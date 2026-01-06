@@ -54,9 +54,9 @@ function Chance.createFromConfig(config)
             eventType = eventData.type,  -- 从数据表中的"type"字段
             value = eventData.value,
             weight = eventData.weight,
-            negative = eventData.is否负收益,  -- 从数据表中的"是否负收益"字段
-            description = eventData.description or eventData.事件描述,
-            parameter = eventData.event参数  -- 一些事件有额外参数
+            negative = eventData.negative,  -- 是否负面事件
+            description = eventData.description,
+            target = eventData.target  -- 事件目标
         }
         table.insert(chances, chance)
     end
