@@ -1,465 +1,432 @@
--- New consolidated game state and logic
+-- 重构的游戏核心逻辑
+-- Game Core - 整合Player、Chance、Item系统
 
 local Game = {}
 
-local AUTO_SIM = true -- 自动模拟整局，无需按键或确认
-local STEP_INTERVAL = 0.1 -- 自动推进的时间间隔（秒）
+-- 导入模块
+local Player = require("player")
+local Chance = require("chance")
+local Item = require("item")
 
+-- ==================== 游戏常量 ====================
 local Phase = {
-    BEFORE = "before_action",
-    ROLL = "roll",
-    MOVE = "move",
-    EVENT = "event",
-    AFTER = "after_action"
+    BEFORE_ACTION = "before_action",  -- 回合开始前
+    ROLL_DICE = "roll_dice",          -- 投掷骰子
+    MOVE = "move",                    -- 移动
+    LAND_EVENT = "land_event",        -- 着陆事件
+    AFTER_ACTION = "after_action"     -- 回合结束
 }
 
-local function shallowCopy(t)
-    local r = {}
-    for k, v in pairs(t) do r[k] = v end
-    return r
-end
+-- ==================== 游戏状态 ====================
+local GameState = {
+    config = nil,
+    
+    -- 玩家和地块
+    players = {},
+    tiles = {},
+    
+    -- 游戏进度
+    currentPlayerIndex = 1,
+    currentTurn = 1,
+    currentPhase = Phase.BEFORE_ACTION,
+    
+    -- 机会卡和道具
+    chanceEvents = {},
+    items = {},
+    
+    -- 游戏状态
+    gameStarted = false,
+    gameFinished = false,
+    winner = nil,
+    
+    -- UI和日志
+    lastLog = "",
+    lastDice = 0,
+    timer = 0,
+    
+    -- 黑市状态
+    blackMarketVisits = {}  -- 记录每个玩家造访黑市的次数
+}
 
-local function weightedPick(list)
-    local total = 0
-    for _, item in ipairs(list) do total = total + (item.weight or 1) end
-    local roll = math.random() * total
-    local acc = 0
-    for _, item in ipairs(list) do
-        acc = acc + (item.weight or 1)
-        if roll <= acc then return item end
-    end
-    return list[1]
-end
+-- ==================== 初始化 ====================
 
-local function buildTileState(configTiles)
-    local tiles = {}
-    for i, t in ipairs(configTiles) do
-        tiles[i] = {
-            id = i,
-            name = t.name,
-            type = t.type,
-            price = t.price or 0,
-            owner = nil,
-            building = 0 -- 0~3
+-- 初始化游戏
+function Game.init(config)
+    GameState.config = config
+    GameState.cfg = config  -- Alias for render compatibility
+    
+    -- 创建地块
+    GameState.tiles = {}
+    for i, tileConfig in ipairs(config.tiles) do
+        GameState.tiles[i] = {
+            id = tileConfig.id,
+            name = tileConfig.name,
+            type = tileConfig.type,
+            price = tileConfig.price or 0,
+            gridPos = tileConfig.gridPos or {1, 1},  -- 网格位置
+            owner = nil,           -- 玩家ID
+            building_level = 0,    -- 建筑等级 0-3（0表示无建筑）
+            
+            -- 特殊设置（路障、地雷等）
+            roadblock = false,     -- 是否有路障
+            landmine = false,      -- 是否有地雷
+            landmine_owner = nil   -- 地雷放置者ID
         }
     end
-    return tiles
+    
+    -- 创建机会卡事件列表
+    GameState.chanceEvents = Chance.createAllEvents()
+    
+    -- 创建物品列表
+    GameState.items = config.items
+    
+    GameState.gameStarted = false
+    GameState.gameFinished = false
+    
+    return GameState
 end
 
-local function newPlayer(id, isAI, cfg)
-    return {
-        id = id,
-        name = isAI and ("AI" .. id) or ("玩家" .. id),
-        isAI = isAI,
-        money = cfg.startMoney,
-        position = 1,
-        stay = 0,
-        stayType = nil,
-        items = {},
-        angel = 0,
-        poor = 0,
-        wealth = 0,
-        eliminated = false
-    }
-end
-
-local function tileRent(tile)
-    if tile.type ~= "empty" or not tile.owner then return 0 end
-    local base = tile.price
-    if tile.building == 0 then return base * 0.5 end
-    local last = base * (2 ^ tile.building)
-    return last * 0.5
-end
-
-local function tileUpgradePrice(tile)
-    if tile.type ~= "empty" or not tile.owner then return 0 end
-    if tile.building >= 3 then return 0 end
-    local times = tile.building + 1
-    return tile.price * (2 ^ times)
-end
-
-local function addMoney(p, amt)
-    p.money = p.money + amt
-    if p.money < 0 then p.money = 0 end
-end
-
-local function moveSteps(state, player, steps)
-    local count = #state.tiles
-    local start = player.position
-    local raw = ((start - 1 + steps) % count) + 1
-    if steps > 0 and (start + steps) > count then
-        addMoney(player, state.cfg.passStartBonus)
-        state.lastLog = player.name .. "经过起点 +" .. state.cfg.passStartBonus
+-- 开始新游戏
+function Game.startNewGame(numHumans)
+    numHumans = math.max(GameState.config.rules.minPlayers, 
+                         math.min(GameState.config.rules.maxPlayers, numHumans or 2))
+    
+    GameState.players = {}
+    GameState.currentPlayerIndex = 1
+    GameState.currentTurn = 1
+    GameState.currentPhase = Phase.BEFORE_ACTION
+    GameState.gameStarted = true
+    GameState.gameFinished = false
+    GameState.timer = 0
+    
+    -- 创建玩家
+    local characters = GameState.config.characters
+    local vehicles = GameState.config.vehicles
+    
+    for i = 1, numHumans do
+        local vehicleIdx = ((i - 1) % #vehicles) + 1
+        local player = Player.new(i, characters[i].id, vehicles[vehicleIdx].id, false)
+        player.name = "玩家" .. i
+        table.insert(GameState.players, player)
     end
-    player.position = raw
-    return raw
+    
+    -- 创建AI玩家
+    for i = numHumans + 1, GameState.config.rules.maxPlayers do
+        local vehicleIdx = ((i - 1) % #vehicles) + 1
+        local player = Player.new(i, characters[i].id, vehicles[vehicleIdx].id, true)
+        player.name = "AI" .. i
+        table.insert(GameState.players, player)
+    end
+    
+    GameState.lastLog = "游戏开始！"
+    
+    return GameState
 end
 
-local function nextActiveIndex(state, idx)
-    local total = #state.players
-    local i = idx
+-- ==================== 游戏逻辑 ====================
+
+-- 获取当前活跃玩家
+local function getCurrentPlayer()
+    return GameState.players[GameState.currentPlayerIndex]
+end
+
+-- 获取下一个活跃玩家
+local function getNextActivePlayerIndex()
+    local count = #GameState.players
+    local idx = GameState.currentPlayerIndex
+    
     repeat
-        i = i + 1
-        if i > total then i = 1 end
-        local p = state.players[i]
-        if not p.eliminated then return i end
-    until false
+        idx = idx + 1
+        if idx > count then
+            idx = 1
+            GameState.currentTurn = GameState.currentTurn + 1  -- 回合数增加
+        end
+        
+        local player = GameState.players[idx]
+        if not Player.isBankrupt(player) then
+            return idx
+        end
+    until idx == GameState.currentPlayerIndex
+    
+    -- 只剩一个玩家时游戏结束
+    return GameState.currentPlayerIndex
 end
 
-local checkVictory -- forward declaration
-
-local function eliminate(state, player)
-    player.eliminated = true
-    for _, tile in ipairs(state.tiles) do
-        if tile.owner == player.id then
-            tile.owner = nil
-            tile.building = 0
+-- 检查游戏是否结束
+local function checkGameEnd()
+    local aliveCount = 0
+    local lastAlive = nil
+    
+    for _, player in ipairs(GameState.players) do
+        if not Player.isBankrupt(player) then
+            aliveCount = aliveCount + 1
+            lastAlive = player
         end
     end
-    state.lastLog = player.name .. " 破产出局"
-    checkVictory(state)
-end
-
-function checkVictory(state)
-    local alive = {}
-    for _, p in ipairs(state.players) do
-        if not p.eliminated then table.insert(alive, p) end
-    end
-    if #alive <= 1 then
-        state.finished = true
-        state.winner = alive[1]
-        if #alive == 1 then
-            state.lastLog = alive[1].name .. " 获胜！"
+    
+    if aliveCount <= 1 then
+        GameState.gameFinished = true
+        GameState.winner = lastAlive
+        if lastAlive then
+            GameState.lastLog = lastAlive.name .. " 获胜！"
         else
-            state.lastLog = "所有玩家出局，平局"
+            GameState.lastLog = "游戏结束（没有获胜者）"
         end
         return true
     end
+    
     return false
 end
 
-local function applyChance(state, player)
-    local card = weightedPick(state.cfg.chanceCards)
-    local log = card.name
-    if card.kind == "gain_money" then
-        addMoney(player, card.value)
-        log = log .. " +" .. card.value
-    elseif card.kind == "lose_money" then
-        addMoney(player, -card.value)
-        if player.money == 0 then eliminate(state, player) end
-        log = log .. " -" .. card.value
-    elseif card.kind == "lose_percent" then
-        local loss = math.floor(player.money * card.value)
-        addMoney(player, -loss)
-        if player.money == 0 then eliminate(state, player) end
-        log = log .. " -" .. loss
-    elseif card.kind == "collect" then
-        for _, other in ipairs(state.players) do
-            if other ~= player and not other.eliminated then
-                local pay = math.min(other.money, card.value)
-                addMoney(other, -pay)
-                addMoney(player, pay)
+-- 在地块上着陆
+local function onLandTile(player, tileId)
+    local tile = GameState.tiles[tileId]
+    if not tile then return end
+    
+    local result = {log = "", events = {}}
+    
+    -- 检查路障
+    if tile.roadblock and tile.type == "property" then
+        Player.enterHospital(player, 1)  -- 停留1回合
+        result.log = player.name .. " 踩中路障，停留1回合"
+        return result
+    end
+    
+    -- 检查地雷
+    if tile.landmine and tile.landmine_owner then
+        local owner = GameState.players[tile.landmine_owner]
+        if owner and not Player.isProtectedByAngel(player) then
+            Player.destroyVehicle(player)
+            Player.enterHospital(player, GameState.config.rules.hospitalStay)
+            result.log = player.name .. " 踩中地雷，座驾被摧毁，进入医院"
+            return result
+        end
+    end
+    
+    -- 处理不同类型地块
+    if tile.type == "start" then
+        result.log = player.name .. " 回到起点"
+        
+    elseif tile.type == "property" then
+        if not tile.owner then
+            -- 未被购买的地块，玩家可以选择购买
+            if player.money >= tile.price then
+                Player.acquireProperty(player, tile.id)
+                Player.subtractMoney(player, tile.price)
+                result.log = player.name .. " 购买了 " .. tile.name .. "，花费 " .. tile.price
+            else
+                result.log = player.name .. " 资金不足，无法购买 " .. tile.name
+            end
+        elseif tile.owner == player.id then
+            -- 自己的地块，可以升级
+            result.log = player.name .. " 停留在自己的地块 " .. tile.name
+        else
+            -- 他人的地块，支付租金
+            local ownerPlayer = GameState.players[tile.owner]
+            if ownerPlayer and not Player.isBankrupt(ownerPlayer) then
+                local rentAmount = tile.price * (0.5 * (1 + tile.building_level))
+                
+                -- 检查穷神附身（支付金额翻倍）
+                if Player.isCursedByPoor(player) then
+                    rentAmount = rentAmount * 2
+                end
+                
+                -- 检查财神附身（收取金额翻倍）
+                if Player.isBlessedByWealth(ownerPlayer) then
+                    rentAmount = rentAmount * 2
+                end
+                
+                Player.transfer(player, ownerPlayer, rentAmount)
+                result.log = player.name .. " 支付租金 " .. rentAmount .. " 给 " .. ownerPlayer.name
+                
+                if Player.isBankrupt(player) then
+                    result.log = result.log .. "（破产）"
+                end
             end
         end
-        log = log .. " 向他人收取" .. card.value
-    elseif card.kind == "pay_others" then
-        for _, other in ipairs(state.players) do
-            if other ~= player and not other.eliminated then
-                local pay = math.min(player.money, card.value)
-                addMoney(player, -pay)
-                addMoney(other, pay)
+        
+    elseif tile.type == "tax_office" then
+        -- 税务局：支付50%现金
+        local taxAmount = math.floor(player.money * GameState.config.rules.taxRate)
+        Player.subtractMoney(player, taxAmount)
+        result.log = player.name .. " 在税务局交税 " .. taxAmount
+        
+        if Player.isBankrupt(player) then
+            result.log = result.log .. "（破产）"
+        end
+        
+    elseif tile.type == "hospital" then
+        -- 医院：支付费用后进入
+        Player.enterHospital(player, GameState.config.rules.hospitalStay)
+        Player.subtractMoney(player, GameState.config.rules.hospitalFee)
+        result.log = player.name .. " 进入医院，停留 " .. GameState.config.rules.hospitalStay .. " 回合"
+        
+    elseif tile.type == "mountain" then
+        -- 深山：被困
+        Player.enterMountain(player, GameState.config.rules.mountainStay)
+        result.log = player.name .. " 被困深山，停留 " .. GameState.config.rules.mountainStay .. " 回合"
+        
+    elseif tile.type == "black_market" then
+        -- 黑市：可以购买道具（需要特殊货币）
+        result.log = player.name .. " 到达黑市"
+        
+    elseif tile.type == "chance_card" then
+        -- 机会卡：随机抽取机会事件
+        local event = Chance.drawRandom(GameState.chanceEvents)
+        if event then
+            Chance.execute(event, player, GameState.players, GameState)
+            result.log = player.name .. " 抽取机会卡：" .. event.description
+        else
+            result.log = player.name .. " 抽取机会卡（无可用事件）"
+        end
+        
+    elseif tile.type == "item_card" then
+        -- 道具卡：随机获得道具
+        local itemId = Item.drawRandom(GameState.config)
+        if itemId and Player.addItem(player, itemId) then
+            result.log = player.name .. " 获得道具：" .. Item.getName(itemId)
+        else
+            result.log = player.name .. " 道具卡（已满或无可用道具）"
+        end
+        
+    elseif tile.type == "jail" then
+        -- 监狱：无事件
+        result.log = player.name .. " 停留在监狱"
+    end
+    
+    return result
+end
+
+-- 抽取机会卡
+local function drawChanceCard(player)
+    local event = Chance.drawRandom(GameState.chanceEvents)
+    local result = Chance.execute(event, player, GameState.players, GameState)
+    
+    GameState.lastLog = (GameState.lastLog or "") .. "\n[机会卡] " .. result.message
+    
+    return result
+end
+
+-- ==================== 回合管理 ====================
+
+-- 推进游戏一个步骤
+function Game.advance()
+    if GameState.gameFinished then return end
+    
+    local player = getCurrentPlayer()
+    
+    if GameState.currentPhase == Phase.BEFORE_ACTION then
+        -- 回合开始
+        Player.startTurn(player)
+        
+        -- 检查是否可以行动
+        if not Player.canAct(player) then
+            if Player.isBankrupt(player) then
+                GameState.lastLog = player.name .. " 已破产，跳过回合"
+            else
+                GameState.lastLog = player.name .. " 无法行动，跳过回合"
+            end
+            GameState.currentPhase = Phase.AFTER_ACTION
+            Game.advance()
+            return
+        end
+        
+        GameState.currentPhase = Phase.ROLL_DICE
+        GameState.lastLog = player.name .. " 的回合开始"
+        
+    elseif GameState.currentPhase == Phase.ROLL_DICE then
+        -- 投掷骰子
+        local diceCount = player.hasVehicle and 2 or 1
+        local diceTotal = 0
+        for i = 1, diceCount do
+            diceTotal = diceTotal + math.random(1, 6)
+        end
+        
+        GameState.lastDice = diceTotal
+        GameState.lastLog = player.name .. " 投掷骰子，点数为 " .. diceTotal
+        
+        GameState.currentPhase = Phase.MOVE
+        
+    elseif GameState.currentPhase == Phase.MOVE then
+        -- 移动
+        local tileCount = #GameState.tiles
+        Player.moveForward(player, GameState.lastDice, tileCount)
+        GameState.lastLog = player.name .. " 向前移动 " .. GameState.lastDice .. " 格，现在位置为 " .. player.position
+        
+        -- 检查是否经过起点
+        if GameState.lastDice > 0 then
+            local passStart = false
+            local oldPos = player.position - GameState.lastDice
+            if oldPos <= 0 then oldPos = oldPos + tileCount end
+            
+            if oldPos > player.position or (oldPos == tileCount and player.position > 1) then
+                passStart = true
+            end
+            
+            if passStart then
+                Player.addMoney(player, GameState.config.rules.passStartBonus)
+                GameState.lastLog = GameState.lastLog .. "\n经过起点，获得 " .. GameState.config.rules.passStartBonus .. " 金币"
             end
         end
-        if player.money == 0 then eliminate(state, player) end
-        log = log .. " 支付每人" .. card.value
-    elseif card.kind == "move" then
-        moveSteps(state, player, card.value)
-        log = log .. " 移动" .. card.value .. "格"
-    elseif card.kind == "gain_item" then
-        if #player.items < state.cfg.maxItemSlots then
-            table.insert(player.items, card.value)
-            log = log .. " 获得道具" .. card.value
-        else
-            log = log .. " 道具栏已满"
+        
+        GameState.currentPhase = Phase.LAND_EVENT
+        
+    elseif GameState.currentPhase == Phase.LAND_EVENT then
+        -- 着陆事件
+        local landResult = onLandTile(player, player.position)
+        GameState.lastLog = landResult.log
+        
+        GameState.currentPhase = Phase.AFTER_ACTION
+        
+    elseif GameState.currentPhase == Phase.AFTER_ACTION then
+        -- 回合结束，检查游戏是否结束
+        if checkGameEnd() then
+            return
         end
-    elseif card.kind == "lose_item" then
-        if #player.items > 0 then
-            table.remove(player.items)
-            log = log .. " 丢弃一个道具"
-        else
-            log = log .. " 无道具可丢弃"
-        end
-    end
-    state.lastLog = log
-end
-
-local function drawItem(state, player)
-    if #player.items >= state.cfg.maxItemSlots then
-        state.lastLog = player.name .. " 道具栏已满"
-        return
-    end
-    local card = weightedPick(state.cfg.itemCards)
-    table.insert(player.items, card.type)
-    state.lastLog = player.name .. " 获得道具 " .. card.name
-end
-
-local function buyFromBlackMarket(state, player)
-    if #player.items >= state.cfg.maxItemSlots then
-        state.lastLog = player.name .. " 黑市购物失败：卡槽已满"
-        return
-    end
-    local price = state.cfg.blackMarketPrice or 0
-    if player.money < price then
-        state.lastLog = player.name .. " 黑市购物失败：资金不足"
-        return
-    end
-    addMoney(player, -price)
-    local card = weightedPick(state.cfg.itemCards)
-    table.insert(player.items, card.type)
-    state.lastLog = player.name .. " 在黑市购买了道具 " .. card.name .. " 花费" .. price
-end
-
-local function chargeRent(state, player, tile)
-    local rent = tileRent(tile)
-    local owner = state.players[tile.owner]
-    if owner.eliminated then return end
-    if owner.stayType == "mountain" and owner.stay > 0 then
-        state.lastLog = owner.name .. " 在深山，免收租金"
-        return
-    end
-    if player.money >= rent then
-        addMoney(player, -rent)
-        addMoney(owner, rent)
-        state.lastLog = player.name .. " 支付租金 " .. rent
-    else
-        addMoney(owner, player.money)
-        addMoney(player, -player.money)
-        eliminate(state, player)
+        
+        -- 切换到下一个玩家
+        GameState.currentPlayerIndex = getNextActivePlayerIndex()
+        GameState.currentPhase = Phase.BEFORE_ACTION
+        
+        Game.advance()
     end
 end
 
-local function promptDecision(state, opts)
-    state.waiting = opts
-    state.timer = 0
-end
-
-local GameState = {
-    cfg = nil,
-    tiles = {},
-    players = {},
-    current = 1,
-    phase = Phase.BEFORE,
-    turn = 1,
-    timer = 0,
-    waiting = nil,
-    ui = nil,
-    lastLog = "",
-    finished = false,
-    winner = nil,
-    autoTimer = 0
-}
-
-function Game.init(cfg)
-    GameState.cfg = {
-        maxPlayers = cfg.rules.maxPlayers,
-        minPlayers = cfg.rules.minPlayers,
-        startMoney = cfg.rules.startMoney,
-        passStartBonus = cfg.rules.passStartBonus,
-        hospitalFee = cfg.rules.hospitalFee,
-        hospitalStay = cfg.rules.hospitalStay,
-        mountainStay = cfg.rules.mountainStay,
-        turnTimeout = cfg.rules.turnTimeout,
-        maxItemSlots = cfg.rules.maxItemSlots,
-        blackMarketPrice = cfg.rules.blackMarketPrice,
-        chanceCards = cfg.chanceCards,
-        itemCards = cfg.itemCards,
-        tiles = cfg.tiles,
-        colors = cfg.colors
-    }
-    GameState.tiles = buildTileState(cfg.tiles)
-    GameState.players = {}
-    GameState.current = 1
-    GameState.phase = Phase.BEFORE
-    GameState.turn = 1
-    GameState.waiting = nil
-    GameState.ui = nil
-    GameState.lastLog = "自动模拟中"
-    GameState.finished = false
-    GameState.winner = nil
-    GameState.autoTimer = 0
-end
-
-function Game.startNewGame(humans)
-    humans = math.max(1, math.min(GameState.cfg.maxPlayers, humans or 1))
-    GameState.players = {}
-    for i = 1, humans do
-        table.insert(GameState.players, newPlayer(i, false, GameState.cfg))
-    end
-    for i = humans + 1, GameState.cfg.maxPlayers do
-        table.insert(GameState.players, newPlayer(i, true, GameState.cfg))
-    end
-    GameState.current = 1
-    GameState.phase = Phase.BEFORE
-    GameState.turn = 1
-    GameState.tiles = buildTileState(GameState.cfg.tiles)
-    GameState.waiting = nil
-    GameState.lastLog = "新游戏开始"
-    GameState.finished = false
-    GameState.winner = nil
-    GameState.autoTimer = 0
-end
+-- ==================== 获取游戏状态 ====================
 
 function Game.getState()
     return GameState
 end
 
-local function beginDecision(state, title, msg, yesFn, noFn)
-    state.ui = {
-        title = title,
-        message = msg,
-        buttons = {"Y 确认", "N 放弃"}
-    }
-    promptDecision(state, {accept = yesFn, reject = noFn})
+function Game.getCurrentPlayer()
+    return getCurrentPlayer()
 end
+
+function Game.isFinished()
+    return GameState.gameFinished
+end
+
+function Game.getWinner()
+    return GameState.winner
+end
+
+function Game.getLog()
+    return GameState.lastLog
+end
+
+function Game.getTurn()
+    return GameState.currentTurn
+end
+
+-- ==================== 更新 ====================
 
 function Game.update(dt)
     GameState.timer = GameState.timer + dt
-    if GameState.finished then return end
-
-    if GameState.waiting and GameState.timer >= GameState.cfg.turnTimeout then
-        if GameState.waiting.reject then GameState.waiting.reject() end
-        GameState.waiting = nil
-        GameState.ui = nil
-        GameState.phase = Phase.AFTER
-        GameState.timer = 0
+    
+    -- 每隔一定时间自动推进一步（自动模拟）
+    if GameState.timer > 0.05 and not GameState.gameFinished then
         Game.advance()
-    end
-
-    if AUTO_SIM then
-        GameState.autoTimer = GameState.autoTimer + dt
-        while GameState.autoTimer >= STEP_INTERVAL and not GameState.finished and not GameState.waiting do
-            Game.advance()
-            GameState.autoTimer = GameState.autoTimer - STEP_INTERVAL
-        end
-    end
-end
-
-function Game.advance()
-    if GameState.finished then return end
-    if GameState.waiting then return end
-
-    local p = GameState.players[GameState.current]
-    if p.eliminated then
-        GameState.current = nextActiveIndex(GameState, GameState.current)
-        return
-    end
-
-    if GameState.phase == Phase.BEFORE then
-        GameState.phase = Phase.ROLL
         GameState.timer = 0
-        local dice = math.random(1, 6)
-        GameState.lastRoll = dice
-        local pos = moveSteps(GameState, p, dice)
-        GameState.phase = Phase.EVENT
-        local tile = GameState.tiles[pos]
-
-        -- handle tile event
-        if tile.type == "start" then
-            GameState.lastLog = p.name .. " 停留在起点"
-        elseif tile.type == "empty" then
-            if not tile.owner then
-                local price = tile.price
-                if p.money >= price then
-                    addMoney(p, -price)
-                    tile.owner = p.id
-                    GameState.lastLog = p.name .. " 购入 " .. tile.name
-                else
-                    GameState.lastLog = p.name .. " 资金不足，放弃购买"
-                end
-            elseif tile.owner == p.id then
-                local up = tileUpgradePrice(tile)
-                if up > 0 then
-                    if p.money >= up then
-                        addMoney(p, -up)
-                        tile.building = tile.building + 1
-                        GameState.lastLog = p.name .. " 加盖 " .. tile.name
-                    else
-                        GameState.lastLog = p.name .. " 资金不足，放弃加盖"
-                    end
-                else
-                    GameState.lastLog = tile.name .. " 已是高楼"
-                end
-            else
-                chargeRent(GameState, p, tile)
-            end
-        elseif tile.type == "chance" then
-            applyChance(GameState, p)
-        elseif tile.type == "item" then
-            drawItem(GameState, p)
-        elseif tile.type == "hospital" then
-            local fee = GameState.cfg.hospitalFee
-            if p.money >= fee then
-                addMoney(p, -fee)
-                p.stay = GameState.cfg.hospitalStay
-                p.stayType = "hospital"
-                GameState.lastLog = p.name .. " 入院 停留" .. p.stay .. "回合"
-            else
-                eliminate(GameState, p)
-            end
-        elseif tile.type == "mountain" then
-            p.stay = GameState.cfg.mountainStay
-            p.stayType = "mountain"
-            GameState.lastLog = p.name .. " 被困深山 " .. p.stay .. "回合"
-        elseif tile.type == "tax" then
-            local tax = math.floor(p.money * 0.5)
-            addMoney(p, -tax)
-            GameState.lastLog = p.name .. " 缴税 " .. tax
-            if p.money == 0 then eliminate(GameState, p) end
-        elseif tile.type == "black_market" then
-            buyFromBlackMarket(GameState, p)
-        end
-
-        if not GameState.waiting then
-            GameState.phase = Phase.AFTER
-            Game.advance() -- immediately go after_action
-        end
-
-    elseif GameState.phase == Phase.AFTER then
-        -- tick stay counters
-        if p.stay and p.stay > 0 then
-            p.stay = p.stay - 1
-            if p.stay <= 0 then p.stayType = nil end
-        end
-
-        if checkVictory(GameState) then return end
-
-        -- next player
-        GameState.current = nextActiveIndex(GameState, GameState.current)
-        GameState.phase = Phase.BEFORE
-        GameState.turn = GameState.turn + 1
-        GameState.timer = 0
-    end
-end
-
-function Game.chooseYes()
-    if GameState.waiting then
-        if GameState.waiting.accept then GameState.waiting.accept() end
-        GameState.waiting = nil
-        GameState.ui = nil
-        GameState.phase = Phase.AFTER
-        GameState.timer = 0
-        Game.advance()
-    end
-end
-
-function Game.chooseNo()
-    if GameState.waiting then
-        if GameState.waiting.reject then GameState.waiting.reject() end
-        GameState.waiting = nil
-        GameState.ui = nil
-        GameState.phase = Phase.AFTER
-        GameState.timer = 0
-        Game.advance()
     end
 end
 
