@@ -1,0 +1,24 @@
+# Lua compiled files
+*.luac
+
+# LÖVE build artifacts
+*.love
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Temporary files
+/tmp/
+*.tmp
+*.bak
+
+# Logs
+*.log
