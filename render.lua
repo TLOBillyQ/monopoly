@@ -89,7 +89,7 @@ local function drawBoard(state)
     
     -- 绘制玩家棋子
     for idx, p in ipairs(state.players) do
-        if p and p.state ~= "BANKRUPT" then
+        if p and p.state ~= "bankrupt" then
             local tile = tiles[p.position]
             if tile and tile.gridPos then
                 local gx, gy = tile.gridPos[1], tile.gridPos[2]
@@ -183,9 +183,9 @@ local function drawHud(state)
     -- 特殊状态
     if p.stayTurns and p.stayTurns > 0 then
         currentY = currentY + 5
-        local stateText = p.state == "IN_HOSPITAL" and "医院"
-                       or p.state == "IN_MOUNTAIN" and "深山"
-                       or p.state == "IN_JAIL" and "监狱"
+        local stateText = p.state == "in_hospital" and "医院"
+                       or p.state == "in_mountain" and "深山"
+                       or p.state == "in_jail" and "监狱"
                        or "未知"
         love.graphics.print("停留: " .. stateText .. " (" .. p.stayTurns .. " 回合)", hudX, currentY)
         currentY = currentY + lineHeight
@@ -239,7 +239,7 @@ local function drawPlayerRanking(state)
     -- 按金币排序玩家
     local sortedPlayers = {}
     for i, p in ipairs(state.players) do
-        if p and p.state ~= "BANKRUPT" then
+        if p and p.state ~= "bankrupt" then
             table.insert(sortedPlayers, {index = i, player = p})
         end
     end
