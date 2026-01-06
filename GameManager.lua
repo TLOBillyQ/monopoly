@@ -101,64 +101,8 @@ end
 -- 创建游戏主Epoch
 function GameManager.createGameEpoch(context)
     return LambdaEpoch.new("GameEpoch", function(s)
-        -- 监听游戏流程状态
-        s:Call(context.gameFlow.currentPhase)
-        s:Call(context.gameFlow.currentPlayerIndex)
-        s:Call(context.gameFlow.currentTurn)
-        
-        -- 监听玩家状态
-        s:Call(context.players)
-        
-        -- 监听游戏结束
-        s:Call(context.gameFlow.gameFinished)
-        
-        -- 设置游戏循环
-        return function(s)
-            local phase = s:D(context.gameFlow.currentPhase)
-            local playerIndex = s:D(context.gameFlow.currentPlayerIndex)
-            local players = s:D(context.players)
-            
-            if not players[playerIndex] then return end
-            
-            local currentPlayer = players[playerIndex]
-            local isAI = currentPlayer.isAI:Get()
-            
-            -- 根据阶段执行逻辑
-            if phase == GameFlowSystem.Phase.BEFORE_ACTION then
-                -- 行动前：检查物品使用、附身持续等
-                if isAI then
-                    -- AI的行动前逻辑
-                else
-                    -- 人类玩家：等待输入
-                end
-                
-            elseif phase == GameFlowSystem.Phase.ROLL_DICE then
-                -- 投掷骰子
-                local roll = GameFlowSystem.rollDice(context.gameFlow)
-                
-                -- 启动骰子动画
-                if context.animationState then
-                    AnimationSystem.startDiceAnimation(context.animationState, roll)
-                end
-                
-                GameFlowSystem.nextPhase(context.gameFlow, players)
-                
-            elseif phase == GameFlowSystem.Phase.MOVE then
-                -- 移动
-                GameManager.executeMovement(context, currentPlayer)
-                GameFlowSystem.nextPhase(context.gameFlow, players)
-                
-            elseif phase == GameFlowSystem.Phase.LAND_EVENT then
-                -- 着陆事件
-                GameManager.executeLandEvent(context, currentPlayer)
-                GameFlowSystem.nextPhase(context.gameFlow, players)
-                
-            elseif phase == GameFlowSystem.Phase.AFTER_ACTION then
-                -- 行动后
-                GameManager.executeAfterAction(context, currentPlayer)
-                GameFlowSystem.nextPhase(context.gameFlow, players)
-            end
-        end
+        -- 这个Epoch只作为容器，游戏逻辑在update中处理
+        return nil
     end)
 end
 
@@ -218,7 +162,9 @@ end
 -- 执行行动后处理
 function GameManager.executeAfterAction(context, player)
     -- 减少附身时间
-    PlayerSystem.reduceBuff(player)
+    if player.buffTurns then
+        PlayerSystem.reduceBuff(player)
+    end
     
     -- 检查破产
     if EventSystem.checkBankruptcy(player) then
@@ -289,6 +235,47 @@ function GameManager.update(dt)
     
     -- 更新所有动画
     AnimationSystem.updateAll(ctx.animationState, dt, diceValue)
+    
+    -- 游戏流程处理（在update中处理而不是Effect中）
+    if not ctx.gameFlow or not ctx.players then
+        return
+    end
+    
+    local phase = ctx.gameFlow.currentPhase:Get()
+    local playerIndex = ctx.gameFlow.currentPlayerIndex:Get()
+    local players = ctx.players:Get()
+    
+    if not players[playerIndex] then return end
+    
+    local currentPlayer = players[playerIndex]
+    
+    -- 根据阶段执行逻辑
+    if phase == GameFlowSystem.Phase.ROLL_DICE then
+        -- 投掷骰子
+        local roll = GameFlowSystem.rollDice(ctx.gameFlow)
+        
+        -- 启动骰子动画
+        if ctx.animationState then
+            AnimationSystem.startDiceAnimation(ctx.animationState, roll)
+        end
+        
+        GameFlowSystem.nextPhase(ctx.gameFlow, players)
+        
+    elseif phase == GameFlowSystem.Phase.MOVE then
+        -- 移动
+        GameManager.executeMovement(ctx, currentPlayer)
+        GameFlowSystem.nextPhase(ctx.gameFlow, players)
+        
+    elseif phase == GameFlowSystem.Phase.LAND_EVENT then
+        -- 着陆事件
+        GameManager.executeLandEvent(ctx, currentPlayer)
+        GameFlowSystem.nextPhase(ctx.gameFlow, players)
+        
+    elseif phase == GameFlowSystem.Phase.AFTER_ACTION then
+        -- 行动后
+        GameManager.executeAfterAction(ctx, currentPlayer)
+        GameFlowSystem.nextPhase(ctx.gameFlow, players)
+    end
 end
 
 -- 绘制游戏
@@ -298,11 +285,16 @@ function GameManager.draw()
         return
     end
 
+    -- 每帧重新创建渲染管道，确保获取最新的玩家状态
+    local players = ctx.players:Get()
+    local properties = ctx.properties:Get()
+    local config = ctx.config:Get()
+    
     local renderPipeline = RenderSystem.createRenderPipeline(
         ctx.gameFlow,
-        ctx.players:Get(),
-        ctx.properties:Get(),
-        ctx.config:Get(),
+        players,
+        properties,
+        config,
         ctx.renderState,
         ctx.animationState
     )

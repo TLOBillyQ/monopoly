@@ -162,6 +162,10 @@ function PlayerSystem.reduceBuff(playerState)
     local buffTurns = playerState.buffTurns:Get()
     local buffs = playerState.buffs:Get()
     
+    if not buffTurns or not buffs then
+        return
+    end
+    
     for buffType, turns in pairs(buffTurns) do
         buffTurns[buffType] = turns - 1
         if buffTurns[buffType] <= 0 then

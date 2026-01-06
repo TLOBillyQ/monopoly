@@ -36,6 +36,10 @@ function AISystem.createAIPlayer(id, difficulty, characterId, vehicleId)
         state = State.Create("normal"),  -- normal, hospital, mountain, jail, bankrupt
         stayTurns = State.Create(0),     -- 停留回合数
         
+        -- 附身
+        buffs = State.Create({}),  -- 当前附身状态
+        buffTurns = State.Create({}),  -- 附身剩余回合数
+        
         -- 决策历史（用于学习）
         decisionHistory = State.Create({}),
         
