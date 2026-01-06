@@ -43,10 +43,26 @@ local GameState = {
     lastLog = "",
     lastDice = 0,
     timer = 0,
+    ui = nil,              -- 当前弹窗
+    
+    -- 游戏模式
+    autoMode = false,       -- 自动模式开关
+    autoSpeed = 1.0,        -- 自动模式速度（秒/步）
+    waitingForInput = false, -- 等待玩家输入
+    pendingAction = nil,     -- 待处理的操作
     
     -- 黑市状态
     blackMarketVisits = {}  -- 记录每个玩家造访黑市的次数
 }
+
+-- UI 辅助函数
+local function showPrompt(title, message, buttons)
+    GameState.ui = {
+        title = title,
+        message = message,
+        buttons = buttons or {"Y 是", "N 否"}
+    }
+end
 
 -- ==================== 初始化 ====================
 
@@ -152,6 +168,17 @@ local function getNextActivePlayerIndex()
     return GameState.currentPlayerIndex
 end
 
+-- 统一的骰子函数，确保结果在配置范围内（默认1-6）
+local function rollDice(count)
+    local min = (GameState.config.constants and GameState.config.constants.DICE_MIN) or 1
+    local max = (GameState.config.constants and GameState.config.constants.DICE_MAX) or 6
+    local total = 0
+    for i = 1, count do
+        total = total + math.random(min, max)
+    end
+    return total
+end
+
 -- 检查游戏是否结束
 local function checkGameEnd()
     local aliveCount = 0
@@ -209,13 +236,24 @@ local function onLandTile(player, tileId)
         
     elseif tile.type == "property" then
         if not tile.owner then
-            -- 未被购买的地块，玩家可以选择购买
-            if player.money >= tile.price then
-                Player.acquireProperty(player, tile.id)
-                Player.subtractMoney(player, tile.price)
-                result.log = player.name .. " 购买了 " .. tile.name .. "，花费 " .. tile.price
+            -- 未被购买的地块
+            if not player.isAI and not GameState.autoMode and player.money >= tile.price then
+                -- 玩家手动模式：弹出确认
+                GameState.waitingForInput = true
+                GameState.pendingAction = { type = "buy", playerId = player.id, tileId = tile.id }
+                showPrompt("购买地块", tile.name .. "，价格: " .. tile.price .. "。是否购买？")
+                result.log = "等待玩家确认是否购买 " .. tile.name
+                result.waiting = true
             else
-                result.log = player.name .. " 资金不足，无法购买 " .. tile.name
+                -- AI 或自动模式：直接购买（如果有钱）
+                if player.money >= tile.price then
+                    Player.acquireProperty(player, tile.id)
+                    Player.subtractMoney(player, tile.price)
+                    tile.owner = player.id
+                    result.log = player.name .. " 购买了 " .. tile.name .. "，花费 " .. tile.price
+                else
+                    result.log = player.name .. " 资金不足，无法购买 " .. tile.name
+                end
             end
         elseif tile.owner == player.id then
             -- 自己的地块，可以升级
@@ -337,10 +375,7 @@ function Game.advance()
     elseif GameState.currentPhase == Phase.ROLL_DICE then
         -- 投掷骰子
         local diceCount = player.hasVehicle and 2 or 1
-        local diceTotal = 0
-        for i = 1, diceCount do
-            diceTotal = diceTotal + math.random(1, 6)
-        end
+        local diceTotal = rollDice(diceCount)
         
         GameState.lastDice = diceTotal
         GameState.lastLog = player.name .. " 投掷骰子，点数为 " .. diceTotal
@@ -375,6 +410,11 @@ function Game.advance()
         -- 着陆事件
         local landResult = onLandTile(player, player.position)
         GameState.lastLog = landResult.log
+        
+        -- 如果需要玩家确认，则暂停推进
+        if landResult.waiting then
+            return
+        end
         
         GameState.currentPhase = Phase.AFTER_ACTION
         
@@ -418,15 +458,159 @@ function Game.getTurn()
     return GameState.currentTurn
 end
 
+function Game.isWaitingForInput()
+    return GameState.waitingForInput
+end
+
+-- 玩家选择确认/取消
+function Game.chooseYes()
+    if not GameState.waitingForInput or not GameState.pendingAction then return end
+    local action = GameState.pendingAction
+    local player = GameState.players[action.playerId]
+    local tile = GameState.tiles[action.tileId]
+    
+    if action.type == "buy" and player and tile and not tile.owner then
+        if player.money >= tile.price then
+            Player.acquireProperty(player, tile.id)
+            Player.subtractMoney(player, tile.price)
+            tile.owner = player.id
+            GameState.lastLog = player.name .. " 购买了 " .. tile.name
+        else
+            GameState.lastLog = "金币不足，无法购买"
+        end
+    end
+    
+    GameState.waitingForInput = false
+    GameState.pendingAction = nil
+    GameState.ui = nil
+    GameState.currentPhase = Phase.AFTER_ACTION
+    Game.advance()
+end
+
+function Game.chooseNo()
+    if not GameState.waitingForInput or not GameState.pendingAction then return end
+    local action = GameState.pendingAction
+    local player = GameState.players[action.playerId]
+    local tile = GameState.tiles[action.tileId]
+    
+    if action.type == "buy" and player and tile then
+        GameState.lastLog = player.name .. " 放弃购买 " .. tile.name
+    end
+    
+    GameState.waitingForInput = false
+    GameState.pendingAction = nil
+    GameState.ui = nil
+    GameState.currentPhase = Phase.AFTER_ACTION
+    Game.advance()
+end
+
+-- ==================== 游戏模式控制 ====================
+
+-- 切换自动/手动模式
+function Game.toggleAutoMode()
+    GameState.autoMode = not GameState.autoMode
+    GameState.lastLog = "游戏模式: " .. (GameState.autoMode and "自动" or "手动")
+    return GameState.autoMode
+end
+
+-- 设置自动模式速度
+function Game.setAutoSpeed(speed)
+    GameState.autoSpeed = math.max(0.1, math.min(5.0, speed))
+end
+
+-- 获取当前模式
+function Game.isAutoMode()
+    return GameState.autoMode
+end
+
+-- 手动推进一步（手动模式使用）
+function Game.nextStep()
+    if not GameState.waitingForInput then
+        Game.advance()
+    end
+end
+
+-- ==================== 玩家交互 ====================
+
+-- 购买地块
+function Game.buyProperty()
+    local player = getCurrentPlayer()
+    local tile = GameState.tiles[player.position]
+    
+    if tile and tile.type == "property" and not tile.owner then
+        if player.money >= tile.price then
+            Player.acquireProperty(player, tile.id)
+            Player.subtractMoney(player, tile.price)
+            tile.owner = player.id
+            GameState.lastLog = player.name .. " 购买了 " .. tile.name
+            return true
+        else
+            GameState.lastLog = "金币不足，无法购买"
+            return false
+        end
+    end
+    return false
+end
+
+-- 升级地块
+function Game.upgradeProperty()
+    local player = getCurrentPlayer()
+    local tile = GameState.tiles[player.position]
+    
+    if tile and tile.type == "property" and tile.owner == player.id then
+        if tile.building_level < 4 then
+            local upgradeCost = tile.price * (2 ^ (tile.building_level + 1))
+            if player.money >= upgradeCost then
+                Player.subtractMoney(player, upgradeCost)
+                tile.building_level = tile.building_level + 1
+                GameState.lastLog = player.name .. " 升级了 " .. tile.name .. " 到 " .. tile.building_level .. " 级"
+                return true
+            else
+                GameState.lastLog = "金币不足，无法升级"
+                return false
+            end
+        else
+            GameState.lastLog = "已达到最高等级"
+            return false
+        end
+    end
+    return false
+end
+
+-- 使用道具
+function Game.useItem(itemId)
+    local player = getCurrentPlayer()
+    
+    if Player.hasItem(player, itemId) then
+        -- TODO: 实现道具使用逻辑
+        GameState.lastLog = player.name .. " 使用了道具 " .. itemId
+        Player.removeItem(player, itemId)
+        return true
+    end
+    
+    GameState.lastLog = "没有该道具"
+    return false
+end
+
+-- 跳过当前操作
+function Game.skipAction()
+    if GameState.currentPhase == Phase.LAND_EVENT then
+        GameState.currentPhase = Phase.AFTER_ACTION
+        GameState.lastLog = "跳过操作"
+    end
+end
+
 -- ==================== 更新 ====================
 
 function Game.update(dt)
     GameState.timer = GameState.timer + dt
     
-    -- 每隔一定时间自动推进一步（自动模拟）
-    if GameState.timer > 0.05 and not GameState.gameFinished then
-        Game.advance()
-        GameState.timer = 0
+    -- 自动模式：每隔一定时间自动推进一步
+    if GameState.autoMode and not GameState.gameFinished and not GameState.waitingForInput then
+        if GameState.timer > GameState.autoSpeed then
+            Game.advance()
+            GameState.timer = 0
+        end
     end
 end
 

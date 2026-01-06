@@ -268,6 +268,42 @@ local function drawPlayerRanking(state)
     end
 end
 
+-- 绘制控制提示
+local function drawControls(state)
+    local colors = state.cfg.colors
+    local startX, startY = 680, 720
+    local lineHeight = 18
+    
+    love.graphics.setColor(colors.hudText)
+    
+    -- 显示当前模式
+    local modeText = state.autoMode and "【自动模式】" or "【手动模式】"
+    love.graphics.print(modeText, startX, startY)
+    
+    -- 显示快捷键提示
+    local y = startY + lineHeight + 5
+    love.graphics.print("快捷键:", startX, y)
+    y = y + lineHeight
+    
+    if state.autoMode then
+        love.graphics.print("  A - 切换手动", startX, y)
+        y = y + lineHeight - 2
+        love.graphics.print("  +/- - 调速度", startX, y)
+    else
+        love.graphics.print("  空格 - 下一步", startX, y)
+        y = y + lineHeight - 2
+        love.graphics.print("  A - 切换自动", startX, y)
+        y = y + lineHeight - 2
+        love.graphics.print("  B - 买地块", startX, y)
+        y = y + lineHeight - 2
+        love.graphics.print("  U - 升级", startX, y)
+        y = y + lineHeight - 2
+        love.graphics.print("  S - 跳过", startX, y)
+    end
+    y = y + lineHeight - 2
+    love.graphics.print("  H - 帮助", startX, y)
+end
+
 function Render.draw(state)
     ensureFont()
     love.graphics.setFont(fonts.base)
@@ -276,6 +312,7 @@ function Render.draw(state)
     drawBoard(state)
     drawHud(state)
     drawPlayerRanking(state)
+    drawControls(state)
     drawPrompt(state)
 end
 
