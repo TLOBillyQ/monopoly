@@ -15,6 +15,7 @@ local EventSystem = require("systems.EventSystem")
 local AISystem = require("systems.AISystem")
 local RenderSystem = require("systems.RenderSystem")
 local InputSystem = require("systems.InputSystem")
+local AnimationSystem = require("systems.AnimationSystem")
 
 local GameManager = {}
 
@@ -43,6 +44,7 @@ function GameManager.initialize(config)
         -- 输入和渲染
         inputState = InputSystem.createInputState(),
         renderState = RenderSystem.createRenderState(),
+        animationState = AnimationSystem.createAnimationState(),
         
         -- 游戏统计
         statistics = State.Create({
@@ -132,23 +134,29 @@ function GameManager.createGameEpoch(context)
                 
             elseif phase == GameFlowSystem.Phase.ROLL_DICE then
                 -- 投掷骰子
-                GameFlowSystem.rollDice(context.gameFlow)
-                GameFlowSystem.nextPhase(context.gameFlow)
+                local roll = GameFlowSystem.rollDice(context.gameFlow)
+                
+                -- 启动骰子动画
+                if context.animationState then
+                    AnimationSystem.startDiceAnimation(context.animationState, roll)
+                end
+                
+                GameFlowSystem.nextPhase(context.gameFlow, players)
                 
             elseif phase == GameFlowSystem.Phase.MOVE then
                 -- 移动
                 GameManager.executeMovement(context, currentPlayer)
-                GameFlowSystem.nextPhase(context.gameFlow)
+                GameFlowSystem.nextPhase(context.gameFlow, players)
                 
             elseif phase == GameFlowSystem.Phase.LAND_EVENT then
                 -- 着陆事件
                 GameManager.executeLandEvent(context, currentPlayer)
-                GameFlowSystem.nextPhase(context.gameFlow)
+                GameFlowSystem.nextPhase(context.gameFlow, players)
                 
             elseif phase == GameFlowSystem.Phase.AFTER_ACTION then
                 -- 行动后
                 GameManager.executeAfterAction(context, currentPlayer)
-                GameFlowSystem.nextPhase(context.gameFlow)
+                GameFlowSystem.nextPhase(context.gameFlow, players)
             end
         end
     end)
@@ -250,10 +258,43 @@ function GameManager.handleInput(key)
     InputSystem.handleKeyPress(key, ctx.inputState, ctx.gameFlow, ctx.players:Get())
 end
 
+-- 处理鼠标点击
+function GameManager.handleMouseClick(x, y, button)
+    local ctx = GameManager.context
+    if not ctx then return end
+    
+    -- 尝试处理UI点击（对话框、按钮等）
+    -- 这里可以集成UI.handleClick
+    
+    -- TODO: 添加地块点击显示详情的功能
+end
+
+-- 更新游戏动画
+function GameManager.update(dt)
+    local ctx = GameManager.context
+    if not ctx then
+        return
+    end
+    
+    -- 确保动画状态存在
+    if not ctx.animationState then
+        return
+    end
+    
+    -- 获取当前骰子值用于动画
+    local diceValue = nil
+    if ctx.gameFlow and ctx.gameFlow.lastDiceRoll and ctx.gameFlow.lastDiceRoll.Get then
+        diceValue = ctx.gameFlow.lastDiceRoll:Get()
+    end
+    
+    -- 更新所有动画
+    AnimationSystem.updateAll(ctx.animationState, dt, diceValue)
+end
+
 -- 绘制游戏
 function GameManager.draw()
     local ctx = GameManager.context
-    if not ctx or not ctx.config or not ctx.config.Get then
+    if not ctx or not ctx.config or not ctx.gameFlow then
         return
     end
 
@@ -261,7 +302,9 @@ function GameManager.draw()
         ctx.gameFlow,
         ctx.players:Get(),
         ctx.properties:Get(),
-        ctx.config:Get()
+        ctx.config:Get(),
+        ctx.renderState,
+        ctx.animationState
     )
     
     if renderPipeline then

@@ -47,7 +47,7 @@ function GameFlowSystem.createGameFlow()
 end
 
 -- 前进到下一个阶段
-function GameFlowSystem.nextPhase(gameFlow)
+function GameFlowSystem.nextPhase(gameFlow, players)
     local currentPhase = gameFlow.currentPhase:Get()
     
     local phaseOrder = {
@@ -68,7 +68,8 @@ function GameFlowSystem.nextPhase(gameFlow)
     
     if nextPhase == GameFlowSystem.Phase.BEFORE_ACTION then
         -- 进入下一个玩家的回合
-        GameFlowSystem.nextTurn(gameFlow)
+        local playerCount = players and #players or 4
+        GameFlowSystem.nextTurn(gameFlow, playerCount)
     else
         gameFlow.currentPhase:Set(nextPhase)
     end

@@ -1,10 +1,8 @@
 -- 蛋仔大富翁游戏主入口
 
 local Config = require("config")
-local Game = require("game")
-local Render = require("render")
-
-local gameState = nil
+local GameManager = require("GameManager")
+local UI = require("ui")
 
 function love.load()
     love.window.setMode(Config.window.width, Config.window.height)
@@ -12,9 +10,11 @@ function love.load()
     math.randomseed(os.time())
     love.keyboard.setKeyRepeat(true)
 
-    -- 初始化游戏
-    gameState = Game.init(Config)
-    Game.startNewGame(4)
+    -- 初始化UI系统
+    UI.init()
+
+    -- 初始化游戏管理器
+    GameManager.createNewGame(Config, 4, "medium")
     
     print("=== 蛋仔大富翁 ===")
     print("游戏已启动！")
@@ -25,43 +25,32 @@ function love.load()
 end
 
 function love.update(dt)
-    -- 更新游戏逻辑（处理自动模式）
-    Game.update(dt)
+    -- Spoke框架自动处理反应式更新
+    -- 更新游戏动画
+    GameManager.update(dt)
+    
+    -- 更新UI系统
+    UI.update(dt)
 end
 
 function love.draw()
-    local state = Game.getState()
-    Render.draw(state)
+    GameManager.draw()
+    
+    -- 绘制UI层（对话框、卡片等）
+    UI.draw()
 end
 
 function love.keypressed(key, scancode)
-    if key == "escape" then
-        love.event.quit()
-    elseif key == "space" then
-        Game.nextStep()
-    elseif key == "a" then
-        Game.toggleAutoMode()
-    elseif key == "y" then
-        Game.chooseYes()
-    elseif key == "n" then
-        Game.chooseNo()
-    elseif key == "b" then
-        Game.buyProperty()
-    elseif key == "u" then
-        Game.upgradeProperty()
-    elseif key == "s" then
-        Game.skipAction()
-    elseif key == "h" then
-        print("快捷键:")
-        print("  SPACE - 推进游戏")
-        print("  A - 切换自动/手动模式")
-        print("  Y - 确认")
-        print("  N - 取消")
-        print("  B - 购买地块")
-        print("  U - 升级地块")
-        print("  S - 跳过操作")
-        print("  H - 帮助")
-        print("  ESC - 退出")
+    GameManager.handleInput(key)
+end
+
+function love.mousepressed(x, y, button)
+    -- 先让UI处理点击
+    if UI.handleClick(x, y) then
+        return  -- UI已处理
     end
+    
+    -- 否则传递给游戏管理器
+    GameManager.handleMouseClick(x, y, button)
 end
 

@@ -16,7 +16,7 @@
 ## 📂 文件导航
 
 ### 快速开始
-1. **第一次使用？** → 阅读 [QUICKSTART.md](./docs/QUICKSTART.md)
+1. **第一次使用？** → 阅读 [QUICKSTART.s](./docs/QUICKSTART.md)
 2. **想了解架构？** → 阅读 [SPOKE_ARCHITECTURE.md](./docs/SPOKE_ARCHITECTURE.md)
 3. **想看详细设计？** → 阅读 [ARCHITECTURE_DETAILS.md](./docs/ARCHITECTURE_DETAILS.md)
 4. **想看完成总结？** → 阅读 [COMPLETION_REPORT.md](./docs/COMPLETION_REPORT.md)
@@ -87,20 +87,20 @@ lua SimpleExample.lua
 ### 初学者
 
 1. 安装LÖVE2D框架
-2. 阅读 [QUICKSTART.md](QUICKSTART.md)
+2. 阅读 [QUICKSTART.md](./docs/QUICKSTART.md)
 3. 运行 [SimpleExample.lua](SimpleExample.lua)
 4. 尝试修改config.lua中的参数
 
 ### 中级开发者
 
-1. 阅读 [SPOKE_ARCHITECTURE.md](SPOKE_ARCHITECTURE.md)
+1. 阅读 [SPOKE_ARCHITECTURE.md](./docs/SPOKE_ARCHITECTURE.md)
 2. 学习Spoke框架的基本概念（State、Memo、Effect、Trigger）
 3. 研究各个系统的实现（systems/目录）
 4. 尝试添加新的游戏功能
 
 ### 高级开发者
 
-1. 阅读 [ARCHITECTURE_DETAILS.md](ARCHITECTURE_DETAILS.md)
+1. 阅读 [ARCHITECTURE_DETAILS.md](./docs/ARCHITECTURE_DETAILS.md)
 2. 研究系统间的通信机制
 3. 优化性能和扩展能力
 4. 贡献新功能和改进
@@ -317,10 +317,10 @@ renderState.showDebug:Set(true)
 
 | 文档 | 内容 |
 |------|------|
-| [QUICKSTART.md](QUICKSTART.md) | 快速开始指南 |
-| [SPOKE_ARCHITECTURE.md](SPOKE_ARCHITECTURE.md) | 架构设计详解 |
-| [ARCHITECTURE_DETAILS.md](ARCHITECTURE_DETAILS.md) | 系统架构图解 |
-| [COMPLETION_REPORT.md](COMPLETION_REPORT.md) | 完成总结报告 |
+| [QUICKSTART.md](./docs/QUICKSTART.md) | 快速开始指南 |
+| [SPOKE_ARCHITECTURE.md](./docs/SPOKE_ARCHITECTURE.md) | 架构设计详解 |
+| [ARCHITECTURE_DETAILS.md](./docs/ARCHITECTURE_DETAILS.md) | 系统架构图解 |
+| [COMPLETION_REPORT.md](./docs/COMPLETION_REPORT.md) | 完成总结报告 |
 | [README.md](README.md) | 本文件 |
 
 ## 🤝 贡献指南
@@ -351,9 +351,9 @@ renderState.showDebug:Set(true)
 - [x] AI系统
 - [x] 测试和示例
 - [x] 文档
+- [x] UI完善（图形界面）
 
 ### ⏳ 进行中
-- [ ] UI完善（图形界面）
 - [ ] 音效系统
 - [ ] 游戏存档
 

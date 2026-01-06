@@ -3,6 +3,7 @@
 
 local State = require("Spoke.State")
 local Trigger = require("Spoke.Trigger")
+local GameFlowSystem = require("systems.GameFlowSystem")
 
 local InputSystem = {}
 
@@ -32,11 +33,11 @@ end
 -- 处理按键输入
 function InputSystem.handleKeyPress(key, inputState, gameFlow, players)
     inputState.lastKey:Set(key)
-    inputState.onKeyPressed:Fire({key = key})
+    inputState.onKeyPressed:Invoke({key = key})
     
     if key == "space" then
         -- 推进游戏阶段
-        gameFlow.currentPhase:Set(gameFlow.currentPhase:Get() .. "_next")
+        GameFlowSystem.nextPhase(gameFlow, players)
         
     elseif key == "a" then
         -- 切换自动模式
@@ -63,7 +64,7 @@ function InputSystem.handleMouseClick(x, y, button, inputState)
     inputState.mouseX:Set(x)
     inputState.mouseY:Set(y)
     inputState.mouseDown:Set(true)
-    inputState.onMouseClicked:Fire({x = x, y = y, button = button})
+    inputState.onMouseClicked:Invoke({x = x, y = y, button = button})
     
     -- 检查点击的UI元素
 end
@@ -71,7 +72,7 @@ end
 -- 处理对话框选项
 function InputSystem.handleDialogOption(optionIndex, inputState, gameFlow)
     inputState.selectedOption:Set(optionIndex)
-    inputState.onOptionSelected:Fire({optionIndex = optionIndex})
+    inputState.onOptionSelected:Invoke({optionIndex = optionIndex})
     inputState.showDialog:Set(false)
 end
 
