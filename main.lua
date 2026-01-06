@@ -1,9 +1,10 @@
--- Rebuilt main entry
+-- 使用Spoke反应式框架重构
+
+-- Ensure Spoke modules are discoverable when required from within the Spoke folder
+package.path = package.path .. ";./Spoke/?.lua;./Spoke/?/init.lua"
 
 local Config = require("config")
-local Game = require("game")
-local Render = require("render")
-local Input = require("input")
+local GameManager = require("GameManager")
 
 function love.load()
     love.window.setMode(Config.window.width, Config.window.height)
@@ -11,24 +12,26 @@ function love.load()
     math.randomseed(os.time())
     love.keyboard.setKeyRepeat(true)
 
-    Game.init(Config)
-    Game.startNewGame(1) -- default single human + AI fill
+    -- 初始化游戏管理器
+    GameManager.createNewGame(Config, 4, "medium")
     
-    -- 打印欢迎信息和帮助
-    print("=== 蛋仔大富翁 ===")
-    print("按 H 键查看操作帮助")
-    print("按 A 键切换自动/手动模式")
-    print("默认为手动模式，按空格推进游戏")
+    print("=== 蛋仔大富翁 (Spoke Edition) ===")
+    print("游戏已启动！")
+    print("按 SPACE 推进游戏")
+    print("按 A 切换自动模式")
+    print("按 H 查看帮助")
+    print("按 ESC 退出游戏")
 end
 
 function love.update(dt)
-    Game.update(dt)
+    -- Spoke框架自动处理反应式更新
 end
 
 function love.draw()
-    Render.draw(Game.getState())
+    GameManager.draw()
 end
 
 function love.keypressed(key, scancode)
-    Input.handleKey(key or scancode, Game)
+    GameManager.handleInput(key)
 end
+
