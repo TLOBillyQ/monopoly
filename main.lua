@@ -49,8 +49,5 @@ function love.mousepressed(x, y, button)
     if UI.handleClick(x, y) then
         return  -- UI已处理
     end
-    
-    -- 否则传递给游戏管理器
-    GameManager.handleMouseClick(x, y, button)
 end
 

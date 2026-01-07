@@ -3,8 +3,6 @@
 
 local SpokeTree = require("Spoke.SpokeTree").SpokeTree
 local State = require("Spoke.State")
-local Reaction = require("Spoke.Reaction")
-local Effect = require("Spoke.Effect").Effect
 local LambdaEpoch = require("Spoke.LambdaEpoch")
 
 local PlayerSystem = require("systems.PlayerSystem")
@@ -37,20 +35,10 @@ function GameManager.initialize(config)
         -- 地块
         properties = State.Create({}),
         
-        -- 物品数据库
-        itemDatabase = ItemSystem.createItemDatabase(config.items),
-        chanceDatabase = ItemSystem.createChanceDatabase(config.chanceEvents),
-        
         -- 输入和渲染
         inputState = InputSystem.createInputState(),
         renderState = RenderSystem.createRenderState(),
         animationState = AnimationSystem.createAnimationState(),
-        
-        -- 游戏统计
-        statistics = State.Create({
-            totalTurns = 0,
-            totalEvents = 0,
-        }),
     }
     
     print("游戏管理器初始化完成")
@@ -101,7 +89,7 @@ end
 -- 创建游戏主Epoch
 function GameManager.createGameEpoch(context)
     return LambdaEpoch.new("GameEpoch", function(s)
-        -- 这个Epoch只作为容器，游戏逻辑在update中处理
+        -- Epoch 作为容器，主要逻辑在 update() 中处理
         return nil
     end)
 end
@@ -202,17 +190,6 @@ function GameManager.handleInput(key)
     end
 
     InputSystem.handleKeyPress(key, ctx.inputState, ctx.gameFlow, ctx.players:Get())
-end
-
--- 处理鼠标点击
-function GameManager.handleMouseClick(x, y, button)
-    local ctx = GameManager.context
-    if not ctx then return end
-    
-    -- 尝试处理UI点击（对话框、按钮等）
-    -- 这里可以集成UI.handleClick
-    
-    -- TODO: 添加地块点击显示详情的功能
 end
 
 -- 更新游戏动画

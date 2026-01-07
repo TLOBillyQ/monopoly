@@ -13,13 +13,15 @@
 - ✅ **智能AI** - 三个难度级别的AI对手
 - ✅ **事件驱动** - 使用Trigger和Effect实现事件系统
 
-## 📂 文件导航
+## 📂 文档导航
 
-### 快速开始
-1. **第一次使用？** → 阅读 [QUICKSTART.s](./docs/QUICKSTART.md)
-2. **想了解架构？** → 阅读 [SPOKE_ARCHITECTURE.md](./docs/SPOKE_ARCHITECTURE.md)
-3. **想看详细设计？** → 阅读 [ARCHITECTURE_DETAILS.md](./docs/ARCHITECTURE_DETAILS.md)
-4. **想看完成总结？** → 阅读 [COMPLETION_REPORT.md](./docs/COMPLETION_REPORT.md)
+| 文档 | 说明 | 适用人群 |
+|------|------|---------|
+| **[QUICKSTART.md](docs/QUICKSTART.md)** | 快速入门指南 | 新手用户 |
+| **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** | Spoke 架构设计详解 | 开发者 |
+| **[API_QUICK.md](docs/API_QUICK.md)** | API 快速参考 | 开发者 |
+| **[UI_QUICK_REFERENCE.md](docs/UI_QUICK_REFERENCE.md)** | UI 系统参考 | 开发者 |
+| **[docs/README.md](docs/README.md)** | 项目完整说明 | 所有人 |
 
 ### 核心文件
 
@@ -84,26 +86,27 @@ lua SimpleExample.lua
 
 ## 📚 学习路径
 
-### 初学者
+### 🌱 初学者
 
-1. 安装LÖVE2D框架
-2. 阅读 [QUICKSTART.md](./docs/QUICKSTART.md)
-3. 运行 [SimpleExample.lua](SimpleExample.lua)
-4. 尝试修改config.lua中的参数
+1. 安装 LÖVE2D 框架
+2. 阅读 [QUICKSTART.md](docs/QUICKSTART.md)
+3. 运行游戏 `love .`
+4. 尝试修改 `config.lua` 中的参数
 
-### 中级开发者
+### 🔨 开发者
 
-1. 阅读 [SPOKE_ARCHITECTURE.md](./docs/SPOKE_ARCHITECTURE.md)
-2. 学习Spoke框架的基本概念（State、Memo、Effect、Trigger）
-3. 研究各个系统的实现（systems/目录）
-4. 尝试添加新的游戏功能
+1. 阅读 [ARCHITECTURE.md](docs/ARCHITECTURE.md) 了解架构
+2. 学习 Spoke 框架基本概念（State、Memo、Effect）
+3. 查阅 [API_QUICK.md](docs/API_QUICK.md) 使用 API
+4. 研究 `systems/` 目录下的实现
+5. 尝试添加新功能或修改现有逻辑
 
-### 高级开发者
+### 🚀 高级开发者
 
-1. 阅读 [ARCHITECTURE_DETAILS.md](./docs/ARCHITECTURE_DETAILS.md)
-2. 研究系统间的通信机制
-3. 优化性能和扩展能力
-4. 贡献新功能和改进
+1. 研究系统间的通信和数据流
+2. 优化性能（状态颗粒度、Memo 缓存）
+3. 扩展新系统或重构现有系统
+4. 贡献代码和改进建议
 
 ## 💡 Spoke框架基础
 
@@ -215,14 +218,13 @@ onBankrupt:Fire({playerId = 1})  -- 发射事件
 
 | 指标 | 数值 |
 |------|------|
-| 总行数 | ~2650行 |
-| 核心文件 | 2个 |
-| 系统模块 | 8个 |
-| 地块数量 | 45个 |
-| 道具数量 | 19个 |
-| 机会卡 | 34张 |
-| 测试用例 | 5个 |
-| 文档页数 | 5份 |
+| 核心系统 | 8 个模块 |
+| 地块数量 | 45 个 |
+| 道具数量 | 19 个 |
+| 机会卡 | 34 张 |
+| 文档数量 | 5 份精简文档 |
+| 游戏模式 | 手动/自动 |
+| AI 难度 | 3 个级别 |
 
 ## 🔧 开发指南
 
