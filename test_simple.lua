@@ -6,10 +6,10 @@ local PropertySystem = require("systems.PropertySystem")
 local GameFlowSystem = require("systems.GameFlowSystem")
 local EventSystem = require("systems.EventSystem")
 
-local SimpleExample = {}
+local TestSimple = {}
 
 -- 创建一个简单的游戏场景
-function SimpleExample.createSimpleGame()
+function TestSimple.createSimpleGame()
     print("=== 简单游戏示例 ===\n")
     
     -- 1. 创建玩家
@@ -103,7 +103,7 @@ function SimpleExample.createSimpleGame()
 end
 
 -- 运行多回合的游戏循环示例
-function SimpleExample.runGameLoop()
+function TestSimple.runGameLoop()
     print("\n=== 游戏循环示例（5回合） ===\n")
     
     local Config = require("config")
@@ -168,7 +168,7 @@ function SimpleExample.runGameLoop()
 end
 
 -- 演示反应式特性
-function SimpleExample.demonstrateReactivity()
+function TestSimple.demonstrateReactivity()
     print("\n=== 反应式特性演示 ===\n")
     
     local State = require("spoke.state")
@@ -215,14 +215,14 @@ function SimpleExample.demonstrateReactivity()
 end
 
 -- 主函数
-function SimpleExample.run()
+function TestSimple.run()
     print("\n" .. string.rep("=", 50))
     print("   Spoke框架 - 蛋仔大富翁 示例程序")
     print(string.rep("=", 50) .. "\n")
     
-    SimpleExample.createSimpleGame()
-    SimpleExample.runGameLoop()
-    SimpleExample.demonstrateReactivity()
+    TestSimple.createSimpleGame()
+    TestSimple.runGameLoop()
+    TestSimple.demonstrateReactivity()
     
     print("\n" .. string.rep("=", 50))
     print("   所有示例运行完成！")
@@ -230,6 +230,6 @@ function SimpleExample.run()
 end
 
 -- 直接运行
-SimpleExample.run()
+TestSimple.run()
 
-return SimpleExample
+return TestSimple

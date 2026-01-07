@@ -163,8 +163,6 @@ function TestSuite.runAllTests()
 end
 
 -- 如果直接运行此文件
-if _G.arg and _G.arg[1] == "test" then
-    TestSuite.runAllTests()
-end
+TestSuite.runAllTests()
 
 return TestSuite
