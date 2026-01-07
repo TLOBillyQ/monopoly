@@ -38,7 +38,7 @@ end
 
 -- 随机抽取物品（按权重）
 function ItemSystem.drawRandomItem(itemDatabase)
-    local db = itemDatabase:Get()
+    local db = itemDatabase:Now()
     local items = {}
     local weights = {}
     
@@ -56,7 +56,7 @@ end
 
 -- 随机抽取机会卡
 function ItemSystem.drawRandomChance(chanceDatabase)
-    local db = chanceDatabase:Get()
+    local db = chanceDatabase:Now()
     local chances = {}
     
     for id, config in pairs(db) do
@@ -70,7 +70,7 @@ end
 
 -- 应用物品效果
 function ItemSystem.applyItemEffect(itemId, itemDatabase, targetPlayer, context)
-    local db = itemDatabase:Get()
+    local db = itemDatabase:Now()
     local item = db[itemId]
     
     if not item then return false end
@@ -82,7 +82,7 @@ end
 
 -- 应用机会卡效果
 function ItemSystem.applyChanceEffect(chanceId, chanceDatabase, targetPlayer, context)
-    local db = chanceDatabase:Get()
+    local db = chanceDatabase:Now()
     local chance = db[chanceId]
     
     if not chance then return false end

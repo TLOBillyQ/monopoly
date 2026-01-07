@@ -65,7 +65,7 @@ local State = require("Spoke.State")
 local money = State.Create(100000)
 
 -- 读取和更新
-local amount = money:Get()
+local amount = money:Now()
 money:Set(50000)  -- 自动触发依赖更新
 ```
 
@@ -218,7 +218,7 @@ local debug = require("Spoke.SpokeIntrospect")
 debug.printTree(GameManager.context.spokeTree)
 
 -- 追踪状态变化
-player.money:Get()  -- 在关键点打印状态
+player.money:Now()  -- 在关键点打印状态
 ```
 
 ## 性能优化

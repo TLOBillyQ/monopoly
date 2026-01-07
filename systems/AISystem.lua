@@ -63,9 +63,9 @@ end
 
 -- 决定是否购买地块
 function AISystem.decideToBuyProperty(aiPlayer, tilePrice, tileType, gameContext)
-    local difficulty = aiPlayer.difficulty:Get()
-    local money = aiPlayer.money:Get()
-    local aggressiveness = aiPlayer.aggressiveness:Get()
+    local difficulty = aiPlayer.difficulty:Now()
+    local money = aiPlayer.money:Now()
+    local aggressiveness = aiPlayer.aggressiveness:Now()
     
     -- 简单计算是否应该购买
     local affordability = money / tilePrice
@@ -87,8 +87,8 @@ end
 
 -- 决定是否使用物品卡
 function AISystem.decideToUseItem(aiPlayer, itemId, situation, gameContext)
-    local difficulty = aiPlayer.difficulty:Get()
-    local money = aiPlayer.money:Get()
+    local difficulty = aiPlayer.difficulty:Now()
+    local money = aiPlayer.money:Now()
     
     if difficulty == AISystem.Difficulty.EASY then
         return math.random() > 0.7  -- 容易难度：随机使用
@@ -107,12 +107,12 @@ end
 
 -- 决定升级地块
 function AISystem.decideToUpgrade(aiPlayer, propertyId, upgradeCost, gameContext)
-    local difficulty = aiPlayer.difficulty:Get()
-    local money = aiPlayer.money:Get()
-    local riskTolerance = aiPlayer.riskTolerance:Get()
+    local difficulty = aiPlayer.difficulty:Now()
+    local money = aiPlayer.money:Now()
+    local riskTolerance = aiPlayer.riskTolerance:Now()
     
     local moneyAfterUpgrade = money - upgradeCost
-    local minimumRequired = gameContext.config:Get().constants.START_MONEY * 0.2
+    local minimumRequired = gameContext.config:Now().constants.START_MONEY * 0.2
     
     if difficulty == AISystem.Difficulty.EASY then
         return moneyAfterUpgrade > minimumRequired * 2
@@ -134,7 +134,7 @@ function AISystem.selectTarget(aiPlayer, availableTargets, gameContext)
     local maxWealth = 0
     
     for _, target in ipairs(availableTargets) do
-        local wealth = target.money:Get() + (#target.properties:Get() * 50)
+        local wealth = target.money:Now() + (#target.properties:Now() * 50)
         if wealth > maxWealth then
             maxWealth = wealth
             targetWithMostWealth = target
@@ -146,16 +146,16 @@ end
 
 -- 评估游戏形势
 function AISystem.evaluateGameSituation(aiPlayer, allPlayers, gameContext)
-    local aiMoney = aiPlayer.money:Get()
-    local aiProperties = #aiPlayer.properties:Get()
+    local aiMoney = aiPlayer.money:Now()
+    local aiProperties = #aiPlayer.properties:Now()
     
     local averageMoney = 0
     local averageProperties = 0
     
     for _, player in ipairs(allPlayers) do
-        if player.id:Get() ~= aiPlayer.id:Get() then
-            averageMoney = averageMoney + player.money:Get()
-            averageProperties = averageProperties + #player.properties:Get()
+        if player.id:Now() ~= aiPlayer.id:Now() then
+            averageMoney = averageMoney + player.money:Now()
+            averageProperties = averageProperties + #player.properties:Now()
         end
     end
     

@@ -59,27 +59,27 @@ end
 
 -- 添加金币
 function PlayerSystem.addMoney(playerState, amount)
-    local currentMoney = playerState.money:Get()
+    local currentMoney = playerState.money:Now()
     playerState.money:Set(currentMoney + amount)
 end
 
 -- 减少金币
 function PlayerSystem.subtractMoney(playerState, amount)
-    local currentMoney = playerState.money:Get()
+    local currentMoney = playerState.money:Now()
     local newAmount = math.max(0, currentMoney - amount)
     playerState.money:Set(newAmount)
 end
 
 -- 获得地块
 function PlayerSystem.acquireProperty(playerState, propertyId)
-    local properties = playerState.properties:Get()
+    local properties = playerState.properties:Now()
     table.insert(properties, propertyId)
     playerState.properties:Set(properties)
 end
 
 -- 失去地块
 function PlayerSystem.loseProperty(playerState, propertyId)
-    local properties = playerState.properties:Get()
+    local properties = playerState.properties:Now()
     for i, id in ipairs(properties) do
         if id == propertyId then
             table.remove(properties, i)
@@ -91,7 +91,7 @@ end
 
 -- 添加道具
 function PlayerSystem.addItem(playerState, itemId)
-    local items = playerState.items:Get()
+    local items = playerState.items:Now()
     if #items < 5 then  -- 最多5个道具
         table.insert(items, itemId)
         playerState.items:Set(items)
@@ -102,7 +102,7 @@ end
 
 -- 移除道具
 function PlayerSystem.removeItem(playerState, itemId)
-    local items = playerState.items:Get()
+    local items = playerState.items:Now()
     for i, id in ipairs(items) do
         if id == itemId then
             table.remove(items, i)
@@ -135,8 +135,8 @@ end
 
 -- 应用附身
 function PlayerSystem.applyBuff(playerState, buffType, duration)
-    local buffs = playerState.buffs:Get()
-    local buffTurns = playerState.buffTurns:Get()
+    local buffs = playerState.buffs:Now()
+    local buffTurns = playerState.buffTurns:Now()
     
     if not buffs[buffType] then
         buffs[buffType] = buffType
@@ -148,8 +148,8 @@ end
 
 -- 移除附身
 function PlayerSystem.removeBuff(playerState, buffType)
-    local buffs = playerState.buffs:Get()
-    local buffTurns = playerState.buffTurns:Get()
+    local buffs = playerState.buffs:Now()
+    local buffTurns = playerState.buffTurns:Now()
     
     buffs[buffType] = nil
     buffTurns[buffType] = nil
@@ -159,8 +159,8 @@ end
 
 -- 减少附身时间
 function PlayerSystem.reduceBuff(playerState)
-    local buffTurns = playerState.buffTurns:Get()
-    local buffs = playerState.buffs:Get()
+    local buffTurns = playerState.buffTurns:Now()
+    local buffs = playerState.buffs:Now()
     
     if not buffTurns or not buffs then
         return

@@ -77,7 +77,7 @@ local State = require("Spoke.State")
 local money = State.Create(100000)
 
 -- 获取值
-local amount = money:Get()
+local amount = money:Now()
 
 -- 修改值（自动通知依赖）
 money:Set(50000)
@@ -132,9 +132,9 @@ local PlayerSystem = require("systems.PlayerSystem")
 local player = PlayerSystem.createPlayer(1, 1001, 4001, false)
 
 -- 访问反应式属性
-print(player.money:Get())           -- 100000
-print(player.position:Get())        -- 1
-print(#player.properties:Get())     -- 0
+print(player.money:Now())           -- 100000
+print(player.position:Now())        -- 1
+print(#player.properties:Now())     -- 0
 
 -- 修改属性（自动触发依赖）
 PlayerSystem.addMoney(player, 5000) -- money 变为 105000
@@ -243,7 +243,7 @@ PlayerSystem.applyBuff(player, "angel", 5)  -- 5回合的天使附身
 ### 检查破产
 
 ```lua
-if player.money:Get() <= 0 then
+if player.money:Now() <= 0 then
     player.state:Set("bankrupt")
 end
 ```
@@ -259,15 +259,15 @@ GameFlowSystem.addLog(gameFlow, "玩家1获得了1000金币")
 ### 检查状态值
 
 ```lua
-print("玩家金币: " .. player.money:Get())
-print("玩家位置: " .. player.position:Get())
-print("玩家地块: " .. table.concat(player.properties:Get(), ","))
+print("玩家金币: " .. player.money:Now())
+print("玩家位置: " .. player.position:Now())
+print("玩家地块: " .. table.concat(player.properties:Now(), ","))
 ```
 
 ### 查看游戏日志
 
 ```lua
-local logs = gameFlow.logs:Get()
+local logs = gameFlow.logs:Now()
 for _, log in ipairs(logs) do
     print(log.message)
 end

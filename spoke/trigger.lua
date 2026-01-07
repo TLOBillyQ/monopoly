@@ -82,7 +82,7 @@ function Trigger:Flush()
         self.eventHead = self.eventHead + 1
         
         -- Copy subscribers
-        local subList = self.subListPool:Get()
+        local subList = self.subListPool:Now()
         for i, sub in ipairs(self.subs) do
             table.insert(subList, sub)
         end

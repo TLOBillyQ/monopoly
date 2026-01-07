@@ -46,7 +46,7 @@ function AnimationSystem.updateDiceAnimation(animState, dt, finalValue)
         return false
     end
     
-    if not animState.diceRolling:Get() then
+    if not animState.diceRolling:Now() then
         return false
     end
     
@@ -54,7 +54,7 @@ function AnimationSystem.updateDiceAnimation(animState, dt, finalValue)
         return false
     end
     
-    local currentTime = animState.diceAnimationTime:Get()
+    local currentTime = animState.diceAnimationTime:Now()
     currentTime = currentTime + dt
     animState.diceAnimationTime:Set(currentTime)
     
@@ -86,7 +86,7 @@ function AnimationSystem.updatePlayerMoveAnimation(animState, dt)
         return false
     end
     
-    if not animState.playerMoving:Get() then
+    if not animState.playerMoving:Now() then
         return false
     end
     
@@ -94,7 +94,7 @@ function AnimationSystem.updatePlayerMoveAnimation(animState, dt)
         return false
     end
     
-    local progress = animState.playerMoveProgress:Get()
+    local progress = animState.playerMoveProgress:Now()
     progress = progress + dt * 2  -- 移动速度
     
     if progress >= 1 then
@@ -115,7 +115,7 @@ function AnimationSystem.updateAll(animState, dt, diceValue)
     
     -- 更新动画时间
     if animState.animationTime and animState.animationTime.Get then
-        local animTime = animState.animationTime:Get()
+        local animTime = animState.animationTime:Now()
         animState.animationTime:Set(animTime + dt)
     end
     

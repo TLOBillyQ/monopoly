@@ -49,6 +49,7 @@ function Memo:Now()
     return self.state:Now()
 end
 
+
 function Memo:Subscribe(action)
     return self.state:Subscribe(action)
 end

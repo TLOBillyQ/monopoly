@@ -14,21 +14,21 @@ function TestSuite.testPlayerSystem()
     
     -- 测试金币操作
     PlayerSystem.addMoney(player, 5000)
-    assert(player.money:Get() == 105000, "金币增加失败")
+    assert(player.money:Now() == 105000, "金币增加失败")
     print("✓ 金币增加测试通过")
     
     PlayerSystem.subtractMoney(player, 3000)
-    assert(player.money:Get() == 102000, "金币减少失败")
+    assert(player.money:Now() == 102000, "金币减少失败")
     print("✓ 金币减少测试通过")
     
     -- 测试地块操作
     PlayerSystem.acquireProperty(player, 5)
-    assert(#player.properties:Get() == 1, "获得地块失败")
+    assert(#player.properties:Now() == 1, "获得地块失败")
     print("✓ 地块获得测试通过")
     
     -- 测试附身
     PlayerSystem.applyBuff(player, "angel", 5)
-    assert(player.buffs:Get()["angel"] == "angel", "附身应用失败")
+    assert(player.buffs:Now()["angel"] == "angel", "附身应用失败")
     print("✓ 附身应用测试通过")
     
     print("✓ 玩家系统测试全部通过")
@@ -48,13 +48,13 @@ function TestSuite.testPropertySystem()
     
     -- 测试购买
     PropertySystem.buyProperty(tile, 1, 500)
-    assert(tile.owner:Get() == 1, "购买地块失败")
-    assert(tile.level:Get() == 1, "初始等级设置失败")
+    assert(tile.owner:Now() == 1, "购买地块失败")
+    assert(tile.level:Now() == 1, "初始等级设置失败")
     print("✓ 地块购买测试通过")
     
     -- 测试升级
     PropertySystem.upgradeProperty(tile, 1000)
-    assert(tile.level:Get() == 2, "地块升级失败")
+    assert(tile.level:Now() == 2, "地块升级失败")
     print("✓ 地块升级测试通过")
     
     -- 测试租金计算
@@ -74,17 +74,17 @@ function TestSuite.testGameFlowSystem()
     -- 测试骰子投掷
     local roll = GameFlowSystem.rollDice(gameFlow)
     assert(roll >= 1 and roll <= 6, "骰子投掷失败")
-    assert(gameFlow.lastDiceRoll:Get() == roll, "骰子结果记录失败")
+    assert(gameFlow.lastDiceRoll:Now() == roll, "骰子结果记录失败")
     print("✓ 骰子投掷测试通过")
     
     -- 测试回合推进
     GameFlowSystem.nextTurn(gameFlow, 4)
-    assert(gameFlow.currentTurn:Get() == 2, "回合推进失败")
+    assert(gameFlow.currentTurn:Now() == 2, "回合推进失败")
     print("✓ 回合推进测试通过")
     
     -- 测试日志
     GameFlowSystem.addLog(gameFlow, "测试日志")
-    assert(#gameFlow.logs:Get() > 0, "日志添加失败")
+    assert(#gameFlow.logs:Now() > 0, "日志添加失败")
     print("✓ 日志系统测试通过")
     
     print("✓ 游戏流程系统测试全部通过")
@@ -119,7 +119,7 @@ function TestSuite.testAISystem()
     local aiPlayer = AISystem.createAIPlayer(1, AISystem.Difficulty.MEDIUM, 1001, 4001)
     
     -- 测试购买决策
-    assert(aiPlayer.difficulty:Get() == AISystem.Difficulty.MEDIUM, "AI难度设置失败")
+    assert(aiPlayer.difficulty:Now() == AISystem.Difficulty.MEDIUM, "AI难度设置失败")
     print("✓ AI创建测试通过")
     
     -- 测试局势评估

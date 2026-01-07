@@ -24,7 +24,7 @@ function SpokePool:SetConstructor(constructor)
     self.constructor = constructor
 end
 
-function SpokePool:Get()
+function SpokePool:Now()
     if #self.pool > 0 then
         return table.remove(self.pool)
     end

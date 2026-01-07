@@ -48,7 +48,7 @@ end
 
 -- 前进到下一个阶段
 function GameFlowSystem.nextPhase(gameFlow, players)
-    local currentPhase = gameFlow.currentPhase:Get()
+    local currentPhase = gameFlow.currentPhase:Now()
     
     local phaseOrder = {
         GameFlowSystem.Phase.BEFORE_ACTION,
@@ -79,11 +79,11 @@ end
 function GameFlowSystem.nextTurn(gameFlow, playerCount)
     playerCount = playerCount or 4
     
-    local currentPlayerIndex = gameFlow.currentPlayerIndex:Get()
+    local currentPlayerIndex = gameFlow.currentPlayerIndex:Now()
     local nextPlayerIndex = (currentPlayerIndex % playerCount) + 1
     
     gameFlow.currentPlayerIndex:Set(nextPlayerIndex)
-    gameFlow.currentTurn:Set(gameFlow.currentTurn:Get() + 1)
+    gameFlow.currentTurn:Set(gameFlow.currentTurn:Now() + 1)
     gameFlow.currentPhase:Set(GameFlowSystem.Phase.BEFORE_ACTION)
 end
 
@@ -97,7 +97,7 @@ end
 
 -- 记录日志
 function GameFlowSystem.addLog(gameFlow, message)
-    local logs = gameFlow.logs:Get()
+    local logs = gameFlow.logs:Now()
     table.insert(logs, {
         message = message,
         timestamp = os.time(),

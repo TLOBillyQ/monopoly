@@ -21,19 +21,19 @@ end
 
 -- 处理着陆事件
 function EventSystem.handleLandEvent(player, tile, gameContext)
-    local tileType = tile.type:Get()
+    local tileType = tile.type:Now()
     
     if tileType == "start" then
         -- 经过起点获得奖金
-        local reward = gameContext.config:Get().constants.PASS_START_BONUS
+        local reward = gameContext.config:Now().constants.PASS_START_BONUS
         return {event = "passStart", reward = reward}
         
     elseif tileType == "property" then
-        local owner = tile.owner:Get()
+        local owner = tile.owner:Now()
         if not owner then
             -- 无主地块，可以购买
-            return {event = "canBuyProperty", tileId = tile.id:Get()}
-        elseif owner ~= player.id:Get() then
+            return {event = "canBuyProperty", tileId = tile.id:Now()}
+        elseif owner ~= player.id:Now() then
             -- 他人地块，支付租金
             local rent = EventSystem.calculateRent(tile)
             return {event = "payRent", amount = rent, owner = owner}
@@ -70,8 +70,8 @@ end
 
 -- 计算租金
 function EventSystem.calculateRent(tile)
-    local level = tile.level:Get()
-    local basePrice = tile.basePrice:Get()
+    local level = tile.level:Now()
+    local basePrice = tile.basePrice:Now()
     
     if level == 0 then return 0 end
     
@@ -103,16 +103,16 @@ end
 
 -- 处理购买地块
 function EventSystem.handlePropertyPurchase(player, tile, gameContext, buyPrice)
-    local playerMoney = player.money:Get()
+    local playerMoney = player.money:Now()
     
     if playerMoney >= buyPrice then
         -- 可以购买
         player.money:Set(playerMoney - buyPrice)
-        tile.owner:Set(player.id:Get())
+        tile.owner:Set(player.id:Now())
         tile.level:Set(1)
         
-        local properties = player.properties:Get()
-        table.insert(properties, tile.id:Get())
+        local properties = player.properties:Now()
+        table.insert(properties, tile.id:Now())
         player.properties:Set(properties)
         
         return {success = true, message = "购买成功"}
@@ -123,8 +123,8 @@ end
 
 -- 破产检查
 function EventSystem.checkBankruptcy(player)
-    local money = player.money:Get()
-    local state = player.state:Get()
+    local money = player.money:Now()
+    local state = player.state:Now()
     
     if money <= 0 and state ~= "bankrupt" then
         player.state:Set("bankrupt")

@@ -38,7 +38,7 @@ end
 
 -- 升级地块
 function PropertySystem.upgradeProperty(tile, price)
-    local currentLevel = tile.level:Get()
+    local currentLevel = tile.level:Now()
     if currentLevel < 3 then
         tile.level:Set(currentLevel + 1)
         return price * (2 ^ currentLevel)
@@ -48,9 +48,9 @@ end
 
 -- 计算租金
 function PropertySystem.calculateRent(tile, boardSize)
-    local tileType = tile.type:Get()
-    local level = tile.level:Get()
-    local basePrice = tile.basePrice:Get()
+    local tileType = tile.type:Now()
+    local level = tile.level:Now()
+    local basePrice = tile.basePrice:Now()
     
     if tileType ~= "property" then
         return 0
@@ -67,14 +67,14 @@ end
 
 -- 放置路障
 function PropertySystem.placeRoadblock(tile, playerId)
-    local roadblocks = tile.roadblocks:Get()
+    local roadblocks = tile.roadblocks:Now()
     table.insert(roadblocks, {playerId = playerId, turnsLeft = 1})
     tile.roadblocks:Set(roadblocks)
 end
 
 -- 放置地雷
 function PropertySystem.placeLandmine(tile, playerId)
-    local landmines = tile.landmines:Get()
+    local landmines = tile.landmines:Now()
     table.insert(landmines, {playerId = playerId, turnsLeft = 1})
     tile.landmines:Set(landmines)
 end

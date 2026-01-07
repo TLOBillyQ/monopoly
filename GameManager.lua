@@ -96,13 +96,13 @@ end
 
 -- 执行移动
 function GameManager.executeMovement(context, player)
-    local steps = context.gameFlow.movementSteps:Get()
-    local currentPos = player.position:Get()
+    local steps = context.gameFlow.movementSteps:Now()
+    local currentPos = player.position:Now()
     local newPos = (currentPos + steps - 1) % 45 + 1
     
     -- 如果经过起点
     if newPos < currentPos then
-        local reward = context.config:Get().rules.passStartBonus
+        local reward = context.config:Now().rules.passStartBonus
         PlayerSystem.addMoney(player, reward)
         GameFlowSystem.addLog(context.gameFlow, "经过起点，获得" .. reward .. "金币")
     end
@@ -112,8 +112,8 @@ end
 
 -- 执行着陆事件
 function GameManager.executeLandEvent(context, player)
-    local properties = context.properties:Get()
-    local position = player.position:Get()
+    local properties = context.properties:Now()
+    local position = player.position:Now()
     local tile = properties[position]
     
     if not tile then return end
@@ -124,18 +124,18 @@ function GameManager.executeLandEvent(context, player)
         PlayerSystem.addMoney(player, event.reward)
     elseif event.event == "canBuyProperty" then
         -- 提示购买
-        if not player.isAI:Get() then
-            InputSystem.promptBuyProperty(context.inputState, tile.name:Get(), tile.basePrice:Get())
+        if not player.isAI:Now() then
+            InputSystem.promptBuyProperty(context.inputState, tile.name:Now(), tile.basePrice:Now())
         else
             -- AI决定购买
-            if AISystem.decideToBuyProperty(player, tile.basePrice:Get(), tile.type:Get(), context) then
-                EventSystem.handlePropertyPurchase(player, tile, context, tile.basePrice:Get())
+            if AISystem.decideToBuyProperty(player, tile.basePrice:Now(), tile.type:Now(), context) then
+                EventSystem.handlePropertyPurchase(player, tile, context, tile.basePrice:Now())
             end
         end
     elseif event.event == "payRent" then
         local owner = nil
-        for _, p in ipairs(context.players:Get()) do
-            if p.id:Get() == event.owner then
+        for _, p in ipairs(context.players:Now()) do
+            if p.id:Now() == event.owner then
                 owner = p
                 break
             end
@@ -156,7 +156,7 @@ function GameManager.executeAfterAction(context, player)
     
     -- 检查破产
     if EventSystem.checkBankruptcy(player) then
-        GameFlowSystem.addLog(context.gameFlow, "玩家" .. player.id:Get() .. "破产了")
+        GameFlowSystem.addLog(context.gameFlow, "玩家" .. player.id:Now() .. "破产了")
     end
     
     -- 检查游戏结束
@@ -165,20 +165,20 @@ end
 
 -- 检查游戏是否结束
 function GameManager.checkGameEnd(context)
-    local players = context.players:Get()
+    local players = context.players:Now()
     local activePlayers = 0
     local lastActivePlayer = nil
     
     for _, player in ipairs(players) do
-        if player.state:Get() ~= "bankrupt" then
+        if player.state:Now() ~= "bankrupt" then
             activePlayers = activePlayers + 1
             lastActivePlayer = player
         end
     end
     
     if activePlayers <= 1 and lastActivePlayer then
-        GameFlowSystem.endGame(context.gameFlow, lastActivePlayer.id:Get())
-        GameFlowSystem.addLog(context.gameFlow, "玩家" .. lastActivePlayer.id:Get() .. "胜利了！")
+        GameFlowSystem.endGame(context.gameFlow, lastActivePlayer.id:Now())
+        GameFlowSystem.addLog(context.gameFlow, "玩家" .. lastActivePlayer.id:Now() .. "胜利了！")
     end
 end
 
@@ -189,7 +189,7 @@ function GameManager.handleInput(key)
         return
     end
 
-    InputSystem.handleKeyPress(key, ctx.inputState, ctx.gameFlow, ctx.players:Get())
+    InputSystem.handleKeyPress(key, ctx.inputState, ctx.gameFlow, ctx.players:Now())
 end
 
 -- 更新游戏动画
@@ -207,7 +207,7 @@ function GameManager.update(dt)
     -- 获取当前骰子值用于动画
     local diceValue = nil
     if ctx.gameFlow and ctx.gameFlow.lastDiceRoll and ctx.gameFlow.lastDiceRoll.Get then
-        diceValue = ctx.gameFlow.lastDiceRoll:Get()
+        diceValue = ctx.gameFlow.lastDiceRoll:Now()
     end
     
     -- 更新所有动画
@@ -218,9 +218,9 @@ function GameManager.update(dt)
         return
     end
     
-    local phase = ctx.gameFlow.currentPhase:Get()
-    local playerIndex = ctx.gameFlow.currentPlayerIndex:Get()
-    local players = ctx.players:Get()
+    local phase = ctx.gameFlow.currentPhase:Now()
+    local playerIndex = ctx.gameFlow.currentPlayerIndex:Now()
+    local players = ctx.players:Now()
     
     if not players[playerIndex] then return end
     
@@ -263,9 +263,9 @@ function GameManager.draw()
     end
 
     -- 每帧重新创建渲染管道，确保获取最新的玩家状态
-    local players = ctx.players:Get()
-    local properties = ctx.properties:Get()
-    local config = ctx.config:Get()
+    local players = ctx.players:Now()
+    local properties = ctx.properties:Now()
+    local config = ctx.config:Now()
     
     local renderPipeline = RenderSystem.createRenderPipeline(
         ctx.gameFlow,

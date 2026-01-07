@@ -123,7 +123,7 @@ end
 
 -- 反应式方式（Spoke）
 local money = State.Create(player.money)
-money:Set(money:Get() - 1000)  -- 自动更新依赖
+money:Set(money:Now() - 1000)  -- 自动更新依赖
 ```
 
 ### 核心概念
@@ -131,7 +131,7 @@ money:Set(money:Get() - 1000)  -- 自动更新依赖
 #### 1. State（反应式值）
 ```lua
 local money = State.Create(100000)
-local newAmount = money:Get()
+local newAmount = money:Now()
 money:Set(50000)  -- 自动通知依赖
 ```
 
@@ -284,13 +284,13 @@ end
 
 ### 查看状态值
 ```lua
-print("玩家金币: " .. player.money:Get())
-print("玩家位置: " .. player.position:Get())
+print("玩家金币: " .. player.money:Now())
+print("玩家位置: " .. player.position:Now())
 ```
 
 ### 查看游戏日志
 ```lua
-local logs = gameFlow.logs:Get()
+local logs = gameFlow.logs:Now()
 for _, log in ipairs(logs) do
     print(log.message)
 end

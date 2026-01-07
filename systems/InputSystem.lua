@@ -41,7 +41,7 @@ function InputSystem.handleKeyPress(key, inputState, gameFlow, players)
         
     elseif key == "a" then
         -- 切换自动模式
-        local autoMode = gameFlow.autoMode:Get()
+        local autoMode = gameFlow.autoMode:Now()
         gameFlow.autoMode:Set(not autoMode)
         
     elseif key == "h" then

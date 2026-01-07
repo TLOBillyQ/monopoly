@@ -44,12 +44,12 @@ PlayerSystem.reduceBuff(player)                 -- 减少附身时间
 
 ### 响应式属性
 ```lua
-player.money:Get()                              -- 获取金币
-player.position:Get()                           -- 获取位置
-player.properties:Get()                         -- 获取拥有的地块列表
-player.items:Get()                              -- 获取道具列表
-player.totalAsset:Get()                         -- 总资产（自动计算）
-player.isBankrupt:Get()                         -- 是否破产（自动计算）
+player.money:Now()                              -- 获取金币
+player.position:Now()                           -- 获取位置
+player.properties:Now()                         -- 获取拥有的地块列表
+player.items:Now()                              -- 获取道具列表
+player.totalAsset:Now()                         -- 总资产（自动计算）
+player.isBankrupt:Now()                         -- 是否破产（自动计算）
 ```
 
 ---
@@ -72,11 +72,11 @@ PropertySystem.setLandmine(tile, ownerId)       -- 放置地雷
 
 ### 地块属性查询
 ```lua
-tile.name:Get()                                 -- 地块名称
-tile.type:Get()                                 -- 地块类型
-tile.owner:Get()                                -- 拥有者ID
-tile.basePrice:Get()                            -- 基础价格
-tile.level:Get()                                -- 升级等级
+tile.name:Now()                                 -- 地块名称
+tile.type:Now()                                 -- 地块类型
+tile.owner:Now()                                -- 拥有者ID
+tile.basePrice:Now()                            -- 基础价格
+tile.level:Now()                                -- 升级等级
 ```
 
 ---
@@ -103,10 +103,10 @@ GameFlowSystem.endGame(gameFlow, winnerId)      -- 结束游戏
 
 ### 状态查询
 ```lua
-gameFlow.currentPhase:Get()                     -- 当前阶段
-gameFlow.currentPlayerIndex:Get()               -- 当前玩家索引
-gameFlow.currentTurn:Get()                      -- 当前回合数
-gameFlow.gameLog:Get()                          -- 游戏日志
+gameFlow.currentPhase:Now()                     -- 当前阶段
+gameFlow.currentPlayerIndex:Now()               -- 当前玩家索引
+gameFlow.currentTurn:Now()                      -- 当前回合数
+gameFlow.gameLog:Now()                          -- 游戏日志
 ```
 
 ---
@@ -218,8 +218,8 @@ GameManager.handleInput(key)                    -- 处理输入
 ### 上下文访问
 ```lua
 GameManager.context                             -- 游戏上下文（包含所有状态）
-GameManager.context.players:Get()               -- 获取玩家列表
-GameManager.context.properties:Get()            -- 获取地块列表
+GameManager.context.players:Now()               -- 获取玩家列表
+GameManager.context.properties:Now()            -- 获取地块列表
 GameManager.context.gameFlow                    -- 游戏流程状态
 ```
 
@@ -232,16 +232,16 @@ GameManager.context.gameFlow                    -- 游戏流程状态
 local State = require("Spoke.State")
 local value = State.Create(initialValue)
 value:Set(newValue)                             -- 更新值
-value:Get()                                     -- 读取值
+value:Now()                                     -- 读取值
 ```
 
 ### Memo（计算值）
 ```lua
 local Memo = require("Spoke.Memo")
 local computed = Memo.new(function(s)
-    return someState:Get() * 2
+    return someState:Now() * 2
 end)
-computed:Get()                                  -- 获取计算结果
+computed:Now()                                  -- 获取计算结果
 ```
 
 ### Trigger（触发器）
@@ -269,7 +269,7 @@ PlayerSystem.addMoney(player, 1000)
 ```lua
 local function setupMoney监听(player)
     -- 金币变化会自动更新UI
-    return player.money:Get()
+    return player.money:Now()
 end
 ```
 
@@ -286,7 +286,7 @@ end
 ```lua
 local AISystem = require("systems.AISystem")
 if AISystem.decideToBuyProperty(player, price, tileType, context) then
-    PropertySystem.buyProperty(tile, player.id:Get())
+    PropertySystem.buyProperty(tile, player.id:Now())
 end
 ```
 

@@ -21,10 +21,6 @@ function State:Now()
     return self.value
 end
 
-function State:Get()
-    return self.value
-end
-
 function State:Subscribe(action)
     if type(action) ~= "function" then
         error("Subscribe requires a function, got " .. type(action))

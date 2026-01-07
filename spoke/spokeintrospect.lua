@@ -82,7 +82,7 @@ function SpokeIntrospect.DumpTree(root, eLabel)
         local label = eLabel and eLabel(epoch) or tostring(epoch)
         table.insert(result, string.format("%s|-- %s", indent, label))
         
-        local children = SpokeIntrospect.GetChildren(epoch, elPool:Get())
+        local children = SpokeIntrospect.GetChildren(epoch, elPool:Now())
         for _, c in ipairs(children) do
             traverse(depth + 1, c)
         end

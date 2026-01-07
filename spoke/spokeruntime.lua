@@ -123,7 +123,7 @@ function SpokeRuntime:Push(frame)
     table.insert(self.frames, frame)
     table.insert(self.versions, self.TimeStamp)
     self.TimeStamp = self.TimeStamp + 1
-    table.insert(self.onPopSelfFrames, self.fnlPool:Get())
+    table.insert(self.onPopSelfFrames, self.fnlPool:Now())
     return Handle.new(self, #self.frames, self.versions[#self.versions])
 end
 

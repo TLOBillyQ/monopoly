@@ -61,8 +61,8 @@ function RenderSystem.getTileColor(tile, property)
     elseif tile.type == "item_card" or tile.type == "chance_card" then
         return {0.5, 0.5, 1}  -- 蓝色
     elseif tile.type == "property" then
-        if property and property.ownerId and property.ownerId:Get() > 0 then
-            local level = property.level and property.level:Get() or 0
+        if property and property.ownerId and property.ownerId:Now() > 0 then
+            local level = property.level and property.level:Now() or 0
             local intensity = 0.5 + level * 0.1
             return {intensity, 0.7, intensity}  -- 根据等级变化
         else
@@ -96,9 +96,9 @@ function RenderSystem.drawBoard(properties, config, renderState)
         
         -- 如果是地产，显示等级
         if tile.type == "property" and property and property.ownerId then
-            local ownerId = property.ownerId:Get()
+            local ownerId = property.ownerId:Now()
             if ownerId and ownerId > 0 then
-                local level = (property.level and property.level:Get()) or 0
+                local level = (property.level and property.level:Now()) or 0
                 love.graphics.setColor(0.1, 0.1, 0.1)
                 love.graphics.print("Lv" .. level, x + 5, y + 5)
                 
@@ -128,12 +128,12 @@ function RenderSystem.drawPlayers(players, config)
         if not player.position or not player.money then goto next_player end
         
         -- 检查是否破产或淘汰
-        local playerState = player.state:Get()
-        local money = player.money:Get()
+        local playerState = player.state:Now()
+        local money = player.money:Now()
         local isBankrupt = playerState == "bankrupt" or money < 0
         
         if not isBankrupt then
-            local position = player.position:Get()
+            local position = player.position:Now()
             if not playersOnTile[position] then
                 playersOnTile[position] = {}
             end
@@ -179,7 +179,7 @@ function RenderSystem.drawPlayers(players, config)
                 love.graphics.setLineWidth(1)
                 
                 -- 绘制金币显示（简化版，显示金币数量等级）
-                local money = player.money:Get()
+                local money = player.money:Now()
                 local moneyLevel = 0
                 if money > 200000 then moneyLevel = 3
                 elseif money > 100000 then moneyLevel = 2
@@ -220,15 +220,15 @@ function RenderSystem.drawPlayerInfo(players, gameFlow, config)
         return
     end
     
-    local currentPlayer = gameFlow.currentPlayerIndex:Get()
+    local currentPlayer = gameFlow.currentPlayerIndex:Now()
     local playerCount = 0
     local displayIndex = 0
     
     -- 先数一遍有多少个活跃玩家
     for i, player in ipairs(players) do
         if player and player.position and player.money then
-            local playerState = player.state:Get()
-            local money = player.money:Get()
+            local playerState = player.state:Now()
+            local money = player.money:Now()
             local isBankrupt = playerState == "bankrupt" or money < 0
             if not isBankrupt then
                 playerCount = playerCount + 1
@@ -244,21 +244,21 @@ function RenderSystem.drawPlayerInfo(players, gameFlow, config)
         if not player.position or not player.money then goto next_player end
         
         -- 检查是否破产或淘汰
-        local playerState = player.state:Get()
-        local money = player.money:Get()
+        local playerState = player.state:Now()
+        local money = player.money:Now()
         local isBankrupt = playerState == "bankrupt" or money < 0
         if isBankrupt then goto next_player end
         
         displayIndex = displayIndex + 1
         local yPos = panelY + 60 + (displayIndex - 1) * cardHeight
-        local position = player.position:Get()
+        local position = player.position:Now()
         
         -- 计算总资产（金币 + 地块价值）
-        local propertyCount = (player.properties and #player.properties:Get()) or 0
+        local propertyCount = (player.properties and #player.properties:Now()) or 0
         local propertyValue = propertyCount * 1000  -- 简化：每块地 1000 金币
         local totalAsset = money + propertyValue
         
-        local itemCount = (player.items and #player.items:Get()) or 0
+        local itemCount = (player.items and #player.items:Now()) or 0
         
         -- 玩家卡片背景
         local cardColor = config.colors.player[i] or {0.5, 0.5, 0.5}
@@ -349,9 +349,9 @@ function RenderSystem.drawGameStatus(gameFlow, config)
     
     love.graphics.setColor(0.2, 0.2, 0.2)
     
-    local turn = gameFlow.currentTurn:Get()
-    local phase = gameFlow.currentPhase:Get()
-    local playerIndex = gameFlow.currentPlayerIndex:Get()
+    local turn = gameFlow.currentTurn:Now()
+    local phase = gameFlow.currentPhase:Now()
+    local playerIndex = gameFlow.currentPlayerIndex:Now()
     
     -- 使用更友好的阶段名称
     local phaseNames = {
@@ -370,7 +370,7 @@ end
 -- 绘制日志
 function RenderSystem.drawLogs(gameFlow)
     -- 日志已集成到游戏状态面板中，这里可以选择性显示最新日志
-    local logs = gameFlow.logs:Get()
+    local logs = gameFlow.logs:Now()
     if #logs == 0 then return end
     
     local recentLog = logs[#logs]
@@ -382,7 +382,7 @@ end
 
 -- 绘制骰子动画
 function RenderSystem.drawDice(animationState)
-    if not animationState or not animationState.diceRolling:Get() then 
+    if not animationState or not animationState.diceRolling:Now() then 
         return 
     end
     
@@ -403,7 +403,7 @@ function RenderSystem.drawDice(animationState)
     love.graphics.setLineWidth(1)
     
     -- 骰子点数
-    local value = animationState.diceValue:Get()
+    local value = animationState.diceValue:Now()
     love.graphics.setColor(0.9, 0.2, 0.2)
     love.graphics.print(tostring(value), diceX + 28, diceY + 18, 0, 3, 3)
     
@@ -432,12 +432,12 @@ function RenderSystem.createRenderPipeline(gameFlow, players, properties, config
                 if not player.position or not player.money then goto next_player end
                 
                 -- 检查是否破产或淘汰
-                local playerState = player.state:Get()
-                local money = player.money:Get()
+                local playerState = player.state:Now()
+                local money = player.money:Now()
                 local isBankrupt = playerState == "bankrupt" or money < 0
                 
                 if not isBankrupt then
-                    local position = player.position:Get()
+                    local position = player.position:Now()
                     if not playersOnTile[position] then
                         playersOnTile[position] = {}
                     end
@@ -460,7 +460,7 @@ function RenderSystem.createRenderPipeline(gameFlow, players, properties, config
                     {offsetX = cellSize - 25, offsetY = cellSize - 25}   -- 右下
                 }
                 
-                local currentPlayerIdx = gameFlow and gameFlow.currentPlayerIndex:Get() or nil
+                local currentPlayerIdx = gameFlow and gameFlow.currentPlayerIndex:Now() or nil
                 
                 for idx, playerIdx in ipairs(playerIndices) do
                     local player = players[playerIdx]
@@ -490,7 +490,7 @@ function RenderSystem.createRenderPipeline(gameFlow, players, properties, config
                         love.graphics.setLineWidth(1)
                         
                         -- 绘制状态指示器
-                        local playerState = player.state:Get()
+                        local playerState = player.state:Now()
                         if playerState ~= "normal" then
                             local stateIcon = ""
                             local stateColor = {0.5, 0.5, 0.5}
@@ -514,7 +514,7 @@ function RenderSystem.createRenderPipeline(gameFlow, players, properties, config
                         end
                         
                         -- 绘制金币显示（简化版，显示金币数量等级）
-                        local money = player.money:Get()
+                        local money = player.money:Now()
                         local moneyLevel = 0
                         if money > 200000 then moneyLevel = 3
                         elseif money > 100000 then moneyLevel = 2

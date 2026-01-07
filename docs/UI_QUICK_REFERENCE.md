@@ -143,8 +143,8 @@ renderState.showDebug:Set(true)
 
 ### 查看动画状态
 ```lua
-print("Dice rolling:", animationState.diceRolling:Get())
-print("Dice value:", animationState.diceValue:Get())
+print("Dice rolling:", animationState.diceRolling:Now())
+print("Dice value:", animationState.diceValue:Now())
 ```
 
 ### 测试UI组件

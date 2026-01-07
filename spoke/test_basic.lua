@@ -58,10 +58,10 @@ local SpokePool = require("spoke.spokepool")
 local pool = SpokePool.Create(function(obj)
     obj.value = 0
 end)
-local obj1 = pool:Get()
+local obj1 = pool:Now()
 obj1.value = 42
 pool:Return(obj1)
-local obj2 = pool:Get()
+local obj2 = pool:Now()
 assert(obj2.value == 0, "Returned object should be reset")
 print("✓ SpokePool tests passed")
 
