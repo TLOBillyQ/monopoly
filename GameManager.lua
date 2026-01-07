@@ -1,9 +1,9 @@
 -- 主游戏管理器 - Spoke框架实现
 -- 整合所有游戏系统并协调运行
 
-local SpokeTree = require("Spoke.SpokeTree").SpokeTree
-local State = require("Spoke.State")
-local LambdaEpoch = require("Spoke.LambdaEpoch")
+local SpokeTree = require("spoke.spoketree").SpokeTree
+local State = require("spoke.state")
+local LambdaEpoch = require("spoke.lambdaepoch")
 
 local PlayerSystem = require("systems.PlayerSystem")
 local PropertySystem = require("systems.PropertySystem")

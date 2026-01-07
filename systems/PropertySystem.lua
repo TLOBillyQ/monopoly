@@ -1,8 +1,8 @@
 -- 地块系统 - Spoke框架实现
 -- 管理游戏地图和地块状态
 
-local State = require("Spoke.State")
-local Memo = require("Spoke.Memo")
+local State = require("spoke.state")
+local Memo = require("spoke.memo")
 
 local PropertySystem = {}
 

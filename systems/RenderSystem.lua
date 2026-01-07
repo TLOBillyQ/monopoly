@@ -1,8 +1,8 @@
 -- 渲染系统 - Spoke框架实现
 -- 处理游戏画面的绘制
 
-local State = require("Spoke.State")
-local Effect = require("Spoke.Effect").Effect
+local State = require("spoke.state")
+local Effect = require("spoke.effect").Effect
 
 local RenderSystem = {}
 

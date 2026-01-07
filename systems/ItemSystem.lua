@@ -1,6 +1,6 @@
 -- 物品和机会卡系统 - Spoke框架实现
 
-local State = require("Spoke.State")
+local State = require("spoke.state")
 
 local ItemSystem = {}
 

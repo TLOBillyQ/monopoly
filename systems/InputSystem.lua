@@ -1,8 +1,8 @@
 -- 输入系统 - Spoke框架实现
 -- 处理玩家输入和UI交互
 
-local State = require("Spoke.State")
-local Trigger = require("Spoke.Trigger")
+local State = require("spoke.state")
+local Trigger = require("spoke.trigger")
 local GameFlowSystem = require("systems.GameFlowSystem")
 
 local InputSystem = {}

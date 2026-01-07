@@ -1,8 +1,8 @@
 -- 事件系统 - Spoke框架实现
 -- 处理着陆、购买、租金等事件
 
-local State = require("Spoke.State")
-local Trigger = require("Spoke.Trigger")
+local State = require("spoke.state")
+local Trigger = require("spoke.trigger")
 
 local EventSystem = {}
 

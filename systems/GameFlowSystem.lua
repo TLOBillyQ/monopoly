@@ -1,10 +1,10 @@
 -- 游戏流程系统 - Spoke框架实现
 -- 管理游戏的回合制流程和阶段
 
-local State = require("Spoke.State")
-local Effect = require("Spoke.Effect").Effect
-local Reaction = require("Spoke.Reaction")
-local LambdaEpoch = require("Spoke.LambdaEpoch")
+local State = require("spoke.state")
+local Effect = require("spoke.effect").Effect
+local Reaction = require("spoke.reaction")
+local LambdaEpoch = require("spoke.lambdaepoch")
 
 local GameFlowSystem = {}
 

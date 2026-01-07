@@ -1,8 +1,8 @@
 -- 玩家系统 - Spoke框架实现
 -- 管理玩家的反应式状态
 
-local State = require("Spoke.State")
-local Memo = require("Spoke.Memo")
+local State = require("spoke.state")
+local Memo = require("spoke.memo")
 
 local PlayerSystem = {}
 

@@ -1,7 +1,7 @@
 -- 动画系统 - 处理游戏中的视觉动画效果
 -- 包括骰子动画、移动动画等
 
-local State = require("Spoke.State")
+local State = require("spoke.state")
 
 local AnimationSystem = {}
 

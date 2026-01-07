@@ -1,8 +1,8 @@
 -- AI决策系统 - Spoke框架实现
 -- 提供AI玩家的决策逻辑
 
-local State = require("Spoke.State")
-local Memo = require("Spoke.Memo")
+local State = require("spoke.state")
+local Memo = require("spoke.memo")
 
 local AISystem = {}
 
