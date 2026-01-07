@@ -35,6 +35,7 @@ function Property.createFromConfig(config)
             name = tileConfig.name,
             type = tileConfig.type,
             price = tileConfig.price or 0,
+            gridPos = tileConfig.gridPos,
             
             -- 所有权
             owner = nil,                   -- 拥有者ID
@@ -61,13 +62,13 @@ end
 -- ==================== 租金计算 ====================
 
 -- 计算地块基础租金
--- 租金 = 价格 * (0.5 + 0.5 * 建筑等级)
+-- 租金 = 价格 * (0.4 + 0.3 * 建筑等级)
 function Property.calculateRent(tile, withBuff)
     if tile.type ~= Property.Type.PROPERTY or not tile.owner then
         return 0
     end
     
-    local rent = tile.price * (0.5 + 0.5 * tile.building_level)
+    local rent = tile.price * (0.4 + 0.3 * tile.building_level)
     
     -- 申用财神附身加成（如果传入）
     if withBuff then
@@ -78,7 +79,7 @@ function Property.calculateRent(tile, withBuff)
 end
 
 -- 计算地块升级费用
--- 升级费用 = 价格 * (2 ^ 下一级别)
+-- 升级费用随等级线性提升
 function Property.calculateUpgradeCost(tile)
     if tile.type ~= Property.Type.PROPERTY or not tile.owner then
         return 0
@@ -89,7 +90,7 @@ function Property.calculateUpgradeCost(tile)
     end
     
     local nextLevel = tile.building_level + 1
-    return tile.price * (2 ^ nextLevel)
+    return math.floor(tile.price * (1 + 0.5 * nextLevel))
 end
 
 -- 获取建筑等级名称

@@ -13,11 +13,12 @@ Player.State = {
 }
 
 -- 创建新玩家
-function Player.new(id, characterId, vehicleId, isAI)
+function Player.new(id, characterId, vehicleId, isAI, tileCount)
     local player = {
         id = id,
         name = ("玩家" .. id),
         isAI = isAI or false,
+        tileCount = tileCount or 16,
         
         -- 角色和座驾
         characterId = characterId or 1001,
@@ -59,6 +60,16 @@ function Player.new(id, characterId, vehicleId, isAI)
     }
     
     return player
+end
+
+local function resolveTileCount(player, tileCount)
+    if tileCount then
+        return tileCount
+    end
+    if player and player.tileCount then
+        return player.tileCount
+    end
+    return 16
 end
 
 
@@ -314,7 +325,7 @@ end
 
 -- 移动到指定位置
 function Player.moveTo(player, position, tileCount)
-    tileCount = tileCount or 45  -- 默认45个地块
+    tileCount = resolveTileCount(player, tileCount)
     player.position = position % tileCount
     if player.position == 0 then
         player.position = tileCount
@@ -323,7 +334,7 @@ end
 
 -- 前进指定步数
 function Player.moveForward(player, steps, tileCount)
-    tileCount = tileCount or 45  -- 默认45个地块
+    tileCount = resolveTileCount(player, tileCount)
     player.position = player.position + steps
     while player.position > tileCount do
         player.position = player.position - tileCount
@@ -333,7 +344,7 @@ end
 
 -- 后退指定步数
 function Player.moveBackward(player, steps, tileCount)
-    tileCount = tileCount or 45  -- 默认45个地块
+    tileCount = resolveTileCount(player, tileCount)
     player.position = player.position - steps
     while player.position <= 0 do
         player.position = player.position + tileCount

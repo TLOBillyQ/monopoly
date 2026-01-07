@@ -1,284 +1,507 @@
--- 主游戏管理器 - Spoke框架实现
--- 整合所有游戏系统并协调运行
-
-local SpokeTree = require("spoke.spoketree").SpokeTree
-local State = require("spoke.state")
-local LambdaEpoch = require("spoke.lambdaepoch")
-
-local PlayerSystem = require("systems.PlayerSystem")
-local PropertySystem = require("systems.PropertySystem")
-local GameFlowSystem = require("systems.GameFlowSystem")
-local ItemSystem = require("systems.ItemSystem")
-local EventSystem = require("systems.EventSystem")
-local AISystem = require("systems.AISystem")
-local RenderSystem = require("systems.RenderSystem")
-local InputSystem = require("systems.InputSystem")
-local AnimationSystem = require("systems.AnimationSystem")
+local Config = require("config")
+local Player = require("player")
+local Property = require("property")
+local Chance = require("chance")
+local Item = require("item")
+local Render = require("render")
+local Input = require("input")
 
 local GameManager = {}
 
--- 游戏上下文
-GameManager.context = {}
+local Phase = {
+    ROLL = "ROLL",
+    MOVE = "MOVE",
+    RESOLVE = "RESOLVE",
+    END_TURN = "END"
+}
 
--- 初始化游戏
-function GameManager.initialize(config)
-    GameManager.context = {
-        -- 配置
-        config = State.Create(config),
+local function currentPlayer(state)
+    return state.players[state.currentPlayerIndex]
+end
+
+local function findPlayerById(state, id)
+    for _, p in ipairs(state.players) do
+        if p.id == id then
+            return p
+        end
+    end
+end
+
+local function log(state, message)
+    state.lastLog = message
+    table.insert(state.logs, message)
+    if #state.logs > 80 then
+        table.remove(state.logs, 1)
+    end
+end
+
+local function buildTileIndexByType(tiles)
+    local map = {}
+    for _, tile in ipairs(tiles) do
+        if tile.type and not map[tile.type] then
+            map[tile.type] = tile.id
+        end
+    end
+    return map
+end
+
+local function createPlayers(config, count, tileCount)
+    local players = {}
+    for i = 1, count do
+        local characterId = (config.characters[i] and config.characters[i].id) or 1000 + i
+        local vehicleId = config.vehicles[1].id
+        local isAI = i > 1
+        local player = Player.new(i, characterId, vehicleId, isAI, tileCount)
+        player.money = config.rules.startMoney
+        player.totalAssets = player.money
+        table.insert(players, player)
+    end
+    return players
+end
+
+local function resetPrompts(state)
+    state.waitingAction = nil
+    state.ui = nil
+    GameManager.chooseYes = nil
+    GameManager.chooseNo = nil
+end
+
+local function setPrompt(state, title, message, yesFn, noFn)
+    state.waitingAction = {title = title}
+    state.ui = {
+        title = title,
+        message = message,
+        buttons = {"Y - 是", "N - 否"}
+    }
+    GameManager.chooseYes = function()
+        resetPrompts(state)
+        yesFn()
+    end
+    GameManager.chooseNo = function()
+        resetPrompts(state)
+        if noFn then
+            noFn()
+        end
+    end
+end
+
+local function applyBankruptcyIfNeeded(state, player)
+    if player.money <= 0 and not Player.isBankrupt(player) then
+        Player.bankrupt(player)
+        for _, tile in ipairs(state.tiles) do
+            if tile.owner == player.id then
+                Property.reset(tile)
+            end
+        end
+        log(state, string.format("玩家%d 破产，退出游戏", player.id))
+    end
+end
+
+local function applyItemGain(state, player, itemId)
+    if not itemId then
+        log(state, "未抽到任何道具")
+        return
+    end
+    local added = Player.addItem(player, itemId)
+    local name = Item.getName(itemId)
+    if not added then
+        log(state, string.format("%s 道具栏已满", name))
+        return
+    end
+    log(state, string.format("%s 获得道具：%s", player.name, name))
+    
+    -- 所有道具均为即时效果，获得后立刻生效
+    local useResult = Item.use(itemId, player, state)
+    if useResult and useResult.message then
+        log(state, useResult.message)
+    end
+end
+
+local function handleRent(state, tenant, tile)
+    local owner = findPlayerById(state, tile.owner)
+    if not owner then
+        return
+    end
+    local rent = math.floor(Property.calculateRent(tile, owner.buffType == "wealth"))
+    
+    if tenant.freePass then
+        tenant.freePass = false
+        log(state, string.format("%s 使用免费卡，免租金", tenant.name))
+        rent = 0
+    elseif tenant.buffType == "poor" and tenant.buffTurns > 0 then
+        rent = rent * 2
+    end
+    
+    if rent > 0 then
+        Player.transfer(tenant, owner, rent)
+        log(state, string.format("%s 向 %s 支付租金 %d", tenant.name, owner.name, rent))
+        applyBankruptcyIfNeeded(state, tenant)
+    else
+        log(state, string.format("%s 本次无需支付租金", tenant.name))
+    end
+end
+
+local function resolveProperty(state, player, tile)
+    if not tile.owner then
+        if player.isAI or state.autoMode then
+            if player.money >= tile.price then
+                Property.buy(tile, player.id, tile.price)
+                Player.subtractMoney(player, tile.price)
+                Player.acquireProperty(player, tile.id)
+                log(state, string.format("%s 自动购买了 %s", player.name, tile.name))
+            else
+                log(state, string.format("%s 资金不足，无法购买 %s", player.name, tile.name))
+            end
+            state.currentPhase = Phase.END_TURN
+            return
+        end
         
-        -- 游戏流程
-        gameFlow = GameFlowSystem.createGameFlow(),
-        
-        -- 玩家
-        players = State.Create({}),
-        
-        -- 地块
-        properties = State.Create({}),
-        
-        -- 输入和渲染
-        inputState = InputSystem.createInputState(),
-        renderState = RenderSystem.createRenderState(),
-        animationState = AnimationSystem.createAnimationState(),
+        setPrompt(
+            state,
+            "购买地块？",
+            string.format("%s - 价格 %d", tile.name, tile.price),
+            function() GameManager.buyProperty() end,
+            function() GameManager.skipAction() end
+        )
+        return
+    end
+    
+    if tile.owner == player.id then
+        if (player.isAI or state.autoMode) and tile.building_level < Property.Building.MANSION then
+            local cost = Property.calculateUpgradeCost(tile)
+            if cost > 0 and player.money > cost + 300 then
+                Property.upgrade(tile, player.id, cost)
+                Player.subtractMoney(player, cost)
+                log(state, string.format("%s 自动升级了 %s", player.name, tile.name))
+            end
+        end
+        state.currentPhase = Phase.END_TURN
+        return
+    end
+    
+    handleRent(state, player, tile)
+    state.currentPhase = Phase.END_TURN
+end
+
+local function resolveSpecialTile(state, player, tile)
+    local rules = state.config.rules
+    if tile.type == "chance_card" then
+        local event = Chance.drawRandom(state.chanceDeck)
+        local res = Chance.execute(event, player, state.players, state)
+        log(state, res.message)
+        state.currentPhase = Phase.END_TURN
+    elseif tile.type == "item_card" then
+        local itemId = Item.drawRandom(state.config)
+        applyItemGain(state, player, itemId)
+        state.currentPhase = Phase.END_TURN
+    elseif tile.type == "hospital" then
+        Player.enterHospital(player, rules.hospitalStay)
+        Player.subtractMoney(player, rules.hospitalFee)
+        log(state, string.format("%s 住院，需要等待 %d 回合", player.name, rules.hospitalStay))
+        applyBankruptcyIfNeeded(state, player)
+        state.currentPhase = Phase.END_TURN
+    elseif tile.type == "mountain" then
+        Player.enterMountain(player, rules.mountainStay)
+        log(state, string.format("%s 在深山停留 %d 回合", player.name, rules.mountainStay))
+        state.currentPhase = Phase.END_TURN
+    elseif tile.type == "tax_office" then
+        local tax = math.floor(player.money * rules.taxRate)
+        if player.freePass then
+            player.freePass = false
+            log(state, string.format("%s 使用免费卡，免税", player.name))
+        else
+            Player.subtractMoney(player, tax)
+            log(state, string.format("%s 支付税金 %d", player.name, tax))
+            applyBankruptcyIfNeeded(state, player)
+        end
+        state.currentPhase = Phase.END_TURN
+    elseif tile.type == "black_market" then
+        local cost = 600
+        if player.isAI or state.autoMode then
+            if player.money >= cost then
+                Player.subtractMoney(player, cost)
+                applyItemGain(state, player, Item.drawRandom(state.config))
+            else
+                log(state, string.format("%s 资金不足，无法在黑市购物", player.name))
+            end
+            state.currentPhase = Phase.END_TURN
+        else
+            setPrompt(
+                state,
+                "黑市购物？",
+                string.format("花费 %d 获取随机道具", cost),
+                function()
+                    if player.money >= cost then
+                        Player.subtractMoney(player, cost)
+                        applyItemGain(state, player, Item.drawRandom(state.config))
+                    else
+                        log(state, "金币不足，无法购物")
+                    end
+                    GameManager.skipAction()
+                end,
+                function() GameManager.skipAction() end
+            )
+        end
+    elseif tile.type == "rest" then
+        Player.addMoney(player, 300)
+        log(state, string.format("%s 休息并获得 300 金币", player.name))
+        state.currentPhase = Phase.END_TURN
+    elseif tile.type == "start" then
+        Player.addMoney(player, math.floor(rules.passStartBonus / 2))
+        log(state, string.format("%s 停在起点，获得奖励", player.name))
+        state.currentPhase = Phase.END_TURN
+    else
+        state.currentPhase = Phase.END_TURN
+    end
+end
+
+local function movePlayer(state, player)
+    local steps = state.pendingMove or state.lastDice or 0
+    local tileCount = state.tileCount
+    local oldPos = player.position
+    local newPos = ((oldPos - 1 + steps) % tileCount) + 1
+    if newPos < oldPos then
+        Player.addMoney(player, state.config.rules.passStartBonus)
+        log(state, string.format("%s 经过起点，获得 %d 金币", player.name, state.config.rules.passStartBonus))
+    end
+    player.position = newPos
+    log(state, string.format("%s 前进到格子 %d", player.name, newPos))
+end
+
+local function prepareTurn(state, player)
+    if Player.isBankrupt(player) then
+        return false
+    end
+    Player.startTurn(player)
+    if player.state ~= Player.State.NORMAL then
+        log(state, string.format("%s 仍在等待，剩余 %d 回合", player.name, player.stayTurns))
+        state.currentPhase = Phase.END_TURN
+        return false
+    end
+    return true
+end
+
+local function advanceToNextPlayer(state)
+    local alive = {}
+    for _, p in ipairs(state.players) do
+        if not Player.isBankrupt(p) then
+            table.insert(alive, p)
+        end
+    end
+    if #alive <= 1 then
+        state.winner = alive[1] and alive[1].id or nil
+        if state.winner then
+            state.ui = {title = "游戏结束", message = string.format("玩家%d 获胜！", state.winner)}
+        end
+        return
+    end
+    
+    repeat
+        state.currentPlayerIndex = state.currentPlayerIndex + 1
+        if state.currentPlayerIndex > #state.players then
+            state.currentPlayerIndex = 1
+            state.currentTurn = state.currentTurn + 1
+        end
+    until not Player.isBankrupt(state.players[state.currentPlayerIndex])
+    
+    state.currentPhase = Phase.ROLL
+    state.pendingMove = nil
+end
+
+function GameManager.createNewGame(config, playerCount)
+    local cfg = config or Config
+    local tiles = Property.createFromConfig(cfg)
+    local tileCount = #tiles
+    local players = createPlayers(cfg, playerCount or 4, tileCount)
+    
+    GameManager.state = {
+        config = cfg,
+        cfg = cfg,
+        tiles = tiles,
+        tileCount = tileCount,
+        tileIndexByType = buildTileIndexByType(tiles),
+        chanceDeck = Chance.createFromConfig(cfg),
+        players = players,
+        currentPlayerIndex = 1,
+        currentPhase = Phase.ROLL,
+        currentTurn = 1,
+        lastDice = nil,
+        pendingMove = nil,
+        lastLog = "",
+        logs = {},
+        autoMode = false,
+        baseAutoInterval = cfg.rules.autoStepInterval or 1.0,
+        autoInterval = cfg.rules.autoStepInterval or 1.0,
+        autoTimer = 0,
+        waitingAction = nil,
+        ui = nil,
+        winner = nil
     }
     
-    print("游戏管理器初始化完成")
-    return GameManager.context
+    log(GameManager.state, "新游戏开始，按空格投骰子")
+    return GameManager.state
 end
 
--- 创建新游戏
-function GameManager.createNewGame(config, playerCount, aiDifficulty)
-    playerCount = playerCount or 4
-    aiDifficulty = aiDifficulty or "medium"
-    
-    local context = GameManager.initialize(config)
-    
-    -- 创建玩家
-    local players = {}
-    for i = 1, playerCount do
-        local characterId = config.characters[i].id
-        local vehicleId = config.vehicles[1].id
-        
-        if i == 1 then
-            -- 第一个玩家是人类
-            local player = PlayerSystem.createPlayer(i, characterId, vehicleId, false)
-            table.insert(players, player)
-        else
-            -- 其他玩家是AI
-            local aiPlayer = AISystem.createAIPlayer(i, aiDifficulty, characterId, vehicleId)
-            table.insert(players, aiPlayer)
-        end
-    end
-    context.players:Set(players)
-    
-    -- 创建地块
-    local tiles = {}
-    for i, tileConfig in ipairs(config.tiles) do
-        tiles[i] = PropertySystem.createTile(i, tileConfig)
-    end
-    context.properties:Set(tiles)
-    
-    -- 创建游戏Epoch
-    context.gameEpoch = GameManager.createGameEpoch(context)
-    
-    -- 启动Spoke树
-    context.spokeTree = SpokeTree.Spawn("MonopolyGame", context.gameEpoch)
-    
-    print(string.format("游戏已创建：%d个玩家，%d个地块", playerCount, #tiles))
+function GameManager.getState()
+    return GameManager.state
 end
 
--- 创建游戏主Epoch
-function GameManager.createGameEpoch(context)
-    return LambdaEpoch.new("GameEpoch", function(s)
-        -- Epoch 作为容器，主要逻辑在 update() 中处理
-        return nil
-    end)
+function GameManager.isWaitingForInput()
+    local state = GameManager.state
+    return state and state.waitingAction ~= nil
 end
 
--- 执行移动
-function GameManager.executeMovement(context, player)
-    local steps = context.gameFlow.movementSteps:Now()
-    local currentPos = player.position:Now()
-    local newPos = (currentPos + steps - 1) % 45 + 1
-    
-    -- 如果经过起点
-    if newPos < currentPos then
-        local reward = context.config:Now().rules.passStartBonus
-        PlayerSystem.addMoney(player, reward)
-        GameFlowSystem.addLog(context.gameFlow, "经过起点，获得" .. reward .. "金币")
-    end
-    
-    PlayerSystem.moveTo(player, newPos, 45)
+function GameManager.isAutoMode()
+    local state = GameManager.state
+    return state and state.autoMode
 end
 
--- 执行着陆事件
-function GameManager.executeLandEvent(context, player)
-    local properties = context.properties:Now()
-    local position = player.position:Now()
-    local tile = properties[position]
-    
-    if not tile then return end
-    
-    local event = EventSystem.handleLandEvent(player, tile, context)
-    
-    if event.event == "passStart" then
-        PlayerSystem.addMoney(player, event.reward)
-    elseif event.event == "canBuyProperty" then
-        -- 提示购买
-        if not player.isAI:Now() then
-            InputSystem.promptBuyProperty(context.inputState, tile.name:Now(), tile.basePrice:Now())
-        else
-            -- AI决定购买
-            if AISystem.decideToBuyProperty(player, tile.basePrice:Now(), tile.type:Now(), context) then
-                EventSystem.handlePropertyPurchase(player, tile, context, tile.basePrice:Now())
-            end
-        end
-    elseif event.event == "payRent" then
-        local owner = nil
-        for _, p in ipairs(context.players:Now()) do
-            if p.id:Now() == event.owner then
-                owner = p
-                break
-            end
-        end
-        if owner then
-            PlayerSystem.subtractMoney(player, event.amount)
-            PlayerSystem.addMoney(owner, event.amount)
-        end
+function GameManager.toggleAutoMode()
+    local state = GameManager.state
+    if not state then
+        return false
     end
+    state.autoMode = not state.autoMode
+    if state.autoMode then
+        resetPrompts(state)
+    end
+    return state.autoMode
 end
 
--- 执行行动后处理
-function GameManager.executeAfterAction(context, player)
-    -- 减少附身时间
-    if player.buffTurns then
-        PlayerSystem.reduceBuff(player)
-    end
-    
-    -- 检查破产
-    if EventSystem.checkBankruptcy(player) then
-        GameFlowSystem.addLog(context.gameFlow, "玩家" .. player.id:Now() .. "破产了")
-    end
-    
-    -- 检查游戏结束
-    GameManager.checkGameEnd(context)
-end
-
--- 检查游戏是否结束
-function GameManager.checkGameEnd(context)
-    local players = context.players:Now()
-    local activePlayers = 0
-    local lastActivePlayer = nil
-    
-    for _, player in ipairs(players) do
-        if player.state:Now() ~= "bankrupt" then
-            activePlayers = activePlayers + 1
-            lastActivePlayer = player
-        end
-    end
-    
-    if activePlayers <= 1 and lastActivePlayer then
-        GameFlowSystem.endGame(context.gameFlow, lastActivePlayer.id:Now())
-        GameFlowSystem.addLog(context.gameFlow, "玩家" .. lastActivePlayer.id:Now() .. "胜利了！")
-    end
-end
-
--- 处理输入
-function GameManager.handleInput(key)
-    local ctx = GameManager.context
-    if not ctx or not ctx.players or not ctx.players.Get then
+function GameManager.setAutoSpeed(multiplier)
+    local state = GameManager.state
+    if not state then
         return
     end
-
-    InputSystem.handleKeyPress(key, ctx.inputState, ctx.gameFlow, ctx.players:Now())
+    state.autoInterval = math.max(0.1, state.baseAutoInterval * multiplier)
 end
 
--- 更新游戏动画
+function GameManager.buyProperty()
+    local state = GameManager.state
+    if not state then
+        return
+    end
+    local player = currentPlayer(state)
+    local tile = state.tiles[player.position]
+    if tile.type ~= "property" or tile.owner then
+        log(state, "无法购买当前地块")
+        state.currentPhase = Phase.END_TURN
+        return
+    end
+    if player.money < tile.price then
+        log(state, "金币不足，购买失败")
+        state.currentPhase = Phase.END_TURN
+        return
+    end
+    Property.buy(tile, player.id, tile.price)
+    Player.subtractMoney(player, tile.price)
+    Player.acquireProperty(player, tile.id)
+    log(state, string.format("%s 购买了 %s", player.name, tile.name))
+    state.currentPhase = Phase.END_TURN
+end
+
+function GameManager.upgradeProperty()
+    local state = GameManager.state
+    if not state then
+        return
+    end
+    local player = currentPlayer(state)
+    local tile = state.tiles[player.position]
+    if tile.type ~= "property" or tile.owner ~= player.id then
+        log(state, "当前地块无法升级")
+        return
+    end
+    local cost = Property.calculateUpgradeCost(tile)
+    if cost <= 0 or player.money < cost then
+        log(state, "资金不足或已达最高等级")
+        return
+    end
+    Property.upgrade(tile, player.id, cost)
+    Player.subtractMoney(player, cost)
+    log(state, string.format("%s 将 %s 升级到等级 %d", player.name, tile.name, tile.building_level))
+end
+
+function GameManager.skipAction()
+    local state = GameManager.state
+    if not state then
+        return
+    end
+    resetPrompts(state)
+    state.currentPhase = Phase.END_TURN
+end
+
+function GameManager.nextStep()
+    local state = GameManager.state
+    if not state or state.winner then
+        return
+    end
+    if state.waitingAction then
+        return
+    end
+    
+    local player = currentPlayer(state)
+    if not player then
+        return
+    end
+    
+    if Player.isBankrupt(player) then
+        advanceToNextPlayer(state)
+        return
+    end
+    
+    if state.currentPhase == Phase.ROLL then
+        if not prepareTurn(state, player) then
+            return
+        end
+        local dice = math.random(1, 6)
+        if player.pendingDiceDouble then
+            dice = dice * 2
+            player.pendingDiceDouble = false
+        end
+        state.lastDice = dice
+        state.pendingMove = dice
+        log(state, string.format("%s 投出 %d 点", player.name, dice))
+        state.currentPhase = Phase.MOVE
+        
+    elseif state.currentPhase == Phase.MOVE then
+        movePlayer(state, player)
+        state.currentPhase = Phase.RESOLVE
+        
+    elseif state.currentPhase == Phase.RESOLVE then
+        local tile = state.tiles[player.position]
+        if tile.type == "property" then
+            resolveProperty(state, player, tile)
+        else
+            resolveSpecialTile(state, player, tile)
+        end
+        
+    elseif state.currentPhase == Phase.END_TURN then
+        advanceToNextPlayer(state)
+    end
+end
+
 function GameManager.update(dt)
-    local ctx = GameManager.context
-    if not ctx then
+    local state = GameManager.state
+    if not state or state.winner then
         return
     end
-    
-    -- 确保动画状态存在
-    if not ctx.animationState then
-        return
-    end
-    
-    -- 获取当前骰子值用于动画
-    local diceValue = nil
-    if ctx.gameFlow and ctx.gameFlow.lastDiceRoll and ctx.gameFlow.lastDiceRoll.Get then
-        diceValue = ctx.gameFlow.lastDiceRoll:Now()
-    end
-    
-    -- 更新所有动画
-    AnimationSystem.updateAll(ctx.animationState, dt, diceValue)
-    
-    -- 游戏流程处理（在update中处理而不是Effect中）
-    if not ctx.gameFlow or not ctx.players then
-        return
-    end
-    
-    local phase = ctx.gameFlow.currentPhase:Now()
-    local playerIndex = ctx.gameFlow.currentPlayerIndex:Now()
-    local players = ctx.players:Now()
-    
-    if not players[playerIndex] then return end
-    
-    local currentPlayer = players[playerIndex]
-    
-    -- 根据阶段执行逻辑
-    if phase == GameFlowSystem.Phase.ROLL_DICE then
-        -- 投掷骰子
-        local roll = GameFlowSystem.rollDice(ctx.gameFlow)
-        
-        -- 启动骰子动画
-        if ctx.animationState then
-            AnimationSystem.startDiceAnimation(ctx.animationState, roll)
+    if state.autoMode and not state.waitingAction then
+        state.autoTimer = state.autoTimer + dt
+        if state.autoTimer >= state.autoInterval then
+            state.autoTimer = 0
+            GameManager.nextStep()
         end
-        
-        GameFlowSystem.nextPhase(ctx.gameFlow, players)
-        
-    elseif phase == GameFlowSystem.Phase.MOVE then
-        -- 移动
-        GameManager.executeMovement(ctx, currentPlayer)
-        GameFlowSystem.nextPhase(ctx.gameFlow, players)
-        
-    elseif phase == GameFlowSystem.Phase.LAND_EVENT then
-        -- 着陆事件
-        GameManager.executeLandEvent(ctx, currentPlayer)
-        GameFlowSystem.nextPhase(ctx.gameFlow, players)
-        
-    elseif phase == GameFlowSystem.Phase.AFTER_ACTION then
-        -- 行动后
-        GameManager.executeAfterAction(ctx, currentPlayer)
-        GameFlowSystem.nextPhase(ctx.gameFlow, players)
     end
 end
 
--- 绘制游戏
 function GameManager.draw()
-    local ctx = GameManager.context
-    if not ctx or not ctx.config or not ctx.gameFlow then
-        return
+    if GameManager.state then
+        Render.draw(GameManager.state)
     end
+end
 
-    -- 每帧重新创建渲染管道，确保获取最新的玩家状态
-    local players = ctx.players:Now()
-    local properties = ctx.properties:Now()
-    local config = ctx.config:Now()
-    
-    local renderPipeline = RenderSystem.createRenderPipeline(
-        ctx.gameFlow,
-        players,
-        properties,
-        config,
-        ctx.renderState,
-        ctx.animationState
-    )
-    
-    if renderPipeline then
-        renderPipeline()
-    end
+function GameManager.handleInput(key)
+    Input.handleKey(key, GameManager)
 end
 
 return GameManager

@@ -27,7 +27,12 @@ local function drawBoard(state)
     local tiles = state.tiles
     local originX, originY = 20, 40
     local cellSize = 70
-    local gridSize = 9  -- 9x9 grid
+    local gridSize = 5
+    for _, t in ipairs(tiles) do
+        if t.gridPos then
+            gridSize = math.max(gridSize, t.gridPos[1], t.gridPos[2])
+        end
+    end
     
     -- 绘制棋盘背景
     love.graphics.setColor(colors.boardFill)
@@ -73,6 +78,8 @@ local function drawBoard(state)
                 love.graphics.setColor(1, 0.95, 0.7)  -- 淡黄色
             elseif tile.type == "item_card" then
                 love.graphics.setColor(0.95, 0.8, 1)  -- 淡紫色
+            elseif tile.type == "rest" then
+                love.graphics.setColor(0.85, 0.95, 1)
             end
             love.graphics.rectangle("fill", x + 1, y + 1, cellSize - 2, cellSize - 2)
             
@@ -83,6 +90,15 @@ local function drawBoard(state)
             -- 绘制价格（如果有）
             if tile.price > 0 then
                 love.graphics.printf("¥" .. tile.price, x + 2, y + cellSize - 18, cellSize - 4, "center")
+            end
+            
+            -- 绘制所有权
+            if tile.owner then
+                local ownerColor = colors.player[(tile.owner - 1) % #colors.player + 1]
+                love.graphics.setColor(ownerColor)
+                love.graphics.rectangle("fill", x + 4, y + cellSize - 10, cellSize - 8, 6)
+                love.graphics.setColor(colors.boardLine)
+                love.graphics.printf("P" .. tile.owner, x + 2, y + cellSize - 24, cellSize - 4, "center")
             end
         end
     end
@@ -159,24 +175,17 @@ local function drawHud(state)
     end
     
     -- 附身状态
-    if p.buff and p.buff.type and p.buff.duration and p.buff.duration > 0 then
+    if p.buffType and p.buffTurns and p.buffTurns > 0 then
         currentY = currentY + 5
         love.graphics.print("═══ 附身状态 ═══", hudX, currentY)
         currentY = currentY + lineHeight
-        local buffName = p.buff.type == "angel" and "天使保护" 
-                      or p.buff.type == "wealth" and "财神附身"
-                      or p.buff.type == "poor" and "穷神诅咒"
+        local buffName = p.buffType == "angel" and "天使保护" 
+                      or p.buffType == "wealth" and "财神附身"
+                      or p.buffType == "poor" and "穷神诅咒"
                       or "未知"
         love.graphics.print("状态: " .. buffName, hudX, currentY)
         currentY = currentY + lineHeight
-        love.graphics.print("剩余: " .. p.buff.duration .. " 回合", hudX, currentY)
-        currentY = currentY + lineHeight
-    end
-    
-    -- 座驾状态
-    if p.vehicle then
-        currentY = currentY + 5
-        love.graphics.print("座驾: " .. (p.vehicle.broken and "已损坏" or "完好"), hudX, currentY)
+        love.graphics.print("剩余: " .. p.buffTurns .. " 回合", hudX, currentY)
         currentY = currentY + lineHeight
     end
     
@@ -197,7 +206,13 @@ local function drawHud(state)
     currentY = currentY + lineHeight
     love.graphics.print("回合: " .. (state.currentTurn or 1), hudX, currentY)
     currentY = currentY + lineHeight
-    love.graphics.print("阶段: " .. (state.currentPhase or "未知"), hudX, currentY)
+    local phaseNames = {
+        ROLL = "掷骰",
+        MOVE = "移动",
+        RESOLVE = "结算",
+        END = "回合结束"
+    }
+    love.graphics.print("阶段: " .. (phaseNames[state.currentPhase] or state.currentPhase or "未知"), hudX, currentY)
     currentY = currentY + lineHeight
     if state.lastDice then
         love.graphics.print("骰子点数: " .. state.lastDice, hudX, currentY)
