@@ -7,6 +7,25 @@ local fonts = {
     title = nil
 }
 
+local function calculateBoardMetrics(tiles)
+    local originX, originY = 20, 40
+    local cellSize = 70
+    local gridSize = 5
+    for _, t in ipairs(tiles) do
+        if t.gridPos then
+            gridSize = math.max(gridSize, t.gridPos[1], t.gridPos[2])
+        end
+    end
+    return {
+        originX = originX,
+        originY = originY,
+        cellSize = cellSize,
+        gridSize = gridSize,
+        width = cellSize * gridSize,
+        height = cellSize * gridSize
+    }
+end
+
 local function ensureFont()
     if fonts.base then return end
     local fontPath = "assets/fonts/NotoSansSC-Regular.ttf"
@@ -22,17 +41,11 @@ local function ensureFont()
     end
 end
 
-local function drawBoard(state)
+local function drawBoard(state, board)
     local colors = state.cfg.colors
     local tiles = state.tiles
-    local originX, originY = 20, 40
-    local cellSize = 70
-    local gridSize = 5
-    for _, t in ipairs(tiles) do
-        if t.gridPos then
-            gridSize = math.max(gridSize, t.gridPos[1], t.gridPos[2])
-        end
-    end
+    local originX, originY = board.originX, board.originY
+    local cellSize, gridSize = board.cellSize, board.gridSize
     
     -- 绘制棋盘背景
     love.graphics.setColor(colors.boardFill)
@@ -61,7 +74,6 @@ local function drawBoard(state)
             love.graphics.rectangle("line", x, y, cellSize, cellSize)
             
             -- 根据类型着色
-            local tileColor = colors.boardLine
             if tile.type == "property" then
                 love.graphics.setColor(0.8, 0.9, 1)  -- 浅蓝色
             elseif tile.type == "start" then
@@ -122,17 +134,19 @@ local function drawBoard(state)
     end
 end
 
-local function drawHud(state)
+local function drawHud(state, startX, startY, width)
     local colors = state.cfg.colors
     local p = state.players[state.currentPlayerIndex]
+    local hudX = startX or 680
+    local hudY = startY or 40
+    local wrapWidth = width or 560
     
     if not p then
         love.graphics.setColor(colors.hudText)
-        love.graphics.print("未初始化玩家", 680, 40)
-        return
+        love.graphics.print("未初始化玩家", hudX, hudY)
+        return hudY
     end
     
-    local hudX, hudY = 680, 40 -- 放在右侧，避免遮挡棋盘
     local lineHeight = 22
     local currentY = hudY
     
@@ -223,7 +237,13 @@ local function drawHud(state)
     currentY = currentY + 10
     love.graphics.print("═══ 提示信息 ═══", hudX, currentY)
     currentY = currentY + lineHeight
-    love.graphics.printf(state.lastLog or "", hudX, currentY, 560, "left")
+    local logText = state.lastLog or ""
+    local _, lines = love.graphics.getFont():getWrap(logText, wrapWidth)
+    local logLines = math.max(#lines, 1)
+    love.graphics.printf(logText, hudX, currentY, wrapWidth, "left")
+    currentY = currentY + lineHeight * logLines
+    
+    return currentY
 end
 
 local function drawPrompt(state)
@@ -243,13 +263,14 @@ local function drawPrompt(state)
 end
 
 -- 绘制所有玩家排名
-local function drawPlayerRanking(state)
+local function drawPlayerRanking(state, startX, startY)
     local colors = state.cfg.colors
-    local startX, startY = 20, 680
     local lineHeight = 20
+    local currentY = startY or 680
     
     love.graphics.setColor(colors.hudText)
-    love.graphics.print("═══ 玩家排行榜 ═══", startX, startY)
+    love.graphics.print("═══ 玩家排行榜 ═══", startX, currentY)
+    currentY = currentY + lineHeight
     
     -- 按金币排序玩家
     local sortedPlayers = {}
@@ -266,7 +287,7 @@ local function drawPlayerRanking(state)
     for rank, data in ipairs(sortedPlayers) do
         local i = data.index
         local p = data.player
-        local y = startY + lineHeight + (rank - 1) * lineHeight
+        local y = currentY + (rank - 1) * lineHeight
         local c = colors.player[(i - 1) % #colors.player + 1]
         
         -- 颜色标记
@@ -281,12 +302,15 @@ local function drawPlayerRanking(state)
             isCurrent, p.name or "玩家" .. i, p.money or 0, propertyCount)
         love.graphics.print(text, startX + 25, y)
     end
+    
+    return currentY + lineHeight * (#sortedPlayers + 1)
 end
 
 -- 绘制控制提示
-local function drawControls(state)
+local function drawControls(state, startX, startY)
     local colors = state.cfg.colors
-    local startX, startY = 680, 720
+    local startX = startX or 680
+    local startY = startY or 720
     local lineHeight = 18
     
     love.graphics.setColor(colors.hudText)
@@ -317,6 +341,8 @@ local function drawControls(state)
     end
     y = y + lineHeight - 2
     love.graphics.print("  H - 帮助", startX, y)
+    
+    return y + lineHeight
 end
 
 function Render.draw(state)
@@ -324,10 +350,26 @@ function Render.draw(state)
     love.graphics.setFont(fonts.base)
     local bg = state.cfg.colors.background
     love.graphics.clear(bg[1], bg[2], bg[3], 1)
-    drawBoard(state)
-    drawHud(state)
-    drawPlayerRanking(state)
-    drawControls(state)
+    
+    local board = calculateBoardMetrics(state.tiles)
+    local padding = 16
+    local panelX = board.originX + board.width + padding
+    local panelY = board.originY
+    local panelWidth = math.max(love.graphics.getWidth() - panelX - padding, 240)
+    local panelHeight = love.graphics.getHeight() - panelY - padding
+    
+    drawBoard(state, board)
+    
+    -- 侧边信息面板背景，防止文字贴边或被遮挡
+    love.graphics.setColor(1, 1, 1, 0.9)
+    love.graphics.rectangle("fill", panelX - 12, panelY - 12, panelWidth + 24, panelHeight + 24, 10, 10)
+    love.graphics.setColor(state.cfg.colors.boardLine)
+    love.graphics.rectangle("line", panelX - 12, panelY - 12, panelWidth + 24, panelHeight + 24, 10, 10)
+    
+    local currentY = panelY
+    currentY = drawHud(state, panelX, currentY, panelWidth) + 12
+    currentY = drawPlayerRanking(state, panelX, currentY) + 12
+    drawControls(state, panelX, currentY)
     drawPrompt(state)
 end
 
