@@ -67,11 +67,11 @@ local function resetPrompts(state)
 end
 
 local function setPrompt(state, title, message, yesFn, noFn)
-    state.waitingAction = {title = title}
+    state.waitingAction = { title = title }
     state.ui = {
         title = title,
         message = message,
-        buttons = {"Y - 是", "N - 否"}
+        buttons = { "Y - 是", "N - 否" }
     }
     game.chooseYes = function()
         resetPrompts(state)
@@ -109,7 +109,7 @@ local function applyItemGain(state, player, itemId)
         return
     end
     log(state, string.format("%s 获得道具：%s", player.name, name))
-    
+
     -- 所有道具均为即时效果，获得后立刻生效
     local useResult = Item.use(itemId, player, state)
     if useResult and useResult.message then
@@ -123,7 +123,7 @@ local function handleRent(state, tenant, tile)
         return
     end
     local rent = math.floor(Property.calculateRent(tile, owner.buffType == "wealth"))
-    
+
     if tenant.freePass then
         tenant.freePass = false
         log(state, string.format("%s 使用免费卡，免租金", tenant.name))
@@ -131,7 +131,7 @@ local function handleRent(state, tenant, tile)
     elseif tenant.buffType == "poor" and tenant.buffTurns > 0 then
         rent = rent * 2
     end
-    
+
     if rent > 0 then
         Player.transfer(tenant, owner, rent)
         log(state, string.format("%s 向 %s 支付租金 %d", tenant.name, owner.name, rent))
@@ -155,7 +155,7 @@ local function resolveProperty(state, player, tile)
             state.currentPhase = phase.END_TURN
             return
         end
-        
+
         setPrompt(
             state,
             "购买地块？",
@@ -165,7 +165,7 @@ local function resolveProperty(state, player, tile)
         )
         return
     end
-    
+
     if tile.owner == player.id then
         if (player.isAI or state.autoMode) and tile.building_level < Property.Building.MANSION then
             local cost = Property.calculateUpgradeCost(tile)
@@ -178,7 +178,7 @@ local function resolveProperty(state, player, tile)
         state.currentPhase = phase.END_TURN
         return
     end
-    
+
     handleRent(state, player, tile)
     state.currentPhase = phase.END_TURN
 end
@@ -291,11 +291,11 @@ local function advanceToNextPlayer(state)
     if #alive <= 1 then
         state.winner = alive[1] and alive[1].id or nil
         if state.winner then
-            state.ui = {title = "游戏结束", message = string.format("玩家%d 获胜！", state.winner)}
+            state.ui = { title = "游戏结束", message = string.format("玩家%d 获胜！", state.winner) }
         end
         return
     end
-    
+
     repeat
         state.currentPlayerIndex = state.currentPlayerIndex + 1
         if state.currentPlayerIndex > #state.players then
@@ -303,7 +303,7 @@ local function advanceToNextPlayer(state)
             state.currentTurn = state.currentTurn + 1
         end
     until not Player.isBankrupt(state.players[state.currentPlayerIndex])
-    
+
     state.currentPhase = phase.ROLL
     state.pendingMove = nil
 end
@@ -313,7 +313,7 @@ function game.createNewGame(config, playerCount)
     local tiles = Property.createFromConfig(cfg)
     local tileCount = #tiles
     local players = createPlayers(cfg, playerCount or 4, tileCount)
-    
+
     game.state = {
         config = cfg,
         cfg = cfg,
@@ -337,7 +337,7 @@ function game.createNewGame(config, playerCount)
         ui = nil,
         winner = nil
     }
-    
+
     log(game.state, "新游戏开始，按空格投骰子")
     return game.state
 end
@@ -438,17 +438,17 @@ function game.nextStep()
     if state.waitingAction then
         return
     end
-    
+
     local player = currentPlayer(state)
     if not player then
         return
     end
-    
+
     if Player.isBankrupt(player) then
         advanceToNextPlayer(state)
         return
     end
-    
+
     if state.currentPhase == phase.ROLL then
         if not prepareTurn(state, player) then
             return
@@ -463,11 +463,9 @@ function game.nextStep()
         state.pendingMove = dice
         log(state, string.format("%s 投出 %d 点", player.name, dice))
         state.currentPhase = phase.MOVE
-        
     elseif state.currentPhase == phase.MOVE then
         movePlayer(state, player)
         state.currentPhase = phase.RESOLVE
-        
     elseif state.currentPhase == phase.RESOLVE then
         local tile = state.tiles[player.position]
         if tile.type == "property" then
@@ -475,7 +473,6 @@ function game.nextStep()
         else
             resolveSpecialTile(state, player, tile)
         end
-        
     elseif state.currentPhase == phase.END_TURN then
         advanceToNextPlayer(state)
     end

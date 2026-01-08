@@ -5,10 +5,10 @@ local Config = require("config")
 local Board = {}
 
 local playerColors = {
-    {1, 0.3, 0.3},
-    {0.3, 0.3, 1},
-    {0.3, 0.9, 0.3},
-    {1, 0.85, 0.3}
+    { 1,   0.3,  0.3 },
+    { 0.3, 0.3,  1 },
+    { 0.3, 0.9,  0.3 },
+    { 1,   0.85, 0.3 }
 }
 
 Board.data = {
@@ -39,9 +39,9 @@ function Board.draw(players, currentPlayerIndex)
         end
     end
 
-    love.graphics.setColor(colors.boardFill or {0.8, 0.8, 0.8})
+    love.graphics.setColor(colors.boardFill or { 0.8, 0.8, 0.8 })
     love.graphics.rectangle("fill", originX, originY, cellSize * gridSize, cellSize * gridSize)
-    love.graphics.setColor(colors.boardLine or {0, 0, 0})
+    love.graphics.setColor(colors.boardLine or { 0, 0, 0 })
     love.graphics.rectangle("line", originX, originY, cellSize * gridSize, cellSize * gridSize)
 
     -- 网格线
@@ -78,7 +78,7 @@ function Board.draw(players, currentPlayerIndex)
                 love.graphics.setColor(0.85, 0.85, 0.85)
             end
             love.graphics.rectangle("fill", x + 1, y + 1, cellSize - 2, cellSize - 2)
-            love.graphics.setColor(colors.boardLine or {0, 0, 0})
+            love.graphics.setColor(colors.boardLine or { 0, 0, 0 })
             love.graphics.rectangle("line", x, y, cellSize, cellSize)
             love.graphics.printf(tile.name or "", x + 2, y + 5, cellSize - 4, "center")
             if tile.price and tile.price > 0 then
@@ -99,7 +99,7 @@ function Board.draw(players, currentPlayerIndex)
                 love.graphics.setColor(color)
                 local radius = (idx == currentPlayerIndex) and 10 or 7
                 love.graphics.circle("fill", px, py, radius)
-                love.graphics.setColor(colors.boardLine or {0, 0, 0})
+                love.graphics.setColor(colors.boardLine or { 0, 0, 0 })
                 love.graphics.circle("line", px, py, radius)
             end
         end

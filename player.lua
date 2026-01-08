@@ -19,46 +19,46 @@ function Player.new(id, characterId, vehicleId, isAI, tileCount)
         name = ("玩家" .. id),
         isAI = isAI or false,
         tileCount = tileCount or 16,
-        
+
         -- 角色和座驾
         characterId = characterId or 1001,
         vehicleId = vehicleId or 4001,
-        
+
         -- 财务
         money = 100000,  -- 初始金币
-        properties = {},  -- 拥有的地块 ID 列表
-        
+        properties = {}, -- 拥有的地块 ID 列表
+
         -- 位置和移动
-        position = 1,  -- 当前位置（1-16）
-        
+        position = 1, -- 当前位置（1-16）
+
         -- 状态管理
         state = Player.State.NORMAL,
         stayTurns = 0,  -- 停留回合数
-        stayType = nil,  -- 停留类型
-        
+        stayType = nil, -- 停留类型
+
         -- 道具系统
-        items = {},  -- 道具卡列表，最多5个
-        itemCount = 0,  -- 当前道具数量
-        
+        items = {},    -- 道具卡列表，最多5个
+        itemCount = 0, -- 当前道具数量
+
         -- 附身状态（互斥，最多一个）
-        buffType = nil,  -- "angel", "wealth", "poor" 或 nil
+        buffType = nil, -- "angel", "wealth", "poor" 或 nil
         buffTurns = 0,  -- 附身剩余回合数
-        
+
         -- 座驾管理
-        hasVehicle = true,  -- 是否有座驾
-        vehicleDestroyed = false,  -- 座驾是否被摧毁
-        
+        hasVehicle = true,        -- 是否有座驾
+        vehicleDestroyed = false, -- 座驾是否被摧毁
+
         -- 其他状态
-        freeJailCard = false,  -- 免费停留卡（在监狱中使用）
-        
+        freeJailCard = false, -- 免费停留卡（在监狱中使用）
+
         -- 统计数据
-        totalAssets = 100000,  -- 总资产
-        turnsPlayed = 0,  -- 已进行回合数
-        
+        totalAssets = 100000, -- 总资产
+        turnsPlayed = 0,      -- 已进行回合数
+
         -- 调试信息
         lastAction = nil
     }
-    
+
     return player
 end
 
@@ -107,7 +107,7 @@ end
 function Player.acquireProperty(player, propertyId)
     for _, id in ipairs(player.properties) do
         if id == propertyId then
-            return false  -- 已经拥有
+            return false -- 已经拥有
         end
     end
     table.insert(player.properties, propertyId)
@@ -154,7 +154,7 @@ function Player.addItem(player, itemId)
     if player.itemCount >= 5 then
         return false, "道具卡已满"
     end
-    
+
     table.insert(player.items, itemId)
     player.itemCount = player.itemCount + 1
     return true
@@ -288,12 +288,12 @@ end
 function Player.reduceStayTurns(player)
     if player.stayTurns > 0 then
         player.stayTurns = player.stayTurns - 1
-        
+
         if player.stayTurns == 0 then
             player.state = Player.State.NORMAL
             player.stayType = nil
         end
-        
+
         return true
     end
     return false
@@ -365,11 +365,11 @@ end
 function Player.startTurn(player)
     player.turnsPlayed = player.turnsPlayed + 1
     Player.reduceBuff(player)
-    
+
     -- 如果在停留状态，减少停留时间
-    if player.state == Player.State.IN_HOSPITAL or 
-       player.state == Player.State.IN_MOUNTAIN or
-       player.state == Player.State.IN_JAIL then
+    if player.state == Player.State.IN_HOSPITAL or
+        player.state == Player.State.IN_MOUNTAIN or
+        player.state == Player.State.IN_JAIL then
         Player.reduceStayTurns(player)
     end
 end

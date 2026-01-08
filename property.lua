@@ -5,22 +5,22 @@ local Property = {}
 
 -- ==================== 地块类型 ====================
 Property.Type = {
-    START = "start",                      -- 起点
-    PROPERTY = "property",                -- 可购买地块（普通房地产）
-    TAX_OFFICE = "tax_office",            -- 税务局
-    HOSPITAL = "hospital",                -- 医院
-    MOUNTAIN = "mountain",                -- 深山
-    BLACK_MARKET = "black_market",        -- 黑市
-    JAIL = "jail"                         -- 监狱
+    START = "start",               -- 起点
+    PROPERTY = "property",         -- 可购买地块（普通房地产）
+    TAX_OFFICE = "tax_office",     -- 税务局
+    HOSPITAL = "hospital",         -- 医院
+    MOUNTAIN = "mountain",         -- 深山
+    BLACK_MARKET = "black_market", -- 黑市
+    JAIL = "jail"                  -- 监狱
 }
 
 -- 建筑等级
 Property.Building = {
-    NONE = 0,           -- 无建筑
-    HOUSE = 1,          -- 住宅
-    APARTMENT = 2,      -- 公寓
-    HOTEL = 3,          -- 酒店
-    MANSION = 4         -- 豪宅
+    NONE = 0,      -- 无建筑
+    HOUSE = 1,     -- 住宅
+    APARTMENT = 2, -- 公寓
+    HOTEL = 3,     -- 酒店
+    MANSION = 4    -- 豪宅
 }
 
 -- ==================== 地块创建 ====================
@@ -28,7 +28,7 @@ Property.Building = {
 -- 根据config创建地块
 function Property.createFromConfig(config)
     local tiles = {}
-    
+
     for i, tileConfig in ipairs(config.tiles) do
         local tile = {
             id = tileConfig.id,
@@ -36,26 +36,26 @@ function Property.createFromConfig(config)
             type = tileConfig.type,
             price = tileConfig.price or 0,
             gridPos = tileConfig.gridPos,
-            
+
             -- 所有权
-            owner = nil,                   -- 拥有者ID
-            
+            owner = nil, -- 拥有者ID
+
             -- 建筑
-            building_level = 0,            -- 建筑等级（0-4）
-            
+            building_level = 0, -- 建筑等级（0-4）
+
             -- 特殊对象
-            roadblock = false,             -- 是否有路障
-            roadblock_owner = nil,         -- 路障放置者ID
-            landmine = false,              -- 是否有地雷
-            landmine_owner = nil,          -- 地雷放置者ID
-            
+            roadblock = false,     -- 是否有路障
+            roadblock_owner = nil, -- 路障放置者ID
+            landmine = false,      -- 是否有地雷
+            landmine_owner = nil,  -- 地雷放置者ID
+
             -- 位置信息
             position = i
         }
-        
+
         tiles[i] = tile
     end
-    
+
     return tiles
 end
 
@@ -67,14 +67,14 @@ function Property.calculateRent(tile, withBuff)
     if tile.type ~= Property.Type.PROPERTY or not tile.owner then
         return 0
     end
-    
+
     local rent = tile.price * (0.4 + 0.3 * tile.building_level)
-    
+
     -- 申用财神附身加成（如果传入）
     if withBuff then
         rent = rent * 2
     end
-    
+
     return rent
 end
 
@@ -84,11 +84,11 @@ function Property.calculateUpgradeCost(tile)
     if tile.type ~= Property.Type.PROPERTY or not tile.owner then
         return 0
     end
-    
+
     if tile.building_level >= Property.Building.MANSION then
-        return 0  -- 已是最高等级
+        return 0 -- 已是最高等级
     end
-    
+
     local nextLevel = tile.building_level + 1
     return math.floor(tile.price * (1 + 0.5 * nextLevel))
 end
@@ -112,14 +112,14 @@ function Property.buy(tile, playerId, cost)
     if tile.type ~= Property.Type.PROPERTY then
         return false, "该地块无法购买"
     end
-    
+
     if tile.owner then
         return false, "该地块已被购买"
     end
-    
+
     tile.owner = playerId
     tile.building_level = Property.Building.NONE
-    
+
     return true, cost or tile.price
 end
 
@@ -128,18 +128,18 @@ function Property.upgrade(tile, playerId, cost)
     if tile.type ~= Property.Type.PROPERTY then
         return false, "该地块无法升级"
     end
-    
+
     if tile.owner ~= playerId then
         return false, "这不是你的地块"
     end
-    
+
     if tile.building_level >= Property.Building.MANSION then
         return false, "已是最高等级"
     end
-    
+
     local newLevel = tile.building_level + 1
     tile.building_level = newLevel
-    
+
     return true, Property.calculateUpgradeCost(tile)
 end
 
@@ -157,7 +157,7 @@ function Property.transfer(tile, fromPlayerId, toPlayerId)
     if tile.owner ~= fromPlayerId then
         return false, "无法转移不属于你的地块"
     end
-    
+
     tile.owner = toPlayerId
     return true
 end
@@ -179,7 +179,7 @@ function Property.placeRoadblock(tile, playerId)
     if tile.roadblock then
         return false, "该地块已有路障"
     end
-    
+
     tile.roadblock = true
     tile.roadblock_owner = playerId
     return true
@@ -190,7 +190,7 @@ function Property.removeRoadblock(tile)
     if not tile.roadblock then
         return false, "该地块没有路障"
     end
-    
+
     tile.roadblock = false
     tile.roadblock_owner = nil
     return true
@@ -201,7 +201,7 @@ function Property.placeLandmine(tile, playerId)
     if tile.landmine then
         return false, "该地块已有地雷"
     end
-    
+
     tile.landmine = true
     tile.landmine_owner = playerId
     return true
@@ -213,13 +213,13 @@ function Property.triggerLandmine(tile)
         triggered = tile.landmine,
         owner = tile.landmine_owner
     }
-    
+
     -- 触发后地雷消失
     if tile.landmine then
         tile.landmine = false
         tile.landmine_owner = nil
     end
-    
+
     return result
 end
 
@@ -230,14 +230,14 @@ function Property.getTotalValue(tile)
     if tile.type ~= Property.Type.PROPERTY or not tile.owner then
         return 0
     end
-    
+
     local total = tile.price
-    
+
     -- 加上所有已建筑的升级费用
     for level = 1, tile.building_level do
         total = total + (tile.price * (2 ^ level))
     end
-    
+
     return total
 end
 
@@ -255,22 +255,22 @@ function Property.getSummary(tile)
         roadblock = tile.roadblock,
         landmine = tile.landmine
     }
-    
+
     return summary
 end
 
 -- 获取地块描述
 function Property.getDescription(tile)
     local desc = tile.name .. "\n类型: " .. tile.type
-    
+
     if tile.type == Property.Type.PROPERTY then
         desc = desc .. "\n价格: " .. tile.price .. " 金币"
-        
+
         if tile.owner then
             desc = desc .. "\n拥有者: 玩家 " .. tile.owner
             desc = desc .. "\n建筑: " .. Property.getBuildingName(tile.building_level)
             desc = desc .. "\n租金: " .. math.floor(Property.calculateRent(tile)) .. " 金币"
-            
+
             if tile.building_level < Property.Building.MANSION then
                 desc = desc .. "\n升级费用: " .. Property.calculateUpgradeCost(tile) .. " 金币"
             end
@@ -286,7 +286,7 @@ function Property.getDescription(tile)
     elseif tile.type == Property.Type.BLACK_MARKET then
         desc = desc .. "\n效果: 使用特殊货币购买道具"
     end
-    
+
     return desc
 end
 
@@ -297,10 +297,10 @@ function Property.forceAcquire(tile, fromPlayerId, toPlayerId, cost)
     if tile.owner ~= fromPlayerId then
         return false, "目标地块不属于该玩家"
     end
-    
+
     -- 转移所有权（包括建筑）
     tile.owner = toPlayerId
-    
+
     return true, cost
 end
 
@@ -309,26 +309,26 @@ end
 function Property.getAdjacentTiles(tileId, allTiles)
     local adjacent = {}
     local adjacentIds = {}
-    
+
     -- 简化版：仅返回前一个和后一个地块
     if tileId > 1 then
         table.insert(adjacentIds, tileId - 1)
     else
         table.insert(adjacentIds, 16)
     end
-    
+
     if tileId < 16 then
         table.insert(adjacentIds, tileId + 1)
     else
         table.insert(adjacentIds, 1)
     end
-    
+
     for _, id in ipairs(adjacentIds) do
         if allTiles[id] then
             table.insert(adjacent, allTiles[id])
         end
     end
-    
+
     return adjacent
 end
 
@@ -337,15 +337,15 @@ function Property.canUpgrade(tile, allTiles)
     if tile.type ~= Property.Type.PROPERTY then
         return false, "只有房地产可以升级"
     end
-    
+
     if not tile.owner then
         return false, "未拥有的地块无法升级"
     end
-    
+
     if tile.building_level >= Property.Building.MANSION then
         return false, "已是最高等级"
     end
-    
+
     return true
 end
 

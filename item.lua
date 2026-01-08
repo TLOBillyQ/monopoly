@@ -49,25 +49,25 @@ Item.IdToType = {
 }
 
 Item.Info = {
-    [Item.Type.FREE_PASS] = {id = 2001, name = "免费卡", description = "免除下一次租金或税金。"},
-    [Item.Type.REMOTE_DICE] = {id = 2002, name = "遥控骰子卡", description = "控制下一次掷骰点数。"},
-    [Item.Type.DICE_DOUBLE] = {id = 2003, name = "骰子加倍卡", description = "本回合掷骰结果翻倍。"},
-    [Item.Type.ROADBLOCK] = {id = 2004, name = "路障卡", description = "放置路障，阻挡其他玩家。"},
-    [Item.Type.LANDMINE] = {id = 2005, name = "地雷卡", description = "在脚下放置地雷。"},
-    [Item.Type.CLEAR_ROAD] = {id = 2006, name = "清障卡", description = "清除前方障碍。"},
-    [Item.Type.STEAL] = {id = 2007, name = "偷窃卡", description = "偷取其他玩家的道具。"},
-    [Item.Type.MONSTER] = {id = 2008, name = "怪兽卡", description = "释放怪兽拆除建筑。"},
-    [Item.Type.FORCE_ACQUIRE] = {id = 2009, name = "强征卡", description = "强制获得当前地块。"},
-    [Item.Type.TAX_FREE] = {id = 2010, name = "免税卡", description = "抵扣下一次税金。"},
-    [Item.Type.EQUAL_WEALTH] = {id = 2011, name = "均富卡", description = "与目标平分金币。"},
-    [Item.Type.BANISH] = {id = 2012, name = "流放卡", description = "将目标流放到深山。"},
-    [Item.Type.MISSILE] = {id = 2013, name = "导弹卡", description = "攻击范围内的建筑。"},
-    [Item.Type.TAX_CHECK] = {id = 2014, name = "查税卡", description = "让目标支付税金。"},
-    [Item.Type.INVOKE_GOD] = {id = 2015, name = "请神卡", description = "夺取他人附身神。"},
-    [Item.Type.SEND_GOD] = {id = 2016, name = "送神卡", description = "将穷神转移出去。"},
-    [Item.Type.WEALTH_GOD] = {id = 2017, name = "财神卡", description = "财神附身，收益翻倍。"},
-    [Item.Type.POOR_GOD] = {id = 2018, name = "穷神卡", description = "让目标穷神附身。"},
-    [Item.Type.ANGEL] = {id = 2019, name = "天使卡", description = "天使附身，免疫负面效果。"}
+    [Item.Type.FREE_PASS] = { id = 2001, name = "免费卡", description = "免除下一次租金或税金。" },
+    [Item.Type.REMOTE_DICE] = { id = 2002, name = "遥控骰子卡", description = "控制下一次掷骰点数。" },
+    [Item.Type.DICE_DOUBLE] = { id = 2003, name = "骰子加倍卡", description = "本回合掷骰结果翻倍。" },
+    [Item.Type.ROADBLOCK] = { id = 2004, name = "路障卡", description = "放置路障，阻挡其他玩家。" },
+    [Item.Type.LANDMINE] = { id = 2005, name = "地雷卡", description = "在脚下放置地雷。" },
+    [Item.Type.CLEAR_ROAD] = { id = 2006, name = "清障卡", description = "清除前方障碍。" },
+    [Item.Type.STEAL] = { id = 2007, name = "偷窃卡", description = "偷取其他玩家的道具。" },
+    [Item.Type.MONSTER] = { id = 2008, name = "怪兽卡", description = "释放怪兽拆除建筑。" },
+    [Item.Type.FORCE_ACQUIRE] = { id = 2009, name = "强征卡", description = "强制获得当前地块。" },
+    [Item.Type.TAX_FREE] = { id = 2010, name = "免税卡", description = "抵扣下一次税金。" },
+    [Item.Type.EQUAL_WEALTH] = { id = 2011, name = "均富卡", description = "与目标平分金币。" },
+    [Item.Type.BANISH] = { id = 2012, name = "流放卡", description = "将目标流放到深山。" },
+    [Item.Type.MISSILE] = { id = 2013, name = "导弹卡", description = "攻击范围内的建筑。" },
+    [Item.Type.TAX_CHECK] = { id = 2014, name = "查税卡", description = "让目标支付税金。" },
+    [Item.Type.INVOKE_GOD] = { id = 2015, name = "请神卡", description = "夺取他人附身神。" },
+    [Item.Type.SEND_GOD] = { id = 2016, name = "送神卡", description = "将穷神转移出去。" },
+    [Item.Type.WEALTH_GOD] = { id = 2017, name = "财神卡", description = "财神附身，收益翻倍。" },
+    [Item.Type.POOR_GOD] = { id = 2018, name = "穷神卡", description = "让目标穷神附身。" },
+    [Item.Type.ANGEL] = { id = 2019, name = "天使卡", description = "天使附身，免疫负面效果。" }
 }
 
 local function resolveItemType(itemId)
@@ -144,29 +144,25 @@ end
 function Item.use(itemId, player, gameState)
     local itemType = resolveItemType(itemId)
     if not itemType then
-        return {success = false, message = "未知道具"}
+        return { success = false, message = "未知道具" }
     end
 
     local rules = (gameState and gameState.config and gameState.config.rules) or {}
     local others = otherPlayers(player, gameState)
     local target = others[1]
-    local result = {success = true, message = Item.getName(itemId)}
+    local result = { success = true, message = Item.getName(itemId) }
 
     if itemType == Item.Type.FREE_PASS then
         player.freePass = true
         result.message = "下次租金或税金豁免"
-
     elseif itemType == Item.Type.REMOTE_DICE then
         player.pendingDiceOverride = 6
         result.message = "遥控骰子：下一次掷骰固定为 6 点"
-
     elseif itemType == Item.Type.DICE_DOUBLE then
         player.pendingDiceDouble = true
         result.message = "本回合骰子结果加倍"
-
     elseif itemType == Item.Type.ROADBLOCK or itemType == Item.Type.LANDMINE or itemType == Item.Type.CLEAR_ROAD then
         result.message = Item.getName(itemId) .. " 功能未实现，已作废"
-
     elseif itemType == Item.Type.STEAL then
         if target and target.items and #target.items > 0 then
             local stolen = Player.removeRandomItem(target)
@@ -175,10 +171,8 @@ function Item.use(itemId, player, gameState)
         else
             result.message = "目标没有可偷的道具"
         end
-
     elseif itemType == Item.Type.MONSTER then
         result.message = "怪兽卡效果未实现，已作废"
-
     elseif itemType == Item.Type.FORCE_ACQUIRE then
         local tiles = gameState and gameState.tiles
         local tile = tiles and tiles[player.position]
@@ -196,11 +190,9 @@ function Item.use(itemId, player, gameState)
         else
             result.message = "当前位置无法强征"
         end
-
     elseif itemType == Item.Type.TAX_FREE then
         player.freePass = true
         result.message = "免税卡已激活"
-
     elseif itemType == Item.Type.EQUAL_WEALTH then
         if target then
             local total = player.money + target.money
@@ -219,7 +211,6 @@ function Item.use(itemId, player, gameState)
         else
             result.message = "没有可平分的目标"
         end
-
     elseif itemType == Item.Type.BANISH then
         if target then
             local dest = getTileIndexByType(gameState, "mountain", target.tileCount)
@@ -231,10 +222,8 @@ function Item.use(itemId, player, gameState)
         else
             result.message = "没有可流放的目标"
         end
-
     elseif itemType == Item.Type.MISSILE then
         result.message = "导弹卡效果未实现，已作废"
-
     elseif itemType == Item.Type.TAX_CHECK then
         if target then
             local tax = math.floor(target.money * (rules.taxRate or 0.5))
@@ -243,7 +232,6 @@ function Item.use(itemId, player, gameState)
         else
             result.message = "没有可查税的目标"
         end
-
     elseif itemType == Item.Type.INVOKE_GOD then
         if target and target.buffType then
             player.buffType = target.buffType
@@ -254,7 +242,6 @@ function Item.use(itemId, player, gameState)
         else
             result.message = "目标没有附身状态"
         end
-
     elseif itemType == Item.Type.SEND_GOD then
         if player.buffType == "poor" and target then
             target.buffType = "poor"
@@ -265,11 +252,9 @@ function Item.use(itemId, player, gameState)
         else
             result.message = "只有被穷神附身时才能使用"
         end
-
     elseif itemType == Item.Type.WEALTH_GOD then
         Player.applyBuff(player, "wealth", rules.wealthDuration or 5)
         result.message = "财神附身，收益翻倍"
-
     elseif itemType == Item.Type.POOR_GOD then
         if target then
             Player.applyBuff(target, "poor", rules.poorDuration or 5)
@@ -277,7 +262,6 @@ function Item.use(itemId, player, gameState)
         else
             result.message = "没有目标可施加穷神"
         end
-
     elseif itemType == Item.Type.ANGEL then
         Player.applyBuff(player, "angel", rules.angelDuration or 5)
         result.message = "天使附身，免疫负面效果"

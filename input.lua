@@ -32,27 +32,27 @@ function Input.handleKey(key, Game)
         end
         return
     end
-    
+
     -- A键：切换自动/手动模式
     if key == "a" then
         local isAuto = Game.toggleAutoMode()
         print("游戏模式: " .. (isAuto and "自动" or "手动"))
         return
     end
-    
+
     -- +/-键：调整自动模式速度
     if key == "=" or key == "+" or key == "kp+" then
         Game.setAutoSpeed(1.0)
         print("速度设为正常")
         return
     end
-    
+
     if key == "-" or key == "kp-" then
         Game.setAutoSpeed(2.0)
         print("速度设为慢速")
         return
     end
-    
+
     if key == "0" then
         Game.setAutoSpeed(0.1)
         print("速度设为快速")
@@ -64,13 +64,13 @@ function Input.handleKey(key, Game)
         Game.buyProperty()
         return
     end
-    
+
     -- U键：升级地块
     if key == "u" then
         Game.upgradeProperty()
         return
     end
-    
+
     -- S键：跳过当前操作
     if key == "s" then
         Game.skipAction()
@@ -91,7 +91,7 @@ function Input.handleKey(key, Game)
         end
         return
     end
-    
+
     -- H键：显示帮助
     if key == "h" then
         print("=== 游戏操作帮助 ===")
