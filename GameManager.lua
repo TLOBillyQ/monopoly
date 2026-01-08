@@ -453,7 +453,8 @@ function GameManager.nextStep()
         if not prepareTurn(state, player) then
             return
         end
-        local dice = math.random(1, 6)
+        local dice = player.pendingDiceOverride or math.random(1, 6)
+        player.pendingDiceOverride = nil
         if player.pendingDiceDouble then
             dice = dice * 2
             player.pendingDiceDouble = false
