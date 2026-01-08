@@ -1,15 +1,15 @@
 -- 蛋仔大富翁配置（同步 main 数据，移除 Spoke 依赖）
 
-local Config = {}
+local config = {}
 
-Config.window = {
+config.window = {
     width = 1280,
     height = 720,
     title = "蛋仔大富翁 - 纯Lua重构"
 }
 
 -- 核心规则（保留自动步进设置）
-Config.rules = {
+config.rules = {
     max_players = 4,
     min_players = 2,
     start_money = 100000,
@@ -31,7 +31,7 @@ Config.rules = {
 }
 
 -- 颜色方案
-Config.colors = {
+config.colors = {
     background = { 0.92, 0.92, 0.9 },
     board_fill = { 0.85, 0.85, 0.8 },
     board_line = { 0.1, 0.1, 0.1 },
@@ -45,21 +45,21 @@ Config.colors = {
 }
 
 -- 角色与座驾（用于展示）
-Config.characters = {
+config.characters = {
     { id = 1001, name = "蛋仔" },
     { id = 1002, name = "泡泡" },
     { id = 1003, name = "小花" },
     { id = 1004, name = "萝卜" }
 }
 
-Config.vehicles = {
+config.vehicles = {
     { id = 4001, name = "滑板" },
     { id = 4002, name = "哈雷摩托" },
     { id = 4003, name = "法拉利" }
 }
 
 -- 9x9 网格布局的完整地块数据（参考 map.md）
-Config.tiles = {
+config.tiles = {
     -- 从起点开始逆时针编号
     { id = 1, name = "起点", type = "start", price = 0, grid_pos = { 9, 9 } },
 
@@ -121,7 +121,7 @@ Config.tiles = {
 }
 
 -- 机会卡表（34个事件）
-Config.chance_events = {
+config.chance_events = {
     -- 3001-3009: 金币相关
     { id = 3001, name = "奖金", type = "gain_money", value = 2000, weight = 300, negative = false, target = "self", description = "你赢得了彩票，获得2000金币。" },
     { id = 3002, name = "双倍奖金", type = "gain_money", value = 5000, weight = 200, negative = false, target = "self", description = "投资成功，获得5000金币。" },
@@ -165,7 +165,7 @@ Config.chance_events = {
 }
 
 -- 道具表（19个道具）
-Config.items = {
+config.items = {
     -- 1级道具（基础卡）
     {
         id = 2001,
@@ -381,7 +381,7 @@ Config.items = {
 }
 
 -- 黑市价格配置
-Config.black_market = {
+config.black_market = {
     prices = {
         [2001] = { type = "ads", value = 1 },             -- 免费卡：1个广告
         [2002] = { type = "coins", value = 1000 },        -- 遥控骰子：1000金币
@@ -406,14 +406,14 @@ Config.black_market = {
 }
 
 -- 建筑升级成本配置
-Config.building_costs = {
+config.building_costs = {
     -- 基于地块的房间类型：house, apartment, hotel, mansion
     -- 升级到这个等级的费用 = 地块价格 * 系数
     multipliers = { 1, 2, 4, 8 }
 }
 
 -- 常量表（位置按照上方 tiles 列表）
-Config.constants = {
+config.constants = {
     GRID_SIZE = 9,
     TILE_COUNT = 45,
     DICE_MIN = 1,
@@ -436,4 +436,4 @@ Config.constants = {
     WINDOW_HEIGHT = 640
 }
 
-return Config
+return config

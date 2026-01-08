@@ -1,9 +1,9 @@
 -- UI系统（独立文件）
 -- 提供地块卡片、对话框、按钮等UI组件
 
-local UI = {}
+local ui = {}
 
-UI.data = {
+ui.data = {
     buttons = {},
     dialogs = {},
     current_dialog = nil,
@@ -15,53 +15,53 @@ UI.data = {
     mouse_y = 0,
 }
 
-function UI.init()
-    UI.load_font()
+function ui.init()
+    ui.load_font()
     print("UI初始化完成")
 end
 
 -- 尝试加载中文字体，若不存在则使用默认字体
-function UI.load_font()
+function ui.load_font()
     local font_path = "assets/fonts/NotoSansSC-Regular.ttf"
     local has_font = love.filesystem.getInfo(font_path) ~= nil
 
     if has_font then
-        UI.data.font = love.graphics.newFont(font_path, 18)
-        UI.data.title_font = love.graphics.newFont(font_path, 22)
-        UI.data.small_font = love.graphics.newFont(font_path, 14)
+        ui.data.font = love.graphics.newFont(font_path, 18)
+        ui.data.title_font = love.graphics.newFont(font_path, 22)
+        ui.data.small_font = love.graphics.newFont(font_path, 14)
         print("已加载中文字体: " .. font_path)
     else
-        UI.data.font = love.graphics.newFont(16)
-        UI.data.title_font = love.graphics.newFont(20)
-        UI.data.small_font = love.graphics.newFont(12)
+        ui.data.font = love.graphics.newFont(16)
+        ui.data.title_font = love.graphics.newFont(20)
+        ui.data.small_font = love.graphics.newFont(12)
         print("未找到中文字体 assets/fonts/NotoSansSC-Regular.ttf，使用默认字体")
         print("如需中文显示，请将支持中文的字体文件放到 assets/fonts/NotoSansSC-Regular.ttf")
     end
 end
 
-function UI.update(dt, mouse_x, mouse_y)
-    UI.data.mouse_x = mouse_x or love.mouse.getX()
-    UI.data.mouse_y = mouse_y or love.mouse.getY()
+function ui.update(dt, mouse_x, mouse_y)
+    ui.data.mouse_x = mouse_x or love.mouse.getX()
+    ui.data.mouse_y = mouse_y or love.mouse.getY()
 end
 
-function UI.draw()
-    if UI.data.font then
-        love.graphics.setFont(UI.data.font)
+function ui.draw()
+    if ui.data.font then
+        love.graphics.setFont(ui.data.font)
     end
 
     -- 绘制地块信息卡片
-    if UI.data.property_card then
-        UI.draw_property_card(UI.data.property_card)
+    if ui.data.property_card then
+        ui.draw_property_card(ui.data.property_card)
     end
 
     -- 绘制当前对话框
-    if UI.data.current_dialog then
-        UI.draw_dialog(UI.data.current_dialog)
+    if ui.data.current_dialog then
+        ui.draw_dialog(ui.data.current_dialog)
     end
 end
 
 -- 绘制地块信息卡片
-function UI.draw_property_card(card)
+function ui.draw_property_card(card)
     local x, y = 900, 200
     local width, height = 300, 400
 
@@ -79,15 +79,15 @@ function UI.draw_property_card(card)
     love.graphics.setColor(0.2, 0.6, 0.9)
     love.graphics.rectangle("fill", x, y, width, 40, 10, 10)
 
-    if UI.data.title_font then
-        love.graphics.setFont(UI.data.title_font)
+    if ui.data.title_font then
+        love.graphics.setFont(ui.data.title_font)
     end
     love.graphics.setColor(1, 1, 1)
     love.graphics.print(card.name, x + 15, y + 10)
 
     -- 内容区域
-    if UI.data.font then
-        love.graphics.setFont(UI.data.font)
+    if ui.data.font then
+        love.graphics.setFont(ui.data.font)
     end
 
     local content_y = y + 55
@@ -136,21 +136,21 @@ function UI.draw_property_card(card)
     if card.description then
         content_y = content_y + 10
         love.graphics.setColor(0.7, 0.7, 0.7)
-        if UI.data.small_font then
-            love.graphics.setFont(UI.data.small_font)
+        if ui.data.small_font then
+            love.graphics.setFont(ui.data.small_font)
         end
         love.graphics.printf(card.description, x + 15, content_y, width - 30)
     end
 
     -- 关闭提示
-    if UI.data.small_font then
-        love.graphics.setFont(UI.data.small_font)
+    if ui.data.small_font then
+        love.graphics.setFont(ui.data.small_font)
     end
     love.graphics.setColor(0.5, 0.5, 0.5)
     love.graphics.print("点击其他位置关闭", x + 15, y + height - 25)
 end
 
-function UI.draw_dialog(dialog)
+function ui.draw_dialog(dialog)
     local x, y = 400, 250
     local width, height = 480, 220
 
@@ -173,8 +173,8 @@ function UI.draw_dialog(dialog)
         love.graphics.setColor(0.3, 0.7, 1)
         love.graphics.rectangle("fill", x, y, width, 45, 12, 12)
 
-        if UI.data.title_font then
-            love.graphics.setFont(UI.data.title_font)
+        if ui.data.title_font then
+            love.graphics.setFont(ui.data.title_font)
         end
         love.graphics.setColor(1, 1, 1)
         love.graphics.printf(dialog.title, x, y + 12, width, "center")
@@ -182,8 +182,8 @@ function UI.draw_dialog(dialog)
 
     -- 消息内容
     if dialog.message then
-        if UI.data.font then
-            love.graphics.setFont(UI.data.font)
+        if ui.data.font then
+            love.graphics.setFont(ui.data.font)
         end
         love.graphics.setColor(0.2, 0.2, 0.2)
         love.graphics.printf(dialog.message, x + 20, y + 70, width - 40, "center")
@@ -203,7 +203,7 @@ function UI.draw_dialog(dialog)
             local btn_x = start_x + (i - 1) * (button_width + button_spacing)
 
             -- 检测鼠标悬停
-            local is_hover = UI.is_mouse_over(btn_x, button_y, button_width, button_height)
+            local is_hover = ui.is_mouse_over(btn_x, button_y, button_width, button_height)
 
             -- 按钮背景
             if is_hover then
@@ -231,42 +231,42 @@ function UI.draw_dialog(dialog)
 end
 
 -- 检测鼠标是否在区域内
-function UI.is_mouse_over(x, y, width, height)
-    local mx, my = UI.data.mouse_x, UI.data.mouse_y
+function ui.is_mouse_over(x, y, width, height)
+    local mx, my = ui.data.mouse_x, ui.data.mouse_y
     return mx >= x and mx <= x + width and my >= y and my <= y + height
 end
 
-function UI.handle_click(x, y)
+function ui.handle_click(x, y)
     -- 处理对话框按钮点击
-    if UI.data.current_dialog and UI.data.current_dialog.button_positions then
-        for i, btn_pos in ipairs(UI.data.current_dialog.button_positions) do
-            if UI.is_mouse_over(btn_pos.x, btn_pos.y, btn_pos.w, btn_pos.h) then
-                if UI.data.current_dialog.callback then
-                    UI.data.current_dialog.callback(i)
+    if ui.data.current_dialog and ui.data.current_dialog.button_positions then
+        for i, btn_pos in ipairs(ui.data.current_dialog.button_positions) do
+            if ui.is_mouse_over(btn_pos.x, btn_pos.y, btn_pos.w, btn_pos.h) then
+                if ui.data.current_dialog.callback then
+                    ui.data.current_dialog.callback(i)
                 end
-                UI.close_dialog()
+                ui.close_dialog()
                 return true
             end
         end
     end
 
     -- 点击对话框外部关闭
-    if UI.data.current_dialog then
-        UI.close_dialog()
+    if ui.data.current_dialog then
+        ui.close_dialog()
         return true
     end
 
     -- 点击地块卡片外部关闭
-    if UI.data.property_card then
-        UI.close_property_card()
+    if ui.data.property_card then
+        ui.close_property_card()
         return true
     end
 
     return false
 end
 
-function UI.show_dialog(title, message, buttons, callback)
-    UI.data.current_dialog = {
+function ui.show_dialog(title, message, buttons, callback)
+    ui.data.current_dialog = {
         title = title,
         message = message,
         buttons = buttons or { "确定" },
@@ -274,16 +274,16 @@ function UI.show_dialog(title, message, buttons, callback)
     }
 end
 
-function UI.close_dialog()
-    UI.data.current_dialog = nil
+function ui.close_dialog()
+    ui.data.current_dialog = nil
 end
 
-function UI.show_property_card(property_info)
-    UI.data.property_card = property_info
+function ui.show_property_card(property_info)
+    ui.data.property_card = property_info
 end
 
-function UI.close_property_card()
-    UI.data.property_card = nil
+function ui.close_property_card()
+    ui.data.property_card = nil
 end
 
-return UI
+return ui

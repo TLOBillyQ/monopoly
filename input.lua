@@ -1,8 +1,8 @@
 -- Input handling module
 
-local Input = {}
+local input = {}
 
-function Input.handle_key(key, Game)
+function input.handle_key(key, Game)
     if not key then return end
     key = string.lower(key)
     print("Key pressed: " .. tostring(key))
@@ -112,4 +112,4 @@ function Input.handle_key(key, Game)
     print("未绑定的按键: " .. tostring(key))
 end
 
-return Input
+return input

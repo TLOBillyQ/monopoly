@@ -1,6 +1,6 @@
 -- Rendering module for Monopoly prototype
 
-local Render = {}
+local render = {}
 
 local fonts = {
     base = nil,
@@ -345,7 +345,7 @@ local function draw_controls(state, start_x, start_y)
     return y + line_height
 end
 
-function Render.draw(state)
+function render.draw(state)
     ensure_font()
     love.graphics.setFont(fonts.base)
     local bg = state.cfg.colors.background
@@ -373,4 +373,4 @@ function Render.draw(state)
     draw_prompt(state)
 end
 
-return Render
+return render

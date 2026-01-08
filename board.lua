@@ -1,8 +1,8 @@
 -- 地图系统（基于 9x9 网格的数据渲染）
 
-local Config = require("config")
+local config = require("config")
 
-local Board = {}
+local board = {}
 
 local player_colors = {
     { 1,   0.3,  0.3 },
@@ -11,24 +11,24 @@ local player_colors = {
     { 1,   0.85, 0.3 }
 }
 
-Board.data = {
-    tiles = Config.tiles,
-    grid_size = (Config.constants and Config.constants.GRID_SIZE) or 9,
+board.data = {
+    tiles = config.tiles,
+    grid_size = (config.constants and config.constants.GRID_SIZE) or 9,
     board_width = 800,
     board_height = 600
 }
 
 -- 初始化地图
-function Board.init()
-    Board.data.tiles = Config.tiles
-    print("地图初始化完成，共 " .. tostring(#(Board.data.tiles or {})) .. " 个格子")
+function board.init()
+    board.data.tiles = config.tiles
+    print("地图初始化完成，共 " .. tostring(#(board.data.tiles or {})) .. " 个格子")
 end
 
 -- 绘制地图（简单调试用，实际绘制交由 render.lua）
-function Board.draw(players, current_player_index)
-    local tiles = Board.data.tiles or {}
-    local colors = Config.colors or {}
-    local grid_size = Board.data.grid_size or 9
+function board.draw(players, current_player_index)
+    local tiles = board.data.tiles or {}
+    local colors = config.colors or {}
+    local grid_size = board.data.grid_size or 9
     local cell_size = 60
     local origin_x, origin_y = 50, 80
 
@@ -106,4 +106,4 @@ function Board.draw(players, current_player_index)
     end
 end
 
-return Board
+return board
