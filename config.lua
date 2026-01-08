@@ -10,32 +10,32 @@ Config.window = {
 
 -- 核心规则（保留自动步进设置）
 Config.rules = {
-    maxPlayers = 4,
-    minPlayers = 2,
-    startMoney = 100000,
-    passStartBonus = 2000,
-    hospitalFee = 1000,     -- 进入医院费用
-    hospitalStay = 2,       -- 医院停留回合数
-    mountainStay = 2,       -- 深山停留回合数
-    turnTimeout = 30,       -- 回合超时时间
-    maxItemSlots = 5,       -- 最多持有道具数
-    autoStepInterval = 0.9, -- 自动模式步进时间（秒）
+    max_players = 4,
+    min_players = 2,
+    start_money = 100000,
+    pass_start_bonus = 2000,
+    hospital_fee = 1000,     -- 进入医院费用
+    hospital_stay = 2,       -- 医院停留回合数
+    mountain_stay = 2,       -- 深山停留回合数
+    turn_timeout = 30,       -- 回合超时时间
+    max_item_slots = 5,       -- 最多持有道具数
+    auto_step_interval = 0.9, -- 自动模式步进时间（秒）
 
     -- 神仙附身时间（回合）
-    angelDuration = 5,
-    poorDuration = 5,
-    wealthDuration = 5,
+    angel_duration = 5,
+    poor_duration = 5,
+    wealth_duration = 5,
 
     -- 税务相关
-    taxRate = 0.5 -- 查税卡扣款比例
+    tax_rate = 0.5 -- 查税卡扣款比例
 }
 
 -- 颜色方案
 Config.colors = {
     background = { 0.92, 0.92, 0.9 },
-    boardFill = { 0.85, 0.85, 0.8 },
-    boardLine = { 0.1, 0.1, 0.1 },
-    hudText = { 0.1, 0.1, 0.1 },
+    board_fill = { 0.85, 0.85, 0.8 },
+    board_line = { 0.1, 0.1, 0.1 },
+    hud_text = { 0.1, 0.1, 0.1 },
     player = {
         { 1,    0.35, 0.35 },
         { 0.35, 0.35, 1 },
@@ -61,67 +61,67 @@ Config.vehicles = {
 -- 9x9 网格布局的完整地块数据（参考 map.md）
 Config.tiles = {
     -- 从起点开始逆时针编号
-    { id = 1, name = "起点", type = "start", price = 0, gridPos = { 9, 9 } },
+    { id = 1, name = "起点", type = "start", price = 0, grid_pos = { 9, 9 } },
 
     -- 底边从右向左 (2-9)
-    { id = 2, name = "福州路", type = "property", price = 500, gridPos = { 8, 9 } },
-    { id = 3, name = "台北路", type = "property", price = 550, gridPos = { 7, 9 } },
-    { id = 4, name = "海口路", type = "property", price = 600, gridPos = { 6, 9 } },
-    { id = 5, name = "道具卡", type = "item_card", price = 0, gridPos = { 5, 9 } },
-    { id = 6, name = "广州路", type = "property", price = 650, gridPos = { 4, 9 } },
-    { id = 7, name = "香港路", type = "property", price = 700, gridPos = { 3, 9 } },
-    { id = 8, name = "澳门路", type = "property", price = 750, gridPos = { 2, 9 } },
-    { id = 9, name = "医院", type = "hospital", price = 0, gridPos = { 1, 9 } },
+    { id = 2, name = "福州路", type = "property", price = 500, grid_pos = { 8, 9 } },
+    { id = 3, name = "台北路", type = "property", price = 550, grid_pos = { 7, 9 } },
+    { id = 4, name = "海口路", type = "property", price = 600, grid_pos = { 6, 9 } },
+    { id = 5, name = "道具卡", type = "item_card", price = 0, grid_pos = { 5, 9 } },
+    { id = 6, name = "广州路", type = "property", price = 650, grid_pos = { 4, 9 } },
+    { id = 7, name = "香港路", type = "property", price = 700, grid_pos = { 3, 9 } },
+    { id = 8, name = "澳门路", type = "property", price = 750, grid_pos = { 2, 9 } },
+    { id = 9, name = "医院", type = "hospital", price = 0, grid_pos = { 1, 9 } },
 
     -- 左边从下向上 (10-17)
-    { id = 10, name = "南宁路", type = "property", price = 800, gridPos = { 1, 8 } },
-    { id = 11, name = "贵阳路", type = "property", price = 850, gridPos = { 1, 7 } },
-    { id = 12, name = "昆明路", type = "property", price = 900, gridPos = { 1, 6 } },
-    { id = 13, name = "机会卡", type = "chance_card", price = 0, gridPos = { 1, 5 } },
-    { id = 14, name = "成都路", type = "property", price = 950, gridPos = { 1, 4 } },
-    { id = 15, name = "西宁路", type = "property", price = 1000, gridPos = { 1, 3 } },
-    { id = 16, name = "拉萨路", type = "property", price = 1050, gridPos = { 1, 2 } },
-    { id = 17, name = "深山", type = "mountain", price = 0, gridPos = { 1, 1 } },
+    { id = 10, name = "南宁路", type = "property", price = 800, grid_pos = { 1, 8 } },
+    { id = 11, name = "贵阳路", type = "property", price = 850, grid_pos = { 1, 7 } },
+    { id = 12, name = "昆明路", type = "property", price = 900, grid_pos = { 1, 6 } },
+    { id = 13, name = "机会卡", type = "chance_card", price = 0, grid_pos = { 1, 5 } },
+    { id = 14, name = "成都路", type = "property", price = 950, grid_pos = { 1, 4 } },
+    { id = 15, name = "西宁路", type = "property", price = 1000, grid_pos = { 1, 3 } },
+    { id = 16, name = "拉萨路", type = "property", price = 1050, grid_pos = { 1, 2 } },
+    { id = 17, name = "深山", type = "mountain", price = 0, grid_pos = { 1, 1 } },
 
     -- 顶边从左向右 (18-25)
-    { id = 18, name = "乌鲁木齐路", type = "property", price = 1100, gridPos = { 2, 1 } },
-    { id = 19, name = "兰州路", type = "property", price = 1150, gridPos = { 3, 1 } },
-    { id = 20, name = "呼和浩特路", type = "property", price = 1200, gridPos = { 4, 1 } },
-    { id = 21, name = "道具卡", type = "item_card", price = 0, gridPos = { 5, 1 } },
-    { id = 22, name = "哈尔滨路", type = "property", price = 1250, gridPos = { 6, 1 } },
-    { id = 23, name = "长春路", type = "property", price = 1300, gridPos = { 7, 1 } },
-    { id = 24, name = "沈阳路", type = "property", price = 1350, gridPos = { 8, 1 } },
-    { id = 25, name = "税务局", type = "tax_office", price = 0, gridPos = { 9, 1 } },
+    { id = 18, name = "乌鲁木齐路", type = "property", price = 1100, grid_pos = { 2, 1 } },
+    { id = 19, name = "兰州路", type = "property", price = 1150, grid_pos = { 3, 1 } },
+    { id = 20, name = "呼和浩特路", type = "property", price = 1200, grid_pos = { 4, 1 } },
+    { id = 21, name = "道具卡", type = "item_card", price = 0, grid_pos = { 5, 1 } },
+    { id = 22, name = "哈尔滨路", type = "property", price = 1250, grid_pos = { 6, 1 } },
+    { id = 23, name = "长春路", type = "property", price = 1300, grid_pos = { 7, 1 } },
+    { id = 24, name = "沈阳路", type = "property", price = 1350, grid_pos = { 8, 1 } },
+    { id = 25, name = "税务局", type = "tax_office", price = 0, grid_pos = { 9, 1 } },
 
     -- 右边从上向下 (26-32)
-    { id = 26, name = "石家庄路", type = "property", price = 1400, gridPos = { 9, 2 } },
-    { id = 27, name = "郑州路", type = "property", price = 1450, gridPos = { 9, 3 } },
-    { id = 28, name = "合肥路", type = "property", price = 1500, gridPos = { 9, 4 } },
-    { id = 29, name = "机会卡", type = "chance_card", price = 0, gridPos = { 9, 5 } },
-    { id = 30, name = "济南路", type = "property", price = 1550, gridPos = { 9, 6 } },
-    { id = 31, name = "南京路", type = "property", price = 1600, gridPos = { 9, 7 } },
-    { id = 32, name = "杭州路", type = "property", price = 1650, gridPos = { 9, 8 } },
+    { id = 26, name = "石家庄路", type = "property", price = 1400, grid_pos = { 9, 2 } },
+    { id = 27, name = "郑州路", type = "property", price = 1450, grid_pos = { 9, 3 } },
+    { id = 28, name = "合肥路", type = "property", price = 1500, grid_pos = { 9, 4 } },
+    { id = 29, name = "机会卡", type = "chance_card", price = 0, grid_pos = { 9, 5 } },
+    { id = 30, name = "济南路", type = "property", price = 1550, grid_pos = { 9, 6 } },
+    { id = 31, name = "南京路", type = "property", price = 1600, grid_pos = { 9, 7 } },
+    { id = 32, name = "杭州路", type = "property", price = 1650, grid_pos = { 9, 8 } },
 
     -- 中间横行从右向左 (33-39)
-    { id = 33, name = "上海路", type = "property", price = 1700, gridPos = { 8, 5 } },
-    { id = 34, name = "北京路", type = "property", price = 1750, gridPos = { 7, 5 } },
-    { id = 35, name = "机会卡", type = "chance_card", price = 0, gridPos = { 6, 5 } },
-    { id = 36, name = "黑市", type = "black_market", price = 0, gridPos = { 5, 5 } },
-    { id = 37, name = "武汉路", type = "property", price = 1800, gridPos = { 4, 5 } },
-    { id = 38, name = "长沙路", type = "property", price = 1850, gridPos = { 3, 5 } },
-    { id = 39, name = "南昌路", type = "property", price = 1900, gridPos = { 2, 5 } },
+    { id = 33, name = "上海路", type = "property", price = 1700, grid_pos = { 8, 5 } },
+    { id = 34, name = "北京路", type = "property", price = 1750, grid_pos = { 7, 5 } },
+    { id = 35, name = "机会卡", type = "chance_card", price = 0, grid_pos = { 6, 5 } },
+    { id = 36, name = "黑市", type = "black_market", price = 0, grid_pos = { 5, 5 } },
+    { id = 37, name = "武汉路", type = "property", price = 1800, grid_pos = { 4, 5 } },
+    { id = 38, name = "长沙路", type = "property", price = 1850, grid_pos = { 3, 5 } },
+    { id = 39, name = "南昌路", type = "property", price = 1900, grid_pos = { 2, 5 } },
 
     -- 中间列从上向下 (40-45)
-    { id = 40, name = "银川路", type = "property", price = 1950, gridPos = { 5, 2 } },
-    { id = 41, name = "西安路", type = "property", price = 2000, gridPos = { 5, 3 } },
-    { id = 42, name = "太原路", type = "property", price = 2050, gridPos = { 5, 4 } },
-    { id = 43, name = "天津路", type = "property", price = 2100, gridPos = { 5, 6 } },
-    { id = 44, name = "重庆路", type = "property", price = 2150, gridPos = { 5, 7 } },
-    { id = 45, name = "机会卡", type = "chance_card", price = 0, gridPos = { 5, 8 } }
+    { id = 40, name = "银川路", type = "property", price = 1950, grid_pos = { 5, 2 } },
+    { id = 41, name = "西安路", type = "property", price = 2000, grid_pos = { 5, 3 } },
+    { id = 42, name = "太原路", type = "property", price = 2050, grid_pos = { 5, 4 } },
+    { id = 43, name = "天津路", type = "property", price = 2100, grid_pos = { 5, 6 } },
+    { id = 44, name = "重庆路", type = "property", price = 2150, grid_pos = { 5, 7 } },
+    { id = 45, name = "机会卡", type = "chance_card", price = 0, grid_pos = { 5, 8 } }
 }
 
 -- 机会卡表（34个事件）
-Config.chanceEvents = {
+Config.chance_events = {
     -- 3001-3009: 金币相关
     { id = 3001, name = "奖金", type = "gain_money", value = 2000, weight = 300, negative = false, target = "self", description = "你赢得了彩票，获得2000金币。" },
     { id = 3002, name = "双倍奖金", type = "gain_money", value = 5000, weight = 200, negative = false, target = "self", description = "投资成功，获得5000金币。" },
@@ -173,8 +173,8 @@ Config.items = {
         level = 1,
         type = "free_pass",
         weight = 1000,
-        immuneToAngel = false,
-        triggerTime = "after_action",
+        immune_to_angel = false,
+        trigger_time = "after_action",
         description = "当你停留在其他玩家的地块上时，使用此卡可以免交本次租金。"
     },
 
@@ -184,8 +184,8 @@ Config.items = {
         level = 1,
         type = "remote_dice",
         weight = 1000,
-        immuneToAngel = false,
-        triggerTime = "before_action",
+        immune_to_angel = false,
+        trigger_time = "before_action",
         description = "在你行动前可以使用，可以遥控骰子投出的点数。"
     },
 
@@ -195,8 +195,8 @@ Config.items = {
         level = 1,
         type = "dice_double",
         weight = 1000,
-        immuneToAngel = false,
-        triggerTime = "after_roll",
+        immune_to_angel = false,
+        trigger_time = "after_roll",
         description = "投出骰子后可以使用，使当前投出的点数加倍。"
     },
 
@@ -206,8 +206,8 @@ Config.items = {
         level = 1,
         type = "roadblock",
         weight = 1000,
-        immuneToAngel = true,
-        triggerTime = "active_use",
+        immune_to_angel = true,
+        trigger_time = "active_use",
         description = "放置路障，任何玩家经过此地时强制停留1个回合。"
     },
 
@@ -217,8 +217,8 @@ Config.items = {
         level = 1,
         type = "landmine",
         weight = 1000,
-        immuneToAngel = true,
-        triggerTime = "active_use",
+        immune_to_angel = true,
+        trigger_time = "active_use",
         description = "在脚下放置地雷，任何玩家经过此地时触发地雷，摧毁座驾并强制住院。"
     },
 
@@ -228,8 +228,8 @@ Config.items = {
         level = 1,
         type = "clear_road",
         weight = 1000,
-        immuneToAngel = false,
-        triggerTime = "before_action",
+        immune_to_angel = false,
+        trigger_time = "before_action",
         description = "放出机器人清除前方12格以内的路障和地雷。"
     },
 
@@ -240,8 +240,8 @@ Config.items = {
         level = 2,
         type = "steal",
         weight = 500,
-        immuneToAngel = true,
-        triggerTime = "pass_player",
+        immune_to_angel = true,
+        trigger_time = "pass_player",
         description = "当你路过其他玩家时，可以选择使用此卡获得他的一个道具。"
     },
 
@@ -251,8 +251,8 @@ Config.items = {
         level = 2,
         type = "monster",
         weight = 500,
-        immuneToAngel = false,
-        triggerTime = "active_use",
+        immune_to_angel = false,
+        trigger_time = "active_use",
         description = "选择前后3格内其他玩家的建筑，释放怪兽拆除该建筑。"
     },
 
@@ -262,8 +262,8 @@ Config.items = {
         level = 2,
         type = "force_acquire",
         weight = 500,
-        immuneToAngel = false,
-        triggerTime = "after_action",
+        immune_to_angel = false,
+        trigger_time = "after_action",
         description = "停留在其他玩家地块上时，支付费用后强制获得这块地块的所有权。"
     },
 
@@ -273,8 +273,8 @@ Config.items = {
         level = 2,
         type = "tax_free",
         weight = 500,
-        immuneToAngel = false,
-        triggerTime = "tax_time",
+        immune_to_angel = false,
+        trigger_time = "tax_time",
         description = "在税务局征税时使用，可以抵扣本次税金。"
     },
 
@@ -284,8 +284,8 @@ Config.items = {
         level = 2,
         type = "equal_wealth",
         weight = 500,
-        immuneToAngel = true,
-        triggerTime = "active_use",
+        immune_to_angel = true,
+        trigger_time = "active_use",
         description = "选择一个玩家，你和该玩家平分你们的总资金。"
     },
 
@@ -295,8 +295,8 @@ Config.items = {
         level = 2,
         type = "banish",
         weight = 500,
-        immuneToAngel = true,
-        triggerTime = "active_use",
+        immune_to_angel = true,
+        trigger_time = "active_use",
         description = "选择一个玩家，将其强制流放到深山中。"
     },
 
@@ -307,8 +307,8 @@ Config.items = {
         level = 3,
         type = "missile",
         weight = 250,
-        immuneToAngel = false,
-        triggerTime = "active_use",
+        immune_to_angel = false,
+        trigger_time = "active_use",
         description = "向前后3格范围内释放导弹，摧毁所有建筑和座驾，玩家住进医院。"
     },
 
@@ -318,8 +318,8 @@ Config.items = {
         level = 3,
         type = "tax_check",
         weight = 250,
-        immuneToAngel = true,
-        triggerTime = "active_use",
+        immune_to_angel = true,
+        trigger_time = "active_use",
         description = "选择一个玩家，该玩家立即支付50%资金的所得税。"
     },
 
@@ -329,8 +329,8 @@ Config.items = {
         level = 3,
         type = "invoke_god",
         weight = 250,
-        immuneToAngel = false,
-        triggerTime = "active_use",
+        immune_to_angel = false,
+        trigger_time = "active_use",
         description = "选择其他玩家，将其身上的附身神请到自己身上。"
     },
 
@@ -340,8 +340,8 @@ Config.items = {
         level = 3,
         type = "send_god",
         weight = 250,
-        immuneToAngel = false,
-        triggerTime = "when_cursed",
+        immune_to_angel = false,
+        trigger_time = "when_cursed",
         description = "被穷神附身时使用，选择一个玩家，将穷神送到他身上。"
     },
 
@@ -352,8 +352,8 @@ Config.items = {
         level = 3,
         type = "wealth_god",
         weight = 0,
-        immuneToAngel = false,
-        triggerTime = "active_use",
+        immune_to_angel = false,
+        trigger_time = "active_use",
         description = "财神附身5回合，收到的租金和奖金翻倍。"
     },
 
@@ -363,8 +363,8 @@ Config.items = {
         level = 3,
         type = "poor_god",
         weight = 0,
-        immuneToAngel = false,
-        triggerTime = "active_use",
+        immune_to_angel = false,
+        trigger_time = "active_use",
         description = "选择一个玩家，令其穷神附身5回合，支付的租金和罚金翻倍。"
     },
 
@@ -374,14 +374,14 @@ Config.items = {
         level = 3,
         type = "angel",
         weight = 0,
-        immuneToAngel = false,
-        triggerTime = "active_use",
+        immune_to_angel = false,
+        trigger_time = "active_use",
         description = "天使附身5回合，免受负面卡牌效果影响。"
     }
 }
 
 -- 黑市价格配置
-Config.blackMarket = {
+Config.black_market = {
     prices = {
         [2001] = { type = "ads", value = 1 },             -- 免费卡：1个广告
         [2002] = { type = "coins", value = 1000 },        -- 遥控骰子：1000金币
@@ -406,7 +406,7 @@ Config.blackMarket = {
 }
 
 -- 建筑升级成本配置
-Config.buildingCosts = {
+Config.building_costs = {
     -- 基于地块的房间类型：house, apartment, hotel, mansion
     -- 升级到这个等级的费用 = 地块价格 * 系数
     multipliers = { 1, 2, 4, 8 }

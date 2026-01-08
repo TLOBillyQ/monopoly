@@ -51,52 +51,52 @@
 
 ### 2. **player.lua** - 玩家系统完全重构
 - ✅ **玩家创建**：支持角色ID和座驾ID
-  - characterId：选择的游戏角色
-  - vehicleId：初始座驾
+  - character_id：选择的游戏角色
+  - vehicle_id：初始座驾
   - 初始资金：100,000
 
 - ✅ **金币管理**：
-  - addMoney()：增加金币
-  - subtractMoney()：减少金币
+  - add_money()：增加金币
+  - subtract_money()：减少金币
   - transfer()：转账
 
 - ✅ **地块管理**：
-  - acquireProperty()：购买地块
-  - loseProperty()：失去地块
-  - loseRandomProperty()：随机失去一块地块
-  - loseAllProperties()：失去所有地块
+  - acquire_property()：购买地块
+  - lose_property()：失去地块
+  - lose_random_property()：随机失去一块地块
+  - lose_all_properties()：失去所有地块
 
 - ✅ **道具管理**：
-  - addItem()：添加道具
-  - removeItem()：移除道具
-  - removeRandomItem()：随机移除道具
-  - clearAllItems()：清空所有道具
-  - hasItem()：检查是否持有
+  - add_item()：添加道具
+  - remove_item()：移除道具
+  - remove_random_item()：随机移除道具
+  - clear_all_items()：清空所有道具
+  - has_item()：检查是否持有
 
 - ✅ **附身状态管理**：
-  - applyBuff()：获得附身状态
-  - removeBuff()：移除附身
-  - reduceBuff()：减少附身时间
-  - isProtectedByAngel()：检查天使保护
-  - isCursedByPoor()：检查穷神附身
-  - isBlessedByWealth()：检查财神附身
+  - apply_buff()：获得附身状态
+  - remove_buff()：移除附身
+  - reduce_buff()：减少附身时间
+  - is_protected_by_angel()：检查天使保护
+  - is_cursed_by_poor()：检查穷神附身
+  - is_blessed_by_wealth()：检查财神附身
 
 - ✅ **座驾管理**：
-  - obtainVehicle()：获得座驾
-  - destroyVehicle()：摧毁座驾
-  - repairVehicle()：修复座驾
+  - obtain_vehicle()：获得座驾
+  - destroy_vehicle()：摧毁座驾
+  - repair_vehicle()：修复座驾
 
 - ✅ **位置管理**：
-  - moveTo()：移动到指定位置
-  - moveForward()：前进指定步数
-  - moveBackward()：后退指定步数
+  - move_to()：移动到指定位置
+  - move_forward()：前进指定步数
+  - move_backward()：后退指定步数
 
 - ✅ **状态管理**：
-  - enterHospital()：进入医院
-  - enterMountain()：进入深山
-  - enterJail()：进入监狱
-  - reduceStayTurns()：减少停留时间
-  - releaseFromStay()：立即离开
+  - enter_hospital()：进入医院
+  - enter_mountain()：进入深山
+  - enter_jail()：进入监狱
+  - reduce_stay_turns()：减少停留时间
+  - release_from_stay()：立即离开
 
 ### 3. **chance.lua** - 机会卡系统完全实现
 - ✅ **34个事件的完整实现**：

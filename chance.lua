@@ -6,216 +6,216 @@ local Item = require("item")
 local Property = require("property")
 
 -- 事件类型枚举
-Chance.EventType = {
-    GAIN_MONEY = "gain_money",
-    LOSE_MONEY = "lose_money",
-    LOSE_PERCENT = "lose_percent",
-    LOSE_PERCENT_ALL = "lose_percent_all",
-    COLLECT_FROM_ALL = "collect_from_all",
-    PAY_TO_ALL = "pay_to_all",
-    MOVE_FORWARD = "move_forward",
-    MOVE_BACKWARD = "move_backward",
-    TELEPORT_TO_TAX = "teleport_to_tax",
-    TELEPORT_TO_HOSPITAL = "teleport_to_hospital",
-    TELEPORT_TO_MARKET = "teleport_to_market",
-    TELEPORT_TO_START = "teleport_to_start",
-    TELEPORT_SECRET = "teleport_secret",
-    SKIP_JAIL = "skip_jail",
-    GAIN_ITEM = "gain_item",
-    LOSE_RANDOM_ITEM = "lose_random_item",
-    LOSE_ALL_ITEMS = "lose_all_items",
-    LOSE_PROPERTY = "lose_property",
-    FORCE_HOSPITAL = "force_hospital",
-    FORCE_MOUNTAIN = "force_mountain"
+Chance.event_types = {
+    gain_money = "gain_money",
+    lose_money = "lose_money",
+    lose_percent = "lose_percent",
+    lose_percent_all = "lose_percent_all",
+    collect_from_all = "collect_from_all",
+    pay_to_all = "pay_to_all",
+    move_forward = "move_forward",
+    move_backward = "move_backward",
+    teleport_to_tax = "teleport_to_tax",
+    teleport_to_hospital = "teleport_to_hospital",
+    teleport_to_market = "teleport_to_market",
+    teleport_to_start = "teleport_to_start",
+    teleport_secret = "teleport_secret",
+    skip_jail = "skip_jail",
+    gain_item = "gain_item",
+    lose_random_item = "lose_random_item",
+    lose_all_items = "lose_all_items",
+    lose_property = "lose_property",
+    force_hospital = "force_hospital",
+    force_mountain = "force_mountain"
 }
 
-local function getTileIndexByType(gameState, tileType, defaultValue)
-    if gameState and gameState.tileIndexByType and tileType then
-        return gameState.tileIndexByType[tileType] or defaultValue
+local function get_tile_index_by_type(game_state, tile_type, default_value)
+    if game_state and game_state.tile_index_by_type and tile_type then
+        return game_state.tile_index_by_type[tile_type] or default_value
     end
-    return defaultValue
+    return default_value
 end
 
-local function getTileCount(gameState)
-    if gameState and gameState.tileCount then
-        return gameState.tileCount
+local function get_tile_count(game_state)
+    if game_state and game_state.tile_count then
+        return game_state.tile_count
     end
     return 16
 end
 
 -- 从配置构建机会卡列表
-function Chance.createFromConfig(config)
+function Chance.create_from_config(config)
     local events = {}
-    for _, entry in ipairs(config.chanceEvents or {}) do
+    for _, entry in ipairs(config.chance_events or {}) do
         local evt = {}
         for k, v in pairs(entry) do
             evt[k] = v
         end
-        evt.eventType = entry.type or entry.eventType
+        evt.event_type = entry.type or entry.event_type
         table.insert(events, evt)
     end
     return events
 end
 
 -- 按权重随机抽取一张机会卡
-function Chance.drawRandom(chanceList)
-    if not chanceList or #chanceList == 0 then
+function Chance.draw_random(chance_list)
+    if not chance_list or #chance_list == 0 then
         return nil
     end
-    local totalWeight = 0
-    for _, event in ipairs(chanceList) do
-        totalWeight = totalWeight + (event.weight or 1)
+    local total_weight = 0
+    for _, event in ipairs(chance_list) do
+        total_weight = total_weight + (event.weight or 1)
     end
-    if totalWeight <= 0 then
-        return chanceList[1]
+    if total_weight <= 0 then
+        return chance_list[1]
     end
-    local rand = math.random() * totalWeight
+    local rand = math.random() * total_weight
     local current = 0
-    for _, event in ipairs(chanceList) do
+    for _, event in ipairs(chance_list) do
         current = current + (event.weight or 1)
         if rand <= current then
             return event
         end
     end
-    return chanceList[#chanceList]
+    return chance_list[#chance_list]
 end
 
-local function teleportTo(drawer, tileIndex, tileCount)
-    if tileIndex then
-        Player.moveTo(drawer, tileIndex, tileCount)
+local function teleport_to(drawer, tile_index, tile_count)
+    if tile_index then
+        Player.move_to(drawer, tile_index, tile_count)
     end
 end
 
-local function applyHospital(drawer, rules)
-    Player.enterHospital(drawer, rules.hospitalStay or 1)
-    if rules.hospitalFee then
-        Player.subtractMoney(drawer, rules.hospitalFee)
+local function apply_hospital(drawer, rules)
+    Player.enter_hospital(drawer, rules.hospital_stay or 1)
+    if rules.hospital_fee then
+        Player.subtract_money(drawer, rules.hospital_fee)
     end
 end
 
 -- 执行机会卡
-function Chance.execute(event, drawer, allPlayers, gameState)
+function Chance.execute(event, drawer, all_players, game_state)
     if not event then
         return { message = "没有可用的机会卡", applied = false }
     end
 
-    local rules = (gameState and gameState.config and gameState.config.rules) or {}
-    local tileCount = getTileCount(gameState)
-    local eventType = event.eventType or event.type
-    local angelProtected = event.negative and drawer.buffType == "angel" and (drawer.buffTurns or 0) > 0
+    local rules = (game_state and game_state.config and game_state.config.rules) or {}
+    local tile_count = get_tile_count(game_state)
+    local event_type = event.event_type or event.type
+    local angel_protected = event.negative and drawer.buff_type == "angel" and (drawer.buff_turns or 0) > 0
 
-    if angelProtected then
+    if angel_protected then
         return { message = "天使护符生效，负面事件无效", applied = false }
     end
 
     local result = { message = event.description or event.name or "机会卡", applied = true }
 
-    if eventType == Chance.EventType.GAIN_MONEY then
-        Player.addMoney(drawer, event.value or 0)
+    if event_type == Chance.event_types.gain_money then
+        Player.add_money(drawer, event.value or 0)
         result.message = string.format("%s，获得 %d 金币", event.name or "奖金", event.value or 0)
-    elseif eventType == Chance.EventType.LOSE_MONEY then
-        Player.subtractMoney(drawer, event.value or 0)
+    elseif event_type == Chance.event_types.lose_money then
+        Player.subtract_money(drawer, event.value or 0)
         result.message = string.format("%s，失去 %d 金币", event.name or "罚款", event.value or 0)
-    elseif eventType == Chance.EventType.LOSE_PERCENT then
+    elseif event_type == Chance.event_types.lose_percent then
         local amount = math.floor(drawer.money * (event.value or 0))
-        Player.subtractMoney(drawer, amount)
+        Player.subtract_money(drawer, amount)
         result.message = string.format("损失资金的 %d%%（%d 金币）", math.floor((event.value or 0) * 100), amount)
-    elseif eventType == Chance.EventType.LOSE_PERCENT_ALL then
-        for _, p in ipairs(allPlayers or {}) do
+    elseif event_type == Chance.event_types.lose_percent_all then
+        for _, p in ipairs(all_players or {}) do
             if p.id ~= drawer.id then
                 local amount = math.floor(p.money * (event.value or 0))
-                Player.subtractMoney(p, amount)
+                Player.subtract_money(p, amount)
             end
         end
         result.message = "所有其他玩家损失资金"
-    elseif eventType == Chance.EventType.COLLECT_FROM_ALL then
+    elseif event_type == Chance.event_types.collect_from_all then
         local total = 0
-        for _, p in ipairs(allPlayers or {}) do
+        for _, p in ipairs(all_players or {}) do
             if p.id ~= drawer.id then
                 total = total + Player.transfer(p, drawer, event.value or 0)
             end
         end
         result.message = string.format("每人支付 %d 金币，共收获 %d", event.value or 0, total)
-    elseif eventType == Chance.EventType.PAY_TO_ALL then
-        for _, p in ipairs(allPlayers or {}) do
+    elseif event_type == Chance.event_types.pay_to_all then
+        for _, p in ipairs(all_players or {}) do
             if p.id ~= drawer.id then
                 Player.transfer(drawer, p, event.value or 0)
             end
         end
         result.message = string.format("请客，每人获得 %d 金币", event.value or 0)
-    elseif eventType == Chance.EventType.MOVE_FORWARD then
-        Player.moveForward(drawer, event.value or 0, tileCount)
+    elseif event_type == Chance.event_types.move_forward then
+        Player.move_forward(drawer, event.value or 0, tile_count)
         result.message = string.format("前进 %d 格", event.value or 0)
-    elseif eventType == Chance.EventType.MOVE_BACKWARD then
-        Player.moveBackward(drawer, event.value or 0, tileCount)
+    elseif event_type == Chance.event_types.move_backward then
+        Player.move_backward(drawer, event.value or 0, tile_count)
         result.message = string.format("后退 %d 格", event.value or 0)
-    elseif eventType == Chance.EventType.TELEPORT_TO_TAX then
-        local target = getTileIndexByType(gameState, "tax_office", 1)
-        teleportTo(drawer, target, tileCount)
+    elseif event_type == Chance.event_types.teleport_to_tax then
+        local target = get_tile_index_by_type(game_state, "tax_office", 1)
+        teleport_to(drawer, target, tile_count)
         result.message = "前往税务局"
-    elseif eventType == Chance.EventType.TELEPORT_TO_HOSPITAL then
-        local target = getTileIndexByType(gameState, "hospital", 1)
-        teleportTo(drawer, target, tileCount)
-        applyHospital(drawer, rules)
+    elseif event_type == Chance.event_types.teleport_to_hospital then
+        local target = get_tile_index_by_type(game_state, "hospital", 1)
+        teleport_to(drawer, target, tile_count)
+        apply_hospital(drawer, rules)
         result.message = "前往医院并住院"
-    elseif eventType == Chance.EventType.TELEPORT_TO_MARKET then
-        local target = getTileIndexByType(gameState, "black_market", 1)
-        teleportTo(drawer, target, tileCount)
+    elseif event_type == Chance.event_types.teleport_to_market then
+        local target = get_tile_index_by_type(game_state, "black_market", 1)
+        teleport_to(drawer, target, tile_count)
         result.message = "前往黑市"
-    elseif eventType == Chance.EventType.TELEPORT_TO_START then
-        local target = getTileIndexByType(gameState, "start", 1)
-        teleportTo(drawer, target, tileCount)
+    elseif event_type == Chance.event_types.teleport_to_start then
+        local target = get_tile_index_by_type(game_state, "start", 1)
+        teleport_to(drawer, target, tile_count)
         result.message = "回到起点"
-    elseif eventType == Chance.EventType.TELEPORT_SECRET then
-        local target = getTileIndexByType(gameState, "black_market", 1)
-        teleportTo(drawer, target, tileCount)
+    elseif event_type == Chance.event_types.teleport_secret then
+        local target = get_tile_index_by_type(game_state, "black_market", 1)
+        teleport_to(drawer, target, tile_count)
         result.message = "通过密道进入黑市"
-    elseif eventType == Chance.EventType.SKIP_JAIL then
-        drawer.freeJailCard = true
+    elseif event_type == Chance.event_types.skip_jail then
+        drawer.free_jail_card = true
         result.message = "获得免费停留卡"
-    elseif eventType == Chance.EventType.GAIN_ITEM then
-        local itemId = event.value
-        local added = Player.addItem(drawer, itemId)
+    elseif event_type == Chance.event_types.gain_item then
+        local item_id = event.value
+        local added = Player.add_item(drawer, item_id)
         if not added then
             result.message = "道具栏已满，无法获得道具"
         else
-            local name = Item.getName(itemId)
+            local name = Item.get_name(item_id)
             result.message = string.format("获得道具：%s", name)
-            local useResult = Item.use and Item.use(itemId, drawer, gameState)
-            if useResult and useResult.message then
-                result.message = useResult.message
+            local use_result = Item.use and Item.use(item_id, drawer, game_state)
+            if use_result and use_result.message then
+                result.message = use_result.message
             end
         end
-    elseif eventType == Chance.EventType.LOSE_RANDOM_ITEM then
-        local lost = Player.removeRandomItem(drawer)
+    elseif event_type == Chance.event_types.lose_random_item then
+        local lost = Player.remove_random_item(drawer)
         result.message = lost and string.format("丢失一张道具（ID %s）", tostring(lost)) or "没有道具可丢失"
-    elseif eventType == Chance.EventType.LOSE_ALL_ITEMS then
-        local count = Player.clearAllItems(drawer)
+    elseif event_type == Chance.event_types.lose_all_items then
+        local count = Player.clear_all_items(drawer)
         result.message = string.format("丢失所有道具，共 %d 张", count)
-    elseif eventType == Chance.EventType.LOSE_PROPERTY then
+    elseif event_type == Chance.event_types.lose_property then
         if drawer.properties and #drawer.properties > 0 then
-            local lostPropertyId = Player.loseRandomProperty(drawer)
-            if lostPropertyId and gameState and gameState.tiles then
-                for _, t in ipairs(gameState.tiles) do
-                    if t.id == lostPropertyId then
+            local lost_property_id = Player.lose_random_property(drawer)
+            if lost_property_id and game_state and game_state.tiles then
+                for _, t in ipairs(game_state.tiles) do
+                    if t.id == lost_property_id then
                         Property.reset(t)
                         break
                     end
                 end
             end
-            result.message = string.format("失去一块地块（ID %s）", tostring(lostPropertyId))
+            result.message = string.format("失去一块地块（ID %s）", tostring(lost_property_id))
         else
             result.message = "没有地块可失去"
         end
-    elseif eventType == Chance.EventType.FORCE_HOSPITAL then
-        local target = getTileIndexByType(gameState, "hospital", 1)
-        teleportTo(drawer, target, tileCount)
-        applyHospital(drawer, rules)
+    elseif event_type == Chance.event_types.force_hospital then
+        local target = get_tile_index_by_type(game_state, "hospital", 1)
+        teleport_to(drawer, target, tile_count)
+        apply_hospital(drawer, rules)
         result.message = "强制住院"
-    elseif eventType == Chance.EventType.FORCE_MOUNTAIN then
-        local target = getTileIndexByType(gameState, "mountain", 1)
-        teleportTo(drawer, target, tileCount)
-        Player.enterMountain(drawer, rules.mountainStay or 1)
+    elseif event_type == Chance.event_types.force_mountain then
+        local target = get_tile_index_by_type(game_state, "mountain", 1)
+        teleport_to(drawer, target, tile_count)
+        Player.enter_mountain(drawer, rules.mountain_stay or 1)
         result.message = "被迫进入深山"
     end
 

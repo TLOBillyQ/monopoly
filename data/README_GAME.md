@@ -162,14 +162,14 @@ open -a love .
 {
     id,              -- 玩家ID
     name,            -- 玩家名称
-    isAI,            -- 是否AI
+    is_ai,            -- 是否AI
     money,           -- 金币
     properties,      -- 拥有的地块
     position,        -- 当前位置
     state,           -- 状态
     items,           -- 道具卡
     vehicle,         -- 座驾
-    angelTurns,      -- 天使回合数
+    angel_turns,      -- 天使回合数
     ...
 }
 ```
@@ -180,11 +180,11 @@ open -a love .
     id,              -- 地块ID
     name,            -- 名称
     type,            -- 类型
-    basePrice,       -- 基础价格
+    base_price,       -- 基础价格
     owner,           -- 所有者
-    buildingLevel,   -- 建筑等级
-    hasRoadblock,    -- 是否有路障
-    hasLandmine,     -- 是否有地雷
+    building_level,   -- 建筑等级
+    has_roadblock,    -- 是否有路障
+    has_landmine,     -- 是否有地雷
     ...
 }
 ```
@@ -200,10 +200,10 @@ open -a love .
 3. 在 `config.lua` 中添加配置
 
 ### 添加新机会卡
-在 `chance.lua` 中的 `Chance.createAllChances()` 添加卡片
+在 `chance.lua` 中的 `Chance.create_all_chances()` 添加卡片
 
 ### 自定义AI策略
-修改 `player.lua` 中的 `Player.makeAIDecision()` 函数
+修改 `player.lua` 中的 `Player.make_ai_decision()` 函数
 
 ## 许可证
 

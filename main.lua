@@ -7,7 +7,7 @@ function love.load()
     love.keyboard.setKeyRepeat(true)
     math.randomseed(os.time())
 
-    game.createNewGame(Config, 4)
+    game.create_new_game(Config, 4)
 
     print("=== 蛋仔大富翁（无 Spoke 版） ===")
     print("空格: 下一步 | A: 自动/手动 | B: 买地 | U: 升级 | S: 跳过 | H: 帮助 | ESC: 退出")
@@ -22,5 +22,5 @@ function love.draw()
 end
 
 function love.keypressed(key)
-    game.handleInput(key)
+    game.handle_input(key)
 end

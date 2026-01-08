@@ -4,7 +4,7 @@ local Config = require("config")
 
 local Board = {}
 
-local playerColors = {
+local player_colors = {
     { 1,   0.3,  0.3 },
     { 0.3, 0.3,  1 },
     { 0.3, 0.9,  0.3 },
@@ -13,9 +13,9 @@ local playerColors = {
 
 Board.data = {
     tiles = Config.tiles,
-    gridSize = (Config.constants and Config.constants.GRID_SIZE) or 9,
-    boardWidth = 800,
-    boardHeight = 600
+    grid_size = (Config.constants and Config.constants.GRID_SIZE) or 9,
+    board_width = 800,
+    board_height = 600
 }
 
 -- 初始化地图
@@ -25,38 +25,38 @@ function Board.init()
 end
 
 -- 绘制地图（简单调试用，实际绘制交由 render.lua）
-function Board.draw(players, currentPlayerIndex)
+function Board.draw(players, current_player_index)
     local tiles = Board.data.tiles or {}
     local colors = Config.colors or {}
-    local gridSize = Board.data.gridSize or 9
-    local cellSize = 60
-    local originX, originY = 50, 80
+    local grid_size = Board.data.grid_size or 9
+    local cell_size = 60
+    local origin_x, origin_y = 50, 80
 
     -- 计算实际网格尺寸
     for _, t in ipairs(tiles) do
-        if t.gridPos then
-            gridSize = math.max(gridSize, t.gridPos[1], t.gridPos[2])
+        if t.grid_pos then
+            grid_size = math.max(grid_size, t.grid_pos[1], t.grid_pos[2])
         end
     end
 
-    love.graphics.setColor(colors.boardFill or { 0.8, 0.8, 0.8 })
-    love.graphics.rectangle("fill", originX, originY, cellSize * gridSize, cellSize * gridSize)
-    love.graphics.setColor(colors.boardLine or { 0, 0, 0 })
-    love.graphics.rectangle("line", originX, originY, cellSize * gridSize, cellSize * gridSize)
+    love.graphics.setColor(colors.board_fill or { 0.8, 0.8, 0.8 })
+    love.graphics.rectangle("fill", origin_x, origin_y, cell_size * grid_size, cell_size * grid_size)
+    love.graphics.setColor(colors.board_line or { 0, 0, 0 })
+    love.graphics.rectangle("line", origin_x, origin_y, cell_size * grid_size, cell_size * grid_size)
 
     -- 网格线
     love.graphics.setColor(0.7, 0.7, 0.7, 0.3)
-    for i = 1, gridSize - 1 do
-        love.graphics.line(originX + i * cellSize, originY, originX + i * cellSize, originY + gridSize * cellSize)
-        love.graphics.line(originX, originY + i * cellSize, originX + gridSize * cellSize, originY + i * cellSize)
+    for i = 1, grid_size - 1 do
+        love.graphics.line(origin_x + i * cell_size, origin_y, origin_x + i * cell_size, origin_y + grid_size * cell_size)
+        love.graphics.line(origin_x, origin_y + i * cell_size, origin_x + grid_size * cell_size, origin_y + i * cell_size)
     end
 
     -- 绘制地块
     for _, tile in ipairs(tiles) do
-        if tile.gridPos then
-            local gx, gy = tile.gridPos[1], tile.gridPos[2]
-            local x = originX + (gx - 1) * cellSize
-            local y = originY + (gy - 1) * cellSize
+        if tile.grid_pos then
+            local gx, gy = tile.grid_pos[1], tile.grid_pos[2]
+            local x = origin_x + (gx - 1) * cell_size
+            local y = origin_y + (gy - 1) * cell_size
 
             if tile.type == "property" then
                 love.graphics.setColor(0.8, 0.9, 1)
@@ -77,12 +77,12 @@ function Board.draw(players, currentPlayerIndex)
             else
                 love.graphics.setColor(0.85, 0.85, 0.85)
             end
-            love.graphics.rectangle("fill", x + 1, y + 1, cellSize - 2, cellSize - 2)
-            love.graphics.setColor(colors.boardLine or { 0, 0, 0 })
-            love.graphics.rectangle("line", x, y, cellSize, cellSize)
-            love.graphics.printf(tile.name or "", x + 2, y + 5, cellSize - 4, "center")
+            love.graphics.rectangle("fill", x + 1, y + 1, cell_size - 2, cell_size - 2)
+            love.graphics.setColor(colors.board_line or { 0, 0, 0 })
+            love.graphics.rectangle("line", x, y, cell_size, cell_size)
+            love.graphics.printf(tile.name or "", x + 2, y + 5, cell_size - 4, "center")
             if tile.price and tile.price > 0 then
-                love.graphics.printf("¥" .. tile.price, x + 2, y + cellSize - 18, cellSize - 4, "center")
+                love.graphics.printf("¥" .. tile.price, x + 2, y + cell_size - 18, cell_size - 4, "center")
             end
         end
     end
@@ -91,15 +91,15 @@ function Board.draw(players, currentPlayerIndex)
     for idx, player in ipairs(players or {}) do
         if player and player.position then
             local tile = tiles[player.position]
-            if tile and tile.gridPos then
-                local gx, gy = tile.gridPos[1], tile.gridPos[2]
-                local px = originX + (gx - 1) * cellSize + cellSize / 2
-                local py = originY + (gy - 1) * cellSize + cellSize / 2 + (idx - 1) * 8 - 12
-                local color = playerColors[(idx - 1) % #playerColors + 1]
-                love.graphics.setColor(color)
-                local radius = (idx == currentPlayerIndex) and 10 or 7
-                love.graphics.circle("fill", px, py, radius)
-                love.graphics.setColor(colors.boardLine or { 0, 0, 0 })
+            if tile and tile.grid_pos then
+                local gx, gy = tile.grid_pos[1], tile.grid_pos[2]
+                local px = origin_x + (gx - 1) * cell_size + cell_size / 2
+                local py = origin_y + (gy - 1) * cell_size + cell_size / 2 + (idx - 1) * 8 - 12
+        local color = player_colors[(idx - 1) % #player_colors + 1]
+        love.graphics.setColor(color)
+        local radius = (idx == current_player_index) and 10 or 7
+        love.graphics.circle("fill", px, py, radius)
+                love.graphics.setColor(colors.board_line or { 0, 0, 0 })
                 love.graphics.circle("line", px, py, radius)
             end
         end

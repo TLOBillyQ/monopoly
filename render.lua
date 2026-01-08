@@ -7,33 +7,33 @@ local fonts = {
     title = nil
 }
 
-local function calculateBoardMetrics(tiles)
-    local originX, originY = 20, 40
-    local cellSize = 70
-    local gridSize = 5
+local function calculate_board_metrics(tiles)
+    local origin_x, origin_y = 20, 40
+    local cell_size = 70
+    local grid_size = 5
     for _, t in ipairs(tiles) do
-        if t.gridPos then
-            gridSize = math.max(gridSize, t.gridPos[1], t.gridPos[2])
+        if t.grid_pos then
+            grid_size = math.max(grid_size, t.grid_pos[1], t.grid_pos[2])
         end
     end
     return {
-        originX = originX,
-        originY = originY,
-        cellSize = cellSize,
-        gridSize = gridSize,
-        width = cellSize * gridSize,
-        height = cellSize * gridSize
+        origin_x = origin_x,
+        origin_y = origin_y,
+        cell_size = cell_size,
+        grid_size = grid_size,
+        width = cell_size * grid_size,
+        height = cell_size * grid_size
     }
 end
 
-local function ensureFont()
+local function ensure_font()
     if fonts.base then return end
-    local fontPath = "assets/fonts/NotoSansSC-Regular.ttf"
-    local hasFont = love.filesystem.getInfo(fontPath) ~= nil
-    if hasFont then
-        fonts.base = love.graphics.newFont(fontPath, 18)
-        fonts.title = love.graphics.newFont(fontPath, 22)
-        print("已加载中文字体: " .. fontPath)
+    local font_path = "assets/fonts/NotoSansSC-Regular.ttf"
+    local has_font = love.filesystem.getInfo(font_path) ~= nil
+    if has_font then
+        fonts.base = love.graphics.newFont(font_path, 18)
+        fonts.title = love.graphics.newFont(font_path, 22)
+        print("已加载中文字体: " .. font_path)
     else
         fonts.base = love.graphics.newFont(16)
         fonts.title = love.graphics.newFont(20)
@@ -41,37 +41,37 @@ local function ensureFont()
     end
 end
 
-local function drawBoard(state, board)
+local function draw_board(state, board)
     local colors = state.cfg.colors
     local tiles = state.tiles
-    local originX, originY = board.originX, board.originY
-    local cellSize, gridSize = board.cellSize, board.gridSize
+    local origin_x, origin_y = board.origin_x, board.origin_y
+    local cell_size, grid_size = board.cell_size, board.grid_size
 
     -- 绘制棋盘背景
-    love.graphics.setColor(colors.boardFill)
-    love.graphics.rectangle("fill", originX, originY, cellSize * gridSize, cellSize * gridSize)
-    love.graphics.setColor(colors.boardLine)
-    love.graphics.rectangle("line", originX, originY, cellSize * gridSize, cellSize * gridSize)
+    love.graphics.setColor(colors.board_fill)
+    love.graphics.rectangle("fill", origin_x, origin_y, cell_size * grid_size, cell_size * grid_size)
+    love.graphics.setColor(colors.board_line)
+    love.graphics.rectangle("line", origin_x, origin_y, cell_size * grid_size, cell_size * grid_size)
 
     -- 绘制网格线
     love.graphics.setColor(0.7, 0.7, 0.7, 0.3)
-    for i = 1, gridSize - 1 do
+    for i = 1, grid_size - 1 do
         -- 竖线
-        love.graphics.line(originX + i * cellSize, originY, originX + i * cellSize, originY + gridSize * cellSize)
+        love.graphics.line(origin_x + i * cell_size, origin_y, origin_x + i * cell_size, origin_y + grid_size * cell_size)
         -- 横线
-        love.graphics.line(originX, originY + i * cellSize, originX + gridSize * cellSize, originY + i * cellSize)
+        love.graphics.line(origin_x, origin_y + i * cell_size, origin_x + grid_size * cell_size, origin_y + i * cell_size)
     end
 
     -- 绘制地块信息和玩家
-    love.graphics.setColor(colors.boardLine)
+    love.graphics.setColor(colors.board_line)
     for _, tile in ipairs(tiles) do
-        if tile.gridPos then
-            local gx, gy = tile.gridPos[1], tile.gridPos[2]
-            local x = originX + (gx - 1) * cellSize
-            local y = originY + (gy - 1) * cellSize
+        if tile.grid_pos then
+            local gx, gy = tile.grid_pos[1], tile.grid_pos[2]
+            local x = origin_x + (gx - 1) * cell_size
+            local y = origin_y + (gy - 1) * cell_size
 
             -- 绘制地块边框
-            love.graphics.rectangle("line", x, y, cellSize, cellSize)
+            love.graphics.rectangle("line", x, y, cell_size, cell_size)
 
             -- 根据类型着色
             if tile.type == "property" then
@@ -93,24 +93,24 @@ local function drawBoard(state, board)
             elseif tile.type == "rest" then
                 love.graphics.setColor(0.85, 0.95, 1)
             end
-            love.graphics.rectangle("fill", x + 1, y + 1, cellSize - 2, cellSize - 2)
+            love.graphics.rectangle("fill", x + 1, y + 1, cell_size - 2, cell_size - 2)
 
             -- 绘制地块名称
-            love.graphics.setColor(colors.boardLine)
-            love.graphics.printf(tile.name, x + 2, y + 5, cellSize - 4, "center")
+            love.graphics.setColor(colors.board_line)
+            love.graphics.printf(tile.name, x + 2, y + 5, cell_size - 4, "center")
 
             -- 绘制价格（如果有）
             if tile.price > 0 then
-                love.graphics.printf("¥" .. tile.price, x + 2, y + cellSize - 18, cellSize - 4, "center")
+                love.graphics.printf("¥" .. tile.price, x + 2, y + cell_size - 18, cell_size - 4, "center")
             end
 
             -- 绘制所有权
             if tile.owner then
-                local ownerColor = colors.player[(tile.owner - 1) % #colors.player + 1]
-                love.graphics.setColor(ownerColor)
-                love.graphics.rectangle("fill", x + 4, y + cellSize - 10, cellSize - 8, 6)
-                love.graphics.setColor(colors.boardLine)
-                love.graphics.printf("P" .. tile.owner, x + 2, y + cellSize - 24, cellSize - 4, "center")
+                local owner_color = colors.player[(tile.owner - 1) % #colors.player + 1]
+                love.graphics.setColor(owner_color)
+                love.graphics.rectangle("fill", x + 4, y + cell_size - 10, cell_size - 8, 6)
+                love.graphics.setColor(colors.board_line)
+                love.graphics.printf("P" .. tile.owner, x + 2, y + cell_size - 24, cell_size - 4, "center")
             end
         end
     end
@@ -119,134 +119,134 @@ local function drawBoard(state, board)
     for idx, p in ipairs(state.players) do
         if p and p.state ~= "bankrupt" then
             local tile = tiles[p.position]
-            if tile and tile.gridPos then
-                local gx, gy = tile.gridPos[1], tile.gridPos[2]
-                local x = originX + (gx - 1) * cellSize + cellSize / 2
-                local y = originY + (gy - 1) * cellSize + cellSize / 2 + (idx - 1) * 8 - 12
+            if tile and tile.grid_pos then
+                local gx, gy = tile.grid_pos[1], tile.grid_pos[2]
+                local x = origin_x + (gx - 1) * cell_size + cell_size / 2
+                local y = origin_y + (gy - 1) * cell_size + cell_size / 2 + (idx - 1) * 8 - 12
                 local c = colors.player[(idx - 1) % #colors.player + 1]
                 love.graphics.setColor(c)
-                local r = (idx == state.currentPlayerIndex) and 8 or 6
+                local r = (idx == state.current_player_index) and 8 or 6
                 love.graphics.circle("fill", x, y, r)
-                love.graphics.setColor(colors.boardLine)
+                love.graphics.setColor(colors.board_line)
                 love.graphics.circle("line", x, y, r)
             end
         end
     end
 end
 
-local function drawHud(state, startX, startY, width)
+local function draw_hud(state, start_x, start_y, width)
     local colors = state.cfg.colors
-    local p = state.players[state.currentPlayerIndex]
-    local hudX = startX or 680
-    local hudY = startY or 40
-    local wrapWidth = width or 560
+    local p = state.players[state.current_player_index]
+    local hud_x = start_x or 680
+    local hud_y = start_y or 40
+    local wrap_width = width or 560
 
     if not p then
-        love.graphics.setColor(colors.hudText)
-        love.graphics.print("未初始化玩家", hudX, hudY)
-        return hudY
+        love.graphics.setColor(colors.hud_text)
+        love.graphics.print("未初始化玩家", hud_x, hud_y)
+        return hud_y
     end
 
-    local lineHeight = 22
-    local currentY = hudY
+    local line_height = 22
+    local current_y = hud_y
 
     -- 玩家基本信息
-    love.graphics.setColor(colors.hudText)
-    love.graphics.print("═══ 当前玩家 ═══", hudX, currentY)
-    currentY = currentY + lineHeight
-    love.graphics.print("姓名: " .. (p.name or "玩家") .. (p.isAI and " (AI)" or ""), hudX, currentY)
-    currentY = currentY + lineHeight
-    love.graphics.print("金币: ¥" .. (p.money or 0), hudX, currentY)
-    currentY = currentY + lineHeight
-    love.graphics.print("位置: " .. (p.position or 1) .. " 号格", hudX, currentY)
-    currentY = currentY + lineHeight
+    love.graphics.setColor(colors.hud_text)
+    love.graphics.print("═══ 当前玩家 ═══", hud_x, current_y)
+    current_y = current_y + line_height
+    love.graphics.print("姓名: " .. (p.name or "玩家") .. (p.is_ai and " (AI)" or ""), hud_x, current_y)
+    current_y = current_y + line_height
+    love.graphics.print("金币: ¥" .. (p.money or 0), hud_x, current_y)
+    current_y = current_y + line_height
+    love.graphics.print("位置: " .. (p.position or 1) .. " 号格", hud_x, current_y)
+    current_y = current_y + line_height
 
     -- 资产信息
-    love.graphics.print("═══ 资产状态 ═══", hudX, currentY)
-    currentY = currentY + lineHeight
-    local propertyCount = p.properties and #p.properties or 0
-    love.graphics.print("地块数量: " .. propertyCount .. " 块", hudX, currentY)
-    currentY = currentY + lineHeight
+    love.graphics.print("═══ 资产状态 ═══", hud_x, current_y)
+    current_y = current_y + line_height
+    local property_count = p.properties and #p.properties or 0
+    love.graphics.print("地块数量: " .. property_count .. " 块", hud_x, current_y)
+    current_y = current_y + line_height
 
-    local itemCount = p.items and #p.items or 0
-    love.graphics.print("道具数量: " .. itemCount .. " / 5", hudX, currentY)
-    currentY = currentY + lineHeight
+    local item_count = p.items and #p.items or 0
+    love.graphics.print("道具数量: " .. item_count .. " / 5", hud_x, current_y)
+    current_y = current_y + line_height
 
     -- 显示持有的道具
-    if itemCount > 0 and p.items then
-        love.graphics.print("持有道具:", hudX, currentY)
-        currentY = currentY + lineHeight
-        for i, itemId in ipairs(p.items) do
+    if item_count > 0 and p.items then
+        love.graphics.print("持有道具:", hud_x, current_y)
+        current_y = current_y + line_height
+        for i, item_id in ipairs(p.items) do
             if i <= 3 then -- 只显示前3个
-                love.graphics.print("  • " .. (itemId or "未知"), hudX, currentY)
-                currentY = currentY + lineHeight - 2
+                love.graphics.print("  • " .. (item_id or "未知"), hud_x, current_y)
+                current_y = current_y + line_height - 2
             end
         end
-        if itemCount > 3 then
-            love.graphics.print("  ...还有 " .. (itemCount - 3) .. " 个", hudX, currentY)
-            currentY = currentY + lineHeight - 2
+        if item_count > 3 then
+            love.graphics.print("  ...还有 " .. (item_count - 3) .. " 个", hud_x, current_y)
+            current_y = current_y + line_height - 2
         end
     end
 
     -- 附身状态
-    if p.buffType and p.buffTurns and p.buffTurns > 0 then
-        currentY = currentY + 5
-        love.graphics.print("═══ 附身状态 ═══", hudX, currentY)
-        currentY = currentY + lineHeight
-        local buffName = p.buffType == "angel" and "天使保护"
-            or p.buffType == "wealth" and "财神附身"
-            or p.buffType == "poor" and "穷神诅咒"
+    if p.buff_type and p.buff_turns and p.buff_turns > 0 then
+        current_y = current_y + 5
+        love.graphics.print("═══ 附身状态 ═══", hud_x, current_y)
+        current_y = current_y + line_height
+        local buff_name = p.buff_type == "angel" and "天使保护"
+            or p.buff_type == "wealth" and "财神附身"
+            or p.buff_type == "poor" and "穷神诅咒"
             or "未知"
-        love.graphics.print("状态: " .. buffName, hudX, currentY)
-        currentY = currentY + lineHeight
-        love.graphics.print("剩余: " .. p.buffTurns .. " 回合", hudX, currentY)
-        currentY = currentY + lineHeight
+        love.graphics.print("状态: " .. buff_name, hud_x, current_y)
+        current_y = current_y + line_height
+        love.graphics.print("剩余: " .. p.buff_turns .. " 回合", hud_x, current_y)
+        current_y = current_y + line_height
     end
 
     -- 特殊状态
-    if p.stayTurns and p.stayTurns > 0 then
-        currentY = currentY + 5
-        local stateText = p.state == "in_hospital" and "医院"
+    if p.stay_turns and p.stay_turns > 0 then
+        current_y = current_y + 5
+        local state_text = p.state == "in_hospital" and "医院"
             or p.state == "in_mountain" and "深山"
             or p.state == "in_jail" and "监狱"
             or "未知"
-        love.graphics.print("停留: " .. stateText .. " (" .. p.stayTurns .. " 回合)", hudX, currentY)
-        currentY = currentY + lineHeight
+        love.graphics.print("停留: " .. state_text .. " (" .. p.stay_turns .. " 回合)", hud_x, current_y)
+        current_y = current_y + line_height
     end
 
     -- 游戏进度
-    currentY = currentY + 10
-    love.graphics.print("═══ 游戏进度 ═══", hudX, currentY)
-    currentY = currentY + lineHeight
-    love.graphics.print("回合: " .. (state.currentTurn or 1), hudX, currentY)
-    currentY = currentY + lineHeight
-    local phaseNames = {
+    current_y = current_y + 10
+    love.graphics.print("═══ 游戏进度 ═══", hud_x, current_y)
+    current_y = current_y + line_height
+    love.graphics.print("回合: " .. (state.current_turn or 1), hud_x, current_y)
+    current_y = current_y + line_height
+    local phase_names = {
         ROLL = "掷骰",
         MOVE = "移动",
         RESOLVE = "结算",
         END = "回合结束"
     }
-    love.graphics.print("阶段: " .. (phaseNames[state.currentPhase] or state.currentPhase or "未知"), hudX, currentY)
-    currentY = currentY + lineHeight
-    if state.lastDice then
-        love.graphics.print("骰子点数: " .. state.lastDice, hudX, currentY)
-        currentY = currentY + lineHeight
+    love.graphics.print("阶段: " .. (phase_names[state.current_phase] or state.current_phase or "未知"), hud_x, current_y)
+    current_y = current_y + line_height
+    if state.last_dice then
+        love.graphics.print("骰子点数: " .. state.last_dice, hud_x, current_y)
+        current_y = current_y + line_height
     end
 
     -- 提示信息
-    currentY = currentY + 10
-    love.graphics.print("═══ 提示信息 ═══", hudX, currentY)
-    currentY = currentY + lineHeight
-    local logText = state.lastLog or ""
-    local _, lines = love.graphics.getFont():getWrap(logText, wrapWidth)
-    local logLines = math.max(#lines, 1)
-    love.graphics.printf(logText, hudX, currentY, wrapWidth, "left")
-    currentY = currentY + lineHeight * logLines
+    current_y = current_y + 10
+    love.graphics.print("═══ 提示信息 ═══", hud_x, current_y)
+    current_y = current_y + line_height
+    local log_text = state.last_log or ""
+    local _, lines = love.graphics.getFont():getWrap(log_text, wrap_width)
+    local log_lines = math.max(#lines, 1)
+    love.graphics.printf(log_text, hud_x, current_y, wrap_width, "left")
+    current_y = current_y + line_height * log_lines
 
-    return currentY
+    return current_y
 end
 
-local function drawPrompt(state)
+local function draw_prompt(state)
     if not state.ui then return end
     local w, h = 420, 180
     local x = (love.graphics.getWidth() - w) / 2
@@ -263,114 +263,114 @@ local function drawPrompt(state)
 end
 
 -- 绘制所有玩家排名
-local function drawPlayerRanking(state, startX, startY)
+local function draw_player_ranking(state, start_x, start_y)
     local colors = state.cfg.colors
-    local lineHeight = 20
-    local currentY = startY or 680
+    local line_height = 20
+    local current_y = start_y or 680
 
-    love.graphics.setColor(colors.hudText)
-    love.graphics.print("═══ 玩家排行榜 ═══", startX, currentY)
-    currentY = currentY + lineHeight
+    love.graphics.setColor(colors.hud_text)
+    love.graphics.print("═══ 玩家排行榜 ═══", start_x, current_y)
+    current_y = current_y + line_height
 
     -- 按金币排序玩家
-    local sortedPlayers = {}
+    local sorted_players = {}
     for i, p in ipairs(state.players) do
         if p and p.state ~= "bankrupt" then
-            table.insert(sortedPlayers, { index = i, player = p })
+            table.insert(sorted_players, { index = i, player = p })
         end
     end
-    table.sort(sortedPlayers, function(a, b)
+    table.sort(sorted_players, function(a, b)
         return (a.player.money or 0) > (b.player.money or 0)
     end)
 
     -- 显示玩家信息
-    for rank, data in ipairs(sortedPlayers) do
+    for rank, data in ipairs(sorted_players) do
         local i = data.index
         local p = data.player
-        local y = currentY + (rank - 1) * lineHeight
+        local y = current_y + (rank - 1) * line_height
         local c = colors.player[(i - 1) % #colors.player + 1]
 
         -- 颜色标记
         love.graphics.setColor(c)
-        love.graphics.circle("fill", startX + 10, y + 8, 6)
+        love.graphics.circle("fill", start_x + 10, y + 8, 6)
 
         -- 玩家信息
-        love.graphics.setColor(colors.hudText)
-        local isCurrent = (i == state.currentPlayerIndex) and "→ " or "  "
-        local propertyCount = p.properties and #p.properties or 0
+        love.graphics.setColor(colors.hud_text)
+        local is_current = (i == state.current_player_index) and "→ " or "  "
+        local property_count = p.properties and #p.properties or 0
         local text = string.format("%s%s: ¥%d (%d块地)",
-            isCurrent, p.name or "玩家" .. i, p.money or 0, propertyCount)
-        love.graphics.print(text, startX + 25, y)
+            is_current, p.name or "玩家" .. i, p.money or 0, property_count)
+        love.graphics.print(text, start_x + 25, y)
     end
 
-    return currentY + lineHeight * (#sortedPlayers + 1)
+    return current_y + line_height * (#sorted_players + 1)
 end
 
 -- 绘制控制提示
-local function drawControls(state, startX, startY)
+local function draw_controls(state, start_x, start_y)
     local colors = state.cfg.colors
-    local startX = startX or 680
-    local startY = startY or 720
-    local lineHeight = 18
+    local start_x = start_x or 680
+    local start_y = start_y or 720
+    local line_height = 18
 
-    love.graphics.setColor(colors.hudText)
+    love.graphics.setColor(colors.hud_text)
 
     -- 显示当前模式
-    local modeText = state.autoMode and "【自动模式】" or "【手动模式】"
-    love.graphics.print(modeText, startX, startY)
+    local mode_text = state.auto_mode and "【自动模式】" or "【手动模式】"
+    love.graphics.print(mode_text, start_x, start_y)
 
     -- 显示快捷键提示
-    local y = startY + lineHeight + 5
-    love.graphics.print("快捷键:", startX, y)
-    y = y + lineHeight
+    local y = start_y + line_height + 5
+    love.graphics.print("快捷键:", start_x, y)
+    y = y + line_height
 
-    if state.autoMode then
-        love.graphics.print("  A - 切换手动", startX, y)
-        y = y + lineHeight - 2
-        love.graphics.print("  +/- - 调速度", startX, y)
+    if state.auto_mode then
+        love.graphics.print("  A - 切换手动", start_x, y)
+        y = y + line_height - 2
+        love.graphics.print("  +/- - 调速度", start_x, y)
     else
-        love.graphics.print("  空格 - 下一步", startX, y)
-        y = y + lineHeight - 2
-        love.graphics.print("  A - 切换自动", startX, y)
-        y = y + lineHeight - 2
-        love.graphics.print("  B - 买地块", startX, y)
-        y = y + lineHeight - 2
-        love.graphics.print("  U - 升级", startX, y)
-        y = y + lineHeight - 2
-        love.graphics.print("  S - 跳过", startX, y)
+        love.graphics.print("  空格 - 下一步", start_x, y)
+        y = y + line_height - 2
+        love.graphics.print("  A - 切换自动", start_x, y)
+        y = y + line_height - 2
+        love.graphics.print("  B - 买地块", start_x, y)
+        y = y + line_height - 2
+        love.graphics.print("  U - 升级", start_x, y)
+        y = y + line_height - 2
+        love.graphics.print("  S - 跳过", start_x, y)
     end
-    y = y + lineHeight - 2
-    love.graphics.print("  H - 帮助", startX, y)
+    y = y + line_height - 2
+    love.graphics.print("  H - 帮助", start_x, y)
 
-    return y + lineHeight
+    return y + line_height
 end
 
 function Render.draw(state)
-    ensureFont()
+    ensure_font()
     love.graphics.setFont(fonts.base)
     local bg = state.cfg.colors.background
     love.graphics.clear(bg[1], bg[2], bg[3], 1)
 
-    local board = calculateBoardMetrics(state.tiles)
+    local board = calculate_board_metrics(state.tiles)
     local padding = 16
-    local panelX = board.originX + board.width + padding
-    local panelY = board.originY
-    local panelWidth = math.max(love.graphics.getWidth() - panelX - padding, 240)
-    local panelHeight = love.graphics.getHeight() - panelY - padding
+    local panel_x = board.origin_x + board.width + padding
+    local panel_y = board.origin_y
+    local panel_width = math.max(love.graphics.getWidth() - panel_x - padding, 240)
+    local panel_height = love.graphics.getHeight() - panel_y - padding
 
-    drawBoard(state, board)
+    draw_board(state, board)
 
     -- 侧边信息面板背景，防止文字贴边或被遮挡
     love.graphics.setColor(1, 1, 1, 0.9)
-    love.graphics.rectangle("fill", panelX - 12, panelY - 12, panelWidth + 24, panelHeight + 24, 10, 10)
-    love.graphics.setColor(state.cfg.colors.boardLine)
-    love.graphics.rectangle("line", panelX - 12, panelY - 12, panelWidth + 24, panelHeight + 24, 10, 10)
+    love.graphics.rectangle("fill", panel_x - 12, panel_y - 12, panel_width + 24, panel_height + 24, 10, 10)
+    love.graphics.setColor(state.cfg.colors.board_line)
+    love.graphics.rectangle("line", panel_x - 12, panel_y - 12, panel_width + 24, panel_height + 24, 10, 10)
 
-    local currentY = panelY
-    currentY = drawHud(state, panelX, currentY, panelWidth) + 12
-    currentY = drawPlayerRanking(state, panelX, currentY) + 12
-    drawControls(state, panelX, currentY)
-    drawPrompt(state)
+    local current_y = panel_y
+    current_y = draw_hud(state, panel_x, current_y, panel_width) + 12
+    current_y = draw_player_ranking(state, panel_x, current_y) + 12
+    draw_controls(state, panel_x, current_y)
+    draw_prompt(state)
 end
 
 return Render
