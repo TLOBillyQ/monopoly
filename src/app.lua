@@ -37,6 +37,9 @@ function App.new(opts)
     path_history = {},
     turn_count = 0,
     logger = logger,
+    finished = false,
+    winner = nil,
+    last_turn = nil,
   }
   setmetatable(game, App)
   game:rebuild_occupants()
@@ -93,13 +96,18 @@ function App:run(max_rounds)
 end
 
 function App:check_victory()
+  if self.finished then
+    return true
+  end
   local alive = self:alive_players()
   if #alive <= 1 then
     if #alive == 1 then
       self.logger.event("游戏结束，胜者:", alive[1].name)
+      self.winner = alive[1]
     else
       self.logger.event("游戏结束，无人生还")
     end
+    self.finished = true
     return true
   end
   return false

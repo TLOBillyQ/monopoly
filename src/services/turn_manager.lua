@@ -19,7 +19,19 @@ end
 
 function TurnManager:run_turn()
   local player = self.game:current_player()
+  self.game.turn_count = (self.game.turn_count or 0) + 1
+  self.game.last_turn = {
+    player_id = player.id,
+    player_name = player.name,
+    skipped = false,
+    rolls = nil,
+    total = nil,
+    move_result = nil,
+    note = nil,
+  }
   if player.eliminated then
+    self.game.last_turn.note = "已出局，跳过"
+    self.game.last_turn.skipped = true
     return self:next_player()
   end
 
@@ -27,6 +39,9 @@ function TurnManager:run_turn()
   if player.status.stay_turns and player.status.stay_turns > 0 then
     player.status.stay_turns = player.status.stay_turns - 1
     logger.event(player.name .. " 被扣留，剩余回合:", player.status.stay_turns)
+    self.game.last_turn.note = "被扣留"
+    self.game.last_turn.skipped = true
+    self.game.last_turn.stay_turns = player.status.stay_turns
     return self:end_turn(player)
   end
 
@@ -45,9 +60,12 @@ function TurnManager:run_turn()
     total = total * player.status.pending_dice_multiplier
   end
   logger.event(player.name .. " 投骰: [" .. table.concat(rolls, ",") .. "] => " .. total)
+  self.game.last_turn.rolls = rolls
+  self.game.last_turn.total = total
 
   -- 移动
   local move_result = MovementService.move(self.game, player, total)
+  self.game.last_turn.move_result = move_result
 
   -- 结算格子
   local tile = self.game.board:get_tile(player.position)
