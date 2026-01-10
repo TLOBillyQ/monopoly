@@ -54,17 +54,19 @@ function TurnManager:run_turn()
   if player.status.pending_remote_dice then
     override = player.status.pending_remote_dice.values
   end
-  local rolls, total = Dice.roll(dice_count, override)
+  local rolls, raw_total = Dice.roll(dice_count, override)
 
+  local total = raw_total
   if player.status.pending_dice_multiplier and player.status.pending_dice_multiplier > 1 then
     total = total * player.status.pending_dice_multiplier
   end
   logger.event(player.name .. " 投骰: [" .. table.concat(rolls, ",") .. "] => " .. total)
   self.game.last_turn.rolls = rolls
   self.game.last_turn.total = total
+  self.game.last_turn.raw_total = raw_total
 
   -- 移动
-  local move_result = MovementService.move(self.game, player, total)
+  local move_result = MovementService.move(self.game, player, total, { branch_parity = raw_total })
   self.game.last_turn.move_result = move_result
 
   -- 结算格子

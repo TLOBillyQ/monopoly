@@ -56,14 +56,14 @@ function Board:find_first_by_type(tile_type)
 end
 
 -- 计算下一步索引，支持分支（奇左偶右）
-function Board:advance(index, steps, dice_total)
+function Board:advance(index, steps, branch_parity)
   local length = self:length()
   local current = index
   local passed_start = 0
   for _ = 1, steps do
     local branch = self.branches[current]
-    if branch and dice_total then
-      current = (dice_total % 2 == 1) and branch.odd or branch.even
+    if branch and branch_parity then
+      current = (branch_parity % 2 == 1) and branch.odd or branch.even
     else
       current = current + 1
     end

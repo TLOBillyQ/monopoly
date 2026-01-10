@@ -1,5 +1,70 @@
+local App = require("src.app")
+local logger = require("src.services.logger")
+local items_cfg = require("src.config.items")
+local roles_cfg = require("src.config.roles")
+
 local LoveLayer = {}
 LoveLayer.__index = LoveLayer
+
+local grid_coords = {
+  { 9, 9 }, { 9, 8 }, { 9, 7 }, { 9, 6 }, { 9, 5 }, { 9, 4 }, { 9, 3 }, { 9, 2 }, { 9, 1 },
+  { 8, 1 }, { 8, 5 }, { 8, 9 }, { 7, 9 }, { 7, 5 }, { 7, 1 }, { 6, 1 }, { 6, 5 }, { 6, 9 },
+  { 5, 9 }, { 5, 8 }, { 5, 7 }, { 5, 6 }, { 5, 5 }, { 5, 4 }, { 5, 3 }, { 5, 2 }, { 5, 1 },
+  { 4, 1 }, { 4, 5 }, { 4, 9 }, { 3, 9 }, { 3, 5 }, { 3, 1 }, { 2, 1 }, { 2, 5 }, { 2, 9 },
+  { 1, 9 }, { 1, 8 }, { 1, 7 }, { 1, 6 }, { 1, 5 }, { 1, 4 }, { 1, 3 }, { 1, 2 }, { 1, 1 },
+}
+
+local function create_ui()
+  return {
+    margin = 18,
+    side_width = 320,
+    tile_radius = 18,
+    auto_play = false,
+    auto_interval = 0.9,
+    last_auto_time = 0,
+    hover_tile = nil,
+    selected_tile = nil,
+    buttons = {},
+    palette = {
+      bg = { 0.07, 0.09, 0.1 },
+      panel = { 0.12, 0.14, 0.16 },
+      panel_border = { 0.24, 0.27, 0.3 },
+      text = { 0.95, 0.95, 0.92 },
+      muted = { 0.7, 0.72, 0.7 },
+      tile = {
+        land = { 0.77, 0.7, 0.56 },
+        start = { 0.3, 0.75, 0.48 },
+        chance = { 0.3, 0.5, 0.75 },
+        item = { 0.85, 0.6, 0.32 },
+        market = { 0.6, 0.42, 0.22 },
+        tax = { 0.8, 0.36, 0.36 },
+        hospital = { 0.35, 0.7, 0.8 },
+        mountain = { 0.55, 0.55, 0.6 },
+        default = { 0.7, 0.7, 0.7 },
+      },
+      player = {
+        { 0.92, 0.35, 0.36 },
+        { 0.3, 0.7, 0.92 },
+        { 0.92, 0.78, 0.3 },
+        { 0.6, 0.45, 0.9 },
+        { 0.4, 0.85, 0.5 },
+      },
+      log = {
+        info = { 0.72, 0.8, 0.88 },
+        warn = { 0.9, 0.6, 0.3 },
+        event = { 0.88, 0.85, 0.7 },
+      },
+    },
+    fonts = {},
+    board = {
+      positions = {},
+      center = { x = 0, y = 0 },
+      origin = { x = 0, y = 0 },
+      size = 0,
+      cell_size = 0,
+    },
+  }
+end
 
 local function build_fonts(ui)
   ui.fonts.title = love.graphics.newFont("assets/fonts/NotoSansSC-Regular.ttf", 22)
@@ -9,54 +74,198 @@ local function build_fonts(ui)
   love.graphics.setFont(ui.fonts.body)
 end
 
-function LoveLayer.new(opts)
+function LoveLayer.new()
   local self = {
-    ui = opts.ui,
-    logger = opts.logger,
-    roles_cfg = opts.roles_cfg,
-    item_name_by_id = opts.item_name_by_id,
-    get_game = opts.get_game,
-    set_game = opts.set_game,
-    new_game = opts.new_game,
-    layout = opts.layout,
-    update_hover_tile = opts.update_hover_tile,
-    step_turn = opts.step_turn,
-    is_inside = opts.is_inside,
-    draw_button = opts.draw_button,
-    draw_panel_background = opts.draw_panel_background,
-    tile_color = opts.tile_color,
-    draw_wrapped = opts.draw_wrapped,
-    build_player_label = opts.build_player_label,
-    build_item_index = opts.build_item_index,
+    ui = create_ui(),
+    game = nil,
+    item_name_by_id = {},
   }
   return setmetatable(self, LoveLayer)
+end
+
+function LoveLayer:set_game(g)
+  self.game = g
+end
+
+function LoveLayer:get_game()
+  return self.game
+end
+
+function LoveLayer:build_item_index()
+  self.item_name_by_id = {}
+  for _, cfg in ipairs(items_cfg) do
+    self.item_name_by_id[cfg.id] = cfg.name or tostring(cfg.id)
+  end
+end
+
+function LoveLayer:new_game()
+  logger.clear()
+  local g = App.new({
+    players = { "玩家1", "AI2", "AI3", "AI4" },
+    ai = { [2] = true, [3] = true, [4] = true },
+    auto_all = true,
+  })
+  self.ui.selected_tile = nil
+  self.ui.hover_tile = nil
+  self.ui.last_auto_time = 0
+  g.logger.info("启动蛋仔大富翁，玩家数:", #g.players)
+  return g
+end
+
+function LoveLayer:layout()
+  local w, h = love.graphics.getDimensions()
+  local ui = self.ui
+  ui.side_width = math.max(280, math.floor(w * 0.28))
+  local board_w = w - ui.side_width - ui.margin * 3
+  local board_h = h - ui.margin * 2
+  local board_size = math.min(board_w, board_h)
+  ui.board.size = board_size
+  ui.board.cell_size = board_size / 9
+  ui.tile_radius = math.min(ui.board.cell_size * 0.32, 18)
+  ui.board.origin.x = ui.margin + (board_w - board_size) * 0.5
+  ui.board.origin.y = ui.margin + (board_h - board_size) * 0.5
+  ui.board.center.x = ui.board.origin.x + board_size * 0.5
+  ui.board.center.y = ui.board.origin.y + board_size * 0.5
+  ui.board.positions = {}
+  if not self.game then
+    return
+  end
+  local count = self.game.board:length()
+  for i = 1, count do
+    local coord = grid_coords[i]
+    if not coord then
+      break
+    end
+    local row, col = coord[1], coord[2]
+    ui.board.positions[i] = {
+      x = ui.board.origin.x + (col - 0.5) * ui.board.cell_size,
+      y = ui.board.origin.y + (row - 0.5) * ui.board.cell_size,
+      row = row,
+      col = col,
+    }
+  end
+  local panel_x = ui.margin * 2 + board_w
+  local panel_y = ui.margin
+  local btn_w = ui.side_width - ui.margin * 2
+  local btn_h = 36
+  ui.buttons = {
+    {
+      id = "next",
+      label = "下一回合 (Space)",
+      x = panel_x + ui.margin,
+      y = panel_y + 68,
+      w = btn_w,
+      h = btn_h,
+    },
+    {
+      id = "auto",
+      label = "自动运行 (A)",
+      x = panel_x + ui.margin,
+      y = panel_y + 110,
+      w = btn_w,
+      h = btn_h,
+    },
+    {
+      id = "restart",
+      label = "重新开始 (R)",
+      x = panel_x + ui.margin,
+      y = panel_y + 152,
+      w = btn_w,
+      h = btn_h,
+    },
+  }
+end
+
+function LoveLayer:is_inside(x, y, rect)
+  return x >= rect.x and x <= rect.x + rect.w and y >= rect.y and y <= rect.y + rect.h
+end
+
+function LoveLayer:step_turn()
+  if not self.game or self.game.finished then
+    return
+  end
+  self.game.turn_manager:run_turn()
+  self.game:check_victory()
+end
+
+function LoveLayer:tile_color(tile_type)
+  return self.ui.palette.tile[tile_type] or self.ui.palette.tile.default
+end
+
+function LoveLayer:draw_panel_background(x, y, w, h)
+  love.graphics.setColor(self.ui.palette.panel)
+  love.graphics.rectangle("fill", x, y, w, h, 10, 10)
+  love.graphics.setColor(self.ui.palette.panel_border)
+  love.graphics.rectangle("line", x, y, w, h, 10, 10)
+end
+
+function LoveLayer:draw_button(btn, active)
+  local bg = active and { 0.3, 0.5, 0.35 } or { 0.2, 0.22, 0.24 }
+  love.graphics.setColor(bg)
+  love.graphics.rectangle("fill", btn.x, btn.y, btn.w, btn.h, 6, 6)
+  love.graphics.setColor(self.ui.palette.panel_border)
+  love.graphics.rectangle("line", btn.x, btn.y, btn.w, btn.h, 6, 6)
+  love.graphics.setColor(self.ui.palette.text)
+  love.graphics.printf(btn.label, btn.x, btn.y + 8, btn.w, "center")
+end
+
+function LoveLayer:draw_wrapped(text, x, y, width, font)
+  love.graphics.setFont(font)
+  local _, lines = font:getWrap(text, width)
+  love.graphics.printf(text, x, y, width, "left")
+  return #lines
+end
+
+function LoveLayer:update_hover_tile(mx, my)
+  self.ui.hover_tile = nil
+  if not self.game then
+    return
+  end
+  local half_cell = (self.ui.board.cell_size or self.ui.tile_radius * 2) * 0.5
+  for idx, pos in ipairs(self.ui.board.positions) do
+    local dx = mx - pos.x
+    local dy = my - pos.y
+    if math.abs(dx) <= half_cell and math.abs(dy) <= half_cell then
+      self.ui.hover_tile = idx
+      return
+    end
+  end
+end
+
+function LoveLayer:build_player_label(player)
+  if player.eliminated then
+    return player.name .. " (出局)"
+  end
+  local suffix = ""
+  if player.status.stay_turns and player.status.stay_turns > 0 then
+    suffix = " 停留" .. player.status.stay_turns
+  end
+  return player.name .. " $" .. player.cash .. suffix
 end
 
 function LoveLayer:load()
   love.window.setTitle("蛋仔大富翁 (Love2D)")
   build_fonts(self.ui)
-  self.build_item_index()
-  local g = self.new_game()
-  self.set_game(g)
-  self.layout()
+  self:build_item_index()
+  self:set_game(self:new_game())
+  self:layout()
 end
 
 function LoveLayer:resize()
-  self.layout()
+  self:layout()
 end
 
 function LoveLayer:update(dt)
-  local game = self.get_game()
-  if not game then
+  if not self.game then
     return
   end
   local mx, my = love.mouse.getPosition()
-  self.update_hover_tile(mx, my)
-  if self.ui.auto_play and not game.finished then
+  self:update_hover_tile(mx, my)
+  if self.ui.auto_play and not self.game.finished then
     self.ui.last_auto_time = self.ui.last_auto_time + dt
     if self.ui.last_auto_time >= self.ui.auto_interval then
       self.ui.last_auto_time = 0
-      self.step_turn()
+      self:step_turn()
     end
   end
 end
@@ -66,15 +275,15 @@ function LoveLayer:mousepressed(x, y, button)
     return
   end
   for _, btn in ipairs(self.ui.buttons) do
-    if self.is_inside(x, y, btn) then
+    if self:is_inside(x, y, btn) then
       if btn.id == "next" then
-        self.step_turn()
+        self:step_turn()
       elseif btn.id == "auto" then
         self.ui.auto_play = not self.ui.auto_play
         self.ui.last_auto_time = 0
       elseif btn.id == "restart" then
-        self.set_game(self.new_game())
-        self.layout()
+        self:set_game(self:new_game())
+        self:layout()
       end
       return
     end
@@ -87,24 +296,21 @@ end
 
 function LoveLayer:keypressed(key)
   if key == "space" or key == "return" then
-    self.step_turn()
+    self:step_turn()
   elseif key == "a" then
     self.ui.auto_play = not self.ui.auto_play
     self.ui.last_auto_time = 0
   elseif key == "r" then
-    self.set_game(self.new_game())
-    self.layout()
+    self:set_game(self:new_game())
+    self:layout()
   elseif key == "escape" then
     love.event.quit()
   end
 end
 
 function LoveLayer:draw()
-  local game = self.get_game()
+  local game = self.game
   local ui = self.ui
-  local roles_cfg = self.roles_cfg
-  local logger = self.logger
-  local item_name_by_id = self.item_name_by_id
 
   local w, h = love.graphics.getDimensions()
   love.graphics.setColor(ui.palette.bg)
@@ -119,7 +325,7 @@ function LoveLayer:draw()
   local panel_y = ui.margin
   local panel_w = ui.side_width
   local panel_h = h - ui.margin * 2
-  self.draw_panel_background(panel_x, panel_y, panel_w, panel_h)
+  self:draw_panel_background(panel_x, panel_y, panel_w, panel_h)
 
   if game then
     local cell_size = ui.board.cell_size
@@ -133,7 +339,7 @@ function LoveLayer:draw()
     end
     for idx, pos in ipairs(ui.board.positions) do
       local tile = game.board:get_tile(idx)
-      local color = self.tile_color(tile.type)
+      local color = self:tile_color(tile.type)
       if last_visited[idx] then
         color = { math.min(color[1] + 0.2, 1), math.min(color[2] + 0.2, 1), math.min(color[3] + 0.2, 1) }
       end
@@ -206,7 +412,7 @@ function LoveLayer:draw()
   love.graphics.printf(turn_label, panel_x + ui.margin, panel_y + 42, panel_w - ui.margin * 2, "left")
 
   for _, btn in ipairs(ui.buttons) do
-    self.draw_button(btn, btn.id == "auto" and ui.auto_play)
+    self:draw_button(btn, btn.id == "auto" and ui.auto_play)
   end
 
   local info_y = panel_y + 200
@@ -259,7 +465,7 @@ function LoveLayer:draw()
       love.graphics.setColor(color)
       love.graphics.circle("fill", panel_x + ui.margin + 6, info_y + 6, 4)
       love.graphics.setColor(ui.palette.text)
-      love.graphics.printf(self.build_player_label(player), panel_x + ui.margin + 16, info_y, panel_w - ui.margin * 2 - 16, "left")
+      love.graphics.printf(self:build_player_label(player), panel_x + ui.margin + 16, info_y, panel_w - ui.margin * 2 - 16, "left")
       info_y = info_y + 16
     end
   end
@@ -280,7 +486,7 @@ function LoveLayer:draw()
     else
       for _, item in ipairs(current.inventory.items) do
         love.graphics.setColor(ui.palette.text)
-        love.graphics.printf(item_name_by_id[item.id] or tostring(item.id), panel_x + ui.margin, info_y, panel_w - ui.margin * 2, "left")
+        love.graphics.printf(self.item_name_by_id[item.id] or tostring(item.id), panel_x + ui.margin, info_y, panel_w - ui.margin * 2, "left")
         info_y = info_y + 14
       end
     end
@@ -327,7 +533,7 @@ function LoveLayer:draw()
     for i = start, #logger.entries do
       local entry = logger.entries[i]
       love.graphics.setColor(ui.palette.log[entry.level] or ui.palette.text)
-      local lines = self.draw_wrapped(entry.text, panel_x + ui.margin, info_y, panel_w - ui.margin * 2, ui.fonts.tiny)
+      local lines = self:draw_wrapped(entry.text, panel_x + ui.margin, info_y, panel_w - ui.margin * 2, ui.fonts.tiny)
       info_y = info_y + (ui.fonts.tiny:getHeight() + 2) * math.max(1, lines)
     end
   end

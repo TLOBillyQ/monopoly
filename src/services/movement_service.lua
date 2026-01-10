@@ -3,17 +3,18 @@ local logger = require("src.services.logger")
 
 local MovementService = {}
 
-function MovementService.move(game, player, steps)
+function MovementService.move(game, player, steps, opts)
+  opts = opts or {}
+  local branch_parity = opts.branch_parity or steps
   local board = game.board
   local encountered = {}
   local visited = {}
   local pass_start = 0
   local stopped_on_roadblock = false
   local current = player.position
-  local parity = steps -- 用总点数决定分支
 
   for _ = 1, steps do
-    local next_index, passed = board:advance(current, 1, parity)
+    local next_index, passed = board:advance(current, 1, branch_parity)
     pass_start = pass_start + passed
     current = next_index
     table.insert(visited, current)
