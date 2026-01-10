@@ -1,11 +1,9 @@
--- 蛋仔大富翁配置（同步 main 数据，移除 Spoke 依赖）
-
 local config = {}
 
 config.window = {
     width = 1280,
     height = 720,
-    title = "蛋仔大富翁 - 纯Lua重构"
+    title = "蛋仔大富翁"
 }
 
 -- 核心规则（保留自动步进设置）

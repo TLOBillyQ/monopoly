@@ -1,12 +1,11 @@
+local class = require("Utils.ClassUtils").class
 local config = require("config")
-local player = require("player")
-local property = require("property")
-local chance = require("chance")
-local item = require("item")
+local Player = require("Player")
+local Tile = require("Tile")
+local ChanceDeck = require("chance")
+local ItemSystem = require("ItemSystem")
 local render = require("render")
 local input = require("input")
-
-local game = {}
 
 local phase = {
     ROLL = "ROLL",
@@ -15,24 +14,14 @@ local phase = {
     END_TURN = "END"
 }
 
-local function current_player(state)
-    return state.players[state.current_player_index]
-end
+---@class Game
+---@field new fun(): Game
+local Game = class("Game")
 
-local function find_player_by_id(state, id)
-    for _, p in ipairs(state.players) do
-        if p.id == id then
-            return p
-        end
-    end
-end
-
-local function log(state, message)
-    state.last_log = message
-    table.insert(state.logs, message)
-    if #state.logs > 80 then
-        table.remove(state.logs, 1)
-    end
+function Game:ctor()
+    self.state = nil
+    self.choose_yes = nil
+    self.choose_no = nil
 end
 
 local function build_tile_index_by_type(tiles)
@@ -45,213 +34,232 @@ local function build_tile_index_by_type(tiles)
     return map
 end
 
+function Game:current_player()
+    return self.state.players[self.state.current_player_index]
+end
+
+function Game:find_player_by_id(id)
+    for _, p in ipairs(self.state.players) do
+        if p.id == id then
+            return p
+        end
+    end
+end
+
+function Game:log(message)
+    local state = self.state
+    state.last_log = message
+    table.insert(state.logs, message)
+    if #state.logs > 80 then
+        table.remove(state.logs, 1)
+    end
+end
+
 local function create_players(count, tile_count)
     local players = {}
     for i = 1, count do
         local character_id = (config.characters[i] and config.characters[i].id) or 1000 + i
         local vehicle_id = config.vehicles[1].id
         local is_ai = i > 1
-        local player = player.new(i, character_id, vehicle_id, is_ai, tile_count)
-        player.money = config.rules.start_money
-        player.total_assets = player.money
-        table.insert(players, player)
+        local p = Player.new(i, character_id, vehicle_id, is_ai, tile_count)
+        p.money = config.rules.start_money
+        p.total_assets = p.money
+        table.insert(players, p)
     end
     return players
 end
 
-local function reset_prompts(state)
-    state.waiting_action = nil
-    state.ui = nil
-    game.choose_yes = nil
-    game.choose_no = nil
+function Game:reset_prompts()
+    self.state.waiting_action = nil
+    self.state.ui = nil
+    self.choose_yes = nil
+    self.choose_no = nil
 end
 
-local function set_prompt(state, title, message, yes_fn, no_fn)
+function Game:set_prompt(title, message, yes_fn, no_fn)
+    local state = self.state
     state.waiting_action = { title = title }
     state.ui = {
         title = title,
         message = message,
         buttons = { "Y - 是", "N - 否" }
     }
-    game.choose_yes = function()
-        reset_prompts(state)
+    self.choose_yes = function()
+        self:reset_prompts()
         yes_fn()
     end
-    game.choose_no = function()
-        reset_prompts(state)
+    self.choose_no = function()
+        self:reset_prompts()
         if no_fn then
             no_fn()
         end
     end
 end
 
-local function apply_bankruptcy_if_needed(state, player)
-    if player.money <= 0 and not player.is_bankrupt(player) then
-        player.bankrupt(player)
-        for _, tile in ipairs(state.tiles) do
+function Game:apply_bankruptcy_if_needed(player)
+    if player.money <= 0 and not player:is_bankrupt() then
+        player:bankrupt()
+        for _, tile in ipairs(self.state.tiles) do
             if tile.owner == player.id then
-                property.reset(tile)
+                tile:reset()
             end
         end
-        log(state, string.format("玩家%d 破产，退出游戏", player.id))
+        self:log(string.format("玩家%d 破产，退出游戏", player.id))
     end
 end
 
-local function apply_item_gain(state, player, item_id)
+function Game:apply_item_gain(player, item_id)
     if not item_id then
-        log(state, "未抽到任何道具")
+        self:log("未抽到任何道具")
         return
     end
-    local added = player.add_item(player, item_id)
-    local name = item.get_name(item_id)
+    local added = player:add_item(item_id)
+    local name = ItemSystem:get_name(item_id)
     if not added then
-        log(state, string.format("%s 道具栏已满", name))
+        self:log(string.format("%s 道具栏已满", name))
         return
     end
-    log(state, string.format("%s 获得道具：%s", player.name, name))
+    self:log(string.format("%s 获得道具：%s", player.name, name))
 
-    -- 所有道具均为即时效果，获得后立刻生效
-    local use_result = item.use(item_id, player, state)
+    local use_result = ItemSystem:use(item_id, player, self.state)
     if use_result and use_result.message then
-        log(state, use_result.message)
+        self:log(use_result.message)
     end
 end
 
-local function handle_rent(state, tenant, tile)
-    local owner = find_player_by_id(state, tile.owner)
+function Game:handle_rent(tenant, tile)
+    local owner = self:find_player_by_id(tile.owner)
     if not owner then
         return
     end
-    local rent = math.floor(property.calculate_rent(tile, owner.buff_type == "wealth"))
+    local rent = math.floor(tile:calculate_rent(owner.buff_type == "wealth"))
 
     if tenant.free_pass then
         tenant.free_pass = false
-        log(state, string.format("%s 使用免费卡，免租金", tenant.name))
+        self:log(string.format("%s 使用免费卡，免租金", tenant.name))
         rent = 0
     elseif tenant.buff_type == "poor" and tenant.buff_turns > 0 then
         rent = rent * 2
     end
 
     if rent > 0 then
-        player.transfer(tenant, owner, rent)
-        log(state, string.format("%s 向 %s 支付租金 %d", tenant.name, owner.name, rent))
-        apply_bankruptcy_if_needed(state, tenant)
+        Player.transfer(tenant, owner, rent)
+        self:log(string.format("%s 向 %s 支付租金 %d", tenant.name, owner.name, rent))
+        self:apply_bankruptcy_if_needed(tenant)
     else
-        log(state, string.format("%s 本次无需支付租金", tenant.name))
+        self:log(string.format("%s 本次无需支付租金", tenant.name))
     end
 end
 
-local function resolve_property(state, player, tile)
+function Game:resolve_property(player, tile)
     if not tile.owner then
-        if player.is_ai or state.auto_mode then
+        if player.is_ai or self.state.auto_mode then
             if player.money >= tile.price then
-                property.buy(tile, player.id, tile.price)
-                player.subtract_money(player, tile.price)
-                player.acquire_property(player, tile.id)
-                log(state, string.format("%s 自动购买了 %s", player.name, tile.name))
+                tile:buy(player.id, tile.price)
+                player:subtract_money(tile.price)
+                player:acquire_property(tile.id)
+                self:log(string.format("%s 自动购买了 %s", player.name, tile.name))
             else
-                log(state, string.format("%s 资金不足，无法购买 %s", player.name, tile.name))
+                self:log(string.format("%s 资金不足，无法购买 %s", player.name, tile.name))
             end
-            state.current_phase = phase.END_TURN
+            self.state.current_phase = phase.END_TURN
             return
         end
 
-        set_prompt(
-            state,
+        self:set_prompt(
             "购买地块？",
             string.format("%s - 价格 %d", tile.name, tile.price),
-            function() game.buy_property() end,
-            function() game.skip_action() end
+            function() self:buy_property() end,
+            function() self:skip_action() end
         )
         return
     end
 
     if tile.owner == player.id then
-        if (player.is_ai or state.auto_mode) and tile.building_level < property.buildings.mansion then
-            local cost = property.calculate_upgrade_cost(tile)
+        if (player.is_ai or self.state.auto_mode) and tile.building_level < Tile.buildings.mansion then
+            local cost = tile:calculate_upgrade_cost()
             if cost > 0 and player.money > cost + 300 then
-                property.upgrade(tile, player.id, cost)
-                player.subtract_money(player, cost)
-                log(state, string.format("%s 自动升级了 %s", player.name, tile.name))
+                tile:upgrade(player.id, cost)
+                player:subtract_money(cost)
+                self:log(string.format("%s 自动升级了 %s", player.name, tile.name))
             end
         end
-        state.current_phase = phase.END_TURN
+        self.state.current_phase = phase.END_TURN
         return
     end
 
-    handle_rent(state, player, tile)
-    state.current_phase = phase.END_TURN
+    self:handle_rent(player, tile)
+    self.state.current_phase = phase.END_TURN
 end
 
-local function resolve_special_tile(state, player, tile)
-    local rules = state.config.rules
+function Game:resolve_special_tile(player, tile)
+    local rules = self.state.config.rules
     if tile.type == "chance_card" then
-        local event = chance.draw_random(state.chance_deck)
-        local res = chance.execute(event, player, state.players, state)
-        log(state, res.message)
-        state.current_phase = phase.END_TURN
+        local event = self.state.chance_deck:draw_random()
+        local res = self.state.chance_deck:execute(event, player, self.state.players, self.state)
+        self:log(res.message)
+        self.state.current_phase = phase.END_TURN
     elseif tile.type == "item_card" then
-        local item_id = item.draw_random(state.config)
-        apply_item_gain(state, player, item_id)
-        state.current_phase = phase.END_TURN
+        local item_id = ItemSystem:draw_random(self.state.config)
+        self:apply_item_gain(player, item_id)
+        self.state.current_phase = phase.END_TURN
     elseif tile.type == "hospital" then
-        player.enter_hospital(player, rules.hospital_stay)
-        player.subtract_money(player, rules.hospital_fee)
-        log(state, string.format("%s 住院，需要等待 %d 回合", player.name, rules.hospital_stay))
-        apply_bankruptcy_if_needed(state, player)
-        state.current_phase = phase.END_TURN
+        player:enter_hospital(rules.hospital_stay)
+        player:subtract_money(rules.hospital_fee)
+        self:log(string.format("%s 住院，需要等待 %d 回合", player.name, rules.hospital_stay))
+        self:apply_bankruptcy_if_needed(player)
+        self.state.current_phase = phase.END_TURN
     elseif tile.type == "mountain" then
-        player.enter_mountain(player, rules.mountain_stay)
-        log(state, string.format("%s 在深山停留 %d 回合", player.name, rules.mountain_stay))
-        state.current_phase = phase.END_TURN
+        player:enter_mountain(rules.mountain_stay)
+        self:log(string.format("%s 在深山停留 %d 回合", player.name, rules.mountain_stay))
+        self.state.current_phase = phase.END_TURN
     elseif tile.type == "tax_office" then
         local tax = math.floor(player.money * rules.tax_rate)
         if player.free_pass then
             player.free_pass = false
-            log(state, string.format("%s 使用免费卡，免税", player.name))
+            self:log(string.format("%s 使用免费卡，免税", player.name))
         else
-            player.subtract_money(player, tax)
-            log(state, string.format("%s 支付税金 %d", player.name, tax))
-            apply_bankruptcy_if_needed(state, player)
+            player:subtract_money(tax)
+            self:log(string.format("%s 支付税金 %d", player.name, tax))
+            self:apply_bankruptcy_if_needed(player)
         end
-        state.current_phase = phase.END_TURN
+        self.state.current_phase = phase.END_TURN
     elseif tile.type == "black_market" then
         local cost = 600
-        if player.is_ai or state.auto_mode then
+        if player.is_ai or self.state.auto_mode then
             if player.money >= cost then
-                player.subtract_money(player, cost)
-                apply_item_gain(state, player, item.draw_random(state.config))
+                player:subtract_money(cost)
+                self:apply_item_gain(player, ItemSystem:draw_random(self.state.config))
             else
-                log(state, string.format("%s 资金不足，无法在黑市购物", player.name))
+                self:log(string.format("%s 资金不足，无法在黑市购物", player.name))
             end
-            state.current_phase = phase.END_TURN
+            self.state.current_phase = phase.END_TURN
         else
-            set_prompt(
-                state,
+            self:set_prompt(
                 "黑市购物？",
                 string.format("花费 %d 获取随机道具", cost),
                 function()
                     if player.money >= cost then
-                        player.subtract_money(player, cost)
-                        apply_item_gain(state, player, item.draw_random(state.config))
+                        player:subtract_money(cost)
+                        self:apply_item_gain(player, ItemSystem:draw_random(self.state.config))
                     else
-                        log(state, "金币不足，无法购物")
+                        self:log("金币不足，无法购物")
                     end
-                    game.skip_action()
+                    self:skip_action()
                 end,
-                function() game.skip_action() end
+                function() self:skip_action() end
             )
         end
     elseif tile.type == "rest" then
-        player.add_money(player, 300)
-        log(state, string.format("%s 休息并获得 300 金币", player.name))
-        state.current_phase = phase.END_TURN
+        player:add_money(300)
+        self:log(string.format("%s 休息并获得 300 金币", player.name))
+        self.state.current_phase = phase.END_TURN
     elseif tile.type == "start" then
-        player.add_money(player, math.floor(rules.pass_start_bonus / 2))
-        log(state, string.format("%s 停在起点，获得奖励", player.name))
-        state.current_phase = phase.END_TURN
+        player:add_money(math.floor(rules.pass_start_bonus / 2))
+        self:log(string.format("%s 停在起点，获得奖励", player.name))
+        self.state.current_phase = phase.END_TURN
     else
-        state.current_phase = phase.END_TURN
+        self.state.current_phase = phase.END_TURN
     end
 end
 
@@ -261,30 +269,31 @@ local function move_player(state, player)
     local old_pos = player.position
     local new_pos = ((old_pos - 1 + steps) % tile_count) + 1
     if new_pos < old_pos then
-        player.add_money(player, state.config.rules.pass_start_bonus)
-        log(state, string.format("%s 经过起点，获得 %d 金币", player.name, state.config.rules.pass_start_bonus))
+        player:add_money(state.config.rules.pass_start_bonus)
+        state.game:log(string.format("%s 经过起点，获得 %d 金币", player.name, state.config.rules.pass_start_bonus))
     end
     player.position = new_pos
-    log(state, string.format("%s 前进到格子 %d", player.name, new_pos))
+    state.game:log(string.format("%s 前进到格子 %d", player.name, new_pos))
 end
 
 local function prepare_turn(state, player)
-    if player.is_bankrupt(player) then
+    if player:is_bankrupt() then
         return false
     end
-    player.start_turn(player)
-    if player.state ~= player.state.normal then
-        log(state, string.format("%s 仍在等待，剩余 %d 回合", player.name, player.stay_turns))
+    player:start_turn()
+    if player.state ~= Player.states.normal then
+        state.game:log(string.format("%s 仍在等待，剩余 %d 回合", player.name, player.stay_turns))
         state.current_phase = phase.END_TURN
         return false
     end
     return true
 end
 
-local function advance_to_next_player(state)
+function Game:advance_to_next_player()
+    local state = self.state
     local alive = {}
     for _, p in ipairs(state.players) do
-        if not player.is_bankrupt(p) then
+        if not p:is_bankrupt() then
             table.insert(alive, p)
         end
     end
@@ -302,22 +311,22 @@ local function advance_to_next_player(state)
             state.current_player_index = 1
             state.current_turn = state.current_turn + 1
         end
-    until not player.is_bankrupt(state.players[state.current_player_index])
+    until not state.players[state.current_player_index]:is_bankrupt()
 
     state.current_phase = phase.ROLL
     state.pending_move = nil
 end
 
-function game.create_new_game(player_count)
-    local tiles = property.create_from_config()
+function Game:create_new_game(player_count)
+    local tiles = Tile.create_from_config()
     local tile_count = #tiles
     local players = create_players(player_count, tile_count)
 
-    game.state = {
+    self.state = {
         tiles = tiles,
         tile_count = tile_count,
         tile_index_by_type = build_tile_index_by_type(tiles),
-        chance_deck = chance.create_from_config(),
+        chance_deck = ChanceDeck.from_config(),
         players = players,
         current_player_index = 1,
         current_phase = phase.ROLL,
@@ -332,103 +341,104 @@ function game.create_new_game(player_count)
         auto_timer = 0,
         waiting_action = nil,
         ui = nil,
-        winner = nil
+        winner = nil,
+        config = config,
+        game = self
     }
 
-    log(game.state, "新游戏开始，按空格投骰子")
-    return game.state
+    self:log("新游戏开始，按空格投骰子")
+    return self.state
 end
 
-function game.get_state()
-    return game.state
+function Game:get_state()
+    return self.state
 end
 
-function game.is_waiting_for_input()
-    local state = game.state
+function Game:is_waiting_for_input()
+    local state = self.state
     return state and state.waiting_action ~= nil
 end
 
-function game.is_auto_mode()
-    local state = game.state
+function Game:is_auto_mode()
+    local state = self.state
     return state and state.auto_mode
 end
 
-function game.toggle_auto_mode()
-    local state = game.state
+function Game:toggle_auto_mode()
+    local state = self.state
     if not state then
         return false
     end
     state.auto_mode = not state.auto_mode
     if state.auto_mode then
-        reset_prompts(state)
+        self:reset_prompts()
     end
     return state.auto_mode
 end
 
-function game.set_auto_speed(multiplier)
-    local state = game.state
+function Game:set_auto_speed(multiplier)
+    local state = self.state
     if not state then
         return
     end
     state.auto_interval = math.max(0.1, state.base_auto_interval * multiplier)
 end
 
-function game.buy_property()
-    local state = game.state
+function Game:buy_property()
+    local state = self.state
     if not state then
         return
     end
-    local player = current_player(state)
+    local player = self:current_player()
     local tile = state.tiles[player.position]
     if tile.type ~= "property" or tile.owner then
-        log(state, "无法购买当前地块")
+        self:log("无法购买当前地块")
         state.current_phase = phase.END_TURN
         return
     end
     if player.money < tile.price then
-        log(state, "金币不足，购买失败")
+        self:log("金币不足，购买失败")
         state.current_phase = phase.END_TURN
         return
     end
-    property.buy(tile, player.id, tile.price)
-    player.subtract_money(player, tile.price)
-    player.acquire_property(player, tile.id)
-    log(state, string.format("%s 购买了 %s", player.name, tile.name))
+    tile:buy(player.id, tile.price)
+    player:subtract_money(tile.price)
+    player:acquire_property(tile.id)
+    self:log(string.format("%s 购买了 %s", player.name, tile.name))
     state.current_phase = phase.END_TURN
 end
 
-function game.upgrade_property()
-    local state = game.state
+function Game:upgrade_property()
+    local state = self.state
     if not state then
         return
     end
-    local player = current_player(state)
+    local player = self:current_player()
     local tile = state.tiles[player.position]
     if tile.type ~= "property" or tile.owner ~= player.id then
-        log(state, "当前地块无法升级")
+        self:log("当前地块无法升级")
         return
     end
-    local cost = property.calculate_upgrade_cost(tile)
+    local cost = tile:calculate_upgrade_cost()
     if cost <= 0 or player.money < cost then
-        log(state, "资金不足或已达最高等级")
+        self:log("资金不足或已达最高等级")
         return
     end
-    property.upgrade(tile, player.id, cost)
-    player.subtract_money(player, cost)
-    log(state, string.format("%s 将 %s 升级到等级 %d", player.name, tile.name, tile.building_level))
+    tile:upgrade(player.id, cost)
+    player:subtract_money(cost)
+    self:log(string.format("%s 将 %s 升级到等级 %d", player.name, tile.name, tile.building_level))
 end
 
-function game.skip_action()
-    local state = game.state
-    if not state then
+function Game:skip_action()
+    if not self.state then
         return
     end
-    reset_prompts(state)
-    state.current_phase = phase.END_TURN
+    self:reset_prompts()
+    self.state.current_phase = phase.END_TURN
 end
 
-function game.next_step()
-    local state = game.state
+function Game:next_step()
+    local state = self.state
     if not state or state.winner then
         return
     end
@@ -436,13 +446,13 @@ function game.next_step()
         return
     end
 
-    local player = current_player(state)
+    local player = self:current_player()
     if not player then
         return
     end
 
-    if player.is_bankrupt(player) then
-        advance_to_next_player(state)
+    if player:is_bankrupt() then
+        self:advance_to_next_player()
         return
     end
 
@@ -458,7 +468,7 @@ function game.next_step()
         end
         state.last_dice = dice
         state.pending_move = dice
-        log(state, string.format("%s 投出 %d 点", player.name, dice))
+        self:log(string.format("%s 投出 %d 点", player.name, dice))
         state.current_phase = phase.MOVE
     elseif state.current_phase == phase.MOVE then
         move_player(state, player)
@@ -466,17 +476,17 @@ function game.next_step()
     elseif state.current_phase == phase.RESOLVE then
         local tile = state.tiles[player.position]
         if tile.type == "property" then
-            resolve_property(state, player, tile)
+            self:resolve_property(player, tile)
         else
-            resolve_special_tile(state, player, tile)
+            self:resolve_special_tile(player, tile)
         end
     elseif state.current_phase == phase.END_TURN then
-        advance_to_next_player(state)
+        self:advance_to_next_player()
     end
 end
 
-function game.update(dt)
-    local state = game.state
+function Game:update(dt)
+    local state = self.state
     if not state or state.winner then
         return
     end
@@ -484,19 +494,20 @@ function game.update(dt)
         state.auto_timer = state.auto_timer + dt
         if state.auto_timer >= state.auto_interval then
             state.auto_timer = 0
-            game.next_step()
+            self:next_step()
         end
     end
 end
 
-function game.draw()
-    if game.state then
-        render.draw(game.state)
+function Game:draw()
+    if self.state then
+        render.draw(self.state)
     end
 end
 
-function game.handle_input(key)
-    input.handle_key(key, game)
+function Game:handle_input(key)
+    input.handle_key(key, self)
 end
 
+local game = Game.new()
 return game

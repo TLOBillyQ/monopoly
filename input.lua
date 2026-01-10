@@ -1,14 +1,14 @@
 -- Input handling module
 
-local input = {}
+local Input = {}
 
-function input.handle_key(key, game)
+function Input.handle_key(key, game)
     if not key then return end
     key = string.lower(key)
     print("Key pressed: " .. tostring(key))
 
     -- 如果正在等待确认，优先处理确认键
-    if game.is_waiting_for_input and game.is_waiting_for_input() then
+    if game.is_waiting_for_input and game:is_waiting_for_input() then
         if key == "y" or key == "return" or key == "kpenter" or key == "space" then
             if game.choose_yes then game.choose_yes() end
             return
@@ -27,53 +27,53 @@ function input.handle_key(key, game)
 
     -- 空格键：推进游戏/手动模式下的下一步
     if key == "space" then
-        if not game.is_auto_mode() then
-            game.next_step()
+        if not game:is_auto_mode() then
+            game:next_step()
         end
         return
     end
 
     -- A键：切换自动/手动模式
     if key == "a" then
-        local is_auto = game.toggle_auto_mode()
+        local is_auto = game:toggle_auto_mode()
         print("游戏模式: " .. (is_auto and "自动" or "手动"))
         return
     end
 
     -- +/-键：调整自动模式速度
     if key == "=" then
-        game.set_auto_speed(1.0)
+        game:set_auto_speed(1.0)
         print("速度设为正常")
         return
     end
 
     if key == "-" then
-        game.set_auto_speed(2.0)
+        game:set_auto_speed(2.0)
         print("速度设为慢速")
         return
     end
 
     if key == "+" then
-        game.set_auto_speed(0.1)
+        game:set_auto_speed(0.1)
         print("速度设为快速")
         return
     end
 
     -- B键：购买地块
     if key == "b" then
-        game.buy_property()
+        game:buy_property()
         return
     end
 
     -- U键：升级地块
     if key == "u" then
-        game.upgrade_property()
+        game:upgrade_property()
         return
     end
 
     -- S键：跳过当前操作
     if key == "s" then
-        game.skip_action()
+        game:skip_action()
         return
     end
 
@@ -112,4 +112,4 @@ function input.handle_key(key, game)
     print("未绑定的按键: " .. tostring(key))
 end
 
-return input
+return Input
