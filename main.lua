@@ -1,26 +1,18 @@
-local config = require("config")
-local game = require('game')
+package.path = "src/?.lua;src/?/init.lua;?.lua;" .. package.path
 
-function love.load()
-    love.window.setMode(config.window.width, config.window.height)
-    love.window.setTitle(config.window.title)
-    love.keyboard.setKeyRepeat(true)
-    math.randomseed(os.time())
+local App = require("src.app")
+local logger = require("src.services.logger")
 
-    game:create_new_game(4)
+local game = App.new({
+  players = { "玩家1", "AI2", "AI3", "AI4" },
+  ai = { [2] = true, [3] = true, [4] = true },
+  auto_all = true,
+})
 
-    print("=== 蛋仔大富翁（无 Spoke 版） ===")
-    print("空格: 下一步 | A: 自动/手动 | B: 买地 | U: 升级 | S: 跳过 | H: 帮助 | ESC: 退出")
-end
+logger.info("启动蛋仔大富翁，玩家数:", #game.players)
+game:run(30)
 
-function love.update(dt)
-    game:update(dt)
-end
-
-function love.draw()
-    game:draw()
-end
-
-function love.keypressed(key)
-    game:handle_input(key)
+logger.info("最终资金榜：")
+for _, p in ipairs(game.players) do
+  logger.info(p.name .. " 现金=" .. p.cash .. " 净资产估算=" .. p:net_worth(game.board))
 end

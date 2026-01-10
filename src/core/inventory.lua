@@ -1,0 +1,51 @@
+local constants = require("src.config.constants")
+
+local Inventory = {}
+Inventory.__index = Inventory
+
+function Inventory.new()
+  local inv = { items = {} }
+  return setmetatable(inv, Inventory)
+end
+
+function Inventory:count()
+  return #self.items
+end
+
+function Inventory:is_full()
+  return self:count() >= constants.inventory_slots
+end
+
+function Inventory:add(item)
+  if self:is_full() then
+    return false
+  end
+  table.insert(self.items, item)
+  return true
+end
+
+function Inventory:remove_by_index(idx)
+  local item = self.items[idx]
+  table.remove(self.items, idx)
+  return item
+end
+
+function Inventory:remove_first(predicate)
+  for i, it in ipairs(self.items) do
+    if predicate(it) then
+      return self:remove_by_index(i)
+    end
+  end
+  return nil
+end
+
+function Inventory:find_index(predicate)
+  for i, it in ipairs(self.items) do
+    if predicate(it) then
+      return i
+    end
+  end
+  return nil
+end
+
+return Inventory
