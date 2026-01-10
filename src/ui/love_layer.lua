@@ -1,4 +1,3 @@
-local App = require("src.app")
 local logger = require("src.services.logger")
 local items_cfg = require("src.config.items")
 local roles_cfg = require("src.config.roles")
@@ -74,11 +73,13 @@ local function build_fonts(ui)
   love.graphics.setFont(ui.fonts.body)
 end
 
-function LoveLayer.new()
+function LoveLayer.new(opts)
+  opts = opts or {}
   local self = {
     ui = create_ui(),
     game = nil,
     item_name_by_id = {},
+    game_factory = opts.game_factory,
   }
   return setmetatable(self, LoveLayer)
 end
@@ -91,6 +92,10 @@ function LoveLayer:get_game()
   return self.game
 end
 
+function LoveLayer:set_game_factory(factory)
+  self.game_factory = factory
+end
+
 function LoveLayer:build_item_index()
   self.item_name_by_id = {}
   for _, cfg in ipairs(items_cfg) do
@@ -100,11 +105,8 @@ end
 
 function LoveLayer:new_game()
   logger.clear()
-  local g = App.new({
-    players = { "玩家1", "AI2", "AI3", "AI4" },
-    ai = { [2] = true, [3] = true, [4] = true },
-    auto_all = true,
-  })
+  assert(self.game_factory, "game_factory not set")
+  local g = self.game_factory()
   self.ui.selected_tile = nil
   self.ui.hover_tile = nil
   self.ui.last_auto_time = 0
