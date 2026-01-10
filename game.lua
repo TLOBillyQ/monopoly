@@ -45,7 +45,7 @@ local function build_tile_index_by_type(tiles)
     return map
 end
 
-local function create_players(config, count, tile_count)
+local function create_players(count, tile_count)
     local players = {}
     for i = 1, count do
         local character_id = (config.characters[i] and config.characters[i].id) or 1000 + i
@@ -308,19 +308,16 @@ local function advance_to_next_player(state)
     state.pending_move = nil
 end
 
-function game.create_new_game(config, player_count)
-    local cfg = config or config
-    local tiles = property.create_from_config(cfg)
+function game.create_new_game(player_count)
+    local tiles = property.create_from_config()
     local tile_count = #tiles
-    local players = create_players(cfg, player_count or 4, tile_count)
+    local players = create_players(player_count, tile_count)
 
     game.state = {
-        config = cfg,
-        cfg = cfg,
         tiles = tiles,
         tile_count = tile_count,
         tile_index_by_type = build_tile_index_by_type(tiles),
-        chance_deck = chance.create_from_config(cfg),
+        chance_deck = chance.create_from_config(),
         players = players,
         current_player_index = 1,
         current_phase = phase.ROLL,
@@ -330,8 +327,8 @@ function game.create_new_game(config, player_count)
         last_log = "",
         logs = {},
         auto_mode = false,
-        base_auto_interval = cfg.rules.auto_step_interval or 1.0,
-        auto_interval = cfg.rules.auto_step_interval or 1.0,
+        base_auto_interval = config.rules.auto_step_interval,
+        auto_interval = config.rules.auto_step_interval,
         auto_timer = 0,
         waiting_action = nil,
         ui = nil,

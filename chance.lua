@@ -1,4 +1,4 @@
--- 机会卡系统（完整数据版，同步 main 数据）
+local config = require "config"
 
 local chance = {}
 local player = require("player")
@@ -44,7 +44,7 @@ local function get_tile_count(game_state)
 end
 
 -- 从配置构建机会卡列表
-function chance.create_from_config(config)
+function chance.create_from_config()
     local events = {}
     for _, entry in ipairs(config.chance_events or {}) do
         local evt = {}

@@ -1,6 +1,3 @@
--- 玩家/角色系统
--- Player System
-
 local player = {}
 
 -- 玩家状态

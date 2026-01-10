@@ -1,23 +1,5 @@
 # 蛋仔大富翁 - Lua游戏原型
 
-基于策划案开发的大富翁游戏Lua原型。
-
-## 项目结构
-
-```
-monopoly/
-├── main.lua          # 主入口文件（LÖVE2D框架）
-├── game.lua          # 游戏流程控制
-├── player.lua        # 玩家/角色系统
-├── property.lua      # 地块系统
-├── item.lua          # 道具卡系统
-├── chance.lua        # 机会卡系统
-├── board.lua         # 地图系统
-├── ui.lua            # UI系统
-├── config.lua        # 游戏配置
-└── Readme.md         # 策划案文档
-```
-
 ## 功能实现
 
 ### 已实现的核心系统
@@ -96,41 +78,6 @@ monopoly/
 - **深山**：停留2回合，期间无法收租
 - **税务局**：缴纳现金50%的税
 
-## 运行环境
-
-本项目使用 **LÖVE2D** 游戏引擎开发。
-
-### 安装LÖVE2D
-
-#### macOS
-```bash
-brew install love
-```
-
-或从官网下载：https://love2d.org/
-
-#### Windows/Linux
-从官网下载对应版本：https://love2d.org/
-
-### 运行游戏
-
-```bash
-# 方法1：直接运行
-love .
-
-# 方法2：指定项目目录
-love /path/to/monopoly
-
-# 方法3（macOS）：使用应用程序
-open -a love .
-```
-
-### 游戏操作
-
-- **空格键**：投骰子/确认/下一阶段
-- **ESC键**：退出游戏
-- **鼠标点击**：UI交互（购买、加盖等）
-
 ## 开发状态
 
 ### 已完成
@@ -204,16 +151,3 @@ open -a love .
 
 ### 自定义AI策略
 修改 `player.lua` 中的 `Player.make_ai_decision()` 函数
-
-## 许可证
-
-本项目为游戏原型，仅供学习和开发参考。
-
-## 贡献
-
-欢迎提交问题和改进建议！
-
----
-
-开发版本：1.0  
-最后更新：2026年1月5日

@@ -2,19 +2,19 @@
 
 local input = {}
 
-function input.handle_key(key, Game)
+function input.handle_key(key, game)
     if not key then return end
     key = string.lower(key)
     print("Key pressed: " .. tostring(key))
 
     -- 如果正在等待确认，优先处理确认键
-    if Game.is_waiting_for_input and Game.is_waiting_for_input() then
+    if game.is_waiting_for_input and game.is_waiting_for_input() then
         if key == "y" or key == "return" or key == "kpenter" or key == "space" then
-            if Game.choose_yes then Game.choose_yes() end
+            if game.choose_yes then game.choose_yes() end
             return
         end
         if key == "n" or key == "escape" or key == "backspace" then
-            if Game.choose_no then Game.choose_no() end
+            if game.choose_no then game.choose_no() end
             return
         end
         -- 其它按键继续向下，让模式切换等仍然生效
@@ -27,67 +27,67 @@ function input.handle_key(key, Game)
 
     -- 空格键：推进游戏/手动模式下的下一步
     if key == "space" then
-        if not Game.is_auto_mode() then
-            Game.next_step()
+        if not game.is_auto_mode() then
+            game.next_step()
         end
         return
     end
 
     -- A键：切换自动/手动模式
     if key == "a" then
-        local is_auto = Game.toggle_auto_mode()
+        local is_auto = game.toggle_auto_mode()
         print("游戏模式: " .. (is_auto and "自动" or "手动"))
         return
     end
 
     -- +/-键：调整自动模式速度
-    if key == "=" or key == "+" or key == "kp+" then
-        Game.set_auto_speed(1.0)
+    if key == "=" then
+        game.set_auto_speed(1.0)
         print("速度设为正常")
         return
     end
 
-    if key == "-" or key == "kp-" then
-        Game.set_auto_speed(2.0)
+    if key == "-" then
+        game.set_auto_speed(2.0)
         print("速度设为慢速")
         return
     end
 
-    if key == "0" then
-        Game.set_auto_speed(0.1)
+    if key == "+" then
+        game.set_auto_speed(0.1)
         print("速度设为快速")
         return
     end
 
     -- B键：购买地块
     if key == "b" then
-        Game.buy_property()
+        game.buy_property()
         return
     end
 
     -- U键：升级地块
     if key == "u" then
-        Game.upgrade_property()
+        game.upgrade_property()
         return
     end
 
     -- S键：跳过当前操作
     if key == "s" then
-        Game.skip_action()
+        game.skip_action()
         return
     end
 
     -- Y/N键：选择是/否
     if key == "y" then
-        if Game.choose_yes then
-            Game.choose_yes()
+        if game.choose_yes then
+            game.choose_yes()
         end
         return
     end
 
     if key == "n" then
-        if Game.choose_no then
-            Game.choose_no()
+        if game.choose_no then
+            game.choose_no()
         end
         return
     end

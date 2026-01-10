@@ -19,7 +19,7 @@ config.rules = {
     mountain_stay = 2,       -- 深山停留回合数
     turn_timeout = 30,       -- 回合超时时间
     max_item_slots = 5,       -- 最多持有道具数
-    auto_step_interval = 0.9, -- 自动模式步进时间（秒）
+    auto_step_interval = 0.1, -- 自动模式步进时间（秒）
 
     -- 神仙附身时间（回合）
     angel_duration = 5,

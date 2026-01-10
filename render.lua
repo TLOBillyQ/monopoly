@@ -1,5 +1,4 @@
--- Rendering module for Monopoly prototype
-
+local config = require "config"
 local render = {}
 
 local fonts = {
@@ -42,7 +41,7 @@ local function ensure_font()
 end
 
 local function draw_board(state, board)
-    local colors = state.cfg.colors
+    local colors = config.colors
     local tiles = state.tiles
     local origin_x, origin_y = board.origin_x, board.origin_y
     local cell_size, grid_size = board.cell_size, board.grid_size
@@ -135,7 +134,7 @@ local function draw_board(state, board)
 end
 
 local function draw_hud(state, start_x, start_y, width)
-    local colors = state.cfg.colors
+    local colors = config.colors
     local p = state.players[state.current_player_index]
     local hud_x = start_x or 680
     local hud_y = start_y or 40
@@ -264,7 +263,7 @@ end
 
 -- 绘制所有玩家排名
 local function draw_player_ranking(state, start_x, start_y)
-    local colors = state.cfg.colors
+    local colors = config.colors
     local line_height = 20
     local current_y = start_y or 680
 
@@ -308,7 +307,7 @@ end
 
 -- 绘制控制提示
 local function draw_controls(state, start_x, start_y)
-    local colors = state.cfg.colors
+    local colors = config.colors
     local start_x = start_x or 680
     local start_y = start_y or 720
     local line_height = 18
@@ -348,7 +347,7 @@ end
 function render.draw(state)
     ensure_font()
     love.graphics.setFont(fonts.base)
-    local bg = state.cfg.colors.background
+    local bg = config.colors.background
     love.graphics.clear(bg[1], bg[2], bg[3], 1)
 
     local board = calculate_board_metrics(state.tiles)
@@ -363,7 +362,7 @@ function render.draw(state)
     -- 侧边信息面板背景，防止文字贴边或被遮挡
     love.graphics.setColor(1, 1, 1, 0.9)
     love.graphics.rectangle("fill", panel_x - 12, panel_y - 12, panel_width + 24, panel_height + 24, 10, 10)
-    love.graphics.setColor(state.cfg.colors.board_line)
+    love.graphics.setColor(config.colors.board_line)
     love.graphics.rectangle("line", panel_x - 12, panel_y - 12, panel_width + 24, panel_height + 24, 10, 10)
 
     local current_y = panel_y

@@ -1,5 +1,4 @@
--- 道具系统（完整数据适配，无 Spoke 版）
-
+local config = require "config"
 local item = {}
 local player = require("player")
 local property = require("property")
@@ -103,7 +102,7 @@ function item.get_name(item_id)
     return info and info.name or ("道具" .. tostring(item_id))
 end
 
-function item.draw_random(config)
+function item.draw_random()
     local items = (config and config.items) or {}
     local total = 0
     for _, entry in ipairs(items) do

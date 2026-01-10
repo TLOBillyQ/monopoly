@@ -1,5 +1,4 @@
--- 地块系统 - 完全重构
--- Property/Board System - 基于16格地块设计
+local config = require "config"
 
 local property = {}
 
@@ -26,7 +25,7 @@ property.buildings = {
 -- ==================== 地块创建 ====================
 
 -- 根据config创建地块
-function property.create_from_config(config)
+function property.create_from_config()
     local tiles = {}
 
     for i, tile_config in ipairs(config.tiles) do
