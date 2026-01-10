@@ -1,5 +1,5 @@
 local config = require("config")
-local game = require('Game')
+local game = require('game')
 
 function love.load()
     love.window.setMode(config.window.width, config.window.height)
