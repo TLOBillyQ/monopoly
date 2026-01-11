@@ -1,6 +1,15 @@
+local tiles_cfg = require("src.config.tiles")
+
+local coords_by_id = {}
+for _, cfg in ipairs(tiles_cfg) do
+  if cfg.id and cfg.row and cfg.col then
+    coords_by_id[cfg.id] = { cfg.row, cfg.col }
+  end
+end
+
 local Layout = {}
 
-function Layout.apply(ui, game, grid_coords)
+function Layout.apply(ui, game)
   local w, h = love.graphics.getDimensions()
   ui.side_width = math.max(280, math.floor(w * 0.24))
 
@@ -23,7 +32,8 @@ function Layout.apply(ui, game, grid_coords)
   if game then
     local count = game.board:length()
     for i = 1, count do
-      local coord = grid_coords[i]
+      local tile = game.board:get_tile(i)
+      local coord = tile and coords_by_id[tile.id]
       if not coord then
         break
       end

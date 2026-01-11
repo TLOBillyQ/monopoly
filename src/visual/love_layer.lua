@@ -10,18 +10,6 @@ local AutoRunner = require("src.visual.auto_runner")
 local LoveLayer = {}
 LoveLayer.__index = LoveLayer
 
--- 与 map.path 对应的棋盘坐标：先外圈逆时针，再内圈逆时针
-local grid_coords = {
-  -- 外圈 32 格：起点在右下角，逆时针
-  { 9, 9 }, { 9, 8 }, { 9, 7 }, { 9, 6 }, { 9, 5 }, { 9, 4 }, { 9, 3 }, { 9, 2 }, { 9, 1 },
-  { 8, 1 }, { 7, 1 }, { 6, 1 }, { 5, 1 }, { 4, 1 }, { 3, 1 }, { 2, 1 }, { 1, 1 },
-  { 1, 2 }, { 1, 3 }, { 1, 4 }, { 1, 5 }, { 1, 6 }, { 1, 7 }, { 1, 8 }, { 1, 9 },
-  { 2, 9 }, { 3, 9 }, { 4, 9 }, { 5, 9 }, { 6, 9 }, { 7, 9 }, { 8, 9 },
-  -- 内圈 13 格：逆时针围绕中心列
-  { 8, 5 }, { 7, 5 }, { 6, 5 }, { 5, 5 }, { 5, 6 }, { 5, 7 }, { 5, 8 },
-  { 4, 5 }, { 3, 5 }, { 2, 5 }, { 5, 4 }, { 5, 3 }, { 5, 2 },
-}
-
 function LoveLayer.new(opts)
   opts = opts or {}
   local ui = UIState.create()
@@ -116,7 +104,7 @@ function LoveLayer:new_game()
 end
 
 function LoveLayer:layout()
-  Layout.apply(self.ui, self.game, grid_coords)
+  Layout.apply(self.ui, self.game)
 end
 
 function LoveLayer:is_inside(x, y, rect)
