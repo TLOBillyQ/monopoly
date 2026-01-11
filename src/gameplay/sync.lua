@@ -37,8 +37,6 @@ local function restore_turn(game)
     return
   end
   game.turn_count = turn.turn_count or game.turn_count or 0
-  game.current_player_index = turn.current_player_index or game.current_player_index or 1
-  game.phase = turn.phase or game.phase or "start"
 end
 
 local function restore_overlays(game)

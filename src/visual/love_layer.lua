@@ -26,6 +26,7 @@ end
 
 function LoveLayer:set_game(g)
   self.game = g
+  self.game.ui_enabled = true
   self.game.ui_hooks = self.game.ui_hooks or {}
   self.game.ui_hooks.push_popup = function(payload)
     self.modal:push(payload)
@@ -75,6 +76,44 @@ function LoveLayer:set_game(g)
       button_text = "取消",
     })
   end
+end
+
+function LoveLayer:sync_pending_choice_modal()
+  if not self.game or not self.game.store then
+    return
+  end
+  local pending = self.game.store:get({ "turn", "pending_choice" })
+  if not pending then
+    return
+  end
+  if self.modal.active and self.modal.active._pending_choice_id == pending.id then
+    return
+  end
+
+  if self.modal.active and not self.modal.active._pending_choice_id then
+    table.insert(self.modal.queue, 1, self.modal.active)
+  end
+
+  local buttons = {}
+  for _, opt in ipairs(pending.options or {}) do
+    table.insert(buttons, {
+      label = opt.label or tostring(opt.id),
+      on_click = function()
+        self:dispatch_action({ type = "choice_select", choice_id = pending.id, option_id = opt.id })
+      end,
+    })
+  end
+
+  self.modal.active = {
+    title = pending.title or "请选择",
+    body = table.concat(pending.body_lines or {}, "\n"),
+    buttons = buttons,
+    button_text = pending.cancel_label or "取消",
+    on_confirm = function()
+      self:dispatch_action({ type = "choice_cancel", choice_id = pending.id })
+    end,
+    _pending_choice_id = pending.id,
+  }
 end
 
 function LoveLayer:get_game()
@@ -155,6 +194,7 @@ function LoveLayer:update(dt)
   if not self.game then
     return
   end
+  self:sync_pending_choice_modal()
   local mx, my = love.mouse.getPosition()
   self:update_hover_tile(mx, my)
   local auto_action = self.auto_runner:next_action(dt, {
@@ -199,6 +239,11 @@ function LoveLayer:dispatch_action(action)
   elseif action.type == "modal_confirm" then
     if not self.modal:confirm() then
       self.modal:keypressed("space")
+    end
+  elseif action.type == "choice_select" or action.type == "choice_cancel" then
+    if self.game and self.game.turn_manager then
+      self.game.turn_manager:dispatch(action)
+      self.game:check_victory()
     end
   end
 end

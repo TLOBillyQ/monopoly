@@ -16,8 +16,7 @@ local function phase_start(tm)
   if player.eliminated then
     tm.game.last_turn.note = "已出局，跳过"
     tm.game.last_turn.skipped = true
-    tm:next_player()
-    return nil
+    return "end_turn", { player = player }
   end
   if player.status.stay_turns and player.status.stay_turns > 0 then
     player.status.stay_turns = player.status.stay_turns - 1
@@ -25,10 +24,12 @@ local function phase_start(tm)
     tm.game.last_turn.note = "被扣留"
     tm.game.last_turn.skipped = true
     tm.game.last_turn.stay_turns = player.status.stay_turns
-    tm:end_turn(player)
-    return nil
+    return "end_turn", { player = player }
   end
-  ItemService.auto_pre_action(tm.game, player)
+  local pre = ItemService.auto_pre_action(tm.game, player)
+  if pre and pre.waiting then
+    return "wait_choice", { resume_state = "roll", resume_args = { player = player } }
+  end
   return "roll", { player = player }
 end
 

@@ -182,7 +182,7 @@ local function handle_market(game, player)
 end
 
 local function handle_chance(game, player, context)
-  local card = ChanceService.draw_card()
+  local card = ChanceService.draw_card(game and game.rng)
   logger.event(player.name .. " 抽到机会卡 " .. card.description)
   ChanceService.resolve(game, player, card, context)
 end
@@ -207,8 +207,13 @@ end
 
 function TileService.resolve(game, player, tile, context)
   -- 路过玩家触发偷窃
-  if context and context.encountered_players then
-    ItemService.handle_pass_players(game, player, context.encountered_players)
+  if context and context.encountered_players and not context.pass_players_checked then
+    local res = ItemService.handle_pass_players(game, player, context.encountered_players)
+    if res and res.waiting then
+      context.pass_players_checked = true
+      return res
+    end
+    context.pass_players_checked = true
   end
 
   if tile.type == "land" then
@@ -230,6 +235,7 @@ function TileService.resolve(game, player, tile, context)
   end
 
   check_mine(game, player)
+  return nil
 end
 
 return TileService

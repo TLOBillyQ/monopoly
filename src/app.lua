@@ -65,6 +65,8 @@ function App.new(opts)
       current_player_index = 1,
       turn_count = 0,
       phase = "start",
+      pending_choice = nil,
+      choice_seq = 0,
     },
     rng = rng:snapshot(),
     players = snapshot_players(),
@@ -98,7 +100,6 @@ function App.new(opts)
     self.store:set({ "turn", "turn_count" }, self.turn_count or 0)
     local idx = self.store:get({ "turn", "current_player_index" }) or 1
     self.store:set({ "turn", "current_player_index" }, idx)
-    self.store:set({ "turn", "phase" }, self.phase or "start")
     -- rng
     self.store:set({ "rng" }, self.rng:snapshot())
   end

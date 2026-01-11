@@ -25,8 +25,8 @@ local function load_services()
   end
 end
 
-function ChanceService.draw_card()
-  return random.weighted_choice(chance_cfg, "weight")
+function ChanceService.draw_card(rng)
+  return random.weighted_choice(chance_cfg, "weight", rng)
 end
 
 local function apply_cash_change(player, delta)
@@ -117,11 +117,17 @@ function ChanceService.resolve(game, player, card, context)
   elseif effect == "move_backward" then
     local res = MovementService.move(game, player, card.steps)
     local tile = game.board:get_tile(player.position)
-    TileService.resolve(game, player, tile, res)
+    local out = TileService.resolve(game, player, tile, res)
+    if out and out.waiting then
+      return out
+    end
   elseif effect == "move_forward" then
     local res = MovementService.move(game, player, card.steps)
     local tile = game.board:get_tile(player.position)
-    TileService.resolve(game, player, tile, res)
+    local out = TileService.resolve(game, player, tile, res)
+    if out and out.waiting then
+      return out
+    end
   elseif effect == "grant_item" then
     ItemService.give_item(player, card.item_id)
   elseif effect == "discard_items" then
@@ -159,7 +165,10 @@ function ChanceService.resolve(game, player, card, context)
       local idx = game.board:find_first_by_type("tax")
       if idx then
         game:update_player_position(player, idx)
-        TileService.resolve(game, player, game.board:get_tile(idx), context)
+        local out = TileService.resolve(game, player, game.board:get_tile(idx), context)
+        if out and out.waiting then
+          return out
+        end
       end
     elseif card.destination == "market" then
       local idx = game.board:find_first_by_type("market")
