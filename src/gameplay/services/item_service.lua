@@ -82,7 +82,7 @@ function ItemService.auto_pre_action(game, player)
   if find_item_index(player, 2006) then
     if ItemService.has_obstacles_ahead(game, player, 12) then
       local res = ItemService.use_item(game, player, 2006)
-      if res and res.waiting then
+      if type(res) == "table" and res.waiting then
         return res
       end
     end
@@ -91,7 +91,7 @@ function ItemService.auto_pre_action(game, player)
   -- 遥控骰子：自动设为最高点数
   if find_item_index(player, 2002) then
     local res = ItemService.use_item(game, player, 2002)
-    if res and res.waiting then
+    if type(res) == "table" and res.waiting then
       return res
     end
   end
@@ -99,7 +99,7 @@ function ItemService.auto_pre_action(game, player)
   -- 骰子加倍：有就用
   if find_item_index(player, 2003) then
     local res = ItemService.use_item(game, player, 2003)
-    if res and res.waiting then
+    if type(res) == "table" and res.waiting then
       return res
     end
   end
@@ -107,7 +107,7 @@ function ItemService.auto_pre_action(game, player)
   -- 路障：自动放置前方 3 格内最近空位
   if find_item_index(player, 2004) then
     local res = ItemService.use_item(game, player, 2004)
-    if res and res.waiting then
+    if type(res) == "table" and res.waiting then
       return res
     end
   end
@@ -115,7 +115,7 @@ function ItemService.auto_pre_action(game, player)
   -- 怪兽卡：若前后 3 格内有他人建筑则使用
   if find_item_index(player, 2008) and ItemService.find_monster_target(game, player, 3) then
     local res = ItemService.use_item(game, player, 2008)
-    if res and res.waiting then
+    if type(res) == "table" and res.waiting then
       return res
     end
   end
@@ -123,7 +123,7 @@ function ItemService.auto_pre_action(game, player)
   -- 导弹卡：若前后 3 格有可轰炸目标则使用
   if find_item_index(player, 2013) and find_missile_target(game, player, 3) then
     local res = ItemService.use_item(game, player, 2013)
-    if res and res.waiting then
+    if type(res) == "table" and res.waiting then
       return res
     end
   end
@@ -131,12 +131,12 @@ function ItemService.auto_pre_action(game, player)
   -- 财神/天使/穷神：优先自用财神/天使
   if find_item_index(player, 2017) then
     local res = ItemService.use_item(game, player, 2017)
-    if res and res.waiting then
+    if type(res) == "table" and res.waiting then
       return res
     end
   elseif find_item_index(player, 2019) then
     local res = ItemService.use_item(game, player, 2019)
-    if res and res.waiting then
+    if type(res) == "table" and res.waiting then
       return res
     end
   end
@@ -246,7 +246,8 @@ local function send_players_to_hospital(game, idx)
     return 0
   end
   local count = 0
-  local snapshot = { table.unpack(occupants) }
+  local unpack_fn = table.unpack or unpack
+  local snapshot = { unpack_fn(occupants) }
   for _, pid in ipairs(snapshot) do
     local target = game.players[pid]
     if target then
