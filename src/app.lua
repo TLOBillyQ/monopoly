@@ -3,14 +3,19 @@ local Player = require("src.core.player")
 local Inventory = require("src.core.inventory")
 local constants = require("src.config.constants")
 local roles_cfg = require("src.config.roles")
-local logger = require("src.services.logger")
-local TurnManager = require("src.services.turn_manager")
+local logger = require("src.gameplay.services.logger")
+local TurnManager = require("src.gameplay.services.turn_manager")
+local RNG = require("src.gameplay.rng")
+local Store = require("src.gameplay.store")
+local Flow = require("src.gameplay.flow")
 
 local App = {}
 App.__index = App
 
 function App.new(opts)
+  opts = opts or {}
   local board = Board.new()
+  local rng = RNG.new(opts.seed)
   local players = {}
   local names = opts.players or { "玩家1" }
   for i, name in ipairs(names) do
@@ -27,15 +32,52 @@ function App.new(opts)
     table.insert(players, player)
   end
 
+  local function snapshot_players()
+    local ps = {}
+    for _, p in ipairs(players) do
+      ps[p.id] = {
+        id = p.id,
+        cash = p.cash,
+        position = p.position,
+        properties = p.properties,
+        status = p.status,
+      }
+    end
+    return ps
+  end
+
+  local function snapshot_tiles()
+    local ts = {}
+    for _, tile in ipairs(board.path) do
+      if tile.type == "land" then
+        ts[tile.id] = { owner_id = tile.owner_id, level = tile.level }
+      end
+    end
+    return ts
+  end
+
+  local initial_state = {
+    board = {
+      overlays = { roadblocks = {}, mines = {} },
+      tiles = snapshot_tiles(),
+    },
+    turn = {
+      current_player_index = 1,
+      turn_count = 0,
+      phase = "start",
+    },
+    rng = rng:snapshot(),
+    players = snapshot_players(),
+  }
+  local store = Store.new(initial_state)
+
   local game = {
     board = board,
     players = players,
-    current_player_index = 1,
-    phase = "roll",
-    overlays = { roadblocks = {}, mines = {} },
-    occupants = {},
-    path_history = {},
-    turn_count = 0,
+    store = store,
+    rng = rng,
+    turn_count = initial_state.turn.turn_count,
+    overlays = initial_state.board.overlays,
     logger = logger,
     finished = false,
     winner = nil,
@@ -44,6 +86,24 @@ function App.new(opts)
   setmetatable(game, App)
   game:rebuild_occupants()
   game.turn_manager = TurnManager.new(game)
+  function game:commit_state()
+    -- tiles
+    local tiles_snapshot = snapshot_tiles()
+    self.store:set({ "board", "tiles" }, tiles_snapshot)
+    -- overlays
+    self.store:set({ "board", "overlays" }, self.overlays)
+    -- players
+    self.store:set({ "players" }, snapshot_players())
+    -- turn
+    self.store:set({ "turn", "turn_count" }, self.turn_count or 0)
+    local idx = self.store:get({ "turn", "current_player_index" }) or 1
+    self.store:set({ "turn", "current_player_index" }, idx)
+    self.store:set({ "turn", "phase" }, self.phase or "start")
+    -- rng
+    self.store:set({ "rng" }, self.rng:snapshot())
+  end
+  local Sync = require("src.gameplay.sync")
+  Sync.sync_all(game)
   return game
 end
 
@@ -58,7 +118,8 @@ function App:alive_players()
 end
 
 function App:current_player()
-  return self.players[self.current_player_index]
+  local idx = self.store:get({ "turn", "current_player_index" }) or 1
+  return self.players[idx]
 end
 
 function App:rebuild_occupants()
@@ -83,6 +144,7 @@ function App:update_player_position(player, new_index)
   player.position = new_index
   self.occupants[new_index] = self.occupants[new_index] or {}
   table.insert(self.occupants[new_index], player.id)
+  self.store:set({ "board", "overlays" }, self.store:get({ "board", "overlays" }) or { roadblocks = {}, mines = {} })
 end
 
 function App:run(max_rounds)

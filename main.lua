@@ -1,7 +1,7 @@
 package.path = "src/?.lua;src/?/init.lua;?.lua;" .. package.path
 
 local App = require("src.app")
-local LoveLayer = require("src.ui.love_layer")
+local LoveLayer = require("src.visual.love_layer")
 
 local default_factory = function()
 	return App.new({

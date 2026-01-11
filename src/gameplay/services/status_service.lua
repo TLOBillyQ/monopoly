@@ -1,6 +1,6 @@
 local constants = require("src.config.constants")
-local logger = require("src.services.logger")
-local BankruptcyService = require("src.services.bankruptcy_service")
+local logger = require("src.gameplay.services.logger")
+local BankruptcyService = require("src.gameplay.services.bankruptcy_service")
 
 local StatusService = {}
 

@@ -1,4 +1,4 @@
-local logger = require("src.services.logger")
+local logger = require("src.gameplay.services.logger")
 local roles_cfg = require("src.config.roles")
 
 local PanelRenderer = {}
@@ -149,6 +149,14 @@ local function draw_tile_detail(ui, game, panel, y)
           y = y + 14
         end
       end
+      if game.overlays.roadblocks[idx] then
+        love.graphics.printf("路障: 有", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+        y = y + 14
+      end
+      if game.overlays.mines[idx] then
+        love.graphics.printf("地雷: 有", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+        y = y + 14
+      end
     end
   end
 
@@ -183,7 +191,10 @@ function PanelRenderer.draw(ui, game, buttons, item_name_by_id)
   love.graphics.printf("蛋仔大富翁", panel.x + ui.margin, panel.y + 18, panel.w - ui.margin * 2, "left")
 
   love.graphics.setFont(ui.fonts.small)
-  local turn_label = game and ("回合: " .. game.turn_count) or "回合: -"
+  local turn_label = "回合: -"
+  if game and game.turn_count then
+    turn_label = "回合: " .. tostring(game.turn_count)
+  end
   love.graphics.setColor(ui.palette.muted)
   love.graphics.printf(turn_label, panel.x + ui.margin, panel.y + 42, panel.w - ui.margin * 2, "left")
 

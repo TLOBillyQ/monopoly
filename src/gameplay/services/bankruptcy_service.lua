@@ -1,4 +1,4 @@
-local logger = require("src.services.logger")
+local logger = require("src.gameplay.services.logger")
 
 local BankruptcyService = {}
 

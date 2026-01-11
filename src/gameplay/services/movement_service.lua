@@ -1,5 +1,5 @@
 local constants = require("src.config.constants")
-local logger = require("src.services.logger")
+local logger = require("src.gameplay.services.logger")
 
 local MovementService = {}
 
@@ -43,10 +43,6 @@ function MovementService.move(game, player, steps, opts)
   game:update_player_position(player, current)
 
   local landing_tile = board:get_tile(current)
-  if landing_tile.type == "start" then
-    player:add_cash(constants.pass_start_bonus)
-    logger.event(player.name .. " 停在起点，获得 " .. constants.pass_start_bonus .. " 金币")
-  end
 
   return {
     encountered_players = encountered,

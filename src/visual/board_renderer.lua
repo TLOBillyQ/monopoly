@@ -1,4 +1,4 @@
-local UIState = require("src.ui.ui_state")
+local UIState = require("src.visual.ui_state")
 
 local BoardRenderer = {}
 
@@ -46,13 +46,16 @@ end
 local function draw_overlays(ui, overlays, rect_x, rect_y, rect_w, rect_h, idx)
   if overlays.roadblocks[idx] then
     local cx = rect_x + rect_w * 0.5
-    local cy = rect_y + rect_h * 0.25
+    local cy = rect_y + rect_h * 0.26
+    love.graphics.setColor(0, 0, 0, 0.55)
+    love.graphics.circle("fill", cx + 2, cy + 2, rect_w * 0.36)
     love.graphics.setColor(ui.palette.overlay.roadblock.bg)
-    love.graphics.circle("fill", cx, cy, 10)
+    love.graphics.circle("fill", cx, cy, rect_w * 0.36)
     love.graphics.setColor(ui.palette.overlay.roadblock.fg)
-    love.graphics.setLineWidth(2)
-    love.graphics.line(cx - 8, cy, cx + 8, cy)
-    love.graphics.line(cx, cy - 8, cx, cy + 8)
+    love.graphics.setLineWidth(3)
+    love.graphics.circle("line", cx, cy, rect_w * 0.36)
+    love.graphics.line(cx - rect_w * 0.2, cy - rect_w * 0.22, cx + rect_w * 0.2, cy + rect_w * 0.22)
+    love.graphics.line(cx - rect_w * 0.2, cy + rect_w * 0.22, cx + rect_w * 0.2, cy - rect_w * 0.22)
     love.graphics.setLineWidth(1)
   elseif overlays.mines[idx] then
     local cx = rect_x + rect_w * 0.5
@@ -109,8 +112,6 @@ local function draw_tile(ui, game, idx, pos, half_cell, pad, last_visited)
     love.graphics.rectangle("line", rect_x - 2, rect_y - 2, rect_w + 4, rect_h + 4, 9, 9)
     draw_buildings(ui, pos, half_cell, tile, owner_color)
   end
-
-  draw_overlays(ui, game.overlays, rect_x, rect_y, rect_w, rect_h, idx)
 end
 
 local function draw_players(ui, game, cell_size)
@@ -146,6 +147,20 @@ local function collect_last_visited(game)
   return last_visited
 end
 
+local function tile_rect_for_overlay(ui, idx, pos, half_cell, pad)
+  local rect_x = pos.x - half_cell + pad
+  local rect_y = pos.y - half_cell + pad
+  local rect_w = ui.board.cell_size - pad * 2
+  local rect_h = ui.board.cell_size - pad * 2
+  if ui.hover_tile == idx or ui.selected_tile == idx then
+    rect_x = rect_x - 2
+    rect_y = rect_y - 2
+    rect_w = rect_w + 4
+    rect_h = rect_h + 4
+  end
+  return rect_x, rect_y, rect_w, rect_h
+end
+
 function BoardRenderer.draw(ui, game)
   if not game then
     return
@@ -160,6 +175,11 @@ function BoardRenderer.draw(ui, game)
   end
 
   draw_players(ui, game, cell_size)
+
+  for idx, pos in ipairs(ui.board.positions) do
+    local rect_x, rect_y, rect_w, rect_h = tile_rect_for_overlay(ui, idx, pos, half_cell, pad)
+    draw_overlays(ui, game.overlays, rect_x, rect_y, rect_w, rect_h, idx)
+  end
 end
 
 return BoardRenderer

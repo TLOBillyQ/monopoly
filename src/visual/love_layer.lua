@@ -1,34 +1,92 @@
-local logger = require("src.services.logger")
+local logger = require("src.gameplay.services.logger")
 local items_cfg = require("src.config.items")
-local UIState = require("src.ui.ui_state")
-local Layout = require("src.ui.layout")
-local BoardRenderer = require("src.ui.board_renderer")
-local PanelRenderer = require("src.ui.panel_renderer")
+local UIState = require("src.visual.ui_state")
+local Layout = require("src.visual.layout")
+local BoardRenderer = require("src.visual.board_renderer")
+local PanelRenderer = require("src.visual.panel_renderer")
+local Modal = require("src.visual.modal")
+local AutoRunner = require("src.visual.auto_runner")
 
 local LoveLayer = {}
 LoveLayer.__index = LoveLayer
 
+-- 与 map.path 对应的棋盘坐标：先外圈逆时针，再内圈逆时针
 local grid_coords = {
+  -- 外圈 32 格：起点在右下角，逆时针
   { 9, 9 }, { 9, 8 }, { 9, 7 }, { 9, 6 }, { 9, 5 }, { 9, 4 }, { 9, 3 }, { 9, 2 }, { 9, 1 },
-  { 8, 1 }, { 8, 5 }, { 8, 9 }, { 7, 9 }, { 7, 5 }, { 7, 1 }, { 6, 1 }, { 6, 5 }, { 6, 9 },
-  { 5, 9 }, { 5, 8 }, { 5, 7 }, { 5, 6 }, { 5, 5 }, { 5, 4 }, { 5, 3 }, { 5, 2 }, { 5, 1 },
-  { 4, 1 }, { 4, 5 }, { 4, 9 }, { 3, 9 }, { 3, 5 }, { 3, 1 }, { 2, 1 }, { 2, 5 }, { 2, 9 },
-  { 1, 9 }, { 1, 8 }, { 1, 7 }, { 1, 6 }, { 1, 5 }, { 1, 4 }, { 1, 3 }, { 1, 2 }, { 1, 1 },
+  { 8, 1 }, { 7, 1 }, { 6, 1 }, { 5, 1 }, { 4, 1 }, { 3, 1 }, { 2, 1 }, { 1, 1 },
+  { 1, 2 }, { 1, 3 }, { 1, 4 }, { 1, 5 }, { 1, 6 }, { 1, 7 }, { 1, 8 }, { 1, 9 },
+  { 2, 9 }, { 3, 9 }, { 4, 9 }, { 5, 9 }, { 6, 9 }, { 7, 9 }, { 8, 9 },
+  -- 内圈 13 格：逆时针围绕中心列
+  { 8, 5 }, { 7, 5 }, { 6, 5 }, { 5, 5 }, { 5, 6 }, { 5, 7 }, { 5, 8 },
+  { 4, 5 }, { 3, 5 }, { 2, 5 }, { 5, 4 }, { 5, 3 }, { 5, 2 },
 }
 
 function LoveLayer.new(opts)
   opts = opts or {}
+  local ui = UIState.create()
   local self = {
-    ui = UIState.create(),
+    ui = ui,
     game = nil,
     item_name_by_id = {},
     game_factory = opts.game_factory,
+    modal = Modal.new(),
+    auto_runner = AutoRunner.new({ interval = ui.auto_interval }),
   }
   return setmetatable(self, LoveLayer)
 end
 
 function LoveLayer:set_game(g)
   self.game = g
+  self.game.ui_hooks = self.game.ui_hooks or {}
+  self.game.ui_hooks.push_popup = function(payload)
+    self.modal:push(payload)
+  end
+  self.game.ui_hooks.request_choice = function(opts)
+    if not opts or not opts.candidates or #opts.candidates == 0 then
+      -- allow custom buttons path
+      local buttons = opts and opts.buttons
+      if buttons and #buttons > 0 then
+        self.modal:push({
+          title = opts.title or "请选择",
+          body = table.concat(opts.body_lines or {}, "\n"),
+          buttons = buttons,
+          button_text = "取消",
+        })
+      end
+      return
+    end
+    local buttons = {}
+    local candidates = opts.candidates or {}
+    for _, p in ipairs(candidates) do
+      table.insert(buttons, {
+        label = p.name,
+        on_click = function()
+          if opts.on_select then
+            opts.on_select(p)
+          end
+        end,
+      })
+    end
+    local body_lines = opts.body_lines or {}
+    if #body_lines == 0 then
+      for _, p in ipairs(candidates) do
+        table.insert(body_lines, p.name .. " 现金:" .. p.cash .. (p.status.deity and (" 神:" .. p.status.deity.type) or ""))
+      end
+    end
+    table.insert(buttons, {
+      label = "取消",
+      on_click = function()
+        -- do nothing
+      end,
+    })
+    self.modal:push({
+      title = opts.title or "选择玩家",
+      body = table.concat(body_lines, "\n"),
+      buttons = buttons,
+      button_text = "取消",
+    })
+  end
 end
 
 function LoveLayer:get_game()
@@ -52,7 +110,7 @@ function LoveLayer:new_game()
   local g = self.game_factory()
   self.ui.selected_tile = nil
   self.ui.hover_tile = nil
-  self.ui.last_auto_time = 0
+  self.auto_runner:reset_timer()
   g.logger.info("启动蛋仔大富翁，玩家数:", #g.players)
   return g
 end
@@ -66,6 +124,9 @@ function LoveLayer:is_inside(x, y, rect)
 end
 
 function LoveLayer:step_turn()
+  if self.modal.active then
+    return
+  end
   if not self.game or self.game.finished then
     return
   end
@@ -108,11 +169,48 @@ function LoveLayer:update(dt)
   end
   local mx, my = love.mouse.getPosition()
   self:update_hover_tile(mx, my)
-  if self.ui.auto_play and not self.game.finished then
-    self.ui.last_auto_time = self.ui.last_auto_time + dt
-    if self.ui.last_auto_time >= self.ui.auto_interval then
-      self.ui.last_auto_time = 0
-      self:step_turn()
+  local auto_action = self.auto_runner:next_action(dt, {
+    modal_active = self.modal.active ~= nil,
+    modal_buttons = self.modal.active and self.modal.active.buttons,
+    game_finished = self.game.finished,
+  })
+  if auto_action then
+    self:dispatch_action(auto_action)
+  end
+  self.modal:update()
+end
+
+function LoveLayer:handle_ui_button(id)
+  if id == "next" then
+    self:step_turn()
+  elseif id == "auto" then
+    self.ui.auto_play = not self.ui.auto_play
+    self.auto_runner:set_enabled(self.ui.auto_play)
+    self.auto_runner:reset_timer()
+  elseif id == "restart" then
+    local was_auto = self.ui.auto_play
+    self:set_game(self:new_game())
+    self:layout()
+    self.auto_runner:set_enabled(was_auto)
+  end
+end
+
+function LoveLayer:dispatch_action(action)
+  if not action then
+    return
+  end
+  if action.type == "key" then
+    self:keypressed(action.key)
+  elseif action.type == "ui_button" then
+    self:handle_ui_button(action.id)
+  elseif action.type == "modal_button" then
+    local idx = action.index or 1
+    if not self.modal:press_button(idx) then
+      self.modal:keypressed("space")
+    end
+  elseif action.type == "modal_confirm" then
+    if not self.modal:confirm() then
+      self.modal:keypressed("space")
     end
   end
 end
@@ -121,17 +219,12 @@ function LoveLayer:mousepressed(x, y, button)
   if button ~= 1 then
     return
   end
+  if self.modal:click_buttons(x, y) or self.modal:mousepressed(x, y) then
+    return
+  end
   for _, btn in ipairs(self.ui.buttons) do
     if self:is_inside(x, y, btn) then
-      if btn.id == "next" then
-        self:step_turn()
-      elseif btn.id == "auto" then
-        self.ui.auto_play = not self.ui.auto_play
-        self.ui.last_auto_time = 0
-      elseif btn.id == "restart" then
-        self:set_game(self:new_game())
-        self:layout()
-      end
+      self:handle_ui_button(btn.id)
       return
     end
   end
@@ -142,11 +235,15 @@ function LoveLayer:mousepressed(x, y, button)
 end
 
 function LoveLayer:keypressed(key)
+  if self.modal.active and self.modal:keypressed(key) then
+    return
+  end
   if key == "space" or key == "return" then
     self:step_turn()
   elseif key == "a" then
     self.ui.auto_play = not self.ui.auto_play
-    self.ui.last_auto_time = 0
+    self.auto_runner:set_enabled(self.ui.auto_play)
+    self.auto_runner:reset_timer()
   elseif key == "r" then
     self:set_game(self:new_game())
     self:layout()
@@ -170,6 +267,7 @@ function LoveLayer:draw()
 
   BoardRenderer.draw(ui, game)
   PanelRenderer.draw(ui, game, ui.buttons, self.item_name_by_id)
+  self.modal:draw(ui)
 
   if game and game.finished then
     love.graphics.setColor(0, 0, 0, 0.45)

@@ -1,7 +1,8 @@
 local Dice = {}
 Dice.__index = Dice
 
-function Dice.roll(count, override_values)
+-- rng: optional RNG instance with next_int(min, max)
+function Dice.roll(count, override_values, rng)
   local results = {}
   local total = 0
   if override_values and #override_values > 0 then
@@ -13,7 +14,12 @@ function Dice.roll(count, override_values)
     return results, total
   end
   for _ = 1, count do
-    local v = math.random(1, 6)
+    local v
+    if rng then
+      v = rng:next_int(1, 6)
+    else
+      v = math.random(1, 6)
+    end
     table.insert(results, v)
     total = total + v
   end

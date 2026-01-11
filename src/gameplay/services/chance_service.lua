@@ -1,13 +1,13 @@
 local chance_cfg = require("src.config.chance_cards")
 local random = require("src.util.random")
-local StatusService = require("src.services.status_service")
-local ItemService = require("src.services.item_service")
-local MovementService = require("src.services.movement_service")
+local StatusService = require("src.gameplay.services.status_service")
+local ItemService = require("src.gameplay.services.item_service")
+local MovementService = require("src.gameplay.services.movement_service")
 local TileService = nil -- 延迟加载以避免循环
 local MarketService = nil
-local logger = require("src.services.logger")
+local logger = require("src.gameplay.services.logger")
 local constants = require("src.config.constants")
-local BankruptcyService = require("src.services.bankruptcy_service")
+local BankruptcyService = require("src.gameplay.services.bankruptcy_service")
 
 local ChanceService = {}
 
@@ -18,10 +18,10 @@ end
 
 local function load_services()
   if not TileService then
-    TileService = require("src.services.tile_service")
+    TileService = require("src.gameplay.services.tile_service")
   end
   if not MarketService then
-    MarketService = require("src.services.market_service")
+    MarketService = require("src.gameplay.services.market_service")
   end
 end
 

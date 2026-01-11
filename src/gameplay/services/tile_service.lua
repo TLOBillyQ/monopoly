@@ -1,10 +1,10 @@
 local constants = require("src.config.constants")
-local ItemService = require("src.services.item_service")
-local ChanceService = require("src.services.chance_service")
-local MarketService = require("src.services.market_service")
-local StatusService = require("src.services.status_service")
-local BankruptcyService = require("src.services.bankruptcy_service")
-local logger = require("src.services.logger")
+local ItemService = require("src.gameplay.services.item_service")
+local ChanceService = require("src.gameplay.services.chance_service")
+local MarketService = require("src.gameplay.services.market_service")
+local StatusService = require("src.gameplay.services.status_service")
+local BankruptcyService = require("src.gameplay.services.bankruptcy_service")
+local logger = require("src.gameplay.services.logger")
 
 local TileService = {}
 
@@ -187,8 +187,8 @@ local function handle_chance(game, player, context)
   ChanceService.resolve(game, player, card, context)
 end
 
-local function handle_item_tile(player)
-  ItemService.draw_and_give(player)
+local function handle_item_tile(game, player)
+  ItemService.draw_and_give(player, game.rng)
 end
 
 local function check_mine(game, player)
@@ -212,21 +212,21 @@ function TileService.resolve(game, player, tile, context)
   end
 
   if tile.type == "land" then
-    handle_land(game, player, tile, context)
+    -- 已在 effects/land.lua 处理租金/购买/升级
   elseif tile.type == "hospital" then
     handle_hospital(game, player)
   elseif tile.type == "mountain" then
     handle_mountain(game, player)
   elseif tile.type == "tax" then
-    handle_tax(game, player)
+    -- 已在 effects/land.lua 处理税务
   elseif tile.type == "market" then
     handle_market(game, player)
   elseif tile.type == "chance" then
     handle_chance(game, player, context)
   elseif tile.type == "item" then
-    handle_item_tile(player)
+    handle_item_tile(game, player)
   elseif tile.type == "start" then
-    -- 已在 MovementService 处理经过/停留奖励
+    -- start 奖励在 MovementService/land effect 中处理
   end
 
   check_mine(game, player)
