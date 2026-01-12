@@ -18,6 +18,8 @@ local Tables = require("src.util.tables")
 local App = {}
 App.__index = App
 
+-- App orchestrates game state and services. All mutations flow through store snapshots for determinism.
+
 local deep_copy = Tables.deep_copy
 
 local function store_value(v)
@@ -82,6 +84,7 @@ local function snapshot_tiles(path)
   return ts
 end
 
+-- App.new(opts) -> game instance with store/rng/players/services wired; opts: players[], ai map, auto_all, seed
 function App.new(opts)
   opts = opts or {}
   local board = BoardFactory.create()
@@ -146,27 +149,32 @@ function App.new(opts)
   return game
 end
 
+-- Persist a value into store while keeping game objects updated
 function App:_store_set(path, value)
   if self.store then
     self.store:set(path, store_value(value))
   end
 end
 
+-- Update a player's status flag and mirror to store
 function App:set_player_status(player, key, value)
   player.status[key] = value
   self:_store_set({ "players", player.id, "status", key }, value)
 end
 
+-- Update player's seat id (mount) and persist
 function App:set_player_seat(player, seat_id)
   player.seat_id = seat_id
   self:_store_set({ "players", player.id, "seat_id" }, seat_id)
 end
 
+-- Mark player eliminated and persist
 function App:set_player_eliminated(player, eliminated)
   player.eliminated = eliminated and true or false
   self:_store_set({ "players", player.id, "eliminated" }, player.eliminated)
 end
 
+-- Toggle player property ownership and persist
 function App:set_player_property(player, tile_id, owned)
   if owned then
     player.properties[tile_id] = true
@@ -176,24 +184,28 @@ function App:set_player_property(player, tile_id, owned)
   self:_store_set({ "players", player.id, "properties", tile_id }, owned and true or nil)
 end
 
+-- Mirror inventory snapshot into store
 function App:sync_player_inventory(player)
   if player.inventory then
     self:_store_set({ "players", player.id, "inventory" }, snapshot_inventory(player.inventory))
   end
 end
 
+-- Persist tile owner change
 function App:set_tile_owner(tile, owner_id)
   if tile and tile.type == "land" then
     self:_store_set({ "board", "tiles", tile.id, "owner_id" }, owner_id)
   end
 end
 
+-- Persist tile level change
 function App:set_tile_level(tile, level)
   if tile and tile.type == "land" then
     self:_store_set({ "board", "tiles", tile.id, "level" }, level)
   end
 end
 
+-- Clear land owner/level to defaults
 function App:reset_tile(tile)
   if tile and tile.type == "land" then
     self:_store_set({ "board", "tiles", tile.id, "owner_id" }, nil)

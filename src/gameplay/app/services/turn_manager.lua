@@ -18,6 +18,8 @@ local PHASES = {
   end_turn = { phase = "end_turn", fn = phase_end_fn },
 }
 
+-- TurnManager runs turn phases and handles pending choices/actions
+
 function TurnManager.new(game)
   local tm = {
     game = game,

@@ -2,6 +2,7 @@ local logger = require("src.util.logger")
 
 local BankruptcyService = {}
 
+-- eliminate(game, player): clears assets/inventory and marks player eliminated; updates store via game helpers
 function BankruptcyService.eliminate(game, player)
   logger.event(player.name .. " 破产出局")
   -- 释放地皮

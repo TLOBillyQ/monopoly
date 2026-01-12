@@ -5,9 +5,11 @@ local LandingResolver = require("src.gameplay.app.landing_resolver")
 
 local ChanceService = {}
 
+-- draw_card(rng): deterministic draw based on rng
 function ChanceService.draw_card(rng)
   return random.weighted_choice(chance_cfg, "weight", rng)
 end
+-- resolve(game, player, card, context): applies chance effect; may chain into landing resolver
 function ChanceService.resolve(game, player, card, context)
   local res = chance_effects.resolve(game, player, card, context)
   if type(res) == "table" and res.kind == "need_landing" then

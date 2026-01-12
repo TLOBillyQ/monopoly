@@ -19,13 +19,13 @@ local function is_lua(path)
 end
 
 local prefix_map = {
-  ["src/gameplay/"] = "src/gameplay",
   ["src/adapters/"] = "src/adapters",
+  ["src/bootstrap/"] = "src/bootstrap",
   ["src/config/"] = "src/config",
   ["src/core/"] = "src/core",
-  ["src/bootstrap/"] = "src/bootstrap",
+  ["src/gameplay/"] = "src/gameplay",
   ["src/util/"] = "src/util",
-  ["scripts/"] = "scripts",
+  ["src/app.lua"] = "scr/app.lua",
   ["main.lua"] = "main.lua",
 }
 

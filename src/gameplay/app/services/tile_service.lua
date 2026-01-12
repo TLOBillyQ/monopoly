@@ -52,6 +52,7 @@ local function check_mine(game, player)
   end
 end
 
+-- resolve(game, player, tile, context): handles tile interactions and overlays; may open choices
 function TileService.resolve(game, player, tile, context)
   -- 路过玩家触发偷窃
   if context and context.encountered_players and not context.pass_players_checked then
