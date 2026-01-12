@@ -84,6 +84,7 @@ if [ "$DRY_RUN" = false ]; then
     fi
 fi
 
+BACKUP_BRANCH=""  # Initialize backup branch name
 print_step "Creating backup of main branch..."
 if [ "$DRY_RUN" = false ]; then
     git checkout main 2>/dev/null || git checkout -b main origin/main
@@ -91,7 +92,8 @@ if [ "$DRY_RUN" = false ]; then
     git branch "$BACKUP_BRANCH"
     echo "  Created backup branch: $BACKUP_BRANCH"
 else
-    echo "  Would create backup branch: main-backup-TIMESTAMP"
+    BACKUP_BRANCH="main-backup-<TIMESTAMP>"
+    echo "  Would create backup branch: $BACKUP_BRANCH"
 fi
 
 print_step "Resetting main to rewrite2..."
@@ -154,11 +156,7 @@ echo
 print_step "Migration complete!"
 echo "  Main branch now contains rewrite2 content"
 echo "  Obsolete branches have been deleted"
-if [ "$DRY_RUN" = false ]; then
-    echo "  Backup branch: $BACKUP_BRANCH (local only)"
-else
-    echo "  Backup branch would be created (local only)"
-fi
+echo "  Backup branch: $BACKUP_BRANCH (local only)"
 echo
 print_warning "Remember to:"
 echo "  1. Update any CI/CD configurations"
