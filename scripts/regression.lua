@@ -107,19 +107,19 @@ end
 
 local function test_land_optional_waits_with_ui()
   local g = new_game()
-  g.ui_enabled = true
+  -- UI is considered available when an adapter port exists (ui_port or legacy ui_hooks).
+  g.ui_hooks = {}
   local p = g:current_player()
   local idx, tile = first_land_tile(g.board)
   g:update_player_position(p, idx)
   local res = LandingResolver.resolve(g, p, tile, {})
-  assert(res and res.waiting, "landing resolver should wait when UI enabled")
+  assert(res and res.waiting, "landing resolver should wait when UI is available")
   local pending = Choice.get(g)
   assert(pending and pending.kind == "land_optional_effect", "pending choice for land optional")
 end
 
 local function test_land_optional_auto_without_ui()
   local g = new_game()
-  g.ui_enabled = false
   local p = g:current_player()
   local idx, tile = first_land_tile(g.board)
   g:update_player_position(p, idx)
@@ -132,7 +132,7 @@ end
 
 local function test_land_optional_stale_choice_is_blocked()
   local g = new_game()
-  g.ui_enabled = true
+  g.ui_hooks = {}
   local p = g:current_player()
   local idx, tile = first_land_tile(g.board)
   g:update_player_position(p, idx)
@@ -150,7 +150,6 @@ end
 
 local function test_chance_is_mandatory_effect_entrypoint()
   local g = new_game()
-  g.ui_enabled = false
   local p = g:current_player()
   local idx, tile = first_tile_by_type(g.board, "chance")
   g:update_player_position(p, idx)

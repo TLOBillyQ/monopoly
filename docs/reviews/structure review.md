@@ -58,7 +58,7 @@
 ### Phase 3：UI 适配层解耦（2-3 天）
 
 - 在 gameplay/ports 中定义 UI 交互契约（展示选择、动画回调等），LoveLayer 仅实现端口。
-- ui_enabled 分支移出 App；由端口实现决定是否需要等待用户输入。
+
 - 抽离渲染数据投影模块（presenter），输入为 store/state 快照，输出为 UI 模型，减少 UI 对 domain 的直读。
 
 ### Phase 4：配置与模式化（2-3 天）

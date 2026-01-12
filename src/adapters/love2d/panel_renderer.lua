@@ -39,30 +39,29 @@ local function player_label(player)
   return player.name .. " $" .. player.cash .. suffix
 end
 
-local function get_store_state(game)
-  if not game or not game.store or not game.store.get then
-    return nil
-  end
-  local players = game.store:get({ "players" }) or {}
-  local turn = game.store:get({ "turn" }) or {}
-  local board = game.store:get({ "board" }) or {}
-  local overlays = (board and board.overlays) or game.store:get({ "board", "overlays" }) or {}
-  local tiles = (board and board.tiles) or game.store:get({ "board", "tiles" }) or {}
-  return { players = players, turn = turn, overlays = overlays, tiles = tiles }
+local function get_store_state(view)
+  local st = view and view.state or nil
+  local board = st and st.board or nil
+  return {
+    players = st and st.players or {},
+    turn = st and st.turn or {},
+    overlays = (board and board.overlays) or {},
+    tiles = (board and board.tiles) or {},
+  }
 end
 
-local function draw_current_player(ui, game, panel, y)
+local function draw_current_player(ui, view, panel, y)
   love.graphics.setFont(ui.fonts.small)
   love.graphics.setColor(ui.palette.text)
   love.graphics.printf("当前玩家", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 18
 
-  if not game then
+  if not view then
     return y
   end
 
-  local st = get_store_state(game)
-  local idx = (st and st.turn and st.turn.current_player_index) or (game and game.store and game.store:get({ "turn", "current_player_index" })) or 1
+  local st = get_store_state(view)
+  local idx = (st and st.turn and st.turn.current_player_index) or 1
   local current = st and st.players and st.players[idx] or nil
   if not current then
     return y
@@ -85,14 +84,20 @@ local function draw_current_player(ui, game, panel, y)
     y = y + 16
   end
 
-  if game.last_turn and game.last_turn.player_id == current.id then
-    if game.last_turn.rolls then
+  if view.last_turn and view.last_turn.player_id == current.id then
+    if view.last_turn.rolls then
       love.graphics.setColor(ui.palette.text)
-      love.graphics.printf("骰子: " .. table.concat(game.last_turn.rolls, ",") .. " => " .. game.last_turn.total, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+      love.graphics.printf(
+        "骰子: " .. table.concat(view.last_turn.rolls, ",") .. " => " .. view.last_turn.total,
+        panel.x + ui.margin,
+        y,
+        panel.w - ui.margin * 2,
+        "left"
+      )
       y = y + 18
-    elseif game.last_turn.note then
+    elseif view.last_turn.note then
       love.graphics.setColor(ui.palette.muted)
-      love.graphics.printf(game.last_turn.note, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+      love.graphics.printf(view.last_turn.note, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
       y = y + 18
     end
   end
@@ -100,17 +105,16 @@ local function draw_current_player(ui, game, panel, y)
   return y
 end
 
-local function draw_player_status(ui, game, panel, y)
+local function draw_player_status(ui, view, panel, y)
   love.graphics.setFont(ui.fonts.small)
   love.graphics.setColor(ui.palette.text)
   love.graphics.printf("玩家状态", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 16
 
-  local st = get_store_state(game)
-  if game and st then
+  local st = get_store_state(view)
+  if view and st then
     love.graphics.setFont(ui.fonts.tiny)
-    local count = (game.players and #game.players) or 0
-    for pid = 1, count do
+    for pid = 1, #st.players do
       local player = st.players[pid]
       if player then
         local color = ui.palette.player[pid] or ui.palette.text
@@ -125,14 +129,14 @@ local function draw_player_status(ui, game, panel, y)
   return y
 end
 
-local function draw_inventory(ui, game, panel, y, item_name_by_id)
+local function draw_inventory(ui, view, panel, y, item_name_by_id)
   love.graphics.setFont(ui.fonts.small)
   love.graphics.setColor(ui.palette.text)
   love.graphics.printf("当前背包", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 16
 
-  local st = get_store_state(game)
-  if game and st then
+  local st = get_store_state(view)
+  if view and st then
     local idx = st.turn.current_player_index or 1
     local current = st.players[idx]
     if not current then
@@ -155,16 +159,16 @@ local function draw_inventory(ui, game, panel, y, item_name_by_id)
   return y
 end
 
-local function draw_tile_detail(ui, game, panel, y)
+local function draw_tile_detail(ui, view, panel, y)
   love.graphics.setFont(ui.fonts.small)
   love.graphics.setColor(ui.palette.text)
   love.graphics.printf("格子详情", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 16
 
-  local st = get_store_state(game)
-  if game and st and (ui.selected_tile or ui.hover_tile) then
+  local st = get_store_state(view)
+  if view and st and (ui.selected_tile or ui.hover_tile) then
     local idx = ui.selected_tile or ui.hover_tile
-    local tile = game.board:get_tile(idx)
+    local tile = view.board and view.board.tiles and view.board.tiles[idx]
     if tile then
       love.graphics.setFont(ui.fonts.tiny)
       love.graphics.setColor(ui.palette.text)
@@ -175,7 +179,7 @@ local function draw_tile_detail(ui, game, panel, y)
         local owner_id = tile_state and tile_state.owner_id or nil
         local level = tile_state and tile_state.level or 0
         local owner = owner_id and st.players and st.players[owner_id]
-        love.graphics.printf("价格: " .. tile.price, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+        love.graphics.printf("价格: " .. tostring(tile.price or "-"), panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
         y = y + 14
         love.graphics.printf("等级: " .. tostring(level or 0), panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
         y = y + 14
@@ -217,7 +221,7 @@ local function draw_log(ui, panel, y)
   end
 end
 
-function PanelRenderer.draw(ui, game, buttons, item_name_by_id)
+function PanelRenderer.draw(ui, view, buttons, item_name_by_id)
   local panel = ui.panel
   draw_panel_background(ui, panel)
 
@@ -227,11 +231,9 @@ function PanelRenderer.draw(ui, game, buttons, item_name_by_id)
 
   love.graphics.setFont(ui.fonts.small)
   local turn_label = "回合: -"
-  if game and game.store and game.store.get then
-    local tc = game.store:get({ "turn", "turn_count" })
-    if tc ~= nil then
-      turn_label = "回合: " .. tostring(tc)
-    end
+  local tc = view and view.state and view.state.turn and view.state.turn.turn_count
+  if tc ~= nil then
+    turn_label = "回合: " .. tostring(tc)
   end
   love.graphics.setColor(ui.palette.muted)
   love.graphics.printf(turn_label, panel.x + ui.margin, panel.y + 42, panel.w - ui.margin * 2, "left")
@@ -241,10 +243,10 @@ function PanelRenderer.draw(ui, game, buttons, item_name_by_id)
   end
 
   local info_y = panel.y + 200
-  info_y = draw_current_player(ui, game, panel, info_y)
-  info_y = draw_player_status(ui, game, panel, info_y + 10)
-  info_y = draw_inventory(ui, game, panel, info_y + 10, item_name_by_id)
-  info_y = draw_tile_detail(ui, game, panel, info_y + 10)
+  info_y = draw_current_player(ui, view, panel, info_y)
+  info_y = draw_player_status(ui, view, panel, info_y + 10)
+  info_y = draw_inventory(ui, view, panel, info_y + 10, item_name_by_id)
+  info_y = draw_tile_detail(ui, view, panel, info_y + 10)
   info_y = math.max(info_y + 6, panel.y + panel.h * 0.68)
   draw_log(ui, panel, info_y)
 end

@@ -9,7 +9,35 @@ end
 
 local Layout = {}
 
-function Layout.apply(ui, game)
+local function board_tile_id_at(source, i)
+  if not source then
+    return nil
+  end
+  if source.board and source.board.tiles then
+    local t = source.board.tiles[i]
+    return t and t.id
+  end
+  if source.board and source.board.get_tile then
+    local t = source.board:get_tile(i)
+    return t and t.id
+  end
+  return nil
+end
+
+local function board_len(source)
+  if not source then
+    return 0
+  end
+  if source.board and source.board.tiles then
+    return #source.board.tiles
+  end
+  if source.board and source.board.length then
+    return source.board:length()
+  end
+  return 0
+end
+
+function Layout.apply(ui, game_or_view)
   local w, h = love.graphics.getDimensions()
   ui.side_width = math.max(280, math.floor(w * 0.24))
 
@@ -29,11 +57,11 @@ function Layout.apply(ui, game)
   ui.board.center.y = ui.board.origin.y + board_size * 0.5
   ui.board.positions = {}
 
-  if game then
-    local count = game.board:length()
+  if game_or_view then
+    local count = board_len(game_or_view)
     for i = 1, count do
-      local tile = game.board:get_tile(i)
-      local coord = tile and coords_by_id[tile.id]
+      local tile_id = board_tile_id_at(game_or_view, i)
+      local coord = tile_id and coords_by_id[tile_id]
       if not coord then
         break
       end

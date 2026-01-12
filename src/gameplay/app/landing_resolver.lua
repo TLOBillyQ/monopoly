@@ -1,6 +1,7 @@
 local Effect = require("src.gameplay.domain.effect")
 local landing_effects = require("src.gameplay.domain.landing")
 local Choice = require("src.gameplay.app.choice")
+local UI = require("src.gameplay.ports.ui_port")
 
 local LandingResolver = {}
 
@@ -78,7 +79,7 @@ function LandingResolver.resolve(game, player, tile, move_result)
     return nil
   end
 
-  if game and game.ui_enabled then
+  if UI.is_available(game) then
     local body_lines = {}
     local options = {}
     local effect_ids = {}

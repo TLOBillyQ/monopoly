@@ -4,6 +4,7 @@ local UIState = require("src.adapters.love2d.ui_state")
 local Layout = require("src.adapters.love2d.layout")
 local BoardRenderer = require("src.adapters.love2d.board_renderer")
 local PanelRenderer = require("src.adapters.love2d.panel_renderer")
+local Presenter = require("src.adapters.love2d.presenter")
 local Modal = require("src.adapters.love2d.modal")
 local AutoRunner = require("src.adapters.love2d.auto_runner")
 
@@ -28,56 +29,84 @@ end
 
 function LoveLayer:set_game(g)
   self.game = g
-  self.game.ui_enabled = true
-  self.game.ui_hooks = self.game.ui_hooks or {}
-  self.game.ui_hooks.push_popup = function(payload)
-    self.modal:push(payload)
-  end
-  self.game.ui_hooks.request_choice = function(opts)
-    if not opts or not opts.candidates or #opts.candidates == 0 then
-      -- allow custom buttons path
-      local buttons = opts and opts.buttons
-      if buttons and #buttons > 0 then
-        self.modal:push({
-          title = opts.title or "请选择",
-          body = table.concat(opts.body_lines or {}, "\n"),
-          buttons = buttons,
-          button_text = "取消",
-        })
-      end
-      return
-    end
-    local buttons = {}
-    local candidates = opts.candidates or {}
-    for _, p in ipairs(candidates) do
-      table.insert(buttons, {
-        label = p.name,
-        on_click = function()
-          if opts.on_select then
-            opts.on_select(p)
-          end
-        end,
+
+  -- Adapter implements the UI port.
+  self.game.ui_port = self
+end
+
+-- UI Port: push a popup to the modal queue.
+function LoveLayer:push_popup(payload)
+  self.modal:push({
+    title = payload and payload.title,
+    body = payload and payload.body,
+    severity = payload and payload.severity,
+    buttons = payload and payload.buttons,
+    button_text = payload and payload.button_text,
+    on_confirm = payload and payload.on_confirm,
+  })
+  return true
+end
+
+-- UI Port: request an interactive choice (immediate modal with buttons).
+function LoveLayer:request_choice(opts)
+  if not opts or not opts.candidates or #opts.candidates == 0 then
+    local buttons = opts and opts.buttons
+    if buttons and #buttons > 0 then
+      self.modal:push({
+        title = opts.title or "请选择",
+        body = table.concat(opts.body_lines or {}, "\n"),
+        buttons = buttons,
+        button_text = opts.cancel_label or "取消",
       })
+      return true
     end
-    local body_lines = opts.body_lines or {}
-    if #body_lines == 0 then
-      for _, p in ipairs(candidates) do
-        table.insert(body_lines, p.name .. " 现金:" .. p.cash .. (p.status.deity and (" 神:" .. p.status.deity.type) or ""))
-      end
-    end
+    return false
+  end
+
+  local buttons = {}
+  local candidates = opts.candidates or {}
+  for _, p in ipairs(candidates) do
     table.insert(buttons, {
-      label = "取消",
+      label = p.name,
+      on_click = function()
+        if opts.on_select then
+          opts.on_select(p)
+        end
+      end,
+    })
+  end
+
+  local body_lines = opts.body_lines or {}
+  if #body_lines == 0 then
+    for _, p in ipairs(candidates) do
+      table.insert(body_lines, p.name .. " 现金:" .. p.cash .. (p.status and p.status.deity and (" 神:" .. p.status.deity.type) or ""))
+    end
+  end
+
+  if opts.allow_cancel ~= false then
+    table.insert(buttons, {
+      label = opts.cancel_label or "取消",
       on_click = function()
         -- do nothing
       end,
     })
-    self.modal:push({
-      title = opts.title or "选择玩家",
-      body = table.concat(body_lines or {}, "\n"),
-      buttons = buttons,
-      button_text = "取消",
-    })
   end
+
+  self.modal:push({
+    title = opts.title or "选择玩家",
+    body = table.concat(body_lines or {}, "\n"),
+    buttons = buttons,
+    button_text = opts.cancel_label or "取消",
+  })
+  return true
+end
+
+-- UI Port: animation hook (currently no-op; completes immediately).
+function LoveLayer:play_animation(payload)
+  if payload and payload.on_complete then
+    payload.on_complete()
+  end
+  return true
 end
 
 function LoveLayer:sync_pending_choice_modal()
@@ -145,7 +174,13 @@ function LoveLayer:new_game()
 end
 
 function LoveLayer:layout()
-  Layout.apply(self.ui, self.game)
+  local store_state = (self.game and self.game.store and self.game.store.state) or {}
+  local view = Presenter.present(store_state, {
+    last_turn = self.game and self.game.last_turn,
+    finished = self.game and self.game.finished,
+    winner_name = self.game and self.game.winner and self.game.winner.name or nil,
+  })
+  Layout.apply(self.ui, view)
 end
 
 function LoveLayer:is_inside(x, y, rect)
@@ -322,6 +357,13 @@ function LoveLayer:draw()
   local game = self.game
   local ui = self.ui
 
+  local store_state = (game and game.store and game.store.state) or {}
+  local view = Presenter.present(store_state, {
+    last_turn = game and game.last_turn,
+    finished = game and game.finished,
+    winner_name = game and game.winner and game.winner.name or nil,
+  })
+
   local w, h = love.graphics.getDimensions()
   love.graphics.setColor(ui.palette.bg)
   love.graphics.rectangle("fill", 0, 0, w, h)
@@ -331,16 +373,16 @@ function LoveLayer:draw()
   love.graphics.setColor(0.2, 0.3, 0.25, 0.15)
   love.graphics.circle("fill", ui.board.center.x + 140, ui.board.center.y + 90, ui.board.size * 0.4)
 
-  BoardRenderer.draw(ui, game)
-  PanelRenderer.draw(ui, game, ui.buttons, self.item_name_by_id)
+  BoardRenderer.draw(ui, view)
+  PanelRenderer.draw(ui, view, ui.buttons, self.item_name_by_id)
   self.modal:draw(ui)
 
-  if game and game.finished then
+  if view and view.finished then
     love.graphics.setColor(0, 0, 0, 0.45)
     love.graphics.rectangle("fill", 0, 0, w, h)
     love.graphics.setFont(ui.fonts.title)
     love.graphics.setColor(ui.palette.text)
-    local winner = game.winner and game.winner.name or "无人"
+    local winner = view.winner_name or "无人"
     love.graphics.printf("游戏结束，胜者: " .. winner, 0, h * 0.45, w, "center")
   end
 end

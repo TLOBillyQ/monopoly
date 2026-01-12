@@ -25,7 +25,7 @@ local prefix_map = {
   ["src/core/"] = "src/core",
   ["src/gameplay/"] = "src/gameplay",
   ["src/util/"] = "src/util",
-  ["src/app.lua"] = "scr/app.lua",
+  ["src/app.lua"] = "src/app.lua",
   ["main.lua"] = "main.lua",
 }
 

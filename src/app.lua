@@ -114,7 +114,7 @@ end
 -- Mirror inventory snapshot into store
 function App:sync_player_inventory(player)
   if player.inventory then
-    self:_store_set({ "players", player.id, "inventory" }, snapshot_inventory(player.inventory))
+    self:_store_set({ "players", player.id, "inventory" }, Bootstrap.snapshot_inventory(player.inventory))
   end
 end
 

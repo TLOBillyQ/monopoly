@@ -1,0 +1,57 @@
+local BoardUtils = {}
+
+function BoardUtils.indices_in_range(board, start, distance)
+  local len = board:length()
+  local seen = {}
+  local list = {}
+  for step = 1, distance do
+    local forward = start + step
+    if forward > len then
+      forward = forward - len
+    end
+    if not seen[forward] then
+      table.insert(list, forward)
+      seen[forward] = true
+    end
+
+    local back = start - step
+    if back < 1 then
+      back = len + back
+    end
+    if not seen[back] then
+      table.insert(list, back)
+      seen[back] = true
+    end
+  end
+  return list
+end
+
+function BoardUtils.total_invested(tile, owner_id, level)
+  if not owner_id then
+    return 0
+  end
+  level = level or 0
+  local price = tile.price or 0
+  return price * ((2 ^ (level + 1)) - 1)
+end
+
+function BoardUtils.find_best_tile(game, player, distance, opts)
+  local board = game.board
+  local allow_self = opts and opts.allow_self
+  local score_fn = opts and opts.score_fn
+  local best_idx = nil
+  local best_value = nil
+  for _, idx in ipairs(BoardUtils.indices_in_range(board, player.position, distance or 3)) do
+    if allow_self or idx ~= player.position then
+      local tile = board:get_tile(idx)
+      local value = score_fn and score_fn(tile, idx)
+      if value ~= nil and (best_value == nil or value > best_value) then
+        best_value = value
+        best_idx = idx
+      end
+    end
+  end
+  return best_idx, best_value
+end
+
+return BoardUtils

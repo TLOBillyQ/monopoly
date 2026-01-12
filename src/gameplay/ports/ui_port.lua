@@ -1,7 +1,36 @@
 local UI = {}
 
--- UI port wrapper; payload keeps title/body/body_lines/options/on_select
+-- UI port wrapper.
+-- Preferred: game.ui_port (object implementing push_popup/request_choice/play_animation).
+-- Legacy fallback: game.ui_hooks.* (used by older adapters).
+
+local function get_port(game)
+  if game and game.ui_port then
+    return game.ui_port
+  end
+  return nil
+end
+
+function UI.is_available(game)
+  local port = get_port(game)
+  if port then
+    return true
+  end
+  return game and game.ui_hooks ~= nil
+end
+
+function UI.set_port(game, port)
+  if not game then
+    return
+  end
+  game.ui_port = port
+end
+
 function UI.push_popup(game, payload)
+  local port = get_port(game)
+  if port and port.push_popup then
+    return port:push_popup(payload) ~= false
+  end
   if game and game.ui_hooks and game.ui_hooks.push_popup then
     game.ui_hooks.push_popup({
       title = payload.title,
@@ -14,6 +43,10 @@ function UI.push_popup(game, payload)
 end
 
 function UI.request_choice(game, payload)
+  local port = get_port(game)
+  if port and port.request_choice then
+    return port:request_choice(payload) ~= false
+  end
   if not game or not game.ui_hooks or not game.ui_hooks.request_choice then
     return false
   end
@@ -26,6 +59,18 @@ function UI.request_choice(game, payload)
     cancel_label = payload.cancel_label,
   })
   return true
+end
+
+function UI.play_animation(game, payload)
+  local port = get_port(game)
+  if port and port.play_animation then
+    return port:play_animation(payload) ~= false
+  end
+  -- No-op by default; treat as completed.
+  if payload and payload.on_complete then
+    payload.on_complete()
+  end
+  return false
 end
 
 return UI

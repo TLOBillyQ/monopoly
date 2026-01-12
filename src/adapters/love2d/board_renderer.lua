@@ -2,24 +2,22 @@ local UIState = require("src.adapters.love2d.ui_state")
 
 local BoardRenderer = {}
 
-local function get_store_state(game)
-  if not game or not game.store or not game.store.get then
-    return nil
-  end
+local function get_store_state(view)
+  local st = view and view.state or nil
+  local board = st and st.board or nil
   return {
-    tiles = game.store:get({ "board", "tiles" }) or {},
-    overlays = game.store:get({ "board", "overlays" }) or { roadblocks = {}, mines = {} },
-    players = game.store:get({ "players" }) or {},
+    tiles = (board and board.tiles) or {},
+    overlays = (board and board.overlays) or { roadblocks = {}, mines = {} },
+    players = st and st.players or {},
   }
 end
 
-local function build_occupants_from_store(game, store_players)
+local function build_occupants_from_store(store_players)
   local occ = {}
-  if not game or not store_players then
+  if not store_players then
     return occ
   end
-  local count = (game.players and #game.players) or 0
-  for pid = 1, count do
+  for pid = 1, #store_players do
     local p = store_players[pid]
     if p and not p.eliminated and p.position then
       occ[p.position] = occ[p.position] or {}
@@ -100,8 +98,10 @@ local function draw_overlays(ui, overlays, rect_x, rect_y, rect_w, rect_h, idx)
   end
 end
 
-local function draw_tile(ui, game, idx, pos, half_cell, pad, last_visited, tile_state)
-  local tile = game.board:get_tile(idx)
+local function draw_tile(ui, idx, pos, half_cell, pad, last_visited, tile, tile_state)
+  if not tile then
+    return
+  end
   local color = UIState.tile_color(ui, tile.type)
   if last_visited then
     color = lighten(color, 0.2)
@@ -130,9 +130,9 @@ local function draw_tile(ui, game, idx, pos, half_cell, pad, last_visited, tile_
   love.graphics.setFont(ui.fonts.small)
   local name_y = rect_y + rect_h * 0.42
   love.graphics.setColor(0, 0, 0, 0.7)
-  love.graphics.printf(tile.name, rect_x, name_y + 1, rect_w, "center")
+  love.graphics.printf(tile.name or "-", rect_x, name_y + 1, rect_w, "center")
   love.graphics.setColor(0, 0, 0, 0.95)
-  love.graphics.printf(tile.name, rect_x, name_y, rect_w, "center")
+  love.graphics.printf(tile.name or "-", rect_x, name_y, rect_w, "center")
 
   local owner_id = tile_state and tile_state.owner_id or nil
   local level = tile_state and tile_state.level or 0
@@ -167,10 +167,10 @@ local function draw_players(ui, occupants, cell_size)
   end
 end
 
-local function collect_last_visited(game)
+local function collect_last_visited(view)
   local last_visited = {}
-  if game.last_turn and game.last_turn.move_result and game.last_turn.move_result.visited then
-    for _, idx in ipairs(game.last_turn.move_result.visited) do
+  if view and view.last_turn and view.last_turn.move_result and view.last_turn.move_result.visited then
+    for _, idx in ipairs(view.last_turn.move_result.visited) do
       last_visited[idx] = true
     end
   end
@@ -191,30 +191,30 @@ local function tile_rect_for_overlay(ui, idx, pos, half_cell, pad)
   return rect_x, rect_y, rect_w, rect_h
 end
 
-function BoardRenderer.draw(ui, game)
-  if not game then
+function BoardRenderer.draw(ui, view)
+  if not view or not view.board or not view.board.tiles then
     return
   end
 
-  local st = get_store_state(game)
+  local st = get_store_state(view)
 
   local cell_size = ui.board.cell_size
   local half_cell = cell_size * 0.5
   local pad = math.min(cell_size * 0.05, 3)
-  local last_visited = collect_last_visited(game)
+  local last_visited = collect_last_visited(view)
 
   for idx, pos in ipairs(ui.board.positions) do
-    local tile = game.board:get_tile(idx)
+    local tile = view.board.tiles[idx]
     local tile_state = (st and st.tiles and tile and st.tiles[tile.id]) or nil
-    draw_tile(ui, game, idx, pos, half_cell, pad, last_visited[idx], tile_state)
+    draw_tile(ui, idx, pos, half_cell, pad, last_visited[idx], tile, tile_state)
   end
 
-  local occupants = build_occupants_from_store(game, st and st.players)
+  local occupants = build_occupants_from_store(st and st.players)
   draw_players(ui, occupants, cell_size)
 
   for idx, pos in ipairs(ui.board.positions) do
     local rect_x, rect_y, rect_w, rect_h = tile_rect_for_overlay(ui, idx, pos, half_cell, pad)
-    draw_overlays(ui, (st and st.overlays) or game.overlays, rect_x, rect_y, rect_w, rect_h, idx)
+    draw_overlays(ui, (st and st.overlays) or { roadblocks = {}, mines = {} }, rect_x, rect_y, rect_w, rect_h, idx)
   end
 end
 
