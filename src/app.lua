@@ -1,7 +1,6 @@
 local Board = require("src.core.board")
 local Player = require("src.core.player")
 local Inventory = require("src.core.inventory")
-local constants = require("src.config.constants")
 local roles_cfg = require("src.config.roles")
 local logger = require("src.gameplay.services.logger")
 local TurnManager = require("src.gameplay.services.turn_manager")
@@ -14,15 +13,10 @@ local StatusService = require("src.gameplay.services.status_service")
 local BankruptcyService = require("src.gameplay.services.bankruptcy_service")
 local RNG = require("src.gameplay.rng")
 local Store = require("src.gameplay.store")
-local Flow = require("src.gameplay.flow")
-
 local App = {}
 App.__index = App
 
-function App.new(opts)
-  opts = opts or {}
-  local board = Board.new()
-  local rng = RNG.new(opts.seed)
+local function create_players(opts)
   local players = {}
   local names = opts.players or { "玩家1" }
   for i, name in ipairs(names) do
@@ -38,35 +32,43 @@ function App.new(opts)
     })
     table.insert(players, player)
   end
+  return players
+end
 
-  local function snapshot_players()
-    local ps = {}
-    for _, p in ipairs(players) do
-      ps[p.id] = {
-        id = p.id,
-        cash = p.cash,
-        position = p.position,
-        properties = p.properties,
-        status = p.status,
-      }
-    end
-    return ps
+local function snapshot_players(players)
+  local ps = {}
+  for _, p in ipairs(players) do
+    ps[p.id] = {
+      id = p.id,
+      cash = p.cash,
+      position = p.position,
+      properties = p.properties,
+      status = p.status,
+    }
   end
+  return ps
+end
 
-  local function snapshot_tiles()
-    local ts = {}
-    for _, tile in ipairs(board.path) do
-      if tile.type == "land" then
-        ts[tile.id] = { owner_id = tile.owner_id, level = tile.level }
-      end
+local function snapshot_tiles(path)
+  local ts = {}
+  for _, tile in ipairs(path) do
+    if tile.type == "land" then
+      ts[tile.id] = { owner_id = tile.owner_id, level = tile.level }
     end
-    return ts
   end
+  return ts
+end
+
+function App.new(opts)
+  opts = opts or {}
+  local board = Board.new()
+  local rng = RNG.new(opts.seed)
+  local players = create_players(opts)
 
   local initial_state = {
     board = {
       overlays = { roadblocks = {}, mines = {} },
-      tiles = snapshot_tiles(),
+      tiles = snapshot_tiles(board.path),
     },
     turn = {
       current_player_index = 1,
@@ -76,7 +78,7 @@ function App.new(opts)
       choice_seq = 0,
     },
     rng = rng:snapshot(),
-    players = snapshot_players(),
+    players = snapshot_players(players),
   }
   local store = Store.new(initial_state)
 
@@ -106,12 +108,12 @@ function App.new(opts)
   game.turn_manager = TurnManager.new(game)
   function game:commit_state()
     -- tiles
-    local tiles_snapshot = snapshot_tiles()
+    local tiles_snapshot = snapshot_tiles(self.board.path)
     self.store:set({ "board", "tiles" }, tiles_snapshot)
     -- overlays
     self.store:set({ "board", "overlays" }, self.overlays)
     -- players
-    self.store:set({ "players" }, snapshot_players())
+    self.store:set({ "players" }, snapshot_players(self.players))
     -- turn
     self.store:set({ "turn", "turn_count" }, self.turn_count or 0)
     local idx = self.store:get({ "turn", "current_player_index" }) or 1
