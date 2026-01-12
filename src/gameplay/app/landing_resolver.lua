@@ -1,5 +1,5 @@
 local Effect = require("src.gameplay.domain.effect")
-local landing_effects = require("src.gameplay.effects.landing")
+local landing_effects = require("src.gameplay.domain.landing")
 local Choice = require("src.gameplay.app.choice")
 
 local LandingResolver = {}

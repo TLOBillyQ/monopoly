@@ -1,6 +1,6 @@
 local Choice = require("src.gameplay.app.choice")
 local Effect = require("src.gameplay.domain.effect")
-local ItemEffects = require("src.gameplay.effects.item")
+local ItemEffects = require("src.gameplay.domain.item")
 local logger = require("src.util.logger")
 
 local Resolver = {}
@@ -33,7 +33,7 @@ end
 
 local function get_container_defs_by_choice_kind(choice_kind)
   if choice_kind == "land_optional_effect" then
-    local landing_effects = require("src.gameplay.effects.landing")
+    local landing_effects = require("src.gameplay.domain.landing")
     return landing_effects and landing_effects.defs or {}
   end
   return nil

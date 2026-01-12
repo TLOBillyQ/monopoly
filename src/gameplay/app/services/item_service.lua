@@ -1,7 +1,7 @@
--- Thin facade: authoritative item rule logic lives in src/gameplay/effects/item.lua.
+-- Thin facade: authoritative item rule logic lives in src/gameplay/domain/item.lua.
 -- Keep this module as a stable service entrypoint for game.services.item.
 
-local ItemEffects = require("src.gameplay.effects.item")
+local ItemEffects = require("src.gameplay.domain.item")
 
 local ItemService = {}
 

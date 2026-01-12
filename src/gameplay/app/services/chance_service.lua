@@ -1,6 +1,6 @@
 local chance_cfg = require("src.config.chance_cards")
 local random = require("src.util.random")
-local chance_effects = require("src.gameplay.effects.chance")
+local chance_effects = require("src.gameplay.domain.chance")
 
 local ChanceService = {}
 

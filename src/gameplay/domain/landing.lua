@@ -1,4 +1,4 @@
-local land_effects = require("src.gameplay.effects.land")
+local land_effects = require("src.gameplay.domain.land")
 local logger = require("src.util.logger")
 
 local Effect = {}
