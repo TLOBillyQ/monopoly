@@ -1,8 +1,4 @@
-local BoardFactory = require("src.bootstrap.board_factory")
-local Player = require("src.core.player")
-local Inventory = require("src.core.inventory")
-local constants = require("src.config.constants")
-local roles_cfg = require("src.config.roles")
+local Bootstrap = require("src.gameplay.app.bootstrap")
 local logger = require("src.util.logger")
 local TurnManager = require("src.gameplay.app.services.turn_manager")
 local TileService = require("src.gameplay.app.services.tile_service")
@@ -29,83 +25,14 @@ local function store_value(v)
   return v
 end
 
-local function create_players(opts)
-  local players = {}
-  local names = opts.players or { "玩家1" }
-  for i, name in ipairs(names) do
-    local role = roles_cfg[((i - 1) % #roles_cfg) + 1]
-    local player = Player.new({
-      id = i,
-      name = name,
-      role_id = role.id,
-      is_ai = opts.ai and opts.ai[i] or (i > 1),
-      auto = opts.auto_all or false,
-      start_index = 1,
-      constants = constants,
-      inventory = Inventory.new({ constants = constants }),
-    })
-    table.insert(players, player)
-  end
-  return players
-end
-
-local function snapshot_players(players)
-  local ps = {}
-  for _, p in ipairs(players) do
-    ps[p.id] = {
-      id = p.id,
-      name = p.name,
-      role_id = p.role_id,
-      is_ai = p.is_ai,
-      auto = p.auto,
-      cash = p.cash,
-      position = p.position,
-      seat_id = p.seat_id,
-      eliminated = p.eliminated,
-      properties = deep_copy(p.properties),
-      status = deep_copy(p.status),
-      inventory = { items = deep_copy(p.inventory.items), max_slots = p.inventory.max_slots },
-    }
-  end
-  return ps
-end
-
-local function snapshot_inventory(inv)
-  return { items = deep_copy(inv.items), max_slots = inv.max_slots }
-end
-
-local function snapshot_tiles(path)
-  local ts = {}
-  for _, tile in ipairs(path) do
-    if tile.type == "land" then
-      ts[tile.id] = { owner_id = nil, level = 0 }
-    end
-  end
-  return ts
-end
-
 -- App.new(opts) -> game instance with store/rng/players/services wired; opts: players[], ai map, auto_all, seed
 function App.new(opts)
   opts = opts or {}
-  local board = BoardFactory.create()
+  local board = Bootstrap.create_board(opts)
   local rng = RNG.new(opts.seed)
-  local players = create_players(opts)
+  local players = Bootstrap.create_players(opts)
 
-  local initial_state = {
-    board = {
-      overlays = { roadblocks = {}, mines = {} },
-      tiles = snapshot_tiles(board.path),
-    },
-    turn = {
-      current_player_index = 1,
-      turn_count = 0,
-      phase = "start",
-      pending_choice = nil,
-      choice_seq = 0,
-    },
-    rng = rng:snapshot(),
-    players = snapshot_players(players),
-  }
+  local initial_state = Bootstrap.build_initial_state(board, players, rng)
   local store = Store.new(initial_state)
 
   rng._store = store
@@ -115,7 +42,7 @@ function App.new(opts)
     if p.inventory then
       local pid = p.id
       p.inventory._on_change = function(inv)
-        store:set({ "players", pid, "inventory" }, snapshot_inventory(inv))
+        store:set({ "players", pid, "inventory" }, Bootstrap.snapshot_inventory(inv))
       end
     end
   end

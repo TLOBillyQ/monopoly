@@ -1,5 +1,5 @@
-local Board = require("src.core.board")
-local Tile = require("src.core.tile")
+local Board = require("src.gameplay.domain.core.board")
+local Tile = require("src.gameplay.domain.core.tile")
 
 local tiles_config = require("src.config.tiles")
 local map_config = require("src.config.map")

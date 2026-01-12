@@ -1,4 +1,4 @@
-local Inventory = require("src.core.inventory")
+local Inventory = require("src.gameplay.domain.core.inventory")
 local Tables = require("src.util.tables")
 
 local Player = {}

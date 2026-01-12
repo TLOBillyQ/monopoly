@@ -1,5 +1,5 @@
 local constants = require("src.config.constants")
-local Dice = require("src.core.dice")
+local Dice = require("src.gameplay.domain.core.dice")
 local logger = require("src.util.logger")
 
 local function phase_roll(tm, args)
