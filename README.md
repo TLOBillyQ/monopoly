@@ -30,6 +30,17 @@
 - 脚本自检：`lua scripts/regression.lua`（纯 Lua，小型回归：经过起点、路障停留、怪兽卡/导弹卡、地块可选行动等待/自动购买）。
 - 依赖自检：`lua scripts/deps_check.lua`（规则：`src/gameplay/**` 禁止 `require("src.visual.*")`；`src/gameplay/services/**` 禁止互相 `require("src.gameplay.services.*")`，应改用 `game.services.*`；日志模块为 `src.util.logger`）。
 
+## 代码优化路线图
+
+为了提高代码可维护性和降低复杂度，我们制定了一份详细的代码优化路线图：
+
+- **📋 [代码行数大幅降低路线图](docs/ROADMAP_CODE_REDUCTION.md)** - 完整的优化路线图和实施计划（中文）
+- **📊 [详细代码分析](docs/CODE_ANALYSIS.md)** - 具体的优化点分析和代码示例
+- **🔧 [重构快速指南](docs/REFACTORING_GUIDE.md)** - 常见重构模式和最佳实践
+- **📖 [English Roadmap](docs/ROADMAP_CODE_REDUCTION_EN.md)** - Code reduction roadmap in English
+
+**目标**: 从当前 5,214 行减少到 4,200-4,500 行（减少 13-19%），同时提高代码质量。
+
 ## 常用命令
 - 运行：`love .`
 - 搜索：`rg <pattern>`（推荐全局搜索）。
