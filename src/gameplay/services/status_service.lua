@@ -1,6 +1,5 @@
 local constants = require("src.config.constants")
 local logger = require("src.gameplay.services.logger")
-local BankruptcyService = require("src.gameplay.services.bankruptcy_service")
 
 local StatusService = {}
 
@@ -27,7 +26,12 @@ function StatusService.send_to_hospital(game, player, opts)
   if not opts.skip_fee then
     local fee = constants.hospital_fee
     if player.cash < fee then
-      BankruptcyService.eliminate(game, player)
+      local bankruptcy = game and game.services and game.services.bankruptcy
+      if not bankruptcy then
+        logger.warn("缺少 BankruptcyService，无法淘汰破产玩家")
+        return
+      end
+      bankruptcy.eliminate(game, player)
       return
     end
     player:deduct_cash(fee)

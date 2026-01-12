@@ -25,7 +25,7 @@ function Tile:next_upgrade_cost()
     return nil
   end
   local target_level = self.level + 1
-  return self.price * math.pow(2, target_level)
+  return self.price * (2 ^ target_level)
 end
 
 function Tile:current_rent()
@@ -33,7 +33,7 @@ function Tile:current_rent()
     return 0
   end
   local exponent = self.level
-  return self.price * math.pow(2, exponent) * 0.5
+  return self.price * (2 ^ exponent) * 0.5
 end
 
 function Tile:total_invested()
@@ -42,7 +42,7 @@ function Tile:total_invested()
   end
   local total = self.price
   for lvl = 1, self.level do
-    total = total + self.price * math.pow(2, lvl)
+    total = total + self.price * (2 ^ lvl)
   end
   return total
 end

@@ -1,171 +1,176 @@
 # 架构设计评审（Hollywood 原则 / DIP / SOLID）
 
-> 目的：从 **好莱坞原则（Don’t call us, we’ll call you）**、**依赖倒置（DIP）** 与 **SOLID** 的角度，审视当前代码库的结构健康度，明确风险与下一步重构方向。
+> 目的：用“可执行”的方式描述当前 `src/` 的架构现状、主要风险与改造路线；评审维度是 **Hollywood 原则**、**依赖倒置（DIP）** 与 **SOLID**。
 >
-> 范围：本评审基于当前 `src/` 下的代码结构（`core/`、`gameplay/`、`visual/`、`config/`、`util/`）及脚本 `scripts/regression.lua`。
+> 范围：以当前分支代码为准（`src/app.lua`、`src/core/*`、`src/gameplay/*`、`src/visual/*`、`src/config/*`、`scripts/regression.lua`）。
+>
+> 约束：优先对齐 `docs/backlog.md` 的 **M1（不改玩法）**：本评审的 P0/P1 建议都以“结构与稳定性”为目标，不引入新玩法。
 
 ---
 
-## 0. 当前结构概览（事实层）
+## 1. TL;DR（结论先行）
 
-- `src/config/*`：静态配置（地块/地图/道具/机会卡/常量等）。
-- `src/core/*`：纯数据结构（`Board/Tile/Player/Dice/Inventory`）。
-- `src/gameplay/*`：规则与运行流程（Turn phases、services、effects、store/sync、rng）。
-- `src/visual/*`：Love2D 渲染与输入（`love_layer/layout/renderers/modal/auto_runner/ui_state`）。
-- `src/app.lua`：组装器（组装 Board/Players/Store/RNG/TurnManager，并调用 `sync_all`）。
-
-### 已经做对的点（值得保留）
-
-- **Love2D 依赖隔离良好**：绝大多数 `love.*` 仅出现在 `src/visual/*`。
-- **UI 端口注入**：`game.ui_hooks` 作为“可选适配器”，使 gameplay 不必 `require` UI 层（方向符合 DIP）。
-- **Store + Sync 的形态已出现**：具备“可快照/可恢复”的基础（尽管一致性仍需加强）。
-- **RNG 可重放**：`src/gameplay/rng.lua` + `Dice.roll(..., rng)` 为确定性模拟奠基。
-
-### 近期变更（已落地）
-
-- **wait_choice / pending_choice**：`TurnManager` 增加 `wait_choice`，`Choice` + `choice_resolver` 将 UI 选择（含取消）转回 gameplay，自动模式走同一 action 通道。
-- **状态一致性**：`turn/end_turn.lua` 统一 `commit_state`；`sync_all` 对齐 `pending_choice/choice_seq/phase/current_player` 等运行态。
-- **随机源一致**：机会卡抽取等统一走 `game.rng`，回放可重现。
-- **UI 依赖收敛**：`game.ui_enabled` 控制是否发起选择；无 UI 时流程返回 `{waiting=true}` 由上层驱动。
-- **规则单源化**：Land 规则从 `TileService` 收敛到 `land_effects` + `LandResolver`，避免租金/税务双份实现；`ChanceService` 移动后复用同一套结算。
-- **注册表化**：道具与机会卡效果已切换为 handler registry（`item_handlers/post_consume_handlers/effect_handlers`），新增效果按表扩展即可。
-- **UI 端口统一**：`gameplay/ui.lua` 统一 `push_popup/request_choice` payload，services 不再直接组装异构参数。
+- 架构“主干”已成型：`Store + RNG + Flow/TurnManager + wait_choice` 让 **可复现** 与 **可等待交互** 成为一等能力。
+- 最大风险在“模块耦合方式”而非玩法：services 之间仍以 `require` 直接互相引用（含潜在循环），导致改动半径大、难测。
+- UI 侧已经以 `game.ui_hooks` 做到“可选适配”，但 gameplay 内仍会直接触发 UI（如 `push_popup`），属于可接受但需要规范化的“出口”。
+- 下一步（M1 内可做）：
+  - 把“服务引用”从 `require` 迁移到 `game.services` 注入（先消循环、再减耦）。
+  - 明确“存档/回放”的真实边界：哪些字段属于 **Store**（事实），哪些属于 **runtime**（可重建）。
+  - 补齐最小回归脚本覆盖 `wait_choice` 路径，锁住架构不倒退。
 
 ---
 
-## 1. 好莱坞原则（Hollywood Principle）
+## 2. 现状概览（事实层：以代码为准）
 
-> 核心：上层 orchestrator “调用”下层，**不要让领域逻辑主动驱动 UI**；同时当出现“等待输入”的流程时，系统应自然进入 `wait` 状态，而不是继续推进。
+### 2.1 目录职责
 
-### 更新后的现状
+- `src/config/*`：静态配置（地块、道具、机会卡、常量等）。
+- `src/core/*`：纯模型与基础能力（`Board/Tile/Player/Dice/Inventory`）。
+- `src/gameplay/*`：规则、流程、持久化与服务（`flow/turn/*/services/*/rng/store/sync/choice`）。
+- `src/visual/*`：Love2D 渲染与输入适配（UI 层）。
+- `src/app.lua`：组装器（创建 `game`、注入 services、创建 `TurnManager`、执行 `Sync.sync_all`）。
 
-- **已改进**：`wait_choice` / `pending_choice` 已成为一等状态；`Choice.open` 写入 store，`choice_resolver` 通过 action 推进 flow，自动/手动共享同一入口。
-- **仍需注意**：少量即时弹窗（如提示类 `push_popup`）仍在 service 内直接触发，但不再驱动流程；后续可统一走 UI 端口。
+### 2.2 运行时对象与单一事实来源
 
----
+- **事实（可存档/可复现）**：在 `Store`（`src/gameplay/store.lua`）里，主要路径：
+  - `turn.phase / turn.current_player_index / turn.pending_choice / turn.choice_seq / turn.turn_count`
+  - `players[*].cash/position/properties/status`
+  - `board.tiles / board.overlays`
+  - `rng`（`src/gameplay/rng.lua` 的 `{seed,state}`）
+- **运行时（可重建）**：`game.board`（路径与 tile 对象）、`game.players`（Player 实例）、`game.occupants`（位置到玩家映射）、`TurnManager.flow`（协程状态机运行态）。
 
-## 2. 依赖倒置（Dependency Inversion Principle）
-
-> 核心：高层模块不应该依赖低层模块的具体实现；二者都应依赖抽象（接口/端口/协议）。
-
-### 发现
-
-1) `game.ui_hooks` 是正向实践，但目前是“半抽象”
-
-- 优点：gameplay 不依赖 Love2D。
-- 问题：hook 的调用发生在 services 内部，且参数形态不统一（`push_popup` vs `request_choice` 的 payload 结构各异）。
-
-2) services 之间存在硬依赖 + 循环依赖迹象
-
-- `src/gameplay/services/chance_service.lua` 用延迟 `require` 避免循环（`TileService = nil -- 延迟加载以避免循环`）。
-- `TileService` 又依赖 `ChanceService/ItemService/MarketService/StatusService` 等，耦合度较高。
-
-3) 随机源注入不一致（影响可重放与测试）
-
-- `Dice.roll(..., rng)` 支持注入 RNG。
-- **已修正**：机会卡抽取改为使用 `game.rng`，回放一致性恢复。
-
-### 建议（P0/P1）
-
-- **统一端口层**：定义 gameplay 可调用的端口（例如 `ports.ui`, `ports.random`, `ports.log`），由 `App.new` 组装注入；services 只依赖端口，不 `require` 其它 service。
-- **把 RNG 作为强制依赖**：所有抽卡/随机都走 `game.rng`（包括 chance、market 策略等），新增功能沿用此约束。
-- **消除延迟 require**：用 `ctx.services`（组装阶段注入）替代 `require` 互相引用，降低循环依赖风险。
+`Sync.sync_all`（`src/gameplay/sync.lua`）目前做的是“最小可用”的重建：玩家/地块/overlays/turn_count/rng + `rebuild_occupants()`。
 
 ---
 
-## 3. SOLID 审查（逐条）
+## 3. 核心链路（流程与交互的真实形态）
 
-### S — 单一职责（SRP）
+### 3.1 回合流程（状态机）
 
-**问题：一个模块同时承担“规则 + UI 交互 + AI 策略”。**
+`TurnManager`（`src/gameplay/services/turn_manager.lua`）基于 `Flow`（`src/gameplay/flow.lua`）驱动：
 
-- `src/gameplay/services/item_service.lua`：
-  - 规则（使用道具产生的效果）
-  - 交互（目标选择弹窗）
-  - 策略（`auto_pre_action` 决策）
+- `start`：处理跳过（出局/扣留）+ 自动前置道具 `ItemService.auto_pre_action`。
+- `roll`：`Dice.roll(dice_count, override, game.rng)`，保证随机可复现。
+- `move`：`MovementService.move(..., { branch_parity = raw_total })`，产出 `move_result`（visited/encountered/passed_start）。
+- `land`：先 `TileService.resolve`（格子类型事件、偷窃、黑市等），再 `LandResolver.resolve`（land_effects：租金/税/购买/升级/起点等）。
+- `wait_choice`：当 `Choice.open` 写入 `turn.pending_choice` 后，流程停在此；收到 action 后由 `ChoiceResolver.resolve` 消费并恢复到 `resume_state`。
+- `end_turn`：`turn/end_turn.lua` tick 状态、清理临时标记、切到下一玩家并 `commit_state()`。
 
-**影响：**
-- 文件增长快、修改风险高；新增道具易引入回归（if/elseif 链膨胀）。
+### 3.2 “等待选择”机制（Hollywood 原则的落地点）
 
-**建议（P1）：**
-- 拆为：
-  - `src/gameplay/item_effects/*`：纯效果（apply(ctx)），不触达 UI。
-  - `src/gameplay/item_interactions/*`：把“需要选择”的道具包装成 action/choice 流程。
-  - `src/gameplay/ai/item_policy.lua`：自动策略（根据 state 产出 action）。
+- `Choice.open` 只写入 `Store.turn.pending_choice`（`src/gameplay/choice.lua`）。
+- `TurnManager:dispatch(action)` 把 action 填入 `pending_action` 并推进 flow；若 flow 不在运行但 choice 存在，则直接走 `ChoiceResolver` 防止自动模式卡死。
+- `wait_choice` 状态会忽略“过期 action”（通过 `choice_id` 校验），并支持 cancel（`choice_cancel` 或 `option_id=nil`）。
 
-### O — 开闭原则（OCP）
+这条链路保证：**规则层不会“拉 UI”，只会进入 wait 状态；是否、何时产生 action 由上层输入/自动运行决定。**
 
-**问题：新增道具/机会卡依赖修改巨大 if/elseif 分支。**
+### 3.3 UI 端口（当前形态）
 
-- `ItemService.use_item`、`ChanceService.resolve` 都是分支驱动。
-
-**建议（P1）：**
-- 使用注册表（`handlers[item_id] = function(ctx) ... end`、`chance_handlers[effect] = ...`）或 effect 统一框架扩展点。
-
-### L — 里氏替换（LSP）
-
-本项目以 table-struct + 函数为主，不存在典型继承体系；主要风险来自“隐式协议”：
-
-- `ui_hooks.request_choice` 的 opts 在不同调用点结构不一致，会导致某些适配器无法“替换”。
-
-建议：把 hook payload 定义成稳定协议（同一字段含义、可选字段、默认行为）。
-
-### I — 接口隔离（ISP）
-
-目前 `ui_hooks` 合并了弹窗/选择等能力；对纯 CLI/纯脚本运行时，不一定需要全部 UI 能力。
-
-建议：将 UI 端口拆成更小的接口：
-
-- `ui.show_popup(payload)`
-- `ui.request_choice(payload)`（返回 action / 写入 store pending_choice）
-
-同时提供 no-op 实现用于脚本环境。
-
-### D — 依赖倒置（DIP）
-
-与第 2 节相同：**已有雏形，但应继续把“具体 service require”替换为“注入的抽象端口”。**
+- gameplay 侧通过 `src/gameplay/ui.lua` 间接调用 `game.ui_hooks.push_popup/request_choice`。
+- 是否打开选择弹窗由 `game.ui_enabled` 控制；无 UI 时通常走“默认行为”（例如可选行动选择第一个可用项）。
 
 ---
 
-## 4. 一致性/正确性风险清单（P0 状态刷新）
+## 4. 评审：Hollywood / DIP / SOLID
 
-- **已解决**
-  - 回合结束路径统一：`turn/end_turn.lua` 负责 `commit_state`，避免双份实现。
-  - phase 单一真相源：phase 写入 store，并通过 `sync_all` 对齐 runtime。
-  - Chance 抽卡走 `game.rng`，回放一致性恢复。
-  - Land 规则单源：TileService 不再重复租金/税务逻辑，由 LandResolver + land_effects 负责。
-  - 机会卡/道具分支移除：注册表驱动，新增效果无需改主干。
+### 4.1 Hollywood 原则（Don’t call us, we’ll call you）
 
-- **仍需跟踪**
-  - services 间仍有硬引用（Item/Status 等），可进一步用接口/端口注入减耦。
-  - UI hook 的 no-op/CLI 适配器可补齐，便于无 UI 运行。
+**做得好的：**
+
+- `wait_choice` 成为正式 phase，且 choice 本身存放在 Store（可回放/可恢复）。
+- 自动与手动共享同一 action 通道（`TurnManager:dispatch`）。
+
+**仍需规范的：**
+
+- services 内部仍会直接发 `UI.push_popup(...)`（例如 `ItemService`），这不破坏流程正确性，但会让“无 UI 环境”与“录制/回放”更难一致。
+
+### 4.2 依赖倒置 DIP（高层依赖抽象，不依赖细节）
+
+**现状：既有雏形，也有反例。**
+
+- 正向：UI 已经是“端口”（`game.ui_hooks`），gameplay 不 `require visual`。
+- 反向：services 之间大量直接 `require`（例如 `ChanceService` 直接 `require ItemService/MovementService/LandResolver`；`TileService` 顶部 `require ItemService/StatusService`），导致耦合链长、潜在循环依赖只能用“局部延迟 require”兜底。
+
+**改造方向（不改玩法）：**
+
+- 以 `game.services` 作为“依赖注入容器”（已在 `src/app.lua` 存在），逐步把 cross-service 引用从 `require("src.gameplay.services.X")` 改为 `get_service(game, "x")`。
+- 统一“副作用出口”为端口：UI、日志、随机源都通过 `game.*` 注入；services 只依赖 `game` 与数据模型。
+
+### 4.3 SOLID（以 Lua 项目语境解读）
+
+#### S — SRP 单一职责
+
+- `ItemService` 同时承担：道具规则、交互（Choice/UI）、自动策略（`auto_pre_action`）、以及部分“场景规则”（偷窃路过玩家）。
+- 风险：文件过大（`src/gameplay/services/item_service.lua` 已 >600 行），改动容易引发回归。
+
+#### O — OCP 开闭原则
+
+- 已改进：机会卡 `effect_handlers`、道具 `item_handlers/post_consume_handlers` 是典型“注册表扩展点”。
+- 仍可提升：`ItemService.apply_target_item_effect` 仍是 if/elseif 链（属于可接受的过渡态）。
+
+#### L — LSP 里氏替换
+
+- 本项目没有继承体系，LSP 的主要风险来自“隐式协议”。
+- 当前最重要的协议是 `pending_choice` 的 schema 与 action schema（`choice_id/option_id/type`）。建议把协议写进文档并在回归脚本里覆盖。
+
+#### I — ISP 接口隔离
+
+- `ui_hooks` 目前只有两类能力（popup/choice），已经足够小；但建议明确：gameplay 只能调用 `src/gameplay/ui.lua`，不允许直接触达 hooks。
+
+#### D — DIP 依赖倒置
+
+- 结论同 4.2：下一阶段的“结构工作”应以 **消除 cross-service require** 为中心。
 
 ---
 
-## 5. 推荐的落地路线（与 backlog 对齐）
+## 5. 风险清单（按严重性排序）
 
-### P0（已完成，保持）
+### P0（M1 必做：稳定性/可维护性）
 
-- `wait_choice` + `pending_choice` + `choice_resolver`，自动/手动统一 action 通道。
-- `end_turn` 统一 `commit_state`，phase 由 store 管理并可 `sync_all`。
-- 随机源统一注入 `game.rng`，回放可重放。
+- services 互相 `require` 导致潜在循环与隐式初始化顺序问题（最容易在小改动后爆炸）。
+- “事实 vs 运行态”边界不清：`Sync.sync_all` 是最小对齐，但尚未明确哪些字段必须同步、哪些可重建。
+- `wait_choice` 路径的回归覆盖不足：一旦 UI/auto/choice_id 处理变动，容易出现“卡死/跳过/重复消费”。
 
-### P1（结构拆分与可扩展）
+### P1（M1 可做：结构健康度）
 
-- 道具/机会卡注册表化 + 拆分 SRP。**（已完成注册表化，后续可拆策略/交互）**
-- TileService 与 land_effects 完成迁移，避免双份规则。**（已落地：LandResolver 统一租金/税务/可选行动）**
-- 用 services 注入消除循环依赖与延迟 require。**（已建立 `game.services`，仍可逐步替换硬引用）**
-- UI payload 规范化。**（已提供统一 UI 端口，建议继续补 CLI/no-op 实现）**
+- `ItemService` 职责过重；建议拆分为“规则/交互/策略”三块（可以先拆文件，不改接口）。
+- `UI.push_popup` 在 services 内零散调用：建议集中到“事件/日志”或统一端口，便于禁用 UI 时行为一致。
 
-### P2（工程化）
+### P2（后续迭代）
 
-- 更新 README 中的目录指引（当前仍提及旧 `src/ui`、`src/services`）。
-- 扩充回归脚本覆盖“等待选择”的路径（确保自动/手动一致）。
+- 更完整的存档/回放：将 `turn.phase/current_player_index/pending_choice` 的同步/恢复策略做成明确规范，并扩充 sync_all。
 
 ---
 
-## 6. 验收标准（建议）
+## 6. 落地路线（与 `docs/backlog.md` 的 M1 对齐）
 
-- 任意需要选择的效果：回合流程必须进入 `wait_choice`，没有选择不会推进到下一阶段/下一玩家。
-- 自动运行与手动输入共享同一 action 通道。
-- `lua scripts/regression.lua` 在固定 seed 下可 100% 重放，且不会出现偶发差异。
+### 6.1 P0 任务（建议拆成多 PR）
+
+- 任务 A：建立“依赖规则”与快速自检
+  - 规则：`gameplay/*` 禁止 `require visual/*`；services 之间禁止直接 `require` 彼此（改为 `game.services.*`）。
+  - 自检：在 `scripts/` 增加一个轻量脚本，扫描 `src/gameplay/services/*.lua` 的 `require("src.gameplay.services.")` 并报警（不需要完美解析，够用即可）。
+
+- 任务 B：收敛 service 引用
+  - 先从已存在的 `get_service(game, key)` 模式推进（`TileService/ChanceService` 已在用）。
+  - 目标：删除“延迟 require 兜底”与循环依赖注释，让引用链可预测。
+
+- 任务 C：补齐回归覆盖 `wait_choice`
+  - 至少覆盖：落地可选行动（buy/upgrade）、偷窃（目标选择/二级选择）、导弹目标选择。
+  - 验收：固定 seed 下回放一致；并且在无 UI（auto）与有 UI（dispatch action）下都不会卡死。
+
+### 6.2 P1 任务
+
+- 拆分 `ItemService`：
+  - `item_handlers.lua`（注册表）
+  - `item_auto_policy.lua`（自动前置策略）
+  - `item_interactions.lua`（Choice 构建）
+  - 保持对外 API 不变（M1 内不动玩法）。
+
+---
+
+## 7. 验收标准（建议作为 M1 的“架构验收”）
+
+- 任意需要选择的效果：必须进入 `turn.phase == "wait_choice"`；没有 action 不推进下一阶段。
+- 自动与手动共享 action 通道：同 seed + 同 action 序列，结果一致。
+- 代码层约束：`src/gameplay/services/*` 之间无直接 `require("src.gameplay.services.*")`（允许从 `src/app.lua` 组装注入）。
+- 回归脚本在固定 seed 下可重复运行，输出一致（允许日志时间戳等非确定字段不同）。

@@ -28,12 +28,9 @@
 - 道具交互：偷窃/均富/流放/查税/请神/送神/穷神需弹窗选择目标；偷窃可二级选择道具；怪兽/导弹卡弹窗选择目标格子后才生效。
 - 代码风格：保持 ASCII、简短注释；按现有分层放置 UI 代码，不新增全局变量。
 - 脚本自检：`lua scripts/regression.lua`（纯 Lua，小型回归：经过起点、路障停留、怪兽卡/导弹卡、地块可选行动等待/自动购买）。
+- 依赖自检：`lua scripts/deps_check.lua`（规则：`src/gameplay/**` 禁止 `require("src.visual.*")`；`src/gameplay/services/**` 禁止互相 `require("src.gameplay.services.*")`，应改用 `game.services.*`；logger 例外）。
 
 ## 常用命令
 - 运行：`love .`
 - 搜索：`rg <pattern>`（推荐全局搜索）。
 
-## 后续里程碑（摘要）
-- M2：补完未实现道具（怪兽/导弹等）。
-- M3：美术与交互打磨（动画、主题、多语言）。
-- M4：AI/策略和平衡优化。

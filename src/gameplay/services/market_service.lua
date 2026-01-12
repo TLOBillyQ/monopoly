@@ -1,6 +1,5 @@
 local items_cfg = require("src.config.items")
 local logger = require("src.gameplay.services.logger")
-local ItemService = require("src.gameplay.services.item_service")
 
 local MarketService = {}
 
@@ -22,6 +21,11 @@ function MarketService.list_buyable(player)
 end
 
 function MarketService.auto_buy(game, player)
+  local item = game and game.services and game.services.item
+  if not item then
+    logger.warn("缺少 ItemService，无法在黑市购买")
+    return
+  end
   if player.inventory:is_full() then
     logger.warn(player.name .. " 卡槽已满，无法在黑市购买")
     return
@@ -30,7 +34,7 @@ function MarketService.auto_buy(game, player)
   for _, cfg in ipairs(options) do
     if player.cash >= (cfg.shop_price or 0) and not player.inventory:is_full() then
       player:deduct_cash(cfg.shop_price or 0)
-      ItemService.give_item(player, cfg.id)
+      item.give_item(player, cfg.id)
     end
   end
 end

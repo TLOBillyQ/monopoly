@@ -2,13 +2,25 @@ local constants = require("src.config.constants")
 local items_cfg = require("src.config.items")
 local random = require("src.util.random")
 local Choice = require("src.gameplay.choice")
-local StatusService = require("src.gameplay.services.status_service")
-local BankruptcyService = require("src.gameplay.services.bankruptcy_service")
 local logger = require("src.gameplay.services.logger")
 local UI = require("src.gameplay.ui")
 
 local ItemService = {}
 local find_missile_target -- forward declare
+
+local function get_service(game, key)
+  if game and game.services then
+    return game.services[key]
+  end
+end
+
+local function status_service(game)
+  return get_service(game, "status")
+end
+
+local function bankruptcy_service(game)
+  return get_service(game, "bankruptcy")
+end
 
 local cfg_by_id = {}
 for _, cfg in ipairs(items_cfg) do
@@ -230,6 +242,11 @@ local function send_players_to_hospital(game, idx)
   if not occupants then
     return 0
   end
+  local status = status_service(game)
+  if not status then
+    logger.warn("缺少 StatusService，无法送医")
+    return 0
+  end
   local count = 0
   local unpack_fn = table.unpack or unpack
   local snapshot = { unpack_fn(occupants) }
@@ -237,7 +254,7 @@ local function send_players_to_hospital(game, idx)
     local target = game.players[pid]
     if target then
       target.seat_id = nil
-      StatusService.send_to_hospital(game, target, { skip_fee = true })
+      status.send_to_hospital(game, target, { skip_fee = true })
       count = count + 1
     end
   end
@@ -316,11 +333,21 @@ function ItemService.apply_target_item_effect(game, player, item_id, target)
     logger.event(player.name .. " 使用均富卡，与 " .. target.name .. " 平分资金")
     return true
   elseif item_id == 2012 then
-    StatusService.send_to_mountain(game, target)
+    local status = status_service(game)
+    if not status then
+      logger.warn("缺少 StatusService，无法流放")
+      return false
+    end
+    status.send_to_mountain(game, target)
     logger.event(player.name .. " 使用流放卡，将 " .. target.name .. " 送往深山")
     return true
   elseif item_id == 2014 then
-    if StatusService.has_angel(target) then
+    local status = status_service(game)
+    if not status then
+      logger.warn("缺少 StatusService，无法查税")
+      return false
+    end
+    if status.has_angel(target) then
       logger.event(target.name .. " 有天使，查税无效")
       return true
     end
@@ -334,7 +361,12 @@ function ItemService.apply_target_item_effect(game, player, item_id, target)
     target:deduct_cash(fee)
     logger.event(player.name .. " 使用查税卡，" .. target.name .. " 支付 " .. fee .. " 税金")
     if target.cash < 0 then
-      BankruptcyService.eliminate(game, target)
+      local bankruptcy = bankruptcy_service(game)
+      if not bankruptcy then
+        logger.warn("缺少 BankruptcyService，无法淘汰破产玩家")
+        return true
+      end
+      bankruptcy.eliminate(game, target)
     end
     return true
   elseif item_id == 2015 then
@@ -496,12 +528,22 @@ post_consume_handlers[2010] = function(_, player)
 end
 
 post_consume_handlers[2017] = function(_, player)
-  StatusService.apply_deity(player, "rich")
+  local status = status_service(_)
+  if not status then
+    logger.warn("缺少 StatusService，无法附身财神")
+    return false
+  end
+  status.apply_deity(player, "rich")
   return true
 end
 
 post_consume_handlers[2019] = function(_, player)
-  StatusService.apply_deity(player, "angel")
+  local status = status_service(_)
+  if not status then
+    logger.warn("缺少 StatusService，无法附身天使")
+    return false
+  end
+  status.apply_deity(player, "angel")
   return true
 end
 
@@ -579,9 +621,14 @@ function ItemService.handle_pass_players(game, player, encountered_ids)
     return
   end
   local candidates = {}
+  local status = status_service(game)
+  if not status then
+    logger.warn("缺少 StatusService，无法处理偷窃目标筛选")
+    return
+  end
   for _, target_id in ipairs(encountered_ids) do
     local t = game.players[target_id]
-    if t and not StatusService.has_angel(t) and t.inventory:count() > 0 then
+    if t and not status.has_angel(t) and t.inventory:count() > 0 then
       table.insert(candidates, t)
     end
   end

@@ -1,12 +1,8 @@
 local chance_cfg = require("src.config.chance_cards")
 local random = require("src.util.random")
-local StatusService = require("src.gameplay.services.status_service")
-local ItemService = require("src.gameplay.services.item_service")
-local MovementService = require("src.gameplay.services.movement_service")
 local LandResolver = require("src.gameplay.land_resolver")
 local logger = require("src.gameplay.services.logger")
 local constants = require("src.config.constants")
-local BankruptcyService = require("src.gameplay.services.bankruptcy_service")
 
 local ChanceService = {}
 
@@ -19,6 +15,10 @@ local function get_service(game, key)
   if game and game.services then
     return game.services[key]
   end
+end
+
+local function missing_service(name)
+  logger.warn("缺少 " .. name .. "，跳过处理")
 end
 
 function ChanceService.draw_card(rng)
@@ -40,7 +40,11 @@ effect_handlers.pay_cash = function(game, player, card)
   apply_cash_change(player, -card.amount)
   logger.event(player.name .. " 支付 " .. card.amount .. " 金币")
   if player.cash < 0 then
-    BankruptcyService.eliminate(game, player)
+    local bankruptcy = get_service(game, "bankruptcy")
+    if not bankruptcy then
+      return missing_service("BankruptcyService")
+    end
+    bankruptcy.eliminate(game, player)
   end
 end
 
@@ -49,18 +53,26 @@ effect_handlers.percent_pay_cash = function(game, player, card)
   apply_cash_change(player, -fee)
   logger.event(player.name .. " 按比例支付 " .. fee .. " 金币")
   if player.cash < 0 then
-    BankruptcyService.eliminate(game, player)
+    local bankruptcy = get_service(game, "bankruptcy")
+    if not bankruptcy then
+      return missing_service("BankruptcyService")
+    end
+    bankruptcy.eliminate(game, player)
   end
 end
 
 effect_handlers.pay_others = function(game, player, card)
+  local status = get_service(game, "status")
+  if not status then
+    return missing_service("StatusService")
+  end
   for _, other in ipairs(game.players) do
     if other.id ~= player.id and not other.eliminated then
       local fee = card.amount
       if player:has_deity("poor") then
         fee = fee * 2
       end
-      if not StatusService.is_in_mountain(game, other) then
+      if not status.is_in_mountain(game, other) then
         apply_cash_change(player, -fee)
         apply_cash_change(other, fee)
       end
@@ -68,18 +80,26 @@ effect_handlers.pay_others = function(game, player, card)
   end
   logger.event(player.name .. " 向每位玩家支付 " .. card.amount)
   if player.cash < 0 then
-    BankruptcyService.eliminate(game, player)
+    local bankruptcy = get_service(game, "bankruptcy")
+    if not bankruptcy then
+      return missing_service("BankruptcyService")
+    end
+    bankruptcy.eliminate(game, player)
   end
 end
 
 effect_handlers.collect_from_others = function(game, player, card)
+  local status = get_service(game, "status")
+  if not status then
+    return missing_service("StatusService")
+  end
   for _, other in ipairs(game.players) do
     if other.id ~= player.id and not other.eliminated then
       local fee = card.amount
       if player:has_deity("rich") then
         fee = fee * 2
       end
-      if not StatusService.is_in_mountain(game, player) then
+      if not status.is_in_mountain(game, player) then
         if other.cash < fee then
           fee = other.cash
         end
@@ -121,7 +141,11 @@ effect_handlers.reset_tiles_on_path = function(game, _, _, context)
 end
 
 effect_handlers.move_backward = function(game, player, card)
-  local res = MovementService.move(game, player, card.steps)
+  local movement = get_service(game, "movement")
+  if not movement then
+    return missing_service("MovementService")
+  end
+  local res = movement.move(game, player, card.steps)
   local tile = game.board:get_tile(player.position)
   local tile_service = get_service(game, "tile")
   if not tile_service then
@@ -139,7 +163,11 @@ effect_handlers.move_backward = function(game, player, card)
 end
 
 effect_handlers.move_forward = function(game, player, card)
-  local res = MovementService.move(game, player, card.steps)
+  local movement = get_service(game, "movement")
+  if not movement then
+    return missing_service("MovementService")
+  end
+  local res = movement.move(game, player, card.steps)
   local tile = game.board:get_tile(player.position)
   local tile_service = get_service(game, "tile")
   if not tile_service then
@@ -156,8 +184,12 @@ effect_handlers.move_forward = function(game, player, card)
   end
 end
 
-effect_handlers.grant_item = function(_, player, card)
-  ItemService.give_item(player, card.item_id)
+effect_handlers.grant_item = function(game, player, card)
+  local item = get_service(game, "item")
+  if not item then
+    return missing_service("ItemService")
+  end
+  item.give_item(player, card.item_id)
 end
 
 effect_handlers.discard_items = function(_, player, card)
@@ -191,10 +223,14 @@ effect_handlers.discard_properties = function(game, player, card)
 end
 
 effect_handlers.forced_move = function(game, player, card, context)
+  local status = get_service(game, "status")
+  if not status then
+    return missing_service("StatusService")
+  end
   if card.destination == "hospital" then
-    StatusService.send_to_hospital(game, player, { skip_fee = true })
+    status.send_to_hospital(game, player, { skip_fee = true })
   elseif card.destination == "mountain" then
-    StatusService.send_to_mountain(game, player)
+    status.send_to_mountain(game, player)
   elseif card.destination == "tax" then
     local idx = game.board:find_first_by_type("tax")
     if idx then
@@ -228,7 +264,11 @@ effect_handlers.forced_move = function(game, player, card, context)
 end
 
 function ChanceService.resolve(game, player, card, context)
-  if card.negative and StatusService.has_angel(player) then
+  local status = get_service(game, "status")
+  if not status then
+    return missing_service("StatusService")
+  end
+  if card.negative and status.has_angel(player) then
     logger.event(player.name .. " 有天使附身，负面机会卡无效")
     return
   end
