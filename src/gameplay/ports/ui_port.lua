@@ -1,7 +1,6 @@
 local UI = {}
 
--- 统一的 UI 端口封装，payload 保持 title/body/body_lines/options/on_select 等字段
-
+-- UI port wrapper; payload keeps title/body/body_lines/options/on_select
 function UI.push_popup(game, payload)
   if game and game.ui_hooks and game.ui_hooks.push_popup then
     game.ui_hooks.push_popup({

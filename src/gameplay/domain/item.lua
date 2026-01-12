@@ -2,7 +2,7 @@ local constants = require("src.config.constants")
 local items_cfg = require("src.config.items")
 local random = require("src.util.random")
 local logger = require("src.util.logger")
-local UI = require("src.gameplay.ui")
+local UI = require("src.gameplay.ports.ui_port")
 local Services = require("src.util.services")
 local GameState = require("src.util.game_state")
 

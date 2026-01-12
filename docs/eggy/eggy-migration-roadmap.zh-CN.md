@@ -8,11 +8,11 @@
 
 ## 现状盘点（基于仓库）
 
-- Love2D 调用主要集中在 `src/visual/*`：
-  - 主循环与输入：`src/visual/love_layer.lua`
-  - 即时绘制 UI：`src/visual/modal.lua`、`src/visual/board_renderer.lua`、`src/visual/panel_renderer.lua`
-  - 尺寸布局：`src/visual/layout.lua`
-  - 字体加载：`src/visual/ui_state.lua`
+- Love2D 调用主要集中在 `src/adapters/love2d/*`：
+  - 主循环与输入：`src/adapters/love2d/love_layer.lua`
+  - 即时绘制 UI：`src/adapters/love2d/modal.lua`、`src/adapters/love2d/board_renderer.lua`、`src/adapters/love2d/panel_renderer.lua`
+  - 尺寸布局：`src/adapters/love2d/layout.lua`
+  - 字体加载：`src/adapters/love2d/ui_state.lua`
 - 规则层已具备较好的分离度（参见 `docs/architecture-review.zh-CN.md`）。
 
 ## 总体策略（关键决策）
@@ -20,7 +20,7 @@
 - **不建议“移植 love.graphics 画图 API”** 到蛋仔：蛋仔侧更适合用 UI 预制与节点属性更新。
 - 迁移拆成两层：
   - `game/`（规则）：继续沿用现有 `src/gameplay/*`，尽量不改。
-  - `visual/`（表现）：在蛋仔侧基本等同“重写一个新前端”，但复用现有 action/choice 流程。
+  - `adapter/`（表现）：当前 Love2D 适配层位于 `src/adapters/love2d/*`，在蛋仔侧基本等同“重写一个新前端”，但复用现有 action/choice 流程。
 
 ## 阶段 0：蛋仔侧能力确认（P0）
 
@@ -47,7 +47,7 @@
 利用你现有的结构：
 
 - 继续以 `LoveLayer:dispatch_action(...)` 的 action 形式作为“输入统一入口”（例如 `ui_button`、`modal_button`、`choice_select`、`choice_cancel`）。
-- 继续使用 `game.ui_hooks` 作为“规则层 → UI 的请求端口”（你在 `src/visual/love_layer.lua` 里已绑定 `push_popup/request_choice`）。
+- 继续使用 `game.ui_hooks` 作为“规则层 → UI 的请求端口”（你在 `src/adapters/love2d/love_layer.lua` 里已绑定 `push_popup/request_choice`）。
 
 交付物：
 
@@ -73,9 +73,9 @@
 
 拆解为三块（对应现有代码）：
 
-- 面板信息（`src/visual/panel_renderer.lua`）：把文本输出迁到 Label 节点；把按钮状态迁到 Button 节点（文本/可点/高亮）。
-- 弹窗（`src/visual/modal.lua`）：用一组弹窗节点（标题/正文/按钮容器）表现；点击后转成 `modal_button/modal_confirm` 或直接 `choice_select/choice_cancel`。
-- 棋盘（`src/visual/board_renderer.lua`）：第一版建议用“UI 格子节点/图片”表达棋盘，不急着做 3D 单位/相机。
+- 面板信息（`src/adapters/love2d/panel_renderer.lua`）：把文本输出迁到 Label 节点；把按钮状态迁到 Button 节点（文本/可点/高亮）。
+- 弹窗（`src/adapters/love2d/modal.lua`）：用一组弹窗节点（标题/正文/按钮容器）表现；点击后转成 `modal_button/modal_confirm` 或直接 `choice_select/choice_cancel`。
+- 棋盘（`src/adapters/love2d/board_renderer.lua`）：第一版建议用“UI 格子节点/图片”表达棋盘，不急着做 3D 单位/相机。
 
 交付物：
 
