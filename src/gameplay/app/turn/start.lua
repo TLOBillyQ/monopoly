@@ -28,7 +28,7 @@ local function phase_start(tm)
     return "end_turn", { player = player }
   end
   if player.status.stay_turns and player.status.stay_turns > 0 then
-    player.status.stay_turns = player.status.stay_turns - 1
+    tm.game:set_player_status(player, "stay_turns", player.status.stay_turns - 1)
     logger.event(player.name .. " 被扣留，剩余回合:", player.status.stay_turns)
     tm.game.last_turn.note = "被扣留"
     tm.game.last_turn.skipped = true

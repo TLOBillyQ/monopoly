@@ -32,10 +32,23 @@ local function player_label(player)
     return player.name .. " (出局)"
   end
   local suffix = ""
-  if player.status.stay_turns and player.status.stay_turns > 0 then
-    suffix = " 停留" .. player.status.stay_turns
+  local status = player.status or {}
+  if status.stay_turns and status.stay_turns > 0 then
+    suffix = " 停留" .. status.stay_turns
   end
   return player.name .. " $" .. player.cash .. suffix
+end
+
+local function get_store_state(game)
+  if not game or not game.store or not game.store.get then
+    return nil
+  end
+  local players = game.store:get({ "players" }) or {}
+  local turn = game.store:get({ "turn" }) or {}
+  local board = game.store:get({ "board" }) or {}
+  local overlays = (board and board.overlays) or game.store:get({ "board", "overlays" }) or {}
+  local tiles = (board and board.tiles) or game.store:get({ "board", "tiles" }) or {}
+  return { players = players, turn = turn, overlays = overlays, tiles = tiles }
 end
 
 local function draw_current_player(ui, game, panel, y)
@@ -48,20 +61,27 @@ local function draw_current_player(ui, game, panel, y)
     return y
   end
 
-  local current = game:current_player()
+  local st = get_store_state(game)
+  local idx = (st and st.turn and st.turn.current_player_index) or (game and game.store and game.store:get({ "turn", "current_player_index" })) or 1
+  local current = st and st.players and st.players[idx] or nil
+  if not current then
+    return y
+  end
   love.graphics.setFont(ui.fonts.body)
   love.graphics.setColor(ui.palette.text)
   love.graphics.printf(current.name .. " 现金 " .. current.cash, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 20
 
-  local role = roles_cfg[((current.id - 1) % #roles_cfg) + 1]
+  local role_id = current.role_id or current.id
+  local role = roles_cfg[((role_id - 1) % #roles_cfg) + 1]
   love.graphics.setFont(ui.fonts.tiny)
   love.graphics.setColor(ui.palette.muted)
   love.graphics.printf("角色: " .. (role and role.name or "-"), panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 16
 
-  if current.status.deity then
-    love.graphics.printf("附身: " .. current.status.deity.type .. " (" .. current.status.deity.remaining .. ")", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+  local status = current.status or {}
+  if status.deity then
+    love.graphics.printf("附身: " .. status.deity.type .. " (" .. status.deity.remaining .. ")", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
     y = y + 16
   end
 
@@ -86,15 +106,20 @@ local function draw_player_status(ui, game, panel, y)
   love.graphics.printf("玩家状态", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 16
 
-  if game then
+  local st = get_store_state(game)
+  if game and st then
     love.graphics.setFont(ui.fonts.tiny)
-    for _, player in ipairs(game.players) do
-      local color = ui.palette.player[player.id] or ui.palette.text
+    local count = (game.players and #game.players) or 0
+    for pid = 1, count do
+      local player = st.players[pid]
+      if player then
+        local color = ui.palette.player[pid] or ui.palette.text
       love.graphics.setColor(color)
       love.graphics.circle("fill", panel.x + ui.margin + 6, y + 6, 4)
       love.graphics.setColor(ui.palette.text)
       love.graphics.printf(player_label(player), panel.x + ui.margin + 16, y, panel.w - ui.margin * 2 - 16, "left")
       y = y + 16
+      end
     end
   end
   return y
@@ -106,15 +131,21 @@ local function draw_inventory(ui, game, panel, y, item_name_by_id)
   love.graphics.printf("当前背包", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 16
 
-  if game then
-    local current = game:current_player()
+  local st = get_store_state(game)
+  if game and st then
+    local idx = st.turn.current_player_index or 1
+    local current = st.players[idx]
+    if not current then
+      return y
+    end
     love.graphics.setFont(ui.fonts.tiny)
-    if current.inventory:count() == 0 then
+    local inv = current.inventory or { items = {} }
+    if not inv.items or #inv.items == 0 then
       love.graphics.setColor(ui.palette.muted)
       love.graphics.printf("暂无道具", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
       y = y + 16
     else
-      for _, item in ipairs(current.inventory.items) do
+      for _, item in ipairs(inv.items) do
         love.graphics.setColor(ui.palette.text)
         love.graphics.printf(item_name_by_id[item.id] or tostring(item.id), panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
         y = y + 14
@@ -130,7 +161,8 @@ local function draw_tile_detail(ui, game, panel, y)
   love.graphics.printf("格子详情", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 16
 
-  if game and (ui.selected_tile or ui.hover_tile) then
+  local st = get_store_state(game)
+  if game and st and (ui.selected_tile or ui.hover_tile) then
     local idx = ui.selected_tile or ui.hover_tile
     local tile = game.board:get_tile(idx)
     if tile then
@@ -139,21 +171,24 @@ local function draw_tile_detail(ui, game, panel, y)
       love.graphics.printf(tile.name .. " (" .. tile.type .. ")", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
       y = y + 14
       if tile.type == "land" then
-        local owner = tile.owner_id and game.players[tile.owner_id]
+        local tile_state = st.tiles and st.tiles[tile.id] or nil
+        local owner_id = tile_state and tile_state.owner_id or nil
+        local level = tile_state and tile_state.level or 0
+        local owner = owner_id and st.players and st.players[owner_id]
         love.graphics.printf("价格: " .. tile.price, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
         y = y + 14
-        love.graphics.printf("等级: " .. tile.level, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+        love.graphics.printf("等级: " .. tostring(level or 0), panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
         y = y + 14
         if owner then
           love.graphics.printf("归属: " .. owner.name, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
           y = y + 14
         end
       end
-      if game.overlays.roadblocks[idx] then
+      if st.overlays and st.overlays.roadblocks and st.overlays.roadblocks[idx] then
         love.graphics.printf("路障: 有", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
         y = y + 14
       end
-      if game.overlays.mines[idx] then
+      if st.overlays and st.overlays.mines and st.overlays.mines[idx] then
         love.graphics.printf("地雷: 有", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
         y = y + 14
       end

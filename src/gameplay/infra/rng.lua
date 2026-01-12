@@ -16,6 +16,9 @@ end
 
 function RNG:next_raw()
   self.state = (MULT * self.state + INC) % MOD
+  if self._store and self._store.set then
+    self._store:set({ "rng" }, self:snapshot())
+  end
   return self.state
 end
 
@@ -39,6 +42,9 @@ function RNG:restore(snapshot)
   if snapshot then
     self.seed = snapshot.seed or self.seed
     self.state = snapshot.state or self.state
+  end
+  if self._store and self._store.set then
+    self._store:set({ "rng" }, self:snapshot())
   end
 end
 

@@ -95,6 +95,26 @@ local function indices_in_range(board, start, distance)
   return list
 end
 
+local function tile_state(game, tile)
+  if not game or not game.store or not tile or tile.type ~= "land" then
+    return { owner_id = nil, level = 0 }
+  end
+  local s = game.store:get({ "board", "tiles", tile.id })
+  if type(s) ~= "table" then
+    return { owner_id = nil, level = 0 }
+  end
+  return { owner_id = s.owner_id, level = s.level or 0 }
+end
+
+local function total_invested(tile, owner_id, level)
+  if not owner_id then
+    return 0
+  end
+  level = level or 0
+  local price = tile.price or 0
+  return price * ((2 ^ (level + 1)) - 1)
+end
+
 function ItemEffects.find_monster_target(game, player, distance)
   distance = distance or 3
   local board = game.board
@@ -102,20 +122,28 @@ function ItemEffects.find_monster_target(game, player, distance)
   local best_value = nil
   for _, idx in ipairs(indices_in_range(board, player.position, distance)) do
     local tile = board:get_tile(idx)
-    if tile.type == "land" and tile.level > 0 and tile.owner_id and tile.owner_id ~= player.id then
-      local value = tile:total_invested()
+    if tile.type == "land" then
+      local st = tile_state(game, tile)
+      if (st.level or 0) > 0 and st.owner_id and st.owner_id ~= player.id then
+        local value = total_invested(tile, st.owner_id, st.level)
       if not best_value or value > best_value then
         best_value = value
         best_idx = idx
+      end
       end
     end
   end
   return best_idx
 end
 
-local function destroy_building(tile)
-  if tile.type == "land" then
-    tile.level = 0
+local function destroy_building(game, tile)
+  if tile.type ~= "land" then
+    return
+  end
+  if game and game.set_tile_level then
+    game:set_tile_level(tile, 0)
+  elseif game and game.store and tile and tile.id then
+    game.store:set({ "board", "tiles", tile.id, "level" }, 0)
   end
 end
 
@@ -126,7 +154,7 @@ function ItemEffects.use_monster(game, player, distance)
     return false
   end
   local tile = game.board:get_tile(idx)
-  destroy_building(tile)
+  destroy_building(game, tile)
   logger.event(player.name .. " 释放怪兽拆毁 " .. tile.name .. " 的建筑")
   UI.push_popup(game, { title = "怪兽卡", body = player.name .. " 拆毁了 " .. tile.name .. " 的建筑" })
   return true
@@ -142,7 +170,8 @@ find_missile_target = function(game, player, distance)
       local tile = board:get_tile(idx)
       local val = 0
       if tile.type == "land" then
-        val = tile:total_invested()
+        local st = tile_state(game, tile)
+        val = total_invested(tile, st.owner_id, st.level)
       end
       if not best_value or val > best_value then
         best_value = val
@@ -169,7 +198,11 @@ local function send_players_to_hospital(game, idx)
   for _, pid in ipairs(snapshot) do
     local target = game.players[pid]
     if target then
-      target.seat_id = nil
+      if game and game.set_player_seat then
+        game:set_player_seat(target, nil)
+      else
+        target.seat_id = nil
+      end
       status.send_to_hospital(game, target, { skip_fee = true })
       count = count + 1
     end
@@ -189,7 +222,7 @@ end
 function ItemEffects.apply_missile(game, player, idx)
   clear_overlays(game, idx)
   local tile = game.board:get_tile(idx)
-  destroy_building(tile)
+  destroy_building(game, tile)
   local hit = send_players_to_hospital(game, idx)
   local msg = player.name .. " 发射导弹轰炸 " .. tile.name
   if tile.type == "land" then
@@ -249,8 +282,8 @@ function ItemEffects.apply_target_item_effect(game, player, item_id, target)
   if item_id == 2011 then
     local total = player.cash + target.cash
     local half = math.floor(total / 2)
-    player.cash = half
-    target.cash = total - half
+    player:set_cash(half)
+    target:set_cash(total - half)
     logger.event(player.name .. " 使用均富卡，与 " .. target.name .. " 平分资金")
     return true
   elseif item_id == 2012 then
@@ -400,25 +433,37 @@ for _, id in ipairs({ 2011, 2012, 2014, 2015, 2016, 2018 }) do
   item_handlers[id] = handle_target_player_item
 end
 
-post_consume_handlers[2001] = function(_, player)
-  player.status.pending_free_rent = true
+post_consume_handlers[2001] = function(game, player, _context)
+  if game and game.set_player_status then
+    game:set_player_status(player, "pending_free_rent", true)
+  else
+    player.status.pending_free_rent = true
+  end
   logger.event(player.name .. " 使用免费卡，下一次租金免除")
   return true
 end
 
-post_consume_handlers[2002] = function(_, player)
+post_consume_handlers[2002] = function(game, player, _context)
   local dice_count = player.seat_id and constants.dice_with_vehicle or constants.default_dice_count
   local values = {}
   for i = 1, dice_count do
     values[i] = 6
   end
-  player.status.pending_remote_dice = { values = values }
+  if game and game.set_player_status then
+    game:set_player_status(player, "pending_remote_dice", { values = values })
+  else
+    player.status.pending_remote_dice = { values = values }
+  end
   logger.event(player.name .. " 使用遥控骰子，设定点数 " .. table.concat(values, ","))
   return true
 end
 
-post_consume_handlers[2003] = function(_, player)
-  player.status.pending_dice_multiplier = 2
+post_consume_handlers[2003] = function(game, player, _context)
+  if game and game.set_player_status then
+    game:set_player_status(player, "pending_dice_multiplier", 2)
+  else
+    player.status.pending_dice_multiplier = 2
+  end
   logger.event(player.name .. " 使用骰子加倍卡，本次步数翻倍")
   return true
 end
@@ -479,8 +524,12 @@ post_consume_handlers[2009] = function(_, player)
   return true
 end
 
-post_consume_handlers[2010] = function(_, player)
-  player.status.pending_tax_free = true
+post_consume_handlers[2010] = function(game, player, _context)
+  if game and game.set_player_status then
+    game:set_player_status(player, "pending_tax_free", true)
+  else
+    player.status.pending_tax_free = true
+  end
   logger.event(player.name .. " 使用免税卡，本次征税免除")
   return true
 end

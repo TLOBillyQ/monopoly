@@ -20,22 +20,28 @@ local function find_index(tile_id)
 end
 
 local function next_index(idx)
+  -- 杭州路后面是起点
+  if idx == 24 then
+    return 35
+  end
+
   return (idx % #path) + 1
 end
 
 local bottom_intersection = find_index(45)
-local inner_entry = find_index(42)
-local shanghai_idx = find_index(34)
-local right_exit = find_index(43)
+local bottom_entry = find_index(42)
+
+local left_intersection = find_index(40)
+local left_entry = find_index(25)
+
 
 local map = {
   path = path,
   -- 交叉路口按奇偶转向：奇数走默认路径，偶数转向内圈/外圈
   branches = {
-    -- 底部道具格（45）往上进入内圈，否则继续外圈
-    [bottom_intersection] = { odd = next_index(bottom_intersection), even = inner_entry },
-    -- 上海路（34）偶数右转接回外圈的右侧机会格（43），奇数继续内圈
-    [shanghai_idx] = { odd = next_index(shanghai_idx), even = right_exit },
+    [bottom_intersection] = { odd = next_index(bottom_intersection), even = bottom_entry },
+    [left_intersection] = { odd = next_index(left_intersection), even = left_entry },
+  
   },
 }
 

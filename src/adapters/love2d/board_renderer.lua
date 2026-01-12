@@ -2,15 +2,43 @@ local UIState = require("src.adapters.love2d.ui_state")
 
 local BoardRenderer = {}
 
+local function get_store_state(game)
+  if not game or not game.store or not game.store.get then
+    return nil
+  end
+  return {
+    tiles = game.store:get({ "board", "tiles" }) or {},
+    overlays = game.store:get({ "board", "overlays" }) or { roadblocks = {}, mines = {} },
+    players = game.store:get({ "players" }) or {},
+  }
+end
+
+local function build_occupants_from_store(game, store_players)
+  local occ = {}
+  if not game or not store_players then
+    return occ
+  end
+  local count = (game.players and #game.players) or 0
+  for pid = 1, count do
+    local p = store_players[pid]
+    if p and not p.eliminated and p.position then
+      occ[p.position] = occ[p.position] or {}
+      table.insert(occ[p.position], pid)
+    end
+  end
+  return occ
+end
+
 local function lighten(color, amount)
   return { math.min(color[1] + amount, 1), math.min(color[2] + amount, 1), math.min(color[3] + amount, 1) }
 end
 
-local function draw_buildings(ui, pos, half_cell, tile, owner_color)
-  if tile.type ~= "land" or tile.level <= 0 then
+local function draw_buildings(ui, pos, half_cell, tile, level, owner_color)
+  level = level or 0
+  if tile.type ~= "land" or level <= 0 then
     return
   end
-  local level_color = ui.palette.building[tile.level] or owner_color
+  local level_color = ui.palette.building[level] or owner_color
   local dx = pos.x - ui.board.center.x
   local dy = pos.y - ui.board.center.y
   local dir_x, dir_y
@@ -27,7 +55,7 @@ local function draw_buildings(ui, pos, half_cell, tile, owner_color)
   local stack_w = half_cell * 0.9
   local stack_h = half_cell * 0.32
   local top_y = anchor_y
-  for _ = 1, tile.level do
+  for _ = 1, level do
     local bx = anchor_x - stack_w * 0.5
     local by = anchor_y - stack_h
     love.graphics.setColor(level_color[1], level_color[2], level_color[3], 0.92)
@@ -40,7 +68,7 @@ local function draw_buildings(ui, pos, half_cell, tile, owner_color)
   end
   love.graphics.setFont(ui.fonts.tiny)
   love.graphics.setColor(0, 0, 0, 0.95)
-  love.graphics.printf("Lv" .. tile.level, anchor_x - 18, top_y - 14, 36, "center")
+  love.graphics.printf("Lv" .. level, anchor_x - 18, top_y - 14, 36, "center")
 end
 
 local function draw_overlays(ui, overlays, rect_x, rect_y, rect_w, rect_h, idx)
@@ -72,7 +100,7 @@ local function draw_overlays(ui, overlays, rect_x, rect_y, rect_w, rect_h, idx)
   end
 end
 
-local function draw_tile(ui, game, idx, pos, half_cell, pad, last_visited)
+local function draw_tile(ui, game, idx, pos, half_cell, pad, last_visited, tile_state)
   local tile = game.board:get_tile(idx)
   local color = UIState.tile_color(ui, tile.type)
   if last_visited then
@@ -106,20 +134,22 @@ local function draw_tile(ui, game, idx, pos, half_cell, pad, last_visited)
   love.graphics.setColor(0, 0, 0, 0.95)
   love.graphics.printf(tile.name, rect_x, name_y, rect_w, "center")
 
-  if tile.type == "land" and tile.owner_id then
-    local owner_color = ui.palette.player[tile.owner_id] or { 0.9, 0.9, 0.9 }
+  local owner_id = tile_state and tile_state.owner_id or nil
+  local level = tile_state and tile_state.level or 0
+  if tile.type == "land" and owner_id then
+    local owner_color = ui.palette.player[owner_id] or { 0.9, 0.9, 0.9 }
     love.graphics.setColor(owner_color)
     love.graphics.rectangle("line", rect_x - 2, rect_y - 2, rect_w + 4, rect_h + 4, 9, 9)
-    draw_buildings(ui, pos, half_cell, tile, owner_color)
+    draw_buildings(ui, pos, half_cell, tile, level, owner_color)
   end
 end
 
-local function draw_players(ui, game, cell_size)
+local function draw_players(ui, occupants, cell_size)
   for idx, pos in ipairs(ui.board.positions) do
-    local occupants = game.occupants[idx]
-    if occupants then
-      local count = #occupants
-      for i, pid in ipairs(occupants) do
+    local list = occupants[idx]
+    if list then
+      local count = #list
+      for i, pid in ipairs(list) do
         local per_row = math.ceil(math.sqrt(count))
         local spacing = cell_size * 0.28
         local start = -(per_row - 1) * spacing * 0.5
@@ -165,20 +195,26 @@ function BoardRenderer.draw(ui, game)
   if not game then
     return
   end
+
+  local st = get_store_state(game)
+
   local cell_size = ui.board.cell_size
   local half_cell = cell_size * 0.5
   local pad = math.min(cell_size * 0.05, 3)
   local last_visited = collect_last_visited(game)
 
   for idx, pos in ipairs(ui.board.positions) do
-    draw_tile(ui, game, idx, pos, half_cell, pad, last_visited[idx])
+    local tile = game.board:get_tile(idx)
+    local tile_state = (st and st.tiles and tile and st.tiles[tile.id]) or nil
+    draw_tile(ui, game, idx, pos, half_cell, pad, last_visited[idx], tile_state)
   end
 
-  draw_players(ui, game, cell_size)
+  local occupants = build_occupants_from_store(game, st and st.players)
+  draw_players(ui, occupants, cell_size)
 
   for idx, pos in ipairs(ui.board.positions) do
     local rect_x, rect_y, rect_w, rect_h = tile_rect_for_overlay(ui, idx, pos, half_cell, pad)
-    draw_overlays(ui, game.overlays, rect_x, rect_y, rect_w, rect_h, idx)
+    draw_overlays(ui, (st and st.overlays) or game.overlays, rect_x, rect_y, rect_w, rect_h, idx)
   end
 end
 

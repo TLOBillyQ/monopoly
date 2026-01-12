@@ -1,6 +1,16 @@
 local Inventory = {}
 Inventory.__index = Inventory
 
+function Inventory:_notify_change()
+  if self._suspend_on_change then
+    return
+  end
+  local cb = self._on_change
+  if cb then
+    cb(self)
+  end
+end
+
 function Inventory.new(opts)
   opts = opts or {}
   local max_slots = opts.max_slots or (opts.constants and opts.constants.inventory_slots)
@@ -23,12 +33,14 @@ function Inventory:add(item)
     return false
   end
   table.insert(self.items, item)
+  self:_notify_change()
   return true
 end
 
 function Inventory:remove_by_index(idx)
   local item = self.items[idx]
   table.remove(self.items, idx)
+  self:_notify_change()
   return item
 end
 

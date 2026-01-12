@@ -14,8 +14,20 @@ local StatusService = require("src.gameplay.app.services.status_service")
 local BankruptcyService = require("src.gameplay.app.services.bankruptcy_service")
 local RNG = require("src.gameplay.infra.rng")
 local Store = require("src.gameplay.infra.store")
+local Sync = require("src.gameplay.infra.sync")
 local App = {}
 App.__index = App
+
+local function deep_copy(tbl)
+  if type(tbl) ~= "table" then
+    return tbl
+  end
+  local res = {}
+  for k, v in pairs(tbl) do
+    res[k] = deep_copy(v)
+  end
+  return res
+end
 
 local function create_players(opts)
   local players = {}
@@ -42,20 +54,31 @@ local function snapshot_players(players)
   for _, p in ipairs(players) do
     ps[p.id] = {
       id = p.id,
+      name = p.name,
+      role_id = p.role_id,
+      is_ai = p.is_ai,
+      auto = p.auto,
       cash = p.cash,
       position = p.position,
-      properties = p.properties,
-      status = p.status,
+      seat_id = p.seat_id,
+      eliminated = p.eliminated,
+      properties = deep_copy(p.properties),
+      status = deep_copy(p.status),
+      inventory = { items = deep_copy(p.inventory.items), max_slots = p.inventory.max_slots },
     }
   end
   return ps
+end
+
+local function snapshot_inventory(inv)
+  return { items = deep_copy(inv.items), max_slots = inv.max_slots }
 end
 
 local function snapshot_tiles(path)
   local ts = {}
   for _, tile in ipairs(path) do
     if tile.type == "land" then
-      ts[tile.id] = { owner_id = tile.owner_id, level = tile.level }
+      ts[tile.id] = { owner_id = nil, level = 0 }
     end
   end
   return ts
@@ -83,6 +106,18 @@ function App.new(opts)
     players = snapshot_players(players),
   }
   local store = Store.new(initial_state)
+
+  rng._store = store
+
+  for _, p in ipairs(players) do
+    p._store = store
+    if p.inventory then
+      local pid = p.id
+      p.inventory._on_change = function(inv)
+        store:set({ "players", pid, "inventory" }, snapshot_inventory(inv))
+      end
+    end
+  end
 
   -- Store is the source of truth; keep mutable overlay refs pointing at store state.
   local overlays_ref = store:get({ "board", "overlays" })
@@ -112,26 +147,74 @@ function App.new(opts)
   game:rebuild_occupants()
   game.turn_manager = TurnManager.new(game)
   function game:commit_state()
-    -- tiles
-    local tiles_snapshot = snapshot_tiles(self.board.path)
-    self.store:set({ "board", "tiles" }, tiles_snapshot)
-    -- overlays
-    -- overlays is a live ref into store; set defensively in case older code replaced it.
-    self.store:set({ "board", "overlays" }, self.overlays)
-    -- players
-    self.store:set({ "players" }, snapshot_players(self.players))
-    -- turn
-    local turn_count = self.store:get({ "turn", "turn_count" }) or self.turn_count or 0
-    self.store:set({ "turn", "turn_count" }, turn_count)
-    self.turn_count = turn_count
-    local idx = self.store:get({ "turn", "current_player_index" }) or 1
-    self.store:set({ "turn", "current_player_index" }, idx)
-    -- rng
-    self.store:set({ "rng" }, self.rng:snapshot())
+    -- Store is the source of truth: sync runtime objects from store.
+    Sync.sync_all(self)
   end
-  local Sync = require("src.gameplay.infra.sync")
   Sync.sync_all(game)
   return game
+end
+
+function App:set_player_status(player, key, value)
+  player.status[key] = value
+  if self.store then
+    self.store:set({ "players", player.id, "status", key }, deep_copy(value))
+  end
+end
+
+function App:set_player_seat(player, seat_id)
+  player.seat_id = seat_id
+  if self.store then
+    self.store:set({ "players", player.id, "seat_id" }, seat_id)
+  end
+end
+
+function App:set_player_eliminated(player, eliminated)
+  player.eliminated = eliminated and true or false
+  if self.store then
+    self.store:set({ "players", player.id, "eliminated" }, player.eliminated)
+  end
+end
+
+function App:set_player_property(player, tile_id, owned)
+  if owned then
+    player.properties[tile_id] = true
+  else
+    player.properties[tile_id] = nil
+  end
+  if self.store then
+    self.store:set({ "players", player.id, "properties", tile_id }, owned and true or nil)
+  end
+end
+
+function App:sync_player_inventory(player)
+  if self.store and player.inventory then
+    self.store:set({ "players", player.id, "inventory" }, snapshot_inventory(player.inventory))
+  end
+end
+
+function App:set_tile_owner(tile, owner_id)
+  if tile and tile.type == "land" then
+    if self.store then
+      self.store:set({ "board", "tiles", tile.id, "owner_id" }, owner_id)
+    end
+  end
+end
+
+function App:set_tile_level(tile, level)
+  if tile and tile.type == "land" then
+    if self.store then
+      self.store:set({ "board", "tiles", tile.id, "level" }, level)
+    end
+  end
+end
+
+function App:reset_tile(tile)
+  if tile and tile.type == "land" then
+    if self.store then
+      self.store:set({ "board", "tiles", tile.id, "owner_id" }, nil)
+      self.store:set({ "board", "tiles", tile.id, "level" }, 0)
+    end
+  end
 end
 
 function App:alive_players()

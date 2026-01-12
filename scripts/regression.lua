@@ -36,6 +36,14 @@ local function first_tile_by_type(board, t)
   error("no tile found for type=" .. tostring(t))
 end
 
+local function tile_state(game, tile)
+  local s = game.store and game.store:get({ "board", "tiles", tile.id }) or nil
+  if type(s) ~= "table" then
+    return { owner_id = nil, level = 0 }
+  end
+  return { owner_id = s.owner_id, level = s.level or 0 }
+end
+
 local function test_pass_start()
   local g = new_game()
   local p = g:current_player()
@@ -70,12 +78,12 @@ local function test_monster_card()
   local p = g:current_player()
   local idx = 3
   local tile = g.board:get_tile(idx)
-  tile.owner_id = 2
-  tile.level = 2
+  g:set_tile_owner(tile, 2)
+  g:set_tile_level(tile, 2)
   p.inventory:add({ id = 2008 })
   local ok = ItemService.use_item(g, p, 2008)
   assert_eq(ok, true, "monster use ok")
-  assert_eq(tile.level, 0, "building destroyed")
+  assert_eq(tile_state(g, tile).level, 0, "building destroyed")
 end
 
 local function test_missile_card()
@@ -83,15 +91,15 @@ local function test_missile_card()
   local p = g:current_player()
   local idx = 4
   local tile = g.board:get_tile(idx)
-  tile.owner_id = 2
-  tile.level = 1
+  g:set_tile_owner(tile, 2)
+  g:set_tile_level(tile, 1)
   g:update_player_position(g.players[2], idx)
   g.overlays.roadblocks[idx] = true
   g.overlays.mines[idx] = true
   p.inventory:add({ id = 2013 })
   local ok = ItemService.use_item(g, p, 2013)
   assert_eq(ok, true, "missile use ok")
-  assert_eq(tile.level, 0, "building destroyed by missile")
+  assert_eq(tile_state(g, tile).level, 0, "building destroyed by missile")
   assert_eq(g.overlays.roadblocks[idx], nil, "roadblock cleared")
   assert_eq(g.overlays.mines[idx], nil, "mine cleared")
   assert(g.players[2].status.stay_turns > 0, "target sent to hospital")
@@ -118,7 +126,7 @@ local function test_land_optional_auto_without_ui()
   local before_cash = p.cash
   local res = LandingResolver.resolve(g, p, tile, {})
   assert(not res, "landing resolver should not wait without UI")
-  assert(tile.owner_id == p.id, "land should be auto purchased")
+  assert(tile_state(g, tile).owner_id == p.id, "land should be auto purchased")
   assert(p.cash < before_cash, "cash deducted for purchase")
 end
 
@@ -137,7 +145,7 @@ local function test_land_optional_stale_choice_is_blocked()
   p.cash = 0
 
   ChoiceResolver.resolve(g, pending, { option_id = "buy_land" })
-  assert(tile.owner_id == nil, "stale buy_land should be blocked")
+  assert(tile_state(g, tile).owner_id == nil, "stale buy_land should be blocked")
 end
 
 local function test_chance_is_mandatory_effect_entrypoint()

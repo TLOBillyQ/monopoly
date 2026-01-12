@@ -22,7 +22,11 @@ function StatusService.send_to_hospital(game, player, opts)
   if hospital_index then
     game:update_player_position(player, hospital_index)
   end
-  player.status.stay_turns = constants.hospital_stay_turns
+  if game and game.set_player_status then
+    game:set_player_status(player, "stay_turns", constants.hospital_stay_turns)
+  else
+    player.status.stay_turns = constants.hospital_stay_turns
+  end
   if not opts.skip_fee then
     local fee = constants.hospital_fee
     if player.cash < fee then
@@ -45,7 +49,11 @@ function StatusService.send_to_mountain(game, player)
   if idx then
     game:update_player_position(player, idx)
   end
-  player.status.stay_turns = constants.mountain_stay_turns
+  if game and game.set_player_status then
+    game:set_player_status(player, "stay_turns", constants.mountain_stay_turns)
+  else
+    player.status.stay_turns = constants.mountain_stay_turns
+  end
   logger.event(player.name .. " 进入深山，停留 " .. player.status.stay_turns .. " 回合")
 end
 

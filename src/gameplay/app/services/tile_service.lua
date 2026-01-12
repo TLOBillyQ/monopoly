@@ -50,7 +50,11 @@ local function check_mine(game, player)
       return
     end
     game.overlays.mines[player.position] = nil
-    player.seat_id = nil
+    if game and game.set_player_seat then
+      game:set_player_seat(player, nil)
+    else
+      player.seat_id = nil
+    end
     logger.event(player.name .. " 触发地雷，座驾被摧毁并送医")
     status.send_to_hospital(game, player)
   end

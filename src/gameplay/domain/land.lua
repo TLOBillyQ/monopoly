@@ -2,6 +2,39 @@ local Effect = {}
 local logger = require("src.util.logger")
 local constants = require("src.config.constants")
 
+local MAX_LEVEL = 3
+
+local function tile_state(game, tile)
+  if not game or not game.store or not tile or tile.type ~= "land" then
+    return { owner_id = nil, level = 0 }
+  end
+  local s = game.store:get({ "board", "tiles", tile.id })
+  if type(s) ~= "table" then
+    return { owner_id = nil, level = 0 }
+  end
+  return { owner_id = s.owner_id, level = s.level or 0 }
+end
+
+local function next_upgrade_cost(tile, level)
+  local target_level = (level or 0) + 1
+  return (tile.price or 0) * (2 ^ target_level)
+end
+
+local function current_rent(tile, level)
+  local exponent = level or 0
+  return (tile.price or 0) * (2 ^ exponent) * 0.5
+end
+
+local function total_invested(tile, owner_id, level)
+  if not owner_id then
+    return 0
+  end
+  level = level or 0
+  local price = tile.price or 0
+  -- price * (2^(level+1) - 1)
+  return price * ((2 ^ (level + 1)) - 1)
+end
+
 local function get_service(game, key)
   return game and game.services and game.services[key]
 end
@@ -10,15 +43,16 @@ end
 local function can_buy(ctx)
   local tile = ctx.tile
   local player = ctx.player
-  return tile.type == "land" and tile.owner_id == nil and player.cash >= tile.price
+  local st = tile_state(ctx.game, tile)
+  return tile.type == "land" and st.owner_id == nil and player.cash >= tile.price
 end
 
 local function apply_buy(ctx)
   local tile = ctx.tile
   local player = ctx.player
   player:deduct_cash(tile.price)
-  tile.owner_id = player.id
-  player.properties[tile.id] = true
+  ctx.game:set_tile_owner(tile, player.id)
+  ctx.game:set_player_property(player, tile.id, true)
   logger.event(player.name .. " 购买 " .. tile.name .. " 花费 " .. tile.price)
 end
 
@@ -26,19 +60,24 @@ end
 local function can_upgrade(ctx)
   local tile = ctx.tile
   local player = ctx.player
-  if tile.type ~= "land" or tile.owner_id ~= player.id or not tile:can_upgrade() then
+  local st = tile_state(ctx.game, tile)
+  if tile.type ~= "land" or st.owner_id ~= player.id then
     return false
   end
-  local cost = tile:next_upgrade_cost()
-  return cost and player.cash >= cost
+  if (st.level or 0) >= MAX_LEVEL then
+    return false
+  end
+  local cost = next_upgrade_cost(tile, st.level)
+  return player.cash >= cost
 end
 
 local function apply_upgrade(ctx)
   local tile = ctx.tile
   local player = ctx.player
-  local cost = tile:next_upgrade_cost()
+  local st = tile_state(ctx.game, tile)
+  local cost = next_upgrade_cost(tile, st.level)
   player:deduct_cash(cost)
-  tile.level = tile.level + 1
+  ctx.game:set_tile_level(tile, (st.level or 0) + 1)
   logger.event(player.name .. " 为 " .. tile.name .. " 加盖，花费 " .. cost)
 end
 
@@ -52,18 +91,20 @@ Effect.defs = {
     can_apply = function(ctx)
       local tile = ctx.tile
       local player = ctx.player
-      return tile.type == "land" and tile.owner_id and tile.owner_id ~= player.id
+      local st = tile_state(ctx.game, tile)
+      return tile.type == "land" and st.owner_id and st.owner_id ~= player.id
     end,
     apply = function(ctx)
       local tile = ctx.tile
       local player = ctx.player
-      local owner = ctx.game.players[tile.owner_id]
+      local st = tile_state(ctx.game, tile)
+      local owner = st.owner_id and ctx.game.players[st.owner_id] or nil
       if not owner or owner.eliminated then
-        tile.owner_id = nil
+        ctx.game:set_tile_owner(tile, nil)
         return
       end
       -- 强征卡
-      local total_value = tile:total_invested()
+      local total_value = total_invested(tile, st.owner_id, st.level)
       local strong_idx = player.inventory and player.inventory:find_index(function(it)
         return it.id == 2009
       end)
@@ -71,9 +112,9 @@ Effect.defs = {
         player.inventory:remove_by_index(strong_idx)
         player:deduct_cash(total_value)
         owner:add_cash(total_value)
-        tile.owner_id = player.id
-        owner.properties[tile.id] = nil
-        player.properties[tile.id] = true
+        ctx.game:set_tile_owner(tile, player.id)
+        ctx.game:set_player_property(owner, tile.id, false)
+        ctx.game:set_player_property(player, tile.id, true)
         logger.event(player.name .. " 使用强征卡，支付 " .. total_value .. " 强制购入 " .. tile.name)
         return
       end
@@ -83,7 +124,7 @@ Effect.defs = {
         return
       end
       if player.status.pending_free_rent then
-        player.status.pending_free_rent = false
+        ctx.game:set_player_status(player, "pending_free_rent", false)
         logger.event(player.name .. " 使用免费卡，免租 " .. tile.name)
         return
       end
@@ -104,9 +145,14 @@ Effect.defs = {
         local i = index
         while i >= 1 do
           local t = board:get_tile(i)
-          if t.type == "land" and t.owner_id == owner_id then
-            rent_sum = rent_sum + t:current_rent()
-            i = i - 1
+          if t.type == "land" then
+            local st2 = tile_state(ctx.game, t)
+            if st2.owner_id == owner_id then
+              rent_sum = rent_sum + current_rent(t, st2.level)
+              i = i - 1
+            else
+              break
+            end
           else
             break
           end
@@ -114,9 +160,14 @@ Effect.defs = {
         i = index + 1
         while i <= length do
           local t = board:get_tile(i)
-          if t.type == "land" and t.owner_id == owner_id then
-            rent_sum = rent_sum + t:current_rent()
-            i = i + 1
+          if t.type == "land" then
+            local st2 = tile_state(ctx.game, t)
+            if st2.owner_id == owner_id then
+              rent_sum = rent_sum + current_rent(t, st2.level)
+              i = i + 1
+            else
+              break
+            end
           else
             break
           end
@@ -139,7 +190,7 @@ Effect.defs = {
       else
         local paid = player.cash
         owner:add_cash(paid)
-        player.cash = 0
+        player:set_cash(0)
         logger.event(player.name .. " 资金不足，支付剩余 " .. paid .. " 后破产")
         local bankruptcy = get_service(ctx.game, "bankruptcy")
         if bankruptcy and bankruptcy.eliminate then
@@ -160,7 +211,7 @@ Effect.defs = {
       local player = ctx.player
       if player.status.pending_tax_free then
         logger.event(player.name .. " 使用免税卡，本次免税")
-        player.status.pending_tax_free = false
+        ctx.game:set_player_status(player, "pending_tax_free", false)
         return
       end
       local tax_idx = player.inventory and player.inventory:find_index(function(it)

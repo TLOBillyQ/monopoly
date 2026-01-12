@@ -3,6 +3,23 @@ local Inventory = require("src.core.inventory")
 local Player = {}
 Player.__index = Player
 
+local function deep_copy(tbl)
+  if type(tbl) ~= "table" then
+    return tbl
+  end
+  local res = {}
+  for k, v in pairs(tbl) do
+    res[k] = deep_copy(v)
+  end
+  return res
+end
+
+function Player:_store_set(path, value)
+  if self._store and self._store.set then
+    self._store:set(path, value)
+  end
+end
+
 function Player.new(attrs)
   attrs = attrs or {}
   local constants = attrs.constants
@@ -35,10 +52,17 @@ end
 
 function Player:add_cash(amount)
   self.cash = self.cash + amount
+  self:_store_set({ "players", self.id, "cash" }, self.cash)
+end
+
+function Player:set_cash(amount)
+  self.cash = amount
+  self:_store_set({ "players", self.id, "cash" }, self.cash)
 end
 
 function Player:deduct_cash(amount)
   self.cash = self.cash - amount
+  self:_store_set({ "players", self.id, "cash" }, self.cash)
   return self.cash
 end
 
@@ -60,9 +84,11 @@ end
 function Player:set_deity(name, duration)
   if name == nil then
     self.status.deity = nil
+    self:_store_set({ "players", self.id, "status", "deity" }, nil)
     return
   end
   self.status.deity = { type = name, remaining = duration or self.deity_duration_turns }
+  self:_store_set({ "players", self.id, "status", "deity" }, deep_copy(self.status.deity))
 end
 
 function Player:tick_deity()
@@ -71,7 +97,10 @@ function Player:tick_deity()
     deity.remaining = deity.remaining - 1
     if deity.remaining <= 0 then
       self.status.deity = nil
+      self:_store_set({ "players", self.id, "status", "deity" }, nil)
+      return
     end
+    self:_store_set({ "players", self.id, "status", "deity" }, deep_copy(deity))
   end
 end
 
@@ -80,6 +109,11 @@ function Player:clear_temporal_flags()
   self.status.pending_dice_multiplier = 1
   self.status.pending_free_rent = false
   self.status.pending_tax_free = false
+
+  self:_store_set({ "players", self.id, "status", "pending_remote_dice" }, nil)
+  self:_store_set({ "players", self.id, "status", "pending_dice_multiplier" }, 1)
+  self:_store_set({ "players", self.id, "status", "pending_free_rent" }, false)
+  self:_store_set({ "players", self.id, "status", "pending_tax_free" }, false)
 end
 
 return Player

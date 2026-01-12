@@ -13,7 +13,7 @@ local function missing_service(name)
 end
 
 local function apply_cash_change(player, delta)
-  player.cash = player.cash + delta
+  player:add_cash(delta)
 end
 
 local handlers = {}
@@ -98,8 +98,12 @@ handlers.collect_from_others = function(game, player, card)
   logger.event(player.name .. " 收取每位玩家 " .. card.amount)
 end
 
-handlers.set_vehicle = function(_, player, card)
-  player.seat_id = card.vehicle_id
+handlers.set_vehicle = function(game, player, card)
+  if game and game.set_player_seat then
+    game:set_player_seat(player, card.vehicle_id)
+  else
+    player.seat_id = card.vehicle_id
+  end
   logger.event(player.name .. " 获得座驾 " .. tostring(card.vehicle_id))
 end
 
@@ -107,8 +111,14 @@ handlers.destroy_buildings_on_path = function(game, _, _, context)
   if context and context.visited then
     for _, idx in ipairs(context.visited) do
       local t = game.board:get_tile(idx)
-      if t.type == "land" and t.level > 0 then
-        t.level = 0
+      local snap = (game.store and game.store:get({ "board", "tiles", t.id })) or nil
+      local lvl = (type(snap) == "table" and snap.level) or 0
+      if t.type == "land" and lvl > 0 then
+        if game and game.set_tile_level then
+          game:set_tile_level(t, 0)
+        elseif game and game.store and t and t.id then
+          game.store:set({ "board", "tiles", t.id, "level" }, 0)
+        end
         logger.event("台风摧毁 " .. t.name .. " 上的建筑")
       end
     end
@@ -120,7 +130,11 @@ handlers.reset_tiles_on_path = function(game, _, _, context)
     for _, idx in ipairs(context.visited) do
       local t = game.board:get_tile(idx)
       if t.type == "land" then
-        t:reset()
+        if game and game.reset_tile then
+          game:reset_tile(t)
+        else
+          t:reset()
+        end
         logger.event("强制征地重置 " .. t.name)
       end
     end
@@ -172,9 +186,17 @@ handlers.discard_properties = function(game, player, card)
   for tile_id in pairs(player.properties) do
     local tile = game.board:get_tile_by_id(tile_id)
     if tile then
-      tile:reset()
+      if game and game.reset_tile then
+        game:reset_tile(tile)
+      else
+        tile:reset()
+      end
     end
-    player.properties[tile_id] = nil
+    if game and game.set_player_property then
+      game:set_player_property(player, tile_id, false)
+    else
+      player.properties[tile_id] = nil
+    end
     to_drop = to_drop - 1
     if to_drop == 0 then
       break
