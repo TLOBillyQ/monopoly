@@ -3,12 +3,12 @@
 Run these commands locally with proper GitHub authentication to make `rewrite2` the main branch:
 
 ```bash
-# One-liner migration (review script first!)
+# One-liner migration (REVIEW CHANGES before force push!)
 git fetch --all && \
 git checkout main && \
 git branch main-backup-$(date +%Y%m%d-%H%M%S) && \
 git reset --hard origin/rewrite2 && \
-echo "Ready to push. Run: git push origin main --force"
+echo "⚠️  REVIEW CHANGES with 'git diff @{1}' before running: git push origin main --force"
 
 # Then delete obsolete branches (run separately for better error handling)
 git push origin --delete copilot/reduce-codebase-line-count

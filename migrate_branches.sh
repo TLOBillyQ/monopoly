@@ -84,7 +84,7 @@ if [ "$DRY_RUN" = false ]; then
     fi
 fi
 
-BACKUP_BRANCH=""  # Initialize backup branch name
+BACKUP_BRANCH=""
 print_step "Creating backup of main branch..."
 if [ "$DRY_RUN" = false ]; then
     git checkout main 2>/dev/null || git checkout -b main origin/main
@@ -141,7 +141,7 @@ done
 
 print_step "Cleaning up old rewrite2 branch (optional)..."
 if [ "$DRY_RUN" = false ]; then
-    read -p "Do you want to delete the rewrite2 branch now that it's merged? (y/N) " -n 1 -r
+    read -p "Do you want to delete the rewrite2 branch now that its content is in main? (y/N) " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         git push origin --delete rewrite2 || print_warning "Failed to delete rewrite2"
