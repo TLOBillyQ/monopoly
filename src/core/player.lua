@@ -1,20 +1,23 @@
-local constants = require("src.config.constants")
-
 local Inventory = require("src.core.inventory")
 
 local Player = {}
 Player.__index = Player
 
 function Player.new(attrs)
+  attrs = attrs or {}
+  local constants = attrs.constants
+  assert(constants ~= nil, "Player.new(attrs) requires attrs.constants")
+
   local p = {
     id = attrs.id,
     name = attrs.name or ("玩家" .. attrs.id),
     role_id = attrs.role_id,
     is_ai = attrs.is_ai or false,
     auto = attrs.auto or false,
-    cash = constants.starting_cash,
+    cash = attrs.starting_cash or constants.starting_cash,
     position = attrs.start_index or 1,
     seat_id = nil,
+    deity_duration_turns = attrs.deity_duration_turns or constants.deity_duration_turns,
     status = {
       stay_turns = 0,
       deity = nil, -- { type="angel"|"rich"|"poor", remaining=5 }
@@ -23,7 +26,7 @@ function Player.new(attrs)
       pending_free_rent = false,
       pending_tax_free = false,
     },
-    inventory = attrs.inventory or Inventory.new(),
+    inventory = attrs.inventory or Inventory.new({ constants = constants }),
     properties = {},
     eliminated = false,
   }
@@ -59,7 +62,7 @@ function Player:set_deity(name, duration)
     self.status.deity = nil
     return
   end
-  self.status.deity = { type = name, remaining = duration or constants.deity_duration_turns }
+  self.status.deity = { type = name, remaining = duration or self.deity_duration_turns }
 end
 
 function Player:tick_deity()

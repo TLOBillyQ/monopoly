@@ -1,10 +1,12 @@
-local constants = require("src.config.constants")
-
 local Inventory = {}
 Inventory.__index = Inventory
 
-function Inventory.new()
-  local inv = { items = {} }
+function Inventory.new(opts)
+  opts = opts or {}
+  local max_slots = opts.max_slots or (opts.constants and opts.constants.inventory_slots)
+  assert(max_slots ~= nil, "Inventory.new(opts) requires opts.max_slots or opts.constants.inventory_slots")
+
+  local inv = { items = {}, max_slots = max_slots }
   return setmetatable(inv, Inventory)
 end
 
@@ -13,7 +15,7 @@ function Inventory:count()
 end
 
 function Inventory:is_full()
-  return self:count() >= constants.inventory_slots
+  return self:count() >= self.max_slots
 end
 
 function Inventory:add(item)

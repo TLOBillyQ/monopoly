@@ -1,20 +1,9 @@
-local Tile = require("src.core.tile")
-local tiles_config = require("src.config.tiles")
-local map_config = require("src.config.map")
-
 local Board = {}
 Board.__index = Board
 
-function Board.new()
-  local tile_lookup = {}
-  for _, cfg in ipairs(tiles_config) do
-    tile_lookup[cfg.id] = Tile.from_config(cfg)
-  end
-
-  local path = {}
-  for _, id in ipairs(map_config.path) do
-    table.insert(path, tile_lookup[id])
-  end
+function Board.new(data)
+  local tile_lookup = (data and data.tile_lookup) or {}
+  local path = (data and data.path) or {}
 
   local index_by_id = {}
   for idx, tile in ipairs(path) do
@@ -24,7 +13,7 @@ function Board.new()
   local b = {
     path = path,
     tile_lookup = tile_lookup,
-    branches = map_config.branches or {},
+    branches = (data and data.branches) or {},
     index_by_id = index_by_id,
   }
   return setmetatable(b, Board)

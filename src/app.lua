@@ -1,6 +1,7 @@
-local Board = require("src.core.board")
+local BoardFactory = require("src.bootstrap.board_factory")
 local Player = require("src.core.player")
 local Inventory = require("src.core.inventory")
+local constants = require("src.config.constants")
 local roles_cfg = require("src.config.roles")
 local logger = require("src.util.logger")
 local TurnManager = require("src.gameplay.services.turn_manager")
@@ -28,7 +29,8 @@ local function create_players(opts)
       is_ai = opts.ai and opts.ai[i] or (i > 1),
       auto = opts.auto_all or false,
       start_index = 1,
-      inventory = Inventory.new(),
+      constants = constants,
+      inventory = Inventory.new({ constants = constants }),
     })
     table.insert(players, player)
   end
@@ -61,7 +63,7 @@ end
 
 function App.new(opts)
   opts = opts or {}
-  local board = Board.new()
+  local board = BoardFactory.create()
   local rng = RNG.new(opts.seed)
   local players = create_players(opts)
 
