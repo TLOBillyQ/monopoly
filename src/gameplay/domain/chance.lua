@@ -41,7 +41,13 @@ local function move_steps(game, player, steps)
     return nil
   end
   local res = movement.move(game, player, steps)
-  return { kind = "need_landing", player_id = player.id, tile_index = player.position, move_result = res }
+  return {
+    kind = "need_landing",
+    player_id = player.id,
+    board_index = player.position,
+    tile_index = player.position,
+    move_result = res,
+  }
 end
 
 local handlers = {}
@@ -203,7 +209,13 @@ handlers.forced_move = function(game, player, card, context)
     local idx = game.board:find_first_by_type("tax")
     if idx then
       game:update_player_position(player, idx)
-      return { kind = "need_landing", player_id = player.id, tile_index = idx, move_result = context }
+      return {
+        kind = "need_landing",
+        player_id = player.id,
+        board_index = idx,
+        tile_index = idx,
+        move_result = context,
+      }
     end
   elseif card.destination == "market" then
     local idx = game.board:find_first_by_type("market")

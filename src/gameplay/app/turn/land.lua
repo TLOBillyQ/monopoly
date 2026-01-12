@@ -7,7 +7,7 @@ local function phase_land(tm, args)
 
   local res = LandingResolver.resolve(tm.game, player, tile, move_result)
   if res and res.waiting then
-    local resume_state = res.resume_state or "land"
+    local resume_state = res.resume_state or "landing"
     local resume_args = res.resume_args or { player = player, move_result = move_result }
     return "wait_choice", { resume_state = resume_state, resume_args = resume_args }
   end

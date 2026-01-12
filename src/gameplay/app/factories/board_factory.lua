@@ -9,7 +9,7 @@ local BoardFactory = {}
 function BoardFactory.create(opts)
   opts = opts or {}
   local tiles = opts.tiles or tiles_config
-  local map = opts.map or map_config
+  local map_cfg = opts.map or map_config
 
   local tile_lookup = {}
   for _, cfg in ipairs(tiles) do
@@ -17,14 +17,14 @@ function BoardFactory.create(opts)
   end
 
   local path = {}
-  for _, id in ipairs(map.path) do
+  for _, id in ipairs(map_cfg.path) do
     table.insert(path, tile_lookup[id])
   end
 
   return Board.new({
     path = path,
     tile_lookup = tile_lookup,
-    branches = map.branches or {},
+    branches = map_cfg.branches or {},
   })
 end
 

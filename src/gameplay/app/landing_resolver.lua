@@ -32,7 +32,7 @@ local function snapshot_move_result(move_result)
 end
 
 local function build_ctx(game, player, tile, move_result)
-  local phase = game and game.store and game.store:get({ "turn", "phase" }) or "land"
+  local phase = game and game.store and game.store:get({ "turn", "phase" }) or "landing"
   return {
     game = game,
     store = game and game.store,
@@ -69,7 +69,7 @@ function LandingResolver.resolve(game, player, tile, move_result)
     local res = Effect.execute(eff, ctx)
     local out = res and res.result
     if type(out) == "table" and out.waiting then
-      out.resume_state = out.resume_state or "land"
+      out.resume_state = out.resume_state or "landing"
       out.resume_args = out.resume_args or { player = player, move_result = move_result }
       return out
     end
@@ -91,7 +91,7 @@ function LandingResolver.resolve(game, player, tile, move_result)
     end
 
     Choice.open(game, {
-      kind = "land_optional_effect",
+      kind = "landing_optional_effect",
       title = "可选行动",
       body_lines = body_lines,
       options = options,
@@ -105,7 +105,7 @@ function LandingResolver.resolve(game, player, tile, move_result)
       },
     })
 
-    return { waiting = true, reason = "land_optional", resume_state = "end_turn", resume_args = { player = player } }
+    return { waiting = true, reason = "landing_optional", resume_state = "end_turn", resume_args = { player = player } }
   end
 
   

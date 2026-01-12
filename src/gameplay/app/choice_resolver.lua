@@ -32,7 +32,7 @@ local function build_effect_ctx(game, player, tile, move_result)
 end
 
 local function get_container_defs_by_choice_kind(choice_kind)
-  if choice_kind == "land_optional_effect" then
+  if choice_kind == "landing_optional_effect" or choice_kind == "land_optional_effect" then
     local landing_effects = require("src.gameplay.domain.landing")
     return landing_effects and landing_effects.defs or {}
   end
@@ -84,7 +84,7 @@ end
 
 local handlers = {}
 
-handlers.land_optional_effect = function(game, choice, action)
+local function handle_optional_landing_effect(game, choice, action)
   local effect_id = action.option_id
   if not effect_id then
     Choice.clear(game)
@@ -93,7 +93,7 @@ handlers.land_optional_effect = function(game, choice, action)
   local meta = choice.meta or {}
 
   if meta.effect_ids and not contains(meta.effect_ids, effect_id) then
-    logger.warn("land_optional_effect: effect not in offered list:", tostring(effect_id))
+    logger.warn("landing_optional_effect: effect not in offered list:", tostring(effect_id))
     Choice.clear(game)
     return { stay = false }
   end
@@ -101,7 +101,7 @@ handlers.land_optional_effect = function(game, choice, action)
   local effect_defs = get_container_defs_by_choice_kind(choice.kind)
   local target_eff = find_effect_by_id(effect_defs, effect_id)
   if not target_eff then
-    logger.warn("land_optional_effect: effect id not found:", tostring(effect_id))
+    logger.warn("landing_optional_effect: effect id not found:", tostring(effect_id))
     Choice.clear(game)
     return { stay = false }
   end
@@ -113,11 +113,14 @@ handlers.land_optional_effect = function(game, choice, action)
 
   local res = Effect.execute(target_eff, ctx)
   if not res or res.ok ~= true then
-    logger.warn("land_optional_effect execute blocked:", tostring(res and res.reason))
+    logger.warn("landing_optional_effect execute blocked:", tostring(res and res.reason))
   end
   Choice.clear(game)
   return { stay = false }
 end
+
+handlers.landing_optional_effect = handle_optional_landing_effect
+handlers.land_optional_effect = handle_optional_landing_effect
 
 handlers.missile_target = function(game, choice, action)
   if is_cancel(action) then

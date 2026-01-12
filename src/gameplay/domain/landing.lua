@@ -1,4 +1,4 @@
-local land_effects = require("src.gameplay.domain.land")
+local property_effects = require("src.gameplay.domain.property")
 local logger = require("src.util.logger")
 local constants = require("src.config.constants")
 
@@ -70,7 +70,7 @@ Effect.defs = {
 }
 
 
-for _, eff in ipairs(land_effects.defs or {}) do
+for _, eff in ipairs(property_effects.defs or {}) do
   table.insert(Effect.defs, eff)
 end
 

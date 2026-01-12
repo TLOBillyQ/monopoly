@@ -6,7 +6,7 @@ local function phase_move(tm, args)
   assert(movement and movement.move, "Missing MovementService (game.services.movement)")
   local move_result = movement.move(tm.game, player, total, { branch_parity = raw_total })
   tm.game.last_turn.move_result = move_result
-  return "land", { player = player, move_result = move_result }
+  return "landing", { player = player, move_result = move_result }
 end
 
 return phase_move

@@ -4,7 +4,7 @@ local ChoiceResolver = require("src.gameplay.app.choice_resolver")
 local phase_start_fn = require("src.gameplay.app.turn.start")
 local phase_roll_fn = require("src.gameplay.app.turn.roll")
 local phase_move_fn = require("src.gameplay.app.turn.move")
-local phase_land_fn = require("src.gameplay.app.turn.land")
+local phase_landing_fn = require("src.gameplay.app.turn.land")
 local phase_end_fn = require("src.gameplay.app.turn.end_turn")
 
 local TurnManager = {}
@@ -14,7 +14,9 @@ local PHASES = {
   start = { phase = "start", fn = phase_start_fn },
   roll = { phase = "roll", fn = phase_roll_fn },
   move = { phase = "move", fn = phase_move_fn },
-  land = { phase = "land", fn = phase_land_fn },
+  landing = { phase = "landing", fn = phase_landing_fn },
+  
+  land = { phase = "landing", fn = phase_landing_fn },
   end_turn = { phase = "end_turn", fn = phase_end_fn },
 }
 

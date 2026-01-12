@@ -17,7 +17,7 @@ function ChanceService.resolve(game, player, card, context)
     if not target_player then
       return nil
     end
-    local idx = res.tile_index or target_player.position
+    local idx = res.board_index or res.tile_index or target_player.position
     local tile = idx and game and game.board and game.board:get_tile(idx) or nil
     if not tile then
       return nil
