@@ -41,4 +41,3 @@ function Choice.open(game, payload)
 end
 
 return Choice
-

@@ -37,24 +37,6 @@ local function handle_market(game, player)
   end
 end
 
-local function handle_chance(game, player, context)
-  local chance = get_service(game, "chance")
-  if not chance then
-    return missing_service("ChanceService")
-  end
-  local card = chance.draw_card(game and game.rng)
-  logger.event(player.name .. " 抽到机会卡 " .. card.description)
-  chance.resolve(game, player, card, context)
-end
-
-local function handle_item_tile(game, player)
-  local item = get_service(game, "item")
-  if not item then
-    return missing_service("ItemService")
-  end
-  item.draw_and_give(player, game.rng)
-end
-
 local function check_mine(game, player)
   if game.overlays.mines[player.position] then
     local status = get_service(game, "status")
@@ -96,10 +78,6 @@ function TileService.resolve(game, player, tile, context)
     handle_mountain(game, player)
   elseif tile.type == "market" then
     handle_market(game, player)
-  elseif tile.type == "chance" then
-    handle_chance(game, player, context)
-  elseif tile.type == "item" then
-    handle_item_tile(game, player)
   end
 
   check_mine(game, player)

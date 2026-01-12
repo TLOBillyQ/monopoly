@@ -5,7 +5,8 @@ local Choice = require("src.gameplay.choice")
 local logger = require("src.util.logger")
 local UI = require("src.gameplay.ui")
 
-local ItemService = {}
+local ItemEffects = {}
+
 local find_missile_target -- forward declare
 
 local function get_service(game, key)
@@ -27,10 +28,7 @@ for _, cfg in ipairs(items_cfg) do
   cfg_by_id[cfg.id] = cfg
 end
 
-local item_handlers = {}
-local post_consume_handlers = {}
-
-function ItemService.item_name(item_id)
+function ItemEffects.item_name(item_id)
   local cfg = cfg_by_id[item_id]
   return (cfg and cfg.name) or tostring(item_id)
 end
@@ -41,7 +39,7 @@ local function find_item_index(player, item_id)
   end)
 end
 
-local function consume_item(player, item_id)
+function ItemEffects.consume_item(player, item_id)
   local idx = find_item_index(player, item_id)
   if idx then
     player.inventory:remove_by_index(idx)
@@ -50,107 +48,26 @@ local function consume_item(player, item_id)
   return false
 end
 
-ItemService.consume_item = consume_item
-
-function ItemService.draw_random_item(rng)
+function ItemEffects.draw_random_item(rng)
   return random.weighted_choice(items_cfg, "weight", rng)
 end
 
-function ItemService.give_item(player, item_id)
+function ItemEffects.give_item(player, item_id)
   if player.inventory:is_full() then
     logger.warn(player.name .. " 的背包已满，无法获得道具 " .. item_id)
     return false
   end
   player.inventory:add({ id = item_id })
-  logger.event(player.name .. " 获得道具 " .. ItemService.item_name(item_id))
+  logger.event(player.name .. " 获得道具 " .. ItemEffects.item_name(item_id))
   return true
 end
 
-function ItemService.draw_and_give(player, rng)
-  local cfg = ItemService.draw_random_item(rng)
+function ItemEffects.draw_and_give(player, rng)
+  local cfg = ItemEffects.draw_random_item(rng)
   if not cfg then
     return
   end
-  ItemService.give_item(player, cfg.id)
-end
-
-function ItemService.auto_pre_action(game, player)
-  -- 清障卡：若前方 12 格有障碍则使用
-  if find_item_index(player, 2006) then
-    if ItemService.has_obstacles_ahead(game, player, 12) then
-      local res = ItemService.use_item(game, player, 2006)
-      if type(res) == "table" and res.waiting then
-        return res
-      end
-    end
-  end
-
-  -- 遥控骰子：自动设为最高点数
-  if find_item_index(player, 2002) then
-    local res = ItemService.use_item(game, player, 2002)
-    if type(res) == "table" and res.waiting then
-      return res
-    end
-  end
-
-  -- 骰子加倍：有就用
-  if find_item_index(player, 2003) then
-    local res = ItemService.use_item(game, player, 2003)
-    if type(res) == "table" and res.waiting then
-      return res
-    end
-  end
-
-  -- 路障：自动放置前方 3 格内最近空位
-  if find_item_index(player, 2004) then
-    local res = ItemService.use_item(game, player, 2004)
-    if type(res) == "table" and res.waiting then
-      return res
-    end
-  end
-
-  -- 怪兽卡：若前后 3 格内有他人建筑则使用
-  if find_item_index(player, 2008) and ItemService.find_monster_target(game, player, 3) then
-    local res = ItemService.use_item(game, player, 2008)
-    if type(res) == "table" and res.waiting then
-      return res
-    end
-  end
-
-  -- 导弹卡：若前后 3 格有可轰炸目标则使用
-  if find_item_index(player, 2013) and find_missile_target(game, player, 3) then
-    local res = ItemService.use_item(game, player, 2013)
-    if type(res) == "table" and res.waiting then
-      return res
-    end
-  end
-
-  -- 财神/天使/穷神：优先自用财神/天使
-  if find_item_index(player, 2017) then
-    local res = ItemService.use_item(game, player, 2017)
-    if type(res) == "table" and res.waiting then
-      return res
-    end
-  elseif find_item_index(player, 2019) then
-    local res = ItemService.use_item(game, player, 2019)
-    if type(res) == "table" and res.waiting then
-      return res
-    end
-  end
-end
-
-function ItemService.has_obstacles_ahead(game, player, distance)
-  local board = game.board
-  local parity = 1
-  local current = player.position
-  for _ = 1, distance do
-    local next_index = board:advance(current, 1, parity)
-    current = next_index
-    if game.overlays.roadblocks[current] or game.overlays.mines[current] then
-      return true
-    end
-  end
-  return false
+  ItemEffects.give_item(player, cfg.id)
 end
 
 local function indices_in_range(board, start, distance)
@@ -179,7 +96,7 @@ local function indices_in_range(board, start, distance)
   return list
 end
 
-function ItemService.find_monster_target(game, player, distance)
+function ItemEffects.find_monster_target(game, player, distance)
   distance = distance or 3
   local board = game.board
   local best_idx = nil
@@ -203,8 +120,8 @@ local function destroy_building(tile)
   end
 end
 
-function ItemService.use_monster(game, player, distance)
-  local idx = ItemService.find_monster_target(game, player, distance)
+function ItemEffects.use_monster(game, player, distance)
+  local idx = ItemEffects.find_monster_target(game, player, distance)
   if not idx then
     logger.warn(player.name .. " 前后无可拆除建筑，怪兽卡未生效")
     return false
@@ -270,7 +187,7 @@ local function clear_overlays(game, idx)
   end
 end
 
-function ItemService.apply_missile(game, player, idx)
+function ItemEffects.apply_missile(game, player, idx)
   clear_overlays(game, idx)
   local tile = game.board:get_tile(idx)
   destroy_building(tile)
@@ -286,7 +203,7 @@ function ItemService.apply_missile(game, player, idx)
   UI.push_popup(game, { title = "导弹卡", body = msg })
 end
 
-function ItemService.use_missile(game, player, distance)
+function ItemEffects.use_missile(game, player, distance)
   local best_idx = find_missile_target(game, player, distance)
   if not best_idx then
     logger.warn(player.name .. " 前后无可轰炸目标，导弹卡未生效")
@@ -317,14 +234,14 @@ function ItemService.use_missile(game, player, distance)
     end
   end
 
-  if not consume_item(player, 2013) then
+  if not ItemEffects.consume_item(player, 2013) then
     return false
   end
-  ItemService.apply_missile(game, player, best_idx)
+  ItemEffects.apply_missile(game, player, best_idx)
   return true
 end
 
-function ItemService.apply_target_item_effect(game, player, item_id, target)
+function ItemEffects.apply_target_item_effect(game, player, item_id, target)
   if item_id == 2011 then
     local total = player.cash + target.cash
     local half = math.floor(total / 2)
@@ -430,7 +347,7 @@ local function handle_target_player_item(game, player, item_id)
     end
     Choice.open(game, {
       kind = "item_target_player",
-      title = ItemService.item_name(item_id) .. "：选择目标玩家",
+      title = ItemEffects.item_name(item_id) .. "：选择目标玩家",
       body_lines = body_lines,
       options = options,
       allow_cancel = true,
@@ -441,22 +358,25 @@ local function handle_target_player_item(game, player, item_id)
   end
 
   local target = candidates[1]
-  local ok = ItemService.apply_target_item_effect(game, player, item_id, target)
+  local ok = ItemEffects.apply_target_item_effect(game, player, item_id, target)
   if ok then
-    consume_item(player, item_id)
+    ItemEffects.consume_item(player, item_id)
   end
   return ok
 end
 
+local item_handlers = {}
+local post_consume_handlers = {}
+
 item_handlers[2008] = function(game, player, item_id)
-  if not ItemService.find_monster_target(game, player, 3) then
+  if not ItemEffects.find_monster_target(game, player, 3) then
     logger.warn(player.name .. " 前后无他人建筑，怪兽卡未使用")
     return false
   end
-  if not consume_item(player, item_id) then
+  if not ItemEffects.consume_item(player, item_id) then
     return false
   end
-  return ItemService.use_monster(game, player, 3)
+  return ItemEffects.use_monster(game, player, 3)
 end
 
 item_handlers[2013] = function(game, player, _item_id)
@@ -464,7 +384,7 @@ item_handlers[2013] = function(game, player, _item_id)
     logger.warn(player.name .. " 前后无轰炸目标，导弹卡未使用")
     return false
   end
-  return ItemService.use_missile(game, player, 3)
+  return ItemEffects.use_missile(game, player, 3)
 end
 
 for _, id in ipairs({ 2011, 2012, 2014, 2015, 2016, 2018 }) do
@@ -495,8 +415,21 @@ post_consume_handlers[2003] = function(_, player)
 end
 
 post_consume_handlers[2004] = function(game, player)
-  ItemService.place_roadblock(game, player)
-  return true
+  local board = game.board
+  local current = player.position
+  local parity = 1
+  for _ = 1, 3 do
+    local next_index = board:advance(current, 1, parity)
+    current = next_index
+    if not game.overlays.roadblocks[current] and not game.overlays.mines[current] then
+      game.overlays.roadblocks[current] = true
+      logger.event(player.name .. " 放置路障在 " .. board:get_tile(current).name)
+      UI.push_popup(game, { title = "放置路障", body = player.name .. " 在 " .. board:get_tile(current).name .. " 设置了路障" })
+      return true
+    end
+  end
+  logger.warn("未找到可放置路障的位置")
+  return false
 end
 
 post_consume_handlers[2005] = function(game, player)
@@ -507,7 +440,23 @@ post_consume_handlers[2005] = function(game, player)
 end
 
 post_consume_handlers[2006] = function(game, player)
-  ItemService.clear_obstacles(game, player, 12)
+  local board = game.board
+  local cleared = 0
+  local current = player.position
+  local parity = 1
+  for _ = 1, 12 do
+    local next_index = board:advance(current, 1, parity)
+    current = next_index
+    if game.overlays.roadblocks[current] then
+      game.overlays.roadblocks[current] = nil
+      cleared = cleared + 1
+    end
+    if game.overlays.mines[current] then
+      game.overlays.mines[current] = nil
+      cleared = cleared + 1
+    end
+  end
+  logger.event(player.name .. " 清除前方障碍数：" .. cleared)
   return true
 end
 
@@ -527,8 +476,8 @@ post_consume_handlers[2010] = function(_, player)
   return true
 end
 
-post_consume_handlers[2017] = function(_, player)
-  local status = status_service(_)
+post_consume_handlers[2017] = function(game, player)
+  local status = status_service(game)
   if not status then
     logger.warn("缺少 StatusService，无法附身财神")
     return false
@@ -537,8 +486,8 @@ post_consume_handlers[2017] = function(_, player)
   return true
 end
 
-post_consume_handlers[2019] = function(_, player)
-  local status = status_service(_)
+post_consume_handlers[2019] = function(game, player)
+  local status = status_service(game)
   if not status then
     logger.warn("缺少 StatusService，无法附身天使")
     return false
@@ -547,17 +496,18 @@ post_consume_handlers[2019] = function(_, player)
   return true
 end
 
-function ItemService.use_item(game, player, item_id, context)
+function ItemEffects.use_item(game, player, item_id, context)
   local cfg = cfg_by_id[item_id]
   if not cfg then
     return false
   end
+
   local handler = item_handlers[item_id]
   if handler then
     return handler(game, player, item_id, context)
   end
 
-  local consumed = consume_item(player, item_id)
+  local consumed = ItemEffects.consume_item(player, item_id)
   if not consumed then
     return false
   end
@@ -575,44 +525,107 @@ function ItemService.use_item(game, player, item_id, context)
   return false
 end
 
-function ItemService.place_roadblock(game, player)
+function ItemEffects.has_obstacles_ahead(game, player, distance)
   local board = game.board
-  local current = player.position
   local parity = 1
-  for _ = 1, 3 do
-    local next_index = board:advance(current, 1, parity)
-    current = next_index
-    if not game.overlays.roadblocks[current] and not game.overlays.mines[current] then
-      game.overlays.roadblocks[current] = true
-      logger.event(player.name .. " 放置路障在 " .. board:get_tile(current).name)
-      UI.push_popup(game, { title = "放置路障", body = player.name .. " 在 " .. board:get_tile(current).name .. " 设置了路障" })
-      return
-    end
-  end
-  logger.warn("未找到可放置路障的位置")
-end
-
-function ItemService.clear_obstacles(game, player, distance)
-  local board = game.board
-  local cleared = 0
   local current = player.position
-  local parity = 1
   for _ = 1, distance do
     local next_index = board:advance(current, 1, parity)
     current = next_index
-    if game.overlays.roadblocks[current] then
-      game.overlays.roadblocks[current] = nil
-      cleared = cleared + 1
-    end
-    if game.overlays.mines[current] then
-      game.overlays.mines[current] = nil
-      cleared = cleared + 1
+    if game.overlays.roadblocks[current] or game.overlays.mines[current] then
+      return true
     end
   end
-  logger.event(player.name .. " 清除前方障碍数：" .. cleared)
+  return false
 end
 
-function ItemService.handle_pass_players(game, player, encountered_ids)
+function ItemEffects.auto_pre_action(game, player)
+  -- 清障卡：若前方 12 格有障碍则使用
+  if find_item_index(player, 2006) then
+    if ItemEffects.has_obstacles_ahead(game, player, 12) then
+      local res = ItemEffects.use_item(game, player, 2006)
+      if type(res) == "table" and res.waiting then
+        return res
+      end
+    end
+  end
+
+  -- 遥控骰子：自动设为最高点数
+  if find_item_index(player, 2002) then
+    local res = ItemEffects.use_item(game, player, 2002)
+    if type(res) == "table" and res.waiting then
+      return res
+    end
+  end
+
+  -- 骰子加倍：有就用
+  if find_item_index(player, 2003) then
+    local res = ItemEffects.use_item(game, player, 2003)
+    if type(res) == "table" and res.waiting then
+      return res
+    end
+  end
+
+  -- 路障：自动放置前方 3 格内最近空位
+  if find_item_index(player, 2004) then
+    local res = ItemEffects.use_item(game, player, 2004)
+    if type(res) == "table" and res.waiting then
+      return res
+    end
+  end
+
+  -- 怪兽卡：若前后 3 格内有他人建筑则使用
+  if find_item_index(player, 2008) and ItemEffects.find_monster_target(game, player, 3) then
+    local res = ItemEffects.use_item(game, player, 2008)
+    if type(res) == "table" and res.waiting then
+      return res
+    end
+  end
+
+  -- 导弹卡：若前后 3 格有可轰炸目标则使用
+  if find_item_index(player, 2013) and find_missile_target(game, player, 3) then
+    local res = ItemEffects.use_item(game, player, 2013)
+    if type(res) == "table" and res.waiting then
+      return res
+    end
+  end
+
+  -- 财神/天使/穷神：优先自用财神/天使
+  if find_item_index(player, 2017) then
+    local res = ItemEffects.use_item(game, player, 2017)
+    if type(res) == "table" and res.waiting then
+      return res
+    end
+  elseif find_item_index(player, 2019) then
+    local res = ItemEffects.use_item(game, player, 2019)
+    if type(res) == "table" and res.waiting then
+      return res
+    end
+  end
+end
+
+function ItemEffects.steal_item_at_index(game, player, target, item_idx)
+  local inv = target.inventory
+  if inv:count() == 0 then
+    logger.warn(target.name .. " 没有可偷道具")
+    return nil
+  end
+  local stolen = inv:remove_by_index(item_idx or 1)
+  if not stolen then
+    return nil
+  end
+  if player.inventory:is_full() then
+    logger.warn(player.name .. " 背包已满，偷窃道具被销毁")
+    return nil
+  end
+  player.inventory:add(stolen)
+  ItemEffects.consume_item(player, 2007)
+  logger.event(player.name .. " 使用偷窃卡，从 " .. target.name .. " 偷走道具 " .. ItemEffects.item_name(stolen.id))
+  UI.push_popup(game, { title = "偷窃成功", body = player.name .. " 从 " .. target.name .. " 偷走了 " .. ItemEffects.item_name(stolen.id) })
+  return stolen
+end
+
+function ItemEffects.handle_pass_players(game, player, encountered_ids)
   if #encountered_ids == 0 then
     return
   end
@@ -636,20 +649,20 @@ function ItemService.handle_pass_players(game, player, encountered_ids)
     return
   end
   if not game or not game.ui_enabled then
-    ItemService.steal_item_at_index(game, player, candidates[1], 1)
+    ItemEffects.steal_item_at_index(game, player, candidates[1], 1)
     return nil
   end
 
   if #candidates == 1 then
     local target = candidates[1]
     if target.inventory:count() <= 1 then
-      ItemService.steal_item_at_index(game, player, target, 1)
+      ItemEffects.steal_item_at_index(game, player, target, 1)
       return nil
     end
     local options = {}
     local body_lines = {}
     for idx, it in ipairs(target.inventory.items) do
-      local label = ItemService.item_name(it.id)
+      local label = ItemEffects.item_name(it.id)
       table.insert(body_lines, idx .. ". " .. label)
       table.insert(options, { id = idx, label = label })
     end
@@ -683,45 +696,124 @@ function ItemService.handle_pass_players(game, player, encountered_ids)
   return { waiting = true }
 end
 
-function ItemService.steal_item_at_index(game, player, target, item_idx)
-  local inv = target.inventory
-  if inv:count() == 0 then
-    logger.warn(target.name .. " 没有可偷道具")
-    return nil
+local function as_number(v)
+  if type(v) == "number" then
+    return v
   end
-  local stolen = inv:remove_by_index(item_idx or 1)
-  if not stolen then
-    return nil
+  if type(v) == "string" then
+    local n = tonumber(v)
+    return n
   end
-  if player.inventory:is_full() then
-    logger.warn(player.name .. " 背包已满，偷窃道具被销毁")
-    return nil
-  end
-  player.inventory:add(stolen)
-  consume_item(player, 2007)
-  logger.event(player.name .. " 使用偷窃卡，从 " .. target.name .. " 偷走道具 " .. ItemService.item_name(stolen.id))
-  UI.push_popup(game, { title = "偷窃成功", body = player.name .. " 从 " .. target.name .. " 偷走了 " .. ItemService.item_name(stolen.id) })
-  return stolen
+  return nil
 end
 
--- PR4 (items): centralize rule logic into effects/item.lua, keep service as a thin facade.
-local ItemEffects = require("src.gameplay.effects.item")
-ItemService.item_name = ItemEffects.item_name
-ItemService.consume_item = ItemEffects.consume_item
-ItemService.draw_random_item = ItemEffects.draw_random_item
-ItemService.give_item = ItemEffects.give_item
-ItemService.draw_and_give = ItemEffects.draw_and_give
-ItemService.auto_pre_action = ItemEffects.auto_pre_action
-ItemService.has_obstacles_ahead = ItemEffects.has_obstacles_ahead
-ItemService.find_monster_target = ItemEffects.find_monster_target
-ItemService.use_monster = ItemEffects.use_monster
-ItemService.apply_missile = ItemEffects.apply_missile
-ItemService.use_missile = ItemEffects.use_missile
-ItemService.apply_target_item_effect = ItemEffects.apply_target_item_effect
-ItemService.use_item = ItemEffects.use_item
-ItemService.handle_pass_players = ItemEffects.handle_pass_players
-ItemService.steal_item_at_index = ItemEffects.steal_item_at_index
-ItemService.resolve_choice = ItemEffects.resolve_choice
+local function is_cancel(action)
+  return not action or action.type == "choice_cancel" or action.option_id == nil
+end
 
-return ItemService
+-- Centralize item-related choice resolution.
+-- Returns { handled=true, stay=? } if handled; otherwise nil.
+function ItemEffects.resolve_choice(game, choice, action)
+  if not game or not choice then
+    return nil
+  end
 
+  if choice.kind == "missile_target" then
+    if is_cancel(action) then
+      Choice.clear(game)
+      return { handled = true, stay = false }
+    end
+
+    local idx = as_number(action.option_id)
+    local meta = choice.meta or {}
+    local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+    if idx and player then
+      ItemEffects.consume_item(player, 2013)
+      ItemEffects.apply_missile(game, player, idx)
+    end
+    Choice.clear(game)
+    return { handled = true, stay = false }
+  end
+
+  if choice.kind == "steal_target" then
+    if is_cancel(action) then
+      Choice.clear(game)
+      return { handled = true, stay = false }
+    end
+
+    local target_id = as_number(action.option_id)
+    local meta = choice.meta or {}
+    local stealer = meta.stealer_id and game.players[meta.stealer_id] or game:current_player()
+    local target = target_id and game.players[target_id]
+    if not stealer or not target or target.eliminated then
+      Choice.clear(game)
+      return { handled = true, stay = false }
+    end
+
+    if target.inventory:count() <= 1 then
+      ItemEffects.steal_item_at_index(game, stealer, target, 1)
+      Choice.clear(game)
+      return { handled = true, stay = false }
+    end
+
+    local lines = {}
+    local options = {}
+    for i, it in ipairs(target.inventory.items) do
+      local label = ItemEffects.item_name(it.id)
+      table.insert(lines, i .. ". " .. label)
+      table.insert(options, { id = i, label = label })
+    end
+    Choice.open(game, {
+      kind = "steal_item",
+      title = "选择要偷的道具",
+      body_lines = lines,
+      options = options,
+      allow_cancel = true,
+      cancel_label = "取消",
+      meta = { stealer_id = stealer.id, target_id = target.id },
+    })
+    return { handled = true, stay = true }
+  end
+
+  if choice.kind == "steal_item" then
+    if is_cancel(action) then
+      Choice.clear(game)
+      return { handled = true, stay = false }
+    end
+
+    local idx = as_number(action.option_id)
+    local meta = choice.meta or {}
+    local stealer = meta.stealer_id and game.players[meta.stealer_id] or game:current_player()
+    local target = meta.target_id and game.players[meta.target_id]
+    if stealer and target and idx then
+      ItemEffects.steal_item_at_index(game, stealer, target, idx)
+    end
+    Choice.clear(game)
+    return { handled = true, stay = false }
+  end
+
+  if choice.kind == "item_target_player" then
+    if is_cancel(action) then
+      Choice.clear(game)
+      return { handled = true, stay = false }
+    end
+
+    local target_id = as_number(action.option_id)
+    local meta = choice.meta or {}
+    local item_id = meta.item_id
+    local user = meta.user_id and game.players[meta.user_id] or game:current_player()
+    local target = target_id and game.players[target_id]
+    if user and target and item_id then
+      local ok = ItemEffects.apply_target_item_effect(game, user, item_id, target)
+      if ok then
+        ItemEffects.consume_item(user, item_id)
+      end
+    end
+    Choice.clear(game)
+    return { handled = true, stay = false }
+  end
+
+  return nil
+end
+
+return ItemEffects

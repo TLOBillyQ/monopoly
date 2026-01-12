@@ -4,8 +4,9 @@ package.path = "src/?.lua;src/?/init.lua;src/gameplay/?.lua;src/gameplay/?/init.
 local App = require("src.app")
 local MovementService = require("src.gameplay.services.movement_service")
 local ItemService = require("src.gameplay.services.item_service")
-local LandResolver = require("src.gameplay.land_resolver")
+local LandingResolver = require("src.gameplay.landing_resolver")
 local Choice = require("src.gameplay.choice")
+local ChoiceResolver = require("src.gameplay.choice_resolver")
 
 local function assert_eq(a, b, msg)
   if a ~= b then
@@ -26,12 +27,33 @@ local function first_land_tile(board)
   error("no land tile found")
 end
 
+local function first_tile_by_type(board, t)
+  for idx, tile in ipairs(board.path) do
+    if tile.type == t then
+      return idx, tile
+    end
+  end
+  error("no tile found for type=" .. tostring(t))
+end
+
 local function test_pass_start()
   local g = new_game()
   local p = g:current_player()
   p.position = g.board:length()
   local res = MovementService.move(g, p, 2, { branch_parity = 2 })
   assert_eq(res.passed_start, 1, "pass_start bonus")
+end
+
+local function test_land_on_start_reward()
+  local g = new_game()
+  g.ui_enabled = false
+  local p = g:current_player()
+  local idx = first_tile_by_type(g.board, "start")
+  g:update_player_position(p, idx)
+  local before = p.cash
+  local res = LandingResolver.resolve(g, p, g.board:get_tile(idx), {})
+  assert(not res, "landing resolver should not wait")
+  assert(p.cash > before, "landing on start should grant reward")
 end
 
 local function test_roadblock_stop()
@@ -81,8 +103,8 @@ local function test_land_optional_waits_with_ui()
   local p = g:current_player()
   local idx, tile = first_land_tile(g.board)
   g:update_player_position(p, idx)
-  local res = LandResolver.resolve(g, p, tile, {})
-  assert(res and res.waiting, "land resolver should wait when UI enabled")
+  local res = LandingResolver.resolve(g, p, tile, {})
+  assert(res and res.waiting, "landing resolver should wait when UI enabled")
   local pending = Choice.get(g)
   assert(pending and pending.kind == "land_optional_effect", "pending choice for land optional")
 end
@@ -94,19 +116,64 @@ local function test_land_optional_auto_without_ui()
   local idx, tile = first_land_tile(g.board)
   g:update_player_position(p, idx)
   local before_cash = p.cash
-  local res = LandResolver.resolve(g, p, tile, {})
-  assert(not res, "land resolver should not wait without UI")
+  local res = LandingResolver.resolve(g, p, tile, {})
+  assert(not res, "landing resolver should not wait without UI")
   assert(tile.owner_id == p.id, "land should be auto purchased")
   assert(p.cash < before_cash, "cash deducted for purchase")
 end
 
+local function test_land_optional_stale_choice_is_blocked()
+  local g = new_game()
+  g.ui_enabled = true
+  local p = g:current_player()
+  local idx, tile = first_land_tile(g.board)
+  g:update_player_position(p, idx)
+  local res = LandingResolver.resolve(g, p, tile, {})
+  assert(res and res.waiting, "should open choice")
+  local pending = Choice.get(g)
+  assert(pending and pending.kind == "land_optional_effect", "pending choice expected")
+
+  -- Invalidate the option after choice is shown (simulate state change).
+  p.cash = 0
+
+  ChoiceResolver.resolve(g, pending, { option_id = "buy_land" })
+  assert(tile.owner_id == nil, "stale buy_land should be blocked")
+end
+
+local function test_chance_is_mandatory_effect_entrypoint()
+  local g = new_game()
+  g.ui_enabled = false
+  local p = g:current_player()
+  local idx, tile = first_tile_by_type(g.board, "chance")
+  g:update_player_position(p, idx)
+
+  local called = { draw = 0, resolve = 0 }
+  g.services.chance = {
+    draw_card = function()
+      called.draw = called.draw + 1
+      return { description = "stub", effect = "add_cash", amount = 0 }
+    end,
+    resolve = function()
+      called.resolve = called.resolve + 1
+    end,
+  }
+
+  local res = LandingResolver.resolve(g, p, tile, {})
+  assert(not res, "chance landing should not wait")
+  assert_eq(called.draw, 1, "chance draw called")
+  assert_eq(called.resolve, 1, "chance resolve called")
+end
+
 local tests = {
   test_pass_start,
+  test_land_on_start_reward,
   test_roadblock_stop,
   test_monster_card,
   test_missile_card,
   test_land_optional_waits_with_ui,
   test_land_optional_auto_without_ui,
+  test_land_optional_stale_choice_is_blocked,
+  test_chance_is_mandatory_effect_entrypoint,
 }
 
 for _, fn in ipairs(tests) do

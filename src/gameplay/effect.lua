@@ -6,7 +6,7 @@ Effect.__index = Effect
 local function can_apply(effect, ctx)
   if effect.can_apply then
     local ok, reason = effect.can_apply(ctx)
-    return ok, reason
+    return ok == true, reason
   end
   return true, nil
 end
@@ -17,19 +17,43 @@ local function apply(effect, ctx)
   end
 end
 
--- Scan available effects for a given context
+-- Scan effects for a given context, keeping disabled reasons for UI.
+-- Returns entries like: { id, label, mandatory, ok, reason, effect }
+function Effect.scan(effect_defs, ctx)
+  local entries = {}
+  for _, eff in ipairs(effect_defs or {}) do
+    local ok, reason = can_apply(eff, ctx)
+    table.insert(entries, {
+      id = eff.id,
+      label = eff.label or eff.id,
+      mandatory = eff.mandatory == true,
+      ok = ok,
+      reason = reason,
+      effect = eff,
+    })
+  end
+  return entries
+end
+
+-- Backward-compatible: list only available effects.
 function Effect.list(effect_defs, ctx)
   local available = {}
-  for _, eff in ipairs(effect_defs) do
-    local ok = true
-    if eff.can_apply then
-      ok = eff.can_apply(ctx)
-    end
-    if ok then
-      table.insert(available, eff)
+  for _, entry in ipairs(Effect.scan(effect_defs, ctx)) do
+    if entry.ok then
+      table.insert(available, entry.effect)
     end
   end
   return available
+end
+
+-- Execute a single effect with a mandatory re-check (prevents stale choice).
+-- Returns { ok=true, result=? } or { ok=false, reason=? }.
+function Effect.execute(effect, ctx)
+  local ok, reason = can_apply(effect, ctx)
+  if not ok then
+    return { ok = false, reason = reason }
+  end
+  return { ok = true, result = apply(effect, ctx) }
 end
 
 -- Apply mandatory first, then optional via chooser callback
@@ -45,7 +69,7 @@ function Effect.resolve(effect_defs, ctx, choose_fn)
   end
 
   for _, eff in ipairs(mandatory) do
-    apply(eff, ctx)
+    Effect.execute(eff, ctx)
   end
 
   if #optional == 0 then
@@ -55,12 +79,12 @@ function Effect.resolve(effect_defs, ctx, choose_fn)
   if choose_fn then
     choose_fn(optional, function(chosen)
       if chosen then
-        apply(chosen, ctx)
+        Effect.execute(chosen, ctx)
       end
     end)
   else
     -- default: take first optional
-    apply(optional[1], ctx)
+    Effect.execute(optional[1], ctx)
   end
 end
 
