@@ -10,6 +10,14 @@ local phase_end_fn = require("src.gameplay.app.turn.end_turn")
 local TurnManager = {}
 TurnManager.__index = TurnManager
 
+local PHASES = {
+  start = { phase = "start", fn = phase_start_fn },
+  roll = { phase = "roll", fn = phase_roll_fn },
+  move = { phase = "move", fn = phase_move_fn },
+  land = { phase = "land", fn = phase_land_fn },
+  end_turn = { phase = "end_turn", fn = phase_end_fn },
+}
+
 function TurnManager.new(game)
   local tm = {
     game = game,
@@ -17,26 +25,6 @@ function TurnManager.new(game)
     pending_action = nil,
   }
   return setmetatable(tm, TurnManager)
-end
-
-local function phase_start(tm)
-  return phase_start_fn(tm)
-end
-
-local function phase_roll(tm, args)
-  return phase_roll_fn(tm, args)
-end
-
-local function phase_move(tm, args)
-  return phase_move_fn(tm, args)
-end
-
-local function phase_land(tm, args)
-  return phase_land_fn(tm, args)
-end
-
-local function phase_end(tm, args)
-  return phase_end_fn(tm, args)
 end
 
 function TurnManager:dispatch(action)
@@ -57,57 +45,42 @@ function TurnManager:dispatch(action)
 end
 
 function TurnManager:_build_flow()
-  return Flow.new({
-    start = "start",
-    states = {
-      start = function(args)
-        self.game.store:set({ "turn", "phase" }, "start")
-        return phase_start(self, args)
-      end,
-      roll = function(args)
-        self.game.store:set({ "turn", "phase" }, "roll")
-        return phase_roll(self, args)
-      end,
-      move = function(args)
-        self.game.store:set({ "turn", "phase" }, "move")
-        return phase_move(self, args)
-      end,
-      land = function(args)
-        self.game.store:set({ "turn", "phase" }, "land")
-        return phase_land(self, args)
-      end,
-      wait_choice = function(args)
-        self.game.store:set({ "turn", "phase" }, "wait_choice")
-        local choice = Choice.get(self.game)
-        -- If we are in wait_choice but the choice has been cleared externally,
-        -- resume immediately to avoid a tight loop that can freeze auto-play.
-        if not choice then
-          self.pending_action = nil
-          return (args and args.resume_state) or "end_turn", (args and args.resume_args) or {}
-        end
+  local states = {}
+  for name, spec in pairs(PHASES) do
+    states[name] = function(args)
+      self.game.store:set({ "turn", "phase" }, spec.phase)
+      return spec.fn(self, args)
+    end
+  end
 
-        if not self.pending_action then
-          return "wait_choice", args
-        end
-        local action = self.pending_action
-        self.pending_action = nil
+  states.wait_choice = function(args)
+    self.game.store:set({ "turn", "phase" }, "wait_choice")
+    local choice = Choice.get(self.game)
+    -- If we are in wait_choice but the choice has been cleared externally,
+    -- resume immediately to avoid a tight loop that can freeze auto-play.
+    if not choice then
+      self.pending_action = nil
+      return (args and args.resume_state) or "end_turn", (args and args.resume_args) or {}
+    end
 
-        -- Ignore stale actions targeting a different choice id.
-        if action.choice_id and choice.id and action.choice_id ~= choice.id then
-          return "wait_choice", args
-        end
-        local res = ChoiceResolver.resolve(self.game, choice, action)
-        if res and res.stay then
-          return "wait_choice", args
-        end
-        return args and args.resume_state, args and args.resume_args
-      end,
-      end_turn = function(args)
-        self.game.store:set({ "turn", "phase" }, "end_turn")
-        return phase_end(self, args)
-      end,
-    },
-  })
+    if not self.pending_action then
+      return "wait_choice", args
+    end
+    local action = self.pending_action
+    self.pending_action = nil
+
+    -- Ignore stale actions targeting a different choice id.
+    if action.choice_id and choice.id and action.choice_id ~= choice.id then
+      return "wait_choice", args
+    end
+    local res = ChoiceResolver.resolve(self.game, choice, action)
+    if res and res.stay then
+      return "wait_choice", args
+    end
+    return args and args.resume_state, args and args.resume_args
+  end
+
+  return Flow.new({ start = "start", states = states })
 end
 
 function TurnManager:next_player()

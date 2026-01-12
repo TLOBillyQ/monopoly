@@ -48,10 +48,6 @@ local function find_effect_by_id(effect_defs, effect_id)
   return nil
 end
 
-local function get_service(game, key)
-  return game and game.services and game.services[key]
-end
-
 local function as_number(v)
   if type(v) == "number" then
     return v
@@ -67,6 +63,138 @@ local function is_cancel(action)
   return not action or action.type == "choice_cancel" or action.option_id == nil
 end
 
+local function open_steal_item_choice(game, stealer, target)
+  local lines = {}
+  local options = {}
+  for i, it in ipairs(target.inventory.items) do
+    local label = ItemEffects.item_name(it.id)
+    table.insert(lines, i .. ". " .. label)
+    table.insert(options, { id = i, label = label })
+  end
+  Choice.open(game, {
+    kind = "steal_item",
+    title = "选择要偷的道具",
+    body_lines = lines,
+    options = options,
+    allow_cancel = true,
+    cancel_label = "取消",
+    meta = { stealer_id = stealer.id, target_id = target.id },
+  })
+end
+
+local handlers = {}
+
+handlers.land_optional_effect = function(game, choice, action)
+  local effect_id = action.option_id
+  if not effect_id then
+    Choice.clear(game)
+    return { stay = false }
+  end
+  local meta = choice.meta or {}
+
+  if meta.effect_ids and not contains(meta.effect_ids, effect_id) then
+    logger.warn("land_optional_effect: effect not in offered list:", tostring(effect_id))
+    Choice.clear(game)
+    return { stay = false }
+  end
+
+  local effect_defs = get_container_defs_by_choice_kind(choice.kind)
+  local target_eff = find_effect_by_id(effect_defs, effect_id)
+  if not target_eff then
+    logger.warn("land_optional_effect: effect id not found:", tostring(effect_id))
+    Choice.clear(game)
+    return { stay = false }
+  end
+
+  local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+  local tile = meta.tile_id and game.board:get_tile_by_id(meta.tile_id) or (player and game.board:get_tile(player.position))
+  local move_result = meta.move_result or (game.last_turn and game.last_turn.move_result) or nil
+  local ctx = build_effect_ctx(game, player, tile, move_result)
+
+  local res = Effect.execute(target_eff, ctx)
+  if not res or res.ok ~= true then
+    logger.warn("land_optional_effect execute blocked:", tostring(res and res.reason))
+  end
+  Choice.clear(game)
+  return { stay = false }
+end
+
+handlers.missile_target = function(game, choice, action)
+  if is_cancel(action) then
+    Choice.clear(game)
+    return { stay = false }
+  end
+  local idx = as_number(action.option_id)
+  local meta = choice.meta or {}
+  local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+  if idx and player then
+    ItemEffects.consume_item(player, 2013)
+    ItemEffects.apply_missile(game, player, idx)
+  end
+  Choice.clear(game)
+  return { stay = false }
+end
+
+handlers.steal_target = function(game, choice, action)
+  if is_cancel(action) then
+    Choice.clear(game)
+    return { stay = false }
+  end
+  local target_id = as_number(action.option_id)
+  local meta = choice.meta or {}
+  local stealer = meta.stealer_id and game.players[meta.stealer_id] or game:current_player()
+  local target = target_id and game.players[target_id]
+  if not stealer or not target or target.eliminated then
+    Choice.clear(game)
+    return { stay = false }
+  end
+
+  if target.inventory:count() <= 1 then
+    ItemEffects.steal_item_at_index(game, stealer, target, 1)
+    Choice.clear(game)
+    return { stay = false }
+  end
+
+  open_steal_item_choice(game, stealer, target)
+  return { stay = true }
+end
+
+handlers.steal_item = function(game, choice, action)
+  if is_cancel(action) then
+    Choice.clear(game)
+    return { stay = false }
+  end
+  local idx = as_number(action.option_id)
+  local meta = choice.meta or {}
+  local stealer = meta.stealer_id and game.players[meta.stealer_id] or game:current_player()
+  local target = meta.target_id and game.players[meta.target_id]
+  if stealer and target and idx then
+    ItemEffects.steal_item_at_index(game, stealer, target, idx)
+  end
+  Choice.clear(game)
+  return { stay = false }
+end
+
+handlers.item_target_player = function(game, choice, action)
+  if is_cancel(action) then
+    Choice.clear(game)
+    return { stay = false }
+  end
+  local target_id = as_number(action.option_id)
+  local meta = choice.meta or {}
+  local item_id = meta.item_id
+  local user = meta.user_id and game.players[meta.user_id] or game:current_player()
+  local target = target_id and game.players[target_id]
+  if user and target and item_id then
+    local ok = ItemEffects.apply_target_item_effect(game, user, item_id, target)
+    if ok then
+      ItemEffects.consume_item(user, item_id)
+    end
+  end
+  Choice.clear(game)
+  return { stay = false }
+end
+
 function Resolver.resolve(game, choice, action)
   if not game or not choice then
     return { stay = false }
@@ -77,135 +205,9 @@ function Resolver.resolve(game, choice, action)
     return { stay = false }
   end
 
-  if choice.kind == "land_optional_effect" then
-    local effect_id = action.option_id
-    if effect_id then
-      local meta = choice.meta or {}
-
-      -- Reject effects not present when the choice was opened.
-      if meta.effect_ids and not contains(meta.effect_ids, effect_id) then
-        logger.warn("land_optional_effect: effect not in offered list:", tostring(effect_id))
-        Choice.clear(game)
-        return { stay = false }
-      end
-
-      local effect_defs = get_container_defs_by_choice_kind(choice.kind)
-      local target_eff = find_effect_by_id(effect_defs, effect_id)
-      if not target_eff then
-        logger.warn("land_optional_effect: effect id not found:", tostring(effect_id))
-        Choice.clear(game)
-        return { stay = false }
-      end
-
-      local player = meta.player_id and game.players[meta.player_id] or game:current_player()
-      local tile = meta.tile_id and game.board:get_tile_by_id(meta.tile_id) or
-      (player and game.board:get_tile(player.position))
-      local move_result = meta.move_result or (game.last_turn and game.last_turn.move_result) or nil
-      local ctx = build_effect_ctx(game, player, tile, move_result)
-
-      local res = Effect.execute(target_eff, ctx)
-      if not res or res.ok ~= true then
-        logger.warn("land_optional_effect execute blocked:", tostring(res and res.reason))
-      end
-    end
-    Choice.clear(game)
-    return { stay = false }
-  end
-
-  -- Item-related choice kinds are resolved in app (domain must not depend on Choice).
-  if choice.kind == "missile_target" then
-    if is_cancel(action) then
-      Choice.clear(game)
-      return { stay = false }
-    end
-
-    local idx = as_number(action.option_id)
-    local meta = choice.meta or {}
-    local player = meta.player_id and game.players[meta.player_id] or game:current_player()
-    if idx and player then
-      ItemEffects.consume_item(player, 2013)
-      ItemEffects.apply_missile(game, player, idx)
-    end
-    Choice.clear(game)
-    return { stay = false }
-  end
-
-  if choice.kind == "steal_target" then
-    if is_cancel(action) then
-      Choice.clear(game)
-      return { stay = false }
-    end
-
-    local target_id = as_number(action.option_id)
-    local meta = choice.meta or {}
-    local stealer = meta.stealer_id and game.players[meta.stealer_id] or game:current_player()
-    local target = target_id and game.players[target_id]
-    if not stealer or not target or target.eliminated then
-      Choice.clear(game)
-      return { stay = false }
-    end
-
-    if target.inventory:count() <= 1 then
-      ItemEffects.steal_item_at_index(game, stealer, target, 1)
-      Choice.clear(game)
-      return { stay = false }
-    end
-
-    local lines = {}
-    local options = {}
-    for i, it in ipairs(target.inventory.items) do
-      local label = ItemEffects.item_name(it.id)
-      table.insert(lines, i .. ". " .. label)
-      table.insert(options, { id = i, label = label })
-    end
-    Choice.open(game, {
-      kind = "steal_item",
-      title = "选择要偷的道具",
-      body_lines = lines,
-      options = options,
-      allow_cancel = true,
-      cancel_label = "取消",
-      meta = { stealer_id = stealer.id, target_id = target.id },
-    })
-    return { stay = true }
-  end
-
-  if choice.kind == "steal_item" then
-    if is_cancel(action) then
-      Choice.clear(game)
-      return { stay = false }
-    end
-
-    local idx = as_number(action.option_id)
-    local meta = choice.meta or {}
-    local stealer = meta.stealer_id and game.players[meta.stealer_id] or game:current_player()
-    local target = meta.target_id and game.players[meta.target_id]
-    if stealer and target and idx then
-      ItemEffects.steal_item_at_index(game, stealer, target, idx)
-    end
-    Choice.clear(game)
-    return { stay = false }
-  end
-
-  if choice.kind == "item_target_player" then
-    if is_cancel(action) then
-      Choice.clear(game)
-      return { stay = false }
-    end
-
-    local target_id = as_number(action.option_id)
-    local meta = choice.meta or {}
-    local item_id = meta.item_id
-    local user = meta.user_id and game.players[meta.user_id] or game:current_player()
-    local target = target_id and game.players[target_id]
-    if user and target and item_id then
-      local ok = ItemEffects.apply_target_item_effect(game, user, item_id, target)
-      if ok then
-        ItemEffects.consume_item(user, item_id)
-      end
-    end
-    Choice.clear(game)
-    return { stay = false }
+  local handler = handlers[choice.kind]
+  if handler then
+    return handler(game, choice, action)
   end
 
   logger.warn("unknown choice kind:", tostring(choice.kind))

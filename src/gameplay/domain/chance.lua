@@ -1,19 +1,47 @@
 local logger = require("src.util.logger")
+local Services = require("src.util.services")
+local Errors = require("src.util.error_handling")
 
 local ChanceEffects = {}
 
-local function get_service(game, key)
-  if game and game.services then
-    return game.services[key]
-  end
-end
-
 local function missing_service(name)
-  logger.warn("缺少 " .. name .. "，跳过处理")
+  Errors.missing_service(name)
 end
 
 local function apply_cash_change(player, delta)
   player:add_cash(delta)
+end
+
+local function ensure_service(service, name)
+  if not service then
+    missing_service(name)
+    return nil
+  end
+  return service
+end
+
+local function handle_bankruptcy_if_negative(game, player)
+  if player.cash >= 0 then
+    return
+  end
+  local bankruptcy = ensure_service(Services.bankruptcy(game), "BankruptcyService")
+  if bankruptcy and bankruptcy.eliminate then
+    bankruptcy.eliminate(game, player)
+  end
+end
+
+local function apply_cash_and_maybe_bankrupt(game, player, delta)
+  apply_cash_change(player, delta)
+  handle_bankruptcy_if_negative(game, player)
+end
+
+local function move_steps(game, player, steps)
+  local movement = ensure_service(Services.movement(game), "MovementService")
+  if not movement then
+    return nil
+  end
+  local res = movement.move(game, player, steps)
+  return { kind = "need_landing", player_id = player.id, tile_index = player.position, move_result = res }
 end
 
 local handlers = {}
@@ -24,34 +52,20 @@ handlers.add_cash = function(_, player, card)
 end
 
 handlers.pay_cash = function(game, player, card)
-  apply_cash_change(player, -card.amount)
+  apply_cash_and_maybe_bankrupt(game, player, -card.amount)
   logger.event(player.name .. " 支付 " .. card.amount .. " 金币")
-  if player.cash < 0 then
-    local bankruptcy = get_service(game, "bankruptcy")
-    if not bankruptcy then
-      return missing_service("BankruptcyService")
-    end
-    bankruptcy.eliminate(game, player)
-  end
 end
 
 handlers.percent_pay_cash = function(game, player, card)
   local fee = math.floor(player.cash * (card.percent / 100))
-  apply_cash_change(player, -fee)
+  apply_cash_and_maybe_bankrupt(game, player, -fee)
   logger.event(player.name .. " 按比例支付 " .. fee .. " 金币")
-  if player.cash < 0 then
-    local bankruptcy = get_service(game, "bankruptcy")
-    if not bankruptcy then
-      return missing_service("BankruptcyService")
-    end
-    bankruptcy.eliminate(game, player)
-  end
 end
 
 handlers.pay_others = function(game, player, card)
-  local status = get_service(game, "status")
+  local status = ensure_service(Services.status(game), "StatusService")
   if not status then
-    return missing_service("StatusService")
+    return
   end
   for _, other in ipairs(game.players) do
     if other.id ~= player.id and not other.eliminated then
@@ -60,25 +74,18 @@ handlers.pay_others = function(game, player, card)
         fee = fee * 2
       end
       if not status.is_in_mountain(game, other) then
-        apply_cash_change(player, -fee)
+        apply_cash_and_maybe_bankrupt(game, player, -fee)
         apply_cash_change(other, fee)
       end
     end
   end
   logger.event(player.name .. " 向每位玩家支付 " .. card.amount)
-  if player.cash < 0 then
-    local bankruptcy = get_service(game, "bankruptcy")
-    if not bankruptcy then
-      return missing_service("BankruptcyService")
-    end
-    bankruptcy.eliminate(game, player)
-  end
 end
 
 handlers.collect_from_others = function(game, player, card)
-  local status = get_service(game, "status")
+  local status = ensure_service(Services.status(game), "StatusService")
   if not status then
-    return missing_service("StatusService")
+    return
   end
   for _, other in ipairs(game.players) do
     if other.id ~= player.id and not other.eliminated then
@@ -138,25 +145,15 @@ handlers.reset_tiles_on_path = function(game, _, _, context)
 end
 
 handlers.move_backward = function(game, player, card)
-  local movement = get_service(game, "movement")
-  if not movement then
-    return missing_service("MovementService")
-  end
-  local res = movement.move(game, player, card.steps)
-  return { kind = "need_landing", player_id = player.id, tile_index = player.position, move_result = res }
+  return move_steps(game, player, card.steps)
 end
 
 handlers.move_forward = function(game, player, card)
-  local movement = get_service(game, "movement")
-  if not movement then
-    return missing_service("MovementService")
-  end
-  local res = movement.move(game, player, card.steps)
-  return { kind = "need_landing", player_id = player.id, tile_index = player.position, move_result = res }
+  return move_steps(game, player, card.steps)
 end
 
 handlers.grant_item = function(game, player, card)
-  local item = get_service(game, "item")
+  local item = Services.item(game)
   if not item then
     return missing_service("ItemService")
   end
@@ -194,9 +191,9 @@ handlers.discard_properties = function(game, player, card)
 end
 
 handlers.forced_move = function(game, player, card, context)
-  local status = get_service(game, "status")
+  local status = ensure_service(Services.status(game), "StatusService")
   if not status then
-    return missing_service("StatusService")
+    return
   end
   if card.destination == "hospital" then
     status.send_to_hospital(game, player, { skip_fee = true })
@@ -212,7 +209,7 @@ handlers.forced_move = function(game, player, card, context)
     local idx = game.board:find_first_by_type("market")
     if idx then
       game:update_player_position(player, idx)
-      local market_service = get_service(game, "market")
+      local market_service = Services.market(game)
       if market_service then
         market_service.auto_buy(game, player)
       else
@@ -223,7 +220,7 @@ handlers.forced_move = function(game, player, card, context)
 end
 
 function ChanceEffects.resolve(game, player, card, context)
-  local status = get_service(game, "status")
+  local status = Services.status(game)
   if not status then
     return missing_service("StatusService")
   end

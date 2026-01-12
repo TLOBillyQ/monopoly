@@ -1,20 +1,16 @@
 local logger = require("src.util.logger")
 local Choice = require("src.gameplay.app.choice")
+local Services = require("src.util.services")
+local Errors = require("src.util.error_handling")
 
 local TileService = {}
 
-local function get_service(game, key)
-  if game and game.services then
-    return game.services[key]
-  end
-end
-
 local function missing_service(name)
-  logger.warn("缺少 " .. name .. "，跳过处理")
+  Errors.missing_service(name)
 end
 
 local function handle_hospital(game, player)
-  local status = get_service(game, "status")
+  local status = Services.status(game)
   if not status then
     return missing_service("StatusService")
   end
@@ -22,7 +18,7 @@ local function handle_hospital(game, player)
 end
 
 local function handle_mountain(game, player)
-  local status = get_service(game, "status")
+  local status = Services.status(game)
   if not status then
     return missing_service("StatusService")
   end
@@ -30,7 +26,7 @@ local function handle_mountain(game, player)
 end
 
 local function handle_market(game, player)
-  local market = get_service(game, "market")
+  local market = Services.market(game)
   if market and market.auto_buy then
     market.auto_buy(game, player)
   else
@@ -40,7 +36,7 @@ end
 
 local function check_mine(game, player)
   if game.overlays.mines[player.position] then
-    local status = get_service(game, "status")
+    local status = Services.status(game)
     if not status then
       return missing_service("StatusService")
     end
@@ -59,7 +55,7 @@ end
 function TileService.resolve(game, player, tile, context)
   -- 路过玩家触发偷窃
   if context and context.encountered_players and not context.pass_players_checked then
-    local item = get_service(game, "item")
+    local item = Services.item(game)
     if not item then
       missing_service("ItemService")
       context.pass_players_checked = true

@@ -1,9 +1,6 @@
 local logger = require("src.util.logger")
 local Choice = require("src.gameplay.app.choice")
-
-local function get_service(game, key)
-  return game and game.services and game.services[key]
-end
+local Services = require("src.util.services")
 
 local function phase_start(tm)
   local player = tm.game:current_player()
@@ -34,7 +31,7 @@ local function phase_start(tm)
     tm.game.last_turn.stay_turns = player.status.stay_turns
     return "end_turn", { player = player }
   end
-  local item = get_service(tm.game, "item")
+  local item = Services.item(tm.game)
   if item and item.auto_pre_action then
     local pre = item.auto_pre_action(tm.game, player)
     if pre and pre.waiting then

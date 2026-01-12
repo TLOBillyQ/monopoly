@@ -3,23 +3,31 @@ local items_cfg = require("src.config.items")
 local random = require("src.util.random")
 local logger = require("src.util.logger")
 local UI = require("src.gameplay.ui")
+local Services = require("src.util.services")
+local GameState = require("src.util.game_state")
 
 local ItemEffects = {}
 
 local find_missile_target -- forward declare
 
-local function get_service(game, key)
-  if game and game.services then
-    return game.services[key]
+local tile_state = GameState.tile_state
+local status_service = Services.status
+local bankruptcy_service = Services.bankruptcy
+
+local function ensure_status(game, action)
+  local status = status_service(game)
+  if not status then
+    logger.warn("缺少 StatusService，无法" .. action)
   end
+  return status
 end
 
-local function status_service(game)
-  return get_service(game, "status")
-end
-
-local function bankruptcy_service(game)
-  return get_service(game, "bankruptcy")
+local function ensure_bankruptcy(game, action)
+  local bankruptcy = bankruptcy_service(game)
+  if not bankruptcy then
+    logger.warn("缺少 BankruptcyService，无法" .. action)
+  end
+  return bankruptcy
 end
 
 local cfg_by_id = {}
@@ -95,17 +103,6 @@ local function indices_in_range(board, start, distance)
   return list
 end
 
-local function tile_state(game, tile)
-  if not game or not game.store or not tile or tile.type ~= "land" then
-    return { owner_id = nil, level = 0 }
-  end
-  local s = game.store:get({ "board", "tiles", tile.id })
-  if type(s) ~= "table" then
-    return { owner_id = nil, level = 0 }
-  end
-  return { owner_id = s.owner_id, level = s.level or 0 }
-end
-
 local function total_invested(tile, owner_id, level)
   if not owner_id then
     return 0
@@ -115,25 +112,39 @@ local function total_invested(tile, owner_id, level)
   return price * ((2 ^ (level + 1)) - 1)
 end
 
-function ItemEffects.find_monster_target(game, player, distance)
-  distance = distance or 3
+local function find_best_tile(game, player, distance, opts)
   local board = game.board
+  local allow_self = opts and opts.allow_self
+  local score_fn = opts and opts.score_fn
   local best_idx = nil
   local best_value = nil
-  for _, idx in ipairs(indices_in_range(board, player.position, distance)) do
-    local tile = board:get_tile(idx)
-    if tile.type == "land" then
-      local st = tile_state(game, tile)
-      if (st.level or 0) > 0 and st.owner_id and st.owner_id ~= player.id then
-        local value = total_invested(tile, st.owner_id, st.level)
-      if not best_value or value > best_value then
+  for _, idx in ipairs(indices_in_range(board, player.position, distance or 3)) do
+    if allow_self or idx ~= player.position then
+      local tile = board:get_tile(idx)
+      local value = score_fn and score_fn(tile, idx)
+      if value ~= nil and (best_value == nil or value > best_value) then
         best_value = value
         best_idx = idx
       end
-      end
     end
   end
-  return best_idx
+  return best_idx, best_value
+end
+
+function ItemEffects.find_monster_target(game, player, distance)
+  local idx = find_best_tile(game, player, distance, {
+    score_fn = function(tile)
+      if tile.type ~= "land" then
+        return nil
+      end
+      local st = tile_state(game, tile)
+      if (st.level or 0) <= 0 or not st.owner_id or st.owner_id == player.id then
+        return nil
+      end
+      return total_invested(tile, st.owner_id, st.level)
+    end,
+  })
+  return idx
 end
 
 local function destroy_building(game, tile)
@@ -161,25 +172,16 @@ function ItemEffects.use_monster(game, player, distance)
 end
 
 find_missile_target = function(game, player, distance)
-  distance = distance or 3
-  local board = game.board
-  local best_idx = nil
-  local best_value = nil
-  for _, idx in ipairs(indices_in_range(board, player.position, distance)) do
-    if idx ~= player.position then
-      local tile = board:get_tile(idx)
-      local val = 0
-      if tile.type == "land" then
-        local st = tile_state(game, tile)
-        val = total_invested(tile, st.owner_id, st.level)
+  local idx = find_best_tile(game, player, distance, {
+    score_fn = function(tile)
+      if tile.type ~= "land" then
+        return 0
       end
-      if not best_value or val > best_value then
-        best_value = val
-        best_idx = idx
-      end
-    end
-  end
-  return best_idx
+      local st = tile_state(game, tile)
+      return total_invested(tile, st.owner_id, st.level)
+    end,
+  })
+  return idx
 end
 
 local function send_players_to_hospital(game, idx)
@@ -274,93 +276,119 @@ function ItemEffects.use_missile(game, player, distance)
   return true
 end
 
-function ItemEffects.apply_target_item_effect(game, player, item_id, target)
-  if item_id == 2011 then
-    local total = player.cash + target.cash
-    local half = math.floor(total / 2)
-    player:set_cash(half)
-    target:set_cash(total - half)
-    logger.event(player.name .. " 使用均富卡，与 " .. target.name .. " 平分资金")
-    return true
-  elseif item_id == 2012 then
-    local status = status_service(game)
-    if not status then
-      logger.warn("缺少 StatusService，无法流放")
-      return false
-    end
-    status.send_to_mountain(game, target)
-    logger.event(player.name .. " 使用流放卡，将 " .. target.name .. " 送往深山")
-    return true
-  elseif item_id == 2014 then
-    local status = status_service(game)
-    if not status then
-      logger.warn("缺少 StatusService，无法查税")
-      return false
-    end
-    if status.has_angel(target) then
-      logger.event(target.name .. " 有天使，查税无效")
+local target_item_specs = {
+  [2011] = {
+    apply = function(_, user, target)
+      local total = user.cash + target.cash
+      local half = math.floor(total / 2)
+      user:set_cash(half)
+      target:set_cash(total - half)
+      logger.event(user.name .. " 使用均富卡，与 " .. target.name .. " 平分资金")
       return true
-    end
-    local tax_free = find_item_index(target, 2010)
-    if tax_free then
-      target.inventory:remove_by_index(tax_free)
-      logger.event(target.name .. " 使用免税卡抵消查税")
+    end,
+  },
+  [2012] = {
+    apply = function(game, user, target)
+      local status = ensure_status(game, "流放")
+      if not status then
+        return false
+      end
+      status.send_to_mountain(game, target)
+      logger.event(user.name .. " 使用流放卡，将 " .. target.name .. " 送往深山")
       return true
-    end
-    local fee = math.floor(target.cash * 0.5)
-    target:deduct_cash(fee)
-    logger.event(player.name .. " 使用查税卡，" .. target.name .. " 支付 " .. fee .. " 税金")
-    if target.cash < 0 then
-      local bankruptcy = bankruptcy_service(game)
-      if not bankruptcy then
-        logger.warn("缺少 BankruptcyService，无法淘汰破产玩家")
+    end,
+  },
+  [2014] = {
+    apply = function(game, user, target)
+      local status = ensure_status(game, "查税")
+      if not status then
+        return false
+      end
+      if status.has_angel(target) then
+        logger.event(target.name .. " 有天使，查税无效")
         return true
       end
-      bankruptcy.eliminate(game, target)
-    end
-    return true
-  elseif item_id == 2015 then
-    if not target.status.deity then
-      logger.warn("没有可请的神")
-      return false
-    end
-    local deity = target.status.deity
-    target:set_deity(nil)
-    player:set_deity(deity.type, deity.remaining)
-    logger.event(player.name .. " 使用请神卡，从 " .. target.name .. " 请走 " .. deity.type)
-    return true
-  elseif item_id == 2016 then
-    if not player:has_deity("poor") then
-      logger.warn("未附身穷神，无法送神")
-      return false
-    end
-    local remaining = player.status.deity and player.status.deity.remaining or nil
-    target:set_deity("poor", remaining)
-    player:set_deity(nil)
-    logger.event(player.name .. " 使用送神卡，将穷神送给 " .. target.name)
-    return true
-  elseif item_id == 2018 then
-    target:set_deity("poor")
-    logger.event(player.name .. " 使用穷神卡，" .. target.name .. " 穷神附身")
-    return true
+      local tax_free = find_item_index(target, 2010)
+      if tax_free then
+        target.inventory:remove_by_index(tax_free)
+        logger.event(target.name .. " 使用免税卡抵消查税")
+        return true
+      end
+      local fee = math.floor(target.cash * 0.5)
+      target:deduct_cash(fee)
+      logger.event(user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. fee .. " 税金")
+      if target.cash < 0 then
+        local bankruptcy = ensure_bankruptcy(game, "淘汰破产玩家")
+        if bankruptcy then
+          bankruptcy.eliminate(game, target)
+        end
+      end
+      return true
+    end,
+  },
+  [2015] = {
+    filter_target = function(_, _, target)
+      return target.status.deity ~= nil
+    end,
+    apply = function(_, user, target)
+      if not target.status.deity then
+        logger.warn("没有可请的神")
+        return false
+      end
+      local deity = target.status.deity
+      target:set_deity(nil)
+      user:set_deity(deity.type, deity.remaining)
+      logger.event(user.name .. " 使用请神卡，从 " .. target.name .. " 请走 " .. deity.type)
+      return true
+    end,
+  },
+  [2016] = {
+    require_user = function(user)
+      if not user:has_deity("poor") then
+        logger.warn("未附身穷神，无法送神")
+        return false
+      end
+      return true
+    end,
+    apply = function(_, user, target)
+      local remaining = user.status.deity and user.status.deity.remaining or nil
+      target:set_deity("poor", remaining)
+      user:set_deity(nil)
+      logger.event(user.name .. " 使用送神卡，将穷神送给 " .. target.name)
+      return true
+    end,
+  },
+  [2018] = {
+    apply = function(_, user, target)
+      target:set_deity("poor")
+      logger.event(user.name .. " 使用穷神卡，" .. target.name .. " 穷神附身")
+      return true
+    end,
+  },
+}
+
+function ItemEffects.apply_target_item_effect(game, player, item_id, target)
+  local spec = target_item_specs[item_id]
+  if not spec or not spec.apply then
+    return false
   end
-  return false
+  return spec.apply(game, player, target)
 end
 
 local function handle_target_player_item(game, player, item_id)
-  if item_id == 2016 and not player:has_deity("poor") then
-    logger.warn("未附身穷神，无法送神")
+  local spec = target_item_specs[item_id]
+  if not spec then
+    return false
+  end
+
+  if spec.require_user and not spec.require_user(player) then
     return false
   end
 
   local candidates = {}
   for _, p in ipairs(game.players) do
     if p.id ~= player.id and not p.eliminated then
-      if item_id == 2015 then
-        if p.status.deity then
-          table.insert(candidates, p)
-        end
-      else
+      if not spec.filter_target or spec.filter_target(game, player, p) then
         table.insert(candidates, p)
       end
     end
@@ -403,6 +431,75 @@ local function handle_target_player_item(game, player, item_id)
   return ok
 end
 
+local status_item_specs = {
+  [2001] = { key = "pending_free_rent", value = true, message = " 使用免费卡，下一次租金免除" },
+  [2003] = { key = "pending_dice_multiplier", value = 2, message = " 使用骰子加倍卡，本次步数翻倍" },
+  [2010] = { key = "pending_tax_free", value = true, message = " 使用免税卡，本次征税免除" },
+}
+
+local deity_item_specs = {
+  [2017] = { type = "rich", warn = "附身财神", log = " 使用财神卡，财神附身" },
+  [2019] = { type = "angel", warn = "附身天使", log = " 使用天使卡，天使附身" },
+}
+
+local function apply_status_item(game, player, item_id)
+  if item_id == 2002 then
+    local dice_count = player.seat_id and constants.dice_with_vehicle or constants.default_dice_count
+    local values = {}
+    for i = 1, dice_count do
+      values[i] = 6
+    end
+    game:set_player_status(player, "pending_remote_dice", { values = values })
+    logger.event(player.name .. " 使用遥控骰子，设定点数 " .. table.concat(values, ","))
+    return true
+  end
+
+  local spec = status_item_specs[item_id]
+  if not spec then
+    return nil
+  end
+
+  local value = spec.value
+  if value == nil then
+    value = true
+  end
+  game:set_player_status(player, spec.key, value)
+  if spec.message then
+    logger.event(player.name .. spec.message)
+  end
+  return true
+end
+
+local function apply_deity_item(game, player, item_id)
+  local spec = deity_item_specs[item_id]
+  if not spec then
+    return nil
+  end
+  local status = ensure_status(game, spec.warn)
+  if not status then
+    return false
+  end
+  status.apply_deity(player, spec.type)
+  if spec.log then
+    logger.event(player.name .. spec.log)
+  end
+  return true
+end
+
+local function apply_builtin_post(game, player, item_id, context)
+  local status_res = apply_status_item(game, player, item_id, context)
+  if status_res ~= nil then
+    return status_res
+  end
+
+  local deity_res = apply_deity_item(game, player, item_id, context)
+  if deity_res ~= nil then
+    return deity_res
+  end
+
+  return nil
+end
+
 local item_handlers = {}
 local post_consume_handlers = {}
 
@@ -427,29 +524,6 @@ end
 
 for _, id in ipairs({ 2011, 2012, 2014, 2015, 2016, 2018 }) do
   item_handlers[id] = handle_target_player_item
-end
-
-post_consume_handlers[2001] = function(game, player, _context)
-  game:set_player_status(player, "pending_free_rent", true)
-  logger.event(player.name .. " 使用免费卡，下一次租金免除")
-  return true
-end
-
-post_consume_handlers[2002] = function(game, player, _context)
-  local dice_count = player.seat_id and constants.dice_with_vehicle or constants.default_dice_count
-  local values = {}
-  for i = 1, dice_count do
-    values[i] = 6
-  end
-  game:set_player_status(player, "pending_remote_dice", { values = values })
-  logger.event(player.name .. " 使用遥控骰子，设定点数 " .. table.concat(values, ","))
-  return true
-end
-
-post_consume_handlers[2003] = function(game, player, _context)
-  game:set_player_status(player, "pending_dice_multiplier", 2)
-  logger.event(player.name .. " 使用骰子加倍卡，本次步数翻倍")
-  return true
 end
 
 post_consume_handlers[2004] = function(game, player)
@@ -508,32 +582,6 @@ post_consume_handlers[2009] = function(_, player)
   return true
 end
 
-post_consume_handlers[2010] = function(game, player, _context)
-  game:set_player_status(player, "pending_tax_free", true)
-  logger.event(player.name .. " 使用免税卡，本次征税免除")
-  return true
-end
-
-post_consume_handlers[2017] = function(game, player)
-  local status = status_service(game)
-  if not status then
-    logger.warn("缺少 StatusService，无法附身财神")
-    return false
-  end
-  status.apply_deity(player, "rich")
-  return true
-end
-
-post_consume_handlers[2019] = function(game, player)
-  local status = status_service(game)
-  if not status then
-    logger.warn("缺少 StatusService，无法附身天使")
-    return false
-  end
-  status.apply_deity(player, "angel")
-  return true
-end
-
 function ItemEffects.use_item(game, player, item_id, context)
   local cfg = cfg_by_id[item_id]
   if not cfg then
@@ -557,6 +605,11 @@ function ItemEffects.use_item(game, player, item_id, context)
       return res
     end
     return true
+  end
+
+  local auto_post = apply_builtin_post(game, player, item_id, context)
+  if auto_post ~= nil then
+    return auto_post
   end
 
   logger.warn("未实现的道具:" .. tostring(item_id))

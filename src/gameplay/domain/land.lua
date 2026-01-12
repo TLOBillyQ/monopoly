@@ -1,19 +1,12 @@
 local Effect = {}
 local logger = require("src.util.logger")
 local constants = require("src.config.constants")
+local Services = require("src.util.services")
+local GameState = require("src.util.game_state")
 
 local MAX_LEVEL = 3
 
-local function tile_state(game, tile)
-  if not game or not game.store or not tile or tile.type ~= "land" then
-    return { owner_id = nil, level = 0 }
-  end
-  local s = game.store:get({ "board", "tiles", tile.id })
-  if type(s) ~= "table" then
-    return { owner_id = nil, level = 0 }
-  end
-  return { owner_id = s.owner_id, level = s.level or 0 }
-end
+local tile_state = GameState.tile_state
 
 local function next_upgrade_cost(tile, level)
   local target_level = (level or 0) + 1
@@ -33,10 +26,6 @@ local function total_invested(tile, owner_id, level)
   local price = tile.price or 0
   -- price * (2^(level+1) - 1)
   return price * ((2 ^ (level + 1)) - 1)
-end
-
-local function get_service(game, key)
-  return game and game.services and game.services[key]
 end
 
 -- Optional: buy land if unowned and player has cash
@@ -118,7 +107,7 @@ Effect.defs = {
         logger.event(player.name .. " 使用强征卡，支付 " .. total_value .. " 强制购入 " .. tile.name)
         return
       end
-      local status = get_service(ctx.game, "status")
+      local status = Services.status(ctx.game)
       if status and status.is_in_mountain and status.is_in_mountain(ctx.game, owner) then
         logger.event(owner.name .. " 在深山，租金不收取")
         return
@@ -192,7 +181,7 @@ Effect.defs = {
         owner:add_cash(paid)
         player:set_cash(0)
         logger.event(player.name .. " 资金不足，支付剩余 " .. paid .. " 后破产")
-        local bankruptcy = get_service(ctx.game, "bankruptcy")
+        local bankruptcy = Services.bankruptcy(ctx.game)
         if bankruptcy and bankruptcy.eliminate then
           bankruptcy.eliminate(ctx.game, player)
         else
@@ -229,7 +218,7 @@ Effect.defs = {
       player:deduct_cash(fee)
       logger.event(player.name .. " 在税务局支付税金 " .. fee)
       if player.cash <= 0 then
-        local bankruptcy = get_service(ctx.game, "bankruptcy")
+        local bankruptcy = Services.bankruptcy(ctx.game)
         if bankruptcy and bankruptcy.eliminate then
           bankruptcy.eliminate(ctx.game, player)
         else
