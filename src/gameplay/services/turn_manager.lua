@@ -41,6 +41,16 @@ end
 
 function TurnManager:dispatch(action)
   self.pending_action = action
+
+  -- If a choice is pending but the flow isn't running (e.g., UI-triggered choices),
+  -- resolve it immediately to avoid stalling auto-play.
+  local choice = Choice.get(self.game)
+  if choice and (not self.flow or not self.flow.current) then
+    local res = ChoiceResolver.resolve(self.game, choice, action)
+    self.pending_action = nil
+    return res
+  end
+
   if self.flow and self.flow.current then
     self:run_until_wait()
   end
@@ -69,11 +79,23 @@ function TurnManager:_build_flow()
       wait_choice = function(args)
         self.game.store:set({ "turn", "phase" }, "wait_choice")
         local choice = Choice.get(self.game)
-        if not choice or not self.pending_action then
+        -- If we are in wait_choice but the choice has been cleared externally,
+        -- resume immediately to avoid a tight loop that can freeze auto-play.
+        if not choice then
+          self.pending_action = nil
+          return (args and args.resume_state) or "end_turn", (args and args.resume_args) or {}
+        end
+
+        if not self.pending_action then
           return "wait_choice", args
         end
         local action = self.pending_action
         self.pending_action = nil
+
+        -- Ignore stale actions targeting a different choice id.
+        if action.choice_id and choice.id and action.choice_id ~= choice.id then
+          return "wait_choice", args
+        end
         local res = ChoiceResolver.resolve(self.game, choice, action)
         if res and res.stay then
           return "wait_choice", args

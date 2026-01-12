@@ -5,7 +5,7 @@
 ## 快速开始
 - 依赖：Love2D 11.x，Lua 5.4（随 Love 安装即可）。
 - 运行：在项目根目录执行 `love .`。
-- 入口：`main.lua` 会创建游戏实例并挂载 `src/ui/love_layer.lua`。
+- 入口：`main.lua` 会创建游戏实例并挂载 `src/visual/love_layer.lua`。
 
 ## 主要模块
 - `src/app.lua`：游戏状态容器，持有玩家、棋盘、回合管理，并注入 `game.services`（tile/chance/movement/item/market/status/bankruptcy）。

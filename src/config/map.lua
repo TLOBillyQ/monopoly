@@ -10,9 +10,33 @@ local path = {
   28, 29, 30, 27, 26, 25,
 }
 
+local function find_index(tile_id)
+  for i, id in ipairs(path) do
+    if id == tile_id then
+      return i
+    end
+  end
+  error("tile id " .. tile_id .. " not found in path")
+end
+
+local function next_index(idx)
+  return (idx % #path) + 1
+end
+
+local bottom_intersection = find_index(45)
+local inner_entry = find_index(42)
+local shanghai_idx = find_index(34)
+local right_exit = find_index(43)
+
 local map = {
   path = path,
-  branches = {}, -- 分支点可在此扩展： {index = {odd = targetIndex, even = targetIndex}}
+  -- 交叉路口按奇偶转向：奇数走默认路径，偶数转向内圈/外圈
+  branches = {
+    -- 底部道具格（45）往上进入内圈，否则继续外圈
+    [bottom_intersection] = { odd = next_index(bottom_intersection), even = inner_entry },
+    -- 上海路（34）偶数右转接回外圈的右侧机会格（43），奇数继续内圈
+    [shanghai_idx] = { odd = next_index(shanghai_idx), even = right_exit },
+  },
 }
 
 return map

@@ -20,6 +20,8 @@ function LoveLayer.new(opts)
     game_factory = opts.game_factory,
     modal = Modal.new(),
     auto_runner = AutoRunner.new({ interval = ui.auto_interval }),
+    _auto_handled_choice_id = nil,
+    _auto_choice_retry_timer = 0,
   }
   return setmetatable(self, LoveLayer)
 end
@@ -197,9 +199,40 @@ function LoveLayer:update(dt)
   self:sync_pending_choice_modal()
   local mx, my = love.mouse.getPosition()
   self:update_hover_tile(mx, my)
+
+  local pending_choice = self.game.store and self.game.store:get({ "turn", "pending_choice" })
+  if self.ui.auto_play and pending_choice then
+    -- Auto-handle a new pending choice once. If it somehow persists, retry after a short delay.
+    if self._auto_handled_choice_id == pending_choice.id then
+      self._auto_choice_retry_timer = self._auto_choice_retry_timer + dt
+    else
+      self._auto_handled_choice_id = nil
+      self._auto_choice_retry_timer = 0
+    end
+
+    if self._auto_handled_choice_id ~= pending_choice.id or self._auto_choice_retry_timer >= 0.6 then
+      local first = pending_choice.options and pending_choice.options[1]
+      if first then
+        self:dispatch_action({ type = "choice_select", choice_id = pending_choice.id, option_id = first.id or first })
+      else
+        self:dispatch_action({ type = "choice_cancel", choice_id = pending_choice.id })
+      end
+      self._auto_handled_choice_id = pending_choice.id
+      self._auto_choice_retry_timer = 0
+      if self.modal.active and self.modal.active._pending_choice_id == pending_choice.id then
+        self.modal:dismiss()
+      end
+    end
+  elseif not pending_choice then
+    self._auto_handled_choice_id = nil
+    self._auto_choice_retry_timer = 0
+  end
+  pending_choice = self.game.store and self.game.store:get({ "turn", "pending_choice" })
+
   local auto_action = self.auto_runner:next_action(dt, {
     modal_active = self.modal.active ~= nil,
     modal_buttons = self.modal.active and self.modal.active.buttons,
+    pending_choice = pending_choice,
     game_finished = self.game.finished,
   })
   if auto_action then
