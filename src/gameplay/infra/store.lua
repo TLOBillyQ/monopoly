@@ -1,18 +1,10 @@
 local Store = {}
 Store.__index = Store
 
-local DEFAULT_VERSION = 1
+local Tables = require("src.util.tables")
+local deep_copy = Tables.deep_copy
 
-local function deep_copy(tbl)
-  if type(tbl) ~= "table" then
-    return tbl
-  end
-  local res = {}
-  for k, v in pairs(tbl) do
-    res[k] = deep_copy(v)
-  end
-  return res
-end
+local DEFAULT_VERSION = 1
 
 function Store.new(init)
   local self = {

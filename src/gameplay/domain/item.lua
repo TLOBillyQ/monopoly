@@ -198,11 +198,7 @@ local function send_players_to_hospital(game, idx)
   for _, pid in ipairs(snapshot) do
     local target = game.players[pid]
     if target then
-      if game and game.set_player_seat then
-        game:set_player_seat(target, nil)
-      else
-        target.seat_id = nil
-      end
+      game:set_player_seat(target, nil)
       status.send_to_hospital(game, target, { skip_fee = true })
       count = count + 1
     end
@@ -434,11 +430,7 @@ for _, id in ipairs({ 2011, 2012, 2014, 2015, 2016, 2018 }) do
 end
 
 post_consume_handlers[2001] = function(game, player, _context)
-  if game and game.set_player_status then
-    game:set_player_status(player, "pending_free_rent", true)
-  else
-    player.status.pending_free_rent = true
-  end
+  game:set_player_status(player, "pending_free_rent", true)
   logger.event(player.name .. " 使用免费卡，下一次租金免除")
   return true
 end
@@ -449,21 +441,13 @@ post_consume_handlers[2002] = function(game, player, _context)
   for i = 1, dice_count do
     values[i] = 6
   end
-  if game and game.set_player_status then
-    game:set_player_status(player, "pending_remote_dice", { values = values })
-  else
-    player.status.pending_remote_dice = { values = values }
-  end
+  game:set_player_status(player, "pending_remote_dice", { values = values })
   logger.event(player.name .. " 使用遥控骰子，设定点数 " .. table.concat(values, ","))
   return true
 end
 
 post_consume_handlers[2003] = function(game, player, _context)
-  if game and game.set_player_status then
-    game:set_player_status(player, "pending_dice_multiplier", 2)
-  else
-    player.status.pending_dice_multiplier = 2
-  end
+  game:set_player_status(player, "pending_dice_multiplier", 2)
   logger.event(player.name .. " 使用骰子加倍卡，本次步数翻倍")
   return true
 end
@@ -525,11 +509,7 @@ post_consume_handlers[2009] = function(_, player)
 end
 
 post_consume_handlers[2010] = function(game, player, _context)
-  if game and game.set_player_status then
-    game:set_player_status(player, "pending_tax_free", true)
-  else
-    player.status.pending_tax_free = true
-  end
+  game:set_player_status(player, "pending_tax_free", true)
   logger.event(player.name .. " 使用免税卡，本次征税免除")
   return true
 end

@@ -1,18 +1,10 @@
 local Inventory = require("src.core.inventory")
+local Tables = require("src.util.tables")
 
 local Player = {}
 Player.__index = Player
 
-local function deep_copy(tbl)
-  if type(tbl) ~= "table" then
-    return tbl
-  end
-  local res = {}
-  for k, v in pairs(tbl) do
-    res[k] = deep_copy(v)
-  end
-  return res
-end
+local deep_copy = Tables.deep_copy
 
 function Player:_store_set(path, value)
   if self._store and self._store.set then

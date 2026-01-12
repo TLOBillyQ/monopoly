@@ -14,19 +14,17 @@ local StatusService = require("src.gameplay.app.services.status_service")
 local BankruptcyService = require("src.gameplay.app.services.bankruptcy_service")
 local RNG = require("src.gameplay.infra.rng")
 local Store = require("src.gameplay.infra.store")
-local Sync = require("src.gameplay.infra.sync")
+local Tables = require("src.util.tables")
 local App = {}
 App.__index = App
 
-local function deep_copy(tbl)
-  if type(tbl) ~= "table" then
-    return tbl
+local deep_copy = Tables.deep_copy
+
+local function store_value(v)
+  if type(v) == "table" then
+    return deep_copy(v)
   end
-  local res = {}
-  for k, v in pairs(tbl) do
-    res[k] = deep_copy(v)
-  end
-  return res
+  return v
 end
 
 local function create_players(opts)
@@ -127,7 +125,6 @@ function App.new(opts)
     players = players,
     store = store,
     rng = rng,
-    turn_count = store:get({ "turn", "turn_count" }) or 0,
     overlays = overlays_ref,
     logger = logger,
     finished = false,
@@ -146,33 +143,28 @@ function App.new(opts)
   setmetatable(game, App)
   game:rebuild_occupants()
   game.turn_manager = TurnManager.new(game)
-  function game:commit_state()
-    -- Store is the source of truth: sync runtime objects from store.
-    Sync.sync_all(self)
-  end
-  Sync.sync_all(game)
   return game
+end
+
+function App:_store_set(path, value)
+  if self.store then
+    self.store:set(path, store_value(value))
+  end
 end
 
 function App:set_player_status(player, key, value)
   player.status[key] = value
-  if self.store then
-    self.store:set({ "players", player.id, "status", key }, deep_copy(value))
-  end
+  self:_store_set({ "players", player.id, "status", key }, value)
 end
 
 function App:set_player_seat(player, seat_id)
   player.seat_id = seat_id
-  if self.store then
-    self.store:set({ "players", player.id, "seat_id" }, seat_id)
-  end
+  self:_store_set({ "players", player.id, "seat_id" }, seat_id)
 end
 
 function App:set_player_eliminated(player, eliminated)
   player.eliminated = eliminated and true or false
-  if self.store then
-    self.store:set({ "players", player.id, "eliminated" }, player.eliminated)
-  end
+  self:_store_set({ "players", player.id, "eliminated" }, player.eliminated)
 end
 
 function App:set_player_property(player, tile_id, owned)
@@ -181,39 +173,31 @@ function App:set_player_property(player, tile_id, owned)
   else
     player.properties[tile_id] = nil
   end
-  if self.store then
-    self.store:set({ "players", player.id, "properties", tile_id }, owned and true or nil)
-  end
+  self:_store_set({ "players", player.id, "properties", tile_id }, owned and true or nil)
 end
 
 function App:sync_player_inventory(player)
-  if self.store and player.inventory then
-    self.store:set({ "players", player.id, "inventory" }, snapshot_inventory(player.inventory))
+  if player.inventory then
+    self:_store_set({ "players", player.id, "inventory" }, snapshot_inventory(player.inventory))
   end
 end
 
 function App:set_tile_owner(tile, owner_id)
   if tile and tile.type == "land" then
-    if self.store then
-      self.store:set({ "board", "tiles", tile.id, "owner_id" }, owner_id)
-    end
+    self:_store_set({ "board", "tiles", tile.id, "owner_id" }, owner_id)
   end
 end
 
 function App:set_tile_level(tile, level)
   if tile and tile.type == "land" then
-    if self.store then
-      self.store:set({ "board", "tiles", tile.id, "level" }, level)
-    end
+    self:_store_set({ "board", "tiles", tile.id, "level" }, level)
   end
 end
 
 function App:reset_tile(tile)
   if tile and tile.type == "land" then
-    if self.store then
-      self.store:set({ "board", "tiles", tile.id, "owner_id" }, nil)
-      self.store:set({ "board", "tiles", tile.id, "level" }, 0)
-    end
+    self:_store_set({ "board", "tiles", tile.id, "owner_id" }, nil)
+    self:_store_set({ "board", "tiles", tile.id, "level" }, 0)
   end
 end
 
@@ -252,12 +236,9 @@ function App:update_player_position(player, new_index)
     end
   end
   player.position = new_index
-  if self.store then
-    self.store:set({ "players", player.id, "position" }, new_index)
-  end
+  self:_store_set({ "players", player.id, "position" }, new_index)
   self.occupants[new_index] = self.occupants[new_index] or {}
   table.insert(self.occupants[new_index], player.id)
-  self.store:set({ "board", "overlays" }, self.store:get({ "board", "overlays" }) or { roadblocks = {}, mines = {} })
 end
 
 function App:run(max_rounds)

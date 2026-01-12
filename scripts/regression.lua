@@ -47,7 +47,7 @@ end
 local function test_pass_start()
   local g = new_game()
   local p = g:current_player()
-  p.position = g.board:length()
+  g:update_player_position(p, g.board:length())
   local res = MovementService.move(g, p, 2, { branch_parity = 2 })
   assert_eq(res.passed_start, 1, "pass_start bonus")
 end
@@ -142,7 +142,7 @@ local function test_land_optional_stale_choice_is_blocked()
   assert(pending and pending.kind == "land_optional_effect", "pending choice expected")
 
   -- Invalidate the option after choice is shown (simulate state change).
-  p.cash = 0
+  p:set_cash(0)
 
   ChoiceResolver.resolve(g, pending, { option_id = "buy_land" })
   assert(tile_state(g, tile).owner_id == nil, "stale buy_land should be blocked")

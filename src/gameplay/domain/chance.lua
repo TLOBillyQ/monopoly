@@ -99,11 +99,7 @@ handlers.collect_from_others = function(game, player, card)
 end
 
 handlers.set_vehicle = function(game, player, card)
-  if game and game.set_player_seat then
-    game:set_player_seat(player, card.vehicle_id)
-  else
-    player.seat_id = card.vehicle_id
-  end
+  game:set_player_seat(player, card.vehicle_id)
   logger.event(player.name .. " 获得座驾 " .. tostring(card.vehicle_id))
 end
 
@@ -186,17 +182,9 @@ handlers.discard_properties = function(game, player, card)
   for tile_id in pairs(player.properties) do
     local tile = game.board:get_tile_by_id(tile_id)
     if tile then
-      if game and game.reset_tile then
-        game:reset_tile(tile)
-      else
-        tile:reset()
-      end
+      game:reset_tile(tile)
     end
-    if game and game.set_player_property then
-      game:set_player_property(player, tile_id, false)
-    else
-      player.properties[tile_id] = nil
-    end
+    game:set_player_property(player, tile_id, false)
     to_drop = to_drop - 1
     if to_drop == 0 then
       break

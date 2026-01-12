@@ -23,10 +23,6 @@ function BankruptcyService.eliminate(game, player)
     end
   end
 
-  for tile_id in pairs(player.properties) do
-    player.properties[tile_id] = nil
-  end
-
   if player.inventory then
     player.inventory._suspend_on_change = true
     player.inventory.items = {}

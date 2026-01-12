@@ -231,11 +231,7 @@ function PanelRenderer.draw(ui, game, buttons, item_name_by_id)
     local tc = game.store:get({ "turn", "turn_count" })
     if tc ~= nil then
       turn_label = "回合: " .. tostring(tc)
-    elseif game.turn_count then
-      turn_label = "回合: " .. tostring(game.turn_count)
     end
-  elseif game and game.turn_count then
-    turn_label = "回合: " .. tostring(game.turn_count)
   end
   love.graphics.setColor(ui.palette.muted)
   love.graphics.printf(turn_label, panel.x + ui.margin, panel.y + 42, panel.w - ui.margin * 2, "left")

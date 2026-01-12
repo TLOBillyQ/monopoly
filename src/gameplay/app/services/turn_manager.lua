@@ -47,9 +47,6 @@ function TurnManager:dispatch(action)
   local choice = Choice.get(self.game)
   if choice and (not self.flow or not self.flow.current) then
     local res = ChoiceResolver.resolve(self.game, choice, action)
-    if self.game and self.game.commit_state then
-      self.game:commit_state()
-    end
     self.pending_action = nil
     return res
   end
@@ -100,9 +97,6 @@ function TurnManager:_build_flow()
           return "wait_choice", args
         end
         local res = ChoiceResolver.resolve(self.game, choice, action)
-        if self.game and self.game.commit_state then
-          self.game:commit_state()
-        end
         if res and res.stay then
           return "wait_choice", args
         end
@@ -134,9 +128,6 @@ function TurnManager:run_until_wait()
       return "wait_choice"
     end
     self.flow:step()
-    if self.game and self.game.commit_state then
-      self.game:commit_state()
-    end
   end
 
   self.flow = nil

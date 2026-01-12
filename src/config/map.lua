@@ -30,10 +30,14 @@ end
 
 local bottom_intersection = find_index(45)
 local bottom_entry = find_index(42)
-
 local left_intersection = find_index(40)
 local left_entry = find_index(25)
+local up_intersection = find_index(40)
+local up_entry = find_index(25)
+local right_intersection = find_index(40)
+local right_entry = find_index(25)
 
+local market = find_index(39)
 
 local map = {
   path = path,
@@ -41,7 +45,8 @@ local map = {
   branches = {
     [bottom_intersection] = { odd = next_index(bottom_intersection), even = bottom_entry },
     [left_intersection] = { odd = next_index(left_intersection), even = left_entry },
-  
+    [up_intersection] = { odd = next_index(up_intersection), even = up_entry },
+    [right_intersection] = { odd = next_index(right_intersection), even = right_entry },
   },
 }
 
