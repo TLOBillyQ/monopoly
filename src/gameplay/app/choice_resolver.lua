@@ -1,5 +1,5 @@
-local Choice = require("src.gameplay.choice")
-local Effect = require("src.gameplay.effect")
+local Choice = require("src.gameplay.app.choice")
+local Effect = require("src.gameplay.domain.effect")
 local ItemEffects = require("src.gameplay.effects.item")
 local logger = require("src.util.logger")
 

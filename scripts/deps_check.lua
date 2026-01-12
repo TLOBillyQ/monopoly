@@ -1,7 +1,7 @@
 -- Dependency rules self-check (run with: lua scripts/deps_check.lua)
 -- Rules:
 -- 1) src/gameplay/** must not require src/visual/**
--- 2) src/gameplay/services/** must not require other services via require("src.gameplay.services.*")
+-- 2) src/gameplay/app/services/** must not require other services via require("src.gameplay.app.services.*")
 --    (use game.services.* instead). Infrastructure like logger should live outside services (e.g. src/util/logger.lua).
 
 local function read_all(path)
@@ -57,14 +57,14 @@ local function check_file(path, src)
   local errors = {}
 
   local is_gameplay = starts_with(path, "src/gameplay/")
-  local is_service = starts_with(path, "src/gameplay/services/")
+  local is_service = starts_with(path, "src/gameplay/app/services/")
 
   for _, mod in ipairs(extract_requires(src)) do
     if is_gameplay and starts_with(mod, "src.visual") then
       table.insert(errors, "gameplay must not require visual: require(\"" .. mod .. "\")")
     end
 
-    if is_service and starts_with(mod, "src.gameplay.services.") then
+    if is_service and starts_with(mod, "src.gameplay.app.services.") then
       table.insert(errors, "services must not require each other directly: require(\"" .. mod .. "\")")
     end
   end

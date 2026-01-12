@@ -1,11 +1,11 @@
-local Flow = require("src.gameplay.flow")
-local Choice = require("src.gameplay.choice")
-local ChoiceResolver = require("src.gameplay.choice_resolver")
-local phase_start_fn = require("src.gameplay.turn.start")
-local phase_roll_fn = require("src.gameplay.turn.roll")
-local phase_move_fn = require("src.gameplay.turn.move")
-local phase_land_fn = require("src.gameplay.turn.land")
-local phase_end_fn = require("src.gameplay.turn.end_turn")
+local Flow = require("src.gameplay.app.flow")
+local Choice = require("src.gameplay.app.choice")
+local ChoiceResolver = require("src.gameplay.app.choice_resolver")
+local phase_start_fn = require("src.gameplay.app.turn.start")
+local phase_roll_fn = require("src.gameplay.app.turn.roll")
+local phase_move_fn = require("src.gameplay.app.turn.move")
+local phase_land_fn = require("src.gameplay.app.turn.land")
+local phase_end_fn = require("src.gameplay.app.turn.end_turn")
 
 local TurnManager = {}
 TurnManager.__index = TurnManager

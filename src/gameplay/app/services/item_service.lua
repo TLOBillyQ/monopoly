@@ -8,4 +8,3 @@ local ItemService = {}
 setmetatable(ItemService, { __index = ItemEffects })
 
 return ItemService
-

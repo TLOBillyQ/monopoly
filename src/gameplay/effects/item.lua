@@ -1,7 +1,7 @@
 local constants = require("src.config.constants")
 local items_cfg = require("src.config.items")
 local random = require("src.util.random")
-local Choice = require("src.gameplay.choice")
+local Choice = require("src.gameplay.app.choice")
 local logger = require("src.util.logger")
 local UI = require("src.gameplay.ui")
 

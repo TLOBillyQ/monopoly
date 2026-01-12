@@ -110,9 +110,22 @@
   - `src/gameplay/app/`：`services/*`、`turn/*`、`flow.lua`、`landing_resolver.lua`、`choice*`
 - 为控制变更半径：在旧路径保留“转发壳文件”（旧文件内容仅 `return require("new.path")`）。
 
+落地情况（已完成）：
+- 已新增并迁入实现：
+  - `src/gameplay/infra/`：`rng.lua`、`store.lua`、`sync.lua`
+  - `src/gameplay/domain/`：`effect.lua`
+  - `src/gameplay/app/`：`flow.lua`、`landing_resolver.lua`、`choice.lua`、`choice_resolver.lua`
+  - `src/gameplay/app/services/`：`bankruptcy_service.lua`、`chance_service.lua`、`item_service.lua`、`market_service.lua`、`movement_service.lua`、`status_service.lua`、`tile_service.lua`、`turn_manager.lua`
+  - `src/gameplay/app/turn/`：`start.lua`、`roll.lua`、`move.lua`、`land.lua`、`end_turn.lua`
+- 旧路径保留兼容（转发壳，仅一行 `return require(...)`）：
+  - `src/gameplay/`：`rng.lua`、`store.lua`、`sync.lua`、`effect.lua`、`flow.lua`、`landing_resolver.lua`、`choice.lua`、`choice_resolver.lua`
+  - `src/gameplay/services/`：同名文件全部转发到 `src/gameplay/app/services/*`
+  - `src/gameplay/turn/`：同名文件全部转发到 `src/gameplay/app/turn/*`
+
 验收：
-- 自检脚本继续通过。
-- require 改动局部、可回滚。
+- `lua scripts/deps_check.lua` 通过。
+- `lua scripts/regression.lua` 通过（9 tests）。
+- 旧 require 路径不需要改动（仍可 `require("src.gameplay.*")` / `require("src.gameplay.services.*")` / `require("src.gameplay.turn.*")`）。
 
 ### 阶段 4（可选）：将 `visual` 明确为 adapter 命名
 

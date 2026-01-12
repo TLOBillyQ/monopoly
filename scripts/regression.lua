@@ -2,11 +2,11 @@
 package.path = "src/?.lua;src/?/init.lua;src/gameplay/?.lua;src/gameplay/?/init.lua;?.lua;" .. package.path
 
 local App = require("src.app")
-local MovementService = require("src.gameplay.services.movement_service")
-local ItemService = require("src.gameplay.services.item_service")
-local LandingResolver = require("src.gameplay.landing_resolver")
-local Choice = require("src.gameplay.choice")
-local ChoiceResolver = require("src.gameplay.choice_resolver")
+local MovementService = require("src.gameplay.app.services.movement_service")
+local ItemService = require("src.gameplay.app.services.item_service")
+local LandingResolver = require("src.gameplay.app.landing_resolver")
+local Choice = require("src.gameplay.app.choice")
+local ChoiceResolver = require("src.gameplay.app.choice_resolver")
 
 local function assert_eq(a, b, msg)
   if a ~= b then

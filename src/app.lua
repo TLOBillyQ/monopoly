@@ -4,16 +4,16 @@ local Inventory = require("src.core.inventory")
 local constants = require("src.config.constants")
 local roles_cfg = require("src.config.roles")
 local logger = require("src.util.logger")
-local TurnManager = require("src.gameplay.services.turn_manager")
-local TileService = require("src.gameplay.services.tile_service")
-local ChanceService = require("src.gameplay.services.chance_service")
-local MovementService = require("src.gameplay.services.movement_service")
-local ItemService = require("src.gameplay.services.item_service")
-local MarketService = require("src.gameplay.services.market_service")
-local StatusService = require("src.gameplay.services.status_service")
-local BankruptcyService = require("src.gameplay.services.bankruptcy_service")
-local RNG = require("src.gameplay.rng")
-local Store = require("src.gameplay.store")
+local TurnManager = require("src.gameplay.app.services.turn_manager")
+local TileService = require("src.gameplay.app.services.tile_service")
+local ChanceService = require("src.gameplay.app.services.chance_service")
+local MovementService = require("src.gameplay.app.services.movement_service")
+local ItemService = require("src.gameplay.app.services.item_service")
+local MarketService = require("src.gameplay.app.services.market_service")
+local StatusService = require("src.gameplay.app.services.status_service")
+local BankruptcyService = require("src.gameplay.app.services.bankruptcy_service")
+local RNG = require("src.gameplay.infra.rng")
+local Store = require("src.gameplay.infra.store")
 local App = {}
 App.__index = App
 
@@ -123,7 +123,7 @@ function App.new(opts)
     -- rng
     self.store:set({ "rng" }, self.rng:snapshot())
   end
-  local Sync = require("src.gameplay.sync")
+  local Sync = require("src.gameplay.infra.sync")
   Sync.sync_all(game)
   return game
 end

@@ -19,7 +19,7 @@ end
 local handlers = {}
 
 local function get_landing_resolver()
-  return require("src.gameplay.landing_resolver")
+  return require("src.gameplay.app.landing_resolver")
 end
 
 handlers.add_cash = function(_, player, card)
