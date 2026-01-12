@@ -1,4 +1,4 @@
-local logger = require("src.gameplay.services.logger")
+local logger = require("src.util.logger")
 local items_cfg = require("src.config.items")
 local UIState = require("src.visual.ui_state")
 local Layout = require("src.visual.layout")

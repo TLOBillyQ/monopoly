@@ -1,5 +1,5 @@
 local constants = require("src.config.constants")
-local logger = require("src.gameplay.services.logger")
+local logger = require("src.util.logger")
 
 local StatusService = {}
 

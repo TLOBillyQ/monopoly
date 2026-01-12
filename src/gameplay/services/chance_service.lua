@@ -1,7 +1,7 @@
 local chance_cfg = require("src.config.chance_cards")
 local random = require("src.util.random")
 local LandResolver = require("src.gameplay.land_resolver")
-local logger = require("src.gameplay.services.logger")
+local logger = require("src.util.logger")
 local constants = require("src.config.constants")
 
 local ChanceService = {}

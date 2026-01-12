@@ -2,7 +2,7 @@
 -- Rules:
 -- 1) src/gameplay/** must not require src/visual/**
 -- 2) src/gameplay/services/** must not require other services via require("src.gameplay.services.*")
---    (use game.services.* instead). Logger is exempt.
+--    (use game.services.* instead). Infrastructure like logger should live outside services (e.g. src/util/logger.lua).
 
 local function read_all(path)
   local f = io.open(path, "rb")
@@ -64,7 +64,7 @@ local function check_file(path, src)
       table.insert(errors, "gameplay must not require visual: require(\"" .. mod .. "\")")
     end
 
-    if is_service and starts_with(mod, "src.gameplay.services.") and mod ~= "src.gameplay.services.logger" then
+    if is_service and starts_with(mod, "src.gameplay.services.") then
       table.insert(errors, "services must not require each other directly: require(\"" .. mod .. "\")")
     end
   end

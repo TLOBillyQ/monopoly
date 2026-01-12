@@ -1,5 +1,5 @@
 local items_cfg = require("src.config.items")
-local logger = require("src.gameplay.services.logger")
+local logger = require("src.util.logger")
 
 local MarketService = {}
 

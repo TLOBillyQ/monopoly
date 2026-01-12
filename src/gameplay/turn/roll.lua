@@ -1,6 +1,6 @@
 local constants = require("src.config.constants")
 local Dice = require("src.core.dice")
-local logger = require("src.gameplay.services.logger")
+local logger = require("src.util.logger")
 
 local function phase_roll(tm, args)
   local player = args.player or tm.game:current_player()

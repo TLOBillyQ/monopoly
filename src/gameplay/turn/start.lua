@@ -1,5 +1,5 @@
 local ItemService = require("src.gameplay.services.item_service")
-local logger = require("src.gameplay.services.logger")
+local logger = require("src.util.logger")
 
 local function phase_start(tm)
   local player = tm.game:current_player()

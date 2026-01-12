@@ -1,5 +1,5 @@
 local Effect = {}
-local logger = require("src.gameplay.services.logger")
+local logger = require("src.util.logger")
 local constants = require("src.config.constants")
 local BankruptcyService = require("src.gameplay.services.bankruptcy_service")
 local StatusService = require("src.gameplay.services.status_service")
