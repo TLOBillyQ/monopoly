@@ -1,8 +1,10 @@
 local Effect = {}
 local logger = require("src.util.logger")
 local constants = require("src.config.constants")
-local BankruptcyService = require("src.gameplay.services.bankruptcy_service")
-local StatusService = require("src.gameplay.services.status_service")
+
+local function get_service(game, key)
+  return game and game.services and game.services[key]
+end
 
 -- Optional: buy land if unowned and player has cash
 local function can_buy(ctx)
@@ -86,7 +88,8 @@ Effect.defs = {
         logger.event(player.name .. " 使用强征卡，支付 " .. total_value .. " 强制购入 " .. tile.name)
         return
       end
-      if StatusService.is_in_mountain(ctx.game, owner) then
+      local status = get_service(ctx.game, "status")
+      if status and status.is_in_mountain and status.is_in_mountain(ctx.game, owner) then
         logger.event(owner.name .. " 在深山，租金不收取")
         return
       end
@@ -149,7 +152,12 @@ Effect.defs = {
         owner:add_cash(paid)
         player.cash = 0
         logger.event(player.name .. " 资金不足，支付剩余 " .. paid .. " 后破产")
-        BankruptcyService.eliminate(ctx.game, player)
+        local bankruptcy = get_service(ctx.game, "bankruptcy")
+        if bankruptcy and bankruptcy.eliminate then
+          bankruptcy.eliminate(ctx.game, player)
+        else
+          logger.warn("缺少 BankruptcyService，无法处理破产")
+        end
       end
     end,
   },
@@ -181,7 +189,12 @@ Effect.defs = {
       player:deduct_cash(fee)
       logger.event(player.name .. " 在税务局支付税金 " .. fee)
       if player.cash <= 0 then
-        BankruptcyService.eliminate(ctx.game, player)
+        local bankruptcy = get_service(ctx.game, "bankruptcy")
+        if bankruptcy and bankruptcy.eliminate then
+          bankruptcy.eliminate(ctx.game, player)
+        else
+          logger.warn("缺少 BankruptcyService，无法处理破产")
+        end
       end
     end,
   },

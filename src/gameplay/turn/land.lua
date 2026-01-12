@@ -1,11 +1,12 @@
-local TileService = require("src.gameplay.services.tile_service")
 local LandResolver = require("src.gameplay.land_resolver")
 
 local function phase_land(tm, args)
   local player = args.player
   local move_result = args.move_result
   local tile = tm.game.board:get_tile(player.position)
-  local res = TileService.resolve(tm.game, player, tile, move_result)
+  local tile_service = tm.game and tm.game.services and tm.game.services.tile
+  assert(tile_service and tile_service.resolve, "Missing TileService (game.services.tile)")
+  local res = tile_service.resolve(tm.game, player, tile, move_result)
   if res and res.waiting then
     local resume_state = res.resume_state or "land"
     local resume_args = res.resume_args or { player = player, move_result = move_result }

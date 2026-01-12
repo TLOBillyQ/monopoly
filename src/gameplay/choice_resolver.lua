@@ -3,6 +3,10 @@ local logger = require("src.util.logger")
 
 local Resolver = {}
 
+local function get_service(game, key)
+  return game and game.services and game.services[key]
+end
+
 local function as_number(v)
   if type(v) == "number" then
     return v
@@ -55,9 +59,13 @@ function Resolver.resolve(game, choice, action)
     local meta = choice.meta or {}
     local player = meta.player_id and game.players[meta.player_id] or game:current_player()
     if idx and player then
-      local ItemService = require("src.gameplay.services.item_service")
-      ItemService.consume_item(player, 2013)
-      ItemService.apply_missile(game, player, idx)
+      local item = get_service(game, "item")
+      if not item then
+        logger.warn("缺少 ItemService，无法结算导弹")
+      else
+        item.consume_item(player, 2013)
+        item.apply_missile(game, player, idx)
+      end
     end
     Choice.clear(game)
     return { stay = false }
@@ -73,17 +81,27 @@ function Resolver.resolve(game, choice, action)
       return { stay = false }
     end
 
-    local ItemService = require("src.gameplay.services.item_service")
     if target.inventory:count() <= 1 then
-      ItemService.steal_item_at_index(game, stealer, target, 1)
+      local item = get_service(game, "item")
+      if item and item.steal_item_at_index then
+        item.steal_item_at_index(game, stealer, target, 1)
+      else
+        logger.warn("缺少 ItemService，无法结算偷窃")
+      end
       Choice.clear(game)
       return { stay = false }
     end
 
     local lines = {}
     local options = {}
+    local item = get_service(game, "item")
+    if not item then
+      logger.warn("缺少 ItemService，无法列出可偷道具")
+      Choice.clear(game)
+      return { stay = false }
+    end
     for i, it in ipairs(target.inventory.items) do
-      local label = ItemService.item_name(it.id)
+      local label = item.item_name(it.id)
       table.insert(lines, i .. ". " .. label)
       table.insert(options, { id = i, label = label })
     end
@@ -105,8 +123,12 @@ function Resolver.resolve(game, choice, action)
     local stealer = meta.stealer_id and game.players[meta.stealer_id] or game:current_player()
     local target = meta.target_id and game.players[meta.target_id]
     if stealer and target and idx then
-      local ItemService = require("src.gameplay.services.item_service")
-      ItemService.steal_item_at_index(game, stealer, target, idx)
+      local item = get_service(game, "item")
+      if item and item.steal_item_at_index then
+        item.steal_item_at_index(game, stealer, target, idx)
+      else
+        logger.warn("缺少 ItemService，无法结算偷窃")
+      end
     end
     Choice.clear(game)
     return { stay = false }
@@ -119,10 +141,14 @@ function Resolver.resolve(game, choice, action)
     local user = meta.user_id and game.players[meta.user_id] or game:current_player()
     local target = target_id and game.players[target_id]
     if user and target and item_id then
-      local ItemService = require("src.gameplay.services.item_service")
-      local ok = ItemService.apply_target_item_effect(game, user, item_id, target)
-      if ok then
-        ItemService.consume_item(user, item_id)
+      local item = get_service(game, "item")
+      if not item then
+        logger.warn("缺少 ItemService，无法结算道具目标选择")
+      else
+        local ok = item.apply_target_item_effect(game, user, item_id, target)
+        if ok then
+          item.consume_item(user, item_id)
+        end
       end
     end
     Choice.clear(game)

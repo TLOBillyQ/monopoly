@@ -1,5 +1,8 @@
-local ItemService = require("src.gameplay.services.item_service")
 local logger = require("src.util.logger")
+
+local function get_service(game, key)
+  return game and game.services and game.services[key]
+end
 
 local function phase_start(tm)
   local player = tm.game:current_player()
@@ -26,9 +29,14 @@ local function phase_start(tm)
     tm.game.last_turn.stay_turns = player.status.stay_turns
     return "end_turn", { player = player }
   end
-  local pre = ItemService.auto_pre_action(tm.game, player)
-  if pre and pre.waiting then
-    return "wait_choice", { resume_state = "roll", resume_args = { player = player } }
+  local item = get_service(tm.game, "item")
+  if item and item.auto_pre_action then
+    local pre = item.auto_pre_action(tm.game, player)
+    if pre and pre.waiting then
+      return "wait_choice", { resume_state = "roll", resume_args = { player = player } }
+    end
+  else
+    logger.warn("缺少 ItemService，跳过回合前自动道具")
   end
   return "roll", { player = player }
 end

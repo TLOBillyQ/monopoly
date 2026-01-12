@@ -15,6 +15,8 @@
 - 建立开发者指引（运行、主要模块、质量门槛、常用命令）。
 - 梳理 UI 分层与主要模块职责（love_layer/layout/board_renderer/panel_renderer/modal/ui_state）。
 - 补充最小自检/测试说明，明确如何手动回归现有功能。
+- 规则层结构整理：把“落地/抽卡/奖励/惩罚”等统一收敛到 `Effect`（扫描/判定/执行），避免 `turn/*` 与 `services/*` 里分散的 if-else。
+- 去重与边界：合并 `src/gameplay/effect.lua` / `src/gameplay/land_resolver.lua` 的重复职责；可选效果选择在 `Choice` 里做“二次校验”（防止状态变化后仍执行）。
 
 ### M2 现状与待办
 - 已实现：怪兽卡/导弹卡弹窗选择目标格子（消费后生效）；偷窃卡弹窗选目标并可二级选道具；均富/流放/查税/请神/送神/穷神卡弹窗选目标。
