@@ -10,8 +10,9 @@ git branch main-backup-$(date +%Y%m%d-%H%M%S) && \
 git reset --hard origin/rewrite2 && \
 echo "Ready to push. Run: git push origin main --force"
 
-# Then delete obsolete branches
-git push origin --delete copilot/reduce-codebase-line-count rewrite/no-spoke
+# Then delete obsolete branches (run separately for better error handling)
+git push origin --delete copilot/reduce-codebase-line-count
+git push origin --delete rewrite/no-spoke
 ```
 
 Or use the automated script:

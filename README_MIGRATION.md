@@ -82,7 +82,8 @@ monopoly/
 ├── scripts/          # Development scripts
 ├── docs/             # Documentation
 ├── assets/           # Game assets
-└── main.lua          # Entry point
+├── main.lua          # Entry point
+└── README.md         # Project documentation
 ```
 
 This replaces the current flat structure with many `.lua` files at root level.

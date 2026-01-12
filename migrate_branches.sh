@@ -154,7 +154,11 @@ echo
 print_step "Migration complete!"
 echo "  Main branch now contains rewrite2 content"
 echo "  Obsolete branches have been deleted"
-echo "  Backup branch: $BACKUP_BRANCH (local only)"
+if [ "$DRY_RUN" = false ]; then
+    echo "  Backup branch: $BACKUP_BRANCH (local only)"
+else
+    echo "  Backup branch would be created (local only)"
+fi
 echo
 print_warning "Remember to:"
 echo "  1. Update any CI/CD configurations"
