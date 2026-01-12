@@ -43,18 +43,7 @@ local function apply_upgrade(ctx)
 end
 
 -- Mandatory: start tile reward on landing
-local function can_start_reward(ctx)
-  return ctx.tile.type == "start" and ctx.on_landing
-end
-
-local function apply_start_reward(ctx)
-  local player = ctx.player
-  player:add_cash(constants.pass_start_bonus)
-  logger.event(player.name .. " 停在起点，获得 " .. constants.pass_start_bonus .. " 金币")
-end
-
 Effect.defs = {
-  { id = "start_reward", mandatory = true, can_apply = can_start_reward, apply = apply_start_reward },
   { id = "buy_land", label = "购买地块", mandatory = false, can_apply = can_buy, apply = apply_buy },
   { id = "upgrade_land", label = "加盖建筑", mandatory = false, can_apply = can_upgrade, apply = apply_upgrade },
   {

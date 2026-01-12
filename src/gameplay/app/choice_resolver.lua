@@ -98,7 +98,8 @@ function Resolver.resolve(game, choice, action)
       end
 
       local player = meta.player_id and game.players[meta.player_id] or game:current_player()
-      local tile = meta.tile_id and game.board:get_tile_by_id(meta.tile_id) or (player and game.board:get_tile(player.position))
+      local tile = meta.tile_id and game.board:get_tile_by_id(meta.tile_id) or
+      (player and game.board:get_tile(player.position))
       local move_result = meta.move_result or (game.last_turn and game.last_turn.move_result) or nil
       local ctx = build_effect_ctx(game, player, tile, move_result)
 

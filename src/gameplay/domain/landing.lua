@@ -1,10 +1,24 @@
 local land_effects = require("src.gameplay.domain.land")
 local logger = require("src.util.logger")
+local constants = require("src.config.constants")
 
 local Effect = {}
 
 -- Landing container: tile events (mandatory) + land effects (mandatory/optional).
 Effect.defs = {
+  {
+    id = "start_reward",
+    label = "起点奖励",
+    mandatory = true,
+    can_apply = function(ctx)
+      return ctx and ctx.tile and ctx.tile.type == "start" and ctx.on_landing
+    end,
+    apply = function(ctx)
+      local player = ctx.player
+      player:add_cash(constants.pass_start_bonus)
+      logger.event(player.name .. " 停在起点，获得 " .. constants.pass_start_bonus .. " 金币")
+    end,
+  },
   {
     id = "item_draw_and_give",
     label = "道具",
