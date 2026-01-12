@@ -1,4 +1,5 @@
 local logger = require("src.util.logger")
+local Choice = require("src.gameplay.app.choice")
 
 local TileService = {}
 
@@ -66,6 +67,9 @@ function TileService.resolve(game, player, tile, context)
     end
     local res = item.handle_pass_players(game, player, context.encountered_players)
     if res and res.waiting then
+      if res.intent and res.intent.kind == "need_choice" and res.intent.choice_spec then
+        Choice.open(game, res.intent.choice_spec)
+      end
       context.pass_players_checked = true
       return res
     end

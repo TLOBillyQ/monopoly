@@ -1,7 +1,6 @@
 local constants = require("src.config.constants")
 local items_cfg = require("src.config.items")
 local random = require("src.util.random")
-local Choice = require("src.gameplay.app.choice")
 local logger = require("src.util.logger")
 local UI = require("src.gameplay.ui")
 
@@ -221,16 +220,21 @@ function ItemEffects.use_missile(game, player, distance)
       end
     end
     if #options > 0 then
-      Choice.open(game, {
-        kind = "missile_target",
-        title = "导弹卡：选择目标格子",
-        body_lines = body_lines,
-        options = options,
-        allow_cancel = true,
-        cancel_label = "取消",
-        meta = { player_id = player.id },
-      })
-      return { waiting = true }
+      return {
+        waiting = true,
+        intent = {
+          kind = "need_choice",
+          choice_spec = {
+            kind = "missile_target",
+            title = "导弹卡：选择目标格子",
+            body_lines = body_lines,
+            options = options,
+            allow_cancel = true,
+            cancel_label = "取消",
+            meta = { player_id = player.id },
+          },
+        },
+      }
     end
   end
 
@@ -345,16 +349,21 @@ local function handle_target_player_item(game, player, item_id)
       table.insert(body_lines, t.name .. " 现金:" .. t.cash .. (t.status.deity and (" 神:" .. t.status.deity.type) or ""))
       table.insert(options, { id = t.id, label = t.name })
     end
-    Choice.open(game, {
-      kind = "item_target_player",
-      title = ItemEffects.item_name(item_id) .. "：选择目标玩家",
-      body_lines = body_lines,
-      options = options,
-      allow_cancel = true,
-      cancel_label = "取消",
-      meta = { item_id = item_id, user_id = player.id },
-    })
-    return { waiting = true }
+    return {
+      waiting = true,
+      intent = {
+        kind = "need_choice",
+        choice_spec = {
+          kind = "item_target_player",
+          title = ItemEffects.item_name(item_id) .. "：选择目标玩家",
+          body_lines = body_lines,
+          options = options,
+          allow_cancel = true,
+          cancel_label = "取消",
+          meta = { item_id = item_id, user_id = player.id },
+        },
+      },
+    }
   end
 
   local target = candidates[1]
@@ -666,16 +675,21 @@ function ItemEffects.handle_pass_players(game, player, encountered_ids)
       table.insert(body_lines, idx .. ". " .. label)
       table.insert(options, { id = idx, label = label })
     end
-    Choice.open(game, {
-      kind = "steal_item",
-      title = "选择要偷的道具",
-      body_lines = body_lines,
-      options = options,
-      allow_cancel = true,
-      cancel_label = "取消",
-      meta = { stealer_id = player.id, target_id = target.id },
-    })
-    return { waiting = true }
+    return {
+      waiting = true,
+      intent = {
+        kind = "need_choice",
+        choice_spec = {
+          kind = "steal_item",
+          title = "选择要偷的道具",
+          body_lines = body_lines,
+          options = options,
+          allow_cancel = true,
+          cancel_label = "取消",
+          meta = { stealer_id = player.id, target_id = target.id },
+        },
+      },
+    }
   end
 
   local options = {}
@@ -684,136 +698,21 @@ function ItemEffects.handle_pass_players(game, player, encountered_ids)
     table.insert(body_lines, t.name .. " 现金:" .. t.cash)
     table.insert(options, { id = t.id, label = t.name })
   end
-  Choice.open(game, {
-    kind = "steal_target",
-    title = "偷窃卡：选择目标",
-    body_lines = body_lines,
-    options = options,
-    allow_cancel = true,
-    cancel_label = "取消",
-    meta = { stealer_id = player.id },
-  })
-  return { waiting = true }
-end
-
-local function as_number(v)
-  if type(v) == "number" then
-    return v
-  end
-  if type(v) == "string" then
-    local n = tonumber(v)
-    return n
-  end
-  return nil
-end
-
-local function is_cancel(action)
-  return not action or action.type == "choice_cancel" or action.option_id == nil
-end
-
--- Centralize item-related choice resolution.
--- Returns { handled=true, stay=? } if handled; otherwise nil.
-function ItemEffects.resolve_choice(game, choice, action)
-  if not game or not choice then
-    return nil
-  end
-
-  if choice.kind == "missile_target" then
-    if is_cancel(action) then
-      Choice.clear(game)
-      return { handled = true, stay = false }
-    end
-
-    local idx = as_number(action.option_id)
-    local meta = choice.meta or {}
-    local player = meta.player_id and game.players[meta.player_id] or game:current_player()
-    if idx and player then
-      ItemEffects.consume_item(player, 2013)
-      ItemEffects.apply_missile(game, player, idx)
-    end
-    Choice.clear(game)
-    return { handled = true, stay = false }
-  end
-
-  if choice.kind == "steal_target" then
-    if is_cancel(action) then
-      Choice.clear(game)
-      return { handled = true, stay = false }
-    end
-
-    local target_id = as_number(action.option_id)
-    local meta = choice.meta or {}
-    local stealer = meta.stealer_id and game.players[meta.stealer_id] or game:current_player()
-    local target = target_id and game.players[target_id]
-    if not stealer or not target or target.eliminated then
-      Choice.clear(game)
-      return { handled = true, stay = false }
-    end
-
-    if target.inventory:count() <= 1 then
-      ItemEffects.steal_item_at_index(game, stealer, target, 1)
-      Choice.clear(game)
-      return { handled = true, stay = false }
-    end
-
-    local lines = {}
-    local options = {}
-    for i, it in ipairs(target.inventory.items) do
-      local label = ItemEffects.item_name(it.id)
-      table.insert(lines, i .. ". " .. label)
-      table.insert(options, { id = i, label = label })
-    end
-    Choice.open(game, {
-      kind = "steal_item",
-      title = "选择要偷的道具",
-      body_lines = lines,
-      options = options,
-      allow_cancel = true,
-      cancel_label = "取消",
-      meta = { stealer_id = stealer.id, target_id = target.id },
-    })
-    return { handled = true, stay = true }
-  end
-
-  if choice.kind == "steal_item" then
-    if is_cancel(action) then
-      Choice.clear(game)
-      return { handled = true, stay = false }
-    end
-
-    local idx = as_number(action.option_id)
-    local meta = choice.meta or {}
-    local stealer = meta.stealer_id and game.players[meta.stealer_id] or game:current_player()
-    local target = meta.target_id and game.players[meta.target_id]
-    if stealer and target and idx then
-      ItemEffects.steal_item_at_index(game, stealer, target, idx)
-    end
-    Choice.clear(game)
-    return { handled = true, stay = false }
-  end
-
-  if choice.kind == "item_target_player" then
-    if is_cancel(action) then
-      Choice.clear(game)
-      return { handled = true, stay = false }
-    end
-
-    local target_id = as_number(action.option_id)
-    local meta = choice.meta or {}
-    local item_id = meta.item_id
-    local user = meta.user_id and game.players[meta.user_id] or game:current_player()
-    local target = target_id and game.players[target_id]
-    if user and target and item_id then
-      local ok = ItemEffects.apply_target_item_effect(game, user, item_id, target)
-      if ok then
-        ItemEffects.consume_item(user, item_id)
-      end
-    end
-    Choice.clear(game)
-    return { handled = true, stay = false }
-  end
-
-  return nil
+  return {
+    waiting = true,
+    intent = {
+      kind = "need_choice",
+      choice_spec = {
+        kind = "steal_target",
+        title = "偷窃卡：选择目标",
+        body_lines = body_lines,
+        options = options,
+        allow_cancel = true,
+        cancel_label = "取消",
+        meta = { stealer_id = player.id },
+      },
+    },
+  }
 end
 
 return ItemEffects

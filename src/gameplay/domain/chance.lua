@@ -18,10 +18,6 @@ end
 
 local handlers = {}
 
-local function get_landing_resolver()
-  return require("src.gameplay.app.landing_resolver")
-end
-
 handlers.add_cash = function(_, player, card)
   apply_cash_change(player, card.amount)
   logger.event(player.name .. " 获得 " .. card.amount .. " 金币")
@@ -137,12 +133,7 @@ handlers.move_backward = function(game, player, card)
     return missing_service("MovementService")
   end
   local res = movement.move(game, player, card.steps)
-  local tile = game.board:get_tile(player.position)
-  local LandingResolver = get_landing_resolver()
-  local out = LandingResolver.resolve(game, player, tile, res)
-  if out and out.waiting then
-    return out
-  end
+  return { kind = "need_landing", player_id = player.id, tile_index = player.position, move_result = res }
 end
 
 handlers.move_forward = function(game, player, card)
@@ -151,12 +142,7 @@ handlers.move_forward = function(game, player, card)
     return missing_service("MovementService")
   end
   local res = movement.move(game, player, card.steps)
-  local tile = game.board:get_tile(player.position)
-  local LandingResolver = get_landing_resolver()
-  local out = LandingResolver.resolve(game, player, tile, res)
-  if out and out.waiting then
-    return out
-  end
+  return { kind = "need_landing", player_id = player.id, tile_index = player.position, move_result = res }
 end
 
 handlers.grant_item = function(game, player, card)
@@ -210,11 +196,7 @@ handlers.forced_move = function(game, player, card, context)
     local idx = game.board:find_first_by_type("tax")
     if idx then
       game:update_player_position(player, idx)
-      local LandingResolver = get_landing_resolver()
-      local out = LandingResolver.resolve(game, player, game.board:get_tile(idx), context)
-      if out and out.waiting then
-        return out
-      end
+      return { kind = "need_landing", player_id = player.id, tile_index = idx, move_result = context }
     end
   elseif card.destination == "market" then
     local idx = game.board:find_first_by_type("market")

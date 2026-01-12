@@ -3,6 +3,7 @@
 -- 1) src/gameplay/** must not require UI adapters (src/visual/**, src/adapters/**)
 -- 2) src/gameplay/app/services/** must not require other services via require("src.gameplay.app.services.*")
 --    (use game.services.* instead). Infrastructure like logger should live outside services (e.g. src/util/logger.lua).
+-- 3) src/gameplay/domain/** must not require app layer modules (src.gameplay.app.*)
 
 local function read_all(path)
   local f = io.open(path, "rb")
@@ -57,11 +58,16 @@ local function check_file(path, src)
   local errors = {}
 
   local is_gameplay = starts_with(path, "src/gameplay/")
+  local is_domain = starts_with(path, "src/gameplay/domain/")
   local is_service = starts_with(path, "src/gameplay/app/services/")
 
   for _, mod in ipairs(extract_requires(src)) do
     if is_gameplay and (starts_with(mod, "src.visual") or starts_with(mod, "src.adapters.")) then
       table.insert(errors, "gameplay must not require UI adapters: require(\"" .. mod .. "\")")
+    end
+
+    if is_domain and starts_with(mod, "src.gameplay.app.") then
+      table.insert(errors, "domain must not require app layer: require(\"" .. mod .. "\")")
     end
 
     if is_service and starts_with(mod, "src.gameplay.app.services.") then

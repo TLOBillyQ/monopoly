@@ -112,10 +112,100 @@ function Resolver.resolve(game, choice, action)
     return { stay = false }
   end
 
-  -- PR4 (items): delegate item-related choice kinds to ItemEffects.
-  local item_res = ItemEffects.resolve_choice(game, choice, action)
-  if item_res and item_res.handled then
-    return { stay = item_res.stay == true }
+  -- Item-related choice kinds are resolved in app (domain must not depend on Choice).
+  if choice.kind == "missile_target" then
+    if is_cancel(action) then
+      Choice.clear(game)
+      return { stay = false }
+    end
+
+    local idx = as_number(action.option_id)
+    local meta = choice.meta or {}
+    local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+    if idx and player then
+      ItemEffects.consume_item(player, 2013)
+      ItemEffects.apply_missile(game, player, idx)
+    end
+    Choice.clear(game)
+    return { stay = false }
+  end
+
+  if choice.kind == "steal_target" then
+    if is_cancel(action) then
+      Choice.clear(game)
+      return { stay = false }
+    end
+
+    local target_id = as_number(action.option_id)
+    local meta = choice.meta or {}
+    local stealer = meta.stealer_id and game.players[meta.stealer_id] or game:current_player()
+    local target = target_id and game.players[target_id]
+    if not stealer or not target or target.eliminated then
+      Choice.clear(game)
+      return { stay = false }
+    end
+
+    if target.inventory:count() <= 1 then
+      ItemEffects.steal_item_at_index(game, stealer, target, 1)
+      Choice.clear(game)
+      return { stay = false }
+    end
+
+    local lines = {}
+    local options = {}
+    for i, it in ipairs(target.inventory.items) do
+      local label = ItemEffects.item_name(it.id)
+      table.insert(lines, i .. ". " .. label)
+      table.insert(options, { id = i, label = label })
+    end
+    Choice.open(game, {
+      kind = "steal_item",
+      title = "选择要偷的道具",
+      body_lines = lines,
+      options = options,
+      allow_cancel = true,
+      cancel_label = "取消",
+      meta = { stealer_id = stealer.id, target_id = target.id },
+    })
+    return { stay = true }
+  end
+
+  if choice.kind == "steal_item" then
+    if is_cancel(action) then
+      Choice.clear(game)
+      return { stay = false }
+    end
+
+    local idx = as_number(action.option_id)
+    local meta = choice.meta or {}
+    local stealer = meta.stealer_id and game.players[meta.stealer_id] or game:current_player()
+    local target = meta.target_id and game.players[meta.target_id]
+    if stealer and target and idx then
+      ItemEffects.steal_item_at_index(game, stealer, target, idx)
+    end
+    Choice.clear(game)
+    return { stay = false }
+  end
+
+  if choice.kind == "item_target_player" then
+    if is_cancel(action) then
+      Choice.clear(game)
+      return { stay = false }
+    end
+
+    local target_id = as_number(action.option_id)
+    local meta = choice.meta or {}
+    local item_id = meta.item_id
+    local user = meta.user_id and game.players[meta.user_id] or game:current_player()
+    local target = target_id and game.players[target_id]
+    if user and target and item_id then
+      local ok = ItemEffects.apply_target_item_effect(game, user, item_id, target)
+      if ok then
+        ItemEffects.consume_item(user, item_id)
+      end
+    end
+    Choice.clear(game)
+    return { stay = false }
   end
 
   logger.warn("unknown choice kind:", tostring(choice.kind))

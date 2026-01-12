@@ -1,4 +1,5 @@
 local logger = require("src.util.logger")
+local Choice = require("src.gameplay.app.choice")
 
 local function get_service(game, key)
   return game and game.services and game.services[key]
@@ -33,6 +34,9 @@ local function phase_start(tm)
   if item and item.auto_pre_action then
     local pre = item.auto_pre_action(tm.game, player)
     if pre and pre.waiting then
+      if pre.intent and pre.intent.kind == "need_choice" and pre.intent.choice_spec then
+        Choice.open(tm.game, pre.intent.choice_spec)
+      end
       return "wait_choice", { resume_state = "roll", resume_args = { player = player } }
     end
   else
