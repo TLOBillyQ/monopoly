@@ -62,7 +62,7 @@ function Missile.apply(game, player, idx)
   UI.push_popup(game, { title = "导弹卡", body = msg })
 end
 
--- consume_fn(player, item_id) should remove an item and return true/false
+
 function Missile.use(game, player, distance, consume_fn)
   local best_idx = Missile.find_target(game, player, distance)
   if not best_idx then

@@ -10,9 +10,9 @@ local function find_item_index(player, item_id)
   end)
 end
 
--- opts:
--- - item_name(id) -> string
--- - consume_item(player, item_id) -> bool
+
+
+
 function Steal.steal_item_at_index(game, player, target, item_idx, opts)
   opts = opts or {}
   local item_name = opts.item_name or tostring
@@ -40,9 +40,9 @@ function Steal.steal_item_at_index(game, player, target, item_idx, opts)
   return stolen
 end
 
--- opts:
--- - item_name(id) -> string
--- - consume_item(player, item_id) -> bool
+
+
+
 function Steal.handle_pass_players(game, player, encountered_ids, opts)
   opts = opts or {}
   local item_name = opts.item_name or tostring

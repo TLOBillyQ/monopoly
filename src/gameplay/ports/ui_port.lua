@@ -1,8 +1,8 @@
 local UI = {}
 
--- UI port wrapper.
--- Preferred: game.ui_port (object implementing push_popup/request_choice/play_animation).
--- Legacy fallback: game.ui_hooks.* (used by older adapters).
+
+
+
 
 local function get_port(game)
   if game and game.ui_port then
@@ -66,7 +66,7 @@ function UI.play_animation(game, payload)
   if port and port.play_animation then
     return port:play_animation(payload) ~= false
   end
-  -- No-op by default; treat as completed.
+  
   if payload and payload.on_complete then
     payload.on_complete()
   end

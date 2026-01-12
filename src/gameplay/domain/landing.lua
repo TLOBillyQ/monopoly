@@ -4,7 +4,7 @@ local constants = require("src.config.constants")
 
 local Effect = {}
 
--- Landing container: tile events (mandatory) + land effects (mandatory/optional).
+
 Effect.defs = {
   {
     id = "start_reward",
@@ -69,7 +69,7 @@ Effect.defs = {
   },
 }
 
--- Append existing land effects.
+
 for _, eff in ipairs(land_effects.defs or {}) do
   table.insert(Effect.defs, eff)
 end

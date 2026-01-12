@@ -29,8 +29,8 @@ function Player.new(attrs)
     deity_duration_turns = attrs.deity_duration_turns or constants.deity_duration_turns,
     status = {
       stay_turns = 0,
-      deity = nil, -- { type="angel"|"rich"|"poor", remaining=5 }
-      pending_remote_dice = nil, -- { values = {..} }
+      deity = nil, 
+      pending_remote_dice = nil, 
       pending_dice_multiplier = 1,
       pending_free_rent = false,
       pending_tax_free = false,

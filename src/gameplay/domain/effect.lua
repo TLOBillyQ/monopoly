@@ -1,7 +1,7 @@
 local Effect = {}
 Effect.__index = Effect
 
--- effect: { id, label, mandatory, can_apply(ctx), apply(ctx) }
+
 
 local function can_apply(effect, ctx)
   if effect.can_apply then
@@ -17,8 +17,8 @@ local function apply(effect, ctx)
   end
 end
 
--- Scan effects for a given context, keeping disabled reasons for UI.
--- Returns entries like: { id, label, mandatory, ok, reason, effect }
+
+
 function Effect.scan(effect_defs, ctx)
   local entries = {}
   for _, eff in ipairs(effect_defs or {}) do
@@ -35,7 +35,7 @@ function Effect.scan(effect_defs, ctx)
   return entries
 end
 
--- Backward-compatible: list only available effects.
+
 function Effect.list(effect_defs, ctx)
   local available = {}
   for _, entry in ipairs(Effect.scan(effect_defs, ctx)) do
@@ -46,8 +46,8 @@ function Effect.list(effect_defs, ctx)
   return available
 end
 
--- Execute a single effect with a mandatory re-check (prevents stale choice).
--- Returns { ok=true, result=? } or { ok=false, reason=? }.
+
+
 function Effect.execute(effect, ctx)
   local ok, reason = can_apply(effect, ctx)
   if not ok then
@@ -56,7 +56,7 @@ function Effect.execute(effect, ctx)
   return { ok = true, result = apply(effect, ctx) }
 end
 
--- Apply mandatory first, then optional via chooser callback
+
 function Effect.resolve(effect_defs, ctx, choose_fn)
   local mandatory = {}
   local optional = {}
@@ -83,7 +83,7 @@ function Effect.resolve(effect_defs, ctx, choose_fn)
       end
     end)
   else
-    -- default: take first optional
+    
     Effect.execute(optional[1], ctx)
   end
 end

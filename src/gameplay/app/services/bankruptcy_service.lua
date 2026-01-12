@@ -2,10 +2,10 @@ local logger = require("src.util.logger")
 
 local BankruptcyService = {}
 
--- eliminate(game, player): clears assets/inventory and marks player eliminated; updates store via game helpers
+
 function BankruptcyService.eliminate(game, player)
   logger.event(player.name .. " 破产出局")
-  -- 释放地皮
+  
   local owned_tile_ids = {}
   for tile_id in pairs(player.properties) do
     table.insert(owned_tile_ids, tile_id)
@@ -38,7 +38,7 @@ function BankruptcyService.eliminate(game, player)
   else
     player.eliminated = true
   end
-  -- 移出占位
+  
   for tile_idx, list in pairs(game.occupants) do
     for i = #list, 1, -1 do
       if list[i] == player.id then

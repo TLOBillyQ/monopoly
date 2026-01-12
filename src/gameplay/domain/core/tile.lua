@@ -11,7 +11,7 @@ function Tile.from_config(cfg)
     price = cfg.price or 0,
     base_rent = cfg.base_rent or 0,
     owner_id = nil,
-    level = 0, -- 0=空地，1=房屋，2=别墅，3=高楼
+    level = 0, 
   }
   return setmetatable(t, Tile)
 end

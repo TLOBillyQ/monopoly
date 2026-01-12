@@ -44,7 +44,7 @@ function Board:find_first_by_type(tile_type)
   return nil, nil
 end
 
--- 计算下一步索引，支持分支（奇左偶右）
+
 function Board:advance(index, steps, branch_parity)
   local length = self:length()
   local current = index

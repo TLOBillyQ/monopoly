@@ -3,23 +3,23 @@ local logger = require("src.util.logger")
 
 local StatusService = {}
 
--- Helper predicates for deity/status flags
+
 function StatusService.has_angel(player)
   return player:has_deity("angel")
 end
 
--- apply_deity(player, deity_type): grants deity buff for configured turns
+
 function StatusService.apply_deity(player, deity_type)
   player:set_deity(deity_type, constants.deity_duration_turns)
   logger.event(player.name .. " 获得附身：" .. deity_type)
 end
 
--- tick_end_of_turn(player): decreases deity timers each turn end
+
 function StatusService.tick_end_of_turn(player)
   player:tick_deity()
 end
 
--- send_to_hospital(game, player, opts): teleports to hospital, sets stay_turns, charges fee or eliminates
+
 function StatusService.send_to_hospital(game, player, opts)
   opts = opts or {}
   local hospital_index = game.board:find_first_by_type("hospital")
@@ -44,7 +44,7 @@ function StatusService.send_to_hospital(game, player, opts)
   logger.event(player.name .. " 住院，需停留 " .. player.status.stay_turns .. " 回合")
 end
 
--- send_to_mountain(game, player): teleports to mountain tile and applies stay_turns
+
 function StatusService.send_to_mountain(game, player)
   local idx = game.board:find_first_by_type("mountain")
   if idx then
@@ -54,7 +54,7 @@ function StatusService.send_to_mountain(game, player)
   logger.event(player.name .. " 进入深山，停留 " .. player.status.stay_turns .. " 回合")
 end
 
--- is_in_mountain(game, player): checks if player currently on mountain tile
+
 function StatusService.is_in_mountain(game, player)
   local tile = game.board:get_tile(player.position)
   return tile and tile.type == "mountain"

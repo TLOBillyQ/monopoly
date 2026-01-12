@@ -7,7 +7,7 @@ local function buyable_with_cash(cfg)
   return cfg.shop_currency == "金币" or cfg.shop_price == 0
 end
 
--- list_buyable(player): items purchasable with cash only
+
 function MarketService.list_buyable(player)
   local list = {}
   for _, cfg in ipairs(items_cfg) do
@@ -21,7 +21,7 @@ function MarketService.list_buyable(player)
   return list
 end
 
--- auto_buy(game, player): buys affordable items into inventory; mutates player cash and inventory
+
 function MarketService.auto_buy(game, player)
   local item = game and game.services and game.services.item
   if not item then

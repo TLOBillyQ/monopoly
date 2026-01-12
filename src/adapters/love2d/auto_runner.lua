@@ -1,7 +1,7 @@
 local AutoRunner = {}
 AutoRunner.__index = AutoRunner
 
--- Generate simulated input for auto play without直接调用游戏逻辑
+
 function AutoRunner.new(opts)
   local self = {
     interval = (opts and opts.interval) or 0.15,
@@ -20,7 +20,7 @@ function AutoRunner:reset_timer()
   self.timer = 0
 end
 
--- env: { modal_active, modal_buttons, pending_choice, game_finished }
+
 function AutoRunner:next_action(dt, env)
   if not self.enabled then
     return nil

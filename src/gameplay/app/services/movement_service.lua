@@ -3,7 +3,7 @@ local logger = require("src.util.logger")
 
 local MovementService = {}
 
--- move(game, player, steps, opts): advances player, handles roadblocks/pass-start bonus; returns movement summary
+
 function MovementService.move(game, player, steps, opts)
   opts = opts or {}
   local branch_parity = opts.branch_parity or steps

@@ -160,7 +160,7 @@ local function handle_target_player_item(game, player, item_id, _context)
   return ok
 end
 
--- post-consume effects live in src/gameplay/domain/item_post_effects.lua
+
 
 local item_handlers = {}
 
@@ -238,7 +238,7 @@ function ItemEffects.auto_pre_action(game, player)
     return nil
   end
 
-  -- 表驱动的自动使用规则（按优先级顺序）。
+  
   local rules = {
     { id = 2006, cond = function() return ItemEffects.has_obstacles_ahead(game, player, 12) end },
     { id = 2002 },
@@ -257,7 +257,7 @@ function ItemEffects.auto_pre_action(game, player)
     end
   end
 
-  -- 财神/天使：优先自用财神
+  
   return try_use(2017) or try_use(2019)
 end
 

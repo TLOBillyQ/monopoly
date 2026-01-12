@@ -30,11 +30,11 @@ end
 function LoveLayer:set_game(g)
   self.game = g
 
-  -- Adapter implements the UI port.
+  
   self.game.ui_port = self
 end
 
--- UI Port: push a popup to the modal queue.
+
 function LoveLayer:push_popup(payload)
   self.modal:push({
     title = payload and payload.title,
@@ -47,7 +47,7 @@ function LoveLayer:push_popup(payload)
   return true
 end
 
--- UI Port: request an interactive choice (immediate modal with buttons).
+
 function LoveLayer:request_choice(opts)
   if not opts or not opts.candidates or #opts.candidates == 0 then
     local buttons = opts and opts.buttons
@@ -87,7 +87,7 @@ function LoveLayer:request_choice(opts)
     table.insert(buttons, {
       label = opts.cancel_label or "取消",
       on_click = function()
-        -- do nothing
+        
       end,
     })
   end
@@ -101,7 +101,7 @@ function LoveLayer:request_choice(opts)
   return true
 end
 
--- UI Port: animation hook (currently no-op; completes immediately).
+
 function LoveLayer:play_animation(payload)
   if payload and payload.on_complete then
     payload.on_complete()
@@ -237,7 +237,7 @@ function LoveLayer:update(dt)
 
   local pending_choice = self.game.store and self.game.store:get({ "turn", "pending_choice" })
   if self.ui.auto_play and pending_choice then
-    -- Auto-handle a new pending choice once. If it somehow persists, retry after a short delay.
+    
     if self._auto_handled_choice_id == pending_choice.id then
       self._auto_choice_retry_timer = self._auto_choice_retry_timer + dt
     else

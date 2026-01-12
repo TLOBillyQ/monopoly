@@ -127,7 +127,7 @@ function Modal:draw(ui)
   love.graphics.printf(self.active.button_text or "知道了", btn.x, btn.y + 10, btn.w, "center")
 end
 
--- Allow modal buttons to be clicked
+
 function Modal:click_buttons(x, y)
   if not self.active or not self.active.buttons then
     return false
@@ -145,7 +145,7 @@ function Modal:click_buttons(x, y)
   return false
 end
 
--- Programmatic confirm (simulate hitting space/enter)
+
 function Modal:confirm()
   if not self.active then
     return false
@@ -157,7 +157,7 @@ function Modal:confirm()
   return true
 end
 
--- Programmatic button press by index (simulate clicking)
+
 function Modal:press_button(index)
   if not self.active or not self.active.buttons then
     return false

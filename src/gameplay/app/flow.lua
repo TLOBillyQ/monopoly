@@ -1,7 +1,7 @@
 local Flow = {}
 Flow.__index = Flow
 
--- Simple coroutine-driven state machine
+
 function Flow.new(opts)
   local self = {
     states = opts.states or {},

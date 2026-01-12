@@ -13,25 +13,25 @@ local function ensure_status(game, action)
   return status
 end
 
--- Post-consume effects are table-driven.
--- Each entry is consumed first, then dispatched by `type`.
+
+
 local EFFECTS = {
-  -- status-like effects
+  
   [2001] = { type = "set_status", key = "pending_free_rent", value = true, message = " 使用免费卡，下一次租金免除" },
   [2002] = { type = "remote_dice_max" },
   [2003] = { type = "set_status", key = "pending_dice_multiplier", value = 2, message = " 使用骰子加倍卡，本次步数翻倍" },
   [2010] = { type = "set_status", key = "pending_tax_free", value = true, message = " 使用免税卡，本次征税免除" },
 
-  -- board overlay / utility
+  
   [2004] = { type = "place_roadblock_ahead", distance = 3 },
   [2005] = { type = "place_mine_here" },
   [2006] = { type = "clear_obstacles_ahead", distance = 12 },
 
-  -- informational
+  
   [2007] = { type = "log", message = " 准备偷窃（将在经过玩家时触发）" },
   [2009] = { type = "log", message = " 准备使用强征卡（踩他人地块时触发）" },
 
-  -- deity buffs
+  
   [2017] = { type = "deity", deity = "rich", warn = "附身财神", log = " 使用财神卡，财神附身" },
   [2019] = { type = "deity", deity = "angel", warn = "附身天使", log = " 使用天使卡，天使附身" },
 }

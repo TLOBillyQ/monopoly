@@ -16,7 +16,7 @@ local function copy_array(arr)
   return out
 end
 
--- Store-safe snapshot for choice meta (avoid metatables like Tile).
+
 local function snapshot_move_result(move_result)
   if type(move_result) ~= "table" then
     return nil
@@ -45,8 +45,8 @@ local function build_ctx(game, player, tile, move_result)
   }
 end
 
--- Resolve a single landing pipeline: tile_events (mandatory) + land effects.
--- Returns { waiting=true, resume_state?, resume_args? } when a choice is opened.
+
+
 function LandingResolver.resolve(game, player, tile, move_result)
   local ctx = build_ctx(game, player, tile, move_result)
 
@@ -64,7 +64,7 @@ function LandingResolver.resolve(game, player, tile, move_result)
     end
   end
 
-  -- Run mandatory effects in order; stop immediately if any opens a choice.
+  
   for _, eff in ipairs(mandatory) do
     local res = Effect.execute(eff, ctx)
     local out = res and res.result
@@ -108,7 +108,7 @@ function LandingResolver.resolve(game, player, tile, move_result)
     return { waiting = true, reason = "land_optional", resume_state = "end_turn", resume_args = { player = player } }
   end
 
-  -- Auto: take the first optional effect.
+  
   local first = optional[1]
   if first then
     Effect.execute(first, ctx)

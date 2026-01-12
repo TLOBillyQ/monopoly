@@ -1,7 +1,7 @@
 local Dice = {}
 Dice.__index = Dice
 
--- rng: optional RNG instance with next_int(min, max)
+
 function Dice.roll(count, override_values, rng)
   local results = {}
   local total = 0

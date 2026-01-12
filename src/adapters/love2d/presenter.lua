@@ -28,9 +28,9 @@ end
 
 local BOARD_TILES = build_board_tiles()
 
--- Present a UI-facing view model.
--- Input: store/state snapshot (a plain table), plus optional runtime info.
--- Output: { board = { tiles[] }, state = <snapshot>, last_turn, finished, winner_name }
+
+
+
 function Presenter.present(store_state, runtime)
   runtime = runtime or {}
   return {

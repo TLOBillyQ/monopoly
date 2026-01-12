@@ -24,11 +24,11 @@ local function total_invested(tile, owner_id, level)
   end
   level = level or 0
   local price = tile.price or 0
-  -- price * (2^(level+1) - 1)
+  
   return price * ((2 ^ (level + 1)) - 1)
 end
 
--- Optional: buy land if unowned and player has cash
+
 local function can_buy(ctx)
   local tile = ctx.tile
   local player = ctx.player
@@ -45,7 +45,7 @@ local function apply_buy(ctx)
   logger.event(player.name .. " 购买 " .. tile.name .. " 花费 " .. tile.price)
 end
 
--- Optional: upgrade own land if possible and affordable
+
 local function can_upgrade(ctx)
   local tile = ctx.tile
   local player = ctx.player
@@ -70,7 +70,7 @@ local function apply_upgrade(ctx)
   logger.event(player.name .. " 为 " .. tile.name .. " 加盖，花费 " .. cost)
 end
 
--- Mandatory: start tile reward on landing
+
 Effect.defs = {
   { id = "buy_land", label = "购买地块", mandatory = false, can_apply = can_buy, apply = apply_buy },
   { id = "upgrade_land", label = "加盖建筑", mandatory = false, can_apply = can_upgrade, apply = apply_upgrade },
@@ -92,7 +92,7 @@ Effect.defs = {
         ctx.game:set_tile_owner(tile, nil)
         return
       end
-      -- 强征卡
+      
       local total_value = total_invested(tile, st.owner_id, st.level)
       local strong_idx = player.inventory and player.inventory:find_index(function(it)
         return it.id == 2009

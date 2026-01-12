@@ -21,7 +21,7 @@ function Choice.clear(game)
   game.store:set({ "turn", "pending_choice" }, nil)
 end
 
--- payload: { kind, title, body_lines, options, allow_cancel?, cancel_label?, meta? }
+
 function Choice.open(game, payload)
   assert(game and game.store, "Choice.open requires game.store")
   payload = payload or {}

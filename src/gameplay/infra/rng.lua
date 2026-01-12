@@ -1,7 +1,7 @@
 local RNG = {}
 RNG.__index = RNG
 
--- Simple LCG for deterministic reproducibility
+
 local MOD = 0x100000000
 local MULT = 1664525
 local INC = 1013904223
