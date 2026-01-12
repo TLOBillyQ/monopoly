@@ -1,6 +1,6 @@
 -- Dependency rules self-check (run with: lua scripts/deps_check.lua)
 -- Rules:
--- 1) src/gameplay/** must not require src/visual/**
+-- 1) src/gameplay/** must not require UI adapters (src/visual/**, src/adapters/**)
 -- 2) src/gameplay/app/services/** must not require other services via require("src.gameplay.app.services.*")
 --    (use game.services.* instead). Infrastructure like logger should live outside services (e.g. src/util/logger.lua).
 
@@ -60,8 +60,8 @@ local function check_file(path, src)
   local is_service = starts_with(path, "src/gameplay/app/services/")
 
   for _, mod in ipairs(extract_requires(src)) do
-    if is_gameplay and starts_with(mod, "src.visual") then
-      table.insert(errors, "gameplay must not require visual: require(\"" .. mod .. "\")")
+    if is_gameplay and (starts_with(mod, "src.visual") or starts_with(mod, "src.adapters.")) then
+      table.insert(errors, "gameplay must not require UI adapters: require(\"" .. mod .. "\")")
     end
 
     if is_service and starts_with(mod, "src.gameplay.app.services.") then
@@ -76,7 +76,13 @@ local files = git_ls_files()
 local violations = {}
 
 for _, path in ipairs(files) do
-  if is_lua_file(path) and (starts_with(path, "src/gameplay/") or starts_with(path, "src/visual/") or starts_with(path, "src/core/") or starts_with(path, "src/config/") or path == "src/app.lua") then
+  if is_lua_file(path)
+    and (starts_with(path, "src/gameplay/")
+      or starts_with(path, "src/visual/")
+      or starts_with(path, "src/adapters/")
+      or starts_with(path, "src/core/")
+      or starts_with(path, "src/config/")
+      or path == "src/app.lua") then
     local src = read_all(path)
     if src then
       local errs = check_file(path, src)
