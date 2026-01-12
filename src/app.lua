@@ -5,6 +5,13 @@ local constants = require("src.config.constants")
 local roles_cfg = require("src.config.roles")
 local logger = require("src.gameplay.services.logger")
 local TurnManager = require("src.gameplay.services.turn_manager")
+local TileService = require("src.gameplay.services.tile_service")
+local ChanceService = require("src.gameplay.services.chance_service")
+local MovementService = require("src.gameplay.services.movement_service")
+local ItemService = require("src.gameplay.services.item_service")
+local MarketService = require("src.gameplay.services.market_service")
+local StatusService = require("src.gameplay.services.status_service")
+local BankruptcyService = require("src.gameplay.services.bankruptcy_service")
 local RNG = require("src.gameplay.rng")
 local Store = require("src.gameplay.store")
 local Flow = require("src.gameplay.flow")
@@ -84,6 +91,15 @@ function App.new(opts)
     finished = false,
     winner = nil,
     last_turn = nil,
+    services = {
+      tile = TileService,
+      chance = ChanceService,
+      movement = MovementService,
+      item = ItemService,
+      market = MarketService,
+      status = StatusService,
+      bankruptcy = BankruptcyService,
+    },
   }
   setmetatable(game, App)
   game:rebuild_occupants()

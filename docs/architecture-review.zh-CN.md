@@ -21,36 +21,26 @@
 - **Store + Sync 的形态已出现**：具备“可快照/可恢复”的基础（尽管一致性仍需加强）。
 - **RNG 可重放**：`src/gameplay/rng.lua` + `Dice.roll(..., rng)` 为确定性模拟奠基。
 
+### 近期变更（已落地）
+
+- **wait_choice / pending_choice**：`TurnManager` 增加 `wait_choice`，`Choice` + `choice_resolver` 将 UI 选择（含取消）转回 gameplay，自动模式走同一 action 通道。
+- **状态一致性**：`turn/end_turn.lua` 统一 `commit_state`；`sync_all` 对齐 `pending_choice/choice_seq/phase/current_player` 等运行态。
+- **随机源一致**：机会卡抽取等统一走 `game.rng`，回放可重现。
+- **UI 依赖收敛**：`game.ui_enabled` 控制是否发起选择；无 UI 时流程返回 `{waiting=true}` 由上层驱动。
+- **规则单源化**：Land 规则从 `TileService` 收敛到 `land_effects` + `LandResolver`，避免租金/税务双份实现；`ChanceService` 移动后复用同一套结算。
+- **注册表化**：道具与机会卡效果已切换为 handler registry（`item_handlers/post_consume_handlers/effect_handlers`），新增效果按表扩展即可。
+- **UI 端口统一**：`gameplay/ui.lua` 统一 `push_popup/request_choice` payload，services 不再直接组装异构参数。
+
 ---
 
 ## 1. 好莱坞原则（Hollywood Principle）
 
 > 核心：上层 orchestrator “调用”下层，**不要让领域逻辑主动驱动 UI**；同时当出现“等待输入”的流程时，系统应自然进入 `wait` 状态，而不是继续推进。
 
-### 发现
+### 更新后的现状
 
-1) **gameplay 直接调用 UI hook，但流程不会真正等待输入**
-
-- `src/gameplay/effect.lua`：`Effect.resolve(..., choose_fn)` 假设 `choose_fn` 能“异步回调”把选择结果带回来。
-- `src/gameplay/turn/land.lua`：构造 chooser 后调用 `Effect.resolve(...)`，但没有 `wait_choice` phase；回合会直接进入 `end_turn`。
-- `src/gameplay/services/item_service.lua`：`use_missile/use_pass_players/select_player` 等在 gameplay 内直接触发弹窗/选择。
-
-**结果：**
-- “选择”发生在 UI 层之后，gameplay 已经推进完；选择的回调可能在不合适的时间修改状态（典型症状：看起来需要等待点击，但实际上回合已结束/已换人）。
-
-2) `AutoRunner` 目前走“模拟输入”是正确方向，但 gameplay 的选择机制仍不具备等待语义
-
-- `src/visual/auto_runner.lua` / `src/visual/love_layer.lua`：自动模式用派发 action 模拟点击/按键，这一点符合好莱坞原则的“上层调度输入”。
-- 但 gameplay 侧没有“暂停并等待选择”的状态机支撑，因此自动/手动都只能通过“回调注入”绕过等待。
-
-### 建议（P0）
-
-- 引入 **显式的 `wait_choice` phase / pending-action**：
-  - gameplay 在需要选择时不再调用 UI，而是写入 store：`turn.pending_choice = { id, prompt, options... }` 并返回 `"wait_choice"`。
-  - UI 渲染/输入只负责把选择结果（`confirm/select/cancel`）以“action”形式送回 gameplay（例如 `game:dispatch(action)` 或 `TurnManager:dispatch(action)`）。
-  - flow 在 `wait_choice` 中只有在收到选择 action 时才推进。
-
-这会把“等待输入”变成一等公民，从根上解决目前的时序问题，并同时让 AI/自动运行可复用同一套 action 通道。
+- **已改进**：`wait_choice` / `pending_choice` 已成为一等状态；`Choice.open` 写入 store，`choice_resolver` 通过 action 推进 flow，自动/手动共享同一入口。
+- **仍需注意**：少量即时弹窗（如提示类 `push_popup`）仍在 service 内直接触发，但不再驱动流程；后续可统一走 UI 端口。
 
 ---
 
@@ -63,7 +53,7 @@
 1) `game.ui_hooks` 是正向实践，但目前是“半抽象”
 
 - 优点：gameplay 不依赖 Love2D。
-- 问题：hook 的调用发生在 services 内部，且缺少等待语义；同时 hook 的参数形态不统一（`push_popup` vs `request_choice` 的 payload 结构各异）。
+- 问题：hook 的调用发生在 services 内部，且参数形态不统一（`push_popup` vs `request_choice` 的 payload 结构各异）。
 
 2) services 之间存在硬依赖 + 循环依赖迹象
 
@@ -73,12 +63,12 @@
 3) 随机源注入不一致（影响可重放与测试）
 
 - `Dice.roll(..., rng)` 支持注入 RNG。
-- `ChanceService.draw_card()` 未使用 `game.rng`（走 `math.random` 的默认路径），会破坏回放一致性。
+- **已修正**：机会卡抽取改为使用 `game.rng`，回放一致性恢复。
 
 ### 建议（P0/P1）
 
 - **统一端口层**：定义 gameplay 可调用的端口（例如 `ports.ui`, `ports.random`, `ports.log`），由 `App.new` 组装注入；services 只依赖端口，不 `require` 其它 service。
-- **把 RNG 作为强制依赖**：所有抽卡/随机都走 `game.rng`（包括 chance、market 策略等）。
+- **把 RNG 作为强制依赖**：所有抽卡/随机都走 `game.rng`（包括 chance、market 策略等），新增功能沿用此约束。
 - **消除延迟 require**：用 `ctx.services`（组装阶段注入）替代 `require` 互相引用，降低循环依赖风险。
 
 ---
@@ -137,39 +127,35 @@
 
 ---
 
-## 4. 一致性/正确性风险清单（P0）
+## 4. 一致性/正确性风险清单（P0 状态刷新）
 
-1) **回合结束逻辑存在两套实现，`commit_state` 的调用路径不统一**
+- **已解决**
+  - 回合结束路径统一：`turn/end_turn.lua` 负责 `commit_state`，避免双份实现。
+  - phase 单一真相源：phase 写入 store，并通过 `sync_all` 对齐 runtime。
+  - Chance 抽卡走 `game.rng`，回放一致性恢复。
+  - Land 规则单源：TileService 不再重复租金/税务逻辑，由 LandResolver + land_effects 负责。
+  - 机会卡/道具分支移除：注册表驱动，新增效果无需改主干。
 
-- `TurnManager:end_turn(...)` 会 `commit_state`，但 `Flow` 的 `end_turn` state 当前走的是 `src/gameplay/turn/end_turn.lua`（不 commit）。
-- 这会导致 store 与 runtime 状态无法保证在“每回合结束”一致落盘。
-
-2) **`turn.phase` 的真相源不明确**
-
-- `TurnManager:run_turn` 会写 `store.turn.phase`。
-- `App:commit_state` 却写 `store.turn.phase = self.phase or "start"`，但 `game.phase` 并没有在流程中被维护。
-
-建议：明确 “phase 只存在 store” 或 “phase 只存在 runtime”，并保持单向同步。
-
-3) **Chance 抽卡不走 `game.rng`**
-
-- 回放不可重现；测试波动。
+- **仍需跟踪**
+  - services 间仍有硬引用（Item/Status 等），可进一步用接口/端口注入减耦。
+  - UI hook 的 no-op/CLI 适配器可补齐，便于无 UI 运行。
 
 ---
 
 ## 5. 推荐的落地路线（与 backlog 对齐）
 
-### P0（先救时序与一致性）
+### P0（已完成，保持）
 
-- 交互等待：引入 `wait_choice`（store pending_choice + action 驱动）。
-- 统一 `end_turn`：保证每回合结束都会 `commit_state`，并统一 phase 写入。
-- Chance/随机：chance 抽取等统一注入 `game.rng`。
+- `wait_choice` + `pending_choice` + `choice_resolver`，自动/手动统一 action 通道。
+- `end_turn` 统一 `commit_state`，phase 由 store 管理并可 `sync_all`。
+- 随机源统一注入 `game.rng`，回放可重放。
 
 ### P1（结构拆分与可扩展）
 
-- 道具/机会卡注册表化 + 拆分 SRP。
-- TileService 与 land_effects 完成迁移，避免双份规则。
-- 用 services 注入消除循环依赖与延迟 require。
+- 道具/机会卡注册表化 + 拆分 SRP。**（已完成注册表化，后续可拆策略/交互）**
+- TileService 与 land_effects 完成迁移，避免双份规则。**（已落地：LandResolver 统一租金/税务/可选行动）**
+- 用 services 注入消除循环依赖与延迟 require。**（已建立 `game.services`，仍可逐步替换硬引用）**
+- UI payload 规范化。**（已提供统一 UI 端口，建议继续补 CLI/no-op 实现）**
 
 ### P2（工程化）
 
@@ -183,4 +169,3 @@
 - 任意需要选择的效果：回合流程必须进入 `wait_choice`，没有选择不会推进到下一阶段/下一玩家。
 - 自动运行与手动输入共享同一 action 通道。
 - `lua scripts/regression.lua` 在固定 seed 下可 100% 重放，且不会出现偶发差异。
-

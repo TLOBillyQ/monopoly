@@ -5,33 +5,18 @@ local Choice = require("src.gameplay.choice")
 local StatusService = require("src.gameplay.services.status_service")
 local BankruptcyService = require("src.gameplay.services.bankruptcy_service")
 local logger = require("src.gameplay.services.logger")
+local UI = require("src.gameplay.ui")
 
 local ItemService = {}
 local find_missile_target -- forward declare
-
-local function push_popup(game, title, body)
-  if game and game.ui_hooks and game.ui_hooks.push_popup then
-    game.ui_hooks.push_popup({ title = title, body = body })
-  end
-end
-
-local function request_choice(game, title, candidates, on_select, body_lines)
-  if not game or not game.ui_hooks or not game.ui_hooks.request_choice then
-    return nil
-  end
-  game.ui_hooks.request_choice({
-    title = title,
-    candidates = candidates,
-    body_lines = body_lines,
-    on_select = on_select,
-  })
-  return true
-end
 
 local cfg_by_id = {}
 for _, cfg in ipairs(items_cfg) do
   cfg_by_id[cfg.id] = cfg
 end
+
+local item_handlers = {}
+local post_consume_handlers = {}
 
 function ItemService.item_name(item_id)
   local cfg = cfg_by_id[item_id]
@@ -215,7 +200,7 @@ function ItemService.use_monster(game, player, distance)
   local tile = game.board:get_tile(idx)
   destroy_building(tile)
   logger.event(player.name .. " 释放怪兽拆毁 " .. tile.name .. " 的建筑")
-  push_popup(game, "怪兽卡", player.name .. " 拆毁了 " .. tile.name .. " 的建筑")
+  UI.push_popup(game, { title = "怪兽卡", body = player.name .. " 拆毁了 " .. tile.name .. " 的建筑" })
   return true
 end
 
@@ -281,7 +266,7 @@ function ItemService.apply_missile(game, player, idx)
     msg = msg .. "，" .. hit .. " 名玩家送医"
   end
   logger.event(msg)
-  push_popup(game, "导弹卡", msg)
+  UI.push_popup(game, { title = "导弹卡", body = msg })
 end
 
 function ItemService.use_missile(game, player, distance)
@@ -380,134 +365,172 @@ function ItemService.apply_target_item_effect(game, player, item_id, target)
   return false
 end
 
+local function handle_target_player_item(game, player, item_id)
+  if item_id == 2016 and not player:has_deity("poor") then
+    logger.warn("未附身穷神，无法送神")
+    return false
+  end
+
+  local candidates = {}
+  for _, p in ipairs(game.players) do
+    if p.id ~= player.id and not p.eliminated then
+      if item_id == 2015 then
+        if p.status.deity then
+          table.insert(candidates, p)
+        end
+      else
+        table.insert(candidates, p)
+      end
+    end
+  end
+
+  if #candidates == 0 then
+    logger.warn("没有可选择的目标玩家")
+    return false
+  end
+
+  if game and game.ui_enabled and #candidates > 1 then
+    local options = {}
+    local body_lines = {}
+    for _, t in ipairs(candidates) do
+      table.insert(body_lines, t.name .. " 现金:" .. t.cash .. (t.status.deity and (" 神:" .. t.status.deity.type) or ""))
+      table.insert(options, { id = t.id, label = t.name })
+    end
+    Choice.open(game, {
+      kind = "item_target_player",
+      title = ItemService.item_name(item_id) .. "：选择目标玩家",
+      body_lines = body_lines,
+      options = options,
+      allow_cancel = true,
+      cancel_label = "取消",
+      meta = { item_id = item_id, user_id = player.id },
+    })
+    return { waiting = true }
+  end
+
+  local target = candidates[1]
+  local ok = ItemService.apply_target_item_effect(game, player, item_id, target)
+  if ok then
+    consume_item(player, item_id)
+  end
+  return ok
+end
+
+item_handlers[2008] = function(game, player, item_id)
+  if not ItemService.find_monster_target(game, player, 3) then
+    logger.warn(player.name .. " 前后无他人建筑，怪兽卡未使用")
+    return false
+  end
+  if not consume_item(player, item_id) then
+    return false
+  end
+  return ItemService.use_monster(game, player, 3)
+end
+
+item_handlers[2013] = function(game, player, _item_id)
+  if not find_missile_target(game, player, 3) then
+    logger.warn(player.name .. " 前后无轰炸目标，导弹卡未使用")
+    return false
+  end
+  return ItemService.use_missile(game, player, 3)
+end
+
+for _, id in ipairs({ 2011, 2012, 2014, 2015, 2016, 2018 }) do
+  item_handlers[id] = handle_target_player_item
+end
+
+post_consume_handlers[2001] = function(_, player)
+  player.status.pending_free_rent = true
+  logger.event(player.name .. " 使用免费卡，下一次租金免除")
+  return true
+end
+
+post_consume_handlers[2002] = function(_, player)
+  local dice_count = player.seat_id and constants.dice_with_vehicle or constants.default_dice_count
+  local values = {}
+  for i = 1, dice_count do
+    values[i] = 6
+  end
+  player.status.pending_remote_dice = { values = values }
+  logger.event(player.name .. " 使用遥控骰子，设定点数 " .. table.concat(values, ","))
+  return true
+end
+
+post_consume_handlers[2003] = function(_, player)
+  player.status.pending_dice_multiplier = 2
+  logger.event(player.name .. " 使用骰子加倍卡，本次步数翻倍")
+  return true
+end
+
+post_consume_handlers[2004] = function(game, player)
+  ItemService.place_roadblock(game, player)
+  return true
+end
+
+post_consume_handlers[2005] = function(game, player)
+  game.overlays.mines[player.position] = true
+  logger.event(player.name .. " 在脚下埋设地雷")
+  UI.push_popup(game, { title = "埋设地雷", body = player.name .. " 在脚下埋设了地雷" })
+  return true
+end
+
+post_consume_handlers[2006] = function(game, player)
+  ItemService.clear_obstacles(game, player, 12)
+  return true
+end
+
+post_consume_handlers[2007] = function(_, player)
+  logger.event(player.name .. " 准备偷窃（将在经过玩家时触发）")
+  return true
+end
+
+post_consume_handlers[2009] = function(_, player)
+  logger.event(player.name .. " 准备使用强征卡（踩他人地块时触发）")
+  return true
+end
+
+post_consume_handlers[2010] = function(_, player)
+  player.status.pending_tax_free = true
+  logger.event(player.name .. " 使用免税卡，本次征税免除")
+  return true
+end
+
+post_consume_handlers[2017] = function(_, player)
+  StatusService.apply_deity(player, "rich")
+  return true
+end
+
+post_consume_handlers[2019] = function(_, player)
+  StatusService.apply_deity(player, "angel")
+  return true
+end
+
 function ItemService.use_item(game, player, item_id, context)
   local cfg = cfg_by_id[item_id]
   if not cfg then
     return false
   end
-
-  -- Items requiring target selection should consume inside their callback
-  if item_id == 2008 then
-    if not ItemService.find_monster_target(game, player, 3) then
-      logger.warn(player.name .. " 前后无他人建筑，怪兽卡未使用")
-      return false
-    end
-    if not consume_item(player, item_id) then
-      return false
-    end
-    return ItemService.use_monster(game, player, 3)
-  elseif item_id == 2013 then
-    if not find_missile_target(game, player, 3) then
-      logger.warn(player.name .. " 前后无轰炸目标，导弹卡未使用")
-      return false
-    end
-    return ItemService.use_missile(game, player, 3)
+  local handler = item_handlers[item_id]
+  if handler then
+    return handler(game, player, item_id, context)
   end
 
-  if item_id == 2011 or item_id == 2012 or item_id == 2014 or item_id == 2015 or item_id == 2016 or item_id == 2018 then
-    if item_id == 2016 and not player:has_deity("poor") then
-      logger.warn("未附身穷神，无法送神")
-      return false
-    end
-
-    local candidates = {}
-    for _, p in ipairs(game.players) do
-      if p.id ~= player.id and not p.eliminated then
-        if item_id == 2015 then
-          if p.status.deity then
-            table.insert(candidates, p)
-          end
-        else
-          table.insert(candidates, p)
-        end
-      end
-    end
-
-    if #candidates == 0 then
-      logger.warn("没有可选择的目标玩家")
-      return false
-    end
-
-    if game and game.ui_enabled and #candidates > 1 then
-      local options = {}
-      local body_lines = {}
-      for _, t in ipairs(candidates) do
-        table.insert(body_lines, t.name .. " 现金:" .. t.cash .. (t.status.deity and (" 神:" .. t.status.deity.type) or ""))
-        table.insert(options, { id = t.id, label = t.name })
-      end
-      Choice.open(game, {
-        kind = "item_target_player",
-        title = ItemService.item_name(item_id) .. "：选择目标玩家",
-        body_lines = body_lines,
-        options = options,
-        allow_cancel = true,
-        cancel_label = "取消",
-        meta = { item_id = item_id, user_id = player.id },
-      })
-      return { waiting = true }
-    end
-
-    local target = candidates[1]
-    local ok = ItemService.apply_target_item_effect(game, player, item_id, target)
-    if ok then
-      consume_item(player, item_id)
-    end
-    return ok
-  end
-
-  local ok = consume_item(player, item_id)
-  if not ok then
+  local consumed = consume_item(player, item_id)
+  if not consumed then
     return false
   end
 
-  if item_id == 2001 then
-    player.status.pending_free_rent = true
-    logger.event(player.name .. " 使用免费卡，下一次租金免除")
-  elseif item_id == 2002 then
-    local dice_count = player.seat_id and constants.dice_with_vehicle or constants.default_dice_count
-    local values = {}
-    for i = 1, dice_count do
-      values[i] = 6
+  local post = post_consume_handlers[item_id]
+  if post then
+    local res = post(game, player, context)
+    if res ~= nil then
+      return res
     end
-    player.status.pending_remote_dice = { values = values }
-    logger.event(player.name .. " 使用遥控骰子，设定点数 " .. table.concat(values, ","))
-  elseif item_id == 2003 then
-    player.status.pending_dice_multiplier = 2
-    logger.event(player.name .. " 使用骰子加倍卡，本次步数翻倍")
-  elseif item_id == 2004 then
-    ItemService.place_roadblock(game, player)
-  elseif item_id == 2005 then
-    game.overlays.mines[player.position] = true
-    logger.event(player.name .. " 在脚下埋设地雷")
-    push_popup(game, "埋设地雷", player.name .. " 在脚下埋设了地雷")
-  elseif item_id == 2006 then
-    ItemService.clear_obstacles(game, player, 12)
-  elseif item_id == 2007 then
-    -- 偷窃在经过时处理
-    logger.event(player.name .. " 准备偷窃（将在经过玩家时触发）")
-  elseif item_id == 2009 then
-    logger.event(player.name .. " 准备使用强征卡（踩他人地块时触发）")
-  elseif item_id == 2010 then
-    player.status.pending_tax_free = true
-    logger.event(player.name .. " 使用免税卡，本次征税免除")
-  elseif item_id == 2011 then
-    ItemService.use_wealth_share(game, player)
-  elseif item_id == 2012 then
-    ItemService.use_exile(game, player)
-  elseif item_id == 2014 then
-    ItemService.use_audit(game, player)
-  elseif item_id == 2015 then
-    ItemService.use_invite_god(game, player)
-  elseif item_id == 2016 then
-    ItemService.use_send_poor_god(game, player)
-  elseif item_id == 2017 then
-    StatusService.apply_deity(player, "rich")
-  elseif item_id == 2018 then
-    ItemService.use_poor_god(game, player)
-  elseif item_id == 2019 then
-    StatusService.apply_deity(player, "angel")
+    return true
   end
-  return true
+
+  logger.warn("未实现的道具:" .. tostring(item_id))
+  return false
 end
 
 function ItemService.place_roadblock(game, player)
@@ -520,7 +543,7 @@ function ItemService.place_roadblock(game, player)
     if not game.overlays.roadblocks[current] and not game.overlays.mines[current] then
       game.overlays.roadblocks[current] = true
       logger.event(player.name .. " 放置路障在 " .. board:get_tile(current).name)
-      push_popup(game, "放置路障", player.name .. " 在 " .. board:get_tile(current).name .. " 设置了路障")
+      UI.push_popup(game, { title = "放置路障", body = player.name .. " 在 " .. board:get_tile(current).name .. " 设置了路障" })
       return
     end
   end
@@ -630,7 +653,7 @@ function ItemService.steal_item_at_index(game, player, target, item_idx)
   player.inventory:add(stolen)
   consume_item(player, 2007)
   logger.event(player.name .. " 使用偷窃卡，从 " .. target.name .. " 偷走道具 " .. ItemService.item_name(stolen.id))
-  push_popup(game, "偷窃成功", player.name .. " 从 " .. target.name .. " 偷走了 " .. ItemService.item_name(stolen.id))
+  UI.push_popup(game, { title = "偷窃成功", body = player.name .. " 从 " .. target.name .. " 偷走了 " .. ItemService.item_name(stolen.id) })
   return stolen
 end
 
@@ -753,12 +776,19 @@ function ItemService.select_player(game, player, title, on_async_select)
   if #choices == 0 then
     return nil
   end
-  if on_async_select and game.ui_hooks and game.ui_hooks.request_choice and #choices > 1 then
+  if on_async_select and #choices > 1 then
     local body_lines = {}
     for _, p in ipairs(choices) do
       table.insert(body_lines, p.name .. " 现金:" .. p.cash .. (p.status.deity and (" 神:" .. p.status.deity.type) or ""))
     end
-    request_choice(game, title or "选择玩家", choices, on_async_select, body_lines)
+    UI.request_choice(game, {
+      title = title or "选择玩家",
+      candidates = choices,
+      body_lines = body_lines,
+      on_select = on_async_select,
+      allow_cancel = true,
+      cancel_label = "取消",
+    })
     return nil
   end
   return choices[1]
