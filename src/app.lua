@@ -84,13 +84,16 @@ function App.new(opts)
   }
   local store = Store.new(initial_state)
 
+  -- Store is the source of truth; keep mutable overlay refs pointing at store state.
+  local overlays_ref = store:get({ "board", "overlays" })
+
   local game = {
     board = board,
     players = players,
     store = store,
     rng = rng,
-    turn_count = initial_state.turn.turn_count,
-    overlays = initial_state.board.overlays,
+    turn_count = store:get({ "turn", "turn_count" }) or 0,
+    overlays = overlays_ref,
     logger = logger,
     finished = false,
     winner = nil,
@@ -113,11 +116,14 @@ function App.new(opts)
     local tiles_snapshot = snapshot_tiles(self.board.path)
     self.store:set({ "board", "tiles" }, tiles_snapshot)
     -- overlays
+    -- overlays is a live ref into store; set defensively in case older code replaced it.
     self.store:set({ "board", "overlays" }, self.overlays)
     -- players
     self.store:set({ "players" }, snapshot_players(self.players))
     -- turn
-    self.store:set({ "turn", "turn_count" }, self.turn_count or 0)
+    local turn_count = self.store:get({ "turn", "turn_count" }) or self.turn_count or 0
+    self.store:set({ "turn", "turn_count" }, turn_count)
+    self.turn_count = turn_count
     local idx = self.store:get({ "turn", "current_player_index" }) or 1
     self.store:set({ "turn", "current_player_index" }, idx)
     -- rng
@@ -163,6 +169,9 @@ function App:update_player_position(player, new_index)
     end
   end
   player.position = new_index
+  if self.store then
+    self.store:set({ "players", player.id, "position" }, new_index)
+  end
   self.occupants[new_index] = self.occupants[new_index] or {}
   table.insert(self.occupants[new_index], player.id)
   self.store:set({ "board", "overlays" }, self.store:get({ "board", "overlays" }) or { roadblocks = {}, mines = {} })

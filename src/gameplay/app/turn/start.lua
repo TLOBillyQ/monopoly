@@ -7,7 +7,12 @@ end
 
 local function phase_start(tm)
   local player = tm.game:current_player()
-  tm.game.turn_count = (tm.game.turn_count or 0) + 1
+  local tc = (tm.game.store and tm.game.store:get({ "turn", "turn_count" })) or (tm.game.turn_count or 0)
+  tc = tc + 1
+  if tm.game.store then
+    tm.game.store:set({ "turn", "turn_count" }, tc)
+  end
+  tm.game.turn_count = tc
   tm.game.last_turn = {
     player_id = player.id,
     player_name = player.name,
