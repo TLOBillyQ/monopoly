@@ -66,15 +66,15 @@ function App.new(opts)
     end
   end
 
-  
   local overlays_ref = store:get({ "board", "overlays" })
+  local overlays = overlays_ref and deep_copy(overlays_ref) or { roadblocks = {}, mines = {} }
 
   local game = {
     board = board,
     players = players,
     store = store,
     rng = rng,
-    overlays = overlays_ref,
+    overlays = overlays,
     logger = logger,
     finished = false,
     winner = nil,

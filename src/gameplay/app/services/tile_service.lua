@@ -1,8 +1,5 @@
 local logger = require("src.util.logger")
-local Choice = require("src.gameplay.app.choice")
-local Services = require("src.util.services")
 local Errors = require("src.util.error_handling")
-local UI = require("src.gameplay.ports.ui_port")
 local IntentDispatcher = require("src.gameplay.app.intent_dispatcher")
 
 local TileService = {}
@@ -12,7 +9,7 @@ local function missing_service(name)
 end
 
 local function handle_hospital(game, player)
-  local status = Services.status(game)
+  local status = game and game.services and game.services.status
   if not status then
     return missing_service("StatusService")
   end
@@ -20,7 +17,7 @@ local function handle_hospital(game, player)
 end
 
 local function handle_mountain(game, player)
-  local status = Services.status(game)
+  local status = game and game.services and game.services.status
   if not status then
     return missing_service("StatusService")
   end
@@ -37,33 +34,41 @@ local function handle_market(game, player, tile)
     return nil
   end
 
-  local market = Services.market(game)
+  local market = game and game.services and game.services.market
   if not market then
     logger.warn("缺少 MarketService，无法打开黑市")
     return nil
   end
 
   if player.inventory and player.inventory.is_full and player.inventory:is_full() then
-    UI.push_popup(game, { title = "黑市", body = player.name .. " 卡槽已满，无法购买" })
     game.store:set({ "turn", "market_prompt" }, { player_id = player.id, tile_id = tile.id })
-    return nil
+    return {
+      intent = { kind = "push_popup", payload = { title = "黑市", body = player.name .. " 卡槽已满，无法购买" } },
+    }
   end
 
-  local spec = market.build_choice_spec and market.build_choice_spec(game, player) or nil
+  local spec, market_intent = market.build_choice_spec and market.build_choice_spec(game, player) or nil
+  if market_intent then
+    game.store:set({ "turn", "market_prompt" }, { player_id = player.id, tile_id = tile.id })
+    return { intent = market_intent }
+  end
   if not spec then
     game.store:set({ "turn", "market_prompt" }, { player_id = player.id, tile_id = tile.id })
     return nil
   end
 
-  Choice.open(game, spec)
   game.store:set({ "turn", "market_prompt" }, { player_id = player.id, tile_id = tile.id })
-  return { waiting = true, reason = "market_choice" }
+  return {
+    waiting = true,
+    reason = "market_choice",
+    intent = { kind = "need_choice", choice_spec = spec },
+  }
 end
 
 local function check_mine(game, player)
-  local overlay = Services.overlay(game)
+  local overlay = game and game.services and game.services.overlay
   if overlay and overlay.has_mine(game, player.position) then
-    local status = Services.status(game)
+    local status = game and game.services and game.services.status
     if not status then
       return missing_service("StatusService")
     end
@@ -83,7 +88,7 @@ end
 function TileService.resolve(game, player, tile, context)
   
   if context and context.encountered_players and not context.pass_players_checked then
-    local item = Services.item(game)
+    local item = game and game.services and game.services.item
     if not item then
       missing_service("ItemService")
       context.pass_players_checked = true

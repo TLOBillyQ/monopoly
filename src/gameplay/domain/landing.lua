@@ -4,6 +4,13 @@ local constants = require("src.config.constants")
 
 local Effect = {}
 
+local function get_service(ctx, key)
+  if ctx and ctx.services and ctx.services[key] then
+    return ctx.services[key]
+  end
+  return ctx and ctx.game and ctx.game.services and ctx.game.services[key]
+end
+
 
 Effect.defs = {
   {
@@ -27,7 +34,7 @@ Effect.defs = {
       return ctx and ctx.game and ctx.player and ctx.tile and ctx.tile.type == "item"
     end,
     apply = function(ctx)
-      local item = ctx.game and ctx.game.services and ctx.game.services.item
+      local item = get_service(ctx, "item")
       if not item or not item.draw_and_give then
         error("Missing ItemService (game.services.item)")
       end
@@ -42,7 +49,7 @@ Effect.defs = {
       return ctx and ctx.game and ctx.player and ctx.tile and ctx.tile.type == "chance"
     end,
     apply = function(ctx)
-      local chance = ctx.game and ctx.game.services and ctx.game.services.chance
+      local chance = get_service(ctx, "chance")
       if not chance or not chance.draw_card or not chance.resolve then
         error("Missing ChanceService (game.services.chance)")
       end
@@ -60,7 +67,7 @@ Effect.defs = {
       return ctx and ctx.game and ctx.player and ctx.tile
     end,
     apply = function(ctx)
-      local tile_service = ctx.game and ctx.game.services and ctx.game.services.tile
+      local tile_service = get_service(ctx, "tile")
       if not tile_service or not tile_service.resolve then
         error("Missing TileService (game.services.tile)")
       end

@@ -3,7 +3,6 @@ local Choice = require("src.gameplay.app.choice")
 local Effect = require("src.gameplay.domain.effect")
 local ItemEffects = require("src.gameplay.domain.item")
 local Roadblock = require("src.gameplay.domain.item_roadblock")
-local Services = require("src.util.services")
 local logger = require("src.util.logger")
 local IntentDispatcher = require("src.gameplay.app.intent_dispatcher")
 
@@ -274,7 +273,7 @@ handlers.market_buy = function(game, choice, action)
   local item_id = as_number(action.option_id)
   local meta = choice.meta or {}
   local player = meta.player_id and game.players[meta.player_id] or game:current_player()
-  local market = Services.market(game)
+  local market = game.services["market"]
   if player and market and market.buy and item_id then
     market.buy(game, player, item_id)
   end

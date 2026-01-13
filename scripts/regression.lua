@@ -82,7 +82,8 @@ local function test_monster_card()
   g:set_tile_owner(tile, 2)
   g:set_tile_level(tile, 2)
   p.inventory:add({ id = 2008 })
-  local ok = ItemService.use_item(g, p, 2008)
+  local res = ItemService.use_item(g, p, 2008)
+  local ok = (type(res) == "table" and res.ok ~= nil) and res.ok or res
   assert_eq(ok, true, "monster use ok")
   assert_eq(tile_state(g, tile).level, 0, "building destroyed")
 end

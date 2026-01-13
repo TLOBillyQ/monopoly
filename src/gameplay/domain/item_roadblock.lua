@@ -1,14 +1,12 @@
 local logger = require("src.util.logger")
 local UI = require("src.gameplay.ports.ui_port")
 local GameState = require("src.util.game_state")
-local Services = require("src.util.services")
-
 local Roadblock = {}
 
 local OPPOSITE = { up = "down", down = "up", left = "right", right = "left" }
 
 local function has_overlay(game, idx)
-  local overlay = Services.overlay(game)
+  local overlay = game.services["overlay"]
   if not overlay then
     return false
   end
@@ -155,7 +153,7 @@ function Roadblock.apply(game, player, idx)
   if not idx then
     return false
   end
-  local overlay = Services.overlay(game)
+  local overlay = game.services["overlay"]
   if not overlay then
     logger.warn("缺少 OverlayService，无法放置路障")
     return false

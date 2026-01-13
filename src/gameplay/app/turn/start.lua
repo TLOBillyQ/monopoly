@@ -1,6 +1,5 @@
 local logger = require("src.util.logger")
 local Choice = require("src.gameplay.app.choice")
-local Services = require("src.util.services")
 local IntentDispatcher = require("src.gameplay.app.intent_dispatcher")
 
 local function phase_start(tm)
@@ -32,7 +31,7 @@ local function phase_start(tm)
     tm.game.last_turn.stay_turns = player.status.stay_turns
     return "end_turn", { player = player }
   end
-  local item = Services.item(tm.game)
+  local item = tm.game and tm.game.services and tm.game.services.item
   if item and item.auto_pre_action then
     local pre = item.auto_pre_action(tm.game, player)
     if pre then

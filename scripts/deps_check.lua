@@ -86,7 +86,6 @@ for _, path in ipairs(files) do
     and (starts_with(path, "src/gameplay/")
       or starts_with(path, "src/visual/")
       or starts_with(path, "src/adapters/")
-      or starts_with(path, "src/core/")
       or starts_with(path, "src/config/")
       or path == "src/app.lua") then
     local src = read_all(path)

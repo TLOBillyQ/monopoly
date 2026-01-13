@@ -1,12 +1,18 @@
 local Effect = {}
 local logger = require("src.util.logger")
 local constants = require("src.config.constants")
-local Services = require("src.util.services")
 local GameState = require("src.util.game_state")
 
 local MAX_LEVEL = 3
 
 local tile_state = GameState.tile_state
+
+local function get_service(ctx, key)
+  if ctx and ctx.services and ctx.services[key] then
+    return ctx.services[key]
+  end
+  return ctx and ctx.game and ctx.game.services and ctx.game.services[key]
+end
 
 local function next_upgrade_cost(tile, level)
   local target_level = (level or 0) + 1
@@ -191,7 +197,7 @@ Effect.defs = {
       if strong_idx and player.cash >= total_value and not skip_strong_prompt then
         return open_rent_prompt(ctx, "strong", "是否使用强征卡", { "支付 " .. tostring(total_value) .. " 强制购入 " .. tile.name })
       end
-      local status = Services.status(ctx.game)
+      local status = get_service(ctx, "status")
       if status and status.is_in_mountain and status.is_in_mountain(ctx.game, owner) then
         logger.event(owner.name .. " 在深山，租金不收取")
         return
@@ -263,7 +269,7 @@ Effect.defs = {
         owner:add_cash(paid)
         player:set_cash(0)
         logger.event(player.name .. " 资金不足，支付剩余 " .. paid .. " 后破产")
-        local bankruptcy = Services.bankruptcy(ctx.game)
+        local bankruptcy = get_service(ctx, "bankruptcy")
         if bankruptcy and bankruptcy.eliminate then
           bankruptcy.eliminate(ctx.game, player)
         else
@@ -313,7 +319,7 @@ Effect.defs = {
       player:deduct_cash(fee)
       logger.event(player.name .. " 在税务局支付税金 " .. fee)
       if player.cash <= 0 then
-        local bankruptcy = Services.bankruptcy(ctx.game)
+        local bankruptcy = get_service(ctx, "bankruptcy")
         if bankruptcy and bankruptcy.eliminate then
           bankruptcy.eliminate(ctx.game, player)
         else

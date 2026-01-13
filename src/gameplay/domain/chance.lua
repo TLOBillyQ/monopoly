@@ -1,5 +1,4 @@
 local logger = require("src.util.logger")
-local Services = require("src.util.services")
 local Errors = require("src.util.error_handling")
 
 local ChanceEffects = {}
@@ -20,11 +19,18 @@ local function ensure_service(service, name)
   return service
 end
 
+local function get_service(game, context, key)
+  if context and context.services and context.services[key] then
+    return context.services[key]
+  end
+  return game and game.services and game.services[key]
+end
+
 local function handle_bankruptcy_if_negative(game, player)
   if player.cash >= 0 then
     return
   end
-  local bankruptcy = ensure_service(Services.bankruptcy(game), "BankruptcyService")
+  local bankruptcy = ensure_service(get_service(game, nil, "bankruptcy"), "BankruptcyService")
   if bankruptcy and bankruptcy.eliminate then
     bankruptcy.eliminate(game, player)
   end
@@ -36,7 +42,7 @@ local function apply_cash_and_maybe_bankrupt(game, player, delta)
 end
 
 local function move_steps(game, player, steps)
-  local movement = ensure_service(Services.movement(game), "MovementService")
+  local movement = ensure_service(get_service(game, nil, "movement"), "MovementService")
   if not movement then
     return nil
   end
@@ -68,7 +74,7 @@ handlers.percent_pay_cash = function(game, player, card)
 end
 
 handlers.pay_others = function(game, player, card)
-  local status = ensure_service(Services.status(game), "StatusService")
+  local status = ensure_service(get_service(game, nil, "status"), "StatusService")
   if not status then
     return
   end
@@ -88,7 +94,7 @@ handlers.pay_others = function(game, player, card)
 end
 
 handlers.collect_from_others = function(game, player, card)
-  local status = ensure_service(Services.status(game), "StatusService")
+  local status = ensure_service(get_service(game, nil, "status"), "StatusService")
   if not status then
     return
   end
@@ -158,7 +164,7 @@ handlers.move_forward = function(game, player, card)
 end
 
 handlers.grant_item = function(game, player, card)
-  local item = Services.item(game)
+  local item = get_service(game, nil, "item")
   if not item then
     return missing_service("ItemService")
   end
@@ -196,7 +202,7 @@ handlers.discard_properties = function(game, player, card)
 end
 
 handlers.forced_move = function(game, player, card, context)
-  local status = ensure_service(Services.status(game), "StatusService")
+  local status = ensure_service(get_service(game, context, "status"), "StatusService")
   if not status then
     return
   end
@@ -225,7 +231,7 @@ handlers.forced_move = function(game, player, card, context)
       if game.set_player_status then
         game:set_player_status(player, "move_dir", nil)
       end
-      local market_service = Services.market(game)
+      local market_service = get_service(game, context, "market")
       if market_service then
         market_service.auto_buy(game, player)
       else
@@ -236,7 +242,7 @@ handlers.forced_move = function(game, player, card, context)
 end
 
 function ChanceEffects.resolve(game, player, card, context)
-  local status = Services.status(game)
+  local status = get_service(game, context, "status")
   if not status then
     return missing_service("StatusService")
   end

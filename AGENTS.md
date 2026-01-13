@@ -8,7 +8,32 @@
 - 核心gameplay代码架构要满足好莱坞原则和SOLID原则
 - 切分适配层，love2d环境注入
 
-## 代码修改原则
+## Coding Rules
 
-- 不用考虑旧代码，这只会影响你的重构。
-- 带面写完后跑 `scripts/deps_check.lua` 和 `scripts/deps_check.lua`
+**Primary rule: prefer deleting or reusing code over adding new code.**
+
+### 1. No default abstractions
+- Do not add interfaces, layers, or helpers unless there are **at least two real call sites**.
+- No future-proofing.
+
+### 2. Single implementation per feature
+- If similar logic exists, **merge it**.
+- New code must replace old code, not coexist with it.
+
+### 3. Delete aggressively
+- Remove unused functions, modules, parameters, and branches.
+- Delete wrappers that only forward calls.
+
+### 4. Keep Lua simple
+- Prefer plain tables and functions.
+- Avoid metatables, inheritance-like patterns, and over-general utilities.
+
+### 5. Limit growth
+- Prefer editing existing files.
+- Adding a new file requires justification.
+
+### 6. Mandatory cleanup
+- After every change, ask: *“What code can be removed now?”*
+- If nothing can be removed, explain why.
+
+**Goal: minimal code, minimal concepts, minimal files.**

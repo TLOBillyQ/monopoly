@@ -1,6 +1,5 @@
 local items_cfg = require("src.config.items")
 local logger = require("src.util.logger")
-local UI = require("src.gameplay.ports.ui_port")
 
 local MarketService = {}
 
@@ -35,10 +34,6 @@ function MarketService.build_choice_spec(game, player)
   if not player then
     return nil
   end
-  if player.inventory and player.inventory.is_full and player.inventory:is_full() then
-    UI.push_popup(game, { title = "黑市", body = player.name .. " 卡槽已满，无法购买" })
-    return nil
-  end
 
   local options_cfg = MarketService.list_buyable(player)
   local options = {}
@@ -53,8 +48,7 @@ function MarketService.build_choice_spec(game, player)
   end
 
   if #options == 0 then
-    UI.push_popup(game, { title = "黑市", body = player.name .. " 金币不足，暂无可购买道具" })
-    return nil
+    return nil, { kind = "push_popup", payload = { title = "黑市", body = player.name .. " 金币不足，暂无可购买道具" } }
   end
 
   return {
@@ -83,14 +77,18 @@ function MarketService.buy(game, player, item_id)
     return false
   end
   if player.inventory and player.inventory.is_full and player.inventory:is_full() then
-    UI.push_popup(game, { title = "黑市", body = player.name .. " 卡槽已满，无法购买" })
-    return false
+    return { ok = false, intent = { kind = "push_popup", payload = { title = "黑市", body = player.name .. " 卡槽已满，无法购买" } } }
   end
 
   local price = cfg.shop_price or 0
   if player.cash < price then
-    UI.push_popup(game, { title = "黑市", body = player.name .. " 金币不足，无法购买 " .. (cfg.name or tostring(cfg.id)) })
-    return false
+    return {
+      ok = false,
+      intent = {
+        kind = "push_popup",
+        payload = { title = "黑市", body = player.name .. " 金币不足，无法购买 " .. (cfg.name or tostring(cfg.id)) },
+      },
+    }
   end
 
   player:deduct_cash(price)

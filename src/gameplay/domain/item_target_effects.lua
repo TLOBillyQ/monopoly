@@ -1,10 +1,9 @@
 local logger = require("src.util.logger")
-local Services = require("src.util.services")
 
 local TargetEffects = {}
 
 local function ensure_status(game, action)
-  local status = Services.status(game)
+  local status = game.services["status"]
   if not status then
     logger.warn("缺少 StatusService，无法" .. action)
   end
@@ -12,7 +11,7 @@ local function ensure_status(game, action)
 end
 
 local function ensure_bankruptcy(game, action)
-  local bankruptcy = Services.bankruptcy(game)
+  local bankruptcy = game.services["bankruptcy"]
   if not bankruptcy then
     logger.warn("缺少 BankruptcyService，无法" .. action)
   end

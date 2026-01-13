@@ -235,9 +235,6 @@ function LoveLayer:step_turn()
     self.action_usecase:advance_turn()
   elseif self.turn_usecase then
     self.turn_usecase:advance()
-  elseif self.game.turn_manager then
-    self.game.turn_manager:run_turn()
-    self.game:check_victory()
   end
 end
 
@@ -386,9 +383,6 @@ function LoveLayer:dispatch_action(action)
     self:_touch_choice_timeout(self:get_pending_choice())
     if self.action_usecase then
       self.action_usecase:handle_choice(action)
-    elseif self.game and self.game.turn_manager then
-      self.game.turn_manager:dispatch(action)
-      self.game:check_victory()
     end
   end
 end
