@@ -122,10 +122,8 @@
 目标：让“目录/脚本/边界”一致，减少结构困惑。
 
 1) **对齐 deps_check 的扫描范围与真实结构**
-	 - 选择其一：
-		 - A. 删除脚本中对 `src/core/` 的扫描（如果该目录不再计划出现）
-		 - B. 引入/恢复 `src/core/` 作为稳定的“核心域模型目录”，并把 `src/gameplay/domain/core/*` 中的核心对象迁移/别名过去
-	 - 推荐：先做 A（最小变更），后续在 P2 再决定是否需要 core 目录。
+	 - 现状：`src/core/` 已恢复，原 `src/gameplay/domain/core/*` 核心对象迁移到此处并删除兼容路径。
+	 - 后续：保持 deps_check 与目录一致，核心对象只放在 `src/core/`。
 
 2) **收敛 overlays 写入口（禁止外部拿内部引用）**
 	 - 将 `game.overlays` 从“直接引用 store 内表”改为：
@@ -160,7 +158,7 @@
 	 - 保留表驱动优先，尽可能减少“每个道具一个文件”的散落。
 
 2) **统一 core 命名与放置位置**
-	 - 只保留一个“核心对象目录”（要么是 `src/gameplay/domain/core`，要么是 `src/core`）。
+	 - 只保留 `src/core` 作为核心对象目录，避免再出现 `src/gameplay/domain/core` 兼容路径。
 	 - 把 board/player/inventory 等核心对象集中，减少“同名概念分散在多层”的情况。
 
 3) **可删代码清单（以 deps_check + regression 为准）**
