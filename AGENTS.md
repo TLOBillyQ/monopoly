@@ -2,11 +2,9 @@
 
 ## 项目概览
 
-- 大富翁回合制棋盘游戏
-- 尽量表驱动，可维护性优化
-- lua语言
-- 核心gameplay代码架构要满足好莱坞原则和SOLID原则
-- 切分适配层，love2d环境注入
+- 大富翁回合制棋盘游戏，lua语言
+- 表驱动、SOLID原则、好莱坞原则
+- 切分适配层，love2d环境注入, 留出eggy适配层占位
  
 ## 自检
 - 通过脚本测试：`scripts/deps_check.lua`和`scripts/regression.lua`

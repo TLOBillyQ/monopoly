@@ -1,9 +1,5 @@
 local UI = {}
 
-
-
-
-
 local function get_port(game)
   if game and game.ui_port then
     return game.ui_port
