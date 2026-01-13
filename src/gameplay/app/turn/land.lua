@@ -12,7 +12,7 @@ local function phase_land(tm, args)
     return "wait_choice", { resume_state = resume_state, resume_args = resume_args }
   end
 
-  return "end_turn", { player = player }
+  return "post_action", { player = player }
 end
 
 return phase_land

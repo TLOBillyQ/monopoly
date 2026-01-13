@@ -1,6 +1,8 @@
+local constants = require("src.config.constants")
 local Choice = require("src.gameplay.app.choice")
 local Effect = require("src.gameplay.domain.effect")
 local ItemEffects = require("src.gameplay.domain.item")
+local Roadblock = require("src.gameplay.domain.item_roadblock")
 local Services = require("src.util.services")
 local logger = require("src.util.logger")
 
@@ -30,6 +32,12 @@ local function build_effect_ctx(game, player, tile, move_result)
     move_result = move_result,
     on_landing = true,
   }
+end
+
+local function finish_post_action(game)
+  if game and game.store then
+    game.store:set({ "turn", "post_action" }, { done = true })
+  end
 end
 
 local function get_container_defs_by_choice_kind(choice_kind)
@@ -123,6 +131,36 @@ end
 handlers.landing_optional_effect = handle_optional_landing_effect
 handlers.land_optional_effect = handle_optional_landing_effect
 
+handlers.post_action_item = function(game, choice, action)
+  local meta = choice.meta or {}
+  local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+  if is_cancel(action) then
+    finish_post_action(game)
+    Choice.clear(game)
+    return { stay = false }
+  end
+  if not player then
+    Choice.clear(game)
+    return { stay = false }
+  end
+  local item_id = as_number(action.option_id)
+  if not item_id then
+    Choice.clear(game)
+    return { stay = false }
+  end
+
+  local res = ItemEffects.use_item(game, player, item_id)
+  if type(res) == "table" and res.waiting then
+    if res.intent and res.intent.kind == "need_choice" and res.intent.choice_spec then
+      Choice.open(game, res.intent.choice_spec)
+      return { stay = true }
+    end
+  end
+
+  Choice.clear(game)
+  return { stay = false }
+end
+
 handlers.missile_target = function(game, choice, action)
   if is_cancel(action) then
     Choice.clear(game)
@@ -135,6 +173,29 @@ handlers.missile_target = function(game, choice, action)
     ItemEffects.consume_item(player, 2013)
     ItemEffects.apply_missile(game, player, idx)
   end
+  Choice.clear(game)
+  return { stay = false }
+end
+
+handlers.roadblock_target = function(game, choice, action)
+  if is_cancel(action) then
+    Choice.clear(game)
+    return { stay = false }
+  end
+  local idx = as_number(action.option_id)
+  local meta = choice.meta or {}
+  local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+  if not player or not idx then
+    Choice.clear(game)
+    return { stay = false }
+  end
+  if meta.item_id then
+    if not ItemEffects.consume_item(player, meta.item_id) then
+      Choice.clear(game)
+      return { stay = false }
+    end
+  end
+  Roadblock.apply(game, player, idx)
   Choice.clear(game)
   return { stay = false }
 end
@@ -248,6 +309,30 @@ handlers.tax_card_prompt = function(game, choice, action)
       decision = decision,
     })
   end
+  Choice.clear(game)
+  return { stay = false }
+end
+
+handlers.remote_dice_value = function(game, choice, action)
+  if is_cancel(action) then
+    Choice.clear(game)
+    return { stay = false }
+  end
+  local value = as_number(action.option_id)
+  local meta = choice.meta or {}
+  local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+  local dice_count = meta.dice_count or (player and (player.seat_id and constants.dice_with_vehicle or constants.default_dice_count)) or 1
+  if not player or not value then
+    Choice.clear(game)
+    return { stay = false }
+  end
+  if meta.item_id then
+    if not ItemEffects.consume_item(player, meta.item_id) then
+      Choice.clear(game)
+      return { stay = false }
+    end
+  end
+  ItemEffects.apply_remote_dice(game, player, dice_count, value)
   Choice.clear(game)
   return { stay = false }
 end

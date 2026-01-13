@@ -37,9 +37,12 @@ function Missile.find_target(game, player, distance)
   local idx = BoardUtils.find_best_tile(game, player, distance, {
     score_fn = function(tile)
       if tile.type ~= "land" then
-        return 0
+        return nil
       end
       local st = tile_state(game, tile)
+      if not st.owner_id or st.owner_id == player.id or (st.level or 0) <= 0 then
+        return nil
+      end
       return BoardUtils.total_invested(tile, st.owner_id, st.level)
     end,
   })

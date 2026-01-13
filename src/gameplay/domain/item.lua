@@ -9,6 +9,7 @@ local PostEffects = require("src.gameplay.domain.item_post_effects")
 local TargetEffects = require("src.gameplay.domain.item_target_effects")
 local Monster = require("src.gameplay.domain.item_monster")
 local Missile = require("src.gameplay.domain.item_missile")
+local Roadblock = require("src.gameplay.domain.item_roadblock")
 local Steal = require("src.gameplay.domain.item_steal")
 
 local ItemEffects = {}
@@ -78,6 +79,19 @@ function ItemEffects.draw_and_give(player, rng)
     return
   end
   ItemEffects.give_item(player, cfg.id)
+end
+
+function ItemEffects.apply_remote_dice(game, player, dice_count, value)
+  if not dice_count or dice_count < 1 then
+    return false
+  end
+  local values = {}
+  for i = 1, dice_count do
+    values[i] = value
+  end
+  game:set_player_status(player, "pending_remote_dice", { values = values })
+  logger.event(player.name .. " 使用遥控骰子，设定点数 " .. table.concat(values, ","))
+  return true
 end
 
 function ItemEffects.find_monster_target(game, player, distance)
@@ -163,6 +177,80 @@ end
 
 
 local item_handlers = {}
+
+item_handlers[2002] = function(game, player, item_id, _context)
+  local dice_count = player.seat_id and constants.dice_with_vehicle or constants.default_dice_count
+  if UI.is_available(game) then
+    local options = {}
+    local body_lines = {}
+    for i = 1, 6 do
+      table.insert(options, { id = i, label = tostring(i) })
+      table.insert(body_lines, "点数 " .. i)
+    end
+    return {
+      waiting = true,
+      intent = {
+        kind = "need_choice",
+        choice_spec = {
+          kind = "remote_dice_value",
+          title = "遥控骰子：选择点数",
+          body_lines = body_lines,
+          options = options,
+          allow_cancel = true,
+          cancel_label = "放弃",
+          meta = { player_id = player.id, item_id = item_id, dice_count = dice_count },
+        },
+      },
+    }
+  end
+
+  if not ItemEffects.consume_item(player, item_id) then
+    return false
+  end
+  return ItemEffects.apply_remote_dice(game, player, dice_count, 6)
+end
+
+item_handlers[2004] = function(game, player, item_id, _context)
+  local candidates = Roadblock.candidates(game, player, 3)
+  if not candidates or #candidates == 0 then
+    logger.warn(player.name .. " 无可放置路障的位置")
+    return false
+  end
+
+  if UI.is_available(game) then
+    local options = {}
+    local body_lines = {}
+    for _, cand in ipairs(candidates) do
+      table.insert(options, { id = cand.idx, label = cand.label })
+      table.insert(body_lines, cand.label)
+    end
+    return {
+      waiting = true,
+      intent = {
+        kind = "need_choice",
+        choice_spec = {
+          kind = "roadblock_target",
+          title = "路障卡：选择位置",
+          body_lines = body_lines,
+          options = options,
+          allow_cancel = true,
+          cancel_label = "放弃",
+          meta = { player_id = player.id, item_id = item_id },
+        },
+      },
+    }
+  end
+
+  local best = Roadblock.pick_best(candidates)
+  if not best then
+    logger.warn(player.name .. " 未找到可放置的路障格子")
+    return false
+  end
+  if not ItemEffects.consume_item(player, item_id) then
+    return false
+  end
+  return Roadblock.apply(game, player, best.idx)
+end
 
 item_handlers[2008] = function(game, player, item_id, _context)
   if not ItemEffects.find_monster_target(game, player, 3) then

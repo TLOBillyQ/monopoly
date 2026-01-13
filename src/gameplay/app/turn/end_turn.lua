@@ -6,6 +6,7 @@ local function phase_end(tm, args)
   player:clear_temporal_flags()
   if tm.game and tm.game.store then
     tm.game.store:set({ "turn", "market_prompt" }, nil)
+    tm.game.store:set({ "turn", "post_action" }, nil)
   end
   tm:next_player()
   return nil

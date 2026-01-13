@@ -5,6 +5,7 @@ local phase_start_fn = require("src.gameplay.app.turn.start")
 local phase_roll_fn = require("src.gameplay.app.turn.roll")
 local phase_move_fn = require("src.gameplay.app.turn.move")
 local phase_landing_fn = require("src.gameplay.app.turn.land")
+local phase_post_fn = require("src.gameplay.app.turn.post")
 local phase_end_fn = require("src.gameplay.app.turn.end_turn")
 
 local TurnManager = {}
@@ -15,6 +16,7 @@ local PHASES = {
   roll = { phase = "roll", fn = phase_roll_fn },
   move = { phase = "move", fn = phase_move_fn },
   landing = { phase = "landing", fn = phase_landing_fn },
+  post_action = { phase = "post_action", fn = phase_post_fn },
   
   land = { phase = "landing", fn = phase_landing_fn },
   end_turn = { phase = "end_turn", fn = phase_end_fn },

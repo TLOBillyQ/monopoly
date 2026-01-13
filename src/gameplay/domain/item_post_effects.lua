@@ -1,4 +1,3 @@
-local constants = require("src.config.constants")
 local logger = require("src.util.logger")
 local UI = require("src.gameplay.ports.ui_port")
 local Services = require("src.util.services")
@@ -18,12 +17,10 @@ end
 local EFFECTS = {
   
   [2001] = { type = "set_status", key = "pending_free_rent", value = true, message = " 使用免费卡，下一次租金免除" },
-  [2002] = { type = "remote_dice_max" },
   [2003] = { type = "set_status", key = "pending_dice_multiplier", value = 2, message = " 使用骰子加倍卡，本次步数翻倍" },
   [2010] = { type = "set_status", key = "pending_tax_free", value = true, message = " 使用免税卡，本次征税免除" },
 
   
-  [2004] = { type = "place_roadblock_ahead", distance = 3 },
   [2005] = { type = "place_mine_here" },
   [2006] = { type = "clear_obstacles_ahead", distance = 12 },
 
@@ -50,17 +47,6 @@ handlers.set_status = function(game, player, cfg, _context)
   return true
 end
 
-handlers.remote_dice_max = function(game, player, _cfg, _context)
-  local dice_count = player.seat_id and constants.dice_with_vehicle or constants.default_dice_count
-  local values = {}
-  for i = 1, dice_count do
-    values[i] = 6
-  end
-  game:set_player_status(player, "pending_remote_dice", { values = values })
-  logger.event(player.name .. " 使用遥控骰子，设定点数 " .. table.concat(values, ","))
-  return true
-end
-
 handlers.deity = function(game, player, cfg, _context)
   local status = ensure_status(game, cfg.warn or "附身")
   if not status then
@@ -78,27 +64,6 @@ handlers.log = function(_, player, cfg, _context)
     logger.event(player.name .. cfg.message)
   end
   return true
-end
-
-handlers.place_roadblock_ahead = function(game, player, cfg, _context)
-  local board = game.board
-  local current = player.position
-  local parity = 1
-  local facing = player.status and player.status.move_dir or nil
-  local distance = cfg.distance or 3
-  for _ = 1, distance do
-    local next_index, _passed, step_dir = board:step_forward_by_facing(current, facing, parity)
-    current = next_index
-    facing = step_dir or facing
-    if not game.overlays.roadblocks[current] and not game.overlays.mines[current] then
-      game.overlays.roadblocks[current] = true
-      logger.event(player.name .. " 放置路障在 " .. board:get_tile(current).name)
-      UI.push_popup(game, { title = "放置路障", body = player.name .. " 在 " .. board:get_tile(current).name .. " 设置了路障" })
-      return true
-    end
-  end
-  logger.warn("未找到可放置路障的位置")
-  return false
 end
 
 handlers.place_mine_here = function(game, player, _cfg, _context)

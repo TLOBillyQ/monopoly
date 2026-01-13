@@ -110,7 +110,7 @@ function LandingResolver.resolve(game, player, tile, move_result)
       },
     })
 
-    return { waiting = true, reason = "landing_optional", resume_state = "end_turn", resume_args = { player = player } }
+    return { waiting = true, reason = "landing_optional", resume_state = "post_action", resume_args = { player = player } }
   end
 
   
