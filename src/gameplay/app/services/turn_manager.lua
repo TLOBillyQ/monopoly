@@ -7,6 +7,7 @@ local phase_move_fn = require("src.gameplay.app.turn.move")
 local phase_landing_fn = require("src.gameplay.app.turn.land")
 local phase_post_fn = require("src.gameplay.app.turn.post")
 local phase_end_fn = require("src.gameplay.app.turn.end_turn")
+local Agent = require("src.gameplay.ai.agent")
 
 local TurnManager = {}
 TurnManager.__index = TurnManager
@@ -67,6 +68,13 @@ function TurnManager:_build_flow()
     if not choice then
       self.pending_action = nil
       return (args and args.resume_state) or "end_turn", (args and args.resume_args) or {}
+    end
+
+    if not self.pending_action then
+      local auto_action = Agent.auto_action_for_choice(self.game, choice)
+      if auto_action then
+        self.pending_action = auto_action
+      end
     end
 
     if not self.pending_action then

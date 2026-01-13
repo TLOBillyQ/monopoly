@@ -66,14 +66,15 @@ function Missile.apply(game, player, idx)
 end
 
 
-function Missile.use(game, player, distance, consume_fn)
+function Missile.use(game, player, distance, consume_fn, opts)
+  opts = opts or {}
   local best_idx = Missile.find_target(game, player, distance)
   if not best_idx then
     logger.warn(player.name .. " 前后无可轰炸目标，导弹卡未生效")
     return false
   end
 
-  if UI.is_available(game) then
+  if UI.is_available(game) and not opts.by_ai then
     local idxs = BoardUtils.indices_in_range(game.board, player.position, distance)
     local options = {}
     local body_lines = {}

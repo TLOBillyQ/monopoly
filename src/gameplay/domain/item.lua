@@ -5,6 +5,7 @@ local logger = require("src.util.logger")
 local UI = require("src.gameplay.ports.ui_port")
 local Services = require("src.util.services")
 local GameState = require("src.util.game_state")
+local Agent = require("src.gameplay.ai.agent")
 local PostEffects = require("src.gameplay.domain.item_post_effects")
 local TargetEffects = require("src.gameplay.domain.item_target_effects")
 local Monster = require("src.gameplay.domain.item_monster")
@@ -48,6 +49,27 @@ local function find_item_index(player, item_id)
   return player.inventory:find_index(function(it)
     return it.id == item_id
   end)
+end
+
+local function target_candidates(game, player, item_id)
+  local spec = TargetEffects.get_spec(item_id)
+  if not spec then
+    return {}
+  end
+
+  if spec.require_user and not spec.require_user(player) then
+    return {}
+  end
+
+  local candidates = {}
+  for _, p in ipairs(game.players) do
+    if p.id ~= player.id and not p.eliminated then
+      if not spec.filter_target or spec.filter_target(game, player, p) then
+        table.insert(candidates, p)
+      end
+    end
+  end
+  return candidates
 end
 
 function ItemEffects.consume_item(player, item_id)
@@ -110,15 +132,15 @@ function ItemEffects.apply_missile(game, player, idx)
   Missile.apply(game, player, idx)
 end
 
-function ItemEffects.use_missile(game, player, distance)
-  return Missile.use(game, player, distance, ItemEffects.consume_item)
+function ItemEffects.use_missile(game, player, distance, context)
+  return Missile.use(game, player, distance, ItemEffects.consume_item, context)
 end
 
 function ItemEffects.apply_target_item_effect(game, player, item_id, target)
   return TargetEffects.apply(game, player, item_id, target)
 end
 
-local function handle_target_player_item(game, player, item_id, _context)
+local function handle_target_player_item(game, player, item_id, context)
   local spec = TargetEffects.get_spec(item_id)
   if not spec then
     return false
@@ -128,18 +150,23 @@ local function handle_target_player_item(game, player, item_id, _context)
     return false
   end
 
-  local candidates = {}
-  for _, p in ipairs(game.players) do
-    if p.id ~= player.id and not p.eliminated then
-      if not spec.filter_target or spec.filter_target(game, player, p) then
-        table.insert(candidates, p)
-      end
-    end
-  end
+  local candidates = target_candidates(game, player, item_id)
 
   if #candidates == 0 then
     logger.warn("没有可选择的目标玩家")
     return false
+  end
+
+  if context and context.by_ai then
+    local target = Agent.pick_target_player(game, player, item_id, candidates)
+    if not target then
+      return false
+    end
+    local ok = ItemEffects.apply_target_item_effect(game, player, item_id, target)
+    if ok then
+      ItemEffects.consume_item(player, item_id)
+    end
+    return ok
   end
 
   if UI.is_available(game) and #candidates > 1 then
@@ -178,8 +205,22 @@ end
 
 local item_handlers = {}
 
-item_handlers[2002] = function(game, player, item_id, _context)
+item_handlers[2002] = function(game, player, item_id, context)
   local dice_count = player.seat_id and constants.dice_with_vehicle or constants.default_dice_count
+  if context and context.by_ai then
+    local value, target_tile = Agent.pick_remote_dice_value(game, player, dice_count)
+    if not value then
+      return false
+    end
+    if not ItemEffects.consume_item(player, item_id) then
+      return false
+    end
+    local ok = ItemEffects.apply_remote_dice(game, player, dice_count, value)
+    if ok and target_tile then
+      logger.event(player.name .. " AI 设定遥控骰子前往 " .. target_tile.name .. " 点数 " .. value)
+    end
+    return ok
+  end
   if UI.is_available(game) then
     local options = {}
     local body_lines = {}
@@ -210,11 +251,22 @@ item_handlers[2002] = function(game, player, item_id, _context)
   return ItemEffects.apply_remote_dice(game, player, dice_count, 6)
 end
 
-item_handlers[2004] = function(game, player, item_id, _context)
+item_handlers[2004] = function(game, player, item_id, context)
   local candidates = Roadblock.candidates(game, player, 3)
   if not candidates or #candidates == 0 then
     logger.warn(player.name .. " 无可放置路障的位置")
     return false
+  end
+
+  if context and context.by_ai then
+    local idx = Agent.pick_roadblock_target(game, player)
+    if not idx then
+      return false
+    end
+    if not ItemEffects.consume_item(player, item_id) then
+      return false
+    end
+    return Roadblock.apply(game, player, idx)
   end
 
   if UI.is_available(game) then
@@ -263,12 +315,12 @@ item_handlers[2008] = function(game, player, item_id, _context)
   return ItemEffects.use_monster(game, player, 3)
 end
 
-item_handlers[2013] = function(game, player, _item_id, _context)
+item_handlers[2013] = function(game, player, _item_id, context)
   if not ItemEffects.find_missile_target(game, player, 3) then
     logger.warn(player.name .. " 前后无轰炸目标，导弹卡未使用")
     return false
   end
-  return ItemEffects.use_missile(game, player, 3)
+  return ItemEffects.use_missile(game, player, 3, context)
 end
 
 for _, id in ipairs({ 2011, 2012, 2014, 2015, 2016, 2018 }) do
@@ -276,6 +328,10 @@ for _, id in ipairs({ 2011, 2012, 2014, 2015, 2016, 2018 }) do
 end
 
 function ItemEffects.use_item(game, player, item_id, context)
+  context = context or {}
+  if context.by_ai == nil then
+    context.by_ai = Agent.is_auto_player(player)
+  end
   local cfg = cfg_by_id[item_id]
   if not cfg then
     return false
@@ -317,37 +373,83 @@ function ItemEffects.has_obstacles_ahead(game, player, distance)
 end
 
 function ItemEffects.auto_pre_action(game, player)
-  local function try_use(item_id)
+  if not Agent.is_auto_player(player) then
+    return nil
+  end
+
+  local function try_use(item_id, cond)
+    if cond and not cond() then
+      return nil
+    end
     if not find_item_index(player, item_id) then
       return nil
     end
-    local res = ItemEffects.use_item(game, player, item_id)
+    local res = ItemEffects.use_item(game, player, item_id, { by_ai = true })
     if type(res) == "table" and res.waiting then
       return res
     end
     return nil
   end
 
-  
   local rules = {
     { id = 2006, cond = function() return ItemEffects.has_obstacles_ahead(game, player, 12) end },
-    { id = 2002 },
+    {
+      id = 2002,
+      cond = function()
+        local dice_count = player.seat_id and constants.dice_with_vehicle or constants.default_dice_count
+        local value = Agent.pick_remote_dice_value(game, player, dice_count)
+        return value ~= nil
+      end,
+    },
     { id = 2003 },
-    { id = 2004 },
+    { id = 2004, cond = function() return Agent.pick_roadblock_target(game, player) ~= nil end },
     { id = 2008, cond = function() return ItemEffects.find_monster_target(game, player, 3) ~= nil end },
     { id = 2013, cond = function() return ItemEffects.find_missile_target(game, player, 3) ~= nil end },
+    {
+      id = 2011,
+      cond = function()
+        return Agent.pick_target_player(game, player, 2011, target_candidates(game, player, 2011)) ~= nil
+      end,
+    },
+    {
+      id = 2012,
+      cond = function()
+        return Agent.pick_target_player(game, player, 2012, target_candidates(game, player, 2012)) ~= nil
+      end,
+    },
+    {
+      id = 2014,
+      cond = function()
+        return Agent.pick_target_player(game, player, 2014, target_candidates(game, player, 2014)) ~= nil
+      end,
+    },
+    {
+      id = 2015,
+      cond = function()
+        return Agent.pick_target_player(game, player, 2015, target_candidates(game, player, 2015)) ~= nil
+      end,
+    },
+    {
+      id = 2016,
+      cond = function()
+        return Agent.pick_target_player(game, player, 2016, target_candidates(game, player, 2016)) ~= nil
+      end,
+    },
+    {
+      id = 2018,
+      cond = function()
+        return Agent.pick_target_player(game, player, 2018, target_candidates(game, player, 2018)) ~= nil
+      end,
+    },
   }
 
   for _, r in ipairs(rules) do
-    if (not r.cond) or r.cond() then
-      local waiting = try_use(r.id)
-      if waiting then
-        return waiting
-      end
+    local waiting = try_use(r.id, r.cond)
+    if waiting then
+      return waiting
     end
   end
 
-  
   return try_use(2017) or try_use(2019)
 end
 
