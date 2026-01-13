@@ -1,14 +1,18 @@
 local logger = require("src.util.logger")
 local UI = require("src.gameplay.ports.ui_port")
 local GameState = require("src.util.game_state")
+local Services = require("src.util.services")
 
 local Roadblock = {}
 
 local OPPOSITE = { up = "down", down = "up", left = "right", right = "left" }
 
 local function has_overlay(game, idx)
-  return (game.overlays and (game.overlays.roadblocks and game.overlays.roadblocks[idx])) or
-    (game.overlays and (game.overlays.mines and game.overlays.mines[idx]))
+  local overlay = Services.overlay(game)
+  if not overlay then
+    return false
+  end
+  return overlay.has_roadblock(game, idx) or overlay.has_mine(game, idx)
 end
 
 local function make_candidate(board, player, idx, dir, step, seen)
@@ -151,9 +155,12 @@ function Roadblock.apply(game, player, idx)
   if not idx then
     return false
   end
-  game.overlays = game.overlays or {}
-  game.overlays.roadblocks = game.overlays.roadblocks or {}
-  game.overlays.roadblocks[idx] = true
+  local overlay = Services.overlay(game)
+  if not overlay then
+    logger.warn("缺少 OverlayService，无法放置路障")
+    return false
+  end
+  overlay.place_roadblock(game, idx)
   local tile = game.board:get_tile(idx)
   logger.event(player.name .. " 放置路障在 " .. tile.name)
   UI.push_popup(game, { title = "放置路障", body = player.name .. " 在 " .. tile.name .. " 设置了路障" })

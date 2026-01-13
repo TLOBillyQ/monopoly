@@ -32,4 +32,8 @@ function Services.chance(game)
   return Services.get(game, "chance")
 end
 
+function Services.overlay(game)
+  return Services.get(game, "overlay")
+end
+
 return Services

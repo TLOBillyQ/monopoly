@@ -1,5 +1,6 @@
 local constants = require("src.config.constants")
 local logger = require("src.util.logger")
+local Services = require("src.util.services")
 
 local MovementService = {}
 
@@ -14,6 +15,7 @@ function MovementService.move(game, player, steps, opts)
   local stopped_on_roadblock = false
   local current = player.position
   local facing = opts.direction or (player.status and player.status.move_dir) or nil
+  local overlay = Services.overlay(game)
 
   for _ = 1, steps do
     local next_index, passed, step_dir = board:step_forward_by_facing(current, facing, branch_parity)
@@ -29,8 +31,8 @@ function MovementService.move(game, player, steps, opts)
       end
     end
 
-    if game.overlays.roadblocks[current] then
-      game.overlays.roadblocks[current] = nil
+    if overlay and overlay.has_roadblock(game, current) then
+      overlay.clear_roadblock(game, current)
       stopped_on_roadblock = true
       logger.event(player.name .. " 触发路障，停在 " .. board:get_tile(current).name)
       break

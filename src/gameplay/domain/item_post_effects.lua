@@ -12,6 +12,14 @@ local function ensure_status(game, action)
   return status
 end
 
+local function ensure_overlay(game, action)
+  local overlay = Services.overlay(game)
+  if not overlay then
+    logger.warn("缺少 OverlayService，无法" .. action)
+  end
+  return overlay
+end
+
 
 
 local EFFECTS = {
@@ -67,7 +75,11 @@ handlers.log = function(_, player, cfg, _context)
 end
 
 handlers.place_mine_here = function(game, player, _cfg, _context)
-  game.overlays.mines[player.position] = true
+  local overlay = ensure_overlay(game, "埋设地雷")
+  if not overlay then
+    return false
+  end
+  overlay.place_mine(game, player.position)
   logger.event(player.name .. " 在脚下埋设地雷")
   UI.push_popup(game, { title = "埋设地雷", body = player.name .. " 在脚下埋设了地雷" })
   return true
@@ -80,16 +92,20 @@ handlers.clear_obstacles_ahead = function(game, player, cfg, _context)
   local parity = 1
   local facing = player.status and player.status.move_dir or nil
   local distance = cfg.distance or 12
+  local overlay = ensure_overlay(game, "清除障碍")
+  if not overlay then
+    return false
+  end
   for _ = 1, distance do
     local next_index, _passed, step_dir = board:step_forward_by_facing(current, facing, parity)
     current = next_index
     facing = step_dir or facing
-    if game.overlays.roadblocks[current] then
-      game.overlays.roadblocks[current] = nil
+    if overlay.has_roadblock(game, current) then
+      overlay.clear_roadblock(game, current)
       cleared = cleared + 1
     end
-    if game.overlays.mines[current] then
-      game.overlays.mines[current] = nil
+    if overlay.has_mine(game, current) then
+      overlay.clear_mine(game, current)
       cleared = cleared + 1
     end
   end

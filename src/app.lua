@@ -8,6 +8,7 @@ local ItemService = require("src.gameplay.domain.item")
 local MarketService = require("src.gameplay.app.services.market_service")
 local StatusService = require("src.gameplay.app.services.status_service")
 local BankruptcyService = require("src.gameplay.app.services.bankruptcy_service")
+local OverlayService = require("src.gameplay.app.services.overlay_service")
 local RNG = require("src.gameplay.infra.rng")
 local Store = require("src.gameplay.infra.store")
 local Tables = require("src.util.tables")
@@ -25,6 +26,22 @@ local function store_value(v)
   return v
 end
 
+local REQUIRED_SERVICES = {
+  "movement",
+  "tile",
+  "chance",
+  "item",
+  "market",
+  "status",
+  "bankruptcy",
+  "overlay",
+}
+
+local function validate_services(services)
+  for _, key in ipairs(REQUIRED_SERVICES) do
+    assert(services[key] ~= nil, "缺少必要服务：" .. key)
+  end
+end
 
 function App.new(opts)
   opts = opts or {}
@@ -68,9 +85,11 @@ function App.new(opts)
       market = MarketService,
       status = StatusService,
       bankruptcy = BankruptcyService,
+      overlay = OverlayService,
     },
   }
   setmetatable(game, App)
+  validate_services(game.services)
   game:rebuild_occupants()
   game.turn_manager = TurnManager.new(game)
   return game
@@ -121,6 +140,7 @@ end
 
 function App:set_tile_owner(tile, owner_id)
   if tile and tile.type == "land" then
+    tile.owner_id = owner_id
     self:_store_set({ "board", "tiles", tile.id, "owner_id" }, owner_id)
   end
 end
@@ -128,6 +148,7 @@ end
 
 function App:set_tile_level(tile, level)
   if tile and tile.type == "land" then
+    tile.level = level
     self:_store_set({ "board", "tiles", tile.id, "level" }, level)
   end
 end
@@ -135,6 +156,8 @@ end
 
 function App:reset_tile(tile)
   if tile and tile.type == "land" then
+    tile.owner_id = nil
+    tile.level = 0
     self:_store_set({ "board", "tiles", tile.id, "owner_id" }, nil)
     self:_store_set({ "board", "tiles", tile.id, "level" }, 0)
   end

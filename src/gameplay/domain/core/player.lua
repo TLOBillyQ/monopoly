@@ -1,5 +1,6 @@
 local Inventory = require("src.gameplay.domain.core.inventory")
 local Tables = require("src.util.tables")
+local GameState = require("src.util.game_state")
 
 local Player = {}
 Player.__index = Player
@@ -63,7 +64,12 @@ function Player:net_worth(board)
   for tile_id in pairs(self.properties) do
     local tile = board:get_tile_by_id(tile_id)
     if tile then
-      total = total + tile:total_invested()
+      local st = GameState.tile_state(self._store and { store = self._store } or nil, tile)
+      local level = st.level or tile.level or 0
+      if st.owner_id or tile.owner_id then
+        local price = tile.price or 0
+        total = total + price * ((2 ^ (level + 1)) - 1)
+      end
     end
   end
   return total

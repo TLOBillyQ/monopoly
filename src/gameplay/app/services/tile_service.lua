@@ -60,17 +60,18 @@ local function handle_market(game, player, tile)
 end
 
 local function check_mine(game, player)
-  if game.overlays.mines[player.position] then
+  local overlay = Services.overlay(game)
+  if overlay and overlay.has_mine(game, player.position) then
     local status = Services.status(game)
     if not status then
       return missing_service("StatusService")
     end
     if status.has_angel(player) then
       logger.event(player.name .. " 天使保护，地雷无效")
-      game.overlays.mines[player.position] = nil
+      overlay.clear_mine(game, player.position)
       return
     end
-    game.overlays.mines[player.position] = nil
+    overlay.clear_mine(game, player.position)
     game:set_player_seat(player, nil)
     logger.event(player.name .. " 触发地雷，座驾被摧毁并送医")
     status.send_to_hospital(game, player)
