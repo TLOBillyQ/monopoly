@@ -137,6 +137,7 @@ lua scripts/deps_check.lua && lua scripts/regression.lua
 
 - **设计文档**：[docs/design/](docs/design/) - 游戏策划、数据表设计
 - **架构文档**：[docs/deepfuture/](docs/deepfuture/) - 架构演进计划
+- **蛋仔相关**：[docs/eggy/](docs/eggy/) - 蛋仔乐园相关文档
 - **开发规范**：[AGENTS.md](AGENTS.md) - 编码规则和原则
 
 ## 技术栈
@@ -154,7 +155,3 @@ lua scripts/deps_check.lua && lua scripts/regression.lua
 2. 运行 `lua scripts/deps_check.lua` 检查依赖规则
 3. 运行 `lua scripts/regression.lua` 确保回归测试通过
 4. 优先考虑删除或复用代码，而非添加新代码
-
-## License
-
-请参考项目根目录的 LICENSE 文件（如有）。
