@@ -13,6 +13,7 @@ function MovementService.move(game, player, steps, opts)
   local pass_start = 0
   local stopped_on_roadblock = false
   local current = player.position
+  local start_tile = board:get_tile(current)
   local facing = opts.direction or (player.status and player.status.move_dir) or nil
   local overlay = game and game.services and game.services.overlay
 
@@ -38,6 +39,9 @@ function MovementService.move(game, player, steps, opts)
     end
   end
 
+  local landing_tile = board:get_tile(current)
+  logger.event(player.name .. " 从 " .. (start_tile and start_tile.name or tostring(player.position)) .. " 移动到 " .. (landing_tile and landing_tile.name or tostring(current)))
+
   if pass_start > 0 then
     local bonus = pass_start * constants.pass_start_bonus
     player:add_cash(bonus)
@@ -52,8 +56,6 @@ function MovementService.move(game, player, steps, opts)
     player.status = player.status or {}
     player.status.move_dir = facing
   end
-
-  local landing_tile = board:get_tile(current)
 
   return {
     encountered_players = encountered,

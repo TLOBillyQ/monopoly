@@ -31,44 +31,6 @@ local function lighten(color, amount)
   return { math.min(color[1] + amount, 1), math.min(color[2] + amount, 1), math.min(color[3] + amount, 1) }
 end
 
-local function draw_buildings(ui, pos, half_cell, tile, level, owner_color)
-  level = level or 0
-  if tile.type ~= "land" or level <= 0 then
-    return
-  end
-  local level_color = ui.palette.building[level] or owner_color
-  local dx = pos.x - ui.board.center.x
-  local dy = pos.y - ui.board.center.y
-  local dir_x, dir_y
-  if math.abs(dx) >= math.abs(dy) then
-    dir_x = 0
-    dir_y = dy >= 0 and 1 or -1
-  else
-    dir_x = dx >= 0 and 1 or -1
-    dir_y = 0
-  end
-  local anchor_x = pos.x + dir_x * (half_cell + 10)
-  local anchor_y = pos.y + dir_y * (half_cell + 10)
-
-  local stack_w = half_cell * 0.9
-  local stack_h = half_cell * 0.32
-  local top_y = anchor_y
-  for _ = 1, level do
-    local bx = anchor_x - stack_w * 0.5
-    local by = anchor_y - stack_h
-    love.graphics.setColor(level_color[1], level_color[2], level_color[3], 0.92)
-    love.graphics.rectangle("fill", bx, by, stack_w, stack_h, 4, 4)
-    love.graphics.setColor(0, 0, 0, 0.25)
-    love.graphics.rectangle("line", bx, by, stack_w, stack_h, 4, 4)
-    top_y = by
-    anchor_y = by - 2
-    stack_w = stack_w * 0.86
-  end
-  love.graphics.setFont(ui.fonts.tiny)
-  love.graphics.setColor(0, 0, 0, 0.95)
-  love.graphics.printf("Lv" .. level, anchor_x - 18, top_y - 14, 36, "center")
-end
-
 local function draw_overlays(ui, overlays, rect_x, rect_y, rect_w, rect_h, idx)
   if overlays.roadblocks[idx] then
     local cx = rect_x + rect_w * 0.5
@@ -123,10 +85,6 @@ local function draw_tile(ui, idx, pos, half_cell, pad, last_visited, tile, tile_
   love.graphics.setColor(0.12, 0.12, 0.12, 0.65)
   love.graphics.rectangle("line", rect_x, rect_y, rect_w, rect_h, 8, 8)
 
-  love.graphics.setFont(ui.fonts.tiny)
-  love.graphics.setColor(0.05, 0.05, 0.05)
-  love.graphics.printf(tostring(idx), rect_x, rect_y - 8, rect_w, "center")
-
   love.graphics.setFont(ui.fonts.small)
   local name_y = rect_y + rect_h * 0.42
   love.graphics.setColor(0, 0, 0, 0.7)
@@ -140,7 +98,11 @@ local function draw_tile(ui, idx, pos, half_cell, pad, last_visited, tile, tile_
     local owner_color = ui.palette.player[owner_id] or { 0.9, 0.9, 0.9 }
     love.graphics.setColor(owner_color)
     love.graphics.rectangle("line", rect_x - 2, rect_y - 2, rect_w + 4, rect_h + 4, 9, 9)
-    draw_buildings(ui, pos, half_cell, tile, level, owner_color)
+    if level > 0 then
+      love.graphics.setFont(ui.fonts.tiny)
+      love.graphics.setColor(0, 0, 0, 0.88)
+      love.graphics.printf("Lv" .. level, rect_x, rect_y + rect_h - 16, rect_w, "center")
+    end
   end
 end
 
