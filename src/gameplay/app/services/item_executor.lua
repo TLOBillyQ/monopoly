@@ -8,7 +8,7 @@ local Missile = require("src.gameplay.domain.item_missile")
 local Roadblock = require("src.gameplay.domain.item_roadblock")
 local Steal = require("src.gameplay.domain.item_steal")
 local Inventory = require("src.gameplay.domain.item_inventory")
-local Strategy = require("src.gameplay.domain.item_strategy")
+local Strategy = require("src.gameplay.app.services.item_strategy")
 
 local Executor = {}
 

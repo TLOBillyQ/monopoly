@@ -1,7 +1,7 @@
 local constants = require("src.config.constants")
 local Choice = require("src.gameplay.app.choice")
 local Effect = require("src.gameplay.domain.effect")
-local ItemEffects = require("src.gameplay.domain.item")
+local ItemEffects = require("src.gameplay.app.services.item_service")
 local Roadblock = require("src.gameplay.domain.item_roadblock")
 local logger = require("src.util.logger")
 local IntentDispatcher = require("src.gameplay.app.intent_dispatcher")
@@ -158,6 +158,7 @@ handlers.post_action_item = function(game, choice, action)
   if type(res) == "table" and res.waiting then
     return { stay = true }
   end
+  finish_post_action(game)
   Choice.clear(game)
   return { stay = false }
 end
@@ -175,6 +176,7 @@ handlers.missile_target = function(game, choice, action)
     local res = ItemEffects.apply_missile(game, player, idx, { services = game and game.services })
     IntentDispatcher.dispatch_from_result(game, res)
   end
+  finish_post_action(game)
   Choice.clear(game)
   return { stay = false }
 end
@@ -199,6 +201,7 @@ handlers.roadblock_target = function(game, choice, action)
   end
   local res = Roadblock.apply(game, player, idx)
   IntentDispatcher.dispatch_from_result(game, res)
+  finish_post_action(game)
   Choice.clear(game)
   return { stay = false }
 end
@@ -261,6 +264,7 @@ handlers.item_target_player = function(game, choice, action)
       ItemEffects.consume_item(user, item_id)
     end
   end
+  finish_post_action(game)
   Choice.clear(game)
   return { stay = false }
 end
@@ -338,6 +342,7 @@ handlers.remote_dice_value = function(game, choice, action)
     end
   end
   ItemEffects.apply_remote_dice(game, player, dice_count, value)
+  finish_post_action(game)
   Choice.clear(game)
   return { stay = false }
 end
@@ -348,6 +353,9 @@ function Resolver.resolve(game, choice, action)
   end
 
   if is_cancel(action) then
+    if choice.kind == "post_action_item" then
+      finish_post_action(game)
+    end
     Choice.clear(game)
     return { stay = false }
   end
