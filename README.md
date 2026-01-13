@@ -31,11 +31,13 @@ monopoly/
 ├── main.lua              # 游戏入口，配置 package.path 并启动 LÖVE 适配层
 ├── src/
 │   ├── app.lua          # 游戏实例装配（依赖注入、服务组装）
-│   ├── gameplay/        # 核心游戏逻辑（与框架无关）
+│   ├── core/            # 核心领域对象（Board, Player, Dice, Tile 等）
+│   ├── gameplay/        # 游戏逻辑与流程（与框架无关）
 │   │   ├── app/        # 应用层：流程编排、回合管理、用例
 │   │   ├── domain/     # 领域层：游戏规则、效果、道具等
 │   │   ├── infra/      # 基础设施：RNG、状态存储
-│   │   └── ports/      # 端口接口：UI 抽象等
+│   │   ├── ports/      # 端口接口：UI 抽象等
+│   │   └── ai/         # AI 决策逻辑
 │   ├── adapters/       # 适配器层
 │   │   └── love2d/    # LÖVE2D 渲染、输入、UI 适配
 │   ├── config/         # 游戏配置表（地图、地块、角色、道具）
@@ -50,10 +52,12 @@ monopoly/
 | 模块 | 职责 |
 |------|------|
 | `src/app.lua` | 游戏实例装配，初始化服务和状态管理器 |
+| `src/core/` | 核心领域对象（Board, Player, Dice, Tile, Inventory） |
 | `src/gameplay/app/` | 流程编排、回合状态机、业务用例 |
-| `src/gameplay/domain/` | 游戏领域对象和规则（效果、道具、落地逻辑等） |
+| `src/gameplay/domain/` | 游戏领域规则（效果、道具、落地逻辑等） |
 | `src/gameplay/infra/` | 基础设施（随机数生成器、状态存储） |
 | `src/gameplay/ports/` | 端口抽象（UI 接口定义） |
+| `src/gameplay/ai/` | AI 决策逻辑 |
 | `src/adapters/love2d/` | LÖVE2D 框架适配（渲染、输入、UI 组件） |
 | `src/config/` | 游戏数据配置（地图、地块、角色、道具、常量） |
 
