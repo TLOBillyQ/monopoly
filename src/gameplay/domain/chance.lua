@@ -45,7 +45,6 @@ local function move_steps(game, player, steps)
     kind = "need_landing",
     player_id = player.id,
     board_index = player.position,
-    tile_index = player.position,
     move_result = res,
   }
 end
@@ -213,7 +212,6 @@ handlers.forced_move = function(game, player, card, context)
         kind = "need_landing",
         player_id = player.id,
         board_index = idx,
-        tile_index = idx,
         move_result = context,
       }
     end
