@@ -10,6 +10,7 @@ local AutoRunner = require("src.adapters.love2d.auto_runner")
 local constants = require("src.config.constants")
 local TurnUsecase = require("src.gameplay.app.usecases.turn_usecase")
 local ActionUsecase = require("src.gameplay.app.usecases.action_usecase")
+local Agent = require("src.gameplay.ai.agent")
 
 local LoveLayer = {}
 LoveLayer.__index = LoveLayer
@@ -292,12 +293,22 @@ function LoveLayer:update(dt)
     end
 
     if self._auto_handled_choice_id ~= pending_choice.id or self._auto_choice_retry_timer >= 0.6 then
-      local first = pending_choice.options and pending_choice.options[1]
-      if first then
-        self:dispatch_action({ type = "choice_select", choice_id = pending_choice.id, option_id = first.id or first })
-      else
-        self:dispatch_action({ type = "choice_cancel", choice_id = pending_choice.id })
+      local auto_action = Agent.auto_action_for_choice(self.game, pending_choice)
+      if auto_action and auto_action.choice_id and auto_action.choice_id ~= pending_choice.id then
+        auto_action = nil
       end
+      if auto_action and not auto_action.choice_id then
+        auto_action.choice_id = pending_choice.id
+      end
+      if not auto_action then
+        local first = pending_choice.options and pending_choice.options[1]
+        if first then
+          auto_action = { type = "choice_select", choice_id = pending_choice.id, option_id = first.id or first }
+        else
+          auto_action = { type = "choice_cancel", choice_id = pending_choice.id }
+        end
+      end
+      self:dispatch_action(auto_action)
       self._auto_handled_choice_id = pending_choice.id
       self._auto_choice_retry_timer = 0
       if self.modal.active and self.modal.active._pending_choice_id == pending_choice.id then
