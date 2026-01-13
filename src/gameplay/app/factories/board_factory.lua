@@ -25,6 +25,7 @@ function BoardFactory.create(opts)
     path = path,
     tile_lookup = tile_lookup,
     branches = map_cfg.branches or {},
+    map = map_cfg,
   })
 end
 

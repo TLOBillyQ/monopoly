@@ -208,6 +208,9 @@ handlers.forced_move = function(game, player, card, context)
     local idx = game.board:find_first_by_type("tax")
     if idx then
       game:update_player_position(player, idx)
+      if game.set_player_status then
+        game:set_player_status(player, "move_dir", nil)
+      end
       return {
         kind = "need_landing",
         player_id = player.id,
@@ -219,6 +222,9 @@ handlers.forced_move = function(game, player, card, context)
     local idx = game.board:find_first_by_type("market")
     if idx then
       game:update_player_position(player, idx)
+      if game.set_player_status then
+        game:set_player_status(player, "move_dir", nil)
+      end
       local market_service = Services.market(game)
       if market_service then
         market_service.auto_buy(game, player)

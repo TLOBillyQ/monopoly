@@ -84,10 +84,12 @@ handlers.place_roadblock_ahead = function(game, player, cfg, _context)
   local board = game.board
   local current = player.position
   local parity = 1
+  local facing = player.status and player.status.move_dir or nil
   local distance = cfg.distance or 3
   for _ = 1, distance do
-    local next_index = board:advance(current, 1, parity)
+    local next_index, _passed, step_dir = board:step_forward_by_facing(current, facing, parity)
     current = next_index
+    facing = step_dir or facing
     if not game.overlays.roadblocks[current] and not game.overlays.mines[current] then
       game.overlays.roadblocks[current] = true
       logger.event(player.name .. " 放置路障在 " .. board:get_tile(current).name)
@@ -111,10 +113,12 @@ handlers.clear_obstacles_ahead = function(game, player, cfg, _context)
   local cleared = 0
   local current = player.position
   local parity = 1
+  local facing = player.status and player.status.move_dir or nil
   local distance = cfg.distance or 12
   for _ = 1, distance do
-    local next_index = board:advance(current, 1, parity)
+    local next_index, _passed, step_dir = board:step_forward_by_facing(current, facing, parity)
     current = next_index
+    facing = step_dir or facing
     if game.overlays.roadblocks[current] then
       game.overlays.roadblocks[current] = nil
       cleared = cleared + 1

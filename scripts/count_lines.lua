@@ -166,6 +166,7 @@ local prefix_map = {
   ["src/util/"] = "src/util",
   ["src/app.lua"] = "src/app.lua",
   ["main.lua"] = "main.lua",
+  ["scripts/"] = "scritpts/",
 }
 
 local function category_for(path)

@@ -216,9 +216,11 @@ function ItemEffects.has_obstacles_ahead(game, player, distance)
   local board = game.board
   local parity = 1
   local current = player.position
+  local facing = player.status and player.status.move_dir or nil
   for _ = 1, distance do
-    local next_index = board:advance(current, 1, parity)
+    local next_index, _passed, step_dir = board:step_forward_by_facing(current, facing, parity)
     current = next_index
+    facing = step_dir or facing
     if game.overlays.roadblocks[current] or game.overlays.mines[current] then
       return true
     end

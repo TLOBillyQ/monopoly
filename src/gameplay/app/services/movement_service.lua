@@ -13,10 +13,12 @@ function MovementService.move(game, player, steps, opts)
   local pass_start = 0
   local stopped_on_roadblock = false
   local current = player.position
+  local facing = opts.direction or (player.status and player.status.move_dir) or nil
 
   for _ = 1, steps do
-    local next_index, passed = board:advance(current, 1, branch_parity)
+    local next_index, passed, step_dir = board:step_forward_by_facing(current, facing, branch_parity)
     pass_start = pass_start + passed
+    facing = step_dir or facing
     current = next_index
     table.insert(visited, current)
 
@@ -42,6 +44,13 @@ function MovementService.move(game, player, steps, opts)
   end
 
   game:update_player_position(player, current)
+
+  if game.set_player_status then
+    game:set_player_status(player, "move_dir", facing)
+  else
+    player.status = player.status or {}
+    player.status.move_dir = facing
+  end
 
   local landing_tile = board:get_tile(current)
 
