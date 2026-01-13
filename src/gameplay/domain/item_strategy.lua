@@ -1,6 +1,6 @@
 local constants = require("src.config.constants")
 local Agent = require("src.gameplay.ai.agent")
-local TargetEffects = require("src.gameplay.domain.item_target_effects")
+local ItemEffects = require("src.gameplay.domain.item_post_effects")
 
 local Strategy = {}
 
@@ -9,7 +9,7 @@ local function get_service(game, key)
 end
 
 function Strategy.target_candidates(game, player, item_id)
-  local spec = TargetEffects.get_spec(item_id)
+  local spec = ItemEffects.get_target_spec(item_id)
   if not spec then
     return {}
   end

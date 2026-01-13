@@ -208,20 +208,6 @@ function App:update_player_position(player, new_index)
   table.insert(self.occupants[new_index], player.id)
 end
 
-function App:run(max_rounds)
-  max_rounds = max_rounds or 50
-  for _ = 1, max_rounds do
-    if self:check_victory() then
-      break
-    end
-    if self.turn_usecase then
-      self.turn_usecase:advance()
-    elseif self.turn_manager then
-      self.turn_manager:run_turn()
-    end
-  end
-end
-
 function App:check_victory()
   if self.finished then
     return true

@@ -1,5 +1,4 @@
 local logger = require("src.util.logger")
-local UI = require("src.gameplay.ports.ui_port")
 local GameState = require("src.util.game_state")
 local BoardUtils = require("src.gameplay.domain.item_board_utils")
 local WorldOps = require("src.gameplay.domain.item_world_ops")
@@ -33,8 +32,13 @@ function Monster.use(game, player, distance)
   local tile = game.board:get_tile(idx)
   WorldOps.destroy_building(game, tile)
   logger.event(player.name .. " 释放怪兽拆毁 " .. tile.name .. " 的建筑")
-  UI.push_popup(game, { title = "怪兽卡", body = player.name .. " 拆毁了 " .. tile.name .. " 的建筑" })
-  return true
+  return {
+    ok = true,
+    intent = {
+      kind = "push_popup",
+      payload = { title = "怪兽卡", body = player.name .. " 拆毁了 " .. tile.name .. " 的建筑" },
+    },
+  }
 end
 
 return Monster

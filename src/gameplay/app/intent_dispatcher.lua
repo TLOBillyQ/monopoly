@@ -11,48 +11,43 @@ local function dispatch_one(game, intent)
     Choice.open(game, intent.choice_spec)
     return true
   end
-  if intent.kind == "push_popup" and intent.payload then
-    if UI.is_available(game) then
-      return UI.push_popup(game, intent.payload) ~= false
-    end
-    return false
+  if intent.kind == "push_popup" and intent.payload and UI.is_available(game) then
+    return UI.push_popup(game, intent.payload) ~= false
   end
   return false
 end
 
-local function dispatch_many(game, intents)
-  local handled = false
-  for _, intent in ipairs(intents) do
-    handled = dispatch_one(game, intent) or handled
-  end
-  return handled
-end
-
-function IntentDispatcher.dispatch(game, intent_or_list)
-  if not intent_or_list then
+function IntentDispatcher.dispatch(game, payload)
+  if type(payload) ~= "table" then
     return false
   end
-  if intent_or_list.intent or intent_or_list.intents then
-    return IntentDispatcher.dispatch_from_result(game, intent_or_list)
+
+  local intents = nil
+  if payload.intent or payload.intents then
+    intents = {}
+    if payload.intent then
+      intents[#intents + 1] = payload.intent
+    end
+    if type(payload.intents) == "table" then
+      for i = 1, #payload.intents do
+        intents[#intents + 1] = payload.intents[i]
+      end
+    end
+  elseif payload[1] then
+    intents = payload
   end
-  if intent_or_list[1] then
-    return dispatch_many(game, intent_or_list)
+
+  if intents then
+    local handled = false
+    for i = 1, #intents do
+      handled = dispatch_one(game, intents[i]) or handled
+    end
+    return handled
   end
-  return dispatch_one(game, intent_or_list)
+
+  return dispatch_one(game, payload)
 end
 
-function IntentDispatcher.dispatch_from_result(game, res)
-  if type(res) ~= "table" then
-    return false
-  end
-  local handled = false
-  if res.intent then
-    handled = dispatch_one(game, res.intent) or handled
-  end
-  if res.intents then
-    handled = dispatch_many(game, res.intents) or handled
-  end
-  return handled
-end
+IntentDispatcher.dispatch_from_result = IntentDispatcher.dispatch
 
 return IntentDispatcher

@@ -1,5 +1,4 @@
 local logger = require("src.util.logger")
-local UI = require("src.gameplay.ports.ui_port")
 local GameState = require("src.util.game_state")
 local Roadblock = {}
 
@@ -161,8 +160,13 @@ function Roadblock.apply(game, player, idx)
   overlay.place_roadblock(game, idx)
   local tile = game.board:get_tile(idx)
   logger.event(player.name .. " 放置路障在 " .. tile.name)
-  UI.push_popup(game, { title = "放置路障", body = player.name .. " 在 " .. tile.name .. " 设置了路障" })
-  return true
+  return {
+    ok = true,
+    intent = {
+      kind = "push_popup",
+      payload = { title = "放置路障", body = player.name .. " 在 " .. tile.name .. " 设置了路障" },
+    },
+  }
 end
 
 return Roadblock

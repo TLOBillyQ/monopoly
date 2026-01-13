@@ -2,8 +2,7 @@ local constants = require("src.config.constants")
 local logger = require("src.util.logger")
 local UI = require("src.gameplay.ports.ui_port")
 local Agent = require("src.gameplay.ai.agent")
-local PostEffects = require("src.gameplay.domain.item_post_effects")
-local TargetEffects = require("src.gameplay.domain.item_target_effects")
+local ItemEffects = require("src.gameplay.domain.item_post_effects")
 local Monster = require("src.gameplay.domain.item_monster")
 local Missile = require("src.gameplay.domain.item_missile")
 local Roadblock = require("src.gameplay.domain.item_roadblock")
@@ -66,7 +65,7 @@ function Executor.use_missile(game, player, distance, deps)
 end
 
 function Executor.apply_target_item_effect(game, player, item_id, target)
-  return TargetEffects.apply(game, player, item_id, target)
+  return ItemEffects.apply_target(game, player, item_id, target)
 end
 
 local function handle_target_player_item(game, player, item_id, context, deps)
@@ -277,7 +276,7 @@ function Executor.use_item(game, player, item_id, context, deps)
     return false
   end
 
-  local res = PostEffects.apply(game, player, item_id, context)
+  local res = ItemEffects.apply_post(game, player, item_id, context)
   if res ~= nil then
     return res
   end

@@ -197,7 +197,8 @@ handlers.roadblock_target = function(game, choice, action)
       return { stay = false }
     end
   end
-  Roadblock.apply(game, player, idx)
+  local res = Roadblock.apply(game, player, idx)
+  IntentDispatcher.dispatch_from_result(game, res)
   Choice.clear(game)
   return { stay = false }
 end
