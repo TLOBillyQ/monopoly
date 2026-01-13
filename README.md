@@ -1,71 +1,156 @@
+# 蛋仔大富翁 Monopoly
 
-# 蛋仔大富翁（Lua / LÖVE2D）
+一个以**可维护性优先**设计的大富翁回合制棋盘游戏，使用 Lua + LÖVE2D 实现。
 
-以“可维护性优先”的方式实现的类大富翁回合制棋盘游戏原型。
+## 项目特点
 
-- 运行时：LÖVE2D 11.x（自带 Lua）
-- 目标：在不改玩法语义的前提下，持续降低复杂度、保持回归可跑
+- **表驱动设计**：游戏数据（地图、道具、角色）通过配置表定义，易于修改和扩展
+- **清晰的架构分层**：核心游戏逻辑与渲染层解耦，遵循好莱坞原则和 SOLID 原则
+- **代码质量保障**：内置依赖检查、回归测试和静态分析脚本
+- **持续简化**：优先删除和复用代码，避免过度抽象
 
 ## 快速开始
 
-1. 安装 LÖVE2D 11.x
-2. 在项目根目录运行：`love .`
+### 环境要求
 
-入口文件是 [main.lua](main.lua)，会设置 `package.path` 并启动 LÖVE 适配层。
+- [LÖVE2D](https://love2d.org/) 11.x（自带 Lua 解释器）
 
-## 常用命令
+### 运行游戏
 
-- 运行游戏：`love .`
-- 依赖规则自检：`lua scripts/deps_check.lua`
-- 纯 Lua 小回归：`lua scripts/regression.lua`
-- 统计 Lua 行数：`lua scripts/count_lines.lua`
-- 静态死代码扫描（保守）：`lua scripts/debloat_report.lua`
+```bash
+# 在项目根目录运行
+love .
+```
 
-## 代码结构（高层）
+游戏入口为 [main.lua](main.lua)，会自动加载配置并启动游戏。
 
-- [src/app.lua](src/app.lua)：游戏实例装配与状态容器（store/rng/players/services/turn_manager）
-- [src/gameplay](src/gameplay)：规则与流程
-	- `app/`：流程编排、回合状态机、解析器、服务
-	- `domain/`：领域对象与规则（effect、item、landing 等）
-	- `infra/`：基础设施（rng、store）
-	- `ports/`：端口抽象（例如 UI 端口）
-- [src/adapters/love2d](src/adapters/love2d)：LÖVE2D 适配层（渲染、输入、面板、弹窗）
-- [src/config](src/config)：地图、地块、角色、道具、常量等配置
-- [scripts](scripts)：自检与统计脚本
-- [docs](docs)：架构/设计与路线图（中文为主）
+## 项目结构
 
-## 分层与依赖规则
+```
+monopoly/
+├── main.lua              # 游戏入口，配置 package.path 并启动 LÖVE 适配层
+├── src/
+│   ├── app.lua          # 游戏实例装配（依赖注入、服务组装）
+│   ├── gameplay/        # 核心游戏逻辑（与框架无关）
+│   │   ├── app/        # 应用层：流程编排、回合管理、用例
+│   │   ├── domain/     # 领域层：游戏规则、效果、道具等
+│   │   ├── infra/      # 基础设施：RNG、状态存储
+│   │   └── ports/      # 端口接口：UI 抽象等
+│   ├── adapters/       # 适配器层
+│   │   └── love2d/    # LÖVE2D 渲染、输入、UI 适配
+│   ├── config/         # 游戏配置表（地图、地块、角色、道具）
+│   └── util/           # 通用工具函数
+├── scripts/            # 开发工具脚本
+├── docs/               # 设计文档和技术文档
+└── assets/             # 游戏资源
+```
 
-项目使用轻量的“分层 + 自检脚本”来防止依赖倒灌：
+### 核心模块说明
 
-- `src/gameplay/**` 不应 `require("src.adapters.*")`
-- `src/gameplay/domain/**` 不应依赖 `src.gameplay.app.*`
-- `src/gameplay/app/services/**` 不应互相 `require("src.gameplay.app.services.*")`（应走注入/聚合入口）
+| 模块 | 职责 |
+|------|------|
+| `src/app.lua` | 游戏实例装配，初始化服务和状态管理器 |
+| `src/gameplay/app/` | 流程编排、回合状态机、业务用例 |
+| `src/gameplay/domain/` | 游戏领域对象和规则（效果、道具、落地逻辑等） |
+| `src/gameplay/infra/` | 基础设施（随机数生成器、状态存储） |
+| `src/gameplay/ports/` | 端口抽象（UI 接口定义） |
+| `src/adapters/love2d/` | LÖVE2D 框架适配（渲染、输入、UI 组件） |
+| `src/config/` | 游戏数据配置（地图、地块、角色、道具、常量） |
 
-运行 `lua scripts/deps_check.lua` 可以检查以上规则。
+## 开发工具
 
-## 回归基线
+### 常用命令
 
-`lua scripts/regression.lua` 通过纯 Lua 构造 `App` 并跑一组关键路径断言（例如：经过起点奖励、路障停留、道具效果、可选行动等待/自动购买等）。
+```bash
+# 运行游戏
+love .
 
-建议每次重构/删代码前后都跑一次：
+# 依赖规则检查（确保架构分层正确）
+lua scripts/deps_check.lua
 
-- `lua scripts/deps_check.lua && lua scripts/regression.lua`
+# 回归测试（验证核心游戏逻辑）
+lua scripts/regression.lua
 
-## Debloat（删代码）工作流
+# 代码行数统计
+lua scripts/count_lines.lua
 
-推荐顺序：
+# 静态死代码检测
+lua scripts/debloat_report.lua
+```
 
-1. `lua scripts/deps_check.lua`（保证依赖方向没被破坏）
-2. `lua scripts/regression.lua`（保证关键行为未变）
-3. `lua scripts/debloat_report.lua`（找未被 require 到的 Lua 文件；保守静态分析）
+### 推荐工作流
 
-如果 `debloat_report.lua` 报告“Unused runtime-scope Lua files”，通常可以先从“明显弃用/空壳模块”开始清理。
+在重构或修改代码前后，运行以下检查：
 
-## 路线图与文档
+```bash
+lua scripts/deps_check.lua && lua scripts/regression.lua
+```
 
-- [docs/reviews/structure%20review.md](docs/reviews/structure%20review.md)：结构审查与迁移计划（进行中）
-- [docs/ROADMAP_CODE_REDUCTION.md](docs/ROADMAP_CODE_REDUCTION.md)：代码行数降低路线图
-- [docs/CODE_ANALYSIS.md](docs/CODE_ANALYSIS.md)：分析与改进点
-- [docs/REFACTORING_GUIDE.md](docs/REFACTORING_GUIDE.md)：重构快速指南
+### 代码精简工作流（Debloat）
 
+遵循"删代码优先"原则，推荐按以下顺序执行：
+
+1. **依赖检查**：`lua scripts/deps_check.lua` - 确保依赖方向未被破坏
+2. **回归测试**：`lua scripts/regression.lua` - 确保关键行为未变
+3. **死代码扫描**：`lua scripts/debloat_report.lua` - 发现未被使用的模块
+
+## 架构设计
+
+### 分层与依赖规则
+
+项目采用严格的分层架构，通过自检脚本防止依赖倒灌：
+
+- ✅ **Gameplay 层独立**：`src/gameplay/**` 不能依赖 `src.adapters.*`
+- ✅ **领域层独立**：`src/gameplay/domain/**` 不能依赖 `src.gameplay.app.*`
+- ✅ **服务解耦**：`src/gameplay/app/services/**` 之间不能互相依赖（通过依赖注入组装）
+
+运行 `lua scripts/deps_check.lua` 验证这些规则。
+
+### 设计原则
+
+本项目遵循 [AGENTS.md](AGENTS.md) 中定义的编码规则：
+
+1. **无默认抽象**：除非有 2 个以上调用点，否则不添加接口或辅助层
+2. **单一实现**：类似逻辑必须合并，新代码替换旧代码而非共存
+3. **激进删除**：删除未使用的函数、模块、参数和分支
+4. **保持简单**：优先使用普通表和函数，避免元表和继承模式
+5. **限制增长**：优先编辑现有文件，添加新文件需要充分理由
+6. **强制清理**：每次改动后必须问"现在能删除什么代码？"
+
+**目标：最少代码、最少概念、最少文件。**
+
+## 回归测试基线
+
+`scripts/regression.lua` 通过纯 Lua 构造游戏实例，验证关键路径：
+
+- ✓ 经过起点获得奖励
+- ✓ 路障停留机制
+- ✓ 道具效果触发
+- ✓ 可选行动（等待/自动购买）
+- ✓ 破产和游戏结束
+
+## 文档
+
+- **设计文档**：[docs/design/](docs/design/) - 游戏策划、数据表设计
+- **架构文档**：[docs/deepfuture/](docs/deepfuture/) - 架构演进计划
+- **开发规范**：[AGENTS.md](AGENTS.md) - 编码规则和原则
+
+## 技术栈
+
+- **语言**：Lua 5.1+
+- **游戏引擎**：LÖVE2D 11.x
+- **架构风格**：六边形架构（端口-适配器模式）
+- **设计原则**：SOLID、好莱坞原则、依赖注入
+
+## 贡献指南
+
+在提交代码前，请：
+
+1. 阅读 [AGENTS.md](AGENTS.md) 了解编码规则
+2. 运行 `lua scripts/deps_check.lua` 检查依赖规则
+3. 运行 `lua scripts/regression.lua` 确保回归测试通过
+4. 优先考虑删除或复用代码，而非添加新代码
+
+## License
+
+请参考项目根目录的 LICENSE 文件（如有）。
