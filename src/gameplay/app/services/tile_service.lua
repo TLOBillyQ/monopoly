@@ -3,6 +3,7 @@ local Choice = require("src.gameplay.app.choice")
 local Services = require("src.util.services")
 local Errors = require("src.util.error_handling")
 local UI = require("src.gameplay.ports.ui_port")
+local IntentDispatcher = require("src.gameplay.app.intent_dispatcher")
 
 local TileService = {}
 
@@ -88,11 +89,11 @@ function TileService.resolve(game, player, tile, context)
       context.pass_players_checked = true
       return nil
     end
-    local res = item.handle_pass_players(game, player, context.encountered_players)
+    local res = item.handle_pass_players(game, player, context.encountered_players, { services = game and game.services })
+    if res then
+      IntentDispatcher.dispatch_from_result(game, res)
+    end
     if res and res.waiting then
-      if res.intent and res.intent.kind == "need_choice" and res.intent.choice_spec then
-        Choice.open(game, res.intent.choice_spec)
-      end
       context.pass_players_checked = true
       return res
     end

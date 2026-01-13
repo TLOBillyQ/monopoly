@@ -1,6 +1,4 @@
 local logger = require("src.util.logger")
-local UI = require("src.gameplay.ports.ui_port")
-local Services = require("src.util.services")
 
 local Steal = {}
 
@@ -10,6 +8,12 @@ local function find_item_index(player, item_id)
   end)
 end
 
+local function get_service(opts, game, key)
+  if opts and opts.services and opts.services[key] then
+    return opts.services[key]
+  end
+  return game and game.services and game.services[key]
+end
 
 
 
@@ -36,8 +40,11 @@ function Steal.steal_item_at_index(game, player, target, item_idx, opts)
     consume_item(player, 2007)
   end
   logger.event(player.name .. " 使用偷窃卡，从 " .. target.name .. " 偷走道具 " .. item_name(stolen.id))
-  UI.push_popup(game, { title = "偷窃成功", body = player.name .. " 从 " .. target.name .. " 偷走了 " .. item_name(stolen.id) })
-  return stolen
+  return {
+    ok = true,
+    stolen = stolen,
+    intent = { kind = "push_popup", payload = { title = "偷窃成功", body = player.name .. " 从 " .. target.name .. " 偷走了 " .. item_name(stolen.id) } },
+  }
 end
 
 
@@ -56,7 +63,7 @@ function Steal.handle_pass_players(game, player, encountered_ids, opts)
   end
 
   local candidates = {}
-  local status = Services.status(game)
+  local status = get_service(opts, game, "status")
   if not status then
     logger.warn("缺少 StatusService，无法处理偷窃目标筛选")
     return

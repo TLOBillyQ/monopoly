@@ -3,7 +3,6 @@ local items_cfg = require("src.config.items")
 local random = require("src.util.random")
 local logger = require("src.util.logger")
 local UI = require("src.gameplay.ports.ui_port")
-local Services = require("src.util.services")
 local GameState = require("src.util.game_state")
 local Agent = require("src.gameplay.ai.agent")
 local PostEffects = require("src.gameplay.domain.item_post_effects")
@@ -15,25 +14,14 @@ local Steal = require("src.gameplay.domain.item_steal")
 
 local ItemEffects = {}
 
+local function get_service(context, game, key)
+  if context and context.services and context.services[key] then
+    return context.services[key]
+  end
+  return game and game.services and game.services[key]
+end
+
 local tile_state = GameState.tile_state
-local status_service = Services.status
-local bankruptcy_service = Services.bankruptcy
-
-local function ensure_status(game, action)
-  local status = status_service(game)
-  if not status then
-    logger.warn("缺少 StatusService，无法" .. action)
-  end
-  return status
-end
-
-local function ensure_bankruptcy(game, action)
-  local bankruptcy = bankruptcy_service(game)
-  if not bankruptcy then
-    logger.warn("缺少 BankruptcyService，无法" .. action)
-  end
-  return bankruptcy
-end
 
 local cfg_by_id = {}
 for _, cfg in ipairs(items_cfg) do
@@ -128,8 +116,8 @@ function ItemEffects.find_missile_target(game, player, distance)
   return Missile.find_target(game, player, distance)
 end
 
-function ItemEffects.apply_missile(game, player, idx)
-  Missile.apply(game, player, idx)
+function ItemEffects.apply_missile(game, player, idx, context)
+  return Missile.apply(game, player, idx, context)
 end
 
 function ItemEffects.use_missile(game, player, distance, context)
@@ -329,6 +317,7 @@ end
 
 function ItemEffects.use_item(game, player, item_id, context)
   context = context or {}
+  context.services = context.services or (game and game.services)
   if context.by_ai == nil then
     context.by_ai = Agent.is_auto_player(player)
   end
@@ -361,7 +350,7 @@ function ItemEffects.has_obstacles_ahead(game, player, distance)
   local parity = 1
   local current = player.position
   local facing = player.status and player.status.move_dir or nil
-  local overlay = Services.overlay(game)
+  local overlay = get_service(nil, game, "overlay")
   if not overlay then
     return false
   end
@@ -389,8 +378,13 @@ function ItemEffects.auto_pre_action(game, player)
       return nil
     end
     local res = ItemEffects.use_item(game, player, item_id, { by_ai = true })
-    if type(res) == "table" and res.waiting then
-      return res
+    if type(res) == "table" then
+      if res.waiting then
+        return res
+      end
+      if res.intent or res.intents then
+        return res
+      end
     end
     return nil
   end
@@ -464,10 +458,11 @@ function ItemEffects.steal_item_at_index(game, player, target, item_idx)
   })
 end
 
-function ItemEffects.handle_pass_players(game, player, encountered_ids)
+function ItemEffects.handle_pass_players(game, player, encountered_ids, context)
   return Steal.handle_pass_players(game, player, encountered_ids, {
     item_name = ItemEffects.item_name,
     consume_item = ItemEffects.consume_item,
+    services = (context and context.services) or (game and game.services),
   })
 end
 

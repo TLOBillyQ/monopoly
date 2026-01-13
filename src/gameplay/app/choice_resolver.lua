@@ -5,6 +5,7 @@ local ItemEffects = require("src.gameplay.domain.item")
 local Roadblock = require("src.gameplay.domain.item_roadblock")
 local Services = require("src.util.services")
 local logger = require("src.util.logger")
+local IntentDispatcher = require("src.gameplay.app.intent_dispatcher")
 
 local Resolver = {}
 
@@ -26,6 +27,7 @@ local function build_effect_ctx(game, player, tile, move_result)
     game = game,
     store = game and game.store,
     rng = game and game.rng,
+    services = game and game.services,
     phase = phase,
     player = player,
     tile = tile,
@@ -121,6 +123,9 @@ local function handle_optional_landing_effect(game, choice, action)
   local ctx = build_effect_ctx(game, player, tile, move_result)
 
   local res = Effect.execute(target_eff, ctx)
+  if res then
+    IntentDispatcher.dispatch_from_result(game, res.result or res)
+  end
   if not res or res.ok ~= true then
     logger.warn("landing_optional_effect execute blocked:", tostring(res and res.reason))
   end
@@ -150,13 +155,10 @@ handlers.post_action_item = function(game, choice, action)
   end
 
   local res = ItemEffects.use_item(game, player, item_id)
+  IntentDispatcher.dispatch_from_result(game, res)
   if type(res) == "table" and res.waiting then
-    if res.intent and res.intent.kind == "need_choice" and res.intent.choice_spec then
-      Choice.open(game, res.intent.choice_spec)
-      return { stay = true }
-    end
+    return { stay = true }
   end
-
   Choice.clear(game)
   return { stay = false }
 end
@@ -171,7 +173,8 @@ handlers.missile_target = function(game, choice, action)
   local player = meta.player_id and game.players[meta.player_id] or game:current_player()
   if idx and player then
     ItemEffects.consume_item(player, 2013)
-    ItemEffects.apply_missile(game, player, idx)
+    local res = ItemEffects.apply_missile(game, player, idx, { services = game and game.services })
+    IntentDispatcher.dispatch_from_result(game, res)
   end
   Choice.clear(game)
   return { stay = false }
@@ -215,7 +218,8 @@ handlers.steal_target = function(game, choice, action)
   end
 
   if target.inventory:count() <= 1 then
-    ItemEffects.steal_item_at_index(game, stealer, target, 1)
+    local res = ItemEffects.steal_item_at_index(game, stealer, target, 1)
+    IntentDispatcher.dispatch_from_result(game, res)
     Choice.clear(game)
     return { stay = false }
   end
@@ -234,7 +238,8 @@ handlers.steal_item = function(game, choice, action)
   local stealer = meta.stealer_id and game.players[meta.stealer_id] or game:current_player()
   local target = meta.target_id and game.players[meta.target_id]
   if stealer and target and idx then
-    ItemEffects.steal_item_at_index(game, stealer, target, idx)
+    local res = ItemEffects.steal_item_at_index(game, stealer, target, idx)
+    IntentDispatcher.dispatch_from_result(game, res)
   end
   Choice.clear(game)
   return { stay = false }

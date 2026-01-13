@@ -2,6 +2,7 @@ local Effect = require("src.gameplay.domain.effect")
 local landing_effects = require("src.gameplay.domain.landing")
 local Choice = require("src.gameplay.app.choice")
 local UI = require("src.gameplay.ports.ui_port")
+local IntentDispatcher = require("src.gameplay.app.intent_dispatcher")
 
 local LandingResolver = {}
 
@@ -37,6 +38,7 @@ local function build_ctx(game, player, tile, move_result)
     game = game,
     store = game and game.store,
     rng = game and game.rng,
+    services = game and game.services,
     phase = phase,
     player = player,
     tile = tile,
@@ -68,12 +70,8 @@ function LandingResolver.resolve(game, player, tile, move_result)
   for _, eff in ipairs(mandatory) do
     local res = Effect.execute(eff, ctx)
     local out = res and res.result
+    IntentDispatcher.dispatch_from_result(game, out or res)
     if type(out) == "table" and out.waiting then
-      if out.intent and out.intent.kind == "need_choice" and out.intent.choice_spec then
-        if not Choice.get(game) then
-          Choice.open(game, out.intent.choice_spec)
-        end
-      end
       out.resume_state = out.resume_state or "landing"
       out.resume_args = out.resume_args or { player = player, move_result = move_result }
       return out
@@ -116,7 +114,8 @@ function LandingResolver.resolve(game, player, tile, move_result)
   
   local first = optional[1]
   if first then
-    Effect.execute(first, ctx)
+    local res = Effect.execute(first, ctx)
+    IntentDispatcher.dispatch_from_result(game, res and res.result or res)
   end
 
   return nil

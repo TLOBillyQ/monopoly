@@ -1,5 +1,4 @@
 local WorldOps = {}
-local Services = require("src.util.services")
 
 function WorldOps.destroy_building(game, tile)
   if not tile or tile.type ~= "land" then
@@ -12,11 +11,11 @@ function WorldOps.destroy_building(game, tile)
   end
 end
 
-function WorldOps.clear_overlays(game, idx)
+function WorldOps.clear_overlays(game, idx, overlay_service)
   if not game then
     return
   end
-  local overlay = Services.overlay(game)
+  local overlay = overlay_service or (game.services and game.services.overlay)
   if not overlay then
     return
   end

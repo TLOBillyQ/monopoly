@@ -1,19 +1,24 @@
 local logger = require("src.util.logger")
-local UI = require("src.gameplay.ports.ui_port")
-local Services = require("src.util.services")
 
 local PostEffects = {}
 
-local function ensure_status(game, action)
-  local status = Services.status(game)
+local function get_service(context, game, key)
+  if context and context.services and context.services[key] then
+    return context.services[key]
+  end
+  return game and game.services and game.services[key]
+end
+
+local function ensure_status(game, action, context)
+  local status = get_service(context, game, "status")
   if not status then
     logger.warn("缺少 StatusService，无法" .. action)
   end
   return status
 end
 
-local function ensure_overlay(game, action)
-  local overlay = Services.overlay(game)
+local function ensure_overlay(game, action, context)
+  local overlay = get_service(context, game, "overlay")
   if not overlay then
     logger.warn("缺少 OverlayService，无法" .. action)
   end
@@ -55,8 +60,8 @@ handlers.set_status = function(game, player, cfg, _context)
   return true
 end
 
-handlers.deity = function(game, player, cfg, _context)
-  local status = ensure_status(game, cfg.warn or "附身")
+handlers.deity = function(game, player, cfg, context)
+  local status = ensure_status(game, cfg.warn or "附身", context)
   if not status then
     return false
   end
@@ -74,25 +79,27 @@ handlers.log = function(_, player, cfg, _context)
   return true
 end
 
-handlers.place_mine_here = function(game, player, _cfg, _context)
-  local overlay = ensure_overlay(game, "埋设地雷")
+handlers.place_mine_here = function(game, player, _cfg, context)
+  local overlay = ensure_overlay(game, "埋设地雷", context)
   if not overlay then
     return false
   end
   overlay.place_mine(game, player.position)
   logger.event(player.name .. " 在脚下埋设地雷")
-  UI.push_popup(game, { title = "埋设地雷", body = player.name .. " 在脚下埋设了地雷" })
-  return true
+  return {
+    ok = true,
+    intent = { kind = "push_popup", payload = { title = "埋设地雷", body = player.name .. " 在脚下埋设了地雷" } },
+  }
 end
 
-handlers.clear_obstacles_ahead = function(game, player, cfg, _context)
+handlers.clear_obstacles_ahead = function(game, player, cfg, context)
   local board = game.board
   local cleared = 0
   local current = player.position
   local parity = 1
   local facing = player.status and player.status.move_dir or nil
   local distance = cfg.distance or 12
-  local overlay = ensure_overlay(game, "清除障碍")
+  local overlay = ensure_overlay(game, "清除障碍", context)
   if not overlay then
     return false
   end
@@ -114,6 +121,8 @@ handlers.clear_obstacles_ahead = function(game, player, cfg, _context)
 end
 
 function PostEffects.apply(game, player, item_id, context)
+  context = context or {}
+  context.services = context.services or (game and game.services)
   local cfg = EFFECTS[item_id]
   if not cfg then
     return nil
