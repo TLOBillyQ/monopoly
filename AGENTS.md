@@ -7,7 +7,10 @@
 - lua语言
 - 核心gameplay代码架构要满足好莱坞原则和SOLID原则
 - 切分适配层，love2d环境注入
-
+ 
+## 自检
+- 通过脚本测试：`scripts/deps_check.lua`和`scripts/regression.lua`
+  
 ## Coding Rules
 
 **Primary rule: prefer deleting or reusing code over adding new code.**

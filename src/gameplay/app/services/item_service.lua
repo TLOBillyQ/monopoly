@@ -1,6 +1,6 @@
 local Inventory = require("src.gameplay.domain.item_inventory")
-local Strategy = require("src.gameplay.app.services.item_strategy")
-local Executor = require("src.gameplay.app.services.item_executor")
+local Strategy = require("src.gameplay.domain.item_strategy")
+local Executor = require("src.gameplay.domain.item_executor")
 
 local ItemEffects = {}
 
