@@ -1,6 +1,8 @@
 local Bootstrap = require("src.gameplay.app.bootstrap")
 local logger = require("src.util.logger")
 local TurnManager = require("src.gameplay.app.services.turn_manager")
+local TurnUsecase = require("src.gameplay.app.usecases.turn_usecase")
+local ActionUsecase = require("src.gameplay.app.usecases.action_usecase")
 local TileService = require("src.gameplay.app.services.tile_service")
 local ChanceService = require("src.gameplay.app.services.chance_service")
 local MovementService = require("src.gameplay.app.services.movement_service")
@@ -91,7 +93,10 @@ function App.new(opts)
   setmetatable(game, App)
   validate_services(game.services)
   game:rebuild_occupants()
-  game.turn_manager = TurnManager.new(game)
+  local turn_usecase = TurnUsecase.new(game)
+  game.turn_manager = turn_usecase.turn_manager
+  game.turn_usecase = turn_usecase
+  game.action_usecase = ActionUsecase.new({ game = game, turn_usecase = turn_usecase })
   return game
 end
 
@@ -209,7 +214,11 @@ function App:run(max_rounds)
     if self:check_victory() then
       break
     end
-    self.turn_manager:run_turn()
+    if self.turn_usecase then
+      self.turn_usecase:advance()
+    elseif self.turn_manager then
+      self.turn_manager:run_turn()
+    end
   end
 end
 

@@ -2,6 +2,7 @@ local logger = require("src.util.logger")
 local GameState = require("src.util.game_state")
 local BoardUtils = require("src.gameplay.domain.item_board_utils")
 local WorldOps = require("src.gameplay.domain.item_world_ops")
+local UI = require("src.gameplay.ports.ui_port")
 
 local Missile = {}
 

@@ -11,3 +11,4 @@
 ## 代码修改原则
 
 - 不用考虑旧代码，这只会影响你的重构。
+- 带面写完后跑 `scripts/deps_check.lua` 和 `scripts/deps_check.lua`
