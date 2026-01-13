@@ -4,6 +4,9 @@ local function phase_end(tm, args)
   assert(status and status.tick_end_of_turn, "Missing StatusService (game.services.status)")
   status.tick_end_of_turn(player)
   player:clear_temporal_flags()
+  if tm.game and tm.game.store then
+    tm.game.store:set({ "turn", "market_prompt" }, nil)
+  end
   tm:next_player()
   return nil
 end

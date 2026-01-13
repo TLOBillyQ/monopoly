@@ -1,6 +1,7 @@
 local Choice = require("src.gameplay.app.choice")
 local Effect = require("src.gameplay.domain.effect")
 local ItemEffects = require("src.gameplay.domain.item")
+local Services = require("src.util.services")
 local logger = require("src.util.logger")
 
 local Resolver = {}
@@ -193,6 +194,59 @@ handlers.item_target_player = function(game, choice, action)
     if ok then
       ItemEffects.consume_item(user, item_id)
     end
+  end
+  Choice.clear(game)
+  return { stay = false }
+end
+
+handlers.market_buy = function(game, choice, action)
+  if is_cancel(action) then
+    Choice.clear(game)
+    return { stay = false }
+  end
+
+  local item_id = as_number(action.option_id)
+  local meta = choice.meta or {}
+  local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+  local market = Services.market(game)
+  if player and market and market.buy and item_id then
+    market.buy(game, player, item_id)
+  end
+  Choice.clear(game)
+  return { stay = false }
+end
+
+handlers.rent_card_prompt = function(game, choice, action)
+  local meta = choice.meta or {}
+  local store = game and game.store
+  if store and meta.player_id and meta.tile_id and meta.kind then
+    local decision = (action and action.option_id == "use")
+    if is_cancel(action) then
+      decision = false
+    end
+    store:set({ "turn", "rent_prompt" }, {
+      player_id = meta.player_id,
+      tile_id = meta.tile_id,
+      kind = meta.kind,
+      decision = decision,
+    })
+  end
+  Choice.clear(game)
+  return { stay = false }
+end
+
+handlers.tax_card_prompt = function(game, choice, action)
+  local meta = choice.meta or {}
+  local store = game and game.store
+  if store and meta.player_id then
+    local decision = (action and action.option_id == "use")
+    if is_cancel(action) then
+      decision = false
+    end
+    store:set({ "turn", "tax_prompt" }, {
+      player_id = meta.player_id,
+      decision = decision,
+    })
   end
   Choice.clear(game)
   return { stay = false }

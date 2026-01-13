@@ -69,6 +69,11 @@ function LandingResolver.resolve(game, player, tile, move_result)
     local res = Effect.execute(eff, ctx)
     local out = res and res.result
     if type(out) == "table" and out.waiting then
+      if out.intent and out.intent.kind == "need_choice" and out.intent.choice_spec then
+        if not Choice.get(game) then
+          Choice.open(game, out.intent.choice_spec)
+        end
+      end
       out.resume_state = out.resume_state or "landing"
       out.resume_args = out.resume_args or { player = player, move_result = move_result }
       return out

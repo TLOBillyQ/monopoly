@@ -7,6 +7,7 @@ local PanelRenderer = require("src.adapters.love2d.panel_renderer")
 local Presenter = require("src.adapters.love2d.presenter")
 local Modal = require("src.adapters.love2d.modal")
 local AutoRunner = require("src.adapters.love2d.auto_runner")
+local constants = require("src.config.constants")
 
 local LoveLayer = {}
 LoveLayer.__index = LoveLayer
@@ -23,8 +24,24 @@ function LoveLayer.new(opts)
     auto_runner = AutoRunner.new({ interval = ui.auto_interval }),
     _auto_handled_choice_id = nil,
     _auto_choice_retry_timer = 0,
+    _choice_timeout_choice_id = nil,
+    _choice_timeout_timer = 0,
   }
   return setmetatable(self, LoveLayer)
+end
+
+function LoveLayer:_reset_choice_timeout()
+  self._choice_timeout_choice_id = nil
+  self._choice_timeout_timer = 0
+end
+
+function LoveLayer:_touch_choice_timeout(pending_choice)
+  if not pending_choice or not pending_choice.id then
+    self:_reset_choice_timeout()
+    return
+  end
+  self._choice_timeout_choice_id = pending_choice.id
+  self._choice_timeout_timer = 0
 end
 
 function LoveLayer:set_game(g)
@@ -236,6 +253,12 @@ function LoveLayer:update(dt)
   self:update_hover_tile(mx, my)
 
   local pending_choice = self.game.store and self.game.store:get({ "turn", "pending_choice" })
+  if not pending_choice then
+    self:_reset_choice_timeout()
+  elseif self._choice_timeout_choice_id ~= pending_choice.id then
+    self:_touch_choice_timeout(pending_choice)
+  end
+
   if self.ui.auto_play and pending_choice then
     
     if self._auto_handled_choice_id == pending_choice.id then
@@ -262,6 +285,29 @@ function LoveLayer:update(dt)
     self._auto_handled_choice_id = nil
     self._auto_choice_retry_timer = 0
   end
+
+  pending_choice = self.game.store and self.game.store:get({ "turn", "pending_choice" })
+  if pending_choice and not self.ui.auto_play then
+    self._choice_timeout_timer = self._choice_timeout_timer + dt
+    local timeout = constants.action_timeout_seconds or 10
+    if timeout > 0 and self._choice_timeout_timer >= timeout then
+      if pending_choice.allow_cancel ~= false then
+        self:dispatch_action({ type = "choice_cancel", choice_id = pending_choice.id })
+      else
+        local first = pending_choice.options and pending_choice.options[1]
+        if first then
+          self:dispatch_action({ type = "choice_select", choice_id = pending_choice.id, option_id = first.id or first })
+        else
+          self:dispatch_action({ type = "choice_cancel", choice_id = pending_choice.id })
+        end
+      end
+      self:_touch_choice_timeout(pending_choice)
+      if self.modal.active and self.modal.active._pending_choice_id == pending_choice.id then
+        self.modal:dismiss()
+      end
+    end
+  end
+
   pending_choice = self.game.store and self.game.store:get({ "turn", "pending_choice" })
 
   local auto_action = self.auto_runner:next_action(dt, {
@@ -300,15 +346,18 @@ function LoveLayer:dispatch_action(action)
   elseif action.type == "ui_button" then
     self:handle_ui_button(action.id)
   elseif action.type == "modal_button" then
+    self:_touch_choice_timeout(self.game and self.game.store and self.game.store:get({ "turn", "pending_choice" }))
     local idx = action.index or 1
     if not self.modal:press_button(idx) then
       self.modal:keypressed("space")
     end
   elseif action.type == "modal_confirm" then
+    self:_touch_choice_timeout(self.game and self.game.store and self.game.store:get({ "turn", "pending_choice" }))
     if not self.modal:confirm() then
       self.modal:keypressed("space")
     end
   elseif action.type == "choice_select" or action.type == "choice_cancel" then
+    self:_touch_choice_timeout(self.game and self.game.store and self.game.store:get({ "turn", "pending_choice" }))
     if self.game and self.game.turn_manager then
       self.game.turn_manager:dispatch(action)
       self.game:check_victory()
@@ -320,6 +369,7 @@ function LoveLayer:mousepressed(x, y, button)
   if button ~= 1 then
     return
   end
+  self:_touch_choice_timeout(self.game and self.game.store and self.game.store:get({ "turn", "pending_choice" }))
   if self.modal:click_buttons(x, y) or self.modal:mousepressed(x, y) then
     return
   end
@@ -336,6 +386,7 @@ function LoveLayer:mousepressed(x, y, button)
 end
 
 function LoveLayer:keypressed(key)
+  self:_touch_choice_timeout(self.game and self.game.store and self.game.store:get({ "turn", "pending_choice" }))
   if self.modal.active and self.modal:keypressed(key) then
     return
   end

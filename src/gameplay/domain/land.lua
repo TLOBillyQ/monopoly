@@ -28,6 +28,60 @@ local function total_invested(tile, owner_id, level)
   return price * ((2 ^ (level + 1)) - 1)
 end
 
+local function open_rent_prompt(ctx, kind, title, body_lines)
+  local store = ctx.game and ctx.game.store
+  if not store then
+    return nil
+  end
+  store:set({ "turn", "rent_prompt" }, { player_id = ctx.player.id, tile_id = ctx.tile.id, kind = kind, decision = nil })
+  return {
+    waiting = true,
+    reason = "rent_prompt",
+    intent = {
+      kind = "need_choice",
+      choice_spec = {
+        kind = "rent_card_prompt",
+        title = title,
+        body_lines = body_lines or {},
+        options = {
+          { id = "use", label = "使用" },
+          { id = "skip", label = "放弃" },
+        },
+        allow_cancel = false,
+        cancel_label = "放弃",
+        meta = { player_id = ctx.player.id, tile_id = ctx.tile.id, kind = kind },
+      },
+    },
+  }
+end
+
+local function open_tax_prompt(ctx)
+  local store = ctx.game and ctx.game.store
+  if not store then
+    return nil
+  end
+  store:set({ "turn", "tax_prompt" }, { player_id = ctx.player.id, decision = nil })
+  return {
+    waiting = true,
+    reason = "tax_prompt",
+    intent = {
+      kind = "need_choice",
+      choice_spec = {
+        kind = "tax_card_prompt",
+        title = "是否使用免税卡",
+        body_lines = { "使用免税卡可免除本次税金" },
+        options = {
+          { id = "use", label = "使用" },
+          { id = "skip", label = "放弃" },
+        },
+        allow_cancel = false,
+        cancel_label = "放弃",
+        meta = { player_id = ctx.player.id },
+      },
+    },
+  }
+end
+
 
 local function can_buy(ctx)
   local tile = ctx.tile
@@ -97,15 +151,45 @@ Effect.defs = {
       local strong_idx = player.inventory and player.inventory:find_index(function(it)
         return it.id == 2009
       end)
-      if strong_idx and player.cash >= total_value then
-        player.inventory:remove_by_index(strong_idx)
-        player:deduct_cash(total_value)
-        owner:add_cash(total_value)
-        ctx.game:set_tile_owner(tile, player.id)
-        ctx.game:set_player_property(owner, tile.id, false)
-        ctx.game:set_player_property(player, tile.id, true)
-        logger.event(player.name .. " 使用强征卡，支付 " .. total_value .. " 强制购入 " .. tile.name)
-        return
+
+      local store = ctx.game and ctx.game.store
+      local prompt = store and store:get({ "turn", "rent_prompt" }) or nil
+      local skip_strong_prompt = false
+      local skip_free_prompt = false
+
+      if prompt and prompt.player_id == player.id and prompt.tile_id == tile.id and prompt.decision ~= nil then
+        local decision = prompt.decision == true
+        local kind = prompt.kind
+        store:set({ "turn", "rent_prompt" }, nil)
+        if kind == "strong" then
+          if decision and strong_idx and player.cash >= total_value then
+            player.inventory:remove_by_index(strong_idx)
+            player:deduct_cash(total_value)
+            owner:add_cash(total_value)
+            ctx.game:set_tile_owner(tile, player.id)
+            ctx.game:set_player_property(owner, tile.id, false)
+            ctx.game:set_player_property(player, tile.id, true)
+            logger.event(player.name .. " 使用强征卡，支付 " .. total_value .. " 强制购入 " .. tile.name)
+            return
+          end
+          skip_strong_prompt = true
+        elseif kind == "free" then
+          if decision then
+            local free_idx_now = player.inventory and player.inventory:find_index(function(it)
+              return it.id == 2001
+            end)
+            if free_idx_now then
+              player.inventory:remove_by_index(free_idx_now)
+              logger.event(player.name .. " 出示免费卡，免租 " .. tile.name)
+              return
+            end
+          end
+          skip_free_prompt = true
+        end
+      end
+
+      if strong_idx and player.cash >= total_value and not skip_strong_prompt then
+        return open_rent_prompt(ctx, "strong", "是否使用强征卡", { "支付 " .. tostring(total_value) .. " 强制购入 " .. tile.name })
       end
       local status = Services.status(ctx.game)
       if status and status.is_in_mountain and status.is_in_mountain(ctx.game, owner) then
@@ -120,10 +204,8 @@ Effect.defs = {
       local free_idx = player.inventory and player.inventory:find_index(function(it)
         return it.id == 2001
       end)
-      if free_idx then
-        player.inventory:remove_by_index(free_idx)
-        logger.event(player.name .. " 出示免费卡，免租 " .. tile.name)
-        return
+      if free_idx and not skip_free_prompt then
+        return open_rent_prompt(ctx, "free", "是否使用免费卡", { "免除本次租金" })
       end
 
       local board = ctx.game.board
@@ -206,10 +288,23 @@ Effect.defs = {
       local tax_idx = player.inventory and player.inventory:find_index(function(it)
         return it.id == 2010
       end)
-      if tax_idx then
-        player.inventory:remove_by_index(tax_idx)
-        logger.event(player.name .. " 出示免税卡，本次免税")
-        return
+
+      local store = ctx.game and ctx.game.store
+      local prompt = store and store:get({ "turn", "tax_prompt" }) or nil
+      local skip_tax_prompt = false
+      if prompt and prompt.player_id == player.id and prompt.decision ~= nil then
+        local decision = prompt.decision == true
+        store:set({ "turn", "tax_prompt" }, nil)
+        if decision and tax_idx then
+          player.inventory:remove_by_index(tax_idx)
+          logger.event(player.name .. " 出示免税卡，本次免税")
+          return
+        end
+        skip_tax_prompt = true
+      end
+
+      if tax_idx and not skip_tax_prompt then
+        return open_tax_prompt(ctx)
       end
       local fee = math.floor(player.cash * constants.tax_rate)
       if player.cash < fee then

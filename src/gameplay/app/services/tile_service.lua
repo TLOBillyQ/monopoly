@@ -2,6 +2,7 @@ local logger = require("src.util.logger")
 local Choice = require("src.gameplay.app.choice")
 local Services = require("src.util.services")
 local Errors = require("src.util.error_handling")
+local UI = require("src.gameplay.ports.ui_port")
 
 local TileService = {}
 
@@ -25,13 +26,37 @@ local function handle_mountain(game, player)
   status.send_to_mountain(game, player)
 end
 
-local function handle_market(game, player)
-  local market = Services.market(game)
-  if market and market.auto_buy then
-    market.auto_buy(game, player)
-  else
-    logger.warn("缺少 MarketService，跳过黑市自动购买")
+local function handle_market(game, player, tile)
+  if not game or not game.store or not player or not tile then
+    return nil
   end
+
+  local prompted = game.store:get({ "turn", "market_prompt" })
+  if prompted and prompted.player_id == player.id and prompted.tile_id == tile.id then
+    return nil
+  end
+
+  local market = Services.market(game)
+  if not market then
+    logger.warn("缺少 MarketService，无法打开黑市")
+    return nil
+  end
+
+  if player.inventory and player.inventory.is_full and player.inventory:is_full() then
+    UI.push_popup(game, { title = "黑市", body = player.name .. " 卡槽已满，无法购买" })
+    game.store:set({ "turn", "market_prompt" }, { player_id = player.id, tile_id = tile.id })
+    return nil
+  end
+
+  local spec = market.build_choice_spec and market.build_choice_spec(game, player) or nil
+  if not spec then
+    game.store:set({ "turn", "market_prompt" }, { player_id = player.id, tile_id = tile.id })
+    return nil
+  end
+
+  Choice.open(game, spec)
+  game.store:set({ "turn", "market_prompt" }, { player_id = player.id, tile_id = tile.id })
+  return { waiting = true, reason = "market_choice" }
 end
 
 local function check_mine(game, player)
@@ -73,16 +98,19 @@ function TileService.resolve(game, player, tile, context)
     context.pass_players_checked = true
   end
 
+  local out = nil
+
   if tile.type == "hospital" then
     handle_hospital(game, player)
   elseif tile.type == "mountain" then
     handle_mountain(game, player)
   elseif tile.type == "market" then
-    handle_market(game, player)
+    out = handle_market(game, player, tile)
   end
 
   check_mine(game, player)
-  return nil
+
+  return out
 end
 
 return TileService
