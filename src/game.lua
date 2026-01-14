@@ -1,18 +1,12 @@
+-- Game：游戏运行时门面
+-- 职责：领域写操作、状态查询、流程驱动
+-- 装配：由 Bootstrap.assemble() 完成
+
 local Bootstrap = require("src.gameplay.app.bootstrap")
-local logger = require("src.util.logger")
-local TurnManager = require("src.gameplay.app.services.turn_manager")
-local MovementService = require("src.gameplay.app.services.movement_service")
-local MarketService = require("src.gameplay.app.services.market_service")
-local BankruptcyService = require("src.gameplay.app.services.bankruptcy_service")
--- OverlayService removed (integrated into Board)
--- ChanceService removed (integrated into landing domain + resolver recursion)
-local RNG = require("src.gameplay.infra.rng")
-local Store = require("src.gameplay.infra.store")
 local Tables = require("src.util.tables")
+
 local Game = {}
 Game.__index = Game
-
-
 
 local deep_copy = Tables.deep_copy
 
@@ -23,61 +17,12 @@ local function store_value(v)
   return v
 end
 
-local REQUIRED_SERVICES = {
-  "movement",
-  "market",
-  "bankruptcy",
-}
-
-local function validate_services(services)
-  for _, key in ipairs(REQUIRED_SERVICES) do
-    assert(services[key] ~= nil, "缺少必要服务：" .. key)
-  end
-end
-
+-- 创建游戏实例（装配由 Bootstrap 完成）
 function Game.new(opts)
-  opts = opts or {}
-  local board = Bootstrap.create_board(opts)
-  local rng = RNG.new(opts.seed)
-  local players = Bootstrap.create_players(opts)
-
-  local initial_state = Bootstrap.build_initial_state(board, players, rng)
-  local store = Store.new(initial_state)
-
-  rng._store = store
-
-  for _, p in ipairs(players) do
-    p._store = store
-    if p.inventory then
-      local pid = p.id
-      p.inventory._on_change = function(inv)
-        store:set({ "players", pid, "inventory" }, Bootstrap.snapshot_inventory(inv))
-      end
-    end
-  end
-
-  local game = {
-    board = board,
-    players = players,
-    store = store,
-    rng = rng,
-    logger = logger,
-    finished = false,
-    winner = nil,
-    last_turn = nil,
-    services = {
-      movement = MovementService,
-      market = MarketService,
-      bankruptcy = BankruptcyService,
-    },
-  }
-  setmetatable(game, Game)
-  validate_services(game.services)
-  game:rebuild_occupants()
-  game.turn_manager = TurnManager.new(game)
-  return game
+  return Bootstrap.assemble(opts, Game)
 end
 
+-- ========== 领域写操作 ==========
 
 function Game:_store_set(path, value)
   if self.store then
@@ -142,6 +87,8 @@ function Game:reset_tile(tile)
   end
 end
 
+-- ========== 状态查询 ==========
+
 function Game:alive_players()
   local alive = {}
   for _, p in ipairs(self.players) do
@@ -181,6 +128,8 @@ function Game:update_player_position(player, new_index)
   self.occupants[new_index] = self.occupants[new_index] or {}
   table.insert(self.occupants[new_index], player.id)
 end
+
+-- ========== 流程驱动 ==========
 
 function Game:check_victory()
   if self.finished then
