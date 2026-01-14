@@ -1,6 +1,7 @@
 local constants = require("src.config.constants")
 local Agent = require("src.gameplay.ai.agent")
 local ItemEffects = require("src.gameplay.domain.item_post_effects")
+local logger = require("src.util.logger")
 
 local Strategy = {}
 
@@ -61,6 +62,9 @@ function Strategy.auto_pre_action(game, player, deps)
     if not inventory.find_index(player, item_id) then
       return nil
     end
+    if item_id == 2006 then
+      logger.event(player.name .. " 使用清障卡，尝试清理前方障碍")
+    end
     local res = use_item(game, player, item_id, { by_ai = true })
     if type(res) == "table" and (res.waiting or res.intent or res.kind) then
       return res
@@ -73,7 +77,16 @@ function Strategy.auto_pre_action(game, player, deps)
   end
 
   local rules = {
-    { id = 2006, cond = function() return Strategy.has_obstacles_ahead(game, player, 12) end },
+    {
+      id = 2006,
+      cond = function()
+        local found = Strategy.has_obstacles_ahead(game, player, 12)
+        if found and inventory.find_index(player, 2006) then
+          logger.event(player.name .. " 前方发现障碍，准备使用清障卡")
+        end
+        return found
+      end,
+    },
     {
       id = 2002,
       cond = function()
