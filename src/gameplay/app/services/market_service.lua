@@ -104,7 +104,7 @@ function MarketService.auto_buy(game, player)
   for _, cfg in ipairs(options) do
     if player.cash >= (cfg.shop_price or 0) and not player.inventory:is_full() then
       player:deduct_cash(cfg.shop_price or 0)
-      item.give_item(player, cfg.id)
+      Inventory.give(player, cfg.id)
     end
   end
 end
