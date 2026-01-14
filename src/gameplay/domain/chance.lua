@@ -207,7 +207,7 @@ end
 
 handlers.forced_move = function(game, player, card, context)
   if card.destination == "hospital" then
-    player:send_to_hospital(game, { skip_fee = true })
+    player:send_to_hospital(game)
   elseif card.destination == "mountain" then
     player:send_to_mountain(game)
   elseif card.destination == "tax" then

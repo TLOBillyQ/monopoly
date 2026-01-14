@@ -183,10 +183,7 @@ function TileService.handle_pass_players(game, player, encountered_players, cont
   end
 
   if context and context.encountered_players and #context.encountered_players > 0 then
-    local res = Steal.handle_pass_players(game, player, context.encountered_players, {
-      item_name = Inventory.item_name,
-      consume_item = Inventory.consume
-    })
+    local res = Steal.handle_pass_players(game, player, context.encountered_players)
     if res then
       if res.waiting then
         return res

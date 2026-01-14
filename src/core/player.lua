@@ -125,33 +125,30 @@ function Player:apply_deity(deity_type)
   logger.event(self.name .. " 获得附身：" .. deity_type)
 end
 
-function Player:apply_hospital_effects(game, opts)
-  opts = opts or {}
+function Player:apply_hospital_effects(game)
   if game.set_player_status then
     game:set_player_status(self, "stay_turns", constants.hospital_stay_turns)
   else
     self.status.stay_turns = constants.hospital_stay_turns
   end
   
-  if not opts.skip_fee then
-    local fee = constants.hospital_fee
-    if self.cash < fee then
-        local bankruptcy = game and game.services and game.services.bankruptcy
-        if not bankruptcy then
-          logger.warn("缺少 BankruptcyService，无法淘汰破产玩家")
-          return
-        end
-        bankruptcy.eliminate(game, self)
+  local fee = constants.hospital_fee
+  if self.cash < fee then
+      local bankruptcy = game and game.services and game.services.bankruptcy
+      if not bankruptcy then
+        logger.warn("缺少 BankruptcyService，无法淘汰破产玩家")
         return
-    end
-    self:deduct_cash(fee)
-    logger.event(self.name .. " 支付医药费 " .. fee)
+      end
+      bankruptcy.eliminate(game, self)
+      return
   end
+  self:deduct_cash(fee)
+  logger.event(self.name .. " 支付医药费 " .. fee)
+
   logger.event(self.name .. " 住院，需停留 " .. self.status.stay_turns .. " 回合")
 end
 
-function Player:send_to_hospital(game, opts)
-  opts = opts or {}
+function Player:send_to_hospital(game)
   local hospital_index = game.board:find_first_by_type("hospital")
   if hospital_index then
     game:update_player_position(self, hospital_index)
@@ -159,7 +156,7 @@ function Player:send_to_hospital(game, opts)
   if game.set_player_status then
     game:set_player_status(self, "move_dir", nil)
   end
-  self:apply_hospital_effects(game, opts)
+  self:apply_hospital_effects(game)
 end
 
 function Player:apply_mountain_effects(game)

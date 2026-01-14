@@ -1,5 +1,6 @@
 local logger = require("src.util.logger")
 local UI = require("src.gameplay.ports.ui_port")
+local Inventory = require("src.gameplay.domain.item_inventory")
 
 local Steal = {}
 
@@ -9,10 +10,9 @@ local function find_item_index(player, item_id)
   end)
 end
 
-function Steal.steal_item_at_index(game, player, target, item_idx, opts)
-  opts = opts or {}
-  local item_name = opts.item_name or tostring
-  local consume_item = opts.consume_item
+function Steal.steal_item_at_index(game, player, target, item_idx)
+  local item_name = Inventory.item_name
+  local consume_item = Inventory.consume
 
   local inv = target.inventory
   if inv:count() == 0 then
@@ -42,9 +42,8 @@ end
 
 
 
-function Steal.handle_pass_players(game, player, encountered_ids, opts)
-  opts = opts or {}
-  local item_name = opts.item_name or tostring
+function Steal.handle_pass_players(game, player, encountered_ids)
+  local item_name = Inventory.item_name
 
   if #encountered_ids == 0 then
     return
@@ -66,14 +65,14 @@ function Steal.handle_pass_players(game, player, encountered_ids, opts)
   end
 
   if not UI.is_available(game) then
-    Steal.steal_item_at_index(game, player, candidates[1], 1, opts)
+    Steal.steal_item_at_index(game, player, candidates[1], 1)
     return nil
   end
 
   if #candidates == 1 then
     local target = candidates[1]
     if target.inventory:count() <= 1 then
-      Steal.steal_item_at_index(game, player, target, 1, opts)
+      Steal.steal_item_at_index(game, player, target, 1)
       return nil
     end
     local options = {}

@@ -8,6 +8,7 @@ $TempZipFile = Join-Path $ProjectRoot "game_temp.zip"
 $LoveFile = Join-Path $BinWindowsDir "SuperGame.love"
 $GameExe = Join-Path $BinWindowsDir "Game.exe"
 $FinalZip = Join-Path $ProjectRoot "bin\monopoly.zip"
+$SVNTarget = "C:\Users\Lzx_8\Documents\lzx\eggitor\1_开发中\大富翁\项目工程\monopoly"
 
 Write-Host "Starting packaging process..."
 
@@ -74,6 +75,15 @@ if (Test-Path $LoveFile) {
 }
 if (Test-Path $GameExe) {
     Remove-Item $GameExe -Force
+}
+
+# 6. Copy packaged files to Eggitor project if present
+Write-Host "6. Syncing package to $SVNTarget if it exists..."
+if (Test-Path $SVNTarget) {
+    Expand-Archive -Path $FinalZip -DestinationPath $SVNTarget -Force
+    Write-Host "Copied package contents to $SVNTarget"
+} else {
+    Write-Host "Target path not found, skipping copy."
 }
 
 Write-Host "Packaging successful! Output: $FinalZip"

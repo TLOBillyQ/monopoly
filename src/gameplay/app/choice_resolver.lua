@@ -287,10 +287,7 @@ local function handle_steal_target(game, choice, action)
   end
 
   if target.inventory:count() <= 1 then
-    local res = Steal.steal_item_at_index(game, stealer, target, 1, { 
-      item_name = Inventory.item_name, 
-      consume_item = Inventory.consume 
-    })
+    local res = Steal.steal_item_at_index(game, stealer, target, 1)
     logger.event("Steal choice result (single)", res)
     Choice.clear(game)
     if res and res.intent then
@@ -313,10 +310,7 @@ local function handle_steal_item(game, choice, action)
   local stealer = meta.stealer_id and game.players[meta.stealer_id] or game:current_player()
   local target = meta.target_id and game.players[meta.target_id]
   if stealer and target and idx then
-    local res = Steal.steal_item_at_index(game, stealer, target, idx, { 
-      item_name = Inventory.item_name, 
-      consume_item = Inventory.consume 
-    })
+    local res = Steal.steal_item_at_index(game, stealer, target, idx)
     logger.event("Steal choice result (multi)", res)
     Choice.clear(game)
     if res and res.intent then
