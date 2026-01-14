@@ -7,7 +7,6 @@ local TileService = require("src.gameplay.app.services.tile_service")
 local ChanceService = require("src.gameplay.app.services.chance_service")
 local MovementService = require("src.gameplay.app.services.movement_service")
 local MarketService = require("src.gameplay.app.services.market_service")
-local StatusService = require("src.gameplay.app.services.status_service")
 local BankruptcyService = require("src.gameplay.app.services.bankruptcy_service")
 -- OverlayService removed (integrated into Board)
 local RNG = require("src.gameplay.infra.rng")
@@ -32,7 +31,6 @@ local REQUIRED_SERVICES = {
   "tile",
   "chance",
   "market",
-  "status",
   "bankruptcy",
 }
 
@@ -77,7 +75,6 @@ function App.new(opts)
       chance = ChanceService,
       movement = MovementService,
       market = MarketService,
-      status = StatusService,
       bankruptcy = BankruptcyService,
     },
   }

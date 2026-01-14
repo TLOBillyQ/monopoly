@@ -14,13 +14,11 @@ local function require_service(game, key, name)
 end
 
 local function handle_hospital(game, player)
-  local status = require_service(game, "status", "StatusService")
-  status.apply_hospital_effects(game, player)
+  player:apply_hospital_effects(game)
 end
 
 local function handle_mountain(game, player)
-  local status = require_service(game, "status", "StatusService")
-  status.apply_mountain_effects(game, player)
+  player:apply_mountain_effects(game)
 end
 
 local function handle_market(game, player, tile)
@@ -67,8 +65,7 @@ function TileService.check_mine(game, player, idx)
     return false, false
   end
 
-  local status = require_service(game, "status", "StatusService")
-  if status.has_angel(player) then
+  if player:has_angel() then
     logger.event(player.name .. " 天使保护，地雷无效")
     board:clear_mine(position)
     return true, false
@@ -77,7 +74,7 @@ function TileService.check_mine(game, player, idx)
   board:clear_mine(position)
   game:set_player_seat(player, nil)
   logger.event(player.name .. " 触发地雷，座驾被摧毁并送医")
-  status.send_to_hospital(game, player)
+  player:send_to_hospital(game)
   return true, true
 end
 
@@ -169,8 +166,7 @@ function TileService.handle_pass_players(game, player, encountered_players, cont
 
   for _, other_player in ipairs(encountered_players) do
     if other_player.id ~= player.id then
-      local status = require_service(game, "status", "StatusService")
-      if status.has_angel(other_player) then
+      if other_player:has_angel() then
         logger.event(other_player.name .. " 天使保护，无法被偷取")
       else
         local res = Steal.handle_steal(game, player, other_player, context)

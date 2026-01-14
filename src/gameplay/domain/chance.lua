@@ -90,14 +90,13 @@ handlers.percent_pay_cash = function(game, player, card)
 end
 
 handlers.pay_others = function(game, player, card)
-  local status = require_service(get_service(game, nil, "status"), "StatusService")
   for _, other in ipairs(game.players) do
     if other.id ~= player.id and not other.eliminated then
       local fee = card.amount
       if player:has_deity("poor") then
         fee = fee * 2
       end
-      if not status.is_in_mountain(game, other) then
+      if not other:is_in_mountain(game) then
         apply_cash_and_maybe_bankrupt(game, player, -fee)
         apply_cash_change(other, fee)
       end
@@ -107,14 +106,13 @@ handlers.pay_others = function(game, player, card)
 end
 
 handlers.collect_from_others = function(game, player, card)
-  local status = require_service(get_service(game, nil, "status"), "StatusService")
   for _, other in ipairs(game.players) do
     if other.id ~= player.id and not other.eliminated then
       local fee = card.amount
       if player:has_deity("rich") then
         fee = fee * 2
       end
-      if not status.is_in_mountain(game, player) then
+      if not player:is_in_mountain(game) then
         if other.cash < fee then
           fee = other.cash
         end
@@ -208,11 +206,10 @@ handlers.discard_properties = function(game, player, card)
 end
 
 handlers.forced_move = function(game, player, card, context)
-  local status = require_service(get_service(game, context, "status"), "StatusService")
   if card.destination == "hospital" then
-    status.send_to_hospital(game, player, { skip_fee = true })
+    player:send_to_hospital(game, { skip_fee = true })
   elseif card.destination == "mountain" then
-    status.send_to_mountain(game, player)
+    player:send_to_mountain(game)
   elseif card.destination == "tax" then
     local idx = game.board:find_first_by_type("tax")
     if idx then
@@ -241,15 +238,14 @@ handlers.forced_move = function(game, player, card, context)
 end
 
 function ChanceEffects.resolve(game, player, card, context)
-  local status = require_service(get_service(game, context, "status"), "StatusService")
+function ChanceEffects.resolve(game, player, card, context)
 
-  if card.negative and status.has_angel(player) then
+  if card.negative and player:has_angel() then
     logger.event(player.name .. " 有天使附身，负面机会卡无效")
     return nil
   end
 
   local handler = handlers[card.effect]
-  if not handler then
     logger.warn("未知机会卡效果:" .. tostring(card.effect))
     return nil
   end
