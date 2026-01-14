@@ -1,8 +1,6 @@
 local Bootstrap = require("src.gameplay.app.bootstrap")
 local logger = require("src.util.logger")
 local TurnManager = require("src.gameplay.app.services.turn_manager")
-local TurnUsecase = require("src.gameplay.app.usecases.turn_usecase")
-local ActionUsecase = require("src.gameplay.app.usecases.action_usecase")
 local TileService = require("src.gameplay.app.services.tile_service")
 local MovementService = require("src.gameplay.app.services.movement_service")
 local MarketService = require("src.gameplay.app.services.market_service")
@@ -79,10 +77,7 @@ function App.new(opts)
   setmetatable(game, App)
   validate_services(game.services)
   game:rebuild_occupants()
-  local turn_usecase = TurnUsecase.new(game)
-  game.turn_manager = turn_usecase.turn_manager
-  game.turn_usecase = turn_usecase
-  game.action_usecase = ActionUsecase.new({ game = game, turn_usecase = turn_usecase })
+  game.turn_manager = TurnManager.new(game)
   return game
 end
 
@@ -206,6 +201,32 @@ function App:check_victory()
     return true
   end
   return false
+end
+
+function App:advance_turn()
+  if self.finished then
+    return
+  end
+  if self.turn_manager then
+    self.turn_manager:run_turn()
+  end
+  self:check_victory()
+end
+
+function App:dispatch_action(action)
+  if self.finished then
+    return
+  end
+  if self.turn_manager then
+    self.turn_manager:dispatch(action)
+  end
+  self:check_victory()
+end
+
+function App:pending_choice()
+  if self.store then
+    return self.store:get({ "turn", "pending_choice" })
+  end
 end
 
 return App

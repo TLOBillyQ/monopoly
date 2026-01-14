@@ -3,8 +3,6 @@ local items_cfg = require("src.config.items")
 local UIState = require("src.adapters.love2d.ui_state")
 local Modal = require("src.adapters.love2d.modal")
 local AutoRunner = require("src.adapters.love2d.auto_runner")
-local TurnUsecase = require("src.gameplay.app.usecases.turn_usecase")
-local ActionUsecase = require("src.gameplay.app.usecases.action_usecase")
 local LoveRuntime = require("src.adapters.love2d.love_runtime")
 
 local LoveLayer = {}
@@ -18,8 +16,6 @@ function LoveLayer.new(opts)
     game = nil,
     item_name_by_id = {},
     game_factory = opts.game_factory,
-    turn_usecase = nil,
-    action_usecase = nil,
     modal = Modal.new(),
     auto_runner = AutoRunner.new({ interval = ui.auto_interval }),
   }
@@ -29,23 +25,13 @@ end
 function LoveLayer:set_game(g)
   self.game = g
   if self.game then
-    self.turn_usecase = self.game.turn_usecase or TurnUsecase.new(self.game)
-    self.action_usecase = self.game.action_usecase or ActionUsecase.new({ game = self.game, turn_usecase = self.turn_usecase })
-    self.game.turn_usecase = self.turn_usecase
-    self.game.action_usecase = self.action_usecase
     self.game.ui_port = self
-  else
-    self.turn_usecase = nil
-    self.action_usecase = nil
   end
 end
 
 function LoveLayer:get_pending_choice()
-  if self.action_usecase and self.action_usecase.pending_choice then
-    return self.action_usecase:pending_choice()
-  end
-  if self.game and self.game.store then
-    return self.game.store:get({ "turn", "pending_choice" })
+  if self.game then
+    return self.game:pending_choice()
   end
 end
 
@@ -195,11 +181,7 @@ function LoveLayer:step_turn()
   if not self.game or self.game.finished then
     return
   end
-  if self.action_usecase then
-    self.action_usecase:advance_turn()
-  elseif self.turn_usecase then
-    self.turn_usecase:advance()
-  end
+  self.game:advance_turn()
 end
 
 function LoveLayer:handle_ui_button(id)
@@ -235,8 +217,8 @@ function LoveLayer:dispatch_action(action)
       self.modal:keypressed("space")
     end
   elseif action.type == "choice_select" or action.type == "choice_cancel" then
-    if self.action_usecase then
-      self.action_usecase:handle_choice(action)
+    if self.game then
+      self.game:dispatch_action(action)
     end
   end
 end
