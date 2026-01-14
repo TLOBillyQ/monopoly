@@ -187,7 +187,7 @@ function App:rebuild_occupants()
 end
 
 function App:update_player_position(player, new_index)
-  for tile_idx, list in pairs(self.occupants) do
+  for _, list in pairs(self.occupants) do
     for i = #list, 1, -1 do
       if list[i] == player.id then
         table.remove(list, i)

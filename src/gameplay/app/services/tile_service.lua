@@ -57,20 +57,25 @@ local function handle_market(game, player, tile)
   }
 end
 
-local function check_mine(game, player)
+function TileService.check_mine(game, player, idx)
   local overlay = require_service(game, "overlay", "OverlayService")
-  if overlay.has_mine(game, player.position) then
-    local status = require_service(game, "status", "StatusService")
-    if status.has_angel(player) then
-      logger.event(player.name .. " 天使保护，地雷无效")
-      overlay.clear_mine(game, player.position)
-      return
-    end
-    overlay.clear_mine(game, player.position)
-    game:set_player_seat(player, nil)
-    logger.event(player.name .. " 触发地雷，座驾被摧毁并送医")
-    status.send_to_hospital(game, player)
+  local position = idx or player.position
+  if not overlay.has_mine(game, position) then
+    return false, false
   end
+
+  local status = require_service(game, "status", "StatusService")
+  if status.has_angel(player) then
+    logger.event(player.name .. " 天使保护，地雷无效")
+    overlay.clear_mine(game, position)
+    return true, false
+  end
+
+  overlay.clear_mine(game, position)
+  game:set_player_seat(player, nil)
+  logger.event(player.name .. " 触发地雷，座驾被摧毁并送医")
+  status.send_to_hospital(game, player)
+  return true, true
 end
 
 
@@ -99,7 +104,7 @@ function TileService.resolve(game, player, tile, context)
     out = handle_market(game, player, tile)
   end
 
-  check_mine(game, player)
+  TileService.check_mine(game, player)
 
   return out
 end

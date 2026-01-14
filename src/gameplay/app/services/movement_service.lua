@@ -16,6 +16,7 @@ function MovementService.move(game, player, steps, opts)
   local start_tile = board:get_tile(current)
   local facing = opts.direction or (player.status and player.status.move_dir) or nil
   local overlay = game and game.services and game.services.overlay
+  local tile_service = game and game.services and game.services.tile
 
   for _ = 1, steps do
     local next_index, passed, step_dir = board:step_forward_by_facing(current, facing, branch_parity)
@@ -28,6 +29,14 @@ function MovementService.move(game, player, steps, opts)
     for _, pid in ipairs(others) do
       if pid ~= player.id then
         table.insert(encountered, pid)
+      end
+    end
+
+    if tile_service and tile_service.check_mine then
+      local detonated, hospitalized = tile_service.check_mine(game, player, current)
+      if detonated and hospitalized then
+        current = player.position
+        break
       end
     end
 
