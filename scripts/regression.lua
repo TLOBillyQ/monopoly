@@ -1,7 +1,7 @@
 -- Quick regression checks (run with: lua scripts/regression.lua)
 package.path = "src/?.lua;src/?/init.lua;src/gameplay/?.lua;src/gameplay/?/init.lua;?.lua;" .. package.path
 
-local App = require("src.app")
+local App = require("src.game")
 local MovementService = require("src.gameplay.app.services.movement_service")
 local Inventory = require("src.gameplay.domain.item_inventory")
 local Executor = require("src.gameplay.domain.item_executor")

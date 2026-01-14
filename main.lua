@@ -1,10 +1,10 @@
 package.path = "src/?.lua;src/?/init.lua;?.lua;" .. package.path
 
-local App = require("src.app")
+local Game = require("src.game")
 local LoveLayer = require("src.adapters.love2d.love_layer")
 
 local default_factory = function()
-	return App.new({
+	return Game.new({
 		players = { "玩家1", "AI2", "AI3", "AI4" },
 		ai = { [2] = true, [3] = true, [4] = true },
 		auto_all = true,
