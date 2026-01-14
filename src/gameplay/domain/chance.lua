@@ -152,11 +152,7 @@ handlers.reset_tiles_on_path = function(game, _, _, context)
     for _, idx in ipairs(context.visited) do
       local t = game.board:get_tile(idx)
       if t.type == "land" then
-        if game and game.reset_tile then
-          game:reset_tile(t)
-        else
-          t:reset()
-        end
+        game:reset_tile(t)
         logger.event("强制征地重置 " .. t.name)
       end
     end

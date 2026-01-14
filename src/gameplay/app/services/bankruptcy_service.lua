@@ -13,11 +13,7 @@ function BankruptcyService.eliminate(game, player)
   for _, tile_id in ipairs(owned_tile_ids) do
     local tile = game.board:get_tile_by_id(tile_id)
     if tile then
-      if game and game.reset_tile then
-        game:reset_tile(tile)
-      else
-        tile:reset()
-      end
+      game:reset_tile(tile)
     end
     if game and game.set_player_property then
       game:set_player_property(player, tile_id, false)

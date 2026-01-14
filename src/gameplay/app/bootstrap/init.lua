@@ -34,10 +34,6 @@ function Bootstrap.create_players(opts)
   return players
 end
 
-function Bootstrap.build_overlays()
-  return { roadblocks = {}, mines = {} }
-end
-
 function Bootstrap.snapshot_inventory(inv)
   return { items = deep_copy(inv.items), max_slots = inv.max_slots }
 end
@@ -76,7 +72,6 @@ end
 function Bootstrap.build_initial_state(board, players, rng)
   return {
     board = {
-      overlays = Bootstrap.build_overlays(),
       tiles = Bootstrap.snapshot_tiles(board.path),
     },
     turn = {

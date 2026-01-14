@@ -136,35 +136,44 @@ handlers.landing_optional_effect = handle_optional_landing_effect
 handlers.land_optional_effect = handle_optional_landing_effect
 
 local function handle_rent_prompt(game, choice, action)
+  local LandEffect = require("src.gameplay.domain.land")
   local meta = choice.meta or {}
-  if meta.player_id and meta.tile_id and meta.kind then
-    local decision = (action and action.option_id == "use")
-    if is_cancel(action) then
-      decision = false
-    end
-    game.store:set({ "turn", "rent_prompt" }, {
-      player_id = meta.player_id,
-      tile_id = meta.tile_id,
-      kind = meta.kind,
-      decision = decision,
-    })
+  local player_id = meta.player_id
+  local tile_id = meta.tile_id
+  local card_kind = meta.card_kind
+
+  local use_card = (action and action.option_id == "use") and not is_cancel(action)
+
+  if use_card and card_kind == "strong" then
+    -- 使用强征卡
+    LandEffect.execute_strong_card(game, player_id, tile_id)
+  elseif use_card and card_kind == "free" then
+    -- 使用免费卡（免租）
+    LandEffect.execute_free_card(game, player_id, tile_id)
+  else
+    -- 跳过当前卡 → 直接支付租金
+    LandEffect.execute_pay_rent(game, player_id, tile_id)
   end
+
   Choice.clear(game)
   return { stay = false }
 end
 
 local function handle_tax_prompt(game, choice, action)
+  local LandEffect = require("src.gameplay.domain.land")
   local meta = choice.meta or {}
-  if meta.player_id then
-    local decision = (action and action.option_id == "use")
-    if is_cancel(action) then
-      decision = false
-    end
-    game.store:set({ "turn", "tax_prompt" }, {
-      player_id = meta.player_id,
-      decision = decision,
-    })
+  local player_id = meta.player_id
+
+  local use_card = (action and action.option_id == "use") and not is_cancel(action)
+
+  if use_card then
+    -- 使用免税卡
+    LandEffect.execute_tax_free_card(game, player_id)
+  else
+    -- 跳过 → 直接支付税金
+    LandEffect.execute_pay_tax(game, player_id)
   end
+
   Choice.clear(game)
   return { stay = false }
 end
