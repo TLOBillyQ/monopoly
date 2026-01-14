@@ -13,7 +13,7 @@
   - 即时绘制 UI：`src/adapters/love2d/modal.lua`、`src/adapters/love2d/board_renderer.lua`、`src/adapters/love2d/panel_renderer.lua`
   - 尺寸布局：`src/adapters/love2d/layout.lua`
   - 字体加载：`src/adapters/love2d/ui_state.lua`
-- 规则层已具备较好的分离度（参见 `docs/architecture-review.zh-CN.md`）。
+- 规则层已具备较好的分离度（参见 `docs/reviews/architecture-review-solid.zh-CN.md`）。
 
 ## 总体策略（关键决策）
 

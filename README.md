@@ -30,7 +30,7 @@ love .
 monopoly/
 ├── main.lua              # 游戏入口，配置 package.path 并启动 LÖVE 适配层
 ├── src/
-│   ├── app.lua          # 游戏实例装配（依赖注入、服务组装）
+│   ├── game.lua         # 游戏实例装配（依赖注入、服务组装）
 │   ├── core/            # 核心领域对象（Board, Player, Dice, Tile 等）
 │   ├── gameplay/        # 游戏逻辑与流程（与框架无关）
 │   │   ├── app/        # 应用层：流程编排、回合管理、用例
@@ -51,7 +51,7 @@ monopoly/
 
 | 模块 | 职责 |
 |------|------|
-| `src/app.lua` | 游戏实例装配，初始化服务和状态管理器 |
+| `src/game.lua` | 游戏实例装配，初始化服务和状态管理器 |
 | `src/core/` | 核心领域对象（Board, Player, Dice, Tile, Inventory） |
 | `src/gameplay/app/` | 流程编排、回合状态机、业务用例 |
 | `src/gameplay/domain/` | 游戏领域规则（效果、道具、落地逻辑等） |
@@ -70,16 +70,10 @@ monopoly/
 love .
 
 # 依赖规则检查（确保架构分层正确）
-lua scripts/deps_check.lua
+lua tests/deps_check.lua
 
 # 回归测试（验证核心游戏逻辑）
-lua scripts/regression.lua
-
-# 代码行数统计
-lua scripts/count_lines.lua
-
-# 静态死代码检测
-lua scripts/debloat_report.lua
+lua tests/regression.lua
 ```
 
 ### 推荐工作流
@@ -93,18 +87,10 @@ lua scripts/deps_check.lua && lua scripts/regression.lua
 ### 代码精简工作流（Debloat）
 
 遵循"删代码优先"原则，推荐按以下顺序执行：
-
+tests/deps_check.lua && lua tes
 1. **依赖检查**：`lua scripts/deps_check.lua` - 确保依赖方向未被破坏
 2. **回归测试**：`lua scripts/regression.lua` - 确保关键行为未变
-3. **死代码扫描**：`lua scripts/debloat_report.lua` - 发现未被使用的模块
-
-## 架构设计
-
-### 分层与依赖规则
-
-项目采用严格的分层架构，通过自检脚本防止依赖倒灌：
-
-- ✅ **Gameplay 层独立**：`src/gameplay/**` 不能依赖 `src.adapters.*`
+3.✅ **Gameplay 层独立**：`src/gameplay/**` 不能依赖 `src.adapters.*`
 - ✅ **领域层独立**：`src/gameplay/domain/**` 不能依赖 `src.gameplay.app.*`
 - ✅ **服务解耦**：`src/gameplay/app/services/**` 之间不能互相依赖（通过依赖注入组装）
 
@@ -122,7 +108,7 @@ lua scripts/deps_check.lua && lua scripts/regression.lua
 6. **强制清理**：每次改动后必须问"现在能删除什么代码？"
 
 **目标：最少代码、最少概念、最少文件。**
-
+tes
 ## 回归测试基线
 
 `scripts/regression.lua` 通过纯 Lua 构造游戏实例，验证关键路径：
@@ -152,6 +138,6 @@ lua scripts/deps_check.lua && lua scripts/regression.lua
 在提交代码前，请：
 
 1. 阅读 [AGENTS.md](AGENTS.md) 了解编码规则
-2. 运行 `lua scripts/deps_check.lua` 检查依赖规则
-3. 运行 `lua scripts/regression.lua` 确保回归测试通过
+2. 运行 `lua tests/deps_check.lua` 检查依赖规则
+3. 运行 `lua tests/regression.lua` 确保回归测试通过
 4. 优先考虑删除或复用代码，而非添加新代码

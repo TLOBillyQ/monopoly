@@ -1,9 +1,22 @@
--- Dependency rules self-check (run with: lua scripts/deps_check.lua)
--- Rules:
--- 1) src/gameplay/** must not require UI adapters (src/visual/**, src/adapters/**)
--- 2) src/gameplay/app/services/** must not require other services via require("src.gameplay.app.services.*")
---    (use game.services.* instead). Infrastructure like logger should live outside services (e.g. src/util/logger.lua).
--- 3) src/gameplay/domain/** must not require app layer modules (src.gameplay.app.*)
+-- Dependency rules self-check (run with: lua tests/deps_check.lua)
+--
+-- === 依赖规则白名单（Allowed Dependency Directions） ===
+--
+-- 层级                     | 允许依赖
+-- -------------------------|-------------------------------------------
+-- src/adapters/**          | → src/gameplay/**, src/core/**, src/config/**, src/util/**
+-- src/gameplay/app/**      | → src/gameplay/domain/**, src/gameplay/infra/**, src/gameplay/ports/**, src/core/**, src/config/**, src/util/**
+-- src/gameplay/domain/**   | → src/gameplay/infra/**, src/core/**, src/config/**, src/util/**
+-- src/gameplay/infra/**    | → src/util/**
+-- src/core/**              | → src/config/**, src/util/**
+-- src/config/**            | → (none)
+-- src/util/**              | → (none)
+--
+-- === 禁止规则 ===
+-- 1) src/gameplay/** 禁止依赖 UI 适配器 (src/adapters/**)
+-- 2) src/gameplay/app/services/** 禁止直接 require 其他 services（应通过 game.services.* 注入）
+-- 3) src/gameplay/domain/** 禁止依赖 app 层 (src/gameplay/app/**)
+-- 4) src/gameplay/** 禁止使用 dofile/loadfile 绕过 require 检查
 
 local function read_all(path)
   local f = io.open(path, "rb")
@@ -54,6 +67,28 @@ local function extract_requires(src)
   return reqs
 end
 
+-- Convert module name (e.g. "src.adapters.love2d.love_layer") to file path (e.g. "src/adapters/love2d/love_layer.lua")
+local function mod_to_path(mod)
+  return mod:gsub("%.", "/") .. ".lua"
+end
+
+-- Check for dofile/loadfile usage which bypasses require dependency checking
+local function extract_dynamic_loads(src)
+  local loads = {}
+  if not src or src == "" then
+    return loads
+  end
+  -- dofile("path") / dofile('path')
+  for path in src:gmatch("dofile%s*%(%s*[%\"%']([^%\"%']+)[%\"%']%s*%)") do
+    table.insert(loads, { kind = "dofile", path = path })
+  end
+  -- loadfile("path") / loadfile('path')
+  for path in src:gmatch("loadfile%s*%(%s*[%\"%']([^%\"%']+)[%\"%']%s*%)") do
+    table.insert(loads, { kind = "loadfile", path = path })
+  end
+  return loads
+end
+
 local function check_file(path, src)
   local errors = {}
 
@@ -62,16 +97,26 @@ local function check_file(path, src)
   local is_service = starts_with(path, "src/gameplay/app/services/")
 
   for _, mod in ipairs(extract_requires(src)) do
-    if is_gameplay and (starts_with(mod, "src.visual") or starts_with(mod, "src.adapters.")) then
+    -- Convert module to path for more reliable prefix checking
+    local mod_path = mod_to_path(mod)
+
+    if is_gameplay and (starts_with(mod_path, "src/visual/") or starts_with(mod_path, "src/adapters/")) then
       table.insert(errors, "gameplay must not require UI adapters: require(\"" .. mod .. "\")")
     end
 
-    if is_domain and starts_with(mod, "src.gameplay.app.") then
+    if is_domain and starts_with(mod_path, "src/gameplay/app/") then
       table.insert(errors, "domain must not require app layer: require(\"" .. mod .. "\")")
     end
 
-    if is_service and starts_with(mod, "src.gameplay.app.services.") then
+    if is_service and starts_with(mod_path, "src/gameplay/app/services/") then
       table.insert(errors, "services must not require each other directly: require(\"" .. mod .. "\")")
+    end
+  end
+
+  -- Check for dofile/loadfile usage in gameplay layer (bypasses require checking)
+  if is_gameplay then
+    for _, load in ipairs(extract_dynamic_loads(src)) do
+      table.insert(errors, "gameplay must not use " .. load.kind .. " (bypasses dependency checking): " .. load.kind .. "(\"" .. load.path .. "\")")
     end
   end
 
@@ -87,7 +132,7 @@ for _, path in ipairs(files) do
       or starts_with(path, "src/visual/")
       or starts_with(path, "src/adapters/")
       or starts_with(path, "src/config/")
-      or path == "src/app.lua") then
+      or path == "src/game.lua") then
     local src = read_all(path)
     if src then
       local errs = check_file(path, src)

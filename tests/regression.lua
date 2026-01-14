@@ -1,4 +1,4 @@
--- Quick regression checks (run with: lua scripts/regression.lua)
+-- Quick regression checks (run with: lua tests/regression.lua)
 package.path = "src/?.lua;src/?/init.lua;src/gameplay/?.lua;src/gameplay/?/init.lua;?.lua;" .. package.path
 
 local App = require("src.game")
