@@ -180,13 +180,19 @@ handlers.discard_items = function(_, player, card)
   if to_drop == 0 then
     to_drop = player.inventory:count()
   end
+  local dropped_names = {}
   for _ = 1, to_drop do
     if player.inventory:count() == 0 then
       break
     end
-    player.inventory:remove_by_index(1)
+    local item = player.inventory:remove_by_index(1)
+    table.insert(dropped_names, Inventory.item_name(item.id))
   end
-  logger.event(player.name .. " 丢弃道具 " .. to_drop .. " 张")
+  if #dropped_names > 0 then
+    logger.event(player.name .. " 丢弃道具 " .. #dropped_names .. " 张: " .. table.concat(dropped_names, "、"))
+  else
+    logger.event(player.name .. " 丢弃道具 0 张")
+  end
 end
 
 handlers.discard_properties = function(game, player, card)
@@ -195,6 +201,7 @@ handlers.discard_properties = function(game, player, card)
     local tile = game.board:get_tile_by_id(tile_id)
     if tile then
       game:reset_tile(tile)
+      logger.event(player.name .. " 丢失地块 " .. tile.name)
     end
     game:set_player_property(player, tile_id, false)
     to_drop = to_drop - 1
@@ -202,7 +209,6 @@ handlers.discard_properties = function(game, player, card)
       break
     end
   end
-  logger.event(player.name .. " 丢失地块 " .. card.count .. " 块")
 end
 
 handlers.forced_move = function(game, player, card, context)
