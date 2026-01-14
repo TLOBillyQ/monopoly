@@ -82,6 +82,11 @@ Write-Host "6. Syncing package to $SVNTarget if it exists..."
 if (Test-Path $SVNTarget) {
     Expand-Archive -Path $FinalZip -DestinationPath $SVNTarget -Force
     Write-Host "Copied package contents to $SVNTarget"
+
+    if (Get-Command "TortoiseProc.exe" -ErrorAction SilentlyContinue) {
+        Write-Host "Launching TortoiseSVN Commit..."
+        Start-Process "TortoiseProc.exe" -ArgumentList "/command:commit /path:`"$SVNTarget`""
+    }
 } else {
     Write-Host "Target path not found, skipping copy."
 }

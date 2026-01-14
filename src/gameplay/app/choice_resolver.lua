@@ -255,6 +255,9 @@ local function handle_post_action_item(game, choice, action)
 
   local res = use_item(game, player, item_id)
   if type(res) == "table" and res.waiting then
+    if res.intent then
+      dispatch(game, res.intent)
+    end
     return { stay = true }
   end
   finish_post_action(game)
