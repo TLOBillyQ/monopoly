@@ -7,7 +7,7 @@ local function get_store_state(view)
   local board = st and st.board or nil
   return {
     tiles = (board and board.tiles) or {},
-    overlays = (board and board.overlays) or { roadblocks = {}, mines = {} },
+    overlays = (view and view.board and view.board.overlays) or (board and board.overlays) or { roadblocks = {}, mines = {} },
     players = st and st.players or {},
   }
 end

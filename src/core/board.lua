@@ -16,6 +16,7 @@ function Board.new(data)
     branches = (data and data.branches) or {},
     index_by_id = index_by_id,
     map = (data and data.map) or nil,
+    overlays = (data and data.overlays) or { roadblocks = {}, mines = {} },
   }
   return setmetatable(b, Board)
 end
@@ -43,6 +44,45 @@ function Board:find_first_by_type(tile_type)
     end
   end
   return nil, nil
+end
+
+function Board:get_overlays()
+  return self.overlays
+end
+
+function Board:place_roadblock(index)
+  self.overlays.roadblocks = self.overlays.roadblocks or {}
+  self.overlays.roadblocks[index] = true
+end
+
+function Board:has_roadblock(index)
+  return self.overlays.roadblocks and self.overlays.roadblocks[index] ~= nil
+end
+
+function Board:clear_roadblock(index)
+  if self.overlays.roadblocks then
+    self.overlays.roadblocks[index] = nil
+  end
+end
+
+function Board:place_mine(index)
+  self.overlays.mines = self.overlays.mines or {}
+  self.overlays.mines[index] = true
+end
+
+function Board:has_mine(index)
+  return self.overlays.mines and self.overlays.mines[index] ~= nil
+end
+
+function Board:clear_mine(index)
+  if self.overlays.mines then
+    self.overlays.mines[index] = nil
+  end
+end
+
+function Board:clear_all(index)
+  self:clear_roadblock(index)
+  self:clear_mine(index)
 end
 
 

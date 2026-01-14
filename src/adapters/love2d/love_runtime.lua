@@ -10,6 +10,7 @@ function LoveRuntime.install(LoveLayer)
   function LoveLayer:layout()
     local store_state = (self.game and self.game.store and self.game.store.state) or {}
     local view = Presenter.present(store_state, {
+      game = self.game,
       last_turn = self.game and self.game.last_turn,
       finished = self.game and self.game.finished,
       winner_name = self.game and self.game.winner and self.game.winner.name or nil,

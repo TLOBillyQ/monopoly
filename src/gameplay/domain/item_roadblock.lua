@@ -153,12 +153,11 @@ function Roadblock.apply(game, player, idx)
   if not idx then
     return false
   end
-  local overlay = game.services["overlay"]
-  if not overlay then
-    logger.warn("缺少 OverlayService，无法放置路障")
+  if not game.board then
+    logger.warn("缺少 Board，无法放置路障")
     return false
   end
-  overlay.place_roadblock(game, idx)
+  game.board:place_roadblock(idx)
   local tile = game.board:get_tile(idx)
   logger.event(player.name .. " 放置路障在 " .. tile.name)
   return {

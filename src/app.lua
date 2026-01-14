@@ -9,7 +9,7 @@ local MovementService = require("src.gameplay.app.services.movement_service")
 local MarketService = require("src.gameplay.app.services.market_service")
 local StatusService = require("src.gameplay.app.services.status_service")
 local BankruptcyService = require("src.gameplay.app.services.bankruptcy_service")
-local OverlayService = require("src.gameplay.app.services.overlay_service")
+-- OverlayService removed (integrated into Board)
 local RNG = require("src.gameplay.infra.rng")
 local Store = require("src.gameplay.infra.store")
 local Tables = require("src.util.tables")
@@ -34,7 +34,6 @@ local REQUIRED_SERVICES = {
   "market",
   "status",
   "bankruptcy",
-  "overlay",
 }
 
 local function validate_services(services)
@@ -80,7 +79,6 @@ function App.new(opts)
       market = MarketService,
       status = StatusService,
       bankruptcy = BankruptcyService,
-      overlay = OverlayService,
     },
   }
   setmetatable(game, App)

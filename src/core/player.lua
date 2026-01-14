@@ -1,6 +1,7 @@
 local Inventory = require("src.core.inventory")
 local Tables = require("src.util.tables")
-local GameState = require("src.util.game_state")
+-- GameState dependency removed (using Tile.get_state instead)
+local Tile = require("src.core.tile")
 
 local Player = {}
 Player.__index = Player
@@ -64,7 +65,7 @@ function Player:net_worth(board)
   for tile_id in pairs(self.properties) do
     local tile = board:get_tile_by_id(tile_id)
     if tile then
-      local st = GameState.tile_state(self._store and { store = self._store } or nil, tile)
+      local st = Tile.get_state(self._store and { store = self._store } or nil, tile)
       local level = st.level or 0
       if st.owner_id then
         local price = tile.price or 0

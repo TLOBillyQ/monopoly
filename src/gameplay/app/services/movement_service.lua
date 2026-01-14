@@ -15,7 +15,6 @@ function MovementService.move(game, player, steps, opts)
   local current = player.position
   local start_tile = board:get_tile(current)
   local facing = opts.direction or (player.status and player.status.move_dir) or nil
-  local overlay = game and game.services and game.services.overlay
   local tile_service = game and game.services and game.services.tile
 
   for _ = 1, steps do
@@ -40,8 +39,8 @@ function MovementService.move(game, player, steps, opts)
       end
     end
 
-    if overlay and overlay.has_roadblock(game, current) then
-      overlay.clear_roadblock(game, current)
+    if board:has_roadblock(current) then
+      board:clear_roadblock(current)
       stopped_on_roadblock = true
       logger.event(player.name .. " 触发路障，停在 " .. board:get_tile(current).name)
       break

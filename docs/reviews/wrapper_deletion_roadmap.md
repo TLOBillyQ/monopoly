@@ -43,8 +43,12 @@ This report identifies "wrapper" code patterns in the `src` directory to align w
 #### 5. `src/gameplay/app/services/overlay_service.lua`
 *   **Type:** Repository Wrapper.
 *   **Why:** Encapsulates `game.store` paths for overlays.
-*   **Status:** ⏸️ **Kept**
-*   **Justification:** While thin, it centralizes the schema path `{"board", "overlays"}`. Removing it requires deciding where this schema knowledge belongs (likely `Board` domain).
+*   **Status:** ✅ **DELETED**
+*   **Resolution:**
+    *   Moved logic to `src/core/board.lua` (methods `place_roadblock`, `has_roadblock`, etc.).
+    *   State is now part of `Board` in-memory model (Rich Domain Model).
+    *   Refactored callers in `tile_service`, `item_roadblock`, `regression.lua` etc.
+    *   Deleted `src/gameplay/app/services/overlay_service.lua`.
 
 ---
 
@@ -56,8 +60,10 @@ This report identifies "wrapper" code patterns in the `src` directory to align w
 | `ChanceService` | Inline | `draw_card` removed, direct random access used. |
 | `ItemService` | **DELETE** | File deleted (-293 lines). Callers decoupled. |
 | `GameState` | **DELETE** | Logic moved to `Tile.get_state`. File deleted. |
-| **Total** | **Cleanup** | **~100+ lines net reduction** |
+| `OverlayService` | **DELETE** | Logic moved to `Board` methods. File deleted. |
+| **Total** | **Cleanup** | **Significant net reduction & Richer Domain Model** |
 
 ## 3. Next Steps
-1.  **Evaluate `OverlayService`**:
-    *   Consider moving overlay state directly onto `Board` object in memory, synced to store, to remove the "Service" layer entirely.
+1.  **Final Review**:
+    *   Verify if there are any other wrappers left by briefly scanning `src/adapters` (though lower priority).
+    *   Otherwise, this refactoring phase is complete.

@@ -33,9 +33,19 @@ local BOARD_TILES = build_board_tiles()
 
 function Presenter.present(store_state, runtime)
   runtime = runtime or {}
+  local overlays = nil
+  if runtime.game and runtime.game.board and runtime.game.board.get_overlays then
+    overlays = runtime.game.board:get_overlays()
+  elseif store_state and store_state.board and store_state.board.overlays then
+    overlays = store_state.board.overlays
+  else
+    overlays = { roadblocks = {}, mines = {} }
+  end
+
   return {
     board = {
       tiles = BOARD_TILES,
+      overlays = overlays,
     },
     state = store_state or {},
     last_turn = runtime.last_turn,

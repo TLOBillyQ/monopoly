@@ -11,16 +11,13 @@ function WorldOps.destroy_building(game, tile)
   end
 end
 
-function WorldOps.clear_overlays(game, idx, overlay_service)
-  if not game then
+function WorldOps.clear_overlays(game, idx)
+  if not game or not game.board then
     return
   end
-  local overlay = overlay_service or (game.services and game.services.overlay)
-  if not overlay then
-    return
+  if game.board.clear_all then
+    game.board:clear_all(idx)
   end
-  overlay.clear_roadblock(game, idx)
-  overlay.clear_mine(game, idx)
 end
 
 return WorldOps

@@ -154,8 +154,7 @@ handlers.log = function(_, player, cfg, _context)
 end
 
 handlers.place_mine_here = function(game, player, _cfg, context)
-  local overlay = require_service(game, context, "overlay", "OverlayService")
-  overlay.place_mine(game, player.position)
+  game.board:place_mine(player.position)
   logger.event(player.name .. " 在脚下埋设地雷")
   return {
     ok = true,
@@ -170,17 +169,16 @@ handlers.clear_obstacles_ahead = function(game, player, cfg, context)
   local parity = 1
   local facing = player.status and player.status.move_dir or nil
   local distance = cfg.distance or 12
-  local overlay = require_service(game, context, "overlay", "OverlayService")
   for _ = 1, distance do
     local next_index, _passed, step_dir = board:step_forward_by_facing(current, facing, parity)
     current = next_index
     facing = step_dir or facing
-    if overlay.has_roadblock(game, current) then
-      overlay.clear_roadblock(game, current)
+    if board:has_roadblock(current) then
+      board:clear_roadblock(current)
       cleared = cleared + 1
     end
-    if overlay.has_mine(game, current) then
-      overlay.clear_mine(game, current)
+    if board:has_mine(current) then
+      board:clear_mine(current)
       cleared = cleared + 1
     end
   end
