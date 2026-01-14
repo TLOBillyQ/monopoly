@@ -19,8 +19,6 @@ local PHASES = {
   move = { phase = "move", fn = phase_move_fn },
   landing = { phase = "landing", fn = phase_landing_fn },
   post_action = { phase = "post_action", fn = phase_post_fn },
-  
-  land = { phase = "landing", fn = phase_landing_fn },
   end_turn = { phase = "end_turn", fn = phase_end_fn },
 }
 
