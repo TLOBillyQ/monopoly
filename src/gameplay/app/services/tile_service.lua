@@ -12,12 +12,12 @@ end
 
 local function handle_hospital(game, player)
   local status = require_service(game, "status", "StatusService")
-  status.send_to_hospital(game, player)
+  status.apply_hospital_effects(game, player)
 end
 
 local function handle_mountain(game, player)
   local status = require_service(game, "status", "StatusService")
-  status.send_to_mountain(game, player)
+  status.apply_mountain_effects(game, player)
 end
 
 local function handle_market(game, player, tile)

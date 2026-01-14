@@ -9,6 +9,7 @@ local tile_state = GameState.tile_state
 
 function Monster.find_target(game, player, distance)
   local idx = BoardUtils.find_best_tile(game, player, distance, {
+    allow_self = true,
     score_fn = function(tile)
       if tile.type ~= "land" then
         return nil

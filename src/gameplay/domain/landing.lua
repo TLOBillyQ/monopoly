@@ -22,6 +22,10 @@ Effect.defs = {
     end,
     apply = function(ctx)
       local player = ctx.player
+      local move_result = ctx.move_result or {}
+      if move_result.passed_start and move_result.passed_start > 0 then
+        return
+      end
       player:add_cash(constants.pass_start_bonus)
       logger.event(player.name .. " 停在起点，获得 " .. constants.pass_start_bonus .. " 金币")
     end,

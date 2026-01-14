@@ -44,20 +44,48 @@ end
 
 local handlers = {}
 
-handlers.add_cash = function(_, player, card)
-  apply_cash_change(player, card.amount)
-  logger.event(player.name .. " 获得 " .. card.amount .. " 金币")
+handlers.add_cash = function(game, player, card)
+  if card.target == "all" then
+    for _, p in ipairs(game.players) do
+      if not p.eliminated then
+        apply_cash_change(p, card.amount)
+      end
+    end
+    logger.event("每人获得 " .. card.amount .. " 金币")
+  else
+    apply_cash_change(player, card.amount)
+    logger.event(player.name .. " 获得 " .. card.amount .. " 金币")
+  end
 end
 
 handlers.pay_cash = function(game, player, card)
-  apply_cash_and_maybe_bankrupt(game, player, -card.amount)
-  logger.event(player.name .. " 支付 " .. card.amount .. " 金币")
+  if card.target == "all" then
+    for _, p in ipairs(game.players) do
+      if not p.eliminated then
+        apply_cash_and_maybe_bankrupt(game, p, -card.amount)
+      end
+    end
+    logger.event("每人支付 " .. card.amount .. " 金币")
+  else
+    apply_cash_and_maybe_bankrupt(game, player, -card.amount)
+    logger.event(player.name .. " 支付 " .. card.amount .. " 金币")
+  end
 end
 
 handlers.percent_pay_cash = function(game, player, card)
-  local fee = math.floor(player.cash * (card.percent / 100))
-  apply_cash_and_maybe_bankrupt(game, player, -fee)
-  logger.event(player.name .. " 按比例支付 " .. fee .. " 金币")
+  if card.target == "all" then
+    for _, p in ipairs(game.players) do
+      if not p.eliminated then
+        local fee = math.floor(p.cash * (card.percent / 100))
+        apply_cash_and_maybe_bankrupt(game, p, -fee)
+      end
+    end
+    logger.event("每人按比例支付 " .. card.percent .. "% 金币")
+  else
+    local fee = math.floor(player.cash * (card.percent / 100))
+    apply_cash_and_maybe_bankrupt(game, player, -fee)
+    logger.event(player.name .. " 按比例支付 " .. fee .. " 金币")
+  end
 end
 
 handlers.pay_others = function(game, player, card)
