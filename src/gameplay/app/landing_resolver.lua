@@ -68,6 +68,20 @@ function LandingResolver.resolve(game, player, tile, move_result)
   for _, eff in ipairs(mandatory) do
     local res = Effect.execute(eff, ctx)
     local out = res and res.result
+
+    if type(out) == "table" and out.kind == "need_landing" then
+      local target_player = (out.player_id and game and game.players and game.players[out.player_id]) or player
+      local next_tile = nil
+      if target_player then
+        local idx = out.board_index or target_player.position
+        next_tile = idx and game and game.board and game.board:get_tile(idx) or nil
+      end
+      if next_tile then
+          local deep_sub_res = LandingResolver.resolve(game, target_player, next_tile, out.move_result)
+          out = deep_sub_res
+      end
+    end
+
     IntentDispatcher.dispatch(game, out or res)
     if type(out) == "table" and out.waiting then
       out.resume_state = out.resume_state or "landing"

@@ -4,11 +4,11 @@ local TurnManager = require("src.gameplay.app.services.turn_manager")
 local TurnUsecase = require("src.gameplay.app.usecases.turn_usecase")
 local ActionUsecase = require("src.gameplay.app.usecases.action_usecase")
 local TileService = require("src.gameplay.app.services.tile_service")
-local ChanceService = require("src.gameplay.app.services.chance_service")
 local MovementService = require("src.gameplay.app.services.movement_service")
 local MarketService = require("src.gameplay.app.services.market_service")
 local BankruptcyService = require("src.gameplay.app.services.bankruptcy_service")
 -- OverlayService removed (integrated into Board)
+-- ChanceService removed (integrated into landing domain + resolver recursion)
 local RNG = require("src.gameplay.infra.rng")
 local Store = require("src.gameplay.infra.store")
 local Tables = require("src.util.tables")
@@ -29,7 +29,6 @@ end
 local REQUIRED_SERVICES = {
   "movement",
   "tile",
-  "chance",
   "market",
   "bankruptcy",
 }
@@ -72,7 +71,6 @@ function App.new(opts)
     last_turn = nil,
     services = {
       tile = TileService,
-      chance = ChanceService,
       movement = MovementService,
       market = MarketService,
       bankruptcy = BankruptcyService,
