@@ -9,7 +9,6 @@ local Strategy = require("src.gameplay.domain.item_strategy")
 local LandingResolver = require("src.gameplay.app.landing_resolver")
 local Choice = require("src.gameplay.app.choice")
 local ChoiceResolver = require("src.gameplay.app.choice_resolver")
-local IntentDispatcher = require("src.gameplay.app.intent_dispatcher")
 
 local function assert_eq(a, b, msg)
   if a ~= b then
@@ -103,7 +102,9 @@ local function test_missile_card()
   p.inventory:add({ id = 2013 })
   local res = Executor.use_item(g, p, 2013, { services = g.services }, { inventory = Inventory, strategy = Strategy })
   if type(res) == "table" and res.intent then
-    IntentDispatcher.dispatch(g, res)
+    if res.intent.kind == "need_choice" then
+      Choice.open(g, res.intent.choice_spec)
+    end
     local pending = Choice.get(g)
     assert(pending and pending.kind == "missile_target", "missile should open choice")
     local first = pending.options[1]

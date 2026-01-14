@@ -7,12 +7,21 @@ local Strategy = require("src.gameplay.domain.item_strategy")
 local Steal = require("src.gameplay.domain.item_steal")
 local Roadblock = require("src.gameplay.domain.item_roadblock")
 local logger = require("src.util.logger")
-local IntentDispatcher = require("src.gameplay.app.intent_dispatcher")
 local MarketService = require("src.gameplay.app.services.market_service")
-local TileService = require("src.gameplay.app.services.tile_service")
 local constants = require("src.config.constants")
+local UI = require("src.gameplay.ports.ui_port")
 
 local Resolver = {}
+
+local function dispatch(game, payload)
+  if not payload then return end
+  local intent = payload.intent or payload
+  if intent.kind == "need_choice" and intent.choice_spec then
+    Choice.open(game, intent.choice_spec)
+  elseif intent.kind == "push_popup" and intent.payload then
+    UI.push_popup(game, intent.payload)
+  end
+end
 
 local function as_number(v)
   if type(v) == "number" then
@@ -130,7 +139,7 @@ local function handle_optional_landing_effect(game, choice, action)
 
   local res = Effect.execute(target_eff, ctx)
   if res then
-    IntentDispatcher.dispatch(game, res.result or res)
+    dispatch(game, res.result or res)
   end
   if not res or res.ok ~= true then
     logger.warn("landing_optional_effect execute blocked:", tostring(res and res.reason))
@@ -141,6 +150,43 @@ end
 
 handlers.landing_optional_effect = handle_optional_landing_effect
 handlers.land_optional_effect = handle_optional_landing_effect
+
+local function handle_rent_prompt(game, choice, action)
+  local meta = choice.meta or {}
+  if meta.player_id and meta.tile_id and meta.kind then
+    local decision = (action and action.option_id == "use")
+    if is_cancel(action) then
+      decision = false
+    end
+    game.store:set({ "turn", "rent_prompt" }, {
+      player_id = meta.player_id,
+      tile_id = meta.tile_id,
+      kind = meta.kind,
+      decision = decision,
+    })
+  end
+  Choice.clear(game)
+  return { stay = false }
+end
+
+local function handle_tax_prompt(game, choice, action)
+  local meta = choice.meta or {}
+  if meta.player_id then
+    local decision = (action and action.option_id == "use")
+    if is_cancel(action) then
+      decision = false
+    end
+    game.store:set({ "turn", "tax_prompt" }, {
+      player_id = meta.player_id,
+      decision = decision,
+    })
+  end
+  Choice.clear(game)
+  return { stay = false }
+end
+
+handlers.rent_card_prompt = handle_rent_prompt
+handlers.tax_card_prompt = handle_tax_prompt
 
 function Resolver.resolve(game, choice, action)
   if not game or not choice then
@@ -163,11 +209,6 @@ function Resolver.resolve(game, choice, action)
   local market_res = MarketService.handle_choice and MarketService.handle_choice(game, choice, action)
   if market_res then
     return market_res
-  end
-
-  local tile_res = TileService.handle_choice and TileService.handle_choice(game, choice, action)
-  if tile_res then
-    return tile_res
   end
 
   logger.warn("unknown choice kind:", tostring(choice.kind))
@@ -235,9 +276,9 @@ local function handle_missile_target(game, choice, action)
     end
     local res = Missile.apply(game, player, idx, { services = game and game.services })
     if res and res.intent then
-      IntentDispatcher.dispatch(game, res.intent)
+      dispatch(game, res.intent)
     elseif res and res.ok == nil and type(res) == "table" and res.kind then -- Handle intent directly if returned
-      IntentDispatcher.dispatch(game, res)
+      dispatch(game, res)
     end
   end
   finish_post_action(game)
@@ -265,7 +306,7 @@ local function handle_roadblock_target(game, choice, action)
   end
   local res = Roadblock.apply(game, player, idx)
   if res then
-    IntentDispatcher.dispatch(game, res)
+    dispatch(game, res)
   end
   finish_post_action(game)
   Choice.clear(game)
@@ -291,7 +332,7 @@ local function handle_steal_target(game, choice, action)
     logger.event("Steal choice result (single)", res)
     Choice.clear(game)
     if res and res.intent then
-      IntentDispatcher.dispatch(game, res.intent)
+      dispatch(game, res.intent)
     end
     return { stay = false }
   end
@@ -314,7 +355,7 @@ local function handle_steal_item(game, choice, action)
     logger.event("Steal choice result (multi)", res)
     Choice.clear(game)
     if res and res.intent then
-      IntentDispatcher.dispatch(game, res.intent)
+      dispatch(game, res.intent)
     end
   end
   Choice.clear(game)

@@ -1,6 +1,7 @@
 local Effect = require("src.gameplay.domain.effect")
 local landing_effects = require("src.gameplay.domain.landing")
-local IntentDispatcher = require("src.gameplay.app.intent_dispatcher")
+local Choice = require("src.gameplay.app.choice")
+local UI = require("src.gameplay.ports.ui_port")
 
 local LandingResolver = {}
 
@@ -82,7 +83,16 @@ function LandingResolver.resolve(game, player, tile, move_result)
       end
     end
 
-    IntentDispatcher.dispatch(game, out or res)
+    local payload = out or res
+    if payload then
+      local intent = payload.intent or payload
+      if intent.kind == "need_choice" and intent.choice_spec then
+        Choice.open(game, intent.choice_spec)
+      elseif intent.kind == "push_popup" and intent.payload then
+        UI.push_popup(game, intent.payload)
+      end
+    end
+
     if type(out) == "table" and out.waiting then
       out.resume_state = out.resume_state or "landing"
       out.resume_args = out.resume_args or { player = player, move_result = move_result }
@@ -113,21 +123,14 @@ function LandingResolver.resolve(game, player, tile, move_result)
       kind = "need_choice",
       choice_spec = {
         kind = "landing_optional_effect",
-        title = "可选行动",
-        body_lines = body_lines,
         options = options,
-        allow_cancel = true,
-        cancel_label = "跳过",
         meta = {
-          player_id = player.id,
-          tile_id = tile.id,
-          move_result = snapshot_move_result(move_result),
           effect_ids = effect_ids,
         },
       },
     },
   }
-  IntentDispatcher.dispatch(game, out)
+  Choice.open(game, out.intent.choice_spec)
   return out
 end
 

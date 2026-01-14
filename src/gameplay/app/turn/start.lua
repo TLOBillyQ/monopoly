@@ -1,6 +1,6 @@
 local logger = require("src.util.logger")
 local Choice = require("src.gameplay.app.choice")
-local IntentDispatcher = require("src.gameplay.app.intent_dispatcher")
+local UI = require("src.gameplay.ports.ui_port")
 local Inventory = require("src.gameplay.domain.item_inventory")
 local Strategy = require("src.gameplay.domain.item_strategy")
 local Executor = require("src.gameplay.domain.item_executor")
@@ -49,7 +49,12 @@ local function phase_start(tm)
   })
 
   if pre then
-    IntentDispatcher.dispatch(tm.game, pre)
+    local intent = pre.intent or pre
+    if intent.kind == "need_choice" and intent.choice_spec then
+      Choice.open(tm.game, intent.choice_spec)
+    elseif intent.kind == "push_popup" and intent.payload then
+      UI.push_popup(tm.game, intent.payload)
+    end
   end
   if pre and pre.waiting then
     return "wait_choice", { resume_state = "roll", resume_args = { player = player } }

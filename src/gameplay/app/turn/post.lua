@@ -1,6 +1,6 @@
 local UI = require("src.gameplay.ports.ui_port")
+local Choice = require("src.gameplay.app.choice")
 local items_cfg = require("src.config.items")
-local IntentDispatcher = require("src.gameplay.app.intent_dispatcher")
 
 local cfg_by_id = {}
 for _, cfg in ipairs(items_cfg) do
@@ -58,17 +58,14 @@ local function phase_post(tm, args)
     return "end_turn", { player = player }
   end
 
-  IntentDispatcher.dispatch(tm.game, {
-    kind = "need_choice",
-    choice_spec = {
-      kind = "post_action_item",
-      title = "行动后：使用道具？",
-      body_lines = body_lines,
-      options = options,
-      allow_cancel = true,
-      cancel_label = "结束回合",
-      meta = { player_id = player.id },
-    },
+  Choice.open(tm.game, {
+    kind = "post_action_item",
+    title = "行动后：使用道具？",
+    body_lines = body_lines,
+    options = options,
+    allow_cancel = true,
+    cancel_label = "结束回合",
+    meta = { player_id = player.id },
   })
 
   if store then

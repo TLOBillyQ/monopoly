@@ -1,7 +1,6 @@
 local Bootstrap = require("src.gameplay.app.bootstrap")
 local logger = require("src.util.logger")
 local TurnManager = require("src.gameplay.app.services.turn_manager")
-local TileService = require("src.gameplay.app.services.tile_service")
 local MovementService = require("src.gameplay.app.services.movement_service")
 local MarketService = require("src.gameplay.app.services.market_service")
 local BankruptcyService = require("src.gameplay.app.services.bankruptcy_service")
@@ -26,7 +25,6 @@ end
 
 local REQUIRED_SERVICES = {
   "movement",
-  "tile",
   "market",
   "bankruptcy",
 }
@@ -68,7 +66,6 @@ function Game.new(opts)
     winner = nil,
     last_turn = nil,
     services = {
-      tile = TileService,
       movement = MovementService,
       market = MarketService,
       bankruptcy = BankruptcyService,

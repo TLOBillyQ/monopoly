@@ -4,6 +4,25 @@ local logger = require("src.util.logger")
 local MovementService = {}
 
 
+local function check_mine(game, player, current_pos)
+  local board = game.board
+  if not board:has_mine(current_pos) then
+    return false, false
+  end
+
+  if player:has_angel() then
+    logger.event(player.name .. " 天使保护，地雷无效")
+    board:clear_mine(current_pos)
+    return true, false
+  end
+
+  board:clear_mine(current_pos)
+  game:set_player_seat(player, nil)
+  logger.event(player.name .. " 触发地雷，座驾被摧毁并送医")
+  player:send_to_hospital(game)
+  return true, true -- detonated, hospitalized
+end
+
 function MovementService.move(game, player, steps, opts)
   opts = opts or {}
   local branch_parity = opts.branch_parity or steps
@@ -15,7 +34,6 @@ function MovementService.move(game, player, steps, opts)
   local current = player.position
   local start_tile = board:get_tile(current)
   local facing = opts.direction or (player.status and player.status.move_dir) or nil
-  local tile_service = game and game.services and game.services.tile
 
   for _ = 1, steps do
     local next_index, passed, step_dir = board:step_forward_by_facing(current, facing, branch_parity)
@@ -31,12 +49,10 @@ function MovementService.move(game, player, steps, opts)
       end
     end
 
-    if tile_service and tile_service.check_mine then
-      local detonated, hospitalized = tile_service.check_mine(game, player, current)
-      if detonated and hospitalized then
-        current = player.position
-        break
-      end
+    local detonated, hospitalized = check_mine(game, player, current)
+    if detonated and hospitalized then
+      current = player.position
+      break
     end
 
     if board:has_roadblock(current) then

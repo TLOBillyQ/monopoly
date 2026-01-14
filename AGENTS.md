@@ -8,7 +8,7 @@
 
 ## 自检
 
-- 脚本测试：`scripts/deps_check.lua`、`scripts/regression.lua`
+- 脚本测试：`deps_check.lua`、`regression.lua`
 
 ## Coding Rules
 

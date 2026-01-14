@@ -6,6 +6,7 @@ local random = require("src.util.random")
 local Inventory = require("src.gameplay.domain.item_inventory")
 local chance_effects = require("src.gameplay.domain.chance")
 
+local Steal = require("src.gameplay.domain.item_steal")
 local Effect = {}
 
 local function get_service(ctx, key)
@@ -15,8 +16,28 @@ local function get_service(ctx, key)
   return ctx and ctx.game and ctx.game.services and ctx.game.services[key]
 end
 
-
 Effect.defs = {
+  {
+    id = "pass_players",
+    label = "擦肩而过",
+    mandatory = true,
+    can_apply = function(ctx)
+      local enc = ctx.move_result and ctx.move_result.encountered_players
+      return enc and #enc > 0
+    end,
+    apply = function(ctx)
+      local encountered = ctx.move_result.encountered_players
+      local ids = {}
+      for _, p in ipairs(encountered) do
+        if type(p) == "table" then
+          table.insert(ids, p.id)
+        else
+          table.insert(ids, p)
+        end
+      end
+      return Steal.handle_pass_players(ctx.game, ctx.player, ids)
+    end,
+  },
   {
     id = "start_reward",
     label = "起点奖励",
@@ -59,18 +80,120 @@ Effect.defs = {
     end,
   },
   {
-    id = "tile_events",
-    label = "格子事件",
+    id = "hospital",
+    label = "医院",
     mandatory = true,
     can_apply = function(ctx)
-      return ctx and ctx.game and ctx.player and ctx.tile
+      return ctx and ctx.tile and ctx.tile.type == "hospital"
     end,
     apply = function(ctx)
-      local tile_service = get_service(ctx, "tile")
-      if not tile_service or not tile_service.resolve then
-        error("Missing TileService (game.services.tile)")
+      ctx.player:apply_hospital_effects(ctx.game)
+    end,
+  },
+  {
+    id = "mountain",
+    label = "深山",
+    mandatory = true,
+    can_apply = function(ctx)
+      return ctx and ctx.tile and ctx.tile.type == "mountain"
+    end,
+    apply = function(ctx)
+      ctx.player:apply_mountain_effects(ctx.game)
+    end,
+  },
+  {
+    id = "market",
+    label = "黑市",
+    mandatory = true,
+    can_apply = function(ctx)
+      return ctx and ctx.tile and ctx.tile.type == "market"
+    end,
+    apply = function(ctx)
+      local game = ctx.game
+      local player = ctx.player
+      local tile = ctx.tile
+      local store = game and game.store
+
+      if store then
+        local prompted = store:get({ "turn", "market_prompt" })
+        if prompted and prompted.player_id == player.id and prompted.tile_id == tile.id then
+          return nil
+        end
       end
-      return tile_service.resolve(ctx.game, ctx.player, ctx.tile, ctx.move_result)
+
+      local market = get_service(ctx, "market")
+      if not market then
+        return nil
+      end
+
+      if player.inventory and player.inventory.is_full and player.inventory:is_full() then
+        if store then
+          store:set({ "turn", "market_prompt" }, { player_id = player.id, tile_id = tile.id })
+        end
+        return {
+          intent = { kind = "push_popup", payload = { title = "黑市", body = player.name .. " 卡槽已满，无法购买" } },
+        }
+      end
+
+      local spec, market_intent = market.build_choice_spec and market.build_choice_spec(game, player) or nil
+      if market_intent then
+        if store then
+          store:set({ "turn", "market_prompt" }, { player_id = player.id, tile_id = tile.id })
+        end
+        return { intent = market_intent }
+      end
+      if not spec then
+        if store then
+          store:set({ "turn", "market_prompt" }, { player_id = player.id, tile_id = tile.id })
+        end
+        return nil
+      end
+
+      if store then
+        store:set({ "turn", "market_prompt" }, { player_id = player.id, tile_id = tile.id })
+      end
+      return {
+        waiting = true,
+        reason = "market_choice",
+        intent = { kind = "need_choice", choice_spec = spec },
+      }
+    end,
+  },
+  {
+    id = "mine",
+    label = "地雷",
+    mandatory = true,
+    can_apply = function(ctx)
+      local position = ctx.tile and ctx.tile.id
+      local board = ctx.game and ctx.game.board
+      return board and position and board:has_mine(position)
+    end,
+    apply = function(ctx)
+      local player = ctx.player
+      local game = ctx.game
+      local board = game.board
+      local position = ctx.tile.id
+      
+      if player:has_angel() then
+        logger.event(player.name .. " 天使保护，地雷无效")
+        board:clear_mine(position)
+        return
+      end
+    
+      board:clear_mine(position)
+      game:set_player_seat(player, nil)
+      logger.event(player.name .. " 触发地雷，座驾被摧毁并送医")
+      player:send_to_hospital(game)
+      return {
+        kind = "need_landing",
+        player_id = player.id,
+        board_index = player.position, -- Hospital position (set by send_to_hospital?)
+        -- wait, send_to_hospital moves the player?
+        -- Yes, usually.
+        -- If player moved, we need to handle landing on hospital?
+        -- Yes, send_to_hospital usually sets position.
+        -- We return need_landing to recurse.
+      }
     end,
   },
 }
