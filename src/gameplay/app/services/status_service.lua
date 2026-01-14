@@ -20,15 +20,8 @@ function StatusService.tick_end_of_turn(player)
 end
 
 
-function StatusService.send_to_hospital(game, player, opts)
+function StatusService.apply_hospital_effects(game, player, opts)
   opts = opts or {}
-  local hospital_index = game.board:find_first_by_type("hospital")
-  if hospital_index then
-    game:update_player_position(player, hospital_index)
-  end
-  if game.set_player_status then
-    game:set_player_status(player, "move_dir", nil)
-  end
   game:set_player_status(player, "stay_turns", constants.hospital_stay_turns)
   if not opts.skip_fee then
     local fee = constants.hospital_fee
@@ -48,6 +41,25 @@ function StatusService.send_to_hospital(game, player, opts)
 end
 
 
+function StatusService.send_to_hospital(game, player, opts)
+  opts = opts or {}
+  local hospital_index = game.board:find_first_by_type("hospital")
+  if hospital_index then
+    game:update_player_position(player, hospital_index)
+  end
+  if game.set_player_status then
+    game:set_player_status(player, "move_dir", nil)
+  end
+  StatusService.apply_hospital_effects(game, player, opts)
+end
+
+
+function StatusService.apply_mountain_effects(game, player)
+  game:set_player_status(player, "stay_turns", constants.mountain_stay_turns)
+  logger.event(player.name .. " 进入深山，停留 " .. player.status.stay_turns .. " 回合")
+end
+
+
 function StatusService.send_to_mountain(game, player)
   local idx = game.board:find_first_by_type("mountain")
   if idx then
@@ -56,8 +68,7 @@ function StatusService.send_to_mountain(game, player)
   if game.set_player_status then
     game:set_player_status(player, "move_dir", nil)
   end
-  game:set_player_status(player, "stay_turns", constants.mountain_stay_turns)
-  logger.event(player.name .. " 进入深山，停留 " .. player.status.stay_turns .. " 回合")
+  StatusService.apply_mountain_effects(game, player)
 end
 
 
