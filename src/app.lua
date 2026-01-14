@@ -6,7 +6,6 @@ local ActionUsecase = require("src.gameplay.app.usecases.action_usecase")
 local TileService = require("src.gameplay.app.services.tile_service")
 local ChanceService = require("src.gameplay.app.services.chance_service")
 local MovementService = require("src.gameplay.app.services.movement_service")
-local ItemService = require("src.gameplay.app.services.item_service")
 local MarketService = require("src.gameplay.app.services.market_service")
 local StatusService = require("src.gameplay.app.services.status_service")
 local BankruptcyService = require("src.gameplay.app.services.bankruptcy_service")
@@ -32,7 +31,6 @@ local REQUIRED_SERVICES = {
   "movement",
   "tile",
   "chance",
-  "item",
   "market",
   "status",
   "bankruptcy",
@@ -79,7 +77,6 @@ function App.new(opts)
       tile = TileService,
       chance = ChanceService,
       movement = MovementService,
-      item = ItemService,
       market = MarketService,
       status = StatusService,
       bankruptcy = BankruptcyService,

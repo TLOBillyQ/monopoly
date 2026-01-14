@@ -68,7 +68,7 @@ function LandingResolver.resolve(game, player, tile, move_result)
   for _, eff in ipairs(mandatory) do
     local res = Effect.execute(eff, ctx)
     local out = res and res.result
-    IntentDispatcher.dispatch_from_result(game, out or res)
+    IntentDispatcher.dispatch(game, out or res)
     if type(out) == "table" and out.waiting then
       out.resume_state = out.resume_state or "landing"
       out.resume_args = out.resume_args or { player = player, move_result = move_result }
@@ -113,7 +113,7 @@ function LandingResolver.resolve(game, player, tile, move_result)
       },
     },
   }
-  IntentDispatcher.dispatch_from_result(game, out)
+  IntentDispatcher.dispatch(game, out)
   return out
 end
 

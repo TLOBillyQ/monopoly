@@ -1,6 +1,8 @@
 local logger = require("src.util.logger")
 local IntentDispatcher = require("src.gameplay.app.intent_dispatcher")
 local Choice = require("src.gameplay.app.choice")
+local Executor = require("src.gameplay.domain.item_executor")
+local Inventory = require("src.gameplay.domain.item_inventory")
 
 local TileService = {}
 
@@ -82,10 +84,12 @@ end
 function TileService.resolve(game, player, tile, context)
   
   if context and context.encountered_players and not context.pass_players_checked then
-    local item = require_service(game, "item", "ItemService")
-    local res = item.handle_pass_players(game, player, context.encountered_players, { services = game and game.services })
+    local res = Executor.handle_pass_players(game, player, context.encountered_players, {
+        inventory = Inventory,
+        services = game and game.services
+    })
     if res then
-      IntentDispatcher.dispatch_from_result(game, res)
+      IntentDispatcher.dispatch(game, res)
     end
     if res and res.waiting then
       context.pass_players_checked = true

@@ -1,6 +1,9 @@
 local property_effects = require("src.gameplay.domain.land")
 local logger = require("src.util.logger")
 local constants = require("src.config.constants")
+local chance_cfg = require("src.config.chance_cards")
+local random = require("src.util.random")
+local Inventory = require("src.gameplay.domain.item_inventory")
 
 local Effect = {}
 
@@ -38,11 +41,7 @@ Effect.defs = {
       return ctx and ctx.game and ctx.player and ctx.tile and ctx.tile.type == "item"
     end,
     apply = function(ctx)
-      local item = get_service(ctx, "item")
-      if not item or not item.draw_and_give then
-        error("Missing ItemService (game.services.item)")
-      end
-      return item.draw_and_give(ctx.player, ctx.game and ctx.game.rng)
+      return Inventory.draw_and_give(ctx.player, ctx.game and ctx.game.rng)
     end,
   },
   {
@@ -54,11 +53,11 @@ Effect.defs = {
     end,
     apply = function(ctx)
       local chance = get_service(ctx, "chance")
-      if not chance or not chance.draw_card or not chance.resolve then
+      if not chance or not chance.resolve then
         error("Missing ChanceService (game.services.chance)")
       end
 
-      local card = chance.draw_card(ctx.game and ctx.game.rng)
+      local card = random.weighted_choice(chance_cfg, "weight", ctx.game and ctx.game.rng)
       logger.event(ctx.player.name .. " 抽到机会卡 " .. card.description)
       return chance.resolve(ctx.game, ctx.player, card, ctx.move_result)
     end,

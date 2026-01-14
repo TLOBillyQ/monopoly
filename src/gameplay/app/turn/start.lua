@@ -1,6 +1,9 @@
 local logger = require("src.util.logger")
 local Choice = require("src.gameplay.app.choice")
 local IntentDispatcher = require("src.gameplay.app.intent_dispatcher")
+local Inventory = require("src.gameplay.domain.item_inventory")
+local Strategy = require("src.gameplay.domain.item_strategy")
+local Executor = require("src.gameplay.domain.item_executor")
 
 local function phase_start(tm)
   local player = tm.game:current_player()
@@ -31,17 +34,23 @@ local function phase_start(tm)
     tm.game.last_turn.stay_turns = player.status.stay_turns
     return "end_turn", { player = player }
   end
-  local item = tm.game and tm.game.services and tm.game.services.item
-  if item and item.auto_pre_action then
-    local pre = item.auto_pre_action(tm.game, player)
-    if pre then
-      IntentDispatcher.dispatch_from_result(tm.game, pre)
-    end
-    if pre and pre.waiting then
-      return "wait_choice", { resume_state = "roll", resume_args = { player = player } }
-    end
-  else
-    logger.warn("缺少 ItemService，跳过回合前自动道具")
+
+  local pre = Strategy.auto_pre_action(tm.game, player, {
+    inventory = Inventory,
+    find_monster_target = Executor.find_monster_target,
+    find_missile_target = Executor.find_missile_target,
+    use_item = function(g, p, id, ctx)
+      ctx = ctx or { by_ai = true }
+      ctx.services = g.services
+      return Executor.use_item(g, p, id, ctx, { inventory = Inventory, strategy = Strategy })
+    end,
+  })
+
+  if pre then
+    IntentDispatcher.dispatch(tm.game, pre)
+  end
+  if pre and pre.waiting then
+    return "wait_choice", { resume_state = "roll", resume_args = { player = player } }
   end
   return "roll", { player = player }
 end

@@ -33,6 +33,4 @@ function IntentDispatcher.dispatch(game, payload)
   return false
 end
 
-IntentDispatcher.dispatch_from_result = IntentDispatcher.dispatch
-
 return IntentDispatcher

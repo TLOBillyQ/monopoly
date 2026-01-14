@@ -1,6 +1,7 @@
 local items_cfg = require("src.config.items")
 local logger = require("src.util.logger")
 local Choice = require("src.gameplay.app.choice")
+local Inventory = require("src.gameplay.domain.item_inventory")
 
 local MarketService = {}
 
@@ -72,11 +73,6 @@ function MarketService.buy(game, player, item_id)
     return false
   end
 
-  local item = game and game.services and game.services.item
-  if not item or not item.give_item then
-    logger.warn("缺少 ItemService，无法在黑市购买")
-    return false
-  end
   if player.inventory and player.inventory.is_full and player.inventory:is_full() then
     return { ok = false, intent = { kind = "push_popup", payload = { title = "黑市", body = player.name .. " 卡槽已满，无法购买" } } }
   end
@@ -93,18 +89,13 @@ function MarketService.buy(game, player, item_id)
   end
 
   player:deduct_cash(price)
-  item.give_item(player, cfg.id)
+  Inventory.give(player, cfg.id)
   logger.event(player.name .. " 在黑市购买 " .. (cfg.name or tostring(cfg.id)) .. " 花费 " .. tostring(price))
   return true
 end
 
 
 function MarketService.auto_buy(game, player)
-  local item = game and game.services and game.services.item
-  if not item then
-    logger.warn("缺少 ItemService，无法在黑市购买")
-    return
-  end
   if player.inventory:is_full() then
     logger.warn(player.name .. " 卡槽已满，无法在黑市购买")
     return

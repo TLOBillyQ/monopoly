@@ -3,7 +3,9 @@ package.path = "src/?.lua;src/?/init.lua;src/gameplay/?.lua;src/gameplay/?/init.
 
 local App = require("src.app")
 local MovementService = require("src.gameplay.app.services.movement_service")
-local ItemService = require("src.gameplay.app.services.item_service")
+local Inventory = require("src.gameplay.domain.item_inventory")
+local Executor = require("src.gameplay.domain.item_executor")
+local Strategy = require("src.gameplay.domain.item_strategy")
 local LandingResolver = require("src.gameplay.app.landing_resolver")
 local Choice = require("src.gameplay.app.choice")
 local ChoiceResolver = require("src.gameplay.app.choice_resolver")
@@ -83,7 +85,7 @@ local function test_monster_card()
   g:set_tile_owner(tile, 2)
   g:set_tile_level(tile, 2)
   p.inventory:add({ id = 2008 })
-  local res = ItemService.use_item(g, p, 2008)
+  local res = Executor.use_item(g, p, 2008, { services = g.services }, { inventory = Inventory, strategy = Strategy })
   local ok = (type(res) == "table" and res.ok ~= nil) and res.ok or res
   assert_eq(ok, true, "monster use ok")
   assert_eq(tile_state(g, tile).level, 0, "building destroyed")
@@ -100,9 +102,9 @@ local function test_missile_card()
   g.services.overlay.place_roadblock(g, idx)
   g.services.overlay.place_mine(g, idx)
   p.inventory:add({ id = 2013 })
-  local res = ItemService.use_item(g, p, 2013)
+  local res = Executor.use_item(g, p, 2013, { services = g.services }, { inventory = Inventory, strategy = Strategy })
   if type(res) == "table" and res.intent then
-    IntentDispatcher.dispatch_from_result(g, res)
+    IntentDispatcher.dispatch(g, res)
     local pending = Choice.get(g)
     assert(pending and pending.kind == "missile_target", "missile should open choice")
     local first = pending.options[1]
@@ -171,12 +173,8 @@ local function test_chance_is_mandatory_effect_entrypoint()
   local idx, tile = first_tile_by_type(g.board, "chance")
   g:update_player_position(p, idx)
 
-  local called = { draw = 0, resolve = 0 }
+  local called = { resolve = 0 }
   g.services.chance = {
-    draw_card = function()
-      called.draw = called.draw + 1
-      return { description = "stub", effect = "add_cash", amount = 0 }
-    end,
     resolve = function()
       called.resolve = called.resolve + 1
     end,
@@ -184,7 +182,6 @@ local function test_chance_is_mandatory_effect_entrypoint()
 
   local res = LandingResolver.resolve(g, p, tile, {})
   assert(not res, "chance landing should not wait")
-  assert_eq(called.draw, 1, "chance draw called")
   assert_eq(called.resolve, 1, "chance resolve called")
 end
 

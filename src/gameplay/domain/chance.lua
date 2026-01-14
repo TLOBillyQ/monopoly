@@ -1,4 +1,5 @@
 local logger = require("src.util.logger")
+local Inventory = require("src.gameplay.domain.item_inventory")
 
 local ChanceEffects = {}
 
@@ -173,9 +174,7 @@ handlers.move_forward = function(game, player, card)
 end
 
 handlers.grant_item = function(game, player, card)
-  local item = get_service(game, nil, "item")
-  assert(item, "Missing ItemService")
-  item.give_item(player, card.item_id)
+  Inventory.give(player, card.item_id)
 end
 
 handlers.discard_items = function(_, player, card)

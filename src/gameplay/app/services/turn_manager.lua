@@ -14,12 +14,12 @@ local TurnManager = {}
 TurnManager.__index = TurnManager
 
 local PHASES = {
-  start = { phase = "start", fn = phase_start_fn },
-  roll = { phase = "roll", fn = phase_roll_fn },
-  move = { phase = "move", fn = phase_move_fn },
-  landing = { phase = "landing", fn = phase_landing_fn },
-  post_action = { phase = "post_action", fn = phase_post_fn },
-  end_turn = { phase = "end_turn", fn = phase_end_fn },
+  start = phase_start_fn,
+  roll = phase_roll_fn,
+  move = phase_move_fn,
+  landing = phase_landing_fn,
+  post_action = phase_post_fn,
+  end_turn = phase_end_fn,
 }
 
 
@@ -36,8 +36,6 @@ end
 function TurnManager:dispatch(action)
   self.pending_action = action
 
-  
-  
   local choice = Choice.get(self.game)
   if choice and (not self.flow or not self.flow.current) then
     local res = ChoiceResolver.resolve(self.game, choice, action)
@@ -52,18 +50,18 @@ end
 
 function TurnManager:_build_flow()
   local states = {}
-  for name, spec in pairs(PHASES) do
+  for name, fn in pairs(PHASES) do
     states[name] = function(args)
-      self.game.store:set({ "turn", "phase" }, spec.phase)
-      return spec.fn(self, args)
+      self.game.store:set({ "turn", "phase" }, name)
+      return fn(self, args)
     end
   end
 
   states.wait_choice = function(args)
     self.game.store:set({ "turn", "phase" }, "wait_choice")
     local choice = Choice.get(self.game)
-    
-    
+
+
     if not choice then
       self.pending_action = nil
       return (args and args.resume_state) or "end_turn", (args and args.resume_args) or {}
@@ -91,7 +89,7 @@ function TurnManager:_build_flow()
     local action = self.pending_action
     self.pending_action = nil
 
-    
+
     if action.choice_id and choice.id and action.choice_id ~= choice.id then
       return "wait_choice", args
     end
@@ -128,8 +126,6 @@ function TurnManager:run_until_wait()
   self.flow = nil
   return nil
 end
-
-
 
 function TurnManager:run_turn()
   return self:run_until_wait()
