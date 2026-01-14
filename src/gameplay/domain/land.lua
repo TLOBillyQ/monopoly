@@ -200,8 +200,7 @@ Effect.defs = {
       if strong_idx and player.cash >= total_value and not skip_strong_prompt then
         return open_rent_prompt(ctx, "strong", "是否使用强征卡", { "支付 " .. tostring(total_value) .. " 强制购入 " .. tile.name })
       end
-      local status = get_service(ctx, "status")
-      if status and status.is_in_mountain and status.is_in_mountain(ctx.game, owner) then
+      if owner.is_in_mountain and owner:is_in_mountain(ctx.game) then
         logger.event(owner.name .. " 在深山，租金不收取")
         return
       end
