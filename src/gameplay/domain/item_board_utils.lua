@@ -41,7 +41,13 @@ function BoardUtils.find_best_tile(game, player, distance, opts)
   local score_fn = opts and opts.score_fn
   local best_idx = nil
   local best_value = nil
-  for _, idx in ipairs(BoardUtils.indices_in_range(board, player.position, distance or 3)) do
+  
+  local indices = BoardUtils.indices_in_range(board, player.position, distance or 3)
+  if allow_self then
+    table.insert(indices, 1, player.position)
+  end
+  
+  for _, idx in ipairs(indices) do
     if allow_self or idx ~= player.position then
       local tile = board:get_tile(idx)
       local value = score_fn and score_fn(tile, idx)
