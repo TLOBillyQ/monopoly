@@ -3,6 +3,7 @@
 
 # LÖVE build artifacts
 *.love
+bin/
 
 # OS files
 .DS_Store

@@ -3,11 +3,11 @@ repos:
     hooks:
       - id: lua-deps-check
         name: lua deps_check
-        entry: lua scripts/deps_check.lua
+        entry: lua tests/deps_check.lua
         language: system
         pass_filenames: false
       - id: lua-regression
         name: lua regression
-        entry: lua scripts/regression.lua
+        entry: lua tests/regression.lua
         language: system
         pass_filenames: false
