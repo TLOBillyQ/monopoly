@@ -92,22 +92,6 @@ local function find_effect_by_id(effect_defs, effect_id)
   end
   return nil
 end
-
-local function as_number(v)
-  if type(v) == "number" then
-    return v
-  end
-  if type(v) == "string" then
-    local n = tonumber(v)
-    return n
-  end
-  return nil
-end
-
-local function is_cancel(action)
-  return not action or action.type == "choice_cancel" or action.option_id == nil
-end
-
 local handlers = {}
 
 local function handle_optional_landing_effect(game, choice, action)
