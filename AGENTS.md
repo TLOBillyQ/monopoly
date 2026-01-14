@@ -2,39 +2,57 @@
 
 ## 项目概览
 
-- 大富翁回合制棋盘游戏，lua语言
-- 表驱动、SOLID原则、好莱坞原则
-- 切分适配层，love2d环境注入, 留出eggy适配层占位
- 
+- 大富翁回合制棋盘游戏，Lua
+- 表驱动、SOLID 原则、好莱坞原则
+- 切分适配层，Love2D 环境注入，预留 Eggy 适配层
+
 ## 自检
-- 通过脚本测试：`scripts/deps_check.lua`和`scripts/regression.lua`
-  
+
+- 脚本测试：`scripts/deps_check.lua`、`scripts/regression.lua`
+
 ## Coding Rules
 
-**Primary rule: prefer deleting or reusing code over adding new code.**
+**Primary rule: 优先删除或复用代码，而不是新增代码。**
 
-### 1. No default abstractions
-- Do not add interfaces, layers, or helpers unless there are **at least two real call sites**.
-- No future-proofing.
+### 1. 功能不变（Hard Rule）
+- 行为 / 输出 / 边界条件 **绝对不变**
+- 只改“怎么写”，不改“做什么”
 
-### 2. Single implementation per feature
-- If similar logic exists, **merge it**.
-- New code must replace old code, not coexist with it.
+### 2. 聚焦范围（Scope）
+- 仅优化**本次修改触及的代码**
+- 不做全局重构
 
-### 3. Delete aggressively
-- Remove unused functions, modules, parameters, and branches.
-- Delete wrappers that only forward calls.
+### 3. 无默认抽象
+- 没有 **≥2 个真实调用点**，禁止新增接口 / 层 / helper
+- 不做未来预留
 
-### 4. Keep Lua simple
-- Prefer plain tables and functions.
-- Avoid metatables, inheritance-like patterns, and over-general utilities.
+### 4. 单一实现
+- 相似逻辑必须合并
+- 新代码必须替换旧代码，而不是并存
 
-### 5. Limit growth
-- Prefer editing existing files.
-- Adding a new file requires justification.
+### 5. 强制删除
+- 删除未使用的函数、模块、参数、分支
+- 删除只做转发的包装层
+- 每次修改后都要问：**现在能删什么？**
 
-### 6. Mandatory cleanup
-- After every change, ask: *“What code can be removed now?”*
-- If nothing can be removed, explain why.
+### 6. 保持 Lua 简单
+- 使用普通 table + function
+- 避免 metatable、继承式设计、过度泛化工具
 
-**Goal: minimal code, minimal concepts, minimal files.**
+### 7. 提升清晰度（Code Simplifier）
+- 减少嵌套和复杂度
+- 合并强相关逻辑，移除冗余抽象
+- 使用清晰、直白的命名
+- 删除解释“显而易见代码”的注释
+- **禁止嵌套三元表达式**（用 if / else）
+
+### 8. 克制简化
+- 不炫技、不聪明写法
+- 不为“行数更少”牺牲可读性
+- 不因简化降低可维护性或可扩展性
+
+### 9. 控制规模
+- 优先修改已有文件
+- 新增文件必须有明确理由
+
+**目标：最少代码、最少概念、最少文件，但始终以可读性优先。**

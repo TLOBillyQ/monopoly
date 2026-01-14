@@ -39,12 +39,11 @@ local function first_tile_by_type(board, t)
   error("no tile found for type=" .. tostring(t))
 end
 
+local Tile = require("src.core.tile")
+
 local function tile_state(game, tile)
-  local s = game.store and game.store:get({ "board", "tiles", tile.id }) or nil
-  if type(s) ~= "table" then
-    return { owner_id = nil, level = 0 }
-  end
-  return { owner_id = s.owner_id, level = s.level or 0 }
+  local state = Tile.get_state(game, tile)
+  return state or { owner_id = nil, level = 0 }
 end
 
 local function test_pass_start()

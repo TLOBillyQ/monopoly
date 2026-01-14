@@ -1,5 +1,5 @@
 local logger = require("src.util.logger")
-local GameState = require("src.util.game_state")
+local Tile = require("src.core.tile")
 local Roadblock = {}
 
 local OPPOSITE = { up = "down", down = "up", left = "right", right = "left" }
@@ -70,7 +70,7 @@ local function priority_for_candidate(game, player, cand)
     return nil
   end
 
-  local st = (tile.type == "land") and GameState.tile_state(game, tile) or nil
+  local st = (tile.type == "land") and Tile.get_state(game, tile) or nil
   if cand.dir == "forward" then
     if tile.type == "item" then
       return 1

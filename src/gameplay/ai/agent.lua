@@ -1,10 +1,10 @@
-local GameState = require("src.util.game_state")
+local Tile = require("src.core.tile")
 local Roadblock = require("src.gameplay.domain.item_roadblock")
 local Missile = require("src.gameplay.domain.item_missile")
 
 local Agent = {}
 
-local tile_state = GameState.tile_state
+local tile_state = Tile.get_state
 
 local function is_auto_player(player)
   return player and (player.is_ai or player.auto)

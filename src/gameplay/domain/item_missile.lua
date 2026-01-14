@@ -1,11 +1,11 @@
 local logger = require("src.util.logger")
-local GameState = require("src.util.game_state")
+local Tile = require("src.core.tile")
 local BoardUtils = require("src.gameplay.domain.item_board_utils")
 local WorldOps = require("src.gameplay.domain.item_world_ops")
 
 local Missile = {}
 
-local tile_state = GameState.tile_state
+local tile_state = Tile.get_state
 
 local function get_service(context, game, key)
   if context and context.services and context.services[key] then

@@ -52,4 +52,14 @@ function Tile:reset()
   self.level = 0
 end
 
+function Tile.get_state(game, tile)
+  assert(game and game.store, "Tile.get_state requires game.store")
+  assert(tile and tile.type == "land", "Tile.get_state requires land tile")
+
+  local s = game.store:get({ "board", "tiles", tile.id })
+  assert(type(s) == "table", "missing tile state for tile " .. tostring(tile.id))
+
+  return { owner_id = s.owner_id, level = s.level }
+end
+
 return Tile

@@ -1,12 +1,12 @@
 local Effect = {}
 local logger = require("src.util.logger")
 local constants = require("src.config.constants")
-local GameState = require("src.util.game_state")
+local Tile = require("src.core.tile")
 local BoardUtils = require("src.gameplay.domain.item_board_utils")
 
 local MAX_LEVEL = 3
 
-local tile_state = GameState.tile_state
+local tile_state = Tile.get_state
 
 local function get_service(ctx, key)
   if ctx and ctx.services and ctx.services[key] then

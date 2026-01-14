@@ -1,11 +1,11 @@
 local logger = require("src.util.logger")
-local GameState = require("src.util.game_state")
+local Tile = require("src.core.tile")
 local BoardUtils = require("src.gameplay.domain.item_board_utils")
 local WorldOps = require("src.gameplay.domain.item_world_ops")
 
 local Monster = {}
 
-local tile_state = GameState.tile_state
+local tile_state = Tile.get_state
 
 function Monster.find_target(game, player, distance)
   local idx = BoardUtils.find_best_tile(game, player, distance, {
