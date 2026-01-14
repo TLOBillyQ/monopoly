@@ -104,6 +104,18 @@ function Player:tick_deity()
   end
 end
 
+function Player:clear_temporal_flags()
+  self.status.pending_dice_multiplier = 1
+  self.status.pending_free_rent = false
+  self.status.pending_tax_free = false
+  self.status.pending_remote_dice = nil
+  -- Update store if necessary, but individual flag updates might happen elsewhere.
+  -- To be safe, let's sync status if store exists.
+  if self._store then
+    self:_store_set({ "players", self.id, "status" }, deep_copy(self.status))
+  end
+end
+
 function Player:has_angel()
   return self:has_deity("angel")
 end

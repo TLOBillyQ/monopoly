@@ -34,15 +34,12 @@ function Strategy.has_obstacles_ahead(game, player, distance)
   local parity = 1
   local current = player.position
   local facing = player.status and player.status.move_dir or nil
-  local overlay = get_service(game, "overlay")
-  if not overlay then
-    return false
-  end
+  
   for _ = 1, distance do
     local next_index, _passed, step_dir = board:step_forward_by_facing(current, facing, parity)
     current = next_index
     facing = step_dir or facing
-    if overlay.has_roadblock(game, current) or overlay.has_mine(game, current) then
+    if board:has_roadblock(current) or board:has_mine(current) then
       return true
     end
   end

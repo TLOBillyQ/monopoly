@@ -238,7 +238,6 @@ handlers.forced_move = function(game, player, card, context)
 end
 
 function ChanceEffects.resolve(game, player, card, context)
-function ChanceEffects.resolve(game, player, card, context)
 
   if card.negative and player:has_angel() then
     logger.event(player.name .. " 有天使附身，负面机会卡无效")
@@ -246,6 +245,7 @@ function ChanceEffects.resolve(game, player, card, context)
   end
 
   local handler = handlers[card.effect]
+  if not handler then
     logger.warn("未知机会卡效果:" .. tostring(card.effect))
     return nil
   end
