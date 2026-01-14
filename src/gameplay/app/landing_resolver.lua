@@ -1,6 +1,5 @@
 local Effect = require("src.gameplay.domain.effect")
 local landing_effects = require("src.gameplay.domain.landing")
-local UI = require("src.gameplay.ports.ui_port")
 local IntentDispatcher = require("src.gameplay.app.intent_dispatcher")
 
 local LandingResolver = {}
@@ -81,52 +80,41 @@ function LandingResolver.resolve(game, player, tile, move_result)
     return nil
   end
 
-  if UI.is_available(game) then
-    local body_lines = {}
-    local options = {}
-    local effect_ids = {}
-    for _, eff in ipairs(optional) do
-      local label = eff.label or eff.id
-      table.insert(body_lines, label)
-      table.insert(options, { id = eff.id, label = label })
-      table.insert(effect_ids, eff.id)
-    end
+  local body_lines = {}
+  local options = {}
+  local effect_ids = {}
+  for _, eff in ipairs(optional) do
+    local label = eff.label or eff.id
+    table.insert(body_lines, label)
+    table.insert(options, { id = eff.id, label = label })
+    table.insert(effect_ids, eff.id)
+  end
 
-    local out = {
-      waiting = true,
-      reason = "landing_optional",
-      resume_state = "post_action",
-      resume_args = { player = player },
-      intent = {
-        kind = "need_choice",
-        choice_spec = {
-          kind = "landing_optional_effect",
-          title = "可选行动",
-          body_lines = body_lines,
-          options = options,
-          allow_cancel = true,
-          cancel_label = "跳过",
-          meta = {
-            player_id = player.id,
-            tile_id = tile.id,
-            move_result = snapshot_move_result(move_result),
-            effect_ids = effect_ids,
-          },
+  local out = {
+    waiting = true,
+    reason = "landing_optional",
+    resume_state = "post_action",
+    resume_args = { player = player },
+    intent = {
+      kind = "need_choice",
+      choice_spec = {
+        kind = "landing_optional_effect",
+        title = "可选行动",
+        body_lines = body_lines,
+        options = options,
+        allow_cancel = true,
+        cancel_label = "跳过",
+        meta = {
+          player_id = player.id,
+          tile_id = tile.id,
+          move_result = snapshot_move_result(move_result),
+          effect_ids = effect_ids,
         },
       },
-    }
-    IntentDispatcher.dispatch_from_result(game, out)
-    return out
-  end
-
-  
-  local first = optional[1]
-  if first then
-    local res = Effect.execute(first, ctx)
-    IntentDispatcher.dispatch_from_result(game, res and res.result or res)
-  end
-
-  return nil
+    },
+  }
+  IntentDispatcher.dispatch_from_result(game, out)
+  return out
 end
 
 return LandingResolver

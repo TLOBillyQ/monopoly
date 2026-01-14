@@ -1,26 +1,22 @@
 local logger = require("src.util.logger")
-local Errors = require("src.util.error_handling")
 local IntentDispatcher = require("src.gameplay.app.intent_dispatcher")
+local Choice = require("src.gameplay.app.choice")
 
 local TileService = {}
 
-local function missing_service(name)
-  Errors.missing_service(name)
+local function require_service(game, key, name)
+  local svc = game and game.services and game.services[key]
+  assert(svc, "Missing " .. name)
+  return svc
 end
 
 local function handle_hospital(game, player)
-  local status = game and game.services and game.services.status
-  if not status then
-    return missing_service("StatusService")
-  end
+  local status = require_service(game, "status", "StatusService")
   status.send_to_hospital(game, player)
 end
 
 local function handle_mountain(game, player)
-  local status = game and game.services and game.services.status
-  if not status then
-    return missing_service("StatusService")
-  end
+  local status = require_service(game, "status", "StatusService")
   status.send_to_mountain(game, player)
 end
 
@@ -34,11 +30,7 @@ local function handle_market(game, player, tile)
     return nil
   end
 
-  local market = game and game.services and game.services.market
-  if not market then
-    logger.warn("缺少 MarketService，无法打开黑市")
-    return nil
-  end
+  local market = require_service(game, "market", "MarketService")
 
   if player.inventory and player.inventory.is_full and player.inventory:is_full() then
     game.store:set({ "turn", "market_prompt" }, { player_id = player.id, tile_id = tile.id })
@@ -66,12 +58,9 @@ local function handle_market(game, player, tile)
 end
 
 local function check_mine(game, player)
-  local overlay = game and game.services and game.services.overlay
-  if overlay and overlay.has_mine(game, player.position) then
-    local status = game and game.services and game.services.status
-    if not status then
-      return missing_service("StatusService")
-    end
+  local overlay = require_service(game, "overlay", "OverlayService")
+  if overlay.has_mine(game, player.position) then
+    local status = require_service(game, "status", "StatusService")
     if status.has_angel(player) then
       logger.event(player.name .. " 天使保护，地雷无效")
       overlay.clear_mine(game, player.position)
@@ -88,12 +77,7 @@ end
 function TileService.resolve(game, player, tile, context)
   
   if context and context.encountered_players and not context.pass_players_checked then
-    local item = game and game.services and game.services.item
-    if not item then
-      missing_service("ItemService")
-      context.pass_players_checked = true
-      return nil
-    end
+    local item = require_service(game, "item", "ItemService")
     local res = item.handle_pass_players(game, player, context.encountered_players, { services = game and game.services })
     if res then
       IntentDispatcher.dispatch_from_result(game, res)
@@ -118,6 +102,52 @@ function TileService.resolve(game, player, tile, context)
   check_mine(game, player)
 
   return out
+end
+
+local function is_cancel(action)
+  return not action or action.type == "choice_cancel" or action.option_id == nil
+end
+
+function TileService.handle_choice(game, choice, action)
+  if not game or not game.store or not choice then
+    return nil
+  end
+
+  if choice.kind == "rent_card_prompt" then
+    local meta = choice.meta or {}
+    if meta.player_id and meta.tile_id and meta.kind then
+      local decision = (action and action.option_id == "use")
+      if is_cancel(action) then
+        decision = false
+      end
+      game.store:set({ "turn", "rent_prompt" }, {
+        player_id = meta.player_id,
+        tile_id = meta.tile_id,
+        kind = meta.kind,
+        decision = decision,
+      })
+    end
+    Choice.clear(game)
+    return { stay = false }
+  end
+
+  if choice.kind == "tax_card_prompt" then
+    local meta = choice.meta or {}
+    if meta.player_id then
+      local decision = (action and action.option_id == "use")
+      if is_cancel(action) then
+        decision = false
+      end
+      game.store:set({ "turn", "tax_prompt" }, {
+        player_id = meta.player_id,
+        decision = decision,
+      })
+    end
+    Choice.clear(game)
+    return { stay = false }
+  end
+
+  return nil
 end
 
 return TileService

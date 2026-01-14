@@ -69,19 +69,20 @@ local function priority_for_candidate(game, player, cand)
   if has_overlay(game, cand.idx) then
     return nil
   end
-  local st = GameState.tile_state(game, tile)
+
+  local st = (tile.type == "land") and GameState.tile_state(game, tile) or nil
   if cand.dir == "forward" then
     if tile.type == "item" then
       return 1
     end
-    if tile.type == "land" and not st.owner_id then
+    if tile.type == "land" and st and not st.owner_id then
       return 2
     end
     if tile.type == "chance" then
       return 3
     end
   elseif cand.dir == "backward" then
-    if tile.type == "land" and st.owner_id == player.id then
+    if tile.type == "land" and st and st.owner_id == player.id then
       return 4
     end
     if tile.type == "hospital" then

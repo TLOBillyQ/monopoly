@@ -69,10 +69,8 @@ function Strategy.auto_pre_action(game, player, deps)
       return nil
     end
     local res = use_item(game, player, item_id, { by_ai = true })
-    if type(res) == "table" then
-      if res.waiting or res.intent or res.intents then
-        return res
-      end
+    if type(res) == "table" and (res.waiting or res.intent or res.kind) then
+      return res
     end
     return nil
   end

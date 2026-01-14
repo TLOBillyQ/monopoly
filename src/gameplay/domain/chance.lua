@@ -1,21 +1,13 @@
 local logger = require("src.util.logger")
-local Errors = require("src.util.error_handling")
 
 local ChanceEffects = {}
-
-local function missing_service(name)
-  Errors.missing_service(name)
-end
 
 local function apply_cash_change(player, delta)
   player:add_cash(delta)
 end
 
-local function ensure_service(service, name)
-  if not service then
-    missing_service(name)
-    return nil
-  end
+local function require_service(service, name)
+  assert(service, "Missing " .. name)
   return service
 end
 
@@ -30,10 +22,8 @@ local function handle_bankruptcy_if_negative(game, player)
   if player.cash >= 0 then
     return
   end
-  local bankruptcy = ensure_service(get_service(game, nil, "bankruptcy"), "BankruptcyService")
-  if bankruptcy and bankruptcy.eliminate then
-    bankruptcy.eliminate(game, player)
-  end
+  local bankruptcy = require_service(get_service(game, nil, "bankruptcy"), "BankruptcyService")
+  bankruptcy.eliminate(game, player)
 end
 
 local function apply_cash_and_maybe_bankrupt(game, player, delta)
@@ -42,10 +32,7 @@ local function apply_cash_and_maybe_bankrupt(game, player, delta)
 end
 
 local function move_steps(game, player, steps)
-  local movement = ensure_service(get_service(game, nil, "movement"), "MovementService")
-  if not movement then
-    return nil
-  end
+  local movement = require_service(get_service(game, nil, "movement"), "MovementService")
   local res = movement.move(game, player, steps)
   return {
     kind = "need_landing",
@@ -74,10 +61,7 @@ handlers.percent_pay_cash = function(game, player, card)
 end
 
 handlers.pay_others = function(game, player, card)
-  local status = ensure_service(get_service(game, nil, "status"), "StatusService")
-  if not status then
-    return
-  end
+  local status = require_service(get_service(game, nil, "status"), "StatusService")
   for _, other in ipairs(game.players) do
     if other.id ~= player.id and not other.eliminated then
       local fee = card.amount
@@ -94,10 +78,7 @@ handlers.pay_others = function(game, player, card)
 end
 
 handlers.collect_from_others = function(game, player, card)
-  local status = ensure_service(get_service(game, nil, "status"), "StatusService")
-  if not status then
-    return
-  end
+  local status = require_service(get_service(game, nil, "status"), "StatusService")
   for _, other in ipairs(game.players) do
     if other.id ~= player.id and not other.eliminated then
       local fee = card.amount
@@ -165,9 +146,7 @@ end
 
 handlers.grant_item = function(game, player, card)
   local item = get_service(game, nil, "item")
-  if not item then
-    return missing_service("ItemService")
-  end
+  assert(item, "Missing ItemService")
   item.give_item(player, card.item_id)
 end
 
@@ -202,10 +181,7 @@ handlers.discard_properties = function(game, player, card)
 end
 
 handlers.forced_move = function(game, player, card, context)
-  local status = ensure_service(get_service(game, context, "status"), "StatusService")
-  if not status then
-    return
-  end
+  local status = require_service(get_service(game, context, "status"), "StatusService")
   if card.destination == "hospital" then
     status.send_to_hospital(game, player, { skip_fee = true })
   elseif card.destination == "mountain" then
@@ -231,21 +207,14 @@ handlers.forced_move = function(game, player, card, context)
       if game.set_player_status then
         game:set_player_status(player, "move_dir", nil)
       end
-      local market_service = get_service(game, context, "market")
-      if market_service then
-        market_service.auto_buy(game, player)
-      else
-        logger.warn("缺少 MarketService，无法自动购买")
-      end
+      local market_service = require_service(get_service(game, context, "market"), "MarketService")
+      market_service.auto_buy(game, player)
     end
   end
 end
 
 function ChanceEffects.resolve(game, player, card, context)
-  local status = get_service(game, context, "status")
-  if not status then
-    return missing_service("StatusService")
-  end
+  local status = require_service(get_service(game, context, "status"), "StatusService")
 
   if card.negative and status.has_angel(player) then
     logger.event(player.name .. " 有天使附身，负面机会卡无效")

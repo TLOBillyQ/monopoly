@@ -2,6 +2,7 @@ local Effect = {}
 local logger = require("src.util.logger")
 local constants = require("src.config.constants")
 local GameState = require("src.util.game_state")
+local BoardUtils = require("src.gameplay.domain.item_board_utils")
 
 local MAX_LEVEL = 3
 
@@ -22,16 +23,6 @@ end
 local function current_rent(tile, level)
   local exponent = level or 0
   return (tile.price or 0) * (2 ^ exponent) * 0.5
-end
-
-local function total_invested(tile, owner_id, level)
-  if not owner_id then
-    return 0
-  end
-  level = level or 0
-  local price = tile.price or 0
-  
-  return price * ((2 ^ (level + 1)) - 1)
 end
 
 local function open_rent_prompt(ctx, kind, title, body_lines)
@@ -92,8 +83,11 @@ end
 local function can_buy(ctx)
   local tile = ctx.tile
   local player = ctx.player
+  if tile.type ~= "land" then
+    return false
+  end
   local st = tile_state(ctx.game, tile)
-  return tile.type == "land" and st.owner_id == nil and player.cash >= tile.price
+  return st.owner_id == nil and player.cash >= tile.price
 end
 
 local function apply_buy(ctx)
@@ -109,8 +103,11 @@ end
 local function can_upgrade(ctx)
   local tile = ctx.tile
   local player = ctx.player
+  if tile.type ~= "land" then
+    return false
+  end
   local st = tile_state(ctx.game, tile)
-  if tile.type ~= "land" or st.owner_id ~= player.id then
+  if st.owner_id ~= player.id then
     return false
   end
   if (st.level or 0) >= MAX_LEVEL then
@@ -140,12 +137,18 @@ Effect.defs = {
     can_apply = function(ctx)
       local tile = ctx.tile
       local player = ctx.player
+      if tile.type ~= "land" then
+        return false
+      end
       local st = tile_state(ctx.game, tile)
-      return tile.type == "land" and st.owner_id and st.owner_id ~= player.id
+      return st.owner_id and st.owner_id ~= player.id
     end,
     apply = function(ctx)
       local tile = ctx.tile
       local player = ctx.player
+      if tile.type ~= "land" then
+        return
+      end
       local st = tile_state(ctx.game, tile)
       local owner = st.owner_id and ctx.game.players[st.owner_id] or nil
       if not owner or owner.eliminated then
@@ -153,7 +156,7 @@ Effect.defs = {
         return
       end
       
-      local total_value = total_invested(tile, st.owner_id, st.level)
+      local total_value = BoardUtils.total_invested(tile, st.owner_id, st.level)
       local strong_idx = player.inventory and player.inventory:find_index(function(it)
         return it.id == 2009
       end)

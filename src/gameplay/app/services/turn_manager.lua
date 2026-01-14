@@ -1,6 +1,7 @@
 local Flow = require("src.gameplay.app.flow")
 local Choice = require("src.gameplay.app.choice")
 local ChoiceResolver = require("src.gameplay.app.choice_resolver")
+local UI = require("src.gameplay.ports.ui_port")
 local phase_start_fn = require("src.gameplay.app.turn.start")
 local phase_roll_fn = require("src.gameplay.app.turn.roll")
 local phase_move_fn = require("src.gameplay.app.turn.move")
@@ -74,6 +75,15 @@ function TurnManager:_build_flow()
       local auto_action = Agent.auto_action_for_choice(self.game, choice)
       if auto_action then
         self.pending_action = auto_action
+      end
+    end
+
+    if not self.pending_action and not UI.is_available(self.game) then
+      local first = choice.options and choice.options[1]
+      if first then
+        self.pending_action = { type = "choice_select", choice_id = choice.id, option_id = first.id or first }
+      elseif choice.allow_cancel ~= false then
+        self.pending_action = { type = "choice_cancel", choice_id = choice.id }
       end
     end
 

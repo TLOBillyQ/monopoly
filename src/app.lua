@@ -66,15 +66,11 @@ function App.new(opts)
     end
   end
 
-  local overlays_ref = store:get({ "board", "overlays" })
-  local overlays = overlays_ref and deep_copy(overlays_ref) or { roadblocks = {}, mines = {} }
-
   local game = {
     board = board,
     players = players,
     store = store,
     rng = rng,
-    overlays = overlays,
     logger = logger,
     finished = false,
     winner = nil,
@@ -145,7 +141,6 @@ end
 
 function App:set_tile_owner(tile, owner_id)
   if tile and tile.type == "land" then
-    tile.owner_id = owner_id
     self:_store_set({ "board", "tiles", tile.id, "owner_id" }, owner_id)
   end
 end
@@ -153,7 +148,6 @@ end
 
 function App:set_tile_level(tile, level)
   if tile and tile.type == "land" then
-    tile.level = level
     self:_store_set({ "board", "tiles", tile.id, "level" }, level)
   end
 end
@@ -161,8 +155,6 @@ end
 
 function App:reset_tile(tile)
   if tile and tile.type == "land" then
-    tile.owner_id = nil
-    tile.level = 0
     self:_store_set({ "board", "tiles", tile.id, "owner_id" }, nil)
     self:_store_set({ "board", "tiles", tile.id, "level" }, 0)
   end

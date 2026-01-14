@@ -65,8 +65,8 @@ function Player:net_worth(board)
     local tile = board:get_tile_by_id(tile_id)
     if tile then
       local st = GameState.tile_state(self._store and { store = self._store } or nil, tile)
-      local level = st.level or tile.level or 0
-      if st.owner_id or tile.owner_id then
+      local level = st.level or 0
+      if st.owner_id then
         local price = tile.price or 0
         total = total + price * ((2 ^ (level + 1)) - 1)
       end

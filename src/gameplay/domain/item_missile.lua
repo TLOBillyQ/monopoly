@@ -2,7 +2,6 @@ local logger = require("src.util.logger")
 local GameState = require("src.util.game_state")
 local BoardUtils = require("src.gameplay.domain.item_board_utils")
 local WorldOps = require("src.gameplay.domain.item_world_ops")
-local UI = require("src.gameplay.ports.ui_port")
 
 local Missile = {}
 
@@ -84,17 +83,26 @@ function Missile.use(game, player, distance, consume_fn, opts)
     return false
   end
 
-  if UI.is_available(game) and not opts.by_ai then
+  if not opts.by_ai then
     local idxs = BoardUtils.indices_in_range(game.board, player.position, distance)
     local options = {}
     local body_lines = {}
-    for _, idx in ipairs(idxs) do
-      if idx ~= player.position then
+
+    local function push_option(idx)
+      if idx and idx ~= player.position then
         local tile = game.board:get_tile(idx)
         table.insert(body_lines, "#" .. idx .. " " .. tile.name)
         table.insert(options, { id = idx, label = tile.name })
       end
     end
+
+    push_option(best_idx)
+    for _, idx in ipairs(idxs) do
+      if idx ~= best_idx then
+        push_option(idx)
+      end
+    end
+
     if #options > 0 then
       return {
         waiting = true,

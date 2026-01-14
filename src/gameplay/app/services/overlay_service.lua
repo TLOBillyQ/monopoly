@@ -1,21 +1,20 @@
-local Tables = require("src.util.tables")
 local OverlayService = {}
 
 local function ensure_overlays(game)
   if not game then
-    return nil
+    return { roadblocks = {}, mines = {} }
   end
-  if not game.overlays then
-    local from_store = game.store and game.store:get({ "board", "overlays" }) or nil
-    if from_store then
-      game.overlays = Tables.deep_copy(from_store)
-    else
-      game.overlays = { roadblocks = {}, mines = {} }
+  local store = game.store
+  local overlays = store and store:get({ "board", "overlays" }) or nil
+  if type(overlays) ~= "table" then
+    overlays = { roadblocks = {}, mines = {} }
+    if store then
+      store:set({ "board", "overlays" }, overlays)
     end
   end
-  game.overlays.roadblocks = game.overlays.roadblocks or {}
-  game.overlays.mines = game.overlays.mines or {}
-  return game.overlays
+  overlays.roadblocks = overlays.roadblocks or {}
+  overlays.mines = overlays.mines or {}
+  return overlays
 end
 
 local function store_set(game, path, value)

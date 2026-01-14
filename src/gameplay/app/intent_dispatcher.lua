@@ -22,30 +22,15 @@ function IntentDispatcher.dispatch(game, payload)
     return false
   end
 
-  local intents = nil
-  if payload.intent or payload.intents then
-    intents = {}
-    if payload.intent then
-      intents[#intents + 1] = payload.intent
-    end
-    if type(payload.intents) == "table" then
-      for i = 1, #payload.intents do
-        intents[#intents + 1] = payload.intents[i]
-      end
-    end
-  elseif payload[1] then
-    intents = payload
+  if payload.intent then
+    return dispatch_one(game, payload.intent)
   end
 
-  if intents then
-    local handled = false
-    for i = 1, #intents do
-      handled = dispatch_one(game, intents[i]) or handled
-    end
-    return handled
+  if payload.kind then
+    return dispatch_one(game, payload)
   end
 
-  return dispatch_one(game, payload)
+  return false
 end
 
 IntentDispatcher.dispatch_from_result = IntentDispatcher.dispatch

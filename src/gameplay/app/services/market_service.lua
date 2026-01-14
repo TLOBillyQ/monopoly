@@ -1,5 +1,6 @@
 local items_cfg = require("src.config.items")
 local logger = require("src.util.logger")
+local Choice = require("src.gameplay.app.choice")
 
 local MarketService = {}
 
@@ -115,6 +116,40 @@ function MarketService.auto_buy(game, player)
       item.give_item(player, cfg.id)
     end
   end
+end
+
+local function is_cancel(action)
+  return not action or action.type == "choice_cancel" or action.option_id == nil
+end
+
+local function as_number(v)
+  if type(v) == "number" then
+    return v
+  end
+  if type(v) == "string" then
+    return tonumber(v)
+  end
+  return nil
+end
+
+function MarketService.handle_choice(game, choice, action)
+  if not choice or choice.kind ~= "market_buy" then
+    return nil
+  end
+
+  if is_cancel(action) then
+    Choice.clear(game)
+    return { stay = false }
+  end
+
+  local item_id = as_number(action.option_id)
+  local meta = choice.meta or {}
+  local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+  if player and item_id then
+    MarketService.buy(game, player, item_id)
+  end
+  Choice.clear(game)
+  return { stay = false }
 end
 
 return MarketService

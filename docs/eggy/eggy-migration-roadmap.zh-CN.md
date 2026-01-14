@@ -47,7 +47,7 @@
 利用你现有的结构：
 
 - 继续以 `LoveLayer:dispatch_action(...)` 的 action 形式作为“输入统一入口”（例如 `ui_button`、`modal_button`、`choice_select`、`choice_cancel`）。
-- 继续使用 `game.ui_hooks` 作为“规则层 → UI 的请求端口”（你在 `src/adapters/love2d/love_layer.lua` 里已绑定 `push_popup/request_choice`）。
+- 继续使用 `game.ui_port` 作为“规则层 → UI 的请求端口”（`src/adapters/love2d/love_layer.lua` 绑定了 `push_popup/request_choice`）。
 
 交付物：
 
@@ -125,4 +125,3 @@
 - **规则一致性**：同 seed + 同 action 序列，应得到相同胜者与关键状态（现金/地块/道具/叠加状态）。
 - **选择流程**：需要选择时必须进入 `pending_choice`，未选择不推进回合。
 - **UI 可恢复**：任意时刻从存档恢复后，UI 节点展示与内部状态一致。
-

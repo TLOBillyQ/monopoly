@@ -9,28 +9,10 @@ local function resolve_service(context, game, key)
   return game and game.services and game.services[key]
 end
 
-local function ensure_status(game, action, context)
-  local status = resolve_service(context, game, "status")
-  if not status then
-    logger.warn("缺少 StatusService，无法" .. action)
-  end
-  return status
-end
-
-local function ensure_overlay(game, action, context)
-  local overlay = resolve_service(context, game, "overlay")
-  if not overlay then
-    logger.warn("缺少 OverlayService，无法" .. action)
-  end
-  return overlay
-end
-
-local function ensure_bankruptcy(game, action, context)
-  local bankruptcy = resolve_service(context, game, "bankruptcy")
-  if not bankruptcy then
-    logger.warn("缺少 BankruptcyService，无法" .. action)
-  end
-  return bankruptcy
+local function require_service(game, context, key, name)
+  local svc = resolve_service(context, game, key)
+  assert(svc, "Missing " .. name)
+  return svc
 end
 
 local function find_item_index(player, item_id)
@@ -52,10 +34,7 @@ local TARGET_EFFECTS = {
   },
   [2012] = {
     apply = function(game, user, target, context)
-      local status = ensure_status(game, "流放", context)
-      if not status then
-        return false
-      end
+      local status = require_service(game, context, "status", "StatusService")
       status.send_to_mountain(game, target)
       logger.event(user.name .. " 使用流放卡，将 " .. target.name .. " 送往深山")
       return true
@@ -63,10 +42,7 @@ local TARGET_EFFECTS = {
   },
   [2014] = {
     apply = function(game, user, target, context)
-      local status = ensure_status(game, "查税", context)
-      if not status then
-        return false
-      end
+      local status = require_service(game, context, "status", "StatusService")
       if status.has_angel(target) then
         logger.event(target.name .. " 有天使，查税无效")
         return true
@@ -81,10 +57,8 @@ local TARGET_EFFECTS = {
       target:deduct_cash(fee)
       logger.event(user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. fee .. " 税金")
       if target.cash < 0 then
-        local bankruptcy = ensure_bankruptcy(game, "淘汰破产玩家", context)
-        if bankruptcy then
-          bankruptcy.eliminate(game, target)
-        end
+        local bankruptcy = require_service(game, context, "bankruptcy", "BankruptcyService")
+        bankruptcy.eliminate(game, target)
       end
       return true
     end,
@@ -164,10 +138,7 @@ handlers.set_status = function(game, player, cfg, _context)
 end
 
 handlers.deity = function(game, player, cfg, context)
-  local status = ensure_status(game, cfg.warn or "附身", context)
-  if not status then
-    return false
-  end
+  local status = require_service(game, context, "status", "StatusService")
   status.apply_deity(player, cfg.deity)
   if cfg.log then
     logger.event(player.name .. cfg.log)
@@ -183,10 +154,7 @@ handlers.log = function(_, player, cfg, _context)
 end
 
 handlers.place_mine_here = function(game, player, _cfg, context)
-  local overlay = ensure_overlay(game, "埋设地雷", context)
-  if not overlay then
-    return false
-  end
+  local overlay = require_service(game, context, "overlay", "OverlayService")
   overlay.place_mine(game, player.position)
   logger.event(player.name .. " 在脚下埋设地雷")
   return {
@@ -202,10 +170,7 @@ handlers.clear_obstacles_ahead = function(game, player, cfg, context)
   local parity = 1
   local facing = player.status and player.status.move_dir or nil
   local distance = cfg.distance or 12
-  local overlay = ensure_overlay(game, "清除障碍", context)
-  if not overlay then
-    return false
-  end
+  local overlay = require_service(game, context, "overlay", "OverlayService")
   for _ = 1, distance do
     local next_index, _passed, step_dir = board:step_forward_by_facing(current, facing, parity)
     current = next_index

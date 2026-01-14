@@ -1,4 +1,4 @@
-local property_effects = require("src.gameplay.domain.property")
+local property_effects = require("src.gameplay.domain.land")
 local logger = require("src.util.logger")
 local constants = require("src.config.constants")
 

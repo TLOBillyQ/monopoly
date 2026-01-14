@@ -1,8 +1,6 @@
 local Effect = {}
 Effect.__index = Effect
 
-
-
 local function can_apply(effect, ctx)
   if effect.can_apply then
     local ok, reason = effect.can_apply(ctx)
@@ -16,8 +14,6 @@ local function apply(effect, ctx)
     return effect.apply(ctx)
   end
 end
-
-
 
 function Effect.scan(effect_defs, ctx)
   local entries = {}

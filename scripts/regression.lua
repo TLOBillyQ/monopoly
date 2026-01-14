@@ -7,6 +7,7 @@ local ItemService = require("src.gameplay.app.services.item_service")
 local LandingResolver = require("src.gameplay.app.landing_resolver")
 local Choice = require("src.gameplay.app.choice")
 local ChoiceResolver = require("src.gameplay.app.choice_resolver")
+local IntentDispatcher = require("src.gameplay.app.intent_dispatcher")
 
 local function assert_eq(a, b, msg)
   if a ~= b then
@@ -68,7 +69,7 @@ end
 local function test_roadblock_stop()
   local g = new_game()
   local p = g:current_player()
-  g.overlays.roadblocks[2] = true
+  g.services.overlay.place_roadblock(g, 2)
   local res = MovementService.move(g, p, 3, { branch_parity = 3 })
   assert_eq(res.stopped_on_roadblock, true, "stopped on roadblock")
   assert_eq(p.position, 2, "position should stop at roadblock")
@@ -96,21 +97,30 @@ local function test_missile_card()
   g:set_tile_owner(tile, 2)
   g:set_tile_level(tile, 1)
   g:update_player_position(g.players[2], idx)
-  g.overlays.roadblocks[idx] = true
-  g.overlays.mines[idx] = true
+  g.services.overlay.place_roadblock(g, idx)
+  g.services.overlay.place_mine(g, idx)
   p.inventory:add({ id = 2013 })
-  local ok = ItemService.use_item(g, p, 2013)
+  local res = ItemService.use_item(g, p, 2013)
+  if type(res) == "table" and res.intent then
+    IntentDispatcher.dispatch_from_result(g, res)
+    local pending = Choice.get(g)
+    assert(pending and pending.kind == "missile_target", "missile should open choice")
+    local first = pending.options[1]
+    ChoiceResolver.resolve(g, pending, { option_id = first.id })
+    res = true
+  end
+  local ok = (type(res) == "table" and res.ok ~= nil) and res.ok or res
   assert_eq(ok, true, "missile use ok")
   assert_eq(tile_state(g, tile).level, 0, "building destroyed by missile")
-  assert_eq(g.overlays.roadblocks[idx], nil, "roadblock cleared")
-  assert_eq(g.overlays.mines[idx], nil, "mine cleared")
+  assert_eq(g.services.overlay.has_roadblock(g, idx), false, "roadblock cleared")
+  assert_eq(g.services.overlay.has_mine(g, idx), false, "mine cleared")
   assert(g.players[2].status.stay_turns > 0, "target sent to hospital")
 end
 
 local function test_landing_optional_waits_with_ui()
   local g = new_game()
-  -- UI is considered available when an adapter port exists (ui_port or legacy ui_hooks).
-  g.ui_hooks = {}
+  -- UI is considered available when an adapter port exists.
+  g.ui_port = {}
   local p = g:current_player()
   local idx, tile = first_land_tile(g.board)
   g:update_player_position(p, idx)
@@ -120,21 +130,26 @@ local function test_landing_optional_waits_with_ui()
   assert(pending and pending.kind == "landing_optional_effect", "pending choice for landing optional")
 end
 
-local function test_landing_optional_auto_without_ui()
+local function test_landing_optional_waits_without_ui_and_can_resolve()
   local g = new_game()
   local p = g:current_player()
   local idx, tile = first_land_tile(g.board)
   g:update_player_position(p, idx)
   local before_cash = p.cash
   local res = LandingResolver.resolve(g, p, tile, {})
-  assert(not res, "landing resolver should not wait without UI")
-  assert(tile_state(g, tile).owner_id == p.id, "land should be auto purchased")
+  assert(res and res.waiting, "landing resolver should wait even without UI")
+  local pending = Choice.get(g)
+  assert(pending and pending.kind == "landing_optional_effect", "pending choice expected without UI")
+  local first = pending.options and pending.options[1]
+  assert(first, "expected at least one optional effect")
+  ChoiceResolver.resolve(g, pending, { option_id = first.id })
+  assert(tile_state(g, tile).owner_id == p.id, "land should be purchased after resolving choice")
   assert(p.cash < before_cash, "cash deducted for purchase")
 end
 
 local function test_landing_optional_stale_choice_is_blocked()
   local g = new_game()
-  g.ui_hooks = {}
+  g.ui_port = {}
   local p = g:current_player()
   local idx, tile = first_land_tile(g.board)
   g:update_player_position(p, idx)
@@ -203,7 +218,7 @@ local tests = {
   test_monster_card,
   test_missile_card,
   test_landing_optional_waits_with_ui,
-  test_landing_optional_auto_without_ui,
+  test_landing_optional_waits_without_ui_and_can_resolve,
   test_landing_optional_stale_choice_is_blocked,
   test_chance_is_mandatory_effect_entrypoint,
   test_movement_examples_from_issue,

@@ -34,15 +34,15 @@ local function remote_priority(game, player, sim)
   if not tile then
     return nil
   end
-  local st = tile_state(game, tile)
+  local st = (tile.type == "land") and tile_state(game, tile) or nil
   local rank, score
   if tile.type == "item" then
     rank, score = 1, sim.steps
   elseif tile.type == "chance" then
     rank, score = 2, sim.steps
-  elseif tile.type == "land" and not st.owner_id then
+  elseif tile.type == "land" and st and not st.owner_id then
     rank, score = 3, sim.steps
-  elseif tile.type == "land" and st.owner_id == player.id then
+  elseif tile.type == "land" and st and st.owner_id == player.id then
     rank, score = 4, sim.steps
   elseif tile.type == "start" then
     rank, score = 5, sim.steps
@@ -54,7 +54,7 @@ local function remote_priority(game, player, sim)
     rank, score = 8, sim.steps
   elseif tile.type == "hospital" then
     rank, score = 9, sim.steps
-  elseif tile.type == "land" and st.owner_id and st.owner_id ~= player.id then
+  elseif tile.type == "land" and st and st.owner_id and st.owner_id ~= player.id then
     rank, score = 10, -current_rent(tile, st.level)
   end
   if not rank then

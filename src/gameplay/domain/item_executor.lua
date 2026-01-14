@@ -90,36 +90,27 @@ local function handle_target_player_item(game, player, item_id, context, deps)
     return ok
   end
 
-  if UI.is_available(game) and #candidates > 1 then
-    local options = {}
-    local body_lines = {}
-    for _, t in ipairs(candidates) do
-      table.insert(body_lines, t.name .. " 现金:" .. t.cash .. (t.status.deity and (" 神:" .. t.status.deity.type) or ""))
-      table.insert(options, { id = t.id, label = t.name })
-    end
-    return {
-      waiting = true,
-      intent = {
-        kind = "need_choice",
-        choice_spec = {
-          kind = "item_target_player",
-          title = inventory.item_name(item_id) .. "：选择目标玩家",
-          body_lines = body_lines,
-          options = options,
-          allow_cancel = true,
-          cancel_label = "取消",
-          meta = { item_id = item_id, user_id = player.id },
-        },
+  local options = {}
+  local body_lines = {}
+  for _, t in ipairs(candidates) do
+    table.insert(body_lines, t.name .. " 现金:" .. t.cash .. (t.status.deity and (" 神:" .. t.status.deity.type) or ""))
+    table.insert(options, { id = t.id, label = t.name })
+  end
+  return {
+    waiting = true,
+    intent = {
+      kind = "need_choice",
+      choice_spec = {
+        kind = "item_target_player",
+        title = inventory.item_name(item_id) .. "：选择目标玩家",
+        body_lines = body_lines,
+        options = options,
+        allow_cancel = true,
+        cancel_label = "取消",
+        meta = { item_id = item_id, user_id = player.id },
       },
-    }
-  end
-
-  local target = candidates[1]
-  local ok = Executor.apply_target_item_effect(game, player, item_id, target)
-  if ok then
-    inventory.consume(player, item_id)
-  end
-  return ok
+    },
+  }
 end
 
 local function handle_remote_dice(game, player, item_id, context, deps)
@@ -139,34 +130,27 @@ local function handle_remote_dice(game, player, item_id, context, deps)
     end
     return ok
   end
-  if UI.is_available(game) then
-    local options = {}
-    local body_lines = {}
-    for i = 1, 6 do
-      table.insert(options, { id = i, label = tostring(i) })
-      table.insert(body_lines, "点数 " .. i)
-    end
-    return {
-      waiting = true,
-      intent = {
-        kind = "need_choice",
-        choice_spec = {
-          kind = "remote_dice_value",
-          title = "遥控骰子：选择点数",
-          body_lines = body_lines,
-          options = options,
-          allow_cancel = true,
-          cancel_label = "放弃",
-          meta = { player_id = player.id, item_id = item_id, dice_count = dice_count },
-        },
+  local options = {}
+  local body_lines = {}
+  for i = 1, 6 do
+    table.insert(options, { id = i, label = tostring(i) })
+    table.insert(body_lines, "点数 " .. i)
+  end
+  return {
+    waiting = true,
+    intent = {
+      kind = "need_choice",
+      choice_spec = {
+        kind = "remote_dice_value",
+        title = "遥控骰子：选择点数",
+        body_lines = body_lines,
+        options = options,
+        allow_cancel = true,
+        cancel_label = "放弃",
+        meta = { player_id = player.id, item_id = item_id, dice_count = dice_count },
       },
-    }
-  end
-
-  if not inventory.consume(player, item_id) then
-    return false
-  end
-  return Executor.apply_remote_dice(game, player, dice_count, 6)
+    },
+  }
 end
 
 local function handle_roadblock(game, player, item_id, context, deps)
@@ -188,39 +172,27 @@ local function handle_roadblock(game, player, item_id, context, deps)
     return Roadblock.apply(game, player, idx)
   end
 
-  if UI.is_available(game) then
-    local options = {}
-    local body_lines = {}
-    for _, cand in ipairs(candidates) do
-      table.insert(options, { id = cand.idx, label = cand.label })
-      table.insert(body_lines, cand.label)
-    end
-    return {
-      waiting = true,
-      intent = {
-        kind = "need_choice",
-        choice_spec = {
-          kind = "roadblock_target",
-          title = "路障卡：选择位置",
-          body_lines = body_lines,
-          options = options,
-          allow_cancel = true,
-          cancel_label = "放弃",
-          meta = { player_id = player.id, item_id = item_id },
-        },
+  local options = {}
+  local body_lines = {}
+  for _, cand in ipairs(candidates) do
+    table.insert(options, { id = cand.idx, label = cand.label })
+    table.insert(body_lines, cand.label)
+  end
+  return {
+    waiting = true,
+    intent = {
+      kind = "need_choice",
+      choice_spec = {
+        kind = "roadblock_target",
+        title = "路障卡：选择位置",
+        body_lines = body_lines,
+        options = options,
+        allow_cancel = true,
+        cancel_label = "放弃",
+        meta = { player_id = player.id, item_id = item_id },
       },
-    }
-  end
-
-  local best = Roadblock.pick_best(candidates)
-  if not best then
-    logger.warn(player.name .. " 未找到可放置的路障格子")
-    return false
-  end
-  if not inventory.consume(player, item_id) then
-    return false
-  end
-  return Roadblock.apply(game, player, best.idx)
+    },
+  }
 end
 
 local function handle_monster(game, player, item_id, _context, deps)
