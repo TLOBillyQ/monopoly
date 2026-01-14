@@ -2,28 +2,20 @@ local logger = require("src.util.logger")
 local Tile = require("src.core.tile")
 local BoardUtils = require("src.gameplay.domain.item_board_utils")
 local WorldOps = require("src.gameplay.domain.item_world_ops")
+local constants = require("src.config.constants")
 
 local Missile = {}
 
 local tile_state = Tile.get_state
 
-local function get_service(context, game, key)
-  if context and context.services and context.services[key] then
-    return context.services[key]
-  end
-  return game and game.services and game.services[key]
-end
-
-local function send_players_to_hospital(game, idx, context)
+local function send_players_to_hospital(game, idx)
   local occupants = game.occupants[idx]
   if not occupants then
     return 0
   end
-  local status = get_service(context, game, "status")
-  if not status then
-    logger.warn("缺少 StatusService，无法送医")
-    return 0
-  end
+
+  local hospital_index = game.board:find_first_by_type("hospital")
+  
   local count = 0
   local unpack_fn = table.unpack or unpack
   local snapshot = { unpack_fn(occupants) }
@@ -31,7 +23,14 @@ local function send_players_to_hospital(game, idx, context)
     local target = game.players[pid]
     if target then
       game:set_player_seat(target, nil)
-      status.send_to_hospital(game, target, { skip_fee = true })
+      if hospital_index then
+        game:update_player_position(target, hospital_index)
+      end
+      if game.set_player_status then
+        game:set_player_status(target, "move_dir", nil)
+      end
+      game:set_player_status(target, "stay_turns", constants.hospital_stay_turns)
+      logger.event(target.name .. " 被炸伤送往医院，需停留 " .. constants.hospital_stay_turns .. " 回合")
       count = count + 1
     end
   end
@@ -55,10 +54,10 @@ function Missile.find_target(game, player, distance)
 end
 
 function Missile.apply(game, player, idx, context)
-  WorldOps.clear_overlays(game, idx, get_service(context, game, "overlay"))
+  WorldOps.clear_overlays(game, idx)
   local tile = game.board:get_tile(idx)
   WorldOps.destroy_building(game, tile)
-  local hit = send_players_to_hospital(game, idx, context)
+  local hit = send_players_to_hospital(game, idx)
   local msg = player.name .. " 发射导弹轰炸 " .. tile.name
   if tile.type == "land" then
     msg = msg .. "，建筑被摧毁"
@@ -76,7 +75,6 @@ end
 
 function Missile.use(game, player, distance, consume_fn, opts)
   opts = opts or {}
-  opts.services = opts.services or (game and game.services)
   local best_idx = Missile.find_target(game, player, distance)
   if not best_idx then
     logger.warn(player.name .. " 前后无可轰炸目标，导弹卡未生效")

@@ -2,7 +2,9 @@ local Choice = require("src.gameplay.app.choice")
 local Effect = require("src.gameplay.domain.effect")
 local Inventory = require("src.gameplay.domain.item_inventory")
 local Executor = require("src.gameplay.domain.item_executor")
+local Missile = require("src.gameplay.domain.item_missile")
 local Strategy = require("src.gameplay.domain.item_strategy")
+local Steal = require("src.gameplay.domain.item_steal")
 local Roadblock = require("src.gameplay.domain.item_roadblock")
 local logger = require("src.util.logger")
 local IntentDispatcher = require("src.gameplay.app.intent_dispatcher")
@@ -231,8 +233,10 @@ local function handle_missile_target(game, choice, action)
     if meta.item_id then
       Inventory.consume(player, meta.item_id)
     end
-    local res = Executor.apply_missile(game, player, idx, { services = game and game.services })
-    if res then
+    local res = Missile.apply(game, player, idx, { services = game and game.services })
+    if res and res.intent then
+      IntentDispatcher.dispatch(game, res.intent)
+    elseif res and res.ok == nil and type(res) == "table" and res.kind then -- Handle intent directly if returned
       IntentDispatcher.dispatch(game, res)
     end
   end
@@ -283,9 +287,15 @@ local function handle_steal_target(game, choice, action)
   end
 
   if target.inventory:count() <= 1 then
-    local res = Executor.steal_item_at_index(game, stealer, target, 1, { inventory = Inventory })
-    IntentDispatcher.dispatch(game, res)
+    local res = Steal.steal_item_at_index(game, stealer, target, 1, { 
+      item_name = Inventory.item_name, 
+      consume_item = Inventory.consume 
+    })
+    logger.event("Steal choice result (single)", res)
     Choice.clear(game)
+    if res and res.intent then
+      IntentDispatcher.dispatch(game, res.intent)
+    end
     return { stay = false }
   end
 
@@ -303,8 +313,15 @@ local function handle_steal_item(game, choice, action)
   local stealer = meta.stealer_id and game.players[meta.stealer_id] or game:current_player()
   local target = meta.target_id and game.players[meta.target_id]
   if stealer and target and idx then
-    local res = Executor.steal_item_at_index(game, stealer, target, idx, { inventory = Inventory })
-    IntentDispatcher.dispatch(game, res)
+    local res = Steal.steal_item_at_index(game, stealer, target, idx, { 
+      item_name = Inventory.item_name, 
+      consume_item = Inventory.consume 
+    })
+    logger.event("Steal choice result (multi)", res)
+    Choice.clear(game)
+    if res and res.intent then
+      IntentDispatcher.dispatch(game, res.intent)
+    end
   end
   Choice.clear(game)
   return { stay = false }

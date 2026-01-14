@@ -4,6 +4,8 @@ local IntentDispatcher = require("src.gameplay.app.intent_dispatcher")
 local Inventory = require("src.gameplay.domain.item_inventory")
 local Strategy = require("src.gameplay.domain.item_strategy")
 local Executor = require("src.gameplay.domain.item_executor")
+local Monster = require("src.gameplay.domain.item_monster")
+local Missile = require("src.gameplay.domain.item_missile")
 
 local function phase_start(tm)
   local player = tm.game:current_player()
@@ -37,8 +39,8 @@ local function phase_start(tm)
 
   local pre = Strategy.auto_pre_action(tm.game, player, {
     inventory = Inventory,
-    find_monster_target = Executor.find_monster_target,
-    find_missile_target = Executor.find_missile_target,
+    find_monster_target = Monster.find_target,
+    find_missile_target = Missile.find_target,
     use_item = function(g, p, id, ctx)
       ctx = ctx or { by_ai = true }
       ctx.services = g.services

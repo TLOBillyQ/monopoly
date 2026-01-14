@@ -4,14 +4,6 @@ local Roadblock = {}
 
 local OPPOSITE = { up = "down", down = "up", left = "right", right = "left" }
 
-local function has_overlay(game, idx)
-  local overlay = game.services["overlay"]
-  if not overlay then
-    return false
-  end
-  return overlay.has_roadblock(game, idx) or overlay.has_mine(game, idx)
-end
-
 local function make_candidate(board, player, idx, dir, step, seen)
   if not idx or seen[idx] or idx == player.position then
     return nil
@@ -66,7 +58,8 @@ end
 
 local function priority_for_candidate(game, player, cand)
   local tile = cand.tile
-  if has_overlay(game, cand.idx) then
+  local board = game.board
+  if board:has_roadblock(cand.idx) or board:has_mine(cand.idx) then
     return nil
   end
 

@@ -1,19 +1,7 @@
 local logger = require("src.util.logger")
+local constants = require("src.config.constants")
 
 local ItemEffects = {}
-
-local function resolve_service(context, game, key)
-  if context and context.services and context.services[key] then
-    return context.services[key]
-  end
-  return game and game.services and game.services[key]
-end
-
-local function require_service(game, context, key, name)
-  local svc = resolve_service(context, game, key)
-  assert(svc, "Missing " .. name)
-  return svc
-end
 
 local function find_item_index(player, item_id)
   return player.inventory:find_index(function(it)
@@ -34,16 +22,20 @@ local TARGET_EFFECTS = {
   },
   [2012] = {
     apply = function(game, user, target, context)
-      local status = require_service(game, context, "status", "StatusService")
-      status.send_to_mountain(game, target)
+      local idx = game.board:find_first_by_type("mountain")
+      if idx then
+        game:update_player_position(target, idx)
+      end
+      game:set_player_status(target, "move_dir", nil)
+      game:set_player_status(target, "stay_turns", constants.mountain_stay_turns)
+      logger.event(target.name .. " 进入深山，停留 " .. target.status.stay_turns .. " 回合")
       logger.event(user.name .. " 使用流放卡，将 " .. target.name .. " 送往深山")
       return true
     end,
   },
   [2014] = {
     apply = function(game, user, target, context)
-      local status = require_service(game, context, "status", "StatusService")
-      if status.has_angel(target) then
+      if target:has_deity("angel") then
         logger.event(target.name .. " 有天使，查税无效")
         return true
       end
@@ -57,8 +49,10 @@ local TARGET_EFFECTS = {
       target:deduct_cash(fee)
       logger.event(user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. fee .. " 税金")
       if target.cash < 0 then
-        local bankruptcy = require_service(game, context, "bankruptcy", "BankruptcyService")
-        bankruptcy.eliminate(game, target)
+        local bankruptcy = (game.services and game.services.bankruptcy)
+        if bankruptcy then
+          bankruptcy.eliminate(game, target)
+        end
       end
       return true
     end,
@@ -138,8 +132,8 @@ handlers.set_status = function(game, player, cfg, _context)
 end
 
 handlers.deity = function(game, player, cfg, context)
-  local status = require_service(game, context, "status", "StatusService")
-  status.apply_deity(player, cfg.deity)
+  player:set_deity(cfg.deity, constants.deity_duration_turns)
+  logger.event(player.name .. " 获得附身：" .. cfg.deity)
   if cfg.log then
     logger.event(player.name .. cfg.log)
   end

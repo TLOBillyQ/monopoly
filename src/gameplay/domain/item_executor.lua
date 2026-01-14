@@ -33,40 +33,6 @@ function Executor.apply_remote_dice(game, player, dice_count, value)
   return true
 end
 
-function Executor.find_monster_target(game, player, distance)
-  return Monster.find_target(game, player, distance)
-end
-
-function Executor.use_monster(game, player, distance)
-  return Monster.use(game, player, distance)
-end
-
-function Executor.find_missile_target(game, player, distance)
-  return Missile.find_target(game, player, distance)
-end
-
-function Executor.apply_missile(game, player, idx, context)
-  return Missile.apply(game, player, idx, context)
-end
-
-function Executor.use_missile(game, player, distance, deps)
-  local inventory = get_inventory(deps)
-  local res = Missile.use(game, player, distance, inventory.consume, deps)
-  if type(res) == "table" then
-    if res.waiting then
-      return res
-    end
-    if res.ok ~= nil then
-      return res.ok
-    end
-    return true
-  end
-  return res
-end
-
-function Executor.apply_target_item_effect(game, player, item_id, target)
-  return ItemEffects.apply_target(game, player, item_id, target)
-end
 
 local function handle_target_player_item(game, player, item_id, context, deps)
   local strategy = get_strategy(deps)
@@ -83,7 +49,7 @@ local function handle_target_player_item(game, player, item_id, context, deps)
     if not target then
       return false
     end
-    local ok = Executor.apply_target_item_effect(game, player, item_id, target)
+    local ok = ItemEffects.apply_target(game, player, item_id, target)
     if ok then
       inventory.consume(player, item_id)
     end
@@ -197,22 +163,33 @@ end
 
 local function handle_monster(game, player, item_id, _context, deps)
   local inventory = get_inventory(deps)
-  if not Executor.find_monster_target(game, player, 3) then
+  if not Monster.find_target(game, player, 3) then
     logger.warn(player.name .. " 前后无他人建筑，怪兽卡未使用")
     return false
   end
   if not inventory.consume(player, item_id) then
     return false
   end
-  return Executor.use_monster(game, player, 3)
+  return Monster.use(game, player, 3)
 end
 
 local function handle_missile(game, player, item_id, _context, deps)
-  if not Executor.find_missile_target(game, player, 3) then
+  if not Missile.find_target(game, player, 3) then
     logger.warn(player.name .. " 前后无轰炸目标，导弹卡未使用")
     return false
   end
-  return Executor.use_missile(game, player, 3, deps)
+  local inventory = get_inventory(deps)
+  local res = Missile.use(game, player, 3, inventory.consume, deps)
+  if type(res) == "table" then
+    if res.waiting then
+      return res
+    end
+    if res.ok ~= nil then
+      return res.ok
+    end
+    return true
+  end
+  return res
 end
 
 local item_handlers = {
@@ -255,23 +232,6 @@ function Executor.use_item(game, player, item_id, context, deps)
 
   logger.warn("未实现的道具:" .. tostring(item_id))
   return false
-end
-
-function Executor.steal_item_at_index(game, player, target, item_idx, deps)
-  local inventory = get_inventory(deps)
-  return Steal.steal_item_at_index(game, player, target, item_idx, {
-    item_name = inventory.item_name,
-    consume_item = inventory.consume,
-  })
-end
-
-function Executor.handle_pass_players(game, player, encountered_ids, deps)
-  local inventory = get_inventory(deps)
-  return Steal.handle_pass_players(game, player, encountered_ids, {
-    item_name = inventory.item_name,
-    consume_item = inventory.consume,
-    services = (deps and deps.services) or (game and game.services),
-  })
 end
 
 return Executor

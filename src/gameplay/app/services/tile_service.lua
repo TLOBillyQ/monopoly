@@ -3,6 +3,7 @@ local IntentDispatcher = require("src.gameplay.app.intent_dispatcher")
 local Choice = require("src.gameplay.app.choice")
 local Executor = require("src.gameplay.domain.item_executor")
 local Inventory = require("src.gameplay.domain.item_inventory")
+local Steal = require("src.gameplay.domain.item_steal")
 
 local TileService = {}
 
@@ -154,6 +155,50 @@ function TileService.handle_choice(game, choice, action)
     end
     Choice.clear(game)
     return { stay = false }
+  end
+
+  return nil
+end
+
+function TileService.handle_pass_players(game, player, encountered_players, context)
+  if not game or not game.services or not encountered_players or #encountered_players == 0 then
+    return nil
+  end
+
+  local result = { waiting = false }
+
+  for _, other_player in ipairs(encountered_players) do
+    if other_player.id ~= player.id then
+      local status = require_service(game, "status", "StatusService")
+      if status.has_angel(other_player) then
+        logger.event(other_player.name .. " 天使保护，无法被偷取")
+      else
+        local res = Steal.handle_steal(game, player, other_player, context)
+        if res and res.intent then
+          if res.waiting then
+            return res
+          end
+          if res.intent then
+            return res
+          end
+        end
+      end
+    end
+  end
+
+  if context and context.encountered_players and #context.encountered_players > 0 then
+    local res = Steal.handle_pass_players(game, player, context.encountered_players, {
+      item_name = Inventory.item_name,
+      consume_item = Inventory.consume
+    })
+    if res then
+      if res.waiting then
+        return res
+      end
+      if res.intent then
+        return res
+      end
+    end
   end
 
   return nil

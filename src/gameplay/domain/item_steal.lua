@@ -1,4 +1,5 @@
 local logger = require("src.util.logger")
+local UI = require("src.gameplay.ports.ui_port")
 
 local Steal = {}
 
@@ -7,15 +8,6 @@ local function find_item_index(player, item_id)
     return it.id == item_id
   end)
 end
-
-local function get_service(opts, game, key)
-  if opts and opts.services and opts.services[key] then
-    return opts.services[key]
-  end
-  return game and game.services and game.services[key]
-end
-
-
 
 function Steal.steal_item_at_index(game, player, target, item_idx, opts)
   opts = opts or {}
@@ -63,14 +55,9 @@ function Steal.handle_pass_players(game, player, encountered_ids, opts)
   end
 
   local candidates = {}
-  local status = get_service(opts, game, "status")
-  if not status then
-    logger.warn("缺少 StatusService，无法处理偷窃目标筛选")
-    return
-  end
   for _, target_id in ipairs(encountered_ids) do
     local t = game.players[target_id]
-    if t and not status.has_angel(t) and t.inventory:count() > 0 then
+    if t and not t:has_deity("angel") and t.inventory:count() > 0 then
       table.insert(candidates, t)
     end
   end
