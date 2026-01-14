@@ -1,18 +1,10 @@
 # AGENTS.md
 
-## 项目概览
-
-- 大富翁回合制棋盘游戏，Lua
-- 表驱动、SOLID 原则、好莱坞原则
-- 切分适配层，Love2D 环境注入，预留 Eggy 适配层
-
-## 自检
-
-- 脚本测试：`deps_check.lua`、`regression.lua`
-
 ## Coding Rules
 
 **Primary rule: 优先删除或复用代码，而不是新增代码。**
+### 0. 交付前自测
+- lua语法检查 + `tests/deps_check.lua` + `tests/regression.lua`
 
 ### 1. 功能不变（Hard Rule）
 - 行为 / 输出 / 边界条件 **绝对不变**

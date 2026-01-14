@@ -76,7 +76,7 @@ local TARGET_EFFECTS = {
   [2016] = {
     require_user = function(user)
       if not user:has_deity("poor") then
-        logger.warn("未附身穷神，无法送神")
+        --logger.warn("未附身穷神，无法送神")
         return false
       end
       return true

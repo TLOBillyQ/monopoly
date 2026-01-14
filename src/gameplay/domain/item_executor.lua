@@ -3,8 +3,7 @@ local logger = require("src.util.logger")
 local UI = require("src.gameplay.ports.ui_port")
 local Agent = require("src.gameplay.ai.agent")
 local ItemEffects = require("src.gameplay.domain.item_post_effects")
-local Monster = require("src.gameplay.domain.item_monster")
-local Missile = require("src.gameplay.domain.item_missile")
+local Demolish = require("src.gameplay.domain.item_demolish")
 local Roadblock = require("src.gameplay.domain.item_roadblock")
 local Steal = require("src.gameplay.domain.item_steal")
 local Inventory = require("src.gameplay.domain.item_inventory")
@@ -161,35 +160,24 @@ local function handle_roadblock(game, player, item_id, context, deps)
   }
 end
 
-local function handle_monster(game, player, item_id, _context, deps)
+local function handle_monster(game, player, item_id, context, deps)
   local inventory = get_inventory(deps)
-  if not Monster.find_target(game, player, 3) then
-    logger.warn(player.name .. " 前后无他人建筑，怪兽卡未使用")
-    return false
-  end
-  if not inventory.consume(player, item_id) then
-    return false
-  end
-  return Monster.use(game, player, 3)
+  return Demolish.use(game, player, 3, inventory.consume, {
+    item_id = item_id,
+    injure = false,
+    title = "怪兽卡",
+    by_ai = context and context.by_ai
+  })
 end
 
-local function handle_missile(game, player, item_id, _context, deps)
-  if not Missile.find_target(game, player, 3) then
-    logger.warn(player.name .. " 前后无轰炸目标，导弹卡未使用")
-    return false
-  end
+local function handle_missile(game, player, item_id, context, deps)
   local inventory = get_inventory(deps)
-  local res = Missile.use(game, player, 3, inventory.consume, deps)
-  if type(res) == "table" then
-    if res.waiting then
-      return res
-    end
-    if res.ok ~= nil then
-      return res.ok
-    end
-    return true
-  end
-  return res
+  return Demolish.use(game, player, 3, inventory.consume, {
+    item_id = item_id,
+    injure = true,
+    title = "导弹卡",
+    by_ai = context and context.by_ai
+  })
 end
 
 local item_handlers = {

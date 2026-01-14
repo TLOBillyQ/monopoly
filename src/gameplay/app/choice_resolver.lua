@@ -2,7 +2,7 @@ local Choice = require("src.gameplay.app.choice")
 local Effect = require("src.gameplay.domain.effect")
 local Inventory = require("src.gameplay.domain.item_inventory")
 local Executor = require("src.gameplay.domain.item_executor")
-local Missile = require("src.gameplay.domain.item_missile")
+local Demolish = require("src.gameplay.domain.item_demolish")
 local Strategy = require("src.gameplay.domain.item_strategy")
 local Steal = require("src.gameplay.domain.item_steal")
 local Roadblock = require("src.gameplay.domain.item_roadblock")
@@ -249,7 +249,7 @@ local function handle_post_action_item(game, choice, action)
   return { stay = false }
 end
 
-local function handle_missile_target(game, choice, action)
+local function handle_demolish_target(game, choice, action)
   if is_cancel(action) then
     Choice.clear(game)
     return { stay = false }
@@ -261,11 +261,13 @@ local function handle_missile_target(game, choice, action)
     if meta.item_id then
       Inventory.consume(player, meta.item_id)
     end
-    local res = Missile.apply(game, player, idx, { services = game and game.services })
+    local res = Demolish.apply(game, player, idx, { 
+      services = game and game.services,
+      injure = meta.injure,
+      title = meta.title
+    })
     if res and res.intent then
       dispatch(game, res.intent)
-    elseif res and res.ok == nil and type(res) == "table" and res.kind then -- Handle intent directly if returned
-      dispatch(game, res)
     end
   end
   finish_post_action(game)
@@ -393,7 +395,7 @@ local function handle_remote_dice_value(game, choice, action)
 end
 
 handlers.post_action_item = handle_post_action_item
-handlers.missile_target = handle_missile_target
+handlers.demolish_target = handle_demolish_target
 handlers.roadblock_target = handle_roadblock_target
 handlers.steal_target = handle_steal_target
 handlers.steal_item = handle_steal_item

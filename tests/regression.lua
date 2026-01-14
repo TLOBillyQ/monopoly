@@ -83,7 +83,7 @@ local function test_monster_card()
   g:set_tile_owner(tile, 2)
   g:set_tile_level(tile, 2)
   p.inventory:add({ id = 2008 })
-  local res = Executor.use_item(g, p, 2008, { services = g.services }, { inventory = Inventory, strategy = Strategy })
+  local res = Executor.use_item(g, p, 2008, { services = g.services, by_ai = true }, { inventory = Inventory, strategy = Strategy })
   local ok = (type(res) == "table" and res.ok ~= nil) and res.ok or res
   assert_eq(ok, true, "monster use ok")
   assert_eq(tile_state(g, tile).level, 0, "building destroyed")
@@ -106,7 +106,7 @@ local function test_missile_card()
       Choice.open(g, res.intent.choice_spec)
     end
     local pending = Choice.get(g)
-    assert(pending and pending.kind == "missile_target", "missile should open choice")
+    assert(pending and pending.kind == "demolish_target", "missile should open choice")
     local first = pending.options[1]
     ChoiceResolver.resolve(g, pending, { option_id = first.id })
     res = true

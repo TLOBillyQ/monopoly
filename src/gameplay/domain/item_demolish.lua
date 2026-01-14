@@ -4,7 +4,7 @@ local BoardUtils = require("src.gameplay.domain.item_board_utils")
 local WorldOps = require("src.gameplay.domain.item_world_ops")
 local constants = require("src.config.constants")
 
-local Missile = {}
+local Demolish = {}
 
 local tile_state = Tile.get_state
 
@@ -37,13 +37,14 @@ local function send_players_to_hospital(game, idx)
   return count
 end
 
-function Missile.find_target(game, player, distance)
+function Demolish.find_target(game, player, distance)
   local idx = BoardUtils.find_best_tile(game, player, distance, {
     score_fn = function(tile)
       if tile.type ~= "land" then
         return nil
       end
       local st = tile_state(game, tile)
+      -- Target occupied, developed lands not owned by self
       if not st.owner_id or st.owner_id == player.id or (st.level or 0) <= 0 then
         return nil
       end
@@ -53,35 +54,50 @@ function Missile.find_target(game, player, distance)
   return idx
 end
 
-function Missile.apply(game, player, idx, context)
+function Demolish.apply(game, player, idx, opts)
+  opts = opts or {}
   WorldOps.clear_overlays(game, idx)
   local tile = game.board:get_tile(idx)
+  
   WorldOps.destroy_building(game, tile)
-  local hit = send_players_to_hospital(game, idx)
-  local msg = player.name .. " 发射导弹轰炸 " .. tile.name
-  if tile.type == "land" then
-    msg = msg .. "，建筑被摧毁"
+  
+  local hit = 0
+  if opts.injure then
+    hit = send_players_to_hospital(game, idx)
   end
-  if hit > 0 then
-    msg = msg .. "，" .. hit .. " 名玩家送医"
+
+  local msg
+  if opts.injure then
+    msg = player.name .. " 发射导弹轰炸 " .. tile.name
+    if tile.type == "land" then
+       msg = msg .. "，建筑被摧毁"
+    end
+    if hit > 0 then
+      msg = msg .. "，" .. hit .. " 名玩家送医"
+    end
+  else
+    msg = player.name .. " 释放怪兽拆毁 " .. tile.name .. " 的建筑"
   end
+
   logger.event(msg)
+  
+  local title = opts.title or "破坏"
   return {
     ok = true,
-    intent = { kind = "push_popup", payload = { title = "导弹卡", body = msg } },
+    intent = { kind = "push_popup", payload = { title = title, body = msg } },
   }
 end
 
-
-function Missile.use(game, player, distance, consume_fn, opts)
+function Demolish.use(game, player, distance, consume_fn, opts)
   opts = opts or {}
-  local best_idx = Missile.find_target(game, player, distance)
+  local best_idx = Demolish.find_target(game, player, distance)
   if not best_idx then
-    logger.warn(player.name .. " 前后无可轰炸目标，导弹卡未生效")
+    logger.warn(player.name .. " 前后无可破坏目标，道具未生效")
     return false
   end
 
   if not opts.by_ai then
+    -- Interactive Mode: Let user choose if multiple targets or just confirm
     local idxs = BoardUtils.indices_in_range(game.board, player.position, distance)
     local options = {}
     local body_lines = {}
@@ -89,41 +105,60 @@ function Missile.use(game, player, distance, consume_fn, opts)
     local function push_option(idx)
       if idx and idx ~= player.position then
         local tile = game.board:get_tile(idx)
-        table.insert(body_lines, "#" .. idx .. " " .. tile.name)
-        table.insert(options, { id = idx, label = tile.name })
+        -- Only allow targeting valid tiles (owned by others, level > 0)
+        -- We reuse logic from determine_score or simpler check
+        if tile.type == "land" then
+          local st = tile_state(game, tile)
+          if st.owner_id and st.owner_id ~= player.id and (st.level or 0) > 0 then
+            table.insert(body_lines, "#" .. idx .. " " .. tile.name)
+            table.insert(options, { id = idx, label = tile.name })
+          end
+        end
       end
     end
 
-    push_option(best_idx)
+    -- We specifically want to show the 'best' one first or all of them.
+    -- The original Missile code iterated indices.
+    -- Let's just iterate all indices in range.
     for _, idx in ipairs(idxs) do
-      if idx ~= best_idx then
-        push_option(idx)
-      end
+       push_option(idx)
+    end
+    
+    -- If no valid targets found in range (shouldn't happen if best_idx found one)
+    if #options == 0 then
+       -- This acts as a fallback if find_best_tile sees one but our strict loop misses it (unlikely)
+       push_option(best_idx)
     end
 
     if #options > 0 then
+      local title = opts.title or "选择目标"
       return {
         waiting = true,
         intent = {
           kind = "need_choice",
           choice_spec = {
-            kind = "missile_target",
-            title = "导弹卡：选择目标格子",
+            kind = "demolish_target",
+            title = title .. "：选择目标格子",
             body_lines = body_lines,
             options = options,
             allow_cancel = true,
             cancel_label = "取消",
-            meta = { player_id = player.id },
+            meta = { 
+              player_id = player.id, 
+              item_id = opts.item_id,
+              injure = opts.injure,
+              title = opts.title 
+            },
           },
         },
       }
     end
   end
 
-  if not consume_fn(player, 2013) then
+  if consume_fn and not consume_fn(player, opts.item_id) then
     return false
   end
-  return Missile.apply(game, player, best_idx, opts)
+  return Demolish.apply(game, player, best_idx, opts)
 end
 
-return Missile
+return Demolish

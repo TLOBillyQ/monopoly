@@ -1,6 +1,6 @@
 local Tile = require("src.core.tile")
 local Roadblock = require("src.gameplay.domain.item_roadblock")
-local Missile = require("src.gameplay.domain.item_missile")
+local Demolish = require("src.gameplay.domain.item_demolish")
 
 local Agent = {}
 
@@ -166,8 +166,8 @@ function Agent.pick_roadblock_target(game, player)
   return best and best.idx or nil
 end
 
-function Agent.pick_missile_target(game, player, distance)
-  return Missile.find_target(game, player, distance)
+function Agent.pick_demolish_target(game, player, distance)
+  return Demolish.find_target(game, player, distance)
 end
 
 local function first_option_id(options)
@@ -208,8 +208,8 @@ function Agent.auto_action_for_choice(game, choice)
     return { type = "choice_select", choice_id = choice.id, option_id = idx or first_option_id(choice.options) }
   end
 
-  if choice.kind == "missile_target" then
-    local idx = Agent.pick_missile_target(game, actor, 3)
+  if choice.kind == "demolish_target" or choice.kind == "missile_target" then
+    local idx = Agent.pick_demolish_target(game, actor, 3)
     return { type = "choice_select", choice_id = choice.id, option_id = idx or first_option_id(choice.options) }
   end
 

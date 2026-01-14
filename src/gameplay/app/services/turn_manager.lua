@@ -9,6 +9,7 @@ local phase_landing_fn = require("src.gameplay.app.turn.land")
 local phase_post_fn = require("src.gameplay.app.turn.post")
 local phase_end_fn = require("src.gameplay.app.turn.end_turn")
 local Agent = require("src.gameplay.ai.agent")
+local Logger = require("src.util.logger")
 
 local TurnManager = {}
 TurnManager.__index = TurnManager
@@ -52,6 +53,11 @@ function TurnManager:_build_flow()
   local states = {}
   for name, fn in pairs(PHASES) do
     states[name] = function(args)
+      if name == "start" then
+        local p_idx = self.game.store:get({ "turn", "current_player_index" })
+        local turn_count = self.game.store:get({ "turn", "turn_count" }) or 0
+        Logger.info("回合: " .. (turn_count + 1) .. " [Player " .. tostring(p_idx) .. "]")
+      end
       self.game.store:set({ "turn", "phase" }, name)
       return fn(self, args)
     end
