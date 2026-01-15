@@ -1,10 +1,24 @@
 local logger = require("src.util.logger")
 local Tile = require("src.core.tile")
 local BoardUtils = require("src.gameplay.domain.item_board_utils")
-local WorldOps = require("src.gameplay.domain.item_world_ops")
 local constants = require("src.config.constants")
 
 local Demolish = {}
+
+local function clear_overlays(game, idx)
+  if game and game.board and game.board.clear_all then
+    game.board:clear_all(idx)
+  end
+end
+
+local function destroy_building(game, tile)
+  if not tile or tile.type ~= "land" then return end
+  if game and game.set_tile_level then
+    game:set_tile_level(tile, 0)
+  elseif game and game.store and tile and tile.id then
+    game.store:set({ "board", "tiles", tile.id, "level" }, 0)
+  end
+end
 
 local tile_state = Tile.get_state
 
@@ -56,10 +70,10 @@ end
 
 function Demolish.apply(game, player, idx, opts)
   opts = opts or {}
-  WorldOps.clear_overlays(game, idx)
+  clear_overlays(game, idx)
   local tile = game.board:get_tile(idx)
   
-  WorldOps.destroy_building(game, tile)
+  destroy_building(game, tile)
   
   local hit = 0
   if opts.injure then

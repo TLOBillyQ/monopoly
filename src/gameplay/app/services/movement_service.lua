@@ -3,7 +3,6 @@ local logger = require("src.util.logger")
 
 local MovementService = {}
 
-
 local function check_mine(game, player, current_pos)
   local board = game.board
   if not board:has_mine(current_pos) then
@@ -31,11 +30,12 @@ function MovementService.move(game, player, steps, opts)
   local visited = {}
   local pass_start = 0
   local stopped_on_roadblock = false
+  local market_interrupt = nil
   local current = player.position
   local start_tile = board:get_tile(current)
   local facing = opts.direction or (player.status and player.status.move_dir) or nil
 
-  for _ = 1, steps do
+  for step = 1, steps do
     local next_index, passed, step_dir = board:step_forward_by_facing(current, facing, branch_parity)
     pass_start = pass_start + passed
     facing = step_dir or facing
@@ -60,6 +60,21 @@ function MovementService.move(game, player, steps, opts)
       stopped_on_roadblock = true
       logger.event(player.name .. " 触发路障，停在 " .. board:get_tile(current).name)
       break
+    end
+
+    -- 经过黑市时中断（非最后一步），skip_market_check 用于测试
+    if not opts.skip_market_check then
+      local tile = board:get_tile(current)
+      if tile and tile.type == "market" and step < steps then
+        market_interrupt = {
+          position = current,
+          remaining_steps = steps - step,
+          facing = facing,
+          branch_parity = branch_parity,
+        }
+        logger.event(player.name .. " 经过黑市，剩余 " .. market_interrupt.remaining_steps .. " 步")
+        break
+      end
     end
   end
 
@@ -88,6 +103,7 @@ function MovementService.move(game, player, steps, opts)
     visited = visited,
     landing_tile = landing_tile,
     steps = steps,
+    market_interrupt = market_interrupt,
   }
 end
 

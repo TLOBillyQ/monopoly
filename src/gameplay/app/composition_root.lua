@@ -1,3 +1,7 @@
+-- CompositionRoot: 唯一的依赖组装点
+-- 职责：创建并连接所有运行时对象，注入依赖关系
+-- 原则：所有依赖关系在此处显式声明，其他模块不做组装
+
 local BoardFactory = require("src.gameplay.app.factories.board_factory")
 local Player = require("src.core.player")
 local Inventory = require("src.core.inventory")
@@ -12,16 +16,17 @@ local MarketService = require("src.gameplay.app.services.market_service")
 local BankruptcyService = require("src.gameplay.app.services.bankruptcy_service")
 local logger = require("src.util.logger")
 
-local Bootstrap = {}
+local CompositionRoot = {}
 
 local deep_copy = Tables.deep_copy
 
-function Bootstrap.create_board(opts)
+-- ========== 工厂方法 ==========
+
+local function create_board(opts)
   return BoardFactory.create(opts)
 end
 
-function Bootstrap.create_players(opts)
-  opts = opts or {}
+local function create_players(opts)
   local players = {}
   local names = opts.players or { "玩家1" }
   for i, name in ipairs(names) do
@@ -41,11 +46,11 @@ function Bootstrap.create_players(opts)
   return players
 end
 
-function Bootstrap.snapshot_inventory(inv)
+local function snapshot_inventory(inv)
   return { items = deep_copy(inv.items), max_slots = inv.max_slots }
 end
 
-function Bootstrap.snapshot_players(players)
+local function snapshot_players(players)
   local ps = {}
   for _, p in ipairs(players) do
     ps[p.id] = {
@@ -60,13 +65,13 @@ function Bootstrap.snapshot_players(players)
       eliminated = p.eliminated,
       properties = deep_copy(p.properties),
       status = deep_copy(p.status),
-      inventory = Bootstrap.snapshot_inventory(p.inventory),
+      inventory = snapshot_inventory(p.inventory),
     }
   end
   return ps
 end
 
-function Bootstrap.snapshot_tiles(path)
+local function snapshot_tiles(path)
   local ts = {}
   for _, tile in ipairs(path) do
     if tile.type == "land" then
@@ -76,11 +81,9 @@ function Bootstrap.snapshot_tiles(path)
   return ts
 end
 
-function Bootstrap.build_initial_state(board, players, rng)
+local function build_initial_state(board, players, rng)
   return {
-    board = {
-      tiles = Bootstrap.snapshot_tiles(board.path),
-    },
+    board = { tiles = snapshot_tiles(board.path) },
     turn = {
       current_player_index = 1,
       turn_count = 0,
@@ -89,45 +92,49 @@ function Bootstrap.build_initial_state(board, players, rng)
       choice_seq = 0,
     },
     rng = rng and rng:snapshot() or nil,
-    players = Bootstrap.snapshot_players(players),
+    players = snapshot_players(players),
   }
 end
 
--- 装配完整的 Game 实例（组合根）
+-- ========== 组装入口 ==========
+
+-- 组装完整的 Game 实例
 -- opts: { players, ai, auto_all, seed }
--- Game: Game 类（由调用者传入，避免循环依赖）
-function Bootstrap.assemble(opts, Game)
+-- GameClass: Game 类（由调用者传入，避免循环依赖）
+function CompositionRoot.assemble(opts, GameClass)
   opts = opts or {}
 
-  -- 1. 创建核心对象
-  local board = Bootstrap.create_board(opts)
+  -- 1. 创建核心领域对象
+  local board = create_board(opts)
   local rng = RNG.new(opts.seed)
-  local players = Bootstrap.create_players(opts)
+  local players = create_players(opts)
 
-  -- 2. 创建 store 和初始状态
-  local initial_state = Bootstrap.build_initial_state(board, players, rng)
+  -- 2. 创建 store（状态容器）
+  local initial_state = build_initial_state(board, players, rng)
   local store = Store.new(initial_state)
 
-  -- 3. 绑定 store 到 rng 和 players
+  -- 3. 绑定 store 到 rng（实现状态同步）
   rng._store = store
+
+  -- 4. 绑定 store 到 players（实现状态同步）
   for _, p in ipairs(players) do
     p._store = store
     if p.inventory then
       local pid = p.id
       p.inventory._on_change = function(inv)
-        store:set({ "players", pid, "inventory" }, Bootstrap.snapshot_inventory(inv))
+        store:set({ "players", pid, "inventory" }, snapshot_inventory(inv))
       end
     end
   end
 
-  -- 4. 创建 services
+  -- 5. 注册 services（静态模块引用）
   local services = {
     movement = MovementService,
     market = MarketService,
     bankruptcy = BankruptcyService,
   }
 
-  -- 5. 组装 game 实例
+  -- 6. 组装 game 实例
   local game = setmetatable({
     board = board,
     players = players,
@@ -138,13 +145,16 @@ function Bootstrap.assemble(opts, Game)
     winner = nil,
     last_turn = nil,
     services = services,
-  }, Game)
+  }, GameClass)
 
-  -- 6. 初始化运行时状态
+  -- 7. 初始化运行时状态
   game:rebuild_occupants()
   game.turn_manager = TurnManager.new(game)
 
   return game
 end
 
-return Bootstrap
+-- 导出 snapshot_inventory 供外部使用（Game 同步 inventory 时需要）
+CompositionRoot.snapshot_inventory = snapshot_inventory
+
+return CompositionRoot

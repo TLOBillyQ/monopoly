@@ -1,11 +1,9 @@
 local constants = require("src.config.constants")
 local logger = require("src.util.logger")
-local UI = require("src.gameplay.ports.ui_port")
 local Agent = require("src.gameplay.ai.agent")
 local ItemEffects = require("src.gameplay.domain.item_post_effects")
 local Demolish = require("src.gameplay.domain.item_demolish")
 local Roadblock = require("src.gameplay.domain.item_roadblock")
-local Steal = require("src.gameplay.domain.item_steal")
 local Inventory = require("src.gameplay.domain.item_inventory")
 local Strategy = require("src.gameplay.domain.item_strategy")
 
@@ -160,22 +158,18 @@ local function handle_roadblock(game, player, item_id, context, deps)
   }
 end
 
-local function handle_monster(game, player, item_id, context, deps)
-  local inventory = get_inventory(deps)
-  return Demolish.use(game, player, 3, inventory.consume, {
-    item_id = item_id,
-    injure = false,
-    title = "怪兽卡",
-    by_ai = context and context.by_ai
-  })
-end
+local DEMOLISH_ITEMS = {
+  [2008] = { title = "怪兽卡", injure = false },
+  [2013] = { title = "导弹卡", injure = true },
+}
 
-local function handle_missile(game, player, item_id, context, deps)
+local function handle_demolish(game, player, item_id, context, deps)
+  local cfg = DEMOLISH_ITEMS[item_id]
   local inventory = get_inventory(deps)
   return Demolish.use(game, player, 3, inventory.consume, {
     item_id = item_id,
-    injure = true,
-    title = "导弹卡",
+    injure = cfg.injure,
+    title = cfg.title,
     by_ai = context and context.by_ai
   })
 end
@@ -183,8 +177,8 @@ end
 local item_handlers = {
   [2002] = handle_remote_dice,
   [2004] = handle_roadblock,
-  [2008] = handle_monster,
-  [2013] = handle_missile,
+  [2008] = handle_demolish,
+  [2013] = handle_demolish,
 }
 
 for _, id in ipairs({ 2011, 2012, 2014, 2015, 2016, 2018 }) do

@@ -2,7 +2,6 @@ local constants = {
   starting_cash = 100000,
   default_dice_count = 1,
   dice_with_vehicle = 2,
-  action_timeout_seconds = 10,
   pass_start_bonus = 2000,
   hospital_fee = 1000,
   hospital_stay_turns = 2,

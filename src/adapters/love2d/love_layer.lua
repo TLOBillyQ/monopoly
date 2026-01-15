@@ -48,68 +48,6 @@ function LoveLayer:push_popup(payload)
   return true
 end
 
-
-function LoveLayer:request_choice(opts)
-  if not opts or not opts.candidates or #opts.candidates == 0 then
-    local buttons = opts and opts.buttons
-    if buttons and #buttons > 0 then
-      self.modal:push({
-        title = opts.title or "请选择",
-        body = table.concat(opts.body_lines or {}, "\n"),
-        buttons = buttons,
-        button_text = opts.cancel_label or "取消",
-      })
-      return true
-    end
-    return false
-  end
-
-  local buttons = {}
-  local candidates = opts.candidates or {}
-  for _, p in ipairs(candidates) do
-    table.insert(buttons, {
-      label = p.name,
-      on_click = function()
-        if opts.on_select then
-          opts.on_select(p)
-        end
-      end,
-    })
-  end
-
-  local body_lines = opts.body_lines or {}
-  if #body_lines == 0 then
-    for _, p in ipairs(candidates) do
-      table.insert(body_lines, p.name .. " 现金:" .. p.cash .. (p.status and p.status.deity and (" 神:" .. p.status.deity.type) or ""))
-    end
-  end
-
-  if opts.allow_cancel ~= false then
-    table.insert(buttons, {
-      label = opts.cancel_label or "取消",
-      on_click = function()
-        
-      end,
-    })
-  end
-
-  self.modal:push({
-    title = opts.title or "选择玩家",
-    body = table.concat(body_lines or {}, "\n"),
-    buttons = buttons,
-    button_text = opts.cancel_label or "取消",
-  })
-  return true
-end
-
-
-function LoveLayer:play_animation(payload)
-  if payload and payload.on_complete then
-    payload.on_complete()
-  end
-  return true
-end
-
 function LoveLayer:sync_pending_choice_modal()
   if not self.game or not self.game.store then
     return
@@ -150,10 +88,6 @@ end
 
 function LoveLayer:get_game()
   return self.game
-end
-
-function LoveLayer:set_game_factory(factory)
-  self.game_factory = factory
 end
 
 function LoveLayer:build_item_index()

@@ -200,19 +200,19 @@ local function test_movement_examples_from_issue()
 
   -- 例子1: 起点=海口路(3)，步数=4，终点=天津路(32)
   g:update_player_position(p, g.board:index_of_tile_id(3))
-  local r1 = MovementService.move(g, p, 4, { branch_parity = 4 })
+  local r1 = MovementService.move(g, p, 4, { branch_parity = 4, skip_market_check = true })
   assert_eq(g.board:get_tile(p.position).id, 32, "example1 end tile")
   assert(#r1.visited == 4, "example1 visited steps")
 
   -- 例子2: 起点=天津路(32)，当前方向向下(下一格31)，步数=6，终点=澳门路(6)
   g:update_player_position(p, g.board:index_of_tile_id(32))
-  local r2 = MovementService.move(g, p, 6, { branch_parity = 6, direction = "down" })
+  local r2 = MovementService.move(g, p, 6, { branch_parity = 6, direction = "down", skip_market_check = true })
   assert_eq(g.board:get_tile(p.position).id, 6, "example2 end tile")
   assert(#r2.visited == 6, "example2 visited steps")
 
   -- 例子3: 起点=南昌路(25)，当前方向向右，步数=12，终点=南宁路(7)
   g:update_player_position(p, g.board:index_of_tile_id(25))
-  local r3 = MovementService.move(g, p, 12, { branch_parity = 12, direction = "right" })
+  local r3 = MovementService.move(g, p, 12, { branch_parity = 12, direction = "right", skip_market_check = true })
   assert_eq(g.board:get_tile(p.position).id, 7, "example3 end tile")
   assert(#r3.visited == 12, "example3 visited steps")
 end

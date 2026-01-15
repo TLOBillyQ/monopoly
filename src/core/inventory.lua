@@ -44,15 +44,6 @@ function Inventory:remove_by_index(idx)
   return item
 end
 
-function Inventory:remove_first(predicate)
-  for i, it in ipairs(self.items) do
-    if predicate(it) then
-      return self:remove_by_index(i)
-    end
-  end
-  return nil
-end
-
 function Inventory:find_index(predicate)
   for i, it in ipairs(self.items) do
     if predicate(it) then

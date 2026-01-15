@@ -4,16 +4,7 @@ local Inventory = require("src.gameplay.domain.item_inventory")
 
 local Steal = {}
 
-local function find_item_index(player, item_id)
-  return player.inventory:find_index(function(it)
-    return it.id == item_id
-  end)
-end
-
 function Steal.steal_item_at_index(game, player, target, item_idx)
-  local item_name = Inventory.item_name
-  local consume_item = Inventory.consume
-
   local inv = target.inventory
   if inv:count() == 0 then
     logger.warn(target.name .. " 没有可偷道具")
@@ -28,28 +19,21 @@ function Steal.steal_item_at_index(game, player, target, item_idx)
     return nil
   end
   player.inventory:add(stolen)
-  if consume_item then
-    consume_item(player, 2007)
-  end
-  logger.event(player.name .. " 使用偷窃卡，从 " .. target.name .. " 偷走道具 " .. item_name(stolen.id))
+  Inventory.consume(player, 2007)
+  local name = Inventory.item_name(stolen.id)
+  logger.event(player.name .. " 使用偷窃卡，从 " .. target.name .. " 偷走道具 " .. name)
   return {
     ok = true,
     stolen = stolen,
-    intent = { kind = "push_popup", payload = { title = "偷窃成功", body = player.name .. " 从 " .. target.name .. " 偷走了 " .. item_name(stolen.id) } },
+    intent = { kind = "push_popup", payload = { title = "偷窃成功", body = player.name .. " 从 " .. target.name .. " 偷走了 " .. name } },
   }
 end
 
-
-
-
 function Steal.handle_pass_players(game, player, encountered_ids)
-  local item_name = Inventory.item_name
-
   if #encountered_ids == 0 then
     return
   end
-  local has_steal = find_item_index(player, 2007)
-  if not has_steal then
+  if not Inventory.find_index(player, 2007) then
     return
   end
 
@@ -78,7 +62,7 @@ function Steal.handle_pass_players(game, player, encountered_ids)
     local options = {}
     local body_lines = {}
     for idx, it in ipairs(target.inventory.items) do
-      local label = item_name(it.id)
+      local label = Inventory.item_name(it.id)
       table.insert(body_lines, idx .. ". " .. label)
       table.insert(options, { id = idx, label = label })
     end

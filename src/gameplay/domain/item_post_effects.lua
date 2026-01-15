@@ -3,12 +3,6 @@ local constants = require("src.config.constants")
 
 local ItemEffects = {}
 
-local function find_item_index(player, item_id)
-  return player.inventory:find_index(function(it)
-    return it.id == item_id
-  end)
-end
-
 local TARGET_EFFECTS = {
   [2011] = {
     apply = function(_, user, target, _context)
@@ -39,7 +33,7 @@ local TARGET_EFFECTS = {
         logger.event(target.name .. " 有天使，查税无效")
         return true
       end
-      local tax_free = find_item_index(target, 2010)
+      local tax_free = target.inventory:find_index(function(it) return it.id == 2010 end)
       if tax_free then
         target.inventory:remove_by_index(tax_free)
         logger.event(target.name .. " 使用免税卡抵消查税")
@@ -76,7 +70,6 @@ local TARGET_EFFECTS = {
   [2016] = {
     require_user = function(user)
       if not user:has_deity("poor") then
-        --logger.warn("未附身穷神，无法送神")
         return false
       end
       return true
@@ -206,7 +199,5 @@ function ItemEffects.apply_post(game, player, item_id, context)
   end
   return handler(game, player, cfg, context)
 end
-
-ItemEffects.apply = ItemEffects.apply_post
 
 return ItemEffects

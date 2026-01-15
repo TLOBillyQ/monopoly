@@ -56,15 +56,8 @@ function Strategy.auto_pre_action(game, player, deps)
   local use_item = assert(deps.use_item, "use_item deps required")
 
   local function try_use(item_id, cond)
-    if cond and not cond() then
-      return nil
-    end
-    if not inventory.find_index(player, item_id) then
-      return nil
-    end
-    if item_id == 2006 then
-      logger.event(player.name .. " 使用清障卡，尝试清理前方障碍")
-    end
+    if cond and not cond() then return nil end
+    if not inventory.find_index(player, item_id) then return nil end
     local res = use_item(game, player, item_id, { by_ai = true })
     if type(res) == "table" and (res.waiting or res.intent or res.kind) then
       return res
@@ -76,60 +69,47 @@ function Strategy.auto_pre_action(game, player, deps)
     return Strategy.pick_target_player(game, player, item_id, Strategy.target_candidates(game, player, item_id)) ~= nil
   end
 
-  local rules = {
-    {
-      id = 2006,
-      cond = function()
-        local found = Strategy.has_obstacles_ahead(game, player, 12)
-        if found and inventory.find_index(player, 2006) then
-          logger.event(player.name .. " 前方发现障碍，准备使用清障卡")
-        end
-        return found
-      end,
-    },
-    {
-      id = 2002,
-      cond = function()
-        local dice_count = player.seat_id and constants.dice_with_vehicle or constants.default_dice_count
-        local value = Agent.pick_remote_dice_value(game, player, dice_count)
-        return value ~= nil
-      end,
-    },
-    { id = 2003 },
-    { id = 2004, cond = function() return Agent.pick_roadblock_target(game, player) ~= nil end },
-    {
-      id = 2008,
-      cond = function()
-        if deps.find_monster_target then
-          return deps.find_monster_target(game, player, 3) ~= nil
-        end
-        return false
-      end,
-    },
-    {
-      id = 2013,
-      cond = function()
-        if deps.find_missile_target then
-          return deps.find_missile_target(game, player, 3) ~= nil
-        end
-        return false
-      end,
-    },
-    { id = 2011, cond = function() return has_target(2011) end },
-    { id = 2012, cond = function() return has_target(2012) end },
-    { id = 2014, cond = function() return has_target(2014) end },
-    { id = 2015, cond = function() return has_target(2015) end },
-    { id = 2016, cond = function() return has_target(2016) end },
-    { id = 2018, cond = function() return has_target(2018) end },
-  }
-
-  for _, r in ipairs(rules) do
-    local waiting = try_use(r.id, r.cond)
-    if waiting then
-      return waiting
-    end
+  local function has_demolish_target()
+    return deps.find_monster_target and deps.find_monster_target(game, player, 3) ~= nil
   end
 
+  -- 优先使用清障卡
+  local clear_result = try_use(2006, function()
+    local found = Strategy.has_obstacles_ahead(game, player, 12)
+    if found then logger.event(player.name .. " 前方发现障碍，准备使用清障卡") end
+    return found
+  end)
+  if clear_result then return clear_result end
+
+  -- 遥控骰子
+  local dice_result = try_use(2002, function()
+    local dice_count = player.seat_id and constants.dice_with_vehicle or constants.default_dice_count
+    return Agent.pick_remote_dice_value(game, player, dice_count) ~= nil
+  end)
+  if dice_result then return dice_result end
+
+  -- 骰子加倍
+  local double_result = try_use(2003)
+  if double_result then return double_result end
+
+  -- 路障卡
+  local roadblock_result = try_use(2004, function() return Agent.pick_roadblock_target(game, player) ~= nil end)
+  if roadblock_result then return roadblock_result end
+
+  -- 怪兽/导弹
+  local monster_result = try_use(2008, has_demolish_target)
+  if monster_result then return monster_result end
+  local missile_result = try_use(2013, has_demolish_target)
+  if missile_result then return missile_result end
+
+  -- 针对目标玩家的道具
+  local target_items = { 2011, 2012, 2014, 2015, 2016, 2018 }
+  for _, id in ipairs(target_items) do
+    local res = try_use(id, function() return has_target(id) end)
+    if res then return res end
+  end
+
+  -- 附身类道具
   return try_use(2017) or try_use(2019)
 end
 

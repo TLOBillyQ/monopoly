@@ -61,22 +61,6 @@ function Player:deduct_cash(amount)
   return self.cash
 end
 
-function Player:net_worth(board)
-  local total = self.cash
-  for tile_id in pairs(self.properties) do
-    local tile = board:get_tile_by_id(tile_id)
-    if tile then
-      local st = Tile.get_state(self._store and { store = self._store } or nil, tile)
-      local level = st.level or 0
-      if st.owner_id then
-        local price = tile.price or 0
-        total = total + price * ((2 ^ (level + 1)) - 1)
-      end
-    end
-  end
-  return total
-end
-
 function Player:has_deity(name)
   return self.status.deity ~= nil and self.status.deity.type == name and self.status.deity.remaining > 0
 end
@@ -118,11 +102,6 @@ end
 
 function Player:has_angel()
   return self:has_deity("angel")
-end
-
-function Player:apply_deity(deity_type)
-  self:set_deity(deity_type, constants.deity_duration_turns)
-  logger.event(self.name .. " 获得附身：" .. deity_type)
 end
 
 function Player:apply_hospital_effects(game)

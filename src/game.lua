@@ -1,8 +1,8 @@
 -- Game：游戏运行时门面
 -- 职责：领域写操作、状态查询、流程驱动
--- 装配：由 Bootstrap.assemble() 完成
+-- 装配：由 CompositionRoot.assemble() 完成
 
-local Bootstrap = require("src.gameplay.app.bootstrap")
+local CompositionRoot = require("src.gameplay.app.composition_root")
 local Tables = require("src.util.tables")
 
 local Game = {}
@@ -17,9 +17,9 @@ local function store_value(v)
   return v
 end
 
--- 创建游戏实例（装配由 Bootstrap 完成）
+-- 创建游戏实例（装配由 CompositionRoot 完成）
 function Game.new(opts)
-  return Bootstrap.assemble(opts, Game)
+  return CompositionRoot.assemble(opts, Game)
 end
 
 -- ========== 领域写操作 ==========
@@ -61,7 +61,7 @@ end
 
 function Game:sync_player_inventory(player)
   if player.inventory then
-    self:_store_set({ "players", player.id, "inventory" }, Bootstrap.snapshot_inventory(player.inventory))
+    self:_store_set({ "players", player.id, "inventory" }, CompositionRoot.snapshot_inventory(player.inventory))
   end
 end
 

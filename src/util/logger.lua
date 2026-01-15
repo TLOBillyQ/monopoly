@@ -62,8 +62,4 @@ function logger.clear()
   end
 end
 
-function logger.set_max_entries(count)
-  logger.max_entries = math.max(10, tonumber(count) or logger.max_entries)
-end
-
 return logger

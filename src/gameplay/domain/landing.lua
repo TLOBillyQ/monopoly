@@ -111,52 +111,18 @@ Effect.defs = {
     apply = function(ctx)
       local game = ctx.game
       local player = ctx.player
-      local tile = ctx.tile
-      local store = game and game.store
-
-      if store then
-        local prompted = store:get({ "turn", "market_prompt" })
-        if prompted and prompted.player_id == player.id and prompted.tile_id == tile.id then
-          return nil
-        end
-      end
-
       local market = get_service(ctx, "market")
-      if not market then
-        return nil
+      if not market then return nil end
+
+      if player.inventory:is_full() then
+        return { intent = { kind = "push_popup", payload = { title = "黑市", body = player.name .. " 卡槽已满" } } }
       end
 
-      if player.inventory and player.inventory.is_full and player.inventory:is_full() then
-        if store then
-          store:set({ "turn", "market_prompt" }, { player_id = player.id, tile_id = tile.id })
-        end
-        return {
-          intent = { kind = "push_popup", payload = { title = "黑市", body = player.name .. " 卡槽已满，无法购买" } },
-        }
-      end
+      local spec, intent = market.build_choice_spec(game, player)
+      if intent then return { intent = intent } end
+      if not spec then return nil end
 
-      local spec, market_intent = market.build_choice_spec and market.build_choice_spec(game, player) or nil
-      if market_intent then
-        if store then
-          store:set({ "turn", "market_prompt" }, { player_id = player.id, tile_id = tile.id })
-        end
-        return { intent = market_intent }
-      end
-      if not spec then
-        if store then
-          store:set({ "turn", "market_prompt" }, { player_id = player.id, tile_id = tile.id })
-        end
-        return nil
-      end
-
-      if store then
-        store:set({ "turn", "market_prompt" }, { player_id = player.id, tile_id = tile.id })
-      end
-      return {
-        waiting = true,
-        reason = "market_choice",
-        intent = { kind = "need_choice", choice_spec = spec },
-      }
+      return { waiting = true, reason = "market_choice", intent = { kind = "need_choice", choice_spec = spec } }
     end,
   },
   {

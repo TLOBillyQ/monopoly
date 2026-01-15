@@ -5,32 +5,6 @@ local UI = require("src.gameplay.ports.ui_port")
 
 local LandingResolver = {}
 
-local function copy_array(arr)
-  if type(arr) ~= "table" then
-    return nil
-  end
-  local out = {}
-  for i = 1, #arr do
-    out[i] = arr[i]
-  end
-  return out
-end
-
-
-local function snapshot_move_result(move_result)
-  if type(move_result) ~= "table" then
-    return nil
-  end
-  return {
-    encountered_players = copy_array(move_result.encountered_players),
-    passed_start = move_result.passed_start,
-    stopped_on_roadblock = move_result.stopped_on_roadblock,
-    visited = copy_array(move_result.visited),
-    steps = move_result.steps,
-    landing_tile_id = move_result.landing_tile and move_result.landing_tile.id or nil,
-  }
-end
-
 local function build_ctx(game, player, tile, move_result)
   local phase = game and game.store and game.store:get({ "turn", "phase" }) or "landing"
   return {
