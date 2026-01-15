@@ -85,31 +85,21 @@ local function get_player_details_text(player, view, item_name_by_id)
   return table.concat(parts, " ")
 end
 
-local function get_store_state(view)
-  local st = view and view.state or nil
-  local board = st and st.board or nil
-  local view_board = view and view.board or nil
-  return {
-    players = st and st.players or {},
-    turn = st and st.turn or {},
-    overlays = (view_board and view_board.overlays) or (board and board.overlays) or {},
-    tiles = (board and board.tiles) or {},
-  }
-end
-
 local function draw_current_player(ui, view, panel, y)
   love.graphics.setFont(ui.fonts.small)
   love.graphics.setColor(ui.palette.text)
   love.graphics.printf("当前玩家", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 18
 
-  if not view then
+  local state = view and view.state
+  if not state then
     return y
   end
 
-  local st = get_store_state(view)
-  local idx = (st and st.turn and st.turn.current_player_index) or 1
-  local current = st and st.players and st.players[idx] or nil
+  local turn = state.turn or {}
+  local players = state.players or {}
+  local idx = turn.current_player_index or 1
+  local current = players[idx]
   if not current then
     return y
   end
@@ -158,10 +148,11 @@ local function draw_player_status(ui, view, panel, y, item_name_by_id)
   love.graphics.printf("玩家状态", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 20
 
-  local st = get_store_state(view)
-  if view and st then
-    for pid = 1, #st.players do
-      local player = st.players[pid]
+  local state = view and view.state
+  if state then
+    local players = state.players or {}
+    for pid = 1, #players do
+      local player = players[pid]
       if player then
         -- Name line
         love.graphics.setFont(ui.fonts.small)
@@ -195,8 +186,8 @@ local function draw_tile_detail(ui, view, panel, y)
   love.graphics.printf("格子详情", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 16
 
-  local st = get_store_state(view)
-  if view and st and (ui.selected_tile or ui.hover_tile) then
+  local state = view and view.state
+  if state and (ui.selected_tile or ui.hover_tile) then
     local idx = ui.selected_tile or ui.hover_tile
     local tile = view.board and view.board.tiles and view.board.tiles[idx]
     if tile then
@@ -205,10 +196,10 @@ local function draw_tile_detail(ui, view, panel, y)
       love.graphics.printf(tile.name .. " (" .. tile.type .. ")", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
       y = y + 14
       if tile.type == "land" then
-        local tile_state = st.tiles and st.tiles[tile.id] or nil
+        local tile_state = state.board and state.board.tiles and state.board.tiles[tile.id] or nil
         local owner_id = tile_state and tile_state.owner_id or nil
         local level = tile_state and tile_state.level or 0
-        local owner = owner_id and st.players and st.players[owner_id]
+        local owner = owner_id and state.players and state.players[owner_id]
         love.graphics.printf("价格: " .. tostring(tile.price or "-"), panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
         y = y + 14
         love.graphics.printf("等级: " .. tostring(level or 0), panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
@@ -218,11 +209,12 @@ local function draw_tile_detail(ui, view, panel, y)
           y = y + 14
         end
       end
-      if st.overlays and st.overlays.roadblocks and st.overlays.roadblocks[idx] then
+      local overlays = (view.board and view.board.overlays) or (state.board and state.board.overlays) or {}
+      if overlays.roadblocks and overlays.roadblocks[idx] then
         love.graphics.printf("路障: 有", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
         y = y + 14
       end
-      if st.overlays and st.overlays.mines and st.overlays.mines[idx] then
+      if overlays.mines and overlays.mines[idx] then
         love.graphics.printf("地雷: 有", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
         y = y + 14
       end

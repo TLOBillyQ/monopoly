@@ -22,6 +22,10 @@ local function normalize_currency(currency)
   return currency
 end
 
+local function is_unlimited_currency(currency)
+  return currency == constants.unlimited_currency
+end
+
 function Player:_store_set(path, value)
   if self._store and self._store.set then
     self._store:set(path, value)
@@ -109,7 +113,7 @@ end
 
 function Player:balance(currency)
   local key = normalize_currency(currency)
-  if key == "广告" then
+  if is_unlimited_currency(key) then
     return math.huge
   end
   if key == "金币" then
@@ -120,7 +124,7 @@ end
 
 function Player:deduct_balance(currency, amount)
   local key = normalize_currency(currency)
-  if key == "广告" then
+  if is_unlimited_currency(key) then
     return math.huge
   end
   if key == "金币" then
@@ -192,11 +196,7 @@ function Player:has_angel()
 end
 
 function Player:apply_hospital_effects(game)
-  if game.set_player_status then
-    game:set_player_status(self, "stay_turns", constants.hospital_stay_turns)
-  else
-    self.status.stay_turns = constants.hospital_stay_turns
-  end
+  game:set_player_status(self, "stay_turns", constants.hospital_stay_turns)
   
   local fee = constants.hospital_fee
   if self.cash < fee then
@@ -219,18 +219,12 @@ function Player:send_to_hospital(game)
   if hospital_index then
     game:update_player_position(self, hospital_index)
   end
-  if game.set_player_status then
-    game:set_player_status(self, "move_dir", nil)
-  end
+  game:set_player_status(self, "move_dir", nil)
   self:apply_hospital_effects(game)
 end
 
 function Player:apply_mountain_effects(game)
-  if game.set_player_status then
-    game:set_player_status(self, "stay_turns", constants.mountain_stay_turns)
-  else
-      self.status.stay_turns = constants.mountain_stay_turns
-  end
+  game:set_player_status(self, "stay_turns", constants.mountain_stay_turns)
   logger.event(self.name .. " 进入深山，停留 " .. self.status.stay_turns .. " 回合")
 end
 
@@ -239,9 +233,7 @@ function Player:send_to_mountain(game)
   if idx then
     game:update_player_position(self, idx)
   end
-  if game.set_player_status then
-    game:set_player_status(self, "move_dir", nil)
-  end
+  game:set_player_status(self, "move_dir", nil)
   self:apply_mountain_effects(game)
 end
 

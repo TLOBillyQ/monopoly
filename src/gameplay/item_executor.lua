@@ -4,17 +4,8 @@ local ItemEffects = require("src.gameplay.item_post_effects")
 local Demolish = require("src.gameplay.item_demolish")
 local Roadblock = require("src.gameplay.item_roadblock")
 local Inventory = require("src.gameplay.item_inventory")
-local Strategy = require("src.gameplay.item_strategy")
 
 local Executor = {}
-
-local function get_strategy(deps)
-  return (deps and deps.strategy) or Strategy
-end
-
-local function get_inventory(deps)
-  return (deps and deps.inventory) or Inventory
-end
 
 function Executor.apply_remote_dice(game, player, dice_count, value)
   if not dice_count or dice_count < 1 then
@@ -31,8 +22,8 @@ end
 
 
 local function handle_target_player_item(game, player, item_id, context, deps)
-  local strategy = get_strategy(deps)
-  local inventory = get_inventory(deps)
+  local strategy = deps.strategy
+  local inventory = deps.inventory
   local candidates = strategy.target_candidates(game, player, item_id)
 
   if #candidates == 0 then
@@ -76,7 +67,7 @@ local function handle_target_player_item(game, player, item_id, context, deps)
 end
 
 local function handle_remote_dice(game, player, item_id, context, deps)
-  local inventory = get_inventory(deps)
+  local inventory = deps.inventory
   local dice_count = player:dice_count()
   if context and context.by_ai then
     local value, target_tile = Agent.pick_remote_dice_value(game, player, dice_count)
@@ -116,7 +107,7 @@ local function handle_remote_dice(game, player, item_id, context, deps)
 end
 
 local function handle_roadblock(game, player, item_id, context, deps)
-  local inventory = get_inventory(deps)
+  local inventory = deps.inventory
   local candidates = Roadblock.candidates(game, player, 3)
   if not candidates or #candidates == 0 then
     logger.warn(player.name .. " 无可放置路障的位置")
@@ -164,7 +155,7 @@ local DEMOLISH_ITEMS = {
 
 local function handle_demolish(game, player, item_id, context, deps)
   local cfg = DEMOLISH_ITEMS[item_id]
-  local inventory = get_inventory(deps)
+  local inventory = deps.inventory
   return Demolish.use(game, player, 3, inventory.consume, {
     item_id = item_id,
     injure = cfg.injure,
@@ -187,7 +178,8 @@ end
 function Executor.use_item(game, player, item_id, context, deps)
   context = context or {}
   deps = deps or {}
-  local inventory = get_inventory(deps)
+  local inventory = assert(deps.inventory, "ItemExecutor.use_item requires inventory")
+  assert(deps.strategy, "ItemExecutor.use_item requires strategy")
   if context.by_ai == nil then
     context.by_ai = Agent.is_auto_player(player)
   end

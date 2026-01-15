@@ -5,6 +5,8 @@ local UI = require("src.gameplay.ui_port")
 
 local LandingResolver = {}
 
+local MAX_LANDING_DEPTH = 10
+
 local function build_ctx(game, player, tile, move_result)
   local phase = game and game.store and game.store:get({ "turn", "phase" }) or "landing"
   return {
@@ -22,7 +24,8 @@ end
 
 
 
-function LandingResolver.resolve(game, player, tile, move_result)
+function LandingResolver.resolve(game, player, tile, move_result, depth)
+  depth = depth or 0
   local ctx = build_ctx(game, player, tile, move_result)
 
   local scanned = Effect.scan(landing_effects.defs, ctx)
@@ -44,7 +47,7 @@ function LandingResolver.resolve(game, player, tile, move_result)
     local res = Effect.execute(eff, ctx)
     local out = res and res.result
 
-    if type(out) == "table" and out.kind == "need_landing" then
+    if type(out) == "table" and out.kind == "need_landing" and depth < MAX_LANDING_DEPTH then
       local target_player = (out.player_id and game and game.players and game.players[out.player_id]) or player
       local next_tile = nil
       if target_player then
@@ -52,7 +55,7 @@ function LandingResolver.resolve(game, player, tile, move_result)
         next_tile = idx and game and game.board and game.board:get_tile(idx) or nil
       end
       if next_tile then
-          local deep_sub_res = LandingResolver.resolve(game, target_player, next_tile, out.move_result)
+          local deep_sub_res = LandingResolver.resolve(game, target_player, next_tile, out.move_result, depth + 1)
           out = deep_sub_res
       end
     end

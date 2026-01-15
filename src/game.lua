@@ -66,25 +66,28 @@ function Game:sync_player_inventory(player)
 end
 
 
-function Game:set_tile_owner(tile, owner_id)
-  if tile and tile.type == "land" then
-    self:_store_set({ "board", "tiles", tile.id, "owner_id" }, owner_id)
+function Game:update_tile(tile, updates)
+  if not (tile and tile.type == "land" and updates) then
+    return
   end
+  for key, value in pairs(updates) do
+    self:_store_set({ "board", "tiles", tile.id, key }, value)
+  end
+end
+
+
+function Game:set_tile_owner(tile, owner_id)
+  self:update_tile(tile, { owner_id = owner_id })
 end
 
 
 function Game:set_tile_level(tile, level)
-  if tile and tile.type == "land" then
-    self:_store_set({ "board", "tiles", tile.id, "level" }, level)
-  end
+  self:update_tile(tile, { level = level })
 end
 
 
 function Game:reset_tile(tile)
-  if tile and tile.type == "land" then
-    self:_store_set({ "board", "tiles", tile.id, "owner_id" }, nil)
-    self:_store_set({ "board", "tiles", tile.id, "level" }, 0)
-  end
+  self:update_tile(tile, { owner_id = nil, level = 0 })
 end
 
 -- ========== 状态查询 ==========
