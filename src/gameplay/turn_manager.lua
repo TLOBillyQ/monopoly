@@ -1,4 +1,4 @@
-local Flow = require("src.gameplay.flow")
+local Flow = require("src.core.flow")
 local Choice = require("src.gameplay.choice")
 local ChoiceResolver = require("src.gameplay.choice_resolver")
 local UI = require("src.gameplay.ui_port")
