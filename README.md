@@ -32,17 +32,22 @@ monopoly/
 ├── src/
 │   ├── game.lua         # 游戏实例装配（依赖注入、服务组装）
 │   ├── core/            # 核心领域对象（Board, Player, Dice, Tile 等）
-│   ├── gameplay/        # 游戏逻辑与流程（与框架无关）
-│   │   ├── app/        # 应用层：流程编排、回合管理、用例
-│   │   ├── domain/     # 领域层：游戏规则、效果、道具等
-│   │   ├── infra/      # 基础设施：RNG、状态存储
-│   │   ├── ports/      # 端口接口：UI 抽象等
-│   │   └── ai/         # AI 决策逻辑
+│   ├── gameplay/        # 游戏逻辑与流程（扁平化，无嵌套子目录）
+│   │   ├── composition_root.lua  # 依赖注入装配
+│   │   ├── *_service.lua         # 业务服务（movement, market, bankruptcy, turn_manager）
+│   │   ├── turn_*.lua            # 回合阶段处理
+│   │   ├── item_*.lua            # 道具系统
+│   │   ├── land*.lua             # 地块逻辑
+│   │   ├── landing*.lua          # 落地效果处理
+│   │   ├── choice*.lua           # 选择系统
+│   │   ├── agent.lua             # AI 决策
+│   │   ├── rng.lua, store.lua    # 基础设施
+│   │   └── ui_port.lua           # UI 端口抽象
 │   ├── adapters/       # 适配器层
 │   │   └── love2d/    # LÖVE2D 渲染、输入、UI 适配
 │   ├── config/         # 游戏配置表（地图、地块、角色、道具）
 │   └── util/           # 通用工具函数
-├── scripts/            # 开发工具脚本
+├── tests/              # 测试脚本
 ├── docs/               # 设计文档和技术文档
 └── assets/             # 游戏资源
 ```
@@ -53,11 +58,7 @@ monopoly/
 |------|------|
 | `src/game.lua` | 游戏实例装配，初始化服务和状态管理器 |
 | `src/core/` | 核心领域对象（Board, Player, Dice, Tile, Inventory） |
-| `src/gameplay/app/` | 流程编排、回合状态机、业务用例 |
-| `src/gameplay/domain/` | 游戏领域规则（效果、道具、落地逻辑等） |
-| `src/gameplay/infra/` | 基础设施（随机数生成器、状态存储） |
-| `src/gameplay/ports/` | 端口抽象（UI 接口定义） |
-| `src/gameplay/ai/` | AI 决策逻辑 |
+| `src/gameplay/` | 游戏逻辑（扁平化结构，包含服务、回合、道具、AI 等） |
 | `src/adapters/love2d/` | LÖVE2D 框架适配（渲染、输入、UI 组件） |
 | `src/config/` | 游戏数据配置（地图、地块、角色、道具、常量） |
 
@@ -87,14 +88,16 @@ lua scripts/deps_check.lua && lua scripts/regression.lua
 ### 代码精简工作流（Debloat）
 
 遵循"删代码优先"原则，推荐按以下顺序执行：
-tests/deps_check.lua && lua tes
-1. **依赖检查**：`lua scripts/deps_check.lua` - 确保依赖方向未被破坏
-2. **回归测试**：`lua scripts/regression.lua` - 确保关键行为未变
-3.✅ **Gameplay 层独立**：`src/gameplay/**` 不能依赖 `src.adapters.*`
-- ✅ **领域层独立**：`src/gameplay/domain/**` 不能依赖 `src.gameplay.app.*`
-- ✅ **服务解耦**：`src/gameplay/app/services/**` 之间不能互相依赖（通过依赖注入组装）
 
-运行 `lua scripts/deps_check.lua` 验证这些规则。
+1. **依赖检查**：`lua tests/deps_check.lua` - 确保依赖方向未被破坏
+2. **回归测试**：`lua tests/regression.lua` - 确保关键行为未变
+
+### 依赖规则
+
+- ✅ **Gameplay 层独立**：`src/gameplay/**` 不能依赖 `src/adapters/**`
+- ✅ **服务解耦**：services 之间不能互相依赖（通过依赖注入组装）
+
+运行 `lua tests/deps_check.lua` 验证这些规则。
 
 ### 设计原则
 
