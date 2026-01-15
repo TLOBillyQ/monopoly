@@ -217,6 +217,63 @@ local function test_movement_examples_from_issue()
   assert(#r3.visited == 12, "example3 visited steps")
 end
 
+local function test_ai_cancels_land_purchases()
+  local Agent = require("src.gameplay.ai.agent")
+  local g = new_game()
+  local ai_player = g.players[2]
+  assert(Agent.is_auto_player(ai_player), "player 2 should be AI")
+  
+  -- Set AI player as current player (index 2)
+  if g.store then
+    g.store:set({"turn", "current_player_index"}, 2)
+  end
+  
+  assert(g:current_player() == ai_player, "AI should be current player")
+  
+  local idx, tile = first_land_tile(g.board)
+  g:update_player_position(ai_player, idx)
+  
+  local res = LandingResolver.resolve(g, ai_player, tile, {})
+  assert(res and res.waiting, "should wait for choice")
+  
+  local pending = Choice.get(g)
+  assert(pending and pending.kind == "landing_optional_effect", "should have landing choice")
+  
+  local action = Agent.auto_action_for_choice(g, pending)
+  assert(action, "AI should return an action")
+  assert(action.type == "choice_cancel", "AI should cancel land purchase")
+  
+  local before_cash = ai_player.cash
+  ChoiceResolver.resolve(g, pending, action)
+  assert(ai_player.cash == before_cash, "AI cash should not change after canceling")
+  assert(tile_state(g, tile).owner_id == nil, "land should not be purchased")
+end
+
+local function test_mandatory_payment_causes_bankruptcy()
+  local g = new_game()
+  local p1 = g.players[1]
+  local p2 = g.players[2]
+  
+  -- Set up: p1 owns a land tile with high value, p2 has little cash
+  local idx, tile = first_land_tile(g.board)
+  g:set_tile_owner(tile, p1.id)
+  g:set_tile_level(tile, 3) -- Max level for high rent
+  g:set_player_property(p1, tile.id, true)
+  
+  -- Give p2 very little cash (not enough to pay rent)
+  p2:set_cash(10)
+  
+  -- Move p2 to the land tile
+  g:update_player_position(p2, idx)
+  
+  local before_eliminated = p2.eliminated
+  LandingResolver.resolve(g, p2, tile, {})
+  
+  -- p2 should be eliminated due to insufficient funds for mandatory rent
+  assert(p2.eliminated == true, "player should be eliminated after failing to pay rent")
+  assert(before_eliminated == false, "player should not have been eliminated before")
+end
+
 local tests = {
   test_pass_start,
   test_land_on_start_reward,
@@ -228,6 +285,8 @@ local tests = {
   test_landing_optional_stale_choice_is_blocked,
   test_chance_is_mandatory_effect_entrypoint,
   test_movement_examples_from_issue,
+  test_ai_cancels_land_purchases,
+  test_mandatory_payment_causes_bankruptcy,
 }
 
 for _, fn in ipairs(tests) do
