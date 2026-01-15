@@ -1,7 +1,7 @@
 local logger = require("src.util.logger")
-local Choice = require("src.gameplay.app.choice")
-local UI = require("src.gameplay.ports.ui_port")
-local DecisionEngine = require("src.gameplay.app.decision_engine")
+local Choice = require("src.gameplay.choice")
+local UI = require("src.gameplay.ui_port")
+local DecisionEngine = require("src.gameplay.decision_engine")
 
 local function phase_start(tm)
   local player = tm.game:current_player()

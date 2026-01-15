@@ -1,7 +1,7 @@
 local Tile = require("src.core.tile")
-local Roadblock = require("src.gameplay.domain.item_roadblock")
-local Demolish = require("src.gameplay.domain.item_demolish")
-local Pricing = require("src.gameplay.domain.land_pricing")
+local Roadblock = require("src.gameplay.item_roadblock")
+local Demolish = require("src.gameplay.item_demolish")
+local Pricing = require("src.gameplay.land_pricing")
 
 local Agent = {}
 

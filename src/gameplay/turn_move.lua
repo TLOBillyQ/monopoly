@@ -1,5 +1,5 @@
-local Choice = require("src.gameplay.app.choice")
-local UI = require("src.gameplay.ports.ui_port")
+local Choice = require("src.gameplay.choice")
+local UI = require("src.gameplay.ui_port")
 
 local function phase_move(tm, args)
   local player = args.player

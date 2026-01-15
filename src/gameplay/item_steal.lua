@@ -1,6 +1,6 @@
 local logger = require("src.util.logger")
-local UI = require("src.gameplay.ports.ui_port")
-local Inventory = require("src.gameplay.domain.item_inventory")
+local UI = require("src.gameplay.ui_port")
+local Inventory = require("src.gameplay.item_inventory")
 
 local Steal = {}
 

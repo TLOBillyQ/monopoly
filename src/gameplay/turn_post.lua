@@ -1,5 +1,5 @@
-local UI = require("src.gameplay.ports.ui_port")
-local Choice = require("src.gameplay.app.choice")
+local UI = require("src.gameplay.ui_port")
+local Choice = require("src.gameplay.choice")
 local items_cfg = require("src.config.items")
 
 local cfg_by_id = {}

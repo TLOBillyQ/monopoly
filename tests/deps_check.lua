@@ -5,18 +5,15 @@
 -- 层级                     | 允许依赖
 -- -------------------------|-------------------------------------------
 -- src/adapters/**          | → src/gameplay/**, src/core/**, src/config/**, src/util/**
--- src/gameplay/app/**      | → src/gameplay/domain/**, src/gameplay/infra/**, src/gameplay/ports/**, src/core/**, src/config/**, src/util/**
--- src/gameplay/domain/**   | → src/gameplay/infra/**, src/core/**, src/config/**, src/util/**
--- src/gameplay/infra/**    | → src/util/**
+-- src/gameplay/**          | → src/gameplay/**, src/core/**, src/config/**, src/util/**
 -- src/core/**              | → src/config/**, src/util/**
 -- src/config/**            | → (none)
 -- src/util/**              | → (none)
 --
 -- === 禁止规则 ===
 -- 1) src/gameplay/** 禁止依赖 UI 适配器 (src/adapters/**)
--- 2) src/gameplay/app/services/** 禁止直接 require 其他 services（应通过 game.services.* 注入）
--- 3) src/gameplay/domain/** 禁止依赖 app 层 (src/gameplay/app/**)
--- 4) src/gameplay/** 禁止使用 dofile/loadfile 绕过 require 检查
+-- 2) services 之间禁止直接 require（应通过 game.services.* 注入）
+-- 3) src/gameplay/** 禁止使用 dofile/loadfile 绕过 require 检查
 
 local function read_all(path)
   local f = io.open(path, "rb")
@@ -93,27 +90,24 @@ local function check_file(path, src)
   local errors = {}
 
   local is_gameplay = starts_with(path, "src/gameplay/")
-  local is_domain = starts_with(path, "src/gameplay/domain/")
-  local is_service = starts_with(path, "src/gameplay/app/services/")
+  local is_service = path:match("src/gameplay/.*_service%.lua$") ~= nil
 
   for _, mod in ipairs(extract_requires(src)) do
     -- Convert module to path for more reliable prefix checking
     local mod_path = mod_to_path(mod)
 
+    -- Rule 1: gameplay must not require UI adapters
     if is_gameplay and (starts_with(mod_path, "src/visual/") or starts_with(mod_path, "src/adapters/")) then
       table.insert(errors, "gameplay must not require UI adapters: require(\"" .. mod .. "\")")
     end
 
-    if is_domain and starts_with(mod_path, "src/gameplay/app/") then
-      table.insert(errors, "domain must not require app layer: require(\"" .. mod .. "\")")
-    end
-
-    if is_service and starts_with(mod_path, "src/gameplay/app/services/") then
+    -- Rule 2: services must not require each other directly
+    if is_service and mod_path:match("src/gameplay/.*_service%.lua$") then
       table.insert(errors, "services must not require each other directly: require(\"" .. mod .. "\")")
     end
   end
 
-  -- Check for dofile/loadfile usage in gameplay layer (bypasses require checking)
+  -- Rule 3: Check for dofile/loadfile usage in gameplay layer (bypasses require checking)
   if is_gameplay then
     for _, load in ipairs(extract_dynamic_loads(src)) do
       table.insert(errors, "gameplay must not use " .. load.kind .. " (bypasses dependency checking): " .. load.kind .. "(\"" .. load.path .. "\")")

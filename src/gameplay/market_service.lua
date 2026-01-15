@@ -2,9 +2,9 @@ local market_cfg = require("src.config.market")
 local items_cfg = require("src.config.items")
 local vehicles_cfg = require("src.config.vehicles")
 local logger = require("src.util.logger")
-local Choice = require("src.gameplay.app.choice")
-local Inventory = require("src.gameplay.domain.item_inventory")
-local Agent = require("src.gameplay.ai.agent")
+local Choice = require("src.gameplay.choice")
+local Inventory = require("src.gameplay.item_inventory")
+local Agent = require("src.gameplay.agent")
 
 local MarketService = {}
 
