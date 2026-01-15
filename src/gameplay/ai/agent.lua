@@ -232,10 +232,6 @@ function Agent.auto_action_for_choice(game, choice)
   end
 
   if choice.kind == "landing_optional_effect" or choice.kind == "land_optional_effect" then
-    local id = first_option_id(choice.options)
-    if id then
-      return { type = "choice_select", choice_id = choice.id, option_id = id }
-    end
     return { type = "choice_cancel", choice_id = choice.id }
   end
 
