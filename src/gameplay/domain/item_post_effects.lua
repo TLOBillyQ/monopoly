@@ -42,7 +42,7 @@ local TARGET_EFFECTS = {
       local fee = math.floor(target.cash * 0.5)
       target:deduct_cash(fee)
       logger.event(user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. fee .. " 税金")
-      if target.cash < 0 then
+      if target.cash <= 0 then
         local bankruptcy = (game.services and game.services.bankruptcy)
         if bankruptcy then
           bankruptcy.eliminate(game, target)
@@ -153,9 +153,9 @@ handlers.clear_obstacles_ahead = function(game, player, cfg, context)
   local board = game.board
   local cleared = 0
   local current = player.position
-  local parity = 1
-  local facing = player.status and player.status.move_dir or nil
   local distance = cfg.distance or 12
+  local parity = (context and context.branch_parity) or distance
+  local facing = player.status and player.status.move_dir or nil
   for _ = 1, distance do
     local next_index, _passed, step_dir = board:step_forward_by_facing(current, facing, parity)
     current = next_index

@@ -32,7 +32,8 @@ end
 
 function Strategy.has_obstacles_ahead(game, player, distance)
   local board = game.board
-  local parity = 1
+  distance = distance or 12
+  local parity = distance
   local current = player.position
   local facing = player.status and player.status.move_dir or nil
   

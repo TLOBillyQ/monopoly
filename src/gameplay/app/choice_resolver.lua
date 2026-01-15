@@ -151,6 +151,24 @@ local function handle_rent_prompt(game, choice, action)
     -- 使用免费卡（免租）
     LandEffect.execute_free_card(game, player_id, tile_id)
   else
+    if card_kind == "strong" then
+      local player = player_id and game.players[player_id] or nil
+      local free_idx = player and player.inventory and player.inventory:find_index(function(it) return it.id == 2001 end)
+      if free_idx then
+        Choice.open(game, {
+          kind = "rent_card_prompt",
+          title = "是否使用免费卡",
+          body_lines = { "免除本次租金" },
+          options = {
+            { id = "use", label = "使用" },
+            { id = "skip", label = "放弃" },
+          },
+          allow_cancel = false,
+          meta = { player_id = player_id, tile_id = tile_id, card_kind = "free" },
+        })
+        return { stay = true }
+      end
+    end
     -- 跳过当前卡 → 直接支付租金
     LandEffect.execute_pay_rent(game, player_id, tile_id)
   end

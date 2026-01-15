@@ -88,10 +88,11 @@ end
 local function get_store_state(view)
   local st = view and view.state or nil
   local board = st and st.board or nil
+  local view_board = view and view.board or nil
   return {
     players = st and st.players or {},
     turn = st and st.turn or {},
-    overlays = (board and board.overlays) or {},
+    overlays = (view_board and view_board.overlays) or (board and board.overlays) or {},
     tiles = (board and board.tiles) or {},
   }
 end
