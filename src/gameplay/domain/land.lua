@@ -3,19 +3,20 @@ local logger = require("src.util.logger")
 local constants = require("src.config.constants")
 local Tile = require("src.core.tile")
 local BoardUtils = require("src.gameplay.domain.item_board_utils")
-
-local MAX_LEVEL = 3
+local Pricing = require("src.gameplay.domain.land_pricing")
 
 local tile_state = Tile.get_state
 
 local function next_upgrade_cost(tile, level)
-  local target_level = (level or 0) + 1
-  return (tile.price or 0) * (2 ^ target_level)
+  return Pricing.upgrade_cost(tile, level or 0)
 end
 
 local function current_rent(tile, level)
-  local exponent = level or 0
-  return (tile.price or 0) * (2 ^ exponent) * 0.5
+  return Pricing.rent_for_level(tile, level or 0)
+end
+
+local function max_level(tile)
+  return Pricing.max_level(tile)
 end
 
 -- 计算连续地块租金
@@ -65,7 +66,7 @@ function Effect.execute_strong_card(game, player_id, tile_id)
   local owner = st.owner_id and game.players[st.owner_id] or nil
   if not owner then return false end
 
-  local total_value = BoardUtils.total_invested(tile, st.owner_id, st.level)
+  local total_value = BoardUtils.total_invested(tile, st.level)
   local strong_idx = player.inventory and player.inventory:find_index(function(it) return it.id == 2009 end)
 
   if not strong_idx or player.cash < total_value then return false end
@@ -200,7 +201,7 @@ local function can_upgrade(ctx)
   if st.owner_id ~= player.id then
     return false
   end
-  if (st.level or 0) >= MAX_LEVEL then
+  if (st.level or 0) >= max_level(tile) then
     return false
   end
   local cost = next_upgrade_cost(tile, st.level)
@@ -260,7 +261,7 @@ Effect.defs = {
       end
 
       -- 检查强征卡
-      local total_value = BoardUtils.total_invested(tile, st.owner_id, st.level)
+      local total_value = BoardUtils.total_invested(tile, st.level)
       local strong_idx = player.inventory and player.inventory:find_index(function(it) return it.id == 2009 end)
       if strong_idx and player.cash >= total_value then
         return {

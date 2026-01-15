@@ -60,6 +60,7 @@ local function snapshot_players(players)
       is_ai = p.is_ai,
       auto = p.auto,
       cash = p.cash,
+      balances = deep_copy(p.balances),
       position = p.position,
       seat_id = p.seat_id,
       eliminated = p.eliminated,

@@ -1,8 +1,20 @@
 local logger = {
   entries = {},
   max_entries = 200,
-  file_path = "runtime.log",
+  file_path = nil,
 }
+
+-- love2d 环境下获取 exe 同级目录的日志路径
+local function get_log_path()
+  if love and love.filesystem and love.filesystem.getSourceBaseDirectory then
+    local base = love.filesystem.getSourceBaseDirectory()
+    local sep = package.config:sub(1, 1) -- Windows: "\", Unix: "/"
+    return base .. sep .. "game.log"
+  end
+  return "game.log"
+end
+
+logger.file_path = get_log_path()
 
 local function stringify(...)
   local parts = {}

@@ -1,4 +1,3 @@
-local constants = require("src.config.constants")
 local logger = require("src.util.logger")
 local Agent = require("src.gameplay.ai.agent")
 local ItemEffects = require("src.gameplay.domain.item_post_effects")
@@ -78,7 +77,7 @@ end
 
 local function handle_remote_dice(game, player, item_id, context, deps)
   local inventory = get_inventory(deps)
-  local dice_count = player.seat_id and constants.dice_with_vehicle or constants.default_dice_count
+  local dice_count = player:dice_count()
   if context and context.by_ai then
     local value, target_tile = Agent.pick_remote_dice_value(game, player, dice_count)
     if not value then

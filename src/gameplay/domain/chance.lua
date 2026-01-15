@@ -160,11 +160,11 @@ handlers.reset_tiles_on_path = function(game, _, _, context)
 end
 
 handlers.move_backward = function(game, player, card)
-  return move_steps(game, player, card.steps)
+  return move_steps(game, player, -(card.steps or 0))
 end
 
 handlers.move_forward = function(game, player, card)
-  return move_steps(game, player, card.steps)
+  return move_steps(game, player, card.steps or 0)
 end
 
 handlers.grant_item = function(game, player, card)
@@ -208,6 +208,21 @@ handlers.discard_properties = function(game, player, card)
 end
 
 handlers.forced_move = function(game, player, card, context)
+  if card.destination_tile_id then
+    local idx = game.board:index_of_tile_id(card.destination_tile_id)
+    if idx then
+      game:update_player_position(player, idx)
+      if game.set_player_status then
+        game:set_player_status(player, "move_dir", nil)
+      end
+      return {
+        kind = "need_landing",
+        player_id = player.id,
+        board_index = idx,
+        move_result = context,
+      }
+    end
+  end
   if card.destination == "hospital" then
     player:send_to_hospital(game)
   elseif card.destination == "mountain" then

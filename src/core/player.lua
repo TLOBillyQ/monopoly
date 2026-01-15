@@ -2,12 +2,25 @@ local Inventory = require("src.core.inventory")
 local Tables = require("src.util.tables")
 local Tile = require("src.core.tile")
 local constants = require("src.config.constants")
+local vehicles_cfg = require("src.config.vehicles")
 local logger = require("src.util.logger")
 
 local Player = {}
 Player.__index = Player
 
 local deep_copy = Tables.deep_copy
+
+local vehicle_by_id = {}
+for _, cfg in ipairs(vehicles_cfg) do
+  vehicle_by_id[cfg.id] = cfg
+end
+
+local function normalize_currency(currency)
+  if currency == nil or currency == "" then
+    return "金币"
+  end
+  return currency
+end
 
 function Player:_store_set(path, value)
   if self._store and self._store.set then
@@ -20,13 +33,36 @@ function Player.new(attrs)
   local constants = attrs.constants
   assert(constants ~= nil, "Player.new(attrs) requires attrs.constants")
 
+  local balances = {}
+  if attrs.balances then
+    for currency, amount in pairs(attrs.balances) do
+      if normalize_currency(currency) == "金币" then
+        balances["金币"] = amount
+      else
+        balances[currency] = amount
+      end
+    end
+  end
+
+  local cash = attrs.starting_cash or constants.starting_cash
+  if balances["金币"] ~= nil then
+    cash = balances["金币"]
+    balances["金币"] = nil
+  end
+  if balances["金豆"] == nil and constants.starting_jindou ~= nil then
+    balances["金豆"] = constants.starting_jindou
+  end
+  if balances["乐园币"] == nil and constants.starting_leyuanbi ~= nil then
+    balances["乐园币"] = constants.starting_leyuanbi
+  end
+
   local p = {
     id = attrs.id,
     name = attrs.name or ("玩家" .. attrs.id),
     role_id = attrs.role_id,
     is_ai = attrs.is_ai or false,
     auto = attrs.auto or false,
-    cash = attrs.starting_cash or constants.starting_cash,
+    cash = cash,
     position = attrs.start_index or 1,
     seat_id = nil,
     deity_duration_turns = attrs.deity_duration_turns or constants.deity_duration_turns,
@@ -40,9 +76,60 @@ function Player.new(attrs)
     },
     inventory = attrs.inventory or Inventory.new({ constants = constants }),
     properties = {},
+    balances = balances,
     eliminated = false,
   }
   return setmetatable(p, Player)
+end
+
+function Player:vehicle_cfg()
+  if not self.seat_id then
+    return nil
+  end
+  return vehicle_by_id[self.seat_id]
+end
+
+function Player:vehicle_name()
+  local cfg = self:vehicle_cfg()
+  return cfg and cfg.name or nil
+end
+
+function Player:dice_count()
+  local cfg = self:vehicle_cfg()
+  if cfg and cfg.dice_count then
+    return cfg.dice_count
+  end
+  return constants.default_dice_count
+end
+
+function Player:is_vehicle_indestructible()
+  local cfg = self:vehicle_cfg()
+  return cfg and cfg.indestructible or false
+end
+
+function Player:balance(currency)
+  local key = normalize_currency(currency)
+  if key == "广告" then
+    return math.huge
+  end
+  if key == "金币" then
+    return self.cash or 0
+  end
+  return self.balances[key] or 0
+end
+
+function Player:deduct_balance(currency, amount)
+  local key = normalize_currency(currency)
+  if key == "广告" then
+    return math.huge
+  end
+  if key == "金币" then
+    return self:deduct_cash(amount)
+  end
+  local next_value = (self.balances[key] or 0) - amount
+  self.balances[key] = next_value
+  self:_store_set({ "players", self.id, "balances", key }, next_value)
+  return next_value
 end
 
 function Player:add_cash(amount)

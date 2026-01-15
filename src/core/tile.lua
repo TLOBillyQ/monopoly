@@ -7,13 +7,18 @@ function Tile.from_config(cfg)
     name = cfg.name,
     type = cfg.type,
     price = cfg.price or 0,
-    base_rent = cfg.base_rent or 0,
+    upgrade_costs = cfg.upgrade_costs or {},
+    rents = cfg.rents or {},
+    row = cfg.row,
+    col = cfg.col,
+    build_row = cfg.build_row,
+    build_col = cfg.build_col,
   }
   return setmetatable(t, Tile)
 end
 
 -- 从 store 获取 tile 的动态状态（owner_id, level）
--- tile 的静态属性（id, name, type, price, base_rent）在 Tile 对象上
+-- tile 的静态属性（id, name, type, price, upgrade_costs, rents）在 Tile 对象上
 -- tile 的动态状态存储在 store["board"]["tiles"][tile.id] 中
 function Tile.get_state(game, tile)
   assert(game and game.store, "Tile.get_state requires game.store")

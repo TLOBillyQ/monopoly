@@ -1,6 +1,7 @@
 local Tile = require("src.core.tile")
 local Roadblock = require("src.gameplay.domain.item_roadblock")
 local Demolish = require("src.gameplay.domain.item_demolish")
+local Pricing = require("src.gameplay.domain.land_pricing")
 
 local Agent = {}
 
@@ -13,8 +14,7 @@ end
 Agent.is_auto_player = is_auto_player
 
 local function current_rent(tile, level)
-  local exponent = level or 0
-  return (tile.price or 0) * (2 ^ exponent) * 0.5
+  return Pricing.rent_for_level(tile, level or 0)
 end
 
 local function simulate_landing(game, player, steps)

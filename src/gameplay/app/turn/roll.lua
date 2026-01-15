@@ -1,10 +1,9 @@
-local constants = require("src.config.constants")
 local Dice = require("src.core.dice")
 local logger = require("src.util.logger")
 
 local function phase_roll(tm, args)
   local player = args.player or tm.game:current_player()
-  local dice_count = player.seat_id and constants.dice_with_vehicle or constants.default_dice_count
+  local dice_count = player:dice_count()
   local override = nil
   if player.status.pending_remote_dice then
     override = player.status.pending_remote_dice.values

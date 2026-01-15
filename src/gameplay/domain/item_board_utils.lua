@@ -1,3 +1,5 @@
+local Pricing = require("src.gameplay.domain.land_pricing")
+
 local BoardUtils = {}
 
 function BoardUtils.indices_in_range(board, start, distance)
@@ -26,13 +28,11 @@ function BoardUtils.indices_in_range(board, start, distance)
   return list
 end
 
-function BoardUtils.total_invested(tile, owner_id, level)
-  if not owner_id then
+function BoardUtils.total_invested(tile, level)
+  if not tile then
     return 0
   end
-  level = level or 0
-  local price = tile.price or 0
-  return price * ((2 ^ (level + 1)) - 1)
+  return Pricing.total_invested(tile, level or 0)
 end
 
 function BoardUtils.find_best_tile(game, player, distance, opts)

@@ -36,6 +36,9 @@ local function send_players_to_hospital(game, idx)
   for _, pid in ipairs(snapshot) do
     local target = game.players[pid]
     if target then
+      if target.is_vehicle_indestructible and target:is_vehicle_indestructible() then
+        logger.event(target.name .. " 座驾免疫导弹效果")
+      else
       game:set_player_seat(target, nil)
       if hospital_index then
         game:update_player_position(target, hospital_index)
@@ -46,6 +49,7 @@ local function send_players_to_hospital(game, idx)
       game:set_player_status(target, "stay_turns", constants.hospital_stay_turns)
       logger.event(target.name .. " 被炸伤送往医院，需停留 " .. constants.hospital_stay_turns .. " 回合")
       count = count + 1
+      end
     end
   end
   return count
@@ -62,7 +66,7 @@ function Demolish.find_target(game, player, distance)
       if not st.owner_id or st.owner_id == player.id or (st.level or 0) <= 0 then
         return nil
       end
-      return BoardUtils.total_invested(tile, st.owner_id, st.level)
+      return BoardUtils.total_invested(tile, st.level)
     end,
   })
   return idx

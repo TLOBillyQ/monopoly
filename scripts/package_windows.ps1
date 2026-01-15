@@ -1,5 +1,7 @@
 $ErrorActionPreference = "Stop"
 
+
+
 # Define paths
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $ProjectRoot = (Resolve-Path "$ScriptDir\..").Path
@@ -7,8 +9,6 @@ $BinWindowsDir = Join-Path $ProjectRoot "bin\windows"
 $TempZipFile = Join-Path $ProjectRoot "game_temp.zip"
 $LoveFile = Join-Path $BinWindowsDir "SuperGame.love"
 $GameExe = Join-Path $BinWindowsDir "Game.exe"
-$FinalZip = Join-Path $ProjectRoot "bin\monopoly.zip"
-$SVNTarget = "C:\Users\Lzx_8\Documents\lzx\eggitor\1_开发中\大富翁\项目工程\monopoly"
 
 Write-Host "Starting packaging process..."
 
@@ -55,40 +55,11 @@ if (-not (Test-Path $GameExe)) {
     exit 1
 }
 
-# 4. Zip bin/windows to monopoly.zip (excluding love.exe and SuperGame.love)
-Write-Host "4. Zipping bin/windows to $FinalZip..."
-if (Test-Path $FinalZip) {
-    Remove-Item $FinalZip -Force
-}
-
-# Get files to zip: All files in bin/windows EXCEPT love.exe and SuperGame.love
-$FilesToZip = Get-ChildItem -Path $BinWindowsDir | Where-Object { 
-    $_.Name -ne "love.exe" -and $_.Name -ne "SuperGame.love"
-}
-
-Compress-Archive -Path $FilesToZip.FullName -DestinationPath $FinalZip -Force
-
-# 5. Cleanup intermediate files
-Write-Host "5. Cleaning up intermediate files in bin/windows..."
+# 4. Cleanup intermediate files
+Write-Host "4. Cleaning up intermediate files in bin/windows..."
 if (Test-Path $LoveFile) {
     Remove-Item $LoveFile -Force
 }
-if (Test-Path $GameExe) {
-    Remove-Item $GameExe -Force
-}
 
-# 6. Copy packaged files to Eggitor project if present
-Write-Host "6. Syncing package to $SVNTarget if it exists..."
-if (Test-Path $SVNTarget) {
-    Expand-Archive -Path $FinalZip -DestinationPath $SVNTarget -Force
-    Write-Host "Copied package contents to $SVNTarget"
+Write-Host "Packaging successful! Output: $GameExe"
 
-    if (Get-Command "TortoiseProc.exe" -ErrorAction SilentlyContinue) {
-        Write-Host "Launching TortoiseSVN Commit..."
-        Start-Process "TortoiseProc.exe" -ArgumentList "/command:commit /path:`"$SVNTarget`""
-    }
-} else {
-    Write-Host "Target path not found, skipping copy."
-}
-
-Write-Host "Packaging successful! Output: $FinalZip"

@@ -1,11 +1,11 @@
 local logger = require("src.util.logger")
 local roles_cfg = require("src.config.roles")
+local vehicles_cfg = require("src.config.vehicles")
 
-local VEHICLE_NAMES = {
-  [4001] = "滑板",
-  [4002] = "摩托",
-  [4003] = "法拉利",
-}
+local vehicle_name_by_id = {}
+for _, cfg in ipairs(vehicles_cfg) do
+  vehicle_name_by_id[cfg.id] = cfg.name
+end
 
 local PanelRenderer = {}
 
@@ -67,7 +67,7 @@ local function get_player_details_text(player, view, item_name_by_id)
 
   -- Vehicle
   if player.seat_id then
-    local vname = VEHICLE_NAMES[player.seat_id] or ("车" .. player.seat_id)
+    local vname = vehicle_name_by_id[player.seat_id] or ("车" .. player.seat_id)
     table.insert(parts, vname)
   end
 

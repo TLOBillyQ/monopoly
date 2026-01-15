@@ -1,4 +1,3 @@
-local constants = require("src.config.constants")
 local Agent = require("src.gameplay.ai.agent")
 local ItemEffects = require("src.gameplay.domain.item_post_effects")
 local logger = require("src.util.logger")
@@ -84,7 +83,7 @@ function Strategy.auto_pre_action(game, player, deps)
 
   -- 遥控骰子
   local dice_result = try_use(2002, function()
-    local dice_count = player.seat_id and constants.dice_with_vehicle or constants.default_dice_count
+    local dice_count = player:dice_count()
     return Agent.pick_remote_dice_value(game, player, dice_count) ~= nil
   end)
   if dice_result then return dice_result end

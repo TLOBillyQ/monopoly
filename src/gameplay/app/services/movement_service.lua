@@ -24,7 +24,8 @@ end
 
 function MovementService.move(game, player, steps, opts)
   opts = opts or {}
-  local branch_parity = opts.branch_parity or steps
+  local abs_steps = math.abs(steps or 0)
+  local branch_parity = opts.branch_parity or abs_steps
   local board = game.board
   local encountered = {}
   local visited = {}
@@ -34,9 +35,10 @@ function MovementService.move(game, player, steps, opts)
   local current = player.position
   local start_tile = board:get_tile(current)
   local facing = opts.direction or (player.status and player.status.move_dir) or nil
+  local step_fn = (steps or 0) < 0 and board.step_backward_by_facing or board.step_forward_by_facing
 
-  for step = 1, steps do
-    local next_index, passed, step_dir = board:step_forward_by_facing(current, facing, branch_parity)
+  for step = 1, abs_steps do
+    local next_index, passed, step_dir = step_fn(board, current, facing, branch_parity)
     pass_start = pass_start + passed
     facing = step_dir or facing
     current = next_index
@@ -63,12 +65,12 @@ function MovementService.move(game, player, steps, opts)
     end
 
     -- 经过黑市时中断（非最后一步），skip_market_check 用于测试
-    if not opts.skip_market_check then
+    if steps > 0 and not opts.skip_market_check then
       local tile = board:get_tile(current)
       if tile and tile.type == "market" and step < steps then
         market_interrupt = {
           position = current,
-          remaining_steps = steps - step,
+          remaining_steps = abs_steps - step,
           facing = facing,
           branch_parity = branch_parity,
         }

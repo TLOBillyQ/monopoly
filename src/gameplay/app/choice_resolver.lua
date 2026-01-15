@@ -8,7 +8,6 @@ local Steal = require("src.gameplay.domain.item_steal")
 local Roadblock = require("src.gameplay.domain.item_roadblock")
 local logger = require("src.util.logger")
 local MarketService = require("src.gameplay.app.services.market_service")
-local constants = require("src.config.constants")
 local UI = require("src.gameplay.ports.ui_port")
 
 local Resolver = {}
@@ -404,7 +403,7 @@ local function handle_remote_dice_value(game, choice, action)
   local value = as_number(action.option_id)
   local meta = choice.meta or {}
   local player = meta.player_id and game.players[meta.player_id] or game:current_player()
-  local dice_count = meta.dice_count or (player and (player.seat_id and constants.dice_with_vehicle or constants.default_dice_count)) or 1
+  local dice_count = meta.dice_count or (player and player.dice_count and player:dice_count()) or 1
   if not player or not value then
     Choice.clear(game)
     return { stay = false }

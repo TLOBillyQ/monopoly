@@ -114,10 +114,6 @@ Effect.defs = {
       local market = get_service(ctx, "market")
       if not market then return nil end
 
-      if player.inventory:is_full() then
-        return { intent = { kind = "push_popup", payload = { title = "黑市", body = player.name .. " 卡槽已满" } } }
-      end
-
       local spec, intent = market.build_choice_spec(player)
       if intent then return { intent = intent } end
       if not spec then return nil end
