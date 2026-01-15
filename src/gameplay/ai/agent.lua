@@ -216,9 +216,8 @@ function Agent.auto_action_for_choice(game, choice)
   if choice.kind == "item_target_player" then
     local item_id = choice.meta and choice.meta.item_id
     local target = item_id and pick_target_player(game, actor, item_id, choice.options) or nil
-    local target_id = target and target.id or first_option_id(choice.options)
-    if target_id then
-      return { type = "choice_select", choice_id = choice.id, option_id = target_id }
+    if target then
+      return { type = "choice_select", choice_id = choice.id, option_id = target.id }
     end
     return { type = "choice_cancel", choice_id = choice.id }
   end
