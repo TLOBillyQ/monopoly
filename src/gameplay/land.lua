@@ -2,8 +2,8 @@ local Effect = {}
 local logger = require("src.util.logger")
 local constants = require("src.config.constants")
 local Tile = require("src.core.tile")
-local BoardUtils = require("src.gameplay.domain.item_board_utils")
-local Pricing = require("src.gameplay.domain.land_pricing")
+local BoardUtils = require("src.gameplay.item_board_utils")
+local Pricing = require("src.gameplay.land_pricing")
 
 local tile_state = Tile.get_state
 

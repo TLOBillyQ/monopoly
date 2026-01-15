@@ -1,14 +1,14 @@
-local Choice = require("src.gameplay.app.choice")
-local Effect = require("src.gameplay.domain.effect")
-local Inventory = require("src.gameplay.domain.item_inventory")
-local Executor = require("src.gameplay.domain.item_executor")
-local Demolish = require("src.gameplay.domain.item_demolish")
-local Strategy = require("src.gameplay.domain.item_strategy")
-local Steal = require("src.gameplay.domain.item_steal")
-local Roadblock = require("src.gameplay.domain.item_roadblock")
+local Choice = require("src.gameplay.choice")
+local Effect = require("src.gameplay.effect")
+local Inventory = require("src.gameplay.item_inventory")
+local Executor = require("src.gameplay.item_executor")
+local Demolish = require("src.gameplay.item_demolish")
+local Strategy = require("src.gameplay.item_strategy")
+local Steal = require("src.gameplay.item_steal")
+local Roadblock = require("src.gameplay.item_roadblock")
 local logger = require("src.util.logger")
-local MarketService = require("src.gameplay.app.services.market_service")
-local UI = require("src.gameplay.ports.ui_port")
+local MarketService = require("src.gameplay.market_service")
+local UI = require("src.gameplay.ui_port")
 
 local Resolver = {}
 
@@ -77,7 +77,7 @@ end
 
 local function get_container_defs_by_choice_kind(choice_kind)
   if choice_kind == "landing_optional_effect" or choice_kind == "land_optional_effect" then
-    local landing_effects = require("src.gameplay.domain.landing")
+    local landing_effects = require("src.gameplay.landing")
     return landing_effects and landing_effects.defs or {}
   end
   return nil
@@ -135,7 +135,7 @@ handlers.landing_optional_effect = handle_optional_landing_effect
 handlers.land_optional_effect = handle_optional_landing_effect
 
 local function handle_rent_prompt(game, choice, action)
-  local LandEffect = require("src.gameplay.domain.land")
+  local LandEffect = require("src.gameplay.land")
   local meta = choice.meta or {}
   local player_id = meta.player_id
   local tile_id = meta.tile_id
@@ -177,7 +177,7 @@ local function handle_rent_prompt(game, choice, action)
 end
 
 local function handle_tax_prompt(game, choice, action)
-  local LandEffect = require("src.gameplay.domain.land")
+  local LandEffect = require("src.gameplay.land")
   local meta = choice.meta or {}
   local player_id = meta.player_id
 

@@ -1,5 +1,5 @@
 local logger = require("src.util.logger")
-local Inventory = require("src.gameplay.domain.item_inventory")
+local Inventory = require("src.gameplay.item_inventory")
 
 local ChanceEffects = {}
 

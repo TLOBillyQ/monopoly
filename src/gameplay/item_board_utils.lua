@@ -1,4 +1,4 @@
-local Pricing = require("src.gameplay.domain.land_pricing")
+local Pricing = require("src.gameplay.land_pricing")
 
 local BoardUtils = {}
 

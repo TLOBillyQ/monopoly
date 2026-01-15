@@ -2,7 +2,7 @@
 -- 职责：领域写操作、状态查询、流程驱动
 -- 装配：由 CompositionRoot.assemble() 完成
 
-local CompositionRoot = require("src.gameplay.app.composition_root")
+local CompositionRoot = require("src.gameplay.composition_root")
 local Tables = require("src.util.tables")
 
 local Game = {}

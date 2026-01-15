@@ -1,6 +1,6 @@
 local logger = require("src.util.logger")
 local Tile = require("src.core.tile")
-local BoardUtils = require("src.gameplay.domain.item_board_utils")
+local BoardUtils = require("src.gameplay.item_board_utils")
 local constants = require("src.config.constants")
 
 local Demolish = {}

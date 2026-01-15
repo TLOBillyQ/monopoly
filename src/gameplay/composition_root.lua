@@ -2,18 +2,18 @@
 -- 职责：创建并连接所有运行时对象，注入依赖关系
 -- 原则：所有依赖关系在此处显式声明，其他模块不做组装
 
-local BoardFactory = require("src.gameplay.app.factories.board_factory")
+local BoardFactory = require("src.gameplay.board_factory")
 local Player = require("src.core.player")
 local Inventory = require("src.core.inventory")
 local constants = require("src.config.constants")
 local roles_cfg = require("src.config.roles")
 local Tables = require("src.util.tables")
-local RNG = require("src.gameplay.infra.rng")
-local Store = require("src.gameplay.infra.store")
-local TurnManager = require("src.gameplay.app.services.turn_manager")
-local MovementService = require("src.gameplay.app.services.movement_service")
-local MarketService = require("src.gameplay.app.services.market_service")
-local BankruptcyService = require("src.gameplay.app.services.bankruptcy_service")
+local RNG = require("src.gameplay.rng")
+local Store = require("src.gameplay.store")
+local TurnManager = require("src.gameplay.turn_manager")
+local MovementService = require("src.gameplay.movement_service")
+local MarketService = require("src.gameplay.market_service")
+local BankruptcyService = require("src.gameplay.bankruptcy_service")
 local logger = require("src.util.logger")
 
 local CompositionRoot = {}

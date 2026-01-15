@@ -1,10 +1,10 @@
 local logger = require("src.util.logger")
-local Agent = require("src.gameplay.ai.agent")
-local ItemEffects = require("src.gameplay.domain.item_post_effects")
-local Demolish = require("src.gameplay.domain.item_demolish")
-local Roadblock = require("src.gameplay.domain.item_roadblock")
-local Inventory = require("src.gameplay.domain.item_inventory")
-local Strategy = require("src.gameplay.domain.item_strategy")
+local Agent = require("src.gameplay.agent")
+local ItemEffects = require("src.gameplay.item_post_effects")
+local Demolish = require("src.gameplay.item_demolish")
+local Roadblock = require("src.gameplay.item_roadblock")
+local Inventory = require("src.gameplay.item_inventory")
+local Strategy = require("src.gameplay.item_strategy")
 
 local Executor = {}
 

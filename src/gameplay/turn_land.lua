@@ -1,4 +1,4 @@
-local LandingResolver = require("src.gameplay.app.landing_resolver")
+local LandingResolver = require("src.gameplay.landing_resolver")
 
 local function phase_land(tm, args)
   local player = args.player

@@ -1,12 +1,12 @@
-local property_effects = require("src.gameplay.domain.land")
+local property_effects = require("src.gameplay.land")
 local logger = require("src.util.logger")
 local constants = require("src.config.constants")
 local chance_cfg = require("src.config.chance_cards")
 local random = require("src.util.random")
-local Inventory = require("src.gameplay.domain.item_inventory")
-local chance_effects = require("src.gameplay.domain.chance")
+local Inventory = require("src.gameplay.item_inventory")
+local chance_effects = require("src.gameplay.chance")
 
-local Steal = require("src.gameplay.domain.item_steal")
+local Steal = require("src.gameplay.item_steal")
 local Effect = {}
 
 local function get_service(ctx, key)

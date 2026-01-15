@@ -1,8 +1,8 @@
-local Agent = require("src.gameplay.ai.agent")
-local Strategy = require("src.gameplay.domain.item_strategy")
-local Inventory = require("src.gameplay.domain.item_inventory")
-local Demolish = require("src.gameplay.domain.item_demolish")
-local Executor = require("src.gameplay.domain.item_executor")
+local Agent = require("src.gameplay.agent")
+local Strategy = require("src.gameplay.item_strategy")
+local Inventory = require("src.gameplay.item_inventory")
+local Demolish = require("src.gameplay.item_demolish")
+local Executor = require("src.gameplay.item_executor")
 
 local DecisionEngine = {}
 

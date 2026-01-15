@@ -1,5 +1,5 @@
-local Agent = require("src.gameplay.ai.agent")
-local ItemEffects = require("src.gameplay.domain.item_post_effects")
+local Agent = require("src.gameplay.agent")
+local ItemEffects = require("src.gameplay.item_post_effects")
 local logger = require("src.util.logger")
 
 local Strategy = {}

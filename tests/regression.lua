@@ -2,13 +2,13 @@
 package.path = "src/?.lua;src/?/init.lua;src/gameplay/?.lua;src/gameplay/?/init.lua;?.lua;" .. package.path
 
 local App = require("src.game")
-local MovementService = require("src.gameplay.app.services.movement_service")
-local Inventory = require("src.gameplay.domain.item_inventory")
-local Executor = require("src.gameplay.domain.item_executor")
-local Strategy = require("src.gameplay.domain.item_strategy")
-local LandingResolver = require("src.gameplay.app.landing_resolver")
-local Choice = require("src.gameplay.app.choice")
-local ChoiceResolver = require("src.gameplay.app.choice_resolver")
+local MovementService = require("src.gameplay.movement_service")
+local Inventory = require("src.gameplay.item_inventory")
+local Executor = require("src.gameplay.item_executor")
+local Strategy = require("src.gameplay.item_strategy")
+local LandingResolver = require("src.gameplay.landing_resolver")
+local Choice = require("src.gameplay.choice")
+local ChoiceResolver = require("src.gameplay.choice_resolver")
 
 local function assert_eq(a, b, msg)
   if a ~= b then
@@ -218,7 +218,7 @@ local function test_movement_examples_from_issue()
 end
 
 local function test_ai_cancels_land_purchases()
-  local Agent = require("src.gameplay.ai.agent")
+  local Agent = require("src.gameplay.agent")
   local g = new_game()
   local ai_player = g.players[2]
   assert(Agent.is_auto_player(ai_player), "player 2 should be AI")
@@ -275,7 +275,7 @@ local function test_mandatory_payment_causes_bankruptcy()
 end
 
 local function test_ai_skips_auto_buy_at_market()
-  local MarketService = require("src.gameplay.app.services.market_service")
+  local MarketService = require("src.gameplay.market_service")
   local g = new_game()
   local ai_player = g.players[2]
   assert(ai_player.is_ai, "player 2 should be AI")
