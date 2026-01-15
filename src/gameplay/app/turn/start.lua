@@ -1,10 +1,7 @@
 local logger = require("src.util.logger")
 local Choice = require("src.gameplay.app.choice")
 local UI = require("src.gameplay.ports.ui_port")
-local Inventory = require("src.gameplay.domain.item_inventory")
-local Strategy = require("src.gameplay.domain.item_strategy")
-local Executor = require("src.gameplay.domain.item_executor")
-local Demolish = require("src.gameplay.domain.item_demolish")
+local DecisionEngine = require("src.gameplay.app.decision_engine")
 
 local function phase_start(tm)
   local player = tm.game:current_player()
@@ -36,16 +33,7 @@ local function phase_start(tm)
     return "end_turn", { player = player }
   end
 
-  local pre = Strategy.auto_pre_action(tm.game, player, {
-    inventory = Inventory,
-    find_monster_target = Demolish.find_target,
-    find_missile_target = Demolish.find_target,
-    use_item = function(g, p, id, ctx)
-      ctx = ctx or { by_ai = true }
-      ctx.services = g.services
-      return Executor.use_item(g, p, id, ctx, { inventory = Inventory, strategy = Strategy })
-    end,
-  })
+  local pre = DecisionEngine.get_pre_turn_action(tm.game, player)
 
   if pre then
     local intent = pre.intent or pre

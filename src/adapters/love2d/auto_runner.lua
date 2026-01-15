@@ -43,15 +43,6 @@ function AutoRunner:next_action(dt, env)
     return { type = "modal_confirm" }
   end
 
-  local pending = env.pending_choice
-  if pending then
-    local first = pending.options and pending.options[1]
-    if first then
-      return { type = "choice_select", choice_id = pending.id, option_id = first.id or first }
-    end
-    return { type = "choice_cancel", choice_id = pending.id }
-  end
-
   return { type = "ui_button", id = "next" }
 end
 
