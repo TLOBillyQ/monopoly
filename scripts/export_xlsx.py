@@ -193,7 +193,7 @@ def table_from_sheet(path):
 def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     root = os.path.abspath(os.path.join(script_dir, os.pardir))
-    design_dir = os.path.join(root, "docs", "design")
+    design_dir = os.path.join(root, "design")
     config_dir = os.path.join(root, "src", "config")
 
     tiles_path = os.path.join(design_dir, "蛋仔--大富翁--地块表.xlsx")
