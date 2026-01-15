@@ -61,6 +61,9 @@ function TurnManager:dispatch(action)
   self.pending_action = action
 
   local choice = Choice.get(self.game)
+  if choice and action == nil and (not self.flow or not self.flow.current) then
+    return nil
+  end
   if choice and (not self.flow or not self.flow.current) then
     local res = ChoiceResolver.resolve(self.game, choice, action)
     self.pending_action = nil

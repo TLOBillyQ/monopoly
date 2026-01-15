@@ -26,7 +26,9 @@ function Store:set(path, value)
   local node = self.state
   for i = 1, #path - 1 do
     local key = path[i]
-    node[key] = node[key] or {}
+    if node[key] == nil or type(node[key]) ~= "table" then
+      node[key] = {}
+    end
     node = node[key]
   end
   node[path[#path]] = value
