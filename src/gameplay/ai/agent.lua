@@ -21,10 +21,23 @@ local function simulate_landing(game, player, steps)
   local board = game.board
   local current = player.position
   local facing = player.status and player.status.move_dir or nil
-  for _ = 1, steps do
+  for step = 1, steps do
     local next_index, _, step_dir = board:step_forward_by_facing(current, facing, steps)
     current = next_index
     facing = step_dir or facing
+    
+    if board:has_roadblock(current) then
+      break
+    end
+    
+    if board:has_mine(current) then
+      break
+    end
+    
+    local tile = board:get_tile(current)
+    if tile and tile.type == "market" and step < steps then
+      break
+    end
   end
   return { idx = current, tile = board:get_tile(current), steps = steps }
 end
@@ -216,9 +229,8 @@ function Agent.auto_action_for_choice(game, choice)
   if choice.kind == "item_target_player" then
     local item_id = choice.meta and choice.meta.item_id
     local target = item_id and pick_target_player(game, actor, item_id, choice.options) or nil
-    local target_id = target and target.id or first_option_id(choice.options)
-    if target_id then
-      return { type = "choice_select", choice_id = choice.id, option_id = target_id }
+    if target then
+      return { type = "choice_select", choice_id = choice.id, option_id = target.id }
     end
     return { type = "choice_cancel", choice_id = choice.id }
   end

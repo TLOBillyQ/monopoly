@@ -4,6 +4,7 @@ local vehicles_cfg = require("src.config.vehicles")
 local logger = require("src.util.logger")
 local Choice = require("src.gameplay.app.choice")
 local Inventory = require("src.gameplay.domain.item_inventory")
+local Agent = require("src.gameplay.ai.agent")
 
 local MarketService = {}
 
@@ -128,7 +129,7 @@ end
 -- 机会卡传送到黑市时使用：AI自动购买最便宜的一个
 function MarketService.auto_buy(game, player)
   -- AI玩家不主动购买，避免破产
-  if player.is_ai or player.auto then
+  if Agent.is_auto_player(player) then
     logger.event(player.name .. " (AI) 到达黑市，选择不购买")
     return
   end

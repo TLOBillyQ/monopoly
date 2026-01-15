@@ -8,7 +8,7 @@ local phase_move_fn = require("src.gameplay.app.turn.move")
 local phase_landing_fn = require("src.gameplay.app.turn.land")
 local phase_post_fn = require("src.gameplay.app.turn.post")
 local phase_end_fn = require("src.gameplay.app.turn.end_turn")
-local Agent = require("src.gameplay.ai.agent")
+local DecisionEngine = require("src.gameplay.app.decision_engine")
 local Logger = require("src.util.logger")
 
 local TurnManager = {}
@@ -74,7 +74,7 @@ function TurnManager:_build_flow()
     end
 
     if not self.pending_action then
-      local auto_action = Agent.auto_action_for_choice(self.game, choice)
+      local auto_action = DecisionEngine.get_choice_action(self.game, choice)
       if auto_action then
         self.pending_action = auto_action
       end
