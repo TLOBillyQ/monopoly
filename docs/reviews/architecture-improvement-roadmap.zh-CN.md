@@ -1,6 +1,6 @@
 # 改进路线图（架构与目录层级）— monopoly
 
-> 评审快照：`34ea479`（2026-01-14）  
+> 评审快照：`6e473b0`（2026-01-15）  
 > 原则：遵循仓库 `AGENTS.md`（功能不变、优先删除/复用、避免无调用点抽象、每步改完自测）。
 
 ## 0. 路线图目标与验收口径
@@ -20,17 +20,16 @@
 
 ## 1. P0（当天可完成）：文档/脚本路径“止血”
 
-### 1.1 修正 README 与注释漂移
+### 1.1 修正 README 与文档漂移
 
 **问题对应**
 
 - `README.md` 中的 `src/app.lua`、`lua scripts/*` 与仓库实际不一致。
-- `tests/deps_check.lua`、`tests/regression.lua` 头部注释仍写 `lua scripts/...`。
-- `docs/eggy/eggy-migration-roadmap.zh-CN.md` 引用不存在的 `docs/architecture-review.zh-CN.md`。
+- `docs/eggy/eggy-migration-roadmap.zh-CN.md` 仍写 `src/app.lua` 作为规则层入口。
 
 **建议动作（择一或组合）**
 
-- A) 只改文档：统一把命令与文件引用改为 `tests/*`、`src/game.lua`、`src/gameplay/app/bootstrap/init.lua`。
+- A) 只改文档：统一把命令与文件引用改为 `tests/*`、`src/game.lua`、`src/gameplay/app/bootstrap/init.lua`，并同步修正 `docs/eggy/eggy-migration-roadmap.zh-CN.md` 的 `src/app.lua`。
 - B) 保留旧路径兼容：新增 `scripts/deps_check.lua` 与 `scripts/regression.lua` 作为“薄入口”，内部直接 `dofile("tests/xxx.lua")`（仅当你确实需要兼容旧文档/旧 CI）。
 
 **验收**
@@ -38,41 +37,33 @@
 - README 的所有命令在仓库根目录可直接运行并成功。
 - 文档引用的文件在仓库中真实存在。
 
-### 1.2 补齐或移除“失效引用”
-
-**建议动作**
-
-- 在 `docs/` 中补一份被引用的 `docs/architecture-review.zh-CN.md`（内容可非常短：给出依赖方向 + 端口/适配器约定 + 如何自检），或把引用改到本仓库已有文档（如 `docs/deepfuture/...` 或本次评审文档）。
-
-**验收**
-
-- `rg -n \"docs/architecture-review\" docs` 无悬空引用。
-
 ## 2. P1（低风险可渐进）：强化依赖守护（DIP 的“护栏”）
 
 ### 2.1 让 `deps_check` 更难被绕过
 
 **现状**
 
-- `tests/deps_check.lua` 通过扫描 `require("...")` 字符串前缀做规则判断；对命名风格敏感。
+- `tests/deps_check.lua` 已把模块名映射为路径并检查 `dofile/loadfile`，但仍依赖字符串扫描，且只匹配 `src/` 前缀。
 
 **建议动作（增量增强，保持简单）**
 
-- 把规则从“检查模块名字符串前缀”升级为“解析模块名→推导可能文件路径→再判断路径前缀”：
-  - 例如把 `require("src.adapters.love2d.love_layer")` 转成 `src/adapters/love2d/love_layer.lua` 后做前缀判断。
-  - 同时把 `require "..."` 与 `require("...")` 两类保持覆盖（现有已做）。
-- 增加对 `dofile/loadfile` 的最低限度扫描（只要发现 gameplay 层调用这些加载函数就报错或警告），避免绕开 require。
+- 把 `require("adapters.*")` 这类无 `src.` 前缀的模块名归一到 `src/` 目录下再判断，减少绕过空间。
+- 对明显的动态拼接 `require` 保持告警（至少提示“可能绕过规则”）。
 
 **验收**
 
 - `deps_check` 仍是纯 Lua、无需额外依赖。
-- 新增一两个“故意违规”的临时分支能被脚本抓到（验证后撤回临时代码）。
+- 新增一两个“故意违规”的临时分支能被脚本抓到（验证后撤回临时代码），例如 `require("adapters.love2d...")`。
 
 ### 2.2 明确“允许依赖”的白名单
 
+**现状**
+
+- `tests/deps_check.lua` 顶部已明确列出允许依赖方向。
+
 **建议动作**
 
-- 在 `tests/deps_check.lua` 顶部用更明确的文字写出规则（比如：`core/ util/ config/ gameplay/ adapters/` 的允许方向），并在 README 中链接到该规则。
+- README 改为引用该处规则，避免重复维护与漂移。
 
 **验收**
 
@@ -153,4 +144,3 @@
 2) P1 加固 deps_check（马上提升“可守护性”）  
 3) P2 选定 overlays/Tile 的单一来源策略（提升“可存档/可复现可信度”）  
 4) 其余项按需求推进（迁移蛋仔/扩规则时再做 P3/P4）
-
