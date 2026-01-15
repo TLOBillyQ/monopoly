@@ -118,7 +118,7 @@ Effect.defs = {
         return { intent = { kind = "push_popup", payload = { title = "黑市", body = player.name .. " 卡槽已满" } } }
       end
 
-      local spec, intent = market.build_choice_spec(game, player)
+      local spec, intent = market.build_choice_spec(player)
       if intent then return { intent = intent } end
       if not spec then return nil end
 

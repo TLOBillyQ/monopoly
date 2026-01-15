@@ -23,7 +23,7 @@ local function phase_move(tm, args)
   if move_result.market_interrupt then
     local market = tm.game.services and tm.game.services.market
     if market then
-      local spec, intent = market.build_choice_spec(tm.game, player)
+      local spec, intent = market.build_choice_spec(player)
       if spec then
         Choice.open(tm.game, spec)
         return "wait_choice", {

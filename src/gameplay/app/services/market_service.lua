@@ -31,7 +31,7 @@ function MarketService.list_buyable(player)
   return list
 end
 
-function MarketService.build_choice_spec(game, player)
+function MarketService.build_choice_spec(player)
   if not player then return nil end
 
   if player.inventory:is_full() then
@@ -61,7 +61,7 @@ function MarketService.build_choice_spec(game, player)
   }
 end
 
-function MarketService.buy(game, player, item_id)
+function MarketService.buy(player, item_id)
   if not player or not item_id then return false end
   local cfg = find_cfg(item_id)
   if not cfg or not buyable_with_cash(cfg) then return false end
@@ -82,7 +82,7 @@ function MarketService.buy(game, player, item_id)
 end
 
 -- 机会卡传送到黑市时使用：AI自动购买最便宜的一个
-function MarketService.auto_buy(game, player)
+function MarketService.auto_buy(player)
   -- AI玩家不主动购买，避免破产
   if player.is_ai or player.auto then
     logger.event(player.name .. " (AI) 到达黑市，选择不购买")
@@ -94,7 +94,7 @@ function MarketService.auto_buy(game, player)
   end
   local list = MarketService.list_buyable(player)
   if #list > 0 then
-    MarketService.buy(game, player, list[1].id)
+    MarketService.buy(player, list[1].id)
   end
 end
 
@@ -116,7 +116,7 @@ function MarketService.handle_choice(game, choice, action)
   local meta = choice.meta or {}
   local player = meta.player_id and game.players[meta.player_id] or game:current_player()
   if player and item_id then
-    MarketService.buy(game, player, item_id)
+    MarketService.buy(player, item_id)
   end
   Choice.clear(game)
   return { stay = false }

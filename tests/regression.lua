@@ -284,7 +284,7 @@ local function test_ai_skips_auto_buy_at_market()
   ai_player:set_cash(1000)
   
   local before_cash = ai_player.cash
-  MarketService.auto_buy(g, ai_player)
+  MarketService.auto_buy(ai_player)
   
   -- AI should not buy anything
   assert(ai_player.cash == before_cash, "AI should not spend money on auto_buy")
