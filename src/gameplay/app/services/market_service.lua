@@ -83,6 +83,11 @@ end
 
 -- 机会卡传送到黑市时使用：AI自动购买最便宜的一个
 function MarketService.auto_buy(game, player)
+  -- AI玩家不主动购买，避免破产
+  if player.is_ai or player.auto then
+    logger.event(player.name .. " (AI) 到达黑市，选择不购买")
+    return
+  end
   if player.inventory:is_full() then
     logger.warn(player.name .. " 卡槽已满，无法在黑市购买")
     return

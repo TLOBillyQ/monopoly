@@ -274,6 +274,22 @@ local function test_mandatory_payment_causes_bankruptcy()
   assert(before_eliminated == false, "player should not have been eliminated before")
 end
 
+local function test_ai_skips_auto_buy_at_market()
+  local MarketService = require("src.gameplay.app.services.market_service")
+  local g = new_game()
+  local ai_player = g.players[2]
+  assert(ai_player.is_ai, "player 2 should be AI")
+  
+  -- Give AI player enough cash to buy something
+  ai_player:set_cash(1000)
+  
+  local before_cash = ai_player.cash
+  MarketService.auto_buy(g, ai_player)
+  
+  -- AI should not buy anything
+  assert(ai_player.cash == before_cash, "AI should not spend money on auto_buy")
+end
+
 local tests = {
   test_pass_start,
   test_land_on_start_reward,
@@ -287,6 +303,7 @@ local tests = {
   test_movement_examples_from_issue,
   test_ai_cancels_land_purchases,
   test_mandatory_payment_causes_bankruptcy,
+  test_ai_skips_auto_buy_at_market,
 }
 
 for _, fn in ipairs(tests) do
