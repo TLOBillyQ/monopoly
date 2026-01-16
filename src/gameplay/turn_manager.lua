@@ -158,6 +158,7 @@ function TurnManager:run_until_wait()
     end
     local prev_state = self.flow.current
     self.flow:step()
+    -- If still in wait_choice state after execution, need to wait for input, break the loop
     -- 如果执行后仍在 wait_choice 状态，说明需要等待，跳出循环
     if self.flow.current == "wait_choice" and prev_state == "wait_choice" then
       return "wait_choice"
