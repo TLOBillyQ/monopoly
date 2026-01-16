@@ -23,8 +23,29 @@ function DecisionEngine.get_pre_turn_action(game, player)
   })
 end
 
+local function first_option_id(options)
+  if not options or #options == 0 then
+    return nil
+  end
+  return options[1].id or options[1]
+end
+
 function DecisionEngine.get_choice_action(game, choice)
   return Agent.auto_action_for_choice(game, choice)
+end
+
+function DecisionEngine.get_fallback_choice_action(choice)
+  if not choice then
+    return nil
+  end
+  local first = first_option_id(choice.options)
+  if first ~= nil then
+    return { type = "choice_select", choice_id = choice.id, option_id = first }
+  end
+  if choice.allow_cancel ~= false then
+    return { type = "choice_cancel", choice_id = choice.id }
+  end
+  return nil
 end
 
 return DecisionEngine
