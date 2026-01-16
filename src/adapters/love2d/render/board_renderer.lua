@@ -1,4 +1,4 @@
-local UIState = require("src.adapters.love2d.ui_state")
+local UIState = require("src.adapters.love2d.ui.ui_state")
 
 local BoardRenderer = {}
 

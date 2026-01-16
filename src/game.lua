@@ -164,6 +164,11 @@ function Game:_finish_with_winners(winners, reason)
   else
     self.logger.event("游戏结束，无人生还")
   end
+  -- 输出游戏结束摘要
+  local turn_count = self.store and self.store:get({ "turn", "turn_count" }) or 0
+  self.logger.info("=== 游戏结束摘要 ===")
+  self.logger.info("总回合数:", turn_count)
+  self.logger.info("胜者:", self.winner_name or "无")
   return true
 end
 
