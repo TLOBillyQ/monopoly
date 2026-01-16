@@ -121,6 +121,17 @@ local function draw_current_player(ui, view, panel, y)
     y = y + 16
   end
 
+  local phase = turn.item_phase_active
+  if phase then
+    local phase_label = phase == "pre_action" and "行动前"
+      or phase == "pre_move" and "投骰后"
+      or phase == "post_action" and "行动后"
+      or phase
+    love.graphics.setColor(ui.palette.muted)
+    love.graphics.printf("阶段: " .. phase_label, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+    y = y + 16
+  end
+
   if view.last_turn and view.last_turn.player_id == current.id then
     if view.last_turn.rolls then
       love.graphics.setColor(ui.palette.text)

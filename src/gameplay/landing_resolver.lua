@@ -1,7 +1,5 @@
-local Effect = require("src.gameplay.effect")
 local landing_effects = require("src.gameplay.landing")
-local Choice = require("src.gameplay.choice")
-local UI = require("src.gameplay.ui_port")
+local EffectPipeline = require("src.gameplay.effect_pipeline")
 
 local LandingResolver = {}
 
@@ -28,87 +26,31 @@ function LandingResolver.resolve(game, player, tile, move_result, depth)
   depth = depth or 0
   local ctx = build_ctx(game, player, tile, move_result)
 
-  local scanned = Effect.scan(landing_effects.defs, ctx)
-  local mandatory = {}
-  local optional = {}
-
-  for _, entry in ipairs(scanned) do
-    if entry.ok then
-      if entry.mandatory then
-        table.insert(mandatory, entry.effect)
-      else
-        table.insert(optional, entry.effect)
-      end
-    end
-  end
-
-  
-  for _, eff in ipairs(mandatory) do
-    local res = Effect.execute(eff, ctx)
-    local out = res and res.result
-
-    if type(out) == "table" and out.kind == "need_landing" and depth < MAX_LANDING_DEPTH then
-      local target_player = (out.player_id and game and game.players and game.players[out.player_id]) or player
-      local next_tile = nil
-      if target_player then
-        local idx = out.board_index or target_player.position
-        next_tile = idx and game and game.board and game.board:get_tile(idx) or nil
-      end
-      if next_tile then
-          local deep_sub_res = LandingResolver.resolve(game, target_player, next_tile, out.move_result, depth + 1)
-          out = deep_sub_res
-      end
-    end
-
-    local payload = out or res
-    if payload then
-      local intent = payload.intent or payload
-      if intent.kind == "need_choice" and intent.choice_spec then
-        Choice.open(game, intent.choice_spec)
-      elseif intent.kind == "push_popup" and intent.payload then
-        UI.push_popup(game, intent.payload)
-      end
-    end
-
-    if type(out) == "table" and out.waiting then
-      out.resume_state = out.resume_state or "landing"
-      out.resume_args = out.resume_args or { player = player, move_result = move_result }
+  local function handle_need_landing(out)
+    if depth >= MAX_LANDING_DEPTH then
       return out
     end
+    local target_player = (out.player_id and game and game.players and game.players[out.player_id]) or player
+    local next_tile = nil
+    if target_player then
+      local idx = out.board_index or target_player.position
+      next_tile = idx and game and game.board and game.board:get_tile(idx) or nil
+    end
+    if next_tile then
+      return LandingResolver.resolve(game, target_player, next_tile, out.move_result, depth + 1)
+    end
+    return out
   end
 
-  if #optional == 0 then
-    return nil
-  end
-
-  local body_lines = {}
-  local options = {}
-  local effect_ids = {}
-  for _, eff in ipairs(optional) do
-    local label = eff.label or eff.id
-    table.insert(body_lines, label)
-    table.insert(options, { id = eff.id, label = label })
-    table.insert(effect_ids, eff.id)
-  end
-
-  local out = {
-    waiting = true,
-    reason = "landing_optional",
+  return EffectPipeline.run(landing_effects.defs, ctx, {
     resume_state = "post_action",
     resume_args = { player = player },
-    intent = {
-      kind = "need_choice",
-      choice_spec = {
-        kind = "landing_optional_effect",
-        options = options,
-        meta = {
-          effect_ids = effect_ids,
-        },
-      },
-    },
-  }
-  Choice.open(game, out.intent.choice_spec)
-  return out
+    optional_choice_kind = "landing_optional_effect",
+    optional_reason = "landing_optional",
+    optional_allow_cancel = true,
+    optional_cancel_label = "跳过",
+    on_need_landing = handle_need_landing,
+  })
 end
 
 return LandingResolver

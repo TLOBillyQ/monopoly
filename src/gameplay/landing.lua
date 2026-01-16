@@ -5,6 +5,7 @@ local chance_cfg = require("src.config.chance_cards")
 local random = require("src.util.random")
 local Inventory = require("src.gameplay.item_inventory")
 local chance_effects = require("src.gameplay.chance")
+local MineEffect = require("src.gameplay.mine_effect")
 
 local Steal = require("src.gameplay.item_steal")
 local Effect = {}
@@ -133,29 +134,15 @@ Effect.defs = {
     apply = function(ctx)
       local player = ctx.player
       local game = ctx.game
-      local board = game.board
       local position = ctx.tile.id
-      
-      if player:has_angel() then
-        logger.event(player.name .. " 天使保护，地雷无效")
-        board:clear_mine(position)
-        return
+      local res = MineEffect.apply(game, player, position)
+      if res and res.hospitalized then
+        return {
+          kind = "need_landing",
+          player_id = player.id,
+          board_index = player.position,
+        }
       end
-    
-      board:clear_mine(position)
-      game:set_player_seat(player, nil)
-      logger.event(player.name .. " 触发地雷，座驾被摧毁并送医")
-      player:send_to_hospital(game)
-      return {
-        kind = "need_landing",
-        player_id = player.id,
-        board_index = player.position, -- Hospital position (set by send_to_hospital?)
-        -- wait, send_to_hospital moves the player?
-        -- Yes, usually.
-        -- If player moved, we need to handle landing on hospital?
-        -- Yes, send_to_hospital usually sets position.
-        -- We return need_landing to recurse.
-      }
     end,
   },
 }

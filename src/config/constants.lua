@@ -13,6 +13,7 @@ local constants = {
   inventory_slots = 5,
   deity_duration_turns = 5,
   unlimited_currency = "广告",
+  item_phase_queue = { "pre_action", "pre_move", "post_action" },
 }
 
 return constants

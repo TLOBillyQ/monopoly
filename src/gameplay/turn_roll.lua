@@ -1,5 +1,6 @@
 local Dice = require("src.core.dice")
 local logger = require("src.util.logger")
+local ItemPhase = require("src.gameplay.item_phase")
 
 local function phase_roll(tm, args)
   local player = args.player or tm.game:current_player()
@@ -18,6 +19,14 @@ local function phase_roll(tm, args)
   tm.game.last_turn.rolls = rolls
   tm.game.last_turn.total = total
   tm.game.last_turn.raw_total = raw_total
+  local phase_res = ItemPhase.run(tm, "pre_move", {
+    player = player,
+    resume_state = "move",
+    resume_args = { player = player, total = total, raw_total = raw_total },
+  })
+  if phase_res and phase_res.waiting then
+    return "wait_choice", { resume_state = "move", resume_args = { player = player, total = total, raw_total = raw_total } }
+  end
   return "move", { player = player, total = total, raw_total = raw_total }
 end
 

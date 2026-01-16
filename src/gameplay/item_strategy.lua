@@ -47,7 +47,24 @@ function Strategy.has_obstacles_ahead(game, player, distance)
   return false
 end
 
-function Strategy.auto_pre_action(game, player, deps)
+local PHASE_TIMING = {
+  pre_action = { pre_action = true, turn = true },
+  pre_move = { pre_move = true, turn = true },
+  post_action = { post_action = true, manual = true, turn = true },
+}
+
+local function timing_allowed(phase, timing)
+  if not phase then
+    return true
+  end
+  local allowed = PHASE_TIMING[phase]
+  if not allowed or not timing then
+    return false
+  end
+  return allowed[timing] == true
+end
+
+function Strategy.auto_pre_action(game, player, deps, phase)
   if not Agent.is_auto_player(player) then
     return nil
   end
@@ -55,8 +72,15 @@ function Strategy.auto_pre_action(game, player, deps)
   local inventory = assert(deps.inventory, "inventory deps required")
   local use_item = assert(deps.use_item, "use_item deps required")
 
+  local function can_use(item_id)
+    local cfg = inventory.cfg and inventory.cfg(item_id) or nil
+    local timing = cfg and cfg.timing or "manual"
+    return timing_allowed(phase, timing)
+  end
+
   local function try_use(item_id, cond)
     if cond and not cond() then return nil end
+    if not can_use(item_id) then return nil end
     if not inventory.find_index(player, item_id) then return nil end
     local res = use_item(game, player, item_id, { by_ai = true })
     if type(res) == "table" and (res.waiting or res.intent or res.kind) then

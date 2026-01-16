@@ -36,9 +36,24 @@ function LoveLayer:get_pending_choice()
 end
 
 
+local function build_phase_title(game, base_title)
+  if not (game and game.store) then
+    return base_title
+  end
+  local phase = game.store:get({ "turn", "item_phase_active" })
+  if not phase then
+    return base_title
+  end
+  local label = phase == "pre_action" and "行动前"
+    or phase == "pre_move" and "投骰后"
+    or phase == "post_action" and "行动后"
+    or phase
+  return "[" .. label .. "] " .. (base_title or "请选择")
+end
+
 function LoveLayer:push_popup(payload)
   self.modal:push({
-    title = payload and payload.title,
+    title = build_phase_title(self.game, payload and payload.title),
     body = payload and payload.body,
     severity = payload and payload.severity,
     buttons = payload and payload.buttons,
@@ -75,7 +90,7 @@ function LoveLayer:sync_pending_choice_modal()
   end
 
   self.modal.active = {
-    title = pending.title or "请选择",
+    title = build_phase_title(self.game, pending.title or "请选择"),
     body = table.concat(pending.body_lines or {}, "\n"),
     buttons = buttons,
     button_text = pending.cancel_label or "取消",

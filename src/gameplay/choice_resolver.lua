@@ -9,6 +9,7 @@ local Roadblock = require("src.gameplay.item_roadblock")
 local logger = require("src.util.logger")
 local MarketService = require("src.gameplay.market_service")
 local UI = require("src.gameplay.ui_port")
+local ItemPhase = require("src.gameplay.item_phase")
 
 local Resolver = {}
 
@@ -69,9 +70,16 @@ local function build_effect_ctx(game, player, tile, move_result)
   }
 end
 
-local function finish_post_action(game)
-  if game and game.store then
-    game.store:set({ "turn", "post_action" }, { done = true })
+local function finish_item_phase(game, phase)
+  ItemPhase.finish(game, phase)
+end
+local function finish_active_item_phase(game)
+  if not (game and game.store) then
+    return
+  end
+  local phase = game.store:get({ "turn", "item_phase_active" })
+  if phase then
+    ItemPhase.finish(game, phase)
   end
 end
 
@@ -204,8 +212,9 @@ function Resolver.resolve(game, choice, action)
   end
 
   if is_cancel(action) then
-    if choice.kind == "post_action_item" then
-      finish_post_action(game)
+    if choice.kind == "item_phase_choice" then
+      local phase = choice.meta and choice.meta.phase
+      finish_item_phase(game, phase)
     end
     Choice.clear(game)
     return { stay = false }
@@ -245,36 +254,6 @@ local function open_steal_item_choice(game, stealer, target)
   })
 end
 
-local function handle_post_action_item(game, choice, action)
-  local meta = choice.meta or {}
-  local player = meta.player_id and game.players[meta.player_id] or game:current_player()
-  if is_cancel(action) then
-    finish_post_action(game)
-    Choice.clear(game)
-    return { stay = false }
-  end
-  if not player then
-    Choice.clear(game)
-    return { stay = false }
-  end
-  local item_id = as_number(action.option_id)
-  if not item_id then
-    Choice.clear(game)
-    return { stay = false }
-  end
-
-  local res = use_item(game, player, item_id)
-  if type(res) == "table" and res.waiting then
-    if res.intent then
-      dispatch(game, res.intent)
-    end
-    return { stay = true }
-  end
-  finish_post_action(game)
-  Choice.clear(game)
-  return { stay = false }
-end
-
 local function handle_demolish_target(game, choice, action)
   if is_cancel(action) then
     Choice.clear(game)
@@ -296,7 +275,7 @@ local function handle_demolish_target(game, choice, action)
       dispatch(game, res.intent)
     end
   end
-  finish_post_action(game)
+  finish_active_item_phase(game)
   Choice.clear(game)
   return { stay = false }
 end
@@ -323,7 +302,7 @@ local function handle_roadblock_target(game, choice, action)
   if res then
     dispatch(game, res)
   end
-  finish_post_action(game)
+  finish_active_item_phase(game)
   Choice.clear(game)
   return { stay = false }
 end
@@ -373,6 +352,7 @@ local function handle_steal_item(game, choice, action)
       dispatch(game, res.intent)
     end
   end
+  finish_active_item_phase(game)
   Choice.clear(game)
   return { stay = false }
 end
@@ -390,7 +370,7 @@ local function handle_item_target_player(game, choice, action)
     local res = use_item(game, player, item_id, { target_id = target_id })
     if res and res.waiting then return { stay = true } end
   end
-  finish_post_action(game)
+  finish_active_item_phase(game)
   Choice.clear(game)
   return { stay = false }
 end
@@ -415,12 +395,43 @@ local function handle_remote_dice_value(game, choice, action)
     end
   end
   Executor.apply_remote_dice(game, player, dice_count, value)
-  finish_post_action(game)
+  finish_active_item_phase(game)
   Choice.clear(game)
   return { stay = false }
 end
 
-handlers.post_action_item = handle_post_action_item
+local function handle_item_phase_choice(game, choice, action)
+  local meta = choice.meta or {}
+  local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+  local phase = meta.phase
+  if is_cancel(action) then
+    finish_item_phase(game, phase)
+    Choice.clear(game)
+    return { stay = false }
+  end
+  if not player then
+    Choice.clear(game)
+    return { stay = false }
+  end
+  local item_id = as_number(action.option_id)
+  if not item_id then
+    Choice.clear(game)
+    return { stay = false }
+  end
+
+  local res = use_item(game, player, item_id)
+  if type(res) == "table" and res.waiting then
+    if res.intent then
+      dispatch(game, res.intent)
+    end
+    return { stay = true }
+  end
+  finish_item_phase(game, phase)
+  Choice.clear(game)
+  return { stay = false }
+end
+
+handlers.item_phase_choice = handle_item_phase_choice
 handlers.demolish_target = handle_demolish_target
 handlers.roadblock_target = handle_roadblock_target
 handlers.steal_target = handle_steal_target

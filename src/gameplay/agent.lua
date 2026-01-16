@@ -251,7 +251,7 @@ function Agent.auto_action_for_choice(game, choice)
     return { type = "choice_select", choice_id = choice.id, option_id = "use" }
   end
 
-  if choice.kind == "post_action_item" then
+  if choice.kind == "item_phase_choice" then
     return { type = "choice_cancel", choice_id = choice.id }
   end
 

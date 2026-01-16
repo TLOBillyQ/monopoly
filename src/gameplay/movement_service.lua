@@ -3,25 +3,6 @@ local logger = require("src.util.logger")
 
 local MovementService = {}
 
-local function check_mine(game, player, current_pos)
-  local board = game.board
-  if not board:has_mine(current_pos) then
-    return false, false
-  end
-
-  if player:has_angel() then
-    logger.event(player.name .. " 天使保护，地雷无效")
-    board:clear_mine(current_pos)
-    return true, false
-  end
-
-  board:clear_mine(current_pos)
-  game:set_player_seat(player, nil)
-  logger.event(player.name .. " 触发地雷，座驾被摧毁并送医")
-  player:send_to_hospital(game)
-  return true, true -- detonated, hospitalized
-end
-
 function MovementService.move(game, player, steps, opts)
   opts = opts or {}
   local abs_steps = math.abs(steps or 0)
@@ -49,12 +30,6 @@ function MovementService.move(game, player, steps, opts)
       if pid ~= player.id then
         table.insert(encountered, pid)
       end
-    end
-
-    local detonated, hospitalized = check_mine(game, player, current)
-    if detonated and hospitalized then
-      current = player.position
-      break
     end
 
     if board:has_roadblock(current) then
