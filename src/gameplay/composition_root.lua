@@ -29,13 +29,20 @@ end
 local function create_players(opts)
   local players = {}
   local names = opts.players or { "玩家1" }
+  local ai_flags = opts.ai or {}
+  if #names == 1 then
+    names = { names[1], "AI2", "AI3", "AI4" }
+    ai_flags[2] = true
+    ai_flags[3] = true
+    ai_flags[4] = true
+  end
   for i, name in ipairs(names) do
     local role = roles_cfg[((i - 1) % #roles_cfg) + 1]
     local player = Player.new({
       id = i,
       name = name,
       role_id = role.id,
-      is_ai = opts.ai and opts.ai[i] or (i > 1),
+      is_ai = ai_flags and ai_flags[i] or (i > 1),
       auto = opts.auto_all or false,
       start_index = 1,
       constants = constants,
@@ -144,6 +151,9 @@ function CompositionRoot.assemble(opts, GameClass)
     logger = logger,
     finished = false,
     winner = nil,
+    winners = nil,
+    winner_name = nil,
+    max_turns = opts.max_turns or constants.max_turns,
     last_turn = nil,
     services = services,
   }, GameClass)

@@ -251,12 +251,24 @@ function Agent.auto_action_for_choice(game, choice)
     return { type = "choice_select", choice_id = choice.id, option_id = "use" }
   end
 
+  if choice.kind == "dice_double_prompt" then
+    return { type = "choice_select", choice_id = choice.id, option_id = "use" }
+  end
+
   if choice.kind == "post_action_item" then
     return { type = "choice_cancel", choice_id = choice.id }
   end
 
   if choice.kind == "market_buy" then
     return { type = "choice_cancel", choice_id = choice.id }
+  end
+
+  if choice.kind == "market_replace_vehicle" then
+    return { type = "choice_select", choice_id = choice.id, option_id = "skip" }
+  end
+
+  if choice.kind == "steal_pass_prompt" then
+    return { type = "choice_select", choice_id = choice.id, option_id = "use" }
   end
 
   return nil

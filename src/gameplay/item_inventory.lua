@@ -50,9 +50,9 @@ end
 function Inventory.draw_and_give(player, rng)
   local cfg = Inventory.draw_random(rng)
   if not cfg then
-    return
+    return nil
   end
-  Inventory.give(player, cfg.id)
+  return Inventory.give(player, cfg.id)
 end
 
 return Inventory

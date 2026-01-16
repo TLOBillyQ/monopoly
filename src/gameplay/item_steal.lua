@@ -7,8 +7,12 @@ local Steal = {}
 function Steal.steal_item_at_index(game, player, target, item_idx)
   local inv = target.inventory
   if inv:count() == 0 then
+    Inventory.consume(player, 2007)
     logger.warn(target.name .. " 没有可偷道具")
-    return nil
+    return {
+      ok = false,
+      intent = { kind = "push_popup", payload = { title = "偷窃失败", body = "很遗憾，目标没有任何道具。" } },
+    }
   end
   local stolen = inv:remove_by_index(item_idx or 1)
   if not stolen then
@@ -37,70 +41,41 @@ function Steal.handle_pass_players(game, player, encountered_ids)
     return
   end
 
-  local candidates = {}
+  local targets = {}
   for _, target_id in ipairs(encountered_ids) do
     local t = game.players[target_id]
-    if t and not t:has_deity("angel") and t.inventory:count() > 0 then
-      table.insert(candidates, t)
+    if t and not t:has_deity("angel") and not t.eliminated then
+      table.insert(targets, t)
     end
   end
-  if #candidates == 0 then
+  if #targets == 0 then
     return
   end
 
   if not UI.is_available(game) then
-    Steal.steal_item_at_index(game, player, candidates[1], 1)
+    Steal.steal_item_at_index(game, player, targets[1], 1)
     return nil
   end
 
-  if #candidates == 1 then
-    local target = candidates[1]
-    if target.inventory:count() <= 1 then
-      Steal.steal_item_at_index(game, player, target, 1)
-      return nil
-    end
-    local options = {}
-    local body_lines = {}
-    for idx, it in ipairs(target.inventory.items) do
-      local label = Inventory.item_name(it.id)
-      table.insert(body_lines, idx .. ". " .. label)
-      table.insert(options, { id = idx, label = label })
-    end
-    return {
-      waiting = true,
-      intent = {
-        kind = "need_choice",
-        choice_spec = {
-          kind = "steal_item",
-          title = "选择要偷的道具",
-          body_lines = body_lines,
-          options = options,
-          allow_cancel = true,
-          cancel_label = "取消",
-          meta = { stealer_id = player.id, target_id = target.id },
-        },
-      },
-    }
-  end
-
-  local options = {}
-  local body_lines = {}
-  for _, t in ipairs(candidates) do
-    table.insert(body_lines, t.name .. " 现金:" .. t.cash)
-    table.insert(options, { id = t.id, label = t.name })
+  local target = targets[1]
+  local target_ids = {}
+  for _, t in ipairs(targets) do
+    table.insert(target_ids, t.id)
   end
   return {
     waiting = true,
     intent = {
       kind = "need_choice",
       choice_spec = {
-        kind = "steal_target",
-        title = "偷窃卡：选择目标",
-        body_lines = body_lines,
-        options = options,
-        allow_cancel = true,
-        cancel_label = "取消",
-        meta = { stealer_id = player.id },
+        kind = "steal_pass_prompt",
+        title = "偷窃卡",
+        body_lines = { "目标：" .. target.name .. "，你有偷窃卡，可以偷取他的一个道具，是否对他使用？" },
+        options = {
+          { id = "use", label = "使用" },
+          { id = "skip", label = "放弃" },
+        },
+        allow_cancel = false,
+        meta = { stealer_id = player.id, target_ids = target_ids, index = 1 },
       },
     },
   }

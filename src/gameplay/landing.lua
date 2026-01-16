@@ -63,7 +63,16 @@ Effect.defs = {
       return ctx and ctx.game and ctx.player and ctx.tile and ctx.tile.type == "item"
     end,
     apply = function(ctx)
-      return Inventory.draw_and_give(ctx.player, ctx.game and ctx.game.rng)
+      local ok = Inventory.draw_and_give(ctx.player, ctx.game and ctx.game.rng)
+      if ok == false then
+        return {
+          intent = {
+            kind = "push_popup",
+            payload = { title = "道具卡已满", body = "道具卡已满，无法获得。" },
+          },
+        }
+      end
+      return nil
     end,
   },
   {
@@ -143,8 +152,17 @@ Effect.defs = {
       end
     
       board:clear_mine(position)
-      game:set_player_seat(player, nil)
-      logger.event(player.name .. " 触发地雷，座驾被摧毁并送医")
+      if player.seat_id and player.is_vehicle_indestructible and player:is_vehicle_indestructible() then
+        logger.event(player.name .. " 触发地雷，座驾无损")
+        return
+      end
+
+      if player.seat_id then
+        game:set_player_seat(player, nil)
+        logger.event(player.name .. " 触发地雷，座驾被摧毁并送医")
+      else
+        logger.event(player.name .. " 触发地雷，送医")
+      end
       player:send_to_hospital(game)
       return {
         kind = "need_landing",

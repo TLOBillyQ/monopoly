@@ -54,6 +54,9 @@ function LoveLayer:sync_pending_choice_modal()
   end
   local pending = self:get_pending_choice()
   if not pending then
+    if self.modal.active and self.modal.active._pending_choice_id then
+      self.modal:dismiss()
+    end
     return
   end
   if self.modal.active and self.modal.active._pending_choice_id == pending.id then

@@ -4,6 +4,8 @@
 
 local CompositionRoot = require("src.gameplay.composition_root")
 local Tables = require("src.util.tables")
+local Tile = require("src.core.tile")
+local Pricing = require("src.gameplay.land_pricing")
 
 local Game = {}
 Game.__index = Game
@@ -132,6 +134,39 @@ function Game:update_player_position(player, new_index)
   table.insert(self.occupants[new_index], player.id)
 end
 
+function Game:player_total_assets(player)
+  local total = player.cash or 0
+  for tile_id in pairs(player.properties) do
+    local tile = self.board:get_tile_by_id(tile_id)
+    if tile and tile.type == "land" then
+      local st = Tile.get_state(self, tile)
+      total = total + Pricing.total_invested(tile, st.level or 0)
+    end
+  end
+  return total
+end
+
+function Game:_finish_with_winners(winners, reason)
+  self.finished = true
+  self.winners = winners
+  self.winner = winners and winners[1] or nil
+  if winners and #winners > 0 then
+    local names = {}
+    for _, p in ipairs(winners) do
+      table.insert(names, p.name)
+    end
+    self.winner_name = table.concat(names, "、")
+    if reason then
+      self.logger.event("游戏结束(" .. reason .. ")，胜者:", self.winner_name)
+    else
+      self.logger.event("游戏结束，胜者:", self.winner_name)
+    end
+  else
+    self.logger.event("游戏结束，无人生还")
+  end
+  return true
+end
+
 -- ========== 流程驱动 ==========
 
 function Game:check_victory()
@@ -139,15 +174,30 @@ function Game:check_victory()
     return true
   end
   local alive = self:alive_players()
-  if #alive <= 1 then
-    if #alive == 1 then
-      self.logger.event("游戏结束，胜者:", alive[1].name)
-      self.winner = alive[1]
-    else
-      self.logger.event("游戏结束，无人生还")
+  local max_turns = self.max_turns
+  local phase = self.store and self.store:get({ "turn", "phase" })
+  local turn_count = self.store and self.store:get({ "turn", "turn_count" }) or 0
+
+  if max_turns and turn_count >= max_turns and phase == "end_turn" then
+    if #alive == 0 then
+      return self:_finish_with_winners(nil, "时间结束")
     end
-    self.finished = true
-    return true
+    local best_assets = nil
+    local winners = {}
+    for _, p in ipairs(alive) do
+      local assets = self:player_total_assets(p)
+      if best_assets == nil or assets > best_assets then
+        best_assets = assets
+        winners = { p }
+      elseif assets == best_assets then
+        table.insert(winners, p)
+      end
+    end
+    return self:_finish_with_winners(winners, "时间结束")
+  end
+
+  if #alive <= 1 then
+    return self:_finish_with_winners(alive, nil)
   end
   return false
 end

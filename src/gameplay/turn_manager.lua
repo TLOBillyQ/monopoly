@@ -136,7 +136,13 @@ function TurnManager:run_until_wait()
   while self.flow.current do
     if self.flow.current == "wait_choice" and not self.pending_action then
       self.game.store:set({ "turn", "phase" }, "wait_choice")
-      return "wait_choice"
+      local choice = Choice.get(self.game)
+      if choice then
+        self.pending_action = decide_choice_action(self.game, choice, nil)
+      end
+      if not self.pending_action then
+        return "wait_choice"
+      end
     end
     self.flow:step()
   end

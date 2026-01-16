@@ -16,8 +16,17 @@ local function check_mine(game, player, current_pos)
   end
 
   board:clear_mine(current_pos)
-  game:set_player_seat(player, nil)
-  logger.event(player.name .. " 触发地雷，座驾被摧毁并送医")
+  if player.seat_id and player.is_vehicle_indestructible and player:is_vehicle_indestructible() then
+    logger.event(player.name .. " 触发地雷，座驾无损")
+    return true, false
+  end
+
+  if player.seat_id then
+    game:set_player_seat(player, nil)
+    logger.event(player.name .. " 触发地雷，座驾被摧毁并送医")
+  else
+    logger.event(player.name .. " 触发地雷，送医")
+  end
   player:send_to_hospital(game)
   return true, true -- detonated, hospitalized
 end
@@ -52,8 +61,10 @@ function MovementService.move(game, player, steps, opts)
     end
 
     local detonated, hospitalized = check_mine(game, player, current)
-    if detonated and hospitalized then
-      current = player.position
+    if detonated then
+      if hospitalized then
+        current = player.position
+      end
       break
     end
 

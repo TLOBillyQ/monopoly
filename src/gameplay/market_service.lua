@@ -45,9 +45,6 @@ local function entry_currency(entry)
 end
 
 local function can_buy_entry(player, entry)
-  if entry.kind == "item" and player.inventory and player.inventory:is_full() then
-    return false
-  end
   local price = entry_price(entry)
   return player:balance(entry_currency(entry)) >= price
 end
@@ -161,6 +158,22 @@ function MarketService.handle_choice(game, choice, action)
   local meta = choice.meta or {}
   local player = meta.player_id and game.players[meta.player_id] or game:current_player()
   if player and product_id then
+    local entry = entries_by_id[product_id]
+    if entry and entry.kind == "vehicle" and player.seat_id and player.seat_id ~= product_id then
+      local current_name = (player.vehicle_name and player:vehicle_name()) or tostring(player.seat_id)
+      Choice.open(game, {
+        kind = "market_replace_vehicle",
+        title = "更换座驾",
+        body_lines = { "您已经有" .. current_name .. "了，是否更换座驾" },
+        options = {
+          { id = "buy", label = "购买" },
+          { id = "skip", label = "算了" },
+        },
+        allow_cancel = false,
+        meta = { player_id = player.id, product_id = product_id },
+      })
+      return { stay = true }
+    end
     MarketService.buy(game, player, product_id)
   end
   Choice.clear(game)
