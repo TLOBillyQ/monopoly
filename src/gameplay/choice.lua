@@ -1,3 +1,5 @@
+local UI = require("src.gameplay.ui_port")
+
 local Choice = {}
 
 local function next_choice_id(store)
@@ -38,6 +40,18 @@ function Choice.open(game, payload)
   }
   game.store:set({ "turn", "pending_choice" }, entry)
   return entry
+end
+
+function Choice.apply_intent(game, payload)
+  if not payload then
+    return
+  end
+  local intent = payload.intent or payload
+  if intent.kind == "need_choice" and intent.choice_spec then
+    Choice.open(game, intent.choice_spec)
+  elseif intent.kind == "push_popup" and intent.payload then
+    UI.push_popup(game, intent.payload)
+  end
 end
 
 return Choice

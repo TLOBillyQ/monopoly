@@ -9,19 +9,8 @@ local Steal = require("src.gameplay.item_steal")
 local Roadblock = require("src.gameplay.item_roadblock")
 local logger = require("src.util.logger")
 local MarketService = require("src.gameplay.market_service")
-local UI = require("src.gameplay.ui_port")
 
 local Resolver = {}
-
-local function dispatch(game, payload)
-  if not payload then return end
-  local intent = payload.intent or payload
-  if intent.kind == "need_choice" and intent.choice_spec then
-    Choice.open(game, intent.choice_spec)
-  elseif intent.kind == "push_popup" and intent.payload then
-    UI.push_popup(game, intent.payload)
-  end
-end
 
 local function as_number(v)
   if type(v) == "number" then
@@ -124,7 +113,7 @@ local function handle_optional_landing_effect(game, choice, action)
 
   local res = Effect.execute(target_eff, ctx)
   if res then
-    dispatch(game, res.result or res)
+    Choice.apply_intent(game, res.result or res)
   end
   if not res or res.ok ~= true then
     logger.warn("landing_optional_effect execute blocked:", tostring(res and res.reason))
@@ -281,7 +270,7 @@ local function handle_steal_pass_prompt(game, choice, action)
   if target.inventory:count() <= 1 then
     local res = Steal.steal_item_at_index(game, stealer, target, 1)
     if res then
-      dispatch(game, res)
+      Choice.apply_intent(game, res)
     end
     Choice.clear(game)
     return { stay = false }
@@ -361,7 +350,7 @@ local function handle_post_action_item(game, choice, action)
   local res = use_item(game, player, item_id)
   if type(res) == "table" and res.waiting then
     if res.intent then
-      dispatch(game, res.intent)
+      Choice.apply_intent(game, res.intent)
     end
     return { stay = true }
   end
@@ -388,7 +377,7 @@ local function handle_demolish_target(game, choice, action)
       title = meta.title
     })
     if res and res.intent then
-      dispatch(game, res.intent)
+      Choice.apply_intent(game, res.intent)
     end
   end
   finish_post_action(game)
@@ -416,7 +405,7 @@ local function handle_roadblock_target(game, choice, action)
   end
   local res = Roadblock.apply(game, player, idx)
   if res then
-    dispatch(game, res)
+    Choice.apply_intent(game, res)
   end
   finish_post_action(game)
   Choice.clear(game)
@@ -442,7 +431,7 @@ local function handle_steal_target(game, choice, action)
     logger.event("Steal choice result (single)", res)
     Choice.clear(game)
     if res and res.intent then
-      dispatch(game, res.intent)
+      Choice.apply_intent(game, res.intent)
     end
     return { stay = false }
   end
@@ -465,7 +454,7 @@ local function handle_steal_item(game, choice, action)
     logger.event("Steal choice result (multi)", res)
     Choice.clear(game)
     if res and res.intent then
-      dispatch(game, res.intent)
+      Choice.apply_intent(game, res.intent)
     end
   end
   Choice.clear(game)

@@ -2,12 +2,12 @@ local Flow = require("src.core.flow")
 local Choice = require("src.gameplay.choice")
 local ChoiceResolver = require("src.gameplay.choice_resolver")
 local UI = require("src.gameplay.ui_port")
-local phase_start_fn = require("src.gameplay.turn_start")
-local phase_roll_fn = require("src.gameplay.turn_roll")
-local phase_move_fn = require("src.gameplay.turn_move")
-local phase_landing_fn = require("src.gameplay.turn_land")
-local phase_post_fn = require("src.gameplay.turn_post")
-local phase_end_fn = require("src.gameplay.turn_end")
+local phase_start = require("src.gameplay.turn_start")
+local phase_roll = require("src.gameplay.turn_roll")
+local phase_move = require("src.gameplay.turn_move")
+local phase_landing = require("src.gameplay.turn_land")
+local phase_post = require("src.gameplay.turn_post")
+local phase_end = require("src.gameplay.turn_end")
 local DecisionEngine = require("src.gameplay.decision_engine")
 local Logger = require("src.util.logger")
 
@@ -15,13 +15,23 @@ local TurnManager = {}
 TurnManager.__index = TurnManager
 
 local PHASES = {
-  start = phase_start_fn,
-  roll = phase_roll_fn,
-  move = phase_move_fn,
-  landing = phase_landing_fn,
-  post_action = phase_post_fn,
-  end_turn = phase_end_fn,
+  start = phase_start,
+  roll = phase_roll,
+  move = phase_move,
+  landing = phase_landing,
+  post_action = phase_post,
+  end_turn = phase_end,
 }
+
+local function matches_choice_action(choice, action)
+  if not action then
+    return false
+  end
+  if action.choice_id and choice and choice.id and action.choice_id ~= choice.id then
+    return false
+  end
+  return true
+end
 
 local function decide_choice_action(game, choice, pending_action)
   if pending_action then
@@ -61,13 +71,14 @@ function TurnManager:dispatch(action)
   self.pending_action = action
 
   local choice = Choice.get(self.game)
-  if choice and action == nil and (not self.flow or not self.flow.current) then
-    return nil
-  end
-  if choice and (not self.flow or not self.flow.current) then
-    local res = ChoiceResolver.resolve(self.game, choice, action)
+  local no_flow = not self.flow or not self.flow.current
+  
+  if choice and no_flow then
     self.pending_action = nil
-    return res
+    if not matches_choice_action(choice, action) then
+      return nil
+    end
+    return ChoiceResolver.resolve(self.game, choice, action)
   end
 
   if self.flow and self.flow.current then
@@ -93,29 +104,30 @@ function TurnManager:_build_flow()
     self.game.store:set({ "turn", "phase" }, "wait_choice")
     local choice = Choice.get(self.game)
 
-
     if not choice then
       self.pending_action = nil
       return (args and args.resume_state) or "end_turn", (args and args.resume_args) or {}
     end
 
     self.pending_action = decide_choice_action(self.game, choice, self.pending_action)
-
     if not self.pending_action then
       return "wait_choice", args
     end
+
     local action = self.pending_action
     self.pending_action = nil
 
-
-    if action.choice_id and choice.id and action.choice_id ~= choice.id then
+    -- 验证choice是否匹配
+    if not matches_choice_action(choice, action) then
       return "wait_choice", args
     end
+
     local res = ChoiceResolver.resolve(self.game, choice, action)
     if res and res.stay then
       return "wait_choice", args
     end
-    return args and args.resume_state, args and args.resume_args
+
+    return (args and args.resume_state) or "end_turn", (args and args.resume_args) or {}
   end
 
   return Flow.new({ start = "start", states = states })

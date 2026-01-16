@@ -1,5 +1,4 @@
 local Choice = require("src.gameplay.choice")
-local UI = require("src.gameplay.ui_port")
 
 local function phase_move(tm, args)
   local player = args.player
@@ -48,7 +47,7 @@ local function phase_move(tm, args)
           },
         }
       elseif intent then
-        UI.push_popup(tm.game, intent.payload)
+        Choice.apply_intent(tm.game, intent)
       end
     end
   end

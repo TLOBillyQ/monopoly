@@ -1,6 +1,5 @@
 local logger = require("src.util.logger")
 local Choice = require("src.gameplay.choice")
-local UI = require("src.gameplay.ui_port")
 local DecisionEngine = require("src.gameplay.decision_engine")
 
 local function phase_start(tm)
@@ -35,14 +34,7 @@ local function phase_start(tm)
 
   local pre = DecisionEngine.get_pre_turn_action(tm.game, player)
 
-  if pre then
-    local intent = pre.intent or pre
-    if intent.kind == "need_choice" and intent.choice_spec then
-      Choice.open(tm.game, intent.choice_spec)
-    elseif intent.kind == "push_popup" and intent.payload then
-      UI.push_popup(tm.game, intent.payload)
-    end
-  end
+  Choice.apply_intent(tm.game, pre)
   if pre and pre.waiting then
     return "wait_choice", { resume_state = "roll", resume_args = { player = player } }
   end

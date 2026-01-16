@@ -1,7 +1,6 @@
 local Effect = require("src.gameplay.effect")
 local landing_effects = require("src.gameplay.landing")
 local Choice = require("src.gameplay.choice")
-local UI = require("src.gameplay.ui_port")
 
 local LandingResolver = {}
 
@@ -61,14 +60,7 @@ function LandingResolver.resolve(game, player, tile, move_result, depth)
     end
 
     local payload = out or res
-    if payload then
-      local intent = payload.intent or payload
-      if intent.kind == "need_choice" and intent.choice_spec then
-        Choice.open(game, intent.choice_spec)
-      elseif intent.kind == "push_popup" and intent.payload then
-        UI.push_popup(game, intent.payload)
-      end
-    end
+    Choice.apply_intent(game, payload)
 
     if type(out) == "table" and out.waiting then
       out.resume_state = out.resume_state or "landing"
