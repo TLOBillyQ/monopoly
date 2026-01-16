@@ -13,7 +13,7 @@ function LoveRuntime.install(LoveLayer)
       game = self.game,
       last_turn = self.game and self.game.last_turn,
       finished = self.game and self.game.finished,
-      winner_name = self.game and self.game.winner and self.game.winner.name or nil,
+      winner_name = self.game and (self.game.winner_name or (self.game.winner and self.game.winner.name)) or nil,
     })
     Layout.apply(self.ui, view)
   end
@@ -115,7 +115,7 @@ function LoveRuntime.install(LoveLayer)
     local view = Presenter.present(store_state, {
       last_turn = game and game.last_turn,
       finished = game and game.finished,
-      winner_name = game and game.winner and game.winner.name or nil,
+      winner_name = game and (game.winner_name or (game.winner and game.winner.name)) or nil,
     })
 
     local w, h = love.graphics.getDimensions()

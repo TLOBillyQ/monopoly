@@ -168,7 +168,10 @@ handlers.move_forward = function(game, player, card)
 end
 
 handlers.grant_item = function(game, player, card)
-  Inventory.give(player, card.item_id)
+  local ok = Inventory.give(player, card.item_id)
+  if ok == false then
+    return { intent = { kind = "push_popup", payload = { title = "道具卡已满", body = "道具卡已满，无法获得。" } } }
+  end
 end
 
 handlers.discard_items = function(_, player, card)

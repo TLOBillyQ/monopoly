@@ -5,6 +5,16 @@ local function phase_move(tm, args)
   local player = args.player
   local total = args.total
   local raw_total = args.raw_total
+  if total == nil then
+    raw_total = raw_total or (tm.game.last_turn and tm.game.last_turn.raw_total) or 0
+    local multiplier = (player.status.pending_dice_multiplier and player.status.pending_dice_multiplier > 1)
+      and player.status.pending_dice_multiplier or 1
+    total = raw_total * multiplier
+    if tm.game.last_turn then
+      tm.game.last_turn.total = total
+      tm.game.last_turn.raw_total = raw_total
+    end
+  end
   local movement = tm.game and tm.game.services and tm.game.services.movement
   assert(movement and movement.move, "Missing MovementService (game.services.movement)")
 

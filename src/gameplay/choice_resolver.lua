@@ -1,6 +1,7 @@
 local Choice = require("src.gameplay.choice")
 local Effect = require("src.gameplay.effect")
 local Inventory = require("src.gameplay.item_inventory")
+local ItemEffects = require("src.gameplay.item_post_effects")
 local Executor = require("src.gameplay.item_executor")
 local Demolish = require("src.gameplay.item_demolish")
 local Strategy = require("src.gameplay.item_strategy")
@@ -91,6 +92,7 @@ local function find_effect_by_id(effect_defs, effect_id)
   end
   return nil
 end
+local open_steal_item_choice
 local handlers = {}
 
 local function handle_optional_landing_effect(game, choice, action)
@@ -198,6 +200,99 @@ end
 handlers.rent_card_prompt = handle_rent_prompt
 handlers.tax_card_prompt = handle_tax_prompt
 
+local function handle_market_replace_vehicle(game, choice, action)
+  local meta = choice.meta or {}
+  local player_id = meta.player_id
+  local product_id = as_number(meta.product_id)
+
+  if is_cancel(action) or (action and action.option_id == "skip") then
+    Choice.clear(game)
+    return { stay = false }
+  end
+
+  local player = player_id and game.players[player_id] or game:current_player()
+  if player and product_id then
+    MarketService.buy(game, player, product_id)
+  end
+  Choice.clear(game)
+  return { stay = false }
+end
+
+handlers.market_replace_vehicle = handle_market_replace_vehicle
+
+local function handle_dice_double_prompt(game, choice, action)
+  local meta = choice.meta or {}
+  local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+
+  if is_cancel(action) or (action and action.option_id == "skip") then
+    Choice.clear(game)
+    return { stay = false }
+  end
+
+  if player and Inventory.consume(player, 2003) then
+    ItemEffects.apply_post(game, player, 2003, { reason = "dice_double_prompt" })
+  end
+  Choice.clear(game)
+  return { stay = false }
+end
+
+handlers.dice_double_prompt = handle_dice_double_prompt
+
+local function handle_steal_pass_prompt(game, choice, action)
+  local meta = choice.meta or {}
+  local target_ids = meta.target_ids or {}
+  local index = meta.index or 1
+  local stealer = meta.stealer_id and game.players[meta.stealer_id] or game:current_player()
+  if not stealer or not Inventory.find_index(stealer, 2007) then
+    Choice.clear(game)
+    return { stay = false }
+  end
+
+  local target_id = target_ids[index]
+  local target = target_id and game.players[target_id] or nil
+  if not target then
+    Choice.clear(game)
+    return { stay = false }
+  end
+
+  if is_cancel(action) or (action and action.option_id == "skip") then
+    local next_index = index + 1
+    if target_ids[next_index] and Inventory.find_index(stealer, 2007) then
+      local next_target = game.players[target_ids[next_index]]
+      if next_target then
+        Choice.open(game, {
+          kind = "steal_pass_prompt",
+          title = "偷窃卡",
+          body_lines = { "目标：" .. next_target.name .. "，你有偷窃卡，可以偷取他的一个道具，是否对他使用？" },
+          options = {
+            { id = "use", label = "使用" },
+            { id = "skip", label = "放弃" },
+          },
+          allow_cancel = false,
+          meta = { stealer_id = stealer.id, target_ids = target_ids, index = next_index },
+        })
+        return { stay = true }
+      end
+    end
+    Choice.clear(game)
+    return { stay = false }
+  end
+
+  if target.inventory:count() <= 1 then
+    local res = Steal.steal_item_at_index(game, stealer, target, 1)
+    if res then
+      dispatch(game, res)
+    end
+    Choice.clear(game)
+    return { stay = false }
+  end
+
+  open_steal_item_choice(game, stealer, target)
+  return { stay = true }
+end
+
+handlers.steal_pass_prompt = handle_steal_pass_prompt
+
 function Resolver.resolve(game, choice, action)
   if not game or not choice then
     return { stay = false }
@@ -226,7 +321,7 @@ function Resolver.resolve(game, choice, action)
   return { stay = false }
 end
 
-local function open_steal_item_choice(game, stealer, target)
+open_steal_item_choice = function(game, stealer, target)
   local lines = {}
   local options = {}
   for i, it in ipairs(target.inventory.items) do
