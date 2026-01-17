@@ -1,5 +1,4 @@
-local Choice = require("src.gameplay.choice")
-local UI = require("src.gameplay.ui_port")
+local IntentDispatcher = require("src.util.intent_dispatcher")
 local items_cfg = require("src.config.items")
 local constants = require("src.config.constants")
 local DecisionEngine = require("src.gameplay.decision_engine")
@@ -30,18 +29,6 @@ local function timing_allowed(phase, timing)
     return false
   end
   return allowed[timing] == true
-end
-
-local function dispatch(game, payload)
-  if not payload then
-    return
-  end
-  local intent = payload.intent or payload
-  if intent.kind == "need_choice" and intent.choice_spec then
-    Choice.open(game, intent.choice_spec)
-  elseif intent.kind == "push_popup" and intent.payload then
-    UI.push_popup(game, intent.payload)
-  end
 end
 
 function ItemPhase.is_enabled(game, phase)
@@ -104,7 +91,7 @@ function ItemPhase.run(tm, phase, args)
   if Agent.is_auto_player(player) then
     local pre = DecisionEngine.get_phase_action(game, player, phase)
     if pre then
-      dispatch(game, pre)
+      IntentDispatcher.dispatch(game, pre)
     end
     if pre and pre.waiting then
       if store then
@@ -116,7 +103,7 @@ function ItemPhase.run(tm, phase, args)
     return nil
   end
 
-  if not UI.is_available(game) then
+  if game.ui_port == nil then
     ItemPhase.finish(game, phase)
     return nil
   end
@@ -127,14 +114,17 @@ function ItemPhase.run(tm, phase, args)
     return nil
   end
 
-  Choice.open(game, {
-    kind = "item_phase_choice",
-    title = PHASE_TITLES[phase] or "使用道具？",
-    body_lines = body_lines,
-    options = options,
-    allow_cancel = true,
-    cancel_label = "结束阶段",
-    meta = { player_id = player.id, phase = phase },
+  IntentDispatcher.dispatch(game, {
+    kind = "need_choice",
+    choice_spec = {
+      kind = "item_phase_choice",
+      title = PHASE_TITLES[phase] or "使用道具？",
+      body_lines = body_lines,
+      options = options,
+      allow_cancel = true,
+      cancel_label = "结束阶段",
+      meta = { player_id = player.id, phase = phase },
+    },
   })
 
   if store then

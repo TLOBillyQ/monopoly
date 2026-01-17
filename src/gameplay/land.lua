@@ -56,7 +56,7 @@ local function contiguous_rent(game, board, index, owner_id)
   return rent_sum
 end
 
--- 执行强征卡效果（由 choice_resolver 调用）
+-- 执行强征卡效果（由 choice_service 调用）
 function Effect.execute_strong_card(game, player_id, tile_id)
   local player = game.players[player_id]
   local tile = game.board:get_tile_by_id(tile_id)
@@ -81,7 +81,7 @@ function Effect.execute_strong_card(game, player_id, tile_id)
   return true
 end
 
--- 执行免费卡（免租）效果（由 choice_resolver 调用）
+-- 执行免费卡（免租）效果（由 choice_service 调用）
 function Effect.execute_free_card(game, player_id, tile_id)
   local player = game.players[player_id]
   local tile = game.board:get_tile_by_id(tile_id)
@@ -95,7 +95,7 @@ function Effect.execute_free_card(game, player_id, tile_id)
   return true
 end
 
--- 执行租金支付（由 choice_resolver 调用，当用户跳过所有卡牌选项后）
+-- 执行租金支付（由 choice_service 调用，当用户跳过所有卡牌选项后）
 function Effect.execute_pay_rent(game, player_id, tile_id)
   local player = game.players[player_id]
   local tile = game.board:get_tile_by_id(tile_id)
@@ -137,7 +137,7 @@ function Effect.execute_pay_rent(game, player_id, tile_id)
   return true
 end
 
--- 执行免税卡效果（由 choice_resolver 调用）
+-- 执行免税卡效果（由 choice_service 调用）
 function Effect.execute_tax_free_card(game, player_id)
   local player = game.players[player_id]
   if not player then return false end
@@ -150,7 +150,7 @@ function Effect.execute_tax_free_card(game, player_id)
   return true
 end
 
--- 执行税金支付（由 choice_resolver 调用，当用户跳过免税卡后）
+-- 执行税金支付（由 choice_service 调用，当用户跳过免税卡后）
 function Effect.execute_pay_tax(game, player_id)
   local player = game.players[player_id]
   if not player then return false end

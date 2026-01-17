@@ -2,10 +2,8 @@ local market_cfg = require("src.config.market")
 local items_cfg = require("src.config.items")
 local vehicles_cfg = require("src.config.vehicles")
 local logger = require("src.util.logger")
-local Choice = require("src.gameplay.choice")
 local Inventory = require("src.gameplay.item_inventory")
 local Agent = require("src.gameplay.agent")
-
 local MarketService = {}
 
 local items_by_id = {}
@@ -141,30 +139,6 @@ function MarketService.auto_buy(game, player)
   if #list > 0 then
     MarketService.buy(game, player, list[1].product_id)
   end
-end
-
-local function as_number(v)
-  return type(v) == "number" and v or tonumber(v)
-end
-
-function MarketService.handle_choice(game, choice, action)
-  if not choice or choice.kind ~= "market_buy" then
-    return nil
-  end
-
-  if not action or action.type == "choice_cancel" or action.option_id == nil then
-    Choice.clear(game)
-    return { stay = false }
-  end
-
-  local product_id = as_number(action.option_id)
-  local meta = choice.meta or {}
-  local player = meta.player_id and game.players[meta.player_id] or game:current_player()
-  if player and product_id then
-    MarketService.buy(game, player, product_id)
-  end
-  Choice.clear(game)
-  return { stay = false }
 end
 
 return MarketService

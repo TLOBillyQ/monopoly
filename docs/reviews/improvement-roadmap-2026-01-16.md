@@ -38,7 +38,7 @@
 #### 任务2: 合并重复的 dispatch() 函数
 - [ ] 创建 `src/util/intent_dispatcher.lua`
 - [ ] 实现统一的 dispatch 函数
-- [ ] 修改 `src/gameplay/choice_resolver.lua` 使用新模块
+- [ ] 修改 `src/gameplay/choice_service.lua` 使用新模块
 - [ ] 修改 `src/gameplay/effect_pipeline.lua` 使用新模块
 - [ ] 修改 `src/gameplay/item_phase.lua` 使用新模块
 - [ ] 删除 3 处 local dispatch 函数定义
@@ -70,7 +70,7 @@
 #### 任务5: 提取 as_number() 到工具模块
 - [ ] 创建 `src/util/convert.lua`
 - [ ] 实现 `Convert.to_number()` 函数
-- [ ] 修改 `src/gameplay/choice_resolver.lua` 使用新模块
+- [ ] 修改 `src/gameplay/choice_service.lua` 使用新模块
 - [ ] 修改 `src/gameplay/market_service.lua` 使用新模块
 - [ ] 删除 2 处 local as_number 函数定义
 - [ ] 运行测试验证
@@ -92,7 +92,7 @@
 
 ### 任务清单
 
-#### 任务1: 拆分 choice_resolver.lua
+#### 任务1: 拆分 choice_service.lua
 - [ ] 创建 `src/gameplay/choice_service.lua` (主入口)
 - [ ] 创建 `src/gameplay/choice_handlers/` 目录
 - [ ] 拆分出 `land_choice_handler.lua`
@@ -177,7 +177,7 @@
 - [ ] `land_pricing.lua`: 租金计算时检查分母非零
 
 #### 输入验证
-- [ ] `choice_resolver.lua`: 验证 option_id 合法性
+- [ ] `choice_service.lua`: 验证 option_id 合法性
 - [ ] `market_service.lua`: 检查购买数量为正数
 
 ---

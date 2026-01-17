@@ -84,11 +84,19 @@ function Agent.pick_remote_dice_value(game, player, dice_count)
     local sim = simulate_landing(game, player, steps)
     local rank, score = remote_priority(game, player, sim)
     if rank then
-      if (not best_rank)
-        or rank < best_rank
-        or (rank == best_rank and (score or 0) > (best_score or -math.huge)) then
+      -- 按优先级 rank 选择，若同 rank 则以 score 取更优结果
+      local score_value = score or 0
+      local should_replace = false
+      if not best_rank then
+        should_replace = true
+      elseif rank < best_rank then
+        should_replace = true
+      elseif rank == best_rank and score_value > (best_score or -math.huge) then
+        should_replace = true
+      end
+      if should_replace then
         best_rank = rank
-        best_score = score
+        best_score = score_value
         best_value = value
         best_tile = sim.tile
       end
@@ -228,6 +236,7 @@ function Agent.auto_action_for_choice(game, choice)
 
   if choice.kind == "item_target_player" then
     local item_id = choice.meta and choice.meta.item_id
+    ---@type any
     local target = item_id and pick_target_player(game, actor, item_id, choice.options) or nil
     if target then
       return { type = "choice_select", choice_id = choice.id, option_id = target.id }

@@ -6,14 +6,94 @@ local MovementService = require("src.gameplay.movement_service")
 local Inventory = require("src.gameplay.item_inventory")
 local Executor = require("src.gameplay.item_executor")
 local Strategy = require("src.gameplay.item_strategy")
-local LandingResolver = require("src.gameplay.landing_resolver")
-local Choice = require("src.gameplay.choice")
-local ChoiceResolver = require("src.gameplay.choice_resolver")
+local landing_effects = require("src.gameplay.landing")
+local EffectPipeline = require("src.gameplay.effect_pipeline")
+local ChoiceService = require("src.gameplay.choice_service")
 
 local function assert_eq(a, b, msg)
   if a ~= b then
     error((msg or "assert failed") .. " | expected=" .. tostring(b) .. " got=" .. tostring(a))
   end
+end
+
+local function next_choice_id(store)
+  local seq = store:get({ "turn", "choice_seq" }) or 0
+  seq = seq + 1
+  store:set({ "turn", "choice_seq" }, seq)
+  return seq
+end
+
+local function open_choice(game, payload)
+  assert(game and game.store, "Choice.open requires game.store")
+  payload = payload or {}
+  local id = next_choice_id(game.store)
+  local entry = {
+    id = id,
+    kind = payload.kind,
+    title = payload.title or "请选择",
+    body_lines = payload.body_lines or {},
+    options = payload.options or {},
+    allow_cancel = payload.allow_cancel ~= false,
+    cancel_label = payload.cancel_label or "取消",
+    meta = payload.meta,
+  }
+  game.store:set({ "turn", "pending_choice" }, entry)
+  return entry
+end
+
+local function get_choice(game)
+  if not (game and game.store) then
+    return nil
+  end
+  return game.store:get({ "turn", "pending_choice" })
+end
+
+local MAX_LANDING_DEPTH = 10
+
+local function build_landing_ctx(game, player, tile, move_result)
+  local phase = game and game.store and game.store:get({ "turn", "phase" }) or "landing"
+  return {
+    game = game,
+    store = game and game.store,
+    rng = game and game.rng,
+    services = game and game.services,
+    phase = phase,
+    player = player,
+    tile = tile,
+    move_result = move_result,
+    on_landing = true,
+  }
+end
+
+local function resolve_landing(game, player, tile, move_result, depth)
+  depth = depth or 0
+  local ctx = build_landing_ctx(game, player, tile, move_result)
+
+  local function handle_need_landing(out)
+    if depth >= MAX_LANDING_DEPTH then
+      return out
+    end
+    local target_player = (out.player_id and game and game.players and game.players[out.player_id]) or player
+    local next_tile = nil
+    if target_player then
+      local idx = out.board_index or target_player.position
+      next_tile = idx and game and game.board and game.board:get_tile(idx) or nil
+    end
+    if next_tile then
+      return resolve_landing(game, target_player, next_tile, out.move_result, depth + 1)
+    end
+    return out
+  end
+
+  return EffectPipeline.run(landing_effects.defs, ctx, {
+    resume_state = "post_action",
+    resume_args = { player = player },
+    optional_choice_kind = "landing_optional_effect",
+    optional_reason = "landing_optional",
+    optional_allow_cancel = true,
+    optional_cancel_label = "跳过",
+    on_need_landing = handle_need_landing,
+  })
 end
 
 local function new_game()
@@ -61,7 +141,7 @@ local function test_land_on_start_reward()
   local idx = first_tile_by_type(g.board, "start")
   g:update_player_position(p, idx)
   local before = p.cash
-  local res = LandingResolver.resolve(g, p, g.board:get_tile(idx), {})
+  local res = resolve_landing(g, p, g.board:get_tile(idx), {})
   assert(not res, "landing resolver should not wait")
   assert(p.cash > before, "landing on start should grant reward")
 end
@@ -103,12 +183,12 @@ local function test_missile_card()
   local res = Executor.use_item(g, p, 2013, { services = g.services }, { inventory = Inventory, strategy = Strategy })
   if type(res) == "table" and res.intent then
     if res.intent.kind == "need_choice" then
-      Choice.open(g, res.intent.choice_spec)
+      open_choice(g, res.intent.choice_spec)
     end
-    local pending = Choice.get(g)
+    local pending = get_choice(g)
     assert(pending and pending.kind == "demolish_target", "missile should open choice")
     local first = pending.options[1]
-    ChoiceResolver.resolve(g, pending, { option_id = first.id })
+    ChoiceService.resolve(g, pending, { option_id = first.id })
     res = true
   end
   local ok = (type(res) == "table" and res.ok ~= nil) and res.ok or res
@@ -126,9 +206,9 @@ local function test_landing_optional_waits_with_ui()
   local p = g:current_player()
   local idx, tile = first_land_tile(g.board)
   g:update_player_position(p, idx)
-  local res = LandingResolver.resolve(g, p, tile, {})
+  local res = resolve_landing(g, p, tile, {})
   assert(res and res.waiting, "landing resolver should wait when UI is available")
-  local pending = Choice.get(g)
+  local pending = get_choice(g)
   assert(pending and pending.kind == "landing_optional_effect", "pending choice for landing optional")
 end
 
@@ -138,13 +218,13 @@ local function test_landing_optional_waits_without_ui_and_can_resolve()
   local idx, tile = first_land_tile(g.board)
   g:update_player_position(p, idx)
   local before_cash = p.cash
-  local res = LandingResolver.resolve(g, p, tile, {})
+  local res = resolve_landing(g, p, tile, {})
   assert(res and res.waiting, "landing resolver should wait even without UI")
-  local pending = Choice.get(g)
+  local pending = get_choice(g)
   assert(pending and pending.kind == "landing_optional_effect", "pending choice expected without UI")
   local first = pending.options and pending.options[1]
   assert(first, "expected at least one optional effect")
-  ChoiceResolver.resolve(g, pending, { option_id = first.id })
+  ChoiceService.resolve(g, pending, { option_id = first.id })
   assert(tile_state(g, tile).owner_id == p.id, "land should be purchased after resolving choice")
   assert(p.cash < before_cash, "cash deducted for purchase")
 end
@@ -155,15 +235,15 @@ local function test_landing_optional_stale_choice_is_blocked()
   local p = g:current_player()
   local idx, tile = first_land_tile(g.board)
   g:update_player_position(p, idx)
-  local res = LandingResolver.resolve(g, p, tile, {})
+  local res = resolve_landing(g, p, tile, {})
   assert(res and res.waiting, "should open choice")
-  local pending = Choice.get(g)
+  local pending = get_choice(g)
   assert(pending and pending.kind == "landing_optional_effect", "pending choice expected")
 
   -- Invalidate the option after choice is shown (simulate state change).
   p:set_cash(0)
 
-  ChoiceResolver.resolve(g, pending, { option_id = "buy_land" })
+  ChoiceService.resolve(g, pending, { option_id = "buy_land" })
   assert(tile_state(g, tile).owner_id == nil, "stale buy_land should be blocked")
 end
 
@@ -189,7 +269,7 @@ local function test_chance_is_mandatory_effect_entrypoint()
   -- We assume standard chance cards are safe or we mock chance_effects?
   -- Mocking requires package reload. Let's trust integration.
 
-  LandingResolver.resolve(g, p, tile, {})
+  resolve_landing(g, p, tile, {})
   
   assert(called.rng > 0, "chance logic was executed (RNG used)")
 end
@@ -233,10 +313,10 @@ local function test_ai_cancels_land_purchases()
   local idx, tile = first_land_tile(g.board)
   g:update_player_position(ai_player, idx)
   
-  local res = LandingResolver.resolve(g, ai_player, tile, {})
+  local res = resolve_landing(g, ai_player, tile, {})
   assert(res and res.waiting, "should wait for choice")
   
-  local pending = Choice.get(g)
+  local pending = get_choice(g)
   assert(pending and pending.kind == "landing_optional_effect", "should have landing choice")
   
   local action = Agent.auto_action_for_choice(g, pending)
@@ -244,7 +324,7 @@ local function test_ai_cancels_land_purchases()
   assert(action.type == "choice_cancel", "AI should cancel land purchase")
   
   local before_cash = ai_player.cash
-  ChoiceResolver.resolve(g, pending, action)
+  ChoiceService.resolve(g, pending, action)
   assert(ai_player.cash == before_cash, "AI cash should not change after canceling")
   assert(tile_state(g, tile).owner_id == nil, "land should not be purchased")
 end
@@ -267,7 +347,7 @@ local function test_mandatory_payment_causes_bankruptcy()
   g:update_player_position(p2, idx)
   
   local before_eliminated = p2.eliminated
-  LandingResolver.resolve(g, p2, tile, {})
+  resolve_landing(g, p2, tile, {})
   
   -- p2 should be eliminated due to insufficient funds for mandatory rent
   assert(p2.eliminated == true, "player should be eliminated after failing to pay rent")

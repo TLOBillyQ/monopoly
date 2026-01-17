@@ -1,5 +1,4 @@
-local Choice = require("src.gameplay.choice")
-local UI = require("src.gameplay.ui_port")
+local IntentDispatcher = require("src.util.intent_dispatcher")
 
 local function phase_move(tm, args)
   local player = args.player
@@ -25,7 +24,7 @@ local function phase_move(tm, args)
     if market then
       local spec, intent = market.build_choice_spec(player)
       if spec then
-        Choice.open(tm.game, spec)
+        IntentDispatcher.dispatch(tm.game, { kind = "need_choice", choice_spec = spec })
         return "wait_choice", {
           resume_state = "move",
           resume_args = {
@@ -38,7 +37,10 @@ local function phase_move(tm, args)
           },
         }
       elseif intent then
-        UI.push_popup(tm.game, intent.payload)
+        local ui_port = tm.game and tm.game.ui_port
+        if ui_port and ui_port.push_popup then
+          ui_port:push_popup(intent.payload)
+        end
       end
     end
   end

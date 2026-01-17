@@ -48,7 +48,7 @@ grep -r "UI\.push_popup" src/
 ```
 
 根据代码分析，调用点包括：
-1. `src/gameplay/choice_resolver.lua`
+1. `src/gameplay/choice_service.lua`
 2. `src/gameplay/item_phase.lua`
 3. `src/gameplay/market_service.lua`
 4. 其他8个文件
@@ -94,7 +94,7 @@ lua tests/regression.lua
 ## 2. 合并重复的 dispatch() 函数
 
 ### 问题描述
-`dispatch()` 函数在 `choice_resolver.lua`、`effect_pipeline.lua` 和 `item_phase.lua` 中重复出现，完全相同的实现。
+`dispatch()` 函数在 `choice_service.lua`、`effect_pipeline.lua` 和 `item_phase.lua` 中重复出现，完全相同的实现。
 
 ### 当前代码
 ```lua
@@ -137,7 +137,7 @@ return IntentDispatcher
 
 #### 步骤2: 更新调用文件
 
-**更新 `src/gameplay/choice_resolver.lua`**:
+**更新 `src/gameplay/choice_service.lua`**:
 ```lua
 -- 在文件顶部添加
 local IntentDispatcher = require("src.util.intent_dispatcher")
@@ -337,7 +337,7 @@ lua tests/regression.lua
 ## 5. 提取 as_number() 到工具模块
 
 ### 问题描述
-`as_number()` 函数在 `choice_resolver.lua` 和 `market_service.lua` 中重复实现。
+`as_number()` 函数在 `choice_service.lua` 和 `market_service.lua` 中重复实现。
 
 ### 当前代码
 ```lua
@@ -376,7 +376,7 @@ return Convert
 
 #### 步骤2: 更新调用文件
 
-**更新 `src/gameplay/choice_resolver.lua`**:
+**更新 `src/gameplay/choice_service.lua`**:
 ```lua
 -- 在文件顶部添加
 local Convert = require("src.util.convert")
@@ -407,10 +407,10 @@ lua tests/regression.lua
 
 ---
 
-## 6. 拆分 choice_resolver.lua
+## 6. 拆分 choice_service.lua
 
 ### 问题描述
-`choice_resolver.lua` 文件过大（442行），包含了21个处理函数，职责过重。
+`choice_service.lua` 文件过大（442行），包含了21个处理函数，职责过重。
 
 ### 修复步骤
 

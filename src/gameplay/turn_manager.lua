@@ -1,7 +1,5 @@
 local Flow = require("src.core.flow")
-local Choice = require("src.gameplay.choice")
-local ChoiceResolver = require("src.gameplay.choice_resolver")
-local UI = require("src.gameplay.ui_port")
+local ChoiceService = require("src.gameplay.choice_service")
 local phase_start_fn = require("src.gameplay.turn_start")
 local phase_roll_fn = require("src.gameplay.turn_roll")
 local phase_move_fn = require("src.gameplay.turn_move")
@@ -23,6 +21,13 @@ local PHASES = {
   end_turn = phase_end_fn,
 }
 
+local function get_choice(game)
+  if not (game and game.store) then
+    return nil
+  end
+  return game.store:get({ "turn", "pending_choice" })
+end
+
 local function decide_choice_action(game, choice, pending_action)
   if pending_action then
     return pending_action
@@ -33,7 +38,7 @@ local function decide_choice_action(game, choice, pending_action)
     return auto_action
   end
 
-  if not UI.is_available(game) then
+  if game.ui_port == nil then
     local first = choice.options and choice.options[1]
     if first then
       return { type = "choice_select", choice_id = choice.id, option_id = first.id or first }
@@ -60,12 +65,13 @@ end
 function TurnManager:dispatch(action)
   self.pending_action = action
 
-  local choice = Choice.get(self.game)
+  local choice = get_choice(self.game)
   if choice and action == nil and (not self.flow or not self.flow.current) then
     return nil
   end
   if choice and (not self.flow or not self.flow.current) then
-    local res = ChoiceResolver.resolve(self.game, choice, action)
+    ---@type any
+    local res = ChoiceService.resolve(self.game, choice, action) or {}
     self.pending_action = nil
     return res
   end
@@ -91,7 +97,7 @@ function TurnManager:_build_flow()
 
   states.wait_choice = function(args)
     self.game.store:set({ "turn", "phase" }, "wait_choice")
-    local choice = Choice.get(self.game)
+    local choice = get_choice(self.game)
 
 
     if not choice then
@@ -111,8 +117,9 @@ function TurnManager:_build_flow()
     if action.choice_id and choice.id and action.choice_id ~= choice.id then
       return "wait_choice", args
     end
-    local res = ChoiceResolver.resolve(self.game, choice, action)
-    if res and res.stay then
+    ---@type any
+    local res = ChoiceService.resolve(self.game, choice, action) or {}
+    if res.stay then
       return "wait_choice", args
     end
     return args and args.resume_state, args and args.resume_args

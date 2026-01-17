@@ -79,7 +79,7 @@
 3. 内联 `choice.lua` 到调用点
 4. 删除 `landing_resolver.lua` 薄层
 5. 提取 `as_number()` 到工具模块
-6. 拆分 `choice_resolver.lua`
+6. 拆分 `choice_service.lua`
 7. 简化 `agent.lua` 嵌套逻辑
 
 ---

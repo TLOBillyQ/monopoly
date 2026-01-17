@@ -1,20 +1,7 @@
 local Effect = require("src.gameplay.effect")
-local Choice = require("src.gameplay.choice")
-local UI = require("src.gameplay.ui_port")
+local IntentDispatcher = require("src.util.intent_dispatcher")
 
 local Pipeline = {}
-
-local function dispatch(game, payload)
-  if not payload then
-    return
-  end
-  local intent = payload.intent or payload
-  if intent.kind == "need_choice" and intent.choice_spec then
-    Choice.open(game, intent.choice_spec)
-  elseif intent.kind == "push_popup" and intent.payload then
-    UI.push_popup(game, intent.payload)
-  end
-end
 
 local function build_optional_choice(optional, ctx, opts)
   local body_lines = {}
@@ -52,7 +39,7 @@ local function build_optional_choice(optional, ctx, opts)
     intent = { kind = "need_choice", choice_spec = choice_spec },
   }
 
-  Choice.open(ctx.game, choice_spec)
+  IntentDispatcher.dispatch(ctx.game, { kind = "need_choice", choice_spec = choice_spec })
   return out
 end
 
@@ -82,7 +69,7 @@ function Pipeline.run(effect_defs, ctx, opts)
 
     local payload = out or res
     if payload then
-      dispatch(ctx.game, payload)
+      IntentDispatcher.dispatch(ctx.game, payload)
     end
 
     if type(out) == "table" and out.waiting then

@@ -1,4 +1,5 @@
-local Choice = require("src.gameplay.choice")
+return require("src.gameplay.choice_service")
+--[[
 local Effect = require("src.gameplay.effect")
 local Inventory = require("src.gameplay.item_inventory")
 local Executor = require("src.gameplay.item_executor")
@@ -8,33 +9,21 @@ local Steal = require("src.gameplay.item_steal")
 local Roadblock = require("src.gameplay.item_roadblock")
 local logger = require("src.util.logger")
 local MarketService = require("src.gameplay.market_service")
-local UI = require("src.gameplay.ui_port")
 local ItemPhase = require("src.gameplay.item_phase")
+local IntentDispatcher = require("src.util.intent_dispatcher")
+local Convert = require("src.util.convert")
 
 local Resolver = {}
 
-local function dispatch(game, payload)
-  if not payload then return end
-  local intent = payload.intent or payload
-  if intent.kind == "need_choice" and intent.choice_spec then
-    Choice.open(game, intent.choice_spec)
-  elseif intent.kind == "push_popup" and intent.payload then
-    UI.push_popup(game, intent.payload)
-  end
-end
-
-local function as_number(v)
-  if type(v) == "number" then
-    return v
-  end
-  if type(v) == "string" then
-    return tonumber(v)
-  end
-  return nil
-end
-
 local function is_cancel(action)
   return not action or action.type == "choice_cancel" or action.option_id == nil
+end
+
+local function clear_choice(game)
+  if not (game and game.store) then
+    return
+  end
+  game.store:set({ "turn", "pending_choice" }, nil)
 end
 
 local function use_item(game, player, item_id, context)
@@ -104,14 +93,14 @@ local handlers = {}
 local function handle_optional_landing_effect(game, choice, action)
   local effect_id = action.option_id
   if not effect_id then
-    Choice.clear(game)
+    clear_choice(game)
     return { stay = false }
   end
   local meta = choice.meta or {}
 
   if meta.effect_ids and not contains(meta.effect_ids, effect_id) then
     logger.warn("landing_optional_effect: effect not in offered list:", tostring(effect_id))
-    Choice.clear(game)
+    clear_choice(game)
     return { stay = false }
   end
 
@@ -119,7 +108,7 @@ local function handle_optional_landing_effect(game, choice, action)
   local target_eff = find_effect_by_id(effect_defs, effect_id)
   if not target_eff then
     logger.warn("landing_optional_effect: effect id not found:", tostring(effect_id))
-    Choice.clear(game)
+    clear_choice(game)
     return { stay = false }
   end
 
@@ -130,12 +119,12 @@ local function handle_optional_landing_effect(game, choice, action)
 
   local res = Effect.execute(target_eff, ctx)
   if res then
-    dispatch(game, res.result or res)
+    IntentDispatcher.dispatch(game, res.result or res)
   end
   if not res or res.ok ~= true then
     logger.warn("landing_optional_effect execute blocked:", tostring(res and res.reason))
   end
-  Choice.clear(game)
+  clear_choice(game)
   return { stay = false }
 end
 
@@ -162,16 +151,19 @@ local function handle_rent_prompt(game, choice, action)
       local player = player_id and game.players[player_id] or nil
       local free_idx = player and player.inventory and player.inventory:find_index(function(it) return it.id == 2001 end)
       if free_idx then
-        Choice.open(game, {
-          kind = "rent_card_prompt",
-          title = "是否使用免费卡",
-          body_lines = { "免除本次租金" },
-          options = {
-            { id = "use", label = "使用" },
-            { id = "skip", label = "放弃" },
+        IntentDispatcher.dispatch(game, {
+          kind = "need_choice",
+          choice_spec = {
+            kind = "rent_card_prompt",
+            title = "是否使用免费卡",
+            body_lines = { "免除本次租金" },
+            options = {
+              { id = "use", label = "使用" },
+              { id = "skip", label = "放弃" },
+            },
+            allow_cancel = false,
+            meta = { player_id = player_id, tile_id = tile_id, card_kind = "free" },
           },
-          allow_cancel = false,
-          meta = { player_id = player_id, tile_id = tile_id, card_kind = "free" },
         })
         return { stay = true }
       end
@@ -180,7 +172,7 @@ local function handle_rent_prompt(game, choice, action)
     LandEffect.execute_pay_rent(game, player_id, tile_id)
   end
 
-  Choice.clear(game)
+  clear_choice(game)
   return { stay = false }
 end
 
@@ -199,7 +191,7 @@ local function handle_tax_prompt(game, choice, action)
     LandEffect.execute_pay_tax(game, player_id)
   end
 
-  Choice.clear(game)
+  clear_choice(game)
   return { stay = false }
 end
 
@@ -216,7 +208,7 @@ function Resolver.resolve(game, choice, action)
       local phase = choice.meta and choice.meta.phase
       finish_item_phase(game, phase)
     end
-    Choice.clear(game)
+    clear_choice(game)
     return { stay = false }
   end
 
@@ -231,7 +223,7 @@ function Resolver.resolve(game, choice, action)
   end
 
   logger.warn("unknown choice kind:", tostring(choice.kind))
-  Choice.clear(game)
+  clear_choice(game)
   return { stay = false }
 end
 
@@ -243,23 +235,26 @@ local function open_steal_item_choice(game, stealer, target)
     table.insert(lines, i .. ". " .. label)
     table.insert(options, { id = i, label = label })
   end
-  Choice.open(game, {
-    kind = "steal_item",
-    title = "选择要偷的道具",
-    body_lines = lines,
-    options = options,
-    allow_cancel = true,
-    cancel_label = "取消",
-    meta = { stealer_id = stealer.id, target_id = target.id },
+  IntentDispatcher.dispatch(game, {
+    kind = "need_choice",
+    choice_spec = {
+      kind = "steal_item",
+      title = "选择要偷的道具",
+      body_lines = lines,
+      options = options,
+      allow_cancel = true,
+      cancel_label = "取消",
+      meta = { stealer_id = stealer.id, target_id = target.id },
+    },
   })
 end
 
 local function handle_demolish_target(game, choice, action)
   if is_cancel(action) then
-    Choice.clear(game)
+    clear_choice(game)
     return { stay = false }
   end
-  local idx = as_number(action.option_id)
+  local idx = Convert.to_number(action.option_id)
   local meta = choice.meta or {}
   local player = meta.player_id and game.players[meta.player_id] or game:current_player()
   if idx and player then
@@ -272,61 +267,61 @@ local function handle_demolish_target(game, choice, action)
       title = meta.title
     })
     if res and res.intent then
-      dispatch(game, res.intent)
+      IntentDispatcher.dispatch(game, res.intent)
     end
   end
   finish_active_item_phase(game)
-  Choice.clear(game)
+  clear_choice(game)
   return { stay = false }
 end
 
 local function handle_roadblock_target(game, choice, action)
   if is_cancel(action) then
-    Choice.clear(game)
+    clear_choice(game)
     return { stay = false }
   end
-  local idx = as_number(action.option_id)
+  local idx = Convert.to_number(action.option_id)
   local meta = choice.meta or {}
   local player = meta.player_id and game.players[meta.player_id] or game:current_player()
   if not player or not idx then
-    Choice.clear(game)
+    clear_choice(game)
     return { stay = false }
   end
   if meta.item_id then
     if not Inventory.consume(player, meta.item_id) then
-      Choice.clear(game)
+      clear_choice(game)
       return { stay = false }
     end
   end
   local res = Roadblock.apply(game, player, idx)
   if res then
-    dispatch(game, res)
+    IntentDispatcher.dispatch(game, res)
   end
   finish_active_item_phase(game)
-  Choice.clear(game)
+  clear_choice(game)
   return { stay = false }
 end
 
 local function handle_steal_target(game, choice, action)
   if is_cancel(action) then
-    Choice.clear(game)
+    clear_choice(game)
     return { stay = false }
   end
-  local target_id = as_number(action.option_id)
+  local target_id = Convert.to_number(action.option_id)
   local meta = choice.meta or {}
   local stealer = meta.stealer_id and game.players[meta.stealer_id] or game:current_player()
   local target = target_id and game.players[target_id]
   if not stealer or not target or target.eliminated then
-    Choice.clear(game)
+    clear_choice(game)
     return { stay = false }
   end
 
   if target.inventory:count() <= 1 then
     local res = Steal.steal_item_at_index(game, stealer, target, 1)
     logger.event("Steal choice result (single)", res)
-    Choice.clear(game)
+    clear_choice(game)
     if res and res.intent then
-      dispatch(game, res.intent)
+      IntentDispatcher.dispatch(game, res.intent)
     end
     return { stay = false }
   end
@@ -337,32 +332,32 @@ end
 
 local function handle_steal_item(game, choice, action)
   if is_cancel(action) then
-    Choice.clear(game)
+    clear_choice(game)
     return { stay = false }
   end
-  local idx = as_number(action.option_id)
+  local idx = Convert.to_number(action.option_id)
   local meta = choice.meta or {}
   local stealer = meta.stealer_id and game.players[meta.stealer_id] or game:current_player()
   local target = meta.target_id and game.players[meta.target_id]
   if stealer and target and idx then
     local res = Steal.steal_item_at_index(game, stealer, target, idx)
     logger.event("Steal choice result (multi)", res)
-    Choice.clear(game)
+    clear_choice(game)
     if res and res.intent then
-      dispatch(game, res.intent)
+      IntentDispatcher.dispatch(game, res.intent)
     end
   end
   finish_active_item_phase(game)
-  Choice.clear(game)
+  clear_choice(game)
   return { stay = false }
 end
 
 local function handle_item_target_player(game, choice, action)
   if is_cancel(action) then
-    Choice.clear(game)
+    clear_choice(game)
     return { stay = false }
   end
-  local target_id = as_number(action.option_id)
+  local target_id = Convert.to_number(action.option_id)
   local meta = choice.meta or {}
   local player = meta.player_id and game.players[meta.player_id] or game:current_player()
   local item_id = meta.item_id
@@ -371,32 +366,32 @@ local function handle_item_target_player(game, choice, action)
     if res and res.waiting then return { stay = true } end
   end
   finish_active_item_phase(game)
-  Choice.clear(game)
+  clear_choice(game)
   return { stay = false }
 end
 
 local function handle_remote_dice_value(game, choice, action)
   if is_cancel(action) then
-    Choice.clear(game)
+    clear_choice(game)
     return { stay = false }
   end
-  local value = as_number(action.option_id)
+  local value = Convert.to_number(action.option_id)
   local meta = choice.meta or {}
   local player = meta.player_id and game.players[meta.player_id] or game:current_player()
   local dice_count = meta.dice_count or (player and player.dice_count and player:dice_count()) or 1
   if not player or not value then
-    Choice.clear(game)
+    clear_choice(game)
     return { stay = false }
   end
   if meta.item_id then
     if not Inventory.consume(player, meta.item_id) then
-      Choice.clear(game)
+      clear_choice(game)
       return { stay = false }
     end
   end
   Executor.apply_remote_dice(game, player, dice_count, value)
   finish_active_item_phase(game)
-  Choice.clear(game)
+  clear_choice(game)
   return { stay = false }
 end
 
@@ -406,28 +401,28 @@ local function handle_item_phase_choice(game, choice, action)
   local phase = meta.phase
   if is_cancel(action) then
     finish_item_phase(game, phase)
-    Choice.clear(game)
+    clear_choice(game)
     return { stay = false }
   end
   if not player then
-    Choice.clear(game)
+    clear_choice(game)
     return { stay = false }
   end
-  local item_id = as_number(action.option_id)
+  local item_id = Convert.to_number(action.option_id)
   if not item_id then
-    Choice.clear(game)
+    clear_choice(game)
     return { stay = false }
   end
 
   local res = use_item(game, player, item_id)
   if type(res) == "table" and res.waiting then
     if res.intent then
-      dispatch(game, res.intent)
+      IntentDispatcher.dispatch(game, res.intent)
     end
     return { stay = true }
   end
   finish_item_phase(game, phase)
-  Choice.clear(game)
+  clear_choice(game)
   return { stay = false }
 end
 
@@ -440,3 +435,4 @@ handlers.item_target_player = handle_item_target_player
 handlers.remote_dice_value = handle_remote_dice_value
 
 return Resolver
+]]

@@ -1,5 +1,4 @@
 local logger = require("src.util.logger")
-local UI = require("src.gameplay.ui_port")
 local Inventory = require("src.gameplay.item_inventory")
 
 local Steal = {}
@@ -48,7 +47,7 @@ function Steal.handle_pass_players(game, player, encountered_ids)
     return
   end
 
-  if not UI.is_available(game) then
+  if game.ui_port == nil then
     Steal.steal_item_at_index(game, player, candidates[1], 1)
     return nil
   end
