@@ -3,11 +3,19 @@ local Inventory = require("src.gameplay.item_inventory")
 
 local Steal = {}
 
+local function fail_popup(game, stealer, target)
+  local msg = "很遗憾，" .. target.name .. " 没有任何道具。"
+  logger.event(stealer.name .. " 使用偷窃卡失败：" .. msg)
+  return {
+    ok = false,
+    intent = { kind = "push_popup", payload = { title = "偷窃失败", body = msg } },
+  }
+end
+
 function Steal.steal_item_at_index(game, player, target, item_idx)
   local inv = target.inventory
   if inv:count() == 0 then
-    logger.warn(target.name .. " 没有可偷道具")
-    return nil
+    return fail_popup(game, player, target)
   end
   local stolen = inv:remove_by_index(item_idx or 1)
   if not stolen then
@@ -28,6 +36,25 @@ function Steal.steal_item_at_index(game, player, target, item_idx)
   }
 end
 
+function Steal.build_prompt_spec(game, player, queue, index)
+  local target_id = queue and queue[index]
+  local target = target_id and game.players[target_id]
+  if not player or not target then
+    return nil
+  end
+  return {
+    kind = "steal_prompt",
+    title = "是否使用偷窃卡",
+    body_lines = { "目标：" .. target.name },
+    options = {
+      { id = "use", label = "使用" },
+      { id = "skip", label = "放弃" },
+    },
+    allow_cancel = false,
+    meta = { stealer_id = player.id, target_id = target.id, queue = queue, index = index },
+  }
+end
+
 function Steal.handle_pass_players(game, player, encountered_ids)
   if #encountered_ids == 0 then
     return
@@ -36,71 +63,38 @@ function Steal.handle_pass_players(game, player, encountered_ids)
     return
   end
 
-  local candidates = {}
+  local queue = {}
   for _, target_id in ipairs(encountered_ids) do
     local t = game.players[target_id]
-    if t and not t:has_deity("angel") and t.inventory:count() > 0 then
-      table.insert(candidates, t)
+    if t and not t.eliminated and not t:has_deity("angel") then
+      table.insert(queue, t.id)
     end
   end
-  if #candidates == 0 then
+  if #queue == 0 then
     return
   end
 
   if game.ui_port == nil then
-    Steal.steal_item_at_index(game, player, candidates[1], 1)
-    return nil
-  end
-
-  if #candidates == 1 then
-    local target = candidates[1]
-    if target.inventory:count() <= 1 then
-      Steal.steal_item_at_index(game, player, target, 1)
+    local target = game.players[queue[1]]
+    if not target then
       return nil
     end
-    local options = {}
-    local body_lines = {}
-    for idx, it in ipairs(target.inventory.items) do
-      local label = Inventory.item_name(it.id)
-      table.insert(body_lines, idx .. ". " .. label)
-      table.insert(options, { id = idx, label = label })
+    if target.inventory:count() == 0 then
+      Inventory.consume(player, 2007)
+      return fail_popup(game, player, target)
     end
-    return {
-      waiting = true,
-      intent = {
-        kind = "need_choice",
-        choice_spec = {
-          kind = "steal_item",
-          title = "选择要偷的道具",
-          body_lines = body_lines,
-          options = options,
-          allow_cancel = true,
-          cancel_label = "取消",
-          meta = { stealer_id = player.id, target_id = target.id },
-        },
-      },
-    }
+    return Steal.steal_item_at_index(game, player, target, 1)
   end
 
-  local options = {}
-  local body_lines = {}
-  for _, t in ipairs(candidates) do
-    table.insert(body_lines, t.name .. " 现金:" .. t.cash)
-    table.insert(options, { id = t.id, label = t.name })
+  local spec = Steal.build_prompt_spec(game, player, queue, 1)
+  if not spec then
+    return nil
   end
   return {
     waiting = true,
     intent = {
       kind = "need_choice",
-      choice_spec = {
-        kind = "steal_target",
-        title = "偷窃卡：选择目标",
-        body_lines = body_lines,
-        options = options,
-        allow_cancel = true,
-        cancel_label = "取消",
-        meta = { stealer_id = player.id },
-      },
+      choice_spec = spec,
     },
   }
 end

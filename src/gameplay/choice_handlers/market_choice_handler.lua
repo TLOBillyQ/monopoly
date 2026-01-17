@@ -1,4 +1,5 @@
 local MarketService = require("src.gameplay.market_service")
+local IntentDispatcher = require("src.util.intent_dispatcher")
 local Convert = require("src.util.convert")
 
 local MarketChoiceHandler = {}
@@ -21,7 +22,32 @@ function MarketChoiceHandler.build(helpers)
     local meta = choice.meta or {}
     local player = meta.player_id and game.players[meta.player_id] or game:current_player()
     if player and product_id then
-      MarketService.buy(game, player, product_id)
+      local res = MarketService.buy(game, player, product_id)
+      if type(res) == "table" and res.intent then
+        IntentDispatcher.dispatch(game, res.intent)
+        return { stay = res.intent.kind == "need_choice" }
+      end
+    end
+    clear_choice(game)
+    return { stay = false }
+  end
+
+  local function handle_vehicle_replace(game, choice, action)
+    if not choice or choice.kind ~= "market_vehicle_replace" then
+      return nil
+    end
+
+    if is_cancel(action) then
+      clear_choice(game)
+      return { stay = false }
+    end
+
+    local use = action and action.option_id == "use"
+    local meta = choice.meta or {}
+    local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+    local product_id = Convert.to_number(meta.product_id)
+    if use and player and product_id then
+      MarketService.buy_with_opts(game, player, product_id, { skip_vehicle_prompt = true })
     end
     clear_choice(game)
     return { stay = false }
@@ -29,6 +55,7 @@ function MarketChoiceHandler.build(helpers)
 
   return {
     market_buy = handle_market_buy,
+    market_vehicle_replace = handle_vehicle_replace,
   }
 end
 

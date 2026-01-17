@@ -1,6 +1,5 @@
 local Inventory = require("src.core.inventory")
 local Tables = require("src.util.tables")
-local Tile = require("src.core.tile")
 local constants = require("src.config.constants")
 local vehicles_cfg = require("src.config.vehicles")
 local logger = require("src.util.logger")

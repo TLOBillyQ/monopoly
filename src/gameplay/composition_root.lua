@@ -30,6 +30,9 @@ end
 local function create_players(opts)
   local players = {}
   local names = opts.players or { "玩家1" }
+  if #names == 1 then
+    names = { names[1], "玩家2", "玩家3", "玩家4" }
+  end
   for i, name in ipairs(names) do
     local role = roles_cfg[((i - 1) % #roles_cfg) + 1]
     local player = Player.new({

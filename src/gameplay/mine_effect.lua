@@ -15,6 +15,10 @@ function MineEffect.apply(game, player, position)
   end
 
   board:clear_mine(position)
+  if player.is_vehicle_indestructible and player:is_vehicle_indestructible() then
+    logger.event(player.name .. " 座驾免疫地雷")
+    return { detonated = true, protected = true }
+  end
   game:set_player_seat(player, nil)
   logger.event(player.name .. " 触发地雷，座驾被摧毁并送医")
   player:send_to_hospital(game)
