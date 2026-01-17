@@ -15,40 +15,78 @@ local function safe_tile_state(game, tile)
   return { owner_id = st.owner_id, level = st.level or 0 }
 end
 
--- 计算连续地块租金
+-- 计算连续地块租金（图邻接）
 local function contiguous_rent(game, board, index, owner_id)
-  local length = board:length()
+  local map = board and board.map
+  local neighbors = map and map.neighbors
+  if not neighbors then
+    local length = board:length()
+    local rent_sum = 0
+    local i = index
+    while i >= 1 do
+      local t = board:get_tile(i)
+      if t.type == "land" then
+        local st2 = safe_tile_state(game, t)
+        if st2.owner_id == owner_id then
+          rent_sum = rent_sum + Pricing.rent_for_level(t, st2.level or 0)
+          i = i - 1
+        else
+          break
+        end
+      else
+        break
+      end
+    end
+    i = index + 1
+    while i <= length do
+      local t = board:get_tile(i)
+      if t.type == "land" then
+        local st2 = safe_tile_state(game, t)
+        if st2.owner_id == owner_id then
+          rent_sum = rent_sum + Pricing.rent_for_level(t, st2.level or 0)
+          i = i + 1
+        else
+          break
+        end
+      else
+        break
+      end
+    end
+    return rent_sum
+  end
+
+  local start_tile = board:get_tile(index)
+  if not start_tile or start_tile.type ~= "land" then
+    return 0
+  end
+  local start_state = safe_tile_state(game, start_tile)
+  if start_state.owner_id ~= owner_id then
+    return 0
+  end
+
   local rent_sum = 0
-  local i = index
-  while i >= 1 do
-    local t = board:get_tile(i)
-    if t.type == "land" then
-      local st2 = safe_tile_state(game, t)
+  local visited = {}
+  local queue = { start_tile.id }
+  visited[start_tile.id] = true
+
+  while #queue > 0 do
+    local tile_id = table.remove(queue, 1)
+    local tile = board:get_tile_by_id(tile_id)
+    if tile and tile.type == "land" then
+      local st2 = safe_tile_state(game, tile)
       if st2.owner_id == owner_id then
-        rent_sum = rent_sum + Pricing.rent_for_level(t, st2.level or 0)
-        i = i - 1
-      else
-        break
+        rent_sum = rent_sum + Pricing.rent_for_level(tile, st2.level or 0)
+        local neigh = neighbors[tile_id] or {}
+        for _, next_id in pairs(neigh) do
+          if not visited[next_id] then
+            visited[next_id] = true
+            table.insert(queue, next_id)
+          end
+        end
       end
-    else
-      break
     end
   end
-  i = index + 1
-  while i <= length do
-    local t = board:get_tile(i)
-    if t.type == "land" then
-      local st2 = safe_tile_state(game, t)
-      if st2.owner_id == owner_id then
-        rent_sum = rent_sum + Pricing.rent_for_level(t, st2.level or 0)
-        i = i + 1
-      else
-        break
-      end
-    else
-      break
-    end
-  end
+
   return rent_sum
 end
 
@@ -157,7 +195,7 @@ function Effect.execute_pay_tax(game, player_id)
   player:deduct_cash(fee)
   logger.event(player.name .. " 在税务局支付税金 " .. fee)
 
-  if player.cash <= 0 then
+  if player.cash < 0 then
     local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
     if bankruptcy and bankruptcy.eliminate then
       bankruptcy.eliminate(game, player)

@@ -11,6 +11,7 @@ local LandEffect = require("src.gameplay.land")
 local landing_effects = require("src.gameplay.landing")
 local EffectPipeline = require("src.gameplay.effect_pipeline")
 local ChoiceService = require("src.gameplay.choice_service")
+local BoardUtils = require("src.gameplay.item_board_utils")
 
 local function assert_eq(a, b, msg)
   if a ~= b then
@@ -403,6 +404,42 @@ local function test_land_rent_contiguous_sum()
   assert_eq(before - tenant.cash, expected, "contiguous rent sum")
 end
 
+local function test_land_rent_graph_adjacency_breaks_path_neighbors()
+  local g = new_game()
+  local owner = g.players[1]
+  local tenant = g.players[2]
+  local idx_a = g.board:index_of_tile_id(27)
+  local idx_b = g.board:index_of_tile_id(28)
+  assert(idx_a and idx_b, "expected tile ids 27/28")
+  local tile_a = g.board:get_tile(idx_a)
+  local tile_b = g.board:get_tile(idx_b)
+  assert(tile_a and tile_b, "expected land tiles")
+
+  g:set_tile_owner(tile_a, owner.id)
+  g:set_tile_owner(tile_b, owner.id)
+  g:set_tile_level(tile_a, 1)
+  g:set_tile_level(tile_b, 2)
+  g:set_player_property(owner, tile_a.id, true)
+  g:set_player_property(owner, tile_b.id, true)
+
+  g:update_player_position(tenant, idx_a)
+  local before = tenant.cash
+  LandEffect.execute_pay_rent(g, tenant.id, tile_a.id)
+  local expected = Pricing.rent_for_level(tile_a, 1)
+  assert_eq(before - tenant.cash, expected, "graph adjacency rent excludes non-neighbors")
+end
+
+local function test_board_indices_in_range_uses_graph_distance()
+  local g = new_game()
+  local idx_a = g.board:index_of_tile_id(27)
+  local idx_b = g.board:index_of_tile_id(28)
+  assert(idx_a and idx_b, "expected tile ids 27/28")
+  local list = BoardUtils.indices_in_range(g.board, idx_a, 1)
+  for _, idx in ipairs(list) do
+    assert(idx ~= idx_b, "graph distance should not include path neighbor")
+  end
+end
+
 local function test_item_equalize_cash()
   local g = new_game()
   local user = g.players[1]
@@ -478,6 +515,8 @@ local tests = {
   test_mandatory_payment_causes_bankruptcy,
   test_ai_skips_auto_buy_at_market,
   test_land_rent_contiguous_sum,
+  test_land_rent_graph_adjacency_breaks_path_neighbors,
+  test_board_indices_in_range_uses_graph_distance,
   test_item_equalize_cash,
   test_market_full_inventory_blocks_items,
   test_zero_cash_no_buy_choice,

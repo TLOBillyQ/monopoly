@@ -2,7 +2,59 @@ local Pricing = require("src.gameplay.land_pricing")
 
 local BoardUtils = {}
 
+local DIR_ORDER = { "up", "right", "down", "left" }
+
 function BoardUtils.indices_in_range(board, start, distance)
+  local map = board and board.map
+  local neighbors = map and map.neighbors
+  if neighbors then
+    local start_tile = board:get_tile(start)
+    if not start_tile then
+      return {}
+    end
+    local max_dist = distance or 0
+    if max_dist <= 0 then
+      return {}
+    end
+    local dist_by_id = { [start_tile.id] = 0 }
+    local queue = { start_tile.id }
+    local qhead = 1
+    local by_dist = {}
+
+    while qhead <= #queue do
+      local tile_id = queue[qhead]
+      qhead = qhead + 1
+      local dist = dist_by_id[tile_id] or 0
+      if dist < max_dist then
+        local neigh = neighbors[tile_id] or {}
+        for _, dir in ipairs(DIR_ORDER) do
+          local next_id = neigh[dir]
+          if next_id and dist_by_id[next_id] == nil then
+            local next_dist = dist + 1
+            dist_by_id[next_id] = next_dist
+            if next_dist <= max_dist then
+              queue[#queue + 1] = next_id
+              local idx = board:index_of_tile_id(next_id)
+              if idx then
+                by_dist[next_dist] = by_dist[next_dist] or {}
+                table.insert(by_dist[next_dist], idx)
+              end
+            end
+          end
+        end
+      end
+    end
+
+    local list = {}
+    for step = 1, max_dist do
+      local entries = by_dist[step] or {}
+      for _, idx in ipairs(entries) do
+        table.insert(list, idx)
+      end
+    end
+    return list
+  end
+
   local len = board:length()
   local seen = {}
   local list = {}

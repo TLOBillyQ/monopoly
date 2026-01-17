@@ -1,7 +1,10 @@
 local logger = require("src.util.logger")
 local Inventory = require("src.gameplay.item_inventory")
+local Tile = require("src.core.tile")
 
 local ChanceEffects = {}
+
+local tile_state = Tile.get_state
 
 local function apply_cash_change(player, delta)
   player:add_cash(delta)
@@ -145,6 +148,13 @@ handlers.reset_tiles_on_path = function(game, _, _, context)
     for _, idx in ipairs(context.visited) do
       local t = game.board:get_tile(idx)
       if t.type == "land" then
+        local st = tile_state(game, t)
+        if st and st.owner_id then
+          local owner = game.players[st.owner_id]
+          if owner then
+            game:set_player_property(owner, t.id, false)
+          end
+        end
         game:reset_tile(t)
         logger.event("强制征地重置 " .. t.name)
       end
