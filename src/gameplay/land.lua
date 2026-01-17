@@ -7,6 +7,14 @@ local Pricing = require("src.gameplay.land_pricing")
 
 local tile_state = Tile.get_state
 
+local function safe_tile_state(game, tile)
+  local ok, st = pcall(tile_state, game, tile)
+  if not ok or type(st) ~= "table" then
+    return { owner_id = nil, level = 0 }
+  end
+  return { owner_id = st.owner_id, level = st.level or 0 }
+end
+
 local function next_upgrade_cost(tile, level)
   return Pricing.upgrade_cost(tile, level or 0)
 end
@@ -27,7 +35,7 @@ local function contiguous_rent(game, board, index, owner_id)
   while i >= 1 do
     local t = board:get_tile(i)
     if t.type == "land" then
-      local st2 = tile_state(game, t)
+      local st2 = safe_tile_state(game, t)
       if st2.owner_id == owner_id then
         rent_sum = rent_sum + current_rent(t, st2.level)
         i = i - 1
@@ -42,7 +50,7 @@ local function contiguous_rent(game, board, index, owner_id)
   while i <= length do
     local t = board:get_tile(i)
     if t.type == "land" then
-      local st2 = tile_state(game, t)
+      local st2 = safe_tile_state(game, t)
       if st2.owner_id == owner_id then
         rent_sum = rent_sum + current_rent(t, st2.level)
         i = i + 1
@@ -62,7 +70,7 @@ function Effect.execute_strong_card(game, player_id, tile_id)
   local tile = game.board:get_tile_by_id(tile_id)
   if not player or not tile then return false end
 
-  local st = tile_state(game, tile)
+  local st = safe_tile_state(game, tile)
   local owner = st.owner_id and game.players[st.owner_id] or nil
   if not owner then return false end
 
@@ -101,7 +109,7 @@ function Effect.execute_pay_rent(game, player_id, tile_id)
   local tile = game.board:get_tile_by_id(tile_id)
   if not player or not tile then return false end
 
-  local st = tile_state(game, tile)
+  local st = safe_tile_state(game, tile)
   local owner = st.owner_id and game.players[st.owner_id] or nil
   if not owner or owner.eliminated then
     game:set_tile_owner(tile, nil)
@@ -177,7 +185,7 @@ local function can_buy(ctx)
   if tile.type ~= "land" then
     return false
   end
-  local st = tile_state(ctx.game, tile)
+  local st = safe_tile_state(ctx.game, tile)
   return st.owner_id == nil and player.cash >= tile.price
 end
 
@@ -197,7 +205,7 @@ local function can_upgrade(ctx)
   if tile.type ~= "land" then
     return false
   end
-  local st = tile_state(ctx.game, tile)
+  local st = safe_tile_state(ctx.game, tile)
   if st.owner_id ~= player.id then
     return false
   end
@@ -211,7 +219,7 @@ end
 local function apply_upgrade(ctx)
   local tile = ctx.tile
   local player = ctx.player
-  local st = tile_state(ctx.game, tile)
+  local st = safe_tile_state(ctx.game, tile)
   local cost = next_upgrade_cost(tile, st.level)
   player:deduct_cash(cost)
   ctx.game:set_tile_level(tile, (st.level or 0) + 1)
@@ -231,7 +239,7 @@ Effect.defs = {
       if tile.type ~= "land" then
         return false
       end
-      local st = tile_state(ctx.game, tile)
+      local st = safe_tile_state(ctx.game, tile)
       return st.owner_id and st.owner_id ~= player.id
     end,
     apply = function(ctx)

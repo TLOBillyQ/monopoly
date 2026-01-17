@@ -32,7 +32,7 @@ monopoly/
 ├── src/
 │   ├── game.lua         # 游戏实例装配（依赖注入、服务组装）
 │   ├── core/            # 核心领域对象（Board, Player, Dice, Tile 等）
-│   ├── gameplay/        # 游戏逻辑与流程（扁平化，无嵌套子目录）
+│   ├── gameplay/        # 游戏逻辑与流程（包含 choice_handlers 子目录）
 │   │   ├── composition_root.lua  # 依赖注入装配
 │   │   ├── *_service.lua         # 业务服务（movement, market, bankruptcy, turn_manager）
 │   │   ├── turn_*.lua            # 回合阶段处理
@@ -42,7 +42,7 @@ monopoly/
 │   │   ├── choice*.lua           # 选择系统
 │   │   ├── agent.lua             # AI 决策
 │   │   ├── rng.lua, store.lua    # 基础设施
-│   │   └── ui_port.lua           # UI 端口抽象
+│   │   └── choice_handlers/      # 选择处理器
 │   ├── adapters/       # 适配器层
 │   │   └── love2d/    # LÖVE2D 渲染、输入、UI 适配
 │   ├── config/         # 游戏配置表（地图、地块、角色、道具）
@@ -127,6 +127,8 @@ tes
 - **设计文档**：[docs/design/](docs/design/) - 游戏策划、数据表设计
 - **架构文档**：[docs/deepfuture/](docs/deepfuture/) - 架构演进计划
 - **蛋仔相关**：[docs/eggy/](docs/eggy/) - 蛋仔乐园相关文档
+- **API 文档**：[docs/api.md](docs/api.md) - 核心入口函数说明
+- **ADR**：[docs/adr/](docs/adr/) - 架构决策记录
 - **开发规范**：[AGENTS.md](AGENTS.md) - 编码规则和原则
 
 ## 技术栈

@@ -88,6 +88,9 @@ end
 
 function Board:advance(index, steps, branch_parity)
   local length = self:length()
+  if length == 0 then
+    return index, 0
+  end
   local current = index
   local passed_start = 0
   for _ = 1, steps do
@@ -183,6 +186,9 @@ function Board:step_forward_by_facing(current_index, facing, parity)
   end
 
   local next_index = self:index_of_tile_id(next_id)
+  if not next_index then
+    return current_index, 0, facing
+  end
   local passed_start = (map.start_id and next_id == map.start_id) and 1 or 0
   local step_dir = map.direction and map.direction(current_id, next_id) or facing
   return next_index, passed_start, step_dir
@@ -235,6 +241,9 @@ function Board:step_backward_by_facing(current_index, facing, _parity)
   end
 
   local next_index = self:index_of_tile_id(next_id)
+  if not next_index then
+    return current_index, 0, facing
+  end
   local passed_start = (map.start_id and next_id == map.start_id) and 1 or 0
   local step_dir = map.direction and map.direction(current_id, next_id) or facing
   return next_index, passed_start, step_dir

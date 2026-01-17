@@ -40,6 +40,23 @@ local function contains(list, value)
   return false
 end
 
+local function option_exists(choice, option_id)
+  if not choice or option_id == nil then
+    return false
+  end
+  local options = choice.options
+  if type(options) ~= "table" or #options == 0 then
+    return true
+  end
+  for _, opt in ipairs(options) do
+    local id = (type(opt) == "table") and opt.id or opt
+    if id ~= nil and (id == option_id or tostring(id) == tostring(option_id)) then
+      return true
+    end
+  end
+  return false
+end
+
 local function build_effect_ctx(game, player, tile, move_result)
   local phase = game and game.store and game.store:get({ "turn", "phase" }) or "wait_choice"
   return {
@@ -125,6 +142,12 @@ function ChoiceService.resolve(game, choice, action)
       local phase = choice.meta and choice.meta.phase
       finish_item_phase(game, phase)
     end
+    clear_choice(game)
+    return { stay = false }
+  end
+
+  if action and action.option_id ~= nil and not option_exists(choice, action.option_id) then
+    logger.warn("invalid choice option:", tostring(choice.kind), tostring(action.option_id))
     clear_choice(game)
     return { stay = false }
   end

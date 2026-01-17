@@ -1,10 +1,10 @@
 local Flow = require("src.core.flow")
-local phase_start_fn = require("src.gameplay.turn_start")
-local phase_roll_fn = require("src.gameplay.turn_roll")
-local phase_move_fn = require("src.gameplay.turn_move")
-local phase_landing_fn = require("src.gameplay.turn_land")
-local phase_post_fn = require("src.gameplay.turn_post")
-local phase_end_fn = require("src.gameplay.turn_end")
+local turn_start = require("src.gameplay.turn_start")
+local turn_roll = require("src.gameplay.turn_roll")
+local turn_move = require("src.gameplay.turn_move")
+local turn_land = require("src.gameplay.turn_land")
+local turn_post = require("src.gameplay.turn_post")
+local turn_end = require("src.gameplay.turn_end")
 local DecisionEngine = require("src.gameplay.decision_engine")
 local Logger = require("src.util.logger")
 
@@ -12,12 +12,12 @@ local TurnManager = {}
 TurnManager.__index = TurnManager
 
 local PHASES = {
-  start = phase_start_fn,
-  roll = phase_roll_fn,
-  move = phase_move_fn,
-  landing = phase_landing_fn,
-  post_action = phase_post_fn,
-  end_turn = phase_end_fn,
+  start = turn_start,
+  roll = turn_roll,
+  move = turn_move,
+  landing = turn_land,
+  post_action = turn_post,
+  end_turn = turn_end,
 }
 
 local function get_choice(game)

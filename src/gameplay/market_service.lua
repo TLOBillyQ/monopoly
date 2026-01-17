@@ -93,7 +93,11 @@ function MarketService.build_choice_spec(player)
 end
 
 function MarketService.buy(game, player, product_id)
-  if not player or not product_id then return false end
+  if not player then return false end
+  if type(product_id) ~= "number" or product_id <= 0 then
+    logger.warn("invalid market product id:", tostring(product_id))
+    return false
+  end
   local entry = entries_by_id[product_id]
   if not entry then return false end
 

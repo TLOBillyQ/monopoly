@@ -6,6 +6,8 @@ local MovementService = require("src.gameplay.movement_service")
 local Inventory = require("src.gameplay.item_inventory")
 local Executor = require("src.gameplay.item_executor")
 local Strategy = require("src.gameplay.item_strategy")
+local Pricing = require("src.gameplay.land_pricing")
+local LandEffect = require("src.gameplay.land")
 local landing_effects = require("src.gameplay.landing")
 local EffectPipeline = require("src.gameplay.effect_pipeline")
 local ChoiceService = require("src.gameplay.choice_service")
@@ -116,6 +118,17 @@ local function first_tile_by_type(board, t)
     end
   end
   error("no tile found for type=" .. tostring(t))
+end
+
+local function first_adjacent_land_pair(board)
+  for idx = 1, #board.path - 1 do
+    local a = board.path[idx]
+    local b = board.path[idx + 1]
+    if a.type == "land" and b.type == "land" then
+      return idx, a, idx + 1, b
+    end
+  end
+  error("no adjacent land tiles")
 end
 
 local Tile = require("src.core.tile")
@@ -370,6 +383,86 @@ local function test_ai_skips_auto_buy_at_market()
   assert(ai_player.cash == before_cash, "AI should not spend money on auto_buy")
 end
 
+local function test_land_rent_contiguous_sum()
+  local g = new_game()
+  local owner = g.players[1]
+  local tenant = g.players[2]
+
+  local idx1, tile1, idx2, tile2 = first_adjacent_land_pair(g.board)
+  g:set_tile_owner(tile1, owner.id)
+  g:set_tile_owner(tile2, owner.id)
+  g:set_tile_level(tile1, 1)
+  g:set_tile_level(tile2, 2)
+  g:set_player_property(owner, tile1.id, true)
+  g:set_player_property(owner, tile2.id, true)
+
+  g:update_player_position(tenant, idx1)
+  local before = tenant.cash
+  LandEffect.execute_pay_rent(g, tenant.id, tile1.id)
+  local expected = Pricing.rent_for_level(tile1, 1) + Pricing.rent_for_level(tile2, 2)
+  assert_eq(before - tenant.cash, expected, "contiguous rent sum")
+end
+
+local function test_item_equalize_cash()
+  local g = new_game()
+  local user = g.players[1]
+  local target = g.players[2]
+  user:set_cash(1000)
+  target:set_cash(9000)
+  user.inventory:add({ id = 2011 })
+  local res = Executor.use_item(g, user, 2011, { by_ai = true }, { inventory = Inventory, strategy = Strategy })
+  local ok = (type(res) == "table" and res.ok ~= nil) and res.ok or res
+  assert_eq(ok, true, "equalize use ok")
+  assert_eq(user.cash, 5000, "equalize user cash")
+  assert_eq(target.cash, 5000, "equalize target cash")
+end
+
+local function test_market_full_inventory_blocks_items()
+  local MarketService = require("src.gameplay.market_service")
+  local g = new_game()
+  local p = g:current_player()
+  p:set_cash(999999)
+  for _ = 1, p.inventory.max_slots do
+    p.inventory:add({ id = 2001 })
+  end
+
+  local list = MarketService.list_buyable(p)
+  for _, entry in ipairs(list) do
+    assert(entry.kind ~= "item", "item should be excluded when inventory full")
+  end
+end
+
+local function test_zero_cash_no_buy_choice()
+  local g = new_game()
+  local p = g:current_player()
+  local idx, tile = first_land_tile(g.board)
+  g:update_player_position(p, idx)
+  p:set_cash(0)
+  local res = resolve_landing(g, p, tile, {})
+  assert(not res, "no choice when cannot buy")
+  assert(get_choice(g) == nil, "no pending choice")
+end
+
+local function test_movement_backward_wrap()
+  local g = new_game()
+  local p = g:current_player()
+  g:update_player_position(p, 1)
+  local res = MovementService.move(g, p, -1, { branch_parity = 1 })
+  assert(p.position >= 1 and p.position <= g.board:length(), "backward index in range")
+  assert(#res.visited == 1, "visited steps")
+end
+
+local function test_invalid_choice_option_rejected()
+  local g = new_game()
+  local choice = open_choice(g, {
+    kind = "market_buy",
+    options = { { id = 1, label = "X" } },
+    meta = { player_id = g:current_player().id },
+  })
+  ChoiceService.resolve(g, choice, { option_id = 999 })
+  assert(get_choice(g) == nil, "invalid option should clear choice")
+end
+
 local tests = {
   test_pass_start,
   test_land_on_start_reward,
@@ -384,6 +477,12 @@ local tests = {
   test_ai_cancels_land_purchases,
   test_mandatory_payment_causes_bankruptcy,
   test_ai_skips_auto_buy_at_market,
+  test_land_rent_contiguous_sum,
+  test_item_equalize_cash,
+  test_market_full_inventory_blocks_items,
+  test_zero_cash_no_buy_choice,
+  test_movement_backward_wrap,
+  test_invalid_choice_option_rejected,
 }
 
 for _, fn in ipairs(tests) do
