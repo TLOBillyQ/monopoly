@@ -14,6 +14,7 @@ local TurnManager = require("src.gameplay.turn_manager")
 local MovementService = require("src.gameplay.movement_service")
 local MarketService = require("src.gameplay.market_service")
 local BankruptcyService = require("src.gameplay.bankruptcy_service")
+local ChoiceService = require("src.gameplay.choice_service")
 local logger = require("src.util.logger")
 
 local CompositionRoot = {}
@@ -133,6 +134,7 @@ function CompositionRoot.assemble(opts, GameClass)
     movement = MovementService,
     market = MarketService,
     bankruptcy = BankruptcyService,
+    choice = ChoiceService,
   }
 
   -- 6. 组装 game 实例

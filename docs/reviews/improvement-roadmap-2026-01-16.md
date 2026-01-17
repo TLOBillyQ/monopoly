@@ -25,55 +25,55 @@
 ### 任务清单
 
 #### 任务1: 删除 ui_port.lua 包装层
-- [ ] 识别所有 `UI.push_popup()` 调用点（约11处）
-- [ ] 替换为直接调用 `game.ui_port:push_popup(...)`
-- [ ] 识别所有 `UI.is_available()` 调用
-- [ ] 替换为直接检查 `game.ui_port ~= nil`
-- [ ] 删除 `src/gameplay/ui_port.lua` 文件
-- [ ] 运行 `lua tests/deps_check.lua` 验证
-- [ ] 运行 `lua tests/regression.lua` 验证
+- [x] 识别所有 `UI.push_popup()` 调用点（约11处）
+- [x] 替换为直接调用 `game.ui_port:push_popup(...)`
+- [x] 识别所有 `UI.is_available()` 调用
+- [x] 替换为直接检查 `game.ui_port ~= nil`
+- [x] 删除 `src/gameplay/ui_port.lua` 文件
+- [x] 运行 `lua tests/deps_check.lua` 验证
+- [x] 运行 `lua tests/regression.lua` 验证
 
 **预期收益**: 删除 22 行代码，简化 1 个模块
 
 #### 任务2: 合并重复的 dispatch() 函数
-- [ ] 创建 `src/util/intent_dispatcher.lua`
-- [ ] 实现统一的 dispatch 函数
-- [ ] 修改 `src/gameplay/choice_service.lua` 使用新模块
-- [ ] 修改 `src/gameplay/effect_pipeline.lua` 使用新模块
-- [ ] 修改 `src/gameplay/item_phase.lua` 使用新模块
-- [ ] 删除 3 处 local dispatch 函数定义
-- [ ] 运行测试验证
+- [x] 创建 `src/util/intent_dispatcher.lua`
+- [x] 实现统一的 dispatch 函数
+- [x] 修改 `src/gameplay/choice_service.lua` 使用新模块
+- [x] 修改 `src/gameplay/effect_pipeline.lua` 使用新模块
+- [x] 修改 `src/gameplay/item_phase.lua` 使用新模块
+- [x] 删除 3 处 local dispatch 函数定义
+- [x] 运行测试验证
 
 **预期收益**: 删除 36 行重复代码
 
 #### 任务3: 内联 choice.lua 到调用点
-- [ ] 识别所有 `Choice.get()` 调用（约 3 处）
-- [ ] 替换为 `game.store:get({ "turn", "pending_choice" })`
-- [ ] 识别所有 `Choice.open()` 调用（约 2 处）
-- [ ] 替换为 `game.store:set({ "turn", "pending_choice" }, spec)`
-- [ ] 识别所有 `Choice.clear()` 调用（约 3 处）
-- [ ] 替换为 `game.store:set({ "turn", "pending_choice" }, nil)`
-- [ ] 删除 `src/gameplay/choice.lua` 文件
-- [ ] 运行测试验证
+- [x] 识别所有 `Choice.get()` 调用（约 3 处）
+- [x] 替换为 `game.store:get({ "turn", "pending_choice" })`
+- [x] 识别所有 `Choice.open()` 调用（约 2 处）
+- [x] 替换为 `game.store:set({ "turn", "pending_choice" }, spec)`
+- [x] 识别所有 `Choice.clear()` 调用（约 3 处）
+- [x] 替换为 `game.store:set({ "turn", "pending_choice" }, nil)`
+- [x] 删除 `src/gameplay/choice.lua` 文件
+- [x] 运行测试验证
 
 **预期收益**: 删除 44 行包装代码
 
 #### 任务4: 删除 landing_resolver.lua 薄层
-- [ ] 修改 `src/gameplay/turn_land.lua`
-- [ ] 直接 require `effect_pipeline.lua` 而非 `landing_resolver.lua`
-- [ ] 使用固定参数调用 `Pipeline.run(...)`
-- [ ] 删除 `src/gameplay/landing_resolver.lua` 文件
-- [ ] 运行测试验证
+- [x] 修改 `src/gameplay/turn_land.lua`
+- [x] 直接 require `effect_pipeline.lua` 而非 `landing_resolver.lua`
+- [x] 使用固定参数调用 `Pipeline.run(...)`
+- [x] 删除 `src/gameplay/landing_resolver.lua` 文件
+- [x] 运行测试验证
 
 **预期收益**: 删除 57 行代码
 
 #### 任务5: 提取 as_number() 到工具模块
-- [ ] 创建 `src/util/convert.lua`
-- [ ] 实现 `Convert.to_number()` 函数
-- [ ] 修改 `src/gameplay/choice_service.lua` 使用新模块
-- [ ] 修改 `src/gameplay/market_service.lua` 使用新模块
-- [ ] 删除 2 处 local as_number 函数定义
-- [ ] 运行测试验证
+- [x] 创建 `src/util/convert.lua`
+- [x] 实现 `Convert.to_number()` 函数
+- [x] 修改 `src/gameplay/choice_service.lua` 使用新模块
+- [x] 修改 `src/gameplay/market_service.lua` 使用新模块
+- [x] 删除 2 处 local as_number 函数定义
+- [x] 运行测试验证
 
 **预期收益**: 删除 20 行重复代码
 
@@ -93,30 +93,30 @@
 ### 任务清单
 
 #### 任务1: 拆分 choice_service.lua
-- [ ] 创建 `src/gameplay/choice_service.lua` (主入口)
-- [ ] 创建 `src/gameplay/choice_handlers/` 目录
-- [ ] 拆分出 `land_choice_handler.lua`
-- [ ] 拆分出 `market_choice_handler.lua`
-- [ ] 拆分出 `item_choice_handler.lua`
-- [ ] 拆分出 `optional_effect_handler.lua`
-- [ ] 更新 composition_root.lua 注入
-- [ ] 删除原 choice_resolver.lua
-- [ ] 运行测试验证
+- [x] 创建 `src/gameplay/choice_service.lua` (主入口)
+- [x] 创建 `src/gameplay/choice_handlers/` 目录
+- [x] 拆分出 `land_choice_handler.lua`
+- [x] 拆分出 `market_choice_handler.lua`
+- [x] 拆分出 `item_choice_handler.lua`
+- [x] 拆分出 `optional_effect_handler.lua`
+- [x] 更新 composition_root.lua 注入
+- [x] 删除原 choice_resolver.lua
+- [x] 运行测试验证
 
 **预期收益**: 职责分离，圈复杂度降低
 
 #### 任务2: 简化 agent.lua 嵌套逻辑
-- [ ] 重构 `pick_remote_dice_value()` 使用提前返回
-- [ ] 添加辅助函数减少嵌套
-- [ ] 添加注释说明算法意图
-- [ ] 运行测试验证
+- [x] 重构 `pick_remote_dice_value()` 使用提前返回
+- [x] 添加辅助函数减少嵌套
+- [x] 添加注释说明算法意图
+- [x] 运行测试验证
 
 **预期收益**: 可读性提升
 
 #### 任务3: 重命名和模块化
-- [ ] 重命名 `choice_resolver.lua` → `choice_service.lua`
-- [ ] 更新所有 require 引用
-- [ ] 更新文档中的引用
+- [x] 重命名 `choice_resolver.lua` → `choice_service.lua`
+- [x] 更新所有 require 引用
+- [x] 更新文档中的引用
 
 ### 第二阶段总结
 - **预计时间**: 3-5天
@@ -219,11 +219,11 @@ git diff --stat
 
 | 阶段 | 任务数 | 完成数 | 进度 |
 |------|--------|--------|------|
-| 第一阶段 | 5 | 0 | 0% |
-| 第二阶段 | 3 | 0 | 0% |
+| 第一阶段 | 5 | 5 | 100% |
+| 第二阶段 | 3 | 3 | 100% |
 | 第三阶段 | 14 | 0 | 0% |
 | 错误处理 | 5 | 0 | 0% |
-| **总计** | **27** | **0** | **0%** |
+| **总计** | **27** | **8** | **30%** |
 
 ---
 
@@ -250,5 +250,5 @@ git diff --stat
 
 ---
 
-**最后更新**: 2026-01-16  
+**最后更新**: 2026-01-17  
 **下次评审日期**: 2026-02-16 (建议)

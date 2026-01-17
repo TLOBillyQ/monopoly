@@ -78,7 +78,7 @@ end
 
 function Agent.pick_remote_dice_value(game, player, dice_count)
   dice_count = dice_count or 1
-  local best_value, best_rank, best_score, best_tile
+  local best
   for value = 1, 6 do
     local steps = value * dice_count
     local sim = simulate_landing(game, player, steps)
@@ -86,23 +86,14 @@ function Agent.pick_remote_dice_value(game, player, dice_count)
     if rank then
       -- 按优先级 rank 选择，若同 rank 则以 score 取更优结果
       local score_value = score or 0
-      local should_replace = false
-      if not best_rank then
-        should_replace = true
-      elseif rank < best_rank then
-        should_replace = true
-      elseif rank == best_rank and score_value > (best_score or -math.huge) then
-        should_replace = true
-      end
-      if should_replace then
-        best_rank = rank
-        best_score = score_value
-        best_value = value
-        best_tile = sim.tile
+      if not best
+        or rank < best.rank
+        or (rank == best.rank and score_value > (best.score or -math.huge)) then
+        best = { rank = rank, score = score_value, value = value, tile = sim.tile }
       end
     end
   end
-  return best_value, best_tile
+  return best and best.value, best and best.tile
 end
 
 local function richest_other(game, player, allow_ids)

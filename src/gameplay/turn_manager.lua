@@ -1,5 +1,4 @@
 local Flow = require("src.core.flow")
-local ChoiceService = require("src.gameplay.choice_service")
 local phase_start_fn = require("src.gameplay.turn_start")
 local phase_roll_fn = require("src.gameplay.turn_roll")
 local phase_move_fn = require("src.gameplay.turn_move")
@@ -51,6 +50,11 @@ local function decide_choice_action(game, choice, pending_action)
   return nil
 end
 
+local function resolve_choice(game, choice, action)
+  local service = game and game.services and game.services.choice
+  assert(service and service.resolve, "Missing ChoiceService (game.services.choice)")
+  return service.resolve(game, choice, action) or {}
+end
 
 
 function TurnManager.new(game)
@@ -71,7 +75,7 @@ function TurnManager:dispatch(action)
   end
   if choice and (not self.flow or not self.flow.current) then
     ---@type any
-    local res = ChoiceService.resolve(self.game, choice, action) or {}
+    local res = resolve_choice(self.game, choice, action)
     self.pending_action = nil
     return res
   end
@@ -118,7 +122,7 @@ function TurnManager:_build_flow()
       return "wait_choice", args
     end
     ---@type any
-    local res = ChoiceService.resolve(self.game, choice, action) or {}
+    local res = resolve_choice(self.game, choice, action)
     if res.stay then
       return "wait_choice", args
     end
