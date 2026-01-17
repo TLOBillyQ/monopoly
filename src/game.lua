@@ -172,6 +172,20 @@ function Game:dispatch_action(action)
   self:check_victory()
 end
 
+function Game:get_service(key, context)
+  if context and context.services and context.services[key] then
+    return context.services[key]
+  end
+  return self.services and self.services[key]
+end
+
+function Game:get_services(context)
+  if context and context.services then
+    return context.services
+  end
+  return self.services
+end
+
 function Game:pending_choice()
   if self.store then
     return self.store:get({ "turn", "pending_choice" })

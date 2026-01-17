@@ -127,8 +127,7 @@ function Strategy.auto_pre_action(game, player, deps, phase)
   if missile_result then return missile_result end
 
   -- 针对目标玩家的道具
-  local target_items = { 2011, 2012, 2014, 2015, 2016, 2018 }
-  for _, id in ipairs(target_items) do
+  for _, id in ipairs(ItemEffects.target_item_ids()) do
     local res = try_use(id, function() return has_target(id) end)
     if res then return res end
   end

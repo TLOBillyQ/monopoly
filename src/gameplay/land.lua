@@ -15,18 +15,6 @@ local function safe_tile_state(game, tile)
   return { owner_id = st.owner_id, level = st.level or 0 }
 end
 
-local function next_upgrade_cost(tile, level)
-  return Pricing.upgrade_cost(tile, level or 0)
-end
-
-local function current_rent(tile, level)
-  return Pricing.rent_for_level(tile, level or 0)
-end
-
-local function max_level(tile)
-  return Pricing.max_level(tile)
-end
-
 -- 计算连续地块租金
 local function contiguous_rent(game, board, index, owner_id)
   local length = board:length()
@@ -37,7 +25,7 @@ local function contiguous_rent(game, board, index, owner_id)
     if t.type == "land" then
       local st2 = safe_tile_state(game, t)
       if st2.owner_id == owner_id then
-        rent_sum = rent_sum + current_rent(t, st2.level)
+        rent_sum = rent_sum + Pricing.rent_for_level(t, st2.level or 0)
         i = i - 1
       else
         break
@@ -52,7 +40,7 @@ local function contiguous_rent(game, board, index, owner_id)
     if t.type == "land" then
       local st2 = safe_tile_state(game, t)
       if st2.owner_id == owner_id then
-        rent_sum = rent_sum + current_rent(t, st2.level)
+        rent_sum = rent_sum + Pricing.rent_for_level(t, st2.level or 0)
         i = i + 1
       else
         break
@@ -137,7 +125,7 @@ function Effect.execute_pay_rent(game, player_id, tile_id)
     owner:add_cash(paid)
     player:set_cash(0)
     logger.event(player.name .. " 资金不足，支付剩余 " .. paid .. " 后破产")
-    local bankruptcy = game.services and game.services.bankruptcy
+    local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
     if bankruptcy and bankruptcy.eliminate then
       bankruptcy.eliminate(game, player)
     end
@@ -170,7 +158,7 @@ function Effect.execute_pay_tax(game, player_id)
   logger.event(player.name .. " 在税务局支付税金 " .. fee)
 
   if player.cash <= 0 then
-    local bankruptcy = game.services and game.services.bankruptcy
+    local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
     if bankruptcy and bankruptcy.eliminate then
       bankruptcy.eliminate(game, player)
     end
@@ -209,10 +197,10 @@ local function can_upgrade(ctx)
   if st.owner_id ~= player.id then
     return false
   end
-  if (st.level or 0) >= max_level(tile) then
+  if (st.level or 0) >= Pricing.max_level(tile) then
     return false
   end
-  local cost = next_upgrade_cost(tile, st.level)
+  local cost = Pricing.upgrade_cost(tile, st.level or 0)
   return player.cash >= cost
 end
 
@@ -220,7 +208,7 @@ local function apply_upgrade(ctx)
   local tile = ctx.tile
   local player = ctx.player
   local st = safe_tile_state(ctx.game, tile)
-  local cost = next_upgrade_cost(tile, st.level)
+  local cost = Pricing.upgrade_cost(tile, st.level or 0)
   player:deduct_cash(cost)
   ctx.game:set_tile_level(tile, (st.level or 0) + 1)
   logger.event(player.name .. " 为 " .. tile.name .. " 加盖，花费 " .. cost)

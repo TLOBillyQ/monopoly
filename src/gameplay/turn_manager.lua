@@ -51,7 +51,7 @@ local function decide_choice_action(game, choice, pending_action)
 end
 
 local function resolve_choice(game, choice, action)
-  local service = game and game.services and game.services.choice
+  local service = game and game.get_service and game:get_service("choice")
   assert(service and service.resolve, "Missing ChoiceService (game.services.choice)")
   return service.resolve(game, choice, action) or {}
 end

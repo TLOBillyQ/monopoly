@@ -171,7 +171,7 @@ local item_handlers = {
   [2013] = handle_demolish,
 }
 
-for _, id in ipairs({ 2011, 2012, 2014, 2015, 2016, 2018 }) do
+for _, id in ipairs(ItemEffects.target_item_ids()) do
   item_handlers[id] = handle_target_player_item
 end
 

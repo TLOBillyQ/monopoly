@@ -17,7 +17,7 @@ function DecisionEngine.get_phase_action(game, player, phase)
     find_missile_target = Demolish.find_target,
     use_item = function(g, p, id, ctx)
       ctx = ctx or { by_ai = true }
-      ctx.services = g.services
+      ctx.services = g:get_services()
       return Executor.use_item(g, p, id, ctx, { inventory = Inventory, strategy = Strategy })
     end,
   }, phase)

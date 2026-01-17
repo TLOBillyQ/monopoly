@@ -4,7 +4,7 @@ local LandChoiceHandler = {}
 
 function LandChoiceHandler.build(helpers)
   local is_cancel = helpers.is_cancel
-  local clear_choice = helpers.clear_choice
+  local finish_choice = helpers.finish_choice
 
   local function handle_rent_prompt(game, choice, action)
     local LandEffect = require("src.gameplay.land")
@@ -47,8 +47,7 @@ function LandChoiceHandler.build(helpers)
       LandEffect.execute_pay_rent(game, player_id, tile_id)
     end
 
-    clear_choice(game)
-    return { stay = false }
+    return finish_choice(game, false)
   end
 
   local function handle_tax_prompt(game, choice, action)
@@ -66,8 +65,7 @@ function LandChoiceHandler.build(helpers)
       LandEffect.execute_pay_tax(game, player_id)
     end
 
-    clear_choice(game)
-    return { stay = false }
+    return finish_choice(game, false)
   end
 
   return {

@@ -39,4 +39,23 @@ function Effect.execute(effect, ctx)
   return { ok = true, result = apply(effect, ctx) }
 end
 
+function Effect.build_ctx(game, player, tile, move_result, opts)
+  opts = opts or {}
+  local phase = opts.phase
+  if not phase then
+    phase = (game and game.store and game.store:get({ "turn", "phase" })) or opts.phase_default
+  end
+  return {
+    game = game,
+    store = game and game.store,
+    rng = game and game.rng,
+    services = game and game.get_services and game:get_services(),
+    phase = phase or "wait_choice",
+    player = player,
+    tile = tile,
+    move_result = move_result,
+    on_landing = opts.on_landing,
+  }
+end
+
 return Effect

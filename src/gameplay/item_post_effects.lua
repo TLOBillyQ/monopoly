@@ -3,6 +3,15 @@ local constants = require("src.config.constants")
 
 local ItemEffects = {}
 
+local TARGET_ITEM_ORDER = {
+  2011,
+  2012,
+  2014,
+  2015,
+  2016,
+  2018,
+}
+
 local TARGET_EFFECTS = {
   [2011] = {
     apply = function(_, user, target, _context)
@@ -43,7 +52,7 @@ local TARGET_EFFECTS = {
       target:deduct_cash(fee)
       logger.event(user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. fee .. " 税金")
       if target.cash <= 0 then
-        local bankruptcy = (game.services and game.services.bankruptcy)
+        local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
         if bankruptcy then
           bankruptcy.eliminate(game, target)
         end
@@ -177,6 +186,10 @@ function ItemEffects.get_target_spec(item_id)
   return TARGET_EFFECTS[item_id]
 end
 
+function ItemEffects.target_item_ids()
+  return TARGET_ITEM_ORDER
+end
+
 function ItemEffects.apply_target(game, user, item_id, target, context)
   local spec = TARGET_EFFECTS[item_id]
   if not spec or not spec.apply then
@@ -187,7 +200,7 @@ end
 
 function ItemEffects.apply_post(game, player, item_id, context)
   context = context or {}
-  context.services = context.services or (game and game.services)
+  context.services = context.services or (game and game.get_services and game:get_services())
   local cfg = POST_EFFECTS[item_id]
   if not cfg then
     return nil

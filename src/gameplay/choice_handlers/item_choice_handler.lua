@@ -16,6 +16,12 @@ function ItemChoiceHandler.build(helpers)
   local finish_item_phase = helpers.finish_item_phase
   local finish_active_item_phase = helpers.finish_active_item_phase
 
+  local function finish_and_clear(game)
+    finish_active_item_phase(game)
+    clear_choice(game)
+    return { stay = false }
+  end
+
   local function open_steal_item_choice(game, stealer, target)
     local lines = {}
     local options = {}
@@ -40,8 +46,7 @@ function ItemChoiceHandler.build(helpers)
 
   local function handle_demolish_target(game, choice, action)
     if is_cancel(action) then
-      clear_choice(game)
-      return { stay = false }
+      return finish_and_clear(game)
     end
     local idx = Convert.to_number(action.option_id)
     local meta = choice.meta or {}
@@ -51,48 +56,40 @@ function ItemChoiceHandler.build(helpers)
         Inventory.consume(player, meta.item_id)
       end
       local res = Demolish.apply(game, player, idx, {
-        services = game and game.services,
+        services = game and game.get_services and game:get_services(),
         injure = meta.injure,
         title = meta.title
       })
       IntentDispatcher.dispatch(game, res.intent)
     end
-    finish_active_item_phase(game)
-    clear_choice(game)
-    return { stay = false }
+    return finish_and_clear(game)
   end
 
   local function handle_roadblock_target(game, choice, action)
     if is_cancel(action) then
-      clear_choice(game)
-      return { stay = false }
+      return finish_and_clear(game)
     end
     local idx = Convert.to_number(action.option_id)
     local meta = choice.meta or {}
     local player = meta.player_id and game.players[meta.player_id] or game:current_player()
     if not player or not idx then
-      clear_choice(game)
-      return { stay = false }
+      return finish_and_clear(game)
     end
     if meta.item_id then
       if not Inventory.consume(player, meta.item_id) then
-        clear_choice(game)
-        return { stay = false }
+        return finish_and_clear(game)
       end
     end
     local res = Roadblock.apply(game, player, idx)
     if res then
       IntentDispatcher.dispatch(game, res)
     end
-    finish_active_item_phase(game)
-    clear_choice(game)
-    return { stay = false }
+    return finish_and_clear(game)
   end
 
   local function handle_steal_item(game, choice, action)
     if is_cancel(action) then
-      clear_choice(game)
-      return { stay = false }
+      return finish_and_clear(game)
     end
     local idx = Convert.to_number(action.option_id)
     local meta = choice.meta or {}
@@ -101,14 +98,11 @@ function ItemChoiceHandler.build(helpers)
     if stealer and target and idx then
       local res = Steal.steal_item_at_index(game, stealer, target, idx)
       logger.event("Steal choice result (multi)", res)
-      clear_choice(game)
       if res and res.intent then
         IntentDispatcher.dispatch(game, res.intent)
       end
     end
-    finish_active_item_phase(game)
-    clear_choice(game)
-    return { stay = false }
+    return finish_and_clear(game)
   end
 
   local function handle_steal_prompt(game, choice, action)
@@ -163,8 +157,7 @@ function ItemChoiceHandler.build(helpers)
 
   local function handle_item_target_player(game, choice, action)
     if is_cancel(action) then
-      clear_choice(game)
-      return { stay = false }
+      return finish_and_clear(game)
     end
     local target_id = Convert.to_number(action.option_id)
     local meta = choice.meta or {}
@@ -174,34 +167,27 @@ function ItemChoiceHandler.build(helpers)
       local res = use_item(game, player, item_id, { target_id = target_id })
       if res and res.waiting then return { stay = true } end
     end
-    finish_active_item_phase(game)
-    clear_choice(game)
-    return { stay = false }
+    return finish_and_clear(game)
   end
 
   local function handle_remote_dice_value(game, choice, action)
     if is_cancel(action) then
-      clear_choice(game)
-      return { stay = false }
+      return finish_and_clear(game)
     end
     local value = Convert.to_number(action.option_id)
     local meta = choice.meta or {}
     local player = meta.player_id and game.players[meta.player_id] or game:current_player()
     local dice_count = meta.dice_count or (player and player.dice_count and player:dice_count()) or 1
     if not player or not value then
-      clear_choice(game)
-      return { stay = false }
+      return finish_and_clear(game)
     end
     if meta.item_id then
       if not Inventory.consume(player, meta.item_id) then
-        clear_choice(game)
-        return { stay = false }
+        return finish_and_clear(game)
       end
     end
     Executor.apply_remote_dice(game, player, dice_count, value)
-    finish_active_item_phase(game)
-    clear_choice(game)
-    return { stay = false }
+    return finish_and_clear(game)
   end
 
   local function handle_item_phase_choice(game, choice, action)

@@ -1,26 +1,15 @@
 local landing_effects = require("src.gameplay.landing")
 local EffectPipeline = require("src.gameplay.effect_pipeline")
+local Effect = require("src.gameplay.effect")
 
 local MAX_LANDING_DEPTH = 10
 
-local function build_ctx(game, player, tile, move_result)
-  local phase = game and game.store and game.store:get({ "turn", "phase" }) or "landing"
-  return {
-    game = game,
-    store = game and game.store,
-    rng = game and game.rng,
-    services = game and game.services,
-    phase = phase,
-    player = player,
-    tile = tile,
-    move_result = move_result,
-    on_landing = true,
-  }
-end
-
 local function resolve_landing(game, player, tile, move_result, depth)
   depth = depth or 0
-  local ctx = build_ctx(game, player, tile, move_result)
+  local ctx = Effect.build_ctx(game, player, tile, move_result, {
+    phase_default = "landing",
+    on_landing = true,
+  })
 
   local function handle_need_landing(out)
     if depth >= MAX_LANDING_DEPTH then

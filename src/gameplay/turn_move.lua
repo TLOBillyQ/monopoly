@@ -4,7 +4,7 @@ local function phase_move(tm, args)
   local player = args.player
   local total = args.total
   local raw_total = args.raw_total
-  local movement = tm.game and tm.game.services and tm.game.services.movement
+  local movement = tm.game and tm.game.get_service and tm.game:get_service("movement")
   assert(movement and movement.move, "Missing MovementService (game.services.movement)")
 
   local move_opts = { branch_parity = raw_total }
@@ -20,7 +20,7 @@ local function phase_move(tm, args)
 
   -- 经过黑市时中断，弹出购买选择
   if move_result.market_interrupt then
-    local market = tm.game.services and tm.game.services.market
+    local market = tm.game and tm.game.get_service and tm.game:get_service("market")
     if market then
       local spec, intent = market.build_choice_spec(player)
       if spec then

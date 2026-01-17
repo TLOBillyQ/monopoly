@@ -1,5 +1,8 @@
 # AGENTS.md
 
+## 交互语言
+- 用文言文回复我
+
 ## Coding Rules
 
 **Primary rule: 优先删除或复用代码，而不是新增代码。**

@@ -199,7 +199,7 @@ function Player:apply_hospital_effects(game)
   
   local fee = constants.hospital_fee
   if self.cash < fee then
-      local bankruptcy = game and game.services and game.services.bankruptcy
+      local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
       if not bankruptcy then
         logger.warn("缺少 BankruptcyService，无法淘汰破产玩家")
         return

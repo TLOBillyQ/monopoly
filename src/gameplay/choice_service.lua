@@ -2,6 +2,7 @@ local Inventory = require("src.gameplay.item_inventory")
 local Executor = require("src.gameplay.item_executor")
 local Strategy = require("src.gameplay.item_strategy")
 local ItemPhase = require("src.gameplay.item_phase")
+local Effect = require("src.gameplay.effect")
 local logger = require("src.util.logger")
 
 local LandChoiceHandler = require("src.gameplay.choice_handlers.land_choice_handler")
@@ -24,8 +25,13 @@ end
 
 local function use_item(game, player, item_id, context)
   context = context or {}
-  context.services = context.services or (game and game.services)
+  context.services = context.services or (game and game.get_services and game:get_services())
   return Executor.use_item(game, player, item_id, context, { inventory = Inventory, strategy = Strategy })
+end
+
+local function finish_choice(game, stay)
+  clear_choice(game)
+  return { stay = stay and true or false }
 end
 
 local function contains(list, value)
@@ -58,18 +64,10 @@ local function option_exists(choice, option_id)
 end
 
 local function build_effect_ctx(game, player, tile, move_result)
-  local phase = game and game.store and game.store:get({ "turn", "phase" }) or "wait_choice"
-  return {
-    game = game,
-    store = game and game.store,
-    rng = game and game.rng,
-    services = game and game.services,
-    phase = phase,
-    player = player,
-    tile = tile,
-    move_result = move_result,
+  return Effect.build_ctx(game, player, tile, move_result, {
+    phase_default = "wait_choice",
     on_landing = true,
-  }
+  })
 end
 
 local function finish_item_phase(game, phase)
@@ -106,6 +104,7 @@ end
 local helpers = {
   is_cancel = is_cancel,
   clear_choice = clear_choice,
+  finish_choice = finish_choice,
   use_item = use_item,
   contains = contains,
   build_effect_ctx = build_effect_ctx,

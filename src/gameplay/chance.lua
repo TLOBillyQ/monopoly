@@ -12,18 +12,11 @@ local function require_service(service, name)
   return service
 end
 
-local function get_service(game, context, key)
-  if context and context.services and context.services[key] then
-    return context.services[key]
-  end
-  return game and game.services and game.services[key]
-end
-
 local function handle_bankruptcy_if_negative(game, player)
   if player.cash >= 0 then
     return
   end
-  local bankruptcy = require_service(get_service(game, nil, "bankruptcy"), "BankruptcyService")
+  local bankruptcy = require_service(game and game.get_service and game:get_service("bankruptcy"), "BankruptcyService")
   bankruptcy.eliminate(game, player)
 end
 
@@ -33,7 +26,7 @@ local function apply_cash_and_maybe_bankrupt(game, player, delta)
 end
 
 local function move_steps(game, player, steps)
-  local movement = require_service(get_service(game, nil, "movement"), "MovementService")
+  local movement = require_service(game and game.get_service and game:get_service("movement"), "MovementService")
   local res = movement.move(game, player, steps)
   return {
     kind = "need_landing",
@@ -248,7 +241,7 @@ handlers.forced_move = function(game, player, card, context)
       if game.set_player_status then
         game:set_player_status(player, "move_dir", nil)
       end
-      local market_service = require_service(get_service(game, context, "market"), "MarketService")
+      local market_service = require_service(game and game.get_service and game:get_service("market", context), "MarketService")
       market_service.auto_buy(game, player)
     end
   end

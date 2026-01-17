@@ -10,13 +10,6 @@ local MineEffect = require("src.gameplay.mine_effect")
 local Steal = require("src.gameplay.item_steal")
 local Effect = {}
 
-local function get_service(ctx, key)
-  if ctx and ctx.services and ctx.services[key] then
-    return ctx.services[key]
-  end
-  return ctx and ctx.game and ctx.game.services and ctx.game.services[key]
-end
-
 Effect.defs = {
   {
     id = "pass_players",
@@ -112,7 +105,7 @@ Effect.defs = {
     apply = function(ctx)
       local game = ctx.game
       local player = ctx.player
-      local market = get_service(ctx, "market")
+      local market = game and game.get_service and game:get_service("market", ctx)
       if not market then return nil end
 
       local spec, intent = market.build_choice_spec(player)

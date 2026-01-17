@@ -6,7 +6,7 @@ local MarketChoiceHandler = {}
 
 function MarketChoiceHandler.build(helpers)
   local is_cancel = helpers.is_cancel
-  local clear_choice = helpers.clear_choice
+  local finish_choice = helpers.finish_choice
 
   local function handle_market_buy(game, choice, action)
     if not choice or choice.kind ~= "market_buy" then
@@ -14,8 +14,7 @@ function MarketChoiceHandler.build(helpers)
     end
 
     if is_cancel(action) then
-      clear_choice(game)
-      return { stay = false }
+      return finish_choice(game, false)
     end
 
     local product_id = Convert.to_number(action.option_id)
@@ -28,8 +27,7 @@ function MarketChoiceHandler.build(helpers)
         return { stay = res.intent.kind == "need_choice" }
       end
     end
-    clear_choice(game)
-    return { stay = false }
+    return finish_choice(game, false)
   end
 
   local function handle_vehicle_replace(game, choice, action)
@@ -38,8 +36,7 @@ function MarketChoiceHandler.build(helpers)
     end
 
     if is_cancel(action) then
-      clear_choice(game)
-      return { stay = false }
+      return finish_choice(game, false)
     end
 
     local use = action and action.option_id == "use"
@@ -49,8 +46,7 @@ function MarketChoiceHandler.build(helpers)
     if use and player and product_id then
       MarketService.buy_with_opts(game, player, product_id, { skip_vehicle_prompt = true })
     end
-    clear_choice(game)
-    return { stay = false }
+    return finish_choice(game, false)
   end
 
   return {
