@@ -51,7 +51,7 @@ local TARGET_EFFECTS = {
       local fee = math.floor(target.cash * 0.5)
       target:deduct_cash(fee)
       logger.event(user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. fee .. " 税金")
-      if target.cash < 0 then
+      if target.cash <= 0 then
         local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
         if bankruptcy then
           bankruptcy.eliminate(game, target)
@@ -165,17 +165,65 @@ handlers.clear_obstacles_ahead = function(game, player, cfg, context)
   local distance = cfg.distance or 12
   local parity = (context and context.branch_parity) or distance
   local facing = player.status and player.status.move_dir or nil
-  for _ = 1, distance do
-    local next_index, _passed, step_dir = board:step_forward_by_facing(current, facing, parity)
-    current = next_index
-    facing = step_dir or facing
-    if board:has_roadblock(current) then
-      board:clear_roadblock(current)
-      cleared = cleared + 1
+  local map = board.map
+  if not map or not map.neighbors then
+    for _ = 1, distance do
+      local next_index, _passed, step_dir = board:step_forward_by_facing(current, facing, parity)
+      current = next_index
+      facing = step_dir or facing
+      if board:has_roadblock(current) then
+        board:clear_roadblock(current)
+        cleared = cleared + 1
+      end
+      if board:has_mine(current) then
+        board:clear_mine(current)
+        cleared = cleared + 1
+      end
     end
-    if board:has_mine(current) then
-      board:clear_mine(current)
-      cleared = cleared + 1
+  else
+    local OPPOSITE = { up = "down", down = "up", left = "right", right = "left" }
+    local start_tile = board:get_tile(current)
+    local start_id = start_tile and start_tile.id
+    local queue = {}
+    local visited = {}
+    local function mark(tile_id, dir, depth)
+      visited[tile_id] = visited[tile_id] or {}
+      local key = dir or ""
+      local prev = visited[tile_id][key]
+      if prev and prev <= depth then
+        return false
+      end
+      visited[tile_id][key] = depth
+      return true
+    end
+    if start_id then
+      mark(start_id, facing, 0)
+      table.insert(queue, { tile_id = start_id, facing = facing, depth = 0 })
+    end
+    while #queue > 0 do
+      local node = table.remove(queue, 1)
+      if node.depth < distance then
+        local neigh = map.neighbors[node.tile_id] or {}
+        local back = node.facing and OPPOSITE[node.facing] or nil
+        for dir, next_id in pairs(neigh) do
+          if not back or dir ~= back then
+            local next_index = board:index_of_tile_id(next_id)
+            if next_index then
+              if board:has_roadblock(next_index) then
+                board:clear_roadblock(next_index)
+                cleared = cleared + 1
+              end
+              if board:has_mine(next_index) then
+                board:clear_mine(next_index)
+                cleared = cleared + 1
+              end
+              if mark(next_id, dir, node.depth + 1) then
+                table.insert(queue, { tile_id = next_id, facing = dir, depth = node.depth + 1 })
+              end
+            end
+          end
+        end
+      end
     end
   end
   logger.event(player.name .. " 清除前方障碍数：" .. cleared)

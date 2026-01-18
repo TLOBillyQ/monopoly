@@ -6,6 +6,7 @@ local logger = require("src.util.logger")
 local IntentDispatcher = require("src.util.intent_dispatcher")
 local Convert = require("src.util.convert")
 local RemoteDice = require("src.gameplay.item_remote_dice")
+local ItemPhase = require("src.gameplay.item_phase")
 
 local ItemChoiceHandler = {}
 
@@ -42,6 +43,39 @@ function ItemChoiceHandler.build(helpers)
         meta = { stealer_id = stealer.id, target_id = target.id },
       },
     })
+  end
+
+  local function open_discard_item_choice(game, player, phase)
+    local lines = {}
+    local options = {}
+    for i, it in ipairs(player.inventory.items) do
+      local label = Inventory.item_name(it.id)
+      table.insert(lines, i .. ". " .. label)
+      table.insert(options, { id = i, label = label })
+    end
+    IntentDispatcher.dispatch(game, {
+      kind = "need_choice",
+      choice_spec = {
+        kind = "discard_item",
+        title = "选择要丢弃的道具",
+        body_lines = lines,
+        options = options,
+        allow_cancel = true,
+        cancel_label = "返回",
+        meta = { player_id = player.id, phase = phase },
+      },
+    })
+  end
+
+  local function reopen_item_phase(game, player, phase)
+    local spec = ItemPhase.build_choice_spec(player, phase)
+    if not spec then
+      finish_item_phase(game, phase)
+      clear_choice(game)
+      return { stay = false }
+    end
+    IntentDispatcher.dispatch(game, { kind = "need_choice", choice_spec = spec })
+    return { stay = true }
   end
 
   local function handle_demolish_target(game, choice, action)
@@ -204,6 +238,11 @@ function ItemChoiceHandler.build(helpers)
       return { stay = false }
     end
     local item_id = Convert.to_number(action.option_id)
+    if not item_id and action.option_id == "discard_item" then
+      clear_choice(game)
+      open_discard_item_choice(game, player, phase)
+      return { stay = true }
+    end
     if not item_id then
       clear_choice(game)
       return { stay = false }
@@ -221,6 +260,27 @@ function ItemChoiceHandler.build(helpers)
     return { stay = false }
   end
 
+  local function handle_discard_item(game, choice, action)
+    local meta = choice.meta or {}
+    local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+    local phase = meta.phase
+    if is_cancel(action) then
+      clear_choice(game)
+      return reopen_item_phase(game, player, phase)
+    end
+    local idx = Convert.to_number(action.option_id)
+    if not player or not idx then
+      clear_choice(game)
+      return reopen_item_phase(game, player, phase)
+    end
+    local dropped = player.inventory:remove_by_index(idx)
+    if dropped then
+      logger.event(player.name .. " 丢弃道具 " .. Inventory.item_name(dropped.id))
+    end
+    clear_choice(game)
+    return reopen_item_phase(game, player, phase)
+  end
+
   return {
     item_phase_choice = handle_item_phase_choice,
     demolish_target = handle_demolish_target,
@@ -229,6 +289,7 @@ function ItemChoiceHandler.build(helpers)
     steal_prompt = handle_steal_prompt,
     item_target_player = handle_item_target_player,
     remote_dice_value = handle_remote_dice_value,
+    discard_item = handle_discard_item,
   }
 end
 

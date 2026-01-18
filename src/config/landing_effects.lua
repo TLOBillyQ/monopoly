@@ -6,9 +6,9 @@ return {
   { id = "hospital", label = "医院", mandatory = true },
   { id = "mountain", label = "深山", mandatory = true },
   { id = "market", label = "黑市", mandatory = true },
-  { id = "mine", label = "地雷", mandatory = true },
   { id = "buy_land", label = "购买地块", mandatory = false },
   { id = "upgrade_land", label = "加盖建筑", mandatory = false },
   { id = "pay_rent", mandatory = true },
   { id = "tax", mandatory = true },
+  { id = "mine", label = "地雷", mandatory = true },
 }

@@ -108,6 +108,10 @@ function Strategy.auto_pre_action(game, player, deps, phase)
   end)
   if dice_result then return dice_result end
 
+  -- 地雷卡
+  local mine_result = try_use(2005)
+  if mine_result then return mine_result end
+
   -- 骰子加倍
   local double_result = try_use(2003)
   if double_result then return double_result end

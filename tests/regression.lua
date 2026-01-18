@@ -468,8 +468,8 @@ local function test_zero_cash_no_buy_choice()
   g:update_player_position(p, idx)
   p:set_cash(0)
   local res = resolve_landing(g, p, tile, {})
-  assert(not res, "no choice when cannot buy")
-  assert(get_choice(g) == nil, "no pending choice")
+  assert(res and res.waiting, "buy choice should appear even when cash is zero")
+  assert(get_choice(g) ~= nil, "pending choice should exist")
 end
 
 local function test_movement_backward_wrap()

@@ -5,6 +5,7 @@ return {
   default_dice_count = 1,
   dice_with_vehicle = 2,
   action_timeout_seconds = 10,
+  turn_limit = 100,
   pass_start_bonus = 2000,
   hospital_fee = 5000,
   hospital_stay_turns = 2,
@@ -13,5 +14,6 @@ return {
   inventory_slots = 5,
   deity_duration_turns = 5,
   unlimited_currency = "广告",
+  max_tile_occupants = 4,
   item_phase_queue = { "pre_action", "pre_move", "post_action" },
 }

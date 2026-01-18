@@ -167,6 +167,12 @@ function LandActions.execute_pay_rent(game, player_id, tile_id)
     player:deduct_cash(rent)
     owner:add_cash(rent)
     logger.event(player.name .. " 向 " .. owner.name .. " 支付租金 " .. rent)
+    if player.cash <= 0 then
+      local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
+      if bankruptcy and bankruptcy.eliminate then
+        bankruptcy.eliminate(game, player)
+      end
+    end
   else
     local paid = player.cash
     owner:add_cash(paid)
@@ -204,7 +210,7 @@ function LandActions.execute_pay_tax(game, player_id)
   player:deduct_cash(fee)
   logger.event(player.name .. " 在税务局支付税金 " .. fee)
 
-  if player.cash < 0 then
+  if player.cash <= 0 then
     local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
     if bankruptcy and bankruptcy.eliminate then
       bankruptcy.eliminate(game, player)

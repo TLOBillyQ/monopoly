@@ -1,6 +1,7 @@
 local items_cfg = require("src.config.items")
 local random = require("src.util.random")
 local logger = require("src.util.logger")
+local IntentDispatcher = require("src.util.intent_dispatcher")
 
 local Inventory = {}
 
@@ -37,9 +38,23 @@ function Inventory.draw_random(rng)
   return random.weighted_choice(items_cfg, "weight", rng)
 end
 
-function Inventory.give(player, item_id)
+local function notify_full(game, player, item_id)
+  if not game or not game.ui_port or not player or player.is_ai or player.auto then
+    return
+  end
+  IntentDispatcher.dispatch(game, {
+    kind = "push_popup",
+    payload = {
+      title = "道具",
+      body = player.name .. " 背包已满，无法获得道具 " .. Inventory.item_name(item_id),
+    },
+  })
+end
+
+function Inventory.give(player, item_id, context)
   if player.inventory:is_full() then
     logger.warn(player.name .. " 的背包已满，无法获得道具 " .. item_id)
+    notify_full(context and context.game, player, item_id)
     return false
   end
   player.inventory:add({ id = item_id })
@@ -47,12 +62,12 @@ function Inventory.give(player, item_id)
   return true
 end
 
-function Inventory.draw_and_give(player, rng)
+function Inventory.draw_and_give(player, rng, context)
   local cfg = Inventory.draw_random(rng)
   if not cfg then
     return
   end
-  Inventory.give(player, cfg.id)
+  Inventory.give(player, cfg.id, context)
 end
 
 return Inventory

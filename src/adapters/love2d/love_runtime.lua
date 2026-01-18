@@ -1,4 +1,5 @@
 local UIState = require("src.adapters.love2d.ui_state")
+local constants = require("src.config.constants")
 local Layout = require("src.adapters.love2d.layout")
 local BoardRenderer = require("src.adapters.love2d.board_renderer")
 local PanelRenderer = require("src.adapters.love2d.panel_renderer")
@@ -9,11 +10,12 @@ local LoveRuntime = {}
 function LoveRuntime.install(LoveLayer)
   function LoveLayer:layout()
     local store_state = (self.game and self.game.store and self.game.store.state) or {}
+    local winner_name = self.game and (self.game.winner_names or (self.game.winner and self.game.winner.name)) or nil
     local view = Presenter.present(store_state, {
       game = self.game,
       last_turn = self.game and self.game.last_turn,
       finished = self.game and self.game.finished,
-      winner_name = self.game and self.game.winner and self.game.winner.name or nil,
+      winner_name = winner_name,
     })
     Layout.apply(self.ui, view)
   end
@@ -65,6 +67,27 @@ function LoveRuntime.install(LoveLayer)
     if auto_action then
       self:dispatch_action(auto_action)
     end
+    local timeout = constants.action_timeout_seconds or 0
+    if timeout > 0 and self.pending_choice and self.modal.active then
+      if self.pending_choice_id ~= self.pending_choice.id then
+        self.pending_choice_elapsed = 0
+        self.pending_choice_id = self.pending_choice.id
+      end
+      self.pending_choice_elapsed = self.pending_choice_elapsed + dt
+      if self.pending_choice_elapsed >= timeout then
+        local choice = self.pending_choice
+        self.pending_choice_elapsed = 0
+        local first = choice.options and choice.options[1]
+        if first then
+          self:dispatch_action({ type = "choice_select", choice_id = choice.id, option_id = first.id or first })
+        elseif choice.allow_cancel ~= false then
+          self:dispatch_action({ type = "choice_cancel", choice_id = choice.id })
+        end
+      end
+    else
+      self.pending_choice_elapsed = 0
+      self.pending_choice_id = nil
+    end
     self.modal:update()
   end
 
@@ -110,10 +133,11 @@ function LoveRuntime.install(LoveLayer)
     local ui = self.ui
 
     local store_state = (game and game.store and game.store.state) or {}
+    local winner_name = game and (game.winner_names or (game.winner and game.winner.name)) or nil
     local view = Presenter.present(store_state, {
       last_turn = game and game.last_turn,
       finished = game and game.finished,
-      winner_name = game and game.winner and game.winner.name or nil,
+      winner_name = winner_name,
     })
 
     local w, h = love.graphics.getDimensions()

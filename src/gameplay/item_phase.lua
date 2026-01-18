@@ -48,6 +48,10 @@ local function build_options(player, phase)
       table.insert(body_lines, line)
     end
   end
+  if player.inventory:count() > 0 then
+    table.insert(options, { id = "discard_item", label = "丢弃道具" })
+    table.insert(body_lines, "丢弃道具：从背包丢弃一张")
+  end
   return body_lines, options
 end
 
@@ -106,24 +110,13 @@ function ItemPhase.run(tm, phase, args)
     return nil
   end
 
-  local body_lines, options = build_options(player, phase)
-  if #options == 0 then
+  local spec = ItemPhase.build_choice_spec(player, phase)
+  if not spec then
     ItemPhase.finish(game, phase)
     return nil
   end
 
-  IntentDispatcher.dispatch(game, {
-    kind = "need_choice",
-    choice_spec = {
-      kind = "item_phase_choice",
-      title = PHASE_TITLES[phase] or "使用道具？",
-      body_lines = body_lines,
-      options = options,
-      allow_cancel = true,
-      cancel_label = "结束阶段",
-      meta = { player_id = player.id, phase = phase },
-    },
-  })
+  IntentDispatcher.dispatch(game, { kind = "need_choice", choice_spec = spec })
 
   if store then
     store:set({ "turn", "item_phase", phase }, { active = true })
@@ -131,6 +124,22 @@ function ItemPhase.run(tm, phase, args)
   end
 
   return { waiting = true, resume_state = args.resume_state, resume_args = args.resume_args }
+end
+
+function ItemPhase.build_choice_spec(player, phase)
+  local body_lines, options = build_options(player, phase)
+  if #options == 0 then
+    return nil
+  end
+  return {
+    kind = "item_phase_choice",
+    title = PHASE_TITLES[phase] or "使用道具？",
+    body_lines = body_lines,
+    options = options,
+    allow_cancel = true,
+    cancel_label = "结束阶段",
+    meta = { player_id = player.id, phase = phase },
+  }
 end
 
 return ItemPhase

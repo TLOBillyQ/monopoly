@@ -1,4 +1,5 @@
 local IntentDispatcher = require("src.util.intent_dispatcher")
+local Steal = require("src.gameplay.item_steal")
 
 local function phase_move(tm, args)
   local player = args.player
@@ -9,7 +10,7 @@ local function phase_move(tm, args)
 
   local move_opts = { branch_parity = raw_total }
   -- 支持从黑市中断后继续移动
-  if args.continue_from_market then
+  if args.continue_from_market or args.continue_from_steal then
     total = args.remaining_steps
     move_opts.direction = args.facing
     move_opts.branch_parity = args.branch_parity
@@ -17,6 +18,45 @@ local function phase_move(tm, args)
 
   local move_result = movement.move(tm.game, player, total, move_opts)
   tm.game.last_turn.move_result = move_result
+
+  if move_result.stopped_on_roadblock then
+    local stay = player.status.stay_turns or 0
+    if stay < 1 then
+      tm.game:set_player_status(player, "stay_turns", 1)
+    end
+  end
+
+  if move_result.steal_interrupt then
+    local interrupt = move_result.steal_interrupt
+    local res = Steal.handle_pass_players(tm.game, player, interrupt.encountered_ids or {})
+    if res and res.intent then
+      IntentDispatcher.dispatch(tm.game, res.intent)
+    end
+    if res and res.waiting then
+      return "wait_choice", {
+        resume_state = "move",
+        resume_args = {
+          player = player,
+          continue_from_steal = true,
+          remaining_steps = interrupt.remaining_steps,
+          facing = interrupt.facing,
+          branch_parity = interrupt.branch_parity,
+          raw_total = raw_total,
+        },
+      }
+    end
+    if interrupt.remaining_steps and interrupt.remaining_steps > 0 then
+      return "move", {
+        player = player,
+        continue_from_steal = true,
+        remaining_steps = interrupt.remaining_steps,
+        facing = interrupt.facing,
+        branch_parity = interrupt.branch_parity,
+        raw_total = raw_total,
+      }
+    end
+    move_result.encountered_players = {}
+  end
 
   -- 经过黑市时中断，弹出购买选择
   if move_result.market_interrupt then

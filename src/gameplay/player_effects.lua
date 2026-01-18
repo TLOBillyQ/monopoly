@@ -18,6 +18,15 @@ function Effects:apply_hospital_effects(game)
   end
   self:deduct_cash(fee)
   logger.event(self.name .. " 支付医药费 " .. fee)
+  if self.cash <= 0 then
+    local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
+    if not bankruptcy then
+      logger.warn("缺少 BankruptcyService，无法淘汰破产玩家")
+      return
+    end
+    bankruptcy.eliminate(game, self)
+    return
+  end
 
   logger.event(self.name .. " 住院，需停留 " .. self.status.stay_turns .. " 回合")
 end

@@ -15,12 +15,20 @@ local function can_buy(ctx)
     return false
   end
   local st = LandActions.safe_tile_state(ctx.game, tile)
-  return st.owner_id == nil and player.cash >= tile.price
+  return st.owner_id == nil
 end
 
 local function apply_buy(ctx)
   local tile = ctx.tile
   local player = ctx.player
+  if player.cash < tile.price then
+    return {
+      intent = {
+        kind = "push_popup",
+        payload = { title = "购买失败", body = player.name .. " 余额不足" },
+      },
+    }
+  end
   player:deduct_cash(tile.price)
   ctx.game:set_tile_owner(tile, player.id)
   ctx.game:set_player_property(player, tile.id, true)
@@ -40,8 +48,7 @@ local function can_upgrade(ctx)
   if (st.level or 0) >= Pricing.max_level(tile) then
     return false
   end
-  local cost = Pricing.upgrade_cost(tile, st.level or 0)
-  return player.cash >= cost
+  return true
 end
 
 local function apply_upgrade(ctx)
@@ -49,6 +56,14 @@ local function apply_upgrade(ctx)
   local player = ctx.player
   local st = LandActions.safe_tile_state(ctx.game, tile)
   local cost = Pricing.upgrade_cost(tile, st.level or 0)
+  if player.cash < cost then
+    return {
+      intent = {
+        kind = "push_popup",
+        payload = { title = "升级失败", body = player.name .. " 余额不足" },
+      },
+    }
+  end
   player:deduct_cash(cost)
   ctx.game:set_tile_level(tile, (st.level or 0) + 1)
   logger.event(player.name .. " 为 " .. tile.name .. " 加盖，花费 " .. cost)

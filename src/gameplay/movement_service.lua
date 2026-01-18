@@ -13,6 +13,7 @@ function MovementService.move(game, player, steps, opts)
   local pass_start = 0
   local stopped_on_roadblock = false
   local market_interrupt = nil
+  local steal_interrupt = nil
   local current = player.position
   local start_tile = board:get_tile(current)
   local facing = opts.direction or (player.status and player.status.move_dir) or nil
@@ -20,14 +21,23 @@ function MovementService.move(game, player, steps, opts)
 
   for step = 1, abs_steps do
     local next_index, passed, step_dir = step_fn(board, current, facing, branch_parity)
+    local occupants = game.occupants[next_index] or {}
+    if constants.max_tile_occupants and #occupants >= constants.max_tile_occupants then
+      local tile = board:get_tile(current)
+      local tile_name = tile and tile.name or tostring(current)
+      logger.event(player.name .. " 前方拥挤，停在 " .. tile_name)
+      break
+    end
     pass_start = pass_start + passed
     facing = step_dir or facing
     current = next_index
     table.insert(visited, current)
 
     local others = game.occupants[current] or {}
+    local encountered_step = {}
     for _, pid in ipairs(others) do
       if pid ~= player.id then
+        table.insert(encountered_step, pid)
         table.insert(encountered, pid)
       end
     end
@@ -37,6 +47,22 @@ function MovementService.move(game, player, steps, opts)
       stopped_on_roadblock = true
       logger.event(player.name .. " 触发路障，停在 " .. board:get_tile(current).name)
       break
+    end
+
+    if not opts.skip_steal_check and #encountered_step > 0 then
+      local has_steal = player.inventory and player.inventory:find_index(function(it) return it.id == 2007 end)
+      local remaining = abs_steps - step
+      if has_steal and remaining > 0 then
+        steal_interrupt = {
+          position = current,
+          remaining_steps = remaining,
+          facing = facing,
+          branch_parity = branch_parity,
+          encountered_ids = encountered_step,
+        }
+        logger.event(player.name .. " 经过玩家，触发偷窃中断")
+        break
+      end
     end
 
     -- 经过黑市时中断（非最后一步），skip_market_check 用于测试
@@ -76,6 +102,7 @@ function MovementService.move(game, player, steps, opts)
     landing_tile = landing_tile,
     steps = steps,
     market_interrupt = market_interrupt,
+    steal_interrupt = steal_interrupt,
   }
 end
 

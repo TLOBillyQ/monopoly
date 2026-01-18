@@ -1,5 +1,6 @@
 local logger = require("src.util.logger")
 local items_cfg = require("src.config.items")
+local constants = require("src.config.constants")
 local UIState = require("src.adapters.love2d.ui_state")
 local Modal = require("src.adapters.love2d.modal")
 local AutoRunner = require("src.adapters.love2d.auto_runner")
@@ -17,6 +18,8 @@ function LoveLayer.new(opts)
     game = nil,
     item_name_by_id = {},
     pending_choice = nil,
+    pending_choice_elapsed = 0,
+    pending_choice_id = nil,
     game_factory = opts.game_factory,
     modal = Modal.new(),
     auto_runner = AutoRunner.new({ interval = ui.auto_interval }),
@@ -100,6 +103,8 @@ function LoveLayer:open_choice_modal(pending)
     end,
     _pending_choice_id = pending.id,
   }
+  self.pending_choice_elapsed = 0
+  self.pending_choice_id = pending.id
 end
 
 function LoveLayer:get_game()
@@ -168,6 +173,8 @@ function LoveLayer:dispatch_action(action)
     end
   elseif action.type == "choice_select" or action.type == "choice_cancel" then
     self.pending_choice = nil
+    self.pending_choice_elapsed = 0
+    self.pending_choice_id = nil
     if self.game then
       self.game:dispatch_action(action)
     end

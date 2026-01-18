@@ -10,13 +10,23 @@ local function apply_cash_change(player, delta)
   player:add_cash(delta)
 end
 
+local function adjust_chance_delta(player, delta)
+  if delta > 0 and player:has_deity("rich") then
+    return delta * 2
+  end
+  if delta < 0 and player:has_deity("poor") then
+    return delta * 2
+  end
+  return delta
+end
+
 local function require_service(service, name)
   assert(service, "Missing " .. name)
   return service
 end
 
 local function handle_bankruptcy_if_negative(game, player)
-  if player.cash >= 0 then
+  if player.cash > 0 then
     return
   end
   local bankruptcy = require_service(game and game.get_service and game:get_service("bankruptcy"), "BankruptcyService")
@@ -45,13 +55,15 @@ handlers.add_cash = function(game, player, card)
   if card.target == "all" then
     for _, p in ipairs(game.players) do
       if not p.eliminated then
-        apply_cash_change(p, card.amount)
+        local delta = adjust_chance_delta(p, card.amount)
+        apply_cash_change(p, delta)
+        logger.event(p.name .. " 获得 " .. delta .. " 金币")
       end
     end
-    logger.event("每人获得 " .. card.amount .. " 金币")
   else
-    apply_cash_change(player, card.amount)
-    logger.event(player.name .. " 获得 " .. card.amount .. " 金币")
+    local delta = adjust_chance_delta(player, card.amount)
+    apply_cash_change(player, delta)
+    logger.event(player.name .. " 获得 " .. delta .. " 金币")
   end
 end
 
@@ -59,13 +71,15 @@ handlers.pay_cash = function(game, player, card)
   if card.target == "all" then
     for _, p in ipairs(game.players) do
       if not p.eliminated then
-        apply_cash_and_maybe_bankrupt(game, p, -card.amount)
+        local delta = adjust_chance_delta(p, -card.amount)
+        apply_cash_and_maybe_bankrupt(game, p, delta)
+        logger.event(p.name .. " 支付 " .. math.abs(delta) .. " 金币")
       end
     end
-    logger.event("每人支付 " .. card.amount .. " 金币")
   else
-    apply_cash_and_maybe_bankrupt(game, player, -card.amount)
-    logger.event(player.name .. " 支付 " .. card.amount .. " 金币")
+    local delta = adjust_chance_delta(player, -card.amount)
+    apply_cash_and_maybe_bankrupt(game, player, delta)
+    logger.event(player.name .. " 支付 " .. math.abs(delta) .. " 金币")
   end
 end
 
@@ -74,14 +88,16 @@ handlers.percent_pay_cash = function(game, player, card)
     for _, p in ipairs(game.players) do
       if not p.eliminated then
         local fee = math.floor(p.cash * (card.percent / 100))
-        apply_cash_and_maybe_bankrupt(game, p, -fee)
+        local delta = adjust_chance_delta(p, -fee)
+        apply_cash_and_maybe_bankrupt(game, p, delta)
+        logger.event(p.name .. " 按比例支付 " .. math.abs(delta) .. " 金币")
       end
     end
-    logger.event("每人按比例支付 " .. card.percent .. "% 金币")
   else
     local fee = math.floor(player.cash * (card.percent / 100))
-    apply_cash_and_maybe_bankrupt(game, player, -fee)
-    logger.event(player.name .. " 按比例支付 " .. fee .. " 金币")
+    local delta = adjust_chance_delta(player, -fee)
+    apply_cash_and_maybe_bankrupt(game, player, delta)
+    logger.event(player.name .. " 按比例支付 " .. math.abs(delta) .. " 金币")
   end
 end
 
@@ -171,7 +187,7 @@ handlers.move_forward = function(game, player, card)
 end
 
 handlers.grant_item = function(game, player, card)
-  Inventory.give(player, card.item_id)
+  Inventory.give(player, card.item_id, { game = game })
 end
 
 handlers.discard_items = function(_, player, card)
@@ -251,8 +267,12 @@ handlers.forced_move = function(game, player, card, context)
       if game.set_player_status then
         game:set_player_status(player, "move_dir", nil)
       end
-      local market_service = require_service(game and game.get_service and game:get_service("market", context), "MarketService")
-      market_service.auto_buy(game, player)
+      return {
+        kind = "need_landing",
+        player_id = player.id,
+        board_index = idx,
+        move_result = context,
+      }
     end
   end
 end
