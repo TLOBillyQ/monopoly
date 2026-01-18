@@ -33,7 +33,7 @@ function Modal:dismiss()
   activate(self)
 end
 
-local function button_rect(w, h, ui)
+local function button_rect(w, h)
   local btn_w = 120
   local btn_h = 38
   local btn_x = (w - btn_w) * 0.5
@@ -117,7 +117,7 @@ function Modal:draw(ui)
     end
   end
 
-  local btn = button_rect(w, h, ui)
+  local btn = button_rect(w, h)
   love.graphics.setColor(0.3, 0.5, 0.35)
   love.graphics.rectangle("fill", btn.x, btn.y, btn.w, btn.h, btn.r, btn.r)
   love.graphics.setColor(ui.palette.panel_border)
