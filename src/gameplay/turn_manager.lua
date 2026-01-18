@@ -89,8 +89,6 @@ function TurnManager:_build_flow()
   states.wait_choice = function(args)
     self.game.store:set({ "turn", "phase" }, "wait_choice")
     local choice = get_choice(self.game)
-
-
     if not choice then
       self.pending_action = nil
       return (args and args.resume_state) or "end_turn", (args and args.resume_args) or {}

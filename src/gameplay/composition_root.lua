@@ -188,7 +188,7 @@ function CompositionRoot.assemble(opts, GameClass)
   }, GameClass)
 
   -- 7. 初始化运行时状态
-  game:rebuild_occupants()
+  game:rebuild()
   game.turn_manager = TurnManager.new(game, phases)
 
   return game

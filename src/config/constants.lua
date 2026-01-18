@@ -1,4 +1,4 @@
-local constants = {
+return {
   starting_cash = 100000,
   starting_jindou = 0,
   starting_leyuanbi = 0,
@@ -15,5 +15,3 @@ local constants = {
   unlimited_currency = "广告",
   item_phase_queue = { "pre_action", "pre_move", "post_action" },
 }
-
-return constants

@@ -107,7 +107,7 @@ function Game:current_player()
   return self.players[idx]
 end
 
-function Game:rebuild_occupants()
+function Game:rebuild()
   self.occupants = {}
   for _, p in ipairs(self.players) do
     if not p.eliminated then
