@@ -47,7 +47,7 @@ test_complex_market_interrupt_with_rent()
 
 ### 2. 完整文档（3 个文档，1057 行）
 
-#### docs/complex_turn_settlement_examples.md (283 行)
+#### docs/reviews/complex_turn_settlement_examples.md (283 行)
 **详细技术文档**
 
 内容：
@@ -60,7 +60,7 @@ test_complex_market_interrupt_with_rent()
 - 调试技巧和性能考虑
 - 扩展性建议
 
-#### docs/complex_turn_quickref.md (234 行)
+#### docs/reviews/complex_turn_quickref.md (234 行)
 **快速参考指南**
 
 内容：
@@ -71,7 +71,7 @@ test_complex_market_interrupt_with_rent()
 - 关键代码片段（递归、机会卡、地雷）
 - 调试建议和排查步骤
 
-#### docs/complex_turn_visualization.md (323 行)
+#### docs/reviews/complex_turn_visualization.md (323 行)
 **可视化游戏场景**
 
 内容：
@@ -145,9 +145,9 @@ test_complex_market_interrupt_with_rent()
 
 ```
 新增文件：
-  docs/complex_turn_settlement_examples.md  +283 行
-  docs/complex_turn_quickref.md             +234 行
-  docs/complex_turn_visualization.md        +323 行
+  docs/reviews/complex_turn_settlement_examples.md  +283 行
+  docs/reviews/complex_turn_quickref.md             +234 行
+  docs/reviews/complex_turn_visualization.md        +323 行
 
 修改文件：
   tests/regression.lua                      +217 行 (2个新测试)
@@ -172,16 +172,16 @@ love .
 **快速入门**：
 ```bash
 # 查看快速参考
-cat docs/complex_turn_quickref.md
+cat docs/reviews/complex_turn_quickref.md
 ```
 
 **深入理解**：
 ```bash
 # 查看详细技术文档
-cat docs/complex_turn_settlement_examples.md
+cat docs/reviews/complex_turn_settlement_examples.md
 
 # 查看可视化场景
-cat docs/complex_turn_visualization.md
+cat docs/reviews/complex_turn_visualization.md
 ```
 
 ### 调试复杂场景
@@ -191,7 +191,7 @@ cat docs/complex_turn_visualization.md
 3. 检查选择堆栈
 4. 验证状态转换
 
-详见：`docs/complex_turn_quickref.md` 调试建议部分
+详见：`docs/reviews/complex_turn_quickref.md` 调试建议部分
 
 ## 扩展性
 
@@ -202,7 +202,7 @@ cat docs/complex_turn_visualization.md
 3. 返回 `{ kind = "need_landing" }` 触发递归
 4. 添加对应的回归测试
 
-详见：`docs/complex_turn_settlement_examples.md` 扩展性建议部分
+详见：`docs/reviews/complex_turn_settlement_examples.md` 扩展性建议部分
 
 ## 总结
 

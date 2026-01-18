@@ -5,7 +5,7 @@
 - **测试代码位置**：`tests/regression.lua`
   - `test_complex_consecutive_turn_settlement()` - 五层连续触发
   - `test_complex_market_interrupt_with_rent()` - 黑市中断场景
-- **详细文档**：`docs/complex_turn_settlement_examples.md`
+- **详细文档**：`docs/reviews/complex_turn_settlement_examples.md`
 
 ## 最复杂场景：五层连续触发示例
 
@@ -231,4 +231,4 @@ Landing.executors.mine = {
 - **效果管道**：`src/gameplay/effect_pipeline.lua`
 - **落地效果定义**：`src/config/landing_effects.lua`
 - **机会卡配置**：`src/config/chance_cards.lua`
-- **架构文档**：`docs/design/architecture.md`
+- **架构文档**：`docs/reviews/codebase-overview.md`
