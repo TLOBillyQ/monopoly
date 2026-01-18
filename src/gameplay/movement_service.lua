@@ -66,12 +66,7 @@ function MovementService.move(game, player, steps, opts)
 
   game:update_player_position(player, current)
 
-  if game.set_player_status then
-    game:set_player_status(player, "move_dir", facing)
-  else
-    player.status = player.status or {}
-    player.status.move_dir = facing
-  end
+  game:set_player_status(player, "move_dir", facing)
 
   return {
     encountered_players = encountered,

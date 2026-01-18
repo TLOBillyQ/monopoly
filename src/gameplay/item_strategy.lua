@@ -4,6 +4,10 @@ local logger = require("src.util.logger")
 
 local Strategy = {}
 
+function Strategy.is_auto_player(player)
+  return Agent.is_auto_player(player)
+end
+
 function Strategy.target_candidates(game, player, item_id)
   local spec = ItemEffects.get_target_spec(item_id)
   if not spec then
@@ -27,6 +31,14 @@ end
 
 function Strategy.pick_target_player(game, player, item_id, candidates)
   return Agent.pick_target_player(game, player, item_id, candidates)
+end
+
+function Strategy.pick_remote_dice_value(game, player, dice_count)
+  return Agent.pick_remote_dice_value(game, player, dice_count)
+end
+
+function Strategy.pick_roadblock_target(game, player)
+  return Agent.pick_roadblock_target(game, player)
 end
 
 function Strategy.has_obstacles_ahead(game, player, distance)

@@ -13,11 +13,7 @@ end
 
 local function destroy_building(game, tile)
   if not tile or tile.type ~= "land" then return end
-  if game and game.set_tile_level then
-    game:set_tile_level(tile, 0)
-  elseif game and game.store and tile and tile.id then
-    game.store:set({ "board", "tiles", tile.id, "level" }, 0)
-  end
+  game:set_tile_level(tile, 0)
 end
 
 local tile_state = Tile.get_state
@@ -31,24 +27,21 @@ local function send_players_to_hospital(game, idx)
   local hospital_index = game.board:find_first_by_type("hospital")
   
   local count = 0
-  local unpack_fn = table.unpack or unpack
-  local snapshot = { unpack_fn(occupants) }
+  local snapshot = { table.unpack(occupants) }
   for _, pid in ipairs(snapshot) do
     local target = game.players[pid]
     if target then
-      if target.is_vehicle_indestructible and target:is_vehicle_indestructible() then
+      if target:is_vehicle_indestructible() then
         logger.event(target.name .. " 座驾免疫导弹效果")
       else
-      game:set_player_seat(target, nil)
-      if hospital_index then
-        game:update_player_position(target, hospital_index)
-      end
-      if game.set_player_status then
+        game:set_player_seat(target, nil)
+        if hospital_index then
+          game:update_player_position(target, hospital_index)
+        end
         game:set_player_status(target, "move_dir", nil)
-      end
-      game:set_player_status(target, "stay_turns", constants.hospital_stay_turns)
-      logger.event(target.name .. " 被炸伤送往医院，需停留 " .. constants.hospital_stay_turns .. " 回合")
-      count = count + 1
+        game:set_player_status(target, "stay_turns", constants.hospital_stay_turns)
+        logger.event(target.name .. " 被炸伤送往医院，需停留 " .. constants.hospital_stay_turns .. " 回合")
+        count = count + 1
       end
     end
   end

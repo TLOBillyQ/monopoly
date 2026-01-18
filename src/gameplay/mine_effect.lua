@@ -15,7 +15,7 @@ function MineEffect.apply(game, player, position)
   end
 
   board:clear_mine(position)
-  if player.is_vehicle_indestructible and player:is_vehicle_indestructible() then
+  if player:is_vehicle_indestructible() then
     logger.event(player.name .. " 座驾免疫地雷")
     return { detonated = true, protected = true }
   end

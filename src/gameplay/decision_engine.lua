@@ -7,7 +7,7 @@ local Executor = require("src.gameplay.item_executor")
 local DecisionEngine = {}
 
 function DecisionEngine.get_phase_action(game, player, phase)
-  if not Agent.is_auto_player(player) then
+  if not Strategy.is_auto_player(player) then
     return nil
   end
 

@@ -105,6 +105,10 @@ local function check_file(path, src)
     if is_service and mod_path:match("src/gameplay/.*_service%.lua$") then
       table.insert(errors, "services must not require each other directly: require(\"" .. mod .. "\")")
     end
+
+    if path == "src/gameplay/turn_manager.lua" and mod_path:match("^src/gameplay/turn_") then
+      table.insert(errors, "turn_manager must not require turn_* directly: require(\"" .. mod .. "\")")
+    end
   end
 
   -- Rule 3: Check for dofile/loadfile usage in gameplay layer (bypasses require checking)
@@ -117,8 +121,35 @@ local function check_file(path, src)
   return errors
 end
 
+local function require_in_file(path, mod)
+  local src = read_all(path)
+  if not src then
+    return false
+  end
+  for _, m in ipairs(extract_requires(src)) do
+    if m == mod then
+      return true
+    end
+  end
+  return false
+end
+
 local files = git_ls_files()
 local violations = {}
+local required_phases = {
+  "src.gameplay.turn_start",
+  "src.gameplay.turn_roll",
+  "src.gameplay.turn_move",
+  "src.gameplay.turn_land",
+  "src.gameplay.turn_post",
+  "src.gameplay.turn_end",
+}
+
+for _, mod in ipairs(required_phases) do
+  if not require_in_file("src/gameplay/composition_root.lua", mod) then
+    table.insert(violations, "src/gameplay/composition_root.lua: missing required phase module: " .. mod)
+  end
+end
 
 for _, path in ipairs(files) do
   if is_lua_file(path)

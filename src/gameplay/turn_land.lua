@@ -1,4 +1,4 @@
-local landing_effects = require("src.gameplay.landing")
+local landing_effects = require("src.gameplay.landing_effects")
 local EffectPipeline = require("src.gameplay.effect_pipeline")
 local Effect = require("src.gameplay.effect")
 
@@ -6,7 +6,7 @@ local MAX_LANDING_DEPTH = 10
 
 local function resolve_landing(game, player, tile, move_result, depth)
   depth = depth or 0
-  local ctx = Effect.build_ctx(game, player, tile, move_result, {
+  local game_ctx = Effect.build_game_ctx(game, move_result, {
     phase_default = "landing",
     on_landing = true,
   })
@@ -27,7 +27,7 @@ local function resolve_landing(game, player, tile, move_result, depth)
     return out
   end
 
-  return EffectPipeline.run(landing_effects.defs, ctx, {
+  return EffectPipeline.run(landing_effects.defs, player, tile, game_ctx, {
     resume_state = "post_action",
     resume_args = { player = player },
     optional_choice_kind = "landing_optional_effect",

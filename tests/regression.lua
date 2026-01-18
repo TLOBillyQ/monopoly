@@ -7,9 +7,10 @@ local Inventory = require("src.gameplay.item_inventory")
 local Executor = require("src.gameplay.item_executor")
 local Strategy = require("src.gameplay.item_strategy")
 local Pricing = require("src.gameplay.land_pricing")
-local LandEffect = require("src.gameplay.land")
-local landing_effects = require("src.gameplay.landing")
+local LandActions = require("src.gameplay.land_actions")
+local landing_effects = require("src.gameplay.landing_effects")
 local EffectPipeline = require("src.gameplay.effect_pipeline")
+local Effect = require("src.gameplay.effect")
 local ChoiceService = require("src.gameplay.choice_service")
 local BoardUtils = require("src.gameplay.item_board_utils")
 
@@ -53,24 +54,16 @@ end
 
 local MAX_LANDING_DEPTH = 10
 
-local function build_landing_ctx(game, player, tile, move_result)
-  local phase = game and game.store and game.store:get({ "turn", "phase" }) or "landing"
-  return {
-    game = game,
-    store = game and game.store,
-    rng = game and game.rng,
-    services = game and game.services,
-    phase = phase,
-    player = player,
-    tile = tile,
-    move_result = move_result,
+local function build_landing_ctx(game, move_result)
+  return Effect.build_game_ctx(game, move_result, {
+    phase_default = "landing",
     on_landing = true,
-  }
+  })
 end
 
 local function resolve_landing(game, player, tile, move_result, depth)
   depth = depth or 0
-  local ctx = build_landing_ctx(game, player, tile, move_result)
+  local ctx = build_landing_ctx(game, move_result)
 
   local function handle_need_landing(out)
     if depth >= MAX_LANDING_DEPTH then
@@ -88,7 +81,7 @@ local function resolve_landing(game, player, tile, move_result, depth)
     return out
   end
 
-  return EffectPipeline.run(landing_effects.defs, ctx, {
+  return EffectPipeline.run(landing_effects.defs, player, tile, ctx, {
     resume_state = "post_action",
     resume_args = { player = player },
     optional_choice_kind = "landing_optional_effect",
@@ -150,7 +143,6 @@ end
 
 local function test_land_on_start_reward()
   local g = new_game()
-  g.ui_enabled = false
   local p = g:current_player()
   local idx = first_tile_by_type(g.board, "start")
   g:update_player_position(p, idx)
@@ -399,7 +391,7 @@ local function test_land_rent_contiguous_sum()
 
   g:update_player_position(tenant, idx1)
   local before = tenant.cash
-  LandEffect.execute_pay_rent(g, tenant.id, tile1.id)
+  LandActions.execute_pay_rent(g, tenant.id, tile1.id)
   local expected = Pricing.rent_for_level(tile1, 1) + Pricing.rent_for_level(tile2, 2)
   assert_eq(before - tenant.cash, expected, "contiguous rent sum")
 end
@@ -424,7 +416,7 @@ local function test_land_rent_graph_adjacency_breaks_path_neighbors()
 
   g:update_player_position(tenant, idx_a)
   local before = tenant.cash
-  LandEffect.execute_pay_rent(g, tenant.id, tile_a.id)
+  LandActions.execute_pay_rent(g, tenant.id, tile_a.id)
   local expected = Pricing.rent_for_level(tile_a, 1)
   assert_eq(before - tenant.cash, expected, "graph adjacency rent excludes non-neighbors")
 end

@@ -1,4 +1,23 @@
 local IntentDispatcher = {}
+local listeners = {}
+
+function IntentDispatcher.on(kind, fn)
+  if not kind or not fn then
+    return
+  end
+  listeners[kind] = listeners[kind] or {}
+  table.insert(listeners[kind], fn)
+end
+
+local function emit(kind, payload)
+  local list = listeners[kind]
+  if not list then
+    return
+  end
+  for _, fn in ipairs(list) do
+    fn(payload)
+  end
+end
 
 function IntentDispatcher.dispatch(game, payload)
   if not payload then
@@ -22,6 +41,7 @@ function IntentDispatcher.dispatch(game, payload)
       meta = spec.meta,
     }
     game.store:set({ "turn", "pending_choice" }, entry)
+    emit("need_choice", { game = game, choice = entry, choice_spec = spec })
     return
   end
   if intent.kind == "push_popup" and intent.payload then

@@ -1,16 +1,8 @@
-local Inventory = require("src.gameplay.item_inventory")
-local Executor = require("src.gameplay.item_executor")
-local Strategy = require("src.gameplay.item_strategy")
-local ItemPhase = require("src.gameplay.item_phase")
-local Effect = require("src.gameplay.effect")
 local logger = require("src.util.logger")
 
-local LandChoiceHandler = require("src.gameplay.choice_handlers.land_choice_handler")
-local MarketChoiceHandler = require("src.gameplay.choice_handlers.market_choice_handler")
-local ItemChoiceHandler = require("src.gameplay.choice_handlers.item_choice_handler")
-local OptionalEffectHandler = require("src.gameplay.choice_handlers.optional_effect_handler")
-
 local ChoiceService = {}
+local deps = nil
+local handler_registry = {}
 
 local function is_cancel(action)
   return not action or action.type == "choice_cancel" or action.option_id == nil
@@ -26,7 +18,10 @@ end
 local function use_item(game, player, item_id, context)
   context = context or {}
   context.services = context.services or (game and game.get_services and game:get_services())
-  return Executor.use_item(game, player, item_id, context, { inventory = Inventory, strategy = Strategy })
+  return deps.executor.use_item(game, player, item_id, context, {
+    inventory = deps.inventory,
+    strategy = deps.strategy,
+  })
 end
 
 local function finish_choice(game, stay)
@@ -63,15 +58,15 @@ local function option_exists(choice, option_id)
   return false
 end
 
-local function build_effect_ctx(game, player, tile, move_result)
-  return Effect.build_ctx(game, player, tile, move_result, {
+local function build_game_ctx(game, move_result)
+  return deps.effect.build_game_ctx(game, move_result, {
     phase_default = "wait_choice",
     on_landing = true,
   })
 end
 
 local function finish_item_phase(game, phase)
-  ItemPhase.finish(game, phase)
+  deps.item_phase.finish(game, phase)
 end
 
 local function finish_active_item_phase(game)
@@ -80,14 +75,13 @@ local function finish_active_item_phase(game)
   end
   local phase = game.store:get({ "turn", "item_phase_active" })
   if phase then
-    ItemPhase.finish(game, phase)
+    deps.item_phase.finish(game, phase)
   end
 end
 
 local function get_container_defs_by_choice_kind(choice_kind)
   if choice_kind == "landing_optional_effect" or choice_kind == "land_optional_effect" then
-    local landing_effects = require("src.gameplay.landing")
-    return landing_effects and landing_effects.defs or {}
+    return deps.landing_effects and deps.landing_effects.defs or {}
   end
   return nil
 end
@@ -107,31 +101,49 @@ local helpers = {
   finish_choice = finish_choice,
   use_item = use_item,
   contains = contains,
-  build_effect_ctx = build_effect_ctx,
+  build_game_ctx = build_game_ctx,
   finish_item_phase = finish_item_phase,
   finish_active_item_phase = finish_active_item_phase,
   get_container_defs_by_choice_kind = get_container_defs_by_choice_kind,
   find_effect_by_id = find_effect_by_id,
 }
 
-local handlers = {}
+function ChoiceService.register(kind, handler)
+  handler_registry[kind] = handler
+end
 
 local function merge_handlers(list)
   for _, group in ipairs(list) do
     for key, handler in pairs(group) do
-      handlers[key] = handler
+      ChoiceService.register(key, handler)
     end
   end
 end
 
-merge_handlers({
-  OptionalEffectHandler.build(helpers),
-  LandChoiceHandler.build(helpers),
-  ItemChoiceHandler.build(helpers),
-  MarketChoiceHandler.build(helpers),
-})
+function ChoiceService.setup(in_deps)
+  deps = in_deps or {}
+  assert(deps.executor, "ChoiceService requires executor")
+  assert(deps.inventory, "ChoiceService requires inventory")
+  assert(deps.strategy, "ChoiceService requires strategy")
+  assert(deps.item_phase, "ChoiceService requires item_phase")
+  assert(deps.effect, "ChoiceService requires effect")
+  assert(deps.landing_effects, "ChoiceService requires landing_effects")
+  assert(deps.land_choice_handler, "ChoiceService requires land_choice_handler")
+  assert(deps.market_choice_handler, "ChoiceService requires market_choice_handler")
+  assert(deps.item_choice_handler, "ChoiceService requires item_choice_handler")
+  assert(deps.optional_effect_handler, "ChoiceService requires optional_effect_handler")
+
+  handler_registry = {}
+  merge_handlers({
+    deps.optional_effect_handler.build(helpers),
+    deps.land_choice_handler.build(helpers),
+    deps.item_choice_handler.build(helpers),
+    deps.market_choice_handler.build(helpers),
+  })
+end
 
 function ChoiceService.resolve(game, choice, action)
+  assert(deps, "ChoiceService.setup must be called before resolve")
   if not game or not choice then
     return { stay = false }
   end
@@ -151,7 +163,7 @@ function ChoiceService.resolve(game, choice, action)
     return { stay = false }
   end
 
-  local handler = handlers[choice.kind] or function(inner_game, inner_choice, inner_action)
+  local handler = handler_registry[choice.kind] or function(inner_game, inner_choice, inner_action)
     logger.warn("unknown choice kind:", tostring(choice.kind))
     clear_choice(inner_game)
     return { stay = false }

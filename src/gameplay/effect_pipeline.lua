@@ -3,7 +3,7 @@ local IntentDispatcher = require("src.util.intent_dispatcher")
 
 local Pipeline = {}
 
-local function build_optional_choice(optional, ctx, opts)
+local function build_optional_choice(optional, player, tile, game_ctx, opts)
   local body_lines = {}
   local options = {}
   local effect_ids = {}
@@ -16,9 +16,9 @@ local function build_optional_choice(optional, ctx, opts)
 
   local meta = {
     effect_ids = effect_ids,
-    player_id = ctx.player and ctx.player.id or nil,
-    tile_id = ctx.tile and ctx.tile.id or nil,
-    move_result = ctx.move_result,
+    player_id = player and player.id or nil,
+    tile_id = tile and tile.id or nil,
+    move_result = game_ctx and game_ctx.move_result,
   }
 
   local choice_spec = {
@@ -39,13 +39,13 @@ local function build_optional_choice(optional, ctx, opts)
     intent = { kind = "need_choice", choice_spec = choice_spec },
   }
 
-  IntentDispatcher.dispatch(ctx.game, { kind = "need_choice", choice_spec = choice_spec })
+  IntentDispatcher.dispatch(game_ctx and game_ctx.game, { kind = "need_choice", choice_spec = choice_spec })
   return out
 end
 
-function Pipeline.run(effect_defs, ctx, opts)
+function Pipeline.run(effect_defs, player, tile, game_ctx, opts)
   opts = opts or {}
-  local scanned = Effect.scan(effect_defs, ctx)
+  local scanned = Effect.scan(effect_defs, player, tile, game_ctx)
   local mandatory = {}
   local optional = {}
 
@@ -60,7 +60,7 @@ function Pipeline.run(effect_defs, ctx, opts)
   end
 
   for _, eff in ipairs(mandatory) do
-    local res = Effect.execute(eff, ctx)
+    local res = Effect.execute(eff, player, tile, game_ctx)
     local out = res and res.result
 
     if opts.on_need_landing and type(out) == "table" and out.kind == "need_landing" then
@@ -69,7 +69,7 @@ function Pipeline.run(effect_defs, ctx, opts)
 
     local payload = out or res
     if payload then
-      IntentDispatcher.dispatch(ctx.game, payload)
+      IntentDispatcher.dispatch(game_ctx and game_ctx.game, payload)
     end
 
     if type(out) == "table" and out.waiting then
@@ -87,7 +87,7 @@ function Pipeline.run(effect_defs, ctx, opts)
     return nil
   end
 
-  return build_optional_choice(optional, ctx, opts)
+  return build_optional_choice(optional, player, tile, game_ctx, opts)
 end
 
 return Pipeline

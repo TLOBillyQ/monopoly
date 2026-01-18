@@ -1,15 +1,44 @@
 local Effect = {}
 Effect.__index = Effect
 
+local Landing = require("src.gameplay.landing")
+local Land = require("src.gameplay.land")
+
+local executors = {}
+local function merge_executors(list)
+  for key, executor in pairs(list or {}) do
+    executors[key] = executor
+  end
+end
+
+merge_executors(Landing.executors)
+merge_executors(Land.executors)
+
+local function build_ctx(player, tile, game_ctx)
+  return {
+    game = game_ctx and game_ctx.game,
+    store = game_ctx and game_ctx.store,
+    rng = game_ctx and game_ctx.rng,
+    services = game_ctx and game_ctx.services,
+    phase = game_ctx and game_ctx.phase,
+    player = player,
+    tile = tile,
+    move_result = game_ctx and game_ctx.move_result,
+    on_landing = game_ctx and game_ctx.on_landing,
+  }
+end
+
 local function can_apply(effect, ctx)
-  if effect.can_apply then
-    local ok, reason = effect.can_apply(ctx)
+  local exec = executors[effect.id]
+  if exec and exec.can_apply then
+    local ok, reason = exec.can_apply(ctx)
     return ok == true, reason
   end
   return true, nil
 end
 
-function Effect.scan(effect_defs, ctx)
+function Effect.scan(effect_defs, player, tile, game_ctx)
+  local ctx = build_ctx(player, tile, game_ctx)
   local entries = {}
   for _, eff in ipairs(effect_defs or {}) do
     local ok, reason = can_apply(eff, ctx)
@@ -25,15 +54,17 @@ function Effect.scan(effect_defs, ctx)
   return entries
 end
 
-function Effect.execute(effect, ctx)
+function Effect.execute(effect, player, tile, game_ctx)
+  local ctx = build_ctx(player, tile, game_ctx)
   local ok, reason = can_apply(effect, ctx)
   if not ok then
     return { ok = false, reason = reason }
   end
-  return { ok = true, result = effect.apply and effect.apply(ctx) }
+  local exec = executors[effect.id]
+  return { ok = true, result = exec and exec.apply and exec.apply(ctx) }
 end
 
-function Effect.build_ctx(game, player, tile, move_result, opts)
+function Effect.build_game_ctx(game, move_result, opts)
   opts = opts or {}
   local phase = opts.phase
   if not phase then
@@ -45,8 +76,6 @@ function Effect.build_ctx(game, player, tile, move_result, opts)
     rng = game and game.rng,
     services = game and game.get_services and game:get_services(),
     phase = phase or "wait_choice",
-    player = player,
-    tile = tile,
     move_result = move_result,
     on_landing = opts.on_landing,
   }

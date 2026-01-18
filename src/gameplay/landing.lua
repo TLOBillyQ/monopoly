@@ -1,4 +1,3 @@
-local property_effects = require("src.gameplay.land")
 local logger = require("src.util.logger")
 local constants = require("src.config.constants")
 local chance_cfg = require("src.config.chance_cards")
@@ -6,15 +5,12 @@ local random = require("src.util.random")
 local Inventory = require("src.gameplay.item_inventory")
 local chance_effects = require("src.gameplay.chance")
 local MineEffect = require("src.gameplay.mine_effect")
-
 local Steal = require("src.gameplay.item_steal")
-local Effect = {}
 
-Effect.defs = {
-  {
-    id = "pass_players",
-    label = "擦肩而过",
-    mandatory = true,
+local Landing = {}
+
+Landing.executors = {
+  pass_players = {
     can_apply = function(ctx)
       local enc = ctx.move_result and ctx.move_result.encountered_players
       return enc and #enc > 0
@@ -32,10 +28,7 @@ Effect.defs = {
       return Steal.handle_pass_players(ctx.game, ctx.player, ids)
     end,
   },
-  {
-    id = "start_reward",
-    label = "起点奖励",
-    mandatory = true,
+  start_reward = {
     can_apply = function(ctx)
       return ctx and ctx.tile and ctx.tile.type == "start" and ctx.on_landing
     end,
@@ -49,10 +42,7 @@ Effect.defs = {
       logger.event(player.name .. " 停在起点，获得 " .. constants.pass_start_bonus .. " 金币")
     end,
   },
-  {
-    id = "item_draw_and_give",
-    label = "道具",
-    mandatory = true,
+  item_draw_and_give = {
     can_apply = function(ctx)
       return ctx and ctx.game and ctx.player and ctx.tile and ctx.tile.type == "item"
     end,
@@ -60,10 +50,7 @@ Effect.defs = {
       return Inventory.draw_and_give(ctx.player, ctx.game and ctx.game.rng)
     end,
   },
-  {
-    id = "chance_draw_and_resolve",
-    label = "机会卡",
-    mandatory = true,
+  chance_draw_and_resolve = {
     can_apply = function(ctx)
       return ctx and ctx.game and ctx.player and ctx.tile and ctx.tile.type == "chance"
     end,
@@ -73,10 +60,7 @@ Effect.defs = {
       return chance_effects.resolve(ctx.game, ctx.player, card, ctx.move_result)
     end,
   },
-  {
-    id = "hospital",
-    label = "医院",
-    mandatory = true,
+  hospital = {
     can_apply = function(ctx)
       return ctx and ctx.tile and ctx.tile.type == "hospital"
     end,
@@ -84,10 +68,7 @@ Effect.defs = {
       ctx.player:apply_hospital_effects(ctx.game)
     end,
   },
-  {
-    id = "mountain",
-    label = "深山",
-    mandatory = true,
+  mountain = {
     can_apply = function(ctx)
       return ctx and ctx.tile and ctx.tile.type == "mountain"
     end,
@@ -95,10 +76,7 @@ Effect.defs = {
       ctx.player:apply_mountain_effects(ctx.game)
     end,
   },
-  {
-    id = "market",
-    label = "黑市",
-    mandatory = true,
+  market = {
     can_apply = function(ctx)
       return ctx and ctx.tile and ctx.tile.type == "market"
     end,
@@ -115,10 +93,7 @@ Effect.defs = {
       return { waiting = true, reason = "market_choice", intent = { kind = "need_choice", choice_spec = spec } }
     end,
   },
-  {
-    id = "mine",
-    label = "地雷",
-    mandatory = true,
+  mine = {
     can_apply = function(ctx)
       local position = ctx.tile and ctx.tile.id
       local board = ctx.game and ctx.game.board
@@ -140,9 +115,4 @@ Effect.defs = {
   },
 }
 
-
-for _, eff in ipairs(property_effects.defs or {}) do
-  table.insert(Effect.defs, eff)
-end
-
-return Effect
+return Landing

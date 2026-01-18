@@ -1,18 +1,11 @@
 local Inventory = require("src.core.inventory")
 local Tables = require("src.util.tables")
 local constants = require("src.config.constants")
-local vehicles_cfg = require("src.config.vehicles")
-local logger = require("src.util.logger")
 
 local Player = {}
 Player.__index = Player
 
 local deep_copy = Tables.deep_copy
-
-local vehicle_by_id = {}
-for _, cfg in ipairs(vehicles_cfg) do
-  vehicle_by_id[cfg.id] = cfg
-end
 
 local function normalize_currency(currency)
   if currency == nil or currency == "" then
@@ -83,31 +76,6 @@ function Player.new(attrs)
     eliminated = false,
   }
   return setmetatable(p, Player)
-end
-
-function Player:vehicle_cfg()
-  if not self.seat_id then
-    return nil
-  end
-  return vehicle_by_id[self.seat_id]
-end
-
-function Player:vehicle_name()
-  local cfg = self:vehicle_cfg()
-  return cfg and cfg.name or nil
-end
-
-function Player:dice_count()
-  local cfg = self:vehicle_cfg()
-  if cfg and cfg.dice_count then
-    return cfg.dice_count
-  end
-  return constants.default_dice_count
-end
-
-function Player:is_vehicle_indestructible()
-  local cfg = self:vehicle_cfg()
-  return cfg and cfg.indestructible or false
 end
 
 function Player:balance(currency)
@@ -192,53 +160,6 @@ end
 
 function Player:has_angel()
   return self:has_deity("angel")
-end
-
-function Player:apply_hospital_effects(game)
-  game:set_player_status(self, "stay_turns", constants.hospital_stay_turns)
-  
-  local fee = constants.hospital_fee
-  if self.cash < fee then
-      local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
-      if not bankruptcy then
-        logger.warn("缺少 BankruptcyService，无法淘汰破产玩家")
-        return
-      end
-      bankruptcy.eliminate(game, self)
-      return
-  end
-  self:deduct_cash(fee)
-  logger.event(self.name .. " 支付医药费 " .. fee)
-
-  logger.event(self.name .. " 住院，需停留 " .. self.status.stay_turns .. " 回合")
-end
-
-function Player:send_to_hospital(game)
-  local hospital_index = game.board:find_first_by_type("hospital")
-  if hospital_index then
-    game:update_player_position(self, hospital_index)
-  end
-  game:set_player_status(self, "move_dir", nil)
-  self:apply_hospital_effects(game)
-end
-
-function Player:apply_mountain_effects(game)
-  game:set_player_status(self, "stay_turns", constants.mountain_stay_turns)
-  logger.event(self.name .. " 进入深山，停留 " .. self.status.stay_turns .. " 回合")
-end
-
-function Player:send_to_mountain(game)
-  local idx = game.board:find_first_by_type("mountain")
-  if idx then
-    game:update_player_position(self, idx)
-  end
-  game:set_player_status(self, "move_dir", nil)
-  self:apply_mountain_effects(game)
-end
-
-function Player:is_in_mountain(game)
-  local tile = game.board:get_tile(self.position)
-  return tile and tile.type == "mountain"
 end
 
 return Player

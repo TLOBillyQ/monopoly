@@ -1,24 +1,9 @@
 local Flow = require("src.core.flow")
-local turn_start = require("src.gameplay.turn_start")
-local turn_roll = require("src.gameplay.turn_roll")
-local turn_move = require("src.gameplay.turn_move")
-local turn_land = require("src.gameplay.turn_land")
-local turn_post = require("src.gameplay.turn_post")
-local turn_end = require("src.gameplay.turn_end")
 local DecisionEngine = require("src.gameplay.decision_engine")
 local Logger = require("src.util.logger")
 
 local TurnManager = {}
 TurnManager.__index = TurnManager
-
-local PHASES = {
-  start = turn_start,
-  roll = turn_roll,
-  move = turn_move,
-  landing = turn_land,
-  post_action = turn_post,
-  end_turn = turn_end,
-}
 
 local function get_choice(game)
   if not (game and game.store) then
@@ -57,9 +42,10 @@ local function resolve_choice(game, choice, action)
 end
 
 
-function TurnManager.new(game)
+function TurnManager.new(game, phases)
   local tm = {
     game = game,
+    phases = phases,
     flow = nil,
     pending_action = nil,
   }
@@ -86,8 +72,9 @@ function TurnManager:dispatch(action)
 end
 
 function TurnManager:_build_flow()
+  assert(self.phases, "TurnManager requires phases")
   local states = {}
-  for name, fn in pairs(PHASES) do
+  for name, fn in pairs(self.phases) do
     states[name] = function(args)
       if name == "start" then
         local p_idx = self.game.store:get({ "turn", "current_player_index" })

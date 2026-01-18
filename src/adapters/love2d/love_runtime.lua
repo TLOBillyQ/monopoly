@@ -55,13 +55,11 @@ function LoveRuntime.install(LoveLayer)
     if not self.game then
       return
     end
-    self:sync_pending_choice_modal()
     local mx, my = love.mouse.getPosition()
     self:update_hover_tile(mx, my)
     local auto_action = self.auto_runner:next_action(dt, {
       modal_active = self.modal.active ~= nil,
       modal_buttons = self.modal.active and self.modal.active.buttons,
-      pending_choice = self:get_pending_choice(),
       game_finished = self.game.finished,
     })
     if auto_action then

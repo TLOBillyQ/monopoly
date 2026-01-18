@@ -4,6 +4,7 @@ local UIState = require("src.adapters.love2d.ui_state")
 local Modal = require("src.adapters.love2d.modal")
 local AutoRunner = require("src.adapters.love2d.auto_runner")
 local LoveRuntime = require("src.adapters.love2d.love_runtime")
+local IntentDispatcher = require("src.util.intent_dispatcher")
 
 local LoveLayer = {}
 LoveLayer.__index = LoveLayer
@@ -15,10 +16,17 @@ function LoveLayer.new(opts)
     ui = ui,
     game = nil,
     item_name_by_id = {},
+    pending_choice = nil,
     game_factory = opts.game_factory,
     modal = Modal.new(),
     auto_runner = AutoRunner.new({ interval = ui.auto_interval }),
   }
+  IntentDispatcher.on("need_choice", function(payload)
+    if payload and payload.game == self.game then
+      self.pending_choice = payload.choice
+      self:open_choice_modal(payload.choice)
+    end
+  end)
   return setmetatable(self, LoveLayer)
 end
 
@@ -27,14 +35,11 @@ function LoveLayer:set_game(g)
   if self.game then
     self.game.ui_port = self
   end
-end
-
-function LoveLayer:get_pending_choice()
-  if self.game then
-    return self.game:pending_choice()
+  self.pending_choice = self.game and self.game:pending_choice() or nil
+  if self.pending_choice then
+    self:open_choice_modal(self.pending_choice)
   end
 end
-
 
 local function build_phase_title(game, base_title)
   if not (game and game.store) then
@@ -63,11 +68,7 @@ function LoveLayer:push_popup(payload)
   return true
 end
 
-function LoveLayer:sync_pending_choice_modal()
-  if not self.game or not self.game.store then
-    return
-  end
-  local pending = self:get_pending_choice()
+function LoveLayer:open_choice_modal(pending)
   if not pending then
     return
   end
@@ -166,6 +167,7 @@ function LoveLayer:dispatch_action(action)
       self.modal:keypressed("space")
     end
   elseif action.type == "choice_select" or action.type == "choice_cancel" then
+    self.pending_choice = nil
     if self.game then
       self.game:dispatch_action(action)
     end

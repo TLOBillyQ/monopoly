@@ -1,11 +1,11 @@
 local Inventory = require("src.gameplay.item_inventory")
-local Executor = require("src.gameplay.item_executor")
 local Demolish = require("src.gameplay.item_demolish")
 local Steal = require("src.gameplay.item_steal")
 local Roadblock = require("src.gameplay.item_roadblock")
 local logger = require("src.util.logger")
 local IntentDispatcher = require("src.util.intent_dispatcher")
 local Convert = require("src.util.convert")
+local RemoteDice = require("src.gameplay.item_remote_dice")
 
 local ItemChoiceHandler = {}
 
@@ -186,7 +186,7 @@ function ItemChoiceHandler.build(helpers)
         return finish_and_clear(game)
       end
     end
-    Executor.apply_remote_dice(game, player, dice_count, value)
+    RemoteDice.apply(game, player, dice_count, value)
     return finish_and_clear(game)
   end
 

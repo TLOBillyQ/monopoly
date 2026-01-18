@@ -1,11 +1,12 @@
 local IntentDispatcher = require("src.util.intent_dispatcher")
+local LandChoiceSpecs = require("src.gameplay.land_choice_specs")
 
 local LandChoiceHandler = {}
 
 function LandChoiceHandler.build(helpers)
   local is_cancel = helpers.is_cancel
   local finish_choice = helpers.finish_choice
-  local LandEffect = require("src.gameplay.land")
+  local LandActions = require("src.gameplay.land_actions")
 
   local function handle_rent_prompt(game, choice, action)
     local meta = choice.meta or {}
@@ -17,10 +18,10 @@ function LandChoiceHandler.build(helpers)
 
     if use_card and card_kind == "strong" then
       -- 使用强征卡
-      LandEffect.execute_strong_card(game, player_id, tile_id)
+      LandActions.execute_strong_card(game, player_id, tile_id)
     elseif use_card and card_kind == "free" then
       -- 使用免费卡（免租）
-      LandEffect.execute_free_card(game, player_id, tile_id)
+      LandActions.execute_free_card(game, player_id, tile_id)
     else
       if card_kind == "strong" then
         local player = player_id and game.players[player_id] or nil
@@ -28,23 +29,13 @@ function LandChoiceHandler.build(helpers)
         if free_idx then
           IntentDispatcher.dispatch(game, {
             kind = "need_choice",
-            choice_spec = {
-              kind = "rent_card_prompt",
-              title = "是否使用免费卡",
-              body_lines = { "免除本次租金" },
-              options = {
-                { id = "use", label = "使用" },
-                { id = "skip", label = "放弃" },
-              },
-              allow_cancel = false,
-              meta = { player_id = player_id, tile_id = tile_id, card_kind = "free" },
-            },
+            choice_spec = LandChoiceSpecs.rent_prompt(player_id, tile_id, "free"),
           })
           return { stay = true }
         end
       end
       -- 跳过当前卡 → 直接支付租金
-      LandEffect.execute_pay_rent(game, player_id, tile_id)
+      LandActions.execute_pay_rent(game, player_id, tile_id)
     end
 
     return finish_choice(game, false)
@@ -58,10 +49,10 @@ function LandChoiceHandler.build(helpers)
 
     if use_card then
       -- 使用免税卡
-      LandEffect.execute_tax_free_card(game, player_id)
+      LandActions.execute_tax_free_card(game, player_id)
     else
       -- 跳过 → 直接支付税金
-      LandEffect.execute_pay_tax(game, player_id)
+      LandActions.execute_pay_tax(game, player_id)
     end
 
     return finish_choice(game, false)
