@@ -11,6 +11,9 @@ local tile_state = Tile.get_state
 local function can_buy(ctx)
   local tile = ctx.tile
   local player = ctx.player
+  if not tile then
+    return false
+  end
   if tile.type ~= "land" then
     return false
   end
@@ -38,6 +41,9 @@ end
 local function can_upgrade(ctx)
   local tile = ctx.tile
   local player = ctx.player
+  if not tile then
+    return false
+  end
   if tile.type ~= "land" then
     return false
   end
@@ -72,6 +78,9 @@ end
 local function can_pay_rent(ctx)
   local tile = ctx.tile
   local player = ctx.player
+  if not tile then
+    return false
+  end
   if tile.type ~= "land" then
     return false
   end
@@ -82,7 +91,7 @@ end
 local function apply_pay_rent(ctx)
   local tile = ctx.tile
   local player = ctx.player
-  if tile.type ~= "land" then
+  if not tile or tile.type ~= "land" then
     return
   end
   local owner, st = LandActions.resolve_rent_owner(ctx.game, tile, tile_state)
@@ -129,7 +138,7 @@ local function apply_pay_rent(ctx)
 end
 
 local function can_tax(ctx)
-  return ctx.tile.type == "tax"
+  return ctx.tile and ctx.tile.type == "tax"
 end
 
 local function apply_tax(ctx)

@@ -8,6 +8,7 @@ local Executor = require("src.gameplay.item_executor")
 local Strategy = require("src.gameplay.item_strategy")
 local Pricing = require("src.gameplay.land_pricing")
 local LandActions = require("src.gameplay.land_actions")
+local Steal = require("src.gameplay.item_steal")
 local landing_defs = require("src.config.landing_effects")
 local EffectPipeline = require("src.gameplay.effect_pipeline")
 local Effect = require("src.gameplay.effect")
@@ -559,7 +560,7 @@ local function test_complex_consecutive_turn_settlement()
   -- 记录初始状态
   local initial_has_steal_card = Inventory.find_index(p1, 2007) ~= nil
   local initial_p2_item_count = p2.inventory:count()
-  local initial_has_vehicle = g:get_player_seat(p1) ~= nil
+  local initial_has_vehicle = p1.seat_id ~= nil
   
   assert(initial_has_steal_card, "p1 应该有偷窃卡")
   assert(initial_p2_item_count > 0, "p2 应该有道具可被偷")
@@ -568,9 +569,28 @@ local function test_complex_consecutive_turn_settlement()
   -- 第一步：移动3格，经过p2，到达机会卡格子
   -- branch_parity 用于在分叉路口选择方向，设为与步数相同确保一致性
   local res1 = MovementService.move(g, p1, 3, { branch_parity = 3, skip_market_check = true })
-  
+  local first_res = res1
+  if res1.steal_interrupt then
+    local interrupt = res1.steal_interrupt
+    local steal_res = Steal.handle_pass_players(g, p1, interrupt.encountered_ids or {})
+    if steal_res and steal_res.waiting then
+      local pending = get_choice(g)
+      if pending and pending.options and #pending.options > 0 then
+        ChoiceService.resolve(g, pending, { option_id = pending.options[1].id })
+      elseif pending and pending.allow_cancel then
+        ChoiceService.resolve(g, pending, { type = "choice_cancel", choice_id = pending.id })
+      end
+    end
+    res1 = MovementService.move(g, p1, interrupt.remaining_steps, {
+      branch_parity = interrupt.branch_parity,
+      direction = interrupt.facing,
+      skip_market_check = true,
+      skip_steal_check = true,
+    })
+  end
+
   -- 验证经过了玩家
-  assert(res1.encountered_players and #res1.encountered_players > 0, "应该经过其他玩家")
+  assert(first_res.encountered_players and #first_res.encountered_players > 0, "应该经过其他玩家")
   assert(p1.position == chance_idx, "应该停在机会卡格子")
   
   -- 第二步：处理经过玩家的偷窃卡提示
