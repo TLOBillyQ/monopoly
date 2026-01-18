@@ -5,9 +5,9 @@ local LandChoiceHandler = {}
 function LandChoiceHandler.build(helpers)
   local is_cancel = helpers.is_cancel
   local finish_choice = helpers.finish_choice
+  local LandEffect = require("src.gameplay.land")
 
   local function handle_rent_prompt(game, choice, action)
-    local LandEffect = require("src.gameplay.land")
     local meta = choice.meta or {}
     local player_id = meta.player_id
     local tile_id = meta.tile_id
@@ -51,7 +51,6 @@ function LandChoiceHandler.build(helpers)
   end
 
   local function handle_tax_prompt(game, choice, action)
-    local LandEffect = require("src.gameplay.land")
     local meta = choice.meta or {}
     local player_id = meta.player_id
 

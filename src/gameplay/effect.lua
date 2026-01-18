@@ -9,12 +9,6 @@ local function can_apply(effect, ctx)
   return true, nil
 end
 
-local function apply(effect, ctx)
-  if effect.apply then
-    return effect.apply(ctx)
-  end
-end
-
 function Effect.scan(effect_defs, ctx)
   local entries = {}
   for _, eff in ipairs(effect_defs or {}) do
@@ -36,7 +30,7 @@ function Effect.execute(effect, ctx)
   if not ok then
     return { ok = false, reason = reason }
   end
-  return { ok = true, result = apply(effect, ctx) }
+  return { ok = true, result = effect.apply and effect.apply(ctx) }
 end
 
 function Effect.build_ctx(game, player, tile, move_result, opts)
