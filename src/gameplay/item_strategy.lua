@@ -4,10 +4,6 @@ local logger = require("src.util.logger")
 
 local Strategy = {}
 
-function Strategy.is_auto_player(player)
-  return Agent.is_auto_player(player)
-end
-
 function Strategy.target_candidates(game, player, item_id)
   local spec = ItemEffects.get_target_spec(item_id)
   if not spec then
@@ -27,18 +23,6 @@ function Strategy.target_candidates(game, player, item_id)
     end
   end
   return candidates
-end
-
-function Strategy.pick_target_player(game, player, item_id, candidates)
-  return Agent.pick_target_player(game, player, item_id, candidates)
-end
-
-function Strategy.pick_remote_dice_value(game, player, dice_count)
-  return Agent.pick_remote_dice_value(game, player, dice_count)
-end
-
-function Strategy.pick_roadblock_target(game, player)
-  return Agent.pick_roadblock_target(game, player)
 end
 
 function Strategy.has_obstacles_ahead(game, player, distance)
@@ -65,9 +49,9 @@ local PHASE_TIMING = {
   post_action = { post_action = true, manual = true, turn = true },
 }
 
-local function timing_allowed(phase, timing)
+function Strategy.timing_allowed(phase, timing, allow_missing_phase)
   if not phase then
-    return true
+    return allow_missing_phase and true or false
   end
   local allowed = PHASE_TIMING[phase]
   if not allowed or not timing then
@@ -87,7 +71,7 @@ function Strategy.auto_pre_action(game, player, deps, phase)
   local function can_use(item_id)
     local cfg = inventory.cfg and inventory.cfg(item_id) or nil
     local timing = cfg and cfg.timing or "manual"
-    return timing_allowed(phase, timing)
+    return Strategy.timing_allowed(phase, timing, true)
   end
 
   local function try_use(item_id, cond)
@@ -102,7 +86,7 @@ function Strategy.auto_pre_action(game, player, deps, phase)
   end
 
   local function has_target(item_id)
-    return Strategy.pick_target_player(game, player, item_id, Strategy.target_candidates(game, player, item_id)) ~= nil
+    return Agent.pick_target_player(game, player, item_id, Strategy.target_candidates(game, player, item_id)) ~= nil
   end
 
   local function has_demolish_target()

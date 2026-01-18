@@ -4,6 +4,7 @@ local vehicles_cfg = require("src.config.vehicles")
 local logger = require("src.util.logger")
 local Inventory = require("src.gameplay.item_inventory")
 local Agent = require("src.gameplay.agent")
+local LandChoiceSpecs = require("src.gameplay.land_choice_specs")
 local MarketService = {}
 
 local items_by_id = {}
@@ -134,21 +135,17 @@ function MarketService.buy_with_opts(game, player, product_id, opts)
       ok = false,
       intent = {
         kind = "need_choice",
-        choice_spec = {
-          kind = "market_vehicle_replace",
-          title = "是否更换座驾",
-          body_lines = {
+        choice_spec = LandChoiceSpecs.build_use_skip(
+          "market_vehicle_replace",
+          "是否更换座驾",
+          {
             "当前座驾：" .. current_name,
             "新座驾：" .. next_name,
             "价格：" .. tostring(price) .. " " .. currency,
           },
-          options = {
-            { id = "use", label = "更换" },
-            { id = "skip", label = "算了" },
-          },
-          allow_cancel = false,
-          meta = { player_id = player.id, product_id = entry.product_id },
-        },
+          { player_id = player.id, product_id = entry.product_id },
+          { use = "更换", skip = "算了" }
+        ),
       },
     }
   end

@@ -4,6 +4,7 @@ local Demolish = require("src.gameplay.item_demolish")
 local Roadblock = require("src.gameplay.item_roadblock")
 local Inventory = require("src.gameplay.item_inventory")
 local RemoteDice = require("src.gameplay.item_remote_dice")
+local Agent = require("src.gameplay.agent")
 
 local Executor = {}
 
@@ -19,7 +20,7 @@ local function handle_target_player_item(game, player, item_id, context, deps)
   end
 
   if context and context.by_ai then
-    local target = strategy.pick_target_player(game, player, item_id, candidates)
+    local target = Agent.pick_target_player(game, player, item_id, candidates)
     if not target then
       return false
     end
@@ -57,7 +58,7 @@ local function handle_remote_dice(game, player, item_id, context, deps)
   local inventory = deps.inventory
   local dice_count = player:dice_count()
   if context and context.by_ai then
-    local value, target_tile = deps.strategy.pick_remote_dice_value(game, player, dice_count)
+    local value, target_tile = Agent.pick_remote_dice_value(game, player, dice_count)
     if not value then
       return false
     end
@@ -102,7 +103,7 @@ local function handle_roadblock(game, player, item_id, context, deps)
   end
 
   if context and context.by_ai then
-    local idx = deps.strategy.pick_roadblock_target(game, player)
+    local idx = Agent.pick_roadblock_target(game, player)
     if not idx then
       return false
     end
@@ -168,7 +169,7 @@ function Executor.use_item(game, player, item_id, context, deps)
   local inventory = assert(deps.inventory, "ItemExecutor.use_item requires inventory")
   assert(deps.strategy, "ItemExecutor.use_item requires strategy")
   if context.by_ai == nil then
-    context.by_ai = deps.strategy.is_auto_player(player)
+    context.by_ai = Agent.is_auto_player(player)
   end
   local cfg = inventory.cfg(item_id)
   if not cfg then

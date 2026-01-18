@@ -81,7 +81,7 @@ end
 
 local function get_container_defs_by_choice_kind(choice_kind)
   if choice_kind == "landing_optional_effect" or choice_kind == "land_optional_effect" then
-    return deps.landing_effects and deps.landing_effects.defs or {}
+    return deps.landing_effects or {}
   end
   return nil
 end

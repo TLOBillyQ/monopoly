@@ -1,5 +1,6 @@
 local logger = require("src.util.logger")
 local Inventory = require("src.gameplay.item_inventory")
+local LandChoiceSpecs = require("src.gameplay.land_choice_specs")
 
 local Steal = {}
 
@@ -42,17 +43,12 @@ function Steal.build_prompt_spec(game, player, queue, index)
   if not player or not target then
     return nil
   end
-  return {
-    kind = "steal_prompt",
-    title = "是否使用偷窃卡",
-    body_lines = { "目标：" .. target.name },
-    options = {
-      { id = "use", label = "使用" },
-      { id = "skip", label = "放弃" },
-    },
-    allow_cancel = false,
-    meta = { stealer_id = player.id, target_id = target.id, queue = queue, index = index },
-  }
+  return LandChoiceSpecs.build_use_skip(
+    "steal_prompt",
+    "是否使用偷窃卡",
+    { "目标：" .. target.name },
+    { stealer_id = player.id, target_id = target.id, queue = queue, index = index }
+  )
 end
 
 function Steal.handle_pass_players(game, player, encountered_ids)

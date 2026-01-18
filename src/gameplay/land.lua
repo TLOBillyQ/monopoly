@@ -70,16 +70,8 @@ local function apply_pay_rent(ctx)
   if tile.type ~= "land" then
     return
   end
-  local st = tile_state(ctx.game, tile)
-  local owner = st.owner_id and ctx.game.players[st.owner_id] or nil
-  if not owner or owner.eliminated then
-    ctx.game:set_tile_owner(tile, nil)
-    return
-  end
-
-  -- 检查深山状态
-  if owner:is_in_mountain(ctx.game) then
-    logger.event(owner.name .. " 在深山，租金不收取")
+  local owner, st = LandActions.resolve_rent_owner(ctx.game, tile, tile_state)
+  if not owner then
     return
   end
 

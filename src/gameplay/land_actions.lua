@@ -15,6 +15,22 @@ function LandActions.safe_tile_state(game, tile)
   return { owner_id = st.owner_id, level = st.level or 0 }
 end
 
+function LandActions.resolve_rent_owner(game, tile, state_fn)
+  local st = state_fn and state_fn(game, tile) or LandActions.safe_tile_state(game, tile)
+  local owner = st.owner_id and game.players[st.owner_id] or nil
+  if not owner or owner.eliminated then
+    game:set_tile_owner(tile, nil)
+    return nil, st
+  end
+
+  if owner:is_in_mountain(game) then
+    logger.event(owner.name .. " 在深山，租金不收取")
+    return nil, st
+  end
+
+  return owner, st
+end
+
 -- 计算连续地块租金（图邻接）
 local function contiguous_rent(game, board, index, owner_id)
   local map = board and board.map
@@ -135,15 +151,8 @@ function LandActions.execute_pay_rent(game, player_id, tile_id)
   local tile = game.board:get_tile_by_id(tile_id)
   if not player or not tile then return false end
 
-  local st = LandActions.safe_tile_state(game, tile)
-  local owner = st.owner_id and game.players[st.owner_id] or nil
-  if not owner or owner.eliminated then
-    game:set_tile_owner(tile, nil)
-    return true
-  end
-
-  if owner:is_in_mountain(game) then
-    logger.event(owner.name .. " 在深山，租金不收取")
+  local owner, st = LandActions.resolve_rent_owner(game, tile)
+  if not owner then
     return true
   end
 

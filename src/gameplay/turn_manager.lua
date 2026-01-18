@@ -1,6 +1,6 @@
 local Flow = require("src.core.flow")
-local DecisionEngine = require("src.gameplay.decision_engine")
 local Logger = require("src.util.logger")
+local Agent = require("src.gameplay.agent")
 
 local TurnManager = {}
 TurnManager.__index = TurnManager
@@ -17,7 +17,7 @@ local function decide_choice_action(game, choice, pending_action)
     return pending_action
   end
 
-  local auto_action = DecisionEngine.get_choice_action(game, choice)
+  local auto_action = Agent.auto_action_for_choice(game, choice)
   if auto_action then
     return auto_action
   end

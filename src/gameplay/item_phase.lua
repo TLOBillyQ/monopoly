@@ -1,8 +1,11 @@
 local IntentDispatcher = require("src.util.intent_dispatcher")
 local items_cfg = require("src.config.items")
 local constants = require("src.config.constants")
-local DecisionEngine = require("src.gameplay.decision_engine")
 local Agent = require("src.gameplay.agent")
+local Strategy = require("src.gameplay.item_strategy")
+local Inventory = require("src.gameplay.item_inventory")
+local Demolish = require("src.gameplay.item_demolish")
+local Executor = require("src.gameplay.item_executor")
 
 local ItemPhase = {}
 
@@ -16,20 +19,6 @@ local PHASE_TITLES = {
   pre_move = "投骰后：使用道具？",
   post_action = "行动后：使用道具？",
 }
-
-local PHASE_TIMING = {
-  pre_action = { pre_action = true, turn = true },
-  pre_move = { pre_move = true, turn = true },
-  post_action = { post_action = true, manual = true, turn = true },
-}
-
-local function timing_allowed(phase, timing)
-  local allowed = PHASE_TIMING[phase]
-  if not allowed or not timing then
-    return false
-  end
-  return allowed[timing] == true
-end
 
 function ItemPhase.is_enabled(game, phase)
   local queue = constants.item_phase_queue
@@ -50,7 +39,7 @@ local function build_options(player, phase)
   for _, it in ipairs(player.inventory.items or {}) do
     local cfg = cfg_by_id[it.id]
     local timing = cfg and cfg.timing or "manual"
-    if timing_allowed(phase, timing) then
+    if Strategy.timing_allowed(phase, timing, false) then
       table.insert(options, { id = it.id, label = cfg.name })
       local line = cfg.name
       if cfg.usage and #cfg.usage > 0 then
@@ -89,7 +78,16 @@ function ItemPhase.run(tm, phase, args)
   end
 
   if Agent.is_auto_player(player) then
-    local pre = DecisionEngine.get_phase_action(game, player, phase)
+    local pre = Strategy.auto_pre_action(game, player, {
+      inventory = Inventory,
+      find_monster_target = Demolish.find_target,
+      find_missile_target = Demolish.find_target,
+      use_item = function(g, p, id, ctx)
+        ctx = ctx or { by_ai = true }
+        ctx.services = g:get_services()
+        return Executor.use_item(g, p, id, ctx, { inventory = Inventory, strategy = Strategy })
+      end,
+    }, phase)
     if pre then
       IntentDispatcher.dispatch(game, pre)
     end

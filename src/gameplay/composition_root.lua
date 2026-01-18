@@ -153,7 +153,7 @@ function CompositionRoot.assemble(opts, GameClass)
     strategy = require("src.gameplay.item_strategy"),
     item_phase = require("src.gameplay.item_phase"),
     effect = require("src.gameplay.effect"),
-    landing_effects = require("src.gameplay.landing_effects"),
+    landing_effects = require("src.config.landing_effects"),
     land_choice_handler = require("src.gameplay.choice_handlers.land_choice_handler"),
     market_choice_handler = require("src.gameplay.choice_handlers.market_choice_handler"),
     item_choice_handler = require("src.gameplay.choice_handlers.item_choice_handler"),
