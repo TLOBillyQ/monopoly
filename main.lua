@@ -33,23 +33,36 @@ if all_ai_mode then
 	print("玩家配置: " .. #game.players .. " 个AI玩家")
 	
 	-- 自动运行直到游戏结束
-	local turn_count = 0
-	while not game.finished and turn_count < 1000 do
+	local steps = 0
+	local max_steps = 10000  -- 安全上限
+	while not game.finished and steps < max_steps do
 		game:advance_turn()
-		turn_count = turn_count + 1
-		if turn_count % 10 == 0 then
+		steps = steps + 1
+		
+		-- 每10步输出一次进度
+		if steps % 10 == 0 then
+			local turn_count = game.store and game.store:get({ "turn", "turn_count" }) or 0
 			local alive = game:alive_players()
-			print("回合 " .. turn_count .. ", 存活玩家: " .. #alive)
+			print("游戏回合: " .. turn_count .. ", 存活玩家: " .. #alive .. " (步骤: " .. steps .. ")")
 		end
 	end
 	
 	-- 输出结果
 	print("\n=== 游戏结束 ===")
-	print("总回合数: " .. turn_count)
+	local final_turn = game.store and game.store:get({ "turn", "turn_count" }) or 0
+	print("游戏回合数: " .. final_turn)
+	print("执行步骤数: " .. steps)
 	if game.winner_names then
 		print("胜者: " .. game.winner_names)
 	else
 		print("无胜者")
+	end
+	
+	-- 显示所有玩家最终状态
+	print("\n玩家状态:")
+	for _, p in ipairs(game.players) do
+		local status = p.eliminated and "已淘汰" or "存活"
+		print("  " .. p.name .. ": " .. status .. ", 现金: " .. (p.cash or 0))
 	end
 else
 	-- UI 适配层：LoveLayer 负责渲染、输入、动画
