@@ -544,19 +544,17 @@ local function test_complex_consecutive_turn_settlement()
     g.board:place_mine(mine_pos.id)
   end
   
-  -- 设置 RNG 以确保抽到向前移动的机会卡
+  -- 验证配置中存在向前移动的机会卡（测试依赖此配置）
   -- 机会卡 3023: "后方有犬吠，你向前跑两格"，effect = "move_forward", steps = 2
-  local chance_card_found = false
-  local target_card = nil
   local chance_cfg = require("src.config.chance_cards")
+  local has_forward_card = false
   for _, card in ipairs(chance_cfg) do
     if card.effect == "move_forward" and card.steps == 2 then
-      target_card = card
-      chance_card_found = true
+      has_forward_card = true
       break
     end
   end
-  assert(chance_card_found, "需要找到向前移动2格的机会卡")
+  assert(has_forward_card, "配置中需要存在向前移动2格的机会卡")
   
   -- 记录初始状态
   local initial_has_steal_card = Inventory.find_index(p1, 2007) ~= nil
@@ -568,6 +566,7 @@ local function test_complex_consecutive_turn_settlement()
   assert(initial_has_vehicle, "p1 应该有座驾")
   
   -- 第一步：移动3格，经过p2，到达机会卡格子
+  -- branch_parity 用于在分叉路口选择方向，设为与步数相同确保一致性
   local res1 = MovementService.move(g, p1, 3, { branch_parity = 3, skip_market_check = true })
   
   -- 验证经过了玩家
@@ -624,6 +623,14 @@ local function test_complex_consecutive_turn_settlement()
   assert(true, "复杂连续结算完成")
 end
 
+local function calculate_move_distance(board, from_pos, to_pos)
+  local distance = to_pos - from_pos
+  if distance <= 0 then
+    distance = board:length() + distance
+  end
+  return distance
+end
+
 -- 另一个复杂场景：黑市中断 + 后续租金支付
 -- 场景：移动经过黑市时中断，购买后继续移动，落地在他人地块上需要支付租金
 local function test_complex_market_interrupt_with_rent()
@@ -658,24 +665,17 @@ local function test_complex_market_interrupt_with_rent()
   g:set_tile_level(land_tile, 2)
   g:set_player_property(p2, land_tile.id, true)
   
-  -- 计算需要移动的步数：经过黑市，最终落在地块上
-  local steps = land_idx - 1  -- 从起点(1)移动到land_idx
-  if steps <= 0 then
-    steps = g.board:length() + land_idx - 1
-  end
+  -- 计算需要移动的步数
+  local steps = calculate_move_distance(g.board, 1, land_idx)
   
   -- 放置 p1 在合适的位置，使其经过黑市到达地块
-  -- 简化：直接设置 p1 在黑市前面
   local start_pos = market_idx - (land_idx - market_idx) - 1
   if start_pos < 1 then
     start_pos = 1
   end
   g:update_player_position(p1, start_pos)
   
-  local move_distance = land_idx - start_pos
-  if move_distance <= 0 then
-    move_distance = g.board:length() + land_idx - start_pos
-  end
+  local move_distance = calculate_move_distance(g.board, start_pos, land_idx)
   
   -- 移动
   local initial_cash = p1.cash
@@ -685,7 +685,7 @@ local function test_complex_market_interrupt_with_rent()
   local has_market_interrupt = res.market_interrupt ~= nil
   
   -- 如果没有中断或已处理，继续落地
-  if not has_market_interrupt or res.market_interrupt.remaining_steps == 0 then
+  if not has_market_interrupt or (res.market_interrupt and res.market_interrupt.remaining_steps == 0) then
     local final_tile = g.board:get_tile(p1.position)
     local landing_res = resolve_landing(g, p1, final_tile, res, 0)
     
