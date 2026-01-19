@@ -22,7 +22,11 @@ local function decide_choice_action(game, choice, pending_action)
     return auto_action
   end
 
-  if game.ui_port == nil then
+  local auto_play = game
+    and game.ui_port
+    and game.ui_port.ui
+    and game.ui_port.ui.auto_play
+  if game.ui_port == nil or auto_play then
     local first = choice.options and choice.options[1]
     if first then
       return { type = "choice_select", choice_id = choice.id, option_id = first.id or first }

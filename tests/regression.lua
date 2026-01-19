@@ -9,6 +9,7 @@ local Strategy = require("src.gameplay.item_strategy")
 local Pricing = require("src.gameplay.land_pricing")
 local LandActions = require("src.gameplay.land_actions")
 local Steal = require("src.gameplay.item_steal")
+local ChanceEffects = require("src.gameplay.chance")
 local landing_defs = require("src.config.landing_effects")
 local EffectPipeline = require("src.gameplay.effect_pipeline")
 local Effect = require("src.gameplay.effect")
@@ -19,6 +20,24 @@ local function assert_eq(a, b, msg)
   if a ~= b then
     error((msg or "assert failed") .. " | expected=" .. tostring(b) .. " got=" .. tostring(a))
   end
+end
+
+local function visited_tile_ids(board, visited)
+  local list = {}
+  for _, idx in ipairs(visited or {}) do
+    local tile = board:get_tile(idx)
+    table.insert(list, tile and tile.id or idx)
+  end
+  return list
+end
+
+local function list_contains(list, value)
+  for _, v in ipairs(list) do
+    if v == value then
+      return true
+    end
+  end
+  return false
 end
 
 local function next_choice_id(store)
@@ -482,6 +501,29 @@ local function test_movement_backward_wrap()
   assert(#res.visited == 1, "visited steps")
 end
 
+local function test_chance_move_backward_pass_market()
+  local g = new_game()
+  local p = g:current_player()
+  g:update_player_position(p, g.board:index_of_tile_id(32))
+  g:set_player_status(p, "move_dir", "down")
+  local out = ChanceEffects.resolve(g, p, { effect = "move_backward", steps = 2, target = "self" }, {})
+  assert(out and out.move_result, "move_backward should return move result")
+  local visited_ids = visited_tile_ids(g.board, out.move_result.visited)
+  assert(list_contains(visited_ids, 39), "backward move should pass market")
+  assert(out.move_result.market_interrupt == nil, "backward move should not trigger market interrupt")
+end
+
+local function test_chance_move_backward_pass_intersection()
+  local g = new_game()
+  local p = g:current_player()
+  g:update_player_position(p, g.board:index_of_tile_id(42))
+  g:set_player_status(p, "move_dir", "up")
+  local out = ChanceEffects.resolve(g, p, { effect = "move_backward", steps = 2, target = "self" }, {})
+  assert(out and out.move_result, "move_backward should return move result")
+  local visited_ids = visited_tile_ids(g.board, out.move_result.visited)
+  assert(list_contains(visited_ids, 45), "backward move should pass intersection")
+end
+
 local function test_invalid_choice_option_rejected()
   local g = new_game()
   local choice = open_choice(g, {
@@ -747,6 +789,8 @@ local tests = {
   test_market_full_inventory_blocks_items,
   test_zero_cash_no_buy_choice,
   test_movement_backward_wrap,
+  test_chance_move_backward_pass_market,
+  test_chance_move_backward_pass_intersection,
   test_invalid_choice_option_rejected,
   test_complex_consecutive_turn_settlement,
   test_complex_market_interrupt_with_rent,
