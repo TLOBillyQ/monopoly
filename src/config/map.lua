@@ -1,4 +1,3 @@
-
 local tiles = require("src.config.tiles")
 
 local coord_by_id = {}
