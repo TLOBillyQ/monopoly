@@ -14,15 +14,14 @@ local ITEM_IDS = gameplay_constants.item_ids
 
 function ItemChoiceHandler.build(helpers)
   local is_cancel = helpers.is_cancel
-  local clear_choice = helpers.clear_choice
+  local finish_choice = helpers.finish_choice
   local use_item = helpers.use_item
   local finish_item_phase = helpers.finish_item_phase
   local finish_active_item_phase = helpers.finish_active_item_phase
 
   local function finish_and_clear(game)
     finish_active_item_phase(game)
-    clear_choice(game)
-    return { stay = false }
+    return finish_choice(game, false)
   end
 
   local function open_steal_item_choice(game, stealer, target)
@@ -73,8 +72,7 @@ function ItemChoiceHandler.build(helpers)
     local spec = ItemPhase.build_choice_spec(player, phase)
     if not spec then
       finish_item_phase(game, phase)
-      clear_choice(game)
-      return { stay = false }
+      return finish_choice(game, false)
     end
     IntentDispatcher.dispatch(game, { kind = "need_choice", choice_spec = spec })
     return { stay = true }
@@ -143,15 +141,13 @@ function ItemChoiceHandler.build(helpers)
 
   local function handle_steal_prompt(game, choice, action)
     if is_cancel(action) then
-      clear_choice(game)
-      return { stay = false }
+      return finish_choice(game, false)
     end
     local meta = choice.meta or {}
     local stealer = meta.player_id and game.players[meta.player_id] or game:current_player()
     local target = meta.target_id and game.players[meta.target_id]
     if not stealer or not target or target.eliminated then
-      clear_choice(game)
-      return { stay = false }
+      return finish_choice(game, false)
     end
 
     if action and action.option_id == "use" then
@@ -162,16 +158,14 @@ function ItemChoiceHandler.build(helpers)
             IntentDispatcher.dispatch(game, res.intent)
           end
         end
-        clear_choice(game)
-        return { stay = false }
+        return finish_choice(game, false)
       end
       if Inventory.count(target) <= 1 then
         local res = Steal.steal_item_at_index(game, stealer, target, 1)
         if res and res.intent then
           IntentDispatcher.dispatch(game, res.intent)
         end
-        clear_choice(game)
-        return { stay = false }
+        return finish_choice(game, false)
       end
       open_steal_item_choice(game, stealer, target)
       return { stay = true }
@@ -187,8 +181,7 @@ function ItemChoiceHandler.build(helpers)
       end
     end
 
-    clear_choice(game)
-    return { stay = false }
+    return finish_choice(game, false)
   end
 
   local function handle_item_target_player(game, choice, action)
@@ -232,22 +225,19 @@ function ItemChoiceHandler.build(helpers)
     local phase = meta.phase
     if is_cancel(action) then
       finish_item_phase(game, phase)
-      clear_choice(game)
-      return { stay = false }
+      return finish_choice(game, false)
     end
     if not player then
-      clear_choice(game)
-      return { stay = false }
+      return finish_choice(game, false)
     end
     local item_id = Convert.to_number(action.option_id)
     if not item_id and action.option_id == "discard_item" then
-      clear_choice(game)
+      finish_choice(game, false)
       open_discard_item_choice(game, player, phase)
       return { stay = true }
     end
     if not item_id then
-      clear_choice(game)
-      return { stay = false }
+      return finish_choice(game, false)
     end
 
     local res = use_item(game, player, item_id)
@@ -258,8 +248,7 @@ function ItemChoiceHandler.build(helpers)
       return { stay = true }
     end
     finish_item_phase(game, phase)
-    clear_choice(game)
-    return { stay = false }
+    return finish_choice(game, false)
   end
 
   local function handle_discard_item(game, choice, action)
@@ -267,19 +256,19 @@ function ItemChoiceHandler.build(helpers)
     local player = meta.player_id and game.players[meta.player_id] or game:current_player()
     local phase = meta.phase
     if is_cancel(action) then
-      clear_choice(game)
+      finish_choice(game, false)
       return reopen_item_phase(game, player, phase)
     end
     local idx = Convert.to_number(action.option_id)
     if not player or not idx then
-      clear_choice(game)
+      finish_choice(game, false)
       return reopen_item_phase(game, player, phase)
     end
     local dropped = Inventory.remove_by_index(player, idx)
     if dropped then
       logger.event(player.name .. " 丢弃道具 " .. Inventory.item_name(dropped.id))
     end
-    clear_choice(game)
+    finish_choice(game, false)
     return reopen_item_phase(game, player, phase)
   end
 
