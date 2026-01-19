@@ -1,4 +1,5 @@
 local logger = require("src.util.logger")
+local Inventory = require("src.gameplay.item_inventory")
 
 local BankruptcyService = {}
 
@@ -20,11 +21,7 @@ function BankruptcyService.eliminate(game, player)
     end
   end
 
-  if player.inventory then
-    player.inventory._suspend_on_change = true
-    player.inventory.items = {}
-    player.inventory._suspend_on_change = false
-  end
+  Inventory.clear(player)
   if game and game.sync_player_inventory then
     game:sync_player_inventory(player)
   end

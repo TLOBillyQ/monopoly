@@ -75,6 +75,15 @@ function Inventory.remove_by_index(player, idx)
   return player.inventory:remove_by_index(idx)
 end
 
+function Inventory.clear(player)
+  if not player or not player.inventory then
+    return
+  end
+  player.inventory._suspend_on_change = true
+  player.inventory.items = {}
+  player.inventory._suspend_on_change = false
+end
+
 function Inventory.draw_random(rng)
   return random.weighted_choice(items_cfg, "weight", rng)
 end
