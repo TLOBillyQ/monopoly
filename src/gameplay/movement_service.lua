@@ -66,7 +66,6 @@ function MovementService.move(game, player, steps, opts)
       end
     end
 
-    -- 经过黑市时中断（非最后一步），skip_market_check 用于测试
     if steps > 0 and not opts.skip_market_check then
       local tile = board:get_tile(current)
       if tile and tile.type == "market" and step < steps then

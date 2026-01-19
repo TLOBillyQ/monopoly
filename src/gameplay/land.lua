@@ -99,14 +99,12 @@ local function apply_pay_rent(ctx)
     return
   end
 
-  -- 检查预置免租状态
   if player.status.pending_free_rent then
     ctx.game:set_player_status(player, "pending_free_rent", false)
     logger.event(player.name .. " 使用免费卡，免租 " .. tile.name)
     return
   end
 
-  -- 检查强征卡
   local total_value = BoardUtils.total_invested(tile, st.level)
   local strong_idx = player.inventory and player.inventory:find_index(function(it) return it.id == 2009 end)
   if strong_idx and player.cash >= total_value then
@@ -120,7 +118,6 @@ local function apply_pay_rent(ctx)
     }
   end
 
-  -- 检查免费卡
   local free_idx = player.inventory and player.inventory:find_index(function(it) return it.id == 2001 end)
   if free_idx then
     return {
@@ -133,7 +130,6 @@ local function apply_pay_rent(ctx)
     }
   end
 
-  -- 无卡可用，直接支付租金
   LandActions.execute_pay_rent(ctx.game, player.id, tile.id)
 end
 
@@ -144,14 +140,12 @@ end
 local function apply_tax(ctx)
   local player = ctx.player
 
-  -- 检查预置免税状态
   if player.status.pending_tax_free then
     logger.event(player.name .. " 使用免税卡，本次免税")
     ctx.game:set_player_status(player, "pending_tax_free", false)
     return
   end
 
-  -- 检查免税卡
   local tax_idx = player.inventory and player.inventory:find_index(function(it) return it.id == 2010 end)
   if tax_idx then
     return {
@@ -164,7 +158,6 @@ local function apply_tax(ctx)
     }
   end
 
-  -- 无免税卡，直接支付税金
   LandActions.execute_pay_tax(ctx.game, player.id)
 end
 

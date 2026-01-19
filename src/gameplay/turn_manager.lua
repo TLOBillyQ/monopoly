@@ -134,7 +134,6 @@ function TurnManager:dispatch(action)
     return nil
   end
   if choice and (not self.flow or not self.flow.current) then
-    ---@type any
     local res = resolve_choice(self.game, choice, action)
     self.pending_action = nil
     return res
@@ -179,7 +178,6 @@ function TurnManager:_build_flow()
     if action.choice_id and choice.id and action.choice_id ~= choice.id then
       return "wait_choice", args
     end
-    ---@type any
     local res = resolve_choice(self.game, choice, action)
     if res.stay then
       return "wait_choice", args
@@ -204,9 +202,7 @@ function TurnManager:run_until_wait()
 
   while self.flow.current do
     if self.flow.current == "wait_choice" then
-      -- 执行一次 wait_choice 状态以获取自动决策
       self.flow:step()
-      -- 如果仍在 wait_choice 且无待处理行动，则等待
       if self.flow.current == "wait_choice" and not self.pending_action then
         self.game.store:set({ "turn", "phase" }, "wait_choice")
         return "wait_choice"

@@ -17,10 +17,8 @@ function LandChoiceHandler.build(helpers)
     local use_card = (action and action.option_id == "use") and not is_cancel(action)
 
     if use_card and card_kind == "strong" then
-      -- 使用强征卡
       LandActions.execute_strong_card(game, player_id, tile_id)
     elseif use_card and card_kind == "free" then
-      -- 使用免费卡（免租）
       LandActions.execute_free_card(game, player_id, tile_id)
     else
       if card_kind == "strong" then
@@ -34,7 +32,6 @@ function LandChoiceHandler.build(helpers)
           return { stay = true }
         end
       end
-      -- 跳过当前卡 → 直接支付租金
       LandActions.execute_pay_rent(game, player_id, tile_id)
     end
 
@@ -48,10 +45,8 @@ function LandChoiceHandler.build(helpers)
     local use_card = (action and action.option_id == "use") and not is_cancel(action)
 
     if use_card then
-      -- 使用免税卡
       LandActions.execute_tax_free_card(game, player_id)
     else
-      -- 跳过 → 直接支付税金
       LandActions.execute_pay_tax(game, player_id)
     end
 

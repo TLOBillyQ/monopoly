@@ -27,7 +27,7 @@ local function send_players_to_hospital(game, idx)
   end
 
   local hospital_index = game.board:find_first_by_type("hospital")
-  
+
   local count = 0
   local snapshot = { list_unpack(occupants) }
   for _, pid in ipairs(snapshot) do
@@ -57,7 +57,6 @@ function Demolish.find_target(game, player, distance)
         return nil
       end
       local st = tile_state(game, tile)
-      -- Target occupied, developed lands not owned by self
       if not st.owner_id or st.owner_id == player.id or (st.level or 0) <= 0 then
         return nil
       end
@@ -71,9 +70,9 @@ function Demolish.apply(game, player, idx, opts)
   opts = opts or {}
   clear_overlays(game, idx)
   local tile = game.board:get_tile(idx)
-  
+
   destroy_building(game, tile)
-  
+
   local hit = 0
   if opts.injure then
     hit = send_players_to_hospital(game, idx)
@@ -93,7 +92,7 @@ function Demolish.apply(game, player, idx, opts)
   end
 
   logger.event(msg)
-  
+
   local title = opts.title or "破坏"
   return {
     ok = true,
@@ -110,7 +109,6 @@ function Demolish.use(game, player, distance, consume_fn, opts)
   end
 
   if not opts.by_ai then
-    -- Interactive Mode: Let user choose if multiple targets or just confirm
     local idxs = BoardUtils.indices_in_range(game.board, player.position, distance)
     local options = {}
     local body_lines = {}
@@ -118,8 +116,6 @@ function Demolish.use(game, player, distance, consume_fn, opts)
     local function push_option(idx)
       if idx and idx ~= player.position then
         local tile = game.board:get_tile(idx)
-        -- Only allow targeting valid tiles (owned by others, level > 0)
-        -- We reuse logic from determine_score or simpler check
         if tile.type == "land" then
           local st = tile_state(game, tile)
           if st.owner_id and st.owner_id ~= player.id and (st.level or 0) > 0 then
@@ -130,16 +126,11 @@ function Demolish.use(game, player, distance, consume_fn, opts)
       end
     end
 
-    -- We specifically want to show the 'best' one first or all of them.
-    -- The original Missile code iterated indices.
-    -- Let's just iterate all indices in range.
     for _, idx in ipairs(idxs) do
        push_option(idx)
     end
-    
-    -- If no valid targets found in range (shouldn't happen if best_idx found one)
+
     if #options == 0 then
-       -- This acts as a fallback if find_best_tile sees one but our strict loop misses it (unlikely)
        push_option(best_idx)
     end
 
@@ -156,11 +147,11 @@ function Demolish.use(game, player, distance, consume_fn, opts)
             options = options,
             allow_cancel = true,
             cancel_label = "取消",
-            meta = { 
-              player_id = player.id, 
+            meta = {
+              player_id = player.id,
               item_id = opts.item_id,
               injure = opts.injure,
-              title = opts.title 
+              title = opts.title
             },
           },
         },

@@ -31,7 +31,7 @@ function Strategy.has_obstacles_ahead(game, player, distance)
   local parity = distance
   local current = player.position
   local facing = player.status and player.status.move_dir or nil
-  
+
   for _ = 1, distance do
     local next_index, _passed, step_dir = board:step_forward_by_facing(current, facing, parity)
     current = next_index
@@ -93,7 +93,6 @@ function Strategy.auto_pre_action(game, player, deps, phase)
     return deps.find_monster_target and deps.find_monster_target(game, player, 3) ~= nil
   end
 
-  -- 优先使用清障卡
   local clear_result = try_use(2006, function()
     local found = Strategy.has_obstacles_ahead(game, player, 12)
     if found then logger.event(player.name .. " 前方发现障碍，准备使用清障卡") end
@@ -101,38 +100,31 @@ function Strategy.auto_pre_action(game, player, deps, phase)
   end)
   if clear_result then return clear_result end
 
-  -- 遥控骰子
   local dice_result = try_use(2002, function()
     local dice_count = player:dice_count()
     return Agent.pick_remote_dice_value(game, player, dice_count) ~= nil
   end)
   if dice_result then return dice_result end
 
-  -- 地雷卡
   local mine_result = try_use(2005)
   if mine_result then return mine_result end
 
-  -- 骰子加倍
   local double_result = try_use(2003)
   if double_result then return double_result end
 
-  -- 路障卡
   local roadblock_result = try_use(2004, function() return Agent.pick_roadblock_target(game, player) ~= nil end)
   if roadblock_result then return roadblock_result end
 
-  -- 怪兽/导弹
   local monster_result = try_use(2008, has_demolish_target)
   if monster_result then return monster_result end
   local missile_result = try_use(2013, has_demolish_target)
   if missile_result then return missile_result end
 
-  -- 针对目标玩家的道具
   for _, id in ipairs(ItemEffects.target_item_ids()) do
     local res = try_use(id, function() return has_target(id) end)
     if res then return res end
   end
 
-  -- 附身类道具
   return try_use(2017) or try_use(2019)
 end
 

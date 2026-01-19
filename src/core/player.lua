@@ -64,8 +64,8 @@ function Player.new(attrs)
     deity_duration_turns = attrs.deity_duration_turns or constants.deity_duration_turns,
     status = {
       stay_turns = 0,
-      deity = nil, 
-      pending_remote_dice = nil, 
+      deity = nil,
+      pending_remote_dice = nil,
       pending_dice_multiplier = 1,
       pending_free_rent = false,
       pending_tax_free = false,
@@ -151,8 +151,6 @@ function Player:clear_temporal_flags()
   self.status.pending_free_rent = false
   self.status.pending_tax_free = false
   self.status.pending_remote_dice = nil
-  -- Update store if necessary, but individual flag updates might happen elsewhere.
-  -- To be safe, let's sync status if store exists.
   if self._store then
     self:_store_set({ "players", self.id, "status" }, deep_copy(self.status))
   end

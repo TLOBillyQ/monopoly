@@ -5,7 +5,7 @@ local BankruptcyService = {}
 
 function BankruptcyService.eliminate(game, player)
   logger.event(player.name .. " 破产出局")
-  
+
   local owned_tile_ids = {}
   for tile_id in pairs(player.properties) do
     table.insert(owned_tile_ids, tile_id)
@@ -34,7 +34,7 @@ function BankruptcyService.eliminate(game, player)
   else
     player.eliminated = true
   end
-  
+
   for tile_idx, list in pairs(game.occupants) do
     for i = #list, 1, -1 do
       if list[i] == player.id then

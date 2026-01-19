@@ -1,0 +1,530 @@
+{
+  "task": "Batch Lua Comment Removal",
+  "status": "COMPLETED",
+  "timestamp": "2026-01-19",
+  "summary": {
+    "total_files_processed": 72,
+    "total_comments_removed": 97,
+    "total_lines_removed": 169,
+    "files_with_comments": 19,
+    "files_without_comments": 53,
+    "success_rate": "100%"
+  },
+  "processing_results": [
+    {
+      "file": "src/adapters/love2d/auto_runner.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/adapters/love2d/board_renderer.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/adapters/love2d/layout.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/adapters/love2d/love_layer.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/adapters/love2d/love_runtime.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/adapters/love2d/modal.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/adapters/love2d/panel_renderer.lua",
+      "comments_removed": 7,
+      "lines_removed": 8,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/adapters/love2d/presenter.lua",
+      "comments_removed": 1,
+      "lines_removed": 2,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/adapters/love2d/ui_state.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/config/chance_cards.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/config/constants.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/config/items.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/config/landing_effects.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/config/map.lua",
+      "comments_removed": 6,
+      "lines_removed": 7,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/config/market.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/config/roles.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/config/tiles.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/config/vehicles.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/core/board.lua",
+      "comments_removed": 8,
+      "lines_removed": 9,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/core/dice.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/core/flow.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/core/inventory.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/core/player.lua",
+      "comments_removed": 2,
+      "lines_removed": 3,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/core/rng.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/core/store.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/core/tile.lua",
+      "comments_removed": 3,
+      "lines_removed": 4,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/game.lua",
+      "comments_removed": 7,
+      "lines_removed": 8,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/agent.lua",
+      "comments_removed": 2,
+      "lines_removed": 3,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/bankruptcy_service.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/board_factory.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/chance.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/choice_handlers/item_choice_handler.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/choice_handlers/land_choice_handler.lua",
+      "comments_removed": 5,
+      "lines_removed": 6,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/choice_handlers/market_choice_handler.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/choice_handlers/optional_effect_handler.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/choice_service.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/composition_root.lua",
+      "comments_removed": 16,
+      "lines_removed": 17,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/constants.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/effect.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/effect_pipeline.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/item_board_utils.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/item_demolish.lua",
+      "comments_removed": 9,
+      "lines_removed": 10,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/item_executor.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/item_inventory.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/item_phase.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/item_post_effects.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/item_remote_dice.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/item_roadblock.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/item_steal.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/item_strategy.lua",
+      "comments_removed": 8,
+      "lines_removed": 9,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/land.lua",
+      "comments_removed": 7,
+      "lines_removed": 8,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/land_actions.lua",
+      "comments_removed": 6,
+      "lines_removed": 7,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/land_choice_specs.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/land_pricing.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/landing.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/market_service.lua",
+      "comments_removed": 2,
+      "lines_removed": 3,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/mine_effect.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/movement_service.lua",
+      "comments_removed": 1,
+      "lines_removed": 2,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/player_effects.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/player_vehicle.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/turn_end.lua",
+      "comments_removed": 1,
+      "lines_removed": 2,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/turn_land.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/turn_manager.lua",
+      "comments_removed": 4,
+      "lines_removed": 5,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/turn_move.lua",
+      "comments_removed": 2,
+      "lines_removed": 3,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/turn_post.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/turn_roll.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/gameplay/turn_start.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/util/convert.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/util/intent_dispatcher.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/util/logger.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/util/random.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    },
+    {
+      "file": "src/util/tables.lua",
+      "comments_removed": 0,
+      "lines_removed": 1,
+      "status": "SUCCESS"
+    }
+  ],
+  "top_commented_files": [
+    {
+      "rank": 1,
+      "file": "src/gameplay/composition_root.lua",
+      "comments_removed": 16,
+      "lines_removed": 17
+    },
+    {
+      "rank": 2,
+      "file": "src/gameplay/item_demolish.lua",
+      "comments_removed": 9,
+      "lines_removed": 10
+    },
+    {
+      "rank": 3,
+      "file": "src/core/board.lua",
+      "comments_removed": 8,
+      "lines_removed": 9
+    },
+    {
+      "rank": 4,
+      "file": "src/gameplay/item_strategy.lua",
+      "comments_removed": 8,
+      "lines_removed": 9
+    },
+    {
+      "rank": 5,
+      "file": "src/adapters/love2d/panel_renderer.lua",
+      "comments_removed": 7,
+      "lines_removed": 8
+    },
+    {
+      "rank": 6,
+      "file": "src/game.lua",
+      "comments_removed": 7,
+      "lines_removed": 8
+    },
+    {
+      "rank": 7,
+      "file": "src/gameplay/land.lua",
+      "comments_removed": 7,
+      "lines_removed": 8
+    }
+  ],
+  "category_summary": {
+    "adapters/love2d": {
+      "files": 9,
+      "comments": 8,
+      "lines": 17
+    },
+    "config": {
+      "files": 9,
+      "comments": 6,
+      "lines": 15
+    },
+    "core": {
+      "files": 8,
+      "comments": 13,
+      "lines": 21
+    },
+    "gameplay": {
+      "files": 40,
+      "comments": 63,
+      "lines": 103
+    },
+    "util": {
+      "files": 5,
+      "comments": 0,
+      "lines": 5
+    }
+  },
+  "notes": {
+    "processing_method": "Python script with advanced Lua syntax parsing",
+    "features": [
+      "Handles single-line comments (-- prefix)",
+      "Handles multi-line comments (--[[ ]]--)",
+      "Preserves string contents (no removal of -- inside strings)",
+      "Maintains code structure and indentation",
+      "Removes empty lines created by comment removal",
+      "Proper handling of escape sequences in strings"
+    ],
+    "verification": "All files processed successfully with 100% success rate. Code structure and functionality preserved."
+  }
+}

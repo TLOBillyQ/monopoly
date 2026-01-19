@@ -1,6 +1,3 @@
--- Game：游戏运行时门面
--- 职责：领域写操作、状态查询、流程驱动
--- 装配：由 CompositionRoot.assemble() 完成
 
 local CompositionRoot = require("src.gameplay.composition_root")
 local Tables = require("src.util.tables")
@@ -62,12 +59,10 @@ local function apply_winners(game, winners, message)
   return true
 end
 
--- 创建游戏实例（装配由 CompositionRoot 完成）
 function Game.new(opts)
   return CompositionRoot.assemble(opts, Game)
 end
 
--- ========== 领域写操作 ==========
 
 function Game:_store_set(path, value)
   if self.store then
@@ -135,7 +130,6 @@ function Game:reset_tile(tile)
   self:update_tile(tile, { owner_id = nil, level = 0 })
 end
 
--- ========== 状态查询 ==========
 
 function Game:alive_players()
   local alive = {}
@@ -177,7 +171,6 @@ function Game:update_player_position(player, new_index)
   table.insert(self.occupants[new_index], player.id)
 end
 
--- ========== 流程驱动 ==========
 
 function Game:check_victory()
   if self.finished then

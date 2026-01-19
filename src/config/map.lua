@@ -1,12 +1,11 @@
 
 local tiles = require("src.config.tiles")
 
-local START_ID = 35
-local MARKET_ID = 39
-
 local coord_by_id = {}
+local id_by_coord = {}
 for _, t in ipairs(tiles) do
   coord_by_id[t.id] = { row = t.row, col = t.col }
+  id_by_coord[t.row .. "," .. t.col] = t.id
 end
 
 local function direction(from_id, to_id)
@@ -27,6 +26,20 @@ local function direction(from_id, to_id)
     return "right"
   end
   return nil
+end
+
+local function id_at(coord)
+  local id = id_by_coord[coord[1] .. "," .. coord[2]]
+  assert(id, "missing tile at (" .. tostring(coord[1]) .. "," .. tostring(coord[2]) .. ")")
+  return id
+end
+
+local function to_ids(coords)
+  local ids = {}
+  for i, coord in ipairs(coords) do
+    ids[i] = id_at(coord)
+  end
+  return ids
 end
 
 local TURN_LEFT = {
@@ -53,58 +66,56 @@ local function add_neighbor(neighbors, a, b)
   neighbors[b][d_ba] = a
 end
 
--- 外圈：默认向前为逆时针
-local outer_ccw = {
-  35, 1, 2, 3, 45, 4, 5, 6, 36,
-  7, 8, 9, 40, 10, 11, 12, 37,
-  13, 14, 15, 44, 16, 17, 18, 38,
-  19, 20, 21, 43, 22, 23, 24,
+local outer_ccw_coords = {
+  { 9, 9 }, { 9, 8 }, { 9, 7 }, { 9, 6 }, { 9, 5 }, { 9, 4 }, { 9, 3 }, { 9, 2 }, { 9, 1 },
+  { 8, 1 }, { 7, 1 }, { 6, 1 }, { 5, 1 }, { 4, 1 }, { 3, 1 }, { 2, 1 }, { 1, 1 },
+  { 1, 2 }, { 1, 3 }, { 1, 4 }, { 1, 5 }, { 1, 6 }, { 1, 7 }, { 1, 8 }, { 1, 9 },
+  { 2, 9 }, { 3, 9 }, { 4, 9 }, { 5, 9 }, { 6, 9 }, { 7, 9 }, { 8, 9 },
 }
+
+local outer_ccw_ids = to_ids(outer_ccw_coords)
 
 local outer_next = {}
 local outer_prev = {}
-for i, id in ipairs(outer_ccw) do
-  local next_id = outer_ccw[(i % #outer_ccw) + 1]
-  local prev_id = outer_ccw[((i - 2) % #outer_ccw) + 1]
+for i, id in ipairs(outer_ccw_ids) do
+  local next_id = outer_ccw_ids[(i % #outer_ccw_ids) + 1]
+  local prev_id = outer_ccw_ids[((i - 2) % #outer_ccw_ids) + 1]
   outer_next[id] = next_id
   outer_prev[id] = prev_id
 end
 
--- 内圈“十字通道”连接（与外圈四个中点相连）
--- 45(下中) <-> 42 <-> 31 <-> 32 <-> 39 <-> 28 <-> 29 <-> 30 <-> 44(上中)
--- 40(左中) <-> 25 <-> 26 <-> 27 <-> 39 <-> 41 <-> 33 <-> 34 <-> 43(右中)
 local edges = {}
-local function chain(list)
-  for i = 1, #list - 1 do
-    table.insert(edges, { list[i], list[i + 1] })
+local function chain(coords)
+  for i = 1, #coords - 1 do
+    table.insert(edges, { coords[i], coords[i + 1] })
   end
 end
 
-chain(outer_ccw)
-table.insert(edges, { 24, 35 })
+chain(outer_ccw_coords)
+table.insert(edges, { outer_ccw_coords[#outer_ccw_coords], outer_ccw_coords[1] })
 
-chain({ 45, 42, 31, 32, 39, 28, 29, 30, 44 })
-chain({ 40, 25, 26, 27, 39, 41, 33, 34, 43 })
+chain({ { 9, 5 }, { 8, 5 }, { 7, 5 }, { 6, 5 }, { 5, 5 }, { 4, 5 }, { 3, 5 }, { 2, 5 }, { 1, 5 } })
+chain({ { 5, 1 }, { 5, 2 }, { 5, 3 }, { 5, 4 }, { 5, 5 }, { 5, 6 }, { 5, 7 }, { 5, 8 }, { 5, 9 } })
 
 local neighbors = {}
 for _, e in ipairs(edges) do
-  add_neighbor(neighbors, e[1], e[2])
+  add_neighbor(neighbors, id_at(e[1]), id_at(e[2]))
 end
 
--- 四个入口点：偶数点数进入内圈（仅当从外圈逆时针方向抵达入口点时触发）
-local entry_points = {
-  [45] = { inner_id = 42 },
-  [40] = { inner_id = 25 },
-  [44] = { inner_id = 30 },
-  [43] = { inner_id = 34 },
-}
+local entry_points = {}
+entry_points[id_at({ 9, 5 })] = { inner_id = id_at({ 8, 5 }) }
+entry_points[id_at({ 5, 1 })] = { inner_id = id_at({ 5, 2 }) }
+entry_points[id_at({ 1, 5 })] = { inner_id = id_at({ 2, 5 }) }
+entry_points[id_at({ 5, 9 })] = { inner_id = id_at({ 5, 8 }) }
 
--- board.path 只用于提供 tile->index 的索引；实际移动按 neighbors/规则计算。
 local path = {}
-for _, id in ipairs(outer_ccw) do
+for _, id in ipairs(outer_ccw_ids) do
   table.insert(path, id)
 end
-for _, id in ipairs({ 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 39, 41, 42 }) do
+for _, id in ipairs(to_ids({
+  { 5, 2 }, { 5, 3 }, { 5, 4 }, { 4, 5 }, { 3, 5 }, { 2, 5 }, { 7, 5 },
+  { 6, 5 }, { 5, 7 }, { 5, 8 }, { 5, 5 }, { 5, 6 }, { 8, 5 },
+})) do
   table.insert(path, id)
 end
 
@@ -114,8 +125,8 @@ return {
   outer_next = outer_next,
   outer_prev = outer_prev,
   entry_points = entry_points,
-  start_id = START_ID,
-  market_id = MARKET_ID,
+  start_id = id_at({ 9, 9 }),
+  market_id = id_at({ 5, 5 }),
   direction = direction,
   turn_left = TURN_LEFT,
   turn_right = TURN_RIGHT,

@@ -43,8 +43,7 @@ end
 local function get_player_details_text(player, view, item_name_by_id)
   if player.eliminated then return nil end
   local parts = {}
-  
-  -- Status / Location
+
   local status = player.status or {}
   if status.stay_turns and status.stay_turns > 0 then
     local pos = player.position
@@ -60,18 +59,15 @@ local function get_player_details_text(player, view, item_name_by_id)
     end
   end
 
-  -- Deity
   if status.deity then
     table.insert(parts, status.deity.type .. "(" .. status.deity.remaining .. ")")
   end
 
-  -- Vehicle
   if player.seat_id then
     local vname = vehicle_name_by_id[player.seat_id] or ("车" .. player.seat_id)
     table.insert(parts, vname)
   end
 
-  -- Items
   local inv = player.inventory or {}
   if inv.items and #inv.items > 0 then
     local names = {}
@@ -165,7 +161,6 @@ local function draw_player_status(ui, view, panel, y, item_name_by_id)
     for pid = 1, #players do
       local player = players[pid]
       if player then
-        -- Name line
         love.graphics.setFont(ui.fonts.small)
         local color = ui.palette.player[pid] or ui.palette.text
         love.graphics.setColor(color)
@@ -174,7 +169,6 @@ local function draw_player_status(ui, view, panel, y, item_name_by_id)
         love.graphics.printf(player_label(player), panel.x + ui.margin + 16, y, panel.w - ui.margin * 2 - 16, "left")
         y = y + 18
 
-        -- Details line
         local details = get_player_details_text(player, view, item_name_by_id)
         if details then
           love.graphics.setColor(ui.palette.muted)
@@ -182,8 +176,7 @@ local function draw_player_status(ui, view, panel, y, item_name_by_id)
           love.graphics.printf(details, panel.x + ui.margin + 16, y, panel.w - ui.margin * 2 - 16, "left")
           y = y + (#lines * 18)
         end
-        
-        -- Spacer
+
         y = y + 6
       end
     end

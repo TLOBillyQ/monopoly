@@ -31,7 +31,6 @@ function LandActions.resolve_rent_owner(game, tile, state_fn)
   return owner, st
 end
 
--- 计算连续地块租金（图邻接）
 local function contiguous_rent(game, board, index, owner_id)
   local map = board and board.map
   local neighbors = map and map.neighbors
@@ -106,7 +105,6 @@ local function contiguous_rent(game, board, index, owner_id)
   return rent_sum
 end
 
--- 执行强征卡效果（由 choice_service 调用）
 function LandActions.execute_strong_card(game, player_id, tile_id)
   local player = game.players[player_id]
   local tile = game.board:get_tile_by_id(tile_id)
@@ -131,7 +129,6 @@ function LandActions.execute_strong_card(game, player_id, tile_id)
   return true
 end
 
--- 执行免费卡（免租）效果（由 choice_service 调用）
 function LandActions.execute_free_card(game, player_id, tile_id)
   local player = game.players[player_id]
   local tile = game.board:get_tile_by_id(tile_id)
@@ -145,7 +142,6 @@ function LandActions.execute_free_card(game, player_id, tile_id)
   return true
 end
 
--- 执行租金支付（由 choice_service 调用，当用户跳过所有卡牌选项后）
 function LandActions.execute_pay_rent(game, player_id, tile_id)
   local player = game.players[player_id]
   local tile = game.board:get_tile_by_id(tile_id)
@@ -186,7 +182,6 @@ function LandActions.execute_pay_rent(game, player_id, tile_id)
   return true
 end
 
--- 执行免税卡效果（由 choice_service 调用）
 function LandActions.execute_tax_free_card(game, player_id)
   local player = game.players[player_id]
   if not player then return false end
@@ -199,7 +194,6 @@ function LandActions.execute_tax_free_card(game, player_id)
   return true
 end
 
--- 执行税金支付（由 choice_service 调用，当用户跳过免税卡后）
 function LandActions.execute_pay_tax(game, player_id)
   local player = game.players[player_id]
   if not player then return false end

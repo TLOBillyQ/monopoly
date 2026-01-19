@@ -9,7 +9,6 @@ local function phase_move(tm, args)
   assert(movement and movement.move, "Missing MovementService (game.services.movement)")
 
   local move_opts = { branch_parity = raw_total }
-  -- 支持从黑市中断后继续移动
   if args.continue_from_market or args.continue_from_steal then
     total = args.remaining_steps
     move_opts.direction = args.facing
@@ -58,7 +57,6 @@ local function phase_move(tm, args)
     move_result.encountered_players = {}
   end
 
-  -- 经过黑市时中断，弹出购买选择
   if move_result.market_interrupt then
     local market = tm.game and tm.game.get_service and tm.game:get_service("market")
     if market then

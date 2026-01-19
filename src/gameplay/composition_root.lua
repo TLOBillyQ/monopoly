@@ -1,6 +1,3 @@
--- CompositionRoot: 唯一的依赖组装点
--- 职责：创建并连接所有运行时对象，注入依赖关系
--- 原则：所有依赖关系在此处显式声明，其他模块不做组装
 
 local BoardFactory = require("src.gameplay.board_factory")
 local Player = require("src.core.player")
@@ -29,7 +26,6 @@ local CompositionRoot = {}
 
 local deep_copy = Tables.deep_copy
 
--- ========== 工厂方法 ==========
 
 local function create_board(opts)
   return BoardFactory.create(opts)
@@ -115,27 +111,19 @@ local function build_initial_state(board, players, rng)
   }
 end
 
--- ========== 组装入口 ==========
 
--- 组装完整的 Game 实例
--- opts: { players, ai, auto_all, seed }
--- GameClass: Game 类（由调用者传入，避免循环依赖）
 function CompositionRoot.assemble(opts, GameClass)
   opts = opts or {}
 
-  -- 1. 创建核心领域对象
   local board = create_board(opts)
   local rng = RNG.new(opts.seed)
   local players = create_players(opts)
 
-  -- 2. 创建 store（状态容器）
   local initial_state = build_initial_state(board, players, rng)
   local store = Store.new(initial_state)
 
-  -- 3. 绑定 store 到 rng（实现状态同步）
   rng._store = store
 
-  -- 4. 绑定 store 到 players（实现状态同步）
   for _, p in ipairs(players) do
     p._store = store
     if p.inventory then
@@ -146,7 +134,6 @@ function CompositionRoot.assemble(opts, GameClass)
     end
   end
 
-  -- 5. 注册 services（静态模块引用）
   ChoiceService.setup({
     inventory = require("src.gameplay.item_inventory"),
     executor = require("src.gameplay.item_executor"),
@@ -174,7 +161,6 @@ function CompositionRoot.assemble(opts, GameClass)
     choice = ChoiceService,
   }
 
-  -- 6. 组装 game 实例
   local game = setmetatable({
     board = board,
     players = players,
@@ -187,14 +173,12 @@ function CompositionRoot.assemble(opts, GameClass)
     services = services,
   }, GameClass)
 
-  -- 7. 初始化运行时状态
   game:rebuild()
   game.turn_manager = TurnManager.new(game, phases)
 
   return game
 end
 
--- 导出 snapshot_inventory 供外部使用（Game 同步 inventory 时需要）
 CompositionRoot.snapshot_inventory = snapshot_inventory
 
 return CompositionRoot

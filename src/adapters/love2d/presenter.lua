@@ -33,7 +33,6 @@ local BOARD_TILES = build_board_tiles()
 
 function Presenter.present(store_state, runtime)
   runtime = runtime or {}
-  -- overlays 是运行态，只从 Board 读取，不存入 store
   local overlays
   if runtime.game and runtime.game.board and runtime.game.board.get_overlays then
     overlays = runtime.game.board:get_overlays()
