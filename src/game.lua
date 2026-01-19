@@ -117,7 +117,14 @@ end
 
 
 function Game:set_tile_owner(tile, owner_id)
-  self:update_tile(tile, { owner_id = owner_id })
+  if not (tile and tile.type == "land") then
+    return
+  end
+  if owner_id == nil then
+    self:_store_set({ "board", "tiles", tile.id, "owner_id" }, nil)
+  else
+    self:update_tile(tile, { owner_id = owner_id })
+  end
 end
 
 
@@ -127,7 +134,11 @@ end
 
 
 function Game:reset_tile(tile)
-  self:update_tile(tile, { owner_id = nil, level = 0 })
+  if not (tile and tile.type == "land") then
+    return
+  end
+  self:_store_set({ "board", "tiles", tile.id, "owner_id" }, nil)
+  self:_store_set({ "board", "tiles", tile.id, "level" }, 0)
 end
 
 

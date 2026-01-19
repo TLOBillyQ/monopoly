@@ -378,6 +378,37 @@ local function test_mandatory_payment_causes_bankruptcy()
   assert(before_eliminated == false, "player should not have been eliminated before")
 end
 
+local function test_bankruptcy_resets_owned_tiles()
+  local g = new_game()
+  local p1 = g.players[1]
+  local _, tile1 = first_land_tile(g.board)
+  local tile2 = nil
+  for i = 1, #g.board.path do
+    local t = g.board.path[i]
+    if t.type == "land" and t.id ~= tile1.id then
+      tile2 = t
+      break
+    end
+  end
+  assert(tile2, "should have at least two land tiles")
+
+  g:set_tile_owner(tile1, p1.id)
+  g:set_tile_level(tile1, 2)
+  g:set_player_property(p1, tile1.id, true)
+
+  g:set_tile_owner(tile2, p1.id)
+  g:set_tile_level(tile2, 1)
+
+  local bankruptcy = g:get_service("bankruptcy")
+  bankruptcy.eliminate(g, p1)
+
+  local st1 = tile_state(g, tile1)
+  local st2 = tile_state(g, tile2)
+  assert(st1.owner_id == nil and st1.level == 0, "bankruptcy clears owned tile1")
+  assert(st2.owner_id == nil and st2.level == 0, "bankruptcy clears owned tile2")
+  assert(next(p1.properties) == nil, "bankruptcy clears player properties")
+end
+
 local function test_ai_skips_auto_buy_at_market()
   local MarketService = require("src.gameplay.market_service")
   local g = new_game()
@@ -779,6 +810,7 @@ local tests = {
   test_movement_examples_from_issue,
   test_ai_cancels_land_purchases,
   test_mandatory_payment_causes_bankruptcy,
+  test_bankruptcy_resets_owned_tiles,
   test_ai_skips_auto_buy_at_market,
   test_land_rent_contiguous_sum,
   test_land_rent_graph_adjacency_breaks_path_neighbors,

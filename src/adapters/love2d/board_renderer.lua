@@ -60,7 +60,11 @@ local function draw_tile(ui, idx, pos, half_cell, pad, last_visited, tile, tile_
   if not tile then
     return
   end
+  local owner_id = tile_state and tile_state.owner_id or nil
   local color = UIState.tile_color(ui, tile.type)
+  if tile.type == "land" and owner_id then
+    color = ui.palette.player[owner_id] or { 0.9, 0.9, 0.9 }
+  end
   if last_visited then
     color = lighten(color, 0.2)
   end
@@ -90,12 +94,8 @@ local function draw_tile(ui, idx, pos, half_cell, pad, last_visited, tile, tile_
   love.graphics.setColor(0, 0, 0, 0.95)
   love.graphics.printf(tile.name or "-", rect_x, name_y, rect_w, "center")
 
-  local owner_id = tile_state and tile_state.owner_id or nil
   local level = tile_state and tile_state.level or 0
   if tile.type == "land" and owner_id then
-    local owner_color = ui.palette.player[owner_id] or { 0.9, 0.9, 0.9 }
-    love.graphics.setColor(owner_color)
-    love.graphics.rectangle("line", rect_x - 2, rect_y - 2, rect_w + 4, rect_h + 4, 9, 9)
     if level > 0 then
       love.graphics.setFont(ui.fonts.tiny)
       love.graphics.setColor(0, 0, 0, 0.88)

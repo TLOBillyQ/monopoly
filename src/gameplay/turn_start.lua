@@ -4,10 +4,6 @@ local ItemPhase = require("src.gameplay.item_phase")
 local function phase_start(tm)
   local player = tm.game:current_player()
   local tc = (tm.game.store and tm.game.store:get({ "turn", "turn_count" })) or 0
-  tc = tc + 1
-  if tm.game.store then
-    tm.game.store:set({ "turn", "turn_count" }, tc)
-  end
   tm.game.last_turn = {
     player_id = player.id,
     player_name = player.name,
@@ -21,6 +17,10 @@ local function phase_start(tm)
     tm.game.last_turn.note = "已出局，跳过"
     tm.game.last_turn.skipped = true
     return "end_turn", { player = player }
+  end
+  tc = tc + 1
+  if tm.game.store then
+    tm.game.store:set({ "turn", "turn_count" }, tc)
   end
   if player.status.stay_turns and player.status.stay_turns > 0 then
     tm.game:set_player_status(player, "stay_turns", player.status.stay_turns - 1)

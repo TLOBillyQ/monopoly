@@ -8,8 +8,12 @@ local TurnManager = {}
 TurnManager.__index = TurnManager
 
 local function build_turn_log_line(game, turn_count)
-  local line = "回合" .. (turn_count + 1) .. ": "
   local player = game and game.current_player and game:current_player()
+  local next_count = turn_count + 1
+  if player and player.eliminated then
+    next_count = turn_count
+  end
+  local line = "回合" .. tostring(next_count) .. ": "
   if not player then
     line = line .. "无效玩家"
     return line
