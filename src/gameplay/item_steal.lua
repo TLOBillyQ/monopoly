@@ -16,19 +16,20 @@ local function fail_popup(game, stealer, target)
 end
 
 function Steal.steal_item_at_index(game, player, target, item_idx)
-  local inv = target.inventory
-  if inv:count() == 0 then
+  if Inventory.count(target) == 0 then
     return fail_popup(game, player, target)
   end
   local stolen = Inventory.remove_by_index(target, item_idx or 1)
   if not stolen then
     return nil
   end
-  if player.inventory:is_full() then
+  if Inventory.is_full(player) then
     logger.warn(player.name .. " 背包已满，偷窃道具被销毁")
     return nil
   end
-  player.inventory:add(stolen)
+  if not Inventory.add(player, stolen) then
+    return nil
+  end
   Inventory.consume(player, ITEM_IDS.steal)
   local name = Inventory.item_name(stolen.id)
   logger.event(player.name .. " 使用偷窃卡，从 " .. target.name .. " 偷走道具 " .. name)
@@ -77,7 +78,7 @@ function Steal.handle_pass_players(game, player, encountered_ids)
     if not target then
       return nil
     end
-    if target.inventory:count() == 0 then
+    if Inventory.count(target) == 0 then
       Inventory.consume(player, ITEM_IDS.steal)
       return fail_popup(game, player, target)
     end

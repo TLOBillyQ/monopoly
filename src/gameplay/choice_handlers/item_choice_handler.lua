@@ -28,7 +28,7 @@ function ItemChoiceHandler.build(helpers)
   local function open_steal_item_choice(game, stealer, target)
     local lines = {}
     local options = {}
-    for i, it in ipairs(target.inventory.items) do
+    for i, it in ipairs(Inventory.items(target)) do
       local label = Inventory.item_name(it.id)
       table.insert(lines, i .. ". " .. label)
       table.insert(options, { id = i, label = label })
@@ -50,7 +50,7 @@ function ItemChoiceHandler.build(helpers)
   local function open_discard_item_choice(game, player, phase)
     local lines = {}
     local options = {}
-    for i, it in ipairs(player.inventory.items) do
+    for i, it in ipairs(Inventory.items(player)) do
       local label = Inventory.item_name(it.id)
       table.insert(lines, i .. ". " .. label)
       table.insert(options, { id = i, label = label })
@@ -129,8 +129,7 @@ function ItemChoiceHandler.build(helpers)
     end
     local idx = Convert.to_number(action.option_id)
     local meta = choice.meta or {}
-    local stealer_id = meta.player_id or meta.stealer_id
-    local stealer = stealer_id and game.players[stealer_id] or game:current_player()
+    local stealer = meta.player_id and game.players[meta.player_id] or game:current_player()
     local target = meta.target_id and game.players[meta.target_id]
     if stealer and target and idx then
       local res = Steal.steal_item_at_index(game, stealer, target, idx)
@@ -148,8 +147,7 @@ function ItemChoiceHandler.build(helpers)
       return { stay = false }
     end
     local meta = choice.meta or {}
-    local stealer_id = meta.player_id or meta.stealer_id
-    local stealer = stealer_id and game.players[stealer_id] or game:current_player()
+    local stealer = meta.player_id and game.players[meta.player_id] or game:current_player()
     local target = meta.target_id and game.players[meta.target_id]
     if not stealer or not target or target.eliminated then
       clear_choice(game)
@@ -157,7 +155,7 @@ function ItemChoiceHandler.build(helpers)
     end
 
     if action and action.option_id == "use" then
-      if target.inventory:count() <= 0 then
+      if Inventory.count(target) <= 0 then
         if Inventory.consume(stealer, ITEM_IDS.steal) then
           local res = Steal.steal_item_at_index(game, stealer, target, 1)
           if res and res.intent then
@@ -167,7 +165,7 @@ function ItemChoiceHandler.build(helpers)
         clear_choice(game)
         return { stay = false }
       end
-      if target.inventory:count() <= 1 then
+      if Inventory.count(target) <= 1 then
         local res = Steal.steal_item_at_index(game, stealer, target, 1)
         if res and res.intent then
           IntentDispatcher.dispatch(game, res.intent)
@@ -199,8 +197,7 @@ function ItemChoiceHandler.build(helpers)
     end
     local target_id = Convert.to_number(action.option_id)
     local meta = choice.meta or {}
-    local player_id = meta.player_id or meta.user_id
-    local player = player_id and game.players[player_id] or game:current_player()
+    local player = meta.player_id and game.players[meta.player_id] or game:current_player()
     local item_id = meta.item_id
     if player and target_id and item_id then
       local res = use_item(game, player, item_id, { target_id = target_id })

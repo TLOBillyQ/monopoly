@@ -195,12 +195,6 @@ local function choice_owner(game, choice)
   if meta.player_id and game.players[meta.player_id] then
     return game.players[meta.player_id]
   end
-  if meta.user_id and game.players[meta.user_id] then
-    return game.players[meta.user_id]
-  end
-  if meta.stealer_id and game.players[meta.stealer_id] then
-    return game.players[meta.stealer_id]
-  end
   return game:current_player()
 end
 

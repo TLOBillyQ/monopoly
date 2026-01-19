@@ -49,7 +49,7 @@ local function entry_currency(entry)
 end
 
 local function can_buy_entry(player, entry)
-  if entry.kind == "item" and player.inventory and player.inventory:is_full() then
+  if entry.kind == "item" and Inventory.is_full(player) then
     return false
   end
   local price = entry_price(entry)
@@ -119,7 +119,7 @@ function MarketService.buy_with_opts(game, player, product_id, opts)
   end
 
   if entry.kind == "item" then
-    if player.inventory and player.inventory:is_full() then
+    if Inventory.is_full(player) then
       return { ok = false, intent = { kind = "push_popup", payload = { title = "黑市", body = player.name .. " 卡槽已满" } } }
     end
     player:deduct_balance(currency, price)

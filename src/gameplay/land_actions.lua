@@ -10,6 +10,16 @@ local gameplay_constants = require("src.gameplay.constants")
 local tile_state = Tile.get_state
 local ITEM_IDS = gameplay_constants.item_ids
 
+local function eliminate_if_bankrupt(game, player)
+  if not player or player.cash > 0 then
+    return
+  end
+  local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
+  if bankruptcy and bankruptcy.eliminate then
+    bankruptcy.eliminate(game, player)
+  end
+end
+
 function LandActions.safe_tile_state(game, tile)
   local ok, st = pcall(tile_state, game, tile)
   if not ok or type(st) ~= "table" then
@@ -159,21 +169,13 @@ function LandActions.execute_pay_rent(game, player_id, tile_id)
     player:deduct_cash(rent)
     owner:add_cash(rent)
     logger.event(player.name .. " 向 " .. owner.name .. " 支付租金 " .. rent)
-    if player.cash <= 0 then
-      local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
-      if bankruptcy and bankruptcy.eliminate then
-        bankruptcy.eliminate(game, player)
-      end
-    end
+    eliminate_if_bankrupt(game, player)
   else
     local paid = player.cash
     owner:add_cash(paid)
     player:set_cash(0)
     logger.event(player.name .. " 资金不足，支付(".. owner.name ..") " .. paid .. " 后破产")
-    local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
-    if bankruptcy and bankruptcy.eliminate then
-      bankruptcy.eliminate(game, player)
-    end
+    eliminate_if_bankrupt(game, player)
   end
   return true
 end
@@ -197,12 +199,7 @@ function LandActions.execute_pay_tax(game, player_id)
   player:deduct_cash(fee)
   logger.event(player.name .. " 在税务局支付税金 " .. fee)
 
-  if player.cash <= 0 then
-    local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
-    if bankruptcy and bankruptcy.eliminate then
-      bankruptcy.eliminate(game, player)
-    end
-  end
+  eliminate_if_bankrupt(game, player)
   return true
 end
 

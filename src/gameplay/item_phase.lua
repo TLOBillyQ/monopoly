@@ -36,7 +36,7 @@ end
 local function build_options(player, phase)
   local options = {}
   local body_lines = {}
-  for _, it in ipairs(player.inventory.items or {}) do
+  for _, it in ipairs(Inventory.items(player)) do
     local cfg = cfg_by_id[it.id]
     local timing = cfg and cfg.timing or "manual"
     if Strategy.timing_allowed(phase, timing, false) then
@@ -48,7 +48,7 @@ local function build_options(player, phase)
       table.insert(body_lines, line)
     end
   end
-  if player.inventory:count() > 0 then
+  if Inventory.count(player) > 0 then
     table.insert(options, { id = "discard_item", label = "丢弃道具" })
     table.insert(body_lines, "丢弃道具：从背包丢弃一张")
   end

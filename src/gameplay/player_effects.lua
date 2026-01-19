@@ -3,28 +3,31 @@ local logger = require("src.util.logger")
 
 local Effects = {}
 
+local function get_bankruptcy(game)
+  local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
+  if not bankruptcy then
+    logger.warn("缺少 BankruptcyService，无法淘汰破产玩家")
+    return nil
+  end
+  return bankruptcy
+end
+
 function Effects:apply_hospital_effects(game)
   game:set_player_status(self, "stay_turns", constants.hospital_stay_turns)
 
   local fee = constants.hospital_fee
   if self.cash < fee then
     logger.event(self.name .. " 资金不足，无法支付医药费 " .. fee)
-    local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
-    if not bankruptcy then
-      logger.warn("缺少 BankruptcyService，无法淘汰破产玩家")
-      return
-    end
+    local bankruptcy = get_bankruptcy(game)
+    if not bankruptcy then return end
     bankruptcy.eliminate(game, self)
     return
   end
   self:deduct_cash(fee)
   logger.event(self.name .. " 支付医药费 " .. fee)
   if self.cash <= 0 then
-    local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
-    if not bankruptcy then
-      logger.warn("缺少 BankruptcyService，无法淘汰破产玩家")
-      return
-    end
+    local bankruptcy = get_bankruptcy(game)
+    if not bankruptcy then return end
     bankruptcy.eliminate(game, self)
     return
   end

@@ -36,7 +36,6 @@ local function build_optional_choice(optional, player, tile, game_ctx, opts)
     reason = opts.optional_reason or "optional_effect",
     resume_state = opts.resume_state,
     resume_args = opts.resume_args,
-    intent = { kind = "need_choice", choice_spec = choice_spec },
   }
 
   IntentDispatcher.dispatch(game_ctx and game_ctx.game, { kind = "need_choice", choice_spec = choice_spec })
@@ -75,6 +74,7 @@ function Pipeline.run(effect_defs, player, tile, game_ctx, opts)
     if type(out) == "table" and out.waiting then
       out.resume_state = out.resume_state or opts.resume_state
       out.resume_args = out.resume_args or opts.resume_args
+      out.intent = nil
       return out
     end
 

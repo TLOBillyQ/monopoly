@@ -193,11 +193,11 @@ end
 handlers.discard_items = function(_, player, card)
   local to_drop = card.count
   if to_drop == 0 then
-    to_drop = player.inventory:count()
+    to_drop = Inventory.count(player)
   end
   local dropped_names = {}
   for _ = 1, to_drop do
-    if player.inventory:count() == 0 then
+    if Inventory.count(player) == 0 then
       break
     end
     local item = Inventory.remove_by_index(player, 1)

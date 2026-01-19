@@ -31,13 +31,11 @@ local function build_turn_log_line(game, turn_count)
     table.insert(status_parts, "deity=" .. tostring(deity.type) .. ":" .. tostring(deity.remaining))
   end
   local items = {}
-  if player.inventory and player.inventory.items then
-    for _, it in ipairs(player.inventory.items) do
-      local id = it and it.id or it
-      if id ~= nil then
-        local name = Inventory.item_name(id)
-        table.insert(items, name .. "(" .. tostring(id) .. ")")
-      end
+  for _, it in ipairs(Inventory.items(player)) do
+    local id = it and it.id or it
+    if id ~= nil then
+      local name = Inventory.item_name(id)
+      table.insert(items, name .. "(" .. tostring(id) .. ")")
     end
   end
   line = line

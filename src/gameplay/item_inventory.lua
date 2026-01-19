@@ -19,6 +19,34 @@ function Inventory.item_name(item_id)
   return (cfg and cfg.name) or tostring(item_id)
 end
 
+function Inventory.items(player)
+  if not player or not player.inventory then
+    return {}
+  end
+  return player.inventory.items or {}
+end
+
+function Inventory.count(player)
+  if not player or not player.inventory then
+    return 0
+  end
+  return player.inventory:count()
+end
+
+function Inventory.is_full(player)
+  if not player or not player.inventory then
+    return false
+  end
+  return player.inventory:is_full()
+end
+
+function Inventory.add(player, item)
+  if not player or not player.inventory or not item then
+    return false
+  end
+  return player.inventory:add(item)
+end
+
 function Inventory.find_index(player, item_id)
   if not player or not player.inventory then
     return nil
@@ -65,12 +93,14 @@ local function notify_full(game, player, item_id)
 end
 
 function Inventory.give(player, item_id, context)
-  if player.inventory:is_full() then
+  if Inventory.is_full(player) then
     logger.warn(player.name .. " 的背包已满，无法获得道具 " .. item_id)
     notify_full(context and context.game, player, item_id)
     return false
   end
-  player.inventory:add({ id = item_id })
+  if not Inventory.add(player, { id = item_id }) then
+    return false
+  end
   logger.event(player.name .. " 获得道具 " .. Inventory.item_name(item_id))
   return true
 end
