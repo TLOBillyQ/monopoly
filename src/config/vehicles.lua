@@ -1,4 +1,4 @@
-return {
+local vehicles = {
   { id = 4001, name = "滑板", tier = 1, dice_count = 2, indestructible = false },
   { id = 4002, name = "三轮车", tier = 1, dice_count = 2, indestructible = false },
   { id = 4003, name = "电动车", tier = 1, dice_count = 2, indestructible = false },
@@ -12,3 +12,5 @@ return {
   { id = 4011, name = "四翼无人机", tier = 4, dice_count = 3, indestructible = true },
   { id = 4012, name = "外星飞碟", tier = 4, dice_count = 3, indestructible = true },
 }
+
+return vehicles

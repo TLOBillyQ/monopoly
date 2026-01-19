@@ -1,4 +1,4 @@
-return {
+local tiles = {
   { id = 1, name = "福州路", type = "land", row = 9, col = 8, build_row = 8, build_col = 8, price = 1000, upgrade_costs = { 2000, 4000, 8000 }, rents = { 500, 1000, 2000, 4000 } },
   { id = 2, name = "台北路", type = "land", row = 9, col = 7, build_row = 8, build_col = 7, price = 1050, upgrade_costs = { 2100, 4200, 8400 }, rents = { 525, 1050, 2100, 4200 } },
   { id = 3, name = "海口路", type = "land", row = 9, col = 6, build_row = 8, build_col = 6, price = 1100, upgrade_costs = { 2200, 4400, 8800 }, rents = { 550, 1100, 2200, 4400 } },
@@ -45,3 +45,5 @@ return {
   { id = 44, name = "道具卡", type = "item", row = 1, col = 5, price = 0, upgrade_costs = { 0, 0, 0 }, rents = { 0, 0, 0, 0 } },
   { id = 45, name = "道具卡", type = "item", row = 9, col = 5, price = 0, upgrade_costs = { 0, 0, 0 }, rents = { 0, 0, 0, 0 } },
 }
+
+return tiles

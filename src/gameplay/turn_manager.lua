@@ -1,6 +1,7 @@
 local Flow = require("src.core.flow")
 local Logger = require("src.util.logger")
 local Agent = require("src.gameplay.agent")
+local Inventory = require("src.gameplay.item_inventory")
 
 local TurnManager = {}
 TurnManager.__index = TurnManager
@@ -82,7 +83,40 @@ function TurnManager:_build_flow()
     states[name] = function(args)
       if name == "start" then
         local turn_count = self.game.store:get({ "turn", "turn_count" }) or 0
-        Logger.info("回合" .. (turn_count + 1) )
+        local line = "回合" .. (turn_count + 1) .. ": "
+        local player = self.game and self.game.current_player and self.game:current_player()
+        if player then
+          local status = player.status or {}
+          local status_parts = {}
+          local stay_turns = status.stay_turns or 0
+          if stay_turns ~= 0 then
+            table.insert(status_parts, "stay_turns=" .. tostring(stay_turns))
+          end
+          local deity = status.deity
+          if deity then
+            table.insert(status_parts, "deity=" .. tostring(deity.type) .. ":" .. tostring(deity.remaining))
+          end
+          local items = {}
+          if player.inventory and player.inventory.items then
+            for _, it in ipairs(player.inventory.items) do
+              local id = it and it.id or it
+              if id ~= nil then
+                local name = Inventory.item_name(id)
+                table.insert(items, name .. "(" .. tostring(id) .. ")")
+              end
+            end
+          end
+          line = line
+            .. tostring(player.name)
+            .. " 金币=" .. tostring(player.cash or 0)
+          if #status_parts > 0 then
+            line = line .. " 状态: " .. table.concat(status_parts, ", ")
+          end
+          if #items > 0 then
+            line = line .. " 背包: " .. table.concat(items, ", ")
+          end
+        end
+        Logger.info(line)
       end
       self.game.store:set({ "turn", "phase" }, name)
       return fn(self, args)

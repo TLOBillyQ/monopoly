@@ -1,8 +1,8 @@
-return {
+local items = {
   { id = 2001, name = "免费卡", tier = 1, shop_currency = "广告", shop_price = 1, weight = 1000, angel_immune = false, timing = "post_action", usage = "确认使用，支付环节改为出示免费卡", description = "当你停留在其他玩家的地块上时，你可以选择使用免费卡，免交本次的租金。" },
   { id = 2002, name = "遥控骰子卡", tier = 1, shop_currency = "金币", shop_price = 1000, weight = 1000, angel_immune = false, timing = "pre_action", usage = "投骰子前点击骰子依次改变骰子上的点数，点击确认后投出这些点数", description = "在你行动前可以使用遥控骰子卡，可以遥控骰子投出的点数。" },
   { id = 2003, name = "骰子加倍卡", tier = 1, shop_currency = "金币", shop_price = 1000, weight = 1000, angel_immune = false, timing = "pre_move", usage = "确认使用，增加N个同点数的骰子，共同计算行动步数。", description = "在投出骰子后你可以使用加倍骰子卡，可以使当前投出的点数加倍。" },
-  { id = 2004, name = "路障卡", tier = 1, shop_currency = "金币", shop_price = 1000, weight = 1000, angel_immune = true, timing = "manual", usage = "使用后视角拉高，可放置格子高亮闪烁，其他压暗，点击任意一格放下路障，恢复视角", description = "使用路障卡，在你前后3格内放置一个路障，任何玩家经过此地时强制停留在此1个回合。" },
+  { id = 2004, name = "路障卡", tier = 1, shop_currency = "金币", shop_price = 1000, weight = 1000, angel_immune = true, timing = "manual", usage = "使用后视角拉高，可放置格子高亮闪烁，其他压暗，点击任意一格放下路障，恢复视角", description = "使用路障卡，在你前后3格内放置一个路障，任何玩家经过此地时强制停留。" },
   { id = 2005, name = "地雷卡", tier = 1, shop_currency = "金币", shop_price = 1000, weight = 1000, angel_immune = true, timing = "manual", usage = "使用后在脚下安装一个地雷", description = "使用地雷卡，在你脚下放置地雷，任何玩家经过此地时触发地雷，摧毁该玩家的座驾并让他强制住院。" },
   { id = 2006, name = "清障卡", tier = 1, shop_currency = "金币", shop_price = 1000, weight = 1000, angel_immune = false, timing = "pre_action", usage = "使用后放出一个机器人自动前进，清除12格以内路障地雷等障碍物。", description = "在你行动前可以使用清障卡，放出机器人清除前方障碍物。" },
   { id = 2007, name = "偷窃卡", tier = 2, shop_currency = "乐园币", shop_price = 10, weight = 500, angel_immune = true, timing = "pass_player", usage = "使用后压暗主场景，屏幕中间展示目标玩家道具栏，选择一个道具。", description = "当你路过其他玩家时，你可以选择使用偷窃卡，获得他的一个道具。" },
@@ -19,3 +19,5 @@ return {
   { id = 2018, name = "穷神卡", tier = 3, shop_currency = "金豆", shop_price = 5, weight = 100, angel_immune = false, timing = "manual", usage = "使用后压暗主场景，屏幕中间展示其他玩家形象选择一个玩家确认后，穷神飘在该玩家身后。", description = "使用穷神卡，选择一个其他玩家，令其穷神附身5回合，支付的租金和罚金翻倍。" },
   { id = 2019, name = "天使卡", tier = 3, shop_currency = "金豆", shop_price = 5, weight = 100, angel_immune = false, timing = "manual", usage = "使用后天使飘在自身背后，5回合结束后天使消失", description = "使用财神卡，天使附身5回合，免受负面卡牌效果影响。" },
 }
+
+return items

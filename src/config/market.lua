@@ -1,4 +1,4 @@
-return {
+local market = {
   { order = 1, product_id = 2001, name = "免费卡", page = "道具商店", kind = "item", currency = "广告", price = 1, limit = 999 },
   { order = 2, product_id = 2003, name = "骰子加倍卡", page = "道具商店", kind = "item", currency = "金币", price = 5000, limit = 999 },
   { order = 3, product_id = 2005, name = "地雷卡", page = "道具商店", kind = "item", currency = "金币", price = 5000, limit = 999 },
@@ -31,3 +31,5 @@ return {
   { order = 30, product_id = 4011, name = "四翼无人机", page = "座驾商店", kind = "vehicle", currency = "金豆", price = 1980, limit = 1 },
   { order = 31, product_id = 4012, name = "外星飞碟", page = "座驾商店", kind = "vehicle", currency = "金豆", price = 1980, limit = 1 },
 }
+
+return market

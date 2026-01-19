@@ -1,4 +1,4 @@
-return {
+local constants = {
   starting_cash = 100000,
   starting_jindou = 0,
   starting_leyuanbi = 0,
@@ -13,7 +13,9 @@ return {
   tax_rate = 0.5,
   inventory_slots = 5,
   deity_duration_turns = 5,
-  unlimited_currency = "广告",
   max_tile_occupants = 4,
   item_phase_queue = { "pre_action", "pre_move", "post_action" },
+  unlimited_currency = "广告",
 }
+
+return constants

@@ -1,10 +1,10 @@
-return {
+local chance_cards = {
   { id = 3001, description = "你出售股票，获利10000金币。", weight = 300, negative = false, target = "self", effect = "add_cash", amount = 10000 },
   { id = 3002, description = "你抽到二等奖，获得奖金1000金币。", weight = 400, negative = false, target = "self", effect = "add_cash", amount = 1000 },
   { id = 3003, description = "你典卖家当，获利2000金币。", weight = 400, negative = false, target = "self", effect = "add_cash", amount = 2000 },
   { id = 3004, description = "你见义勇为，获得奖金5000金币。", weight = 400, negative = false, target = "self", effect = "add_cash", amount = 5000 },
   { id = 3005, description = "你投资失败，损失10000金币。", weight = 400, negative = true, target = "self", effect = "pay_cash", amount = 10000 },
-  { id = 3006, description = "你去洗浴中心，支付1000金币。", weight = 400, negative = true, target = "self", effect = "pay_cash", amount = 1000 },
+  { id = 3006, description = "你去游乐场，支付1000金币。", weight = 400, negative = true, target = "self", effect = "pay_cash", amount = 1000 },
   { id = 3007, description = "你捐助失学儿童，捐出2000金币。", weight = 400, negative = true, target = "self", effect = "pay_cash", amount = 2000 },
   { id = 3008, description = "你扶老人去医院，垫付5000金币。", weight = 400, negative = true, target = "self", effect = "pay_cash", amount = 5000 },
   { id = 3009, description = "口罩封城，每人领取3000金币救济金。", weight = 400, negative = false, target = "all", effect = "add_cash", amount = 3000 },
@@ -37,3 +37,5 @@ return {
   { id = 3036, description = "姐姐爱你，送给你一辆哈雷摩托", weight = 100, negative = false, target = "self", effect = "set_vehicle", vehicle_id = 4005 },
   { id = 3037, description = "干爹爱你，送给你一辆法拉利", weight = 100, negative = false, target = "self", effect = "set_vehicle", vehicle_id = 4006 },
 }
+
+return chance_cards
