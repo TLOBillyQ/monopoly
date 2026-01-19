@@ -34,15 +34,15 @@ end
 
 if all_ai_mode then
 	-- 全AI模式：无UI运行
-	print("=== 全AI模式启动 ===")
+	print("=== All-AI Mode Start ===")
 	
 	-- 初始化日志系统
 	local logger = require("src.util.logger")
 	logger.clear()
 	
 	local game = create_game()
-	print("玩家配置: " .. #game.players .. " 个AI玩家")
-	logger.info("全AI模式启动，玩家数:", #game.players)
+	print("Players: " .. #game.players .. " AI players")
+	logger.info("All-AI Mode Start, player count:", #game.players)
 	
 	-- 自动运行直到游戏结束
 	local steps = 0
@@ -56,27 +56,27 @@ if all_ai_mode then
 		local alive = game:alive_players()
 		if #alive < prev_alive then
 			local turn_count = game.store and game.store:get({ "turn", "turn_count" }) or 0
-			print("游戏回合: " .. turn_count .. ", 存活玩家: " .. #alive .. " (步骤: " .. steps .. ")")
+			print("Turn: " .. turn_count .. ", Alive: " .. #alive .. " (Steps: " .. steps .. ")")
 			prev_alive = #alive
 		end
 	end
 	
 	-- 输出结果
-	print("\n=== 游戏结束 ===")
+	print("\n=== Game Over ===")
 	local final_turn = game.store and game.store:get({ "turn", "turn_count" }) or 0
-	print("游戏回合数: " .. final_turn)
-	print("执行步骤数: " .. steps)
+	print("Turn count: " .. final_turn)
+	print("Steps executed: " .. steps)
 	if game.winner_names then
-		print("胜者: " .. game.winner_names)
+		print("Winner: " .. game.winner_names)
 	else
-		print("无胜者")
+		print("No winner")
 	end
 	
 	-- 显示所有玩家最终状态
-	print("\n玩家状态:")
+	print("\nPlayer status:")
 	for _, p in ipairs(game.players) do
-		local status = p.eliminated and "已淘汰" or "存活"
-		print("  " .. p.name .. ": " .. status .. ", 现金: " .. (p.cash or 0))
+		local status = p.eliminated and "Eliminated" or "Alive"
+		print("  " .. p.name .. ": " .. status .. ", Cash: " .. (p.cash or 0))
 	end
 else
 	-- UI 适配层：LoveLayer 负责渲染、输入、动画

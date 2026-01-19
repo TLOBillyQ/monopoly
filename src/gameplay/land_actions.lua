@@ -177,7 +177,7 @@ function LandActions.execute_pay_rent(game, player_id, tile_id)
     local paid = player.cash
     owner:add_cash(paid)
     player:set_cash(0)
-    logger.event(player.name .. " 资金不足，支付剩余 " .. paid .. " 后破产")
+    logger.event(player.name .. " 资金不足，支付(".. owner.name ..") " .. paid .. " 后破产")
     local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
     if bankruptcy and bankruptcy.eliminate then
       bankruptcy.eliminate(game, player)

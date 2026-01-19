@@ -8,6 +8,7 @@ function Effects:apply_hospital_effects(game)
 
   local fee = constants.hospital_fee
   if self.cash < fee then
+    logger.event(self.name .. " 资金不足，无法支付医药费 " .. fee)
     local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
     if not bankruptcy then
       logger.warn("缺少 BankruptcyService，无法淘汰破产玩家")
