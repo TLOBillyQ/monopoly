@@ -1,5 +1,5 @@
 -- Quick regression checks (run with: lua tests/regression.lua)
-package.path = "src/?.lua;src/?/init.lua;src/gameplay/?.lua;src/gameplay/?/init.lua;?.lua;" .. package.path
+require("bootstrap")({ "src/gameplay/?.lua", "src/gameplay/?/init.lua" })
 
 local App = require("src.game")
 local MovementService = require("src.gameplay.movement_service")
@@ -16,11 +16,8 @@ local Effect = require("src.gameplay.effect")
 local ChoiceService = require("src.gameplay.choice_service")
 local BoardUtils = require("src.gameplay.item_board_utils")
 
-local function assert_eq(a, b, msg)
-  if a ~= b then
-    error((msg or "assert failed") .. " | expected=" .. tostring(b) .. " got=" .. tostring(a))
-  end
-end
+local TestUtils = require("tests.test_utils")
+local assert_eq = TestUtils.assert_eq
 
 local function visited_tile_ids(board, visited)
   local list = {}

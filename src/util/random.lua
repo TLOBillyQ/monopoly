@@ -9,12 +9,8 @@ function random.weighted_choice(list, weight_key, rng)
   if total <= 0 then
     return list[1]
   end
-  local pick
-  if rng and rng.next_float then
-    pick = rng:next_float() * total
-  else
-    pick = math.random() * total
-  end
+  assert(rng and rng.next_float, "random.weighted_choice requires rng with next_float")
+  local pick = rng:next_float() * total
   for _, item in ipairs(list) do
     pick = pick - (item[weight_key] or 0)
     if pick <= 0 then

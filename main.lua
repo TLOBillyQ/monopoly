@@ -1,7 +1,7 @@
 -- 蛋仔大富翁 - LÖVE2D 入口
 -- 结构：Game（规则层）+ LoveLayer（UI 适配层）
 
-package.path = "src/?.lua;src/?/init.lua;?.lua;" .. package.path
+require("bootstrap")()
 
 -- 规则层：Game 负责游戏逻辑，装配由 Bootstrap 完成
 local Game = require("src.game")

@@ -1,18 +1,15 @@
 -- 流程控制与恢复机制测试
 -- 测试目标：验证状态机恢复、中断处理、嵌套等待等复杂场景
 
-package.path = "src/?.lua;src/?/init.lua;src/gameplay/?.lua;?.lua;" .. package.path
+require("bootstrap")({ "src/gameplay/?.lua" })
 
 local Flow = require("src.core.flow")
 local Game = require("src.game")
 local MovementService = require("src.gameplay.movement_service")
 local ChoiceService = require("src.gameplay.choice_service")
 
-local function assert_eq(a, b, msg)
-  if a ~= b then
-    error((msg or "assert failed") .. " | expected=" .. tostring(b) .. " got=" .. tostring(a))
-  end
-end
+local TestUtils = require("tests.test_utils")
+local assert_eq = TestUtils.assert_eq
 
 local function new_game()
   return Game.new({ players = { "P1", "P2" }, ai = { [2] = true }, auto_all = false, seed = 42 })
