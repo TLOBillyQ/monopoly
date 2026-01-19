@@ -30,7 +30,7 @@ Landing.executors = {
   },
   start_reward = {
     can_apply = function(ctx)
-      return ctx and ctx.tile and ctx.tile.type == "start" and ctx.on_landing
+      return ctx.tile and ctx.tile.type == "start" and ctx.on_landing
     end,
     apply = function(ctx)
       local player = ctx.player
@@ -44,25 +44,25 @@ Landing.executors = {
   },
   item_draw_and_give = {
     can_apply = function(ctx)
-      return ctx and ctx.game and ctx.player and ctx.tile and ctx.tile.type == "item"
+      return ctx.game and ctx.player and ctx.tile and ctx.tile.type == "item"
     end,
     apply = function(ctx)
-      return Inventory.draw_and_give(ctx.player, ctx.game and ctx.game.rng, { game = ctx.game })
+      return Inventory.draw_and_give(ctx.player, ctx.game.rng, { game = ctx.game })
     end,
   },
   chance_draw_and_resolve = {
     can_apply = function(ctx)
-      return ctx and ctx.game and ctx.player and ctx.tile and ctx.tile.type == "chance"
+      return ctx.game and ctx.player and ctx.tile and ctx.tile.type == "chance"
     end,
     apply = function(ctx)
-      local card = random.weighted_choice(chance_cfg, "weight", ctx.game and ctx.game.rng)
+      local card = random.weighted_choice(chance_cfg, "weight", ctx.game.rng)
       logger.event(ctx.player.name .. " 抽到机会卡 " .. card.description)
       return chance_effects.resolve(ctx.game, ctx.player, card, ctx.move_result)
     end,
   },
   hospital = {
     can_apply = function(ctx)
-      return ctx and ctx.tile and ctx.tile.type == "hospital"
+      return ctx.tile and ctx.tile.type == "hospital"
     end,
     apply = function(ctx)
       ctx.player:apply_hospital_effects(ctx.game)
@@ -70,7 +70,7 @@ Landing.executors = {
   },
   mountain = {
     can_apply = function(ctx)
-      return ctx and ctx.tile and ctx.tile.type == "mountain"
+      return ctx.tile and ctx.tile.type == "mountain"
     end,
     apply = function(ctx)
       ctx.player:apply_mountain_effects(ctx.game)
@@ -78,12 +78,12 @@ Landing.executors = {
   },
   market = {
     can_apply = function(ctx)
-      return ctx and ctx.tile and ctx.tile.type == "market"
+      return ctx.tile and ctx.tile.type == "market"
     end,
     apply = function(ctx)
       local game = ctx.game
       local player = ctx.player
-      local market = game and game.get_service and game:get_service("market", ctx)
+      local market = game:get_service("market", ctx)
 
       local spec, intent = market.build_choice_spec(player)
       if intent then return { intent = intent } end
@@ -95,7 +95,7 @@ Landing.executors = {
   mine = {
     can_apply = function(ctx)
       local position = ctx.tile and ctx.tile.id
-      local board = ctx.game and ctx.game.board
+      local board = ctx.game.board
       return board and position and board:has_mine(position)
     end,
     apply = function(ctx)

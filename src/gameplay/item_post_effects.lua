@@ -54,7 +54,7 @@ local TARGET_EFFECTS = {
       target:deduct_cash(fee)
       logger.event(user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. fee .. " 税金")
       if target.cash <= 0 then
-        local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
+        local bankruptcy = game:get_service("bankruptcy")
         bankruptcy.eliminate(game, target)
       end
       return true
@@ -247,7 +247,7 @@ end
 
 function ItemEffects.apply_post(game, player, item_id, context)
   context = context or {}
-  context.services = context.services or (game and game.get_services and game:get_services())
+  context.services = context.services or game:get_services()
   local cfg = POST_EFFECTS[item_id]
   if not cfg then
     return nil

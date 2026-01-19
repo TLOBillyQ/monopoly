@@ -113,7 +113,7 @@ local function decide_choice_action(game, choice, pending_action)
 end
 
 local function resolve_choice(game, choice, action)
-  local service = game and game.get_service and game:get_service("choice")
+  local service = game:get_service("choice")
   return service.resolve(game, choice, action) or {}
 end
 

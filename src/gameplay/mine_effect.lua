@@ -3,8 +3,8 @@ local logger = require("src.util.logger")
 local MineEffect = {}
 
 function MineEffect.apply(game, player, position)
-  local board = game and game.board
-  if not board or not player or not position then
+  local board = game.board
+  if not player or not position then
     return { detonated = false }
   end
 

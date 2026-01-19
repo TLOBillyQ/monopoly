@@ -90,7 +90,7 @@ function ItemChoiceHandler.build(helpers)
         Inventory.consume(player, meta.item_id)
       end
       local res = Demolish.apply(game, player, idx, {
-        services = game and game.get_services and game:get_services(),
+        services = game:get_services(),
         injure = meta.injure,
         title = meta.title
       })
