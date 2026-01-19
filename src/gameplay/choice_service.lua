@@ -17,7 +17,7 @@ end
 
 local function use_item(game, player, item_id, context)
   context = context or {}
-  context.services = context.services or (game and game.get_services and game:get_services())
+  context.services = context.services or game:get_services()
   return deps.executor.use_item(game, player, item_id, context, {
     inventory = deps.inventory,
     strategy = deps.strategy,

@@ -247,7 +247,7 @@ end
 
 function ItemEffects.apply_post(game, player, item_id, context)
   context = context or {}
-  context.services = context.services or (game and game.get_services and game:get_services())
+  context.services = context.services or game:get_services()
   local cfg = POST_EFFECTS[item_id]
   if not cfg then
     return nil
