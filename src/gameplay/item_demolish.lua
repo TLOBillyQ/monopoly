@@ -5,6 +5,8 @@ local constants = require("src.config.constants")
 
 local Demolish = {}
 
+local list_unpack = table.unpack or unpack
+
 local function clear_overlays(game, idx)
   if game and game.board and game.board.clear_all then
     game.board:clear_all(idx)
@@ -27,7 +29,7 @@ local function send_players_to_hospital(game, idx)
   local hospital_index = game.board:find_first_by_type("hospital")
   
   local count = 0
-  local snapshot = { table.unpack(occupants) }
+  local snapshot = { list_unpack(occupants) }
   for _, pid in ipairs(snapshot) do
     local target = game.players[pid]
     if target then

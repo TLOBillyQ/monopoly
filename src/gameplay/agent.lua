@@ -248,6 +248,30 @@ function Agent.auto_action_for_choice(game, choice)
   end
 
   if choice.kind == "landing_optional_effect" or choice.kind == "land_optional_effect" then
+    local options = choice.options or {}
+    local target = nil
+    for _, opt in ipairs(options) do
+      local id = opt.id or opt
+      if id == "buy_land" then
+        target = id
+        break
+      end
+    end
+    if not target then
+      for _, opt in ipairs(options) do
+        local id = opt.id or opt
+        if id == "upgrade_land" then
+          target = id
+          break
+        end
+      end
+    end
+    if not target then
+      target = first_option_id(options)
+    end
+    if target then
+      return { type = "choice_select", choice_id = choice.id, option_id = target }
+    end
     return { type = "choice_cancel", choice_id = choice.id }
   end
 

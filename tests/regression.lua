@@ -323,7 +323,7 @@ local function test_movement_examples_from_issue()
   assert(#r3.visited == 12, "example3 visited steps")
 end
 
-local function test_ai_cancels_land_purchases()
+local function test_ai_picks_land_purchase()
   local Agent = require("src.gameplay.agent")
   local g = new_game()
   local ai_player = g.players[2]
@@ -347,12 +347,13 @@ local function test_ai_cancels_land_purchases()
   
   local action = Agent.auto_action_for_choice(g, pending)
   assert(action, "AI should return an action")
-  assert(action.type == "choice_cancel", "AI should cancel land purchase")
+  assert(action.type == "choice_select", "AI should select land purchase")
+  assert(action.option_id == "buy_land", "AI should pick buy_land")
   
   local before_cash = ai_player.cash
   ChoiceService.resolve(g, pending, action)
-  assert(ai_player.cash == before_cash, "AI cash should not change after canceling")
-  assert(tile_state(g, tile).owner_id == nil, "land should not be purchased")
+  assert(ai_player.cash == before_cash - tile.price, "AI cash should decrease by land price")
+  assert(tile_state(g, tile).owner_id == ai_player.id, "land should be purchased")
 end
 
 local function test_mandatory_payment_causes_bankruptcy()

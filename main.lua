@@ -6,8 +6,14 @@ package.path = "src/?.lua;src/?/init.lua;?.lua;" .. package.path
 -- 规则层：Game 负责游戏逻辑，装配由 Bootstrap 完成
 local Game = require("src.game")
 
--- 环境检测：支持 ALL_AI=1 环境变量启用全AI模式
-local all_ai_mode = os.getenv("ALL_AI") == "1"
+-- 环境检测：支持命令行参数启用全AI模式
+local all_ai_mode = false
+for _, v in ipairs(arg or {}) do
+	if v == "--all-ai" then
+		all_ai_mode = true
+		break
+	end
+end
 
 -- 游戏工厂：配置玩家和 AI
 local function create_game()
@@ -41,15 +47,17 @@ if all_ai_mode then
 	-- 自动运行直到游戏结束
 	local steps = 0
 	local max_steps = 10000  -- 安全上限
+	local prev_alive = #game:alive_players()
 	while not game.finished and steps < max_steps do
 		game:advance_turn()
 		steps = steps + 1
 		
-		-- 每10步输出一次进度
-		if steps % 10 == 0 then
+		-- 玩家破产时输出进度
+		local alive = game:alive_players()
+		if #alive < prev_alive then
 			local turn_count = game.store and game.store:get({ "turn", "turn_count" }) or 0
-			local alive = game:alive_players()
 			print("游戏回合: " .. turn_count .. ", 存活玩家: " .. #alive .. " (步骤: " .. steps .. ")")
+			prev_alive = #alive
 		end
 	end
 	

@@ -82,7 +82,14 @@ function MovementService.move(game, player, steps, opts)
   end
 
   local landing_tile = board:get_tile(current)
-  logger.event(player.name .. " 从 " .. (start_tile and start_tile.name or tostring(player.position)) .. " 移动到 " .. (landing_tile and landing_tile.name or tostring(current)))
+  local function tile_label(tile, fallback_index)
+    local name = (tile and tile.name) or tostring(fallback_index)
+    if tile and tile.row and tile.col then
+      return name .. "（" .. tile.row .. "，" .. tile.col .. "）"
+    end
+    return name
+  end
+  logger.event(player.name .. " 从 " .. tile_label(start_tile, player.position) .. " 移动到 " .. tile_label(landing_tile, current))
 
   if pass_start > 0 then
     local bonus = pass_start * constants.pass_start_bonus

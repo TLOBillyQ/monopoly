@@ -26,7 +26,7 @@ local function decide_choice_action(game, choice, pending_action)
     and game.ui_port
     and game.ui_port.ui
     and game.ui_port.ui.auto_play
-  if game.ui_port == nil or auto_play then
+  if game.ui_port == nil then
     local first = choice.options and choice.options[1]
     if first then
       return { type = "choice_select", choice_id = choice.id, option_id = first.id or first }
@@ -81,9 +81,8 @@ function TurnManager:_build_flow()
   for name, fn in pairs(self.phases) do
     states[name] = function(args)
       if name == "start" then
-        local p_idx = self.game.store:get({ "turn", "current_player_index" })
         local turn_count = self.game.store:get({ "turn", "turn_count" }) or 0
-        Logger.info("回合: " .. (turn_count + 1) .. " [Player " .. tostring(p_idx) .. "]")
+        Logger.info("回合" .. (turn_count + 1) )
       end
       self.game.store:set({ "turn", "phase" }, name)
       return fn(self, args)
