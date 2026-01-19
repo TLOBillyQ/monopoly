@@ -45,30 +45,13 @@ end
 
 local function draw_overlays(ui, overlays, rect_x, rect_y, rect_w, rect_h, idx, tile)
   if overlays.roadblocks[idx] then
-    local cx = rect_x + rect_w * 0.5
-    local cy = rect_y + rect_h * 0.26
-    love.graphics.setColor(0, 0, 0, 0.55)
-    love.graphics.circle("fill", cx + 2, cy + 2, rect_w * 0.36)
-    love.graphics.setColor(ui.palette.overlay.roadblock.bg)
-    love.graphics.circle("fill", cx, cy, rect_w * 0.36)
+    love.graphics.setFont(ui.fonts.tiny)
     love.graphics.setColor(ui.palette.overlay.roadblock.fg)
-    love.graphics.setLineWidth(3)
-    love.graphics.circle("line", cx, cy, rect_w * 0.36)
-    love.graphics.line(cx - rect_w * 0.2, cy - rect_w * 0.22, cx + rect_w * 0.2, cy + rect_w * 0.22)
-    love.graphics.line(cx - rect_w * 0.2, cy + rect_w * 0.22, cx + rect_w * 0.2, cy - rect_w * 0.22)
-    love.graphics.setLineWidth(1)
+    love.graphics.printf("路障", rect_x, rect_y + rect_h * 0.08, rect_w, "center")
   elseif overlays.mines[idx] then
-    local cx = rect_x + rect_w * 0.5
-    local cy = rect_y + rect_h * 0.78
-    love.graphics.setColor(ui.palette.overlay.mine.bg)
-    love.graphics.circle("fill", cx, cy, 10)
-    love.graphics.setColor(ui.palette.overlay.mine.ring)
-    love.graphics.circle("line", cx, cy, 10)
+    love.graphics.setFont(ui.fonts.tiny)
     love.graphics.setColor(ui.palette.overlay.mine.fg)
-    love.graphics.setLineWidth(2)
-    love.graphics.line(cx - 6, cy - 6, cx + 6, cy + 6)
-    love.graphics.line(cx - 6, cy + 6, cx + 6, cy - 6)
-    love.graphics.setLineWidth(1)
+    love.graphics.printf("地雷", rect_x, rect_y + rect_h * 0.72, rect_w, "center")
   end
   draw_tile_coord(ui, tile, rect_x, rect_y)
 end
