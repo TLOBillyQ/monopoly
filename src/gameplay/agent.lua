@@ -2,8 +2,10 @@ local Tile = require("src.core.tile")
 local Roadblock = require("src.gameplay.item_roadblock")
 local Demolish = require("src.gameplay.item_demolish")
 local Pricing = require("src.gameplay.land_pricing")
+local gameplay_constants = require("src.gameplay.constants")
 
 local Agent = {}
+local ITEM_IDS = gameplay_constants.item_ids
 
 local tile_state = Tile.get_state
 
@@ -133,18 +135,18 @@ end
 local function pick_target_player(game, player, item_id, options)
   local allowed = allow_from_options(options)
 
-  if item_id == 2011 then
+  if item_id == ITEM_IDS.share_wealth then
     if not is_richest(game, player) then
       return richest_other(game, player, allowed)
     end
     return nil
   end
 
-  if item_id == 2012 or item_id == 2014 or item_id == 2018 then
+  if item_id == ITEM_IDS.exile or item_id == ITEM_IDS.tax or item_id == ITEM_IDS.poor then
     return richest_other(game, player, allowed)
   end
 
-  if item_id == 2015 then
+  if item_id == ITEM_IDS.invite_deity then
     local best = nil
     for _, p in ipairs(game.players) do
       if p.id ~= player.id and not p.eliminated and (not allowed or allowed[p.id]) then
@@ -159,7 +161,7 @@ local function pick_target_player(game, player, item_id, options)
     return best
   end
 
-  if item_id == 2016 then
+  if item_id == ITEM_IDS.send_poor then
     if not player:has_deity("poor") then
       return nil
     end

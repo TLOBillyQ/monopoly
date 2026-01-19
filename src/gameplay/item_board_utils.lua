@@ -4,6 +4,18 @@ local BoardUtils = {}
 
 local DIR_ORDER = { "up", "right", "down", "left" }
 
+function BoardUtils.queue_walk(queue, visit)
+  local q = queue or {}
+  local head = 1
+  while head <= #q do
+    local node = q[head]
+    head = head + 1
+    visit(node, function(next_node)
+      q[#q + 1] = next_node
+    end)
+  end
+end
+
 function BoardUtils.indices_in_range(board, start, distance)
   local map = board and board.map
   local neighbors = map and map.neighbors

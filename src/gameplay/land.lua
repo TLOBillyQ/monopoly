@@ -5,8 +5,11 @@ local BoardUtils = require("src.gameplay.item_board_utils")
 local Pricing = require("src.gameplay.land_pricing")
 local LandActions = require("src.gameplay.land_actions")
 local LandChoiceSpecs = require("src.gameplay.land_choice_specs")
+local Inventory = require("src.gameplay.item_inventory")
+local gameplay_constants = require("src.gameplay.constants")
 
 local tile_state = Tile.get_state
+local ITEM_IDS = gameplay_constants.item_ids
 
 local function can_buy(ctx)
   local tile = ctx.tile
@@ -106,7 +109,7 @@ local function apply_pay_rent(ctx)
   end
 
   local total_value = BoardUtils.total_invested(tile, st.level)
-  local strong_idx = player.inventory and player.inventory:find_index(function(it) return it.id == 2009 end)
+  local strong_idx = Inventory.find_index(player, ITEM_IDS.strong)
   if strong_idx and player.cash >= total_value then
     return {
       waiting = true,
@@ -118,7 +121,7 @@ local function apply_pay_rent(ctx)
     }
   end
 
-  local free_idx = player.inventory and player.inventory:find_index(function(it) return it.id == 2001 end)
+  local free_idx = Inventory.find_index(player, ITEM_IDS.free_rent)
   if free_idx then
     return {
       waiting = true,
@@ -146,7 +149,7 @@ local function apply_tax(ctx)
     return
   end
 
-  local tax_idx = player.inventory and player.inventory:find_index(function(it) return it.id == 2010 end)
+  local tax_idx = Inventory.find_index(player, ITEM_IDS.tax_free)
   if tax_idx then
     return {
       waiting = true,

@@ -4,8 +4,11 @@ local constants = require("src.config.constants")
 local Tile = require("src.core.tile")
 local BoardUtils = require("src.gameplay.item_board_utils")
 local Pricing = require("src.gameplay.land_pricing")
+local Inventory = require("src.gameplay.item_inventory")
+local gameplay_constants = require("src.gameplay.constants")
 
 local tile_state = Tile.get_state
+local ITEM_IDS = gameplay_constants.item_ids
 
 function LandActions.safe_tile_state(game, tile)
   local ok, st = pcall(tile_state, game, tile)
@@ -84,8 +87,7 @@ local function contiguous_rent(game, board, index, owner_id)
   local queue = { start_tile.id }
   visited[start_tile.id] = true
 
-  while #queue > 0 do
-    local tile_id = table.remove(queue, 1)
+  BoardUtils.queue_walk(queue, function(tile_id, push)
     local tile = board:get_tile_by_id(tile_id)
     if tile and tile.type == "land" then
       local st2 = LandActions.safe_tile_state(game, tile)
@@ -95,12 +97,12 @@ local function contiguous_rent(game, board, index, owner_id)
         for _, next_id in pairs(neigh) do
           if not visited[next_id] then
             visited[next_id] = true
-            table.insert(queue, next_id)
+            push(next_id)
           end
         end
       end
     end
-  end
+  end)
 
   return rent_sum
 end
@@ -115,11 +117,8 @@ function LandActions.execute_strong_card(game, player_id, tile_id)
   if not owner then return false end
 
   local total_value = BoardUtils.total_invested(tile, st.level)
-  local strong_idx = player.inventory and player.inventory:find_index(function(it) return it.id == 2009 end)
-
-  if not strong_idx or player.cash < total_value then return false end
-
-  player.inventory:remove_by_index(strong_idx)
+  if player.cash < total_value then return false end
+  if not Inventory.consume(player, ITEM_IDS.strong) then return false end
   player:deduct_cash(total_value)
   owner:add_cash(total_value)
   game:set_tile_owner(tile, player.id)
@@ -134,10 +133,7 @@ function LandActions.execute_free_card(game, player_id, tile_id)
   local tile = game.board:get_tile_by_id(tile_id)
   if not player or not tile then return false end
 
-  local free_idx = player.inventory and player.inventory:find_index(function(it) return it.id == 2001 end)
-  if not free_idx then return false end
-
-  player.inventory:remove_by_index(free_idx)
+  if not Inventory.consume(player, ITEM_IDS.free_rent) then return false end
   logger.event(player.name .. " 出示免费卡，免租 " .. tile.name)
   return true
 end
@@ -186,10 +182,7 @@ function LandActions.execute_tax_free_card(game, player_id)
   local player = game.players[player_id]
   if not player then return false end
 
-  local tax_idx = player.inventory and player.inventory:find_index(function(it) return it.id == 2010 end)
-  if not tax_idx then return false end
-
-  player.inventory:remove_by_index(tax_idx)
+  if not Inventory.consume(player, ITEM_IDS.tax_free) then return false end
   logger.event(player.name .. " 出示免税卡，本次免税")
   return true
 end

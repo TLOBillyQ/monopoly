@@ -1,8 +1,10 @@
 local constants = require("src.config.constants")
 local gameplay_constants = require("src.gameplay.constants")
+local Inventory = require("src.gameplay.item_inventory")
 local logger = require("src.util.logger")
 
 local MovementService = {}
+local ITEM_IDS = gameplay_constants.item_ids
 
 function MovementService.move(game, player, steps, opts)
   opts = opts or {}
@@ -51,7 +53,7 @@ function MovementService.move(game, player, steps, opts)
     end
 
     if not opts.skip_steal_check and #encountered_step > 0 then
-      local has_steal = player.inventory and player.inventory:find_index(function(it) return it.id == 2007 end)
+      local has_steal = Inventory.find_index(player, ITEM_IDS.steal)
       local remaining = abs_steps - step
       if has_steal and remaining > 0 then
         steal_interrupt = {

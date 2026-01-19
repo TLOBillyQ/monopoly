@@ -20,18 +20,31 @@ function Inventory.item_name(item_id)
 end
 
 function Inventory.find_index(player, item_id)
+  if not player or not player.inventory then
+    return nil
+  end
   return player.inventory:find_index(function(it)
     return it.id == item_id
   end)
 end
 
 function Inventory.consume(player, item_id)
+  if not player or not player.inventory then
+    return false
+  end
   local idx = Inventory.find_index(player, item_id)
   if idx then
     player.inventory:remove_by_index(idx)
     return true
   end
   return false
+end
+
+function Inventory.remove_by_index(player, idx)
+  if not player or not player.inventory or not idx then
+    return nil
+  end
+  return player.inventory:remove_by_index(idx)
 end
 
 function Inventory.draw_random(rng)

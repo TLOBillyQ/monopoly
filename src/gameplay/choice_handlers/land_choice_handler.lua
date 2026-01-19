@@ -1,7 +1,10 @@
 local IntentDispatcher = require("src.util.intent_dispatcher")
 local LandChoiceSpecs = require("src.gameplay.land_choice_specs")
+local Inventory = require("src.gameplay.item_inventory")
+local gameplay_constants = require("src.gameplay.constants")
 
 local LandChoiceHandler = {}
+local ITEM_IDS = gameplay_constants.item_ids
 
 function LandChoiceHandler.build(helpers)
   local is_cancel = helpers.is_cancel
@@ -23,8 +26,7 @@ function LandChoiceHandler.build(helpers)
     else
       if card_kind == "strong" then
         local player = player_id and game.players[player_id] or nil
-        local free_idx = player and player.inventory and player.inventory:find_index(function(it) return it.id == 2001 end)
-        if free_idx then
+        if player and Inventory.find_index(player, ITEM_IDS.free_rent) then
           IntentDispatcher.dispatch(game, {
             kind = "need_choice",
             choice_spec = LandChoiceSpecs.rent_prompt(player_id, tile_id, "free"),

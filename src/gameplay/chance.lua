@@ -200,7 +200,7 @@ handlers.discard_items = function(_, player, card)
     if player.inventory:count() == 0 then
       break
     end
-    local item = player.inventory:remove_by_index(1)
+    local item = Inventory.remove_by_index(player, 1)
     table.insert(dropped_names, Inventory.item_name(item.id))
   end
   if #dropped_names > 0 then

@@ -1,8 +1,10 @@
 local Agent = require("src.gameplay.agent")
 local ItemEffects = require("src.gameplay.item_post_effects")
+local gameplay_constants = require("src.gameplay.constants")
 local logger = require("src.util.logger")
 
 local Strategy = {}
+local ITEM_IDS = gameplay_constants.item_ids
 
 function Strategy.target_candidates(game, player, item_id)
   local spec = ItemEffects.get_target_spec(item_id)
@@ -93,31 +95,31 @@ function Strategy.auto_pre_action(game, player, deps, phase)
     return deps.find_monster_target and deps.find_monster_target(game, player, 3) ~= nil
   end
 
-  local clear_result = try_use(2006, function()
+  local clear_result = try_use(ITEM_IDS.clear_obstacles, function()
     local found = Strategy.has_obstacles_ahead(game, player, 12)
     if found then logger.event(player.name .. " 前方发现障碍，准备使用清障卡") end
     return found
   end)
   if clear_result then return clear_result end
 
-  local dice_result = try_use(2002, function()
+  local dice_result = try_use(ITEM_IDS.remote_dice, function()
     local dice_count = player:dice_count()
     return Agent.pick_remote_dice_value(game, player, dice_count) ~= nil
   end)
   if dice_result then return dice_result end
 
-  local mine_result = try_use(2005)
+  local mine_result = try_use(ITEM_IDS.mine)
   if mine_result then return mine_result end
 
-  local double_result = try_use(2003)
+  local double_result = try_use(ITEM_IDS.dice_multiplier)
   if double_result then return double_result end
 
-  local roadblock_result = try_use(2004, function() return Agent.pick_roadblock_target(game, player) ~= nil end)
+  local roadblock_result = try_use(ITEM_IDS.roadblock, function() return Agent.pick_roadblock_target(game, player) ~= nil end)
   if roadblock_result then return roadblock_result end
 
-  local monster_result = try_use(2008, has_demolish_target)
+  local monster_result = try_use(ITEM_IDS.monster, has_demolish_target)
   if monster_result then return monster_result end
-  local missile_result = try_use(2013, has_demolish_target)
+  local missile_result = try_use(ITEM_IDS.missile, has_demolish_target)
   if missile_result then return missile_result end
 
   for _, id in ipairs(ItemEffects.target_item_ids()) do
@@ -125,7 +127,7 @@ function Strategy.auto_pre_action(game, player, deps, phase)
     if res then return res end
   end
 
-  return try_use(2017) or try_use(2019)
+  return try_use(ITEM_IDS.rich) or try_use(ITEM_IDS.angel)
 end
 
 return Strategy

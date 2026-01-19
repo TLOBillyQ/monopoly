@@ -7,8 +7,10 @@ local IntentDispatcher = require("src.util.intent_dispatcher")
 local Convert = require("src.util.convert")
 local RemoteDice = require("src.gameplay.item_remote_dice")
 local ItemPhase = require("src.gameplay.item_phase")
+local gameplay_constants = require("src.gameplay.constants")
 
 local ItemChoiceHandler = {}
+local ITEM_IDS = gameplay_constants.item_ids
 
 function ItemChoiceHandler.build(helpers)
   local is_cancel = helpers.is_cancel
@@ -40,7 +42,7 @@ function ItemChoiceHandler.build(helpers)
         options = options,
         allow_cancel = true,
         cancel_label = "取消",
-        meta = { stealer_id = stealer.id, target_id = target.id },
+        meta = { player_id = stealer.id, target_id = target.id },
       },
     })
   end
@@ -127,7 +129,8 @@ function ItemChoiceHandler.build(helpers)
     end
     local idx = Convert.to_number(action.option_id)
     local meta = choice.meta or {}
-    local stealer = meta.stealer_id and game.players[meta.stealer_id] or game:current_player()
+    local stealer_id = meta.player_id or meta.stealer_id
+    local stealer = stealer_id and game.players[stealer_id] or game:current_player()
     local target = meta.target_id and game.players[meta.target_id]
     if stealer and target and idx then
       local res = Steal.steal_item_at_index(game, stealer, target, idx)
@@ -145,7 +148,8 @@ function ItemChoiceHandler.build(helpers)
       return { stay = false }
     end
     local meta = choice.meta or {}
-    local stealer = meta.stealer_id and game.players[meta.stealer_id] or game:current_player()
+    local stealer_id = meta.player_id or meta.stealer_id
+    local stealer = stealer_id and game.players[stealer_id] or game:current_player()
     local target = meta.target_id and game.players[meta.target_id]
     if not stealer or not target or target.eliminated then
       clear_choice(game)
@@ -154,7 +158,7 @@ function ItemChoiceHandler.build(helpers)
 
     if action and action.option_id == "use" then
       if target.inventory:count() <= 0 then
-        if Inventory.consume(stealer, 2007) then
+        if Inventory.consume(stealer, ITEM_IDS.steal) then
           local res = Steal.steal_item_at_index(game, stealer, target, 1)
           if res and res.intent then
             IntentDispatcher.dispatch(game, res.intent)
@@ -177,7 +181,7 @@ function ItemChoiceHandler.build(helpers)
 
     local next_index = (meta.index or 1) + 1
     local queue = meta.queue or {}
-    if Inventory.find_index(stealer, 2007) and queue[next_index] then
+    if Inventory.find_index(stealer, ITEM_IDS.steal) and queue[next_index] then
       local spec = Steal.build_prompt_spec(game, stealer, queue, next_index)
       if spec then
         IntentDispatcher.dispatch(game, { kind = "need_choice", choice_spec = spec })
@@ -195,7 +199,8 @@ function ItemChoiceHandler.build(helpers)
     end
     local target_id = Convert.to_number(action.option_id)
     local meta = choice.meta or {}
-    local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+    local player_id = meta.player_id or meta.user_id
+    local player = player_id and game.players[player_id] or game:current_player()
     local item_id = meta.item_id
     if player and target_id and item_id then
       local res = use_item(game, player, item_id, { target_id = target_id })
@@ -273,7 +278,7 @@ function ItemChoiceHandler.build(helpers)
       clear_choice(game)
       return reopen_item_phase(game, player, phase)
     end
-    local dropped = player.inventory:remove_by_index(idx)
+    local dropped = Inventory.remove_by_index(player, idx)
     if dropped then
       logger.event(player.name .. " 丢弃道具 " .. Inventory.item_name(dropped.id))
     end

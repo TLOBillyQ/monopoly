@@ -1,8 +1,10 @@
 local logger = require("src.util.logger")
 local Inventory = require("src.gameplay.item_inventory")
 local LandChoiceSpecs = require("src.gameplay.land_choice_specs")
+local gameplay_constants = require("src.gameplay.constants")
 
 local Steal = {}
+local ITEM_IDS = gameplay_constants.item_ids
 
 local function fail_popup(game, stealer, target)
   local msg = "很遗憾，" .. target.name .. " 没有任何道具。"
@@ -18,7 +20,7 @@ function Steal.steal_item_at_index(game, player, target, item_idx)
   if inv:count() == 0 then
     return fail_popup(game, player, target)
   end
-  local stolen = inv:remove_by_index(item_idx or 1)
+  local stolen = Inventory.remove_by_index(target, item_idx or 1)
   if not stolen then
     return nil
   end
@@ -27,7 +29,7 @@ function Steal.steal_item_at_index(game, player, target, item_idx)
     return nil
   end
   player.inventory:add(stolen)
-  Inventory.consume(player, 2007)
+  Inventory.consume(player, ITEM_IDS.steal)
   local name = Inventory.item_name(stolen.id)
   logger.event(player.name .. " 使用偷窃卡，从 " .. target.name .. " 偷走道具 " .. name)
   return {
@@ -47,7 +49,7 @@ function Steal.build_prompt_spec(game, player, queue, index)
     "steal_prompt",
     "是否使用偷窃卡",
     { "目标：" .. target.name },
-    { stealer_id = player.id, target_id = target.id, queue = queue, index = index }
+    { player_id = player.id, target_id = target.id, queue = queue, index = index }
   )
 end
 
@@ -55,7 +57,7 @@ function Steal.handle_pass_players(game, player, encountered_ids)
   if #encountered_ids == 0 then
     return
   end
-  if not Inventory.find_index(player, 2007) then
+  if not Inventory.find_index(player, ITEM_IDS.steal) then
     return
   end
 
@@ -76,7 +78,7 @@ function Steal.handle_pass_players(game, player, encountered_ids)
       return nil
     end
     if target.inventory:count() == 0 then
-      Inventory.consume(player, 2007)
+      Inventory.consume(player, ITEM_IDS.steal)
       return fail_popup(game, player, target)
     end
     return Steal.steal_item_at_index(game, player, target, 1)

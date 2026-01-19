@@ -1,19 +1,23 @@
 local logger = require("src.util.logger")
 local constants = require("src.config.constants")
+local BoardUtils = require("src.gameplay.item_board_utils")
+local Inventory = require("src.gameplay.item_inventory")
+local gameplay_constants = require("src.gameplay.constants")
 
 local ItemEffects = {}
+local ITEM_IDS = gameplay_constants.item_ids
 
 local TARGET_ITEM_ORDER = {
-  2011,
-  2012,
-  2014,
-  2015,
-  2016,
-  2018,
+  ITEM_IDS.share_wealth,
+  ITEM_IDS.exile,
+  ITEM_IDS.tax,
+  ITEM_IDS.invite_deity,
+  ITEM_IDS.send_poor,
+  ITEM_IDS.poor,
 }
 
 local TARGET_EFFECTS = {
-  [2011] = {
+  [ITEM_IDS.share_wealth] = {
     apply = function(_, user, target, _context)
       local total = user.cash + target.cash
       local half = math.floor(total / 2)
@@ -23,7 +27,7 @@ local TARGET_EFFECTS = {
       return true
     end,
   },
-  [2012] = {
+  [ITEM_IDS.exile] = {
     apply = function(game, user, target, context)
       local idx = game.board:find_first_by_type("mountain")
       if idx then
@@ -36,15 +40,13 @@ local TARGET_EFFECTS = {
       return true
     end,
   },
-  [2014] = {
+  [ITEM_IDS.tax] = {
     apply = function(game, user, target, context)
       if target:has_deity("angel") then
         logger.event(target.name .. " 有天使，查税无效")
         return true
       end
-      local tax_free = target.inventory:find_index(function(it) return it.id == 2010 end)
-      if tax_free then
-        target.inventory:remove_by_index(tax_free)
+      if Inventory.consume(target, ITEM_IDS.tax_free) then
         logger.event(target.name .. " 使用免税卡抵消查税")
         return true
       end
@@ -60,7 +62,7 @@ local TARGET_EFFECTS = {
       return true
     end,
   },
-  [2015] = {
+  [ITEM_IDS.invite_deity] = {
     filter_target = function(_, _, target)
       return target.status.deity ~= nil
     end,
@@ -76,7 +78,7 @@ local TARGET_EFFECTS = {
       return true
     end,
   },
-  [2016] = {
+  [ITEM_IDS.send_poor] = {
     require_user = function(user)
       if not user:has_deity("poor") then
         return false
@@ -91,7 +93,7 @@ local TARGET_EFFECTS = {
       return true
     end,
   },
-  [2018] = {
+  [ITEM_IDS.poor] = {
     apply = function(_, user, target, _context)
       target:set_deity("poor")
       logger.event(user.name .. " 使用穷神卡，" .. target.name .. " 穷神附身")
@@ -102,21 +104,21 @@ local TARGET_EFFECTS = {
 
 local POST_EFFECTS = {
 
-  [2001] = { type = "set_status", key = "pending_free_rent", value = true, message = " 使用免费卡，下一次租金免除" },
-  [2003] = { type = "set_status", key = "pending_dice_multiplier", value = 2, message = " 使用骰子加倍卡，本次步数翻倍" },
-  [2010] = { type = "set_status", key = "pending_tax_free", value = true, message = " 使用免税卡，本次征税免除" },
+  [ITEM_IDS.free_rent] = { type = "set_status", key = "pending_free_rent", value = true, message = " 使用免费卡，下一次租金免除" },
+  [ITEM_IDS.dice_multiplier] = { type = "set_status", key = "pending_dice_multiplier", value = 2, message = " 使用骰子加倍卡，本次步数翻倍" },
+  [ITEM_IDS.tax_free] = { type = "set_status", key = "pending_tax_free", value = true, message = " 使用免税卡，本次征税免除" },
 
 
-  [2005] = { type = "place_mine_here" },
-  [2006] = { type = "clear_obstacles_ahead", distance = 12 },
+  [ITEM_IDS.mine] = { type = "place_mine_here" },
+  [ITEM_IDS.clear_obstacles] = { type = "clear_obstacles_ahead", distance = 12 },
 
 
-  [2007] = { type = "log", message = " 准备偷窃（将在经过玩家时触发）" },
-  [2009] = { type = "log", message = " 准备使用强征卡（踩他人地块时触发）" },
+  [ITEM_IDS.steal] = { type = "log", message = " 准备偷窃（将在经过玩家时触发）" },
+  [ITEM_IDS.strong] = { type = "log", message = " 准备使用强征卡（踩他人地块时触发）" },
 
 
-  [2017] = { type = "deity", deity = "rich", warn = "附身财神", log = " 使用财神卡，财神附身" },
-  [2019] = { type = "deity", deity = "angel", warn = "附身天使", log = " 使用天使卡，天使附身" },
+  [ITEM_IDS.rich] = { type = "deity", deity = "rich", warn = "附身财神", log = " 使用财神卡，财神附身" },
+  [ITEM_IDS.angel] = { type = "deity", deity = "angel", warn = "附身天使", log = " 使用天使卡，天使附身" },
 }
 
 local handlers = {}
@@ -200,8 +202,7 @@ handlers.clear_obstacles_ahead = function(game, player, cfg, context)
       mark(start_id, facing, 0)
       table.insert(queue, { tile_id = start_id, facing = facing, depth = 0 })
     end
-    while #queue > 0 do
-      local node = table.remove(queue, 1)
+    BoardUtils.queue_walk(queue, function(node, push)
       if node.depth < distance then
         local neigh = map.neighbors[node.tile_id] or {}
         local back = node.facing and OPPOSITE[node.facing] or nil
@@ -218,13 +219,13 @@ handlers.clear_obstacles_ahead = function(game, player, cfg, context)
                 cleared = cleared + 1
               end
               if mark(next_id, dir, node.depth + 1) then
-                table.insert(queue, { tile_id = next_id, facing = dir, depth = node.depth + 1 })
+                push({ tile_id = next_id, facing = dir, depth = node.depth + 1 })
               end
             end
           end
         end
       end
-    end
+    end)
   end
   logger.event(player.name .. " 清除前方障碍数：" .. cleared)
   return true
