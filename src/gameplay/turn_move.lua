@@ -6,7 +6,6 @@ local function phase_move(tm, args)
   local total = args.total
   local raw_total = args.raw_total
   local movement = tm.game and tm.game.get_service and tm.game:get_service("movement")
-  assert(movement and movement.move, "Missing MovementService (game.services.movement)")
 
   local move_opts = { branch_parity = raw_total }
   if args.continue_from_market or args.continue_from_steal then

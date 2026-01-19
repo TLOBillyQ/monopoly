@@ -20,19 +20,11 @@ local function adjust_chance_delta(player, delta)
   return delta
 end
 
-local function require_service(service, name)
-  if not service then
-    logger.warn("缺少 " .. name .. "，操作可能无法完成")
-  end
-  return service
-end
-
 local function handle_bankruptcy_if_negative(game, player)
   if player.cash > 0 then
     return
   end
-  local bankruptcy = require_service(game and game.get_service and game:get_service("bankruptcy"), "BankruptcyService")
-  if not bankruptcy then return end
+  local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
   bankruptcy.eliminate(game, player)
 end
 
@@ -42,10 +34,7 @@ local function apply_cash_and_maybe_bankrupt(game, player, delta)
 end
 
 local function move_steps(game, player, steps)
-  local movement = require_service(game and game.get_service and game:get_service("movement"), "MovementService")
-  if not movement then
-    return { kind = "noop" }
-  end
+  local movement = game and game.get_service and game:get_service("movement")
   local res = movement.move(game, player, steps)
   return {
     kind = "need_landing",

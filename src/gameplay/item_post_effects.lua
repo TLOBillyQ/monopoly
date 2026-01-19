@@ -55,9 +55,7 @@ local TARGET_EFFECTS = {
       logger.event(user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. fee .. " 税金")
       if target.cash <= 0 then
         local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
-        if bankruptcy then
-          bankruptcy.eliminate(game, target)
-        end
+        bankruptcy.eliminate(game, target)
       end
       return true
     end,
