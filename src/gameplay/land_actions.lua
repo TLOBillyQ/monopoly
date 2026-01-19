@@ -15,9 +15,11 @@ local function eliminate_if_bankrupt(game, player)
     return
   end
   local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
-  if bankruptcy and bankruptcy.eliminate then
-    bankruptcy.eliminate(game, player)
+  if not bankruptcy then
+    logger.warn("缺少 BankruptcyService，无法淘汰破产玩家")
+    return
   end
+  bankruptcy.eliminate(game, player)
 end
 
 function LandActions.safe_tile_state(game, tile)

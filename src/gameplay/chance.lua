@@ -21,7 +21,9 @@ local function adjust_chance_delta(player, delta)
 end
 
 local function require_service(service, name)
-  assert(service, "Missing " .. name)
+  if not service then
+    logger.warn("缺少 " .. name .. "，操作可能无法完成")
+  end
   return service
 end
 
@@ -30,6 +32,7 @@ local function handle_bankruptcy_if_negative(game, player)
     return
   end
   local bankruptcy = require_service(game and game.get_service and game:get_service("bankruptcy"), "BankruptcyService")
+  if not bankruptcy then return end
   bankruptcy.eliminate(game, player)
 end
 
@@ -40,6 +43,9 @@ end
 
 local function move_steps(game, player, steps)
   local movement = require_service(game and game.get_service and game:get_service("movement"), "MovementService")
+  if not movement then
+    return { kind = "noop" }
+  end
   local res = movement.move(game, player, steps)
   return {
     kind = "need_landing",
