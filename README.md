@@ -18,11 +18,18 @@
 ### 运行游戏
 
 ```bash
-# 在项目根目录运行
+# 标准模式（带UI）
 love .
+
+# 全AI模式（无UI，自动运行）
+ALL_AI=1 lua main.lua
+# 或使用脚本
+./run_all_ai.sh
 ```
 
 游戏入口为 [main.lua](main.lua)，会自动加载配置并启动游戏。
+
+**全AI模式**：所有玩家都是AI，无阻断性UI选择，自动运行到游戏结束。详见 [全AI模式使用指南](docs/ALL_AI_MODE.md)。
 
 ## 项目结构
 
