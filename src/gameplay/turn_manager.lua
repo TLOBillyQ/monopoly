@@ -134,11 +134,17 @@ function TurnManager:run_until_wait()
   end
 
   while self.flow.current do
-    if self.flow.current == "wait_choice" and not self.pending_action then
-      self.game.store:set({ "turn", "phase" }, "wait_choice")
-      return "wait_choice"
+    if self.flow.current == "wait_choice" then
+      -- 执行一次 wait_choice 状态以获取自动决策
+      self.flow:step()
+      -- 如果仍在 wait_choice 且无待处理行动，则等待
+      if self.flow.current == "wait_choice" and not self.pending_action then
+        self.game.store:set({ "turn", "phase" }, "wait_choice")
+        return "wait_choice"
+      end
+    else
+      self.flow:step()
     end
-    self.flow:step()
   end
 
   self.flow = nil

@@ -29,8 +29,14 @@ end
 if all_ai_mode then
 	-- 全AI模式：无UI运行
 	print("=== 全AI模式启动 ===")
+	
+	-- 初始化日志系统
+	local logger = require("src.util.logger")
+	logger.clear()
+	
 	local game = create_game()
 	print("玩家配置: " .. #game.players .. " 个AI玩家")
+	logger.info("全AI模式启动，玩家数:", #game.players)
 	
 	-- 自动运行直到游戏结束
 	local steps = 0
