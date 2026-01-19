@@ -47,7 +47,7 @@ Landing.executors = {
       return ctx and ctx.game and ctx.player and ctx.tile and ctx.tile.type == "item"
     end,
     apply = function(ctx)
-      return Inventory.draw_and_give(ctx.player, ctx.game and ctx.game.rng, { game = ctx.game })
+      return Inventory.draw_and_give(ctx.player, ctx.game.rng, { game = ctx.game })
     end,
   },
   chance_draw_and_resolve = {
@@ -55,7 +55,7 @@ Landing.executors = {
       return ctx and ctx.game and ctx.player and ctx.tile and ctx.tile.type == "chance"
     end,
     apply = function(ctx)
-      local card = random.weighted_choice(chance_cfg, "weight", ctx.game and ctx.game.rng)
+      local card = random.weighted_choice(chance_cfg, "weight", ctx.game.rng)
       logger.event(ctx.player.name .. " 抽到机会卡 " .. card.description)
       return chance_effects.resolve(ctx.game, ctx.player, card, ctx.move_result)
     end,
@@ -83,7 +83,7 @@ Landing.executors = {
     apply = function(ctx)
       local game = ctx.game
       local player = ctx.player
-      local market = game and game.get_service and game:get_service("market", ctx)
+      local market = game:get_service("market", ctx)
 
       local spec, intent = market.build_choice_spec(player)
       if intent then return { intent = intent } end

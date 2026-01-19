@@ -24,7 +24,7 @@ local function handle_bankruptcy_if_negative(game, player)
   if player.cash > 0 then
     return
   end
-  local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
+  local bankruptcy = game:get_service("bankruptcy")
   bankruptcy.eliminate(game, player)
 end
 
@@ -34,7 +34,7 @@ local function apply_cash_and_maybe_bankrupt(game, player, delta)
 end
 
 local function move_steps(game, player, steps)
-  local movement = game and game.get_service and game:get_service("movement")
+  local movement = game:get_service("movement")
   local res = movement.move(game, player, steps)
   return {
     kind = "need_landing",

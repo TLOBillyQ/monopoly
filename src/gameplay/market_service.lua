@@ -70,8 +70,6 @@ function MarketService.list_buyable(player)
 end
 
 function MarketService.build_choice_spec(player)
-  if not player then return nil end
-
   local options = {}
   local body_lines = {}
   for _, entry in ipairs(MarketService.list_buyable(player)) do
@@ -104,7 +102,6 @@ end
 
 function MarketService.buy_with_opts(game, player, product_id, opts)
   opts = opts or {}
-  if not player then return false end
   if type(product_id) ~= "number" or product_id <= 0 then
     logger.warn("invalid market product id:", tostring(product_id))
     return false

@@ -14,7 +14,7 @@ local function eliminate_if_bankrupt(game, player)
   if not player or player.cash > 0 then
     return
   end
-  local bankruptcy = game and game.get_service and game:get_service("bankruptcy")
+  local bankruptcy = game:get_service("bankruptcy")
   bankruptcy.eliminate(game, player)
 end
 
@@ -118,8 +118,6 @@ end
 function LandActions.execute_strong_card(game, player_id, tile_id)
   local player = game.players[player_id]
   local tile = game.board:get_tile_by_id(tile_id)
-  if not player or not tile then return false end
-
   local st = LandActions.safe_tile_state(game, tile)
   local owner = st.owner_id and game.players[st.owner_id] or nil
   if not owner then return false end
@@ -139,8 +137,6 @@ end
 function LandActions.execute_free_card(game, player_id, tile_id)
   local player = game.players[player_id]
   local tile = game.board:get_tile_by_id(tile_id)
-  if not player or not tile then return false end
-
   if not Inventory.consume(player, ITEM_IDS.free_rent) then return false end
   logger.event(player.name .. " 出示免费卡，免租 " .. tile.name)
   return true
@@ -149,8 +145,6 @@ end
 function LandActions.execute_pay_rent(game, player_id, tile_id)
   local player = game.players[player_id]
   local tile = game.board:get_tile_by_id(tile_id)
-  if not player or not tile then return false end
-
   local owner, st = LandActions.resolve_rent_owner(game, tile)
   if not owner then
     return true
@@ -180,8 +174,6 @@ end
 
 function LandActions.execute_tax_free_card(game, player_id)
   local player = game.players[player_id]
-  if not player then return false end
-
   if not Inventory.consume(player, ITEM_IDS.tax_free) then return false end
   logger.event(player.name .. " 出示免税卡，本次免税")
   return true
@@ -189,8 +181,6 @@ end
 
 function LandActions.execute_pay_tax(game, player_id)
   local player = game.players[player_id]
-  if not player then return false end
-
   local fee = math.floor(player.cash * constants.tax_rate)
   if player.cash < fee then fee = player.cash end
 
