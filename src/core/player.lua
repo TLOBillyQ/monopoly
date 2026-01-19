@@ -1,6 +1,6 @@
 local Inventory = require("src.core.inventory")
 local Tables = require("src.util.tables")
-local constants = require("src.config.constants")
+local gameplay_constants = require("src.gameplay.constants")
 
 local Player = {}
 Player.__index = Player
@@ -15,7 +15,7 @@ local function normalize_currency(currency)
 end
 
 local function is_unlimited_currency(currency)
-  return currency == constants.unlimited_currency
+  return currency == gameplay_constants.unlimited_currency
 end
 
 function Player:_store_set(path, value)

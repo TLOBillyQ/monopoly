@@ -4,7 +4,7 @@
 
 local CompositionRoot = require("src.gameplay.composition_root")
 local Tables = require("src.util.tables")
-local constants = require("src.config.constants")
+local gameplay_constants = require("src.gameplay.constants")
 local Tile = require("src.core.tile")
 local Pricing = require("src.gameplay.land_pricing")
 
@@ -184,7 +184,7 @@ function Game:check_victory()
     return true
   end
   local alive = self:alive_players()
-  local turn_limit = constants.turn_limit or 0
+  local turn_limit = gameplay_constants.turn_limit or 0
   if turn_limit > 0 and self.store then
     local turn_count = self.store:get({ "turn", "turn_count" }) or 0
     if turn_count >= turn_limit then

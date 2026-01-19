@@ -1,6 +1,6 @@
 local IntentDispatcher = require("src.util.intent_dispatcher")
 local items_cfg = require("src.config.items")
-local constants = require("src.config.constants")
+local gameplay_constants = require("src.gameplay.constants")
 local Agent = require("src.gameplay.agent")
 local Strategy = require("src.gameplay.item_strategy")
 local Inventory = require("src.gameplay.item_inventory")
@@ -21,7 +21,7 @@ local PHASE_TITLES = {
 }
 
 function ItemPhase.is_enabled(game, phase)
-  local queue = constants.item_phase_queue
+  local queue = gameplay_constants.item_phase_queue
   if type(queue) ~= "table" then
     return true
   end
