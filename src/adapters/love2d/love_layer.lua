@@ -10,6 +10,20 @@ local IntentDispatcher = require("src.util.intent_dispatcher")
 local LoveLayer = {}
 LoveLayer.__index = LoveLayer
 
+function LoveLayer:_sync_auto_player(enabled)
+  if not self.game or not self.game.players then
+    return
+  end
+  local player = self.game.players[1]
+  if not player then
+    return
+  end
+  player.auto = enabled and true or false
+  if player._store_set then
+    player:_store_set({ "players", player.id, "auto" }, player.auto)
+  end
+end
+
 function LoveLayer.new(opts)
   opts = opts or {}
   local ui = UIState.create()
@@ -38,6 +52,7 @@ function LoveLayer:set_game(g)
   if self.game then
     self.game.ui_port = self
   end
+  self:_sync_auto_player(self.ui.auto_play)
   self.pending_choice = self.game and self.game:pending_choice() or nil
   if self.pending_choice then
     self:open_choice_modal(self.pending_choice)
@@ -146,6 +161,7 @@ function LoveLayer:handle_ui_button(id)
     self.ui.auto_play = not self.ui.auto_play
     self.auto_runner:set_enabled(self.ui.auto_play)
     self.auto_runner:reset_timer()
+    self:_sync_auto_player(self.ui.auto_play)
   elseif id == "restart" then
     local was_auto = self.ui.auto_play
     self:set_game(self:new_game())

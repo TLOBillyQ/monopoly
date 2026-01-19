@@ -120,6 +120,7 @@ function LoveRuntime.install(LoveLayer)
       self.ui.auto_play = not self.ui.auto_play
       self.auto_runner:set_enabled(self.ui.auto_play)
       self.auto_runner:reset_timer()
+      self:_sync_auto_player(self.ui.auto_play)
     elseif key == "r" then
       self:set_game(self:new_game())
       self:layout()

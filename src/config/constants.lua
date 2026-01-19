@@ -5,7 +5,7 @@ return {
   default_dice_count = 1,
   dice_with_vehicle = 2,
   action_timeout_seconds = 10,
-  turn_limit = 100,
+  turn_limit = 1000,
   pass_start_bonus = 2000,
   hospital_fee = 5000,
   hospital_stay_turns = 2,
