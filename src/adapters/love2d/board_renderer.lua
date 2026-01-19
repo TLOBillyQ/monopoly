@@ -31,7 +31,19 @@ local function lighten(color, amount)
   return { math.min(color[1] + amount, 1), math.min(color[2] + amount, 1), math.min(color[3] + amount, 1) }
 end
 
-local function draw_overlays(ui, overlays, rect_x, rect_y, rect_w, rect_h, idx)
+local function draw_tile_coord(ui, tile, rect_x, rect_y)
+  if not (tile and tile.row and tile.col) then
+    return
+  end
+  local coord_text = tostring(tile.row) .. "," .. tostring(tile.col)
+  love.graphics.setFont(ui.fonts.tiny)
+  love.graphics.setColor(0, 0, 0, 0.65)
+  love.graphics.print(coord_text, rect_x + 6, rect_y + 4)
+  love.graphics.setColor(0, 0, 0, 0.9)
+  love.graphics.print(coord_text, rect_x + 5, rect_y + 3)
+end
+
+local function draw_overlays(ui, overlays, rect_x, rect_y, rect_w, rect_h, idx, tile)
   if overlays.roadblocks[idx] then
     local cx = rect_x + rect_w * 0.5
     local cy = rect_y + rect_h * 0.26
@@ -58,6 +70,7 @@ local function draw_overlays(ui, overlays, rect_x, rect_y, rect_w, rect_h, idx)
     love.graphics.line(cx - 6, cy + 6, cx + 6, cy - 6)
     love.graphics.setLineWidth(1)
   end
+  draw_tile_coord(ui, tile, rect_x, rect_y)
 end
 
 local function draw_tile(ui, idx, pos, half_cell, pad, last_visited, tile, tile_state)
@@ -84,6 +97,8 @@ local function draw_tile(ui, idx, pos, half_cell, pad, last_visited, tile, tile_
   love.graphics.rectangle("fill", rect_x, rect_y, rect_w, rect_h, 8, 8)
   love.graphics.setColor(0.12, 0.12, 0.12, 0.65)
   love.graphics.rectangle("line", rect_x, rect_y, rect_w, rect_h, 8, 8)
+
+  draw_tile_coord(ui, tile, rect_x, rect_y)
 
   love.graphics.setFont(ui.fonts.small)
   local name_y = rect_y + rect_h * 0.42
@@ -176,7 +191,8 @@ function BoardRenderer.draw(ui, view)
 
   for idx, pos in ipairs(ui.board.positions) do
     local rect_x, rect_y, rect_w, rect_h = tile_rect_for_overlay(ui, idx, pos, half_cell, pad)
-    draw_overlays(ui, (st and st.overlays) or { roadblocks = {}, mines = {} }, rect_x, rect_y, rect_w, rect_h, idx)
+    local tile = view.board.tiles[idx]
+    draw_overlays(ui, (st and st.overlays) or { roadblocks = {}, mines = {} }, rect_x, rect_y, rect_w, rect_h, idx, tile)
   end
 end
 
