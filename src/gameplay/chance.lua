@@ -33,9 +33,15 @@ local function apply_cash_and_maybe_bankrupt(game, player, delta)
   handle_bankruptcy_if_negative(game, player)
 end
 
-local function move_steps(game, player, steps)
+local function move_steps(game, player, steps, opts)
   local movement = game:get_service("movement")
-  local res = movement.move(game, player, steps)
+  local res = movement.move(game, player, steps, opts)
+  if res and res.stopped_on_roadblock then
+    local stay = player.status.stay_turns or 0
+    if stay < 1 then
+      game:set_player_status(player, "stay_turns", 1)
+    end
+  end
   return {
     kind = "need_landing",
     player_id = player.id,
@@ -174,7 +180,10 @@ handlers.reset_tiles_on_path = function(game, _, _, context)
 end
 
 handlers.move_backward = function(game, player, card)
-  return move_steps(game, player, -(card.steps or 0))
+  return move_steps(game, player, -(card.steps or 0), {
+    skip_steal_check = true,
+    skip_market_check = true,
+  })
 end
 
 handlers.move_forward = function(game, player, card)

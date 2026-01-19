@@ -42,7 +42,7 @@ model_reasoning_effort = "high"
 model_reasoning_summary = "auto"
 
 # Text verbosity for GPT-5 family (Responses API): low | medium | high (default: medium)
-model_verbosity = "medium"
+model_verbosity = "low"
 
 # Force-enable reasoning summaries for current model (default: false)
 model_supports_reasoning_summaries = false
@@ -324,9 +324,9 @@ steer = true
 
 [tools]
 # Enable the `view_image` tool. Default: unset
-# view_image = true
+view_image = true
 # Enable the `web_search` tool. Default: unset
-# web_search = true
+web_search = true
 
 ################################################################################
 # Define MCP servers under this table. Leave empty to disable.
