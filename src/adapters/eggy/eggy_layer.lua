@@ -31,6 +31,7 @@ function EggyLayer.new(opts)
       self.pending_choice = payload.choice
       self.pending_choice_elapsed = 0
       self.pending_choice_id = payload.choice and payload.choice.id or nil
+      self:_open_choice_modal(payload.choice)
     end
   end)
 
@@ -46,6 +47,7 @@ function EggyLayer:set_game(g)
   if self.pending_choice then
     self.pending_choice_elapsed = 0
     self.pending_choice_id = self.pending_choice.id
+    self:_open_choice_modal(self.pending_choice)
   end
 end
 
@@ -76,6 +78,10 @@ end
 function EggyLayer:tick(dt)
   if not self.game then
     return
+  end
+
+  if self.pending_choice then
+    self:_open_choice_modal(self.pending_choice)
   end
 
   local auto_action = self.auto_runner:next_action(dt, {
@@ -121,6 +127,76 @@ function EggyLayer:tick(dt)
   self:_log_status(self:build_view())
 end
 
+local function build_phase_title(game, base_title)
+  if not (game and game.store) then
+    return base_title
+  end
+  local phase = game.store:get({ "turn", "item_phase_active" })
+  if not phase then
+    return base_title
+  end
+  local label = phase == "pre_action" and "行动前"
+    or phase == "pre_move" and "投骰后"
+    or phase == "post_action" and "行动后"
+    or phase
+  return "[" .. label .. "] " .. (base_title or "请选择")
+end
+
+function EggyLayer:_open_choice_modal(pending)
+  if not pending then
+    return
+  end
+  if self.pending_choice_id == pending.id and self.ui.choice_active then
+    return
+  end
+
+  local title = build_phase_title(self.game, pending.title or "请选择")
+  local body = ""
+  if pending.body_lines then
+    body = table.concat(pending.body_lines, "\n")
+  elseif pending.body then
+    body = pending.body
+  end
+
+  self.ui:set_label(self.ui.choice.title, title)
+  self.ui:set_label(self.ui.choice.body, body)
+  self.ui:set_visible(self.ui.choice.root, true)
+
+  local option_nodes = self.ui.choice.option_buttons or {}
+  for idx, name in ipairs(option_nodes) do
+    local opt = pending.options and pending.options[idx]
+    if opt then
+      self.ui:set_button(name, opt.label or tostring(opt.id or opt))
+      self.ui:set_visible(name, true)
+      self.ui:set_touch_enabled(name, true)
+    else
+      self.ui:set_visible(name, false)
+      self.ui:set_touch_enabled(name, false)
+    end
+  end
+
+  if pending.allow_cancel == false then
+    self.ui:set_visible(self.ui.choice.cancel, false)
+    self.ui:set_touch_enabled(self.ui.choice.cancel, false)
+  else
+    self.ui:set_button(self.ui.choice.cancel, pending.cancel_label or "取消")
+    self.ui:set_visible(self.ui.choice.cancel, true)
+    self.ui:set_touch_enabled(self.ui.choice.cancel, true)
+  end
+
+  self.ui.choice_active = true
+  self.pending_choice_elapsed = 0
+  self.pending_choice_id = pending.id
+end
+
+function EggyLayer:_close_choice_modal()
+  if not self.ui.choice_active then
+    return
+  end
+  self.ui:set_visible(self.ui.choice.root, false)
+  self.ui.choice_active = false
+end
+
 function EggyLayer:build_view()
   local store_state = (self.game and self.game.store and self.game.store.state) or {}
   local winner_name = self.game and (self.game.winner_names or (self.game.winner and self.game.winner.name)) or nil
@@ -159,6 +235,7 @@ function EggyLayer:dispatch_action(action)
     self.pending_choice = nil
     self.pending_choice_elapsed = 0
     self.pending_choice_id = nil
+    self:_close_choice_modal()
     if self.game then
       self.game:dispatch_action(action)
     end

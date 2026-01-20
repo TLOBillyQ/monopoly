@@ -42,7 +42,7 @@ model_reasoning_effort = "high"
 model_reasoning_summary = "auto"
 
 # Text verbosity for GPT-5 family (Responses API): low | medium | high (default: medium)
-model_verbosity = "low"
+model_verbosity = "medium"
 
 # Force-enable reasoning summaries for current model (default: false)
 model_supports_reasoning_summaries = false
