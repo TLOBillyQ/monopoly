@@ -1,6 +1,3 @@
-## ExecPlan
-
-```md
 # Eggy 适配层实现（从 Love2D 迁移到 Eggy PC 编辑器）
 
 This ExecPlan is a living document. The sections `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work proceeds.
@@ -19,13 +16,16 @@ After this work, a developer can run the Monopoly game logic inside the Eggy PC 
 - [x] (2026-01-20 07:07Z) Implement panel UI refresh and action button mapping.
 - [x] (2026-01-20 07:07Z) Implement board UI refresh and tile selection mapping.
 - [x] (2026-01-20 07:07Z) Implement event-to-action mapping table and enforce dispatch_action-only mutations.
-- [ ] (2026-01-20 07:07Z) Implement archive save/load with Role.get_archive_by_type.
-- [ ] (2026-01-20 07:07Z) Add validation steps and document expected logs/results.
+- [x] (2026-01-20 17:14Z) Verify Eggy adapter files exist and align with milestones 0-4 (`src/adapters/eggy/eggy_layer.lua`, `src/adapters/eggy/eggy_runtime.lua`, `src/adapters/eggy/presenter.lua`, `src/adapters/eggy/ui_state.lua`).
+- [ ] (2026-01-20 17:14Z) Implement archive save/load with Role.get_archive_by_type and wire Continue/Restart entry flow.
+- [ ] (2026-01-20 17:14Z) Run validation steps and capture expected logs/results in this plan.
 
 ## Surprises & Discoveries
 
 - Observation: none yet.
   Evidence: not started.
+ - Observation: `docs/eggy/plan.md` is missing in the current working tree, so this ExecPlan must be fully self-contained.
+   Evidence: `Get-Content docs/eggy/plan.md` failed with "path does not exist".
 
 ## Decision Log
 
@@ -34,6 +34,9 @@ After this work, a developer can run the Monopoly game logic inside the Eggy PC 
   Date/Author: 2026-01-20 / Codex
 - Decision: Map Eggy UI nodes using explicit names (panel_*, btn_*, tile_*, modal_choice, modal_popup) and refresh via adapter only.
   Rationale: Avoids adding abstraction without real call sites and keeps UI wiring consistent with Love2D behavior.
+  Date/Author: 2026-01-20 / Codex
+- Decision: Treat milestones 0-4 as implemented based on the presence of Eggy adapter files and keep archives/validation as remaining work.
+  Rationale: The repository already contains the core Eggy adapter modules, but no archive wiring or validation evidence is recorded here.
   Date/Author: 2026-01-20 / Codex
 
 ## Outcomes & Retrospective
@@ -160,4 +163,5 @@ Eggy event bindings must include:
 
 Plan update note: Added initial ExecPlan to guide Eggy adapter implementation based on repository PLANS.md requirements. (2026-01-20 / Codex)
 Plan update note: Completed milestones 0-4 with Eggy adapter panel/board refresh, UI mapping table, and popup support; added expected UI node list. (2026-01-20 / Codex)
+Plan update note: Refreshed Progress/Decision/Surprises to reflect current repo state and remaining work, and recorded missing `docs/eggy/plan.md` so this plan stays self-contained. (2026-01-20 / Codex)
 ```
