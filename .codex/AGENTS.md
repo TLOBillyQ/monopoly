@@ -3,6 +3,10 @@
 ## 语言
 - 直白简练的现代汉语
 
+## ExecPlans
+ 
+When writing complex features or significant refactors, use an ExecPlan (as described in .agent/PLANS.md) from design to implementation.
+
 ## Coding Rules
 
 **Primary rule: 优先删除或复用代码，而不是新增代码。**

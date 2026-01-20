@@ -17,7 +17,8 @@ Write-Host "1. Creating zip package from src/, assets/ and main.lua..."
 $SourceItems = @(
     (Join-Path $ProjectRoot "src"),
     (Join-Path $ProjectRoot "assets"),
-    (Join-Path $ProjectRoot "main.lua")
+    (Join-Path $ProjectRoot "main.lua"),
+    (Join-Path $ProjectRoot "bootstrap.lua")
 )
 
 if (Test-Path $TempZipFile) {
