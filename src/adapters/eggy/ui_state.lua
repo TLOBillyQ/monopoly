@@ -40,6 +40,7 @@ function UIState.create()
     auto_play = false,
     auto_interval = 0.1,
     nodes = {},
+    selected_tile = nil,
     choice = {
       root = "modal_choice",
       title = "choice_title",
@@ -51,6 +52,12 @@ function UIState.create()
         "choice_option_3",
         "choice_option_4",
       },
+    },
+    popup = {
+      root = "modal_popup",
+      title = "popup_title",
+      body = "popup_body",
+      confirm = "popup_confirm",
     },
   }
 end

@@ -27,16 +27,35 @@ function EggyRuntime.install()
       return
     end
     local event_name = data.event_name or data.name or data.event or nil
-    if event_name == "ui_button" then
-      layer:dispatch_action({ type = "ui_button", id = data.id or data.button_id })
-    elseif event_name == "choice_select" then
-      layer:dispatch_action({
-        type = "choice_select",
-        choice_id = data.choice_id,
-        option_id = data.option_id,
-      })
-    elseif event_name == "choice_cancel" then
-      layer:dispatch_action({ type = "choice_cancel", choice_id = data.choice_id })
+    local actions = {
+      ui_button = function(payload)
+        return { type = "ui_button", id = payload.id or payload.button_id }
+      end,
+      choice_select = function(payload)
+        return {
+          type = "choice_select",
+          choice_id = payload.choice_id,
+          option_id = payload.option_id,
+        }
+      end,
+      choice_cancel = function(payload)
+        return { type = "choice_cancel", choice_id = payload.choice_id }
+      end,
+      ui_tile_select = function(payload)
+        return { type = "ui_tile_select", index = payload.index or payload.tile_index }
+      end,
+      popup_confirm = function()
+        layer:close_popup()
+        return nil
+      end,
+    }
+    local builder = event_name and actions[event_name] or nil
+    if not builder then
+      return
+    end
+    local action = builder(data)
+    if action then
+      layer:dispatch_action(action)
     end
   end)
 

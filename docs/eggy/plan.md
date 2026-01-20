@@ -13,12 +13,12 @@ After this work, a developer can run the Monopoly game logic inside the Eggy PC 
 
 ## Progress
 
-- [ ] (2026-01-20 07:07Z) Read existing Love2D adapter and confirm action/choice flows to mirror.
-- [ ] (2026-01-20 07:07Z) Implement minimal Eggy runtime and layer that can boot new_game and tick.
-- [ ] (2026-01-20 07:07Z) Add choice flow wiring and UI modal node refresh for need_choice.
-- [ ] (2026-01-20 07:07Z) Implement panel UI refresh and action button mapping.
-- [ ] (2026-01-20 07:07Z) Implement board UI refresh and tile selection mapping.
-- [ ] (2026-01-20 07:07Z) Implement event-to-action mapping table and enforce dispatch_action-only mutations.
+- [x] (2026-01-20 07:07Z) Read existing Love2D adapter and confirm action/choice flows to mirror.
+- [x] (2026-01-20 07:07Z) Implement minimal Eggy runtime and layer that can boot new_game and tick.
+- [x] (2026-01-20 07:07Z) Add choice flow wiring and UI modal node refresh for need_choice.
+- [x] (2026-01-20 07:07Z) Implement panel UI refresh and action button mapping.
+- [x] (2026-01-20 07:07Z) Implement board UI refresh and tile selection mapping.
+- [x] (2026-01-20 07:07Z) Implement event-to-action mapping table and enforce dispatch_action-only mutations.
 - [ ] (2026-01-20 07:07Z) Implement archive save/load with Role.get_archive_by_type.
 - [ ] (2026-01-20 07:07Z) Add validation steps and document expected logs/results.
 
@@ -31,6 +31,9 @@ After this work, a developer can run the Monopoly game logic inside the Eggy PC 
 
 - Decision: Follow the existing adapter contract (game.ui_port + dispatch_action) and reuse Love2D presenter data shape.
   Rationale: The roadmap states rules layer is fixed; reusing the existing contract keeps behavior identical.
+  Date/Author: 2026-01-20 / Codex
+- Decision: Map Eggy UI nodes using explicit names (panel_*, btn_*, tile_*, modal_choice, modal_popup) and refresh via adapter only.
+  Rationale: Avoids adding abstraction without real call sites and keeps UI wiring consistent with Love2D behavior.
   Date/Author: 2026-01-20 / Codex
 
 ## Outcomes & Retrospective
@@ -88,10 +91,14 @@ Milestone 6 (3D presentation). Add optional 3D units, camera, and audio that ref
 3) Implement UI refresh functions.
    - Add `refresh_panel(view)` and `refresh_board(view)` in the Eggy adapter (either in `eggy_layer.lua` or a small helper module if it has at least two real call sites).
    - Bind UI nodes by name; do not add abstractions for unused nodes.
+   - Expected nodes: `panel_title`, `panel_turn`, `panel_current_title`, `panel_current_name`, `panel_current_role`, `panel_current_phase`, `panel_current_dice`, `panel_players_title`, `panel_player_1..4`, `panel_player_1_detail..4_detail`, `panel_tile_title`, `tile_detail_name`, `tile_detail_price`, `tile_detail_level`, `tile_detail_owner`, `tile_detail_roadblock`, `tile_detail_mine`, `panel_log_title`, `panel_log_body`, `btn_next`, `btn_auto`, `btn_restart`, and `tile_1..N`.
+   - Modal nodes: `modal_choice` group (existing) and `modal_popup` group (`popup_title`, `popup_body`, `popup_confirm`).
 
 4) Implement action mapping.
    - Add a mapping table from Eggy UI events to action payloads.
    - Ensure `dispatch_action` is the sole path to mutate game state.
+   - Map `ui_tile_select` to `dispatch_action({ type = "ui_tile_select", index = ... })` and use it to update the selected tile only.
+   - Map `popup_confirm` to close the Eggy popup without touching game state.
 
 5) Implement archives.
    - Define archive struct with version and data fields.
@@ -152,5 +159,5 @@ Eggy event bindings must include:
 - UI_CUSTOM_EVENT to capture button/tile events and map them to actions.
 
 Plan update note: Added initial ExecPlan to guide Eggy adapter implementation based on repository PLANS.md requirements. (2026-01-20 / Codex)
+Plan update note: Completed milestones 0-4 with Eggy adapter panel/board refresh, UI mapping table, and popup support; added expected UI node list. (2026-01-20 / Codex)
 ```
-
