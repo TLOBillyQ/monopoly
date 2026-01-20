@@ -1,11 +1,8 @@
-local logger = require("src.util.logger")
-local items_cfg = require("src.config.items")
-local constants = require("src.config.constants")
 local UIState = require("src.adapters.love2d.ui_state")
 local Modal = require("src.adapters.love2d.modal")
 local AutoRunner = require("src.adapters.love2d.auto_runner")
 local LoveRuntime = require("src.adapters.love2d.love_runtime")
-local IntentDispatcher = require("src.util.intent_dispatcher")
+local AdapterLayer = require("src.adapters.core.adapter_layer")
 
 local LoveLayer = {}
 LoveLayer.__index = LoveLayer
@@ -27,36 +24,30 @@ end
 function LoveLayer.new(opts)
   opts = opts or {}
   local ui = UIState.create()
-  local self = {
+  local self = setmetatable({
     ui = ui,
-    game = nil,
-    item_name_by_id = {},
-    pending_choice = nil,
-    pending_choice_elapsed = 0,
-    pending_choice_id = nil,
-    game_factory = opts.game_factory,
     modal = Modal.new(),
+  }, LoveLayer)
+  AdapterLayer.attach(self, {
+    ui = ui,
+    game_factory = opts.game_factory,
     auto_runner = AutoRunner.new({ interval = ui.auto_interval }),
-  }
-  IntentDispatcher.on("need_choice", function(payload)
-    if payload and payload.game == self.game then
-      self.pending_choice = payload.choice
-      self:open_choice_modal(payload.choice)
-    end
-  end)
-  return setmetatable(self, LoveLayer)
+    on_need_choice = function(layer, choice)
+      layer:open_choice_modal(choice)
+    end,
+  })
+  return self
 end
 
 function LoveLayer:set_game(g)
-  self.game = g
-  if self.game then
-    self.game.ui_port = self
-  end
-  self:_sync_auto_player(self.ui.auto_play)
-  self.pending_choice = self.game and self.game:pending_choice() or nil
-  if self.pending_choice then
-    self:open_choice_modal(self.pending_choice)
-  end
+  AdapterLayer.set_game(self, g, {
+    on_set_game = function(layer)
+      layer:_sync_auto_player(layer.ui.auto_play)
+    end,
+    on_pending_choice = function(layer, pending)
+      layer:open_choice_modal(pending)
+    end,
+  })
 end
 
 local function build_phase_title(game, base_title)
@@ -127,21 +118,16 @@ function LoveLayer:get_game()
 end
 
 function LoveLayer:build_item_index()
-  self.item_name_by_id = {}
-  for _, cfg in ipairs(items_cfg) do
-    self.item_name_by_id[cfg.id] = cfg.name or tostring(cfg.id)
-  end
+  AdapterLayer.build_item_index(self)
 end
 
 function LoveLayer:new_game()
-  logger.clear()
-  assert(self.game_factory, "game_factory not set")
-  local g = self.game_factory()
-  self.ui.selected_tile = nil
-  self.ui.hover_tile = nil
-  self.auto_runner:reset_timer()
-  g.logger.info("启动蛋仔大富翁，玩家数:", #g.players)
-  return g
+  return AdapterLayer.new_game(self, {
+    on_new_game = function(layer)
+      layer.ui.selected_tile = nil
+      layer.ui.hover_tile = nil
+    end,
+  })
 end
 
 function LoveLayer:step_turn()
@@ -188,9 +174,7 @@ function LoveLayer:dispatch_action(action)
       self.modal:keypressed("space")
     end
   elseif action.type == "choice_select" or action.type == "choice_cancel" then
-    self.pending_choice = nil
-    self.pending_choice_elapsed = 0
-    self.pending_choice_id = nil
+    AdapterLayer.clear_choice(self)
     if self.game then
       self.game:dispatch_action(action)
     end

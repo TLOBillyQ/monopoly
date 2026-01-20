@@ -1,17 +1,18 @@
 local logger = require("src.util.logger")
-local UIState = require("src.adapters.eggy.ui_state")
+local UIState = require("src.adapters.oasis.ui_state")
+local UIBridge = require("src.adapters.oasis.ui_bridge")
 local AutoRunner = require("src.adapters.love2d.auto_runner")
-local Presenter = require("src.adapters.eggy.presenter")
+local Presenter = require("src.adapters.love2d.presenter")
 local AdapterLayer = require("src.adapters.core.adapter_layer")
 local Agent = require("src.gameplay.agent")
 local roles_cfg = require("src.config.roles")
 local vehicles_cfg = require("src.config.vehicles")
 
-local EggyLayer = {}
-EggyLayer.__index = EggyLayer
+local OasisLayer = {}
+OasisLayer.__index = OasisLayer
 
-local function build_log_prefix()
-  return "[EggyAdapter]"
+local function build_log_prefix(prefix)
+  return prefix or "[OasisAdapter]"
 end
 
 local function build_phase_label(phase)
@@ -42,13 +43,32 @@ local function map_vehicle_names()
   return out
 end
 
-function EggyLayer.new(opts)
+local function build_phase_title(game, base_title)
+  if not (game and game.store) then
+    return base_title
+  end
+  local phase = game.store:get({ "turn", "item_phase_active" })
+  if not phase then
+    return base_title
+  end
+  local label = phase == "pre_action" and "行动前"
+    or phase == "pre_move" and "投骰后"
+    or phase == "post_action" and "行动后"
+    or phase
+  return "[" .. label .. "] " .. (base_title or "请选择")
+end
+
+function OasisLayer.new(opts)
   opts = opts or {}
-  local ui = UIState.create()
+  local bridge = opts.ui_bridge or UIBridge.new(opts.ui_root)
+  local ui = UIState.create(bridge)
   local self = setmetatable({
     ui = ui,
+    bridge = bridge,
     vehicle_name_by_id = map_vehicle_names(),
-  }, EggyLayer)
+    logger_prefix = opts.logger_prefix or "[OasisAdapter]",
+  }, OasisLayer)
+
   AdapterLayer.attach(self, {
     ui = ui,
     game_factory = opts.game_factory,
@@ -61,7 +81,7 @@ function EggyLayer.new(opts)
   return self
 end
 
-function EggyLayer:set_game(g)
+function OasisLayer:set_game(g)
   AdapterLayer.set_game(self, g, {
     on_pending_choice = function(layer, pending)
       layer:_open_choice_modal(pending)
@@ -69,30 +89,30 @@ function EggyLayer:set_game(g)
   })
 end
 
-function EggyLayer:build_item_index()
+function OasisLayer:build_item_index()
   AdapterLayer.build_item_index(self)
 end
 
-function EggyLayer:new_game()
+function OasisLayer:new_game()
   return AdapterLayer.new_game(self)
 end
 
-function EggyLayer:_log_status(view)
+function OasisLayer:_log_status(view)
   if not view then
     return
   end
   logger.info(
-    build_log_prefix(),
+    build_log_prefix(self.logger_prefix),
     "玩家:",
-    tostring(view.current_player_name),
+    tostring(view.current_player_name or "-"),
     "现金:",
-    tostring(view.current_player_cash),
+    tostring(view.current_player_cash or "0"),
     "回合:",
-    tostring(view.turn_count)
+    tostring(view.turn_count or "0")
   )
 end
 
-function EggyLayer:tick(dt)
+function OasisLayer:tick(dt)
   if not self.game then
     return
   end
@@ -133,22 +153,7 @@ function EggyLayer:tick(dt)
   self:_log_status(self:build_view())
 end
 
-local function build_phase_title(game, base_title)
-  if not (game and game.store) then
-    return base_title
-  end
-  local phase = game.store:get({ "turn", "item_phase_active" })
-  if not phase then
-    return base_title
-  end
-  local label = phase == "pre_action" and "行动前"
-    or phase == "pre_move" and "投骰后"
-    or phase == "post_action" and "行动后"
-    or phase
-  return "[" .. label .. "] " .. (base_title or "请选择")
-end
-
-function EggyLayer:_open_choice_modal(pending)
+function OasisLayer:_open_choice_modal(pending)
   if not pending then
     return
   end
@@ -195,7 +200,7 @@ function EggyLayer:_open_choice_modal(pending)
   self.pending_choice_id = pending.id
 end
 
-function EggyLayer:_close_choice_modal()
+function OasisLayer:_close_choice_modal()
   if not self.ui.choice_active then
     return
   end
@@ -203,18 +208,26 @@ function EggyLayer:_close_choice_modal()
   self.ui.choice_active = false
 end
 
-function EggyLayer:build_view()
+function OasisLayer:build_view()
   local store_state = (self.game and self.game.store and self.game.store.state) or {}
   local winner_name = self.game and (self.game.winner_names or (self.game.winner and self.game.winner.name)) or nil
-  return Presenter.present(store_state, {
+  local view = Presenter.present(store_state, {
     game = self.game,
     last_turn = self.game and self.game.last_turn,
     finished = self.game and self.game.finished,
     winner_name = winner_name,
   })
+  local turn = store_state.turn or {}
+  local players = store_state.players or {}
+  local idx = turn.current_player_index or 1
+  local current = players[idx]
+  view.current_player_name = current and current.name or "-"
+  view.current_player_cash = current and current.cash or 0
+  view.turn_count = turn.turn_count or 0
+  return view
 end
 
-function EggyLayer:refresh_view()
+function OasisLayer:refresh_view()
   local view = self:build_view()
   self:refresh_panel(view)
   self:refresh_board(view)
@@ -272,7 +285,7 @@ local function get_player_details_text(player, view, item_name_by_id, vehicle_na
   return table.concat(parts, " ")
 end
 
-function EggyLayer:refresh_panel(view)
+function OasisLayer:refresh_panel(view)
   local state = view and view.state or nil
   local turn = state and state.turn or {}
   local players = state and state.players or {}
@@ -342,7 +355,7 @@ function EggyLayer:refresh_panel(view)
   self.ui:set_label("panel_log_body", table.concat(log_lines, "\n"))
 end
 
-function EggyLayer:refresh_tile_detail(view)
+function OasisLayer:refresh_tile_detail(view)
   local state = view and view.state or nil
   if not state then
     return
@@ -384,7 +397,7 @@ function EggyLayer:refresh_tile_detail(view)
   self.ui:set_label("tile_detail_mine", overlays.mines and overlays.mines[idx] and "地雷: 有" or "地雷: 无")
 end
 
-function EggyLayer:refresh_board(view)
+function OasisLayer:refresh_board(view)
   if not view or not view.board or not view.board.tiles then
     return
   end
@@ -408,14 +421,14 @@ function EggyLayer:refresh_board(view)
   end
 end
 
-function EggyLayer:step_turn()
+function OasisLayer:step_turn()
   if not self.game or self.game.finished then
     return
   end
   self.game:advance_turn()
 end
 
-function EggyLayer:dispatch_action(action)
+function OasisLayer:dispatch_action(action)
   if not action then
     return
   end
@@ -446,7 +459,7 @@ function EggyLayer:dispatch_action(action)
   end
 end
 
-function EggyLayer:push_popup(payload)
+function OasisLayer:push_popup(payload)
   if not payload then
     return false
   end
@@ -458,7 +471,7 @@ function EggyLayer:push_popup(payload)
   return true
 end
 
-function EggyLayer:close_popup()
+function OasisLayer:close_popup()
   if not self.ui.popup_active then
     return
   end
@@ -466,8 +479,8 @@ function EggyLayer:close_popup()
   self.ui.popup_active = false
 end
 
-function EggyLayer:tick_once(dt)
+function OasisLayer:tick_once(dt)
   self:tick(dt)
 end
 
-return EggyLayer
+return OasisLayer

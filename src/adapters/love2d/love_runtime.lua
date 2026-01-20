@@ -1,9 +1,9 @@
 local UIState = require("src.adapters.love2d.ui_state")
-local constants = require("src.config.constants")
 local Layout = require("src.adapters.love2d.layout")
 local BoardRenderer = require("src.adapters.love2d.board_renderer")
 local PanelRenderer = require("src.adapters.love2d.panel_renderer")
 local Presenter = require("src.adapters.love2d.presenter")
+local AdapterLayer = require("src.adapters.core.adapter_layer")
 
 local LoveRuntime = {}
 
@@ -59,35 +59,26 @@ function LoveRuntime.install(LoveLayer)
     end
     local mx, my = love.mouse.getPosition()
     self:update_hover_tile(mx, my)
-    local auto_action = self.auto_runner:next_action(dt, {
+    AdapterLayer.step_auto_runner(self, dt, {
       modal_active = self.modal.active ~= nil,
       modal_buttons = self.modal.active and self.modal.active.buttons,
       game_finished = self.game.finished,
     })
-    if auto_action then
-      self:dispatch_action(auto_action)
-    end
-    local timeout = constants.action_timeout_seconds or 0
-    if timeout > 0 and self.pending_choice and self.modal.active then
-      if self.pending_choice_id ~= self.pending_choice.id then
-        self.pending_choice_elapsed = 0
-        self.pending_choice_id = self.pending_choice.id
-      end
-      self.pending_choice_elapsed = self.pending_choice_elapsed + dt
-      if self.pending_choice_elapsed >= timeout then
-        local choice = self.pending_choice
-        self.pending_choice_elapsed = 0
+    AdapterLayer.step_choice_timeout(self, dt, {
+      is_choice_active = function(layer)
+        return layer.pending_choice and layer.modal.active
+      end,
+      build_action = function(_, choice)
         local first = choice.options and choice.options[1]
         if first then
-          self:dispatch_action({ type = "choice_select", choice_id = choice.id, option_id = first.id or first })
-        elseif choice.allow_cancel ~= false then
-          self:dispatch_action({ type = "choice_cancel", choice_id = choice.id })
+          return { type = "choice_select", choice_id = choice.id, option_id = first.id or first }
         end
-      end
-    else
-      self.pending_choice_elapsed = 0
-      self.pending_choice_id = nil
-    end
+        if choice.allow_cancel ~= false then
+          return { type = "choice_cancel", choice_id = choice.id }
+        end
+        return nil
+      end,
+    })
     self.modal:update()
   end
 
