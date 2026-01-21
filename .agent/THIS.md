@@ -6,6 +6,7 @@
 - `tests/` contains Lua regression and dependency checks.
 - `design/` stores planning spreadsheets and docs; `assets/` holds fonts and art; `docs/` captures design and review notes.
 - Entrypoints: `main.lua` for the Love2D demo and `src/game.lua` as the runtime facade.
+- 不要读取`docs/eggy/EggyAPI.lua`，这个文件过长了。
 
 ## Build, Test, and Development Commands
 - `export_xlsx.bat` regenerates `src/config/*.lua` from `design/*.xlsx` and packages `bin/windows/Game.exe`.
