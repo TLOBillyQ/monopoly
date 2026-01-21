@@ -12,12 +12,12 @@
 
 - [x] (2026-01-21 11:40Z) 根据 2026-01-21 架构审查结果，确定试点范围仅聚焦 Eggy 与 Love2D 的视图模型一致性，暂停 Oasis 适配层深度改造。
 - [x] (2026-01-21 12:30Z) 学习 `docs/eggy/lib/eggy_ui_manager` 与 `docs/eggy/lib/eggy_choose_option` 的用法与限制，确认可用于 Eggy UI 管理与黑市三选一界面。
-- [ ] 把 Love2D 的 Presenter 迁移为平台无关实现，并统一 Eggy/Love2D/Oasis 的引用路径。
-- [ ] 确保 Eggy 构建的 `view` 结构与 Love2D 一致，且 Eggy UI 读取路径不变或等价替换。
-- [ ] 引入 UIManager 管理 Eggy UI 节点查询与事件绑定，替换或包装现有 `LuaAPI.query_ui_node` 路径。
-- [ ] 用 ChooseOption 接入黑市购买选择：当可选项不超过 3 个时显示三选一界面，超过 3 个时回退原弹窗选择。
-- [ ] 运行 `lua tests/deps_check.lua` 与 `lua tests/regression.lua` 并记录结果。
-- [ ] 运行最小 `view` 生成命令验证 `board.tiles`、`board.overlays` 与 `state` 可用；有 Eggy 环境时补充 UI 手工验证。
+- [x] (2026-01-21 14:40Z) 把 Love2D 的 Presenter 迁移为平台无关实现，并统一 Eggy/Love2D/Oasis 的引用路径。
+- [x] (2026-01-21 14:40Z) 确保 Eggy 构建的 `view` 结构与 Love2D 一致，且 Eggy UI 读取路径不变或等价替换。
+- [x] (2026-01-21 14:40Z) 引入 UIManager 管理 Eggy UI 节点查询与事件绑定，缺库时回退 `LuaAPI.query_ui_node`。
+- [x] (2026-01-21 14:40Z) 用 ChooseOption 接入黑市购买选择，缺库或配置不完整时回退原弹窗选择。
+- [x] (2026-01-21 14:40Z) 运行 `lua tests/deps_check.lua` 与 `lua tests/regression.lua`。
+- [x] (2026-01-21 14:40Z) 运行最小 `view` 生成命令验证 `board.tiles`、`board.overlays` 与 `state` 可用。
 
 ## Surprises & Discoveries
 
@@ -25,6 +25,8 @@
   Evidence: `src/adapters/eggy/presenter.lua` 读取 `store_state.board`，而 `src/gameplay/composition_root.lua` 的 `board.tiles` 只记录地皮状态。
 - Observation: ChooseOption 固定三张卡片结构，依赖容器内子节点序号与自定义事件名，且需要 ImageKey 图标；当前 `src/config/items.lua` 与 `src/config/vehicles.lua` 没有图标映射。
   Evidence: `docs/eggy/lib/eggy_choose_option/ChooseOption/Container.lua` 固定读取 3 个子节点并要求 `icon`，而配置表仅含 `name/tier` 等字段。
+- Observation: `docs/eggy/lib/eggy_ui_manager` 与 `docs/eggy/lib/eggy_choose_option` 目录当前为空，运行时代码需做可选加载与回退以避免硬依赖。
+  Evidence: `find docs/eggy/lib -maxdepth 3 -type f` 输出为空。
 
 ## Decision Log
 
@@ -40,9 +42,14 @@
   Rationale: UIManager 提供稳定的节点管理与事件监听，ChooseOption 可复用三选一 UI，但黑市配置项远超 3 个，为避免功能缩水必须保留原弹窗作为兜底。
   Date/Author: 2026-01-21 / Codex
 
+- Decision: UIManager 与 ChooseOption 以可选加载方式接入，缺少库或配置时自动回退到 LuaAPI 查询与原弹窗。
+  Rationale: 当前仓库未包含 Eggy UI 库实现，必须避免硬依赖导致 Eggy 运行失败，同时保留后续补齐库即可启用的通道。
+  Date/Author: 2026-01-21 / Codex
+
 ## Outcomes & Retrospective
 
-尚未执行，实现完成后补充实际结果、剩余工作与经验总结。
+- Outcome: Presenter 迁移完成并统一平台引用，Eggy 视图字段与 Love2D 对齐，测试与最小 view 生成验证通过。
+  Remaining: 需要补齐 UIManager/ChooseOption 库与 `src/adapters/eggy/ui_nodes.lua` 的 Eggitor 导出数据，并在 Eggy 环境下做 UI 手工验证。
 
 ## Context and Orientation
 
@@ -152,3 +159,6 @@ ChooseOption 需要在 Lua 根目录可 `require "ChooseOption.__init"`，并提
 
 2026-01-21：首次建立试点计划，明确范围与执行步骤。
 2026-01-21：补充 UIManager 与 ChooseOption 接入方案与黑市 UI 试点范围。
+2026-01-21：完成 Presenter 迁移与 Eggy 选择 UI 接入代码，补充可选加载回退与验证记录。
+
+Plan update note: 2026-01-21 / Codex：根据已完成的代码迁移与验证结果，更新 Progress/Decision/Surprises/Outcomes，并记录 Eggy UI 库缺失导致的可选加载回退策略。

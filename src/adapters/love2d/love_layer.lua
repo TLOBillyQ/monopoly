@@ -1,8 +1,10 @@
 local UIState = require("src.adapters.love2d.ui_state")
 local Modal = require("src.adapters.love2d.modal")
-local AutoRunner = require("src.adapters.love2d.auto_runner")
+local AutoRunner = require("src.adapters.core.auto_runner")
 local LoveRuntime = require("src.adapters.love2d.love_runtime")
 local AdapterLayer = require("src.adapters.core.adapter_layer")
+local ChoiceView = require("src.adapters.core.ui_choice")
+local PhaseView = require("src.adapters.core.ui_phase")
 
 local LoveLayer = {}
 LoveLayer.__index = LoveLayer
@@ -50,24 +52,9 @@ function LoveLayer:set_game(g)
   })
 end
 
-local function build_phase_title(game, base_title)
-  if not (game and game.store) then
-    return base_title
-  end
-  local phase = game.store:get({ "turn", "item_phase_active" })
-  if not phase then
-    return base_title
-  end
-  local label = phase == "pre_action" and "行动前"
-    or phase == "pre_move" and "投骰后"
-    or phase == "post_action" and "行动后"
-    or phase
-  return "[" .. label .. "] " .. (base_title or "请选择")
-end
-
 function LoveLayer:push_popup(payload)
   self.modal:push({
-    title = build_phase_title(self.game, payload and payload.title),
+    title = PhaseView.build_phase_title(self.game, payload and payload.title),
     body = payload and payload.body,
     severity = payload and payload.severity,
     buttons = payload and payload.buttons,
@@ -89,21 +76,42 @@ function LoveLayer:open_choice_modal(pending)
     table.insert(self.modal.queue, 1, self.modal.active)
   end
 
+  local function love_option_label(opt)
+    if opt and opt.label then
+      return opt.label
+    end
+    return tostring(opt and opt.id)
+  end
+
+  local view = ChoiceView.build_choice_view(pending, {
+    game = self.game,
+    option_label = love_option_label,
+    body_lines_only = true,
+  })
+  if not view then
+    return
+  end
+
   local buttons = {}
-  for _, opt in ipairs(pending.options or {}) do
+  for _, opt in ipairs(view.options or {}) do
+    local raw = opt.raw
+    local opt_id = nil
+    if type(raw) == "table" then
+      opt_id = raw.id
+    end
     table.insert(buttons, {
-      label = opt.label or tostring(opt.id),
+      label = opt.label,
       on_click = function()
-        self:dispatch_action({ type = "choice_select", choice_id = pending.id, option_id = opt.id })
+        self:dispatch_action({ type = "choice_select", choice_id = pending.id, option_id = opt_id })
       end,
     })
   end
 
   self.modal.active = {
-    title = build_phase_title(self.game, pending.title or "请选择"),
-    body = table.concat(pending.body_lines or {}, "\n"),
+    title = view.title,
+    body = view.body,
     buttons = buttons,
-    button_text = pending.cancel_label or "取消",
+    button_text = view.cancel_label,
     on_confirm = function()
       self:dispatch_action({ type = "choice_cancel", choice_id = pending.id })
     end,

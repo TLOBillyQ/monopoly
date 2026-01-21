@@ -1,6 +1,30 @@
 local UIState = {}
 
+local function query_ui_manager_node(name)
+  if not name then
+    return nil
+  end
+  local manager = rawget(_G, "UIManager")
+  if not manager then
+    local ok, mod = pcall(require, "UIManager")
+    if ok then
+      manager = mod
+    end
+  end
+  if manager and manager.query_nodes_by_name then
+    local list = manager.query_nodes_by_name(name)
+    if list and list[1] then
+      return list[1]
+    end
+  end
+  return nil
+end
+
 local function safe_query_node(name)
+  local node = query_ui_manager_node(name)
+  if node ~= nil then
+    return node
+  end
   if not (name and LuaAPI and LuaAPI.query_ui_node) then
     return nil
   end
@@ -70,7 +94,9 @@ function UIState.get_node(self, name)
     return self.nodes[name]
   end
   local node = safe_query_node(name)
-  self.nodes[name] = node
+  if node ~= nil then
+    self.nodes[name] = node
+  end
   return node
 end
 

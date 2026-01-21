@@ -2,7 +2,7 @@ local UIState = require("src.adapters.love2d.ui_state")
 local Layout = require("src.adapters.love2d.layout")
 local BoardRenderer = require("src.adapters.love2d.board_renderer")
 local PanelRenderer = require("src.adapters.love2d.panel_renderer")
-local Presenter = require("src.adapters.love2d.presenter")
+local Presenter = require("src.adapters.core.presenter")
 local AdapterLayer = require("src.adapters.core.adapter_layer")
 
 local LoveRuntime = {}

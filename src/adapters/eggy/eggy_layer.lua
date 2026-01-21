@@ -1,10 +1,16 @@
 local logger = require("src.util.logger")
 local UIState = require("src.adapters.eggy.ui_state")
-local AutoRunner = require("src.adapters.love2d.auto_runner")
-local Presenter = require("src.adapters.eggy.presenter")
+local AutoRunner = require("src.adapters.core.auto_runner")
+local Presenter = require("src.adapters.core.presenter")
 local AdapterLayer = require("src.adapters.core.adapter_layer")
+local ChoiceView = require("src.adapters.core.ui_choice")
+local PanelView = require("src.adapters.core.ui_panel")
+local TileView = require("src.adapters.core.ui_tile")
+local LogView = require("src.adapters.core.ui_log")
+local MarketUI = require("src.adapters.eggy.market_ui")
 local Agent = require("src.gameplay.agent")
-local roles_cfg = require("src.config.roles")
+local items_cfg = require("src.config.items")
+local market_cfg = require("src.config.market")
 local vehicles_cfg = require("src.config.vehicles")
 
 local EggyLayer = {}
@@ -14,33 +20,29 @@ local function build_log_prefix()
   return "[EggyAdapter]"
 end
 
-local function build_phase_label(phase)
-  if phase == "pre_action" then
-    return "行动前"
-  end
-  if phase == "pre_move" then
-    return "投骰后"
-  end
-  if phase == "post_action" then
-    return "行动后"
-  end
-  return phase
-end
-
-local function join_lines(lines)
-  if not lines then
-    return ""
-  end
-  return table.concat(lines, "\n")
+local vehicles_by_id = {}
+for _, cfg in ipairs(vehicles_cfg) do
+  vehicles_by_id[cfg.id] = cfg
 end
 
 local function map_vehicle_names()
   local out = {}
-  for _, cfg in ipairs(vehicles_cfg) do
-    out[cfg.id] = cfg.name
+  for id, cfg in pairs(vehicles_by_id) do
+    out[id] = cfg.name
   end
   return out
 end
+
+local items_by_id = {}
+for _, cfg in ipairs(items_cfg) do
+  items_by_id[cfg.id] = cfg
+end
+
+local market_by_id = {}
+for _, entry in ipairs(market_cfg) do
+  market_by_id[entry.product_id] = entry
+end
+
 
 function EggyLayer.new(opts)
   opts = opts or {}
@@ -133,46 +135,139 @@ function EggyLayer:tick(dt)
   self:_log_status(self:build_view())
 end
 
-local function build_phase_title(game, base_title)
-  if not (game and game.store) then
-    return base_title
-  end
-  local phase = game.store:get({ "turn", "item_phase_active" })
-  if not phase then
-    return base_title
-  end
-  local label = phase == "pre_action" and "行动前"
-    or phase == "pre_move" and "投骰后"
-    or phase == "post_action" and "行动后"
-    or phase
-  return "[" .. label .. "] " .. (base_title or "请选择")
-end
-
 function EggyLayer:_open_choice_modal(pending)
   if not pending then
     return
   end
-  if self.pending_choice_id == pending.id and self.ui.choice_active then
+  if self.pending_choice_id == pending.id and (self.ui.choice_active or self.ui.choose_option_active) then
     return
   end
 
-  local title = build_phase_title(self.game, pending.title or "请选择")
-  local body = ""
-  if pending.body_lines then
-    body = join_lines(pending.body_lines)
-  elseif pending.body then
-    body = pending.body
+  if pending.kind == "market_buy"
+    and pending.options
+    and #pending.options > 0
+    and #pending.options <= 3
+    and MarketUI.is_ready
+    and MarketUI.is_ready() then
+    local ok, choose = pcall(require, "ChooseOption.__init")
+    if not ok then
+      ok, choose = pcall(require, "ChooseOption")
+    end
+    if ok and choose then
+      if self.ui.choice_active then
+        self.ui:set_visible(self.ui.choice.root, false)
+        self.ui.choice_active = false
+      end
+
+      local cards = {}
+      local option_ids = {}
+      for idx, opt in ipairs(pending.options) do
+        local opt_id = opt.id or opt
+        option_ids[idx] = opt_id
+        local entry = market_by_id[opt_id]
+        local cfg = nil
+        if entry and entry.kind == "vehicle" then
+          cfg = vehicles_by_id[opt_id]
+        else
+          cfg = items_by_id[opt_id]
+        end
+        local name = (entry and entry.name)
+          or (cfg and cfg.name)
+          or (opt.label)
+          or tostring(opt_id)
+        local price = entry and entry.price or 0
+        local currency = entry and entry.currency or nil
+        if currency == nil or currency == "" then
+          currency = "金币"
+        end
+        local level = cfg and cfg.tier or 1
+        if level < 1 then
+          level = 1
+        elseif level > 3 then
+          level = 3
+        end
+        local card = {
+          title = name,
+          description = "价格: " .. tostring(price) .. " " .. currency,
+          level = level,
+          icon = MarketUI.icon_placeholder or "icon_placeholder",
+        }
+        if entry and entry.page then
+          card.label = entry.page
+        end
+        cards[idx] = card
+      end
+
+      local payload = {
+        container = MarketUI.container,
+        title = pending.title or MarketUI.title or "黑市",
+        choose_event = MarketUI.choose_event,
+        confirm_event = MarketUI.confirm_event,
+        confirm_button = MarketUI.confirm_button,
+        cancel_button = MarketUI.cancel_button,
+        cards = cards,
+      }
+
+      local container = self.choose_option_container
+      if choose.build and type(choose.build) == "function" then
+        local built = choose.build(payload)
+        if built then
+          container = built
+        end
+      end
+      if container then
+        if container.set_data then
+          container:set_data(payload)
+        elseif container.refresh then
+          container:refresh(payload)
+        elseif container.update then
+          container:update(payload)
+        end
+        if container.show then
+          container:show()
+        elseif container.set_visible then
+          container:set_visible(true)
+        end
+      end
+
+      self.choose_option_container = container
+      self.ui.choose_option_active = true
+      self.market_choice_option_ids = option_ids
+      self.pending_choice_selected_option_id = nil
+      self.pending_choice_elapsed = 0
+      self.pending_choice_id = pending.id
+      return
+    end
   end
 
-  self.ui:set_label(self.ui.choice.title, title)
-  self.ui:set_label(self.ui.choice.body, body)
+  if self.ui.choose_option_active then
+    local container = self.choose_option_container
+    if container then
+      if container.hide then
+        container:hide()
+      elseif container.set_visible then
+        container:set_visible(false)
+      end
+    end
+    self.ui.choose_option_active = false
+    self.market_choice_option_ids = nil
+    self.pending_choice_selected_option_id = nil
+  end
+
+  local view = ChoiceView.build_choice_view(pending, { game = self.game })
+  if not view then
+    return
+  end
+
+  self.ui:set_label(self.ui.choice.title, view.title)
+  self.ui:set_label(self.ui.choice.body, view.body)
   self.ui:set_visible(self.ui.choice.root, true)
 
   local option_nodes = self.ui.choice.option_buttons or {}
   for idx, name in ipairs(option_nodes) do
-    local opt = pending.options and pending.options[idx]
+    local opt = view.options and view.options[idx]
     if opt then
-      self.ui:set_button(name, opt.label or tostring(opt.id or opt))
+      self.ui:set_button(name, opt.label)
       self.ui:set_visible(name, true)
       self.ui:set_touch_enabled(name, true)
     else
@@ -181,11 +276,11 @@ function EggyLayer:_open_choice_modal(pending)
     end
   end
 
-  if pending.allow_cancel == false then
+  if not view.allow_cancel then
     self.ui:set_visible(self.ui.choice.cancel, false)
     self.ui:set_touch_enabled(self.ui.choice.cancel, false)
   else
-    self.ui:set_button(self.ui.choice.cancel, pending.cancel_label or "取消")
+    self.ui:set_button(self.ui.choice.cancel, view.cancel_label)
     self.ui:set_visible(self.ui.choice.cancel, true)
     self.ui:set_touch_enabled(self.ui.choice.cancel, true)
   end
@@ -196,11 +291,23 @@ function EggyLayer:_open_choice_modal(pending)
 end
 
 function EggyLayer:_close_choice_modal()
-  if not self.ui.choice_active then
-    return
+  if self.ui.choice_active then
+    self.ui:set_visible(self.ui.choice.root, false)
+    self.ui.choice_active = false
   end
-  self.ui:set_visible(self.ui.choice.root, false)
-  self.ui.choice_active = false
+  if self.ui.choose_option_active then
+    local container = self.choose_option_container
+    if container then
+      if container.hide then
+        container:hide()
+      elseif container.set_visible then
+        container:set_visible(false)
+      end
+    end
+    self.ui.choose_option_active = false
+  end
+  self.market_choice_option_ids = nil
+  self.pending_choice_selected_option_id = nil
 end
 
 function EggyLayer:build_view()
@@ -223,130 +330,49 @@ function EggyLayer:refresh_view()
   self:refresh_board(view)
 end
 
-local function player_label(player)
-  if player.eliminated then
-    return player.name .. " (出局)"
-  end
-  return player.name .. " $" .. player.cash
-end
-
-local function get_player_details_text(player, view, item_name_by_id, vehicle_name_by_id)
-  if player.eliminated then
-    return nil
-  end
-  local parts = {}
-
-  local status = player.status or {}
-  if status.stay_turns and status.stay_turns > 0 then
-    local pos = player.position
-    local tile = view and view.board and view.board.tiles and view.board.tiles[pos]
-    local t_type = tile and tile.type
-    local days = status.stay_turns
-    if t_type == "hospital" then
-      table.insert(parts, "医院(" .. days .. ")")
-    elseif t_type == "mountain" then
-      table.insert(parts, "深山(" .. days .. ")")
-    else
-      table.insert(parts, "停留(" .. days .. ")")
-    end
-  end
-
-  if status.deity then
-    table.insert(parts, status.deity.type .. "(" .. status.deity.remaining .. ")")
-  end
-
-  if player.seat_id then
-    local vname = vehicle_name_by_id[player.seat_id] or ("车" .. player.seat_id)
-    table.insert(parts, vname)
-  end
-
-  local inv = player.inventory or {}
-  if inv.items and #inv.items > 0 then
-    local names = {}
-    for _, item in ipairs(inv.items) do
-      table.insert(names, item_name_by_id[item.id] or tostring(item.id))
-    end
-    table.insert(parts, "{" .. table.concat(names, ",") .. "}")
-  end
-
-  if #parts == 0 then
-    return nil
-  end
-  return table.concat(parts, " ")
-end
-
 function EggyLayer:refresh_panel(view)
-  local state = view.state
-  local turn = state.turn
-  local players = state.players
-  local idx = turn.current_player_index
-  local current = players[idx]
-  local role_id = current.role_id or current.id
-  local role = roles_cfg[((role_id - 1) % #roles_cfg) + 1]
-
-  local turn_label = "回合: " .. turn.turn_count
+  local turn_label = PanelView.build_turn_label(view.state.turn.turn_count)
+  local current_view = PanelView.build_current_player_view(view)
 
   self.ui:set_label("panel_title", "蛋仔大富翁")
   self.ui:set_label("panel_turn", turn_label)
   self.ui:set_label("panel_current_title", "当前玩家")
 
-  self.ui:set_label("panel_current_name", current.name .. " 现金 " .. current.cash)
+  self.ui:set_label("panel_current_name", current_view and current_view.name_text or "")
+  self.ui:set_label("panel_current_role", current_view and current_view.role_text or "")
 
-  self.ui:set_label("panel_current_role", "角色: " .. role.name)
-
-  local phase = turn.item_phase_active
-  if phase then
-    self.ui:set_label("panel_current_phase", "阶段: " .. build_phase_label(phase))
-  else
-    self.ui:set_label("panel_current_phase", "")
-  end
-
-  local dice_text = ""
-  if view and view.last_turn and current and view.last_turn.player_id == current.id then
-    if view.last_turn.rolls then
-      dice_text = "骰子: " .. table.concat(view.last_turn.rolls, ",") .. " => " .. view.last_turn.total
-    elseif view.last_turn.note then
-      dice_text = view.last_turn.note
-    end
-  end
-  self.ui:set_label("panel_current_dice", dice_text)
+  self.ui:set_label("panel_current_phase", current_view and current_view.phase_text or "")
+  self.ui:set_label("panel_current_dice", current_view and current_view.dice_text or "")
 
   self.ui:set_label("panel_players_title", "玩家状态")
+  local player_rows = PanelView.build_player_statuses(view, self.item_name_by_id, self.vehicle_name_by_id, 4)
   for i = 1, 4 do
-    local player = players[i]
-    local label = player_label(player)
-    self.ui:set_label("panel_player_" .. tostring(i), label)
-    local detail = get_player_details_text(player, view, self.item_name_by_id, self.vehicle_name_by_id) or ""
-    self.ui:set_label("panel_player_" .. tostring(i) .. "_detail", detail)
+    local row = player_rows[i]
+    self.ui:set_label("panel_player_" .. tostring(i), row and row.label or "")
+    self.ui:set_label("panel_player_" .. tostring(i) .. "_detail", row and row.detail or "")
   end
 
   self.ui:set_label("panel_tile_title", "格子详情")
   self:refresh_tile_detail(view)
 
   self.ui:set_button("btn_next", "下一回合")
-  local auto_label = "自动运行:关"
-  if self.ui.auto_play then
-    auto_label = "自动运行:开"
-  end
-  self.ui:set_button("btn_auto", auto_label)
+  self.ui:set_button("btn_auto", PanelView.build_auto_label(self.ui.auto_play))
   self.ui:set_button("btn_restart", "重新开始")
 
   local entries = logger.entries or {}
-  local start = math.max(1, #entries - 8)
+  local log_entries = LogView.build_log_entries(entries, 8)
   local log_lines = {}
-  for i = start, #entries do
-    local entry = entries[i]
-    table.insert(log_lines, entry.text)
+  for _, entry in ipairs(log_entries) do
+    log_lines[#log_lines + 1] = entry.text
   end
   self.ui:set_label("panel_log_title", "事件记录")
   self.ui:set_label("panel_log_body", table.concat(log_lines, "\n"))
 end
 
 function EggyLayer:refresh_tile_detail(view)
-  local state = view.state
   local idx = self.ui.selected_tile
-  local tile = view.board.tiles[idx]
-  if not tile then
+  local detail = TileView.build_tile_detail_view(view, idx)
+  if not detail then
     self.ui:set_label("tile_detail_name", "")
     self.ui:set_label("tile_detail_price", "")
     self.ui:set_label("tile_detail_level", "")
@@ -356,57 +382,24 @@ function EggyLayer:refresh_tile_detail(view)
     return
   end
 
-  self.ui:set_label("tile_detail_name", tile.name .. " (" .. tile.type .. ")")
-
-  if tile.type == "land" then
-    local tile_state = state.board.tiles[tile.id]
-    local owner_id = tile_state.owner_id
-    local level = tile_state.level
-    local owner = state.players[owner_id]
-    self.ui:set_label("tile_detail_price", "价格: " .. tostring(tile.price or "-"))
-    self.ui:set_label("tile_detail_level", "等级: " .. tostring(level))
-    if owner then
-      self.ui:set_label("tile_detail_owner", "归属: " .. owner.name)
-    else
-      self.ui:set_label("tile_detail_owner", "归属: -")
-    end
+  self.ui:set_label("tile_detail_name", detail.name)
+  if detail.price then
+    self.ui:set_label("tile_detail_price", detail.price)
+    self.ui:set_label("tile_detail_level", detail.level or "")
+    self.ui:set_label("tile_detail_owner", detail.owner_label or "")
   else
     self.ui:set_label("tile_detail_price", "")
     self.ui:set_label("tile_detail_level", "")
     self.ui:set_label("tile_detail_owner", "")
   end
-
-  local overlays = view.board.overlays
-  local roadblock_text = "路障: 无"
-  if overlays.roadblocks[idx] then
-    roadblock_text = "路障: 有"
-  end
-  local mine_text = "地雷: 无"
-  if overlays.mines[idx] then
-    mine_text = "地雷: 有"
-  end
-  self.ui:set_label("tile_detail_roadblock", roadblock_text)
-  self.ui:set_label("tile_detail_mine", mine_text)
+  self.ui:set_label("tile_detail_roadblock", detail.roadblock or "")
+  self.ui:set_label("tile_detail_mine", detail.mine or "")
 end
 
 function EggyLayer:refresh_board(view)
-  local st = view.state
-  local overlays = view.board.overlays
-  for idx, tile in ipairs(view.board.tiles) do
-    local tile_state = st.board.tiles[tile.id]
-    local owner_id = tile_state.owner_id
-    local level = tile_state.level
+  for idx in ipairs(view.board.tiles) do
     local node = "tile_" .. tostring(idx)
-    local label = tile.name
-    if tile.type == "land" and owner_id then
-      label = label .. " Lv" .. tostring(level)
-    end
-    if overlays.roadblocks and overlays.roadblocks[idx] then
-      label = label .. " 路障"
-    elseif overlays.mines and overlays.mines[idx] then
-      label = label .. " 地雷"
-    end
-    self.ui:set_label(node, label)
+    self.ui:set_label(node, TileView.build_tile_label(view, idx))
   end
 end
 

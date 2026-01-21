@@ -1,4 +1,5 @@
 local EggyLayer = require("src.adapters.eggy.eggy_layer")
+local MarketUI = require("src.adapters.eggy.market_ui")
 local Game = require("src.game")
 
 local EggyRuntime = {}
@@ -11,10 +12,52 @@ local function create_game()
   })
 end
 
+local function install_ui_manager()
+  pcall(require, "UIManager.Utils")
+  local manager = rawget(_G, "UIManager")
+  if not manager then
+    local ok, mod = pcall(require, "UIManager")
+    if ok then
+      manager = mod
+    end
+  end
+  if not (manager and manager.Builder) then
+    return
+  end
+  local ok_nodes, nodes = pcall(require, "src.adapters.eggy.ui_nodes")
+  if not ok_nodes then
+    return
+  end
+  pcall(manager.Builder, nodes)
+end
+
+local function resolve_option_id(choice, payload, layer)
+  if not (choice and payload) then
+    return nil
+  end
+  local option_id = payload.option_id or payload.option or nil
+  if option_id then
+    return option_id
+  end
+  local idx = payload.index or payload.option_index or payload.card_index or payload.choice_index
+  if idx then
+    local mapped = layer and layer.market_choice_option_ids and layer.market_choice_option_ids[idx]
+    if mapped then
+      return mapped
+    end
+    local opt = choice.options and choice.options[idx]
+    if opt then
+      return opt.id or opt
+    end
+  end
+  return nil
+end
+
 function EggyRuntime.install()
   local layer = EggyLayer.new({ game_factory = create_game })
 
   LuaAPI.global_register_trigger_event(EVENT.GAME_INIT, function()
+    install_ui_manager()
     layer:set_game(layer:new_game())
   end)
 
@@ -27,6 +70,37 @@ function EggyRuntime.install()
       return
     end
     local event_name = data.event_name or data.name or data.event or nil
+    if MarketUI.is_ready and MarketUI.is_ready() then
+      local choice = layer.pending_choice
+      if choice and choice.kind == "market_buy" then
+        if event_name == MarketUI.confirm_event then
+          local option_id = resolve_option_id(choice, data, layer) or layer.pending_choice_selected_option_id
+          local action = nil
+          if option_id then
+            action = { type = "choice_select", choice_id = choice.id, option_id = option_id }
+          elseif choice.allow_cancel ~= false then
+            action = { type = "choice_cancel", choice_id = choice.id }
+          end
+          if action then
+            layer:dispatch_action(action)
+          end
+          return
+        end
+        if event_name == MarketUI.choose_event then
+          local option_id = resolve_option_id(choice, data, layer)
+          if option_id then
+            layer.pending_choice_selected_option_id = option_id
+          end
+          return
+        end
+        if MarketUI.cancel_event and event_name == MarketUI.cancel_event then
+          if choice.allow_cancel ~= false then
+            layer:dispatch_action({ type = "choice_cancel", choice_id = choice.id })
+          end
+          return
+        end
+      end
+    end
     local actions = {
       ui_button = function(payload)
         return { type = "ui_button", id = payload.id or payload.button_id }
@@ -49,7 +123,7 @@ function EggyRuntime.install()
         return nil
       end,
     }
-  local builder = actions[event_name]
+    local builder = actions[event_name]
     if not builder then
       return
     end

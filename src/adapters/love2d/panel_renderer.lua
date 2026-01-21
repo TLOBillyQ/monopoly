@@ -1,6 +1,8 @@
 local logger = require("src.util.logger")
-local roles_cfg = require("src.config.roles")
 local vehicles_cfg = require("src.config.vehicles")
+local PanelView = require("src.adapters.core.ui_panel")
+local TileView = require("src.adapters.core.ui_tile")
+local LogView = require("src.adapters.core.ui_log")
 
 local vehicle_name_by_id = {}
 for _, cfg in ipairs(vehicles_cfg) do
@@ -36,110 +38,45 @@ local function draw_wrapped(text, x, y, width, font)
   return #lines
 end
 
-local function player_label(player)
-  if player.eliminated then
-    return player.name .. " (出局)"
-  end
-  return player.name .. " $" .. player.cash
-end
-
-local function get_player_details_text(player, view, item_name_by_id)
-  if player.eliminated then return nil end
-  local parts = {}
-
-  local status = player.status
-  if status.stay_turns and status.stay_turns > 0 then
-    local pos = player.position
-    local tile = view.board.tiles[pos]
-    local t_type = tile.type
-    local days = status.stay_turns
-    if t_type == "hospital" then
-      table.insert(parts, "医院(" .. days .. ")")
-    elseif t_type == "mountain" then
-      table.insert(parts, "深山(" .. days .. ")")
-    else
-      table.insert(parts, "停留(" .. days .. ")")
-    end
-  end
-
-  if status.deity then
-    table.insert(parts, status.deity.type .. "(" .. status.deity.remaining .. ")")
-  end
-
-  if player.seat_id then
-    local vname = vehicle_name_by_id[player.seat_id] or ("车" .. player.seat_id)
-    table.insert(parts, vname)
-  end
-
-  local inv = player.inventory
-  if inv.items and #inv.items > 0 then
-    local names = {}
-    for _, item in ipairs(inv.items) do
-       table.insert(names, item_name_by_id[item.id] or tostring(item.id))
-    end
-    table.insert(parts, "{" .. table.concat(names, ",") .. "}")
-  end
-
-  if #parts == 0 then return nil end
-  return table.concat(parts, " ")
-end
-
 local function draw_current_player(ui, view, panel, y)
   love.graphics.setFont(ui.fonts.small)
   love.graphics.setColor(ui.palette.text)
   love.graphics.printf("当前玩家", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 18
 
-  local state = view.state
-  local turn = state.turn
-  local players = state.players
-  local idx = turn.current_player_index
-  local current = players[idx]
+  local current_view = PanelView.build_current_player_view(view)
+  if not current_view then
+    return y
+  end
   love.graphics.setFont(ui.fonts.body)
   love.graphics.setColor(ui.palette.text)
-  love.graphics.printf(current.name .. " 现金 " .. current.cash, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+  love.graphics.printf(current_view.name_text, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 20
 
-  local role_id = current.role_id or current.id
-  local role = roles_cfg[((role_id - 1) % #roles_cfg) + 1]
   love.graphics.setFont(ui.fonts.tiny)
   love.graphics.setColor(ui.palette.muted)
-  love.graphics.printf("角色: " .. role.name, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+  love.graphics.printf(current_view.role_text, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 16
 
-  local status = current.status
-  if status.deity then
-    love.graphics.printf("附身: " .. status.deity.type .. " (" .. status.deity.remaining .. ")", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+  if current_view.deity_text then
+    love.graphics.printf(current_view.deity_text, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
     y = y + 16
   end
 
-  local phase = turn.item_phase_active
-  if phase then
-    local phase_label = phase == "pre_action" and "行动前"
-      or phase == "pre_move" and "投骰后"
-      or phase == "post_action" and "行动后"
-      or phase
+  if current_view.phase_text then
     love.graphics.setColor(ui.palette.muted)
-    love.graphics.printf("阶段: " .. phase_label, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+    love.graphics.printf(current_view.phase_text, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
     y = y + 16
   end
 
-  if view.last_turn and view.last_turn.player_id == current.id then
-    if view.last_turn.rolls then
-      love.graphics.setColor(ui.palette.text)
-      love.graphics.printf(
-        "骰子: " .. table.concat(view.last_turn.rolls, ",") .. " => " .. view.last_turn.total,
-        panel.x + ui.margin,
-        y,
-        panel.w - ui.margin * 2,
-        "left"
-      )
-      y = y + 18
-    elseif view.last_turn.note then
+  if current_view.dice_text then
+    if current_view.dice_is_note then
       love.graphics.setColor(ui.palette.muted)
-      love.graphics.printf(view.last_turn.note, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
-      y = y + 18
+    else
+      love.graphics.setColor(ui.palette.text)
     end
+    love.graphics.printf(current_view.dice_text, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+    y = y + 18
   end
 
   return y
@@ -151,18 +88,17 @@ local function draw_player_status(ui, view, panel, y, item_name_by_id)
   love.graphics.printf("玩家状态", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 20
 
-  local players = view.state.players
-  for pid = 1, #players do
-    local player = players[pid]
+  local player_rows = PanelView.build_player_statuses(view, item_name_by_id, vehicle_name_by_id)
+  for pid, row in ipairs(player_rows) do
     love.graphics.setFont(ui.fonts.small)
     local color = ui.palette.player[pid] or ui.palette.text
     love.graphics.setColor(color)
     love.graphics.circle("fill", panel.x + ui.margin + 6, y + 8, 4)
     love.graphics.setColor(ui.palette.text)
-    love.graphics.printf(player_label(player), panel.x + ui.margin + 16, y, panel.w - ui.margin * 2 - 16, "left")
+    love.graphics.printf(row.label, panel.x + ui.margin + 16, y, panel.w - ui.margin * 2 - 16, "left")
     y = y + 18
 
-    local details = get_player_details_text(player, view, item_name_by_id)
+    local details = row.detail
     if details then
       love.graphics.setColor(ui.palette.muted)
       local _, lines = ui.fonts.small:getWrap(details, panel.w - ui.margin * 2 - 16)
@@ -181,36 +117,30 @@ local function draw_tile_detail(ui, view, panel, y)
   love.graphics.printf("格子详情", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 16
 
-  local state = view.state
   if ui.selected_tile or ui.hover_tile then
     local idx = ui.selected_tile or ui.hover_tile
-    local tile = view.board.tiles[idx]
-    if tile then
+    local detail = TileView.build_tile_detail_view(view, idx)
+    if detail then
       love.graphics.setFont(ui.fonts.tiny)
       love.graphics.setColor(ui.palette.text)
-      love.graphics.printf(tile.name .. " (" .. tile.type .. ")", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+      love.graphics.printf(detail.name, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
       y = y + 14
-      if tile.type == "land" then
-        local tile_state = state.board.tiles[tile.id]
-        local owner_id = tile_state.owner_id
-        local level = tile_state.level
-        local owner = state.players[owner_id]
-        love.graphics.printf("价格: " .. tostring(tile.price or "-"), panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+      if detail.price then
+        love.graphics.printf(detail.price, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
         y = y + 14
-        love.graphics.printf("等级: " .. tostring(level), panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+        love.graphics.printf(detail.level, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
         y = y + 14
-        if owner then
-          love.graphics.printf("归属: " .. owner.name, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+        if detail.has_owner then
+          love.graphics.printf(detail.owner_label, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
           y = y + 14
         end
       end
-      local overlays = view.board.overlays
-      if overlays.roadblocks[idx] then
-        love.graphics.printf("路障: 有", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+      if detail.has_roadblock then
+        love.graphics.printf(detail.roadblock, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
         y = y + 14
       end
-      if overlays.mines[idx] then
-        love.graphics.printf("地雷: 有", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+      if detail.has_mine then
+        love.graphics.printf(detail.mine, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
         y = y + 14
       end
     end
@@ -228,9 +158,8 @@ local function draw_log(ui, panel, y)
   if logger.entries then
     love.graphics.setFont(ui.fonts.tiny)
     local max_lines = math.floor((panel.y + panel.h - y - ui.margin) / (ui.fonts.tiny:getHeight() + 2))
-    local start = math.max(1, #logger.entries - max_lines)
-    for i = start, #logger.entries do
-      local entry = logger.entries[i]
+    local entries = LogView.build_log_entries(logger.entries, max_lines)
+    for _, entry in ipairs(entries) do
       love.graphics.setColor(ui.palette.log[entry.level] or ui.palette.text)
       local lines = draw_wrapped(entry.text, panel.x + ui.margin, y, panel.w - ui.margin * 2, ui.fonts.tiny)
       y = y + (ui.fonts.tiny:getHeight() + 2) * math.max(1, lines)
@@ -248,7 +177,7 @@ function PanelRenderer.draw(ui, view, buttons, item_name_by_id)
 
   love.graphics.setFont(ui.fonts.small)
   local tc = view.state.turn.turn_count
-  local turn_label = "回合: " .. tc
+  local turn_label = PanelView.build_turn_label(tc)
   love.graphics.setColor(ui.palette.muted)
   love.graphics.printf(turn_label, panel.x + ui.margin, panel.y + 42, panel.w - ui.margin * 2, "left")
 
