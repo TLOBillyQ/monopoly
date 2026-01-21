@@ -3,8 +3,9 @@ AutoRunner.__index = AutoRunner
 
 
 function AutoRunner.new(opts)
+  opts = opts or {}
   local self = {
-    interval = (opts and opts.interval) or 0.15,
+    interval = opts.interval or 0.15,
     timer = 0,
     enabled = false,
   }
@@ -12,7 +13,7 @@ function AutoRunner.new(opts)
 end
 
 function AutoRunner:set_enabled(on)
-  self.enabled = on and true or false
+  self.enabled = on
   self.timer = 0
 end
 

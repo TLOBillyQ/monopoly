@@ -44,9 +44,6 @@ local function map_vehicle_names()
 end
 
 local function build_phase_title(game, base_title)
-  if not (game and game.store) then
-    return base_title
-  end
   local phase = game.store:get({ "turn", "item_phase_active" })
   if not phase then
     return base_title
@@ -98,17 +95,14 @@ function OasisLayer:new_game()
 end
 
 function OasisLayer:_log_status(view)
-  if not view then
-    return
-  end
   logger.info(
     build_log_prefix(self.logger_prefix),
     "玩家:",
-    tostring(view.current_player_name or "-"),
+    tostring(view.current_player_name),
     "现金:",
-    tostring(view.current_player_cash or "0"),
+    tostring(view.current_player_cash),
     "回合:",
-    tostring(view.turn_count or "0")
+    tostring(view.turn_count)
   )
 end
 
@@ -209,21 +203,24 @@ function OasisLayer:_close_choice_modal()
 end
 
 function OasisLayer:build_view()
-  local store_state = (self.game and self.game.store and self.game.store.state) or {}
-  local winner_name = self.game and (self.game.winner_names or (self.game.winner and self.game.winner.name)) or nil
+  local store_state = self.game.store.state
+  local winner_name = self.game.winner_names
+  if not winner_name and self.game.winner then
+    winner_name = self.game.winner.name
+  end
   local view = Presenter.present(store_state, {
     game = self.game,
-    last_turn = self.game and self.game.last_turn,
-    finished = self.game and self.game.finished,
+    last_turn = self.game.last_turn,
+    finished = self.game.finished,
     winner_name = winner_name,
   })
-  local turn = store_state.turn or {}
-  local players = store_state.players or {}
-  local idx = turn.current_player_index or 1
+  local turn = store_state.turn
+  local players = store_state.players
+  local idx = turn.current_player_index
   local current = players[idx]
-  view.current_player_name = current and current.name or "-"
-  view.current_player_cash = current and current.cash or 0
-  view.turn_count = turn.turn_count or 0
+  view.current_player_name = current.name
+  view.current_player_cash = current.cash
+  view.turn_count = turn.turn_count
   return view
 end
 
@@ -246,11 +243,11 @@ local function get_player_details_text(player, view, item_name_by_id, vehicle_na
   end
   local parts = {}
 
-  local status = player.status or {}
+  local status = player.status
   if status.stay_turns and status.stay_turns > 0 then
     local pos = player.position
-    local tile = view and view.board and view.board.tiles and view.board.tiles[pos]
-    local t_type = tile and tile.type
+    local tile = view.board.tiles[pos]
+    local t_type = tile.type
     local days = status.stay_turns
     if t_type == "hospital" then
       table.insert(parts, "医院(" .. days .. ")")
@@ -270,7 +267,7 @@ local function get_player_details_text(player, view, item_name_by_id, vehicle_na
     table.insert(parts, vname)
   end
 
-  local inv = player.inventory or {}
+  local inv = player.inventory
   if inv.items and #inv.items > 0 then
     local names = {}
     for _, item in ipairs(inv.items) do
@@ -286,30 +283,23 @@ local function get_player_details_text(player, view, item_name_by_id, vehicle_na
 end
 
 function OasisLayer:refresh_panel(view)
-  local state = view and view.state or nil
-  local turn = state and state.turn or {}
-  local players = state and state.players or {}
-  local idx = turn.current_player_index or 1
+  local state = view.state
+  local turn = state.turn
+  local players = state.players
+  local idx = turn.current_player_index
   local current = players[idx]
-  local role_id = current and (current.role_id or current.id) or nil
-  local role = role_id and roles_cfg[((role_id - 1) % #roles_cfg) + 1] or nil
+  local role_id = current.role_id or current.id
+  local role = roles_cfg[((role_id - 1) % #roles_cfg) + 1]
 
-  local turn_label = "回合: -"
-  if turn.turn_count ~= nil then
-    turn_label = "回合: " .. tostring(turn.turn_count)
-  end
+  local turn_label = "回合: " .. turn.turn_count
 
   self.ui:set_label("panel_title", "蛋仔大富翁")
   self.ui:set_label("panel_turn", turn_label)
   self.ui:set_label("panel_current_title", "当前玩家")
 
-  if current then
-    self.ui:set_label("panel_current_name", current.name .. " 现金 " .. current.cash)
-  else
-    self.ui:set_label("panel_current_name", "-")
-  end
+  self.ui:set_label("panel_current_name", current.name .. " 现金 " .. current.cash)
 
-  self.ui:set_label("panel_current_role", "角色: " .. (role and role.name or "-"))
+  self.ui:set_label("panel_current_role", "角色: " .. role.name)
 
   local phase = turn.item_phase_active
   if phase then
@@ -319,7 +309,7 @@ function OasisLayer:refresh_panel(view)
   end
 
   local dice_text = ""
-  if view and view.last_turn and current and view.last_turn.player_id == current.id then
+  if view.last_turn and current and view.last_turn.player_id == current.id then
     if view.last_turn.rolls then
       dice_text = "骰子: " .. table.concat(view.last_turn.rolls, ",") .. " => " .. view.last_turn.total
     elseif view.last_turn.note then
@@ -331,9 +321,9 @@ function OasisLayer:refresh_panel(view)
   self.ui:set_label("panel_players_title", "玩家状态")
   for i = 1, 4 do
     local player = players[i]
-    local label = player and player_label(player) or "-"
+    local label = player_label(player)
     self.ui:set_label("panel_player_" .. tostring(i), label)
-    local detail = player and get_player_details_text(player, view, self.item_name_by_id, self.vehicle_name_by_id) or ""
+    local detail = get_player_details_text(player, view, self.item_name_by_id, self.vehicle_name_by_id) or ""
     self.ui:set_label("panel_player_" .. tostring(i) .. "_detail", detail)
   end
 
@@ -341,7 +331,11 @@ function OasisLayer:refresh_panel(view)
   self:refresh_tile_detail(view)
 
   self.ui:set_button("btn_next", "下一回合")
-  self.ui:set_button("btn_auto", self.ui.auto_play and "自动运行:开" or "自动运行:关")
+  local auto_label = "自动运行:关"
+  if self.ui.auto_play then
+    auto_label = "自动运行:开"
+  end
+  self.ui:set_button("btn_auto", auto_label)
   self.ui:set_button("btn_restart", "重新开始")
 
   local entries = logger.entries or {}
@@ -356,12 +350,9 @@ function OasisLayer:refresh_panel(view)
 end
 
 function OasisLayer:refresh_tile_detail(view)
-  local state = view and view.state or nil
-  if not state then
-    return
-  end
+  local state = view.state
   local idx = self.ui.selected_tile
-  local tile = idx and view and view.board and view.board.tiles and view.board.tiles[idx]
+  local tile = view.board.tiles[idx]
   if not tile then
     self.ui:set_label("tile_detail_name", "")
     self.ui:set_label("tile_detail_price", "")
@@ -375,12 +366,12 @@ function OasisLayer:refresh_tile_detail(view)
   self.ui:set_label("tile_detail_name", tile.name .. " (" .. tile.type .. ")")
 
   if tile.type == "land" then
-    local tile_state = state.board and state.board.tiles and state.board.tiles[tile.id] or nil
-    local owner_id = tile_state and tile_state.owner_id or nil
-    local level = tile_state and tile_state.level or 0
-    local owner = owner_id and state.players and state.players[owner_id]
+    local tile_state = state.board.tiles[tile.id]
+    local owner_id = tile_state.owner_id
+    local level = tile_state.level
+    local owner = state.players[owner_id]
     self.ui:set_label("tile_detail_price", "价格: " .. tostring(tile.price or "-"))
-    self.ui:set_label("tile_detail_level", "等级: " .. tostring(level or 0))
+    self.ui:set_label("tile_detail_level", "等级: " .. tostring(level))
     if owner then
       self.ui:set_label("tile_detail_owner", "归属: " .. owner.name)
     else
@@ -392,23 +383,28 @@ function OasisLayer:refresh_tile_detail(view)
     self.ui:set_label("tile_detail_owner", "")
   end
 
-  local overlays = (view.board and view.board.overlays) or (state.board and state.board.overlays) or {}
-  self.ui:set_label("tile_detail_roadblock", overlays.roadblocks and overlays.roadblocks[idx] and "路障: 有" or "路障: 无")
-  self.ui:set_label("tile_detail_mine", overlays.mines and overlays.mines[idx] and "地雷: 有" or "地雷: 无")
+  local overlays = view.board.overlays
+  local roadblock_text = "路障: 无"
+  if overlays.roadblocks[idx] then
+    roadblock_text = "路障: 有"
+  end
+  local mine_text = "地雷: 无"
+  if overlays.mines[idx] then
+    mine_text = "地雷: 有"
+  end
+  self.ui:set_label("tile_detail_roadblock", roadblock_text)
+  self.ui:set_label("tile_detail_mine", mine_text)
 end
 
 function OasisLayer:refresh_board(view)
-  if not view or not view.board or not view.board.tiles then
-    return
-  end
-  local st = view.state or {}
-  local overlays = (view.board and view.board.overlays) or (st.board and st.board.overlays) or { roadblocks = {}, mines = {} }
+  local st = view.state
+  local overlays = view.board.overlays
   for idx, tile in ipairs(view.board.tiles) do
-    local tile_state = st.board and st.board.tiles and tile and st.board.tiles[tile.id] or nil
-    local owner_id = tile_state and tile_state.owner_id or nil
-    local level = tile_state and tile_state.level or 0
+    local tile_state = st.board.tiles[tile.id]
+    local owner_id = tile_state.owner_id
+    local level = tile_state.level
     local node = "tile_" .. tostring(idx)
-    local label = tile.name or tostring(tile.id)
+    local label = tile.name
     if tile.type == "land" and owner_id then
       label = label .. " Lv" .. tostring(level)
     end

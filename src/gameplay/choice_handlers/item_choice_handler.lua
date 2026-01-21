@@ -83,8 +83,8 @@ function ItemChoiceHandler.build(helpers)
       return finish_and_clear(game)
     end
     local idx = Convert.to_number(action.option_id)
-    local meta = choice.meta or {}
-    local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+    local meta = choice.meta
+    local player = game.players[meta.player_id]
     if idx and player then
       if meta.item_id then
         Inventory.consume(player, meta.item_id)
@@ -104,8 +104,8 @@ function ItemChoiceHandler.build(helpers)
       return finish_and_clear(game)
     end
     local idx = Convert.to_number(action.option_id)
-    local meta = choice.meta or {}
-    local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+    local meta = choice.meta
+    local player = game.players[meta.player_id]
     if not player or not idx then
       return finish_and_clear(game)
     end
@@ -126,9 +126,9 @@ function ItemChoiceHandler.build(helpers)
       return finish_and_clear(game)
     end
     local idx = Convert.to_number(action.option_id)
-    local meta = choice.meta or {}
-    local stealer = meta.player_id and game.players[meta.player_id] or game:current_player()
-    local target = meta.target_id and game.players[meta.target_id]
+    local meta = choice.meta
+    local stealer = game.players[meta.player_id]
+    local target = game.players[meta.target_id]
     if stealer and target and idx then
       local res = Steal.steal_item_at_index(game, stealer, target, idx)
       logger.event("Steal choice result (multi)", res)
@@ -143,9 +143,9 @@ function ItemChoiceHandler.build(helpers)
     if is_cancel(action) then
       return finish_choice(game, false)
     end
-    local meta = choice.meta or {}
-    local stealer = meta.player_id and game.players[meta.player_id] or game:current_player()
-    local target = meta.target_id and game.players[meta.target_id]
+    local meta = choice.meta
+    local stealer = game.players[meta.player_id]
+    local target = game.players[meta.target_id]
     if not stealer or not target or target.eliminated then
       return finish_choice(game, false)
     end
@@ -171,8 +171,8 @@ function ItemChoiceHandler.build(helpers)
       return { stay = true }
     end
 
-    local next_index = (meta.index or 1) + 1
-    local queue = meta.queue or {}
+    local next_index = meta.index + 1
+    local queue = meta.queue
     if Inventory.find_index(stealer, ITEM_IDS.steal) and queue[next_index] then
       local spec = Steal.build_prompt_spec(game, stealer, queue, next_index)
       if spec then
@@ -189,8 +189,8 @@ function ItemChoiceHandler.build(helpers)
       return finish_and_clear(game)
     end
     local target_id = Convert.to_number(action.option_id)
-    local meta = choice.meta or {}
-    local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+    local meta = choice.meta
+    local player = game.players[meta.player_id]
     local item_id = meta.item_id
     if player and target_id and item_id then
       local res = use_item(game, player, item_id, { target_id = target_id })
@@ -204,9 +204,9 @@ function ItemChoiceHandler.build(helpers)
       return finish_and_clear(game)
     end
     local value = Convert.to_number(action.option_id)
-    local meta = choice.meta or {}
-    local player = meta.player_id and game.players[meta.player_id] or game:current_player()
-    local dice_count = meta.dice_count or (player and player.dice_count and player:dice_count()) or 1
+    local meta = choice.meta
+    local player = game.players[meta.player_id]
+    local dice_count = meta.dice_count or player:dice_count()
     if not player or not value then
       return finish_and_clear(game)
     end
@@ -220,14 +220,11 @@ function ItemChoiceHandler.build(helpers)
   end
 
   local function handle_item_phase_choice(game, choice, action)
-    local meta = choice.meta or {}
-    local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+    local meta = choice.meta
+    local player = game.players[meta.player_id]
     local phase = meta.phase
     if is_cancel(action) then
       finish_item_phase(game, phase)
-      return finish_choice(game, false)
-    end
-    if not player then
       return finish_choice(game, false)
     end
     local item_id = Convert.to_number(action.option_id)
@@ -252,15 +249,15 @@ function ItemChoiceHandler.build(helpers)
   end
 
   local function handle_discard_item(game, choice, action)
-    local meta = choice.meta or {}
-    local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+    local meta = choice.meta
+    local player = game.players[meta.player_id]
     local phase = meta.phase
     if is_cancel(action) then
       finish_choice(game, false)
       return reopen_item_phase(game, player, phase)
     end
     local idx = Convert.to_number(action.option_id)
-    if not player or not idx then
+    if not idx then
       finish_choice(game, false)
       return reopen_item_phase(game, player, phase)
     end

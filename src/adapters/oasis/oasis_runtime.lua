@@ -65,7 +65,7 @@ function OasisRuntime.on_ui_event(payload)
       return nil
     end,
   }
-  local builder = event_name and actions[event_name] or nil
+  local builder = actions[event_name]
   if not builder then
     return
   end

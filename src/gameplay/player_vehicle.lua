@@ -17,7 +17,10 @@ end
 
 function Vehicle:vehicle_name()
   local cfg = self:vehicle_cfg()
-  return cfg and cfg.name or nil
+  if not cfg then
+    return nil
+  end
+  return cfg.name
 end
 
 function Vehicle:dice_count()
@@ -30,7 +33,10 @@ end
 
 function Vehicle:is_vehicle_indestructible()
   local cfg = self:vehicle_cfg()
-  return cfg and cfg.indestructible or false
+  if not cfg then
+    return false
+  end
+  return cfg.indestructible == true
 end
 
 return Vehicle

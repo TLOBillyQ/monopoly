@@ -16,7 +16,7 @@ function OptionalEffectHandler.build(helpers)
     if not effect_id then
       return finish_choice(game, false)
     end
-    local meta = choice.meta or {}
+    local meta = choice.meta
 
     if meta.effect_ids and not contains(meta.effect_ids, effect_id) then
       logger.warn("landing_optional_effect: effect not in offered list:", tostring(effect_id))
@@ -30,9 +30,9 @@ function OptionalEffectHandler.build(helpers)
       return finish_choice(game, false)
     end
 
-    local player = meta.player_id and game.players[meta.player_id] or game:current_player()
-    local tile = meta.tile_id and game.board:get_tile_by_id(meta.tile_id) or (player and game.board:get_tile(player.position))
-    local move_result = meta.move_result or (game.last_turn and game.last_turn.move_result) or nil
+    local player = game.players[meta.player_id]
+    local tile = game.board:get_tile_by_id(meta.tile_id)
+    local move_result = meta.move_result
     local game_ctx = build_game_ctx(game, move_result)
 
     local res = Effect.execute(target_eff, player, tile, game_ctx)

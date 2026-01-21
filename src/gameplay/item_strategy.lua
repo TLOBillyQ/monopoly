@@ -32,7 +32,7 @@ function Strategy.has_obstacles_ahead(game, player, distance)
   distance = distance or 12
   local parity = distance
   local current = player.position
-  local facing = player.status and player.status.move_dir or nil
+  local facing = player.status.move_dir
 
   for _ = 1, distance do
     local next_index, _passed, step_dir = board:step_forward_by_facing(current, facing, parity)
@@ -53,7 +53,7 @@ local PHASE_TIMING = {
 
 function Strategy.timing_allowed(phase, timing, allow_missing_phase)
   if not phase then
-    return allow_missing_phase and true or false
+    return allow_missing_phase
   end
   local allowed = PHASE_TIMING[phase]
   if not allowed or not timing then
@@ -71,8 +71,8 @@ function Strategy.auto_pre_action(game, player, deps, phase)
   local use_item = assert(deps.use_item, "use_item deps required")
 
   local function can_use(item_id)
-    local cfg = inventory.cfg and inventory.cfg(item_id) or nil
-    local timing = cfg and cfg.timing or "manual"
+    local cfg = inventory.cfg(item_id)
+    local timing = cfg.timing
     return Strategy.timing_allowed(phase, timing, true)
   end
 

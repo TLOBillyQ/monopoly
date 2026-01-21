@@ -9,12 +9,15 @@ local LoveRuntime = {}
 
 function LoveRuntime.install(LoveLayer)
   function LoveLayer:layout()
-    local store_state = (self.game and self.game.store and self.game.store.state) or {}
-    local winner_name = self.game and (self.game.winner_names or (self.game.winner and self.game.winner.name)) or nil
+    local store_state = self.game.store.state
+    local winner_name = self.game.winner_names
+    if not winner_name and self.game.winner then
+      winner_name = self.game.winner.name
+    end
     local view = Presenter.present(store_state, {
       game = self.game,
-      last_turn = self.game and self.game.last_turn,
-      finished = self.game and self.game.finished,
+      last_turn = self.game.last_turn,
+      finished = self.game.finished,
       winner_name = winner_name,
     })
     Layout.apply(self.ui, view)
@@ -124,11 +127,15 @@ function LoveRuntime.install(LoveLayer)
     local game = self.game
     local ui = self.ui
 
-    local store_state = (game and game.store and game.store.state) or {}
-    local winner_name = game and (game.winner_names or (game.winner and game.winner.name)) or nil
+    local store_state = game.store.state
+    local winner_name = game.winner_names
+    if not winner_name and game.winner then
+      winner_name = game.winner.name
+    end
     local view = Presenter.present(store_state, {
-      last_turn = game and game.last_turn,
-      finished = game and game.finished,
+      game = game,
+      last_turn = game.last_turn,
+      finished = game.finished,
       winner_name = winner_name,
     })
 

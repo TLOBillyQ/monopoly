@@ -16,9 +16,9 @@ local function build_optional_choice(optional, player, tile, game_ctx, opts)
 
   local meta = {
     effect_ids = effect_ids,
-    player_id = player and player.id or nil,
-    tile_id = tile and tile.id or nil,
-    move_result = game_ctx and game_ctx.move_result,
+    player_id = player.id,
+    tile_id = tile.id,
+    move_result = game_ctx.move_result,
   }
 
   local choice_spec = {
@@ -38,7 +38,7 @@ local function build_optional_choice(optional, player, tile, game_ctx, opts)
     resume_args = opts.resume_args,
   }
 
-  IntentDispatcher.dispatch(game_ctx and game_ctx.game, { kind = "need_choice", choice_spec = choice_spec })
+  IntentDispatcher.dispatch(game_ctx.game, { kind = "need_choice", choice_spec = choice_spec })
   return out
 end
 
@@ -68,7 +68,7 @@ function Pipeline.run(effect_defs, player, tile, game_ctx, opts)
 
     local payload = out or res
     if payload then
-      IntentDispatcher.dispatch(game_ctx and game_ctx.game, payload)
+      IntentDispatcher.dispatch(game_ctx.game, payload)
     end
 
     if type(out) == "table" and out.waiting then

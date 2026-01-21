@@ -38,7 +38,7 @@ local function build_options(player, phase)
   local body_lines = {}
   for _, it in ipairs(Inventory.items(player)) do
     local cfg = cfg_by_id[it.id]
-    local timing = cfg and cfg.timing or "manual"
+    local timing = cfg.timing
     if Strategy.timing_allowed(phase, timing, false) then
       table.insert(options, { id = it.id, label = cfg.name })
       local line = cfg.name
@@ -56,12 +56,11 @@ local function build_options(player, phase)
 end
 
 function ItemPhase.finish(game, phase)
-  if game and game.store then
-    game.store:set({ "turn", "item_phase", phase }, { done = true })
-    local active = game.store:get({ "turn", "item_phase_active" })
-    if active == phase then
-      game.store:set({ "turn", "item_phase_active" }, nil)
-    end
+  local store = game.store
+  store:set({ "turn", "item_phase", phase }, { done = true })
+  local active = store:get({ "turn", "item_phase_active" })
+  if active == phase then
+    store:set({ "turn", "item_phase_active" }, nil)
   end
 end
 
@@ -72,12 +71,10 @@ function ItemPhase.run(tm, phase, args)
     return nil
   end
 
-  local store = game and game.store
-  local phase_state = store and store:get({ "turn", "item_phase", phase }) or nil
+  local store = game.store
+  local phase_state = store:get({ "turn", "item_phase", phase })
   if phase_state and phase_state.done then
-    if store then
-      store:set({ "turn", "item_phase", phase }, nil)
-    end
+    store:set({ "turn", "item_phase", phase }, nil)
     return nil
   end
 
@@ -96,9 +93,7 @@ function ItemPhase.run(tm, phase, args)
       IntentDispatcher.dispatch(game, pre)
     end
     if pre and pre.waiting then
-      if store then
-        store:set({ "turn", "item_phase_active" }, phase)
-      end
+      store:set({ "turn", "item_phase_active" }, phase)
       return { waiting = true, resume_state = args.resume_state, resume_args = args.resume_args }
     end
     ItemPhase.finish(game, phase)
@@ -118,10 +113,8 @@ function ItemPhase.run(tm, phase, args)
 
   IntentDispatcher.dispatch(game, { kind = "need_choice", choice_spec = spec })
 
-  if store then
-    store:set({ "turn", "item_phase", phase }, { active = true })
-    store:set({ "turn", "item_phase_active" }, phase)
-  end
+  store:set({ "turn", "item_phase", phase }, { active = true })
+  store:set({ "turn", "item_phase_active" }, phase)
 
   return { waiting = true, resume_state = args.resume_state, resume_args = args.resume_args }
 end

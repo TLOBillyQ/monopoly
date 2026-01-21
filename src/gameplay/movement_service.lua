@@ -8,7 +8,7 @@ local ITEM_IDS = gameplay_constants.item_ids
 
 function MovementService.move(game, player, steps, opts)
   opts = opts or {}
-  local abs_steps = math.abs(steps or 0)
+  local abs_steps = math.abs(steps)
   local branch_parity = opts.branch_parity or abs_steps
   local board = game.board
   local encountered = {}
@@ -19,15 +19,18 @@ function MovementService.move(game, player, steps, opts)
   local steal_interrupt = nil
   local current = player.position
   local start_tile = board:get_tile(current)
-  local facing = opts.direction or (player.status and player.status.move_dir) or nil
-  local step_fn = (steps or 0) < 0 and board.step_backward_by_facing or board.step_forward_by_facing
+  local facing = opts.direction or player.status.move_dir
+  local step_fn = board.step_forward_by_facing
+  if steps < 0 then
+    step_fn = board.step_backward_by_facing
+  end
 
   for step = 1, abs_steps do
     local next_index, passed, step_dir = step_fn(board, current, facing, branch_parity)
     local occupants = game.occupants[next_index] or {}
     if gameplay_constants.max_tile_occupants and #occupants >= gameplay_constants.max_tile_occupants then
       local tile = board:get_tile(current)
-      local tile_name = tile and tile.name or tostring(current)
+      local tile_name = tile.name
       logger.event(player.name .. " 前方拥挤，停在 " .. tile_name)
       break
     end
@@ -85,8 +88,8 @@ function MovementService.move(game, player, steps, opts)
 
   local landing_tile = board:get_tile(current)
   local function tile_label(tile, fallback_index)
-    local name = (tile and tile.name) or tostring(fallback_index)
-    if tile and tile.row and tile.col then
+    local name = tile.name
+    if tile.row and tile.col then
       return name .. "（" .. tile.row .. "，" .. tile.col .. "）"
     end
     return name

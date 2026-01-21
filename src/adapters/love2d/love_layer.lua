@@ -15,7 +15,7 @@ function LoveLayer:_sync_auto_player(enabled)
   if not player then
     return
   end
-  player.auto = enabled and true or false
+  player.auto = enabled
   if player._store_set then
     player:_store_set({ "players", player.id, "auto" }, player.auto)
   end

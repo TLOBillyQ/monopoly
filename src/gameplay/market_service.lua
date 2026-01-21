@@ -25,15 +25,33 @@ end
 local function entry_name(entry)
   if entry.kind == "vehicle" then
     local cfg = vehicles_by_id[entry.product_id]
-    return (cfg and cfg.name) or entry.name or tostring(entry.product_id)
+    if cfg then
+      return cfg.name
+    end
+    if entry.name then
+      return entry.name
+    end
+    return tostring(entry.product_id)
   end
   local cfg = items_by_id[entry.product_id]
-  return (cfg and cfg.name) or entry.name or tostring(entry.product_id)
+  if cfg then
+    return cfg.name
+  end
+  if entry.name then
+    return entry.name
+  end
+  return tostring(entry.product_id)
 end
 
 local function vehicle_name(seat_id)
-  local cfg = seat_id and vehicles_by_id[seat_id]
-  return cfg and cfg.name or (seat_id and tostring(seat_id)) or "无"
+  if seat_id then
+    local cfg = vehicles_by_id[seat_id]
+    if cfg then
+      return cfg.name
+    end
+    return tostring(seat_id)
+  end
+  return "无"
 end
 
 local function entry_price(entry)

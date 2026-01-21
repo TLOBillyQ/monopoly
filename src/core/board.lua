@@ -2,8 +2,8 @@ local Board = {}
 Board.__index = Board
 
 function Board.new(data)
-  local tile_lookup = (data and data.tile_lookup) or {}
-  local path = (data and data.path) or {}
+  local tile_lookup = data.tile_lookup
+  local path = data.path
 
   local index_by_id = {}
   for idx, tile in ipairs(path) do
@@ -13,10 +13,10 @@ function Board.new(data)
   local b = {
     path = path,
     tile_lookup = tile_lookup,
-    branches = (data and data.branches) or {},
+    branches = data.branches,
     index_by_id = index_by_id,
-    map = (data and data.map) or nil,
-    overlays = (data and data.overlays) or { roadblocks = {}, mines = {} },
+    map = data.map,
+    overlays = data.overlays,
   }
   return setmetatable(b, Board)
 end
@@ -96,7 +96,11 @@ function Board:advance(index, steps, branch_parity)
   for _ = 1, steps do
     local branch = self.branches[current]
     if branch and branch_parity then
-      current = (branch_parity % 2 == 1) and branch.odd or branch.even
+      if branch_parity % 2 == 1 then
+        current = branch.odd
+      else
+        current = branch.even
+      end
     else
       current = current + 1
     end
@@ -125,25 +129,21 @@ end
 
 function Board:step_forward_by_facing(current_index, facing, parity)
   local map = self.map
-  if not map or not map.neighbors then
-    local next_index, passed = self:advance(current_index, 1, parity)
-    return next_index, passed, facing
-  end
 
   local current_tile = self:get_tile(current_index)
   if not current_tile then
     return current_index, 0, facing
   end
   local current_id = current_tile.id
-  local neigh = map.neighbors[current_id] or {}
+  local neigh = map.neighbors[current_id]
 
   local next_id = nil
 
   if map.outer_next and map.outer_next[current_id] then
-    local entry = map.entry_points and map.entry_points[current_id] or nil
-    if entry and parity and (parity % 2 == 0) and facing and map.outer_prev and map.direction then
+    local entry = map.entry_points[current_id]
+    if entry and parity and (parity % 2 == 0) and facing then
       local prev_id = map.outer_prev[current_id]
-      local required_facing = prev_id and map.direction(prev_id, current_id) or nil
+      local required_facing = map.direction(prev_id, current_id)
       if required_facing and required_facing == facing then
         next_id = entry.inner_id
       end
@@ -152,7 +152,10 @@ function Board:step_forward_by_facing(current_index, facing, parity)
       next_id = map.outer_next[current_id]
     end
   elseif map.market_id and current_id == map.market_id and facing and parity and map.turn_left and map.turn_right then
-    local exit_dir = (parity % 2 == 1) and map.turn_left[facing] or map.turn_right[facing]
+    local exit_dir = map.turn_right[facing]
+    if parity % 2 == 1 then
+      exit_dir = map.turn_left[facing]
+    end
     if exit_dir then
       next_id = neigh[exit_dir]
     end
@@ -163,7 +166,7 @@ function Board:step_forward_by_facing(current_index, facing, parity)
     if facing and neigh[facing] then
       next_id = neigh[facing]
     else
-      local back_dir = facing and OPPOSITE[facing] or nil
+      local back_dir = OPPOSITE[facing]
       local _, nid = pick_any_dir(neigh, back_dir)
       next_id = nid
       if not next_id then
@@ -181,30 +184,23 @@ function Board:step_forward_by_facing(current_index, facing, parity)
   if not next_index then
     return current_index, 0, facing
   end
-  local passed_start = (map.start_id and next_id == map.start_id) and 1 or 0
-  local step_dir = map.direction and map.direction(current_id, next_id) or facing
+  local passed_start = 0
+  if next_id == map.start_id then
+    passed_start = 1
+  end
+  local step_dir = map.direction(current_id, next_id) or facing
   return next_index, passed_start, step_dir
 end
 
 function Board:step_backward_by_facing(current_index, facing, _parity)
   local map = self.map
-  if not map or not map.neighbors then
-    local len = self:length()
-    local next_index = current_index - 1
-    if next_index < 1 then
-      next_index = len
-    end
-    local next_tile = self:get_tile(next_index)
-    local passed_start = (map and map.start_id and next_tile and next_tile.id == map.start_id) and 1 or 0
-    return next_index, passed_start, facing
-  end
 
   local current_tile = self:get_tile(current_index)
   if not current_tile then
     return current_index, 0, facing
   end
   local current_id = current_tile.id
-  local neigh = map.neighbors[current_id] or {}
+  local neigh = map.neighbors[current_id]
 
   local next_id = nil
   if facing then
@@ -236,8 +232,11 @@ function Board:step_backward_by_facing(current_index, facing, _parity)
   if not next_index then
     return current_index, 0, facing
   end
-  local passed_start = (map.start_id and next_id == map.start_id) and 1 or 0
-  local step_dir = map.direction and map.direction(current_id, next_id) or facing
+  local passed_start = 0
+  if next_id == map.start_id then
+    passed_start = 1
+  end
+  local step_dir = map.direction(current_id, next_id) or facing
   return next_index, passed_start, step_dir
 end
 

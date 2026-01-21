@@ -146,8 +146,11 @@ handlers.destroy_buildings_on_path = function(game, _, _, context)
   if context and context.visited then
     for _, idx in ipairs(context.visited) do
       local t = game.board:get_tile(idx)
-      local snap = (game.store and game.store:get({ "board", "tiles", t.id })) or nil
-      local lvl = (type(snap) == "table" and snap.level) or 0
+      local snap = game.store:get({ "board", "tiles", t.id })
+      local lvl = 0
+      if type(snap) == "table" then
+        lvl = snap.level
+      end
       if t.type == "land" and lvl > 0 then
         if game and game.set_tile_level then
           game:set_tile_level(t, 0)

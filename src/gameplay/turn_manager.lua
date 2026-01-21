@@ -8,25 +8,21 @@ local TurnManager = {}
 TurnManager.__index = TurnManager
 
 local function build_turn_log_line(game, turn_count)
-  local player = game and game.current_player and game:current_player()
+  local player = game:current_player()
   local next_count = turn_count + 1
-  if player and player.eliminated then
+  if player.eliminated then
     next_count = turn_count
   end
   local line = "回合" .. tostring(next_count) .. ": "
-  if not player then
-    line = line .. "无效玩家"
-    return line
-  end
   if player.eliminated then
     line = line .. tostring(player.name) .. " (已出局)"
     return line
   end
 
   local tile_state = Tile.get_state
-  local status = player.status or {}
+  local status = player.status
   local status_parts = {}
-  local stay_turns = status.stay_turns or 0
+  local stay_turns = status.stay_turns
   if stay_turns ~= 0 then
     table.insert(status_parts, "stay_turns=" .. tostring(stay_turns))
   end
@@ -36,15 +32,13 @@ local function build_turn_log_line(game, turn_count)
   end
   local items = {}
   for _, it in ipairs(Inventory.items(player)) do
-    local id = it and it.id or it
-    if id ~= nil then
-      local name = Inventory.item_name(id)
-      table.insert(items, name .. "(" .. tostring(id) .. ")")
-    end
+    local id = it.id
+    local name = Inventory.item_name(id)
+    table.insert(items, name .. "(" .. tostring(id) .. ")")
   end
   line = line
     .. tostring(player.name)
-    .. " 金币=" .. tostring(player.cash or 0)
+    .. " 金币=" .. tostring(player.cash)
   if #status_parts > 0 then
     line = line .. " 状态: " .. table.concat(status_parts, ", ")
   end
@@ -52,29 +46,25 @@ local function build_turn_log_line(game, turn_count)
     line = line .. " 背包: " .. table.concat(items, ", ")
   end
   local properties = {}
-  if player.properties then
-    local ids = {}
-    for tile_id in pairs(player.properties) do
-      table.insert(ids, tile_id)
+  local ids = {}
+  for tile_id in pairs(player.properties) do
+    table.insert(ids, tile_id)
+  end
+  table.sort(ids, function(a, b)
+    if type(a) == "number" and type(b) == "number" then
+      return a < b
     end
-    table.sort(ids, function(a, b)
-      if type(a) == "number" and type(b) == "number" then
-        return a < b
-      end
-      return tostring(a) < tostring(b)
-    end)
-    for _, tile_id in ipairs(ids) do
-      local tile = game and game.board and game.board:get_tile_by_id(tile_id)
-      local name = (tile and tile.name) or tostring(tile_id)
-      local level = 0
-      if tile then
-        local ok, st = pcall(tile_state, game, tile)
-        if ok and type(st) == "table" then
-          level = st.level or 0
-        end
-      end
-      table.insert(properties, name .. "(Lv" .. tostring(level) .. ")")
+    return tostring(a) < tostring(b)
+  end)
+  for _, tile_id in ipairs(ids) do
+    local tile = game.board:get_tile_by_id(tile_id)
+    local name = tile.name
+    local level = 0
+    local ok, st = pcall(tile_state, game, tile)
+    if ok and type(st) == "table" then
+      level = st.level
     end
+    table.insert(properties, name .. "(Lv" .. tostring(level) .. ")")
   end
   if #properties > 0 then
     line = line .. " 地产: " .. table.concat(properties, ", ")
@@ -83,9 +73,6 @@ local function build_turn_log_line(game, turn_count)
 end
 
 local function get_choice(game)
-  if not (game and game.store) then
-    return nil
-  end
   return game.store:get({ "turn", "pending_choice" })
 end
 
@@ -99,10 +86,6 @@ local function decide_choice_action(game, choice, pending_action)
     return auto_action
   end
 
-  local auto_play = game
-    and game.ui_port
-    and game.ui_port.ui
-    and game.ui_port.ui.auto_play
   if game.ui_port == nil then
     local first = choice.options and choice.options[1]
     if first then
@@ -156,7 +139,7 @@ function TurnManager:_build_flow()
   for name, fn in pairs(self.phases) do
     states[name] = function(args)
       if name == "start" then
-        local turn_count = self.game.store:get({ "turn", "turn_count" }) or 0
+        local turn_count = self.game.store:get({ "turn", "turn_count" })
         Logger.info(build_turn_log_line(self.game, turn_count))
       end
       self.game.store:set({ "turn", "phase" }, name)
@@ -169,7 +152,7 @@ function TurnManager:_build_flow()
     local choice = get_choice(self.game)
     if not choice then
       self.pending_action = nil
-      return (args and args.resume_state) or "end_turn", (args and args.resume_args) or {}
+      return args.resume_state, args.resume_args
     end
 
     self.pending_action = decide_choice_action(self.game, choice, self.pending_action)
@@ -188,7 +171,7 @@ function TurnManager:_build_flow()
     if res.stay then
       return "wait_choice", args
     end
-    return args and args.resume_state, args and args.resume_args
+    return args.resume_state, args.resume_args
   end
 
   return Flow.new({ start = "start", states = states })
@@ -196,7 +179,7 @@ end
 
 function TurnManager:next_player()
   local count = #self.game.players
-  local current = self.game.store:get({ "turn", "current_player_index" }) or 1
+  local current = self.game.store:get({ "turn", "current_player_index" })
   local next_index = current % count + 1
   self.game.store:set({ "turn", "current_player_index" }, next_index)
 end

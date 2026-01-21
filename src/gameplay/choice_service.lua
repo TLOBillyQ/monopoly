@@ -9,9 +9,6 @@ local function is_cancel(action)
 end
 
 local function clear_choice(game)
-  if not (game and game.store) then
-    return
-  end
   game.store:set({ "turn", "pending_choice" }, nil)
 end
 
@@ -26,7 +23,7 @@ end
 
 local function finish_choice(game, stay)
   clear_choice(game)
-  return { stay = stay and true or false }
+  return { stay = stay }
 end
 
 -- 选择处理约定：
@@ -53,7 +50,10 @@ local function option_exists(choice, option_id)
     return true
   end
   for _, opt in ipairs(options) do
-    local id = (type(opt) == "table") and opt.id or opt
+    local id = opt
+    if type(opt) == "table" then
+      id = opt.id
+    end
     if id ~= nil and (id == option_id or tostring(id) == tostring(option_id)) then
       return true
     end
@@ -73,9 +73,6 @@ local function finish_item_phase(game, phase)
 end
 
 local function finish_active_item_phase(game)
-  if not (game and game.store) then
-    return
-  end
   local phase = game.store:get({ "turn", "item_phase_active" })
   if phase then
     deps.item_phase.finish(game, phase)

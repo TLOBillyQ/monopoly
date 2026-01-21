@@ -27,8 +27,14 @@ function LandActions.safe_tile_state(game, tile)
 end
 
 function LandActions.resolve_rent_owner(game, tile, state_fn)
-  local st = state_fn and state_fn(game, tile) or LandActions.safe_tile_state(game, tile)
-  local owner = st.owner_id and game.players[st.owner_id] or nil
+  local st = LandActions.safe_tile_state(game, tile)
+  if state_fn then
+    st = state_fn(game, tile)
+  end
+  local owner = nil
+  if st.owner_id then
+    owner = game.players[st.owner_id]
+  end
   if not owner or owner.eliminated then
     game:set_tile_owner(tile, nil)
     return nil, st
@@ -119,7 +125,10 @@ function LandActions.execute_strong_card(game, player_id, tile_id)
   local player = game.players[player_id]
   local tile = game.board:get_tile_by_id(tile_id)
   local st = LandActions.safe_tile_state(game, tile)
-  local owner = st.owner_id and game.players[st.owner_id] or nil
+  local owner = nil
+  if st.owner_id then
+    owner = game.players[st.owner_id]
+  end
   if not owner then return false end
 
   local total_value = BoardUtils.total_invested(tile, st.level)

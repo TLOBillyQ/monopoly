@@ -12,7 +12,7 @@ local ITEM_IDS = gameplay_constants.item_ids
 
 
 local function run_item_choice_flow(game, player, item_id, context, deps, opts)
-  local candidates = opts.candidates and opts.candidates(game, player, item_id, context, deps) or {}
+  local candidates = opts.candidates(game, player, item_id, context, deps)
   if not candidates or #candidates == 0 then
     if opts.on_empty then
       opts.on_empty(game, player, item_id, context, deps)
@@ -21,7 +21,10 @@ local function run_item_choice_flow(game, player, item_id, context, deps, opts)
   end
 
   if context and context.by_ai then
-    return opts.ai_select and opts.ai_select(game, player, item_id, candidates, context, deps) or false
+    if opts.ai_select then
+      return opts.ai_select(game, player, item_id, candidates, context, deps)
+    end
+    return false
   end
 
   local choice_spec = opts.choice_spec and opts.choice_spec(game, player, item_id, candidates, context, deps)
@@ -60,7 +63,11 @@ local function handle_target_player_item(game, player, item_id, context, deps)
       local options = {}
       local body_lines = {}
       for _, t in ipairs(candidates) do
-        table.insert(body_lines, t.name .. " 现金:" .. t.cash .. (t.status.deity and (" 神:" .. t.status.deity.type) or ""))
+        local deity_text = ""
+        if t.status.deity then
+          deity_text = " 神:" .. t.status.deity.type
+        end
+        table.insert(body_lines, t.name .. " 现金:" .. t.cash .. deity_text)
         table.insert(options, { id = t.id, label = t.name })
       end
       return {
@@ -126,7 +133,10 @@ local function handle_roadblock(game, player, item_id, context, deps)
     end,
     ai_select = function(inner_game, inner_player, inner_item_id, candidates, _, inner_deps)
       local best = Roadblock.pick_best(candidates)
-      local idx = best and best.idx or nil
+      local idx = nil
+      if best then
+        idx = best.idx
+      end
       if not idx then
         return false
       end

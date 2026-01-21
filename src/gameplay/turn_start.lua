@@ -3,7 +3,7 @@ local ItemPhase = require("src.gameplay.item_phase")
 
 local function phase_start(tm)
   local player = tm.game:current_player()
-  local tc = (tm.game.store and tm.game.store:get({ "turn", "turn_count" })) or 0
+  local tc = tm.game.store:get({ "turn", "turn_count" })
   tm.game.last_turn = {
     player_id = player.id,
     player_name = player.name,

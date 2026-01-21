@@ -26,6 +26,7 @@ function BoardFactory.create(opts)
     tile_lookup = tile_lookup,
     branches = map_cfg.branches or {},
     map = map_cfg,
+    overlays = { roadblocks = {}, mines = {} },
   })
 end
 

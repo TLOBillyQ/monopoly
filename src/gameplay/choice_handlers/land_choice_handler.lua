@@ -12,7 +12,7 @@ function LandChoiceHandler.build(helpers)
   local LandActions = require("src.gameplay.land_actions")
 
   local function handle_rent_prompt(game, choice, action)
-    local meta = choice.meta or {}
+    local meta = choice.meta
     local player_id = meta.player_id
     local tile_id = meta.tile_id
     local card_kind = meta.card_kind
@@ -25,8 +25,8 @@ function LandChoiceHandler.build(helpers)
       LandActions.execute_free_card(game, player_id, tile_id)
     else
       if card_kind == "strong" then
-        local player = player_id and game.players[player_id] or nil
-        if player and Inventory.find_index(player, ITEM_IDS.free_rent) then
+        local player = game.players[player_id]
+        if Inventory.find_index(player, ITEM_IDS.free_rent) then
           IntentDispatcher.dispatch(game, {
             kind = "need_choice",
             choice_spec = LandChoiceSpecs.rent_prompt(player_id, tile_id, "free"),
@@ -41,7 +41,7 @@ function LandChoiceHandler.build(helpers)
   end
 
   local function handle_tax_prompt(game, choice, action)
-    local meta = choice.meta or {}
+    local meta = choice.meta
     local player_id = meta.player_id
 
     local use_card = (action and action.option_id == "use") and not is_cancel(action)

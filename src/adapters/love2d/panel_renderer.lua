@@ -17,7 +17,10 @@ local function draw_panel_background(ui, panel)
 end
 
 local function draw_button(ui, btn, active)
-  local bg = active and { 0.3, 0.5, 0.35 } or { 0.2, 0.22, 0.24 }
+  local bg = { 0.2, 0.22, 0.24 }
+  if active then
+    bg = { 0.3, 0.5, 0.35 }
+  end
   love.graphics.setColor(bg)
   love.graphics.rectangle("fill", btn.x, btn.y, btn.w, btn.h, 6, 6)
   love.graphics.setColor(ui.palette.panel_border)
@@ -44,11 +47,11 @@ local function get_player_details_text(player, view, item_name_by_id)
   if player.eliminated then return nil end
   local parts = {}
 
-  local status = player.status or {}
+  local status = player.status
   if status.stay_turns and status.stay_turns > 0 then
     local pos = player.position
-    local tile = view and view.board and view.board.tiles and view.board.tiles[pos]
-    local t_type = tile and tile.type
+    local tile = view.board.tiles[pos]
+    local t_type = tile.type
     local days = status.stay_turns
     if t_type == "hospital" then
       table.insert(parts, "医院(" .. days .. ")")
@@ -68,7 +71,7 @@ local function get_player_details_text(player, view, item_name_by_id)
     table.insert(parts, vname)
   end
 
-  local inv = player.inventory or {}
+  local inv = player.inventory
   if inv.items and #inv.items > 0 then
     local names = {}
     for _, item in ipairs(inv.items) do
@@ -87,18 +90,11 @@ local function draw_current_player(ui, view, panel, y)
   love.graphics.printf("当前玩家", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 18
 
-  local state = view and view.state
-  if not state then
-    return y
-  end
-
-  local turn = state.turn or {}
-  local players = state.players or {}
-  local idx = turn.current_player_index or 1
+  local state = view.state
+  local turn = state.turn
+  local players = state.players
+  local idx = turn.current_player_index
   local current = players[idx]
-  if not current then
-    return y
-  end
   love.graphics.setFont(ui.fonts.body)
   love.graphics.setColor(ui.palette.text)
   love.graphics.printf(current.name .. " 现金 " .. current.cash, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
@@ -108,10 +104,10 @@ local function draw_current_player(ui, view, panel, y)
   local role = roles_cfg[((role_id - 1) % #roles_cfg) + 1]
   love.graphics.setFont(ui.fonts.tiny)
   love.graphics.setColor(ui.palette.muted)
-  love.graphics.printf("角色: " .. (role and role.name or "-"), panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+  love.graphics.printf("角色: " .. role.name, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 16
 
-  local status = current.status or {}
+  local status = current.status
   if status.deity then
     love.graphics.printf("附身: " .. status.deity.type .. " (" .. status.deity.remaining .. ")", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
     y = y + 16
@@ -155,31 +151,26 @@ local function draw_player_status(ui, view, panel, y, item_name_by_id)
   love.graphics.printf("玩家状态", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 20
 
-  local state = view and view.state
-  if state then
-    local players = state.players or {}
-    for pid = 1, #players do
-      local player = players[pid]
-      if player then
-        love.graphics.setFont(ui.fonts.small)
-        local color = ui.palette.player[pid] or ui.palette.text
-        love.graphics.setColor(color)
-        love.graphics.circle("fill", panel.x + ui.margin + 6, y + 8, 4)
-        love.graphics.setColor(ui.palette.text)
-        love.graphics.printf(player_label(player), panel.x + ui.margin + 16, y, panel.w - ui.margin * 2 - 16, "left")
-        y = y + 18
+  local players = view.state.players
+  for pid = 1, #players do
+    local player = players[pid]
+    love.graphics.setFont(ui.fonts.small)
+    local color = ui.palette.player[pid] or ui.palette.text
+    love.graphics.setColor(color)
+    love.graphics.circle("fill", panel.x + ui.margin + 6, y + 8, 4)
+    love.graphics.setColor(ui.palette.text)
+    love.graphics.printf(player_label(player), panel.x + ui.margin + 16, y, panel.w - ui.margin * 2 - 16, "left")
+    y = y + 18
 
-        local details = get_player_details_text(player, view, item_name_by_id)
-        if details then
-          love.graphics.setColor(ui.palette.muted)
-          local _, lines = ui.fonts.small:getWrap(details, panel.w - ui.margin * 2 - 16)
-          love.graphics.printf(details, panel.x + ui.margin + 16, y, panel.w - ui.margin * 2 - 16, "left")
-          y = y + (#lines * 18)
-        end
-
-        y = y + 6
-      end
+    local details = get_player_details_text(player, view, item_name_by_id)
+    if details then
+      love.graphics.setColor(ui.palette.muted)
+      local _, lines = ui.fonts.small:getWrap(details, panel.w - ui.margin * 2 - 16)
+      love.graphics.printf(details, panel.x + ui.margin + 16, y, panel.w - ui.margin * 2 - 16, "left")
+      y = y + (#lines * 18)
     end
+
+    y = y + 6
   end
   return y
 end
@@ -190,35 +181,35 @@ local function draw_tile_detail(ui, view, panel, y)
   love.graphics.printf("格子详情", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
   y = y + 16
 
-  local state = view and view.state
-  if state and (ui.selected_tile or ui.hover_tile) then
+  local state = view.state
+  if ui.selected_tile or ui.hover_tile then
     local idx = ui.selected_tile or ui.hover_tile
-    local tile = view.board and view.board.tiles and view.board.tiles[idx]
+    local tile = view.board.tiles[idx]
     if tile then
       love.graphics.setFont(ui.fonts.tiny)
       love.graphics.setColor(ui.palette.text)
       love.graphics.printf(tile.name .. " (" .. tile.type .. ")", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
       y = y + 14
       if tile.type == "land" then
-        local tile_state = state.board and state.board.tiles and state.board.tiles[tile.id] or nil
-        local owner_id = tile_state and tile_state.owner_id or nil
-        local level = tile_state and tile_state.level or 0
-        local owner = owner_id and state.players and state.players[owner_id]
+        local tile_state = state.board.tiles[tile.id]
+        local owner_id = tile_state.owner_id
+        local level = tile_state.level
+        local owner = state.players[owner_id]
         love.graphics.printf("价格: " .. tostring(tile.price or "-"), panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
         y = y + 14
-        love.graphics.printf("等级: " .. tostring(level or 0), panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
+        love.graphics.printf("等级: " .. tostring(level), panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
         y = y + 14
         if owner then
           love.graphics.printf("归属: " .. owner.name, panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
           y = y + 14
         end
       end
-      local overlays = (view.board and view.board.overlays) or (state.board and state.board.overlays) or {}
-      if overlays.roadblocks and overlays.roadblocks[idx] then
+      local overlays = view.board.overlays
+      if overlays.roadblocks[idx] then
         love.graphics.printf("路障: 有", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
         y = y + 14
       end
-      if overlays.mines and overlays.mines[idx] then
+      if overlays.mines[idx] then
         love.graphics.printf("地雷: 有", panel.x + ui.margin, y, panel.w - ui.margin * 2, "left")
         y = y + 14
       end
@@ -256,11 +247,8 @@ function PanelRenderer.draw(ui, view, buttons, item_name_by_id)
   love.graphics.printf("蛋仔大富翁", panel.x + ui.margin, panel.y + 18, panel.w - ui.margin * 2, "left")
 
   love.graphics.setFont(ui.fonts.small)
-  local turn_label = "回合: -"
-  local tc = view and view.state and view.state.turn and view.state.turn.turn_count
-  if tc ~= nil then
-    turn_label = "回合: " .. tostring(tc)
-  end
+  local tc = view.state.turn.turn_count
+  local turn_label = "回合: " .. tc
   love.graphics.setColor(ui.palette.muted)
   love.graphics.printf(turn_label, panel.x + ui.margin, panel.y + 42, panel.w - ui.margin * 2, "left")
 

@@ -75,10 +75,14 @@ function UIBridge:set_visible(name, visible)
   if not node then
     return
   end
-  local flag = visible and true or false
+  local flag = visible == true
   if node.SetVisibility then
     if _G.ESlateVisibility and ESlateVisibility.Visible and ESlateVisibility.Collapsed then
-      node:SetVisibility(flag and ESlateVisibility.Visible or ESlateVisibility.Collapsed)
+    local vis = ESlateVisibility.Collapsed
+    if flag then
+      vis = ESlateVisibility.Visible
+    end
+    node:SetVisibility(vis)
     else
       node:SetVisibility(flag)
     end
@@ -98,7 +102,7 @@ function UIBridge:set_touch_enabled(name, enabled)
   if not node then
     return
   end
-  local flag = enabled and true or false
+  local flag = enabled == true
   if node.SetIsEnabled then
     node:SetIsEnabled(flag)
     return

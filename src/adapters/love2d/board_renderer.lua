@@ -3,20 +3,17 @@ local UIState = require("src.adapters.love2d.ui_state")
 local BoardRenderer = {}
 
 local function get_store_state(view)
-  local st = view and view.state or nil
-  local board = st and st.board or nil
+  local st = view.state
+  local board = st.board
   return {
-    tiles = (board and board.tiles) or {},
-    overlays = (view and view.board and view.board.overlays) or (board and board.overlays) or { roadblocks = {}, mines = {} },
-    players = st and st.players or {},
+    tiles = board.tiles,
+    overlays = view.board.overlays,
+    players = st.players,
   }
 end
 
 local function build_occupants_from_store(store_players)
   local occ = {}
-  if not store_players then
-    return occ
-  end
   for pid = 1, #store_players do
     local p = store_players[pid]
     if p and not p.eliminated and p.position then
@@ -60,7 +57,12 @@ local function draw_tile(ui, idx, pos, half_cell, pad, last_visited, tile, tile_
   if not tile then
     return
   end
-  local owner_id = tile_state and tile_state.owner_id or nil
+  local owner_id = nil
+  local level = 0
+  if tile.type == "land" then
+    owner_id = tile_state.owner_id
+    level = tile_state.level
+  end
   local color = UIState.tile_color(ui, tile.type)
   if tile.type == "land" and owner_id then
     color = ui.palette.player[owner_id] or { 0.9, 0.9, 0.9 }
@@ -90,11 +92,10 @@ local function draw_tile(ui, idx, pos, half_cell, pad, last_visited, tile, tile_
   love.graphics.setFont(ui.fonts.small)
   local name_y = rect_y + rect_h * 0.42
   love.graphics.setColor(0, 0, 0, 0.7)
-  love.graphics.printf(tile.name or "-", rect_x, name_y + 1, rect_w, "center")
+  love.graphics.printf(tile.name, rect_x, name_y + 1, rect_w, "center")
   love.graphics.setColor(0, 0, 0, 0.95)
-  love.graphics.printf(tile.name or "-", rect_x, name_y, rect_w, "center")
+  love.graphics.printf(tile.name, rect_x, name_y, rect_w, "center")
 
-  local level = tile_state and tile_state.level or 0
   if tile.type == "land" and owner_id then
     if level > 0 then
       love.graphics.setFont(ui.fonts.tiny)
@@ -152,10 +153,6 @@ local function tile_rect_for_overlay(ui, idx, pos, half_cell, pad)
 end
 
 function BoardRenderer.draw(ui, view)
-  if not view or not view.board or not view.board.tiles then
-    return
-  end
-
   local st = get_store_state(view)
 
   local cell_size = ui.board.cell_size
@@ -165,17 +162,17 @@ function BoardRenderer.draw(ui, view)
 
   for idx, pos in ipairs(ui.board.positions) do
     local tile = view.board.tiles[idx]
-    local tile_state = (st and st.tiles and tile and st.tiles[tile.id]) or nil
+    local tile_state = st.tiles[tile.id]
     draw_tile(ui, idx, pos, half_cell, pad, last_visited[idx], tile, tile_state)
   end
 
-  local occupants = build_occupants_from_store(st and st.players)
+  local occupants = build_occupants_from_store(st.players)
   draw_players(ui, occupants, cell_size)
 
   for idx, pos in ipairs(ui.board.positions) do
     local rect_x, rect_y, rect_w, rect_h = tile_rect_for_overlay(ui, idx, pos, half_cell, pad)
     local tile = view.board.tiles[idx]
-    draw_overlays(ui, (st and st.overlays) or { roadblocks = {}, mines = {} }, rect_x, rect_y, rect_w, rect_h, idx, tile)
+    draw_overlays(ui, st.overlays, rect_x, rect_y, rect_w, rect_h, idx, tile)
   end
 end
 

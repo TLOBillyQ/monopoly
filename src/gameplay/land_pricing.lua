@@ -1,7 +1,7 @@
 local Pricing = {}
 
 local function max_level(tile)
-  local costs = tile and tile.upgrade_costs
+  local costs = tile.upgrade_costs
   if type(costs) == "table" then
     return #costs
   end
@@ -13,11 +13,11 @@ function Pricing.max_level(tile)
 end
 
 function Pricing.purchase_price(tile)
-  return (tile and tile.price) or 0
+  return tile.price
 end
 
 function Pricing.upgrade_cost(tile, level)
-  local costs = tile and tile.upgrade_costs
+  local costs = tile.upgrade_costs
   if type(costs) ~= "table" then
     return 0
   end
@@ -26,7 +26,7 @@ function Pricing.upgrade_cost(tile, level)
 end
 
 function Pricing.rent_for_level(tile, level)
-  local rents = tile and tile.rents
+  local rents = tile.rents
   if type(rents) ~= "table" then
     return 0
   end
@@ -36,7 +36,7 @@ end
 
 function Pricing.total_invested(tile, level)
   local total = Pricing.purchase_price(tile)
-  local costs = tile and tile.upgrade_costs
+  local costs = tile.upgrade_costs
   if type(costs) ~= "table" then
     return total
   end

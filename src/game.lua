@@ -24,7 +24,10 @@ local function total_assets(game, player)
     local tile = game.board:get_tile_by_id(tile_id)
     if tile and tile.type == "land" then
       local ok, st = pcall(tile_state, game, tile)
-      local level = (ok and type(st) == "table" and st.level) or 0
+      local level = 0
+      if ok and type(st) == "table" then
+        level = st.level
+      end
       total = total + Pricing.total_invested(tile, level)
     end
   end
@@ -47,7 +50,11 @@ local function apply_winners(game, winners, message)
     game.winner = nil
   end
   local names = winner_names(winners)
-  game.winner_names = names ~= "" and names or nil
+  if names ~= "" then
+    game.winner_names = names
+  else
+    game.winner_names = nil
+  end
   if message then
     if game.winner_names then
       game.logger.event(message, game.winner_names)
@@ -84,7 +91,7 @@ end
 
 
 function Game:set_player_eliminated(player, eliminated)
-  player.eliminated = eliminated and true or false
+  player.eliminated = eliminated == true
   self:_store_set({ "players", player.id, "eliminated" }, player.eliminated)
 end
 
@@ -95,7 +102,11 @@ function Game:set_player_property(player, tile_id, owned)
   else
     player.properties[tile_id] = nil
   end
-  self:_store_set({ "players", player.id, "properties", tile_id }, owned and true or nil)
+  local store_value = nil
+  if owned then
+    store_value = true
+  end
+  self:_store_set({ "players", player.id, "properties", tile_id }, store_value)
 end
 
 

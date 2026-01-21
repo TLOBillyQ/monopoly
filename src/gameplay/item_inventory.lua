@@ -16,7 +16,7 @@ end
 
 function Inventory.item_name(item_id)
   local cfg = cfg_by_id[item_id]
-  return (cfg and cfg.name) or tostring(item_id)
+  return cfg.name
 end
 
 function Inventory.items(player)

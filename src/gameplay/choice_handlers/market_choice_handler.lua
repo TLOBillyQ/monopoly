@@ -18,8 +18,8 @@ function MarketChoiceHandler.build(helpers)
     end
 
     local product_id = Convert.to_number(action.option_id)
-    local meta = choice.meta or {}
-    local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+    local meta = choice.meta
+    local player = game.players[meta.player_id]
     if player and product_id then
       local res = MarketService.buy(game, player, product_id)
       if type(res) == "table" and res.intent then
@@ -40,8 +40,8 @@ function MarketChoiceHandler.build(helpers)
     end
 
     local use = action and action.option_id == "use"
-    local meta = choice.meta or {}
-    local player = meta.player_id and game.players[meta.player_id] or game:current_player()
+    local meta = choice.meta
+    local player = game.players[meta.player_id]
     local product_id = Convert.to_number(meta.product_id)
     if use and player and product_id then
       MarketService.buy_with_opts(game, player, product_id, { skip_vehicle_prompt = true })

@@ -20,7 +20,7 @@ function AdapterLayer.attach(layer, opts)
     if payload and payload.game == layer.game then
       layer.pending_choice = payload.choice
       layer.pending_choice_elapsed = 0
-      layer.pending_choice_id = payload.choice and payload.choice.id or nil
+      layer.pending_choice_id = payload.choice.id
       if opts.on_need_choice then
         opts.on_need_choice(layer, payload.choice)
       end
@@ -37,7 +37,7 @@ function AdapterLayer.set_game(layer, game, opts)
     opts.on_set_game(layer, game)
   end
 
-  layer.pending_choice = layer.game and layer.game:pending_choice() or nil
+  layer.pending_choice = layer.game:pending_choice()
   if layer.pending_choice then
     layer.pending_choice_elapsed = 0
     layer.pending_choice_id = layer.pending_choice.id

@@ -39,11 +39,15 @@ local function create_players(opts)
   end
   for i, name in ipairs(names) do
     local role = roles_cfg[((i - 1) % #roles_cfg) + 1]
+    local is_ai = i > 1
+    if opts.ai ~= nil then
+      is_ai = opts.ai[i]
+    end
     local player = Player.new({
       id = i,
       name = name,
       role_id = role.id,
-      is_ai = opts.ai and opts.ai[i] or (i > 1),
+      is_ai = is_ai,
       auto = opts.auto_all or false,
       start_index = 1,
       constants = constants,
@@ -106,7 +110,7 @@ local function build_initial_state(board, players, rng)
       pending_choice = nil,
       choice_seq = 0,
     },
-    rng = rng and rng:snapshot() or nil,
+    rng = rng:snapshot(),
     players = snapshot_players(players),
   }
 end

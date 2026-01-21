@@ -25,14 +25,14 @@ local function safe_set_visible(node, visible)
   if not (node and Role and Role.set_node_visible) then
     return
   end
-  Role.set_node_visible(node, visible and true or false)
+  Role.set_node_visible(node, visible == true)
 end
 
 local function safe_set_touch_enabled(node, enabled)
   if not (node and Role and Role.set_node_touch_enabled) then
     return
   end
-  Role.set_node_touch_enabled(node, enabled and true or false)
+  Role.set_node_touch_enabled(node, enabled == true)
 end
 
 function UIState.create()

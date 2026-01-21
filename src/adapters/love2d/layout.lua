@@ -43,8 +43,8 @@ function Layout.apply(ui, game_or_view)
 
   local board_w = w - ui.side_width - ui.margin * 3
   local board_h = h - ui.margin * 2
-  local vpad = (ui.board.padding and ui.board.padding.vertical) or 0
-  local hpad = (ui.board.padding and ui.board.padding.horizontal) or 0
+  local vpad = ui.board.padding.vertical
+  local hpad = ui.board.padding.horizontal
   local effective_board_h = board_h - vpad * 2
   local effective_board_w = board_w - hpad * 2
   local board_size = math.min(effective_board_w, effective_board_h)

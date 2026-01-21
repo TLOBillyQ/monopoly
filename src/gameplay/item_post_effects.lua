@@ -84,7 +84,10 @@ local TARGET_EFFECTS = {
       return true
     end,
     apply = function(_, user, target, _context)
-      local remaining = user.status.deity and user.status.deity.remaining or nil
+      local remaining = nil
+      if user.status.deity then
+        remaining = user.status.deity.remaining
+      end
       target:set_deity("poor", remaining)
       user:set_deity(nil)
       logger.event(user.name .. " 使用送神卡，将穷神送给 " .. target.name)
@@ -163,8 +166,11 @@ handlers.clear_obstacles_ahead = function(game, player, cfg, context)
   local cleared = 0
   local current = player.position
   local distance = cfg.distance or 12
-  local parity = (context and context.branch_parity) or distance
-  local facing = player.status and player.status.move_dir or nil
+  local parity = distance
+  if context and context.branch_parity ~= nil then
+    parity = context.branch_parity
+  end
+  local facing = player.status.move_dir
   local map = board.map
   if not map or not map.neighbors then
     for _ = 1, distance do
@@ -203,7 +209,7 @@ handlers.clear_obstacles_ahead = function(game, player, cfg, context)
     BoardUtils.queue_walk(queue, function(node, push)
       if node.depth < distance then
         local neigh = map.neighbors[node.tile_id] or {}
-        local back = node.facing and OPPOSITE[node.facing] or nil
+        local back = OPPOSITE[node.facing]
         for dir, next_id in pairs(neigh) do
           if not back or dir ~= back then
             local next_index = board:index_of_tile_id(next_id)

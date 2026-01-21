@@ -24,7 +24,7 @@ end
 local function forward_indices(board, player, distance)
   local list = {}
   local current = player.position
-  local facing = player.status and player.status.move_dir or nil
+  local facing = player.status.move_dir
   for step = 1, distance do
     local next_idx, _, next_dir = board:step_forward_by_facing(current, facing, 1)
     current = next_idx
@@ -38,7 +38,7 @@ local function backward_indices(board, player, distance)
   local list = {}
   local current = player.position
   local len = board:length()
-  local facing = player.status and player.status.move_dir
+  local facing = player.status.move_dir
   for step = 1, distance do
     local prev = nil
     if board.map and facing and OPPOSITE[facing] then
@@ -63,7 +63,10 @@ local function priority_for_candidate(game, player, cand)
     return nil
   end
 
-  local st = (tile.type == "land") and Tile.get_state(game, tile) or nil
+  local st = nil
+  if tile.type == "land" then
+    st = Tile.get_state(game, tile)
+  end
   if cand.dir == "forward" then
     if tile.type == "item" then
       return 1
@@ -92,7 +95,10 @@ local function priority_for_candidate(game, player, cand)
 end
 
 local function format_label(cand)
-  local dir_label = (cand.dir == "forward") and "前方" or "后方"
+  local dir_label = "后方"
+  if cand.dir == "forward" then
+    dir_label = "前方"
+  end
   return dir_label .. cand.step .. "格：" .. cand.tile.name .. " (" .. cand.tile.type .. ")"
 end
 

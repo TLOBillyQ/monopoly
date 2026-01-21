@@ -10,7 +10,7 @@ local ITEM_IDS = gameplay_constants.item_ids
 local tile_state = Tile.get_state
 
 local function is_auto_player(player)
-  return player and (player.is_ai or player.auto)
+  return player.is_ai or player.auto
 end
 
 Agent.is_auto_player = is_auto_player
@@ -22,7 +22,7 @@ end
 local function simulate_landing(game, player, steps)
   local board = game.board
   local current = player.position
-  local facing = player.status and player.status.move_dir or nil
+  local facing = player.status.move_dir
   for step = 1, steps do
     local next_index, _, step_dir = board:step_forward_by_facing(current, facing, steps)
     current = next_index
@@ -49,7 +49,10 @@ local function remote_priority(game, player, sim)
   if not tile then
     return nil
   end
-  local st = (tile.type == "land") and tile_state(game, tile) or nil
+  local st = nil
+  if tile.type == "land" then
+    st = tile_state(game, tile)
+  end
   local rank, score
   if tile.type == "item" then
     rank, score = 1, sim.steps
@@ -87,14 +90,21 @@ function Agent.pick_remote_dice_value(game, player, dice_count)
     local rank, score = remote_priority(game, player, sim)
     if rank then
       local score_value = score or 0
+      local best_score = -math.huge
+      if best and best.score ~= nil then
+        best_score = best.score
+      end
       if not best
         or rank < best.rank
-        or (rank == best.rank and score_value > (best.score or -math.huge)) then
+        or (rank == best.rank and score_value > best_score) then
         best = { rank = rank, score = score_value, value = value, tile = sim.tile }
       end
     end
   end
-  return best and best.value, best and best.tile
+  if not best then
+    return nil, nil
+  end
+  return best.value, best.tile
 end
 
 local function richest_other(game, player, allow_ids)
@@ -176,7 +186,10 @@ Agent.pick_target_player = pick_target_player
 function Agent.pick_roadblock_target(game, player)
   local candidates = Roadblock.candidates(game, player, 3)
   local best = Roadblock.pick_best(candidates)
-  return best and best.idx or nil
+  if not best then
+    return nil
+  end
+  return best.idx
 end
 
 function Agent.pick_demolish_target(game, player, distance)
@@ -205,7 +218,7 @@ function Agent.auto_action_for_choice(game, choice)
   end
 
   if choice.kind == "remote_dice_value" then
-    local dice_count = (choice.meta and choice.meta.dice_count) or 1
+    local dice_count = choice.meta.dice_count
     local value = Agent.pick_remote_dice_value(game, actor, dice_count)
     return { type = "choice_select", choice_id = choice.id, option_id = value or first_option_id(choice.options) }
   end
@@ -221,8 +234,8 @@ function Agent.auto_action_for_choice(game, choice)
   end
 
   if choice.kind == "item_target_player" then
-    local item_id = choice.meta and choice.meta.item_id
-    local target = item_id and pick_target_player(game, actor, item_id, choice.options) or nil
+    local item_id = choice.meta.item_id
+    local target = pick_target_player(game, actor, item_id, choice.options)
     if target then
       return { type = "choice_select", choice_id = choice.id, option_id = target.id }
     end

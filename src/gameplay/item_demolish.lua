@@ -118,7 +118,7 @@ function Demolish.use(game, player, distance, consume_fn, opts)
         local tile = game.board:get_tile(idx)
         if tile.type == "land" then
           local st = tile_state(game, tile)
-          if st.owner_id and st.owner_id ~= player.id and (st.level or 0) > 0 then
+          if st.owner_id and st.owner_id ~= player.id and st.level > 0 then
             table.insert(body_lines, "#" .. idx .. " " .. tile.name)
             table.insert(options, { id = idx, label = tile.name })
           end

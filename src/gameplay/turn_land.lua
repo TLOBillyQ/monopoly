@@ -15,11 +15,16 @@ local function resolve_landing(game, player, tile, move_result, depth)
     if depth >= MAX_LANDING_DEPTH then
       return out
     end
-    local target_player = (out.player_id and game and game.players and game.players[out.player_id]) or player
+    local target_player = player
+    if out.player_id then
+      target_player = game.players[out.player_id]
+    end
     local next_tile = nil
     if target_player then
       local idx = out.board_index or target_player.position
-      next_tile = idx and game and game.board and game.board:get_tile(idx) or nil
+      if idx then
+        next_tile = game.board:get_tile(idx)
+      end
     end
     if next_tile then
       return resolve_landing(game, target_player, next_tile, out.move_result, depth + 1)
