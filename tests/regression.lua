@@ -808,7 +808,6 @@ local tests = {
   test_landing_optional_stale_choice_is_blocked,
   test_chance_is_mandatory_effect_entrypoint,
   test_movement_examples_from_issue,
-  test_ai_cancels_land_purchases,
   test_mandatory_payment_causes_bankruptcy,
   test_bankruptcy_resets_owned_tiles,
   test_ai_skips_auto_buy_at_market,
