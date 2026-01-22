@@ -13,10 +13,10 @@ local function create_game()
 end
 
 local function install_ui_manager()
-  pcall(require, "UIManager.Utils")
+  pcall(require, "src.adapters.eggy.lib.eggy_ui_manager.UIManager.Utils")
   local manager = rawget(_G, "UIManager")
   if not manager then
-    local ok, mod = pcall(require, "UIManager")
+    local ok, mod = pcall(require, "src.adapters.eggy.lib.eggy_ui_manager.UIManager.Utils")
     if ok then
       manager = mod
     end

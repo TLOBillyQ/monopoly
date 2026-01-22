@@ -149,9 +149,9 @@ function EggyLayer:_open_choice_modal(pending)
     and #pending.options <= 3
     and MarketUI.is_ready
     and MarketUI.is_ready() then
-    local ok, choose = pcall(require, "ChooseOption.__init")
+    local ok, choose = pcall(require, "src.adapters.eggy.lib.eggy_choose_option.ChooseOption.__init")
     if not ok then
-      ok, choose = pcall(require, "ChooseOption")
+      ok, choose = pcall(require, "src.adapters.eggy.lib.eggy_choose_option.ChooseOption")
     end
     if ok and choose then
       if self.ui.choice_active then
