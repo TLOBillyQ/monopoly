@@ -85,7 +85,7 @@ Landing.executors = {
       local player = ctx.player
       local market = game:get_service("market", ctx)
 
-      local spec, intent = market.build_choice_spec(player)
+      local spec, intent = market.build_choice_spec(player, game)
       if intent then return { intent = intent } end
       if not spec then return nil end
 

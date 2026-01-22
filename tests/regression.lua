@@ -504,9 +504,42 @@ local function test_market_full_inventory_blocks_items()
     p.inventory:add({ id = 2001 })
   end
 
-  local list = MarketService.list_buyable(p)
+  local list = MarketService.list_buyable(p, g)
   for _, entry in ipairs(list) do
     assert(entry.kind ~= "item", "item should be excluded when inventory full")
+  end
+end
+
+local function test_market_global_limit()
+  local MarketService = require("src.gameplay.market_service")
+  local market_cfg = require("src.config.market")
+  local g = new_game()
+  local p = g:current_player()
+  local entry = nil
+  for _, cfg in ipairs(market_cfg) do
+    if cfg.kind == "item" and cfg.currency == "金币" then
+      entry = cfg
+      break
+    end
+  end
+  assert(entry, "should find a market item with coin currency")
+  p:set_cash((entry.price or 0) + 1000)
+  g.store:set({ "market", "global_limits", entry.product_id }, 1)
+
+  local res = MarketService.buy(g, p, entry.product_id)
+  local ok = (type(res) == "table" and res.ok ~= nil) and res.ok or res
+  assert(ok, "first purchase should succeed")
+
+  local list = MarketService.list_buyable(p, g)
+  for _, item in ipairs(list) do
+    assert(item.product_id ~= entry.product_id, "sold out item should be excluded from list")
+  end
+
+  local spec = MarketService.build_choice_spec(p, g)
+  if spec and spec.options then
+    for _, option in ipairs(spec.options) do
+      assert(option.id ~= entry.product_id, "sold out item should be excluded from choice")
+    end
   end
 end
 
@@ -546,7 +579,7 @@ local function test_chance_move_backward_pass_intersection()
   local g = new_game()
   local p = g:current_player()
   g:update_player_position(p, g.board:index_of_tile_id(42))
-  g:set_player_status(p, "move_dir", "up")
+  g:set_player_status(p, "move_dir", "down")
   local out = ChanceEffects.resolve(g, p, { effect = "move_backward", steps = 2, target = "self" }, {})
   assert(out and out.move_result, "move_backward should return move result")
   local visited_ids = visited_tile_ids(g.board, out.move_result.visited)
@@ -725,19 +758,28 @@ local function test_complex_market_interrupt_with_rent()
   
   -- 找到一个地块
   local land_idx, land_tile = first_land_tile(g.board)
-  
-  -- 确保地块在黑市之后
-  if land_idx <= market_idx then
-    -- 寻找黑市后面的地块
-    for idx = market_idx + 1, g.board:length() do
+  local found_land = false
+  for idx = market_idx + 1, g.board:length() do
+    local t = g.board:get_tile(idx)
+    if t and t.type == "land" then
+      land_idx = idx
+      land_tile = t
+      found_land = true
+      break
+    end
+  end
+  if not found_land then
+    for idx = 1, market_idx - 1 do
       local t = g.board:get_tile(idx)
       if t and t.type == "land" then
         land_idx = idx
         land_tile = t
+        found_land = true
         break
       end
     end
   end
+  assert(found_land, "should find a land tile after market")
   
   -- 设置地块归 p2 所有，且有建筑
   g:set_tile_owner(land_tile, p2.id)
@@ -745,9 +787,9 @@ local function test_complex_market_interrupt_with_rent()
   g:set_player_property(p2, land_tile.id, true)
   
   -- 放置 p1 在合适的位置，使其经过黑市到达地块
-  local start_pos = market_idx - (land_idx - market_idx) - 1
+  local start_pos = market_idx - 1
   if start_pos < 1 then
-    start_pos = 1
+    start_pos = g.board:length()
   end
   g:update_player_position(p1, start_pos)
   
@@ -816,6 +858,7 @@ local tests = {
   test_board_indices_in_range_uses_graph_distance,
   test_item_equalize_cash,
   test_market_full_inventory_blocks_items,
+  test_market_global_limit,
   test_zero_cash_no_buy_choice,
   test_movement_backward_wrap,
   test_chance_move_backward_pass_market,

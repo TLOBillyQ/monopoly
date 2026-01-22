@@ -21,6 +21,7 @@ local MarketService = require("src.gameplay.market_service")
 local BankruptcyService = require("src.gameplay.bankruptcy_service")
 local ChoiceService = require("src.gameplay.choice_service")
 local logger = require("src.util.logger")
+local market_cfg = require("src.config.market")
 
 local CompositionRoot = {}
 
@@ -100,9 +101,21 @@ local function snapshot_tiles(path)
   return ts
 end
 
+local function snapshot_market_limits()
+  local limits = {}
+  for _, entry in ipairs(market_cfg) do
+    local limit = entry.limit
+    if type(limit) == "number" and limit >= 1 then
+      limits[entry.product_id] = limit
+    end
+  end
+  return limits
+end
+
 local function build_initial_state(board, players, rng)
   return {
     board = { tiles = snapshot_tiles(board.path) },
+    market = { global_limits = snapshot_market_limits() },
     turn = {
       current_player_index = 1,
       turn_count = 0,

@@ -66,18 +66,29 @@ local function entry_currency(entry)
   return currency
 end
 
-local function can_buy_entry(player, entry)
+local function remaining_global_limit(game, product_id)
+  if not (game and game.store and product_id) then
+    return nil
+  end
+  return game.store:get({ "market", "global_limits", product_id })
+end
+
+local function can_buy_entry(game, player, entry)
   if entry.kind == "item" and Inventory.is_full(player) then
+    return false
+  end
+  local remaining = remaining_global_limit(game, entry.product_id)
+  if remaining ~= nil and remaining <= 0 then
     return false
   end
   local price = entry_price(entry)
   return player:balance(entry_currency(entry)) >= price
 end
 
-function MarketService.list_buyable(player)
+function MarketService.list_buyable(player, game)
   local list = {}
   for _, entry in ipairs(market_cfg) do
-    if can_buy_entry(player, entry) then
+    if can_buy_entry(game, player, entry) then
       table.insert(list, entry)
     end
   end
@@ -87,10 +98,10 @@ function MarketService.list_buyable(player)
   return list
 end
 
-function MarketService.build_choice_spec(player)
+function MarketService.build_choice_spec(player, game)
   local options = {}
   local body_lines = {}
-  for _, entry in ipairs(MarketService.list_buyable(player)) do
+  for _, entry in ipairs(MarketService.list_buyable(player, game)) do
     local name = entry_name(entry)
     local price = entry_price(entry)
     local currency = entry_currency(entry)
@@ -118,6 +129,21 @@ function MarketService.buy(game, player, product_id)
   return MarketService.buy_with_opts(game, player, product_id, nil)
 end
 
+local function consume_global_limit(game, product_id)
+  if not (game and game.store and product_id) then
+    return
+  end
+  local remaining = remaining_global_limit(game, product_id)
+  if remaining == nil then
+    return
+  end
+  local next_remaining = remaining - 1
+  if next_remaining < 0 then
+    next_remaining = 0
+  end
+  game.store:set({ "market", "global_limits", product_id }, next_remaining)
+end
+
 function MarketService.buy_with_opts(game, player, product_id, opts)
   opts = opts or {}
   if type(product_id) ~= "number" or product_id <= 0 then
@@ -126,6 +152,11 @@ function MarketService.buy_with_opts(game, player, product_id, opts)
   end
   local entry = entries_by_id[product_id]
   if not entry then return false end
+
+  local remaining = remaining_global_limit(game, product_id)
+  if remaining ~= nil and remaining <= 0 then
+    return { ok = false, intent = { kind = "push_popup", payload = { title = "黑市", body = player.name .. " 该商品已售罄" } } }
+  end
 
   local price = entry_price(entry)
   local currency = entry_currency(entry)
@@ -139,6 +170,7 @@ function MarketService.buy_with_opts(game, player, product_id, opts)
     end
     player:deduct_balance(currency, price)
     Inventory.give(player, product_id)
+    consume_global_limit(game, product_id)
     logger.event(player.name .. " 在黑市购买 " .. entry_name(entry) .. " 花费 " .. price .. " " .. currency)
     return true
   end
@@ -172,6 +204,7 @@ function MarketService.buy_with_opts(game, player, product_id, opts)
   else
     player.seat_id = product_id
   end
+  consume_global_limit(game, product_id)
   logger.event(player.name .. " 在黑市购买座驾 " .. entry_name(entry) .. " 花费 " .. price .. " " .. currency)
   return true
 end
@@ -182,7 +215,7 @@ function MarketService.auto_buy(game, player)
     return
   end
 
-  local list = MarketService.list_buyable(player)
+  local list = MarketService.list_buyable(player, game)
   table.sort(list, function(a, b)
     return (entry_price(a) or 0) < (entry_price(b) or 0)
   end)
