@@ -1337,100 +1337,21 @@ function GlobalAPI.warning(_content) end
 ---@class Ability: Actor, AttrComp, KVBase, TriggerSystem
 Ability = {}
 
----技能激活冷却
----@deprecated
----@see Ability.enter_cd
-function Ability.ability_active_cd() end
 
----修改技能作用半径
----@param _delta_affect_radius Fixed 修改技能作用半径
----@deprecated
----@see Ability.change_affect_radius
-function Ability.ability_api_change_affect_radius(_delta_affect_radius) end
 
----修改技能作用宽度
----@param _delta_affect_width Fixed 修改技能作用宽度
----@deprecated
----@see Ability.change_affect_width
-function Ability.ability_api_change_affect_width(_delta_affect_width) end
 
----修改技能施法距离
----@param _delta_level Fixed 修改技能施法距离
----@deprecated
----@see Ability.change_max_release_distance
-function Ability.ability_api_change_max_release_distance(_delta_level) end
 
----降级技能等级
----@param _delta_level integer 降低的技能等级
----@deprecated
----@see Ability.downgrade_ability_level
-function Ability.ability_api_decrease_ability_level(_delta_level) end
 
----获取技能的等级
----@return integer 技能等级
----@deprecated
----@see Ability.get_ability_level
-function Ability.ability_api_get_ability_level() end
 
----获取技能的最大等级
----@return integer 技能最大等级
----@deprecated
----@see Ability.get_ability_max_level
-function Ability.ability_api_get_ability_max_level() end
 
----获取技能的作用半径
----@return Fixed 施法距离
----@deprecated
----@see Ability.get_affect_radius
-function Ability.ability_api_get_affect_radius() end
 
----获取技能的作用宽度
----@return Fixed 施法距离
----@deprecated
----@see Ability.get_affect_width
-function Ability.ability_api_get_affect_width() end
 
----获取技能的施法距离
----@return Fixed 施法距离
----@deprecated
----@see Ability.get_max_release_distance
-function Ability.ability_api_get_max_release_distance() end
 
----增加技能等级
----@param _delta_level integer 增加的技能等级
----@deprecated
----@see Ability.upgrade_ability_level
-function Ability.ability_api_increase_ability_level(_delta_level) end
 
----设置技能等级
----@param _new_level integer 技能等级
----@deprecated
----@see Ability.set_ability_level
-function Ability.ability_api_set_ability_level(_new_level) end
 
----设置技能最大等级
----@param _new_max_level integer 技能最大等级
----@deprecated
----@see Ability.set_ability_max_level
-function Ability.ability_api_set_ability_max_level(_new_max_level) end
 
----设置技能的作用半径
----@param _new_affect_radius Fixed 作用半径
----@deprecated
----@see Ability.set_affect_radius
-function Ability.ability_api_set_affect_radius(_new_affect_radius) end
 
----设置技能的作用宽度
----@param _new_affect_width Fixed 作用宽度
----@deprecated
----@see Ability.set_affect_width
-function Ability.ability_api_set_affect_width(_new_affect_width) end
 
----设置技能的施法距离
----@param _new_max_release_distance Fixed 施法距离
----@deprecated
----@see Ability.set_max_release_distance
-function Ability.ability_api_set_max_release_distance(_new_max_release_distance) end
 
 ---技能给单位添加状态
 ---@param _unit Unit 对象
@@ -1468,43 +1389,10 @@ function Ability.downgrade_ability_level(_delta_level) end
 ---技能激活冷却
 function Ability.enter_cd() end
 
----获取技能可以作用的角色列表
----@param _height Fixed 高度差
----@param _use_fixed_release_point boolean? 施法点是否固定
----@return Character[] 可以影响的角色列表
----@deprecated
----@see Ability.get_affect_character_list
-function Ability.get_ability_can_affect_character_list_v2(_height, _use_fixed_release_point) end
 
----获取技能可以作用的生物列表
----@param _height Fixed 高度差
----@param _use_fixed_release_point boolean? 施法点是否固定
----@return Creature[] 可以影响的生物列表
----@deprecated
----@see Ability.get_affect_creature_list
-function Ability.get_ability_can_affect_creature_list_v2(_height, _use_fixed_release_point) end
 
----获取技能可以作用的生命体列表
----@param _height Fixed 高度差
----@param _use_fixed_release_point boolean? 施法点是否固定
----@return LifeEntity[] 可以影响的生命体列表
----@deprecated
----@see Ability.get_affect_lifeentity_list
-function Ability.get_ability_can_affect_life_entity_list_v2(_height, _use_fixed_release_point) end
 
----获取技能可以作用的组件列表
----@param _height Fixed 高度差
----@param _use_fixed_release_point boolean? 施法点是否固定
----@return Obstacle[] 可以影响的组件列表
----@deprecated
----@see Ability.get_affect_obstacle_list
-function Ability.get_ability_can_affect_obstacle_list_v2(_height, _use_fixed_release_point) end
 
----获取技能所在槽位
----@return AbilitySlot 技能槽位
----@deprecated
----@see Ability.get_ability_slot
-function Ability.get_ability_index() end
 
 ---获取技能的等级
 ---@return integer 技能等级
@@ -1570,17 +1458,7 @@ function Ability.get_cur_release_num() end
 ---@return string 技能描述
 function Ability.get_desc() end
 
----技能是否在冷却中
----@return boolean 剩余冷却时间
----@deprecated
----@see Ability.is_in_cd
-function Ability.get_is_in_cd() end
 
----技能是否在充能中
----@return boolean 剩余冷却时间
----@deprecated
----@see Ability.is_in_charge
-function Ability.get_is_in_charge() end
 
 ---获取技能编号
 ---@return AbilityKey 技能编号
@@ -1594,12 +1472,6 @@ function Ability.get_left_cd_time() end
 ---@return Fixed 剩余充能时间
 function Ability.get_left_charge_time() end
 
----获取技能使用限制是否激活
----@param _limit Enums.AbilityLimitation 使用限制
----@return boolean 是否激活
----@deprecated
----@see Ability.is_limitation_enabled
-function Ability.get_limitation_active(_limit) end
 
 ---获取技能锁定目标
 ---@return Obstacle 获取技能锁定目标
@@ -1645,21 +1517,11 @@ function Ability.get_owner_creature() end
 ---@return Equipment 技能拥有者
 function Ability.get_owner_equipment() end
 
----获取技能拥有者
----@return LifeEntity 技能拥有者
----@deprecated
----@see Ability.get_owner
-function Ability.get_owner_unit() end
 
 ---获取技能指示器类型
 ---@return Enums.AbilityPointerType 指示器类型
 function Ability.get_pointer_type() end
 
----获取技能释放方向
----@return Vector3 方向
----@deprecated
----@see Ability.get_release_direction
-function Ability.get_release_dir() end
 
 ---获取技能释放方向
 ---@return Vector3 方向
@@ -1750,14 +1612,6 @@ AbilityComp = {}
 ---@return Ability 添加上的技能
 function AbilityComp.add_ability_to_slot(_ability_index, _ability_id, _kv_args, _kv_types) end
 
----添加道具技能
----@param _ability_id AbilityKey 技能编号
----@param _kv_args table? 自定义参数值
----@param _kv_types table? 自定义参数类型
----@return Ability 添加上的技能
----@deprecated
----@see AbilityComp.add_prop_ability
-function AbilityComp.add_item_ability_with_check(_ability_id, _kv_args, _kv_types) end
 
 ---添加道具技能
 ---@param _ability_id AbilityKey 技能编号
@@ -1964,11 +1818,6 @@ Camp = {}
 ---@param _add_score integer 变化积分
 function Camp.change_camp_score(_add_score) end
 
----获取阵营内玩家列表
----@return Role[] 玩家列表
----@deprecated
----@see Camp.get_roles
-function Camp.get_camp_role_list() end
 
 ---获取阵营积分
 ---@return integer 积分
@@ -1989,80 +1838,16 @@ function Camp.set_camp_score(_score) end
 ---@class Character: LifeEntity
 Character = {}
 
----改变角色预设
----@param _c_key CharacterKey 角色预设
----@param _reset_prop boolean 重置属性
----@param _reset_trigger_system boolean 重置蛋码
----@param _reset_model boolean 重置外观
----@deprecated
----@see Character.set_character_prefab
-function Character.change_character_prefab(_c_key, _reset_prop, _reset_trigger_system, _reset_model) end
 
----根据生物设置模型
----@param _creature Creature 生物
----@param _include_custom_model boolean? 是否包含自定义形象
----@param _inherit_scale boolean? 是否继承缩放
----@param _inherit_capsule_size boolean? 是否继承胶囊体尺寸
----@deprecated
----@see LifeEntity.set_model_by_creature
-function Character.change_model_by_creature(_creature, _include_custom_model, _inherit_scale, _inherit_capsule_size) end
 
----修改角色指定外观部位为自定义模型
----@param _model_socket Enums.ModelSocket 外观部位
----@param _creature Creature 生物
----@param _creature_model_socket Enums.ModelSocket 外观部位
----@deprecated
----@see Character.set_socket_model
-function Character.change_target_socket_model(_model_socket, _creature, _creature_model_socket) end
 
----修改角色指定外观部位为自定义模型
----@param _model_socket Enums.ModelSocket 外观部位
----@param _creature_key CreatureKey 生物编号
----@param _creature_model_socket Enums.ModelSocket 外观部位
----@deprecated
----@see Character.set_socket_model_by_creature_key
-function Character.change_target_socket_model_by_creature_key(_model_socket, _creature_key, _creature_model_socket) end
 
----根据生物修改角色所有外观部位自定义模型
----@param _creature Creature 生物
----@deprecated
----@see Character.change_model_by_creature
-function Character.change_ugc_model_by_creature(_creature) end
 
----根据生物预设修改角色所有外观部位自定义模型
----@param _creature_key CreatureKey 生物编号
----@deprecated
----@see Character.change_model_by_creature_key
-function Character.change_ugc_model_by_creature_key(_creature_key) end
 
----命令角色抓举
----@deprecated
----@see Character.lift
-function Character.cmd_lift() end
 
----命令角色移动到坐标点
----@param _target_pos Vector3 坐标点
----@param _duration Fixed 持续时间
----@deprecated
----@see Character.start_move_to_pos
-function Character.cmd_move_to_pos(_target_pos, _duration) end
 
----命令角色前扑
----@deprecated
----@see Character.fling_rush
-function Character.cmd_rush() end
 
----销毁效果
----@param _modifier Modifier 效果对象
----@deprecated
----@see ModifierComp.destroy_modifier
-function Character.destroy_buff(_modifier) end
 
----开关角色靶向移动
----@param _enable boolean 开关
----@deprecated
----@see Character.set_aim_move_enabled
-function Character.enable_aim_move_mode(_enable) end
 
 ---命令角色前扑
 function Character.fling_rush() end
@@ -2071,24 +1856,8 @@ function Character.fling_rush() end
 ---@return integer 技能点
 function Character.get_ability_point() end
 
----获取单位效果
----@param _modifier_id ModifierKey 效果ID
----@return Modifier 效果对象
----@deprecated
----@see ModifierComp.get_modifier_by_modifier_key
-function Character.get_buff(_modifier_id) end
 
----获取单位所有效果
----@return Modifier[] 效果
----@deprecated
----@see ModifierComp.get_modifiers
-function Character.get_buffs() end
 
----获取控制角色的玩家
----@return Role 玩家
----@deprecated
----@see Character.get_ctrl_role
-function Character.get_camp_role() end
 
 ---获取角色攀爬的组件
 ---@return Obstacle 攀爬的组件
@@ -2098,59 +1867,20 @@ function Character.get_climb_obstacle() end
 ---@return Role 玩家
 function Character.get_ctrl_role() end
 
----获取朝向
----@return Vector3 方向
----@deprecated
----@see LifeEntity.get_direction
-function Character.get_face_dir() end
 
 ---增加技能点
 ---@param _increase integer 技能点
 function Character.increase_ability_point(_increase) end
 
----是否正在强制位移
----@return boolean 布尔
----@deprecated
----@see CharacterComp.is_forced_moving
-function Character.is_forced_moving() end
 
----生命体是否进入魂蛋模式
----@return boolean 是否处于魂蛋模式
----@deprecated
----@see LifeEntity.is_ghost_mode
-function Character.is_ghost_mode() end
 
----是否拥有指定编号的效果
----@param _modifier_key ModifierKey 效果编号
----@return boolean 是否拥有
----@deprecated
----@see ModifierComp.has_modifier_by_key
-function Character.is_have_buff_with_id(_modifier_key) end
 
----命令角色跳跃
----@deprecated
----@see LifeEntity.jump
-function Character.jump() end
 
 ---命令角色抓举
 function Character.lift() end
 
----还原模型变化
----@deprecated
----@see LifeEntity.reset_model
-function Character.recover_model() end
 
----还原角色指定外观部位变化
----@param _model_socket Enums.ModelSocket 外观部位
----@deprecated
----@see Character.reset_target_socket_model
-function Character.recover_target_socket_model(_model_socket) end
 
----移除效果
----@param _modifier_id ModifierKey 效果编号
----@deprecated
----@see ModifierComp.remove_modifier_by_key
-function Character.remove_buff(_modifier_id) end
 
 ---还原角色指定外观部位变化
 ---@param _model_socket Enums.ModelSocket 外观部位
@@ -2160,17 +1890,7 @@ function Character.reset_target_socket_model(_model_socket) end
 ---@param _enable boolean 开关
 function Character.set_aim_move_enabled(_enable) end
 
----开关角色靶向移动
----@param _enable boolean 开关
----@deprecated
----@see Character.set_aim_move_enabled
-function Character.set_aim_move_mode(_enable) end
 
----设置角色配音是否生效
----@param _enabled boolean 是否启用
----@deprecated
----@see Character.set_voice_enabled
-function Character.set_character_act_voice_enabled(_enabled) end
 
 ---改变角色预设
 ---@param _c_key CharacterKey 角色预设
@@ -2195,11 +1915,6 @@ function Character.set_climb_min_angle(_angle) end
 ---@param _speed Fixed 攀爬速度
 function Character.set_climb_speed(_speed) end
 
----设置质量条是否显示
----@param _visible boolean 是否显示
----@deprecated
----@see LifeEntity.set_mass_bar_visible
-function Character.set_mass_bar_visible(_visible) end
 
 ---修改角色指定外观部位为自定义模型
 ---@param _model_socket Enums.ModelSocket 外观部位
@@ -2217,33 +1932,14 @@ function Character.set_socket_model_by_creature_key(_model_socket, _creature_key
 ---@param _enabled boolean 是否启用
 function Character.set_voice_enabled(_enabled) end
 
----开始强制位移
----@param _vel Vector3 移动速度
----@param _duration Fixed 持续时间
----@param _enable_phy boolean? 是否保留物理
----@deprecated
----@see CharacterComp.start_forced_move
-function Character.start_forced_move(_vel, _duration, _enable_phy) end
 
 ---命令角色移动到坐标点
 ---@param _target_pos Vector3 坐标点
 ---@param _duration Fixed 持续时间
 function Character.start_move_to_pos(_target_pos, _duration) end
 
----退出当前强制位移
----@deprecated
----@see CharacterComp.stop_forced_move
-function Character.stop_forced_move() end
 
----生命体尝试下载具
----@deprecated
----@see LifeEntity.try_exit_vehicle
-function Character.try_exit_ugcvehicle() end
 
----生命体尝试下载具
----@deprecated
----@see LifeEntity.try_exit_vehicle
-function Character.try_exit_vehicle() end
 
 ---@class CharacterComp
 CharacterComp = {}
@@ -2256,11 +1952,6 @@ function CharacterComp.get_scale_ratio() end
 ---@return boolean 布尔
 function CharacterComp.is_forced_moving() end
 
----设置朝向
----@param _face_dir Vector3 方向
----@deprecated
----@see LifeEntity.set_direction
-function CharacterComp.set_face_dir(_face_dir) end
 
 ---开始强制位移
 ---@param _vel Vector3 移动速度
@@ -2274,30 +1965,8 @@ function CharacterComp.stop_forced_move() end
 ---@class Creature: LifeEntity, OwnerComp
 Creature = {}
 
----根据生物设置模型
----@param _creature Creature 生物
----@param _include_custom_model boolean? 是否包含自定义形象
----@param _inherit_scale boolean? 是否继承缩放
----@param _inherit_capsule_size boolean? 是否继承胶囊体尺寸
----@deprecated
----@see LifeEntity.set_model_by_creature
-function Creature.change_model_by_creature(_creature, _include_custom_model, _inherit_scale, _inherit_capsule_size) end
 
----修改生物指定外观部位为自定义模型
----@param _model_socket Enums.ModelSocket 外观部位
----@param _creature Creature 生物
----@param _creature_model_socket Enums.ModelSocket 外观部位
----@deprecated
----@see Creature.set_socket_model
-function Creature.change_target_socket_model(_model_socket, _creature, _creature_model_socket) end
 
----修改生物指定外观部位为自定义模型
----@param _model_socket Enums.ModelSocket 外观部位
----@param _creature_key CreatureKey 生物编号
----@param _creature_model_socket Enums.ModelSocket 外观部位
----@deprecated
----@see Creature.set_socket_model_by_creature_key
-function Creature.change_target_socket_model_by_creature_key(_model_socket, _creature_key, _creature_model_socket) end
 
 ---命令生物移动
 ---@param _direction Vector3 方向
@@ -2307,44 +1976,15 @@ function Creature.force_start_move(_direction, _t) end
 ---命令生物停止移动
 function Creature.force_stop_move() end
 
----获取朝向
----@return Vector3 方向
----@deprecated
----@see LifeEntity.get_direction
-function Creature.get_face_dir() end
 
----获取生命体是否可拖动
----@return boolean 可拖动
----@deprecated
----@see LifeEntity.is_draggable
-function Creature.is_drag_enable() end
 
----获取生命体是否可点击
----@return boolean 可点击
----@deprecated
----@see LifeEntity.is_touchable
-function Creature.is_touch_enable() end
 
----还原模型变化
----@deprecated
----@see LifeEntity.reset_model
-function Creature.recover_model() end
 
----还原生物指定外观部位变化
----@param _model_socket Enums.ModelSocket 外观部位
----@deprecated
----@see Creature.reset_target_socket_model
-function Creature.recover_target_socket_model(_model_socket) end
 
 ---还原生物指定外观部位变化
 ---@param _model_socket Enums.ModelSocket 外观部位
 function Creature.reset_target_socket_model(_model_socket) end
 
----设置生物是否可拖动
----@param _enable boolean 是否可拖动
----@deprecated
----@see Creature.set_draggable
-function Creature.set_drag_enable(_enable) end
 
 ---设置生物是否可拖动
 ---@param _enable boolean 是否可拖动
@@ -2354,11 +1994,6 @@ function Creature.set_draggable(_enable) end
 ---@param _value Enums.PlaneType 拖动平面
 function Creature.set_dragged_plane_type(_value) end
 
----设置质量条是否显示
----@param _visible boolean 是否显示
----@deprecated
----@see LifeEntity.set_mass_bar_visible
-function Creature.set_mass_bar_visible(_visible) end
 
 ---设置生物的显示名称
 ---@param _name string 显示名称
@@ -2380,17 +2015,7 @@ function Creature.set_socket_model(_model_socket, _creature, _creature_model_soc
 ---@param _creature_model_socket Enums.ModelSocket 外观部位
 function Creature.set_socket_model_by_creature_key(_model_socket, _creature_key, _creature_model_socket) end
 
----设置生物拖动平面
----@param _value Enums.PlaneType 拖动平面
----@deprecated
----@see Creature.set_dragged_plane_type
-function Creature.set_touch_drag_plane(_value) end
 
----设置生物是否可点击
----@param _enable boolean 是否可点击
----@deprecated
----@see Creature.set_touchable
-function Creature.set_touch_enable(_enable) end
 
 ---设置生物是否可点击
 ---@param _enable boolean 是否可点击
@@ -2410,22 +2035,8 @@ DisplayComp = {}
 ---@param _anim_name string 动画名
 function DisplayComp.add_banned_anim(_anim_name) end
 
----临时屏蔽部分动画的播放
----@param _anim_name string 动画名
----@deprecated
----@see DisplayComp.add_banned_anim
-function DisplayComp.api_add_banned_anim(_anim_name) end
 
----清除动画屏蔽
----@deprecated
----@see DisplayComp.clear_banned_anim
-function DisplayComp.api_clear_banned_anim() end
 
----解除部分动画的播放屏蔽
----@param _anim_name string 动画名
----@deprecated
----@see DisplayComp.remove_banned_anim
-function DisplayComp.api_remove_banned_anim(_anim_name) end
 
 ---添加绑定模型
 ---@param _model_id UnitKey 单位编号
@@ -2465,22 +2076,11 @@ function DisplayComp.play_upper_anim_by_id(_anim_id, _start_time, _play_time, _i
 ---@param _anim_name string 动画名
 function DisplayComp.remove_banned_anim(_anim_name) end
 
----移除绑定模型
----@param _bind_id string 绑定ID
----@deprecated
----@see DisplayComp.unbind_model
-function DisplayComp.remove_bind_model(_bind_id) end
 
 ---设置播放速率
 ---@param _anim_rate Fixed 播放速率
 function DisplayComp.set_anim_rate(_anim_rate) end
 
----修改骨骼缩放
----@param _skeleton Skeleton 骨骼
----@param _scale Vector3 缩放比例
----@deprecated
----@see LifeEntity.set_skeleton_scale
-function DisplayComp.set_skeleton_scale(_skeleton, _scale) end
 
 ---停止播放动画
 function DisplayComp.stop_anim() end
@@ -2492,11 +2092,6 @@ function DisplayComp.stop_play_body_anim() end
 ---@param _anim_id AnimKey 动画编号
 function DisplayComp.stop_play_body_anim_by_id(_anim_id) end
 
----停止播放全身动画）
----@param _anim_id AnimKey 动画编号
----@deprecated
----@see DisplayComp.stop_play_body_anim_by_id
-function DisplayComp.stop_play_body_anim_with_id(_anim_id) end
 
 ---停止播放上半身动画
 function DisplayComp.stop_play_upper_anim() end
@@ -2505,22 +2100,7 @@ function DisplayComp.stop_play_upper_anim() end
 ---@param _anim_id AnimKey 动画编号
 function DisplayComp.stop_play_upper_anim_by_id(_anim_id) end
 
----停止播放上半身动画
----@param _anim_id AnimKey 动画编号
----@deprecated
----@see DisplayComp.stop_play_upper_anim_by_id
-function DisplayComp.stop_play_upper_anim_with_id(_anim_id) end
 
----添加绑定模型
----@param _model_id UnitKey 单位编号
----@param _socket Enums.ModelSocket 挂点
----@param _offset Vector3? 偏移
----@param _rot Quaternion? 旋转
----@param _scale Vector3? 缩放
----@return string 绑定ID
----@deprecated
----@see DisplayComp.bind_model
-function DisplayComp.ugc_add_bind_model(_model_id, _socket, _offset, _rot, _scale) end
 
 ---移除绑定模型
 ---@param _bind_id string 绑定ID
@@ -2555,12 +2135,6 @@ function Equipment.get_current_stack_num() end
 ---@return string 物品描述
 function Equipment.get_desc() end
 
----获取物品的抵押价格
----@param _res_type string 货币类型
----@return integer 卖价
----@deprecated
----@see Equipment.get_price
-function Equipment.get_economic_value(_res_type) end
 
 ---获取物品所在槽位
 ---@return EquipmentSlot 槽位
@@ -2624,21 +2198,11 @@ function Equipment.is_auto_using() end
 ---@param _slot integer 槽位
 function Equipment.move_to_slot(_slot_type, _slot) end
 
----设置枪械自动瞄准
----@param _is_auto_aim boolean 是否自动瞄准
----@deprecated
----@see Equipment.set_auto_aim_enabled
-function Equipment.set_auto_aim(_is_auto_aim) end
 
 ---设置枪械自动瞄准
 ---@param _is_auto_aim boolean 是否自动瞄准
 function Equipment.set_auto_aim_enabled(_is_auto_aim) end
 
----设置枪械自动开火
----@param _is_auto_fire boolean 是否自动开火
----@deprecated
----@see Equipment.set_auto_fire_enabled
-function Equipment.set_auto_fire(_is_auto_fire) end
 
 ---设置枪械自动开火
 ---@param _is_auto_fire boolean 是否自动开火
@@ -2660,12 +2224,6 @@ function Equipment.set_desc(_desc) end
 ---@param _droppable boolean 能否丢弃
 function Equipment.set_droppable(_droppable) end
 
----设置物品的抵押价格
----@param _res_type string 货币类型
----@param _price integer 卖价
----@deprecated
----@see Equipment.set_price
-function Equipment.set_economic_value(_res_type, _price) end
 
 ---设置物品的图标
 ---@param _icon_key ImageKey 图标
@@ -2725,12 +2283,6 @@ function EquipmentComp.get_equipment_by_slot(_slot_type, _slot_index) end
 ---@return Equipment[] 物品列表
 function EquipmentComp.get_equipment_list(_equipment_key, _exclude_equipped, _exclude_bag) end
 
----获取持有的物品列表
----@param _slot_type Enums.EquipmentSlotType 槽位类型
----@return Equipment[] 物品
----@deprecated
----@see EquipmentComp.get_equipment_list_by_slot_type
-function EquipmentComp.get_equipment_list_by_slot(_slot_type) end
 
 ---获取持有的物品列表
 ---@param _slot_type Enums.EquipmentSlotType 槽位类型
@@ -2742,12 +2294,6 @@ function EquipmentComp.get_equipment_list_by_slot_type(_slot_type) end
 ---@return integer 数量
 function EquipmentComp.get_equipment_max_count(_slot_type) end
 
----获取最大可持有的物品数量
----@param _slot_type Enums.EquipmentSlotType 槽位类型
----@return integer 数量
----@deprecated
----@see EquipmentComp.get_equipment_max_count
-function EquipmentComp.get_equipment_max_num_by_slot(_slot_type) end
 
 ---获取当前选中的物品
 ---@return Equipment 物品
@@ -2763,12 +2309,6 @@ function EquipmentComp.select_equipment_slot(_slot_type, _slot_index) end
 ---@param _slot_num integer 数量
 function EquipmentComp.set_equipment_max_count(_slot_type, _slot_num) end
 
----设置单位选中物品格
----@param _slot_type Enums.EquipmentSlotType 槽位类型
----@param _slot_index integer 槽位索引
----@deprecated
----@see EquipmentComp.select_equipment_slot
-function EquipmentComp.set_selected_equipment_slot(_slot_type, _slot_index) end
 
 ---@class ExprDeviceComp
 ExprDeviceComp = {}
@@ -2813,13 +2353,6 @@ function GameAPI.ability_prefab_has_kv(_ability_key, _prop) end
 ---@param _point_id PathPointID 路点
 function GameAPI.add_pathpoint(_path_id, _index, _point_id) end
 
----新增路点
----@param _path_id PathID 路径
----@param _index integer 路点索引
----@param _point_id PathPointID 路点
----@deprecated
----@see GameAPI.add_pathpoint
-function GameAPI.add_road_point(_path_id, _index, _point_id) end
 
 ---表添加列
 ---@param _sheet_id SheetID 表格
@@ -2827,49 +2360,19 @@ function GameAPI.add_road_point(_path_id, _index, _point_id) end
 ---@param _type_name string 类型
 function GameAPI.add_sheet_column(_sheet_id, _key, _type_name) end
 
----表添加列
----@param _sheet_id SheetID 表格
----@param _key string 列名
----@param _type_name string 类型
----@deprecated
----@see GameAPI.add_sheet_column
-function GameAPI.add_table_column(_sheet_id, _key, _type_name) end
 
 ---清空表
 ---@param _sheet_id SheetID 表格
 function GameAPI.clear_sheet(_sheet_id) end
 
----清空表
----@param _sheet_id SheetID 表格
----@deprecated
----@see GameAPI.clear_sheet
-function GameAPI.clear_table(_sheet_id) end
 
----表添加列
----@param _sheet_id SheetID 表格
----@param _key string 列名
----@param _type_name string 类型
----@deprecated
----@see GameAPI.add_sheet_column
-function GameAPI.config_table_add_column(_sheet_id, _key, _type_name) end
 
 ---复制表
 ---@param _sheet_id SheetID 表格
 ---@return SheetID 表格
 function GameAPI.copy_sheet(_sheet_id) end
 
----复制表
----@param _sheet_id SheetID 表格
----@return SheetID 表格
----@deprecated
----@see GameAPI.copy_sheet
-function GameAPI.copy_table(_sheet_id) end
 
----创建表
----@return SheetID 表格
----@deprecated
----@see GameAPI.create_sheet
-function GameAPI.create_config_table() end
 
 ---创建一个固定风场单位
 ---@param _pos Vector3 位置
@@ -2911,13 +2414,6 @@ function GameAPI.create_decoration(_u_key, _pos, _rotation, _scale, _parent) end
 ---@return Equipment 物品
 function GameAPI.create_equipment(_equipment_eid, _pos) end
 
----创建物品到坐标点
----@param _equipment_eid EquipmentKey 物品编号
----@param _pos Vector3 位置
----@return Equipment 物品
----@deprecated
----@see GameAPI.create_equipment
-function GameAPI.create_equipment_in_scene(_equipment_eid, _pos) end
 
 ---创建关节助手
 ---@param _unit_key Enums.JointAssistantKey 关节助手类型
@@ -2987,11 +2483,6 @@ function GameAPI.create_sfx_with_socket_offset(_sfx_key, _unit, _socket_name, _o
 ---@return SheetID 表格
 function GameAPI.create_sheet() end
 
----创建表
----@return SheetID 表格
----@deprecated
----@see GameAPI.create_sheet
-function GameAPI.create_table() end
 
 ---创建一个逻辑体
 ---@param _u_key TriggerSpaceKey 逻辑体编号
@@ -3066,12 +2557,6 @@ function GameAPI.customtriggerspace_prefab_has_kv(_key, _prop) end
 ---@param _data table? 参数
 function GameAPI.deal_damage(_dst, _dmg, _src, _schema, _data) end
 
----删除路点
----@param _path_id PathID 路径
----@param _index integer 路点索引
----@deprecated
----@see GameAPI.remove_pathpoint
-function GameAPI.del_road_point(_path_id, _index) end
 
 ---销毁场景界面
 ---@param _layer E3DLayer 场景界面
@@ -3104,39 +2589,12 @@ function GameAPI.enable_collision_between_units(_unit_1, _unit_2, _enable) end
 ---@return boolean 是否存在
 function GameAPI.equipment_prefab_has_kv(_equipment_key, _prop) end
 
----创建一个组件组
----@param _unit_group_id UnitGroupKey 单位编号
----@param _pos Vector3 位置
----@param _root_quaternion Quaternion 旋转
----@param _role Role? 所属玩家
----@return UnitGroup 创建出的单位
----@deprecated
----@see GameAPI.create_unit_group
-function GameAPI.game_api_create_unit_group(_unit_group_id, _pos, _root_quaternion, _role) end
 
 ---游戏结束
 function GameAPI.game_end() end
 
----获取技能预设描述
----@param _ability_id AbilityKey 技能编号
----@return string 技能描述
----@deprecated
----@see GameAPI.ability_prefab_get_desc
-function GameAPI.get_ability_prefab_desc(_ability_id) end
 
----获取技能预设名称
----@param _ability_id AbilityKey 技能编号
----@return string 技能名称
----@deprecated
----@see GameAPI.ability_prefab_get_name
-function GameAPI.get_ability_prefab_name(_ability_id) end
 
----获取成就目标进度
----@param _event_id Achievement 成就
----@return integer 成就进度
----@deprecated
----@see GameAPI.get_achievement_target
-function GameAPI.get_achieve_target_count(_event_id) end
 
 ---获取成就目标进度
 ---@param _event_id Achievement 成就
@@ -3184,11 +2642,6 @@ function GameAPI.get_all_online_roles() end
 ---@return Role[] 玩家
 function GameAPI.get_all_roles() end
 
----获取游戏中所有有效玩家
----@return Role[] 玩家列表
----@deprecated
----@see GameAPI.get_all_valid_roles
-function GameAPI.get_all_roles_in_game() end
 
 ---获取所有逻辑体
 ---@return TriggerSpace[] 逻辑体列表
@@ -3230,19 +2683,7 @@ function GameAPI.get_characters_in_cylinder(_bottom_center, _radius, _height) en
 ---@return Character[] 角色列表
 function GameAPI.get_characters_in_sphere(_center, _radius) end
 
----获取表列数
----@param _sheet_id SheetID 多维表
----@return integer 长度
----@deprecated
----@see GameAPI.get_sheet_col_count
-function GameAPI.get_config_table_col_len(_sheet_id) end
 
----获取表行数
----@param _sheet_id SheetID 多维表
----@return integer 长度
----@deprecated
----@see GameAPI.get_sheet_row_count
-function GameAPI.get_config_table_row_len(_sheet_id) end
 
 ---获取指定编号的逻辑体列表
 ---@param _creature_key CreatureKey 生物编号
@@ -3287,13 +2728,6 @@ function GameAPI.get_creatures_in_sector(_center, _face_dir, _central_angle, _ra
 ---@return Creature[] 生物列表
 function GameAPI.get_creatures_in_sphere(_center, _radius) end
 
----获取射线检测到的触发区域
----@param _start_pos Vector3 起始点
----@param _end_pos Vector3 终点
----@return CustomTriggerSpace 触发区域
----@deprecated
----@see GameAPI.get_first_customtriggerspace_in_raycast
-function GameAPI.get_customtriggerspace_in_raycast(_start_pos, _end_pos) end
 
 ---获取指定预设的触发区域列表
 ---@param _key CustomTriggerSpaceKey 触发区域编号
@@ -3378,32 +2812,8 @@ function GameAPI.get_hour(_timestamp) end
 ---@return JointAssistant[] 关节列表
 function GameAPI.get_joint_assistants(_unit) end
 
----获取矩形区域内的生命体
----@param _center Vector3 中心点
----@param _length Fixed 长
----@param _height Fixed 高
----@param _width Fixed 宽
----@return LifeEntity[] 生命体列表
----@deprecated
----@see GameAPI.get_lifeentities_in_aabb
-function GameAPI.get_life_entities_in_aabb(_center, _length, _height, _width) end
 
----获取圆柱区域内的生命体
----@param _bottom_center Vector3 底部中心
----@param _radius Fixed 半径
----@param _height Fixed 高度
----@return LifeEntity[] 生命体列表
----@deprecated
----@see GameAPI.get_lifeentities_in_cylinder
-function GameAPI.get_life_entities_in_cylinder(_bottom_center, _radius, _height) end
 
----获取圆形区域内的生命体
----@param _center Vector3 中心点
----@param _radius Fixed 半径
----@return LifeEntity[] 生命体列表
----@deprecated
----@see GameAPI.get_lifeentities_in_sphere
-function GameAPI.get_life_entities_in_sphere(_center, _radius) end
 
 ---获取矩形区域内的生命体
 ---@param _center Vector3 中心点
@@ -3426,11 +2836,6 @@ function GameAPI.get_lifeentities_in_cylinder(_bottom_center, _radius, _height) 
 ---@return LifeEntity[] 生命体列表
 function GameAPI.get_lifeentities_in_sphere(_center, _radius) end
 
----获取地图当前评分
----@return Fixed 当前评分
----@deprecated
----@see GameAPI.get_map_rating_score
-function GameAPI.get_map_appreciate_score() end
 
 ---获取所有地图角色
 ---@return Character[] 角色列表
@@ -3440,42 +2845,15 @@ function GameAPI.get_map_characters() end
 ---@return Fixed 当前评分
 function GameAPI.get_map_rating_score() end
 
----获取环境时间
----@return Fixed 当前环境时刻
----@deprecated
----@see GameAPI.get_env_time
-function GameAPI.get_map_time() end
 
----获取环境时间流逝速率
----@return Fixed 流逝速率
----@deprecated
----@see GameAPI.get_env_time_ratio
-function GameAPI.get_map_time_ratio() end
 
----获取环境时间是否自动流逝
----@return boolean 是否自动流逝
----@deprecated
----@see GameAPI.get_env_time_running_enabled
-function GameAPI.get_map_time_running_enabled() end
 
 ---获取时间戳转化后的分钟数
 ---@param _timestamp Timestamp 时间戳
 ---@return integer 分
 function GameAPI.get_minute(_timestamp) end
 
----获取效果预设描述
----@param _modifier_key ModifierKey 效果编号
----@return string 效果描述
----@deprecated
----@see GameAPI.modifier_prefab_get_desc
-function GameAPI.get_modifier_prefab_desc(_modifier_key) end
 
----获取效果预设名称
----@param _modifier_key ModifierKey 效果编号
----@return string 效果名称
----@deprecated
----@see GameAPI.modifier_prefab_get_name
-function GameAPI.get_modifier_prefab_name(_modifier_key) end
 
 ---获取动画时长
 ---@param _montage_id MontageKey 剧情动画编号
@@ -3493,13 +2871,6 @@ function GameAPI.get_month(_timestamp) end
 ---@return Obstacle 组件
 function GameAPI.get_obstacle_by_raycast(_start_pos, _end_pos) end
 
----获取射线检测到的组件
----@param _start_pos Vector3 起始点
----@param _end_pos Vector3 终点
----@return Obstacle 组件
----@deprecated
----@see GameAPI.get_obstacle_by_raycast
-function GameAPI.get_obstacle_in_raycast(_start_pos, _end_pos) end
 
 ---获取指定编号的组件列表
 ---@param _key ObstacleKey 组件编号
@@ -3535,13 +2906,6 @@ function GameAPI.get_obstacles_in_annulus(_center, _radius1, _radius2, _height) 
 ---@return Obstacle[] 组件列表
 function GameAPI.get_obstacles_in_cylinder(_bottom_center, _radius, _height) end
 
----获取射线检测到的组件列表
----@param _start_pos Vector3 起始点
----@param _end_pos Vector3 终点
----@return Obstacle[] 组件列表
----@deprecated
----@see GameAPI.get_obstacles_by_raycast
-function GameAPI.get_obstacles_in_raycast(_start_pos, _end_pos) end
 
 ---获取扇形区域内的组件
 ---@param _center Vector3 起始点
@@ -3569,46 +2933,15 @@ function GameAPI.get_pathpoint_by_id(_point_id) end
 ---@return Vector3 向量
 function GameAPI.get_pathpoint_by_index(_path_id, _index) end
 
----获取随机颜色
----@return Color 颜色
----@deprecated
----@see GameAPI.random_color
-function GameAPI.get_random_color() end
 
----获取路径中的路点向量
----@param _path_id PathID 路径
----@param _index integer 路点索引
----@return Vector3 向量
----@deprecated
----@see GameAPI.get_pathpoint_by_index
-function GameAPI.get_road_point_vector3(_path_id, _index) end
 
----获取路点坐标
----@param _point_id PathPointID 路点
----@return Vector3 坐标
----@deprecated
----@see GameAPI.get_pathpoint_by_id
-function GameAPI.get_roadpoint_position(_point_id) end
 
----获取路点坐标
----@param _point_id PathPointID 路点
----@return Vector3 坐标
----@deprecated
----@see GameAPI.get_pathpoint_by_id
-function GameAPI.get_roadpoint_position_vector3(_point_id) end
 
 ---玩家ID获取玩家
 ---@param _role_id RoleID 玩家ID
 ---@return Role 玩家
 function GameAPI.get_role(_role_id) end
 
----获取玩家亲密度
----@param _role_1 Role 玩家1
----@param _role_2 Role 玩家2
----@return integer 亲密度
----@deprecated
----@see GameAPI.get_role_friendship_value
-function GameAPI.get_role_friendship_level(_role_1, _role_2) end
 
 ---获取玩家亲密度
 ---@param _role_1 Role 玩家1
@@ -3639,29 +2972,8 @@ function GameAPI.get_sheet_row_count(_sheet_id) end
 ---@return any 自定义值
 function GameAPI.get_sheet_value_by_type(_value_type, _sheet_id, _key1, _key2) end
 
----获取表列数
----@param _sheet_id SheetID 多维表
----@return integer 长度
----@deprecated
----@see GameAPI.get_sheet_col_count
-function GameAPI.get_table_col_count(_sheet_id) end
 
----获取表行数
----@param _sheet_id SheetID 多维表
----@return integer 长度
----@deprecated
----@see GameAPI.get_sheet_row_count
-function GameAPI.get_table_row_count(_sheet_id) end
 
----获取表格值
----@param _value_type Enums.ValueType 值类型
----@param _sheet_id SheetID 表格
----@param _key1 string 行索引
----@param _key2 string 列索引
----@return any 自定义值
----@deprecated
----@see GameAPI.get_sheet_value_by_type
-function GameAPI.get_table_value_by_type(_value_type, _sheet_id, _key1, _key2) end
 
 ---获取当前时间戳
 ---@return Timestamp 时间戳
@@ -3693,31 +3005,13 @@ function GameAPI.get_triggerspaces_by_key(_key) end
 ---@return Unit 单位
 function GameAPI.get_unit(_unit_id) end
 
----获取组件上的所有关节
----@param _unit Unit 目标单位
----@return JointAssistant[] 关节列表
----@deprecated
----@see GameAPI.get_joint_assistants
-function GameAPI.get_unit_all_joint_assistant(_unit) end
 
 ---获取单位ID
 ---@param _name string 单位名称
 ---@return UnitID 单位ID
 function GameAPI.get_unit_id_by_name(_name) end
 
----获取路径向量数组
----@param _path_id PathID 路径
----@return Vector3[] 向量数组
----@deprecated
----@see GameAPI.get_vector3s_from_path
-function GameAPI.get_vector3_from_path(_path_id) end
 
----获取路径向量数组
----@param _path_id PathID 路径
----@return Vector3[] 向量数组
----@deprecated
----@see GameAPI.get_vector3s_from_path
-function GameAPI.get_vector3_list_from_road(_path_id) end
 
 ---获取路径向量数组
 ---@param _path_id PathID 路径
@@ -3739,32 +3033,12 @@ function GameAPI.get_year(_timestamp) end
 ---@return boolean 是否含有全局变量
 function GameAPI.has_global_kv(_var_name) end
 
----是否有全局变量
----@param _var_name string 变量名称
----@return boolean 是否含有全局变量
----@deprecated
----@see GameAPI.has_global_kv
-function GameAPI.has_var(_var_name) end
 
 ---是否开启存档
 ---@return boolean 是否开启
 function GameAPI.is_archives_enabled() end
 
----坐标点是否在触发区域内
----@param _point Vector3 坐标点
----@param _custom_trigger_space CustomTriggerSpace 触发区域
----@return boolean 布尔
----@deprecated
----@see GameAPI.is_point_in_customtriggerspace
-function GameAPI.is_point_in_custom_trigger_space(_point, _custom_trigger_space) end
 
----坐标点是否在触发区域内
----@param _point Vector3 坐标点
----@param _custom_trigger_space CustomTriggerSpace 触发区域
----@return boolean 布尔
----@deprecated
----@see GameAPI.is_point_in_customtriggerspace
-function GameAPI.is_point_in_custom_trigger_spaces(_point, _custom_trigger_space) end
 
 ---坐标点是否在触发区域内
 ---@param _point Vector3 坐标点
@@ -3779,14 +3053,6 @@ function GameAPI.is_point_in_customtriggerspace(_point, _custom_trigger_space) e
 ---@return boolean 是否符合
 function GameAPI.is_role_friendship_type_match(_role_1, _role_2, _friendship_type) end
 
----玩家亲密关系是否符合
----@param _role_1 Role 玩家1
----@param _role_2 Role 玩家2
----@param _friendship_type Enums.FriendshipType 亲密关系
----@return boolean 是否符合
----@deprecated
----@see GameAPI.is_role_friendship_type_match
-function GameAPI.is_role_friendship_type_matched(_role_1, _role_2, _friendship_type) end
 
 ---跳转关卡
 ---@param _level_key LevelKey 关卡编号
@@ -3864,13 +3130,6 @@ function GameAPI.play_link_sfx(_sfx_key, _unit, _from_socket_name, _target_unit,
 ---@return SfxID 特效ID
 function GameAPI.play_sfx_by_key(_sfx_key, _pos, _rot, _scale, _duration, _rate, _with_sound) end
 
----随机整数
----@param _min_value integer 最小值
----@param _max_value integer 最大值
----@return integer 整数
----@deprecated
----@see GameAPI.random_int
-function GameAPI.randint(_min_value, _max_value) end
 
 ---获取随机颜色
 ---@return Color 颜色
@@ -3946,21 +3205,7 @@ function GameAPI.remove_pathpoint(_path_id, _index) end
 ---@param _visible boolean 点击关闭属性
 function GameAPI.set_all_scene_ui_visible(_role, _visible) end
 
----设置单位与预设是否能发生碰撞
----@param _unit Unit 单位
----@param _unit_eid UnitKey 单位编号
----@param _enable boolean 是否碰撞
----@deprecated
----@see GameAPI.enable_collision_between_unit_and_prefab
-function GameAPI.set_enable_collide_unit_and_prefab(_unit, _unit_eid, _enable) end
 
----设置两个单位是否能碰撞
----@param _unit_1 Unit 单位1
----@param _unit_2 Unit 单位2
----@param _enable boolean 是否碰撞
----@deprecated
----@see GameAPI.enable_collision_between_units
-function GameAPI.set_enable_collide_with_units(_unit_1, _unit_2, _enable) end
 
 ---设置环境时间
 ---@param _target_time Fixed 目标时刻
@@ -3976,13 +3221,6 @@ function GameAPI.set_env_time_ratio(_time_ratio) end
 ---@param _enabled boolean 是否自动流逝
 function GameAPI.set_env_time_running_enabled(_enabled) end
 
----设置物品商店物品剩余库存
----@param _battle_shop_key BattleShopKey 物品商店编号
----@param _equipment_key EquipmentKey 物品编号
----@param _cur_stock_count integer 剩余库存
----@deprecated
----@see GameAPI.set_equipment_remaining_stock_count
-function GameAPI.set_equipment_current_stock_num(_battle_shop_key, _equipment_key, _cur_stock_count) end
 
 ---设置物品商店物品最大库存
 ---@param _battle_shop_key BattleShopKey 物品商店编号
@@ -3990,13 +3228,6 @@ function GameAPI.set_equipment_current_stock_num(_battle_shop_key, _equipment_ke
 ---@param _max_stock_count integer 最大库存
 function GameAPI.set_equipment_max_stock_count(_battle_shop_key, _equipment_key, _max_stock_count) end
 
----设置物品商店物品最大库存
----@param _battle_shop_key BattleShopKey 物品商店编号
----@param _equipment_key EquipmentKey 物品编号
----@param _max_stock_count integer 最大库存
----@deprecated
----@see GameAPI.set_equipment_max_stock_count
-function GameAPI.set_equipment_max_stock_num(_battle_shop_key, _equipment_key, _max_stock_count) end
 
 ---设置物品商店物品剩余库存
 ---@param _battle_shop_key BattleShopKey 物品商店编号
@@ -4023,25 +3254,8 @@ function GameAPI.set_global_wind_frequency(_fixed_value) end
 ---@param _z Fixed 矩形边界宽度
 function GameAPI.set_life_entity_survival_scene_boundary(_x, _y, _z) end
 
----设置环境时间
----@param _target_time Fixed 目标时刻
----@param _duration Fixed 过渡时间
----@param _direction boolean 是否正向
----@deprecated
----@see GameAPI.set_env_time
-function GameAPI.set_map_time(_target_time, _duration, _direction) end
 
----设置环境时间流逝速度
----@param _time_ratio Fixed 流逝速度
----@deprecated
----@see GameAPI.set_env_time_ratio
-function GameAPI.set_map_time_ratio(_time_ratio) end
 
----设置环境时间是否自动流逝
----@param _enabled boolean 是否自动流逝
----@deprecated
----@see GameAPI.set_env_time_running_enabled
-function GameAPI.set_map_time_running_enabled(_enabled) end
 
 ---设置场景界面位置
 ---@param _role Role 玩家
@@ -4063,15 +3277,6 @@ function GameAPI.set_scene_ui_visible(_layer, _role, _visible) end
 ---@param _val any 自定义值
 function GameAPI.set_sheet_value_by_type(_value_type, _sheet_id, _key1, _key2, _val) end
 
----设置表格值
----@param _value_type Enums.ValueType 值类型
----@param _sheet_id SheetID 表格
----@param _key1 string 行索引
----@param _key2 string 列索引
----@param _val any 自定义值
----@deprecated
----@see GameAPI.set_sheet_value_by_type
-function GameAPI.set_table_value_by_type(_value_type, _sheet_id, _key1, _key2, _val) end
 
 ---设置组件存活场景边界大小
 ---@param _x Fixed 矩形边界长度
@@ -4083,12 +3288,6 @@ function GameAPI.set_unit_survival_scene_boundary(_x, _y, _z) end
 ---@param _assigned_id SoundID 音效ID
 function GameAPI.stop_sound(_assigned_id) end
 
----获取时间戳转化后的星期数
----@param _timestamp Timestamp 时间戳
----@return integer 星期
----@deprecated
----@see GameAPI.get_weekday
-function GameAPI.timestame_to_weekday(_timestamp) end
 
 ---获取逻辑体预设的自定义值
 ---@param _value_type Enums.ValueType 值类型
@@ -4134,17 +3333,7 @@ function ItemBox.remove_equipment(_key) end
 ---@class JointAssistantComp
 JointAssistantComp = {}
 
----获取关节组件主体
----@return Character 关节组件主体
----@deprecated
----@see JointAssistantComp.get_joint_assistant_primary_obstacle
-function JointAssistantComp.get_joint_assistant_object1_obstacle() end
 
----获取关节组件目标
----@return Character 关节组件目标
----@deprecated
----@see JointAssistantComp.get_joint_assistant_target_obstacle
-function JointAssistantComp.get_joint_assistant_object2_obstacle() end
 
 ---获取关节组件主体
 ---@return Character 关节组件主体
@@ -4174,11 +3363,6 @@ function JointAssistantComp.set_joint_assistant_visible(_visible) end
 ---@class JumpComp
 JumpComp = {}
 
----获取多段跳剩余冷却
----@return Fixed 冷却时间
----@deprecated
----@see JumpComp.get_multi_jump_remaining_cooldown
-function JumpComp.get_multi_jump_current_cooldown() end
 
 ---获取多段跳剩余冷却
 ---@return Fixed 冷却时间
@@ -4188,11 +3372,6 @@ function JumpComp.get_multi_jump_remaining_cooldown() end
 ---@return boolean 是否位于地面
 function JumpComp.is_on_ground() end
 
----设置多段跳剩余冷却
----@param _cd Fixed 冷却时间
----@deprecated
----@see JumpComp.set_multi_jump_remaining_cooldown
-function JumpComp.set_multi_jump_current_cooldown(_cd) end
 
 ---设置多段跳剩余冷却
 ---@param _cd Fixed 冷却时间
@@ -4211,23 +3390,8 @@ function KVBase.clear_kv() end
 ---清空标签
 function KVBase.clear_tag() end
 
----移除标签
----@param _tag string 标签
----@deprecated
----@see KVBase.remove_tag
-function KVBase.delete_tag(_tag) end
 
----获取公告板文本内容
----@return string 公告板内容
----@deprecated
----@see Obstacle.get_billboard_text
-function KVBase.get_billboard_content() end
 
----获取公告板文本字体大小
----@return integer 公告板字体大小
----@deprecated
----@see Obstacle.get_billboard_font_size
-function KVBase.get_billboard_font_size() end
 
 ---获取自定义值
 ---@param _value_type Enums.ValueType 值类型
@@ -4253,37 +3417,9 @@ function KVBase.remove_kv(_key) end
 ---@param _tag string 标签
 function KVBase.remove_tag(_tag) end
 
----设置公告板文本内容
----@param _content string 文本内容
----@deprecated
----@see Obstacle.set_billboard_text
-function KVBase.set_billboard_content(_content) end
 
----设置公告板文本颜色
----@param _color Color 文本颜色
----@param _gradient_color_1 Color? 渐变色1
----@param _gradient_color_2 Color? 渐变色2
----@param _gradient_color_3 Color? 渐变色3
----@param _gradient_color_4 Color? 渐变色4
----@deprecated
----@see Obstacle.set_billboard_text_color
-function KVBase.set_billboard_font_color(_color, _gradient_color_1, _gradient_color_2, _gradient_color_3, _gradient_color_4) end
 
----设置公告板文本字体大小
----@param _font_size integer 字体大小
----@deprecated
----@see Obstacle.set_billboard_font_size
-function KVBase.set_billboard_font_size(_font_size) end
 
----设置公告板文本颜色
----@param _color Color 文本颜色
----@param _gradient_color_1 Color? 渐变色1
----@param _gradient_color_2 Color? 渐变色2
----@param _gradient_color_3 Color? 渐变色3
----@param _gradient_color_4 Color? 渐变色4
----@deprecated
----@see Obstacle.set_billboard_text_color
-function KVBase.set_billboard_text_color(_color, _gradient_color_1, _gradient_color_2, _gradient_color_3, _gradient_color_4) end
 
 ---设置自定义值
 ---@param _value_type Enums.ValueType 值类型
@@ -4291,11 +3427,6 @@ function KVBase.set_billboard_text_color(_color, _gradient_color_1, _gradient_co
 ---@param _val any 自定义值
 function KVBase.set_kv_by_type(_value_type, _key, _val) end
 
----添加标签
----@param _tag string 标签
----@deprecated
----@see KVBase.add_tag
-function KVBase.set_tag(_tag) end
 
 ---@class LevelComp
 LevelComp = {}
@@ -4366,17 +3497,7 @@ function LifeComp.is_infinite_reborn() end
 ---@param _immediate boolean? 立即复活
 function LifeComp.reborn(_immediate) end
 
----设置自动复活
----@param _auto_reborn boolean 是否自动复活
----@deprecated
----@see LifeComp.set_auto_reborn_enabled
-function LifeComp.set_auto_reborn(_auto_reborn) end
 
----设置自动复活
----@param _auto_reborn boolean 是否自动复活
----@deprecated
----@see LifeComp.set_auto_reborn_enabled
-function LifeComp.set_auto_reborn_enable(_auto_reborn) end
 
 ---设置自动复活
 ---@param _auto_reborn boolean 是否自动复活
@@ -4386,27 +3507,12 @@ function LifeComp.set_auto_reborn_enabled(_auto_reborn) end
 ---@param _value Fixed 最大健康值
 function LifeComp.set_hp_max(_value) end
 
----设置无限复活
----@param _enable_reborn boolean 是否无限复活
----@deprecated
----@see LifeComp.set_infinite_reborn_enabled
-function LifeComp.set_infinite_reborn(_enable_reborn) end
 
----设置无限复活
----@param _enable_reborn boolean 是否无限复活
----@deprecated
----@see LifeComp.set_infinite_reborn_enabled
-function LifeComp.set_infinite_reborn_enable(_enable_reborn) end
 
 ---设置无限复活
 ---@param _enable_reborn boolean 是否无限复活
 function LifeComp.set_infinite_reborn_enabled(_enable_reborn) end
 
----改变当前命数
----@param _value integer 当前命数
----@deprecated
----@see LifeComp.set_life_count
-function LifeComp.set_life(_value) end
 
 ---改变当前命数
 ---@param _value integer 当前命数
@@ -4491,14 +3597,6 @@ function LifeEntity.ai_command_jump() end
 ---控制AI举起/扔下/投掷
 function LifeEntity.ai_command_lift() end
 
----控制AI执行巡逻命令
----@param _waypoint Vector3[] 路径
----@param _reject_time Fixed 厌恶时间
----@param _round_mode Enums.PatrolType 往返模式
----@param _move_mode Enums.MoveMode 移动方式
----@deprecated
----@see LifeEntity.ai_command_patrol
-function LifeEntity.ai_command_nav(_waypoint, _reject_time, _round_mode, _move_mode) end
 
 ---控制AI执行巡逻命令
 ---@param _waypoint Vector3[] 路径
@@ -4534,48 +3632,14 @@ function LifeEntity.ai_command_start_move_high_priority(_target_position, _durat
 ---@param _duration Fixed 时间
 function LifeEntity.ai_command_stop_move(_duration) end
 
----根据角色设置模型
----@param _character Character 角色
----@param _include_ugc_model boolean? 是否包含自定义形象
----@param _inherit_scale boolean? 是否继承缩放
----@param _inherit_capsule_size boolean? 是否继承胶囊体尺寸
----@deprecated
----@see LifeEntity.set_model_by_character
-function LifeEntity.change_model_by_character(_character, _include_ugc_model, _inherit_scale, _inherit_capsule_size) end
 
----根据生物设置模型
----@param _creature Creature 生物
----@param _include_custom_model boolean? 是否包含自定义形象
----@param _inherit_scale boolean? 是否继承缩放
----@param _inherit_capsule_size boolean? 是否继承胶囊体尺寸
----@deprecated
----@see LifeEntity.set_model_by_creature
-function LifeEntity.change_model_by_creature(_creature, _include_custom_model, _inherit_scale, _inherit_capsule_size) end
 
----根据生物预设设置模型
----@param _creature_key CreatureKey 生物编号
----@param _include_custom_model boolean? 是否包含自定义形象
----@param _inherit_scale boolean? 是否继承缩放
----@param _inherit_capsule_size boolean? 是否继承胶囊体
----@deprecated
----@see LifeEntity.set_model_by_creature_key
-function LifeEntity.change_model_by_creature_key(_creature_key, _include_custom_model, _inherit_scale, _inherit_capsule_size) end
 
 ---获取朝向
 ---@return Vector3 方向
 function LifeEntity.get_direction() end
 
----获取朝向
----@return Vector3 方向
----@deprecated
----@see LifeEntity.get_direction
-function LifeEntity.get_face_dir() end
 
----获取朝向
----@return Vector3 方向
----@deprecated
----@see LifeEntity.get_direction
-function LifeEntity.get_face_direction() end
 
 ---获取生命体大力击倒阈值
 function LifeEntity.get_hard_punch_threshold() end
@@ -4606,11 +3670,6 @@ function LifeEntity.get_punch_threshold() end
 ---打断双人动作
 function LifeEntity.interrupt_multi_animation() end
 
----获取生命体是否可拖动
----@return boolean 可拖动
----@deprecated
----@see LifeEntity.is_draggable
-function LifeEntity.is_drag_enable() end
 
 ---获取生命体是否可拖动
 ---@return boolean 可拖动
@@ -4632,11 +3691,6 @@ function LifeEntity.is_moving() end
 ---@return boolean 是否在飞扑中
 function LifeEntity.is_rushing() end
 
----获取生命体是否可点击
----@return boolean 可点击
----@deprecated
----@see LifeEntity.is_touchable
-function LifeEntity.is_touch_enable() end
 
 ---获取生命体是否可点击
 ---@return boolean 可点击
@@ -4645,30 +3699,13 @@ function LifeEntity.is_touchable() end
 ---命令角色跳跃
 function LifeEntity.jump() end
 
----发送气泡表情
----@param _emoji_key EmojiKey 表情
----@param _show_time Fixed 持续时间
----@param _offset Vector3 偏移
----@deprecated
----@see Unit.play_emoji_with_offset
-function LifeEntity.play_emoji_with_offset(_emoji_key, _show_time, _offset) end
 
----播放面部表情
----@param _emoji_key EmojiKey 表情
----@param _show_time Fixed 持续时间
----@deprecated
----@see LifeEntity.play_face_expression
-function LifeEntity.play_face_emoji(_emoji_key, _show_time) end
 
 ---播放面部表情
 ---@param _emoji_key EmojiKey 表情
 ---@param _show_time Fixed 持续时间
 function LifeEntity.play_face_expression(_emoji_key, _show_time) end
 
----还原模型变化
----@deprecated
----@see LifeEntity.reset_model
-function LifeEntity.recover_model() end
 
 ---还原模型变化
 function LifeEntity.reset_model() end
@@ -4681,17 +3718,7 @@ function LifeEntity.set_ai_move_threshold(_threshold) end
 ---@param _face_dir Vector3 方向
 function LifeEntity.set_direction(_face_dir) end
 
----设置朝向
----@param _face_dir Vector3 方向
----@deprecated
----@see LifeEntity.set_direction
-function LifeEntity.set_face_dir(_face_dir) end
 
----设置朝向
----@param _face_dir Vector3 方向
----@deprecated
----@see LifeEntity.set_direction
-function LifeEntity.set_face_direction(_face_dir) end
 
 ---设置生命体大力击倒阈值
 ---@param _punch_threshold Fixed 击倒阈值
@@ -4773,14 +3800,6 @@ function LifeEntity.set_skeleton_offset(_skeleton, _offset) end
 ---@param _scale Vector3 缩放比例
 function LifeEntity.set_skeleton_scale(_skeleton, _scale) end
 
----发送气泡信息
----@param _show_msg string 气泡信息
----@param _show_time Fixed 持续时间
----@param _max_dis Fixed? 隐藏距离
----@param _offset Vector3? 偏移
----@deprecated
----@see Unit.show_bubble_msg
-function LifeEntity.show_bubble_msg_with_offset(_show_msg, _show_time, _max_dis, _offset) end
 
 ---激活AI
 function LifeEntity.start_ai() end
@@ -4811,21 +3830,11 @@ function LifeEntity.try_exit_vehicle() end
 ---@class LiftComp
 LiftComp = {}
 
----获取举起冷却时间
----@return Fixed 定点数
----@deprecated
----@see LiftComp.get_lift_cooldown
-function LiftComp.get_lift_cd() end
 
 ---获取举起冷却时间
 ---@return Fixed 定点数
 function LiftComp.get_lift_cooldown() end
 
----获取举起剩余冷却时间
----@return Fixed 定点数
----@deprecated
----@see LiftComp.get_lift_remaining_cooldown
-function LiftComp.get_lift_left_cd() end
 
 ---获取举起剩余冷却时间
 ---@return Fixed 定点数
@@ -4839,21 +3848,11 @@ function LiftComp.is_lift_status() end
 ---@param _unit Unit 被抓举单位
 function LiftComp.lift_unit(_unit) end
 
----设置举起冷却时间
----@param _cd_time Fixed 时间
----@deprecated
----@see LiftComp.set_lift_cooldown
-function LiftComp.set_lift_cd(_cd_time) end
 
 ---设置举起冷却时间
 ---@param _cd_time Fixed 时间
 function LiftComp.set_lift_cooldown(_cd_time) end
 
----设置举起剩余冷却时间
----@param _time Fixed 时间
----@deprecated
----@see LiftComp.set_lift_remaining_cooldown
-function LiftComp.set_lift_left_cd(_time) end
 
 ---设置举起剩余冷却时间
 ---@param _time Fixed 时间
@@ -4862,11 +3861,6 @@ function LiftComp.set_lift_remaining_cooldown(_time) end
 ---@class LiftedComp
 LiftedComp = {}
 
----获取是否可抓举
----@return boolean 是否可抓举
----@deprecated
----@see LiftedComp.is_lifted_enabled
-function LiftedComp.is_lifted_enable() end
 
 ---获取是否可抓举
 ---@return boolean 是否可抓举
@@ -4884,17 +3878,7 @@ function LiftedComp.set_custom_thrown_force(_force) end
 ---@param _enable boolean 是否自定义
 function LiftedComp.set_custom_thrown_force_enabled(_enable) end
 
----设置是否自定义投掷力量
----@param _enable boolean 是否自定义
----@deprecated
----@see LiftedComp.set_custom_thrown_force_enabled
-function LiftedComp.set_is_use_custom_thrown_force(_enable) end
 
----设置是否可抓举
----@param _enable boolean 是否可被抓举
----@deprecated
----@see LiftedComp.set_lifted_enabled
-function LiftedComp.set_lifted_enable(_enable) end
 
 ---设置是否可抓举
 ---@param _enable boolean 是否可被抓举
@@ -5139,11 +4123,6 @@ function Modifier.get_releaser_unit() end
 ---@return Fixed 剩余持续时间
 function Modifier.get_remain_duration() end
 
----获取效果剩余持续时间
----@return Fixed 剩余持续时间
----@deprecated
----@see Modifier.get_remain_duration
-function Modifier.get_remain_time() end
 
 ---获取护盾值
 ---@return Fixed 属性值
@@ -5157,11 +4136,6 @@ function Modifier.get_stack_count() end
 ---@param _remain_duration Fixed 剩余持续时间
 function Modifier.set_remain_duration(_remain_duration) end
 
----设置效果剩余时间
----@param _remain_duration Fixed 剩余持续时间
----@deprecated
----@see Modifier.set_remain_duration
-function Modifier.set_remain_time(_remain_duration) end
 
 ---设置护盾值
 ---@param _shield_value Fixed 属性值
@@ -5185,28 +4159,12 @@ function ModifierComp.add_modifier(_modifier_id) end
 ---@return Modifier 效果对象
 function ModifierComp.add_modifier_by_key(_modifier_id, _params_dict) end
 
----销毁效果
----@param _modifier Modifier 效果对象
----@deprecated
----@see ModifierComp.destroy_modifier
-function ModifierComp.destroy_buff(_modifier) end
 
 ---销毁效果
 ---@param _modifier Modifier 效果对象
 function ModifierComp.destroy_modifier(_modifier) end
 
----获取单位效果
----@param _modifier_id ModifierKey 效果ID
----@return Modifier 效果对象
----@deprecated
----@see ModifierComp.get_modifier_by_modifier_key
-function ModifierComp.get_buff(_modifier_id) end
 
----获取单位所有效果
----@return Modifier[] 效果
----@deprecated
----@see ModifierComp.get_modifiers
-function ModifierComp.get_buffs() end
 
 ---获取单位效果
 ---@param _modifier_id ModifierKey 效果ID
@@ -5222,21 +4180,11 @@ function ModifierComp.get_modifiers() end
 ---@return boolean 是否拥有
 function ModifierComp.has_modifier_by_key(_modifier_key) end
 
----移除效果
----@param _modifier_id ModifierKey 效果编号
----@deprecated
----@see ModifierComp.remove_modifier_by_key
-function ModifierComp.remove_buff(_modifier_id) end
 
 ---移除效果
 ---@param _modifier_id ModifierKey 效果编号
 function ModifierComp.remove_modifier_by_key(_modifier_id) end
 
----移除效果
----@param _modifier_id ModifierKey 效果编号
----@deprecated
----@see ModifierComp.remove_modifier_by_key
-function ModifierComp.remove_modifier_by_modifier_key(_modifier_id) end
 
 ---@class MoveStatusComp
 MoveStatusComp = {}
@@ -5280,21 +4228,11 @@ function Obstacle.get_chess_rank() end
 ---@return ChessType 牌名
 function Obstacle.get_chess_type() end
 
----获取组件是否可拖动
----@return boolean 是否可拖动
----@deprecated
----@see Obstacle.is_draggable
-function Obstacle.is_drag_enable() end
 
 ---获取组件是否可拖动
 ---@return boolean 是否可拖动
 function Obstacle.is_draggable() end
 
----获取组件是否可点击
----@return boolean 是否可点击
----@deprecated
----@see Obstacle.is_touchable
-function Obstacle.is_touch_enable() end
 
 ---获取组件是否可点击
 ---@return boolean 是否可点击
@@ -5339,25 +4277,8 @@ function Obstacle.set_collision_count_limit(_limit_type, _value) end
 ---@param _value Fixed 值
 function Obstacle.set_collision_interval_limit(_limit_type, _value) end
 
----设置组件碰撞次数限制
----@param _limit_type Enums.CollisionLimitType 碰撞限制类型
----@param _value integer 值
----@deprecated
----@see Obstacle.set_collision_count_limit
-function Obstacle.set_collision_limit_count(_limit_type, _value) end
 
----设置组件碰撞间隔限制
----@param _limit_type Enums.CollisionLimitType 碰撞限制类型
----@param _value Fixed 值
----@deprecated
----@see Obstacle.set_collision_interval_limit
-function Obstacle.set_collision_limit_interval(_limit_type, _value) end
 
----设置组件是否可拖动
----@param _enabled boolean 是否可拖动
----@deprecated
----@see Obstacle.set_draggable
-function Obstacle.set_drag_enable(_enabled) end
 
 ---设置组件是否可拖动
 ---@param _enabled boolean 是否可拖动
@@ -5368,12 +4289,6 @@ function Obstacle.set_draggable(_enabled) end
 ---@param _score integer 分数
 function Obstacle.set_ranklist_score(_role, _score) end
 
----设置场景排行榜分数
----@param _role Role 玩家
----@param _score integer 分数
----@deprecated
----@see Obstacle.set_ranklist_score
-function Obstacle.set_ranklist_score_by_role(_role, _score) end
 
 ---@class OwnerComp
 OwnerComp = {}
@@ -5389,12 +4304,6 @@ function OwnerComp.get_owner_role() end
 ---@class Role: AttrComp, KVBase
 Role = {}
 
----增加成就进度
----@param _event_id Achievement 成就
----@param _add_count integer 成就进度
----@deprecated
----@see Role.add_achievement_progress
-function Role.add_achieve_count(_event_id, _add_count) end
 
 ---增加成就进度
 ---@param _event_id Achievement 成就
@@ -5410,12 +4319,6 @@ function Role.add_score(_add_score) end
 ---@param _num integer 数量
 function Role.consume_commodity(_commodity_id, _num) end
 
----消耗玩家指定数量道具
----@param _commodity_id UgcCommodity 道具
----@param _num integer 数量
----@deprecated
----@see Role.consume_commodity
-function Role.consume_ugc_commodity(_commodity_id, _num) end
 
 ---关闭单位菲尼尔效果
 ---@param _unit Unit 单位
@@ -5437,10 +4340,6 @@ function Role.enter_watch_mode(_camp_limit, _exit_visible) end
 ---玩家退出观战
 function Role.exit_watch_mode() end
 
----玩家游戏失败
----@deprecated
----@see Role.lose
-function Role.game_lose() end
 
 ---玩家游戏失败并显示失败界面
 function Role.game_lose_and_show_result_panel() end
@@ -5448,12 +4347,6 @@ function Role.game_lose_and_show_result_panel() end
 ---玩家游戏胜利并显示胜利界面
 function Role.game_win_and_show_result_panel() end
 
----获取成就进度
----@param _event_id Achievement 成就
----@return integer 成就进度
----@deprecated
----@see Role.get_achievement_progress
-function Role.get_achieve_count(_event_id) end
 
 ---获取成就进度
 ---@param _event_id Achievement 成就
@@ -5466,23 +4359,12 @@ function Role.get_achievement_progress(_event_id) end
 ---@return any 存档值
 function Role.get_archive_by_type(_archive_type, _key) end
 
----获取表格存档
----@param _key Archive 存档
----@return SheetID 表格id
----@deprecated
----@see Role.get_archive_sheetid
-function Role.get_archive_configtable(_key) end
 
 ---获取表格存档
 ---@param _key Archive 存档
 ---@return SheetID 表格id
 function Role.get_archive_sheetid(_key) end
 
----获取玩家相机的朝向(需要开启玩家相机旋转同步)
----@return Vector3 相机朝向
----@deprecated
----@see Role.get_camera_direction
-function Role.get_camera_dir() end
 
 ---获取玩家相机的朝向(需要开启玩家相机旋转同步)
 ---@return Vector3 相机朝向
@@ -5525,12 +4407,6 @@ function Role.get_roleid() end
 ---@return integer 积分
 function Role.get_score() end
 
----玩家拥有道具数量
----@param _commodity_id UgcCommodity 道具
----@return integer 拥有道具数量
----@deprecated
----@see Role.get_commodity_count
-function Role.get_ugc_commodity_num(_commodity_id) end
 
 ---获取语音音量
 ---@return Fixed 语音音量
@@ -5545,19 +4421,7 @@ function Role.has_commodity(_commodity_id) end
 ---@return boolean 是否记录过存档
 function Role.has_saved_archive() end
 
----玩家是否拥有道具
----@param _commodity_id UgcCommodity 道具
----@return boolean 是否拥有道具
----@deprecated
----@see Role.has_commodity
-function Role.has_ugc_commodity(_commodity_id) end
 
----成就是否完成
----@param _event_id Achievement 成就
----@return boolean 是否完成
----@deprecated
----@see Role.is_achievement_completed
-function Role.is_achieve_finish(_event_id) end
 
 ---成就是否完成
 ---@param _event_id Achievement 成就
@@ -5568,23 +4432,8 @@ function Role.is_achievement_completed(_event_id) end
 ---@return boolean 是否是乐园会员
 function Role.is_gallery_vip() end
 
----玩家是否失败
----@return boolean 玩家是否失败
----@deprecated
----@see Role.is_lost
-function Role.is_lose() end
 
----玩家是否失败
----@return boolean 玩家是否失败
----@deprecated
----@see Role.is_lost
-function Role.is_losed() end
 
----玩家是否失败
----@return boolean 玩家是否失败
----@deprecated
----@see Role.is_lost
-function Role.is_loss() end
 
 ---玩家是否失败
 ---@return boolean 玩家是否失败
@@ -5606,17 +4455,7 @@ function Role.is_online() end
 ---@return boolean 是否是派对手册进阶会员
 function Role.is_pass_premium_vip() end
 
----玩家是否失败
----@return boolean 玩家是否失败
----@deprecated
----@see Role.is_lost
-function Role.is_role_lose() end
 
----玩家是否胜利
----@return boolean 玩家是否胜利
----@deprecated
----@see Role.is_won
-function Role.is_role_win() end
 
 ---玩家是否订阅地图作者
 ---@return boolean 是否订阅
@@ -5626,33 +4465,13 @@ function Role.is_subscribed_map_author() end
 ---@return boolean 是否处于观战模式
 function Role.is_watch_mode() end
 
----玩家是否胜利
----@return boolean 玩家是否胜利
----@deprecated
----@see Role.is_won
-function Role.is_win() end
 
 ---玩家是否胜利
 ---@return boolean 玩家是否胜利
 function Role.is_won() end
 
----设置是否开启玩家相机旋转同步
----@param _enabled boolean 是否同步
----@deprecated
----@see Role.set_camera_rotation_sync_enabled
-function Role.listen_camera_rotation(_enabled) end
 
----设置监听陀螺仪信息
----@param _enabled boolean 是否监听
----@deprecated
----@see Role.set_gyroscope_sync_enabled
-function Role.listen_gyroscope_info(_enabled) end
 
----发起进入关卡投票
----@param _level_key LevelKey 关卡编号
----@deprecated
----@see Role.start_level_vote
-function Role.load_level_by_voting(_level_key) end
 
 ---玩家游戏失败
 function Role.lose() end
@@ -5683,14 +4502,6 @@ function Role.play_advertisement_with_event(_success_event, _fail_event, _ad_tag
 ---@param _play_time Fixed 播放时长
 function Role.play_montage(_montage_key, _start_time, _play_to_end, _play_time) end
 
----播放指定剧情动画
----@param _montage_key MontageKey 剧情动画编号
----@param _start_time Fixed 起始时间
----@param _play_to_end boolean 是否播完
----@param _play_time Fixed 播放时长
----@deprecated
----@see Role.play_montage
-function Role.play_montage_by_id(_montage_key, _start_time, _play_to_end, _play_time) end
 
 ---播放屏幕特效
 ---@param _sfx_key SfxKey 特效编号
@@ -5699,11 +4510,6 @@ function Role.play_montage_by_id(_montage_key, _start_time, _play_to_end, _play_
 ---@return SfxID 特效ID
 function Role.play_screen_sfx(_sfx_key, _duration, _rate) end
 
----播放界面动效
----@param _effect_node EEffectNode UI动效
----@deprecated
----@see Role.play_ui_effect
-function Role.play_ui_animation_effect(_effect_node) end
 
 ---播放界面动效
 ---@param _effect_node EEffectNode UI动效
@@ -5728,24 +4534,12 @@ function Role.resume_camera_motor() end
 ---@param _change_num integer 数据变化
 function Role.send_track_data_change(_track_data_key, _change_num) end
 
----发送埋点数据变化
----@param _track_data_key string 埋点key
----@param _change_num integer 数据变化
----@deprecated
----@see Role.send_track_data_change
-function Role.send_track_data_log(_track_data_key, _change_num) end
 
 ---发送UI自定义消息
 ---@param _event_name string 自定义事件名
 ---@param _data table 附带参数
 function Role.send_ui_custom_event(_event_name, _data) end
 
----设置成就进度
----@param _event_id Achievement 成就
----@param _count integer 成就进度
----@deprecated
----@see Role.set_achievement_progress
-function Role.set_achieve_count(_event_id, _count) end
 
 ---设置成就进度
 ---@param _event_id Achievement 成就
@@ -5764,12 +4558,6 @@ function Role.set_animation_state(_node, _animation_name, _state) end
 ---@param _val any 存档值
 function Role.set_archive_by_type(_archive_type, _key, _val) end
 
----设置表格存档
----@param _key Archive 存档
----@param _val SheetID 表格id
----@deprecated
----@see Role.set_archive_sheetid
-function Role.set_archive_configtable(_key, _val) end
 
 ---设置存档点坐标
 ---@param _position Vector3 坐标
@@ -5782,12 +4570,6 @@ function Role.set_archive_point(_position, _priority, _direction) end
 ---@param _val SheetID 表格id
 function Role.set_archive_sheetid(_key, _val) end
 
----设置物品格关联生命体
----@param _bag_slot EBagSlot UI物品格
----@param _life_entity LifeEntity 生命体
----@deprecated
----@see Role.set_bagslot_related_lifeentity
-function Role.set_bagslot_related_life_entity(_bag_slot, _life_entity) end
 
 ---设置物品格关联生命体
 ---@param _bag_slot EBagSlot UI物品格
@@ -5905,13 +4687,6 @@ function Role.set_image_texture_by_key_with_auto_resize(_image, _image_key, _res
 ---@param _reset_size boolean? 是否重置大小
 function Role.set_image_texture_with_auto_resize(_image, _image_path, _reset_size) end
 
----设置UI图片节点图片
----@param _image EImage UI图片节点
----@param _image_key ImageKey 图片
----@param _reset_size boolean? 是否重置大小
----@deprecated
----@see Role.set_image_texture_by_key_with_auto_resize
-function Role.set_image_texture_with_size(_image, _image_key, _reset_size) end
 
 ---设置UI输入节点文本
 ---@param _input_field EInputField UI输入节点
@@ -5936,19 +4711,7 @@ function Role.set_label_background_opacity(_label, _opacity, _transition_time) e
 ---@param _transition_time Fixed 变化时间
 function Role.set_label_color(_label, _color, _transition_time) end
 
----设置UI文本节点的描边是否开启
----@param _label ELabel UI文本节点
----@param _enable boolean 是否开启描边
----@deprecated
----@see Role.set_label_outline_enabled
-function Role.set_label_enable_outline(_label, _enable) end
 
----设置UI文本节点的阴影是否开启
----@param _label ELabel UI文本节点
----@param _enable boolean 是否开启阴影
----@deprecated
----@see Role.set_label_shadow_enabled
-function Role.set_label_enable_shadow(_label, _enable) end
 
 ---设置UI文本节点字体
 ---@param _label ELabel UI文本节点
@@ -6006,21 +4769,11 @@ function Role.set_label_shadow_y_offset(_label, _offset) end
 ---@param _text string 文本
 function Role.set_label_text(_label, _text) end
 
----设置是否开启玩家相机旋转同步
----@param _enabled boolean 是否同步
----@deprecated
----@see Role.set_camera_rotation_sync_enabled
-function Role.set_listen_camera_rotation(_enabled) end
 
 ---设置玩家昵称可见性
 ---@param _visible boolean 是否可见
 function Role.set_name_visible(_visible) end
 
----设置玩家昵称可见性
----@param _visible boolean 是否可见
----@deprecated
----@see Role.set_name_visible
-function Role.set_nickname_visible(_visible) end
 
 ---设置UI节点交互开关
 ---@param _node ENode UI节点
@@ -6053,17 +4806,7 @@ function Role.set_progressbar_min(_progress_bar, _min) end
 ---@param _transition_time Fixed 过渡时间
 function Role.set_progressbar_transition(_progress_bar, _current, _transition_time) end
 
----设置玩家阵营
----@param _camp Camp 阵营
----@deprecated
----@see Role.set_role_camp
-function Role.set_role_camp(_camp) end
 
----设置玩家控制开启/关闭
----@param _enable boolean 开启/关闭
----@deprecated
----@see Role.set_role_ctrl_enabled
-function Role.set_role_ctrl(_enable) end
 
 ---设置玩家控制开启/关闭
 ---@param _enable boolean 开启/关闭
@@ -6073,11 +4816,6 @@ function Role.set_role_ctrl_enabled(_enable) end
 ---@param _score integer 积分
 function Role.set_score(_score) end
 
----设置付费道具商店可见性
----@param _visible boolean 可见性
----@deprecated
----@see Role.set_goods_panel_visible
-function Role.set_ugc_goods_panel_visible(_visible) end
 
 ---设置UI节点不透明度
 ---@param _node ENode UI节点
@@ -6115,12 +4853,6 @@ function Role.set_unit_mask(_unit, _color) end
 ---@param _color Color 颜色
 function Role.set_unit_outline(_unit, _width, _color) end
 
----设置单位穿透显示
----@param _unit Unit 单位
----@param _enabled boolean 是否穿透显示
----@deprecated
----@see Role.set_unit_see_through_enabled
-function Role.set_unit_see_through(_unit, _enabled) end
 
 ---设置单位穿透显示
 ---@param _unit Unit 单位
@@ -6166,10 +4898,6 @@ function Role.show_dynamic_text(_text, _pos, _color, _duration, _anim_type) end
 ---@param _show_time Fixed 显示时间
 function Role.show_goods_purchase_panel(_raw_goods_id, _show_time) end
 
----显示点赞界面
----@deprecated
----@see Role.show_like_panel
-function Role.show_like_interact_ui() end
 
 ---显示点赞界面
 function Role.show_like_panel() end
@@ -6179,12 +4907,6 @@ function Role.show_like_panel() end
 ---@param _duration Fixed? 时长
 function Role.show_tips(_content, _duration) end
 
----玩家显示指定商品购买界面
----@param _raw_goods_id UgcGoods 商品
----@param _show_time Fixed 显示时间
----@deprecated
----@see Role.show_goods_purchase_panel
-function Role.show_ugc_good_purchase_panel(_raw_goods_id, _show_time) end
 
 ---显示玩家决战技选择界面
 ---@param _keep_time integer 时间
@@ -6216,11 +4938,6 @@ function Role.stop_camera_motor() end
 ---@param _has_black_screen boolean 是否有跳过黑幕
 function Role.stop_montage(_montage_key, _has_black_screen) end
 
----停止界面动效
----@param _effect_node EEffectNode UI动效
----@deprecated
----@see Role.stop_ui_effect
-function Role.stop_ui_animation_effect(_effect_node) end
 
 ---停止界面动效
 ---@param _effect_node EEffectNode UI动效
@@ -6238,11 +4955,6 @@ function Role.unbind_progressbar_current(_progress_bar) end
 ---@param _progress_bar EProgressbar UI进度条节点
 function Role.unbind_progressbar_max(_progress_bar) end
 
----发起进入关卡投票
----@param _level_key LevelKey 关卡编号
----@deprecated
----@see Role.start_level_vote
-function Role.vote_for_switch_level(_level_key) end
 
 ---玩家胜利
 function Role.win() end
@@ -6254,11 +4966,6 @@ RollComp = {}
 ---@return Fixed 冷却时间
 function RollComp.get_roll_cooldown() end
 
----获取滚动剩余冷却时间
----@return Fixed 剩余冷却时间
----@deprecated
----@see RollComp.get_roll_remaining_cooldown
-function RollComp.get_roll_left_cd() end
 
 ---获取滚动剩余冷却时间
 ---@return Fixed 剩余冷却时间
@@ -6268,11 +4975,6 @@ function RollComp.get_roll_remaining_cooldown() end
 ---@param _time Fixed 时间
 function RollComp.set_roll_cooldown(_time) end
 
----设置滚动剩余冷却时间
----@param _remaining_time Fixed 剩余冷却时间
----@deprecated
----@see RollComp.set_roll_remaining_cooldown
-function RollComp.set_roll_left_cd(_remaining_time) end
 
 ---设置滚动剩余冷却时间
 ---@param _remaining_time Fixed 剩余冷却时间
@@ -6285,11 +4987,6 @@ RushComp = {}
 ---@return Fixed 冷却时间
 function RushComp.get_rush_cooldown() end
 
----获取飞扑剩余冷却时间
----@return Fixed 剩余冷却时间
----@deprecated
----@see RushComp.get_rush_remaining_cooldown
-function RushComp.get_rush_left_cd() end
 
 ---获取飞扑剩余冷却时间
 ---@return Fixed 剩余冷却时间
@@ -6299,11 +4996,6 @@ function RushComp.get_rush_remaining_cooldown() end
 ---@param _time Fixed 时间
 function RushComp.set_rush_cooldown(_time) end
 
----设置飞扑剩余冷却时间
----@param _time Fixed 时间
----@deprecated
----@see RushComp.set_rush_remaining_cooldown
-function RushComp.set_rush_left_cd(_time) end
 
 ---设置飞扑剩余冷却时间
 ---@param _time Fixed 时间
@@ -6344,24 +5036,7 @@ function TriggerSystem.has_timer(_timer) end
 ---@class Unit: Actor
 Unit = {}
 
----添加向技能槽位添加UGC技能能
----@param _ability_index AbilitySlot 技能槽位
----@param _ability_id AbilityKey 技能编号
----@param _kv_args table? 自定义参数值
----@param _kv_types table? 自定义参数类型
----@return Ability 添加上的技能
----@deprecated
----@see AbilityComp.add_ability_to_slot
-function Unit.add_ability_to_slot(_ability_index, _ability_id, _kv_args, _kv_types) end
 
----添加圆周运动
----@param _vel Vector3 角速度
----@param _time Fixed 时间
----@param _is_local boolean? 是否局部空间
----@return integer 索引
----@deprecated
----@see Unit.add_circle_motor
-function Unit.add_angular_motor(_vel, _time, _is_local) end
 
 ---添加子单位
 ---@param _unit Unit 子单位
@@ -6388,101 +5063,18 @@ function Unit.add_linear_motor(_vel, _time, _is_local) end
 ---@param _follow_rotate boolean? 是否跟随旋转
 function Unit.add_surround_motor(_follow_target, _ang_vel, _time, _follow_rotate) end
 
----添加向技能槽位添加UGC技能能
----@param _ability_index AbilitySlot 技能槽位
----@param _ability_id AbilityKey 技能编号
----@param _kv_args table? 自定义参数值
----@param _kv_types table? 自定义参数类型
----@return Ability 添加上的技能
----@deprecated
----@see AbilityComp.add_ability_to_slot
-function Unit.add_ugc_skill_to_slot(_ability_index, _ability_id, _kv_args, _kv_types) end
 
----控制AI执行警戒命令
----@param _tagert_pos Vector3 目标
----@param _target_dir Vector3 朝向
----@param _dalay_time Fixed 延迟
----@param _reject_time Fixed 厌恶时间
----@param _move_mode Enums.MoveMode 移动方式
----@deprecated
----@see LifeEntity.ai_command_alert
-function Unit.ai_command_alert(_tagert_pos, _target_dir, _dalay_time, _reject_time, _move_mode) end
 
----控制AI执行跟随命令
----@param _target_unit Unit 目标
----@param _follow_dis Fixed 距离
----@param _tolerate_dis Fixed 容忍距离
----@param _reject_time Fixed 厌恶时间
----@param _move_mode Enums.MoveMode 移动方式
----@deprecated
----@see LifeEntity.ai_command_follow
-function Unit.ai_command_follow(_target_unit, _follow_dis, _tolerate_dis, _reject_time, _move_mode) end
 
----控制AI执行模仿命令
----@param _target_unit Character 目标
----@param _delay Fixed 延迟
----@param _disable_actions Enums.AIBasicCommand[] 屏蔽操作
----@deprecated
----@see LifeEntity.ai_command_imitate
-function Unit.ai_command_imitate(_target_unit, _delay, _disable_actions) end
 
----控制AI跳跃
----@deprecated
----@see LifeEntity.ai_command_jump
-function Unit.ai_command_jump() end
 
----控制AI举起/扔下/投掷
----@deprecated
----@see LifeEntity.ai_command_lift
-function Unit.ai_command_lift() end
 
----控制AI执行巡逻命令
----@param _waypoint Vector3[] 路径
----@param _reject_time Fixed 厌恶时间
----@param _round_mode Enums.PatrolType 往返模式
----@param _move_mode Enums.MoveMode 移动方式
----@deprecated
----@see LifeEntity.ai_command_patrol
-function Unit.ai_command_nav(_waypoint, _reject_time, _round_mode, _move_mode) end
 
----控制AI拾取物品
----@param _target_equipment Equipment 拾取物品
----@param _move_mode Enums.MoveMode 移动方式
----@param _reject_time Fixed 厌恶时间
----@deprecated
----@see LifeEntity.ai_command_pick_up_equipment
-function Unit.ai_command_pick_up_equipment(_target_equipment, _move_mode, _reject_time) end
 
----控制AI滚动
----@deprecated
----@see LifeEntity.ai_command_roll
-function Unit.ai_command_roll() end
 
----控制AI前扑
----@deprecated
----@see LifeEntity.ai_command_rush
-function Unit.ai_command_rush() end
 
----控制AI单位移动
----@param _direction Vector3 方向
----@param _t Fixed 时间
----@deprecated
----@see LifeEntity.ai_command_start_move
-function Unit.ai_command_start_move(_direction, _t) end
 
----控制AI执行高优先级寻路命令
----@param _target_position Vector3[] 坐标
----@param _duration Fixed? 持续时间
----@param _threshold Fixed? 距离阈值
----@deprecated
----@see LifeEntity.ai_command_start_move_high_priority
-function Unit.ai_command_start_move_high_priority(_target_position, _duration, _threshold) end
 
----控制AI单位停止移动
----@param _duration Fixed 时间
----@deprecated
----@see LifeEntity.ai_command_stop_move
-function Unit.ai_command_stop_move(_duration) end
 
 ---施加力
 ---@param _force Vector3 力
@@ -6495,113 +5087,21 @@ function Unit.apply_force(_force) end
 ---@param _lost_ctrl_time Fixed? 击飞失控时间
 function Unit.apply_impact_force(_force, _max_speed, _force_lost_control, _lost_ctrl_time) end
 
----打断技能蓄力
----@deprecated
----@see AbilityComp.break_ability_accumulate
-function Unit.break_ability_accumulate() end
 
----打断技能施法
----@deprecated
----@see AbilityComp.interrupt_ability
-function Unit.break_ability_cast() end
 
----打断技能蓄力
----@deprecated
----@see AbilityComp.break_ability_accumulate
-function Unit.break_accumulate_skill() end
 
----打断技能施法
----@deprecated
----@see AbilityComp.interrupt_ability
-function Unit.break_cast_skill() end
 
----控制角色对目标方向释放指定槽位技能
----@param _direction Vector3 方向
----@param _ability_slot AbilitySlot 技能槽位
----@param _duration Fixed 时间
----@deprecated
----@see AbilityComp.cast_ability_by_ability_slot_and_direction
-function Unit.cast_ability_by_ability_slot_and_direction(_direction, _ability_slot, _duration) end
 
----控制角色对目标坐标释放指定槽位技能
----@param _position Vector3 坐标
----@param _ability_slot AbilitySlot 技能槽位
----@param _duration Fixed 时间
----@deprecated
----@see AbilityComp.cast_ability_by_ability_slot_and_position
-function Unit.cast_ability_by_ability_slot_and_position(_position, _ability_slot, _duration) end
 
----控制角色对目标单位释放指定槽位技能
----@param _target LifeEntity 目标
----@param _ability_slot AbilitySlot 技能槽位
----@param _duration Fixed 时间
----@deprecated
----@see AbilityComp.cast_ability_by_ability_slot_and_target
-function Unit.cast_ability_by_ability_slot_and_target(_target, _ability_slot, _duration) end
 
----控制角色对指定方向执行释放指定预设技能
----@param _ability_key AbilityKey 技能编号
----@param _duration Fixed 时间
----@param _direction Vector3 方向
----@param _ability_slot AbilitySlot? 技能槽位
----@deprecated
----@see AbilityComp.cast_ability_by_direction
-function Unit.cast_ability_by_direction(_ability_key, _duration, _direction, _ability_slot) end
 
----控制角色对指定坐标执行释放预设技能
----@param _ability_key AbilityKey 技能编号
----@param _duration Fixed 时间
----@param _position Vector3 坐标
----@param _ability_slot AbilitySlot? 技能槽位
----@deprecated
----@see AbilityComp.cast_ability_by_position
-function Unit.cast_ability_by_position(_ability_key, _duration, _position, _ability_slot) end
 
----控制角色对指定目标执行释放指定预设技能
----@param _ability_key AbilityKey 技能编号
----@param _duration Fixed 时间
----@param _target LifeEntity 目标
----@param _ability_slot AbilitySlot? 技能槽位
----@deprecated
----@see AbilityComp.cast_ability_by_target
-function Unit.cast_ability_by_target(_ability_key, _duration, _target, _ability_slot) end
 
----改变组件颜色
----@param _paint_area PaintArea 染色区域
----@param _color Color 颜色
----@deprecated
----@see Unit.set_paint_area_color
-function Unit.change_comp_color(_paint_area, _color) end
 
----修改所属玩家
----@param _role Role 所属玩家
----@deprecated
----@see OwnerComp.change_owner
-function Unit.change_owner(_role) end
 
----清除单位物品格选中状态
----@deprecated
----@see EquipmentComp.clear_selected_equipment_slot
-function Unit.clear_selected_equipment_slot() end
 
----停止环绕运动
----@deprecated
----@see Unit.remove_surround_motor
-function Unit.del_surround_motor() end
 
----销毁技能
----@param _ability Ability 技能对象
----@return boolean 是否成功移除
----@deprecated
----@see AbilityComp.destroy_ability
-function Unit.destroy_ability(_ability) end
 
----销毁技能
----@param _ability Ability 技能对象
----@return boolean 是否成功移除
----@deprecated
----@see AbilityComp.destroy_ability
-function Unit.destroy_skill(_ability) end
 
 ---关闭重力影响
 function Unit.disable_gravity() end
@@ -6623,76 +5123,14 @@ function Unit.enable_interact() end
 ---@param _index integer 索引
 function Unit.enable_motor(_index) end
 
----控制角色对目标方向释放指定槽位技能
----@param _direction Vector3 方向
----@param _ability_slot AbilitySlot 技能槽位
----@param _duration Fixed 时间
----@deprecated
----@see AbilityComp.cast_ability_by_ability_slot_and_direction
-function Unit.execute_ability_by_ability_slot_index_and_dir(_direction, _ability_slot, _duration) end
 
----控制角色对目标坐标释放指定槽位技能
----@param _position Vector3 坐标
----@param _ability_slot AbilitySlot 技能槽位
----@param _duration Fixed 时间
----@deprecated
----@see AbilityComp.cast_ability_by_ability_slot_and_position
-function Unit.execute_ability_by_ability_slot_index_and_pos(_position, _ability_slot, _duration) end
 
----控制角色对目标单位释放指定槽位技能
----@param _target LifeEntity 目标
----@param _ability_slot AbilitySlot 技能槽位
----@param _duration Fixed 时间
----@deprecated
----@see AbilityComp.cast_ability_by_ability_slot_and_target
-function Unit.execute_ability_by_ability_slot_index_and_target(_target, _ability_slot, _duration) end
 
----控制角色对指定方向执行释放指定预设技能
----@param _ability_key AbilityKey 技能编号
----@param _duration Fixed 时间
----@param _direction Vector3 方向
----@param _ability_slot AbilitySlot? 技能槽位
----@deprecated
----@see AbilityComp.cast_ability_by_direction
-function Unit.execute_ability_by_dir(_ability_key, _duration, _direction, _ability_slot) end
 
----控制角色对指定坐标执行释放预设技能
----@param _ability_key AbilityKey 技能编号
----@param _duration Fixed 时间
----@param _position Vector3 坐标
----@param _ability_slot AbilitySlot? 技能槽位
----@deprecated
----@see AbilityComp.cast_ability_by_position
-function Unit.execute_ability_by_pos(_ability_key, _duration, _position, _ability_slot) end
 
----控制角色对指定目标执行释放指定预设技能
----@param _ability_key AbilityKey 技能编号
----@param _duration Fixed 时间
----@param _target LifeEntity 目标
----@param _ability_slot AbilitySlot? 技能槽位
----@deprecated
----@see AbilityComp.cast_ability_by_target
-function Unit.execute_ability_by_target(_ability_key, _duration, _target, _ability_slot) end
 
----获取单位所有技能
----@return Ability[] 技能对象
----@deprecated
----@see AbilityComp.get_abilities
-function Unit.get_abilities() end
 
----获取对应槽位技能
----@param _ability_slot AbilitySlot 技能槽位
----@return Ability 技能对象
----@deprecated
----@see AbilityComp.get_ability_by_slot
-function Unit.get_ability_by_slot(_ability_slot) end
 
----获取对应槽位技能
----@param _ability_slot AbilitySlot 技能槽位
----@return Ability 技能对象
----@deprecated
----@see AbilityComp.get_ability_by_slot
-function Unit.get_ability_in_slot(_ability_slot) end
 
 ---获取单位角速度
 ---@return Vector3 角速度
@@ -6723,81 +5161,23 @@ function Unit.get_child_obstacles() end
 ---@return Unit[] 单位列表
 function Unit.get_children() end
 
----获得所有子触发区域单位
----@return CustomTriggerSpace[] 触发区域列表
----@deprecated
----@see Unit.get_child_customtriggerspaces
-function Unit.get_children_customtriggerspace() end
 
----获得所有子物理组件单位
----@return Obstacle[] 组件列表
----@deprecated
----@see Unit.get_child_obstacles
-function Unit.get_children_obstacle() end
 
----获取触发区域内的随机坐标
----@return Vector3 坐标
----@deprecated
----@see CustomTriggerSpace.random_point
-function Unit.get_customtriggerspaces_random_point() end
 
----获取身上的物品
----@param _slot_type Enums.EquipmentSlotType 槽位类型
----@param _slot_index integer 槽位索引
----@return Equipment 物品
----@deprecated
----@see EquipmentComp.get_equipment_by_slot
-function Unit.get_equipment_by_slot(_slot_type, _slot_index) end
 
----获取角色/生物持有的物品预设列表
----@param _equipment_key EquipmentKey 物品类型
----@param _exclude_equipped boolean? 不搜索物品栏
----@param _exclude_bag boolean? 不搜索背包栏
----@return Equipment[] 物品列表
----@deprecated
----@see EquipmentComp.get_equipment_list
-function Unit.get_equipment_list(_equipment_key, _exclude_equipped, _exclude_bag) end
 
----获取持有的物品列表
----@param _slot_type Enums.EquipmentSlotType 槽位类型
----@return Equipment[] 物品
----@deprecated
----@see EquipmentComp.get_equipment_list_by_slot_type
-function Unit.get_equipment_list_by_slot(_slot_type) end
 
----获取最大可持有的物品数量
----@param _slot_type Enums.EquipmentSlotType 槽位类型
----@return integer 数量
----@deprecated
----@see EquipmentComp.get_equipment_max_count
-function Unit.get_equipment_max_num_by_slot(_slot_type) end
 
 ---获取单位编号
 ---@return UnitKey 单位编号
 function Unit.get_key() end
 
----获取举起冷却时间
----@return Fixed 定点数
----@deprecated
----@see LiftComp.get_lift_cooldown
-function Unit.get_lift_cd() end
 
----获取举起剩余冷却时间
----@return Fixed 定点数
----@deprecated
----@see LiftComp.get_lift_remaining_cooldown
-function Unit.get_lift_left_cd() end
 
 ---获取单位线速度
 ---@return Vector3 线速度
 function Unit.get_linear_velocity() end
 
----获取单位本地坐标系下的方向
----@param _direction_type Enums.DirectionType 方向
----@return Vector3 向量
----@deprecated
----@see Unit.get_local_direction
-function Unit.get_local_dir(_direction_type) end
 
 ---获取单位本地坐标系下的方向
 ---@param _direction_type Enums.DirectionType 方向
@@ -6842,40 +5222,14 @@ function Unit.get_role() end
 ---@return RoleID 玩家ID
 function Unit.get_role_id() end
 
----获取滚动剩余冷却时间
----@return Fixed 剩余冷却时间
----@deprecated
----@see RollComp.get_roll_remaining_cooldown
-function Unit.get_roll_left_cd() end
 
----获取飞扑剩余冷却时间
----@return Fixed 剩余冷却时间
----@deprecated
----@see RushComp.get_rush_remaining_cooldown
-function Unit.get_rush_left_cd() end
 
 ---获得单位缩放
 ---@return Vector3 缩放
 function Unit.get_scale() end
 
----获取当前选中的物品
----@return Equipment 物品
----@deprecated
----@see EquipmentComp.get_selected_equipment
-function Unit.get_selected_equipment() end
 
----获取单位所有技能
----@return Ability[] 技能对象
----@deprecated
----@see AbilityComp.get_abilities
-function Unit.get_skills() end
 
----获取对应槽位技能
----@param _ability_slot AbilitySlot 技能槽位
----@return Ability 技能对象
----@deprecated
----@see AbilityComp.get_ability_by_slot
-function Unit.get_ugc_skill(_ability_slot) end
 
 ---获取单位类型
 ---@return Enums.UnitType 单位类型
@@ -6884,10 +5238,6 @@ function Unit.get_unit_type() end
 ---关闭气泡信息
 function Unit.hide_bubble_msg() end
 
----打断技能施法
----@deprecated
----@see AbilityComp.interrupt_ability
-function Unit.interrupt_ability() end
 
 ---是否为角色
 ---@return boolean 单位
@@ -6905,13 +5255,6 @@ function Unit.is_dynamic() end
 ---@return boolean 受力物体
 function Unit.is_dynamic_body() end
 
----单位是否在触发区域内
----@param _custom_trigger_space CustomTriggerSpace 触发区域
----@param _consider_mask boolean? 考虑掩码
----@return boolean 布尔
----@deprecated
----@see Unit.is_in_customtriggerspace
-function Unit.is_in_custom_trigger_space(_custom_trigger_space, _consider_mask) end
 
 ---单位是否在触发区域内
 ---@param _custom_trigger_space CustomTriggerSpace 触发区域
@@ -6927,17 +5270,7 @@ function Unit.is_kinematic_body() end
 ---@return boolean 是否隐藏
 function Unit.is_model_visible() end
 
----单位物理是否生效
----@return boolean 是否物理生效
----@deprecated
----@see Unit.is_physics_active
-function Unit.is_physic_active() end
 
----单位物理是否生效
----@return boolean 是否物理生效
----@deprecated
----@see Unit.is_physics_active
-function Unit.is_physic_enable() end
 
 ---单位物理是否生效
 ---@return boolean 是否物理生效
@@ -6959,10 +5292,6 @@ function Unit.is_valid_ability_target(_ability) end
 ---@param _play_speed Fixed 播放速度
 function Unit.model_play_animation(_anim_name, _start_time, _is_loop, _play_speed) end
 
----模型停止动画
----@deprecated
----@see Unit.model_stop_animation
-function Unit.model_stop_anim() end
 
 ---模型停止动画
 function Unit.model_stop_animation() end
@@ -6991,73 +5320,20 @@ function Unit.play_emoji_with_offset(_emoji_key, _show_time, _offset) end
 ---@return SoundID 音效ID
 function Unit.play_sound_with_dis_and_attenuation(_event_id, _vis_dis, _sound_attenuation_curve) end
 
----移除槽位上的技能
----@param _ability_slot AbilitySlot 技能槽位
----@return boolean 是否成功移除
----@deprecated
----@see AbilityComp.remove_ability
-function Unit.remove_ability(_ability_slot) end
 
----根据技能编号移除技能
----@param _ability_key AbilityKey 技能编号
----@return boolean 是否成功移除
----@deprecated
----@see AbilityComp.remove_ability_by_key
-function Unit.remove_ability_by_ability_key(_ability_key) end
 
----根据技能编号移除技能
----@param _ability_key AbilityKey 技能编号
----@return boolean 是否成功移除
----@deprecated
----@see AbilityComp.remove_ability_by_key
-function Unit.remove_ability_by_key(_ability_key) end
 
----移除槽位上的技能
----@param _ability_slot AbilitySlot 技能槽位
----@return boolean 是否成功移除
----@deprecated
----@see AbilityComp.remove_ability
-function Unit.remove_ability_in_slot(_ability_slot) end
 
 ---从父节点移除
 function Unit.remove_from_parent() end
 
----根据技能编号移除技能
----@param _ability_key AbilityKey 技能编号
----@return boolean 是否成功移除
----@deprecated
----@see AbilityComp.remove_ability_by_key
-function Unit.remove_skill_by_skill_key(_ability_key) end
 
 ---停止环绕运动
 function Unit.remove_surround_motor() end
 
----移除槽位上的技能
----@param _ability_slot AbilitySlot 技能槽位
----@return boolean 是否成功移除
----@deprecated
----@see AbilityComp.remove_ability
-function Unit.remove_ugc_skill_in_slot(_ability_slot) end
 
----重置指定槽位技能CD
----@param _ability_index AbilitySlot 技能槽位
----@deprecated
----@see AbilityComp.reset_ability_cd
-function Unit.reset_ability_cd(_ability_index) end
 
----重置指定槽位技能CD
----@param _ability_index AbilitySlot 技能槽位
----@deprecated
----@see AbilityComp.reset_ability_cd
-function Unit.reset_skill_cd(_ability_index) end
 
----替换技能槽位(UGC槽位)
----@param _ability Ability 技能对象
----@param _ability_index AbilitySlot 技能槽位
----@return Ability 被替换的旧技能
----@deprecated
----@see AbilityComp.set_ability_to_slot
-function Unit.set_ability_to_slot(_ability, _ability_index) end
 
 ---设置加速运动初速度并重置
 ---@param _index integer 索引
@@ -7068,17 +5344,7 @@ function Unit.set_acc_motor_init_velocity(_index, _init_vel) end
 ---@param _vel Vector3 角速度
 function Unit.set_angular_velocity(_vel) end
 
----设置举起冷却时间
----@param _cd_time Fixed 时间
----@deprecated
----@see LiftComp.set_lift_cooldown
-function Unit.set_lift_cd(_cd_time) end
 
----设置举起剩余冷却时间
----@param _time Fixed 时间
----@deprecated
----@see LiftComp.set_lift_remaining_cooldown
-function Unit.set_lift_left_cd(_time) end
 
 ---设置直线运动速度
 ---@param _index integer 索引
@@ -7094,11 +5360,6 @@ function Unit.set_linear_velocity(_vel) end
 ---@param _enable boolean 是否启用
 function Unit.set_mirror_reflect_enabled(_enable) end
 
----设置单位物理是否生效
----@param _is_active boolean 是否生效
----@deprecated
----@see Unit.set_physics_active
-function Unit.set_model_physic_visible(_is_active) end
 
 ---设置单位模型是否可见
 ---@param _v boolean 是否可见
@@ -7113,18 +5374,7 @@ function Unit.set_orientation(_rot) end
 ---@param _color Color 颜色
 function Unit.set_paint_area_color(_paint_area, _color) end
 
----改变组件颜色
----@param _paint_area PaintArea 染色区域
----@param _color Color 颜色
----@deprecated
----@see Unit.set_paint_area_color
-function Unit.set_paintarea_color(_paint_area, _color) end
 
----设置单位物理是否生效
----@param _is_active boolean 是否生效
----@deprecated
----@see Unit.set_physics_active
-function Unit.set_physic_enable(_is_active) end
 
 ---设置单位物理是否生效
 ---@param _is_active boolean 是否生效
@@ -7134,38 +5384,10 @@ function Unit.set_physics_active(_is_active) end
 ---@param _pos Vector3 坐标
 function Unit.set_position(_pos) end
 
----设置滚动剩余冷却时间
----@param _remaining_time Fixed 剩余冷却时间
----@deprecated
----@see RollComp.set_roll_remaining_cooldown
-function Unit.set_roll_left_cd(_remaining_time) end
 
----设置飞扑冷却时间
----@param _time Fixed 时间
----@deprecated
----@see RushComp.set_rush_cooldown
-function Unit.set_rush_cd(_time) end
 
----设置飞扑剩余冷却时间
----@param _time Fixed 时间
----@deprecated
----@see RushComp.set_rush_remaining_cooldown
-function Unit.set_rush_left_cd(_time) end
 
----设置单位选中物品格
----@param _slot_type Enums.EquipmentSlotType 槽位类型
----@param _slot_index integer 槽位索引
----@deprecated
----@see EquipmentComp.select_equipment_slot
-function Unit.set_selected_equipment_slot(_slot_type, _slot_index) end
 
----替换技能槽位(UGC槽位)
----@param _ability Ability 技能对象
----@param _ability_index AbilitySlot 技能槽位
----@return Ability 被替换的旧技能
----@deprecated
----@see AbilityComp.set_ability_to_slot
-function Unit.set_skill_to_slot(_ability, _ability_index) end
 
 ---设置单位世界空间下的缩放
 ---@param _scale Vector3 缩放
@@ -7178,31 +5400,13 @@ function Unit.set_world_scale(_scale) end
 ---@param _offset Vector3? 偏移
 function Unit.show_bubble_msg(_show_msg, _show_time, _max_dis, _offset) end
 
----激活AI
----@deprecated
----@see LifeEntity.start_ai
-function Unit.start_ai() end
 
----暂停AI
----@deprecated
----@see LifeEntity.stop_ai
-function Unit.stop_ai() end
 
 ---单位停止播放声音
 ---@param _lres_id SoundID 音效ID
 function Unit.stop_sound(_lres_id) end
 
----使载具往某个方向移动一段时间
----@param _direction Vector3 方向
----@param _duration Fixed 持续时间
----@deprecated
----@see VehicleComp.start_move_by_direction
-function Unit.vehicle_start_move(_direction, _duration) end
 
----使载具停止移动
----@deprecated
----@see VehicleComp.stop_move
-function Unit.vehicle_stop_move() end
 
 ---@class UnitInteractVolumeComp
 UnitInteractVolumeComp = {}
@@ -7213,19 +5417,7 @@ UnitInteractVolumeComp = {}
 ---@return InteractBtnID 互动按钮ID
 function UnitInteractVolumeComp.get_interact_id(_interact_index, _interact_btn_type) end
 
----设置单位互动按钮图标
----@param _interact_id InteractBtnID 互动按钮ID
----@param _icon ImageKey 互动按钮图标
----@deprecated
----@see UnitInteractVolumeComp.set_interact_button_icon
-function UnitInteractVolumeComp.set_interact_btn_icon(_interact_id, _icon) end
 
----设置单位互动按钮文本
----@param _interact_id InteractBtnID 互动按钮ID
----@param _text string 互动按钮文本
----@deprecated
----@see UnitInteractVolumeComp.set_interact_button_text
-function UnitInteractVolumeComp.set_interact_btn_name(_interact_id, _text) end
 
 ---设置单位互动按钮图标
 ---@param _interact_id InteractBtnID 互动按钮ID
@@ -7242,18 +5434,7 @@ function UnitInteractVolumeComp.set_interact_button_text(_interact_id, _text) en
 ---@param _text string 互动按钮文本
 function UnitInteractVolumeComp.set_interact_button_text_by_index(_interact_index, _text) end
 
----设置单位互动是否启用
----@param _enable boolean 是否启用
----@deprecated
----@see UnitInteractVolumeComp.set_interact_enabled
-function UnitInteractVolumeComp.set_interact_enable(_enable) end
 
----设置单位互动是否启用(索引)
----@param _interact_index integer 互动索引
----@param _enable boolean 是否启用
----@deprecated
----@see UnitInteractVolumeComp.set_interact_enabled_by_index
-function UnitInteractVolumeComp.set_interact_enable_by_index(_interact_index, _enable) end
 
 ---设置单位互动是否启用
 ---@param _enable boolean 是否启用
@@ -7281,300 +5462,54 @@ function VehicleComp.stop_move() end
 ---@class VirtualEquipment
 VirtualEquipment = {}
 
----增加/减少物品当前堆叠数
----@param _num integer 堆叠数
----@deprecated
----@see Equipment.change_current_stack_size
-function VirtualEquipment.add_equipment_current_stack_num(_num) end
 
----增加/减少物品最大堆叠数
----@param _num integer 堆叠数
----@deprecated
----@see Equipment.change_max_stack_size
-function VirtualEquipment.add_equipment_max_stack_num(_num) end
 
----获取物品能否丢弃
----@return boolean 能否丢弃
----@deprecated
----@see Equipment.can_drop
-function VirtualEquipment.can_drop() end
 
----增加/减少物品当前堆叠数
----@param _num integer 堆叠数
----@deprecated
----@see Equipment.change_current_stack_size
-function VirtualEquipment.change_current_stack_size(_num) end
 
----增加/减少物品最大堆叠数
----@param _num integer 堆叠数
----@deprecated
----@see Equipment.change_max_stack_size
-function VirtualEquipment.change_max_stack_size(_num) end
 
----删除物品
----@deprecated
----@see Equipment.destroy_equipment
-function VirtualEquipment.destroy_equipment() end
 
----获取物品当前堆叠层数
----@return integer 当前堆叠层数
----@deprecated
----@see Equipment.get_current_stack_num
-function VirtualEquipment.get_current_stack_num() end
 
----获取物品描述
----@return string 物品描述
----@deprecated
----@see Equipment.get_desc
-function VirtualEquipment.get_desc() end
 
----获取物品的抵押价格
----@param _res_type string 货币类型
----@return integer 卖价
----@deprecated
----@see Equipment.get_price
-function VirtualEquipment.get_economic_value(_res_type) end
 
----获取物品是否自动拾取
----@return boolean 是否自动拾取
----@deprecated
----@see Equipment.is_auto_picking
-function VirtualEquipment.get_equipment_auto_pick() end
 
----获取物品是否自动使用
----@return boolean 是否自动使用
----@deprecated
----@see Equipment.is_auto_using
-function VirtualEquipment.get_equipment_auto_use() end
 
----获取物品能否丢弃
----@return boolean 能否丢弃
----@deprecated
----@see Equipment.can_drop
-function VirtualEquipment.get_equipment_can_drop() end
 
----获取物品当前堆叠层数
----@return integer 当前堆叠层数
----@deprecated
----@see Equipment.get_current_stack_num
-function VirtualEquipment.get_equipment_current_stack_num() end
 
----获取物品描述
----@return string 物品描述
----@deprecated
----@see Equipment.get_desc
-function VirtualEquipment.get_equipment_desc() end
 
----获取物品的物品编号
----@return EquipmentKey 物品编号
----@deprecated
----@see Equipment.get_key
-function VirtualEquipment.get_equipment_key_prefab() end
 
----获取物品最大堆叠层数
----@return integer 最大堆叠层数
----@deprecated
----@see Equipment.get_max_stack_num
-function VirtualEquipment.get_equipment_max_stack_num() end
 
----获取物品名称
----@return string 物品名称
----@deprecated
----@see Equipment.get_name
-function VirtualEquipment.get_equipment_name() end
 
----获取持有物品的角色
----@return Character 角色
----@deprecated
----@see Equipment.get_owner_character
-function VirtualEquipment.get_equipment_owner_character() end
 
----获取持有物品的生物
----@return Creature 生物
----@deprecated
----@see Equipment.get_owner_creature
-function VirtualEquipment.get_equipment_owner_creature() end
 
----获取物品所在槽位
----@return EquipmentSlot 槽位
----@deprecated
----@see Equipment.get_equipment_slot
-function VirtualEquipment.get_equipment_slot() end
 
----获取物品所在槽位
----@return EquipmentSlot 槽位
----@deprecated
----@see Equipment.get_equipment_slot
-function VirtualEquipment.get_equipment_slot_index() end
 
----获取物品所在槽位类型
----@return Enums.EquipmentSlotType 槽位类型
----@deprecated
----@see Equipment.get_slot_type
-function VirtualEquipment.get_equipment_slot_type() end
 
----获取物品的物品类型
----@return Enums.EquipmentType 物品类型
----@deprecated
----@see Equipment.get_equipment_type
-function VirtualEquipment.get_equipment_type() end
 
----获取物品的物品编号
----@return EquipmentKey 物品编号
----@deprecated
----@see Equipment.get_key
-function VirtualEquipment.get_key() end
 
----获取物品最大堆叠层数
----@return integer 最大堆叠层数
----@deprecated
----@see Equipment.get_max_stack_num
-function VirtualEquipment.get_max_stack_num() end
 
----获取物品名称
----@return string 物品名称
----@deprecated
----@see Equipment.get_name
-function VirtualEquipment.get_name() end
 
----获取持有物品的角色
----@return Character 角色
----@deprecated
----@see Equipment.get_owner_character
-function VirtualEquipment.get_owner_character() end
 
----获取持有物品的生物
----@return Creature 生物
----@deprecated
----@see Equipment.get_owner_creature
-function VirtualEquipment.get_owner_creature() end
 
----获取物品位置
----@return Vector3 物品位置
----@deprecated
----@see Equipment.get_position
-function VirtualEquipment.get_position() end
 
----获取物品所在槽位
----@return EquipmentSlot 槽位
----@deprecated
----@see Equipment.get_equipment_slot
-function VirtualEquipment.get_slot_index() end
 
----获取物品所在槽位类型
----@return Enums.EquipmentSlotType 槽位类型
----@deprecated
----@see Equipment.get_slot_type
-function VirtualEquipment.get_slot_type() end
 
----物品是否被持有
----@return boolean 是否被持有
----@deprecated
----@see Equipment.has_owner
-function VirtualEquipment.has_owner() end
 
----获取物品是否自动拾取
----@return boolean 是否自动拾取
----@deprecated
----@see Equipment.is_auto_picking
-function VirtualEquipment.is_auto_pick() end
 
----获取物品是否自动拾取
----@return boolean 是否自动拾取
----@deprecated
----@see Equipment.is_auto_picking
-function VirtualEquipment.is_auto_picking() end
 
----获取物品是否自动使用
----@return boolean 是否自动使用
----@deprecated
----@see Equipment.is_auto_using
-function VirtualEquipment.is_auto_use() end
 
----获取物品是否自动使用
----@return boolean 是否自动使用
----@deprecated
----@see Equipment.is_auto_using
-function VirtualEquipment.is_auto_using() end
 
----设置物品当前堆叠数
----@param _num integer 堆叠数
----@deprecated
----@see Equipment.set_current_stack_num
-function VirtualEquipment.set_current_stack_num(_num) end
 
----设置物品的描述
----@param _desc string 描述
----@deprecated
----@see Equipment.set_desc
-function VirtualEquipment.set_desc(_desc) end
 
----设置物品能否丢弃
----@param _droppable boolean 能否丢弃
----@deprecated
----@see Equipment.set_droppable
-function VirtualEquipment.set_droppable(_droppable) end
 
----设置物品的抵押价格
----@param _res_type string 货币类型
----@param _price integer 卖价
----@deprecated
----@see Equipment.set_price
-function VirtualEquipment.set_economic_value(_res_type, _price) end
 
----设置物品当前堆叠数
----@param _num integer 堆叠数
----@deprecated
----@see Equipment.set_current_stack_num
-function VirtualEquipment.set_equipment_current_stack_num(_num) end
 
----设置物品的描述
----@param _desc string 描述
----@deprecated
----@see Equipment.set_desc
-function VirtualEquipment.set_equipment_desc(_desc) end
 
----设置物品的图标
----@param _icon_key ImageKey 图标
----@deprecated
----@see Equipment.set_icon
-function VirtualEquipment.set_equipment_icon(_icon_key) end
 
----设置物品最大堆叠数
----@param _num integer 堆叠数
----@deprecated
----@see Equipment.set_max_stack_num
-function VirtualEquipment.set_equipment_max_stack_num(_num) end
 
----设置物品的名称
----@param _name string 名称
----@deprecated
----@see Equipment.set_name
-function VirtualEquipment.set_equipment_name(_name) end
 
----设置物品的图标
----@param _icon_key ImageKey 图标
----@deprecated
----@see Equipment.set_icon
-function VirtualEquipment.set_icon(_icon_key) end
 
----设置物品最大堆叠数
----@param _num integer 堆叠数
----@deprecated
----@see Equipment.set_max_stack_num
-function VirtualEquipment.set_max_stack_num(_num) end
 
----设置物品的名称
----@param _name string 名称
----@deprecated
----@see Equipment.set_name
-function VirtualEquipment.set_name(_name) end
 
----设置物品能否使用
----@param _usable boolean 能否使用
----@deprecated
----@see Equipment.set_usable
-function VirtualEquipment.set_usable(_usable) end
 
 ---@class EVENT
 EVENT = {}

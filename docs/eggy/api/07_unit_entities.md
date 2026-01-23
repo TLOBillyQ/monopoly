@@ -1,21 +1,5 @@
 ## Ability
 
-Ability|ability_active_cd
-Ability|ability_api_change_affect_radius|_delta_affect_radius
-Ability|ability_api_change_affect_width|_delta_affect_width
-Ability|ability_api_change_max_release_distance|_delta_level
-Ability|ability_api_decrease_ability_level|_delta_level
-Ability|ability_api_get_ability_level
-Ability|ability_api_get_ability_max_level
-Ability|ability_api_get_affect_radius
-Ability|ability_api_get_affect_width
-Ability|ability_api_get_max_release_distance
-Ability|ability_api_increase_ability_level|_delta_level
-Ability|ability_api_set_ability_level|_new_level
-Ability|ability_api_set_ability_max_level|_new_max_level
-Ability|ability_api_set_affect_radius|_new_affect_radius
-Ability|ability_api_set_affect_width|_new_affect_width
-Ability|ability_api_set_max_release_distance|_new_max_release_distance
 Ability|add_state_to_target|_unit, _state_id
 Ability|begin_cast|_dir_info, _target_point, _target_unit
 Ability|break_accumulate
@@ -25,11 +9,6 @@ Ability|change_affect_width|_delta_affect_width
 Ability|change_max_release_distance|_delta_level
 Ability|downgrade_ability_level|_delta_level
 Ability|enter_cd
-Ability|get_ability_can_affect_character_list_v2|_height, _use_fixed_release_point
-Ability|get_ability_can_affect_creature_list_v2|_height, _use_fixed_release_point
-Ability|get_ability_can_affect_life_entity_list_v2|_height, _use_fixed_release_point
-Ability|get_ability_can_affect_obstacle_list_v2|_height, _use_fixed_release_point
-Ability|get_ability_index
 Ability|get_ability_level
 Ability|get_ability_max_level
 Ability|get_ability_slot
@@ -44,12 +23,9 @@ Ability|get_cd_time
 Ability|get_charge_time
 Ability|get_cur_release_num
 Ability|get_desc
-Ability|get_is_in_cd
-Ability|get_is_in_charge
 Ability|get_key
 Ability|get_left_cd_time
 Ability|get_left_charge_time
-Ability|get_limitation_active|_limit
 Ability|get_lock_obstacle
 Ability|get_lock_target
 Ability|get_lock_target_char
@@ -61,9 +37,7 @@ Ability|get_owner
 Ability|get_owner_character
 Ability|get_owner_creature
 Ability|get_owner_equipment
-Ability|get_owner_unit
 Ability|get_pointer_type
-Ability|get_release_dir
 Ability|get_release_direction
 Ability|get_release_direction_list
 Ability|get_release_point
@@ -91,7 +65,6 @@ Actor|get_id
 ## Camp
 
 Camp|change_camp_score|_add_score
-Camp|get_camp_role_list
 Camp|get_camp_score
 Camp|get_name
 Camp|get_roles
@@ -99,76 +72,35 @@ Camp|set_camp_score|_score
 
 ## Character
 
-Character|change_character_prefab|_c_key, _reset_prop, _reset_trigger_system, _reset_model
-Character|change_model_by_creature|_creature, _include_custom_model, _inherit_scale, _inherit_capsule_size
-Character|change_target_socket_model|_model_socket, _creature, _creature_model_socket
-Character|change_target_socket_model_by_creature_key|_model_socket, _creature_key, _creature_model_socket
-Character|change_ugc_model_by_creature|_creature
-Character|change_ugc_model_by_creature_key|_creature_key
-Character|cmd_lift
-Character|cmd_move_to_pos|_target_pos, _duration
-Character|cmd_rush
-Character|destroy_buff|_modifier
-Character|enable_aim_move_mode|_enable
 Character|fling_rush
 Character|get_ability_point
-Character|get_buff|_modifier_id
-Character|get_buffs
-Character|get_camp_role
 Character|get_climb_obstacle
 Character|get_ctrl_role
-Character|get_face_dir
 Character|increase_ability_point|_increase
-Character|is_forced_moving
-Character|is_ghost_mode
-Character|is_have_buff_with_id|_modifier_key
-Character|jump
 Character|lift
-Character|recover_model
-Character|recover_target_socket_model|_model_socket
-Character|remove_buff|_modifier_id
 Character|reset_target_socket_model|_model_socket
 Character|set_aim_move_enabled|_enable
-Character|set_aim_move_mode|_enable
-Character|set_character_act_voice_enabled|_enabled
 Character|set_character_prefab|_c_key, _reset_prop, _reset_trigger_system, _reset_model
 Character|set_climb_enabled|_enable
 Character|set_climb_max_angle|_angle
 Character|set_climb_min_angle|_angle
 Character|set_climb_speed|_speed
-Character|set_mass_bar_visible|_visible
 Character|set_socket_model|_model_socket, _creature, _creature_model_socket
 Character|set_socket_model_by_creature_key|_model_socket, _creature_key, _creature_model_socket
 Character|set_voice_enabled|_enabled
-Character|start_forced_move|_vel, _duration, _enable_phy
 Character|start_move_to_pos|_target_pos, _duration
-Character|stop_forced_move
-Character|try_exit_ugcvehicle
-Character|try_exit_vehicle
 
 ## Creature
 
-Creature|change_model_by_creature|_creature, _include_custom_model, _inherit_scale, _inherit_capsule_size
-Creature|change_target_socket_model|_model_socket, _creature, _creature_model_socket
-Creature|change_target_socket_model_by_creature_key|_model_socket, _creature_key, _creature_model_socket
 Creature|force_start_move|_direction, _t
 Creature|force_stop_move
-Creature|get_face_dir
-Creature|is_drag_enable
-Creature|is_touch_enable
-Creature|recover_model
-Creature|recover_target_socket_model|_model_socket
 Creature|reset_target_socket_model|_model_socket
-Creature|set_drag_enable|_enable
 Creature|set_draggable|_enable
 Creature|set_dragged_plane_type|_value
-Creature|set_mass_bar_visible|_visible
 Creature|set_name|_name
 Creature|set_name_visible|_visible
 Creature|set_socket_model|_model_socket, _creature, _creature_model_socket
 Creature|set_socket_model_by_creature_key|_model_socket, _creature_key, _creature_model_socket
-Creature|set_touch_drag_plane|_value
-Creature|set_touch_enable|_enable
 Creature|set_touchable|_enable
 
 ## CustomTriggerSpace
@@ -184,7 +116,6 @@ Equipment|destroy_equipment
 Equipment|drop
 Equipment|get_current_stack_num
 Equipment|get_desc
-Equipment|get_economic_value|_res_type
 Equipment|get_equipment_slot
 Equipment|get_equipment_type
 Equipment|get_key
@@ -200,15 +131,12 @@ Equipment|has_owner
 Equipment|is_auto_picking
 Equipment|is_auto_using
 Equipment|move_to_slot|_slot_type, _slot
-Equipment|set_auto_aim|_is_auto_aim
 Equipment|set_auto_aim_enabled|_is_auto_aim
-Equipment|set_auto_fire|_is_auto_fire
 Equipment|set_auto_fire_enabled|_is_auto_fire
 Equipment|set_charge_cost_free|_is_free
 Equipment|set_current_stack_num|_num
 Equipment|set_desc|_desc
 Equipment|set_droppable|_droppable
-Equipment|set_economic_value|_res_type, _price
 Equipment|set_icon|_icon_key
 Equipment|set_max_stack_num|_num
 Equipment|set_name|_name
@@ -229,20 +157,12 @@ ItemBox|remove_equipment|_key
 KVBase|add_tag|_tag
 KVBase|clear_kv
 KVBase|clear_tag
-KVBase|delete_tag|_tag
-KVBase|get_billboard_content
-KVBase|get_billboard_font_size
 KVBase|get_kv_by_type|_value_type, _key
 KVBase|has_kv|_key
 KVBase|has_tag|_tag
 KVBase|remove_kv|_key
 KVBase|remove_tag|_tag
-KVBase|set_billboard_content|_content
-KVBase|set_billboard_font_color|_color, _gradient_color_1, _gradient_color_2, _gradient_color_3, _gradient_color_4
-KVBase|set_billboard_font_size|_font_size
-KVBase|set_billboard_text_color|_color, _gradient_color_1, _gradient_color_2, _gradient_color_3, _gradient_color_4
 KVBase|set_kv_by_type|_value_type, _key, _val
-KVBase|set_tag|_tag
 
 ## LifeEntity
 
@@ -255,7 +175,6 @@ LifeEntity|ai_command_follow|_target_unit, _follow_dis, _tolerate_dis, _reject_t
 LifeEntity|ai_command_imitate|_target_unit, _delay, _disable_actions
 LifeEntity|ai_command_jump
 LifeEntity|ai_command_lift
-LifeEntity|ai_command_nav|_waypoint, _reject_time, _round_mode, _move_mode
 LifeEntity|ai_command_patrol|_waypoint, _reject_time, _round_mode, _move_mode
 LifeEntity|ai_command_pick_up_equipment|_target_equipment, _move_mode, _reject_time
 LifeEntity|ai_command_roll
@@ -263,12 +182,7 @@ LifeEntity|ai_command_rush
 LifeEntity|ai_command_start_move|_direction, _t
 LifeEntity|ai_command_start_move_high_priority|_target_position, _duration, _threshold
 LifeEntity|ai_command_stop_move|_duration
-LifeEntity|change_model_by_character|_character, _include_ugc_model, _inherit_scale, _inherit_capsule_size
-LifeEntity|change_model_by_creature|_creature, _include_custom_model, _inherit_scale, _inherit_capsule_size
-LifeEntity|change_model_by_creature_key|_creature_key, _include_custom_model, _inherit_scale, _inherit_capsule_size
 LifeEntity|get_direction
-LifeEntity|get_face_dir
-LifeEntity|get_face_direction
 LifeEntity|get_hard_punch_threshold
 LifeEntity|get_hpbar_scale_x
 LifeEntity|get_hpbar_scale_y
@@ -277,24 +191,17 @@ LifeEntity|get_lifted_obstacle
 LifeEntity|get_owner
 LifeEntity|get_punch_threshold
 LifeEntity|interrupt_multi_animation
-LifeEntity|is_drag_enable
 LifeEntity|is_draggable
 LifeEntity|is_ghost_mode
 LifeEntity|is_jumping
 LifeEntity|is_moving
 LifeEntity|is_rushing
-LifeEntity|is_touch_enable
 LifeEntity|is_touchable
 LifeEntity|jump
-LifeEntity|play_emoji_with_offset|_emoji_key, _show_time, _offset
-LifeEntity|play_face_emoji|_emoji_key, _show_time
 LifeEntity|play_face_expression|_emoji_key, _show_time
-LifeEntity|recover_model
 LifeEntity|reset_model
 LifeEntity|set_ai_move_threshold|_threshold
 LifeEntity|set_direction|_face_dir
-LifeEntity|set_face_dir|_face_dir
-LifeEntity|set_face_direction|_face_dir
 LifeEntity|set_hard_punch_threshold|_punch_threshold
 LifeEntity|set_hpbar_scale|_hpbar_scale_x, _hpbar_scale_y
 LifeEntity|set_mass_bar_visible|_visible
@@ -311,7 +218,6 @@ LifeEntity|set_search_enemy_priority_value_by_unit_key|_unit_key, _priority
 LifeEntity|set_search_enemy_priority_value_by_unit_type|_unit_prefab_type, _priority
 LifeEntity|set_skeleton_offset|_skeleton, _offset
 LifeEntity|set_skeleton_scale|_skeleton, _scale
-LifeEntity|show_bubble_msg_with_offset|_show_msg, _show_time, _max_dis, _offset
 LifeEntity|start_ai
 LifeEntity|start_move_by_direction|_direction, _duration
 LifeEntity|start_move_to_pos_with_threshold|_target_pos, _duration, _threshold
@@ -335,11 +241,9 @@ Modifier|get_owner_life_entity
 Modifier|get_owner_unit
 Modifier|get_releaser_unit
 Modifier|get_remain_duration
-Modifier|get_remain_time
 Modifier|get_shield_value
 Modifier|get_stack_count
 Modifier|set_remain_duration|_remain_duration
-Modifier|set_remain_time|_remain_duration
 Modifier|set_shield_value|_shield_value
 Modifier|set_stack_count|_stack_count_add
 
@@ -350,9 +254,7 @@ Obstacle|get_billboard_text
 Obstacle|get_bound_equipment
 Obstacle|get_chess_rank
 Obstacle|get_chess_type
-Obstacle|is_drag_enable
 Obstacle|is_draggable
-Obstacle|is_touch_enable
 Obstacle|is_touchable
 Obstacle|reset_collision_limit|_limit_type
 Obstacle|set_billboard_font_size|_font_size
@@ -362,34 +264,24 @@ Obstacle|set_chess_type_and_rank|_card_type, _card_rank
 Obstacle|set_climbable|_enable
 Obstacle|set_collision_count_limit|_limit_type, _value
 Obstacle|set_collision_interval_limit|_limit_type, _value
-Obstacle|set_collision_limit_count|_limit_type, _value
-Obstacle|set_collision_limit_interval|_limit_type, _value
-Obstacle|set_drag_enable|_enabled
 Obstacle|set_draggable|_enabled
 Obstacle|set_ranklist_score|_role, _score
-Obstacle|set_ranklist_score_by_role|_role, _score
 
 ## Role
 
-Role|add_achieve_count|_event_id, _add_count
 Role|add_achievement_progress|_event_id, _add_count
 Role|add_score|_add_score
 Role|consume_commodity|_commodity_id, _num
-Role|consume_ugc_commodity|_commodity_id, _num
 Role|disable_unit_fresnel|_unit
 Role|disable_unit_mask|_unit
 Role|disable_unit_outline|_unit
 Role|enter_watch_mode|_camp_limit, _exit_visible
 Role|exit_watch_mode
-Role|game_lose
 Role|game_lose_and_show_result_panel
 Role|game_win_and_show_result_panel
-Role|get_achieve_count|_event_id
 Role|get_achievement_progress|_event_id
 Role|get_archive_by_type|_archive_type, _key
-Role|get_archive_configtable|_key
 Role|get_archive_sheetid|_key
-Role|get_camera_dir
 Role|get_camera_direction
 Role|get_camera_rotation
 Role|get_camp
@@ -400,54 +292,36 @@ Role|get_head_icon
 Role|get_name
 Role|get_roleid
 Role|get_score
-Role|get_ugc_commodity_num|_commodity_id
 Role|get_voice_volume
 Role|has_commodity|_commodity_id
 Role|has_saved_archive
-Role|has_ugc_commodity|_commodity_id
-Role|is_achieve_finish|_event_id
 Role|is_achievement_completed|_event_id
 Role|is_gallery_vip
-Role|is_lose
-Role|is_losed
-Role|is_loss
 Role|is_lost
 Role|is_map_favorited
 Role|is_map_liked
 Role|is_online
 Role|is_pass_premium_vip
-Role|is_role_lose
-Role|is_role_win
 Role|is_subscribed_map_author
 Role|is_watch_mode
-Role|is_win
 Role|is_won
-Role|listen_camera_rotation|_enabled
-Role|listen_gyroscope_info|_enabled
-Role|load_level_by_voting|_level_key
 Role|lose
 Role|pause_camera_motor
 Role|play_2d_sound_with_params|_event_id, _duration, _volume, _speed
 Role|play_advertisement_with_event|_success_event, _fail_event, _ad_tag, _success_data, _fail_data
 Role|play_montage|_montage_key, _start_time, _play_to_end, _play_time
-Role|play_montage_by_id|_montage_key, _start_time, _play_to_end, _play_time
 Role|play_screen_sfx|_sfx_key, _duration, _rate
-Role|play_ui_animation_effect|_effect_node
 Role|play_ui_effect|_effect_node
 Role|reset_animation|_node
 Role|reset_camera|_reset_angle, _reset_bind, _reset_point, _reset_prop_pitch
 Role|resume_camera_motor
 Role|send_track_data_change|_track_data_key, _change_num
-Role|send_track_data_log|_track_data_key, _change_num
 Role|send_ui_custom_event|_event_name, _data
-Role|set_achieve_count|_event_id, _count
 Role|set_achievement_progress|_event_id, _count
 Role|set_animation_state|_node, _animation_name, _state
 Role|set_archive_by_type|_archive_type, _key, _val
-Role|set_archive_configtable|_key, _val
 Role|set_archive_point|_position, _priority, _direction
 Role|set_archive_sheetid|_key, _val
-Role|set_bagslot_related_life_entity|_bag_slot, _life_entity
 Role|set_bagslot_related_lifeentity|_bag_slot, _life_entity
 Role|set_battle_shop_visible|_battle_shop_id, _visible
 Role|set_blind_corner|_enable, _strength, _color
@@ -472,13 +346,10 @@ Role|set_gyroscope_sync_enabled|_enabled
 Role|set_image_color|_image, _image_color, _transition_time
 Role|set_image_texture_by_key_with_auto_resize|_image, _image_key, _reset_size
 Role|set_image_texture_with_auto_resize|_image, _image_path, _reset_size
-Role|set_image_texture_with_size|_image, _image_key, _reset_size
 Role|set_input_field_text|_input_field, _text
 Role|set_label_background_color|_label, _color, _transition_time
 Role|set_label_background_opacity|_label, _opacity, _transition_time
 Role|set_label_color|_label, _color, _transition_time
-Role|set_label_enable_outline|_label, _enable
-Role|set_label_enable_shadow|_label, _enable
 Role|set_label_font|_label, _font_key
 Role|set_label_font_size|_label, _font_size, _transition_time
 Role|set_label_outline_color|_label, _color
@@ -490,27 +361,21 @@ Role|set_label_shadow_enabled|_label, _enable
 Role|set_label_shadow_x_offset|_label, _offset
 Role|set_label_shadow_y_offset|_label, _offset
 Role|set_label_text|_label, _text
-Role|set_listen_camera_rotation|_enabled
 Role|set_name_visible|_visible
-Role|set_nickname_visible|_visible
 Role|set_node_touch_enabled|_node, _touch_enabled
 Role|set_node_visible|_node, _visible
 Role|set_progressbar_current|_progress_bar, _current
 Role|set_progressbar_max|_progress_bar, _max
 Role|set_progressbar_min|_progress_bar, _min
 Role|set_progressbar_transition|_progress_bar, _current, _transition_time
-Role|set_role_camp|_camp
-Role|set_role_ctrl|_enable
 Role|set_role_ctrl_enabled|_enable
 Role|set_score|_score
-Role|set_ugc_goods_panel_visible|_visible
 Role|set_ui_opacity|_node, _opacity
 Role|set_uipreset_visible|_ui, _visible
 Role|set_unit_fresnel|_unit, _fresnel_scale, _color, _intensity
 Role|set_unit_fresnel_gradual|_unit, _fresnel_scale, _color, _intensity, _duration
 Role|set_unit_mask|_unit, _color
 Role|set_unit_outline|_unit, _width, _color
-Role|set_unit_see_through|_unit, _enabled
 Role|set_unit_see_through_enabled|_unit, _enabled
 Role|set_unit_visible|_unit, _is_visible
 Role|set_voice_volume_sync_enabled|_enabled
@@ -518,10 +383,8 @@ Role|shake_camera|_shake_type, _shake_max_amplitude, _shake_time, _shake_source,
 Role|show_bag_panel|_visible
 Role|show_dynamic_text|_text, _pos, _color, _duration, _anim_type
 Role|show_goods_purchase_panel|_raw_goods_id, _show_time
-Role|show_like_interact_ui
 Role|show_like_panel
 Role|show_tips|_content, _duration
-Role|show_ugc_good_purchase_panel|_raw_goods_id, _show_time
 Role|show_ultimate_ability_panel|_keep_time
 Role|skip_current_montage|_has_black_screen
 Role|start_level_vote|_level_key
@@ -529,12 +392,10 @@ Role|start_vibration|_vibrate_type, _vibrate_count, _vibrate_interval
 Role|stop_2d_sound|_sound_instance_id
 Role|stop_camera_motor
 Role|stop_montage|_montage_key, _has_black_screen
-Role|stop_ui_animation_effect|_effect_node
 Role|stop_ui_effect|_effect_node
 Role|unbind_label_text|_label
 Role|unbind_progressbar_current|_progress_bar
 Role|unbind_progressbar_max|_progress_bar
-Role|vote_for_switch_level|_level_key
 Role|win
 
 ## SceneUI
@@ -552,58 +413,18 @@ TriggerSystem|has_timer|_timer
 
 ## Unit
 
-Unit|add_ability_to_slot|_ability_index, _ability_id, _kv_args, _kv_types
-Unit|add_angular_motor|_vel, _time, _is_local
 Unit|add_child|_unit
 Unit|add_circle_motor|_vel, _time, _is_local
 Unit|add_linear_motor|_vel, _time, _is_local
 Unit|add_surround_motor|_follow_target, _ang_vel, _time, _follow_rotate
-Unit|add_ugc_skill_to_slot|_ability_index, _ability_id, _kv_args, _kv_types
-Unit|ai_command_alert|_tagert_pos, _target_dir, _dalay_time, _reject_time, _move_mode
-Unit|ai_command_follow|_target_unit, _follow_dis, _tolerate_dis, _reject_time, _move_mode
-Unit|ai_command_imitate|_target_unit, _delay, _disable_actions
-Unit|ai_command_jump
-Unit|ai_command_lift
-Unit|ai_command_nav|_waypoint, _reject_time, _round_mode, _move_mode
-Unit|ai_command_pick_up_equipment|_target_equipment, _move_mode, _reject_time
-Unit|ai_command_roll
-Unit|ai_command_rush
-Unit|ai_command_start_move|_direction, _t
-Unit|ai_command_start_move_high_priority|_target_position, _duration, _threshold
-Unit|ai_command_stop_move|_duration
 Unit|apply_force|_force
 Unit|apply_impact_force|_force, _max_speed, _force_lost_control, _lost_ctrl_time
-Unit|break_ability_accumulate
-Unit|break_ability_cast
-Unit|break_accumulate_skill
-Unit|break_cast_skill
-Unit|cast_ability_by_ability_slot_and_direction|_direction, _ability_slot, _duration
-Unit|cast_ability_by_ability_slot_and_position|_position, _ability_slot, _duration
-Unit|cast_ability_by_ability_slot_and_target|_target, _ability_slot, _duration
-Unit|cast_ability_by_direction|_ability_key, _duration, _direction, _ability_slot
-Unit|cast_ability_by_position|_ability_key, _duration, _position, _ability_slot
-Unit|cast_ability_by_target|_ability_key, _duration, _target, _ability_slot
-Unit|change_comp_color|_paint_area, _color
-Unit|change_owner|_role
-Unit|clear_selected_equipment_slot
-Unit|del_surround_motor
-Unit|destroy_ability|_ability
-Unit|destroy_skill|_ability
 Unit|disable_gravity
 Unit|disable_interact
 Unit|disable_motor|_index
 Unit|enable_gravity
 Unit|enable_interact
 Unit|enable_motor|_index
-Unit|execute_ability_by_ability_slot_index_and_dir|_direction, _ability_slot, _duration
-Unit|execute_ability_by_ability_slot_index_and_pos|_position, _ability_slot, _duration
-Unit|execute_ability_by_ability_slot_index_and_target|_target, _ability_slot, _duration
-Unit|execute_ability_by_dir|_ability_key, _duration, _direction, _ability_slot
-Unit|execute_ability_by_pos|_ability_key, _duration, _position, _ability_slot
-Unit|execute_ability_by_target|_ability_key, _duration, _target, _ability_slot
-Unit|get_abilities
-Unit|get_ability_by_slot|_ability_slot
-Unit|get_ability_in_slot|_ability_slot
 Unit|get_angular_velocity
 Unit|get_camp
 Unit|get_camp_id
@@ -611,18 +432,8 @@ Unit|get_child_by_name|_name
 Unit|get_child_customtriggerspaces
 Unit|get_child_obstacles
 Unit|get_children
-Unit|get_children_customtriggerspace
-Unit|get_children_obstacle
-Unit|get_customtriggerspaces_random_point
-Unit|get_equipment_by_slot|_slot_type, _slot_index
-Unit|get_equipment_list|_equipment_key, _exclude_equipped, _exclude_bag
-Unit|get_equipment_list_by_slot|_slot_type
-Unit|get_equipment_max_num_by_slot|_slot_type
 Unit|get_key
-Unit|get_lift_cd
-Unit|get_lift_left_cd
 Unit|get_linear_velocity
-Unit|get_local_dir|_direction_type
 Unit|get_local_direction|_direction_type
 Unit|get_local_offset_position|_offset
 Unit|get_local_quaternion|_direction_type
@@ -633,122 +444,37 @@ Unit|get_position
 Unit|get_rigid_body_type
 Unit|get_role
 Unit|get_role_id
-Unit|get_roll_left_cd
-Unit|get_rush_left_cd
 Unit|get_scale
-Unit|get_selected_equipment
-Unit|get_skills
-Unit|get_ugc_skill|_ability_slot
 Unit|get_unit_type
 Unit|hide_bubble_msg
-Unit|interrupt_ability
 Unit|is_character
 Unit|is_creature
 Unit|is_dynamic
 Unit|is_dynamic_body
-Unit|is_in_custom_trigger_space|_custom_trigger_space, _consider_mask
 Unit|is_in_customtriggerspace|_custom_trigger_space, _consider_mask
 Unit|is_kinematic_body
 Unit|is_model_visible
-Unit|is_physic_active
-Unit|is_physic_enable
 Unit|is_physics_active
 Unit|is_static_body
 Unit|is_valid_ability_target|_ability
 Unit|model_play_animation|_anim_name, _start_time, _is_loop, _play_speed
-Unit|model_stop_anim
 Unit|model_stop_animation
 Unit|play_3d_sound|_sound_key, _duration, _volume
 Unit|play_emoji|_emoji_key
 Unit|play_emoji_with_offset|_emoji_key, _show_time, _offset
 Unit|play_sound_with_dis_and_attenuation|_event_id, _vis_dis, _sound_attenuation_curve
-Unit|remove_ability|_ability_slot
-Unit|remove_ability_by_ability_key|_ability_key
-Unit|remove_ability_by_key|_ability_key
-Unit|remove_ability_in_slot|_ability_slot
 Unit|remove_from_parent
-Unit|remove_skill_by_skill_key|_ability_key
 Unit|remove_surround_motor
-Unit|remove_ugc_skill_in_slot|_ability_slot
-Unit|reset_ability_cd|_ability_index
-Unit|reset_skill_cd|_ability_index
-Unit|set_ability_to_slot|_ability, _ability_index
 Unit|set_acc_motor_init_velocity|_index, _init_vel
 Unit|set_angular_velocity|_vel
-Unit|set_lift_cd|_cd_time
-Unit|set_lift_left_cd|_time
 Unit|set_linear_motor_velocity|_index, _vel, _is_local
 Unit|set_linear_velocity|_vel
 Unit|set_mirror_reflect_enabled|_enable
-Unit|set_model_physic_visible|_is_active
 Unit|set_model_visible|_v
 Unit|set_orientation|_rot
 Unit|set_paint_area_color|_paint_area, _color
-Unit|set_paintarea_color|_paint_area, _color
-Unit|set_physic_enable|_is_active
 Unit|set_physics_active|_is_active
 Unit|set_position|_pos
-Unit|set_roll_left_cd|_remaining_time
-Unit|set_rush_cd|_time
-Unit|set_rush_left_cd|_time
-Unit|set_selected_equipment_slot|_slot_type, _slot_index
-Unit|set_skill_to_slot|_ability, _ability_index
 Unit|set_world_scale|_scale
 Unit|show_bubble_msg|_show_msg, _show_time, _max_dis, _offset
-Unit|start_ai
-Unit|stop_ai
 Unit|stop_sound|_lres_id
-Unit|vehicle_start_move|_direction, _duration
-Unit|vehicle_stop_move
-
-## VirtualEquipment
-
-VirtualEquipment|add_equipment_current_stack_num|_num
-VirtualEquipment|add_equipment_max_stack_num|_num
-VirtualEquipment|can_drop
-VirtualEquipment|change_current_stack_size|_num
-VirtualEquipment|change_max_stack_size|_num
-VirtualEquipment|destroy_equipment
-VirtualEquipment|get_current_stack_num
-VirtualEquipment|get_desc
-VirtualEquipment|get_economic_value|_res_type
-VirtualEquipment|get_equipment_auto_pick
-VirtualEquipment|get_equipment_auto_use
-VirtualEquipment|get_equipment_can_drop
-VirtualEquipment|get_equipment_current_stack_num
-VirtualEquipment|get_equipment_desc
-VirtualEquipment|get_equipment_key_prefab
-VirtualEquipment|get_equipment_max_stack_num
-VirtualEquipment|get_equipment_name
-VirtualEquipment|get_equipment_owner_character
-VirtualEquipment|get_equipment_owner_creature
-VirtualEquipment|get_equipment_slot
-VirtualEquipment|get_equipment_slot_index
-VirtualEquipment|get_equipment_slot_type
-VirtualEquipment|get_equipment_type
-VirtualEquipment|get_key
-VirtualEquipment|get_max_stack_num
-VirtualEquipment|get_name
-VirtualEquipment|get_owner_character
-VirtualEquipment|get_owner_creature
-VirtualEquipment|get_position
-VirtualEquipment|get_slot_index
-VirtualEquipment|get_slot_type
-VirtualEquipment|has_owner
-VirtualEquipment|is_auto_pick
-VirtualEquipment|is_auto_picking
-VirtualEquipment|is_auto_use
-VirtualEquipment|is_auto_using
-VirtualEquipment|set_current_stack_num|_num
-VirtualEquipment|set_desc|_desc
-VirtualEquipment|set_droppable|_droppable
-VirtualEquipment|set_economic_value|_res_type, _price
-VirtualEquipment|set_equipment_current_stack_num|_num
-VirtualEquipment|set_equipment_desc|_desc
-VirtualEquipment|set_equipment_icon|_icon_key
-VirtualEquipment|set_equipment_max_stack_num|_num
-VirtualEquipment|set_equipment_name|_name
-VirtualEquipment|set_icon|_icon_key
-VirtualEquipment|set_max_stack_num|_num
-VirtualEquipment|set_name|_name
-VirtualEquipment|set_usable|_usable

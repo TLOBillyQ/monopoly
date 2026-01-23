@@ -1,7 +1,6 @@
 ## AbilityComp
 
 AbilityComp|add_ability_to_slot|_ability_index, _ability_id, _kv_args, _kv_types
-AbilityComp|add_item_ability_with_check|_ability_id, _kv_args, _kv_types
 AbilityComp|add_prop_ability|_ability_id, _kv_args, _kv_types
 AbilityComp|break_ability_accumulate
 AbilityComp|cast_ability_by_ability_slot_and_direction|_direction, _ability_slot, _duration
@@ -50,33 +49,24 @@ BuffStateComp|remove_state|_state_id
 
 CharacterComp|get_scale_ratio
 CharacterComp|is_forced_moving
-CharacterComp|set_face_dir|_face_dir
 CharacterComp|start_forced_move|_vel, _duration, _enable_phy
 CharacterComp|stop_forced_move
 
 ## DisplayComp
 
 DisplayComp|add_banned_anim|_anim_name
-DisplayComp|api_add_banned_anim|_anim_name
-DisplayComp|api_clear_banned_anim
-DisplayComp|api_remove_banned_anim|_anim_name
 DisplayComp|bind_model|_model_id, _socket, _offset, _rot, _scale
 DisplayComp|bind_model_by_unit|_unit, _socket, _offset, _rot
 DisplayComp|clear_banned_anim
 DisplayComp|play_body_anim_by_id|_anim_id, _start_time, _play_time, _is_loop
 DisplayComp|play_upper_anim_by_id|_anim_id, _start_time, _play_time, _is_loop
 DisplayComp|remove_banned_anim|_anim_name
-DisplayComp|remove_bind_model|_bind_id
 DisplayComp|set_anim_rate|_anim_rate
-DisplayComp|set_skeleton_scale|_skeleton, _scale
 DisplayComp|stop_anim
 DisplayComp|stop_play_body_anim
 DisplayComp|stop_play_body_anim_by_id|_anim_id
-DisplayComp|stop_play_body_anim_with_id|_anim_id
 DisplayComp|stop_play_upper_anim
 DisplayComp|stop_play_upper_anim_by_id|_anim_id
-DisplayComp|stop_play_upper_anim_with_id|_anim_id
-DisplayComp|ugc_add_bind_model|_model_id, _socket, _offset, _rot, _scale
 DisplayComp|unbind_model|_bind_id
 
 ## EquipmentComp
@@ -86,14 +76,11 @@ EquipmentComp|consume_equipment|_equipment_key, _consume_num
 EquipmentComp|create_equipment_to_slot|_key, _slot_type
 EquipmentComp|get_equipment_by_slot|_slot_type, _slot_index
 EquipmentComp|get_equipment_list|_equipment_key, _exclude_equipped, _exclude_bag
-EquipmentComp|get_equipment_list_by_slot|_slot_type
 EquipmentComp|get_equipment_list_by_slot_type|_slot_type
 EquipmentComp|get_equipment_max_count|_slot_type
-EquipmentComp|get_equipment_max_num_by_slot|_slot_type
 EquipmentComp|get_selected_equipment
 EquipmentComp|select_equipment_slot|_slot_type, _slot_index
 EquipmentComp|set_equipment_max_count|_slot_type, _slot_num
-EquipmentComp|set_selected_equipment_slot|_slot_type, _slot_index
 
 ## ExprDeviceComp
 
@@ -102,8 +89,6 @@ ExprDeviceComp|enable_expr_device_by_name|_name
 
 ## JointAssistantComp
 
-JointAssistantComp|get_joint_assistant_object1_obstacle
-JointAssistantComp|get_joint_assistant_object2_obstacle
 JointAssistantComp|get_joint_assistant_primary_obstacle
 JointAssistantComp|get_joint_assistant_target_obstacle
 JointAssistantComp|get_joint_assistant_type
@@ -113,10 +98,8 @@ JointAssistantComp|set_joint_assistant_visible|_visible
 
 ## JumpComp
 
-JumpComp|get_multi_jump_current_cooldown
 JumpComp|get_multi_jump_remaining_cooldown
 JumpComp|is_on_ground
-JumpComp|set_multi_jump_current_cooldown|_cd
 JumpComp|set_multi_jump_remaining_cooldown|_cd
 
 ## LevelComp
@@ -140,14 +123,9 @@ LifeComp|get_life_max
 LifeComp|is_die_status
 LifeComp|is_infinite_reborn
 LifeComp|reborn|_immediate
-LifeComp|set_auto_reborn|_auto_reborn
-LifeComp|set_auto_reborn_enable|_auto_reborn
 LifeComp|set_auto_reborn_enabled|_auto_reborn
 LifeComp|set_hp_max|_value
-LifeComp|set_infinite_reborn|_enable_reborn
-LifeComp|set_infinite_reborn_enable|_enable_reborn
 LifeComp|set_infinite_reborn_enabled|_enable_reborn
-LifeComp|set_life|_value
 LifeComp|set_life_count|_value
 LifeComp|set_life_max|_value
 LifeComp|set_reborn_in_place|_reborn_in_place, _reset_camera
@@ -155,42 +133,30 @@ LifeComp|set_reborn_time|_reborn_time
 
 ## LiftComp
 
-LiftComp|get_lift_cd
 LiftComp|get_lift_cooldown
-LiftComp|get_lift_left_cd
 LiftComp|get_lift_remaining_cooldown
 LiftComp|is_lift_status
 LiftComp|lift_unit|_unit
-LiftComp|set_lift_cd|_cd_time
 LiftComp|set_lift_cooldown|_cd_time
-LiftComp|set_lift_left_cd|_time
 LiftComp|set_lift_remaining_cooldown|_time
 
 ## LiftedComp
 
-LiftedComp|is_lifted_enable
 LiftedComp|is_lifted_enabled
 LiftedComp|is_lifted_status
 LiftedComp|set_custom_thrown_force|_force
 LiftedComp|set_custom_thrown_force_enabled|_enable
-LiftedComp|set_is_use_custom_thrown_force|_enable
-LiftedComp|set_lifted_enable|_enable
 LiftedComp|set_lifted_enabled|_enable
 
 ## ModifierComp
 
 ModifierComp|add_modifier|_modifier_id
 ModifierComp|add_modifier_by_key|_modifier_id, _params_dict
-ModifierComp|destroy_buff|_modifier
 ModifierComp|destroy_modifier|_modifier
-ModifierComp|get_buff|_modifier_id
-ModifierComp|get_buffs
 ModifierComp|get_modifier_by_modifier_key|_modifier_id
 ModifierComp|get_modifiers
 ModifierComp|has_modifier_by_key|_modifier_key
-ModifierComp|remove_buff|_modifier_id
 ModifierComp|remove_modifier_by_key|_modifier_id
-ModifierComp|remove_modifier_by_modifier_key|_modifier_id
 
 ## MoveStatusComp
 
@@ -207,31 +173,23 @@ OwnerComp|get_owner_role
 ## RollComp
 
 RollComp|get_roll_cooldown
-RollComp|get_roll_left_cd
 RollComp|get_roll_remaining_cooldown
 RollComp|set_roll_cooldown|_time
-RollComp|set_roll_left_cd|_remaining_time
 RollComp|set_roll_remaining_cooldown|_remaining_time
 
 ## RushComp
 
 RushComp|get_rush_cooldown
-RushComp|get_rush_left_cd
 RushComp|get_rush_remaining_cooldown
 RushComp|set_rush_cooldown|_time
-RushComp|set_rush_left_cd|_time
 RushComp|set_rush_remaining_cooldown|_time
 
 ## UnitInteractVolumeComp
 
 UnitInteractVolumeComp|get_interact_id|_interact_index, _interact_btn_type
-UnitInteractVolumeComp|set_interact_btn_icon|_interact_id, _icon
-UnitInteractVolumeComp|set_interact_btn_name|_interact_id, _text
 UnitInteractVolumeComp|set_interact_button_icon|_interact_id, _icon
 UnitInteractVolumeComp|set_interact_button_text|_interact_id, _text
 UnitInteractVolumeComp|set_interact_button_text_by_index|_interact_index, _text
-UnitInteractVolumeComp|set_interact_enable|_enable
-UnitInteractVolumeComp|set_interact_enable_by_index|_interact_index, _enable
 UnitInteractVolumeComp|set_interact_enabled|_enable
 UnitInteractVolumeComp|set_interact_enabled_by_index|_interact_index, _enable
 
