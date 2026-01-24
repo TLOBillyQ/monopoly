@@ -1,5 +1,5 @@
 -- Quick regression checks (run with: lua tests/regression.lua)
-require("bootstrap")({ "src/gameplay/?.lua", "src/gameplay/?/init.lua" })
+require('src.bootstrap')({ "src/gameplay/?.lua", "src/gameplay/?/init.lua" })
 
 local App = require("src.game")
 local MovementService = require("src.gameplay.movement_service")

@@ -1,7 +1,7 @@
 -- 流程控制与恢复机制测试
 -- 测试目标：验证状态机恢复、中断处理、嵌套等待等复杂场景
 
-require("bootstrap")({ "src/gameplay/?.lua" })
+require('src.bootstrap')({ "src/gameplay/?.lua" })
 
 local Flow = require("src.core.flow")
 local Game = require("src.game")

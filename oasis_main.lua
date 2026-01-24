@@ -1,4 +1,4 @@
-require("bootstrap")()
+require('src.bootstrap')()
 
 local Entry = require("src.entry")
 local runtime = Entry.run({ platform = "oasis" })
