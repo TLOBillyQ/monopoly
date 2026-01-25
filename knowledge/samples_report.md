@@ -1,6 +1,6 @@
 # Eggy 官方示例工程知识汇总（knowledge/）
 
-> 目标：从 knowledge/ 下的示例工程抽取可复用的脚本结构、事件/定时器/UI/资源使用方式，辅助 LuaSource_大富翁 开发。
+> 目标： 从 knowledge/ 下的示例工程抽取可复用的脚本结构、事件/定时器/UI/资源使用方式，辅助 LuaSource_大富翁 开发。
 
 ## 总览与目录
 
@@ -59,7 +59,7 @@ knowledge/ 下包含多个独立示例工程，每个目录都是可直接放入
   - 监听 `SPEC_LIFEENTITY_LIFT_BEGAN/ENDED`，处理举起/放下。
   - 通过 `GameAPI.raycast_unit` 获取焊接点。
   - 用 `GameAPI.create_joint_assistant` 创建固定关节，并用 KV 标记可拆。
-  - 使用 `role.set_camera_rotation_sync_enabled(true)` 确保相机朝向更新。
+- 使用 `role.set_camera_rotation_sync_enabled(true)` 确保相机朝向与角色同步更新。
 - UI：`Data/UINodes.lua` 中的“焊接按钮”控制显示。
 - 可迁移点：用于大富翁中“道具拼接/建筑摆放/地块改造”。
 
