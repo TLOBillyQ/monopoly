@@ -1,7 +1,5 @@
 ---@class ClassUtil
 ---@field __name string 类名
----@field private init fun()
----@field private __destroyed boolean 是否已销毁
 local ClassUtil = {}
 
 -- 自定义索引，必须有返回值，否则将报错
@@ -125,10 +123,11 @@ local function find_new_custom_index(current_class)
 end
 
 
----@generic T: ClassUtil
+---@generic T
+---@[constructor("init")]
 ---@param class_name `T` 类名
----@return table
-local function Class(class_name, ...)
+---@return T
+function Class(class_name, ...)
     local parents = { ... }
     local class_table = {
         __name = class_name,
@@ -254,5 +253,3 @@ local function Class(class_name, ...)
 
     return class_table
 end
-
-return Class

@@ -1,4 +1,4 @@
-local Class = require "ChooseOption.Utils"
+local Class = require "Utils.Class"
 
 ---@class UICard
 ---@field label EImage
