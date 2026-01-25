@@ -25,7 +25,7 @@ knowledge/ 下包含多个独立示例工程，每个目录都是可直接放入
 ## 统一脚本模式（建议在 LuaSource_大富翁 复用）
 
 1. **入口统一在 GAME_INIT**
-   - `LuaAPI.global_register_trigger_event({ EVENT.GAME_INIT }, function() ... end)`
+   - `LuaAPI.global_register_trigger_event({ EVENT.GAME_INIT }, function() end)`
    - 在入口里初始化管理器、UI、事件监听。
 
 2. **全局单例容器**
