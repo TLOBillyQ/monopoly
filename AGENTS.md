@@ -2,9 +2,9 @@
 
 使用直白简练的现代汉语
 
-## ExecPlans
+## 可执行计划（ExecPlans）
  
-When writing complex features or significant refactors, use an ExecPlan (as described in .agent/PLANS.md) from design to implementation.
+编写复杂功能或进行重大重构时，应按照 .agent/PLANS.md 中所述使用可执行计划（ExecPlan），贯穿设计到实现的整个过程。
 
 ## Coding Rules
 

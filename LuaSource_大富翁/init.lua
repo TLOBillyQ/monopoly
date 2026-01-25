@@ -1,14 +1,5 @@
-V3_ONE = math.Vector3(1, 1, 1)
-Q_ZERO = math.Quaternion(0, 0, 0)
-
-Q_LEFT = math.Quaternion(0, -180, 0)
-Q_RIGHT = Q_ZERO
-Q_UP = math.Quaternion(0, -90, 0)
-Q_DOWN = math.Quaternion(0, 90, 0)
-
--- local pos1 = math.Vector3(81.99, 2.05, 80.45)
--- local pos2 = math.Vector3(82.04, 5.13, 70.28)
--- local pos3 = math.Vector3(82.11, 2.01, 58.41)
+require 'macro'
+local move = require "move"
 
 G = {
     tiles = {},
@@ -16,6 +7,7 @@ G = {
     refs = require "refs",
     lvs = {}
 }
+
 
 return function()
     LuaAPI.global_send_custom_event("显示加载屏", {})
@@ -32,26 +24,8 @@ return function()
     G.tiles = LuaAPI.query_units(tile_names)
     G.buildings = LuaAPI.query_units(building_names)
 
-    -- local u1 = LuaAPI.query_unit("一级建筑")
-    -- local u2 = LuaAPI.query_unit("二级建筑")
-    -- local u3 = LuaAPI.query_unit("三级建筑")
-    -- G.lvs[1] = u1.get_scale()
-    -- G.lvs[2] = u2.get_scale()
-    -- G.lvs[3] = u3.get_scale()
-    -- local pos1 = u1.get_position()
-    -- local pos2 = u2.get_position()
-    -- local pos3 = u3.get_position()
-    -- local q1 = u1.get_orientation()
-    -- u1.set_model_visible(false)
-    -- u2.set_model_visible(false)
-    -- u3.set_model_visible(false)
-
     local ground = LuaAPI.query_unit("ground")
     ground.set_model_visible(false)
-
-    --GameAPI.create_obstacle(refs["lv1"], pos1, q1, G.lvs[1])
-    --GameAPI.create_obstacle(refs["lv2"], pos2, q1, G.lvs[2])
-    --GameAPI.create_obstacle(refs["lv3"], pos3, q1, G.lvs[3])
 
     local offset1 = math.Vector3(0, 1.5, 0)
     local offset2 = math.Vector3(0, 1.5, 0)
@@ -82,23 +56,35 @@ return function()
         role.set_image_texture_by_key_with_auto_resize(refs["道具槽位1"], refs["3036"], false)
         role.set_image_texture_by_key_with_auto_resize(refs["道具槽位2"], refs["2002"], false)
         role.set_image_texture_by_key_with_auto_resize(refs["道具槽位3"], refs["3036"], false)
-        role.set_image_texture_by_key_with_auto_resize(refs["道具槽位4"], refs["2002"], false)
+        role.set_image_texture_by_key_with_auto_resize(refs["道具槽位4"], refs["空"], false)
         role.set_image_texture_by_key_with_auto_resize(refs["道具槽位5"], refs["2002"], false)
 
         local unit = role.get_ctrl_unit()
-        unit.add_state(Enums.BuffState.BUFF_FORBID_CONTROL)
+        -- unit.add_state(Enums.BuffState.BUFF_FORBID_CONTROL)
     end
 
 
-    LuaAPI.call_delay_time(1.0, function()
+    LuaAPI.call_delay_time(0.5, function()
         LuaAPI.global_send_custom_event("隐藏加载屏", {})
 
         LuaAPI.global_send_custom_event("显示基础屏", {})
         local role = GameAPI.get_role(1)
 
-        LuaAPI.global_send_custom_event("玩家1刷小摩托", {})
-        -- LuaAPI.call_delay_time(0.5, function()
-        --     LuaAPI.global_send_custom_event("玩家1上车", {})
-        -- end)
+        -- 载具测试
+        -- LuaAPI.global_send_custom_event("玩家上载具", {})
+    end)
+
+
+    --local handle = LuaAPI.global_register_trigger_event({EVENT.REPEAT_TIMEOUT, 2}, function()
+    --move.one_step(DIR_LEFT, 1)
+
+    --end)
+
+    -- LuaAPI.call_delay_time(16.0, function()
+    --     LuaAPI.global_unregister_trigger_event(handle)
+    -- end)
+
+    LuaAPI.call_delay_time(2.0, function()
+        move.start_to_finish(1, 35, 2)
     end)
 end
