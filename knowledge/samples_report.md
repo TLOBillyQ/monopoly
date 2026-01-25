@@ -143,7 +143,7 @@ knowledge/ 下包含多个独立示例工程，每个目录都是可直接放入
 
 ## 常用 API 清单（从示例中抽取）
 
-> 仅列出示例出现频率高且对大富翁有价值的 API。
+>仅列出示例出现频率高且对大富翁有价值的 API。
 
 - **事件注册**
   - `LuaAPI.global_register_trigger_event({ EVENT.GAME_INIT }, fn)`
