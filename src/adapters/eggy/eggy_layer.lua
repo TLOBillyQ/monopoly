@@ -20,6 +20,18 @@ local function build_log_prefix()
   return "[EggyAdapter]"
 end
 
+local function log_once(self, level, key, ...)
+  if not self or not self._log_once or self._log_once[key] then
+    return
+  end
+  self._log_once[key] = true
+  if level == "warn" then
+    logger.warn(...)
+  else
+    logger.info(...)
+  end
+end
+
 local vehicles_by_id = {}
 for _, cfg in ipairs(vehicles_cfg) do
   vehicles_by_id[cfg.id] = cfg
@@ -50,6 +62,12 @@ function EggyLayer.new(opts)
   local self = setmetatable({
     ui = ui,
     vehicle_name_by_id = map_vehicle_names(),
+    tile_units = nil,
+    tile_positions = nil,
+    tile_spacing = nil,
+    player_units = nil,
+    player_units_missing = false,
+    _log_once = {},
   }, EggyLayer)
   AdapterLayer.attach(self, {
     ui = ui,
@@ -69,6 +87,8 @@ function EggyLayer:set_game(g)
       layer:_open_choice_modal(pending)
     end,
   })
+  self.player_units = nil
+  self.player_units_missing = false
 end
 
 function EggyLayer:build_item_index()
@@ -400,6 +420,186 @@ function EggyLayer:refresh_board(view)
   for idx in ipairs(view.board.tiles) do
     local node = "tile_" .. tostring(idx)
     self.ui:set_label(node, TileView.build_tile_label(view, idx))
+  end
+
+  local players = view and view.state and view.state.players or nil
+  if not players then
+    return
+  end
+
+  local tile_count = view.board_tile_count or (view.board and #view.board.tiles) or 0
+  if tile_count <= 0 then
+    return
+  end
+
+  if not self.tile_positions or #self.tile_positions < tile_count then
+    local tiles = nil
+    if G and type(G.tiles) == "table" and #G.tiles >= tile_count then
+      tiles = G.tiles
+    else
+      local tile_names = {}
+      for i = 1, tile_count do
+        tile_names[i] = "t" .. tostring(i)
+      end
+      tiles = LuaAPI.query_units(tile_names)
+    end
+
+    local positions = {}
+    local missing = 0
+    for i = 1, tile_count do
+      local unit = tiles and tiles[i] or nil
+      if unit and unit.get_position then
+        positions[i] = unit.get_position()
+      else
+        missing = missing + 1
+      end
+    end
+
+    self.tile_units = tiles
+    self.tile_positions = positions
+
+    local spacing = 0
+    local spacing_count = 0
+    for i = 1, tile_count - 1 do
+      local a = positions[i]
+      local b = positions[i + 1]
+      if a and b and a.x and b.x then
+        local dx = b.x - a.x
+        local dy = (b.y or 0) - (a.y or 0)
+        local dz = (b.z or 0) - (a.z or 0)
+        local dist = math.sqrt(dx * dx + dy * dy + dz * dz)
+        if dist > 0 then
+          spacing = spacing + dist
+          spacing_count = spacing_count + 1
+        end
+      end
+    end
+    if spacing_count > 0 then
+      self.tile_spacing = (spacing / spacing_count) * 0.28
+    end
+
+    log_once(self, "info", "tiles_ready", build_log_prefix(), "tile anchors ready:", tostring(tile_count))
+    if missing > 0 then
+      log_once(
+        self,
+        "warn",
+        "tiles_missing",
+        build_log_prefix(),
+        "tile anchors missing:",
+        tostring(missing)
+      )
+    end
+  end
+
+  if not self.player_units or self.player_units_missing then
+    local roles = GameAPI.get_all_valid_roles() or {}
+    local name_to_unit = {}
+    local role_units = {}
+    for i, role in ipairs(roles) do
+      local unit = role and role.get_ctrl_unit and role.get_ctrl_unit() or nil
+      role_units[i] = unit
+      if role and role.get_name then
+        local name = role.get_name()
+        if name then
+          name_to_unit[name] = unit
+        end
+      end
+    end
+
+    local mapped = {}
+    local mapped_count = 0
+    local missing = {}
+    for i, player in ipairs(players) do
+      if player then
+        local pid = player.id or i
+        local unit = nil
+        if player.name then
+          unit = name_to_unit[player.name]
+        end
+        if not unit then
+          unit = role_units[pid] or role_units[i]
+        end
+        if unit then
+          mapped[pid] = unit
+          mapped_count = mapped_count + 1
+        else
+          missing[#missing + 1] = player.name or tostring(pid)
+        end
+      end
+    end
+
+    self.player_units = mapped
+    self.player_units_missing = #missing > 0
+    log_once(
+      self,
+      "info",
+      "player_units_ready",
+      build_log_prefix(),
+      "player->unit mapped:",
+      tostring(mapped_count),
+      "(missing:",
+      tostring(#missing) .. ")"
+    )
+    if #missing > 0 then
+      log_once(
+        self,
+        "warn",
+        "player_units_missing",
+        build_log_prefix(),
+        "player unit missing:",
+        table.concat(missing, ", ")
+      )
+    end
+  end
+
+  local occupants = {}
+  for i, player in ipairs(players) do
+    if player and not player.eliminated and player.position then
+      local idx = player.position
+      if self.tile_positions and self.tile_positions[idx] then
+        local pid = player.id or i
+        local list = occupants[idx]
+        if not list then
+          list = {}
+          occupants[idx] = list
+        end
+        list[#list + 1] = pid
+      end
+    end
+  end
+
+  local spacing = self.tile_spacing or 0
+  for i, player in ipairs(players) do
+    if player and not player.eliminated and player.position then
+      local idx = player.position
+      local base = self.tile_positions and self.tile_positions[idx] or nil
+      local pid = player.id or i
+      local unit = self.player_units and self.player_units[pid] or nil
+      if base and unit and unit.set_position then
+        local list = occupants[idx]
+        local count = list and #list or 1
+        local slot = 1
+        if list and count > 1 then
+          for s = 1, count do
+            if list[s] == pid then
+              slot = s
+              break
+            end
+          end
+        end
+        if count > 1 and spacing > 0 then
+          local per_row = math.ceil(math.sqrt(count))
+          local row = math.floor((slot - 1) / per_row)
+          local col = (slot - 1) % per_row
+          local start = -(per_row - 1) * spacing * 0.5
+          local ox = start + col * spacing
+          local oz = start + row * spacing
+          unit.set_position(base + math.Vector3(ox, 0, oz))
+        else
+          unit.set_position(base)
+        end
+      end
+    end
   end
 end
 

@@ -10,10 +10,11 @@
 
 ## Progress
 
-- [ ] (2026-01-25 00:00Z) 读取 Eggy 适配层与最新入口脚本的场景单位命名约定，确认棋盘单位与玩家单位来源。
-- [ ] (2026-01-25 00:00Z) 在 Eggy 适配层实现棋盘索引 -> 世界坐标映射与玩家单位缓存。
-- [ ] (2026-01-25 00:00Z) 在刷新流程中调用 Unit.set_position，完成玩家位置渲染。
-- [ ] (2026-01-25 00:00Z) 进行 Lua 自测与 Eggy 手动验证，记录结果。
+- [x] (2026-01-25 09:07Z) 读取 Eggy 适配层与最新入口脚本的场景单位命名约定，确认棋盘单位与玩家单位来源。
+- [x] (2026-01-25 09:07Z) 在 Eggy 适配层实现棋盘索引 -> 世界坐标映射与玩家单位缓存。
+- [x] (2026-01-25 09:07Z) 在刷新流程中调用 Unit.set_position，完成玩家位置渲染。
+- [x] (2026-01-25 09:08Z) 完成 Lua 自测（`lua tests/deps_check.lua`、`lua tests/regression.lua`）。
+- [ ] (2026-01-25 09:08Z) 在 Eggy 环境手动验证玩家移动与同格错位，记录结果。
 
 ## Surprises & Discoveries
 
@@ -27,10 +28,16 @@
 - Decision: 玩家单位优先使用 `Role.get_ctrl_unit()` 获取并移动。
   Rationale: Eggy 平台已有角色控制单位，避免额外创建棋子单位与额外资源依赖。
   Date/Author: 2026-01-25 / Codex
+- Decision: 被淘汰玩家不更新棋子位置。
+  Rationale: Love2D 渲染逻辑同样跳过 `eliminated` 玩家，保持行为一致，避免残留棋子误导。
+  Date/Author: 2026-01-25 / Codex
+- Decision: 同格错位幅度按相邻格子平均距离的 0.28 倍推导。
+  Rationale: 复用 Love2D 渲染的错位比例并从实际棋盘几何估算世界间距，避免硬编码世界单位。
+  Date/Author: 2026-01-25 / Codex
 
 ## Outcomes & Retrospective
 
-未开始。
+已完成 Lua 自测（依赖检查与回归检查通过）；Eggy 运行时手动验证尚未执行。
 
 ## Context and Orientation
 
@@ -114,3 +121,6 @@ Eggy 环境验证：
 - `offset_for_slot(count, slot, step)`：返回 `Vector3` 偏移量。
 
 变更说明：本次更新补充了 `LuaSource_大富翁/init.lua` 中 `G.tiles` 与 `move.start_to_finish` 的最新信息，并将锚点来源改为优先复用 `G.tiles`，以减少重复查询与符合 CodingDiscipline。
+
+变更记录：完成 Eggy 适配层渲染位置的核心实现与日志，并在 Progress/Decision Log 中同步实现进度与渲染策略选择，便于后续验证与回滚。
+变更记录（2026-01-25 09:08Z）：补充 Lua 自测结果并拆分待验证项，确保 Progress 与 Outcomes 反映实际状态。
