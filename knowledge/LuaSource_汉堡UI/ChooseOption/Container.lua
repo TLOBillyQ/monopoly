@@ -1,4 +1,4 @@
-local Class = require "Utils.Class"
+require "Utils.Class"
 
 ---@class UICard
 ---@field label EImage

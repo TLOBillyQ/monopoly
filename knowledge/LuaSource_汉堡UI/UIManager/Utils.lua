@@ -58,7 +58,8 @@ UIManager.typeof = function(_node, _type)
     return _node and _node.__name == _type or false
 end
 
-UIManager.set_frame_out = require "Utils.Frameout"
+require "Utils.Frameout"
+UIManager.set_frame_out = SetFrameOut
 
 require 'Utils.Class'
 UIManager.Class = Class
