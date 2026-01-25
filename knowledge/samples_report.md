@@ -66,7 +66,7 @@ knowledge/ 下包含多个独立示例工程，每个目录都是可直接放入
 ### 3) LuaSource_商城道具（商品/消耗）
 
 - 入口：`knowledge/LuaSource_商城道具/main.lua`
-- 数据：`Data/GoodsData.lua` 从 `GameAPI.get_goods_list()` 动态映射商品。
+- 数据：`Data/GoodData.lua` 从 `GameAPI.get_goods_list()` 动态映射商品。
 - 事件：自定义 UI 点击事件 + `EVENT.SPEC_ROLE_PURCHASE_GOODS` 购买成功回调。
 - 角色商品 API：
   - `role.get_commodity_count`/`role.consume_commodity`
@@ -179,14 +179,14 @@ knowledge/ 下包含多个独立示例工程，每个目录都是可直接放入
 5. **经济系统可参考跑商玩法**：商品刷新、买卖、金币 UI 更新。
 6. **称号系统可迁移为“角色头顶状态/资产提示”**。
 
-## 参考文件索引（绝对路径）
+## 参考文件索引（相对路径）
 
-- `/home/runner/work/monopoly/monopoly/knowledge/LuaSource_空白图/main.lua`
-- `/home/runner/work/monopoly/monopoly/knowledge/LuaSource_动态搭建/StickController.lua`
-- `/home/runner/work/monopoly/monopoly/knowledge/LuaSource_商城道具/main.lua`
-- `/home/runner/work/monopoly/monopoly/knowledge/LuaSource_换装玩法/main.lua`
-- `/home/runner/work/monopoly/monopoly/knowledge/LuaSource_生存割草/main.lua`
-- `/home/runner/work/monopoly/monopoly/knowledge/LuaSource_称号系统/main.lua`
-- `/home/runner/work/monopoly/monopoly/knowledge/LuaSource_跑商玩法/main.lua`
-- `/home/runner/work/monopoly/monopoly/knowledge/LuaSource_无限大世界/main.lua`
-- `/home/runner/work/monopoly/monopoly/knowledge/LuaSource_自动跳台/main.lua`
+- `knowledge/LuaSource_空白图/main.lua`
+- `knowledge/LuaSource_动态搭建/StickController.lua`
+- `knowledge/LuaSource_商城道具/main.lua`
+- `knowledge/LuaSource_换装玩法/main.lua`
+- `knowledge/LuaSource_生存割草/main.lua`
+- `knowledge/LuaSource_称号系统/main.lua`
+- `knowledge/LuaSource_跑商玩法/main.lua`
+- `knowledge/LuaSource_无限大世界/main.lua`
+- `knowledge/LuaSource_自动跳台/main.lua`
