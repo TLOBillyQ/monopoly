@@ -8,6 +8,10 @@ local PhaseView = require("src.adapters.core.ui_phase")
 
 local LoveLayer = {}
 LoveLayer.__index = LoveLayer
+LoveLayer.modal_kinds = {
+  popup = "popup",
+  choice = "choice",
+}
 
 function LoveLayer:_sync_auto_player(enabled)
   if not self.game or not self.game.players then
@@ -66,6 +70,8 @@ function LoveLayer:push_popup(payload)
     button_text = payload and payload.button_text,
     on_confirm = payload and payload.on_confirm,
     _popup_seq = seq,
+    _modal_kind = LoveLayer.modal_kinds.popup,
+    _modal_ref = "popup_" .. tostring(seq),
   })
   return true
 end
@@ -122,6 +128,8 @@ function LoveLayer:open_choice_modal(pending)
       self:dispatch_action({ type = "choice_cancel", choice_id = pending.id })
     end,
     _pending_choice_id = pending.id,
+    _modal_kind = LoveLayer.modal_kinds.choice,
+    _modal_ref = "choice_" .. tostring(pending.id),
   }
   self.pending_choice_elapsed = 0
   self.pending_choice_id = pending.id

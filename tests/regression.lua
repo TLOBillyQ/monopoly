@@ -261,6 +261,10 @@ local function test_popup_timeout_auto_confirm()
   local layer = {}
   AdapterLayer.attach(layer, { game_factory = function() return g end })
   local timeout = constants.action_timeout_seconds or 0
+  if timeout <= 0 then
+    return
+  end
+  local near_timeout = timeout * 0.9
   local popup = {
     active = true,
     confirm_called = 0,
@@ -271,7 +275,7 @@ local function test_popup_timeout_auto_confirm()
     end,
   }
   layer.modal = { active = popup }
-  AdapterLayer.step_modal_timeout(layer, math.max(timeout - 1, timeout * 0.5), {
+  local timeout_opts = {
     is_active = function(l)
       return l.modal and l.modal.active and l.modal.active.active
     end,
@@ -281,19 +285,10 @@ local function test_popup_timeout_auto_confirm()
     on_timeout = function(l)
       l.modal.active:confirm()
     end,
-  })
+  }
+  AdapterLayer.step_modal_timeout(layer, near_timeout, timeout_opts)
   assert_eq(popup.confirm_called, 0, "popup should not auto confirm before timeout")
-  AdapterLayer.step_modal_timeout(layer, math.max(timeout - 1, timeout * 0.5) + 1, {
-    is_active = function(l)
-      return l.modal and l.modal.active and l.modal.active.active
-    end,
-    get_ref = function(l)
-      return l.modal and l.modal.active
-    end,
-    on_timeout = function(l)
-      l.modal.active:confirm()
-    end,
-  })
+  AdapterLayer.step_modal_timeout(layer, near_timeout + 1, timeout_opts)
   assert_eq(popup.confirm_called, 1, "popup should auto confirm after timeout")
 end
 

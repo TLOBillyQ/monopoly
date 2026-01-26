@@ -175,7 +175,7 @@ function AdapterLayer.step_modal_timeout(layer, dt, opts)
     layer.ui_modal_ref = ref
     layer.ui_modal_elapsed = 0
   end
-  layer.ui_modal_elapsed = (layer.ui_modal_elapsed or 0) + (dt or 0)
+  layer.ui_modal_elapsed = layer.ui_modal_elapsed + (dt or 0)
   if layer.ui_modal_elapsed >= timeout then
     layer.ui_modal_elapsed = 0
     opts.on_timeout(layer)
