@@ -85,8 +85,3 @@ UIManager.ENodeType = {
     EImage = "UIManager.EImage",
     ENode = "UIManager.ENode",
 }
-
-UIManager.ForwardUIEvent = function(event)
-    UIManager.EcaEvent = event
-    LuaAPI.global_send_custom_event(FORWAR_UI_EVENT, {})
-end

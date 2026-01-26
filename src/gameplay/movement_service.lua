@@ -27,13 +27,6 @@ function MovementService.move(game, player, steps, opts)
 
   for step = 1, abs_steps do
     local next_index, passed, step_dir = step_fn(board, current, facing, branch_parity)
-    local occupants = game.occupants[next_index] or {}
-    if gameplay_constants.max_tile_occupants and #occupants >= gameplay_constants.max_tile_occupants then
-      local tile = board:get_tile(current)
-      local tile_name = tile.name
-      logger.event(player.name .. " 前方拥挤，停在 " .. tile_name)
-      break
-    end
     pass_start = pass_start + passed
     facing = step_dir or facing
     current = next_index

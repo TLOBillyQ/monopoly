@@ -12,10 +12,14 @@ function get_spawn_vehicle_id()
     return 4002
 end
 
-
 ---@export
 ---@desc 被转发的界面事件
 ---@return string
 function get_forward_ui_event()
     return UIManager.EcaEvent or ""
+end
+
+UIManager.ForwardUIEvent = function(event)
+    UIManager.EcaEvent = event
+    LuaAPI.global_send_custom_event(FORWAR_UI_EVENT, {})
 end

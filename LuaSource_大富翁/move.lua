@@ -1,13 +1,6 @@
-local move = {}
+local MovementManager = {}
 
--- TIME_ONE_STEP = 1.5
--- LENTH_ONE_STEP = 10.5
-
-
-TIME_ONE_STEP = 1.6
-LENTH_ONE_STEP = 11.0
-
-function move.one_step(dir, p_id)
+function MovementManager.one_step(player_id, dir, tile_start, tile_end)
     local v3_dir = V3_LEFT
     if dir == DIR_LEFT then
         v3_dir = V3_LEFT
@@ -19,21 +12,15 @@ function move.one_step(dir, p_id)
         v3_dir = V3_DOWN
     end
 
-    local unit = GameAPI.get_role(p_id).get_ctrl_unit()
-    local pos = unit.get_position()
-    local target = pos + v3_dir * LENTH_ONE_STEP
-    unit.start_move_to_pos_with_threshold(target, TIME_ONE_STEP, 0.5)
+    local pos_s = G.tiles[tile_start].get_position()
+    local pos_f = G.tiles[tile_end].get_position()
+    local dist = pos_f - pos_s
+    local len = dist:length()
+    local time = len / MOVE_SPEED
 
-    return unit
+    local unit = GameAPI.get_role(player_id).get_ctrl_unit()
+    local target = unit.get_position() + v3_dir * len
+    unit.start_move_to_pos_with_threshold(target, time, MOVE_THRESHOLD)
 end
 
-function move.start_to_finish(p_id, start, finish)
-    local t_s = G.tiles[start]
-    local t_f = G.tiles[finish]
-    local unit = GameAPI.get_role(p_id).get_ctrl_unit()
-    local pos_s = t_s.get_position()
-    local pos_f = t_f.get_position()
-    unit.set_position(pos_f)
-end
-
-return move
+return MovementManager
