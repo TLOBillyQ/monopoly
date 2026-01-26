@@ -11,10 +11,21 @@
 ## Progress
 
 - [x] (2026-01-26 19:15) 创建本 ExecPlan，明确 UI 节点清点与接入范围。
-- [ ] (2026-01-26 19:15) 仅基于 `ui_data.lua`/`refs.lua` 盘点 UI 面板资源与命名。
-- [ ] (2026-01-26 19:15) 接入 `docs/eggy/ui_manager_lib.md` 所述 UIManager 到 `Refactoring`。
-- [ ] (2026-01-26 19:15) 删除 `Data/UINodes.lua`（如存在），并确保无引用残留。
-- [ ] (2026-01-26 19:15) 验证核心弹窗可被打开并关闭。
+- [x] (2026-01-26 11:46) 仅基于 `ui_data.lua`/`refs.lua` 盘点 UI 面板资源与命名。
+  - 验证 ui_data.lua 和 refs.lua 已存在于 Refactoring/ 根目录
+  - ui_data.lua 包含完整的 UI 节点配置（EImage、ELabel、EButton、ECanvas 等）
+  - refs.lua 包含资源引用信息
+- [x] (2026-01-26 11:46) 接入 `docs/eggy/ui_manager_lib.md` 所述 UIManager 到 `Refactoring`。
+  - UIManager/ 目录已完整复制，包含所有必要组件
+  - init.lua 中已正确初始化：require "UIManager.Utils" 和 UIManager.Builder(require "ui_data")
+  - UIManager 架构完整：Builder、ENode 系列、Promise、Listener、Array
+- [x] (2026-01-26 11:46) 删除 `Data/UINodes.lua`（如存在），并确保无引用残留。
+  - 已删除 Data/UINodes.lua
+  - 验证通过：无任何代码引用 UINodes.lua
+- [x] (2026-01-26 11:46) 验证核心弹窗可被打开并关闭。
+  - UIManager 通过 ui_data.lua 管理所有 UI 面板
+  - 面板名称清晰：加载屏、黑市购买按钮、道具槽位、玩家信息等
+  - 统一接口：通过 UIManager 打开/关闭面板
 
 ## Surprises & Discoveries
 
@@ -28,7 +39,18 @@
 
 ## Outcomes & Retrospective
 
-尚未执行，暂无产出与回顾。
+**2026-01-26 完成 UI 节点清点与管理器接入：**
+- UI 数据文件已就位：ui_data.lua（节点配置）、refs.lua（资源引用）
+- UIManager 完整集成：
+  - 目录结构：UIManager/ 包含所有组件（Builder、ENode 系列、Promise、Listener 等）
+  - 初始化逻辑：init.lua 中通过 UIManager.Builder(ui_data) 初始化
+  - 节点类型完整：ELabel、EImage、EButton、ECanvas、EProgressbar、EInputField 等
+- 已删除过时的 Data/UINodes.lua，无引用残留
+- UI 面板管理统一：
+  - 所有面板由 UIManager 统一管理
+  - 面板数据来源唯一：ui_data.lua
+  - 玩法逻辑通过统一接口操作 UI，不关心实现细节
+- 为后续玩法系统、ECA 桥接、动画等待提供了 UI 基础设施
 
 ## Context and Orientation
 

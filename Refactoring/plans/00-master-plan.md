@@ -14,8 +14,9 @@
 - [x] (2026-01-26 11:42) 完成 01-structure-bootstrap.md - 重构目录与基线骨架。
 - [x] (2026-01-26 11:43) 完成 02-data-config-port.md - 设计数据与配置同步。
 - [x] (2026-01-26 11:44) 完成 03-entry-flow.md - 主入口与回合流程接线。
-- [ ] (2026-01-26 11:44) 执行 04-ui-nodes-manager.md - UIManager 接入与 UI 数据统一。
-- [ ] 继续执行剩余子计划（05-12）。
+- [x] (2026-01-26 11:46) 完成 04-ui-nodes-manager.md - UIManager 接入与 UI 数据统一。
+- [ ] (2026-01-26 11:46) 执行 05-gameplay-items-chance.md - 玩法与道具/机会系统接入。
+- [ ] 继续执行剩余子计划（06-12）。
 - [ ] 汇总关键差异、验证结果与最终回顾。
 
 ## Surprises & Discoveries
