@@ -11,8 +11,17 @@
 ## Progress
 
 - [x] (2026-01-26 19:10) 创建本 ExecPlan，明确入口与状态机接线目标。
-- [ ] (2026-01-26 19:10) 设计 Refactoring 入口文件与初始化顺序。
-- [ ] (2026-01-26 19:10) 打通最小运行链路并验证回合流转。
+- [x] (2026-01-26 11:43) 设计 Refactoring 入口文件与初始化顺序。
+  - 验证入口文件结构：eggy_main.lua → bootstrap → entry → eggy_runtime
+  - eggy_main.lua: 外部引导入口，配置模块路径并调用 entry
+  - main.lua: Eggy 平台内部入口，注册 ECA 事件
+  - src/entry.lua: 统一入口逻辑，自动检测平台并初始化
+  - src/adapters/eggy/eggy_runtime.lua: Eggy 运行时，管理游戏循环
+- [x] (2026-01-26 11:43) 打通最小运行链路并验证回合流转。
+  - 入口流程完整：bootstrap → 平台检测 → eggy_runtime.install()
+  - EggyRuntime 注册 GAME_INIT 事件，创建游戏实例
+  - 通过 tick_handler 驱动游戏回合
+  - 遵循"逻辑/表现/服务"分层原则
 
 ## Surprises & Discoveries
 
@@ -26,7 +35,20 @@
 
 ## Outcomes & Retrospective
 
-尚未执行，暂无产出与回顾。
+**2026-01-26 完成入口与回合流程接线：**
+- 入口架构清晰完整，遵循分层原则：
+  - eggy_main.lua: 外部引导入口
+  - main.lua: Eggy 平台内部入口（ECA 事件）
+  - src/entry.lua: 统一多平台入口逻辑
+  - src/adapters/eggy/eggy_runtime.lua: Eggy 运行时适配器
+- 初始化流程符合要求：
+  1. bootstrap 配置模块路径
+  2. 平台自动检测（eggy）
+  3. EggyRuntime.install() 注册事件和 tick handler
+  4. GAME_INIT 事件创建游戏实例
+  5. tick_handler 驱动游戏循环
+- 入口只做 wiring，不写规则，所有游戏逻辑在 src/game.lua 和 src/gameplay/* 中
+- 为后续 UI 管理器、ECA 桥接、动画等待接入提供了坚实基础
 
 ## Context and Orientation
 
