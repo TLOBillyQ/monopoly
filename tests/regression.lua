@@ -17,6 +17,8 @@ local EffectPipeline = require("src.gameplay.effect_pipeline")
 local Effect = require("src.gameplay.effect")
 local ChoiceService = require("src.gameplay.choice_service")
 local BoardUtils = require("src.gameplay.item_board_utils")
+local AdapterLayer = require("src.adapters.core.adapter_layer")
+local constants = require("src.config.constants")
 
 local TestUtils = require("tests.test_utils")
 local assert_eq = TestUtils.assert_eq
@@ -252,6 +254,42 @@ local function test_landing_optional_waits_without_ui_and_can_resolve()
   ChoiceService.resolve(g, pending, { option_id = first.id })
   assert(tile_state(g, tile).owner_id == p.id, "land should be purchased after resolving choice")
   assert(p.cash < before_cash, "cash deducted for purchase")
+end
+
+local function test_popup_timeout_auto_confirm()
+  local g = new_game()
+  local layer = {}
+  AdapterLayer.attach(layer, { game_factory = function() return g end })
+  local timeout = constants.action_timeout_seconds or 0
+  if timeout <= 0 then
+    return
+  end
+  local near_timeout = timeout * 0.9
+  local popup = {
+    active = true,
+    confirm_called = 0,
+    confirm = function(self)
+      self.confirm_called = self.confirm_called + 1
+      self.active = false
+      return true
+    end,
+  }
+  layer.modal = { active = popup }
+  local timeout_opts = {
+    is_active = function(l)
+      return l.modal and l.modal.active and l.modal.active.active
+    end,
+    get_ref = function(l)
+      return l.modal and l.modal.active
+    end,
+    on_timeout = function(l)
+      l.modal.active:confirm()
+    end,
+  }
+  AdapterLayer.step_modal_timeout(layer, near_timeout, timeout_opts)
+  assert_eq(popup.confirm_called, 0, "popup should not auto confirm before timeout")
+  AdapterLayer.step_modal_timeout(layer, near_timeout + 1, timeout_opts)
+  assert_eq(popup.confirm_called, 1, "popup should auto confirm after timeout")
 end
 
 local function test_landing_optional_stale_choice_is_blocked()
@@ -885,6 +923,7 @@ local tests = {
   test_missile_card,
   test_landing_optional_waits_with_ui,
   test_landing_optional_waits_without_ui_and_can_resolve,
+  test_popup_timeout_auto_confirm,
   test_landing_optional_stale_choice_is_blocked,
   test_chance_is_mandatory_effect_entrypoint,
   test_movement_examples_from_issue,

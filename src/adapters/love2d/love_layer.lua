@@ -8,6 +8,10 @@ local PhaseView = require("src.adapters.core.ui_phase")
 
 local LoveLayer = {}
 LoveLayer.__index = LoveLayer
+LoveLayer.modal_kinds = {
+  popup = "popup",
+  choice = "choice",
+}
 
 function LoveLayer:_sync_auto_player(enabled)
   if not self.game or not self.game.players then
@@ -56,6 +60,8 @@ function LoveLayer:set_game(g)
 end
 
 function LoveLayer:push_popup(payload)
+  local seq = (self._popup_seq or 0) + 1
+  self._popup_seq = seq
   self.modal:push({
     title = PhaseView.build_phase_title(self.game, payload and payload.title),
     body = payload and payload.body,
@@ -63,6 +69,9 @@ function LoveLayer:push_popup(payload)
     buttons = payload and payload.buttons,
     button_text = payload and payload.button_text,
     on_confirm = payload and payload.on_confirm,
+    _popup_seq = seq,
+    _modal_kind = LoveLayer.modal_kinds.popup,
+    _modal_ref = "popup_" .. tostring(seq),
   })
   return true
 end
@@ -119,6 +128,8 @@ function LoveLayer:open_choice_modal(pending)
       self:dispatch_action({ type = "choice_cancel", choice_id = pending.id })
     end,
     _pending_choice_id = pending.id,
+    _modal_kind = LoveLayer.modal_kinds.choice,
+    _modal_ref = "choice_" .. tostring(pending.id),
   }
   self.pending_choice_elapsed = 0
   self.pending_choice_id = pending.id
@@ -187,7 +198,13 @@ function LoveLayer:dispatch_action(action)
       self.modal:keypressed("space")
     end
   elseif action.type == "choice_select" or action.type == "choice_cancel" then
-    AdapterLayer.clear_choice(self)
+    AdapterLayer.clear_choice(self, {
+      on_close_choice = function(layer)
+        if layer.modal then
+          layer.modal:dismiss()
+        end
+      end,
+    })
     if self.game then
       self.game:dispatch_action(action)
     end

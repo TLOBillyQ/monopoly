@@ -91,6 +91,28 @@ function LoveRuntime.install(LoveLayer)
       end,
     })
 
+    AdapterLayer.step_modal_timeout(self, dt, {
+      is_active = function(layer)
+        local active = layer.modal and layer.modal.active
+        if not active then
+          return false
+        end
+        return active._modal_kind == layer.modal_kinds.popup
+      end,
+      get_ref = function(layer)
+        local active = layer.modal and layer.modal.active
+        if not active then
+          return nil
+        end
+        return active._modal_ref or "popup"
+      end,
+      on_timeout = function(layer)
+        if layer.modal and layer.modal.active then
+          layer.modal:confirm()
+        end
+      end,
+    })
+
     self:step_move_anim(dt)
 
     self.modal:update()
