@@ -55,7 +55,6 @@ function OasisLayer:set_game(g)
       layer:_open_choice_modal(pending)
     end,
   })
-  self:_register_game_tickables()
 end
 
 function OasisLayer:build_item_index()
@@ -66,52 +65,7 @@ function OasisLayer:new_game()
   return AdapterLayer.new_game(self)
 end
 
-function OasisLayer:_register_game_tickables()
-  if not self.game then
-    return
-  end
-  local tickables = {
-    {
-      update = function(_, dt)
-        AdapterLayer.step_auto_runner(self, dt, {
-          modal_active = false,
-          modal_buttons = nil,
-          game_finished = self.game and self.game.finished,
-        })
-      end,
-    },
-    {
-      update = function(_, dt)
-        AdapterLayer.step_choice_timeout(self, dt, {
-          build_action = function(layer, choice)
-            local auto_choice = Agent.auto_action_for_choice(layer.game, choice)
-            if auto_choice then
-              return auto_choice
-            end
-            local first = choice.options and choice.options[1]
-            if first then
-              return {
-                type = "choice_select",
-                choice_id = choice.id,
-                option_id = first.id or first,
-              }
-            end
-            if choice.allow_cancel ~= false then
-              return { type = "choice_cancel", choice_id = choice.id }
-            end
-            return nil
-          end,
-        })
-      end,
-    },
-    {
-      update = function()
-        AdapterLayer.step_move_anim(self)
-      end,
-    },
-  }
-  AdapterLayer.register_tickables(self, tickables)
-end
+
 
 function OasisLayer:_log_status(view)
   logger.info(
@@ -130,7 +84,34 @@ function OasisLayer:tick(dt)
     return
   end
 
-  self.game:tick(dt)
+  AdapterLayer.step_auto_runner(self, dt, {
+    modal_active = false,
+    modal_buttons = nil,
+    game_finished = self.game and self.game.finished,
+  })
+
+  AdapterLayer.step_choice_timeout(self, dt, {
+    build_action = function(layer, choice)
+      local auto_choice = Agent.auto_action_for_choice(layer.game, choice)
+      if auto_choice then
+        return auto_choice
+      end
+      local first = choice.options and choice.options[1]
+      if first then
+        return {
+          type = "choice_select",
+          choice_id = choice.id,
+          option_id = first.id or first,
+        }
+      end
+      if choice.allow_cancel ~= false then
+        return { type = "choice_cancel", choice_id = choice.id }
+      end
+      return nil
+    end,
+  })
+
+  AdapterLayer.step_move_anim(self)
 
   if self.pending_choice then
     self:_open_choice_modal(self.pending_choice)
