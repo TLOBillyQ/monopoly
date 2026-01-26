@@ -11,8 +11,17 @@
 ## Progress
 
 - [x] (2026-01-26 19:48) 创建本 ExecPlan，拆分主动道具专项计划。
-- [ ] (2026-01-26 19:48) 列出主动类道具清单并对照实现路径。
-- [ ] (2026-01-26 19:48) 验证 UI 选择与效果触发。
+- [x] (2026-01-26 11:50) 列出主动类道具清单并对照实现路径。
+  - 主动道具（timing="manual"）：路障、地雷、怪兽、均富、流放、导弹、查税、请神、送神、财神、穷神、天使
+  - item_executor.lua：统一道具执行入口
+  - item_phase.lua：处理道具使用时机
+  - 专用模块：item_roadblock、item_steal、item_demolish 等
+- [x] (2026-01-26 11:50) 验证 UI 选择与效果触发。
+  - 使用流程：玩家选择道具 → UI 展示目标选择 → 确认 → 执行效果
+  - 目标选择：玩家、地块、建筑（根据道具类型）
+  - 范围限制：前后 3 格、全场等
+  - choice_service：统一处理选择逻辑
+  - 自动模式：item_strategy.lua 提供 AI 决策
 
 ## Surprises & Discoveries
 
@@ -26,7 +35,31 @@
 
 ## Outcomes & Retrospective
 
-尚未执行，暂无产出与回顾。
+**2026-01-26 完成主动使用类道具卡：**
+- 主动道具系统完整（12 种 timing="manual" 道具）：
+  - 放置类：路障、地雷（前后 3 格）
+  - 攻击类：怪兽（拆建筑）、导弹（摧毁多目标）
+  - 经济类：均富（平分资金）、查税（目标缴税 50%）
+  - 传送类：流放（送往深山）
+  - 神仙类：请神、送神、财神、穷神、天使（增益/减益）
+- 执行模块：
+  - item_executor.lua：统一执行入口
+  - item_phase.lua：时机控制
+  - item_roadblock.lua：路障放置
+  - item_steal.lua：偷窃选择
+  - item_demolish.lua：拆除建筑
+  - item_remote_dice.lua：遥控骰子
+  - item_post_effects.lua：被动效果
+- 选择系统：
+  - 目标类型：玩家、地块、建筑
+  - 范围限制：视觉高亮、点击选择
+  - UI 反馈：choice_service 统一处理
+  - AI 策略：item_strategy.lua 自动决策
+- 特殊机制：
+  - 天使卡免疫负面效果（angel_immune 标记）
+  - 神仙附身持续回合计数
+  - 效果叠加和互斥规则
+- 为策略玩法和玩家互动提供了丰富的道具系统
 
 ## Context and Orientation
 

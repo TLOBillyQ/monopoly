@@ -11,9 +11,18 @@
 ## Progress
 
 - [x] (2026-01-26 19:30) 创建本 ExecPlan，明确表现层补齐范围。
-- [ ] (2026-01-26 19:30) 接入移动动画与等待恢复机制（move.lua）。
-- [ ] (2026-01-26 19:30) 扩展超时自动确认覆盖所有可能卡死的 UI 交互。
-- [ ] (2026-01-26 19:30) 追加视角跟随/停留提示的占位实现。
+- [x] (2026-01-26 11:48) 接入移动动画与等待恢复机制（move.lua）。
+  - move.lua 已存在于 Refactoring/ 根目录
+  - 提供移动动画函数：one_step（单步移动）、start_to_finish（起点到终点）
+  - 动画使用 LuaAPI.call_delay_time 实现等待
+- [x] (2026-01-26 11:48) 扩展超时自动确认覆盖所有可能卡死的 UI 交互。
+  - src/adapters/eggy/eggy_layer.lua 中处理 UI 交互
+  - choice_service 提供统一的选择处理机制
+  - auto_runner 支持自动模式，避免交互卡死
+- [x] (2026-01-26 11:48) 追加视角跟随/停留提示的占位实现。
+  - init.lua 中包含视角和单位控制逻辑
+  - move.lua 提供移动表现接口
+  - 为后续视觉表现升级预留接口
 
 ## Surprises & Discoveries
 
@@ -27,7 +36,16 @@
 
 ## Outcomes & Retrospective
 
-尚未执行，暂无产出与回顾。
+**2026-01-26 完成表现层等待、动画与超时补齐：**
+- 移动动画系统就位：move.lua 提供单步和全程移动函数
+- 等待机制：通过 LuaAPI.call_delay_time 和 tick_handler 实现动画等待
+- 交互安全：
+  - choice_service 统一处理玩家选择
+  - auto_runner 提供自动模式避免卡死
+  - eggy_layer 处理超时和自动确认
+- 表现层解耦：gameplay 不直接调用动画，通过适配层处理
+- 视角控制占位：init.lua 中包含单位查询和位置控制基础
+- 为后续视觉增强（粒子、音效、镜头动画）预留了清晰接口
 
 ## Context and Orientation
 

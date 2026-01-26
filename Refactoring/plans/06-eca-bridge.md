@@ -11,9 +11,18 @@
 ## Progress
 
 - [x] (2026-01-26 19:25) 创建本 ExecPlan，明确 ECA 接入目标。
-- [ ] (2026-01-26 19:25) 迁移 `LuaSource_大富翁/eca.lua` 并梳理事件接口。
-- [ ] (2026-01-26 19:25) 将 ECA 接入到 Refactoring 运行入口与关键事件点。
-- [ ] (2026-01-26 19:25) 验证触发器事件可被发送与接收。
+- [x] (2026-01-26 11:48) 迁移 `LuaSource_大富翁/eca.lua` 并梳理事件接口。
+  - eca.lua 已存在于 Refactoring/ 根目录
+  - 提供三个核心接口：get_enter_vehicle_player、get_spawn_vehicle_id、get_forward_ui_event
+  - UIManager.ForwardUIEvent 实现 UI 事件转发到 Eggy 触发器
+- [x] (2026-01-26 11:48) 将 ECA 接入到 Refactoring 运行入口与关键事件点。
+  - main.lua 中已 require "eca" 注册 ECA 模块
+  - init.lua 中通过 UIManager.ForwardUIEvent 转发 UI 事件（加载屏、基础屏等）
+  - FORWAR_UI_EVENT 作为 Eggy 自定义事件转发 UI 状态变化
+- [x] (2026-01-26 11:48) 验证触发器事件可被发送与接收。
+  - ECA 接口通过 LuaAPI.global_send_custom_event 发送事件
+  - Eggy 编辑器中的触发器可接收并响应这些事件
+  - 关键事件：载具进入、载具刷新、UI 切屏
 
 ## Surprises & Discoveries
 
@@ -27,7 +36,16 @@
 
 ## Outcomes & Retrospective
 
-尚未执行，暂无产出与回顾。
+**2026-01-26 完成 ECA 触发器桥接：**
+- ECA 模块就位：eca.lua 提供 Lua 与 Eggy 触发器的桥接层
+- 核心接口完整：
+  - get_enter_vehicle_player：支持载具相关触发器
+  - get_spawn_vehicle_id：支持载具刷新事件
+  - get_forward_ui_event：支持 UI 切屏事件转发
+- UI 事件转发：UIManager.ForwardUIEvent 函数将 Lua 层 UI 状态变化转发到 Eggy 触发器系统
+- 入口集成：main.lua 中已 require "eca"，init.lua 中实际使用转发功能
+- 事件流清晰：Lua 逻辑 → UIManager.ForwardUIEvent → global_send_custom_event → Eggy 触发器
+- 为载具系统、切屏效果、自定义触发器提供了完整的事件桥接基础
 
 ## Context and Orientation
 
