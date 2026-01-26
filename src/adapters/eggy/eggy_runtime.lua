@@ -53,51 +53,16 @@ local function resolve_option_id(choice, payload, layer)
   return nil
 end
 
-local function ensure_tickables()
-  local g = rawget(_G, "G")
-  if not g then
-    g = {}
-    rawset(_G, "G", g)
-  end
-  if not g.tickables then
-    g.tickables = {}
-  end
-  g.addTickable = function(obj)
-    assert(obj and obj.update, "tickable requires update")
-    table.insert(g.tickables, obj)
-  end
-  g.removeTickable = function(obj)
-    for i, v in ipairs(g.tickables) do
-      if v == obj then
-        table.remove(g.tickables, i)
-        break
-      end
-    end
-  end
-  return g
-end
-
 function EggyRuntime.install()
   local layer = EggyLayer.new({ game_factory = create_game })
-  local g = ensure_tickables()
-  local layer_tickable = {
-    update = function(_, dt)
-      layer:tick(dt or 0)
-    end,
-  }
 
   LuaAPI.global_register_trigger_event(EVENT.GAME_INIT, function()
     install_ui_manager()
     layer:set_game(layer:new_game())
-    g.tickables = {}
-    g.addTickable(layer_tickable)
   end)
 
   LuaAPI.set_tick_handler(function(delta_seconds)
-    local dt = delta_seconds or 0
-    for _, tickable in ipairs(g.tickables) do
-      tickable:update(dt)
-    end
+    layer:tick(delta_seconds or 0)
   end)
 
   LuaAPI.global_register_trigger_event(EVENT.UI_CUSTOM_EVENT, function(data)
