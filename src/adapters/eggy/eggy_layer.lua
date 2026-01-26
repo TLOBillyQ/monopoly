@@ -89,6 +89,7 @@ function EggyLayer:set_game(g)
   })
   self.player_units = nil
   self.player_units_missing = false
+  self:_register_game_tickables()
 end
 
 function EggyLayer:build_item_index()
@@ -97,6 +98,53 @@ end
 
 function EggyLayer:new_game()
   return AdapterLayer.new_game(self)
+end
+
+function EggyLayer:_register_game_tickables()
+  if not self.game then
+    return
+  end
+  local tickables = {
+    {
+      update = function(_, dt)
+        AdapterLayer.step_auto_runner(self, dt, {
+          modal_active = false,
+          modal_buttons = nil,
+          game_finished = self.game and self.game.finished,
+        })
+      end,
+    },
+    {
+      update = function(_, dt)
+        AdapterLayer.step_choice_timeout(self, dt, {
+          build_action = function(layer, choice)
+            local auto_choice = Agent.auto_action_for_choice(layer.game, choice)
+            if auto_choice then
+              return auto_choice
+            end
+            local first = choice.options and choice.options[1]
+            if first then
+              return {
+                type = "choice_select",
+                choice_id = choice.id,
+                option_id = first.id or first,
+              }
+            end
+            if choice.allow_cancel ~= false then
+              return { type = "choice_cancel", choice_id = choice.id }
+            end
+            return nil
+          end,
+        })
+      end,
+    },
+    {
+      update = function()
+        AdapterLayer.step_move_anim(self)
+      end,
+    },
+  }
+  AdapterLayer.register_tickables(self, tickables)
 end
 
 function EggyLayer:_log_status(view)
@@ -119,38 +167,13 @@ function EggyLayer:tick(dt)
     return
   end
 
+  self.game:tick(dt)
+
   if self.pending_choice then
     self:_open_choice_modal(self.pending_choice)
   end
 
-  AdapterLayer.step_auto_runner(self, dt, {
-    modal_active = false,
-    modal_buttons = nil,
-    game_finished = self.game.finished,
-  })
-
   self:refresh_view()
-
-  AdapterLayer.step_choice_timeout(self, dt, {
-    build_action = function(layer, choice)
-      local auto_choice = Agent.auto_action_for_choice(layer.game, choice)
-      if auto_choice then
-        return auto_choice
-      end
-      local first = choice.options and choice.options[1]
-      if first then
-        return {
-          type = "choice_select",
-          choice_id = choice.id,
-          option_id = first.id or first,
-        }
-      end
-      if choice.allow_cancel ~= false then
-        return { type = "choice_cancel", choice_id = choice.id }
-      end
-      return nil
-    end,
-  })
 
   self:_log_status(self:build_view())
 end

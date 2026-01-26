@@ -6,6 +6,7 @@ local function phase_move(tm, args)
   local total = args.total
   local raw_total = args.raw_total
   local movement = tm.game and tm.game.get_service and tm.game:get_service("movement")
+  local move_result = args.move_result
 
   local move_opts = { branch_parity = raw_total }
   if args.continue_from_market or args.continue_from_steal then
@@ -14,8 +15,41 @@ local function phase_move(tm, args)
     move_opts.branch_parity = args.branch_parity
   end
 
-  local move_result = movement.move(tm.game, player, total, move_opts)
-  tm.game.last_turn.move_result = move_result
+  if not move_result then
+    local start_index = player.position
+    move_result = movement.move(tm.game, player, total, move_opts)
+    tm.game.last_turn.move_result = move_result
+
+    local game = tm.game
+    local store = game and game.store
+    local ui_port = game and game.ui_port
+    if store and ui_port and ui_port.wait_move_anim == true then
+      local seq = (store:get({ "turn", "move_anim_seq" }) or 0) + 1
+      store:set({ "turn", "move_anim_seq" }, seq)
+      store:set({ "turn", "move_anim" }, {
+        seq = seq,
+        player_id = player.id,
+        from_index = start_index,
+        to_index = player.position,
+        visited = move_result.visited,
+        steps = move_result.steps,
+        stopped_on_roadblock = move_result.stopped_on_roadblock == true,
+        market_interrupt = move_result.market_interrupt ~= nil,
+        steal_interrupt = move_result.steal_interrupt ~= nil,
+      })
+      return "wait_move_anim", {
+        resume_state = "move",
+        resume_args = {
+          player = player,
+          total = total,
+          raw_total = raw_total,
+          move_result = move_result,
+        },
+      }
+    end
+  else
+    tm.game.last_turn.move_result = move_result
+  end
 
   if move_result.stopped_on_roadblock then
     local stay = player.status.stay_turns or 0

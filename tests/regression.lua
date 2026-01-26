@@ -3,6 +3,8 @@ require('src.bootstrap')({ "src/gameplay/?.lua", "src/gameplay/?/init.lua" })
 
 local App = require("src.game")
 local MovementService = require("src.gameplay.movement_service")
+local TurnManager = require("src.gameplay.turn_manager")
+local turn_move = require("src.gameplay.turn_move")
 local Inventory = require("src.gameplay.item_inventory")
 local Executor = require("src.gameplay.item_executor")
 local Strategy = require("src.gameplay.item_strategy")
@@ -597,6 +599,42 @@ local function test_invalid_choice_option_rejected()
   assert(get_choice(g) == nil, "invalid option should clear choice")
 end
 
+local function test_move_anim_wait_and_resume()
+  local g = new_game()
+  g.ui_port = { wait_move_anim = true }
+  local player = g:current_player()
+  g.last_turn = {
+    player_id = player.id,
+    player_name = player.name,
+    skipped = false,
+    rolls = nil,
+    total = nil,
+    move_result = nil,
+    note = nil,
+  }
+  local phases = {
+    start = function()
+      return "move", { player = player, total = 1, raw_total = 1 }
+    end,
+    move = turn_move,
+    landing = function()
+      return nil
+    end,
+  }
+  g.turn_manager = TurnManager.new(g, phases)
+
+  local res = g.turn_manager:run_until_wait()
+  assert(res == "wait_move_anim", "should wait for move anim")
+  local seq = g.store:get({ "turn", "move_anim", "seq" })
+  assert(seq, "move_anim seq should be set")
+
+  g:dispatch_action({ type = "move_anim_done", seq = seq })
+
+  assert(g.store:get({ "turn", "move_anim" }) == nil, "move_anim should be cleared")
+  local phase = g.store:get({ "turn", "phase" })
+  assert(phase ~= "wait_move_anim", "should resume after move anim done")
+end
+
 -- 最复杂的回合结算用例：连续触发多个效果
 -- 场景设计：
 -- 1. 玩家持有偷窃卡，移动经过其他玩家
@@ -864,6 +902,7 @@ local tests = {
   test_chance_move_backward_pass_market,
   test_chance_move_backward_pass_intersection,
   test_invalid_choice_option_rejected,
+  test_move_anim_wait_and_resume,
   test_complex_consecutive_turn_settlement,
   test_complex_market_interrupt_with_rent,
 }

@@ -9,6 +9,7 @@ local roles_cfg = require("src.config.roles")
 local Tables = require("src.util.tables")
 local RNG = require("src.core.rng")
 local Store = require("src.core.store")
+local TickFlow = require("src.core.tick_flow")
 local TurnManager = require("src.gameplay.turn_manager")
 local turn_start = require("src.gameplay.turn_start")
 local turn_roll = require("src.gameplay.turn_roll")
@@ -122,6 +123,8 @@ local function build_initial_state(board, players, rng)
       phase = "start",
       pending_choice = nil,
       choice_seq = 0,
+      move_anim_seq = 0,
+      move_anim = nil,
     },
     rng = rng:snapshot(),
     players = snapshot_players(players),
@@ -188,6 +191,7 @@ function CompositionRoot.assemble(opts, GameClass)
     winner = nil,
     last_turn = nil,
     services = services,
+    tick_flow = TickFlow.new(),
   }, GameClass)
 
   game:rebuild()

@@ -3,7 +3,7 @@ local Layout = require("src.adapters.love2d.layout")
 local BoardRenderer = require("src.adapters.love2d.board_renderer")
 local PanelRenderer = require("src.adapters.love2d.panel_renderer")
 local Presenter = require("src.adapters.core.presenter")
-local AdapterLayer = require("src.adapters.core.adapter_layer")
+local logger = require("src.util.logger")
 
 local LoveRuntime = {}
 
@@ -62,26 +62,7 @@ function LoveRuntime.install(LoveLayer)
     end
     local mx, my = love.mouse.getPosition()
     self:update_hover_tile(mx, my)
-    AdapterLayer.step_auto_runner(self, dt, {
-      modal_active = self.modal.active ~= nil,
-      modal_buttons = self.modal.active and self.modal.active.buttons,
-      game_finished = self.game.finished,
-    })
-    AdapterLayer.step_choice_timeout(self, dt, {
-      is_choice_active = function(layer)
-        return layer.pending_choice and layer.modal.active
-      end,
-      build_action = function(_, choice)
-        local first = choice.options and choice.options[1]
-        if first then
-          return { type = "choice_select", choice_id = choice.id, option_id = first.id or first }
-        end
-        if choice.allow_cancel ~= false then
-          return { type = "choice_cancel", choice_id = choice.id }
-        end
-        return nil
-      end,
-    })
+    self.game:tick(dt)
     self.modal:update()
   end
 
@@ -138,6 +119,7 @@ function LoveRuntime.install(LoveLayer)
       finished = game.finished,
       winner_name = winner_name,
     })
+    view.player_positions = self:build_move_anim_positions()
 
     local w, h = love.graphics.getDimensions()
     love.graphics.setColor(ui.palette.bg)
@@ -160,6 +142,102 @@ function LoveRuntime.install(LoveLayer)
       local winner = view.winner_name or "无人"
       love.graphics.printf("游戏结束，胜者: " .. winner, 0, h * 0.45, w, "center")
     end
+  end
+
+  local function build_move_anim_path(anim)
+    local path = {}
+    if anim and anim.from_index then
+      path[#path + 1] = anim.from_index
+    end
+    if anim and anim.visited then
+      for _, idx in ipairs(anim.visited) do
+        path[#path + 1] = idx
+      end
+    end
+    if anim and anim.to_index and path[#path] ~= anim.to_index then
+      path[#path + 1] = anim.to_index
+    end
+    return path
+  end
+
+  function LoveLayer:step_move_anim(dt)
+    if not (self.game and self.game.store) then
+      self.move_anim_state = nil
+      return
+    end
+    local phase = self.game.store:get({ "turn", "phase" })
+    local anim = self.game.store:get({ "turn", "move_anim" })
+    local seq = anim and anim.seq or nil
+    if phase ~= self.move_anim_log_phase or seq ~= self.move_anim_log_seq then
+      logger.info("move_anim 观察 phase=", tostring(phase), " seq=", tostring(seq))
+      self.move_anim_log_phase = phase
+      self.move_anim_log_seq = seq
+    end
+    if phase ~= "wait_move_anim" then
+      self.move_anim_state = nil
+      return
+    end
+    if not anim or not anim.seq then
+      self.move_anim_state = nil
+      return
+    end
+
+    local state = self.move_anim_state
+    if not state or state.seq ~= anim.seq then
+      state = {
+        seq = anim.seq,
+        elapsed = 0,
+        duration = 1,
+        player_id = anim.player_id,
+        path = build_move_anim_path(anim),
+        sent = false,
+      }
+      self.move_anim_state = state
+    end
+
+    state.elapsed = state.elapsed + (dt or 0)
+    if state.elapsed >= state.duration and not state.sent then
+      state.sent = true
+      self.game:dispatch_action({ type = "move_anim_done", seq = anim.seq })
+    end
+  end
+
+  function LoveLayer:build_move_anim_positions()
+    local state = self.move_anim_state
+    if not state or not state.player_id or not state.path or #state.path == 0 then
+      return nil
+    end
+    local duration = state.duration or 1
+    local t = 1
+    if duration > 0 then
+      t = math.min(state.elapsed / duration, 1)
+    end
+    local path = state.path
+    if #path == 1 then
+      local pos = self.ui.board.positions[path[1]]
+      if not pos then
+        return nil
+      end
+      return { [state.player_id] = { x = pos.x, y = pos.y } }
+    end
+
+    local segments = #path - 1
+    local seg_value = t * segments
+    local seg_index = math.floor(seg_value) + 1
+    if seg_index > segments then
+      seg_index = segments
+    end
+    local seg_t = seg_value - (seg_index - 1)
+    local from_idx = path[seg_index]
+    local to_idx = path[seg_index + 1]
+    local from = from_idx and self.ui.board.positions[from_idx] or nil
+    local to = to_idx and self.ui.board.positions[to_idx] or nil
+    if not (from and to) then
+      return nil
+    end
+    local x = from.x + (to.x - from.x) * seg_t
+    local y = from.y + (to.y - from.y) * seg_t
+    return { [state.player_id] = { x = x, y = y } }
   end
 
   function LoveLayer:attach()

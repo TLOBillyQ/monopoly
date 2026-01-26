@@ -70,6 +70,24 @@ function Game.new(opts)
   return CompositionRoot.assemble(opts, Game)
 end
 
+function Game:add_tickable(obj)
+  if self.tick_flow then
+    self.tick_flow:add_tickable(obj)
+  end
+end
+
+function Game:remove_tickable(obj)
+  if self.tick_flow then
+    self.tick_flow:remove_tickable(obj)
+  end
+end
+
+function Game:tick(dt)
+  if self.tick_flow then
+    self.tick_flow:tick(dt or 0)
+  end
+end
+
 
 function Game:_store_set(path, value)
   if self.store then

@@ -12,6 +12,12 @@ function AdapterLayer.attach(layer, opts)
   layer.pending_choice = nil
   layer.pending_choice_elapsed = 0
   layer.pending_choice_id = nil
+  layer.wait_move_anim = true
+  layer.move_anim_seq = nil
+  layer.move_anim_log_phase = nil
+  layer.move_anim_log_seq = nil
+  layer._tickables = nil
+  layer._tickables_game = nil
   layer.item_name_by_id = {}
   layer.game_factory = opts.game_factory or layer.game_factory
   layer.auto_runner = opts.auto_runner or layer.auto_runner
@@ -54,6 +60,20 @@ function AdapterLayer.build_item_index(layer)
   end
 end
 
+function AdapterLayer.register_tickables(layer, tickables)
+  if not (layer and layer.game and layer.game.add_tickable) then
+    return
+  end
+  if layer._tickables_game == layer.game then
+    return
+  end
+  layer._tickables_game = layer.game
+  layer._tickables = tickables or {}
+  for _, tickable in ipairs(layer._tickables) do
+    layer.game:add_tickable(tickable)
+  end
+end
+
 function AdapterLayer.new_game(layer, opts)
   logger.clear()
   assert(layer.game_factory, "game_factory not set")
@@ -90,6 +110,22 @@ function AdapterLayer.step_choice_timeout(layer, dt, opts)
     layer.pending_choice_elapsed = 0
     layer.pending_choice_id = nil
     return
+  end
+
+  if layer.game and layer.game.store then
+    local pending = layer.game.store:get({ "turn", "pending_choice" })
+    if pending and (not layer.pending_choice or layer.pending_choice.id ~= pending.id) then
+      layer.pending_choice = pending
+      layer.pending_choice_elapsed = 0
+      layer.pending_choice_id = pending.id
+      if opts and opts.on_pending_choice then
+        opts.on_pending_choice(layer, pending)
+      end
+    elseif not pending then
+      layer.pending_choice = nil
+      layer.pending_choice_elapsed = 0
+      layer.pending_choice_id = nil
+    end
   end
 
   local active = false
@@ -137,6 +173,39 @@ function AdapterLayer.clear_choice(layer, opts)
   layer.pending_choice_id = nil
   if opts and opts.on_close_choice then
     opts.on_close_choice(layer)
+  end
+end
+
+function AdapterLayer.step_move_anim(layer)
+  if not (layer and layer.wait_move_anim and layer.game and layer.game.store) then
+    return
+  end
+
+  local anim = layer.game.store:get({ "turn", "move_anim" })
+  local phase = layer.game.store:get({ "turn", "phase" })
+  local seq = anim and anim.seq or nil
+  if phase ~= layer.move_anim_log_phase or seq ~= layer.move_anim_log_seq then
+    logger.info("move_anim 观察 phase=", tostring(phase), " seq=", tostring(seq))
+    layer.move_anim_log_phase = phase
+    layer.move_anim_log_seq = seq
+  end
+  if not anim or not anim.seq then
+    layer.move_anim_seq = nil
+    return
+  end
+
+  if phase ~= "wait_move_anim" then
+    layer.move_anim_seq = nil
+    return
+  end
+
+  if layer.move_anim_seq == anim.seq then
+    return
+  end
+
+  layer.move_anim_seq = anim.seq
+  if layer.game and layer.game.dispatch_action then
+    layer.game:dispatch_action({ type = "move_anim_done", seq = anim.seq })
   end
 end
 

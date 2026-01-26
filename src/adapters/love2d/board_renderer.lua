@@ -128,6 +128,27 @@ local function draw_players(ui, occupants, cell_size)
   end
 end
 
+local function draw_player_at(ui, pid, pos)
+  if not (pos and pos.x and pos.y) then
+    return
+  end
+  local p_color = ui.palette.player[pid] or { 0.9, 0.9, 0.9 }
+  love.graphics.setColor(p_color)
+  love.graphics.circle("fill", pos.x, pos.y, 6)
+  love.graphics.setColor(0.1, 0.1, 0.1, 0.8)
+  love.graphics.circle("line", pos.x, pos.y, 6)
+end
+
+local function remove_player_from_occupants(occupants, pid)
+  for _, list in pairs(occupants) do
+    for i = #list, 1, -1 do
+      if list[i] == pid then
+        table.remove(list, i)
+      end
+    end
+  end
+end
+
 local function collect_last_visited(view)
   local last_visited = {}
   if view and view.last_turn and view.last_turn.move_result and view.last_turn.move_result.visited then
@@ -167,7 +188,18 @@ function BoardRenderer.draw(ui, view)
   end
 
   local occupants = build_occupants_from_store(st.players)
+  local animated = view.player_positions
+  if animated then
+    for pid in pairs(animated) do
+      remove_player_from_occupants(occupants, pid)
+    end
+  end
   draw_players(ui, occupants, cell_size)
+  if animated then
+    for pid, pos in pairs(animated) do
+      draw_player_at(ui, pid, pos)
+    end
+  end
 
   for idx, pos in ipairs(ui.board.positions) do
     local rect_x, rect_y, rect_w, rect_h = tile_rect_for_overlay(ui, idx, pos, half_cell, pad)
