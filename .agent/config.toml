@@ -27,7 +27,7 @@ unified_exec = true
 # Snapshot shell state for better reproducibility/debugging. May capture more environment context.
 shell_snapshot = true
 # Whether to read child AGENTS.md files in subfolders (if your workflow uses them). Enable if you rely on per-module guidance.
-child_agents_md = false
+child_agents_md = true
 # Allow freeform patch application. Keep enabled if you want Codex to apply non-trivial diffs.
 apply_patch_freeform = true
 # Enforce an execution policy / guardrails for running tools.
@@ -46,7 +46,6 @@ collab = true
 steer = true
 
 [notice]
-# Hides prominent warnings about broad tool access. Consider setting false if you prefer explicit safety prompts.
 hide_full_access_warning = true
 
 [projects."/Users/billyq/Dev/Github/Lua/monopoly"]
@@ -54,23 +53,3 @@ trust_level = "trusted"
 
 [projects."/Users/billyq/Dev/AI"]
 trust_level = "trusted"
-
-# -----------------------------------------------------------------------------
-# Optional presets (commented out): copy/uncomment to switch behavior quickly.
-# -----------------------------------------------------------------------------
-
-# Safer / low-risk preset (reduce tool surface area)
-# [features]
-# shell_tool = false
-# web_search_request = false
-# apply_patch_freeform = false
-# collab = false
-
-# Deterministic / reproducibility-leaning preset
-# [features]
-# web_search_cached = true
-# shell_snapshot = true
-
-# If you rely on per-folder guidance files
-# [features]
-# child_agents_md = true

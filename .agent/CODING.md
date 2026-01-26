@@ -1,70 +1,49 @@
-# Codex CLI / VS Code integration configuration (TOML)
-# Notes:
-# - Keys under [features] are feature toggles. If you are unsure whether a key is supported in your installed Codex version,
-#   leave it as-is; unsupported keys are usually ignored, but behavior varies by build.
-# - Removing a key generally reverts to the tool's default.
-# - "trusted" projects can run tools more freely; keep this list tight.
+# CodingDiscipline
 
-# Model selection
-model = "gpt-5.2-codex"
-# Reasoning effort: higher can improve quality but typically increases latency/cost.
-model_reasoning_effort = "high"
-[features]
-# Allow executing shell commands. Disable if you want a stricter “analysis-only” mode.
-shell_tool = true
-# Allow the agent to request web search. If you do not want any network lookups, set to false.
-web_search_request = true
-# Prefer cached search results when available. true reduces repeated calls but may be slightly stale.
-web_search_cached = false
-# Use a unified execution path for tools/commands (implementation detail; usually keep enabled).
-unified_exec = true
-# Snapshot shell state for better reproducibility/debugging. May capture more environment context.
-shell_snapshot = true
-# Whether to read child AGENTS.md files in subfolders (if your workflow uses them). Enable if you rely on per-module guidance.
-child_agents_md = false
-# Allow freeform patch application. Keep enabled if you want Codex to apply non-trivial diffs.
-apply_patch_freeform = true
-# Enforce an execution policy / guardrails for running tools.
-exec_policy = true
-# Allow remote compaction of conversation/context to save tokens. If you need strict local-only handling, disable.
-remote_compaction = true
-# Whether to allow routing to remote models/providers (if supported). Keep false if you want predictable local/provider behavior.
-remote_models = false
-# Force PowerShell UTF-8 behavior (mainly relevant on Windows). No harm on macOS, but can be removed if unused.
-powershell_utf8 = true
-# Compress requests sent to the model/service (if supported). true can reduce bandwidth, but may complicate debugging.
-enable_request_compression = false
-# Collaboration features (if supported). Disable if you do not use multi-user workflows.
-collab = true
-# Enable instruction steering controls (if supported). Typically keep enabled.
-steer = true
+**Primary rule: 优先删除或复用代码，而不是新增代码。**
 
-[notice]
-# Hides prominent warnings about broad tool access. Consider setting false if you prefer explicit safety prompts.
-hide_full_access_warning = true
+## 0. 交付前自测
+- 语法检查，寻找tests/等目录下的测试脚本自测
 
-[projects."/Users/billyq/Dev/Github/Lua/monopoly"]
-trust_level = "trusted"
+## 1. 功能不变（Hard Rule）
+- 行为 / 输出 / 边界条件 **绝对不变**
+- 只改“怎么写”，不改“做什么”
 
-[projects."/Users/billyq/Dev/AI"]
-trust_level = "trusted"
+## 2. 聚焦范围（Scope）
+- 仅优化**本次修改触及的代码**
+- 不做全局重构，除非声明授权
 
-# -----------------------------------------------------------------------------
-# Optional presets (commented out): copy/uncomment to switch behavior quickly.
-# -----------------------------------------------------------------------------
+## 3. 无默认抽象
+- 没有 **≥2 个真实调用点**，禁止新增接口 / 层 / helper
+- 不做未来预留
 
-# Safer / low-risk preset (reduce tool surface area)
-# [features]
-# shell_tool = false
-# web_search_request = false
-# apply_patch_freeform = false
-# collab = false
+## 4. 单一实现
+- 相似逻辑必须合并
+- 新代码必须替换旧代码，而不是并存
 
-# Deterministic / reproducibility-leaning preset
-# [features]
-# web_search_cached = true
-# shell_snapshot = true
+## 5. 强制删除
+- 删除未使用的函数、模块、参数、分支
+- 删除只做转发的包装层
+- 每次修改后都要问：**现在能删什么？**
 
-# If you rely on per-folder guidance files
-# [features]
-# child_agents_md = true
+## 6. 保持 Lua 简单
+- 使用普通 table + function
+- 避免 metatable、继承式设计、过度泛化工具
+
+## 7. 提升清晰度（Code Simplifier）
+- 减少嵌套和复杂度
+- 合并强相关逻辑，移除冗余抽象
+- 使用清晰、直白的命名
+- 删除解释“显而易见代码”的注释
+- **禁止嵌套三元表达式**（用 if / else）
+
+## 8. 克制简化
+- 不炫技、不聪明写法
+- 不为“行数更少”牺牲可读性
+- 不因简化降低可维护性或可扩展性
+
+## 9. 控制规模
+- 优先修改已有文件
+- 新增文件必须有明确理由
+
+**目标：最少代码、最少概念、最少文件，但始终以可读性优先。**
