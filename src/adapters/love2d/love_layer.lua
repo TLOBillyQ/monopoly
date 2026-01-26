@@ -56,6 +56,8 @@ function LoveLayer:set_game(g)
 end
 
 function LoveLayer:push_popup(payload)
+  local seq = (self._popup_seq or 0) + 1
+  self._popup_seq = seq
   self.modal:push({
     title = PhaseView.build_phase_title(self.game, payload and payload.title),
     body = payload and payload.body,
@@ -63,6 +65,7 @@ function LoveLayer:push_popup(payload)
     buttons = payload and payload.buttons,
     button_text = payload and payload.button_text,
     on_confirm = payload and payload.on_confirm,
+    _popup_seq = seq,
   })
   return true
 end
@@ -187,7 +190,13 @@ function LoveLayer:dispatch_action(action)
       self.modal:keypressed("space")
     end
   elseif action.type == "choice_select" or action.type == "choice_cancel" then
-    AdapterLayer.clear_choice(self)
+    AdapterLayer.clear_choice(self, {
+      on_close_choice = function(layer)
+        if layer.modal then
+          layer.modal:dismiss()
+        end
+      end,
+    })
     if self.game then
       self.game:dispatch_action(action)
     end

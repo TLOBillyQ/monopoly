@@ -12,6 +12,8 @@ function AdapterLayer.attach(layer, opts)
   layer.pending_choice = nil
   layer.pending_choice_elapsed = 0
   layer.pending_choice_id = nil
+  layer.ui_modal_elapsed = 0
+  layer.ui_modal_ref = nil
   layer.wait_move_anim = true
   layer.move_anim_seq = nil
   layer.move_anim_log_phase = nil
@@ -150,6 +152,33 @@ function AdapterLayer.step_choice_timeout(layer, dt, opts)
     if action then
       layer:dispatch_action(action)
     end
+  end
+end
+
+function AdapterLayer.step_modal_timeout(layer, dt, opts)
+  local timeout = constants.action_timeout_seconds or 0
+  if timeout <= 0 then
+    layer.ui_modal_elapsed = 0
+    layer.ui_modal_ref = nil
+    return
+  end
+  if not (opts and opts.is_active and opts.on_timeout) then
+    return
+  end
+  if not opts.is_active(layer) then
+    layer.ui_modal_elapsed = 0
+    layer.ui_modal_ref = nil
+    return
+  end
+  local ref = opts.get_ref and opts.get_ref(layer) or true
+  if layer.ui_modal_ref ~= ref then
+    layer.ui_modal_ref = ref
+    layer.ui_modal_elapsed = 0
+  end
+  layer.ui_modal_elapsed = (layer.ui_modal_elapsed or 0) + (dt or 0)
+  if layer.ui_modal_elapsed >= timeout then
+    layer.ui_modal_elapsed = 0
+    opts.on_timeout(layer)
   end
 end
 

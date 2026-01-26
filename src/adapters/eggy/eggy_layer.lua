@@ -148,6 +148,18 @@ function EggyLayer:tick(dt)
     end,
   })
 
+  AdapterLayer.step_modal_timeout(self, dt, {
+    is_active = function(layer)
+      return layer.ui and layer.ui.popup_active
+    end,
+    get_ref = function(layer)
+      return layer.ui and layer.ui.popup_active and layer.ui.popup_seq or nil
+    end,
+    on_timeout = function(layer)
+      layer:close_popup()
+    end,
+  })
+
   AdapterLayer.step_move_anim(self)
 
   if self.pending_choice then
@@ -654,6 +666,7 @@ function EggyLayer:push_popup(payload)
   self.ui:set_button(self.ui.popup.confirm, payload.button_text or "知道了")
   self.ui:set_visible(self.ui.popup.root, true)
   self.ui.popup_active = true
+  self.ui.popup_seq = (self.ui.popup_seq or 0) + 1
   return true
 end
 
