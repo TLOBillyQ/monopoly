@@ -1,0 +1,18 @@
+[features]
+shell_tool = true
+web_search_request = true
+web_search_cached = false
+unified_exec = true
+shell_snapshot = true
+child_agents_md = false
+apply_patch_freeform = true
+exec_policy = true
+remote_compaction = true
+remote_models = false
+powershell_utf8 = true
+enable_request_compression = false
+collab = true
+steer = true
+
+[notice]
+hide_full_access_warning = true
