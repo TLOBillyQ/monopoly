@@ -63,7 +63,7 @@ function LoveRuntime.install(LoveLayer)
     end
     local mx, my = love.mouse.getPosition()
     self:update_hover_tile(mx, my)
-    
+
     AdapterLayer.step_auto_runner(self, dt, {
       modal_active = self.modal.active ~= nil,
       modal_buttons = self.modal.active and self.modal.active.buttons,
@@ -92,7 +92,7 @@ function LoveRuntime.install(LoveLayer)
     })
 
     self:step_move_anim(dt)
-    
+
     self.modal:update()
   end
 
