@@ -1,6 +1,5 @@
 local Inventory = require("src.core.inventory")
 local Tables = require("src.util.tables")
-local gameplay_constants = require("src.gameplay.constants")
 
 local Player = {}
 Player.__index = Player
@@ -12,10 +11,6 @@ local function normalize_currency(currency)
     return "金币"
   end
   return currency
-end
-
-local function is_unlimited_currency(currency)
-  return currency == gameplay_constants.unlimited_currency
 end
 
 function Player:_store_set(path, value)
@@ -80,9 +75,6 @@ end
 
 function Player:balance(currency)
   local key = normalize_currency(currency)
-  if is_unlimited_currency(key) then
-    return math.huge
-  end
   if key == "金币" then
     return self.cash or 0
   end
@@ -91,9 +83,6 @@ end
 
 function Player:deduct_balance(currency, amount)
   local key = normalize_currency(currency)
-  if is_unlimited_currency(key) then
-    return math.huge
-  end
   if key == "金币" then
     return self:deduct_cash(amount)
   end
