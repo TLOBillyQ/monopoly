@@ -9,7 +9,7 @@ end
 ---@desc 获取刷载具的ID
 ---@return integer
 function get_spawn_vehicle_id()
-    return 4002
+    return 4002 -- TODO：类似界面事件转发，在这里动态维护刷载具事件的具体载具
 end
 
 ---@export

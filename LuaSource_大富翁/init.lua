@@ -72,8 +72,8 @@ return function()
 
         local role = GameAPI.get_role(1)
 
-        --载具测试
-        -- LuaAPI.global_send_custom_event("玩家上载具", {})
+        --载具测试， 与载具eca配合使用，实现类似ForwardUIEvent的载具事件转发
+        LuaAPI.global_send_custom_event("玩家上载具", {}) 
     end)
 
 
