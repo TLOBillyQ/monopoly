@@ -3,6 +3,7 @@ local Layout = require("src.adapters.love2d.layout")
 local BoardRenderer = require("src.adapters.love2d.board_renderer")
 local PanelRenderer = require("src.adapters.love2d.panel_renderer")
 local Presenter = require("src.adapters.core.presenter")
+local AdapterLayer = require("src.adapters.core.adapter_layer")
 local logger = require("src.util.logger")
 
 local LoveRuntime = {}
@@ -62,7 +63,36 @@ function LoveRuntime.install(LoveLayer)
     end
     local mx, my = love.mouse.getPosition()
     self:update_hover_tile(mx, my)
-    self.game:tick(dt)
+
+    AdapterLayer.step_auto_runner(self, dt, {
+      modal_active = self.modal.active ~= nil,
+      modal_buttons = self.modal.active and self.modal.active.buttons,
+      game_finished = self.game and self.game.finished,
+    })
+
+    AdapterLayer.step_choice_timeout(self, dt, {
+      is_choice_active = function(layer)
+        return layer.pending_choice and layer.modal.active
+      end,
+      on_pending_choice = function(layer, pending)
+        if not layer.modal.active then
+          layer:open_choice_modal(pending)
+        end
+      end,
+      build_action = function(_, choice)
+        local first = choice.options and choice.options[1]
+        if first then
+          return { type = "choice_select", choice_id = choice.id, option_id = first.id or first }
+        end
+        if choice.allow_cancel ~= false then
+          return { type = "choice_cancel", choice_id = choice.id }
+        end
+        return nil
+      end,
+    })
+
+    self:step_move_anim(dt)
+
     self.modal:update()
   end
 

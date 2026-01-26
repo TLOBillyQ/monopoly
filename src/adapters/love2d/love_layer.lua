@@ -53,7 +53,6 @@ function LoveLayer:set_game(g)
       layer:open_choice_modal(pending)
     end,
   })
-  self:_register_game_tickables()
 end
 
 function LoveLayer:push_popup(payload)
@@ -142,52 +141,7 @@ function LoveLayer:new_game()
   })
 end
 
-function LoveLayer:_register_game_tickables()
-  if not self.game then
-    return
-  end
-  local tickables = {
-    {
-      update = function(_, dt)
-        AdapterLayer.step_auto_runner(self, dt, {
-          modal_active = self.modal.active ~= nil,
-          modal_buttons = self.modal.active and self.modal.active.buttons,
-          game_finished = self.game and self.game.finished,
-        })
-      end,
-    },
-    {
-      update = function(_, dt)
-        AdapterLayer.step_choice_timeout(self, dt, {
-          is_choice_active = function(layer)
-            return layer.pending_choice and layer.modal.active
-          end,
-          on_pending_choice = function(layer, pending)
-            if not layer.modal.active then
-              layer:open_choice_modal(pending)
-            end
-          end,
-          build_action = function(_, choice)
-            local first = choice.options and choice.options[1]
-            if first then
-              return { type = "choice_select", choice_id = choice.id, option_id = first.id or first }
-            end
-            if choice.allow_cancel ~= false then
-              return { type = "choice_cancel", choice_id = choice.id }
-            end
-            return nil
-          end,
-        })
-      end,
-    },
-    {
-      update = function(_, dt)
-        self:step_move_anim(dt)
-      end,
-    },
-  }
-  AdapterLayer.register_tickables(self, tickables)
-end
+
 
 function LoveLayer:step_turn()
   if self.modal.active then

@@ -16,8 +16,6 @@ function AdapterLayer.attach(layer, opts)
   layer.move_anim_seq = nil
   layer.move_anim_log_phase = nil
   layer.move_anim_log_seq = nil
-  layer._tickables = nil
-  layer._tickables_game = nil
   layer.item_name_by_id = {}
   layer.game_factory = opts.game_factory or layer.game_factory
   layer.auto_runner = opts.auto_runner or layer.auto_runner
@@ -60,19 +58,7 @@ function AdapterLayer.build_item_index(layer)
   end
 end
 
-function AdapterLayer.register_tickables(layer, tickables)
-  if not (layer and layer.game and layer.game.add_tickable) then
-    return
-  end
-  if layer._tickables_game == layer.game then
-    return
-  end
-  layer._tickables_game = layer.game
-  layer._tickables = tickables or {}
-  for _, tickable in ipairs(layer._tickables) do
-    layer.game:add_tickable(tickable)
-  end
-end
+
 
 function AdapterLayer.new_game(layer, opts)
   logger.clear()
