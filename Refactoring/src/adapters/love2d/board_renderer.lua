@@ -1,0 +1,211 @@
+local UIState = require("src.adapters.love2d.ui_state")
+
+local BoardRenderer = {}
+
+local function get_store_state(view)
+  local st = view.state
+  local board = st.board
+  return {
+    tiles = board.tiles,
+    overlays = view.board.overlays,
+    players = st.players,
+  }
+end
+
+local function build_occupants_from_store(store_players)
+  local occ = {}
+  for pid = 1, #store_players do
+    local p = store_players[pid]
+    if p and not p.eliminated and p.position then
+      occ[p.position] = occ[p.position] or {}
+      table.insert(occ[p.position], pid)
+    end
+  end
+  return occ
+end
+
+local function lighten(color, amount)
+  return { math.min(color[1] + amount, 1), math.min(color[2] + amount, 1), math.min(color[3] + amount, 1) }
+end
+
+local function draw_tile_coord(ui, tile, rect_x, rect_y)
+  if not (tile and tile.row and tile.col) then
+    return
+  end
+  local coord_text = tostring(tile.row) .. "," .. tostring(tile.col)
+  love.graphics.setFont(ui.fonts.tiny)
+  love.graphics.setColor(0, 0, 0, 0.65)
+  love.graphics.print(coord_text, rect_x + 6, rect_y + 4)
+  love.graphics.setColor(0, 0, 0, 0.9)
+  love.graphics.print(coord_text, rect_x + 5, rect_y + 3)
+end
+
+local function draw_overlays(ui, overlays, rect_x, rect_y, rect_w, rect_h, idx, tile)
+  if overlays.roadblocks[idx] then
+    love.graphics.setFont(ui.fonts.tiny)
+    love.graphics.setColor(ui.palette.overlay.roadblock.fg)
+    love.graphics.printf("路障", rect_x, rect_y + rect_h * 0.08, rect_w, "center")
+  elseif overlays.mines[idx] then
+    love.graphics.setFont(ui.fonts.tiny)
+    love.graphics.setColor(ui.palette.overlay.mine.fg)
+    love.graphics.printf("地雷", rect_x, rect_y + rect_h * 0.72, rect_w, "center")
+  end
+  draw_tile_coord(ui, tile, rect_x, rect_y)
+end
+
+local function draw_tile(ui, idx, pos, half_cell, pad, last_visited, tile, tile_state)
+  if not tile then
+    return
+  end
+  local owner_id = nil
+  local level = 0
+  if tile.type == "land" then
+    owner_id = tile_state.owner_id
+    level = tile_state.level
+  end
+  local color = UIState.tile_color(ui, tile.type)
+  if tile.type == "land" and owner_id then
+    color = ui.palette.player[owner_id] or { 0.9, 0.9, 0.9 }
+  end
+  if last_visited then
+    color = lighten(color, 0.2)
+  end
+
+  local rect_x = pos.x - half_cell + pad
+  local rect_y = pos.y - half_cell + pad
+  local rect_w = ui.board.cell_size - pad * 2
+  local rect_h = ui.board.cell_size - pad * 2
+  if ui.hover_tile == idx or ui.selected_tile == idx then
+    rect_x = rect_x - 2
+    rect_y = rect_y - 2
+    rect_w = rect_w + 4
+    rect_h = rect_h + 4
+  end
+
+  love.graphics.setColor(color)
+  love.graphics.rectangle("fill", rect_x, rect_y, rect_w, rect_h, 8, 8)
+  love.graphics.setColor(0.12, 0.12, 0.12, 0.65)
+  love.graphics.rectangle("line", rect_x, rect_y, rect_w, rect_h, 8, 8)
+
+  draw_tile_coord(ui, tile, rect_x, rect_y)
+
+  love.graphics.setFont(ui.fonts.small)
+  local name_y = rect_y + rect_h * 0.42
+  love.graphics.setColor(0, 0, 0, 0.7)
+  love.graphics.printf(tile.name, rect_x, name_y + 1, rect_w, "center")
+  love.graphics.setColor(0, 0, 0, 0.95)
+  love.graphics.printf(tile.name, rect_x, name_y, rect_w, "center")
+
+  if tile.type == "land" and owner_id then
+    if level > 0 then
+      love.graphics.setFont(ui.fonts.tiny)
+      love.graphics.setColor(0, 0, 0, 0.88)
+      love.graphics.printf("Lv" .. level, rect_x, rect_y + rect_h - 16, rect_w, "center")
+    end
+  end
+end
+
+local function draw_players(ui, occupants, cell_size)
+  for idx, pos in ipairs(ui.board.positions) do
+    local list = occupants[idx]
+    if list then
+      local count = #list
+      for i, pid in ipairs(list) do
+        local per_row = math.ceil(math.sqrt(count))
+        local spacing = cell_size * 0.28
+        local start = -(per_row - 1) * spacing * 0.5
+        local row = math.floor((i - 1) / per_row)
+        local col = (i - 1) % per_row
+        local ox = pos.x + start + col * spacing
+        local oy = pos.y + start + row * spacing
+        local p_color = ui.palette.player[pid] or { 0.9, 0.9, 0.9 }
+        love.graphics.setColor(p_color)
+        love.graphics.circle("fill", ox, oy, 6)
+        love.graphics.setColor(0.1, 0.1, 0.1, 0.8)
+        love.graphics.circle("line", ox, oy, 6)
+      end
+    end
+  end
+end
+
+local function draw_player_at(ui, pid, pos)
+  if not (pos and pos.x and pos.y) then
+    return
+  end
+  local p_color = ui.palette.player[pid] or { 0.9, 0.9, 0.9 }
+  love.graphics.setColor(p_color)
+  love.graphics.circle("fill", pos.x, pos.y, 6)
+  love.graphics.setColor(0.1, 0.1, 0.1, 0.8)
+  love.graphics.circle("line", pos.x, pos.y, 6)
+end
+
+local function remove_player_from_occupants(occupants, pid)
+  for _, list in pairs(occupants) do
+    for i = #list, 1, -1 do
+      if list[i] == pid then
+        table.remove(list, i)
+      end
+    end
+  end
+end
+
+local function collect_last_visited(view)
+  local last_visited = {}
+  if view and view.last_turn and view.last_turn.move_result and view.last_turn.move_result.visited then
+    for _, idx in ipairs(view.last_turn.move_result.visited) do
+      last_visited[idx] = true
+    end
+  end
+  return last_visited
+end
+
+local function tile_rect_for_overlay(ui, idx, pos, half_cell, pad)
+  local rect_x = pos.x - half_cell + pad
+  local rect_y = pos.y - half_cell + pad
+  local rect_w = ui.board.cell_size - pad * 2
+  local rect_h = ui.board.cell_size - pad * 2
+  if ui.hover_tile == idx or ui.selected_tile == idx then
+    rect_x = rect_x - 2
+    rect_y = rect_y - 2
+    rect_w = rect_w + 4
+    rect_h = rect_h + 4
+  end
+  return rect_x, rect_y, rect_w, rect_h
+end
+
+function BoardRenderer.draw(ui, view)
+  local st = get_store_state(view)
+
+  local cell_size = ui.board.cell_size
+  local half_cell = cell_size * 0.5
+  local pad = math.min(cell_size * 0.05, 3)
+  local last_visited = collect_last_visited(view)
+
+  for idx, pos in ipairs(ui.board.positions) do
+    local tile = view.board.tiles[idx]
+    local tile_state = st.tiles[tile.id]
+    draw_tile(ui, idx, pos, half_cell, pad, last_visited[idx], tile, tile_state)
+  end
+
+  local occupants = build_occupants_from_store(st.players)
+  local animated = view.player_positions
+  if animated then
+    for pid in pairs(animated) do
+      remove_player_from_occupants(occupants, pid)
+    end
+  end
+  draw_players(ui, occupants, cell_size)
+  if animated then
+    for pid, pos in pairs(animated) do
+      draw_player_at(ui, pid, pos)
+    end
+  end
+
+  for idx, pos in ipairs(ui.board.positions) do
+    local rect_x, rect_y, rect_w, rect_h = tile_rect_for_overlay(ui, idx, pos, half_cell, pad)
+    local tile = view.board.tiles[idx]
+    draw_overlays(ui, st.overlays, rect_x, rect_y, rect_w, rect_h, idx, tile)
+  end
+end
+
+return BoardRenderer

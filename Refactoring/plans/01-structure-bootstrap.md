@@ -11,8 +11,12 @@
 ## Progress
 
 - [x] (2026-01-26 19:00) 创建本 ExecPlan，明确骨架目标与依赖。
-- [ ] (2026-01-26 19:00) 定义 `Refactoring/` 目录结构与复制清单。
-- [ ] (2026-01-26 19:00) 完成首次拷贝并确认基础入口文件可加载。
+- [x] (2026-01-26 11:42) 定义 `Refactoring/` 目录结构与复制清单。
+- [x] (2026-01-26 11:42) 完成首次拷贝并确认基础入口文件可加载。
+  - 已复制 LuaSource_大富翁/ 的工程骨架到 Refactoring/
+  - 已覆盖 src/ 目录到 Refactoring/src/
+  - 已复制 eggy_main.lua 入口文件
+  - 验证通过：main.lua, eggy_main.lua, init.lua, src/ 均已就位
 
 ## Surprises & Discoveries
 
@@ -26,7 +30,12 @@
 
 ## Outcomes & Retrospective
 
-尚未执行，暂无产出与回顾。
+**2026-01-26 完成基础骨架构建：**
+- 成功建立 Refactoring/ 独立目录结构
+- 完成 Eggy 工程骨架、src/ 逻辑代码、入口文件的完整复制
+- 目录结构清晰，包含 Data/, UIManager/, Utils/, src/, plans/ 等关键目录
+- 入口文件齐全：main.lua（Eggy 内部入口）、eggy_main.lua（外部引导入口）、init.lua（初始化）
+- 为后续子计划提供了坚实的基础骨架
 
 ## Context and Orientation
 
