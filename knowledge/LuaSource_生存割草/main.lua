@@ -4,7 +4,6 @@ local PrefabFactory = require("Utils.PrefabFactory")
 local MonsterManager = require("MonsterManager")
 local HeroManager = require("HeroManager")
 local ItemData = require("Data.ItemData")
-local Stage0Demo = require("Stage0Demo")
 
 -- 创建全局表G
 G = {}
@@ -70,6 +69,4 @@ LuaAPI.global_register_trigger_event({ EVENT.GAME_INIT }, function()
 	-- 开始生成怪物
 	G.monsterManager:startSpawn()
 
-	-- 阶段0：能力确认示例（日志/UI事件/存档/音效）
-	Stage0Demo.install()
 end)
