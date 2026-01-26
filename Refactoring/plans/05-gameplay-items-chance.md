@@ -11,9 +11,20 @@
 ## Progress
 
 - [x] (2026-01-26 19:20) 创建本 ExecPlan，明确玩法接入范围。
-- [ ] (2026-01-26 19:20) 同步 `src/gameplay` 到 `Refactoring/src/gameplay` 并完成接线。
-- [ ] (2026-01-26 19:20) 对照设计表确认道具/机会卡数量与效果覆盖。
-- [ ] (2026-01-26 19:20) 打通道具槽位、黑市购买与 UI 提示。
+- [x] (2026-01-26 11:47) 同步 `src/gameplay` 到 `Refactoring/src/gameplay` 并完成接线。
+  - 验证通过：src/gameplay 与 Refactoring/src/gameplay 完全一致
+  - gameplay 模块完整：agent、chance、choice_service、composition_root 等
+  - 所有选择处理器就绪：item_choice、land_choice、market_choice、optional_effect
+- [x] (2026-01-26 11:47) 对照设计表确认道具/机会卡数量与效果覆盖。
+  - 道具系统：19 种道具（ID 2001-2019），配置完整
+  - 机会卡系统：37 张机会卡（ID 3001-3037），配置完整
+  - 道具类型覆盖：免费卡、遥控骰子、路障、地雷、偷窃、怪兽、强征、免税、均富、流放、导弹、查税、请神、送神、财神、穷神、天使等
+  - 机会卡效果覆盖：金币增减、载具赠送、强制移动、建筑破坏、道具获得/丢失、地块没收等
+- [x] (2026-01-26 11:47) 打通道具槽位、黑市购买与 UI 提示。
+  - 道具管理：item_inventory.lua 处理道具槽位和满槽逻辑
+  - 黑市购买：market_service.lua 处理购买流程
+  - 商城配置：market.lua 包含黑市商品配置
+  - UI 提示：通过 choice_service 和 UI 管理器实现交互
 
 ## Surprises & Discoveries
 
@@ -27,7 +38,20 @@
 
 ## Outcomes & Retrospective
 
-尚未执行，暂无产出与回顾。
+**2026-01-26 完成玩法与道具/机会系统接入：**
+- 玩法逻辑完整同步到 Refactoring/src/gameplay/
+- 配置数据验证完成：
+  - 19 种道具（2001-2019）：涵盖免费、遥控、路障、地雷、偷窃、怪兽、强征等核心玩法
+  - 37 张机会卡（3001-3037）：涵盖金币奖惩、载具赠送、强制移动、建筑破坏等多种效果
+- 核心系统就绪：
+  - 回合管理：turn_manager、turn_roll、turn_move、turn_land、turn_post 等
+  - 道具系统：item_inventory、item_executor、item_phase 等
+  - 机会卡系统：chance.lua 处理抽卡和效果执行
+  - 选择服务：choice_service 统一处理玩家选择
+  - 效果管道：effect_pipeline 处理各类效果
+- 接口清晰：gameplay 通过 choice_handlers 和 IntentDispatcher 与 UI 解耦
+- AI 行为：agent.lua 提供自动决策支持
+- 为后续 ECA 桥接、表现层补齐、AI 完整性验证提供了玩法基础
 
 ## Context and Orientation
 
