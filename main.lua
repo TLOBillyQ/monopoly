@@ -1,5 +1,4 @@
--- 蛋仔大富翁 - LÖVE2D 入口
--- 结构：Game（规则层）+ LoveLayer（UI 适配层）
+-- 蛋仔大富翁 - headless 入口（本地模拟/自测）
 
 require('src.bootstrap')()
 require("src.entry").run()

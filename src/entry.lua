@@ -26,12 +26,10 @@ local function resolve_platform(opts)
   if not platform then
     if arg_all_ai then
       platform = "headless"
-    elseif type(love) == "table" then
-      platform = "love2d"
     elseif rawget(_G, "LuaAPI") and rawget(_G, "EVENT") then
       platform = "eggy"
     else
-      platform = "love2d"
+      platform = "headless"
     end
   end
   return platform, arg_all_ai
@@ -104,20 +102,9 @@ function Entry.run(opts)
     return nil
   end
 
-  if platform == "love2d" then
-    local LoveLayer = require("src.adapters.love2d.love_layer")
-    LoveLayer.new({ game_factory = game_factory }):attach()
-    return nil
-  end
-
   if platform == "eggy" then
     local EggyRuntime = require("src.adapters.eggy.eggy_runtime")
     return EggyRuntime.install()
-  end
-
-  if platform == "oasis" then
-    local OasisRuntime = require("src.adapters.oasis.oasis_runtime")
-    return OasisRuntime
   end
 
   error("Unknown platform: " .. tostring(platform))

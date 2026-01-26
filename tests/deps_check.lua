@@ -64,7 +64,7 @@ local function extract_requires(src)
   return reqs
 end
 
--- Convert module name (e.g. "src.adapters.love2d.love_layer") to file path (e.g. "src/adapters/love2d/love_layer.lua")
+-- Convert module name (e.g. "src.adapters.eggy.eggy_runtime") to file path (e.g. "src/adapters/eggy/eggy_runtime.lua")
 local function mod_to_path(mod)
   return mod:gsub("%.", "/") .. ".lua"
 end

@@ -26,9 +26,5 @@ echo Exporting xlsx configs...
 %PY_CMD% "%ROOT%scripts\export_xlsx.py"
 if errorlevel 1 exit /b 1
 
-echo Packaging Game.exe...
-powershell -ExecutionPolicy Bypass -File "%ROOT%scripts\package_windows.ps1" -KeepGameExe
-if errorlevel 1 exit /b 1
-
 echo Done.
 exit /b 0
