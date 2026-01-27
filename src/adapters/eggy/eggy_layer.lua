@@ -32,6 +32,23 @@ local function log_once(self, level, key, ...)
   end
 end
 
+local function show_tips(message, duration)
+  local text = message and tostring(message) or ""
+  if text == "" then
+    return false
+  end
+  if GlobalAPI and GlobalAPI.show_tips then
+    GlobalAPI.show_tips(text, duration)
+    return true
+  end
+  local role = Role
+  if role and role.show_tips then
+    role.show_tips(text, duration)
+    return true
+  end
+  return false
+end
+
 local vehicles_by_id = {}
 for _, cfg in ipairs(vehicles_cfg) do
   vehicles_by_id[cfg.id] = cfg
@@ -75,6 +92,12 @@ function EggyLayer.new(opts)
     auto_runner = AutoRunner.new({ interval = ui.auto_interval }),
     on_need_choice = function(layer, choice)
       layer:_open_choice_modal(choice)
+    end,
+  })
+  logger.set_adapter({
+    level = "event",
+    on_log = function(entry)
+      show_tips(entry.text, 2)
     end,
   })
 

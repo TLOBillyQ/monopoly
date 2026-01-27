@@ -2,6 +2,7 @@ local logger = {
   entries = {},
   max_entries = 200,
   file_path = "game.log",
+  adapter = nil,
 }
 
 local function stringify(...)
@@ -28,15 +29,43 @@ end
 local function push(level, ...)
   local text = stringify(...)
   local timestamp = os.time()
-  table.insert(logger.entries, {
+  local entry = {
     level = level,
     text = text,
     timestamp = timestamp,
-  })
+  }
+  table.insert(logger.entries, entry)
   if #logger.entries > logger.max_entries then
     table.remove(logger.entries, 1)
   end
   append_to_file(level, text, timestamp)
+  local adapter = logger.adapter
+  if adapter and adapter.on_log then
+    local allow = adapter.level
+    local should_call = false
+    if allow == nil then
+      should_call = true
+    elseif type(allow) == "table" then
+      for _, value in ipairs(allow) do
+        if value == entry.level then
+          should_call = true
+          break
+        end
+      end
+    else
+      should_call = allow == entry.level
+    end
+    if should_call then
+      local ok, err = pcall(adapter.on_log, entry)
+      if not ok then
+        io.stderr:write("[logger] adapter error: " .. tostring(err) .. "\n")
+      end
+    end
+  end
+end
+
+function logger.set_adapter(adapter)
+  logger.adapter = adapter
 end
 
 function logger.info(...)

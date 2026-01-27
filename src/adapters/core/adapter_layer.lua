@@ -16,8 +16,6 @@ function AdapterLayer.attach(layer, opts)
   layer.ui_modal_ref = nil
   layer.wait_move_anim = true
   layer.move_anim_seq = nil
-  layer.move_anim_log_phase = nil
-  layer.move_anim_log_seq = nil
   layer.item_name_by_id = {}
   layer.game_factory = opts.game_factory or layer.game_factory
   layer.auto_runner = opts.auto_runner or layer.auto_runner
@@ -198,12 +196,6 @@ function AdapterLayer.step_move_anim(layer)
 
   local anim = layer.game.store:get({ "turn", "move_anim" })
   local phase = layer.game.store:get({ "turn", "phase" })
-  local seq = anim and anim.seq or nil
-  if phase ~= layer.move_anim_log_phase or seq ~= layer.move_anim_log_seq then
-    logger.info("move_anim 观察 phase=", tostring(phase), " seq=", tostring(seq))
-    layer.move_anim_log_phase = phase
-    layer.move_anim_log_seq = seq
-  end
   if not anim or not anim.seq then
     layer.move_anim_seq = nil
     return
