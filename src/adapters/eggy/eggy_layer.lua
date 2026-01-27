@@ -168,19 +168,6 @@ local function set_image_texture(node, image_key, reset_size)
   end
 end
 
-local function set_ui_image(ui, name, image_key, reset_size)
-  if not (ui and name) then
-    return
-  end
-  local node = ui.get_node and ui:get_node(name) or nil
-  if not node then
-    node = ui.query_node and ui:query_node(name) or nil
-  end
-  if node then
-    set_image_texture(node, image_key, reset_size)
-  end
-end
-
 local function query_node(name)
   if not name then
     return nil
@@ -214,6 +201,16 @@ local function set_touch_enabled(ui, name, enabled)
   local node = query_node(name)
   if node and node.disabled ~= nil then
     node.disabled = not enabled
+  end
+end
+
+local function set_ui_image(ui, name, image_key, reset_size)
+  if not (ui and name) then
+    return
+  end
+  local node = query_node(name)
+  if node then
+    set_image_texture(node, image_key, reset_size)
   end
 end
 

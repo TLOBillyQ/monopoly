@@ -130,11 +130,8 @@ local function register_ui_manager_events(layer)
       return
     end
     local option_id = layer.pending_choice_selected_option_id
-      or resolve_option_id(choice, { index = 1 }, layer)
     if option_id then
       layer:dispatch_action({ type = "choice_select", choice_id = choice.id, option_id = option_id })
-    elseif choice.allow_cancel ~= false then
-      layer:dispatch_action({ type = "choice_cancel", choice_id = choice.id })
     end
   end)
 
