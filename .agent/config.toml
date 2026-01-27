@@ -1,56 +1,31 @@
+odel = "gpt-5.2"
+model_reasoning_effort = "high"
 tool_output_token_limit = 25000
 # Leave room for native compaction near the 272–273k context window.
 # Formula: 273000 - (tool_output_token_limit + 15000)
 # With tool_output_token_limit=25000 ⇒ 273000 - (25000 + 15000) = 233000
 model_auto_compact_token_limit = 233000
 
-# Codex CLI / VS Code integration configuration (TOML)
-# Notes:
-# - Keys under [features] are feature toggles. If you are unsure whether a key is supported in your installed Codex version,
-#   leave it as-is; unsupported keys are usually ignored, but behavior varies by build.
-# - Removing a key generally reverts to the tool's default.
-# - "trusted" projects can run tools more freely; keep this list tight.
-
-# Model selection
-model = "gpt-5.2-codex"
-# Reasoning effort: higher can improve quality but typically increases latency/cost.
-model_reasoning_effort = "high"
 [features]
-# Allow executing shell commands. Disable if you want a stricter “analysis-only” mode.
+undo = true
 shell_tool = true
-# Allow the agent to request web search. If you do not want any network lookups, set to false.
 web_search_request = true
-# Prefer cached search results when available. true reduces repeated calls but may be slightly stale.
-web_search_cached = false
-# Use a unified execution path for tools/commands (implementation detail; usually keep enabled).
+web_search_cached = true
 unified_exec = true
-# Snapshot shell state for better reproducibility/debugging. May capture more environment context.
 shell_snapshot = true
-# Whether to read child AGENTS.md files in subfolders (if your workflow uses them). Enable if you rely on per-module guidance.
 child_agents_md = true
-# Allow freeform patch application. Keep enabled if you want Codex to apply non-trivial diffs.
 apply_patch_freeform = true
-# Enforce an execution policy / guardrails for running tools.
 exec_policy = true
-# Allow remote compaction of conversation/context to save tokens. If you need strict local-only handling, disable.
 remote_compaction = true
-# Whether to allow routing to remote models/providers (if supported). Keep false if you want predictable local/provider behavior.
 remote_models = false
-# Force PowerShell UTF-8 behavior (mainly relevant on Windows). No harm on macOS, but can be removed if unused.
 powershell_utf8 = true
-# Compress requests sent to the model/service (if supported). true can reduce bandwidth, but may complicate debugging.
 enable_request_compression = false
-# Collaboration features (if supported). Disable if you do not use multi-user workflows.
 collab = true
-# Enable instruction steering controls (if supported). Typically keep enabled.
 steer = true
 collaboration_modes = true
 
 [notice]
 hide_full_access_warning = true
 
-[projects."/Users/billyq/Dev/Github/Lua/monopoly"]
-trust_level = "trusted"
-
-[projects."/Users/billyq/Dev/AI"]
-trust_level = "trusted"
+[notice.model_migrations]
+"gpt-5.2" = "gpt-5.2-codex"

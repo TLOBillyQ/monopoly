@@ -12,12 +12,12 @@ Q_RIGHT = Q_ZERO
 Q_UP = math.Quaternion(0, -90, 0)
 Q_DOWN = math.Quaternion(0, 90, 0)
 
-DIR_LEFT = 1
-DIR_RIGHT = 2
-DIR_UP = 3
-DIR_DOWN = 4
+WALK_SPEED = 7.0
+VEHICLE_SPEED = 20.0
+VEHICLE_ACCEL = 20.0
 
-FORWAR_UI_EVENT = "界面事件转发"
-
-MOVE_SPEED = 7.0
-MOVE_THRESHOLD = 0.5
+FORWARD_EVENT_UI = "ui_forward"
+FORWARD_EVENT_ENTER_VEHICLE = "enter_vehicle_forward"
+FORWARD_EVENT_EXIT_VEHICLE = "exit_vehicle_forward"
+FORWARD_EVENT_MOVE_VEHICLE = "move_vehicle_forward"
+FORWARD_EVENT_STOP_VEHICLE = "stop_vehicle_forward"

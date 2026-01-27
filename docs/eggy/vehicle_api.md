@@ -12,6 +12,26 @@
 
 ---
 
+## 组件获取（重点）
+
+Eggy 的组件不会通过单独的 `get_component` 返回实例，常见做法是：
+先拿到 `Unit`，再通过 `LuaAPI.has_component` 判断组件是否存在，若存在，组件方法会直接挂在 `Unit` 上调用。
+
+```lua
+local role = GameAPI.get_role(role_id)
+local unit = role and role.get_ctrl_unit()
+if unit and LuaAPI.has_component(unit, "VehicleComp") then
+    unit.start_move_by_direction(math.Vector3(1, 0, 0), 1.0)
+    unit.stop_move()
+end
+```
+
+补充说明：
+1. `LuaAPI.get_component_list(unit)` 可用于查看当前挂载的组件名列表。
+2. 其它 `*Comp` 组件调用方式相同，都是“判断存在 -> 直接在对象上调用”。
+
+---
+
 ## API 说明
 
 ### VehicleComp.start_move_by_direction(direction, duration)

@@ -8,6 +8,7 @@ local PanelView = require("src.adapters.core.ui_panel")
 local TileView = require("src.adapters.core.ui_tile")
 local LogView = require("src.adapters.core.ui_log")
 local MarketUI = require("src.adapters.eggy.market_ui")
+local BuildingEffects = require("src.adapters.eggy.building_effects")
 local Agent = require("src.gameplay.agent")
 local items_cfg = require("src.config.items")
 local market_cfg = require("src.config.market")
@@ -904,6 +905,37 @@ function EggyLayer:refresh_board(view)
       end
     end
   end
+end
+
+function EggyLayer:on_tile_upgraded(tile_id, level)
+  if not (tile_id and level) then
+    return
+  end
+  local buildings = G and G.buildings
+  local refs = G and G.refs
+  if not (buildings and refs) then
+    return
+  end
+  local board = self.game and self.game.board
+  if not (board and board.index_of_tile_id) then
+    return
+  end
+  local idx = board:index_of_tile_id(tile_id)
+  if not (idx and buildings[idx]) then
+    return
+  end
+  local lv = tonumber(level)
+  if not (lv and lv >= 1 and lv <= 3) then
+    return
+  end
+  local root_quaternion = Q_ZERO
+  if not root_quaternion and math and math.Quaternion then
+    root_quaternion = math.Quaternion(0, 0, 0)
+  end
+  if not root_quaternion then
+    return
+  end
+  BuildingEffects.spawn_upgrade_building_units(root_quaternion, idx, lv)
 end
 
 function EggyLayer:step_turn()

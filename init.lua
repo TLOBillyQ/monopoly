@@ -1,22 +1,35 @@
 require 'macro'
 require "UIManager.Utils"
+require "eca"
 
 local move = require "move"
+local Prefab = require("Data.Prefab")
 
 G = {
     tiles = {},
     buildings = {},
     refs = require "refs",
-    lvs = {}
+    lvs = {},
+    role = { GameAPI.get_role(1),
+        GameAPI.get_role(2),
+        GameAPI.get_role(3),
+        GameAPI.get_role(4) },
+    unit = {
+        GameAPI.get_role(1).get_ctrl_unit(),
+        GameAPI.get_role(2).get_ctrl_unit(),
+        GameAPI.get_role(3).get_ctrl_unit(),
+        GameAPI.get_role(4).get_ctrl_unit(),
+    }
 }
-
 UIManager.Builder(require "ui_data")
 
 
 return function()
-    UIManager.ForwardUIEvent("显示加载屏")
+    --UIManager.ForwardUIEvent("显示加载屏")
 
     local refs = G.refs
+    local role = GameAPI.get_role(1)
+    local unit = role.get_ctrl_unit()
 
     -- 场景索引
     local tile_names = {}
@@ -38,9 +51,9 @@ return function()
     local pos1 = G.buildings[1].get_position()
     local pos2 = G.buildings[2].get_position()
     local pos3 = G.buildings[3].get_position()
-    GameAPI.create_unit_group(refs["lv1"], pos1 + offset1, q1)
-    GameAPI.create_unit_group(refs["lv2"], pos2 + offset2, q1)
-    GameAPI.create_unit_group(refs["lv3"], pos3 + offset3, q1)
+    GameAPI.create_unit_group(Prefab.group.lv1, pos1 + offset1, q1)
+    GameAPI.create_unit_group(Prefab.group.lv2, pos2 + offset2, q1)
+    GameAPI.create_unit_group(Prefab.group.lv3, pos3 + offset3, q1)
 
 
     -- 渲染测试
@@ -54,38 +67,36 @@ return function()
     end
 
 
-    for _, role in ipairs(GameAPI.get_all_valid_roles()) do
-        role.set_image_texture_by_key_with_auto_resize(refs["道具槽位1"], refs["3036"], false)
-        role.set_image_texture_by_key_with_auto_resize(refs["道具槽位2"], refs["2002"], false)
-        role.set_image_texture_by_key_with_auto_resize(refs["道具槽位3"], refs["3036"], false)
-        role.set_image_texture_by_key_with_auto_resize(refs["道具槽位4"], refs["空"], false)
-        role.set_image_texture_by_key_with_auto_resize(refs["道具槽位5"], refs["2002"], false)
+    for _, r in ipairs(GameAPI.get_all_valid_roles()) do
+        r.set_image_texture_by_key_with_auto_resize(refs["道具槽位1"], refs["3036"], false)
+        r.set_image_texture_by_key_with_auto_resize(refs["道具槽位2"], refs["2002"], false)
+        r.set_image_texture_by_key_with_auto_resize(refs["道具槽位3"], refs["3036"], false)
+        r.set_image_texture_by_key_with_auto_resize(refs["道具槽位4"], refs["空"], false)
+        r.set_image_texture_by_key_with_auto_resize(refs["道具槽位5"], refs["2002"], false)
 
-        local unit = role.get_ctrl_unit()
         -- unit.add_state(Enums.BuffState.BUFF_FORBID_CONTROL)
     end
 
 
-    LuaAPI.call_delay_time(3.0, function()
-        UIManager.ForwardUIEvent("隐藏加载屏")
-        UIManager.ForwardUIEvent("显示基础屏")
+    unit.set_position(G.tiles[35].get_position() + math.Vector3(0, 1.5, 0))
 
-        local role = GameAPI.get_role(1)
 
-        --载具测试， 与载具eca配合使用，实现类似ForwardUIEvent的载具事件转发
-        LuaAPI.global_send_custom_event("玩家上载具", {}) 
+    LuaAPI.call_delay_time(0.5, function()
+        UIManager.forward_eca_event("隐藏加载屏")
+        UIManager.forward_eca_event("显示基础屏")
+
+        --载具测试
+        -- VehicleManager.forward_eca_event_enter(1, 4001)
     end)
 
-
-    local handle = LuaAPI.global_register_trigger_event({ EVENT.REPEAT_TIMEOUT, 2 }, function()
-        move.one_step(DIR_LEFT, 1)
+    LuaAPI.call_delay_time(2.0, function()
+        local final_id = 4
+        move.one_step(1, V3_LEFT, 35, final_id)
+        print("Moving to tile:", final_id)
     end)
 
-    LuaAPI.call_delay_time(16.0, function()
-        LuaAPI.global_unregister_trigger_event(handle)
+    LuaAPI.call_delay_time(8.0, function()
+        local dist = unit.get_position() - G.tiles[35].get_position()
+        print("Final Dist:", dist:length())
     end)
-
-    -- LuaAPI.call_delay_time(2.0, function()
-    --     move.start_to_finish(1, 35, 2)
-    -- end)
 end

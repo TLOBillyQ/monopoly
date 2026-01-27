@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UINodes 合并工具</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script src="./script.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 UINodes 处理工具</h1>
+            <p>快速处理 Lua UINodes 文件并生成导出内容</p>
+        </div>
+        
+        <div class="main-content">
+            <!-- 文件输入区域 -->
+            <div class="section">
+                <h2>📁 导入文件</h2>
+                <div class="file-input-area" id="fileInputArea">
+                    <input type="file" class="file-input" id="fileInput" accept=".lua,.txt">
+                    <div class="upload-icon">📄</div>
+                    <div class="upload-text">点击选择或拖拽Lua文件到此处</div>
+                    <div class="upload-hint">支持 .lua 和 .txt 文件</div>
+                </div>
+            </div>
+
+            <!-- 手动输入区域 -->
+            <div class="section">
+                <h2>✏️ 或手动输入内容</h2>
+                <textarea class="textarea" id="inputText" placeholder="请粘贴UINodes.lua文件内容..."></textarea>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="button-group">
+                <button class="btn" id="processBtn">🔄 处理数据</button>
+                <button class="btn btn-secondary" id="clearBtn">🗑️ 清空</button>
+            </div>
+
+            <!-- 结果展示 -->
+            <div class="section">
+                <h2>📤 生成的 Lua 文件</h2>
+                <textarea class="textarea" id="outputText" style="min-height: 400px;" readonly></textarea>
+                <div class="button-group">
+                    <button class="btn" id="copyBtn">📋 复制到剪贴板</button>
+                    <button class="btn btn-secondary" id="downloadBtn">💾 下载文件</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

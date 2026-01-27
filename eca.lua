@@ -1,61 +1,65 @@
 ---@export
----@desc 获取进入载具的玩家
+---@desc 获取执行载具命令的玩家
 ---@return Role
-function get_enter_vehicle_player()
-    return GameAPI.get_role(1)
+function get_vehicle_player()
+    local role_id = VehicleManager.player_id or 1
+    return GameAPI.get_role(role_id)
 end
 
-local refs = require "refs"
-
-local vehicle_name_by_id = nil
-do
-    local ok, vehicles_cfg = pcall(require, "src.config.vehicles")
-    if ok and vehicles_cfg then
-        vehicle_name_by_id = {}
-        for _, cfg in ipairs(vehicles_cfg) do
-            vehicle_name_by_id[cfg.id] = cfg.name
-        end
-    end
+---@export
+---@desc 获取载具移动方向
+---@return Vector3
+function get_vehicle_move_direction()
+    return VehicleManager.move_direction or V3_LEFT
 end
 
-local function resolve_vehicle_spawn_id(vehicle_id)
-    if not vehicle_id then
-        return nil
-    end
-    local ref_id = refs[vehicle_id] or refs[tostring(vehicle_id)]
-    if ref_id then
-        return ref_id
-    end
-    if vehicle_name_by_id then
-        local name = vehicle_name_by_id[vehicle_id]
-        if name then
-            ref_id = refs[name]
-        end
-    end
-    return ref_id or vehicle_id
+---@export
+---@desc 获取载具移动时间
+---@return Fixed
+function get_vehicle_move_time()
+    return VehicleManager.move_time or 0
 end
 
 ---@export
 ---@desc 获取刷载具的ID
 ---@return integer
 function get_spawn_vehicle_id()
-    local vehicle_id = UIManager.EcaVehicleId or 4002
-    return resolve_vehicle_spawn_id(vehicle_id)
+    return VehicleManager.vehicle_id or 4001
 end
 
 ---@export
 ---@desc 被转发的界面事件
 ---@return string
 function get_forward_ui_event()
-    return UIManager.EcaEvent or ""
+    return UIManager.eca_event or ""
 end
 
-UIManager.ForwardVehicleEvent = function(vehicle_id)
-    UIManager.EcaVehicleId = vehicle_id
-    LuaAPI.global_send_custom_event("玩家上载具", {})
+UIManager.forward_eca_event = function(event)
+    UIManager.eca_event = event
+    LuaAPI.global_send_custom_event(FORWARD_EVENT_UI, {})
 end
 
-UIManager.ForwardUIEvent = function(event)
-    UIManager.EcaEvent = event
-    LuaAPI.global_send_custom_event(FORWAR_UI_EVENT, {})
+VehicleManager = {}
+
+VehicleManager.forward_eca_event_enter = function(role_id, vehicle_id)
+    VehicleManager.player_id = role_id
+    VehicleManager.vehicle_id = vehicle_id
+    LuaAPI.global_send_custom_event(FORWARD_EVENT_ENTER_VEHICLE, {})
+end
+VehicleManager.forward_eca_event_exit = function(role_id)
+    VehicleManager.player_id = role_id
+    LuaAPI.global_send_custom_event(FORWARD_EVENT_EXIT_VEHICLE, {})
+end
+
+VehicleManager.forward_eca_event_move = function(role_id, dir, time)
+    VehicleManager.player_id = role_id
+    VehicleManager.move_direction = dir
+    VehicleManager.move_time = time
+    LuaAPI.global_send_custom_event(FORWARD_EVENT_MOVE_VEHICLE, {})
+end
+
+-- 不太需要，当move到时间后，就相当于stop了
+VehicleManager.forward_eca_event_stop = function(role_id)
+    VehicleManager.player_id = role_id
+    LuaAPI.global_send_custom_event(FORWARD_EVENT_STOP_VEHICLE, {})
 end
