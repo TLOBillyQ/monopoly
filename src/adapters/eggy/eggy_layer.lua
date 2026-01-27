@@ -41,7 +41,7 @@ local function show_tips(message, duration)
     GlobalAPI.show_tips(text, duration)
     return true
   end
-  local role = Role or rawget(_G, "Role")
+  local role = Role
   if role and role.show_tips then
     role.show_tips(text, duration)
     return true
