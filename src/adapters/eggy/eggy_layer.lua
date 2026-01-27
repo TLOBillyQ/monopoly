@@ -95,10 +95,9 @@ function EggyLayer.new(opts)
     end,
   })
   logger.set_adapter({
+    level = "event",
     on_log = function(entry)
-      if entry and entry.level == "event" then
-        show_tips(entry.text, 2)
-      end
+      show_tips(entry.text, 2)
     end,
   })
 

@@ -41,7 +41,9 @@ local function push(level, ...)
   append_to_file(level, text, timestamp)
   local adapter = logger.adapter
   if adapter and adapter.on_log then
-    adapter.on_log(entry)
+    if not adapter.level or adapter.level == entry.level then
+      pcall(adapter.on_log, entry)
+    end
   end
 end
 
