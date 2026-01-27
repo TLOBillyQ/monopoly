@@ -44,6 +44,7 @@ enable_request_compression = false
 collab = true
 # Enable instruction steering controls (if supported). Typically keep enabled.
 steer = true
+collaboration_modes = true
 
 [notice]
 hide_full_access_warning = true

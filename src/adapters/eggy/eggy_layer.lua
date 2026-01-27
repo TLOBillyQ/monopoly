@@ -72,6 +72,112 @@ for _, entry in ipairs(market_cfg) do
   market_by_id[entry.product_id] = entry
 end
 
+local function resolve_market_entry(product_id)
+  local entry = market_by_id[product_id]
+  local cfg = nil
+  if entry and entry.kind == "vehicle" then
+    cfg = vehicles_by_id[product_id]
+  else
+    cfg = items_by_id[product_id]
+  end
+  return entry, cfg
+end
+
+local function resolve_market_name(opt, product_id, entry, cfg)
+  if entry and entry.name then
+    return entry.name
+  end
+  if cfg and cfg.name then
+    return cfg.name
+  end
+  if opt and opt.label then
+    return opt.label
+  end
+  return tostring(product_id)
+end
+
+local function resolve_market_currency(entry)
+  local currency = entry and entry.currency
+  if currency == nil or currency == "" then
+    return "金币"
+  end
+  return currency
+end
+
+local function resolve_market_price(entry)
+  return entry and entry.price or 0
+end
+
+local function resolve_market_level(cfg)
+  local level = cfg and cfg.tier or 1
+  if level < 1 then
+    return 1
+  end
+  if level >= 3 then
+    return 3
+  end
+  return 2
+end
+
+local function resolve_ref_key(key)
+  if key == nil then
+    return nil
+  end
+  if type(key) == "number" then
+    return key
+  end
+  if G and G.refs then
+    return G.refs[key]
+  end
+  return nil
+end
+
+local function resolve_market_icon_key(product_id, entry, cfg)
+  if not (G and G.refs) then
+    return nil
+  end
+  local key = tostring(product_id)
+  if G.refs[key] ~= nil then
+    return G.refs[key]
+  end
+  local name = (cfg and cfg.name) or (entry and entry.name)
+  if name and G.refs[name] ~= nil then
+    return G.refs[name]
+  end
+  return nil
+end
+
+local function set_image_texture(node, image_key, reset_size)
+  if not (node and image_key) then
+    return
+  end
+  if type(node) == "table" then
+    if node.image_texture ~= nil then
+      node.image_texture = image_key
+      if reset_size and node.reset_size then
+        node:reset_size()
+      end
+      return
+    end
+    if node.id then
+      node = node.id
+    end
+  end
+  if Role and Role.set_image_texture_by_key_with_auto_resize then
+    Role.set_image_texture_by_key_with_auto_resize(node, image_key, reset_size == true)
+  end
+end
+
+local function set_ui_image(ui, name, image_key, reset_size)
+  if not (ui and name) then
+    return
+  end
+  local node = ui:get_node(name)
+  if node then
+    set_image_texture(node, image_key, reset_size)
+  end
+end
+
 
 function EggyLayer.new(opts)
   opts = opts or {}
@@ -194,11 +300,146 @@ function EggyLayer:tick(dt)
   self:_log_status(self:build_view())
 end
 
+function EggyLayer:_refresh_market_selection(option_id)
+  if not self.ui then
+    return
+  end
+  local price_text = ""
+  local icon_key = resolve_ref_key(MarketUI.empty_ref_key)
+  if option_id then
+    local entry, cfg = resolve_market_entry(option_id)
+    local price = resolve_market_price(entry)
+    local currency = resolve_market_currency(entry)
+    price_text = "售价：" .. tostring(price) .. " " .. currency
+    icon_key = resolve_market_icon_key(option_id, entry, cfg) or icon_key
+  end
+  if MarketUI.price_label then
+    self.ui:set_label(MarketUI.price_label, price_text)
+  end
+  if MarketUI.selected_card and icon_key then
+    set_ui_image(self.ui, MarketUI.selected_card, icon_key, true)
+  end
+end
+
+function EggyLayer:select_market_option(option_id)
+  self.pending_choice_selected_option_id = option_id
+  self:_refresh_market_selection(option_id)
+end
+
+function EggyLayer:_open_market_panel(pending)
+  if not (pending and pending.options and self.ui) then
+    return false
+  end
+  self.ui:set_visible(MarketUI.container, true)
+  self.ui.market_active = true
+
+  local option_ids = {}
+  local buttons = MarketUI.item_buttons or {}
+  local labels = MarketUI.item_labels or {}
+  local frames = MarketUI.item_frames or {}
+  local max_slots = #buttons
+  for idx = 1, max_slots do
+    local opt = pending.options[idx]
+    local button = buttons[idx]
+    local label = labels[idx]
+    local frame = frames[idx]
+    if opt then
+      local opt_id = opt.id or opt
+      option_ids[idx] = opt_id
+      local entry, cfg = resolve_market_entry(opt_id)
+      local name = resolve_market_name(opt, opt_id, entry, cfg)
+      if label then
+        self.ui:set_label(label, name)
+        self.ui:set_visible(label, true)
+      end
+      if button then
+        self.ui:set_visible(button, true)
+        self.ui:set_touch_enabled(button, true)
+      end
+      if frame then
+        self.ui:set_visible(frame, true)
+        local level = resolve_market_level(cfg)
+        local rarity_key = resolve_ref_key((MarketUI.rarity_ref_keys or {})[level])
+        if rarity_key then
+          set_ui_image(self.ui, frame, rarity_key, false)
+        end
+      end
+    else
+      if button then
+        self.ui:set_visible(button, false)
+        self.ui:set_touch_enabled(button, false)
+      end
+      if label then
+        self.ui:set_visible(label, false)
+      end
+      if frame then
+        self.ui:set_visible(frame, false)
+      end
+    end
+  end
+
+  if MarketUI.confirm_button then
+    self.ui:set_visible(MarketUI.confirm_button, true)
+    self.ui:set_touch_enabled(MarketUI.confirm_button, true)
+  end
+  if MarketUI.cancel_button then
+    local show_cancel = pending.allow_cancel ~= false
+    self.ui:set_visible(MarketUI.cancel_button, show_cancel)
+    self.ui:set_touch_enabled(MarketUI.cancel_button, show_cancel)
+  end
+
+  self.market_choice_option_ids = option_ids
+  self:select_market_option(option_ids[1])
+  self.pending_choice_elapsed = 0
+  self.pending_choice_id = pending.id
+  return true
+end
+
+function EggyLayer:_close_market_panel()
+  if not (self.ui and self.ui.market_active) then
+    return
+  end
+  self.ui:set_visible(MarketUI.container, false)
+  self.ui.market_active = false
+  self.market_choice_option_ids = nil
+  self.pending_choice_selected_option_id = nil
+  if MarketUI.price_label then
+    self.ui:set_label(MarketUI.price_label, "")
+  end
+  local empty_key = resolve_ref_key(MarketUI.empty_ref_key)
+  if MarketUI.selected_card and empty_key then
+    set_ui_image(self.ui, MarketUI.selected_card, empty_key, true)
+  end
+end
+
 function EggyLayer:_open_choice_modal(pending)
   if not pending then
     return
   end
-  if self.pending_choice_id == pending.id and (self.ui.choice_active or self.ui.choose_option_active) then
+  if self.pending_choice_id == pending.id
+    and (self.ui.choice_active or self.ui.choose_option_active or self.ui.market_active) then
+    return
+  end
+
+  if pending.kind == "market_buy"
+    and MarketUI.is_panel_ready
+    and MarketUI.is_panel_ready() then
+    if self.ui.choice_active then
+      self.ui:set_visible(self.ui.choice.root, false)
+      self.ui.choice_active = false
+    end
+    if self.ui.choose_option_active then
+      local container = self.choose_option_container
+      if container then
+        if container.hide then
+          container:hide()
+        elseif container.set_visible then
+          container:set_visible(false)
+        end
+      end
+      self.ui.choose_option_active = false
+    end
+    self:_open_market_panel(pending)
     return
   end
 
@@ -206,8 +447,12 @@ function EggyLayer:_open_choice_modal(pending)
     and pending.options
     and #pending.options > 0
     and #pending.options <= 3
+    and type(MarketUI.choose_event) == "string" and MarketUI.choose_event ~= ""
     and MarketUI.is_ready
     and MarketUI.is_ready() then
+    if self.ui.market_active then
+      self:_close_market_panel()
+    end
     local ok, choose = pcall(require, "src.adapters.eggy.lib.eggy_choose_option.ChooseOption.__init")
     if not ok then
       ok, choose = pcall(require, "src.adapters.eggy.lib.eggy_choose_option.ChooseOption")
@@ -223,28 +468,11 @@ function EggyLayer:_open_choice_modal(pending)
       for idx, opt in ipairs(pending.options) do
         local opt_id = opt.id or opt
         option_ids[idx] = opt_id
-        local entry = market_by_id[opt_id]
-        local cfg = nil
-        if entry and entry.kind == "vehicle" then
-          cfg = vehicles_by_id[opt_id]
-        else
-          cfg = items_by_id[opt_id]
-        end
-        local name = (entry and entry.name)
-          or (cfg and cfg.name)
-          or (opt.label)
-          or tostring(opt_id)
-        local price = entry and entry.price or 0
-        local currency = entry and entry.currency or nil
-        if currency == nil or currency == "" then
-          currency = "金币"
-        end
-        local level = cfg and cfg.tier or 1
-        if level < 1 then
-          level = 1
-        elseif level > 3 then
-          level = 3
-        end
+        local entry, cfg = resolve_market_entry(opt_id)
+        local name = resolve_market_name(opt, opt_id, entry, cfg)
+        local price = resolve_market_price(entry)
+        local currency = resolve_market_currency(entry)
+        local level = resolve_market_level(cfg)
         local card = {
           title = name,
           description = "价格: " .. tostring(price) .. " " .. currency,
@@ -312,6 +540,9 @@ function EggyLayer:_open_choice_modal(pending)
     self.market_choice_option_ids = nil
     self.pending_choice_selected_option_id = nil
   end
+  if self.ui.market_active then
+    self:_close_market_panel()
+  end
 
   local view = ChoiceView.build_choice_view(pending, { game = self.game })
   if not view then
@@ -365,6 +596,9 @@ function EggyLayer:_close_choice_modal()
     end
     self.ui.choose_option_active = false
   end
+  if self.ui.market_active then
+    self:_close_market_panel()
+  end
   self.market_choice_option_ids = nil
   self.pending_choice_selected_option_id = nil
 end
@@ -412,6 +646,7 @@ function EggyLayer:refresh_panel(view)
   end
 
   self.ui:set_label("panel_tile_title", "格子详情")
+  self:refresh_item_slots(view)
   self:refresh_tile_detail(view)
 
   self.ui:set_button("btn_next", "下一回合")
@@ -426,6 +661,35 @@ function EggyLayer:refresh_panel(view)
   end
   self.ui:set_label("panel_log_title", "事件记录")
   self.ui:set_label("panel_log_body", table.concat(log_lines, "\n"))
+end
+
+function EggyLayer:refresh_item_slots(view)
+  local ui = self.ui
+  if not (ui and ui.item_slots) then
+    return
+  end
+
+  local slots = ui.item_slots
+  local item_ids = {}
+  ui.item_slot_item_ids = item_ids
+
+  local players = view and view.state and view.state.players or nil
+  local turn = view and view.state and view.state.turn or nil
+  local current = players and turn and players[turn.current_player_index] or nil
+  local items = current and current.inventory and current.inventory.items or {}
+
+  for i, slot_name in ipairs(slots) do
+    local item = items[i]
+    if item and item.id then
+      local name = (self.item_name_by_id and self.item_name_by_id[item.id]) or tostring(item.id)
+      ui:set_button(slot_name, name)
+      ui:set_touch_enabled(slot_name, true)
+      item_ids[i] = item.id
+    else
+      ui:set_button(slot_name, "空")
+      ui:set_touch_enabled(slot_name, false)
+    end
+  end
 end
 
 function EggyLayer:refresh_tile_detail(view)
@@ -654,6 +918,33 @@ function EggyLayer:dispatch_action(action)
     return
   end
   if action.type == "ui_button" then
+    local slot_index = action.id and string.match(action.id, "^item_slot_(%d+)$")
+    if slot_index then
+      slot_index = tonumber(slot_index)
+      local choice = self.pending_choice
+      if not (choice and choice.kind == "item_phase_choice") then
+        return
+      end
+      local item_ids = self.ui and self.ui.item_slot_item_ids or nil
+      local item_id = item_ids and item_ids[slot_index] or nil
+      if not item_id then
+        return
+      end
+      local options = choice.options or {}
+      local option_ok = false
+      for _, opt in ipairs(options) do
+        local opt_id = opt.id or opt
+        if opt_id == item_id then
+          option_ok = true
+          break
+        end
+      end
+      if not option_ok then
+        return
+      end
+      self:dispatch_action({ type = "choice_select", choice_id = choice.id, option_id = item_id })
+      return
+    end
     if action.id == "next" then
       self:step_turn()
     elseif action.id == "auto" then

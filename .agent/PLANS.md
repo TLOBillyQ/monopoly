@@ -1,150 +1,156 @@
-# Codex Execution Plans (ExecPlans):
+# Codex 可执行计划
  
-This document describes the requirements for an execution plan ("ExecPlan"), a design document that a coding agent can follow to deliver a working feature or system change. Treat the reader as a complete beginner to this repository: they have only the current working tree and the single ExecPlan file you provide. There is no memory of prior plans and no external context.
+本文定义“可执行计划”的要求。可执行计划是一种设计文档，编码代理可以据此交付一个可运行的功能或系统变更。请把读者当成**本仓库的完全新手**：他手上只有当前工作树，以及你提供的这一个可执行计划文件。他没有历史记忆，也没有外部上下文。
  
-## How to use ExecPlans and PLANS.md
+## 如何使用可执行计划与 PLANS.md
  
-When authoring an executable specification (ExecPlan), follow PLANS.md _to the letter_. If it is not in your context, refresh your memory by reading the entire PLANS.md file. Be thorough in reading (and re-reading) source material to produce an accurate specification. When creating a spec, start from the skeleton and flesh it out as you do your research.
+在**编写**可执行计划时，必须**逐条严格遵守**本 PLANS.md。如果它不在上下文里，先完整重读。为了写出准确规范的说明，请充分阅读（必要时反复阅读）源码与资料。写作时从骨架开始，边研究边补全。
  
-When implementing an executable specification (ExecPlan), do not prompt the user for "next steps"; simply proceed to the next milestone. Keep all sections up to date, add or split entries in the list at every stopping point to affirmatively state the progress made and next steps. Resolve ambiguities autonomously, and commit frequently.
+在**实施**可执行计划时，不要向用户询问“下一步做什么”；直接推进到下一个里程碑。每次停下都要更新全部章节；在进度列表中新增或拆分条目，明确记录已完成内容与下一步。遇到歧义要自主决策，并且频繁提交。
  
-When discussing an executable specification (ExecPlan), record decisions in a log in the spec for posterity; it should be unambiguously clear why any change to the specification was made. ExecPlans are living documents, and it should always be possible to restart from _only_ the ExecPlan and no other work.
+在**讨论/修改**可执行计划时，要把决策记录到文档的日志里，确保任何规格变更的原因都清晰可追溯。可执行计划是“活文档”，应当做到：仅凭这份可执行计划，就能随时从零重启工作。
  
-When researching a design with challenging requirements or significant unknowns, use milestones to implement proof of concepts, "toy implementations", etc., that allow validating whether the user's proposal is feasible. Read the source code of libraries by finding or acquiring them, research deeply, and include prototypes to guide a fuller implementation.
+在**调研高不确定性或复杂需求**时，应设置里程碑做概念验证、玩具实现等，用来验证方案可行性。需要深入研究依赖库时，要获取并阅读其源码，并在计划中加入原型验证以指导后续完整实现。
  
-## Requirements
+## 要求（硬性要求）
  
-NON-NEGOTIABLE REQUIREMENTS:
+以下要求不可妥协：
  
-* Every ExecPlan must be fully self-contained. Self-contained means that in its current form it contains all knowledge and instructions needed for a novice to succeed.
-* Every ExecPlan is a living document. Contributors are required to revise it as progress is made, as discoveries occur, and as design decisions are finalized. Each revision must remain fully self-contained.
-* Every ExecPlan must enable a complete novice to implement the feature end-to-end without prior knowledge of this repo.
-* Every ExecPlan must produce a demonstrably working behavior, not merely code changes to "meet a definition".
-* Every ExecPlan must define every term of art in plain language or do not use it.
+* 每个可执行计划必须**完整自足**。所谓完整自足，是指当前版本已经包含新手成功所需的全部知识与指令。
+* 每个可执行计划都是**活文档**。随着进展、发现与设计决策落地，必须持续修订；每次修订后仍需保持完整自足。
+* 每个可执行计划必须让完全新手在不了解仓库的情况下，也能端到端完成实现。
+* 每个可执行计划必须产生**可被证明“确实在工作”的行为**，而不只是“代码改了、看似满足定义”。
+* 每个可执行计划必须用通俗语言解释所有术语；不能解释就不要用。
  
-Purpose and intent come first. Begin by explaining, in a few sentences, why the work matters from a user's perspective: what someone can do after this change that they could not do before, and how to see it working. Then guide the reader through the exact steps to achieve that outcome, including what to edit, what to run, and what they should observe.
+先讲目的与意图。开头用几句话说明：这项工作为何重要（从用户视角），改完之后用户能做什么以前做不到的事，以及如何看到它确实生效。然后给出达成该结果的**精确步骤**：改哪些文件、跑哪些命令、应该观察到什么。
  
-The agent executing your plan can list files, read files, search, run the project, and run tests. It does not know any prior context and cannot infer what you meant from earlier milestones. Repeat any assumption you rely on. Do not point to external blogs or docs; if knowledge is required, embed it in the plan itself in your own words. If an ExecPlan builds upon a prior ExecPlan and that file is checked in, incorporate it by reference. If it is not, you must include all relevant context from that plan.
+执行计划的代理可以列文件、读文件、搜索、运行项目、运行测试。但它没有历史上下文，也不能从里程碑之间“猜出你的意思”。凡是依赖的假设都要重复写清楚。不要把关键知识外包给外部链接或博客；如果确实需要知识，请用你自己的话直接写进计划。如果当前计划基于之前的计划且那个文件已经入库，可以引用它；否则必须把相关上下文完整写进本计划。
  
-## Formatting
+## 格式（严格）
  
-Format and envelope are simple and strict. Each ExecPlan must be one single fenced code block labeled as `md` that begins and ends with triple backticks. Do not nest additional triple-backtick code fences inside; when you need to show commands, transcripts, diffs, or code, present them as indented blocks within that single fence. Use indentation for clarity rather than code fences inside an ExecPlan to avoid prematurely closing the ExecPlan's code fence. Use two newlines after every heading, use # and ## and so on, and correct syntax for ordered and unordered lists.
+格式规则简单但严格：
  
-When writing an ExecPlan to a Markdown (.md) file where the content of the file *is only* the single ExecPlan, you should omit the triple backticks.
+* 每个可执行计划必须是**一个**标注为 `md` 的围栏代码块，以三反引号开始，以三反引号结束。
+* 不要在其中嵌套新的三反引号代码块；需要展示命令、输出、diff 或代码时，请使用“缩进块”。
+* 使用缩进而不是再开代码块，可以避免意外提前闭合。
+* 每个标题后空两行；使用正确的 `#`、`##` 层级，以及正确的有序/无序列表语法。
  
-Write in plain prose. Prefer sentences over lists. Avoid checklists, tables, and long enumerations unless brevity would obscure meaning. Checklists are permitted only in the `Progress` section, where they are mandatory. Narrative sections must remain prose-first.
+如果你是把可执行计划写进一个 Markdown 文件（`.md`），且文件内容只有这一个可执行计划，那么应该**省略外层三反引号**。
  
-## Guidelines
+用朴素散文写作。优先用句子而不是列表。除非不列会更难懂，否则避免清单、表格和长枚举。清单只允许出现在“进度”章节，并且在那里是强制要求。叙述性章节必须以散文为主。
  
-Self-containment and plain language are paramount. If you introduce a phrase that is not ordinary English ("daemon", "middleware", "RPC gateway", "filter graph"), define it immediately and remind the reader how it manifests in this repository (for example, by naming the files or commands where it appears). Do not say "as defined previously" or "according to the architecture doc." Include the needed explanation here, even if you repeat yourself.
+## 写作指南
  
-Avoid common failure modes. Do not rely on undefined jargon. Do not describe "the letter of a feature" so narrowly that the resulting code compiles but does nothing meaningful. Do not outsource key decisions to the reader. When ambiguity exists, resolve it in the plan itself and explain why you chose that path. Err on the side of over-explaining user-visible effects and under-specifying incidental implementation details.
+完整自足与通俗语言是最高优先级。如果你引入了非常用术语（例如 “daemon / middleware / RPC gateway / filter graph”），要立刻解释，并说明它在本仓库里如何体现（例如对应哪些文件或命令）。不要写“如前所述”或“按架构文档”。哪怕重复，也要把必要解释写在这里。
  
-Anchor the plan with observable outcomes. State what the user can do after implementation, the commands to run, and the outputs they should see. Acceptance should be phrased as behavior a human can verify ("after starting the server, navigating to [http://localhost:8080/health](http://localhost:8080/health) returns HTTP 200 with body OK") rather than internal attributes ("added a HealthCheck struct"). If a change is internal, explain how its impact can still be demonstrated (for example, by running tests that fail before and pass after, and by showing a scenario that uses the new behavior).
+避免常见失败模式：不要依赖未定义术语；不要把描述写得过窄，导致代码虽然能编译但没有实际价值；不要把关键决策丢给读者。遇到歧义时，在计划中直接拍板并解释原因。宁可多解释用户可见效果，也不要把实现细节写得过度精细却失去目的导向。
  
-Specify repository context explicitly. Name files with full repository-relative paths, name functions and modules precisely, and describe where new files should be created. If touching multiple areas, include a short orientation paragraph that explains how those parts fit together so a novice can navigate confidently. When running commands, show the working directory and exact command line. When outcomes depend on environment, state the assumptions and provide alternatives when reasonable.
+用“可观察结果”锚定计划。明确写出实现后用户能做什么、要运行哪些命令、会看到哪些输出。验收标准应是人能验证的行为（例如“启动后访问某 URL 返回 200 和 OK”），而不是内部结构变化（例如“新增了某 struct”）。如果变更是内部的，也要说明如何证明它确实有效（例如：某测试变更前失败、变更后通过；或给出一个能触发新行为的小场景）。
  
-Be idempotent and safe. Write the steps so they can be run multiple times without causing damage or drift. If a step can fail halfway, include how to retry or adapt. If a migration or destructive operation is necessary, spell out backups or safe fallbacks. Prefer additive, testable changes that can be validated as you go.
+明确仓库上下文。使用仓库相对路径写清文件名；函数、模块名要精确；新增文件要说明创建位置。如果会改多个区域，加一段简短导读，解释这些部分在仓库中的关系，帮助新手定位。运行命令时要写出工作目录与完整命令行。结果依赖环境时，要写出假设，并在合理范围内给替代路径。
  
-Validation is not optional. Include instructions to run tests, to start the system if applicable, and to observe it doing something useful. Describe comprehensive testing for any new features or capabilities. Include expected outputs and error messages so a novice can tell success from failure. Where possible, show how to prove that the change is effective beyond compilation (for example, through a small end-to-end scenario, a CLI invocation, or an HTTP request/response transcript). State the exact test commands appropriate to the project’s toolchain and how to interpret their results.
+保证可重复与安全。步骤应可重复执行而不造成破坏或漂移。如果步骤可能中途失败，要写重试或调整方法。如果涉及迁移或破坏性操作，要写备份与回退方案。优先选择可验证的增量式改动。
  
-Capture evidence. When your steps produce terminal output, short diffs, or logs, include them inside the single fenced block as indented examples. Keep them concise and focused on what proves success. If you need to include a patch, prefer file-scoped diffs or small excerpts that a reader can recreate by following your instructions rather than pasting large blobs.
+验证是必选项。必须包含测试指令；如适用，包含启动系统与观察行为的指令。对新功能要写充分测试方式。写出预期输出与错误提示，帮助新手判断成功与失败。尽可能给出“超越编译通过”的证明方法（例如端到端场景、CLI 调用、HTTP 请求/响应片段）。写明项目工具链下的准确测试命令，以及如何解读结果。
  
-## Milestones
+保留证据。当步骤会产生终端输出、简短 diff 或日志时，把它们作为缩进示例放进同一个围栏块中。证据要短小，只保留能证明成功的关键信息。如果需要展示补丁，优先给文件级 diff 或小片段，让读者可以按步骤复现，而不是粘贴大段内容。
  
-Milestones are narrative, not bureaucracy. If you break the work into milestones, introduce each with a brief paragraph that describes the scope, what will exist at the end of the milestone that did not exist before, the commands to run, and the acceptance you expect to observe. Keep it readable as a story: goal, work, result, proof. Progress and milestones are distinct: milestones tell the story, progress tracks granular work. Both must exist. Never abbreviate a milestone merely for the sake of brevity, do not leave out details that could be crucial to a future implementation.
+## 里程碑
  
-Each milestone must be independently verifiable and incrementally implement the overall goal of the execution plan.
+里程碑是叙事工具，不是流程负担。若要拆里程碑，每个里程碑开头用一小段话说明：范围是什么、完成后新增了什么（之前没有的）、要跑什么命令、预期看到什么验收结果。把它写成一个故事：目标 -> 工作 -> 结果 -> 证明。“进度”与里程碑是两回事：里程碑讲故事，进度跟踪颗粒度工作。两者都必须存在。不要为了简洁而把里程碑写得过短，避免遗漏会影响后续实施的关键细节。
  
-## Living plans and design decisions
+每个里程碑都必须能独立验证，并且是对总体目标的增量推进。
  
-* ExecPlans are living documents. As you make key design decisions, update the plan to record both the decision and the thinking behind it. Record all decisions in the `Decision Log` section.
-* ExecPlans must contain and maintain a `Progress` section, a `Surprises & Discoveries` section, a `Decision Log`, and an `Outcomes & Retrospective` section. These are not optional.
-* When you discover optimizer behavior, performance tradeoffs, unexpected bugs, or inverse/unapply semantics that shaped your approach, capture those observations in the `Surprises & Discoveries` section with short evidence snippets (test output is ideal).
-* If you change course mid-implementation, document why in the `Decision Log` and reflect the implications in `Progress`. Plans are guides for the next contributor as much as checklists for you.
-* At completion of a major task or the full plan, write an `Outcomes & Retrospective` entry summarizing what was achieved, what remains, and lessons learned.
+## 活文档与设计决策
  
-# Prototyping milestones and parallel implementations
+* 可执行计划是活文档。每当做出关键设计决策，都要更新计划，记录“决策内容 + 决策理由”。所有决策写入“决策日志”。
+* 可执行计划必须包含并持续维护以下四个章节：“进度”、“意外与发现”、“决策日志”、“结果与复盘”。这四个章节不可缺省。
+* 当你发现了优化器行为、性能权衡、意外 bug、或反向/撤销语义等影响方案选择的事实时，要记录在“意外与发现”，并附简短证据片段（测试输出最佳）。
+* 如果中途改变路线，要在“决策日志”记录原因，并在“进度”体现影响。计划既是你的清单，也是下一位贡献者的导航。
+* 在完成重大任务或整份计划时，要写“结果与复盘”，总结完成了什么、还剩什么、学到了什么，并对照最初目的。
  
-It is acceptable—-and often encouraged—-to include explicit prototyping milestones when they de-risk a larger change. Examples: adding a low-level operator to a dependency to validate feasibility, or exploring two composition orders while measuring optimizer effects. Keep prototypes additive and testable. Clearly label the scope as “prototyping”; describe how to run and observe results; and state the criteria for promoting or discarding the prototype.
+# 原型里程碑与并行实现
  
-Prefer additive code changes followed by subtractions that keep tests passing. Parallel implementations (e.g., keeping an adapter alongside an older path during migration) are fine when they reduce risk or enable tests to continue passing during a large migration. Describe how to validate both paths and how to retire one safely with tests. When working with multiple new libraries or feature areas, consider creating spikes that evaluate the feasibility of these features _independently_ of one another, proving that the external library performs as expected and implements the features we need in isolation.
+当原型能显著降风险时，可以（且通常应当）加入明确的“原型里程碑”。例如：给依赖库增加一个底层操作验证可行性；或者探索两种组合顺序并测量优化器效果。原型应保持增量与可测试。要明确标注“这是原型”，说明如何运行与观察，并写清“什么条件下保留或丢弃”。
  
-## Skeleton of a Good ExecPlan
+优先采用“先增量、后删减”的策略，并确保测试持续通过。并行实现（例如迁移期保留新旧两条路径）是可接受的，只要它能降低风险或保证测试不中断。需要描述如何验证两条路径，以及如何用测试安全退役其中一条。当涉及多个新库或多个能力域时，应考虑用技术探针（spike）分别验证它们的可行性，证明外部库的行为符合预期，并且在隔离环境下满足需求。
  
-    # <Short, action-oriented description>
+## 一个好的可执行计划骨架
  
-    This ExecPlan is a living document. The sections `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work proceeds.
+    # <简短、面向行动的标题>
  
-    If PLANS.md file is checked into the repo, reference the path to that file here from the repository root and note that this document must be maintained in accordance with PLANS.md.
+    本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
  
-    ## Purpose / Big Picture
+    如果仓库中存在 PLANS.md，请在这里写出它的仓库相对路径，并注明本文件必须遵循 PLANS.md 维护。
  
-    Explain in a few sentences what someone gains after this change and how they can see it working. State the user-visible behavior you will enable.
+    ## 目的 / 全局视角
  
-    ## Progress
+    用几句话说明改动完成后用户获得了什么，以及如何看到它在工作。写出可见行为。
  
-    Use a list with checkboxes to summarize granular steps. Every stopping point must be documented here, even if it requires splitting a partially completed task into two (“done” vs. “remaining”). This section must always reflect the actual current state of the work.
+    ## 进度
  
-    - [x] (2025-10-01 13:00Z) Example completed step.
-    - [ ] Example incomplete step.
-    - [ ] Example partially completed step (completed: X; remaining: Y).
+    用带复选框的列表记录颗粒度进展。每次停下都必须更新；即使需要把一项拆成“已完成 / 剩余”。本节必须始终反映真实状态。
  
-    Use timestamps to measure rates of progress.
+    - [x] (2025-10-01 13:00Z) 示例：已完成步骤
+    - [ ] 示例：未完成步骤
+    - [ ] 示例：部分完成（已完成：X；剩余：Y）
  
-    ## Surprises & Discoveries
+    使用时间戳衡量推进速度。
  
-    Document unexpected behaviors, bugs, optimizations, or insights discovered during implementation. Provide concise evidence.
+    ## 意外与发现
  
-    - Observation: …
-      Evidence: …
+    记录实施过程中发现的意外行为、bug、优化或洞察，并附简短证据。
  
-    ## Decision Log
+    - 观察：...
+      证据：...
  
-    Record every decision made while working on the plan in the format:
+    ## 决策日志
  
-    - Decision: …
-      Rationale: …
-      Date/Author: …
+    用以下格式记录每个决策：
  
-    ## Outcomes & Retrospective
+    - 决策：...
+      理由：...
+      日期/作者：...
  
-    Summarize outcomes, gaps, and lessons learned at major milestones or at completion. Compare the result against the original purpose.
+    ## 结果与复盘
  
-    ## Context and Orientation
+    在里程碑完成或整体完成时总结结果、缺口与经验教训，并对照最初目的评估。
  
-    Describe the current state relevant to this task as if the reader knows nothing. Name the key files and modules by full path. Define any non-obvious term you will use. Do not refer to prior plans.
+    ## 背景与导读
  
-    ## Plan of Work
+    面向完全不了解仓库的读者，描述与任务相关的现状。用完整路径列出关键文件与模块。定义所有非显然术语。不要引用以前的计划。
  
-    Describe, in prose, the sequence of edits and additions. For each edit, name the file and location (function, module) and what to insert or change. Keep it concrete and minimal.
+    ## 工作计划
  
-    ## Concrete Steps
+    用散文描述编辑与新增的顺序。每一处修改都要写清文件与位置（函数/模块），以及要插入或改动什么。保持具体且最小必要。
  
-    State the exact commands to run and where to run them (working directory). When a command generates output, show a short expected transcript so the reader can compare. This section must be updated as work proceeds.
+    ## 具体步骤
  
-    ## Validation and Acceptance
+    写出精确命令与执行位置（工作目录）。如果命令会产生输出，给出简短预期片段，便于对照。本节必须随实施持续更新。
  
-    Describe how to start or exercise the system and what to observe. Phrase acceptance as behavior, with specific inputs and outputs. If tests are involved, say "run <project’s test command> and expect <N> passed; the new test <name> fails before the change and passes after>".
+    ## 验证与验收
  
-    ## Idempotence and Recovery
+    说明如何启动或驱动系统，以及要观察什么。把验收写成具体行为与输入输出。如果涉及测试，使用类似表述：
+    “运行 <项目测试命令>，预期 <N> 通过；新测试 <名称> 在变更前失败、变更后通过”。
  
-    If steps can be repeated safely, say so. If a step is risky, provide a safe retry or rollback path. Keep the environment clean after completion.
+    ## 可重复性与恢复
  
-    ## Artifacts and Notes
+    如果步骤可重复执行，要明确说明；若有风险步骤，提供安全重试或回滚路径。完成后保持环境整洁。
  
-    Include the most important transcripts, diffs, or snippets as indented examples. Keep them concise and focused on what proves success.
+    ## 产物与备注
  
-    ## Interfaces and Dependencies
+    用缩进示例包含关键输出、diff 或片段。保持简短，只保留能证明成功的内容。
  
-    Be prescriptive. Name the libraries, modules, and services to use and why. Specify the types, traits/interfaces, and function signatures that must exist at the end of the milestone. Prefer stable names and paths such as `crate::module::function` or `package.submodule.Interface`. E.g.:
+    ## 接口与依赖
  
-    In crates/foo/planner.rs, define:
+    要有明确指令性。写清应使用的库、模块、服务及其原因。写出里程碑结束时必须存在的类型、接口与函数签名。优先使用稳定的命名与路径，如 `crate::module::function` 或 `package.submodule.Interface`。例如：
+ 
+    在 crates/foo/planner.rs 中定义：
  
         pub trait Planner {
             fn plan(&self, observed: &Observed) -> Vec<Action>;
         }
  
-If you follow the guidance above, a single, stateless agent -- or a human novice -- can read your ExecPlan from top to bottom and produce a working, observable result. That is the bar: SELF-CONTAINED, SELF-SUFFICIENT, NOVICE-GUIDING, OUTCOME-FOCUSED.
+如果你遵循上述规范，那么一个“无状态代理”或一个人类新手，只靠从头到尾读这份可执行计划，就能做出一个可运行、可观察的结果。这就是标准：完整自足、面向新手、以结果为导向。
  
-When you revise a plan, you must ensure your changes are comprehensively reflected across all sections, including the living document sections, and you must write a note at the bottom of the plan describing the change and the reason why. ExecPlans must describe not just the what but the why for almost everything.
+当你修改一个计划时，必须确保所有章节（尤其是活文档章节）都同步反映变更，并且在文档底部追加一条说明：改了什么、为什么改。可执行计划不能只写“做什么”，还必须写清“为什么这么做”。

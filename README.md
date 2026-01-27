@@ -6,10 +6,9 @@
 3. 如果成功，./src/config下的对应lua文件会被覆盖
 
 ## 运行
-1. 无图形模拟: `./run_all_ai.bat` 或 `lua main.lua --all-ai`
+1. Eggitor：打开仓库根目录（工程名 `LuaSource_Monopoly`），入口为 `main.lua`
 2. 日志为 `game.log`
 
 ## 平台入口
-- Eggy：`LuaSource_大富翁/main.lua`（Eggitor/Eggy 环境入口）
-- Headless：`main.lua`
-- 可选参数：`--platform=eggy|headless` 或环境变量 `MONOPOLY_PLATFORM`
+- Eggy：`main.lua`
+- UI 资源：`ui_data.lua` / `refs.lua`

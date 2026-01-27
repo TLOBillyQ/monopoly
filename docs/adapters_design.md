@@ -9,19 +9,17 @@
 核心边界：
 - **规则/状态**：`src/game.lua` + `src/gameplay/*` + `src/core/*`
 - **适配/UI**：`src/adapters/*`
-- **平台入口**：`src/entry.lua` 选择平台并安装对应 runtime
+- **平台入口**：`main.lua` 直接安装 Eggy runtime（当前唯一入口）
 
 ## 2. 入口与平台选择
 
-文件：`src/entry.lua`
+文件：`main.lua`
 
-关键函数：
-- `Entry.run(opts)`：根据环境决定平台并安装适配层。
-- `resolve_platform(opts)`：依据 CLI、环境变量与运行环境判定平台（eggy/headless）。
+当前仓库只保留 Eggy 入口：
+- `main.lua`：先调用 `require("src.bootstrap")()` 扩展 `package.path`，再调用 `require("src.adapters.eggy.eggy_runtime").install()` 安装运行时。
+- Eggy runtime：`src/adapters/eggy/eggy_runtime.lua`。
 
-平台分支：
-- `eggy`：`src/adapters/eggy/eggy_runtime.lua`
-- `headless`：纯逻辑跑 AI，用于回归和验证
+不再通过 `src/entry.lua` 做多平台分支选择，也不再保留 headless 入口。
 
 ## 3. 通用适配层骨架（AdapterLayer）
 

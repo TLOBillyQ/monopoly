@@ -4,6 +4,14 @@ local Game = require("src.game")
 
 local EggyRuntime = {}
 
+-- Map UI custom event names to logical actions when UI cannot pass ids.
+local EVENT_NAME_ACTION_MAP = {
+  ["自动控制底"] = { type = "ui_button", id = "auto" },
+  ["自动控制按钮"] = { type = "ui_button", id = "auto" },
+  ["圆形金"] = { type = "ui_button", id = "next" },
+  ["关闭"] = { type = "popup_confirm" },
+}
+
 local function create_game()
   return Game.new({
     players = { "玩家1", "AI2", "AI3", "AI4" },
@@ -13,18 +21,12 @@ local function create_game()
 end
 
 local function install_ui_manager()
-  pcall(require, "src.adapters.eggy.lib.eggy_ui_manager.UIManager.Utils")
+  pcall(require, "UIManager.Utils")
   local manager = rawget(_G, "UIManager")
-  if not manager then
-    local ok, mod = pcall(require, "src.adapters.eggy.lib.eggy_ui_manager.UIManager.Utils")
-    if ok then
-      manager = mod
-    end
-  end
   if not (manager and manager.Builder) then
     return
   end
-  local ok_nodes, nodes = pcall(require, "src.adapters.eggy.ui_nodes")
+  local ok_nodes, nodes = pcall(require, "ui_data")
   if not ok_nodes then
     return
   end
@@ -49,6 +51,38 @@ local function resolve_option_id(choice, payload, layer)
     if opt then
       return opt.id or opt
     end
+  end
+  return nil
+end
+
+local function resolve_market_index(event_name)
+  if type(event_name) ~= "string" then
+    return nil
+  end
+  if type(MarketUI.item_events) == "table" then
+    for idx, name in ipairs(MarketUI.item_events) do
+      if name == event_name then
+        return idx
+      end
+    end
+  end
+  local prefix = MarketUI.item_event_prefix
+  if type(prefix) == "string" and prefix ~= "" then
+    if string.sub(event_name, 1, #prefix) == prefix then
+      local suffix = string.sub(event_name, #prefix + 1)
+      local idx = tonumber(suffix)
+      if idx then
+        return idx
+      end
+    end
+  end
+  return nil
+end
+
+local function resolve_mapped_action(event_name)
+  local mapped = EVENT_NAME_ACTION_MAP[event_name]
+  if mapped then
+    return { type = mapped.type, id = mapped.id, choice_id = mapped.choice_id, option_id = mapped.option_id }
   end
   return nil
 end
@@ -86,10 +120,26 @@ function EggyRuntime.install()
           end
           return
         end
-        if event_name == MarketUI.choose_event then
+        if MarketUI.choose_event and event_name == MarketUI.choose_event then
           local option_id = resolve_option_id(choice, data, layer)
           if option_id then
-            layer.pending_choice_selected_option_id = option_id
+            if layer.select_market_option then
+              layer:select_market_option(option_id)
+            else
+              layer.pending_choice_selected_option_id = option_id
+            end
+          end
+          return
+        end
+        local idx = resolve_market_index(event_name)
+        if idx then
+          local option_id = resolve_option_id(choice, { index = idx }, layer)
+          if option_id then
+            if layer.select_market_option then
+              layer:select_market_option(option_id)
+            else
+              layer.pending_choice_selected_option_id = option_id
+            end
           end
           return
         end
@@ -101,6 +151,17 @@ function EggyRuntime.install()
         end
       end
     end
+
+    local mapped_action = resolve_mapped_action(event_name)
+    if mapped_action then
+      if mapped_action.type == "popup_confirm" then
+        layer:close_popup()
+        return
+      end
+      layer:dispatch_action(mapped_action)
+      return
+    end
+
     local actions = {
       ui_button = function(payload)
         return { type = "ui_button", id = payload.id or payload.button_id }
