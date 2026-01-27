@@ -41,7 +41,25 @@ local function push(level, ...)
   append_to_file(level, text, timestamp)
   local adapter = logger.adapter
   if adapter and adapter.on_log then
-    if not adapter.level or adapter.level == entry.level then
+    local allow = adapter.level
+    local should_call = false
+    if allow == nil then
+      should_call = true
+    elseif type(allow) == "table" then
+      if allow[entry.level] then
+        should_call = true
+      else
+        for _, value in ipairs(allow) do
+          if value == entry.level then
+            should_call = true
+            break
+          end
+        end
+      end
+    else
+      should_call = allow == entry.level
+    end
+    if should_call then
       pcall(adapter.on_log, entry)
     end
   end
