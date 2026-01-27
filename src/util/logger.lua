@@ -2,6 +2,7 @@ local logger = {
   entries = {},
   max_entries = 200,
   file_path = "game.log",
+  adapter = nil,
 }
 
 local function stringify(...)
@@ -28,15 +29,24 @@ end
 local function push(level, ...)
   local text = stringify(...)
   local timestamp = os.time()
-  table.insert(logger.entries, {
+  local entry = {
     level = level,
     text = text,
     timestamp = timestamp,
-  })
+  }
+  table.insert(logger.entries, entry)
   if #logger.entries > logger.max_entries then
     table.remove(logger.entries, 1)
   end
   append_to_file(level, text, timestamp)
+  local adapter = logger.adapter
+  if adapter and adapter.on_log then
+    adapter.on_log(entry)
+  end
+end
+
+function logger.set_adapter(adapter)
+  logger.adapter = adapter
 end
 
 function logger.info(...)

@@ -19,6 +19,7 @@ local ChoiceService = require("src.gameplay.choice_service")
 local BoardUtils = require("src.gameplay.item_board_utils")
 local AdapterLayer = require("src.adapters.core.adapter_layer")
 local constants = require("src.config.constants")
+local logger = require("src.util.logger")
 
 local TestUtils = require("tests.test_utils")
 local assert_eq = TestUtils.assert_eq
@@ -160,6 +161,21 @@ local function test_pass_start()
   g:update_player_position(p, g.board:index_of_tile_id(24))
   local res = MovementService.move(g, p, 1, { branch_parity = 1 })
   assert_eq(res.passed_start, 1, "pass_start bonus")
+end
+
+local function test_logger_adapter_called()
+  local called = 0
+  local last = nil
+  logger.set_adapter({
+    on_log = function(entry)
+      called = called + 1
+      last = entry
+    end,
+  })
+  logger.info("adapter-test", 1)
+  assert_eq(called, 1, "adapter should be called")
+  assert_eq(last and last.text, "adapter-test 1", "adapter entry text")
+  logger.set_adapter(nil)
 end
 
 local function test_land_on_start_reward()
@@ -917,6 +933,7 @@ end
 
 local tests = {
   test_pass_start,
+  test_logger_adapter_called,
   test_land_on_start_reward,
   test_roadblock_stop,
   test_monster_card,
