@@ -176,28 +176,28 @@ local function query_node(name)
   return list and list[1] or nil
 end
 
-local function set_label(ui, name, text)
+local function set_label(_, name, text)
   local node = query_node(name)
   if node and node.text ~= nil then
     node.text = text or ""
   end
 end
 
-local function set_button(ui, name, text)
+local function set_button(_, name, text)
   local node = query_node(name)
   if node and node.text ~= nil then
     node.text = text or ""
   end
 end
 
-local function set_visible(ui, name, visible)
+local function set_visible(_, name, visible)
   local node = query_node(name)
   if node and node.visible ~= nil then
     node.visible = visible == true
   end
 end
 
-local function set_touch_enabled(ui, name, enabled)
+local function set_touch_enabled(_, name, enabled)
   local node = query_node(name)
   if node and node.disabled ~= nil then
     node.disabled = not enabled
