@@ -8,13 +8,13 @@
 
 ## 已映射节点（代码 -> UI 资源名）
 
-- btn_auto -> 自动控制底
-- btn_next -> 圆形金
+- btn_auto -> btn_auto
+- btn_next -> btn_next
 - modal_popup -> 弹窗屏
 - popup_confirm -> 关闭
 - panel_player_1..4 -> 玩家1名字..玩家4名字
 - panel_player_1_detail..4_detail -> 玩家1总资产..玩家4总资产
-- item_slot_1..5 -> 道具槽位1..道具槽位5
+- item_slot_1..5 -> item_slot_1..5
 
 ## 基础面板
 

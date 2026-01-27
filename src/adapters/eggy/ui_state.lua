@@ -2,8 +2,8 @@ local UIState = {}
 
 -- Map logical node ids used by code to the current UI resource names.
 local DIRECT_NAME_MAP = {
-  btn_auto = "自动控制底",
-  btn_next = "圆形金",
+  btn_auto = "btn_auto",
+  btn_next = "btn_next",
   modal_popup = "弹窗屏",
   popup_confirm = "关闭",
   panel_player_1 = "玩家1名字",
@@ -25,11 +25,6 @@ local function resolve_ui_name(name)
     return mapped
   end
 
-  local slot_idx = string.match(name, "^item_slot_(%d+)$")
-  if slot_idx then
-    return "道具槽位" .. tostring(slot_idx)
-  end
-
   return name
 end
 
@@ -37,80 +32,18 @@ local function query_ui_manager_node(name)
   if not name then
     return nil
   end
-  local manager = rawget(_G, "UIManager")
-  if not manager then
-    local ok, mod = pcall(require, "UIManager")
-    if ok then
-      manager = mod
-    end
+  local list = UIManager.query_nodes_by_name(name)
+  if list and list[1] then
+    return list[1]
   end
-  if manager and manager.query_nodes_by_name then
-    local list = manager.query_nodes_by_name(name)
-    if list and list[1] then
-      return list[1]
-    end
-  end
+
   return nil
-end
-
-local function safe_query_node(name)
-  local resolved = resolve_ui_name(name)
-  local candidates = { resolved }
-  if resolved ~= name then
-    candidates[#candidates + 1] = name
-  end
-  for i = 1, #candidates do
-    local candidate = candidates[i]
-    local node = query_ui_manager_node(candidate)
-    if node ~= nil then
-      return node, candidate
-    end
-  end
-  for i = 1, #candidates do
-    local candidate = candidates[i]
-    if candidate and LuaAPI and LuaAPI.query_ui_node then
-      local node = LuaAPI.query_ui_node(candidate)
-      if node ~= nil then
-        return node, candidate
-      end
-    end
-  end
-  return nil, resolved
-end
-
-local function safe_set_label(node, text)
-  if not (node and Role and Role.set_label_text) then
-    return
-  end
-  Role.set_label_text(node, text or "")
-end
-
-local function safe_set_button(node, text)
-  if not (node and Role and Role.set_button_text) then
-    return
-  end
-  Role.set_button_text(node, text or "")
-end
-
-local function safe_set_visible(node, visible)
-  if not (node and Role and Role.set_node_visible) then
-    return
-  end
-  Role.set_node_visible(node, visible == true)
-end
-
-local function safe_set_touch_enabled(node, enabled)
-  if not (node and Role and Role.set_node_touch_enabled) then
-    return
-  end
-  Role.set_node_touch_enabled(node, enabled == true)
 end
 
 function UIState.create()
   return {
     auto_play = false,
     auto_interval = 0.1,
-    nodes = {},
     item_slots = {
       "item_slot_1",
       "item_slot_2",
@@ -145,33 +78,49 @@ function UIState.get_node(self, name)
   if not name then
     return nil
   end
-  if self.nodes[name] ~= nil then
-    return self.nodes[name]
+  local resolved = resolve_ui_name(name)
+  local candidates = { resolved }
+  if resolved ~= name then
+    candidates[#candidates + 1] = name
   end
-  local node, resolved = safe_query_node(name)
-  if node ~= nil then
-    self.nodes[name] = node
-    if resolved and resolved ~= name then
-      self.nodes[resolved] = node
+  local node = nil
+  for i = 1, #candidates do
+    local candidate = candidates[i]
+    node = query_ui_manager_node(candidate)
+    if node ~= nil then
+      resolved = candidate
+      break
     end
   end
   return node
 end
 
 function UIState.set_label(self, name, text)
-  safe_set_label(self:get_node(name), text)
+  local node = self:get_node(name)
+  if node and node.text ~= nil then
+    node.text = text or ""
+  end
 end
 
 function UIState.set_button(self, name, text)
-  safe_set_button(self:get_node(name), text)
+  local node = self:get_node(name)
+  if node and node.text ~= nil then
+    node.text = text or ""
+  end
 end
 
 function UIState.set_visible(self, name, visible)
-  safe_set_visible(self:get_node(name), visible)
+  local node = self:get_node(name)
+  if node and node.visible ~= nil then
+    node.visible = visible == true
+  end
 end
 
 function UIState.set_touch_enabled(self, name, enabled)
-  safe_set_touch_enabled(self:get_node(name), enabled)
+  local node = self:get_node(name)
+  if node and node.disabled ~= nil then
+    node.disabled = not enabled
+  end
 end
 
 return UIState

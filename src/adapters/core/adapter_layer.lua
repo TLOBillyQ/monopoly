@@ -58,9 +58,7 @@ function AdapterLayer.build_item_index(layer)
   end
 end
 
-
-
-function AdapterLayer.new_game(layer, opts)
+function AdapterLayer.new_game(layer)
   logger.clear()
   assert(layer.game_factory, "game_factory not set")
   local g = layer.game_factory()
@@ -69,9 +67,7 @@ function AdapterLayer.new_game(layer, opts)
     layer.auto_runner:reset_timer()
   end
   g.logger.info("启动蛋仔大富翁，玩家数:", #g.players)
-  if opts and opts.on_new_game then
-    opts.on_new_game(layer, g)
-  end
+ 
   return g
 end
 

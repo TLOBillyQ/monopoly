@@ -499,7 +499,6 @@ def main():
         "deity_duration_turns": 5,
         "starting_jindou": 0,
         "starting_leyuanbi": 0,
-        "unlimited_currency": "广告",
     }
     name_to_key = {
         "初始金币": "starting_cash",
@@ -536,7 +535,6 @@ def main():
             "tax_rate",
             "inventory_slots",
             "deity_duration_turns",
-            "unlimited_currency",
         ],
     )
 

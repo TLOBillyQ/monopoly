@@ -1,6 +1,6 @@
 # 适配层设计与实现（开发指南）
 
-本文面向适配维护者，说明本仓库适配层的结构、数据流、关键函数与 Eggy 细节。内容以函数级别为主，便于直接定位代码。
+本文面向适配维护者，说明本仓库适配层的结构、数据流、关键函数与 Eggy 细节，便于直接定位代码与排查问题。
 
 ## 1. 适配层的目标与边界
 
@@ -9,7 +9,7 @@
 核心边界：
 - **规则/状态**：`src/game.lua` + `src/gameplay/*` + `src/core/*`
 - **适配/UI**：`src/adapters/*`
-- **平台入口**：`main.lua` 直接安装 Eggy runtime（当前唯一入口）
+- **平台入口**：`main.lua` 安装 Eggy runtime（当前唯一运行入口）
 
 ## 2. 入口与平台选择
 
@@ -19,7 +19,9 @@
 - `main.lua`：先调用 `require("src.bootstrap")()` 扩展 `package.path`，再调用 `require("src.adapters.eggy.eggy_runtime").install()` 安装运行时。
 - Eggy runtime：`src/adapters/eggy/eggy_runtime.lua`。
 
-不再通过 `src/entry.lua` 做多平台分支选择，也不再保留 headless 入口。
+说明：
+- 本仓库已不再维护多平台入口分支（历史的 `src/entry.lua` 已删除）。
+- 仓库根目录的 `init.lua` 是 Eggy 工程侧常用的“场景/资源绑定脚本”（创建 `G.refs/G.tiles/G.buildings` 等全局索引、并调用 `UIManager.Builder(require "ui_data")`）。`EggyLayer` 会优先使用 `G.tiles`，否则会在运行时回退到 `LuaAPI.query_units("t1..tN")` 自行构建锚点缓存。
 
 ## 3. 通用适配层骨架（AdapterLayer）
 
@@ -30,18 +32,26 @@
 核心函数：
 - `AdapterLayer.attach(layer, opts)`
   - 绑定 `ui`、`game_factory`、`auto_runner`。
-  - 监听 `IntentDispatcher` 的 `need_choice` 事件并写入 `layer.pending_choice`。
+  - 监听 `IntentDispatcher` 的 `need_choice` 事件并写入 `layer.pending_choice`（同时重置计时器）。
+  - 初始化并维护：`pending_choice_elapsed/pending_choice_id`、`ui_modal_elapsed/ui_modal_ref`、`move_anim_seq` 等状态机字段。
 - `AdapterLayer.set_game(layer, game, opts)`
   - 设置当前 `game` 并把 `game.ui_port` 指向 `layer`（供规则层回调）。
   - 检查是否已有 `pending_choice` 并回调 `opts.on_pending_choice`。
+- `AdapterLayer.build_item_index(layer)`
+  - 由 `src/config/items.lua` 生成 `layer.item_name_by_id`，用于 UI 文本显示（道具槽位/黑市等）。
 - `AdapterLayer.new_game(layer, opts)`
   - 清理日志、创建新 Game、初始化物品索引、重置自动运行定时器。
 - `AdapterLayer.step_auto_runner(layer, dt, context)`
-  - 根据 `AutoRunner` 输出自动动作（通常是 `ui_button next`）。
+  - 根据 `AutoRunner` 输出自动动作（默认是 `ui_button next`；若 `context.modal_active` 为真，会输出 `modal_*` 动作）。
 - `AdapterLayer.step_choice_timeout(layer, dt, opts)`
-  - 若选择超时，自动生成 `choice_select` / `choice_cancel` 动作。
+  - 选择超时（`src/config/constants.lua: action_timeout_seconds`）时，自动生成 `choice_select` / `choice_cancel` 动作。
+  - 同步 `game.store.turn.pending_choice`，确保 UI 与 store 一致（避免只靠事件导致漏刷新）。
+- `AdapterLayer.step_modal_timeout(layer, dt, opts)`
+  - 对“非选择类弹窗”的超时收敛：当 UI 处于激活态且超过 `action_timeout_seconds`，调用 `opts.on_timeout`（Eggy 用它自动关闭提示弹窗）。
+- `AdapterLayer.step_move_anim(layer)`
+  - 监听 `game.store.turn.move_anim` 与 `turn.phase == "wait_move_anim"`；当检测到新的 `move_anim.seq` 时自动派发 `{type="move_anim_done", seq=...}`，用于推进“等待移动动画结束”的回合阶段。
 - `AdapterLayer.clear_choice(layer, opts)`
-  - 清空当前选择状态并通知 UI 关闭。
+  - 清空当前选择状态并回调 `opts.on_close_choice`（平台侧负责把选择 UI 收起）。
 
 说明：`IntentDispatcher` 的 `need_choice` 由规则层产生，适配层仅负责 UI 和动作回传。
 
@@ -52,6 +62,7 @@
 - `Presenter.present(store_state, env)`
   - 将 `store_state` 与运行期上下文（last_turn/finished/winner）合并为 UI View。
   - `board.tiles` 由 `src/config/map.lua` + `src/config/tiles.lua` 映射得到。
+  - `board.overlays`（路障/地雷等）优先来自 `env.game.board:get_overlays()`，否则使用空集合。
 
 共享 UI 小组件：
 - `src/adapters/core/ui_panel.lua`：面板文本（当前玩家、状态、道具等）。
@@ -76,24 +87,24 @@ Eggy 适配层为当前主要实现，**事件入口、UI 查询、以及选择 
   - `LuaAPI.set_tick_handler(function(delta_seconds) ... end)`：每帧调用 `layer:tick()`。
   - `LuaAPI.global_register_trigger_event(EVENT.UI_CUSTOM_EVENT, ...)`：接收 UI 事件并派发动作。
 - `install_ui_manager()`：尝试加载 `UIManager`，并执行 `UIManager.Builder(nodes)` 构建 UI。
-- `resolve_option_id(choice, payload, layer)`：解析黑市选择 UI 的选择项。
+- `resolve_option_id(choice, payload, layer)`：解析黑市选择 UI 的选择项（支持 `option_id/option` 或 `index/*_index`）。
+- `resolve_market_index(event_name)`：支持“黑市购买项按钮”走事件名前缀匹配（`MarketUI.item_event_prefix`）。
+- `EVENT_NAME_ACTION_MAP`：当 UI 侧无法透传 id 时，用资源事件名做兜底映射（例如把“圆形金”映射为 `ui_button next`）。
 
-入口脚本（主工程）：`LuaSource_大富翁/init.lua`
-- 初始化 `G.tiles = LuaAPI.query_units(t1..t45)`（棋盘锚点）。
-- 控制 UI 显示与测试移动（`move.start_to_finish`）。
+补充：仓库根目录 `init.lua` 负责初始化 `G.refs/G.tiles/G.buildings` 等全局表，并构建 UI（`ui_data.lua`）。`EggyLayer` 的部分能力（例如楼房升级特效/图片 key 映射）会依赖这些全局数据。
 
 ### 5.2 UIState 与节点查询
 
 文件：`src/adapters/eggy/ui_state.lua`
 
 核心策略：
-- 优先使用 `UIManager.query_nodes_by_name` 查节点。
-- 若 UIManager 不可用，则回退到 `LuaAPI.query_ui_node(name)`。
-- `safe_set_label/set_button/set_visible/set_touch_enabled` 统一调用 Role API。
+- 节点通过 `UIManager.query_nodes_by_name(name)` 获取，并缓存到 `UIState.nodes`。
+- `DIRECT_NAME_MAP` 负责把“代码里用的逻辑节点名”映射到“UI 资源里的真实名字”（例如 `popup_confirm -> 关闭`）。
+- 目前实现假设节点对象具备字段：`text/visible/disabled`，设置时直接写字段（不再走 `LuaAPI.query_ui_node` 兜底）。
 
 关键函数：
 - `UIState.get_node(self, name)`：缓存节点，避免重复查询。
-- `UIState.set_label / set_button / set_visible / set_touch_enabled`：封装 Role UI API。
+- `UIState.set_label / set_button / set_visible / set_touch_enabled`：对节点字段写入的薄封装。
 
 ### 5.3 EggyLayer（主逻辑）
 
@@ -105,33 +116,49 @@ Eggy 适配层为当前主要实现，**事件入口、UI 查询、以及选择 
 - `EggyLayer:set_game(g)`
   - 调 `AdapterLayer.set_game`，处理 pending_choice。
 - `EggyLayer:tick(dt)`
-  - 处理 `pending_choice` 打开 UI。
-  - 自动运行与超时选择。
-  - 调 `refresh_view()` 生成并刷新 UI。
+  - `AdapterLayer.step_auto_runner`：自动推进（默认下一回合）。
+  - `AdapterLayer.step_choice_timeout`：选择超时自动处理（Eggy 会先尝试 `Agent.auto_action_for_choice`）。
+  - `AdapterLayer.step_modal_timeout`：弹窗超时自动关闭（调用 `close_popup()`）。
+  - `AdapterLayer.step_move_anim`：等待移动动画结束时自动派发 `move_anim_done`。
+  - `pending_choice` 存在时打开选择 UI，并 `refresh_view()` 刷新 UI。
 - `EggyLayer:build_view()`
   - 调 `Presenter.present` 生成 `view`。
 - `EggyLayer:refresh_view()`
   - 顺序调用 `refresh_panel(view)` + `refresh_board(view)`。
 - `EggyLayer:refresh_panel(view)`
   - 写入面板节点（玩家、回合、日志）。
+- `EggyLayer:refresh_item_slots(view)`
+  - 把当前玩家背包道具写入 `item_slot_1..5`，并记录 `ui.item_slot_item_ids`（供点击道具槽位选择）。
 - `EggyLayer:refresh_tile_detail(view)`
   - 根据 `selected_tile` 更新格子详情节点。
 - `EggyLayer:refresh_board(view)`
-  - 只更新棋盘格子的文字；**玩家位置渲染需在此扩展**。
+  - 更新棋盘格子的文字。
+  - 缓存棋盘锚点位置：优先 `G.tiles`，否则 `LuaAPI.query_units("t1..tN")`。
+  - 绑定玩家角色 unit：通过 `GameAPI.get_all_valid_roles()` 获取并按玩家名/id 映射。
+  - 根据玩家 `position` 把 unit 移动到格子锚点位置；多人同格子时按 `tile_spacing` 做偏移排布。
 - `EggyLayer:_open_choice_modal(pending)` / `_close_choice_modal()`
-  - 根据 `pending.kind` 构建普通选择 UI 或黑市 UI（MarketUI）。
+  - 根据 `pending.kind` 构建普通选择 UI 或黑市 UI（见 5.4）。
 - `EggyLayer:dispatch_action(action)`
   - UI 按钮/格子选择/选择结果 -> 游戏动作。
 - `EggyLayer:push_popup(payload)` / `close_popup()`
   - 控制弹窗 UI。
+- `EggyLayer:on_tile_upgraded(tile_id, level)`
+  - 触发楼房升级表现（依赖 `G.buildings/G.refs`，内部调用 `src/adapters/eggy/building_effects.lua`）。
 
 ### 5.4 黑市 UI（MarketUI）
 
 文件：`src/adapters/eggy/market_ui.lua`
 
-- `MarketUI.is_ready()`：要求容器与事件名字段完整。
-- `_open_choice_modal` 在 `pending.kind == "market_buy"` 时走该通道。
-- `EggyRuntime.install()` 在 UI 事件里识别 `MarketUI.choose_event / confirm_event / cancel_event`。
+黑市 UI 目前有两条路径，按可用资源自动选择：
+
+1) **面板式黑市（10 项）**（推荐默认）
+- `MarketUI.is_panel_ready()` 为真时启用（要求容器、确认按钮、以及 `item_buttons/item_labels` 等字段完整）。
+- `EggyLayer:_open_market_panel(pending)` 会把 `pending.options` 映射到按钮/文字/稀有度底框，并记录 `layer.market_choice_option_ids`。
+- `EggyRuntime.install()` 通过 `MarketUI.item_event_prefix` 或 `MarketUI.confirm_event/cancel_event` 把 UI 点击转换为选择动作。
+
+2) **卡牌式黑市（≤3 项）**
+- 当 `MarketUI.choose_event` 配置为非空字符串，且 `pending.options` 数量 `<= 3` 时启用。
+- 依赖外部组件模块：`src.adapters.eggy.lib.eggy_choose_option.ChooseOption`（存在则用，不存在会回退到 1) 或普通选择 UI）。
 
 ### 5.5 Eggy 事件流（UI -> 游戏）
 
@@ -142,10 +169,14 @@ Eggy 适配层为当前主要实现，**事件入口、UI 查询、以及选择 
    │ EVENT.UI_CUSTOM_EVENT
    ▼
 EggyRuntime.install()
-   │ 解析 event_name / payload
-   ├─ MarketUI 路径 → resolve_option_id()
+   │ 解析 event_name / payload（data.event_name/name/event）
+   ├─ 黑市路径（pending.kind == "market_buy"）
+   │    ├─ confirm_event / cancel_event / item_event_prefix
+   │    └─ resolve_option_id() → choice_select / choice_cancel
    │
-   └─ 通用路径 → action = {type=...}
+   └─ 通用路径
+        ├─ EVENT_NAME_ACTION_MAP（资源事件名兜底）
+        └─ event_name 作为动作类型（ui_button/choice_select/...）
              ▼
         EggyLayer:dispatch_action(action)
              ▼
@@ -160,6 +191,8 @@ LuaAPI.set_tick_handler
 EggyLayer:tick(dt)
    ├─ AdapterLayer.step_auto_runner
    ├─ AdapterLayer.step_choice_timeout
+   ├─ AdapterLayer.step_modal_timeout
+   ├─ AdapterLayer.step_move_anim
    └─ refresh_view()
         ├─ refresh_panel(view)
         └─ refresh_board(view)
@@ -167,10 +200,11 @@ EggyLayer:tick(dt)
 
 ### 5.7 Eggy 适配维护重点
 
-1) **节点命名**：Eggy UI 依赖节点名（如 `panel_title`、`tile_1`）。改 UI 资源需同步代码。
-2) **UIManager**：优先使用 `UIManager` 查询节点；若构建失败，必须保证 `LuaAPI.query_ui_node` 可用。
-3) **玩家位置渲染**：目前 Eggy 只写格子文本，不绘制角色位置。后续需使用 `Unit.set_position(pos)` 或 SceneUI 绑定。
-4) **黑市 UI**：`pending.kind == "market_buy"` 会走 MarketUI 分支，事件名必须与资源配置一致。
+1) **节点命名与映射**：UI 资源改名时，优先改 `UIState.DIRECT_NAME_MAP` 与 `MarketUI.*` 常量，而不是全局搜索替换字符串。
+2) **UIManager 依赖**：当前 `UIState` 只走 `UIManager.query_nodes_by_name`。若 UIManager 构建失败，会导致节点全部为 nil（表现为 UI 不刷新）。排查顺序：`ui_data.lua` 是否可 require、`UIManager.Builder` 是否被调用、节点名是否一致。
+3) **场景锚点/角色绑定**：玩家位移依赖棋盘锚点 `t1..tN`（或 `G.tiles`），玩家 unit 依赖 `GameAPI.get_all_valid_roles()`。多人同格子偏移由 `tile_spacing` 自动估算。
+4) **楼房升级表现**：`on_tile_upgraded` 依赖 `G.buildings/G.refs`，并用 `Data.Prefab` 生成组单位；Eggy 工程资源变更时需要同步 Prefab/refs。
+5) **黑市 UI**：优先保证面板式黑市可用（`item_event_prefix/confirm_event/cancel_event` 事件名与资源一致）。卡牌式黑市是可选增强（需要 `MarketUI.choose_event` + 外部组件）。
 
 ## 6. 适配层与规则层的通信
 
@@ -186,17 +220,19 @@ EggyLayer:tick(dt)
 - **新增 UI 节点**：先在 UI 资源中添加节点名，再在 `EggyLayer:refresh_panel/refresh_board` 中设置文本。
 - **新增选择 UI**：通过 `pending.kind` 分支处理；优先复用 `ChoiceView.build_choice_view`。
 - **改自动运行**：调整 `src/adapters/core/auto_runner.lua` 的 `interval` 与动作生成规则。
+- **移动动画卡死**：若回合卡在 `wait_move_anim`，检查 `store.turn.move_anim.seq` 是否更新、以及 `AdapterLayer.step_move_anim` 是否被 tick 到（Eggy 已默认调用）。
 - **Eggy API 查询**：遵守项目约定，不直接读 `docs/eggy/EggyAPI.lua`，用 `docs/eggy/api/*.md` 查接口。
 
 ## 8. 测试建议
 
 - `lua tests/deps_check.lua`
 - `lua tests/regression.lua`
+
 ## 9. 小结
 
 适配层整体结构是：
 - **Presenter + AdapterLayer** 提供跨平台的 View 与流程骨架。
 - **Eggy** 通过 UI 节点驱动的方式适配平台 UI。
-- **Eggy** 额外包含 UIManager 管理、黑市 UI 分支与平台事件入口。
+- **Eggy** 额外包含 UIManager 管理、黑市 UI 分支、场景单位绑定（玩家/楼房）与平台事件入口。
 
 维护适配层时，优先确保：节点命名一致、`dispatch_action` 通路正确、`refresh_view` 在 tick 内稳定运行。

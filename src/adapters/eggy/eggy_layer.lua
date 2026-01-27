@@ -229,8 +229,6 @@ function EggyLayer:new_game()
   return AdapterLayer.new_game(self)
 end
 
-
-
 function EggyLayer:_log_status(view)
   if not view then
     return

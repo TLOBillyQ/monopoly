@@ -82,7 +82,7 @@ function Panel.build_player_details_text(player, view, item_name_by_id, vehicle_
   end
 
   if player.seat_id then
-    local vname = (vehicle_name_by_id and vehicle_name_by_id[player.seat_id]) or ("车" .. player.seat_id)
+    local vname = vehicle_name_by_id and vehicle_name_by_id[player.seat_id]
     table.insert(parts, vname)
   end
 

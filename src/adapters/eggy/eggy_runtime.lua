@@ -2,6 +2,8 @@ local EggyLayer = require("src.adapters.eggy.eggy_layer")
 local MarketUI = require("src.adapters.eggy.market_ui")
 local Game = require("src.game")
 
+require "Utils.Frameout"
+
 local EggyRuntime = {}
 
 -- Map UI custom event names to logical actions when UI cannot pass ids.
@@ -21,16 +23,9 @@ local function create_game()
 end
 
 local function install_ui_manager()
-  pcall(require, "UIManager.Utils")
-  local manager = rawget(_G, "UIManager")
-  if not (manager and manager.Builder) then
-    return
-  end
-  local ok_nodes, nodes = pcall(require, "ui_data")
-  if not ok_nodes then
-    return
-  end
-  pcall(manager.Builder, nodes)
+  require "UIManager.Utils"
+  local ui_data = require "ui_data"
+  UIManager.Builder(ui_data)
 end
 
 local function resolve_option_id(choice, payload, layer)
@@ -87,112 +82,145 @@ local function resolve_mapped_action(event_name)
   return nil
 end
 
+local function handle_ui_custom_event(layer, event_name, payload)
+  local data = payload or {}
+  local resolved_name = data.event_name or data.name or data.event or event_name
+  if not resolved_name then
+    return
+  end
+  if MarketUI.is_ready and MarketUI.is_ready() then
+    local choice = layer.pending_choice
+    if choice and choice.kind == "market_buy" then
+      if resolved_name == MarketUI.confirm_event then
+        local option_id = resolve_option_id(choice, data, layer) or layer.pending_choice_selected_option_id
+        local action = nil
+        if option_id then
+          action = { type = "choice_select", choice_id = choice.id, option_id = option_id }
+        elseif choice.allow_cancel ~= false then
+          action = { type = "choice_cancel", choice_id = choice.id }
+        end
+        if action then
+          layer:dispatch_action(action)
+        end
+        return
+      end
+      if MarketUI.choose_event and resolved_name == MarketUI.choose_event then
+        local option_id = resolve_option_id(choice, data, layer)
+        if option_id then
+          if layer.select_market_option then
+            layer:select_market_option(option_id)
+          else
+            layer.pending_choice_selected_option_id = option_id
+          end
+        end
+        return
+      end
+      local idx = resolve_market_index(resolved_name)
+      if idx then
+        local option_id = resolve_option_id(choice, { index = idx }, layer)
+        if option_id then
+          if layer.select_market_option then
+            layer:select_market_option(option_id)
+          else
+            layer.pending_choice_selected_option_id = option_id
+          end
+        end
+        return
+      end
+      if MarketUI.cancel_event and resolved_name == MarketUI.cancel_event then
+        if choice.allow_cancel ~= false then
+          layer:dispatch_action({ type = "choice_cancel", choice_id = choice.id })
+        end
+        return
+      end
+    end
+  end
+
+  local mapped_action = resolve_mapped_action(resolved_name)
+  if mapped_action then
+    if mapped_action.type == "popup_confirm" then
+      layer:close_popup()
+      return
+    end
+    layer:dispatch_action(mapped_action)
+    return
+  end
+
+  local actions = {
+    ui_button = function(payload)
+      return { type = "ui_button", id = payload.id or payload.button_id }
+    end,
+    choice_select = function(payload)
+      return {
+        type = "choice_select",
+        choice_id = payload.choice_id,
+        option_id = payload.option_id,
+      }
+    end,
+    choice_cancel = function(payload)
+      return { type = "choice_cancel", choice_id = payload.choice_id }
+    end,
+    ui_tile_select = function(payload)
+      return { type = "ui_tile_select", index = payload.index or payload.tile_index }
+    end,
+    popup_confirm = function()
+      layer:close_popup()
+      return nil
+    end,
+  }
+  local builder = actions[resolved_name]
+  if not builder then
+    return
+  end
+  local action = builder(data)
+  if action then
+    layer:dispatch_action(action)
+  end
+end
+
 function EggyRuntime.install()
   local layer = EggyLayer.new({ game_factory = create_game })
 
-  LuaAPI.global_register_trigger_event(EVENT.GAME_INIT, function()
+  LuaAPI.global_register_trigger_event({ EVENT.GAME_INIT }, function()
     install_ui_manager()
     layer:set_game(layer:new_game())
   end)
 
-  LuaAPI.set_tick_handler(function(delta_seconds)
-    layer:tick(delta_seconds or 0)
-  end)
+  local tick_interval = 1
+  local tick_seconds = math.tofixed(tick_interval + 1) / 30.0
+  SetFrameOut(tick_interval, function()
+    layer:tick(tick_seconds)
+  end, -1)
 
-  LuaAPI.global_register_trigger_event(EVENT.UI_CUSTOM_EVENT, function(data)
-    if not data then
-      return
-    end
-    local event_name = data.event_name or data.name or data.event or nil
-    if MarketUI.is_ready and MarketUI.is_ready() then
-      local choice = layer.pending_choice
-      if choice and choice.kind == "market_buy" then
-        if event_name == MarketUI.confirm_event then
-          local option_id = resolve_option_id(choice, data, layer) or layer.pending_choice_selected_option_id
-          local action = nil
-          if option_id then
-            action = { type = "choice_select", choice_id = choice.id, option_id = option_id }
-          elseif choice.allow_cancel ~= false then
-            action = { type = "choice_cancel", choice_id = choice.id }
-          end
-          if action then
-            layer:dispatch_action(action)
-          end
-          return
-        end
-        if MarketUI.choose_event and event_name == MarketUI.choose_event then
-          local option_id = resolve_option_id(choice, data, layer)
-          if option_id then
-            if layer.select_market_option then
-              layer:select_market_option(option_id)
-            else
-              layer.pending_choice_selected_option_id = option_id
-            end
-          end
-          return
-        end
-        local idx = resolve_market_index(event_name)
-        if idx then
-          local option_id = resolve_option_id(choice, { index = idx }, layer)
-          if option_id then
-            if layer.select_market_option then
-              layer:select_market_option(option_id)
-            else
-              layer.pending_choice_selected_option_id = option_id
-            end
-          end
-          return
-        end
-        if MarketUI.cancel_event and event_name == MarketUI.cancel_event then
-          if choice.allow_cancel ~= false then
-            layer:dispatch_action({ type = "choice_cancel", choice_id = choice.id })
-          end
-          return
-        end
-      end
-    end
+  local registered_events = {}
+  local function register_ui_custom_event(name)
+    registered_events[name] = true
+    LuaAPI.global_register_custom_event(name, function(_, _, data)
+      handle_ui_custom_event(layer, name, data)
+    end)
+  end
 
-    local mapped_action = resolve_mapped_action(event_name)
-    if mapped_action then
-      if mapped_action.type == "popup_confirm" then
-        layer:close_popup()
-        return
-      end
-      layer:dispatch_action(mapped_action)
-      return
+  for name in pairs(EVENT_NAME_ACTION_MAP) do
+    register_ui_custom_event(name)
+  end
+  for _, name in ipairs({ "ui_button", "choice_select", "choice_cancel", "ui_tile_select", "popup_confirm" }) do
+    register_ui_custom_event(name)
+  end
+  register_ui_custom_event(MarketUI.confirm_event)
+  register_ui_custom_event(MarketUI.cancel_event)
+  register_ui_custom_event(MarketUI.choose_event)
+  if type(MarketUI.item_events) == "table" then
+    for _, name in ipairs(MarketUI.item_events) do
+      register_ui_custom_event(name)
     end
-
-    local actions = {
-      ui_button = function(payload)
-        return { type = "ui_button", id = payload.id or payload.button_id }
-      end,
-      choice_select = function(payload)
-        return {
-          type = "choice_select",
-          choice_id = payload.choice_id,
-          option_id = payload.option_id,
-        }
-      end,
-      choice_cancel = function(payload)
-        return { type = "choice_cancel", choice_id = payload.choice_id }
-      end,
-      ui_tile_select = function(payload)
-        return { type = "ui_tile_select", index = payload.index or payload.tile_index }
-      end,
-      popup_confirm = function()
-        layer:close_popup()
-        return nil
-      end,
-    }
-    local builder = actions[event_name]
-    if not builder then
-      return
+  end
+  local prefix = MarketUI.item_event_prefix
+  local item_buttons = MarketUI.item_buttons
+  if type(prefix) == "string" and prefix ~= "" and type(item_buttons) == "table" then
+    for i = 1, #item_buttons do
+      register_ui_custom_event(prefix .. tostring(i))
     end
-    local action = builder(data)
-    if action then
-      layer:dispatch_action(action)
-    end
-  end)
+  end
 
   return layer
 end
