@@ -16,30 +16,7 @@ local function load_ui_names()
   return names
 end
 
-local DIRECT_NAME_MAP = {
-  btn_auto = "自动控制底",
-  btn_next = "圆形金",
-  modal_popup = "弹窗屏",
-  popup_confirm = "关闭",
-  panel_player_1 = "玩家1名字",
-  panel_player_2 = "玩家2名字",
-  panel_player_3 = "玩家3名字",
-  panel_player_4 = "玩家4名字",
-  panel_player_1_detail = "玩家1总资产",
-  panel_player_2_detail = "玩家2总资产",
-  panel_player_3_detail = "玩家3总资产",
-  panel_player_4_detail = "玩家4总资产",
-}
-
 local function resolve_ui_name(name)
-  local mapped = DIRECT_NAME_MAP[name]
-  if mapped then
-    return mapped
-  end
-  local slot_idx = string.match(name or "", "^item_slot_(%d+)$")
-  if slot_idx then
-    return "道具槽位" .. tostring(slot_idx)
-  end
   return name
 end
 
@@ -91,6 +68,38 @@ local function build_required_logical_names()
     "popup_title",
     "popup_body",
     "popup_confirm",
+    "popup_confirm_alt",
+    "popup_card",
+    "btn_auto_label",
+    "panel_player_1_info",
+    "panel_player_1_avatar",
+    "panel_player_1_cash",
+    "panel_player_1_land_count",
+    "panel_player_1_base",
+    "panel_player_1_base_color",
+    "panel_player_2_info",
+    "panel_player_2_avatar",
+    "panel_player_2_cash",
+    "panel_player_2_land_count",
+    "panel_player_2_base",
+    "panel_player_2_base_color",
+    "panel_player_3_info",
+    "panel_player_3_avatar",
+    "panel_player_3_cash",
+    "panel_player_3_land_count",
+    "panel_player_3_base",
+    "panel_player_3_base_color",
+    "panel_player_4_info",
+    "panel_player_4_avatar",
+    "panel_player_4_cash",
+    "panel_player_4_land_count",
+    "panel_player_4_base",
+    "panel_player_4_base_color",
+    "loading_screen",
+    "loading_tip",
+    "base_screen",
+    "overlay_mask",
+    "background_rect",
   }
 
   -- Board tiles: presenter uses 45 tiles in the demo map.
@@ -132,9 +141,6 @@ local function append_market_requirements(required)
       add(name)
     end
   end
-  add(market.confirm_event)
-  add(market.cancel_event)
-  add(market.item_event_prefix)
   return required
 end
 
@@ -151,7 +157,7 @@ local function audit()
     if not seen[logical] then
       seen[logical] = true
       local resolved = resolve_ui_name(logical)
-      if not ui_names[logical] and not ui_names[resolved] then
+      if not ui_names[resolved] then
         missing_logical[#missing_logical + 1] = logical
         missing_resolved[#missing_resolved + 1] = resolved
       end

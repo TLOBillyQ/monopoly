@@ -1,5 +1,4 @@
 local logger = require("src.util.logger")
-local UIState = require("src.adapters.eggy.ui_state")
 local AutoRunner = require("src.adapters.core.auto_runner")
 local Presenter = require("src.adapters.core.presenter")
 local AdapterLayer = require("src.adapters.core.adapter_layer")
@@ -169,20 +168,94 @@ local function set_image_texture(node, image_key, reset_size)
   end
 end
 
+local function query_node(name)
+  if not name then
+    return nil
+  end
+  local list = UIManager.query_nodes_by_name(name)
+  return list and list[1] or nil
+end
+
+local function set_label(_, name, text)
+  local node = query_node(name)
+  if node and node.text ~= nil then
+    node.text = text or ""
+  end
+end
+
+local function set_button(_, name, text)
+  local node = query_node(name)
+  if node and node.text ~= nil then
+    node.text = text or ""
+  end
+end
+
+local function set_visible(_, name, visible)
+  local node = query_node(name)
+  if node and node.visible ~= nil then
+    node.visible = visible == true
+  end
+end
+
+local function set_touch_enabled(_, name, enabled)
+  local node = query_node(name)
+  if node and node.disabled ~= nil then
+    node.disabled = not enabled
+  end
+end
+
 local function set_ui_image(ui, name, image_key, reset_size)
   if not (ui and name) then
     return
   end
-  local node = ui:get_node(name)
+  local node = query_node(name)
   if node then
     set_image_texture(node, image_key, reset_size)
   end
 end
 
+local function build_ui_state()
+  return {
+    auto_play = false,
+    auto_interval = 0.1,
+    item_slots = {
+      "item_slot_1",
+      "item_slot_2",
+      "item_slot_3",
+      "item_slot_4",
+      "item_slot_5",
+    },
+    market_active = false,
+    selected_tile = nil,
+    choice = {
+      root = "modal_choice",
+      title = "choice_title",
+      body = "choice_body",
+      cancel = "choice_cancel",
+      option_buttons = {
+        "choice_option_1",
+        "choice_option_2",
+        "choice_option_3",
+        "choice_option_4",
+      },
+    },
+    popup = {
+      root = "modal_popup",
+      title = "popup_title",
+      body = "popup_body",
+      confirm = "popup_confirm",
+    },
+    query_node = query_node,
+    set_label = set_label,
+    set_button = set_button,
+    set_visible = set_visible,
+    set_touch_enabled = set_touch_enabled,
+  }
+end
 
 function EggyLayer.new(opts)
   opts = opts or {}
-  local ui = UIState.create()
+  local ui = build_ui_state()
   local self = setmetatable({
     ui = ui,
     vehicle_name_by_id = map_vehicle_names(),

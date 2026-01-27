@@ -1,6 +1,5 @@
 require 'macro'
 require "UIManager.Utils"
-require "eca"
 
 local move = require "move"
 local Prefab = require("Data.Prefab")
