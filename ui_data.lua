@@ -158,5 +158,4 @@ return {
 	["placeholder|tile_43"] = {"tile_43", "ELabel"},
 	["placeholder|tile_44"] = {"tile_44", "ELabel"},
 	["placeholder|tile_45"] = {"tile_45", "ELabel"},
-	["placeholder|length"] = 159,
 }

@@ -22,7 +22,6 @@ local function install_ui_manager()
 end
 
 local function install_eca_bridge()
-  require "macro"
   require "src.adapters.eggy.eca"
 end
 
@@ -50,12 +49,16 @@ end
 
 
 
-local function register_node_click(name, callback)
+local function register_node_click(cache, name, callback)
   if not name then
     return
   end
-  local nodes = UIManager.query_nodes_by_name(name)
-  if not nodes or not nodes[1] then
+  local nodes = cache[name]
+  if nodes == nil then
+    nodes = UIManager.query_nodes_by_name(name) or {}
+    cache[name] = nodes
+  end
+  if not nodes[1] then
     return
   end
   for _, node in ipairs(nodes) do
@@ -66,23 +69,24 @@ local function register_node_click(name, callback)
 end
 
 local function register_ui_manager_events(layer)
-  register_node_click("btn_next", function()
+  local cache = {}
+  register_node_click(cache, "btn_next", function()
     layer:dispatch_action({ type = "ui_button", id = "next" })
   end)
-  register_node_click("btn_auto", function()
+  register_node_click(cache, "btn_auto", function()
     layer:dispatch_action({ type = "ui_button", id = "auto" })
   end)
-  register_node_click("btn_restart", function()
+  register_node_click(cache, "btn_restart", function()
     layer:dispatch_action({ type = "ui_button", id = "restart" })
   end)
-  register_node_click("popup_confirm", function()
+  register_node_click(cache, "popup_confirm", function()
     layer:close_popup()
   end)
-  register_node_click("popup_confirm_alt", function()
+  register_node_click(cache, "popup_confirm_alt", function()
     layer:close_popup()
   end)
 
-  register_node_click("choice_cancel", function()
+  register_node_click(cache, "choice_cancel", function()
     local choice = layer.pending_choice
     if choice and choice.allow_cancel ~= false then
       layer:dispatch_action({ type = "choice_cancel", choice_id = choice.id })
@@ -90,7 +94,7 @@ local function register_ui_manager_events(layer)
   end)
 
   for idx, name in ipairs({ "choice_option_1", "choice_option_2", "choice_option_3", "choice_option_4" }) do
-    register_node_click(name, function()
+    register_node_click(cache, name, function()
       local choice = layer.pending_choice
       if not choice then
         return
@@ -105,7 +109,7 @@ local function register_ui_manager_events(layer)
   end
 
   for idx, name in ipairs(MarketUI.item_buttons or {}) do
-    register_node_click(name, function()
+    register_node_click(cache, name, function()
       if not (MarketUI.is_ready and MarketUI.is_ready()) then
         return
       end
@@ -124,7 +128,7 @@ local function register_ui_manager_events(layer)
     end)
   end
 
-  register_node_click(MarketUI.confirm_button, function()
+  register_node_click(cache, MarketUI.confirm_button, function()
     local choice = layer.pending_choice
     if not (choice and choice.kind == "market_buy") then
       return
@@ -135,7 +139,7 @@ local function register_ui_manager_events(layer)
     end
   end)
 
-  register_node_click(MarketUI.cancel_button, function()
+  register_node_click(cache, MarketUI.cancel_button, function()
     local choice = layer.pending_choice
     if choice and choice.allow_cancel ~= false then
       layer:dispatch_action({ type = "choice_cancel", choice_id = choice.id })
