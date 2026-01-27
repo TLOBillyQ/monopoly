@@ -4,17 +4,7 @@
 
 ## 现状说明
 
-当前 `ui_data.lua` 使用中文节点名，适配层通过 `src/adapters/eggy/ui_state.lua` 的映射表做兼容。以下“基础面板/按钮/弹窗”等清单仍以逻辑名为主，具体缺口以 `tests/ui_nodes_audit.lua` 输出为准。
-
-## 已映射节点（代码 -> UI 资源名）
-
-- btn_auto -> btn_auto
-- btn_next -> btn_next
-- modal_popup -> 弹窗屏
-- popup_confirm -> 关闭
-- panel_player_1..4 -> 玩家1名字..玩家4名字
-- panel_player_1_detail..4_detail -> 玩家1总资产..玩家4总资产
-- item_slot_1..5 -> item_slot_1..5
+当前命名清单以统一的小写蛇形命名为准，`ui_data.lua` 与 Eggy 适配层已直接使用这些名称，不再依赖中文映射。UI 资源侧需要保持同名，保证审计脚本可直接命中。
 
 ## 基础面板
 
@@ -33,12 +23,36 @@
 
 - panel_player_1
 - panel_player_1_detail
+- panel_player_1_info
+- panel_player_1_avatar
+- panel_player_1_cash
+- panel_player_1_land_count
+- panel_player_1_base
+- panel_player_1_base_color
 - panel_player_2
 - panel_player_2_detail
+- panel_player_2_info
+- panel_player_2_avatar
+- panel_player_2_cash
+- panel_player_2_land_count
+- panel_player_2_base
+- panel_player_2_base_color
 - panel_player_3
 - panel_player_3_detail
+- panel_player_3_info
+- panel_player_3_avatar
+- panel_player_3_cash
+- panel_player_3_land_count
+- panel_player_3_base
+- panel_player_3_base_color
 - panel_player_4
 - panel_player_4_detail
+- panel_player_4_info
+- panel_player_4_avatar
+- panel_player_4_cash
+- panel_player_4_land_count
+- panel_player_4_base
+- panel_player_4_base_color
 
 ## 道具槽位（中下 5 格）
 
@@ -87,6 +101,8 @@
 - popup_title
 - popup_body
 - popup_confirm
+- popup_card
+- popup_confirm_alt
 
 ## 棋盘格子文本
 
@@ -96,38 +112,17 @@
 
 以下名称来自 `src/adapters/eggy/market_ui.lua` 的当前配置：
 
-- MarketUI.container = 黑市屏
-- MarketUI.confirm_button = 黑市购买按钮
-- MarketUI.cancel_button = 取消按钮
-- MarketUI.price_label = 售价：100
-- MarketUI.selected_card = 选中卡牌
-- MarketUI.item_buttons = 黑市购买项1…10
-- MarketUI.item_labels = 道具名称1…10
-- MarketUI.item_frames = 底框1…10
-- MarketUI.icon_placeholder = icon_placeholder
-
-事件名（UI 资源侧触发）：
-
-- MarketUI.item_event_prefix = 点击黑市购买项（用于拼接 1…10）
-- MarketUI.confirm_event = 点击黑市购买按钮
-- MarketUI.cancel_event = 点击取消按钮
+- MarketUI.container = market_panel
+- MarketUI.confirm_button = market_confirm_button
+- MarketUI.cancel_button = market_cancel_button
+- MarketUI.price_label = market_price_label
+- MarketUI.selected_card = market_selected_card
+- MarketUI.item_buttons = market_item_button_1…10
+- MarketUI.item_labels = market_item_label_1…10
+- MarketUI.item_frames = market_item_frame_1…10
+- MarketUI.icon_placeholder = market_icon_placeholder
 
 ## 托管/自动控制事件约束
 
-- 点击 `btn_auto` 时，UI 事件 payload 中应带 `id="auto"` 或 `button_id="auto"`，用于触发自动控制切换。
-- 右上“自动控制”按钮对应 `btn_auto`。
-
-## 待补齐清单（来自 `tests/ui_nodes_audit.lua`）
-
-当前审计仍缺失以下类别节点/事件（以审计脚本输出为准）：
-
-- 基础面板：`panel_title`、`panel_turn`、`panel_current_*`、`panel_players_title`
-- 道具区：`panel_item_slots`
-- 格子详情：`panel_tile_title`、`tile_detail_*`
-- 日志区：`panel_log_title`、`panel_log_body`
-- 选择弹窗：`modal_choice`、`choice_*`
-- 确认弹窗：`popup_title`、`popup_body`
-- 按钮：`btn_restart`
-- 棋盘文本：`tile_1..tile_45`
-- 黑市事件：`点击黑市购买项`、`点击黑市购买按钮`、`点击取消按钮`
-- 资源占位：`icon_placeholder`
+- 点击 `btn_auto` 时应触发 UIManager 点击事件，由适配层基于节点名判定动作。
+- 右上“自动控制”按钮对应 `btn_auto`，文字节点使用 `btn_auto_label`。
