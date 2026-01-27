@@ -28,6 +28,11 @@ local function install_ui_manager()
   UIManager.Builder(ui_data)
 end
 
+local function install_eca_bridge()
+  require "macro"
+  require "src.adapters.eggy.eca"
+end
+
 local function resolve_option_id(choice, payload, layer)
   if not (choice and payload) then
     return nil
@@ -183,6 +188,7 @@ function EggyRuntime.install()
 
   LuaAPI.global_register_trigger_event({ EVENT.GAME_INIT }, function()
     install_ui_manager()
+    install_eca_bridge()
     layer:set_game(layer:new_game())
   end)
 
