@@ -9,24 +9,28 @@
 
 ## 进度
 
-- [ ] (2026-01-27 21:10+08:00) 盘点 UIState 依赖点并标注替换范围  
-- [ ] (2026-01-27 21:10+08:00) 在 EggyLayer 中替换为 UIManager 直连调用  
-- [ ] (2026-01-27 21:10+08:00) 清理 ui_state.lua 与相关引用  
-- [ ] (2026-01-27 21:10+08:00) 运行测试并记录结果
+- [x] (2026-01-27 14:44Z) 盘点 UIState 依赖点并标注替换范围  
+- [x] (2026-01-27 14:44Z) 在 EggyLayer 中替换为 UIManager 直连调用  
+- [x] (2026-01-27 14:44Z) 清理 ui_state.lua 与相关引用  
+- [x] (2026-01-27 14:50Z) 运行测试并记录结果
 
 ## 意外与发现
 
-暂无。
+- 观察：仓库中已不存在 src/adapters/eggy/ui_state.lua，eggy_layer.lua 已直接使用 UIManager 查询节点。
+  证据：ls src/adapters/eggy；src/adapters/eggy/eggy_layer.lua:180-256。
 
 ## 决策日志
 
 - 决策：优先删除 UIState 模块而非保留兼容层。  
   理由：CodingDiscipline 要求复用与删除优先，UIManager 已提供完整能力。  
   日期/作者：2026-01-27 / Codex
+- 决策：同步更新 docs/adapters_design.md 的 UIState 描述为当前实现。  
+  理由：避免设计文档与现状不一致，降低新手阅读成本。  
+  日期/作者：2026-01-27 / Codex
 
 ## 结果与复盘
 
-完成后补充。
+已完成 UIState 清理与文档同步，Lua 测试通过。
 
 ## 背景与导读
 
@@ -69,6 +73,12 @@
 完成后产物应包括：  
 `src/adapters/eggy/eggy_layer.lua` 修改、`src/adapters/eggy/ui_state.lua` 删除。
 
+    docs/adapters_design.md 已同步为 build_ui_state 直连 UIManager 的描述。
+
+    测试输出：
+    Dependency self-check passed
+    All regression checks passed (29)
+
 ## 接口与依赖
 
 直接使用以下 UIManager 能力：  
@@ -78,3 +88,5 @@
 依赖文档：`docs/eggy/ui_manager_lib.md`。
 
 附记：初版计划，用于删除 UIState 并直连 UIManager，便于后续按同一逻辑实施。
+改动说明：确认 UIState 已清理并补齐文档同步记录，原因是需要与当前实现保持一致。
+改动说明：补充测试结果与完成状态，原因是已执行 Lua 测试并需要记录验收结论。

@@ -1,3 +1,5 @@
+require "src.adapters.eggy.macro"
+
 ---@export
 ---@desc 获取执行载具命令的玩家
 ---@return Role

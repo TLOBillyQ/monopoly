@@ -85,26 +85,23 @@ Eggy 适配层为当前主要实现，**事件入口、UI 查询、以及选择 
 - `EggyRuntime.install()`：注册 Eggy 事件与 Tick。
   - `LuaAPI.global_register_trigger_event(EVENT.GAME_INIT, ...)`：初始化 UI 管理器并创建 Game。
   - `LuaAPI.set_tick_handler(function(delta_seconds) ... end)`：每帧调用 `layer:tick()`。
-  - `LuaAPI.global_register_trigger_event(EVENT.UI_CUSTOM_EVENT, ...)`：接收 UI 事件并派发动作。
 - `install_ui_manager()`：尝试加载 `UIManager`，并执行 `UIManager.Builder(nodes)` 构建 UI。
+- `register_ui_manager_events(layer)`：通过 `UIManager.query_nodes_by_name` 获取节点并监听 CLICK 事件，直接派发 `layer:dispatch_action` 或 `layer:close_popup`。
 - `resolve_option_id(choice, payload, layer)`：解析黑市选择 UI 的选择项（支持 `option_id/option` 或 `index/*_index`）。
-- `resolve_market_index(event_name)`：支持“黑市购买项按钮”走事件名前缀匹配（`MarketUI.item_event_prefix`）。
-- `EVENT_NAME_ACTION_MAP`：当 UI 侧无法透传 id 时，用资源事件名做兜底映射（例如把“圆形金”映射为 `ui_button next`）。
 
 补充：仓库根目录 `init.lua` 负责初始化 `G.refs/G.tiles/G.buildings` 等全局表，并构建 UI（`ui_data.lua`）。`EggyLayer` 的部分能力（例如楼房升级特效/图片 key 映射）会依赖这些全局数据。
 
-### 5.2 UIState 与节点查询
+### 5.2 UI 状态与节点查询
 
-文件：`src/adapters/eggy/ui_state.lua`
+文件：`src/adapters/eggy/eggy_layer.lua`
 
 核心策略：
-- 节点通过 `UIManager.query_nodes_by_name(name)` 获取，并缓存到 `UIState.nodes`。
-- `DIRECT_NAME_MAP` 负责把“代码里用的逻辑节点名”映射到“UI 资源里的真实名字”（例如 `popup_confirm -> 关闭`）。
-- 目前实现假设节点对象具备字段：`text/visible/disabled`，设置时直接写字段（不再走 `LuaAPI.query_ui_node` 兜底）。
+- 节点通过 `UIManager.query_nodes_by_name(name)` 获取，并在 `build_ui_state()` 内用 `query_node` 取首个节点。
+- 直接写节点字段 `text/visible/disabled`，不再额外封装映射层。
+- `ui` 状态表内保留 `choice/popup/item_slots` 等字段，供 `EggyLayer` 逻辑使用。
 
 关键函数：
-- `UIState.get_node(self, name)`：缓存节点，避免重复查询。
-- `UIState.set_label / set_button / set_visible / set_touch_enabled`：对节点字段写入的薄封装。
+- `build_ui_state()`：组装 `ui` 状态表，并提供 `query_node/set_label/set_button/set_visible/set_touch_enabled` 等方法。
 
 ### 5.3 EggyLayer（主逻辑）
 
@@ -112,7 +109,7 @@ Eggy 适配层为当前主要实现，**事件入口、UI 查询、以及选择 
 
 关键函数（函数级说明）：
 - `EggyLayer.new(opts)`
-  - 创建 `UIState`，挂载 `AdapterLayer.attach`。
+  - 构建 `ui` 状态表（`build_ui_state()`），并挂载 `AdapterLayer.attach`。
 - `EggyLayer:set_game(g)`
   - 调 `AdapterLayer.set_game`，处理 pending_choice。
 - `EggyLayer:tick(dt)`
@@ -154,7 +151,7 @@ Eggy 适配层为当前主要实现，**事件入口、UI 查询、以及选择 
 1) **面板式黑市（10 项）**（推荐默认）
 - `MarketUI.is_panel_ready()` 为真时启用（要求容器、确认按钮、以及 `item_buttons/item_labels` 等字段完整）。
 - `EggyLayer:_open_market_panel(pending)` 会把 `pending.options` 映射到按钮/文字/稀有度底框，并记录 `layer.market_choice_option_ids`。
-- `EggyRuntime.install()` 通过 `MarketUI.item_event_prefix` 或 `MarketUI.confirm_event/cancel_event` 把 UI 点击转换为选择动作。
+- `EggyRuntime.install()` 通过 UIManager 节点监听将 `MarketUI.item_buttons` 与确认/取消按钮转为选择动作。
 
 2) **卡牌式黑市（≤3 项）**
 - 当 `MarketUI.choose_event` 配置为非空字符串，且 `pending.options` 数量 `<= 3` 时启用。
@@ -166,19 +163,16 @@ Eggy 适配层为当前主要实现，**事件入口、UI 查询、以及选择 
 
 ```
 [Eggy UI 事件]
-   │ EVENT.UI_CUSTOM_EVENT
+   │ UIManager 节点 CLICK
    ▼
-EggyRuntime.install()
-   │ 解析 event_name / payload（data.event_name/name/event）
+EggyRuntime.register_ui_manager_events()
+   │ 按节点名分发（btn_next/btn_auto/choice_option/...）
    ├─ 黑市路径（pending.kind == "market_buy"）
-   │    ├─ confirm_event / cancel_event / item_event_prefix
+   │    ├─ item_buttons 顺序映射
    │    └─ resolve_option_id() → choice_select / choice_cancel
    │
    └─ 通用路径
-        ├─ EVENT_NAME_ACTION_MAP（资源事件名兜底）
-        └─ event_name 作为动作类型（ui_button/choice_select/...）
-             ▼
-        EggyLayer:dispatch_action(action)
+        └─ layer:dispatch_action(action)
              ▼
            Game:dispatch_action(action)
 ```
@@ -200,11 +194,11 @@ EggyLayer:tick(dt)
 
 ### 5.7 Eggy 适配维护重点
 
-1) **节点命名与映射**：UI 资源改名时，优先改 `UIState.DIRECT_NAME_MAP` 与 `MarketUI.*` 常量，而不是全局搜索替换字符串。
-2) **UIManager 依赖**：当前 `UIState` 只走 `UIManager.query_nodes_by_name`。若 UIManager 构建失败，会导致节点全部为 nil（表现为 UI 不刷新）。排查顺序：`ui_data.lua` 是否可 require、`UIManager.Builder` 是否被调用、节点名是否一致。
+1) **节点命名**：UI 资源改名时，直接同步 `ui_data.lua`、`docs/plans/ui_naming_list.md` 与 `MarketUI.*` 常量，避免映射层。
+2) **UIManager 依赖**：节点通过 `UIManager.query_nodes_by_name` 获取首个节点。若 UIManager 构建失败，会导致节点全部为 nil（表现为 UI 不刷新）。排查顺序：`ui_data.lua` 是否可 require、`UIManager.Builder` 是否被调用、节点名是否一致。
 3) **场景锚点/角色绑定**：玩家位移依赖棋盘锚点 `t1..tN`（或 `G.tiles`），玩家 unit 依赖 `GameAPI.get_all_valid_roles()`。多人同格子偏移由 `tile_spacing` 自动估算。
 4) **楼房升级表现**：`on_tile_upgraded` 依赖 `G.buildings/G.refs`，并用 `Data.Prefab` 生成组单位；Eggy 工程资源变更时需要同步 Prefab/refs。
-5) **黑市 UI**：优先保证面板式黑市可用（`item_event_prefix/confirm_event/cancel_event` 事件名与资源一致）。卡牌式黑市是可选增强（需要 `MarketUI.choose_event` + 外部组件）。
+5) **黑市 UI**：优先保证面板式黑市可用（`MarketUI.item_buttons/confirm_button/cancel_button` 与 UI 资源一致）。卡牌式黑市是可选增强（需要 `MarketUI.choose_event` + 外部组件）。
 
 ## 6. 适配层与规则层的通信
 

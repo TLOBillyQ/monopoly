@@ -40,7 +40,6 @@ local MarketUI = {
     "market_item_frame_9",
     "market_item_frame_10",
   },
-  item_event_prefix = "market_item_button_",
   choose_event = nil,
   confirm_event = "market_confirm_button",
   cancel_event = "market_cancel_button",

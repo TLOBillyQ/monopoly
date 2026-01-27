@@ -17,6 +17,14 @@
 - panel_current_dice
 - panel_players_title
 
+## 基础屏与遮罩
+
+- base_screen
+- loading_screen
+- loading_tip
+- overlay_mask
+- background_rect
+
 ## 玩家状态（4 人）
 
 左下信息面板对应玩家状态区。
@@ -78,6 +86,7 @@
 - btn_next（行动按钮）
 - btn_auto（自动控制开关）
 - btn_restart
+- btn_auto_label
 
 ## 日志区
 

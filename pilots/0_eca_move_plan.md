@@ -11,14 +11,16 @@
 ## 进度
 
 - [x] (2026-01-27 21:26Z) 创建可执行计划文件，明确迁移目标与验证方式。
-- [ ] (2026-01-27 21:26Z) 设计 eca.lua 与 init.lua、macro.lua、move.lua、refs.lua 的新位置与安装入口，并确定根目录入口职责边界。
-- [ ] (2026-01-27 21:26Z) 实施上述文件迁移与启动安装改造，保持 API 与演示行为一致。
-- [ ] (2026-01-27 21:26Z) 全量更新 require 路径与兼容入口，避免双路径加载。
-- [ ] (2026-01-27 21:26Z) 执行测试与手工验收，记录观察结果并更新文档。
+- [x] (2026-01-27 14:44Z) 设计 eca.lua 与 init.lua、macro.lua、move.lua、refs.lua 的新位置与安装入口，并确定根目录入口职责边界。
+- [x] (2026-01-27 14:44Z) 实施上述文件迁移与启动安装改造，保持 API 与演示行为一致。
+- [x] (2026-01-27 14:44Z) 全量更新 require 路径与兼容入口，避免双路径加载。
+- [x] (2026-01-27 14:50Z) 执行测试与手工验收，记录观察结果并更新文档。
 
 ## 意外与发现
 
-当前尚无意外与发现。执行过程中如发现引擎侧依赖 eca.lua 的加载顺序或全局变量约束，需要在此记录并附证据片段。
+- 观察：eca.lua 已经位于 src/adapters/eggy/ 且 eggy_runtime.lua 已在安装流程中 require。
+  证据：ls src/adapters/eggy 显示 eca.lua；src/adapters/eggy/eggy_runtime.lua:23-31 有 install_eca_bridge 调用。
+执行过程中如发现引擎侧依赖 eca.lua 的加载顺序或全局变量约束，需要在此记录并附证据片段。
 
 ## 决策日志
 
@@ -28,10 +30,13 @@
 - 决策：将 init.lua、macro.lua、move.lua、refs.lua 一并迁移到 Eggy 适配层，并保留根目录 init.lua 作为兼容入口。
   理由：这些文件与启动链路、演示初始化与平台常量密切相关，集中到适配层能减少根目录耦合；保留兼容入口避免引擎启动路径断裂。
   日期/作者：2026-01-27 Codex
+- 决策：eca.lua 内部显式 require src.adapters.eggy.macro，保证事件常量先行加载。
+  理由：避免依赖外部调用顺序，确保 UI/载具转发常量可用。
+  日期/作者：2026-01-27 Codex
 
 ## 结果与复盘
 
-尚未实施，待完成后填写实际达成情况、残留问题与验证结果。
+已完成文件迁移与入口改造，Lua 测试通过；未执行 Game.exe 手工验收。
 
 ## 背景与导读
 
@@ -62,9 +67,18 @@
 
 产物包括新位置的 eca.lua、Eggy runtime 的加载入口调整，以及 init.lua 的依赖清理。执行完成后应保留简短的测试输出片段作为证据。
 
+    init.lua 兼容入口示例：
+    return require("src.adapters.eggy.init")
+
+    测试输出：
+    Dependency self-check passed
+    All regression checks passed (29)
+
 ## 接口与依赖
 
 eca.lua 中的函数签名必须保持不变，包括 get_vehicle_player/get_vehicle_move_direction/get_vehicle_move_time/get_spawn_vehicle_id/get_forward_ui_event 以及 UIManager.forward_eca_event、VehicleManager.forward_eca_event_*。macro.lua 仍提供 FORWARD_EVENT_* 等全局常量；refs.lua 仍负责初始化 G.refs；move.lua 仍对外暴露 move.one_step；init.lua 仍返回演示入口函数并负责场景索引与 UI 初始化。EggyRuntime.install 必须负责加载 eca.lua 与 macro.lua，并保证 UIManager 与 LuaAPI 可用；根目录 init.lua 必须保持兼容入口，确保引擎侧仍能从原路径启动。
 
 改动说明：补充了 init.lua 与 move.lua 在迁移计划中的位置与依赖关系说明，原因是它们与启动链路和演示调用路径有关，必须在计划中明确。
 改动说明：将迁移范围扩展到 init.lua、macro.lua、move.lua、refs.lua，并补充兼容入口与验证要点，原因是用户要求这些文件与 eca 一并迁移且避免启动链路断裂。
+改动说明：完成 init/macro/move/refs 迁移与根目录 init 兼容入口，并记录 eca 已在适配层的发现，原因是需要同步进度与决策事实。
+改动说明：补充测试结果与完成状态，原因是已执行 Lua 测试并需要记录验收结论。

@@ -9,24 +9,29 @@
 
 ## 进度
 
-- [ ] (2026-01-27 21:35+08:00) 统一命名规范并列出全量清单  
-- [ ] (2026-01-27 21:35+08:00) 同步 `ui_data.lua` 与 `docs/plans/ui_naming_list.md`  
-- [ ] (2026-01-27 21:35+08:00) 更新 Eggy 适配层与审计脚本引用  
-- [ ] (2026-01-27 21:35+08:00) 运行审计与回归验证
+- [x] (2026-01-27 14:44Z) 统一命名规范并列出全量清单  
+- [x] (2026-01-27 14:44Z) 同步 `ui_data.lua` 与 `docs/plans/ui_naming_list.md`  
+- [x] (2026-01-27 14:44Z) 更新 Eggy 适配层与审计脚本引用  
+- [x] (2026-01-27 14:50Z) 运行审计与回归验证
 
 ## 意外与发现
 
-暂无。若发现 UI 节点语义与命名不符（例如“弹窗确认/关闭”实际语义），在这里记录并给出 UI 侧截图或日志证据。
+- 观察：ui_data.lua 已采用小写蛇形命名，tests/ui_nodes_audit.lua 直接匹配节点名，无需映射表。
+  证据：ui_data.lua 顶部条目均为 snake_case；tests/ui_nodes_audit.lua:20-110。
+若发现 UI 节点语义与命名不符（例如“弹窗确认/关闭”实际语义），在这里记录并给出 UI 侧截图或日志证据。
 
 ## 决策日志
 
 - 决策：统一采用小写蛇形命名，并以代码逻辑名为准。  
   理由：减少映射与双语命名维护成本，便于适配层直接使用 UIManager 查询。  
   日期/作者：2026-01-27 / Codex
+- 决策：补齐 ui_naming_list 中遗漏的基础屏/遮罩节点并保持与审计清单一致。  
+  理由：保证清单完整可用，避免遗漏导致 UI 资源侧改名不全。  
+  日期/作者：2026-01-27 / Codex
 
 ## 结果与复盘
 
-完成后补充。
+已确认命名统一并补齐清单，审计与回归测试通过。
 
 ## 背景与导读
 
@@ -52,8 +57,17 @@
 
 产物包括更新后的 `ui_data.lua`、`docs/plans/ui_naming_list.md` 与 Eggy 适配层文件；Eggitor 最终导出的 `Data/UINodes.lua` 与 `Data/Prefab.lua` 由你在确认命名后生成。若发现 UI 中“弹窗确认/关闭”语义与代码期望不符，需要在 UI 侧调整并记录到“意外与发现”。
 
+    docs/plans/ui_naming_list.md 已补齐 base_screen/loading_screen 等节点清单。
+
+    测试输出：
+    [ui-audit] ok: all required nodes/events are present (directly or via mapping)
+    Dependency self-check passed
+    All regression checks passed (29)
+
 ## 接口与依赖
 
 统一命名清单采用小写蛇形，所有 UI 资源名需严格一致。基础屏幕与遮罩使用 base_screen、loading_screen、loading_tip、overlay_mask、background_rect。主面板使用 panel_title、panel_turn、panel_current_title、panel_current_name、panel_current_role、panel_current_phase、panel_current_dice、panel_players_title、panel_item_slots、panel_tile_title、panel_log_title、panel_log_body。玩家区按 1..4 使用 panel_player_1、panel_player_1_detail、panel_player_1_info、panel_player_1_avatar、panel_player_1_cash、panel_player_1_land_count、panel_player_1_base、panel_player_1_base_color，并对 2..4 重复同样后缀。道具槽位使用 item_slot_1、item_slot_2、item_slot_3、item_slot_4、item_slot_5。格子详情使用 tile_detail_name、tile_detail_price、tile_detail_level、tile_detail_owner、tile_detail_roadblock、tile_detail_mine。主按钮使用 btn_next、btn_auto、btn_restart，并保留 btn_auto_label 作为自动控制文字节点。选择弹窗使用 modal_choice、choice_title、choice_body、choice_cancel、choice_option_1、choice_option_2、choice_option_3、choice_option_4。确认弹窗使用 modal_popup、popup_title、popup_body、popup_confirm、popup_card，并将原“弹窗确认”暂定为 popup_confirm_alt（若实际为确认按钮则与 popup_confirm 对调）。黑市面板使用 market_panel、market_confirm_button、market_cancel_button、market_price_label、market_selected_card、market_icon_placeholder、market_item_button_1..10、market_item_label_1..10、market_item_frame_1..10。棋盘格子文本使用 tile_1..tile_45。自定义事件名与节点名保持一致，黑市事件使用 market_item_button_1..10、market_confirm_button、market_cancel_button；自动与下一回合事件使用 btn_auto、btn_next；弹窗确认事件使用 popup_confirm。
 
 附记：首次创建本计划，明确全量 UI 命名清单与同步范围，避免后续再引入映射层。
+改动说明：确认命名已统一并补齐基础屏/遮罩清单，原因是当前实现已无映射且清单需完整可用。
+改动说明：补充审计与回归测试结果，原因是已完成验收并需要记录输出。

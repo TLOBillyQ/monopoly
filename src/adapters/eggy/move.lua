@@ -1,3 +1,5 @@
+require "src.adapters.eggy.macro"
+
 local MovementManager = {}
 
 function MovementManager.one_step(player_id, v3_dir, tile_start, tile_end)
