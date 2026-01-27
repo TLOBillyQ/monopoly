@@ -2,6 +2,7 @@ local logger = {
   entries = {},
   max_entries = 200,
   file_path = "game.log",
+  enable_file_io = false,
   adapter = nil,
 }
 
@@ -38,7 +39,9 @@ local function push(level, ...)
   if #logger.entries > logger.max_entries then
     table.remove(logger.entries, 1)
   end
-  append_to_file(level, text, timestamp)
+  if logger.enable_file_io then
+    append_to_file(level, text, timestamp)
+  end
   local adapter = logger.adapter
   if adapter and adapter.on_log then
     local allow = adapter.level
@@ -68,6 +71,10 @@ function logger.set_adapter(adapter)
   logger.adapter = adapter
 end
 
+function logger.set_file_io_enabled(enabled)
+  logger.enable_file_io = enabled == true
+end
+
 function logger.info(...)
   push("info", ...)
 end
@@ -82,7 +89,7 @@ end
 
 function logger.clear()
   logger.entries = {}
-  if logger.file_path then
+  if logger.enable_file_io and logger.file_path then
     local file = io.open(logger.file_path, "w")
     if file then
       file:write("-- session start " .. os.date("%Y-%m-%d %H:%M:%S") .. " --\n")
