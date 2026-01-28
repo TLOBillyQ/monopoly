@@ -15,14 +15,19 @@
 
 
 - [x] (2026-01-28 17:52) 建立计划初版，完成相关文件定位与问题拆分。
-- [ ] (2026-01-28 17:52) 明确棋盘锚点映射与 TileRenderer 的修复方案，补上初次渲染。
-- [ ] (2026-01-28 17:52) 修复“下一步”按钮不推进与连点防护，并补齐调试 print。
-- [ ] (2026-01-28 17:52) 记录调试 print 位置到 docs，并完成验证与回归检查。
+- [x] (2026-01-28 18:02) 明确棋盘锚点映射与 TileRenderer 的修复方案，补上初次渲染。
+- [x] (2026-01-28 18:02) 修复“下一步”按钮不推进与连点防护，并补齐调试 print。
+- [ ] (2026-01-28 18:05) 部分完成：已记录调试 print 位置到 docs，已运行 `lua tests/regression.lua`；剩余：Eggy 场景验收。
 
 ## 意外与发现
 
 
-当前尚未发现意外行为。若发现棋盘锚点命名与配置不一致、Eggy 场景缺少 `t<ID>`、或 UI 点击事件未注册，将在此记录并给出证据。
+ 当前尚未发现意外行为。若发现棋盘锚点命名与配置不一致、Eggy 场景缺少 `t<ID>`、或 UI 点击事件未注册，将在此记录并给出证据。
+
+暂无新增意外与发现。
+
+观察：回归脚本通过。
+证据：`lua tests/regression.lua` 输出 `All regression checks passed (30)`。
 
 ## 决策日志
 
@@ -39,10 +44,14 @@
 理由：不引入新抽象，避免重复触发回合逻辑，同时不阻塞自动运行。
 日期/作者：2026-01-28 / Codex。
 
+决策：防连点节流基于 `GameAPI.get_timestamp()`，当时间戳是毫秒级时先归一为秒。
+理由：保持节流判断在不同时间戳单位下都能稳定工作，避免误判锁死或失效。
+日期/作者：2026-01-28 / Codex。
+
 ## 结果与复盘
 
 
-尚未实施，完成后补充实际结果、缺口与复盘。
+已完成棋盘锚点映射、TileRenderer 初次渲染与按钮节流/调试 print 增补；调试 print 已记录到文档，回归脚本已通过。仍需在 Eggy 场景手工验证起点、文本与回合推进链路。
 
 ## 背景与导读
 
@@ -65,6 +74,14 @@
 
     rg -n "tile_renderer|render_tile|t\\d+|btn_next|dispatch_action" src
     rg -n "path|start_id" src/config/map.lua
+
+已执行并完成以下修改：更新 `src/adapters/eggy/eggy_runtime.lua` 的棋盘锚点查询改为按 `map.path` 顺序；在 `src/adapters/eggy/eggy_layer_board.lua` 初始化时渲染格子文本；在 `src/adapters/eggy/tile_renderer.lua` 使用 id 映射；补齐 `btn_next`/`dispatch_action`/`step_turn`/`turn_manager` 调试 print；新增 `docs/debug_prints.md`。接下来运行回归脚本并完成 Eggy 场景验证。
+
+已在仓库根目录运行回归脚本：
+
+    lua tests/regression.lua
+    ..............................
+    All regression checks passed (30)
 
 修改 `src/adapters/eggy/eggy_runtime.lua`，用 `src/config/map.lua` 的 `path` 生成 `t<ID>` 列表查询单位，保证 `G.tiles[board_index]` 对应 `t<tile_id>`。注意 `board_index=1` 对应 `tile_id=35`。
 
@@ -115,3 +132,7 @@
 仍使用 `src/config/map.lua` 的 `path` 作为棋盘索引顺序来源，仍使用 `TileRenderer.render_tile(unit, tile_id, owner_id)` 作为渲染入口。按钮事件沿用 `register_ui_manager_events` 与 `EggyLayer:dispatch_action`。不新增新的中间层或通用工具函数。
 
 本次更新说明：首次创建计划，覆盖棋盘锚点/文本、回合按钮与调试 print 的修复需求，尚未实施。
+
+本次更新说明：已落地棋盘锚点映射、TileRenderer 初次渲染、回合按钮节流与调试 print，并补充调试清单；验证与手工验收待完成。
+
+本次更新说明：已运行回归脚本并记录通过结果。
