@@ -26,3 +26,4 @@
 
 - 所有节点名必须与 `docs/ui_naming_list.md` 一致。
 - 基础屏不再依赖 tile_1..tile_45 的棋盘文本节点，导出时保持与命名清单一致即可。
+- item_slot_* 节点需具备 `image_texture` 与 `disabled` 属性，用于道具图片与点击开关。

@@ -12,7 +12,7 @@
 ## 进度
 
 
-- [ ] (2026-01-28 05:15Z) 创建并确认本可执行计划范围与验收口径。
+- [x] (2026-01-28 13:40Z) 更新可执行计划与 docs/ui 文档，补充玩家信息与道具槽位显示规则，并同步命名说明。
 - [x] (2025-09-24 01:20Z) 创建并确认本可执行计划范围与验收口径。
 - [x] (2025-09-24 01:20Z) 盘点 UI 渲染链路与棋盘渲染链路的现状，确认移除范围与资产来源。
 - [ ] (2025-09-24 01:20Z) 部分完成：已完成代码与文档调整、测试清单更新；剩余：Eggitor 删除节点并重新导出 `ui_data.lua`。
@@ -43,7 +43,7 @@
 ## 结果与复盘
 
 
-已完成代码与文档调整与脚本测试，尚未执行 Eggitor 节点清理与手工验收，结果与复盘待全部验收后补写。
+已完成代码与文档调整与脚本测试，并补充 docs/ui 说明，但尚未执行 Eggitor 节点清理与手工验收，结果与复盘待全部验收后补写。
 
 ## 背景与导读
 
@@ -53,7 +53,7 @@
 ## 工作计划
 
 
-先从渲染链路切断 UI 对 tile 的依赖，删除 `EggyLayerBoard.refresh_board` 中对 tile_1..tile_45 的标签刷新，并移除 `src/adapters/core/ui_tile.lua` 及所有引用。随后删除格子详情功能，包括 `EggyLayerUI.refresh_tile_detail`、`EggyLayer:refresh_tile_detail`、`EggyLayer:dispatch_action` 中的 `ui_tile_select` 分支，以及 UI 状态中的 selected_tile 字段，同时清理 panel_tile_title 与 tile_detail_* 节点在 UI 文档与命名清单中的出现。接着把玩家信息刷新逻辑改为写入 `panel_player_X_avatar`、`panel_player_X_cash`、`panel_player_X_land_count`、`panel_player_X_base`，其中总资产的计算沿用 `src/game.lua` 的 `total_assets` 逻辑，在 UI 层按玩家拥有地块与投资额汇总。item_slot 渲染改为设置图片纹理，优先使用 `G.refs` 的道具 id 贴图，空槽位使用“空”贴图，并保留点击事件。最后更新 `docs/ui` 中的基础屏与命名清单，并在 Eggitor 中移除不再使用的节点后重新导出 `ui_data.lua`。
+先从渲染链路切断 UI 对 tile 的依赖，删除 `EggyLayerBoard.refresh_board` 中对 tile_1..tile_45 的标签刷新，并移除 `src/adapters/core/ui_tile.lua` 及所有引用。随后删除格子详情功能，包括 `EggyLayerUI.refresh_tile_detail`、`EggyLayer:refresh_tile_detail`、`EggyLayer:dispatch_action` 中的 `ui_tile_select` 分支，以及 UI 状态中的 selected_tile 字段，同时清理 panel_tile_title 与 tile_detail_* 节点在 UI 文档与命名清单中的出现。接着把玩家信息刷新逻辑改为写入 `panel_player_X`、`panel_player_X_cash`、`panel_player_X_land_count`、`panel_player_X_detail`，其中总资产的计算沿用 `src/game.lua` 的 `total_assets` 逻辑，在 UI 层按玩家拥有地块与投资额汇总。item_slot 渲染改为设置图片纹理，优先使用 `G.refs` 的道具 id 贴图，空槽位使用“空”贴图，并保留点击事件。最后更新 `docs/ui` 中的基础屏与命名清单，补充总资产与道具图片的说明，并在 Eggitor 中移除不再使用的节点后重新导出 `ui_data.lua`。
 
 ## 具体步骤
 
@@ -101,3 +101,5 @@
     EggyLayerUI.refresh_panel(layer, view)
     EggyLayerUI.refresh_item_slots(layer, view)
     EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
+
+本次更新：补充了玩家信息字段与道具槽位图片的文档说明，并在进度与结果中同步当前状态，确保计划对齐实际 UI 表现。

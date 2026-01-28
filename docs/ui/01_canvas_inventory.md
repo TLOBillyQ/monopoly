@@ -16,37 +16,37 @@
      - panel_current_dice
      - panel_players_title
      - panel_player_1
-     - panel_player_1_detail
-     - panel_player_1_info
-     - panel_player_1_avatar
+     - panel_player_1_detail（总资产）
+     - panel_player_1_info（可选底图）
+     - panel_player_1_avatar（头像）
      - panel_player_1_cash
      - panel_player_1_land_count
-     - panel_player_1_base
-     - panel_player_1_base_color
+     - panel_player_1_base（可选装饰）
+     - panel_player_1_base_color（可选装饰）
      - panel_player_2
-     - panel_player_2_detail
-     - panel_player_2_info
-     - panel_player_2_avatar
+     - panel_player_2_detail（总资产）
+     - panel_player_2_info（可选底图）
+     - panel_player_2_avatar（头像）
      - panel_player_2_cash
      - panel_player_2_land_count
-     - panel_player_2_base
-     - panel_player_2_base_color
+     - panel_player_2_base（可选装饰）
+     - panel_player_2_base_color（可选装饰）
      - panel_player_3
-     - panel_player_3_detail
-     - panel_player_3_info
-     - panel_player_3_avatar
+     - panel_player_3_detail（总资产）
+     - panel_player_3_info（可选底图）
+     - panel_player_3_avatar（头像）
      - panel_player_3_cash
      - panel_player_3_land_count
-     - panel_player_3_base
-     - panel_player_3_base_color
+     - panel_player_3_base（可选装饰）
+     - panel_player_3_base_color（可选装饰）
      - panel_player_4
-     - panel_player_4_detail
-     - panel_player_4_info
-     - panel_player_4_avatar
+     - panel_player_4_detail（总资产）
+     - panel_player_4_info（可选底图）
+     - panel_player_4_avatar（头像）
      - panel_player_4_cash
      - panel_player_4_land_count
-     - panel_player_4_base
-     - panel_player_4_base_color
+     - panel_player_4_base（可选装饰）
+     - panel_player_4_base_color（可选装饰）
      - panel_item_slots
      - item_slot_1
      - item_slot_2
@@ -62,6 +62,7 @@
      - overlay_mask
      - background_rect
    - 显示控制：默认显示；如需切换，用 ECA 事件控制。
+   - 说明：基础屏只展示头像、现金、地块数量、总资产，不再包含 tile_1..tile_45 或格子详情相关节点。道具槽位以图片显示，空槽位使用“空”贴图并禁用点击。
 
 2. loading_screen（加载屏）
    - 用途：遮罩与加载提示。

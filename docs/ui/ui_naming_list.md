@@ -28,6 +28,7 @@
 ## 玩家状态（4 人）
 
 左下信息面板对应玩家状态区。
+panel_player_* 为玩家名，panel_player_*_cash 为现金，panel_player_*_land_count 为地块数量，panel_player_*_detail 为总资产；头像与底图类节点由 Eggitor 资源配置。
 
 - panel_player_1
 - panel_player_1_detail
@@ -70,6 +71,8 @@
 - item_slot_3
 - item_slot_4
 - item_slot_5
+
+item_slot_* 需支持 `image_texture` 与 `disabled`，用于道具图片与点击开关。
 
 ## 主按钮
 
