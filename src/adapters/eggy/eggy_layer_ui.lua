@@ -2,12 +2,42 @@ local PanelView = require("src.adapters.core.ui_panel")
 
 local EggyLayerUI = {}
 
+local alias_map = {
+  choice_option_1 = "choice_option1",
+  choice_option_2 = "choice_option2",
+  choice_option_3 = "choice_option3",
+  choice_option_4 = "choice_option4",
+}
+
+for i = 1, 10 do
+  alias_map["market_item_button_" .. tostring(i)] = "market_item_button" .. tostring(i)
+end
+
+local missing_tips = {}
+
+local function resolve_node_name(name)
+  return alias_map[name] or name
+end
+
+local function show_missing_tip(name)
+  if missing_tips[name] then
+    return
+  end
+  missing_tips[name] = true
+  GlobalAPI.show_tips("UI 节点未适配：" .. tostring(name))
+end
+
 local function query_node(name)
   if not name then
     return nil
   end
-  local list = UIManager.query_nodes_by_name(name)
-  return list and list[1] or nil
+  local resolved = resolve_node_name(name)
+  local list = UIManager.query_nodes_by_name(resolved)
+  local node = list and list[1] or nil
+  if not node then
+    show_missing_tip(name)
+  end
+  return node
 end
 
 local function set_label(_, name, text)

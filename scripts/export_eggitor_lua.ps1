@@ -13,7 +13,9 @@ $includeDirs = @(
 )
 
 $includeFiles = @(
-  "main.lua"
+  "main.lua",
+  "DebugTools.lua",
+  "eggitor_config.lua"
 )
 
 if (Test-Path $staging) {

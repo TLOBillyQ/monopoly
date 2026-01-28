@@ -14,13 +14,14 @@
 
 
 - [x] (2026-01-28 17:10Z) 创建计划初版，确认对比口径与目标。
-- [ ] (2026-01-28 17:10Z) 生成 UI 节点缺失实现清单并落盘。
-- [ ] (2026-01-28 17:10Z) 补上缺省提示逻辑并回归验证。
+- [x] (2026-01-28 19:05Z) 生成 UI 节点缺失实现清单并落盘（`docs/ui/ui_missing_impl.md`）。
+- [x] (2026-01-28 19:05Z) 补上缺省提示逻辑并回归验证（新增 `tests/ui_missing_impl_audit.lua`）。
 
 ## 意外与发现
 
 
-当前暂无发现，实施中如发现 UI 命名与 ui_data 实际不一致或重复项，将在此记录证据与影响。
+- 观察：`ui_missing_impl_audit` 已无 “MissingInUiData” 项。
+  证据：`lua tests/ui_missing_impl_audit.lua` 输出 `MissingInUiData:` 为空。
 
 ## 决策日志
 
@@ -32,12 +33,12 @@
 ## 结果与复盘
 
 
-尚未实施，完成后总结缺失节点的数量、主要类型与后续 UI 资源修复建议。
+已生成缺失清单并补齐缺省提示逻辑：缺失节点会在访问或点击时提示一次，未绑定按钮也会被绑定默认提示。当前 ui_data 缺失项已清零，仅剩“适配未使用”的装饰节点清单供参考。
 
 ## 背景与导读
 
 
-UI 节点由 Eggitor 导出到 Data/ui_data.lua，适配层主要在 src/adapters/eggy/eggy_layer_ui.lua、src/adapters/eggy/eggy_runtime.lua、src/adapters/eggy/market_ui.lua 和 src/adapters/eggy/eggy_layer_market.lua 中读取并更新。当前存在明显命名差异与缺失：ui_data 中的 choice_option1~4 与适配层使用的 choice_option_1~4 不一致，market_item_button1~10 与适配层的 market_item_button_1~10 不一致；适配层写入的 panel_current_title、panel_current_name、panel_current_role、panel_current_phase、panel_players_title、panel_log_title、panel_log_body、btn_restart、popup_confirm_alt、panel_player_1_land_count、panel_player_4_land_count、btn_auto_label、panel_item_slots、overlay_mask、background_rect 等在 ui_data 中未出现；ui_data 中还包含 market_item_containter、market_panel_backgroud、backgroud_rect_base、backgroud_loading 等拼写与文档不一致的节点，以及若干中文节点未被适配层使用。以上均属于“可能缺失实现”的候选，需要通过脚本正式确认并落盘。
+UI 节点由 Eggitor 导出到 Data/ui_data.lua，适配层主要在 src/adapters/eggy/eggy_layer_ui.lua、src/adapters/eggy/eggy_runtime.lua、src/adapters/eggy/market_ui.lua 和 src/adapters/eggy/eggy_layer_market.lua 中读取并更新。当前存在明显命名差异与缺失：ui_data 中的 choice_option1~4 与适配层使用的 choice_option_1~4 不一致，market_item_button1~10 与适配层的 market_item_button_1~10 不一致；适配层写入的 panel_current_title、panel_current_name、panel_current_role、panel_current_phase、panel_players_title、panel_log_title、panel_log_body、btn_restart、popup_confirm_alt、btn_auto_label、panel_item_slots、overlay_mask、background_rect 等在 ui_data 中未出现；ui_data 中还包含 market_item_containter、market_panel_backgroud、backgroud_rect_base、backgroud_loading 等拼写与文档不一致的节点，以及若干中文节点未被适配层使用。以上均属于“可能缺失实现”的候选，需要通过脚本正式确认并落盘。
 
 ## 里程碑
 
@@ -96,3 +97,8 @@ UI 节点由 Eggitor 导出到 Data/ui_data.lua，适配层主要在 src/adapter
 默认提示使用 GlobalAPI.show_tips。审计脚本只依赖 Data.ui_data 与适配层模块，不新增外部依赖或动态文件读取；适配层新增的别名映射需限制在 ui_data 已存在的名称。
 
 本次更新：创建 UI 节点缺失实现梳理与缺省提示计划，列出已发现的命名差异与缺失节点，明确审计与修复流程。
+本次更新：补齐缺失清单、审计脚本与缺省提示逻辑，记录 ui_data 仍缺少的节点与后续待办。
+
+改动说明：补充审计产物与执行结果，更新进度与复盘，明确仍需 Eggitor 补齐节点。
+改动说明：记录 ui_data 缺失项已清零的现状，更新意外与复盘描述。
+改动说明：同步背景描述中已补齐的节点信息，避免后续误判缺失项。

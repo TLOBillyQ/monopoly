@@ -16,7 +16,7 @@
 文件：`main.lua`
 
 当前仓库只保留 Eggy 入口：
-- `main.lua`：先调用 `require("src.bootstrap")()` 扩展 `package.path`，再调用 `require("src.adapters.eggy.eggy_runtime").install()` 安装运行时。
+- `main.lua`：直接调用 `require("src.adapters.eggy.eggy_runtime").install()` 安装运行时。
 - Eggy runtime：`src/adapters/eggy/eggy_runtime.lua`。
 
 说明：

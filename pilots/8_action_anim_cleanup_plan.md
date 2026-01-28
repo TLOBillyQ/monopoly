@@ -19,15 +19,15 @@
 - [x] (2026-01-28 15:40Z) 完成路障/地雷/怪兽/导弹/清障逻辑写入 `action_anim` 并移除 `push_popup`。
 - [x] (2026-01-28 16:10Z) 已运行 `lua tests/ui_nodes_audit.lua`、`lua tests/deps_check.lua`、`lua tests/regression.lua` 并通过。
 - [x] (2026-01-28 16:30Z) 动作动画原型改为 `GlobalAPI.show_tips`，用于先跑通回调流程。
-- [ ] (2026-01-28 16:30Z) 待完成：Eggitor 删除 `panel_current_dice` 并导出 `Data/ui_data.lua`；手工验收与截图。
+- [ ] (2026-01-28 18:45Z) 部分完成：`Data/ui_data.lua` 已不含 `panel_current_dice`；剩余：Eggitor 侧确认资源、手工验收与截图。
 
 ## 意外与发现
 
 
-- 观察：`Data/ui_data.lua` 仍包含 `panel_current_dice`，需要通过 Eggitor 删除节点后导出。
-  证据：`Data/ui_data.lua` 仍有 `panel_current_dice` 占位条目。
 - 观察：动作动画原型当前用 `GlobalAPI.show_tips` 占位，暂不依赖 Prefab。
   证据：`src/adapters/eggy/action_anim.lua` 只调用 `GlobalAPI.show_tips`。
+- 观察：当前 `Data/ui_data.lua` 已不包含 `panel_current_dice`。
+  证据：`rg -n "panel_current_dice" Data/ui_data.lua` 无输出。
 
 ## 决策日志
 
@@ -163,3 +163,6 @@
 本次更新：记录测试执行结果并更新进度，方便后续对照 Eggitor 导出与手工验收状态。
 
 本次更新：动作动画原型改用 `GlobalAPI.show_tips`，移除 Prefab 命名对照并同步文档。
+本次更新：补充 `panel_current_dice` 的当前状态，明确仍需 Eggitor 侧确认与手工验收。
+
+改动说明：同步 UI 资源现状与待办，避免后续误判未完成事项。

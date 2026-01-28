@@ -13,13 +13,9 @@ function Dice.roll(count, override_values, rng)
     end
     return results, total
   end
+  assert(rng and rng.next_int, "Dice.roll requires rng")
   for _ = 1, count do
-    local v
-    if rng then
-      v = rng:next_int(1, 6)
-    else
-      v = math.random(1, 6)
-    end
+    local v = rng:next_int(1, 6)
     table.insert(results, v)
     total = total + v
   end

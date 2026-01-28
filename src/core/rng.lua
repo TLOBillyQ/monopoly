@@ -7,9 +7,10 @@ local MULT = 1664525
 local INC = 1013904223
 
 function RNG.new(seed, state)
+  seed = seed or 1
   local self = {
-    seed = seed or os.time(),
-    state = state or (seed or os.time()),
+    seed = seed,
+    state = state or seed,
   }
   return setmetatable(self, RNG)
 end

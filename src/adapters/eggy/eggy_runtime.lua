@@ -1,11 +1,33 @@
 local EggyLayer = require("src.adapters.eggy.eggy_layer")
 local MarketUI = require("src.adapters.eggy.market_ui")
 local Game = require("src.game")
+local logger = require("src.util.logger")
 
 require "Utils.Frameout"
 require "src.adapters.eggy.macro"
 
 local EggyRuntime = {}
+
+local function pad2(value)
+  if value < 10 then
+    return "0" .. tostring(value)
+  end
+  return tostring(value)
+end
+
+local function format_timestamp(timestamp)
+  if timestamp == nil then
+    return "0"
+  end
+  local year = GameAPI.get_year(timestamp)
+  local month = GameAPI.get_month(timestamp)
+  local day = GameAPI.get_day(timestamp)
+  local hour = GameAPI.get_hour(timestamp)
+  local minute = GameAPI.get_minute(timestamp)
+  local second = GameAPI.get_second(timestamp)
+  return tostring(year) .. "-" .. pad2(month) .. "-" .. pad2(day)
+    .. " " .. pad2(hour) .. ":" .. pad2(minute) .. ":" .. pad2(second)
+end
 
 -- Map UI custom event names to logical actions when UI cannot pass ids.
 local function create_game()
@@ -13,6 +35,7 @@ local function create_game()
     players = { "玩家1", "AI2", "AI3", "AI4" },
     ai = { [2] = true, [3] = true, [4] = true },
     auto_all = true,
+    seed = GameAPI.get_timestamp(),
   })
 end
 
@@ -38,19 +61,51 @@ local function resolve_option_id(choice, payload, layer)
   return nil
 end
 
+local function build_click_alias_map()
+  local map = {
+    choice_option_1 = "choice_option1",
+    choice_option_2 = "choice_option2",
+    choice_option_3 = "choice_option3",
+    choice_option_4 = "choice_option4",
+  }
+  for i = 1, 10 do
+    map["market_item_button_" .. tostring(i)] = "market_item_button" .. tostring(i)
+  end
+  return map
+end
+
+local click_alias_map = build_click_alias_map()
+local missing_button_tips = {}
+
+local function resolve_click_node_name(name)
+  return click_alias_map[name] or name
+end
+
+local function show_missing_button_tip(name)
+  if missing_button_tips[name] then
+    return
+  end
+  missing_button_tips[name] = true
+  GlobalAPI.show_tips("UI 节点未适配: " .. tostring(name))
+end
 
 
-local function register_node_click(cache, name, callback)
+
+local function register_node_click(cache, name, callback, registered)
   if not name then
     return
   end
-  local nodes = cache[name]
+  local resolved = resolve_click_node_name(name)
+  local nodes = cache[resolved]
   if nodes == nil then
-    nodes = UIManager.query_nodes_by_name(name) or {}
-    cache[name] = nodes
+    nodes = UIManager.query_nodes_by_name(resolved) or {}
+    cache[resolved] = nodes
   end
   if not nodes[1] then
     return
+  end
+  if registered then
+    registered[resolved] = true
   end
   for _, node in ipairs(nodes) do
     node:listen(UIManager.EVENT.CLICK, function(data)
@@ -61,28 +116,29 @@ end
 
 local function register_ui_manager_events(layer)
   local cache = {}
+  local registered = {}
   register_node_click(cache, "btn_next", function()
     layer:dispatch_action({ type = "ui_button", id = "next" })
-  end)
+  end, registered)
   register_node_click(cache, "btn_auto", function()
     layer:dispatch_action({ type = "ui_button", id = "auto" })
-  end)
+  end, registered)
   for idx = 1, 5 do
     local name = "item_slot_" .. tostring(idx)
     register_node_click(cache, name, function()
       layer:dispatch_action({ type = "ui_button", id = name })
-    end)
+    end, registered)
   end
   register_node_click(cache, "popup_confirm", function()
     layer:close_popup()
-  end)
+  end, registered)
 
   register_node_click(cache, "choice_cancel", function()
     local choice = layer.pending_choice
     if choice and choice.allow_cancel ~= false then
       layer:dispatch_action({ type = "choice_cancel", choice_id = choice.id })
     end
-  end)
+  end, registered)
 
   for idx, name in ipairs({ "choice_option1", "choice_option2", "choice_option3", "choice_option4" }) do
     register_node_click(cache, name, function()
@@ -96,7 +152,7 @@ local function register_ui_manager_events(layer)
       elseif choice.allow_cancel ~= false then
         layer:dispatch_action({ type = "choice_cancel", choice_id = choice.id })
       end
-    end)
+    end, registered)
   end
 
   for idx, name in ipairs(MarketUI.item_buttons or {}) do
@@ -116,7 +172,7 @@ local function register_ui_manager_events(layer)
           layer.pending_choice_selected_option_id = option_id
         end
       end
-    end)
+    end, registered)
   end
 
   register_node_click(cache, MarketUI.confirm_button, function()
@@ -128,17 +184,35 @@ local function register_ui_manager_events(layer)
     if option_id then
       layer:dispatch_action({ type = "choice_select", choice_id = choice.id, option_id = option_id })
     end
-  end)
+  end, registered)
 
   register_node_click(cache, MarketUI.cancel_button, function()
     local choice = layer.pending_choice
     if choice and choice.allow_cancel ~= false then
       layer:dispatch_action({ type = "choice_cancel", choice_id = choice.id })
     end
-  end)
+  end, registered)
+
+  local ok, nodes = pcall(require, "Data.ui_data")
+  if ok and type(nodes) == "table" then
+    for _, entry in pairs(nodes) do
+      local name = entry[1]
+      local kind = entry[2]
+      if kind == "EButton" and name and not registered[name] then
+        register_node_click(cache, name, function()
+          show_missing_button_tip(name)
+        end, registered)
+      end
+    end
+  end
 end
 
 function EggyRuntime.install()
+  logger.set_timestamp_provider(function()
+    return GameAPI.get_timestamp()
+  end)
+  logger.set_time_formatter(format_timestamp)
+
   local layer = EggyLayer.new({ game_factory = create_game })
 
   LuaAPI.global_register_trigger_event({ EVENT.GAME_INIT }, function()

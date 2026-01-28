@@ -1,5 +1,3 @@
----AUTTO EXPORT BY EGGITOR PLUGIN, PLEASE DO NOT EDIT
-
 return {
 	["1519736575|1011261148"] = {"market_item_frame_10", "EImage"},
 	["1519736575|1012795873"] = {"market_item_frame_5", "EImage"},
@@ -73,7 +71,7 @@ return {
 	["1519736575|1774672733"] = {"panel_player_3_cash", "ELabel"},
 	["1519736575|1777416652"] = {"popup_confirm", "EButton"},
 	["1519736575|1782809469"] = {"market_item_button4", "EImage"},
-	["1519736575|1787678764"] = {"panel_player_2_land_count", "ELabel"},
+	["1519736575|1787678764"] = {"panel_player_1_land_count", "ELabel"},
 	["1519736575|1811295573"] = {"market_item_button6", "EImage"},
 	["1519736575|1816056503"] = {"market_item_frame_6", "EImage"},
 	["1519736575|1820106071"] = {"panel_player_1_detail", "ELabel"},
@@ -89,7 +87,7 @@ return {
 	["1519736575|1894063635"] = {"自动控制按钮", "ELabel"},
 	["1519736575|1896699596"] = {"market_item_label_1", "ELabel"},
 	["1519736575|1907699520"] = {"btn_next", "EButton"},
-	["1519736575|1919844375"] = {"panel_player_1_detail", "ELabel"},
+	["1519736575|1919844375"] = {"panel_player_4_land_count", "ELabel"},
 	["1519736575|1947900782"] = {"玩家1底板颜色", "EImage"},
 	["1519736575|1951900414"] = {"modal_choice", "ECanvas"},
 	["1519736575|1960301211"] = {"panel_player_1_name", "ELabel"},
@@ -99,5 +97,5 @@ return {
 	["1519736575|2089185279"] = {"panel_player_3_name", "ELabel"},
 	["1519736575|2132349816"] = {"backgroud_loading", "EImage"},
 	["1519736575|2147314485"] = {"base_screen", "ECanvas"},
-	-- length = 98
+	--length = 98
 }

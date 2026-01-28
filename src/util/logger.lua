@@ -1,9 +1,9 @@
 local logger = {
   entries = {},
   max_entries = 200,
-  file_path = "game.log",
-  enable_file_io = false,
   adapter = nil,
+  timestamp_provider = nil,
+  time_formatter = nil,
 }
 
 local function stringify(...)
@@ -14,33 +14,35 @@ local function stringify(...)
   return table.concat(parts, " ")
 end
 
-local function append_to_file(level, text, timestamp)
-  if not logger.file_path then
-    return
+local function get_timestamp()
+  local provider = logger.timestamp_provider
+  if provider then
+    return provider()
   end
-  local file = io.open(logger.file_path, "a")
-  if not file then
-    return
+  return 0
+end
+
+local function format_timestamp(timestamp)
+  local formatter = logger.time_formatter
+  if formatter then
+    return formatter(timestamp)
   end
-  local prefix = os.date("%Y-%m-%d %H:%M:%S", timestamp or os.time())
-  file:write("[" .. prefix .. "][" .. level .. "] " .. text .. "\n")
-  file:close()
+  return tostring(timestamp or 0)
 end
 
 local function push(level, ...)
   local text = stringify(...)
-  local timestamp = os.time()
+  local timestamp = get_timestamp()
+  local time_text = format_timestamp(timestamp)
   local entry = {
     level = level,
     text = text,
     timestamp = timestamp,
+    time_text = time_text,
   }
   table.insert(logger.entries, entry)
   if #logger.entries > logger.max_entries then
     table.remove(logger.entries, 1)
-  end
-  if logger.enable_file_io then
-    append_to_file(level, text, timestamp)
   end
   local adapter = logger.adapter
   if adapter and adapter.on_log then
@@ -61,7 +63,7 @@ local function push(level, ...)
     if should_call then
       local ok, err = pcall(adapter.on_log, entry)
       if not ok then
-        io.stderr:write("[logger] adapter error: " .. tostring(err) .. "\n")
+        print("[logger] adapter error: " .. tostring(err))
       end
     end
   end
@@ -69,6 +71,14 @@ end
 
 function logger.set_adapter(adapter)
   logger.adapter = adapter
+end
+
+function logger.set_timestamp_provider(provider)
+  logger.timestamp_provider = provider
+end
+
+function logger.set_time_formatter(formatter)
+  logger.time_formatter = formatter
 end
 
 function logger.set_file_io_enabled(enabled)
@@ -89,13 +99,6 @@ end
 
 function logger.clear()
   logger.entries = {}
-  if logger.enable_file_io and logger.file_path then
-    local file = io.open(logger.file_path, "w")
-    if file then
-      file:write("-- session start " .. os.date("%Y-%m-%d %H:%M:%S") .. " --\n")
-      file:close()
-    end
-  end
 end
 
 return logger

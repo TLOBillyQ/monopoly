@@ -15,13 +15,16 @@
 - [x] (2026-01-28 01:35Z) 兼容 yaw 角度转换函数，避免运行时缺失。
 - [x] (2026-01-28 02:05Z) 重命名 move.lua 为 move_anim.lua 并更新引用。
 - [x] (2026-01-28 02:12Z) 接入 gameplay 的 move_anim 数据到 Eggy 适配层动画播放。
-- [ ] (2026-01-28 02:20Z) 运行 Lua 测试与 Demo 验收并记录结果。
-- [ ] (2026-01-28 01:40Z) 补齐 Lua 运行环境或在可运行环境补跑测试与截图。
+- [x] (2026-01-28 18:20Z) 运行 Lua 测试并记录结果（`lua tests/deps_check.lua`、`lua tests/regression.lua`）。
+- [x] (2026-01-28 18:20Z) 当前环境已具备 Lua 运行时（`lua -v` 为 5.1.5）。
+- [ ] (2026-01-28 18:20Z) Demo 手工验收与截图待在 Eggitor/可视环境完成。
 
 ## 意外与发现
 
-当前环境缺少 `lua` 运行时，执行 `lua tests/deps_check.lua` 返回 “Command 'lua' not found”。需要在具备 Lua 的环境补跑测试。
-尝试使用 `apt-get` 安装 Lua 时因权限不足失败；同时仓库内未包含 `bin/windows/Game.exe`，当前环境无法直接运行 Demo 截图。
+- 观察：当前环境可直接运行 Lua 5.1.5，测试已执行。
+  证据：`lua -v` 输出 `Lua 5.1.5`，`lua tests/deps_check.lua` 输出 `Dependency self-check passed`。
+- 观察：Demo 手工验收仍未完成。
+  证据：尚未在可视化环境打开 `bin/windows/Game.exe` 或 Eggitor 入口。
 
 ## 决策日志
 
@@ -40,7 +43,7 @@
 
 ## 结果与复盘
 
-已完成转向逻辑实现并兼容角度转换，待在可运行 Lua 的环境中执行测试与 Demo 验收。完成后需要补充测试输出与视觉验收记录，同时提供 UI 截图证据。
+已完成转向逻辑实现并通过 Lua 脚本测试，Demo 手工验收与截图仍待补齐。
 
 ## 背景与导读
 
@@ -86,3 +89,5 @@
 依赖 `LifeEntity.set_direction(face_dir)` 或 `Unit.set_orientation(rot)`；数学转换使用 `math.atan2` 与 `math.rad_to_deg`，四元数构造使用 `math.Quaternion(pitch, yaw, roll)`。移动仍由 `start_move_by_direction(direction, duration)` 驱动，`WALK_SPEED` 等常量继续来自 `src/adapters/eggy/macro.lua`。适配层通过 `AdapterLayer.step_move_anim` 读取 gameplay 的 `move_anim` 数据并驱动动画。
 
 附记：首次创建本计划，用于补齐 move.lua 转向行为与验收路径。
+
+改动说明：补记已完成的 Lua 测试与运行时可用性，更新意外与发现及复盘，保留 Demo 手工验收待办。

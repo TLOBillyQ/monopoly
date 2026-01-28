@@ -15,14 +15,17 @@
 - [x] (2026-01-28 13:40Z) 更新可执行计划与 docs/ui 文档，补充玩家信息与道具槽位显示规则，并同步命名说明。
 - [x] (2025-09-24 01:20Z) 创建并确认本可执行计划范围与验收口径。
 - [x] (2025-09-24 01:20Z) 盘点 UI 渲染链路与棋盘渲染链路的现状，确认移除范围与资产来源。
-- [ ] (2025-09-24 01:20Z) 部分完成：已完成代码与文档调整、测试清单更新；剩余：Eggitor 删除节点并重新导出 `ui_data.lua`。
+- [x] (2026-01-28 19:20Z) 已完成 Eggitor 节点清理并重新导出 `Data/ui_data.lua`（基础屏节点已按清理目标更新）。
 - [ ] (2025-09-24 01:32Z) 部分完成：已运行 `lua tests/deps_check.lua` 与 `lua tests/regression.lua`；剩余：Eggitor 手工验收与截图。
+- [x] (2026-01-28 19:20Z) 已更新 `tests/ui_nodes_audit.lua` 规则并复跑通过；已补齐 `panel_player_1_land_count`、`panel_player_4_land_count` 并导出。
 
 ## 意外与发现
 
 
-- 观察：暂无新的意外与发现。
-  证据：无。
+- 观察：`ui_nodes_audit` 已通过，基础屏必需节点完整。
+  证据：`lua tests/ui_nodes_audit.lua` 输出 `ok: all required nodes/events are present`。
+- 观察：`Data/ui_data.lua` 已包含 `panel_player_1_land_count` 与 `panel_player_4_land_count`。
+  证据：`rg -n "panel_player_1_land_count|panel_player_4_land_count" Data/ui_data.lua` 有输出。
 
 ## 决策日志
 
@@ -43,7 +46,7 @@
 ## 结果与复盘
 
 
-已完成代码与文档调整与脚本测试，并补充 docs/ui 说明，但尚未执行 Eggitor 节点清理与手工验收，结果与复盘待全部验收后补写。
+已完成代码与文档调整、脚本测试与 Eggitor 节点导出，`ui_nodes_audit` 已通过。当前仍需在 Eggitor 运行时进行手工验收与截图。
 
 ## 背景与导读
 
@@ -88,7 +91,7 @@
 ## 产物与备注
 
 
-产物包含更新后的 `src/adapters/eggy/eggy_layer_ui.lua`、`src/adapters/eggy/eggy_layer_board.lua`、`src/adapters/eggy/eggy_layer.lua`、`src/adapters/core/ui_panel.lua`、`tests/ui_nodes_audit.lua`、`docs/ui` 下对应文档，并删除 `src/adapters/core/ui_tile.lua`。仍需在 Eggitor 中清理节点并重新导出 `Data/ui_data.lua`。验收时需保留测试输出片段与一张基础屏对照截图以证明 UI 已按需求简化。
+产物包含更新后的 `src/adapters/eggy/eggy_layer_ui.lua`、`src/adapters/eggy/eggy_layer_board.lua`、`src/adapters/eggy/eggy_layer.lua`、`src/adapters/core/ui_panel.lua`、`tests/ui_nodes_audit.lua`、`docs/ui` 下对应文档，并删除 `src/adapters/core/ui_tile.lua`。Eggitor 侧节点已清理并导出 `Data/ui_data.lua`。验收时需保留测试输出片段与一张基础屏对照截图以证明 UI 已按需求简化。
 
 本次更新：完成 UI 清理代码、玩家信息与道具槽位逻辑更新，并同步文档与 UI 节点审计及 Lua 测试执行，原因是计划 6 要求去除格子文本与详情，同时将玩家信息与道具展示改为精简版本。
 
@@ -103,3 +106,8 @@
     EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
 
 本次更新：补充了玩家信息字段与道具槽位图片的文档说明，并在进度与结果中同步当前状态，确保计划对齐实际 UI 表现。
+本次更新：补充 ui_nodes_audit 的最新执行结果与缺失节点记录，明确 Eggitor 侧待补齐项。
+
+改动说明：同步最新审计结果并标记 Eggitor 待办，确保后续接续时信息一致。
+改动说明：记录 Eggitor 导出已完成与 ui_nodes_audit 通过，更新进度与复盘状态。
+改动说明：补充 Eggitor 导出已完成后的产物说明，确保计划与当前状态一致。
