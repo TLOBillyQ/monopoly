@@ -92,7 +92,7 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
         local dx = b.x - a.x
         local dy = (b.y or 0) - (a.y or 0)
         local dz = (b.z or 0) - (a.z or 0)
-        local dist = math.sqrt(dx * dx + dy * dy + dz * dz)
+        local dist = math.Vector3(dx, dy, dz):length()
         if dist > 0 then
           spacing = spacing + dist
           spacing_count = spacing_count + 1
@@ -273,7 +273,10 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
           end
         end
         if count > 1 and spacing > 0 then
-          local per_row = math.ceil(math.sqrt(count))
+          local per_row = 0
+          while per_row * per_row < count do
+            per_row = per_row + 1
+          end
           local row = math.floor((slot - 1) / per_row)
           local col = (slot - 1) % per_row
           local start = -(per_row - 1) * spacing * 0.5

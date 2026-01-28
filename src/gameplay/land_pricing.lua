@@ -40,7 +40,11 @@ function Pricing.total_invested(tile, level)
   if type(costs) ~= "table" then
     return total
   end
-  local max = math.min(level or 0, #costs)
+  local max = level or 0
+  local count = #costs
+  if max > count then
+    max = count
+  end
   for i = 1, max do
     total = total + (costs[i] or 0)
   end

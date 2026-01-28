@@ -6,6 +6,13 @@ local ChanceEffects = {}
 
 local tile_state = Tile.get_state
 
+local function abs_value(value)
+  if value < 0 then
+    return -value
+  end
+  return value
+end
+
 local function apply_cash_change(player, delta)
   player:add_cash(delta)
 end
@@ -74,13 +81,13 @@ handlers.pay_cash = function(game, player, card)
       if not p.eliminated then
         local delta = adjust_chance_delta(p, -card.amount)
         apply_cash_and_maybe_bankrupt(game, p, delta)
-        logger.event(p.name .. " 支付 " .. math.abs(delta) .. " 金币")
+        logger.event(p.name .. " 支付 " .. abs_value(delta) .. " 金币")
       end
     end
   else
     local delta = adjust_chance_delta(player, -card.amount)
     apply_cash_and_maybe_bankrupt(game, player, delta)
-    logger.event(player.name .. " 支付 " .. math.abs(delta) .. " 金币")
+    logger.event(player.name .. " 支付 " .. abs_value(delta) .. " 金币")
   end
 end
 
@@ -91,14 +98,14 @@ handlers.percent_pay_cash = function(game, player, card)
         local fee = math.floor(p.cash * (card.percent / 100))
         local delta = adjust_chance_delta(p, -fee)
         apply_cash_and_maybe_bankrupt(game, p, delta)
-        logger.event(p.name .. " 按比例支付 " .. math.abs(delta) .. " 金币")
+        logger.event(p.name .. " 按比例支付 " .. abs_value(delta) .. " 金币")
       end
     end
   else
     local fee = math.floor(player.cash * (card.percent / 100))
     local delta = adjust_chance_delta(player, -fee)
     apply_cash_and_maybe_bankrupt(game, player, delta)
-    logger.event(player.name .. " 按比例支付 " .. math.abs(delta) .. " 金币")
+    logger.event(player.name .. " 按比例支付 " .. abs_value(delta) .. " 金币")
   end
 end
 

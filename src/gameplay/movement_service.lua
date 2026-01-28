@@ -8,7 +8,7 @@ local ITEM_IDS = gameplay_constants.item_ids
 
 function MovementService.move(game, player, steps, opts)
   opts = opts or {}
-  local abs_steps = math.abs(steps)
+  local abs_steps = steps < 0 and -steps or steps
   local branch_parity = opts.branch_parity or abs_steps
   local board = game.board
   local encountered = {}
