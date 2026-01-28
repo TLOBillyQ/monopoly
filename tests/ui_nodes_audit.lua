@@ -44,13 +44,6 @@ local function build_required_logical_names()
     "item_slot_3",
     "item_slot_4",
     "item_slot_5",
-    "panel_tile_title",
-    "tile_detail_name",
-    "tile_detail_price",
-    "tile_detail_level",
-    "tile_detail_owner",
-    "tile_detail_roadblock",
-    "tile_detail_mine",
     "btn_next",
     "btn_auto",
     "btn_restart",
@@ -101,11 +94,6 @@ local function build_required_logical_names()
     "overlay_mask",
     "background_rect",
   }
-
-  -- Board tiles: presenter uses 45 tiles in the demo map.
-  for i = 1, 45 do
-    required[#required + 1] = "tile_" .. tostring(i)
-  end
 
   return required
 end

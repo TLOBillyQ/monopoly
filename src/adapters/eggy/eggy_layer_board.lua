@@ -1,16 +1,9 @@
 local BuildingEffects = require("src.adapters.eggy.building_effects")
 local TileRenderer = require("src.adapters.eggy.tile_renderer")
-local TileView = require("src.adapters.core.ui_tile")
 
 local EggyLayerBoard = {}
 
 function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
-  local ui = layer.ui
-  for idx in ipairs(view.board.tiles) do
-    local node = "tile_" .. tostring(idx)
-    ui:set_label(node, TileView.build_tile_label(view, idx))
-  end
-
   local players = view and view.state and view.state.players or nil
   if not players then
     return

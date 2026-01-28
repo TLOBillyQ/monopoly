@@ -71,16 +71,6 @@
 - item_slot_4
 - item_slot_5
 
-## 格子详情
-
-- panel_tile_title
-- tile_detail_name
-- tile_detail_price
-- tile_detail_level
-- tile_detail_owner
-- tile_detail_roadblock
-- tile_detail_mine
-
 ## 主按钮
 
 - btn_next（行动按钮）
@@ -112,54 +102,6 @@
 - popup_confirm
 - popup_card
 - popup_confirm_alt
-
-## 棋盘格子文本
-
-- tile_1
-- tile_2
-- tile_3
-- tile_4
-- tile_5
-- tile_6
-- tile_7
-- tile_8
-- tile_9
-- tile_10
-- tile_11
-- tile_12
-- tile_13
-- tile_14
-- tile_15
-- tile_16
-- tile_17
-- tile_18
-- tile_19
-- tile_20
-- tile_21
-- tile_22
-- tile_23
-- tile_24
-- tile_25
-- tile_26
-- tile_27
-- tile_28
-- tile_29
-- tile_30
-- tile_31
-- tile_32
-- tile_33
-- tile_34
-- tile_35
-- tile_36
-- tile_37
-- tile_38
-- tile_39
-- tile_40
-- tile_41
-- tile_42
-- tile_43
-- tile_44
-- tile_45
 
 ## 黑市与商城 UI（如有）
 

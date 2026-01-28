@@ -25,4 +25,4 @@
 ## 导出要求
 
 - 所有节点名必须与 `docs/ui_naming_list.md` 一致。
-- tile_1 到 tile_45 的数量需与 `Presenter` 的 `board_tile_count` 一致。
+- 基础屏不再依赖 tile_1..tile_45 的棋盘文本节点，导出时保持与命名清单一致即可。

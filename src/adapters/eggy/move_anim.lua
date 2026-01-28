@@ -6,20 +6,20 @@ end
 
 local MovementManager = {}
 
-function MovementManager.one_step(player_id, v3_dir, tile_start, tile_end)
+function MovementManager.one_step(player_id, v3_dir, start_tile_id, end_tile_id)
     if not (G and G.tiles and G.unit and G.unit[player_id]) then
         return
     end
 
-    local tile_s = G.tiles[tile_start]
-    local tile_e = G.tiles[tile_end]
-    if not (tile_s and tile_e and tile_s.get_position and tile_e.get_position) then
+    local start_tile = G.tiles[start_tile_id]
+    local end_tile = G.tiles[end_tile_id]
+    if not (start_tile and end_tile and start_tile.get_position and end_tile.get_position) then
         return
     end
 
-    local pos_s = tile_s.get_position()
-    local pos_e = tile_e.get_position()
-    local dist = pos_e - pos_s
+    local pos_s = start_tile.get_position()
+    local pos_e = end_tile.get_position()
+    local dist = pos_e - pos_s 
     local len = dist:length()
     if len <= 0 then
         return
@@ -35,7 +35,7 @@ function MovementManager.one_step(player_id, v3_dir, tile_start, tile_end)
     end
 
     local unit = G.unit[player_id]
-    if not unit.start_move_by_direction then
+    if not unit or not unit.start_move_by_direction then
         return
     end
     if unit.set_direction then

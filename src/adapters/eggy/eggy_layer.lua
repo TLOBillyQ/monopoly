@@ -9,7 +9,6 @@ local EggyLayerBoard = require("src.adapters.eggy.eggy_layer_board")
 local MarketUI = require("src.adapters.eggy.market_ui")
 local MoveAnim = require("src.adapters.eggy.move_anim")
 local Agent = require("src.gameplay.agent")
-local vehicles_cfg = require("src.config.vehicles")
 
 local EggyLayer = {}
 EggyLayer.__index = EggyLayer
@@ -47,25 +46,11 @@ local function show_tips(message, duration)
   return false
 end
 
-local vehicles_by_id = {}
-for _, cfg in ipairs(vehicles_cfg) do
-  vehicles_by_id[cfg.id] = cfg
-end
-
-local function map_vehicle_names()
-  local out = {}
-  for id, cfg in pairs(vehicles_by_id) do
-    out[id] = cfg.name
-  end
-  return out
-end
-
 function EggyLayer.new(opts)
   opts = opts or {}
   local ui = EggyLayerUI.build_ui_state()
   local self = setmetatable({
     ui = ui,
-    vehicle_name_by_id = map_vehicle_names(),
     tile_units = nil,
     tile_positions = nil,
     tile_spacing = nil,
@@ -311,10 +296,6 @@ function EggyLayer:refresh_item_slots(view)
   EggyLayerUI.refresh_item_slots(self, view)
 end
 
-function EggyLayer:refresh_tile_detail(view)
-  EggyLayerUI.refresh_tile_detail(self, view)
-end
-
 function EggyLayer:refresh_board(view)
   EggyLayerBoard.refresh_board(self, view, log_once, build_log_prefix)
 end
@@ -377,9 +358,6 @@ function EggyLayer:dispatch_action(action)
       self:set_game(self:new_game())
       self.auto_runner:set_enabled(was_auto)
     end
-  elseif action.type == "ui_tile_select" then
-    self.ui.selected_tile = action.index
-    self:refresh_tile_detail(self:build_view())
   elseif action.type == "choice_select" or action.type == "choice_cancel" then
     AdapterLayer.clear_choice(self, {
       on_close_choice = function(layer)

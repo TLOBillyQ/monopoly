@@ -25,7 +25,7 @@ UIManager.Builder(require "Data.ui_data")
 
 
 return function()
-    --UIManager.ForwardUIEvent("显示加载屏")
+    UIManager.forward_eca_event(ECA_EVENT.UI.open_loading_screen)
 
     local refs = G.refs
     local role = GameAPI.get_role(1)
@@ -77,11 +77,11 @@ return function()
 
 
     LuaAPI.call_delay_time(0.5, function()
-        UIManager.forward_eca_event("隐藏加载屏")
-        UIManager.forward_eca_event("显示基础屏")
+        UIManager.forward_eca_event(ECA_EVENT.UI.close_loading_screen)
+        UIManager.forward_eca_event(ECA_EVENT.UI.open_base_screen)
 
         --载具测试
-        -- VehicleManager.forward_eca_event_enter(1, 4001)
+        VehicleManager.forward_eca_event_enter(1, 4001)
     end)
 
     LuaAPI.call_delay_time(2.0, function()

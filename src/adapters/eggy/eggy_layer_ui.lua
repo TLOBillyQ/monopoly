@@ -1,6 +1,5 @@
 local logger = require("src.util.logger")
 local PanelView = require("src.adapters.core.ui_panel")
-local TileView = require("src.adapters.core.ui_tile")
 local LogView = require("src.adapters.core.ui_log")
 
 local EggyLayerUI = {}
@@ -41,6 +40,37 @@ local function set_touch_enabled(_, name, enabled)
   end
 end
 
+local function set_image_texture(node, image_key, reset_size)
+  if not (node and image_key) then
+    return
+  end
+  if type(node) == "table" then
+    if node.image_texture ~= nil then
+      node.image_texture = image_key
+      if reset_size and node.reset_size then
+        node:reset_size()
+      end
+      return
+    end
+    if node.id then
+      node = node.id
+    end
+  end
+  if Role and Role.set_image_texture_by_key_with_auto_resize then
+    Role.set_image_texture_by_key_with_auto_resize(node, image_key, reset_size == true)
+  end
+end
+
+local function set_ui_image(ui, name, image_key, reset_size)
+  if not (ui and name) then
+    return
+  end
+  local node = ui.query_node(name)
+  if node then
+    set_image_texture(node, image_key, reset_size)
+  end
+end
+
 function EggyLayerUI.build_ui_state()
   return {
     auto_play = false,
@@ -53,7 +83,6 @@ function EggyLayerUI.build_ui_state()
       "item_slot_5",
     },
     market_active = false,
-    selected_tile = nil,
     choice = {
       root = "modal_choice",
       title = "choice_title",
@@ -96,16 +125,16 @@ function EggyLayerUI.refresh_panel(layer, view)
   ui:set_label("panel_current_dice", current_view and current_view.dice_text or "")
 
   ui:set_label("panel_players_title", "玩家状态")
-  local player_rows = PanelView.build_player_statuses(view, layer.item_name_by_id, layer.vehicle_name_by_id, 4)
+  local player_rows = PanelView.build_player_statuses(view, layer.game, 4)
   for i = 1, 4 do
     local row = player_rows[i]
-    ui:set_label("panel_player_" .. tostring(i), row and row.label or "")
-    ui:set_label("panel_player_" .. tostring(i) .. "_detail", row and row.detail or "")
+    ui:set_label("panel_player_" .. tostring(i), row and row.name or "")
+    ui:set_label("panel_player_" .. tostring(i) .. "_cash", row and row.cash or "")
+    ui:set_label("panel_player_" .. tostring(i) .. "_land_count", row and row.land_count or "")
+    ui:set_label("panel_player_" .. tostring(i) .. "_detail", row and row.total_assets or "")
   end
 
-  ui:set_label("panel_tile_title", "格子详情")
   EggyLayerUI.refresh_item_slots(layer, view)
-  EggyLayerUI.refresh_tile_detail(layer, view)
 
   ui:set_button("btn_next", "下一回合")
   ui:set_button("btn_auto", PanelView.build_auto_label(ui.auto_play))
@@ -135,47 +164,29 @@ function EggyLayerUI.refresh_item_slots(layer, view)
   local turn = view and view.state and view.state.turn or nil
   local current = players and turn and players[turn.current_player_index] or nil
   local items = current and current.inventory and current.inventory.items or {}
+  local refs = G and G.refs or nil
+  local empty_key = refs and refs["空"] or nil
 
   for i, slot_name in ipairs(slots) do
     local item = items[i]
     if item and item.id then
-      local name = (layer.item_name_by_id and layer.item_name_by_id[item.id]) or tostring(item.id)
-      ui:set_button(slot_name, name)
+      if refs then
+        local ref_key = refs[tostring(item.id)] or refs[item.id]
+        if ref_key then
+          set_ui_image(ui, slot_name, ref_key, false)
+        elseif empty_key then
+          set_ui_image(ui, slot_name, empty_key, false)
+        end
+      end
       ui:set_touch_enabled(slot_name, true)
       item_ids[i] = item.id
     else
-      ui:set_button(slot_name, "空")
+      if empty_key then
+        set_ui_image(ui, slot_name, empty_key, false)
+      end
       ui:set_touch_enabled(slot_name, false)
     end
   end
-end
-
-function EggyLayerUI.refresh_tile_detail(layer, view)
-  local ui = layer.ui
-  local idx = ui.selected_tile
-  local detail = TileView.build_tile_detail_view(view, idx)
-  if not detail then
-    ui:set_label("tile_detail_name", "")
-    ui:set_label("tile_detail_price", "")
-    ui:set_label("tile_detail_level", "")
-    ui:set_label("tile_detail_owner", "")
-    ui:set_label("tile_detail_roadblock", "")
-    ui:set_label("tile_detail_mine", "")
-    return
-  end
-
-  ui:set_label("tile_detail_name", detail.name)
-  if detail.price then
-    ui:set_label("tile_detail_price", detail.price)
-    ui:set_label("tile_detail_level", detail.level or "")
-    ui:set_label("tile_detail_owner", detail.owner_label or "")
-  else
-    ui:set_label("tile_detail_price", "")
-    ui:set_label("tile_detail_level", "")
-    ui:set_label("tile_detail_owner", "")
-  end
-  ui:set_label("tile_detail_roadblock", detail.roadblock or "")
-  ui:set_label("tile_detail_mine", detail.mine or "")
 end
 
 return EggyLayerUI
