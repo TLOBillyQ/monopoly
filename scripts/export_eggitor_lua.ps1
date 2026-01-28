@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
-$dist = Join-Path $root "dist"
+$dist = Join-Path $root "bin"
 $staging = Join-Path $root ".eggitor_export_tmp"
 $zipPath = Join-Path $dist "eggitor_lua_export.zip"
 
