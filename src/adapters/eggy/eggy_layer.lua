@@ -35,13 +35,17 @@ local function show_tips(message, duration)
   if text == "" then
     return false
   end
+  local tip_duration = duration
+  if type(duration) == "number" and math and math.tofixed then
+    tip_duration = math.tofixed(duration)
+  end
   if GlobalAPI and GlobalAPI.show_tips then
-    GlobalAPI.show_tips(text, duration)
+    GlobalAPI.show_tips(text, tip_duration)
     return true
   end
   local role = Role
   if role and role.show_tips then
-    role.show_tips(text, duration)
+    role.show_tips(text, tip_duration)
     return true
   end
   return false

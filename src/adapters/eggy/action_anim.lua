@@ -42,7 +42,11 @@ function ActionAnim.play(_, anim)
     return nil
   end
   local duration = anim.duration or DURATIONS[anim.kind] or 1.0
-  GlobalAPI.show_tips(build_tip(anim), duration)
+  local tip_duration = duration
+  if type(duration) == "number" and math and math.tofixed then
+    tip_duration = math.tofixed(duration)
+  end
+  GlobalAPI.show_tips(build_tip(anim), tip_duration)
   return duration
 end
 
