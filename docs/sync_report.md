@@ -48,6 +48,7 @@
 
 **开始信号**
 - `turn_move.lua` 写入 `store.turn.move_anim`，并带 `seq`。
+- payload 字段应与规则层一致：`seq`、`player_id`、`from_index`、`to_index`、`visited`、`steps`、`stopped_on_roadblock`、`market_interrupt`、`steal_interrupt`（无 `direction` 字段，方向由 `steps` 推导）。
 
 **完成信号**
 - Eggy 动画结束后派发 `{ type="move_anim_done", seq=... }`。
