@@ -6,7 +6,7 @@
 
 loading_screen（ECanvas）
 - loading_tip（ELabel）
-- background_rect（可复用同名节点或单独遮罩）
+- backgroud_loading（EImage）
 
 ## 显示与隐藏
 

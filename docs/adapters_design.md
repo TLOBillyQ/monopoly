@@ -70,7 +70,6 @@
 - `src/adapters/core/ui_panel.lua`：面板文本（当前玩家、状态、道具等）。
 - `src/adapters/core/ui_tile.lua`：棋盘格子文本与详情。
 - `src/adapters/core/ui_choice.lua`：选择框文本与按钮列表。
-- `src/adapters/core/ui_log.lua`：日志裁剪显示。
 - `src/adapters/core/ui_phase.lua`：阶段名与标题前缀。
 
 这些模块只做文本拼装，具体 UI 渲染在各平台 adapter 内完成。

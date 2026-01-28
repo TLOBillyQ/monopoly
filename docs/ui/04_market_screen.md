@@ -5,16 +5,16 @@
 ## 结构建议
 
 market_panel（ECanvas）
-- market_item_button_1（EImage 或 EButton，可点击）
-- market_item_button_2（EImage 或 EButton，可点击）
-- market_item_button_3（EImage 或 EButton，可点击）
-- market_item_button_4（EImage 或 EButton，可点击）
-- market_item_button_5（EImage 或 EButton，可点击）
-- market_item_button_6（EImage 或 EButton，可点击）
-- market_item_button_7（EImage 或 EButton，可点击）
-- market_item_button_8（EImage 或 EButton，可点击）
-- market_item_button_9（EImage 或 EButton，可点击）
-- market_item_button_10（EImage 或 EButton，可点击）
+- market_item_button1（EImage，可点击）
+- market_item_button2（EImage，可点击）
+- market_item_button3（EImage，可点击）
+- market_item_button4（EImage，可点击）
+- market_item_button5（EImage，可点击）
+- market_item_button6（EImage，可点击）
+- market_item_button7（EImage，可点击）
+- market_item_button8（EImage，可点击）
+- market_item_button9（EImage，可点击）
+- market_item_button10（EImage，可点击）
 - market_item_label_1（ELabel）
 - market_item_label_2（ELabel）
 - market_item_label_3（ELabel）
@@ -35,11 +35,12 @@ market_panel（ECanvas）
 - market_item_frame_8（EImage）
 - market_item_frame_9（EImage）
 - market_item_frame_10（EImage）
+- market_panel_backgroud（EImage）
 - market_selected_card（EImage）
 - market_price_label（ELabel）
 - market_confirm_button（EButton）
 - market_cancel_button（EButton）
-- market_icon_placeholder（EImage）
+- market_item_containter（EImage）
 
 ## 显示与隐藏
 
@@ -48,16 +49,16 @@ market_panel（ECanvas）
 
 ## 点击事件（已注册）
 
-- market_item_button_1 -> 选择商品
-- market_item_button_2 -> 选择商品
-- market_item_button_3 -> 选择商品
-- market_item_button_4 -> 选择商品
-- market_item_button_5 -> 选择商品
-- market_item_button_6 -> 选择商品
-- market_item_button_7 -> 选择商品
-- market_item_button_8 -> 选择商品
-- market_item_button_9 -> 选择商品
-- market_item_button_10 -> 选择商品
+- market_item_button1 -> 选择商品
+- market_item_button2 -> 选择商品
+- market_item_button3 -> 选择商品
+- market_item_button4 -> 选择商品
+- market_item_button5 -> 选择商品
+- market_item_button6 -> 选择商品
+- market_item_button7 -> 选择商品
+- market_item_button8 -> 选择商品
+- market_item_button9 -> 选择商品
+- market_item_button10 -> 选择商品
 - market_confirm_button -> 确认购买
 - market_cancel_button -> 取消购买
 

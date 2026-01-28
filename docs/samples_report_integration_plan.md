@@ -10,7 +10,7 @@
 - `lua tests/ui_nodes_audit.lua` 通过（目前失败，缺 78 项）。
 - 在 Eggitor 中打开仓库根目录后：
   - 基础 UI 文本能刷新（标题、回合、当前玩家、日志）。
-  - 按钮能驱动动作（下一回合 / 自动控制 / 重新开始）。
+  - 按钮能驱动动作（下一回合 / 自动控制）。
   - 黑市面板能显示并完成一次购买流程。
   - 玩家位置能随回合推进更新。
 
@@ -142,7 +142,7 @@
   - 基础面板节点（`panel_*`）。
   - 选择/弹窗节点（`modal_*` / `choice_*` / `popup_*`）。
   - 棋盘文本节点（`tile_1..tile_45`）。
-  - 关键按钮节点与事件（`btn_next` / `btn_auto` / `btn_restart`）。
+  - 关键按钮节点与事件（`btn_next` / `btn_auto`）。
 - 每次 UI 改动后重新跑 `lua tests/ui_nodes_audit.lua`，直到通过。
 
 5) 补 UI 事件闭环（事件映射层）。
@@ -177,7 +177,7 @@
 
 - Eggitor 端到端验收（人工观察）：
   - GAME_INIT 后 UI 有可见变化（至少标题/回合/玩家名）。
-  - `next/auto/restart` 三个动作都可触发。
+  - `next/auto` 两个动作都可触发。
   - tile 选择与格子详情能联动。
   - 黑市能打开、能选、能确认/取消。
 
@@ -206,7 +206,7 @@
 
 - UI 资源侧最终是“全面改名到逻辑名”，还是“长期保留映射层”。
   - 解决方式：以 `ui_nodes_audit` 的通过成本为准做一次取舍；若 UI 侧改名成本低，就逐步去映射。
-- UI 资源侧 `next/auto/restart/tile` 选择的事件名与 payload 结构是什么。
+- UI 资源侧 `next/auto/tile` 选择的事件名与 payload 结构是什么。
   - 解决方式：在 UI 侧确认事件名后，统一收敛到事件映射表，不直接写死在多处代码里。
 
 ## Outcomes & Retrospective

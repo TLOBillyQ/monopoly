@@ -5,24 +5,24 @@
 ## 选择弹窗（modal_choice）
 
 结构建议：
-- modal_choice（EImage，根）
+- modal_choice（ECanvas，根）
   - choice_title（ELabel）
   - choice_body（ELabel）
   - choice_cancel（EButton）
-  - choice_option_1（EButton）
-  - choice_option_2（EButton）
-  - choice_option_3（EButton）
-  - choice_option_4（EButton）
+  - choice_option1（EImage，可点击）
+  - choice_option2（EImage，可点击）
+  - choice_option3（EImage，可点击）
+  - choice_option4（EImage，可点击）
 
 显示与隐藏：
 - 打开：`EggyLayer:_open_choice_modal`
 - 关闭：`EggyLayer:_close_choice_modal`
 
 点击事件（已注册）：
-- choice_option_1 -> `choice_select`
-- choice_option_2 -> `choice_select`
-- choice_option_3 -> `choice_select`
-- choice_option_4 -> `choice_select`
+- choice_option1 -> `choice_select`
+- choice_option2 -> `choice_select`
+- choice_option3 -> `choice_select`
+- choice_option4 -> `choice_select`
 - choice_cancel -> `choice_cancel`（当 `allow_cancel ~= false`）
 
 ## 确认弹窗（modal_popup）
@@ -32,7 +32,6 @@
   - popup_title（ELabel）
   - popup_body（ELabel）
   - popup_confirm（EButton）
-  - popup_confirm_alt（EButton，备用确认）
   - popup_card（EImage）
 
 显示与隐藏：
@@ -41,7 +40,3 @@
 
 点击事件（已注册）：
 - popup_confirm -> 关闭弹窗
-- popup_confirm_alt -> 关闭弹窗
-
-备注：
-- 如果只需要一个确认按钮，仍建议保留 `popup_confirm_alt` 为空节点，避免命名缺失。

@@ -9,8 +9,8 @@
     return {
       ["1519736575|1907699520"] = {"btn_next", "EButton"},
       ["1519736575|1248111351"] = {"loading_screen", "ECanvas"},
-      ["1519736575|1631553682"] = {"btn_auto", "EButton"},
-      ["placeholder|panel_title"] = {"panel_title", "ELabel"},
+      ["1519736575|1535720565"] = {"backgroud_rect_base", "EImage"},
+      ["1519736575|1951900414"] = {"modal_choice", "ECanvas"},
     }
 
 ## 类型约束
@@ -19,8 +19,7 @@
 
 ## placeholder 说明
 
-`placeholder|xxx` 用于兜底或开发阶段缺失节点的场景，它不会绑定真实 EUI 节点。
-正式交付时应确保所有需要交互或显示的节点都有真实 id，并由 Eggitor 导出覆盖。
+当前导出的 `ui_data.lua` 已不包含 `placeholder|xxx` 条目；若开发阶段需要兜底节点，可临时补充，但交付前必须由 Eggitor 导出真实 id 覆盖。
 
 ## 导出要求
 
