@@ -24,7 +24,15 @@ function MovementManager.one_step(player_id, v3_dir, tile_start, tile_end)
         local dx = v3_dir.x
         local dz = v3_dir.z
         if dx ~= 0 or dz ~= 0 then
-            unit.set_orientation(math.Quaternion(0, math.rad_to_deg(math.atan2(dx, dz)), 0))
+            local yaw = math.atan2(dx, dz)
+            if math.rad_to_deg then
+                yaw = math.rad_to_deg(yaw)
+            elseif math.deg then
+                yaw = math.deg(yaw)
+            else
+                yaw = yaw * 180 / math.pi
+            end
+            unit.set_orientation(math.Quaternion(0, yaw, 0))
         end
     end
 
