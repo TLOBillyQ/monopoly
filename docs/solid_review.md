@@ -25,7 +25,7 @@
 **建议**
 
 - 明确 `Game` 只处理规则状态，胜负判定可拆到独立服务（例如 `victory_service.lua`）。
-- 继续拆分 Eggy 适配层的子模块（目前已有 `egg_layer_board`/`market`），可以把“自动推进/动画”单独抽出。
+- 继续拆分 Eggy 适配层的子模块（目前已有 `eggy_layer_board`/`eggy_layer_market`），可以把“自动推进/动画”单独抽出。
 
 ## 开闭原则（OCP）
 
