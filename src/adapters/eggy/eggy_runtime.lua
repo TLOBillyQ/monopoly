@@ -67,9 +67,6 @@ local function register_ui_manager_events(layer)
   register_node_click(cache, "btn_auto", function()
     layer:dispatch_action({ type = "ui_button", id = "auto" })
   end)
-  register_node_click(cache, "btn_restart", function()
-    layer:dispatch_action({ type = "ui_button", id = "restart" })
-  end)
   for idx = 1, 5 do
     local name = "item_slot_" .. tostring(idx)
     register_node_click(cache, name, function()
@@ -77,9 +74,6 @@ local function register_ui_manager_events(layer)
     end)
   end
   register_node_click(cache, "popup_confirm", function()
-    layer:close_popup()
-  end)
-  register_node_click(cache, "popup_confirm_alt", function()
     layer:close_popup()
   end)
 
@@ -90,7 +84,7 @@ local function register_ui_manager_events(layer)
     end
   end)
 
-  for idx, name in ipairs({ "choice_option_1", "choice_option_2", "choice_option_3", "choice_option_4" }) do
+  for idx, name in ipairs({ "choice_option1", "choice_option2", "choice_option3", "choice_option4" }) do
     register_node_click(cache, name, function()
       local choice = layer.pending_choice
       if not choice then

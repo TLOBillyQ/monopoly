@@ -1,6 +1,4 @@
-local logger = require("src.util.logger")
 local PanelView = require("src.adapters.core.ui_panel")
-local LogView = require("src.adapters.core.ui_log")
 
 local EggyLayerUI = {}
 
@@ -58,10 +56,10 @@ function EggyLayerUI.build_ui_state()
       body = "choice_body",
       cancel = "choice_cancel",
       option_buttons = {
-        "choice_option_1",
-        "choice_option_2",
-        "choice_option_3",
-        "choice_option_4",
+        "choice_option1",
+        "choice_option2",
+        "choice_option3",
+        "choice_option4",
       },
     },
     popup = {
@@ -81,22 +79,13 @@ end
 function EggyLayerUI.refresh_panel(layer, view)
   local ui = layer.ui
   local turn_label = PanelView.build_turn_label(view.state.turn.turn_count)
-  local current_view = PanelView.build_current_player_view(view)
 
   ui:set_label("panel_title", "蛋仔大富翁")
   ui:set_label("panel_turn", turn_label)
-  ui:set_label("panel_current_title", "当前玩家")
-
-  ui:set_label("panel_current_name", current_view and current_view.name_text or "")
-  ui:set_label("panel_current_role", current_view and current_view.role_text or "")
-
-  ui:set_label("panel_current_phase", current_view and current_view.phase_text or "")
-
-  ui:set_label("panel_players_title", "玩家状态")
   local player_rows = PanelView.build_player_statuses(view, layer.game, 4)
   for i = 1, 4 do
     local row = player_rows[i]
-    ui:set_label("panel_player_" .. tostring(i), row and row.name or "")
+    ui:set_label("panel_player_" .. tostring(i) .. "_name", row and row.name or "")
     ui:set_label("panel_player_" .. tostring(i) .. "_cash", row and row.cash or "")
     ui:set_label("panel_player_" .. tostring(i) .. "_land_count", row and row.land_count or "")
     ui:set_label("panel_player_" .. tostring(i) .. "_detail", row and row.total_assets or "")
@@ -106,16 +95,6 @@ function EggyLayerUI.refresh_panel(layer, view)
 
   ui:set_button("btn_next", "下一回合")
   ui:set_button("btn_auto", PanelView.build_auto_label(ui.auto_play))
-  ui:set_button("btn_restart", "重新开始")
-
-  local entries = logger.entries or {}
-  local log_entries = LogView.build_log_entries(entries, 8)
-  local log_lines = {}
-  for _, entry in ipairs(log_entries) do
-    log_lines[#log_lines + 1] = entry.text
-  end
-  ui:set_label("panel_log_title", "事件记录")
-  ui:set_label("panel_log_body", table.concat(log_lines, "\n"))
 end
 
 function EggyLayerUI.refresh_item_slots(layer, view)

@@ -9,8 +9,7 @@ $includeDirs = @(
   "src",
   "Data",
   "UIManager",
-  "Utils",
-  "tests"
+  "Utils"
 )
 
 $includeFiles = @(
