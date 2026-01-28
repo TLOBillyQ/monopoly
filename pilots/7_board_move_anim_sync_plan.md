@@ -13,9 +13,9 @@
 ## 进度
 
 
-- [ ] (2026-01-28 06:45Z) 计划初版：完成现状梳理与方案草案
-- [ ] (2026-01-28 06:45Z) 原型验证：确认冲突触发条件与最小规避策略
-- [ ] (2026-01-28 06:45Z) 实现与验证：完成改动、跑测试与手工验收
+- [x] (2026-01-28 13:41Z) 计划初版：完成现状梳理与方案草案
+- [x] (2026-01-28 13:41Z) 原型验证：确认冲突触发条件与最小规避策略（以 `turn.phase` 与 `turn.move_anim` 作为动画期判据）
+- [x] (2026-01-28 13:41Z) 实现与验证：完成改动并跑测试（手工验收待完成）
 
 
 ## 意外与发现
@@ -23,6 +23,8 @@
 
 - 观察：移动服务会立即更新 `player.position`，而 `refresh_board` 每次刷新都会把单位位置直接写回格点，因此在 `wait_move_anim` 阶段可能覆盖动画移动。
   证据：`src/gameplay/movement_service.lua` 中 `game:update_player_position` 与 `src/adapters/eggy/eggy_layer_board.lua` 中 `unit.set_position`。
+- 观察：仅单向比对位置快照会漏掉玩家移除或回合裁剪的情况，因此需要双向比对快照与上一次缓存。
+  证据：实现中对 `snapshot` 与 `board_last_positions` 做了双向遍历判定变更。
 
 
 ## 决策日志
@@ -36,11 +38,15 @@
   理由：最小改动、避免新增抽象层，符合当前 CodingDiscipline 的“单一实现”与“克制简化”要求。
   日期/作者：2026-01-28 / Codex
 
+- 决策：动画期间暂停所有玩家的坐标同步，动画结束后强制同步一次。
+  理由：避免移动玩家与同格玩家因占位计算被强行错位，优先保证动画流畅与落点一致。
+  日期/作者：2026-01-28 / Codex
+
 
 ## 结果与复盘
 
 
-当前未完成，待实现后补充最终效果、测试结果与复盘。
+已完成 Eggy 棋盘位置同步的“暂停/恢复”与快照差异检测，减少动画期间的抢写冲突，并降低每帧重复写入。自动化测试已通过，手工验收仍需在 Eggitor 或 Demo 中确认动画过程是否连贯、多人同格是否稳定错位。后续若发现位置信息仍有抖动，可进一步细化为“只暂停移动玩家”的策略，但当前实现以稳定为优先。
 
 
 ## 背景与导读
@@ -75,6 +81,7 @@
 
 在仓库根目录梳理当前调用链与数据：
   rg -n "refresh_board|wait_move_anim|move_anim" src/adapters src/gameplay
+  已执行，输出确认 `eggy_layer.lua` 与 `eggy_layer_board.lua` 的刷新与动画交互点。
 
 修改 `src/adapters/eggy/eggy_layer.lua`，在 `EggyLayer.new` 初始化新增状态字段（例如 `board_sync_pending`、`board_last_positions`、`board_last_phase`），并在 `tick` 中读取 `turn.phase` 变化，必要时置 `board_sync_pending = true`。确保刷新顺序仍是 `step_move_anim` -> `refresh_view`。
 
@@ -86,7 +93,9 @@
 
 运行测试（在仓库根目录）：
   lua tests/deps_check.lua
+  预期：Dependency self-check passed
   lua tests/regression.lua
+  预期：All regression checks passed (30)
 
 手工验收：在 Eggitor 或 Demo 中触发移动动画，观察移动过程不被拉回；动画结束后棋子落在目标格子；多人同格时仍能正确错位显示。
 
@@ -107,7 +116,7 @@
 ## 产物与备注
 
 
-预计修改文件：
+修改文件：
 `src/adapters/eggy/eggy_layer.lua`  
 `src/adapters/eggy/eggy_layer_board.lua`
 
@@ -119,6 +128,11 @@
     layer.board_sync_pending = true
     return
   end
+
+测试输出片段（缩进示例）：
+  Dependency self-check passed
+  ..............................
+  All regression checks passed (30)
 
 
 ## 接口与依赖
@@ -137,3 +151,4 @@
 `layer.game.store:get({ "turn", "phase" })`  
 `layer.game.store:get({ "turn", "move_anim" })`
 
+变更说明：更新进度为已完成，实现动画期暂停同步与快照差异检测，并补充测试结果，确保计划可独立复现与验证。

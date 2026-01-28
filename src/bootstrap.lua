@@ -19,7 +19,10 @@ local function build_paths(extra)
 end
 
 local function apply_paths(extra)
-  local current = package.path or ""
+  if type(package) ~= "table" then
+    return
+  end
+  local current = type(package.path) == "string" and package.path or ""
   local existing = split_path(current)
   local existing_set = {}
   for _, p in ipairs(existing) do

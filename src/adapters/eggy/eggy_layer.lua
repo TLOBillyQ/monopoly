@@ -56,6 +56,9 @@ function EggyLayer.new(opts)
     tile_spacing = nil,
     player_units = nil,
     player_units_missing = false,
+    board_last_positions = nil,
+    board_sync_pending = false,
+    board_last_phase = nil,
     _log_once = {},
   }, EggyLayer)
   AdapterLayer.attach(self, {
@@ -175,6 +178,15 @@ function EggyLayer:tick(dt)
       return MoveAnim.one_step(player_id, dir, from_index, to_index)
     end,
   })
+
+  local store = self.game and self.game.store
+  if store and store.get then
+    local phase = store:get({ "turn", "phase" })
+    if self.board_last_phase == "wait_move_anim" and phase ~= "wait_move_anim" then
+      self.board_sync_pending = true
+    end
+    self.board_last_phase = phase
+  end
 
   if self.pending_choice then
     self:_open_choice_modal(self.pending_choice)

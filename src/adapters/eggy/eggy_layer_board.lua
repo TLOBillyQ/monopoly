@@ -134,6 +134,53 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
     end
   end
 
+  local store = layer.game and layer.game.store
+  local phase = store and store.get and store:get({ "turn", "phase" }) or nil
+  local anim = store and store.get and store:get({ "turn", "move_anim" }) or nil
+  local suppress_sync = phase == "wait_move_anim" and anim ~= nil
+
+  local snapshot = {}
+  for i, player in ipairs(players) do
+    if player then
+      local pid = player.id or i
+      local pos = player.position
+      local eliminated = player.eliminated and 1 or 0
+      snapshot[pid] = tostring(pos) .. ":" .. tostring(eliminated)
+    end
+  end
+
+  local need_sync = layer.board_sync_pending or false
+  local last_positions = layer.board_last_positions
+  if not need_sync then
+    if not last_positions then
+      need_sync = true
+    else
+      for pid, value in pairs(snapshot) do
+        if last_positions[pid] ~= value then
+          need_sync = true
+          break
+        end
+      end
+      if not need_sync then
+        for pid, _ in pairs(last_positions) do
+          if snapshot[pid] == nil then
+            need_sync = true
+            break
+          end
+        end
+      end
+    end
+  end
+
+  if suppress_sync then
+    layer.board_sync_pending = true
+  end
+
+  if suppress_sync or not need_sync then
+    layer.board_last_positions = snapshot
+    return
+  end
+
   local occupants = {}
   for i, player in ipairs(players) do
     if player and not player.eliminated and player.position then
@@ -183,6 +230,9 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
       end
     end
   end
+
+  layer.board_sync_pending = false
+  layer.board_last_positions = snapshot
 end
 
 function EggyLayerBoard.on_tile_upgraded(layer, tile_id, level)
