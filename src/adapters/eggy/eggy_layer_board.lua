@@ -177,11 +177,6 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
     end
   end
 
-  local store = layer.game and layer.game.store
-  local phase = store and store.get and store:get({ "turn", "phase" }) or nil
-  local anim = store and store.get and store:get({ "turn", "move_anim" }) or nil
-  local suppress_sync = phase == "wait_move_anim" and anim ~= nil
-
   local snapshot = {}
   for i, player in ipairs(players) do
     if player then
@@ -215,11 +210,7 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
     end
   end
 
-  if suppress_sync then
-    layer.board_sync_pending = true
-  end
-
-  if suppress_sync or not need_sync then
+  if not need_sync then
     layer.board_last_positions = snapshot
     return
   end

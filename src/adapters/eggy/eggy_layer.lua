@@ -7,7 +7,6 @@ local EggyLayerUI = require("src.adapters.eggy.eggy_layer_ui")
 local EggyLayerMarket = require("src.adapters.eggy.eggy_layer_market")
 local EggyLayerBoard = require("src.adapters.eggy.eggy_layer_board")
 local MarketUI = require("src.adapters.eggy.market_ui")
-local MoveAnim = require("src.adapters.eggy.move_anim")
 local ActionAnim = require("src.adapters.eggy.action_anim")
 local Agent = require("src.gameplay.agent")
 
@@ -78,8 +77,6 @@ function EggyLayer.new(opts)
     player_units = nil,
     player_units_missing = false,
     board_last_positions = nil,
-    board_sync_pending = false,
-    board_last_phase = nil,
     next_turn_locked = false,
     next_turn_last_click = nil,
     next_turn_lock_phase = nil,
@@ -112,6 +109,7 @@ function EggyLayer:set_game(g)
   })
   self.player_units = nil
   self.player_units_missing = false
+  self.camera_follow_player_id = nil
 end
 
 function EggyLayer:build_item_index()
@@ -181,29 +179,6 @@ function EggyLayer:tick(dt)
     end,
   })
 
-  AdapterLayer.step_move_anim(self, {
-    on_move_anim = function(_, anim)
-      if not anim then
-        return nil
-      end
-      local player_id = anim.player_id
-      local from_index = anim.from_index
-      local to_index = anim.to_index
-      if not (player_id and from_index and to_index) then
-        return nil
-      end
-      local dir = anim.direction
-      if not dir and anim.steps then
-        if anim.steps < 0 then
-          dir = V3_RIGHT
-        elseif anim.steps > 0 then
-          dir = V3_LEFT
-        end
-      end
-      return MoveAnim.one_step(player_id, dir, from_index, to_index)
-    end,
-  })
-
   AdapterLayer.step_action_anim(self, {
     on_action_anim = function(layer, anim)
       return ActionAnim.play(layer, anim)
@@ -213,14 +188,10 @@ function EggyLayer:tick(dt)
   local store = self.game and self.game.store
   if store and store.get then
     local phase = store:get({ "turn", "phase" })
-    if self.board_last_phase == "wait_move_anim" and phase ~= "wait_move_anim" then
-      self.board_sync_pending = true
-    end
     if self.next_turn_locked and self.next_turn_lock_phase and phase and phase ~= self.next_turn_lock_phase then
       self.next_turn_locked = false
       self.next_turn_lock_phase = phase
     end
-    self.board_last_phase = phase
   end
 
   if self.pending_choice then
@@ -341,9 +312,10 @@ function EggyLayer:refresh_view()
     local current = players[current_index]
     local current_id = current and (current.id or current_index) or nil
     if current_id then
+      local role = GameAPI.get_role(current_id)
+
       if self.camera_follow_player_id ~= current_id then
         self.camera_follow_player_id = current_id
-        local role = GameAPI.get_role(current_id);
         role.set_camera_bind_mode(Enums.CameraBindMode.TRACK)
       end
 
@@ -359,7 +331,14 @@ function EggyLayer:refresh_view()
       end
 
       if target_pos and role and role.set_camera_lock_position then
-        role.set_camera_lock_position(target_pos)
+        local dir = math.Vector3(1, 1, 1)
+        dir:normalize()
+        local dist = 50
+        if math and math.tofixed then
+          dist = math.tofixed(dist)
+        end
+        local lock_pos = target_pos + dir * dist
+        role.set_camera_lock_position(lock_pos)
       end
     end
   end
