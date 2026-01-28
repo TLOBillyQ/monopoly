@@ -198,6 +198,14 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
   end
 
   local spacing = layer.tile_spacing or 0
+  local ground_y = 0
+  if G and G.ground and G.ground.get_position then
+    local ground_pos = G.ground.get_position()
+    if ground_pos and ground_pos.y then
+      ground_y = ground_pos.y
+    end
+  end
+  local min_player_y = ground_y + 1.5
   for i, player in ipairs(players) do
     if player and not player.eliminated and player.position then
       local idx = player.position
@@ -205,6 +213,11 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
       local pid = player.id or i
       local unit = layer.player_units and layer.player_units[pid] or nil
       if base and unit and unit.set_position then
+        local base_y = base.y or 0
+        local y_offset = 0
+        if base_y < min_player_y then
+          y_offset = min_player_y - base_y
+        end
         local list = occupants[idx]
         local count = list and #list or 1
         local slot = 1
@@ -223,9 +236,9 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
           local start = -(per_row - 1) * spacing * 0.5
           local ox = start + col * spacing
           local oz = start + row * spacing
-          unit.set_position(base + math.Vector3(ox, 0, oz))
+          unit.set_position(base + math.Vector3(ox, y_offset, oz))
         else
-          unit.set_position(base)
+          unit.set_position(base + math.Vector3(0, y_offset, 0))
         end
       end
     end

@@ -254,8 +254,8 @@ function EggyRuntime.install()
     G.tiles = LuaAPI.query_units(tile_names)
     G.buildings = LuaAPI.query_units(building_names)
 
-    local ground = LuaAPI.query_unit("ground")
-    ground.set_model_visible(false)
+    G.ground = LuaAPI.query_unit("ground")
+    G.ground.set_model_visible(false)
 
     local function set_item_slot_image(slot_name, image_key)
       if not (slot_name and image_key) then
