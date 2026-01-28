@@ -146,16 +146,12 @@ Eggy 适配层为当前主要实现，**事件入口、UI 查询、以及选择 
 
 文件：`src/adapters/eggy/market_ui.lua`
 
-黑市 UI 目前有两条路径，按可用资源自动选择：
+黑市 UI 仅保留面板式黑市路径，按可用资源自动选择：
 
 1) **面板式黑市（10 项）**（推荐默认）
 - `MarketUI.is_panel_ready()` 为真时启用（要求容器、确认按钮、以及 `item_buttons/item_labels` 等字段完整）。
 - `EggyLayer:_open_market_panel(pending)` 会把 `pending.options` 映射到按钮/文字/稀有度底框，并记录 `layer.market_choice_option_ids`。
 - `EggyRuntime.install()` 通过 UIManager 节点监听将 `MarketUI.item_buttons` 与确认/取消按钮转为选择动作。
-
-2) **卡牌式黑市（≤3 项）**
-- 当 `MarketUI.choose_event` 配置为非空字符串，且 `pending.options` 数量 `<= 3` 时启用。
-- 依赖外部组件模块：`src.adapters.eggy.lib.eggy_choose_option.ChooseOption`（存在则用，不存在会回退到 1) 或普通选择 UI）。
 
 ### 5.5 Eggy 事件流（UI -> 游戏）
 
@@ -198,7 +194,7 @@ EggyLayer:tick(dt)
 2) **UIManager 依赖**：节点通过 `UIManager.query_nodes_by_name` 获取首个节点。若 UIManager 构建失败，会导致节点全部为 nil（表现为 UI 不刷新）。排查顺序：`ui_data.lua` 是否可 require、`UIManager.Builder` 是否被调用、节点名是否一致。
 3) **场景锚点/角色绑定**：玩家位移依赖棋盘锚点 `t1..tN`（或 `G.tiles`），玩家 unit 依赖 `GameAPI.get_all_valid_roles()`。多人同格子偏移由 `tile_spacing` 自动估算。
 4) **楼房升级表现**：`on_tile_upgraded` 依赖 `G.buildings/G.refs`，并用 `Data.Prefab` 生成组单位；Eggy 工程资源变更时需要同步 Prefab/refs。
-5) **黑市 UI**：优先保证面板式黑市可用（`MarketUI.item_buttons/confirm_button/cancel_button` 与 UI 资源一致）。卡牌式黑市是可选增强（需要 `MarketUI.choose_event` + 外部组件）。
+5) **黑市 UI**：优先保证面板式黑市可用（`MarketUI.item_buttons/confirm_button/cancel_button` 与 UI 资源一致）。
 
 ## 6. 适配层与规则层的通信
 
