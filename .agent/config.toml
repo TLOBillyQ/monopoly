@@ -27,3 +27,6 @@ collaboration_modes = true
 [notice]
 hide_full_access_warning = true
 
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp"]

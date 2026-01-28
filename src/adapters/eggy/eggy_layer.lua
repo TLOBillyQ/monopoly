@@ -83,6 +83,7 @@ function EggyLayer.new(opts)
     next_turn_locked = false,
     next_turn_last_click = nil,
     next_turn_lock_phase = nil,
+    camera_follow_player_id = nil,
     _log_once = {},
   }, EggyLayer)
   AdapterLayer.attach(self, {
@@ -248,13 +249,13 @@ function EggyLayer:_open_choice_modal(pending)
     return
   end
   if self.pending_choice_id == pending.id
-    and (self.ui.choice_active or self.ui.market_active) then
+      and (self.ui.choice_active or self.ui.market_active) then
     return
   end
 
   if pending.kind == "market_buy"
-    and MarketUI.is_panel_ready
-    and MarketUI.is_panel_ready() then
+      and MarketUI.is_panel_ready
+      and MarketUI.is_panel_ready() then
     if self.ui.choice_active then
       self.ui:set_visible(self.ui.choice.root, false)
       self.ui.choice_active = false
@@ -332,6 +333,36 @@ function EggyLayer:refresh_view()
   local view = self:build_view()
   self:refresh_panel(view)
   self:refresh_board(view)
+
+  local players = view and view.state and view.state.players or nil
+  local turn = view and view.state and view.state.turn or nil
+  local current_index = turn and turn.current_player_index or nil
+  if players and current_index then
+    local current = players[current_index]
+    local current_id = current and (current.id or current_index) or nil
+    if current_id then
+      if self.camera_follow_player_id ~= current_id then
+        self.camera_follow_player_id = current_id
+        local role = GameAPI.get_role(current_id);
+        role.set_camera_bind_mode(Enums.CameraBindMode.TRACK)
+      end
+
+      local target_pos = nil
+      local unit = self.player_units and self.player_units[current_id] or nil
+      if unit and unit.get_position then
+        target_pos = unit.get_position()
+      else
+        local pos_idx = current and current.position or nil
+        if pos_idx and self.tile_positions then
+          target_pos = self.tile_positions[pos_idx]
+        end
+      end
+
+      if target_pos and role and role.set_camera_lock_position then
+        role.set_camera_lock_position(target_pos)
+      end
+    end
+  end
 end
 
 function EggyLayer:refresh_panel(view)
@@ -407,7 +438,7 @@ function EggyLayer:dispatch_action(action)
         if self.next_turn_lock_phase and phase and phase ~= self.next_turn_lock_phase then
           allow = true
         elseif now and self.next_turn_last_click
-          and (now - self.next_turn_last_click) >= NEXT_TURN_COOLDOWN then
+            and (now - self.next_turn_last_click) >= NEXT_TURN_COOLDOWN then
           allow = true
         end
         if not allow then
