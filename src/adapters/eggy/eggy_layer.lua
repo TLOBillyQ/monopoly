@@ -12,6 +12,7 @@ local Agent = require("src.gameplay.agent")
 local items_cfg = require("src.config.items")
 local market_cfg = require("src.config.market")
 local vehicles_cfg = require("src.config.vehicles")
+local TileRenderer = require("src.adapters.eggy.tile_renderer")
 
 local EggyLayer = {}
 EggyLayer.__index = EggyLayer
@@ -887,6 +888,21 @@ function EggyLayer:on_tile_upgraded(tile_id, level)
     return
   end
   BuildingEffects.spawn_upgrade_building_units(root_quaternion, idx, lv)
+end
+
+function EggyLayer:on_tile_owner_changed(tile_id, owner_id)
+  if not tile_id then
+    return
+  end
+  local board = self.game and self.game.board
+  if not (board and board.index_of_tile_id) then
+    return
+  end
+  local idx = board:index_of_tile_id(tile_id)
+  if not (idx and self.tile_units and self.tile_units[idx]) then
+    return
+  end
+  TileRenderer.render_tile(self.tile_units[idx], tile_id, owner_id)
 end
 
 function EggyLayer:step_turn()

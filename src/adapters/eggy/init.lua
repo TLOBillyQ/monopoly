@@ -2,6 +2,7 @@ require "src.adapters.eggy.macro"
 require "UIManager.Utils"
 
 local move = require "src.adapters.eggy.move"
+local TileRenderer = require "src.adapters.eggy.tile_renderer"
 local Prefab = require("Data.Prefab")
 
 G = {
@@ -56,13 +57,8 @@ return function()
 
 
     -- 渲染测试
-    for i = 1, 34 do
-        local u_color = G.tiles[i].get_child_by_name("color")
-        local u_name = G.tiles[i].get_child_by_name("name")
-        local u_price = G.tiles[i].get_child_by_name("price")
-        u_color.set_paint_area_color(1, 0xFF0000)
-        u_name.set_billboard_text("test")
-        u_price.set_billboard_text("￥000")
+    for i = 1, #G.tiles do
+        TileRenderer.render_tile(G.tiles[i], i, nil)
     end
 
 

@@ -131,6 +131,10 @@ function Game:set_tile_owner(tile, owner_id)
   if not (tile and tile.type == "land") then
     return
   end
+  local ui_port = self.ui_port
+  if ui_port and ui_port.on_tile_owner_changed then
+    ui_port:on_tile_owner_changed(tile.id, owner_id)
+  end
   if owner_id == nil then
     self:_store_set({ "board", "tiles", tile.id, "owner_id" }, nil)
   else
@@ -147,6 +151,10 @@ end
 function Game:reset_tile(tile)
   if not (tile and tile.type == "land") then
     return
+  end
+  local ui_port = self.ui_port
+  if ui_port and ui_port.on_tile_owner_changed then
+    ui_port:on_tile_owner_changed(tile.id, nil)
   end
   self:_store_set({ "board", "tiles", tile.id, "owner_id" }, nil)
   self:_store_set({ "board", "tiles", tile.id, "level" }, 0)
