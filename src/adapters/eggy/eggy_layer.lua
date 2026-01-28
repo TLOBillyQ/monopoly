@@ -8,6 +8,7 @@ local TileView = require("src.adapters.core.ui_tile")
 local LogView = require("src.adapters.core.ui_log")
 local MarketUI = require("src.adapters.eggy.market_ui")
 local BuildingEffects = require("src.adapters.eggy.building_effects")
+local MoveAnim = require("src.adapters.eggy.move_anim")
 local Agent = require("src.gameplay.agent")
 local items_cfg = require("src.config.items")
 local market_cfg = require("src.config.market")
@@ -361,7 +362,28 @@ function EggyLayer:tick(dt)
     end,
   })
 
-  AdapterLayer.step_move_anim(self)
+  AdapterLayer.step_move_anim(self, {
+    on_move_anim = function(_, anim)
+      if not anim then
+        return nil
+      end
+      local player_id = anim.player_id
+      local from_index = anim.from_index
+      local to_index = anim.to_index
+      if not (player_id and from_index and to_index) then
+        return nil
+      end
+      local dir = anim.direction
+      if not dir and anim.steps then
+        if anim.steps < 0 then
+          dir = V3_RIGHT
+        elseif anim.steps > 0 then
+          dir = V3_LEFT
+        end
+      end
+      return MoveAnim.one_step(player_id, dir, from_index, to_index)
+    end,
+  })
 
   if self.pending_choice then
     self:_open_choice_modal(self.pending_choice)

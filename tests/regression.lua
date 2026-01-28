@@ -178,6 +178,45 @@ local function test_logger_adapter_called()
   logger.set_adapter(nil)
 end
 
+local function test_move_anim_callback_and_delay()
+  local dispatched = {}
+  local layer = { wait_move_anim = true }
+  local game = {
+    store = {
+      get = function(_, key)
+        if key[1] == "turn" and key[2] == "move_anim" then
+          return { seq = 1 }
+        end
+        if key[1] == "turn" and key[2] == "phase" then
+          return "wait_move_anim"
+        end
+        return nil
+      end,
+    },
+    dispatch_action = function(_, action)
+      table.insert(dispatched, action)
+    end,
+  }
+  layer.game = game
+  local delay_called = nil
+  local original_lua_api = LuaAPI
+  LuaAPI = {
+    call_delay_time = function(delay, cb)
+      delay_called = delay
+      cb()
+    end,
+  }
+  AdapterLayer.step_move_anim(layer, {
+    on_move_anim = function(_, anim)
+      assert_eq(anim.seq, 1, "anim seq forwarded")
+      return 0.2
+    end,
+  })
+  LuaAPI = original_lua_api
+  assert_eq(delay_called, 0.2, "delay requested")
+  assert_eq(#dispatched, 1, "move_anim_done dispatched")
+  assert_eq(dispatched[1].seq, 1, "move_anim_done seq")
+end
 local function test_land_on_start_reward()
   local g = new_game()
   local p = g:current_player()
@@ -934,6 +973,7 @@ end
 local tests = {
   test_pass_start,
   test_logger_adapter_called,
+  test_move_anim_callback_and_delay,
   test_land_on_start_reward,
   test_roadblock_stop,
   test_monster_card,
