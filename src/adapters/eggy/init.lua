@@ -1,7 +1,7 @@
 require "src.adapters.eggy.macro"
 require "UIManager.Utils"
 
-local move = require "src.adapters.eggy.move"
+local move_anim = require "src.adapters.eggy.move_anim"
 local TileRenderer = require "src.adapters.eggy.tile_renderer"
 local Prefab = require("Data.Prefab")
 

@@ -3,6 +3,7 @@ local MarketUI = require("src.adapters.eggy.market_ui")
 local Game = require("src.game")
 
 require "Utils.Frameout"
+require "src.adapters.eggy.macro"
 
 local EggyRuntime = {}
 
@@ -13,22 +14,6 @@ local function create_game()
     ai = { [2] = true, [3] = true, [4] = true },
     auto_all = true,
   })
-end
-
-local function install_ui_manager()
-  require "UIManager.Utils"
-  local ui_data = require "Data.ui_data"
-  UIManager.Builder(ui_data)
-end
-
-local function install_eca_bridge()
-  require "src.adapters.eggy.eca"
-end
-
-local function forward_eca_event(name)
-  if UIManager and UIManager.forward_eca_event then
-    UIManager.forward_eca_event(name)
-  end
 end
 
 local function resolve_option_id(choice, payload, layer)
@@ -163,20 +148,20 @@ function EggyRuntime.install()
   local layer = EggyLayer.new({ game_factory = create_game })
 
   LuaAPI.global_register_trigger_event({ EVENT.GAME_INIT }, function()
-    install_ui_manager()
-    install_eca_bridge()
-    forward_eca_event("显示加载屏")
-    forward_eca_event("隐藏基础屏")
+    require "UIManager.Utils"
+    UIManager.Builder(require "Data.ui_data")
+    require "src.adapters.eggy.eca"
+    UIManager.forward_eca_event(ECA_EVENT.UI.open_loading_screen)
     layer:set_game(layer:new_game())
     register_ui_manager_events(layer)
     if LuaAPI and LuaAPI.call_delay_time then
       LuaAPI.call_delay_time(0.1, function()
-        forward_eca_event("隐藏加载屏")
-        forward_eca_event("显示基础屏")
+        UIManager.forward_eca_event(ECA_EVENT.UI.close_loading_screen)
+        UIManager.forward_eca_event(ECA_EVENT.UI.open_base_screen)
       end)
     else
-      forward_eca_event("隐藏加载屏")
-      forward_eca_event("显示基础屏")
+      UIManager.forward_eca_event(ECA_EVENT.UI.close_loading_screen)
+      UIManager.forward_eca_event(ECA_EVENT.UI.open_base_screen)
     end
   end)
 

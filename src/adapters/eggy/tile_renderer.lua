@@ -14,17 +14,6 @@ local function resolve_color(owner_id)
   return OWNER_COLORS[owner_id] or DEFAULT_COLOR
 end
 
-local function resolve_rent(cfg)
-  if not (cfg and cfg.type == "land") then
-    return nil
-  end
-  local rents = cfg.rents
-  if type(rents) ~= "table" then
-    return 0
-  end
-  return rents[1] or 0
-end
-
 function TileRenderer.render_tile(unit, tile_id, owner_id)
   local cfg = tiles_cfg[tile_id]
   if not (cfg and unit and unit.get_child_by_name) then
@@ -38,9 +27,9 @@ function TileRenderer.render_tile(unit, tile_id, owner_id)
 
   local price_node = unit.get_child_by_name("price")
   if price_node and price_node.set_billboard_text then
-    local rent = resolve_rent(cfg)
-    if rent then
-      price_node.set_billboard_text("￥" .. tostring(rent))
+    local price = cfg.price
+    if price then
+      price_node.set_billboard_text("￥" .. tostring(price))
     else
       price_node.set_billboard_text("")
     end

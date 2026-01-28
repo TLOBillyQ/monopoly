@@ -7,6 +7,7 @@
 - `design/` stores planning spreadsheets and docs; `assets/` holds fonts and art; `docs/` captures design and review notes.
 - Entrypoints: `main.lua` for the Love2D demo and `src/game.lua` as the runtime facade.
 - 遇到EggyAPI相关检索时， 不要直接读取`docs/eggy/EggyAPI.lua`，这个文件很长，先通过docs/eggy/api/确定关键词后再匹配, 注意deprecated的API不需要。
+- LuaAPI及其他EggyAPI 必然存在，不写类似 `if LuaAPI and LuaAPI.call_delay_time then` 这种判断。
 
 ## Build, Test, and Development Commands
 - `export_xlsx.bat` regenerates `src/config/*.lua` from `design/*.xlsx` and packages `bin/windows/Game.exe`.
