@@ -38,15 +38,6 @@ function Panel.build_current_player_view(view)
     out.phase_text = "阶段: " .. Phase.build_phase_label(phase)
   end
 
-  if view.last_turn and view.last_turn.player_id == current.id then
-    if view.last_turn.rolls then
-      out.dice_text = "骰子: " .. table.concat(view.last_turn.rolls, ",") .. " => " .. view.last_turn.total
-    elseif view.last_turn.note then
-      out.dice_text = view.last_turn.note
-      out.dice_is_note = true
-    end
-  end
-
   return out
 end
 

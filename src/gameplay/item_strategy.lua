@@ -81,7 +81,7 @@ function Strategy.auto_pre_action(game, player, deps, phase)
     if not can_use(item_id) then return nil end
     if not inventory.find_index(player, item_id) then return nil end
     local res = use_item(game, player, item_id, { by_ai = true })
-    if type(res) == "table" and (res.waiting or res.intent or res.kind) then
+    if type(res) == "table" and (res.waiting or res.intent or res.kind or res.action_anim) then
       return res
     end
     return nil

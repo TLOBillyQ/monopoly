@@ -28,7 +28,6 @@ local function build_required_logical_names()
     "panel_current_name",
     "panel_current_role",
     "panel_current_phase",
-    "panel_current_dice",
     "panel_players_title",
     "panel_player_1",
     "panel_player_1_detail",

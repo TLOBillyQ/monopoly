@@ -171,6 +171,10 @@ function TurnManager:_build_flow()
     if res.stay then
       return "wait_choice", args
     end
+    local action_anim = self.game.store:get({ "turn", "action_anim" })
+    if action_anim then
+      return "wait_action_anim", args
+    end
     return args.resume_state, args.resume_args
   end
 
@@ -191,6 +195,26 @@ function TurnManager:_build_flow()
       return "wait_move_anim", args
     end
     self.game.store:set({ "turn", "move_anim" }, nil)
+    return args.resume_state, args.resume_args
+  end
+
+  states.wait_action_anim = function(args)
+    self.game.store:set({ "turn", "phase" }, "wait_action_anim")
+    local anim = self.game.store:get({ "turn", "action_anim" })
+    if not anim then
+      self.pending_action = nil
+      return args.resume_state, args.resume_args
+    end
+
+    local action = self.pending_action
+    self.pending_action = nil
+    if not action or action.type ~= "action_anim_done" then
+      return "wait_action_anim", args
+    end
+    if action.seq and anim.seq and action.seq ~= anim.seq then
+      return "wait_action_anim", args
+    end
+    self.game.store:set({ "turn", "action_anim" }, nil)
     return args.resume_state, args.resume_args
   end
 
@@ -221,6 +245,12 @@ function TurnManager:run_until_wait()
       if self.flow.current == "wait_move_anim" and not self.pending_action then
         self.game.store:set({ "turn", "phase" }, "wait_move_anim")
         return "wait_move_anim"
+      end
+    elseif self.flow.current == "wait_action_anim" then
+      self.flow:step()
+      if self.flow.current == "wait_action_anim" and not self.pending_action then
+        self.game.store:set({ "turn", "phase" }, "wait_action_anim")
+        return "wait_action_anim"
       end
     else
       self.flow:step()

@@ -3,29 +3,62 @@ local logger = require("src.util.logger")
 local ItemPhase = require("src.gameplay.item_phase")
 
 local function phase_roll(tm, args)
-  local player = args.player or tm.game:current_player()
-  local dice_count = player:dice_count()
-  local override = nil
-  if player.status.pending_remote_dice then
-    override = player.status.pending_remote_dice.values
-  end
-  local rolls, raw_total = Dice.roll(dice_count, override, tm.game.rng)
+  args = args or {}
+  local game = tm.game
+  local player = args.player or game:current_player()
+  local rolls = args.rolls
+  local raw_total = args.raw_total
+  local total = args.total
 
-  local total = raw_total
-  if player.status.pending_dice_multiplier and player.status.pending_dice_multiplier > 1 then
-    total = total * player.status.pending_dice_multiplier
+  if not rolls then
+    local dice_count = player:dice_count()
+    local override = nil
+    if player.status.pending_remote_dice then
+      override = player.status.pending_remote_dice.values
+    end
+    rolls, raw_total = Dice.roll(dice_count, override, game.rng)
+
+    total = raw_total
+    if player.status.pending_dice_multiplier and player.status.pending_dice_multiplier > 1 then
+      total = total * player.status.pending_dice_multiplier
+    end
+    logger.event(player.name .. " 投骰: [" .. table.concat(rolls, ",") .. "] => " .. total)
+    game.last_turn.rolls = rolls
+    game.last_turn.total = total
+    game.last_turn.raw_total = raw_total
   end
-  logger.event(player.name .. " 投骰: [" .. table.concat(rolls, ",") .. "] => " .. total)
-  tm.game.last_turn.rolls = rolls
-  tm.game.last_turn.total = total
-  tm.game.last_turn.raw_total = raw_total
+
+  if not args.skip_anim and game.ui_port and game.ui_port.wait_action_anim then
+    game:queue_action_anim({
+      kind = "roll",
+      player_id = player.id,
+      rolls = rolls,
+      total = total,
+    })
+    return "wait_action_anim", {
+      resume_state = "roll",
+      resume_args = {
+        player = player,
+        rolls = rolls,
+        raw_total = raw_total,
+        total = total,
+        skip_anim = true,
+      },
+    }
+  end
+
   local phase_res = ItemPhase.run(tm, "pre_move", {
     player = player,
     resume_state = "move",
     resume_args = { player = player, total = total, raw_total = raw_total },
   })
   if phase_res and phase_res.waiting then
-    return "wait_choice", { resume_state = "move", resume_args = { player = player, total = total, raw_total = raw_total } }
+    local resume_state = phase_res.resume_state or "move"
+    local resume_args = phase_res.resume_args or { player = player, total = total, raw_total = raw_total }
+    if phase_res.wait_action_anim then
+      return "wait_action_anim", { resume_state = resume_state, resume_args = resume_args }
+    end
+    return "wait_choice", { resume_state = resume_state, resume_args = resume_args }
   end
   return "move", { player = player, total = total, raw_total = raw_total }
 end

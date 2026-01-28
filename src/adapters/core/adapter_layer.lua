@@ -16,6 +16,8 @@ function AdapterLayer.attach(layer, opts)
   layer.ui_modal_ref = nil
   layer.wait_move_anim = true
   layer.move_anim_seq = nil
+  layer.wait_action_anim = true
+  layer.action_anim_seq = nil
   layer.item_name_by_id = {}
   layer.game_factory = opts.game_factory or layer.game_factory
   layer.auto_runner = opts.auto_runner or layer.auto_runner
@@ -209,7 +211,7 @@ function AdapterLayer.step_move_anim(layer, opts)
   layer.move_anim_seq = anim.seq
   if opts and opts.on_move_anim then
     local ok, delay = pcall(opts.on_move_anim, layer, anim)
-    if ok and delay and delay > 0 and LuaAPI and LuaAPI.call_delay_time then
+    if ok and delay and delay > 0 then
       LuaAPI.call_delay_time(delay, function()
         if layer.game and layer.game.dispatch_action then
           layer.game:dispatch_action({ type = "move_anim_done", seq = anim.seq })
@@ -220,6 +222,44 @@ function AdapterLayer.step_move_anim(layer, opts)
   end
   if layer.game and layer.game.dispatch_action then
     layer.game:dispatch_action({ type = "move_anim_done", seq = anim.seq })
+  end
+end
+
+function AdapterLayer.step_action_anim(layer, opts)
+  if not (layer and layer.wait_action_anim and layer.game and layer.game.store) then
+    return
+  end
+
+  local anim = layer.game.store:get({ "turn", "action_anim" })
+  local phase = layer.game.store:get({ "turn", "phase" })
+  if not anim or not anim.seq then
+    layer.action_anim_seq = nil
+    return
+  end
+
+  if phase ~= "wait_action_anim" then
+    layer.action_anim_seq = nil
+    return
+  end
+
+  if layer.action_anim_seq == anim.seq then
+    return
+  end
+
+  layer.action_anim_seq = anim.seq
+  if opts and opts.on_action_anim then
+    local ok, delay = pcall(opts.on_action_anim, layer, anim)
+    if ok and delay and delay > 0 then
+      LuaAPI.call_delay_time(delay, function()
+        if layer.game and layer.game.dispatch_action then
+          layer.game:dispatch_action({ type = "action_anim_done", seq = anim.seq })
+        end
+      end)
+      return
+    end
+  end
+  if layer.game and layer.game.dispatch_action then
+    layer.game:dispatch_action({ type = "action_anim_done", seq = anim.seq })
   end
 end
 

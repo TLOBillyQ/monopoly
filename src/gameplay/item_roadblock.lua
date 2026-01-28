@@ -159,13 +159,16 @@ function Roadblock.apply(game, player, idx)
   game.board:place_roadblock(idx)
   local tile = game.board:get_tile(idx)
   logger.event(player.name .. " 放置路障在 " .. tile.name)
-  return {
-    ok = true,
-    intent = {
-      kind = "push_popup",
-      payload = { title = "放置路障", body = player.name .. " 在 " .. tile.name .. " 设置了路障" },
-    },
-  }
+  local queued = false
+  if game.ui_port and game.ui_port.wait_action_anim then
+    game:queue_action_anim({
+      kind = "roadblock",
+      player_id = player.id,
+      tile_index = idx,
+    })
+    queued = true
+  end
+  return { ok = true, action_anim = queued }
 end
 
 return Roadblock

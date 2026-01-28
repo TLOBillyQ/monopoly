@@ -14,7 +14,6 @@
 - panel_current_name
 - panel_current_role
 - panel_current_phase
-- panel_current_dice
 - panel_players_title
 
 ## 基础屏与遮罩

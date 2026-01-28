@@ -8,6 +8,7 @@ local EggyLayerMarket = require("src.adapters.eggy.eggy_layer_market")
 local EggyLayerBoard = require("src.adapters.eggy.eggy_layer_board")
 local MarketUI = require("src.adapters.eggy.market_ui")
 local MoveAnim = require("src.adapters.eggy.move_anim")
+local ActionAnim = require("src.adapters.eggy.action_anim")
 local Agent = require("src.gameplay.agent")
 
 local EggyLayer = {}
@@ -176,6 +177,12 @@ function EggyLayer:tick(dt)
         end
       end
       return MoveAnim.one_step(player_id, dir, from_index, to_index)
+    end,
+  })
+
+  AdapterLayer.step_action_anim(self, {
+    on_action_anim = function(layer, anim)
+      return ActionAnim.play(layer, anim)
     end,
   })
 

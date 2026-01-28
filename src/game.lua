@@ -127,6 +127,18 @@ function Game:update_tile(tile, updates)
 end
 
 
+function Game:queue_action_anim(payload)
+  if not (payload and self.store) then
+    return nil
+  end
+  local seq = (self.store:get({ "turn", "action_anim_seq" }) or 0) + 1
+  payload.seq = seq
+  self.store:set({ "turn", "action_anim_seq" }, seq)
+  self.store:set({ "turn", "action_anim" }, payload)
+  return payload
+end
+
+
 function Game:set_tile_owner(tile, owner_id)
   if not (tile and tile.type == "land") then
     return

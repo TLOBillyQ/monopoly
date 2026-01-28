@@ -91,7 +91,6 @@ function EggyLayerUI.refresh_panel(layer, view)
   ui:set_label("panel_current_role", current_view and current_view.role_text or "")
 
   ui:set_label("panel_current_phase", current_view and current_view.phase_text or "")
-  ui:set_label("panel_current_dice", current_view and current_view.dice_text or "")
 
   ui:set_label("panel_players_title", "玩家状态")
   local player_rows = PanelView.build_player_statuses(view, layer.game, 4)

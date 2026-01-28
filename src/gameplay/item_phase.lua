@@ -96,6 +96,10 @@ function ItemPhase.run(tm, phase, args)
       store:set({ "turn", "item_phase_active" }, phase)
       return { waiting = true, resume_state = args.resume_state, resume_args = args.resume_args }
     end
+    if store:get({ "turn", "action_anim" }) then
+      ItemPhase.finish(game, phase)
+      return { waiting = true, wait_action_anim = true, resume_state = args.resume_state, resume_args = args.resume_args }
+    end
     ItemPhase.finish(game, phase)
     return nil
   end

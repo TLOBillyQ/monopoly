@@ -155,15 +155,22 @@ end
 handlers.place_mine_here = function(game, player, _cfg, context)
   game.board:place_mine(player.position)
   logger.event(player.name .. " 在脚下埋设地雷")
-  return {
-    ok = true,
-    intent = { kind = "push_popup", payload = { title = "埋设地雷", body = player.name .. " 在脚下埋设了地雷" } },
-  }
+  if game.ui_port and game.ui_port.wait_action_anim then
+    game:queue_action_anim({
+      kind = "mine",
+      player_id = player.id,
+      tile_index = player.position,
+    })
+    return { ok = true, action_anim = true }
+  end
+  return true
 end
 
 handlers.clear_obstacles_ahead = function(game, player, cfg, context)
   local board = game.board
   local cleared = 0
+  local cleared_indices = {}
+  local cleared_map = {}
   local current = player.position
   local distance = cfg.distance or 12
   local parity = distance
@@ -180,10 +187,18 @@ handlers.clear_obstacles_ahead = function(game, player, cfg, context)
       if board:has_roadblock(current) then
         board:clear_roadblock(current)
         cleared = cleared + 1
+        if not cleared_map[current] then
+          cleared_map[current] = true
+          cleared_indices[#cleared_indices + 1] = current
+        end
       end
       if board:has_mine(current) then
         board:clear_mine(current)
         cleared = cleared + 1
+        if not cleared_map[current] then
+          cleared_map[current] = true
+          cleared_indices[#cleared_indices + 1] = current
+        end
       end
     end
   else
@@ -217,10 +232,18 @@ handlers.clear_obstacles_ahead = function(game, player, cfg, context)
               if board:has_roadblock(next_index) then
                 board:clear_roadblock(next_index)
                 cleared = cleared + 1
+                if not cleared_map[next_index] then
+                  cleared_map[next_index] = true
+                  cleared_indices[#cleared_indices + 1] = next_index
+                end
               end
               if board:has_mine(next_index) then
                 board:clear_mine(next_index)
                 cleared = cleared + 1
+                if not cleared_map[next_index] then
+                  cleared_map[next_index] = true
+                  cleared_indices[#cleared_indices + 1] = next_index
+                end
               end
               if mark(next_id, dir, node.depth + 1) then
                 push({ tile_id = next_id, facing = dir, depth = node.depth + 1 })
@@ -232,6 +255,14 @@ handlers.clear_obstacles_ahead = function(game, player, cfg, context)
     end)
   end
   logger.event(player.name .. " 清除前方障碍数：" .. cleared)
+  if game.ui_port and game.ui_port.wait_action_anim then
+    game:queue_action_anim({
+      kind = "clear_obstacles",
+      player_id = player.id,
+      cleared_indices = cleared_indices,
+    })
+    return { ok = true, action_anim = true }
+  end
   return true
 end
 

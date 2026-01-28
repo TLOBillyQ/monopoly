@@ -124,6 +124,8 @@ local function build_initial_state(board, players, rng)
       choice_seq = 0,
       move_anim_seq = 0,
       move_anim = nil,
+      action_anim_seq = 0,
+      action_anim = nil,
     },
     rng = rng:snapshot(),
     players = snapshot_players(players),

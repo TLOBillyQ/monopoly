@@ -12,7 +12,6 @@ base_screen（ECanvas）
 - panel_current_name（ELabel）
 - panel_current_role（ELabel）
 - panel_current_phase（ELabel）
-- panel_current_dice（ELabel）
 - panel_players_title（ELabel）
 - panel_player_1（ELabel）
   - panel_player_1_detail（ELabel，总资产）
@@ -71,7 +70,6 @@ base_screen（ECanvas）
   - panel_current_name
   - panel_current_role
   - panel_current_phase
-  - panel_current_dice
   - panel_players_title
   - panel_player_1
   - panel_player_1_detail（总资产）

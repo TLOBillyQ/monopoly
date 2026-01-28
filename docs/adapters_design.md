@@ -50,6 +50,8 @@
   - 对“非选择类弹窗”的超时收敛：当 UI 处于激活态且超过 `action_timeout_seconds`，调用 `opts.on_timeout`（Eggy 用它自动关闭提示弹窗）。
 - `AdapterLayer.step_move_anim(layer)`
   - 监听 `game.store.turn.move_anim` 与 `turn.phase == "wait_move_anim"`；当检测到新的 `move_anim.seq` 时自动派发 `{type="move_anim_done", seq=...}`，用于推进“等待移动动画结束”的回合阶段。
+- `AdapterLayer.step_action_anim(layer)`
+  - 监听 `game.store.turn.action_anim` 与 `turn.phase == "wait_action_anim"`；当检测到新的 `action_anim.seq` 时自动派发 `{type="action_anim_done", seq=...}`，用于推进“等待动作动画结束”的回合阶段（骰子、路障、地雷、导弹、怪兽、清障机器人等）。
 - `AdapterLayer.clear_choice(layer, opts)`
   - 清空当前选择状态并回调 `opts.on_close_choice`（平台侧负责把选择 UI 收起）。
 
@@ -117,6 +119,7 @@ Eggy 适配层为当前主要实现，**事件入口、UI 查询、以及选择 
   - `AdapterLayer.step_choice_timeout`：选择超时自动处理（Eggy 会先尝试 `Agent.auto_action_for_choice`）。
   - `AdapterLayer.step_modal_timeout`：弹窗超时自动关闭（调用 `close_popup()`）。
   - `AdapterLayer.step_move_anim`：等待移动动画结束时自动派发 `move_anim_done`。
+  - `AdapterLayer.step_action_anim`：等待动作动画结束时自动派发 `action_anim_done`。
   - `pending_choice` 存在时打开选择 UI，并 `refresh_view()` 刷新 UI。
 - `EggyLayer:build_view()`
   - 调 `Presenter.present` 生成 `view`。
@@ -132,6 +135,7 @@ Eggy 适配层为当前主要实现，**事件入口、UI 查询、以及选择 
   - UI 按钮/格子选择/选择结果 -> 游戏动作。
 - `EggyLayer:push_popup(payload)` / `close_popup()`
   - 控制弹窗 UI。
+- `EggyLayer:tick` 内会调用 `src/adapters/eggy/action_anim.lua` 播放动作动画（骰子、路障、地雷、导弹、怪兽、清障机器人），播放结束后回调推进回合。
 - `EggyLayer:on_tile_upgraded(tile_id, level)`
   - 触发楼房升级表现（依赖 `G.buildings/G.refs`，内部调用 `src/adapters/eggy/building_effects.lua`）。
 
@@ -173,10 +177,11 @@ LuaAPI.set_tick_handler
    ▼
 EggyLayer:tick(dt)
    ├─ AdapterLayer.step_auto_runner
-   ├─ AdapterLayer.step_choice_timeout
-   ├─ AdapterLayer.step_modal_timeout
-   ├─ AdapterLayer.step_move_anim
-   └─ refresh_view()
+  ├─ AdapterLayer.step_choice_timeout
+  ├─ AdapterLayer.step_modal_timeout
+  ├─ AdapterLayer.step_move_anim
+  ├─ AdapterLayer.step_action_anim
+  └─ refresh_view()
         ├─ refresh_panel(view)
         └─ refresh_board(view)
 ```
@@ -188,6 +193,7 @@ EggyLayer:tick(dt)
 3) **场景锚点/角色绑定**：玩家位移依赖棋盘锚点 `t1..tN`（或 `G.tiles`），玩家 unit 依赖 `GameAPI.get_all_valid_roles()`。多人同格子偏移由 `tile_spacing` 自动估算。
 4) **楼房升级表现**：`on_tile_upgraded` 依赖 `G.buildings/G.refs`，并用 `Data.Prefab` 生成组单位；Eggy 工程资源变更时需要同步 Prefab/refs。
 5) **黑市 UI**：优先保证面板式黑市可用（`MarketUI.item_buttons/confirm_button/cancel_button` 与 UI 资源一致）。
+6) **动作动画原型**：当前 `src/adapters/eggy/action_anim.lua` 使用 `GlobalAPI.show_tips` 作为动画占位表现，后续若接入 Prefab 动画，再在此处补充资源 key 对照表。
 
 ## 6. 适配层与规则层的通信
 
