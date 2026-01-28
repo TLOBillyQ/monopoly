@@ -47,6 +47,22 @@ local function show_tips(message, duration)
   return false
 end
 
+local NEXT_TURN_COOLDOWN = 0.4
+
+local function get_timestamp_seconds()
+  if not (GameAPI and GameAPI.get_timestamp) then
+    return nil
+  end
+  local ts = GameAPI.get_timestamp()
+  if type(ts) ~= "number" then
+    return nil
+  end
+  if ts > 10000000000 then
+    return ts / 1000
+  end
+  return ts
+end
+
 function EggyLayer.new(opts)
   opts = opts or {}
   local ui = EggyLayerUI.build_ui_state()
@@ -60,6 +76,9 @@ function EggyLayer.new(opts)
     board_last_positions = nil,
     board_sync_pending = false,
     board_last_phase = nil,
+    next_turn_locked = false,
+    next_turn_last_click = nil,
+    next_turn_lock_phase = nil,
     _log_once = {},
   }, EggyLayer)
   AdapterLayer.attach(self, {
@@ -191,6 +210,10 @@ function EggyLayer:tick(dt)
     local phase = store:get({ "turn", "phase" })
     if self.board_last_phase == "wait_move_anim" and phase ~= "wait_move_anim" then
       self.board_sync_pending = true
+    end
+    if self.next_turn_locked and self.next_turn_lock_phase and phase and phase ~= self.next_turn_lock_phase then
+      self.next_turn_locked = false
+      self.next_turn_lock_phase = phase
     end
     self.board_last_phase = phase
   end
@@ -331,6 +354,7 @@ function EggyLayer:step_turn()
   if not self.game or self.game.finished then
     return
   end
+  print("[debug] step_turn: advance_turn")
   self.game:advance_turn()
 end
 
@@ -367,6 +391,28 @@ function EggyLayer:dispatch_action(action)
       return
     end
     if action.id == "next" then
+      print("[debug] dispatch ui_button next")
+      local phase = nil
+      local store = self.game and self.game.store
+      if store and store.get then
+        phase = store:get({ "turn", "phase" })
+      end
+      local now = get_timestamp_seconds()
+      if self.next_turn_locked then
+        local allow = false
+        if self.next_turn_lock_phase and phase and phase ~= self.next_turn_lock_phase then
+          allow = true
+        elseif now and self.next_turn_last_click
+          and (now - self.next_turn_last_click) >= NEXT_TURN_COOLDOWN then
+          allow = true
+        end
+        if not allow then
+          return
+        end
+      end
+      self.next_turn_locked = true
+      self.next_turn_last_click = now
+      self.next_turn_lock_phase = phase
       self:step_turn()
     elseif action.id == "auto" then
       self.ui.auto_play = not self.ui.auto_play

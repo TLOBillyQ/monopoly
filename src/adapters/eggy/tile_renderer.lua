@@ -1,5 +1,12 @@
 local tiles_cfg = require("src.config.tiles")
 
+local tiles_by_id = {}
+for _, cfg in ipairs(tiles_cfg) do
+  if cfg and cfg.id then
+    tiles_by_id[cfg.id] = cfg
+  end
+end
+
 local TileRenderer = {}
 
 local DEFAULT_COLOR = 0xCFCFCF
@@ -15,7 +22,7 @@ local function resolve_color(owner_id)
 end
 
 function TileRenderer.render_tile(unit, tile_id, owner_id)
-  local cfg = tiles_cfg[tile_id]
+  local cfg = tiles_by_id[tile_id]
   if not (cfg and unit and unit.get_child_by_name) then
     return
   end

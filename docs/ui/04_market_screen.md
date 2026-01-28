@@ -40,6 +40,7 @@ market_panel（ECanvas）
 - market_price_label（ELabel）
 - market_confirm_button（EButton）
 - market_cancel_button（EButton）
+- market_panel_close（EButton，可点击）
 - market_item_containter（EImage）
 
 ## 显示与隐藏
@@ -61,6 +62,7 @@ market_panel（ECanvas）
 - market_item_button10 -> 选择商品
 - market_confirm_button -> 确认购买
 - market_cancel_button -> 取消购买
+- market_panel_close -> 取消购买
 
 ## 资源引用规则
 

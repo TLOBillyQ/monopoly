@@ -262,6 +262,7 @@ function TurnManager:run_until_wait()
 end
 
 function TurnManager:run_turn()
+  print("[debug] turn_manager: run_turn")
   return self:run_until_wait()
 end
 

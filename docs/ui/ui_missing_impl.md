@@ -18,7 +18,6 @@
 - loading_screen (ECanvas)
 - loading_tip (ELabel)
 - market_panel_backgroud (EImage)
-- market_panel_close (EButton)
 - panel_player_1 (EImage)
 - panel_player_1_avatar (EImage)
 - panel_player_2 (EImage)

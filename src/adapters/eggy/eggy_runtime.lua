@@ -2,6 +2,7 @@ local EggyLayer = require("src.adapters.eggy.eggy_layer")
 local MarketUI = require("src.adapters.eggy.market_ui")
 local Game = require("src.game")
 local logger = require("src.util.logger")
+local map_cfg = require("src.config.map")
 
 require "Utils.Frameout"
 require "src.adapters.eggy.macro"
@@ -118,6 +119,7 @@ local function register_ui_manager_events(layer)
   local cache = {}
   local registered = {}
   register_node_click(cache, "btn_next", function()
+    print("[debug] ui btn_next clicked")
     layer:dispatch_action({ type = "ui_button", id = "next" })
   end, registered)
   register_node_click(cache, "btn_auto", function()
@@ -193,6 +195,13 @@ local function register_ui_manager_events(layer)
     end
   end, registered)
 
+  register_node_click(cache, "market_panel_close", function()
+    local choice = layer.pending_choice
+    if choice and choice.allow_cancel ~= false then
+      layer:dispatch_action({ type = "choice_cancel", choice_id = choice.id })
+    end
+  end, registered)
+
   local ok, nodes = pcall(require, "Data.ui_data")
   if ok and type(nodes) == "table" then
     for _, entry in pairs(nodes) do
@@ -247,9 +256,15 @@ function EggyRuntime.install()
 
     local tile_names = {}
     local building_names = {}
-    for i = 1, 45 do
-      tile_names[i] = "t" .. tostring(i)
-      building_names[i] = "b" .. tostring(i)
+    local tile_ids = map_cfg.path or {}
+    if #tile_ids == 0 then
+      for i = 1, 45 do
+        tile_ids[i] = i
+      end
+    end
+    for i, tile_id in ipairs(tile_ids) do
+      tile_names[i] = "t" .. tostring(tile_id)
+      building_names[i] = "b" .. tostring(tile_id)
     end
     G.tiles = LuaAPI.query_units(tile_names)
     G.buildings = LuaAPI.query_units(building_names)

@@ -1,5 +1,6 @@
 local BuildingEffects = require("src.adapters.eggy.building_effects")
 local TileRenderer = require("src.adapters.eggy.tile_renderer")
+local map_cfg = require("src.config.map")
 
 local EggyLayerBoard = {}
 
@@ -19,9 +20,27 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
     if G and type(G.tiles) == "table" and #G.tiles >= tile_count then
       tiles = G.tiles
     else
+      local tile_ids = {}
+      if view.board and view.board.tiles then
+        for i, tile in ipairs(view.board.tiles) do
+          if tile and tile.id then
+            tile_ids[i] = tile.id
+          end
+        end
+      end
+      if #tile_ids == 0 then
+        for i, tile_id in ipairs(map_cfg.path or {}) do
+          tile_ids[i] = tile_id
+        end
+      end
+      if #tile_ids == 0 then
+        for i = 1, tile_count do
+          tile_ids[i] = i
+        end
+      end
       local tile_names = {}
       for i = 1, tile_count do
-        tile_names[i] = "t" .. tostring(i)
+        tile_names[i] = "t" .. tostring(tile_ids[i])
       end
       tiles = LuaAPI.query_units(tile_names)
     end
@@ -39,6 +58,30 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
 
     layer.tile_units = tiles
     layer.tile_positions = positions
+
+    local board_tiles = view.state and view.state.board and view.state.board.tiles or {}
+    local tile_ids = {}
+    if view.board and view.board.tiles then
+      for i, tile in ipairs(view.board.tiles) do
+        if tile and tile.id then
+          tile_ids[i] = tile.id
+        end
+      end
+    end
+    if #tile_ids == 0 then
+      for i, tile_id in ipairs(map_cfg.path or {}) do
+        tile_ids[i] = tile_id
+      end
+    end
+    for i = 1, tile_count do
+      local tile_id = tile_ids[i]
+      local unit = tiles and tiles[i] or nil
+      if tile_id and unit then
+        local tile_state = board_tiles and board_tiles[tile_id] or nil
+        local owner_id = tile_state and tile_state.owner_id or nil
+        TileRenderer.render_tile(unit, tile_id, owner_id)
+      end
+    end
 
     local spacing = 0
     local spacing_count = 0
