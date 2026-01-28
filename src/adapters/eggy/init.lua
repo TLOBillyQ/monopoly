@@ -86,7 +86,7 @@ return function()
 
     LuaAPI.call_delay_time(2.0, function()
         local final_id = 4
-        move.one_step(1, V3_LEFT, 35, final_id)
+        move_anim.one_step(1, V3_LEFT, 35, final_id)
         print("Moving to tile:", final_id)
     end)
 

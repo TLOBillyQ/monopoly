@@ -185,7 +185,7 @@ function AdapterLayer.clear_choice(layer, opts)
   end
 end
 
-function AdapterLayer.step_move_anim(layer)
+function AdapterLayer.step_move_anim(layer, opts)
   if not (layer and layer.wait_move_anim and layer.game and layer.game.store) then
     return
   end
@@ -207,6 +207,17 @@ function AdapterLayer.step_move_anim(layer)
   end
 
   layer.move_anim_seq = anim.seq
+  if opts and opts.on_move_anim then
+    local ok, delay = pcall(opts.on_move_anim, layer, anim)
+    if ok and delay and delay > 0 and LuaAPI and LuaAPI.call_delay_time then
+      LuaAPI.call_delay_time(delay, function()
+        if layer.game and layer.game.dispatch_action then
+          layer.game:dispatch_action({ type = "move_anim_done", seq = anim.seq })
+        end
+      end)
+      return
+    end
+  end
   if layer.game and layer.game.dispatch_action then
     layer.game:dispatch_action({ type = "move_anim_done", seq = anim.seq })
   end
