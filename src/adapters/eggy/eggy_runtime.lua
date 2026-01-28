@@ -146,17 +146,69 @@ function EggyRuntime.install()
     UIManager.Builder(require "Data.ui_data")
     require "src.adapters.eggy.eca"
     UIManager.forward_eca_event(ECA_EVENT.UI.open_loading_screen)
+    G = {
+      tiles = {},
+      buildings = {},
+      refs = require "src.adapters.eggy.refs",
+      lvs = {},
+      role = {
+        GameAPI.get_role(1),
+        GameAPI.get_role(2),
+        GameAPI.get_role(3),
+        GameAPI.get_role(4),
+      },
+      unit = {
+        GameAPI.get_role(1).get_ctrl_unit(),
+        GameAPI.get_role(2).get_ctrl_unit(),
+        GameAPI.get_role(3).get_ctrl_unit(),
+        GameAPI.get_role(4).get_ctrl_unit(),
+      },
+    }
     layer:set_game(layer:new_game())
     register_ui_manager_events(layer)
-    if LuaAPI and LuaAPI.call_delay_time then
-      LuaAPI.call_delay_time(0.1, function()
-        UIManager.forward_eca_event(ECA_EVENT.UI.close_loading_screen)
-        UIManager.forward_eca_event(ECA_EVENT.UI.open_base_screen)
-      end)
-    else
+
+    local refs = G.refs
+    local role = GameAPI.get_role(1)
+    local unit = role.get_ctrl_unit()
+
+    local tile_names = {}
+    local building_names = {}
+    for i = 1, 45 do
+      tile_names[i] = "t" .. tostring(i)
+      building_names[i] = "b" .. tostring(i)
+    end
+    G.tiles = LuaAPI.query_units(tile_names)
+    G.buildings = LuaAPI.query_units(building_names)
+
+    local ground = LuaAPI.query_unit("ground")
+    ground.set_model_visible(false)
+
+    local function set_item_slot_image(slot_name, image_key)
+      if not (slot_name and image_key) then
+        return
+      end
+      local nodes = UIManager.query_nodes_by_name(slot_name) or {}
+      for _, node in ipairs(nodes) do
+        if node and node.image_texture ~= nil then
+          node.image_texture = image_key
+        end
+      end
+    end
+
+    for _, r in ipairs(GameAPI.get_all_valid_roles()) do
+      UIManager.client_role = r
+      for i = 1, 5 do
+        set_item_slot_image("item_slot_" .. tostring(i), refs["空"])
+      end
+
+      unit.add_state(Enums.BuffState.BUFF_FORBID_CONTROL)
+    end
+    UIManager.client_role = nil
+
+    LuaAPI.call_delay_time(0.1, function()
       UIManager.forward_eca_event(ECA_EVENT.UI.close_loading_screen)
       UIManager.forward_eca_event(ECA_EVENT.UI.open_base_screen)
-    end
+    end)
   end)
 
   local tick_interval = 1
