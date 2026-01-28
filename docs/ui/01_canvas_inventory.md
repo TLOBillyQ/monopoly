@@ -1,0 +1,189 @@
+# 画布清单与职责
+
+本清单面向 Eggitor 画布与节点结构，给出“要做几张画布、各自负责什么”。
+
+## 必需画布
+
+1. base_screen（基础屏）
+   - 用途：主 HUD + 棋盘文本 + 操作按钮。
+   - 主要节点：
+     - panel_title
+     - panel_turn
+     - panel_current_title
+     - panel_current_name
+     - panel_current_role
+     - panel_current_phase
+     - panel_current_dice
+     - panel_players_title
+     - panel_player_1
+     - panel_player_1_detail
+     - panel_player_1_info
+     - panel_player_1_avatar
+     - panel_player_1_cash
+     - panel_player_1_land_count
+     - panel_player_1_base
+     - panel_player_1_base_color
+     - panel_player_2
+     - panel_player_2_detail
+     - panel_player_2_info
+     - panel_player_2_avatar
+     - panel_player_2_cash
+     - panel_player_2_land_count
+     - panel_player_2_base
+     - panel_player_2_base_color
+     - panel_player_3
+     - panel_player_3_detail
+     - panel_player_3_info
+     - panel_player_3_avatar
+     - panel_player_3_cash
+     - panel_player_3_land_count
+     - panel_player_3_base
+     - panel_player_3_base_color
+     - panel_player_4
+     - panel_player_4_detail
+     - panel_player_4_info
+     - panel_player_4_avatar
+     - panel_player_4_cash
+     - panel_player_4_land_count
+     - panel_player_4_base
+     - panel_player_4_base_color
+     - panel_item_slots
+     - item_slot_1
+     - item_slot_2
+     - item_slot_3
+     - item_slot_4
+     - item_slot_5
+     - panel_tile_title
+     - tile_detail_name
+     - tile_detail_price
+     - tile_detail_level
+     - tile_detail_owner
+     - tile_detail_roadblock
+     - tile_detail_mine
+     - panel_log_title
+     - panel_log_body
+     - btn_next
+     - btn_auto
+     - btn_restart
+     - btn_auto_label
+     - overlay_mask
+     - background_rect
+     - tile_1
+     - tile_2
+     - tile_3
+     - tile_4
+     - tile_5
+     - tile_6
+     - tile_7
+     - tile_8
+     - tile_9
+     - tile_10
+     - tile_11
+     - tile_12
+     - tile_13
+     - tile_14
+     - tile_15
+     - tile_16
+     - tile_17
+     - tile_18
+     - tile_19
+     - tile_20
+     - tile_21
+     - tile_22
+     - tile_23
+     - tile_24
+     - tile_25
+     - tile_26
+     - tile_27
+     - tile_28
+     - tile_29
+     - tile_30
+     - tile_31
+     - tile_32
+     - tile_33
+     - tile_34
+     - tile_35
+     - tile_36
+     - tile_37
+     - tile_38
+     - tile_39
+     - tile_40
+     - tile_41
+     - tile_42
+     - tile_43
+     - tile_44
+     - tile_45
+   - 显示控制：默认显示；如需切换，用 ECA 事件控制。
+
+2. loading_screen（加载屏）
+   - 用途：遮罩与加载提示。
+   - 主要节点：
+     - loading_tip
+     - background_rect
+   - 显示控制：ECA 事件控制，启动时先显示加载屏并隐藏基础屏，短延时后隐藏加载屏并显示基础屏。
+
+3. market_panel（黑市屏）
+   - 用途：黑市购买界面。
+   - 主要节点：
+     - market_item_button_1
+     - market_item_button_2
+     - market_item_button_3
+     - market_item_button_4
+     - market_item_button_5
+     - market_item_button_6
+     - market_item_button_7
+     - market_item_button_8
+     - market_item_button_9
+     - market_item_button_10
+     - market_item_label_1
+     - market_item_label_2
+     - market_item_label_3
+     - market_item_label_4
+     - market_item_label_5
+     - market_item_label_6
+     - market_item_label_7
+     - market_item_label_8
+     - market_item_label_9
+     - market_item_label_10
+     - market_item_frame_1
+     - market_item_frame_2
+     - market_item_frame_3
+     - market_item_frame_4
+     - market_item_frame_5
+     - market_item_frame_6
+     - market_item_frame_7
+     - market_item_frame_8
+     - market_item_frame_9
+     - market_item_frame_10
+     - market_selected_card
+     - market_price_label
+     - market_confirm_button
+     - market_cancel_button
+     - market_icon_placeholder
+   - 显示控制：Lua 自动打开与关闭（`EggyLayerMarket`）。
+
+4. modal_choice 与 modal_popup（弹窗）
+   - 用途：选择弹窗、确认弹窗。
+   - 主要节点：
+     - modal_choice
+     - choice_title
+     - choice_body
+     - choice_cancel
+     - choice_option_1
+     - choice_option_2
+     - choice_option_3
+     - choice_option_4
+     - modal_popup
+     - popup_title
+     - popup_body
+     - popup_confirm
+     - popup_confirm_alt
+     - popup_card
+   - 显示控制：Lua 自动打开与关闭（`EggyLayer`）。
+
+## 层级建议
+
+- loading_screen 在最上层（覆盖全部）。
+- base_screen 常驻底层。
+- market_panel 与 modal_choice、modal_popup 覆盖 base_screen。
+- overlay_mask 可放在 base_screen 或弹窗画布，按需提高遮罩层级。

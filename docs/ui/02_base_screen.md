@@ -1,0 +1,258 @@
+# 基础屏（base_screen）
+
+主界面 HUD 与棋盘文本展示。节点名来自 `ui_data.lua` 与 `docs/ui_naming_list.md`。
+
+## 结构建议
+
+base_screen（ECanvas）
+- background_rect（EImage，背景）
+- panel_title（ELabel）
+- panel_turn（ELabel）
+- panel_current_title（ELabel）
+- panel_current_name（ELabel）
+- panel_current_role（ELabel）
+- panel_current_phase（ELabel）
+- panel_current_dice（ELabel）
+- panel_players_title（ELabel）
+- panel_player_1（ELabel）
+  - panel_player_1_detail（ELabel）
+  - panel_player_1_info（EImage）
+  - panel_player_1_avatar（EImage）
+  - panel_player_1_cash（ELabel）
+  - panel_player_1_land_count（ELabel）
+  - panel_player_1_base（EImage）
+  - panel_player_1_base_color（EImage）
+- panel_player_2（ELabel）
+  - panel_player_2_detail（ELabel）
+  - panel_player_2_info（EImage）
+  - panel_player_2_avatar（EImage）
+  - panel_player_2_cash（ELabel）
+  - panel_player_2_land_count（ELabel）
+  - panel_player_2_base（EImage）
+  - panel_player_2_base_color（EImage）
+- panel_player_3（ELabel）
+  - panel_player_3_detail（ELabel）
+  - panel_player_3_info（EImage）
+  - panel_player_3_avatar（EImage）
+  - panel_player_3_cash（ELabel）
+  - panel_player_3_land_count（ELabel）
+  - panel_player_3_base（EImage）
+  - panel_player_3_base_color（EImage）
+- panel_player_4（ELabel）
+  - panel_player_4_detail（ELabel）
+  - panel_player_4_info（EImage）
+  - panel_player_4_avatar（EImage）
+  - panel_player_4_cash（ELabel）
+  - panel_player_4_land_count（ELabel）
+  - panel_player_4_base（EImage）
+  - panel_player_4_base_color（EImage）
+- panel_item_slots（ELabel）
+  - item_slot_1（建议可点击）
+  - item_slot_2（建议可点击）
+  - item_slot_3（建议可点击）
+  - item_slot_4（建议可点击）
+  - item_slot_5（建议可点击）
+- panel_tile_title（ELabel）
+  - tile_detail_name（ELabel）
+  - tile_detail_price（ELabel）
+  - tile_detail_level（ELabel）
+  - tile_detail_owner（ELabel）
+  - tile_detail_roadblock（ELabel）
+  - tile_detail_mine（ELabel）
+- panel_log_title（ELabel）
+- panel_log_body（ELabel）
+- btn_next（EButton）
+- btn_auto（EButton）
+- btn_restart（EButton）
+  - btn_auto_label（ELabel，可选文本层）
+- overlay_mask（EImage，可选遮罩）
+- tile_1（ELabel，棋盘格子文本）
+- tile_2（ELabel，棋盘格子文本）
+- tile_3（ELabel，棋盘格子文本）
+- tile_4（ELabel，棋盘格子文本）
+- tile_5（ELabel，棋盘格子文本）
+- tile_6（ELabel，棋盘格子文本）
+- tile_7（ELabel，棋盘格子文本）
+- tile_8（ELabel，棋盘格子文本）
+- tile_9（ELabel，棋盘格子文本）
+- tile_10（ELabel，棋盘格子文本）
+- tile_11（ELabel，棋盘格子文本）
+- tile_12（ELabel，棋盘格子文本）
+- tile_13（ELabel，棋盘格子文本）
+- tile_14（ELabel，棋盘格子文本）
+- tile_15（ELabel，棋盘格子文本）
+- tile_16（ELabel，棋盘格子文本）
+- tile_17（ELabel，棋盘格子文本）
+- tile_18（ELabel，棋盘格子文本）
+- tile_19（ELabel，棋盘格子文本）
+- tile_20（ELabel，棋盘格子文本）
+- tile_21（ELabel，棋盘格子文本）
+- tile_22（ELabel，棋盘格子文本）
+- tile_23（ELabel，棋盘格子文本）
+- tile_24（ELabel，棋盘格子文本）
+- tile_25（ELabel，棋盘格子文本）
+- tile_26（ELabel，棋盘格子文本）
+- tile_27（ELabel，棋盘格子文本）
+- tile_28（ELabel，棋盘格子文本）
+- tile_29（ELabel，棋盘格子文本）
+- tile_30（ELabel，棋盘格子文本）
+- tile_31（ELabel，棋盘格子文本）
+- tile_32（ELabel，棋盘格子文本）
+- tile_33（ELabel，棋盘格子文本）
+- tile_34（ELabel，棋盘格子文本）
+- tile_35（ELabel，棋盘格子文本）
+- tile_36（ELabel，棋盘格子文本）
+- tile_37（ELabel，棋盘格子文本）
+- tile_38（ELabel，棋盘格子文本）
+- tile_39（ELabel，棋盘格子文本）
+- tile_40（ELabel，棋盘格子文本）
+- tile_41（ELabel，棋盘格子文本）
+- tile_42（ELabel，棋盘格子文本）
+- tile_43（ELabel，棋盘格子文本）
+- tile_44（ELabel，棋盘格子文本）
+- tile_45（ELabel，棋盘格子文本）
+
+## 文本刷新来源
+
+- `EggyLayerUI.refresh_panel`：
+  - panel_title
+  - panel_turn
+  - panel_current_title
+  - panel_current_name
+  - panel_current_role
+  - panel_current_phase
+  - panel_current_dice
+  - panel_players_title
+  - panel_player_1
+  - panel_player_1_detail
+  - panel_player_2
+  - panel_player_2_detail
+  - panel_player_3
+  - panel_player_3_detail
+  - panel_player_4
+  - panel_player_4_detail
+  - panel_tile_title
+  - panel_log_title
+  - panel_log_body
+  - btn_next
+  - btn_auto
+  - btn_restart
+- `EggyLayerUI.refresh_item_slots`：
+  - item_slot_1（按钮文案/禁用）
+  - item_slot_2（按钮文案/禁用）
+  - item_slot_3（按钮文案/禁用）
+  - item_slot_4（按钮文案/禁用）
+  - item_slot_5（按钮文案/禁用）
+- `EggyLayerUI.refresh_tile_detail`：
+  - tile_detail_name
+  - tile_detail_price
+  - tile_detail_level
+  - tile_detail_owner
+  - tile_detail_roadblock
+  - tile_detail_mine
+- `EggyLayerBoard.refresh_board`：
+  - tile_1
+  - tile_2
+  - tile_3
+  - tile_4
+  - tile_5
+  - tile_6
+  - tile_7
+  - tile_8
+  - tile_9
+  - tile_10
+  - tile_11
+  - tile_12
+  - tile_13
+  - tile_14
+  - tile_15
+  - tile_16
+  - tile_17
+  - tile_18
+  - tile_19
+  - tile_20
+  - tile_21
+  - tile_22
+  - tile_23
+  - tile_24
+  - tile_25
+  - tile_26
+  - tile_27
+  - tile_28
+  - tile_29
+  - tile_30
+  - tile_31
+  - tile_32
+  - tile_33
+  - tile_34
+  - tile_35
+  - tile_36
+  - tile_37
+  - tile_38
+  - tile_39
+  - tile_40
+  - tile_41
+  - tile_42
+  - tile_43
+  - tile_44
+  - tile_45
+
+## 点击事件（当前已注册）
+
+- btn_next -> `ui_button` id=next
+- btn_auto -> `ui_button` id=auto
+- btn_restart -> `ui_button` id=restart
+- item_slot_1 -> `ui_button` id=item_slot_1
+- item_slot_2 -> `ui_button` id=item_slot_2
+- item_slot_3 -> `ui_button` id=item_slot_3
+- item_slot_4 -> `ui_button` id=item_slot_4
+- item_slot_5 -> `ui_button` id=item_slot_5
+
+## 点击事件（预留，默认未注册）
+
+- tile_1
+- tile_2
+- tile_3
+- tile_4
+- tile_5
+- tile_6
+- tile_7
+- tile_8
+- tile_9
+- tile_10
+- tile_11
+- tile_12
+- tile_13
+- tile_14
+- tile_15
+- tile_16
+- tile_17
+- tile_18
+- tile_19
+- tile_20
+- tile_21
+- tile_22
+- tile_23
+- tile_24
+- tile_25
+- tile_26
+- tile_27
+- tile_28
+- tile_29
+- tile_30
+- tile_31
+- tile_32
+- tile_33
+- tile_34
+- tile_35
+- tile_36
+- tile_37
+- tile_38
+- tile_39
+- tile_40
+- tile_41
+- tile_42
+- tile_43
+- tile_44
+- tile_45
+- overlay_mask、panel_* 等

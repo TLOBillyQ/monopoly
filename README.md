@@ -11,4 +11,4 @@
 
 ## 平台入口
 - Eggy：`main.lua`
-- UI 资源：`ui_data.lua` / `refs.lua`
+- UI 资源：`Data/ui_data.lua` / `refs.lua`

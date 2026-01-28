@@ -17,12 +17,18 @@ end
 
 local function install_ui_manager()
   require "UIManager.Utils"
-  local ui_data = require "ui_data"
+  local ui_data = require "Data.ui_data"
   UIManager.Builder(ui_data)
 end
 
 local function install_eca_bridge()
   require "src.adapters.eggy.eca"
+end
+
+local function forward_eca_event(name)
+  if UIManager and UIManager.forward_eca_event then
+    UIManager.forward_eca_event(name)
+  end
 end
 
 local function resolve_option_id(choice, payload, layer)
@@ -79,6 +85,12 @@ local function register_ui_manager_events(layer)
   register_node_click(cache, "btn_restart", function()
     layer:dispatch_action({ type = "ui_button", id = "restart" })
   end)
+  for idx = 1, 5 do
+    local name = "item_slot_" .. tostring(idx)
+    register_node_click(cache, name, function()
+      layer:dispatch_action({ type = "ui_button", id = name })
+    end)
+  end
   register_node_click(cache, "popup_confirm", function()
     layer:close_popup()
   end)
@@ -153,8 +165,19 @@ function EggyRuntime.install()
   LuaAPI.global_register_trigger_event({ EVENT.GAME_INIT }, function()
     install_ui_manager()
     install_eca_bridge()
+    forward_eca_event("显示加载屏")
+    forward_eca_event("隐藏基础屏")
     layer:set_game(layer:new_game())
     register_ui_manager_events(layer)
+    if LuaAPI and LuaAPI.call_delay_time then
+      LuaAPI.call_delay_time(0.1, function()
+        forward_eca_event("隐藏加载屏")
+        forward_eca_event("显示基础屏")
+      end)
+    else
+      forward_eca_event("隐藏加载屏")
+      forward_eca_event("显示基础屏")
+    end
   end)
 
   local tick_interval = 1

@@ -115,9 +115,53 @@
 
 ## 棋盘格子文本
 
-- tile_1 … tile_N（N 为棋盘格子数，与 `src/adapters/core/presenter.lua` 的 BOARD_TILES 数量一致）
+- tile_1
+- tile_2
+- tile_3
+- tile_4
+- tile_5
+- tile_6
+- tile_7
+- tile_8
+- tile_9
+- tile_10
+- tile_11
+- tile_12
+- tile_13
+- tile_14
+- tile_15
+- tile_16
+- tile_17
+- tile_18
+- tile_19
+- tile_20
+- tile_21
+- tile_22
+- tile_23
+- tile_24
+- tile_25
+- tile_26
+- tile_27
+- tile_28
+- tile_29
+- tile_30
+- tile_31
+- tile_32
+- tile_33
+- tile_34
+- tile_35
+- tile_36
+- tile_37
+- tile_38
+- tile_39
+- tile_40
+- tile_41
+- tile_42
+- tile_43
+- tile_44
+- tile_45
 
-## 黑市/商城 UI（如有）
+## 黑市与商城 UI（如有）
 
 以下名称来自 `src/adapters/eggy/market_ui.lua` 的当前配置：
 
@@ -126,12 +170,76 @@
 - MarketUI.cancel_button = market_cancel_button
 - MarketUI.price_label = market_price_label
 - MarketUI.selected_card = market_selected_card
-- MarketUI.item_buttons = market_item_button_1…10
-- MarketUI.item_labels = market_item_label_1…10
-- MarketUI.item_frames = market_item_frame_1…10
+- MarketUI.item_buttons[1] = market_item_button_1
+- MarketUI.item_buttons[2] = market_item_button_2
+- MarketUI.item_buttons[3] = market_item_button_3
+- MarketUI.item_buttons[4] = market_item_button_4
+- MarketUI.item_buttons[5] = market_item_button_5
+- MarketUI.item_buttons[6] = market_item_button_6
+- MarketUI.item_buttons[7] = market_item_button_7
+- MarketUI.item_buttons[8] = market_item_button_8
+- MarketUI.item_buttons[9] = market_item_button_9
+- MarketUI.item_buttons[10] = market_item_button_10
+- MarketUI.item_labels[1] = market_item_label_1
+- MarketUI.item_labels[2] = market_item_label_2
+- MarketUI.item_labels[3] = market_item_label_3
+- MarketUI.item_labels[4] = market_item_label_4
+- MarketUI.item_labels[5] = market_item_label_5
+- MarketUI.item_labels[6] = market_item_label_6
+- MarketUI.item_labels[7] = market_item_label_7
+- MarketUI.item_labels[8] = market_item_label_8
+- MarketUI.item_labels[9] = market_item_label_9
+- MarketUI.item_labels[10] = market_item_label_10
+- MarketUI.item_frames[1] = market_item_frame_1
+- MarketUI.item_frames[2] = market_item_frame_2
+- MarketUI.item_frames[3] = market_item_frame_3
+- MarketUI.item_frames[4] = market_item_frame_4
+- MarketUI.item_frames[5] = market_item_frame_5
+- MarketUI.item_frames[6] = market_item_frame_6
+- MarketUI.item_frames[7] = market_item_frame_7
+- MarketUI.item_frames[8] = market_item_frame_8
+- MarketUI.item_frames[9] = market_item_frame_9
+- MarketUI.item_frames[10] = market_item_frame_10
 - MarketUI.icon_placeholder = market_icon_placeholder
 
-## 托管/自动控制事件约束
+## 托管与自动控制事件约束
 
 - 点击 `btn_auto` 时应触发 UIManager 点击事件，由适配层基于节点名判定动作。
 - 右上“自动控制”按钮对应 `btn_auto`，文字节点使用 `btn_auto_label`。
+
+## ECA 界面事件名（需在关卡内实现）
+
+- 显示加载屏
+- 隐藏加载屏
+- 显示基础屏
+- 隐藏基础屏
+
+## Lua 已绑定点击事件（UIManager.EVENT.CLICK）
+
+- btn_next
+- btn_auto
+- btn_restart
+- item_slot_1
+- item_slot_2
+- item_slot_3
+- item_slot_4
+- item_slot_5
+- popup_confirm
+- popup_confirm_alt
+- choice_cancel
+- choice_option_1
+- choice_option_2
+- choice_option_3
+- choice_option_4
+- market_item_button_1
+- market_item_button_2
+- market_item_button_3
+- market_item_button_4
+- market_item_button_5
+- market_item_button_6
+- market_item_button_7
+- market_item_button_8
+- market_item_button_9
+- market_item_button_10
+- market_confirm_button
+- market_cancel_button

@@ -21,3 +21,16 @@ FORWARD_EVENT_ENTER_VEHICLE = "enter_vehicle_forward"
 FORWARD_EVENT_EXIT_VEHICLE = "exit_vehicle_forward"
 FORWARD_EVENT_MOVE_VEHICLE = "move_vehicle_forward"
 FORWARD_EVENT_STOP_VEHICLE = "stop_vehicle_forward"
+
+ECA_UI_EVENT ={
+    show_base = "show_base",
+    hide_base = "hide_base",
+    show_choice = "show_choice",
+    hide_choice = "hide_choice",
+    show_popup = "show_popup",
+    hide_popup = "hide_popup",
+    show_market = "show_market",
+    hide_market = "hide_market",
+    show_loading = "show_loading",
+    hide_loading = "hide_loading",
+}

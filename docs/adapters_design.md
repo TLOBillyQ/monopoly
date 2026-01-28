@@ -21,7 +21,7 @@
 
 说明：
 - 本仓库已不再维护多平台入口分支（历史的 `src/entry.lua` 已删除）。
-- 仓库根目录的 `init.lua` 是 Eggy 工程侧常用的“场景/资源绑定脚本”（创建 `G.refs/G.tiles/G.buildings` 等全局索引、并调用 `UIManager.Builder(require "ui_data")`）。`EggyLayer` 会优先使用 `G.tiles`，否则会在运行时回退到 `LuaAPI.query_units("t1..tN")` 自行构建锚点缓存。
+- 仓库根目录的 `init.lua` 是 Eggy 工程侧常用的“场景/资源绑定脚本”（创建 `G.refs/G.tiles/G.buildings` 等全局索引、并调用 `UIManager.Builder(require "Data.ui_data")`）。`EggyLayer` 会优先使用 `G.tiles`，否则会在运行时回退到 `LuaAPI.query_units("t1..tN")` 自行构建锚点缓存。
 
 ## 3. 通用适配层骨架（AdapterLayer）
 
@@ -89,27 +89,27 @@ Eggy 适配层为当前主要实现，**事件入口、UI 查询、以及选择 
 - `register_ui_manager_events(layer)`：通过 `UIManager.query_nodes_by_name` 获取节点并监听 CLICK 事件，直接派发 `layer:dispatch_action` 或 `layer:close_popup`。
 - `resolve_option_id(choice, payload, layer)`：解析黑市选择 UI 的选择项（支持 `option_id/option` 或 `index/*_index`）。
 
-补充：仓库根目录 `init.lua` 负责初始化 `G.refs/G.tiles/G.buildings` 等全局表，并构建 UI（`ui_data.lua`）。`EggyLayer` 的部分能力（例如楼房升级特效/图片 key 映射）会依赖这些全局数据。
+补充：仓库根目录 `init.lua` 负责初始化 `G.refs/G.tiles/G.buildings` 等全局表，并构建 UI（`Data/ui_data.lua`）。`EggyLayer` 的部分能力（例如楼房升级特效/图片 key 映射）会依赖这些全局数据。
 
 ### 5.2 UI 状态与节点查询
 
-文件：`src/adapters/eggy/eggy_layer.lua`
+文件：`src/adapters/eggy/eggy_layer.lua`、`src/adapters/eggy/eggy_layer_ui.lua`
 
 核心策略：
-- 节点通过 `UIManager.query_nodes_by_name(name)` 获取，并在 `build_ui_state()` 内用 `query_node` 取首个节点。
+- 节点通过 `UIManager.query_nodes_by_name(name)` 获取，并在 `EggyLayerUI.build_ui_state()` 内用 `query_node` 取首个节点。
 - 直接写节点字段 `text/visible/disabled`，不再额外封装映射层。
 - `ui` 状态表内保留 `choice/popup/item_slots` 等字段，供 `EggyLayer` 逻辑使用。
 
 关键函数：
-- `build_ui_state()`：组装 `ui` 状态表，并提供 `query_node/set_label/set_button/set_visible/set_touch_enabled` 等方法。
+- `EggyLayerUI.build_ui_state()`：组装 `ui` 状态表，并提供 `query_node/set_label/set_button/set_visible/set_touch_enabled` 等方法。
 
 ### 5.3 EggyLayer（主逻辑）
 
-文件：`src/adapters/eggy/eggy_layer.lua`
+文件：`src/adapters/eggy/eggy_layer.lua`、`src/adapters/eggy/eggy_layer_ui.lua`、`src/adapters/eggy/eggy_layer_market.lua`、`src/adapters/eggy/eggy_layer_board.lua`
 
 关键函数（函数级说明）：
 - `EggyLayer.new(opts)`
-  - 构建 `ui` 状态表（`build_ui_state()`），并挂载 `AdapterLayer.attach`。
+  - 构建 `ui` 状态表（`EggyLayerUI.build_ui_state()`），并挂载 `AdapterLayer.attach`。
 - `EggyLayer:set_game(g)`
   - 调 `AdapterLayer.set_game`，处理 pending_choice。
 - `EggyLayer:tick(dt)`
@@ -122,17 +122,10 @@ Eggy 适配层为当前主要实现，**事件入口、UI 查询、以及选择 
   - 调 `Presenter.present` 生成 `view`。
 - `EggyLayer:refresh_view()`
   - 顺序调用 `refresh_panel(view)` + `refresh_board(view)`。
-- `EggyLayer:refresh_panel(view)`
-  - 写入面板节点（玩家、回合、日志）。
-- `EggyLayer:refresh_item_slots(view)`
-  - 把当前玩家背包道具写入 `item_slot_1..5`，并记录 `ui.item_slot_item_ids`（供点击道具槽位选择）。
-- `EggyLayer:refresh_tile_detail(view)`
-  - 根据 `selected_tile` 更新格子详情节点。
+- `EggyLayer:refresh_panel(view)` / `EggyLayer:refresh_item_slots(view)` / `EggyLayer:refresh_tile_detail(view)`
+  - 由 `eggy_layer_ui.lua` 完成 UI 面板与格子详情刷新。
 - `EggyLayer:refresh_board(view)`
-  - 更新棋盘格子的文字。
-  - 缓存棋盘锚点位置：优先 `G.tiles`，否则 `LuaAPI.query_units("t1..tN")`。
-  - 绑定玩家角色 unit：通过 `GameAPI.get_all_valid_roles()` 获取并按玩家名/id 映射。
-  - 根据玩家 `position` 把 unit 移动到格子锚点位置；多人同格子时按 `tile_spacing` 做偏移排布。
+  - 由 `eggy_layer_board.lua` 刷新棋盘格子文本、锚点缓存与玩家单位位置。
 - `EggyLayer:_open_choice_modal(pending)` / `_close_choice_modal()`
   - 根据 `pending.kind` 构建普通选择 UI 或黑市 UI（见 5.4）。
 - `EggyLayer:dispatch_action(action)`
@@ -150,7 +143,7 @@ Eggy 适配层为当前主要实现，**事件入口、UI 查询、以及选择 
 
 1) **面板式黑市（10 项）**（推荐默认）
 - `MarketUI.is_panel_ready()` 为真时启用（要求容器、确认按钮、以及 `item_buttons/item_labels` 等字段完整）。
-- `EggyLayer:_open_market_panel(pending)` 会把 `pending.options` 映射到按钮/文字/稀有度底框，并记录 `layer.market_choice_option_ids`。
+- `eggy_layer_market.lua` 负责黑市面板渲染与选择状态；`EggyLayer:_open_market_panel(pending)` 负责委托并记录 `layer.market_choice_option_ids`。
 - `EggyRuntime.install()` 通过 UIManager 节点监听将 `MarketUI.item_buttons` 与确认/取消按钮转为选择动作。
 
 ### 5.5 Eggy 事件流（UI -> 游戏）

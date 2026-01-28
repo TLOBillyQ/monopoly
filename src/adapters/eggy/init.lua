@@ -21,7 +21,7 @@ G = {
         GameAPI.get_role(4).get_ctrl_unit(),
     }
 }
-UIManager.Builder(require "ui_data")
+UIManager.Builder(require "Data.ui_data")
 
 
 return function()

@@ -1,7 +1,7 @@
 local function load_ui_names()
-  local ok, nodes = pcall(require, "ui_data")
+  local ok, nodes = pcall(require, "Data.ui_data")
   if not ok or type(nodes) ~= "table" then
-    io.stderr:write("[ui-audit] failed to require ui_data\n")
+    io.stderr:write("[ui-audit] failed to require Data.ui_data\n")
     os.exit(1)
   end
   local names = {}
