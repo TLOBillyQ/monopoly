@@ -40,37 +40,6 @@ local function set_touch_enabled(_, name, enabled)
   end
 end
 
-local function set_image_texture(node, image_key, reset_size)
-  if not (node and image_key) then
-    return
-  end
-  if type(node) == "table" then
-    if node.image_texture ~= nil then
-      node.image_texture = image_key
-      if reset_size and node.reset_size then
-        node:reset_size()
-      end
-      return
-    end
-    if node.id then
-      node = node.id
-    end
-  end
-  if Role and Role.set_image_texture_by_key_with_auto_resize then
-    Role.set_image_texture_by_key_with_auto_resize(node, image_key, reset_size == true)
-  end
-end
-
-local function set_ui_image(ui, name, image_key, reset_size)
-  if not (ui and name) then
-    return
-  end
-  local node = ui.query_node(name)
-  if node then
-    set_image_texture(node, image_key, reset_size)
-  end
-end
-
 function EggyLayerUI.build_ui_state()
   return {
     auto_play = false,
@@ -172,17 +141,21 @@ function EggyLayerUI.refresh_item_slots(layer, view)
     if item and item.id then
       if refs then
         local ref_key = refs[tostring(item.id)] or refs[item.id]
-        if ref_key then
-          set_ui_image(ui, slot_name, ref_key, false)
-        elseif empty_key then
-          set_ui_image(ui, slot_name, empty_key, false)
+        local node = ui.query_node(slot_name)
+        if node and node.image_texture ~= nil then
+          if ref_key then
+            node.image_texture = ref_key
+          elseif empty_key then
+            node.image_texture = empty_key
+          end
         end
       end
       ui:set_touch_enabled(slot_name, true)
       item_ids[i] = item.id
     else
-      if empty_key then
-        set_ui_image(ui, slot_name, empty_key, false)
+      local node = ui.query_node(slot_name)
+      if node and node.image_texture ~= nil and empty_key then
+        node.image_texture = empty_key
       end
       ui:set_touch_enabled(slot_name, false)
     end

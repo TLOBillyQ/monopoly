@@ -95,37 +95,6 @@ local function resolve_market_icon_key(product_id, entry, cfg)
   return nil
 end
 
-local function set_image_texture(node, image_key, reset_size)
-  if not (node and image_key) then
-    return
-  end
-  if type(node) == "table" then
-    if node.image_texture ~= nil then
-      node.image_texture = image_key
-      if reset_size and node.reset_size then
-        node:reset_size()
-      end
-      return
-    end
-    if node.id then
-      node = node.id
-    end
-  end
-  if Role and Role.set_image_texture_by_key_with_auto_resize then
-    Role.set_image_texture_by_key_with_auto_resize(node, image_key, reset_size == true)
-  end
-end
-
-local function set_ui_image(ui, name, image_key, reset_size)
-  if not (ui and name) then
-    return
-  end
-  local node = ui.query_node(name)
-  if node then
-    set_image_texture(node, image_key, reset_size)
-  end
-end
-
 function EggyLayerMarket.refresh_market_selection(layer, option_id)
   local ui = layer.ui
   if not ui then
@@ -144,7 +113,13 @@ function EggyLayerMarket.refresh_market_selection(layer, option_id)
     ui:set_label(MarketUI.price_label, price_text)
   end
   if MarketUI.selected_card and icon_key then
-    set_ui_image(ui, MarketUI.selected_card, icon_key, true)
+    local node = ui.query_node(MarketUI.selected_card)
+    if node and node.image_texture ~= nil then
+      node.image_texture = icon_key
+      if node.reset_size then
+        node:reset_size()
+      end
+    end
   end
 end
 
@@ -189,7 +164,10 @@ function EggyLayerMarket.open_market_panel(layer, pending)
         local level = resolve_market_level(cfg)
         local rarity_key = resolve_ref_key((MarketUI.rarity_ref_keys or {})[level])
         if rarity_key then
-          set_ui_image(ui, frame, rarity_key, false)
+          local node = ui.query_node(frame)
+          if node and node.image_texture ~= nil then
+            node.image_texture = rarity_key
+          end
         end
       end
     else
@@ -237,7 +215,13 @@ function EggyLayerMarket.close_market_panel(layer)
   end
   local empty_key = resolve_ref_key(MarketUI.empty_ref_key)
   if MarketUI.selected_card and empty_key then
-    set_ui_image(ui, MarketUI.selected_card, empty_key, true)
+    local node = ui.query_node(MarketUI.selected_card)
+    if node and node.image_texture ~= nil then
+      node.image_texture = empty_key
+      if node.reset_size then
+        node:reset_size()
+      end
+    end
   end
 end
 

@@ -62,15 +62,29 @@ return function()
     end
 
 
+    local function set_item_slot_image(slot_name, image_key)
+        if not (slot_name and image_key) then
+            return
+        end
+        local nodes = UIManager.query_nodes_by_name(slot_name) or {}
+        for _, node in ipairs(nodes) do
+            if node and node.image_texture ~= nil then
+                node.image_texture = image_key
+            end
+        end
+    end
+
     for _, r in ipairs(GameAPI.get_all_valid_roles()) do
-        r.set_image_texture_by_key_with_auto_resize(refs["道具槽位1"], refs["3036"], false)
-        r.set_image_texture_by_key_with_auto_resize(refs["道具槽位2"], refs["2002"], false)
-        r.set_image_texture_by_key_with_auto_resize(refs["道具槽位3"], refs["3036"], false)
-        r.set_image_texture_by_key_with_auto_resize(refs["道具槽位4"], refs["空"], false)
-        r.set_image_texture_by_key_with_auto_resize(refs["道具槽位5"], refs["2002"], false)
+        UIManager.client_role = r
+        set_item_slot_image("item_slot_1", refs["3036"])
+        set_item_slot_image("item_slot_2", refs["2002"])
+        set_item_slot_image("item_slot_3", refs["3036"])
+        set_item_slot_image("item_slot_4", refs["空"])
+        set_item_slot_image("item_slot_5", refs["2002"])
 
         -- unit.add_state(Enums.BuffState.BUFF_FORBID_CONTROL)
     end
+    UIManager.client_role = nil
 
 
     unit.set_position(G.tiles[35].get_position() + math.Vector3(0, 1.5, 0))
