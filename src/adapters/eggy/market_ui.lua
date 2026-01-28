@@ -40,9 +40,6 @@ local MarketUI = {
     "market_item_frame_9",
     "market_item_frame_10",
   },
-  choose_event = nil,
-  confirm_event = "market_confirm_button",
-  cancel_event = "market_cancel_button",
   title = "黑市",
   icon_placeholder = "market_icon_placeholder",
   rarity_ref_keys = { [1] = "lv1", [2] = "lv2", [3] = "lv3" },
@@ -51,7 +48,6 @@ local MarketUI = {
 
 function MarketUI.is_ready()
   return type(MarketUI.container) == "string" and MarketUI.container ~= ""
-    and type(MarketUI.confirm_event) == "string" and MarketUI.confirm_event ~= ""
     and type(MarketUI.confirm_button) == "string" and MarketUI.confirm_button ~= ""
 end
 

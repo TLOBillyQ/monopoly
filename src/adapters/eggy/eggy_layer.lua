@@ -489,7 +489,7 @@ function EggyLayer:_open_choice_modal(pending)
     return
   end
   if self.pending_choice_id == pending.id
-    and (self.ui.choice_active or self.ui.choose_option_active or self.ui.market_active) then
+    and (self.ui.choice_active or self.ui.market_active) then
     return
   end
 
@@ -500,117 +500,8 @@ function EggyLayer:_open_choice_modal(pending)
       self.ui:set_visible(self.ui.choice.root, false)
       self.ui.choice_active = false
     end
-    if self.ui.choose_option_active then
-      local container = self.choose_option_container
-      if container then
-        if container.hide then
-          container:hide()
-        elseif container.set_visible then
-          container:set_visible(false)
-        end
-      end
-      self.ui.choose_option_active = false
-    end
     self:_open_market_panel(pending)
     return
-  end
-
-  if pending.kind == "market_buy"
-    and pending.options
-    and #pending.options > 0
-    and #pending.options <= 3
-    and type(MarketUI.choose_event) == "string" and MarketUI.choose_event ~= ""
-    and MarketUI.is_ready
-    and MarketUI.is_ready() then
-    if self.ui.market_active then
-      self:_close_market_panel()
-    end
-    local ok, choose = pcall(require, "src.adapters.eggy.lib.eggy_choose_option.ChooseOption.__init")
-    if not ok then
-      ok, choose = pcall(require, "src.adapters.eggy.lib.eggy_choose_option.ChooseOption")
-    end
-    if ok and choose then
-      if self.ui.choice_active then
-        self.ui:set_visible(self.ui.choice.root, false)
-        self.ui.choice_active = false
-      end
-
-      local cards = {}
-      local option_ids = {}
-      for idx, opt in ipairs(pending.options) do
-        local opt_id = opt.id or opt
-        option_ids[idx] = opt_id
-        local entry, cfg = resolve_market_entry(opt_id)
-        local name = resolve_market_name(opt, opt_id, entry, cfg)
-        local price = resolve_market_price(entry)
-        local currency = resolve_market_currency(entry)
-        local level = resolve_market_level(cfg)
-        local card = {
-          title = name,
-          description = "价格: " .. tostring(price) .. " " .. currency,
-          level = level,
-          icon = MarketUI.icon_placeholder or "icon_placeholder",
-        }
-        if entry and entry.page then
-          card.label = entry.page
-        end
-        cards[idx] = card
-      end
-
-      local payload = {
-        container = MarketUI.container,
-        title = pending.title or MarketUI.title or "黑市",
-        choose_event = MarketUI.choose_event,
-        confirm_event = MarketUI.confirm_event,
-        confirm_button = MarketUI.confirm_button,
-        cancel_button = MarketUI.cancel_button,
-        cards = cards,
-      }
-
-      local container = self.choose_option_container
-      if choose.build and type(choose.build) == "function" then
-        local built = choose.build(payload)
-        if built then
-          container = built
-        end
-      end
-      if container then
-        if container.set_data then
-          container:set_data(payload)
-        elseif container.refresh then
-          container:refresh(payload)
-        elseif container.update then
-          container:update(payload)
-        end
-        if container.show then
-          container:show()
-        elseif container.set_visible then
-          container:set_visible(true)
-        end
-      end
-
-      self.choose_option_container = container
-      self.ui.choose_option_active = true
-      self.market_choice_option_ids = option_ids
-      self.pending_choice_selected_option_id = nil
-      self.pending_choice_elapsed = 0
-      self.pending_choice_id = pending.id
-      return
-    end
-  end
-
-  if self.ui.choose_option_active then
-    local container = self.choose_option_container
-    if container then
-      if container.hide then
-        container:hide()
-      elseif container.set_visible then
-        container:set_visible(false)
-      end
-    end
-    self.ui.choose_option_active = false
-    self.market_choice_option_ids = nil
-    self.pending_choice_selected_option_id = nil
   end
   if self.ui.market_active then
     self:_close_market_panel()
@@ -656,17 +547,6 @@ function EggyLayer:_close_choice_modal()
   if self.ui.choice_active then
     self.ui:set_visible(self.ui.choice.root, false)
     self.ui.choice_active = false
-  end
-  if self.ui.choose_option_active then
-    local container = self.choose_option_container
-    if container then
-      if container.hide then
-        container:hide()
-      elseif container.set_visible then
-        container:set_visible(false)
-      end
-    end
-    self.ui.choose_option_active = false
   end
   if self.ui.market_active then
     self:_close_market_panel()
