@@ -89,7 +89,7 @@ function Inventory.draw_random(rng)
 end
 
 local function notify_full(game, player, item_id)
-  if not game or not game.ui_port or not player or player.is_ai or player.auto then
+  if not game or not player or player.is_ai or player.auto then
     return
   end
   IntentDispatcher.dispatch(game, {

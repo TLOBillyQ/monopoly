@@ -98,15 +98,13 @@ function Demolish.apply(game, player, idx, opts)
     kind = "missile"
   end
   local queued = false
-  if game.ui_port and game.ui_port.wait_action_anim then
-    game:queue_action_anim({
-      kind = kind,
-      player_id = player.id,
-      tile_index = idx,
-      item_id = opts.item_id,
-    })
-    queued = true
-  end
+  game:queue_action_anim({
+    kind = kind,
+    player_id = player.id,
+    tile_index = idx,
+    item_id = opts.item_id,
+  })
+  queued = true
   return { ok = true, action_anim = queued }
 end
 

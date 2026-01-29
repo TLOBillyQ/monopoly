@@ -76,10 +76,6 @@ local function apply_upgrade(ctx)
   player:deduct_cash(cost)
   local new_level = (st.level or 0) + 1
   ctx.game:set_tile_level(tile, new_level)
-  local ui_port = ctx.game and ctx.game.ui_port
-  if ui_port and ui_port.on_tile_upgraded then
-    ui_port:on_tile_upgraded(tile.id, new_level)
-  end
   logger.event(player.name .. " 为 " .. tile.name .. " 加盖，花费 " .. cost)
 end
 

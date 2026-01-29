@@ -124,7 +124,7 @@ local POST_EFFECTS = {
 
 local handlers = {}
 
-handlers.set_status = function(game, player, cfg, _context)
+handlers.set_status = function(game, player, cfg, context)
   local value = cfg.value
   if value == nil then
     value = true
@@ -145,7 +145,7 @@ handlers.deity = function(game, player, cfg, context)
   return true
 end
 
-handlers.log = function(_, player, cfg, _context)
+handlers.log = function(_, player, cfg, context)
   if cfg.message then
     logger.event(player.name .. cfg.message)
   end
@@ -155,15 +155,12 @@ end
 handlers.place_mine_here = function(game, player, _cfg, context)
   game.board:place_mine(player.position)
   logger.event(player.name .. " 在脚下埋设地雷")
-  if game.ui_port and game.ui_port.wait_action_anim then
-    game:queue_action_anim({
-      kind = "mine",
-      player_id = player.id,
-      tile_index = player.position,
-    })
-    return { ok = true, action_anim = true }
-  end
-  return true
+  game:queue_action_anim({
+    kind = "mine",
+    player_id = player.id,
+    tile_index = player.position,
+  })
+  return { ok = true, action_anim = true }
 end
 
 handlers.clear_obstacles_ahead = function(game, player, cfg, context)
@@ -255,15 +252,12 @@ handlers.clear_obstacles_ahead = function(game, player, cfg, context)
     end)
   end
   logger.event(player.name .. " 清除前方障碍数：" .. cleared)
-  if game.ui_port and game.ui_port.wait_action_anim then
-    game:queue_action_anim({
-      kind = "clear_obstacles",
-      player_id = player.id,
-      cleared_indices = cleared_indices,
-    })
-    return { ok = true, action_anim = true }
-  end
-  return true
+  game:queue_action_anim({
+    kind = "clear_obstacles",
+    player_id = player.id,
+    cleared_indices = cleared_indices,
+  })
+  return { ok = true, action_anim = true }
 end
 
 function ItemEffects.get_target_spec(item_id)

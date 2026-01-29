@@ -104,11 +104,6 @@ function ItemPhase.run(tm, phase, args)
     return nil
   end
 
-  if game.ui_port == nil then
-    ItemPhase.finish(game, phase)
-    return nil
-  end
-
   local spec = ItemPhase.build_choice_spec(player, phase)
   if not spec then
     ItemPhase.finish(game, phase)

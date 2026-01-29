@@ -73,18 +73,6 @@ function Steal.handle_pass_players(game, player, encountered_ids)
     return
   end
 
-  if game.ui_port == nil then
-    local target = game.players[queue[1]]
-    if not target then
-      return nil
-    end
-    if Inventory.count(target) == 0 then
-      Inventory.consume(player, ITEM_IDS.steal)
-      return fail_popup(game, player, target)
-    end
-    return Steal.steal_item_at_index(game, player, target, 1)
-  end
-
   local spec = Steal.build_prompt_spec(game, player, queue, 1)
   if not spec then
     return nil

@@ -93,16 +93,6 @@ local function decide_choice_action(game, choice, pending_action)
     return auto_action
   end
 
-  if game.ui_port == nil then
-    local first = choice.options and choice.options[1]
-    if first then
-      return { type = "choice_select", choice_id = choice.id, option_id = first.id or first }
-    end
-    if choice.allow_cancel ~= false then
-      return { type = "choice_cancel", choice_id = choice.id }
-    end
-  end
-
   return nil
 end
 

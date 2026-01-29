@@ -22,8 +22,7 @@ local function phase_move(tm, args)
 
     local game = tm.game
     local store = game and game.store
-    local ui_port = game and game.ui_port
-    if store and ui_port and ui_port.wait_move_anim == true then
+    if store then
       local seq = (store:get({ "turn", "move_anim_seq" }) or 0) + 1
       store:set({ "turn", "move_anim_seq" }, seq)
       store:set({ "turn", "move_anim" }, {
@@ -108,10 +107,7 @@ local function phase_move(tm, args)
           },
         }
       elseif intent then
-        local ui_port = tm.game and tm.game.ui_port
-        if ui_port and ui_port.push_popup then
-          ui_port:push_popup(intent.payload)
-        end
+        IntentDispatcher.dispatch(tm.game, intent)
       end
     end
   end

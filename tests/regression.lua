@@ -1,8 +1,6 @@
 -- Quick regression checks (run with: lua tests/regression.lua)
 local App = require("Manager.GameManager.System.Game")
 local MovementService = require("Manager.GameManager.Movement.MovementService")
-local TurnManager = require("Manager.GameManager.Turn.TurnManager")
-local turn_move = require("Manager.GameManager.Turn.TurnMove")
 local Inventory = require("Manager.GameManager.Item.ItemInventory")
 local Executor = require("Manager.GameManager.Item.ItemExecutor")
 local Strategy = require("Manager.GameManager.Item.ItemStrategy")
@@ -15,8 +13,6 @@ local EffectPipeline = require("Manager.GameManager.Effect.EffectPipeline")
 local Effect = require("Manager.GameManager.Effect.Effect")
 local ChoiceService = require("Manager.GameManager.Choice.ChoiceService")
 local BoardUtils = require("Manager.GameManager.Item.ItemBoardUtils")
-local AdapterLayer = require("Manager.Adapter.Core.AdapterLayer")
-local constants = require("Config.Constants")
 local logger = require("Library.Monopoly.Logger")
 
 local TestUtils = require("tests.test_utils")
@@ -176,45 +172,6 @@ local function test_logger_adapter_called()
   logger.set_adapter(nil)
 end
 
-local function test_move_anim_callback_and_delay()
-  local dispatched = {}
-  local layer = { wait_move_anim = true }
-  local game = {
-    store = {
-      get = function(_, key)
-        if key[1] == "turn" and key[2] == "move_anim" then
-          return { seq = 1 }
-        end
-        if key[1] == "turn" and key[2] == "phase" then
-          return "wait_move_anim"
-        end
-        return nil
-      end,
-    },
-    dispatch_action = function(_, action)
-      table.insert(dispatched, action)
-    end,
-  }
-  layer.game = game
-  local delay_called = nil
-  local original_lua_api = LuaAPI
-  LuaAPI = {
-    call_delay_time = function(delay, cb)
-      delay_called = delay
-      cb()
-    end,
-  }
-  AdapterLayer.step_move_anim(layer, {
-    on_move_anim = function(_, anim)
-      assert_eq(anim.seq, 1, "anim seq forwarded")
-      return 0.2
-    end,
-  })
-  LuaAPI = original_lua_api
-  assert_eq(delay_called, 0.2, "delay requested")
-  assert_eq(#dispatched, 1, "move_anim_done dispatched")
-  assert_eq(dispatched[1].seq, 1, "move_anim_done seq")
-end
 local function test_land_on_start_reward()
   local g = new_game()
   local p = g:current_player()
@@ -279,29 +236,16 @@ local function test_missile_card()
   assert(g.players[2].status.stay_turns > 0, "target sent to hospital")
 end
 
-local function test_landing_optional_waits_with_ui()
-  local g = new_game()
-  -- UI is considered available when an adapter port exists.
-  g.ui_port = {}
-  local p = g:current_player()
-  local idx, tile = first_land_tile(g.board)
-  g:update_player_position(p, idx)
-  local res = resolve_landing(g, p, tile, {})
-  assert(res and res.waiting, "landing resolver should wait when UI is available")
-  local pending = get_choice(g)
-  assert(pending and pending.kind == "landing_optional_effect", "pending choice for landing optional")
-end
-
-local function test_landing_optional_waits_without_ui_and_can_resolve()
+local function test_landing_optional_waits_and_can_resolve()
   local g = new_game()
   local p = g:current_player()
   local idx, tile = first_land_tile(g.board)
   g:update_player_position(p, idx)
   local before_cash = p.cash
   local res = resolve_landing(g, p, tile, {})
-  assert(res and res.waiting, "landing resolver should wait even without UI")
+  assert(res and res.waiting, "landing resolver should wait")
   local pending = get_choice(g)
-  assert(pending and pending.kind == "landing_optional_effect", "pending choice expected without UI")
+  assert(pending and pending.kind == "landing_optional_effect", "pending choice expected")
   local first = pending.options and pending.options[1]
   assert(first, "expected at least one optional effect")
   ChoiceService.resolve(g, pending, { option_id = first.id })
@@ -309,45 +253,9 @@ local function test_landing_optional_waits_without_ui_and_can_resolve()
   assert(p.cash < before_cash, "cash deducted for purchase")
 end
 
-local function test_popup_timeout_auto_confirm()
-  local g = new_game()
-  local layer = {}
-  AdapterLayer.attach(layer, { game_factory = function() return g end })
-  local timeout = constants.action_timeout_seconds or 0
-  if timeout <= 0 then
-    return
-  end
-  local near_timeout = timeout * 0.9
-  local popup = {
-    active = true,
-    confirm_called = 0,
-    confirm = function(self)
-      self.confirm_called = self.confirm_called + 1
-      self.active = false
-      return true
-    end,
-  }
-  layer.modal = { active = popup }
-  local timeout_opts = {
-    is_active = function(l)
-      return l.modal and l.modal.active and l.modal.active.active
-    end,
-    get_ref = function(l)
-      return l.modal and l.modal.active
-    end,
-    on_timeout = function(l)
-      l.modal.active:confirm()
-    end,
-  }
-  AdapterLayer.step_modal_timeout(layer, near_timeout, timeout_opts)
-  assert_eq(popup.confirm_called, 0, "popup should not auto confirm before timeout")
-  AdapterLayer.step_modal_timeout(layer, near_timeout + 1, timeout_opts)
-  assert_eq(popup.confirm_called, 1, "popup should auto confirm after timeout")
-end
 
 local function test_landing_optional_stale_choice_is_blocked()
   local g = new_game()
-  g.ui_port = {}
   local p = g:current_player()
   local idx, tile = first_land_tile(g.board)
   g:update_player_position(p, idx)
@@ -690,41 +598,6 @@ local function test_invalid_choice_option_rejected()
   assert(get_choice(g) == nil, "invalid option should clear choice")
 end
 
-local function test_move_anim_wait_and_resume()
-  local g = new_game()
-  g.ui_port = { wait_move_anim = true }
-  local player = g:current_player()
-  g.last_turn = {
-    player_id = player.id,
-    player_name = player.name,
-    skipped = false,
-    rolls = nil,
-    total = nil,
-    move_result = nil,
-    note = nil,
-  }
-  local phases = {
-    start = function()
-      return "move", { player = player, total = 1, raw_total = 1 }
-    end,
-    move = turn_move,
-    landing = function()
-      return nil
-    end,
-  }
-  g.turn_manager = TurnManager.new(g, phases)
-
-  local res = g.turn_manager:run_until_wait()
-  assert(res == "wait_move_anim", "should wait for move anim")
-  local seq = g.store:get({ "turn", "move_anim", "seq" })
-  assert(seq, "move_anim seq should be set")
-
-  g:dispatch_action({ type = "move_anim_done", seq = seq })
-
-  assert(g.store:get({ "turn", "move_anim" }) == nil, "move_anim should be cleared")
-  local phase = g.store:get({ "turn", "phase" })
-  assert(phase ~= "wait_move_anim", "should resume after move anim done")
-end
 
 -- 最复杂的回合结算用例：连续触发多个效果
 -- 场景设计：
@@ -971,14 +844,11 @@ end
 local tests = {
   test_pass_start,
   test_logger_adapter_called,
-  test_move_anim_callback_and_delay,
   test_land_on_start_reward,
   test_roadblock_stop,
   test_monster_card,
   test_missile_card,
-  test_landing_optional_waits_with_ui,
-  test_landing_optional_waits_without_ui_and_can_resolve,
-  test_popup_timeout_auto_confirm,
+  test_landing_optional_waits_and_can_resolve,
   test_landing_optional_stale_choice_is_blocked,
   test_chance_is_mandatory_effect_entrypoint,
   test_movement_examples_from_issue,
@@ -996,7 +866,6 @@ local tests = {
   test_chance_move_backward_pass_market,
   test_chance_move_backward_pass_intersection,
   test_invalid_choice_option_rejected,
-  test_move_anim_wait_and_resume,
   test_complex_consecutive_turn_settlement,
   test_complex_market_interrupt_with_rent,
 }

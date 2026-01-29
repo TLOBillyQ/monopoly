@@ -4,14 +4,13 @@
 --
 -- 层级                     | 允许依赖
 -- -------------------------|-------------------------------------------
--- Manager/Adapter/**       | → Manager/GameManager/**, Components/**, Config/**, Library/Monopoly/**
 -- Manager/GameManager/**   | → Manager/GameManager/**, Components/**, Config/**, Library/Monopoly/**
 -- Components/**            | → Config/**, Library/Monopoly/**
 -- Config/**                | → (none)
 -- Library/Monopoly/**      | → (none)
 --
 -- === 禁止规则 ===
--- 1) Manager/GameManager/** 禁止依赖 UI 适配器 (Manager/Adapter/**)
+-- 1) Manager/GameManager/** 禁止依赖 UI 适配器
 -- 2) services 之间禁止直接 require（应通过 game.services.* 注入）
 -- 3) Manager/GameManager/** 禁止使用 dofile/loadfile 绕过 require 检查
 
@@ -64,7 +63,7 @@ local function extract_requires(src)
   return reqs
 end
 
--- Convert module name (e.g. "Manager.Adapter.Eggy.EggyRuntime") to file path (e.g. "Manager/Adapter/Eggy/EggyRuntime.lua")
+-- Convert module name (e.g. "Manager.GameManager.System.Game") to file path (e.g. "Manager/GameManager/System/Game.lua")
 local function mod_to_path(mod)
   return mod:gsub("%.", "/") .. ".lua"
 end
@@ -154,7 +153,6 @@ end
 for _, path in ipairs(files) do
   if is_lua_file(path)
     and (starts_with(path, "Manager/GameManager/")
-      or starts_with(path, "Manager/Adapter/")
       or starts_with(path, "Config/")
       or path == "Manager/GameManager/System/Game.lua") then
     local src = read_all(path)

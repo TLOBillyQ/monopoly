@@ -28,7 +28,7 @@ local function phase_roll(tm, args)
     game.last_turn.raw_total = raw_total
   end
 
-  if not args.skip_anim and game.ui_port and game.ui_port.wait_action_anim then
+  if not args.skip_anim then
     game:queue_action_anim({
       kind = "roll",
       player_id = player.id,
