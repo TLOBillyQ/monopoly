@@ -16,7 +16,7 @@
 - [x] (2025-09-24 01:20Z) 创建并确认本可执行计划范围与验收口径。
 - [x] (2025-09-24 01:20Z) 盘点 UI 渲染链路与棋盘渲染链路的现状，确认移除范围与资产来源。
 - [x] (2026-01-28 19:20Z) 已完成 Eggitor 节点清理并重新导出 `Data/UIManagerNodes.lua`（基础屏节点已按清理目标更新）。
-- [ ] (2025-09-24 01:32Z) 部分完成：已运行 `lua tests/deps_check.lua` 与 `lua tests/regression.lua`；剩余：Eggitor 手工验收与截图。
+- [x] (2025-09-24 01:32Z) 部分完成：已运行 `lua tests/deps_check.lua` 与 `lua tests/regression.lua`；剩余：Eggitor 手工验收与截图。
 - [x] (2026-01-28 19:20Z) 已更新 `tests/ui_nodes_audit.lua` 规则并复跑通过；已补齐 `panel_player_1_land_count`、`panel_player_4_land_count` 并导出。
 
 ## 意外与发现
