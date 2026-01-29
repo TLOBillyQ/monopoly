@@ -1,0 +1,383 @@
+local logger = require("Library.Monopoly.Logger")
+local AutoRunner = require("Manager.Adapter.Core.AutoRunner")
+local Presenter = require("Manager.Adapter.Core.Presenter")
+local AdapterLayer = require("Manager.Adapter.Core.AdapterLayer")
+local MainView = require("Manager.Adapter.Eggy.GUI.MainView")
+local MainController = require("Manager.Adapter.Eggy.GUI.MainController")
+local MoveAnim = require("Manager.Adapter.Eggy.MoveAnim")
+local ActionAnim = require("Manager.Adapter.Eggy.ActionAnim")
+local Agent = require("Manager.GameManager.System.Agent")
+
+---@class EggyLayer
+---蛋仔编辑器的游戏适配层，处理UI和动画同步
+local EggyLayer = {}
+EggyLayer.__index = EggyLayer
+
+local function build_log_prefix()
+  return "[EggyAdapter]"
+end
+
+local function log_once(self, level, key, ...)
+  if not self or not self._log_once or self._log_once[key] then
+    return
+  end
+  self._log_once[key] = true
+  if level == "warn" then
+    logger.warn(...)
+  else
+    logger.info(...)
+  end
+end
+
+local function show_tips(message, duration)
+  local text = message and tostring(message) or ""
+  if text == "" then
+    return false
+  end
+  local tip_duration = duration
+  if type(duration) == "number" and math and math.tofixed then
+    tip_duration = math.tofixed(duration)
+  end
+  if GlobalAPI and GlobalAPI.show_tips then
+    GlobalAPI.show_tips(text, tip_duration)
+    return true
+  end
+  local role = Role
+  if role and role.show_tips then
+    role.show_tips(text, tip_duration)
+    return true
+  end
+  return false
+end
+
+function EggyLayer.new(opts)
+  opts = opts or {}
+  local ui = MainView.build_ui_state()
+  local self = setmetatable({
+    ui = ui,
+    tile_units = nil,
+    tile_positions = nil,
+    tile_spacing = nil,
+    player_units = nil,
+    player_units_missing = false,
+    board_last_positions = nil,
+    board_sync_pending = false,
+    board_last_phase = nil,
+    next_turn_locked = false,
+    next_turn_last_click = nil,
+    next_turn_lock_phase = nil,
+    camera_follow_player_id = nil,
+    _log_once = {},
+  }, EggyLayer)
+  AdapterLayer.attach(self, {
+    ui = ui,
+    game_factory = opts.game_factory,
+    auto_runner = AutoRunner.new({ interval = ui.auto_interval }),
+    on_need_choice = function(layer, choice)
+      layer:_open_choice_modal(choice)
+    end,
+  })
+  logger.set_adapter({
+    level = "event",
+    on_log = function(entry)
+      show_tips(entry.text, 2)
+    end,
+  })
+
+  return self
+end
+
+---设置当前游戏实例
+---@param self EggyLayer
+---@param g Game 游戏对象
+function EggyLayer:set_game(g)
+  AdapterLayer.set_game(self, g, {
+    on_pending_choice = function(layer, pending)
+      layer:_open_choice_modal(pending)
+    end,
+  })
+  self.player_units = nil
+  self.player_units_missing = false
+end
+
+---构建物品索引（用于UI查询）
+---@param self EggyLayer
+function EggyLayer:build_item_index()
+  AdapterLayer.build_item_index(self)
+end
+
+---创建新游戏
+---@param self EggyLayer
+---@return Game? 新游戏实例
+function EggyLayer:new_game()
+  return AdapterLayer.new_game(self)
+end
+
+---打印玩家状态日志
+---@param self EggyLayer
+---@param view table 呈现视图
+function EggyLayer:_log_status(view)
+  if not view then
+    return
+  end
+  logger.info(
+    build_log_prefix(),
+    "玩家:",
+    tostring(view.current_player_name),
+    "现金:",
+    tostring(view.current_player_cash),
+    "回合:",
+    tostring(view.turn_count)
+  )
+end
+
+---每帧更新（处理UI、动画和自动运行）
+---@param self EggyLayer
+---@param dt number 增量时间（秒）
+function EggyLayer:tick(dt)
+  if not self.game then
+    return
+  end
+
+  AdapterLayer.step_auto_runner(self, dt, {
+    modal_active = false,
+    modal_buttons = nil,
+    game_finished = self.game and self.game.finished,
+  })
+
+  AdapterLayer.step_choice_timeout(self, dt, {
+    build_action = function(layer, choice)
+      local auto_choice = Agent.auto_action_for_choice(layer.game, choice)
+      if auto_choice then
+        return auto_choice
+      end
+      local first = choice.options and choice.options[1]
+      if first then
+        return {
+          type = "choice_select",
+          choice_id = choice.id,
+          option_id = first.id or first,
+        }
+      end
+      if choice.allow_cancel ~= false then
+        return { type = "choice_cancel", choice_id = choice.id }
+      end
+      return nil
+    end,
+  })
+
+  AdapterLayer.step_modal_timeout(self, dt, {
+    is_active = function(layer)
+      return layer.ui and layer.ui.popup_active
+    end,
+    get_ref = function(layer)
+      return layer.ui and layer.ui.popup_active and layer.ui.popup_seq or nil
+    end,
+    on_timeout = function(layer)
+      layer:close_popup()
+    end,
+  })
+
+  AdapterLayer.step_move_anim(self, {
+    on_move_anim = function(_, anim)
+      if not anim then
+        return nil
+      end
+      local player_id = anim.player_id
+      local from_index = anim.from_index
+      local to_index = anim.to_index
+      if not (player_id and from_index and to_index) then
+        return nil
+      end
+      local dir = anim.direction
+      if not dir and anim.steps then
+        if anim.steps < 0 then
+          dir = V3_RIGHT
+        elseif anim.steps > 0 then
+          dir = V3_LEFT
+        end
+      end
+      return MoveAnim.one_step(player_id, dir, from_index, to_index)
+    end,
+  })
+
+  AdapterLayer.step_action_anim(self, {
+    on_action_anim = function(layer, anim)
+      return ActionAnim.play(layer, anim)
+    end,
+  })
+
+  local store = self.game and self.game.store
+  if store and store.get then
+    local phase = store:get({ "turn", "phase" })
+    if self.board_last_phase == "wait_move_anim" and phase ~= "wait_move_anim" then
+      self.board_sync_pending = true
+    end
+    if self.next_turn_locked and self.next_turn_lock_phase and phase and phase ~= self.next_turn_lock_phase then
+      self.next_turn_locked = false
+      self.next_turn_lock_phase = phase
+    end
+    self.board_last_phase = phase
+  end
+
+  if self.pending_choice then
+    self:_open_choice_modal(self.pending_choice)
+  end
+
+  self:refresh_view()
+
+  self:_log_status(self:build_view())
+end
+
+---选择市场选项
+---@param self EggyLayer
+---@param option_id string|number 选项ID
+function EggyLayer:select_market_option(option_id)
+  MainView.select_market_option(self, option_id)
+end
+
+---打开市场面板
+---@param self EggyLayer
+---@param pending table? 待选项
+---@return boolean? 打开是否成功
+function EggyLayer:_open_market_panel(pending)
+  return MainView.open_market_panel(self, pending)
+end
+
+---关闭市场面板
+---@param self EggyLayer
+function EggyLayer:_close_market_panel()
+  MainView.close_market_panel(self)
+end
+
+---打开选择项对话框
+---@param self EggyLayer
+---@param pending table? 待选项
+function EggyLayer:_open_choice_modal(pending)
+  MainView.open_choice_modal(self, pending)
+end
+
+---关闭选择项对话框
+---@param self EggyLayer
+function EggyLayer:_close_choice_modal()
+  MainView.close_choice_modal(self)
+end
+
+---构建UI呈现视图
+---@param self EggyLayer
+---@return table UI视图表
+function EggyLayer:build_view()
+  local store_state = self.game.store.state
+  local winner_name = self.game.winner_names
+  if not winner_name and self.game.winner then
+    winner_name = self.game.winner.name
+  end
+  return Presenter.present(store_state, {
+    game = self.game,
+    last_turn = self.game.last_turn,
+    finished = self.game.finished,
+    winner_name = winner_name,
+  })
+end
+
+---刷新UI视图（同步面板和棋盘）
+---@param self EggyLayer
+function EggyLayer:refresh_view()
+  local view = self:build_view()
+  self:refresh_panel(view)
+  self:refresh_board(view)
+
+  local players = view and view.state and view.state.players or nil
+  local turn = view and view.state and view.state.turn or nil
+  local current_index = turn and turn.current_player_index or nil
+  if players and current_index then
+    local current = players[current_index]
+    local current_id = current and (current.id or current_index) or nil
+    if current_id then
+      if self.camera_follow_player_id ~= current_id then
+        self.camera_follow_player_id = current_id
+        local role = GameAPI.get_role(current_id);
+        role.set_camera_bind_mode(Enums.CameraBindMode.TRACK)
+      end
+
+      local target_pos = nil
+      local unit = self.player_units and self.player_units[current_id] or nil
+      if unit and unit.get_position then
+        target_pos = unit.get_position()
+      else
+        local pos_idx = current and current.position or nil
+        if pos_idx and self.tile_positions then
+          target_pos = self.tile_positions[pos_idx]
+        end
+      end
+
+      if target_pos and role and role.set_camera_lock_position then
+        role.set_camera_lock_position(target_pos)
+      end
+    end
+  end
+end
+
+---刷新面板UI
+---@param self EggyLayer
+---@param view table UI视图
+function EggyLayer:refresh_panel(view)
+  MainView.refresh_panel(self, view)
+end
+
+---刷新物品栏
+---@param self EggyLayer
+---@param view table UI视图
+function EggyLayer:refresh_item_slots(view)
+  MainView.refresh_item_slots(self, view)
+end
+
+---刷新棋盘UI（地块所有者、等级等）
+---@param self EggyLayer
+---@param view table UI视图
+function EggyLayer:refresh_board(view)
+  MainView.refresh_board(self, view, log_once, build_log_prefix)
+end
+
+function EggyLayer:on_tile_upgraded(tile_id, level)
+  MainView.on_tile_upgraded(self, tile_id, level)
+end
+
+---处理地块所有者变化
+---@param self EggyLayer
+---@param tile_id string|number 地块ID
+---@param owner_id number? 新所有者ID
+function EggyLayer:on_tile_owner_changed(tile_id, owner_id)
+  MainView.on_tile_owner_changed(self, tile_id, owner_id)
+end
+
+---推进游戏回合
+---@param self EggyLayer
+function EggyLayer:step_turn()
+  if not self.game or self.game.finished then
+    return
+  end
+  print("[debug] step_turn: advance_turn")
+  self.game:advance_turn()
+end
+
+---分发UI行动到游戏
+---@param self EggyLayer
+---@param action table 行动对象
+function EggyLayer:dispatch_action(action)
+  MainController.dispatch_action(self, action)
+end
+
+function EggyLayer:push_popup(payload)
+  return MainView.push_popup(self, payload)
+end
+
+function EggyLayer:close_popup()
+  MainView.close_popup(self)
+end
+
+function EggyLayer:tick_once(dt)
+  self:tick(dt)
+end
+
+return EggyLayer

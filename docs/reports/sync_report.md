@@ -26,7 +26,7 @@
 
 **目标**：所有 UI 事件都归一成统一 action 结构，稳定进入 `Game:dispatch_action` 或 `Game:advance_turn`。
 
-- 统一入口：`src/adapters/eggy/eggy_runtime.lua` 的 UI 事件回调。
+- 统一入口：`Manager/Adapter/Eggy/EggyRuntime.lua` 的 UI 事件回调。
 - 统一 action 结构：`{ type="ui_button", id="next" }`、`{ type="choice_select", choice_id=..., option_id=... }` 等。
 - 强制映射表：UI 事件名必须先经过“事件映射层”，再进入 `EggyLayer:dispatch_action`。
 - 同步点：**UI 触发事件的瞬间**，必须写清楚对应的 `action.type/id`，防止同名事件在不同逻辑分支产出不同动作。

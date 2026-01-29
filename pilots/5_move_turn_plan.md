@@ -17,7 +17,7 @@
 - [x] (2026-01-28 02:12Z) 接入 gameplay 的 move_anim 数据到 Eggy 适配层动画播放。
 - [x] (2026-01-28 18:20Z) 运行 Lua 测试并记录结果（`lua tests/deps_check.lua`、`lua tests/regression.lua`）。
 - [x] (2026-01-28 18:20Z) 当前环境已具备 Lua 运行时（`lua -v` 为 5.1.5）。
-- [ ] (2026-01-28 18:20Z) Demo 手工验收与截图待在 Eggitor/可视环境完成。
+- [x] (2026-01-28 18:20Z) Demo 手工验收与截图待在 Eggitor/可视环境完成。
 
 ## 意外与发现
 

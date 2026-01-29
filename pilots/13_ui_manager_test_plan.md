@@ -39,7 +39,7 @@
 ## 背景与导读
 
 
-UIManager 代码位于 `UIManager/`，入口为 `UIManager/Utils.lua`，加载时依赖全局 `GameAPI`、`LuaAPI` 与 `EVENT`。节点构建由 `UIManager/Builder.lua` 完成；节点类型包括 `UIManager/ENode.lua`、`UIManager/ELabel.lua`、`UIManager/EImage.lua`、`UIManager/EButton.lua`、`UIManager/EProgressbar.lua`、`UIManager/EInputField.lua`；事件与异步由 `UIManager/Listener.lua` 与 `UIManager/Promise.lua` 实现。Eggy 运行时入口在 `src/adapters/eggy/eggy_runtime.lua` 与 `src/adapters/eggy/eggy_layer_ui.lua`，UI 节点数据来自 `Data/ui_data.lua`。本计划中的 “Role” 指可接收 UI API 调用的玩家对象，“ENode” 指 UI 节点 ID。
+UIManager 代码位于 `UIManager/`，入口为 `UIManager/Utils.lua`，加载时依赖全局 `GameAPI`、`LuaAPI` 与 `EVENT`。节点构建由 `UIManager/Builder.lua` 完成；节点类型包括 `UIManager/ENode.lua`、`UIManager/ELabel.lua`、`UIManager/EImage.lua`、`UIManager/EButton.lua`、`UIManager/EProgressbar.lua`、`UIManager/EInputField.lua`；事件与异步由 `UIManager/Listener.lua` 与 `UIManager/Promise.lua` 实现。Eggy 运行时入口在 `src/adapters/eggy/eggy_runtime.lua` 与 `src/adapters/eggy/eggy_layer_ui.lua`，UI 节点数据来自 `Data/UIManagerNodes.lua`。本计划中的 “Role” 指可接收 UI API 调用的玩家对象，“ENode” 指 UI 节点 ID。
 
 ## 工作计划
 

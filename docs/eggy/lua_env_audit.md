@@ -4,7 +4,7 @@
 
 ## 范围与规则
 
-审计范围为 `src/` 目录的运行时代码，不包含 `tests/`。测试脚本为本地工具，仍会使用 `io/os`。
+审计范围为 `Components/`、`Manager/`、`Config/`、`Library/Monopoly/`、`Data/` 与入口脚本，不包含 `tests/`。测试脚本为本地工具，仍会使用 `io/os`。
 
 审计规则：
 
@@ -15,10 +15,10 @@
 
 ## 修复摘要
 
-- 删除 `src/bootstrap.lua`，`main.lua` 直接安装运行时，避免对 `package.path` 的依赖。
+- 入口由 `main.lua` 加载 `init.lua`，避免对 `package.path` 的依赖。
 - RNG 默认种子不再依赖 `os.time`，由上层显式传入；EggyRuntime 使用 `GameAPI.get_timestamp()` 作为 seed。
 - `Dice.roll` 强制依赖传入 RNG，移除 `math.random`。
-- `src/util/logger.lua` 移除 `io/os` 写文件与时间格式化，改为可注入的 `timestamp_provider` 与 `time_formatter`。
+- `Library/Monopoly/Logger.lua` 移除 `io/os` 写文件与时间格式化，改为可注入的 `timestamp_provider` 与 `time_formatter`。
 
 ## 审计结果
 
@@ -28,7 +28,7 @@
 
 输出：
 
-    [lua-env] ok: no violations in src
+    [lua-env] ok: no violations in runtime paths
 
 ## 备注
 

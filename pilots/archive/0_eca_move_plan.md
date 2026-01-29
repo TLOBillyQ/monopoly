@@ -30,7 +30,7 @@
 - 决策：将 init.lua、macro.lua、move.lua、refs.lua 一并迁移到 Eggy 适配层，并保留根目录 init.lua 作为兼容入口。
   理由：这些文件与启动链路、演示初始化与平台常量密切相关，集中到适配层能减少根目录耦合；保留兼容入口避免引擎启动路径断裂。
   日期/作者：2026-01-27 Codex
-- 决策：eca.lua 内部显式 require src.adapters.eggy.macro，保证事件常量先行加载。
+- 决策：eca.lua 内部显式 require Manager.Adapter.Eggy.Macro，保证事件常量先行加载。
   理由：避免依赖外部调用顺序，确保 UI/载具转发常量可用。
   日期/作者：2026-01-27 Codex
 
@@ -50,7 +50,7 @@
 
 在工作目录 /Users/billyq/Dev/Github/Lua/monopoly 下完成以下操作。先用 rg 搜索 require 入口与调用点，明确引用范围，例如：
     rg -n "require\\s*\\\"(eca|macro|move|refs|init)\\\"" .
-然后将 init.lua、macro.lua、move.lua、refs.lua 与 eca.lua 迁移到 src/adapters/eggy/ 下（保留同名文件），保持函数与全局变量不变，只修正 require 路径与模块入口风格。再在 src/adapters/eggy/eggy_runtime.lua 的 install 过程中 require 新路径，确保启动时安装。最后更新根目录 init.lua 作为兼容入口（仅 require 新路径并返回函数），并清理根目录 macro.lua、move.lua、refs.lua，避免双路径加载。若宏常量依赖需要更早初始化，确保在引入 eca 之前已有 require "src.adapters.eggy.macro"；若 refs 需要在 UI 初始化或场景索引前准备，也要保持原有加载顺序。
+然后将 init.lua、macro.lua、move.lua、refs.lua 与 eca.lua 迁移到 src/adapters/eggy/ 下（保留同名文件），保持函数与全局变量不变，只修正 require 路径与模块入口风格。再在 src/adapters/eggy/eggy_runtime.lua 的 install 过程中 require 新路径，确保启动时安装。最后更新根目录 init.lua 作为兼容入口（仅 require 新路径并返回函数），并清理根目录 macro.lua、move.lua、refs.lua，避免双路径加载。若宏常量依赖需要更早初始化，确保在引入 eca 之前已有 require "Manager.Adapter.Eggy.Macro"；若 refs 需要在 UI 初始化或场景索引前准备，也要保持原有加载顺序。
 
 ## 验证与验收
 
@@ -68,7 +68,7 @@
 产物包括新位置的 eca.lua、Eggy runtime 的加载入口调整，以及 init.lua 的依赖清理。执行完成后应保留简短的测试输出片段作为证据。
 
     init.lua 兼容入口示例：
-    return require("src.adapters.eggy.init")
+    return require("Manager.Adapter.Eggy.init")
 
     测试输出：
     Dependency self-check passed

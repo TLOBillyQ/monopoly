@@ -39,7 +39,7 @@
 ## 背景与导读
 
 
-Eggy 适配层入口是 `src/adapters/eggy/eggy_runtime.lua`，主适配层是 `src/adapters/eggy/eggy_layer.lua`，UI 刷新与棋盘渲染分别在 `src/adapters/eggy/eggy_layer_ui.lua` 与 `src/adapters/eggy/eggy_layer_board.lua`。移动动画当前只实现 `src/adapters/eggy/move_anim.lua` 的单步移动，动作动画提示在 `src/adapters/eggy/action_anim.lua`。游戏侧移动路径和道具行为由 `src/gameplay/movement_service.lua`、`src/gameplay/turn_move.lua`、`src/gameplay/item_roadblock.lua`、`src/gameplay/item_demolish.lua` 等模块生成，并通过 `store.turn.move_anim` 与 `store.turn.action_anim` 传给适配层。选择需求的交互入口是 `src/adapters/core/adapter_layer.lua` 的 pending choice 逻辑，UI 节点清单在 `Data/ui_data.lua`。棋盘点击能力需参考 `docs/eggy/EggyAPI.lua` 与 `docs/eggy/api/09_events.md` 中的 Obstacle 点击事件。
+Eggy 适配层入口是 `src/adapters/eggy/eggy_runtime.lua`，主适配层是 `src/adapters/eggy/eggy_layer.lua`，UI 刷新与棋盘渲染分别在 `src/adapters/eggy/eggy_layer_ui.lua` 与 `src/adapters/eggy/eggy_layer_board.lua`。移动动画当前只实现 `src/adapters/eggy/move_anim.lua` 的单步移动，动作动画提示在 `src/adapters/eggy/action_anim.lua`。游戏侧移动路径和道具行为由 `src/gameplay/movement_service.lua`、`src/gameplay/turn_move.lua`、`src/gameplay/item_roadblock.lua`、`src/gameplay/item_demolish.lua` 等模块生成，并通过 `store.turn.move_anim` 与 `store.turn.action_anim` 传给适配层。选择需求的交互入口是 `src/adapters/core/adapter_layer.lua` 的 pending choice 逻辑，UI 节点清单在 `Data/UIManagerNodes.lua`。棋盘点击能力需参考 `docs/eggy/EggyAPI.lua` 与 `docs/eggy/api/09_events.md` 中的 Obstacle 点击事件。
 
 ## 工作计划
 

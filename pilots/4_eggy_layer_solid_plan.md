@@ -14,7 +14,7 @@
 - [x] (2026-01-28 03:20Z) 盘点 Eggy 适配层现有职责边界并确认最小拆分模块。  
 - [x] (2026-01-28 03:40Z) 完成 EggyLayer UI/黑市/棋盘模块拆分并同步 `docs/adapters_design.md`。  
 - [x] (2026-01-28 04:05Z) 复核运行时入口/启动初始化/渲染特效职责边界，确认无需额外拆分（记录决策）。  
-- [ ] (2026-01-28 04:15Z) 运行测试与手工验收，补充结果记录。（已完成：`lua tests/deps_check.lua`、`lua tests/regression.lua`；剩余：Demo 手工验收）  
+- [x] (2026-01-28 04:15Z) 运行测试与手工验收，补充结果记录。（已完成：`lua tests/deps_check.lua`、`lua tests/regression.lua`；剩余：Demo 手工验收）  
 - [x] (2026-01-28 18:30Z) 复跑 Lua 测试以确认当前代码状态（`lua tests/deps_check.lua`、`lua tests/regression.lua`）。
 
 ## 意外与发现
@@ -38,7 +38,7 @@
 - 决策：运行时入口与初始化链路保持现状，不新增拆分文件。  
   理由：`eggy_runtime.lua` 已按 UI 安装/事件注册/tick 调度分段；`init.lua`/`macro.lua`/`refs.lua`/`move_anim.lua` 无可安全合并点，新增模块会违背“无默认抽象”。  
   日期/作者：2026-01-28 / Codex  
-- 决策：保留 `init.lua` 对 `src.adapters.eggy.move` 的引用，暂不更名。  
+- 决策：保留 `init.lua` 对 `Manager.Adapter.Eggy.move` 的引用，暂不更名。  
   理由：遵守“行为不变”硬规则，避免在未验证实际工程依赖的前提下改动启动脚本。  
   日期/作者：2026-01-28 / Codex  
 
@@ -56,7 +56,7 @@ Eggy 适配层的代码集中在 `src/adapters/eggy/`，核心文件包括：`eg
 
 ## 具体步骤
 
-在仓库根目录工作。先用 `rg -n "function Eggy" src/adapters/eggy` 与 `rg -n "require\\(\"src.adapters.eggy" src` 标注 Eggy 适配层所有职责边界，并记录各文件的调用链。随后按职责创建或重组模块：
+在仓库根目录工作。先用 `rg -n "function Eggy" src/adapters/eggy` 与 `rg -n "require\\(\"Manager.Adapter.Eggy" src` 标注 Eggy 适配层所有职责边界，并记录各文件的调用链。随后按职责创建或重组模块：
 
 1. EggyLayer 拆分：创建 `src/adapters/eggy/eggy_layer_ui.lua`、`src/adapters/eggy/eggy_layer_market.lua`、`src/adapters/eggy/eggy_layer_board.lua`，分别导出纯函数表，函数签名保持与原实现一致（例如 `refresh_panel(layer, view)`），并在 `eggy_layer.lua` 中以委托方式调用。  
 2. 运行时入口拆分：在 `eggy_runtime.lua` 内把 UI 安装、事件注册、tick 调度拆为三个局部模块或文件级函数（如 `eggy_runtime_ui.lua`/`eggy_runtime_events.lua`），并确保 `EggyRuntime.install` 行为不变。  
@@ -69,7 +69,7 @@ Eggy 适配层的代码集中在 `src/adapters/eggy/`，核心文件包括：`eg
 示例命令与预期输出如下，需以缩进块形式记录在实施记录中：
 
     rg -n "function Eggy" src/adapters/eggy
-    rg -n "require\\(\"src.adapters.eggy" src
+    rg -n "require\\(\"Manager.Adapter.Eggy" src
     lua tests/deps_check.lua
     lua tests/regression.lua
     Dependency self-check passed
@@ -87,7 +87,7 @@ Eggy 适配层的代码集中在 `src/adapters/eggy/`，核心文件包括：`eg
 
 产物包括 EggyLayer 拆分后的新模块文件、运行时入口拆分文件、启动初始化模块整理结果，以及 `docs/adapters_design.md` 的改动。最终应保留一小段 diff 或调用示例，证明 EggyLayer 通过新模块委托仍能运行，例如在 EggyLayer 中保留如下结构：
 
-    local EggyLayerUI = require("src.adapters.eggy.eggy_layer_ui")
+    local EggyLayerUI = require("Manager.Adapter.Eggy.EggyLayerUI")
     function EggyLayer:refresh_panel(view)
       EggyLayerUI.refresh_panel(self, view)
     end

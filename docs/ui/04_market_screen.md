@@ -1,6 +1,6 @@
 # 黑市屏（market_panel）
 
-黑市界面由 Lua 自动打开与关闭，节点命名需与 `src/adapters/eggy/market_ui.lua` 一致。
+黑市界面由 Lua 自动打开与关闭，节点命名需与 `Manager/Adapter/Eggy/MarketUI.lua` 一致。
 
 ## 结构建议
 
@@ -66,6 +66,6 @@ market_panel（ECanvas）
 
 ## 资源引用规则
 
-- 物品卡图与载具卡图：按 `product_id` 或名称映射到 `src/adapters/eggy/refs.lua`。
+- 物品卡图与载具卡图：按 `product_id` 或名称映射到 `Manager/Adapter/Eggy/Refs.lua`。
 - 稀有度框：`MarketUI.rarity_ref_keys` -> lv1、lv2、lv3。
 - 空白图：key 为 “空”。

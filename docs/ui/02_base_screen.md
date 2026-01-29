@@ -1,6 +1,6 @@
 # 基础屏（base_screen）
 
-主界面 HUD 与棋盘表现层入口。节点名来自 `ui_data.lua` 与 `docs/ui_naming_list.md`。
+主界面 HUD 与棋盘表现层入口。节点名来自 `UIManagerNodes.lua` 与 `docs/ui_naming_list.md`。
 
 ## 结构建议
 

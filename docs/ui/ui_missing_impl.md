@@ -1,6 +1,6 @@
 # UI 节点缺失实现清单
 
-本清单以 `Data/ui_data.lua` 为事实来源，结合适配层已使用节点生成。
+本清单以 `Data/UIManagerNodes.lua` 为事实来源，结合适配层已使用节点生成。
 
 ## 复现命令
 
@@ -51,5 +51,5 @@
 
 适配层已对缺失节点增加一次性提示：
 
-- `src/adapters/eggy/eggy_layer_ui.lua`：设置文本/可见性时找不到节点会提示。
-- `src/adapters/eggy/eggy_runtime.lua`：对未注册的按钮事件绑定缺省提示。
+- `Manager/Adapter/Eggy/EggyLayerUI.lua`：设置文本/可见性时找不到节点会提示。
+- `Manager/Adapter/Eggy/EggyRuntime.lua`：对未注册的按钮事件绑定缺省提示。

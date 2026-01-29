@@ -13,7 +13,7 @@
 
 ## 2. AutoRunner：自动推进节奏控制
 
-文件：`src/adapters/core/auto_runner.lua`
+文件：`Manager/Adapter/Core/AutoRunner.lua`
 
 ### 2.1 结构与状态
 
@@ -52,7 +52,7 @@ AutoRunner 是一个很薄的对象，只有三个核心字段：
 
 AutoRunner 不直接接触 Game，而是通过 AdapterLayer 接入：
 
-文件：`src/adapters/core/adapter_layer.lua`
+文件：`Manager/Adapter/Core/AdapterLayer.lua`
 
 - `AdapterLayer.step_auto_runner(layer, dt, context)`
   - 调 `layer.auto_runner:next_action(dt, ctx)` 拿动作
@@ -60,7 +60,7 @@ AutoRunner 不直接接触 Game，而是通过 AdapterLayer 接入：
 
 Eggy 侧在 tick 中默认启用这条链路：
 
-文件：`src/adapters/eggy/eggy_layer.lua`
+文件：`Manager/Adapter/Eggy/EggyLayer.lua`
 
 - `EggyLayer.new(opts)`
   - `auto_runner = AutoRunner.new({ interval = ui.auto_interval })`
@@ -76,7 +76,7 @@ Eggy 侧在 tick 中默认启用这条链路：
 
 ## 3. Agent：选择题的自动决策
 
-文件：`src/gameplay/agent.lua`
+文件：`Manager/GameManager/System/Agent.lua`
 
 ### 3.1 Agent 只在“选择题”里出手
 
@@ -108,9 +108,9 @@ Agent 的策略是“按 choice.kind 分发”，重点有几类：
 
 2) 路障 / 拆除类目标格子
 - `roadblock_target` → `Agent.pick_roadblock_target(...)`
-  - 依赖：`src/gameplay/item_roadblock.lua`
+  - 依赖：`Manager/GameManager/Item/ItemRoadblock.lua`
 - `demolish_target / missile_target` → `Agent.pick_demolish_target(...)`
-  - 依赖：`src/gameplay/item_demolish.lua`
+  - 依赖：`Manager/GameManager/Item/ItemDemolish.lua`
 
 3) 指定目标玩家类道具：`item_target_player`
 - 入口：`Agent.pick_target_player(...)`
@@ -137,7 +137,7 @@ Agent 的策略是“按 choice.kind 分发”，重点有几类：
 
 ### 4.1 规则层：TurnManager 会在等待态询问 Agent
 
-文件：`src/gameplay/turn_manager.lua`
+文件：`Manager/GameManager/Turn/TurnManager.lua`
 
 关键逻辑在 `wait_choice` 状态：
 
@@ -151,7 +151,7 @@ Agent 的策略是“按 choice.kind 分发”，重点有几类：
 
 ### 4.2 适配层：Eggy 在“选择超时”时再次询问 Agent
 
-文件：`src/adapters/eggy/eggy_layer.lua`
+文件：`Manager/Adapter/Eggy/EggyLayer.lua`
 
 在 `EggyLayer:tick(dt)` 里：
 
@@ -173,7 +173,7 @@ Agent 的策略是“按 choice.kind 分发”，重点有几类：
 
 ### 5.1 AI 在道具阶段的“主动出手”
 
-文件：`src/gameplay/item_phase.lua`
+文件：`Manager/GameManager/Item/ItemPhase.lua`
 
 当当前玩家是自动玩家时：
 
@@ -183,7 +183,7 @@ Agent 的策略是“按 choice.kind 分发”，重点有几类：
 
 ### 5.2 道具执行器会调用 Agent 选目标 / 选点数
 
-文件：`src/gameplay/item_executor.lua`
+文件：`Manager/GameManager/Item/ItemExecutor.lua`
 
 在 AI 分支（`context.by_ai == true`）下：
 
@@ -230,7 +230,7 @@ Agent 的策略是“按 choice.kind 分发”，重点有几类：
 - `Agent.auto_action_for_choice` 是否覆盖该 kind
 
 3) 最后看是否是等待态/超时逻辑问题
-- 规则层：`src/gameplay/turn_manager.lua` 的 `wait_choice`
+- 规则层：`Manager/GameManager/Turn/TurnManager.lua` 的 `wait_choice`
 - 适配层：`AdapterLayer.step_choice_timeout(...)`
 
 ## 8. 回归测试建议
@@ -238,7 +238,7 @@ Agent 的策略是“按 choice.kind 分发”，重点有几类：
 已有回归用例已经覆盖 Agent 的关键入口：
 
 - 文件：`tests/regression.lua`
-- 关注位置：包含 `Agent = require("src.gameplay.agent")` 与 `Agent.auto_action_for_choice(...)` 的用例段落
+- 关注位置：包含 `Agent = require("Manager.GameManager.System.Agent")` 与 `Agent.auto_action_for_choice(...)` 的用例段落
 
 建议至少运行：
 

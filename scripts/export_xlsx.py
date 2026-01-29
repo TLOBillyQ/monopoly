@@ -194,7 +194,8 @@ def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     root = os.path.abspath(os.path.join(script_dir, os.pardir))
     design_dir = os.path.join(root, "design")
-    config_dir = os.path.join(root, "src", "config")
+    config_dir = os.path.join(root, "Config", "Generated")
+    os.makedirs(config_dir, exist_ok=True)
 
     tiles_path = os.path.join(design_dir, "蛋仔--大富翁--地块表.xlsx")
     items_path = os.path.join(design_dir, "蛋仔--大富翁--道具表.xlsx")
@@ -259,7 +260,7 @@ def main():
         tiles.append(record)
 
     write_lua_table(
-        os.path.join(config_dir, "tiles.lua"),
+        os.path.join(config_dir, "Tiles.lua"),
         "tiles",
         tiles,
         [
@@ -293,7 +294,7 @@ def main():
         )
 
     write_lua_table(
-        os.path.join(config_dir, "roles.lua"),
+        os.path.join(config_dir, "Roles.lua"),
         "roles",
         roles,
         ["id", "name", "prototype", "description"],
@@ -332,7 +333,7 @@ def main():
         )
 
     write_lua_table(
-        os.path.join(config_dir, "items.lua"),
+        os.path.join(config_dir, "Items.lua"),
         "items",
         items,
         [
@@ -367,7 +368,7 @@ def main():
         )
 
     write_lua_table(
-        os.path.join(config_dir, "vehicles.lua"),
+        os.path.join(config_dir, "Vehicles.lua"),
         "vehicles",
         vehicles,
         ["id", "name", "tier", "dice_count", "indestructible"],
@@ -399,7 +400,7 @@ def main():
         )
 
     write_lua_table(
-        os.path.join(config_dir, "market.lua"),
+        os.path.join(config_dir, "Market.lua"),
         "market",
         market,
         ["order", "product_id", "name", "page", "kind", "currency", "price", "limit"],
@@ -467,7 +468,7 @@ def main():
         cards.append(record)
 
     write_lua_table(
-        os.path.join(config_dir, "chance_cards.lua"),
+        os.path.join(config_dir, "ChanceCards.lua"),
         "chance_cards",
         cards,
         [
@@ -518,7 +519,7 @@ def main():
         constants[key] = parse_int(row.get(col_map.get("常量参数")))
 
     write_lua_kv(
-        os.path.join(config_dir, "constants.lua"),
+        os.path.join(config_dir, "Constants.lua"),
         "constants",
         constants,
         [

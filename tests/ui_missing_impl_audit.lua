@@ -1,11 +1,11 @@
-local ok, ui_data = pcall(require, "Data.ui_data")
+local ok, ui_data = pcall(require, "Data.UIManagerNodes")
 if not ok or type(ui_data) ~= "table" then
-  io.stderr:write("[ui-missing] failed to require Data.ui_data\n")
+  io.stderr:write("[ui-missing] failed to require Data.UIManagerNodes\n")
   os.exit(1)
 end
 
-local EggyLayerUI = require("src.adapters.eggy.eggy_layer_ui")
-local MarketUI = require("src.adapters.eggy.market_ui")
+local EggyLayerUI = require("Manager.Adapter.Eggy.EggyLayerUI")
+local MarketUI = require("Manager.Adapter.Eggy.MarketUI")
 
 local function add(set, name)
   if name and name ~= "" then

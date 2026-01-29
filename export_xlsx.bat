@@ -22,7 +22,7 @@ if "%PY_CMD%"=="" (
   exit /b 1
 )
 
-echo Exporting xlsx configs...
+echo Exporting xlsx configs to Config\Generated...
 %PY_CMD% "%ROOT%scripts\export_xlsx.py"
 if errorlevel 1 exit /b 1
 

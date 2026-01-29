@@ -16,6 +16,10 @@
 
 当做代码修改时，遵守 CodingDiscipline (见.agent/CODING.md)
 
+## API 读取规则
+
+当需要检索API文件时，遵守 ReadingDiscipline (./agent/READING.md)
+
 ## 本项目
 
 关于本项目的信息，见.agent/THIS.md

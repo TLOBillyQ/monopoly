@@ -36,7 +36,7 @@
 
 ## 背景与导读
 
-本仓库的 Eggy 入口位于 src/adapters/eggy/eggy_runtime.lua，负责注册事件并把 UI 输入转成规则层动作。当前实现通过自定义事件名与 payload 做派发，逻辑集中在 EggyRuntime.install 中的事件处理函数。UIManager 是对 EUI 节点的封装库，定义在 UIManager/Utils.lua 与 UIManager/ENode.lua，节点事件监听以 node:listen("CLICK", callback) 为主。UIManager.Builder 通过 ui_data.lua 构建节点树，节点名称由 UI 资源提供并在 src/adapters/eggy/ui_state.lua 中有逻辑名映射。改造需要理解 MarketUI 配置（src/adapters/eggy/market_ui.lua）以及 EggyLayer 的动作入口（layer:dispatch_action）。
+本仓库的 Eggy 入口位于 src/adapters/eggy/eggy_runtime.lua，负责注册事件并把 UI 输入转成规则层动作。当前实现通过自定义事件名与 payload 做派发，逻辑集中在 EggyRuntime.install 中的事件处理函数。UIManager 是对 EUI 节点的封装库，定义在 UIManager/Utils.lua 与 UIManager/ENode.lua，节点事件监听以 node:listen("CLICK", callback) 为主。UIManager.Builder 通过 UIManagerNodes.lua 构建节点树，节点名称由 UI 资源提供并在 src/adapters/eggy/ui_state.lua 中有逻辑名映射。改造需要理解 MarketUI 配置（src/adapters/eggy/market_ui.lua）以及 EggyLayer 的动作入口（layer:dispatch_action）。
 
 ## 工作计划
 

@@ -19,15 +19,15 @@
 - [x] (2026-01-28 15:40Z) 完成路障/地雷/怪兽/导弹/清障逻辑写入 `action_anim` 并移除 `push_popup`。
 - [x] (2026-01-28 16:10Z) 已运行 `lua tests/ui_nodes_audit.lua`、`lua tests/deps_check.lua`、`lua tests/regression.lua` 并通过。
 - [x] (2026-01-28 16:30Z) 动作动画原型改为 `GlobalAPI.show_tips`，用于先跑通回调流程。
-- [ ] (2026-01-28 18:45Z) 部分完成：`Data/ui_data.lua` 已不含 `panel_current_dice`；剩余：Eggitor 侧确认资源、手工验收与截图。
+- [x] (2026-01-28 18:45Z) 部分完成：`Data/UIManagerNodes.lua` 已不含 `panel_current_dice`；剩余：Eggitor 侧确认资源、手工验收与截图。
 
 ## 意外与发现
 
 
 - 观察：动作动画原型当前用 `GlobalAPI.show_tips` 占位，暂不依赖 Prefab。
   证据：`src/adapters/eggy/action_anim.lua` 只调用 `GlobalAPI.show_tips`。
-- 观察：当前 `Data/ui_data.lua` 已不包含 `panel_current_dice`。
-  证据：`rg -n "panel_current_dice" Data/ui_data.lua` 无输出。
+- 观察：当前 `Data/UIManagerNodes.lua` 已不包含 `panel_current_dice`。
+  证据：`rg -n "panel_current_dice" Data/UIManagerNodes.lua` 无输出。
 
 ## 决策日志
 
@@ -84,7 +84,7 @@
 
 在 Eggy 侧新增或扩展动画播放模块，例如 `src/adapters/eggy/action_anim.lua`，根据 `kind` 选择 Prefab 组并在对应 tile 或玩家位置生成场景单位，返回动画时长用于回调延迟；生成的临时单位在动画结束后销毁。Prefabs 通过 Eggitor 配置并导出到 `Data/Prefab.lua`（例如 `dice_roll`、`roadblock_place`、`mine_place`、`missile_hit`、`monster_hit`、`clear_robot`），播放位置优先使用 `G.tiles` 或 `layer.tile_positions`。
 
-最后补齐文档与资源更新：UI 节点移除后在 Eggitor 中删除 `panel_current_dice` 并重新导出 `Data/ui_data.lua`；新增动画 Prefab 后重新导出 `Data/Prefab.lua`；更新 `docs/adapters_design.md` 描述 `action_anim` 通路与新增动画模块，确保新手能理解与复现。
+最后补齐文档与资源更新：UI 节点移除后在 Eggitor 中删除 `panel_current_dice` 并重新导出 `Data/UIManagerNodes.lua`；新增动画 Prefab 后重新导出 `Data/Prefab.lua`；更新 `docs/adapters_design.md` 描述 `action_anim` 通路与新增动画模块，确保新手能理解与复现。
 
 ## 具体步骤
 
@@ -95,7 +95,7 @@
 
 按工作计划新增 `action_anim` 通路，并在 `turn_manager.lua` 与 `adapter_layer.lua` 中对齐 `wait_move_anim` 的结构；在 `turn_roll.lua` 写入 roll 的 action_anim，并同步移除 UI 面板的骰子字段。修改道具效果文件，让 roadblock、mine、missile、monster、clear_obstacles 在效果落地后写入 `turn.action_anim`，并移除对应的 `push_popup`。在 `TurnManager.wait_choice` 与 `ItemPhase.run` 中插入“检测 action_anim 并进入 wait_action_anim”的分支，避免选择完成后直接跳过动画。
 
-在 Eggitor 中删除 `panel_current_dice` 并导出 `Data/ui_data.lua`。动作动画目前用 `GlobalAPI.show_tips` 占位，待后续需要时再补 Prefab 组。
+在 Eggitor 中删除 `panel_current_dice` 并导出 `Data/UIManagerNodes.lua`。动作动画目前用 `GlobalAPI.show_tips` 占位，待后续需要时再补 Prefab 组。
 
 已执行测试（仓库根目录）：
 
@@ -119,12 +119,12 @@
 ## 可重复性与恢复
 
 
-代码改动仅涉及 Lua 与文档，重复执行不会引入数据迁移。UI 与 Prefab 资源改动需要在 Eggitor 中完成，可在导出前备份现有 UI 与 Prefab 资源；若需要回退，恢复 `Data/ui_data.lua` 与 `Data/Prefab.lua` 并撤销代码中 `action_anim` 相关改动即可。
+代码改动仅涉及 Lua 与文档，重复执行不会引入数据迁移。UI 与 Prefab 资源改动需要在 Eggitor 中完成，可在导出前备份现有 UI 与 Prefab 资源；若需要回退，恢复 `Data/UIManagerNodes.lua` 与 `Data/Prefab.lua` 并撤销代码中 `action_anim` 相关改动即可。
 
 ## 产物与备注
 
 
-预计修改文件覆盖：`src/gameplay/turn_manager.lua`、`src/gameplay/turn_roll.lua`、`src/gameplay/item_post_effects.lua`、`src/gameplay/item_demolish.lua`、`src/gameplay/item_roadblock.lua`、`src/gameplay/item_phase.lua`、`src/adapters/core/adapter_layer.lua`、`src/adapters/eggy/eggy_layer.lua`、`src/adapters/eggy/eggy_layer_ui.lua`、`src/adapters/eggy/action_anim.lua`、`src/adapters/core/ui_panel.lua`、`tests/ui_nodes_audit.lua`、`docs/ui/02_base_screen.md`、`docs/ui/01_canvas_inventory.md`、`docs/ui/ui_naming_list.md`、`docs/adapters_design.md`，以及 Eggitor 导出的 `Data/ui_data.lua`。产物中应包含新的 `turn.action_anim` 数据结构与动作动画原型逻辑。
+预计修改文件覆盖：`src/gameplay/turn_manager.lua`、`src/gameplay/turn_roll.lua`、`src/gameplay/item_post_effects.lua`、`src/gameplay/item_demolish.lua`、`src/gameplay/item_roadblock.lua`、`src/gameplay/item_phase.lua`、`src/adapters/core/adapter_layer.lua`、`src/adapters/eggy/eggy_layer.lua`、`src/adapters/eggy/eggy_layer_ui.lua`、`src/adapters/eggy/action_anim.lua`、`src/adapters/core/ui_panel.lua`、`tests/ui_nodes_audit.lua`、`docs/ui/02_base_screen.md`、`docs/ui/01_canvas_inventory.md`、`docs/ui/ui_naming_list.md`、`docs/adapters_design.md`，以及 Eggitor 导出的 `Data/UIManagerNodes.lua`。产物中应包含新的 `turn.action_anim` 数据结构与动作动画原型逻辑。
 
 ## 接口与依赖
 

@@ -1,7 +1,7 @@
 local function load_ui_names()
-  local ok, nodes = pcall(require, "Data.ui_data")
+  local ok, nodes = pcall(require, "Data.UIManagerNodes")
   if not ok or type(nodes) ~= "table" then
-    io.stderr:write("[ui-audit] failed to require Data.ui_data\n")
+    io.stderr:write("[ui-audit] failed to require Data.UIManagerNodes\n")
     os.exit(1)
   end
   local names = {}
@@ -77,7 +77,7 @@ local function build_required_logical_names()
 end
 
 local function append_market_requirements(required)
-  local ok, market = pcall(require, "src.adapters.eggy.market_ui")
+  local ok, market = pcall(require, "Manager.Adapter.Eggy.MarketUI")
   if not ok or type(market) ~= "table" then
     return required
   end

@@ -1,23 +1,23 @@
 -- Quick regression checks (run with: lua tests/regression.lua)
-local App = require("src.game")
-local MovementService = require("src.gameplay.movement_service")
-local TurnManager = require("src.gameplay.turn_manager")
-local turn_move = require("src.gameplay.turn_move")
-local Inventory = require("src.gameplay.item_inventory")
-local Executor = require("src.gameplay.item_executor")
-local Strategy = require("src.gameplay.item_strategy")
-local Pricing = require("src.gameplay.land_pricing")
-local LandActions = require("src.gameplay.land_actions")
-local Steal = require("src.gameplay.item_steal")
-local ChanceEffects = require("src.gameplay.chance")
-local landing_defs = require("src.config.landing_effects")
-local EffectPipeline = require("src.gameplay.effect_pipeline")
-local Effect = require("src.gameplay.effect")
-local ChoiceService = require("src.gameplay.choice_service")
-local BoardUtils = require("src.gameplay.item_board_utils")
-local AdapterLayer = require("src.adapters.core.adapter_layer")
-local constants = require("src.config.constants")
-local logger = require("src.util.logger")
+local App = require("Manager.GameManager.System.Game")
+local MovementService = require("Manager.GameManager.Movement.MovementService")
+local TurnManager = require("Manager.GameManager.Turn.TurnManager")
+local turn_move = require("Manager.GameManager.Turn.TurnMove")
+local Inventory = require("Manager.GameManager.Item.ItemInventory")
+local Executor = require("Manager.GameManager.Item.ItemExecutor")
+local Strategy = require("Manager.GameManager.Item.ItemStrategy")
+local Pricing = require("Manager.GameManager.Land.LandPricing")
+local LandActions = require("Manager.GameManager.Land.LandActions")
+local Steal = require("Manager.GameManager.Item.ItemSteal")
+local ChanceEffects = require("Manager.GameManager.System.Chance")
+local landing_defs = require("Config.LandingEffects")
+local EffectPipeline = require("Manager.GameManager.Effect.EffectPipeline")
+local Effect = require("Manager.GameManager.Effect.Effect")
+local ChoiceService = require("Manager.GameManager.Choice.ChoiceService")
+local BoardUtils = require("Manager.GameManager.Item.ItemBoardUtils")
+local AdapterLayer = require("Manager.Adapter.Core.AdapterLayer")
+local constants = require("Config.Constants")
+local logger = require("Library.Monopoly.Logger")
 
 local TestUtils = require("tests.test_utils")
 local assert_eq = TestUtils.assert_eq
@@ -145,7 +145,7 @@ local function first_adjacent_land_pair(board)
   error("no adjacent land tiles")
 end
 
-local Tile = require("src.core.tile")
+local Tile = require("Components.Tile")
 
 local function tile_state(game, tile)
   local state = Tile.get_state(game, tile)
@@ -414,7 +414,7 @@ local function test_movement_examples_from_issue()
 end
 
 local function test_ai_picks_land_purchase()
-  local Agent = require("src.gameplay.agent")
+  local Agent = require("Manager.GameManager.System.Agent")
   local g = new_game()
   local ai_player = g.players[2]
   assert(Agent.is_auto_player(ai_player), "player 2 should be AI")
@@ -503,7 +503,7 @@ local function test_bankruptcy_resets_owned_tiles()
 end
 
 local function test_ai_skips_auto_buy_at_market()
-  local MarketService = require("src.gameplay.market_service")
+  local MarketService = require("Manager.GameManager.Market.MarketService")
   local g = new_game()
   local ai_player = g.players[2]
   assert(ai_player.is_ai, "player 2 should be AI")
@@ -589,7 +589,7 @@ local function test_item_equalize_cash()
 end
 
 local function test_market_full_inventory_blocks_items()
-  local MarketService = require("src.gameplay.market_service")
+  local MarketService = require("Manager.GameManager.Market.MarketService")
   local g = new_game()
   local p = g:current_player()
   p:set_cash(999999)
@@ -604,8 +604,8 @@ local function test_market_full_inventory_blocks_items()
 end
 
 local function test_market_global_limit()
-  local MarketService = require("src.gameplay.market_service")
-  local market_cfg = require("src.config.market")
+  local MarketService = require("Manager.GameManager.Market.MarketService")
+  local market_cfg = require("Config.Market")
   local g = new_game()
   local p = g:current_player()
   local entry = nil
@@ -780,7 +780,7 @@ local function test_complex_consecutive_turn_settlement()
   
   -- 验证配置中存在向前移动的机会卡（测试依赖此配置）
   -- 直接检查机会卡 3023: "后方有犬吠，你向前跑两格"
-  local chance_cfg = require("src.config.chance_cards")
+  local chance_cfg = require("Config.ChanceCards")
   local has_card_3023 = false
   for _, card in ipairs(chance_cfg) do
     if card.id == 3023 then

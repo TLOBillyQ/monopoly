@@ -10,7 +10,7 @@ end
 
 local function list_lua_files()
   local files = {}
-  local pipe = io.popen('rg --files -g "*.lua" src')
+  local pipe = io.popen('rg --files -g "*.lua" Components Config Manager Globals Data Library/Monopoly')
   if not pipe then
     return files
   end
@@ -20,6 +20,16 @@ local function list_lua_files()
     end
   end
   pipe:close()
+  local init_file = io.open("init.lua", "rb")
+  if init_file then
+    init_file:close()
+    table.insert(files, "init.lua")
+  end
+  local main_file = io.open("main.lua", "rb")
+  if main_file then
+    main_file:close()
+    table.insert(files, "main.lua")
+  end
   return files
 end
 
@@ -76,4 +86,4 @@ if #violations > 0 then
   os.exit(1)
 end
 
-io.stdout:write("[lua-env] ok: no violations in src\n")
+io.stdout:write("[lua-env] ok: no violations in runtime paths\n")

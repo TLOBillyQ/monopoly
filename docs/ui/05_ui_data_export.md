@@ -1,6 +1,6 @@
 # ui_data 导出形态
 
-`ui_data.lua` 是 UIManager 的节点清单，`UIManager.Builder` 会用它构建节点树。
+`UIManagerNodes.lua` 是 UIManager 的节点清单，`UIManager.Builder` 会用它构建节点树。
 
 ## 数据形态
 
@@ -19,7 +19,7 @@
 
 ## placeholder 说明
 
-当前导出的 `ui_data.lua` 已不包含 `placeholder|xxx` 条目；若开发阶段需要兜底节点，可临时补充，但交付前必须由 Eggitor 导出真实 id 覆盖。
+当前导出的 `UIManagerNodes.lua` 已不包含 `placeholder|xxx` 条目；若开发阶段需要兜底节点，可临时补充，但交付前必须由 Eggitor 导出真实 id 覆盖。
 
 ## 导出要求
 

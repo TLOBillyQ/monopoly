@@ -46,7 +46,7 @@
 
 1. 搜索 `ui_state`、`set_label` 等调用点，整理替换清单。  
 2. 修改 `src/adapters/eggy/eggy_layer.lua`：  
-   - 移除 `require("src.adapters.eggy.ui_state")`。  
+   - 移除 `require("Manager.Adapter.Eggy.ui_state")`。  
    - 将 `ui = UIState.create()` 改为内联构建 `ui` 状态表。  
    - 将所有 `ui:set_*` 调用替换为直接节点查询与属性赋值。  
 3. 删除 `src/adapters/eggy/ui_state.lua`，并确认无残留引用。  

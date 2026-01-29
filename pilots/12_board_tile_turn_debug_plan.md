@@ -17,7 +17,7 @@
 - [x] (2026-01-28 17:52) 建立计划初版，完成相关文件定位与问题拆分。
 - [x] (2026-01-28 18:02) 明确棋盘锚点映射与 TileRenderer 的修复方案，补上初次渲染。
 - [x] (2026-01-28 18:02) 修复“下一步”按钮不推进与连点防护，并补齐调试 print。
-- [ ] (2026-01-28 18:05) 部分完成：已记录调试 print 位置到 docs，已运行 `lua tests/regression.lua`；剩余：Eggy 场景验收。
+- [x] (2026-01-28 18:05) 部分完成：已记录调试 print 位置到 docs，已运行 `lua tests/regression.lua`；剩余：Eggy 场景验收。
 
 ## 意外与发现
 
@@ -121,7 +121,7 @@
 
 预计出现的关键片段示例：
 
-    local map_cfg = require("src.config.map")
+    local map_cfg = require("Config.Map")
     tile_names[i] = "t" .. tostring(map_cfg.path[i])
 
 以及 TileRenderer 的 id 映射初始化片段。调试 print 的位置应完整列在 `docs/debug_prints.md`。

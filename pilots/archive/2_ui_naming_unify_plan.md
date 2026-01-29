@@ -5,19 +5,19 @@
 
 ## 目的 / 全局视角
 
-本任务要把 UI 命名统一为简洁一致的小写蛇形命名，并同步到 `ui_data.lua`、`docs/plans/ui_naming_list.md` 与 Eggy 适配层代码。完成后，UI 侧资源名与代码使用的逻辑名完全一致，不再依赖映射或中文命名。验收方式是 UI 命名清单与 `ui_data.lua` 一致，适配层引用更新完成，运行 `tests/ui_nodes_audit.lua` 与回归测试不报缺失。
+本任务要把 UI 命名统一为简洁一致的小写蛇形命名，并同步到 `UIManagerNodes.lua`、`docs/plans/ui_naming_list.md` 与 Eggy 适配层代码。完成后，UI 侧资源名与代码使用的逻辑名完全一致，不再依赖映射或中文命名。验收方式是 UI 命名清单与 `UIManagerNodes.lua` 一致，适配层引用更新完成，运行 `tests/ui_nodes_audit.lua` 与回归测试不报缺失。
 
 ## 进度
 
 - [x] (2026-01-27 14:44Z) 统一命名规范并列出全量清单  
-- [x] (2026-01-27 14:44Z) 同步 `ui_data.lua` 与 `docs/plans/ui_naming_list.md`  
+- [x] (2026-01-27 14:44Z) 同步 `UIManagerNodes.lua` 与 `docs/plans/ui_naming_list.md`  
 - [x] (2026-01-27 14:44Z) 更新 Eggy 适配层与审计脚本引用  
 - [x] (2026-01-27 14:50Z) 运行审计与回归验证
 
 ## 意外与发现
 
-- 观察：ui_data.lua 已采用小写蛇形命名，tests/ui_nodes_audit.lua 直接匹配节点名，无需映射表。
-  证据：ui_data.lua 顶部条目均为 snake_case；tests/ui_nodes_audit.lua:20-110。
+- 观察：UIManagerNodes.lua 已采用小写蛇形命名，tests/ui_nodes_audit.lua 直接匹配节点名，无需映射表。
+  证据：UIManagerNodes.lua 顶部条目均为 snake_case；tests/ui_nodes_audit.lua:20-110。
 若发现 UI 节点语义与命名不符（例如“弹窗确认/关闭”实际语义），在这里记录并给出 UI 侧截图或日志证据。
 
 ## 决策日志
@@ -35,15 +35,15 @@
 
 ## 背景与导读
 
-当前 UI 资源名主要集中在 `ui_data.lua`，其中大量节点使用中文名称；Eggy 适配层通过 `src/adapters/eggy/ui_state.lua` 与 `tests/ui_nodes_audit.lua` 的映射表做兼容。适配层使用的逻辑名已基本固定（例如 `panel_title`、`btn_next`、`tile_detail_*`），因此应以逻辑名作为唯一 UI 资源名，并在 Eggitor 编辑器中同步。`Data/UINodes.lua` 与 `Data/Prefab.lua` 为 Eggitor 导出产物，不直接手改，最终由你在 Eggitor 中按新命名导出覆盖。
+当前 UI 资源名主要集中在 `UIManagerNodes.lua`，其中大量节点使用中文名称；Eggy 适配层通过 `src/adapters/eggy/ui_state.lua` 与 `tests/ui_nodes_audit.lua` 的映射表做兼容。适配层使用的逻辑名已基本固定（例如 `panel_title`、`btn_next`、`tile_detail_*`），因此应以逻辑名作为唯一 UI 资源名，并在 Eggitor 编辑器中同步。`Data/UINodes.lua` 与 `Data/Prefab.lua` 为 Eggitor 导出产物，不直接手改，最终由你在 Eggitor 中按新命名导出覆盖。
 
 ## 工作计划
 
-先确认统一命名规范为小写蛇形，并给出全量 UI 命名清单，覆盖 `ui_data.lua` 现有节点、适配层要求节点、以及市场/弹窗/棋盘等缺失节点。然后编辑 `ui_data.lua`：把所有中文名替换为统一命名，并补齐缺失项（使用占位 id）；同时更新 `docs/plans/ui_naming_list.md` 为新清单，移除旧的映射说明。最后更新 Eggy 适配层：包括 `src/adapters/eggy/eggy_layer.lua`、`src/adapters/eggy/market_ui.lua`、`src/adapters/eggy/eggy_runtime.lua` 与 `tests/ui_nodes_audit.lua`，使其直接使用新命名；若后续决定删除 `ui_state.lua`，应在同一变更中完成。
+先确认统一命名规范为小写蛇形，并给出全量 UI 命名清单，覆盖 `UIManagerNodes.lua` 现有节点、适配层要求节点、以及市场/弹窗/棋盘等缺失节点。然后编辑 `UIManagerNodes.lua`：把所有中文名替换为统一命名，并补齐缺失项（使用占位 id）；同时更新 `docs/plans/ui_naming_list.md` 为新清单，移除旧的映射说明。最后更新 Eggy 适配层：包括 `src/adapters/eggy/eggy_layer.lua`、`src/adapters/eggy/market_ui.lua`、`src/adapters/eggy/eggy_runtime.lua` 与 `tests/ui_nodes_audit.lua`，使其直接使用新命名；若后续决定删除 `ui_state.lua`，应在同一变更中完成。
 
 ## 具体步骤
 
-在仓库根目录执行。先根据下方“接口与依赖”的全量命名清单，确认哪些是现有中文节点、哪些是缺失节点。随后按清单改写 `ui_data.lua` 的名称字段，并补齐缺失节点的占位记录；同步更新 `docs/plans/ui_naming_list.md` 使其成为唯一命名对照表。接着把适配层中所有中文事件名与节点名替换为统一命名，并调整 `tests/ui_nodes_audit.lua` 的必需清单与映射逻辑为“无映射、直接匹配”。最后运行测试并记录输出。
+在仓库根目录执行。先根据下方“接口与依赖”的全量命名清单，确认哪些是现有中文节点、哪些是缺失节点。随后按清单改写 `UIManagerNodes.lua` 的名称字段，并补齐缺失节点的占位记录；同步更新 `docs/plans/ui_naming_list.md` 使其成为唯一命名对照表。接着把适配层中所有中文事件名与节点名替换为统一命名，并调整 `tests/ui_nodes_audit.lua` 的必需清单与映射逻辑为“无映射、直接匹配”。最后运行测试并记录输出。
 
 ## 验证与验收
 
@@ -55,7 +55,7 @@
 
 ## 产物与备注
 
-产物包括更新后的 `ui_data.lua`、`docs/plans/ui_naming_list.md` 与 Eggy 适配层文件；Eggitor 最终导出的 `Data/UINodes.lua` 与 `Data/Prefab.lua` 由你在确认命名后生成。若发现 UI 中“弹窗确认/关闭”语义与代码期望不符，需要在 UI 侧调整并记录到“意外与发现”。
+产物包括更新后的 `UIManagerNodes.lua`、`docs/plans/ui_naming_list.md` 与 Eggy 适配层文件；Eggitor 最终导出的 `Data/UINodes.lua` 与 `Data/Prefab.lua` 由你在确认命名后生成。若发现 UI 中“弹窗确认/关闭”语义与代码期望不符，需要在 UI 侧调整并记录到“意外与发现”。
 
     docs/plans/ui_naming_list.md 已补齐 base_screen/loading_screen 等节点清单。
 
