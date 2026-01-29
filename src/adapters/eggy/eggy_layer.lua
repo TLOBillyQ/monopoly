@@ -11,6 +11,8 @@ local MoveAnim = require("src.adapters.eggy.move_anim")
 local ActionAnim = require("src.adapters.eggy.action_anim")
 local Agent = require("src.gameplay.agent")
 
+---@class EggyLayer
+---蛋仔编辑器的游戏适配层，处理UI和动画同步
 local EggyLayer = {}
 EggyLayer.__index = EggyLayer
 
@@ -104,6 +106,9 @@ function EggyLayer.new(opts)
   return self
 end
 
+---设置当前游戏实例
+---@param self EggyLayer
+---@param g Game 游戏对象
 function EggyLayer:set_game(g)
   AdapterLayer.set_game(self, g, {
     on_pending_choice = function(layer, pending)
@@ -114,14 +119,22 @@ function EggyLayer:set_game(g)
   self.player_units_missing = false
 end
 
+---构建物品索引（用于UI查询）
+---@param self EggyLayer
 function EggyLayer:build_item_index()
   AdapterLayer.build_item_index(self)
 end
 
+---创建新游戏
+---@param self EggyLayer
+---@return Game? 新游戏实例
 function EggyLayer:new_game()
   return AdapterLayer.new_game(self)
 end
 
+---打印玩家状态日志
+---@param self EggyLayer
+---@param view table 呈现视图
 function EggyLayer:_log_status(view)
   if not view then
     return
@@ -137,6 +150,9 @@ function EggyLayer:_log_status(view)
   )
 end
 
+---每帧更新（处理UI、动画和自动运行）
+---@param self EggyLayer
+---@param dt number 增量时间（秒）
 function EggyLayer:tick(dt)
   if not self.game then
     return
@@ -232,18 +248,30 @@ function EggyLayer:tick(dt)
   self:_log_status(self:build_view())
 end
 
+---选择市场选项
+---@param self EggyLayer
+---@param option_id string|number 选项ID
 function EggyLayer:select_market_option(option_id)
   EggyLayerMarket.select_market_option(self, option_id)
 end
 
+---打开市场面板
+---@param self EggyLayer
+---@param pending table? 待选项
+---@return boolean? 打开是否成功
 function EggyLayer:_open_market_panel(pending)
   return EggyLayerMarket.open_market_panel(self, pending)
 end
 
+---关闭市场面板
+---@param self EggyLayer
 function EggyLayer:_close_market_panel()
   EggyLayerMarket.close_market_panel(self)
 end
 
+---打开选择项对话框
+---@param self EggyLayer
+---@param pending table? 待选项
 function EggyLayer:_open_choice_modal(pending)
   if not pending then
     return
@@ -303,6 +331,8 @@ function EggyLayer:_open_choice_modal(pending)
   self.pending_choice_id = pending.id
 end
 
+---关闭选择项对话框
+---@param self EggyLayer
 function EggyLayer:_close_choice_modal()
   if self.ui.choice_active then
     self.ui:set_visible(self.ui.choice.root, false)
@@ -315,6 +345,9 @@ function EggyLayer:_close_choice_modal()
   self.pending_choice_selected_option_id = nil
 end
 
+---构建UI呈现视图
+---@param self EggyLayer
+---@return table UI视图表
 function EggyLayer:build_view()
   local store_state = self.game.store.state
   local winner_name = self.game.winner_names
@@ -329,6 +362,8 @@ function EggyLayer:build_view()
   })
 end
 
+---刷新UI视图（同步面板和棋盘）
+---@param self EggyLayer
 function EggyLayer:refresh_view()
   local view = self:build_view()
   self:refresh_panel(view)
@@ -365,14 +400,23 @@ function EggyLayer:refresh_view()
   end
 end
 
+---刷新面板UI
+---@param self EggyLayer
+---@param view table UI视图
 function EggyLayer:refresh_panel(view)
   EggyLayerUI.refresh_panel(self, view)
 end
 
+---刷新物品栏
+---@param self EggyLayer
+---@param view table UI视图
 function EggyLayer:refresh_item_slots(view)
   EggyLayerUI.refresh_item_slots(self, view)
 end
 
+---刷新棋盘UI（地块所有者、等级等）
+---@param self EggyLayer
+---@param view table UI视图
 function EggyLayer:refresh_board(view)
   EggyLayerBoard.refresh_board(self, view, log_once, build_log_prefix)
 end
@@ -381,10 +425,16 @@ function EggyLayer:on_tile_upgraded(tile_id, level)
   EggyLayerBoard.on_tile_upgraded(self, tile_id, level)
 end
 
+---处理地块所有者变化
+---@param self EggyLayer
+---@param tile_id string|number 地块ID
+---@param owner_id number? 新所有者ID
 function EggyLayer:on_tile_owner_changed(tile_id, owner_id)
   EggyLayerBoard.on_tile_owner_changed(self, tile_id, owner_id)
 end
 
+---推进游戏回合
+---@param self EggyLayer
 function EggyLayer:step_turn()
   if not self.game or self.game.finished then
     return
@@ -393,6 +443,9 @@ function EggyLayer:step_turn()
   self.game:advance_turn()
 end
 
+---分发UI行动到游戏
+---@param self EggyLayer
+---@param action table 行动对象
 function EggyLayer:dispatch_action(action)
   if not action then
     return

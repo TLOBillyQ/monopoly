@@ -1,6 +1,8 @@
 local Inventory = require("src.core.inventory")
 local Tables = require("src.util.tables")
 
+---@class Player
+---玩家对象，管理玩家资产、状态和物品
 local Player = {}
 Player.__index = Player
 
@@ -13,12 +15,19 @@ local function normalize_currency(currency)
   return currency
 end
 
+---内部方法：更新玩家状态到存储
+---@param self Player
+---@param path table 状态路径
+---@param value any 值
 function Player:_store_set(path, value)
   if self._store and self._store.set then
     self._store:set(path, value)
   end
 end
 
+---创建新玩家实例
+---@param attrs table 玩家属性表（id/name/role_id/constants等）
+---@return Player 新玩家对象
 function Player.new(attrs)
   attrs = attrs or {}
   local constants = attrs.constants
@@ -73,6 +82,10 @@ function Player.new(attrs)
   return setmetatable(p, Player)
 end
 
+---获取玩家指定币种的余额
+---@param self Player
+---@param currency string? 币种名称（默认"金币"）
+---@return number 余额
 function Player:balance(currency)
   local key = normalize_currency(currency)
   if key == "金币" then
@@ -81,6 +94,11 @@ function Player:balance(currency)
   return self.balances[key] or 0
 end
 
+---扣除玩家指定币种的余额
+---@param self Player
+---@param currency string? 币种名称
+---@param amount number 扣除金额
+---@return number 扣除后的余额
 function Player:deduct_balance(currency, amount)
   local key = normalize_currency(currency)
   if key == "金币" then
@@ -92,26 +110,44 @@ function Player:deduct_balance(currency, amount)
   return next_value
 end
 
+---增加玩家现金
+---@param self Player
+---@param amount number 增加金额
 function Player:add_cash(amount)
   self.cash = self.cash + amount
   self:_store_set({ "players", self.id, "cash" }, self.cash)
 end
 
+---设置玩家现金（绝对值）
+---@param self Player
+---@param amount number 现金数量
 function Player:set_cash(amount)
   self.cash = amount
   self:_store_set({ "players", self.id, "cash" }, self.cash)
 end
 
+---扣除玩家现金
+---@param self Player
+---@param amount number 扣除金额
+---@return number 扣除后的现金
 function Player:deduct_cash(amount)
   self.cash = self.cash - amount
   self:_store_set({ "players", self.id, "cash" }, self.cash)
   return self.cash
 end
 
+---检查玩家是否拥有特定神力
+---@param self Player
+---@param name string 神力名称
+---@return boolean 是否拥有该神力
 function Player:has_deity(name)
   return self.status.deity ~= nil and self.status.deity.type == name and self.status.deity.remaining > 0
 end
 
+---设置或清除玩家的神力状态
+---@param self Player
+---@param name string? 神力名称，nil表示清除
+---@param duration number? 持续回合数
 function Player:set_deity(name, duration)
   if name == nil then
     self.status.deity = nil
@@ -122,6 +158,8 @@ function Player:set_deity(name, duration)
   self:_store_set({ "players", self.id, "status", "deity" }, deep_copy(self.status.deity))
 end
 
+---减少神力的剩余回合数
+---@param self Player
 function Player:tick_deity()
   local deity = self.status.deity
   if deity then
@@ -135,6 +173,8 @@ function Player:tick_deity()
   end
 end
 
+---清除玩家的临时标志位（用于回合开始）
+---@param self Player
 function Player:clear_temporal_flags()
   self.status.pending_dice_multiplier = 1
   self.status.pending_free_rent = false
@@ -145,6 +185,9 @@ function Player:clear_temporal_flags()
   end
 end
 
+---快速检查玩家是否拥有天使神力
+---@param self Player
+---@return boolean 是否有天使神力
 function Player:has_angel()
   return self:has_deity("angel")
 end

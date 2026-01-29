@@ -5,6 +5,8 @@ local gameplay_constants = require("src.gameplay.constants")
 local Tile = require("src.core.tile")
 local Pricing = require("src.gameplay.land_pricing")
 
+---@class Game
+---游戏主协调类，管理所有游戏逻辑、状态、玩家和棋盘
 local Game = {}
 Game.__index = Game
 
@@ -18,6 +20,10 @@ local function store_value(v)
   return v
 end
 
+---计算玩家总资产（现金+地产评估价值）
+---@param game Game
+---@param player Player
+---@return number 总资产
 local function total_assets(game, player)
   local total = player.cash or 0
   for tile_id in pairs(player.properties or {}) do
@@ -34,6 +40,9 @@ local function total_assets(game, player)
   return total
 end
 
+---从玩家列表生成胜者名字（用中文分号连接）
+---@param list Player[]
+---@return string 名字字符串
 local function winner_names(list)
   local names = {}
   for _, player in ipairs(list or {}) do
@@ -42,6 +51,11 @@ local function winner_names(list)
   return table.concat(names, "、")
 end
 
+---更新游戏胜者信息
+---@param game Game
+---@param winners Player[] 胜者列表
+---@param message string? 事件日志消息
+---@return boolean 总是返回true
 local function apply_winners(game, winners, message)
   game.winners = winners
   if #winners == 1 then
@@ -66,11 +80,18 @@ local function apply_winners(game, winners, message)
   return true
 end
 
+---创建新游戏实例
+---@param opts table 配置选项表（players/ai/seed等）
+---@return Game 新游戏实例
 function Game.new(opts)
   return CompositionRoot.assemble(opts, Game)
 end
 
 
+---内部方法：将值持久化到状态树
+---@param self Game
+---@param path table 状态路径数组
+---@param value any 要存储的值
 function Game:_store_set(path, value)
   if self.store then
     self.store:set(path, store_value(value))
@@ -78,24 +99,42 @@ function Game:_store_set(path, value)
 end
 
 
+---设置玩家状态标志
+---@param self Game
+---@param player Player 目标玩家
+---@param key string 状态键名（如"stay_turns"、"deity"等）
+---@param value any 状态值
 function Game:set_player_status(player, key, value)
   player.status[key] = value
   self:_store_set({ "players", player.id, "status", key }, value)
 end
 
 
+---设置玩家座位ID
+---@param self Game
+---@param player Player
+---@param seat_id number 座位ID
 function Game:set_player_seat(player, seat_id)
   player.seat_id = seat_id
   self:_store_set({ "players", player.id, "seat_id" }, seat_id)
 end
 
 
+---设置玩家是否出局
+---@param self Game
+---@param player Player
+---@param eliminated boolean 是否出局
 function Game:set_player_eliminated(player, eliminated)
   player.eliminated = eliminated == true
   self:_store_set({ "players", player.id, "eliminated" }, player.eliminated)
 end
 
 
+---更新玩家地产所有权
+---@param self Game
+---@param player Player
+---@param tile_id string|number 地块ID
+---@param owned boolean 是否拥有
 function Game:set_player_property(player, tile_id, owned)
   if owned then
     player.properties[tile_id] = true
@@ -110,6 +149,9 @@ function Game:set_player_property(player, tile_id, owned)
 end
 
 
+---同步玩家背包到状态树
+---@param self Game
+---@param player Player
 function Game:sync_player_inventory(player)
   if player.inventory then
     self:_store_set({ "players", player.id, "inventory" }, CompositionRoot.snapshot_inventory(player.inventory))
@@ -117,6 +159,10 @@ function Game:sync_player_inventory(player)
 end
 
 
+---更新地块状态（仅限地产类地块）
+---@param self Game
+---@param tile Tile 地块对象
+---@param updates table 更新字段表（如{level=1, owner_id=2}）
 function Game:update_tile(tile, updates)
   if not (tile and tile.type == "land" and updates) then
     return
@@ -127,6 +173,10 @@ function Game:update_tile(tile, updates)
 end
 
 
+---将动画负载加入队列，生成序列号
+---@param self Game
+---@param payload table 动画负载
+---@return table? 带seq字段的负载，或nil
 function Game:queue_action_anim(payload)
   if not (payload and self.store) then
     return nil
@@ -139,6 +189,10 @@ function Game:queue_action_anim(payload)
 end
 
 
+---设置地块所有者，并通知UI
+---@param self Game
+---@param tile Tile 地块对象
+---@param owner_id number? 所有者ID，nil表示无主
 function Game:set_tile_owner(tile, owner_id)
   if not (tile and tile.type == "land") then
     return
@@ -155,11 +209,18 @@ function Game:set_tile_owner(tile, owner_id)
 end
 
 
+---设置地块等级
+---@param self Game
+---@param tile Tile 地块对象
+---@param level number 等级
 function Game:set_tile_level(tile, level)
   self:update_tile(tile, { level = level })
 end
 
 
+---重置地块（清除所有者和等级）
+---@param self Game
+---@param tile Tile 地块对象
 function Game:reset_tile(tile)
   if not (tile and tile.type == "land") then
     return
@@ -173,6 +234,9 @@ function Game:reset_tile(tile)
 end
 
 
+---获取所有存活的玩家
+---@param self Game
+---@return Player[] 存活玩家列表
 function Game:alive_players()
   local alive = {}
   for _, p in ipairs(self.players) do
@@ -183,11 +247,16 @@ function Game:alive_players()
   return alive
 end
 
+---获取当前轮次的活跃玩家
+---@param self Game
+---@return Player 当前玩家对象
 function Game:current_player()
   local idx = self.store:get({ "turn", "current_player_index" }) or 1
   return self.players[idx]
 end
 
+---重建占位表（根据当前玩家位置）
+---@param self Game
 function Game:rebuild()
   self.occupants = {}
   for _, p in ipairs(self.players) do
@@ -199,6 +268,10 @@ function Game:rebuild()
   end
 end
 
+---更新玩家位置，维护占位表
+---@param self Game
+---@param player Player 玩家对象
+---@param new_index number 新位置索引
 function Game:update_player_position(player, new_index)
   for _, list in pairs(self.occupants) do
     for i = #list, 1, -1 do
@@ -214,6 +287,9 @@ function Game:update_player_position(player, new_index)
 end
 
 
+---检查游戏是否已结束（根据存活人数或时间限制）
+---@param self Game
+---@return boolean 游戏是否结束
 function Game:check_victory()
   if self.finished then
     return true
@@ -249,6 +325,8 @@ function Game:check_victory()
   return false
 end
 
+---推进回合（运行回合管理器）
+---@param self Game
 function Game:advance_turn()
   if self.finished then
     return
@@ -259,6 +337,9 @@ function Game:advance_turn()
   self:check_victory()
 end
 
+---分发玩家行动到回合管理器
+---@param self Game
+---@param action table 行动对象
 function Game:dispatch_action(action)
   if self.finished then
     return
@@ -269,6 +350,11 @@ function Game:dispatch_action(action)
   self:check_victory()
 end
 
+---获取特定服务实例
+---@param self Game
+---@param key string 服务键（如"movement"、"market"等）
+---@param context table? 上下文（优先级高于全局services）
+---@return any 服务对象或nil
 function Game:get_service(key, context)
   if context and context.services and context.services[key] then
     return context.services[key]
@@ -276,6 +362,10 @@ function Game:get_service(key, context)
   return self.services and self.services[key]
 end
 
+---获取所有服务
+---@param self Game
+---@param context table? 上下文（优先级高于全局services）
+---@return table 服务表
 function Game:get_services(context)
   if context and context.services then
     return context.services

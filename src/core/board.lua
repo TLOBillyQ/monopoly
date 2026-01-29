@@ -1,6 +1,11 @@
+---@class Board
+---棋盘管理类，负责路径、地块和分支的管理
 local Board = {}
 Board.__index = Board
 
+---创建新棋盘实例
+---@param data table 棋盘数据（包含path/tile_lookup/branches/map/overlays）
+---@return Board 新棋盘对象
 function Board.new(data)
   local tile_lookup = data.tile_lookup
   local path = data.path
@@ -21,22 +26,41 @@ function Board.new(data)
   return setmetatable(b, Board)
 end
 
+---获取棋盘长度（地块数）
+---@param self Board
+---@return number 棋盘上的地块总数
 function Board:length()
   return #self.path
 end
 
+---根据地块ID获取其在棋盘路径中的索引
+---@param self Board
+---@param id string|number 地块ID
+---@return number? 索引，1-based；如不存在则返回nil
 function Board:index_of_tile_id(id)
   return self.index_by_id[id]
 end
 
+---根据索引获取地块
+---@param self Board
+---@param index number 地块索引（1-based）
+---@return Tile? 地块对象，或nil
 function Board:get_tile(index)
   return self.path[index]
 end
 
+---根据ID获取地块
+---@param self Board
+---@param id string|number 地块ID
+---@return Tile? 地块对象，或nil
 function Board:get_tile_by_id(id)
   return self.tile_lookup[id]
 end
 
+---查找第一个指定类型的地块
+---@param self Board
+---@param tile_type string 地块类型（如"land"）
+---@return number?, Tile? 索引和地块对象；如不存在返回nil, nil
 function Board:find_first_by_type(tile_type)
   for idx, tile in ipairs(self.path) do
     if tile.type == tile_type then
@@ -46,46 +70,78 @@ function Board:find_first_by_type(tile_type)
   return nil, nil
 end
 
+---获取棋盘覆盖物表（包含roadblocks和mines）
+---@param self Board
+---@return table 覆盖物表
 function Board:get_overlays()
   return self.overlays
 end
 
+---在指定位置放置路障
+---@param self Board
+---@param index number 位置索引
 function Board:place_roadblock(index)
   self.overlays.roadblocks = self.overlays.roadblocks or {}
   self.overlays.roadblocks[index] = true
 end
 
+---检查指定位置是否有路障
+---@param self Board
+---@param index number 位置索引
+---@return boolean 是否有路障
 function Board:has_roadblock(index)
   return self.overlays.roadblocks and self.overlays.roadblocks[index] ~= nil
 end
 
+---清除指定位置的路障
+---@param self Board
+---@param index number 位置索引
 function Board:clear_roadblock(index)
   if self.overlays.roadblocks then
     self.overlays.roadblocks[index] = nil
   end
 end
 
+---在指定位置放置地雷
+---@param self Board
+---@param index number 位置索引
 function Board:place_mine(index)
   self.overlays.mines = self.overlays.mines or {}
   self.overlays.mines[index] = true
 end
 
+---检查指定位置是否有地雷
+---@param self Board
+---@param index number 位置索引
+---@return boolean 是否有地雷
 function Board:has_mine(index)
   return self.overlays.mines and self.overlays.mines[index] ~= nil
 end
 
+---清除指定位置的地雷
+---@param self Board
+---@param index number 位置索引
 function Board:clear_mine(index)
   if self.overlays.mines then
     self.overlays.mines[index] = nil
   end
 end
 
+---清除指定位置的所有覆盖物（路障和地雷）
+---@param self Board
+---@param index number 位置索引
 function Board:clear_all(index)
   self:clear_roadblock(index)
   self:clear_mine(index)
 end
 
 
+---按步数推进棋盘位置（考虑分支和绕圈）
+---@param self Board
+---@param index number 当前位置索引
+---@param steps number 要移动的步数
+---@param branch_parity number? 分支奇偶性（用于分支选择）
+---@return number, number 新位置索引和绕圈次数
 function Board:advance(index, steps, branch_parity)
   local length = self:length()
   if length == 0 then
@@ -112,21 +168,12 @@ function Board:advance(index, steps, branch_parity)
   return current, passed_start
 end
 
-local DIR_ORDER = { "up", "right", "down", "left" }
-local OPPOSITE = { up = "down", down = "up", left = "right", right = "left" }
-
-local function pick_any_dir(neigh, blocked_dir)
-  for _, d in ipairs(DIR_ORDER) do
-    if (not blocked_dir) or d ~= blocked_dir then
-      local nid = neigh[d]
-      if nid then
-        return d, nid
-      end
-    end
-  end
-  return nil, nil
-end
-
+---根据朝向向前移动一步（用于精确导航）
+---@param self Board
+---@param current_index number 当前位置索引
+---@param facing string? 面向方向（如"up"、"right"等）
+---@param parity number? 奇偶性用于市场出口
+---@return number, number, string 新位置、绕圈次数、新方向
 function Board:step_forward_by_facing(current_index, facing, parity)
   local map = self.map
 
@@ -192,6 +239,12 @@ function Board:step_forward_by_facing(current_index, facing, parity)
   return next_index, passed_start, step_dir
 end
 
+---根据朝向向后移动一步
+---@param self Board
+---@param current_index number 当前位置索引
+---@param facing string? 面向方向
+---@param _parity number? 奇偶性（后退时不使用）
+---@return number, number, string 新位置、绕圈次数、新方向
 function Board:step_backward_by_facing(current_index, facing, _parity)
   local map = self.map
 

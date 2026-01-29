@@ -372,9 +372,9 @@ local function test_chance_is_mandatory_effect_entrypoint()
   -- We verify execution by checking if RNG is used to pick a card
   local called = { rng = 0 }
   g.rng = {
-    next_float = function()
+    next_int = function()
       called.rng = called.rng + 1
-      return 0.1 -- Pick first card usually
+      return 0 -- Pick first card usually
     end,
     -- chance.resolve might use rng for effects too
     random = function() return 1 end, 

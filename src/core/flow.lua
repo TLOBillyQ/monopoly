@@ -1,7 +1,11 @@
+---@class Flow
+---状态机类，管理游戏状态流转
 local Flow = {}
 Flow.__index = Flow
 
-
+---创建新状态机实例
+---@param opts table 选项表（states/start/args）
+---@return Flow 新状态机对象
 function Flow.new(opts)
   local self = {
     states = opts.states or {},
@@ -12,6 +16,9 @@ function Flow.new(opts)
   return setmetatable(self, Flow)
 end
 
+---执行一步状态转移
+---@param self Flow
+---@return string? 下一个状态名，nil表示完成
 function Flow:step()
   if not self.current then
     return nil

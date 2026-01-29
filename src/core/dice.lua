@@ -1,7 +1,14 @@
+---@class Dice
+---骰子摇摇类，用于生成随机摇骰结果
 local Dice = {}
 Dice.__index = Dice
 
-
+---掷骰子
+---@param count number 骰子数量
+---@param override_values number[]? 覆盖值列表（用于测试）
+---@param rng RNG 随机数生成器
+---@return number[] 每个骰子的结果
+---@return number 总和
 function Dice.roll(count, override_values, rng)
   local results = {}
   local total = 0

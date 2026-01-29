@@ -1,40 +1,34 @@
+---@class RNG
+---随机数生成器（使用GameAPI.random_int）
 local RNG = {}
 RNG.__index = RNG
 
-
-local MOD = 0x100000000
-local MULT = 1664525
-local INC = 1013904223
-
+---创建新随机数生成器
+---@param seed number? 随机种子（保留参数以兼容现有代码）
+---@param state number? 初始状态（保留参数以兼容现有代码）
+---@return RNG 新RNG对象
 function RNG.new(seed, state)
-  seed = seed or 1
   local self = {
-    seed = seed,
-    state = state or seed,
+    seed = seed or 1,
+    state = state or (seed or 1),
   }
   return setmetatable(self, RNG)
 end
 
-function RNG:next_raw()
-  self.state = (MULT * self.state + INC) % MOD
-  if self._store and self._store.set then
-    self._store:set({ "rng" }, self:snapshot())
-  end
-  return self.state
-end
-
-function RNG:next_float()
-  return self:next_raw() / MOD
-end
-
+---生成在[min, max]范围内的整数
+---@param self RNG
+---@param min number? 最小值（默认0）
+---@param max number? 最大值（默认1）
+---@return number 随机整数
 function RNG:next_int(min, max)
   min = min or 0
   max = max or 1
-  local span = max - min + 1
-  local v = self:next_raw() % span
-  return min + v
+  return GameAPI.random_int(min, max)
 end
 
+---获取RNG的快照（用于序列化）
+---@param self RNG
+---@return table 包含seed和state的快照表
 function RNG:snapshot()
   return { seed = self.seed, state = self.state }
 end
