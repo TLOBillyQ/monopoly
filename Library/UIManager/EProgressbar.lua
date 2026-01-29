@@ -8,7 +8,7 @@
 ---@field protected __protected_max_value integer 最大进度值
 ---@field protected __protected_min_value integer 最小进度值
 ---@field protected __protected_transition_time Fixed 受保护的样式变化时间
-local EProgressbar = UIManager.Class("UIManager.EProgressbar", UIManager.ENode)
+local EProgressbar = Class("UIManager.EProgressbar", UIManager.ENode)
 local allroles = UIManager.allroles
 
 ---@param _node ENode
@@ -16,6 +16,7 @@ local allroles = UIManager.allroles
 function EProgressbar:init(_node, _name)
     UIManager.ENode.init(self, _node, _name)
     self.__protected_text = ""
+    self.__protected_transition_time = 0.0
 end
 
 function EProgressbar:__get_value()

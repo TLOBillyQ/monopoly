@@ -1,19 +1,12 @@
----@class UIManager.Listener : ClassUtil
----@field id integer
+---@class UIManager.Listener : Class
 ---@field _event string 事件名称
 ---@field _callback function 回调函数
 ---@field _node_id ENode 节点ID
 ---@field _trigger integer 触发器
-local Listener = UIManager.Class("UIManager.Listener")
-local id = 1
-local ListenerMapping = {}
+local Listener = Class("UIManager.Listener")
 local event_handlers = UIManager.event_handlers
 
-function Listener:init()
-    self.id = id
-    ListenerMapping[id] = self
-    id = id + 1
-end
+function Listener:init() end
 
 function Listener:destroy()
     -- 获取对应事件的处理器
@@ -50,13 +43,6 @@ function Listener:destroy()
             end
         end
     end
-    ListenerMapping[self.id] = nil
-end
-
----@param _id integer
----@return UIManager.Listener
-function Listener.query(_id)
-    return ListenerMapping[_id]
 end
 
 return Listener

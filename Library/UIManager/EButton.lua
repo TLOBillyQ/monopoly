@@ -10,8 +10,7 @@
 ---@field protected __protected_font_size Fixed 受保护的字体大小
 ---@field protected __protected_normal_image ImageKey 常态图片
 ---@field protected __protected_pressed_image ImageKey 按下图片
----@field wait fun(self: UIManager.EButton, _interval: integer): UIManager.Promise<UIManager.EButton>
-local EButton = UIManager.Class("UIManager.EButton", UIManager.ENode)
+local EButton = Class("UIManager.EButton", UIManager.ENode)
 local allroles = UIManager.allroles
 
 ---@param _node ENode

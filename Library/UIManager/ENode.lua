@@ -1,9 +1,9 @@
----@class UIManager.ENode : ClassUtil
+---@class UIManager.ENode : Class
 ---@field __name "UIManager.ENode"
 ---@field id ENode ID值 - 只读
 ---@field name string UI名称 - 只读
 ---@field parent UIManager.ENode? 父亲节点 - 只读
----@field children UIManager.ArrayReadOnly<UIManager.ENode> 子节点列表 - 只读
+---@field children ArrayReadOnly<UIManager.ENode> 子节点列表 - 只读
 ---@field visible boolean 是否可见
 ---@field disabled boolean 是否禁用
 ---@field custom_data table 自定义数据
@@ -11,12 +11,13 @@
 ---@field protected __protected_id ENode 受保护的id值
 ---@field protected __protected_name string 受保护的UI名称
 ---@field protected __protected_parent UIManager.ENode 受保护的父亲节点
----@field protected __protected_children UIManager.Array<UIManager.ENode> 受保护的子节点列表
+---@field protected __protected_children Array<UIManager.ENode> 受保护的子节点列表
 ---@field protected __protected_visible boolean 受保护的是否可见
 ---@field protected __protected_disabled boolean 受保护的是否禁用
 ---@field protected __protected_custom_data table<RoleID, table> 受保护的自定义数据
 ---@field protected data table 被保护的数据
-local ENode = UIManager.Class("UIManager.ENode")
+---@field new fun(self: UIManager.ENode, _node: ENode, _name: string)
+local ENode = Class("UIManager.ENode")
 local nodes_list = UIManager.nodes_list
 local allroles = UIManager.allroles
 
@@ -31,7 +32,7 @@ function ENode.__custom_index(tbl, key)
             if not data then
                 return client_data[-1][key]
             end
-            if data[key] == nil then
+            if not data[key] then
                 return client_data[-1][key]
             end
             return data[key]
@@ -74,9 +75,9 @@ function ENode:init(_node, _name)
     self.__protected_parent = nil
     self.__protected_id = _node
 
-    local array = UIManager.Array() --[[@as UIManager.Array<UIManager.ENode>]]
+    local array = UIManager.Array:new() --[[@as Array<UIManager.ENode>]]
     self.__protected_children = array
-    self.__protected_read_only_children = UIManager.ArrayReadOnly(array)
+    self.__protected_read_only_children = UIManager.ArrayReadOnly:new(array)
 end
 
 function ENode:__init_children()
@@ -261,17 +262,14 @@ end
 ---@param _callback fun(data: {role: Role, target: UIManager.ENode, listener: UIManager.Listener})
 ---@return UIManager.Listener
 function ENode:listen(_event, _callback)
-    local listener = UIManager.Listener() --[[@as UIManager.Listener]]
-    local has_handler = false
-    if event_handlers[_event] then
-        has_handler = true
-    end
-    local handler = event_handlers[_event] or {}
-    event_handlers[_event] = handler
+    local listener = UIManager.Listener:new()
+    local handler = event_handlers[_event]
     local trigger
+    if not handler then
+        event_handlers[_event] = {}
+        handler = event_handlers[_event]
 
-    ---@param data {eui_node_id: ENode, role: Role}
-    if not has_handler then
+        ---@param data {eui_node_id: ENode, role: Role}
         trigger = LuaAPI.global_register_custom_event(_event, function(_, _, data)
             local handler_data = event_handlers[_event][data.eui_node_id]
             if handler_data and handler_data.callbacks and not handler_data.node._disabled then
@@ -286,15 +284,14 @@ function ENode:listen(_event, _callback)
                 UIManager.client_role = nil
             end
         end)
+        handler.trigger = trigger
     end
-    handler.trigger = trigger
 
     local handler_data = handler[self.__protected_id]
     if not handler_data then
         handler[self.__protected_id] = {
             callbacks = { _callback },
-            node = self,
-            listener_id = listener.id
+            node = self
         }
     else
         table.insert(handler_data.callbacks, _callback)
@@ -306,56 +303,6 @@ function ENode:listen(_event, _callback)
     listener._node_id = self.__protected_id
 
     return listener
-end
-
----@param role Role 触发者
----@param _event_name string 事件名称
----@return UIManager.Promise<{role: Role, node: UIManager.ENodeUnion}>
-function ENode:trigger(role, _event_name)
-    local handler = event_handlers[_event_name]
-    local temp = UIManager.client_role
-    UIManager.client_role = role
-    if handler then
-        local handler_data = handler[self.__protected_id]
-        if handler_data and handler_data.callbacks then
-            for _, callback in ipairs(handler_data.callbacks) do
-                callback({
-                    role = role,
-                    target = handler_data.node,
-                    listener = UIManager.Listener.query(handler_data.listener_id)
-                })
-            end
-            local promise = UIManager.Promise({ role = role, node = handler_data.node })
-            UIManager.client_role = temp
-            return promise
-        end
-    end
-    role.send_ui_custom_event(_event_name, {})
-    local promise = UIManager.Promise({ role = role, node = nil })
-    UIManager.client_role = temp
-    return promise
-end
-
----@generic T
----@param _interval integer 间隔帧数
----@overload fun(self: T, _interval: integer): UIManager.Promise<T>
-function ENode:wait(_interval)
-    local promise = UIManager.Promise(self) --[[@as UIManager.Promise<UIManager.ENode>]]
-    UIManager.set_frame_out(math.max(_interval, 1), function(frameout)
-        promise:_resolve(self)
-    end)
-    return promise
-end
-
----重置动画
-function ENode:reset_animation()
-    if UIManager.client_role then
-        UIManager.client_role.reset_animation(self.__protected_id)
-    else
-        for _, role in ipairs(allroles) do
-            role.reset_animation(self.__protected_id)
-        end
-    end
 end
 
 return ENode

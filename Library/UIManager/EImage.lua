@@ -6,7 +6,7 @@
 ---@field protected __protected_image_color Color 图片颜色
 ---@field protected __protected_image_texture ImageKey 图片预设
 ---@field protected __protected_transition_time Fixed 受保护的样式变化时间
-local EImage = UIManager.Class("UIManager.EImage", UIManager.ENode)
+local EImage = Class("UIManager.EImage", UIManager.ENode)
 local allroles = UIManager.allroles
 
 ---@param _node ENode
@@ -30,7 +30,8 @@ end
 -- 更新图片颜色
 function EImage:__update_image_color()
     if UIManager.client_role then
-        UIManager.client_role.set_image_color(self.__protected_id, self.__protected_image_color, self.__protected_transition_time)
+        UIManager.client_role.set_image_color(self.__protected_id, self.__protected_image_color,
+            self.__protected_transition_time)
     else
         for _, role in ipairs(allroles) do
             role.set_image_color(self.__protected_id, self.__protected_image_color, self.__protected_transition_time)
@@ -50,7 +51,8 @@ end
 -- 更新图片预设
 function EImage:__update_image_texture()
     if UIManager.client_role then
-        UIManager.client_role.set_image_texture_by_key_with_auto_resize(self.__protected_id, self.__protected_image_texture, false)
+        UIManager.client_role.set_image_texture_by_key_with_auto_resize(self.__protected_id,
+            self.__protected_image_texture, false)
     else
         for _, role in ipairs(allroles) do
             role.set_image_texture_by_key_with_auto_resize(self.__protected_id, self.__protected_image_texture, false)
@@ -68,7 +70,8 @@ end
 
 function EImage:reset_size()
     if UIManager.client_role then
-        UIManager.client_role.set_image_texture_by_key_with_auto_resize(self.__protected_id, self.__protected_image_texture, true)
+        UIManager.client_role.set_image_texture_by_key_with_auto_resize(self.__protected_id,
+            self.__protected_image_texture, true)
     else
         for _, role in ipairs(allroles) do
             role.set_image_texture_by_key_with_auto_resize(self.__protected_id, self.__protected_image_texture, true)

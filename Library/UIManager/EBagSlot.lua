@@ -2,8 +2,7 @@
 ---@field __name "UIManager.EBagSlot"
 ---@field related_lifeentity LifeEntity 绑定的LifeEntity
 ---@field protected __protected_related_lifeentity LifeEntity 受保护的绑定的LifeEntity
----@field wait fun(self: UIManager.EBagSlot, _interval: integer): UIManager.Promise<UIManager.EBagSlot>
-local EBagSlot = UIManager.Class("UIManager.EBagSlot", UIManager.ENode)
+local EBagSlot = Class("UIManager.EBagSlot", UIManager.ENode)
 local allroles = UIManager.allroles
 
 ---@param _node ENode
