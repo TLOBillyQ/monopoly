@@ -20,9 +20,9 @@
 ## 进度
 
 
-- [ ] (2026-01-30 00:00Z) 新增事件总线与事件处理器
-- [ ] (2026-01-30 00:00Z) 迁移 `MovementService`、`LandActions`、`MarketService`、`Chance` 的日志为事件
-- [ ] (2026-01-30 00:00Z) 新增事件测试并完成回归验证
+- [x] (2026-01-30 09:09Z) 新增事件总线与事件处理器
+- [x] (2026-01-30 09:09Z) 迁移 `MovementService`、`LandActions`、`MarketService`、`Chance` 的日志为事件
+- [x] (2026-01-30 09:09Z) 新增事件测试并完成回归验证
 
 
 ## 意外与发现
@@ -42,11 +42,23 @@
   理由：迁移成本最低，可逐步演进。
   日期/作者：2026-01-30 / Codex
 
+- 决策：事件处理器在 `EggyLayer:set_game` 时安装，确保拿到 `ui_port`。
+  理由：运行时入口已切换为 `Entry.install`，`Layer` 更接近 UI 端口且便于重开局时复用。
+  日期/作者：2026-01-30 / Codex
+
+- 决策：事件 payload 统一携带 `text` 作为日志文本，处理器仅做输出与 UI 弹窗。
+  理由：改动最小，避免重复拼装字符串并降低迁移风险。
+  日期/作者：2026-01-30 / Codex
+
+- 决策：新增事件类型补充 `movement.steal_interrupt` 与 `market.buy_failed` 等实际日志分支。
+  理由：原日志覆盖到的分支需要完整迁移，保持可观察行为一致。
+  日期/作者：2026-01-30 / Codex
+
 
 ## 结果与复盘
 
 
-尚未实施。
+已完成事件总线与处理器落地，核心服务日志改为事件发射，事件测试与回归测试通过。剩余里程碑 3 与格式统一任务未执行。
 
 
 ## 背景与导读
@@ -66,15 +78,23 @@
 
 先新增事件总线与处理器，再逐步迁移日志。事件命名保持直观，保证能覆盖当前日志的语义。领域服务在关键点调用 `game.events:emit(kind, payload)`。事件处理器订阅这些事件并调用 `logger.event` 或 `ui_port`。在迁移过程中，允许短期内“事件 + 旧日志”并存，但最终要删除旧日志调用，避免重复。
 
-建议事件列表（可按实现调整，但需在文档内明确）：
+建议事件列表（已落地版本）：
 - `movement.moved`：玩家移动结束（payload 包含 player、from、to、steps、landing_tile）。
 - `movement.passed_start`：经过起点（payload 包含 player、count、bonus）。
 - `movement.roadblock_hit`：触发路障（payload 包含 player、tile）。
 - `movement.market_interrupt`：经过黑市中断（payload 包含 player、remaining_steps）。
-- `land.rent_paid`：支付租金（payload 包含 payer、owner、amount、tile）。
+- `movement.steal_interrupt`：经过玩家触发偷窃中断（payload 包含 player、encountered_ids）。
+- `land.rent_skipped_mountain`：深山免租（payload 包含 owner、tile）。
+- `land.strong_card_used`：强征卡购地（payload 包含 player、owner、tile、amount）。
+- `land.free_rent_used`：免租卡触发（payload 包含 player、tile）。
+- `land.rent_paid`：支付租金（payload 包含 player、owner、amount、tile）。
+- `land.rent_bankrupt`：租金不足导致破产（payload 包含 player、owner、amount、tile）。
+- `land.tax_free`：免税卡触发（payload 包含 player）。
 - `land.tax_paid`：支付税款（payload 包含 player、amount）。
-- `land.tile_reset`：地块被清空（payload 包含 tile、reason）。
-- `market.bought`：购买物品/座驾（payload 包含 player、entry、price、currency）。
+- `market.bought_item`：购买道具（payload 包含 player、entry、price、currency）。
+- `market.bought_vehicle`：购买座驾（payload 包含 player、entry、price、currency）。
+- `market.auto_skip`：AI 自动放弃购买（payload 包含 player）。
+- `market.buy_failed`：购买失败弹窗（payload 包含 popup、reason）。
 - `chance.applied`：机会卡效果执行（payload 包含 player、card、effect）。
 
 
@@ -156,3 +176,4 @@
 
 
 改动记录：本计划为首次版本，尚未实施。
+改动记录：完成事件总线、处理器与日志迁移，新增事件测试并通过回归验证。

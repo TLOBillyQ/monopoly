@@ -1,10 +1,15 @@
 local constants = require("Config.Constants")
 local gameplay_constants = require("Manager.GameManager.Constants")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
-local logger = require("Library.Monopoly.Logger")
 
 local MovementService = {}
 local ITEM_IDS = gameplay_constants.item_ids
+
+local function emit_event(game, kind, payload)
+  if game and game.events and game.events.emit then
+    game.events:emit(kind, payload)
+  end
+end
 
 function MovementService.move(game, player, steps, opts)
   opts = opts or {}
@@ -44,7 +49,11 @@ function MovementService.move(game, player, steps, opts)
     if board:has_roadblock(current) then
       board:clear_roadblock(current)
       stopped_on_roadblock = true
-      logger.event(player.name .. " 触发路障，停在 " .. board:get_tile(current).name)
+      emit_event(game, "movement.roadblock_hit", {
+        player = player,
+        tile = board:get_tile(current),
+        text = player.name .. " 触发路障，停在 " .. board:get_tile(current).name,
+      })
       break
     end
 
@@ -59,7 +68,11 @@ function MovementService.move(game, player, steps, opts)
           branch_parity = branch_parity,
           encountered_ids = encountered_step,
         }
-        logger.event(player.name .. " 经过玩家，触发偷窃中断")
+        emit_event(game, "movement.steal_interrupt", {
+          player = player,
+          encountered_ids = encountered_step,
+          text = player.name .. " 经过玩家，触发偷窃中断",
+        })
         break
       end
     end
@@ -73,7 +86,11 @@ function MovementService.move(game, player, steps, opts)
           facing = facing,
           branch_parity = branch_parity,
         }
-        logger.event(player.name .. " 经过黑市，剩余 " .. market_interrupt.remaining_steps .. " 步")
+        emit_event(game, "movement.market_interrupt", {
+          player = player,
+          remaining_steps = market_interrupt.remaining_steps,
+          text = player.name .. " 经过黑市，剩余 " .. market_interrupt.remaining_steps .. " 步",
+        })
         break
       end
     end
@@ -87,12 +104,23 @@ function MovementService.move(game, player, steps, opts)
     end
     return name
   end
-  logger.event(player.name .. " 从 " .. tile_label(start_tile, player.position) .. " 移动到 " .. tile_label(landing_tile, current))
+  emit_event(game, "movement.moved", {
+    player = player,
+    from_tile = start_tile,
+    to_tile = landing_tile,
+    steps = steps,
+    text = player.name .. " 从 " .. tile_label(start_tile, player.position) .. " 移动到 " .. tile_label(landing_tile, current),
+  })
 
   if pass_start > 0 then
     local bonus = pass_start * constants.pass_start_bonus
     player:add_cash(bonus)
-    logger.event(player.name .. " 经过起点，获得 " .. bonus .. " 金币")
+    emit_event(game, "movement.passed_start", {
+      player = player,
+      count = pass_start,
+      bonus = bonus,
+      text = player.name .. " 经过起点，获得 " .. bonus .. " 金币",
+    })
   end
 
   game:update_player_position(player, current)

@@ -7,6 +7,12 @@ local Agent = require("Manager.GameManager.Agent")
 local LandChoiceSpecs = require("Manager.LandManager.Land.LandChoiceSpecs")
 local MarketService = {}
 
+local function emit_event(game, kind, payload)
+  if game and game.events and game.events.emit then
+    game.events:emit(kind, payload)
+  end
+end
+
 local items_by_id = {}
 for _, cfg in ipairs(items_cfg) do
   items_by_id[cfg.id] = cfg
@@ -155,23 +161,47 @@ function MarketService.buy_with_opts(game, player, product_id, opts)
 
   local remaining = remaining_global_limit(game, product_id)
   if remaining ~= nil and remaining <= 0 then
-    return { ok = false, intent = { kind = "push_popup", payload = { title = "黑市", body = player.name .. " 该商品已售罄" } } }
+    emit_event(game, "market.buy_failed", {
+      player = player,
+      entry = entry,
+      reason = "sold_out",
+      popup = { title = "黑市", body = player.name .. " 该商品已售罄" },
+    })
+    return { ok = false }
   end
 
   local price = entry_price(entry)
   local currency = entry_currency(entry)
   if player:balance(currency) < price then
-    return { ok = false, intent = { kind = "push_popup", payload = { title = "黑市", body = player.name .. " 余额不足" } } }
+    emit_event(game, "market.buy_failed", {
+      player = player,
+      entry = entry,
+      reason = "insufficient_balance",
+      popup = { title = "黑市", body = player.name .. " 余额不足" },
+    })
+    return { ok = false }
   end
 
   if entry.kind == "item" then
     if Inventory.is_full(player) then
-      return { ok = false, intent = { kind = "push_popup", payload = { title = "黑市", body = player.name .. " 卡槽已满" } } }
+      emit_event(game, "market.buy_failed", {
+        player = player,
+        entry = entry,
+        reason = "inventory_full",
+        popup = { title = "黑市", body = player.name .. " 卡槽已满" },
+      })
+      return { ok = false }
     end
     player:deduct_balance(currency, price)
     Inventory.give(player, product_id)
     consume_global_limit(game, product_id)
-    logger.event(player.name .. " 在黑市购买 " .. entry_name(entry) .. " 花费 " .. price .. " " .. currency)
+    emit_event(game, "market.bought_item", {
+      player = player,
+      entry = entry,
+      price = price,
+      currency = currency,
+      text = player.name .. " 在黑市购买 " .. entry_name(entry) .. " 花费 " .. price .. " " .. currency,
+    })
     return true
   end
 
@@ -205,13 +235,22 @@ function MarketService.buy_with_opts(game, player, product_id, opts)
     player.seat_id = product_id
   end
   consume_global_limit(game, product_id)
-  logger.event(player.name .. " 在黑市购买座驾 " .. entry_name(entry) .. " 花费 " .. price .. " " .. currency)
+  emit_event(game, "market.bought_vehicle", {
+    player = player,
+    entry = entry,
+    price = price,
+    currency = currency,
+    text = player.name .. " 在黑市购买座驾 " .. entry_name(entry) .. " 花费 " .. price .. " " .. currency,
+  })
   return true
 end
 
 function MarketService.auto_buy(game, player)
   if Agent.is_auto_player(player) then
-    logger.event(player.name .. " (AI) 到达黑市，选择不购买")
+    emit_event(game, "market.auto_skip", {
+      player = player,
+      text = player.name .. " (AI) 到达黑市，选择不购买",
+    })
     return
   end
 

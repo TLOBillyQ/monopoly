@@ -15,7 +15,7 @@ local EffectPipeline = require("Manager.EffectManager.Effect.EffectPipeline")
 local Effect = require("Manager.EffectManager.Effect.Effect")
 local ChoiceService = require("Manager.ChoiceManager.Choice.ChoiceService")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
-local AdapterLayer = require("Manager.System.AdapterLayer")
+local EggyLayer = require("Manager.TurnManager.GUI.Layer")
 local constants = require("Config.Constants")
 local logger = require("Library.Monopoly.Logger")
 
@@ -204,7 +204,7 @@ local function test_move_anim_callback_and_delay()
       cb()
     end,
   }
-  AdapterLayer.step_move_anim(layer, {
+  EggyLayer.step_move_anim(layer, {
     on_move_anim = function(_, anim)
       assert_eq(anim.seq, 1, "anim seq forwarded")
       return 0.2
@@ -312,7 +312,8 @@ end
 local function test_popup_timeout_auto_confirm()
   local g = new_game()
   local layer = {}
-  AdapterLayer.attach(layer, { game_factory = function() return g end })
+  layer.ui_modal_elapsed = 0
+  layer.ui_modal_ref = nil
   local timeout = constants.action_timeout_seconds or 0
   if timeout <= 0 then
     return
@@ -339,9 +340,9 @@ local function test_popup_timeout_auto_confirm()
       l.modal.active:confirm()
     end,
   }
-  AdapterLayer.step_modal_timeout(layer, near_timeout, timeout_opts)
+  EggyLayer.step_modal_timeout(layer, near_timeout, timeout_opts)
   assert_eq(popup.confirm_called, 0, "popup should not auto confirm before timeout")
-  AdapterLayer.step_modal_timeout(layer, near_timeout + 1, timeout_opts)
+  EggyLayer.step_modal_timeout(layer, near_timeout + 1, timeout_opts)
   assert_eq(popup.confirm_called, 1, "popup should auto confirm after timeout")
 end
 

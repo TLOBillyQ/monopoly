@@ -15,8 +15,8 @@
 ## 进度
 
 
-- [ ] (2026-01-30 00:00Z) 里程碑 1：拆分 Runtime 与 UI 端口接口层，保留现有行为（见子计划 `pilots/16_monopoly_solid_runtime_plan.md`）
-- [ ] (2026-01-30 00:00Z) 里程碑 2：领域服务事件化，日志与 UI 副作用迁移到事件处理器（见子计划 `pilots/17_monopoly_solid_events_plan.md`）
+- [x] (2026-01-30 08:56Z) 里程碑 1：拆分 Runtime 与 UI 端口接口层，保留现有行为（见子计划 `pilots/16_monopoly_solid_runtime_plan.md`）
+- [x] (2026-01-30 09:09Z) 里程碑 2：领域服务事件化，日志与 UI 副作用迁移到事件处理器（见子计划 `pilots/17_monopoly_solid_events_plan.md`）
 - [ ] (2026-01-30 00:00Z) 里程碑 3：道具 / 机会卡 / 选择处理注册化，新增最小测试（见子计划 `pilots/18_monopoly_solid_registry_plan.md`）
 - [ ] (2026-01-30 00:00Z) 完成回归测试与验收脚本整理
 - [ ] (2026-01-30 00:00Z) 全局格式统一：关键 Lua 类改用 `ClassUtils.Class`，补充精简 EmmyLua 注释（见子计划 `pilots/19_monopoly_classutils_emmylua_plan.md`）
@@ -25,7 +25,8 @@
 ## 意外与发现
 
 
-暂无。实施过程中如发现 UI 端口缺失方法、事件无法覆盖现有日志、或测试无法在本地 Lua 环境运行，需要在此记录，并附上简短证据片段。
+- 观察：回归测试中加载 `Manager.TurnManager.GUI.Layer` 触发 `Globals.Macro` 依赖，导致本地 Lua 缺失 `math.Vector3` 报错。
+  证据：`lua tests/regression.lua` 报错 `Globals/Macro.lua:1: attempt to call field 'Vector3' (a nil value)`。
 
 
 ## 决策日志
@@ -47,11 +48,15 @@
   理由：统一类构造风格，提升可读性与编辑器提示，便于后续维护。
   日期/作者：2026-01-30 / Codex
 
+- 决策：适配层在 `Layer.lua` 内对动画模块使用延迟 `require`。
+  理由：保证回归测试可在缺少引擎数学类型的 Lua 环境中运行。
+  日期/作者：2026-01-30 / Codex
+
 
 ## 结果与复盘
 
 
-尚未实施。本节在完成里程碑或整体完成时补充：完成了什么、仍欠缺什么、与最初目的的差距。
+已完成里程碑 1/2（入口迁移、适配层合并、事件总线与日志迁移）。剩余里程碑 3 与全局格式统一待执行，整体目标尚未达成。
 
 
 ## 背景与导读
@@ -196,3 +201,5 @@
 改动记录：本计划为首次版本，尚未实施。
 改动记录：拆分为总计划 + 三个子计划，里程碑细节迁移到 `pilots/16_*`、`pilots/17_*`、`pilots/18_*`。
 改动记录：新增全局格式统一任务（ClassUtils.Class + EmmyLua 精简注释），并拆分为子计划 `pilots/19_monopoly_classutils_emmylua_plan.md`。
+改动记录：完成里程碑 1 执行与验收，更新进度与测试环境发现。
+改动记录：完成里程碑 2 执行与验收，更新进度与事件化结果。

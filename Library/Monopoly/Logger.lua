@@ -81,6 +81,38 @@ function logger.set_time_formatter(formatter)
   logger.time_formatter = formatter
 end
 
+function logger.configure_game_time(game_api)
+  if not game_api then
+    return
+  end
+  if game_api.get_timestamp then
+    logger.set_timestamp_provider(function()
+      return game_api.get_timestamp()
+    end)
+  end
+
+  local function pad2(value)
+    if value < 10 then
+      return "0" .. tostring(value)
+    end
+    return tostring(value)
+  end
+
+  logger.set_time_formatter(function(timestamp)
+    if timestamp == nil then
+      return "0"
+    end
+    local year = game_api.get_year(timestamp)
+    local month = game_api.get_month(timestamp)
+    local day = game_api.get_day(timestamp)
+    local hour = game_api.get_hour(timestamp)
+    local minute = game_api.get_minute(timestamp)
+    local second = game_api.get_second(timestamp)
+    return tostring(year) .. "-" .. pad2(month) .. "-" .. pad2(day)
+      .. " " .. pad2(hour) .. ":" .. pad2(minute) .. ":" .. pad2(second)
+  end)
+end
+
 function logger.set_file_io_enabled(enabled)
   logger.enable_file_io = enabled == true
 end

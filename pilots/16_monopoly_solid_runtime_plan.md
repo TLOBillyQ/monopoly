@@ -1,39 +1,33 @@
 # 里程碑 1：启动与 UI 适配逻辑落地到具体模块（子计划）
 
-
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
 本计划遵循 `.agent/PLANS.md` 的全部要求，并作为总计划 `pilots/15_monopoly_solid_refactor_plan.md` 的子计划。
 
-
 ## 目的 / 全局视角
-
 
 本里程碑把“Runtime / System / AdapterLayer”这些抽象层拆散到具体行为位置：日志时间格式化放回 `Library/Monopoly/Logger.lua`，GAME_INIT 的 UI 与单位初始化放到 `Manager/TurnManager/GUI/Layer.lua`，帧循环启动也由 `Layer` 负责；`AdapterLayer` 的逻辑并入 `Layer`，不再保留该文件；入口从 `Manager/System/Runtime.lua` 迁移到更具体的 `Manager/GameManager/Entry.lua`。完成后，目录与文件名不再体现这些抽象层级，但对外入口仍能从 `init.lua` 启动游戏。
 
 可观察结果：
+
 1) `init.lua` 改为调用 `Manager/GameManager/Entry.lua` 后，回归测试通过；
 2) `Manager/System/Runtime.lua` 与 `Manager/System/AdapterLayer.lua` 被移除或只剩兼容空壳；
 3) `EggyLayer` 内部仍能创建游戏、响应 UI 事件并推进回合。
 
-
 ## 进度
 
-
-- [ ] (2026-01-30 00:00Z) 建立新的游戏入口（Entry）并替换 `init.lua` 调用点
-- [ ] (2026-01-30 00:00Z) 合并 `AdapterLayer` 逻辑到 `Manager/TurnManager/GUI/Layer.lua`
-- [ ] (2026-01-30 00:00Z) 迁移 `Presenter`、`AutoRunner`、`ECA` 到更具体位置并更新引用
-- [ ] (2026-01-30 00:00Z) 回归验证与最小启动测试
-
+- [x] (2026-01-30 08:56Z) 建立新的游戏入口（Entry）并替换 `init.lua` 调用点
+- [x] (2026-01-30 08:56Z) 合并 `AdapterLayer` 逻辑到 `Manager/TurnManager/GUI/Layer.lua`
+- [x] (2026-01-30 08:56Z) 迁移 `Presenter`、`AutoRunner`、`ECA` 到更具体位置并更新引用
+- [x] (2026-01-30 08:56Z) 调整依赖检查以允许 Entry 作为运行时入口例外
+- [x] (2026-01-30 08:56Z) 回归验证与最小启动测试
 
 ## 意外与发现
 
-
-暂无。若合并 `AdapterLayer` 时发现外部模块依赖其私有字段或函数，需要记录并提供兼容方案（例如在 `Layer` 内保留旧字段名）。
-
+- 观察：回归测试中 `require("Manager.TurnManager.GUI.Layer")` 触发 `Globals/Macro.lua` 依赖，导致本地 Lua 环境缺失 `math.Vector3` 报错。
+  证据：`lua tests/regression.lua` 报错 `Globals/Macro.lua:1: attempt to call field 'Vector3' (a nil value)`。
 
 ## 决策日志
-
 
 - 决策：入口文件改为 `Manager/GameManager/Entry.lua`，`init.lua` 调用该入口。
   理由：入口属于玩法层，不应使用抽象层名称。
@@ -47,15 +41,19 @@
   理由：这些功能分别属于 UI 视图、UI 自动行为与全局事件桥接。
   日期/作者：2026-01-30 / Codex
 
+- 决策：在 `Layer.lua` 内对 `MoveAnim` 与 `ActionAnim` 使用延迟 `require`。
+  理由：测试环境仅需要 `step_*` 方法，不应触发 `Globals.Macro` 对引擎类型的依赖。
+  日期/作者：2026-01-30 / Codex
+
+- 决策：`tests/deps_check.lua` 将 `Manager/GameManager/Entry.lua` 视为运行时入口例外。
+  理由：入口需要依赖 GUI 层，规则上与原 `Runtime.lua` 同类。
+  日期/作者：2026-01-30 / Codex
 
 ## 结果与复盘
 
-
-尚未实施。
-
+已完成入口迁移、适配层合并与模块搬迁，运行时入口改为 `Entry.install()`，回归测试与入口加载测试通过。当前里程碑没有遗留项，后续继续执行事件化与注册表里程碑。
 
 ## 背景与导读
-
 
 目前启动流程集中在 `Manager/System/Runtime.lua`，UI 适配集中在 `Manager/System/AdapterLayer.lua`，并在 `Manager/TurnManager/GUI/Layer.lua` 中被调用。`Presenter` 与 `AutoRunner` 也位于 `Manager/System/`，`ECA` 放在 `Manager/System/ECA.lua`。这些命名属于抽象层次，不符合“按行为落位”的结构原则，因此本里程碑将其迁移到更具体的模块位置。
 
@@ -69,15 +67,11 @@
 `Manager/TurnManager/GUI/Layer.lua`
 `Library/Monopoly/Logger.lua`
 
-
 ## 工作计划
-
 
 先建立新的入口文件，再把 AdapterLayer 的逻辑并入 `Layer`，最后搬迁辅助模块并更新引用。入口文件负责：配置日志时间、创建 Layer、注册 GAME_INIT 处理、启动帧循环。`Layer` 内部要拥有原先 AdapterLayer 的功能（选择超时、动画同步、自动运行、游戏创建等），并确保对外方法名尽量兼容。`Presenter` 与 `AutoRunner` 迁移到 `Manager/TurnManager/GUI/`，`ECA` 迁移到 `Globals/`，以“行为所属位置”为准更新 require。
 
-
 ## 具体步骤
-
 
 所有命令在 `C:\Users\Lzx_8\Desktop\eggitor\1_开发中\大富翁\monopoly` 执行。
 
@@ -108,9 +102,7 @@
 5) 最小启动验证。
    - 新建 `tests/entry_smoke_test.lua`，只验证 `require("Manager.GameManager.Entry")` 可加载，且 `Entry.install` 存在（不实际调用引擎依赖）。
 
-
 ## 验证与验收
-
 
 运行回归测试：
     lua tests/deps_check.lua
@@ -122,15 +114,11 @@
 
 人工验证（可选）：执行入口，观察日志仍能输出回合信息，UI 初始化无报错。
 
-
 ## 可重复性与恢复
-
 
 迁移以文件移动与局部合并为主，可逐步提交。若合并后出现行为差异，优先恢复单个模块并重新对比 AdapterLayer 原逻辑。删除文件前先确保所有 require 都已更新，避免运行时找不到模块。
 
-
 ## 产物与备注
-
 
 预期新增或改动文件：
 `Manager/GameManager/Entry.lua`
@@ -153,9 +141,7 @@
     lua tests/entry_smoke_test.lua
     ok - entry load
 
-
 ## 接口与依赖
-
 
 在 `Manager/GameManager/Entry.lua` 中定义：
     local Entry = {}
@@ -170,6 +156,6 @@
 
 `EggyLayer` 内部方法命名允许调整，但对外公开接口应保持 `new/set_game/new_game/dispatch_action/step_turn` 等不变。
 
-
 改动记录：本计划为首次版本，尚未实施。
 改动记录：按要求移除“System/Runtime/AdapterLayer”抽象命名，改为具体模块落位，并调整步骤与产物清单。
+改动记录：执行里程碑 1，完成入口迁移、适配层合并、依赖检查调整与测试验证，并记录测试环境的 Macro 依赖问题。

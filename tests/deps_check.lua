@@ -11,7 +11,7 @@
 -- Library/Monopoly/**      | → (none)
 --
 -- === 禁止规则 ===
--- 1) Manager/** (非GUI) 禁止依赖 Manager/**/GUI/** 与 Manager/System/Runtime.lua
+-- 1) Manager/** (非GUI) 禁止依赖 Manager/**/GUI/** 与运行时入口文件
 -- 2) services 之间禁止直接 require（应通过 game.services.* 注入）
 -- 3) Manager/** (非GUI) 禁止使用 dofile/loadfile 绕过 require 检查
 
@@ -93,6 +93,7 @@ local function check_file(path, src)
   local is_gameplay = starts_with(path, "Manager/")
     and not is_gui
     and path ~= "Manager/System/Runtime.lua"
+    and path ~= "Manager/GameManager/Entry.lua"
   local is_service = path:match("Manager/.+/.*Service%.lua$") ~= nil
 
   for _, mod in ipairs(extract_requires(src)) do
@@ -100,7 +101,9 @@ local function check_file(path, src)
     local mod_path = mod_to_path(mod)
 
     -- Rule 1: gameplay must not require UI adapters
-    if is_gameplay and (mod_path:match("^Manager/.+/GUI/") or mod_path == "Manager/System/Runtime.lua") then
+    if is_gameplay and (mod_path:match("^Manager/.+/GUI/")
+        or mod_path == "Manager/System/Runtime.lua"
+        or mod_path == "Manager/GameManager/Entry.lua") then
       table.insert(errors, "gameplay must not require GUI/runtime: require(\"" .. mod .. "\")")
     end
 

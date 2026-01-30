@@ -1,4 +1,3 @@
-local AdapterLayer = require("Manager.System.AdapterLayer")
 local UIEventRouter = require("Manager.TurnManager.GUI.UIEventRouter")
 
 local MainController = {}
@@ -85,7 +84,7 @@ function MainController.dispatch_action(layer, action)
       layer.auto_runner:set_enabled(was_auto)
     end
   elseif action.type == "choice_select" or action.type == "choice_cancel" then
-    AdapterLayer.clear_choice(layer, {
+    layer:clear_choice({
       on_close_choice = function(ctx)
         ctx:_close_choice_modal()
       end,

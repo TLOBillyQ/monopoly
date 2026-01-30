@@ -6,6 +6,12 @@ local ChanceEffects = {}
 
 local tile_state = Tile.get_state
 
+local function emit_event(game, kind, payload)
+  if game and game.events and game.events.emit then
+    game.events:emit(kind, payload)
+  end
+end
+
 local function abs_value(value)
   if value < 0 then
     return -value
@@ -65,13 +71,23 @@ handlers.add_cash = function(game, player, card)
       if not p.eliminated then
         local delta = adjust_chance_delta(p, card.amount)
         apply_cash_change(p, delta)
-        logger.event(p.name .. " 获得 " .. delta .. " 金币")
+        emit_event(game, "chance.applied", {
+          player = p,
+          card = card,
+          effect = card.effect,
+          text = p.name .. " 获得 " .. delta .. " 金币",
+        })
       end
     end
   else
     local delta = adjust_chance_delta(player, card.amount)
     apply_cash_change(player, delta)
-    logger.event(player.name .. " 获得 " .. delta .. " 金币")
+    emit_event(game, "chance.applied", {
+      player = player,
+      card = card,
+      effect = card.effect,
+      text = player.name .. " 获得 " .. delta .. " 金币",
+    })
   end
 end
 
@@ -81,13 +97,23 @@ handlers.pay_cash = function(game, player, card)
       if not p.eliminated then
         local delta = adjust_chance_delta(p, -card.amount)
         apply_cash_and_maybe_bankrupt(game, p, delta)
-        logger.event(p.name .. " 支付 " .. abs_value(delta) .. " 金币")
+        emit_event(game, "chance.applied", {
+          player = p,
+          card = card,
+          effect = card.effect,
+          text = p.name .. " 支付 " .. abs_value(delta) .. " 金币",
+        })
       end
     end
   else
     local delta = adjust_chance_delta(player, -card.amount)
     apply_cash_and_maybe_bankrupt(game, player, delta)
-    logger.event(player.name .. " 支付 " .. abs_value(delta) .. " 金币")
+    emit_event(game, "chance.applied", {
+      player = player,
+      card = card,
+      effect = card.effect,
+      text = player.name .. " 支付 " .. abs_value(delta) .. " 金币",
+    })
   end
 end
 
@@ -98,14 +124,24 @@ handlers.percent_pay_cash = function(game, player, card)
         local fee = math.floor(p.cash * (card.percent / 100))
         local delta = adjust_chance_delta(p, -fee)
         apply_cash_and_maybe_bankrupt(game, p, delta)
-        logger.event(p.name .. " 按比例支付 " .. abs_value(delta) .. " 金币")
+        emit_event(game, "chance.applied", {
+          player = p,
+          card = card,
+          effect = card.effect,
+          text = p.name .. " 按比例支付 " .. abs_value(delta) .. " 金币",
+        })
       end
     end
   else
     local fee = math.floor(player.cash * (card.percent / 100))
     local delta = adjust_chance_delta(player, -fee)
     apply_cash_and_maybe_bankrupt(game, player, delta)
-    logger.event(player.name .. " 按比例支付 " .. abs_value(delta) .. " 金币")
+    emit_event(game, "chance.applied", {
+      player = player,
+      card = card,
+      effect = card.effect,
+      text = player.name .. " 按比例支付 " .. abs_value(delta) .. " 金币",
+    })
   end
 end
 
@@ -122,7 +158,12 @@ handlers.pay_others = function(game, player, card)
       end
     end
   end
-  logger.event(player.name .. " 向每位玩家支付 " .. card.amount)
+  emit_event(game, "chance.applied", {
+    player = player,
+    card = card,
+    effect = card.effect,
+    text = player.name .. " 向每位玩家支付 " .. card.amount,
+  })
 end
 
 handlers.collect_from_others = function(game, player, card)
@@ -141,12 +182,22 @@ handlers.collect_from_others = function(game, player, card)
       end
     end
   end
-  logger.event(player.name .. " 收取每位玩家 " .. card.amount)
+  emit_event(game, "chance.applied", {
+    player = player,
+    card = card,
+    effect = card.effect,
+    text = player.name .. " 收取每位玩家 " .. card.amount,
+  })
 end
 
 handlers.set_vehicle = function(game, player, card)
   game:set_player_seat(player, card.vehicle_id)
-  logger.event(player.name .. " 获得座驾 " .. tostring(card.vehicle_id))
+  emit_event(game, "chance.applied", {
+    player = player,
+    card = card,
+    effect = card.effect,
+    text = player.name .. " 获得座驾 " .. tostring(card.vehicle_id),
+  })
 end
 
 handlers.destroy_buildings_on_path = function(game, _, _, context)
@@ -164,7 +215,12 @@ handlers.destroy_buildings_on_path = function(game, _, _, context)
         elseif game and game.store and t and t.id then
           game.store:set({ "board", "tiles", t.id, "level" }, 0)
         end
-        logger.event("台风摧毁 " .. t.name .. " 上的建筑")
+        emit_event(game, "chance.applied", {
+          card = { effect = "destroy_buildings_on_path" },
+          effect = "destroy_buildings_on_path",
+          tile = t,
+          text = "台风摧毁 " .. t.name .. " 上的建筑",
+        })
       end
     end
   end
@@ -183,7 +239,12 @@ handlers.reset_tiles_on_path = function(game, _, _, context)
           end
         end
         game:reset_tile(t)
-        logger.event("强制征地重置 " .. t.name)
+        emit_event(game, "chance.applied", {
+          card = { effect = "reset_tiles_on_path" },
+          effect = "reset_tiles_on_path",
+          tile = t,
+          text = "强制征地重置 " .. t.name,
+        })
       end
     end
   end
@@ -204,7 +265,7 @@ handlers.grant_item = function(game, player, card)
   Inventory.give(player, card.item_id, { game = game })
 end
 
-handlers.discard_items = function(_, player, card)
+handlers.discard_items = function(game, player, card)
   local to_drop = card.count
   if to_drop == 0 then
     to_drop = Inventory.count(player)
@@ -218,9 +279,19 @@ handlers.discard_items = function(_, player, card)
     table.insert(dropped_names, Inventory.item_name(item.id))
   end
   if #dropped_names > 0 then
-    logger.event(player.name .. " 丢弃道具 " .. #dropped_names .. " 张: " .. table.concat(dropped_names, "、"))
+    emit_event(game, "chance.applied", {
+      player = player,
+      card = card,
+      effect = card.effect,
+      text = player.name .. " 丢弃道具 " .. #dropped_names .. " 张: " .. table.concat(dropped_names, "、"),
+    })
   else
-    logger.event(player.name .. " 丢弃道具 0 张")
+    emit_event(game, "chance.applied", {
+      player = player,
+      card = card,
+      effect = card.effect,
+      text = player.name .. " 丢弃道具 0 张",
+    })
   end
 end
 
@@ -230,7 +301,13 @@ handlers.discard_properties = function(game, player, card)
     local tile = game.board:get_tile_by_id(tile_id)
     if tile then
       game:reset_tile(tile)
-      logger.event(player.name .. " 丢失地块 " .. tile.name)
+      emit_event(game, "chance.applied", {
+        player = player,
+        card = card,
+        effect = card.effect,
+        tile = tile,
+        text = player.name .. " 丢失地块 " .. tile.name,
+      })
     end
     game:set_player_property(player, tile_id, false)
     to_drop = to_drop - 1
@@ -294,7 +371,12 @@ end
 function ChanceEffects.resolve(game, player, card, context)
 
   if card.negative and player:has_angel() then
-    logger.event(player.name .. " 有天使附身，负面机会卡无效")
+    emit_event(game, "chance.applied", {
+      player = player,
+      card = card,
+      effect = card.effect,
+      text = player.name .. " 有天使附身，负面机会卡无效",
+    })
     return nil
   end
 
