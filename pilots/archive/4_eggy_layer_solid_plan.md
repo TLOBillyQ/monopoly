@@ -87,7 +87,7 @@ Eggy 适配层的代码集中在 `src/adapters/eggy/`，核心文件包括：`eg
 
 产物包括 EggyLayer 拆分后的新模块文件、运行时入口拆分文件、启动初始化模块整理结果，以及 `docs/adapters_design.md` 的改动。最终应保留一小段 diff 或调用示例，证明 EggyLayer 通过新模块委托仍能运行，例如在 EggyLayer 中保留如下结构：
 
-    local EggyLayerUI = require("Manager.Adapter.Eggy.EggyLayerUI")
+    local EggyLayerUI = require("Manager.TurnManager.GUI.UIState")
     function EggyLayer:refresh_panel(view)
       EggyLayerUI.refresh_panel(self, view)
     end

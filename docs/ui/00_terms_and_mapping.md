@@ -25,7 +25,7 @@
 
 - Lua 直接控制：modal_choice、modal_popup、market_panel 的显示与隐藏由 Lua 调用 `ui:set_visible` 完成。
 - ECA 事件控制：loading_screen 与 base_screen 由 ECA 场景切换。
-  - 事件名：显示加载屏、隐藏加载屏、显示基础屏、隐藏基础屏（`Manager/Adapter/Eggy/EggyRuntime.lua`）。
+  - 事件名：显示加载屏、隐藏加载屏、显示基础屏、隐藏基础屏（`Manager/System/Runtime.lua`）。
   - 事件转发机制：`UIManager.forward_eca_event` -> 自定义事件 `ui_forward` -> ECA 读取 `get_forward_ui_event()`。
   - ECA 侧需按事件名实现具体显隐逻辑。
 

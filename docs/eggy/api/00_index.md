@@ -14,4 +14,4 @@
 - 08_components.md：组件类方法索引（*Comp）。
 - 09_events.md：事件常量与示例。
 
-校验方式：运行 `python scripts/eggy_api_split_check.py`，确保接口数量一致。
+校验方式：运行 `python scripts/eggy_api_split_generate.py`，默认包含校验。

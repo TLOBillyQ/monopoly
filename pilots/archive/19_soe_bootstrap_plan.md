@@ -31,17 +31,17 @@
 
 ## 背景与导读
 
-当前入口 `main.lua` 直接加载 `init.lua` 并调用 `Manager.Adapter.Eggy.EggyRuntime.install()`。初始化逻辑（UIManager.Builder、G 全局表初始化、资源索引）主要在 `Manager/Adapter/Eggy/EggyRuntime.lua` 的 `GAME_INIT` 事件中完成；`Globals/__init.lua` 与 `Manager/__init.lua` 目前只提供占位入口。SecretOfEscaper 的启动链路强调 `init.lua` 负责全局初始化与资源绑定，`main.lua` 只负责延迟启动与场景入口。此次改动需要把初始化职责集中到 `init.lua` 或 `Globals/__init.lua`，保留 EggyRuntime 的运行时职责，但不改变任何游戏行为。
+当前入口 `main.lua` 直接加载 `init.lua` 并调用 `Manager.System.Runtime.install()`。初始化逻辑（UIManager.Builder、G 全局表初始化、资源索引）主要在 `Manager/System/Runtime.lua` 的 `GAME_INIT` 事件中完成；`Globals/__init.lua` 与 `Manager/__init.lua` 目前只提供占位入口。SecretOfEscaper 的启动链路强调 `init.lua` 负责全局初始化与资源绑定，`main.lua` 只负责延迟启动与场景入口。此次改动需要把初始化职责集中到 `init.lua` 或 `Globals/__init.lua`，保留 EggyRuntime 的运行时职责，但不改变任何游戏行为。
 
 ## 工作计划
 
-先从 `Manager/Adapter/Eggy/EggyRuntime.lua` 中整理出“初始化职责清单”（UI 构建、G.refs/G.tiles/G.buildings、UIManager 事件桥接等），区分哪些必须在 `GAME_INIT` 内执行、哪些可提前执行。然后把可提前部分迁移到 `Globals/__init.lua` 或 `init.lua`，并提供明确的初始化入口给 `EggyRuntime.install` 调用。更新 `main.lua` 为 SOE 风格的延迟启动（例如 `LuaAPI.call_delay_frame`），确保运行时环境准备好后再进行初始化与安装。最后清理重复初始化，保证每个全局表只初始化一次。
+先从 `Manager/System/Runtime.lua` 中整理出“初始化职责清单”（UI 构建、G.refs/G.tiles/G.buildings、UIManager 事件桥接等），区分哪些必须在 `GAME_INIT` 内执行、哪些可提前执行。然后把可提前部分迁移到 `Globals/__init.lua` 或 `init.lua`，并提供明确的初始化入口给 `EggyRuntime.install` 调用。更新 `main.lua` 为 SOE 风格的延迟启动（例如 `LuaAPI.call_delay_frame`），确保运行时环境准备好后再进行初始化与安装。最后清理重复初始化，保证每个全局表只初始化一次。
 
 ## 具体步骤
 
 在仓库根目录执行：
 
-  1) 打开 `main.lua`、`init.lua`、`Globals/__init.lua`、`Manager/Adapter/Eggy/EggyRuntime.lua`，列出初始化职责与调用顺序。
+  1) 打开 `main.lua`、`init.lua`、`Globals/__init.lua`、`Manager/System/Runtime.lua`，列出初始化职责与调用顺序。
   2) 将初始化代码抽到 `Globals/__init.lua` 或 `init.lua` 内的显式函数中，并在 `EggyRuntime.install` 中调用该函数。
   3) 调整 `main.lua` 的启动顺序为“延迟 -> init -> install”，避免重复初始化。
   4) 清理旧的初始化分支与重复调用。

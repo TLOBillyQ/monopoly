@@ -72,10 +72,13 @@ Camp|set_camp_score|_score
 
 ## Character
 
+Character|change_custom_model_by_creature|_creature
+Character|change_custom_model_by_creature_key|_creature_key
 Character|fling_rush
 Character|get_ability_point
 Character|get_climb_obstacle
 Character|get_ctrl_role
+Character|get_joystick_direction
 Character|increase_ability_point|_increase
 Character|lift
 Character|reset_target_socket_model|_model_socket
@@ -182,6 +185,7 @@ LifeEntity|ai_command_rush
 LifeEntity|ai_command_start_move|_direction, _t
 LifeEntity|ai_command_start_move_high_priority|_target_position, _duration, _threshold
 LifeEntity|ai_command_stop_move|_duration
+LifeEntity|disable_yaw_speed_limit
 LifeEntity|get_direction
 LifeEntity|get_hard_punch_threshold
 LifeEntity|get_hpbar_scale_x
@@ -205,6 +209,7 @@ LifeEntity|set_direction|_face_dir
 LifeEntity|set_hard_punch_threshold|_punch_threshold
 LifeEntity|set_hpbar_scale|_hpbar_scale_x, _hpbar_scale_y
 LifeEntity|set_mass_bar_visible|_visible
+LifeEntity|set_max_yaw_speed|_limit_yaw_speed
 LifeEntity|set_model_by_character|_character, _include_ugc_model, _inherit_scale, _inherit_capsule_size
 LifeEntity|set_model_by_creature|_creature, _include_custom_model, _inherit_scale, _inherit_capsule_size
 LifeEntity|set_model_by_creature_key|_creature_key, _include_custom_model, _inherit_scale, _inherit_capsule_size
@@ -432,6 +437,8 @@ Unit|get_child_by_name|_name
 Unit|get_child_customtriggerspaces
 Unit|get_child_obstacles
 Unit|get_children
+Unit|get_current_mass
+Unit|get_current_mass_center
 Unit|get_key
 Unit|get_linear_velocity
 Unit|get_local_direction|_direction_type
@@ -467,14 +474,18 @@ Unit|remove_from_parent
 Unit|remove_surround_motor
 Unit|set_acc_motor_init_velocity|_index, _init_vel
 Unit|set_angular_velocity|_vel
+Unit|set_current_mass|_mass
+Unit|set_current_mass_center|_center
 Unit|set_linear_motor_velocity|_index, _vel, _is_local
 Unit|set_linear_velocity|_vel
 Unit|set_mirror_reflect_enabled|_enable
 Unit|set_model_visible|_v
 Unit|set_orientation|_rot
+Unit|set_orientation_smooth|_rot
 Unit|set_paint_area_color|_paint_area, _color
 Unit|set_physics_active|_is_active
 Unit|set_position|_pos
+Unit|set_position_smooth|_pos
 Unit|set_world_scale|_scale
 Unit|show_bubble_msg|_show_msg, _show_time, _max_dis, _offset
 Unit|stop_sound|_lres_id

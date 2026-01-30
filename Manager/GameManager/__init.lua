@@ -1,10 +1,10 @@
-require("Manager.GameManager.Turn.__init")
-require("Manager.GameManager.Item.__init")
-require("Manager.GameManager.Land.__init")
-require("Manager.GameManager.Market.__init")
-require("Manager.GameManager.Choice.__init")
-require("Manager.GameManager.Movement.__init")
-require("Manager.GameManager.Effect.__init")
-require("Manager.GameManager.System.__init")
+require("Manager.TurnManager.Turn.__init")
+require("Manager.ItemManager.Item.__init")
+require("Manager.LandManager.Land.__init")
+require("Manager.MarketManager.Market.__init")
+require("Manager.ChoiceManager.Choice.__init")
+require("Manager.MovementManager.Movement.__init")
+require("Manager.EffectManager.Effect.__init")
+require("Manager.System.__init")
 
 return {}

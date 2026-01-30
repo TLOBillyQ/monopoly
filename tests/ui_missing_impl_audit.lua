@@ -4,8 +4,9 @@ if not ok or type(ui_data) ~= "table" then
   os.exit(1)
 end
 
-local EggyLayerUI = require("Manager.Adapter.Eggy.EggyLayerUI")
-local MarketUI = require("Manager.Adapter.Eggy.MarketUI")
+local EggyLayerUI = require("Manager.TurnManager.GUI.UIState")
+local UIAliases = require("Manager.ChoiceManager.GUI.UIAliases")
+local MarketUI = require("Manager.MarketManager.GUI.MarketUI")
 
 local function add(set, name)
   if name and name ~= "" then
@@ -19,19 +20,12 @@ local function add_list(set, list)
   end
 end
 
-local function build_alias_map()
-  local map = {
-    choice_option_1 = "choice_option1",
-    choice_option_2 = "choice_option2",
-    choice_option_3 = "choice_option3",
-    choice_option_4 = "choice_option4",
-  }
-  for i = 1, 10 do
-    map["market_item_button_" .. tostring(i)] = "market_item_button" .. tostring(i)
-    map["market_item_label_" .. tostring(i)] = "market_item_label_" .. tostring(i)
-    map["market_item_frame_" .. tostring(i)] = "market_item_frame_" .. tostring(i)
+local function resolve_alias(name)
+  local resolved = UIAliases.resolve(name)
+  if resolved ~= name then
+    return resolved
   end
-  return map
+  return nil
 end
 
 local function build_used_nodes()
@@ -73,7 +67,6 @@ local function build_used_nodes()
   return used
 end
 
-local alias_map = build_alias_map()
 local allowed_missing = {
   panel_player_1_land_count = true,
   panel_player_4_land_count = true,
@@ -96,7 +89,7 @@ local blocking_missing = {}
 local alias_hits = {}
 for name in pairs(used) do
   if not ui_names[name] then
-    local alias = alias_map[name]
+    local alias = resolve_alias(name)
     if alias and ui_names[alias] then
       alias_hits[name] = alias
     else

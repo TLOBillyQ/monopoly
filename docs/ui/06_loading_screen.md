@@ -11,5 +11,5 @@ loading_screen（ECanvas）
 ## 显示与隐藏
 
 - ECA 事件名：显示加载屏、隐藏加载屏。
-- 触发点：`Manager/Adapter/Eggy/EggyRuntime.lua` 在 GAME_INIT 时先显示加载屏并隐藏基础屏，
+- 触发点：`Manager/System/Runtime.lua` 在 GAME_INIT 时先显示加载屏并隐藏基础屏，
   然后短延时隐藏加载屏并显示基础屏。

@@ -51,5 +51,5 @@
 
 适配层已对缺失节点增加一次性提示：
 
-- `Manager/Adapter/Eggy/EggyLayerUI.lua`：设置文本/可见性时找不到节点会提示。
-- `Manager/Adapter/Eggy/EggyRuntime.lua`：对未注册的按钮事件绑定缺省提示。
+- `Manager/TurnManager/GUI/UIState.lua`：设置文本/可见性时找不到节点会提示。
+- `Manager/System/Runtime.lua`：对未注册的按钮事件绑定缺省提示。

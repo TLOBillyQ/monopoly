@@ -7,7 +7,7 @@
 
 ## 目的 / 全局视角
 
-目标是把本项目的文件名、目录名、模块名与函数命名风格统一为 SecretOfEscaper 的命名习惯：目录与文件使用帕斯卡命名（如 `TurnManager.lua`、`MarketService.lua`），模块表名使用帕斯卡命名，函数保持小写蛇形或 SOE 现有风格不变。完成后用户能在根目录用 SOE 风格的路径 `Manager/Adapter/Eggy/EggyRuntime.lua`、`Components/Board.lua` 等加载模块，测试脚本与入口 `main.lua` 正常运行，行为不变。
+目标是把本项目的文件名、目录名、模块名与函数命名风格统一为 SecretOfEscaper 的命名习惯：目录与文件使用帕斯卡命名（如 `TurnManager.lua`、`MarketService.lua`），模块表名使用帕斯卡命名，函数保持小写蛇形或 SOE 现有风格不变。完成后用户能在根目录用 SOE 风格的路径 `Manager/System/Runtime.lua`、`Components/Board.lua` 等加载模块，测试脚本与入口 `main.lua` 正常运行，行为不变。
 
 ## 进度
 
@@ -32,7 +32,7 @@
 
 ## 背景与导读
 
-当前项目已迁移为 SOE 风格顶层结构，但子目录与文件仍保留大量小写蛇形命名（例如 `Manager/GameManager/TurnManager.lua`、`Manager/Adapter/Eggy/EggyRuntime.lua`、`Config/LandingEffects.lua`）。SecretOfEscaper 的命名习惯是：目录与文件名使用帕斯卡命名（如 `Manager/MapManager/Lobby/GUI/MainView.lua`），模块表名也是帕斯卡命名，函数多为小写蛇形。要达成统一，需要重命名文件与目录，并同步所有 `require` 路径与文档引用，同时保证行为不变。
+当前项目已迁移为 SOE 风格顶层结构，但子目录与文件仍保留大量小写蛇形命名（例如 `Manager/GameManager/TurnManager.lua`、`Manager/System/Runtime.lua`、`Config/LandingEffects.lua`）。SecretOfEscaper 的命名习惯是：目录与文件名使用帕斯卡命名（如 `Manager/MapManager/Lobby/GUI/MainView.lua`），模块表名也是帕斯卡命名，函数多为小写蛇形。要达成统一，需要重命名文件与目录，并同步所有 `require` 路径与文档引用，同时保证行为不变。
 
 ## 工作计划
 

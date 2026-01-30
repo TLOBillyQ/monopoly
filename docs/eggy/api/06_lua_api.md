@@ -19,7 +19,7 @@ LuaAPI|global_send_custom_event|_event_name, _data
 LuaAPI|global_unregister_custom_event|_id
 LuaAPI|global_unregister_trigger_event|_id
 LuaAPI|has_component|_object, _name
-LuaAPI|log|_content
+LuaAPI|log|_content, _log_level
 LuaAPI|query_ui_node|_name
 LuaAPI|query_ui_nodes|_name_list
 LuaAPI|query_unit|_name

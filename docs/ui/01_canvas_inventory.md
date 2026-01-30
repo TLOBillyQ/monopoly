@@ -97,7 +97,7 @@
      - market_confirm_button
      - market_cancel_button
      - market_item_containter
-   - 显示控制：Lua 自动打开与关闭（`EggyLayerMarket`）。
+   - 显示控制：Lua 自动打开与关闭（`Manager/MarketManager/GUI/UIMarket.lua`）。
 
 4. modal_choice 与 modal_popup（弹窗）
    - 用途：选择弹窗、确认弹窗。
@@ -115,7 +115,7 @@
      - popup_body
      - popup_confirm
      - popup_card
-   - 显示控制：Lua 自动打开与关闭（`EggyLayer`）。
+   - 显示控制：Lua 自动打开与关闭（`Manager/TurnManager/GUI/Layer.lua`）。
 
 ## 层级建议
 

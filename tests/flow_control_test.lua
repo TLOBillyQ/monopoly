@@ -2,9 +2,9 @@
 -- 测试目标：验证状态机恢复、中断处理、嵌套等待等复杂场景
 
 local Flow = require("Components.Flow")
-local Game = require("Manager.GameManager.System.Game")
-local MovementService = require("Manager.GameManager.Movement.MovementService")
-local ChoiceService = require("Manager.GameManager.Choice.ChoiceService")
+local Game = require("Manager.System.Game")
+local MovementService = require("Manager.MovementManager.Movement.MovementService")
+local ChoiceService = require("Manager.ChoiceManager.Choice.ChoiceService")
 
 local TestUtils = require("tests.test_utils")
 local assert_eq = TestUtils.assert_eq

@@ -58,6 +58,7 @@ DisplayComp|add_banned_anim|_anim_name
 DisplayComp|bind_model|_model_id, _socket, _offset, _rot, _scale
 DisplayComp|bind_model_by_unit|_unit, _socket, _offset, _rot
 DisplayComp|clear_banned_anim
+DisplayComp|force_play_animation_by_anim_key|_anim_key, _start_time, _play_time, _play_rate, _is_loop
 DisplayComp|play_body_anim_by_id|_anim_id, _start_time, _play_time, _is_loop
 DisplayComp|play_upper_anim_by_id|_anim_id, _start_time, _play_time, _is_loop
 DisplayComp|remove_banned_anim|_anim_name

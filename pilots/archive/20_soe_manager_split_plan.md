@@ -18,7 +18,7 @@
 ## 意外与发现
 
 - 观察：批量替换 require 时，`Land` 与 `Effect` 的路径出现重复片段（如 `Land.Land.LandPricing`、`Effect.Effect.EffectPipeline`）。
-  证据：`tests/regression.lua` 已修正为 `Manager.GameManager.Effect.EffectPipeline`，并通过回归测试。
+  证据：`tests/regression.lua` 已修正为 `Manager.EffectManager.Effect.EffectPipeline`，并通过回归测试。
 
 ## 决策日志
 
@@ -47,7 +47,7 @@
   Effect/: Effect、EffectPipeline、MineEffect
   System/: BoardFactory、Agent、PlayerEffects、PlayerVehicle、Constants、Game
 
-迁移时优先改目录、后改文件路径，并新增 `Manager/GameManager/__init.lua` 与子域 `__init.lua` 作为统一出口。所有 require 路径统一为新结构（例如 `Manager.GameManager.Item.ItemInventory`），并同步更新测试与文档引用。保持模块表与函数名不变，只移动路径。
+迁移时优先改目录、后改文件路径，并新增 `Manager/GameManager/__init.lua` 与子域 `__init.lua` 作为统一出口。所有 require 路径统一为新结构（例如 `Manager.ItemManager.Item.ItemInventory`），并同步更新测试与文档引用。保持模块表与函数名不变，只移动路径。
 
 ## 具体步骤
 

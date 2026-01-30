@@ -51,7 +51,7 @@ base_screen（ECanvas）
 
 ## 文本刷新来源
 
-- `EggyLayerUI.refresh_panel`：
+- `EggyLayerUI.refresh_panel`（`Manager/TurnManager/GUI/UIState.lua`）：
   - panel_title
   - panel_turn
   - panel_player_1_name
@@ -72,7 +72,7 @@ base_screen（ECanvas）
   - panel_player_4_land_count
   - btn_next
   - btn_auto
-- `EggyLayerUI.refresh_item_slots`：
+- `EggyLayerUI.refresh_item_slots`（`Manager/TurnManager/GUI/UIState.lua`）：
   - item_slot_1（图片纹理/点击开关）
   - item_slot_2（图片纹理/点击开关）
   - item_slot_3（图片纹理/点击开关）

@@ -4,16 +4,16 @@
 --
 -- 层级                     | 允许依赖
 -- -------------------------|-------------------------------------------
--- Manager/Adapter/**       | → Manager/GameManager/**, Components/**, Config/**, Library/Monopoly/**
--- Manager/GameManager/**   | → Manager/GameManager/**, Components/**, Config/**, Library/Monopoly/**
+-- Manager/** (非GUI)       | → Manager/** (非GUI), Components/**, Config/**, Library/Monopoly/**
+-- Manager/**/GUI/**        | → Manager/**, Components/**, Config/**, Library/Monopoly/**
 -- Components/**            | → Config/**, Library/Monopoly/**
 -- Config/**                | → (none)
 -- Library/Monopoly/**      | → (none)
 --
 -- === 禁止规则 ===
--- 1) Manager/GameManager/** 禁止依赖 UI 适配器 (Manager/Adapter/**)
+-- 1) Manager/** (非GUI) 禁止依赖 Manager/**/GUI/** 与 Manager/System/Runtime.lua
 -- 2) services 之间禁止直接 require（应通过 game.services.* 注入）
--- 3) Manager/GameManager/** 禁止使用 dofile/loadfile 绕过 require 检查
+-- 3) Manager/** (非GUI) 禁止使用 dofile/loadfile 绕过 require 检查
 
 local function read_all(path)
   local f = io.open(path, "rb")
@@ -64,7 +64,7 @@ local function extract_requires(src)
   return reqs
 end
 
--- Convert module name (e.g. "Manager.Adapter.Eggy.EggyRuntime") to file path (e.g. "Manager/Adapter/Eggy/EggyRuntime.lua")
+-- Convert module name (e.g. "Manager.System.Runtime") to file path (e.g. "Manager/System/Runtime.lua")
 local function mod_to_path(mod)
   return mod:gsub("%.", "/") .. ".lua"
 end
@@ -89,24 +89,27 @@ end
 local function check_file(path, src)
   local errors = {}
 
-  local is_gameplay = starts_with(path, "Manager/GameManager/")
-  local is_service = path:match("Manager/GameManager/.*Service%.lua$") ~= nil
+  local is_gui = path:match("^Manager/.+/GUI/") ~= nil
+  local is_gameplay = starts_with(path, "Manager/")
+    and not is_gui
+    and path ~= "Manager/System/Runtime.lua"
+  local is_service = path:match("Manager/.+/.*Service%.lua$") ~= nil
 
   for _, mod in ipairs(extract_requires(src)) do
     -- Convert module to path for more reliable prefix checking
     local mod_path = mod_to_path(mod)
 
     -- Rule 1: gameplay must not require UI adapters
-    if is_gameplay and starts_with(mod_path, "Manager/Adapter/") then
-      table.insert(errors, "gameplay must not require UI adapters: require(\"" .. mod .. "\")")
+    if is_gameplay and (mod_path:match("^Manager/.+/GUI/") or mod_path == "Manager/System/Runtime.lua") then
+      table.insert(errors, "gameplay must not require GUI/runtime: require(\"" .. mod .. "\")")
     end
 
     -- Rule 2: services must not require each other directly
-    if is_service and mod_path:match("Manager/GameManager/.*Service%.lua$") then
+    if is_service and mod_path:match("Manager/.+/.*Service%.lua$") then
       table.insert(errors, "services must not require each other directly: require(\"" .. mod .. "\")")
     end
 
-    if path == "Manager/GameManager/Turn/TurnManager.lua" and mod_path:match("^Manager/GameManager/Turn") then
+    if path == "Manager/TurnManager/Turn/TurnManager.lua" and mod_path:match("^Manager/TurnManager/Turn") then
       table.insert(errors, "turn_manager must not require Turn* directly: require(\"" .. mod .. "\")")
     end
   end
@@ -137,26 +140,25 @@ end
 local files = git_ls_files()
 local violations = {}
 local required_phases = {
-  "Manager.GameManager.Turn.TurnStart",
-  "Manager.GameManager.Turn.TurnRoll",
-  "Manager.GameManager.Turn.TurnMove",
-  "Manager.GameManager.Turn.TurnLand",
-  "Manager.GameManager.Turn.TurnPost",
-  "Manager.GameManager.Turn.TurnEnd",
+  "Manager.TurnManager.Turn.TurnStart",
+  "Manager.TurnManager.Turn.TurnRoll",
+  "Manager.TurnManager.Turn.TurnMove",
+  "Manager.TurnManager.Turn.TurnLand",
+  "Manager.TurnManager.Turn.TurnPost",
+  "Manager.TurnManager.Turn.TurnEnd",
 }
 
 for _, mod in ipairs(required_phases) do
-  if not require_in_file("Manager/GameManager/System/CompositionRoot.lua", mod) then
-    table.insert(violations, "Manager/GameManager/System/CompositionRoot.lua: missing required phase module: " .. mod)
+  if not require_in_file("Manager/System/CompositionRoot.lua", mod) then
+    table.insert(violations, "Manager/System/CompositionRoot.lua: missing required phase module: " .. mod)
   end
 end
 
 for _, path in ipairs(files) do
   if is_lua_file(path)
-    and (starts_with(path, "Manager/GameManager/")
-      or starts_with(path, "Manager/Adapter/")
+    and (starts_with(path, "Manager/")
       or starts_with(path, "Config/")
-      or path == "Manager/GameManager/System/Game.lua") then
+      or path == "Manager/System/Game.lua") then
     local src = read_all(path)
     if src then
       local errs = check_file(path, src)

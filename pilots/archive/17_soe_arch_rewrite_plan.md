@@ -40,7 +40,7 @@
 
 ## 背景与导读
 
-当前项目代码主要位于 `src/` 下，入口为根目录 `main.lua`，它直接加载 `Manager.Adapter.Eggy.EggyRuntime`。核心业务逻辑分散在 `src/core/` 与 `src/gameplay/`，配置在 `src/config/`，适配层在 `src/adapters/`，工具在 `src/util/`。SecretOfEscaper 采用顶层分层结构：`Components/`（系统组件）、`Manager/`（管理器与业务流程）、`Config/`（配置）、`Data/`（数据表）、`Globals/`（全局初始化）、`Library/`（通用库）、`init.lua`（初始化）、`main.lua`（入口）。本次重写需要把现有逻辑迁移到类似结构，并确保旧功能不变。
+当前项目代码主要位于 `src/` 下，入口为根目录 `main.lua`，它直接加载 `Manager.System.Runtime`。核心业务逻辑分散在 `src/core/` 与 `src/gameplay/`，配置在 `src/config/`，适配层在 `src/adapters/`，工具在 `src/util/`。SecretOfEscaper 采用顶层分层结构：`Components/`（系统组件）、`Manager/`（管理器与业务流程）、`Config/`（配置）、`Data/`（数据表）、`Globals/`（全局初始化）、`Library/`（通用库）、`init.lua`（初始化）、`main.lua`（入口）。本次重写需要把现有逻辑迁移到类似结构，并确保旧功能不变。
 
 ## 工作计划
 

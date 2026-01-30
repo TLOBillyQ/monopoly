@@ -506,10 +506,18 @@ EVENT.MODIFIER_STACK_COUNT_CHANGE = "MODIFIER_STACK_COUNT_CHANGE"
 ---事件主体 Default 多类型
 ---事件回调参数 play_role Role 触发角色
 ---事件回调参数 montage_id MontageKey 触发的剧情动画
+---事件回调参数 start_time Fixed start_time
+---事件回调参数 play_to_end boolean play_to_end
+---事件回调参数 play_time Fixed play_time
+---事件回调参数 transform_origin table transform_origin
 --[[
 LuaAPI.global_register_trigger_event({EVENT.ON_MONTAGE_BEGIN, }, function(event_name, actor, data)
 	print(data.play_role)
 	print(data.montage_id)
+	print(data.start_time)
+	print(data.play_to_end)
+	print(data.play_time)
+	print(data.transform_origin)
 end)
 --]]
 EVENT.ON_MONTAGE_BEGIN = "ON_MONTAGE_BEGIN"
@@ -635,6 +643,34 @@ LuaAPI.unit_register_trigger_event(_unit, {EVENT.SPEC_LIFEENTITY_INTERACTED, }, 
 end)
 --]]
 EVENT.SPEC_LIFEENTITY_INTERACTED = "SPEC_LIFEENTITY_INTERACTED"
+
+---指定生物被点击开始
+---事件主体 Creature 生物
+---事件回调参数 touch_unit Role 点击玩家
+---事件回调参数 touched_unit Creature 被点击的物体
+---事件回调参数 touch_pos Vector3 点击位置
+--[[
+LuaAPI.unit_register_trigger_event(_unit, {EVENT.SPEC_CREATURE_TOUCH_BEGIN, }, function(event_name, actor, data)
+	print(data.touch_unit)
+	print(data.touched_unit)
+	print(data.touch_pos)
+end)
+--]]
+EVENT.SPEC_CREATURE_TOUCH_BEGIN = "SPEC_CREATURE_TOUCH_BEGIN"
+
+---指定生物被点击结束
+---事件主体 Creature 生物
+---事件回调参数 touch_unit Role 点击玩家
+---事件回调参数 touched_unit Creature 被点击的物体
+---事件回调参数 touch_pos Vector3 松开位置
+--[[
+LuaAPI.unit_register_trigger_event(_unit, {EVENT.SPEC_CREATURE_TOUCH_END, }, function(event_name, actor, data)
+	print(data.touch_unit)
+	print(data.touched_unit)
+	print(data.touch_pos)
+end)
+--]]
+EVENT.SPEC_CREATURE_TOUCH_END = "SPEC_CREATURE_TOUCH_END"
 
 ---指定触发区域销毁
 ---事件主体 CustomTriggerSpace 触发区域
@@ -1433,6 +1469,17 @@ LuaAPI.global_register_trigger_event({EVENT.SPEC_ROLE_PURCHASE_GOODS, _role}, fu
 end)
 --]]
 EVENT.SPEC_ROLE_PURCHASE_GOODS = "SPEC_ROLE_PURCHASE_GOODS"
+
+---指定玩家分享地图
+---事件主体 Global 全局触发器
+---注册参数 _role RoleID 目标玩家
+---事件回调参数 role Role 目标玩家
+--[[
+LuaAPI.global_register_trigger_event({EVENT.SPEC_ROLE_SHARE_MAP, _role}, function(event_name, actor, data)
+	print(data.role)
+end)
+--]]
+EVENT.SPEC_ROLE_SHARE_MAP = "SPEC_ROLE_SHARE_MAP"
 
 ---语音音量变化事件
 ---事件主体 Default 多类型

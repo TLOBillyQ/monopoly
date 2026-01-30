@@ -15,8 +15,8 @@
   - choice_option4（EImage，可点击）
 
 显示与隐藏：
-- 打开：`EggyLayer:_open_choice_modal`
-- 关闭：`EggyLayer:_close_choice_modal`
+- 打开：`EggyLayer:_open_choice_modal`（`Manager/TurnManager/GUI/Layer.lua`）
+- 关闭：`EggyLayer:_close_choice_modal`（`Manager/TurnManager/GUI/Layer.lua`）
 
 点击事件（已注册）：
 - choice_option1 -> `choice_select`
@@ -35,8 +35,8 @@
   - popup_card（EImage）
 
 显示与隐藏：
-- 打开：`EggyLayer:push_popup`
-- 关闭：`EggyLayer:close_popup`
+- 打开：`EggyLayer:push_popup`（`Manager/TurnManager/GUI/Layer.lua`）
+- 关闭：`EggyLayer:close_popup`（`Manager/TurnManager/GUI/Layer.lua`）
 
 点击事件（已注册）：
 - popup_confirm -> 关闭弹窗

@@ -17,14 +17,9 @@ local function load_ui_names()
 end
 
 local function resolve_ui_name(name)
-  local map = {
-    choice_option_1 = "choice_option1",
-    choice_option_2 = "choice_option2",
-    choice_option_3 = "choice_option3",
-    choice_option_4 = "choice_option4",
-  }
-  if map[name] then
-    return map[name]
+  local ok, aliases = pcall(require, "Manager.ChoiceManager.GUI.UIAliases")
+  if ok and aliases and aliases.resolve then
+    return aliases.resolve(name)
   end
   return name
 end
@@ -77,7 +72,7 @@ local function build_required_logical_names()
 end
 
 local function append_market_requirements(required)
-  local ok, market = pcall(require, "Manager.Adapter.Eggy.MarketUI")
+  local ok, market = pcall(require, "Manager.MarketManager.GUI.MarketUI")
   if not ok or type(market) ~= "table" then
     return required
   end
