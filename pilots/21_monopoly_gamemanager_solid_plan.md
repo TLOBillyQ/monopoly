@@ -14,8 +14,8 @@
 
 
 - [x] (2026-01-30 18:45) 盘点 GameManager 目录与主要调用点，整理当前职责与依赖关系。
-- [ ] 拆分/合并方案落地，更新 require 与入口聚合，删除冗余文件。
-- [ ] 依赖检查与回归测试通过，补充结果与复盘。
+- [x] (2026-01-30 19:03) 拆分/合并方案落地，更新 require 与入口聚合，删除冗余文件。
+- [x] (2026-01-30 19:03) 通过验收与入口加载测试，补充结果与复盘。
 
 
 ## 意外与发现
@@ -26,6 +26,8 @@
 观察：`Manager/GameManager/Game.lua` 同时包含状态持久化、棋盘占位维护、胜负判定、UI 端口通知与回合分发等多类职责。证据：文件内既有 `_store_set` 和 `update_player_position`，也有 `check_victory` 与 `set_tile_owner`。
 
 观察：`Manager/GameManager/Agent.lua` 被 TurnManager、Item、Market 等多处引用，但文件内混合了自动选择与目标评估逻辑，后续维护难以定位。证据：`rg "Manager.GameManager.Agent" -n Manager` 命中 Turn/Item/Market 多处引用。
+
+观察：验收测试会依次执行 `deps_check` 与 `regression`，通过后输出 `ok - acceptance suite`。证据：运行 `lua tests/acceptance.lua` 输出 `ok - acceptance suite`。
 
 
 ## 决策日志
@@ -43,7 +45,7 @@
 ## 结果与复盘
 
 
-尚未实施。完成后补充变更结果、剩余缺口与经验总结。
+已完成 GameManager 拆分与合并：`BoardFactory` 内联进 `CompositionRoot` 并删除；`Game` 状态写入/占位维护与胜负判定拆到 `GameState`、`GameVictory`；`Agent` 目标评估迁入 `AgentTargeting`，对外方法保留。运行 `lua tests/acceptance.lua` 与 `lua tests/entry_smoke_test.lua` 均通过，入口可加载且回归无异常。当前无遗留项。
 
 
 ## 背景与导读
@@ -169,3 +171,6 @@
     Constants.turn_limit / Constants.item_ids 保持现有字段
 
 新模块 `GameState`、`GameVictory`、`AgentTargeting` 不对外暴露新 API，只承载现有实现拆分后的逻辑，避免引入额外抽象层。
+
+
+改动记录：完成拆分合并与测试验证，更新进度、意外与发现、结果与复盘（补充验收证据）。

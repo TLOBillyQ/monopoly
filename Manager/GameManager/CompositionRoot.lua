@@ -1,11 +1,14 @@
 
-local BoardFactory = require("Manager.GameManager.BoardFactory")
+local Board = require("Components.Board")
+local Tile = require("Components.Tile")
 local Player = require("Components.Player")
 local PlayerVehicle = require("Manager.GameManager.PlayerVehicle")
 local PlayerEffects = require("Manager.GameManager.PlayerEffects")
 local Inventory = require("Components.Inventory")
 local constants = require("Config.Generated.Constants")
 local roles_cfg = require("Config.Generated.Roles")
+local tiles_config = require("Config.Generated.Tiles")
+local map_config = require("Config.Map")
 local Tables = require("Library.Monopoly.Tables")
 local RNG = require("Components.RNG")
 local Store = require("Components.Store")
@@ -31,7 +34,27 @@ local deep_copy = Tables.deep_copy
 
 
 local function create_board(opts)
-  return BoardFactory.create(opts)
+  opts = opts or {}
+  local tiles = opts.tiles or tiles_config
+  local map_cfg = opts.map or map_config
+
+  local tile_lookup = {}
+  for _, cfg in ipairs(tiles) do
+    tile_lookup[cfg.id] = Tile.from_config(cfg)
+  end
+
+  local path = {}
+  for _, id in ipairs(map_cfg.path) do
+    table.insert(path, tile_lookup[id])
+  end
+
+  return Board.new({
+    path = path,
+    tile_lookup = tile_lookup,
+    branches = map_cfg.branches or {},
+    map = map_cfg,
+    overlays = { roadblocks = {}, mines = {} },
+  })
 end
 
 local function create_players(opts)
