@@ -21,7 +21,6 @@ local MarketService = require("Manager.MarketManager.Market.MarketService")
 local BankruptcyService = require("Manager.GameManager.BankruptcyService")
 local ChoiceService = require("Manager.ChoiceManager.Choice.ChoiceService")
 local logger = require("Library.Monopoly.Logger")
-local GameEvents = require("Library.Monopoly.GameEvents")
 local market_cfg = require("Config.Market")
 
 local CompositionRoot = {}
@@ -189,7 +188,6 @@ function CompositionRoot.assemble(opts, GameClass)
     store = store,
     rng = rng,
     logger = logger,
-    events = GameEvents.new(),
     finished = false,
     winner = nil,
     last_turn = nil,

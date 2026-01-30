@@ -5,11 +5,12 @@ local logger = require("Library.Monopoly.Logger")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local Agent = require("Manager.GameManager.Agent")
 local LandChoiceSpecs = require("Manager.LandManager.Land.LandChoiceSpecs")
+local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 local MarketService = {}
 
-local function emit_event(game, kind, payload)
-  if game and game.events and game.events.emit then
-    game.events:emit(kind, payload)
+local function emit_event(kind, payload)
+  if LuaAPI and LuaAPI.global_send_custom_event then
+    LuaAPI.global_send_custom_event(kind, payload or {})
   end
 end
 
@@ -161,7 +162,7 @@ function MarketService.buy_with_opts(game, player, product_id, opts)
 
   local remaining = remaining_global_limit(game, product_id)
   if remaining ~= nil and remaining <= 0 then
-    emit_event(game, "market.buy_failed", {
+    emit_event(MONOPOLY_EVENT.market.buy_failed, {
       player = player,
       entry = entry,
       reason = "sold_out",
@@ -173,7 +174,7 @@ function MarketService.buy_with_opts(game, player, product_id, opts)
   local price = entry_price(entry)
   local currency = entry_currency(entry)
   if player:balance(currency) < price then
-    emit_event(game, "market.buy_failed", {
+    emit_event(MONOPOLY_EVENT.market.buy_failed, {
       player = player,
       entry = entry,
       reason = "insufficient_balance",
@@ -184,7 +185,7 @@ function MarketService.buy_with_opts(game, player, product_id, opts)
 
   if entry.kind == "item" then
     if Inventory.is_full(player) then
-      emit_event(game, "market.buy_failed", {
+      emit_event(MONOPOLY_EVENT.market.buy_failed, {
         player = player,
         entry = entry,
         reason = "inventory_full",
@@ -195,7 +196,7 @@ function MarketService.buy_with_opts(game, player, product_id, opts)
     player:deduct_balance(currency, price)
     Inventory.give(player, product_id)
     consume_global_limit(game, product_id)
-    emit_event(game, "market.bought_item", {
+    emit_event(MONOPOLY_EVENT.market.bought_item, {
       player = player,
       entry = entry,
       price = price,
@@ -235,7 +236,7 @@ function MarketService.buy_with_opts(game, player, product_id, opts)
     player.seat_id = product_id
   end
   consume_global_limit(game, product_id)
-  emit_event(game, "market.bought_vehicle", {
+  emit_event(MONOPOLY_EVENT.market.bought_vehicle, {
     player = player,
     entry = entry,
     price = price,
@@ -247,7 +248,7 @@ end
 
 function MarketService.auto_buy(game, player)
   if Agent.is_auto_player(player) then
-    emit_event(game, "market.auto_skip", {
+    emit_event(MONOPOLY_EVENT.market.auto_skip, {
       player = player,
       text = player.name .. " (AI) 到达黑市，选择不购买",
     })

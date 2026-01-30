@@ -1,64 +1,56 @@
-# 里程碑 2：领域服务事件化（子计划）
+# 里程碑 2：使用 Eggy 事件/触发器替代自建事件（子计划）
 
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
-本计划遵循 `.agent/PLANS.md` 的全部要求，并作为总计划 `pilots/15_monopoly_solid_refactor_plan.md` 的子计划。
+本计划遵循 `.agent/PLANS.md` 的全部要求，并作为总计划 `pilots/15_monopoly_solid_refactor_plan.md` 的子计划，同时遵循 `docs/eggy/eggy_lua_agent_memory.md` 的 Eggy 规则。
 
 
 ## 目的 / 全局视角
 
 
-本里程碑把领域服务中的日志与 UI 副作用迁移到统一的事件处理层，降低 `MovementService`、`LandActions`、`MarketService`、`Chance` 的耦合度。完成后，领域服务只负责计算和返回结果，并通过事件总线报告发生了什么；日志与 UI 弹窗在一个集中模块中完成。这样做可以让领域逻辑更可测试，也能更容易替换 UI 表现层。
+本里程碑将领域服务中的日志与 UI 副作用迁移到 Eggy 的自定义事件与触发器系统，删除自建事件总线与处理器实现。完成后，领域服务只负责计算并调用 `LuaAPI.global_send_custom_event` 报告发生了什么；日志与 UI 弹窗通过 `LuaAPI.global_register_custom_event` 注册的回调处理。这样做避免引擎运行时坑，并符合 Eggy 的 API 使用规范。
 
 可观察结果：
 1) 关键日志仍能输出（移动、租金、黑市购买等）；
 2) 领域服务里不再直接调用 `logger.event`；
-3) 新增事件总线测试通过。
+3) 代码库中不再存在自建事件总线实现（如 `GameEvents`）。
 
 
 ## 进度
 
 
-- [x] (2026-01-30 09:09Z) 新增事件总线与事件处理器
-- [x] (2026-01-30 09:09Z) 迁移 `MovementService`、`LandActions`、`MarketService`、`Chance` 的日志为事件
-- [x] (2026-01-30 09:09Z) 新增事件测试并完成回归验证
+- [x] (2026-01-30 17:35Z) 定义事件名称与注册入口（使用 LuaAPI 事件系统）
+- [x] (2026-01-30 17:35Z) 迁移 `MovementService`、`LandActions`、`MarketService`、`Chance` 为 Eggy 事件派发
+- [x] (2026-01-30 17:35Z) 删除自建事件实现并完成回归验证
 
 
 ## 意外与发现
 
 
-暂无。若发现事件无法覆盖现有日志信息或 UI 行为，则需要记录并给出替代方案。
+暂无。若发现 Eggy 事件回调的 `data` 需要使用字符串索引（如 `data["1"]`），必须记录并在处理器里做兼容。
 
 
 ## 决策日志
 
 
-- 决策：事件总线作为 `game.events` 注入，由运行时或组合根创建。
-  理由：领域逻辑可直接使用 `game.events`，避免全局单例。
+- 决策：完全删除自建事件总线与处理器，改用 `LuaAPI.global_register_custom_event` / `LuaAPI.global_send_custom_event`。
+  理由：Eggy 运行时规定事件通信首选该机制，避免隐藏兼容风险。
   日期/作者：2026-01-30 / Codex
 
-- 决策：日志与 UI 先集中在 `Manager/System/EventHandlers.lua`，后续再拆分细化。
-  理由：迁移成本最低，可逐步演进。
+- 决策：事件名称集中定义在 `Globals/MonopolyEvents.lua` 或 `Globals/Macro.lua`。
+  理由：避免散落硬编码，且不引入新的抽象层目录。
   日期/作者：2026-01-30 / Codex
 
-- 决策：事件处理器在 `EggyLayer:set_game` 时安装，确保拿到 `ui_port`。
-  理由：运行时入口已切换为 `Entry.install`，`Layer` 更接近 UI 端口且便于重开局时复用。
-  日期/作者：2026-01-30 / Codex
-
-- 决策：事件 payload 统一携带 `text` 作为日志文本，处理器仅做输出与 UI 弹窗。
-  理由：改动最小，避免重复拼装字符串并降低迁移风险。
-  日期/作者：2026-01-30 / Codex
-
-- 决策：新增事件类型补充 `movement.steal_interrupt` 与 `market.buy_failed` 等实际日志分支。
-  理由：原日志覆盖到的分支需要完整迁移，保持可观察行为一致。
+- 决策：事件名称统一加 `monopoly.` 前缀，常量表落在 `Globals/MonopolyEvents.lua`。
+  理由：降低跨玩法事件命名冲突，并保持集中管理。
   日期/作者：2026-01-30 / Codex
 
 
 ## 结果与复盘
 
 
-已完成事件总线与处理器落地，核心服务日志改为事件发射，事件测试与回归测试通过。剩余里程碑 3 与格式统一任务未执行。
+已完成事件迁移与自建事件总线删除；领域服务改为 `LuaAPI.global_send_custom_event` 派发，自定义事件回调负责日志与弹窗。新增事件常量表与事件名测试，`deps_check` 与回归测试通过。后续如需新增事件，按常量表扩展并在注册入口补处理即可。
 
 
 ## 背景与导读
@@ -70,55 +62,53 @@
 `Manager/MarketManager/Market/MarketService.lua` 记录购买。
 `Manager/GameManager/Chance.lua` 记录机会卡效果。
 
-这导致领域逻辑与日志/UI 绑定紧密。此次改造引入统一事件总线 `Library/Monopoly/GameEvents.lua` 和处理器 `Manager/System/EventHandlers.lua`。
+根据 `docs/eggy/eggy_lua_agent_memory.md`，应该使用 Eggy 的事件系统（`LuaAPI.global_register_custom_event` / `LuaAPI.global_send_custom_event`）进行通信，且所有 API 调用必须使用点号。UI 初始化需要在 GAME_INIT 之后，事件注册与派发应在该时机之后进行。
 
 
 ## 工作计划
 
 
-先新增事件总线与处理器，再逐步迁移日志。事件命名保持直观，保证能覆盖当前日志的语义。领域服务在关键点调用 `game.events:emit(kind, payload)`。事件处理器订阅这些事件并调用 `logger.event` 或 `ui_port`。在迁移过程中，允许短期内“事件 + 旧日志”并存，但最终要删除旧日志调用，避免重复。
+先定义事件名称并建立注册入口，再逐步迁移日志。事件命名保持直观，保证能覆盖当前日志语义。领域服务在关键点调用 `LuaAPI.global_send_custom_event(event_name, payload)`。事件处理在启动入口或 `Layer` 初始化后注册（依据计划 16 的落位），并在回调里执行 `logger.event` 与 `ui_port` 弹窗。迁移过程中允许短期内“事件 + 旧日志”并存，但最终删除旧日志调用。
 
-建议事件列表（已落地版本）：
-- `movement.moved`：玩家移动结束（payload 包含 player、from、to、steps、landing_tile）。
-- `movement.passed_start`：经过起点（payload 包含 player、count、bonus）。
-- `movement.roadblock_hit`：触发路障（payload 包含 player、tile）。
-- `movement.market_interrupt`：经过黑市中断（payload 包含 player、remaining_steps）。
-- `movement.steal_interrupt`：经过玩家触发偷窃中断（payload 包含 player、encountered_ids）。
-- `land.rent_skipped_mountain`：深山免租（payload 包含 owner、tile）。
-- `land.strong_card_used`：强征卡购地（payload 包含 player、owner、tile、amount）。
-- `land.free_rent_used`：免租卡触发（payload 包含 player、tile）。
-- `land.rent_paid`：支付租金（payload 包含 player、owner、amount、tile）。
-- `land.rent_bankrupt`：租金不足导致破产（payload 包含 player、owner、amount、tile）。
-- `land.tax_free`：免税卡触发（payload 包含 player）。
-- `land.tax_paid`：支付税款（payload 包含 player、amount）。
-- `market.bought_item`：购买道具（payload 包含 player、entry、price、currency）。
-- `market.bought_vehicle`：购买座驾（payload 包含 player、entry、price、currency）。
-- `market.auto_skip`：AI 自动放弃购买（payload 包含 player）。
-- `market.buy_failed`：购买失败弹窗（payload 包含 popup、reason）。
-- `chance.applied`：机会卡效果执行（payload 包含 player、card、effect）。
+建议事件名称（最终以实现为准）：
+- `monopoly.movement.moved`
+- `monopoly.movement.passed_start`
+- `monopoly.movement.roadblock_hit`
+- `monopoly.movement.market_interrupt`
+- `monopoly.movement.steal_interrupt`
+- `monopoly.land.rent_paid`
+- `monopoly.land.rent_bankrupt`
+- `monopoly.land.tax_paid`
+- `monopoly.market.bought_item`
+- `monopoly.market.bought_vehicle`
+- `monopoly.market.buy_failed`
+- `monopoly.chance.applied`
 
 
 ## 具体步骤
 
 
-1) 新增事件总线模块。
-   - 新建 `Library/Monopoly/GameEvents.lua`，提供 `new/on/emit`。
-   - 在 `Manager/GameManager/CompositionRoot.lua` 中创建 `game.events` 并注入。
+1) 定义事件名称。
+   - 在 `Globals/MonopolyEvents.lua` 新增事件常量表（或在 `Globals/Macro.lua` 中扩展）。
+   - 事件名称仅用于 `LuaAPI.global_register_custom_event` 与 `LuaAPI.global_send_custom_event`。
 
-2) 新增事件处理器。
-   - 新建 `Manager/System/EventHandlers.lua`，提供 `install(game, logger, ui_port)`。
-   - 在 `Manager/System/Runtime.lua` 或 `RuntimeInit` 中调用 `EventHandlers.install`，保证游戏启动时订阅。
+2) 建立事件注册入口。
+   - 在计划 16 约定的入口位置（如 `Manager/GameManager/Entry.lua` 或 `Manager/TurnManager/GUI/Layer.lua` 的初始化逻辑）注册事件回调。
+   - 使用 `LuaAPI.global_register_custom_event` 逐一注册事件，并在回调内调用 `logger.event` 或 `ui_port`。
+   - 所有 API 调用使用点号（例如 `LuaAPI.global_register_custom_event`），不使用冒号。
 
-3) 迁移日志调用为事件。
-   - `MovementService`：把 `logger.event` 改为 `game.events:emit("movement.*", payload)`。
+3) 迁移日志调用为 Eggy 事件派发。
+   - `MovementService`：把 `logger.event` 改为 `LuaAPI.global_send_custom_event(MONOPOLY_EVENT.movement_moved, payload)` 等。
    - `LandActions`：把租金、税务、强征、破产相关日志迁移为事件。
-   - `MarketService`：把购买成功与失败弹窗改为事件（弹窗可由处理器调用 UI）。
+   - `MarketService`：把购买成功与失败弹窗改为事件（回调里处理 UI）。
    - `Chance`：把各类效果日志改为事件。
 
-4) 移除旧日志调用，确保仅由事件处理器输出。
+4) 删除自建事件实现。
+   - 移除 `Library/Monopoly/GameEvents.lua`、`Manager/System/EventHandlers.lua`（若存在）。
+   - 清理 `CompositionRoot` 中 `game.events` 注入以及所有 `game.events:emit` 调用。
 
-5) 新增测试。
-   - 新建 `tests/game_events_test.lua`，构造一个简单 `GameEvents` 实例，注册回调并验证 `emit` 可触发。
+5) 新增测试（不依赖引擎）。
+   - 新建 `tests/eggy_event_names_test.lua`，验证事件常量表存在且包含关键键。
 
 
 ## 验证与验收
@@ -128,9 +118,9 @@
     lua tests/deps_check.lua
     lua tests/regression.lua
 
-运行新增事件测试：
-    lua tests/game_events_test.lua
-    ok - game events
+运行事件名称测试：
+    lua tests/eggy_event_names_test.lua
+    ok - eggy event names
 
 人工观察：运行游戏后仍能看到移动与租金日志，且输出内容与原先一致或语义等价。
 
@@ -138,42 +128,43 @@
 ## 可重复性与恢复
 
 
-迁移过程以事件替换日志为主，可分阶段执行。若事件处理器无法覆盖日志，可临时保留旧日志，并在“意外与发现”记录。回退时恢复对应文件即可。
+迁移以事件替换日志为主，可分阶段执行。若事件回调没有覆盖日志，可临时保留旧日志并记录在“意外与发现”。回退时恢复对应文件即可。
 
 
 ## 产物与备注
 
 
 预期新增或改动文件：
-`Library/Monopoly/GameEvents.lua`
-`Manager/System/EventHandlers.lua`
-`Manager/GameManager/CompositionRoot.lua`
+`Globals/MonopolyEvents.lua`（或 `Globals/Macro.lua`）
 `Manager/MovementManager/Movement/MovementService.lua`
 `Manager/LandManager/Land/LandActions.lua`
 `Manager/MarketManager/Market/MarketService.lua`
 `Manager/GameManager/Chance.lua`
-`tests/game_events_test.lua`
+`tests/eggy_event_names_test.lua`
+
+预期移除文件（若存在）：
+`Library/Monopoly/GameEvents.lua`
+`Manager/System/EventHandlers.lua`
 
 测试输出示例：
-    lua tests/game_events_test.lua
-    ok - game events
+    lua tests/eggy_event_names_test.lua
+    ok - eggy event names
 
 
 ## 接口与依赖
 
 
-在 `Library/Monopoly/GameEvents.lua` 中定义：
-    local GameEvents = {}
-    function GameEvents.new() end
-    function GameEvents:on(kind, fn) end
-    function GameEvents:emit(kind, payload) end
+事件依赖 Eggy API，必须使用 LuaAPI 的自定义事件系统：
+    LuaAPI.global_register_custom_event(name, fn)
+    LuaAPI.global_send_custom_event(name, payload)
+    LuaAPI.global_unregister_custom_event(id)
 
-在 `Manager/System/EventHandlers.lua` 中定义：
-    local EventHandlers = {}
-    function EventHandlers.install(game, logger, ui_port) end
+如需触发器监听引擎事件，使用：
+    LuaAPI.global_register_trigger_event({ EVENT.XXX }, fn)
 
-事件处理器必须能够访问 `logger`，并在 `ui_port` 为 nil 时安全降级。
+事件注册与派发必须使用点号调用方式，符合 Eggy 规范。
 
 
-改动记录：本计划为首次版本，尚未实施。
-改动记录：完成事件总线、处理器与日志迁移，新增事件测试并通过回归验证。
+改动记录：本计划重写为 Eggy 事件/触发器版本，删除自建事件总线方案。
+
+改动记录：更新进度为完成状态，补充事件命名决策与实施结果（含测试）。

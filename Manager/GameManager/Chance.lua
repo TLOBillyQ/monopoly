@@ -1,14 +1,15 @@
 local logger = require("Library.Monopoly.Logger")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local Tile = require("Components.Tile")
+local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 
 local ChanceEffects = {}
 
 local tile_state = Tile.get_state
 
-local function emit_event(game, kind, payload)
-  if game and game.events and game.events.emit then
-    game.events:emit(kind, payload)
+local function emit_event(kind, payload)
+  if LuaAPI and LuaAPI.global_send_custom_event then
+    LuaAPI.global_send_custom_event(kind, payload or {})
   end
 end
 
@@ -71,7 +72,7 @@ handlers.add_cash = function(game, player, card)
       if not p.eliminated then
         local delta = adjust_chance_delta(p, card.amount)
         apply_cash_change(p, delta)
-        emit_event(game, "chance.applied", {
+        emit_event(MONOPOLY_EVENT.chance.applied, {
           player = p,
           card = card,
           effect = card.effect,
@@ -82,7 +83,7 @@ handlers.add_cash = function(game, player, card)
   else
     local delta = adjust_chance_delta(player, card.amount)
     apply_cash_change(player, delta)
-    emit_event(game, "chance.applied", {
+    emit_event(MONOPOLY_EVENT.chance.applied, {
       player = player,
       card = card,
       effect = card.effect,
@@ -97,7 +98,7 @@ handlers.pay_cash = function(game, player, card)
       if not p.eliminated then
         local delta = adjust_chance_delta(p, -card.amount)
         apply_cash_and_maybe_bankrupt(game, p, delta)
-        emit_event(game, "chance.applied", {
+        emit_event(MONOPOLY_EVENT.chance.applied, {
           player = p,
           card = card,
           effect = card.effect,
@@ -108,7 +109,7 @@ handlers.pay_cash = function(game, player, card)
   else
     local delta = adjust_chance_delta(player, -card.amount)
     apply_cash_and_maybe_bankrupt(game, player, delta)
-    emit_event(game, "chance.applied", {
+    emit_event(MONOPOLY_EVENT.chance.applied, {
       player = player,
       card = card,
       effect = card.effect,
@@ -124,7 +125,7 @@ handlers.percent_pay_cash = function(game, player, card)
         local fee = math.floor(p.cash * (card.percent / 100))
         local delta = adjust_chance_delta(p, -fee)
         apply_cash_and_maybe_bankrupt(game, p, delta)
-        emit_event(game, "chance.applied", {
+        emit_event(MONOPOLY_EVENT.chance.applied, {
           player = p,
           card = card,
           effect = card.effect,
@@ -136,7 +137,7 @@ handlers.percent_pay_cash = function(game, player, card)
     local fee = math.floor(player.cash * (card.percent / 100))
     local delta = adjust_chance_delta(player, -fee)
     apply_cash_and_maybe_bankrupt(game, player, delta)
-    emit_event(game, "chance.applied", {
+    emit_event(MONOPOLY_EVENT.chance.applied, {
       player = player,
       card = card,
       effect = card.effect,
@@ -158,7 +159,7 @@ handlers.pay_others = function(game, player, card)
       end
     end
   end
-  emit_event(game, "chance.applied", {
+  emit_event(MONOPOLY_EVENT.chance.applied, {
     player = player,
     card = card,
     effect = card.effect,
@@ -182,7 +183,7 @@ handlers.collect_from_others = function(game, player, card)
       end
     end
   end
-  emit_event(game, "chance.applied", {
+  emit_event(MONOPOLY_EVENT.chance.applied, {
     player = player,
     card = card,
     effect = card.effect,
@@ -215,7 +216,7 @@ handlers.destroy_buildings_on_path = function(game, _, _, context)
         elseif game and game.store and t and t.id then
           game.store:set({ "board", "tiles", t.id, "level" }, 0)
         end
-        emit_event(game, "chance.applied", {
+        emit_event(MONOPOLY_EVENT.chance.applied, {
           card = { effect = "destroy_buildings_on_path" },
           effect = "destroy_buildings_on_path",
           tile = t,
@@ -239,7 +240,7 @@ handlers.reset_tiles_on_path = function(game, _, _, context)
           end
         end
         game:reset_tile(t)
-        emit_event(game, "chance.applied", {
+        emit_event(MONOPOLY_EVENT.chance.applied, {
           card = { effect = "reset_tiles_on_path" },
           effect = "reset_tiles_on_path",
           tile = t,
@@ -279,14 +280,14 @@ handlers.discard_items = function(game, player, card)
     table.insert(dropped_names, Inventory.item_name(item.id))
   end
   if #dropped_names > 0 then
-    emit_event(game, "chance.applied", {
+    emit_event(MONOPOLY_EVENT.chance.applied, {
       player = player,
       card = card,
       effect = card.effect,
       text = player.name .. " 丢弃道具 " .. #dropped_names .. " 张: " .. table.concat(dropped_names, "、"),
     })
   else
-    emit_event(game, "chance.applied", {
+    emit_event(MONOPOLY_EVENT.chance.applied, {
       player = player,
       card = card,
       effect = card.effect,
@@ -371,7 +372,7 @@ end
 function ChanceEffects.resolve(game, player, card, context)
 
   if card.negative and player:has_angel() then
-    emit_event(game, "chance.applied", {
+    emit_event(MONOPOLY_EVENT.chance.applied, {
       player = player,
       card = card,
       effect = card.effect,

@@ -5,13 +5,14 @@ local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
 local Pricing = require("Manager.LandManager.Land.LandPricing")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local gameplay_constants = require("Manager.GameManager.Constants")
+local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 
 local tile_state = Tile.get_state
 local ITEM_IDS = gameplay_constants.item_ids
 
-local function emit_event(game, kind, payload)
-  if game and game.events and game.events.emit then
-    game.events:emit(kind, payload)
+local function emit_event(kind, payload)
+  if LuaAPI and LuaAPI.global_send_custom_event then
+    LuaAPI.global_send_custom_event(kind, payload or {})
   end
 end
 
@@ -46,7 +47,7 @@ function LandActions.resolve_rent_owner(game, tile, state_fn)
   end
 
   if owner:is_in_mountain(game) then
-    emit_event(game, "land.rent_skipped_mountain", {
+    emit_event(MONOPOLY_EVENT.land.rent_skipped_mountain, {
       owner = owner,
       tile = tile,
       text = owner.name .. " 在深山，租金不收取",
@@ -148,7 +149,7 @@ function LandActions.execute_strong_card(game, player_id, tile_id)
   game:set_tile_owner(tile, player.id)
   game:set_player_property(owner, tile.id, false)
   game:set_player_property(player, tile.id, true)
-  emit_event(game, "land.strong_card_used", {
+  emit_event(MONOPOLY_EVENT.land.strong_card_used, {
     player = player,
     owner = owner,
     tile = tile,
@@ -162,7 +163,7 @@ function LandActions.execute_free_card(game, player_id, tile_id)
   local player = game.players[player_id]
   local tile = game.board:get_tile_by_id(tile_id)
   if not Inventory.consume(player, ITEM_IDS.free_rent) then return false end
-  emit_event(game, "land.free_rent_used", {
+  emit_event(MONOPOLY_EVENT.land.free_rent_used, {
     player = player,
     tile = tile,
     text = player.name .. " 出示免费卡，免租 " .. tile.name,
@@ -188,7 +189,7 @@ function LandActions.execute_pay_rent(game, player_id, tile_id)
   if player.cash >= rent then
     player:deduct_cash(rent)
     owner:add_cash(rent)
-    emit_event(game, "land.rent_paid", {
+    emit_event(MONOPOLY_EVENT.land.rent_paid, {
       player = player,
       owner = owner,
       tile = tile,
@@ -200,7 +201,7 @@ function LandActions.execute_pay_rent(game, player_id, tile_id)
     local paid = player.cash
     owner:add_cash(paid)
     player:set_cash(0)
-    emit_event(game, "land.rent_bankrupt", {
+    emit_event(MONOPOLY_EVENT.land.rent_bankrupt, {
       player = player,
       owner = owner,
       tile = tile,
@@ -215,7 +216,7 @@ end
 function LandActions.execute_tax_free_card(game, player_id)
   local player = game.players[player_id]
   if not Inventory.consume(player, ITEM_IDS.tax_free) then return false end
-  emit_event(game, "land.tax_free", {
+  emit_event(MONOPOLY_EVENT.land.tax_free, {
     player = player,
     text = player.name .. " 出示免税卡，本次免税",
   })
@@ -228,7 +229,7 @@ function LandActions.execute_pay_tax(game, player_id)
   if player.cash < fee then fee = player.cash end
 
   player:deduct_cash(fee)
-  emit_event(game, "land.tax_paid", {
+  emit_event(MONOPOLY_EVENT.land.tax_paid, {
     player = player,
     amount = fee,
     text = player.name .. " 在税务局支付税金 " .. fee,
