@@ -18,8 +18,9 @@
 - [x] (2026-01-30 08:56Z) 里程碑 1：拆分 Runtime 与 UI 端口接口层，保留现有行为（见子计划 `pilots/16_monopoly_solid_runtime_plan.md`）
 - [x] (2026-01-30 09:09Z) 里程碑 2：领域服务事件化，日志与 UI 副作用迁移到事件处理器（见子计划 `pilots/17_monopoly_solid_events_plan.md`）
 - [ ] (2026-01-30 00:00Z) 里程碑 3：道具 / 机会卡 / 选择处理注册化，新增最小测试（见子计划 `pilots/18_monopoly_solid_registry_plan.md`）
-- [ ] (2026-01-30 00:00Z) 完成回归测试与验收脚本整理
 - [ ] (2026-01-30 00:00Z) 全局格式统一：关键 Lua 类改用 `ClassUtils.Class`，补充精简 EmmyLua 注释（见子计划 `pilots/19_monopoly_classutils_emmylua_plan.md`）
+- [ ] (2026-01-30 00:00Z) 清理冗余/兼容性/多套实现问题（见子计划 `pilots/20_monopoly_cleanup_plan.md`）
+- [ ] (2026-01-30 00:00Z) 完成回归测试与验收脚本整理
 
 
 ## 意外与发现
@@ -50,6 +51,10 @@
 
 - 决策：适配层在 `Layer.lua` 内对动画模块使用延迟 `require`。
   理由：保证回归测试可在缺少引擎数学类型的 Lua 环境中运行。
+  日期/作者：2026-01-30 / Codex
+
+- 决策：增加代码清理子计划，集中处理冗余实现与兼容层。
+  理由：避免后续注册化与格式统一引入重复逻辑，保持代码库清爽可维护。
   日期/作者：2026-01-30 / Codex
 
 
@@ -95,10 +100,13 @@
 `pilots/17_monopoly_solid_events_plan.md`
 `pilots/18_monopoly_solid_registry_plan.md`
 `pilots/19_monopoly_classutils_emmylua_plan.md`
+`pilots/20_monopoly_cleanup_plan.md`
 
 本总计划只保留全局目标、统一验证与验收要求，以及跨里程碑的注意事项。每个子计划都是独立的可执行计划，包含完整步骤、验证、接口与回滚策略。
 
 新增全局格式统一任务：要求将关键 Lua 类统一改为 `ClassUtils.Class` 的封装风格，并补充精简 EmmyLua 风格注释。具体范围、步骤与验证方式见子计划 `pilots/19_monopoly_classutils_emmylua_plan.md`。该任务需要兼容既有行为，避免改变对外接口。
+
+新增清理任务：对冗余、兼容层、重复实现进行梳理与删除，避免多套逻辑并存。具体范围与步骤见子计划 `pilots/20_monopoly_cleanup_plan.md`。
 
 每个里程碑都要保持可编译、可运行、可回归测试。若迁移中需要并行旧逻辑与新逻辑，必须在计划内说明切换条件与删除旧逻辑的时机。
 
@@ -203,3 +211,4 @@
 改动记录：新增全局格式统一任务（ClassUtils.Class + EmmyLua 精简注释），并拆分为子计划 `pilots/19_monopoly_classutils_emmylua_plan.md`。
 改动记录：完成里程碑 1 执行与验收，更新进度与测试环境发现。
 改动记录：完成里程碑 2 执行与验收，更新进度与事件化结果。
+改动记录：新增清理冗余/兼容性/多套实现的子计划 `pilots/20_monopoly_cleanup_plan.md`。

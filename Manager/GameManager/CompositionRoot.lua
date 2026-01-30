@@ -20,6 +20,8 @@ local MovementService = require("Manager.MovementManager.Movement.MovementServic
 local MarketService = require("Manager.MarketManager.Market.MarketService")
 local BankruptcyService = require("Manager.GameManager.BankruptcyService")
 local ChoiceService = require("Manager.ChoiceManager.Choice.ChoiceService")
+local ItemRegistry = require("Manager.ItemManager.Item.ItemRegistry")
+local ChanceRegistry = require("Manager.GameManager.ChanceRegistry")
 local logger = require("Library.Monopoly.Logger")
 local market_cfg = require("Config.Market")
 
@@ -167,6 +169,8 @@ function CompositionRoot.assemble(opts, GameClass)
     item_choice_handler = require("Manager.ChoiceManager.Choice.ChoiceHandlers.ItemChoiceHandler"),
     optional_effect_handler = require("Manager.ChoiceManager.Choice.ChoiceHandlers.OptionalEffectHandler"),
   })
+  ItemRegistry.register_defaults()
+  ChanceRegistry.register_defaults()
   local phases = {
     start = turn_start,
     roll = turn_roll,

@@ -1,8 +1,8 @@
 local logger = require("Library.Monopoly.Logger")
+local ChoiceRegistry = require("Manager.ChoiceManager.Choice.ChoiceRegistry")
 
 local ChoiceService = {}
 local deps = nil
-local handler_registry = {}
 
 local function is_cancel(action)
   return not action or action.type == "choice_cancel" or action.option_id == nil
@@ -108,18 +108,6 @@ local helpers = {
   find_effect_by_id = find_effect_by_id,
 }
 
-function ChoiceService.register(kind, handler)
-  handler_registry[kind] = handler
-end
-
-local function merge_handlers(list)
-  for _, group in ipairs(list) do
-    for key, handler in pairs(group) do
-      ChoiceService.register(key, handler)
-    end
-  end
-end
-
 function ChoiceService.setup(in_deps)
   deps = in_deps or {}
   assert(deps.executor, "ChoiceService requires executor")
@@ -133,13 +121,7 @@ function ChoiceService.setup(in_deps)
   assert(deps.item_choice_handler, "ChoiceService requires item_choice_handler")
   assert(deps.optional_effect_handler, "ChoiceService requires optional_effect_handler")
 
-  handler_registry = {}
-  merge_handlers({
-    deps.optional_effect_handler.build(helpers),
-    deps.land_choice_handler.build(helpers),
-    deps.item_choice_handler.build(helpers),
-    deps.market_choice_handler.build(helpers),
-  })
+  ChoiceRegistry.register_defaults(deps, helpers)
 end
 
 function ChoiceService.resolve(game, choice, action)
@@ -163,9 +145,10 @@ function ChoiceService.resolve(game, choice, action)
     return { stay = false }
   end
 
-  local handler = handler_registry[choice.kind] or function(inner_game, inner_choice, inner_action)
+  local handler = ChoiceRegistry.get(choice.kind)
+  if not handler then
     logger.warn("unknown choice kind:", tostring(choice.kind))
-    clear_choice(inner_game)
+    clear_choice(game)
     return { stay = false }
   end
   return handler(game, choice, action)
