@@ -2,7 +2,7 @@ local logger = require("Library.Monopoly.Logger")
 local constants = require("Config.Constants")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
-local gameplay_constants = require("Manager.System.Constants")
+local gameplay_constants = require("Manager.GameManager.Constants")
 
 local ItemEffects = {}
 local ITEM_IDS = gameplay_constants.item_ids
@@ -298,3 +298,4 @@ function ItemEffects.apply_post(game, player, item_id, context)
 end
 
 return ItemEffects
+

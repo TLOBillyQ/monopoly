@@ -1,4 +1,4 @@
-require "Manager.System.Macro"
+require "Globals.Macro"
 
 local rad_to_deg = math.rad_to_deg or math.deg or function(radians)
     return radians * 180 / math.pi
@@ -67,3 +67,4 @@ function MovementManager.one_step(player_id, v3_dir, start_tile_id, end_tile_id)
 end
 
 return MovementManager
+

@@ -6,7 +6,7 @@ local MainView = require("Manager.TurnManager.GUI.MainView")
 local MainController = require("Manager.TurnManager.GUI.MainController")
 local MoveAnim = require("Manager.BoardManager.GUI.MoveAnim")
 local ActionAnim = require("Manager.BoardManager.GUI.ActionAnim")
-local Agent = require("Manager.System.Agent")
+local Agent = require("Manager.GameManager.Agent")
 
 ---@class EggyLayer
 ---蛋仔编辑器的游戏适配层，处理UI和动画同步
@@ -381,3 +381,4 @@ function EggyLayer:tick_once(dt)
 end
 
 return EggyLayer
+

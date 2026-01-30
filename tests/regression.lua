@@ -1,5 +1,5 @@
 -- Quick regression checks (run with: lua tests/regression.lua)
-local App = require("Manager.System.Game")
+local App = require("Manager.GameManager.Game")
 local MovementService = require("Manager.MovementManager.Movement.MovementService")
 local TurnManager = require("Manager.TurnManager.Turn.TurnManager")
 local turn_move = require("Manager.TurnManager.Turn.TurnMove")
@@ -9,7 +9,7 @@ local Strategy = require("Manager.ItemManager.Item.ItemStrategy")
 local Pricing = require("Manager.LandManager.Land.LandPricing")
 local LandActions = require("Manager.LandManager.Land.LandActions")
 local Steal = require("Manager.ItemManager.Item.ItemSteal")
-local ChanceEffects = require("Manager.System.Chance")
+local ChanceEffects = require("Manager.GameManager.Chance")
 local landing_defs = require("Config.LandingEffects")
 local EffectPipeline = require("Manager.EffectManager.Effect.EffectPipeline")
 local Effect = require("Manager.EffectManager.Effect.Effect")
@@ -414,7 +414,7 @@ local function test_movement_examples_from_issue()
 end
 
 local function test_ai_picks_land_purchase()
-  local Agent = require("Manager.System.Agent")
+  local Agent = require("Manager.GameManager.Agent")
   local g = new_game()
   local ai_player = g.players[2]
   assert(Agent.is_auto_player(ai_player), "player 2 should be AI")
@@ -1007,3 +1007,4 @@ for _, fn in ipairs(tests) do
 end
 
 print("\nAll regression checks passed (" .. #tests .. ")")
+

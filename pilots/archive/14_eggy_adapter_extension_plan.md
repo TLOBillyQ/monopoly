@@ -15,9 +15,10 @@
 
 - [x] (2026-01-29 09:10Z) 创建可执行计划并梳理 Eggy 适配层与 gameplay 的交互链路。
 - [x] (2026-01-29 09:20Z) 查阅 Eggy API 点击事件与 Obstacle 触摸事件位置，确认可用于棋盘选择交互。
-- [ ] (2026-01-29 09:30Z) 完成点击格子的原型验证与清理，明确可行的选择交互方式。
-- [ ] (2026-01-29 09:40Z) 实现 move_anim 按 visited 逐步播放的动画链路并接入 EggyLayer。
-- [ ] (2026-01-29 09:50Z) 实现道具表现与路障渲染、选择界面流程并完成验证与复盘。
+- [ ] (2026-01-29 09:30Z) 完成点击格子的原型验证与清理，明确可行的选择交互方式。（废弃）
+- [ ] (2026-01-29 09:40Z) 实现 move_anim 按 visited 逐步播放的动画链路并接入 EggyLayer。（废弃）
+- [ ] (2026-01-29 09:50Z) 实现道具表现与路障渲染、选择界面流程并完成验证与复盘。（废弃）
+- [x] (2026-01-30 15:36) 按用户指示废弃本计划并归档
 
 ## 意外与发现
 
@@ -27,6 +28,8 @@
 ## 决策日志
 
 
+决策：按用户指示废弃本计划，不再继续实现。理由：用户明确要求终止计划。日期/作者：2026-01-30 / Codex。
+
 决策：选择界面优先走“棋盘格子可点击 + 目标标记”的方案，并把选择状态与标记渲染归入 `eggy_layer_board.lua`。理由：目标选择与棋盘渲染天然耦合，可复用已有的 tile 缓存与单位坐标，符合单一职责且减少新增抽象。日期/作者：2026-01-29 / Codex。
 
 决策：移动动画扩展仍放在 `src/adapters/eggy/move_anim.lua` 内，通过新增“按路径播放”的函数实现，不新建独立模块。理由：移动动画已集中在该文件，新建模块会违反“无默认抽象”。日期/作者：2026-01-29 / Codex。
@@ -34,7 +37,7 @@
 ## 结果与复盘
 
 
-尚未实施，待完成各里程碑后补充真实结果与偏差分析。
+计划按用户指示废弃，未继续实现移动动画、道具表现与选择界面。已保留现状，无新增代码。
 
 ## 背景与导读
 
@@ -94,3 +97,5 @@ Eggy 适配层入口是 `src/adapters/eggy/eggy_runtime.lua`，主适配层是 `
 新增或调整的接口建议保持以下形态，避免额外抽象层并满足 SOLID 的单一职责：`src/adapters/eggy/move_anim.lua` 提供 `play_path(player_id, visited, anim)` 与原有 `one_step`；`src/adapters/eggy/eggy_layer_board.lua` 提供 `refresh_overlays(layer, view)`、`open_tile_selection(layer, choice)`、`close_tile_selection(layer)`、`handle_tile_click(layer, tile_index)`、`play_action_effect(layer, anim)`；`src/adapters/eggy/eggy_layer.lua` 在 `_open_choice_modal` 处调用选择模式，并在 `dispatch_action` 或新建的 `handle_tile_click` 中派发 `choice_select`。依赖仍限于现有模块与 Eggy API（`LuaAPI.unit_register_trigger_event`、`EVENT.SPEC_OBSTACLE_TOUCH_BEGIN`），不引入第三方库。
 
 改动说明：创建本计划，明确移动动画、道具表现与选择界面的架构目标、验证路径与接口草案，便于后续实现按 SOLID 拆分职责。
+
+变更说明：按用户指示废弃计划并补记进度与结果。

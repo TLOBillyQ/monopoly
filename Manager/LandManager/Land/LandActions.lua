@@ -5,7 +5,7 @@ local Tile = require("Components.Tile")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
 local Pricing = require("Manager.LandManager.Land.LandPricing")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
-local gameplay_constants = require("Manager.System.Constants")
+local gameplay_constants = require("Manager.GameManager.Constants")
 
 local tile_state = Tile.get_state
 local ITEM_IDS = gameplay_constants.item_ids
@@ -201,3 +201,4 @@ function LandActions.execute_pay_tax(game, player_id)
 end
 
 return LandActions
+

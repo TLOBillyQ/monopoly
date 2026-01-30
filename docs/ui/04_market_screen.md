@@ -66,6 +66,7 @@ market_panel（ECanvas）
 
 ## 资源引用规则
 
-- 物品卡图与载具卡图：按 `product_id` 或名称映射到 `Manager/System/Refs.lua`。
+- 物品卡图与载具卡图：按 `product_id` 或名称映射到 `Globals/Refs.lua`。
 - 稀有度框：`MarketUI.rarity_ref_keys` -> lv1、lv2、lv3。
 - 空白图：key 为 “空”。
+

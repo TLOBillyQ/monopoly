@@ -1,7 +1,7 @@
 local logger = require("Library.Monopoly.Logger")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local LandChoiceSpecs = require("Manager.LandManager.Land.LandChoiceSpecs")
-local gameplay_constants = require("Manager.System.Constants")
+local gameplay_constants = require("Manager.GameManager.Constants")
 
 local Steal = {}
 local ITEM_IDS = gameplay_constants.item_ids
@@ -99,3 +99,4 @@ function Steal.handle_pass_players(game, player, encountered_ids)
 end
 
 return Steal
+

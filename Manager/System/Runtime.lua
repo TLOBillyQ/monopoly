@@ -1,11 +1,11 @@
 local EggyLayer = require("Manager.TurnManager.GUI.Layer")
 local MainController = require("Manager.TurnManager.GUI.MainController")
-local Game = require("Manager.System.Game")
+local Game = require("Manager.GameManager.Game")
 local logger = require("Library.Monopoly.Logger")
 local map_cfg = require("Config.Map")
 
 require "Utils.Frameout"
-require "Manager.System.Macro"
+require "Globals.Macro"
 
 local EggyRuntime = {}
 
@@ -56,7 +56,7 @@ function EggyRuntime.install()
     G = {
       tiles = {},
       buildings = {},
-      refs = require "Manager.System.Refs",
+      refs = require "Globals.Refs",
       lvs = {},
       role = {
         GameAPI.get_role(1),
@@ -134,3 +134,4 @@ function EggyRuntime.install()
 end
 
 return EggyRuntime
+

@@ -1,6 +1,6 @@
-local Agent = require("Manager.System.Agent")
+local Agent = require("Manager.GameManager.Agent")
 local ItemEffects = require("Manager.ItemManager.Item.ItemPostEffects")
-local gameplay_constants = require("Manager.System.Constants")
+local gameplay_constants = require("Manager.GameManager.Constants")
 local logger = require("Library.Monopoly.Logger")
 
 local Strategy = {}
@@ -131,3 +131,4 @@ function Strategy.auto_pre_action(game, player, deps, phase)
 end
 
 return Strategy
+

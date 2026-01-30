@@ -3,7 +3,7 @@ local constants = require("Config.Constants")
 local chance_cfg = require("Config.ChanceCards")
 local random = require("Library.Monopoly.Random")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
-local chance_effects = require("Manager.System.Chance")
+local chance_effects = require("Manager.GameManager.Chance")
 local MineEffect = require("Manager.EffectManager.Effect.MineEffect")
 local Steal = require("Manager.ItemManager.Item.ItemSteal")
 
@@ -115,3 +115,4 @@ Landing.executors = {
 }
 
 return Landing
+

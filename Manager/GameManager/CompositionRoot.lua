@@ -1,8 +1,8 @@
 
-local BoardFactory = require("Manager.System.BoardFactory")
+local BoardFactory = require("Manager.GameManager.BoardFactory")
 local Player = require("Components.Player")
-local PlayerVehicle = require("Manager.System.PlayerVehicle")
-local PlayerEffects = require("Manager.System.PlayerEffects")
+local PlayerVehicle = require("Manager.GameManager.PlayerVehicle")
+local PlayerEffects = require("Manager.GameManager.PlayerEffects")
 local Inventory = require("Components.Inventory")
 local constants = require("Config.Constants")
 local roles_cfg = require("Config.Roles")
@@ -18,7 +18,7 @@ local turn_post = require("Manager.TurnManager.Turn.TurnPost")
 local turn_end = require("Manager.TurnManager.Turn.TurnEnd")
 local MovementService = require("Manager.MovementManager.Movement.MovementService")
 local MarketService = require("Manager.MarketManager.Market.MarketService")
-local BankruptcyService = require("Manager.System.BankruptcyService")
+local BankruptcyService = require("Manager.GameManager.BankruptcyService")
 local ChoiceService = require("Manager.ChoiceManager.Choice.ChoiceService")
 local logger = require("Library.Monopoly.Logger")
 local market_cfg = require("Config.Market")
@@ -203,3 +203,4 @@ end
 CompositionRoot.snapshot_inventory = snapshot_inventory
 
 return CompositionRoot
+

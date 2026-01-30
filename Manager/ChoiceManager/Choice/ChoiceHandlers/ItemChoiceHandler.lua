@@ -7,7 +7,7 @@ local IntentDispatcher = require("Library.Monopoly.IntentDispatcher")
 local Convert = require("Library.Monopoly.Convert")
 local RemoteDice = require("Manager.ItemManager.Item.ItemRemoteDice")
 local ItemPhase = require("Manager.ItemManager.Item.ItemPhase")
-local gameplay_constants = require("Manager.System.Constants")
+local gameplay_constants = require("Manager.GameManager.Constants")
 
 local ItemChoiceHandler = {}
 local ITEM_IDS = gameplay_constants.item_ids
@@ -282,3 +282,4 @@ function ItemChoiceHandler.build(helpers)
 end
 
 return ItemChoiceHandler
+

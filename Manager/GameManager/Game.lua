@@ -1,7 +1,7 @@
 
-local CompositionRoot = require("Manager.System.CompositionRoot")
+local CompositionRoot = require("Manager.GameManager.CompositionRoot")
 local Tables = require("Library.Monopoly.Tables")
-local gameplay_constants = require("Manager.System.Constants")
+local gameplay_constants = require("Manager.GameManager.Constants")
 local Tile = require("Components.Tile")
 local Pricing = require("Manager.LandManager.Land.LandPricing")
 
@@ -380,3 +380,4 @@ function Game:pending_choice()
 end
 
 return Game
+

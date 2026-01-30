@@ -4,8 +4,8 @@ local Demolish = require("Manager.ItemManager.Item.ItemDemolish")
 local Roadblock = require("Manager.ItemManager.Item.ItemRoadblock")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local RemoteDice = require("Manager.ItemManager.Item.ItemRemoteDice")
-local Agent = require("Manager.System.Agent")
-local gameplay_constants = require("Manager.System.Constants")
+local Agent = require("Manager.GameManager.Agent")
+local gameplay_constants = require("Manager.GameManager.Constants")
 
 local Executor = {}
 local ITEM_IDS = gameplay_constants.item_ids
@@ -225,3 +225,4 @@ function Executor.use_item(game, player, item_id, context, deps)
 end
 
 return Executor
+

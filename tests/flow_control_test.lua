@@ -2,7 +2,7 @@
 -- 测试目标：验证状态机恢复、中断处理、嵌套等待等复杂场景
 
 local Flow = require("Components.Flow")
-local Game = require("Manager.System.Game")
+local Game = require("Manager.GameManager.Game")
 local MovementService = require("Manager.MovementManager.Movement.MovementService")
 local ChoiceService = require("Manager.ChoiceManager.Choice.ChoiceService")
 
@@ -405,3 +405,4 @@ for _, fn in ipairs(tests) do
 end
 
 print("\nAll flow control tests passed (" .. #tests .. ")")
+

@@ -1,4 +1,4 @@
-require "Manager.System.Macro"
+require "Globals.Macro"
 
 ---@export
 ---@desc 获取执行载具命令的玩家
@@ -65,3 +65,4 @@ VehicleManager.forward_eca_event_stop = function(role_id)
     VehicleManager.player_id = role_id
     LuaAPI.global_send_custom_event(ECA_EVENT.VEHICLE.stop, {})
 end
+

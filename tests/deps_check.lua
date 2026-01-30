@@ -149,8 +149,8 @@ local required_phases = {
 }
 
 for _, mod in ipairs(required_phases) do
-  if not require_in_file("Manager/System/CompositionRoot.lua", mod) then
-    table.insert(violations, "Manager/System/CompositionRoot.lua: missing required phase module: " .. mod)
+  if not require_in_file("Manager/GameManager/CompositionRoot.lua", mod) then
+    table.insert(violations, "Manager/GameManager/CompositionRoot.lua: missing required phase module: " .. mod)
   end
 end
 
@@ -158,7 +158,7 @@ for _, path in ipairs(files) do
   if is_lua_file(path)
     and (starts_with(path, "Manager/")
       or starts_with(path, "Config/")
-      or path == "Manager/System/Game.lua") then
+      or path == "Manager/GameManager/Game.lua") then
     local src = read_all(path)
     if src then
       local errs = check_file(path, src)
@@ -180,3 +180,4 @@ if #violations > 0 then
 end
 
 print("Dependency self-check passed")
+

@@ -1,4 +1,4 @@
-require "Manager.System.Macro"
+require "Globals.Macro"
 
 local ActionAnim = {}
 
@@ -51,3 +51,4 @@ function ActionAnim.play(_, anim)
 end
 
 return ActionAnim
+

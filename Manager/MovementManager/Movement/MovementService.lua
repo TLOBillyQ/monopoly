@@ -1,5 +1,5 @@
 local constants = require("Config.Constants")
-local gameplay_constants = require("Manager.System.Constants")
+local gameplay_constants = require("Manager.GameManager.Constants")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local logger = require("Library.Monopoly.Logger")
 
@@ -112,3 +112,4 @@ function MovementService.move(game, player, steps, opts)
 end
 
 return MovementService
+

@@ -1,7 +1,7 @@
 local IntentDispatcher = require("Library.Monopoly.IntentDispatcher")
 local LandChoiceSpecs = require("Manager.LandManager.Land.LandChoiceSpecs")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
-local gameplay_constants = require("Manager.System.Constants")
+local gameplay_constants = require("Manager.GameManager.Constants")
 
 local LandChoiceHandler = {}
 local ITEM_IDS = gameplay_constants.item_ids
@@ -62,3 +62,4 @@ function LandChoiceHandler.build(helpers)
 end
 
 return LandChoiceHandler
+

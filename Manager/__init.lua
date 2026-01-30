@@ -1,4 +1,5 @@
 require "Manager.System.__init"
+require "Manager.GameManager.__init"
 require "Manager.TurnManager.__init"
 require "Manager.BoardManager.__init"
 require "Manager.MarketManager.__init"

@@ -1,6 +1,6 @@
 local Flow = require("Components.Flow")
 local Logger = require("Library.Monopoly.Logger")
-local Agent = require("Manager.System.Agent")
+local Agent = require("Manager.GameManager.Agent")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local Tile = require("Components.Tile")
 
@@ -298,3 +298,4 @@ function TurnManager:run_turn()
 end
 
 return TurnManager
+

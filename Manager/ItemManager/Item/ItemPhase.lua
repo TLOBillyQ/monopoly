@@ -1,7 +1,7 @@
 local IntentDispatcher = require("Library.Monopoly.IntentDispatcher")
 local items_cfg = require("Config.Items")
-local gameplay_constants = require("Manager.System.Constants")
-local Agent = require("Manager.System.Agent")
+local gameplay_constants = require("Manager.GameManager.Constants")
+local Agent = require("Manager.GameManager.Agent")
 local Strategy = require("Manager.ItemManager.Item.ItemStrategy")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local Demolish = require("Manager.ItemManager.Item.ItemDemolish")
@@ -140,3 +140,4 @@ function ItemPhase.build_choice_spec(player, phase)
 end
 
 return ItemPhase
+
