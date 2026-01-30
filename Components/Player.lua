@@ -1,10 +1,26 @@
 local Inventory = require("Components.Inventory")
 local Tables = require("Library.Monopoly.Tables")
+require "Library.ClassUtils"
 
 ---@class Player
+---@field id number
+---@field name string
+---@field role_id number?
+---@field is_ai boolean
+---@field auto boolean
+---@field cash number
+---@field position number
+---@field seat_id number?
+---@field deity_duration_turns number
+---@field status table
+---@field inventory Inventory
+---@field properties table
+---@field balances table
+---@field eliminated boolean
+---@field _store Store?
 ---玩家对象，管理玩家资产、状态和物品
-local Player = {}
-Player.__index = Player
+local Player = Class("Player")
+Player.__class_new = Player.new
 
 local deep_copy = Tables.deep_copy
 
@@ -27,8 +43,7 @@ end
 
 ---创建新玩家实例
 ---@param attrs table 玩家属性表（id/name/role_id/constants等）
----@return Player 新玩家对象
-function Player.new(attrs)
+function Player:init(attrs)
   attrs = attrs or {}
   local constants = attrs.constants
   assert(constants ~= nil, "Player.new(attrs) requires attrs.constants")
@@ -56,30 +71,34 @@ function Player.new(attrs)
     balances["乐园币"] = constants.starting_leyuanbi
   end
 
-  local p = {
-    id = attrs.id,
-    name = attrs.name or ("玩家" .. attrs.id),
-    role_id = attrs.role_id,
-    is_ai = attrs.is_ai or false,
-    auto = attrs.auto or false,
-    cash = cash,
-    position = attrs.start_index or 1,
-    seat_id = nil,
-    deity_duration_turns = attrs.deity_duration_turns or constants.deity_duration_turns,
-    status = {
-      stay_turns = 0,
-      deity = nil,
-      pending_remote_dice = nil,
-      pending_dice_multiplier = 1,
-      pending_free_rent = false,
-      pending_tax_free = false,
-    },
-    inventory = attrs.inventory or Inventory.new({ constants = constants }),
-    properties = {},
-    balances = balances,
-    eliminated = false,
+  self.id = attrs.id
+  self.name = attrs.name or ("玩家" .. attrs.id)
+  self.role_id = attrs.role_id
+  self.is_ai = attrs.is_ai or false
+  self.auto = attrs.auto or false
+  self.cash = cash
+  self.position = attrs.start_index or 1
+  self.seat_id = nil
+  self.deity_duration_turns = attrs.deity_duration_turns or constants.deity_duration_turns
+  self.status = {
+    stay_turns = 0,
+    deity = nil,
+    pending_remote_dice = nil,
+    pending_dice_multiplier = 1,
+    pending_free_rent = false,
+    pending_tax_free = false,
   }
-  return setmetatable(p, Player)
+  self.inventory = attrs.inventory or Inventory.new({ constants = constants })
+  self.properties = {}
+  self.balances = balances
+  self.eliminated = false
+end
+
+---创建新玩家实例
+---@param attrs table 玩家属性表（id/name/role_id/constants等）
+---@return Player 新玩家对象
+function Player.new(attrs)
+  return Player.__class_new(Player, attrs)
 end
 
 ---获取玩家指定币种的余额

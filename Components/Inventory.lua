@@ -1,7 +1,13 @@
+require "Library.ClassUtils"
+
 ---@class Inventory
+---@field items table[]
+---@field max_slots number
+---@field _on_change fun(inv: Inventory)?
+---@field _suspend_on_change boolean?
 ---背包管理类，管理玩家物品
-local Inventory = {}
-Inventory.__index = Inventory
+local Inventory = Class("Inventory")
+Inventory.__class_new = Inventory.new
 
 ---通知背包有变化
 ---@param self Inventory
@@ -17,14 +23,20 @@ end
 
 ---创建新背包实例
 ---@param opts table 选项表（max_slots或constants）
----@return Inventory 新背包对象
-function Inventory.new(opts)
+function Inventory:init(opts)
   opts = opts or {}
   local max_slots = opts.max_slots or (opts.constants and opts.constants.inventory_slots)
   assert(max_slots ~= nil, "Inventory.new(opts) requires opts.max_slots or opts.constants.inventory_slots")
 
-  local inv = { items = {}, max_slots = max_slots }
-  return setmetatable(inv, Inventory)
+  self.items = {}
+  self.max_slots = max_slots
+end
+
+---创建新背包实例
+---@param opts table 选项表（max_slots或constants）
+---@return Inventory 新背包对象
+function Inventory.new(opts)
+  return Inventory.__class_new(Inventory, opts)
 end
 
 ---获取背包中的物品数量

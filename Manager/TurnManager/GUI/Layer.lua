@@ -4,16 +4,44 @@ local Presenter = require("Manager.TurnManager.GUI.Presenter")
 local MainView = require("Manager.TurnManager.GUI.MainView")
 local MainController = require("Manager.TurnManager.GUI.MainController")
 local Agent = require("Manager.GameManager.Agent")
-local constants = require("Config.Constants")
-local items_cfg = require("Config.Items")
+local constants = require("Config.Generated.Constants")
+local items_cfg = require("Config.Generated.Items")
 local map_cfg = require("Config.Map")
 local IntentDispatcher = require("Library.Monopoly.IntentDispatcher")
 local EventHandlers = require("Manager.System.EventHandlers")
+require "Library.ClassUtils"
 
 ---@class EggyLayer
+---@field ui table
+---@field game Game?
+---@field pending_choice table?
+---@field pending_choice_elapsed number
+---@field pending_choice_id string|number?
+---@field ui_modal_elapsed number
+---@field ui_modal_ref any
+---@field wait_move_anim boolean
+---@field move_anim_seq number?
+---@field wait_action_anim boolean
+---@field action_anim_seq number?
+---@field item_name_by_id table
+---@field game_factory fun(): Game?
+---@field auto_runner AutoRunner
+---@field tile_units table?
+---@field tile_positions table?
+---@field tile_spacing number?
+---@field player_units table?
+---@field player_units_missing boolean
+---@field board_last_positions table?
+---@field board_sync_pending boolean
+---@field board_last_phase string?
+---@field next_turn_locked boolean
+---@field next_turn_last_click number?
+---@field next_turn_lock_phase string?
+---@field camera_follow_player_id number?
+---@field _log_once table
 ---蛋仔编辑器的游戏适配层，处理UI和动画同步
-local EggyLayer = {}
-EggyLayer.__index = EggyLayer
+local EggyLayer = Class("EggyLayer")
+EggyLayer.__class_new = EggyLayer.new
 
 local function build_log_prefix()
   return "[EggyAdapter]"
@@ -52,38 +80,36 @@ local function show_tips(message, duration)
   return false
 end
 
-function EggyLayer.new(opts)
+function EggyLayer:init(opts)
   opts = opts or {}
   local ui = opts.ui or MainView.build_ui_state()
-  local self = setmetatable({
-    ui = ui,
-    game = nil,
-    pending_choice = nil,
-    pending_choice_elapsed = 0,
-    pending_choice_id = nil,
-    ui_modal_elapsed = 0,
-    ui_modal_ref = nil,
-    wait_move_anim = true,
-    move_anim_seq = nil,
-    wait_action_anim = true,
-    action_anim_seq = nil,
-    item_name_by_id = {},
-    game_factory = opts.game_factory,
-    auto_runner = opts.auto_runner or AutoRunner.new({ interval = ui.auto_interval }),
-    tile_units = nil,
-    tile_positions = nil,
-    tile_spacing = nil,
-    player_units = nil,
-    player_units_missing = false,
-    board_last_positions = nil,
-    board_sync_pending = false,
-    board_last_phase = nil,
-    next_turn_locked = false,
-    next_turn_last_click = nil,
-    next_turn_lock_phase = nil,
-    camera_follow_player_id = nil,
-    _log_once = {},
-  }, EggyLayer)
+  self.ui = ui
+  self.game = nil
+  self.pending_choice = nil
+  self.pending_choice_elapsed = 0
+  self.pending_choice_id = nil
+  self.ui_modal_elapsed = 0
+  self.ui_modal_ref = nil
+  self.wait_move_anim = true
+  self.move_anim_seq = nil
+  self.wait_action_anim = true
+  self.action_anim_seq = nil
+  self.item_name_by_id = {}
+  self.game_factory = opts.game_factory
+  self.auto_runner = opts.auto_runner or AutoRunner.new({ interval = ui.auto_interval })
+  self.tile_units = nil
+  self.tile_positions = nil
+  self.tile_spacing = nil
+  self.player_units = nil
+  self.player_units_missing = false
+  self.board_last_positions = nil
+  self.board_sync_pending = false
+  self.board_last_phase = nil
+  self.next_turn_locked = false
+  self.next_turn_last_click = nil
+  self.next_turn_lock_phase = nil
+  self.camera_follow_player_id = nil
+  self._log_once = {}
 
   local on_need_choice = opts.on_need_choice
   if not on_need_choice then
@@ -106,7 +132,10 @@ function EggyLayer.new(opts)
     end,
   })
 
-  return self
+end
+
+function EggyLayer.new(opts)
+  return EggyLayer.__class_new(EggyLayer, opts)
 end
 
 ---设置当前游戏实例

@@ -1,5 +1,5 @@
 local map_cfg = require("Config.Map")
-local tiles_cfg = require("Config.Tiles")
+local tiles_cfg = require("Config.Generated.Tiles")
 
 local tiles_by_id = {}
 for _, cfg in ipairs(tiles_cfg) do

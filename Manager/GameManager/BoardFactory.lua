@@ -1,7 +1,7 @@
 local Board = require("Components.Board")
 local Tile = require("Components.Tile")
 
-local tiles_config = require("Config.Tiles")
+local tiles_config = require("Config.Generated.Tiles")
 local map_config = require("Config.Map")
 
 local BoardFactory = {}

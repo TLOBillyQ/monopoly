@@ -1,25 +1,47 @@
+require "Library.ClassUtils"
+
 ---@class Tile
+---@field id string|number
+---@field name string
+---@field type string
+---@field price number
+---@field upgrade_costs number[]
+---@field rents number[]
+---@field row number?
+---@field col number?
+---@field build_row number?
+---@field build_col number?
 ---地块类，代表棋盘上的一个地块
-local Tile = {}
-Tile.__index = Tile
+local Tile = Class("Tile")
+Tile.__class_new = Tile.new
+
+---从配置创建新地块
+---@param cfg table 地块配置（id/name/type/price等）
+function Tile:init(cfg)
+  self.id = cfg.id
+  self.name = cfg.name
+  self.type = cfg.type
+  self.price = cfg.price or 0
+  self.upgrade_costs = cfg.upgrade_costs or {}
+  self.rents = cfg.rents or {}
+  self.row = cfg.row
+  self.col = cfg.col
+  self.build_row = cfg.build_row
+  self.build_col = cfg.build_col
+end
+
+---创建新地块实例
+---@param cfg table 地块配置（id/name/type/price等）
+---@return Tile 新地块对象
+function Tile.new(cfg)
+  return Tile.__class_new(Tile, cfg)
+end
 
 ---从配置创建新地块
 ---@param cfg table 地块配置（id/name/type/price等）
 ---@return Tile 新地块对象
 function Tile.from_config(cfg)
-  local t = {
-    id = cfg.id,
-    name = cfg.name,
-    type = cfg.type,
-    price = cfg.price or 0,
-    upgrade_costs = cfg.upgrade_costs or {},
-    rents = cfg.rents or {},
-    row = cfg.row,
-    col = cfg.col,
-    build_row = cfg.build_row,
-    build_col = cfg.build_col,
-  }
-  return setmetatable(t, Tile)
+  return Tile.__class_new(Tile, cfg)
 end
 
 ---获取地块的游戏状态（所有者和等级）

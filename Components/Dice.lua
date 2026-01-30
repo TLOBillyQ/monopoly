@@ -1,7 +1,8 @@
+require "Library.ClassUtils"
+
 ---@class Dice
 ---骰子摇摇类，用于生成随机摇骰结果
-local Dice = {}
-Dice.__index = Dice
+local Dice = Class("Dice")
 
 ---掷骰子
 ---@param count number 骰子数量

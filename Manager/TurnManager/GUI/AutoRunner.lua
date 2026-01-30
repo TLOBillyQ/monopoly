@@ -1,19 +1,27 @@
+require "Library.ClassUtils"
+
 ---@class AutoRunner
+---@field interval number
+---@field timer number
+---@field enabled boolean
 ---自动运行器，用于定时执行游戏逻辑
-local AutoRunner = {}
-AutoRunner.__index = AutoRunner
+local AutoRunner = Class("AutoRunner")
+AutoRunner.__class_new = AutoRunner.new
+
+---创建新自动运行器
+---@param opts table 选项表（interval等）
+function AutoRunner:init(opts)
+  opts = opts or {}
+  self.interval = opts.interval or 0.15
+  self.timer = 0
+  self.enabled = false
+end
 
 ---创建新自动运行器
 ---@param opts table 选项表（interval等）
 ---@return AutoRunner 新AutoRunner对象
 function AutoRunner.new(opts)
-  opts = opts or {}
-  local self = {
-    interval = opts.interval or 0.15,
-    timer = 0,
-    enabled = false,
-  }
-  return setmetatable(self, AutoRunner)
+  return AutoRunner.__class_new(AutoRunner, opts)
 end
 
 ---启用或禁用自动运行

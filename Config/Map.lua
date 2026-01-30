@@ -1,4 +1,4 @@
-local tiles = require("Config.Tiles")
+local tiles = require("Config.Generated.Tiles")
 
 local coord_by_id = {}
 local id_by_coord = {}

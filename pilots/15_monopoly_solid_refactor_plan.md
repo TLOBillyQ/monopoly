@@ -17,10 +17,10 @@
 
 - [x] (2026-01-30 08:56Z) 里程碑 1：拆分 Runtime 与 UI 端口接口层，保留现有行为（见子计划 `pilots/16_monopoly_solid_runtime_plan.md`）
 - [x] (2026-01-30 09:09Z) 里程碑 2：领域服务事件化，日志与 UI 副作用迁移到事件处理器（见子计划 `pilots/17_monopoly_solid_events_plan.md`）
-- [ ] (2026-01-30 00:00Z) 里程碑 3：道具 / 机会卡 / 选择处理注册化，新增最小测试（见子计划 `pilots/18_monopoly_solid_registry_plan.md`）
-- [ ] (2026-01-30 00:00Z) 全局格式统一：关键 Lua 类改用 `ClassUtils.Class`，补充精简 EmmyLua 注释（见子计划 `pilots/19_monopoly_classutils_emmylua_plan.md`）
-- [ ] (2026-01-30 00:00Z) 清理冗余/兼容性/多套实现问题（见子计划 `pilots/20_monopoly_cleanup_plan.md`）
-- [ ] (2026-01-30 00:00Z) 完成回归测试与验收脚本整理
+- [x] (2026-01-30 10:23Z) 里程碑 3：道具 / 机会卡 / 选择处理注册化，新增最小测试（见子计划 `pilots/18_monopoly_solid_registry_plan.md`）
+- [x] (2026-01-30 10:23Z) 全局格式统一：关键 Lua 类改用 `ClassUtils.Class`，补充精简 EmmyLua 注释（见子计划 `pilots/19_monopoly_classutils_emmylua_plan.md`）
+- [x] (2026-01-30 10:34Z) 清理冗余/兼容性/多套实现问题（见子计划 `pilots/20_monopoly_cleanup_plan.md`）
+- [x] (2026-01-30 10:37Z) 完成回归测试与验收脚本整理（新增 `tests/acceptance.lua` 并验证通过）
 
 
 ## 意外与发现
@@ -28,6 +28,12 @@
 
 - 观察：回归测试中加载 `Manager.TurnManager.GUI.Layer` 触发 `Globals.Macro` 依赖，导致本地 Lua 缺失 `math.Vector3` 报错。
   证据：`lua tests/regression.lua` 报错 `Globals/Macro.lua:1: attempt to call field 'Vector3' (a nil value)`。
+
+- 观察：ClassUtils 迁移后如果覆盖 `Class()` 的 `new` 会导致递归挂起。
+  证据：测试中断堆栈停在 `Components/Flow.lua:24` 的 `Flow.new` 调用。
+
+- 观察：清理阶段未发现 Runtime/Adapter/EventHandlers 多套实现，仅有无引用 `__init.lua` 占位入口可清理。
+  证据：`rg -n "Runtime|Adapter|EventHandlers|GameEvents" Manager Library Globals` 仅命中 `Manager/System/Runtime.lua` 与 `Manager/System/EventHandlers.lua`。
 
 
 ## 决策日志
@@ -57,11 +63,23 @@
   理由：避免后续注册化与格式统一引入重复逻辑，保持代码库清爽可维护。
   日期/作者：2026-01-30 / Codex
 
+- 决策：为 `Class()` 保留原始构造器 `__class_new`，并让 `X.new()` 转发调用。
+  理由：保持旧调用入口且避免覆盖 `Class()` 自带 `new` 导致递归。
+  日期/作者：2026-01-30 / Codex
+
+- 决策：清理阶段保留顶层 `__init.lua` 作为兼容入口，仅移除无引用的子目录 `__init.lua`。
+  理由：减少冗余同时避免破坏潜在外部入口依赖。
+  日期/作者：2026-01-30 / Codex
+
+- 决策：新增统一验收脚本 `tests/acceptance.lua` 汇总关键测试。
+  理由：减少手动串行执行遗漏，确保回归与新增测试一键验证。
+  日期/作者：2026-01-30 / Codex
+
 
 ## 结果与复盘
 
 
-已完成里程碑 1/2（入口迁移、适配层合并、事件总线与日志迁移）。剩余里程碑 3 与全局格式统一待执行，整体目标尚未达成。
+已完成里程碑 1/2/3/4/5 与验收脚本整理（入口迁移、适配层合并、事件总线与日志迁移、注册表落地、ClassUtils 迁移与注释补全、冗余入口清理、验收脚本汇总），回归测试与新增测试通过。总体目标达成。
 
 
 ## 背景与导读
@@ -136,6 +154,9 @@
 新增注册与事件测试：运行新建的测试脚本（按你创建的文件名），预期输出包含 “ok” 或断言通过。
     lua tests/solid_event_registry_test.lua
 
+统一验收脚本：运行汇总脚本，预期所有子测试通过并输出 `ok - acceptance suite`。
+    lua tests/acceptance.lua
+
 人工验证：启动流程不变，`Runtime.install()` 仍能创建游戏并开始回合推进；在日志中仍能看到关键事件（如“移动到某地块”、“支付租金”）。
 
 
@@ -160,6 +181,7 @@
 `Manager/GameManager/ChanceRegistry.lua`
 `Manager/ChoiceManager/Choice/ChoiceRegistry.lua`
 `tests/solid_event_registry_test.lua`
+`tests/acceptance.lua`
 
 测试输出示例（缩进块，实际以运行结果为准）：
     lua tests/solid_event_registry_test.lua
@@ -212,3 +234,6 @@
 改动记录：完成里程碑 1 执行与验收，更新进度与测试环境发现。
 改动记录：完成里程碑 2 执行与验收，更新进度与事件化结果。
 改动记录：新增清理冗余/兼容性/多套实现的子计划 `pilots/20_monopoly_cleanup_plan.md`。
+改动记录：更新里程碑 3/4 进度与复盘，补充 ClassUtils 兼容决策与观察，保证总计划状态与子计划一致。
+改动记录：更新里程碑 5 进度与决策日志，标记清理子计划完成并记录剩余验收整理。
+改动记录：补充统一验收脚本与最终完成状态，确保总计划闭环可复用。

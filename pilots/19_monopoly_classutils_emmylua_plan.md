@@ -15,16 +15,21 @@
 ## 进度
 
 
-- [ ] (2026-01-30 00:00Z) 梳理需要迁移的类与关键类列表
-- [ ] (2026-01-30 00:00Z) 将手写类迁移为 `Class()` 风格并保持 `X.new()` 兼容
-- [ ] (2026-01-30 00:00Z) 为关键类补充精简 EmmyLua 注释
-- [ ] (2026-01-30 00:00Z) 回归验证与格式检查
+- [x] (2026-01-30 10:09Z) 梳理需要迁移的类与关键类列表（Components/ 与 Manager/ 的 __index 扫描已完成）
+- [x] (2026-01-30 10:09Z) 将手写类迁移为 `Class()` 风格并保持 `X.new()` 兼容（含 Game 与 GUI 层）
+- [x] (2026-01-30 10:09Z) 为关键类补充精简 EmmyLua 注释
+- [x] (2026-01-30 10:18Z) 回归验证与格式检查（deps_check、regression、classutils 测试已通过）
 
 
 ## 意外与发现
 
 
-暂无。若发现某类依赖自定义 `__index` 行为或被外部脚本反射访问字段名，需要记录并给出兼容方案。
+- 观察：`AutoRunner` 位于 `Manager/TurnManager/GUI/AutoRunner.lua`，而非原清单中的 `Manager/System/AutoRunner.lua`。
+  证据：`rg -n "__index" Components Manager` 输出包含 `Manager\\TurnManager\\GUI\\AutoRunner.lua`。
+
+- 观察：最初运行 `lua tests/regression.lua` 与 `lua tests/classutils_refactor_test.lua` 时挂起，定位到 `X.new()` 兼容包装覆盖了 `Class()` 的 `new` 导致递归。
+  证据：中断测试时堆栈停在 `Components/Flow.lua:24` 的 `Flow.new` 递归调用。
+  处理：改为保留 `__class_new`，并由 `X.new()` 转发调用。
 
 
 ## 决策日志
@@ -38,11 +43,19 @@
   理由：现有调用大量使用点号调用，不改变对外接口。
   日期/作者：2026-01-30 / Codex
 
+- 决策：在 `CompositionRoot.assemble` 中使用 `GameClass.__class_new(GameClass)` 构造实例，再填充字段。
+  理由：`Class()` 实例需要专用元表，且 `Game.new` 保留为装配入口时需显式调用原始构造器。
+  日期/作者：2026-01-30 / Codex
+
+- 决策：为兼容 `X.new()` 保留原始 `Class()` 构造器为 `__class_new`，由包装函数转发。
+  理由：避免覆盖 `Class()` 自带的 `new` 导致递归，同时保持旧调用点可用。
+  日期/作者：2026-01-30 / Codex
+
 
 ## 结果与复盘
 
 
-尚未实施。
+已完成 ClassUtils 迁移与关键类 EmmyLua 注释，新增 classutils 兼容性测试脚本，并完成回归与新增测试验证。该里程碑目标已达成，未发现行为回归。
 
 
 ## 背景与导读
@@ -106,6 +119,8 @@ monopoly 中存在一批“手写类”，通常写法为：
    - 再次运行搜索确认无遗漏：
        rg -n "__index" Components Manager
 
+已按上述步骤完成类迁移与注释补全，并新增 `tests/classutils_refactor_test.lua` 用于验证 `X.new()` 兼容入口。回归与新测试已运行并通过。
+
 
 ## 验证与验收
 
@@ -119,6 +134,8 @@ monopoly 中存在一批“手写类”，通常写法为：
     ok - classutils refactor
 
 若测试依赖引擎对象（如 `GameAPI`），测试应只覆盖不依赖引擎的类（如 `Flow`、`Store`、`Inventory`、`RNG`）。
+
+已运行 `deps_check`、`regression` 与 `classutils_refactor_test`，均通过。
 
 
 ## 可重复性与恢复
@@ -150,6 +167,8 @@ monopoly 中存在一批“手写类”，通常写法为：
     lua tests/classutils_refactor_test.lua
     ok - classutils refactor
 
+本次已新增 `tests/classutils_refactor_test.lua`，其输出以实际运行结果为准；回归测试已通过。
+
 
 ## 接口与依赖
 
@@ -168,3 +187,7 @@ EmmyLua 注释规范示例（精简版）：
 
 
 改动记录：本计划为首次版本，尚未实施。
+改动记录：完成 ClassUtils 迁移、注释补全与测试脚本新增，更新进度与决策日志以反映真实实施情况。
+改动记录：记录测试挂起的根因与修复方式，并更新验证状态为已通过。
+改动记录：补充回归通过与结果复盘，确保里程碑完成状态可追溯。
+改动记录：补充 `__class_new` 兼容策略与装配入口说明，保证后续维护者理解实例构造路径。

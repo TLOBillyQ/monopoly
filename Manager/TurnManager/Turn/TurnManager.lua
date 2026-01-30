@@ -3,11 +3,16 @@ local Logger = require("Library.Monopoly.Logger")
 local Agent = require("Manager.GameManager.Agent")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local Tile = require("Components.Tile")
+require "Library.ClassUtils"
 
 ---@class TurnManager
+---@field game Game
+---@field phases table
+---@field flow Flow?
+---@field pending_action table?
 ---回合循环管理器，控制游戏状态机和流程
-local TurnManager = {}
-TurnManager.__index = TurnManager
+local TurnManager = Class("TurnManager")
+TurnManager.__class_new = TurnManager.new
 
 local function build_turn_log_line(game, turn_count)
   local player = game:current_player()
@@ -120,15 +125,19 @@ end
 ---创建新回合管理器
 ---@param game Game 游戏实例
 ---@param phases table 回合阶段函数表
+function TurnManager:init(game, phases)
+  self.game = game
+  self.phases = phases
+  self.flow = nil
+  self.pending_action = nil
+end
+
+---创建新回合管理器
+---@param game Game 游戏实例
+---@param phases table 回合阶段函数表
 ---@return TurnManager 新TurnManager对象
 function TurnManager.new(game, phases)
-  local tm = {
-    game = game,
-    phases = phases,
-    flow = nil,
-    pending_action = nil,
-  }
-  return setmetatable(tm, TurnManager)
+  return TurnManager.__class_new(TurnManager, game, phases)
 end
 
 ---分发玩家行动到流程

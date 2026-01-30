@@ -1,4 +1,4 @@
-local items_cfg = require("Config.Items")
+local items_cfg = require("Config.Generated.Items")
 local random = require("Library.Monopoly.Random")
 local logger = require("Library.Monopoly.Logger")
 local IntentDispatcher = require("Library.Monopoly.IntentDispatcher")

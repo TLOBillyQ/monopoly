@@ -1,5 +1,6 @@
 local Landing = require("Manager.LandManager.Land.Landing")
 local Land = require("Manager.LandManager.Land.Land")
+require "Library.ClassUtils"
 
 local executors = {}
 for id, exec in pairs(Landing.executors or {}) do
@@ -34,8 +35,7 @@ end
 
 ---@class Effect
 ---效果类，处理玩家落地后的效果
-local Effect = {}
-Effect.__index = Effect
+local Effect = Class("Effect")
 
 ---扫描并检查落地效果是否可用
 ---@param effect_defs table[] 效果定义列表

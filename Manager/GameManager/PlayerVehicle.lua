@@ -1,5 +1,5 @@
-local constants = require("Config.Constants")
-local vehicles_cfg = require("Config.Vehicles")
+local constants = require("Config.Generated.Constants")
+local vehicles_cfg = require("Config.Generated.Vehicles")
 
 local vehicle_by_id = {}
 for _, cfg in ipairs(vehicles_cfg) do

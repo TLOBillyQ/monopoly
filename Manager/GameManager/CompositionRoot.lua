@@ -4,8 +4,8 @@ local Player = require("Components.Player")
 local PlayerVehicle = require("Manager.GameManager.PlayerVehicle")
 local PlayerEffects = require("Manager.GameManager.PlayerEffects")
 local Inventory = require("Components.Inventory")
-local constants = require("Config.Constants")
-local roles_cfg = require("Config.Roles")
+local constants = require("Config.Generated.Constants")
+local roles_cfg = require("Config.Generated.Roles")
 local Tables = require("Library.Monopoly.Tables")
 local RNG = require("Components.RNG")
 local Store = require("Components.Store")
@@ -23,7 +23,7 @@ local ChoiceService = require("Manager.ChoiceManager.Choice.ChoiceService")
 local ItemRegistry = require("Manager.ItemManager.Item.ItemRegistry")
 local ChanceRegistry = require("Manager.GameManager.ChanceRegistry")
 local logger = require("Library.Monopoly.Logger")
-local market_cfg = require("Config.Market")
+local market_cfg = require("Config.Generated.Market")
 
 local CompositionRoot = {}
 
@@ -186,17 +186,16 @@ function CompositionRoot.assemble(opts, GameClass)
     choice = ChoiceService,
   }
 
-  local game = setmetatable({
-    board = board,
-    players = players,
-    store = store,
-    rng = rng,
-    logger = logger,
-    finished = false,
-    winner = nil,
-    last_turn = nil,
-    services = services,
-  }, GameClass)
+  local game = GameClass.__class_new(GameClass)
+  game.board = board
+  game.players = players
+  game.store = store
+  game.rng = rng
+  game.logger = logger
+  game.finished = false
+  game.winner = nil
+  game.last_turn = nil
+  game.services = services
 
   game:rebuild()
   game.turn_manager = TurnManager.new(game, phases)

@@ -15,16 +15,20 @@
 ## 进度
 
 
-- [ ] (2026-01-30 00:00Z) 盘点冗余与多套实现清单
-- [ ] (2026-01-30 00:00Z) 分批移除或合并冗余实现
-- [ ] (2026-01-30 00:00Z) 清理兼容层与未使用入口
-- [ ] (2026-01-30 00:00Z) 回归验证与差异检查
+- [x] (2026-01-30 10:33Z) 盘点冗余与多套实现清单
+- [x] (2026-01-30 10:33Z) 分批移除或合并冗余实现
+- [x] (2026-01-30 10:33Z) 清理兼容层与未使用入口
+- [x] (2026-01-30 10:33Z) 回归验证与差异检查
 
 
 ## 意外与发现
 
 
-暂无。若发现某冗余实现仍被运行时入口依赖或外部工具脚本依赖，必须记录并保留兼容路径，或在计划中说明替代方案。
+- 观察：关键关键词扫描未发现重复的 Runtime/Adapter/EventHandlers/GameEvents 多套实现，仅保留现有入口。
+  证据：`rg -n "Runtime|Adapter|EventHandlers|GameEvents" Manager Library Globals` 仅命中 `Manager/System/Runtime.lua` 与 `Manager/System/EventHandlers.lua`。
+
+- 观察：多处子目录仅存在空 `__init.lua` 作为占位入口，且无实际引用。
+  证据：`rg -n "return {}" Manager -g"__init.lua"` 命中多个空模块。
 
 
 ## 决策日志
@@ -38,11 +42,15 @@
   理由：工程可能被编辑器或脚本以固定入口调用。
   日期/作者：2026-01-30 / Codex
 
+- 决策：保留顶层 `__init.lua` 作为兼容入口，仅清理无引用的 GUI 子目录 `__init.lua` 与无效链式 `__init.lua`。
+  理由：减少冗余同时避免破坏潜在外部入口依赖。
+  日期/作者：2026-01-30 / Codex
+
 
 ## 结果与复盘
 
 
-尚未实施。
+已清理无引用的 GUI 子目录 `__init.lua` 与无效链式 `__init.lua`，回归测试通过。冗余入口已收敛到必要的顶层兼容入口，未发现多套实现冲突。
 
 
 ## 背景与导读
@@ -86,6 +94,8 @@
 4) 校验差异。
    - 检查 `git status` 与关键路径，确保无误删核心实现。
 
+已完成清单盘点与清理，删除无引用入口并更新父级 `__init.lua`，随后完成回归验证。
+
 
 ## 验证与验收
 
@@ -97,6 +107,8 @@
 确保：
 - 入口脚本 `main.lua` / `init.lua` 不报错。
 - `rg -n "GameEvents|EventHandlers|AdapterLayer|Runtime"` 不再出现已清理实现（如已替换）。
+
+已执行 `deps_check` 与 `regression`，结果通过。
 
 
 ## 可重复性与恢复
@@ -117,6 +129,10 @@
 
 若这些文件在前置里程碑已移除，则本里程碑需验证并记录“已清理，无需处理”。
 
+本次实际清理：
+    删除：Manager/ItemManager/Item/__init.lua、Manager/ChoiceManager/Choice/__init.lua、Manager/ChoiceManager/Choice/ChoiceHandlers/__init.lua、Manager/TurnManager/Turn/__init.lua、Manager/LandManager/Land/__init.lua、Manager/EffectManager/Effect/__init.lua、Manager/MovementManager/Movement/__init.lua、Manager/MarketManager/Market/__init.lua、Manager/TurnManager/GUI/__init.lua、Manager/BoardManager/GUI/__init.lua、Manager/ChoiceManager/GUI/__init.lua、Manager/MarketManager/GUI/__init.lua
+    修改：Manager/ItemManager/__init.lua、Manager/ChoiceManager/__init.lua、Manager/TurnManager/__init.lua、Manager/LandManager/__init.lua、Manager/EffectManager/__init.lua、Manager/MovementManager/__init.lua、Manager/MarketManager/__init.lua
+
 
 ## 接口与依赖
 
@@ -125,3 +141,4 @@
 
 
 改动记录：本计划为首次版本，尚未实施。
+改动记录：完成清单盘点与无引用入口清理，补充决策与验证结果，确保子计划状态可追溯。

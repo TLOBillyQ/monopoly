@@ -1,18 +1,26 @@
+require "Library.ClassUtils"
+
 ---@class RNG
+---@field seed number
+---@field state number
 ---随机数生成器（使用GameAPI.random_int）
-local RNG = {}
-RNG.__index = RNG
+local RNG = Class("RNG")
+RNG.__class_new = RNG.new
+
+---创建新随机数生成器
+---@param seed number? 随机种子（保留参数以兼容现有代码）
+---@param state number? 初始状态（保留参数以兼容现有代码）
+function RNG:init(seed, state)
+  self.seed = seed or 1
+  self.state = state or (seed or 1)
+end
 
 ---创建新随机数生成器
 ---@param seed number? 随机种子（保留参数以兼容现有代码）
 ---@param state number? 初始状态（保留参数以兼容现有代码）
 ---@return RNG 新RNG对象
 function RNG.new(seed, state)
-  local self = {
-    seed = seed or 1,
-    state = state or (seed or 1),
-  }
-  return setmetatable(self, RNG)
+  return RNG.__class_new(RNG, seed, state)
 end
 
 ---生成在[min, max]范围内的整数

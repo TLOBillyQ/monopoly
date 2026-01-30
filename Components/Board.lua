@@ -1,7 +1,15 @@
+require "Library.ClassUtils"
+
 ---@class Board
+---@field path Tile[]
+---@field tile_lookup table
+---@field branches table
+---@field index_by_id table
+---@field map table
+---@field overlays table
 ---棋盘管理类，负责路径、地块和分支的管理
-local Board = {}
-Board.__index = Board
+local Board = Class("Board")
+Board.__class_new = Board.new
 
 local OPPOSITE = {
   up = "down",
@@ -24,8 +32,7 @@ end
 
 ---创建新棋盘实例
 ---@param data table 棋盘数据（包含path/tile_lookup/branches/map/overlays）
----@return Board 新棋盘对象
-function Board.new(data)
+function Board:init(data)
   local tile_lookup = data.tile_lookup
   local path = data.path
 
@@ -34,15 +41,19 @@ function Board.new(data)
     index_by_id[tile.id] = idx
   end
 
-  local b = {
-    path = path,
-    tile_lookup = tile_lookup,
-    branches = data.branches,
-    index_by_id = index_by_id,
-    map = data.map,
-    overlays = data.overlays,
-  }
-  return setmetatable(b, Board)
+  self.path = path
+  self.tile_lookup = tile_lookup
+  self.branches = data.branches
+  self.index_by_id = index_by_id
+  self.map = data.map
+  self.overlays = data.overlays
+end
+
+---创建新棋盘实例
+---@param data table 棋盘数据（包含path/tile_lookup/branches/map/overlays）
+---@return Board 新棋盘对象
+function Board.new(data)
+  return Board.__class_new(Board, data)
 end
 
 ---获取棋盘长度（地块数）

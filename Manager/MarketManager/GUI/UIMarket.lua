@@ -1,7 +1,7 @@
 local MarketUI = require("Manager.MarketManager.GUI.MarketUI")
-local items_cfg = require("Config.Items")
-local market_cfg = require("Config.Market")
-local vehicles_cfg = require("Config.Vehicles")
+local items_cfg = require("Config.Generated.Items")
+local market_cfg = require("Config.Generated.Market")
+local vehicles_cfg = require("Config.Generated.Vehicles")
 
 local EggyLayerMarket = {}
 

@@ -1,4 +1,4 @@
-local constants = require("Config.Constants")
+local constants = require("Config.Generated.Constants")
 local logger = require("Library.Monopoly.Logger")
 
 local Effects = {}

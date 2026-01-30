@@ -16,7 +16,7 @@ local Effect = require("Manager.EffectManager.Effect.Effect")
 local ChoiceService = require("Manager.ChoiceManager.Choice.ChoiceService")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
 local EggyLayer = require("Manager.TurnManager.GUI.Layer")
-local constants = require("Config.Constants")
+local constants = require("Config.Generated.Constants")
 local logger = require("Library.Monopoly.Logger")
 
 local TestUtils = require("tests.test_utils")
@@ -606,7 +606,7 @@ end
 
 local function test_market_global_limit()
   local MarketService = require("Manager.MarketManager.Market.MarketService")
-  local market_cfg = require("Config.Market")
+  local market_cfg = require("Config.Generated.Market")
   local g = new_game()
   local p = g:current_player()
   local entry = nil
@@ -781,7 +781,7 @@ local function test_complex_consecutive_turn_settlement()
   
   -- 验证配置中存在向前移动的机会卡（测试依赖此配置）
   -- 直接检查机会卡 3023: "后方有犬吠，你向前跑两格"
-  local chance_cfg = require("Config.ChanceCards")
+  local chance_cfg = require("Config.Generated.ChanceCards")
   local has_card_3023 = false
   for _, card in ipairs(chance_cfg) do
     if card.id == 3023 then

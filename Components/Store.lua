@@ -1,19 +1,25 @@
+require "Library.ClassUtils"
+
 ---@class Store
+---@field state table
 ---状态存储类，管理游戏状态持久化
-local Store = {}
-Store.__index = Store
+local Store = Class("Store")
+Store.__class_new = Store.new
 
 local Tables = require("Library.Monopoly.Tables")
 local deep_copy = Tables.deep_copy
 
 ---创建新状态树
 ---@param init table? 初始状态表
+function Store:init(init)
+  self.state = deep_copy(init or {})
+end
+
+---创建新状态树
+---@param init table? 初始状态表
 ---@return Store 新Store对象
 function Store.new(init)
-  local self = {
-    state = deep_copy(init or {}),
-  }
-  return setmetatable(self, Store)
+  return Store.__class_new(Store, init)
 end
 
 ---根据路径读取状态值

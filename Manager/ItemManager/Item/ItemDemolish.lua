@@ -1,7 +1,7 @@
 local logger = require("Library.Monopoly.Logger")
 local Tile = require("Components.Tile")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
-local constants = require("Config.Constants")
+local constants = require("Config.Generated.Constants")
 
 local Demolish = {}
 

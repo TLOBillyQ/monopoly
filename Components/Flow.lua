@@ -1,19 +1,28 @@
+require "Library.ClassUtils"
+
 ---@class Flow
+---@field states table
+---@field current string?
+---@field args table
+---@field running boolean
 ---状态机类，管理游戏状态流转
-local Flow = {}
-Flow.__index = Flow
+local Flow = Class("Flow")
+Flow.__class_new = Flow.new
+
+---创建新状态机实例
+---@param opts table 选项表（states/start/args）
+function Flow:init(opts)
+  self.states = opts.states or {}
+  self.current = opts.start or nil
+  self.args = opts.args or {}
+  self.running = false
+end
 
 ---创建新状态机实例
 ---@param opts table 选项表（states/start/args）
 ---@return Flow 新状态机对象
 function Flow.new(opts)
-  local self = {
-    states = opts.states or {},
-    current = opts.start or nil,
-    args = opts.args or {},
-    running = false,
-  }
-  return setmetatable(self, Flow)
+  return Flow.__class_new(Flow, opts)
 end
 
 ---执行一步状态转移

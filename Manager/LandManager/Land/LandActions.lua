@@ -1,5 +1,5 @@
 local LandActions = {}
-local constants = require("Config.Constants")
+local constants = require("Config.Generated.Constants")
 local Tile = require("Components.Tile")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
 local Pricing = require("Manager.LandManager.Land.LandPricing")
