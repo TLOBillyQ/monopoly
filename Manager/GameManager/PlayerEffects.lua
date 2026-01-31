@@ -1,5 +1,6 @@
 local constants = require("Config.Generated.Constants")
 local logger = require("Library.Monopoly.Logger")
+local SERVICE_KEY = require("Globals.ServiceKeys")
 
 local Effects = {}
 
@@ -9,14 +10,14 @@ function Effects:apply_hospital_effects(game)
   local fee = constants.hospital_fee
   if self.cash < fee then
     logger.event(self.name .. " 资金不足，无法支付医药费 " .. fee)
-    local bankruptcy = game:get_service("bankruptcy")
+    local bankruptcy = game:get_service(SERVICE_KEY.bankruptcy)
     bankruptcy.eliminate(game, self)
     return
   end
   self:deduct_cash(fee)
   logger.event(self.name .. " 支付医药费 " .. fee)
   if self.cash <= 0 then
-    local bankruptcy = game:get_service("bankruptcy")
+    local bankruptcy = game:get_service(SERVICE_KEY.bankruptcy)
     bankruptcy.eliminate(game, self)
     return
   end

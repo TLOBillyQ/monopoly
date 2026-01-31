@@ -3,6 +3,7 @@ local Logger = require("Library.Monopoly.Logger")
 local Agent = require("Manager.GameManager.Agent")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local Tile = require("Components.Tile")
+local SERVICE_KEY = require("Globals.ServiceKeys")
 require "Library.ClassUtils"
 
 ---@class TurnManager
@@ -117,7 +118,7 @@ end
 ---@param action table? 行动对象
 ---@return table 决议结果
 local function resolve_choice(game, choice, action)
-  local service = game:get_service("choice")
+  local service = game:get_service(SERVICE_KEY.choice)
   return service.resolve(game, choice, action) or {}
 end
 
@@ -307,4 +308,3 @@ function TurnManager:run_turn()
 end
 
 return TurnManager
-

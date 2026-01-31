@@ -6,6 +6,7 @@ local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local chance_effects = require("Manager.GameManager.Chance")
 local MineEffect = require("Manager.EffectManager.Effect.MineEffect")
 local Steal = require("Manager.ItemManager.Item.ItemSteal")
+local SERVICE_KEY = require("Globals.ServiceKeys")
 
 local Landing = {}
 
@@ -83,7 +84,7 @@ Landing.executors = {
     apply = function(ctx)
       local game = ctx.game
       local player = ctx.player
-      local market = game:get_service("market", ctx)
+      local market = game:get_service(SERVICE_KEY.market, ctx)
 
       local spec, intent = market.build_choice_spec(player, game)
       if intent then return { intent = intent } end
@@ -115,4 +116,3 @@ Landing.executors = {
 }
 
 return Landing
-

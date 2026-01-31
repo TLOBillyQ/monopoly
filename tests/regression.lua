@@ -20,6 +20,7 @@ local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
 local RuntimeLoop = require("Manager.System.RuntimeLoop")
 local constants = require("Config.Generated.Constants")
 local logger = require("Library.Monopoly.Logger")
+local SERVICE_KEY = require("Globals.ServiceKeys")
 
 local TestUtils = require("tests.test_utils")
 local assert_eq = TestUtils.assert_eq
@@ -495,7 +496,7 @@ local function test_bankruptcy_resets_owned_tiles()
   g:set_tile_owner(tile2, p1.id)
   g:set_tile_level(tile2, 1)
 
-  local bankruptcy = g:get_service("bankruptcy")
+  local bankruptcy = g:get_service(SERVICE_KEY.bankruptcy)
   bankruptcy.eliminate(g, p1)
 
   local st1 = tile_state(g, tile1)

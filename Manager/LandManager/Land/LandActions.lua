@@ -6,6 +6,7 @@ local Pricing = require("Manager.LandManager.Land.LandPricing")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local gameplay_constants = require("Manager.GameManager.Constants")
 local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
+local SERVICE_KEY = require("Globals.ServiceKeys")
 
 local tile_state = Tile.get_state
 local ITEM_IDS = gameplay_constants.item_ids
@@ -20,7 +21,7 @@ local function eliminate_if_bankrupt(game, player)
   if not player or player.cash > 0 then
     return
   end
-  local bankruptcy = game:get_service("bankruptcy")
+  local bankruptcy = game:get_service(SERVICE_KEY.bankruptcy)
   bankruptcy.eliminate(game, player)
 end
 
@@ -240,4 +241,3 @@ function LandActions.execute_pay_tax(game, player_id)
 end
 
 return LandActions
-

@@ -1,11 +1,12 @@
 local IntentDispatcher = require("Library.Monopoly.IntentDispatcher")
 local Steal = require("Manager.ItemManager.Item.ItemSteal")
+local SERVICE_KEY = require("Globals.ServiceKeys")
 
 local function phase_move(tm, args)
   local player = args.player
   local total = args.total
   local raw_total = args.raw_total
-  local movement = tm.game and tm.game.get_service and tm.game:get_service("movement")
+  local movement = tm.game and tm.game.get_service and tm.game:get_service(SERVICE_KEY.movement)
   local move_result = args.move_result
 
   local move_opts = { branch_parity = raw_total }
@@ -91,7 +92,7 @@ local function phase_move(tm, args)
   end
 
   if move_result.market_interrupt then
-    local market = tm.game and tm.game.get_service and tm.game:get_service("market")
+    local market = tm.game and tm.game.get_service and tm.game:get_service(SERVICE_KEY.market)
     if market then
       local spec, intent = market.build_choice_spec(player, tm.game)
       if spec then

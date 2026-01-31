@@ -1,6 +1,7 @@
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local Tile = require("Components.Tile")
 local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
+local SERVICE_KEY = require("Globals.ServiceKeys")
 
 local ChanceRegistry = {}
 local handlers = {}
@@ -39,7 +40,7 @@ local function handle_bankruptcy_if_negative(game, player)
   if player.cash > 0 then
     return
   end
-  local bankruptcy = game:get_service("bankruptcy")
+  local bankruptcy = game:get_service(SERVICE_KEY.bankruptcy)
   bankruptcy.eliminate(game, player)
 end
 
@@ -49,7 +50,7 @@ local function apply_cash_and_maybe_bankrupt(game, player, delta)
 end
 
 local function move_steps(game, player, steps, opts)
-  local movement = game:get_service("movement")
+  local movement = game:get_service(SERVICE_KEY.movement)
   local res = movement.move(game, player, steps, opts)
   if res and res.stopped_on_roadblock then
     local stay = player.status.stay_turns or 0

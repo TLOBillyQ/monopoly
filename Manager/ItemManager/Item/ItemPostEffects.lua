@@ -3,6 +3,7 @@ local constants = require("Config.Generated.Constants")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local gameplay_constants = require("Manager.GameManager.Constants")
+local SERVICE_KEY = require("Globals.ServiceKeys")
 
 local ItemEffects = {}
 local ITEM_IDS = gameplay_constants.item_ids
@@ -54,7 +55,7 @@ local TARGET_EFFECTS = {
       target:deduct_cash(fee)
       logger.event(user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. fee .. " 税金")
       if target.cash <= 0 then
-        local bankruptcy = game:get_service("bankruptcy")
+        local bankruptcy = game:get_service(SERVICE_KEY.bankruptcy)
         bankruptcy.eliminate(game, target)
       end
       return true
@@ -298,4 +299,3 @@ function ItemEffects.apply_post(game, player, item_id, context)
 end
 
 return ItemEffects
-
