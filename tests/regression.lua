@@ -15,7 +15,7 @@ local EffectPipeline = require("Manager.EffectManager.Effect.EffectPipeline")
 local Effect = require("Manager.EffectManager.Effect.Effect")
 local ChoiceService = require("Manager.ChoiceManager.Choice.ChoiceService")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
-local RuntimeLoop = require("Manager.System.GUI.RuntimeLoop")
+local GameplayLoop = require("Manager.GameManager.GameplayLoop")
 local constants = require("Config.Generated.Constants")
 local logger = require("Library.Monopoly.Logger")
 local SERVICE_KEY = require("Globals.ServiceKeys")
@@ -233,7 +233,7 @@ local function test_move_anim_callback_and_delay()
     end,
   }
   SetTimeOut = LuaAPI.call_delay_time
-  RuntimeLoop.step_move_anim(layer, {
+  GameplayLoop.step_move_anim(layer, {
     on_move_anim = function(_, anim)
       assert_eq(anim.seq, 1, "anim seq forwarded")
       return 0.2
@@ -370,9 +370,9 @@ local function test_popup_timeout_auto_confirm()
       l.modal.active:confirm()
     end,
   }
-  RuntimeLoop.step_modal_timeout(layer, near_timeout, timeout_opts)
+  GameplayLoop.step_modal_timeout(layer, near_timeout, timeout_opts)
   assert_eq(popup.confirm_called, 0, "popup should not auto confirm before timeout")
-  RuntimeLoop.step_modal_timeout(layer, near_timeout + 1, timeout_opts)
+  GameplayLoop.step_modal_timeout(layer, near_timeout + 1, timeout_opts)
   assert_eq(popup.confirm_called, 1, "popup should auto confirm after timeout")
 end
 
