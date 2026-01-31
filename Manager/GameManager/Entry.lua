@@ -1,4 +1,4 @@
-local EggyLayer = require("Manager.TurnManager.GUI.Layer")
+local Runtime = require("Manager.System.Runtime")
 local Game = require("Manager.GameManager.Game")
 local logger = require("Library.Monopoly.Logger")
 
@@ -14,11 +14,8 @@ local function create_game()
 end
 
 function Entry.install()
-  logger.configure_game_time(GameAPI)
-  local layer = EggyLayer.new({ game_factory = create_game })
-  layer:install_game_init()
-  layer:start_tick_loop()
-  return layer
+  logger.configure_game_time()
+  return Runtime.install({ game_factory = create_game })
 end
 
 return Entry

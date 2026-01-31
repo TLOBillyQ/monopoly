@@ -10,7 +10,7 @@ local function show_missing_tip(name)
     return
   end
   missing_tips[name] = true
-  GlobalAPI.show_tips("UI 节点未适配：" .. tostring(name))
+  GlobalAPI.show_tips("UI 节点未适配：" .. tostring(name), 2.0)
 end
 
 local function query_node(name)

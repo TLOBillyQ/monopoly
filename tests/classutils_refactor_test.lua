@@ -1,3 +1,5 @@
+dofile("tests/test_bootstrap.lua")
+
 local Flow = require("Components.Flow")
 local Inventory = require("Components.Inventory")
 local RNG = require("Components.RNG")

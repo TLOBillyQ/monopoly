@@ -1,3 +1,5 @@
+dofile("tests/test_bootstrap.lua")
+
 local ok, ui_data = pcall(require, "Data.UIManagerNodes")
 if not ok or type(ui_data) ~= "table" then
   io.stderr:write("[ui-missing] failed to require Data.UIManagerNodes\n")

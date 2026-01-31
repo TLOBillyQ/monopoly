@@ -26,9 +26,9 @@
 
 **目标**：所有 UI 事件都归一成统一 action 结构，稳定进入 `Game:dispatch_action` 或 `Game:advance_turn`。
 
-- 统一入口：`Manager/TurnManager/GUI/UIEventRouter.lua` 的 UI 事件回调（由 `MainController.bind` 装配）。
+- 统一入口：`Manager/TurnManager/GUI/UIEventRouter.lua` 的 UI 事件回调（由 `Manager/System/Runtime.lua` 装配）。
 - 统一 action 结构：`{ type="ui_button", id="next" }`、`{ type="choice_select", choice_id=..., option_id=... }` 等。
-- 强制映射表：UI 事件名必须先经过“事件映射层”（`UIEventRouter`），再进入 `EggyLayer:dispatch_action`。
+- 强制映射表：UI 事件名必须先经过“事件映射层”（`UIEventRouter`），再进入 `RuntimeLoop.dispatch_action`（`Manager/System/RuntimeLoop.lua`）。
 - 同步点：**UI 触发事件的瞬间**，必须写清楚对应的 `action.type/id`，防止同名事件在不同逻辑分支产出不同动作。
 
 ### 2. 选择等待同步点（gameplay ↔ Eggy）
@@ -102,7 +102,7 @@
 ## 建议实现步骤（最小变更路径）
 
 1. 在 `Manager/TurnManager/GUI/UIEventRouter.lua` 增加“事件映射层”，集中维护 UI 事件 → action 的唯一映射。
-2. 在 `EggyLayer:tick` 中，根据 `store.turn.phase` 抑制 AutoRunner。
+2. 在 `RuntimeLoop.tick` 中，根据 `store.turn.phase` 抑制 AutoRunner。
 3. 在 `AdapterLayer.step_move_anim` / `step_action_anim` 中确保失败兜底立即确认。
 4. 在选择逻辑中增加 `choice.id` 对齐校验，确保超时/关闭动作对齐当前 choice。
 5. 在 UI 刷新中区分 `wait_move_anim` 与普通刷新，避免表现与规则状态冲突。

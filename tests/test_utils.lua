@@ -1,3 +1,5 @@
+dofile("tests/test_bootstrap.lua")
+
 local TestUtils = {}
 
 function TestUtils.assert_eq(a, b, msg)

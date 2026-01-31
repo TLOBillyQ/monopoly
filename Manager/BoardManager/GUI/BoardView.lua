@@ -284,7 +284,7 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
           local oz = start + row * spacing
           unit.set_position(base + math.Vector3(ox, y_offset, oz))
         else
-          unit.set_position(base + math.Vector3(0, y_offset, 0))
+          unit.set_position(base + math.Vector3(0.0, y_offset, 0.0))
         end
       end
     end
@@ -317,7 +317,7 @@ function EggyLayerBoard.on_tile_upgraded(layer, tile_id, level)
   end
   local root_quaternion = Q_ZERO
   if not root_quaternion and math and math.Quaternion then
-    root_quaternion = math.Quaternion(0, 0, 0)
+    root_quaternion = math.Quaternion(0.0, 0.0, 0.0)
   end
   if not root_quaternion then
     return

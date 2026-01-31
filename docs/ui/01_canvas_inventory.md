@@ -115,7 +115,7 @@
      - popup_body
      - popup_confirm
      - popup_card
-   - 显示控制：Lua 自动打开与关闭（`Manager/TurnManager/GUI/Layer.lua`）。
+  - 显示控制：Lua 自动打开与关闭（`Manager/System/RuntimeUI.lua`）。
 
 ## 层级建议
 

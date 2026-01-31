@@ -44,7 +44,7 @@ function MovementManager.one_step(player_id, v3_dir, start_tile_id, end_tile_id)
         local dx = dir.x
         local dz = dir.z
         if dx ~= 0 or dz ~= 0 then
-            local yaw_radians = 0
+            local yaw_radians = 0.0
             if dz > 0 then
                 yaw_radians = math.atan(dx / dz)
             elseif dz < 0 then
@@ -58,7 +58,7 @@ function MovementManager.one_step(player_id, v3_dir, start_tile_id, end_tile_id)
             elseif dx < 0 then
                 yaw_radians = -math.pi / 2
             end
-            unit.set_orientation(math.Quaternion(0, rad_to_deg(yaw_radians), 0))
+            unit.set_orientation(math.Quaternion(0.0, rad_to_deg(yaw_radians), 0.0))
         end
     end
 
@@ -67,4 +67,3 @@ function MovementManager.one_step(player_id, v3_dir, start_tile_id, end_tile_id)
 end
 
 return MovementManager
-

@@ -1,3 +1,5 @@
+dofile("tests/test_bootstrap.lua")
+
 package.path = package.path .. ";./?.lua"
 
 local function assert_true(value, message)

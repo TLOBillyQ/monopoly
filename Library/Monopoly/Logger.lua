@@ -81,7 +81,8 @@ function logger.set_time_formatter(formatter)
   logger.time_formatter = formatter
 end
 
-function logger.configure_game_time(game_api)
+function logger.configure_game_time()
+  local game_api = GameAPI
   if not game_api then
     return
   end

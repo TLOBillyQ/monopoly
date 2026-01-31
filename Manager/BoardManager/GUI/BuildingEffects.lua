@@ -4,9 +4,9 @@ local BuildingEffects = {}
 
 function BuildingEffects.spawn_upgrade_building_units(root_quaternion, building_index, level)
   local offsets = {
-    [1] = math.Vector3(0, 1.5, 0),
-    [2] = math.Vector3(0, 1.5, 0),
-    [3] = math.Vector3(1, 1.5, 0),
+    [1] = math.Vector3(0.0, 1.5, 0.0),
+    [2] = math.Vector3(0.0, 1.5, 0.0),
+    [3] = math.Vector3(1.0, 1.5, 0.0),
   }
   local buildings = G.buildings
   local refs = G.refs

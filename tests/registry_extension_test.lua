@@ -1,3 +1,5 @@
+dofile("tests/test_bootstrap.lua")
+
 local ChanceRegistry = require("Manager.GameManager.ChanceRegistry")
 local ChanceEffects = require("Manager.GameManager.Chance")
 

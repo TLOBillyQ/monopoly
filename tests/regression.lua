@@ -1,3 +1,5 @@
+dofile("tests/test_bootstrap.lua")
+
 -- Quick regression checks (run with: lua tests/regression.lua)
 local App = require("Manager.GameManager.Game")
 local MovementService = require("Manager.MovementManager.Movement.MovementService")
@@ -15,7 +17,7 @@ local EffectPipeline = require("Manager.EffectManager.Effect.EffectPipeline")
 local Effect = require("Manager.EffectManager.Effect.Effect")
 local ChoiceService = require("Manager.ChoiceManager.Choice.ChoiceService")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
-local EggyLayer = require("Manager.TurnManager.GUI.Layer")
+local RuntimeLoop = require("Manager.System.RuntimeLoop")
 local constants = require("Config.Generated.Constants")
 local logger = require("Library.Monopoly.Logger")
 
@@ -204,7 +206,7 @@ local function test_move_anim_callback_and_delay()
       cb()
     end,
   }
-  EggyLayer.step_move_anim(layer, {
+  RuntimeLoop.step_move_anim(layer, {
     on_move_anim = function(_, anim)
       assert_eq(anim.seq, 1, "anim seq forwarded")
       return 0.2
@@ -340,9 +342,9 @@ local function test_popup_timeout_auto_confirm()
       l.modal.active:confirm()
     end,
   }
-  EggyLayer.step_modal_timeout(layer, near_timeout, timeout_opts)
+  RuntimeLoop.step_modal_timeout(layer, near_timeout, timeout_opts)
   assert_eq(popup.confirm_called, 0, "popup should not auto confirm before timeout")
-  EggyLayer.step_modal_timeout(layer, near_timeout + 1, timeout_opts)
+  RuntimeLoop.step_modal_timeout(layer, near_timeout + 1, timeout_opts)
   assert_eq(popup.confirm_called, 1, "popup should auto confirm after timeout")
 end
 
@@ -1008,4 +1010,3 @@ for _, fn in ipairs(tests) do
 end
 
 print("\nAll regression checks passed (" .. #tests .. ")")
-

@@ -1,3 +1,5 @@
+dofile("tests/test_bootstrap.lua")
+
 local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 
 local function assert_event(path, value)

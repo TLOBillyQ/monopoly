@@ -1,3 +1,5 @@
+dofile("tests/test_bootstrap.lua")
+
 -- Dependency rules self-check (run with: lua tests/deps_check.lua)
 --
 -- === 依赖规则白名单（Allowed Dependency Directions） ===

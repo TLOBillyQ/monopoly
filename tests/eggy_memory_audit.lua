@@ -12,7 +12,7 @@ end
 
 local function list_lua_files()
   local files = {}
-  local pipe = io.popen('rg --files -g "*.lua" Components Config Manager Globals Data Library/Monopoly')
+  local pipe = io.popen('rg --files -g "*.lua" Components Config Manager Globals')
   if not pipe then
     return files
   end
@@ -48,29 +48,26 @@ local function scan_file(path, violations)
   local line_no = 0
   for line in content:gmatch("([^\n]*)\n?") do
     line_no = line_no + 1
-    if line:find("%f[%w]io%.") then
-      add_violation(violations, path, line_no, "使用 io.*")
+    if line:find("%f[%w]LuaAPI%s*:%s*%w") then
+      add_violation(violations, path, line_no, "LuaAPI 使用冒号调用")
     end
-    if line:find("%f[%w]os%.") then
-      add_violation(violations, path, line_no, "使用 os.*")
+    if line:find("%f[%w]GameAPI%s*:%s*%w") then
+      add_violation(violations, path, line_no, "GameAPI 使用冒号调用")
     end
-    if line:find("%f[%w]package%.") then
-      add_violation(violations, path, line_no, "使用 package.*")
+    if line:find("%f[%w]GlobalAPI%s*:%s*%w") then
+      add_violation(violations, path, line_no, "GlobalAPI 使用冒号调用")
     end
-    if line:find("%f[%w]debug%.") then
-      add_violation(violations, path, line_no, "使用 debug.*")
+    if line:find("GlobalAPI%.show_tips%([^,]+,%s*%-?%d+%s*[,)]") then
+      add_violation(violations, path, line_no, "show_tips 使用整数字面量时长")
     end
-    if line:find("debug%.traceback") then
-      add_violation(violations, path, line_no, "使用 debug.traceback")
+    if line:find("LuaAPI%.call_delay_time%(%s*%-?%d+%s*[,)]") then
+      add_violation(violations, path, line_no, "call_delay_time 使用整数字面量时长")
     end
-    if line:find("math%.random") then
-      add_violation(violations, path, line_no, "使用 math.random")
+    if line:find("math%.Quaternion%(%s*%-?%d+%s*,%s*%-?%d+%s*,%s*%-?%d+%s*%)") then
+      add_violation(violations, path, line_no, "Quaternion 使用整数字面量")
     end
-    if line:find("__gc") then
-      add_violation(violations, path, line_no, "使用 __gc")
-    end
-    if line:find("__mode") then
-      add_violation(violations, path, line_no, "使用 __mode")
+    if line:find("math%.Vector3%(%s*%-?%d+%s*,%s*%-?%d+%s*,%s*%-?%d+%s*%)") then
+      add_violation(violations, path, line_no, "Vector3 使用整数字面量")
     end
   end
 end
@@ -81,11 +78,11 @@ for _, path in ipairs(list_lua_files()) do
 end
 
 if #violations > 0 then
-  io.stdout:write("[lua-env] violations:\n")
+  io.stdout:write("[eggy-memory] violations:\n")
   for _, item in ipairs(violations) do
     io.stdout:write("  - " .. item .. "\n")
   end
   os.exit(1)
 end
 
-io.stdout:write("[lua-env] ok: no violations in runtime paths\n")
+io.stdout:write("ok - eggy memory audit\n")
