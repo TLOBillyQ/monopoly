@@ -9,7 +9,7 @@ local NavMesh = {}
 NavMesh.start_edit = function()
     LuaAPI.enable_developer_mode()
     local Editor = require "Library.NavMesh.Editor"
-    for _, role in ipairs(GameAPI.get_all_valid_roles()) do
+    for _, role in ipairs(ALLROLES) do
         local editor = Editor.find(role)
         if not editor then
             editor = Editor:new(role)
@@ -23,7 +23,7 @@ end
 
 NavMesh.stop_edit = function()
     local Editor = require "Library.NavMesh.Editor"
-    for _, role in ipairs(GameAPI.get_all_valid_roles()) do
+    for _, role in ipairs(ALLROLES) do
         local editor = Editor.find(role)
         if not editor then
             editor = Editor:new(role)
@@ -38,7 +38,7 @@ end
 NavMesh.render = function()
     local Editor = require "Library.NavMesh.Editor"
     NavMesh.is_rendering = true
-    for _, role in ipairs(GameAPI.get_all_valid_roles()) do
+    for _, role in ipairs(ALLROLES) do
         local editor = Editor.find(role)
         if not editor then
             editor = Editor:new(role)
@@ -60,7 +60,7 @@ NavMesh.Operation = {
 ---@param operation NavMesh.Operation 操作
 NavMesh.set_operation = function(operation)
     local Editor = require "Library.NavMesh.Editor"
-    for _, role in ipairs(GameAPI.get_all_valid_roles()) do
+    for _, role in ipairs(ALLROLES) do
         local editor = Editor.find(role)
         if not editor then
             editor = Editor:new(role)
@@ -75,7 +75,7 @@ end
 NavMesh.disable_render = function()
     NavMesh.is_rendering = false
     local Editor = require "Library.NavMesh.Editor"
-    for _, role in ipairs(GameAPI.get_all_valid_roles()) do
+    for _, role in ipairs(ALLROLES) do
         local editor = Editor.find(role)
         if not editor then
             editor = Editor:new(role)
@@ -89,7 +89,7 @@ end
 
 NavMesh.export = function()
     local Editor = require "Library.NavMesh.Editor"
-    for _, role in ipairs(GameAPI.get_all_valid_roles()) do
+    for _, role in ipairs(ALLROLES) do
         local editor = Editor.find(role)
         if not editor then
             editor = Editor:new(role)

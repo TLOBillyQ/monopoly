@@ -9,8 +9,8 @@ local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 local MarketService = {}
 
 local function emit_event(kind, payload)
-  if LuaAPI and LuaAPI.global_send_custom_event then
-    LuaAPI.global_send_custom_event(kind, payload or {})
+  if TriggerCustomEvent then
+    TriggerCustomEvent(kind, payload or {})
   end
 end
 
@@ -274,4 +274,3 @@ function MarketService.auto_buy(game, player)
 end
 
 return MarketService
-

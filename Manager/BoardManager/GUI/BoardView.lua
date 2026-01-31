@@ -117,7 +117,7 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
   end
 
   if not layer.player_units or layer.player_units_missing then
-    local roles = GameAPI.get_all_valid_roles() or {}
+    local roles = ALLROLES or {}
     local name_to_unit = {}
     local role_units = {}
     for i, role in ipairs(roles) do

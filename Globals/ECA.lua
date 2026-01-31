@@ -38,7 +38,7 @@ end
 
 UIManager.forward_eca_event = function(event)
     UIManager.eca_event = event
-    LuaAPI.global_send_custom_event(FORWARD_ECA_EVENT_UI, {})
+    TriggerCustomEvent(FORWARD_ECA_EVENT_UI, {})
 end
 
 VehicleManager = {}
@@ -46,23 +46,22 @@ VehicleManager = {}
 VehicleManager.forward_eca_event_enter = function(role_id, vehicle_id)
     VehicleManager.player_id = role_id
     VehicleManager.vehicle_id = vehicle_id
-    LuaAPI.global_send_custom_event(ECA_EVENT.VEHICLE.enter, {})
+    TriggerCustomEvent(ECA_EVENT.VEHICLE.enter, {})
 end
 VehicleManager.forward_eca_event_exit = function(role_id)
     VehicleManager.player_id = role_id
-    LuaAPI.global_send_custom_event(ECA_EVENT.VEHICLE.exit, {})
+    TriggerCustomEvent(ECA_EVENT.VEHICLE.exit, {})
 end
 
 VehicleManager.forward_eca_event_move = function(role_id, dir, time)
     VehicleManager.player_id = role_id
     VehicleManager.move_direction = dir
     VehicleManager.move_time = time
-    LuaAPI.global_send_custom_event(ECA_EVENT.VEHICLE.move, {})
+    TriggerCustomEvent(ECA_EVENT.VEHICLE.move, {})
 end
 
 -- 不太需要，当move到时间后，就相当于stop了
 VehicleManager.forward_eca_event_stop = function(role_id)
     VehicleManager.player_id = role_id
-    LuaAPI.global_send_custom_event(ECA_EVENT.VEHICLE.stop, {})
+    TriggerCustomEvent(ECA_EVENT.VEHICLE.stop, {})
 end
-

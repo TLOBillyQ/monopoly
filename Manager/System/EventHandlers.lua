@@ -20,7 +20,7 @@ function EventHandlers.install(_, logger, ui_port)
   if not logger then
     return
   end
-  if not (LuaAPI and LuaAPI.global_register_custom_event) then
+  if not RegisterCustomEvent then
     return
   end
   if installed then
@@ -28,7 +28,7 @@ function EventHandlers.install(_, logger, ui_port)
   end
   installed = true
 
-  local register = LuaAPI.global_register_custom_event
+  local register = RegisterCustomEvent
 
   local function log_text(payload)
     if payload and payload.text then

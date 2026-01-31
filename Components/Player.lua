@@ -1,6 +1,6 @@
 local Inventory = require("Components.Inventory")
-local Tables = require("Library.Monopoly.Tables")
 require "Library.ClassUtils"
+require "Library.Utils"
 
 ---@class Player
 ---@field id number
@@ -22,7 +22,7 @@ require "Library.ClassUtils"
 local Player = Class("Player")
 Player.__class_new = Player.new
 
-local deep_copy = Tables.deep_copy
+local deep_copy = Utils.deep_copy
 
 local function normalize_currency(currency)
   if currency == nil or currency == "" then

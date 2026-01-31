@@ -2,7 +2,7 @@
 ---@field client_role Role?
 UIManager = {}
 
-UIManager.allroles = GameAPI.get_all_valid_roles()
+UIManager.allroles = ALLROLES
 UIManager.nodes_list = {} --[[@as table<ENode, UIManager.ENode?>]]
 UIManager.name_node_mapping = {} --[[@as table<string, UIManager.ENode[]?> ]]
 ---@type 

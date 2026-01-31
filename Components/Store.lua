@@ -1,4 +1,5 @@
 require "Library.ClassUtils"
+require "Library.Utils"
 
 ---@class Store
 ---@field state table
@@ -6,8 +7,7 @@ require "Library.ClassUtils"
 local Store = Class("Store")
 Store.__class_new = Store.new
 
-local Tables = require("Library.Monopoly.Tables")
-local deep_copy = Tables.deep_copy
+local deep_copy = Utils.deep_copy
 
 ---创建新状态树
 ---@param init table? 初始状态表

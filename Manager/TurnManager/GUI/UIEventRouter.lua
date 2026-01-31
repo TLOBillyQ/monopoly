@@ -1,7 +1,7 @@
 local UIAliases = require("Manager.ChoiceManager.GUI.UIAliases")
 local MarketUI = require("Manager.MarketManager.GUI.MarketUI")
-local RuntimeLoop = require("Manager.System.RuntimeLoop")
-local RuntimeUI = require("Manager.System.RuntimeUI")
+local RuntimeLoop = require("Manager.System.GUI.RuntimeLoop")
+local RuntimeUI = require("Manager.System.GUI.RuntimeUI")
 
 local UIEventRouter = {}
 

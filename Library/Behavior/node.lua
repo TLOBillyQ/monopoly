@@ -739,7 +739,7 @@ function EventListenNode:init(name, event_name, proxy_property)
     DecoratorNode.init(self, name)
     BT.Utils.set_node_property(self, "event_name", event_name or "")
     BT.Utils.set_node_property(self, "proxy_property", proxy_property or "")
-    self.event_handler_id = LuaAPI.global_register_custom_event(event_name, function(_, _, data)
+    self.event_handler_id = RegisterCustomEvent(event_name, function(_, _, data)
         local property = BT.Utils.get_node_property(self, "proxy_property")
         local blackboard = self.blackboard
         if not blackboard then

@@ -36,7 +36,7 @@ end
 
 function Editor:init_controller()
     local char = self.role.get_ctrl_unit()
-    LuaAPI.unit_register_trigger_event(char, { EVENT.SPEC_LIFEENTITY_MOVE_BEGIN }, function()
+    UnitTriggerEvent(char, { EVENT.SPEC_LIFEENTITY_MOVE_BEGIN }, function()
         if self.editing then
             if self.role.has_tag("nav_mesh:start_move") then
                 return
@@ -45,11 +45,11 @@ function Editor:init_controller()
         end
     end)
 
-    LuaAPI.unit_register_trigger_event(char, { EVENT.SPEC_LIFEENTITY_MOVE_END }, function()
+    UnitTriggerEvent(char, { EVENT.SPEC_LIFEENTITY_MOVE_END }, function()
         self:stop_move()
     end)
 
-    LuaAPI.unit_register_trigger_event(char, { EVENT.SPEC_LIFEENTITY_JUMP }, function()
+    UnitTriggerEvent(char, { EVENT.SPEC_LIFEENTITY_JUMP }, function()
         if self.editing then
             self:on_jump()
         end

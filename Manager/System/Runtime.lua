@@ -1,8 +1,8 @@
 local AutoRunner = require("Manager.TurnManager.GUI.AutoRunner")
 local IntentDispatcher = require("Library.Monopoly.IntentDispatcher")
 local MainView = require("Manager.TurnManager.GUI.MainView")
-local RuntimeLoop = require("Manager.System.RuntimeLoop")
-local RuntimeUI = require("Manager.System.RuntimeUI")
+local RuntimeLoop = require("Manager.System.GUI.RuntimeLoop")
+local RuntimeUI = require("Manager.System.GUI.RuntimeUI")
 local UIEventRouter = require("Manager.TurnManager.GUI.UIEventRouter")
 local map_cfg = require("Config.Map")
 local logger = require("Library.Monopoly.Logger")
@@ -100,7 +100,7 @@ local function build_runtime(opts)
 end
 
 function Runtime.install_game_init(runtime)
-  LuaAPI.global_register_trigger_event({ EVENT.GAME_INIT }, function()
+  RegisterTriggerEvent({ EVENT.GAME_INIT }, function()
     require "UIManager.Utils"
     UIManager.Builder(require "Data.UIManagerNodes")
     require "Globals.ECA"
@@ -160,7 +160,7 @@ function Runtime.install_game_init(runtime)
       end
     end
 
-    for _, r in ipairs(GameAPI.get_all_valid_roles()) do
+    for _, r in ipairs(ALLROLES) do
       UIManager.client_role = r
       for i = 1, 5 do
         set_item_slot_image("item_slot_" .. tostring(i), refs["空"])
@@ -170,7 +170,7 @@ function Runtime.install_game_init(runtime)
     end
     UIManager.client_role = nil
 
-    LuaAPI.call_delay_time(0.1, function()
+    SetTimeOut(0.1, function()
       UIManager.forward_eca_event(ECA_EVENT.UI.close_loading_screen)
       UIManager.forward_eca_event(ECA_EVENT.UI.open_base_screen)
     end)

@@ -1,8 +1,11 @@
 local MarketService = require("Manager.MarketManager.Market.MarketService")
 local IntentDispatcher = require("Library.Monopoly.IntentDispatcher")
-local Convert = require("Library.Monopoly.Convert")
 
 local MarketChoiceHandler = {}
+
+local function to_number(value)
+  return tonumber(value)
+end
 
 function MarketChoiceHandler.build(helpers)
   local is_cancel = helpers.is_cancel
@@ -17,7 +20,7 @@ function MarketChoiceHandler.build(helpers)
       return finish_choice(game, false)
     end
 
-    local product_id = Convert.to_number(action.option_id)
+    local product_id = to_number(action.option_id)
     local meta = choice.meta
     local player = game.players[meta.player_id]
     if player and product_id then
@@ -42,7 +45,7 @@ function MarketChoiceHandler.build(helpers)
     local use = action and action.option_id == "use"
     local meta = choice.meta
     local player = game.players[meta.player_id]
-    local product_id = Convert.to_number(meta.product_id)
+    local product_id = to_number(meta.product_id)
     if use and player and product_id then
       MarketService.buy_with_opts(game, player, product_id, { skip_vehicle_prompt = true })
     end

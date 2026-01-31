@@ -1,9 +1,23 @@
 local CompositionRoot = require("Manager.GameManager.CompositionRoot")
-local Tables = require("Library.Monopoly.Tables")
+local Constants = require("Manager.GameManager.Constants")
+require "Library.Utils"
 
 local GameState = {}
 
-local deep_copy = Tables.deep_copy
+local deep_copy = Utils.deep_copy
+local StorePath = Constants.store_path_enum
+local StorePathKey = Constants.store_path_key
+
+local function sp(id)
+  return StorePathKey[id]
+end
+
+local function normalize_tile_key(key)
+  if type(key) == "number" then
+    return StorePathKey[key] or key
+  end
+  return key
+end
 
 local function store_value(v)
   if type(v) == "table" then
@@ -20,17 +34,17 @@ end
 
 function GameState:set_player_status(player, key, value)
   player.status[key] = value
-  self:_store_set({ "players", player.id, "status", key }, value)
+  self:_store_set({ sp(StorePath.players), player.id, sp(StorePath.status), key }, value)
 end
 
 function GameState:set_player_seat(player, seat_id)
   player.seat_id = seat_id
-  self:_store_set({ "players", player.id, "seat_id" }, seat_id)
+  self:_store_set({ sp(StorePath.players), player.id, sp(StorePath.seat_id) }, seat_id)
 end
 
 function GameState:set_player_eliminated(player, eliminated)
   player.eliminated = eliminated == true
-  self:_store_set({ "players", player.id, "eliminated" }, player.eliminated)
+  self:_store_set({ sp(StorePath.players), player.id, sp(StorePath.eliminated) }, player.eliminated)
 end
 
 function GameState:set_player_property(player, tile_id, owned)
@@ -43,12 +57,12 @@ function GameState:set_player_property(player, tile_id, owned)
   if owned then
     store_value = true
   end
-  self:_store_set({ "players", player.id, "properties", tile_id }, store_value)
+  self:_store_set({ sp(StorePath.players), player.id, sp(StorePath.properties), tile_id }, store_value)
 end
 
 function GameState:sync_player_inventory(player)
   if player.inventory then
-    self:_store_set({ "players", player.id, "inventory" }, CompositionRoot.snapshot_inventory(player.inventory))
+    self:_store_set({ sp(StorePath.players), player.id, sp(StorePath.inventory) }, CompositionRoot.snapshot_inventory(player.inventory))
   end
 end
 
@@ -57,7 +71,8 @@ function GameState:update_tile(tile, updates)
     return
   end
   for key, value in pairs(updates) do
-    self:_store_set({ "board", "tiles", tile.id, key }, value)
+    local store_key = normalize_tile_key(key)
+    self:_store_set({ sp(StorePath.board), sp(StorePath.tiles), tile.id, store_key }, value)
   end
 end
 
@@ -65,10 +80,10 @@ function GameState:queue_action_anim(payload)
   if not (payload and self.store) then
     return nil
   end
-  local seq = (self.store:get({ "turn", "action_anim_seq" }) or 0) + 1
+  local seq = (self.store:get({ sp(StorePath.turn), sp(StorePath.action_anim_seq) }) or 0) + 1
   payload.seq = seq
-  self.store:set({ "turn", "action_anim_seq" }, seq)
-  self.store:set({ "turn", "action_anim" }, payload)
+  self.store:set({ sp(StorePath.turn), sp(StorePath.action_anim_seq) }, seq)
+  self.store:set({ sp(StorePath.turn), sp(StorePath.action_anim) }, payload)
   return payload
 end
 
@@ -81,14 +96,14 @@ function GameState:set_tile_owner(tile, owner_id)
     ui_port:on_tile_owner_changed(tile.id, owner_id)
   end
   if owner_id == nil then
-    self:_store_set({ "board", "tiles", tile.id, "owner_id" }, nil)
+    self:_store_set({ sp(StorePath.board), sp(StorePath.tiles), tile.id, sp(StorePath.owner_id) }, nil)
   else
-    self:update_tile(tile, { owner_id = owner_id })
+    self:update_tile(tile, { [StorePath.owner_id] = owner_id })
   end
 end
 
 function GameState:set_tile_level(tile, level)
-  self:update_tile(tile, { level = level })
+  self:update_tile(tile, { [StorePath.level] = level })
 end
 
 function GameState:reset_tile(tile)
@@ -99,8 +114,8 @@ function GameState:reset_tile(tile)
   if ui_port and ui_port.on_tile_owner_changed then
     ui_port:on_tile_owner_changed(tile.id, nil)
   end
-  self:_store_set({ "board", "tiles", tile.id, "owner_id" }, nil)
-  self:_store_set({ "board", "tiles", tile.id, "level" }, 0)
+  self:_store_set({ sp(StorePath.board), sp(StorePath.tiles), tile.id, sp(StorePath.owner_id) }, nil)
+  self:_store_set({ sp(StorePath.board), sp(StorePath.tiles), tile.id, sp(StorePath.level) }, 0)
 end
 
 function GameState:alive_players()
@@ -114,7 +129,7 @@ function GameState:alive_players()
 end
 
 function GameState:current_player()
-  local idx = self.store:get({ "turn", "current_player_index" }) or 1
+  local idx = self.store:get({ sp(StorePath.turn), sp(StorePath.current_player_index) }) or 1
   return self.players[idx]
 end
 
@@ -138,14 +153,14 @@ function GameState:update_player_position(player, new_index)
     end
   end
   player.position = new_index
-  self:_store_set({ "players", player.id, "position" }, new_index)
+  self:_store_set({ sp(StorePath.players), player.id, sp(StorePath.position) }, new_index)
   self.occupants[new_index] = self.occupants[new_index] or {}
   table.insert(self.occupants[new_index], player.id)
 end
 
 function GameState:pending_choice()
   if self.store then
-    return self.store:get({ "turn", "pending_choice" })
+    return self.store:get({ sp(StorePath.turn), sp(StorePath.pending_choice) })
   end
 end
 

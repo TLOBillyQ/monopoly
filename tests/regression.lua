@@ -1,5 +1,3 @@
-dofile("tests/test_bootstrap.lua")
-
 -- Quick regression checks (run with: lua tests/regression.lua)
 local App = require("Manager.GameManager.Game")
 local MovementService = require("Manager.MovementManager.Movement.MovementService")
@@ -17,13 +15,39 @@ local EffectPipeline = require("Manager.EffectManager.Effect.EffectPipeline")
 local Effect = require("Manager.EffectManager.Effect.Effect")
 local ChoiceService = require("Manager.ChoiceManager.Choice.ChoiceService")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
-local RuntimeLoop = require("Manager.System.RuntimeLoop")
+local RuntimeLoop = require("Manager.System.GUI.RuntimeLoop")
 local constants = require("Config.Generated.Constants")
 local logger = require("Library.Monopoly.Logger")
 local SERVICE_KEY = require("Globals.ServiceKeys")
 
-local TestUtils = require("tests.test_utils")
-local assert_eq = TestUtils.assert_eq
+if not math.tofixed then
+  function math.tofixed(value)
+    return value
+  end
+end
+
+if not math.Vector3 then
+  function math.Vector3(x, y, z)
+    return { x = x, y = y, z = z }
+  end
+end
+
+if not math.Quaternion then
+  function math.Quaternion(x, y, z)
+    return { x = x, y = y, z = z }
+  end
+end
+
+local function assert_eq(a, b, msg)
+  if a ~= b then
+    error((msg or "assert failed") .. " | expected=" .. tostring(b) .. " got=" .. tostring(a))
+  end
+end
+
+LuaAPI = LuaAPI or {}
+LuaAPI.rand = LuaAPI.rand or function()
+  return math.random()
+end
 
 local function visited_tile_ids(board, visited)
   local list = {}
@@ -201,12 +225,14 @@ local function test_move_anim_callback_and_delay()
   layer.game = game
   local delay_called = nil
   local original_lua_api = LuaAPI
+  local original_set_timeout = SetTimeOut
   LuaAPI = {
     call_delay_time = function(delay, cb)
       delay_called = delay
       cb()
     end,
   }
+  SetTimeOut = LuaAPI.call_delay_time
   RuntimeLoop.step_move_anim(layer, {
     on_move_anim = function(_, anim)
       assert_eq(anim.seq, 1, "anim seq forwarded")
@@ -214,6 +240,7 @@ local function test_move_anim_callback_and_delay()
     end,
   })
   LuaAPI = original_lua_api
+  SetTimeOut = original_set_timeout
   assert_eq(delay_called, 0.2, "delay requested")
   assert_eq(#dispatched, 1, "move_anim_done dispatched")
   assert_eq(dispatched[1].seq, 1, "move_anim_done seq")
@@ -373,25 +400,23 @@ local function test_chance_is_mandatory_effect_entrypoint()
   local idx, tile = first_tile_by_type(g.board, "chance")
   g:update_player_position(p, idx)
 
-  -- We verify execution by checking if RNG is used to pick a card
-  local called = { rng = 0 }
-  g.rng = {
-    next_int = function()
-      called.rng = called.rng + 1
-      return 0 -- Pick first card usually
-    end,
-    -- chance.resolve might use rng for effects too
-    random = function() return 1 end, 
-    choice = function(self, arr) return arr[1] end
-  }
+  -- We verify execution by checking if LuaAPI.rand is used to pick a card
+  local called = { rand = 0 }
+  local original_lua_api = LuaAPI
+  LuaAPI = LuaAPI or {}
+  LuaAPI.rand = function()
+    called.rand = called.rand + 1
+    return 0 -- Pick first card
+  end
   
   -- Ensure we don't crash on effect execution
   -- We assume standard chance cards are safe or we mock chance_effects?
   -- Mocking requires package reload. Let's trust integration.
 
   resolve_landing(g, p, tile, {})
-  
-  assert(called.rng > 0, "chance logic was executed (RNG used)")
+  LuaAPI = original_lua_api
+
+  assert(called.rand > 0, "chance logic was executed (LuaAPI.rand used)")
 end
 
 local function test_movement_examples_from_issue()

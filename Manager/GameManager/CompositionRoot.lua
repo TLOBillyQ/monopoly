@@ -9,8 +9,7 @@ local constants = require("Config.Generated.Constants")
 local roles_cfg = require("Config.Generated.Roles")
 local tiles_config = require("Config.Generated.Tiles")
 local map_config = require("Config.Map")
-local Tables = require("Library.Monopoly.Tables")
-local RNG = require("Components.RNG")
+require "Library.Utils"
 local Store = require("Components.Store")
 local TurnManager = require("Manager.TurnManager.Turn.TurnManager")
 local turn_start = require("Manager.TurnManager.Turn.TurnStart")
@@ -31,7 +30,36 @@ local SERVICE_KEY = require("Globals.ServiceKeys")
 
 local CompositionRoot = {}
 
-local deep_copy = Tables.deep_copy
+local deep_copy = Utils.deep_copy
+
+local function new_rng(seed, state)
+  local rng = {
+    seed = seed or 1,
+    state = state or (seed or 1),
+  }
+
+  function rng:next_int(min, max)
+    min = min or 0
+    max = max or 1
+    if GameAPI and GameAPI.random_int then
+      return GameAPI.random_int(min, max)
+    end
+    local curr = self.state or self.seed or 1
+    curr = (curr * 1103515245 + 12345) % 2147483648
+    self.state = curr
+    local span = max - min + 1
+    if span <= 0 then
+      return min
+    end
+    return min + (curr % span)
+  end
+
+  function rng:snapshot()
+    return { seed = self.seed, state = self.state }
+  end
+
+  return rng
+end
 
 
 local function create_board(opts)
@@ -163,7 +191,7 @@ function CompositionRoot.assemble(opts, GameClass)
   opts = opts or {}
 
   local board = create_board(opts)
-  local rng = RNG.new(opts.seed)
+  local rng = new_rng(opts.seed)
   local players = create_players(opts)
 
   local initial_state = build_initial_state(board, players, rng)

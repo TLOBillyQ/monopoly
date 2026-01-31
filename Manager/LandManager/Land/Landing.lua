@@ -1,7 +1,7 @@
 local logger = require("Library.Monopoly.Logger")
 local constants = require("Config.Generated.Constants")
 local chance_cfg = require("Config.Generated.ChanceCards")
-local random = require("Library.Monopoly.Random")
+require "Library.Utils"
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local chance_effects = require("Manager.GameManager.Chance")
 local MineEffect = require("Manager.EffectManager.Effect.MineEffect")
@@ -56,7 +56,13 @@ Landing.executors = {
       return ctx.game and ctx.player and ctx.tile and ctx.tile.type == "chance"
     end,
     apply = function(ctx)
-      local card = random.weighted_choice(chance_cfg, "weight", ctx.game.rng)
+      local picked = Utils.choice_weight_list(chance_cfg, 1, function(item)
+        return item.weight or 0
+      end, true)
+      local card = picked[1] or chance_cfg[1]
+      if not card then
+        return
+      end
       logger.event(ctx.player.name .. " 抽到机会卡 " .. card.description)
       return chance_effects.resolve(ctx.game, ctx.player, card, ctx.move_result)
     end,

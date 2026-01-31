@@ -1,5 +1,5 @@
 local items_cfg = require("Config.Generated.Items")
-local random = require("Library.Monopoly.Random")
+require "Library.Utils"
 local logger = require("Library.Monopoly.Logger")
 local IntentDispatcher = require("Library.Monopoly.IntentDispatcher")
 
@@ -84,8 +84,11 @@ function Inventory.clear(player)
   player.inventory._suspend_on_change = false
 end
 
-function Inventory.draw_random(rng)
-  return random.weighted_choice(items_cfg, "weight", rng)
+function Inventory.draw_random(_)
+  local picked = Utils.choice_weight_list(items_cfg, 1, function(item)
+    return item.weight or 0
+  end, true)
+  return picked[1] or items_cfg[1]
 end
 
 local function notify_full(game, player, item_id)

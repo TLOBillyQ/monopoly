@@ -44,7 +44,7 @@ SetFrameOut = function(interval, callback, count, immediately)
             frameout.destroy()
         end
     end
-    local handler = LuaAPI.global_register_trigger_event(
+    local handler = RegisterTriggerEvent(
         { EVENT.REPEAT_TIMEOUT, math.tofixed(interval) / 30.0 }, decorator
     )
     ---销毁计时器
@@ -62,7 +62,7 @@ SetFrameOut = function(interval, callback, count, immediately)
     ---恢复计时器
     frameout.resume = function()
         if not frameout.status then
-            handler = LuaAPI.global_register_trigger_event(
+            handler = RegisterTriggerEvent(
                 { EVENT.REPEAT_TIMEOUT, math.tofixed(interval) / 30.0 }, decorator
             )
             frameout.status = true

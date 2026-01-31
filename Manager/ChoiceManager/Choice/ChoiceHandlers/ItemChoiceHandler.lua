@@ -4,13 +4,16 @@ local Steal = require("Manager.ItemManager.Item.ItemSteal")
 local Roadblock = require("Manager.ItemManager.Item.ItemRoadblock")
 local logger = require("Library.Monopoly.Logger")
 local IntentDispatcher = require("Library.Monopoly.IntentDispatcher")
-local Convert = require("Library.Monopoly.Convert")
 local RemoteDice = require("Manager.ItemManager.Item.ItemRemoteDice")
 local ItemPhase = require("Manager.ItemManager.Item.ItemPhase")
 local gameplay_constants = require("Manager.GameManager.Constants")
 
 local ItemChoiceHandler = {}
 local ITEM_IDS = gameplay_constants.item_ids
+
+local function to_number(value)
+  return tonumber(value)
+end
 
 function ItemChoiceHandler.build(helpers)
   local is_cancel = helpers.is_cancel
@@ -82,7 +85,7 @@ function ItemChoiceHandler.build(helpers)
     if is_cancel(action) then
       return finish_and_clear(game)
     end
-    local idx = Convert.to_number(action.option_id)
+    local idx = to_number(action.option_id)
     local meta = choice.meta
     local player = game.players[meta.player_id]
     if idx and player then
@@ -103,7 +106,7 @@ function ItemChoiceHandler.build(helpers)
     if is_cancel(action) then
       return finish_and_clear(game)
     end
-    local idx = Convert.to_number(action.option_id)
+    local idx = to_number(action.option_id)
     local meta = choice.meta
     local player = game.players[meta.player_id]
     if not player or not idx then
@@ -125,7 +128,7 @@ function ItemChoiceHandler.build(helpers)
     if is_cancel(action) then
       return finish_and_clear(game)
     end
-    local idx = Convert.to_number(action.option_id)
+    local idx = to_number(action.option_id)
     local meta = choice.meta
     local stealer = game.players[meta.player_id]
     local target = game.players[meta.target_id]
@@ -188,7 +191,7 @@ function ItemChoiceHandler.build(helpers)
     if is_cancel(action) then
       return finish_and_clear(game)
     end
-    local target_id = Convert.to_number(action.option_id)
+    local target_id = to_number(action.option_id)
     local meta = choice.meta
     local player = game.players[meta.player_id]
     local item_id = meta.item_id
@@ -203,7 +206,7 @@ function ItemChoiceHandler.build(helpers)
     if is_cancel(action) then
       return finish_and_clear(game)
     end
-    local value = Convert.to_number(action.option_id)
+    local value = to_number(action.option_id)
     local meta = choice.meta
     local player = game.players[meta.player_id]
     local dice_count = meta.dice_count or player:dice_count()
@@ -227,7 +230,7 @@ function ItemChoiceHandler.build(helpers)
       finish_item_phase(game, phase)
       return finish_choice(game, false)
     end
-    local item_id = Convert.to_number(action.option_id)
+    local item_id = to_number(action.option_id)
     if not item_id and action.option_id == "discard_item" then
       finish_choice(game, false)
       open_discard_item_choice(game, player, phase)
@@ -256,7 +259,7 @@ function ItemChoiceHandler.build(helpers)
       finish_choice(game, false)
       return reopen_item_phase(game, player, phase)
     end
-    local idx = Convert.to_number(action.option_id)
+    local idx = to_number(action.option_id)
     if not idx then
       finish_choice(game, false)
       return reopen_item_phase(game, player, phase)
@@ -282,4 +285,3 @@ function ItemChoiceHandler.build(helpers)
 end
 
 return ItemChoiceHandler
-

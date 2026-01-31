@@ -12,8 +12,8 @@ local tile_state = Tile.get_state
 local ITEM_IDS = gameplay_constants.item_ids
 
 local function emit_event(kind, payload)
-  if LuaAPI and LuaAPI.global_send_custom_event then
-    LuaAPI.global_send_custom_event(kind, payload or {})
+  if TriggerCustomEvent then
+    TriggerCustomEvent(kind, payload or {})
   end
 end
 
