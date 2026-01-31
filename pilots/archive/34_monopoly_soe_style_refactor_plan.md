@@ -13,6 +13,8 @@
 ## 进度
 
 
+- [x] (2026-01-31 14:09Z) 已完成：按用户指示废弃本计划并记录原因
+- [x] (2026-01-31 14:08Z) 已完成：根据计划34做代码审查与 SOLID 评估，并把发现与建议写入本计划
 - [ ] (2026-01-31 13:30Z) 明确 SOE 式入口链路在 Monopoly 的目标形态与模块边界
 - [ ] (2026-01-31 13:30Z) 新增 LevelData、MapManager、ModeManager 最小实现并接入入口
 - [ ] (2026-01-31 13:30Z) 迁移启动逻辑到 ModeManager，并补齐地图/模式配置
@@ -23,19 +25,46 @@
 ## 意外与发现
 
 
-当前暂无记录。执行中如发现现有入口或运行时依赖无法由模式接管，请记录具体文件、函数与证据片段。
+发现当前仓库尚未新增与计划对应的核心文件与最小实现。MapManager 与 ModeManager 目录为空，Config 下尚未出现 MapConfig 与 ModeConfig，Globals 下尚未出现 LevelData，这意味着计划的步骤 1-4 尚未开始，代码审查只能针对现有入口链路进行。
+
+证据：ls Manager/MapManager 输出为空；ls Manager/ModeManager/Classic 输出为空；ls Config 只包含 Map.lua。
 
 
 ## 决策日志
 
 
-当前暂无记录。实施过程中每次关键判断都需以“决策：… 理由：… 日期/作者：…”的句式记录。
+- 决策：在正式实现前先做一次面向现有入口链路的 SOLID 评估，并把缺口与建议写入计划。
+  理由：当前计划相关文件未落地，先给出结构性改进方向可降低后续设计反复。
+  日期/作者：2026-01-31 / Codex
+- 决策：废弃本计划。
+  理由：用户明确要求废弃该计划。
+  日期/作者：2026-01-31 / Codex
 
 
 ## 结果与复盘
 
 
-尚未开始。完成后总结 SOE 式入口重构对现有玩法的影响、保留的耦合点与下一阶段重构建议。
+本计划已按用户要求废弃，未进入实现与验证阶段。保留的代码审查与路线图可作为后续替代计划的参考，但不再作为执行依据。
+
+
+## 代码审查与 SOLID 评估
+
+
+当前入口链路由 `init.lua` 直接调用 `Manager.GameManager.Entry.install()`，这使启动流程依赖具体实现而非抽象入口，违反依赖倒置原则，也导致未来 MapManager/ModeManager 接入时需要修改入口文件而非配置。`Manager/__init.lua` 一次性加载全部管理器，入口层承担过多装配职责，职责边界模糊，放大了启动依赖。`Manager/GameManager/Entry.lua` 同时负责运行时安装与创建游戏实例，且在 `create_game` 内部硬编码玩家与 AI 配置，容易阻塞扩展点，影响开闭原则与单一职责。
+
+这些问题与计划 34 的目标一致，说明把入口迁移到 MapManager/ModeManager 并引入 LevelData 与配置映射，能够把启动决策与运行逻辑解耦，从结构上改善上述 SOLID 缺口。
+
+
+## 修改建议与路线图
+
+
+第一阶段以最小可运行骨架为目标，把 `Globals/LevelData.lua`、`Config/MapConfig.lua`、`Config/ModeConfig.lua`、`Manager/MapManager/__init.lua`、`Manager/ModeManager/__init.lua` 与 `Manager/ModeManager/Classic/__init.lua` 补齐，并在 `init.lua` 改为 `MapManager.init_level(LevelData.current_level)`，确保入口只依赖抽象的地图与模式选择。
+
+第二阶段把 `Manager/GameManager/Entry.lua` 的 `create_game` 拆为可注入的工厂或配置读取，ModeManager 通过配置或参数传入，减少硬编码并让模式层成为唯一的启动决策点。
+
+第三阶段整理 `Manager/__init.lua` 的加载顺序，让 MapManager/ModeManager 处于入口层最小依赖集合，其余 Manager 由模式或运行时按需加载，降低入口职责并避免全量 require 的启动耦合。
+
+第四阶段在 `tests/regression.lua` 通过后，再补充新的启动链路验证点，确保入口调整的可观察结果稳定，并把验证输出写回“结果与复盘”。
 
 
 ## 背景与导读
@@ -107,3 +136,7 @@ Monopoly 当前入口是 `main.lua` → `init.lua` → `Manager.GameManager.Entr
 配置依赖：`Config/MapConfig.lua` 必须能映射 `LevelData.current_level` 到地图模块路径或配置；`Config/ModeConfig.lua` 必须能映射 `LevelData.current_mode` 到模式模块路径。
 
 修改说明：根据计划29的研究结论，重写为 SOE 式入口链路重构计划，移除 core/adapter 分层思路。
+
+变更说明：补充了基于计划34的代码审查与 SOLID 评估、当前缺口与修改路线图，用于在实现前明确问题与推进顺序。
+
+变更说明：按用户要求废弃本计划，更新进度、决策日志与结果与复盘以反映终止状态。
