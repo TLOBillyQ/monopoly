@@ -1,5 +1,5 @@
 local logger = require("Library.Monopoly.Logger")
-local ChanceRegistry = require("Manager.GameManager.ChanceRegistry")
+local ChanceRegistry = require("Manager.ChanceManager.ChanceRegistry")
 local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 
 local ChanceEffects = {}

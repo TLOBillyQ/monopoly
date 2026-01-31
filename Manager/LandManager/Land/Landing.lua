@@ -3,7 +3,7 @@ local constants = require("Config.Generated.Constants")
 local chance_cfg = require("Config.Generated.ChanceCards")
 require "Library.Utils"
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
-local chance_effects = require("Manager.GameManager.Chance")
+local chance_effects = require("Manager.ChanceManager.Chance")
 local MineEffect = require("Manager.EffectManager.Effect.MineEffect")
 local Steal = require("Manager.ItemManager.Item.ItemSteal")
 local SERVICE_KEY = require("Globals.ServiceKeys")

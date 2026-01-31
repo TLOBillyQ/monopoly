@@ -24,6 +24,10 @@ local MONOPOLY_EVENT = {
   chance = {
     applied = "monopoly.chance.applied",
   },
+  intent = {
+    need_choice = "monopoly.intent.need_choice",
+    push_popup = "monopoly.intent.push_popup",
+  },
 }
 
 return MONOPOLY_EVENT

@@ -1,6 +1,6 @@
 local UIAliases = require("Manager.ChoiceManager.GUI.UIAliases")
 local MarketUI = require("Manager.MarketManager.GUI.MarketUI")
-local GameplayLoop = require("Manager.GameManager.GameplayLoop")
+local GameplayLoop = require("Manager.TurnManager.GameplayLoop")
 local MainView = require("Manager.TurnManager.GUI.MainView")
 
 local UIEventRouter = {}

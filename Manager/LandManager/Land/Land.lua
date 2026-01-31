@@ -6,7 +6,7 @@ local Pricing = require("Manager.LandManager.Land.LandPricing")
 local LandActions = require("Manager.LandManager.Land.LandActions")
 local LandChoiceSpecs = require("Manager.LandManager.Land.LandChoiceSpecs")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
-local gameplay_constants = require("Manager.GameManager.Constants")
+local gameplay_constants = require("Config.GameplayConstants")
 
 local tile_state = Tile.get_state
 local ITEM_IDS = gameplay_constants.item_ids

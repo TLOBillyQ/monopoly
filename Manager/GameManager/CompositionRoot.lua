@@ -2,8 +2,6 @@
 local Board = require("Components.Board")
 local Tile = require("Components.Tile")
 local Player = require("Components.Player")
-local PlayerVehicle = require("Manager.GameManager.PlayerVehicle")
-local PlayerEffects = require("Manager.GameManager.PlayerEffects")
 local Inventory = require("Components.Inventory")
 local constants = require("Config.Generated.Constants")
 local roles_cfg = require("Config.Generated.Roles")
@@ -23,7 +21,7 @@ local MarketService = require("Manager.MarketManager.Market.MarketService")
 local BankruptcyService = require("Manager.GameManager.BankruptcyService")
 local ChoiceService = require("Manager.ChoiceManager.Choice.ChoiceService")
 local ItemRegistry = require("Manager.ItemManager.Item.ItemRegistry")
-local ChanceRegistry = require("Manager.GameManager.ChanceRegistry")
+local ChanceRegistry = require("Manager.ChanceManager.ChanceRegistry")
 local logger = require("Library.Monopoly.Logger")
 local market_cfg = require("Config.Generated.Market")
 local SERVICE_KEY = require("Globals.ServiceKeys")
@@ -108,12 +106,6 @@ local function create_players(opts)
       constants = constants,
       inventory = Inventory.new({ constants = constants }),
     })
-    for key, fn in pairs(PlayerVehicle) do
-      player[key] = fn
-    end
-    for key, fn in pairs(PlayerEffects) do
-      player[key] = fn
-    end
     table.insert(players, player)
   end
   return players

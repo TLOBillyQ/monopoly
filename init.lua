@@ -3,7 +3,7 @@ require "Manager.__init"
 
 local AutoRunner = require("Manager.TurnManager.GUI.AutoRunner")
 local Game = require("Manager.GameManager.Game")
-local GameplayLoop = require("Manager.GameManager.GameplayLoop")
+local GameplayLoop = require("Manager.TurnManager.GameplayLoop")
 local IntentDispatcher = require("Library.Monopoly.IntentDispatcher")
 local MainView = require("Manager.TurnManager.GUI.MainView")
 local UIEventRouter = require("Manager.TurnManager.GUI.UIEventRouter")

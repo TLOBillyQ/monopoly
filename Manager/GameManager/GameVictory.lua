@@ -1,6 +1,6 @@
 local Tile = require("Components.Tile")
 local Pricing = require("Manager.LandManager.Land.LandPricing")
-local gameplay_constants = require("Manager.GameManager.Constants")
+local gameplay_constants = require("Config.GameplayConstants")
 
 local GameVictory = {}
 

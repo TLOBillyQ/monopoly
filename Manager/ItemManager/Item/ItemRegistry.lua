@@ -4,7 +4,7 @@ local Demolish = require("Manager.ItemManager.Item.ItemDemolish")
 local Roadblock = require("Manager.ItemManager.Item.ItemRoadblock")
 local RemoteDice = require("Manager.ItemManager.Item.ItemRemoteDice")
 local Agent = require("Manager.GameManager.Agent")
-local gameplay_constants = require("Manager.GameManager.Constants")
+local gameplay_constants = require("Config.GameplayConstants")
 
 local ItemRegistry = {}
 local handlers = {}

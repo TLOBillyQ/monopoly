@@ -1,22 +1,44 @@
 local IntentDispatcher = {}
-local listeners = {}
+local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
+
+local function normalize_payload(data)
+  if type(data) ~= "table" then
+    return data
+  end
+  if data.text ~= nil or data.popup ~= nil then
+    return data
+  end
+  if data["1"] ~= nil then
+    return data["1"]
+  end
+  return data
+end
+
+local function resolve_event_name(kind)
+  if not kind then
+    return nil
+  end
+  local intent = MONOPOLY_EVENT and MONOPOLY_EVENT.intent
+  if intent and intent[kind] then
+    return intent[kind]
+  end
+  return kind
+end
 
 function IntentDispatcher.on(kind, fn)
   if not kind or not fn then
     return
   end
-  listeners[kind] = listeners[kind] or {}
-  table.insert(listeners[kind], fn)
-end
-
-local function emit(kind, payload)
-  local list = listeners[kind]
-  if not list then
+  if not RegisterCustomEvent then
     return
   end
-  for _, fn in ipairs(list) do
-    fn(payload)
+  local event_name = resolve_event_name(kind)
+  if not event_name then
+    return
   end
+  RegisterCustomEvent(event_name, function(_, _, data)
+    fn(normalize_payload(data))
+  end)
 end
 
 function IntentDispatcher.dispatch(game, payload)
@@ -41,13 +63,24 @@ function IntentDispatcher.dispatch(game, payload)
       meta = spec.meta,
     }
     game.store:set({ "turn", "pending_choice" }, entry)
-    emit("need_choice", { game = game, choice = entry, choice_spec = spec })
+    if TriggerCustomEvent then
+      local event_name = resolve_event_name("need_choice")
+      if event_name then
+        TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
+      end
+    end
     return
   end
   if intent.kind == "push_popup" and intent.payload then
     local ui_port = game and game.ui_port
     if ui_port and ui_port.push_popup then
       ui_port:push_popup(intent.payload)
+    end
+    if TriggerCustomEvent then
+      local event_name = resolve_event_name("push_popup")
+      if event_name then
+        TriggerCustomEvent(event_name, { game = game, payload = intent.payload })
+      end
     end
   end
 end

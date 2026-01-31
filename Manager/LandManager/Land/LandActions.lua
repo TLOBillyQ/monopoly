@@ -4,7 +4,7 @@ local Tile = require("Components.Tile")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
 local Pricing = require("Manager.LandManager.Land.LandPricing")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
-local gameplay_constants = require("Manager.GameManager.Constants")
+local gameplay_constants = require("Config.GameplayConstants")
 local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 local SERVICE_KEY = require("Globals.ServiceKeys")
 

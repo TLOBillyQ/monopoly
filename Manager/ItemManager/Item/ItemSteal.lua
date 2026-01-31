@@ -1,7 +1,7 @@
 local logger = require("Library.Monopoly.Logger")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local LandChoiceSpecs = require("Manager.LandManager.Land.LandChoiceSpecs")
-local gameplay_constants = require("Manager.GameManager.Constants")
+local gameplay_constants = require("Config.GameplayConstants")
 
 local Steal = {}
 local ITEM_IDS = gameplay_constants.item_ids

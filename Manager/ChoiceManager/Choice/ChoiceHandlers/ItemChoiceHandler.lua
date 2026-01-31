@@ -6,7 +6,7 @@ local logger = require("Library.Monopoly.Logger")
 local IntentDispatcher = require("Library.Monopoly.IntentDispatcher")
 local RemoteDice = require("Manager.ItemManager.Item.ItemRemoteDice")
 local ItemPhase = require("Manager.ItemManager.Item.ItemPhase")
-local gameplay_constants = require("Manager.GameManager.Constants")
+local gameplay_constants = require("Config.GameplayConstants")
 
 local ItemChoiceHandler = {}
 local ITEM_IDS = gameplay_constants.item_ids

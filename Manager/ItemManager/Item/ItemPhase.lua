@@ -1,6 +1,6 @@
 local IntentDispatcher = require("Library.Monopoly.IntentDispatcher")
 local items_cfg = require("Config.Generated.Items")
-local gameplay_constants = require("Manager.GameManager.Constants")
+local gameplay_constants = require("Config.GameplayConstants")
 local Agent = require("Manager.GameManager.Agent")
 local Strategy = require("Manager.ItemManager.Item.ItemStrategy")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")

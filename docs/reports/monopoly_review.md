@@ -13,14 +13,14 @@
 
 - `Manager/System/Runtime.lua` 已将循环与 UI 拆到 `Manager/System/GUI/RuntimeLoop.lua` 与 `Manager/System/GUI/RuntimeUI.lua`，职责边界更清晰。
 - `Manager/GameManager/Game.lua` 现在主要负责回合推进与服务访问，状态逻辑被拆到 `Manager/GameManager/GameState.lua`。
-- `Manager/ChoiceManager/Choice/ChoiceRegistry.lua`、`Manager/ItemManager/Item/ItemRegistry.lua`、`Manager/GameManager/ChanceRegistry.lua` 将“注册”与“执行”分离，减少单点职责堆叠。
+- `Manager/ChoiceManager/Choice/ChoiceRegistry.lua`、`Manager/ItemManager/Item/ItemRegistry.lua`、`Manager/ChanceManager/ChanceRegistry.lua` 将“注册”与“执行”分离，减少单点职责堆叠。
 
 **问题**
 
 - `Manager/System/Runtime.lua:install_game_init` 仍包含 UI 初始化、角色/单位缓存、地图实体查询、全局变量设置、加载屏控制等多类职责，属于“启动 + 运行时 + 资源绑定”混杂。
 - `Manager/BoardManager/GUI/BoardView.lua:refresh_board` 同时做锚点解析、玩家单位映射、位置同步/布局、日志与告警、动画节流，函数跨度过大。
 - `Manager/MovementManager/Movement/MovementService.lua` 在移动逻辑中直接处理奖励、事件广播与状态写回（位置、朝向），仍有“领域逻辑 + 应用流程 + 通知”的耦合。
-- `Manager/GameManager/ChanceRegistry.lua` 将大量效果实现集中在同一文件，扩展时容易变成“超大工具箱”。
+- `Manager/ChanceManager/ChanceRegistry.lua` 将大量效果实现集中在同一文件，扩展时容易变成“超大工具箱”。
 
 ### O（开闭原则）
 

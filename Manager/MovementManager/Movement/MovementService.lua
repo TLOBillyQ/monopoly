@@ -1,5 +1,5 @@
 local constants = require("Config.Generated.Constants")
-local gameplay_constants = require("Manager.GameManager.Constants")
+local gameplay_constants = require("Config.GameplayConstants")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 

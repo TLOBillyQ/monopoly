@@ -1,6 +1,6 @@
 local Agent = require("Manager.GameManager.Agent")
 local ItemEffects = require("Manager.ItemManager.Item.ItemPostEffects")
-local gameplay_constants = require("Manager.GameManager.Constants")
+local gameplay_constants = require("Config.GameplayConstants")
 local logger = require("Library.Monopoly.Logger")
 
 local Strategy = {}

@@ -2,7 +2,7 @@ local logger = require("Library.Monopoly.Logger")
 local constants = require("Config.Generated.Constants")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
-local gameplay_constants = require("Manager.GameManager.Constants")
+local gameplay_constants = require("Config.GameplayConstants")
 local SERVICE_KEY = require("Globals.ServiceKeys")
 
 local ItemEffects = {}
