@@ -27,6 +27,7 @@ local ItemRegistry = require("Manager.ItemManager.Item.ItemRegistry")
 local ChanceRegistry = require("Manager.GameManager.ChanceRegistry")
 local logger = require("Library.Monopoly.Logger")
 local market_cfg = require("Config.Generated.Market")
+local SERVICE_KEY = require("Globals.ServiceKeys")
 
 local CompositionRoot = {}
 
@@ -203,10 +204,10 @@ function CompositionRoot.assemble(opts, GameClass)
     end_turn = turn_end,
   }
   local services = {
-    movement = MovementService,
-    market = MarketService,
-    bankruptcy = BankruptcyService,
-    choice = ChoiceService,
+    [SERVICE_KEY.movement] = MovementService,
+    [SERVICE_KEY.market] = MarketService,
+    [SERVICE_KEY.bankruptcy] = BankruptcyService,
+    [SERVICE_KEY.choice] = ChoiceService,
   }
 
   local game = GameClass.__class_new(GameClass)
@@ -229,4 +230,3 @@ end
 CompositionRoot.snapshot_inventory = snapshot_inventory
 
 return CompositionRoot
-
