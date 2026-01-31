@@ -22,43 +22,6 @@ local constants = {
     poor = 2018,
     angel = 2019,
   },
-  store_path_enum = {
-    players = 1,
-    status = 2,
-    seat_id = 3,
-    eliminated = 4,
-    properties = 5,
-    inventory = 6,
-    position = 7,
-    board = 8,
-    tiles = 9,
-    owner_id = 10,
-    level = 11,
-    turn = 12,
-    action_anim_seq = 13,
-    action_anim = 14,
-    current_player_index = 15,
-    pending_choice = 16,
-  },
-}
-
-constants.store_path_key = {
-  [constants.store_path_enum.players] = "players",
-  [constants.store_path_enum.status] = "status",
-  [constants.store_path_enum.seat_id] = "seat_id",
-  [constants.store_path_enum.eliminated] = "eliminated",
-  [constants.store_path_enum.properties] = "properties",
-  [constants.store_path_enum.inventory] = "inventory",
-  [constants.store_path_enum.position] = "position",
-  [constants.store_path_enum.board] = "board",
-  [constants.store_path_enum.tiles] = "tiles",
-  [constants.store_path_enum.owner_id] = "owner_id",
-  [constants.store_path_enum.level] = "level",
-  [constants.store_path_enum.turn] = "turn",
-  [constants.store_path_enum.action_anim_seq] = "action_anim_seq",
-  [constants.store_path_enum.action_anim] = "action_anim",
-  [constants.store_path_enum.current_player_index] = "current_player_index",
-  [constants.store_path_enum.pending_choice] = "pending_choice",
 }
 
 return constants

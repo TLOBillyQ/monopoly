@@ -13,12 +13,16 @@
 ## 进度
 
 
-- [ ] (2026-01-31 12:40Z) 阅读入口与初始化，确认启动流程与全局变量初始化顺序
-- [ ] (2026-01-31 12:40Z) 梳理 Library 模块职责与关键 API，覆盖 Utils、ClassUtils、UIManager、Behavior、NavMesh、Bincore
-- [ ] (2026-01-31 12:40Z) 追踪 Manager/Components 对 Library 的调用链，记录典型用法与文件位置
-- [ ] (2026-01-31 12:40Z) 产出研究笔记并对照 Monopoly 现有模块给出差异与可迁移点
-- [ ] (2026-01-31 12:49Z) 补充 Monopoly 现有实现的入口流程、核心模块与调用链，沉淀在同一份笔记中
+- [x] (2026-01-31 13:15Z) 阅读入口与初始化，确认启动流程与全局变量初始化顺序
+- [x] (2026-01-31 13:15Z) 梳理 Library 模块职责与关键 API，覆盖 Utils、ClassUtils、UIManager、Behavior、NavMesh、Bincore
+- [x] (2026-01-31 13:15Z) 追踪 Manager/Components 对 Library 的调用链，记录典型用法与文件位置
+- [x] (2026-01-31 13:15Z) 产出研究笔记并对照 Monopoly 现有模块给出差异与可迁移点
+- [x] (2026-01-31 13:15Z) 补充 Monopoly 现有实现的入口流程、核心模块与调用链，沉淀在同一份笔记中
 - [x] (2026-01-31 12:55Z) 深挖 Monopoly 的 Choice/Item 调用链并写入研究笔记
+- [x] (2026-01-31 12:55Z) 深挖 Monopoly 的 Land/Market choice 调用链并写入研究笔记
+- [x] (2026-01-31 12:59Z) 深挖 EffectPipeline 与可选落地效果的 choice 链条并写入研究笔记
+- [x] (2026-01-31 12:59Z) 补齐 SecretOfEscaper 的 Library/Manager 架构与 Monopoly 对照
+- [x] (2026-01-31 13:05Z) 记录 EffectPipeline 执行点扫描后的重构切入点
 
 
 ## 意外与发现
@@ -36,7 +40,7 @@
 ## 结果与复盘
 
 
-尚未开始。完成后总结产出的笔记是否足以支撑重构设计，列出仍缺失的信息与下一步建议。
+已完成架构研究初版，研究笔记覆盖入口与初始化、目录职责、Library/Manager 对照、Monopoly 关键调用链、EffectPipeline 相关链路与重构切入点。主要缺口在于更细粒度的 Manager/Components 调用链验证与运行期行为（例如模式切换时序、存档边界条件）。后续若要推动重构落地，需要补充这些细节并结合实机日志验证。
 
 
 ## 背景与导读
@@ -51,6 +55,8 @@
 
 
 先从入口与初始化读起，确认模块加载顺序与全局变量的生命周期，建立整体心智模型。随后逐一阅读 `Library` 内的核心模块，整理每个模块提供的入口、关键数据结构与最小使用示例，并把需要在笔记中保留的 API 签名标出来。接着从 `Manager` 与 `Components` 中逆向追踪实际调用链，把 Library 如何支撑玩法逻辑写清楚。然后补充 Monopoly 当前实现：从 `Runtime` 与 `CompositionRoot` 入手，串起 `Store` 状态树、`TurnManager` 状态机与各个 Manager 服务的调用链，明确数据驱动与 UI 同步方式。最后把这些结论整理为一份研究笔记，并与仓库中 Monopoly 的 `Library` 与 `Manager` 现有实现做对照，提炼可迁移的结构与潜在冲突点。
+
+为加速执行，可将调研拆成多个子任务并行推进。建议将子任务按模块分配给 subagent：A 负责 SecretOfEscaper 的 `Library` 结构与关键入口；B 负责 SecretOfEscaper 的 `Manager` 体系（Map/Mode/Entity/Player/Item/Shop）；C 负责 Monopoly 的对应模块与调用链补齐；主执行者负责统一汇总到同一份笔记并做对照。每个 subagent 必须输出“关键文件路径 + 入口函数 + 调用关系 + 结论要点”，并标注是否存在仍需二次确认的疑点。
 
 
 ## 具体步骤
@@ -113,3 +119,9 @@
 
 修改说明：补充 Monopoly 现有实现的背景、步骤与验收要求，并决定将对照内容写入同一份研究笔记，便于重构准备与检索。
 修改说明：记录 Choice/Item 调用链已落地到研究笔记，便于后续重构对照。
+修改说明：补充 Land/Market choice 调用链到研究笔记，覆盖落地与黑市流程。
+修改说明：补充 EffectPipeline 与可选落地效果 choice 链条到研究笔记，便于落地效果重构对照。
+修改说明：补齐 SecretOfEscaper 的 Library/Manager 架构对照章节，覆盖核心差异点。
+修改说明：补充 EffectPipeline 执行点扫描后的重构切入点，便于后续设计拆分。
+修改说明：补充 subagent 并行拆分的执行指导，以便正式执行时加速推进。
+修改说明：执行计划补齐入口/目录/调用链章节，完成初版并更新进度与复盘。

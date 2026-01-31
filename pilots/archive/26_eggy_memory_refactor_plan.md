@@ -16,7 +16,7 @@
 - [x] (2026-01-31 20:40Z) 已审阅 docs/eggy/eggy_lua_agent_memory.md 与主要运行路径（Entry/Layer/MoveAnim/Globals）。
 - [x] (2026-01-31 01:41Z) 统一浮点字面量与 30 FPS 时间换算（仅修改 Manager/Globals）。
 - [x] (2026-01-31 01:41Z) 增加 Eggy 规则审计测试并补足运行时提示（不扫描/修改 Library）。
-- [ ] (2026-01-31 01:43Z) 完成脚本与手工验收（已完成：lua tests/eggy_memory_audit.lua、lua tests/acceptance.lua、lua tests/lua_env_audit.lua；剩余：Eggitor 手工验收与结果复盘）。
+- [x] (2026-01-31 13:00Z) 按用户要求直接收尾并归档（未执行：Eggitor 手工验收；未确认：静态审计脚本与自动测试的实际存在与输出）。
 
 ## 意外与发现
 
@@ -32,6 +32,9 @@
 
 观察：测试环境直接 require Globals/Macro.lua 会触发 math.Vector3 缺失报错。  
 证据：tests/acceptance.lua 报错 “Globals/Macro.lua:1: field 'Vector3' is not callable (a nil value)”。
+
+观察：计划中提到的 tests/eggy_memory_audit.lua 在当前工作树不存在，tests 目录仅有 tests/regression.lua。  
+证据：执行 lua tests/eggy_memory_audit.lua 报错 “No such file or directory”；ls tests 仅显示 regression.lua。
 
 除以上记录外，本次执行未发现新的意外行为。
 
@@ -58,10 +61,14 @@
 理由：测试环境缺少 math.Vector3，直接 require Macro 会导致测试中断。  
 日期/作者：2026-01-31 / Codex
 
+决策：按用户要求将计划直接标记完成并归档，不补做缺失脚本与手工验收。  
+理由：用户明确要求“直接将 26 视作完成，开始清理计划”，优先遵循。  
+日期/作者：2026-01-31 / Codex
+
 ## 结果与复盘
 
 
-已完成代码与脚本修改，并通过静态审计与自动测试；手工验收待执行。
+按用户要求直接收尾并归档。手工验收未执行；计划中提到的静态审计脚本与自动测试未在本次确认存在或通过，若需补做需先恢复相关脚本与测试入口。
 
 ## 背景与导读
 
@@ -110,6 +117,8 @@
 
 验收三（Eggitor 手工）：以 main.lua 为入口启动，观察 UI 在 GAME_INIT 后才出现；触发 UI 缺失提示时停留约 2 秒；如单位未关闭组件性能优化，初始化时应提示一次。
 
+本次按用户要求未执行验收三；同时未在当前工作树确认 tests/eggy_memory_audit.lua 与 tests/acceptance.lua 的存在与输出。
+
 ## 可重复性与恢复
 
 
@@ -142,3 +151,4 @@
 本次更新：取消弧度角度相关内容，新增“不修改 Library/”约束，并同步调整审计范围、步骤与验收，原因是用户要求缩小范围与避免触碰底层库。
 本次更新：执行计划并完成代码修改与审计脚本接入，同步更新进度、步骤与复盘状态，原因是进入实施阶段。
 本次更新：完成静态审计与自动测试，记录测试环境缺失 math.Vector3 的发现与兜底决策，原因是确保测试稳定通过。
+本次更新：按用户要求直接标记完成并归档，记录缺失脚本与未执行验收的事实，原因是进入清理流程。
