@@ -9,8 +9,7 @@
 ## 自定义提示词
 
 - “交付可执行计划”：在.github/plans/下创建可执行文档`x_*.md`，x是递增的数字序号前缀
-- “清理可执行计划”：将.github/plans/下已完成的可执行文档归档到.github/plans/archive/下，但保持数字序号递增
-- “按顺序执行计划”：按数字从小到大一次执行.github/plans/下的未完成计划
+- “清理计划”：将.github/plans/下已完成的可执行文档归档到.github/plans/archive/下，但保持数字序号递增
 
 ## Coding Rules
 
