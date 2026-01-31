@@ -8,18 +8,18 @@
 
 ## 自定义提示词
 
-- “交付可执行计划”：在./pilots/下创建可执行文档`x_*.md`，x是递增的数字序号前缀
-- “清理可执行计划”：将./pilots/下已完成的可执行文档归档到./pilots/archive/下，但保持数字序号递增
-- “按顺序执行计划”：按数字从小到大一次执行./pilots/下的未完成计划
+- “交付可执行计划”：在.github/plans/下创建可执行文档`x_*.md`，x是递增的数字序号前缀
+- “清理可执行计划”：将.github/plans/下已完成的可执行文档归档到.github/plans/archive/下，但保持数字序号递增
+- “按顺序执行计划”：按数字从小到大一次执行.github/plans/下的未完成计划
 
 ## Coding Rules
 
-当做代码修改时，遵守 CodingDiscipline (见.agent/CODING.md)
+当做代码修改时，遵守 CodingDiscipline (见.github/agent/CODING.md)
 
 ## API 读取规则
 
-当需要检索API文件时，遵守 ReadingDiscipline (./agent/READING.md)
+当需要检索API文件时，遵守 ReadingDiscipline (.github/agent/READING.md)
 
 ## 本项目
 
-关于本项目的信息，见.agent/THIS.md
+关于本项目的信息，见.github/agent/THIS.md

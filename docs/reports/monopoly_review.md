@@ -2,8 +2,8 @@
 
 ## 范围与说明
 
-- 仅审查 `monopoly` 代码；`SecretOfEscaper/` 为模板工程，不在范围内。
-- 重点参考：`Manager/`、`Components/`、`Library/Monopoly/`、`Config/`、`Data/`、`Globals/`、`main.lua`/`init.lua`。
+- 仅审查 `monopoly` 代码；`SecretOfEscaper/` 不在范围内。
+- 重点参考：`Manager/`、`Components/`、`Library/Monopoly/`、`Config/`、`Data/`、`Globals/`、`main.lua`、`init.lua`。
 
 ## SOLID 审查结论
 
@@ -11,78 +11,95 @@
 
 **优点**
 
-- `Components/Flow.lua`、`Components/Store.lua`、`Components/Board.lua`、`Components/Player.lua`职责较清晰，类边界明确。
-- `Manager/GameManager/CompositionRoot.lua`集中装配依赖，降低了多处拼装的复杂度。
+- `Manager/System/Runtime.lua` 已将循环与 UI 拆到 `Manager/System/GUI/RuntimeLoop.lua` 与 `Manager/System/GUI/RuntimeUI.lua`，职责边界更清晰。
+- `Manager/GameManager/Game.lua` 现在主要负责回合推进与服务访问，状态逻辑被拆到 `Manager/GameManager/GameState.lua`。
+- `Manager/ChoiceManager/Choice/ChoiceRegistry.lua`、`Manager/ItemManager/Item/ItemRegistry.lua`、`Manager/GameManager/ChanceRegistry.lua` 将“注册”与“执行”分离，减少单点职责堆叠。
 
 **问题**
 
-- `Manager/System/Runtime.lua`同时负责时间格式化、日志初始化、UI初始化、ECA事件桥接、角色与单位缓存、地图实体查询、游戏创建与启动、帧更新循环，职责过多。
-- `Manager/BoardManager/GUI/BoardView.lua`中的 `refresh_board` 聚合了“地图锚点解析”“玩家单位映射”“位置同步/布局”“日志与告警”“动画节流”等多个层面。
-- `Manager/GameManager/Game.lua`既是领域模型又直接触发UI端口（`ui_port`）行为，并维护动画队列与胜负判定，职责叠加。
-- `Manager/MovementManager/Movement/MovementService.lua`在移动计算的同时直接处理奖励、状态更新与日志输出，领域规则和应用流程耦合。
+- `Manager/System/Runtime.lua:install_game_init` 仍包含 UI 初始化、角色/单位缓存、地图实体查询、全局变量设置、加载屏控制等多类职责，属于“启动 + 运行时 + 资源绑定”混杂。
+- `Manager/BoardManager/GUI/BoardView.lua:refresh_board` 同时做锚点解析、玩家单位映射、位置同步/布局、日志与告警、动画节流，函数跨度过大。
+- `Manager/MovementManager/Movement/MovementService.lua` 在移动逻辑中直接处理奖励、事件广播与状态写回（位置、朝向），仍有“领域逻辑 + 应用流程 + 通知”的耦合。
+- `Manager/GameManager/ChanceRegistry.lua` 将大量效果实现集中在同一文件，扩展时容易变成“超大工具箱”。
 
 ### O（开闭原则）
 
 **优点**
 
-- 通过 `ChoiceService.register` 与 `ChoiceService.setup` 提供了扩展入口。
+- `ItemRegistry`/`ChanceRegistry`/`ChoiceRegistry` 已提供统一注册入口，新增类型不必修改执行器本体。
+- `Manager/GameManager/CompositionRoot.lua` 的阶段表 `phases` 便于在回合流程上做替换或插拔。
 
 **问题**
 
-- `Manager/ItemManager/Item/ItemExecutor.lua`以静态表 `item_handlers` 绑定道具逻辑；新增道具大多需要改动此文件。
-- `Manager/GameManager/Chance.lua`的 `handlers` 表写死效果映射，扩展机会卡需修改核心模块。
-- `Manager/ChoiceManager/Choice/ChoiceService.lua`的 `setup` 强依赖固定 handler 列表，新增选择类型需要回到 CompositionRoot/ChoiceService 修改。
+- 默认注册仍集中在 `ChanceRegistry.register_defaults` 与 `ItemRegistry.register_defaults`；新增效果通常需要改动这些文件或在外部显式调用注册，扩展路径仍偏“集中式”。
+- `ChoiceService.setup` 依赖固定的 handler 组装顺序（`ChoiceHandlers/*`），新增新类 handler 往往需要回到 CompositionRoot 调整注入顺序。
 
 ### L（里氏替换）
 
 **观察与风险**
 
-- 多处“鸭子类型”依赖隐式接口：如 `Game.ui_port` 期望具备 `push_popup/on_tile_owner_changed` 等方法（`Manager/GameManager/Game.lua`、`Library/Monopoly/IntentDispatcher.lua`）。
-- 这些依赖缺少明确契约，替换实现（如测试桩、纯逻辑运行）时容易缺失方法而崩溃。
+- `ui_port` 依赖隐式“鸭子类型”接口：`GameState` 期望 `on_tile_owner_changed`，`IntentDispatcher` 期望 `push_popup`，`TurnMove` 依赖 `wait_move_anim` 等字段。缺少明确契约时，替换成测试桩或无 UI 运行会出现缺方法崩溃。
+- `Game:get_service` 依赖 `services` 结构约定（`Globals.ServiceKeys`），但没有类型契约或默认实现，替换测试服务时需要额外小心。
 
 ### I（接口隔离）
 
 **问题**
 
-- `ui_port` 作为“胖接口”，被 `Game`、`AdapterLayer`、`TurnMove`、`IntentDispatcher` 等多个模块调用，且方法并非所有场景都需要（例如动画、弹窗、地块渲染、ECA转发）。
-- `Game` 作为服务容器暴露过多方法（`update_player_position`、`set_tile_owner`、`queue_action_anim` 等），下游服务依赖面过大，难以形成最小接口。
+- `ui_port` 目前仍承担“弹窗通知 + 动画等待 + 地块变更通知”等多类接口，且多处模块直接访问；相较之前缩小了范围，但仍属于胖接口。
+- `GameState` 同时承担状态写回与 UI 通知（`set_tile_owner`/`reset_tile`），导致下层模块无法仅依赖纯状态接口。
 
 ### D（依赖倒置）
 
 **问题**
 
-- 领域逻辑直接依赖具体实现和配置：
-  - `Manager/MarketManager/Market/MarketService.lua` 直接依赖 `Config.Market/Items/Vehicles`。
-  - `Manager/MovementManager/Movement/MovementService.lua` 直接依赖 `Config.Constants` 和具体 `Inventory`。
-  - `Manager/LandManager/Land/LandActions.lua` 直接依赖 `Config.Constants` 与 `Inventory`。
-- `Manager/System/Runtime.lua` 直接引用 `GameAPI/LuaAPI/UIManager` 等环境级接口，没有隔离层；测试与替换困难。
+- 多个服务直接依赖 `Config.Generated.*` 与全局事件 API：
+  - `MovementService` 依赖 `Config.Generated.Constants` 与 `TriggerCustomEvent`。
+  - `MarketService` 直接读取 `Config.Generated.Market/Items/Vehicles`。
+  - `LandActions` 直接依赖 `Config.Generated.Constants` 与 `TriggerCustomEvent`。
+- `Runtime` 与 `EventHandlers` 直接调用 `UIManager`、`LuaAPI`、`RegisterCustomEvent` 等环境级接口，隔离层较薄，测试替换难度仍高。
+
+## 性能考量
+
+**潜在热点**
+
+- `Manager/System/GUI/RuntimeLoop.lua:tick` 每帧都会执行多段逻辑（自动行动、超时检查、动画派发、UI 刷新、日志），在低帧率设备上可能成为主开销。
+- `Manager/BoardManager/GUI/BoardView.lua:refresh_board` 内部包含锚点解析、玩家单位映射与位置同步，尽管有缓存，但仍在频繁刷新时产生可观成本。
+- `Manager/MovementManager/Movement/MovementService.lua:move` 逐步遍历并在每一步进行多次查表与事件派发，长步数与多分支会放大开销。
+- `Manager/LandManager/Land/LandActions.lua:execute_pay_rent` 计算连续地块租金时可能触发广度遍历，且每次落地都会重复计算。
+- `Manager/MarketManager/Market/MarketService.lua:list_buyable` 每次进入黑市都遍历并排序完整配置，数量增大后会带来额外开销。
+
+**优化建议**
+
+- 将 `RuntimeLoop.tick` 的日志与 UI 刷新拆分为“定帧刷新/变化驱动”，例如仅在状态变化或间隔帧时刷新面板与输出日志。
+- 为 `refresh_board` 增加更细粒度的变化检测（例如仅在玩家位置变化或单位映射变化时触发），并避免在无动画/无位置变化时重复布局。
+- 在 `MovementService.move` 中将“事件/日志派发”延迟到移动结束后批量处理，减少单步分发次数。
+- 为租金计算引入缓存或预计算（按 owner 与区块聚合），在地产状态未变化时复用结果。
+- 为黑市可购买列表增加缓存与失效策略（依赖库存/余额变化），避免每次都全量排序。
 
 ## 改进建议
 
-1. **分离运行时与领域层**：将 `Runtime` 中的 UI/场景初始化、单位查询、ECA转发拆到独立模块，`Runtime` 仅负责引导与生命周期。
-2. **收敛 UI 依赖面**：为 `ui_port` 定义最小接口（如 `UIActions`、`UIRender`、`UIEvents`），用适配器聚合，降低上层调用的“胖接口”。
-3. **域服务纯化**：将 `MovementService/MarketService/LandActions` 中的日志、UI触发、动画队列等副作用集中到“应用层/事件层”。领域方法只返回结果与事件。
-4. **效果/道具注册化**：为机会卡、道具与选择类型建立注册中心或数据驱动描述（配置+处理器映射），避免修改核心模块。
-5. **依赖注入收敛**：在 `CompositionRoot` 中显式注入配置与服务，让领域逻辑依赖抽象（接口/函数表），而非直接 `require` 具体模块。
+1. **拆分 Runtime 引导逻辑**：将 `Runtime.install_game_init` 中的 UI 初始化、地图实体查询、全局资源绑定抽为 `RuntimeBootstrap` 或 `SceneAdapter`，`Runtime` 保持“生命周期/循环控制”。
+2. **明确 UI 端口契约**：新增 `UIPort` 约定（函数表 + 默认空实现），让 `GameState` 与 `IntentDispatcher` 依赖最小接口，并提供 `NullUI` 便于纯逻辑测试。
+3. **领域结果与事件分离**：让 `MovementService`/`LandActions` 返回结果与事件列表，由上层统一派发，避免服务直接触发全局事件。
+4. **拆分大型注册文件**：将 `ChanceRegistry`、`ItemRegistry` 的默认注册拆到独立模块（按效果/道具分组），降低单文件复杂度并让扩展更清晰。
 
 ## 路线图（建议）
 
 **阶段 1：低风险整理（1-2 周）**
 
-- 在 `Manager/System/` 下新增 `RuntimeInit/RuntimeLoop` 之类的模块拆分 `Runtime`。
-- 为 `ui_port` 定义最小接口文档与适配器（不改调用方行为，先加适配层）。
-- 为 `Game` 增加事件回调出口（例如 `game.events.emit`），把 `set_tile_owner` 的 UI 通知迁移到事件层。
+- 抽离 `Runtime.install_game_init` 的 UI 与资源加载部分到独立模块。
+- 引入 `UIPort` 约定与 `NullUI`，最小化 `GameState` 对 UI 的直接调用面。
 
-**阶段 2：域服务纯化（2-4 周）**
+**阶段 2：领域纯化（2-4 周）**
 
-- 调整 `MovementService` 返回“结果+事件”（如 `passed_start/landed_on/roadblock_hit`），日志和动画由上层处理。
-- 将 `LandActions/MarketService/Chance` 的 UI/日志调用迁移到“应用层处理器”。
+- 让 `MovementService`/`LandActions` 产出事件列表，事件统一由 `EventHandlers`/上层派发。
+- 将 `ChanceRegistry`/`ItemRegistry` 的默认注册拆分为多个文件并在 CompositionRoot 统一装配。
 
-**阶段 3：扩展能力建设（4-6 周）**
+**阶段 3：扩展能力（4-6 周）**
 
-- 引入“效果/道具/选择类型注册中心”，将 `ItemExecutor`、`Chance`、`ChoiceService.setup` 的硬编码改为注册式。
-- 在 `CompositionRoot` 里集中注册默认处理器，后续可以通过新增模块扩展而不改核心文件。
+- 允许通过配置或模块自动发现注册（减少“改默认注册文件”的必要）。
+- 为 `services` 增加默认实现或接口校验，降低替换成本。
 
 ## 结论
 
-整体模块划分已经具备一定的分层思路，但运行时、UI与领域逻辑仍有较多交叉，导致 SOLID 中的 SRP、ISP、DIP 承压。按上述路线图逐步拆分并建立注册/事件体系，可以显著提升可测试性与扩展性。
+当前架构已明显朝分层与可扩展方向演进：回合流程、注册中心、运行时 UI 已拆分。主要压力仍集中在运行时引导逻辑、UI 端口接口与领域服务的副作用（事件/配置/环境依赖）。按“Runtime 拆分 + UI 契约 + 事件下沉”的路线推进，可进一步提升可测试性与可维护性。
