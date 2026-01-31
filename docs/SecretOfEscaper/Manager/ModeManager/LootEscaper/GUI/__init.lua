@@ -1,0 +1,1 @@
+require "Manager.ModeManager.LootEscaper.GUI.MainController"
