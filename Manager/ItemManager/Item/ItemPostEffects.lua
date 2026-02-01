@@ -1,4 +1,4 @@
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local constants = require("Config.Generated.Constants")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
@@ -299,3 +299,5 @@ function ItemEffects.apply_post(game, player, item_id, context)
 end
 
 return ItemEffects
+
+

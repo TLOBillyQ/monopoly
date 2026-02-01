@@ -1,4 +1,4 @@
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local ItemEffects = require("Manager.ItemManager.Item.ItemPostEffects")
 local Demolish = require("Manager.ItemManager.Item.ItemDemolish")
 local Roadblock = require("Manager.ItemManager.Item.ItemRoadblock")
@@ -225,3 +225,5 @@ function ItemRegistry.register_defaults()
 end
 
 return ItemRegistry
+
+

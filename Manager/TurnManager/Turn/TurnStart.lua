@@ -1,4 +1,4 @@
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local ItemPhase = require("Manager.ItemManager.Item.ItemPhase")
 
 local function phase_start(tm)
@@ -49,3 +49,5 @@ local function phase_start(tm)
 end
 
 return phase_start
+
+

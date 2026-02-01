@@ -1,4 +1,4 @@
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local Tile = require("Components.Tile")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
 local constants = require("Config.Generated.Constants")
@@ -176,3 +176,5 @@ function Demolish.use(game, player, distance, consume_fn, opts)
 end
 
 return Demolish
+
+

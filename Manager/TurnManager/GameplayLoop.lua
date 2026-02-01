@@ -4,7 +4,7 @@ local items_cfg = require("Config.Generated.Items")
 local EventHandlers = require("Manager.TurnManager.GUI.EventHandlers")
 local MainView = require("Manager.TurnManager.GUI.MainView")
 local Presenter = require("Manager.TurnManager.GUI.Presenter")
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 
 local GameplayLoop = {}
 
@@ -529,3 +529,5 @@ function GameplayLoop.tick(game, state, dt)
 end
 
 return GameplayLoop
+
+

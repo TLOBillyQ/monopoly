@@ -7,7 +7,7 @@ local GameplayLoop = require("Manager.TurnManager.GameplayLoop")
 local MainView = require("Manager.TurnManager.GUI.MainView")
 local UIEventRouter = require("Manager.TurnManager.GUI.UIEventRouter")
 local map_cfg = require("Config.Map")
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 
 logger.configure_game_time()
@@ -137,10 +137,9 @@ end
 
 local function install_game_init(state)
   RegisterTriggerEvent({ EVENT.GAME_INIT }, function()
-    require "UIManager.Utils"
-    UIManager.Builder(require "Data.UIManagerNodes")
+    require "Library.UIManager.Utils"
+    UIManager.Builder:new(require "Data.UIManagerNodes")
     require "Globals.ECA"
-    UIManager.forward_eca_event(ECA_EVENT.UI.open_loading_screen)
     G = {
       tiles = {},
       buildings = {},
@@ -172,7 +171,9 @@ local function install_game_init(state)
     local refs = G.refs
     local role = GameAPI.get_role(1)
     local unit = role.get_ctrl_unit()
-
+    role.send_ui_custom_event("显示加载屏", {});
+    -- UIManager.forward_eca_event(ECA_EVENT.UI.open_loading_screen)
+    
     local tile_names = {}
     local building_names = {}
     local tile_ids = map_cfg.path or {}
@@ -213,15 +214,17 @@ local function install_game_init(state)
     end
     UIManager.client_role = nil
 
-    SetTimeOut(0.1, function()
-      UIManager.forward_eca_event(ECA_EVENT.UI.close_loading_screen)
-      UIManager.forward_eca_event(ECA_EVENT.UI.open_base_screen)
+    SetTimeOut(1.0, function()
+      -- UIManager.forward_eca_event(ECA_EVENT.UI.close_loading_screen)
+      -- UIManager.forward_eca_event(ECA_EVENT.UI.open_base_screen)
+      role.send_ui_custom_event("隐藏加载屏"， {});
+      role.send_ui_custom_event("显示基础屏"， {});
     end)
   end)
 end
 
 local function start_tick_loop(state, interval)
-  require "Utils.Frameout"
+  require "Library.Utils"
   local tick_interval = interval or 1
   local tick_seconds = math.tofixed(tick_interval + 1) / 30.0
   SetFrameOut(tick_interval, function()
@@ -232,3 +235,5 @@ end
 local state = build_state()
 install_game_init(state)
 start_tick_loop(state)
+
+

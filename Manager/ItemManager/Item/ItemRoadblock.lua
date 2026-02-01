@@ -1,4 +1,4 @@
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local Tile = require("Components.Tile")
 local Roadblock = {}
 
@@ -172,3 +172,5 @@ function Roadblock.apply(game, player, idx)
 end
 
 return Roadblock
+
+

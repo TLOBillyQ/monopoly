@@ -1,6 +1,6 @@
 local items_cfg = require("Config.Generated.Items")
 require "Library.Utils"
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 
 local Inventory = {}
@@ -172,3 +172,5 @@ function Inventory.draw_and_give(player, rng, context)
 end
 
 return Inventory
+
+

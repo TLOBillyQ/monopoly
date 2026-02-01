@@ -1,5 +1,5 @@
 local Land = {}
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local Tile = require("Components.Tile")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
 local Pricing = require("Manager.LandManager.Land.LandPricing")
@@ -177,4 +177,6 @@ Land.executors = {
 }
 
 return Land
+
+
 

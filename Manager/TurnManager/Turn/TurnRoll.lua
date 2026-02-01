@@ -1,5 +1,5 @@
 local Dice = require("Components.Dice")
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local ItemPhase = require("Manager.ItemManager.Item.ItemPhase")
 
 local function phase_roll(tm, args)
@@ -64,3 +64,5 @@ local function phase_roll(tm, args)
 end
 
 return phase_roll
+
+

@@ -1,4 +1,4 @@
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local ChanceRegistry = require("Manager.ChanceManager.ChanceRegistry")
 local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 
@@ -31,3 +31,5 @@ function ChanceEffects.resolve(game, player, card, context)
 end
 
 return ChanceEffects
+
+

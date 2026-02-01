@@ -1,7 +1,7 @@
 local market_cfg = require("Config.Generated.Market")
 local items_cfg = require("Config.Generated.Items")
 local vehicles_cfg = require("Config.Generated.Vehicles")
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local Agent = require("Manager.GameManager.Agent")
 local LandChoiceSpecs = require("Manager.LandManager.Land.LandChoiceSpecs")
@@ -270,3 +270,5 @@ function MarketService.auto_buy(game, player)
 end
 
 return MarketService
+
+

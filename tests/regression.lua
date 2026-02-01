@@ -16,7 +16,7 @@ local ChoiceService = require("Manager.ChoiceManager.Choice.ChoiceService")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
 local GameplayLoop = require("Manager.TurnManager.GameplayLoop")
 local constants = require("Config.Generated.Constants")
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local SERVICE_KEY = require("Globals.ServiceKeys")
 
 if not math.tofixed then
@@ -1034,3 +1034,5 @@ for _, fn in ipairs(tests) do
 end
 
 print("\nAll regression checks passed (" .. #tests .. ")")
+
+

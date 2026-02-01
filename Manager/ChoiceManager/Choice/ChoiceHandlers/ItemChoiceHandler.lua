@@ -2,7 +2,7 @@ local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local Demolish = require("Manager.ItemManager.Item.ItemDemolish")
 local Steal = require("Manager.ItemManager.Item.ItemSteal")
 local Roadblock = require("Manager.ItemManager.Item.ItemRoadblock")
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local RemoteDice = require("Manager.ItemManager.Item.ItemRemoteDice")
 local ItemPhase = require("Manager.ItemManager.Item.ItemPhase")
 local gameplay_constants = require("Config.GameplayConstants")
@@ -327,3 +327,5 @@ function ItemChoiceHandler.build(helpers)
 end
 
 return ItemChoiceHandler
+
+

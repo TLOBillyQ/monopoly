@@ -1,4 +1,4 @@
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 
 local MineEffect = {}
 
@@ -26,3 +26,4 @@ function MineEffect.apply(game, player, position)
 end
 
 return MineEffect
+

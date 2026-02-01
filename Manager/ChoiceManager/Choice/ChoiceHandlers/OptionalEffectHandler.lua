@@ -1,5 +1,5 @@
 local Effect = require("Manager.EffectManager.Effect.Effect")
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 
 local OptionalEffectHandler = {}
@@ -96,3 +96,5 @@ function OptionalEffectHandler.build(helpers)
 end
 
 return OptionalEffectHandler
+
+

@@ -1,4 +1,4 @@
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local ChoiceRegistry = require("Manager.ChoiceManager.Choice.ChoiceRegistry")
 local Executor = require("Manager.ItemManager.Item.ItemExecutor")
 local ItemPhase = require("Manager.ItemManager.Item.ItemPhase")
@@ -137,3 +137,5 @@ function ChoiceService.resolve(game, choice, action)
 end
 
 return ChoiceService
+
+

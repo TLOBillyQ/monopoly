@@ -1,4 +1,4 @@
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local LandChoiceSpecs = require("Manager.LandManager.Land.LandChoiceSpecs")
 local gameplay_constants = require("Config.GameplayConstants")
@@ -99,4 +99,6 @@ function Steal.handle_pass_players(game, player, encountered_ids)
 end
 
 return Steal
+
+
 

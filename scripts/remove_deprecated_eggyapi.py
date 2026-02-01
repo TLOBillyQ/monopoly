@@ -43,8 +43,8 @@ def main():
     parser.add_argument(
         "path",
         nargs="?",
-        default="docs/eggy/EggyAPI.lua",
-        help="目标文件路径，默认 docs/eggy/EggyAPI.lua",
+        default="EggyAPI.lua",
+        help="目标文件路径，默认 EggyAPI.lua",
     )
     parser.add_argument(
         "--backup-suffix",

@@ -1,4 +1,4 @@
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 
 local RemoteDice = {}
 
@@ -16,3 +16,4 @@ function RemoteDice.apply(game, player, dice_count, value)
 end
 
 return RemoteDice
+

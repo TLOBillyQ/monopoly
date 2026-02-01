@@ -22,7 +22,7 @@ local BankruptcyService = require("Manager.GameManager.BankruptcyService")
 local ChoiceService = require("Manager.ChoiceManager.Choice.ChoiceService")
 local ItemRegistry = require("Manager.ItemManager.Item.ItemRegistry")
 local ChanceRegistry = require("Manager.ChanceManager.ChanceRegistry")
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local market_cfg = require("Config.Generated.Market")
 local SERVICE_KEY = require("Globals.ServiceKeys")
 
@@ -242,3 +242,5 @@ end
 CompositionRoot.snapshot_inventory = snapshot_inventory
 
 return CompositionRoot
+
+

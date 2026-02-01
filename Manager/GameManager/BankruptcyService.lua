@@ -1,4 +1,4 @@
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 
 local BankruptcyService = {}
@@ -49,3 +49,5 @@ function BankruptcyService.eliminate(game, player)
 end
 
 return BankruptcyService
+
+

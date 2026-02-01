@@ -1,7 +1,7 @@
 local Agent = require("Manager.GameManager.Agent")
 local ItemEffects = require("Manager.ItemManager.Item.ItemPostEffects")
 local gameplay_constants = require("Config.GameplayConstants")
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local Executor = require("Manager.ItemManager.Item.ItemExecutor")
 local Demolish = require("Manager.ItemManager.Item.ItemDemolish")
@@ -115,4 +115,6 @@ function Strategy.auto_pre_action(game, player, phase)
 end
 
 return Strategy
+
+
 

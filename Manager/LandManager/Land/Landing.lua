@@ -1,4 +1,4 @@
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local constants = require("Config.Generated.Constants")
 local chance_cfg = require("Config.Generated.ChanceCards")
 require "Library.Utils"
@@ -122,3 +122,5 @@ Landing.executors = {
 }
 
 return Landing
+
+

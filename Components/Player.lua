@@ -1,7 +1,7 @@
 local Inventory = require("Components.Inventory")
 local game_constants = require("Config.Generated.Constants")
 local vehicles_cfg = require("Config.Generated.Vehicles")
-local logger = require("Library.Monopoly.Logger")
+local logger = require("Components.Logger")
 local SERVICE_KEY = require("Globals.ServiceKeys")
 require "Library.ClassUtils"
 require "Library.Utils"
@@ -296,3 +296,5 @@ function Player:is_in_mountain(game)
 end
 
 return Player
+
+
