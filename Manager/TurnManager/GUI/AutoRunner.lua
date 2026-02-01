@@ -2,7 +2,6 @@ require "Library.ClassUtils"
 
 
 local AutoRunner = Class("AutoRunner")
-AutoRunner.__class_new = AutoRunner.new
 
 
 function AutoRunner:init(opts)
@@ -10,11 +9,6 @@ function AutoRunner:init(opts)
   self.interval = opts.interval or 0.15
   self.timer = 0
   self.enabled = false
-end
-
-
-function AutoRunner.new(opts)
-  return AutoRunner.__class_new(AutoRunner, opts)
 end
 
 

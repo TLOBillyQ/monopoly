@@ -9,7 +9,6 @@ require "Library.ClassUtils"
 ---@field overlays table
 ---棋盘管理类，负责路径、地块和分支的管理
 local Board = Class("Board")
-Board.__class_new = Board.new
 
 local OPPOSITE = {
   up = "down",
@@ -52,10 +51,6 @@ end
 ---创建新棋盘实例
 ---@param data table 棋盘数据（包含path/tile_lookup/branches/map/overlays）
 ---@return Board 新棋盘对象
-function Board.new(data)
-  return Board.__class_new(Board, data)
-end
-
 ---获取棋盘长度（地块数）
 ---@param self Board
 ---@return number 棋盘上的地块总数

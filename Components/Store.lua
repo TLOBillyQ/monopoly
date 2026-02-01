@@ -5,7 +5,6 @@ require "Library.Utils"
 ---@field state table
 ---状态存储类，管理游戏状态持久化
 local Store = Class("Store")
-Store.__class_new = Store.new
 
 local deep_copy = Utils.deep_copy
 
@@ -18,10 +17,6 @@ end
 ---创建新状态树
 ---@param init table? 初始状态表
 ---@return Store 新Store对象
-function Store.new(init)
-  return Store.__class_new(Store, init)
-end
-
 ---根据路径读取状态值
 ---@param self Store
 ---@param path table 路径数组（如{"players", 1, "cash"}）

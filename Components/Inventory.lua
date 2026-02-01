@@ -7,7 +7,6 @@ require "Library.ClassUtils"
 ---@field _suspend_on_change boolean?
 ---背包管理类，管理玩家物品
 local Inventory = Class("Inventory")
-Inventory.__class_new = Inventory.new
 
 ---通知背包有变化
 ---@param self Inventory
@@ -35,10 +34,6 @@ end
 ---创建新背包实例
 ---@param opts table 选项表（max_slots或constants）
 ---@return Inventory 新背包对象
-function Inventory.new(opts)
-  return Inventory.__class_new(Inventory, opts)
-end
-
 ---获取背包中的物品数量
 ---@param self Inventory
 ---@return number 物品数量

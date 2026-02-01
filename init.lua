@@ -13,7 +13,7 @@ local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 logger.configure_game_time()
 
 local function create_game()
-  return Game.new({
+  return Game:new({
     players = { "玩家1", "AI2", "AI3", "AI4" },
     ai = { [2] = true, [3] = true, [4] = true },
     auto_all = true,
@@ -58,7 +58,7 @@ local function build_state()
     action_anim_seq = nil,
     item_name_by_id = {},
     game_factory = create_game,
-    auto_runner = AutoRunner.new({ interval = ui.auto_interval }),
+    auto_runner = AutoRunner:new({ interval = ui.auto_interval }),
     tile_units = nil,
     tile_positions = nil,
     tile_spacing = nil,

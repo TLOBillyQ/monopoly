@@ -8,7 +8,6 @@ require "Library.ClassUtils"
 
 
 local TurnManager = Class("TurnManager")
-TurnManager.__class_new = TurnManager.new
 
 local function build_turn_log_line(game, turn_count)
   local player = game:current_player()
@@ -118,11 +117,6 @@ function TurnManager:init(game, phases)
 end
 
 
-function TurnManager.new(game, phases)
-  return TurnManager.__class_new(TurnManager, game, phases)
-end
-
-
 function TurnManager:dispatch(action)
   self.pending_action = action
 
@@ -227,7 +221,7 @@ function TurnManager:_build_flow()
     return args.resume_state, args.resume_args
   end
 
-  return Flow.new({ start = "start", states = states })
+  return Flow:new({ start = "start", states = states })
 end
 
 

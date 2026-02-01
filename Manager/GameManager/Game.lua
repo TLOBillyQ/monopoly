@@ -5,7 +5,6 @@ require "Library.ClassUtils"
 
 
 local Game = Class("Game")
-Game.__class_new = Game.new
 
 for key, fn in pairs(GameState) do
   Game[key] = fn
@@ -13,8 +12,11 @@ end
 
 Game.check_victory = GameVictory.check_victory
 
-function Game.new(opts)
-  return CompositionRoot.assemble(opts, Game)
+function Game:init(opts)
+  if opts and opts.__skip_assemble then
+    return
+  end
+  CompositionRoot.assemble(opts, self)
 end
 
 function Game:advance_turn()

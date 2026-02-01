@@ -24,7 +24,6 @@ require "Library.Utils"
 ---@field _store Store?
 ---玩家对象，管理玩家资产、状态和物品
 local Player = Class("Player")
-Player.__class_new = Player.new
 
 local deep_copy = Utils.deep_copy
 
@@ -97,7 +96,7 @@ function Player:init(attrs)
     pending_free_rent = false,
     pending_tax_free = false,
   }
-  self.inventory = attrs.inventory or Inventory.new({ constants = constants })
+  self.inventory = attrs.inventory or Inventory:new({ constants = constants })
   self.properties = {}
   self.balances = balances
   self.eliminated = false
@@ -106,10 +105,6 @@ end
 ---创建新玩家实例
 ---@param attrs table 玩家属性表（id/name/role_id/constants等）
 ---@return Player 新玩家对象
-function Player.new(attrs)
-  return Player.__class_new(Player, attrs)
-end
-
 ---获取玩家指定币种的余额
 ---@param self Player
 ---@param currency string? 币种名称（默认"金币"）
