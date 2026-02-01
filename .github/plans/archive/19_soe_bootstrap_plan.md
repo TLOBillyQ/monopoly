@@ -50,8 +50,8 @@
 
 在仓库根目录运行：
 
-  lua tests/deps_check.lua
-  lua tests/regression.lua
+  lua .github/tests/deps_check.lua
+  lua .github/tests/regression.lua
 
 若可进入 Eggy 场景，确认 UI 与棋盘初始化正常，启动无报错，且回合推进不变。
 

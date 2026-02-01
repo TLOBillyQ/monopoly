@@ -25,7 +25,7 @@
 
 - 观察：`Manager/System` 曾存在额外嵌套一层 `System/` 目录，需要扁平化以符合目标结构。
   证据：迁移前路径包含 `Manager/System/System/*.lua`。
-- 观察：`docs/reports/adapters_design.md` 与 `docs/reports/solid_review.md` 当前不在工作树中，本次重构按用户要求暂不恢复。
+- 观察：`.github/docs/reports/adapters_design.md` 与 `.github/docs/reports/solid_review.md` 当前不在工作树中，本次重构按用户要求暂不恢复。
   证据：`rg --files -g 'adapters_design.md'` / `rg --files -g 'solid_review.md'` 无输出。
 
 ## 决策日志
@@ -202,15 +202,15 @@ BoardManager/GUI：
 
 5) 重构过程中，凡是需要类结构的模块，统一改为 `ClassUtil` 定义方式；避免新增无调用点的抽象。
 
-6) 更新 `tests/deps_check.lua` 依赖规则前缀与说明文字，确保规则层不依赖 `Manager/*/GUI` 与运行时装配逻辑。
+6) 更新 `.github/tests/deps_check.lua` 依赖规则前缀与说明文字，确保规则层不依赖 `Manager/*/GUI` 与运行时装配逻辑。
 
 ## 验证与验收
 
 
 在仓库根目录运行依赖与回归测试：
 
-    lua tests/deps_check.lua
-    lua tests/regression.lua
+    lua .github/tests/deps_check.lua
+    lua .github/tests/regression.lua
 
 预期输出包含：
 

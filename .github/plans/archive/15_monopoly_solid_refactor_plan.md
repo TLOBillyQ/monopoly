@@ -20,14 +20,14 @@
 - [x] (2026-01-30 10:23Z) 里程碑 3：道具 / 机会卡 / 选择处理注册化，新增最小测试（见子计划 `pilots/18_monopoly_solid_registry_plan.md`）
 - [x] (2026-01-30 10:23Z) 全局格式统一：关键 Lua 类改用 `ClassUtils.Class`，补充精简 EmmyLua 注释（见子计划 `pilots/19_monopoly_classutils_emmylua_plan.md`）
 - [x] (2026-01-30 10:34Z) 清理冗余/兼容性/多套实现问题（见子计划 `pilots/20_monopoly_cleanup_plan.md`）
-- [x] (2026-01-30 10:37Z) 完成回归测试与验收脚本整理（新增 `tests/acceptance.lua` 并验证通过）
+- [x] (2026-01-30 10:37Z) 完成回归测试与验收脚本整理（新增 `.github/tests/acceptance.lua` 并验证通过）
 
 
 ## 意外与发现
 
 
 - 观察：回归测试中加载 `Manager.TurnManager.GUI.Layer` 触发 `Globals.Macro` 依赖，导致本地 Lua 缺失 `math.Vector3` 报错。
-  证据：`lua tests/regression.lua` 报错 `Globals/Macro.lua:1: attempt to call field 'Vector3' (a nil value)`。
+  证据：`lua .github/tests/regression.lua` 报错 `Globals/Macro.lua:1: attempt to call field 'Vector3' (a nil value)`。
 
 - 观察：ClassUtils 迁移后如果覆盖 `Class()` 的 `new` 会导致递归挂起。
   证据：测试中断堆栈停在 `Components/Flow.lua:24` 的 `Flow.new` 调用。
@@ -71,7 +71,7 @@
   理由：减少冗余同时避免破坏潜在外部入口依赖。
   日期/作者：2026-01-30 / Codex
 
-- 决策：新增统一验收脚本 `tests/acceptance.lua` 汇总关键测试。
+- 决策：新增统一验收脚本 `.github/tests/acceptance.lua` 汇总关键测试。
   理由：减少手动串行执行遗漏，确保回归与新增测试一键验证。
   日期/作者：2026-01-30 / Codex
 
@@ -141,21 +141,21 @@
 新增 `Library/Monopoly/GameEvents.lua`（或同名模块）提供 `emit/on` 能力，并在 `CompositionRoot.assemble` 中创建并注入 `game.events`。逐步改造 `MovementService`、`LandActions`、`MarketService`、`Chance` 中的 `logger.event` 与 UI 调用，改为通过 `game.events.emit` 抛出事件，再由 `Manager/System/EventHandlers.lua` 统一处理并写日志或触发 UI。`TurnMove`、`IntentDispatcher` 若需要也改成只触发事件而非直接写 UI。
 
 里程碑 3 操作要点：
-新增注册表模块并迁移现有处理函数。`ItemExecutor` 从 `ItemRegistry.get(item_id)` 获取处理器。`Chance` 从 `ChanceRegistry.get(effect)` 获取处理器。`ChoiceService.setup` 只负责装配默认注册表，不再硬编码 handler 表。新增 `tests/` 下的 Lua 测试文件，模拟注册一个虚拟道具或机会卡，并断言执行路径被调用。
+新增注册表模块并迁移现有处理函数。`ItemExecutor` 从 `ItemRegistry.get(item_id)` 获取处理器。`Chance` 从 `ChanceRegistry.get(effect)` 获取处理器。`ChoiceService.setup` 只负责装配默认注册表，不再硬编码 handler 表。新增 `.github/tests/` 下的 Lua 测试文件，模拟注册一个虚拟道具或机会卡，并断言执行路径被调用。
 
 
 ## 验证与验收
 
 
 基础回归：运行以下命令，预期全部通过，无新增报错。
-    lua tests/deps_check.lua
-    lua tests/regression.lua
+    lua .github/tests/deps_check.lua
+    lua .github/tests/regression.lua
 
 新增注册与事件测试：运行新建的测试脚本（按你创建的文件名），预期输出包含 “ok” 或断言通过。
-    lua tests/solid_event_registry_test.lua
+    lua .github/tests/solid_event_registry_test.lua
 
 统一验收脚本：运行汇总脚本，预期所有子测试通过并输出 `ok - acceptance suite`。
-    lua tests/acceptance.lua
+    lua .github/tests/acceptance.lua
 
 人工验证：启动流程不变，`Runtime.install()` 仍能创建游戏并开始回合推进；在日志中仍能看到关键事件（如“移动到某地块”、“支付租金”）。
 
@@ -180,11 +180,11 @@
 `Manager/ItemManager/Item/ItemRegistry.lua`
 `Manager/GameManager/ChanceRegistry.lua`
 `Manager/ChoiceManager/Choice/ChoiceRegistry.lua`
-`tests/solid_event_registry_test.lua`
-`tests/acceptance.lua`
+`.github/tests/solid_event_registry_test.lua`
+`.github/tests/acceptance.lua`
 
 测试输出示例（缩进块，实际以运行结果为准）：
-    lua tests/solid_event_registry_test.lua
+    lua .github/tests/solid_event_registry_test.lua
     ok - registry extension works
 
 

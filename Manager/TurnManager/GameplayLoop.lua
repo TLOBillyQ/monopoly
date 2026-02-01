@@ -344,7 +344,6 @@ function GameplayLoop.step_turn(game, state)
   if not game or game.finished then
     return
   end
-  print("[debug] step_turn: advance_turn")
   game:advance_turn()
 end
 
@@ -381,7 +380,6 @@ function GameplayLoop.dispatch_action(game, state, action, opts)
       return
     end
     if action.id == "next" then
-      print("[debug] dispatch ui_button next")
       local phase = nil
       local store = game and game.store
       if store and store.get then

@@ -20,7 +20,7 @@
 ## 意外与发现
 
 
-- 观察：本地执行 `lua tests/regression.lua` 在加载 `Globals.ServiceKeys` 时失败。
+- 观察：本地执行 `lua .github/tests/regression.lua` 在加载 `Globals.ServiceKeys` 时失败。
   证据：`Globals/ServiceKeys.lua:2: unexpected symbol near '<'`
 
 ## 决策日志
@@ -41,19 +41,19 @@
 ## 背景与导读
 
 
-类工具位于 `Library/ClassUtils.lua`，`Class` 会为类表提供 `:new(...)`，并在内部调用 `init`。当前多处类定义通过 `__class_new` 保存原始构造函数，再用 `new` 包装转发，导致调用风格混用 `ClassName.new(...)` 与 `ClassName:new(...)`。本计划聚焦以下运行时文件（不动 `docs/` 示例）：`Components/*.lua`、`Manager/TurnManager/*`、`Manager/GameManager/*`、`init.lua`、`tests/regression.lua`。
+类工具位于 `Library/ClassUtils.lua`，`Class` 会为类表提供 `:new(...)`，并在内部调用 `init`。当前多处类定义通过 `__class_new` 保存原始构造函数，再用 `new` 包装转发，导致调用风格混用 `ClassName.new(...)` 与 `ClassName:new(...)`。本计划聚焦以下运行时文件（不动 `.github/docs/` 示例）：`Components/*.lua`、`Manager/TurnManager/*`、`Manager/GameManager/*`、`init.lua`、`.github/tests/regression.lua`。
 
 ## 里程碑
 
 
 里程碑一：清理类定义中的冗余构造写法。范围包含 `Components/Board.lua`、`Components/Tile.lua`、`Components/Flow.lua`、`Components/Inventory.lua`、`Components/Player.lua`、`Components/Store.lua`、`Manager/TurnManager/Turn/TurnManager.lua`、`Manager/TurnManager/GUI/AutoRunner.lua`、`Manager/GameManager/Game.lua`、`Manager/GameManager/CompositionRoot.lua`。完成后不再出现 `__class_new` 与无逻辑 `new` 包装，`Game` 通过 `init` 触发组装逻辑。此里程碑无需运行命令，仅需通过代码审查确认定义写法一致。
 
-里程碑二：更新调用点并做最小验证。范围包含 `init.lua`、`Manager/GameManager/CompositionRoot.lua`、`Manager/TurnManager/Turn/TurnManager.lua`、`Components/Player.lua`、`tests/regression.lua` 等使用 `.new(...)` 的位置。完成后使用 `:new(...)` 语法，行为不变。验证阶段运行回归脚本并观察无报错结束。
+里程碑二：更新调用点并做最小验证。范围包含 `init.lua`、`Manager/GameManager/CompositionRoot.lua`、`Manager/TurnManager/Turn/TurnManager.lua`、`Components/Player.lua`、`.github/tests/regression.lua` 等使用 `.new(...)` 的位置。完成后使用 `:new(...)` 语法，行为不变。验证阶段运行回归脚本并观察无报错结束。
 
 ## 工作计划
 
 
-先按 `rg "__class_new"` 与 `rg "\.new\("` 结果逐一定位冗余类定义。对仅转发的 `new` 统一删除，保留 `init` 作为构造入口。`Tile.from_config`、`TurnManager:_build_flow` 等内部调用改为 `ClassName:new(...)`。`Game` 需要把组装逻辑接到 `init`，因此调整 `CompositionRoot.assemble` 支持传入现成实例并移除对 `__class_new` 的依赖，同时更新 `init.lua` 与 `tests/regression.lua` 为 `Game:new(...)`。所有改动保持字段赋值和流程顺序不变，不引入新抽象。
+先按 `rg "__class_new"` 与 `rg "\.new\("` 结果逐一定位冗余类定义。对仅转发的 `new` 统一删除，保留 `init` 作为构造入口。`Tile.from_config`、`TurnManager:_build_flow` 等内部调用改为 `ClassName:new(...)`。`Game` 需要把组装逻辑接到 `init`，因此调整 `CompositionRoot.assemble` 支持传入现成实例并移除对 `__class_new` 的依赖，同时更新 `init.lua` 与 `.github/tests/regression.lua` 为 `Game:new(...)`。所有改动保持字段赋值和流程顺序不变，不引入新抽象。
 
 ## 具体步骤
 
@@ -63,7 +63,7 @@
 1) 定位并记录冗余构造模式。
 
     rg "__class_new" -n
-    rg "\.new\(" -n Components Manager init.lua tests/regression.lua
+    rg "\.new\(" -n Components Manager init.lua .github/tests/regression.lua
 
 2) 清理类定义与内部调用。
 
@@ -78,14 +78,14 @@
     - `Manager/GameManager/CompositionRoot.lua` 中的 `Board.new`、`Player.new`、`Inventory.new`、`Store.new`、`TurnManager.new` 改为 `:new`。
     - `Manager/TurnManager/Turn/TurnManager.lua` 中的 `Flow.new` 改为 `Flow:new`。
     - `Components/Player.lua` 中的 `Inventory.new` 改为 `Inventory:new`。
-    - `tests/regression.lua` 中的 `App.new` 与 `TurnManager.new` 改为 `:new`。
+    - `.github/tests/regression.lua` 中的 `App.new` 与 `TurnManager.new` 改为 `:new`。
 
 ## 验证与验收
 
 
 在仓库根目录运行：
 
-    lua tests/regression.lua
+    lua .github/tests/regression.lua
 
 预期脚本执行完成且没有报错或断言失败。若运行环境缺少 `lua`，则在蛋仔编辑器中启动主流程，观察游戏可以正常创建棋盘与回合推进（例如进入首回合并能触发一次投骰/移动）。
 

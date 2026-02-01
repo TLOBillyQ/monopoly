@@ -7,7 +7,7 @@
 ## 目的 / 全局视角
 
 
-基于 `docs/SecretOfEscaper/architecture_study.md` 的对照结论，建立“核心逻辑层（Core）+ 引擎适配层（Adapter）”的分层结构，让 Monopoly 的回合逻辑、状态树、选择系统与效果系统不再依赖 Eggy 运行时细节。完成后，核心层可在无引擎环境下被脚本驱动，适配层仅负责 UI/事件/引擎对象绑定。可观察结果是：核心入口可被脚本独立调用，`lua tests/regression.lua` 仍通过，且运行时入口仍能启动原有流程。
+基于 `.github/docs/SecretOfEscaper/architecture_study.md` 的对照结论，建立“核心逻辑层（Core）+ 引擎适配层（Adapter）”的分层结构，让 Monopoly 的回合逻辑、状态树、选择系统与效果系统不再依赖 Eggy 运行时细节。完成后，核心层可在无引擎环境下被脚本驱动，适配层仅负责 UI/事件/引擎对象绑定。可观察结果是：核心入口可被脚本独立调用，`lua .github/tests/regression.lua` 仍通过，且运行时入口仍能启动原有流程。
 
 
 ## 进度
@@ -41,7 +41,7 @@
 ## 背景与导读
 
 
-Monopoly 当前入口 `main.lua` → `init.lua` → `Manager.GameManager.Entry.install()`，逻辑层与运行时强耦合在 `Manager/System/Runtime.lua` 与 `Manager/TurnManager/GUI`。从 `docs/SecretOfEscaper/architecture_study.md` 可见，SecretOfEscaper 以 “Map/Mode/Entity” 组织玩法并将 UI/行为树/导航等通用能力作为 Library 提供；Monopoly 则以 “回合/状态树/规则服务” 为核心。为了后续全局重构，应先建立清晰的核心层边界，把 `Game`、`TurnManager`、`ChoiceService`、`EffectPipeline` 等逻辑归入 Core，并以 Adapter 实现 UI 与引擎事件绑定。
+Monopoly 当前入口 `main.lua` → `init.lua` → `Manager.GameManager.Entry.install()`，逻辑层与运行时强耦合在 `Manager/System/Runtime.lua` 与 `Manager/TurnManager/GUI`。从 `.github/docs/SecretOfEscaper/architecture_study.md` 可见，SecretOfEscaper 以 “Map/Mode/Entity” 组织玩法并将 UI/行为树/导航等通用能力作为 Library 提供；Monopoly 则以 “回合/状态树/规则服务” 为核心。为了后续全局重构，应先建立清晰的核心层边界，把 `Game`、`TurnManager`、`ChoiceService`、`EffectPipeline` 等逻辑归入 Core，并以 Adapter 实现 UI 与引擎事件绑定。
 
 
 ## 工作计划
@@ -77,12 +77,12 @@ Monopoly 当前入口 `main.lua` → `init.lua` → `Manager.GameManager.Entry.i
 5) 更新入口并补充 smoke 脚本：
 
     - `main.lua` 或 `init.lua` 中改为优先调用 `Adapters/EggyEntry.install()`，保留旧入口作为 fallback。
-    - 新增 `scripts/core_smoke.lua`：在无引擎环境下构造 `Core.Game`，跑 `advance_turn` 若干次，验证 `Store` 与 `TurnManager` 能工作。
+    - 新增 `.github/scripts/core_smoke.lua`：在无引擎环境下构造 `Core.Game`，跑 `advance_turn` 若干次，验证 `Store` 与 `TurnManager` 能工作。
 
 6) 运行验证并记录输出：
 
-    - `lua tests/regression.lua`
-    - `lua scripts/core_smoke.lua`
+    - `lua .github/tests/regression.lua`
+    - `lua .github/scripts/core_smoke.lua`
 
 将关键输出片段与验证结论写入“产物与备注”。
 
@@ -92,15 +92,15 @@ Monopoly 当前入口 `main.lua` → `init.lua` → `Manager.GameManager.Entry.i
 
 必须满足以下条件：
 
-1) `lua tests/regression.lua` 通过且无新增失败。
-2) `lua scripts/core_smoke.lua` 可运行并输出至少一次完整回合推进日志（例如当前玩家、回合数变化）。
+1) `lua .github/tests/regression.lua` 通过且无新增失败。
+2) `lua .github/scripts/core_smoke.lua` 可运行并输出至少一次完整回合推进日志（例如当前玩家、回合数变化）。
 3) 原入口仍可通过 `Adapters/EggyEntry` 启动（如需要手动启动，记录最小步骤与观察点）。
 
 
 ## 可重复性与恢复
 
 
-本计划的修改可反复执行。若发现 Core/Adapter 引入问题，可按以下方式回滚：删除 `Core/` 与 `Adapters/` 目录，并恢复 `main.lua/init.lua` 的原入口调用。新增脚本 `scripts/core_smoke.lua` 可直接删除。
+本计划的修改可反复执行。若发现 Core/Adapter 引入问题，可按以下方式回滚：删除 `Core/` 与 `Adapters/` 目录，并恢复 `main.lua/init.lua` 的原入口调用。新增脚本 `.github/scripts/core_smoke.lua` 可直接删除。
 
 
 ## 产物与备注
@@ -115,11 +115,11 @@ Monopoly 当前入口 `main.lua` → `init.lua` → `Manager.GameManager.Entry.i
 - `Core/Entry.lua`
 - `Adapters/EggyRuntimePort.lua`
 - `Adapters/EggyEntry.lua`
-- `scripts/core_smoke.lua`
+- `.github/scripts/core_smoke.lua`
 
 验证示例输出片段（示例）：
 
-    lua scripts/core_smoke.lua
+    lua .github/scripts/core_smoke.lua
     turn=1 current_player=玩家1
     turn=2 current_player=玩家2
 

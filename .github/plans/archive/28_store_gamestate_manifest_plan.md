@@ -14,24 +14,24 @@
 
 本计划交付一个可验证的结果：新增一份文档，把 `Manager/GameManager/GameState.lua` 作为 Store 的核心写入点显式列出，并列清它读写的路径；随后把这些状态路径重构为“非字符串的数值枚举”，并通过小测试锁定枚举类型与映射的正确性。
 
-验收方式：运行 `lua tests/acceptance.lua` 通过，并且文档中能直接搜索到 `Manager/GameManager/GameState.lua` 这一行以及对应的路径清单；同时枚举测试确认所有枚举值是数字类型。
+验收方式：运行 `lua .github/tests/acceptance.lua` 通过，并且文档中能直接搜索到 `Manager/GameManager/GameState.lua` 这一行以及对应的路径清单；同时枚举测试确认所有枚举值是数字类型。
 
 ## 进度
 
 
 - [x] (2026-01-31 02:06Z) 确认 Store 实现位置为 `Components/Store.lua`，并定位 `Manager/GameManager/GameState.lua` 对 Store 的读写点。
-- [x] (2026-01-31 02:22Z) 新增 `docs/store/00_state_tree_writers.md`，显式列出 `Manager/GameManager/GameState.lua` 的读写路径与语义。
-- [x] (2026-01-31 02:23Z) 新增 `tests/store_docs_test.lua`，断言文档包含 `Manager/GameManager/GameState.lua` 与标题。
+- [x] (2026-01-31 02:22Z) 新增 `.github/docs/store/00_state_tree_writers.md`，显式列出 `Manager/GameManager/GameState.lua` 的读写路径与语义。
+- [x] (2026-01-31 02:23Z) 新增 `.github/tests/store_docs_test.lua`，断言文档包含 `Manager/GameManager/GameState.lua` 与标题。
 - [x] (2026-01-31 02:24Z) 在 `Manager/GameManager/Constants.lua` 中新增 Store 路径枚举（数值型）与映射表。
 - [x] (2026-01-31 02:24Z) 重构 `Manager/GameManager/GameState.lua`，通过枚举与映射表构建 Store 路径。
-- [x] (2026-01-31 02:25Z) 新增 `tests/store_enum_test.lua`，断言枚举值为数字且映射可用。
-- [x] (2026-01-31 02:26Z) 更新 `tests/acceptance.lua` 并运行 `lua tests/acceptance.lua` 验证通过。
+- [x] (2026-01-31 02:25Z) 新增 `.github/tests/store_enum_test.lua`，断言枚举值为数字且映射可用。
+- [x] (2026-01-31 02:26Z) 更新 `.github/tests/acceptance.lua` 并运行 `lua .github/tests/acceptance.lua` 验证通过。
 
 ## 意外与发现
 
 
-观察：仓库目前没有专门的 Store/状态树文档；Store 的使用点分散在 `Manager/*`、`Library/*`、`Components/*` 与 tests 中。
-证据：`find docs -name '*.md'` 未发现与 Store 相关的现有文档；`rg "store:set\\(|store:get\\("` 可搜到大量散点使用。
+观察：仓库目前没有专门的 Store/状态树文档；Store 的使用点分散在 `Manager/*`、`Library/*`、`Components/*` 与 .github/tests 中。
+证据：`find .github/docs -name '*.md'` 未发现与 Store 相关的现有文档；`rg "store:set\\(|store:get\\("` 可搜到大量散点使用。
 
 观察：`Manager/GameManager/Constants.lua` 已作为玩法常量集中点，适合作为 Store 路径枚举的放置位置。
 证据：该文件包含 `turn_limit` 与 `item_ids` 等玩法常量。
@@ -54,7 +54,7 @@
 ## 结果与复盘
 
 
-已新增 Store 写入点文档与枚举测试，并完成 `GameState` 枚举化重构。验收通过 `lua tests/acceptance.lua`。当前仅覆盖 `GameState.lua`，其它 Store 写入点尚未纳入文档，可在后续计划扩展为“全仓库 Store 路径索引”。
+已新增 Store 写入点文档与枚举测试，并完成 `GameState` 枚举化重构。验收通过 `lua .github/tests/acceptance.lua`。当前仅覆盖 `GameState.lua`，其它 Store 写入点尚未纳入文档，可在后续计划扩展为“全仓库 Store 路径索引”。
 
 ## 背景与导读
 
@@ -117,7 +117,7 @@
 ## 具体步骤
 
 
-1) 新增文档 `docs/store/00_state_tree_writers.md`，建议结构：
+1) 新增文档 `.github/docs/store/00_state_tree_writers.md`，建议结构：
 
     - 标题：Store 状态树写入点（Writers）
     - 解释 Store/路径数组的概念（保持简短，避免重复本计划太多）
@@ -125,16 +125,16 @@
       - 用“写入/读取”分组列出路径模式与一句话语义
       - 备注：哪些方法会触发写入（例如 `set_player_status`、`update_tile`、`queue_action_anim`）
 
-2) 新增测试 `tests/store_docs_test.lua`，以纯 Lua 方式读取文件并断言内容包含：
+2) 新增测试 `.github/tests/store_docs_test.lua`，以纯 Lua 方式读取文件并断言内容包含：
 
     - `Manager/GameManager/GameState.lua`
     - `Store 状态树写入点`（或你在文档里采用的稳定标题）
 
    测试失败时应给出清晰提示，比如：
 
-    - `expected docs/store/00_state_tree_writers.md to mention Manager/GameManager/GameState.lua`
+    - `expected .github/docs/store/00_state_tree_writers.md to mention Manager/GameManager/GameState.lua`
 
-3) 修改 `tests/acceptance.lua`，把 `tests/store_docs_test.lua` 加入 `scripts` 列表。
+3) 修改 `.github/tests/acceptance.lua`，把 `.github/tests/store_docs_test.lua` 加入 `.github/scripts` 列表。
 
 4) 在 `Manager/GameManager/Constants.lua` 中新增 Store 路径枚举与映射表，要求：
 
@@ -143,16 +143,16 @@
 
 5) 在 `Manager/GameManager/GameState.lua` 中替换所有 Store 路径构造方式，使用枚举 + 映射表生成路径片段，避免直接写 `"players"` / `"turn"` 等字符串。
 
-6) 新增测试 `tests/store_enum_test.lua`，断言：
+6) 新增测试 `.github/tests/store_enum_test.lua`，断言：
 
     - 枚举值为数字类型。
     - 映射表返回的路径片段为字符串（仅映射表允许字符串）。
 
-7) 修改 `tests/acceptance.lua`，把 `tests/store_enum_test.lua` 加入 `scripts` 列表。
+7) 修改 `.github/tests/acceptance.lua`，把 `.github/tests/store_enum_test.lua` 加入 `.github/scripts` 列表。
 
 8) 在仓库根目录运行：
 
-    lua tests/acceptance.lua
+    lua .github/tests/acceptance.lua
 
    预期输出包含：
 
@@ -163,27 +163,27 @@
 
 验收标准（必须同时满足）：
 
-1) 文档存在且可检索：`rg "Manager/GameManager/GameState.lua" docs/store/00_state_tree_writers.md` 有命中。
-2) `tests/store_enum_test.lua` 断言枚举值为数字且映射可用。
-3) `lua tests/acceptance.lua` 通过，输出包含 `ok - acceptance suite`。
+1) 文档存在且可检索：`rg "Manager/GameManager/GameState.lua" .github/docs/store/00_state_tree_writers.md` 有命中。
+2) `.github/tests/store_enum_test.lua` 断言枚举值为数字且映射可用。
+3) `lua .github/tests/acceptance.lua` 通过，输出包含 `ok - acceptance suite`。
 
 ## 可重复性与恢复
 
 
 本计划只新增文档与测试，属于可重复执行的增量改动，不应影响运行时代码路径。
 
-若需要回滚，只需删除新增的 `docs/store/` 文档与 `tests/store_docs_test.lua`，并从 `tests/acceptance.lua` 移除该测试条目即可。
+若需要回滚，只需删除新增的 `.github/docs/store/` 文档与 `.github/tests/store_docs_test.lua`，并从 `.github/tests/acceptance.lua` 移除该测试条目即可。
 
 ## 产物与备注
 
 
 关键输出片段：
 
-    [acceptance] tests/store_docs_test.lua
+    [acceptance] .github/tests/store_docs_test.lua
     ok - store docs
-    [acceptance] tests/store_enum_test.lua
+    [acceptance] .github/tests/store_enum_test.lua
     ok - store enum
-    [acceptance] tests/regression.lua
+    [acceptance] .github/tests/regression.lua
     ..............................
     All regression checks passed (30)
     ok - acceptance suite

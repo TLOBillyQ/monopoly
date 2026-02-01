@@ -101,8 +101,8 @@
 
 
 运行回归测试：
-    lua tests/deps_check.lua
-    lua tests/regression.lua
+    lua .github/tests/deps_check.lua
+    lua .github/tests/regression.lua
 
 确保：
 - 入口脚本 `main.lua` / `init.lua` 不报错。

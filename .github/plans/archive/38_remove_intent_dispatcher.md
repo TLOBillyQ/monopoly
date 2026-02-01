@@ -18,13 +18,13 @@
 - [x] (2026-01-31 15:20Z) 盘点 IntentDispatcher 的依赖点与行为范围
 - [x] (2026-02-01 12:39Z) 在各调用点内联 need_choice/push_popup 行为并移除 require
 - [x] (2026-02-01 12:39Z) 删除 IntentDispatcher 模块并自检
-- [ ] (2026-02-01 12:39Z) 验证行为不变并记录证据（tests/regression.lua 当前失败）
+- [ ] (2026-02-01 12:39Z) 验证行为不变并记录证据（.github/tests/regression.lua 当前失败）
 
 
 ## 意外与发现
 
 
-- 观察：运行 `lua tests/regression.lua` 失败，报错指向 `Globals/ServiceKeys.lua` 的语法错误。
+- 观察：运行 `lua .github/tests/regression.lua` 失败，报错指向 `Globals/ServiceKeys.lua` 的语法错误。
   证据：`Globals\ServiceKeys.lua:2: unexpected symbol near '<'`。
 
 
@@ -102,7 +102,7 @@ IntentDispatcher 当前负责两件事：一是处理 need_choice（递增 turn.
 
 - 运行回归脚本：
 
-    lua tests/regression.lua
+    lua .github/tests/regression.lua
 
   预期：输出 All regression checks passed。
 

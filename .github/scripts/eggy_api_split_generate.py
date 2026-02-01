@@ -11,11 +11,11 @@ from datetime import date
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_NEW = ROOT / "docs" / "eggy" / "EggyAPI.lua"
-DEFAULT_OLD = ROOT / "docs" / "eggy" / "EggyAPI_old.lua"
-DEFAULT_DOC_DIR = ROOT / "docs" / "eggy" / "api"
-DEFAULT_CHANGELOG = ROOT / "docs" / "eggy" / "api_changelog.md"
+ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_NEW = ROOT / ".github" / "docs" / "eggy" / "EggyAPI.lua"
+DEFAULT_OLD = ROOT / ".github" / "docs" / "eggy" / "EggyAPI_old.lua"
+DEFAULT_DOC_DIR = ROOT / ".github" / "docs" / "eggy" / "api"
+DEFAULT_CHANGELOG = ROOT / ".github" / "docs" / "eggy" / "api_changelog.md"
 
 FUNC_RE = re.compile(r"^function\s+([^\(]+)\(([^)]*)\)\s*end\s*$", re.M)
 CLASS_RE = re.compile(r"^---@class\s+([^\n]+)$", re.M)
@@ -347,7 +347,7 @@ def main() -> int:
         index = [
             "# EggyAPI 拆分索引",
             "",
-            "本目录用于按功能拆分 `docs/eggy/EggyAPI.lua`，加速查询并保证 API 完整性。",
+            "本目录用于按功能拆分 `.github/docs/eggy/EggyAPI.lua`，加速查询并保证 API 完整性。",
             "",
             "## 目录",
             "",
@@ -361,7 +361,7 @@ def main() -> int:
             "- 08_components.md：组件类方法索引（*Comp）。",
             "- 09_events.md：事件常量与示例。",
             "",
-            "校验方式：运行 `python scripts/eggy_api_split_generate.py`，默认包含校验。",
+            "校验方式：运行 `python .github/scripts/eggy_api_split_generate.py`，默认包含校验。",
             "",
         ]
         (args.doc_dir / "00_index.md").write_text("\n".join(index), encoding="utf-8")

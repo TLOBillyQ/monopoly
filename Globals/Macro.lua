@@ -19,18 +19,6 @@ FPS = 30.0
 FORWARD_ECA_EVENT_UI = "ui_forward"
 
 ECA_EVENT = {
-    UI = {
-        open_base_screen = "open_base_screen",
-        close_base_screen = "close_base_screen",
-        open_modal_choice = "open_modal_choice",
-        close_modal_choice = "close_modal_choice",
-        open_modal_popup = "open_modal_popup",
-        close_modal_popup = "close_modal_popup",
-        open_market_panel = "open_market_panel",
-        close_market_panel = "close_market_panel",
-        open_loading_screen = "open_loading_screen",
-        close_loading_screen = "close_loading_screen",
-    },
     VEHICLE = {
         enter = "enter_vehicle",
         exit = "exit_vehicle",

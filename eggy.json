@@ -8,10 +8,10 @@
         ".git", 
         ".github",
         ".gitignore",
-        "scripts",
-        "tests",
+        ".github/scripts",
+        ".github/tests",
         "AGENTS.md",
-        "docs",
+        ".github/docs",
         "EggyAPI.lua"
     ], 
     "isSEMap": false, 

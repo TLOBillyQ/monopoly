@@ -24,7 +24,7 @@
 ## 决策日志
 
 - 决策：在 Eggy runtime 里以 UIManager 节点监听为唯一 UI 事件入口，移除基于 event_name 的分发。
-  理由：UIManager 的事件模型在 docs/eggy/ui_manager_lib.md 中明确，且能减少对字符串事件名与 payload 的耦合。
+  理由：UIManager 的事件模型在 .github/docs/eggy/ui_manager_lib.md 中明确，且能减少对字符串事件名与 payload 的耦合。
   日期/作者：2026-01-27 Codex
 - 决策：删除 MarketUI.item_event_prefix 配置项。
   理由：事件已通过节点点击直接绑定，前缀映射不再使用。
@@ -49,8 +49,8 @@
 ## 验证与验收
 
 运行 Lua 测试验证无回归，命令在仓库根目录执行：
-    lua tests/deps_check.lua
-    lua tests/regression.lua
+    lua .github/tests/deps_check.lua
+    lua .github/tests/regression.lua
 预期输出包含 “Dependency self-check passed” 与 “All regression checks passed”。然后运行 bin/windows/Game.exe，手工点击 btn_next、btn_auto、弹窗确认、黑市购买与取消按钮，观察回合推进、自动控制开关切换、黑市选项高亮与购买行为正常。如果点击无响应，需要记录具体节点名与 UI 资源情况并回填到“意外与发现”。
 
 ## 可重复性与恢复

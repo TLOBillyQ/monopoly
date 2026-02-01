@@ -1,4 +1,4 @@
--- Quick regression checks (run with: lua tests/regression.lua)
+-- Quick regression checks (run with: lua .github/tests/regression.lua)
 local App = require("Manager.GameManager.Game")
 local MovementService = require("Manager.MovementManager.Movement.MovementService")
 local TurnManager = require("Manager.TurnManager.Turn.TurnManager")

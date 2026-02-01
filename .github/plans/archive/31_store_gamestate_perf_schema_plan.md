@@ -8,7 +8,7 @@
 ## 目的 / 全局视角
 
 
-当前 `Manager/GameManager/GameState.lua` 通过 `Components/Store.lua` 读写状态树，路径以字符串片段构成。随着回合推进、动画与地块更新频繁调用，Store 的路径构造与拷贝可能成为性能热点。本计划要验证两件事：一是 GameState 是否存在可测的性能瓶颈；二是 Store 是否可以采用类似 `docs/SecretOfEscaper/Manager/PlayerManager/Player.lua` 中 `schema` 的方式进行结构化定义，从而减少运行时的分支与分配。
+当前 `Manager/GameManager/GameState.lua` 通过 `Components/Store.lua` 读写状态树，路径以字符串片段构成。随着回合推进、动画与地块更新频繁调用，Store 的路径构造与拷贝可能成为性能热点。本计划要验证两件事：一是 GameState 是否存在可测的性能瓶颈；二是 Store 是否可以采用类似 `.github/docs/SecretOfEscaper/Manager/PlayerManager/Player.lua` 中 `schema` 的方式进行结构化定义，从而减少运行时的分支与分配。
 
 交付结果必须可观察：给出性能对比数据与明确结论（保留现状/引入 schema/采用其它优化方案），并提供最小的落地改动或原型验证，确保读者能复现实验并看到提升或验证不可行。
 
@@ -24,8 +24,8 @@
 ## 意外与发现
 
 
-观察：仓库中 `tests/test_bootstrap.lua` 不存在，基准脚本不能依赖测试引导文件。
-证据：`lua scripts/bench_store_gamestate.lua` 初次运行提示 `cannot open tests/test_bootstrap.lua`。
+观察：仓库中 `.github/tests/test_bootstrap.lua` 不存在，基准脚本不能依赖测试引导文件。
+证据：`lua .github/scripts/bench_store_gamestate.lua` 初次运行提示 `cannot open .github/tests/test_bootstrap.lua`。
 
 ## 决策日志
 
@@ -48,7 +48,7 @@
 
 Store 是一棵嵌套 table，由 `Components/Store.lua` 的 `get/set` 读写。`Manager/GameManager/GameState.lua` 负责把玩家状态、地块状态、动画队列等写入 Store。最近已将路径片段抽为数值枚举并通过映射表回到字符串，这保证了枚举值不是字符串，但 Store 仍以字符串作为最终 table key。
 
-`docs/SecretOfEscaper/Manager/PlayerManager/Player.lua` 展示了一个“schema + 编解码”的存档结构：schema 定义结构与字段，运行时依照 schema 读写并做序列化。此方式可能为 Store 提供结构化路径定义、减少动态路径拼装和分配，但也可能引入额外复杂度或与现有运行时写法冲突。本计划将验证其可行性与收益。
+`.github/docs/SecretOfEscaper/Manager/PlayerManager/Player.lua` 展示了一个“schema + 编解码”的存档结构：schema 定义结构与字段，运行时依照 schema 读写并做序列化。此方式可能为 Store 提供结构化路径定义、减少动态路径拼装和分配，但也可能引入额外复杂度或与现有运行时写法冲突。本计划将验证其可行性与收益。
 
 ## 工作计划
 
@@ -62,7 +62,7 @@ Store 是一棵嵌套 table，由 `Components/Store.lua` 的 `get/set` 读写。
 
 1) 在仓库根目录新增一个最小可复现的基线脚本或测试场景，驱动 `GameState` 的典型写入路径（玩家状态变更、地块更新、动画入队），并输出调用次数与耗时。要求场景可在纯 Lua 下运行，且不会引入引擎依赖。
 
-2) 基于 `docs/store/00_state_tree_writers.md` 与 `GameState.lua` 的现有路径，编写一份 Store schema 草案。schema 必须是显式结构定义，包含每个路径片段与叶子字段的类型或用途说明，并能映射回当前字符串路径。
+2) 基于 `.github/docs/store/00_state_tree_writers.md` 与 `GameState.lua` 的现有路径，编写一份 Store schema 草案。schema 必须是显式结构定义，包含每个路径片段与叶子字段的类型或用途说明，并能映射回当前字符串路径。
 
 3) 实现原型（仅覆盖 GameState 路径），以“路径复用”微基准作为 schema 预生成路径的代理指标：
 
@@ -93,7 +93,7 @@ Store 是一棵嵌套 table，由 `Components/Store.lua` 的 `get/set` 读写。
 
 运行命令与关键输出：
 
-    lua scripts/bench_store_gamestate.lua
+    lua .github/scripts/bench_store_gamestate.lua
     loops=20000
     game_ops=0.378558
     path_alloc=0.021690
@@ -101,8 +101,8 @@ Store 是一棵嵌套 table，由 `Components/Store.lua` 的 `get/set` 读写。
 
 新增文件：
 
-1) `scripts/bench_store_gamestate.lua`
-2) `docs/store/01_store_schema_draft.md`
+1) `.github/scripts/bench_store_gamestate.lua`
+2) `.github/docs/store/01_store_schema_draft.md`
 
 ## 接口与依赖
 
@@ -117,7 +117,7 @@ Store 是一棵嵌套 table，由 `Components/Store.lua` 的 `get/set` 读写。
    - `_store_set(path: table, value: any): void`
    - 读写当前 Store 路径的核心入口。
 
-3) `docs/SecretOfEscaper/Manager/PlayerManager/Player.lua`
+3) `.github/docs/SecretOfEscaper/Manager/PlayerManager/Player.lua`
    - `schema`：作为“结构化定义”的参考样式，评估其对 Store 的适配性。
 
 变更说明：完成基线脚本、schema 草案与对比结论，记录意外与决策，并补充可复现输出。

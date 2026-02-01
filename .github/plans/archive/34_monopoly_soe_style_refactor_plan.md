@@ -7,7 +7,7 @@
 ## 目的 / 全局视角
 
 
-基于计划29的研究结果，把 Monopoly 的入口与模块组织方式调整为更接近 SecretOfEscaper 的“地图/模式/系统”结构，不再以平台分层作为设计前提。目标是让 `MapManager` 与 `ModeManager` 成为新的启动主干，核心玩法逻辑仍保留在现有 Manager 中，但由模式驱动串联。可观察结果是：`init.lua` 不再直接调用 `GameManager.Entry.install()`，而是通过 `MapManager.init_level` 选择地图并加载模式；`tests/regression.lua` 仍通过；运行时启动路径清晰可追踪。
+基于计划29的研究结果，把 Monopoly 的入口与模块组织方式调整为更接近 SecretOfEscaper 的“地图/模式/系统”结构，不再以平台分层作为设计前提。目标是让 `MapManager` 与 `ModeManager` 成为新的启动主干，核心玩法逻辑仍保留在现有 Manager 中，但由模式驱动串联。可观察结果是：`init.lua` 不再直接调用 `GameManager.Entry.install()`，而是通过 `MapManager.init_level` 选择地图并加载模式；`.github/tests/regression.lua` 仍通过；运行时启动路径清晰可追踪。
 
 
 ## 进度
@@ -64,7 +64,7 @@
 
 第三阶段整理 `Manager/__init.lua` 的加载顺序，让 MapManager/ModeManager 处于入口层最小依赖集合，其余 Manager 由模式或运行时按需加载，降低入口职责并避免全量 require 的启动耦合。
 
-第四阶段在 `tests/regression.lua` 通过后，再补充新的启动链路验证点，确保入口调整的可观察结果稳定，并把验证输出写回“结果与复盘”。
+第四阶段在 `.github/tests/regression.lua` 通过后，再补充新的启动链路验证点，确保入口调整的可观察结果稳定，并把验证输出写回“结果与复盘”。
 
 
 ## 背景与导读
@@ -94,7 +94,7 @@ Monopoly 当前入口是 `main.lua` → `init.lua` → `Manager.GameManager.Entr
 
 6) 运行验证并记录输出：
 
-    lua tests/regression.lua
+    lua .github/tests/regression.lua
 
 如果运行时依赖引擎无法在本地复现，可记录最小启动步骤与预期观察点，补充到“产物与备注”。
 
@@ -102,7 +102,7 @@ Monopoly 当前入口是 `main.lua` → `init.lua` → `Manager.GameManager.Entr
 ## 验证与验收
 
 
-必须满足以下条件：`lua tests/regression.lua` 通过；`init.lua` 启动链路已改为 `MapManager.init_level` 且能加载 `Classic` 模式；核心玩法逻辑与现有 `Entry.install` 行为一致。
+必须满足以下条件：`lua .github/tests/regression.lua` 通过；`init.lua` 启动链路已改为 `MapManager.init_level` 且能加载 `Classic` 模式；核心玩法逻辑与现有 `Entry.install` 行为一致。
 
 
 ## 可重复性与恢复

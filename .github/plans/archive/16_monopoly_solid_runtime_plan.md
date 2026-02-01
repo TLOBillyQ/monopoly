@@ -25,7 +25,7 @@
 ## 意外与发现
 
 - 观察：回归测试中 `require("Manager.TurnManager.GUI.Layer")` 触发 `Globals/Macro.lua` 依赖，导致本地 Lua 环境缺失 `math.Vector3` 报错。
-  证据：`lua tests/regression.lua` 报错 `Globals/Macro.lua:1: attempt to call field 'Vector3' (a nil value)`。
+  证据：`lua .github/tests/regression.lua` 报错 `Globals/Macro.lua:1: attempt to call field 'Vector3' (a nil value)`。
 
 ## 决策日志
 
@@ -45,7 +45,7 @@
   理由：测试环境仅需要 `step_*` 方法，不应触发 `Globals.Macro` 对引擎类型的依赖。
   日期/作者：2026-01-30 / Codex
 
-- 决策：`tests/deps_check.lua` 将 `Manager/GameManager/Entry.lua` 视为运行时入口例外。
+- 决策：`.github/tests/deps_check.lua` 将 `Manager/GameManager/Entry.lua` 视为运行时入口例外。
   理由：入口需要依赖 GUI 层，规则上与原 `Runtime.lua` 同类。
   日期/作者：2026-01-30 / Codex
 
@@ -100,16 +100,16 @@
    - 在 `Entry.install()` 中调用此函数，传入 `GameAPI`。
 
 5) 最小启动验证。
-   - 新建 `tests/entry_smoke_test.lua`，只验证 `require("Manager.GameManager.Entry")` 可加载，且 `Entry.install` 存在（不实际调用引擎依赖）。
+   - 新建 `.github/tests/entry_smoke_test.lua`，只验证 `require("Manager.GameManager.Entry")` 可加载，且 `Entry.install` 存在（不实际调用引擎依赖）。
 
 ## 验证与验收
 
 运行回归测试：
-    lua tests/deps_check.lua
-    lua tests/regression.lua
+    lua .github/tests/deps_check.lua
+    lua .github/tests/regression.lua
 
 运行入口加载测试：
-    lua tests/entry_smoke_test.lua
+    lua .github/tests/entry_smoke_test.lua
     ok - entry load
 
 人工验证（可选）：执行入口，观察日志仍能输出回合信息，UI 初始化无报错。
@@ -128,7 +128,7 @@
 `Globals/ECA.lua`
 `Library/Monopoly/Logger.lua`
 `init.lua`
-`tests/entry_smoke_test.lua`
+`.github/tests/entry_smoke_test.lua`
 
 预期移除文件：
 `Manager/System/Runtime.lua`
@@ -138,7 +138,7 @@
 `Manager/System/ECA.lua`
 
 测试输出示例：
-    lua tests/entry_smoke_test.lua
+    lua .github/tests/entry_smoke_test.lua
     ok - entry load
 
 ## 接口与依赖

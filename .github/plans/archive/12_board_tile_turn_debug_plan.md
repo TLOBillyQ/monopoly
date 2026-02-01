@@ -9,7 +9,7 @@
 
 
 完成后将同时解决五个问题：
-1) 场景棋盘格子上的名称与价格能够正确显示；2) 起点地块对齐到 `t35`（与 `src/config/tiles.lua` 的 id 对应），不再错误落在 `t1`；3) 玩家点击“下一步”能推进回合；4) “下一步”具备防连点；5) 关键流程增加调试 `print` 覆盖，并在 `docs/*.md` 记录位置以便发布前统一删除。用户能通过进入 Eggy 场景、点击按钮、观察格子文本与回合推进来验证生效。
+1) 场景棋盘格子上的名称与价格能够正确显示；2) 起点地块对齐到 `t35`（与 `src/config/tiles.lua` 的 id 对应），不再错误落在 `t1`；3) 玩家点击“下一步”能推进回合；4) “下一步”具备防连点；5) 关键流程增加调试 `print` 覆盖，并在 `.github/docs/*.md` 记录位置以便发布前统一删除。用户能通过进入 Eggy 场景、点击按钮、观察格子文本与回合推进来验证生效。
 
 ## 进度
 
@@ -17,7 +17,7 @@
 - [x] (2026-01-28 17:52) 建立计划初版，完成相关文件定位与问题拆分。
 - [x] (2026-01-28 18:02) 明确棋盘锚点映射与 TileRenderer 的修复方案，补上初次渲染。
 - [x] (2026-01-28 18:02) 修复“下一步”按钮不推进与连点防护，并补齐调试 print。
-- [x] (2026-01-28 18:05) 部分完成：已记录调试 print 位置到 docs，已运行 `lua tests/regression.lua`；剩余：Eggy 场景验收。
+- [x] (2026-01-28 18:05) 部分完成：已记录调试 print 位置到 .github/docs，已运行 `lua .github/tests/regression.lua`；剩余：Eggy 场景验收。
 
 ## 意外与发现
 
@@ -27,7 +27,7 @@
 暂无新增意外与发现。
 
 观察：回归脚本通过。
-证据：`lua tests/regression.lua` 输出 `All regression checks passed (30)`。
+证据：`lua .github/tests/regression.lua` 输出 `All regression checks passed (30)`。
 
 ## 决策日志
 
@@ -65,7 +65,7 @@
 
 然后修复“下一步”按钮流程。通过在 `register_ui_manager_events` 与 `EggyLayer:dispatch_action/step_turn` 加 `print` 覆盖，确认点击事件确实触发并推进到 `Game:advance_turn`。若确认触发但回合不前进，继续在 `src/gameplay/turn_manager.lua` 入口加 print 追踪阶段变化。完成后加入防连点逻辑：在 EggyLayer 里维护一次点击锁，只有当锁解除才允许新的 “next”，锁解除的条件使用“回合阶段已变化”或“最短时间间隔已满足”，并确保自动运行不受影响。
 
-最后统一补充调试 print 的位置清单，写入 `docs/debug_prints.md`（或同等命名的 docs 文件），列出文件路径与简短说明，用于后续发布前集中删除。
+最后统一补充调试 print 的位置清单，写入 `.github/docs/debug_prints.md`（或同等命名的 .github/docs 文件），列出文件路径与简短说明，用于后续发布前集中删除。
 
 ## 具体步骤
 
@@ -75,11 +75,11 @@
     rg -n "tile_renderer|render_tile|t\\d+|btn_next|dispatch_action" src
     rg -n "path|start_id" src/config/map.lua
 
-已执行并完成以下修改：更新 `src/adapters/eggy/eggy_runtime.lua` 的棋盘锚点查询改为按 `map.path` 顺序；在 `src/adapters/eggy/eggy_layer_board.lua` 初始化时渲染格子文本；在 `src/adapters/eggy/tile_renderer.lua` 使用 id 映射；补齐 `btn_next`/`dispatch_action`/`step_turn`/`turn_manager` 调试 print；新增 `docs/debug_prints.md`。接下来运行回归脚本并完成 Eggy 场景验证。
+已执行并完成以下修改：更新 `src/adapters/eggy/eggy_runtime.lua` 的棋盘锚点查询改为按 `map.path` 顺序；在 `src/adapters/eggy/eggy_layer_board.lua` 初始化时渲染格子文本；在 `src/adapters/eggy/tile_renderer.lua` 使用 id 映射；补齐 `btn_next`/`dispatch_action`/`step_turn`/`turn_manager` 调试 print；新增 `.github/docs/debug_prints.md`。接下来运行回归脚本并完成 Eggy 场景验证。
 
 已在仓库根目录运行回归脚本：
 
-    lua tests/regression.lua
+    lua .github/tests/regression.lua
     ..............................
     All regression checks passed (30)
 
@@ -96,25 +96,25 @@
 - 在 `src/adapters/eggy/eggy_layer.lua` 的 `dispatch_action` 与 `step_turn` 增加 `print`，并加入节流锁逻辑（记录点击时刻与最近回合阶段变化）。
 - 在 `src/gameplay/turn_manager.lua` 的 `run_turn` 或 `advance` 入口添加 `print`，用于确认回合推进链路。
 
-新增 `docs/debug_prints.md`，记录上述 print 的位置与用途，明确“发布前删除”的备注。
+新增 `.github/docs/debug_prints.md`，记录上述 print 的位置与用途，明确“发布前删除”的备注。
 
 ## 验证与验收
 
 
 运行回归脚本：
 
-    lua tests/regression.lua
+    lua .github/tests/regression.lua
 
 在 Eggy 场景中验证：
 1) 起点格子位于 `t35`，玩家初始位置在起点。
 2) 任意格子显示 name 与 price 文本（地块类显示价格，非地块可为空）。
 3) 点击“下一步”后回合推进，日志/print 显示点击与推进链路；连续快速点击不会多次推进。
-4) `docs/debug_prints.md` 中列出的 print 均存在，且易于定位删除。
+4) `.github/docs/debug_prints.md` 中列出的 print 均存在，且易于定位删除。
 
 ## 可重复性与恢复
 
 
-修改集中在 Eggy 适配层与配置读取，重复执行不会造成破坏。若需回退，使用版本控制恢复 `src/adapters/eggy/` 与 `docs/debug_prints.md` 的变更，再运行回归脚本确认状态恢复。
+修改集中在 Eggy 适配层与配置读取，重复执行不会造成破坏。若需回退，使用版本控制恢复 `src/adapters/eggy/` 与 `.github/docs/debug_prints.md` 的变更，再运行回归脚本确认状态恢复。
 
 ## 产物与备注
 
@@ -124,7 +124,7 @@
     local map_cfg = require("Config.Map")
     tile_names[i] = "t" .. tostring(map_cfg.path[i])
 
-以及 TileRenderer 的 id 映射初始化片段。调试 print 的位置应完整列在 `docs/debug_prints.md`。
+以及 TileRenderer 的 id 映射初始化片段。调试 print 的位置应完整列在 `.github/docs/debug_prints.md`。
 
 ## 接口与依赖
 

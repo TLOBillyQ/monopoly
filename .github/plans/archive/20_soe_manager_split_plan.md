@@ -18,7 +18,7 @@
 ## 意外与发现
 
 - 观察：批量替换 require 时，`Land` 与 `Effect` 的路径出现重复片段（如 `Land.Land.LandPricing`、`Effect.Effect.EffectPipeline`）。
-  证据：`tests/regression.lua` 已修正为 `Manager.EffectManager.Effect.EffectPipeline`，并通过回归测试。
+  证据：`.github/tests/regression.lua` 已修正为 `Manager.EffectManager.Effect.EffectPipeline`，并通过回归测试。
 
 ## 决策日志
 
@@ -62,8 +62,8 @@
 
 在仓库根目录运行：
 
-  lua tests/deps_check.lua
-  lua tests/regression.lua
+  lua .github/tests/deps_check.lua
+  lua .github/tests/regression.lua
 
 预期测试无报错。重点验证回合推进、道具使用与地块交易流程不受影响。已完成上述测试并通过。
 

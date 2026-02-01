@@ -3,7 +3,7 @@
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
-本计划遵循 `.agent/PLANS.md` 的全部要求，并作为总计划 `pilots/15_monopoly_solid_refactor_plan.md` 的子计划，同时遵循 `docs/eggy/eggy_lua_agent_memory.md` 的 Eggy 规则。
+本计划遵循 `.agent/PLANS.md` 的全部要求，并作为总计划 `pilots/15_monopoly_solid_refactor_plan.md` 的子计划，同时遵循 `.github/docs/eggy/eggy_lua_agent_memory.md` 的 Eggy 规则。
 
 
 ## 目的 / 全局视角
@@ -62,7 +62,7 @@
 `Manager/MarketManager/Market/MarketService.lua` 记录购买。
 `Manager/GameManager/Chance.lua` 记录机会卡效果。
 
-根据 `docs/eggy/eggy_lua_agent_memory.md`，应该使用 Eggy 的事件系统（`LuaAPI.global_register_custom_event` / `LuaAPI.global_send_custom_event`）进行通信，且所有 API 调用必须使用点号。UI 初始化需要在 GAME_INIT 之后，事件注册与派发应在该时机之后进行。
+根据 `.github/docs/eggy/eggy_lua_agent_memory.md`，应该使用 Eggy 的事件系统（`LuaAPI.global_register_custom_event` / `LuaAPI.global_send_custom_event`）进行通信，且所有 API 调用必须使用点号。UI 初始化需要在 GAME_INIT 之后，事件注册与派发应在该时机之后进行。
 
 
 ## 工作计划
@@ -108,18 +108,18 @@
    - 清理 `CompositionRoot` 中 `game.events` 注入以及所有 `game.events:emit` 调用。
 
 5) 新增测试（不依赖引擎）。
-   - 新建 `tests/eggy_event_names_test.lua`，验证事件常量表存在且包含关键键。
+   - 新建 `.github/tests/eggy_event_names_test.lua`，验证事件常量表存在且包含关键键。
 
 
 ## 验证与验收
 
 
 运行回归测试：
-    lua tests/deps_check.lua
-    lua tests/regression.lua
+    lua .github/tests/deps_check.lua
+    lua .github/tests/regression.lua
 
 运行事件名称测试：
-    lua tests/eggy_event_names_test.lua
+    lua .github/tests/eggy_event_names_test.lua
     ok - eggy event names
 
 人工观察：运行游戏后仍能看到移动与租金日志，且输出内容与原先一致或语义等价。
@@ -140,14 +140,14 @@
 `Manager/LandManager/Land/LandActions.lua`
 `Manager/MarketManager/Market/MarketService.lua`
 `Manager/GameManager/Chance.lua`
-`tests/eggy_event_names_test.lua`
+`.github/tests/eggy_event_names_test.lua`
 
 预期移除文件（若存在）：
 `Library/Monopoly/GameEvents.lua`
 `Manager/System/EventHandlers.lua`
 
 测试输出示例：
-    lua tests/eggy_event_names_test.lua
+    lua .github/tests/eggy_event_names_test.lua
     ok - eggy event names
 
 

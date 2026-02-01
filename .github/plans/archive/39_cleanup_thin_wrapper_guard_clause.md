@@ -9,7 +9,7 @@
 ## 目的 / 全局视角
 
 
-清理 Manager、Globals、Components 目录下的薄封装与显式 guard clause，使代码更直白但行为完全不变。用户视角不会看到功能变化，choice 与 popup 的触发逻辑保持一致，物品与黑市等流程保持原有结果。验证方式是运行 tests/regression.lua，或在可运行环境中触发一次需要选择与弹窗的流程，观察 UI 与日志无变化。
+清理 Manager、Globals、Components 目录下的薄封装与显式 guard clause，使代码更直白但行为完全不变。用户视角不会看到功能变化，choice 与 popup 的触发逻辑保持一致，物品与黑市等流程保持原有结果。验证方式是运行 .github/tests/regression.lua，或在可运行环境中触发一次需要选择与弹窗的流程，观察 UI 与日志无变化。
 
 
 ## 进度
@@ -18,7 +18,7 @@
 - [x] (2026-02-01 13:32) 盘点 Manager/Globals/Components 中可清理的 thin wrapper 与 guard clause，并记录目标文件
 - [x] (2026-02-01 13:41) 删除薄封装并更新调用点（Tile.from_config、to_number、MarketService.buy、Registry.get）
 - [x] (2026-02-01 13:41) 清理 resolve_event_name 与 dispatch_intent 的显式 guard clause（保持行为不变）
-- [x] (2026-02-01 13:46) 自测与记录证据（tests/regression.lua 通过）
+- [x] (2026-02-01 13:46) 自测与记录证据（.github/tests/regression.lua 通过）
 
 
 ## 意外与发现
@@ -60,7 +60,7 @@ Manager 目录包含玩法逻辑与 UI 选择流程，Components 目录提供核
 ## 里程碑
 
 
-里程碑一：完成薄封装清理。完成后，Tile.from_config、to_number、MarketService.buy、Registry.get 等不再存在，调用点改为直接调用或表索引，行为保持不变。验证方式是在 tests/regression.lua 中通过对黑市购买、道具使用与选择流程的现有断言，或在可运行环境里人工触发相关流程。
+里程碑一：完成薄封装清理。完成后，Tile.from_config、to_number、MarketService.buy、Registry.get 等不再存在，调用点改为直接调用或表索引，行为保持不变。验证方式是在 .github/tests/regression.lua 中通过对黑市购买、道具使用与选择流程的现有断言，或在可运行环境里人工触发相关流程。
 
 里程碑二：完成 guard clause 清理。完成后，resolve_event_name 与 dispatch_intent 不再含显式早退语句，但对 nil 输入的处理仍然等价；choice 与 popup 的触发行为不变。验证方式与里程碑一相同，并重点观察 need_choice 与 push_popup 的事件触发与 UI 展示。
 
@@ -68,7 +68,7 @@ Manager 目录包含玩法逻辑与 UI 选择流程，Components 目录提供核
 ## 工作计划
 
 
-先处理 Components/Tile.lua，删除 Tile.from_config 并在 Manager/GameManager/CompositionRoot.lua 中把 Tile.from_config 改为 Tile:new。然后在 Manager/ChoiceManager/Choice/ChoiceHandlers/ItemChoiceHandler.lua 与 Manager/ChoiceManager/Choice/ChoiceHandlers/MarketChoiceHandler.lua 移除 to_number，直接使用 tonumber。接着移除 MarketService.buy 并在 Manager/ChoiceManager/Choice/ChoiceHandlers/MarketChoiceHandler.lua 与 tests/regression.lua 改为调用 MarketService.buy_with_opts。随后在 Manager/ChoiceManager/Choice/ChoiceRegistry.lua、Manager/ChanceManager/ChanceRegistry.lua、Manager/ItemManager/Item/ItemRegistry.lua 暴露 handlers 表并删除 get 函数，在 Manager/ChoiceManager/Choice/ChoiceService.lua、Manager/ChanceManager/Chance.lua、Manager/ItemManager/Item/ItemExecutor.lua 替换为直接索引。最后清理 guard clause：在 Manager/EffectManager/Effect/EffectPipeline.lua、Manager/TurnManager/Turn/TurnMove.lua、Manager/ItemManager/Item/ItemInventory.lua、Manager/ItemManager/Item/ItemPhase.lua、Manager/ChoiceManager/Choice/ChoiceHandlers/*.lua 中，改写 resolve_event_name 为 nil-safe 返回式，改写 dispatch_intent 为先计算 intent，再在分支中判断 intent 是否存在，确保对 nil payload 的行为不变。
+先处理 Components/Tile.lua，删除 Tile.from_config 并在 Manager/GameManager/CompositionRoot.lua 中把 Tile.from_config 改为 Tile:new。然后在 Manager/ChoiceManager/Choice/ChoiceHandlers/ItemChoiceHandler.lua 与 Manager/ChoiceManager/Choice/ChoiceHandlers/MarketChoiceHandler.lua 移除 to_number，直接使用 tonumber。接着移除 MarketService.buy 并在 Manager/ChoiceManager/Choice/ChoiceHandlers/MarketChoiceHandler.lua 与 .github/tests/regression.lua 改为调用 MarketService.buy_with_opts。随后在 Manager/ChoiceManager/Choice/ChoiceRegistry.lua、Manager/ChanceManager/ChanceRegistry.lua、Manager/ItemManager/Item/ItemRegistry.lua 暴露 handlers 表并删除 get 函数，在 Manager/ChoiceManager/Choice/ChoiceService.lua、Manager/ChanceManager/Chance.lua、Manager/ItemManager/Item/ItemExecutor.lua 替换为直接索引。最后清理 guard clause：在 Manager/EffectManager/Effect/EffectPipeline.lua、Manager/TurnManager/Turn/TurnMove.lua、Manager/ItemManager/Item/ItemInventory.lua、Manager/ItemManager/Item/ItemPhase.lua、Manager/ChoiceManager/Choice/ChoiceHandlers/*.lua 中，改写 resolve_event_name 为 nil-safe 返回式，改写 dispatch_intent 为先计算 intent，再在分支中判断 intent 是否存在，确保对 nil payload 的行为不变。
 
 
 ## 具体步骤
@@ -76,7 +76,7 @@ Manager 目录包含玩法逻辑与 UI 选择流程，Components 目录提供核
 
 所有命令在仓库根目录执行。第一步，使用 ripgrep 定位薄封装与 guard clause 位置，例如：
 
-    rg -n "Tile\\.from_config|to_number|MarketService\\.buy|Registry\\.get|resolve_event_name|dispatch_intent" Manager Globals Components tests
+    rg -n "Tile\\.from_config|to_number|MarketService\\.buy|Registry\\.get|resolve_event_name|dispatch_intent" Manager Globals Components .github/tests
 
 第二步，按“工作计划”顺序逐个修改文件，确保每个改动只做等价替换，不引入新逻辑。第三步，重复运行 ripgrep 确认薄封装函数与旧调用点已清理。第四步，执行验证命令并记录输出片段。
 
@@ -84,7 +84,7 @@ Manager 目录包含玩法逻辑与 UI 选择流程，Components 目录提供核
 ## 验证与验收
 
 
-在仓库根目录运行 lua tests/regression.lua，期望脚本通过或至少不因本次改动新增报错。如果本地环境无法运行回归脚本，则在游戏运行流程中触发一次 need_choice 与 push_popup（如黑市购买或道具选择），确认 choice 面板与弹窗仍正常出现，并在日志中看到对应事件触发记录。
+在仓库根目录运行 lua .github/tests/regression.lua，期望脚本通过或至少不因本次改动新增报错。如果本地环境无法运行回归脚本，则在游戏运行流程中触发一次 need_choice 与 push_popup（如黑市购买或道具选择），确认 choice 面板与弹窗仍正常出现，并在日志中看到对应事件触发记录。
 
 
 ## 可重复性与恢复

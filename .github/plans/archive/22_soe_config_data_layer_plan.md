@@ -35,17 +35,17 @@
 
 ## 背景与导读
 
-当前配置集中在 `Config/*.lua`，由 `scripts/export_xlsx.py` 直接生成，例如 `Config/Tiles.lua`、`Config/Roles.lua` 等。为避免引入 `.h.lua` 的 require 路径问题，本次改造采用 `Config/Generated/` 承载导出数据，`Config/*.lua` 变成薄封装入口，保持调用方式不变。
+当前配置集中在 `Config/*.lua`，由 `.github/scripts/export_xlsx.py` 直接生成，例如 `Config/Tiles.lua`、`Config/Roles.lua` 等。为避免引入 `.h.lua` 的 require 路径问题，本次改造采用 `Config/Generated/` 承载导出数据，`Config/*.lua` 变成薄封装入口，保持调用方式不变。
 
 ## 工作计划
 
-先盘点哪些配置来自 Excel（tiles/roles/items/vehicles/market 等），哪些是手写配置（Map、LandingEffects 等）。调整 `scripts/export_xlsx.py` 输出到 `Config/Generated/<Name>.lua`，并在 `Config/<Name>.lua` 中以 `return require("Config.Generated.<Name>")` 形式返回数据。对手写配置保持不变。更新导出脚本提示，确保团队知道生成文件的职责。
+先盘点哪些配置来自 Excel（tiles/roles/items/vehicles/market 等），哪些是手写配置（Map、LandingEffects 等）。调整 `.github/scripts/export_xlsx.py` 输出到 `Config/Generated/<Name>.lua`，并在 `Config/<Name>.lua` 中以 `return require("Config.Generated.<Name>")` 形式返回数据。对手写配置保持不变。更新导出脚本提示，确保团队知道生成文件的职责。
 
 ## 具体步骤
 
 在仓库根目录执行：
 
-  1) 修改 `scripts/export_xlsx.py` 的输出目录为 `Config/Generated/`，并更新文件名为帕斯卡命名。
+  1) 修改 `.github/scripts/export_xlsx.py` 的输出目录为 `Config/Generated/`，并更新文件名为帕斯卡命名。
   2) 为每个导出配置创建对应的 `Config/<Name>.lua` 入口，保持调用路径不变。
   3) 更新 `export_xlsx.bat` 输出提示。
   4) 运行导出脚本并刷新生成文件。
@@ -54,12 +54,12 @@
 
 在仓库根目录运行：
 
-  lua tests/deps_check.lua
-  lua tests/regression.lua
+  lua .github/tests/deps_check.lua
+  lua .github/tests/regression.lua
 
 如环境具备 Python，运行：
 
-  python3 scripts/export_xlsx.py
+  python3 .github/scripts/export_xlsx.py
 
 预期导出成功，且运行时仍能通过 `Config.<Name>` 获取数据。已运行导出脚本并通过测试。
 

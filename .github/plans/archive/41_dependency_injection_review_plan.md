@@ -9,7 +9,7 @@
 ## 目的 / 全局视角
 
 
-对本项目当前的依赖注入模式做一次可追溯的审查，明确哪些地方在“注入”、用什么方式注入、为何这样做，并评估这些模式是否适合继续保留或需要替换。最终产物是一份文档，写清现状、风险、可行性与建议，让后续重构时可以直接按文档执行或对照。可观察结果是 `docs/reports/dependency_injection_review.md` 存在且内容覆盖关键模块与结论。
+对本项目当前的依赖注入模式做一次可追溯的审查，明确哪些地方在“注入”、用什么方式注入、为何这样做，并评估这些模式是否适合继续保留或需要替换。最终产物是一份文档，写清现状、风险、可行性与建议，让后续重构时可以直接按文档执行或对照。可观察结果是 `.github/docs/reports/dependency_injection_review.md` 存在且内容覆盖关键模块与结论。
 
 
 ## 进度
@@ -31,7 +31,7 @@
 ## 决策日志
 
 
-- 决策：评估结果落在 `docs/reports/dependency_injection_review.md`。
+- 决策：评估结果落在 `.github/docs/reports/dependency_injection_review.md`。
   理由：该目录已有类似评审类文档，便于统一查看与引用。
   日期/作者：2026-02-01 / Codex
 - 决策：评估结论围绕“组合根+服务定位、注册表、上下文覆盖、执行器聚合”四类模式展开。
@@ -71,7 +71,7 @@
 
 根据记录为每种模式写评估结论，结论必须覆盖可行性、风险、替代成本与可执行建议。建议采用统一模板描述，避免只有结论没有证据。
 
-在 `docs/reports/dependency_injection_review.md` 写入最终文档。文档应包含范围与方法、模式清单、可行性评估、风险与建议、后续改进候选等小节，并在每个小节内标注相关文件路径作为证据。
+在 `.github/docs/reports/dependency_injection_review.md` 写入最终文档。文档应包含范围与方法、模式清单、可行性评估、风险与建议、后续改进候选等小节，并在每个小节内标注相关文件路径作为证据。
 
 
 ## 验证与验收
@@ -79,7 +79,7 @@
 
 确认文档文件存在且内容覆盖主要模式与结论，且至少引用了 CompositionRoot、Game 服务定位、Registry 注册表三类模式。可通过以下命令检查：
 
-    rg -n "CompositionRoot|get_service|Registry|服务定位|注册表" docs/reports/dependency_injection_review.md
+    rg -n "CompositionRoot|get_service|Registry|服务定位|注册表" .github/docs/reports/dependency_injection_review.md
 
 若命中为空或缺少关键模式描述，则视为未完成。
 
@@ -87,7 +87,7 @@
 ## 可重复性与恢复
 
 
-本计划仅新增评审文档，不影响运行代码。若需要回退，可删除 `docs/reports/dependency_injection_review.md` 并重新按本计划执行审查。
+本计划仅新增评审文档，不影响运行代码。若需要回退，可删除 `.github/docs/reports/dependency_injection_review.md` 并重新按本计划执行审查。
 
 
 ## 产物与备注
@@ -95,7 +95,7 @@
 
 最终产物为评审文档，路径如下：
 
-    docs/reports/dependency_injection_review.md
+    .github/docs/reports/dependency_injection_review.md
 
 文档应包含可引用的证据片段，例如：
 

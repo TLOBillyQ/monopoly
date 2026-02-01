@@ -15,14 +15,14 @@
 - [x] (2026-01-28 01:35Z) 兼容 yaw 角度转换函数，避免运行时缺失。
 - [x] (2026-01-28 02:05Z) 重命名 move.lua 为 move_anim.lua 并更新引用。
 - [x] (2026-01-28 02:12Z) 接入 gameplay 的 move_anim 数据到 Eggy 适配层动画播放。
-- [x] (2026-01-28 18:20Z) 运行 Lua 测试并记录结果（`lua tests/deps_check.lua`、`lua tests/regression.lua`）。
+- [x] (2026-01-28 18:20Z) 运行 Lua 测试并记录结果（`lua .github/tests/deps_check.lua`、`lua .github/tests/regression.lua`）。
 - [x] (2026-01-28 18:20Z) 当前环境已具备 Lua 运行时（`lua -v` 为 5.1.5）。
 - [x] (2026-01-28 18:20Z) Demo 手工验收与截图待在 Eggitor/可视环境完成。
 
 ## 意外与发现
 
 - 观察：当前环境可直接运行 Lua 5.1.5，测试已执行。
-  证据：`lua -v` 输出 `Lua 5.1.5`，`lua tests/deps_check.lua` 输出 `Dependency self-check passed`。
+  证据：`lua -v` 输出 `Lua 5.1.5`，`lua .github/tests/deps_check.lua` 输出 `Dependency self-check passed`。
 - 观察：Demo 手工验收仍未完成。
   证据：尚未在可视化环境打开 `bin/windows/Game.exe` 或 Eggitor 入口。
 
@@ -62,13 +62,13 @@
 2. 修改 `src/adapters/eggy/move_anim.lua`，在 `start_move_by_direction` 前插入朝向设置逻辑（`set_direction` 或 `set_orientation`）。
 3. 修改 `src/adapters/eggy/eggy_layer.lua`，在 `AdapterLayer.step_move_anim` 回调中调用 `move_anim.one_step`。
 4. 运行测试：
-     lua tests/deps_check.lua
-     lua tests/regression.lua
+     lua .github/tests/deps_check.lua
+     lua .github/tests/regression.lua
 5. 启动 Demo（如 `bin/windows/Game.exe` 或现有演示入口），观察棋子在移动前转向正确。
 
 ## 验证与验收
 
-运行 `lua tests/deps_check.lua` 与 `lua tests/regression.lua`，预期输出包含 “Dependency self-check passed” 与 “All regression checks passed”。启动 Demo 后，触发 `move_anim`（例如 `src/adapters/eggy/init.lua` 的延迟调用或回合移动），观察棋子在移动前朝向 `v3_dir`，移动过程中方向一致。
+运行 `lua .github/tests/deps_check.lua` 与 `lua .github/tests/regression.lua`，预期输出包含 “Dependency self-check passed” 与 “All regression checks passed”。启动 Demo 后，触发 `move_anim`（例如 `src/adapters/eggy/init.lua` 的延迟调用或回合移动），观察棋子在移动前朝向 `v3_dir`，移动过程中方向一致。
 
 ## 可重复性与恢复
 

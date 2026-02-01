@@ -172,7 +172,6 @@ local function install_game_init(state)
     local role = GameAPI.get_role(1)
     local unit = role.get_ctrl_unit()
     role.send_ui_custom_event("显示加载屏", {});
-    -- UIManager.forward_eca_event(ECA_EVENT.UI.open_loading_screen)
     
     local tile_names = {}
     local building_names = {}
@@ -207,7 +206,8 @@ local function install_game_init(state)
     for _, r in ipairs(ALLROLES) do
       UIManager.client_role = r
       for i = 1, 5 do
-        set_item_slot_image("道具槽位" .. tostring(i), refs["空"])
+        local num = 3000 + i
+        set_item_slot_image("道具槽位" .. tostring(i), refs[tostring(num)])
       end
 
       unit.add_state(Enums.BuffState.BUFF_FORBID_CONTROL)
@@ -215,10 +215,8 @@ local function install_game_init(state)
     UIManager.client_role = nil
 
     SetTimeOut(1.0, function()
-      -- UIManager.forward_eca_event(ECA_EVENT.UI.close_loading_screen)
-      -- UIManager.forward_eca_event(ECA_EVENT.UI.open_base_screen)
-      role.send_ui_custom_event("隐藏加载屏"， {});
-      role.send_ui_custom_event("显示基础屏"， {});
+      role.send_ui_custom_event("隐藏加载屏", {});
+      role.send_ui_custom_event("显示基础屏", {});
     end)
   end)
 end

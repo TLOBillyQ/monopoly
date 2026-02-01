@@ -12,18 +12,18 @@
 ## 进度
 
 
-- [x] (2026-01-28 13:40Z) 更新可执行计划与 docs/ui 文档，补充玩家信息与道具槽位显示规则，并同步命名说明。
+- [x] (2026-01-28 13:40Z) 更新可执行计划与 .github/docs/ui 文档，补充玩家信息与道具槽位显示规则，并同步命名说明。
 - [x] (2025-09-24 01:20Z) 创建并确认本可执行计划范围与验收口径。
 - [x] (2025-09-24 01:20Z) 盘点 UI 渲染链路与棋盘渲染链路的现状，确认移除范围与资产来源。
 - [x] (2026-01-28 19:20Z) 已完成 Eggitor 节点清理并重新导出 `Data/UIManagerNodes.lua`（基础屏节点已按清理目标更新）。
-- [x] (2025-09-24 01:32Z) 部分完成：已运行 `lua tests/deps_check.lua` 与 `lua tests/regression.lua`；剩余：Eggitor 手工验收与截图。
-- [x] (2026-01-28 19:20Z) 已更新 `tests/ui_nodes_audit.lua` 规则并复跑通过；已补齐 `panel_player_1_land_count`、`panel_player_4_land_count` 并导出。
+- [x] (2025-09-24 01:32Z) 部分完成：已运行 `lua .github/tests/deps_check.lua` 与 `lua .github/tests/regression.lua`；剩余：Eggitor 手工验收与截图。
+- [x] (2026-01-28 19:20Z) 已更新 `.github/tests/ui_nodes_audit.lua` 规则并复跑通过；已补齐 `panel_player_1_land_count`、`panel_player_4_land_count` 并导出。
 
 ## 意外与发现
 
 
 - 观察：`ui_nodes_audit` 已通过，基础屏必需节点完整。
-  证据：`lua tests/ui_nodes_audit.lua` 输出 `ok: all required nodes/events are present`。
+  证据：`lua .github/tests/ui_nodes_audit.lua` 输出 `ok: all required nodes/events are present`。
 - 观察：`Data/UIManagerNodes.lua` 已包含 `panel_player_1_land_count` 与 `panel_player_4_land_count`。
   证据：`rg -n "panel_player_1_land_count|panel_player_4_land_count" Data/UIManagerNodes.lua` 有输出。
 
@@ -51,12 +51,12 @@
 ## 背景与导读
 
 
-当前 Eggy UI 由 `src/adapters/eggy/eggy_layer_ui.lua` 负责面板刷新，由 `src/adapters/eggy/eggy_layer_board.lua` 负责棋盘相关展示，其中包含对 `src/adapters/core/ui_tile.lua` 的依赖以生成 UI 上的 tile 标签与格子详情。基础屏节点在 `docs/ui/ui_naming_list.md`、`docs/ui/01_canvas_inventory.md`、`docs/ui/02_base_screen.md` 中定义，UI 数据由 `UIManagerNodes.lua` 提供并由 Eggitor 导出。需求变更要求去除 UI 上的格子文本与格子详情，并将 overlay 改为场景单位呈现，同时调整玩家信息显示为头像、现金、地块数量、总资产，以及 item_slot 以可点击图片显示道具。
+当前 Eggy UI 由 `src/adapters/eggy/eggy_layer_ui.lua` 负责面板刷新，由 `src/adapters/eggy/eggy_layer_board.lua` 负责棋盘相关展示，其中包含对 `src/adapters/core/ui_tile.lua` 的依赖以生成 UI 上的 tile 标签与格子详情。基础屏节点在 `.github/docs/ui/ui_naming_list.md`、`.github/docs/ui/01_canvas_inventory.md`、`.github/docs/ui/02_base_screen.md` 中定义，UI 数据由 `UIManagerNodes.lua` 提供并由 Eggitor 导出。需求变更要求去除 UI 上的格子文本与格子详情，并将 overlay 改为场景单位呈现，同时调整玩家信息显示为头像、现金、地块数量、总资产，以及 item_slot 以可点击图片显示道具。
 
 ## 工作计划
 
 
-先从渲染链路切断 UI 对 tile 的依赖，删除 `EggyLayerBoard.refresh_board` 中对 tile_1..tile_45 的标签刷新，并移除 `src/adapters/core/ui_tile.lua` 及所有引用。随后删除格子详情功能，包括 `EggyLayerUI.refresh_tile_detail`、`EggyLayer:refresh_tile_detail`、`EggyLayer:dispatch_action` 中的 `ui_tile_select` 分支，以及 UI 状态中的 selected_tile 字段，同时清理 panel_tile_title 与 tile_detail_* 节点在 UI 文档与命名清单中的出现。接着把玩家信息刷新逻辑改为写入 `panel_player_X`、`panel_player_X_cash`、`panel_player_X_land_count`、`panel_player_X_detail`，其中总资产的计算沿用 `src/game.lua` 的 `total_assets` 逻辑，在 UI 层按玩家拥有地块与投资额汇总。item_slot 渲染改为设置图片纹理，优先使用 `G.refs` 的道具 id 贴图，空槽位使用“空”贴图，并保留点击事件。最后更新 `docs/ui` 中的基础屏与命名清单，补充总资产与道具图片的说明，并在 Eggitor 中移除不再使用的节点后重新导出 `UIManagerNodes.lua`。
+先从渲染链路切断 UI 对 tile 的依赖，删除 `EggyLayerBoard.refresh_board` 中对 tile_1..tile_45 的标签刷新，并移除 `src/adapters/core/ui_tile.lua` 及所有引用。随后删除格子详情功能，包括 `EggyLayerUI.refresh_tile_detail`、`EggyLayer:refresh_tile_detail`、`EggyLayer:dispatch_action` 中的 `ui_tile_select` 分支，以及 UI 状态中的 selected_tile 字段，同时清理 panel_tile_title 与 tile_detail_* 节点在 UI 文档与命名清单中的出现。接着把玩家信息刷新逻辑改为写入 `panel_player_X`、`panel_player_X_cash`、`panel_player_X_land_count`、`panel_player_X_detail`，其中总资产的计算沿用 `src/game.lua` 的 `total_assets` 逻辑，在 UI 层按玩家拥有地块与投资额汇总。item_slot 渲染改为设置图片纹理，优先使用 `G.refs` 的道具 id 贴图，空槽位使用“空”贴图，并保留点击事件。最后更新 `.github/docs/ui` 中的基础屏与命名清单，补充总资产与道具图片的说明，并在 Eggitor 中移除不再使用的节点后重新导出 `UIManagerNodes.lua`。
 
 ## 具体步骤
 
@@ -66,32 +66,32 @@
 本步骤涉及的命令示例如下，命令执行位置为仓库根目录：
 
     rg -n "tile_detail|tile_\\d+|ui_tile|ui_tile_select" src/adapters -S
-    lua tests/deps_check.lua
-    lua tests/regression.lua
+    lua .github/tests/deps_check.lua
+    lua .github/tests/regression.lua
 
 已执行并通过的命令输出如下：
 
-    > lua tests/deps_check.lua
+    > lua .github/tests/deps_check.lua
     Dependency self-check passed
 
-    > lua tests/regression.lua
+    > lua .github/tests/regression.lua
     ..............................
     All regression checks passed (30)
 
 ## 验证与验收
 
 
-先运行 `lua tests/deps_check.lua` 与 `lua tests/regression.lua`，两者必须通过（已通过）。随后在 Eggy 运行时进入基础屏，确认界面不再出现 tile_1..tile_45 文本与格子详情面板，玩家信息区仅展示头像、现金、地块数量与总资产，道具槽位以图片显示且点击仍能触发道具选择。覆盖物显示应来自场景单位而非 UI，若缺少覆盖物资产或 prefab，需要补齐后再复验。
+先运行 `lua .github/tests/deps_check.lua` 与 `lua .github/tests/regression.lua`，两者必须通过（已通过）。随后在 Eggy 运行时进入基础屏，确认界面不再出现 tile_1..tile_45 文本与格子详情面板，玩家信息区仅展示头像、现金、地块数量与总资产，道具槽位以图片显示且点击仍能触发道具选择。覆盖物显示应来自场景单位而非 UI，若缺少覆盖物资产或 prefab，需要补齐后再复验。
 
 ## 可重复性与恢复
 
 
-代码修改均在 `src/adapters` 与 `docs/ui` 下进行，可通过版本控制回滚；UI 资源调整需要在 Eggitor 中删除节点并重新导出 `UIManagerNodes.lua`，在执行前先备份当前 UI 资源与导出文件以便恢复。
+代码修改均在 `src/adapters` 与 `.github/docs/ui` 下进行，可通过版本控制回滚；UI 资源调整需要在 Eggitor 中删除节点并重新导出 `UIManagerNodes.lua`，在执行前先备份当前 UI 资源与导出文件以便恢复。
 
 ## 产物与备注
 
 
-产物包含更新后的 `src/adapters/eggy/eggy_layer_ui.lua`、`src/adapters/eggy/eggy_layer_board.lua`、`src/adapters/eggy/eggy_layer.lua`、`src/adapters/core/ui_panel.lua`、`tests/ui_nodes_audit.lua`、`docs/ui` 下对应文档，并删除 `src/adapters/core/ui_tile.lua`。Eggitor 侧节点已清理并导出 `Data/UIManagerNodes.lua`。验收时需保留测试输出片段与一张基础屏对照截图以证明 UI 已按需求简化。
+产物包含更新后的 `src/adapters/eggy/eggy_layer_ui.lua`、`src/adapters/eggy/eggy_layer_board.lua`、`src/adapters/eggy/eggy_layer.lua`、`src/adapters/core/ui_panel.lua`、`.github/tests/ui_nodes_audit.lua`、`.github/docs/ui` 下对应文档，并删除 `src/adapters/core/ui_tile.lua`。Eggitor 侧节点已清理并导出 `Data/UIManagerNodes.lua`。验收时需保留测试输出片段与一张基础屏对照截图以证明 UI 已按需求简化。
 
 本次更新：完成 UI 清理代码、玩家信息与道具槽位逻辑更新，并同步文档与 UI 节点审计及 Lua 测试执行，原因是计划 6 要求去除格子文本与详情，同时将玩家信息与道具展示改为精简版本。
 

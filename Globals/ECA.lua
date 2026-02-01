@@ -29,18 +29,6 @@ function get_spawn_vehicle_id()
     return VehicleManager.vehicle_id or 4001
 end
 
----@export
----@desc 被转发的界面事件
----@return string
-function get_forward_ui_event()
-    return UIManager.eca_event or ""
-end
-
-UIManager.forward_eca_event = function(event)
-    UIManager.eca_event = event
-    TriggerCustomEvent(FORWARD_ECA_EVENT_UI, {})
-end
-
 VehicleManager = {}
 
 VehicleManager.forward_eca_event_enter = function(role_id, vehicle_id)

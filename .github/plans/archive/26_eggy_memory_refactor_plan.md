@@ -8,12 +8,12 @@
 ## 目的 / 全局视角
 
 
-本次重构的目标是让运行时 Lua 代码与 docs/eggy/eggy_lua_agent_memory.md 的硬性规则对齐，避免因浮点写法、UI 初始化时机、30 FPS 逻辑时间换算和单位可操作性导致的运行时坑。完成后可以观察到：所有用于时长/旋转/向量的字面量按 x.y 书写且通过自测审计，UI 仍只在 GAME_INIT 后创建，UI 提示有统一时长且不会因为未初始化而报错，且新增的规则审计脚本与现有回归测试能够稳定通过。本计划明确不修改 Library/ 下的文件。
+本次重构的目标是让运行时 Lua 代码与 .github/docs/eggy/eggy_lua_agent_memory.md 的硬性规则对齐，避免因浮点写法、UI 初始化时机、30 FPS 逻辑时间换算和单位可操作性导致的运行时坑。完成后可以观察到：所有用于时长/旋转/向量的字面量按 x.y 书写且通过自测审计，UI 仍只在 GAME_INIT 后创建，UI 提示有统一时长且不会因为未初始化而报错，且新增的规则审计脚本与现有回归测试能够稳定通过。本计划明确不修改 Library/ 下的文件。
 
 ## 进度
 
 
-- [x] (2026-01-31 20:40Z) 已审阅 docs/eggy/eggy_lua_agent_memory.md 与主要运行路径（Entry/Layer/MoveAnim/Globals）。
+- [x] (2026-01-31 20:40Z) 已审阅 .github/docs/eggy/eggy_lua_agent_memory.md 与主要运行路径（Entry/Layer/MoveAnim/Globals）。
 - [x] (2026-01-31 01:41Z) 统一浮点字面量与 30 FPS 时间换算（仅修改 Manager/Globals）。
 - [x] (2026-01-31 01:41Z) 增加 Eggy 规则审计测试并补足运行时提示（不扫描/修改 Library）。
 - [x] (2026-01-31 13:00Z) 按用户要求直接收尾并归档（未执行：Eggitor 手工验收；未确认：静态审计脚本与自动测试的实际存在与输出）。
@@ -31,10 +31,10 @@
 证据：Manager/TurnManager/GUI/Layer.lua 用 (tick_interval + 1) / 30.0。
 
 观察：测试环境直接 require Globals/Macro.lua 会触发 math.Vector3 缺失报错。  
-证据：tests/acceptance.lua 报错 “Globals/Macro.lua:1: field 'Vector3' is not callable (a nil value)”。
+证据：.github/tests/acceptance.lua 报错 “Globals/Macro.lua:1: field 'Vector3' is not callable (a nil value)”。
 
-观察：计划中提到的 tests/eggy_memory_audit.lua 在当前工作树不存在，tests 目录仅有 tests/regression.lua。  
-证据：执行 lua tests/eggy_memory_audit.lua 报错 “No such file or directory”；ls tests 仅显示 regression.lua。
+观察：计划中提到的 .github/tests/eggy_memory_audit.lua 在当前工作树不存在，.github/tests 目录仅有 .github/tests/regression.lua。  
+证据：执行 lua .github/tests/eggy_memory_audit.lua 报错 “No such file or directory”；ls .github/tests 仅显示 regression.lua。
 
 除以上记录外，本次执行未发现新的意外行为。
 
@@ -73,12 +73,12 @@
 ## 背景与导读
 
 
-仓库入口为 main.lua -> init.lua -> Manager/GameManager/Entry.lua，Entry.install 创建 EggyLayer 并注册 GAME_INIT 回调。UI 初始化与 UIManager.Builder 发生在 Manager/TurnManager/GUI/Layer.lua 的 GAME_INIT 触发器内。MoveAnim/UI 逻辑主要位于 Manager/BoardManager/GUI/ 与 Manager/TurnManager/GUI/，全局速度常量与后续新增 FPS 常量在 Globals/Macro.lua。本计划只修改 Manager/Globals/tests 及入口文件，不改动 Library/ 下代码。所有 Eggy API 依赖以 LuaAPI/GameAPI/GlobalAPI 形式调用。
+仓库入口为 main.lua -> init.lua -> Manager/GameManager/Entry.lua，Entry.install 创建 EggyLayer 并注册 GAME_INIT 回调。UI 初始化与 UIManager.Builder 发生在 Manager/TurnManager/GUI/Layer.lua 的 GAME_INIT 触发器内。MoveAnim/UI 逻辑主要位于 Manager/BoardManager/GUI/ 与 Manager/TurnManager/GUI/，全局速度常量与后续新增 FPS 常量在 Globals/Macro.lua。本计划只修改 Manager/Globals/.github/tests 及入口文件，不改动 Library/ 下代码。所有 Eggy API 依赖以 LuaAPI/GameAPI/GlobalAPI 形式调用。
 
 ## 工作计划
 
 
-首先补齐规则审计脚本，作为“可观察结果”的基线。新增 tests/eggy_memory_audit.lua，扫描运行时代码目录（Components/Config/Manager/Globals）与 init.lua、main.lua，检查：LuaAPI/GameAPI/GlobalAPI 是否出现冒号调用、GlobalAPI.show_tips 与 LuaAPI.call_delay_time 是否存在整数时长字面量、math.Quaternion/Vector3 是否仍含明显整数字面量（只针对纯字面量参数）。若已有 tests/acceptance.lua 作为主入口，则把该审计加入 scripts 列表，否则保留独立执行指令。审计脚本仅做静态文本检查，保持轻量、可重复。
+首先补齐规则审计脚本，作为“可观察结果”的基线。新增 .github/tests/eggy_memory_audit.lua，扫描运行时代码目录（Components/Config/Manager/Globals）与 init.lua、main.lua，检查：LuaAPI/GameAPI/GlobalAPI 是否出现冒号调用、GlobalAPI.show_tips 与 LuaAPI.call_delay_time 是否存在整数时长字面量、math.Quaternion/Vector3 是否仍含明显整数字面量（只针对纯字面量参数）。若已有 .github/tests/acceptance.lua 作为主入口，则把该审计加入 .github/scripts 列表，否则保留独立执行指令。审计脚本仅做静态文本检查，保持轻量、可重复。
 
 然后统一浮点字面量与时间换算。把 GlobalAPI.show_tips 的默认时长显式写为 2.0，并为 UIEventRouter 与 UIState 的提示补上统一 duration。把 math.Quaternion(0,0,0) / math.Vector3(0,1.5,0) 等字面量改为 0.0/1.0 形式（只改 Manager/Globals/Components/Config 运行路径，避免全仓库无谓改动）。在 Globals/Macro.lua 增加 FPS = 30.0，并在 Manager/TurnManager/GUI/Layer.lua 使用 FPS 进行换算，移除 tick_interval + 1 的偏移以保证 dt 与帧间隔一致。
 
@@ -97,27 +97,27 @@
 
 步骤三（已完成）：在 Manager/TurnManager/GUI/Layer.lua 的 GAME_INIT 回调内加入单位检查提示，确保仅初始化时触发一次。
 
-步骤四（已完成）：新增 tests/eggy_memory_audit.lua，并将其加入 tests/acceptance.lua。
+步骤四（已完成）：新增 .github/tests/eggy_memory_audit.lua，并将其加入 .github/tests/acceptance.lua。
 
 ## 验证与验收
 
 
 验收一：运行静态审计。
 
-    lua tests/eggy_memory_audit.lua
+    lua .github/tests/eggy_memory_audit.lua
 
 已执行，输出包含 “ok - eggy memory audit”。若发现违规，应在输出中带文件与行号。
 
 验收二：运行现有测试。
 
-    lua tests/acceptance.lua
-    lua tests/lua_env_audit.lua
+    lua .github/tests/acceptance.lua
+    lua .github/tests/lua_env_audit.lua
 
 已执行，输出包含 “ok - acceptance suite” 与 “[lua-env] ok”。
 
 验收三（Eggitor 手工）：以 main.lua 为入口启动，观察 UI 在 GAME_INIT 后才出现；触发 UI 缺失提示时停留约 2 秒；如单位未关闭组件性能优化，初始化时应提示一次。
 
-本次按用户要求未执行验收三；同时未在当前工作树确认 tests/eggy_memory_audit.lua 与 tests/acceptance.lua 的存在与输出。
+本次按用户要求未执行验收三；同时未在当前工作树确认 .github/tests/eggy_memory_audit.lua 与 .github/tests/acceptance.lua 的存在与输出。
 
 ## 可重复性与恢复
 
@@ -127,7 +127,7 @@
 ## 产物与备注
 
 
-预期产物包括：更新后的 Globals/Macro.lua 与 UI 相关文件、tests/eggy_memory_audit.lua 以及可能更新的 tests/acceptance.lua。示例变更片段如下：
+预期产物包括：更新后的 Globals/Macro.lua 与 UI 相关文件、.github/tests/eggy_memory_audit.lua 以及可能更新的 .github/tests/acceptance.lua。示例变更片段如下：
 
     -- Globals/Macro.lua
     FPS = 30.0

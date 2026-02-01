@@ -27,7 +27,7 @@
     require "Manager.__init"
     require("Manager.GameManager.Entry").install()
 
-观察：`tests/regression.lua` 直接调用 `EggyLayer.step_move_anim` 与 `EggyLayer.step_modal_timeout`，测试入口需要同步调整到新的运行时函数。证据片段如下：
+观察：`.github/tests/regression.lua` 直接调用 `EggyLayer.step_move_anim` 与 `EggyLayer.step_modal_timeout`，测试入口需要同步调整到新的运行时函数。证据片段如下：
 
     local EggyLayer = require("Manager.TurnManager.GUI.Layer")
     EggyLayer.step_move_anim(layer, { ... })
@@ -56,7 +56,7 @@
 ## 结果与复盘
 
 
-已完成运行时重建并移除 `EggyLayer`/`MainController`，入口改为 `Runtime.install` 装配，`RuntimeLoop` 负责动作与帧循环，`RuntimeUI` 负责 UI 刷新与弹窗。回归与入口测试已通过：`tests/deps_check.lua`、`tests/regression.lua`、`tests/ui_missing_impl_audit.lua`、`tests/entry_smoke_test.lua`。仍需在 Eggy 环境做一次手工启动验收，确认 UI 与动画表现一致。
+已完成运行时重建并移除 `EggyLayer`/`MainController`，入口改为 `Runtime.install` 装配，`RuntimeLoop` 负责动作与帧循环，`RuntimeUI` 负责 UI 刷新与弹窗。回归与入口测试已通过：`.github/tests/deps_check.lua`、`.github/tests/regression.lua`、`.github/tests/ui_missing_impl_audit.lua`、`.github/tests/entry_smoke_test.lua`。仍需在 Eggy 环境做一次手工启动验收，确认 UI 与动画表现一致。
 
 ## 背景与导读
 
@@ -79,17 +79,17 @@
 
 然后更新入口与事件派发路径，把 `Manager/GameManager/Entry.lua` 改为 `require("Manager.System.Runtime")` 并调用 `Runtime.install({ game_factory = create_game })`，同时把 `Manager/System/Runtime.lua` 改为实际装配入口而非薄封装。同步改造 `Manager/TurnManager/GUI/UIEventRouter.lua`，将所有 `layer:dispatch_action` 等调用调整为 `RuntimeLoop/RuntimeUI` 模块函数；删除 `Manager/TurnManager/GUI/MainController.lua`，把原动作处理逻辑合并到 `RuntimeLoop.dispatch_action`。此处要保证 UI 交互逻辑不变，并继续通过 `RuntimeLoop.dispatch_action(runtime, action)` 作为规则层入口。
 
-完成代码迁移后删除 `Manager/TurnManager/GUI/Layer.lua`，并用 `rg "Manager.TurnManager.GUI.Layer"` 与 `rg "EggyLayer"` 再次确认代码中不再引用该文件或命名。随后更新 `tests/regression.lua` 等测试，将 `require("Manager.TurnManager.GUI.Layer")` 改为新的运行时模块引用，并把 `EggyLayer.step_move_anim`、`EggyLayer.step_modal_timeout` 等调用替换为 `RuntimeLoop.step_move_anim`、`RuntimeLoop.step_modal_timeout`。文档层面同步替换 `docs/ui/03_popup_screen.md`、`docs/reports/sync_report.md` 等对 `EggyLayer` 的描述，使其指向新的运行时模块与函数名。
+完成代码迁移后删除 `Manager/TurnManager/GUI/Layer.lua`，并用 `rg "Manager.TurnManager.GUI.Layer"` 与 `rg "EggyLayer"` 再次确认代码中不再引用该文件或命名。随后更新 `.github/tests/regression.lua` 等测试，将 `require("Manager.TurnManager.GUI.Layer")` 改为新的运行时模块引用，并把 `EggyLayer.step_move_anim`、`EggyLayer.step_modal_timeout` 等调用替换为 `RuntimeLoop.step_move_anim`、`RuntimeLoop.step_modal_timeout`。文档层面同步替换 `.github/docs/ui/03_popup_screen.md`、`.github/docs/reports/sync_report.md` 等对 `EggyLayer` 的描述，使其指向新的运行时模块与函数名。
 
 ## 验证与验收
 
 
 在仓库根目录运行以下命令，预期全部退出码为 0。若有报错，优先回到 `rg "EggyLayer"` 的查找结果补齐遗漏替换，再重复验证。
 
-    lua tests/deps_check.lua
-    lua tests/regression.lua
-    lua tests/ui_missing_impl_audit.lua
-    lua tests/entry_smoke_test.lua
+    lua .github/tests/deps_check.lua
+    lua .github/tests/regression.lua
+    lua .github/tests/ui_missing_impl_audit.lua
+    lua .github/tests/entry_smoke_test.lua
 
 此外需要在 Eggy 环境中启动入口流程，观察 UI 正常显示、回合可推进、弹窗与动画等待仍然按原逻辑触发，以证明行为一致。
 
@@ -110,11 +110,11 @@
 
 测试通过的输出片段：
 
-    lua tests/deps_check.lua
+    lua .github/tests/deps_check.lua
     Dependency self-check passed
-    lua tests/regression.lua
+    lua .github/tests/regression.lua
     All regression checks passed (30)
-    lua tests/entry_smoke_test.lua
+    lua .github/tests/entry_smoke_test.lua
     ok - entry load
 
 ## 接口与依赖

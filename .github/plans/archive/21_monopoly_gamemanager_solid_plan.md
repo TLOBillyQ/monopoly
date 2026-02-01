@@ -7,7 +7,7 @@
 ## 目的 / 全局视角
 
 
-目标是在不改变玩法结果与对外接口的前提下，让 `Manager/GameManager` 按实际玩法职责拆分、合并并删除文件，降低职责耦合、减少单文件过载，同时保持启动与测试行为一致。完成后应能通过 `init.lua` 启动游戏，且在仓库根目录运行 `lua tests/acceptance.lua` 输出 `ok - acceptance suite`，并且 `lua tests/entry_smoke_test.lua` 仍能加载入口模块。
+目标是在不改变玩法结果与对外接口的前提下，让 `Manager/GameManager` 按实际玩法职责拆分、合并并删除文件，降低职责耦合、减少单文件过载，同时保持启动与测试行为一致。完成后应能通过 `init.lua` 启动游戏，且在仓库根目录运行 `lua .github/tests/acceptance.lua` 输出 `ok - acceptance suite`，并且 `lua .github/tests/entry_smoke_test.lua` 仍能加载入口模块。
 
 
 ## 进度
@@ -27,7 +27,7 @@
 
 观察：`Manager/GameManager/Agent.lua` 被 TurnManager、Item、Market 等多处引用，但文件内混合了自动选择与目标评估逻辑，后续维护难以定位。证据：`rg "Manager.GameManager.Agent" -n Manager` 命中 Turn/Item/Market 多处引用。
 
-观察：验收测试会依次执行 `deps_check` 与 `regression`，通过后输出 `ok - acceptance suite`。证据：运行 `lua tests/acceptance.lua` 输出 `ok - acceptance suite`。
+观察：验收测试会依次执行 `deps_check` 与 `regression`，通过后输出 `ok - acceptance suite`。证据：运行 `lua .github/tests/acceptance.lua` 输出 `ok - acceptance suite`。
 
 
 ## 决策日志
@@ -45,7 +45,7 @@
 ## 结果与复盘
 
 
-已完成 GameManager 拆分与合并：`BoardFactory` 内联进 `CompositionRoot` 并删除；`Game` 状态写入/占位维护与胜负判定拆到 `GameState`、`GameVictory`；`Agent` 目标评估迁入 `AgentTargeting`，对外方法保留。运行 `lua tests/acceptance.lua` 与 `lua tests/entry_smoke_test.lua` 均通过，入口可加载且回归无异常。当前无遗留项。
+已完成 GameManager 拆分与合并：`BoardFactory` 内联进 `CompositionRoot` 并删除；`Game` 状态写入/占位维护与胜负判定拆到 `GameState`、`GameVictory`；`Agent` 目标评估迁入 `AgentTargeting`，对外方法保留。运行 `lua .github/tests/acceptance.lua` 与 `lua .github/tests/entry_smoke_test.lua` 均通过，入口可加载且回归无异常。当前无遗留项。
 
 
 ## 背景与导读
@@ -64,13 +64,13 @@
     Manager/GameManager/Constants.lua - 回合上限与道具 ID 常量。
     Manager/GameManager/Entry.lua - 游戏启动入口。
 
-这些模块被 TurnManager、ItemManager、MarketManager、LandManager 与测试脚本调用。拆分与合并必须保证 `tests/deps_check.lua` 的依赖规则仍然满足，尤其是 `CompositionRoot.lua` 仍需显式 require 回合阶段模块。
+这些模块被 TurnManager、ItemManager、MarketManager、LandManager 与测试脚本调用。拆分与合并必须保证 `.github/tests/deps_check.lua` 的依赖规则仍然满足，尤其是 `CompositionRoot.lua` 仍需显式 require 回合阶段模块。
 
 
 ## 工作计划
 
 
-先在实现前明确现有调用点与公开接口，确保拆分不会改变外部行为。具体做法是用 `rg` 盘点 `GameManager` 模块在 `Manager/` 与 `tests/` 内的引用，并逐项记录哪些函数被外部依赖。完成盘点后，按“只拆实现、不改行为”的策略执行三个结构调整：合并 `BoardFactory`；抽离 `Game` 中的状态写入与胜负判定为独立模块并混入；抽离 `Agent` 的目标评估逻辑为独立模块并保留 `Agent` 作为自动选择入口。所有拆分后的模块仍位于 `Manager/GameManager/` 下，`__init.lua` 统一入口保持可加载。最后更新 require 路径与聚合文件，运行依赖检查与回归测试确认行为不变。
+先在实现前明确现有调用点与公开接口，确保拆分不会改变外部行为。具体做法是用 `rg` 盘点 `GameManager` 模块在 `Manager/` 与 `.github/tests/` 内的引用，并逐项记录哪些函数被外部依赖。完成盘点后，按“只拆实现、不改行为”的策略执行三个结构调整：合并 `BoardFactory`；抽离 `Game` 中的状态写入与胜负判定为独立模块并混入；抽离 `Agent` 的目标评估逻辑为独立模块并保留 `Agent` 作为自动选择入口。所有拆分后的模块仍位于 `Manager/GameManager/` 下，`__init.lua` 统一入口保持可加载。最后更新 require 路径与聚合文件，运行依赖检查与回归测试确认行为不变。
 
 
 ## 具体步骤
@@ -78,10 +78,10 @@
 
 在仓库根目录执行依赖盘点，记录 `GameManager` 相关调用点与 `Game` 方法使用方：
 
-    rg "Manager.GameManager" -n Manager tests
-    rg "game:" -n Manager tests
+    rg "Manager.GameManager" -n Manager .github/tests
+    rg "game:" -n Manager .github/tests
 
-先合并 `BoardFactory`：把 `Manager/GameManager/BoardFactory.lua` 的内容内联进 `CompositionRoot.lua` 的棋盘创建逻辑，删掉 `BoardFactory.lua`，并移除 `Manager/GameManager/__init.lua` 中对它的 require。调整时要保留 `CompositionRoot.lua` 对 `TurnStart/TurnRoll/TurnMove/TurnLand/TurnPost/TurnEnd` 的显式 require，以满足 `tests/deps_check.lua` 的校验。
+先合并 `BoardFactory`：把 `Manager/GameManager/BoardFactory.lua` 的内容内联进 `CompositionRoot.lua` 的棋盘创建逻辑，删掉 `BoardFactory.lua`，并移除 `Manager/GameManager/__init.lua` 中对它的 require。调整时要保留 `CompositionRoot.lua` 对 `TurnStart/TurnRoll/TurnMove/TurnLand/TurnPost/TurnEnd` 的显式 require，以满足 `.github/tests/deps_check.lua` 的校验。
 
 新增 `Manager/GameManager/GameState.lua`，把 `Game.lua` 内与状态持久化和占位维护相关的方法迁入该文件并以表形式导出；`Game.lua` 通过遍历表把方法挂回类上，确保方法名与行为不变。范围包含 `_store_set`、玩家状态/属性更新、tile 更新、动画队列、占位表维护、`alive_players` 与 `current_player` 等与状态相关的方法。
 
@@ -97,13 +97,13 @@
 
 在仓库根目录执行下列命令，确认输出与预期一致：
 
-    lua tests/acceptance.lua
+    lua .github/tests/acceptance.lua
 
 预期看到结尾输出 `ok - acceptance suite` 且无报错。再单独执行入口加载测试，确认入口仍可被 require：
 
-    lua tests/entry_smoke_test.lua
+    lua .github/tests/entry_smoke_test.lua
 
-预期输出包含 `ok - entry smoke test`。若依赖检查失败，优先回查 `CompositionRoot.lua` 的 require 列表是否满足 `tests/deps_check.lua` 的要求。
+预期输出包含 `ok - entry smoke test`。若依赖检查失败，优先回查 `CompositionRoot.lua` 的 require 列表是否满足 `.github/tests/deps_check.lua` 的要求。
 
 
 ## 可重复性与恢复

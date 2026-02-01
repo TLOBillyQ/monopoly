@@ -92,9 +92,9 @@
 保持所有逻辑只作用于当前位置同步，不影响格点锚点初始化、玩家单位映射与楼房特效。
 
 运行测试（在仓库根目录）：
-  lua tests/deps_check.lua
+  lua .github/tests/deps_check.lua
   预期：Dependency self-check passed
-  lua tests/regression.lua
+  lua .github/tests/regression.lua
   预期：All regression checks passed (30)
 
 手工验收：在 Eggitor 或 Demo 中触发移动动画，观察移动过程不被拉回；动画结束后棋子落在目标格子；多人同格时仍能正确错位显示。
@@ -103,7 +103,7 @@
 ## 验证与验收
 
 
-自动化验证：执行 `lua tests/deps_check.lua` 与 `lua tests/regression.lua`，预期输出包含依赖检查与回归测试通过信息。  
+自动化验证：执行 `lua .github/tests/deps_check.lua` 与 `lua .github/tests/regression.lua`，预期输出包含依赖检查与回归测试通过信息。  
 手工验证：启动 Eggy 运行入口（Eggitor 打开仓库根目录，入口为 `main.lua`），点“下一回合”触发移动，观察移动过程连续、无瞬移；移动结束后棋子位置与数值日志一致；连续多回合自动播放下不出现棋子抖动或错位。
 
 

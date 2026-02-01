@@ -12,10 +12,10 @@
 
 - [x] (2026-01-28 02:12Z) 创建可执行计划文件，记录拆分目标与验证方式。  
 - [x] (2026-01-28 03:20Z) 盘点 Eggy 适配层现有职责边界并确认最小拆分模块。  
-- [x] (2026-01-28 03:40Z) 完成 EggyLayer UI/黑市/棋盘模块拆分并同步 `docs/adapters_design.md`。  
+- [x] (2026-01-28 03:40Z) 完成 EggyLayer UI/黑市/棋盘模块拆分并同步 `.github/docs/adapters_design.md`。  
 - [x] (2026-01-28 04:05Z) 复核运行时入口/启动初始化/渲染特效职责边界，确认无需额外拆分（记录决策）。  
-- [x] (2026-01-28 04:15Z) 运行测试与手工验收，补充结果记录。（已完成：`lua tests/deps_check.lua`、`lua tests/regression.lua`；剩余：Demo 手工验收）  
-- [x] (2026-01-28 18:30Z) 复跑 Lua 测试以确认当前代码状态（`lua tests/deps_check.lua`、`lua tests/regression.lua`）。
+- [x] (2026-01-28 04:15Z) 运行测试与手工验收，补充结果记录。（已完成：`lua .github/tests/deps_check.lua`、`lua .github/tests/regression.lua`；剩余：Demo 手工验收）  
+- [x] (2026-01-28 18:30Z) 复跑 Lua 测试以确认当前代码状态（`lua .github/tests/deps_check.lua`、`lua .github/tests/regression.lua`）。
 
 ## 意外与发现
 
@@ -44,7 +44,7 @@
 
 ## 结果与复盘
 
-已完成 EggyLayer 的 UI/黑市/棋盘三块模块拆分与文档同步，并通过 `lua tests/deps_check.lua` 与 `lua tests/regression.lua`；运行时入口与启动初始化确认无需额外拆分，渲染/特效调用点已复核。当前仅剩 Demo 手工验收需要补齐，完成后需对照“目的 / 全局视角”补写复盘。
+已完成 EggyLayer 的 UI/黑市/棋盘三块模块拆分与文档同步，并通过 `lua .github/tests/deps_check.lua` 与 `lua .github/tests/regression.lua`；运行时入口与启动初始化确认无需额外拆分，渲染/特效调用点已复核。当前仅剩 Demo 手工验收需要补齐，完成后需对照“目的 / 全局视角”补写复盘。
 
 ## 背景与导读
 
@@ -52,7 +52,7 @@ Eggy 适配层的代码集中在 `src/adapters/eggy/`，核心文件包括：`eg
 
 ## 工作计划
 
-先以“行为不变”为硬规则，覆盖整个 Eggy 适配层做职责拆分，并保持所有入口调用路径不变。拆分范围按职责划分为五类：运行时入口与事件注册（`eggy_runtime.lua`）、事件桥接与引擎交互（`eca.lua`）、启动初始化与资源索引（`init.lua`/`macro.lua`/`refs.lua`/`move_anim.lua`）、UI 展示与逻辑（`eggy_layer.lua`/`market_ui.lua`）、棋盘与特效渲染（`tile_renderer.lua`/`building_effects.lua`）。在 EggyLayer 内继续按“UI 状态/文本刷新”“黑市 UI”“棋盘与单位渲染”三块拆分，并保持 `new/set_game/tick/dispatch_action/push_popup/close_popup` 入口不变。拆分时不新增接口层或抽象类型，只引入简单的 `require` 模块表，以符合“无默认抽象”和“单一实现”的要求。最后同步 `docs/adapters_design.md` 的 Eggy 章节，明确拆分后的文件职责与入口关系。
+先以“行为不变”为硬规则，覆盖整个 Eggy 适配层做职责拆分，并保持所有入口调用路径不变。拆分范围按职责划分为五类：运行时入口与事件注册（`eggy_runtime.lua`）、事件桥接与引擎交互（`eca.lua`）、启动初始化与资源索引（`init.lua`/`macro.lua`/`refs.lua`/`move_anim.lua`）、UI 展示与逻辑（`eggy_layer.lua`/`market_ui.lua`）、棋盘与特效渲染（`tile_renderer.lua`/`building_effects.lua`）。在 EggyLayer 内继续按“UI 状态/文本刷新”“黑市 UI”“棋盘与单位渲染”三块拆分，并保持 `new/set_game/tick/dispatch_action/push_popup/close_popup` 入口不变。拆分时不新增接口层或抽象类型，只引入简单的 `require` 模块表，以符合“无默认抽象”和“单一实现”的要求。最后同步 `.github/docs/adapters_design.md` 的 Eggy 章节，明确拆分后的文件职责与入口关系。
 
 ## 具体步骤
 
@@ -62,7 +62,7 @@ Eggy 适配层的代码集中在 `src/adapters/eggy/`，核心文件包括：`eg
 2. 运行时入口拆分：在 `eggy_runtime.lua` 内把 UI 安装、事件注册、tick 调度拆为三个局部模块或文件级函数（如 `eggy_runtime_ui.lua`/`eggy_runtime_events.lua`），并确保 `EggyRuntime.install` 行为不变。  
 3. 启动初始化拆分：整理 `init.lua`、`macro.lua`、`refs.lua`、`move_anim.lua` 的职责，若存在互相转发的重复模块则合并或删除，并保留根目录兼容入口不变。  
 4. 渲染与特效拆分：确认 `tile_renderer.lua` 与 `building_effects.lua` 的调用点，避免双路径渲染；若有未使用函数应删除。  
-5. 文档同步：更新 `docs/adapters_design.md` 中 Eggy 适配层章节，列出拆分后的文件职责、入口与调用顺序。
+5. 文档同步：更新 `.github/docs/adapters_design.md` 中 Eggy 适配层章节，列出拆分后的文件职责、入口与调用顺序。
 
 整个过程不改变任何逻辑判断、不新增字段、不改变日志内容。
 
@@ -70,14 +70,14 @@ Eggy 适配层的代码集中在 `src/adapters/eggy/`，核心文件包括：`eg
 
     rg -n "function Eggy" src/adapters/eggy
     rg -n "require\\(\"Manager.Adapter.Eggy" src
-    lua tests/deps_check.lua
-    lua tests/regression.lua
+    lua .github/tests/deps_check.lua
+    lua .github/tests/regression.lua
     Dependency self-check passed
     All regression checks passed (29)
 
 ## 验证与验收
 
-必须运行 `lua tests/deps_check.lua` 与 `lua tests/regression.lua`，两者均通过。然后运行 Demo（例如启动 `bin/windows/Game.exe` 或现有 Eggy 工程入口）完成一次完整操作：点击“下一回合”、切换“自动”、打开并关闭黑市与弹窗、触发一次楼房升级或地块渲染（如经过地产升级流程），观察 UI 文字、棋盘移动、桥接事件与日志输出与改动前一致。若任何按钮无响应或 UI 文本缺失，应记录具体节点名与触发步骤。
+必须运行 `lua .github/tests/deps_check.lua` 与 `lua .github/tests/regression.lua`，两者均通过。然后运行 Demo（例如启动 `bin/windows/Game.exe` 或现有 Eggy 工程入口）完成一次完整操作：点击“下一回合”、切换“自动”、打开并关闭黑市与弹窗、触发一次楼房升级或地块渲染（如经过地产升级流程），观察 UI 文字、棋盘移动、桥接事件与日志输出与改动前一致。若任何按钮无响应或 UI 文本缺失，应记录具体节点名与触发步骤。
 
 ## 可重复性与恢复
 
@@ -85,16 +85,16 @@ Eggy 适配层的代码集中在 `src/adapters/eggy/`，核心文件包括：`eg
 
 ## 产物与备注
 
-产物包括 EggyLayer 拆分后的新模块文件、运行时入口拆分文件、启动初始化模块整理结果，以及 `docs/adapters_design.md` 的改动。最终应保留一小段 diff 或调用示例，证明 EggyLayer 通过新模块委托仍能运行，例如在 EggyLayer 中保留如下结构：
+产物包括 EggyLayer 拆分后的新模块文件、运行时入口拆分文件、启动初始化模块整理结果，以及 `.github/docs/adapters_design.md` 的改动。最终应保留一小段 diff 或调用示例，证明 EggyLayer 通过新模块委托仍能运行，例如在 EggyLayer 中保留如下结构：
 
     local EggyLayerUI = require("Manager.TurnManager.GUI.UIState")
     function EggyLayer:refresh_panel(view)
       EggyLayerUI.refresh_panel(self, view)
     end
 
-    lua tests/deps_check.lua
+    lua .github/tests/deps_check.lua
     Dependency self-check passed
-    lua tests/regression.lua
+    lua .github/tests/regression.lua
     ..............................
     All regression checks passed (30)
 

@@ -75,7 +75,6 @@ function UIEventRouter.bind(state, get_game, opts)
   local cache = {}
   local registered = {}
   register_node_click(cache, "行动按钮", function()
-    print("[debug] ui btn_next clicked")
     dispatch_action({ type = "ui_button", id = "next" })
   end, registered)
   register_node_click(cache, "托管按钮", function()

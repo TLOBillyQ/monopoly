@@ -92,18 +92,18 @@
    - `ChoiceService.resolve` 通过 `ChoiceRegistry.get(choice.kind)` 获取处理器。
 
 5) 新增测试。
-   - 新建 `tests/registry_extension_test.lua`，注册一个虚拟道具或机会卡处理器并断言执行。
+   - 新建 `.github/tests/registry_extension_test.lua`，注册一个虚拟道具或机会卡处理器并断言执行。
 
 
 ## 验证与验收
 
 
 运行回归测试：
-    lua tests/deps_check.lua
-    lua tests/regression.lua
+    lua .github/tests/deps_check.lua
+    lua .github/tests/regression.lua
 
 运行新增注册测试：
-    lua tests/registry_extension_test.lua
+    lua .github/tests/registry_extension_test.lua
     ok - registry extension works
 
 人工验证：进入游戏流程后，道具/机会卡仍能正常触发（由回归测试日志或手动触发验证）。
@@ -125,10 +125,10 @@
 `Manager/ItemManager/Item/ItemExecutor.lua`
 `Manager/GameManager/Chance.lua`
 `Manager/ChoiceManager/Choice/ChoiceService.lua`
-`tests/registry_extension_test.lua`
+`.github/tests/registry_extension_test.lua`
 
 测试输出示例：
-    lua tests/registry_extension_test.lua
+    lua .github/tests/registry_extension_test.lua
     ok - registry extension works
 
 

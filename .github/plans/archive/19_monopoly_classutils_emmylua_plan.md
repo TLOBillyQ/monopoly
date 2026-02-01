@@ -27,7 +27,7 @@
 - 观察：`AutoRunner` 位于 `Manager/TurnManager/GUI/AutoRunner.lua`，而非原清单中的 `Manager/System/AutoRunner.lua`。
   证据：`rg -n "__index" Components Manager` 输出包含 `Manager\\TurnManager\\GUI\\AutoRunner.lua`。
 
-- 观察：最初运行 `lua tests/regression.lua` 与 `lua tests/classutils_refactor_test.lua` 时挂起，定位到 `X.new()` 兼容包装覆盖了 `Class()` 的 `new` 导致递归。
+- 观察：最初运行 `lua .github/tests/regression.lua` 与 `lua .github/tests/classutils_refactor_test.lua` 时挂起，定位到 `X.new()` 兼容包装覆盖了 `Class()` 的 `new` 导致递归。
   证据：中断测试时堆栈停在 `Components/Flow.lua:24` 的 `Flow.new` 递归调用。
   处理：改为保留 `__class_new`，并由 `X.new()` 转发调用。
 
@@ -119,18 +119,18 @@ monopoly 中存在一批“手写类”，通常写法为：
    - 再次运行搜索确认无遗漏：
        rg -n "__index" Components Manager
 
-已按上述步骤完成类迁移与注释补全，并新增 `tests/classutils_refactor_test.lua` 用于验证 `X.new()` 兼容入口。回归与新测试已运行并通过。
+已按上述步骤完成类迁移与注释补全，并新增 `.github/tests/classutils_refactor_test.lua` 用于验证 `X.new()` 兼容入口。回归与新测试已运行并通过。
 
 
 ## 验证与验收
 
 
 运行回归测试：
-    lua tests/deps_check.lua
-    lua tests/regression.lua
+    lua .github/tests/deps_check.lua
+    lua .github/tests/regression.lua
 
-新增一个最小测试（如 `tests/classutils_refactor_test.lua`），验证 `X.new()` 兼容入口仍可创建实例并调用方法。预期输出包含 `ok`：
-    lua tests/classutils_refactor_test.lua
+新增一个最小测试（如 `.github/tests/classutils_refactor_test.lua`），验证 `X.new()` 兼容入口仍可创建实例并调用方法。预期输出包含 `ok`：
+    lua .github/tests/classutils_refactor_test.lua
     ok - classutils refactor
 
 若测试依赖引擎对象（如 `GameAPI`），测试应只覆盖不依赖引擎的类（如 `Flow`、`Store`、`Inventory`、`RNG`）。
@@ -161,13 +161,13 @@ monopoly 中存在一批“手写类”，通常写法为：
 `Manager/TurnManager/GUI/Layer.lua`
 `Manager/System/AutoRunner.lua`
 `Manager/EffectManager/Effect/Effect.lua`
-`tests/classutils_refactor_test.lua`
+`.github/tests/classutils_refactor_test.lua`
 
 测试输出示例：
-    lua tests/classutils_refactor_test.lua
+    lua .github/tests/classutils_refactor_test.lua
     ok - classutils refactor
 
-本次已新增 `tests/classutils_refactor_test.lua`，其输出以实际运行结果为准；回归测试已通过。
+本次已新增 `.github/tests/classutils_refactor_test.lua`，其输出以实际运行结果为准；回归测试已通过。
 
 
 ## 接口与依赖

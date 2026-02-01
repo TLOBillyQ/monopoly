@@ -55,8 +55,8 @@
 ## 验证与验收
 
 运行 Lua 测试验证无回归，命令在仓库根目录执行：
-    lua tests/deps_check.lua
-    lua tests/regression.lua
+    lua .github/tests/deps_check.lua
+    lua .github/tests/regression.lua
 预期输出包含 “Dependency self-check passed” 与 “All regression checks passed”。然后运行 bin/windows/Game.exe 或现有 Demo 启动流程，观察启动后执行 UIManager.forward_eca_event 的调用仍能让引擎侧收到转发事件（可通过已有日志或可视效果确认）；move.one_step 的演示调用仍能驱动棋子移动；若载具事件相关逻辑启用，调用 VehicleManager.forward_eca_event_enter/exit/move/stop 仍应生效。
 
 ## 可重复性与恢复

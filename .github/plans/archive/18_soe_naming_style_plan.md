@@ -51,8 +51,8 @@
 
 在仓库根目录运行：
 
-  lua tests/deps_check.lua
-  lua tests/regression.lua
+  lua .github/tests/deps_check.lua
+  lua .github/tests/regression.lua
 
 预期脚本无报错退出，并能从 `main.lua` 正常加载新路径模块。
 

@@ -26,7 +26,7 @@
 ## 意外与发现
 
 - 观察：所有文件的语法检查通过，无编译错误
-  证据：`lua tests/deps_check.lua` 输出 "Dependency self-check passed"
+  证据：`lua .github/tests/deps_check.lua` 输出 "Dependency self-check passed"
 - 观察：EmmyLua注释格式被正确解析，所有@class、@param、@return标签都有效
   证据：按照标准格式添加，无语法错误
 
@@ -283,7 +283,7 @@ end
 
 ### 验证结果
 
-✅ **语法检查：** 通过 `lua tests/deps_check.lua` - 无编译错误
+✅ **语法检查：** 通过 `lua .github/tests/deps_check.lua` - 无编译错误
 ✅ **格式验证：** 所有注释采用标准EmmyLua语法
 ✅ **可用性：** 可立即被VS Code + EmmyLua插件识别
 

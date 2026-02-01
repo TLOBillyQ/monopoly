@@ -19,11 +19,11 @@
 ## 意外与发现
 
 - 观察：回归测试暴露出 `Manager/GameManager/Effect.lua` 缺少 `build_ctx`/`can_apply` 与执行器合并逻辑。
-  证据：`lua tests/regression.lua` 报错 `global 'build_ctx' is not callable`。
+  证据：`lua .github/tests/regression.lua` 报错 `global 'build_ctx' is not callable`。
 - 观察：棋盘前进/后退路径缺失 `OPPOSITE` 与 `pick_any_dir`，导致移动回退失败。
-  证据：`lua tests/regression.lua` 报错 `global 'OPPOSITE'` 与 `global 'pick_any_dir'`。
+  证据：`lua .github/tests/regression.lua` 报错 `global 'OPPOSITE'` 与 `global 'pick_any_dir'`。
 - 观察：测试环境没有 `GameAPI`，导致 RNG 调用失败。
-  证据：`lua tests/regression.lua` 报错 `global 'GameAPI' is not callable`。
+  证据：`lua .github/tests/regression.lua` 报错 `global 'GameAPI' is not callable`。
 
 ## 决策日志
 
@@ -36,7 +36,7 @@
 
 ## 结果与复盘
 
-已完成 SOE 架构迁移，所有 `src/` 代码迁入新目录结构并修正 `require` 路径，根目录新增 `Library/`、`Globals/`、`Manager/` 与 `init.lua`，入口 `main.lua` 更新。补齐缺失辅助函数后回归测试通过。后续若需要统一文档路径引用，可再单独更新 `docs/` 与历史计划。
+已完成 SOE 架构迁移，所有 `src/` 代码迁入新目录结构并修正 `require` 路径，根目录新增 `Library/`、`Globals/`、`Manager/` 与 `init.lua`，入口 `main.lua` 更新。补齐缺失辅助函数后回归测试通过。后续若需要统一文档路径引用，可再单独更新 `.github/docs/` 与历史计划。
 
 ## 背景与导读
 
@@ -62,8 +62,8 @@
 
 在仓库根目录运行：
 
-  lua tests/deps_check.lua
-  lua tests/regression.lua
+  lua .github/tests/deps_check.lua
+  lua .github/tests/regression.lua
 
 预期所有脚本无报错退出。若有报错，修复路径或模块加载问题后重试。最终以启动入口 `main.lua` 无加载错误为验收基准之一。
 

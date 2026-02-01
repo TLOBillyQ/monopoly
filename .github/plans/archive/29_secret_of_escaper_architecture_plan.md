@@ -7,7 +7,7 @@
 ## 目的 / 全局视角
 
 
-学习 `docs/SecretOfEscaper` 的架构与功能，尤其是 `Library` 的设计与实际使用方式，同时补充当前 Monopoly 现有实现的结构与关键调用链，产出可复用的研究笔记，为后续 Monopoly 全局重构提供直接参考。完成后应能通过一份笔记快速回答入口流程、各目录职责、Library 模块的核心 API 与在玩法中的调用链，并能指出与本仓库 Monopoly 现有实现的对照点。验证方式是生成 `docs/SecretOfEscaper/architecture_study.md` 并通过搜索命令交叉核对引用。
+学习 `.github/docs/SecretOfEscaper` 的架构与功能，尤其是 `Library` 的设计与实际使用方式，同时补充当前 Monopoly 现有实现的结构与关键调用链，产出可复用的研究笔记，为后续 Monopoly 全局重构提供直接参考。完成后应能通过一份笔记快速回答入口流程、各目录职责、Library 模块的核心 API 与在玩法中的调用链，并能指出与本仓库 Monopoly 现有实现的对照点。验证方式是生成 `.github/docs/SecretOfEscaper/architecture_study.md` 并通过搜索命令交叉核对引用。
 
 
 ## 进度
@@ -46,7 +46,7 @@
 ## 背景与导读
 
 
-`docs/SecretOfEscaper` 是一个完整的 Lua 子工程镜像，入口位于 `docs/SecretOfEscaper/main.lua`，它在延迟一帧后调用 `require "init"` 并执行 `MapManager.init_level(LevelData.current_level)`。初始化文件 `docs/SecretOfEscaper/init.lua` 依次加载 `Globals` 封装、`Library.Utils`、`Library.ClassUtils`、`Library.UIManager.Utils`、`Library.Bincore`、`Library.Behavior.config`，然后加载 `Manager.__init` 以及全局 `LevelData`。目录结构以 `Config`、`Data`、`Globals`、`Library`、`Manager`、`Components` 为核心，其中 `Library` 提供通用能力，`Manager` 承载玩法与系统模块。`Library` 的典型调用点包括 `docs/SecretOfEscaper/Manager/ModeManager/LootEscaper/__init.lua`（NavMesh 与 UIManager）、`docs/SecretOfEscaper/Manager/EntityManager`（Behavior）、`docs/SecretOfEscaper/Manager/PlayerManager/Player.lua`（Bincore）。这些是后续追踪调用链的起点。
+`.github/docs/SecretOfEscaper` 是一个完整的 Lua 子工程镜像，入口位于 `.github/docs/SecretOfEscaper/main.lua`，它在延迟一帧后调用 `require "init"` 并执行 `MapManager.init_level(LevelData.current_level)`。初始化文件 `.github/docs/SecretOfEscaper/init.lua` 依次加载 `Globals` 封装、`Library.Utils`、`Library.ClassUtils`、`Library.UIManager.Utils`、`Library.Bincore`、`Library.Behavior.config`，然后加载 `Manager.__init` 以及全局 `LevelData`。目录结构以 `Config`、`Data`、`Globals`、`Library`、`Manager`、`Components` 为核心，其中 `Library` 提供通用能力，`Manager` 承载玩法与系统模块。`Library` 的典型调用点包括 `.github/docs/SecretOfEscaper/Manager/ModeManager/LootEscaper/__init.lua`（NavMesh 与 UIManager）、`.github/docs/SecretOfEscaper/Manager/EntityManager`（Behavior）、`.github/docs/SecretOfEscaper/Manager/PlayerManager/Player.lua`（Bincore）。这些是后续追踪调用链的起点。
 
 当前 Monopoly 工程入口位于 `main.lua`，它直接 `require "init"`。初始化文件 `init.lua` 依次加载 `Globals.__init` 与 `Manager.__init`，并调用 `Manager.GameManager.Entry.install()` 启动运行时。`Globals/__init.lua` 封装 `SetTimeOut`、触发器注册与 `ALLROLES` 等全局变量。`Manager/__init.lua` 汇总加载 `System`、`GameManager`、`TurnManager`、`BoardManager`、`MarketManager`、`ChoiceManager`、`MovementManager`、`ItemManager`、`LandManager`、`EffectManager`。运行时主逻辑在 `Manager/System/Runtime.lua`：构建 `runtime`（UI、自动回合、状态同步与弹窗），监听 `IntentDispatcher`，安装 GAME_INIT 回调并通过 `UIManager.Builder` 构建 UI。核心游戏对象由 `Manager/GameManager/CompositionRoot.lua` 组装：读取 `Config/Generated` 与 `Config/Map.lua`，构建 `Components.Board` 与 `Components.Player`，创建 `Components.Store` 状态树，注册 `ChoiceService`、`ItemRegistry`、`ChanceRegistry`，并生成 `TurnManager` 以运行阶段状态机。回合阶段在 `Manager/TurnManager/Turn` 下拆分为 `TurnStart`、`TurnRoll`、`TurnMove`、`TurnLand`、`TurnPost`、`TurnEnd`。这些模块是后续总结 Monopoly 现有实现与重构对照的基线。
 
@@ -64,14 +64,14 @@
 
 在仓库根目录依次运行搜索命令，先建立目录与引用视图，再进入代码阅读与记录阶段。建议按顺序执行以下命令并在笔记中记录观察结果：
 
-    rg --files docs/SecretOfEscaper
-    rg "Library\\." -n docs/SecretOfEscaper
-    rg "Behavior" -n docs/SecretOfEscaper/Manager
-    rg "NavMesh" -n docs/SecretOfEscaper/Manager
-    rg "UIManager" -n docs/SecretOfEscaper/Manager
-    rg "Bincore" -n docs/SecretOfEscaper
+    rg --files .github/docs/SecretOfEscaper
+    rg "Library\\." -n .github/docs/SecretOfEscaper
+    rg "Behavior" -n .github/docs/SecretOfEscaper/Manager
+    rg "NavMesh" -n .github/docs/SecretOfEscaper/Manager
+    rg "UIManager" -n .github/docs/SecretOfEscaper/Manager
+    rg "Bincore" -n .github/docs/SecretOfEscaper
 
-这些命令应返回包含入口文件与关键引用的位置，例如 `docs/SecretOfEscaper/init.lua`、`docs/SecretOfEscaper/Manager/ModeManager/LootEscaper/__init.lua`、`docs/SecretOfEscaper/Manager/PlayerManager/Player.lua`。随后打开这些文件逐段阅读，补齐对初始化流程、Library 模块职责与实际调用的理解，并把结论实时写入笔记文件。
+这些命令应返回包含入口文件与关键引用的位置，例如 `.github/docs/SecretOfEscaper/init.lua`、`.github/docs/SecretOfEscaper/Manager/ModeManager/LootEscaper/__init.lua`、`.github/docs/SecretOfEscaper/Manager/PlayerManager/Player.lua`。随后打开这些文件逐段阅读，补齐对初始化流程、Library 模块职责与实际调用的理解，并把结论实时写入笔记文件。
 
 补充 Monopoly 现有实现时，建议额外运行以下命令以定位核心调用链：
 
@@ -88,19 +88,19 @@
 ## 验证与验收
 
 
-完成后检查 `docs/SecretOfEscaper/architecture_study.md` 是否包含入口与初始化、目录职责、Library 模块说明、典型调用链、Monopoly 现有实现概览、与 Monopoly 对照与待验证问题这些内容。再重复上述 `rg` 命令，确保每条调用链在笔记中都有对应引用路径。若能在不打开源码的情况下通过笔记回答“某个玩法模块如何调用 Library”与“Monopoly 当前回合是如何驱动的”这类问题，则视为达标。
+完成后检查 `.github/docs/SecretOfEscaper/architecture_study.md` 是否包含入口与初始化、目录职责、Library 模块说明、典型调用链、Monopoly 现有实现概览、与 Monopoly 对照与待验证问题这些内容。再重复上述 `rg` 命令，确保每条调用链在笔记中都有对应引用路径。若能在不打开源码的情况下通过笔记回答“某个玩法模块如何调用 Library”与“Monopoly 当前回合是如何驱动的”这类问题，则视为达标。
 
 
 ## 可重复性与恢复
 
 
-本计划仅涉及阅读与写笔记，命令可重复执行而不会改动代码。若笔记内容失真，可删除 `docs/SecretOfEscaper/architecture_study.md` 后按步骤重新生成，并在进度中记录重做原因。
+本计划仅涉及阅读与写笔记，命令可重复执行而不会改动代码。若笔记内容失真，可删除 `.github/docs/SecretOfEscaper/architecture_study.md` 后按步骤重新生成，并在进度中记录重做原因。
 
 
 ## 产物与备注
 
 
-最终产物是研究笔记 `docs/SecretOfEscaper/architecture_study.md`。示例结构如下：
+最终产物是研究笔记 `.github/docs/SecretOfEscaper/architecture_study.md`。示例结构如下：
 
     # SecretOfEscaper 架构与 Library 笔记
     入口与初始化：说明 main.lua 与 init.lua 的调用顺序与全局初始化

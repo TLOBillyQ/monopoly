@@ -9,7 +9,7 @@
 ## 目的 / 全局视角
 
 
-目标是把 Manager/GameManager 与 Manager/System 中职责混杂的函数按“行为/责任”重新归位到更恰当的目录（如 Components、Config、Globals 以及对应的 *Manager），让读者可以凭目录名判断模块用途，并且保持用户可见行为完全不变。可观察结果是：重构后游戏仍能按原流程运行；`lua tests/regression.lua` 通过；并且 `rg -n "Manager/System"` 只命中确实属于平台适配与底层事件桥接的文件，其余逻辑已回到更匹配的目录。
+目标是把 Manager/GameManager 与 Manager/System 中职责混杂的函数按“行为/责任”重新归位到更恰当的目录（如 Components、Config、Globals 以及对应的 *Manager），让读者可以凭目录名判断模块用途，并且保持用户可见行为完全不变。可观察结果是：重构后游戏仍能按原流程运行；`lua .github/tests/regression.lua` 通过；并且 `rg -n "Manager/System"` 只命中确实属于平台适配与底层事件桥接的文件，其余逻辑已回到更匹配的目录。
 
 
 ## 进度
@@ -60,7 +60,7 @@
 
 第一个里程碑是“职责盘点与映射完成”。完成后会有一份清晰的迁移映射，列出每个函数或子模块的目标位置，并且能说明它为何属于该目录。验证方式是执行一次全量搜索并在计划中记录映射与依据。
 
-第二个里程碑是“迁移落地与回归通过”。完成后所有迁移已落地，旧路径不再被引用，`lua tests/regression.lua` 通过，并且 `rg -n "Manager/System"` 只剩平台适配或事件桥接的少量文件。
+第二个里程碑是“迁移落地与回归通过”。完成后所有迁移已落地，旧路径不再被引用，`lua .github/tests/regression.lua` 通过，并且 `rg -n "Manager/System"` 只剩平台适配或事件桥接的少量文件。
 
 
 ## 工作计划
@@ -86,7 +86,7 @@
 
 迁移完成后运行回归脚本。
 
-  lua tests/regression.lua
+  lua .github/tests/regression.lua
 
 预期输出包含连续的点号以及结尾：
 
@@ -96,7 +96,7 @@
 ## 验证与验收
 
 
-执行 `lua tests/regression.lua`，预期全部通过并输出 “All regression checks passed (30)”。在 Eggy 场景中启动游戏，确认 GAME_INIT 后 UI 正常显示，点击“下一步”可推进回合，自动模式与弹窗行为保持不变。若无法运行 Eggy 场景，则至少通过日志验证 GameplayLoop 仍在驱动帧循环且 UI 刷新被触发。
+执行 `lua .github/tests/regression.lua`，预期全部通过并输出 “All regression checks passed (30)”。在 Eggy 场景中启动游戏，确认 GAME_INIT 后 UI 正常显示，点击“下一步”可推进回合，自动模式与弹窗行为保持不变。若无法运行 Eggy 场景，则至少通过日志验证 GameplayLoop 仍在驱动帧循环且 UI 刷新被触发。
 
 
 ## 可重复性与恢复

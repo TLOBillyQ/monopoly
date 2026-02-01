@@ -23,7 +23,7 @@
 ## 意外与发现
 
 
-当前 UI 只有 `choice_option1~4` 四个按钮，但道具目标选择可能超过 4 个选项，必须引入棋盘选择或滚动列表；EggyAPI 提供 `EVENT.SPEC_OBSTACLE_TOUCH_BEGIN` 事件，可用于监听棋盘单位点击。证据来自 `docs/eggy/EggyAPI.lua` 与 `docs/eggy/api/09_events.md` 中的事件说明。
+当前 UI 只有 `choice_option1~4` 四个按钮，但道具目标选择可能超过 4 个选项，必须引入棋盘选择或滚动列表；EggyAPI 提供 `EVENT.SPEC_OBSTACLE_TOUCH_BEGIN` 事件，可用于监听棋盘单位点击。证据来自 `.github/docs/eggy/EggyAPI.lua` 与 `.github/docs/eggy/api/09_events.md` 中的事件说明。
 
 ## 决策日志
 
@@ -42,7 +42,7 @@
 ## 背景与导读
 
 
-Eggy 适配层入口是 `src/adapters/eggy/eggy_runtime.lua`，主适配层是 `src/adapters/eggy/eggy_layer.lua`，UI 刷新与棋盘渲染分别在 `src/adapters/eggy/eggy_layer_ui.lua` 与 `src/adapters/eggy/eggy_layer_board.lua`。移动动画当前只实现 `src/adapters/eggy/move_anim.lua` 的单步移动，动作动画提示在 `src/adapters/eggy/action_anim.lua`。游戏侧移动路径和道具行为由 `src/gameplay/movement_service.lua`、`src/gameplay/turn_move.lua`、`src/gameplay/item_roadblock.lua`、`src/gameplay/item_demolish.lua` 等模块生成，并通过 `store.turn.move_anim` 与 `store.turn.action_anim` 传给适配层。选择需求的交互入口是 `src/adapters/core/adapter_layer.lua` 的 pending choice 逻辑，UI 节点清单在 `Data/UIManagerNodes.lua`。棋盘点击能力需参考 `docs/eggy/EggyAPI.lua` 与 `docs/eggy/api/09_events.md` 中的 Obstacle 点击事件。
+Eggy 适配层入口是 `src/adapters/eggy/eggy_runtime.lua`，主适配层是 `src/adapters/eggy/eggy_layer.lua`，UI 刷新与棋盘渲染分别在 `src/adapters/eggy/eggy_layer_ui.lua` 与 `src/adapters/eggy/eggy_layer_board.lua`。移动动画当前只实现 `src/adapters/eggy/move_anim.lua` 的单步移动，动作动画提示在 `src/adapters/eggy/action_anim.lua`。游戏侧移动路径和道具行为由 `src/gameplay/movement_service.lua`、`src/gameplay/turn_move.lua`、`src/gameplay/item_roadblock.lua`、`src/gameplay/item_demolish.lua` 等模块生成，并通过 `store.turn.move_anim` 与 `store.turn.action_anim` 传给适配层。选择需求的交互入口是 `src/adapters/core/adapter_layer.lua` 的 pending choice 逻辑，UI 节点清单在 `Data/UIManagerNodes.lua`。棋盘点击能力需参考 `.github/docs/eggy/EggyAPI.lua` 与 `.github/docs/eggy/api/09_events.md` 中的 Obstacle 点击事件。
 
 ## 工作计划
 
@@ -57,14 +57,14 @@ Eggy 适配层入口是 `src/adapters/eggy/eggy_runtime.lua`，主适配层是 `
     rg -n "move_anim" src/adapters/eggy src/gameplay
     rg -n "action_anim" src/adapters/eggy src/gameplay
     rg -n "roadblock_target|demolish_target" src/gameplay
-    rg -n "SPEC_OBSTACLE_TOUCH" docs/eggy
+    rg -n "SPEC_OBSTACLE_TOUCH" .github/docs/eggy
 
-原型阶段在 `src/adapters/eggy/eggy_runtime.lua` 中为 `G.tiles` 注册 Obstacle 点击事件，点击时打印 tile 名称或索引并弹出提示；启动 Demo，点击棋盘格子应看到提示，证明可用后清理或收敛到最终实现。原型验证通过后，先在 `src/adapters/eggy/move_anim.lua` 增加按路径播放函数并更新 `src/adapters/eggy/eggy_layer.lua` 的 move_anim 调用路径；随后在 `src/adapters/eggy/eggy_layer_board.lua` 增加路障渲染缓存并根据 overlays 创建或销毁覆盖物，同时提供选择标记的生成与销毁；再在 `src/adapters/eggy/eggy_layer.lua` 中识别 `roadblock_target` 与 `demolish_target` 的 pending choice，进入棋盘选择模式并通过 `choice_select` 或 `choice_cancel` 收敛状态；最后在 `src/adapters/eggy/eggy_runtime.lua` 注册棋盘点击事件把 tile index 传给 `EggyLayer`，并按需复用 `modal_choice` 的标题与取消按钮。完成代码后同步 `docs/adapters_design.md` 的 Eggy 章节。
+原型阶段在 `src/adapters/eggy/eggy_runtime.lua` 中为 `G.tiles` 注册 Obstacle 点击事件，点击时打印 tile 名称或索引并弹出提示；启动 Demo，点击棋盘格子应看到提示，证明可用后清理或收敛到最终实现。原型验证通过后，先在 `src/adapters/eggy/move_anim.lua` 增加按路径播放函数并更新 `src/adapters/eggy/eggy_layer.lua` 的 move_anim 调用路径；随后在 `src/adapters/eggy/eggy_layer_board.lua` 增加路障渲染缓存并根据 overlays 创建或销毁覆盖物，同时提供选择标记的生成与销毁；再在 `src/adapters/eggy/eggy_layer.lua` 中识别 `roadblock_target` 与 `demolish_target` 的 pending choice，进入棋盘选择模式并通过 `choice_select` 或 `choice_cancel` 收敛状态；最后在 `src/adapters/eggy/eggy_runtime.lua` 注册棋盘点击事件把 tile index 传给 `EggyLayer`，并按需复用 `modal_choice` 的标题与取消按钮。完成代码后同步 `.github/docs/adapters_design.md` 的 Eggy 章节。
 
 实现完成后执行测试：
 
-    lua tests/deps_check.lua
-    lua tests/regression.lua
+    lua .github/tests/deps_check.lua
+    lua .github/tests/regression.lua
 
 预期输出应包含：
 
@@ -74,17 +74,17 @@ Eggy 适配层入口是 `src/adapters/eggy/eggy_runtime.lua`，主适配层是 `
 ## 验证与验收
 
 
-必须通过 `lua tests/deps_check.lua` 与 `lua tests/regression.lua`。手工验收时启动 Demo，完成以下场景：掷骰移动时角色逐格移动、移动结束位置与逻辑一致；使用路障道具时棋盘出现路障标记并阻挡下一名玩家；使用导弹/怪兽时出现相应表现并且建筑/角色状态变化与日志一致；选择目标时可看到被标记的格子并可点击选择或取消，且选择结果与 gameplay 中的选项一致。若出现无法点击、标记残留或动画错位，记录触发步骤与相关日志。
+必须通过 `lua .github/tests/deps_check.lua` 与 `lua .github/tests/regression.lua`。手工验收时启动 Demo，完成以下场景：掷骰移动时角色逐格移动、移动结束位置与逻辑一致；使用路障道具时棋盘出现路障标记并阻挡下一名玩家；使用导弹/怪兽时出现相应表现并且建筑/角色状态变化与日志一致；选择目标时可看到被标记的格子并可点击选择或取消，且选择结果与 gameplay 中的选项一致。若出现无法点击、标记残留或动画错位，记录触发步骤与相关日志。
 
 ## 可重复性与恢复
 
 
-移动动画与选择标记的实现应是纯运行时渲染，不修改存档数据，可重复执行而不改变结果。若原型代码引入临时日志或标记，必须在正式实现前删除。若需要回退，可撤销对 `src/adapters/eggy/` 与 `docs/adapters_design.md` 的改动并重新运行测试验证基线。
+移动动画与选择标记的实现应是纯运行时渲染，不修改存档数据，可重复执行而不改变结果。若原型代码引入临时日志或标记，必须在正式实现前删除。若需要回退，可撤销对 `src/adapters/eggy/` 与 `.github/docs/adapters_design.md` 的改动并重新运行测试验证基线。
 
 ## 产物与备注
 
 
-产物包括：`src/adapters/eggy/move_anim.lua` 的路径播放能力、`src/adapters/eggy/eggy_layer.lua` 的选择模式分支、`src/adapters/eggy/eggy_layer_board.lua` 的路障与选择渲染、`src/adapters/eggy/eggy_runtime.lua` 的棋盘点击桥接，以及 `docs/adapters_design.md` 的说明。为便于复核，可在实现完成后保留一段小型 diff 片段，例如：
+产物包括：`src/adapters/eggy/move_anim.lua` 的路径播放能力、`src/adapters/eggy/eggy_layer.lua` 的选择模式分支、`src/adapters/eggy/eggy_layer_board.lua` 的路障与选择渲染、`src/adapters/eggy/eggy_runtime.lua` 的棋盘点击桥接，以及 `.github/docs/adapters_design.md` 的说明。为便于复核，可在实现完成后保留一段小型 diff 片段，例如：
 
     -- EggyLayer move_anim 接入 visited
     if anim.visited then

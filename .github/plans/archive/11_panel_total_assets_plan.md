@@ -65,7 +65,7 @@
 
 运行回归脚本验证基础行为不被破坏：
 
-    lua tests/regression.lua
+    lua .github/tests/regression.lua
 
 在可运行 Eggy 的环境中启动 `main.lua`，让玩家购买一块地并升级一次，观察 `panel_player_1_detail` 显示形如 “总资产: <数值>”，且数值大于现金。若无法启动引擎，则在 Lua 里构造一局游戏并调用 `Panel.build_player_statuses`，确认返回值中的 `total_assets` 反映现金+地块价值。
 

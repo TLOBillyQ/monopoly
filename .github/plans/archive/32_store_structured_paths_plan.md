@@ -60,7 +60,7 @@ Store 是一棵嵌套 table，`GameState` 原先通过路径数组调用 `store:
 
 2) 运行基准脚本：
 
-    lua scripts/bench_store_gamestate.lua
+    lua .github/scripts/bench_store_gamestate.lua
 
 3) 把输出记录到“产物与备注”。
 
@@ -69,7 +69,7 @@ Store 是一棵嵌套 table，`GameState` 原先通过路径数组调用 `store:
 ## 验证与验收
 
 
-1) `lua scripts/bench_store_gamestate.lua` 可运行。
+1) `lua .github/scripts/bench_store_gamestate.lua` 可运行。
 2) `game_ops` 相比之前降低（同样 loops=20000）。
 3) `GameState` 对 Store 的写入路径与字段保持一致。
 
@@ -83,7 +83,7 @@ Store 是一棵嵌套 table，`GameState` 原先通过路径数组调用 `store:
 
 运行命令与关键输出：
 
-    lua scripts/bench_store_gamestate.lua
+    lua .github/scripts/bench_store_gamestate.lua
     loops=20000
     game_ops=0.130148
     path_alloc=0.020803

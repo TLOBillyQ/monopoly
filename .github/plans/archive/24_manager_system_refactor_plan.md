@@ -25,7 +25,7 @@
 
 
 - 观察：依赖检查失败，原因是 Manager/BoardManager、ChoiceManager、MarketManager、TurnManager 的 __init.lua 在非 GUI 层 require GUI/__init.lua。
-  证据：运行 `lua tests/deps_check.lua` 报错 `gameplay must not require GUI/runtime`，指向上述 __init.lua。
+  证据：运行 `lua .github/tests/deps_check.lua` 报错 `gameplay must not require GUI/runtime`，指向上述 __init.lua。
 
 ## 决策日志
 
@@ -61,7 +61,7 @@
 在仓库根目录运行以下命令，收集所有旧路径引用与文档引用，并把输出保存到临时清单中，便于逐项核对：
 
     rg -n "Manager\.System\.(Game|CompositionRoot|BoardFactory|Chance|Agent|BankruptcyService|PlayerEffects|PlayerVehicle|Constants|Macro|Refs)" -g "*.lua"
-    rg -n "Manager/System/(Macro|Refs)\.lua" docs
+    rg -n "Manager/System/(Macro|Refs)\.lua" .github/docs
 
 确认引用后创建目标目录并移动文件，以下命令以 PowerShell 为例，可按实际需要拆分执行：
 
@@ -83,12 +83,12 @@
 
     rg -n "Manager\.System\." -g "*.lua"
 
-调整入口聚合文件与文档。更新 `Globals/__init.lua` 以显式加载 `Globals/Macro.lua`（必要时也加载 `Globals/Refs.lua`），更新 `Manager/GameManager/__init.lua` 以只汇总 GameManager 内部模块并移除对其他 Manager 的 require，更新 `docs/ui/04_market_screen.md` 中关于 Refs 的路径说明。
+调整入口聚合文件与文档。更新 `Globals/__init.lua` 以显式加载 `Globals/Macro.lua`（必要时也加载 `Globals/Refs.lua`），更新 `Manager/GameManager/__init.lua` 以只汇总 GameManager 内部模块并移除对其他 Manager 的 require，更新 `.github/docs/ui/04_market_screen.md` 中关于 Refs 的路径说明。
 
 完成迁移后运行依赖检查与回归测试，必要时补充最小手动验收记录：
 
-    lua tests/deps_check.lua
-    lua tests/regression.lua
+    lua .github/tests/deps_check.lua
+    lua .github/tests/regression.lua
 
 ## 验证与验收
 
