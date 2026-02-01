@@ -1,0 +1,18 @@
+{
+    "projectName": "monopoly", 
+    "projectID": "697efb085050765d38a88dfe", 
+    "serverPort": 38090, 
+    "syncEnabled": true, 
+    "excludePatterns": [
+        ".vscode", 
+        ".git", 
+        ".github",
+        ".gitignore",
+        "scripts",
+        "tests",
+        "EggyAPI.lua",
+        "AGENTS.md"
+    ], 
+    "isSEMap": false, 
+    "version": "1.0.0"
+}
