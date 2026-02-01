@@ -74,31 +74,32 @@ function UIEventRouter.bind(state, get_game, opts)
 
   local cache = {}
   local registered = {}
-  register_node_click(cache, "btn_next", function()
+  register_node_click(cache, "行动按钮", function()
     print("[debug] ui btn_next clicked")
     dispatch_action({ type = "ui_button", id = "next" })
   end, registered)
-  register_node_click(cache, "btn_auto", function()
+  register_node_click(cache, "托管按钮", function()
     dispatch_action({ type = "ui_button", id = "auto" })
   end, registered)
   for idx = 1, 5 do
-    local name = "item_slot_" .. tostring(idx)
-    register_node_click(cache, name, function()
-      dispatch_action({ type = "ui_button", id = name })
+    local node_name = "道具槽位" .. tostring(idx)
+    local action_id = "item_slot_" .. tostring(idx)
+    register_node_click(cache, node_name, function()
+      dispatch_action({ type = "ui_button", id = action_id })
     end, registered)
   end
-  register_node_click(cache, "popup_confirm", function()
+  register_node_click(cache, "弹窗确认", function()
     MainView.close_popup(state)
   end, registered)
 
-  register_node_click(cache, "choice_cancel", function()
+  register_node_click(cache, "取消按钮", function()
     local choice = state.pending_choice
     if choice and choice.allow_cancel ~= false then
       dispatch_action({ type = "choice_cancel", choice_id = choice.id })
     end
   end, registered)
 
-  for idx, name in ipairs({ "choice_option1", "choice_option2", "choice_option3", "choice_option4" }) do
+  for idx, name in ipairs({ "道具名称1", "道具名称2", "道具名称3", "道具名称4" }) do
     register_node_click(cache, name, function()
       local choice = state.pending_choice
       if not choice then
@@ -147,12 +148,15 @@ function UIEventRouter.bind(state, get_game, opts)
     end
   end, registered)
 
-  register_node_click(cache, "market_panel_close", function()
-    local choice = state.pending_choice
-    if choice and choice.allow_cancel ~= false then
-      dispatch_action({ type = "choice_cancel", choice_id = choice.id })
-    end
-  end, registered)
+  local market_close = "关闭"
+  if MarketUI.cancel_button ~= market_close then
+    register_node_click(cache, market_close, function()
+      local choice = state.pending_choice
+      if choice and choice.allow_cancel ~= false then
+        dispatch_action({ type = "choice_cancel", choice_id = choice.id })
+      end
+    end, registered)
+  end
 
   local ok, nodes = pcall(require, "Data.UIManagerNodes")
   if ok and type(nodes) == "table" then

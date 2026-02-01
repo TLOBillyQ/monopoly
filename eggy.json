@@ -1,7 +1,7 @@
 {
     "projectName": "monopoly", 
     "projectID": "697efb085050765d38a88dfe", 
-    "serverPort": 38090, 
+    "serverPort": 39038, 
     "syncEnabled": true, 
     "excludePatterns": [
         ".vscode", 

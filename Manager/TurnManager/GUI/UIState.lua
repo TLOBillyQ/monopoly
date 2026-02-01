@@ -59,30 +59,26 @@ function EggyLayerUI.build_ui_state()
     auto_play = false,
     auto_interval = 0.1,
     item_slots = {
-      "item_slot_1",
-      "item_slot_2",
-      "item_slot_3",
-      "item_slot_4",
-      "item_slot_5",
+      "道具槽位1",
+      "道具槽位2",
+      "道具槽位3",
+      "道具槽位4",
+      "道具槽位5",
     },
     market_active = false,
     choice = {
-      root = "modal_choice",
-      title = "choice_title",
-      body = "choice_body",
-      cancel = "choice_cancel",
+      root = "黑市屏",
+      cancel = "取消按钮",
       option_buttons = {
-        "choice_option1",
-        "choice_option2",
-        "choice_option3",
-        "choice_option4",
+        "道具名称1",
+        "道具名称2",
+        "道具名称3",
+        "道具名称4",
       },
     },
     popup = {
-      root = "modal_popup",
-      title = "popup_title",
-      body = "popup_body",
-      confirm = "popup_confirm",
+      root = "弹窗屏",
+      confirm = "弹窗确认",
     },
     query_node = query_node,
     set_label = set_label,
@@ -96,21 +92,22 @@ function EggyLayerUI.refresh_panel(layer, view)
   local ui = layer.ui
   local turn_label = PanelView.build_turn_label(view.state.turn.turn_count)
 
-  ui:set_label("panel_title", "蛋仔大富翁")
-  ui:set_label("panel_turn", turn_label)
+  ui:set_label("倒计时", turn_label)
   local player_rows = PanelView.build_player_statuses(view, layer.game, 4)
   for i = 1, 4 do
     local row = player_rows[i]
-    ui:set_label("panel_player_" .. tostring(i) .. "_name", row and row.name or "")
-    ui:set_label("panel_player_" .. tostring(i) .. "_cash", row and row.cash or "")
-    ui:set_label("panel_player_" .. tostring(i) .. "_land_count", row and row.land_count or "")
-    ui:set_label("panel_player_" .. tostring(i) .. "_detail", row and row.total_assets or "")
+    ui:set_label("玩家" .. tostring(i) .. "名字", row and row.name or "")
+    ui:set_label("玩家" .. tostring(i) .. "现金", row and row.cash or "")
+    ui:set_label("玩家" .. tostring(i) .. "地块数量", row and row.land_count or "")
+    ui:set_label("玩家" .. tostring(i) .. "总资产", row and row.total_assets or "")
   end
 
   EggyLayerUI.refresh_item_slots(layer, view)
 
-  ui:set_button("btn_next", "下一回合")
-  ui:set_button("btn_auto", PanelView.build_auto_label(ui.auto_play))
+  local auto_label = PanelView.build_auto_label(ui.auto_play)
+  ui:set_button("行动按钮", "下一回合")
+  ui:set_button("托管按钮", auto_label)
+  ui:set_button("自动控制按钮", auto_label)
 end
 
 function EggyLayerUI.refresh_item_slots(layer, view)

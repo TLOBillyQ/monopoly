@@ -207,7 +207,7 @@ local function install_game_init(state)
     for _, r in ipairs(ALLROLES) do
       UIManager.client_role = r
       for i = 1, 5 do
-        set_item_slot_image("item_slot_" .. tostring(i), refs["空"])
+        set_item_slot_image("道具槽位" .. tostring(i), refs["空"])
       end
 
       unit.add_state(Enums.BuffState.BUFF_FORBID_CONTROL)
