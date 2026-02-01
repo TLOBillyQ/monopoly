@@ -3,21 +3,7 @@ local GameState = require("Manager.GameManager.GameState")
 local GameVictory = require("Manager.GameManager.GameVictory")
 require "Library.ClassUtils"
 
----@class Game
----@field board Board
----@field players Player[]
----@field store Store
----@field rng RNG
----@field services table
----@field logger table
----@field ui_port table?
----@field events table?
----@field turn_manager TurnManager?
----@field finished boolean
----@field winner Player?
----@field winner_names string?
----@field last_turn number?
----游戏主协调类，管理所有游戏逻辑、状态、玩家和棋盘
+
 local Game = Class("Game")
 Game.__class_new = Game.new
 

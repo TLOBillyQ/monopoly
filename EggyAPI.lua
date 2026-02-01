@@ -1191,7 +1191,8 @@ function GlobalAPI.add_kill_broadcast(_kill_char, _dead_char, _duration) end
 ---@param _highlight_power Fixed 亮部偏色程度
 ---@param _duration Fixed 变换时长
 function GlobalAPI.change_render_color(_hue, _brightness, _saturation, _contrast, _amount, _mid_tones, _mid_tones_power,
-									   _shadows, _shadows_power, _highlight, _highlight_power, _duration) end
+									   _shadows, _shadows_power, _highlight, _highlight_power, _duration)
+end
 
 ---Debug窗口打印日志
 ---@param _content string 内容
@@ -1268,7 +1269,8 @@ function GlobalAPI.set_direct_light(_param_dict, _duration) end
 ---@param _highlight_power Fixed 亮部偏色程度
 ---@param _duration Fixed 变换时长
 function GlobalAPI.set_render_color(_hue, _brightness, _saturation, _contrast, _amount, _mid_tones, _mid_tones_power,
-									_shadows, _shadows_power, _highlight, _highlight_power, _duration) end
+									_shadows, _shadows_power, _highlight, _highlight_power, _duration)
+end
 
 ---设置特效旋转
 ---@param _sfx_id SfxID 特效ID
@@ -2418,7 +2420,8 @@ function GameAPI.create_sfx_with_socket(_sfx_key, _unit, _socket_name, _scale, _
 ---@param _bind_type Enums.BindType 绑定方式
 ---@return SfxID 特效ID
 function GameAPI.create_sfx_with_socket_offset(_sfx_key, _unit, _socket_name, _offset, _rot, _scale, _duration,
-											   _bind_type) end
+											   _bind_type)
+end
 
 ---创建表
 ---@return SheetID 表格
@@ -3074,7 +3077,8 @@ function GameAPI.register_geometry_box(_size, _chamfer_radius, _chamfer_level, _
 ---@param _preconf table 扩展配置（预留 ）
 ---@return string 几何体路径，用于create_obstacle_from_geometry
 function GameAPI.register_geometry_frustum(_height, _inner_radius, _outer_radius, _inner_poly_count, _outer_poly_count,
-										   _chamfer_radius, _angle, _layer, _bend, _preconf) end
+										   _chamfer_radius, _angle, _layer, _bend, _preconf)
+end
 
 ---注册一个几何体：圆环（可变形）
 ---@param _height Fixed 高度
@@ -3087,7 +3091,8 @@ function GameAPI.register_geometry_frustum(_height, _inner_radius, _outer_radius
 ---@param _preconf table 扩展配置（预留 ）
 ---@return string 几何体路径，用于create_obstacle_from_geometry
 function GameAPI.register_geometry_ring(_height, _inner_radius, _outer_radius, _inner_poly_count, _outer_poly_count,
-										_chamfer_radius, _angle, _preconf) end
+										_chamfer_radius, _angle, _preconf)
+end
 
 ---注册一个几何体：自定义曲线/曲面
 ---@param _is_rope boolean 是否为曲线
@@ -3100,7 +3105,8 @@ function GameAPI.register_geometry_ring(_height, _inner_radius, _outer_radius, _
 ---@param _preconf table 扩展配置（预留 ）
 ---@return string 几何体路径，用于create_obstacle_from_geometry
 function GameAPI.register_geometry_spline(_is_rope, _pos_list, _normal_list, _radius_list, _dist_precision,
-										  _normal_precision, _depth, _preconf) end
+										  _normal_precision, _depth, _preconf)
+end
 
 ---删除路点
 ---@param _path_id PathID 路径
@@ -3440,7 +3446,8 @@ function LifeEntity.ai_command_alert(_tagert_pos, _target_dir, _dalay_time, _rej
 ---@param _move_mode Enums.MoveMode 移动方式
 ---@param _action_count integer 追击次数
 function LifeEntity.ai_command_chase_with_ability(_target, _chase_range, _reject_time, _action_distance, _ability_key,
-												  _move_mode, _action_count) end
+												  _move_mode, _action_count)
+end
 
 ---控制AI执行追击行为(命令)
 ---@param _target Unit 目标
@@ -3451,7 +3458,8 @@ function LifeEntity.ai_command_chase_with_ability(_target, _chase_range, _reject
 ---@param _move_mode Enums.MoveMode 移动方式
 ---@param _action_count integer 追击次数
 function LifeEntity.ai_command_chase_with_action(_target, _chase_range, _reject_time, _action_distance, _action_mode,
-												 _move_mode, _action_count) end
+												 _move_mode, _action_count)
+end
 
 ---控制AI执行追击行为(物品)
 ---@param _target Unit 目标
@@ -3462,7 +3470,8 @@ function LifeEntity.ai_command_chase_with_action(_target, _chase_range, _reject_
 ---@param _move_mode Enums.MoveMode 移动方式
 ---@param _action_count integer 追击次数
 function LifeEntity.ai_command_chase_with_equipment(_target, _chase_range, _reject_time, _action_distance, _equipment_key,
-													_move_mode, _action_count) end
+													_move_mode, _action_count)
+end
 
 ---控制AI执行跟随命令
 ---@param _target_unit Unit 目标
@@ -4116,7 +4125,8 @@ function Obstacle.set_billboard_text(_content) end
 ---@param _gradient_color_3 Color? 渐变色3
 ---@param _gradient_color_4 Color? 渐变色4
 function Obstacle.set_billboard_text_color(_color, _gradient_color_1, _gradient_color_2, _gradient_color_3,
-										   _gradient_color_4) end
+										   _gradient_color_4)
+end
 
 ---设置牌面(对象只能为麻将/扑克)
 ---@param _card_type ChessType 牌名
@@ -4703,7 +4713,8 @@ function Role.set_voice_volume_sync_enabled(_enabled) end
 ---@param _shake_undamped_scope Fixed 不衰减范围
 ---@param _shake_distance_decay Fixed 距离衰减
 function Role.shake_camera(_shake_type, _shake_max_amplitude, _shake_time, _shake_source, _shake_frequency,
-						   _shake_time_decay, _shake_effect_scope, _shake_undamped_scope, _shake_distance_decay) end
+						   _shake_time_decay, _shake_effect_scope, _shake_undamped_scope, _shake_distance_decay)
+end
 
 ---设置玩家的背包界面显隐
 ---@param _visible boolean 是否显示
@@ -4830,7 +4841,8 @@ SceneUI = {}
 ---@param _inherit_visible boolean? 是否跟随组件显隐
 ---@return E3DLayer 场景界面
 function SceneUI.create_scene_ui_bind_unit(_layer_key, _socket_name, _offset_pos, _duration, _bind_event,
-										   _inherit_visible) end
+										   _inherit_visible)
+end
 
 ---@class TriggerSpace: ExprDeviceComp, OwnerComp, SceneUI, Unit, UnitInteractVolumeComp
 TriggerSpace = {}

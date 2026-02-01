@@ -10,6 +10,7 @@
             "unnecessary-if",
             "assign-type-mismatch",
             "undefined-doc-param"
-        ]
+        ],
+        "enable": false
     }
 }

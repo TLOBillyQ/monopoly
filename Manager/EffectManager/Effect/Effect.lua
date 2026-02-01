@@ -33,16 +33,10 @@ local function can_apply(effect, ctx)
   return true
 end
 
----@class Effect
----效果类，处理玩家落地后的效果
+
 local Effect = Class("Effect")
 
----扫描并检查落地效果是否可用
----@param effect_defs table[] 效果定义列表
----@param player Player 玩家
----@param tile Tile 地块
----@param game_ctx table 游戏上下文
----@return table[] 效果条目列表
+
 function Effect.scan(effect_defs, player, tile, game_ctx)
   local ctx = build_ctx(player, tile, game_ctx)
   local entries = {}
@@ -60,12 +54,7 @@ function Effect.scan(effect_defs, player, tile, game_ctx)
   return entries
 end
 
----执行一个效果
----@param effect table 效果定义
----@param player Player 玩家
----@param tile Tile 地块
----@param game_ctx table 游戏上下文
----@return table 执行结果表（ok和reason/result）
+
 function Effect.execute(effect, player, tile, game_ctx)
   local ctx = build_ctx(player, tile, game_ctx)
   local ok, reason = can_apply(effect, ctx)
@@ -76,11 +65,7 @@ function Effect.execute(effect, player, tile, game_ctx)
   return { ok = true, result = exec and exec.apply and exec.apply(ctx) }
 end
 
----构建游戏上下文（用于效果执行）
----@param game Game 游戏实例
----@param move_result table? 移动结果
----@param opts table? 选项表（phase/phase_default/on_landing等）
----@return table 游戏上下文表
+
 function Effect.build_game_ctx(game, move_result, opts)
   opts = opts or {}
   local phase = opts.phase

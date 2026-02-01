@@ -4,11 +4,11 @@ require "Manager.__init"
 local AutoRunner = require("Manager.TurnManager.GUI.AutoRunner")
 local Game = require("Manager.GameManager.Game")
 local GameplayLoop = require("Manager.TurnManager.GameplayLoop")
-local IntentDispatcher = require("Library.Monopoly.IntentDispatcher")
 local MainView = require("Manager.TurnManager.GUI.MainView")
 local UIEventRouter = require("Manager.TurnManager.GUI.UIEventRouter")
 local map_cfg = require("Config.Map")
 local logger = require("Library.Monopoly.Logger")
+local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 
 logger.configure_game_time()
 
@@ -76,6 +76,36 @@ local function build_state()
     _log_once = {},
   }
 
+  local function normalize_payload(data)
+    if type(data) ~= "table" then
+      return data
+    end
+    if data.text ~= nil or data.popup ~= nil then
+      return data
+    end
+    if data["1"] ~= nil then
+      return data["1"]
+    end
+    return data
+  end
+
+  local function register_intent_listener(kind, fn)
+    if not kind or not fn then
+      return
+    end
+    if not RegisterCustomEvent then
+      return
+    end
+    local intent = MONOPOLY_EVENT and MONOPOLY_EVENT.intent
+    local event_name = (intent and intent[kind]) or kind
+    if not event_name then
+      return
+    end
+    RegisterCustomEvent(event_name, function(_, _, data)
+      fn(normalize_payload(data))
+    end)
+  end
+
   state.push_popup = function(_, payload)
     return MainView.push_popup(state, payload)
   end
@@ -86,7 +116,7 @@ local function build_state()
     MainView.on_tile_owner_changed(state, tile_id, owner_id)
   end
 
-  IntentDispatcher.on("need_choice", function(payload)
+  register_intent_listener("need_choice", function(payload)
     if payload and payload.game == state.game then
       state.pending_choice = payload.choice
       state.pending_choice_elapsed = 0

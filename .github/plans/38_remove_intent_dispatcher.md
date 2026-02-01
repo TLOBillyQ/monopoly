@@ -16,15 +16,16 @@
 
 
 - [x] (2026-01-31 15:20Z) 盘点 IntentDispatcher 的依赖点与行为范围
-- [ ] (2026-01-31 15:20Z) 在各调用点内联 need_choice/push_popup 行为并移除 require
-- [ ] (2026-01-31 15:20Z) 删除 IntentDispatcher 模块并自检
-- [ ] (2026-01-31 15:20Z) 验证行为不变并记录证据
+- [x] (2026-02-01 12:39Z) 在各调用点内联 need_choice/push_popup 行为并移除 require
+- [x] (2026-02-01 12:39Z) 删除 IntentDispatcher 模块并自检
+- [ ] (2026-02-01 12:39Z) 验证行为不变并记录证据（tests/regression.lua 当前失败）
 
 
 ## 意外与发现
 
 
-- 暂无。
+- 观察：运行 `lua tests/regression.lua` 失败，报错指向 `Globals/ServiceKeys.lua` 的语法错误。
+  证据：`Globals\ServiceKeys.lua:2: unexpected symbol near '<'`。
 
 
 ## 决策日志
@@ -38,7 +39,8 @@
 ## 结果与复盘
 
 
-未开始。
+已完成：移除 IntentDispatcher 模块并将 need_choice/push_popup 行为下放到各调用点；init.lua 直接使用自定义事件监听；仓库内不再引用 IntentDispatcher。
+待补充：回归脚本未通过，需先修复 `Globals/ServiceKeys.lua` 的语法错误后再完成验证与记录。
 
 
 ## 背景与导读
@@ -129,3 +131,4 @@ IntentDispatcher 当前负责两件事：一是处理 need_choice（递增 turn.
 
 
 更新记录：首次创建该可执行计划，用于删除 IntentDispatcher 并下放行为，确保实施过程可追溯。
+更新记录：完成调用点内联与模块删除，并记录回归脚本报错，原因是验证步骤被 `Globals/ServiceKeys.lua` 语法错误阻断。

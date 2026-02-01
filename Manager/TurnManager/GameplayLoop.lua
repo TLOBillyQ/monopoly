@@ -41,7 +41,7 @@ local function log_status(view)
   )
 end
 
-local function get_timestamp_seconds()
+local function get_timestamp()
   if not (GameAPI and GameAPI.get_timestamp) then
     return nil
   end
@@ -49,10 +49,17 @@ local function get_timestamp_seconds()
   if type(ts) ~= "number" then
     return nil
   end
-  if ts > 10000000000 then
-    return ts / 1000
-  end
   return ts
+end
+
+local function get_timestamp_diff_seconds(timestamp_1, timestamp_2)
+  if not (GameAPI and GameAPI.get_timestamp_diff) then
+    return nil
+  end
+  if type(timestamp_1) ~= "number" or type(timestamp_2) ~= "number" then
+    return nil
+  end
+  return GameAPI.get_timestamp_diff(timestamp_1, timestamp_2)
 end
 
 local function build_item_index(state)
@@ -381,14 +388,16 @@ function GameplayLoop.dispatch_action(state, action)
       if store and store.get then
         phase = store:get({ "turn", "phase" })
       end
-      local now = get_timestamp_seconds()
+      local now = get_timestamp()
       if state.next_turn_locked then
         local allow = false
         if state.next_turn_lock_phase and phase and phase ~= state.next_turn_lock_phase then
           allow = true
-        elseif now and state.next_turn_last_click
-            and (now - state.next_turn_last_click) >= NEXT_TURN_COOLDOWN then
-          allow = true
+        elseif now and state.next_turn_last_click then
+          local diff = get_timestamp_diff_seconds(now, state.next_turn_last_click)
+          if diff and diff >= NEXT_TURN_COOLDOWN then
+            allow = true
+          end
         end
         if not allow then
           return

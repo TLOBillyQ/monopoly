@@ -6,12 +6,7 @@ local Tile = require("Components.Tile")
 local SERVICE_KEY = require("Globals.ServiceKeys")
 require "Library.ClassUtils"
 
----@class TurnManager
----@field game Game
----@field phases table
----@field flow Flow?
----@field pending_action table?
----回合循环管理器，控制游戏状态机和流程
+
 local TurnManager = Class("TurnManager")
 TurnManager.__class_new = TurnManager.new
 
@@ -84,11 +79,7 @@ local function get_choice(game)
   return game.store:get({ "turn", "pending_choice" })
 end
 
----判断选择行动（自动/玩家/超时）
----@param game Game 游戏实例
----@param choice table 待选项表
----@param pending_action table? 玩家待定行动
----@return table? 决议行动
+
 local function decide_choice_action(game, choice, pending_action)
   if pending_action then
     return pending_action
@@ -112,20 +103,13 @@ local function decide_choice_action(game, choice, pending_action)
   return nil
 end
 
----处理选择项的决议
----@param game Game 游戏实例
----@param choice table 待选项表
----@param action table? 行动对象
----@return table 决议结果
+
 local function resolve_choice(game, choice, action)
   local service = game:get_service(SERVICE_KEY.choice)
   return service.resolve(game, choice, action) or {}
 end
 
 
----创建新回合管理器
----@param game Game 游戏实例
----@param phases table 回合阶段函数表
 function TurnManager:init(game, phases)
   self.game = game
   self.phases = phases
@@ -133,18 +117,12 @@ function TurnManager:init(game, phases)
   self.pending_action = nil
 end
 
----创建新回合管理器
----@param game Game 游戏实例
----@param phases table 回合阶段函数表
----@return TurnManager 新TurnManager对象
+
 function TurnManager.new(game, phases)
   return TurnManager.__class_new(TurnManager, game, phases)
 end
 
----分发玩家行动到流程
----@param self TurnManager
----@param action table? 行动对象
----@return table? 决议结果
+
 function TurnManager:dispatch(action)
   self.pending_action = action
 
@@ -163,9 +141,7 @@ function TurnManager:dispatch(action)
   end
 end
 
----构建回合流程的状态机
----@param self TurnManager
----@return Flow 新的Flow对象
+
 function TurnManager:_build_flow()
   assert(self.phases, "TurnManager requires phases")
   local states = {}
@@ -254,8 +230,7 @@ function TurnManager:_build_flow()
   return Flow.new({ start = "start", states = states })
 end
 
----推进到下一个玩家
----@param self TurnManager
+
 function TurnManager:next_player()
   local count = #self.game.players
   local current = self.game.store:get({ "turn", "current_player_index" })
@@ -263,9 +238,7 @@ function TurnManager:next_player()
   self.game.store:set({ "turn", "current_player_index" }, next_index)
 end
 
----持续运行流程直到遇到等待点
----@param self TurnManager
----@return string? 等待状态名，或nil表示完成
+
 function TurnManager:run_until_wait()
   if not self.flow or not self.flow.current then
     self.flow = self:_build_flow()
@@ -299,9 +272,7 @@ function TurnManager:run_until_wait()
   return nil
 end
 
----运行一个完整回合
----@param self TurnManager
----@return string? 等待状态名
+
 function TurnManager:run_turn()
   print("[debug] turn_manager: run_turn")
   return self:run_until_wait()

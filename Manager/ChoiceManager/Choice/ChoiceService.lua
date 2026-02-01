@@ -26,9 +26,7 @@ local function finish_choice(game, stay)
   return { stay = stay }
 end
 
--- 选择处理约定：
--- 1) 下层若返回 { waiting = true, intent = ... }，由上层负责派发 intent 并保持等待。
--- 2) 处理器已派发 intent 时，只返回 { stay = true } 即可。
+
 local function contains(list, value)
   if type(list) ~= "table" then
     return false

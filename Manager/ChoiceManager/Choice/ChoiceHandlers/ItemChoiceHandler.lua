@@ -3,16 +3,71 @@ local Demolish = require("Manager.ItemManager.Item.ItemDemolish")
 local Steal = require("Manager.ItemManager.Item.ItemSteal")
 local Roadblock = require("Manager.ItemManager.Item.ItemRoadblock")
 local logger = require("Library.Monopoly.Logger")
-local IntentDispatcher = require("Library.Monopoly.IntentDispatcher")
 local RemoteDice = require("Manager.ItemManager.Item.ItemRemoteDice")
 local ItemPhase = require("Manager.ItemManager.Item.ItemPhase")
 local gameplay_constants = require("Config.GameplayConstants")
+local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 
 local ItemChoiceHandler = {}
 local ITEM_IDS = gameplay_constants.item_ids
 
 local function to_number(value)
   return tonumber(value)
+end
+
+local function resolve_event_name(kind)
+  if not kind then
+    return nil
+  end
+  local intent = MONOPOLY_EVENT and MONOPOLY_EVENT.intent
+  if intent and intent[kind] then
+    return intent[kind]
+  end
+  return kind
+end
+
+local function dispatch_intent(game, payload)
+  if not payload then
+    return
+  end
+  local intent = payload.intent or payload
+  if intent.kind == "need_choice" and intent.choice_spec then
+    assert(game and game.store, "Choice.open requires game.store")
+    local spec = intent.choice_spec
+    local seq = game.store:get({ "turn", "choice_seq" }) or 0
+    seq = seq + 1
+    game.store:set({ "turn", "choice_seq" }, seq)
+    local entry = {
+      id = seq,
+      kind = spec.kind,
+      title = spec.title or "请选择",
+      body_lines = spec.body_lines or {},
+      options = spec.options or {},
+      allow_cancel = spec.allow_cancel ~= false,
+      cancel_label = spec.cancel_label or "取消",
+      meta = spec.meta,
+    }
+    game.store:set({ "turn", "pending_choice" }, entry)
+    if TriggerCustomEvent then
+      local event_name = resolve_event_name("need_choice")
+      if event_name then
+        TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
+      end
+    end
+    return
+  end
+  if intent.kind == "push_popup" and intent.payload then
+    local ui_port = game and game.ui_port
+    if ui_port and ui_port.push_popup then
+      ui_port:push_popup(intent.payload)
+    end
+    if TriggerCustomEvent then
+      local event_name = resolve_event_name("push_popup")
+      if event_name then
+        TriggerCustomEvent(event_name, { game = game, payload = intent.payload })
+      end
+    end
+  end
 end
 
 function ItemChoiceHandler.build(helpers)
@@ -35,7 +90,7 @@ function ItemChoiceHandler.build(helpers)
       table.insert(lines, i .. ". " .. label)
       table.insert(options, { id = i, label = label })
     end
-    IntentDispatcher.dispatch(game, {
+    dispatch_intent(game, {
       kind = "need_choice",
       choice_spec = {
         kind = "steal_item",
@@ -57,7 +112,7 @@ function ItemChoiceHandler.build(helpers)
       table.insert(lines, i .. ". " .. label)
       table.insert(options, { id = i, label = label })
     end
-    IntentDispatcher.dispatch(game, {
+    dispatch_intent(game, {
       kind = "need_choice",
       choice_spec = {
         kind = "discard_item",
@@ -77,7 +132,7 @@ function ItemChoiceHandler.build(helpers)
       finish_item_phase(game, phase)
       return finish_choice(game, false)
     end
-    IntentDispatcher.dispatch(game, { kind = "need_choice", choice_spec = spec })
+    dispatch_intent(game, { kind = "need_choice", choice_spec = spec })
     return { stay = true }
   end
 
@@ -97,7 +152,7 @@ function ItemChoiceHandler.build(helpers)
         injure = meta.injure,
         title = meta.title
       })
-      IntentDispatcher.dispatch(game, res.intent)
+      dispatch_intent(game, res.intent)
     end
     return finish_and_clear(game)
   end
@@ -119,7 +174,7 @@ function ItemChoiceHandler.build(helpers)
     end
     local res = Roadblock.apply(game, player, idx)
     if res then
-      IntentDispatcher.dispatch(game, res)
+      dispatch_intent(game, res)
     end
     return finish_and_clear(game)
   end
@@ -136,7 +191,7 @@ function ItemChoiceHandler.build(helpers)
       local res = Steal.steal_item_at_index(game, stealer, target, idx)
       logger.event("Steal choice result (multi)", res)
       if res and res.intent then
-        IntentDispatcher.dispatch(game, res.intent)
+        dispatch_intent(game, res.intent)
       end
     end
     return finish_and_clear(game)
@@ -158,7 +213,7 @@ function ItemChoiceHandler.build(helpers)
         if Inventory.consume(stealer, ITEM_IDS.steal) then
           local res = Steal.steal_item_at_index(game, stealer, target, 1)
           if res and res.intent then
-            IntentDispatcher.dispatch(game, res.intent)
+            dispatch_intent(game, res.intent)
           end
         end
         return finish_choice(game, false)
@@ -166,7 +221,7 @@ function ItemChoiceHandler.build(helpers)
       if Inventory.count(target) <= 1 then
         local res = Steal.steal_item_at_index(game, stealer, target, 1)
         if res and res.intent then
-          IntentDispatcher.dispatch(game, res.intent)
+          dispatch_intent(game, res.intent)
         end
         return finish_choice(game, false)
       end
@@ -179,7 +234,7 @@ function ItemChoiceHandler.build(helpers)
     if Inventory.find_index(stealer, ITEM_IDS.steal) and queue[next_index] then
       local spec = Steal.build_prompt_spec(game, stealer, queue, next_index)
       if spec then
-        IntentDispatcher.dispatch(game, { kind = "need_choice", choice_spec = spec })
+        dispatch_intent(game, { kind = "need_choice", choice_spec = spec })
         return { stay = true }
       end
     end
@@ -243,7 +298,7 @@ function ItemChoiceHandler.build(helpers)
     local res = use_item(game, player, item_id)
     if type(res) == "table" and res.waiting then
       if res.intent then
-        IntentDispatcher.dispatch(game, res.intent)
+        dispatch_intent(game, res.intent)
       end
       return { stay = true }
     end
