@@ -201,18 +201,6 @@ function CompositionRoot.assemble(opts, game_or_class)
     end
   end
 
-  ChoiceService.setup({
-    inventory = require("Manager.ItemManager.Item.ItemInventory"),
-    executor = require("Manager.ItemManager.Item.ItemExecutor"),
-    strategy = require("Manager.ItemManager.Item.ItemStrategy"),
-    item_phase = require("Manager.ItemManager.Item.ItemPhase"),
-    effect = require("Manager.EffectManager.Effect.Effect"),
-    landing_effects = require("Config.LandingEffects"),
-    land_choice_handler = require("Manager.ChoiceManager.Choice.ChoiceHandlers.LandChoiceHandler"),
-    market_choice_handler = require("Manager.ChoiceManager.Choice.ChoiceHandlers.MarketChoiceHandler"),
-    item_choice_handler = require("Manager.ChoiceManager.Choice.ChoiceHandlers.ItemChoiceHandler"),
-    optional_effect_handler = require("Manager.ChoiceManager.Choice.ChoiceHandlers.OptionalEffectHandler"),
-  })
   ItemRegistry.register_defaults()
   ChanceRegistry.register_defaults()
   local phases = {

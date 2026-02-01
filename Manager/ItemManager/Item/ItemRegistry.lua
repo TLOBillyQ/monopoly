@@ -5,6 +5,7 @@ local Roadblock = require("Manager.ItemManager.Item.ItemRoadblock")
 local RemoteDice = require("Manager.ItemManager.Item.ItemRemoteDice")
 local Agent = require("Manager.GameManager.Agent")
 local gameplay_constants = require("Config.GameplayConstants")
+local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 
 local ItemRegistry = {}
 local handlers = {}
@@ -13,23 +14,44 @@ local ITEM_IDS = gameplay_constants.item_ids
 
 ItemRegistry.handlers = handlers
 
-local function run_item_choice_flow(game, player, item_id, context, deps, opts)
-  local candidates = opts.candidates(game, player, item_id, context, deps)
+function ItemRegistry.target_candidates(game, player, item_id)
+  local spec = ItemEffects.get_target_spec(item_id)
+  if not spec then
+    return {}
+  end
+
+  if spec.require_user and not spec.require_user(player) then
+    return {}
+  end
+
+  local candidates = {}
+  for _, p in ipairs(game.players) do
+    if p.id ~= player.id and not p.eliminated then
+      if not spec.filter_target or spec.filter_target(game, player, p) then
+        table.insert(candidates, p)
+      end
+    end
+  end
+  return candidates
+end
+
+local function run_item_choice_flow(game, player, item_id, context, opts)
+  local candidates = opts.candidates(game, player, item_id, context)
   if not candidates or #candidates == 0 then
     if opts.on_empty then
-      opts.on_empty(game, player, item_id, context, deps)
+      opts.on_empty(game, player, item_id, context)
     end
     return false
   end
 
   if context and context.by_ai then
     if opts.ai_select then
-      return opts.ai_select(game, player, item_id, candidates, context, deps)
+      return opts.ai_select(game, player, item_id, candidates, context)
     end
     return false
   end
 
-  local choice_spec = opts.choice_spec and opts.choice_spec(game, player, item_id, candidates, context, deps)
+  local choice_spec = opts.choice_spec and opts.choice_spec(game, player, item_id, candidates, context)
   if not choice_spec then
     return false
   end
@@ -42,26 +64,26 @@ local function run_item_choice_flow(game, player, item_id, context, deps, opts)
   }
 end
 
-local function handle_target_player_item(game, player, item_id, context, deps)
-  return run_item_choice_flow(game, player, item_id, context, deps, {
-    candidates = function(inner_game, inner_player, inner_item_id, _, inner_deps)
-      return inner_deps.strategy.target_candidates(inner_game, inner_player, inner_item_id)
+local function handle_target_player_item(game, player, item_id, context)
+  return run_item_choice_flow(game, player, item_id, context, {
+    candidates = function(inner_game, inner_player, inner_item_id)
+      return ItemRegistry.target_candidates(inner_game, inner_player, inner_item_id)
     end,
     on_empty = function()
       logger.warn("没有可选择的目标玩家")
     end,
-    ai_select = function(inner_game, inner_player, inner_item_id, candidates, _, inner_deps)
+    ai_select = function(inner_game, inner_player, inner_item_id, candidates)
       local target = Agent.pick_target_player(inner_game, inner_player, inner_item_id, candidates)
       if not target then
         return false
       end
       local ok = ItemEffects.apply_target(inner_game, inner_player, inner_item_id, target)
       if ok then
-        inner_deps.inventory.consume(inner_player, inner_item_id)
+        Inventory.consume(inner_player, inner_item_id)
       end
       return ok
     end,
-    choice_spec = function(_, inner_player, inner_item_id, candidates, _, inner_deps)
+    choice_spec = function(_, inner_player, inner_item_id, candidates)
       local options = {}
       local body_lines = {}
       for _, t in ipairs(candidates) do
@@ -74,7 +96,7 @@ local function handle_target_player_item(game, player, item_id, context, deps)
       end
       return {
         kind = "item_target_player",
-        title = inner_deps.inventory.item_name(inner_item_id) .. "：选择目标玩家",
+        title = Inventory.item_name(inner_item_id) .. "：选择目标玩家",
         body_lines = body_lines,
         options = options,
         allow_cancel = true,
@@ -85,18 +107,18 @@ local function handle_target_player_item(game, player, item_id, context, deps)
   })
 end
 
-local function handle_remote_dice(game, player, item_id, context, deps)
+local function handle_remote_dice(game, player, item_id, context)
   local dice_count = player:dice_count()
-  return run_item_choice_flow(game, player, item_id, context, deps, {
+  return run_item_choice_flow(game, player, item_id, context, {
     candidates = function()
       return { 1, 2, 3, 4, 5, 6 }
     end,
-    ai_select = function(inner_game, inner_player, inner_item_id, _, _, inner_deps)
+    ai_select = function(inner_game, inner_player, inner_item_id)
       local value, target_tile = Agent.pick_remote_dice_value(inner_game, inner_player, dice_count)
       if not value then
         return false
       end
-      if not inner_deps.inventory.consume(inner_player, inner_item_id) then
+      if not Inventory.consume(inner_player, inner_item_id) then
         return false
       end
       local ok = RemoteDice.apply(inner_game, inner_player, dice_count, value)
@@ -125,15 +147,15 @@ local function handle_remote_dice(game, player, item_id, context, deps)
   })
 end
 
-local function handle_roadblock(game, player, item_id, context, deps)
-  return run_item_choice_flow(game, player, item_id, context, deps, {
+local function handle_roadblock(game, player, item_id, context)
+  return run_item_choice_flow(game, player, item_id, context, {
     candidates = function(inner_game, inner_player)
       return Roadblock.candidates(inner_game, inner_player, 3)
     end,
     on_empty = function(_, inner_player)
       logger.warn(inner_player.name .. " 无可放置路障的位置")
     end,
-    ai_select = function(inner_game, inner_player, inner_item_id, candidates, _, inner_deps)
+    ai_select = function(inner_game, inner_player, inner_item_id, candidates)
       local best = Roadblock.pick_best(candidates)
       local idx = nil
       if best then
@@ -142,7 +164,7 @@ local function handle_roadblock(game, player, item_id, context, deps)
       if not idx then
         return false
       end
-      if not inner_deps.inventory.consume(inner_player, inner_item_id) then
+      if not Inventory.consume(inner_player, inner_item_id) then
         return false
       end
       return Roadblock.apply(inner_game, inner_player, idx)
@@ -172,10 +194,9 @@ local DEMOLISH_ITEMS = {
   [ITEM_IDS.missile] = { title = "导弹卡", injure = true },
 }
 
-local function handle_demolish(game, player, item_id, context, deps)
+local function handle_demolish(game, player, item_id, context)
   local cfg = DEMOLISH_ITEMS[item_id]
-  local inventory = deps.inventory
-  return Demolish.use(game, player, 3, inventory.consume, {
+  return Demolish.use(game, player, 3, Inventory.consume, {
     item_id = item_id,
     injure = cfg.injure,
     title = cfg.title,

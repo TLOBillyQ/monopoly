@@ -2,28 +2,26 @@ local logger = require("Library.Monopoly.Logger")
 local ItemEffects = require("Manager.ItemManager.Item.ItemPostEffects")
 local ItemRegistry = require("Manager.ItemManager.Item.ItemRegistry")
 local Agent = require("Manager.GameManager.Agent")
+local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 
 local Executor = {}
 
-function Executor.use_item(game, player, item_id, context, deps)
+function Executor.use_item(game, player, item_id, context)
   context = context or {}
-  deps = deps or {}
-  local inventory = assert(deps.inventory, "ItemExecutor.use_item requires inventory")
-  assert(deps.strategy, "ItemExecutor.use_item requires strategy")
   if context.by_ai == nil then
     context.by_ai = Agent.is_auto_player(player)
   end
-  local cfg = inventory.cfg(item_id)
+  local cfg = Inventory.cfg(item_id)
   if not cfg then
     return false
   end
 
   local handler = ItemRegistry.handlers[item_id]
   if handler then
-    return handler(game, player, item_id, context, deps)
+    return handler(game, player, item_id, context)
   end
 
-  local consumed = inventory.consume(player, item_id)
+  local consumed = Inventory.consume(player, item_id)
   if not consumed then
     return false
   end

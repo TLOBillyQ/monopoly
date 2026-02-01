@@ -8,19 +8,16 @@ function ChoiceRegistry.register(kind, handler)
   handlers[kind] = handler
 end
 
-function ChoiceRegistry.register_defaults(deps, helpers)
+function ChoiceRegistry.register_defaults(helpers)
   if defaults_registered then
     return
   end
   defaults_registered = true
-  if not deps then
-    return
-  end
   local groups = {
-    deps.optional_effect_handler.build(helpers),
-    deps.land_choice_handler.build(helpers),
-    deps.item_choice_handler.build(helpers),
-    deps.market_choice_handler.build(helpers),
+    require("Manager.ChoiceManager.Choice.ChoiceHandlers.OptionalEffectHandler").build(helpers),
+    require("Manager.ChoiceManager.Choice.ChoiceHandlers.LandChoiceHandler").build(helpers),
+    require("Manager.ChoiceManager.Choice.ChoiceHandlers.ItemChoiceHandler").build(helpers),
+    require("Manager.ChoiceManager.Choice.ChoiceHandlers.MarketChoiceHandler").build(helpers),
   }
   for _, group in ipairs(groups) do
     for key, handler in pairs(group) do

@@ -15,17 +15,18 @@
 ## 进度
 
 
-- [ ] (2026-02-01 13:55) 盘点 GameplayLoop 与 UIEventRouter 的 game 间接引用与调用链
-- [ ] (2026-02-01 13:55) 盘点 Manager 目录内 deps/setup 注入点并确定替换策略
-- [ ] (2026-02-01 13:55) 按策略改造 GameplayLoop 与 UIEventRouter 调用签名
-- [ ] (2026-02-01 13:55) 去除 ChoiceService/ItemExecutor/ItemRegistry/ItemStrategy 的 deps 注入
-- [ ] (2026-02-01 13:55) 自测并记录证据（tests/regression.lua）
+- [x] (2026-02-01 15:20+08:00) 盘点 GameplayLoop 与 UIEventRouter 的 game 间接引用与调用链
+- [x] (2026-02-01 15:20+08:00) 盘点 Manager 目录内 deps/setup 注入点并确定替换策略
+- [x] (2026-02-01 15:35+08:00) 按策略改造 GameplayLoop 与 UIEventRouter 调用签名
+- [x] (2026-02-01 15:45+08:00) 去除 ChoiceService/ItemExecutor/ItemRegistry/ItemStrategy 的 deps 注入
+- [x] (2026-02-01 15:55+08:00) 自测并记录证据（tests/regression.lua）
 
 
 ## 意外与发现
 
 
-- 暂无。
+- 观察：首次运行回归脚本时触发模块循环依赖（ItemRegistry -> ItemStrategy -> ItemExecutor -> ItemRegistry）。
+  证据：`ItemRegistry.lua:9: loop or previous error loading module 'Manager.ItemManager.Item.ItemStrategy'`
 
 
 ## 决策日志
@@ -37,12 +38,18 @@
 - 决策：去除 ChoiceService.setup 和各类 deps 表注入，改为模块内显式 require 或显式参数传入。
   理由：避免隐藏依赖来源，减少初始化顺序耦合。
   日期/作者：2026-02-01 Codex
+- 决策：UIEventRouter 使用 get_game 闭包并配合 on_game_changed 更新引用。
+  理由：避免 state.game 的隐式依赖，同时让“重开”时 UI 回调能切换到新游戏实例。
+  日期/作者：2026-02-01 / Codex
+- 决策：将道具目标候选计算集中到 ItemRegistry，并让 ItemStrategy 复用该入口。
+  理由：去除 deps 注入后出现 require 循环，通过单一入口复用逻辑并打破依赖环。
+  日期/作者：2026-02-01 / Codex
 
 
 ## 结果与复盘
 
 
-未开始。完成后补充变更范围、验证结果与经验复盘，并对照“目的 / 全局视角”确认行为一致。
+GameplayLoop 与 UIEventRouter 已改为显式传入 game，状态层不再持有隐式依赖；ChoiceService/ItemExecutor/ItemRegistry/ItemStrategy 的 deps/setup 注入已移除并通过直接引用维持行为一致。回归脚本已通过，验证回合推进、动画等待与 choice/popup 逻辑未回归。后续如发现 UI 触发链条有遗漏，应优先检查 UIEventRouter 的 get_game 绑定与 GameplayLoop.dispatch_action 的调用点是否传入了正确实例。
 
 
 ## 背景与导读
@@ -130,6 +137,8 @@
 
 可在此处补充关键 diff 或测试输出证据。
 
+    All regression checks passed (30)
+
 
 ## 接口与依赖
 
@@ -138,6 +147,8 @@
 
     GameplayLoop.tick(game, state, dt)
     GameplayLoop.dispatch_action(game, state, action)
-    UIEventRouter.bind(state, game)
+    UIEventRouter.bind(state, get_game, opts)
 
 ChoiceService、ItemExecutor、ItemRegistry、ItemStrategy 依赖应通过显式 require 或显式参数暴露，不再通过 setup/deps 注入。
+
+变更记录：完成进度与结果复盘，记录循环依赖发现及其修复决策，并补充回归脚本通过的证据，方便后续复查与复跑。

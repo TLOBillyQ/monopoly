@@ -69,22 +69,22 @@ local function build_item_index(state)
   end
 end
 
-local function build_view(state)
-  local store_state = state.game.store.state
-  local winner_name = state.game.winner_names
-  if not winner_name and state.game.winner then
-    winner_name = state.game.winner.name
+local function build_view(state, game)
+  local store_state = game.store.state
+  local winner_name = game.winner_names
+  if not winner_name and game.winner then
+    winner_name = game.winner.name
   end
   return Presenter.present(store_state, {
-    game = state.game,
-    last_turn = state.game.last_turn,
-    finished = state.game.finished,
+    game = game,
+    last_turn = game.last_turn,
+    finished = game.finished,
     winner_name = winner_name,
   })
 end
 
-local function refresh_view(state)
-  local view = build_view(state)
+local function refresh_view(state, game)
+  local view = build_view(state, game)
   MainView.refresh_panel(state, view)
   MainView.refresh_board(state, view, log_once, build_log_prefix)
 
@@ -120,14 +120,13 @@ local function refresh_view(state)
 end
 
 function GameplayLoop.set_game(state, game)
-  state.game = game
-  if state.game then
-    state.game.ui_port = state
-    EventHandlers.install(state.game, logger, state)
+  if game then
+    game.ui_port = state
+    EventHandlers.install(game, logger, state)
   end
   local pending = nil
-  if state.game and state.game.pending_choice then
-    pending = state.game:pending_choice()
+  if game and game.pending_choice then
+    pending = game:pending_choice()
   end
   state.pending_choice = pending
   if pending then
@@ -160,22 +159,22 @@ function GameplayLoop.clear_choice(state, opts)
   end
 end
 
-function GameplayLoop.step_auto_runner(state, dt, context)
-  if not (state.game and state.auto_runner) then
+function GameplayLoop.step_auto_runner(game, state, dt, context)
+  if not (game and state.auto_runner) then
     return nil
   end
   local ctx = context or {}
   if ctx.game_finished == nil then
-    ctx.game_finished = state.game and state.game.finished
+    ctx.game_finished = game and game.finished
   end
   local auto_action = state.auto_runner:next_action(dt, ctx)
   if auto_action then
-    GameplayLoop.dispatch_action(state, auto_action)
+    GameplayLoop.dispatch_action(game, state, auto_action)
   end
   return auto_action
 end
 
-function GameplayLoop.step_choice_timeout(state, dt, opts)
+function GameplayLoop.step_choice_timeout(game, state, dt, opts)
   local timeout = constants.action_timeout_seconds or 0
   if timeout <= 0 then
     state.pending_choice_elapsed = 0
@@ -183,8 +182,8 @@ function GameplayLoop.step_choice_timeout(state, dt, opts)
     return
   end
 
-  if state.game and state.game.store then
-    local pending = state.game.store:get({ "turn", "pending_choice" })
+  if game and game.store then
+    local pending = game.store:get({ "turn", "pending_choice" })
     if pending and (not state.pending_choice or state.pending_choice.id ~= pending.id) then
       state.pending_choice = pending
       state.pending_choice_elapsed = 0
@@ -223,7 +222,7 @@ function GameplayLoop.step_choice_timeout(state, dt, opts)
     state.pending_choice_elapsed = 0
     local action
     if opts and opts.build_action then
-      action = opts.build_action(state, choice)
+      action = opts.build_action(game, state, choice)
     else
       local first = choice.options and choice.options[1]
       if first then
@@ -233,7 +232,7 @@ function GameplayLoop.step_choice_timeout(state, dt, opts)
       end
     end
     if action then
-      GameplayLoop.dispatch_action(state, action)
+      GameplayLoop.dispatch_action(game, state, action)
     end
   end
 end
@@ -265,13 +264,13 @@ function GameplayLoop.step_modal_timeout(state, dt, opts)
   end
 end
 
-function GameplayLoop.step_move_anim(state, opts)
-  if not (state.wait_move_anim and state.game and state.game.store) then
+function GameplayLoop.step_move_anim(game, state, opts)
+  if not (state.wait_move_anim and game and game.store) then
     return
   end
 
-  local anim = state.game.store:get({ "turn", "move_anim" })
-  local phase = state.game.store:get({ "turn", "phase" })
+  local anim = game.store:get({ "turn", "move_anim" })
+  local phase = game.store:get({ "turn", "phase" })
   if not anim or not anim.seq then
     state.move_anim_seq = nil
     return
@@ -291,25 +290,25 @@ function GameplayLoop.step_move_anim(state, opts)
     local ok, delay = pcall(opts.on_move_anim, state, anim)
     if ok and delay and delay > 0 then
       SetTimeOut(delay, function()
-        if state.game and state.game.dispatch_action then
-          state.game:dispatch_action({ type = "move_anim_done", seq = anim.seq })
+        if game and game.dispatch_action then
+          game:dispatch_action({ type = "move_anim_done", seq = anim.seq })
         end
       end)
       return
     end
   end
-  if state.game and state.game.dispatch_action then
-    state.game:dispatch_action({ type = "move_anim_done", seq = anim.seq })
+  if game and game.dispatch_action then
+    game:dispatch_action({ type = "move_anim_done", seq = anim.seq })
   end
 end
 
-function GameplayLoop.step_action_anim(state, opts)
-  if not (state.wait_action_anim and state.game and state.game.store) then
+function GameplayLoop.step_action_anim(game, state, opts)
+  if not (state.wait_action_anim and game and game.store) then
     return
   end
 
-  local anim = state.game.store:get({ "turn", "action_anim" })
-  local phase = state.game.store:get({ "turn", "phase" })
+  local anim = game.store:get({ "turn", "action_anim" })
+  local phase = game.store:get({ "turn", "phase" })
   if not anim or not anim.seq then
     state.action_anim_seq = nil
     return
@@ -329,27 +328,27 @@ function GameplayLoop.step_action_anim(state, opts)
     local ok, delay = pcall(opts.on_action_anim, state, anim)
     if ok and delay and delay > 0 then
       SetTimeOut(delay, function()
-        if state.game and state.game.dispatch_action then
-          state.game:dispatch_action({ type = "action_anim_done", seq = anim.seq })
+        if game and game.dispatch_action then
+          game:dispatch_action({ type = "action_anim_done", seq = anim.seq })
         end
       end)
       return
     end
   end
-  if state.game and state.game.dispatch_action then
-    state.game:dispatch_action({ type = "action_anim_done", seq = anim.seq })
+  if game and game.dispatch_action then
+    game:dispatch_action({ type = "action_anim_done", seq = anim.seq })
   end
 end
 
-function GameplayLoop.step_turn(state)
-  if not state.game or state.game.finished then
+function GameplayLoop.step_turn(game, state)
+  if not game or game.finished then
     return
   end
   print("[debug] step_turn: advance_turn")
-  state.game:advance_turn()
+  game:advance_turn()
 end
 
-function GameplayLoop.dispatch_action(state, action)
+function GameplayLoop.dispatch_action(game, state, action, opts)
   if not action then
     return
   end
@@ -378,13 +377,13 @@ function GameplayLoop.dispatch_action(state, action)
       if not option_ok then
         return
       end
-      GameplayLoop.dispatch_action(state, { type = "choice_select", choice_id = choice.id, option_id = item_id })
+      GameplayLoop.dispatch_action(game, state, { type = "choice_select", choice_id = choice.id, option_id = item_id })
       return
     end
     if action.id == "next" then
       print("[debug] dispatch ui_button next")
       local phase = nil
-      local store = state.game and state.game.store
+      local store = game and game.store
       if store and store.get then
         phase = store:get({ "turn", "phase" })
       end
@@ -406,14 +405,18 @@ function GameplayLoop.dispatch_action(state, action)
       state.next_turn_locked = true
       state.next_turn_last_click = now
       state.next_turn_lock_phase = phase
-      GameplayLoop.step_turn(state)
+      GameplayLoop.step_turn(game, state)
     elseif action.id == "auto" then
       state.ui.auto_play = not state.ui.auto_play
       state.auto_runner:set_enabled(state.ui.auto_play)
       state.auto_runner:reset_timer()
     elseif action.id == "restart" then
       local was_auto = state.ui.auto_play
-      GameplayLoop.set_game(state, GameplayLoop.new_game(state))
+      local new_game = GameplayLoop.new_game(state)
+      GameplayLoop.set_game(state, new_game)
+      if opts and opts.on_game_changed then
+        opts.on_game_changed(new_game)
+      end
       state.auto_runner:set_enabled(was_auto)
     end
   elseif action.type == "choice_select" or action.type == "choice_cancel" then
@@ -422,26 +425,26 @@ function GameplayLoop.dispatch_action(state, action)
         MainView.close_choice_modal(ctx)
       end,
     })
-    if state.game then
-      state.game:dispatch_action(action)
+    if game then
+      game:dispatch_action(action)
     end
   end
 end
 
-function GameplayLoop.tick(state, dt)
-  if not state.game then
+function GameplayLoop.tick(game, state, dt)
+  if not game then
     return
   end
 
-  GameplayLoop.step_auto_runner(state, dt, {
+  GameplayLoop.step_auto_runner(game, state, dt, {
     modal_active = false,
     modal_buttons = nil,
-    game_finished = state.game and state.game.finished,
+    game_finished = game and game.finished,
   })
 
-  GameplayLoop.step_choice_timeout(state, dt, {
-    build_action = function(ctx, choice)
-      local auto_choice = Agent.auto_action_for_choice(ctx.game, choice)
+  GameplayLoop.step_choice_timeout(game, state, dt, {
+    build_action = function(game_ctx, ctx, choice)
+      local auto_choice = Agent.auto_action_for_choice(game_ctx, choice)
       if auto_choice then
         return auto_choice
       end
@@ -472,7 +475,7 @@ function GameplayLoop.tick(state, dt)
     end,
   })
 
-  GameplayLoop.step_move_anim(state, {
+  GameplayLoop.step_move_anim(game, state, {
     on_move_anim = function(_, anim)
       if not anim then
         return nil
@@ -496,14 +499,14 @@ function GameplayLoop.tick(state, dt)
     end,
   })
 
-  GameplayLoop.step_action_anim(state, {
+  GameplayLoop.step_action_anim(game, state, {
     on_action_anim = function(ctx, anim)
       local ActionAnim = require("Manager.BoardManager.GUI.ActionAnim")
       return ActionAnim.play(ctx, anim)
     end,
   })
 
-  local store = state.game and state.game.store
+  local store = game and game.store
   if store and store.get then
     local phase = store:get({ "turn", "phase" })
     if state.board_last_phase == "wait_move_anim" and phase ~= "wait_move_anim" then
@@ -520,9 +523,9 @@ function GameplayLoop.tick(state, dt)
     MainView.open_choice_modal(state, state.pending_choice)
   end
 
-  refresh_view(state)
+  refresh_view(state, game)
 
-  log_status(build_view(state))
+  log_status(build_view(state, game))
 end
 
 return GameplayLoop

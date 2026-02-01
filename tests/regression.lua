@@ -5,7 +5,6 @@ local TurnManager = require("Manager.TurnManager.Turn.TurnManager")
 local turn_move = require("Manager.TurnManager.Turn.TurnMove")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local Executor = require("Manager.ItemManager.Item.ItemExecutor")
-local Strategy = require("Manager.ItemManager.Item.ItemStrategy")
 local Pricing = require("Manager.LandManager.Land.LandPricing")
 local LandActions = require("Manager.LandManager.Land.LandActions")
 local Steal = require("Manager.ItemManager.Item.ItemSteal")
@@ -222,7 +221,6 @@ local function test_move_anim_callback_and_delay()
       table.insert(dispatched, action)
     end,
   }
-  layer.game = game
   local delay_called = nil
   local original_lua_api = LuaAPI
   local original_set_timeout = SetTimeOut
@@ -233,7 +231,7 @@ local function test_move_anim_callback_and_delay()
     end,
   }
   SetTimeOut = LuaAPI.call_delay_time
-  GameplayLoop.step_move_anim(layer, {
+  GameplayLoop.step_move_anim(game, layer, {
     on_move_anim = function(_, anim)
       assert_eq(anim.seq, 1, "anim seq forwarded")
       return 0.2
@@ -273,7 +271,7 @@ local function test_monster_card()
   g:set_tile_owner(tile, 2)
   g:set_tile_level(tile, 2)
   p.inventory:add({ id = 2008 })
-  local res = Executor.use_item(g, p, 2008, { services = g.services, by_ai = true }, { inventory = Inventory, strategy = Strategy })
+  local res = Executor.use_item(g, p, 2008, { services = g.services, by_ai = true })
   local ok = (type(res) == "table" and res.ok ~= nil) and res.ok or res
   assert_eq(ok, true, "monster use ok")
   assert_eq(tile_state(g, tile).level, 0, "building destroyed")
@@ -290,7 +288,7 @@ local function test_missile_card()
   g.board:place_roadblock(idx)
   g.board:place_mine(idx)
   p.inventory:add({ id = 2013 })
-  local res = Executor.use_item(g, p, 2013, { services = g.services }, { inventory = Inventory, strategy = Strategy })
+  local res = Executor.use_item(g, p, 2013, { services = g.services })
   if type(res) == "table" and res.intent then
     if res.intent.kind == "need_choice" then
       open_choice(g, res.intent.choice_spec)
@@ -610,7 +608,7 @@ local function test_item_equalize_cash()
   user:set_cash(1000)
   target:set_cash(9000)
   user.inventory:add({ id = 2011 })
-  local res = Executor.use_item(g, user, 2011, { by_ai = true }, { inventory = Inventory, strategy = Strategy })
+  local res = Executor.use_item(g, user, 2011, { by_ai = true })
   local ok = (type(res) == "table" and res.ok ~= nil) and res.ok or res
   assert_eq(ok, true, "equalize use ok")
   assert_eq(user.cash, 5000, "equalize user cash")

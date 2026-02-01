@@ -60,20 +60,31 @@ local function register_node_click(cache, name, callback, registered)
   end
 end
 
-function UIEventRouter.bind(state)
+function UIEventRouter.bind(state, get_game, opts)
+  local function resolve_game()
+    if type(get_game) == "function" then
+      return get_game()
+    end
+    return get_game
+  end
+
+  local function dispatch_action(action)
+    GameplayLoop.dispatch_action(resolve_game(), state, action, opts)
+  end
+
   local cache = {}
   local registered = {}
   register_node_click(cache, "btn_next", function()
     print("[debug] ui btn_next clicked")
-    GameplayLoop.dispatch_action(state, { type = "ui_button", id = "next" })
+    dispatch_action({ type = "ui_button", id = "next" })
   end, registered)
   register_node_click(cache, "btn_auto", function()
-    GameplayLoop.dispatch_action(state, { type = "ui_button", id = "auto" })
+    dispatch_action({ type = "ui_button", id = "auto" })
   end, registered)
   for idx = 1, 5 do
     local name = "item_slot_" .. tostring(idx)
     register_node_click(cache, name, function()
-      GameplayLoop.dispatch_action(state, { type = "ui_button", id = name })
+      dispatch_action({ type = "ui_button", id = name })
     end, registered)
   end
   register_node_click(cache, "popup_confirm", function()
@@ -83,7 +94,7 @@ function UIEventRouter.bind(state)
   register_node_click(cache, "choice_cancel", function()
     local choice = state.pending_choice
     if choice and choice.allow_cancel ~= false then
-      GameplayLoop.dispatch_action(state, { type = "choice_cancel", choice_id = choice.id })
+      dispatch_action({ type = "choice_cancel", choice_id = choice.id })
     end
   end, registered)
 
@@ -95,9 +106,9 @@ function UIEventRouter.bind(state)
       end
       local option_id = resolve_option_id(choice, { index = idx }, state)
       if option_id then
-        GameplayLoop.dispatch_action(state, { type = "choice_select", choice_id = choice.id, option_id = option_id })
+        dispatch_action({ type = "choice_select", choice_id = choice.id, option_id = option_id })
       elseif choice.allow_cancel ~= false then
-        GameplayLoop.dispatch_action(state, { type = "choice_cancel", choice_id = choice.id })
+        dispatch_action({ type = "choice_cancel", choice_id = choice.id })
       end
     end, registered)
   end
@@ -125,21 +136,21 @@ function UIEventRouter.bind(state)
     end
     local option_id = state.pending_choice_selected_option_id
     if option_id then
-      GameplayLoop.dispatch_action(state, { type = "choice_select", choice_id = choice.id, option_id = option_id })
+      dispatch_action({ type = "choice_select", choice_id = choice.id, option_id = option_id })
     end
   end, registered)
 
   register_node_click(cache, MarketUI.cancel_button, function()
     local choice = state.pending_choice
     if choice and choice.allow_cancel ~= false then
-      GameplayLoop.dispatch_action(state, { type = "choice_cancel", choice_id = choice.id })
+      dispatch_action({ type = "choice_cancel", choice_id = choice.id })
     end
   end, registered)
 
   register_node_click(cache, "market_panel_close", function()
     local choice = state.pending_choice
     if choice and choice.allow_cancel ~= false then
-      GameplayLoop.dispatch_action(state, { type = "choice_cancel", choice_id = choice.id })
+      dispatch_action({ type = "choice_cancel", choice_id = choice.id })
     end
   end, registered)
 

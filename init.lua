@@ -12,6 +12,8 @@ local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 
 logger.configure_game_time()
 
+local current_game = nil
+
 local function create_game()
   return Game:new({
     players = { "玩家1", "AI2", "AI3", "AI4" },
@@ -46,7 +48,6 @@ local function build_state()
   local ui = MainView.build_ui_state()
   local state = {
     ui = ui,
-    game = nil,
     pending_choice = nil,
     pending_choice_elapsed = 0,
     pending_choice_id = nil,
@@ -117,7 +118,7 @@ local function build_state()
   end
 
   register_intent_listener("need_choice", function(payload)
-    if payload and payload.game == state.game then
+    if payload and payload.game == current_game then
       state.pending_choice = payload.choice
       state.pending_choice_elapsed = 0
       state.pending_choice_id = payload.choice.id
@@ -158,8 +159,15 @@ local function install_game_init(state)
         GameAPI.get_role(4).get_ctrl_unit(),
       },
     }
-    GameplayLoop.set_game(state, GameplayLoop.new_game(state))
-    UIEventRouter.bind(state)
+    current_game = GameplayLoop.new_game(state)
+    GameplayLoop.set_game(state, current_game)
+    UIEventRouter.bind(state, function()
+      return current_game
+    end, {
+      on_game_changed = function(new_game)
+        current_game = new_game
+      end,
+    })
 
     local refs = G.refs
     local role = GameAPI.get_role(1)
@@ -217,7 +225,7 @@ local function start_tick_loop(state, interval)
   local tick_interval = interval or 1
   local tick_seconds = math.tofixed(tick_interval + 1) / 30.0
   SetFrameOut(tick_interval, function()
-    GameplayLoop.tick(state, tick_seconds)
+    GameplayLoop.tick(current_game, state, tick_seconds)
   end, -1)
 end
 

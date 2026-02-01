@@ -2,29 +2,16 @@ local Agent = require("Manager.GameManager.Agent")
 local ItemEffects = require("Manager.ItemManager.Item.ItemPostEffects")
 local gameplay_constants = require("Config.GameplayConstants")
 local logger = require("Library.Monopoly.Logger")
+local Inventory = require("Manager.ItemManager.Item.ItemInventory")
+local Executor = require("Manager.ItemManager.Item.ItemExecutor")
+local Demolish = require("Manager.ItemManager.Item.ItemDemolish")
+local ItemRegistry = require("Manager.ItemManager.Item.ItemRegistry")
 
 local Strategy = {}
 local ITEM_IDS = gameplay_constants.item_ids
 
 function Strategy.target_candidates(game, player, item_id)
-  local spec = ItemEffects.get_target_spec(item_id)
-  if not spec then
-    return {}
-  end
-
-  if spec.require_user and not spec.require_user(player) then
-    return {}
-  end
-
-  local candidates = {}
-  for _, p in ipairs(game.players) do
-    if p.id ~= player.id and not p.eliminated then
-      if not spec.filter_target or spec.filter_target(game, player, p) then
-        table.insert(candidates, p)
-      end
-    end
-  end
-  return candidates
+  return ItemRegistry.target_candidates(game, player, item_id)
 end
 
 function Strategy.has_obstacles_ahead(game, player, distance)
@@ -62,16 +49,13 @@ function Strategy.timing_allowed(phase, timing, allow_missing_phase)
   return allowed[timing] == true
 end
 
-function Strategy.auto_pre_action(game, player, deps, phase)
+function Strategy.auto_pre_action(game, player, phase)
   if not Agent.is_auto_player(player) then
     return nil
   end
 
-  local inventory = assert(deps.inventory, "inventory deps required")
-  local use_item = assert(deps.use_item, "use_item deps required")
-
   local function can_use(item_id)
-    local cfg = inventory.cfg(item_id)
+    local cfg = Inventory.cfg(item_id)
     local timing = cfg.timing
     return Strategy.timing_allowed(phase, timing, true)
   end
@@ -79,8 +63,8 @@ function Strategy.auto_pre_action(game, player, deps, phase)
   local function try_use(item_id, cond)
     if cond and not cond() then return nil end
     if not can_use(item_id) then return nil end
-    if not inventory.find_index(player, item_id) then return nil end
-    local res = use_item(game, player, item_id, { by_ai = true })
+    if not Inventory.find_index(player, item_id) then return nil end
+    local res = Executor.use_item(game, player, item_id, { by_ai = true, services = game:get_services() })
     if type(res) == "table" and (res.waiting or res.intent or res.kind or res.action_anim) then
       return res
     end
@@ -92,7 +76,7 @@ function Strategy.auto_pre_action(game, player, deps, phase)
   end
 
   local function has_demolish_target()
-    return deps.find_monster_target and deps.find_monster_target(game, player, 3) ~= nil
+    return Demolish.find_target(game, player, 3) ~= nil
   end
 
   local clear_result = try_use(ITEM_IDS.clear_obstacles, function()

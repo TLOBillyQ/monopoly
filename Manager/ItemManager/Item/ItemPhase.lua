@@ -3,8 +3,6 @@ local gameplay_constants = require("Config.GameplayConstants")
 local Agent = require("Manager.GameManager.Agent")
 local Strategy = require("Manager.ItemManager.Item.ItemStrategy")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
-local Demolish = require("Manager.ItemManager.Item.ItemDemolish")
-local Executor = require("Manager.ItemManager.Item.ItemExecutor")
 local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 
 local ItemPhase = {}
@@ -125,16 +123,7 @@ function ItemPhase.run(tm, phase, args)
   end
 
   if Agent.is_auto_player(player) then
-    local pre = Strategy.auto_pre_action(game, player, {
-      inventory = Inventory,
-      find_monster_target = Demolish.find_target,
-      find_missile_target = Demolish.find_target,
-      use_item = function(g, p, id, ctx)
-        ctx = ctx or { by_ai = true }
-        ctx.services = g:get_services()
-        return Executor.use_item(g, p, id, ctx, { inventory = Inventory, strategy = Strategy })
-      end,
-    }, phase)
+    local pre = Strategy.auto_pre_action(game, player, phase)
     if pre then
       dispatch_intent(game, pre)
     end
