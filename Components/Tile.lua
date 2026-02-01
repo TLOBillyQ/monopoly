@@ -13,7 +13,6 @@ require "Library.ClassUtils"
 ---@field build_col number?
 ---地块类，代表棋盘上的一个地块
 local Tile = Class("Tile")
-Tile.__class_new = Tile.new
 
 ---从配置创建新地块
 ---@param cfg table 地块配置（id/name/type/price等）
@@ -30,18 +29,11 @@ function Tile:init(cfg)
   self.build_col = cfg.build_col
 end
 
----创建新地块实例
----@param cfg table 地块配置（id/name/type/price等）
----@return Tile 新地块对象
-function Tile.new(cfg)
-  return Tile.__class_new(Tile, cfg)
-end
-
 ---从配置创建新地块
 ---@param cfg table 地块配置（id/name/type/price等）
 ---@return Tile 新地块对象
 function Tile.from_config(cfg)
-  return Tile.__class_new(Tile, cfg)
+  return Tile:new(cfg)
 end
 
 ---获取地块的游戏状态（所有者和等级）

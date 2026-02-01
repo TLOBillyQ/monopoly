@@ -18,7 +18,7 @@ function Executor.use_item(game, player, item_id, context, deps)
     return false
   end
 
-  local handler = ItemRegistry.get(item_id)
+  local handler = ItemRegistry.handlers[item_id]
   if handler then
     return handler(game, player, item_id, context, deps)
   end

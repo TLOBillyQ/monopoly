@@ -7,6 +7,8 @@ local ChanceRegistry = {}
 local handlers = {}
 local defaults_registered = false
 
+ChanceRegistry.handlers = handlers
+
 local tile_state = Tile.get_state
 
 local function emit_event(kind, payload)
@@ -373,10 +375,6 @@ end
 
 function ChanceRegistry.register(effect, handler)
   handlers[effect] = handler
-end
-
-function ChanceRegistry.get(effect)
-  return handlers[effect]
 end
 
 function ChanceRegistry.register_defaults()

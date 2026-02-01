@@ -67,7 +67,7 @@ local function create_board(opts)
 
   local tile_lookup = {}
   for _, cfg in ipairs(tiles) do
-    tile_lookup[cfg.id] = Tile.from_config(cfg)
+    tile_lookup[cfg.id] = Tile:new(cfg)
   end
 
   local path = {}
@@ -75,7 +75,7 @@ local function create_board(opts)
     table.insert(path, tile_lookup[id])
   end
 
-  return Board.new({
+  return Board:new({
     path = path,
     tile_lookup = tile_lookup,
     branches = map_cfg.branches or {},
@@ -96,7 +96,7 @@ local function create_players(opts)
     if opts.ai ~= nil then
       is_ai = opts.ai[i]
     end
-    local player = Player.new({
+    local player = Player:new({
       id = i,
       name = name,
       role_id = role.id,
@@ -104,7 +104,7 @@ local function create_players(opts)
       auto = opts.auto_all or false,
       start_index = 1,
       constants = constants,
-      inventory = Inventory.new({ constants = constants }),
+      inventory = Inventory:new({ constants = constants }),
     })
     table.insert(players, player)
   end
@@ -179,7 +179,7 @@ local function build_initial_state(board, players, rng)
 end
 
 
-function CompositionRoot.assemble(opts, GameClass)
+function CompositionRoot.assemble(opts, game_or_class)
   opts = opts or {}
 
   local board = create_board(opts)
@@ -187,7 +187,7 @@ function CompositionRoot.assemble(opts, GameClass)
   local players = create_players(opts)
 
   local initial_state = build_initial_state(board, players, rng)
-  local store = Store.new(initial_state)
+  local store = Store:new(initial_state)
 
   rng._store = store
 
@@ -230,7 +230,11 @@ function CompositionRoot.assemble(opts, GameClass)
     [SERVICE_KEY.choice] = ChoiceService,
   }
 
-  local game = GameClass.__class_new(GameClass)
+  local game = game_or_class
+  if type(game_or_class) == "table" and rawget(game_or_class, "__name") and rawget(game_or_class, "new") then
+    game = game_or_class:new({ __skip_assemble = true })
+  end
+  assert(game, "CompositionRoot.assemble requires game instance or class")
   game.board = board
   game.players = players
   game.store = store
@@ -242,7 +246,7 @@ function CompositionRoot.assemble(opts, GameClass)
   game.services = services
 
   game:rebuild()
-  game.turn_manager = TurnManager.new(game, phases)
+  game.turn_manager = TurnManager:new(game, phases)
 
   return game
 end

@@ -11,6 +11,8 @@ local handlers = {}
 local defaults_registered = false
 local ITEM_IDS = gameplay_constants.item_ids
 
+ItemRegistry.handlers = handlers
+
 local function run_item_choice_flow(game, player, item_id, context, deps, opts)
   local candidates = opts.candidates(game, player, item_id, context, deps)
   if not candidates or #candidates == 0 then
@@ -183,10 +185,6 @@ end
 
 function ItemRegistry.register(item_id, handler)
   handlers[item_id] = handler
-end
-
-function ItemRegistry.get(item_id)
-  return handlers[item_id]
 end
 
 function ItemRegistry.register_defaults()

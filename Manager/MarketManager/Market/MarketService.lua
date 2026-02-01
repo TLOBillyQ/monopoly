@@ -132,10 +132,6 @@ function MarketService.build_choice_spec(player, game)
   }
 end
 
-function MarketService.buy(game, player, product_id)
-  return MarketService.buy_with_opts(game, player, product_id, nil)
-end
-
 local function consume_global_limit(game, product_id)
   if not (game and game.store and product_id) then
     return

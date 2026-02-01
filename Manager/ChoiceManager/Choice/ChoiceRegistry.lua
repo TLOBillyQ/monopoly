@@ -2,12 +2,10 @@ local ChoiceRegistry = {}
 local handlers = {}
 local defaults_registered = false
 
+ChoiceRegistry.handlers = handlers
+
 function ChoiceRegistry.register(kind, handler)
   handlers[kind] = handler
-end
-
-function ChoiceRegistry.get(kind)
-  return handlers[kind]
 end
 
 function ChoiceRegistry.register_defaults(deps, helpers)

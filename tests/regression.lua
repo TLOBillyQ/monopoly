@@ -140,7 +140,7 @@ local function resolve_landing(game, player, tile, move_result, depth)
 end
 
 local function new_game()
-  return App.new({ players = { "P1", "P2" }, ai = { [2] = true }, auto_all = false, seed = 42 })
+  return App:new({ players = { "P1", "P2" }, ai = { [2] = true }, auto_all = false, seed = 42 })
 end
 
 local function first_land_tile(board)
@@ -648,7 +648,7 @@ local function test_market_global_limit()
   p:set_cash((entry.price or 0) + 1000)
   g.store:set({ "market", "global_limits", entry.product_id }, 1)
 
-  local res = MarketService.buy(g, p, entry.product_id)
+  local res = MarketService.buy_with_opts(g, p, entry.product_id, nil)
   local ok = (type(res) == "table" and res.ok ~= nil) and res.ok or res
   assert(ok, "first purchase should succeed")
 
@@ -741,7 +741,7 @@ local function test_move_anim_wait_and_resume()
       return nil
     end,
   }
-  g.turn_manager = TurnManager.new(g, phases)
+  g.turn_manager = TurnManager:new(g, phases)
 
   local res = g.turn_manager:run_until_wait()
   assert(res == "wait_move_anim", "should wait for move anim")

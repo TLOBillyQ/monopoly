@@ -143,7 +143,7 @@ function ChoiceService.resolve(game, choice, action)
     return { stay = false }
   end
 
-  local handler = ChoiceRegistry.get(choice.kind)
+  local handler = ChoiceRegistry.handlers[choice.kind]
   if not handler then
     logger.warn("unknown choice kind:", tostring(choice.kind))
     clear_choice(game)

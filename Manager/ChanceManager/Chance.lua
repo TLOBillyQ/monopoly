@@ -21,7 +21,7 @@ function ChanceEffects.resolve(game, player, card, context)
     return nil
   end
 
-  local handler = ChanceRegistry.get(card.effect)
+  local handler = ChanceRegistry.handlers[card.effect]
   if not handler then
     logger.warn("未知机会卡效果:" .. tostring(card.effect))
     return nil
