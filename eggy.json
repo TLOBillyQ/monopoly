@@ -10,8 +10,9 @@
         ".gitignore",
         "scripts",
         "tests",
-        "EggyAPI.lua",
-        "AGENTS.md"
+        "AGENTS.md",
+        "docs",
+        "EggyAPI.lua"
     ], 
     "isSEMap": false, 
     "version": "1.0.0"
