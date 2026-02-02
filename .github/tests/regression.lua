@@ -796,22 +796,44 @@ local function test_store_missing_path_get_set()
   assert(store:get({ "a", "b", "d" }) == nil, "missing leaf should return nil")
 end
 
+local function test_ui_model_structure()
+  local UIModel = require("Manager.UIRoot.UIModel")
+  local g = new_game()
+  local player = g:current_player()
+  player.inventory:add({ id = 2001 })
+  local ui_state = {
+    ui = {
+      auto_play = false,
+      item_slots = { 1, 2, 3, 4, 5 },
+    },
+  }
+  local model = UIModel.build(g.store.state, {
+    game = g,
+    ui_state = ui_state,
+    last_turn = g.last_turn,
+    finished = g.finished,
+  })
+  assert(model.panel and model.panel.turn_label, "ui_model.panel.turn_label expected")
+  assert(type(model.item_slots) == "table" and model.item_slots[1] == 2001, "ui_model.item_slots[1] expected")
+  assert(model.board and model.board.tiles and model.board.tile_states, "ui_model.board data")
+end
+
 local function test_tick_skips_anim_when_no_anim()
   local Store = require("Components.Store")
-  local MainView = require("Manager.TurnManager.GUI.MainView")
-  local Presenter = require("Manager.TurnManager.GUI.Presenter")
+  local MainView = require("Manager.UIRoot.UIView")
+  local UIModel = require("Manager.UIRoot.UIModel")
 
   local old_refresh = MainView.refresh_panel
   local old_refresh_board = MainView.refresh_board
   local old_open_choice = MainView.open_choice_modal
-  local old_present = Presenter.present
+  local old_build = UIModel.build
   local old_game_api = GameAPI
   local old_enums = Enums
 
   MainView.refresh_panel = function() end
   MainView.refresh_board = function() end
   MainView.open_choice_modal = function() end
-  Presenter.present = function(store_state)
+  UIModel.build = function(store_state)
     return {
       state = store_state,
       current_player_name = "P",
@@ -861,7 +883,7 @@ local function test_tick_skips_anim_when_no_anim()
   MainView.refresh_panel = old_refresh
   MainView.refresh_board = old_refresh_board
   MainView.open_choice_modal = old_open_choice
-  Presenter.present = old_present
+  UIModel.build = old_build
   GameAPI = old_game_api
   Enums = old_enums
 
@@ -1139,6 +1161,7 @@ local tests = {
   test_invalid_choice_option_rejected,
   test_move_anim_wait_and_resume,
   test_store_missing_path_get_set,
+  test_ui_model_structure,
   test_tick_skips_anim_when_no_anim,
   test_complex_consecutive_turn_settlement,
   test_complex_market_interrupt_with_rent,

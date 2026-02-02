@@ -1,15 +1,14 @@
-local BuildingEffects = require("Manager.BoardManager.GUI.BuildingEffects")
-local TileRenderer = require("Manager.BoardManager.GUI.TileRenderer")
+local BuildingEffects = require("Manager.UIRoot.BuildingEffects")
+local TileRenderer = require("Manager.UIRoot.TileRenderer")
 
 local EggyLayerBoard = {}
 
-function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
-  assert(view ~= nil, "missing view")
-  assert(view.state ~= nil, "missing view.state")
-  local players = assert(view.state.players, "missing view.state.players")
-  assert(view.board ~= nil, "missing view.board")
-  assert(view.board.tiles ~= nil, "missing view.board.tiles")
-  local tile_count = view.board_tile_count or #view.board.tiles
+function EggyLayerBoard.refresh_board(layer, ui_model, log_once, build_log_prefix)
+  assert(ui_model ~= nil, "missing ui_model")
+  local board = assert(ui_model.board, "missing ui_model.board")
+  local players = assert(board.players, "missing ui_model.board.players")
+  assert(board.tiles ~= nil, "missing ui_model.board.tiles")
+  local tile_count = board.tile_count or #board.tiles
   assert(tile_count > 0, "missing tile_count")
   assert(log_once ~= nil, "missing log_once")
   assert(build_log_prefix ~= nil, "missing build_log_prefix")
@@ -30,10 +29,9 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
     layer.tile_units = tiles
     layer.tile_positions = positions
 
-    assert(view.state.board ~= nil, "missing view.state.board")
-    local board_tiles = assert(view.state.board.tiles, "missing view.state.board.tiles")
+    local board_tiles = assert(board.tile_states, "missing ui_model.board.tile_states")
     local tile_ids = {}
-    for i, tile in ipairs(view.board.tiles) do
+    for i, tile in ipairs(board.tiles) do
       assert(tile ~= nil and tile.id ~= nil, "missing tile id: " .. tostring(i))
       tile_ids[i] = tile.id
     end
@@ -110,10 +108,8 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
     )
   end
 
-  local game = assert(layer.game, "missing game")
-  local store = assert(game.store, "missing game.store")
-  local phase = store:get({ "turn", "phase" })
-  local anim = store:get({ "turn", "move_anim" })
+  local phase = board.phase
+  local anim = board.move_anim
   local suppress_sync = phase == "wait_move_anim" and anim
 
   local snapshot = {}

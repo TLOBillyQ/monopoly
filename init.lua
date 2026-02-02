@@ -1,12 +1,13 @@
 require "Globals.__init"
 require "Manager.__init"
 
-local AutoRunner = require("Manager.TurnManager.GUI.AutoRunner")
-local BoardScene = require("Manager.BoardManager.GUI.BoardScene")
+local AutoRunner = require("Manager.TurnManager.AutoRunner")
+local BoardScene = require("Manager.UIRoot.BoardScene")
 local Game = require("Manager.GameManager.Game")
 local GameplayLoop = require("Manager.TurnManager.GameplayLoop")
-local MainView = require("Manager.TurnManager.GUI.MainView")
-local UIEventRouter = require("Manager.TurnManager.GUI.UIEventRouter")
+local MainView = require("Manager.UIRoot.UIView")
+local UIModel = require("Manager.UIRoot.UIModel")
+local UIEventRouter = require("Manager.UIRoot.UIEventRouter")
 local map_cfg = require("Config.Map")
 local tiles_cfg = require("Config.Generated.Tiles")
 local logger = require("Components.Logger")
@@ -73,7 +74,20 @@ local function build_state()
     state.pending_choice = data.choice
     state.pending_choice_elapsed = 0
     state.pending_choice_id = data.choice.id
-    MainView.open_choice_modal(state, data.choice)
+    assert(current_game ~= nil, "missing current_game")
+    local winner = current_game.winner
+    local winner_name = current_game.winner_names or (winner and assert(winner.name, "missing winner name"))
+    local ui_model = UIModel.build(current_game.store.state, {
+      game = current_game,
+      ui_state = state,
+      last_turn = current_game.last_turn,
+      finished = current_game.finished,
+      winner_name = winner_name,
+    })
+    state.ui_model = ui_model
+    if ui_model.choice then
+      MainView.open_choice_modal(state, ui_model.choice, ui_model.market)
+    end
   end)
 
   return state

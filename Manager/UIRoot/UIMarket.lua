@@ -1,4 +1,4 @@
-local MarketUI = require("Manager.MarketManager.GUI.MarketUI")
+local MarketUI = require("Manager.UIRoot.MarketUI")
 local items_cfg = require("Config.Generated.Items")
 local market_cfg = require("Config.Generated.Market")
 local vehicles_cfg = require("Config.Generated.Vehicles")
@@ -109,9 +109,9 @@ function EggyLayerMarket.select_market_option(layer, option_id)
   EggyLayerMarket.refresh_market_selection(layer, option_id)
 end
 
-function EggyLayerMarket.open_market_panel(layer, pending)
+function EggyLayerMarket.refresh_market(layer, market)
   local ui = layer.ui
-  assert(pending ~= nil and pending.options ~= nil and ui ~= nil, "missing market pending/ui")
+  assert(market ~= nil and market.options ~= nil and ui ~= nil, "missing market data/ui")
   ui:set_visible(MarketUI.container, true)
   ui.market_active = true
 
@@ -122,7 +122,7 @@ function EggyLayerMarket.open_market_panel(layer, pending)
   local frames = MarketUI.item_frames
   local max_slots = #buttons
   for idx = 1, max_slots do
-    local opt = pending.options[idx]
+    local opt = market.options[idx]
     local button = buttons[idx]
     local label = labels[idx]
     local frame = frames[idx]
@@ -150,14 +150,15 @@ function EggyLayerMarket.open_market_panel(layer, pending)
 
   ui:set_visible(MarketUI.confirm_button, true)
   ui:set_touch_enabled(MarketUI.confirm_button, true)
-  local show_cancel = pending.allow_cancel
+  local show_cancel = market.allow_cancel
   ui:set_visible(MarketUI.cancel_button, show_cancel)
   ui:set_touch_enabled(MarketUI.cancel_button, show_cancel)
 
   layer.market_choice_option_ids = option_ids
-  EggyLayerMarket.select_market_option(layer, option_ids[1])
+  local selected = market.selected_option_id or option_ids[1]
+  EggyLayerMarket.select_market_option(layer, selected)
   layer.pending_choice_elapsed = 0
-  layer.pending_choice_id = pending.id
+  layer.pending_choice_id = market.choice_id
   return true
 end
 

@@ -13,12 +13,12 @@ function Panel.build_player_label(player)
   return player.name .. " $" .. player.cash
 end
 
-function Panel.build_player_statuses(view, game, max_players)
-  local players = view and view.state and view.state.players or {}
+function Panel.build_player_statuses(store_state, game, max_players)
+  local players = store_state and store_state.players or {}
   local count = max_players or #players
   local out = {}
   local board = game and game.board or nil
-  local board_state = view and view.state and view.state.board and view.state.board.tiles or {}
+  local board_state = store_state and store_state.board and store_state.board.tiles or {}
   for i = 1, count do
     local player = players[i]
     if player then

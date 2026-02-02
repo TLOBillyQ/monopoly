@@ -1,9 +1,9 @@
 local Agent = require("Manager.GameManager.Agent")
 local constants = require("Config.Generated.Constants")
 local items_cfg = require("Config.Generated.Items")
-local EventHandlers = require("Manager.TurnManager.GUI.EventHandlers")
-local MainView = require("Manager.TurnManager.GUI.MainView")
-local Presenter = require("Manager.TurnManager.GUI.Presenter")
+local EventHandlers = require("Manager.UIRoot.UIEventHandlers")
+local MainView = require("Manager.UIRoot.UIView")
+local UIModel = require("Manager.UIRoot.UIModel")
 local logger = require("Components.Logger")
 
 local GameplayLoop = {}
@@ -61,12 +61,13 @@ local function build_item_index(state)
   end
 end
 
-local function build_view(state, game)
+local function build_ui_model(state, game)
   local store_state = game.store.state
   local winner = game.winner
   local winner_name = game.winner_names or (winner and assert(winner.name, "missing winner name"))
-  return Presenter.present(store_state, {
+  return UIModel.build(store_state, {
     game = game,
+    ui_state = state,
     last_turn = game.last_turn,
     finished = game.finished,
     winner_name = winner_name,
@@ -74,14 +75,14 @@ local function build_view(state, game)
 end
 
 local function refresh_view(state, game)
-  local view = build_view(state, game)
-  MainView.refresh_panel(state, view)
-  MainView.refresh_board(state, view, log_once, build_log_prefix)
+  local store_state = game.store.state
+  local ui_model = build_ui_model(state, game)
+  state.ui_model = ui_model
+  MainView.render(state, ui_model, log_once, build_log_prefix)
 
-  assert(view ~= nil, "missing view")
-  assert(view.state ~= nil, "missing view.state")
-  local players = assert(view.state.players, "missing view.state.players")
-  local turn = assert(view.state.turn, "missing view.state.turn")
+  assert(ui_model ~= nil, "missing ui_model")
+  local players = assert(store_state.players, "missing store_state.players")
+  local turn = assert(store_state.turn, "missing store_state.turn")
   local current_index = assert(turn.current_player_index, "missing current_player_index")
   local current = assert(players[current_index], "missing current player: " .. tostring(current_index))
   local current_id = assert(current.id, "missing current player id")
@@ -99,6 +100,7 @@ local function refresh_view(state, game)
   local target_pos = assert(unit.get_position(), "missing target position: " .. tostring(current_id))
   assert(role.set_camera_lock_position ~= nil, "missing role.set_camera_lock_position")
   role.set_camera_lock_position(target_pos)
+  return ui_model
 end
 
 function GameplayLoop.set_game(state, game)
@@ -111,7 +113,11 @@ function GameplayLoop.set_game(state, game)
   if pending then
     state.pending_choice_elapsed = 0
     state.pending_choice_id = pending.id
-    MainView.open_choice_modal(state, pending)
+    local ui_model = build_ui_model(state, game)
+    state.ui_model = ui_model
+    if ui_model.choice then
+      MainView.open_choice_modal(state, ui_model.choice, ui_model.market)
+    end
   end
   state.player_units = nil
   state.player_units_missing = false
@@ -432,7 +438,7 @@ function GameplayLoop.tick(game, state, dt)
             dir = V3_LEFT
           end
           assert(dir, "missing anim.direction")
-          local MoveAnim = require("Manager.BoardManager.GUI.MoveAnim")
+          local MoveAnim = require("Manager.UIRoot.MoveAnim")
           return MoveAnim.one_step(state.board_scene, player_id, dir, from_index, to_index)
         end,
       })
@@ -442,7 +448,7 @@ function GameplayLoop.tick(game, state, dt)
     if anim then
       GameplayLoop.step_action_anim(game, state, {
         on_action_anim = function(ctx, anim_ctx)
-          local ActionAnim = require("Manager.BoardManager.GUI.ActionAnim")
+          local ActionAnim = require("Manager.UIRoot.ActionAnim")
           return ActionAnim.play(ctx, anim_ctx)
         end,
       })
@@ -458,13 +464,11 @@ function GameplayLoop.tick(game, state, dt)
   end
   state.board_last_phase = phase
 
-  if state.pending_choice then
-    MainView.open_choice_modal(state, state.pending_choice)
+  local ui_model = refresh_view(state, game)
+  if ui_model.choice then
+    MainView.open_choice_modal(state, ui_model.choice, ui_model.market)
   end
-
-  refresh_view(state, game)
-
-  log_status(build_view(state, game))
+  log_status(ui_model)
 end
 
 return GameplayLoop
