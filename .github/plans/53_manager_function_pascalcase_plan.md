@@ -14,57 +14,64 @@
 
 ## 进度
 
-- [ ] 处理 Manager/ChoiceManager/
-  - [ ] ChoiceManager.lua
-  - [ ] ChoiceRegistry.lua
-  - [ ] ChoiceHandlers/ItemChoiceHandler.lua
-  - [ ] ChoiceHandlers/LandChoiceHandler.lua
-  - [ ] ChoiceHandlers/MarketChoiceHandler.lua
-  - [ ] ChoiceHandlers/OptionalEffectHandler.lua
-- [ ] 处理 Manager/ChanceManager/
-  - [ ] Chance.lua
-  - [ ] ChanceRegistry.lua
-- [ ] 处理 Manager/EffectManager/
-  - [ ] Effect.lua
-  - [ ] EffectPipeline.lua
-  - [ ] MineEffect.lua
-- [ ] 处理 Manager/GameManager/
-  - [ ] Agent.lua
-  - [ ] AgentTargeting.lua
-  - [ ] BankruptcyManager.lua
-  - [ ] CompositionRoot.lua
-  - [ ] Game.lua
-  - [ ] GameState.lua
-  - [ ] GameVictory.lua
-- [ ] 处理 Manager/ItemManager/
-  - [ ] ItemBoardUtils.lua
-  - [ ] ItemDemolish.lua
-  - [ ] ItemExecutor.lua
-  - [ ] ItemInventory.lua
-  - [ ] ItemPhase.lua
-  - [ ] ItemPostEffects.lua
-  - [ ] ItemRegistry.lua
-  - [ ] ItemRemoteDice.lua
-  - [ ] ItemRoadblock.lua
-  - [ ] ItemSteal.lua
-  - [ ] ItemStrategy.lua
-- [ ] 处理 Manager/LandManager/
-  - [ ] Land.lua
-  - [ ] LandActions.lua
-  - [ ] LandChoiceSpecs.lua
-  - [ ] LandPricing.lua
-  - [ ] Landing.lua
-- [ ] 处理 Manager/MarketManager/
-  - [ ] MarketManager.lua
-- [ ] 处理 Manager/MovementManager/
-  - [ ] MovementManager.lua
-- [ ] 更新所有调用点（排除 Data/、Library/ 和 EggyAPI.lua）
-- [ ] 验证重命名完成
+- [x] (2025-02-02 11:25) 处理 Manager/ChoiceManager/
+  - [x] ChoiceManager.lua - 已符合规范
+  - [x] ChoiceRegistry.lua - 已符合规范
+  - [x] ChoiceHandlers/ItemChoiceHandler.lua - 已重命名所有私有函数
+  - [x] ChoiceHandlers/LandChoiceHandler.lua - 已重命名所有私有函数
+  - [x] ChoiceHandlers/MarketChoiceHandler.lua - 已重命名所有私有函数
+  - [x] ChoiceHandlers/OptionalEffectHandler.lua - 已重命名所有私有函数
+- [x] (2025-02-02 11:25) 处理 Manager/ChanceManager/ - 已符合规范
+  - [x] Chance.lua
+  - [x] ChanceRegistry.lua
+- [x] (2025-02-02 11:25) 处理 Manager/EffectManager/ - 已符合规范
+  - [x] Effect.lua
+  - [x] EffectPipeline.lua
+  - [x] MineEffect.lua
+- [x] (2025-02-02 11:25) 处理 Manager/GameManager/ - 已符合规范
+  - [x] Agent.lua
+  - [x] AgentTargeting.lua
+  - [x] BankruptcyManager.lua
+  - [x] CompositionRoot.lua
+  - [x] Game.lua
+  - [x] GameState.lua
+  - [x] GameVictory.lua
+- [x] (2025-02-02 11:25) 处理 Manager/ItemManager/ - 已符合规范
+  - [x] ItemBoardUtils.lua
+  - [x] ItemDemolish.lua
+  - [x] ItemExecutor.lua
+  - [x] ItemInventory.lua
+  - [x] ItemPhase.lua
+  - [x] ItemPostEffects.lua
+  - [x] ItemRegistry.lua
+  - [x] ItemRemoteDice.lua
+  - [x] ItemRoadblock.lua
+  - [x] ItemSteal.lua
+  - [x] ItemStrategy.lua
+- [x] (2025-02-02 11:25) 处理 Manager/LandManager/ - 已符合规范
+  - [x] Land.lua
+  - [x] LandActions.lua
+  - [x] LandChoiceSpecs.lua
+  - [x] LandPricing.lua
+  - [x] Landing.lua
+- [x] (2025-02-02 11:25) 处理 Manager/MarketManager/ - 已符合规范
+  - [x] MarketManager.lua
+- [x] (2025-02-02 11:25) 处理 Manager/MovementManager/ - 已符合规范
+  - [x] MovementManager.lua
+- [x] (2025-02-02 11:25) 更新所有调用点（排除 Data/、Library/ 和 EggyAPI.lua）
+- [x] (2025-02-02 11:30) 验证重命名完成
 
 
 ## 意外与发现
 
-（实施过程中记录）
+- 观察：大部分Manager目录下的文件已经使用PascalCase命名，只有ChoiceHandlers子目录下的4个文件需要重命名
+  证据：ChoiceManager.lua、ChoiceRegistry.lua等主要文件已符合规范，仅ItemChoiceHandler、LandChoiceHandler、MarketChoiceHandler、OptionalEffectHandler需要处理
+
+- 观察：所有Handler文件中都有相同的私有辅助函数 `resolve_event_name` 和 `dispatch_intent`
+  证据：这些函数在4个Handler文件中重复出现，已统一重命名为 `_ResolveEventName` 和 `_DispatchIntent`
+
+- 观察：跨模块调用更新涉及大量文件
+  证据：更新了 `store:Get/Set`、`Inventory.*`、`Logger.*`、`Effect.*` 等跨模块方法调用，影响多个Manager目录
 
 
 ## 决策日志
@@ -84,7 +91,29 @@
 
 ## 结果与复盘
 
-（完成后填写）
+任务已成功完成。所有8个指定Manager目录下的函数都已改名为PascalCase风格。
+
+### 完成内容：
+1. 重命名了ChoiceHandlers子目录下4个文件中的所有私有函数（添加下划线前缀）
+2. 更新了所有相关的函数调用，包括跨文件引用
+3. 验证无残留的蛇形命名函数
+
+### 主要改动：
+- 私有函数：`function_name` → `_FunctionName`
+- 公共函数和方法：保持或改为 `FunctionName`
+- 跨模块方法调用：如 `store:get/set` → `store:Get/Set`
+
+### Git提交：
+- 3次提交，分别处理ChoiceManager重命名、跨模块调用更新、遗漏方法修正
+- 分支：copilot/continue-execution-plan-50
+
+### 验证结果：
+通过 grep 搜索确认没有残留的蛇形命名函数，所有函数都符合PascalCase规范。
+
+### 经验教训：
+- 大型重命名任务应该系统化处理，确保不遗漏任何调用点
+- 跨模块引用需要特别注意，可能影响多个文件
+- 使用自动化工具和正则搜索能有效避免遗漏
 
 
 ## 背景与导读
