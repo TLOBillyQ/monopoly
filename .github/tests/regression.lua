@@ -216,20 +216,6 @@ local function test_pass_start()
   assert_eq(res.passed_start, 1, "pass_start bonus")
 end
 
-local function test_logger_adapter_called()
-  local called = 0
-  local last = nil
-  logger.set_adapter({
-    on_log = function(entry)
-      called = called + 1
-      last = entry
-    end,
-  })
-  logger.info("adapter-test", 1)
-  assert_eq(called, 1, "adapter should be called")
-  assert_eq(last and last.text, "adapter-test 1", "adapter entry text")
-  logger.set_adapter(nil)
-end
 
 local function test_move_anim_callback_and_delay()
   local dispatched = {}
@@ -1126,7 +1112,6 @@ end
 
 local tests = {
   test_pass_start,
-  test_logger_adapter_called,
   test_move_anim_callback_and_delay,
   test_land_on_start_reward,
   test_roadblock_stop,

@@ -1,7 +1,6 @@
 local logger = {
   entries = {},
   max_entries = 200,
-  adapter = { level = nil, on_log = function() end },
   timestamp_provider = function()
     return 0
   end,
@@ -40,31 +39,6 @@ local function push(level, ...)
   if #logger.entries > logger.max_entries then
     table.remove(logger.entries, 1)
   end
-  local adapter = logger.adapter
-  local allow = adapter.level
-  local allow_kind = type(allow)
-  local should_call = true
-  if allow_kind == "table" then
-    should_call = false
-    for _, value in ipairs(allow) do
-      if value == entry.level then
-        should_call = true
-        break
-      end
-    end
-  elseif allow_kind ~= "nil" then
-    should_call = allow == entry.level
-  end
-  if should_call then
-    local ok, err = pcall(adapter.on_log, entry)
-    if not ok then
-      print("[logger] adapter error: " .. tostring(err))
-    end
-  end
-end
-
-function logger.set_adapter(adapter)
-  logger.adapter = adapter or { level = nil, on_log = function() end }
 end
 
 function logger.set_timestamp_provider(provider)

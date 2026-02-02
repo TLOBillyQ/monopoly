@@ -15,20 +15,6 @@ logger.configure_game_time()
 
 local current_game = nil
 
-local function show_tips(message, duration)
-  assert(message ~= nil, "show_tips requires message")
-  local text = tostring(message)
-  if text == "" then
-    return false
-  end
-  local tip_duration = duration
-  if type(duration) == "number" then
-    tip_duration = math.tofixed(duration)
-  end
-  GlobalAPI.show_tips(text, tip_duration)
-  return true
-end
-
 local function build_state()
   local ui = MainView.build_ui_state()
   local state = {
@@ -88,13 +74,6 @@ local function build_state()
     state.pending_choice_id = data.choice.id
     MainView.open_choice_modal(state, data.choice)
   end)
-  
-  logger.set_adapter({
-    level = "event",
-    on_log = function(entry)
-      show_tips(entry.text, 2)
-    end,
-  })
 
   return state
 end
