@@ -1,7 +1,7 @@
-local tiles_cfg = require("Config.Generated.Tiles")
+local TilesCfg = require("Config.Generated.Tiles")
 
 local tiles_by_id = {}
-for _, cfg in ipairs(tiles_cfg) do
+for _, cfg in ipairs(TilesCfg) do
   tiles_by_id[cfg.id] = cfg
 end
 

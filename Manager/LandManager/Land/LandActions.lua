@@ -4,12 +4,12 @@ local Tile = require("Components.Tile")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
 local Pricing = require("Manager.LandManager.Land.LandPricing")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
-local gameplay_constants = require("Config.GameplayConstants")
+local GameplayRules = require("Config.GameplayRules")
 local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 local SERVICE_KEY = require("Globals.ServiceKeys")
 
 local tile_state = Tile.get_state
-local ITEM_IDS = gameplay_constants.item_ids
+local ITEM_IDS = GameplayRules.item_ids
 
 local function emit_event(kind, payload)
   assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")

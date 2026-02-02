@@ -1,22 +1,22 @@
 local MarketUI = require("Manager.UIRoot.MarketUI")
-local items_cfg = require("Config.Generated.Items")
-local market_cfg = require("Config.Generated.Market")
-local vehicles_cfg = require("Config.Generated.Vehicles")
+local ItemsCfg = require("Config.Generated.Items")
+local MarketCfg = require("Config.Generated.Market")
+local VehiclesCfg = require("Config.Generated.Vehicles")
 
 local EggyLayerMarket = {}
 
 local vehicles_by_id = {}
-for _, cfg in ipairs(vehicles_cfg) do
+for _, cfg in ipairs(VehiclesCfg) do
   vehicles_by_id[cfg.id] = cfg
 end
 
 local items_by_id = {}
-for _, cfg in ipairs(items_cfg) do
+for _, cfg in ipairs(ItemsCfg) do
   items_by_id[cfg.id] = cfg
 end
 
 local market_by_id = {}
-for _, entry in ipairs(market_cfg) do
+for _, entry in ipairs(MarketCfg) do
   market_by_id[entry.product_id] = entry
 end
 

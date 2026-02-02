@@ -1,12 +1,12 @@
-local logger = require("Components.Logger")
-local constants = require("Config.Generated.Constants")
-local chance_cfg = require("Config.Generated.ChanceCards")
+local Logger = require("Components.Logger")
+local Constants = require("Config.Generated.Constants")
+local ChanceCfg = require("Config.Generated.ChanceCards")
 require "Library.Utils"
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
-local chance_effects = require("Manager.ChanceManager.Chance")
+local ChanceEffects = require("Manager.ChanceManager.Chance")
 local MineEffect = require("Manager.EffectManager.Effect.MineEffect")
 local Steal = require("Manager.ItemManager.Item.ItemSteal")
-local SERVICE_KEY = require("Globals.ServiceKeys")
+local ServiceKey = require("Globals.ServiceKeys")
 
 local Landing = {}
 
@@ -39,8 +39,8 @@ Landing.executors = {
       if move_result.passed_start and move_result.passed_start > 0 then
         return
       end
-      player:add_cash(constants.pass_start_bonus)
-      logger.event(player.name .. " 停在起点，获得 " .. constants.pass_start_bonus .. " 金币")
+      player:add_cash(Constants.pass_start_bonus)
+      Logger.event(player.name .. " 停在起点，获得 " .. Constants.pass_start_bonus .. " 金币")
     end,
   },
   item_draw_and_give = {
@@ -56,15 +56,15 @@ Landing.executors = {
       return ctx.game and ctx.player and ctx.tile and ctx.tile.type == "chance"
     end,
     apply = function(ctx)
-      local picked = Utils.choice_weight_list(chance_cfg, 1, function(item)
+      local picked = Utils.choice_weight_list(ChanceCfg, 1, function(item)
         return item.weight or 0
       end, true)
-      local card = picked[1] or chance_cfg[1]
+      local card = picked[1] or ChanceCfg[1]
       if not card then
         return
       end
-      logger.event(ctx.player.name .. " 抽到机会卡 " .. card.description)
-      return chance_effects.resolve(ctx.game, ctx.player, card, ctx.move_result)
+      Logger.event(ctx.player.name .. " 抽到机会卡 " .. card.description)
+      return ChanceEffects.resolve(ctx.game, ctx.player, card, ctx.move_result)
     end,
   },
   hospital = {
@@ -90,7 +90,7 @@ Landing.executors = {
     apply = function(ctx)
       local game = ctx.game
       local player = ctx.player
-      local market = game:get_service(SERVICE_KEY.market, ctx)
+      local market = game:get_service(ServiceKey.market, ctx)
 
       local spec, intent = market.build_choice_spec(player, game)
       if intent then return { intent = intent } end

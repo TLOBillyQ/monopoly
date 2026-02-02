@@ -1,6 +1,6 @@
 local Tile = require("Components.Tile")
 local Pricing = require("Manager.LandManager.Land.LandPricing")
-local gameplay_constants = require("Config.GameplayConstants")
+local GameplayRules = require("Config.GameplayRules")
 
 local GameVictory = {}
 
@@ -48,7 +48,7 @@ function GameVictory.check_victory(self)
     return true
   end
   local alive = self:alive_players()
-  local turn_limit = gameplay_constants.turn_limit
+  local turn_limit = GameplayRules.turn_limit
   assert(turn_limit ~= nil, "missing turn_limit")
   if turn_limit > 0 then
     local turn_count = self.store:get({ "turn", "turn_count" })

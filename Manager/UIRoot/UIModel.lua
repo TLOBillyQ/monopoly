@@ -1,10 +1,10 @@
-local map_cfg = require("Config.Map")
-local tiles_cfg = require("Config.Generated.Tiles")
+local MapCfg = require("Config.Map")
+local TilesCfg = require("Config.Generated.Tiles")
 local ChoiceView = require("Manager.UIRoot.UIChoice")
 local PanelView = require("Manager.UIRoot.UIPanel")
 
 local tiles_by_id = {}
-for _, cfg in ipairs(tiles_cfg) do
+for _, cfg in ipairs(TilesCfg) do
   tiles_by_id[cfg.id] = cfg
 end
 
@@ -12,8 +12,8 @@ local UIModel = {}
 
 local function build_board_tiles()
   local out = {}
-  assert(map_cfg.path ~= nil, "missing map path")
-  for i, tile_id in ipairs(map_cfg.path) do
+  assert(MapCfg.path ~= nil, "missing map path")
+  for i, tile_id in ipairs(MapCfg.path) do
     local cfg = tiles_by_id[tile_id]
     assert(cfg ~= nil, "missing tile cfg: " .. tostring(tile_id))
     out[i] = {

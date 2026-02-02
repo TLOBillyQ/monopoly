@@ -2,10 +2,10 @@ local Tile = require("Components.Tile")
 local Roadblock = require("Manager.ItemManager.Item.ItemRoadblock")
 local Demolish = require("Manager.ItemManager.Item.ItemDemolish")
 local Pricing = require("Manager.LandManager.Land.LandPricing")
-local gameplay_constants = require("Config.GameplayConstants")
+local GameplayRules = require("Config.GameplayRules")
 
 local AgentTargeting = {}
-local ITEM_IDS = gameplay_constants.item_ids
+local ITEM_IDS = GameplayRules.item_ids
 
 local tile_state = Tile.get_state
 

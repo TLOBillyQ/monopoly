@@ -1,9 +1,9 @@
-local logger = require("Components.Logger")
+local Logger = require("Components.Logger")
 local ChoiceRegistry = require("Manager.ChoiceManager.Choice.ChoiceRegistry")
 local Executor = require("Manager.ItemManager.Item.ItemExecutor")
 local ItemPhase = require("Manager.ItemManager.Item.ItemPhase")
 local Effect = require("Manager.EffectManager.Effect.Effect")
-local landing_effects = require("Config.LandingEffects")
+local LandingDefs = require("Config.LandingEffects")
 
 local ChoiceService = {}
 
@@ -75,7 +75,7 @@ end
 
 local function get_container_defs_by_choice_kind(choice_kind)
   if choice_kind == "landing_optional_effect" or choice_kind == "land_optional_effect" then
-    return landing_effects
+    return LandingDefs
   end
   return nil
 end
@@ -119,7 +119,7 @@ function ChoiceService.resolve(game, choice, action)
   end
 
   if not option_exists(choice, action.option_id) then
-    logger.warn("invalid choice option:", tostring(choice.kind), tostring(action.option_id))
+    Logger.warn("invalid choice option:", tostring(choice.kind), tostring(action.option_id))
     clear_choice(game)
     return { stay = false }
   end

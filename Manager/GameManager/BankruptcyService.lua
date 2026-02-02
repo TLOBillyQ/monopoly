@@ -1,11 +1,11 @@
-local logger = require("Components.Logger")
+local Logger = require("Components.Logger")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 
 local BankruptcyService = {}
 
 
 function BankruptcyService.eliminate(game, player)
-  logger.event(player.name .. " 破产出局")
+  Logger.event(player.name .. " 破产出局")
 
   local owned_tile_ids = {}
   local owned_tile_set = {}
@@ -26,7 +26,7 @@ function BankruptcyService.eliminate(game, player)
       local tile = game.board:get_tile_by_id(tile_id)
       table.insert(names, tile.name)
     end
-    logger.event(player.name .. " 破产，清空地块: " .. table.concat(names, "、"))
+    Logger.event(player.name .. " 破产，清空地块: " .. table.concat(names, "、"))
   end
   for _, tile_id in ipairs(owned_tile_ids) do
     local tile = game.board:get_tile_by_id(tile_id)

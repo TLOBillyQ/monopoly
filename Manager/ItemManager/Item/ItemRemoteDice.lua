@@ -1,4 +1,4 @@
-local logger = require("Components.Logger")
+local Logger = require("Components.Logger")
 
 local RemoteDice = {}
 
@@ -9,7 +9,7 @@ function RemoteDice.apply(game, player, dice_count, value)
     values[i] = value
   end
   game:set_player_status(player, "pending_remote_dice", { values = values })
-  logger.event(player.name .. " 使用遥控骰子，设定点数 " .. table.concat(values, ","))
+  Logger.event(player.name .. " 使用遥控骰子，设定点数 " .. table.concat(values, ","))
   return true
 end
 

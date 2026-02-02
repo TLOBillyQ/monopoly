@@ -1,4 +1,4 @@
-local logger = require("Components.Logger")
+local Logger = require("Components.Logger")
 local Tile = require("Components.Tile")
 local Roadblock = {}
 
@@ -143,7 +143,7 @@ function Roadblock.apply(game, player, idx)
   assert(game.board ~= nil, "missing board")
   game.board:place_roadblock(idx)
   local tile = game.board:get_tile(idx)
-  logger.event(player.name .. " 放置路障在 " .. tile.name)
+  Logger.event(player.name .. " 放置路障在 " .. tile.name)
   local queued = false
   assert(game.ui_port ~= nil, "missing ui_port")
   if game.ui_port.wait_action_anim then

@@ -1,18 +1,18 @@
-local items_cfg = require("Config.Generated.Items")
+local ItemsCfg = require("Config.Generated.Items")
 require "Library.Utils"
-local logger = require("Components.Logger")
-local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
+local Logger = require("Components.Logger")
+local MonopolyEvent = require("Globals.MonopolyEvents")
 
 local Inventory = {}
 
 local cfg_by_id = {}
-for _, cfg in ipairs(items_cfg) do
+for _, cfg in ipairs(ItemsCfg) do
   cfg_by_id[cfg.id] = cfg
 end
 
 local function resolve_event_name(kind)
-  assert(MONOPOLY_EVENT ~= nil, "missing MONOPOLY_EVENT")
-  local intent = assert(MONOPOLY_EVENT.intent, "missing MONOPOLY_EVENT.intent")
+  assert(MonopolyEvent ~= nil, "missing MONOPOLY_EVENT")
+  local intent = assert(MonopolyEvent.intent, "missing MONOPOLY_EVENT.intent")
   assert(kind ~= nil, "missing event kind")
   return intent[kind] or kind
 end
@@ -119,10 +119,10 @@ function Inventory.clear(player)
 end
 
 function Inventory.draw_random(_)
-  local picked = Utils.choice_weight_list(items_cfg, 1, function(item)
+  local picked = Utils.choice_weight_list(ItemsCfg, 1, function(item)
     return item.weight or 0
   end, true)
-  return picked[1] or items_cfg[1]
+  return picked[1] or ItemsCfg[1]
 end
 
 local function notify_full(game, player, item_id)
@@ -143,13 +143,13 @@ end
 
 function Inventory.give(player, item_id, context)
   if Inventory.is_full(player) then
-    logger.warn(player.name .. " 的背包已满，无法获得道具 " .. item_id)
+    Logger.warn(player.name .. " 的背包已满，无法获得道具 " .. item_id)
     assert(context ~= nil and context.game ~= nil, "missing context.game")
     notify_full(context.game, player, item_id)
     return false
   end
   assert(Inventory.add(player, { id = item_id }) == true, "inventory add failed: " .. tostring(item_id))
-  logger.event(player.name .. " 获得道具 " .. Inventory.item_name(item_id))
+  Logger.event(player.name .. " 获得道具 " .. Inventory.item_name(item_id))
   return true
 end
 

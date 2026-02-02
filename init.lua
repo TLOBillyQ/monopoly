@@ -5,20 +5,20 @@ local AutoRunner = require("Manager.TurnManager.AutoRunner")
 local BoardScene = require("Manager.UIRoot.BoardScene")
 local Game = require("Manager.GameManager.Game")
 local GameplayLoop = require("Manager.TurnManager.GameplayLoop")
-local MainView = require("Manager.UIRoot.UIView")
+local UIView = require("Manager.UIRoot.UIView")
 local UIModel = require("Manager.UIRoot.UIModel")
 local UIEventRouter = require("Manager.UIRoot.UIEventRouter")
-local map_cfg = require("Config.Map")
-local tiles_cfg = require("Config.Generated.Tiles")
-local logger = require("Components.Logger")
-local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
+local MapCfg = require("Config.Map")
+local TilesCfg = require("Config.Generated.Tiles")
+local Logger = require("Components.Logger")
+local MonopolyEvent = require("Globals.MonopolyEvents")
 
-logger.configure_game_time()
+Logger.configure_game_time()
 
 local current_game = nil
 
 local function build_state()
-  local ui = MainView.build_ui_state()
+  local ui = UIView.build_ui_state()
   local state = {
     ui = ui,
     pending_choice = nil,
@@ -37,8 +37,8 @@ local function build_state()
         ai = { [2] = true, [3] = true, [4] = true },
         auto_all = true,
         seed = GameAPI.get_timestamp(),
-        map = map_cfg,
-        tiles = tiles_cfg,
+        map = MapCfg,
+        tiles = TilesCfg,
       })
     end,
     auto_runner = AutoRunner:new({ interval = ui.auto_interval }),
@@ -61,16 +61,16 @@ local function build_state()
   }
 
   state.push_popup = function(_, payload)
-    return MainView.push_popup(state, payload)
+    return UIView.push_popup(state, payload)
   end
   state.on_tile_upgraded = function(_, tile_id, level)
-    MainView.on_tile_upgraded(state, tile_id, level)
+    UIView.on_tile_upgraded(state, tile_id, level)
   end
   state.on_tile_owner_changed = function(_, tile_id, owner_id)
-    MainView.on_tile_owner_changed(state, tile_id, owner_id)
+    UIView.on_tile_owner_changed(state, tile_id, owner_id)
   end
 
-  RegisterCustomEvent(MONOPOLY_EVENT.intent.need_choice, function(_, _, data)
+  RegisterCustomEvent(MonopolyEvent.intent.need_choice, function(_, _, data)
     state.pending_choice = data.choice
     state.pending_choice_elapsed = 0
     state.pending_choice_id = data.choice.id
@@ -86,7 +86,7 @@ local function build_state()
     })
     state.ui_model = ui_model
     if ui_model.choice then
-      MainView.open_choice_modal(state, ui_model.choice, ui_model.market)
+      UIView.open_choice_modal(state, ui_model.choice, ui_model.market)
     end
   end)
 
@@ -110,8 +110,8 @@ local function install_game_init(state)
 
     local role = GameAPI.get_role(1)
     role.send_ui_custom_event("显示加载屏", {});
-    BoardScene.init(state, map_cfg)
-    MainView.init_ui_assets(state)
+    BoardScene.init(state, MapCfg)
+    UIView.init_ui_assets(state)
 
     SetTimeOut(1.0, function()
       role.send_ui_custom_event("隐藏加载屏", {});

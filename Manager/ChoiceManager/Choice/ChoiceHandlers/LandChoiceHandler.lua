@@ -1,14 +1,14 @@
 local LandChoiceSpecs = require("Manager.LandManager.Land.LandChoiceSpecs")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
-local gameplay_constants = require("Config.GameplayConstants")
-local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
+local GameplayRules = require("Config.GameplayRules")
+local MonopolyEvent = require("Globals.MonopolyEvents")
 
 local LandChoiceHandler = {}
-local ITEM_IDS = gameplay_constants.item_ids
+local ITEM_IDS = GameplayRules.item_ids
 
 local function resolve_event_name(kind)
-  assert(MONOPOLY_EVENT ~= nil, "missing MONOPOLY_EVENT")
-  local intent = assert(MONOPOLY_EVENT.intent, "missing MONOPOLY_EVENT.intent")
+  assert(MonopolyEvent ~= nil, "missing MONOPOLY_EVENT")
+  local intent = assert(MonopolyEvent.intent, "missing MONOPOLY_EVENT.intent")
   assert(kind ~= nil, "missing event kind")
   return intent[kind] or kind
 end

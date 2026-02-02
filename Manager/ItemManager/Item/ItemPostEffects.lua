@@ -1,12 +1,12 @@
-local logger = require("Components.Logger")
-local constants = require("Config.Generated.Constants")
+local Logger = require("Components.Logger")
+local Constants = require("Config.Generated.Constants")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
-local gameplay_constants = require("Config.GameplayConstants")
-local SERVICE_KEY = require("Globals.ServiceKeys")
+local GameplayRules = require("Config.GameplayRules")
+local ServiceKey = require("Globals.ServiceKeys")
 
 local ItemEffects = {}
-local ITEM_IDS = gameplay_constants.item_ids
+local ITEM_IDS = GameplayRules.item_ids
 
 local TARGET_ITEM_ORDER = {
   ITEM_IDS.share_wealth,
@@ -24,7 +24,7 @@ local TARGET_EFFECTS = {
       local half = math.floor(total / 2)
       user:set_cash(half)
       target:set_cash(total - half)
-      logger.event(user.name .. " 使用均富卡，与 " .. target.name .. " 平分资金")
+      Logger.event(user.name .. " 使用均富卡，与 " .. target.name .. " 平分资金")
       return true
     end,
   },
@@ -35,27 +35,27 @@ local TARGET_EFFECTS = {
         game:update_player_position(target, idx)
       end
       game:set_player_status(target, "move_dir", nil)
-      game:set_player_status(target, "stay_turns", constants.mountain_stay_turns)
-      logger.event(target.name .. " 进入深山，停留 " .. target.status.stay_turns .. " 回合")
-      logger.event(user.name .. " 使用流放卡，将 " .. target.name .. " 送往深山")
+      game:set_player_status(target, "stay_turns", Constants.mountain_stay_turns)
+      Logger.event(target.name .. " 进入深山，停留 " .. target.status.stay_turns .. " 回合")
+      Logger.event(user.name .. " 使用流放卡，将 " .. target.name .. " 送往深山")
       return true
     end,
   },
   [ITEM_IDS.tax] = {
     apply = function(game, user, target, context)
       if target:has_deity("angel") then
-        logger.event(target.name .. " 有天使，查税无效")
+        Logger.event(target.name .. " 有天使，查税无效")
         return true
       end
       if Inventory.consume(target, ITEM_IDS.tax_free) then
-        logger.event(target.name .. " 使用免税卡抵消查税")
+        Logger.event(target.name .. " 使用免税卡抵消查税")
         return true
       end
       local fee = math.floor(target.cash * 0.5)
       target:deduct_cash(fee)
-      logger.event(user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. fee .. " 税金")
+      Logger.event(user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. fee .. " 税金")
       if target.cash <= 0 then
-        local bankruptcy = game:get_service(SERVICE_KEY.bankruptcy)
+        local bankruptcy = game:get_service(ServiceKey.bankruptcy)
         bankruptcy.eliminate(game, target)
       end
       return true
@@ -69,7 +69,7 @@ local TARGET_EFFECTS = {
       local deity = assert(target.status.deity, "missing target deity")
       target:clear_deity()
       user:set_deity(deity.type, deity.remaining)
-      logger.event(user.name .. " 使用请神卡，从 " .. target.name .. " 请走 " .. deity.type)
+      Logger.event(user.name .. " 使用请神卡，从 " .. target.name .. " 请走 " .. deity.type)
       return true
     end,
   },
@@ -84,14 +84,14 @@ local TARGET_EFFECTS = {
       local remaining = assert(user.status.deity, "missing user deity").remaining
       target:set_deity("poor", remaining)
       user:clear_deity()
-      logger.event(user.name .. " 使用送神卡，将穷神送给 " .. target.name)
+      Logger.event(user.name .. " 使用送神卡，将穷神送给 " .. target.name)
       return true
     end,
   },
   [ITEM_IDS.poor] = {
     apply = function(_, user, target, _context)
       target:set_deity("poor")
-      logger.event(user.name .. " 使用穷神卡，" .. target.name .. " 穷神附身")
+      Logger.event(user.name .. " 使用穷神卡，" .. target.name .. " 穷神附身")
       return true
     end,
   },
@@ -122,29 +122,29 @@ handlers.set_status = function(game, player, cfg, _context)
   local value = assert(cfg.value, "missing status value")
   game:set_player_status(player, cfg.key, value)
   if cfg.message then
-    logger.event(player.name .. cfg.message)
+    Logger.event(player.name .. cfg.message)
   end
   return true
 end
 
 handlers.deity = function(game, player, cfg, context)
-  player:set_deity(cfg.deity, constants.deity_duration_turns)
-  logger.event(player.name .. " 获得附身：" .. cfg.deity)
+  player:set_deity(cfg.deity, Constants.deity_duration_turns)
+  Logger.event(player.name .. " 获得附身：" .. cfg.deity)
   if cfg.log then
-    logger.event(player.name .. cfg.log)
+    Logger.event(player.name .. cfg.log)
   end
   return true
 end
 
 handlers.log = function(_, player, cfg, _context)
   assert(cfg.message ~= nil, "missing log message")
-  logger.event(player.name .. cfg.message)
+  Logger.event(player.name .. cfg.message)
   return true
 end
 
 handlers.place_mine_here = function(game, player, _cfg, context)
   game.board:place_mine(player.position)
-  logger.event(player.name .. " 在脚下埋设地雷")
+  Logger.event(player.name .. " 在脚下埋设地雷")
   assert(game.ui_port ~= nil, "missing ui_port")
   if game.ui_port.wait_action_anim then
     game:queue_action_anim({
@@ -216,7 +216,7 @@ handlers.clear_obstacles_ahead = function(game, player, cfg, context)
       end
     end
   end)
-  logger.event(player.name .. " 清除前方障碍数：" .. cleared)
+  Logger.event(player.name .. " 清除前方障碍数：" .. cleared)
   assert(game.ui_port ~= nil, "missing ui_port")
   if game.ui_port.wait_action_anim then
     game:queue_action_anim({

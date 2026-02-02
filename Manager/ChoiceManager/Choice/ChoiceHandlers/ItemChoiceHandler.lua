@@ -2,18 +2,18 @@ local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local Demolish = require("Manager.ItemManager.Item.ItemDemolish")
 local Steal = require("Manager.ItemManager.Item.ItemSteal")
 local Roadblock = require("Manager.ItemManager.Item.ItemRoadblock")
-local logger = require("Components.Logger")
+local Logger = require("Components.Logger")
 local RemoteDice = require("Manager.ItemManager.Item.ItemRemoteDice")
 local ItemPhase = require("Manager.ItemManager.Item.ItemPhase")
-local gameplay_constants = require("Config.GameplayConstants")
-local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
+local GameplayRules = require("Config.GameplayRules")
+local MonopolyEvent = require("Globals.MonopolyEvents")
 
 local ItemChoiceHandler = {}
-local ITEM_IDS = gameplay_constants.item_ids
+local ITEM_IDS = GameplayRules.item_ids
 
 local function resolve_event_name(kind)
-  assert(MONOPOLY_EVENT ~= nil, "missing MONOPOLY_EVENT")
-  local intent = assert(MONOPOLY_EVENT.intent, "missing MONOPOLY_EVENT.intent")
+  assert(MonopolyEvent ~= nil, "missing MONOPOLY_EVENT")
+  local intent = assert(MonopolyEvent.intent, "missing MONOPOLY_EVENT.intent")
   assert(kind ~= nil, "missing event kind")
   return intent[kind] or kind
 end
@@ -165,7 +165,7 @@ function ItemChoiceHandler.build(helpers)
     local target = assert(game.players[meta.target_id], "missing target: " .. tostring(meta.target_id))
     assert(idx ~= nil, "missing steal index")
     local res = Steal.steal_item_at_index(game, stealer, target, idx)
-    logger.event("Steal choice result (multi)", res)
+    Logger.event("Steal choice result (multi)", res)
     assert(res ~= nil, "missing steal result")
     dispatch_intent(game, res.intent or {})
     return finish_and_clear(game)
@@ -280,7 +280,7 @@ function ItemChoiceHandler.build(helpers)
     local idx = tonumber(action.option_id)
     assert(idx ~= nil, "missing discard index")
     local dropped = assert(Inventory.remove_by_index(player, idx), "missing dropped item")
-    logger.event(player.name .. " 丢弃道具 " .. Inventory.item_name(dropped.id))
+    Logger.event(player.name .. " 丢弃道具 " .. Inventory.item_name(dropped.id))
     finish_choice(game, false)
     return reopen_item_phase(game, player, phase)
   end

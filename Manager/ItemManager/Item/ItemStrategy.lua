@@ -1,14 +1,14 @@
 local Agent = require("Manager.GameManager.Agent")
 local ItemEffects = require("Manager.ItemManager.Item.ItemPostEffects")
-local gameplay_constants = require("Config.GameplayConstants")
-local logger = require("Components.Logger")
+local GameplayRules = require("Config.GameplayRules")
+local Logger = require("Components.Logger")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local Executor = require("Manager.ItemManager.Item.ItemExecutor")
 local Demolish = require("Manager.ItemManager.Item.ItemDemolish")
 local ItemRegistry = require("Manager.ItemManager.Item.ItemRegistry")
 
 local Strategy = {}
-local ITEM_IDS = gameplay_constants.item_ids
+local ITEM_IDS = GameplayRules.item_ids
 
 function Strategy.target_candidates(game, player, item_id)
   return ItemRegistry.target_candidates(game, player, item_id)
@@ -87,7 +87,7 @@ function Strategy.auto_pre_action(game, player, phase)
 
   local clear_result = try_use(ITEM_IDS.clear_obstacles, function()
     local found = Strategy.has_obstacles_ahead(game, player, 12)
-    if found then logger.event(player.name .. " 前方发现障碍，准备使用清障卡") end
+    if found then Logger.event(player.name .. " 前方发现障碍，准备使用清障卡") end
     return found
   end)
   if clear_result then return clear_result end

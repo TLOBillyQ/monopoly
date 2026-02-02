@@ -1,10 +1,10 @@
 local Steal = require("Manager.ItemManager.Item.ItemSteal")
-local SERVICE_KEY = require("Globals.ServiceKeys")
-local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
+local ServiceKey = require("Globals.ServiceKeys")
+local MonopolyEvent = require("Globals.MonopolyEvents")
 
 local function resolve_event_name(kind)
-  assert(MONOPOLY_EVENT ~= nil, "missing MONOPOLY_EVENT")
-  local intent = assert(MONOPOLY_EVENT.intent, "missing MONOPOLY_EVENT.intent")
+  assert(MonopolyEvent ~= nil, "missing MONOPOLY_EVENT")
+  local intent = assert(MonopolyEvent.intent, "missing MONOPOLY_EVENT.intent")
   assert(kind ~= nil, "missing event kind")
   return intent[kind] or kind
 end
@@ -50,7 +50,7 @@ local function phase_move(tm, args)
   local raw_total = args.raw_total
   assert(tm.game ~= nil, "missing game")
   assert(tm.game.get_service ~= nil, "missing game.get_service")
-  local movement = tm.game:get_service(SERVICE_KEY.movement)
+  local movement = tm.game:get_service(ServiceKey.movement)
   assert(movement ~= nil, "missing movement service")
   local move_result = args.move_result
 
@@ -138,7 +138,7 @@ local function phase_move(tm, args)
 
   if move_result.market_interrupt then
     assert(tm.game.get_service ~= nil, "missing game.get_service")
-    local market = assert(tm.game:get_service(SERVICE_KEY.market), "missing market service")
+    local market = assert(tm.game:get_service(ServiceKey.market), "missing market service")
     local spec, intent = market.build_choice_spec(player, tm.game)
     if spec then
       dispatch_intent(tm.game, { kind = "need_choice", choice_spec = spec })

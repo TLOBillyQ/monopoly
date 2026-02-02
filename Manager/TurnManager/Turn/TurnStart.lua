@@ -1,4 +1,4 @@
-local logger = require("Components.Logger")
+local Logger = require("Components.Logger")
 local ItemPhase = require("Manager.ItemManager.Item.ItemPhase")
 
 local function phase_start(tm)
@@ -24,7 +24,7 @@ local function phase_start(tm)
   end
   if player.status.stay_turns and player.status.stay_turns > 0 then
     tm.game:set_player_status(player, "stay_turns", player.status.stay_turns - 1)
-    logger.event(player.name .. " 被扣留，剩余回合:", player.status.stay_turns)
+    Logger.event(player.name .. " 被扣留，剩余回合:", player.status.stay_turns)
     tm.game.last_turn.note = "被扣留"
     tm.game.last_turn.skipped = true
     tm.game.last_turn.stay_turns = player.status.stay_turns

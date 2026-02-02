@@ -1,5 +1,5 @@
 local Dice = require("Components.Dice")
-local logger = require("Components.Logger")
+local Logger = require("Components.Logger")
 local ItemPhase = require("Manager.ItemManager.Item.ItemPhase")
 
 local function phase_roll(tm, args)
@@ -22,7 +22,7 @@ local function phase_roll(tm, args)
     if player.status.pending_dice_multiplier and player.status.pending_dice_multiplier > 1 then
       total = total * player.status.pending_dice_multiplier
     end
-    logger.event(player.name .. " 投骰: [" .. table.concat(rolls, ",") .. "] => " .. total)
+    Logger.event(player.name .. " 投骰: [" .. table.concat(rolls, ",") .. "] => " .. total)
     game.last_turn.rolls = rolls
     game.last_turn.total = total
     game.last_turn.raw_total = raw_total

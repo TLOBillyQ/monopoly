@@ -1,10 +1,10 @@
-local constants = require("Config.Generated.Constants")
-local gameplay_constants = require("Config.GameplayConstants")
+local Constants = require("Config.Generated.Constants")
+local GameplayRules = require("Config.GameplayRules")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
-local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
+local MonopolyEvent = require("Globals.MonopolyEvents")
 
 local MovementService = {}
-local ITEM_IDS = gameplay_constants.item_ids
+local ITEM_IDS = GameplayRules.item_ids
 
 local function emit_event(kind, payload)
   assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
@@ -49,7 +49,7 @@ function MovementService.move(game, player, steps, opts)
     if board:has_roadblock(current) then
       board:clear_roadblock(current)
       stopped_on_roadblock = true
-      emit_event(MONOPOLY_EVENT.movement.roadblock_hit, {
+      emit_event(MonopolyEvent.movement.roadblock_hit, {
         player = player,
         tile = board:get_tile(current),
         text = player.name .. " 触发路障，停在 " .. board:get_tile(current).name,
@@ -68,7 +68,7 @@ function MovementService.move(game, player, steps, opts)
           branch_parity = branch_parity,
           encountered_ids = encountered_step,
         }
-        emit_event(MONOPOLY_EVENT.movement.steal_interrupt, {
+        emit_event(MonopolyEvent.movement.steal_interrupt, {
           player = player,
           encountered_ids = encountered_step,
           text = player.name .. " 经过玩家，触发偷窃中断",
@@ -87,7 +87,7 @@ function MovementService.move(game, player, steps, opts)
           facing = facing,
           branch_parity = branch_parity,
         }
-        emit_event(MONOPOLY_EVENT.movement.market_interrupt, {
+        emit_event(MonopolyEvent.movement.market_interrupt, {
           player = player,
           remaining_steps = market_interrupt.remaining_steps,
           text = player.name .. " 经过黑市，剩余 " .. market_interrupt.remaining_steps .. " 步",
@@ -105,7 +105,7 @@ function MovementService.move(game, player, steps, opts)
     end
     return name
   end
-  emit_event(MONOPOLY_EVENT.movement.moved, {
+  emit_event(MonopolyEvent.movement.moved, {
     player = player,
     from_tile = start_tile,
     to_tile = landing_tile,
@@ -114,9 +114,9 @@ function MovementService.move(game, player, steps, opts)
   })
 
   if pass_start > 0 then
-    local bonus = pass_start * constants.pass_start_bonus
+    local bonus = pass_start * Constants.pass_start_bonus
     player:add_cash(bonus)
-    emit_event(MONOPOLY_EVENT.movement.passed_start, {
+    emit_event(MonopolyEvent.movement.passed_start, {
       player = player,
       count = pass_start,
       bonus = bonus,

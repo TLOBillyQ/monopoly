@@ -1,11 +1,11 @@
-local market_cfg = require("Config.Generated.Market")
-local items_cfg = require("Config.Generated.Items")
-local vehicles_cfg = require("Config.Generated.Vehicles")
-local logger = require("Components.Logger")
+local MarketCfg = require("Config.Generated.Market")
+local ItemsCfg = require("Config.Generated.Items")
+local VehiclesCfg = require("Config.Generated.Vehicles")
+local Logger = require("Components.Logger")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local Agent = require("Manager.GameManager.Agent")
 local LandChoiceSpecs = require("Manager.LandManager.Land.LandChoiceSpecs")
-local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
+local MonopolyEvent = require("Globals.MonopolyEvents")
 local MarketService = {}
 
 local function emit_event(kind, payload)
@@ -14,17 +14,17 @@ local function emit_event(kind, payload)
 end
 
 local items_by_id = {}
-for _, cfg in ipairs(items_cfg) do
+for _, cfg in ipairs(ItemsCfg) do
   items_by_id[cfg.id] = cfg
 end
 
 local vehicles_by_id = {}
-for _, cfg in ipairs(vehicles_cfg) do
+for _, cfg in ipairs(VehiclesCfg) do
   vehicles_by_id[cfg.id] = cfg
 end
 
 local entries_by_id = {}
-for _, entry in ipairs(market_cfg) do
+for _, entry in ipairs(MarketCfg) do
   entries_by_id[entry.product_id] = entry
 end
 
@@ -93,7 +93,7 @@ end
 
 function MarketService.list_buyable(player, game)
   local list = {}
-  for _, entry in ipairs(market_cfg) do
+  for _, entry in ipairs(MarketCfg) do
     if can_buy_entry(game, player, entry) then
       table.insert(list, entry)
     end
@@ -146,7 +146,7 @@ end
 function MarketService.buy_with_opts(game, player, product_id, opts)
   opts = opts or {}
   if type(product_id) ~= "number" or product_id <= 0 then
-    logger.warn("invalid market product id:", tostring(product_id))
+    Logger.warn("invalid market product id:", tostring(product_id))
     return false
   end
   local entry = entries_by_id[product_id]
@@ -154,7 +154,7 @@ function MarketService.buy_with_opts(game, player, product_id, opts)
 
   local remaining = remaining_global_limit(game, product_id)
   if remaining <= 0 then
-    emit_event(MONOPOLY_EVENT.market.buy_failed, {
+    emit_event(MonopolyEvent.market.buy_failed, {
       player = player,
       entry = entry,
       reason = "sold_out",
@@ -166,7 +166,7 @@ function MarketService.buy_with_opts(game, player, product_id, opts)
   local price = entry_price(entry)
   local currency = entry_currency(entry)
   if player:balance(currency) < price then
-    emit_event(MONOPOLY_EVENT.market.buy_failed, {
+    emit_event(MonopolyEvent.market.buy_failed, {
       player = player,
       entry = entry,
       reason = "insufficient_balance",
@@ -177,7 +177,7 @@ function MarketService.buy_with_opts(game, player, product_id, opts)
 
   if entry.kind == "item" then
     if Inventory.is_full(player) then
-      emit_event(MONOPOLY_EVENT.market.buy_failed, {
+      emit_event(MonopolyEvent.market.buy_failed, {
         player = player,
         entry = entry,
         reason = "inventory_full",
@@ -188,7 +188,7 @@ function MarketService.buy_with_opts(game, player, product_id, opts)
     player:deduct_balance(currency, price)
     Inventory.give(player, product_id)
     consume_global_limit(game, product_id)
-    emit_event(MONOPOLY_EVENT.market.bought_item, {
+    emit_event(MonopolyEvent.market.bought_item, {
       player = player,
       entry = entry,
       price = price,
@@ -226,7 +226,7 @@ function MarketService.buy_with_opts(game, player, product_id, opts)
   assert(game.set_player_seat ~= nil, "missing game.set_player_seat")
   game:set_player_seat(player, product_id)
   consume_global_limit(game, product_id)
-  emit_event(MONOPOLY_EVENT.market.bought_vehicle, {
+  emit_event(MonopolyEvent.market.bought_vehicle, {
     player = player,
     entry = entry,
     price = price,
@@ -238,7 +238,7 @@ end
 
 function MarketService.auto_buy(game, player)
   if Agent.is_auto_player(player) then
-    emit_event(MONOPOLY_EVENT.market.auto_skip, {
+    emit_event(MonopolyEvent.market.auto_skip, {
       player = player,
       text = player.name .. " (AI) 到达黑市，选择不购买",
     })

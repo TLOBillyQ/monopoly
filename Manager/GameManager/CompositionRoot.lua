@@ -3,28 +3,28 @@ local Board = require("Components.Board")
 local Tile = require("Components.Tile")
 local Player = require("Components.Player")
 local Inventory = require("Components.Inventory")
-local constants = require("Config.Generated.Constants")
-local roles_cfg = require("Config.Generated.Roles")
-local tiles_config = require("Config.Generated.Tiles")
-local map_config = require("Config.Map")
+local Constants = require("Config.Generated.Constants")
+local RolesCfg = require("Config.Generated.Roles")
+local TilesCfg = require("Config.Generated.Tiles")
+local MapCfg = require("Config.Map")
 require "Library.Utils"
 local Store = require("Components.Store")
 local TurnManager = require("Manager.TurnManager.Turn.TurnManager")
-local turn_start = require("Manager.TurnManager.Turn.TurnStart")
-local turn_roll = require("Manager.TurnManager.Turn.TurnRoll")
-local turn_move = require("Manager.TurnManager.Turn.TurnMove")
-local turn_land = require("Manager.TurnManager.Turn.TurnLand")
-local turn_post = require("Manager.TurnManager.Turn.TurnPost")
-local turn_end = require("Manager.TurnManager.Turn.TurnEnd")
+local TurnStart = require("Manager.TurnManager.Turn.TurnStart")
+local TurnRoll = require("Manager.TurnManager.Turn.TurnRoll")
+local TurnMove = require("Manager.TurnManager.Turn.TurnMove")
+local TurnLand = require("Manager.TurnManager.Turn.TurnLand")
+local TurnPost = require("Manager.TurnManager.Turn.TurnPost")
+local TurnEnd = require("Manager.TurnManager.Turn.TurnEnd")
 local MovementService = require("Manager.MovementManager.Movement.MovementService")
 local MarketService = require("Manager.MarketManager.Market.MarketService")
 local BankruptcyService = require("Manager.GameManager.BankruptcyService")
 local ChoiceService = require("Manager.ChoiceManager.Choice.ChoiceService")
 local ItemRegistry = require("Manager.ItemManager.Item.ItemRegistry")
 local ChanceRegistry = require("Manager.ChanceManager.ChanceRegistry")
-local logger = require("Components.Logger")
-local market_cfg = require("Config.Generated.Market")
-local SERVICE_KEY = require("Globals.ServiceKeys")
+local Logger = require("Components.Logger")
+local MarketCfg = require("Config.Generated.Market")
+local ServiceKey = require("Globals.ServiceKeys")
 
 local CompositionRoot = {}
 
@@ -59,7 +59,7 @@ end
 local function create_board(opts)
   assert(opts ~= nil, "missing board opts")
   local tiles = assert(opts.tiles, "missing tiles config")
-  local map_cfg = assert(opts.map, "missing map config")
+  local MapCfg = assert(opts.map, "missing map config")
 
   local tile_lookup = {}
   for _, cfg in ipairs(tiles) do
@@ -67,15 +67,15 @@ local function create_board(opts)
   end
 
   local path = {}
-  for _, id in ipairs(map_cfg.path) do
+  for _, id in ipairs(MapCfg.path) do
     table.insert(path, tile_lookup[id])
   end
 
   return Board:new({
     path = path,
     tile_lookup = tile_lookup,
-    branches = map_cfg.branches,
-    map = map_cfg,
+    branches = MapCfg.branches,
+    map = MapCfg,
     overlays = { roadblocks = {}, mines = {} },
   })
 end
@@ -87,7 +87,7 @@ local function create_players(opts)
     names = { names[1], "玩家2", "玩家3", "玩家4" }
   end
   for i, name in ipairs(names) do
-    local role = roles_cfg[((i - 1) % #roles_cfg) + 1]
+    local role = RolesCfg[((i - 1) % #RolesCfg) + 1]
     local is_ai = opts.ai[i]
     local player = Player:new({
       id = i,
@@ -96,14 +96,14 @@ local function create_players(opts)
       is_ai = is_ai,
       auto = opts.auto_all,
       start_index = 1,
-      constants = constants,
+      constants = Constants,
       balances = {
-        ["金币"] = constants.starting_cash,
-        ["金豆"] = constants.starting_jindou,
-        ["乐园币"] = constants.starting_leyuanbi,
+        ["金币"] = Constants.starting_cash,
+        ["金豆"] = Constants.starting_jindou,
+        ["乐园币"] = Constants.starting_leyuanbi,
       },
-      deity_duration_turns = constants.deity_duration_turns,
-      inventory = Inventory:new({ constants = constants }),
+      deity_duration_turns = Constants.deity_duration_turns,
+      inventory = Inventory:new({ constants = Constants }),
     })
     table.insert(players, player)
   end
@@ -148,7 +148,7 @@ end
 
 local function snapshot_market_limits()
   local limits = {}
-  for _, entry in ipairs(market_cfg) do
+  for _, entry in ipairs(MarketCfg) do
     local limit = entry.limit
     if type(limit) == "number" and limit >= 1 then
       limits[entry.product_id] = limit
@@ -202,18 +202,18 @@ function CompositionRoot.assemble(opts, game_or_class)
   ItemRegistry.register_defaults()
   ChanceRegistry.register_defaults()
   local phases = {
-    start = turn_start,
-    roll = turn_roll,
-    move = turn_move,
-    landing = turn_land,
-    post_action = turn_post,
-    end_turn = turn_end,
+    start = TurnStart,
+    roll = TurnRoll,
+    move = TurnMove,
+    landing = TurnLand,
+    post_action = TurnPost,
+    end_turn = TurnEnd,
   }
   local services = {
-    [SERVICE_KEY.movement] = MovementService,
-    [SERVICE_KEY.market] = MarketService,
-    [SERVICE_KEY.bankruptcy] = BankruptcyService,
-    [SERVICE_KEY.choice] = ChoiceService,
+    [ServiceKey.movement] = MovementService,
+    [ServiceKey.market] = MarketService,
+    [ServiceKey.bankruptcy] = BankruptcyService,
+    [ServiceKey.choice] = ChoiceService,
   }
 
   local game = game_or_class
@@ -225,7 +225,7 @@ function CompositionRoot.assemble(opts, game_or_class)
   game.players = players
   game.store = store
   game.rng = rng
-  game.logger = logger
+  game.Logger = Logger
   game.finished = false
   game.winner = nil
   game.last_turn = nil

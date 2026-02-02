@@ -1,10 +1,10 @@
 local Agent = require("Manager.GameManager.Agent")
-local constants = require("Config.Generated.Constants")
-local items_cfg = require("Config.Generated.Items")
+local Constants = require("Config.Generated.Constants")
+local ItemsCfg = require("Config.Generated.Items")
 local EventHandlers = require("Manager.UIRoot.UIEventHandlers")
-local MainView = require("Manager.UIRoot.UIView")
+local UIView = require("Manager.UIRoot.UIView")
 local UIModel = require("Manager.UIRoot.UIModel")
-local logger = require("Components.Logger")
+local Logger = require("Components.Logger")
 
 local GameplayLoop = {}
 
@@ -22,15 +22,15 @@ local function log_once(state, level, key, ...)
   end
   state._log_once[key] = true
   if level == "warn" then
-    logger.warn(...)
+    Logger.warn(...)
   else
-    logger.info(...)
+    Logger.info(...)
   end
 end
 
 local function log_status(view)
   assert(view ~= nil, "missing view")
-  logger.info(
+  Logger.info(
     build_log_prefix(),
     "玩家:",
     tostring(view.current_player_name),
@@ -56,7 +56,7 @@ end
 
 local function build_item_index(state)
   state.item_name_by_id = {}
-  for _, cfg in ipairs(items_cfg) do
+  for _, cfg in ipairs(ItemsCfg) do
     state.item_name_by_id[cfg.id] = cfg.name or tostring(cfg.id)
   end
 end
@@ -78,7 +78,7 @@ local function refresh_view(state, game)
   local store_state = game.store.state
   local ui_model = build_ui_model(state, game)
   state.ui_model = ui_model
-  MainView.render(state, ui_model, log_once, build_log_prefix)
+  UIView.render(state, ui_model, log_once, build_log_prefix)
 
   assert(ui_model ~= nil, "missing ui_model")
   local players = assert(store_state.players, "missing store_state.players")
@@ -106,7 +106,7 @@ end
 function GameplayLoop.set_game(state, game)
   assert(game ~= nil, "missing game")
   game.ui_port = state
-  EventHandlers.install(game, logger, state)
+  EventHandlers.install(game, Logger, state)
   assert(game.pending_choice ~= nil, "missing game.pending_choice")
   local pending = game:pending_choice()
   state.pending_choice = pending
@@ -116,7 +116,7 @@ function GameplayLoop.set_game(state, game)
     local ui_model = build_ui_model(state, game)
     state.ui_model = ui_model
     if ui_model.choice then
-      MainView.open_choice_modal(state, ui_model.choice, ui_model.market)
+      UIView.open_choice_modal(state, ui_model.choice, ui_model.market)
     end
   end
   state.player_units = nil
@@ -124,14 +124,14 @@ function GameplayLoop.set_game(state, game)
 end
 
 function GameplayLoop.new_game(state)
-  logger.clear()
+  Logger.clear()
   assert(state.game_factory, "game_factory not set")
   local game = state.game_factory()
   build_item_index(state)
   assert(state.auto_runner ~= nil, "missing auto_runner")
   assert(state.auto_runner.reset_timer ~= nil, "missing auto_runner.reset_timer")
   state.auto_runner:reset_timer()
-  game.logger.info("启动蛋仔大富翁，玩家数:", #game.players)
+  game.Logger.info("启动蛋仔大富翁，玩家数:", #game.players)
   return game
 end
 
@@ -156,7 +156,7 @@ function GameplayLoop.step_auto_runner(game, state, dt, context)
 end
 
 function GameplayLoop.step_choice_timeout(game, state, dt, opts)
-  local timeout = constants.action_timeout_seconds or 0
+  local timeout = Constants.action_timeout_seconds or 0
   if timeout <= 0 then
     state.pending_choice_elapsed = 0
     state.pending_choice_id = nil
@@ -208,7 +208,7 @@ function GameplayLoop.step_choice_timeout(game, state, dt, opts)
 end
 
 function GameplayLoop.step_modal_timeout(state, dt, opts)
-  local timeout = constants.action_timeout_seconds or 0
+  local timeout = Constants.action_timeout_seconds or 0
   if timeout <= 0 then
     state.ui_modal_elapsed = 0
     state.ui_modal_ref = nil
@@ -364,7 +364,7 @@ function GameplayLoop.dispatch_action(game, state, action, opts)
   elseif action.type == "choice_select" or action.type == "choice_cancel" then
     GameplayLoop.clear_choice(state, {
       on_close_choice = function(ctx)
-        MainView.close_choice_modal(ctx)
+        UIView.close_choice_modal(ctx)
       end,
     })
     if game then
@@ -415,7 +415,7 @@ function GameplayLoop.tick(game, state, dt)
       return assert(ctx.ui.popup_seq, "missing popup_seq")
     end,
     on_timeout = function(ctx)
-      MainView.close_popup(ctx)
+      UIView.close_popup(ctx)
     end,
   })
 
@@ -466,7 +466,7 @@ function GameplayLoop.tick(game, state, dt)
 
   local ui_model = refresh_view(state, game)
   if ui_model.choice then
-    MainView.open_choice_modal(state, ui_model.choice, ui_model.market)
+    UIView.open_choice_modal(state, ui_model.choice, ui_model.market)
   end
   log_status(ui_model)
 end

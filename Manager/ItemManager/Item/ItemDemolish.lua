@@ -1,7 +1,7 @@
-local logger = require("Components.Logger")
+local Logger = require("Components.Logger")
 local Tile = require("Components.Tile")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
-local constants = require("Config.Generated.Constants")
+local Constants = require("Config.Generated.Constants")
 
 local Demolish = {}
 
@@ -30,13 +30,13 @@ local function send_players_to_hospital(game, idx)
   for _, pid in ipairs(snapshot) do
     local target = assert(game.players[pid], "missing target player: " .. tostring(pid))
     if target:is_vehicle_indestructible() then
-      logger.event(target.name .. " 座驾免疫导弹效果")
+      Logger.event(target.name .. " 座驾免疫导弹效果")
     else
       game:set_player_seat(target, nil)
       game:update_player_position(target, hospital_index)
       game:set_player_status(target, "move_dir", nil)
-      game:set_player_status(target, "stay_turns", constants.hospital_stay_turns)
-      logger.event(target.name .. " 被炸伤送往医院，需停留 " .. constants.hospital_stay_turns .. " 回合")
+      game:set_player_status(target, "stay_turns", Constants.hospital_stay_turns)
+      Logger.event(target.name .. " 被炸伤送往医院，需停留 " .. Constants.hospital_stay_turns .. " 回合")
       count = count + 1
     end
   end
@@ -87,7 +87,7 @@ function Demolish.apply(game, player, idx, opts)
     msg = player.name .. " 释放怪兽拆毁 " .. tile.name .. " 的建筑"
   end
 
-  logger.event(msg)
+  Logger.event(msg)
 
   local kind = "monster"
   if opts.injure then

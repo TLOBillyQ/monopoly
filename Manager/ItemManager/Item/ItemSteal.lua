@@ -1,14 +1,14 @@
-local logger = require("Components.Logger")
+local Logger = require("Components.Logger")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local LandChoiceSpecs = require("Manager.LandManager.Land.LandChoiceSpecs")
-local gameplay_constants = require("Config.GameplayConstants")
+local GameplayRules = require("Config.GameplayRules")
 
 local Steal = {}
-local ITEM_IDS = gameplay_constants.item_ids
+local ITEM_IDS = GameplayRules.item_ids
 
 local function fail_popup(game, stealer, target)
   local msg = "很遗憾，" .. target.name .. " 没有任何道具。"
-  logger.event(stealer.name .. " 使用偷窃卡失败：" .. msg)
+  Logger.event(stealer.name .. " 使用偷窃卡失败：" .. msg)
   return {
     ok = false,
     intent = { kind = "push_popup", payload = { title = "偷窃失败", body = msg } },
@@ -22,13 +22,13 @@ function Steal.steal_item_at_index(game, player, target, item_idx)
   local stolen = Inventory.remove_by_index(target, item_idx or 1)
   assert(stolen ~= nil, "missing stolen item")
   if Inventory.is_full(player) then
-    logger.warn(player.name .. " 背包已满，偷窃道具被销毁")
+    Logger.warn(player.name .. " 背包已满，偷窃道具被销毁")
     return nil
   end
   assert(Inventory.add(player, stolen) == true, "add stolen item failed")
   Inventory.consume(player, ITEM_IDS.steal)
   local name = Inventory.item_name(stolen.id)
-  logger.event(player.name .. " 使用偷窃卡，从 " .. target.name .. " 偷走道具 " .. name)
+  Logger.event(player.name .. " 使用偷窃卡，从 " .. target.name .. " 偷走道具 " .. name)
   return {
     ok = true,
     stolen = stolen,

@@ -1,14 +1,14 @@
-local items_cfg = require("Config.Generated.Items")
-local gameplay_constants = require("Config.GameplayConstants")
+local ItemsCfg = require("Config.Generated.Items")
+local GameplayRules = require("Config.GameplayRules")
 local Agent = require("Manager.GameManager.Agent")
 local Strategy = require("Manager.ItemManager.Item.ItemStrategy")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
-local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
+local MonopolyEvent = require("Globals.MonopolyEvents")
 
 local ItemPhase = {}
 
 local cfg_by_id = {}
-for _, cfg in ipairs(items_cfg) do
+for _, cfg in ipairs(ItemsCfg) do
   cfg_by_id[cfg.id] = cfg
 end
 
@@ -19,7 +19,7 @@ local PHASE_TITLES = {
 }
 
 local function resolve_event_name(kind)
-  local intent = MONOPOLY_EVENT.intent
+  local intent = MonopolyEvent.intent
   assert(kind ~= nil, "missing intent kind")
   return intent[kind] or kind
 end
@@ -60,7 +60,7 @@ local function dispatch_intent(game, payload)
 end
 
 function ItemPhase.is_enabled(game, phase)
-  local queue = gameplay_constants.item_phase_queue
+  local queue = GameplayRules.item_phase_queue
   assert(type(queue) == "table", "invalid item_phase_queue")
   for _, name in ipairs(queue) do
     if name == phase then

@@ -2,24 +2,24 @@
 local App = require("Manager.GameManager.Game")
 local MovementService = require("Manager.MovementManager.Movement.MovementService")
 local TurnManager = require("Manager.TurnManager.Turn.TurnManager")
-local turn_move = require("Manager.TurnManager.Turn.TurnMove")
+local TurnMove = require("Manager.TurnManager.Turn.TurnMove")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local Executor = require("Manager.ItemManager.Item.ItemExecutor")
 local Pricing = require("Manager.LandManager.Land.LandPricing")
 local LandActions = require("Manager.LandManager.Land.LandActions")
 local Steal = require("Manager.ItemManager.Item.ItemSteal")
 local ChanceEffects = require("Manager.ChanceManager.Chance")
-local landing_defs = require("Config.LandingEffects")
+local LandingDefs = require("Config.LandingEffects")
 local EffectPipeline = require("Manager.EffectManager.Effect.EffectPipeline")
 local Effect = require("Manager.EffectManager.Effect.Effect")
 local ChoiceService = require("Manager.ChoiceManager.Choice.ChoiceService")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
 local GameplayLoop = require("Manager.TurnManager.GameplayLoop")
-local constants = require("Config.Generated.Constants")
-local map_cfg = require("Config.Map")
-local tiles_cfg = require("Config.Generated.Tiles")
-local logger = require("Components.Logger")
-local SERVICE_KEY = require("Globals.ServiceKeys")
+local Constants = require("Config.Generated.Constants")
+local MapCfg = require("Config.Map")
+local TilesCfg = require("Config.Generated.Tiles")
+local Logger = require("Components.Logger")
+local ServiceKey = require("Globals.ServiceKeys")
 
 if not math.tofixed then
   function math.tofixed(value)
@@ -147,7 +147,7 @@ local function resolve_landing(game, player, tile, move_result, depth)
     return out
   end
 
-  return EffectPipeline.run(landing_defs, player, tile, ctx, {
+  return EffectPipeline.run(LandingDefs, player, tile, ctx, {
     resume_state = "post_action",
     resume_args = { player = player },
     optional_choice_kind = "landing_optional_effect",
@@ -164,8 +164,8 @@ local function new_game()
     ai = { [2] = true },
     auto_all = false,
     seed = 42,
-    map = map_cfg,
-    tiles = tiles_cfg,
+    map = MapCfg,
+    tiles = TilesCfg,
   })
   game.ui_port = build_ui_port()
   return game
@@ -366,7 +366,7 @@ local function test_popup_timeout_auto_confirm()
   local layer = {}
   layer.ui_modal_elapsed = 0
   layer.ui_modal_ref = nil
-  local timeout = constants.action_timeout_seconds or 0
+  local timeout = Constants.action_timeout_seconds or 0
   if timeout <= 0 then
     return
   end
@@ -543,7 +543,7 @@ local function test_bankruptcy_resets_owned_tiles()
   g:set_tile_owner(tile2, p1.id)
   g:set_tile_level(tile2, 1)
 
-  local bankruptcy = g:get_service(SERVICE_KEY.bankruptcy)
+  local bankruptcy = g:get_service(ServiceKey.bankruptcy)
   bankruptcy.eliminate(g, p1)
 
   local st1 = tile_state(g, tile1)
@@ -768,7 +768,7 @@ local function test_move_anim_wait_and_resume()
     start = function()
       return "move", { player = player, total = 1, raw_total = 1 }
     end,
-    move = turn_move,
+    move = TurnMove,
     landing = function()
       return nil
     end,

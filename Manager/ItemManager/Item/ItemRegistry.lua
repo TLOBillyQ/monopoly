@@ -1,16 +1,16 @@
-local logger = require("Components.Logger")
+local Logger = require("Components.Logger")
 local ItemEffects = require("Manager.ItemManager.Item.ItemPostEffects")
 local Demolish = require("Manager.ItemManager.Item.ItemDemolish")
 local Roadblock = require("Manager.ItemManager.Item.ItemRoadblock")
 local RemoteDice = require("Manager.ItemManager.Item.ItemRemoteDice")
 local Agent = require("Manager.GameManager.Agent")
-local gameplay_constants = require("Config.GameplayConstants")
+local GameplayRules = require("Config.GameplayRules")
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 
 local ItemRegistry = {}
 local handlers = {}
 local defaults_registered = false
-local ITEM_IDS = gameplay_constants.item_ids
+local ITEM_IDS = GameplayRules.item_ids
 
 ItemRegistry.handlers = handlers
 
@@ -65,7 +65,7 @@ local function handle_target_player_item(game, player, item_id, context)
       return ItemRegistry.target_candidates(inner_game, inner_player, inner_item_id)
     end,
     on_empty = function()
-      logger.warn("没有可选择的目标玩家")
+      Logger.warn("没有可选择的目标玩家")
     end,
     ai_select = function(inner_game, inner_player, inner_item_id, candidates)
       local target = Agent.pick_target_player(inner_game, inner_player, inner_item_id, candidates)
@@ -112,7 +112,7 @@ local function handle_remote_dice(game, player, item_id, context)
       assert(Inventory.consume(inner_player, inner_item_id) == true, "consume remote dice failed")
       local ok = RemoteDice.apply(inner_game, inner_player, dice_count, value)
       if ok and target_tile then
-        logger.event(inner_player.name .. " AI 设定遥控骰子前往 " .. target_tile.name .. " 点数 " .. value)
+        Logger.event(inner_player.name .. " AI 设定遥控骰子前往 " .. target_tile.name .. " 点数 " .. value)
       end
       return ok
     end,
@@ -142,7 +142,7 @@ local function handle_roadblock(game, player, item_id, context)
       return Roadblock.candidates(inner_game, inner_player, 3)
     end,
     on_empty = function(_, inner_player)
-      logger.warn(inner_player.name .. " 无可放置路障的位置")
+      Logger.warn(inner_player.name .. " 无可放置路障的位置")
     end,
     ai_select = function(inner_game, inner_player, inner_item_id, candidates)
       local best = Roadblock.pick_best(candidates)

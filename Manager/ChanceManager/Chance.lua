@@ -1,6 +1,6 @@
-local logger = require("Components.Logger")
+local Logger = require("Components.Logger")
 local ChanceRegistry = require("Manager.ChanceManager.ChanceRegistry")
-local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
+local MonopolyEvent = require("Globals.MonopolyEvents")
 
 local ChanceEffects = {}
 
@@ -11,7 +11,7 @@ end
 
 function ChanceEffects.resolve(game, player, card, context)
   if card.negative and player:has_angel() then
-    emit_event(MONOPOLY_EVENT.chance.applied, {
+    emit_event(MonopolyEvent.chance.applied, {
       player = player,
       card = card,
       effect = card.effect,

@@ -1,12 +1,12 @@
 local Effect = require("Manager.EffectManager.Effect.Effect")
-local logger = require("Components.Logger")
-local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
+local Logger = require("Components.Logger")
+local MonopolyEvent = require("Globals.MonopolyEvents")
 
 local OptionalEffectHandler = {}
 
 local function resolve_event_name(kind)
-  assert(MONOPOLY_EVENT ~= nil, "missing MONOPOLY_EVENT")
-  local intent = assert(MONOPOLY_EVENT.intent, "missing MONOPOLY_EVENT.intent")
+  assert(MonopolyEvent ~= nil, "missing MONOPOLY_EVENT")
+  local intent = assert(MonopolyEvent.intent, "missing MONOPOLY_EVENT.intent")
   assert(kind ~= nil, "missing event kind")
   return intent[kind] or kind
 end
@@ -58,7 +58,7 @@ function OptionalEffectHandler.build(helpers)
     local meta = choice.meta
 
     if meta.effect_ids and not contains(meta.effect_ids, effect_id) then
-      logger.warn("landing_optional_effect: effect not in offered list:", tostring(effect_id))
+      Logger.warn("landing_optional_effect: effect not in offered list:", tostring(effect_id))
       return finish_choice(game, false)
     end
 
@@ -73,7 +73,7 @@ function OptionalEffectHandler.build(helpers)
     local res = Effect.execute(target_eff, player, tile, game_ctx)
     dispatch_intent(game, res.result or res)
     if res.ok ~= true then
-      logger.warn("landing_optional_effect execute blocked:", tostring(res and res.reason))
+      Logger.warn("landing_optional_effect execute blocked:", tostring(res and res.reason))
     end
     return finish_choice(game, false)
   end

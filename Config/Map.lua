@@ -1,8 +1,8 @@
-local tiles = require("Config.Generated.Tiles")
+local TilesCfg = require("Config.Generated.Tiles")
 
 local coord_by_id = {}
 local id_by_coord = {}
-for _, t in ipairs(tiles) do
+for _, t in ipairs(TilesCfg) do
   coord_by_id[t.id] = { row = t.row, col = t.col }
   id_by_coord[t.row .. "," .. t.col] = t.id
 end

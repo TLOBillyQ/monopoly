@@ -1,11 +1,11 @@
 local Effect = require("Manager.EffectManager.Effect.Effect")
-local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
+local MonopolyEvent = require("Globals.MonopolyEvents")
 
 local Pipeline = {}
 
 local function resolve_event_name(kind)
-  assert(MONOPOLY_EVENT ~= nil, "missing MONOPOLY_EVENT")
-  local intent = assert(MONOPOLY_EVENT.intent, "missing MONOPOLY_EVENT.intent")
+  assert(MonopolyEvent ~= nil, "missing MONOPOLY_EVENT")
+  local intent = assert(MonopolyEvent.intent, "missing MONOPOLY_EVENT.intent")
   assert(kind ~= nil, "missing event kind")
   return intent[kind] or kind
 end

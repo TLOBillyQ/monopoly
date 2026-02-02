@@ -1,7 +1,7 @@
 local Inventory = require("Manager.ItemManager.Item.ItemInventory")
 local Tile = require("Components.Tile")
-local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
-local SERVICE_KEY = require("Globals.ServiceKeys")
+local MonopolyEvent = require("Globals.MonopolyEvents")
+local ServiceKey = require("Globals.ServiceKeys")
 
 local ChanceRegistry = {}
 local handlers = {}
@@ -41,7 +41,7 @@ local function handle_bankruptcy_if_negative(game, player)
   if player.cash > 0 then
     return
   end
-  local bankruptcy = game:get_service(SERVICE_KEY.bankruptcy)
+  local bankruptcy = game:get_service(ServiceKey.bankruptcy)
   bankruptcy.eliminate(game, player)
 end
 
@@ -51,7 +51,7 @@ local function apply_cash_and_maybe_bankrupt(game, player, delta)
 end
 
 local function move_steps(game, player, steps, opts)
-  local movement = game:get_service(SERVICE_KEY.movement)
+  local movement = game:get_service(ServiceKey.movement)
   assert(movement ~= nil, "missing movement service")
   local res = movement.move(game, player, steps, opts)
   assert(res ~= nil, "missing move result")
@@ -76,7 +76,7 @@ local function register_defaults()
         if not p.eliminated then
           local delta = adjust_chance_delta(p, card.amount)
           apply_cash_change(p, delta)
-          emit_event(MONOPOLY_EVENT.chance.applied, {
+          emit_event(MonopolyEvent.chance.applied, {
             player = p,
             card = card,
             effect = card.effect,
@@ -87,7 +87,7 @@ local function register_defaults()
     else
       local delta = adjust_chance_delta(player, card.amount)
       apply_cash_change(player, delta)
-      emit_event(MONOPOLY_EVENT.chance.applied, {
+      emit_event(MonopolyEvent.chance.applied, {
         player = player,
         card = card,
         effect = card.effect,
@@ -102,7 +102,7 @@ local function register_defaults()
         if not p.eliminated then
           local delta = adjust_chance_delta(p, -card.amount)
           apply_cash_and_maybe_bankrupt(game, p, delta)
-          emit_event(MONOPOLY_EVENT.chance.applied, {
+          emit_event(MonopolyEvent.chance.applied, {
             player = p,
             card = card,
             effect = card.effect,
@@ -113,7 +113,7 @@ local function register_defaults()
     else
       local delta = adjust_chance_delta(player, -card.amount)
       apply_cash_and_maybe_bankrupt(game, player, delta)
-      emit_event(MONOPOLY_EVENT.chance.applied, {
+      emit_event(MonopolyEvent.chance.applied, {
         player = player,
         card = card,
         effect = card.effect,
@@ -129,7 +129,7 @@ local function register_defaults()
           local fee = math.floor(p.cash * (card.percent / 100))
           local delta = adjust_chance_delta(p, -fee)
           apply_cash_and_maybe_bankrupt(game, p, delta)
-          emit_event(MONOPOLY_EVENT.chance.applied, {
+          emit_event(MonopolyEvent.chance.applied, {
             player = p,
             card = card,
             effect = card.effect,
@@ -141,7 +141,7 @@ local function register_defaults()
       local fee = math.floor(player.cash * (card.percent / 100))
       local delta = adjust_chance_delta(player, -fee)
       apply_cash_and_maybe_bankrupt(game, player, delta)
-      emit_event(MONOPOLY_EVENT.chance.applied, {
+      emit_event(MonopolyEvent.chance.applied, {
         player = player,
         card = card,
         effect = card.effect,
@@ -163,7 +163,7 @@ local function register_defaults()
         end
       end
     end
-    emit_event(MONOPOLY_EVENT.chance.applied, {
+    emit_event(MonopolyEvent.chance.applied, {
       player = player,
       card = card,
       effect = card.effect,
@@ -187,7 +187,7 @@ local function register_defaults()
         end
       end
     end
-    emit_event(MONOPOLY_EVENT.chance.applied, {
+    emit_event(MonopolyEvent.chance.applied, {
       player = player,
       card = card,
       effect = card.effect,
@@ -197,7 +197,7 @@ local function register_defaults()
 
   ChanceRegistry.register("set_vehicle", function(game, player, card)
     game:set_player_seat(player, card.vehicle_id)
-    emit_event(MONOPOLY_EVENT.chance.applied, {
+    emit_event(MonopolyEvent.chance.applied, {
       player = player,
       card = card,
       effect = card.effect,
@@ -217,7 +217,7 @@ local function register_defaults()
       end
       if t.type == "land" and lvl > 0 then
         game:set_tile_level(t, 0)
-        emit_event(MONOPOLY_EVENT.chance.applied, {
+        emit_event(MonopolyEvent.chance.applied, {
           card = { effect = "destroy_buildings_on_path" },
           effect = "destroy_buildings_on_path",
           tile = t,
@@ -240,7 +240,7 @@ local function register_defaults()
           game:set_player_property(owner, t.id, false)
         end
         game:reset_tile(t)
-        emit_event(MONOPOLY_EVENT.chance.applied, {
+        emit_event(MonopolyEvent.chance.applied, {
           card = { effect = "reset_tiles_on_path" },
           effect = "reset_tiles_on_path",
           tile = t,
@@ -279,14 +279,14 @@ local function register_defaults()
       table.insert(dropped_names, Inventory.item_name(item.id))
     end
     if #dropped_names > 0 then
-      emit_event(MONOPOLY_EVENT.chance.applied, {
+      emit_event(MonopolyEvent.chance.applied, {
         player = player,
         card = card,
         effect = card.effect,
         text = player.name .. " 丢弃道具 " .. #dropped_names .. " 张: " .. table.concat(dropped_names, "、"),
       })
     else
-      emit_event(MONOPOLY_EVENT.chance.applied, {
+      emit_event(MonopolyEvent.chance.applied, {
         player = player,
         card = card,
         effect = card.effect,
@@ -301,7 +301,7 @@ local function register_defaults()
       local tile = game.board:get_tile_by_id(tile_id)
       assert(tile ~= nil, "missing tile: " .. tostring(tile_id))
       game:reset_tile(tile)
-      emit_event(MONOPOLY_EVENT.chance.applied, {
+      emit_event(MonopolyEvent.chance.applied, {
         player = player,
         card = card,
         effect = card.effect,

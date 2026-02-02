@@ -1,8 +1,8 @@
 local Inventory = require("Components.Inventory")
-local game_constants = require("Config.Generated.Constants")
-local vehicles_cfg = require("Config.Generated.Vehicles")
-local logger = require("Components.Logger")
-local SERVICE_KEY = require("Globals.ServiceKeys")
+local Constants = require("Config.Generated.Constants")
+local VehiclesCfg = require("Config.Generated.Vehicles")
+local Logger = require("Components.Logger")
+local ServiceKey = require("Globals.ServiceKeys")
 require "Library.ClassUtils"
 require "Library.Utils"
 
@@ -28,13 +28,13 @@ local Player = Class("Player")
 local deep_copy = Utils.deep_copy
 
 local vehicle_by_id = {}
-for _, cfg in ipairs(vehicles_cfg) do
+for _, cfg in ipairs(VehiclesCfg) do
   vehicle_by_id[cfg.id] = cfg
 end
 local default_vehicle_cfg = {
   id = 0,
   name = "",
-  dice_count = game_constants.default_dice_count,
+  dice_count = Constants.default_dice_count,
   indestructible = false,
 }
 
@@ -238,24 +238,24 @@ function Player:is_vehicle_indestructible()
 end
 
 function Player:apply_hospital_effects(game)
-  game:set_player_status(self, "stay_turns", game_constants.hospital_stay_turns)
+  game:set_player_status(self, "stay_turns", Constants.hospital_stay_turns)
 
-  local fee = game_constants.hospital_fee
+  local fee = Constants.hospital_fee
   if self.cash < fee then
-    logger.event(self.name .. " 资金不足，无法支付医药费 " .. fee)
-    local bankruptcy = game:get_service(SERVICE_KEY.bankruptcy)
+    Logger.event(self.name .. " 资金不足，无法支付医药费 " .. fee)
+    local bankruptcy = game:get_service(ServiceKey.bankruptcy)
     bankruptcy.eliminate(game, self)
     return
   end
   self:deduct_cash(fee)
-  logger.event(self.name .. " 支付医药费 " .. fee)
+  Logger.event(self.name .. " 支付医药费 " .. fee)
   if self.cash <= 0 then
-    local bankruptcy = game:get_service(SERVICE_KEY.bankruptcy)
+    local bankruptcy = game:get_service(ServiceKey.bankruptcy)
     bankruptcy.eliminate(game, self)
     return
   end
 
-  logger.event(self.name .. " 住院，需停留 " .. self.status.stay_turns .. " 回合")
+  Logger.event(self.name .. " 住院，需停留 " .. self.status.stay_turns .. " 回合")
 end
 
 function Player:send_to_hospital(game)
@@ -267,8 +267,8 @@ function Player:send_to_hospital(game)
 end
 
 function Player:apply_mountain_effects(game)
-  game:set_player_status(self, "stay_turns", game_constants.mountain_stay_turns)
-  logger.event(self.name .. " 进入深山，停留 " .. self.status.stay_turns .. " 回合")
+  game:set_player_status(self, "stay_turns", Constants.mountain_stay_turns)
+  Logger.event(self.name .. " 进入深山，停留 " .. self.status.stay_turns .. " 回合")
 end
 
 function Player:send_to_mountain(game)
