@@ -24,9 +24,9 @@ local function _DispatchIntent(game, payload)
   if intent.kind == "need_choice" and intent.choice_spec then
     assert(game ~= nil and game.store ~= nil, "Choice.open requires game.store")
     local spec = intent.choice_spec
-    local seq = game.store:get({ "turn", "choice_seq" }) or 0
+    local seq = game.store:Get({ "turn", "choice_seq" }) or 0
     seq = seq + 1
-    game.store:set({ "turn", "choice_seq" }, seq)
+    game.store:Set({ "turn", "choice_seq" }, seq)
     local entry = {
       id = seq,
       kind = spec.kind,
@@ -37,7 +37,7 @@ local function _DispatchIntent(game, payload)
       cancel_label = spec.cancel_label or "取消",
       meta = spec.meta,
     }
-    game.store:set({ "turn", "pending_choice" }, entry)
+    game.store:Set({ "turn", "pending_choice" }, entry)
     assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
     local event_name = _ResolveEventName("need_choice")
     TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
@@ -68,8 +68,8 @@ function ItemChoiceHandler.Build(helpers)
   local function _OpenStealItemChoice(game, stealer, target)
     local lines = {}
     local options = {}
-    for i, it in ipairs(Inventory.items(target)) do
-      local label = Inventory.item_name(it.id)
+    for i, it in ipairs(Inventory.Items(target)) do
+      local label = Inventory.ItemName(it.id)
       table.insert(lines, i .. ". " .. label)
       table.insert(options, { id = i, label = label })
     end
@@ -90,8 +90,8 @@ function ItemChoiceHandler.Build(helpers)
   local function _OpenDiscardItemChoice(game, player, phase)
     local lines = {}
     local options = {}
-    for i, it in ipairs(Inventory.items(player)) do
-      local label = Inventory.item_name(it.id)
+    for i, it in ipairs(Inventory.Items(player)) do
+      local label = Inventory.ItemName(it.id)
       table.insert(lines, i .. ". " .. label)
       table.insert(options, { id = i, label = label })
     end
@@ -110,7 +110,7 @@ function ItemChoiceHandler.Build(helpers)
   end
 
   local function _ReopenItemPhase(game, player, phase)
-    local spec = ItemPhase.build_choice_spec(player, phase)
+    local spec = ItemPhase.BuildChoiceSpec(player, phase)
     assert(spec ~= nil, "missing item phase spec")
     _DispatchIntent(game, { kind = "need_choice", choice_spec = spec })
     return { stay = true }
@@ -125,10 +125,10 @@ function ItemChoiceHandler.Build(helpers)
     local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
     assert(idx ~= nil, "missing demolish index")
     if meta.item_id then
-      Inventory.consume(player, meta.item_id)
+      Inventory.Consume(player, meta.item_id)
     end
-    local res = Demolish.apply(game, player, idx, {
-      services = game:get_services(),
+    local res = Demolish.Apply(game, player, idx, {
+      services = game:GetServices(),
       injure = meta.injure,
       title = meta.title
     })
@@ -146,7 +146,7 @@ function ItemChoiceHandler.Build(helpers)
     local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
     assert(idx ~= nil, "missing roadblock index")
     if meta.item_id then
-      Inventory.consume(player, meta.item_id)
+      Inventory.Consume(player, meta.item_id)
     end
     local res = Roadblock.apply(game, player, idx)
     if res then
@@ -164,8 +164,8 @@ function ItemChoiceHandler.Build(helpers)
     local stealer = assert(game.players[meta.player_id], "missing stealer: " .. tostring(meta.player_id))
     local target = assert(game.players[meta.target_id], "missing target: " .. tostring(meta.target_id))
     assert(idx ~= nil, "missing steal index")
-    local res = Steal.steal_item_at_index(game, stealer, target, idx)
-    Logger.event("Steal choice result (multi)", res)
+    local res = Steal.StealItemAtIndex(game, stealer, target, idx)
+    Logger.Event("Steal choice result (multi)", res)
     assert(res ~= nil, "missing steal result")
     _DispatchIntent(game, res.intent or {})
     return _FinishAndClear(game)
@@ -184,15 +184,15 @@ function ItemChoiceHandler.Build(helpers)
 
     assert(action ~= nil, "missing action")
     if action.option_id == "use" then
-      if Inventory.count(target) <= 0 then
-        Inventory.consume(stealer, ITEM_IDS.steal)
-        local res = Steal.steal_item_at_index(game, stealer, target, 1)
+      if Inventory.Count(target) <= 0 then
+        Inventory.Consume(stealer, ITEM_IDS.steal)
+        local res = Steal.StealItemAtIndex(game, stealer, target, 1)
         assert(res ~= nil, "missing steal result")
         _DispatchIntent(game, res.intent or {})
         return finish_choice(game, false)
       end
-      if Inventory.count(target) <= 1 then
-        local res = Steal.steal_item_at_index(game, stealer, target, 1)
+      if Inventory.Count(target) <= 1 then
+        local res = Steal.StealItemAtIndex(game, stealer, target, 1)
         assert(res ~= nil, "missing steal result")
         _DispatchIntent(game, res.intent or {})
         return finish_choice(game, false)
@@ -203,8 +203,8 @@ function ItemChoiceHandler.Build(helpers)
 
     local next_index = meta.index + 1
     local queue = meta.queue
-    if Inventory.find_index(stealer, ITEM_IDS.steal) and queue[next_index] then
-      local spec = Steal.build_prompt_spec(game, stealer, queue, next_index)
+    if Inventory.FindIndex(stealer, ITEM_IDS.steal) and queue[next_index] then
+      local spec = Steal.BuildPromptSpec(game, stealer, queue, next_index)
       assert(spec ~= nil, "missing steal prompt spec")
       _DispatchIntent(game, { kind = "need_choice", choice_spec = spec })
       return { stay = true }
@@ -236,9 +236,9 @@ function ItemChoiceHandler.Build(helpers)
     local meta = choice.meta
     local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
     assert(value ~= nil, "missing dice value")
-    local dice_count = meta.dice_count or player:dice_count()
+    local dice_count = meta.dice_count or player:DiceCount()
     if meta.item_id then
-      Inventory.consume(player, meta.item_id)
+      Inventory.Consume(player, meta.item_id)
     end
     RemoteDice.apply(game, player, dice_count, value)
     return _FinishAndClear(game)
@@ -279,8 +279,8 @@ function ItemChoiceHandler.Build(helpers)
     end
     local idx = tonumber(action.option_id)
     assert(idx ~= nil, "missing discard index")
-    local dropped = assert(Inventory.remove_by_index(player, idx), "missing dropped item")
-    Logger.event(player.name .. " 丢弃道具 " .. Inventory.item_name(dropped.id))
+    local dropped = assert(Inventory.RemoveByIndex(player, idx), "missing dropped item")
+    Logger.Event(player.name .. " 丢弃道具 " .. Inventory.ItemName(dropped.id))
     finish_choice(game, false)
     return _ReopenItemPhase(game, player, phase)
   end

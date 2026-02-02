@@ -139,7 +139,7 @@ local function _PhaseMove(tm, args)
   if move_result.market_interrupt then
     assert(tm.game.get_service ~= nil, "missing game.get_service")
     local market = assert(tm.game:get_service(ServiceKey.market), "missing market service")
-    local spec, intent = market.build_choice_spec(player, tm.game)
+    local spec, intent = market.BuildChoiceSpec(player, tm.game)
     if spec then
       _DispatchIntent(tm.game, { kind = "need_choice", choice_spec = spec })
       return "wait_choice", {

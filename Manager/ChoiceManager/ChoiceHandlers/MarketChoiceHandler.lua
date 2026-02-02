@@ -16,9 +16,9 @@ local function _DispatchIntent(game, payload)
   if intent.kind == "need_choice" and intent.choice_spec then
     assert(game ~= nil and game.store ~= nil, "Choice.open requires game.store")
     local spec = intent.choice_spec
-    local seq = game.store:get({ "turn", "choice_seq" }) or 0
+    local seq = game.store:Get({ "turn", "choice_seq" }) or 0
     seq = seq + 1
-    game.store:set({ "turn", "choice_seq" }, seq)
+    game.store:Set({ "turn", "choice_seq" }, seq)
     local entry = {
       id = seq,
       kind = spec.kind,
@@ -29,7 +29,7 @@ local function _DispatchIntent(game, payload)
       cancel_label = spec.cancel_label or "取消",
       meta = spec.meta,
     }
-    game.store:set({ "turn", "pending_choice" }, entry)
+    game.store:Set({ "turn", "pending_choice" }, entry)
     assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
     local event_name = _ResolveEventName("need_choice")
     TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
