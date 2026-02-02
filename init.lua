@@ -14,15 +14,6 @@ logger.configure_game_time()
 
 local current_game = nil
 
-local function create_game()
-  return Game:new({
-    players = { "玩家1", "AI2", "AI3", "AI4" },
-    ai = { [2] = true, [3] = true, [4] = true },
-    auto_all = true,
-    seed = GameAPI.get_timestamp(),
-  })
-end
-
 local function show_tips(message, duration)
   local text = message and tostring(message) or ""
   if text == "" then
@@ -58,7 +49,12 @@ local function build_state()
     wait_action_anim = true,
     action_anim_seq = nil,
     item_name_by_id = {},
-    game_factory = create_game,
+    game_factory = Game:new({
+      players = { "玩家1", "AI2", "AI3", "AI4" },
+      ai = { [2] = true, [3] = true, [4] = true },
+      auto_all = true,
+      seed = GameAPI.get_timestamp(),
+    }),
     auto_runner = AutoRunner:new({ interval = ui.auto_interval }),
     tile_units = nil,
     tile_positions = nil,
@@ -77,36 +73,6 @@ local function build_state()
     _log_once = {},
   }
 
-  local function normalize_payload(data)
-    if type(data) ~= "table" then
-      return data
-    end
-    if data.text ~= nil or data.popup ~= nil then
-      return data
-    end
-    if data["1"] ~= nil then
-      return data["1"]
-    end
-    return data
-  end
-
-  local function register_intent_listener(kind, fn)
-    if not kind or not fn then
-      return
-    end
-    if not RegisterCustomEvent then
-      return
-    end
-    local intent = MONOPOLY_EVENT and MONOPOLY_EVENT.intent
-    local event_name = (intent and intent[kind]) or kind
-    if not event_name then
-      return
-    end
-    RegisterCustomEvent(event_name, function(_, _, data)
-      fn(normalize_payload(data))
-    end)
-  end
-
   state.push_popup = function(_, payload)
     return MainView.push_popup(state, payload)
   end
@@ -117,14 +83,13 @@ local function build_state()
     MainView.on_tile_owner_changed(state, tile_id, owner_id)
   end
 
-  register_intent_listener("need_choice", function(payload)
-    if payload and payload.game == current_game then
-      state.pending_choice = payload.choice
-      state.pending_choice_elapsed = 0
-      state.pending_choice_id = payload.choice.id
-      MainView.open_choice_modal(state, payload.choice)
-    end
+  RegisterCustomEvent(MONOPOLY_EVENT.intent.need_choice, function(_, _, data)
+    state.pending_choice = data.choice
+    state.pending_choice_elapsed = 0
+    state.pending_choice_id = data.choice.id
+    MainView.open_choice_modal(state, data.choice)
   end)
+  
   logger.set_adapter({
     level = "event",
     on_log = function(entry)
@@ -172,7 +137,7 @@ local function install_game_init(state)
     local role = GameAPI.get_role(1)
     local unit = role.get_ctrl_unit()
     role.send_ui_custom_event("显示加载屏", {});
-    
+
     local tile_names = {}
     local building_names = {}
     local tile_ids = map_cfg.path or {}
@@ -233,5 +198,3 @@ end
 local state = build_state()
 install_game_init(state)
 start_tick_loop(state)
-
-

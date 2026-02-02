@@ -7,37 +7,19 @@ end
 local MovementManager = {}
 
 function MovementManager.one_step(player_id, v3_dir, start_tile_id, end_tile_id)
-    if not (G and G.tiles and G.unit and G.unit[player_id]) then
-        return
-    end
-
     local start_tile = G.tiles[start_tile_id]
     local end_tile = G.tiles[end_tile_id]
-    if not (start_tile and end_tile and start_tile.get_position and end_tile.get_position) then
-        return
-    end
 
     local pos_s = start_tile.get_position()
     local pos_e = end_tile.get_position()
-    local dist = pos_e - pos_s 
+    local dist = pos_e - pos_s
     local len = dist:length()
-    if len <= 0 then
-        return
-    end
 
     local time = len / WALK_SPEED
     local dir = v3_dir
-    if not dir and dist.x and dist.y and dist.z and math.Vector3 then
-        dir = math.Vector3(dist.x / len, dist.y / len, dist.z / len)
-    end
-    if not dir then
-        return
-    end
+    dir = math.Vector3(dist.x / len, dist.y / len, dist.z / len)
 
     local unit = G.unit[player_id]
-    if not unit or not unit.start_move_by_direction then
-        return
-    end
     if unit.set_direction then
         unit.set_direction(dir)
     elseif unit.set_orientation then
