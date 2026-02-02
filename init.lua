@@ -17,7 +17,7 @@ Logger.configure_game_time()
 
 local current_game = nil
 
-local function build_state()
+local function _BuildState()
   local ui = UIView.BuildUiState()
   local state = {
     ui = ui,
@@ -93,7 +93,7 @@ local function build_state()
   return state
 end
 
-local function install_game_init(state)
+local function _InstallGameInit(state)
   RegisterTriggerEvent({ EVENT.GAME_INIT }, function()
     require "Library.UIManager.Utils"
     UIManager.Builder:new(require "Data.UIManagerNodes")
@@ -120,12 +120,12 @@ local function install_game_init(state)
 
     if not state.tick_started then
       state.tick_started = true
-      start_tick_loop(state)
+      _StartTickLoop(state)
     end
   end)
 end
 
-local function start_tick_loop(state, interval)
+local function _StartTickLoop(state, interval)
   require "Library.Utils"
   local tick_interval = interval or 1
   local tick_seconds = math.tofixed(tick_interval + 1) / 30.0
@@ -134,5 +134,5 @@ local function start_tick_loop(state, interval)
   end, -1)
 end
 
-local state = build_state()
-install_game_init(state)
+local state = _BuildState()
+_InstallGameInit(state)
