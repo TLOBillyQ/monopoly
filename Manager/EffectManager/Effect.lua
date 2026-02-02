@@ -79,7 +79,6 @@ function Effect.BuildGameCtx(game, move_result, opts)
     game = game,
     store = game.store,
     rng = game.rng,
-    services = game:GetServices(),
     phase = phase or "wait_choice",
     move_result = move_result,
     on_landing = opts.on_landing,

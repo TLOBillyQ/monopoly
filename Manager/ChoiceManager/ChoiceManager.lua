@@ -18,7 +18,6 @@ end
 
 local function _UseItem(game, player, item_id, context)
   assert(context ~= nil, "missing item context")
-  context.services = game:GetServices()
   return Executor.UseItem(game, player, item_id, context)
 end
 
@@ -130,5 +129,4 @@ function ChoiceManager.Resolve(game, choice, action)
 end
 
 return ChoiceManager
-
 

@@ -3,7 +3,7 @@ local Constants = require("Config.Generated.Constants")
 local BoardUtils = require("Manager.ItemManager.ItemBoardUtils")
 local Inventory = require("Manager.ItemManager.ItemInventory")
 local GameplayRules = require("Config.GameplayRules")
-local ServiceKey = require("Globals.ServiceKeys")
+local BankruptcyManager = require("Manager.GameManager.BankruptcyManager")
 
 local ItemEffects = {}
 local ITEM_IDS = GameplayRules.item_ids
@@ -55,8 +55,7 @@ local TARGET_EFFECTS = {
       target:DeductCash(fee)
       Logger.Event(user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. fee .. " 税金")
       if target.cash <= 0 then
-        local bankruptcy = game:GetService(ServiceKey.bankruptcy)
-        bankruptcy.Eliminate(game, target)
+        BankruptcyManager.Eliminate(game, target)
       end
       return true
     end,
@@ -251,12 +250,10 @@ end
 
 function ItemEffects.ApplyPost(game, player, item_id, context)
   context = context or {}
-  context.services = context.services or game:GetServices()
   local cfg = assert(POST_EFFECTS[item_id], "missing post effect: " .. tostring(item_id))
   local handler = assert(handlers[cfg.type], "missing post effect handler: " .. tostring(cfg.type))
   return handler(game, player, cfg, context)
 end
 
 return ItemEffects
-
 

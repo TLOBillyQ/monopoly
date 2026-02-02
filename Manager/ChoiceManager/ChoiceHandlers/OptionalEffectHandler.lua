@@ -66,7 +66,7 @@ function OptionalEffectHandler.Build(helpers)
     local target_eff = assert(find_effect_by_id(effect_defs, effect_id), "missing target effect: " .. tostring(effect_id))
 
     local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
-    local tile = assert(game.board:get_tile_by_id(meta.tile_id), "missing tile: " .. tostring(meta.tile_id))
+    local tile = assert(game.board:GetTileById(meta.tile_id), "missing tile: " .. tostring(meta.tile_id))
     local move_result = meta.move_result
     local game_ctx = build_game_ctx(game, move_result)
 
@@ -85,5 +85,4 @@ function OptionalEffectHandler.Build(helpers)
 end
 
 return OptionalEffectHandler
-
 

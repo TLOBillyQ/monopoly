@@ -16,10 +16,10 @@ local ChoiceManager = require("Manager.ChoiceManager.ChoiceManager")
 local BoardUtils = require("Manager.ItemManager.ItemBoardUtils")
 local GameplayLoop = require("Manager.TurnManager.GameplayLoop")
 local Constants = require("Config.Generated.Constants")
+local BankruptcyManager = require("Manager.GameManager.BankruptcyManager")
 local MapCfg = require("Config.Map")
 local TilesCfg = require("Config.Generated.Tiles")
 local Logger = require("Components.Logger")
-local ServiceKey = require("Globals.ServiceKeys")
 
 if not math.tofixed then
   function math.tofixed(value)
@@ -57,8 +57,9 @@ local function _BuildUiPort(overrides)
     wait_move_anim = false,
     wait_action_anim = false,
     push_popup = function() end,
-    on_tile_owner_changed = function() end,
-    on_tile_upgraded = function() end,
+    PushPopup = function() end,
+    OnTileOwnerChanged = function() end,
+    OnTileUpgraded = function() end,
   }
   if overrides then
     for key, value in pairs(overrides) do
@@ -71,7 +72,7 @@ end
 local function _VisitedTileIds(board, visited)
   local list = {}
   for _, idx in ipairs(visited or {}) do
-    local tile = board:get_tile(idx)
+    local tile = board:GetTile(idx)
     table.insert(list, tile and tile.id or idx)
   end
   return list
@@ -87,9 +88,9 @@ local function _ListContains(list, value)
 end
 
 local function _NextChoiceId(store)
-  local seq = store:get({ "turn", "choice_seq" }) or 0
+  local seq = store:Get({ "turn", "choice_seq" }) or 0
   seq = seq + 1
-  store:set({ "turn", "choice_seq" }, seq)
+  store:Set({ "turn", "choice_seq" }, seq)
   return seq
 end
 
@@ -107,7 +108,7 @@ local function _OpenChoice(game, payload)
     cancel_label = payload.cancel_label or "取消",
     meta = payload.meta,
   }
-  game.store:set({ "turn", "pending_choice" }, entry)
+  game.store:Set({ "turn", "pending_choice" }, entry)
   return entry
 end
 
@@ -115,13 +116,13 @@ local function _GetChoice(game)
   if not (game and game.store) then
     return nil
   end
-  return game.store:get({ "turn", "pending_choice" })
+  return game.store:Get({ "turn", "pending_choice" })
 end
 
 local MAX_LANDING_DEPTH = 10
 
 local function _BuildLandingCtx(game, move_result)
-  return Effect.build_game_ctx(game, move_result, {
+  return Effect.BuildGameCtx(game, move_result, {
     phase_default = "landing",
     on_landing = true,
   })
@@ -139,7 +140,7 @@ local function _ResolveLanding(game, player, tile, move_result, depth)
     local next_tile = nil
     if target_player then
       local idx = out.board_index or target_player.position
-      next_tile = idx and game and game.board and game.board:get_tile(idx) or nil
+      next_tile = idx and game and game.board and game.board:GetTile(idx) or nil
     end
     if next_tile then
       return _ResolveLanding(game, target_player, next_tile, out.move_result, depth + 1)
@@ -147,7 +148,7 @@ local function _ResolveLanding(game, player, tile, move_result, depth)
     return out
   end
 
-  return EffectPipeline.run(LandingDefs, player, tile, ctx, {
+  return EffectPipeline.Run(LandingDefs, player, tile, ctx, {
     resume_state = "post_action",
     resume_args = { player = player },
     optional_choice_kind = "landing_optional_effect",
@@ -203,16 +204,16 @@ end
 local Tile = require("Components.Tile")
 
 local function _TileState(game, tile)
-  local state = Tile.get_state(game, tile)
+  local state = Tile.GetState(game, tile)
   return state or { owner_id = nil, level = 0 }
 end
 
 local function _TestPassStart()
   local g = _NewGame()
-  local p = g:current_player()
+  local p = g:CurrentPlayer()
   -- Passing start means stepping onto tile id 35.
-  g:update_player_position(p, g.board:index_of_tile_id(24))
-  local res = MovementManager.move(g, p, 1, { branch_parity = 1 })
+  g:UpdatePlayerPosition(p, g.board:IndexOfTileId(24))
+  local res = MovementManager.Move(g, p, 1, { branch_parity = 1 })
   _AssertEq(res.passed_start, 1, "pass_start bonus")
 end
 
@@ -222,7 +223,7 @@ local function _TestMoveAnimCallbackAndDelay()
   local layer = { wait_move_anim = true }
   local game = {
     store = {
-      get = function(_, key)
+      Get = function(_, key)
         if key[1] == "turn" and key[2] == "move_anim" then
           return { seq = 1 }
         end
@@ -246,7 +247,7 @@ local function _TestMoveAnimCallbackAndDelay()
     end,
   }
   SetTimeOut = LuaAPI.call_delay_time
-  GameplayLoop.step_move_anim(game, layer, {
+  GameplayLoop.StepMoveAnim(game, layer, {
     on_move_anim = function(_, anim)
       _AssertEq(anim.seq, 1, "anim seq forwarded")
       return 0.2
@@ -260,33 +261,33 @@ local function _TestMoveAnimCallbackAndDelay()
 end
 local function _TestLandOnStartReward()
   local g = _NewGame()
-  local p = g:current_player()
+  local p = g:CurrentPlayer()
   local idx = _FirstTileByType(g.board, "start")
-  g:update_player_position(p, idx)
+  g:UpdatePlayerPosition(p, idx)
   local before = p.cash
-  local res = _ResolveLanding(g, p, g.board:get_tile(idx), {})
+  local res = _ResolveLanding(g, p, g.board:GetTile(idx), {})
   assert(not res, "landing resolver should not wait")
   assert(p.cash > before, "landing on start should grant reward")
 end
 
 local function _TestRoadblockStop()
   local g = _NewGame()
-  local p = g:current_player()
-  g.board:place_roadblock(2)
-  local res = MovementManager.move(g, p, 3, { branch_parity = 3 })
+  local p = g:CurrentPlayer()
+  g.board:PlaceRoadblock(2)
+  local res = MovementManager.Move(g, p, 3, { branch_parity = 3 })
   _AssertEq(res.stopped_on_roadblock, true, "stopped on roadblock")
   _AssertEq(p.position, 2, "position should stop at roadblock")
 end
 
 local function _TestMonsterCard()
   local g = _NewGame()
-  local p = g:current_player()
+  local p = g:CurrentPlayer()
   local idx = 3
-  local tile = g.board:get_tile(idx)
-  g:set_tile_owner(tile, 2)
-  g:set_tile_level(tile, 2)
-  p.inventory:add({ id = 2008 })
-  local res = Executor.use_item(g, p, 2008, { services = g.services, by_ai = true })
+  local tile = g.board:GetTile(idx)
+  g:SetTileOwner(tile, 2)
+  g:SetTileLevel(tile, 2)
+  p.inventory:Add({ id = 2008 })
+  local res = Executor.UseItem(g, p, 2008, { by_ai = true })
   if type(res) == "table" and res.intent then
     if res.intent.kind == "need_choice" then
       _OpenChoice(g, res.intent.choice_spec)
@@ -294,7 +295,7 @@ local function _TestMonsterCard()
     local pending = _GetChoice(g)
     assert(pending and pending.kind == "demolish_target", "monster should open choice")
     local first = pending.options[1]
-    ChoiceManager.resolve(g, pending, { option_id = first.id })
+    ChoiceManager.Resolve(g, pending, { option_id = first.id })
     res = true
   end
   local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
@@ -304,16 +305,16 @@ end
 
 local function _TestMissileCard()
   local g = _NewGame()
-  local p = g:current_player()
+  local p = g:CurrentPlayer()
   local idx = 4
-  local tile = g.board:get_tile(idx)
-  g:set_tile_owner(tile, 2)
-  g:set_tile_level(tile, 1)
-  g:update_player_position(g.players[2], idx)
-  g.board:place_roadblock(idx)
-  g.board:place_mine(idx)
-  p.inventory:add({ id = 2013 })
-  local res = Executor.use_item(g, p, 2013, { services = g.services })
+  local tile = g.board:GetTile(idx)
+  g:SetTileOwner(tile, 2)
+  g:SetTileLevel(tile, 1)
+  g:UpdatePlayerPosition(g.players[2], idx)
+  g.board:PlaceRoadblock(idx)
+  g.board:PlaceMine(idx)
+  p.inventory:Add({ id = 2013 })
+  local res = Executor.UseItem(g, p, 2013, {})
   if type(res) == "table" and res.intent then
     if res.intent.kind == "need_choice" then
       _OpenChoice(g, res.intent.choice_spec)
@@ -321,23 +322,23 @@ local function _TestMissileCard()
     local pending = _GetChoice(g)
     assert(pending and pending.kind == "demolish_target", "missile should open choice")
     local first = pending.options[1]
-    ChoiceManager.resolve(g, pending, { option_id = first.id })
+    ChoiceManager.Resolve(g, pending, { option_id = first.id })
     res = true
   end
   local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
   _AssertEq(ok, true, "missile use ok")
   _AssertEq(_TileState(g, tile).level, 0, "building destroyed by missile")
-  _AssertEq(g.board:has_roadblock(idx), false, "roadblock cleared")
-  _AssertEq(g.board:has_mine(idx), false, "mine cleared")
+  _AssertEq(g.board:HasRoadblock(idx), false, "roadblock cleared")
+  _AssertEq(g.board:HasMine(idx), false, "mine cleared")
   assert(g.players[2].status.stay_turns > 0, "target sent to hospital")
 end
 
 local function _TestLandingOptionalWaitsWithUi()
   local g = _NewGame()
   g.ui_port = _BuildUiPort()
-  local p = g:current_player()
+  local p = g:CurrentPlayer()
   local idx, tile = _FirstLandTile(g.board)
-  g:update_player_position(p, idx)
+  g:UpdatePlayerPosition(p, idx)
   local res = _ResolveLanding(g, p, tile, {})
   assert(res and res.waiting, "landing resolver should wait when UI is available")
   local pending = _GetChoice(g)
@@ -346,9 +347,9 @@ end
 
 local function _TestLandingOptionalWaitsWithoutUiAndCanResolve()
   local g = _NewGame()
-  local p = g:current_player()
+  local p = g:CurrentPlayer()
   local idx, tile = _FirstLandTile(g.board)
-  g:update_player_position(p, idx)
+  g:UpdatePlayerPosition(p, idx)
   local before_cash = p.cash
   local res = _ResolveLanding(g, p, tile, {})
   assert(res and res.waiting, "landing resolver should wait without manual UI interaction")
@@ -356,7 +357,7 @@ local function _TestLandingOptionalWaitsWithoutUiAndCanResolve()
   assert(pending and pending.kind == "landing_optional_effect", "pending choice expected")
   local first = pending.options and pending.options[1]
   assert(first, "expected at least one optional effect")
-  ChoiceManager.resolve(g, pending, { option_id = first.id })
+  ChoiceManager.Resolve(g, pending, { option_id = first.id })
   assert(_TileState(g, tile).owner_id == p.id, "land should be purchased after resolving choice")
   assert(p.cash < before_cash, "cash deducted for purchase")
 end
@@ -392,35 +393,35 @@ local function _TestPopupTimeoutAutoConfirm()
       l.modal.active:confirm()
     end,
   }
-  GameplayLoop.step_modal_timeout(layer, near_timeout, timeout_opts)
+  GameplayLoop.StepModalTimeout(layer, near_timeout, timeout_opts)
   _AssertEq(popup.confirm_called, 0, "popup should not auto confirm before timeout")
-  GameplayLoop.step_modal_timeout(layer, near_timeout + 1, timeout_opts)
+  GameplayLoop.StepModalTimeout(layer, near_timeout + 1, timeout_opts)
   _AssertEq(popup.confirm_called, 1, "popup should auto confirm after timeout")
 end
 
 local function _TestLandingOptionalStaleChoiceIsBlocked()
   local g = _NewGame()
   g.ui_port = _BuildUiPort()
-  local p = g:current_player()
+  local p = g:CurrentPlayer()
   local idx, tile = _FirstLandTile(g.board)
-  g:update_player_position(p, idx)
+  g:UpdatePlayerPosition(p, idx)
   local res = _ResolveLanding(g, p, tile, {})
   assert(res and res.waiting, "should open choice")
   local pending = _GetChoice(g)
   assert(pending and pending.kind == "landing_optional_effect", "pending choice expected")
 
   -- Invalidate the option after choice is shown (simulate state change).
-  p:set_cash(0)
+  p:SetCash(0)
 
-  ChoiceManager.resolve(g, pending, { option_id = "buy_land" })
+  ChoiceManager.Resolve(g, pending, { option_id = "buy_land" })
   assert(_TileState(g, tile).owner_id == nil, "stale buy_land should be blocked")
 end
 
 local function _TestChanceIsMandatoryEffectEntrypoint()
   local g = _NewGame()
-  local p = g:current_player()
+  local p = g:CurrentPlayer()
   local idx, tile = _FirstTileByType(g.board, "chance")
-  g:update_player_position(p, idx)
+  g:UpdatePlayerPosition(p, idx)
 
   -- We verify execution by checking if LuaAPI.rand is used to pick a card
   local called = { rand = 0 }
@@ -443,24 +444,24 @@ end
 
 local function _TestMovementExamplesFromIssue()
   local g = _NewGame()
-  local p = g:current_player()
+  local p = g:CurrentPlayer()
 
   -- 例子1: 起点=海口路(3)，步数=4，终点=天津路(32)
-  g:update_player_position(p, g.board:index_of_tile_id(3))
-  local r1 = MovementManager.move(g, p, 4, { branch_parity = 4, skip_market_check = true })
-  _AssertEq(g.board:get_tile(p.position).id, 32, "example1 end tile")
+  g:UpdatePlayerPosition(p, g.board:IndexOfTileId(3))
+  local r1 = MovementManager.Move(g, p, 4, { branch_parity = 4, skip_market_check = true })
+  _AssertEq(g.board:GetTile(p.position).id, 32, "example1 end tile")
   assert(#r1.visited == 4, "example1 visited steps")
 
   -- 例子2: 起点=天津路(32)，当前方向向下(下一格31)，步数=6，终点=澳门路(6)
-  g:update_player_position(p, g.board:index_of_tile_id(32))
-  local r2 = MovementManager.move(g, p, 6, { branch_parity = 6, direction = "down", skip_market_check = true })
-  _AssertEq(g.board:get_tile(p.position).id, 6, "example2 end tile")
+  g:UpdatePlayerPosition(p, g.board:IndexOfTileId(32))
+  local r2 = MovementManager.Move(g, p, 6, { branch_parity = 6, direction = "down", skip_market_check = true })
+  _AssertEq(g.board:GetTile(p.position).id, 6, "example2 end tile")
   assert(#r2.visited == 6, "example2 visited steps")
 
   -- 例子3: 起点=南昌路(25)，当前方向向右，步数=12，终点=南宁路(7)
-  g:update_player_position(p, g.board:index_of_tile_id(25))
-  local r3 = MovementManager.move(g, p, 12, { branch_parity = 12, direction = "right", skip_market_check = true })
-  _AssertEq(g.board:get_tile(p.position).id, 7, "example3 end tile")
+  g:UpdatePlayerPosition(p, g.board:IndexOfTileId(25))
+  local r3 = MovementManager.Move(g, p, 12, { branch_parity = 12, direction = "right", skip_market_check = true })
+  _AssertEq(g.board:GetTile(p.position).id, 7, "example3 end tile")
   assert(#r3.visited == 12, "example3 visited steps")
 end
 
@@ -468,17 +469,17 @@ local function _TestAiPicksLandPurchase()
   local Agent = require("Manager.GameManager.Agent")
   local g = _NewGame()
   local ai_player = g.players[2]
-  assert(Agent.is_auto_player(ai_player), "player 2 should be AI")
+  assert(Agent.IsAutoPlayer(ai_player), "player 2 should be AI")
   
   -- Set AI player as current player (index 2)
   if g.store then
-    g.store:set({"turn", "current_player_index"}, 2)
+    g.store:Set({"turn", "current_player_index"}, 2)
   end
   
-  assert(g:current_player() == ai_player, "AI should be current player")
+  assert(g:CurrentPlayer() == ai_player, "AI should be current player")
   
   local idx, tile = _FirstLandTile(g.board)
-  g:update_player_position(ai_player, idx)
+  g:UpdatePlayerPosition(ai_player, idx)
   
   local res = _ResolveLanding(g, ai_player, tile, {})
   assert(res and res.waiting, "should wait for choice")
@@ -486,13 +487,13 @@ local function _TestAiPicksLandPurchase()
   local pending = _GetChoice(g)
   assert(pending and pending.kind == "landing_optional_effect", "should have landing choice")
   
-  local action = Agent.auto_action_for_choice(g, pending)
+  local action = Agent.AutoActionForChoice(g, pending)
   assert(action, "AI should return an action")
   assert(action.type == "choice_select", "AI should select land purchase")
   assert(action.option_id == "buy_land", "AI should pick buy_land")
   
   local before_cash = ai_player.cash
-  ChoiceManager.resolve(g, pending, action)
+  ChoiceManager.Resolve(g, pending, action)
   assert(ai_player.cash == before_cash - tile.price, "AI cash should decrease by land price")
   assert(_TileState(g, tile).owner_id == ai_player.id, "land should be purchased")
 end
@@ -504,15 +505,15 @@ local function _TestMandatoryPaymentCausesBankruptcy()
   
   -- Set up: p1 owns a land tile with high value, p2 has little cash
   local idx, tile = _FirstLandTile(g.board)
-  g:set_tile_owner(tile, p1.id)
-  g:set_tile_level(tile, 3) -- Max level for high rent
-  g:set_player_property(p1, tile.id, true)
+  g:SetTileOwner(tile, p1.id)
+  g:SetTileLevel(tile, 3) -- Max level for high rent
+  g:SetPlayerProperty(p1, tile.id, true)
   
   -- Give p2 very little cash (not enough to pay rent)
-  p2:set_cash(10)
+  p2:SetCash(10)
   
   -- Move p2 to the land tile
-  g:update_player_position(p2, idx)
+  g:UpdatePlayerPosition(p2, idx)
   
   local before_eliminated = p2.eliminated
   _ResolveLanding(g, p2, tile, {})
@@ -536,15 +537,14 @@ local function _TestBankruptcyResetsOwnedTiles()
   end
   assert(tile2, "should have at least two land tiles")
 
-  g:set_tile_owner(tile1, p1.id)
-  g:set_tile_level(tile1, 2)
-  g:set_player_property(p1, tile1.id, true)
+  g:SetTileOwner(tile1, p1.id)
+  g:SetTileLevel(tile1, 2)
+  g:SetPlayerProperty(p1, tile1.id, true)
 
-  g:set_tile_owner(tile2, p1.id)
-  g:set_tile_level(tile2, 1)
+  g:SetTileOwner(tile2, p1.id)
+  g:SetTileLevel(tile2, 1)
 
-  local bankruptcy = g:get_service(ServiceKey.bankruptcy)
-  bankruptcy.eliminate(g, p1)
+  BankruptcyManager.Eliminate(g, p1)
 
   local st1 = _TileState(g, tile1)
   local st2 = _TileState(g, tile2)
@@ -560,10 +560,10 @@ local function _TestAiSkipsAutoBuyAtMarket()
   assert(ai_player.is_ai, "player 2 should be AI")
   
   -- Give AI player enough cash to buy something
-  ai_player:set_cash(1000)
+  ai_player:SetCash(1000)
   
   local before_cash = ai_player.cash
-  MarketManager.auto_buy(g, ai_player)
+  MarketManager.AutoBuy(g, ai_player)
   
   -- AI should not buy anything
   assert(ai_player.cash == before_cash, "AI should not spend money on auto_buy")
@@ -575,17 +575,17 @@ local function _TestLandRentContiguousSum()
   local tenant = g.players[2]
 
   local idx1, tile1, idx2, tile2 = _FirstAdjacentLandPair(g.board)
-  g:set_tile_owner(tile1, owner.id)
-  g:set_tile_owner(tile2, owner.id)
-  g:set_tile_level(tile1, 1)
-  g:set_tile_level(tile2, 2)
-  g:set_player_property(owner, tile1.id, true)
-  g:set_player_property(owner, tile2.id, true)
+  g:SetTileOwner(tile1, owner.id)
+  g:SetTileOwner(tile2, owner.id)
+  g:SetTileLevel(tile1, 1)
+  g:SetTileLevel(tile2, 2)
+  g:SetPlayerProperty(owner, tile1.id, true)
+  g:SetPlayerProperty(owner, tile2.id, true)
 
-  g:update_player_position(tenant, idx1)
+  g:UpdatePlayerPosition(tenant, idx1)
   local before = tenant.cash
-  LandActions.execute_pay_rent(g, tenant.id, tile1.id)
-  local expected = Pricing.rent_for_level(tile1, 1) + Pricing.rent_for_level(tile2, 2)
+  LandActions.ExecutePayRent(g, tenant.id, tile1.id)
+  local expected = Pricing.RentForLevel(tile1, 1) + Pricing.RentForLevel(tile2, 2)
   _AssertEq(before - tenant.cash, expected, "contiguous rent sum")
 end
 
@@ -593,33 +593,33 @@ local function _TestLandRentGraphAdjacencyBreaksPathNeighbors()
   local g = _NewGame()
   local owner = g.players[1]
   local tenant = g.players[2]
-  local idx_a = g.board:index_of_tile_id(27)
-  local idx_b = g.board:index_of_tile_id(28)
+  local idx_a = g.board:IndexOfTileId(27)
+  local idx_b = g.board:IndexOfTileId(28)
   assert(idx_a and idx_b, "expected tile ids 27/28")
-  local tile_a = g.board:get_tile(idx_a)
-  local tile_b = g.board:get_tile(idx_b)
+  local tile_a = g.board:GetTile(idx_a)
+  local tile_b = g.board:GetTile(idx_b)
   assert(tile_a and tile_b, "expected land tiles")
 
-  g:set_tile_owner(tile_a, owner.id)
-  g:set_tile_owner(tile_b, owner.id)
-  g:set_tile_level(tile_a, 1)
-  g:set_tile_level(tile_b, 2)
-  g:set_player_property(owner, tile_a.id, true)
-  g:set_player_property(owner, tile_b.id, true)
+  g:SetTileOwner(tile_a, owner.id)
+  g:SetTileOwner(tile_b, owner.id)
+  g:SetTileLevel(tile_a, 1)
+  g:SetTileLevel(tile_b, 2)
+  g:SetPlayerProperty(owner, tile_a.id, true)
+  g:SetPlayerProperty(owner, tile_b.id, true)
 
-  g:update_player_position(tenant, idx_a)
+  g:UpdatePlayerPosition(tenant, idx_a)
   local before = tenant.cash
-  LandActions.execute_pay_rent(g, tenant.id, tile_a.id)
-  local expected = Pricing.rent_for_level(tile_a, 1)
+  LandActions.ExecutePayRent(g, tenant.id, tile_a.id)
+  local expected = Pricing.RentForLevel(tile_a, 1)
   _AssertEq(before - tenant.cash, expected, "graph adjacency rent excludes non-neighbors")
 end
 
 local function _TestBoardIndicesInRangeUsesGraphDistance()
   local g = _NewGame()
-  local idx_a = g.board:index_of_tile_id(27)
-  local idx_b = g.board:index_of_tile_id(28)
+  local idx_a = g.board:IndexOfTileId(27)
+  local idx_b = g.board:IndexOfTileId(28)
   assert(idx_a and idx_b, "expected tile ids 27/28")
-  local list = BoardUtils.indices_in_range(g.board, idx_a, 1)
+  local list = BoardUtils.IndicesInRange(g.board, idx_a, 1)
   for _, idx in ipairs(list) do
     assert(idx ~= idx_b, "graph distance should not include path neighbor")
   end
@@ -629,10 +629,10 @@ local function _TestItemEqualizeCash()
   local g = _NewGame()
   local user = g.players[1]
   local target = g.players[2]
-  user:set_cash(1000)
-  target:set_cash(9000)
-  user.inventory:add({ id = 2011 })
-  local res = Executor.use_item(g, user, 2011, { by_ai = true })
+  user:SetCash(1000)
+  target:SetCash(9000)
+  user.inventory:Add({ id = 2011 })
+  local res = Executor.UseItem(g, user, 2011, { by_ai = true })
   if type(res) == "table" and res.intent then
     if res.intent.kind == "need_choice" then
       _OpenChoice(g, res.intent.choice_spec)
@@ -640,7 +640,7 @@ local function _TestItemEqualizeCash()
     local pending = _GetChoice(g)
     assert(pending and pending.kind == "item_target_player", "equalize should open choice")
     local first = pending.options[1]
-    ChoiceManager.resolve(g, pending, { option_id = first.id })
+    ChoiceManager.Resolve(g, pending, { option_id = first.id })
     res = true
   end
   local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
@@ -652,13 +652,13 @@ end
 local function _TestMarketFullInventoryBlocksItems()
   local MarketManager = require("Manager.MarketManager.MarketManager")
   local g = _NewGame()
-  local p = g:current_player()
-  p:set_cash(999999)
+  local p = g:CurrentPlayer()
+  p:SetCash(999999)
   for _ = 1, p.inventory.max_slots do
-    p.inventory:add({ id = 2001 })
+    p.inventory:Add({ id = 2001 })
   end
 
-  local list = MarketManager.list_buyable(p, g)
+  local list = MarketManager.ListBuyable(p, g)
   for _, entry in ipairs(list) do
     assert(entry.kind ~= "item", "item should be excluded when inventory full")
   end
@@ -668,7 +668,7 @@ local function _TestMarketGlobalLimit()
   local MarketManager = require("Manager.MarketManager.MarketManager")
   local market_cfg = require("Config.Generated.Market")
   local g = _NewGame()
-  local p = g:current_player()
+  local p = g:CurrentPlayer()
   local entry = nil
   for _, cfg in ipairs(market_cfg) do
     if cfg.kind == "item" and cfg.currency == "金币" then
@@ -677,19 +677,19 @@ local function _TestMarketGlobalLimit()
     end
   end
   assert(entry, "should find a market item with coin currency")
-  p:set_cash((entry.price or 0) + 1000)
-  g.store:set({ "market", "global_limits", entry.product_id }, 1)
+  p:SetCash((entry.price or 0) + 1000)
+  g.store:Set({ "market", "global_limits", entry.product_id }, 1)
 
-  local res = MarketManager.buy_with_opts(g, p, entry.product_id, nil)
+  local res = MarketManager.BuyWithOpts(g, p, entry.product_id, nil)
   local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
   assert(ok, "first purchase should succeed")
 
-  local list = MarketManager.list_buyable(p, g)
+  local list = MarketManager.ListBuyable(p, g)
   for _, item in ipairs(list) do
     assert(item.product_id ~= entry.product_id, "sold out item should be excluded from list")
   end
 
-  local spec = MarketManager.build_choice_spec(p, g)
+  local spec = MarketManager.BuildChoiceSpec(p, g)
   if spec and spec.options then
     for _, option in ipairs(spec.options) do
       assert(option.id ~= entry.product_id, "sold out item should be excluded from choice")
@@ -699,10 +699,10 @@ end
 
 local function _TestZeroCashNoBuyChoice()
   local g = _NewGame()
-  local p = g:current_player()
+  local p = g:CurrentPlayer()
   local idx, tile = _FirstLandTile(g.board)
-  g:update_player_position(p, idx)
-  p:set_cash(0)
+  g:UpdatePlayerPosition(p, idx)
+  p:SetCash(0)
   local res = _ResolveLanding(g, p, tile, {})
   assert(res and res.waiting, "buy choice should appear even when cash is zero")
   assert(_GetChoice(g) ~= nil, "pending choice should exist")
@@ -710,19 +710,19 @@ end
 
 local function _TestMovementBackwardWrap()
   local g = _NewGame()
-  local p = g:current_player()
-  g:update_player_position(p, 1)
-  local res = MovementManager.move(g, p, -1, { branch_parity = 1 })
-  assert(p.position >= 1 and p.position <= g.board:length(), "backward index in range")
+  local p = g:CurrentPlayer()
+  g:UpdatePlayerPosition(p, 1)
+  local res = MovementManager.Move(g, p, -1, { branch_parity = 1 })
+  assert(p.position >= 1 and p.position <= g.board:Length(), "backward index in range")
   assert(#res.visited == 1, "visited steps")
 end
 
 local function _TestChanceMoveBackwardPassMarket()
   local g = _NewGame()
-  local p = g:current_player()
-  g:update_player_position(p, g.board:index_of_tile_id(32))
-  g:set_player_status(p, "move_dir", "down")
-  local out = ChanceEffects.resolve(g, p, { effect = "move_backward", steps = 2, target = "self" }, {})
+  local p = g:CurrentPlayer()
+  g:UpdatePlayerPosition(p, g.board:IndexOfTileId(32))
+  g:SetPlayerStatus(p, "move_dir", "down")
+  local out = ChanceEffects.Resolve(g, p, { effect = "move_backward", steps = 2, target = "self" }, {})
   assert(out and out.move_result, "move_backward should return move result")
   local visited_ids = _VisitedTileIds(g.board, out.move_result.visited)
   assert(_ListContains(visited_ids, 39), "backward move should pass market")
@@ -731,10 +731,10 @@ end
 
 local function _TestChanceMoveBackwardPassIntersection()
   local g = _NewGame()
-  local p = g:current_player()
-  g:update_player_position(p, g.board:index_of_tile_id(42))
-  g:set_player_status(p, "move_dir", "down")
-  local out = ChanceEffects.resolve(g, p, { effect = "move_backward", steps = 2, target = "self" }, {})
+  local p = g:CurrentPlayer()
+  g:UpdatePlayerPosition(p, g.board:IndexOfTileId(42))
+  g:SetPlayerStatus(p, "move_dir", "down")
+  local out = ChanceEffects.Resolve(g, p, { effect = "move_backward", steps = 2, target = "self" }, {})
   assert(out and out.move_result, "move_backward should return move result")
   local visited_ids = _VisitedTileIds(g.board, out.move_result.visited)
   assert(_ListContains(visited_ids, 45), "backward move should pass intersection")
@@ -745,16 +745,16 @@ local function _TestInvalidChoiceOptionRejected()
   local choice = _OpenChoice(g, {
     kind = "market_buy",
     options = { { id = 1, label = "X" } },
-    meta = { player_id = g:current_player().id },
+    meta = { player_id = g:CurrentPlayer().id },
   })
-  ChoiceManager.resolve(g, choice, { option_id = 999 })
+  ChoiceManager.Resolve(g, choice, { option_id = 999 })
   assert(_GetChoice(g) == nil, "invalid option should clear choice")
 end
 
 local function _TestMoveAnimWaitAndResume()
   local g = _NewGame()
   g.ui_port = _BuildUiPort({ wait_move_anim = true })
-  local player = g:current_player()
+  local player = g:CurrentPlayer()
   g.last_turn = {
     player_id = player.id,
     player_name = player.name,
@@ -775,39 +775,39 @@ local function _TestMoveAnimWaitAndResume()
   }
   g.turn_manager = TurnManager:new(g, phases)
 
-  local res = g.turn_manager:run_until_wait()
+  local res = g.turn_manager:RunUntilWait()
   assert(res == "wait_move_anim", "should wait for move anim")
-  local seq = g.store:get({ "turn", "move_anim", "seq" })
+  local seq = g.store:Get({ "turn", "move_anim", "seq" })
   assert(seq, "move_anim seq should be set")
 
-  g:dispatch_action({ type = "move_anim_done", seq = seq })
+  g:DispatchAction({ type = "move_anim_done", seq = seq })
 
-  assert(g.store:get({ "turn", "move_anim" }) == nil, "move_anim should be cleared")
-  local phase = g.store:get({ "turn", "phase" })
+  assert(g.store:Get({ "turn", "move_anim" }) == nil, "move_anim should be cleared")
+  local phase = g.store:Get({ "turn", "phase" })
   assert(phase ~= "wait_move_anim", "should resume after move anim done")
 end
 
 local function _TestStoreMissingPathGetSet()
   local Store = require("Components.Store")
   local store = Store:new({})
-  assert(store:get({ "missing" }) == nil, "missing path should return nil")
-  store:set({ "a", "b", "c" }, 3)
-  _AssertEq(store:get({ "a", "b", "c" }), 3, "store set should create path")
-  assert(store:get({ "a", "b", "d" }) == nil, "missing leaf should return nil")
+  assert(store:Get({ "missing" }) == nil, "missing path should return nil")
+  store:Set({ "a", "b", "c" }, 3)
+  _AssertEq(store:Get({ "a", "b", "c" }), 3, "store set should create path")
+  assert(store:Get({ "a", "b", "d" }) == nil, "missing leaf should return nil")
 end
 
 local function _TestUiModelStructure()
   local UIModel = require("Manager.UIRoot.UIModel")
   local g = _NewGame()
-  local player = g:current_player()
-  player.inventory:add({ id = 2001 })
+  local player = g:CurrentPlayer()
+  player.inventory:Add({ id = 2001 })
   local ui_state = {
     ui = {
       auto_play = false,
       item_slots = { 1, 2, 3, 4, 5 },
     },
   }
-  local model = UIModel.build(g.store.state, {
+  local model = UIModel.Build(g.store.state, {
     game = g,
     ui_state = ui_state,
     last_turn = g.last_turn,
@@ -823,17 +823,17 @@ local function _TestTickSkipsAnimWhenNoAnim()
   local MainView = require("Manager.UIRoot.UIView")
   local UIModel = require("Manager.UIRoot.UIModel")
 
-  local old_refresh = MainView.refresh_panel
-  local old_refresh_board = MainView.refresh_board
-  local old_open_choice = MainView.open_choice_modal
-  local old_build = UIModel.build
+  local old_refresh = MainView.RefreshPanel
+  local old_refresh_board = MainView.RefreshBoard
+  local old_open_choice = MainView.OpenChoiceModal
+  local old_build = UIModel.Build
   local old_game_api = GameAPI
   local old_enums = Enums
 
-  MainView.refresh_panel = function() end
-  MainView.refresh_board = function() end
-  MainView.open_choice_modal = function() end
-  UIModel.build = function(store_state)
+  MainView.RefreshPanel = function() end
+  MainView.RefreshBoard = function() end
+  MainView.OpenChoiceModal = function() end
+  UIModel.Build = function(store_state)
     return {
       state = store_state,
       current_player_name = "P",
@@ -857,7 +857,10 @@ local function _TestTickSkipsAnimWhenNoAnim()
   })
   local game = { finished = false, store = store }
   local state = {
-    auto_runner = { next_action = function() return nil end },
+    auto_runner = {
+      NextAction = function() return nil end,
+      ResetTimer = function() end,
+    },
     _log_once = {},
     pending_choice = nil,
     pending_choice_elapsed = 0,
@@ -877,13 +880,13 @@ local function _TestTickSkipsAnimWhenNoAnim()
   }
 
   local ok, err = pcall(function()
-    GameplayLoop.tick(game, state, 0.1)
+    GameplayLoop.Tick(game, state, 0.1)
   end)
 
-  MainView.refresh_panel = old_refresh
-  MainView.refresh_board = old_refresh_board
-  MainView.open_choice_modal = old_open_choice
-  UIModel.build = old_build
+  MainView.RefreshPanel = old_refresh
+  MainView.RefreshBoard = old_refresh_board
+  MainView.OpenChoiceModal = old_open_choice
+  UIModel.Build = old_build
   GameAPI = old_game_api
   Enums = old_enums
 
@@ -912,17 +915,17 @@ local function _TestComplexConsecutiveTurnSettlement()
   -- 位置 15 放置地雷
   
   -- 给 p1 偷窃卡（id=2007）和座驾
-  p1.inventory:add({ id = 2007 })
-  p1:set_cash(10000)
-  g:set_player_seat(p1, 4001) -- 滑板座驾
+  p1.inventory:Add({ id = 2007 })
+  p1:SetCash(10000)
+  g:SetPlayerSeat(p1, 4001) -- 滑板座驾
   
   -- 给 p2 一些道具作为偷窃目标
-  p2.inventory:add({ id = 2001 }) -- 路障卡
-  p2:set_cash(10000)
+  p2.inventory:Add({ id = 2001 }) -- 路障卡
+  p2:SetCash(10000)
   
   -- 设置初始位置
-  g:update_player_position(p1, 10)
-  g:update_player_position(p2, 12)
+  g:UpdatePlayerPosition(p1, 10)
+  g:UpdatePlayerPosition(p2, 12)
   
   -- 找到一个机会卡格子
   local chance_idx = _FirstTileByType(g.board, "chance")
@@ -933,13 +936,13 @@ local function _TestComplexConsecutiveTurnSettlement()
   -- p2 在 chance_idx - 2 的位置（将被经过）
   -- chance_idx 是机会卡
   -- chance_idx + 2 放置地雷
-  g:update_player_position(p1, chance_idx - 3)
-  g:update_player_position(p2, chance_idx - 2)
+  g:UpdatePlayerPosition(p1, chance_idx - 3)
+  g:UpdatePlayerPosition(p2, chance_idx - 2)
   
   -- 在 chance_idx + 2 位置放置地雷
-  local mine_pos = g.board:get_tile(chance_idx + 2)
+  local mine_pos = g.board:GetTile(chance_idx + 2)
   if mine_pos then
-    g.board:place_mine(mine_pos.id)
+    g.board:PlaceMine(mine_pos.id)
   end
   
   -- 验证配置中存在向前移动的机会卡（测试依赖此配置）
@@ -955,8 +958,8 @@ local function _TestComplexConsecutiveTurnSettlement()
   assert(has_card_3023, "配置中需要存在机会卡 3023（向前移动2格）")
   
   -- 记录初始状态
-  local initial_has_steal_card = Inventory.find_index(p1, 2007) and true or false
-  local initial_p2_item_count = p2.inventory:count()
+  local initial_has_steal_card = Inventory.FindIndex(p1, 2007) and true or false
+  local initial_p2_item_count = p2.inventory:Count()
   local initial_has_vehicle = p1.seat_id and true or false
   
   assert(initial_has_steal_card, "p1 应该有偷窃卡")
@@ -965,20 +968,20 @@ local function _TestComplexConsecutiveTurnSettlement()
   
   -- 第一步：移动3格，经过p2，到达机会卡格子
   -- branch_parity 用于在分叉路口选择方向，设为与步数相同确保一致性
-  local res1 = MovementManager.move(g, p1, 3, { branch_parity = 3, skip_market_check = true })
+  local res1 = MovementManager.Move(g, p1, 3, { branch_parity = 3, skip_market_check = true })
   local first_res = res1
   if res1.steal_interrupt then
     local interrupt = res1.steal_interrupt
-    local steal_res = Steal.handle_pass_players(g, p1, interrupt.encountered_ids or {})
+    local steal_res = Steal.HandlePassPlayers(g, p1, interrupt.encountered_ids or {})
     if steal_res and steal_res.waiting then
       local pending = _GetChoice(g)
       if pending and pending.options and #pending.options > 0 then
-        ChoiceManager.resolve(g, pending, { option_id = pending.options[1].id })
+        ChoiceManager.Resolve(g, pending, { option_id = pending.options[1].id })
       elseif pending and pending.allow_cancel then
-        ChoiceManager.resolve(g, pending, { type = "choice_cancel", choice_id = pending.id })
+        ChoiceManager.Resolve(g, pending, { type = "choice_cancel", choice_id = pending.id })
       end
     end
-    res1 = MovementManager.move(g, p1, interrupt.remaining_steps, {
+    res1 = MovementManager.Move(g, p1, interrupt.remaining_steps, {
       branch_parity = interrupt.branch_parity,
       direction = interrupt.facing,
       skip_market_check = true,
@@ -991,7 +994,7 @@ local function _TestComplexConsecutiveTurnSettlement()
   assert(p1.position == chance_idx, "应该停在机会卡格子")
   
   -- 第二步：处理经过玩家的偷窃卡提示
-  local tile_chance = g.board:get_tile(chance_idx)
+  local tile_chance = g.board:GetTile(chance_idx)
   local landing_res = _ResolveLanding(g, p1, tile_chance, res1, 0)
   
   -- 在无UI模式下，应该自动处理偷窃并继续
@@ -1008,16 +1011,16 @@ local function _TestComplexConsecutiveTurnSettlement()
     
     -- 自动选择第一个选项或取消
     if pending.options and #pending.options > 0 then
-      ChoiceManager.resolve(g, pending, { option_id = pending.options[1].id })
+      ChoiceManager.Resolve(g, pending, { option_id = pending.options[1].id })
     elseif pending.allow_cancel then
-      ChoiceManager.resolve(g, pending, { type = "choice_cancel", choice_id = pending.id })
+      ChoiceManager.Resolve(g, pending, { type = "choice_cancel", choice_id = pending.id })
     else
       break
     end
     
     -- 重新检查 landing
     if iteration < max_iterations then
-      local current_tile = g.board:get_tile(p1.position)
+      local current_tile = g.board:GetTile(p1.position)
       landing_res = _ResolveLanding(g, p1, current_tile, res1, iteration)
     end
   end
@@ -1027,7 +1030,7 @@ local function _TestComplexConsecutiveTurnSettlement()
   assert(p1, "玩家1应该存在")
   
   -- 如果玩家被送到医院，验证医院效果已应用
-  local hospital_tile = g.board:get_tile(hospital_idx)
+  local hospital_tile = g.board:GetTile(hospital_idx)
   if p1.position == hospital_idx then
     assert(type(p1.status.stay_turns) == "number", "医院应设置 stay_turns")
   end
@@ -1043,8 +1046,8 @@ local function _TestComplexMarketInterruptWithRent()
   local p1 = g.players[1]
   local p2 = g.players[2]
   
-  p1:set_cash(50000)
-  p2:set_cash(50000)
+  p1:SetCash(50000)
+  p2:SetCash(50000)
   
   -- 找到黑市位置
   local market_idx = _FirstTileByType(g.board, "market")
@@ -1052,8 +1055,8 @@ local function _TestComplexMarketInterruptWithRent()
   -- 找到一个地块
   local land_idx, land_tile = _FirstLandTile(g.board)
   local found_land = false
-  for idx = market_idx + 1, g.board:length() do
-    local t = g.board:get_tile(idx)
+  for idx = market_idx + 1, g.board:Length() do
+    local t = g.board:GetTile(idx)
     if t and t.type == "land" then
       land_idx = idx
       land_tile = t
@@ -1063,7 +1066,7 @@ local function _TestComplexMarketInterruptWithRent()
   end
   if not found_land then
     for idx = 1, market_idx - 1 do
-      local t = g.board:get_tile(idx)
+      local t = g.board:GetTile(idx)
       if t and t.type == "land" then
         land_idx = idx
         land_tile = t
@@ -1075,32 +1078,33 @@ local function _TestComplexMarketInterruptWithRent()
   assert(found_land, "should find a land tile after market")
   
   -- 设置地块归 p2 所有，且有建筑
-  g:set_tile_owner(land_tile, p2.id)
-  g:set_tile_level(land_tile, 2)
-  g:set_player_property(p2, land_tile.id, true)
+  g:SetTileOwner(land_tile, p2.id)
+  g:SetTileLevel(land_tile, 2)
+  g:SetPlayerProperty(p2, land_tile.id, true)
   
   -- 放置 p1 在合适的位置，使其经过黑市到达地块
   local start_pos = market_idx - 1
   if start_pos < 1 then
-    start_pos = g.board:length()
+    start_pos = g.board:Length()
   end
-  g:update_player_position(p1, start_pos)
+  g:UpdatePlayerPosition(p1, start_pos)
   
   local move_distance = land_idx - start_pos
   if move_distance <= 0 then
-    move_distance = g.board:length() + move_distance
+    move_distance = g.board:Length() + move_distance
   end
   
   -- 移动
   local initial_cash = p1.cash
-  local res = MovementManager.move(g, p1, move_distance, { branch_parity = move_distance })
+  local res = MovementManager.Move(g, p1, move_distance, { branch_parity = move_distance })
+  res.encountered_players = {}
   
   -- 如果触发了黑市中断
   local has_market_interrupt = res.market_interrupt and true or false
   
   -- 如果没有中断或已处理，继续落地
   if not has_market_interrupt or (res.market_interrupt and res.market_interrupt.remaining_steps == 0) then
-    local final_tile = g.board:get_tile(p1.position)
+    local final_tile = g.board:GetTile(p1.position)
     local landing_res = _ResolveLanding(g, p1, final_tile, res, 0)
     
     -- 处理所有等待的选择（例如支付租金）
@@ -1113,15 +1117,15 @@ local function _TestComplexMarketInterruptWithRent()
       end
       
       if pending.options and #pending.options > 0 then
-        ChoiceManager.resolve(g, pending, { option_id = pending.options[1].id })
+        ChoiceManager.Resolve(g, pending, { option_id = pending.options[1].id })
       elseif pending.allow_cancel then
-        ChoiceManager.resolve(g, pending, { type = "choice_cancel", choice_id = pending.id })
+        ChoiceManager.Resolve(g, pending, { type = "choice_cancel", choice_id = pending.id })
       else
         break
       end
       
       if iteration < 10 then
-        local current_tile = g.board:get_tile(p1.position)
+        local current_tile = g.board:GetTile(p1.position)
         landing_res = _ResolveLanding(g, p1, current_tile, res, iteration)
       end
     end
@@ -1173,5 +1177,3 @@ for _, fn in ipairs(tests) do
 end
 
 print("\nAll regression checks passed (" .. #tests .. ")")
-
-

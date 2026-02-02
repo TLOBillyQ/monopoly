@@ -24,7 +24,6 @@ local ItemRegistry = require("Manager.ItemManager.ItemRegistry")
 local ChanceRegistry = require("Manager.ChanceManager.ChanceRegistry")
 local Logger = require("Components.Logger")
 local MarketCfg = require("Config.Generated.Market")
-local ServiceKey = require("Globals.ServiceKeys")
 
 local CompositionRoot = {}
 
@@ -209,13 +208,6 @@ function CompositionRoot.Assemble(opts, game_or_class)
     post_action = TurnPost,
     end_turn = TurnEnd,
   }
-  local services = {
-    [ServiceKey.movement] = MovementManager,
-    [ServiceKey.market] = MarketManager,
-    [ServiceKey.bankruptcy] = BankruptcyManager,
-    [ServiceKey.choice] = ChoiceManager,
-  }
-
   local game = game_or_class
   if type(game_or_class) == "table" and rawget(game_or_class, "__name") and rawget(game_or_class, "new") then
     game = game_or_class:new({ __skip_assemble = true })
@@ -229,10 +221,9 @@ function CompositionRoot.Assemble(opts, game_or_class)
   game.finished = false
   game.winner = nil
   game.last_turn = nil
-  game.services = services
 
   game:Rebuild()
-  game.turn_manager = TurnManager:New(game, phases)
+  game.turn_manager = TurnManager:new(game, phases)
 
   return game
 end
@@ -240,5 +231,3 @@ end
 CompositionRoot.SnapshotInventory = _SnapshotInventory
 
 return CompositionRoot
-
-

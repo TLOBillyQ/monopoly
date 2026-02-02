@@ -39,18 +39,4 @@ function Game:DispatchAction(action)
   self:CheckVictory()
 end
 
-function Game:GetService(key, context)
-  if context and context.services and context.services[key] then
-    return context.services[key]
-  end
-  return self.services and self.services[key]
-end
-
-function Game:GetServices(context)
-  if context and context.services then
-    return context.services
-  end
-  return self.services
-end
-
 return Game

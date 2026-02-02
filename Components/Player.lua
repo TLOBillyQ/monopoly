@@ -2,7 +2,7 @@ local Inventory = require("Components.Inventory")
 local Constants = require("Config.Generated.Constants")
 local VehiclesCfg = require("Config.Generated.Vehicles")
 local Logger = require("Components.Logger")
-local ServiceKey = require("Globals.ServiceKeys")
+local BankruptcyManager = require("Manager.GameManager.BankruptcyManager")
 require "Library.ClassUtils"
 require "Library.Utils"
 
@@ -243,15 +243,13 @@ function Player:ApplyHospitalEffects(game)
   local fee = Constants.hospital_fee
   if self.cash < fee then
     Logger.Event(self.name .. " 资金不足，无法支付医药费 " .. fee)
-    local bankruptcy = game:GetService(ServiceKey.bankruptcy)
-    bankruptcy.Eliminate(game, self)
+    BankruptcyManager.Eliminate(game, self)
     return
   end
   self:DeductCash(fee)
   Logger.Event(self.name .. " 支付医药费 " .. fee)
   if self.cash <= 0 then
-    local bankruptcy = game:GetService(ServiceKey.bankruptcy)
-    bankruptcy.Eliminate(game, self)
+    BankruptcyManager.Eliminate(game, self)
     return
   end
 
@@ -286,5 +284,4 @@ function Player:IsInMountain(game)
 end
 
 return Player
-
 

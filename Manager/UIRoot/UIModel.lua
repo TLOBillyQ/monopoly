@@ -31,8 +31,8 @@ end
 local BOARD_TILES = _BuildBoardTiles()
 
 local function _BuildOverlays(env)
-  assert(env ~= nil and env.game ~= nil and env.game.board ~= nil and env.game.board.get_overlays ~= nil, "missing board overlays")
-  return env.game.board:get_overlays()
+  assert(env ~= nil and env.game ~= nil and env.game.board ~= nil and env.game.board.GetOverlays ~= nil, "missing board overlays")
+  return env.game.board:GetOverlays()
 end
 
 local function _ResolveCurrentPlayer(state)

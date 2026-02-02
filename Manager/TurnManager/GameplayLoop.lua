@@ -22,15 +22,15 @@ local function _LogOnce(state, level, key, ...)
   end
   state._log_once[key] = true
   if level == "warn" then
-    Logger.warn(...)
+    Logger.Warn(...)
   else
-    Logger.info(...)
+    Logger.Info(...)
   end
 end
 
 local function _LogStatus(view)
   assert(view ~= nil, "missing view")
-  Logger.info(
+  Logger.Info(
     _BuildLogPrefix(),
     "玩家:",
     tostring(view.current_player_name),
@@ -131,7 +131,7 @@ function GameplayLoop.NewGame(state)
   assert(state.auto_runner ~= nil, "missing auto_runner")
   assert(state.auto_runner.ResetTimer ~= nil, "missing auto_runner.ResetTimer")
   state.auto_runner:ResetTimer()
-  game.Logger.info("启动蛋仔大富翁，玩家数:", #game.players)
+  game.Logger.Info("启动蛋仔大富翁，玩家数:", #game.players)
   return game
 end
 
@@ -472,5 +472,4 @@ function GameplayLoop.Tick(game, state, dt)
 end
 
 return GameplayLoop
-
 

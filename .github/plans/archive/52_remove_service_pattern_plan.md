@@ -15,16 +15,19 @@
 ## 进度
 
 
-- [ ] (2026-02-02 18:47+08:00) 盘点 service 模式使用点与受影响的 Manager 列表，确认每个文件需要新增的 `require` 与 PascalCase 命名。
-- [ ] (2026-02-02 18:47+08:00) 在 `Manager/GameManager/CompositionRoot.lua` 移除 `services` 组装，同时删除 `Manager/GameManager/Game.lua` 中 `get_service/get_services`。
-- [ ] (2026-02-02 18:47+08:00) 更新所有调用点与上下文构建逻辑（Choice/Item/Turn/Land/Chance 等），新增直接 `require` 的 Manager 引用，移除 `ServiceKeys` 与 `context.services` 传递。
-- [ ] (2026-02-02 18:47+08:00) 清理 `Globals/ServiceKeys.lua` 与残留引用，完成回归脚本与检索验证，补充日志与复盘。
+- [x] (2026-02-02 20:58+08:00) 盘点 service 模式使用点与受影响的 Manager 列表，确认每个文件需要新增的 `require` 与 PascalCase 命名。
+- [x] (2026-02-02 20:58+08:00) 在 `Manager/GameManager/CompositionRoot.lua` 移除 `services` 组装，同时删除 `Manager/GameManager/Game.lua` 中 `get_service/get_services`。
+- [x] (2026-02-02 20:58+08:00) 更新所有调用点与上下文构建逻辑（Choice/Item/Turn/Land/Chance 等），新增直接 `require` 的 Manager 引用，移除 `ServiceKeys` 与 `context.services` 传递。
+- [x] (2026-02-02 20:58+08:00) 清理 `Globals/ServiceKeys.lua` 与残留引用，完成回归脚本与检索验证，补充日志与复盘。
 
 
 ## 意外与发现
 
 
-暂无，实施中补充。
+- 回归脚本与多处业务代码仍使用旧的 snake_case 方法名（如 `get_tile_by_id`、`step_move_anim`、`Logger.info`），与当前实现的 PascalCase API 不一致，导致回归脚本无法运行。
+  证据：`lua .github/tests/regression.lua` 报错 `method 'get_tile_by_id' is not callable`、`field 'info' is not callable` 等。
+- 回归场景的市场中断用例在不需要偷窃的情况下触发 `pass_players`，会因为缺少偷窃卡触发断言。
+  证据：`Manager/ItemManager/ItemSteal.lua:56: missing steal item`。
 
 
 ## 决策日志
@@ -44,7 +47,7 @@
 ## 结果与复盘
 
 
-尚未开始，完成后补充。
+已移除 service 模式并完成全量调用点迁移，`Globals/ServiceKeys.lua` 删除，`Game:GetService/GetServices` 移除，所有引用改为直接 `require` Manager；回归脚本与检索验证通过。额外修正了若干与现有 API 命名不一致的调用与 UI 模型覆盖层读取，保证回归脚本可执行。
 
 
 ## 背景与导读
@@ -127,7 +130,7 @@
     rg -n "get_service|get_services|ServiceKeys|context\\.services" -g "*.lua"
     (无输出)
     lua .github/tests/regression.lua
-    All regression checks passed (N)
+    All regression checks passed (32)
 
 
 ## 接口与依赖
@@ -145,3 +148,4 @@
 
 本次修改说明：新建“移除 service 模式并改为直接访问 Manager 的计划”，原因是响应用户要求去除 service pattern 并明确可执行迁移步骤。
 本次修改说明：调整为不挂在 `game` 上而是直接 `require` Manager，并要求新增命名使用 PascalCase，原因是用户更新需求。
+本次修改说明：执行计划 52，完成 service 模式迁移并修正回归脚本/相关代码的 API 命名不一致，确保回归脚本可运行。

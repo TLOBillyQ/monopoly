@@ -6,7 +6,7 @@ local Pricing = require("Manager.LandManager.LandPricing")
 local Inventory = require("Manager.ItemManager.ItemInventory")
 local GameplayRules = require("Config.GameplayRules")
 local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
-local SERVICE_KEY = require("Globals.ServiceKeys")
+local BankruptcyManager = require("Manager.GameManager.BankruptcyManager")
 
 local tile_state = Tile.GetState
 local ITEM_IDS = GameplayRules.item_ids
@@ -21,8 +21,7 @@ local function _EliminateIfBankrupt(game, player)
   if player.cash > 0 then
     return
   end
-  local bankruptcy = game:GetService(SERVICE_KEY.bankruptcy)
-  bankruptcy.Eliminate(game, player)
+  BankruptcyManager.Eliminate(game, player)
 end
 
 function LandActions.SafeTileState(game, tile)

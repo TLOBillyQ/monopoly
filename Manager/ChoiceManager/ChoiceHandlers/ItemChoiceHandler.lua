@@ -128,7 +128,6 @@ function ItemChoiceHandler.Build(helpers)
       Inventory.Consume(player, meta.item_id)
     end
     local res = Demolish.Apply(game, player, idx, {
-      services = game:GetServices(),
       injure = meta.injure,
       title = meta.title
     })
@@ -298,5 +297,4 @@ function ItemChoiceHandler.Build(helpers)
 end
 
 return ItemChoiceHandler
-
 

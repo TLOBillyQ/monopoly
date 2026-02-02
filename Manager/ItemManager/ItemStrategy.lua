@@ -70,7 +70,7 @@ function Strategy.AutoPreAction(game, player, phase)
     else
       return nil
     end
-    local res = Executor.UseItem(game, player, item_id, { by_ai = true, services = game:GetServices() })
+    local res = Executor.UseItem(game, player, item_id, { by_ai = true })
     if type(res) == "table" and (res.waiting or res.intent or res.kind or res.action_anim) then
       return res
     end
@@ -123,6 +123,5 @@ function Strategy.AutoPreAction(game, player, phase)
 end
 
 return Strategy
-
 
 

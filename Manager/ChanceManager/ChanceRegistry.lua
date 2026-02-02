@@ -1,7 +1,8 @@
 local Inventory = require("Manager.ItemManager.ItemInventory")
 local Tile = require("Components.Tile")
 local MonopolyEvent = require("Globals.MonopolyEvents")
-local ServiceKey = require("Globals.ServiceKeys")
+local MovementManager = require("Manager.MovementManager.MovementManager")
+local BankruptcyManager = require("Manager.GameManager.BankruptcyManager")
 
 local ChanceRegistry = {}
 local handlers = {}
@@ -41,8 +42,7 @@ local function _HandleBankruptcyIfNegative(game, player)
   if player.cash > 0 then
     return
   end
-  local bankruptcy = game:GetService(ServiceKey.bankruptcy)
-  bankruptcy.Eliminate(game, player)
+  BankruptcyManager.Eliminate(game, player)
 end
 
 local function _ApplyCashAndMaybeBankrupt(game, player, delta)
@@ -51,9 +51,7 @@ local function _ApplyCashAndMaybeBankrupt(game, player, delta)
 end
 
 local function _MoveSteps(game, player, steps, opts)
-  local movement = game:GetService(ServiceKey.movement)
-  assert(movement ~= nil, "missing movement service")
-  local res = movement.Move(game, player, steps, opts)
+  local res = MovementManager.Move(game, player, steps, opts)
   assert(res ~= nil, "missing move result")
   if res.stopped_on_roadblock then
     local stay = player.status.stay_turns or 0

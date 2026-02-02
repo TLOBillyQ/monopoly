@@ -6,7 +6,7 @@ local Inventory = require("Manager.ItemManager.ItemInventory")
 local ChanceEffects = require("Manager.ChanceManager.Chance")
 local MineEffect = require("Manager.EffectManager.MineEffect")
 local Steal = require("Manager.ItemManager.ItemSteal")
-local ServiceKey = require("Globals.ServiceKeys")
+local MarketManager = require("Manager.MarketManager.MarketManager")
 
 local Landing = {}
 
@@ -90,9 +90,7 @@ Landing.executors = {
     apply = function(ctx)
       local game = ctx.game
       local player = ctx.player
-      local market = game:GetService(ServiceKey.market, ctx)
-
-      local spec, intent = market.BuildChoiceSpec(player, game)
+      local spec, intent = MarketManager.BuildChoiceSpec(player, game)
       if intent then return { intent = intent } end
       assert(spec ~= nil, "missing market choice spec")
 
@@ -122,5 +120,4 @@ Landing.executors = {
 }
 
 return Landing
-
 
