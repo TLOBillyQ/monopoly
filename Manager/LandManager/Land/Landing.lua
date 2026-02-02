@@ -94,7 +94,7 @@ Landing.executors = {
 
       local spec, intent = market.build_choice_spec(player, game)
       if intent then return { intent = intent } end
-      if not spec then return nil end
+      assert(spec ~= nil, "missing market choice spec")
 
       return { waiting = true, reason = "market_choice", intent = { kind = "need_choice", choice_spec = spec } }
     end,

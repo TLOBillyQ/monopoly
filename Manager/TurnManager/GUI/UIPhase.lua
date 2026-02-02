@@ -14,15 +14,15 @@ function Phase.build_phase_label(phase)
 end
 
 function Phase.build_phase_title(game, base_title)
-  if not (game and game.store) then
-    return base_title
-  end
+  assert(game ~= nil and game.store ~= nil, "missing game/store")
+  assert(base_title ~= nil, "missing base title")
   local phase = game.store:get({ "turn", "item_phase_active" })
-  if not phase then
+  assert(phase ~= nil, "missing item_phase_active")
+  if phase == "" then
     return base_title
   end
   local label = Phase.build_phase_label(phase)
-  return "[" .. label .. "] " .. (base_title or "请选择")
+  return "[" .. label .. "] " .. base_title
 end
 
 return Phase

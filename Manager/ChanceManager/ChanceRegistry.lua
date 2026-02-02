@@ -12,9 +12,8 @@ ChanceRegistry.handlers = handlers
 local tile_state = Tile.get_state
 
 local function emit_event(kind, payload)
-  if TriggerCustomEvent then
-    TriggerCustomEvent(kind, payload or {})
-  end
+  assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
+  TriggerCustomEvent(kind, payload or {})
 end
 
 local function abs_value(value)
@@ -53,8 +52,10 @@ end
 
 local function move_steps(game, player, steps, opts)
   local movement = game:get_service(SERVICE_KEY.movement)
+  assert(movement ~= nil, "missing movement service")
   local res = movement.move(game, player, steps, opts)
-  if res and res.stopped_on_roadblock then
+  assert(res ~= nil, "missing move result")
+  if res.stopped_on_roadblock then
     local stay = player.status.stay_turns or 0
     if stay < 1 then
       game:set_player_status(player, "stay_turns", 1)
@@ -205,51 +206,46 @@ local function register_defaults()
   end)
 
   ChanceRegistry.register("destroy_buildings_on_path", function(game, _, _, context)
-    if context and context.visited then
-      for _, idx in ipairs(context.visited) do
-        local t = game.board:get_tile(idx)
-        local snap = game.store:get({ "board", "tiles", t.id })
-        local lvl = 0
-        if type(snap) == "table" then
-          lvl = snap.level
-        end
-        if t.type == "land" and lvl > 0 then
-          if game and game.set_tile_level then
-            game:set_tile_level(t, 0)
-          elseif game and game.store and t and t.id then
-            game.store:set({ "board", "tiles", t.id, "level" }, 0)
-          end
-          emit_event(MONOPOLY_EVENT.chance.applied, {
-            card = { effect = "destroy_buildings_on_path" },
-            effect = "destroy_buildings_on_path",
-            tile = t,
-            text = "台风摧毁 " .. t.name .. " 上的建筑",
-          })
-        end
+    assert(context ~= nil and context.visited ~= nil, "missing context.visited")
+    for _, idx in ipairs(context.visited) do
+      local t = game.board:get_tile(idx)
+      assert(t ~= nil, "missing tile: " .. tostring(idx))
+      local snap = game.store:get({ "board", "tiles", t.id })
+      local lvl = 0
+      if type(snap) == "table" then
+        lvl = snap.level
+      end
+      if t.type == "land" and lvl > 0 then
+        game:set_tile_level(t, 0)
+        emit_event(MONOPOLY_EVENT.chance.applied, {
+          card = { effect = "destroy_buildings_on_path" },
+          effect = "destroy_buildings_on_path",
+          tile = t,
+          text = "台风摧毁 " .. t.name .. " 上的建筑",
+        })
       end
     end
   end)
 
   ChanceRegistry.register("reset_tiles_on_path", function(game, _, _, context)
-    if context and context.visited then
-      for _, idx in ipairs(context.visited) do
-        local t = game.board:get_tile(idx)
-        if t.type == "land" then
-          local st = tile_state(game, t)
-          if st and st.owner_id then
-            local owner = game.players[st.owner_id]
-            if owner then
-              game:set_player_property(owner, t.id, false)
-            end
-          end
-          game:reset_tile(t)
-          emit_event(MONOPOLY_EVENT.chance.applied, {
-            card = { effect = "reset_tiles_on_path" },
-            effect = "reset_tiles_on_path",
-            tile = t,
-            text = "强制征地重置 " .. t.name,
-          })
+    assert(context ~= nil and context.visited ~= nil, "missing context.visited")
+    for _, idx in ipairs(context.visited) do
+      local t = game.board:get_tile(idx)
+      assert(t ~= nil, "missing tile: " .. tostring(idx))
+      if t.type == "land" then
+        local st = tile_state(game, t)
+        assert(st ~= nil, "missing tile state: " .. tostring(t.id))
+        if st.owner_id then
+          local owner = assert(game.players[st.owner_id], "missing owner: " .. tostring(st.owner_id))
+          game:set_player_property(owner, t.id, false)
         end
+        game:reset_tile(t)
+        emit_event(MONOPOLY_EVENT.chance.applied, {
+          card = { effect = "reset_tiles_on_path" },
+          effect = "reset_tiles_on_path",
+          tile = t,
+          text = "强制征地重置 " .. t.name,
+        })
       end
     end
   end)
@@ -303,16 +299,15 @@ local function register_defaults()
     local to_drop = card.count
     for tile_id in pairs(player.properties) do
       local tile = game.board:get_tile_by_id(tile_id)
-      if tile then
-        game:reset_tile(tile)
-        emit_event(MONOPOLY_EVENT.chance.applied, {
-          player = player,
-          card = card,
-          effect = card.effect,
-          tile = tile,
-          text = player.name .. " 丢失地块 " .. tile.name,
-        })
-      end
+      assert(tile ~= nil, "missing tile: " .. tostring(tile_id))
+      game:reset_tile(tile)
+      emit_event(MONOPOLY_EVENT.chance.applied, {
+        player = player,
+        card = card,
+        effect = card.effect,
+        tile = tile,
+        text = player.name .. " 丢失地块 " .. tile.name,
+      })
       game:set_player_property(player, tile_id, false)
       to_drop = to_drop - 1
       if to_drop == 0 then
@@ -324,18 +319,15 @@ local function register_defaults()
   ChanceRegistry.register("forced_move", function(game, player, card, context)
     if card.destination_tile_id then
       local idx = game.board:index_of_tile_id(card.destination_tile_id)
-      if idx then
-        game:update_player_position(player, idx)
-        if game.set_player_status then
-          game:set_player_status(player, "move_dir", nil)
-        end
-        return {
-          kind = "need_landing",
-          player_id = player.id,
-          board_index = idx,
-          move_result = context,
-        }
-      end
+      assert(idx ~= nil, "missing destination tile index: " .. tostring(card.destination_tile_id))
+      game:update_player_position(player, idx)
+      game:set_player_status(player, "move_dir", nil)
+      return {
+        kind = "need_landing",
+        player_id = player.id,
+        board_index = idx,
+        move_result = context,
+      }
     end
     if card.destination == "hospital" then
       player:send_to_hospital(game)
@@ -343,32 +335,26 @@ local function register_defaults()
       player:send_to_mountain(game)
     elseif card.destination == "tax" then
       local idx = game.board:find_first_by_type("tax")
-      if idx then
-        game:update_player_position(player, idx)
-        if game.set_player_status then
-          game:set_player_status(player, "move_dir", nil)
-        end
-        return {
-          kind = "need_landing",
-          player_id = player.id,
-          board_index = idx,
-          move_result = context,
-        }
-      end
+      assert(idx ~= nil, "missing tax tile")
+      game:update_player_position(player, idx)
+      game:set_player_status(player, "move_dir", nil)
+      return {
+        kind = "need_landing",
+        player_id = player.id,
+        board_index = idx,
+        move_result = context,
+      }
     elseif card.destination == "market" then
       local idx = game.board:find_first_by_type("market")
-      if idx then
-        game:update_player_position(player, idx)
-        if game.set_player_status then
-          game:set_player_status(player, "move_dir", nil)
-        end
-        return {
-          kind = "need_landing",
-          player_id = player.id,
-          board_index = idx,
-          move_result = context,
-        }
-      end
+      assert(idx ~= nil, "missing market tile")
+      game:update_player_position(player, idx)
+      game:set_player_status(player, "move_dir", nil)
+      return {
+        kind = "need_landing",
+        player_id = player.id,
+        board_index = idx,
+        move_result = context,
+      }
     end
   end)
 end

@@ -14,14 +14,12 @@ local ITEM_IDS = gameplay_constants.item_ids
 local function can_buy(ctx)
   local tile = ctx.tile
   local player = ctx.player
-  if not tile then
-    return false
-  end
+  assert(tile ~= nil, "missing tile")
   if tile.type ~= "land" then
     return false
   end
   local st = LandActions.safe_tile_state(ctx.game, tile)
-  return st.owner_id == nil
+  return not st.owner_id
 end
 
 local function apply_buy(ctx)
@@ -44,9 +42,7 @@ end
 local function can_upgrade(ctx)
   local tile = ctx.tile
   local player = ctx.player
-  if not tile then
-    return false
-  end
+  assert(tile ~= nil, "missing tile")
   if tile.type ~= "land" then
     return false
   end
@@ -76,19 +72,16 @@ local function apply_upgrade(ctx)
   player:deduct_cash(cost)
   local new_level = (st.level or 0) + 1
   ctx.game:set_tile_level(tile, new_level)
-  local ui_port = ctx.game and ctx.game.ui_port
-  if ui_port and ui_port.on_tile_upgraded then
-    ui_port:on_tile_upgraded(tile.id, new_level)
-  end
+  local ui_port = assert(ctx.game.ui_port, "missing ui_port")
+  assert(ui_port.on_tile_upgraded ~= nil, "missing ui_port.on_tile_upgraded")
+  ui_port:on_tile_upgraded(tile.id, new_level)
   logger.event(player.name .. " 为 " .. tile.name .. " 加盖，花费 " .. cost)
 end
 
 local function can_pay_rent(ctx)
   local tile = ctx.tile
   local player = ctx.player
-  if not tile then
-    return false
-  end
+  assert(tile ~= nil, "missing tile")
   if tile.type ~= "land" then
     return false
   end
@@ -99,13 +92,9 @@ end
 local function apply_pay_rent(ctx)
   local tile = ctx.tile
   local player = ctx.player
-  if not tile or tile.type ~= "land" then
-    return
-  end
+  assert(tile ~= nil and tile.type == "land", "invalid land tile")
   local owner, st = LandActions.resolve_rent_owner(ctx.game, tile, tile_state)
-  if not owner then
-    return
-  end
+  assert(owner ~= nil, "missing rent owner")
 
   if player.status.pending_free_rent then
     ctx.game:set_player_status(player, "pending_free_rent", false)
@@ -142,7 +131,8 @@ local function apply_pay_rent(ctx)
 end
 
 local function can_tax(ctx)
-  return ctx.tile and ctx.tile.type == "tax"
+  assert(ctx.tile ~= nil, "missing tile")
+  return ctx.tile.type == "tax"
 end
 
 local function apply_tax(ctx)

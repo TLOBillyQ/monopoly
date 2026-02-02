@@ -10,9 +10,7 @@ end
 local function direction(from_id, to_id)
   local a = coord_by_id[from_id]
   local b = coord_by_id[to_id]
-  if not a or not b then
-    return nil
-  end
+  assert(a and b, "missing coord: " .. tostring(from_id) .. " -> " .. tostring(to_id))
   local dr = b.row - a.row
   local dc = b.col - a.col
   if dr == -1 and dc == 0 then
@@ -24,7 +22,7 @@ local function direction(from_id, to_id)
   elseif dr == 0 and dc == 1 then
     return "right"
   end
-  return nil
+  assert(false, "invalid direction: " .. tostring(from_id) .. " -> " .. tostring(to_id))
 end
 
 local function id_at(coord)
@@ -124,6 +122,7 @@ return {
   outer_next = outer_next,
   outer_prev = outer_prev,
   entry_points = entry_points,
+  branches = {},
   start_id = id_at({ 9, 9 }),
   market_id = id_at({ 5, 5 }),
   direction = direction,

@@ -1,4 +1,3 @@
-local logger = require("Components.Logger")
 local ItemEffects = require("Manager.ItemManager.Item.ItemPostEffects")
 local ItemRegistry = require("Manager.ItemManager.Item.ItemRegistry")
 local Agent = require("Manager.GameManager.Agent")
@@ -8,13 +7,11 @@ local Executor = {}
 
 function Executor.use_item(game, player, item_id, context)
   context = context or {}
-  if context.by_ai == nil then
+  if type(context.by_ai) == "nil" then
     context.by_ai = Agent.is_auto_player(player)
   end
   local cfg = Inventory.cfg(item_id)
-  if not cfg then
-    return false
-  end
+  assert(cfg ~= nil, "missing item cfg: " .. tostring(item_id))
 
   local handler = ItemRegistry.handlers[item_id]
   if handler then
@@ -22,17 +19,11 @@ function Executor.use_item(game, player, item_id, context)
   end
 
   local consumed = Inventory.consume(player, item_id)
-  if not consumed then
-    return false
-  end
+  assert(consumed == true, "item consume failed: " .. tostring(item_id))
 
   local res = ItemEffects.apply_post(game, player, item_id, context)
-  if res ~= nil then
-    return res
-  end
-
-  logger.warn("未实现的道具:" .. tostring(item_id))
-  return false
+  assert(res ~= nil, "missing item post effect result: " .. tostring(item_id))
+  return res
 end
 
 return Executor

@@ -63,15 +63,11 @@ local TARGET_EFFECTS = {
   },
   [ITEM_IDS.invite_deity] = {
     filter_target = function(_, _, target)
-      return target.status.deity ~= nil
+      return target.status.deity and true or false
     end,
     apply = function(_, user, target, _context)
-      if not target.status.deity then
-        logger.warn("没有可请的神")
-        return false
-      end
-      local deity = target.status.deity
-      target:set_deity(nil)
+      local deity = assert(target.status.deity, "missing target deity")
+      target:clear_deity()
       user:set_deity(deity.type, deity.remaining)
       logger.event(user.name .. " 使用请神卡，从 " .. target.name .. " 请走 " .. deity.type)
       return true
@@ -85,12 +81,9 @@ local TARGET_EFFECTS = {
       return true
     end,
     apply = function(_, user, target, _context)
-      local remaining = nil
-      if user.status.deity then
-        remaining = user.status.deity.remaining
-      end
+      local remaining = assert(user.status.deity, "missing user deity").remaining
       target:set_deity("poor", remaining)
-      user:set_deity(nil)
+      user:clear_deity()
       logger.event(user.name .. " 使用送神卡，将穷神送给 " .. target.name)
       return true
     end,
@@ -126,10 +119,7 @@ local POST_EFFECTS = {
 local handlers = {}
 
 handlers.set_status = function(game, player, cfg, _context)
-  local value = cfg.value
-  if value == nil then
-    value = true
-  end
+  local value = assert(cfg.value, "missing status value")
   game:set_player_status(player, cfg.key, value)
   if cfg.message then
     logger.event(player.name .. cfg.message)
@@ -147,16 +137,16 @@ handlers.deity = function(game, player, cfg, context)
 end
 
 handlers.log = function(_, player, cfg, _context)
-  if cfg.message then
-    logger.event(player.name .. cfg.message)
-  end
+  assert(cfg.message ~= nil, "missing log message")
+  logger.event(player.name .. cfg.message)
   return true
 end
 
 handlers.place_mine_here = function(game, player, _cfg, context)
   game.board:place_mine(player.position)
   logger.event(player.name .. " 在脚下埋设地雷")
-  if game.ui_port and game.ui_port.wait_action_anim then
+  assert(game.ui_port ~= nil, "missing ui_port")
+  if game.ui_port.wait_action_anim then
     game:queue_action_anim({
       kind = "mine",
       player_id = player.id,
@@ -174,89 +164,61 @@ handlers.clear_obstacles_ahead = function(game, player, cfg, context)
   local cleared_map = {}
   local current = player.position
   local distance = cfg.distance or 12
-  local parity = distance
-  if context and context.branch_parity ~= nil then
-    parity = context.branch_parity
-  end
+  assert(context ~= nil, "missing context")
+  local parity = context.branch_parity or distance
   local facing = player.status.move_dir
-  local map = board.map
-  if not map or not map.neighbors then
-    for _ = 1, distance do
-      local next_index, _passed, step_dir = board:step_forward_by_facing(current, facing, parity)
-      current = next_index
-      facing = step_dir or facing
-      if board:has_roadblock(current) then
-        board:clear_roadblock(current)
-        cleared = cleared + 1
-        if not cleared_map[current] then
-          cleared_map[current] = true
-          cleared_indices[#cleared_indices + 1] = current
-        end
-      end
-      if board:has_mine(current) then
-        board:clear_mine(current)
-        cleared = cleared + 1
-        if not cleared_map[current] then
-          cleared_map[current] = true
-          cleared_indices[#cleared_indices + 1] = current
-        end
-      end
+  local map = assert(board.map, "missing board.map")
+  local neighbors = assert(map.neighbors, "missing board.map.neighbors")
+  local OPPOSITE = { up = "down", down = "up", left = "right", right = "left" }
+  local start_tile = assert(board:get_tile(current), "missing start tile")
+  local start_id = assert(start_tile.id, "missing start tile id")
+  local queue = {}
+  local visited = {}
+  local function mark(tile_id, dir, depth)
+    visited[tile_id] = visited[tile_id] or {}
+    local key = dir or ""
+    local prev = visited[tile_id][key]
+    if prev and prev <= depth then
+      return false
     end
-  else
-    local OPPOSITE = { up = "down", down = "up", left = "right", right = "left" }
-    local start_tile = board:get_tile(current)
-    local start_id = start_tile and start_tile.id
-    local queue = {}
-    local visited = {}
-    local function mark(tile_id, dir, depth)
-      visited[tile_id] = visited[tile_id] or {}
-      local key = dir or ""
-      local prev = visited[tile_id][key]
-      if prev and prev <= depth then
-        return false
-      end
-      visited[tile_id][key] = depth
-      return true
-    end
-    if start_id then
-      mark(start_id, facing, 0)
-      table.insert(queue, { tile_id = start_id, facing = facing, depth = 0 })
-    end
-    BoardUtils.queue_walk(queue, function(node, push)
-      if node.depth < distance then
-        local neigh = map.neighbors[node.tile_id] or {}
-        local back = OPPOSITE[node.facing]
-        for dir, next_id in pairs(neigh) do
-          if not back or dir ~= back then
-            local next_index = board:index_of_tile_id(next_id)
-            if next_index then
-              if board:has_roadblock(next_index) then
-                board:clear_roadblock(next_index)
-                cleared = cleared + 1
-                if not cleared_map[next_index] then
-                  cleared_map[next_index] = true
-                  cleared_indices[#cleared_indices + 1] = next_index
-                end
-              end
-              if board:has_mine(next_index) then
-                board:clear_mine(next_index)
-                cleared = cleared + 1
-                if not cleared_map[next_index] then
-                  cleared_map[next_index] = true
-                  cleared_indices[#cleared_indices + 1] = next_index
-                end
-              end
-              if mark(next_id, dir, node.depth + 1) then
-                push({ tile_id = next_id, facing = dir, depth = node.depth + 1 })
-              end
+    visited[tile_id][key] = depth
+    return true
+  end
+  mark(start_id, facing, 0)
+  table.insert(queue, { tile_id = start_id, facing = facing, depth = 0 })
+  BoardUtils.queue_walk(queue, function(node, push)
+    if node.depth < distance then
+      local neigh = assert(neighbors[node.tile_id], "missing neighbors: " .. tostring(node.tile_id))
+      local back = OPPOSITE[node.facing]
+      for dir, next_id in pairs(neigh) do
+        if not back or dir ~= back then
+          local next_index = assert(board:index_of_tile_id(next_id), "missing tile index: " .. tostring(next_id))
+          if board:has_roadblock(next_index) then
+            board:clear_roadblock(next_index)
+            cleared = cleared + 1
+            if not cleared_map[next_index] then
+              cleared_map[next_index] = true
+              cleared_indices[#cleared_indices + 1] = next_index
             end
+          end
+          if board:has_mine(next_index) then
+            board:clear_mine(next_index)
+            cleared = cleared + 1
+            if not cleared_map[next_index] then
+              cleared_map[next_index] = true
+              cleared_indices[#cleared_indices + 1] = next_index
+            end
+          end
+          if mark(next_id, dir, node.depth + 1) then
+            push({ tile_id = next_id, facing = dir, depth = node.depth + 1 })
           end
         end
       end
-    end)
-  end
+    end
+  end)
   logger.event(player.name .. " 清除前方障碍数：" .. cleared)
-  if game.ui_port and game.ui_port.wait_action_anim then
+  assert(game.ui_port ~= nil, "missing ui_port")
+  if game.ui_port.wait_action_anim then
     game:queue_action_anim({
       kind = "clear_obstacles",
       player_id = player.id,
@@ -277,24 +239,15 @@ end
 
 function ItemEffects.apply_target(game, user, item_id, target, context)
   local spec = TARGET_EFFECTS[item_id]
-  if not spec or not spec.apply then
-    return false
-  end
+  assert(spec ~= nil and spec.apply ~= nil, "missing target spec: " .. tostring(item_id))
   return spec.apply(game, user, target, context)
 end
 
 function ItemEffects.apply_post(game, player, item_id, context)
   context = context or {}
   context.services = context.services or game:get_services()
-  local cfg = POST_EFFECTS[item_id]
-  if not cfg then
-    return nil
-  end
-  local handler = handlers[cfg.type]
-  if not handler then
-    logger.warn("未实现的道具后置效果类型:" .. tostring(cfg.type) .. " item=" .. tostring(item_id))
-    return false
-  end
+  local cfg = assert(POST_EFFECTS[item_id], "missing post effect: " .. tostring(item_id))
+  local handler = assert(handlers[cfg.type], "missing post effect handler: " .. tostring(cfg.type))
   return handler(game, player, cfg, context)
 end
 

@@ -7,9 +7,8 @@ local MovementService = {}
 local ITEM_IDS = gameplay_constants.item_ids
 
 local function emit_event(kind, payload)
-  if TriggerCustomEvent then
-    TriggerCustomEvent(kind, payload or {})
-  end
+  assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
+  TriggerCustomEvent(kind, payload or {})
 end
 
 function MovementService.move(game, player, steps, opts)
@@ -80,7 +79,8 @@ function MovementService.move(game, player, steps, opts)
 
     if steps > 0 and not opts.skip_market_check then
       local tile = board:get_tile(current)
-      if tile and tile.type == "market" and step < steps then
+      assert(tile ~= nil, "missing tile: " .. tostring(current))
+      if tile.type == "market" and step < steps then
         market_interrupt = {
           position = current,
           remaining_steps = abs_steps - step,

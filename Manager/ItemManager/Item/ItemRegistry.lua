@@ -16,9 +16,7 @@ ItemRegistry.handlers = handlers
 
 function ItemRegistry.target_candidates(game, player, item_id)
   local spec = ItemEffects.get_target_spec(item_id)
-  if not spec then
-    return {}
-  end
+  assert(spec ~= nil, "missing target spec: " .. tostring(item_id))
 
   if spec.require_user and not spec.require_user(player) then
     return {}
@@ -36,25 +34,22 @@ function ItemRegistry.target_candidates(game, player, item_id)
 end
 
 local function run_item_choice_flow(game, player, item_id, context, opts)
-  local candidates = opts.candidates(game, player, item_id, context)
-  if not candidates or #candidates == 0 then
+  context = context or {}
+  local candidates = assert(opts.candidates(game, player, item_id, context), "missing candidates")
+  if #candidates == 0 then
     if opts.on_empty then
       opts.on_empty(game, player, item_id, context)
     end
     return false
   end
 
-  if context and context.by_ai then
-    if opts.ai_select then
-      return opts.ai_select(game, player, item_id, candidates, context)
-    end
-    return false
+  if context.by_ai then
+    assert(opts.ai_select ~= nil, "missing ai_select")
+    return opts.ai_select(game, player, item_id, candidates, context)
   end
 
-  local choice_spec = opts.choice_spec and opts.choice_spec(game, player, item_id, candidates, context)
-  if not choice_spec then
-    return false
-  end
+  assert(opts.choice_spec ~= nil, "missing choice_spec")
+  local choice_spec = assert(opts.choice_spec(game, player, item_id, candidates, context), "missing choice_spec")
   return {
     waiting = true,
     intent = {
@@ -74,9 +69,7 @@ local function handle_target_player_item(game, player, item_id, context)
     end,
     ai_select = function(inner_game, inner_player, inner_item_id, candidates)
       local target = Agent.pick_target_player(inner_game, inner_player, inner_item_id, candidates)
-      if not target then
-        return false
-      end
+      assert(target ~= nil, "missing target player")
       local ok = ItemEffects.apply_target(inner_game, inner_player, inner_item_id, target)
       if ok then
         Inventory.consume(inner_player, inner_item_id)
@@ -115,12 +108,8 @@ local function handle_remote_dice(game, player, item_id, context)
     end,
     ai_select = function(inner_game, inner_player, inner_item_id)
       local value, target_tile = Agent.pick_remote_dice_value(inner_game, inner_player, dice_count)
-      if not value then
-        return false
-      end
-      if not Inventory.consume(inner_player, inner_item_id) then
-        return false
-      end
+      assert(value ~= nil, "missing remote dice value")
+      assert(Inventory.consume(inner_player, inner_item_id) == true, "consume remote dice failed")
       local ok = RemoteDice.apply(inner_game, inner_player, dice_count, value)
       if ok and target_tile then
         logger.event(inner_player.name .. " AI 设定遥控骰子前往 " .. target_tile.name .. " 点数 " .. value)
@@ -157,16 +146,9 @@ local function handle_roadblock(game, player, item_id, context)
     end,
     ai_select = function(inner_game, inner_player, inner_item_id, candidates)
       local best = Roadblock.pick_best(candidates)
-      local idx = nil
-      if best then
-        idx = best.idx
-      end
-      if not idx then
-        return false
-      end
-      if not Inventory.consume(inner_player, inner_item_id) then
-        return false
-      end
+      assert(best ~= nil and best.idx ~= nil, "missing roadblock target")
+      local idx = best.idx
+      assert(Inventory.consume(inner_player, inner_item_id) == true, "consume roadblock failed")
       return Roadblock.apply(inner_game, inner_player, idx)
     end,
     choice_spec = function(_, inner_player, inner_item_id, candidates)
@@ -195,12 +177,13 @@ local DEMOLISH_ITEMS = {
 }
 
 local function handle_demolish(game, player, item_id, context)
-  local cfg = DEMOLISH_ITEMS[item_id]
+  context = context or {}
+  local cfg = assert(DEMOLISH_ITEMS[item_id], "missing demolish cfg: " .. tostring(item_id))
   return Demolish.use(game, player, 3, Inventory.consume, {
     item_id = item_id,
     injure = cfg.injure,
     title = cfg.title,
-    by_ai = context and context.by_ai
+    by_ai = context.by_ai
   })
 end
 

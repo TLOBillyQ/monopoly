@@ -14,10 +14,7 @@ function Inventory:_notify_change()
   if self._suspend_on_change then
     return
   end
-  local cb = self._on_change
-  if cb then
-    cb(self)
-  end
+  self._on_change(self)
 end
 
 ---创建新背包实例
@@ -29,6 +26,7 @@ function Inventory:init(opts)
 
   self.items = {}
   self.max_slots = max_slots
+  self._on_change = function() end
 end
 
 ---创建新背包实例

@@ -30,25 +30,21 @@ local CompositionRoot = {}
 
 local deep_copy = Utils.deep_copy
 
-local function new_rng(seed, state)
+local function new_rng(seed)
+  assert(seed ~= nil, "missing rng seed")
   local rng = {
-    seed = seed or 1,
-    state = state or (seed or 1),
+    seed = seed,
+    state = seed,
   }
 
   function rng:next_int(min, max)
-    min = min or 0
-    max = max or 1
-    if GameAPI and GameAPI.random_int then
-      return GameAPI.random_int(min, max)
-    end
-    local curr = self.state or self.seed or 1
+    assert(min ~= nil and max ~= nil, "rng.next_int requires min/max")
+    local curr = self.state
+    assert(curr ~= nil, "missing rng state")
     curr = (curr * 1103515245 + 12345) % 2147483648
     self.state = curr
     local span = max - min + 1
-    if span <= 0 then
-      return min
-    end
+    assert(span > 0, "invalid rng span: " .. tostring(span))
     return min + (curr % span)
   end
 
@@ -61,9 +57,9 @@ end
 
 
 local function create_board(opts)
-  opts = opts or {}
-  local tiles = opts.tiles or tiles_config
-  local map_cfg = opts.map or map_config
+  assert(opts ~= nil, "missing board opts")
+  local tiles = assert(opts.tiles, "missing tiles config")
+  local map_cfg = assert(opts.map, "missing map config")
 
   local tile_lookup = {}
   for _, cfg in ipairs(tiles) do
@@ -78,7 +74,7 @@ local function create_board(opts)
   return Board:new({
     path = path,
     tile_lookup = tile_lookup,
-    branches = map_cfg.branches or {},
+    branches = map_cfg.branches,
     map = map_cfg,
     overlays = { roadblocks = {}, mines = {} },
   })
@@ -86,24 +82,27 @@ end
 
 local function create_players(opts)
   local players = {}
-  local names = opts.players or { "玩家1" }
+  local names = assert(opts.players, "missing player names")
   if #names == 1 then
     names = { names[1], "玩家2", "玩家3", "玩家4" }
   end
   for i, name in ipairs(names) do
     local role = roles_cfg[((i - 1) % #roles_cfg) + 1]
-    local is_ai = i > 1
-    if opts.ai ~= nil then
-      is_ai = opts.ai[i]
-    end
+    local is_ai = opts.ai[i]
     local player = Player:new({
       id = i,
       name = name,
       role_id = role.id,
       is_ai = is_ai,
-      auto = opts.auto_all or false,
+      auto = opts.auto_all,
       start_index = 1,
       constants = constants,
+      balances = {
+        ["金币"] = constants.starting_cash,
+        ["金豆"] = constants.starting_jindou,
+        ["乐园币"] = constants.starting_leyuanbi,
+      },
+      deity_duration_turns = constants.deity_duration_turns,
       inventory = Inventory:new({ constants = constants }),
     })
     table.insert(players, player)
@@ -172,6 +171,7 @@ local function build_initial_state(board, players, rng)
       move_anim = nil,
       action_anim_seq = 0,
       action_anim = nil,
+      item_phase = {},
     },
     rng = rng:snapshot(),
     players = snapshot_players(players),
@@ -180,7 +180,7 @@ end
 
 
 function CompositionRoot.assemble(opts, game_or_class)
-  opts = opts or {}
+  assert(opts ~= nil, "missing assemble opts")
 
   local board = create_board(opts)
   local rng = new_rng(opts.seed)
@@ -193,11 +193,9 @@ function CompositionRoot.assemble(opts, game_or_class)
 
   for _, p in ipairs(players) do
     p._store = store
-    if p.inventory then
-      local pid = p.id
-      p.inventory._on_change = function(inv)
-        store:set({ "players", pid, "inventory" }, snapshot_inventory(inv))
-      end
+    local pid = p.id
+    p.inventory._on_change = function(inv)
+      store:set({ "players", pid, "inventory" }, snapshot_inventory(inv))
     end
   end
 

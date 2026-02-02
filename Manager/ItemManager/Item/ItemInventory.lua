@@ -11,14 +11,17 @@ for _, cfg in ipairs(items_cfg) do
 end
 
 local function resolve_event_name(kind)
-  local intent = MONOPOLY_EVENT and MONOPOLY_EVENT.intent
-  return kind and ((intent and intent[kind]) or kind) or nil
+  assert(MONOPOLY_EVENT ~= nil, "missing MONOPOLY_EVENT")
+  local intent = assert(MONOPOLY_EVENT.intent, "missing MONOPOLY_EVENT.intent")
+  assert(kind ~= nil, "missing event kind")
+  return intent[kind] or kind
 end
 
 local function dispatch_intent(game, payload)
-  local intent = payload and (payload.intent or payload) or nil
-  if intent and intent.kind == "need_choice" and intent.choice_spec then
-    assert(game and game.store, "Choice.open requires game.store")
+  assert(payload ~= nil, "missing payload")
+  local intent = payload.intent or payload
+  if intent.kind == "need_choice" and intent.choice_spec then
+    assert(game ~= nil and game.store ~= nil, "Choice.open requires game.store")
     local spec = intent.choice_spec
     local seq = game.store:get({ "turn", "choice_seq" }) or 0
     seq = seq + 1
@@ -34,25 +37,18 @@ local function dispatch_intent(game, payload)
       meta = spec.meta,
     }
     game.store:set({ "turn", "pending_choice" }, entry)
-    if TriggerCustomEvent then
-      local event_name = resolve_event_name("need_choice")
-      if event_name then
-        TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
-      end
-    end
+    assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
+    local event_name = resolve_event_name("need_choice")
+    TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
     return
   end
-  if intent and intent.kind == "push_popup" and intent.payload then
-    local ui_port = game and game.ui_port
-    if ui_port and ui_port.push_popup then
-      ui_port:push_popup(intent.payload)
-    end
-    if TriggerCustomEvent then
-      local event_name = resolve_event_name("push_popup")
-      if event_name then
-        TriggerCustomEvent(event_name, { game = game, payload = intent.payload })
-      end
-    end
+  if intent.kind == "push_popup" and intent.payload then
+    local ui_port = assert(game.ui_port, "missing ui_port")
+    assert(ui_port.push_popup ~= nil, "missing ui_port.push_popup")
+    ui_port:push_popup(intent.payload)
+    assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
+    local event_name = resolve_event_name("push_popup")
+    TriggerCustomEvent(event_name, { game = game, payload = intent.payload })
   end
 end
 
@@ -62,69 +58,61 @@ end
 
 function Inventory.item_name(item_id)
   local cfg = cfg_by_id[item_id]
+  assert(cfg ~= nil, "missing item cfg: " .. tostring(item_id))
   return cfg.name
 end
 
 function Inventory.items(player)
-  if not player or not player.inventory then
-    return {}
-  end
-  return player.inventory.items or {}
+  assert(player ~= nil, "missing player")
+  assert(player.inventory ~= nil, "missing player.inventory")
+  return assert(player.inventory.items, "missing inventory items")
 end
 
 function Inventory.count(player)
-  if not player or not player.inventory then
-    return 0
-  end
+  assert(player ~= nil, "missing player")
+  assert(player.inventory ~= nil, "missing player.inventory")
   return player.inventory:count()
 end
 
 function Inventory.is_full(player)
-  if not player or not player.inventory then
-    return false
-  end
+  assert(player ~= nil, "missing player")
+  assert(player.inventory ~= nil, "missing player.inventory")
   return player.inventory:is_full()
 end
 
 function Inventory.add(player, item)
-  if not player or not player.inventory or not item then
-    return false
-  end
+  assert(player ~= nil, "missing player")
+  assert(player.inventory ~= nil, "missing player.inventory")
+  assert(item ~= nil, "missing item")
   return player.inventory:add(item)
 end
 
 function Inventory.find_index(player, item_id)
-  if not player or not player.inventory then
-    return nil
-  end
+  assert(player ~= nil, "missing player")
+  assert(player.inventory ~= nil, "missing player.inventory")
   return player.inventory:find_index(function(it)
     return it.id == item_id
   end)
 end
 
 function Inventory.consume(player, item_id)
-  if not player or not player.inventory then
-    return false
-  end
-  local idx = Inventory.find_index(player, item_id)
-  if idx then
-    player.inventory:remove_by_index(idx)
-    return true
-  end
-  return false
+  assert(player ~= nil, "missing player")
+  assert(player.inventory ~= nil, "missing player.inventory")
+  local idx = assert(Inventory.find_index(player, item_id), "missing item: " .. tostring(item_id))
+  player.inventory:remove_by_index(idx)
+  return true
 end
 
 function Inventory.remove_by_index(player, idx)
-  if not player or not player.inventory or not idx then
-    return nil
-  end
+  assert(player ~= nil, "missing player")
+  assert(player.inventory ~= nil, "missing player.inventory")
+  assert(idx ~= nil, "missing index")
   return player.inventory:remove_by_index(idx)
 end
 
 function Inventory.clear(player)
-  if not player or not player.inventory then
-    return
-  end
+  assert(player ~= nil, "missing player")
+  assert(player.inventory ~= nil, "missing player.inventory")
   player.inventory._suspend_on_change = true
   player.inventory.items = {}
   player.inventory._suspend_on_change = false
@@ -138,7 +126,10 @@ function Inventory.draw_random(_)
 end
 
 local function notify_full(game, player, item_id)
-  if not game or not game.ui_port or not player or player.is_ai or player.auto then
+  assert(game ~= nil, "missing game")
+  assert(game.ui_port ~= nil, "missing ui_port")
+  assert(player ~= nil, "missing player")
+  if player.is_ai or player.auto then
     return
   end
   dispatch_intent(game, {
@@ -153,21 +144,18 @@ end
 function Inventory.give(player, item_id, context)
   if Inventory.is_full(player) then
     logger.warn(player.name .. " 的背包已满，无法获得道具 " .. item_id)
-    notify_full(context and context.game, player, item_id)
+    assert(context ~= nil and context.game ~= nil, "missing context.game")
+    notify_full(context.game, player, item_id)
     return false
   end
-  if not Inventory.add(player, { id = item_id }) then
-    return false
-  end
+  assert(Inventory.add(player, { id = item_id }) == true, "inventory add failed: " .. tostring(item_id))
   logger.event(player.name .. " 获得道具 " .. Inventory.item_name(item_id))
   return true
 end
 
 function Inventory.draw_and_give(player, rng, context)
   local cfg = Inventory.draw_random(rng)
-  if not cfg then
-    return
-  end
+  assert(cfg ~= nil, "missing drawn item cfg")
   Inventory.give(player, cfg.id, context)
 end
 

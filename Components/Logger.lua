@@ -1,9 +1,13 @@
 local logger = {
   entries = {},
   max_entries = 200,
-  adapter = nil,
-  timestamp_provider = nil,
-  time_formatter = nil,
+  adapter = { level = nil, on_log = function() end },
+  timestamp_provider = function()
+    return 0
+  end,
+  time_formatter = function(timestamp)
+    return tostring(timestamp)
+  end,
 }
 
 local function stringify(...)
@@ -15,19 +19,11 @@ local function stringify(...)
 end
 
 local function get_timestamp()
-  local provider = logger.timestamp_provider
-  if provider then
-    return provider()
-  end
-  return 0
+  return logger.timestamp_provider()
 end
 
 local function format_timestamp(timestamp)
-  local formatter = logger.time_formatter
-  if formatter then
-    return formatter(timestamp)
-  end
-  return tostring(timestamp or 0)
+  return logger.time_formatter(timestamp)
 end
 
 local function push(level, ...)
@@ -45,32 +41,30 @@ local function push(level, ...)
     table.remove(logger.entries, 1)
   end
   local adapter = logger.adapter
-  if adapter and adapter.on_log then
-    local allow = adapter.level
-    local should_call = false
-    if allow == nil then
-      should_call = true
-    elseif type(allow) == "table" then
-      for _, value in ipairs(allow) do
-        if value == entry.level then
-          should_call = true
-          break
-        end
+  local allow = adapter.level
+  local allow_kind = type(allow)
+  local should_call = true
+  if allow_kind == "table" then
+    should_call = false
+    for _, value in ipairs(allow) do
+      if value == entry.level then
+        should_call = true
+        break
       end
-    else
-      should_call = allow == entry.level
     end
-    if should_call then
-      local ok, err = pcall(adapter.on_log, entry)
-      if not ok then
-        print("[logger] adapter error: " .. tostring(err))
-      end
+  elseif allow_kind ~= "nil" then
+    should_call = allow == entry.level
+  end
+  if should_call then
+    local ok, err = pcall(adapter.on_log, entry)
+    if not ok then
+      print("[logger] adapter error: " .. tostring(err))
     end
   end
 end
 
 function logger.set_adapter(adapter)
-  logger.adapter = adapter
+  logger.adapter = adapter or { level = nil, on_log = function() end }
 end
 
 function logger.set_timestamp_provider(provider)
@@ -83,14 +77,10 @@ end
 
 function logger.configure_game_time()
   local game_api = GameAPI
-  if not game_api then
-    return
-  end
-  if game_api.get_timestamp then
-    logger.set_timestamp_provider(function()
-      return game_api.get_timestamp()
-    end)
-  end
+  assert(game_api ~= nil, "missing GameAPI")
+  logger.set_timestamp_provider(function()
+    return game_api.get_timestamp()
+  end)
 
   local function pad2(value)
     if value < 10 then
@@ -100,9 +90,7 @@ function logger.configure_game_time()
   end
 
   logger.set_time_formatter(function(timestamp)
-    if timestamp == nil then
-      return "0"
-    end
+    assert(timestamp ~= nil, "missing timestamp")
     local year = game_api.get_year(timestamp)
     local month = game_api.get_month(timestamp)
     local day = game_api.get_day(timestamp)

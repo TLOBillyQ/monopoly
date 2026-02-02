@@ -61,9 +61,15 @@ function Strategy.auto_pre_action(game, player, phase)
   end
 
   local function try_use(item_id, cond)
-    if cond and not cond() then return nil end
-    if not can_use(item_id) then return nil end
-    if not Inventory.find_index(player, item_id) then return nil end
+    if cond and cond() == false then return nil end
+    if can_use(item_id) then
+    else
+      return nil
+    end
+    if Inventory.find_index(player, item_id) then
+    else
+      return nil
+    end
     local res = Executor.use_item(game, player, item_id, { by_ai = true, services = game:get_services() })
     if type(res) == "table" and (res.waiting or res.intent or res.kind or res.action_anim) then
       return res
@@ -72,11 +78,11 @@ function Strategy.auto_pre_action(game, player, phase)
   end
 
   local function has_target(item_id)
-    return Agent.pick_target_player(game, player, item_id, Strategy.target_candidates(game, player, item_id)) ~= nil
+    return Agent.pick_target_player(game, player, item_id, Strategy.target_candidates(game, player, item_id)) and true or false
   end
 
   local function has_demolish_target()
-    return Demolish.find_target(game, player, 3) ~= nil
+    return Demolish.find_target(game, player, 3) and true or false
   end
 
   local clear_result = try_use(ITEM_IDS.clear_obstacles, function()
@@ -88,7 +94,7 @@ function Strategy.auto_pre_action(game, player, phase)
 
   local dice_result = try_use(ITEM_IDS.remote_dice, function()
     local dice_count = player:dice_count()
-    return Agent.pick_remote_dice_value(game, player, dice_count) ~= nil
+    return Agent.pick_remote_dice_value(game, player, dice_count) and true or false
   end)
   if dice_result then return dice_result end
 
@@ -98,7 +104,9 @@ function Strategy.auto_pre_action(game, player, phase)
   local double_result = try_use(ITEM_IDS.dice_multiplier)
   if double_result then return double_result end
 
-  local roadblock_result = try_use(ITEM_IDS.roadblock, function() return Agent.pick_roadblock_target(game, player) ~= nil end)
+  local roadblock_result = try_use(ITEM_IDS.roadblock, function()
+    return Agent.pick_roadblock_target(game, player) and true or false
+  end)
   if roadblock_result then return roadblock_result end
 
   local monster_result = try_use(ITEM_IDS.monster, has_demolish_target)

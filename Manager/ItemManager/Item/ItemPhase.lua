@@ -19,56 +19,49 @@ local PHASE_TITLES = {
 }
 
 local function resolve_event_name(kind)
-  local intent = MONOPOLY_EVENT and MONOPOLY_EVENT.intent
-  return kind and ((intent and intent[kind]) or kind) or nil
+  local intent = MONOPOLY_EVENT.intent
+  assert(kind ~= nil, "missing intent kind")
+  return intent[kind] or kind
 end
 
 local function dispatch_intent(game, payload)
-  local intent = payload and (payload.intent or payload) or nil
-  if intent and intent.kind == "need_choice" and intent.choice_spec then
+  assert(payload ~= nil, "missing intent payload")
+  local intent = payload.intent or payload
+  if intent.kind == "need_choice" then
+    assert(intent.choice_spec ~= nil, "missing choice spec")
     assert(game and game.store, "Choice.open requires game.store")
     local spec = intent.choice_spec
-    local seq = game.store:get({ "turn", "choice_seq" }) or 0
+    local seq = game.store:get({ "turn", "choice_seq" })
     seq = seq + 1
     game.store:set({ "turn", "choice_seq" }, seq)
     local entry = {
       id = seq,
       kind = spec.kind,
-      title = spec.title or "请选择",
-      body_lines = spec.body_lines or {},
-      options = spec.options or {},
-      allow_cancel = spec.allow_cancel ~= false,
-      cancel_label = spec.cancel_label or "取消",
+      title = spec.title,
+      body_lines = spec.body_lines,
+      options = spec.options,
+      allow_cancel = spec.allow_cancel,
+      cancel_label = spec.cancel_label,
       meta = spec.meta,
     }
     game.store:set({ "turn", "pending_choice" }, entry)
-    if TriggerCustomEvent then
-      local event_name = resolve_event_name("need_choice")
-      if event_name then
-        TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
-      end
-    end
+    local event_name = resolve_event_name("need_choice")
+    TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
     return
   end
-  if intent and intent.kind == "push_popup" and intent.payload then
-    local ui_port = game and game.ui_port
-    if ui_port and ui_port.push_popup then
-      ui_port:push_popup(intent.payload)
-    end
-    if TriggerCustomEvent then
-      local event_name = resolve_event_name("push_popup")
-      if event_name then
-        TriggerCustomEvent(event_name, { game = game, payload = intent.payload })
-      end
-    end
+  if intent.kind == "push_popup" then
+    assert(intent.payload ~= nil, "missing popup payload")
+    local ui_port = game.ui_port
+    assert(ui_port ~= nil and ui_port.push_popup ~= nil, "missing ui_port")
+    ui_port:push_popup(intent.payload)
+    local event_name = resolve_event_name("push_popup")
+    TriggerCustomEvent(event_name, { game = game, payload = intent.payload })
   end
 end
 
 function ItemPhase.is_enabled(game, phase)
   local queue = gameplay_constants.item_phase_queue
-  if type(queue) ~= "table" then
-    return true
-  end
+  assert(type(queue) == "table", "invalid item_phase_queue")
   for _, name in ipairs(queue) do
     if name == phase then
       return true
@@ -104,13 +97,14 @@ function ItemPhase.finish(game, phase)
   store:set({ "turn", "item_phase", phase }, { done = true })
   local active = store:get({ "turn", "item_phase_active" })
   if active == phase then
-    store:set({ "turn", "item_phase_active" }, nil)
+    store:set({ "turn", "item_phase_active" }, "")
   end
 end
 
 function ItemPhase.run(tm, phase, args)
   local game = tm.game
-  local player = args.player or game:current_player()
+  local player = args.player
+  assert(player ~= nil, "missing player")
   if not ItemPhase.is_enabled(game, phase) then
     return nil
   end
@@ -139,16 +133,10 @@ function ItemPhase.run(tm, phase, args)
     return nil
   end
 
-  if game.ui_port == nil then
-    ItemPhase.finish(game, phase)
-    return nil
-  end
+  assert(game.ui_port ~= nil, "missing ui_port")
 
   local spec = ItemPhase.build_choice_spec(player, phase)
-  if not spec then
-    ItemPhase.finish(game, phase)
-    return nil
-  end
+  assert(spec ~= nil, "missing choice spec")
 
   dispatch_intent(game, { kind = "need_choice", choice_spec = spec })
 
@@ -160,12 +148,10 @@ end
 
 function ItemPhase.build_choice_spec(player, phase)
   local body_lines, options = build_options(player, phase)
-  if #options == 0 then
-    return nil
-  end
+  assert(#options > 0, "missing item options")
   return {
     kind = "item_phase_choice",
-    title = PHASE_TITLES[phase] or "使用道具？",
+    title = PHASE_TITLES[phase],
     body_lines = body_lines,
     options = options,
     allow_cancel = true,

@@ -2,9 +2,7 @@ local tiles_cfg = require("Config.Generated.Tiles")
 
 local tiles_by_id = {}
 for _, cfg in ipairs(tiles_cfg) do
-  if cfg and cfg.id then
-    tiles_by_id[cfg.id] = cfg
-  end
+  tiles_by_id[cfg.id] = cfg
 end
 
 local TileRenderer = {}
@@ -23,29 +21,22 @@ end
 
 function TileRenderer.render_tile(unit, tile_id, owner_id)
   local cfg = tiles_by_id[tile_id]
-  if not (cfg and unit and unit.get_child_by_name) then
-    return
-  end
+  assert(cfg ~= nil, "missing tile cfg: " .. tostring(tile_id))
+  assert(unit ~= nil and unit.get_child_by_name ~= nil, "invalid tile unit")
 
   local name_node = unit.get_child_by_name("name")
-  if name_node and name_node.set_billboard_text then
-    name_node.set_billboard_text(cfg.name or "")
-  end
+  assert(name_node ~= nil and name_node.set_billboard_text ~= nil, "missing name node")
+  assert(cfg.name ~= nil, "missing tile name: " .. tostring(tile_id))
+  name_node.set_billboard_text(cfg.name)
 
   local price_node = unit.get_child_by_name("price")
-  if price_node and price_node.set_billboard_text then
-    local price = cfg.price
-    if price then
-      price_node.set_billboard_text("￥" .. tostring(price))
-    else
-      price_node.set_billboard_text("")
-    end
-  end
+  assert(price_node ~= nil and price_node.set_billboard_text ~= nil, "missing price node")
+  assert(cfg.price ~= nil, "missing tile price: " .. tostring(tile_id))
+  price_node.set_billboard_text("￥" .. tostring(cfg.price))
 
   local color_node = unit.get_child_by_name("color")
-  if color_node and color_node.set_paint_area_color then
-    color_node.set_paint_area_color(1, resolve_color(owner_id))
-  end
+  assert(color_node ~= nil and color_node.set_paint_area_color ~= nil, "missing color node")
+  color_node.set_paint_area_color(1, resolve_color(owner_id))
 end
 
 return TileRenderer

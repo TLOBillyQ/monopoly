@@ -5,14 +5,13 @@ local Roadblock = {}
 local OPPOSITE = { up = "down", down = "up", left = "right", right = "left" }
 
 local function make_candidate(board, player, idx, dir, step, seen)
-  if not idx or seen[idx] or idx == player.position then
+  assert(idx ~= nil, "missing idx")
+  if seen[idx] or idx == player.position then
     return nil
   end
   seen[idx] = true
   local tile = board:get_tile(idx)
-  if not tile then
-    return nil
-  end
+  assert(tile ~= nil, "missing tile: " .. tostring(idx))
   return {
     idx = idx,
     tile = tile,
@@ -38,18 +37,11 @@ local function backward_indices(board, player, distance)
   local list = {}
   local current = player.position
   local len = board:length()
-  local facing = player.status.move_dir
+  local facing = assert(player.status.move_dir, "missing move_dir")
   for step = 1, distance do
-    local prev = nil
-    if board.map and facing and OPPOSITE[facing] then
-      prev = board:step_forward_by_facing(current, OPPOSITE[facing], 1)
-    end
-    if not prev then
-      prev = current - 1
-      if prev < 1 then
-        prev = len + prev
-      end
-    end
+    assert(board.map ~= nil, "missing board.map")
+    assert(OPPOSITE[facing] ~= nil, "missing opposite dir: " .. tostring(facing))
+    local prev = board:step_forward_by_facing(current, OPPOSITE[facing], 1)
     current = prev
     table.insert(list, { idx = current, step = step, dir = "backward" })
   end
@@ -142,25 +134,19 @@ function Roadblock.candidates(game, player, distance)
 end
 
 function Roadblock.pick_best(candidates)
-  if not candidates or #candidates == 0 then
-    return nil
-  end
+  assert(candidates ~= nil and #candidates > 0, "missing roadblock candidates")
   return candidates[1]
 end
 
 function Roadblock.apply(game, player, idx)
-  if not idx then
-    return false
-  end
-  if not game.board then
-    logger.warn("缺少 Board，无法放置路障")
-    return false
-  end
+  assert(idx ~= nil, "missing idx")
+  assert(game.board ~= nil, "missing board")
   game.board:place_roadblock(idx)
   local tile = game.board:get_tile(idx)
   logger.event(player.name .. " 放置路障在 " .. tile.name)
   local queued = false
-  if game.ui_port and game.ui_port.wait_action_anim then
+  assert(game.ui_port ~= nil, "missing ui_port")
+  if game.ui_port.wait_action_anim then
     game:queue_action_anim({
       kind = "roadblock",
       player_id = player.id,

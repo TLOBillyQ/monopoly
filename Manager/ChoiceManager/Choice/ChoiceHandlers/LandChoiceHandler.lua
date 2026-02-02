@@ -7,14 +7,17 @@ local LandChoiceHandler = {}
 local ITEM_IDS = gameplay_constants.item_ids
 
 local function resolve_event_name(kind)
-  local intent = MONOPOLY_EVENT and MONOPOLY_EVENT.intent
-  return kind and ((intent and intent[kind]) or kind) or nil
+  assert(MONOPOLY_EVENT ~= nil, "missing MONOPOLY_EVENT")
+  local intent = assert(MONOPOLY_EVENT.intent, "missing MONOPOLY_EVENT.intent")
+  assert(kind ~= nil, "missing event kind")
+  return intent[kind] or kind
 end
 
 local function dispatch_intent(game, payload)
-  local intent = payload and (payload.intent or payload) or nil
-  if intent and intent.kind == "need_choice" and intent.choice_spec then
-    assert(game and game.store, "Choice.open requires game.store")
+  assert(payload ~= nil, "missing payload")
+  local intent = payload.intent or payload
+  if intent.kind == "need_choice" and intent.choice_spec then
+    assert(game ~= nil and game.store ~= nil, "Choice.open requires game.store")
     local spec = intent.choice_spec
     local seq = game.store:get({ "turn", "choice_seq" }) or 0
     seq = seq + 1
@@ -30,25 +33,18 @@ local function dispatch_intent(game, payload)
       meta = spec.meta,
     }
     game.store:set({ "turn", "pending_choice" }, entry)
-    if TriggerCustomEvent then
-      local event_name = resolve_event_name("need_choice")
-      if event_name then
-        TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
-      end
-    end
+    assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
+    local event_name = resolve_event_name("need_choice")
+    TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
     return
   end
-  if intent and intent.kind == "push_popup" and intent.payload then
-    local ui_port = game and game.ui_port
-    if ui_port and ui_port.push_popup then
-      ui_port:push_popup(intent.payload)
-    end
-    if TriggerCustomEvent then
-      local event_name = resolve_event_name("push_popup")
-      if event_name then
-        TriggerCustomEvent(event_name, { game = game, payload = intent.payload })
-      end
-    end
+  if intent.kind == "push_popup" and intent.payload then
+    local ui_port = assert(game.ui_port, "missing ui_port")
+    assert(ui_port.push_popup ~= nil, "missing ui_port.push_popup")
+    ui_port:push_popup(intent.payload)
+    assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
+    local event_name = resolve_event_name("push_popup")
+    TriggerCustomEvent(event_name, { game = game, payload = intent.payload })
   end
 end
 
@@ -63,7 +59,8 @@ function LandChoiceHandler.build(helpers)
     local tile_id = meta.tile_id
     local card_kind = meta.card_kind
 
-    local use_card = (action and action.option_id == "use") and not is_cancel(action)
+    assert(action ~= nil, "missing action")
+    local use_card = (action.option_id == "use") and not is_cancel(action)
 
     if use_card and card_kind == "strong" then
       LandActions.execute_strong_card(game, player_id, tile_id)
@@ -90,7 +87,8 @@ function LandChoiceHandler.build(helpers)
     local meta = choice.meta
     local player_id = meta.player_id
 
-    local use_card = (action and action.option_id == "use") and not is_cancel(action)
+    assert(action ~= nil, "missing action")
+    local use_card = (action.option_id == "use") and not is_cancel(action)
 
     if use_card then
       LandActions.execute_tax_free_card(game, player_id)

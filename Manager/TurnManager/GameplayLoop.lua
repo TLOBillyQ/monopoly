@@ -15,7 +15,9 @@ local function build_log_prefix()
 end
 
 local function log_once(state, level, key, ...)
-  if not state or not state._log_once or state._log_once[key] then
+  assert(state ~= nil, "missing state")
+  assert(state._log_once ~= nil, "missing state._log_once")
+  if state._log_once[key] then
     return
   end
   state._log_once[key] = true
@@ -27,9 +29,7 @@ local function log_once(state, level, key, ...)
 end
 
 local function log_status(view)
-  if not view then
-    return
-  end
+  assert(view ~= nil, "missing view")
   logger.info(
     build_log_prefix(),
     "玩家:",
@@ -42,23 +42,15 @@ local function log_status(view)
 end
 
 local function get_timestamp()
-  if not (GameAPI and GameAPI.get_timestamp) then
-    return nil
-  end
+  assert(GameAPI ~= nil and GameAPI.get_timestamp ~= nil, "missing GameAPI.get_timestamp")
   local ts = GameAPI.get_timestamp()
-  if type(ts) ~= "number" then
-    return nil
-  end
+  assert(type(ts) == "number", "invalid timestamp")
   return ts
 end
 
 local function get_timestamp_diff_seconds(timestamp_1, timestamp_2)
-  if not (GameAPI and GameAPI.get_timestamp_diff) then
-    return nil
-  end
-  if type(timestamp_1) ~= "number" or type(timestamp_2) ~= "number" then
-    return nil
-  end
+  assert(GameAPI ~= nil and GameAPI.get_timestamp_diff ~= nil, "missing GameAPI.get_timestamp_diff")
+  assert(type(timestamp_1) == "number" and type(timestamp_2) == "number", "invalid timestamps")
   return GameAPI.get_timestamp_diff(timestamp_1, timestamp_2)
 end
 
@@ -71,10 +63,8 @@ end
 
 local function build_view(state, game)
   local store_state = game.store.state
-  local winner_name = game.winner_names
-  if not winner_name and game.winner then
-    winner_name = game.winner.name
-  end
+  local winner = game.winner
+  local winner_name = game.winner_names or (winner and assert(winner.name, "missing winner name"))
   return Presenter.present(store_state, {
     game = game,
     last_turn = game.last_turn,
@@ -88,46 +78,35 @@ local function refresh_view(state, game)
   MainView.refresh_panel(state, view)
   MainView.refresh_board(state, view, log_once, build_log_prefix)
 
-  local players = view and view.state and view.state.players or nil
-  local turn = view and view.state and view.state.turn or nil
-  local current_index = turn and turn.current_player_index or nil
-  if players and current_index then
-    local current = players[current_index]
-    local current_id = current and (current.id or current_index) or nil
-    if current_id then
-      if state.camera_follow_player_id ~= current_id then
-        state.camera_follow_player_id = current_id
-        local role = GameAPI.get_role(current_id)
-        role.set_camera_bind_mode(Enums.CameraBindMode.TRACK)
-      end
-
-      local target_pos = nil
-      local unit = state.player_units and state.player_units[current_id] or nil
-      if unit and unit.get_position then
-        target_pos = unit.get_position()
-      else
-        local pos_idx = current and current.position or nil
-        if pos_idx and state.tile_positions then
-          target_pos = state.tile_positions[pos_idx]
-        end
-      end
-
-      if target_pos and role and role.set_camera_lock_position then
-        role.set_camera_lock_position(target_pos)
-      end
-    end
+  assert(view ~= nil, "missing view")
+  assert(view.state ~= nil, "missing view.state")
+  local players = assert(view.state.players, "missing view.state.players")
+  local turn = assert(view.state.turn, "missing view.state.turn")
+  local current_index = assert(turn.current_player_index, "missing current_player_index")
+  local current = assert(players[current_index], "missing current player: " .. tostring(current_index))
+  local current_id = assert(current.id, "missing current player id")
+  assert(GameAPI ~= nil and GameAPI.get_role ~= nil, "missing GameAPI.get_role")
+  local role = assert(GameAPI.get_role(current_id), "missing role: " .. tostring(current_id))
+  if state.camera_follow_player_id ~= current_id then
+    state.camera_follow_player_id = current_id
+    assert(role.set_camera_bind_mode ~= nil, "missing role.set_camera_bind_mode")
+    role.set_camera_bind_mode(Enums.CameraBindMode.TRACK)
   end
+
+  assert(state.player_units ~= nil, "missing state.player_units")
+  local unit = assert(state.player_units[current_id], "missing player unit: " .. tostring(current_id))
+  assert(unit.get_position ~= nil, "missing unit.get_position: " .. tostring(current_id))
+  local target_pos = assert(unit.get_position(), "missing target position: " .. tostring(current_id))
+  assert(role.set_camera_lock_position ~= nil, "missing role.set_camera_lock_position")
+  role.set_camera_lock_position(target_pos)
 end
 
 function GameplayLoop.set_game(state, game)
-  if game then
-    game.ui_port = state
-    EventHandlers.install(game, logger, state)
-  end
-  local pending = nil
-  if game and game.pending_choice then
-    pending = game:pending_choice()
-  end
+  assert(game ~= nil, "missing game")
+  game.ui_port = state
+  EventHandlers.install(game, logger, state)
+  assert(game.pending_choice ~= nil, "missing game.pending_choice")
+  local pending = game:pending_choice()
   state.pending_choice = pending
   if pending then
     state.pending_choice_elapsed = 0
@@ -143,9 +122,9 @@ function GameplayLoop.new_game(state)
   assert(state.game_factory, "game_factory not set")
   local game = state.game_factory()
   build_item_index(state)
-  if state.auto_runner and state.auto_runner.reset_timer then
-    state.auto_runner:reset_timer()
-  end
+  assert(state.auto_runner ~= nil, "missing auto_runner")
+  assert(state.auto_runner.reset_timer ~= nil, "missing auto_runner.reset_timer")
+  state.auto_runner:reset_timer()
   game.logger.info("启动蛋仔大富翁，玩家数:", #game.players)
   return game
 end
@@ -154,19 +133,15 @@ function GameplayLoop.clear_choice(state, opts)
   state.pending_choice = nil
   state.pending_choice_elapsed = 0
   state.pending_choice_id = nil
-  if opts and opts.on_close_choice then
-    opts.on_close_choice(state)
-  end
+  assert(opts ~= nil and opts.on_close_choice ~= nil, "missing opts.on_close_choice")
+  opts.on_close_choice(state)
 end
 
 function GameplayLoop.step_auto_runner(game, state, dt, context)
-  if not (game and state.auto_runner) then
-    return nil
-  end
+  assert(game ~= nil, "missing game")
+  assert(state.auto_runner ~= nil, "missing auto_runner")
   local ctx = context or {}
-  if ctx.game_finished == nil then
-    ctx.game_finished = game and game.finished
-  end
+  ctx.game_finished = game.finished
   local auto_action = state.auto_runner:next_action(dt, ctx)
   if auto_action then
     GameplayLoop.dispatch_action(game, state, auto_action)
@@ -182,30 +157,28 @@ function GameplayLoop.step_choice_timeout(game, state, dt, opts)
     return
   end
 
-  if game and game.store then
-    local pending = game.store:get({ "turn", "pending_choice" })
-    if pending and (not state.pending_choice or state.pending_choice.id ~= pending.id) then
-      state.pending_choice = pending
-      state.pending_choice_elapsed = 0
-      state.pending_choice_id = pending.id
-      if opts and opts.on_pending_choice then
-        opts.on_pending_choice(state, pending)
-      end
-    elseif not pending then
-      state.pending_choice = nil
-      state.pending_choice_elapsed = 0
-      state.pending_choice_id = nil
-    end
+  assert(game ~= nil, "missing game")
+  assert(game.store ~= nil, "missing game.store")
+  assert(opts ~= nil, "missing opts")
+  assert(opts.on_pending_choice ~= nil, "missing opts.on_pending_choice")
+  assert(opts.is_choice_active ~= nil, "missing opts.is_choice_active")
+  local pending = game.store:get({ "turn", "pending_choice" })
+  if pending and (not state.pending_choice or state.pending_choice.id ~= pending.id) then
+    state.pending_choice = pending
+    state.pending_choice_elapsed = 0
+    state.pending_choice_id = pending.id
+    opts.on_pending_choice(state, pending)
+  elseif not pending then
+    state.pending_choice = nil
+    state.pending_choice_elapsed = 0
+    state.pending_choice_id = nil
   end
 
   local active = false
-  if opts and opts.is_choice_active then
-    active = opts.is_choice_active(state)
-  else
-    active = state.pending_choice ~= nil
-  end
+  active = opts.is_choice_active(state)
 
-  if not (active and state.pending_choice) then
+  if active and state.pending_choice then
+  else
     state.pending_choice_elapsed = 0
     state.pending_choice_id = nil
     return
@@ -221,19 +194,10 @@ function GameplayLoop.step_choice_timeout(game, state, dt, opts)
     local choice = state.pending_choice
     state.pending_choice_elapsed = 0
     local action
-    if opts and opts.build_action then
-      action = opts.build_action(game, state, choice)
-    else
-      local first = choice.options and choice.options[1]
-      if first then
-        action = { type = "choice_select", choice_id = choice.id, option_id = first.id or first }
-      elseif choice.allow_cancel ~= false then
-        action = { type = "choice_cancel", choice_id = choice.id }
-      end
-    end
-    if action then
-      GameplayLoop.dispatch_action(game, state, action)
-    end
+    assert(opts.build_action ~= nil, "missing opts.build_action")
+    action = opts.build_action(game, state, choice)
+    assert(action ~= nil, "missing timeout action")
+    GameplayLoop.dispatch_action(game, state, action)
   end
 end
 
@@ -244,15 +208,16 @@ function GameplayLoop.step_modal_timeout(state, dt, opts)
     state.ui_modal_ref = nil
     return
   end
-  if not (opts and opts.is_active and opts.on_timeout) then
-    return
-  end
+  assert(opts ~= nil, "missing opts")
+  assert(opts.is_active ~= nil, "missing opts.is_active")
+  assert(opts.on_timeout ~= nil, "missing opts.on_timeout")
+  assert(opts.get_ref ~= nil, "missing opts.get_ref")
   if not opts.is_active(state) then
     state.ui_modal_elapsed = 0
     state.ui_modal_ref = nil
     return
   end
-  local ref = opts.get_ref and opts.get_ref(state) or true
+  local ref = assert(opts.get_ref(state), "missing modal ref")
   if state.ui_modal_ref ~= ref then
     state.ui_modal_ref = ref
     state.ui_modal_elapsed = 0
@@ -265,106 +230,81 @@ function GameplayLoop.step_modal_timeout(state, dt, opts)
 end
 
 function GameplayLoop.step_move_anim(game, state, opts)
-  if not (state.wait_move_anim and game and game.store) then
-    return
-  end
+  assert(state.wait_move_anim == true, "move anim disabled")
+  assert(game ~= nil, "missing game")
+  assert(game.store ~= nil, "missing game.store")
+  assert(opts ~= nil and opts.on_move_anim ~= nil, "missing opts.on_move_anim")
 
   local anim = game.store:get({ "turn", "move_anim" })
   local phase = game.store:get({ "turn", "phase" })
-  if not anim or not anim.seq then
-    state.move_anim_seq = nil
-    return
-  end
+  assert(anim ~= nil and anim.seq ~= nil, "missing move_anim")
 
-  if phase ~= "wait_move_anim" then
-    state.move_anim_seq = nil
-    return
-  end
+  assert(phase == "wait_move_anim", "unexpected move anim phase: " .. tostring(phase))
 
   if state.move_anim_seq == anim.seq then
     return
   end
 
   state.move_anim_seq = anim.seq
-  if opts and opts.on_move_anim then
-    local ok, delay = pcall(opts.on_move_anim, state, anim)
-    if ok and delay and delay > 0 then
-      SetTimeOut(delay, function()
-        if game and game.dispatch_action then
-          game:dispatch_action({ type = "move_anim_done", seq = anim.seq })
-        end
-      end)
-      return
-    end
+  local ok, delay = pcall(opts.on_move_anim, state, anim)
+  if ok and delay and delay > 0 then
+    SetTimeOut(delay, function()
+      assert(game.dispatch_action ~= nil, "missing game.dispatch_action")
+      game:dispatch_action({ type = "move_anim_done", seq = anim.seq })
+    end)
+    return
   end
-  if game and game.dispatch_action then
-    game:dispatch_action({ type = "move_anim_done", seq = anim.seq })
-  end
+  assert(game.dispatch_action ~= nil, "missing game.dispatch_action")
+  game:dispatch_action({ type = "move_anim_done", seq = anim.seq })
 end
 
 function GameplayLoop.step_action_anim(game, state, opts)
-  if not (state.wait_action_anim and game and game.store) then
-    return
-  end
+  assert(state.wait_action_anim == true, "action anim disabled")
+  assert(game ~= nil, "missing game")
+  assert(game.store ~= nil, "missing game.store")
+  assert(opts ~= nil and opts.on_action_anim ~= nil, "missing opts.on_action_anim")
 
   local anim = game.store:get({ "turn", "action_anim" })
   local phase = game.store:get({ "turn", "phase" })
-  if not anim or not anim.seq then
-    state.action_anim_seq = nil
-    return
-  end
+  assert(anim ~= nil and anim.seq ~= nil, "missing action_anim")
 
-  if phase ~= "wait_action_anim" then
-    state.action_anim_seq = nil
-    return
-  end
+  assert(phase == "wait_action_anim", "unexpected action anim phase: " .. tostring(phase))
 
   if state.action_anim_seq == anim.seq then
     return
   end
 
   state.action_anim_seq = anim.seq
-  if opts and opts.on_action_anim then
-    local ok, delay = pcall(opts.on_action_anim, state, anim)
-    if ok and delay and delay > 0 then
-      SetTimeOut(delay, function()
-        if game and game.dispatch_action then
-          game:dispatch_action({ type = "action_anim_done", seq = anim.seq })
-        end
-      end)
-      return
-    end
+  local ok, delay = pcall(opts.on_action_anim, state, anim)
+  if ok and delay and delay > 0 then
+    SetTimeOut(delay, function()
+      assert(game.dispatch_action ~= nil, "missing game.dispatch_action")
+      game:dispatch_action({ type = "action_anim_done", seq = anim.seq })
+    end)
+    return
   end
-  if game and game.dispatch_action then
-    game:dispatch_action({ type = "action_anim_done", seq = anim.seq })
-  end
+  assert(game.dispatch_action ~= nil, "missing game.dispatch_action")
+  game:dispatch_action({ type = "action_anim_done", seq = anim.seq })
 end
 
 function GameplayLoop.step_turn(game, state)
-  if not game or game.finished then
-    return
-  end
+  assert(game ~= nil, "missing game")
+  assert(not game.finished, "game finished")
   game:advance_turn()
 end
 
 function GameplayLoop.dispatch_action(game, state, action, opts)
-  if not action then
-    return
-  end
+  assert(action ~= nil, "missing action")
   if action.type == "ui_button" then
     local slot_index = action.id and string.match(action.id, "^item_slot_(%d+)$")
     if slot_index then
       slot_index = tonumber(slot_index)
       local choice = state.pending_choice
-      if not (choice and choice.kind == "item_phase_choice") then
-        return
-      end
-      local item_ids = state.ui and state.ui.item_slot_item_ids or nil
-      local item_id = item_ids and item_ids[slot_index] or nil
-      if not item_id then
-        return
-      end
-      local options = choice.options or {}
+      assert(choice ~= nil and choice.kind == "item_phase_choice", "invalid item phase choice")
+      assert(state.ui ~= nil, "missing state.ui")
+      assert(state.ui.item_slot_item_ids ~= nil, "missing item_slot_item_ids")
+      local item_id = assert(state.ui.item_slot_item_ids[slot_index], "missing item_id: " .. tostring(slot_index))
+      local options = assert(choice.options, "missing choice options")
       local option_ok = false
       for _, opt in ipairs(options) do
         local opt_id = opt.id or opt
@@ -373,24 +313,22 @@ function GameplayLoop.dispatch_action(game, state, action, opts)
           break
         end
       end
-      if not option_ok then
-        return
-      end
+      assert(option_ok, "invalid item option: " .. tostring(item_id))
       GameplayLoop.dispatch_action(game, state, { type = "choice_select", choice_id = choice.id, option_id = item_id })
       return
     end
     if action.id == "next" then
       local phase = nil
-      local store = game and game.store
-      if store and store.get then
-        phase = store:get({ "turn", "phase" })
-      end
+      assert(game ~= nil and game.store ~= nil, "missing game.store")
+      assert(game.store.get ~= nil, "missing store.get")
+      phase = game.store:get({ "turn", "phase" })
       local now = get_timestamp()
       if state.next_turn_locked then
         local allow = false
         if state.next_turn_lock_phase and phase and phase ~= state.next_turn_lock_phase then
           allow = true
-        elseif now and state.next_turn_last_click then
+        else
+          assert(state.next_turn_last_click ~= nil, "missing next_turn_last_click")
           local diff = get_timestamp_diff_seconds(now, state.next_turn_last_click)
           if diff and diff >= NEXT_TURN_COOLDOWN then
             allow = true
@@ -424,6 +362,7 @@ function GameplayLoop.dispatch_action(game, state, action, opts)
       end,
     })
     if game then
+      assert(game.dispatch_action ~= nil, "missing game.dispatch_action")
       game:dispatch_action(action)
     end
   end
@@ -437,27 +376,26 @@ function GameplayLoop.tick(game, state, dt)
   GameplayLoop.step_auto_runner(game, state, dt, {
     modal_active = false,
     modal_buttons = nil,
-    game_finished = game and game.finished,
+    game_finished = game.finished,
   })
 
   GameplayLoop.step_choice_timeout(game, state, dt, {
+    on_pending_choice = function() end,
+    is_choice_active = function(ctx)
+      return ctx.pending_choice and true or false
+    end,
     build_action = function(game_ctx, ctx, choice)
       local auto_choice = Agent.auto_action_for_choice(game_ctx, choice)
       if auto_choice then
         return auto_choice
       end
-      local first = choice.options and choice.options[1]
-      if first then
-        return {
-          type = "choice_select",
-          choice_id = choice.id,
-          option_id = first.id or first,
-        }
-      end
-      if choice.allow_cancel ~= false then
-        return { type = "choice_cancel", choice_id = choice.id }
-      end
-      return nil
+      local options = assert(choice.options, "missing choice.options")
+      local first = assert(options[1], "missing choice option")
+      return {
+        type = "choice_select",
+        choice_id = choice.id,
+        option_id = first.id or first,
+      }
     end,
   })
 
@@ -466,56 +404,59 @@ function GameplayLoop.tick(game, state, dt)
       return ctx.ui and ctx.ui.popup_active
     end,
     get_ref = function(ctx)
-      return ctx.ui and ctx.ui.popup_active and ctx.ui.popup_seq or nil
+      assert(ctx.ui ~= nil, "missing ui")
+      assert(ctx.ui.popup_active, "popup not active")
+      return assert(ctx.ui.popup_seq, "missing popup_seq")
     end,
     on_timeout = function(ctx)
       MainView.close_popup(ctx)
     end,
   })
 
-  GameplayLoop.step_move_anim(game, state, {
-    on_move_anim = function(_, anim)
-      if not anim then
-        return nil
-      end
-      local player_id = anim.player_id
-      local from_index = anim.from_index
-      local to_index = anim.to_index
-      if not (player_id and from_index and to_index) then
-        return nil
-      end
-      local dir = anim.direction
-      if not dir and anim.steps then
-        if anim.steps < 0 then
-          dir = V3_RIGHT
-        elseif anim.steps > 0 then
-          dir = V3_LEFT
-        end
-      end
-      local MoveAnim = require("Manager.BoardManager.GUI.MoveAnim")
-      return MoveAnim.one_step(player_id, dir, from_index, to_index)
-    end,
-  })
-
-  GameplayLoop.step_action_anim(game, state, {
-    on_action_anim = function(ctx, anim)
-      local ActionAnim = require("Manager.BoardManager.GUI.ActionAnim")
-      return ActionAnim.play(ctx, anim)
-    end,
-  })
-
-  local store = game and game.store
-  if store and store.get then
-    local phase = store:get({ "turn", "phase" })
-    if state.board_last_phase == "wait_move_anim" and phase ~= "wait_move_anim" then
-      state.board_sync_pending = true
+  assert(game.store ~= nil and game.store.get ~= nil, "missing game.store.get")
+  local phase = game.store:get({ "turn", "phase" })
+  if phase == "wait_move_anim" then
+    local anim = game.store:get({ "turn", "move_anim" })
+    if anim then
+      GameplayLoop.step_move_anim(game, state, {
+        on_move_anim = function(_, anim_ctx)
+          assert(anim_ctx ~= nil, "missing anim")
+          local player_id = assert(anim_ctx.player_id, "missing player_id")
+          local from_index = assert(anim_ctx.from_index, "missing from_index")
+          local to_index = assert(anim_ctx.to_index, "missing to_index")
+          local dir = anim_ctx.direction
+          if dir then
+          elseif anim_ctx.steps and anim_ctx.steps < 0 then
+            dir = V3_RIGHT
+          elseif anim_ctx.steps and anim_ctx.steps > 0 then
+            dir = V3_LEFT
+          end
+          assert(dir, "missing anim.direction")
+          local MoveAnim = require("Manager.BoardManager.GUI.MoveAnim")
+          return MoveAnim.one_step(player_id, dir, from_index, to_index)
+        end,
+      })
     end
-    if state.next_turn_locked and state.next_turn_lock_phase and phase and phase ~= state.next_turn_lock_phase then
-      state.next_turn_locked = false
-      state.next_turn_lock_phase = phase
+  elseif phase == "wait_action_anim" then
+    local anim = game.store:get({ "turn", "action_anim" })
+    if anim then
+      GameplayLoop.step_action_anim(game, state, {
+        on_action_anim = function(ctx, anim_ctx)
+          local ActionAnim = require("Manager.BoardManager.GUI.ActionAnim")
+          return ActionAnim.play(ctx, anim_ctx)
+        end,
+      })
     end
-    state.board_last_phase = phase
   end
+
+  if state.board_last_phase == "wait_move_anim" and phase ~= "wait_move_anim" then
+    state.board_sync_pending = true
+  end
+  if state.next_turn_locked and state.next_turn_lock_phase and phase and phase ~= state.next_turn_lock_phase then
+    state.next_turn_locked = false
+    state.next_turn_lock_phase = phase
+  end
+  state.board_last_phase = phase
 
   if state.pending_choice then
     MainView.open_choice_modal(state, state.pending_choice)

@@ -17,17 +17,18 @@ end
 ---创建新状态树
 ---@param init table? 初始状态表
 ---@return Store 新Store对象
----根据路径读取状态值
+---根据路径读取状态值（路径缺失返回 nil）
 ---@param self Store
 ---@param path table 路径数组（如{"players", 1, "cash"}）
 ---@return any 状态值，不存在则返回nil
 function Store:get(path)
   local node = self.state
-  for _, key in ipairs(path) do
-    if type(node) ~= "table" then
+  for i, key in ipairs(path) do
+    assert(type(node) == "table", "store path not table: " .. tostring(key))
+    node = node[key]
+    if node == nil and i < #path then
       return nil
     end
-    node = node[key]
   end
   return node
 end
@@ -40,10 +41,13 @@ function Store:set(path, value)
   local node = self.state
   for i = 1, #path - 1 do
     local key = path[i]
-    if node[key] == nil or type(node[key]) ~= "table" then
-      node[key] = {}
+    local next_node = node[key]
+    if next_node == nil then
+      next_node = {}
+      node[key] = next_node
     end
-    node = node[key]
+    assert(type(next_node) == "table", "store path not table: " .. tostring(key))
+    node = next_node
   end
   node[path[#path]] = value
 end

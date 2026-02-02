@@ -8,68 +8,64 @@ local Demolish = {}
 local list_unpack = table.unpack or unpack
 
 local function clear_overlays(game, idx)
-  if game and game.board and game.board.clear_all then
-    game.board:clear_all(idx)
-  end
+  assert(game ~= nil, "missing game")
+  assert(game.board ~= nil and game.board.clear_all ~= nil, "missing board.clear_all")
+  game.board:clear_all(idx)
 end
 
 local function destroy_building(game, tile)
-  if not tile or tile.type ~= "land" then return end
+  assert(tile ~= nil and tile.type == "land", "invalid tile for demolish")
   game:set_tile_level(tile, 0)
 end
 
 local tile_state = Tile.get_state
 
 local function send_players_to_hospital(game, idx)
-  local occupants = game.occupants[idx]
-  if not occupants then
-    return 0
-  end
+  local occupants = assert(game.occupants[idx], "missing occupants: " .. tostring(idx))
 
-  local hospital_index = game.board:find_first_by_type("hospital")
+  local hospital_index = assert(game.board:find_first_by_type("hospital"), "missing hospital")
 
   local count = 0
   local snapshot = { list_unpack(occupants) }
   for _, pid in ipairs(snapshot) do
-    local target = game.players[pid]
-    if target then
-      if target:is_vehicle_indestructible() then
-        logger.event(target.name .. " 座驾免疫导弹效果")
-      else
-        game:set_player_seat(target, nil)
-        if hospital_index then
-          game:update_player_position(target, hospital_index)
-        end
-        game:set_player_status(target, "move_dir", nil)
-        game:set_player_status(target, "stay_turns", constants.hospital_stay_turns)
-        logger.event(target.name .. " 被炸伤送往医院，需停留 " .. constants.hospital_stay_turns .. " 回合")
-        count = count + 1
-      end
+    local target = assert(game.players[pid], "missing target player: " .. tostring(pid))
+    if target:is_vehicle_indestructible() then
+      logger.event(target.name .. " 座驾免疫导弹效果")
+    else
+      game:set_player_seat(target, nil)
+      game:update_player_position(target, hospital_index)
+      game:set_player_status(target, "move_dir", nil)
+      game:set_player_status(target, "stay_turns", constants.hospital_stay_turns)
+      logger.event(target.name .. " 被炸伤送往医院，需停留 " .. constants.hospital_stay_turns .. " 回合")
+      count = count + 1
     end
   end
   return count
 end
 
 function Demolish.find_target(game, player, distance)
-  local idx = BoardUtils.find_best_tile(game, player, distance, {
+  local idx, value = BoardUtils.find_best_tile(game, player, distance, {
     score_fn = function(tile)
       if tile.type ~= "land" then
-        return nil
+        return -1
       end
       local st = tile_state(game, tile)
       if not st.owner_id or st.owner_id == player.id or (st.level or 0) <= 0 then
-        return nil
+        return -1
       end
       return BoardUtils.total_invested(tile, st.level)
     end,
   })
+  if value < 0 then
+    return nil
+  end
   return idx
 end
 
 function Demolish.apply(game, player, idx, opts)
   opts = opts or {}
   clear_overlays(game, idx)
-  local tile = game.board:get_tile(idx)
+  local tile = assert(game.board:get_tile(idx), "missing tile: " .. tostring(idx))
 
   destroy_building(game, tile)
 
@@ -98,7 +94,8 @@ function Demolish.apply(game, player, idx, opts)
     kind = "missile"
   end
   local queued = false
-  if game.ui_port and game.ui_port.wait_action_anim then
+  assert(game.ui_port ~= nil, "missing ui_port")
+  if game.ui_port.wait_action_anim then
     game:queue_action_anim({
       kind = kind,
       player_id = player.id,
@@ -113,10 +110,7 @@ end
 function Demolish.use(game, player, distance, consume_fn, opts)
   opts = opts or {}
   local best_idx = Demolish.find_target(game, player, distance)
-  if not best_idx then
-    logger.warn(player.name .. " 前后无可破坏目标，道具未生效")
-    return false
-  end
+  assert(best_idx ~= nil, "missing demolish target")
 
   if not opts.by_ai then
     local idxs = BoardUtils.indices_in_range(game.board, player.position, distance)

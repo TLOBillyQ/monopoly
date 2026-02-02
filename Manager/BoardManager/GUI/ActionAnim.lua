@@ -38,9 +38,7 @@ local function build_tip(anim)
 end
 
 function ActionAnim.play(_, anim)
-  if not anim then
-    return nil
-  end
+  assert(anim ~= nil, "missing anim")
   local duration = anim.duration or DURATIONS[anim.kind] or 1.0
   local tip_duration = duration
   if type(duration) == "number" and math and math.tofixed then

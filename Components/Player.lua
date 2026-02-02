@@ -31,11 +31,15 @@ local vehicle_by_id = {}
 for _, cfg in ipairs(vehicles_cfg) do
   vehicle_by_id[cfg.id] = cfg
 end
+local default_vehicle_cfg = {
+  id = 0,
+  name = "",
+  dice_count = game_constants.default_dice_count,
+  indestructible = false,
+}
 
 local function normalize_currency(currency)
-  if currency == nil or currency == "" then
-    return "金币"
-  end
+  assert(currency ~= nil and currency ~= "", "missing currency")
   return currency
 end
 
@@ -44,59 +48,49 @@ end
 ---@param path table 状态路径
 ---@param value any 值
 function Player:_store_set(path, value)
-  if self._store and self._store.set then
-    self._store:set(path, value)
-  end
+  assert(self._store ~= nil, "missing store")
+  self._store:set(path, value)
 end
 
 ---创建新玩家实例
 ---@param attrs table 玩家属性表（id/name/role_id/constants等）
 function Player:init(attrs)
-  attrs = attrs or {}
+  assert(attrs ~= nil, "Player.new(attrs) requires attrs")
   local constants = attrs.constants
   assert(constants ~= nil, "Player.new(attrs) requires attrs.constants")
 
-  local balances = {}
-  if attrs.balances then
-    for currency, amount in pairs(attrs.balances) do
-      if normalize_currency(currency) == "金币" then
-        balances["金币"] = amount
-      else
-        balances[currency] = amount
-      end
-    end
+  local balances = attrs.balances
+  assert(balances ~= nil, "Player.new(attrs) requires attrs.balances")
+  for currency, amount in pairs(balances) do
+    local key = normalize_currency(currency)
+    balances[key] = amount
   end
 
-  local cash = attrs.starting_cash or constants.starting_cash
-  if balances["金币"] ~= nil then
-    cash = balances["金币"]
-    balances["金币"] = nil
-  end
-  if balances["金豆"] == nil and constants.starting_jindou ~= nil then
-    balances["金豆"] = constants.starting_jindou
-  end
-  if balances["乐园币"] == nil and constants.starting_leyuanbi ~= nil then
-    balances["乐园币"] = constants.starting_leyuanbi
-  end
+  local cash = balances["金币"]
+  assert(cash ~= nil, "balances missing 金币")
+  balances["金币"] = nil
+  assert(balances["金豆"] ~= nil, "balances missing 金豆")
+  assert(balances["乐园币"] ~= nil, "balances missing 乐园币")
 
   self.id = attrs.id
-  self.name = attrs.name or ("玩家" .. attrs.id)
+  assert(attrs.name ~= nil, "Player.new(attrs) requires attrs.name")
+  self.name = attrs.name
   self.role_id = attrs.role_id
-  self.is_ai = attrs.is_ai or false
-  self.auto = attrs.auto or false
+  self.is_ai = attrs.is_ai
+  self.auto = attrs.auto
   self.cash = cash
-  self.position = attrs.start_index or 1
+  self.position = attrs.start_index
   self.seat_id = nil
-  self.deity_duration_turns = attrs.deity_duration_turns or constants.deity_duration_turns
+  self.deity_duration_turns = attrs.deity_duration_turns
   self.status = {
     stay_turns = 0,
-    deity = nil,
+    deity = { type = "", remaining = 0 },
     pending_remote_dice = nil,
     pending_dice_multiplier = 1,
     pending_free_rent = false,
     pending_tax_free = false,
   }
-  self.inventory = attrs.inventory or Inventory:new({ constants = constants })
+  self.inventory = attrs.inventory
   self.properties = {}
   self.balances = balances
   self.eliminated = false
@@ -112,9 +106,11 @@ end
 function Player:balance(currency)
   local key = normalize_currency(currency)
   if key == "金币" then
-    return self.cash or 0
+    return self.cash
   end
-  return self.balances[key] or 0
+  local value = self.balances[key]
+  assert(value ~= nil, "missing balance: " .. tostring(key))
+  return value
 end
 
 ---扣除玩家指定币种的余额
@@ -127,7 +123,9 @@ function Player:deduct_balance(currency, amount)
   if key == "金币" then
     return self:deduct_cash(amount)
   end
-  local next_value = (self.balances[key] or 0) - amount
+  local current = self.balances[key]
+  assert(current ~= nil, "missing balance: " .. tostring(key))
+  local next_value = current - amount
   self.balances[key] = next_value
   self:_store_set({ "players", self.id, "balances", key }, next_value)
   return next_value
@@ -164,20 +162,23 @@ end
 ---@param name string 神力名称
 ---@return boolean 是否拥有该神力
 function Player:has_deity(name)
-  return self.status.deity ~= nil and self.status.deity.type == name and self.status.deity.remaining > 0
+  return self.status.deity.type == name and self.status.deity.remaining > 0
 end
 
 ---设置或清除玩家的神力状态
 ---@param self Player
 ---@param name string? 神力名称，nil表示清除
 ---@param duration number? 持续回合数
+function Player:clear_deity()
+  self.status.deity.type = ""
+  self.status.deity.remaining = 0
+  self:_store_set({ "players", self.id, "status", "deity" }, deep_copy(self.status.deity))
+end
+
 function Player:set_deity(name, duration)
-  if name == nil then
-    self.status.deity = nil
-    self:_store_set({ "players", self.id, "status", "deity" }, nil)
-    return
-  end
-  self.status.deity = { type = name, remaining = duration or self.deity_duration_turns }
+  assert(name ~= nil, "missing deity name")
+  self.status.deity.type = name
+  self.status.deity.remaining = duration or self.deity_duration_turns
   self:_store_set({ "players", self.id, "status", "deity" }, deep_copy(self.status.deity))
 end
 
@@ -185,15 +186,15 @@ end
 ---@param self Player
 function Player:tick_deity()
   local deity = self.status.deity
-  if deity then
-    deity.remaining = deity.remaining - 1
-    if deity.remaining <= 0 then
-      self.status.deity = nil
-      self:_store_set({ "players", self.id, "status", "deity" }, nil)
-      return
-    end
-    self:_store_set({ "players", self.id, "status", "deity", "remaining" }, deity.remaining)
+  if deity.remaining <= 0 then
+    return
   end
+  deity.remaining = deity.remaining - 1
+  if deity.remaining <= 0 then
+    self:clear_deity()
+    return
+  end
+  self:_store_set({ "players", self.id, "status", "deity", "remaining" }, deity.remaining)
 end
 
 ---清除玩家的临时标志位（用于回合开始）
@@ -203,9 +204,7 @@ function Player:clear_temporal_flags()
   self.status.pending_free_rent = false
   self.status.pending_tax_free = false
   self.status.pending_remote_dice = nil
-  if self._store then
-    self:_store_set({ "players", self.id, "status" }, deep_copy(self.status))
-  end
+  self:_store_set({ "players", self.id, "status" }, deep_copy(self.status))
 end
 
 ---快速检查玩家是否拥有天使神力
@@ -216,34 +215,26 @@ function Player:has_angel()
 end
 
 function Player:vehicle_cfg()
-  if not self.seat_id then
-    return nil
+  local seat_id = self.seat_id
+  if seat_id then
+    local cfg = vehicle_by_id[seat_id]
+    assert(cfg ~= nil, "missing vehicle cfg: " .. tostring(seat_id))
+    return cfg
   end
-  return vehicle_by_id[self.seat_id]
+  local cfg = default_vehicle_cfg
+  return cfg
 end
 
 function Player:vehicle_name()
-  local cfg = self:vehicle_cfg()
-  if not cfg then
-    return nil
-  end
-  return cfg.name
+  return self:vehicle_cfg().name
 end
 
 function Player:dice_count()
-  local cfg = self:vehicle_cfg()
-  if cfg and cfg.dice_count then
-    return cfg.dice_count
-  end
-  return game_constants.default_dice_count
+  return self:vehicle_cfg().dice_count
 end
 
 function Player:is_vehicle_indestructible()
-  local cfg = self:vehicle_cfg()
-  if not cfg then
-    return false
-  end
-  return cfg.indestructible == true
+  return self:vehicle_cfg().indestructible == true
 end
 
 function Player:apply_hospital_effects(game)
@@ -269,9 +260,8 @@ end
 
 function Player:send_to_hospital(game)
   local hospital_index = game.board:find_first_by_type("hospital")
-  if hospital_index then
-    game:update_player_position(self, hospital_index)
-  end
+  assert(hospital_index ~= nil, "missing hospital tile")
+  game:update_player_position(self, hospital_index)
   game:set_player_status(self, "move_dir", nil)
   self:apply_hospital_effects(game)
 end
@@ -283,16 +273,16 @@ end
 
 function Player:send_to_mountain(game)
   local idx = game.board:find_first_by_type("mountain")
-  if idx then
-    game:update_player_position(self, idx)
-  end
+  assert(idx ~= nil, "missing mountain tile")
+  game:update_player_position(self, idx)
   game:set_player_status(self, "move_dir", nil)
   self:apply_mountain_effects(game)
 end
 
 function Player:is_in_mountain(game)
   local tile = game.board:get_tile(self.position)
-  return tile and tile.type == "mountain"
+  assert(tile ~= nil, "missing tile at position: " .. tostring(self.position))
+  return tile.type == "mountain"
 end
 
 return Player

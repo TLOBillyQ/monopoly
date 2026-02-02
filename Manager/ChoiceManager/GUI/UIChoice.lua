@@ -3,26 +3,24 @@ local Phase = require("Manager.TurnManager.GUI.UIPhase")
 local Choice = {}
 
 local function join_lines(lines)
-  if not lines then
-    return ""
-  end
+  assert(lines ~= nil, "missing body lines")
   return table.concat(lines, "\n")
 end
 
 local function default_option_label(opt)
-  if opt and opt.label then
+  assert(opt ~= nil, "missing option")
+  if opt.label then
     return opt.label
   end
-  if opt and opt.id ~= nil then
-    return tostring(opt.id)
+  local id = opt.id
+  if type(id) ~= "nil" then
+    return tostring(id)
   end
   return tostring(opt)
 end
 
 function Choice.build_choice_view(pending, opts)
-  if not pending then
-    return nil
-  end
+  assert(pending ~= nil, "missing pending choice")
   opts = opts or {}
   local option_label = opts.option_label or default_option_label
   local title = Phase.build_phase_title(opts.game, pending.title or "请选择")
@@ -36,9 +34,7 @@ function Choice.build_choice_view(pending, opts)
   local options = {}
   for _, opt in ipairs(pending.options or {}) do
     local label = option_label(opt)
-    if label == nil then
-      label = ""
-    end
+    assert(label ~= nil, "missing option label")
     table.insert(options, {
       label = label,
       id = opt.id or opt,

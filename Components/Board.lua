@@ -18,15 +18,13 @@ local OPPOSITE = {
 }
 
 local function pick_any_dir(neigh, avoid_dir)
-  if not neigh then
-    return nil, nil
-  end
+  assert(neigh ~= nil, "missing neighbors")
   for dir, next_id in pairs(neigh) do
-    if not avoid_dir or dir ~= avoid_dir then
+    if dir ~= avoid_dir then
       return dir, next_id
     end
   end
-  return nil, nil
+  assert(false, "no neighbor available")
 end
 
 ---创建新棋盘实例
@@ -115,16 +113,14 @@ end
 ---@param index number 位置索引
 ---@return boolean 是否有路障
 function Board:has_roadblock(index)
-  return self.overlays.roadblocks and self.overlays.roadblocks[index] ~= nil
+  return self.overlays.roadblocks[index] and true or false
 end
 
 ---清除指定位置的路障
 ---@param self Board
 ---@param index number 位置索引
 function Board:clear_roadblock(index)
-  if self.overlays.roadblocks then
-    self.overlays.roadblocks[index] = nil
-  end
+  self.overlays.roadblocks[index] = nil
 end
 
 ---在指定位置放置地雷
@@ -140,16 +136,14 @@ end
 ---@param index number 位置索引
 ---@return boolean 是否有地雷
 function Board:has_mine(index)
-  return self.overlays.mines and self.overlays.mines[index] ~= nil
+  return self.overlays.mines[index] and true or false
 end
 
 ---清除指定位置的地雷
 ---@param self Board
 ---@param index number 位置索引
 function Board:clear_mine(index)
-  if self.overlays.mines then
-    self.overlays.mines[index] = nil
-  end
+  self.overlays.mines[index] = nil
 end
 
 ---清除指定位置的所有覆盖物（路障和地雷）
@@ -203,27 +197,25 @@ function Board:step_forward_by_facing(current_index, facing, parity)
   local map = self.map
 
   local current_tile = self:get_tile(current_index)
-  if not current_tile then
-    return current_index, 0, facing
-  end
+  assert(current_tile ~= nil, "missing current tile: " .. tostring(current_index))
   local current_id = current_tile.id
   local neigh = map.neighbors[current_id]
 
   local next_id = nil
 
-  if map.outer_next and map.outer_next[current_id] then
+  if map.outer_next[current_id] then
     local entry = map.entry_points[current_id]
     if entry and parity and (parity % 2 == 0) and facing then
       local prev_id = map.outer_prev[current_id]
       local required_facing = map.direction(prev_id, current_id)
-      if required_facing and required_facing == facing then
+      if required_facing == facing then
         next_id = entry.inner_id
       end
     end
     if not next_id then
       next_id = map.outer_next[current_id]
     end
-  elseif map.market_id and current_id == map.market_id and facing and parity and map.turn_left and map.turn_right then
+  elseif current_id == map.market_id and facing and parity then
     local exit_dir = map.turn_right[facing]
     if parity % 2 == 1 then
       exit_dir = map.turn_left[facing]
@@ -248,14 +240,10 @@ function Board:step_forward_by_facing(current_index, facing, parity)
     end
   end
 
-  if not next_id then
-    return current_index, 0, facing
-  end
+  assert(next_id ~= nil, "missing next tile id from: " .. tostring(current_id))
 
   local next_index = self:index_of_tile_id(next_id)
-  if not next_index then
-    return current_index, 0, facing
-  end
+  assert(next_index ~= nil, "missing next tile index: " .. tostring(next_id))
   local passed_start = 0
   if next_id == map.start_id then
     passed_start = 1
@@ -274,9 +262,7 @@ function Board:step_backward_by_facing(current_index, facing, _parity)
   local map = self.map
 
   local current_tile = self:get_tile(current_index)
-  if not current_tile then
-    return current_index, 0, facing
-  end
+  assert(current_tile ~= nil, "missing current tile: " .. tostring(current_index))
   local current_id = current_tile.id
   local neigh = map.neighbors[current_id]
 
@@ -288,7 +274,7 @@ function Board:step_backward_by_facing(current_index, facing, _parity)
     end
   end
 
-  if not next_id and map.outer_prev and map.outer_prev[current_id] then
+  if not next_id and map.outer_prev[current_id] then
     next_id = map.outer_prev[current_id]
   end
 
@@ -302,14 +288,10 @@ function Board:step_backward_by_facing(current_index, facing, _parity)
     next_id = nid
   end
 
-  if not next_id then
-    return current_index, 0, facing
-  end
+  assert(next_id ~= nil, "missing prev tile id from: " .. tostring(current_id))
 
   local next_index = self:index_of_tile_id(next_id)
-  if not next_index then
-    return current_index, 0, facing
-  end
+  assert(next_index ~= nil, "missing prev tile index: " .. tostring(next_id))
   local passed_start = 0
   if next_id == map.start_id then
     passed_start = 1

@@ -89,15 +89,7 @@ local function decide_choice_action(game, choice, pending_action)
     return auto_action
   end
 
-  if game.ui_port == nil then
-    local first = choice.options and choice.options[1]
-    if first then
-      return { type = "choice_select", choice_id = choice.id, option_id = first.id or first }
-    end
-    if choice.allow_cancel ~= false then
-      return { type = "choice_cancel", choice_id = choice.id }
-    end
-  end
+  assert(game.ui_port ~= nil, "missing ui_port")
 
   return nil
 end
@@ -120,14 +112,8 @@ end
 function TurnManager:dispatch(action)
   self.pending_action = action
 
-  local choice = get_choice(self.game)
-  if choice and action == nil and (not self.flow or not self.flow.current) then
-    return nil
-  end
-  if choice and (not self.flow or not self.flow.current) then
-    local res = resolve_choice(self.game, choice, action)
-    self.pending_action = nil
-    return res
+  if not self.flow or not self.flow.current then
+    self.flow = self:_build_flow()
   end
 
   if self.flow and self.flow.current then
@@ -184,10 +170,7 @@ function TurnManager:_build_flow()
   states.wait_move_anim = function(args)
     self.game.store:set({ "turn", "phase" }, "wait_move_anim")
     local anim = self.game.store:get({ "turn", "move_anim" })
-    if not anim then
-      self.pending_action = nil
-      return args.resume_state, args.resume_args
-    end
+    assert(anim ~= nil, "missing move_anim")
 
     local action = self.pending_action
     self.pending_action = nil
@@ -204,10 +187,7 @@ function TurnManager:_build_flow()
   states.wait_action_anim = function(args)
     self.game.store:set({ "turn", "phase" }, "wait_action_anim")
     local anim = self.game.store:get({ "turn", "action_anim" })
-    if not anim then
-      self.pending_action = nil
-      return args.resume_state, args.resume_args
-    end
+    assert(anim ~= nil, "missing action_anim")
 
     local action = self.pending_action
     self.pending_action = nil

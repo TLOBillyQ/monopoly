@@ -8,7 +8,8 @@ local landing_effects = require("Config.LandingEffects")
 local ChoiceService = {}
 
 local function is_cancel(action)
-  return not action or action.type == "choice_cancel" or action.option_id == nil
+  assert(action ~= nil, "missing action")
+  return action.type == "choice_cancel"
 end
 
 local function clear_choice(game)
@@ -16,8 +17,8 @@ local function clear_choice(game)
 end
 
 local function use_item(game, player, item_id, context)
-  context = context or {}
-  context.services = context.services or game:get_services()
+  assert(context ~= nil, "missing item context")
+  context.services = game:get_services()
   return Executor.use_item(game, player, item_id, context)
 end
 
@@ -28,9 +29,7 @@ end
 
 
 local function contains(list, value)
-  if type(list) ~= "table" then
-    return false
-  end
+  assert(type(list) == "table", "contains requires table")
   for _, v in ipairs(list) do
     if v == value then
       return true
@@ -40,19 +39,16 @@ local function contains(list, value)
 end
 
 local function option_exists(choice, option_id)
-  if not choice or option_id == nil then
-    return false
-  end
+  assert(choice ~= nil, "missing choice")
+  assert(option_id ~= nil, "missing option_id")
   local options = choice.options
-  if type(options) ~= "table" or #options == 0 then
-    return true
-  end
+  assert(type(options) == "table" and #options > 0, "missing choice options")
   for _, opt in ipairs(options) do
     local id = opt
     if type(opt) == "table" then
       id = opt.id
     end
-    if id ~= nil and (id == option_id or tostring(id) == tostring(option_id)) then
+    if type(id) ~= "nil" and (id == option_id or tostring(id) == tostring(option_id)) then
       return true
     end
   end
@@ -72,20 +68,21 @@ end
 
 local function finish_active_item_phase(game)
   local phase = game.store:get({ "turn", "item_phase_active" })
-  if phase then
+  if phase ~= "" then
     ItemPhase.finish(game, phase)
   end
 end
 
 local function get_container_defs_by_choice_kind(choice_kind)
   if choice_kind == "landing_optional_effect" or choice_kind == "land_optional_effect" then
-    return landing_effects or {}
+    return landing_effects
   end
   return nil
 end
 
 local function find_effect_by_id(effect_defs, effect_id)
-  for _, eff in ipairs(effect_defs or {}) do
+  assert(effect_defs ~= nil, "missing effect defs")
+  for _, eff in ipairs(effect_defs) do
     if eff.id == effect_id then
       return eff
     end
@@ -108,31 +105,27 @@ local helpers = {
 
 function ChoiceService.resolve(game, choice, action)
   ChoiceRegistry.register_defaults(helpers)
-  if not game or not choice then
-    return { stay = false }
-  end
+  assert(game ~= nil, "missing game")
+  assert(choice ~= nil, "missing choice")
+  assert(action ~= nil, "missing action")
 
   if is_cancel(action) then
     if choice.kind == "item_phase_choice" then
-      local phase = choice.meta and choice.meta.phase
+      local phase = choice.meta.phase
       finish_item_phase(game, phase)
     end
     clear_choice(game)
     return { stay = false }
   end
 
-  if action and action.option_id ~= nil and not option_exists(choice, action.option_id) then
+  if not option_exists(choice, action.option_id) then
     logger.warn("invalid choice option:", tostring(choice.kind), tostring(action.option_id))
     clear_choice(game)
     return { stay = false }
   end
 
   local handler = ChoiceRegistry.handlers[choice.kind]
-  if not handler then
-    logger.warn("unknown choice kind:", tostring(choice.kind))
-    clear_choice(game)
-    return { stay = false }
-  end
+  assert(handler ~= nil, "unknown choice kind: " .. tostring(choice.kind))
   return handler(game, choice, action)
 end
 

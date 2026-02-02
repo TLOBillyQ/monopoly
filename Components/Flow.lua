@@ -24,9 +24,7 @@ end
 ---@param self Flow
 ---@return string? 下一个状态名，nil表示完成
 function Flow:step()
-  if not self.current then
-    return nil
-  end
+  assert(self.current ~= nil, "flow current state missing")
   local fn = self.states[self.current]
   assert(fn, "flow state not found: " .. tostring(self.current))
   local next_state, next_args = fn(self.args)

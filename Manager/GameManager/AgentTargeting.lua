@@ -84,10 +84,7 @@ function AgentTargeting.pick_remote_dice_value(game, player, dice_count)
     local rank, score = remote_priority(game, player, sim)
     if rank then
       local score_value = score or 0
-      local best_score = -2147483647
-      if best and best.score ~= nil then
-        best_score = best.score
-      end
+      local best_score = best and best.score or -2147483647
       if not best
         or rank < best.rank
         or (rank == best.rank and score_value > best_score) then

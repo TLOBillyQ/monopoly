@@ -3,55 +3,32 @@ local UIAliases = require("Manager.ChoiceManager.GUI.UIAliases")
 
 local EggyLayerUI = {}
 
-local missing_tips = {}
-
-local function show_missing_tip(name)
-  if missing_tips[name] then
-    return
-  end
-  missing_tips[name] = true
-  GlobalAPI.show_tips("UI 节点未适配：" .. tostring(name), 2.0)
-end
-
 local function query_node(name)
-  if not name then
-    return nil
-  end
+  assert(name ~= nil, "missing ui node name")
   local resolved = UIAliases.resolve(name)
   local list = UIManager.query_nodes_by_name(resolved)
-  local node = list and list[1] or nil
-  if not node then
-    show_missing_tip(name)
-  end
-  return node
+  assert(list ~= nil and list[1] ~= nil, "missing ui node: " .. tostring(name))
+  return list[1]
 end
 
 local function set_label(_, name, text)
   local node = query_node(name)
-  if node and node.text ~= nil then
-    node.text = text or ""
-  end
+  node.text = text or ""
 end
 
 local function set_button(_, name, text)
   local node = query_node(name)
-  if node and node.text ~= nil then
-    node.text = text or ""
-  end
+  node.text = text or ""
 end
 
 local function set_visible(_, name, visible)
   local node = query_node(name)
-  if node and node.visible ~= nil then
-    node.visible = visible == true
-  end
+  node.visible = visible == true
 end
 
 local function set_touch_enabled(_, name, enabled)
   local node = query_node(name)
-  if node and node.disabled ~= nil then
-    node.disabled = not enabled
-  end
+  node.disabled = not enabled
 end
 
 function EggyLayerUI.build_ui_state()
@@ -96,10 +73,11 @@ function EggyLayerUI.refresh_panel(layer, view)
   local player_rows = PanelView.build_player_statuses(view, layer.game, 4)
   for i = 1, 4 do
     local row = player_rows[i]
-    ui:set_label("玩家" .. tostring(i) .. "名字", row and row.name or "")
-    ui:set_label("玩家" .. tostring(i) .. "现金", row and row.cash or "")
-    ui:set_label("玩家" .. tostring(i) .. "地块数量", row and row.land_count or "")
-    ui:set_label("玩家" .. tostring(i) .. "总资产", row and row.total_assets or "")
+    assert(row ~= nil, "missing player row: " .. tostring(i))
+    ui:set_label("玩家" .. tostring(i) .. "名字", row.name)
+    ui:set_label("玩家" .. tostring(i) .. "现金", row.cash)
+    ui:set_label("玩家" .. tostring(i) .. "地块数量", row.land_count)
+    ui:set_label("玩家" .. tostring(i) .. "总资产", row.total_assets)
   end
 
   EggyLayerUI.refresh_item_slots(layer, view)
@@ -112,42 +90,34 @@ end
 
 function EggyLayerUI.refresh_item_slots(layer, view)
   local ui = layer.ui
-  if not (ui and ui.item_slots) then
-    return
-  end
+  assert(ui ~= nil and ui.item_slots ~= nil, "missing ui item slots")
 
   local slots = ui.item_slots
   local item_ids = {}
   ui.item_slot_item_ids = item_ids
 
-  local players = view and view.state and view.state.players or nil
-  local turn = view and view.state and view.state.turn or nil
-  local current = players and turn and players[turn.current_player_index] or nil
-  local items = current and current.inventory and current.inventory.items or {}
-  local refs = G and G.refs or nil
-  local empty_key = refs and refs["空"] or nil
+  local players = view.state.players
+  local turn = view.state.turn
+  local current = players[turn.current_player_index]
+  local items = current.inventory.items
+  local refs = G.refs
+  local empty_key = refs["空"]
 
   for i, slot_name in ipairs(slots) do
     local item = items[i]
     if item and item.id then
-      if refs then
-        local ref_key = refs[tostring(item.id)] or refs[item.id]
-        local node = ui.query_node(slot_name)
-        if node and node.image_texture ~= nil then
-          if ref_key then
-            node.image_texture = ref_key
-          elseif empty_key then
-            node.image_texture = empty_key
-          end
-        end
+      local ref_key = refs[tostring(item.id)] or refs[item.id]
+      local node = ui.query_node(slot_name)
+      if ref_key then
+        node.image_texture = ref_key
+      else
+        node.image_texture = empty_key
       end
       ui:set_touch_enabled(slot_name, true)
       item_ids[i] = item.id
     else
       local node = ui.query_node(slot_name)
-      if node and node.image_texture ~= nil and empty_key then
-        node.image_texture = empty_key
-      end
+      node.image_texture = empty_key
       ui:set_touch_enabled(slot_name, false)
     end
   end

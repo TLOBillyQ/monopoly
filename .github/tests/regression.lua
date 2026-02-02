@@ -16,6 +16,8 @@ local ChoiceService = require("Manager.ChoiceManager.Choice.ChoiceService")
 local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
 local GameplayLoop = require("Manager.TurnManager.GameplayLoop")
 local constants = require("Config.Generated.Constants")
+local map_cfg = require("Config.Map")
+local tiles_cfg = require("Config.Generated.Tiles")
 local logger = require("Components.Logger")
 local SERVICE_KEY = require("Globals.ServiceKeys")
 
@@ -46,6 +48,24 @@ end
 LuaAPI = LuaAPI or {}
 LuaAPI.rand = LuaAPI.rand or function()
   return math.random()
+end
+
+TriggerCustomEvent = TriggerCustomEvent or function() end
+
+local function build_ui_port(overrides)
+  local port = {
+    wait_move_anim = false,
+    wait_action_anim = false,
+    push_popup = function() end,
+    on_tile_owner_changed = function() end,
+    on_tile_upgraded = function() end,
+  }
+  if overrides then
+    for key, value in pairs(overrides) do
+      port[key] = value
+    end
+  end
+  return port
 end
 
 local function visited_tile_ids(board, visited)
@@ -139,7 +159,16 @@ local function resolve_landing(game, player, tile, move_result, depth)
 end
 
 local function new_game()
-  return App:new({ players = { "P1", "P2" }, ai = { [2] = true }, auto_all = false, seed = 42 })
+  local game = App:new({
+    players = { "P1", "P2" },
+    ai = { [2] = true },
+    auto_all = false,
+    seed = 42,
+    map = map_cfg,
+    tiles = tiles_cfg,
+  })
+  game.ui_port = build_ui_port()
+  return game
 end
 
 local function first_land_tile(board)
@@ -272,7 +301,17 @@ local function test_monster_card()
   g:set_tile_level(tile, 2)
   p.inventory:add({ id = 2008 })
   local res = Executor.use_item(g, p, 2008, { services = g.services, by_ai = true })
-  local ok = (type(res) == "table" and res.ok ~= nil) and res.ok or res
+  if type(res) == "table" and res.intent then
+    if res.intent.kind == "need_choice" then
+      open_choice(g, res.intent.choice_spec)
+    end
+    local pending = get_choice(g)
+    assert(pending and pending.kind == "demolish_target", "monster should open choice")
+    local first = pending.options[1]
+    ChoiceService.resolve(g, pending, { option_id = first.id })
+    res = true
+  end
+  local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
   assert_eq(ok, true, "monster use ok")
   assert_eq(tile_state(g, tile).level, 0, "building destroyed")
 end
@@ -299,7 +338,7 @@ local function test_missile_card()
     ChoiceService.resolve(g, pending, { option_id = first.id })
     res = true
   end
-  local ok = (type(res) == "table" and res.ok ~= nil) and res.ok or res
+  local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
   assert_eq(ok, true, "missile use ok")
   assert_eq(tile_state(g, tile).level, 0, "building destroyed by missile")
   assert_eq(g.board:has_roadblock(idx), false, "roadblock cleared")
@@ -309,8 +348,7 @@ end
 
 local function test_landing_optional_waits_with_ui()
   local g = new_game()
-  -- UI is considered available when an adapter port exists.
-  g.ui_port = {}
+  g.ui_port = build_ui_port()
   local p = g:current_player()
   local idx, tile = first_land_tile(g.board)
   g:update_player_position(p, idx)
@@ -327,9 +365,9 @@ local function test_landing_optional_waits_without_ui_and_can_resolve()
   g:update_player_position(p, idx)
   local before_cash = p.cash
   local res = resolve_landing(g, p, tile, {})
-  assert(res and res.waiting, "landing resolver should wait even without UI")
+  assert(res and res.waiting, "landing resolver should wait without manual UI interaction")
   local pending = get_choice(g)
-  assert(pending and pending.kind == "landing_optional_effect", "pending choice expected without UI")
+  assert(pending and pending.kind == "landing_optional_effect", "pending choice expected")
   local first = pending.options and pending.options[1]
   assert(first, "expected at least one optional effect")
   ChoiceService.resolve(g, pending, { option_id = first.id })
@@ -376,7 +414,7 @@ end
 
 local function test_landing_optional_stale_choice_is_blocked()
   local g = new_game()
-  g.ui_port = {}
+  g.ui_port = build_ui_port()
   local p = g:current_player()
   local idx, tile = first_land_tile(g.board)
   g:update_player_position(p, idx)
@@ -609,7 +647,17 @@ local function test_item_equalize_cash()
   target:set_cash(9000)
   user.inventory:add({ id = 2011 })
   local res = Executor.use_item(g, user, 2011, { by_ai = true })
-  local ok = (type(res) == "table" and res.ok ~= nil) and res.ok or res
+  if type(res) == "table" and res.intent then
+    if res.intent.kind == "need_choice" then
+      open_choice(g, res.intent.choice_spec)
+    end
+    local pending = get_choice(g)
+    assert(pending and pending.kind == "item_target_player", "equalize should open choice")
+    local first = pending.options[1]
+    ChoiceService.resolve(g, pending, { option_id = first.id })
+    res = true
+  end
+  local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
   assert_eq(ok, true, "equalize use ok")
   assert_eq(user.cash, 5000, "equalize user cash")
   assert_eq(target.cash, 5000, "equalize target cash")
@@ -647,7 +695,7 @@ local function test_market_global_limit()
   g.store:set({ "market", "global_limits", entry.product_id }, 1)
 
   local res = MarketService.buy_with_opts(g, p, entry.product_id, nil)
-  local ok = (type(res) == "table" and res.ok ~= nil) and res.ok or res
+  local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
   assert(ok, "first purchase should succeed")
 
   local list = MarketService.list_buyable(p, g)
@@ -719,7 +767,7 @@ end
 
 local function test_move_anim_wait_and_resume()
   local g = new_game()
-  g.ui_port = { wait_move_anim = true }
+  g.ui_port = build_ui_port({ wait_move_anim = true })
   local player = g:current_player()
   g.last_turn = {
     player_id = player.id,
@@ -751,6 +799,87 @@ local function test_move_anim_wait_and_resume()
   assert(g.store:get({ "turn", "move_anim" }) == nil, "move_anim should be cleared")
   local phase = g.store:get({ "turn", "phase" })
   assert(phase ~= "wait_move_anim", "should resume after move anim done")
+end
+
+local function test_store_missing_path_get_set()
+  local Store = require("Components.Store")
+  local store = Store:new({})
+  assert(store:get({ "missing" }) == nil, "missing path should return nil")
+  store:set({ "a", "b", "c" }, 3)
+  assert_eq(store:get({ "a", "b", "c" }), 3, "store set should create path")
+  assert(store:get({ "a", "b", "d" }) == nil, "missing leaf should return nil")
+end
+
+local function test_tick_skips_anim_when_no_anim()
+  local Store = require("Components.Store")
+  local MainView = require("Manager.TurnManager.GUI.MainView")
+  local Presenter = require("Manager.TurnManager.GUI.Presenter")
+
+  local old_refresh = MainView.refresh_panel
+  local old_refresh_board = MainView.refresh_board
+  local old_open_choice = MainView.open_choice_modal
+  local old_present = Presenter.present
+  local old_game_api = GameAPI
+  local old_enums = Enums
+
+  MainView.refresh_panel = function() end
+  MainView.refresh_board = function() end
+  MainView.open_choice_modal = function() end
+  Presenter.present = function(store_state)
+    return {
+      state = store_state,
+      current_player_name = "P",
+      current_player_cash = 0,
+      turn_count = store_state.turn.turn_count,
+    }
+  end
+  GameAPI = {
+    get_role = function()
+      return {
+        set_camera_bind_mode = function() end,
+        set_camera_lock_position = function() end,
+      }
+    end,
+  }
+  Enums = { CameraBindMode = { TRACK = 0 } }
+
+  local store = Store:new({
+    players = { [1] = { id = 1, name = "P1", cash = 0 } },
+    turn = { phase = "move", current_player_index = 1, turn_count = 0 },
+  })
+  local game = { finished = false, store = store }
+  local state = {
+    auto_runner = { next_action = function() return nil end },
+    _log_once = {},
+    pending_choice = nil,
+    pending_choice_elapsed = 0,
+    pending_choice_id = nil,
+    ui_modal_elapsed = 0,
+    ui_modal_ref = nil,
+    board_last_phase = nil,
+    board_sync_pending = false,
+    next_turn_locked = false,
+    next_turn_lock_phase = nil,
+    player_units = {
+      [1] = {
+        get_position = function() return { x = 0, y = 0, z = 0 } end
+      }
+    },
+    ui = {},
+  }
+
+  local ok, err = pcall(function()
+    GameplayLoop.tick(game, state, 0.1)
+  end)
+
+  MainView.refresh_panel = old_refresh
+  MainView.refresh_board = old_refresh_board
+  MainView.open_choice_modal = old_open_choice
+  Presenter.present = old_present
+  GameAPI = old_game_api
+  Enums = old_enums
+
+  assert(ok, "tick should not error without anim: " .. tostring(err))
 end
 
 -- 最复杂的回合结算用例：连续触发多个效果
@@ -818,9 +947,9 @@ local function test_complex_consecutive_turn_settlement()
   assert(has_card_3023, "配置中需要存在机会卡 3023（向前移动2格）")
   
   -- 记录初始状态
-  local initial_has_steal_card = Inventory.find_index(p1, 2007) ~= nil
+  local initial_has_steal_card = Inventory.find_index(p1, 2007) and true or false
   local initial_p2_item_count = p2.inventory:count()
-  local initial_has_vehicle = p1.seat_id ~= nil
+  local initial_has_vehicle = p1.seat_id and true or false
   
   assert(initial_has_steal_card, "p1 应该有偷窃卡")
   assert(initial_p2_item_count > 0, "p2 应该有道具可被偷")
@@ -959,7 +1088,7 @@ local function test_complex_market_interrupt_with_rent()
   local res = MovementService.move(g, p1, move_distance, { branch_parity = move_distance })
   
   -- 如果触发了黑市中断
-  local has_market_interrupt = res.market_interrupt ~= nil
+  local has_market_interrupt = res.market_interrupt and true or false
   
   -- 如果没有中断或已处理，继续落地
   if not has_market_interrupt or (res.market_interrupt and res.market_interrupt.remaining_steps == 0) then
@@ -1024,6 +1153,8 @@ local tests = {
   test_chance_move_backward_pass_intersection,
   test_invalid_choice_option_rejected,
   test_move_anim_wait_and_resume,
+  test_store_missing_path_get_set,
+  test_tick_skips_anim_when_no_anim,
   test_complex_consecutive_turn_settlement,
   test_complex_market_interrupt_with_rent,
 }

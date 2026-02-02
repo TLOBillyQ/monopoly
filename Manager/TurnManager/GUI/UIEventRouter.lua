@@ -8,20 +8,19 @@ local UIEventRouter = {}
 local missing_button_tips = {}
 
 local function resolve_option_id(choice, payload, state)
-  if not (choice and payload) then
-    return nil
-  end
+  assert(choice ~= nil, "missing choice")
+  assert(payload ~= nil, "missing payload")
   local option_id = payload.option_id or payload.option or nil
   if option_id then
     return option_id
   end
   local idx = payload.index or payload.option_index or payload.card_index or payload.choice_index
   if idx then
-    local mapped = state and state.market_choice_option_ids and state.market_choice_option_ids[idx]
+    local mapped = state.market_choice_option_ids and state.market_choice_option_ids[idx]
     if mapped then
       return mapped
     end
-    local opt = choice.options and choice.options[idx]
+    local opt = choice.options[idx]
     if opt then
       return opt.id or opt
     end
@@ -38,21 +37,17 @@ local function show_missing_button_tip(name)
 end
 
 local function register_node_click(cache, name, callback, registered)
-  if not name then
-    return
-  end
+  assert(name ~= nil, "missing node name")
   local resolved = UIAliases.resolve(name)
   local nodes = cache[resolved]
-  if nodes == nil then
-    nodes = UIManager.query_nodes_by_name(resolved) or {}
+  if nodes then
+  else
+    nodes = UIManager.query_nodes_by_name(resolved)
     cache[resolved] = nodes
   end
-  if not nodes[1] then
-    return
-  end
-  if registered then
-    registered[resolved] = true
-  end
+  assert(nodes[1] ~= nil, "missing ui nodes: " .. tostring(resolved))
+  assert(registered ~= nil, "missing registered map")
+  registered[resolved] = true
   for _, node in ipairs(nodes) do
     node:listen(UIManager.EVENT.CLICK, function(data)
       callback(data)
@@ -93,7 +88,8 @@ function UIEventRouter.bind(state, get_game, opts)
 
   register_node_click(cache, "取消按钮", function()
     local choice = state.pending_choice
-    if choice and choice.allow_cancel ~= false then
+    assert(choice ~= nil, "missing pending choice")
+    if choice.allow_cancel ~= false then
       dispatch_action({ type = "choice_cancel", choice_id = choice.id })
     end
   end, registered)
@@ -101,48 +97,39 @@ function UIEventRouter.bind(state, get_game, opts)
   for idx, name in ipairs({ "道具名称1", "道具名称2", "道具名称3", "道具名称4" }) do
     register_node_click(cache, name, function()
       local choice = state.pending_choice
-      if not choice then
-        return
-      end
+      assert(choice ~= nil, "missing pending choice")
       local option_id = resolve_option_id(choice, { index = idx }, state)
-      if option_id then
-        dispatch_action({ type = "choice_select", choice_id = choice.id, option_id = option_id })
-      elseif choice.allow_cancel ~= false then
+      assert(option_id ~= nil, "missing option id")
+      dispatch_action({ type = "choice_select", choice_id = choice.id, option_id = option_id })
+      if choice.allow_cancel ~= false then
         dispatch_action({ type = "choice_cancel", choice_id = choice.id })
       end
     end, registered)
   end
 
-  for idx, name in ipairs(MarketUI.item_buttons or {}) do
+  for idx, name in ipairs(MarketUI.item_buttons) do
     register_node_click(cache, name, function()
-      if not (MarketUI.is_ready and MarketUI.is_ready()) then
-        return
-      end
+      assert(MarketUI.is_ready(), "market ui not ready")
       local choice = state.pending_choice
-      if not (choice and choice.kind == "market_buy") then
-        return
-      end
+      assert(choice ~= nil and choice.kind == "market_buy", "invalid market choice")
       local option_id = resolve_option_id(choice, { index = idx }, state)
-      if option_id then
-        MainView.select_market_option(state, option_id)
-      end
+      assert(option_id ~= nil, "missing option id")
+      MainView.select_market_option(state, option_id)
     end, registered)
   end
 
   register_node_click(cache, MarketUI.confirm_button, function()
     local choice = state.pending_choice
-    if not (choice and choice.kind == "market_buy") then
-      return
-    end
+    assert(choice ~= nil and choice.kind == "market_buy", "invalid market choice")
     local option_id = state.pending_choice_selected_option_id
-    if option_id then
-      dispatch_action({ type = "choice_select", choice_id = choice.id, option_id = option_id })
-    end
+    assert(option_id ~= nil, "missing selected market option")
+    dispatch_action({ type = "choice_select", choice_id = choice.id, option_id = option_id })
   end, registered)
 
   register_node_click(cache, MarketUI.cancel_button, function()
     local choice = state.pending_choice
-    if choice and choice.allow_cancel ~= false then
+    assert(choice ~= nil, "missing pending choice")
+    if choice.allow_cancel ~= false then
       dispatch_action({ type = "choice_cancel", choice_id = choice.id })
     end
   end, registered)
@@ -151,22 +138,21 @@ function UIEventRouter.bind(state, get_game, opts)
   if MarketUI.cancel_button ~= market_close then
     register_node_click(cache, market_close, function()
       local choice = state.pending_choice
-      if choice and choice.allow_cancel ~= false then
+      assert(choice ~= nil, "missing pending choice")
+      if choice.allow_cancel ~= false then
         dispatch_action({ type = "choice_cancel", choice_id = choice.id })
       end
     end, registered)
   end
 
-  local ok, nodes = pcall(require, "Data.UIManagerNodes")
-  if ok and type(nodes) == "table" then
-    for _, entry in pairs(nodes) do
-      local name = entry[1]
-      local kind = entry[2]
-      if kind == "EButton" and name and not registered[name] then
-        register_node_click(cache, name, function()
-          show_missing_button_tip(name)
-        end, registered)
-      end
+  local nodes = require("Data.UIManagerNodes")
+  for _, entry in pairs(nodes) do
+    local name = entry[1]
+    local kind = entry[2]
+    if kind == "EButton" and not registered[name] then
+      register_node_click(cache, name, function()
+        show_missing_button_tip(name)
+      end, registered)
     end
   end
 end

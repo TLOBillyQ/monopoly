@@ -3,10 +3,10 @@ local logger = require("Components.Logger")
 local MineEffect = {}
 
 function MineEffect.apply(game, player, position)
-  local board = game.board
-  if not player or not position then
-    return { detonated = false }
-  end
+  assert(game ~= nil, "missing game")
+  local board = assert(game.board, "missing board")
+  assert(player ~= nil, "missing player")
+  assert(position ~= nil, "missing position")
 
   if player:has_angel() then
     logger.event(player.name .. " 天使保护，地雷无效")

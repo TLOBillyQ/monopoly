@@ -5,9 +5,8 @@ local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 local ChanceEffects = {}
 
 local function emit_event(kind, payload)
-  if TriggerCustomEvent then
-    TriggerCustomEvent(kind, payload or {})
-  end
+  assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
+  TriggerCustomEvent(kind, payload or {})
 end
 
 function ChanceEffects.resolve(game, player, card, context)
@@ -22,10 +21,7 @@ function ChanceEffects.resolve(game, player, card, context)
   end
 
   local handler = ChanceRegistry.handlers[card.effect]
-  if not handler then
-    logger.warn("未知机会卡效果:" .. tostring(card.effect))
-    return nil
-  end
+  assert(handler ~= nil, "未知机会卡效果:" .. tostring(card.effect))
 
   return handler(game, player, card, context)
 end

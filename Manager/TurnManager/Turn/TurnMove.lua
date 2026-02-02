@@ -3,14 +3,17 @@ local SERVICE_KEY = require("Globals.ServiceKeys")
 local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 
 local function resolve_event_name(kind)
-  local intent = MONOPOLY_EVENT and MONOPOLY_EVENT.intent
-  return kind and ((intent and intent[kind]) or kind) or nil
+  assert(MONOPOLY_EVENT ~= nil, "missing MONOPOLY_EVENT")
+  local intent = assert(MONOPOLY_EVENT.intent, "missing MONOPOLY_EVENT.intent")
+  assert(kind ~= nil, "missing event kind")
+  return intent[kind] or kind
 end
 
 local function dispatch_intent(game, payload)
-  local intent = payload and (payload.intent or payload) or nil
-  if intent and intent.kind == "need_choice" and intent.choice_spec then
-    assert(game and game.store, "Choice.open requires game.store")
+  assert(payload ~= nil, "missing payload")
+  local intent = payload.intent or payload
+  if intent.kind == "need_choice" and intent.choice_spec then
+    assert(game ~= nil and game.store ~= nil, "Choice.open requires game.store")
     local spec = intent.choice_spec
     local seq = game.store:get({ "turn", "choice_seq" }) or 0
     seq = seq + 1
@@ -26,25 +29,18 @@ local function dispatch_intent(game, payload)
       meta = spec.meta,
     }
     game.store:set({ "turn", "pending_choice" }, entry)
-    if TriggerCustomEvent then
-      local event_name = resolve_event_name("need_choice")
-      if event_name then
-        TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
-      end
-    end
+    assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
+    local event_name = resolve_event_name("need_choice")
+    TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
     return
   end
-  if intent and intent.kind == "push_popup" and intent.payload then
-    local ui_port = game and game.ui_port
-    if ui_port and ui_port.push_popup then
-      ui_port:push_popup(intent.payload)
-    end
-    if TriggerCustomEvent then
-      local event_name = resolve_event_name("push_popup")
-      if event_name then
-        TriggerCustomEvent(event_name, { game = game, payload = intent.payload })
-      end
-    end
+  if intent.kind == "push_popup" and intent.payload then
+    local ui_port = assert(game.ui_port, "missing ui_port")
+    assert(ui_port.push_popup ~= nil, "missing ui_port.push_popup")
+    ui_port:push_popup(intent.payload)
+    assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
+    local event_name = resolve_event_name("push_popup")
+    TriggerCustomEvent(event_name, { game = game, payload = intent.payload })
   end
 end
 
@@ -52,7 +48,10 @@ local function phase_move(tm, args)
   local player = args.player
   local total = args.total
   local raw_total = args.raw_total
-  local movement = tm.game and tm.game.get_service and tm.game:get_service(SERVICE_KEY.movement)
+  assert(tm.game ~= nil, "missing game")
+  assert(tm.game.get_service ~= nil, "missing game.get_service")
+  local movement = tm.game:get_service(SERVICE_KEY.movement)
+  assert(movement ~= nil, "missing movement service")
   local move_result = args.move_result
 
   local move_opts = { branch_parity = raw_total }
@@ -68,9 +67,9 @@ local function phase_move(tm, args)
     tm.game.last_turn.move_result = move_result
 
     local game = tm.game
-    local store = game and game.store
-    local ui_port = game and game.ui_port
-    if store and ui_port and ui_port.wait_move_anim == true then
+    local store = assert(game.store, "missing game.store")
+    local ui_port = assert(game.ui_port, "missing game.ui_port")
+    if ui_port.wait_move_anim == true then
       local seq = (store:get({ "turn", "move_anim_seq" }) or 0) + 1
       store:set({ "turn", "move_anim_seq" }, seq)
       store:set({ "turn", "move_anim" }, {
@@ -81,8 +80,8 @@ local function phase_move(tm, args)
         visited = move_result.visited,
         steps = move_result.steps,
         stopped_on_roadblock = move_result.stopped_on_roadblock == true,
-        market_interrupt = move_result.market_interrupt ~= nil,
-        steal_interrupt = move_result.steal_interrupt ~= nil,
+        market_interrupt = move_result.market_interrupt and true or false,
+        steal_interrupt = move_result.steal_interrupt and true or false,
       })
       return "wait_move_anim", {
         resume_state = "move",
@@ -138,28 +137,27 @@ local function phase_move(tm, args)
   end
 
   if move_result.market_interrupt then
-    local market = tm.game and tm.game.get_service and tm.game:get_service(SERVICE_KEY.market)
-    if market then
-      local spec, intent = market.build_choice_spec(player, tm.game)
-      if spec then
-        dispatch_intent(tm.game, { kind = "need_choice", choice_spec = spec })
-        return "wait_choice", {
-          resume_state = "move",
-          resume_args = {
-            player = player,
-            continue_from_market = true,
-            remaining_steps = move_result.market_interrupt.remaining_steps,
-            facing = move_result.market_interrupt.facing,
-            branch_parity = move_result.market_interrupt.branch_parity,
-            raw_total = raw_total,
-          },
-        }
-      elseif intent then
-        local ui_port = tm.game and tm.game.ui_port
-        if ui_port and ui_port.push_popup then
-          ui_port:push_popup(intent.payload)
-        end
-      end
+    assert(tm.game.get_service ~= nil, "missing game.get_service")
+    local market = assert(tm.game:get_service(SERVICE_KEY.market), "missing market service")
+    local spec, intent = market.build_choice_spec(player, tm.game)
+    if spec then
+      dispatch_intent(tm.game, { kind = "need_choice", choice_spec = spec })
+      return "wait_choice", {
+        resume_state = "move",
+        resume_args = {
+          player = player,
+          continue_from_market = true,
+          remaining_steps = move_result.market_interrupt.remaining_steps,
+          facing = move_result.market_interrupt.facing,
+          branch_parity = move_result.market_interrupt.branch_parity,
+          raw_total = raw_total,
+        },
+      }
+    end
+    if intent then
+      local ui_port = assert(tm.game.ui_port, "missing game.ui_port")
+      assert(ui_port.push_popup ~= nil, "missing ui_port.push_popup")
+      ui_port:push_popup(intent.payload)
     end
   end
 

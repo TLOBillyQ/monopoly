@@ -1,86 +1,49 @@
 local BuildingEffects = require("Manager.BoardManager.GUI.BuildingEffects")
 local TileRenderer = require("Manager.BoardManager.GUI.TileRenderer")
-local map_cfg = require("Config.Map")
 
 local EggyLayerBoard = {}
 
 function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
-  local players = view and view.state and view.state.players or nil
-  if not players then
-    return
-  end
-
-  local tile_count = view.board_tile_count or (view.board and #view.board.tiles) or 0
-  if tile_count <= 0 then
-    return
-  end
+  assert(view ~= nil, "missing view")
+  assert(view.state ~= nil, "missing view.state")
+  local players = assert(view.state.players, "missing view.state.players")
+  assert(view.board ~= nil, "missing view.board")
+  assert(view.board.tiles ~= nil, "missing view.board.tiles")
+  local tile_count = view.board_tile_count or #view.board.tiles
+  assert(tile_count > 0, "missing tile_count")
+  assert(log_once ~= nil, "missing log_once")
+  assert(build_log_prefix ~= nil, "missing build_log_prefix")
 
   if not layer.tile_positions or #layer.tile_positions < tile_count then
-    local tiles = nil
-    if G and type(G.tiles) == "table" and #G.tiles >= tile_count then
-      tiles = G.tiles
-    else
-      local tile_ids = {}
-      if view.board and view.board.tiles then
-        for i, tile in ipairs(view.board.tiles) do
-          if tile and tile.id then
-            tile_ids[i] = tile.id
-          end
-        end
-      end
-      if #tile_ids == 0 then
-        for i, tile_id in ipairs(map_cfg.path or {}) do
-          tile_ids[i] = tile_id
-        end
-      end
-      if #tile_ids == 0 then
-        for i = 1, tile_count do
-          tile_ids[i] = i
-        end
-      end
-      local tile_names = {}
-      for i = 1, tile_count do
-        tile_names[i] = "t" .. tostring(tile_ids[i])
-      end
-      tiles = LuaAPI.query_units(tile_names)
-    end
+    assert(G ~= nil, "missing G")
+    assert(type(G.tiles) == "table", "missing G.tiles")
+    assert(#G.tiles >= tile_count, "insufficient G.tiles")
+    local tiles = G.tiles
 
     local positions = {}
-    local missing = 0
     for i = 1, tile_count do
-      local unit = tiles and tiles[i] or nil
-      if unit and unit.get_position then
-        positions[i] = unit.get_position()
-      else
-        missing = missing + 1
-      end
+      local unit = assert(tiles[i], "missing tile unit: " .. tostring(i))
+      assert(unit.get_position ~= nil, "missing tile get_position: " .. tostring(i))
+      positions[i] = unit.get_position()
     end
 
     layer.tile_units = tiles
     layer.tile_positions = positions
 
-    local board_tiles = view.state and view.state.board and view.state.board.tiles or {}
+    assert(view.state.board ~= nil, "missing view.state.board")
+    local board_tiles = assert(view.state.board.tiles, "missing view.state.board.tiles")
     local tile_ids = {}
-    if view.board and view.board.tiles then
-      for i, tile in ipairs(view.board.tiles) do
-        if tile and tile.id then
-          tile_ids[i] = tile.id
-        end
-      end
-    end
-    if #tile_ids == 0 then
-      for i, tile_id in ipairs(map_cfg.path or {}) do
-        tile_ids[i] = tile_id
-      end
+    for i, tile in ipairs(view.board.tiles) do
+      assert(tile ~= nil and tile.id ~= nil, "missing tile id: " .. tostring(i))
+      tile_ids[i] = tile.id
     end
     for i = 1, tile_count do
-      local tile_id = tile_ids[i]
-      local unit = tiles and tiles[i] or nil
-      if tile_id and unit then
-        local tile_state = board_tiles and board_tiles[tile_id] or nil
-        local owner_id = tile_state and tile_state.owner_id or nil
-        TileRenderer.render_tile(unit, tile_id, owner_id)
-      end
+      local tile_id = assert(tile_ids[i], "missing tile_id: " .. tostring(i))
+      local unit = assert(tiles[i], "missing tile unit: " .. tostring(i))
+      local tile_state = board_tiles[tile_id]
+      assert(tile_state ~= nil, "missing board tile state: " .. tostring(tile_id))
+      local owner_id = tile_state.owner_id
+      TileRenderer.render_tile(unit, tile_id, owner_id)
     end
 
     local spacing = 0
@@ -88,15 +51,16 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
     for i = 1, tile_count - 1 do
       local a = positions[i]
       local b = positions[i + 1]
-      if a and b and a.x and b.x then
-        local dx = b.x - a.x
-        local dy = (b.y or 0) - (a.y or 0)
-        local dz = (b.z or 0) - (a.z or 0)
-        local dist = math.Vector3(dx, dy, dz):length()
-        if dist > 0 then
-          spacing = spacing + dist
-          spacing_count = spacing_count + 1
-        end
+      assert(a ~= nil and a.x ~= nil and a.y ~= nil and a.z ~= nil, "missing tile position: " .. tostring(i))
+      assert(b ~= nil and b.x ~= nil and b.y ~= nil and b.z ~= nil, "missing tile position: " .. tostring(i + 1))
+      local dx = b.x - a.x
+      local dy = b.y - a.y
+      local dz = b.z - a.z
+      local dist = math.Vector3(dx, dy, dz):length()
+      assert(dist ~= nil, "missing tile distance: " .. tostring(i))
+      if dist > 0 then
+        spacing = spacing + dist
+        spacing_count = spacing_count + 1
       end
     end
     if spacing_count > 0 then
@@ -104,57 +68,36 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
     end
 
     log_once(layer, "info", "tiles_ready", build_log_prefix(), "tile anchors ready:", tostring(tile_count))
-    if missing > 0 then
-      log_once(
-        layer,
-        "warn",
-        "tiles_missing",
-        build_log_prefix(),
-        "tile anchors missing:",
-        tostring(missing)
-      )
-    end
   end
 
   if not layer.player_units or layer.player_units_missing then
-    local roles = ALLROLES or {}
+    local roles = assert(ALLROLES, "missing ALLROLES")
     local name_to_unit = {}
     local role_units = {}
     for i, role in ipairs(roles) do
-      local unit = role and role.get_ctrl_unit and role.get_ctrl_unit() or nil
+      assert(role ~= nil, "missing role: " .. tostring(i))
+      assert(role.get_ctrl_unit ~= nil, "missing role.get_ctrl_unit: " .. tostring(i))
+      local unit = role.get_ctrl_unit()
       role_units[i] = unit
-      if role and role.get_name then
-        local name = role.get_name()
-        if name then
-          name_to_unit[name] = unit
-        end
-      end
+      assert(role.get_name ~= nil, "missing role.get_name: " .. tostring(i))
+      local name = assert(role.get_name(), "missing role name: " .. tostring(i))
+      name_to_unit[name] = unit
     end
 
     local mapped = {}
     local mapped_count = 0
-    local missing = {}
     for i, player in ipairs(players) do
-      if player then
-        local pid = player.id or i
-        local unit = nil
-        if player.name then
-          unit = name_to_unit[player.name]
-        end
-        if not unit then
-          unit = role_units[pid] or role_units[i]
-        end
-        if unit then
-          mapped[pid] = unit
-          mapped_count = mapped_count + 1
-        else
-          missing[#missing + 1] = player.name or tostring(pid)
-        end
-      end
+      assert(player ~= nil, "missing player: " .. tostring(i))
+      local pid = assert(player.id, "missing player id: " .. tostring(i))
+      local name = assert(player.name, "missing player name: " .. tostring(i))
+      local unit = name_to_unit[name] or role_units[pid]
+      assert(unit ~= nil, "missing player unit: " .. tostring(pid))
+      mapped[pid] = unit
+      mapped_count = mapped_count + 1
     end
 
     layer.player_units = mapped
-    layer.player_units_missing = #missing > 0
+    layer.player_units_missing = false
     log_once(
       layer,
       "info",
@@ -163,54 +106,32 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
       "player->unit mapped:",
       tostring(mapped_count),
       "(missing:",
-      tostring(#missing) .. ")"
+      "0)"
     )
-    if #missing > 0 then
-      log_once(
-        layer,
-        "warn",
-        "player_units_missing",
-        build_log_prefix(),
-        "player unit missing:",
-        table.concat(missing, ", ")
-      )
-    end
   end
 
-  local store = layer.game and layer.game.store
-  local phase = store and store.get and store:get({ "turn", "phase" }) or nil
-  local anim = store and store.get and store:get({ "turn", "move_anim" }) or nil
-  local suppress_sync = phase == "wait_move_anim" and anim ~= nil
+  local game = assert(layer.game, "missing game")
+  local store = assert(game.store, "missing game.store")
+  local phase = store:get({ "turn", "phase" })
+  local anim = store:get({ "turn", "move_anim" })
+  local suppress_sync = phase == "wait_move_anim" and anim
 
   local snapshot = {}
   for i, player in ipairs(players) do
-    if player then
-      local pid = player.id or i
-      local pos = player.position
-      local eliminated = player.eliminated and 1 or 0
-      snapshot[pid] = tostring(pos) .. ":" .. tostring(eliminated)
-    end
+    assert(player ~= nil, "missing player: " .. tostring(i))
+    local pid = assert(player.id, "missing player id: " .. tostring(i))
+    local pos = player.position
+    local eliminated = player.eliminated and 1 or 0
+    snapshot[pid] = tostring(pos) .. ":" .. tostring(eliminated)
   end
 
   local need_sync = layer.board_sync_pending or false
-  local last_positions = layer.board_last_positions
+  local last_positions = assert(layer.board_last_positions, "missing board_last_positions")
   if not need_sync then
-    if not last_positions then
-      need_sync = true
-    else
-      for pid, value in pairs(snapshot) do
-        if last_positions[pid] ~= value then
-          need_sync = true
-          break
-        end
-      end
-      if not need_sync then
-        for pid, _ in pairs(last_positions) do
-          if snapshot[pid] == nil then
-            need_sync = true
-            break
-          end
-        end
+    for pid, value in pairs(snapshot) do
+      if last_positions[pid] ~= value then
+        need_sync = true
+        break
       end
     end
   end
@@ -226,66 +147,68 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
 
   local occupants = {}
   for i, player in ipairs(players) do
-    if player and not player.eliminated and player.position then
-      local idx = player.position
-      if layer.tile_positions and layer.tile_positions[idx] then
-        local pid = player.id or i
-        local list = occupants[idx]
-        if not list then
-          list = {}
-          occupants[idx] = list
-        end
-        list[#list + 1] = pid
+    assert(player ~= nil, "missing player: " .. tostring(i))
+    if not player.eliminated then
+      local idx = assert(player.position, "missing player position: " .. tostring(i))
+      assert(layer.tile_positions ~= nil, "missing tile_positions")
+      assert(layer.tile_positions[idx] ~= nil, "missing tile_position: " .. tostring(idx))
+      local pid = assert(player.id, "missing player id: " .. tostring(i))
+      local list = occupants[idx]
+      if not list then
+        list = {}
+        occupants[idx] = list
       end
+      list[#list + 1] = pid
     end
   end
 
   local spacing = layer.tile_spacing or 0
-  local ground_y = 0
-  if G and G.ground and G.ground.get_position then
-    local ground_pos = G.ground.get_position()
-    if ground_pos and ground_pos.y then
-      ground_y = ground_pos.y
-    end
-  end
+  assert(G ~= nil, "missing G")
+  assert(G.ground ~= nil, "missing G.ground")
+  assert(G.ground.get_position ~= nil, "missing G.ground.get_position")
+  local ground_pos = G.ground.get_position()
+  assert(ground_pos ~= nil and ground_pos.y ~= nil, "missing ground position")
+  local ground_y = ground_pos.y
   local min_player_y = ground_y + 1.5
   for i, player in ipairs(players) do
-    if player and not player.eliminated and player.position then
-      local idx = player.position
-      local base = layer.tile_positions and layer.tile_positions[idx] or nil
-      local pid = player.id or i
-      local unit = layer.player_units and layer.player_units[pid] or nil
-      if base and unit and unit.set_position then
-        local base_y = base.y or 0
-        local y_offset = 0
-        if base_y < min_player_y then
-          y_offset = min_player_y - base_y
-        end
-        local list = occupants[idx]
-        local count = list and #list or 1
-        local slot = 1
-        if list and count > 1 then
-          for s = 1, count do
-            if list[s] == pid then
-              slot = s
-              break
-            end
+    assert(player ~= nil, "missing player: " .. tostring(i))
+    if not player.eliminated then
+      local idx = assert(player.position, "missing player position: " .. tostring(i))
+      assert(layer.tile_positions ~= nil, "missing tile_positions")
+      local base = assert(layer.tile_positions[idx], "missing tile_position: " .. tostring(idx))
+      local pid = assert(player.id, "missing player id: " .. tostring(i))
+      assert(layer.player_units ~= nil, "missing player_units")
+      local unit = assert(layer.player_units[pid], "missing player unit: " .. tostring(pid))
+      assert(unit.set_position ~= nil, "missing unit.set_position: " .. tostring(pid))
+      local base_y = assert(base.y, "missing base.y: " .. tostring(idx))
+      local y_offset = 0
+      if base_y < min_player_y then
+        y_offset = min_player_y - base_y
+      end
+      local list = occupants[idx]
+      local count = list and #list or 1
+      local slot = 1
+      if list and count > 1 then
+        for s = 1, count do
+          if list[s] == pid then
+            slot = s
+            break
           end
         end
-        if count > 1 and spacing > 0 then
-          local per_row = 0
-          while per_row * per_row < count do
-            per_row = per_row + 1
-          end
-          local row = math.floor((slot - 1) / per_row)
-          local col = (slot - 1) % per_row
-          local start = -(per_row - 1) * spacing * 0.5
-          local ox = start + col * spacing
-          local oz = start + row * spacing
-          unit.set_position(base + math.Vector3(ox, y_offset, oz))
-        else
-          unit.set_position(base + math.Vector3(0.0, y_offset, 0.0))
+      end
+      if count > 1 and spacing > 0 then
+        local per_row = 0
+        while per_row * per_row < count do
+          per_row = per_row + 1
         end
+        local row = math.floor((slot - 1) / per_row)
+        local col = (slot - 1) % per_row
+        local start = -(per_row - 1) * spacing * 0.5
+        local ox = start + col * spacing
+        local oz = start + row * spacing
+        unit.set_position(base + math.Vector3(ox, y_offset, oz))
+      else
+        unit.set_position(base + math.Vector3(0.0, y_offset, 0.0))
       end
     end
   end
@@ -295,48 +218,26 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
 end
 
 function EggyLayerBoard.on_tile_upgraded(layer, tile_id, level)
-  if not (tile_id and level) then
-    return
-  end
-  local buildings = G and G.buildings
-  local refs = G and G.refs
-  if not (buildings and refs) then
-    return
-  end
-  local board = layer.game and layer.game.board
-  if not (board and board.index_of_tile_id) then
-    return
-  end
-  local idx = board:index_of_tile_id(tile_id)
-  if not (idx and buildings[idx]) then
-    return
-  end
-  local lv = tonumber(level)
-  if not (lv and lv >= 1 and lv <= 3) then
-    return
-  end
-  local root_quaternion = Q_ZERO
-  if not root_quaternion and math and math.Quaternion then
-    root_quaternion = math.Quaternion(0.0, 0.0, 0.0)
-  end
-  if not root_quaternion then
-    return
-  end
+  assert(tile_id ~= nil, "missing tile_id")
+  assert(level ~= nil, "missing level")
+  assert(G ~= nil and G.buildings ~= nil, "missing G.buildings")
+  local board = assert(layer.game and layer.game.board, "missing board")
+  assert(board.index_of_tile_id ~= nil, "missing board.index_of_tile_id")
+  local idx = assert(board:index_of_tile_id(tile_id), "missing tile index: " .. tostring(tile_id))
+  assert(G.buildings[idx] ~= nil, "missing building unit: " .. tostring(idx))
+  local lv = assert(tonumber(level), "invalid level: " .. tostring(level))
+  assert(lv >= 1 and lv <= 3, "invalid level: " .. tostring(lv))
+  local root_quaternion = assert(Q_ZERO, "missing Q_ZERO")
   BuildingEffects.spawn_upgrade_building_units(root_quaternion, idx, lv)
 end
 
 function EggyLayerBoard.on_tile_owner_changed(layer, tile_id, owner_id)
-  if not tile_id then
-    return
-  end
-  local board = layer.game and layer.game.board
-  if not (board and board.index_of_tile_id) then
-    return
-  end
-  local idx = board:index_of_tile_id(tile_id)
-  if not (idx and layer.tile_units and layer.tile_units[idx]) then
-    return
-  end
+  assert(tile_id ~= nil, "missing tile_id")
+  local board = assert(layer.game and layer.game.board, "missing board")
+  assert(board.index_of_tile_id ~= nil, "missing board.index_of_tile_id")
+  local idx = assert(board:index_of_tile_id(tile_id), "missing tile index: " .. tostring(tile_id))
+  assert(layer.tile_units ~= nil, "missing tile_units")
+  assert(layer.tile_units[idx] ~= nil, "missing tile unit: " .. tostring(idx))
   TileRenderer.render_tile(layer.tile_units[idx], tile_id, owner_id)
 end
 

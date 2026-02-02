@@ -12,14 +12,17 @@ local ItemChoiceHandler = {}
 local ITEM_IDS = gameplay_constants.item_ids
 
 local function resolve_event_name(kind)
-  local intent = MONOPOLY_EVENT and MONOPOLY_EVENT.intent
-  return kind and ((intent and intent[kind]) or kind) or nil
+  assert(MONOPOLY_EVENT ~= nil, "missing MONOPOLY_EVENT")
+  local intent = assert(MONOPOLY_EVENT.intent, "missing MONOPOLY_EVENT.intent")
+  assert(kind ~= nil, "missing event kind")
+  return intent[kind] or kind
 end
 
 local function dispatch_intent(game, payload)
-  local intent = payload and (payload.intent or payload) or nil
-  if intent and intent.kind == "need_choice" and intent.choice_spec then
-    assert(game and game.store, "Choice.open requires game.store")
+  assert(payload ~= nil, "missing payload")
+  local intent = payload.intent or payload
+  if intent.kind == "need_choice" and intent.choice_spec then
+    assert(game ~= nil and game.store ~= nil, "Choice.open requires game.store")
     local spec = intent.choice_spec
     local seq = game.store:get({ "turn", "choice_seq" }) or 0
     seq = seq + 1
@@ -35,25 +38,18 @@ local function dispatch_intent(game, payload)
       meta = spec.meta,
     }
     game.store:set({ "turn", "pending_choice" }, entry)
-    if TriggerCustomEvent then
-      local event_name = resolve_event_name("need_choice")
-      if event_name then
-        TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
-      end
-    end
+    assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
+    local event_name = resolve_event_name("need_choice")
+    TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
     return
   end
-  if intent and intent.kind == "push_popup" and intent.payload then
-    local ui_port = game and game.ui_port
-    if ui_port and ui_port.push_popup then
-      ui_port:push_popup(intent.payload)
-    end
-    if TriggerCustomEvent then
-      local event_name = resolve_event_name("push_popup")
-      if event_name then
-        TriggerCustomEvent(event_name, { game = game, payload = intent.payload })
-      end
-    end
+  if intent.kind == "push_popup" and intent.payload then
+    local ui_port = assert(game.ui_port, "missing ui_port")
+    assert(ui_port.push_popup ~= nil, "missing ui_port.push_popup")
+    ui_port:push_popup(intent.payload)
+    assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
+    local event_name = resolve_event_name("push_popup")
+    TriggerCustomEvent(event_name, { game = game, payload = intent.payload })
   end
 end
 
@@ -115,10 +111,7 @@ function ItemChoiceHandler.build(helpers)
 
   local function reopen_item_phase(game, player, phase)
     local spec = ItemPhase.build_choice_spec(player, phase)
-    if not spec then
-      finish_item_phase(game, phase)
-      return finish_choice(game, false)
-    end
+    assert(spec ~= nil, "missing item phase spec")
     dispatch_intent(game, { kind = "need_choice", choice_spec = spec })
     return { stay = true }
   end
@@ -129,18 +122,18 @@ function ItemChoiceHandler.build(helpers)
     end
     local idx = tonumber(action.option_id)
     local meta = choice.meta
-    local player = game.players[meta.player_id]
-    if idx and player then
-      if meta.item_id then
-        Inventory.consume(player, meta.item_id)
-      end
-      local res = Demolish.apply(game, player, idx, {
-        services = game:get_services(),
-        injure = meta.injure,
-        title = meta.title
-      })
-      dispatch_intent(game, res.intent)
+    local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
+    assert(idx ~= nil, "missing demolish index")
+    if meta.item_id then
+      Inventory.consume(player, meta.item_id)
     end
+    local res = Demolish.apply(game, player, idx, {
+      services = game:get_services(),
+      injure = meta.injure,
+      title = meta.title
+    })
+    local intent = res.intent or {}
+    dispatch_intent(game, intent)
     return finish_and_clear(game)
   end
 
@@ -150,14 +143,10 @@ function ItemChoiceHandler.build(helpers)
     end
     local idx = tonumber(action.option_id)
     local meta = choice.meta
-    local player = game.players[meta.player_id]
-    if not player or not idx then
-      return finish_and_clear(game)
-    end
+    local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
+    assert(idx ~= nil, "missing roadblock index")
     if meta.item_id then
-      if not Inventory.consume(player, meta.item_id) then
-        return finish_and_clear(game)
-      end
+      Inventory.consume(player, meta.item_id)
     end
     local res = Roadblock.apply(game, player, idx)
     if res then
@@ -172,15 +161,13 @@ function ItemChoiceHandler.build(helpers)
     end
     local idx = tonumber(action.option_id)
     local meta = choice.meta
-    local stealer = game.players[meta.player_id]
-    local target = game.players[meta.target_id]
-    if stealer and target and idx then
-      local res = Steal.steal_item_at_index(game, stealer, target, idx)
-      logger.event("Steal choice result (multi)", res)
-      if res and res.intent then
-        dispatch_intent(game, res.intent)
-      end
-    end
+    local stealer = assert(game.players[meta.player_id], "missing stealer: " .. tostring(meta.player_id))
+    local target = assert(game.players[meta.target_id], "missing target: " .. tostring(meta.target_id))
+    assert(idx ~= nil, "missing steal index")
+    local res = Steal.steal_item_at_index(game, stealer, target, idx)
+    logger.event("Steal choice result (multi)", res)
+    assert(res ~= nil, "missing steal result")
+    dispatch_intent(game, res.intent or {})
     return finish_and_clear(game)
   end
 
@@ -189,27 +176,25 @@ function ItemChoiceHandler.build(helpers)
       return finish_choice(game, false)
     end
     local meta = choice.meta
-    local stealer = game.players[meta.player_id]
-    local target = game.players[meta.target_id]
-    if not stealer or not target or target.eliminated then
+    local stealer = assert(game.players[meta.player_id], "missing stealer: " .. tostring(meta.player_id))
+    local target = assert(game.players[meta.target_id], "missing target: " .. tostring(meta.target_id))
+    if target.eliminated then
       return finish_choice(game, false)
     end
 
-    if action and action.option_id == "use" then
+    assert(action ~= nil, "missing action")
+    if action.option_id == "use" then
       if Inventory.count(target) <= 0 then
-        if Inventory.consume(stealer, ITEM_IDS.steal) then
-          local res = Steal.steal_item_at_index(game, stealer, target, 1)
-          if res and res.intent then
-            dispatch_intent(game, res.intent)
-          end
-        end
+        Inventory.consume(stealer, ITEM_IDS.steal)
+        local res = Steal.steal_item_at_index(game, stealer, target, 1)
+        assert(res ~= nil, "missing steal result")
+        dispatch_intent(game, res.intent or {})
         return finish_choice(game, false)
       end
       if Inventory.count(target) <= 1 then
         local res = Steal.steal_item_at_index(game, stealer, target, 1)
-        if res and res.intent then
-          dispatch_intent(game, res.intent)
-        end
+        assert(res ~= nil, "missing steal result")
+        dispatch_intent(game, res.intent or {})
         return finish_choice(game, false)
       end
       open_steal_item_choice(game, stealer, target)
@@ -220,10 +205,9 @@ function ItemChoiceHandler.build(helpers)
     local queue = meta.queue
     if Inventory.find_index(stealer, ITEM_IDS.steal) and queue[next_index] then
       local spec = Steal.build_prompt_spec(game, stealer, queue, next_index)
-      if spec then
-        dispatch_intent(game, { kind = "need_choice", choice_spec = spec })
-        return { stay = true }
-      end
+      assert(spec ~= nil, "missing steal prompt spec")
+      dispatch_intent(game, { kind = "need_choice", choice_spec = spec })
+      return { stay = true }
     end
 
     return finish_choice(game, false)
@@ -235,12 +219,12 @@ function ItemChoiceHandler.build(helpers)
     end
     local target_id = tonumber(action.option_id)
     local meta = choice.meta
-    local player = game.players[meta.player_id]
-    local item_id = meta.item_id
-    if player and target_id and item_id then
-      local res = use_item(game, player, item_id, { target_id = target_id })
-      if res and res.waiting then return { stay = true } end
-    end
+    local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
+    local item_id = assert(meta.item_id, "missing item_id")
+    assert(target_id ~= nil, "missing target_id")
+    local res = use_item(game, player, item_id, { target_id = target_id })
+    assert(res ~= nil, "missing use_item result")
+    if res.waiting then return { stay = true } end
     return finish_and_clear(game)
   end
 
@@ -250,15 +234,11 @@ function ItemChoiceHandler.build(helpers)
     end
     local value = tonumber(action.option_id)
     local meta = choice.meta
-    local player = game.players[meta.player_id]
+    local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
+    assert(value ~= nil, "missing dice value")
     local dice_count = meta.dice_count or player:dice_count()
-    if not player or not value then
-      return finish_and_clear(game)
-    end
     if meta.item_id then
-      if not Inventory.consume(player, meta.item_id) then
-        return finish_and_clear(game)
-      end
+      Inventory.consume(player, meta.item_id)
     end
     RemoteDice.apply(game, player, dice_count, value)
     return finish_and_clear(game)
@@ -278,15 +258,11 @@ function ItemChoiceHandler.build(helpers)
       open_discard_item_choice(game, player, phase)
       return { stay = true }
     end
-    if not item_id then
-      return finish_choice(game, false)
-    end
+    assert(item_id ~= nil, "missing item_id")
 
     local res = use_item(game, player, item_id)
     if type(res) == "table" and res.waiting then
-      if res.intent then
-        dispatch_intent(game, res.intent)
-      end
+      dispatch_intent(game, res.intent or {})
       return { stay = true }
     end
     finish_item_phase(game, phase)
@@ -302,14 +278,9 @@ function ItemChoiceHandler.build(helpers)
       return reopen_item_phase(game, player, phase)
     end
     local idx = tonumber(action.option_id)
-    if not idx then
-      finish_choice(game, false)
-      return reopen_item_phase(game, player, phase)
-    end
-    local dropped = Inventory.remove_by_index(player, idx)
-    if dropped then
-      logger.event(player.name .. " 丢弃道具 " .. Inventory.item_name(dropped.id))
-    end
+    assert(idx ~= nil, "missing discard index")
+    local dropped = assert(Inventory.remove_by_index(player, idx), "missing dropped item")
+    logger.event(player.name .. " 丢弃道具 " .. Inventory.item_name(dropped.id))
     finish_choice(game, false)
     return reopen_item_phase(game, player, phase)
   end

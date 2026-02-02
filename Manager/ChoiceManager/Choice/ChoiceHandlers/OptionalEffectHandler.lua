@@ -5,14 +5,17 @@ local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 local OptionalEffectHandler = {}
 
 local function resolve_event_name(kind)
-  local intent = MONOPOLY_EVENT and MONOPOLY_EVENT.intent
-  return kind and ((intent and intent[kind]) or kind) or nil
+  assert(MONOPOLY_EVENT ~= nil, "missing MONOPOLY_EVENT")
+  local intent = assert(MONOPOLY_EVENT.intent, "missing MONOPOLY_EVENT.intent")
+  assert(kind ~= nil, "missing event kind")
+  return intent[kind] or kind
 end
 
 local function dispatch_intent(game, payload)
-  local intent = payload and (payload.intent or payload) or nil
-  if intent and intent.kind == "need_choice" and intent.choice_spec then
-    assert(game and game.store, "Choice.open requires game.store")
+  assert(payload ~= nil, "missing payload")
+  local intent = payload.intent or payload
+  if intent.kind == "need_choice" and intent.choice_spec then
+    assert(game ~= nil and game.store ~= nil, "Choice.open requires game.store")
     local spec = intent.choice_spec
     local seq = game.store:get({ "turn", "choice_seq" }) or 0
     seq = seq + 1
@@ -28,25 +31,18 @@ local function dispatch_intent(game, payload)
       meta = spec.meta,
     }
     game.store:set({ "turn", "pending_choice" }, entry)
-    if TriggerCustomEvent then
-      local event_name = resolve_event_name("need_choice")
-      if event_name then
-        TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
-      end
-    end
+    assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
+    local event_name = resolve_event_name("need_choice")
+    TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
     return
   end
-  if intent and intent.kind == "push_popup" and intent.payload then
-    local ui_port = game and game.ui_port
-    if ui_port and ui_port.push_popup then
-      ui_port:push_popup(intent.payload)
-    end
-    if TriggerCustomEvent then
-      local event_name = resolve_event_name("push_popup")
-      if event_name then
-        TriggerCustomEvent(event_name, { game = game, payload = intent.payload })
-      end
-    end
+  if intent.kind == "push_popup" and intent.payload then
+    local ui_port = assert(game.ui_port, "missing ui_port")
+    assert(ui_port.push_popup ~= nil, "missing ui_port.push_popup")
+    ui_port:push_popup(intent.payload)
+    assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
+    local event_name = resolve_event_name("push_popup")
+    TriggerCustomEvent(event_name, { game = game, payload = intent.payload })
   end
 end
 
@@ -58,10 +54,7 @@ function OptionalEffectHandler.build(helpers)
   local finish_choice = helpers.finish_choice
 
   local function handle_optional_landing_effect(game, choice, action)
-    local effect_id = action.option_id
-    if not effect_id then
-      return finish_choice(game, false)
-    end
+    local effect_id = assert(action.option_id, "missing effect_id")
     local meta = choice.meta
 
     if meta.effect_ids and not contains(meta.effect_ids, effect_id) then
@@ -70,14 +63,10 @@ function OptionalEffectHandler.build(helpers)
     end
 
     local effect_defs = get_container_defs_by_choice_kind(choice.kind)
-    local target_eff = find_effect_by_id(effect_defs, effect_id)
-    if not target_eff then
-      logger.warn("landing_optional_effect: effect id not found:", tostring(effect_id))
-      return finish_choice(game, false)
-    end
+    local target_eff = assert(find_effect_by_id(effect_defs, effect_id), "missing target effect: " .. tostring(effect_id))
 
-    local player = game.players[meta.player_id]
-    local tile = game.board:get_tile_by_id(meta.tile_id)
+    local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
+    local tile = assert(game.board:get_tile_by_id(meta.tile_id), "missing tile: " .. tostring(meta.tile_id))
     local move_result = meta.move_result
     local game_ctx = build_game_ctx(game, move_result)
 

@@ -3,6 +3,8 @@ local Prefab = require("Data.Prefab")
 local BuildingEffects = {}
 
 function BuildingEffects.spawn_upgrade_building_units(root_quaternion, building_index, level)
+  assert(building_index ~= nil, "missing building_index")
+  assert(level ~= nil, "missing building level")
   local offsets = {
     [1] = math.Vector3(0.0, 1.5, 0.0),
     [2] = math.Vector3(0.0, 1.5, 0.0),
@@ -10,20 +12,17 @@ function BuildingEffects.spawn_upgrade_building_units(root_quaternion, building_
   }
   local buildings = G.buildings
   local refs = G.refs
-  local idx = building_index or 1
-  local lv = level or 1
+  local idx = building_index
+  local lv = level
   local groups = G.building_unit_groups
-  if groups and groups[idx] then
+  assert(groups ~= nil, "missing building_unit_groups")
+  if groups[idx] then
     GameAPI.destroy_unit_with_children(groups[idx], true)
     groups[idx] = nil
   end
   local pos = buildings[idx].get_position()
   local ref_key = string.format("lv%d", lv)
   local unit = GameAPI.create_unit_group(Prefab.group[ref_key], pos + offsets[lv], root_quaternion)
-  if not groups then
-    groups = {}
-    G.building_unit_groups = groups
-  end
   groups[idx] = unit
 end
 

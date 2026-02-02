@@ -17,94 +17,67 @@ function BoardUtils.queue_walk(queue, visit)
 end
 
 function BoardUtils.indices_in_range(board, start, distance)
-  local map = board and board.map
-  local neighbors = map and map.neighbors
-  if neighbors then
-    local start_tile = board:get_tile(start)
-    if not start_tile then
-      return {}
-    end
-    local max_dist = distance or 0
-    if max_dist <= 0 then
-      return {}
-    end
-    local dist_by_id = { [start_tile.id] = 0 }
-    local queue = { start_tile.id }
-    local qhead = 1
-    local by_dist = {}
+  assert(board ~= nil, "missing board")
+  assert(board.map ~= nil, "missing board.map")
+  local neighbors = assert(board.map.neighbors, "missing board.map.neighbors")
+  local start_tile = assert(board:get_tile(start), "missing start tile: " .. tostring(start))
+  local max_dist = distance or 0
+  if max_dist <= 0 then
+    return {}
+  end
+  local dist_by_id = { [start_tile.id] = 0 }
+  local queue = { start_tile.id }
+  local qhead = 1
+  local by_dist = {}
 
-    while qhead <= #queue do
-      local tile_id = queue[qhead]
-      qhead = qhead + 1
-      local dist = dist_by_id[tile_id] or 0
-      if dist < max_dist then
-        local neigh = neighbors[tile_id] or {}
-        for _, dir in ipairs(DIR_ORDER) do
-          local next_id = neigh[dir]
-          if next_id and dist_by_id[next_id] == nil then
+  while qhead <= #queue do
+    local tile_id = queue[qhead]
+    qhead = qhead + 1
+    local dist = dist_by_id[tile_id] or 0
+    if dist < max_dist then
+      local neigh = assert(neighbors[tile_id], "missing neighbors: " .. tostring(tile_id))
+      for _, dir in ipairs(DIR_ORDER) do
+        local next_id = neigh[dir]
+        if next_id then
+          if dist_by_id[next_id] then
+          else
             local next_dist = dist + 1
             dist_by_id[next_id] = next_dist
             if next_dist <= max_dist then
               queue[#queue + 1] = next_id
-              local idx = board:index_of_tile_id(next_id)
-              if idx then
-                by_dist[next_dist] = by_dist[next_dist] or {}
-                table.insert(by_dist[next_dist], idx)
-              end
+              local idx = assert(board:index_of_tile_id(next_id), "missing tile index: " .. tostring(next_id))
+              by_dist[next_dist] = by_dist[next_dist] or {}
+              table.insert(by_dist[next_dist], idx)
             end
           end
         end
       end
     end
-
-    local list = {}
-    for step = 1, max_dist do
-      local entries = by_dist[step] or {}
-      for _, idx in ipairs(entries) do
-        table.insert(list, idx)
-      end
-    end
-    return list
   end
 
-  local len = board:length()
-  local seen = {}
   local list = {}
-  for step = 1, distance do
-    local forward = start + step
-    if forward > len then
-      forward = forward - len
-    end
-    if not seen[forward] then
-      table.insert(list, forward)
-      seen[forward] = true
-    end
-
-    local back = start - step
-    if back < 1 then
-      back = len + back
-    end
-    if not seen[back] then
-      table.insert(list, back)
-      seen[back] = true
+  for step = 1, max_dist do
+    local entries = by_dist[step] or {}
+    for _, idx in ipairs(entries) do
+      table.insert(list, idx)
     end
   end
   return list
 end
 
 function BoardUtils.total_invested(tile, level)
-  if not tile then
-    return 0
-  end
+  assert(tile ~= nil, "missing tile")
   return Pricing.total_invested(tile, level or 0)
 end
 
 function BoardUtils.find_best_tile(game, player, distance, opts)
   local board = game.board
-  local allow_self = opts and opts.allow_self
-  local score_fn = opts and opts.score_fn
+  assert(opts ~= nil, "missing opts")
+  local allow_self = opts.allow_self
+  local score_fn = assert(opts.score_fn, "missing score_fn")
   local best_idx = nil
   local best_value = nil
+  local has_best = false
 
   local indices = BoardUtils.indices_in_range(board, player.position, distance or 3)
   if allow_self then
@@ -114,8 +87,14 @@ function BoardUtils.find_best_tile(game, player, distance, opts)
   for _, idx in ipairs(indices) do
     if allow_self or idx ~= player.position then
       local tile = board:get_tile(idx)
-      local value = score_fn and score_fn(tile, idx)
-      if value ~= nil and (best_value == nil or value > best_value) then
+      local value = assert(score_fn(tile, idx), "missing score for tile: " .. tostring(idx))
+      if has_best then
+        if value > best_value then
+          best_value = value
+          best_idx = idx
+        end
+      else
+        has_best = true
         best_value = value
         best_idx = idx
       end

@@ -12,13 +12,13 @@ local tile_state = Tile.get_state
 local ITEM_IDS = gameplay_constants.item_ids
 
 local function emit_event(kind, payload)
-  if TriggerCustomEvent then
-    TriggerCustomEvent(kind, payload or {})
-  end
+  assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
+  TriggerCustomEvent(kind, payload or {})
 end
 
 local function eliminate_if_bankrupt(game, player)
-  if not player or player.cash > 0 then
+  assert(player ~= nil, "missing player")
+  if player.cash > 0 then
     return
   end
   local bankruptcy = game:get_service(SERVICE_KEY.bankruptcy)
@@ -60,48 +60,12 @@ function LandActions.resolve_rent_owner(game, tile, state_fn)
 end
 
 local function contiguous_rent(game, board, index, owner_id)
-  local map = board and board.map
-  local neighbors = map and map.neighbors
-  if not neighbors then
-    local length = board:length()
-    local rent_sum = 0
-    local i = index
-    while i >= 1 do
-      local t = board:get_tile(i)
-      if t.type == "land" then
-        local st2 = LandActions.safe_tile_state(game, t)
-        if st2.owner_id == owner_id then
-          rent_sum = rent_sum + Pricing.rent_for_level(t, st2.level or 0)
-          i = i - 1
-        else
-          break
-        end
-      else
-        break
-      end
-    end
-    i = index + 1
-    while i <= length do
-      local t = board:get_tile(i)
-      if t.type == "land" then
-        local st2 = LandActions.safe_tile_state(game, t)
-        if st2.owner_id == owner_id then
-          rent_sum = rent_sum + Pricing.rent_for_level(t, st2.level or 0)
-          i = i + 1
-        else
-          break
-        end
-      else
-        break
-      end
-    end
-    return rent_sum
-  end
+  assert(board ~= nil, "missing board")
+  assert(board.map ~= nil, "missing board.map")
+  local neighbors = assert(board.map.neighbors, "missing board.map.neighbors")
 
-  local start_tile = board:get_tile(index)
-  if not start_tile or start_tile.type ~= "land" then
-    return 0
-  end
+  local start_tile = assert(board:get_tile(index), "missing start tile: " .. tostring(index))
+  assert(start_tile.type == "land", "invalid start tile: " .. tostring(index))
   local start_state = LandActions.safe_tile_state(game, start_tile)
   if start_state.owner_id ~= owner_id then
     return 0
@@ -114,11 +78,12 @@ local function contiguous_rent(game, board, index, owner_id)
 
   BoardUtils.queue_walk(queue, function(tile_id, push)
     local tile = board:get_tile_by_id(tile_id)
-    if tile and tile.type == "land" then
+    assert(tile ~= nil, "missing tile: " .. tostring(tile_id))
+    if tile.type == "land" then
       local st2 = LandActions.safe_tile_state(game, tile)
       if st2.owner_id == owner_id then
         rent_sum = rent_sum + Pricing.rent_for_level(tile, st2.level or 0)
-        local neigh = neighbors[tile_id] or {}
+        local neigh = assert(neighbors[tile_id], "missing neighbors: " .. tostring(tile_id))
         for _, next_id in pairs(neigh) do
           if not visited[next_id] then
             visited[next_id] = true
@@ -140,11 +105,11 @@ function LandActions.execute_strong_card(game, player_id, tile_id)
   if st.owner_id then
     owner = game.players[st.owner_id]
   end
-  if not owner then return false end
+  assert(owner ~= nil, "missing owner")
 
   local total_value = BoardUtils.total_invested(tile, st.level)
   if player.cash < total_value then return false end
-  if not Inventory.consume(player, ITEM_IDS.strong) then return false end
+  assert(Inventory.consume(player, ITEM_IDS.strong) == true, "consume strong card failed")
   player:deduct_cash(total_value)
   owner:add_cash(total_value)
   game:set_tile_owner(tile, player.id)
@@ -163,7 +128,7 @@ end
 function LandActions.execute_free_card(game, player_id, tile_id)
   local player = game.players[player_id]
   local tile = game.board:get_tile_by_id(tile_id)
-  if not Inventory.consume(player, ITEM_IDS.free_rent) then return false end
+  assert(Inventory.consume(player, ITEM_IDS.free_rent) == true, "consume free rent failed")
   emit_event(MONOPOLY_EVENT.land.free_rent_used, {
     player = player,
     tile = tile,
@@ -176,12 +141,10 @@ function LandActions.execute_pay_rent(game, player_id, tile_id)
   local player = game.players[player_id]
   local tile = game.board:get_tile_by_id(tile_id)
   local owner, st = LandActions.resolve_rent_owner(game, tile)
-  if not owner then
-    return true
-  end
+  assert(owner ~= nil, "missing rent owner")
 
   local board = game.board
-  local idx = board:index_of_tile_id(tile.id) or 1
+  local idx = assert(board:index_of_tile_id(tile.id), "missing tile index: " .. tostring(tile.id))
   local rent = contiguous_rent(game, board, idx, owner.id)
 
   if player:has_deity("poor") then rent = rent * 2 end
@@ -216,7 +179,7 @@ end
 
 function LandActions.execute_tax_free_card(game, player_id)
   local player = game.players[player_id]
-  if not Inventory.consume(player, ITEM_IDS.tax_free) then return false end
+  assert(Inventory.consume(player, ITEM_IDS.tax_free) == true, "consume tax_free failed")
   emit_event(MONOPOLY_EVENT.land.tax_free, {
     player = player,
     text = player.name .. " 出示免税卡，本次免税",

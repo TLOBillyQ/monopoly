@@ -3,19 +3,20 @@ local Land = require("Manager.LandManager.Land.Land")
 require "Library.ClassUtils"
 
 local executors = {}
-for id, exec in pairs(Landing.executors or {}) do
+local landing_execs = assert(Landing.executors, "missing Landing.executors")
+for id, exec in pairs(landing_execs) do
   executors[id] = exec
 end
-for id, exec in pairs(Land.executors or {}) do
+local land_execs = assert(Land.executors, "missing Land.executors")
+for id, exec in pairs(land_execs) do
   executors[id] = exec
 end
 
 local function build_ctx(player, tile, game_ctx)
   local ctx = {}
-  if game_ctx then
-    for key, value in pairs(game_ctx) do
-      ctx[key] = value
-    end
+  assert(game_ctx ~= nil, "missing game_ctx")
+  for key, value in pairs(game_ctx) do
+    ctx[key] = value
   end
   ctx.player = player
   ctx.tile = tile
@@ -23,10 +24,8 @@ local function build_ctx(player, tile, game_ctx)
 end
 
 local function can_apply(effect, ctx)
-  local exec = effect and executors[effect.id]
-  if not exec then
-    return false, "missing_executor"
-  end
+  assert(effect ~= nil, "missing effect")
+  local exec = assert(executors[effect.id], "missing executor: " .. tostring(effect.id))
   if exec.can_apply and not exec.can_apply(ctx) then
     return false, "blocked"
   end
@@ -38,9 +37,11 @@ local Effect = Class("Effect")
 
 
 function Effect.scan(effect_defs, player, tile, game_ctx)
+  assert(effect_defs ~= nil, "missing effect_defs")
+  assert(game_ctx ~= nil, "missing game_ctx")
   local ctx = build_ctx(player, tile, game_ctx)
   local entries = {}
-  for _, eff in ipairs(effect_defs or {}) do
+  for _, eff in ipairs(effect_defs) do
     local ok, reason = can_apply(eff, ctx)
     table.insert(entries, {
       id = eff.id,
@@ -56,13 +57,15 @@ end
 
 
 function Effect.execute(effect, player, tile, game_ctx)
+  assert(game_ctx ~= nil, "missing game_ctx")
   local ctx = build_ctx(player, tile, game_ctx)
   local ok, reason = can_apply(effect, ctx)
   if not ok then
     return { ok = false, reason = reason }
   end
-  local exec = executors[effect.id]
-  return { ok = true, result = exec and exec.apply and exec.apply(ctx) }
+  local exec = assert(executors[effect.id], "missing executor: " .. tostring(effect.id))
+  assert(exec.apply ~= nil, "missing executor apply: " .. tostring(effect.id))
+  return { ok = true, result = exec.apply(ctx) }
 end
 
 

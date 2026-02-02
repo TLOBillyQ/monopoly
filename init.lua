@@ -7,6 +7,7 @@ local GameplayLoop = require("Manager.TurnManager.GameplayLoop")
 local MainView = require("Manager.TurnManager.GUI.MainView")
 local UIEventRouter = require("Manager.TurnManager.GUI.UIEventRouter")
 local map_cfg = require("Config.Map")
+local tiles_cfg = require("Config.Generated.Tiles")
 local logger = require("Components.Logger")
 local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 
@@ -15,24 +16,17 @@ logger.configure_game_time()
 local current_game = nil
 
 local function show_tips(message, duration)
-  local text = message and tostring(message) or ""
+  assert(message ~= nil, "show_tips requires message")
+  local text = tostring(message)
   if text == "" then
     return false
   end
   local tip_duration = duration
-  if type(duration) == "number" and math and math.tofixed then
+  if type(duration) == "number" then
     tip_duration = math.tofixed(duration)
   end
-  if GlobalAPI and GlobalAPI.show_tips then
-    GlobalAPI.show_tips(text, tip_duration)
-    return true
-  end
-  local role = Role
-  if role and role.show_tips then
-    role.show_tips(text, tip_duration)
-    return true
-  end
-  return false
+  GlobalAPI.show_tips(text, tip_duration)
+  return true
 end
 
 local function build_state()
@@ -49,19 +43,23 @@ local function build_state()
     wait_action_anim = true,
     action_anim_seq = nil,
     item_name_by_id = {},
-    game_factory = Game:new({
-      players = { "玩家1", "AI2", "AI3", "AI4" },
-      ai = { [2] = true, [3] = true, [4] = true },
-      auto_all = true,
-      seed = GameAPI.get_timestamp(),
-    }),
+    game_factory = function()
+      return Game:new({
+        players = { "玩家1", "AI2", "AI3", "AI4" },
+        ai = { [2] = true, [3] = true, [4] = true },
+        auto_all = true,
+        seed = GameAPI.get_timestamp(),
+        map = map_cfg,
+        tiles = tiles_cfg,
+      })
+    end,
     auto_runner = AutoRunner:new({ interval = ui.auto_interval }),
     tile_units = nil,
     tile_positions = nil,
     tile_spacing = nil,
     player_units = nil,
     player_units_missing = false,
-    board_last_positions = nil,
+    board_last_positions = {},
     board_sync_pending = false,
     board_last_phase = nil,
     next_turn_locked = false,
@@ -71,6 +69,7 @@ local function build_state()
     market_choice_option_ids = nil,
     pending_choice_selected_option_id = nil,
     _log_once = {},
+    tick_started = false,
   }
 
   state.push_popup = function(_, payload)
@@ -140,7 +139,7 @@ local function install_game_init(state)
 
     local tile_names = {}
     local building_names = {}
-    local tile_ids = map_cfg.path or {}
+    local tile_ids = assert(map_cfg.path, "missing map path")
     if #tile_ids == 0 then
       for i = 1, 45 do
         tile_ids[i] = i
@@ -157,14 +156,12 @@ local function install_game_init(state)
     G.ground.set_model_visible(false)
 
     local function set_item_slot_image(slot_name, image_key)
-      if not (slot_name and image_key) then
-        return
-      end
-      local nodes = UIManager.query_nodes_by_name(slot_name) or {}
+      assert(slot_name ~= nil, "missing slot name")
+      assert(image_key ~= nil, "missing image key for slot: " .. tostring(slot_name))
+      local nodes = UIManager.query_nodes_by_name(slot_name)
+      assert(nodes ~= nil, "missing ui nodes for slot: " .. tostring(slot_name))
       for _, node in ipairs(nodes) do
-        if node and node.image_texture ~= nil then
-          node.image_texture = image_key
-        end
+        node.image_texture = image_key
       end
     end
 
@@ -172,7 +169,9 @@ local function install_game_init(state)
       UIManager.client_role = r
       for i = 1, 5 do
         local num = 3000 + i
-        set_item_slot_image("道具槽位" .. tostring(i), refs[tostring(num)])
+        local image_key = refs[tostring(num)]
+        assert(image_key ~= nil, "missing item icon: " .. tostring(num))
+        set_item_slot_image("道具槽位" .. tostring(i), image_key)
       end
 
       unit.add_state(Enums.BuffState.BUFF_FORBID_CONTROL)
@@ -183,6 +182,11 @@ local function install_game_init(state)
       role.send_ui_custom_event("隐藏加载屏", {});
       role.send_ui_custom_event("显示基础屏", {});
     end)
+
+    if not state.tick_started then
+      state.tick_started = true
+      start_tick_loop(state)
+    end
   end)
 end
 
@@ -197,4 +201,3 @@ end
 
 local state = build_state()
 install_game_init(state)
-start_tick_loop(state)

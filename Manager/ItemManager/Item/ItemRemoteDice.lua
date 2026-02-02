@@ -3,9 +3,7 @@ local logger = require("Components.Logger")
 local RemoteDice = {}
 
 function RemoteDice.apply(game, player, dice_count, value)
-  if not dice_count or dice_count < 1 then
-    return false
-  end
+  assert(dice_count ~= nil and dice_count >= 1, "invalid dice_count")
   local values = {}
   for i = 1, dice_count do
     values[i] = value

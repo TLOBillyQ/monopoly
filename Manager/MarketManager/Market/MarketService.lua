@@ -9,9 +9,8 @@ local MONOPOLY_EVENT = require("Globals.MonopolyEvents")
 local MarketService = {}
 
 local function emit_event(kind, payload)
-  if TriggerCustomEvent then
-    TriggerCustomEvent(kind, payload or {})
-  end
+  assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
+  TriggerCustomEvent(kind, payload or {})
 end
 
 local items_by_id = {}
@@ -67,16 +66,16 @@ end
 
 local function entry_currency(entry)
   local currency = entry.currency
-  if currency == nil or currency == "" then
-    return "金币"
+  if currency and currency ~= "" then
+    return currency
   end
-  return currency
+  return "金币"
 end
 
 local function remaining_global_limit(game, product_id)
-  if not (game and game.store and product_id) then
-    return nil
-  end
+  assert(game ~= nil, "missing game")
+  assert(game.store ~= nil, "missing game.store")
+  assert(product_id ~= nil, "missing product_id")
   return game.store:get({ "market", "global_limits", product_id })
 end
 
@@ -85,7 +84,7 @@ local function can_buy_entry(game, player, entry)
     return false
   end
   local remaining = remaining_global_limit(game, entry.product_id)
-  if remaining ~= nil and remaining <= 0 then
+  if remaining <= 0 then
     return false
   end
   local price = entry_price(entry)
@@ -133,13 +132,10 @@ function MarketService.build_choice_spec(player, game)
 end
 
 local function consume_global_limit(game, product_id)
-  if not (game and game.store and product_id) then
-    return
-  end
-  local remaining = remaining_global_limit(game, product_id)
-  if remaining == nil then
-    return
-  end
+  assert(game ~= nil, "missing game")
+  assert(game.store ~= nil, "missing game.store")
+  assert(product_id ~= nil, "missing product_id")
+  local remaining = assert(remaining_global_limit(game, product_id), "missing global limit")
   local next_remaining = remaining - 1
   if next_remaining < 0 then
     next_remaining = 0
@@ -154,10 +150,10 @@ function MarketService.buy_with_opts(game, player, product_id, opts)
     return false
   end
   local entry = entries_by_id[product_id]
-  if not entry then return false end
+  assert(entry ~= nil, "missing market entry: " .. tostring(product_id))
 
   local remaining = remaining_global_limit(game, product_id)
-  if remaining ~= nil and remaining <= 0 then
+  if remaining <= 0 then
     emit_event(MONOPOLY_EVENT.market.buy_failed, {
       player = player,
       entry = entry,
@@ -226,11 +222,9 @@ function MarketService.buy_with_opts(game, player, product_id, opts)
 
   player:deduct_balance(currency, price)
 
-  if game and game.set_player_seat then
-    game:set_player_seat(player, product_id)
-  else
-    player.seat_id = product_id
-  end
+  assert(game ~= nil, "missing game")
+  assert(game.set_player_seat ~= nil, "missing game.set_player_seat")
+  game:set_player_seat(player, product_id)
   consume_global_limit(game, product_id)
   emit_event(MONOPOLY_EVENT.market.bought_vehicle, {
     player = player,
