@@ -2,7 +2,7 @@ local Dice = require("Components.Dice")
 local Logger = require("Components.Logger")
 local ItemPhase = require("Manager.ItemManager.ItemPhase")
 
-local function phase_roll(tm, args)
+local function _PhaseRoll(tm, args)
   args = args or {}
   local game = tm.game
   local player = args.player or game:current_player()
@@ -64,6 +64,6 @@ local function phase_roll(tm, args)
   return "move", { player = player, total = total, raw_total = raw_total }
 end
 
-return phase_roll
+return _PhaseRoll
 
 

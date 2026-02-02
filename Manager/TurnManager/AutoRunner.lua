@@ -4,7 +4,7 @@ require "Library.ClassUtils"
 local AutoRunner = Class("AutoRunner")
 
 
-function AutoRunner:init(opts)
+function AutoRunner:Init(opts)
   opts = opts or {}
   self.interval = opts.interval or 0.15
   self.timer = 0
@@ -12,18 +12,18 @@ function AutoRunner:init(opts)
 end
 
 
-function AutoRunner:set_enabled(on)
+function AutoRunner:SetEnabled(on)
   self.enabled = on
   self.timer = 0
 end
 
 
-function AutoRunner:reset_timer()
+function AutoRunner:ResetTimer()
   self.timer = 0
 end
 
 
-function AutoRunner:next_action(dt, env)
+function AutoRunner:NextAction(dt, env)
   if not self.enabled then
     return nil
   end

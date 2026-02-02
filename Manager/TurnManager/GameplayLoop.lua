@@ -10,11 +10,11 @@ local GameplayLoop = {}
 
 local NEXT_TURN_COOLDOWN = 0.4
 
-local function build_log_prefix()
+local function _BuildLogPrefix()
   return "[EggyAdapter]"
 end
 
-local function log_once(state, level, key, ...)
+local function _LogOnce(state, level, key, ...)
   assert(state ~= nil, "missing state")
   assert(state._log_once ~= nil, "missing state._log_once")
   if state._log_once[key] then
@@ -28,10 +28,10 @@ local function log_once(state, level, key, ...)
   end
 end
 
-local function log_status(view)
+local function _LogStatus(view)
   assert(view ~= nil, "missing view")
   Logger.info(
-    build_log_prefix(),
+    _BuildLogPrefix(),
     "玩家:",
     tostring(view.current_player_name),
     "现金:",
@@ -41,27 +41,27 @@ local function log_status(view)
   )
 end
 
-local function get_timestamp()
+local function _GetTimestamp()
   assert(GameAPI ~= nil and GameAPI.get_timestamp ~= nil, "missing GameAPI.get_timestamp")
   local ts = GameAPI.get_timestamp()
   assert(type(ts) == "number", "invalid timestamp")
   return ts
 end
 
-local function get_timestamp_diff_seconds(timestamp_1, timestamp_2)
+local function _GetTimestampDiffSeconds(timestamp_1, timestamp_2)
   assert(GameAPI ~= nil and GameAPI.get_timestamp_diff ~= nil, "missing GameAPI.get_timestamp_diff")
   assert(type(timestamp_1) == "number" and type(timestamp_2) == "number", "invalid timestamps")
   return GameAPI.get_timestamp_diff(timestamp_1, timestamp_2)
 end
 
-local function build_item_index(state)
+local function _BuildItemIndex(state)
   state.item_name_by_id = {}
   for _, cfg in ipairs(ItemsCfg) do
     state.item_name_by_id[cfg.id] = cfg.name or tostring(cfg.id)
   end
 end
 
-local function build_ui_model(state, game)
+local function _BuildUiModel(state, game)
   local store_state = game.store.state
   local winner = game.winner
   local winner_name = game.winner_names or (winner and assert(winner.name, "missing winner name"))
@@ -74,11 +74,11 @@ local function build_ui_model(state, game)
   })
 end
 
-local function refresh_view(state, game)
+local function _RefreshView(state, game)
   local store_state = game.store.state
-  local ui_model = build_ui_model(state, game)
+  local ui_model = _BuildUiModel(state, game)
   state.ui_model = ui_model
-  UIView.Render(state, ui_model, log_once, build_log_prefix)
+  UIView.Render(state, ui_model, _LogOnce, _BuildLogPrefix)
 
   assert(ui_model ~= nil, "missing ui_model")
   local players = assert(store_state.players, "missing store_state.players")
@@ -103,7 +103,7 @@ local function refresh_view(state, game)
   return ui_model
 end
 
-function GameplayLoop.set_game(state, game)
+function GameplayLoop.SetGame(state, game)
   assert(game ~= nil, "missing game")
   game.ui_port = state
   EventHandlers.Install(game, Logger, state)
@@ -113,7 +113,7 @@ function GameplayLoop.set_game(state, game)
   if pending then
     state.pending_choice_elapsed = 0
     state.pending_choice_id = pending.id
-    local ui_model = build_ui_model(state, game)
+    local ui_model = _BuildUiModel(state, game)
     state.ui_model = ui_model
     if ui_model.choice then
       UIView.OpenChoiceModal(state, ui_model.choice, ui_model.market)
@@ -123,19 +123,19 @@ function GameplayLoop.set_game(state, game)
   state.player_units_missing = false
 end
 
-function GameplayLoop.new_game(state)
+function GameplayLoop.NewGame(state)
   Logger.clear()
   assert(state.game_factory, "game_factory not set")
   local game = state.game_factory()
-  build_item_index(state)
+  _BuildItemIndex(state)
   assert(state.auto_runner ~= nil, "missing auto_runner")
-  assert(state.auto_runner.reset_timer ~= nil, "missing auto_runner.reset_timer")
-  state.auto_runner:reset_timer()
+  assert(state.auto_runner.ResetTimer ~= nil, "missing auto_runner.ResetTimer")
+  state.auto_runner:ResetTimer()
   game.Logger.info("启动蛋仔大富翁，玩家数:", #game.players)
   return game
 end
 
-function GameplayLoop.clear_choice(state, opts)
+function GameplayLoop.ClearChoice(state, opts)
   state.pending_choice = nil
   state.pending_choice_elapsed = 0
   state.pending_choice_id = nil
@@ -143,19 +143,19 @@ function GameplayLoop.clear_choice(state, opts)
   opts.on_close_choice(state)
 end
 
-function GameplayLoop.step_auto_runner(game, state, dt, context)
+function GameplayLoop.StepAutoRunner(game, state, dt, context)
   assert(game ~= nil, "missing game")
   assert(state.auto_runner ~= nil, "missing auto_runner")
   local ctx = context or {}
   ctx.game_finished = game.finished
-  local auto_action = state.auto_runner:next_action(dt, ctx)
+  local auto_action = state.auto_runner:NextAction(dt, ctx)
   if auto_action then
-    GameplayLoop.dispatch_action(game, state, auto_action)
+    GameplayLoop.DispatchAction(game, state, auto_action)
   end
   return auto_action
 end
 
-function GameplayLoop.step_choice_timeout(game, state, dt, opts)
+function GameplayLoop.StepChoiceTimeout(game, state, dt, opts)
   local timeout = Constants.action_timeout_seconds or 0
   if timeout <= 0 then
     state.pending_choice_elapsed = 0
@@ -203,11 +203,11 @@ function GameplayLoop.step_choice_timeout(game, state, dt, opts)
     assert(opts.build_action ~= nil, "missing opts.build_action")
     action = opts.build_action(game, state, choice)
     assert(action ~= nil, "missing timeout action")
-    GameplayLoop.dispatch_action(game, state, action)
+    GameplayLoop.DispatchAction(game, state, action)
   end
 end
 
-function GameplayLoop.step_modal_timeout(state, dt, opts)
+function GameplayLoop.StepModalTimeout(state, dt, opts)
   local timeout = Constants.action_timeout_seconds or 0
   if timeout <= 0 then
     state.ui_modal_elapsed = 0
@@ -235,7 +235,7 @@ function GameplayLoop.step_modal_timeout(state, dt, opts)
   end
 end
 
-function GameplayLoop.step_move_anim(game, state, opts)
+function GameplayLoop.StepMoveAnim(game, state, opts)
   assert(state.wait_move_anim == true, "move anim disabled")
   assert(game ~= nil, "missing game")
   assert(game.store ~= nil, "missing game.store")
@@ -264,7 +264,7 @@ function GameplayLoop.step_move_anim(game, state, opts)
   game:dispatch_action({ type = "move_anim_done", seq = anim.seq })
 end
 
-function GameplayLoop.step_action_anim(game, state, opts)
+function GameplayLoop.StepActionAnim(game, state, opts)
   assert(state.wait_action_anim == true, "action anim disabled")
   assert(game ~= nil, "missing game")
   assert(game.store ~= nil, "missing game.store")
@@ -293,13 +293,13 @@ function GameplayLoop.step_action_anim(game, state, opts)
   game:dispatch_action({ type = "action_anim_done", seq = anim.seq })
 end
 
-function GameplayLoop.step_turn(game, state)
+function GameplayLoop.StepTurn(game, state)
   assert(game ~= nil, "missing game")
   assert(not game.finished, "game finished")
   game:advance_turn()
 end
 
-function GameplayLoop.dispatch_action(game, state, action, opts)
+function GameplayLoop.DispatchAction(game, state, action, opts)
   assert(action ~= nil, "missing action")
   if action.type == "ui_button" then
     local slot_index = action.id and string.match(action.id, "^item_slot_(%d+)$")
@@ -320,7 +320,7 @@ function GameplayLoop.dispatch_action(game, state, action, opts)
         end
       end
       assert(option_ok, "invalid item option: " .. tostring(item_id))
-      GameplayLoop.dispatch_action(game, state, { type = "choice_select", choice_id = choice.id, option_id = item_id })
+      GameplayLoop.DispatchAction(game, state, { type = "choice_select", choice_id = choice.id, option_id = item_id })
       return
     end
     if action.id == "next" then
@@ -328,14 +328,14 @@ function GameplayLoop.dispatch_action(game, state, action, opts)
       assert(game ~= nil and game.store ~= nil, "missing game.store")
       assert(game.store.get ~= nil, "missing store.get")
       phase = game.store:get({ "turn", "phase" })
-      local now = get_timestamp()
+      local now = _GetTimestamp()
       if state.next_turn_locked then
         local allow = false
         if state.next_turn_lock_phase and phase and phase ~= state.next_turn_lock_phase then
           allow = true
         else
           assert(state.next_turn_last_click ~= nil, "missing next_turn_last_click")
-          local diff = get_timestamp_diff_seconds(now, state.next_turn_last_click)
+          local diff = _GetTimestampDiffSeconds(now, state.next_turn_last_click)
           if diff and diff >= NEXT_TURN_COOLDOWN then
             allow = true
           end
@@ -347,22 +347,22 @@ function GameplayLoop.dispatch_action(game, state, action, opts)
       state.next_turn_locked = true
       state.next_turn_last_click = now
       state.next_turn_lock_phase = phase
-      GameplayLoop.step_turn(game, state)
+      GameplayLoop.StepTurn(game, state)
     elseif action.id == "auto" then
       state.ui.auto_play = not state.ui.auto_play
-      state.auto_runner:set_enabled(state.ui.auto_play)
-      state.auto_runner:reset_timer()
+      state.auto_runner:SetEnabled(state.ui.auto_play)
+      state.auto_runner:ResetTimer()
     elseif action.id == "restart" then
       local was_auto = state.ui.auto_play
-      local new_game = GameplayLoop.new_game(state)
-      GameplayLoop.set_game(state, new_game)
+      local new_game = GameplayLoop.NewGame(state)
+      GameplayLoop.SetGame(state, new_game)
       if opts and opts.on_game_changed then
         opts.on_game_changed(new_game)
       end
-      state.auto_runner:set_enabled(was_auto)
+      state.auto_runner:SetEnabled(was_auto)
     end
   elseif action.type == "choice_select" or action.type == "choice_cancel" then
-    GameplayLoop.clear_choice(state, {
+    GameplayLoop.ClearChoice(state, {
       on_close_choice = function(ctx)
         UIView.CloseChoiceModal(ctx)
       end,
@@ -374,18 +374,18 @@ function GameplayLoop.dispatch_action(game, state, action, opts)
   end
 end
 
-function GameplayLoop.tick(game, state, dt)
+function GameplayLoop.Tick(game, state, dt)
   if not game then
     return
   end
 
-  GameplayLoop.step_auto_runner(game, state, dt, {
+  GameplayLoop.StepAutoRunner(game, state, dt, {
     modal_active = false,
     modal_buttons = nil,
     game_finished = game.finished,
   })
 
-  GameplayLoop.step_choice_timeout(game, state, dt, {
+  GameplayLoop.StepChoiceTimeout(game, state, dt, {
     on_pending_choice = function() end,
     is_choice_active = function(ctx)
       return ctx.pending_choice and true or false
@@ -405,7 +405,7 @@ function GameplayLoop.tick(game, state, dt)
     end,
   })
 
-  GameplayLoop.step_modal_timeout(state, dt, {
+  GameplayLoop.StepModalTimeout(state, dt, {
     is_active = function(ctx)
       return ctx.ui and ctx.ui.popup_active
     end,
@@ -424,7 +424,7 @@ function GameplayLoop.tick(game, state, dt)
   if phase == "wait_move_anim" then
     local anim = game.store:get({ "turn", "move_anim" })
     if anim then
-      GameplayLoop.step_move_anim(game, state, {
+      GameplayLoop.StepMoveAnim(game, state, {
         on_move_anim = function(_, anim_ctx)
           assert(anim_ctx ~= nil, "missing anim")
           local player_id = assert(anim_ctx.player_id, "missing player_id")
@@ -446,7 +446,7 @@ function GameplayLoop.tick(game, state, dt)
   elseif phase == "wait_action_anim" then
     local anim = game.store:get({ "turn", "action_anim" })
     if anim then
-      GameplayLoop.step_action_anim(game, state, {
+      GameplayLoop.StepActionAnim(game, state, {
         on_action_anim = function(ctx, anim_ctx)
           local ActionAnim = require("Manager.UIRoot.ActionAnim")
           return ActionAnim.Play(ctx, anim_ctx)
@@ -464,11 +464,11 @@ function GameplayLoop.tick(game, state, dt)
   end
   state.board_last_phase = phase
 
-  local ui_model = refresh_view(state, game)
+  local ui_model = _RefreshView(state, game)
   if ui_model.choice then
     UIView.OpenChoiceModal(state, ui_model.choice, ui_model.market)
   end
-  log_status(ui_model)
+  _LogStatus(ui_model)
 end
 
 return GameplayLoop

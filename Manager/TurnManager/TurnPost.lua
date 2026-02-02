@@ -1,6 +1,6 @@
 local ItemPhase = require("Manager.ItemManager.ItemPhase")
 
-local function phase_post(tm, args)
+local function _PhasePost(tm, args)
   local player = args.player or tm.game:current_player()
   local phase_res = ItemPhase.run(tm, "post_action", {
     player = player,
@@ -18,4 +18,4 @@ local function phase_post(tm, args)
   return "end_turn", { player = player }
 end
 
-return phase_post
+return _PhasePost

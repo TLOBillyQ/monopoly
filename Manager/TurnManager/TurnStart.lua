@@ -1,7 +1,7 @@
 local Logger = require("Components.Logger")
 local ItemPhase = require("Manager.ItemManager.ItemPhase")
 
-local function phase_start(tm)
+local function _PhaseStart(tm)
   local player = tm.game:current_player()
   local tc = tm.game.store:get({ "turn", "turn_count" })
   tm.game.last_turn = {
@@ -48,6 +48,6 @@ local function phase_start(tm)
   return "roll", { player = player }
 end
 
-return phase_start
+return _PhaseStart
 
 

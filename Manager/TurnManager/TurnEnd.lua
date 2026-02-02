@@ -1,4 +1,4 @@
-local function phase_end(tm, args)
+local function _PhaseEnd(tm, args)
   local player = args.player
   player:tick_deity()
   player:clear_temporal_flags()
@@ -11,4 +11,4 @@ local function phase_end(tm, args)
   return nil
 end
 
-return phase_end
+return _PhaseEnd

@@ -41,7 +41,7 @@ local function build_state()
         tiles = TilesCfg,
       })
     end,
-    auto_runner = AutoRunner:new({ interval = ui.auto_interval }),
+    auto_runner = AutoRunner:New({ interval = ui.auto_interval }),
     tile_units = nil,
     tile_positions = nil,
     tile_spacing = nil,
@@ -98,8 +98,8 @@ local function install_game_init(state)
     require "Library.UIManager.Utils"
     UIManager.Builder:new(require "Data.UIManagerNodes")
     require "Globals.ECA"
-    current_game = GameplayLoop.new_game(state)
-    GameplayLoop.set_game(state, current_game)
+    current_game = GameplayLoop.NewGame(state)
+    GameplayLoop.SetGame(state, current_game)
     UIEventRouter.Bind(state, function()
       return current_game
     end, {
@@ -130,7 +130,7 @@ local function start_tick_loop(state, interval)
   local tick_interval = interval or 1
   local tick_seconds = math.tofixed(tick_interval + 1) / 30.0
   SetFrameOut(tick_interval, function()
-    GameplayLoop.tick(current_game, state, tick_seconds)
+    GameplayLoop.Tick(current_game, state, tick_seconds)
   end, -1)
 end
 

@@ -9,7 +9,7 @@ require "Library.ClassUtils"
 
 local TurnManager = Class("TurnManager")
 
-local function build_turn_log_line(game, turn_count)
+local function _BuildTurnLogLine(game, turn_count)
   local player = game:current_player()
   local next_count = turn_count + 1
   if player.eliminated then
@@ -74,12 +74,12 @@ local function build_turn_log_line(game, turn_count)
   return line
 end
 
-local function get_choice(game)
+local function _GetChoice(game)
   return game.store:get({ "turn", "pending_choice" })
 end
 
 
-local function decide_choice_action(game, choice, pending_action)
+local function _DecideChoiceAction(game, choice, pending_action)
   if pending_action then
     return pending_action
   end
@@ -95,13 +95,13 @@ local function decide_choice_action(game, choice, pending_action)
 end
 
 
-local function resolve_choice(game, choice, action)
+local function _ResolveChoice(game, choice, action)
   local service = game:get_service(ServiceKey.choice)
   return service.resolve(game, choice, action) or {}
 end
 
 
-function TurnManager:init(game, phases)
+function TurnManager:Init(game, phases)
   self.game = game
   self.phases = phases
   self.flow = nil
@@ -109,27 +109,27 @@ function TurnManager:init(game, phases)
 end
 
 
-function TurnManager:dispatch(action)
+function TurnManager:Dispatch(action)
   self.pending_action = action
 
   if not self.flow or not self.flow.current then
-    self.flow = self:_build_flow()
+    self.flow = self:_BuildFlow()
   end
 
   if self.flow and self.flow.current then
-    self:run_until_wait()
+    self:RunUntilWait()
   end
 end
 
 
-function TurnManager:_build_flow()
+function TurnManager:_BuildFlow()
   assert(self.phases, "TurnManager requires phases")
   local states = {}
   for name, fn in pairs(self.phases) do
     states[name] = function(args)
       if name == "start" then
         local turn_count = self.game.store:get({ "turn", "turn_count" })
-        Logger.info(build_turn_log_line(self.game, turn_count))
+        Logger.info(_BuildTurnLogLine(self.game, turn_count))
       end
       self.game.store:set({ "turn", "phase" }, name)
       return fn(self, args)
@@ -138,13 +138,13 @@ function TurnManager:_build_flow()
 
   states.wait_choice = function(args)
     self.game.store:set({ "turn", "phase" }, "wait_choice")
-    local choice = get_choice(self.game)
+    local choice = _GetChoice(self.game)
     if not choice then
       self.pending_action = nil
       return args.resume_state, args.resume_args
     end
 
-    self.pending_action = decide_choice_action(self.game, choice, self.pending_action)
+    self.pending_action = _DecideChoiceAction(self.game, choice, self.pending_action)
 
     if not self.pending_action then
       return "wait_choice", args
@@ -156,7 +156,7 @@ function TurnManager:_build_flow()
     if action.choice_id and choice.id and action.choice_id ~= choice.id then
       return "wait_choice", args
     end
-    local res = resolve_choice(self.game, choice, action)
+    local res = _ResolveChoice(self.game, choice, action)
     if res.stay then
       return "wait_choice", args
     end
@@ -205,7 +205,7 @@ function TurnManager:_build_flow()
 end
 
 
-function TurnManager:next_player()
+function TurnManager:NextPlayer()
   local count = #self.game.players
   local current = self.game.store:get({ "turn", "current_player_index" })
   local next_index = current % count + 1
@@ -213,9 +213,9 @@ function TurnManager:next_player()
 end
 
 
-function TurnManager:run_until_wait()
+function TurnManager:RunUntilWait()
   if not self.flow or not self.flow.current then
-    self.flow = self:_build_flow()
+    self.flow = self:_BuildFlow()
   end
 
   while self.flow.current do
@@ -247,8 +247,8 @@ function TurnManager:run_until_wait()
 end
 
 
-function TurnManager:run_turn()
-  return self:run_until_wait()
+function TurnManager:RunTurn()
+  return self:RunUntilWait()
 end
 
 return TurnManager
