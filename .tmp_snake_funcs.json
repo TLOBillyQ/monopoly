@@ -1,0 +1,2053 @@
+[
+  {
+    "file": "Manager\\ChanceManager\\Chance.lua",
+    "line": 7,
+    "kind": "private",
+    "qual": "emit_event",
+    "name": "emit_event"
+  },
+  {
+    "file": "Manager\\ChanceManager\\ChanceRegistry.lua",
+    "line": 14,
+    "kind": "private",
+    "qual": "emit_event",
+    "name": "emit_event"
+  },
+  {
+    "file": "Manager\\ChanceManager\\ChanceRegistry.lua",
+    "line": 19,
+    "kind": "private",
+    "qual": "abs_value",
+    "name": "abs_value"
+  },
+  {
+    "file": "Manager\\ChanceManager\\ChanceRegistry.lua",
+    "line": 26,
+    "kind": "private",
+    "qual": "apply_cash_change",
+    "name": "apply_cash_change"
+  },
+  {
+    "file": "Manager\\ChanceManager\\ChanceRegistry.lua",
+    "line": 30,
+    "kind": "private",
+    "qual": "adjust_chance_delta",
+    "name": "adjust_chance_delta"
+  },
+  {
+    "file": "Manager\\ChanceManager\\ChanceRegistry.lua",
+    "line": 40,
+    "kind": "private",
+    "qual": "handle_bankruptcy_if_negative",
+    "name": "handle_bankruptcy_if_negative"
+  },
+  {
+    "file": "Manager\\ChanceManager\\ChanceRegistry.lua",
+    "line": 48,
+    "kind": "private",
+    "qual": "apply_cash_and_maybe_bankrupt",
+    "name": "apply_cash_and_maybe_bankrupt"
+  },
+  {
+    "file": "Manager\\ChanceManager\\ChanceRegistry.lua",
+    "line": 53,
+    "kind": "private",
+    "qual": "move_steps",
+    "name": "move_steps"
+  },
+  {
+    "file": "Manager\\ChanceManager\\ChanceRegistry.lua",
+    "line": 72,
+    "kind": "private",
+    "qual": "register_defaults",
+    "name": "register_defaults"
+  },
+  {
+    "file": "Manager\\ChanceManager\\ChanceRegistry.lua",
+    "line": 366,
+    "kind": "public",
+    "qual": "ChanceRegistry.register_defaults",
+    "name": "register_defaults"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\ItemChoiceHandler.lua",
+    "line": 14,
+    "kind": "private",
+    "qual": "resolve_event_name",
+    "name": "resolve_event_name"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\ItemChoiceHandler.lua",
+    "line": 21,
+    "kind": "private",
+    "qual": "dispatch_intent",
+    "name": "dispatch_intent"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\ItemChoiceHandler.lua",
+    "line": 63,
+    "kind": "private",
+    "qual": "finish_and_clear",
+    "name": "finish_and_clear"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\ItemChoiceHandler.lua",
+    "line": 68,
+    "kind": "private",
+    "qual": "open_steal_item_choice",
+    "name": "open_steal_item_choice"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\ItemChoiceHandler.lua",
+    "line": 90,
+    "kind": "private",
+    "qual": "open_discard_item_choice",
+    "name": "open_discard_item_choice"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\ItemChoiceHandler.lua",
+    "line": 112,
+    "kind": "private",
+    "qual": "reopen_item_phase",
+    "name": "reopen_item_phase"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\ItemChoiceHandler.lua",
+    "line": 119,
+    "kind": "private",
+    "qual": "handle_demolish_target",
+    "name": "handle_demolish_target"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\ItemChoiceHandler.lua",
+    "line": 140,
+    "kind": "private",
+    "qual": "handle_roadblock_target",
+    "name": "handle_roadblock_target"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\ItemChoiceHandler.lua",
+    "line": 158,
+    "kind": "private",
+    "qual": "handle_steal_item",
+    "name": "handle_steal_item"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\ItemChoiceHandler.lua",
+    "line": 174,
+    "kind": "private",
+    "qual": "handle_steal_prompt",
+    "name": "handle_steal_prompt"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\ItemChoiceHandler.lua",
+    "line": 216,
+    "kind": "private",
+    "qual": "handle_item_target_player",
+    "name": "handle_item_target_player"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\ItemChoiceHandler.lua",
+    "line": 231,
+    "kind": "private",
+    "qual": "handle_remote_dice_value",
+    "name": "handle_remote_dice_value"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\ItemChoiceHandler.lua",
+    "line": 247,
+    "kind": "private",
+    "qual": "handle_item_phase_choice",
+    "name": "handle_item_phase_choice"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\ItemChoiceHandler.lua",
+    "line": 272,
+    "kind": "private",
+    "qual": "handle_discard_item",
+    "name": "handle_discard_item"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\LandChoiceHandler.lua",
+    "line": 9,
+    "kind": "private",
+    "qual": "resolve_event_name",
+    "name": "resolve_event_name"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\LandChoiceHandler.lua",
+    "line": 16,
+    "kind": "private",
+    "qual": "dispatch_intent",
+    "name": "dispatch_intent"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\LandChoiceHandler.lua",
+    "line": 56,
+    "kind": "private",
+    "qual": "handle_rent_prompt",
+    "name": "handle_rent_prompt"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\LandChoiceHandler.lua",
+    "line": 86,
+    "kind": "private",
+    "qual": "handle_tax_prompt",
+    "name": "handle_tax_prompt"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\MarketChoiceHandler.lua",
+    "line": 6,
+    "kind": "private",
+    "qual": "resolve_event_name",
+    "name": "resolve_event_name"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\MarketChoiceHandler.lua",
+    "line": 13,
+    "kind": "private",
+    "qual": "dispatch_intent",
+    "name": "dispatch_intent"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\MarketChoiceHandler.lua",
+    "line": 52,
+    "kind": "private",
+    "qual": "handle_market_buy",
+    "name": "handle_market_buy"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\MarketChoiceHandler.lua",
+    "line": 72,
+    "kind": "private",
+    "qual": "handle_vehicle_replace",
+    "name": "handle_vehicle_replace"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\OptionalEffectHandler.lua",
+    "line": 7,
+    "kind": "private",
+    "qual": "resolve_event_name",
+    "name": "resolve_event_name"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\OptionalEffectHandler.lua",
+    "line": 14,
+    "kind": "private",
+    "qual": "dispatch_intent",
+    "name": "dispatch_intent"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceHandlers\\OptionalEffectHandler.lua",
+    "line": 56,
+    "kind": "private",
+    "qual": "handle_optional_landing_effect",
+    "name": "handle_optional_landing_effect"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceManager.lua",
+    "line": 10,
+    "kind": "private",
+    "qual": "is_cancel",
+    "name": "is_cancel"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceManager.lua",
+    "line": 15,
+    "kind": "private",
+    "qual": "clear_choice",
+    "name": "clear_choice"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceManager.lua",
+    "line": 19,
+    "kind": "private",
+    "qual": "use_item",
+    "name": "use_item"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceManager.lua",
+    "line": 25,
+    "kind": "private",
+    "qual": "finish_choice",
+    "name": "finish_choice"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceManager.lua",
+    "line": 41,
+    "kind": "private",
+    "qual": "option_exists",
+    "name": "option_exists"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceManager.lua",
+    "line": 58,
+    "kind": "private",
+    "qual": "build_game_ctx",
+    "name": "build_game_ctx"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceManager.lua",
+    "line": 65,
+    "kind": "private",
+    "qual": "finish_item_phase",
+    "name": "finish_item_phase"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceManager.lua",
+    "line": 69,
+    "kind": "private",
+    "qual": "finish_active_item_phase",
+    "name": "finish_active_item_phase"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceManager.lua",
+    "line": 76,
+    "kind": "private",
+    "qual": "get_container_defs_by_choice_kind",
+    "name": "get_container_defs_by_choice_kind"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceManager.lua",
+    "line": 83,
+    "kind": "private",
+    "qual": "find_effect_by_id",
+    "name": "find_effect_by_id"
+  },
+  {
+    "file": "Manager\\ChoiceManager\\ChoiceRegistry.lua",
+    "line": 11,
+    "kind": "public",
+    "qual": "ChoiceRegistry.register_defaults",
+    "name": "register_defaults"
+  },
+  {
+    "file": "Manager\\EffectManager\\Effect.lua",
+    "line": 15,
+    "kind": "private",
+    "qual": "build_ctx",
+    "name": "build_ctx"
+  },
+  {
+    "file": "Manager\\EffectManager\\Effect.lua",
+    "line": 26,
+    "kind": "private",
+    "qual": "can_apply",
+    "name": "can_apply"
+  },
+  {
+    "file": "Manager\\EffectManager\\Effect.lua",
+    "line": 72,
+    "kind": "public",
+    "qual": "Effect.build_game_ctx",
+    "name": "build_game_ctx"
+  },
+  {
+    "file": "Manager\\EffectManager\\EffectPipeline.lua",
+    "line": 6,
+    "kind": "private",
+    "qual": "resolve_event_name",
+    "name": "resolve_event_name"
+  },
+  {
+    "file": "Manager\\EffectManager\\EffectPipeline.lua",
+    "line": 13,
+    "kind": "private",
+    "qual": "dispatch_intent",
+    "name": "dispatch_intent"
+  },
+  {
+    "file": "Manager\\EffectManager\\EffectPipeline.lua",
+    "line": 48,
+    "kind": "private",
+    "qual": "build_optional_choice",
+    "name": "build_optional_choice"
+  },
+  {
+    "file": "Manager\\GameManager\\Agent.lua",
+    "line": 5,
+    "kind": "private",
+    "qual": "is_auto_player",
+    "name": "is_auto_player"
+  },
+  {
+    "file": "Manager\\GameManager\\Agent.lua",
+    "line": 11,
+    "kind": "public",
+    "qual": "Agent.pick_remote_dice_value",
+    "name": "pick_remote_dice_value"
+  },
+  {
+    "file": "Manager\\GameManager\\Agent.lua",
+    "line": 14,
+    "kind": "public",
+    "qual": "Agent.pick_target_player",
+    "name": "pick_target_player"
+  },
+  {
+    "file": "Manager\\GameManager\\Agent.lua",
+    "line": 18,
+    "kind": "public",
+    "qual": "Agent.pick_roadblock_target",
+    "name": "pick_roadblock_target"
+  },
+  {
+    "file": "Manager\\GameManager\\Agent.lua",
+    "line": 22,
+    "kind": "public",
+    "qual": "Agent.pick_demolish_target",
+    "name": "pick_demolish_target"
+  },
+  {
+    "file": "Manager\\GameManager\\Agent.lua",
+    "line": 26,
+    "kind": "private",
+    "qual": "first_option_id",
+    "name": "first_option_id"
+  },
+  {
+    "file": "Manager\\GameManager\\Agent.lua",
+    "line": 33,
+    "kind": "private",
+    "qual": "choice_owner",
+    "name": "choice_owner"
+  },
+  {
+    "file": "Manager\\GameManager\\Agent.lua",
+    "line": 41,
+    "kind": "public",
+    "qual": "Agent.auto_action_for_choice",
+    "name": "auto_action_for_choice"
+  },
+  {
+    "file": "Manager\\GameManager\\AgentTargeting.lua",
+    "line": 12,
+    "kind": "private",
+    "qual": "current_rent",
+    "name": "current_rent"
+  },
+  {
+    "file": "Manager\\GameManager\\AgentTargeting.lua",
+    "line": 16,
+    "kind": "private",
+    "qual": "simulate_landing",
+    "name": "simulate_landing"
+  },
+  {
+    "file": "Manager\\GameManager\\AgentTargeting.lua",
+    "line": 41,
+    "kind": "private",
+    "qual": "remote_priority",
+    "name": "remote_priority"
+  },
+  {
+    "file": "Manager\\GameManager\\AgentTargeting.lua",
+    "line": 78,
+    "kind": "public",
+    "qual": "AgentTargeting.pick_remote_dice_value",
+    "name": "pick_remote_dice_value"
+  },
+  {
+    "file": "Manager\\GameManager\\AgentTargeting.lua",
+    "line": 101,
+    "kind": "private",
+    "qual": "richest_other",
+    "name": "richest_other"
+  },
+  {
+    "file": "Manager\\GameManager\\AgentTargeting.lua",
+    "line": 116,
+    "kind": "private",
+    "qual": "is_richest",
+    "name": "is_richest"
+  },
+  {
+    "file": "Manager\\GameManager\\AgentTargeting.lua",
+    "line": 125,
+    "kind": "private",
+    "qual": "allow_from_options",
+    "name": "allow_from_options"
+  },
+  {
+    "file": "Manager\\GameManager\\AgentTargeting.lua",
+    "line": 136,
+    "kind": "public",
+    "qual": "AgentTargeting.pick_target_player",
+    "name": "pick_target_player"
+  },
+  {
+    "file": "Manager\\GameManager\\AgentTargeting.lua",
+    "line": 175,
+    "kind": "public",
+    "qual": "AgentTargeting.pick_roadblock_target",
+    "name": "pick_roadblock_target"
+  },
+  {
+    "file": "Manager\\GameManager\\AgentTargeting.lua",
+    "line": 184,
+    "kind": "public",
+    "qual": "AgentTargeting.pick_demolish_target",
+    "name": "pick_demolish_target"
+  },
+  {
+    "file": "Manager\\GameManager\\CompositionRoot.lua",
+    "line": 33,
+    "kind": "private",
+    "qual": "new_rng",
+    "name": "new_rng"
+  },
+  {
+    "file": "Manager\\GameManager\\CompositionRoot.lua",
+    "line": 40,
+    "kind": "public",
+    "qual": "rng:next_int",
+    "name": "next_int"
+  },
+  {
+    "file": "Manager\\GameManager\\CompositionRoot.lua",
+    "line": 59,
+    "kind": "private",
+    "qual": "create_board",
+    "name": "create_board"
+  },
+  {
+    "file": "Manager\\GameManager\\CompositionRoot.lua",
+    "line": 83,
+    "kind": "private",
+    "qual": "create_players",
+    "name": "create_players"
+  },
+  {
+    "file": "Manager\\GameManager\\CompositionRoot.lua",
+    "line": 113,
+    "kind": "private",
+    "qual": "snapshot_inventory",
+    "name": "snapshot_inventory"
+  },
+  {
+    "file": "Manager\\GameManager\\CompositionRoot.lua",
+    "line": 117,
+    "kind": "private",
+    "qual": "snapshot_players",
+    "name": "snapshot_players"
+  },
+  {
+    "file": "Manager\\GameManager\\CompositionRoot.lua",
+    "line": 139,
+    "kind": "private",
+    "qual": "snapshot_tiles",
+    "name": "snapshot_tiles"
+  },
+  {
+    "file": "Manager\\GameManager\\CompositionRoot.lua",
+    "line": 149,
+    "kind": "private",
+    "qual": "snapshot_market_limits",
+    "name": "snapshot_market_limits"
+  },
+  {
+    "file": "Manager\\GameManager\\CompositionRoot.lua",
+    "line": 160,
+    "kind": "private",
+    "qual": "build_initial_state",
+    "name": "build_initial_state"
+  },
+  {
+    "file": "Manager\\GameManager\\Game.lua",
+    "line": 22,
+    "kind": "public",
+    "qual": "Game:advance_turn",
+    "name": "advance_turn"
+  },
+  {
+    "file": "Manager\\GameManager\\Game.lua",
+    "line": 32,
+    "kind": "public",
+    "qual": "Game:dispatch_action",
+    "name": "dispatch_action"
+  },
+  {
+    "file": "Manager\\GameManager\\Game.lua",
+    "line": 42,
+    "kind": "public",
+    "qual": "Game:get_service",
+    "name": "get_service"
+  },
+  {
+    "file": "Manager\\GameManager\\Game.lua",
+    "line": 49,
+    "kind": "public",
+    "qual": "Game:get_services",
+    "name": "get_services"
+  },
+  {
+    "file": "Manager\\GameManager\\GameState.lua",
+    "line": 8,
+    "kind": "private",
+    "qual": "store_root",
+    "name": "store_root"
+  },
+  {
+    "file": "Manager\\GameManager\\GameState.lua",
+    "line": 13,
+    "kind": "private",
+    "qual": "ensure_table",
+    "name": "ensure_table"
+  },
+  {
+    "file": "Manager\\GameManager\\GameState.lua",
+    "line": 18,
+    "kind": "private",
+    "qual": "store_value",
+    "name": "store_value"
+  },
+  {
+    "file": "Manager\\GameManager\\GameState.lua",
+    "line": 25,
+    "kind": "public",
+    "qual": "GameState:set_player_status",
+    "name": "set_player_status"
+  },
+  {
+    "file": "Manager\\GameManager\\GameState.lua",
+    "line": 34,
+    "kind": "public",
+    "qual": "GameState:set_player_seat",
+    "name": "set_player_seat"
+  },
+  {
+    "file": "Manager\\GameManager\\GameState.lua",
+    "line": 42,
+    "kind": "public",
+    "qual": "GameState:set_player_eliminated",
+    "name": "set_player_eliminated"
+  },
+  {
+    "file": "Manager\\GameManager\\GameState.lua",
+    "line": 50,
+    "kind": "public",
+    "qual": "GameState:set_player_property",
+    "name": "set_player_property"
+  },
+  {
+    "file": "Manager\\GameManager\\GameState.lua",
+    "line": 67,
+    "kind": "public",
+    "qual": "GameState:sync_player_inventory",
+    "name": "sync_player_inventory"
+  },
+  {
+    "file": "Manager\\GameManager\\GameState.lua",
+    "line": 74,
+    "kind": "public",
+    "qual": "GameState:update_tile",
+    "name": "update_tile"
+  },
+  {
+    "file": "Manager\\GameManager\\GameState.lua",
+    "line": 86,
+    "kind": "public",
+    "qual": "GameState:queue_action_anim",
+    "name": "queue_action_anim"
+  },
+  {
+    "file": "Manager\\GameManager\\GameState.lua",
+    "line": 97,
+    "kind": "public",
+    "qual": "GameState:set_tile_owner",
+    "name": "set_tile_owner"
+  },
+  {
+    "file": "Manager\\GameManager\\GameState.lua",
+    "line": 105,
+    "kind": "public",
+    "qual": "GameState:set_tile_level",
+    "name": "set_tile_level"
+  },
+  {
+    "file": "Manager\\GameManager\\GameState.lua",
+    "line": 109,
+    "kind": "public",
+    "qual": "GameState:reset_tile",
+    "name": "reset_tile"
+  },
+  {
+    "file": "Manager\\GameManager\\GameState.lua",
+    "line": 122,
+    "kind": "public",
+    "qual": "GameState:alive_players",
+    "name": "alive_players"
+  },
+  {
+    "file": "Manager\\GameManager\\GameState.lua",
+    "line": 132,
+    "kind": "public",
+    "qual": "GameState:current_player",
+    "name": "current_player"
+  },
+  {
+    "file": "Manager\\GameManager\\GameState.lua",
+    "line": 154,
+    "kind": "public",
+    "qual": "GameState:update_player_position",
+    "name": "update_player_position"
+  },
+  {
+    "file": "Manager\\GameManager\\GameState.lua",
+    "line": 170,
+    "kind": "public",
+    "qual": "GameState:pending_choice",
+    "name": "pending_choice"
+  },
+  {
+    "file": "Manager\\GameManager\\GameVictory.lua",
+    "line": 9,
+    "kind": "private",
+    "qual": "total_assets",
+    "name": "total_assets"
+  },
+  {
+    "file": "Manager\\GameManager\\GameVictory.lua",
+    "line": 22,
+    "kind": "private",
+    "qual": "winner_names",
+    "name": "winner_names"
+  },
+  {
+    "file": "Manager\\GameManager\\GameVictory.lua",
+    "line": 31,
+    "kind": "private",
+    "qual": "apply_winners",
+    "name": "apply_winners"
+  },
+  {
+    "file": "Manager\\GameManager\\GameVictory.lua",
+    "line": 46,
+    "kind": "public",
+    "qual": "GameVictory.check_victory",
+    "name": "check_victory"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemBoardUtils.lua",
+    "line": 7,
+    "kind": "public",
+    "qual": "BoardUtils.queue_walk",
+    "name": "queue_walk"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemBoardUtils.lua",
+    "line": 19,
+    "kind": "public",
+    "qual": "BoardUtils.indices_in_range",
+    "name": "indices_in_range"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemBoardUtils.lua",
+    "line": 68,
+    "kind": "public",
+    "qual": "BoardUtils.total_invested",
+    "name": "total_invested"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemBoardUtils.lua",
+    "line": 73,
+    "kind": "public",
+    "qual": "BoardUtils.find_best_tile",
+    "name": "find_best_tile"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemDemolish.lua",
+    "line": 10,
+    "kind": "private",
+    "qual": "clear_overlays",
+    "name": "clear_overlays"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemDemolish.lua",
+    "line": 16,
+    "kind": "private",
+    "qual": "destroy_building",
+    "name": "destroy_building"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemDemolish.lua",
+    "line": 23,
+    "kind": "private",
+    "qual": "send_players_to_hospital",
+    "name": "send_players_to_hospital"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemDemolish.lua",
+    "line": 46,
+    "kind": "public",
+    "qual": "Demolish.find_target",
+    "name": "find_target"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemDemolish.lua",
+    "line": 120,
+    "kind": "private",
+    "qual": "push_option",
+    "name": "push_option"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemExecutor.lua",
+    "line": 8,
+    "kind": "public",
+    "qual": "Executor.use_item",
+    "name": "use_item"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemInventory.lua",
+    "line": 13,
+    "kind": "private",
+    "qual": "resolve_event_name",
+    "name": "resolve_event_name"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemInventory.lua",
+    "line": 20,
+    "kind": "private",
+    "qual": "dispatch_intent",
+    "name": "dispatch_intent"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemInventory.lua",
+    "line": 59,
+    "kind": "public",
+    "qual": "Inventory.item_name",
+    "name": "item_name"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemInventory.lua",
+    "line": 77,
+    "kind": "public",
+    "qual": "Inventory.is_full",
+    "name": "is_full"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemInventory.lua",
+    "line": 90,
+    "kind": "public",
+    "qual": "Inventory.find_index",
+    "name": "find_index"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemInventory.lua",
+    "line": 106,
+    "kind": "public",
+    "qual": "Inventory.remove_by_index",
+    "name": "remove_by_index"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemInventory.lua",
+    "line": 121,
+    "kind": "public",
+    "qual": "Inventory.draw_random",
+    "name": "draw_random"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemInventory.lua",
+    "line": 128,
+    "kind": "private",
+    "qual": "notify_full",
+    "name": "notify_full"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemInventory.lua",
+    "line": 156,
+    "kind": "public",
+    "qual": "Inventory.draw_and_give",
+    "name": "draw_and_give"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemPhase.lua",
+    "line": 21,
+    "kind": "private",
+    "qual": "resolve_event_name",
+    "name": "resolve_event_name"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemPhase.lua",
+    "line": 27,
+    "kind": "private",
+    "qual": "dispatch_intent",
+    "name": "dispatch_intent"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemPhase.lua",
+    "line": 62,
+    "kind": "public",
+    "qual": "ItemPhase.is_enabled",
+    "name": "is_enabled"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemPhase.lua",
+    "line": 73,
+    "kind": "private",
+    "qual": "build_options",
+    "name": "build_options"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemPhase.lua",
+    "line": 149,
+    "kind": "public",
+    "qual": "ItemPhase.build_choice_spec",
+    "name": "build_choice_spec"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemPostEffects.lua",
+    "line": 232,
+    "kind": "public",
+    "qual": "ItemEffects.get_target_spec",
+    "name": "get_target_spec"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemPostEffects.lua",
+    "line": 236,
+    "kind": "public",
+    "qual": "ItemEffects.target_item_ids",
+    "name": "target_item_ids"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemPostEffects.lua",
+    "line": 240,
+    "kind": "public",
+    "qual": "ItemEffects.apply_target",
+    "name": "apply_target"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemPostEffects.lua",
+    "line": 246,
+    "kind": "public",
+    "qual": "ItemEffects.apply_post",
+    "name": "apply_post"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemRegistry.lua",
+    "line": 17,
+    "kind": "public",
+    "qual": "ItemRegistry.target_candidates",
+    "name": "target_candidates"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemRegistry.lua",
+    "line": 36,
+    "kind": "private",
+    "qual": "run_item_choice_flow",
+    "name": "run_item_choice_flow"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemRegistry.lua",
+    "line": 62,
+    "kind": "private",
+    "qual": "handle_target_player_item",
+    "name": "handle_target_player_item"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemRegistry.lua",
+    "line": 103,
+    "kind": "private",
+    "qual": "handle_remote_dice",
+    "name": "handle_remote_dice"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemRegistry.lua",
+    "line": 139,
+    "kind": "private",
+    "qual": "handle_roadblock",
+    "name": "handle_roadblock"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemRegistry.lua",
+    "line": 179,
+    "kind": "private",
+    "qual": "handle_demolish",
+    "name": "handle_demolish"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemRegistry.lua",
+    "line": 194,
+    "kind": "public",
+    "qual": "ItemRegistry.register_defaults",
+    "name": "register_defaults"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemRoadblock.lua",
+    "line": 7,
+    "kind": "private",
+    "qual": "make_candidate",
+    "name": "make_candidate"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemRoadblock.lua",
+    "line": 23,
+    "kind": "private",
+    "qual": "forward_indices",
+    "name": "forward_indices"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemRoadblock.lua",
+    "line": 36,
+    "kind": "private",
+    "qual": "backward_indices",
+    "name": "backward_indices"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemRoadblock.lua",
+    "line": 51,
+    "kind": "private",
+    "qual": "priority_for_candidate",
+    "name": "priority_for_candidate"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemRoadblock.lua",
+    "line": 89,
+    "kind": "private",
+    "qual": "format_label",
+    "name": "format_label"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemRoadblock.lua",
+    "line": 136,
+    "kind": "public",
+    "qual": "Roadblock.pick_best",
+    "name": "pick_best"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemSteal.lua",
+    "line": 9,
+    "kind": "private",
+    "qual": "fail_popup",
+    "name": "fail_popup"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemSteal.lua",
+    "line": 18,
+    "kind": "public",
+    "qual": "Steal.steal_item_at_index",
+    "name": "steal_item_at_index"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemSteal.lua",
+    "line": 39,
+    "kind": "public",
+    "qual": "Steal.build_prompt_spec",
+    "name": "build_prompt_spec"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemSteal.lua",
+    "line": 52,
+    "kind": "public",
+    "qual": "Steal.handle_pass_players",
+    "name": "handle_pass_players"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemStrategy.lua",
+    "line": 13,
+    "kind": "public",
+    "qual": "Strategy.target_candidates",
+    "name": "target_candidates"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemStrategy.lua",
+    "line": 17,
+    "kind": "public",
+    "qual": "Strategy.has_obstacles_ahead",
+    "name": "has_obstacles_ahead"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemStrategy.lua",
+    "line": 41,
+    "kind": "public",
+    "qual": "Strategy.timing_allowed",
+    "name": "timing_allowed"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemStrategy.lua",
+    "line": 52,
+    "kind": "public",
+    "qual": "Strategy.auto_pre_action",
+    "name": "auto_pre_action"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemStrategy.lua",
+    "line": 57,
+    "kind": "private",
+    "qual": "can_use",
+    "name": "can_use"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemStrategy.lua",
+    "line": 63,
+    "kind": "private",
+    "qual": "try_use",
+    "name": "try_use"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemStrategy.lua",
+    "line": 80,
+    "kind": "private",
+    "qual": "has_target",
+    "name": "has_target"
+  },
+  {
+    "file": "Manager\\ItemManager\\ItemStrategy.lua",
+    "line": 84,
+    "kind": "private",
+    "qual": "has_demolish_target",
+    "name": "has_demolish_target"
+  },
+  {
+    "file": "Manager\\LandManager\\Land.lua",
+    "line": 14,
+    "kind": "private",
+    "qual": "can_buy",
+    "name": "can_buy"
+  },
+  {
+    "file": "Manager\\LandManager\\Land.lua",
+    "line": 25,
+    "kind": "private",
+    "qual": "apply_buy",
+    "name": "apply_buy"
+  },
+  {
+    "file": "Manager\\LandManager\\Land.lua",
+    "line": 42,
+    "kind": "private",
+    "qual": "can_upgrade",
+    "name": "can_upgrade"
+  },
+  {
+    "file": "Manager\\LandManager\\Land.lua",
+    "line": 59,
+    "kind": "private",
+    "qual": "apply_upgrade",
+    "name": "apply_upgrade"
+  },
+  {
+    "file": "Manager\\LandManager\\Land.lua",
+    "line": 81,
+    "kind": "private",
+    "qual": "can_pay_rent",
+    "name": "can_pay_rent"
+  },
+  {
+    "file": "Manager\\LandManager\\Land.lua",
+    "line": 92,
+    "kind": "private",
+    "qual": "apply_pay_rent",
+    "name": "apply_pay_rent"
+  },
+  {
+    "file": "Manager\\LandManager\\Land.lua",
+    "line": 133,
+    "kind": "private",
+    "qual": "can_tax",
+    "name": "can_tax"
+  },
+  {
+    "file": "Manager\\LandManager\\Land.lua",
+    "line": 138,
+    "kind": "private",
+    "qual": "apply_tax",
+    "name": "apply_tax"
+  },
+  {
+    "file": "Manager\\LandManager\\LandActions.lua",
+    "line": 14,
+    "kind": "private",
+    "qual": "emit_event",
+    "name": "emit_event"
+  },
+  {
+    "file": "Manager\\LandManager\\LandActions.lua",
+    "line": 19,
+    "kind": "private",
+    "qual": "eliminate_if_bankrupt",
+    "name": "eliminate_if_bankrupt"
+  },
+  {
+    "file": "Manager\\LandManager\\LandActions.lua",
+    "line": 28,
+    "kind": "public",
+    "qual": "LandActions.safe_tile_state",
+    "name": "safe_tile_state"
+  },
+  {
+    "file": "Manager\\LandManager\\LandActions.lua",
+    "line": 36,
+    "kind": "public",
+    "qual": "LandActions.resolve_rent_owner",
+    "name": "resolve_rent_owner"
+  },
+  {
+    "file": "Manager\\LandManager\\LandActions.lua",
+    "line": 62,
+    "kind": "private",
+    "qual": "contiguous_rent",
+    "name": "contiguous_rent"
+  },
+  {
+    "file": "Manager\\LandManager\\LandActions.lua",
+    "line": 100,
+    "kind": "public",
+    "qual": "LandActions.execute_strong_card",
+    "name": "execute_strong_card"
+  },
+  {
+    "file": "Manager\\LandManager\\LandActions.lua",
+    "line": 128,
+    "kind": "public",
+    "qual": "LandActions.execute_free_card",
+    "name": "execute_free_card"
+  },
+  {
+    "file": "Manager\\LandManager\\LandActions.lua",
+    "line": 140,
+    "kind": "public",
+    "qual": "LandActions.execute_pay_rent",
+    "name": "execute_pay_rent"
+  },
+  {
+    "file": "Manager\\LandManager\\LandActions.lua",
+    "line": 180,
+    "kind": "public",
+    "qual": "LandActions.execute_tax_free_card",
+    "name": "execute_tax_free_card"
+  },
+  {
+    "file": "Manager\\LandManager\\LandActions.lua",
+    "line": 190,
+    "kind": "public",
+    "qual": "LandActions.execute_pay_tax",
+    "name": "execute_pay_tax"
+  },
+  {
+    "file": "Manager\\LandManager\\LandChoiceSpecs.lua",
+    "line": 3,
+    "kind": "private",
+    "qual": "build_use_skip",
+    "name": "build_use_skip"
+  },
+  {
+    "file": "Manager\\LandManager\\LandChoiceSpecs.lua",
+    "line": 20,
+    "kind": "public",
+    "qual": "LandChoiceSpecs.rent_prompt",
+    "name": "rent_prompt"
+  },
+  {
+    "file": "Manager\\LandManager\\LandChoiceSpecs.lua",
+    "line": 38,
+    "kind": "public",
+    "qual": "LandChoiceSpecs.tax_prompt",
+    "name": "tax_prompt"
+  },
+  {
+    "file": "Manager\\LandManager\\LandPricing.lua",
+    "line": 3,
+    "kind": "private",
+    "qual": "max_level",
+    "name": "max_level"
+  },
+  {
+    "file": "Manager\\LandManager\\LandPricing.lua",
+    "line": 11,
+    "kind": "public",
+    "qual": "Pricing.max_level",
+    "name": "max_level"
+  },
+  {
+    "file": "Manager\\LandManager\\LandPricing.lua",
+    "line": 15,
+    "kind": "public",
+    "qual": "Pricing.purchase_price",
+    "name": "purchase_price"
+  },
+  {
+    "file": "Manager\\LandManager\\LandPricing.lua",
+    "line": 19,
+    "kind": "public",
+    "qual": "Pricing.upgrade_cost",
+    "name": "upgrade_cost"
+  },
+  {
+    "file": "Manager\\LandManager\\LandPricing.lua",
+    "line": 28,
+    "kind": "public",
+    "qual": "Pricing.rent_for_level",
+    "name": "rent_for_level"
+  },
+  {
+    "file": "Manager\\LandManager\\LandPricing.lua",
+    "line": 37,
+    "kind": "public",
+    "qual": "Pricing.total_invested",
+    "name": "total_invested"
+  },
+  {
+    "file": "Manager\\MarketManager\\MarketManager.lua",
+    "line": 11,
+    "kind": "private",
+    "qual": "emit_event",
+    "name": "emit_event"
+  },
+  {
+    "file": "Manager\\MarketManager\\MarketManager.lua",
+    "line": 31,
+    "kind": "private",
+    "qual": "entry_name",
+    "name": "entry_name"
+  },
+  {
+    "file": "Manager\\MarketManager\\MarketManager.lua",
+    "line": 52,
+    "kind": "private",
+    "qual": "vehicle_name",
+    "name": "vehicle_name"
+  },
+  {
+    "file": "Manager\\MarketManager\\MarketManager.lua",
+    "line": 63,
+    "kind": "private",
+    "qual": "entry_price",
+    "name": "entry_price"
+  },
+  {
+    "file": "Manager\\MarketManager\\MarketManager.lua",
+    "line": 67,
+    "kind": "private",
+    "qual": "entry_currency",
+    "name": "entry_currency"
+  },
+  {
+    "file": "Manager\\MarketManager\\MarketManager.lua",
+    "line": 75,
+    "kind": "private",
+    "qual": "remaining_global_limit",
+    "name": "remaining_global_limit"
+  },
+  {
+    "file": "Manager\\MarketManager\\MarketManager.lua",
+    "line": 82,
+    "kind": "private",
+    "qual": "can_buy_entry",
+    "name": "can_buy_entry"
+  },
+  {
+    "file": "Manager\\MarketManager\\MarketManager.lua",
+    "line": 94,
+    "kind": "public",
+    "qual": "MarketManager.list_buyable",
+    "name": "list_buyable"
+  },
+  {
+    "file": "Manager\\MarketManager\\MarketManager.lua",
+    "line": 107,
+    "kind": "public",
+    "qual": "MarketManager.build_choice_spec",
+    "name": "build_choice_spec"
+  },
+  {
+    "file": "Manager\\MarketManager\\MarketManager.lua",
+    "line": 134,
+    "kind": "private",
+    "qual": "consume_global_limit",
+    "name": "consume_global_limit"
+  },
+  {
+    "file": "Manager\\MarketManager\\MarketManager.lua",
+    "line": 146,
+    "kind": "public",
+    "qual": "MarketManager.buy_with_opts",
+    "name": "buy_with_opts"
+  },
+  {
+    "file": "Manager\\MarketManager\\MarketManager.lua",
+    "line": 239,
+    "kind": "public",
+    "qual": "MarketManager.auto_buy",
+    "name": "auto_buy"
+  },
+  {
+    "file": "Manager\\MovementManager\\MovementManager.lua",
+    "line": 9,
+    "kind": "private",
+    "qual": "emit_event",
+    "name": "emit_event"
+  },
+  {
+    "file": "Manager\\MovementManager\\MovementManager.lua",
+    "line": 101,
+    "kind": "private",
+    "qual": "tile_label",
+    "name": "tile_label"
+  },
+  {
+    "file": "Manager\\TurnManager\\AutoRunner.lua",
+    "line": 15,
+    "kind": "public",
+    "qual": "AutoRunner:set_enabled",
+    "name": "set_enabled"
+  },
+  {
+    "file": "Manager\\TurnManager\\AutoRunner.lua",
+    "line": 21,
+    "kind": "public",
+    "qual": "AutoRunner:reset_timer",
+    "name": "reset_timer"
+  },
+  {
+    "file": "Manager\\TurnManager\\AutoRunner.lua",
+    "line": 26,
+    "kind": "public",
+    "qual": "AutoRunner:next_action",
+    "name": "next_action"
+  },
+  {
+    "file": "Manager\\TurnManager\\GameplayLoop.lua",
+    "line": 13,
+    "kind": "private",
+    "qual": "build_log_prefix",
+    "name": "build_log_prefix"
+  },
+  {
+    "file": "Manager\\TurnManager\\GameplayLoop.lua",
+    "line": 17,
+    "kind": "private",
+    "qual": "log_once",
+    "name": "log_once"
+  },
+  {
+    "file": "Manager\\TurnManager\\GameplayLoop.lua",
+    "line": 31,
+    "kind": "private",
+    "qual": "log_status",
+    "name": "log_status"
+  },
+  {
+    "file": "Manager\\TurnManager\\GameplayLoop.lua",
+    "line": 44,
+    "kind": "private",
+    "qual": "get_timestamp",
+    "name": "get_timestamp"
+  },
+  {
+    "file": "Manager\\TurnManager\\GameplayLoop.lua",
+    "line": 51,
+    "kind": "private",
+    "qual": "get_timestamp_diff_seconds",
+    "name": "get_timestamp_diff_seconds"
+  },
+  {
+    "file": "Manager\\TurnManager\\GameplayLoop.lua",
+    "line": 57,
+    "kind": "private",
+    "qual": "build_item_index",
+    "name": "build_item_index"
+  },
+  {
+    "file": "Manager\\TurnManager\\GameplayLoop.lua",
+    "line": 64,
+    "kind": "private",
+    "qual": "build_ui_model",
+    "name": "build_ui_model"
+  },
+  {
+    "file": "Manager\\TurnManager\\GameplayLoop.lua",
+    "line": 77,
+    "kind": "private",
+    "qual": "refresh_view",
+    "name": "refresh_view"
+  },
+  {
+    "file": "Manager\\TurnManager\\GameplayLoop.lua",
+    "line": 106,
+    "kind": "public",
+    "qual": "GameplayLoop.set_game",
+    "name": "set_game"
+  },
+  {
+    "file": "Manager\\TurnManager\\GameplayLoop.lua",
+    "line": 126,
+    "kind": "public",
+    "qual": "GameplayLoop.new_game",
+    "name": "new_game"
+  },
+  {
+    "file": "Manager\\TurnManager\\GameplayLoop.lua",
+    "line": 138,
+    "kind": "public",
+    "qual": "GameplayLoop.clear_choice",
+    "name": "clear_choice"
+  },
+  {
+    "file": "Manager\\TurnManager\\GameplayLoop.lua",
+    "line": 146,
+    "kind": "public",
+    "qual": "GameplayLoop.step_auto_runner",
+    "name": "step_auto_runner"
+  },
+  {
+    "file": "Manager\\TurnManager\\GameplayLoop.lua",
+    "line": 158,
+    "kind": "public",
+    "qual": "GameplayLoop.step_choice_timeout",
+    "name": "step_choice_timeout"
+  },
+  {
+    "file": "Manager\\TurnManager\\GameplayLoop.lua",
+    "line": 210,
+    "kind": "public",
+    "qual": "GameplayLoop.step_modal_timeout",
+    "name": "step_modal_timeout"
+  },
+  {
+    "file": "Manager\\TurnManager\\GameplayLoop.lua",
+    "line": 238,
+    "kind": "public",
+    "qual": "GameplayLoop.step_move_anim",
+    "name": "step_move_anim"
+  },
+  {
+    "file": "Manager\\TurnManager\\GameplayLoop.lua",
+    "line": 267,
+    "kind": "public",
+    "qual": "GameplayLoop.step_action_anim",
+    "name": "step_action_anim"
+  },
+  {
+    "file": "Manager\\TurnManager\\GameplayLoop.lua",
+    "line": 296,
+    "kind": "public",
+    "qual": "GameplayLoop.step_turn",
+    "name": "step_turn"
+  },
+  {
+    "file": "Manager\\TurnManager\\GameplayLoop.lua",
+    "line": 302,
+    "kind": "public",
+    "qual": "GameplayLoop.dispatch_action",
+    "name": "dispatch_action"
+  },
+  {
+    "file": "Manager\\TurnManager\\TurnEnd.lua",
+    "line": 1,
+    "kind": "private",
+    "qual": "phase_end",
+    "name": "phase_end"
+  },
+  {
+    "file": "Manager\\TurnManager\\TurnLand.lua",
+    "line": 7,
+    "kind": "private",
+    "qual": "resolve_landing",
+    "name": "resolve_landing"
+  },
+  {
+    "file": "Manager\\TurnManager\\TurnLand.lua",
+    "line": 14,
+    "kind": "private",
+    "qual": "handle_need_landing",
+    "name": "handle_need_landing"
+  },
+  {
+    "file": "Manager\\TurnManager\\TurnLand.lua",
+    "line": 46,
+    "kind": "private",
+    "qual": "phase_land",
+    "name": "phase_land"
+  },
+  {
+    "file": "Manager\\TurnManager\\TurnManager.lua",
+    "line": 12,
+    "kind": "private",
+    "qual": "build_turn_log_line",
+    "name": "build_turn_log_line"
+  },
+  {
+    "file": "Manager\\TurnManager\\TurnManager.lua",
+    "line": 77,
+    "kind": "private",
+    "qual": "get_choice",
+    "name": "get_choice"
+  },
+  {
+    "file": "Manager\\TurnManager\\TurnManager.lua",
+    "line": 82,
+    "kind": "private",
+    "qual": "decide_choice_action",
+    "name": "decide_choice_action"
+  },
+  {
+    "file": "Manager\\TurnManager\\TurnManager.lua",
+    "line": 98,
+    "kind": "private",
+    "qual": "resolve_choice",
+    "name": "resolve_choice"
+  },
+  {
+    "file": "Manager\\TurnManager\\TurnManager.lua",
+    "line": 125,
+    "kind": "public",
+    "qual": "TurnManager:_build_flow",
+    "name": "_build_flow"
+  },
+  {
+    "file": "Manager\\TurnManager\\TurnManager.lua",
+    "line": 208,
+    "kind": "public",
+    "qual": "TurnManager:next_player",
+    "name": "next_player"
+  },
+  {
+    "file": "Manager\\TurnManager\\TurnManager.lua",
+    "line": 216,
+    "kind": "public",
+    "qual": "TurnManager:run_until_wait",
+    "name": "run_until_wait"
+  },
+  {
+    "file": "Manager\\TurnManager\\TurnManager.lua",
+    "line": 250,
+    "kind": "public",
+    "qual": "TurnManager:run_turn",
+    "name": "run_turn"
+  },
+  {
+    "file": "Manager\\TurnManager\\TurnMove.lua",
+    "line": 5,
+    "kind": "private",
+    "qual": "resolve_event_name",
+    "name": "resolve_event_name"
+  },
+  {
+    "file": "Manager\\TurnManager\\TurnMove.lua",
+    "line": 12,
+    "kind": "private",
+    "qual": "dispatch_intent",
+    "name": "dispatch_intent"
+  },
+  {
+    "file": "Manager\\TurnManager\\TurnMove.lua",
+    "line": 47,
+    "kind": "private",
+    "qual": "phase_move",
+    "name": "phase_move"
+  },
+  {
+    "file": "Manager\\TurnManager\\TurnPost.lua",
+    "line": 3,
+    "kind": "private",
+    "qual": "phase_post",
+    "name": "phase_post"
+  },
+  {
+    "file": "Manager\\TurnManager\\TurnRoll.lua",
+    "line": 5,
+    "kind": "private",
+    "qual": "phase_roll",
+    "name": "phase_roll"
+  },
+  {
+    "file": "Manager\\TurnManager\\TurnStart.lua",
+    "line": 4,
+    "kind": "private",
+    "qual": "phase_start",
+    "name": "phase_start"
+  },
+  {
+    "file": "Manager\\UIRoot\\ActionAnim.lua",
+    "line": 14,
+    "kind": "private",
+    "qual": "build_tip",
+    "name": "build_tip"
+  },
+  {
+    "file": "Manager\\UIRoot\\BoardView.lua",
+    "line": 6,
+    "kind": "public",
+    "qual": "EggyLayerBoard.refresh_board",
+    "name": "refresh_board"
+  },
+  {
+    "file": "Manager\\UIRoot\\BoardView.lua",
+    "line": 215,
+    "kind": "public",
+    "qual": "EggyLayerBoard.on_tile_upgraded",
+    "name": "on_tile_upgraded"
+  },
+  {
+    "file": "Manager\\UIRoot\\BoardView.lua",
+    "line": 230,
+    "kind": "public",
+    "qual": "EggyLayerBoard.on_tile_owner_changed",
+    "name": "on_tile_owner_changed"
+  },
+  {
+    "file": "Manager\\UIRoot\\BuildingEffects.lua",
+    "line": 5,
+    "kind": "public",
+    "qual": "BuildingEffects.spawn_upgrade_building_units",
+    "name": "spawn_upgrade_building_units"
+  },
+  {
+    "file": "Manager\\UIRoot\\MarketUI.lua",
+    "line": 49,
+    "kind": "public",
+    "qual": "MarketUI.is_ready",
+    "name": "is_ready"
+  },
+  {
+    "file": "Manager\\UIRoot\\MarketUI.lua",
+    "line": 54,
+    "kind": "public",
+    "qual": "MarketUI.is_panel_ready",
+    "name": "is_panel_ready"
+  },
+  {
+    "file": "Manager\\UIRoot\\MoveAnim.lua",
+    "line": 9,
+    "kind": "public",
+    "qual": "MovementManager.one_step",
+    "name": "one_step"
+  },
+  {
+    "file": "Manager\\UIRoot\\TileRenderer.lua",
+    "line": 18,
+    "kind": "private",
+    "qual": "resolve_color",
+    "name": "resolve_color"
+  },
+  {
+    "file": "Manager\\UIRoot\\TileRenderer.lua",
+    "line": 22,
+    "kind": "public",
+    "qual": "TileRenderer.render_tile",
+    "name": "render_tile"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIChoice.lua",
+    "line": 5,
+    "kind": "private",
+    "qual": "join_lines",
+    "name": "join_lines"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIChoice.lua",
+    "line": 10,
+    "kind": "private",
+    "qual": "default_option_label",
+    "name": "default_option_label"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIChoice.lua",
+    "line": 22,
+    "kind": "public",
+    "qual": "Choice.build_choice_view",
+    "name": "build_choice_view"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIEventRouter.lua",
+    "line": 9,
+    "kind": "private",
+    "qual": "resolve_option_id",
+    "name": "resolve_option_id"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIEventRouter.lua",
+    "line": 30,
+    "kind": "private",
+    "qual": "show_missing_button_tip",
+    "name": "show_missing_button_tip"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIEventRouter.lua",
+    "line": 38,
+    "kind": "private",
+    "qual": "register_node_click",
+    "name": "register_node_click"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIEventRouter.lua",
+    "line": 58,
+    "kind": "private",
+    "qual": "resolve_game",
+    "name": "resolve_game"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIEventRouter.lua",
+    "line": 65,
+    "kind": "private",
+    "qual": "dispatch_intent",
+    "name": "dispatch_intent"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIMarket.lua",
+    "line": 23,
+    "kind": "private",
+    "qual": "resolve_market_entry",
+    "name": "resolve_market_entry"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIMarket.lua",
+    "line": 34,
+    "kind": "private",
+    "qual": "resolve_market_name",
+    "name": "resolve_market_name"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIMarket.lua",
+    "line": 47,
+    "kind": "private",
+    "qual": "resolve_market_currency",
+    "name": "resolve_market_currency"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIMarket.lua",
+    "line": 53,
+    "kind": "private",
+    "qual": "resolve_market_price",
+    "name": "resolve_market_price"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIMarket.lua",
+    "line": 58,
+    "kind": "private",
+    "qual": "resolve_market_level",
+    "name": "resolve_market_level"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIMarket.lua",
+    "line": 70,
+    "kind": "private",
+    "qual": "resolve_ref_key",
+    "name": "resolve_ref_key"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIMarket.lua",
+    "line": 77,
+    "kind": "private",
+    "qual": "resolve_market_icon_key",
+    "name": "resolve_market_icon_key"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIMarket.lua",
+    "line": 87,
+    "kind": "public",
+    "qual": "EggyLayerMarket.refresh_market_selection",
+    "name": "refresh_market_selection"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIMarket.lua",
+    "line": 107,
+    "kind": "public",
+    "qual": "EggyLayerMarket.select_market_option",
+    "name": "select_market_option"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIMarket.lua",
+    "line": 112,
+    "kind": "public",
+    "qual": "EggyLayerMarket.refresh_market",
+    "name": "refresh_market"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIMarket.lua",
+    "line": 165,
+    "kind": "public",
+    "qual": "EggyLayerMarket.close_market_panel",
+    "name": "close_market_panel"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIModel.lua",
+    "line": 13,
+    "kind": "private",
+    "qual": "build_board_tiles",
+    "name": "build_board_tiles"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIModel.lua",
+    "line": 33,
+    "kind": "private",
+    "qual": "build_overlays",
+    "name": "build_overlays"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIModel.lua",
+    "line": 38,
+    "kind": "private",
+    "qual": "resolve_current_player",
+    "name": "resolve_current_player"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIPanel.lua",
+    "line": 5,
+    "kind": "public",
+    "qual": "Panel.build_turn_label",
+    "name": "build_turn_label"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIPanel.lua",
+    "line": 9,
+    "kind": "public",
+    "qual": "Panel.build_player_label",
+    "name": "build_player_label"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIPanel.lua",
+    "line": 16,
+    "kind": "public",
+    "qual": "Panel.build_player_statuses",
+    "name": "build_player_statuses"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIPanel.lua",
+    "line": 53,
+    "kind": "public",
+    "qual": "Panel.build_auto_label",
+    "name": "build_auto_label"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIPhase.lua",
+    "line": 3,
+    "kind": "public",
+    "qual": "Phase.build_phase_label",
+    "name": "build_phase_label"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIPhase.lua",
+    "line": 16,
+    "kind": "public",
+    "qual": "Phase.build_phase_title",
+    "name": "build_phase_title"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIView.lua",
+    "line": 8,
+    "kind": "private",
+    "qual": "query_node",
+    "name": "query_node"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIView.lua",
+    "line": 16,
+    "kind": "private",
+    "qual": "set_label",
+    "name": "set_label"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIView.lua",
+    "line": 21,
+    "kind": "private",
+    "qual": "set_button",
+    "name": "set_button"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIView.lua",
+    "line": 26,
+    "kind": "private",
+    "qual": "set_visible",
+    "name": "set_visible"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIView.lua",
+    "line": 31,
+    "kind": "private",
+    "qual": "set_touch_enabled",
+    "name": "set_touch_enabled"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIView.lua",
+    "line": 36,
+    "kind": "public",
+    "qual": "UIView.build_ui_state",
+    "name": "build_ui_state"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIView.lua",
+    "line": 70,
+    "kind": "public",
+    "qual": "UIView.init_ui_assets",
+    "name": "init_ui_assets"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIView.lua",
+    "line": 75,
+    "kind": "private",
+    "qual": "set_item_slot_image",
+    "name": "set_item_slot_image"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIView.lua",
+    "line": 97,
+    "kind": "public",
+    "qual": "UIView.refresh_panel",
+    "name": "refresh_panel"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIView.lua",
+    "line": 120,
+    "kind": "public",
+    "qual": "UIView.refresh_item_slots",
+    "name": "refresh_item_slots"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIView.lua",
+    "line": 152,
+    "kind": "public",
+    "qual": "UIView.refresh_board",
+    "name": "refresh_board"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIView.lua",
+    "line": 161,
+    "kind": "public",
+    "qual": "UIView.on_tile_upgraded",
+    "name": "on_tile_upgraded"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIView.lua",
+    "line": 165,
+    "kind": "public",
+    "qual": "UIView.on_tile_owner_changed",
+    "name": "on_tile_owner_changed"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIView.lua",
+    "line": 169,
+    "kind": "public",
+    "qual": "UIView.select_market_option",
+    "name": "select_market_option"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIView.lua",
+    "line": 173,
+    "kind": "public",
+    "qual": "UIView.open_choice_modal",
+    "name": "open_choice_modal"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIView.lua",
+    "line": 231,
+    "kind": "public",
+    "qual": "UIView.close_choice_modal",
+    "name": "close_choice_modal"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIView.lua",
+    "line": 243,
+    "kind": "public",
+    "qual": "UIView.push_popup",
+    "name": "push_popup"
+  },
+  {
+    "file": "Manager\\UIRoot\\UIView.lua",
+    "line": 255,
+    "kind": "public",
+    "qual": "UIView.close_popup",
+    "name": "close_popup"
+  }
+]

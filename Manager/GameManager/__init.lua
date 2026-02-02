@@ -1,4 +1,4 @@
-require "Manager.GameManager.BankruptcyService"
+require "Manager.GameManager.BankruptcyManager"
 require "Manager.GameManager.AgentTargeting"
 require "Manager.GameManager.Agent"
 require "Manager.GameManager.GameState"

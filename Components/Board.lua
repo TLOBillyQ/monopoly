@@ -17,7 +17,7 @@ local OPPOSITE = {
   right = "left",
 }
 
-local function pick_any_dir(neigh, avoid_dir)
+local function _PickAnyDir(neigh, avoid_dir)
   assert(neigh ~= nil, "missing neighbors")
   for dir, next_id in pairs(neigh) do
     if dir ~= avoid_dir then
@@ -29,7 +29,7 @@ end
 
 ---创建新棋盘实例
 ---@param data table 棋盘数据（包含path/tile_lookup/branches/map/overlays）
-function Board:init(data)
+function Board:Init(data)
   local tile_lookup = data.tile_lookup
   local path = data.path
 
@@ -52,7 +52,7 @@ end
 ---获取棋盘长度（地块数）
 ---@param self Board
 ---@return number 棋盘上的地块总数
-function Board:length()
+function Board:Length()
   return #self.path
 end
 
@@ -60,7 +60,7 @@ end
 ---@param self Board
 ---@param id string|number 地块ID
 ---@return number? 索引，1-based；如不存在则返回nil
-function Board:index_of_tile_id(id)
+function Board:IndexOfTileId(id)
   return self.index_by_id[id]
 end
 
@@ -68,7 +68,7 @@ end
 ---@param self Board
 ---@param index number 地块索引（1-based）
 ---@return Tile? 地块对象，或nil
-function Board:get_tile(index)
+function Board:GetTile(index)
   return self.path[index]
 end
 
@@ -76,7 +76,7 @@ end
 ---@param self Board
 ---@param id string|number 地块ID
 ---@return Tile? 地块对象，或nil
-function Board:get_tile_by_id(id)
+function Board:GetTileById(id)
   return self.tile_lookup[id]
 end
 
@@ -84,7 +84,7 @@ end
 ---@param self Board
 ---@param tile_type string 地块类型（如"land"）
 ---@return number?, Tile? 索引和地块对象；如不存在返回nil, nil
-function Board:find_first_by_type(tile_type)
+function Board:FindFirstByType(tile_type)
   for idx, tile in ipairs(self.path) do
     if tile.type == tile_type then
       return idx, tile
@@ -96,14 +96,14 @@ end
 ---获取棋盘覆盖物表（包含roadblocks和mines）
 ---@param self Board
 ---@return table 覆盖物表
-function Board:get_overlays()
+function Board:GetOverlays()
   return self.overlays
 end
 
 ---在指定位置放置路障
 ---@param self Board
 ---@param index number 位置索引
-function Board:place_roadblock(index)
+function Board:PlaceRoadblock(index)
   self.overlays.roadblocks = self.overlays.roadblocks or {}
   self.overlays.roadblocks[index] = true
 end
@@ -112,21 +112,21 @@ end
 ---@param self Board
 ---@param index number 位置索引
 ---@return boolean 是否有路障
-function Board:has_roadblock(index)
+function Board:HasRoadblock(index)
   return self.overlays.roadblocks[index] and true or false
 end
 
 ---清除指定位置的路障
 ---@param self Board
 ---@param index number 位置索引
-function Board:clear_roadblock(index)
+function Board:ClearRoadblock(index)
   self.overlays.roadblocks[index] = nil
 end
 
 ---在指定位置放置地雷
 ---@param self Board
 ---@param index number 位置索引
-function Board:place_mine(index)
+function Board:PlaceMine(index)
   self.overlays.mines = self.overlays.mines or {}
   self.overlays.mines[index] = true
 end
@@ -135,23 +135,23 @@ end
 ---@param self Board
 ---@param index number 位置索引
 ---@return boolean 是否有地雷
-function Board:has_mine(index)
+function Board:HasMine(index)
   return self.overlays.mines[index] and true or false
 end
 
 ---清除指定位置的地雷
 ---@param self Board
 ---@param index number 位置索引
-function Board:clear_mine(index)
+function Board:ClearMine(index)
   self.overlays.mines[index] = nil
 end
 
 ---清除指定位置的所有覆盖物（路障和地雷）
 ---@param self Board
 ---@param index number 位置索引
-function Board:clear_all(index)
-  self:clear_roadblock(index)
-  self:clear_mine(index)
+function Board:ClearAll(index)
+  self:ClearRoadblock(index)
+  self:ClearMine(index)
 end
 
 
@@ -161,8 +161,8 @@ end
 ---@param steps number 要移动的步数
 ---@param branch_parity number? 分支奇偶性（用于分支选择）
 ---@return number, number 新位置索引和绕圈次数
-function Board:advance(index, steps, branch_parity)
-  local length = self:length()
+function Board:Advance(index, steps, branch_parity)
+  local length = self:Length()
   if length == 0 then
     return index, 0
   end
@@ -193,10 +193,10 @@ end
 ---@param facing string? 面向方向（如"up"、"right"等）
 ---@param parity number? 奇偶性用于市场出口
 ---@return number, number, string 新位置、绕圈次数、新方向
-function Board:step_forward_by_facing(current_index, facing, parity)
+function Board:StepForwardByFacing(current_index, facing, parity)
   local map = self.map
 
-  local current_tile = self:get_tile(current_index)
+  local current_tile = self:GetTile(current_index)
   assert(current_tile ~= nil, "missing current tile: " .. tostring(current_index))
   local current_id = current_tile.id
   local neigh = map.neighbors[current_id]
@@ -207,7 +207,7 @@ function Board:step_forward_by_facing(current_index, facing, parity)
     local entry = map.entry_points[current_id]
     if entry and parity and (parity % 2 == 0) and facing then
       local prev_id = map.outer_prev[current_id]
-      local required_facing = map.direction(prev_id, current_id)
+      local required_facing = map.Direction(prev_id, current_id)
       if required_facing == facing then
         next_id = entry.inner_id
       end
@@ -231,10 +231,10 @@ function Board:step_forward_by_facing(current_index, facing, parity)
       next_id = neigh[facing]
     else
       local back_dir = OPPOSITE[facing]
-      local _, nid = pick_any_dir(neigh, back_dir)
+      local _, nid = _PickAnyDir(neigh, back_dir)
       next_id = nid
       if not next_id then
-        local _, nid2 = pick_any_dir(neigh, nil)
+        local _, nid2 = _PickAnyDir(neigh, nil)
         next_id = nid2
       end
     end
@@ -242,13 +242,13 @@ function Board:step_forward_by_facing(current_index, facing, parity)
 
   assert(next_id ~= nil, "missing next tile id from: " .. tostring(current_id))
 
-  local next_index = self:index_of_tile_id(next_id)
+  local next_index = self:IndexOfTileId(next_id)
   assert(next_index ~= nil, "missing next tile index: " .. tostring(next_id))
   local passed_start = 0
   if next_id == map.start_id then
     passed_start = 1
   end
-  local step_dir = map.direction(current_id, next_id) or facing
+  local step_dir = map.Direction(current_id, next_id) or facing
   return next_index, passed_start, step_dir
 end
 
@@ -258,10 +258,10 @@ end
 ---@param facing string? 面向方向
 ---@param _parity number? 奇偶性（后退时不使用）
 ---@return number, number, string 新位置、绕圈次数、新方向
-function Board:step_backward_by_facing(current_index, facing, _parity)
+function Board:StepBackwardByFacing(current_index, facing, _parity)
   local map = self.map
 
-  local current_tile = self:get_tile(current_index)
+  local current_tile = self:GetTile(current_index)
   assert(current_tile ~= nil, "missing current tile: " .. tostring(current_index))
   local current_id = current_tile.id
   local neigh = map.neighbors[current_id]
@@ -279,24 +279,24 @@ function Board:step_backward_by_facing(current_index, facing, _parity)
   end
 
   if not next_id and facing then
-    local _, nid = pick_any_dir(neigh, facing)
+    local _, nid = _PickAnyDir(neigh, facing)
     next_id = nid
   end
 
   if not next_id then
-    local _, nid = pick_any_dir(neigh, nil)
+    local _, nid = _PickAnyDir(neigh, nil)
     next_id = nid
   end
 
   assert(next_id ~= nil, "missing prev tile id from: " .. tostring(current_id))
 
-  local next_index = self:index_of_tile_id(next_id)
+  local next_index = self:IndexOfTileId(next_id)
   assert(next_index ~= nil, "missing prev tile index: " .. tostring(next_id))
   local passed_start = 0
   if next_id == map.start_id then
     passed_start = 1
   end
-  local step_dir = map.direction(current_id, next_id) or facing
+  local step_dir = map.Direction(current_id, next_id) or facing
   return next_index, passed_start, step_dir
 end
 

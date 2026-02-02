@@ -1,4 +1,4 @@
-local Pricing = require("Manager.LandManager.Land.LandPricing")
+local Pricing = require("Manager.LandManager.LandPricing")
 
 local Panel = {}
 

@@ -9,7 +9,7 @@ local logger = {
   end,
 }
 
-local function stringify(...)
+local function _Stringify(...)
   local parts = {}
   for i = 1, select("#", ...) do
     parts[i] = tostring(select(i, ...))
@@ -17,18 +17,18 @@ local function stringify(...)
   return table.concat(parts, " ")
 end
 
-local function get_timestamp()
+local function _GetTimestamp()
   return logger.timestamp_provider()
 end
 
-local function format_timestamp(timestamp)
+local function _FormatTimestamp(timestamp)
   return logger.time_formatter(timestamp)
 end
 
-local function push(level, ...)
-  local text = stringify(...)
-  local timestamp = get_timestamp()
-  local time_text = format_timestamp(timestamp)
+local function _Push(level, ...)
+  local text = _Stringify(...)
+  local timestamp = _GetTimestamp()
+  local time_text = _FormatTimestamp(timestamp)
   local entry = {
     level = level,
     text = text,
@@ -41,29 +41,29 @@ local function push(level, ...)
   end
 end
 
-function logger.set_timestamp_provider(provider)
+function logger.SetTimestampProvider(provider)
   logger.timestamp_provider = provider
 end
 
-function logger.set_time_formatter(formatter)
+function logger.SetTimeFormatter(formatter)
   logger.time_formatter = formatter
 end
 
-function logger.configure_game_time()
+function logger.ConfigureGameTime()
   local game_api = GameAPI
   assert(game_api ~= nil, "missing GameAPI")
-  logger.set_timestamp_provider(function()
+  logger.SetTimestampProvider(function()
     return game_api.get_timestamp()
   end)
 
-  local function pad2(value)
+  local function _Pad2(value)
     if value < 10 then
       return "0" .. tostring(value)
     end
     return tostring(value)
   end
 
-  logger.set_time_formatter(function(timestamp)
+  logger.SetTimeFormatter(function(timestamp)
     assert(timestamp ~= nil, "missing timestamp")
     local year = game_api.get_year(timestamp)
     local month = game_api.get_month(timestamp)
@@ -71,28 +71,28 @@ function logger.configure_game_time()
     local hour = game_api.get_hour(timestamp)
     local minute = game_api.get_minute(timestamp)
     local second = game_api.get_second(timestamp)
-    return tostring(year) .. "-" .. pad2(month) .. "-" .. pad2(day)
-      .. " " .. pad2(hour) .. ":" .. pad2(minute) .. ":" .. pad2(second)
+    return tostring(year) .. "-" .. _Pad2(month) .. "-" .. _Pad2(day)
+      .. " " .. _Pad2(hour) .. ":" .. _Pad2(minute) .. ":" .. _Pad2(second)
   end)
 end
 
-function logger.set_file_io_enabled(enabled)
+function logger.SetFileIoEnabled(enabled)
   logger.enable_file_io = enabled == true
 end
 
-function logger.info(...)
-  push("info", ...)
+function logger.Info(...)
+  _Push("info", ...)
 end
 
-function logger.warn(...)
-  push("warn", ...)
+function logger.Warn(...)
+  _Push("warn", ...)
 end
 
-function logger.event(...)
-  push("event", ...)
+function logger.Event(...)
+  _Push("event", ...)
 end
 
-function logger.clear()
+function logger.Clear()
   logger.entries = {}
 end
 

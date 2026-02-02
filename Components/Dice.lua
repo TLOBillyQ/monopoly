@@ -10,7 +10,7 @@ local Dice = Class("Dice")
 ---@param rng RNG 随机数生成器
 ---@return number[] 每个骰子的结果
 ---@return number 总和
-function Dice.roll(count, override_values, rng)
+function Dice.Roll(count, override_values, rng)
   local results = {}
   local total = 0
   if override_values and #override_values > 0 then
@@ -21,7 +21,7 @@ function Dice.roll(count, override_values, rng)
     end
     return results, total
   end
-  assert(rng and rng.next_int, "Dice.roll requires rng")
+  assert(rng and rng.next_int, "Dice.Roll requires rng")
   for _ = 1, count do
     local v = rng:next_int(1, 6)
     table.insert(results, v)

@@ -10,7 +10,7 @@ local Flow = Class("Flow")
 
 ---创建新状态机实例
 ---@param opts table 选项表（states/start/args）
-function Flow:init(opts)
+function Flow:Init(opts)
   self.states = opts.states or {}
   self.current = opts.start or nil
   self.args = opts.args or {}
@@ -23,7 +23,7 @@ end
 ---执行一步状态转移
 ---@param self Flow
 ---@return string? 下一个状态名，nil表示完成
-function Flow:step()
+function Flow:Step()
   assert(self.current ~= nil, "flow current state missing")
   local fn = self.states[self.current]
   assert(fn, "flow state not found: " .. tostring(self.current))

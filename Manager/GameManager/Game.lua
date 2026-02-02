@@ -10,43 +10,43 @@ for key, fn in pairs(GameState) do
   Game[key] = fn
 end
 
-Game.check_victory = GameVictory.check_victory
+Game.CheckVictory = GameVictory.CheckVictory
 
-function Game:init(opts)
+function Game:Init(opts)
   if opts and opts.__skip_assemble then
     return
   end
-  CompositionRoot.assemble(opts, self)
+  CompositionRoot.Assemble(opts, self)
 end
 
-function Game:advance_turn()
+function Game:AdvanceTurn()
   if self.finished then
     return
   end
   if self.turn_manager then
-    self.turn_manager:run_turn()
+    self.turn_manager:RunTurn()
   end
-  self:check_victory()
+  self:CheckVictory()
 end
 
-function Game:dispatch_action(action)
+function Game:DispatchAction(action)
   if self.finished then
     return
   end
   if self.turn_manager then
-    self.turn_manager:dispatch(action)
+    self.turn_manager:Dispatch(action)
   end
-  self:check_victory()
+  self:CheckVictory()
 end
 
-function Game:get_service(key, context)
+function Game:GetService(key, context)
   if context and context.services and context.services[key] then
     return context.services[key]
   end
   return self.services and self.services[key]
 end
 
-function Game:get_services(context)
+function Game:GetServices(context)
   if context and context.services then
     return context.services
   end

@@ -1,19 +1,19 @@
 -- Quick regression checks (run with: lua .github/tests/regression.lua)
 local App = require("Manager.GameManager.Game")
-local MovementService = require("Manager.MovementManager.Movement.MovementService")
-local TurnManager = require("Manager.TurnManager.Turn.TurnManager")
-local TurnMove = require("Manager.TurnManager.Turn.TurnMove")
-local Inventory = require("Manager.ItemManager.Item.ItemInventory")
-local Executor = require("Manager.ItemManager.Item.ItemExecutor")
-local Pricing = require("Manager.LandManager.Land.LandPricing")
-local LandActions = require("Manager.LandManager.Land.LandActions")
-local Steal = require("Manager.ItemManager.Item.ItemSteal")
+local MovementManager = require("Manager.MovementManager.MovementManager")
+local TurnManager = require("Manager.TurnManager.TurnManager")
+local TurnMove = require("Manager.TurnManager.TurnMove")
+local Inventory = require("Manager.ItemManager.ItemInventory")
+local Executor = require("Manager.ItemManager.ItemExecutor")
+local Pricing = require("Manager.LandManager.LandPricing")
+local LandActions = require("Manager.LandManager.LandActions")
+local Steal = require("Manager.ItemManager.ItemSteal")
 local ChanceEffects = require("Manager.ChanceManager.Chance")
 local LandingDefs = require("Config.LandingEffects")
-local EffectPipeline = require("Manager.EffectManager.Effect.EffectPipeline")
-local Effect = require("Manager.EffectManager.Effect.Effect")
-local ChoiceService = require("Manager.ChoiceManager.Choice.ChoiceService")
-local BoardUtils = require("Manager.ItemManager.Item.ItemBoardUtils")
+local EffectPipeline = require("Manager.EffectManager.EffectPipeline")
+local Effect = require("Manager.EffectManager.Effect")
+local ChoiceManager = require("Manager.ChoiceManager.ChoiceManager")
+local BoardUtils = require("Manager.ItemManager.ItemBoardUtils")
 local GameplayLoop = require("Manager.TurnManager.GameplayLoop")
 local Constants = require("Config.Generated.Constants")
 local MapCfg = require("Config.Map")
@@ -212,7 +212,7 @@ local function test_pass_start()
   local p = g:current_player()
   -- Passing start means stepping onto tile id 35.
   g:update_player_position(p, g.board:index_of_tile_id(24))
-  local res = MovementService.move(g, p, 1, { branch_parity = 1 })
+  local res = MovementManager.move(g, p, 1, { branch_parity = 1 })
   assert_eq(res.passed_start, 1, "pass_start bonus")
 end
 
@@ -273,7 +273,7 @@ local function test_roadblock_stop()
   local g = new_game()
   local p = g:current_player()
   g.board:place_roadblock(2)
-  local res = MovementService.move(g, p, 3, { branch_parity = 3 })
+  local res = MovementManager.move(g, p, 3, { branch_parity = 3 })
   assert_eq(res.stopped_on_roadblock, true, "stopped on roadblock")
   assert_eq(p.position, 2, "position should stop at roadblock")
 end
@@ -294,7 +294,7 @@ local function test_monster_card()
     local pending = get_choice(g)
     assert(pending and pending.kind == "demolish_target", "monster should open choice")
     local first = pending.options[1]
-    ChoiceService.resolve(g, pending, { option_id = first.id })
+    ChoiceManager.resolve(g, pending, { option_id = first.id })
     res = true
   end
   local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
@@ -321,7 +321,7 @@ local function test_missile_card()
     local pending = get_choice(g)
     assert(pending and pending.kind == "demolish_target", "missile should open choice")
     local first = pending.options[1]
-    ChoiceService.resolve(g, pending, { option_id = first.id })
+    ChoiceManager.resolve(g, pending, { option_id = first.id })
     res = true
   end
   local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
@@ -356,7 +356,7 @@ local function test_landing_optional_waits_without_ui_and_can_resolve()
   assert(pending and pending.kind == "landing_optional_effect", "pending choice expected")
   local first = pending.options and pending.options[1]
   assert(first, "expected at least one optional effect")
-  ChoiceService.resolve(g, pending, { option_id = first.id })
+  ChoiceManager.resolve(g, pending, { option_id = first.id })
   assert(tile_state(g, tile).owner_id == p.id, "land should be purchased after resolving choice")
   assert(p.cash < before_cash, "cash deducted for purchase")
 end
@@ -412,7 +412,7 @@ local function test_landing_optional_stale_choice_is_blocked()
   -- Invalidate the option after choice is shown (simulate state change).
   p:set_cash(0)
 
-  ChoiceService.resolve(g, pending, { option_id = "buy_land" })
+  ChoiceManager.resolve(g, pending, { option_id = "buy_land" })
   assert(tile_state(g, tile).owner_id == nil, "stale buy_land should be blocked")
 end
 
@@ -447,19 +447,19 @@ local function test_movement_examples_from_issue()
 
   -- 例子1: 起点=海口路(3)，步数=4，终点=天津路(32)
   g:update_player_position(p, g.board:index_of_tile_id(3))
-  local r1 = MovementService.move(g, p, 4, { branch_parity = 4, skip_market_check = true })
+  local r1 = MovementManager.move(g, p, 4, { branch_parity = 4, skip_market_check = true })
   assert_eq(g.board:get_tile(p.position).id, 32, "example1 end tile")
   assert(#r1.visited == 4, "example1 visited steps")
 
   -- 例子2: 起点=天津路(32)，当前方向向下(下一格31)，步数=6，终点=澳门路(6)
   g:update_player_position(p, g.board:index_of_tile_id(32))
-  local r2 = MovementService.move(g, p, 6, { branch_parity = 6, direction = "down", skip_market_check = true })
+  local r2 = MovementManager.move(g, p, 6, { branch_parity = 6, direction = "down", skip_market_check = true })
   assert_eq(g.board:get_tile(p.position).id, 6, "example2 end tile")
   assert(#r2.visited == 6, "example2 visited steps")
 
   -- 例子3: 起点=南昌路(25)，当前方向向右，步数=12，终点=南宁路(7)
   g:update_player_position(p, g.board:index_of_tile_id(25))
-  local r3 = MovementService.move(g, p, 12, { branch_parity = 12, direction = "right", skip_market_check = true })
+  local r3 = MovementManager.move(g, p, 12, { branch_parity = 12, direction = "right", skip_market_check = true })
   assert_eq(g.board:get_tile(p.position).id, 7, "example3 end tile")
   assert(#r3.visited == 12, "example3 visited steps")
 end
@@ -492,7 +492,7 @@ local function test_ai_picks_land_purchase()
   assert(action.option_id == "buy_land", "AI should pick buy_land")
   
   local before_cash = ai_player.cash
-  ChoiceService.resolve(g, pending, action)
+  ChoiceManager.resolve(g, pending, action)
   assert(ai_player.cash == before_cash - tile.price, "AI cash should decrease by land price")
   assert(tile_state(g, tile).owner_id == ai_player.id, "land should be purchased")
 end
@@ -554,7 +554,7 @@ local function test_bankruptcy_resets_owned_tiles()
 end
 
 local function test_ai_skips_auto_buy_at_market()
-  local MarketService = require("Manager.MarketManager.Market.MarketService")
+  local MarketManager = require("Manager.MarketManager.MarketManager")
   local g = new_game()
   local ai_player = g.players[2]
   assert(ai_player.is_ai, "player 2 should be AI")
@@ -563,7 +563,7 @@ local function test_ai_skips_auto_buy_at_market()
   ai_player:set_cash(1000)
   
   local before_cash = ai_player.cash
-  MarketService.auto_buy(g, ai_player)
+  MarketManager.auto_buy(g, ai_player)
   
   -- AI should not buy anything
   assert(ai_player.cash == before_cash, "AI should not spend money on auto_buy")
@@ -640,7 +640,7 @@ local function test_item_equalize_cash()
     local pending = get_choice(g)
     assert(pending and pending.kind == "item_target_player", "equalize should open choice")
     local first = pending.options[1]
-    ChoiceService.resolve(g, pending, { option_id = first.id })
+    ChoiceManager.resolve(g, pending, { option_id = first.id })
     res = true
   end
   local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
@@ -650,7 +650,7 @@ local function test_item_equalize_cash()
 end
 
 local function test_market_full_inventory_blocks_items()
-  local MarketService = require("Manager.MarketManager.Market.MarketService")
+  local MarketManager = require("Manager.MarketManager.MarketManager")
   local g = new_game()
   local p = g:current_player()
   p:set_cash(999999)
@@ -658,14 +658,14 @@ local function test_market_full_inventory_blocks_items()
     p.inventory:add({ id = 2001 })
   end
 
-  local list = MarketService.list_buyable(p, g)
+  local list = MarketManager.list_buyable(p, g)
   for _, entry in ipairs(list) do
     assert(entry.kind ~= "item", "item should be excluded when inventory full")
   end
 end
 
 local function test_market_global_limit()
-  local MarketService = require("Manager.MarketManager.Market.MarketService")
+  local MarketManager = require("Manager.MarketManager.MarketManager")
   local market_cfg = require("Config.Generated.Market")
   local g = new_game()
   local p = g:current_player()
@@ -680,16 +680,16 @@ local function test_market_global_limit()
   p:set_cash((entry.price or 0) + 1000)
   g.store:set({ "market", "global_limits", entry.product_id }, 1)
 
-  local res = MarketService.buy_with_opts(g, p, entry.product_id, nil)
+  local res = MarketManager.buy_with_opts(g, p, entry.product_id, nil)
   local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
   assert(ok, "first purchase should succeed")
 
-  local list = MarketService.list_buyable(p, g)
+  local list = MarketManager.list_buyable(p, g)
   for _, item in ipairs(list) do
     assert(item.product_id ~= entry.product_id, "sold out item should be excluded from list")
   end
 
-  local spec = MarketService.build_choice_spec(p, g)
+  local spec = MarketManager.build_choice_spec(p, g)
   if spec and spec.options then
     for _, option in ipairs(spec.options) do
       assert(option.id ~= entry.product_id, "sold out item should be excluded from choice")
@@ -712,7 +712,7 @@ local function test_movement_backward_wrap()
   local g = new_game()
   local p = g:current_player()
   g:update_player_position(p, 1)
-  local res = MovementService.move(g, p, -1, { branch_parity = 1 })
+  local res = MovementManager.move(g, p, -1, { branch_parity = 1 })
   assert(p.position >= 1 and p.position <= g.board:length(), "backward index in range")
   assert(#res.visited == 1, "visited steps")
 end
@@ -747,7 +747,7 @@ local function test_invalid_choice_option_rejected()
     options = { { id = 1, label = "X" } },
     meta = { player_id = g:current_player().id },
   })
-  ChoiceService.resolve(g, choice, { option_id = 999 })
+  ChoiceManager.resolve(g, choice, { option_id = 999 })
   assert(get_choice(g) == nil, "invalid option should clear choice")
 end
 
@@ -965,7 +965,7 @@ local function test_complex_consecutive_turn_settlement()
   
   -- 第一步：移动3格，经过p2，到达机会卡格子
   -- branch_parity 用于在分叉路口选择方向，设为与步数相同确保一致性
-  local res1 = MovementService.move(g, p1, 3, { branch_parity = 3, skip_market_check = true })
+  local res1 = MovementManager.move(g, p1, 3, { branch_parity = 3, skip_market_check = true })
   local first_res = res1
   if res1.steal_interrupt then
     local interrupt = res1.steal_interrupt
@@ -973,12 +973,12 @@ local function test_complex_consecutive_turn_settlement()
     if steal_res and steal_res.waiting then
       local pending = get_choice(g)
       if pending and pending.options and #pending.options > 0 then
-        ChoiceService.resolve(g, pending, { option_id = pending.options[1].id })
+        ChoiceManager.resolve(g, pending, { option_id = pending.options[1].id })
       elseif pending and pending.allow_cancel then
-        ChoiceService.resolve(g, pending, { type = "choice_cancel", choice_id = pending.id })
+        ChoiceManager.resolve(g, pending, { type = "choice_cancel", choice_id = pending.id })
       end
     end
-    res1 = MovementService.move(g, p1, interrupt.remaining_steps, {
+    res1 = MovementManager.move(g, p1, interrupt.remaining_steps, {
       branch_parity = interrupt.branch_parity,
       direction = interrupt.facing,
       skip_market_check = true,
@@ -1008,9 +1008,9 @@ local function test_complex_consecutive_turn_settlement()
     
     -- 自动选择第一个选项或取消
     if pending.options and #pending.options > 0 then
-      ChoiceService.resolve(g, pending, { option_id = pending.options[1].id })
+      ChoiceManager.resolve(g, pending, { option_id = pending.options[1].id })
     elseif pending.allow_cancel then
-      ChoiceService.resolve(g, pending, { type = "choice_cancel", choice_id = pending.id })
+      ChoiceManager.resolve(g, pending, { type = "choice_cancel", choice_id = pending.id })
     else
       break
     end
@@ -1093,7 +1093,7 @@ local function test_complex_market_interrupt_with_rent()
   
   -- 移动
   local initial_cash = p1.cash
-  local res = MovementService.move(g, p1, move_distance, { branch_parity = move_distance })
+  local res = MovementManager.move(g, p1, move_distance, { branch_parity = move_distance })
   
   -- 如果触发了黑市中断
   local has_market_interrupt = res.market_interrupt and true or false
@@ -1113,9 +1113,9 @@ local function test_complex_market_interrupt_with_rent()
       end
       
       if pending.options and #pending.options > 0 then
-        ChoiceService.resolve(g, pending, { option_id = pending.options[1].id })
+        ChoiceManager.resolve(g, pending, { option_id = pending.options[1].id })
       elseif pending.allow_cancel then
-        ChoiceService.resolve(g, pending, { type = "choice_cancel", choice_id = pending.id })
+        ChoiceManager.resolve(g, pending, { type = "choice_cancel", choice_id = pending.id })
       else
         break
       end

@@ -9,18 +9,18 @@ local TilesCfg = require("Config.Generated.Tiles")
 local MapCfg = require("Config.Map")
 require "Library.Utils"
 local Store = require("Components.Store")
-local TurnManager = require("Manager.TurnManager.Turn.TurnManager")
-local TurnStart = require("Manager.TurnManager.Turn.TurnStart")
-local TurnRoll = require("Manager.TurnManager.Turn.TurnRoll")
-local TurnMove = require("Manager.TurnManager.Turn.TurnMove")
-local TurnLand = require("Manager.TurnManager.Turn.TurnLand")
-local TurnPost = require("Manager.TurnManager.Turn.TurnPost")
-local TurnEnd = require("Manager.TurnManager.Turn.TurnEnd")
-local MovementService = require("Manager.MovementManager.Movement.MovementService")
-local MarketService = require("Manager.MarketManager.Market.MarketService")
-local BankruptcyService = require("Manager.GameManager.BankruptcyService")
-local ChoiceService = require("Manager.ChoiceManager.Choice.ChoiceService")
-local ItemRegistry = require("Manager.ItemManager.Item.ItemRegistry")
+local TurnManager = require("Manager.TurnManager.TurnManager")
+local TurnStart = require("Manager.TurnManager.TurnStart")
+local TurnRoll = require("Manager.TurnManager.TurnRoll")
+local TurnMove = require("Manager.TurnManager.TurnMove")
+local TurnLand = require("Manager.TurnManager.TurnLand")
+local TurnPost = require("Manager.TurnManager.TurnPost")
+local TurnEnd = require("Manager.TurnManager.TurnEnd")
+local MovementManager = require("Manager.MovementManager.MovementManager")
+local MarketManager = require("Manager.MarketManager.MarketManager")
+local BankruptcyManager = require("Manager.GameManager.BankruptcyManager")
+local ChoiceManager = require("Manager.ChoiceManager.ChoiceManager")
+local ItemRegistry = require("Manager.ItemManager.ItemRegistry")
 local ChanceRegistry = require("Manager.ChanceManager.ChanceRegistry")
 local Logger = require("Components.Logger")
 local MarketCfg = require("Config.Generated.Market")
@@ -30,15 +30,15 @@ local CompositionRoot = {}
 
 local deep_copy = Utils.deep_copy
 
-local function new_rng(seed)
+local function _NewRng(seed)
   assert(seed ~= nil, "missing rng seed")
   local rng = {
     seed = seed,
     state = seed,
   }
 
-  function rng:next_int(min, max)
-    assert(min ~= nil and max ~= nil, "rng.next_int requires min/max")
+  function rng:NextInt(min, max)
+    assert(min ~= nil and max ~= nil, "rng.NextInt requires min/max")
     local curr = self.state
     assert(curr ~= nil, "missing rng state")
     curr = (curr * 1103515245 + 12345) % 2147483648
@@ -48,7 +48,7 @@ local function new_rng(seed)
     return min + (curr % span)
   end
 
-  function rng:snapshot()
+  function rng:Snapshot()
     return { seed = self.seed, state = self.state }
   end
 
@@ -56,7 +56,7 @@ local function new_rng(seed)
 end
 
 
-local function create_board(opts)
+local function _CreateBoard(opts)
   assert(opts ~= nil, "missing board opts")
   local tiles = assert(opts.tiles, "missing tiles config")
   local MapCfg = assert(opts.map, "missing map config")
@@ -80,7 +80,7 @@ local function create_board(opts)
   })
 end
 
-local function create_players(opts)
+local function _CreatePlayers(opts)
   local players = {}
   local names = assert(opts.players, "missing player names")
   if #names == 1 then
@@ -110,11 +110,11 @@ local function create_players(opts)
   return players
 end
 
-local function snapshot_inventory(inv)
+local function _SnapshotInventory(inv)
   return { items = deep_copy(inv.items), max_slots = inv.max_slots }
 end
 
-local function snapshot_players(players)
+local function _SnapshotPlayers(players)
   local ps = {}
   for _, p in ipairs(players) do
     ps[p.id] = {
@@ -130,13 +130,13 @@ local function snapshot_players(players)
       eliminated = p.eliminated,
       properties = deep_copy(p.properties),
       status = deep_copy(p.status),
-      inventory = snapshot_inventory(p.inventory),
+      inventory = _SnapshotInventory(p.inventory),
     }
   end
   return ps
 end
 
-local function snapshot_tiles(path)
+local function _SnapshotTiles(path)
   local ts = {}
   for _, tile in ipairs(path) do
     if tile.type == "land" then
@@ -146,7 +146,7 @@ local function snapshot_tiles(path)
   return ts
 end
 
-local function snapshot_market_limits()
+local function _SnapshotMarketLimits()
   local limits = {}
   for _, entry in ipairs(MarketCfg) do
     local limit = entry.limit
@@ -157,10 +157,10 @@ local function snapshot_market_limits()
   return limits
 end
 
-local function build_initial_state(board, players, rng)
+local function _BuildInitialState(board, players, rng)
   return {
-    board = { tiles = snapshot_tiles(board.path) },
-    market = { global_limits = snapshot_market_limits() },
+    board = { tiles = _SnapshotTiles(board.path) },
+    market = { global_limits = _SnapshotMarketLimits() },
     turn = {
       current_player_index = 1,
       turn_count = 0,
@@ -173,20 +173,20 @@ local function build_initial_state(board, players, rng)
       action_anim = nil,
       item_phase = {},
     },
-    rng = rng:snapshot(),
-    players = snapshot_players(players),
+    rng = rng:Snapshot(),
+    players = _SnapshotPlayers(players),
   }
 end
 
 
-function CompositionRoot.assemble(opts, game_or_class)
+function CompositionRoot.Assemble(opts, game_or_class)
   assert(opts ~= nil, "missing assemble opts")
 
-  local board = create_board(opts)
-  local rng = new_rng(opts.seed)
-  local players = create_players(opts)
+  local board = _CreateBoard(opts)
+  local rng = _NewRng(opts.seed)
+  local players = _CreatePlayers(opts)
 
-  local initial_state = build_initial_state(board, players, rng)
+  local initial_state = _BuildInitialState(board, players, rng)
   local store = Store:new(initial_state)
 
   rng._store = store
@@ -195,12 +195,12 @@ function CompositionRoot.assemble(opts, game_or_class)
     p._store = store
     local pid = p.id
     p.inventory._on_change = function(inv)
-      store:set({ "players", pid, "inventory" }, snapshot_inventory(inv))
+      store:Set({ "players", pid, "inventory" }, _SnapshotInventory(inv))
     end
   end
 
-  ItemRegistry.register_defaults()
-  ChanceRegistry.register_defaults()
+  ItemRegistry.RegisterDefaults()
+  ChanceRegistry.RegisterDefaults()
   local phases = {
     start = TurnStart,
     roll = TurnRoll,
@@ -210,17 +210,17 @@ function CompositionRoot.assemble(opts, game_or_class)
     end_turn = TurnEnd,
   }
   local services = {
-    [ServiceKey.movement] = MovementService,
-    [ServiceKey.market] = MarketService,
-    [ServiceKey.bankruptcy] = BankruptcyService,
-    [ServiceKey.choice] = ChoiceService,
+    [ServiceKey.movement] = MovementManager,
+    [ServiceKey.market] = MarketManager,
+    [ServiceKey.bankruptcy] = BankruptcyManager,
+    [ServiceKey.choice] = ChoiceManager,
   }
 
   local game = game_or_class
   if type(game_or_class) == "table" and rawget(game_or_class, "__name") and rawget(game_or_class, "new") then
     game = game_or_class:new({ __skip_assemble = true })
   end
-  assert(game, "CompositionRoot.assemble requires game instance or class")
+  assert(game, "CompositionRoot.Assemble requires game instance or class")
   game.board = board
   game.players = players
   game.store = store
@@ -231,13 +231,13 @@ function CompositionRoot.assemble(opts, game_or_class)
   game.last_turn = nil
   game.services = services
 
-  game:rebuild()
+  game:Rebuild()
   game.turn_manager = TurnManager:new(game, phases)
 
   return game
 end
 
-CompositionRoot.snapshot_inventory = snapshot_inventory
+CompositionRoot.SnapshotInventory = _SnapshotInventory
 
 return CompositionRoot
 

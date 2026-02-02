@@ -7,7 +7,7 @@ for _, t in ipairs(TilesCfg) do
   id_by_coord[t.row .. "," .. t.col] = t.id
 end
 
-local function direction(from_id, to_id)
+local function _Direction(from_id, to_id)
   local a = coord_by_id[from_id]
   local b = coord_by_id[to_id]
   assert(a and b, "missing coord: " .. tostring(from_id) .. " -> " .. tostring(to_id))
@@ -25,16 +25,16 @@ local function direction(from_id, to_id)
   assert(false, "invalid direction: " .. tostring(from_id) .. " -> " .. tostring(to_id))
 end
 
-local function id_at(coord)
+local function _IdAt(coord)
   local id = id_by_coord[coord[1] .. "," .. coord[2]]
   assert(id, "missing tile at (" .. tostring(coord[1]) .. "," .. tostring(coord[2]) .. ")")
   return id
 end
 
-local function to_ids(coords)
+local function _ToIds(coords)
   local ids = {}
   for i, coord in ipairs(coords) do
-    ids[i] = id_at(coord)
+    ids[i] = _IdAt(coord)
   end
   return ids
 end
@@ -53,9 +53,9 @@ local TURN_RIGHT = {
   left = "up",
 }
 
-local function add_neighbor(neighbors, a, b)
-  local d_ab = direction(a, b)
-  local d_ba = direction(b, a)
+local function _AddNeighbor(neighbors, a, b)
+  local d_ab = _Direction(a, b)
+  local d_ba = _Direction(b, a)
   assert(d_ab and d_ba, "invalid edge (not orthogonal adjacent): " .. tostring(a) .. " <-> " .. tostring(b))
   neighbors[a] = neighbors[a] or {}
   neighbors[b] = neighbors[b] or {}
@@ -70,7 +70,7 @@ local outer_ccw_coords = {
   { 2, 9 }, { 3, 9 }, { 4, 9 }, { 5, 9 }, { 6, 9 }, { 7, 9 }, { 8, 9 },
 }
 
-local outer_ccw_ids = to_ids(outer_ccw_coords)
+local outer_ccw_ids = _ToIds(outer_ccw_coords)
 
 local outer_next = {}
 local outer_prev = {}
@@ -82,34 +82,34 @@ for i, id in ipairs(outer_ccw_ids) do
 end
 
 local edges = {}
-local function chain(coords)
+local function _Chain(coords)
   for i = 1, #coords - 1 do
     table.insert(edges, { coords[i], coords[i + 1] })
   end
 end
 
-chain(outer_ccw_coords)
+_Chain(outer_ccw_coords)
 table.insert(edges, { outer_ccw_coords[#outer_ccw_coords], outer_ccw_coords[1] })
 
-chain({ { 9, 5 }, { 8, 5 }, { 7, 5 }, { 6, 5 }, { 5, 5 }, { 4, 5 }, { 3, 5 }, { 2, 5 }, { 1, 5 } })
-chain({ { 5, 1 }, { 5, 2 }, { 5, 3 }, { 5, 4 }, { 5, 5 }, { 5, 6 }, { 5, 7 }, { 5, 8 }, { 5, 9 } })
+_Chain({ { 9, 5 }, { 8, 5 }, { 7, 5 }, { 6, 5 }, { 5, 5 }, { 4, 5 }, { 3, 5 }, { 2, 5 }, { 1, 5 } })
+_Chain({ { 5, 1 }, { 5, 2 }, { 5, 3 }, { 5, 4 }, { 5, 5 }, { 5, 6 }, { 5, 7 }, { 5, 8 }, { 5, 9 } })
 
 local neighbors = {}
 for _, e in ipairs(edges) do
-  add_neighbor(neighbors, id_at(e[1]), id_at(e[2]))
+  _AddNeighbor(neighbors, _IdAt(e[1]), _IdAt(e[2]))
 end
 
 local entry_points = {}
-entry_points[id_at({ 9, 5 })] = { inner_id = id_at({ 8, 5 }) }
-entry_points[id_at({ 5, 1 })] = { inner_id = id_at({ 5, 2 }) }
-entry_points[id_at({ 1, 5 })] = { inner_id = id_at({ 2, 5 }) }
-entry_points[id_at({ 5, 9 })] = { inner_id = id_at({ 5, 8 }) }
+entry_points[_IdAt({ 9, 5 })] = { inner_id = _IdAt({ 8, 5 }) }
+entry_points[_IdAt({ 5, 1 })] = { inner_id = _IdAt({ 5, 2 }) }
+entry_points[_IdAt({ 1, 5 })] = { inner_id = _IdAt({ 2, 5 }) }
+entry_points[_IdAt({ 5, 9 })] = { inner_id = _IdAt({ 5, 8 }) }
 
 local path = {}
 for _, id in ipairs(outer_ccw_ids) do
   table.insert(path, id)
 end
-for _, id in ipairs(to_ids({
+for _, id in ipairs(_ToIds({
   { 5, 2 }, { 5, 3 }, { 5, 4 }, { 4, 5 }, { 3, 5 }, { 2, 5 }, { 7, 5 },
   { 6, 5 }, { 5, 7 }, { 5, 8 }, { 5, 5 }, { 5, 6 }, { 8, 5 },
 })) do
@@ -123,9 +123,9 @@ return {
   outer_prev = outer_prev,
   entry_points = entry_points,
   branches = {},
-  start_id = id_at({ 9, 9 }),
-  market_id = id_at({ 5, 5 }),
-  direction = direction,
+  start_id = _IdAt({ 9, 9 }),
+  market_id = _IdAt({ 5, 5 }),
+  Direction = _Direction,
   turn_left = TURN_LEFT,
   turn_right = TURN_RIGHT,
 }

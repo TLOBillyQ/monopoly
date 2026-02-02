@@ -4,14 +4,14 @@ local MonopolyEvent = require("Globals.MonopolyEvents")
 
 local ChanceEffects = {}
 
-local function emit_event(kind, payload)
+local function _EmitEvent(kind, payload)
   assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
   TriggerCustomEvent(kind, payload or {})
 end
 
-function ChanceEffects.resolve(game, player, card, context)
-  if card.negative and player:has_angel() then
-    emit_event(MonopolyEvent.chance.applied, {
+function ChanceEffects.Resolve(game, player, card, context)
+  if card.negative and player:HasAngel() then
+    _EmitEvent(MonopolyEvent.chance.applied, {
       player = player,
       card = card,
       effect = card.effect,

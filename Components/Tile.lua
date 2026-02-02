@@ -16,7 +16,7 @@ local Tile = Class("Tile")
 
 ---从配置创建新地块
 ---@param cfg table 地块配置（id/name/type/price等）
-function Tile:init(cfg)
+function Tile:Init(cfg)
   self.id = cfg.id
   self.name = cfg.name
   self.type = cfg.type
@@ -32,7 +32,7 @@ end
 ---从配置创建新地块
 ---@param cfg table 地块配置（id/name/type/price等）
 ---@return Tile 新地块对象
-function Tile.from_config(cfg)
+function Tile.FromConfig(cfg)
   return Tile:new(cfg)
 end
 
@@ -40,11 +40,11 @@ end
 ---@param game Game 游戏实例
 ---@param tile Tile 地块对象（必须是land类型）
 ---@return table 包含owner_id和level的状态表
-function Tile.get_state(game, tile)
-  assert(game and game.store, "Tile.get_state requires game.store")
-  assert(tile and tile.type == "land", "Tile.get_state requires land tile")
+function Tile.GetState(game, tile)
+  assert(game and game.store, "Tile.GetState requires game.store")
+  assert(tile and tile.type == "land", "Tile.GetState requires land tile")
 
-  local s = game.store:get({ "board", "tiles", tile.id })
+  local s = game.store:Get({ "board", "tiles", tile.id })
   assert(type(s) == "table", "missing tile state for tile " .. tostring(tile.id))
 
   return { owner_id = s.owner_id, level = s.level }
