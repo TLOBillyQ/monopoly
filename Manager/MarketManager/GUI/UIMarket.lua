@@ -67,34 +67,35 @@ local function resolve_market_level(cfg)
   return 2
 end
 
-local function resolve_ref_key(key)
+local function resolve_ref_key(refs, key)
   if type(key) == "number" then
     return key
   end
-  return G.refs[key]
+  return refs[key]
 end
 
-local function resolve_market_icon_key(product_id, entry, cfg)
+local function resolve_market_icon_key(refs, product_id, entry, cfg)
   local key = tostring(product_id)
-  local ref = G.refs[key]
+  local ref = refs[key]
   if ref then
     return ref
   end
   local name = cfg.name or entry.name
-  return G.refs[name]
+  return refs[name]
 end
 
 function EggyLayerMarket.refresh_market_selection(layer, option_id)
   local ui = layer.ui
   assert(ui ~= nil, "missing market ui")
   local price_text = ""
-  local icon_key = resolve_ref_key(MarketUI.empty_ref_key)
+  local refs = layer.ui_refs
+  local icon_key = resolve_ref_key(refs, MarketUI.empty_ref_key)
   assert(option_id ~= nil, "missing market option_id")
   local entry, cfg = resolve_market_entry(option_id)
   local price = resolve_market_price(entry)
   local currency = resolve_market_currency(entry)
   price_text = "售价：" .. tostring(price) .. " " .. currency
-  icon_key = resolve_market_icon_key(option_id, entry, cfg)
+  icon_key = resolve_market_icon_key(refs, option_id, entry, cfg)
   ui:set_label(MarketUI.price_label, price_text)
   local node = ui.query_node(MarketUI.selected_card)
   node.image_texture = icon_key
@@ -114,6 +115,7 @@ function EggyLayerMarket.open_market_panel(layer, pending)
   ui:set_visible(MarketUI.container, true)
   ui.market_active = true
 
+  local refs = layer.ui_refs
   local option_ids = {}
   local buttons = MarketUI.item_buttons
   local labels = MarketUI.item_labels
@@ -135,7 +137,7 @@ function EggyLayerMarket.open_market_panel(layer, pending)
       ui:set_touch_enabled(button, true)
       ui:set_visible(frame, true)
       local level = resolve_market_level(cfg)
-      local rarity_key = resolve_ref_key(MarketUI.rarity_ref_keys[level])
+      local rarity_key = resolve_ref_key(refs, MarketUI.rarity_ref_keys[level])
       local node = ui.query_node(frame)
       node.image_texture = rarity_key
     else
@@ -167,7 +169,7 @@ function EggyLayerMarket.close_market_panel(layer)
   layer.market_choice_option_ids = nil
   layer.pending_choice_selected_option_id = nil
   ui:set_label(MarketUI.price_label, "")
-  local empty_key = resolve_ref_key(MarketUI.empty_ref_key)
+  local empty_key = resolve_ref_key(layer.ui_refs, MarketUI.empty_ref_key)
   local node = ui.query_node(MarketUI.selected_card)
   node.image_texture = empty_key
   if node.reset_size then

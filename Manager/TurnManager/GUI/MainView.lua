@@ -10,6 +10,33 @@ function MainView.build_ui_state()
   return EggyLayerUI.build_ui_state()
 end
 
+function MainView.init_ui_assets(layer)
+  assert(layer ~= nil, "missing state")
+  local refs = require("Globals.Refs")
+  layer.ui_refs = refs
+
+  local function set_item_slot_image(slot_name, image_key)
+    assert(slot_name ~= nil, "missing slot name")
+    assert(image_key ~= nil, "missing image key for slot: " .. tostring(slot_name))
+    local nodes = UIManager.query_nodes_by_name(slot_name)
+    assert(nodes ~= nil, "missing ui nodes for slot: " .. tostring(slot_name))
+    for _, node in ipairs(nodes) do
+      node.image_texture = image_key
+    end
+  end
+
+  for _, role in ipairs(ALLROLES) do
+    UIManager.client_role = role
+    for i = 1, 5 do
+      local num = 3000 + i
+      local image_key = refs[tostring(num)]
+      assert(image_key ~= nil, "missing item icon: " .. tostring(num))
+      set_item_slot_image("道具槽位" .. tostring(i), image_key)
+    end
+  end
+  UIManager.client_role = nil
+end
+
 function MainView.refresh_panel(layer, view)
   EggyLayerUI.refresh_panel(layer, view)
 end

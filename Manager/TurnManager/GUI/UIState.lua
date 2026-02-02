@@ -100,7 +100,7 @@ function EggyLayerUI.refresh_item_slots(layer, view)
   local turn = view.state.turn
   local current = players[turn.current_player_index]
   local items = current.inventory.items
-  local refs = G.refs
+  local refs = layer.ui_refs
   local empty_key = refs["空"]
 
   for i, slot_name in ipairs(slots) do

@@ -13,12 +13,12 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
   assert(tile_count > 0, "missing tile_count")
   assert(log_once ~= nil, "missing log_once")
   assert(build_log_prefix ~= nil, "missing build_log_prefix")
+  local scene = assert(layer.board_scene, "missing board_scene")
 
   if not layer.tile_positions or #layer.tile_positions < tile_count then
-    assert(G ~= nil, "missing G")
-    assert(type(G.tiles) == "table", "missing G.tiles")
-    assert(#G.tiles >= tile_count, "insufficient G.tiles")
-    local tiles = G.tiles
+    assert(type(scene.tiles) == "table", "missing board_scene.tiles")
+    assert(#scene.tiles >= tile_count, "insufficient board_scene.tiles")
+    local tiles = scene.tiles
 
     local positions = {}
     for i = 1, tile_count do
@@ -163,10 +163,9 @@ function EggyLayerBoard.refresh_board(layer, view, log_once, build_log_prefix)
   end
 
   local spacing = layer.tile_spacing or 0
-  assert(G ~= nil, "missing G")
-  assert(G.ground ~= nil, "missing G.ground")
-  assert(G.ground.get_position ~= nil, "missing G.ground.get_position")
-  local ground_pos = G.ground.get_position()
+  assert(scene.ground ~= nil, "missing board_scene.ground")
+  assert(scene.ground.get_position ~= nil, "missing board_scene.ground.get_position")
+  local ground_pos = scene.ground.get_position()
   assert(ground_pos ~= nil and ground_pos.y ~= nil, "missing ground position")
   local ground_y = ground_pos.y
   local min_player_y = ground_y + 1.5
@@ -220,15 +219,16 @@ end
 function EggyLayerBoard.on_tile_upgraded(layer, tile_id, level)
   assert(tile_id ~= nil, "missing tile_id")
   assert(level ~= nil, "missing level")
-  assert(G ~= nil and G.buildings ~= nil, "missing G.buildings")
+  local scene = assert(layer.board_scene, "missing board_scene")
+  local buildings = assert(scene.buildings, "missing board_scene.buildings")
   local board = assert(layer.game and layer.game.board, "missing board")
   assert(board.index_of_tile_id ~= nil, "missing board.index_of_tile_id")
   local idx = assert(board:index_of_tile_id(tile_id), "missing tile index: " .. tostring(tile_id))
-  assert(G.buildings[idx] ~= nil, "missing building unit: " .. tostring(idx))
+  assert(buildings[idx] ~= nil, "missing building unit: " .. tostring(idx))
   local lv = assert(tonumber(level), "invalid level: " .. tostring(level))
   assert(lv >= 1 and lv <= 3, "invalid level: " .. tostring(lv))
   local root_quaternion = assert(Q_ZERO, "missing Q_ZERO")
-  BuildingEffects.spawn_upgrade_building_units(root_quaternion, idx, lv)
+  BuildingEffects.spawn_upgrade_building_units(scene, root_quaternion, idx, lv)
 end
 
 function EggyLayerBoard.on_tile_owner_changed(layer, tile_id, owner_id)

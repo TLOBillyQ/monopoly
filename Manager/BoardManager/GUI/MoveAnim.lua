@@ -6,9 +6,9 @@ end
 
 local MovementManager = {}
 
-function MovementManager.one_step(player_id, v3_dir, start_tile_id, end_tile_id)
-    local start_tile = G.tiles[start_tile_id]
-    local end_tile = G.tiles[end_tile_id]
+function MovementManager.one_step(scene, player_id, v3_dir, start_tile_id, end_tile_id)
+    local start_tile = scene.tiles[start_tile_id]
+    local end_tile = scene.tiles[end_tile_id]
 
     local pos_s = start_tile.get_position()
     local pos_e = end_tile.get_position()
@@ -19,7 +19,7 @@ function MovementManager.one_step(player_id, v3_dir, start_tile_id, end_tile_id)
     local dir = v3_dir
     dir = math.Vector3(dist.x / len, dist.y / len, dist.z / len)
 
-    local unit = G.unit[player_id]
+    local unit = scene.units_by_player_id[player_id]
     if unit.set_direction then
         unit.set_direction(dir)
     elseif unit.set_orientation then

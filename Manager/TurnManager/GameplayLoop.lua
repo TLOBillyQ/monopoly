@@ -433,7 +433,7 @@ function GameplayLoop.tick(game, state, dt)
           end
           assert(dir, "missing anim.direction")
           local MoveAnim = require("Manager.BoardManager.GUI.MoveAnim")
-          return MoveAnim.one_step(player_id, dir, from_index, to_index)
+          return MoveAnim.one_step(state.board_scene, player_id, dir, from_index, to_index)
         end,
       })
     end

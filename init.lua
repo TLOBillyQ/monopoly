@@ -2,6 +2,7 @@ require "Globals.__init"
 require "Manager.__init"
 
 local AutoRunner = require("Manager.TurnManager.GUI.AutoRunner")
+local BoardScene = require("Manager.BoardManager.GUI.BoardScene")
 local Game = require("Manager.GameManager.Game")
 local GameplayLoop = require("Manager.TurnManager.GameplayLoop")
 local MainView = require("Manager.TurnManager.GUI.MainView")
@@ -83,24 +84,6 @@ local function install_game_init(state)
     require "Library.UIManager.Utils"
     UIManager.Builder:new(require "Data.UIManagerNodes")
     require "Globals.ECA"
-    G = {
-      tiles = {},
-      buildings = {},
-      refs = require "Globals.Refs",
-      lvs = {},
-      role = {
-        GameAPI.get_role(1),
-        GameAPI.get_role(2),
-        GameAPI.get_role(3),
-        GameAPI.get_role(4),
-      },
-      unit = {
-        GameAPI.get_role(1).get_ctrl_unit(),
-        GameAPI.get_role(2).get_ctrl_unit(),
-        GameAPI.get_role(3).get_ctrl_unit(),
-        GameAPI.get_role(4).get_ctrl_unit(),
-      },
-    }
     current_game = GameplayLoop.new_game(state)
     GameplayLoop.set_game(state, current_game)
     UIEventRouter.bind(state, function()
@@ -111,51 +94,10 @@ local function install_game_init(state)
       end,
     })
 
-    local refs = G.refs
     local role = GameAPI.get_role(1)
-    local unit = role.get_ctrl_unit()
     role.send_ui_custom_event("显示加载屏", {});
-
-    local tile_names = {}
-    local building_names = {}
-    local tile_ids = assert(map_cfg.path, "missing map path")
-    if #tile_ids == 0 then
-      for i = 1, 45 do
-        tile_ids[i] = i
-      end
-    end
-    for i, tile_id in ipairs(tile_ids) do
-      tile_names[i] = "t" .. tostring(tile_id)
-      building_names[i] = "b" .. tostring(tile_id)
-    end
-    G.tiles = LuaAPI.query_units(tile_names)
-    G.buildings = LuaAPI.query_units(building_names)
-
-    G.ground = LuaAPI.query_unit("ground")
-    G.ground.set_model_visible(false)
-
-    local function set_item_slot_image(slot_name, image_key)
-      assert(slot_name ~= nil, "missing slot name")
-      assert(image_key ~= nil, "missing image key for slot: " .. tostring(slot_name))
-      local nodes = UIManager.query_nodes_by_name(slot_name)
-      assert(nodes ~= nil, "missing ui nodes for slot: " .. tostring(slot_name))
-      for _, node in ipairs(nodes) do
-        node.image_texture = image_key
-      end
-    end
-
-    for _, r in ipairs(ALLROLES) do
-      UIManager.client_role = r
-      for i = 1, 5 do
-        local num = 3000 + i
-        local image_key = refs[tostring(num)]
-        assert(image_key ~= nil, "missing item icon: " .. tostring(num))
-        set_item_slot_image("道具槽位" .. tostring(i), image_key)
-      end
-
-      unit.add_state(Enums.BuffState.BUFF_FORBID_CONTROL)
-    end
-    UIManager.client_role = nil
+    BoardScene.init(state, map_cfg)
+    MainView.init_ui_assets(state)
 
     SetTimeOut(1.0, function()
       role.send_ui_custom_event("隐藏加载屏", {});
