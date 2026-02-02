@@ -168,7 +168,7 @@ function GameplayLoop.StepChoiceTimeout(game, state, dt, opts)
   assert(opts ~= nil, "missing opts")
   assert(opts.on_pending_choice ~= nil, "missing opts.on_pending_choice")
   assert(opts.is_choice_active ~= nil, "missing opts.is_choice_active")
-  local pending = game.store:get({ "turn", "pending_choice" })
+  local pending = game.store:Get({ "turn", "pending_choice" })
   if pending and (not state.pending_choice or state.pending_choice.id ~= pending.id) then
     state.pending_choice = pending
     state.pending_choice_elapsed = 0
@@ -241,8 +241,8 @@ function GameplayLoop.StepMoveAnim(game, state, opts)
   assert(game.store ~= nil, "missing game.store")
   assert(opts ~= nil and opts.on_move_anim ~= nil, "missing opts.on_move_anim")
 
-  local anim = game.store:get({ "turn", "move_anim" })
-  local phase = game.store:get({ "turn", "phase" })
+  local anim = game.store:Get({ "turn", "move_anim" })
+  local phase = game.store:Get({ "turn", "phase" })
   assert(anim ~= nil and anim.seq ~= nil, "missing move_anim")
 
   assert(phase == "wait_move_anim", "unexpected move anim phase: " .. tostring(phase))
@@ -270,8 +270,8 @@ function GameplayLoop.StepActionAnim(game, state, opts)
   assert(game.store ~= nil, "missing game.store")
   assert(opts ~= nil and opts.on_action_anim ~= nil, "missing opts.on_action_anim")
 
-  local anim = game.store:get({ "turn", "action_anim" })
-  local phase = game.store:get({ "turn", "phase" })
+  local anim = game.store:Get({ "turn", "action_anim" })
+  local phase = game.store:Get({ "turn", "phase" })
   assert(anim ~= nil and anim.seq ~= nil, "missing action_anim")
 
   assert(phase == "wait_action_anim", "unexpected action anim phase: " .. tostring(phase))
@@ -326,8 +326,8 @@ function GameplayLoop.DispatchAction(game, state, action, opts)
     if action.id == "next" then
       local phase = nil
       assert(game ~= nil and game.store ~= nil, "missing game.store")
-      assert(game.store.get ~= nil, "missing store.get")
-      phase = game.store:get({ "turn", "phase" })
+      assert(game.store.Get ~= nil, "missing store.Get")
+      phase = game.store:Get({ "turn", "phase" })
       local now = _GetTimestamp()
       if state.next_turn_locked then
         local allow = false
@@ -419,10 +419,10 @@ function GameplayLoop.Tick(game, state, dt)
     end,
   })
 
-  assert(game.store ~= nil and game.store.get ~= nil, "missing game.store.get")
-  local phase = game.store:get({ "turn", "phase" })
+  assert(game.store ~= nil and game.store.Get ~= nil, "missing game.store.Get")
+  local phase = game.store:Get({ "turn", "phase" })
   if phase == "wait_move_anim" then
-    local anim = game.store:get({ "turn", "move_anim" })
+    local anim = game.store:Get({ "turn", "move_anim" })
     if anim then
       GameplayLoop.StepMoveAnim(game, state, {
         on_move_anim = function(_, anim_ctx)
@@ -444,7 +444,7 @@ function GameplayLoop.Tick(game, state, dt)
       })
     end
   elseif phase == "wait_action_anim" then
-    local anim = game.store:get({ "turn", "action_anim" })
+    local anim = game.store:Get({ "turn", "action_anim" })
     if anim then
       GameplayLoop.StepActionAnim(game, state, {
         on_action_anim = function(ctx, anim_ctx)

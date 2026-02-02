@@ -3,7 +3,7 @@ local ItemPhase = require("Manager.ItemManager.ItemPhase")
 
 local function _PhaseStart(tm)
   local player = tm.game:current_player()
-  local tc = tm.game.store:get({ "turn", "turn_count" })
+  local tc = tm.game.store:Get({ "turn", "turn_count" })
   tm.game.last_turn = {
     player_id = player.id,
     player_name = player.name,
@@ -20,7 +20,7 @@ local function _PhaseStart(tm)
   end
   tc = tc + 1
   if tm.game.store then
-    tm.game.store:set({ "turn", "turn_count" }, tc)
+    tm.game.store:Set({ "turn", "turn_count" }, tc)
   end
   if player.status.stay_turns and player.status.stay_turns > 0 then
     tm.game:set_player_status(player, "stay_turns", player.status.stay_turns - 1)

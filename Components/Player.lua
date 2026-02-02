@@ -49,7 +49,7 @@ end
 ---@param value any 值
 function Player:_StoreSet(path, value)
   assert(self._store ~= nil, "missing store")
-  self._store:set(path, value)
+  self._store:Set(path, value)
 end
 
 ---创建新玩家实例
