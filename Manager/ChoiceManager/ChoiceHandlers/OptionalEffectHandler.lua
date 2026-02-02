@@ -4,14 +4,14 @@ local MonopolyEvent = require("Globals.MonopolyEvents")
 
 local OptionalEffectHandler = {}
 
-local function resolve_event_name(kind)
+local function _ResolveEventName(kind)
   assert(MonopolyEvent ~= nil, "missing MONOPOLY_EVENT")
   local intent = assert(MonopolyEvent.intent, "missing MONOPOLY_EVENT.intent")
   assert(kind ~= nil, "missing event kind")
   return intent[kind] or kind
 end
 
-local function dispatch_intent(game, payload)
+local function _DispatchIntent(game, payload)
   assert(payload ~= nil, "missing payload")
   local intent = payload.intent or payload
   if intent.kind == "need_choice" and intent.choice_spec then
@@ -32,7 +32,7 @@ local function dispatch_intent(game, payload)
     }
     game.store:set({ "turn", "pending_choice" }, entry)
     assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = resolve_event_name("need_choice")
+    local event_name = _ResolveEventName("need_choice")
     TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
     return
   end
@@ -41,19 +41,19 @@ local function dispatch_intent(game, payload)
     assert(ui_port.push_popup ~= nil, "missing ui_port.push_popup")
     ui_port:push_popup(intent.payload)
     assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = resolve_event_name("push_popup")
+    local event_name = _ResolveEventName("push_popup")
     TriggerCustomEvent(event_name, { game = game, payload = intent.payload })
   end
 end
 
-function OptionalEffectHandler.build(helpers)
-  local contains = helpers.contains
-  local build_game_ctx = helpers.build_game_ctx
-  local get_container_defs_by_choice_kind = helpers.get_container_defs_by_choice_kind
-  local find_effect_by_id = helpers.find_effect_by_id
-  local finish_choice = helpers.finish_choice
+function OptionalEffectHandler.Build(helpers)
+  local contains = helpers.Contains
+  local build_game_ctx = helpers.BuildGameCtx
+  local get_container_defs_by_choice_kind = helpers.GetContainerDefsByChoiceKind
+  local find_effect_by_id = helpers.FindEffectById
+  local finish_choice = helpers.FinishChoice
 
-  local function handle_optional_landing_effect(game, choice, action)
+  local function _HandleOptionalLandingEffect(game, choice, action)
     local effect_id = assert(action.option_id, "missing effect_id")
     local meta = choice.meta
 
@@ -71,7 +71,7 @@ function OptionalEffectHandler.build(helpers)
     local game_ctx = build_game_ctx(game, move_result)
 
     local res = Effect.execute(target_eff, player, tile, game_ctx)
-    dispatch_intent(game, res.result or res)
+    _DispatchIntent(game, res.result or res)
     if res.ok ~= true then
       Logger.warn("landing_optional_effect execute blocked:", tostring(res and res.reason))
     end
@@ -79,8 +79,8 @@ function OptionalEffectHandler.build(helpers)
   end
 
   return {
-    landing_optional_effect = handle_optional_landing_effect,
-    land_optional_effect = handle_optional_landing_effect,
+    landing_optional_effect = _HandleOptionalLandingEffect,
+    land_optional_effect = _HandleOptionalLandingEffect,
   }
 end
 

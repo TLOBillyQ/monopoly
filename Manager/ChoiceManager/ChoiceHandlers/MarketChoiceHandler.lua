@@ -3,14 +3,14 @@ local MonopolyEvent = require("Globals.MonopolyEvents")
 
 local MarketChoiceHandler = {}
 
-local function resolve_event_name(kind)
+local function _ResolveEventName(kind)
   assert(MonopolyEvent ~= nil, "missing MONOPOLY_EVENT")
   local intent = assert(MonopolyEvent.intent, "missing MONOPOLY_EVENT.intent")
   assert(kind ~= nil, "missing event kind")
   return intent[kind] or kind
 end
 
-local function dispatch_intent(game, payload)
+local function _DispatchIntent(game, payload)
   assert(payload ~= nil, "missing payload")
   local intent = payload.intent or payload
   if intent.kind == "need_choice" and intent.choice_spec then
@@ -31,7 +31,7 @@ local function dispatch_intent(game, payload)
     }
     game.store:set({ "turn", "pending_choice" }, entry)
     assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = resolve_event_name("need_choice")
+    local event_name = _ResolveEventName("need_choice")
     TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
     return
   end
@@ -40,16 +40,16 @@ local function dispatch_intent(game, payload)
     assert(ui_port.push_popup ~= nil, "missing ui_port.push_popup")
     ui_port:push_popup(intent.payload)
     assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = resolve_event_name("push_popup")
+    local event_name = _ResolveEventName("push_popup")
     TriggerCustomEvent(event_name, { game = game, payload = intent.payload })
   end
 end
 
-function MarketChoiceHandler.build(helpers)
-  local is_cancel = helpers.is_cancel
-  local finish_choice = helpers.finish_choice
+function MarketChoiceHandler.Build(helpers)
+  local is_cancel = helpers.IsCancel
+  local finish_choice = helpers.FinishChoice
 
-  local function handle_market_buy(game, choice, action)
+  local function _HandleMarketBuy(game, choice, action)
     assert(choice ~= nil and choice.kind == "market_buy", "invalid market choice")
 
     if is_cancel(action) then
@@ -63,13 +63,13 @@ function MarketChoiceHandler.build(helpers)
     local res = MarketManager.buy_with_opts(game, player, product_id, nil)
     if type(res) == "table" then
       local intent = res.intent or {}
-      dispatch_intent(game, intent)
+      _DispatchIntent(game, intent)
       return { stay = intent.kind == "need_choice" }
     end
     return finish_choice(game, false)
   end
 
-  local function handle_vehicle_replace(game, choice, action)
+  local function _HandleVehicleReplace(game, choice, action)
     assert(choice ~= nil and choice.kind == "market_vehicle_replace", "invalid vehicle replace choice")
 
     if is_cancel(action) then
@@ -88,8 +88,8 @@ function MarketChoiceHandler.build(helpers)
   end
 
   return {
-    market_buy = handle_market_buy,
-    market_vehicle_replace = handle_vehicle_replace,
+    market_buy = _HandleMarketBuy,
+    market_vehicle_replace = _HandleVehicleReplace,
   }
 end
 

@@ -6,14 +6,14 @@ local MonopolyEvent = require("Globals.MonopolyEvents")
 local LandChoiceHandler = {}
 local ITEM_IDS = GameplayRules.item_ids
 
-local function resolve_event_name(kind)
+local function _ResolveEventName(kind)
   assert(MonopolyEvent ~= nil, "missing MONOPOLY_EVENT")
   local intent = assert(MonopolyEvent.intent, "missing MONOPOLY_EVENT.intent")
   assert(kind ~= nil, "missing event kind")
   return intent[kind] or kind
 end
 
-local function dispatch_intent(game, payload)
+local function _DispatchIntent(game, payload)
   assert(payload ~= nil, "missing payload")
   local intent = payload.intent or payload
   if intent.kind == "need_choice" and intent.choice_spec then
@@ -34,7 +34,7 @@ local function dispatch_intent(game, payload)
     }
     game.store:set({ "turn", "pending_choice" }, entry)
     assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = resolve_event_name("need_choice")
+    local event_name = _ResolveEventName("need_choice")
     TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
     return
   end
@@ -43,17 +43,17 @@ local function dispatch_intent(game, payload)
     assert(ui_port.push_popup ~= nil, "missing ui_port.push_popup")
     ui_port:push_popup(intent.payload)
     assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = resolve_event_name("push_popup")
+    local event_name = _ResolveEventName("push_popup")
     TriggerCustomEvent(event_name, { game = game, payload = intent.payload })
   end
 end
 
-function LandChoiceHandler.build(helpers)
-  local is_cancel = helpers.is_cancel
-  local finish_choice = helpers.finish_choice
+function LandChoiceHandler.Build(helpers)
+  local is_cancel = helpers.IsCancel
+  local finish_choice = helpers.FinishChoice
   local LandActions = require("Manager.LandManager.LandActions")
 
-  local function handle_rent_prompt(game, choice, action)
+  local function _HandleRentPrompt(game, choice, action)
     local meta = choice.meta
     local player_id = meta.player_id
     local tile_id = meta.tile_id
@@ -70,7 +70,7 @@ function LandChoiceHandler.build(helpers)
       if card_kind == "strong" then
         local player = game.players[player_id]
         if Inventory.find_index(player, ITEM_IDS.free_rent) then
-          dispatch_intent(game, {
+          _DispatchIntent(game, {
             kind = "need_choice",
             choice_spec = LandChoiceSpecs.rent_prompt(player_id, tile_id, "free"),
           })
@@ -83,7 +83,7 @@ function LandChoiceHandler.build(helpers)
     return finish_choice(game, false)
   end
 
-  local function handle_tax_prompt(game, choice, action)
+  local function _HandleTaxPrompt(game, choice, action)
     local meta = choice.meta
     local player_id = meta.player_id
 
@@ -100,8 +100,8 @@ function LandChoiceHandler.build(helpers)
   end
 
   return {
-    rent_card_prompt = handle_rent_prompt,
-    tax_card_prompt = handle_tax_prompt,
+    rent_card_prompt = _HandleRentPrompt,
+    tax_card_prompt = _HandleTaxPrompt,
   }
 end
 
