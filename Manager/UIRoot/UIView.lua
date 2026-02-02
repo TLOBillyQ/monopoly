@@ -166,8 +166,8 @@ function UIView.on_tile_owner_changed(layer, tile_id, owner_id)
   BoardView.on_tile_owner_changed(layer, tile_id, owner_id)
 end
 
-function UIView.select_market_option(layer, option_id)
-  MarketView.select_market_option(layer, option_id)
+function UIView.SelectMarketOption(layer, option_id)
+  MarketView.SelectMarketOption(layer, option_id)
 end
 
 function UIView.open_choice_modal(layer, choice, market)
@@ -190,11 +190,11 @@ function UIView.open_choice_modal(layer, choice, market)
       cancel_label = choice.cancel_label,
       selected_option_id = layer.pending_choice_selected_option_id,
     }
-    MarketView.refresh_market(layer, market_view)
+    MarketView.RefreshMarket(layer, market_view)
     return
   end
   if layer.ui.market_active then
-    MarketView.close_market_panel(layer)
+    MarketView.CloseMarketPanel(layer)
   end
 
   layer.ui:set_label(layer.ui.choice.title, choice.title)
@@ -234,7 +234,7 @@ function UIView.close_choice_modal(layer)
     layer.ui.choice_active = false
   end
   if layer.ui.market_active then
-    MarketView.close_market_panel(layer)
+    MarketView.CloseMarketPanel(layer)
   end
   layer.market_choice_option_ids = nil
   layer.pending_choice_selected_option_id = nil

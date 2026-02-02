@@ -23,7 +23,7 @@ function UIController.dispatch(state, game, intent, opts)
   end
 
   if intent_type == "market_select" then
-    UIView.select_market_option(state, intent.option_id)
+    UIView.SelectMarketOption(state, intent.option_id)
     return
   end
 
