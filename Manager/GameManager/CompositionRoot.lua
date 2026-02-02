@@ -232,7 +232,7 @@ function CompositionRoot.Assemble(opts, game_or_class)
   game.services = services
 
   game:Rebuild()
-  game.turn_manager = TurnManager:new(game, phases)
+  game.turn_manager = TurnManager:New(game, phases)
 
   return game
 end

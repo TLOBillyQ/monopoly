@@ -4,7 +4,7 @@ local Effect = require("Manager.EffectManager.Effect")
 
 local MAX_LANDING_DEPTH = 10
 
-local function resolve_landing(game, player, tile, move_result, depth)
+local function _ResolveLanding(game, player, tile, move_result, depth)
   depth = depth or 0
   local game_ctx = Effect.build_game_ctx(game, move_result, {
     phase_default = "landing",
@@ -27,7 +27,7 @@ local function resolve_landing(game, player, tile, move_result, depth)
       end
     end
     if next_tile then
-      return resolve_landing(game, target_player, next_tile, out.move_result, depth + 1)
+      return _ResolveLanding(game, target_player, next_tile, out.move_result, depth + 1)
     end
     return out
   end
@@ -43,12 +43,12 @@ local function resolve_landing(game, player, tile, move_result, depth)
   })
 end
 
-local function phase_land(tm, args)
+local function _PhaseLand(tm, args)
   local player = args.player
   local move_result = args.move_result
   local tile = tm.game.board:get_tile(player.position)
 
-  local res = resolve_landing(tm.game, player, tile, move_result)
+  local res = _ResolveLanding(tm.game, player, tile, move_result)
   if res and res.waiting then
     local resume_state = res.resume_state or "landing"
     local resume_args = res.resume_args or { player = player, move_result = move_result }
@@ -58,4 +58,4 @@ local function phase_land(tm, args)
   return "post_action", { player = player }
 end
 
-return phase_land
+return _PhaseLand

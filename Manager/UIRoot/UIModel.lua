@@ -10,7 +10,7 @@ end
 
 local UIModel = {}
 
-local function build_board_tiles()
+local function _BuildBoardTiles()
   local out = {}
   assert(MapCfg.path ~= nil, "missing map path")
   for i, tile_id in ipairs(MapCfg.path) do
@@ -28,14 +28,14 @@ local function build_board_tiles()
   return out
 end
 
-local BOARD_TILES = build_board_tiles()
+local BOARD_TILES = _BuildBoardTiles()
 
-local function build_overlays(env)
+local function _BuildOverlays(env)
   assert(env ~= nil and env.game ~= nil and env.game.board ~= nil and env.game.board.get_overlays ~= nil, "missing board overlays")
   return env.game.board:get_overlays()
 end
 
-local function resolve_current_player(state)
+local function _ResolveCurrentPlayer(state)
   local turn = state.turn
   local players = state.players
   assert(turn ~= nil and players ~= nil, "missing turn or players")
@@ -43,13 +43,13 @@ local function resolve_current_player(state)
   return players[idx], turn
 end
 
-function UIModel.build(store_state, env)
+function UIModel.Build(store_state, env)
   assert(store_state ~= nil, "missing store_state")
   env = env or {}
   local ui_state = env.ui_state
   local ui_runtime = ui_state and ui_state.ui
-  local current, turn = resolve_current_player(store_state)
-  local overlays = build_overlays(env)
+  local current, turn = _ResolveCurrentPlayer(store_state)
+  local overlays = _BuildOverlays(env)
   local slot_count = 5
   if ui_runtime and type(ui_runtime.item_slots) == "table" and #ui_runtime.item_slots > 0 then
     slot_count = #ui_runtime.item_slots
@@ -64,14 +64,14 @@ function UIModel.build(store_state, env)
     item_slots[i] = item and item.id or nil
   end
   local panel = {
-    turn_label = PanelView.build_turn_label(turn.turn_count),
-    player_rows = PanelView.build_player_statuses(store_state, env.game, 4),
-    auto_label = PanelView.build_auto_label(ui_runtime and ui_runtime.auto_play),
+    turn_label = PanelView.BuildTurnLabel(turn.turn_count),
+    player_rows = PanelView.BuildPlayerStatuses(store_state, env.game, 4),
+    auto_label = PanelView.BuildAutoLabel(ui_runtime and ui_runtime.auto_play),
   }
   local choice = nil
   local pending = store_state.turn and store_state.turn.pending_choice
   if pending then
-    choice = ChoiceView.build_choice_view(pending, { game = env.game })
+    choice = ChoiceView.BuildChoiceView(pending, { game = env.game })
     choice.id = pending.id
     choice.kind = pending.kind
   end

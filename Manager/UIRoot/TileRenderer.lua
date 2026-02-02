@@ -15,11 +15,11 @@ local OWNER_COLORS = {
   [4] = 0xE57373,
 }
 
-local function resolve_color(owner_id)
+local function _ResolveColor(owner_id)
   return OWNER_COLORS[owner_id] or DEFAULT_COLOR
 end
 
-function TileRenderer.render_tile(unit, tile_id, owner_id)
+function TileRenderer.RenderTile(unit, tile_id, owner_id)
   local cfg = tiles_by_id[tile_id]
   assert(cfg ~= nil, "missing tile cfg: " .. tostring(tile_id))
   assert(unit ~= nil and unit.get_child_by_name ~= nil, "invalid tile unit")
@@ -36,7 +36,7 @@ function TileRenderer.render_tile(unit, tile_id, owner_id)
 
   local color_node = unit.get_child_by_name("color")
   assert(color_node ~= nil and color_node.set_paint_area_color ~= nil, "missing color node")
-  color_node.set_paint_area_color(1, resolve_color(owner_id))
+  color_node.set_paint_area_color(1, _ResolveColor(owner_id))
 end
 
 return TileRenderer

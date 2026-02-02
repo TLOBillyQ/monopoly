@@ -20,7 +20,7 @@ for _, entry in ipairs(MarketCfg) do
   market_by_id[entry.product_id] = entry
 end
 
-local function resolve_market_entry(product_id)
+local function _ResolveMarketEntry(product_id)
   local entry = market_by_id[product_id]
   local cfg = nil
   if entry and entry.kind == "vehicle" then
@@ -31,7 +31,7 @@ local function resolve_market_entry(product_id)
   return entry, cfg
 end
 
-local function resolve_market_name(opt, product_id, entry, cfg)
+local function _ResolveMarketName(opt, product_id, entry, cfg)
   if entry and entry.name then
     return entry.name
   end
@@ -44,18 +44,18 @@ local function resolve_market_name(opt, product_id, entry, cfg)
   return tostring(product_id)
 end
 
-local function resolve_market_currency(entry)
+local function _ResolveMarketCurrency(entry)
   assert(entry ~= nil, "missing market entry")
   assert(entry.currency ~= nil and entry.currency ~= "", "missing market currency")
   return entry.currency
 end
 
-local function resolve_market_price(entry)
+local function _ResolveMarketPrice(entry)
   assert(entry ~= nil, "missing market entry")
   return entry.price
 end
 
-local function resolve_market_level(cfg)
+local function _ResolveMarketLevel(cfg)
   assert(cfg ~= nil, "missing market cfg")
   local level = cfg.tier
   if level < 1 then
@@ -67,14 +67,14 @@ local function resolve_market_level(cfg)
   return 2
 end
 
-local function resolve_ref_key(refs, key)
+local function _ResolveRefKey(refs, key)
   if type(key) == "number" then
     return key
   end
   return refs[key]
 end
 
-local function resolve_market_icon_key(refs, product_id, entry, cfg)
+local function _ResolveMarketIconKey(refs, product_id, entry, cfg)
   local key = tostring(product_id)
   local ref = refs[key]
   if ref then
@@ -84,18 +84,18 @@ local function resolve_market_icon_key(refs, product_id, entry, cfg)
   return refs[name]
 end
 
-function EggyLayerMarket.refresh_market_selection(layer, option_id)
+function EggyLayerMarket.RefreshMarketSelection(layer, option_id)
   local ui = layer.ui
   assert(ui ~= nil, "missing market ui")
   local price_text = ""
   local refs = layer.ui_refs
-  local icon_key = resolve_ref_key(refs, MarketUI.empty_ref_key)
+  local icon_key = _ResolveRefKey(refs, MarketUI.empty_ref_key)
   assert(option_id ~= nil, "missing market option_id")
-  local entry, cfg = resolve_market_entry(option_id)
-  local price = resolve_market_price(entry)
-  local currency = resolve_market_currency(entry)
+  local entry, cfg = _ResolveMarketEntry(option_id)
+  local price = _ResolveMarketPrice(entry)
+  local currency = _ResolveMarketCurrency(entry)
   price_text = "售价：" .. tostring(price) .. " " .. currency
-  icon_key = resolve_market_icon_key(refs, option_id, entry, cfg)
+  icon_key = _ResolveMarketIconKey(refs, option_id, entry, cfg)
   ui:set_label(MarketUI.price_label, price_text)
   local node = ui.query_node(MarketUI.selected_card)
   node.image_texture = icon_key
@@ -104,12 +104,12 @@ function EggyLayerMarket.refresh_market_selection(layer, option_id)
   end
 end
 
-function EggyLayerMarket.select_market_option(layer, option_id)
+function EggyLayerMarket.SelectMarketOption(layer, option_id)
   layer.pending_choice_selected_option_id = option_id
-  EggyLayerMarket.refresh_market_selection(layer, option_id)
+  EggyLayerMarket.RefreshMarketSelection(layer, option_id)
 end
 
-function EggyLayerMarket.refresh_market(layer, market)
+function EggyLayerMarket.RefreshMarket(layer, market)
   local ui = layer.ui
   assert(market ~= nil and market.options ~= nil and ui ~= nil, "missing market data/ui")
   ui:set_visible(MarketUI.container, true)
@@ -129,15 +129,15 @@ function EggyLayerMarket.refresh_market(layer, market)
     if opt then
       local opt_id = opt.id or opt
       option_ids[idx] = opt_id
-      local entry, cfg = resolve_market_entry(opt_id)
-      local name = resolve_market_name(opt, opt_id, entry, cfg)
+      local entry, cfg = _ResolveMarketEntry(opt_id)
+      local name = _ResolveMarketName(opt, opt_id, entry, cfg)
       ui:set_label(label, name)
       ui:set_visible(label, true)
       ui:set_visible(button, true)
       ui:set_touch_enabled(button, true)
       ui:set_visible(frame, true)
-      local level = resolve_market_level(cfg)
-      local rarity_key = resolve_ref_key(refs, MarketUI.rarity_ref_keys[level])
+      local level = _ResolveMarketLevel(cfg)
+      local rarity_key = _ResolveRefKey(refs, MarketUI.rarity_ref_keys[level])
       local node = ui.query_node(frame)
       node.image_texture = rarity_key
     else
@@ -156,13 +156,13 @@ function EggyLayerMarket.refresh_market(layer, market)
 
   layer.market_choice_option_ids = option_ids
   local selected = market.selected_option_id or option_ids[1]
-  EggyLayerMarket.select_market_option(layer, selected)
+  EggyLayerMarket.SelectMarketOption(layer, selected)
   layer.pending_choice_elapsed = 0
   layer.pending_choice_id = market.choice_id
   return true
 end
 
-function EggyLayerMarket.close_market_panel(layer)
+function EggyLayerMarket.CloseMarketPanel(layer)
   local ui = layer.ui
   assert(ui ~= nil and ui.market_active == true, "market panel not active")
   ui:set_visible(MarketUI.container, false)
@@ -170,7 +170,7 @@ function EggyLayerMarket.close_market_panel(layer)
   layer.market_choice_option_ids = nil
   layer.pending_choice_selected_option_id = nil
   ui:set_label(MarketUI.price_label, "")
-  local empty_key = resolve_ref_key(layer.ui_refs, MarketUI.empty_ref_key)
+  local empty_key = _ResolveRefKey(layer.ui_refs, MarketUI.empty_ref_key)
   local node = ui.query_node(MarketUI.selected_card)
   node.image_texture = empty_key
   if node.reset_size then

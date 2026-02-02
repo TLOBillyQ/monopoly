@@ -3,18 +3,18 @@ local UIView = require("Manager.UIRoot.UIView")
 
 local UIController = {}
 
-function UIController.dispatch(state, game, intent, opts)
+function UIController.Dispatch(state, game, intent, opts)
   assert(intent ~= nil, "missing intent")
   local intent_type = intent.type
   if intent_type == "ui_button"
       or intent_type == "choice_select"
       or intent_type == "choice_cancel" then
-    GameplayLoop.dispatch_action(game, state, intent, opts)
+    GameplayLoop.DispatchAction(game, state, intent, opts)
     return
   end
 
   if intent_type == "market_confirm" then
-    GameplayLoop.dispatch_action(game, state, {
+    GameplayLoop.DispatchAction(game, state, {
       type = "choice_select",
       choice_id = intent.choice_id,
       option_id = intent.option_id,
@@ -23,12 +23,12 @@ function UIController.dispatch(state, game, intent, opts)
   end
 
   if intent_type == "market_select" then
-    UIView.select_market_option(state, intent.option_id)
+    UIView.SelectMarketOption(state, intent.option_id)
     return
   end
 
   if intent_type == "popup_confirm" then
-    UIView.close_popup(state)
+    UIView.ClosePopup(state)
   end
 end
 

@@ -73,13 +73,13 @@ function Effect.BuildGameCtx(game, move_result, opts)
   opts = opts or {}
   local phase = opts.phase
   if not phase then
-    phase = game.store:get({ "turn", "phase" }) or opts.phase_default
+    phase = game.store:Get({ "turn", "phase" }) or opts.phase_default
   end
   return {
     game = game,
     store = game.store,
     rng = game.rng,
-    services = game:get_services(),
+    services = game:GetServices(),
     phase = phase or "wait_choice",
     move_result = move_result,
     on_landing = opts.on_landing,

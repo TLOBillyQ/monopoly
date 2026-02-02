@@ -115,8 +115,10 @@ function Class(class_name, ...)
 
         setmetatable(instance, instance_meta)
 
-        -- 调用初始化方法
-        if self.init then
+        -- 调用初始化方法（支持Init和init两种命名）
+        if self.Init then
+            self.Init(instance, ...)
+        elseif self.init then
             self.init(instance, ...)
         end
 

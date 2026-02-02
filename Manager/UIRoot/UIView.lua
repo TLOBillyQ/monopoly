@@ -5,35 +5,35 @@ local UIAliases = require("Manager.UIRoot.UIAliases")
 
 local UIView = {}
 
-local function query_node(name)
+local function _QueryNode(name)
   assert(name ~= nil, "missing ui node name")
-  local resolved = UIAliases.resolve(name)
+  local resolved = UIAliases.Resolve(name)
   local list = UIManager.query_nodes_by_name(resolved)
   assert(list ~= nil and list[1] ~= nil, "missing ui node: " .. tostring(name))
   return list[1]
 end
 
-local function set_label(_, name, text)
-  local node = query_node(name)
+local function _SetLabel(_, name, text)
+  local node = _QueryNode(name)
   node.text = text or ""
 end
 
-local function set_button(_, name, text)
-  local node = query_node(name)
+local function _SetButton(_, name, text)
+  local node = _QueryNode(name)
   node.text = text or ""
 end
 
-local function set_visible(_, name, visible)
-  local node = query_node(name)
+local function _SetVisible(_, name, visible)
+  local node = _QueryNode(name)
   node.visible = visible == true
 end
 
-local function set_touch_enabled(_, name, enabled)
-  local node = query_node(name)
+local function _SetTouchEnabled(_, name, enabled)
+  local node = _QueryNode(name)
   node.disabled = not enabled
 end
 
-function UIView.build_ui_state()
+function UIView.BuildUiState()
   return {
     auto_play = false,
     auto_interval = 0.1,
@@ -59,15 +59,15 @@ function UIView.build_ui_state()
       root = "弹窗屏",
       confirm = "弹窗确认",
     },
-    query_node = query_node,
-    set_label = set_label,
-    set_button = set_button,
-    set_visible = set_visible,
-    set_touch_enabled = set_touch_enabled,
+    query_node = _QueryNode,
+    set_label = _SetLabel,
+    set_button = _SetButton,
+    set_visible = _SetVisible,
+    set_touch_enabled = _SetTouchEnabled,
   }
 end
 
-function UIView.init_ui_assets(layer)
+function UIView.InitUiAssets(layer)
   assert(layer ~= nil, "missing state")
   local refs = require("Globals.Refs")
   layer.ui_refs = refs
@@ -94,7 +94,7 @@ function UIView.init_ui_assets(layer)
   UIManager.client_role = nil
 end
 
-function UIView.refresh_panel(layer, ui_model)
+function UIView.RefreshPanel(layer, ui_model)
   local ui = layer.ui
   local panel = assert(ui_model.panel, "missing ui_model.panel")
 
@@ -109,7 +109,7 @@ function UIView.refresh_panel(layer, ui_model)
     ui:set_label("玩家" .. tostring(i) .. "总资产", row.total_assets)
   end
 
-  UIView.refresh_item_slots(layer, ui_model)
+  UIView.RefreshItemSlots(layer, ui_model)
 
   local auto_label = panel.auto_label
   ui:set_button("行动按钮", "下一回合")
@@ -117,7 +117,7 @@ function UIView.refresh_panel(layer, ui_model)
   ui:set_button("自动控制按钮", auto_label)
 end
 
-function UIView.refresh_item_slots(layer, ui_model)
+function UIView.RefreshItemSlots(layer, ui_model)
   local ui = layer.ui
   assert(ui ~= nil and ui.item_slots ~= nil, "missing ui item slots")
 
@@ -149,28 +149,28 @@ function UIView.refresh_item_slots(layer, ui_model)
   end
 end
 
-function UIView.refresh_board(layer, ui_model, log_once, build_log_prefix)
-  BoardView.refresh_board(layer, ui_model, log_once, build_log_prefix)
+function UIView.RefreshBoard(layer, ui_model, log_once, build_log_prefix)
+  BoardView.RefreshBoard(layer, ui_model, log_once, build_log_prefix)
 end
 
-function UIView.render(layer, ui_model, log_once, build_log_prefix)
-  UIView.refresh_panel(layer, ui_model)
-  UIView.refresh_board(layer, ui_model, log_once, build_log_prefix)
+function UIView.Render(layer, ui_model, log_once, build_log_prefix)
+  UIView.RefreshPanel(layer, ui_model)
+  UIView.RefreshBoard(layer, ui_model, log_once, build_log_prefix)
 end
 
-function UIView.on_tile_upgraded(layer, tile_id, level)
-  BoardView.on_tile_upgraded(layer, tile_id, level)
+function UIView.OnTileUpgraded(layer, tile_id, level)
+  BoardView.OnTileUpgraded(layer, tile_id, level)
 end
 
-function UIView.on_tile_owner_changed(layer, tile_id, owner_id)
-  BoardView.on_tile_owner_changed(layer, tile_id, owner_id)
+function UIView.OnTileOwnerChanged(layer, tile_id, owner_id)
+  BoardView.OnTileOwnerChanged(layer, tile_id, owner_id)
 end
 
-function UIView.select_market_option(layer, option_id)
-  MarketView.select_market_option(layer, option_id)
+function UIView.SelectMarketOption(layer, option_id)
+  MarketView.SelectMarketOption(layer, option_id)
 end
 
-function UIView.open_choice_modal(layer, choice, market)
+function UIView.OpenChoiceModal(layer, choice, market)
   assert(choice ~= nil, "missing choice")
   local choice_id = assert(choice.id, "missing choice id")
   if layer.pending_choice_id == choice_id
@@ -178,7 +178,7 @@ function UIView.open_choice_modal(layer, choice, market)
     return
   end
 
-  if choice.kind == "market_buy" and MarketUI.is_panel_ready() then
+  if choice.kind == "market_buy" and MarketUI.IsPanelReady() then
     if layer.ui.choice_active then
       layer.ui:set_visible(layer.ui.choice.root, false)
       layer.ui.choice_active = false
@@ -190,11 +190,11 @@ function UIView.open_choice_modal(layer, choice, market)
       cancel_label = choice.cancel_label,
       selected_option_id = layer.pending_choice_selected_option_id,
     }
-    MarketView.refresh_market(layer, market_view)
+    MarketView.RefreshMarket(layer, market_view)
     return
   end
   if layer.ui.market_active then
-    MarketView.close_market_panel(layer)
+    MarketView.CloseMarketPanel(layer)
   end
 
   layer.ui:set_label(layer.ui.choice.title, choice.title)
@@ -228,19 +228,19 @@ function UIView.open_choice_modal(layer, choice, market)
   layer.pending_choice_id = choice_id
 end
 
-function UIView.close_choice_modal(layer)
+function UIView.CloseChoiceModal(layer)
   if layer.ui.choice_active then
     layer.ui:set_visible(layer.ui.choice.root, false)
     layer.ui.choice_active = false
   end
   if layer.ui.market_active then
-    MarketView.close_market_panel(layer)
+    MarketView.CloseMarketPanel(layer)
   end
   layer.market_choice_option_ids = nil
   layer.pending_choice_selected_option_id = nil
 end
 
-function UIView.push_popup(layer, payload)
+function UIView.PushPopup(layer, payload)
   assert(payload ~= nil, "missing popup payload")
   layer.ui:set_label(layer.ui.popup.title, payload.title)
   layer.ui:set_label(layer.ui.popup.body, payload.body)
@@ -252,7 +252,7 @@ function UIView.push_popup(layer, payload)
   return true
 end
 
-function UIView.close_popup(layer)
+function UIView.ClosePopup(layer)
   assert(layer.ui.popup_active == true, "popup not active")
   layer.ui:set_visible(layer.ui.popup.root, false)
   layer.ui.popup_active = false
