@@ -60,7 +60,7 @@ function MarketChoiceHandler.Build(helpers)
     local meta = choice.meta
     local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
     assert(product_id ~= nil, "missing product_id")
-    local res = MarketManager.buy_with_opts(game, player, product_id, nil)
+    local res = MarketManager.BuyWithOpts(game, player, product_id, nil)
     if type(res) == "table" then
       local intent = res.intent or {}
       _DispatchIntent(game, intent)
@@ -82,7 +82,7 @@ function MarketChoiceHandler.Build(helpers)
     local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
     local product_id = assert(tonumber(meta.product_id), "missing product_id")
     if use then
-      MarketManager.buy_with_opts(game, player, product_id, { skip_vehicle_prompt = true })
+      MarketManager.BuyWithOpts(game, player, product_id, { skip_vehicle_prompt = true })
     end
     return finish_choice(game, false)
   end

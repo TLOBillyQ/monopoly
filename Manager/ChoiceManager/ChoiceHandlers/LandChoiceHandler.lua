@@ -63,21 +63,21 @@ function LandChoiceHandler.Build(helpers)
     local use_card = (action.option_id == "use") and not is_cancel(action)
 
     if use_card and card_kind == "strong" then
-      LandActions.execute_strong_card(game, player_id, tile_id)
+      LandActions.ExecuteStrongCard(game, player_id, tile_id)
     elseif use_card and card_kind == "free" then
-      LandActions.execute_free_card(game, player_id, tile_id)
+      LandActions.ExecuteFreeCard(game, player_id, tile_id)
     else
       if card_kind == "strong" then
         local player = game.players[player_id]
         if Inventory.FindIndex(player, ITEM_IDS.free_rent) then
           _DispatchIntent(game, {
             kind = "need_choice",
-            choice_spec = LandChoiceSpecs.rent_prompt(player_id, tile_id, "free"),
+            choice_spec = LandChoiceSpecs.RentPrompt(player_id, tile_id, "free"),
           })
           return { stay = true }
         end
       end
-      LandActions.execute_pay_rent(game, player_id, tile_id)
+      LandActions.ExecutePayRent(game, player_id, tile_id)
     end
 
     return finish_choice(game, false)
@@ -91,9 +91,9 @@ function LandChoiceHandler.Build(helpers)
     local use_card = (action.option_id == "use") and not is_cancel(action)
 
     if use_card then
-      LandActions.execute_tax_free_card(game, player_id)
+      LandActions.ExecuteTaxFreeCard(game, player_id)
     else
-      LandActions.execute_pay_tax(game, player_id)
+      LandActions.ExecutePayTax(game, player_id)
     end
 
     return finish_choice(game, false)

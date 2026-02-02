@@ -148,7 +148,7 @@ function ItemChoiceHandler.Build(helpers)
     if meta.item_id then
       Inventory.Consume(player, meta.item_id)
     end
-    local res = Roadblock.apply(game, player, idx)
+    local res = Roadblock.Apply(game, player, idx)
     if res then
       _DispatchIntent(game, res)
     end
@@ -240,7 +240,7 @@ function ItemChoiceHandler.Build(helpers)
     if meta.item_id then
       Inventory.Consume(player, meta.item_id)
     end
-    RemoteDice.apply(game, player, dice_count, value)
+    RemoteDice.Apply(game, player, dice_count, value)
     return _FinishAndClear(game)
   end
 
