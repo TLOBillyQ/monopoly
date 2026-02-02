@@ -2,7 +2,7 @@ local Prefab = require("Data.Prefab")
 
 local BuildingEffects = {}
 
-function BuildingEffects.spawn_upgrade_building_units(scene, root_quaternion, building_index, level)
+function BuildingEffects.SpawnUpgradeBuildingUnits(scene, root_quaternion, building_index, level)
   assert(scene ~= nil, "missing scene")
   assert(building_index ~= nil, "missing building_index")
   assert(level ~= nil, "missing building level")

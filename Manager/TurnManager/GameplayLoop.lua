@@ -65,7 +65,7 @@ local function build_ui_model(state, game)
   local store_state = game.store.state
   local winner = game.winner
   local winner_name = game.winner_names or (winner and assert(winner.name, "missing winner name"))
-  return UIModel.build(store_state, {
+  return UIModel.Build(store_state, {
     game = game,
     ui_state = state,
     last_turn = game.last_turn,
@@ -78,7 +78,7 @@ local function refresh_view(state, game)
   local store_state = game.store.state
   local ui_model = build_ui_model(state, game)
   state.ui_model = ui_model
-  UIView.render(state, ui_model, log_once, build_log_prefix)
+  UIView.Render(state, ui_model, log_once, build_log_prefix)
 
   assert(ui_model ~= nil, "missing ui_model")
   local players = assert(store_state.players, "missing store_state.players")
@@ -106,7 +106,7 @@ end
 function GameplayLoop.set_game(state, game)
   assert(game ~= nil, "missing game")
   game.ui_port = state
-  EventHandlers.install(game, Logger, state)
+  EventHandlers.Install(game, Logger, state)
   assert(game.pending_choice ~= nil, "missing game.pending_choice")
   local pending = game:pending_choice()
   state.pending_choice = pending
@@ -116,7 +116,7 @@ function GameplayLoop.set_game(state, game)
     local ui_model = build_ui_model(state, game)
     state.ui_model = ui_model
     if ui_model.choice then
-      UIView.open_choice_modal(state, ui_model.choice, ui_model.market)
+      UIView.OpenChoiceModal(state, ui_model.choice, ui_model.market)
     end
   end
   state.player_units = nil
@@ -364,7 +364,7 @@ function GameplayLoop.dispatch_action(game, state, action, opts)
   elseif action.type == "choice_select" or action.type == "choice_cancel" then
     GameplayLoop.clear_choice(state, {
       on_close_choice = function(ctx)
-        UIView.close_choice_modal(ctx)
+        UIView.CloseChoiceModal(ctx)
       end,
     })
     if game then
@@ -415,7 +415,7 @@ function GameplayLoop.tick(game, state, dt)
       return assert(ctx.ui.popup_seq, "missing popup_seq")
     end,
     on_timeout = function(ctx)
-      UIView.close_popup(ctx)
+      UIView.ClosePopup(ctx)
     end,
   })
 
@@ -449,7 +449,7 @@ function GameplayLoop.tick(game, state, dt)
       GameplayLoop.step_action_anim(game, state, {
         on_action_anim = function(ctx, anim_ctx)
           local ActionAnim = require("Manager.UIRoot.ActionAnim")
-          return ActionAnim.play(ctx, anim_ctx)
+          return ActionAnim.Play(ctx, anim_ctx)
         end,
       })
     end
@@ -466,7 +466,7 @@ function GameplayLoop.tick(game, state, dt)
 
   local ui_model = refresh_view(state, game)
   if ui_model.choice then
-    UIView.open_choice_modal(state, ui_model.choice, ui_model.market)
+    UIView.OpenChoiceModal(state, ui_model.choice, ui_model.market)
   end
   log_status(ui_model)
 end

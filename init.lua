@@ -18,7 +18,7 @@ Logger.configure_game_time()
 local current_game = nil
 
 local function build_state()
-  local ui = UIView.build_ui_state()
+  local ui = UIView.BuildUiState()
   local state = {
     ui = ui,
     pending_choice = nil,
@@ -61,13 +61,13 @@ local function build_state()
   }
 
   state.push_popup = function(_, payload)
-    return UIView.push_popup(state, payload)
+    return UIView.PushPopup(state, payload)
   end
   state.on_tile_upgraded = function(_, tile_id, level)
-    UIView.on_tile_upgraded(state, tile_id, level)
+    UIView.OnTileUpgraded(state, tile_id, level)
   end
   state.on_tile_owner_changed = function(_, tile_id, owner_id)
-    UIView.on_tile_owner_changed(state, tile_id, owner_id)
+    UIView.OnTileOwnerChanged(state, tile_id, owner_id)
   end
 
   RegisterCustomEvent(MonopolyEvent.intent.need_choice, function(_, _, data)
@@ -77,7 +77,7 @@ local function build_state()
     assert(current_game ~= nil, "missing current_game")
     local winner = current_game.winner
     local winner_name = current_game.winner_names or (winner and assert(winner.name, "missing winner name"))
-    local ui_model = UIModel.build(current_game.store.state, {
+    local ui_model = UIModel.Build(current_game.store.state, {
       game = current_game,
       ui_state = state,
       last_turn = current_game.last_turn,
@@ -86,7 +86,7 @@ local function build_state()
     })
     state.ui_model = ui_model
     if ui_model.choice then
-      UIView.open_choice_modal(state, ui_model.choice, ui_model.market)
+      UIView.OpenChoiceModal(state, ui_model.choice, ui_model.market)
     end
   end)
 
@@ -100,7 +100,7 @@ local function install_game_init(state)
     require "Globals.ECA"
     current_game = GameplayLoop.new_game(state)
     GameplayLoop.set_game(state, current_game)
-    UIEventRouter.bind(state, function()
+    UIEventRouter.Bind(state, function()
       return current_game
     end, {
       on_game_changed = function(new_game)
@@ -110,8 +110,8 @@ local function install_game_init(state)
 
     local role = GameAPI.get_role(1)
     role.send_ui_custom_event("显示加载屏", {});
-    BoardScene.init(state, MapCfg)
-    UIView.init_ui_assets(state)
+    BoardScene.Init(state, MapCfg)
+    UIView.InitUiAssets(state)
 
     SetTimeOut(1.0, function()
       role.send_ui_custom_event("隐藏加载屏", {});

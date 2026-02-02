@@ -11,7 +11,7 @@ local DURATIONS = {
   clear_obstacles = 1.0,
 }
 
-local function build_tip(anim)
+local function _BuildTip(anim)
   local kind = anim.kind
   if kind == "roll" then
     local rolls = anim.rolls and table.concat(anim.rolls, ",") or "?"
@@ -37,14 +37,14 @@ local function build_tip(anim)
   return "动作动画"
 end
 
-function ActionAnim.play(_, anim)
+function ActionAnim.Play(_, anim)
   assert(anim ~= nil, "missing anim")
   local duration = anim.duration or DURATIONS[anim.kind] or 1.0
   local tip_duration = duration
   if type(duration) == "number" and math and math.tofixed then
     tip_duration = math.tofixed(duration)
   end
-  GlobalAPI.show_tips(build_tip(anim), tip_duration)
+  GlobalAPI.show_tips(_BuildTip(anim), tip_duration)
   return duration
 end
 

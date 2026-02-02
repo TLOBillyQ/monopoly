@@ -3,7 +3,7 @@ local MonopolyEvent = require("Globals.MonopolyEvents")
 local EventHandlers = {}
 local installed = false
 
-function EventHandlers.install(_, logger, ui_port)
+function EventHandlers.Install(_, logger, ui_port)
   if installed then
     return
   end

@@ -2,12 +2,12 @@ local Phase = require("Manager.UIRoot.UIPhase")
 
 local Choice = {}
 
-local function join_lines(lines)
+local function _JoinLines(lines)
   assert(lines ~= nil, "missing body lines")
   return table.concat(lines, "\n")
 end
 
-local function default_option_label(opt)
+local function _DefaultOptionLabel(opt)
   assert(opt ~= nil, "missing option")
   if opt.label then
     return opt.label
@@ -19,14 +19,14 @@ local function default_option_label(opt)
   return tostring(opt)
 end
 
-function Choice.build_choice_view(pending, opts)
+function Choice.BuildChoiceView(pending, opts)
   assert(pending ~= nil, "missing pending choice")
   opts = opts or {}
-  local option_label = opts.option_label or default_option_label
-  local title = Phase.build_phase_title(opts.game, pending.title or "请选择")
+  local option_label = opts.option_label or _DefaultOptionLabel
+  local title = Phase.BuildPhaseTitle(opts.game, pending.title or "请选择")
   local body = ""
   if pending.body_lines then
-    body = join_lines(pending.body_lines)
+    body = _JoinLines(pending.body_lines)
   elseif not opts.body_lines_only and pending.body then
     body = pending.body
   end

@@ -46,13 +46,13 @@ local MarketUI = {
   empty_ref_key = "空",
 }
 
-function MarketUI.is_ready()
+function MarketUI.IsReady()
   return type(MarketUI.container) == "string" and MarketUI.container ~= ""
     and type(MarketUI.confirm_button) == "string" and MarketUI.confirm_button ~= ""
 end
 
-function MarketUI.is_panel_ready()
-  return MarketUI.is_ready()
+function MarketUI.IsPanelReady()
+  return MarketUI.IsReady()
     and type(MarketUI.item_buttons) == "table" and #MarketUI.item_buttons > 0
     and type(MarketUI.item_labels) == "table" and #MarketUI.item_labels > 0
 end

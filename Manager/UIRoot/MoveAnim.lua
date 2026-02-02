@@ -6,7 +6,7 @@ end
 
 local MovementManager = {}
 
-function MovementManager.one_step(scene, player_id, v3_dir, start_tile_id, end_tile_id)
+function MovementManager.OneStep(scene, player_id, v3_dir, start_tile_id, end_tile_id)
     local start_tile = scene.tiles[start_tile_id]
     local end_tile = scene.tiles[end_tile_id]
 

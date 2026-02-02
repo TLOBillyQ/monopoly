@@ -41,7 +41,7 @@ for i = 1, 10 do
   alias_map["market_item_frame_" .. idx] = "底框" .. idx
 end
 
-function UIAliases.resolve(name)
+function UIAliases.Resolve(name)
   return alias_map[name] or name
 end
 

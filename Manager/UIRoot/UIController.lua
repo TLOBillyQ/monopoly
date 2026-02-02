@@ -3,7 +3,7 @@ local UIView = require("Manager.UIRoot.UIView")
 
 local UIController = {}
 
-function UIController.dispatch(state, game, intent, opts)
+function UIController.Dispatch(state, game, intent, opts)
   assert(intent ~= nil, "missing intent")
   local intent_type = intent.type
   if intent_type == "ui_button"
@@ -28,7 +28,7 @@ function UIController.dispatch(state, game, intent, opts)
   end
 
   if intent_type == "popup_confirm" then
-    UIView.close_popup(state)
+    UIView.ClosePopup(state)
   end
 end
 
