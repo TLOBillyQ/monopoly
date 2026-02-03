@@ -1,6 +1,25 @@
-local dice = require("src.game.turn.Dice")
 local logger = require("src.core.Logger")
 local item_phase = require("src.game.item.ItemPhase")
+
+local function _roll_dice(count, override_values, rng)
+  local results = {}
+  local total = 0
+  if override_values and #override_values > 0 then
+    for i = 1, count do
+      local v = override_values[i] or override_values[#override_values]
+      table.insert(results, v)
+      total = total + v
+    end
+    return results, total
+  end
+  assert(rng and rng.next_int, "Dice.Roll requires rng")
+  for _ = 1, count do
+    local v = rng:next_int(1, 6)
+    table.insert(results, v)
+    total = total + v
+  end
+  return results, total
+end
 
 local function _phase_roll(tm, args)
   args = args or {}
@@ -16,7 +35,7 @@ local function _phase_roll(tm, args)
     if player.status.pending_remote_dice then
       override = player.status.pending_remote_dice.values
     end
-    rolls, raw_total = dice.roll(dice_count, override, game.rng)
+    rolls, raw_total = _roll_dice(dice_count, override, game.rng)
 
     total = raw_total
     if player.status.pending_dice_multiplier and player.status.pending_dice_multiplier > 1 then

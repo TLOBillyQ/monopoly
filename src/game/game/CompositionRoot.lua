@@ -14,13 +14,12 @@ local turn_start = require("src.game.turn.TurnStart")
 local turn_roll = require("src.game.turn.TurnRoll")
 local turn_move = require("src.game.turn.TurnMove")
 local turn_land = require("src.game.turn.TurnLand")
-local turn_post = require("src.game.turn.TurnPost")
-local turn_end = require("src.game.turn.TurnEnd")
 local movement_manager = require("src.game.movement.MovementManager")
 local market_manager = require("src.game.market.MarketManager")
 local bankruptcy_manager = require("src.game.game.BankruptcyManager")
 local choice_manager = require("src.game.choice.ChoiceManager")
 local item_registry = require("src.game.item.ItemRegistry")
+local item_phase = require("src.game.item.ItemPhase")
 local chance_registry = require("src.game.chance.ChanceRegistry")
 local logger = require("src.core.Logger")
 local market_cfg = require("Config.Generated.Market")
@@ -179,6 +178,36 @@ local function _build_initial_state(board, players, rng)
   }
 end
 
+local function _phase_post(tm, args)
+  local player = args.player or tm.game:current_player()
+  local phase_res = item_phase.run(tm, "post_action", {
+    player = player,
+    resume_state = "post_action",
+    resume_args = { player = player },
+  })
+  if phase_res and phase_res.waiting then
+    local resume_state = phase_res.resume_state or "post_action"
+    local resume_args = phase_res.resume_args or { player = player }
+    if phase_res.wait_action_anim then
+      return "wait_action_anim", { resume_state = resume_state, resume_args = resume_args }
+    end
+    return "wait_choice", { resume_state = resume_state, resume_args = resume_args }
+  end
+  return "end_turn", { player = player }
+end
+
+local function _phase_end(tm, args)
+  local player = args.player
+  player:tick_deity()
+  player:clear_temporal_flags()
+  assert(tm.game ~= nil and tm.game.store ~= nil, "missing game/store")
+  tm.game.store:set({ "turn", "market_prompt" }, nil)
+  tm.game.store:set({ "turn", "post_action" }, nil)
+  tm.game.store:set({ "turn", "item_phase" }, {})
+  tm.game.store:set({ "turn", "item_phase_active" }, "")
+  tm:next_player()
+  return nil
+end
 
 function composition_root.assemble(opts, game_or_class)
   assert(opts ~= nil, "missing assemble opts")
@@ -207,8 +236,8 @@ function composition_root.assemble(opts, game_or_class)
     roll = turn_roll,
     move = turn_move,
     landing = turn_land,
-    post_action = turn_post,
-    end_turn = turn_end,
+    post_action = _phase_post,
+    end_turn = _phase_end,
   }
   local game = game_or_class
   if type(game_or_class) == "table" and rawget(game_or_class, "__name") and rawget(game_or_class, "new") then

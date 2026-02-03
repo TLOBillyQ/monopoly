@@ -1,5 +1,10 @@
 require "src.runtime.Globals"
-require "src.app.manager_init"
+require "src.game.game.BankruptcyManager"
+require "src.game.game.AgentTargeting"
+require "src.game.game.Agent"
+require "src.game.game.GameState"
+require "src.game.game.GameVictory"
+require "src.game.game.CompositionRoot"
 
 local auto_runner = require("src.game.turn.AutoRunner")
 local board_scene = require("src.ui.BoardScene")

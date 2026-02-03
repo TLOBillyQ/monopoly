@@ -1,6 +1,7 @@
 local ui_aliases = require("src.ui.UIAliases")
 local market_ui = require("src.ui.MarketUI")
-local ui_controller = require("src.ui.UIController")
+local gameplay_loop = require("src.game.turn.GameplayLoop")
+local ui_view = require("src.ui.UIView")
 
 local ui_event_router = {}
 
@@ -54,6 +55,35 @@ local function _register_node_click(cache, name, callback, registered)
   end
 end
 
+local function _dispatch(state, game, intent, opts)
+  assert(intent ~= nil, "missing intent")
+  local intent_type = intent.type
+  if intent_type == "ui_button"
+      or intent_type == "choice_select"
+      or intent_type == "choice_cancel" then
+    gameplay_loop.dispatch_action(game, state, intent, opts)
+    return
+  end
+
+  if intent_type == "market_confirm" then
+    gameplay_loop.dispatch_action(game, state, {
+      type = "choice_select",
+      choice_id = intent.choice_id,
+      option_id = intent.option_id,
+    }, opts)
+    return
+  end
+
+  if intent_type == "market_select" then
+    ui_view.select_market_option(state, intent.option_id)
+    return
+  end
+
+  if intent_type == "popup_confirm" then
+    ui_view.close_popup(state)
+  end
+end
+
 function ui_event_router.bind(state, get_game, opts)
   local function resolve_game()
     if type(get_game) == "function" then
@@ -63,7 +93,7 @@ function ui_event_router.bind(state, get_game, opts)
   end
 
   local function dispatch_intent(intent)
-    ui_controller.dispatch(state, resolve_game(), intent, opts)
+    _dispatch(state, resolve_game(), intent, opts)
   end
 
   local cache = {}
