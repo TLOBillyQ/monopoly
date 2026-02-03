@@ -1,8 +1,8 @@
 require "src.runtime.Macro"
 
-local ActionAnim = {}
+local action_anim = {}
 
-local DURATIONS = {
+local durations = {
   roll = 1.0,
   roadblock = 0.8,
   mine = 0.8,
@@ -11,7 +11,7 @@ local DURATIONS = {
   clear_obstacles = 1.0,
 }
 
-local function _BuildTip(anim)
+local function _build_tip(anim)
   local kind = anim.kind
   if kind == "roll" then
     local rolls = anim.rolls and table.concat(anim.rolls, ",") or "?"
@@ -37,16 +37,16 @@ local function _BuildTip(anim)
   return "动作动画"
 end
 
-function ActionAnim.Play(_, anim)
+function action_anim.play(_, anim)
   assert(anim ~= nil, "missing anim")
-  local duration = anim.duration or DURATIONS[anim.kind] or 1.0
+  local duration = anim.duration or durations[anim.kind] or 1.0
   local tip_duration = duration
   if type(duration) == "number" and math and math.tofixed then
     tip_duration = math.tofixed(duration)
   end
-  GlobalAPI.show_tips(_BuildTip(anim), tip_duration)
+  GlobalAPI.show_tips(_build_tip(anim), tip_duration)
   return duration
 end
 
-return ActionAnim
+return action_anim
 

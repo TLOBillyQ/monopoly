@@ -1,44 +1,44 @@
-local Tile = require("src.game.board.Tile")
-local Roadblock = require("src.game.item.ItemRoadblock")
-local Demolish = require("src.game.item.ItemDemolish")
-local Pricing = require("src.game.land.LandPricing")
-local GameplayRules = require("Config.GameplayRules")
+local tile = require("src.game.board.Tile")
+local roadblock = require("src.game.item.ItemRoadblock")
+local demolish = require("src.game.item.ItemDemolish")
+local pricing = require("src.game.land.LandPricing")
+local gameplay_rules = require("Config.GameplayRules")
 
-local AgentTargeting = {}
-local ITEM_IDS = GameplayRules.item_ids
+local agent_targeting = {}
+local item_ids = gameplay_rules.item_ids
 
-local tile_state = Tile.GetState
+local tile_state = tile.get_state
 
-local function _CurrentRent(tile, level)
-  return Pricing.RentForLevel(tile, level or 0)
+local function _current_rent(tile, level)
+  return pricing.rent_for_level(tile, level or 0)
 end
 
-local function _SimulateLanding(game, player, steps)
+local function _simulate_landing(game, player, steps)
   local board = game.board
   local current = player.position
   local facing = player.status.move_dir
   for step = 1, steps do
-    local next_index, _, step_dir = board:StepForwardByFacing(current, facing, steps)
+    local next_index, _, step_dir = board:step_forward_by_facing(current, facing, steps)
     current = next_index
     facing = step_dir or facing
 
-    if board:HasRoadblock(current) then
+    if board:has_roadblock(current) then
       break
     end
 
-    if board:HasMine(current) then
+    if board:has_mine(current) then
       break
     end
 
-    local tile = board:GetTile(current)
+    local tile = board:get_tile(current)
     if tile and tile.type == "market" and step < steps then
       break
     end
   end
-  return { idx = current, tile = board:GetTile(current), steps = steps }
+  return { idx = current, tile = board:get_tile(current), steps = steps }
 end
 
-local function _RemotePriority(game, player, sim)
+local function _remote_priority(game, player, sim)
   local tile = sim.tile
   if not tile then
     return nil
@@ -67,7 +67,7 @@ local function _RemotePriority(game, player, sim)
   elseif tile.type == "hospital" then
     rank, score = 9, sim.steps
   elseif tile.type == "land" and st and st.owner_id and st.owner_id ~= player.id then
-    rank, score = 10, -_CurrentRent(tile, st.level)
+    rank, score = 10, -_current_rent(tile, st.level)
   end
   if not rank then
     return nil
@@ -75,13 +75,13 @@ local function _RemotePriority(game, player, sim)
   return rank, score
 end
 
-function AgentTargeting.PickRemoteDiceValue(game, player, dice_count)
+function agent_targeting.pick_remote_dice_value(game, player, dice_count)
   dice_count = dice_count or 1
   local best
   for value = 1, 6 do
     local steps = value * dice_count
-    local sim = _SimulateLanding(game, player, steps)
-    local rank, score = _RemotePriority(game, player, sim)
+    local sim = _simulate_landing(game, player, steps)
+    local rank, score = _remote_priority(game, player, sim)
     if rank then
       local score_value = score or 0
       local best_score = best and best.score or -2147483647
@@ -98,7 +98,7 @@ function AgentTargeting.PickRemoteDiceValue(game, player, dice_count)
   return best.value, best.tile
 end
 
-local function _RichestOther(game, player, allow_ids)
+local function _richest_other(game, player, allow_ids)
   local best, best_cash = nil, nil
   for _, p in ipairs(game.players) do
     if not p.eliminated and p.id ~= player.id then
@@ -113,7 +113,7 @@ local function _RichestOther(game, player, allow_ids)
   return best
 end
 
-local function _IsRichest(game, player)
+local function _is_richest(game, player)
   for _, p in ipairs(game.players) do
     if not p.eliminated and p.id ~= player.id and p.cash > player.cash then
       return false
@@ -122,7 +122,7 @@ local function _IsRichest(game, player)
   return true
 end
 
-local function _AllowFromOptions(options)
+local function _allow_from_options(options)
   if not options then
     return nil
   end
@@ -133,28 +133,28 @@ local function _AllowFromOptions(options)
   return allowed
 end
 
-function AgentTargeting.PickTargetPlayer(game, player, item_id, options)
-  local allowed = _AllowFromOptions(options)
+function agent_targeting.pick_target_player(game, player, item_id, options)
+  local allowed = _allow_from_options(options)
 
-  if item_id == ITEM_IDS.share_wealth then
-    if not _IsRichest(game, player) then
-      return _RichestOther(game, player, allowed)
+  if item_id == item_ids.share_wealth then
+    if not _is_richest(game, player) then
+      return _richest_other(game, player, allowed)
     end
     return nil
   end
 
-  if item_id == ITEM_IDS.exile or item_id == ITEM_IDS.tax or item_id == ITEM_IDS.poor then
-    return _RichestOther(game, player, allowed)
+  if item_id == item_ids.exile or item_id == item_ids.tax or item_id == item_ids.poor then
+    return _richest_other(game, player, allowed)
   end
 
-  if item_id == ITEM_IDS.invite_deity then
+  if item_id == item_ids.invite_deity then
     local best = nil
     for _, p in ipairs(game.players) do
       if p.id ~= player.id and not p.eliminated and (not allowed or allowed[p.id]) then
-        if p:HasDeity("angel") then
+        if p:has_deity("angel") then
           best = p
           break
-        elseif p:HasDeity("rich") and not best then
+        elseif p:has_deity("rich") and not best then
           best = p
         end
       end
@@ -162,27 +162,27 @@ function AgentTargeting.PickTargetPlayer(game, player, item_id, options)
     return best
   end
 
-  if item_id == ITEM_IDS.send_poor then
-    if not player:HasDeity("poor") then
+  if item_id == item_ids.send_poor then
+    if not player:has_deity("poor") then
       return nil
     end
-    return _RichestOther(game, player, allowed)
+    return _richest_other(game, player, allowed)
   end
 
   return nil
 end
 
-function AgentTargeting.PickRoadblockTarget(game, player)
-  local candidates = Roadblock.Candidates(game, player, 3)
-  local best = Roadblock.PickBest(candidates)
+function agent_targeting.pick_roadblock_target(game, player)
+  local candidates = roadblock.candidates(game, player, 3)
+  local best = roadblock.pick_best(candidates)
   if not best then
     return nil
   end
   return best.idx
 end
 
-function AgentTargeting.PickDemolishTarget(game, player, distance)
-  return Demolish.FindTarget(game, player, distance)
+function agent_targeting.pick_demolish_target(game, player, distance)
+  return demolish.find_target(game, player, distance)
 end
 
-return AgentTargeting
+return agent_targeting

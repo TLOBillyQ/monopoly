@@ -1,6 +1,6 @@
-local LandChoiceSpecs = {}
+local land_choice_specs = {}
 
-local function _BuildUseSkip(kind, title, body_lines, meta, labels)
+local function _build_use_skip(kind, title, body_lines, meta, labels)
   labels = labels or {}
   return {
     kind = kind,
@@ -15,9 +15,9 @@ local function _BuildUseSkip(kind, title, body_lines, meta, labels)
   }
 end
 
-LandChoiceSpecs.BuildUseSkip = _BuildUseSkip
+land_choice_specs.build_use_skip = _build_use_skip
 
-function LandChoiceSpecs.RentPrompt(player_id, tile_id, card_kind, total_value, tile_name)
+function land_choice_specs.rent_prompt(player_id, tile_id, card_kind, total_value, tile_name)
   local body = nil
   local title = nil
   if card_kind == "strong" then
@@ -27,7 +27,7 @@ function LandChoiceSpecs.RentPrompt(player_id, tile_id, card_kind, total_value, 
     body = { "免除本次租金" }
     title = "是否使用免费卡"
   end
-  return _BuildUseSkip(
+  return _build_use_skip(
     "rent_card_prompt",
     title,
     body,
@@ -35,8 +35,8 @@ function LandChoiceSpecs.RentPrompt(player_id, tile_id, card_kind, total_value, 
   )
 end
 
-function LandChoiceSpecs.TaxPrompt(player_id)
-  return _BuildUseSkip(
+function land_choice_specs.tax_prompt(player_id)
+  return _build_use_skip(
     "tax_card_prompt",
     "是否使用免税卡",
     { "使用免税卡可免除本次税金" },
@@ -44,4 +44,4 @@ function LandChoiceSpecs.TaxPrompt(player_id)
   )
 end
 
-return LandChoiceSpecs
+return land_choice_specs

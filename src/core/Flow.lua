@@ -6,11 +6,11 @@ require "vendor.third_party.ClassUtils"
 ---@field args table
 ---@field running boolean
 ---状态机类，管理游戏状态流转
-local Flow = Class("Flow")
+local flow = Class("Flow")
 
 ---创建新状态机实例
 ---@param opts table 选项表（states/start/args）
-function Flow:Init(opts)
+function flow:init(opts)
   self.states = opts.states or {}
   self.current = opts.start or nil
   self.args = opts.args or {}
@@ -23,7 +23,7 @@ end
 ---执行一步状态转移
 ---@param self Flow
 ---@return string? 下一个状态名，nil表示完成
-function Flow:Step()
+function flow:step()
   assert(self.current ~= nil, "flow current state missing")
   local fn = self.states[self.current]
   assert(fn, "flow state not found: " .. tostring(self.current))
@@ -33,4 +33,4 @@ function Flow:Step()
   return self.current
 end
 
-return Flow
+return flow

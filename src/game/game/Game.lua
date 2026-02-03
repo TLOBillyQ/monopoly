@@ -1,42 +1,42 @@
-local CompositionRoot = require("src.game.game.CompositionRoot")
-local GameState = require("src.game.game.GameState")
-local GameVictory = require("src.game.game.GameVictory")
+local composition_root = require("src.game.game.CompositionRoot")
+local game_state = require("src.game.game.GameState")
+local game_victory = require("src.game.game.GameVictory")
 require "vendor.third_party.ClassUtils"
 
 
-local Game = Class("Game")
+local game = Class("Game")
 
-for key, fn in pairs(GameState) do
-  Game[key] = fn
+for key, fn in pairs(game_state) do
+  game[key] = fn
 end
 
-Game.CheckVictory = GameVictory.CheckVictory
+game.check_victory = game_victory.check_victory
 
-function Game:Init(opts)
+function game:init(opts)
   if opts and opts.__skip_assemble then
     return
   end
-  CompositionRoot.Assemble(opts, self)
+  composition_root.assemble(opts, self)
 end
 
-function Game:AdvanceTurn()
+function game:advance_turn()
   if self.finished then
     return
   end
   if self.turn_manager then
-    self.turn_manager:RunTurn()
+    self.turn_manager:run_turn()
   end
-  self:CheckVictory()
+  self:check_victory()
 end
 
-function Game:DispatchAction(action)
+function game:dispatch_action(action)
   if self.finished then
     return
   end
   if self.turn_manager then
-    self.turn_manager:Dispatch(action)
+    self.turn_manager:dispatch(action)
   end
-  self:CheckVictory()
+  self:check_victory()
 end
 
-return Game
+return game

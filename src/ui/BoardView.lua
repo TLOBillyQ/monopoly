@@ -1,9 +1,9 @@
-local BuildingEffects = require("src.ui.BuildingEffects")
-local TileRenderer = require("src.ui.TileRenderer")
+local building_effects = require("src.ui.BuildingEffects")
+local tile_renderer = require("src.ui.TileRenderer")
 
-local EggyLayerBoard = {}
+local eggy_layer_board = {}
 
-function EggyLayerBoard.RefreshBoard(layer, ui_model, log_once, build_log_prefix)
+function eggy_layer_board.refresh_board(layer, ui_model, log_once, build_log_prefix)
   assert(ui_model ~= nil, "missing ui_model")
   local board = assert(ui_model.board, "missing ui_model.board")
   local players = assert(board.players, "missing ui_model.board.players")
@@ -41,7 +41,7 @@ function EggyLayerBoard.RefreshBoard(layer, ui_model, log_once, build_log_prefix
       local tile_state = board_tiles[tile_id]
       assert(tile_state ~= nil, "missing board tile state: " .. tostring(tile_id))
       local owner_id = tile_state.owner_id
-      TileRenderer.RenderTile(unit, tile_id, owner_id)
+      tile_renderer.render_tile(unit, tile_id, owner_id)
     end
 
     local spacing = 0
@@ -69,7 +69,7 @@ function EggyLayerBoard.RefreshBoard(layer, ui_model, log_once, build_log_prefix
   end
 
   if not layer.player_units or layer.player_units_missing then
-    local roles = assert(ALLROLES, "missing ALLROLES")
+    local roles = assert(all_roles, "missing ALLROLES")
     local name_to_unit = {}
     local role_units = {}
     for i, role in ipairs(roles) do
@@ -212,7 +212,7 @@ function EggyLayerBoard.RefreshBoard(layer, ui_model, log_once, build_log_prefix
   layer.board_last_positions = snapshot
 end
 
-function EggyLayerBoard.OnTileUpgraded(layer, tile_id, level)
+function eggy_layer_board.on_tile_upgraded(layer, tile_id, level)
   assert(tile_id ~= nil, "missing tile_id")
   assert(level ~= nil, "missing level")
   local scene = assert(layer.board_scene, "missing board_scene")
@@ -223,18 +223,18 @@ function EggyLayerBoard.OnTileUpgraded(layer, tile_id, level)
   assert(buildings[idx] ~= nil, "missing building unit: " .. tostring(idx))
   local lv = assert(tonumber(level), "invalid level: " .. tostring(level))
   assert(lv >= 1 and lv <= 3, "invalid level: " .. tostring(lv))
-  local root_quaternion = assert(Q_ZERO, "missing Q_ZERO")
-  BuildingEffects.SpawnUpgradeBuildingUnits(scene, root_quaternion, idx, lv)
+  local root_quaternion = assert(q_zero, "missing Q_ZERO")
+  building_effects.spawn_upgrade_building_units(scene, root_quaternion, idx, lv)
 end
 
-function EggyLayerBoard.OnTileOwnerChanged(layer, tile_id, owner_id)
+function eggy_layer_board.on_tile_owner_changed(layer, tile_id, owner_id)
   assert(tile_id ~= nil, "missing tile_id")
   local board = assert(layer.game and layer.game.board, "missing board")
   assert(board.index_of_tile_id ~= nil, "missing board.index_of_tile_id")
   local idx = assert(board:index_of_tile_id(tile_id), "missing tile index: " .. tostring(tile_id))
   assert(layer.tile_units ~= nil, "missing tile_units")
   assert(layer.tile_units[idx] ~= nil, "missing tile unit: " .. tostring(idx))
-  TileRenderer.RenderTile(layer.tile_units[idx], tile_id, owner_id)
+  tile_renderer.render_tile(layer.tile_units[idx], tile_id, owner_id)
 end
 
-return EggyLayerBoard
+return eggy_layer_board

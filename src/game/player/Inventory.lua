@@ -6,11 +6,11 @@ require "vendor.third_party.ClassUtils"
 ---@field _on_change fun(inv: Inventory)?
 ---@field _suspend_on_change boolean?
 ---背包管理类，管理玩家物品
-local Inventory = Class("Inventory")
+local inventory = Class("Inventory")
 
 ---通知背包有变化
 ---@param self Inventory
-function Inventory:_NotifyChange()
+function inventory:_notify_change()
   if self._suspend_on_change then
     return
   end
@@ -19,7 +19,7 @@ end
 
 ---创建新背包实例
 ---@param opts table 选项表（max_slots或constants）
-function Inventory:Init(opts)
+function inventory:init(opts)
   opts = opts or {}
   local max_slots = opts.max_slots or (opts.constants and opts.constants.inventory_slots)
   assert(max_slots ~= nil, "Inventory.new(opts) requires opts.max_slots or opts.constants.inventory_slots")
@@ -35,27 +35,27 @@ end
 ---获取背包中的物品数量
 ---@param self Inventory
 ---@return number 物品数量
-function Inventory:Count()
+function inventory:count()
   return #self.items
 end
 
 ---检查背包是否已满
 ---@param self Inventory
 ---@return boolean 是否已满
-function Inventory:IsFull()
-  return self:Count() >= self.max_slots
+function inventory:is_full()
+  return self:count() >= self.max_slots
 end
 
 ---向背包添加物品
 ---@param self Inventory
 ---@param item table 物品对象
 ---@return boolean 是否成功（背包满则失败）
-function Inventory:Add(item)
-  if self:IsFull() then
+function inventory:add(item)
+  if self:is_full() then
     return false
   end
   table.insert(self.items, item)
-  self:_NotifyChange()
+  self:_notify_change()
   return true
 end
 
@@ -63,10 +63,10 @@ end
 ---@param self Inventory
 ---@param idx number 物品索引（1-based）
 ---@return table? 被删除的物品
-function Inventory:RemoveByIndex(idx)
+function inventory:remove_by_index(idx)
   local item = self.items[idx]
   table.remove(self.items, idx)
-  self:_NotifyChange()
+  self:_notify_change()
   return item
 end
 
@@ -74,7 +74,7 @@ end
 ---@param self Inventory
 ---@param predicate fun(item: table): boolean 判断函数
 ---@return number? 物品索引，或nil
-function Inventory:FindIndex(predicate)
+function inventory:find_index(predicate)
   for i, it in ipairs(self.items) do
     if predicate(it) then
       return i
@@ -83,4 +83,4 @@ function Inventory:FindIndex(predicate)
   return nil
 end
 
-return Inventory
+return inventory

@@ -1,19 +1,19 @@
-local MapCfg = require("Config.Map")
-local TilesCfg = require("Config.Generated.Tiles")
-local ChoiceView = require("src.ui.UIChoice")
-local PanelView = require("src.ui.UIPanel")
+local map_cfg = require("Config.Map")
+local tiles_cfg = require("Config.Generated.Tiles")
+local choice_view = require("src.ui.UIChoice")
+local panel_view = require("src.ui.UIPanel")
 
 local tiles_by_id = {}
-for _, cfg in ipairs(TilesCfg) do
+for _, cfg in ipairs(tiles_cfg) do
   tiles_by_id[cfg.id] = cfg
 end
 
-local UIModel = {}
+local ui_model = {}
 
-local function _BuildBoardTiles()
+local function _build_board_tiles()
   local out = {}
-  assert(MapCfg.path ~= nil, "missing map path")
-  for i, tile_id in ipairs(MapCfg.path) do
+  assert(map_cfg.path ~= nil, "missing map path")
+  for i, tile_id in ipairs(map_cfg.path) do
     local cfg = tiles_by_id[tile_id]
     assert(cfg ~= nil, "missing tile cfg: " .. tostring(tile_id))
     out[i] = {
@@ -28,14 +28,14 @@ local function _BuildBoardTiles()
   return out
 end
 
-local BOARD_TILES = _BuildBoardTiles()
+local board_tiles = _build_board_tiles()
 
-local function _BuildOverlays(env)
-  assert(env ~= nil and env.game ~= nil and env.game.board ~= nil and env.game.board.GetOverlays ~= nil, "missing board overlays")
-  return env.game.board:GetOverlays()
+local function _build_overlays(env)
+  assert(env ~= nil and env.game ~= nil and env.game.board ~= nil and env.game.board.get_overlays ~= nil, "missing board overlays")
+  return env.game.board:get_overlays()
 end
 
-local function _ResolveCurrentPlayer(state)
+local function _resolve_current_player(state)
   local turn = state.turn
   local players = state.players
   assert(turn ~= nil and players ~= nil, "missing turn or players")
@@ -43,13 +43,13 @@ local function _ResolveCurrentPlayer(state)
   return players[idx], turn
 end
 
-function UIModel.Build(store_state, env)
+function ui_model.build(store_state, env)
   assert(store_state ~= nil, "missing store_state")
   env = env or {}
   local ui_state = env.ui_state
   local ui_runtime = ui_state and ui_state.ui
-  local current, turn = _ResolveCurrentPlayer(store_state)
-  local overlays = _BuildOverlays(env)
+  local current, turn = _resolve_current_player(store_state)
+  local overlays = _build_overlays(env)
   local slot_count = 5
   if ui_runtime and type(ui_runtime.item_slots) == "table" and #ui_runtime.item_slots > 0 then
     slot_count = #ui_runtime.item_slots
@@ -64,14 +64,14 @@ function UIModel.Build(store_state, env)
     item_slots[i] = item and item.id or nil
   end
   local panel = {
-    turn_label = PanelView.BuildTurnLabel(turn.turn_count),
-    player_rows = PanelView.BuildPlayerStatuses(store_state, env.game, 4),
-    auto_label = PanelView.BuildAutoLabel(ui_runtime and ui_runtime.auto_play),
+    turn_label = panel_view.build_turn_label(turn.turn_count),
+    player_rows = panel_view.build_player_statuses(store_state, env.game, 4),
+    auto_label = panel_view.build_auto_label(ui_runtime and ui_runtime.auto_play),
   }
   local choice = nil
   local pending = store_state.turn and store_state.turn.pending_choice
   if pending then
-    choice = ChoiceView.BuildChoiceView(pending, { game = env.game })
+    choice = choice_view.build_choice_view(pending, { game = env.game })
     choice.id = pending.id
     choice.kind = pending.kind
   end
@@ -96,13 +96,13 @@ function UIModel.Build(store_state, env)
 
   return {
     board = {
-      tiles = BOARD_TILES,
+      tiles = board_tiles,
       tile_states = store_state.board and store_state.board.tiles or {},
       overlays = overlays,
       players = store_state.players,
       phase = turn.phase,
       move_anim = turn.move_anim,
-      tile_count = #BOARD_TILES,
+      tile_count = #board_tiles,
     },
     panel = panel,
     item_slots = item_slots,
@@ -112,11 +112,11 @@ function UIModel.Build(store_state, env)
     current_player_name = current.name,
     current_player_cash = current.cash,
     turn_count = turn.turn_count,
-    board_tile_count = #BOARD_TILES,
+    board_tile_count = #board_tiles,
     last_turn = env.last_turn,
     finished = env.finished,
     winner_name = env.winner_name,
   }
 end
 
-return UIModel
+return ui_model

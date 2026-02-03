@@ -1,8 +1,8 @@
-local Prefab = require("Data.Prefab")
+local prefab = require("Data.Prefab")
 
-local BuildingEffects = {}
+local building_effects = {}
 
-function BuildingEffects.SpawnUpgradeBuildingUnits(scene, root_quaternion, building_index, level)
+function building_effects.spawn_upgrade_building_units(scene, root_quaternion, building_index, level)
   assert(scene ~= nil, "missing scene")
   assert(building_index ~= nil, "missing building_index")
   assert(level ~= nil, "missing building level")
@@ -21,8 +21,8 @@ function BuildingEffects.SpawnUpgradeBuildingUnits(scene, root_quaternion, build
   end
   local pos = buildings[idx].get_position()
   local ref_key = string.format("lv%d", lv)
-  local unit = GameAPI.create_unit_group(Prefab.group[ref_key], pos + offsets[lv], root_quaternion)
+  local unit = GameAPI.create_unit_group(prefab.group[ref_key], pos + offsets[lv], root_quaternion)
   groups[idx] = unit
 end
 
-return BuildingEffects
+return building_effects

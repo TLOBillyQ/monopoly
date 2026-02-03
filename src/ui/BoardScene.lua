@@ -1,6 +1,6 @@
-local BoardScene = {}
+local board_scene = {}
 
-function BoardScene.Init(state, map_cfg)
+function board_scene.init(state, map_cfg)
   assert(state ~= nil, "missing state")
   assert(map_cfg ~= nil, "missing map_cfg")
 
@@ -53,4 +53,4 @@ function BoardScene.Init(state, map_cfg)
   return scene
 end
 
-return BoardScene
+return board_scene

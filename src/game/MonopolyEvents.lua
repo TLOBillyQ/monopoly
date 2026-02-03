@@ -1,4 +1,4 @@
-local MONOPOLY_EVENT = {
+local monopoly_event = {
   movement = {
     moved = "mv.moved",
     passed_start = "mv.passed_start",
@@ -30,4 +30,4 @@ local MONOPOLY_EVENT = {
   },
 }
 
-return MONOPOLY_EVENT
+return monopoly_event

@@ -1,4 +1,4 @@
-local UIAliases = {}
+local ui_aliases = {}
 
 local alias_map = {
   btn_next = "行动按钮",
@@ -41,8 +41,8 @@ for i = 1, 10 do
   alias_map["market_item_frame_" .. idx] = "底框" .. idx
 end
 
-function UIAliases.Resolve(name)
+function ui_aliases.resolve(name)
   return alias_map[name] or name
 end
 
-return UIAliases
+return ui_aliases

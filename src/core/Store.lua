@@ -4,13 +4,13 @@ require "vendor.third_party.Utils"
 ---@class Store
 ---@field state table
 ---状态存储类，管理游戏状态持久化
-local Store = Class("Store")
+local store = Class("Store")
 
 local deep_copy = Utils.deep_copy
 
 ---创建新状态树
 ---@param init table? 初始状态表
-function Store:Init(init)
+function store:init(init)
   self.state = deep_copy(init or {})
 end
 
@@ -21,7 +21,7 @@ end
 ---@param self Store
 ---@param path table 路径数组（如{"players", 1, "cash"}）
 ---@return any 状态值，不存在则返回nil
-function Store:Get(path)
+function store:get(path)
   local node = self.state
   for i, key in ipairs(path) do
     assert(type(node) == "table", "store path not table: " .. tostring(key))
@@ -37,7 +37,7 @@ end
 ---@param self Store
 ---@param path table 路径数组
 ---@param value any 要设置的值
-function Store:Set(path, value)
+function store:set(path, value)
   local node = self.state
   for i = 1, #path - 1 do
     local key = path[i]
@@ -52,4 +52,4 @@ function Store:Set(path, value)
   node[path[#path]] = value
 end
 
-return Store
+return store

@@ -1,10 +1,10 @@
 require "vendor.third_party.ClassUtils"
 
 
-local AutoRunner = Class("AutoRunner")
+local auto_runner = Class("AutoRunner")
 
 
-function AutoRunner:Init(opts)
+function auto_runner:init(opts)
   opts = opts or {}
   self.interval = opts.interval or 0.15
   self.timer = 0
@@ -12,18 +12,18 @@ function AutoRunner:Init(opts)
 end
 
 
-function AutoRunner:SetEnabled(on)
+function auto_runner:set_enabled(on)
   self.enabled = on
   self.timer = 0
 end
 
 
-function AutoRunner:ResetTimer()
+function auto_runner:reset_timer()
   self.timer = 0
 end
 
 
-function AutoRunner:NextAction(dt, env)
+function auto_runner:next_action(dt, env)
   if not self.enabled then
     return nil
   end
@@ -48,4 +48,4 @@ function AutoRunner:NextAction(dt, env)
   return { type = "ui_button", id = "next" }
 end
 
-return AutoRunner
+return auto_runner

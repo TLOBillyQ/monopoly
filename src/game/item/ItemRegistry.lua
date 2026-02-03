@@ -1,21 +1,21 @@
-local Logger = require("src.core.Logger")
-local ItemEffects = require("src.game.item.ItemPostEffects")
-local Demolish = require("src.game.item.ItemDemolish")
-local Roadblock = require("src.game.item.ItemRoadblock")
-local RemoteDice = require("src.game.item.ItemRemoteDice")
-local Agent = require("src.game.game.Agent")
-local GameplayRules = require("Config.GameplayRules")
-local Inventory = require("src.game.item.ItemInventory")
+local logger = require("src.core.Logger")
+local item_effects = require("src.game.item.ItemPostEffects")
+local demolish = require("src.game.item.ItemDemolish")
+local roadblock = require("src.game.item.ItemRoadblock")
+local remote_dice = require("src.game.item.ItemRemoteDice")
+local agent = require("src.game.game.Agent")
+local gameplay_rules = require("Config.GameplayRules")
+local inventory = require("src.game.item.ItemInventory")
 
-local ItemRegistry = {}
+local item_registry = {}
 local handlers = {}
 local defaults_registered = false
-local ITEM_IDS = GameplayRules.item_ids
+local item_ids = gameplay_rules.item_ids
 
-ItemRegistry.handlers = handlers
+item_registry.handlers = handlers
 
-function ItemRegistry.TargetCandidates(game, player, item_id)
-  local spec = ItemEffects.GetTargetSpec(item_id)
+function item_registry.target_candidates(game, player, item_id)
+  local spec = item_effects.get_target_spec(item_id)
   assert(spec ~= nil, "missing target spec: " .. tostring(item_id))
 
   if spec.require_user and not spec.require_user(player) then
@@ -33,7 +33,7 @@ function ItemRegistry.TargetCandidates(game, player, item_id)
   return candidates
 end
 
-local function _RunItemChoiceFlow(game, player, item_id, context, opts)
+local function _run_item_choice_flow(game, player, item_id, context, opts)
   context = context or {}
   local candidates = assert(opts.candidates(game, player, item_id, context), "missing candidates")
   if #candidates == 0 then
@@ -59,20 +59,20 @@ local function _RunItemChoiceFlow(game, player, item_id, context, opts)
   }
 end
 
-local function _HandleTargetPlayerItem(game, player, item_id, context)
-  return _RunItemChoiceFlow(game, player, item_id, context, {
+local function _handle_target_player_item(game, player, item_id, context)
+  return _run_item_choice_flow(game, player, item_id, context, {
     candidates = function(inner_game, inner_player, inner_item_id)
-      return ItemRegistry.TargetCandidates(inner_game, inner_player, inner_item_id)
+      return item_registry.target_candidates(inner_game, inner_player, inner_item_id)
     end,
     on_empty = function()
-      Logger.Warn("没有可选择的目标玩家")
+      logger.warn("没有可选择的目标玩家")
     end,
     ai_select = function(inner_game, inner_player, inner_item_id, candidates)
-      local target = Agent.PickTargetPlayer(inner_game, inner_player, inner_item_id, candidates)
+      local target = agent.pick_target_player(inner_game, inner_player, inner_item_id, candidates)
       assert(target ~= nil, "missing target player")
-      local ok = ItemEffects.ApplyTarget(inner_game, inner_player, inner_item_id, target)
+      local ok = item_effects.apply_target(inner_game, inner_player, inner_item_id, target)
       if ok then
-        Inventory.Consume(inner_player, inner_item_id)
+        inventory.consume(inner_player, inner_item_id)
       end
       return ok
     end,
@@ -89,7 +89,7 @@ local function _HandleTargetPlayerItem(game, player, item_id, context)
       end
       return {
         kind = "item_target_player",
-        title = Inventory.ItemName(inner_item_id) .. "：选择目标玩家",
+        title = inventory.item_name(inner_item_id) .. "：选择目标玩家",
         body_lines = body_lines,
         options = options,
         allow_cancel = true,
@@ -100,19 +100,19 @@ local function _HandleTargetPlayerItem(game, player, item_id, context)
   })
 end
 
-local function _HandleRemoteDice(game, player, item_id, context)
-  local dice_count = player:DiceCount()
-  return _RunItemChoiceFlow(game, player, item_id, context, {
+local function _handle_remote_dice(game, player, item_id, context)
+  local dice_count = player:dice_count()
+  return _run_item_choice_flow(game, player, item_id, context, {
     candidates = function()
       return { 1, 2, 3, 4, 5, 6 }
     end,
     ai_select = function(inner_game, inner_player, inner_item_id)
-      local value, target_tile = Agent.PickRemoteDiceValue(inner_game, inner_player, dice_count)
+      local value, target_tile = agent.pick_remote_dice_value(inner_game, inner_player, dice_count)
       assert(value ~= nil, "missing remote dice value")
-      assert(Inventory.Consume(inner_player, inner_item_id) == true, "consume remote dice failed")
-      local ok = RemoteDice.Apply(inner_game, inner_player, dice_count, value)
+      assert(inventory.consume(inner_player, inner_item_id) == true, "consume remote dice failed")
+      local ok = remote_dice.apply(inner_game, inner_player, dice_count, value)
       if ok and target_tile then
-        Logger.Event(inner_player.name .. " AI 设定遥控骰子前往 " .. target_tile.name .. " 点数 " .. value)
+        logger.event(inner_player.name .. " AI 设定遥控骰子前往 " .. target_tile.name .. " 点数 " .. value)
       end
       return ok
     end,
@@ -136,20 +136,20 @@ local function _HandleRemoteDice(game, player, item_id, context)
   })
 end
 
-local function _HandleRoadblock(game, player, item_id, context)
-  return _RunItemChoiceFlow(game, player, item_id, context, {
+local function _handle_roadblock(game, player, item_id, context)
+  return _run_item_choice_flow(game, player, item_id, context, {
     candidates = function(inner_game, inner_player)
-      return Roadblock.Candidates(inner_game, inner_player, 3)
+      return roadblock.candidates(inner_game, inner_player, 3)
     end,
     on_empty = function(_, inner_player)
-      Logger.Warn(inner_player.name .. " 无可放置路障的位置")
+      logger.warn(inner_player.name .. " 无可放置路障的位置")
     end,
     ai_select = function(inner_game, inner_player, inner_item_id, candidates)
-      local best = Roadblock.PickBest(candidates)
+      local best = roadblock.pick_best(candidates)
       assert(best ~= nil and best.idx ~= nil, "missing roadblock target")
       local idx = best.idx
-      assert(Inventory.Consume(inner_player, inner_item_id) == true, "consume roadblock failed")
-      return Roadblock.Apply(inner_game, inner_player, idx)
+      assert(inventory.consume(inner_player, inner_item_id) == true, "consume roadblock failed")
+      return roadblock.apply(inner_game, inner_player, idx)
     end,
     choice_spec = function(_, inner_player, inner_item_id, candidates)
       local options = {}
@@ -171,15 +171,15 @@ local function _HandleRoadblock(game, player, item_id, context)
   })
 end
 
-local DEMOLISH_ITEMS = {
-  [ITEM_IDS.monster] = { title = "怪兽卡", injure = false },
-  [ITEM_IDS.missile] = { title = "导弹卡", injure = true },
+local demolish_items = {
+  [item_ids.monster] = { title = "怪兽卡", injure = false },
+  [item_ids.missile] = { title = "导弹卡", injure = true },
 }
 
-local function _HandleDemolish(game, player, item_id, context)
+local function _handle_demolish(game, player, item_id, context)
   context = context or {}
-  local cfg = assert(DEMOLISH_ITEMS[item_id], "missing demolish cfg: " .. tostring(item_id))
-  return Demolish.Use(game, player, 3, Inventory.Consume, {
+  local cfg = assert(demolish_items[item_id], "missing demolish cfg: " .. tostring(item_id))
+  return demolish.use(game, player, 3, inventory.consume, {
     item_id = item_id,
     injure = cfg.injure,
     title = cfg.title,
@@ -187,26 +187,26 @@ local function _HandleDemolish(game, player, item_id, context)
   })
 end
 
-function ItemRegistry.Register(item_id, handler)
+function item_registry.register(item_id, handler)
   handlers[item_id] = handler
 end
 
-function ItemRegistry.RegisterDefaults()
+function item_registry.register_defaults()
   if defaults_registered then
     return
   end
   defaults_registered = true
 
-  ItemRegistry.Register(ITEM_IDS.remote_dice, _HandleRemoteDice)
-  ItemRegistry.Register(ITEM_IDS.roadblock, _HandleRoadblock)
-  ItemRegistry.Register(ITEM_IDS.monster, _HandleDemolish)
-  ItemRegistry.Register(ITEM_IDS.missile, _HandleDemolish)
+  item_registry.register(item_ids.remote_dice, _handle_remote_dice)
+  item_registry.register(item_ids.roadblock, _handle_roadblock)
+  item_registry.register(item_ids.monster, _handle_demolish)
+  item_registry.register(item_ids.missile, _handle_demolish)
 
-  for _, id in ipairs(ItemEffects.TargetItemIds()) do
-    ItemRegistry.Register(id, _HandleTargetPlayerItem)
+  for _, id in ipairs(item_effects.target_item_ids()) do
+    item_registry.register(id, _handle_target_player_item)
   end
 end
 
-return ItemRegistry
+return item_registry
 
 

@@ -1,8 +1,8 @@
-local ItemPhase = require("src.game.item.ItemPhase")
+local item_phase = require("src.game.item.ItemPhase")
 
-local function _PhasePost(tm, args)
+local function _phase_post(tm, args)
   local player = args.player or tm.game:current_player()
-  local phase_res = ItemPhase.run(tm, "post_action", {
+  local phase_res = item_phase.run(tm, "post_action", {
     player = player,
     resume_state = "post_action",
     resume_args = { player = player },
@@ -18,4 +18,4 @@ local function _PhasePost(tm, args)
   return "end_turn", { player = player }
 end
 
-return _PhasePost
+return _phase_post

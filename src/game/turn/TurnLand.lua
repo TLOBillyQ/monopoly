@@ -1,18 +1,18 @@
-local LandingDefs = require("Config.LandingEffects")
-local EffectPipeline = require("src.game.effect.EffectPipeline")
-local Effect = require("src.game.effect.Effect")
+local landing_defs = require("Config.LandingEffects")
+local effect_pipeline = require("src.game.effect.EffectPipeline")
+local effect = require("src.game.effect.Effect")
 
-local MAX_LANDING_DEPTH = 10
+local max_landing_depth = 10
 
-local function _ResolveLanding(game, player, tile, move_result, depth)
+local function _resolve_landing(game, player, tile, move_result, depth)
   depth = depth or 0
-  local game_ctx = Effect.build_game_ctx(game, move_result, {
+  local game_ctx = effect.build_game_ctx(game, move_result, {
     phase_default = "landing",
     on_landing = true,
   })
 
   local function handle_need_landing(out)
-    if depth >= MAX_LANDING_DEPTH then
+    if depth >= max_landing_depth then
       return out
     end
     local target_player = player
@@ -27,12 +27,12 @@ local function _ResolveLanding(game, player, tile, move_result, depth)
       end
     end
     if next_tile then
-      return _ResolveLanding(game, target_player, next_tile, out.move_result, depth + 1)
+      return _resolve_landing(game, target_player, next_tile, out.move_result, depth + 1)
     end
     return out
   end
 
-  return EffectPipeline.run(LandingDefs, player, tile, game_ctx, {
+  return effect_pipeline.run(landing_defs, player, tile, game_ctx, {
     resume_state = "post_action",
     resume_args = { player = player },
     optional_choice_kind = "landing_optional_effect",
@@ -43,12 +43,12 @@ local function _ResolveLanding(game, player, tile, move_result, depth)
   })
 end
 
-local function _PhaseLand(tm, args)
+local function _phase_land(tm, args)
   local player = args.player
   local move_result = args.move_result
   local tile = tm.game.board:get_tile(player.position)
 
-  local res = _ResolveLanding(tm.game, player, tile, move_result)
+  local res = _resolve_landing(tm.game, player, tile, move_result)
   if res and res.waiting then
     local resume_state = res.resume_state or "landing"
     local resume_args = res.resume_args or { player = player, move_result = move_result }
@@ -58,4 +58,4 @@ local function _PhaseLand(tm, args)
   return "post_action", { player = player }
 end
 
-return _PhaseLand
+return _phase_land

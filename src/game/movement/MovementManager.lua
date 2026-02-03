@@ -1,17 +1,17 @@
-local Constants = require("Config.Generated.Constants")
-local GameplayRules = require("Config.GameplayRules")
-local Inventory = require("src.game.item.ItemInventory")
-local MonopolyEvent = require("src.game.MonopolyEvents")
+local constants = require("Config.Generated.Constants")
+local gameplay_rules = require("Config.GameplayRules")
+local inventory = require("src.game.item.ItemInventory")
+local monopoly_event = require("src.game.MonopolyEvents")
 
-local MovementManager = {}
-local ITEM_IDS = GameplayRules.item_ids
+local movement_manager = {}
+local item_ids = gameplay_rules.item_ids
 
-local function _EmitEvent(kind, payload)
+local function _emit_event(kind, payload)
   assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
   TriggerCustomEvent(kind, payload or {})
 end
 
-function MovementManager.Move(game, player, steps, opts)
+function movement_manager.move(game, player, steps, opts)
   opts = opts or {}
   local abs_steps = steps < 0 and -steps or steps
   local branch_parity = opts.branch_parity or abs_steps
@@ -23,11 +23,11 @@ function MovementManager.Move(game, player, steps, opts)
   local market_interrupt = nil
   local steal_interrupt = nil
   local current = player.position
-  local start_tile = board:GetTile(current)
+  local start_tile = board:get_tile(current)
   local facing = opts.direction or player.status.move_dir
-  local step_fn = board.StepForwardByFacing
+  local step_fn = board.step_forward_by_facing
   if steps < 0 then
-    step_fn = board.StepBackwardByFacing
+    step_fn = board.step_backward_by_facing
   end
 
   for step = 1, abs_steps do
@@ -46,19 +46,19 @@ function MovementManager.Move(game, player, steps, opts)
       end
     end
 
-    if board:HasRoadblock(current) then
-      board:ClearRoadblock(current)
+    if board:has_roadblock(current) then
+      board:clear_roadblock(current)
       stopped_on_roadblock = true
-      _EmitEvent(MonopolyEvent.movement.roadblock_hit, {
+      _emit_event(monopoly_event.movement.roadblock_hit, {
         player = player,
-        tile = board:GetTile(current),
-        text = player.name .. " 触发路障，停在 " .. board:GetTile(current).name,
+        tile = board:get_tile(current),
+        text = player.name .. " 触发路障，停在 " .. board:get_tile(current).name,
       })
       break
     end
 
     if not opts.skip_steal_check and #encountered_step > 0 then
-      local has_steal = Inventory.FindIndex(player, ITEM_IDS.steal)
+      local has_steal = inventory.find_index(player, item_ids.steal)
       local remaining = abs_steps - step
       if has_steal and remaining > 0 then
         steal_interrupt = {
@@ -68,7 +68,7 @@ function MovementManager.Move(game, player, steps, opts)
           branch_parity = branch_parity,
           encountered_ids = encountered_step,
         }
-        _EmitEvent(MonopolyEvent.movement.steal_interrupt, {
+        _emit_event(monopoly_event.movement.steal_interrupt, {
           player = player,
           encountered_ids = encountered_step,
           text = player.name .. " 经过玩家，触发偷窃中断",
@@ -78,7 +78,7 @@ function MovementManager.Move(game, player, steps, opts)
     end
 
     if steps > 0 and not opts.skip_market_check then
-      local tile = board:GetTile(current)
+      local tile = board:get_tile(current)
       assert(tile ~= nil, "missing tile: " .. tostring(current))
       if tile.type == "market" and step < steps then
         market_interrupt = {
@@ -87,7 +87,7 @@ function MovementManager.Move(game, player, steps, opts)
           facing = facing,
           branch_parity = branch_parity,
         }
-        _EmitEvent(MonopolyEvent.movement.market_interrupt, {
+        _emit_event(monopoly_event.movement.market_interrupt, {
           player = player,
           remaining_steps = market_interrupt.remaining_steps,
           text = player.name .. " 经过黑市，剩余 " .. market_interrupt.remaining_steps .. " 步",
@@ -97,26 +97,26 @@ function MovementManager.Move(game, player, steps, opts)
     end
   end
 
-  local landing_tile = board:GetTile(current)
-  local function _TileLabel(tile, fallback_index)
+  local landing_tile = board:get_tile(current)
+  local function _tile_label(tile, fallback_index)
     local name = tile.name
     if tile.row and tile.col then
       return name .. "（" .. tile.row .. "，" .. tile.col .. "）"
     end
     return name
   end
-  _EmitEvent(MonopolyEvent.movement.moved, {
+  _emit_event(monopoly_event.movement.moved, {
     player = player,
     from_tile = start_tile,
     to_tile = landing_tile,
     steps = steps,
-    text = player.name .. " 从 " .. _TileLabel(start_tile, player.position) .. " 移动到 " .. _TileLabel(landing_tile, current),
+    text = player.name .. " 从 " .. _tile_label(start_tile, player.position) .. " 移动到 " .. _tile_label(landing_tile, current),
   })
 
   if pass_start > 0 then
-    local bonus = pass_start * Constants.pass_start_bonus
-    player:AddCash(bonus)
-    _EmitEvent(MonopolyEvent.movement.passed_start, {
+    local bonus = pass_start * constants.pass_start_bonus
+    player:add_cash(bonus)
+    _emit_event(monopoly_event.movement.passed_start, {
       player = player,
       count = pass_start,
       bonus = bonus,
@@ -124,9 +124,9 @@ function MovementManager.Move(game, player, steps, opts)
     })
   end
 
-  game:UpdatePlayerPosition(player, current)
+  game:update_player_position(player, current)
 
-  game:SetPlayerStatus(player, "move_dir", facing)
+  game:set_player_status(player, "move_dir", facing)
 
   return {
     encountered_players = encountered,
@@ -140,4 +140,4 @@ function MovementManager.Move(game, player, steps, opts)
   }
 end
 
-return MovementManager
+return movement_manager

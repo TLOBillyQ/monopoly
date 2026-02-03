@@ -1,9 +1,9 @@
-local Logger = require("src.core.Logger")
-local ItemPhase = require("src.game.item.ItemPhase")
+local logger = require("src.core.Logger")
+local item_phase = require("src.game.item.ItemPhase")
 
-local function _PhaseStart(tm)
+local function _phase_start(tm)
   local player = tm.game:current_player()
-  local tc = tm.game.store:Get({ "turn", "turn_count" })
+  local tc = tm.game.store:get({ "turn", "turn_count" })
   tm.game.last_turn = {
     player_id = player.id,
     player_name = player.name,
@@ -20,18 +20,18 @@ local function _PhaseStart(tm)
   end
   tc = tc + 1
   if tm.game.store then
-    tm.game.store:Set({ "turn", "turn_count" }, tc)
+    tm.game.store:set({ "turn", "turn_count" }, tc)
   end
   if player.status.stay_turns and player.status.stay_turns > 0 then
     tm.game:set_player_status(player, "stay_turns", player.status.stay_turns - 1)
-    Logger.event(player.name .. " 被扣留，剩余回合:", player.status.stay_turns)
+    logger.event(player.name .. " 被扣留，剩余回合:", player.status.stay_turns)
     tm.game.last_turn.note = "被扣留"
     tm.game.last_turn.skipped = true
     tm.game.last_turn.stay_turns = player.status.stay_turns
     return "end_turn", { player = player }
   end
 
-  local phase_res = ItemPhase.run(tm, "pre_action", {
+  local phase_res = item_phase.run(tm, "pre_action", {
     player = player,
     resume_state = "roll",
     resume_args = { player = player },
@@ -48,6 +48,6 @@ local function _PhaseStart(tm)
   return "roll", { player = player }
 end
 
-return _PhaseStart
+return _phase_start
 
 

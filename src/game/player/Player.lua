@@ -1,8 +1,8 @@
-local Inventory = require("src.game.player.Inventory")
-local Constants = require("Config.Generated.Constants")
-local VehiclesCfg = require("Config.Generated.Vehicles")
-local Logger = require("src.core.Logger")
-local BankruptcyManager = require("src.game.game.BankruptcyManager")
+local inventory = require("src.game.player.Inventory")
+local constants = require("Config.Generated.Constants")
+local vehicles_cfg = require("Config.Generated.Vehicles")
+local logger = require("src.core.Logger")
+local bankruptcy_manager = require("src.game.game.BankruptcyManager")
 require "vendor.third_party.ClassUtils"
 require "vendor.third_party.Utils"
 
@@ -23,22 +23,22 @@ require "vendor.third_party.Utils"
 ---@field eliminated boolean
 ---@field _store Store?
 ---玩家对象，管理玩家资产、状态和物品
-local Player = Class("Player")
+local player = Class("Player")
 
 local deep_copy = Utils.deep_copy
 
 local vehicle_by_id = {}
-for _, cfg in ipairs(VehiclesCfg) do
+for _, cfg in ipairs(vehicles_cfg) do
   vehicle_by_id[cfg.id] = cfg
 end
 local default_vehicle_cfg = {
   id = 0,
   name = "",
-  dice_count = Constants.default_dice_count,
+  dice_count = constants.default_dice_count,
   indestructible = false,
 }
 
-local function _NormalizeCurrency(currency)
+local function _normalize_currency(currency)
   assert(currency ~= nil and currency ~= "", "missing currency")
   return currency
 end
@@ -47,14 +47,14 @@ end
 ---@param self Player
 ---@param path table 状态路径
 ---@param value any 值
-function Player:_StoreSet(path, value)
+function player:_store_set(path, value)
   assert(self._store ~= nil, "missing store")
-  self._store:Set(path, value)
+  self._store:set(path, value)
 end
 
 ---创建新玩家实例
 ---@param attrs table 玩家属性表（id/name/role_id/constants等）
-function Player:Init(attrs)
+function player:init(attrs)
   assert(attrs ~= nil, "Player.new(attrs) requires attrs")
   local constants = attrs.constants
   assert(constants ~= nil, "Player.new(attrs) requires attrs.constants")
@@ -62,7 +62,7 @@ function Player:Init(attrs)
   local balances = attrs.balances
   assert(balances ~= nil, "Player.new(attrs) requires attrs.balances")
   for currency, amount in pairs(balances) do
-    local key = _NormalizeCurrency(currency)
+    local key = _normalize_currency(currency)
     balances[key] = amount
   end
 
@@ -103,8 +103,8 @@ end
 ---@param self Player
 ---@param currency string? 币种名称（默认"金币"）
 ---@return number 余额
-function Player:Balance(currency)
-  local key = _NormalizeCurrency(currency)
+function player:balance(currency)
+  local key = _normalize_currency(currency)
   if key == "金币" then
     return self.cash
   end
@@ -118,42 +118,42 @@ end
 ---@param currency string? 币种名称
 ---@param amount number 扣除金额
 ---@return number 扣除后的余额
-function Player:DeductBalance(currency, amount)
-  local key = _NormalizeCurrency(currency)
+function player:deduct_balance(currency, amount)
+  local key = _normalize_currency(currency)
   if key == "金币" then
-    return self:DeductCash(amount)
+    return self:deduct_cash(amount)
   end
   local current = self.balances[key]
   assert(current ~= nil, "missing balance: " .. tostring(key))
   local next_value = current - amount
   self.balances[key] = next_value
-  self:_StoreSet({ "players", self.id, "balances", key }, next_value)
+  self:_store_set({ "players", self.id, "balances", key }, next_value)
   return next_value
 end
 
 ---增加玩家现金
 ---@param self Player
 ---@param amount number 增加金额
-function Player:AddCash(amount)
+function player:add_cash(amount)
   self.cash = self.cash + amount
-  self:_StoreSet({ "players", self.id, "cash" }, self.cash)
+  self:_store_set({ "players", self.id, "cash" }, self.cash)
 end
 
 ---设置玩家现金（绝对值）
 ---@param self Player
 ---@param amount number 现金数量
-function Player:SetCash(amount)
+function player:set_cash(amount)
   self.cash = amount
-  self:_StoreSet({ "players", self.id, "cash" }, self.cash)
+  self:_store_set({ "players", self.id, "cash" }, self.cash)
 end
 
 ---扣除玩家现金
 ---@param self Player
 ---@param amount number 扣除金额
 ---@return number 扣除后的现金
-function Player:DeductCash(amount)
+function player:deduct_cash(amount)
   self.cash = self.cash - amount
-  self:_StoreSet({ "players", self.id, "cash" }, self.cash)
+  self:_store_set({ "players", self.id, "cash" }, self.cash)
   return self.cash
 end
 
@@ -161,7 +161,7 @@ end
 ---@param self Player
 ---@param name string 神力名称
 ---@return boolean 是否拥有该神力
-function Player:HasDeity(name)
+function player:has_deity(name)
   return self.status.deity.type == name and self.status.deity.remaining > 0
 end
 
@@ -169,52 +169,52 @@ end
 ---@param self Player
 ---@param name string? 神力名称，nil表示清除
 ---@param duration number? 持续回合数
-function Player:ClearDeity()
+function player:clear_deity()
   self.status.deity.type = ""
   self.status.deity.remaining = 0
-  self:_StoreSet({ "players", self.id, "status", "deity" }, deep_copy(self.status.deity))
+  self:_store_set({ "players", self.id, "status", "deity" }, deep_copy(self.status.deity))
 end
 
-function Player:SetDeity(name, duration)
+function player:set_deity(name, duration)
   assert(name ~= nil, "missing deity name")
   self.status.deity.type = name
   self.status.deity.remaining = duration or self.deity_duration_turns
-  self:_StoreSet({ "players", self.id, "status", "deity" }, deep_copy(self.status.deity))
+  self:_store_set({ "players", self.id, "status", "deity" }, deep_copy(self.status.deity))
 end
 
 ---减少神力的剩余回合数
 ---@param self Player
-function Player:TickDeity()
+function player:tick_deity()
   local deity = self.status.deity
   if deity.remaining <= 0 then
     return
   end
   deity.remaining = deity.remaining - 1
   if deity.remaining <= 0 then
-    self:ClearDeity()
+    self:clear_deity()
     return
   end
-  self:_StoreSet({ "players", self.id, "status", "deity", "remaining" }, deity.remaining)
+  self:_store_set({ "players", self.id, "status", "deity", "remaining" }, deity.remaining)
 end
 
 ---清除玩家的临时标志位（用于回合开始）
 ---@param self Player
-function Player:ClearTemporalFlags()
+function player:clear_temporal_flags()
   self.status.pending_dice_multiplier = 1
   self.status.pending_free_rent = false
   self.status.pending_tax_free = false
   self.status.pending_remote_dice = nil
-  self:_StoreSet({ "players", self.id, "status" }, deep_copy(self.status))
+  self:_store_set({ "players", self.id, "status" }, deep_copy(self.status))
 end
 
 ---快速检查玩家是否拥有天使神力
 ---@param self Player
 ---@return boolean 是否有天使神力
-function Player:HasAngel()
-  return self:HasDeity("angel")
+function player:has_angel()
+  return self:has_deity("angel")
 end
 
-function Player:VehicleCfg()
+function player:vehicle_cfg()
   local seat_id = self.seat_id
   if seat_id then
     local cfg = vehicle_by_id[seat_id]
@@ -225,63 +225,63 @@ function Player:VehicleCfg()
   return cfg
 end
 
-function Player:VehicleName()
-  return self:VehicleCfg().name
+function player:vehicle_name()
+  return self:vehicle_cfg().name
 end
 
-function Player:DiceCount()
-  return self:VehicleCfg().dice_count
+function player:dice_count()
+  return self:vehicle_cfg().dice_count
 end
 
-function Player:IsVehicleIndestructible()
-  return self:VehicleCfg().indestructible == true
+function player:is_vehicle_indestructible()
+  return self:vehicle_cfg().indestructible == true
 end
 
-function Player:ApplyHospitalEffects(game)
-  game:SetPlayerStatus(self, "stay_turns", Constants.hospital_stay_turns)
+function player:apply_hospital_effects(game)
+  game:set_player_status(self, "stay_turns", constants.hospital_stay_turns)
 
-  local fee = Constants.hospital_fee
+  local fee = constants.hospital_fee
   if self.cash < fee then
-    Logger.Event(self.name .. " 资金不足，无法支付医药费 " .. fee)
-    BankruptcyManager.Eliminate(game, self)
+    logger.event(self.name .. " 资金不足，无法支付医药费 " .. fee)
+    bankruptcy_manager.eliminate(game, self)
     return
   end
-  self:DeductCash(fee)
-  Logger.Event(self.name .. " 支付医药费 " .. fee)
+  self:deduct_cash(fee)
+  logger.event(self.name .. " 支付医药费 " .. fee)
   if self.cash <= 0 then
-    BankruptcyManager.Eliminate(game, self)
+    bankruptcy_manager.eliminate(game, self)
     return
   end
 
-  Logger.Event(self.name .. " 住院，需停留 " .. self.status.stay_turns .. " 回合")
+  logger.event(self.name .. " 住院，需停留 " .. self.status.stay_turns .. " 回合")
 end
 
-function Player:SendToHospital(game)
-  local hospital_index = game.board:FindFirstByType("hospital")
+function player:send_to_hospital(game)
+  local hospital_index = game.board:find_first_by_type("hospital")
   assert(hospital_index ~= nil, "missing hospital tile")
-  game:UpdatePlayerPosition(self, hospital_index)
-  game:SetPlayerStatus(self, "move_dir", nil)
-  self:ApplyHospitalEffects(game)
+  game:update_player_position(self, hospital_index)
+  game:set_player_status(self, "move_dir", nil)
+  self:apply_hospital_effects(game)
 end
 
-function Player:ApplyMountainEffects(game)
-  game:SetPlayerStatus(self, "stay_turns", Constants.mountain_stay_turns)
-  Logger.Event(self.name .. " 进入深山，停留 " .. self.status.stay_turns .. " 回合")
+function player:apply_mountain_effects(game)
+  game:set_player_status(self, "stay_turns", constants.mountain_stay_turns)
+  logger.event(self.name .. " 进入深山，停留 " .. self.status.stay_turns .. " 回合")
 end
 
-function Player:SendToMountain(game)
-  local idx = game.board:FindFirstByType("mountain")
+function player:send_to_mountain(game)
+  local idx = game.board:find_first_by_type("mountain")
   assert(idx ~= nil, "missing mountain tile")
-  game:UpdatePlayerPosition(self, idx)
-  game:SetPlayerStatus(self, "move_dir", nil)
-  self:ApplyMountainEffects(game)
+  game:update_player_position(self, idx)
+  game:set_player_status(self, "move_dir", nil)
+  self:apply_mountain_effects(game)
 end
 
-function Player:IsInMountain(game)
-  local tile = game.board:GetTile(self.position)
+function player:is_in_mountain(game)
+  local tile = game.board:get_tile(self.position)
   assert(tile ~= nil, "missing tile at position: " .. tostring(self.position))
   return tile.type == "mountain"
 end
 
-return Player
+return player
 

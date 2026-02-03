@@ -1,4 +1,4 @@
-local MarketUI = {
+local market_ui = {
   container = "黑市屏",
   confirm_button = "黑市购买按钮",
   cancel_button = "关闭",
@@ -46,15 +46,15 @@ local MarketUI = {
   empty_ref_key = "空",
 }
 
-function MarketUI.IsReady()
-  return type(MarketUI.container) == "string" and MarketUI.container ~= ""
-    and type(MarketUI.confirm_button) == "string" and MarketUI.confirm_button ~= ""
+function market_ui.is_ready()
+  return type(market_ui.container) == "string" and market_ui.container ~= ""
+    and type(market_ui.confirm_button) == "string" and market_ui.confirm_button ~= ""
 end
 
-function MarketUI.IsPanelReady()
-  return MarketUI.IsReady()
-    and type(MarketUI.item_buttons) == "table" and #MarketUI.item_buttons > 0
-    and type(MarketUI.item_labels) == "table" and #MarketUI.item_labels > 0
+function market_ui.is_panel_ready()
+  return market_ui.is_ready()
+    and type(market_ui.item_buttons) == "table" and #market_ui.item_buttons > 0
+    and type(market_ui.item_labels) == "table" and #market_ui.item_labels > 0
 end
 
-return MarketUI
+return market_ui

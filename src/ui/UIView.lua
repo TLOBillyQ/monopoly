@@ -1,39 +1,39 @@
-local MarketView = require("src.ui.UIMarket")
-local BoardView = require("src.ui.BoardView")
-local MarketUI = require("src.ui.MarketUI")
-local UIAliases = require("src.ui.UIAliases")
+local market_view = require("src.ui.UIMarket")
+local board_view = require("src.ui.BoardView")
+local market_ui = require("src.ui.MarketUI")
+local ui_aliases = require("src.ui.UIAliases")
 
-local UIView = {}
+local ui_view = {}
 
-local function _QueryNode(name)
+local function _query_node(name)
   assert(name ~= nil, "missing ui node name")
-  local resolved = UIAliases.Resolve(name)
+  local resolved = ui_aliases.resolve(name)
   local list = UIManager.query_nodes_by_name(resolved)
   assert(list ~= nil and list[1] ~= nil, "missing ui node: " .. tostring(name))
   return list[1]
 end
 
-local function _SetLabel(_, name, text)
-  local node = _QueryNode(name)
+local function _set_label(_, name, text)
+  local node = _query_node(name)
   node.text = text or ""
 end
 
-local function _SetButton(_, name, text)
-  local node = _QueryNode(name)
+local function _set_button(_, name, text)
+  local node = _query_node(name)
   node.text = text or ""
 end
 
-local function _SetVisible(_, name, visible)
-  local node = _QueryNode(name)
+local function _set_visible(_, name, visible)
+  local node = _query_node(name)
   node.visible = visible == true
 end
 
-local function _SetTouchEnabled(_, name, enabled)
-  local node = _QueryNode(name)
+local function _set_touch_enabled(_, name, enabled)
+  local node = _query_node(name)
   node.disabled = not enabled
 end
 
-function UIView.BuildUiState()
+function ui_view.build_ui_state()
   return {
     auto_play = false,
     auto_interval = 0.1,
@@ -59,15 +59,15 @@ function UIView.BuildUiState()
       root = "弹窗屏",
       confirm = "弹窗确认",
     },
-    query_node = _QueryNode,
-    set_label = _SetLabel,
-    set_button = _SetButton,
-    set_visible = _SetVisible,
-    set_touch_enabled = _SetTouchEnabled,
+    query_node = _query_node,
+    set_label = _set_label,
+    set_button = _set_button,
+    set_visible = _set_visible,
+    set_touch_enabled = _set_touch_enabled,
   }
 end
 
-function UIView.InitUiAssets(layer)
+function ui_view.init_ui_assets(layer)
   assert(layer ~= nil, "missing state")
   local refs = require("src.runtime.Refs")
   layer.ui_refs = refs
@@ -82,7 +82,7 @@ function UIView.InitUiAssets(layer)
     end
   end
 
-  for _, role in ipairs(ALLROLES) do
+  for _, role in ipairs(all_roles) do
     UIManager.client_role = role
     for i = 1, 5 do
       local num = 3000 + i
@@ -94,7 +94,7 @@ function UIView.InitUiAssets(layer)
   UIManager.client_role = nil
 end
 
-function UIView.RefreshPanel(layer, ui_model)
+function ui_view.refresh_panel(layer, ui_model)
   local ui = layer.ui
   local panel = assert(ui_model.panel, "missing ui_model.panel")
 
@@ -109,7 +109,7 @@ function UIView.RefreshPanel(layer, ui_model)
     ui:set_label("玩家" .. tostring(i) .. "总资产", row.total_assets)
   end
 
-  UIView.RefreshItemSlots(layer, ui_model)
+  ui_view.refresh_item_slots(layer, ui_model)
 
   local auto_label = panel.auto_label
   ui:set_button("行动按钮", "下一回合")
@@ -117,7 +117,7 @@ function UIView.RefreshPanel(layer, ui_model)
   ui:set_button("自动控制按钮", auto_label)
 end
 
-function UIView.RefreshItemSlots(layer, ui_model)
+function ui_view.refresh_item_slots(layer, ui_model)
   local ui = layer.ui
   assert(ui ~= nil and ui.item_slots ~= nil, "missing ui item slots")
 
@@ -149,28 +149,28 @@ function UIView.RefreshItemSlots(layer, ui_model)
   end
 end
 
-function UIView.RefreshBoard(layer, ui_model, log_once, build_log_prefix)
-  BoardView.RefreshBoard(layer, ui_model, log_once, build_log_prefix)
+function ui_view.refresh_board(layer, ui_model, log_once, build_log_prefix)
+  board_view.refresh_board(layer, ui_model, log_once, build_log_prefix)
 end
 
-function UIView.Render(layer, ui_model, log_once, build_log_prefix)
-  UIView.RefreshPanel(layer, ui_model)
-  UIView.RefreshBoard(layer, ui_model, log_once, build_log_prefix)
+function ui_view.render(layer, ui_model, log_once, build_log_prefix)
+  ui_view.refresh_panel(layer, ui_model)
+  ui_view.refresh_board(layer, ui_model, log_once, build_log_prefix)
 end
 
-function UIView.OnTileUpgraded(layer, tile_id, level)
-  BoardView.OnTileUpgraded(layer, tile_id, level)
+function ui_view.on_tile_upgraded(layer, tile_id, level)
+  board_view.on_tile_upgraded(layer, tile_id, level)
 end
 
-function UIView.OnTileOwnerChanged(layer, tile_id, owner_id)
-  BoardView.OnTileOwnerChanged(layer, tile_id, owner_id)
+function ui_view.on_tile_owner_changed(layer, tile_id, owner_id)
+  board_view.on_tile_owner_changed(layer, tile_id, owner_id)
 end
 
-function UIView.SelectMarketOption(layer, option_id)
-  MarketView.SelectMarketOption(layer, option_id)
+function ui_view.select_market_option(layer, option_id)
+  market_view.select_market_option(layer, option_id)
 end
 
-function UIView.OpenChoiceModal(layer, choice, market)
+function ui_view.open_choice_modal(layer, choice, market)
   assert(choice ~= nil, "missing choice")
   local choice_id = assert(choice.id, "missing choice id")
   if layer.pending_choice_id == choice_id
@@ -178,7 +178,7 @@ function UIView.OpenChoiceModal(layer, choice, market)
     return
   end
 
-  if choice.kind == "market_buy" and MarketUI.IsPanelReady() then
+  if choice.kind == "market_buy" and market_ui.is_panel_ready() then
     if layer.ui.choice_active then
       layer.ui:set_visible(layer.ui.choice.root, false)
       layer.ui.choice_active = false
@@ -190,11 +190,11 @@ function UIView.OpenChoiceModal(layer, choice, market)
       cancel_label = choice.cancel_label,
       selected_option_id = layer.pending_choice_selected_option_id,
     }
-    MarketView.RefreshMarket(layer, market_view)
+    market_view.refresh_market(layer, market_view)
     return
   end
   if layer.ui.market_active then
-    MarketView.CloseMarketPanel(layer)
+    market_view.close_market_panel(layer)
   end
 
   layer.ui:set_label(layer.ui.choice.title, choice.title)
@@ -228,19 +228,19 @@ function UIView.OpenChoiceModal(layer, choice, market)
   layer.pending_choice_id = choice_id
 end
 
-function UIView.CloseChoiceModal(layer)
+function ui_view.close_choice_modal(layer)
   if layer.ui.choice_active then
     layer.ui:set_visible(layer.ui.choice.root, false)
     layer.ui.choice_active = false
   end
   if layer.ui.market_active then
-    MarketView.CloseMarketPanel(layer)
+    market_view.close_market_panel(layer)
   end
   layer.market_choice_option_ids = nil
   layer.pending_choice_selected_option_id = nil
 end
 
-function UIView.PushPopup(layer, payload)
+function ui_view.push_popup(layer, payload)
   assert(payload ~= nil, "missing popup payload")
   layer.ui:set_label(layer.ui.popup.title, payload.title)
   layer.ui:set_label(layer.ui.popup.body, payload.body)
@@ -252,11 +252,11 @@ function UIView.PushPopup(layer, payload)
   return true
 end
 
-function UIView.ClosePopup(layer)
+function ui_view.close_popup(layer)
   assert(layer.ui.popup_active == true, "popup not active")
   layer.ui:set_visible(layer.ui.popup.root, false)
   layer.ui.popup_active = false
   layer.ui.popup_payload = nil
 end
 
-return UIView
+return ui_view

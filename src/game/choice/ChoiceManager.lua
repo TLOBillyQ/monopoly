@@ -1,33 +1,33 @@
-local Logger = require("src.core.Logger")
-local ChoiceRegistry = require("src.game.choice.ChoiceRegistry")
-local Executor = require("src.game.item.ItemExecutor")
-local ItemPhase = require("src.game.item.ItemPhase")
-local Effect = require("src.game.effect.Effect")
-local LandingDefs = require("Config.LandingEffects")
+local logger = require("src.core.Logger")
+local choice_registry = require("src.game.choice.ChoiceRegistry")
+local executor = require("src.game.item.ItemExecutor")
+local item_phase = require("src.game.item.ItemPhase")
+local effect = require("src.game.effect.Effect")
+local landing_defs = require("Config.LandingEffects")
 
-local ChoiceManager = {}
+local choice_manager = {}
 
-local function _IsCancel(action)
+local function _is_cancel(action)
   assert(action ~= nil, "missing action")
   return action.type == "choice_cancel"
 end
 
-local function _ClearChoice(game)
-  game.store:Set({ "turn", "pending_choice" }, nil)
+local function _clear_choice(game)
+  game.store:set({ "turn", "pending_choice" }, nil)
 end
 
-local function _UseItem(game, player, item_id, context)
+local function _use_item(game, player, item_id, context)
   assert(context ~= nil, "missing item context")
-  return Executor.UseItem(game, player, item_id, context)
+  return executor.use_item(game, player, item_id, context)
 end
 
-local function _FinishChoice(game, stay)
-  _ClearChoice(game)
+local function _finish_choice(game, stay)
+  _clear_choice(game)
   return { stay = stay }
 end
 
 
-local function _Contains(list, value)
+local function _contains(list, value)
   assert(type(list) == "table", "contains requires table")
   for _, v in ipairs(list) do
     if v == value then
@@ -37,7 +37,7 @@ local function _Contains(list, value)
   return false
 end
 
-local function _OptionExists(choice, option_id)
+local function _option_exists(choice, option_id)
   assert(choice ~= nil, "missing choice")
   assert(option_id ~= nil, "missing option_id")
   local options = choice.options
@@ -54,32 +54,32 @@ local function _OptionExists(choice, option_id)
   return false
 end
 
-local function _BuildGameCtx(game, move_result)
-  return Effect.BuildGameCtx(game, move_result, {
+local function _build_game_ctx(game, move_result)
+  return effect.build_game_ctx(game, move_result, {
     phase_default = "wait_choice",
     on_landing = true,
   })
 end
 
-local function _FinishItemPhase(game, phase)
-  ItemPhase.Finish(game, phase)
+local function _finish_item_phase(game, phase)
+  item_phase.finish(game, phase)
 end
 
-local function _FinishActiveItemPhase(game)
-  local phase = game.store:Get({ "turn", "item_phase_active" })
+local function _finish_active_item_phase(game)
+  local phase = game.store:get({ "turn", "item_phase_active" })
   if phase ~= "" then
-    ItemPhase.Finish(game, phase)
+    item_phase.finish(game, phase)
   end
 end
 
-local function _GetContainerDefsByChoiceKind(choice_kind)
+local function _get_container_defs_by_choice_kind(choice_kind)
   if choice_kind == "landing_optional_effect" or choice_kind == "land_optional_effect" then
-    return LandingDefs
+    return landing_defs
   end
   return nil
 end
 
-local function _FindEffectById(effect_defs, effect_id)
+local function _find_effect_by_id(effect_defs, effect_id)
   assert(effect_defs ~= nil, "missing effect defs")
   for _, eff in ipairs(effect_defs) do
     if eff.id == effect_id then
@@ -90,43 +90,43 @@ local function _FindEffectById(effect_defs, effect_id)
 end
 
 local helpers = {
-  IsCancel = _IsCancel,
-  ClearChoice = _ClearChoice,
-  FinishChoice = _FinishChoice,
-  UseItem = _UseItem,
-  Contains = _Contains,
-  BuildGameCtx = _BuildGameCtx,
-  FinishItemPhase = _FinishItemPhase,
-  FinishActiveItemPhase = _FinishActiveItemPhase,
-  GetContainerDefsByChoiceKind = _GetContainerDefsByChoiceKind,
-  FindEffectById = _FindEffectById,
+  is_cancel = _is_cancel,
+  clear_choice = _clear_choice,
+  finish_choice = _finish_choice,
+  use_item = _use_item,
+  contains = _contains,
+  build_game_ctx = _build_game_ctx,
+  finish_item_phase = _finish_item_phase,
+  finish_active_item_phase = _finish_active_item_phase,
+  get_container_defs_by_choice_kind = _get_container_defs_by_choice_kind,
+  find_effect_by_id = _find_effect_by_id,
 }
 
-function ChoiceManager.Resolve(game, choice, action)
-  ChoiceRegistry.RegisterDefaults(helpers)
+function choice_manager.resolve(game, choice, action)
+  choice_registry.register_defaults(helpers)
   assert(game ~= nil, "missing game")
   assert(choice ~= nil, "missing choice")
   assert(action ~= nil, "missing action")
 
-  if _IsCancel(action) then
+  if _is_cancel(action) then
     if choice.kind == "item_phase_choice" then
       local phase = choice.meta.phase
-      _FinishItemPhase(game, phase)
+      _finish_item_phase(game, phase)
     end
-    _ClearChoice(game)
+    _clear_choice(game)
     return { stay = false }
   end
 
-  if not _OptionExists(choice, action.option_id) then
-    Logger.Warn("invalid choice option:", tostring(choice.kind), tostring(action.option_id))
-    _ClearChoice(game)
+  if not _option_exists(choice, action.option_id) then
+    logger.warn("invalid choice option:", tostring(choice.kind), tostring(action.option_id))
+    _clear_choice(game)
     return { stay = false }
   end
 
-  local handler = ChoiceRegistry.handlers[choice.kind]
+  local handler = choice_registry.handlers[choice.kind]
   assert(handler ~= nil, "unknown choice kind: " .. tostring(choice.kind))
   return handler(game, choice, action)
 end
 
-return ChoiceManager
+return choice_manager
 

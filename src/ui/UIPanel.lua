@@ -1,19 +1,19 @@
-local Pricing = require("src.game.land.LandPricing")
+local pricing = require("src.game.land.LandPricing")
 
-local Panel = {}
+local panel = {}
 
-function Panel.BuildTurnLabel(turn_count)
+function panel.build_turn_label(turn_count)
   return "回合: " .. tostring(turn_count)
 end
 
-function Panel.BuildPlayerLabel(player)
+function panel.build_player_label(player)
   if player.eliminated then
     return player.name .. " (出局)"
   end
   return player.name .. " $" .. player.cash
 end
 
-function Panel.BuildPlayerStatuses(store_state, game, max_players)
+function panel.build_player_statuses(store_state, game, max_players)
   local players = store_state and store_state.players or {}
   local count = max_players or #players
   local out = {}
@@ -34,11 +34,11 @@ function Panel.BuildPlayerStatuses(store_state, game, max_players)
           if st and type(st) == "table" then
             level = st.level or 0
           end
-          total = total + Pricing.total_invested(tile, level)
+          total = total + pricing.total_invested(tile, level)
         end
       end
       out[i] = {
-        name = Panel.BuildPlayerLabel(player),
+        name = panel.build_player_label(player),
         cash = "现金: " .. tostring(cash),
         land_count = "地块: " .. tostring(land_count),
         total_assets = "总资产: " .. tostring(total),
@@ -50,11 +50,11 @@ function Panel.BuildPlayerStatuses(store_state, game, max_players)
   return out
 end
 
-function Panel.BuildAutoLabel(auto_play)
+function panel.build_auto_label(auto_play)
   if auto_play then
     return "自动控制:开"
   end
   return "自动控制:关"
 end
 
-return Panel
+return panel

@@ -1,29 +1,29 @@
-local Logger = require("src.core.Logger")
+local logger = require("src.core.Logger")
 
-local MineEffect = {}
+local mine_effect = {}
 
-function MineEffect.Apply(game, player, position)
+function mine_effect.apply(game, player, position)
   assert(game ~= nil, "missing game")
   local board = assert(game.board, "missing board")
   assert(player ~= nil, "missing player")
   assert(position ~= nil, "missing position")
 
-  if player:HasAngel() then
-    Logger.Event(player.name .. " 天使保护，地雷无效")
-    board:ClearMine(position)
+  if player:has_angel() then
+    logger.event(player.name .. " 天使保护，地雷无效")
+    board:clear_mine(position)
     return { detonated = true, protected = true }
   end
 
-  board:ClearMine(position)
-  if player:IsVehicleIndestructible() then
-    Logger.Event(player.name .. " 座驾免疫地雷")
+  board:clear_mine(position)
+  if player:is_vehicle_indestructible() then
+    logger.event(player.name .. " 座驾免疫地雷")
     return { detonated = true, protected = true }
   end
-  game:SetPlayerSeat(player, nil)
-  Logger.Event(player.name .. " 触发地雷，座驾被摧毁并送医")
-  player:SendToHospital(game)
+  game:set_player_seat(player, nil)
+  logger.event(player.name .. " 触发地雷，座驾被摧毁并送医")
+  player:send_to_hospital(game)
   return { detonated = true, hospitalized = true, new_position = player.position }
 end
 
-return MineEffect
+return mine_effect
 

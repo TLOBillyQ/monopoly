@@ -1,20 +1,20 @@
-local Agent = require("src.game.game.Agent")
-local ItemEffects = require("src.game.item.ItemPostEffects")
-local GameplayRules = require("Config.GameplayRules")
-local Logger = require("src.core.Logger")
-local Inventory = require("src.game.item.ItemInventory")
-local Executor = require("src.game.item.ItemExecutor")
-local Demolish = require("src.game.item.ItemDemolish")
-local ItemRegistry = require("src.game.item.ItemRegistry")
+local agent = require("src.game.game.Agent")
+local item_effects = require("src.game.item.ItemPostEffects")
+local gameplay_rules = require("Config.GameplayRules")
+local logger = require("src.core.Logger")
+local inventory = require("src.game.item.ItemInventory")
+local executor = require("src.game.item.ItemExecutor")
+local demolish = require("src.game.item.ItemDemolish")
+local item_registry = require("src.game.item.ItemRegistry")
 
-local Strategy = {}
-local ITEM_IDS = GameplayRules.item_ids
+local strategy = {}
+local item_ids = gameplay_rules.item_ids
 
-function Strategy.TargetCandidates(game, player, item_id)
-  return ItemRegistry.TargetCandidates(game, player, item_id)
+function strategy.target_candidates(game, player, item_id)
+  return item_registry.target_candidates(game, player, item_id)
 end
 
-function Strategy.HasObstaclesAhead(game, player, distance)
+function strategy.has_obstacles_ahead(game, player, distance)
   local board = game.board
   distance = distance or 12
   local parity = distance
@@ -22,106 +22,106 @@ function Strategy.HasObstaclesAhead(game, player, distance)
   local facing = player.status.move_dir
 
   for _ = 1, distance do
-    local next_index, _passed, step_dir = board:StepForwardByFacing(current, facing, parity)
+    local next_index, _passed, step_dir = board:step_forward_by_facing(current, facing, parity)
     current = next_index
     facing = step_dir or facing
-    if board:HasRoadblock(current) or board:HasMine(current) then
+    if board:has_roadblock(current) or board:has_mine(current) then
       return true
     end
   end
   return false
 end
 
-local PHASE_TIMING = {
+local phase_timing = {
   pre_action = { pre_action = true, turn = true },
   pre_move = { pre_move = true, turn = true },
   post_action = { post_action = true, manual = true, turn = true },
 }
 
-function Strategy.TimingAllowed(phase, timing, allow_missing_phase)
+function strategy.timing_allowed(phase, timing, allow_missing_phase)
   if not phase then
     return allow_missing_phase
   end
-  local allowed = PHASE_TIMING[phase]
+  local allowed = phase_timing[phase]
   if not allowed or not timing then
     return false
   end
   return allowed[timing] == true
 end
 
-function Strategy.AutoPreAction(game, player, phase)
-  if not Agent.IsAutoPlayer(player) then
+function strategy.auto_pre_action(game, player, phase)
+  if not agent.is_auto_player(player) then
     return nil
   end
 
-  local function _CanUse(item_id)
-    local cfg = Inventory.Cfg(item_id)
+  local function _can_use(item_id)
+    local cfg = inventory.cfg(item_id)
     local timing = cfg.timing
-    return Strategy.TimingAllowed(phase, timing, true)
+    return strategy.timing_allowed(phase, timing, true)
   end
 
-  local function _TryUse(item_id, cond)
+  local function _try_use(item_id, cond)
     if cond and cond() == false then return nil end
-    if _CanUse(item_id) then
+    if _can_use(item_id) then
     else
       return nil
     end
-    if Inventory.FindIndex(player, item_id) then
+    if inventory.find_index(player, item_id) then
     else
       return nil
     end
-    local res = Executor.UseItem(game, player, item_id, { by_ai = true })
+    local res = executor.use_item(game, player, item_id, { by_ai = true })
     if type(res) == "table" and (res.waiting or res.intent or res.kind or res.action_anim) then
       return res
     end
     return nil
   end
 
-  local function _HasTarget(item_id)
-    return Agent.PickTargetPlayer(game, player, item_id, Strategy.TargetCandidates(game, player, item_id)) and true or false
+  local function _has_target(item_id)
+    return agent.pick_target_player(game, player, item_id, strategy.target_candidates(game, player, item_id)) and true or false
   end
 
-  local function _HasDemolishTarget()
-    return Demolish.FindTarget(game, player, 3) and true or false
+  local function _has_demolish_target()
+    return demolish.find_target(game, player, 3) and true or false
   end
 
-  local clear_result = _TryUse(ITEM_IDS.clear_obstacles, function()
-    local found = Strategy.HasObstaclesAhead(game, player, 12)
-    if found then Logger.Event(player.name .. " 前方发现障碍，准备使用清障卡") end
+  local clear_result = _try_use(item_ids.clear_obstacles, function()
+    local found = strategy.has_obstacles_ahead(game, player, 12)
+    if found then logger.event(player.name .. " 前方发现障碍，准备使用清障卡") end
     return found
   end)
   if clear_result then return clear_result end
 
-  local dice_result = _TryUse(ITEM_IDS.remote_dice, function()
-    local dice_count = player:DiceCount()
-    return Agent.PickRemoteDiceValue(game, player, dice_count) and true or false
+  local dice_result = _try_use(item_ids.remote_dice, function()
+    local dice_count = player:dice_count()
+    return agent.pick_remote_dice_value(game, player, dice_count) and true or false
   end)
   if dice_result then return dice_result end
 
-  local mine_result = _TryUse(ITEM_IDS.mine)
+  local mine_result = _try_use(item_ids.mine)
   if mine_result then return mine_result end
 
-  local double_result = _TryUse(ITEM_IDS.dice_multiplier)
+  local double_result = _try_use(item_ids.dice_multiplier)
   if double_result then return double_result end
 
-  local roadblock_result = _TryUse(ITEM_IDS.roadblock, function()
-    return Agent.PickRoadblockTarget(game, player) and true or false
+  local roadblock_result = _try_use(item_ids.roadblock, function()
+    return agent.pick_roadblock_target(game, player) and true or false
   end)
   if roadblock_result then return roadblock_result end
 
-  local monster_result = _TryUse(ITEM_IDS.monster, _HasDemolishTarget)
+  local monster_result = _try_use(item_ids.monster, _has_demolish_target)
   if monster_result then return monster_result end
-  local missile_result = _TryUse(ITEM_IDS.missile, _HasDemolishTarget)
+  local missile_result = _try_use(item_ids.missile, _has_demolish_target)
   if missile_result then return missile_result end
 
-  for _, id in ipairs(ItemEffects.TargetItemIds()) do
-    local res = _TryUse(id, function() return _HasTarget(id) end)
+  for _, id in ipairs(item_effects.target_item_ids()) do
+    local res = _try_use(id, function() return _has_target(id) end)
     if res then return res end
   end
 
-  return _TryUse(ITEM_IDS.rich) or _TryUse(ITEM_IDS.angel)
+  return _try_use(item_ids.rich) or _try_use(item_ids.angel)
 end
 
-return Strategy
+return strategy
 
 

@@ -1,8 +1,8 @@
-local Dice = require("src.game.turn.Dice")
-local Logger = require("src.core.Logger")
-local ItemPhase = require("src.game.item.ItemPhase")
+local dice = require("src.game.turn.Dice")
+local logger = require("src.core.Logger")
+local item_phase = require("src.game.item.ItemPhase")
 
-local function _PhaseRoll(tm, args)
+local function _phase_roll(tm, args)
   args = args or {}
   local game = tm.game
   local player = args.player or game:current_player()
@@ -16,13 +16,13 @@ local function _PhaseRoll(tm, args)
     if player.status.pending_remote_dice then
       override = player.status.pending_remote_dice.values
     end
-    rolls, raw_total = Dice.roll(dice_count, override, game.rng)
+    rolls, raw_total = dice.roll(dice_count, override, game.rng)
 
     total = raw_total
     if player.status.pending_dice_multiplier and player.status.pending_dice_multiplier > 1 then
       total = total * player.status.pending_dice_multiplier
     end
-    Logger.event(player.name .. " 投骰: [" .. table.concat(rolls, ",") .. "] => " .. total)
+    logger.event(player.name .. " 投骰: [" .. table.concat(rolls, ",") .. "] => " .. total)
     game.last_turn.rolls = rolls
     game.last_turn.total = total
     game.last_turn.raw_total = raw_total
@@ -48,7 +48,7 @@ local function _PhaseRoll(tm, args)
     }
   end
 
-  local phase_res = ItemPhase.run(tm, "pre_move", {
+  local phase_res = item_phase.run(tm, "pre_move", {
     player = player,
     resume_state = "move",
     resume_args = { player = player, total = total, raw_total = raw_total },
@@ -64,6 +64,6 @@ local function _PhaseRoll(tm, args)
   return "move", { player = player, total = total, raw_total = raw_total }
 end
 
-return _PhaseRoll
+return _phase_roll
 
 

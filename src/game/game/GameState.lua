@@ -1,53 +1,53 @@
-local CompositionRoot = require("src.game.game.CompositionRoot")
+local composition_root = require("src.game.game.CompositionRoot")
 require "vendor.third_party.Utils"
 
-local GameState = {}
+local game_state = {}
 
 local deep_copy = Utils.deep_copy
 
-local function _StoreRoot(self)
+local function _store_root(self)
   assert(self.store ~= nil, "missing store")
   return self.store.state
 end
 
-local function _EnsureTable(node, key)
+local function _ensure_table(node, key)
   assert(type(node[key]) == "table", "missing table: " .. tostring(key))
   return node[key]
 end
 
-local function _StoreValue(v)
+local function _store_value(v)
   if type(v) == "table" then
     return deep_copy(v)
   end
   return v
 end
 
-function GameState:SetPlayerStatus(player, key, value)
+function game_state:set_player_status(player, key, value)
   player.status[key] = value
-  local root = _StoreRoot(self)
-  local players = _EnsureTable(root, "players")
-  local player_node = _EnsureTable(players, player.id)
-  local status = _EnsureTable(player_node, "status")
-  status[key] = _StoreValue(value)
+  local root = _store_root(self)
+  local players = _ensure_table(root, "players")
+  local player_node = _ensure_table(players, player.id)
+  local status = _ensure_table(player_node, "status")
+  status[key] = _store_value(value)
 end
 
-function GameState:SetPlayerSeat(player, seat_id)
+function game_state:set_player_seat(player, seat_id)
   player.seat_id = seat_id
-  local root = _StoreRoot(self)
-  local players = _EnsureTable(root, "players")
-  local player_node = _EnsureTable(players, player.id)
-  player_node["seat_id"] = _StoreValue(seat_id)
+  local root = _store_root(self)
+  local players = _ensure_table(root, "players")
+  local player_node = _ensure_table(players, player.id)
+  player_node["seat_id"] = _store_value(seat_id)
 end
 
-function GameState:SetPlayerEliminated(player, eliminated)
+function game_state:set_player_eliminated(player, eliminated)
   player.eliminated = eliminated == true
-  local root = _StoreRoot(self)
-  local players = _EnsureTable(root, "players")
-  local player_node = _EnsureTable(players, player.id)
-  player_node["eliminated"] = _StoreValue(player.eliminated)
+  local root = _store_root(self)
+  local players = _ensure_table(root, "players")
+  local player_node = _ensure_table(players, player.id)
+  player_node["eliminated"] = _store_value(player.eliminated)
 end
 
-function GameState:SetPlayerProperty(player, tile_id, owned)
+function game_state:set_player_property(player, tile_id, owned)
   if owned then
     player.properties[tile_id] = true
   else
@@ -57,36 +57,36 @@ function GameState:SetPlayerProperty(player, tile_id, owned)
   if owned then
     store_value = true
   end
-  local root = _StoreRoot(self)
-  local players = _EnsureTable(root, "players")
-  local player_node = _EnsureTable(players, player.id)
-  local properties = _EnsureTable(player_node, "properties")
+  local root = _store_root(self)
+  local players = _ensure_table(root, "players")
+  local player_node = _ensure_table(players, player.id)
+  local properties = _ensure_table(player_node, "properties")
   properties[tile_id] = store_value
 end
 
-function GameState:SyncPlayerInventory(player)
-  local root = _StoreRoot(self)
-  local players = _EnsureTable(root, "players")
-  local player_node = _EnsureTable(players, player.id)
-  player_node["inventory"] = _StoreValue(CompositionRoot.SnapshotInventory(player.inventory))
+function game_state:sync_player_inventory(player)
+  local root = _store_root(self)
+  local players = _ensure_table(root, "players")
+  local player_node = _ensure_table(players, player.id)
+  player_node["inventory"] = _store_value(composition_root.snapshot_inventory(player.inventory))
 end
 
-function GameState:UpdateTile(tile, updates)
+function game_state:update_tile(tile, updates)
   assert(tile ~= nil and tile.type == "land", "invalid tile for update")
   assert(updates ~= nil, "missing tile updates")
-  local root = _StoreRoot(self)
-  local board = _EnsureTable(root, "board")
-  local tiles = _EnsureTable(board, "tiles")
-  local tile_node = _EnsureTable(tiles, tile.id)
+  local root = _store_root(self)
+  local board = _ensure_table(root, "board")
+  local tiles = _ensure_table(board, "tiles")
+  local tile_node = _ensure_table(tiles, tile.id)
   for key, value in pairs(updates) do
-    tile_node[key] = _StoreValue(value)
+    tile_node[key] = _store_value(value)
   end
 end
 
-function GameState:QueueActionAnim(payload)
+function game_state:queue_action_anim(payload)
   assert(payload ~= nil, "missing action anim payload")
-  local root = _StoreRoot(self)
-  local turn = _EnsureTable(root, "turn")
+  local root = _store_root(self)
+  local turn = _ensure_table(root, "turn")
   local seq = turn["action_anim_seq"] + 1
   payload.seq = seq
   turn["action_anim_seq"] = seq
@@ -94,32 +94,32 @@ function GameState:QueueActionAnim(payload)
   return payload
 end
 
-function GameState:SetTileOwner(tile, owner_id)
+function game_state:set_tile_owner(tile, owner_id)
   assert(tile ~= nil and tile.type == "land", "invalid tile for owner")
   local ui_port = self.ui_port
-  assert(ui_port ~= nil and ui_port.OnTileOwnerChanged ~= nil, "missing ui_port")
-  ui_port:OnTileOwnerChanged(tile.id, owner_id)
-  self:UpdateTile(tile, { owner_id = owner_id })
+  assert(ui_port ~= nil and ui_port.on_tile_owner_changed ~= nil, "missing ui_port")
+  ui_port:on_tile_owner_changed(tile.id, owner_id)
+  self:update_tile(tile, { owner_id = owner_id })
 end
 
-function GameState:SetTileLevel(tile, level)
-  self:UpdateTile(tile, { level = level })
+function game_state:set_tile_level(tile, level)
+  self:update_tile(tile, { level = level })
 end
 
-function GameState:ResetTile(tile)
+function game_state:reset_tile(tile)
   assert(tile ~= nil and tile.type == "land", "invalid tile for reset")
   local ui_port = self.ui_port
-  assert(ui_port ~= nil and ui_port.OnTileOwnerChanged ~= nil, "missing ui_port")
-  ui_port:OnTileOwnerChanged(tile.id, nil)
-  local root = _StoreRoot(self)
-  local board = _EnsureTable(root, "board")
-  local tiles = _EnsureTable(board, "tiles")
-  local tile_node = _EnsureTable(tiles, tile.id)
+  assert(ui_port ~= nil and ui_port.on_tile_owner_changed ~= nil, "missing ui_port")
+  ui_port:on_tile_owner_changed(tile.id, nil)
+  local root = _store_root(self)
+  local board = _ensure_table(root, "board")
+  local tiles = _ensure_table(board, "tiles")
+  local tile_node = _ensure_table(tiles, tile.id)
   tile_node["owner_id"] = nil
   tile_node["level"] = 0
 end
 
-function GameState:AlivePlayers()
+function game_state:alive_players()
   local alive = {}
   for _, p in ipairs(self.players) do
     if not p.eliminated then
@@ -129,16 +129,16 @@ function GameState:AlivePlayers()
   return alive
 end
 
-function GameState:CurrentPlayer()
-  local root = _StoreRoot(self)
-  local turn = _EnsureTable(root, "turn")
+function game_state:current_player()
+  local root = _store_root(self)
+  local turn = _ensure_table(root, "turn")
   local idx = turn["current_player_index"]
   assert(idx ~= nil, "missing current_player_index")
   return self.players[idx]
 end
 
-function GameState:Rebuild()
-  local length = self.board:Length()
+function game_state:rebuild()
+  local length = self.board:length()
   self.occupants = {}
   for i = 1, length do
     self.occupants[i] = {}
@@ -151,7 +151,7 @@ function GameState:Rebuild()
   end
 end
 
-function GameState:UpdatePlayerPosition(player, new_index)
+function game_state:update_player_position(player, new_index)
   for _, list in pairs(self.occupants) do
     for i = #list, 1, -1 do
       if list[i] == player.id then
@@ -160,17 +160,17 @@ function GameState:UpdatePlayerPosition(player, new_index)
     end
   end
   player.position = new_index
-  local root = _StoreRoot(self)
-  local players = _EnsureTable(root, "players")
-  local player_node = _EnsureTable(players, player.id)
-  player_node["position"] = _StoreValue(new_index)
+  local root = _store_root(self)
+  local players = _ensure_table(root, "players")
+  local player_node = _ensure_table(players, player.id)
+  player_node["position"] = _store_value(new_index)
   table.insert(self.occupants[new_index], player.id)
 end
 
-function GameState:PendingChoice()
-  local root = _StoreRoot(self)
-  local turn = _EnsureTable(root, "turn")
+function game_state:pending_choice()
+  local root = _store_root(self)
+  local turn = _ensure_table(root, "turn")
   return turn["pending_choice"]
 end
 
-return GameState
+return game_state

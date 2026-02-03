@@ -1,24 +1,24 @@
-local Steal = require("src.game.item.ItemSteal")
-local MonopolyEvent = require("src.game.MonopolyEvents")
-local MovementManager = require("src.game.movement.MovementManager")
-local MarketManager = require("src.game.market.MarketManager")
+local steal = require("src.game.item.ItemSteal")
+local monopoly_event = require("src.game.MonopolyEvents")
+local movement_manager = require("src.game.movement.MovementManager")
+local market_manager = require("src.game.market.MarketManager")
 
-local function _ResolveEventName(kind)
-  assert(MonopolyEvent ~= nil, "missing MONOPOLY_EVENT")
-  local intent = assert(MonopolyEvent.intent, "missing MONOPOLY_EVENT.intent")
+local function _resolve_event_name(kind)
+  assert(monopoly_event ~= nil, "missing MONOPOLY_EVENT")
+  local intent = assert(monopoly_event.intent, "missing MONOPOLY_EVENT.intent")
   assert(kind ~= nil, "missing event kind")
   return intent[kind] or kind
 end
 
-local function _DispatchIntent(game, payload)
+local function _dispatch_intent(game, payload)
   assert(payload ~= nil, "missing payload")
   local intent = payload.intent or payload
   if intent.kind == "need_choice" and intent.choice_spec then
     assert(game ~= nil and game.store ~= nil, "Choice.open requires game.store")
     local spec = intent.choice_spec
-    local seq = game.store:Get({ "turn", "choice_seq" }) or 0
+    local seq = game.store:get({ "turn", "choice_seq" }) or 0
     seq = seq + 1
-    game.store:Set({ "turn", "choice_seq" }, seq)
+    game.store:set({ "turn", "choice_seq" }, seq)
     local entry = {
       id = seq,
       kind = spec.kind,
@@ -29,9 +29,9 @@ local function _DispatchIntent(game, payload)
       cancel_label = spec.cancel_label or "取消",
       meta = spec.meta,
     }
-    game.store:Set({ "turn", "pending_choice" }, entry)
+    game.store:set({ "turn", "pending_choice" }, entry)
     assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = _ResolveEventName("need_choice")
+    local event_name = _resolve_event_name("need_choice")
     TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
     return
   end
@@ -40,12 +40,12 @@ local function _DispatchIntent(game, payload)
     assert(ui_port.push_popup ~= nil, "missing ui_port.push_popup")
     ui_port:push_popup(intent.payload)
     assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = _ResolveEventName("push_popup")
+    local event_name = _resolve_event_name("push_popup")
     TriggerCustomEvent(event_name, { game = game, payload = intent.payload })
   end
 end
 
-local function _PhaseMove(tm, args)
+local function _phase_move(tm, args)
   local player = args.player
   local total = args.total
   local raw_total = args.raw_total
@@ -61,16 +61,16 @@ local function _PhaseMove(tm, args)
 
   if not move_result then
     local start_index = player.position
-    move_result = MovementManager.Move(tm.game, player, total, move_opts)
+    move_result = movement_manager.move(tm.game, player, total, move_opts)
     tm.game.last_turn.move_result = move_result
 
     local game = tm.game
     local store = assert(game.store, "missing game.store")
     local ui_port = assert(game.ui_port, "missing game.ui_port")
     if ui_port.wait_move_anim == true then
-      local seq = (store:Get({ "turn", "move_anim_seq" }) or 0) + 1
-      store:Set({ "turn", "move_anim_seq" }, seq)
-      store:Set({ "turn", "move_anim" }, {
+      local seq = (store:get({ "turn", "move_anim_seq" }) or 0) + 1
+      store:set({ "turn", "move_anim_seq" }, seq)
+      store:set({ "turn", "move_anim" }, {
         seq = seq,
         player_id = player.id,
         from_index = start_index,
@@ -104,9 +104,9 @@ local function _PhaseMove(tm, args)
 
   if move_result.steal_interrupt then
     local interrupt = move_result.steal_interrupt
-    local res = Steal.handle_pass_players(tm.game, player, interrupt.encountered_ids or {})
+    local res = steal.handle_pass_players(tm.game, player, interrupt.encountered_ids or {})
     if res and res.intent then
-      _DispatchIntent(tm.game, res.intent)
+      _dispatch_intent(tm.game, res.intent)
     end
     if res and res.waiting then
       return "wait_choice", {
@@ -135,9 +135,9 @@ local function _PhaseMove(tm, args)
   end
 
   if move_result.market_interrupt then
-    local spec, intent = MarketManager.BuildChoiceSpec(player, tm.game)
+    local spec, intent = market_manager.build_choice_spec(player, tm.game)
     if spec then
-      _DispatchIntent(tm.game, { kind = "need_choice", choice_spec = spec })
+      _dispatch_intent(tm.game, { kind = "need_choice", choice_spec = spec })
       return "wait_choice", {
         resume_state = "move",
         resume_args = {
@@ -160,4 +160,4 @@ local function _PhaseMove(tm, args)
   return "landing", { player = player, move_result = move_result }
 end
 
-return _PhaseMove
+return _phase_move

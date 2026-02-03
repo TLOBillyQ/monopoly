@@ -1,16 +1,16 @@
-local Logger = require("src.core.Logger")
-local Tile = require("src.game.board.Tile")
-local Roadblock = {}
+local logger = require("src.core.Logger")
+local tile = require("src.game.board.Tile")
+local roadblock = {}
 
-local OPPOSITE = { up = "down", down = "up", left = "right", right = "left" }
+local opposite = { up = "down", down = "up", left = "right", right = "left" }
 
-local function _MakeCandidate(board, player, idx, dir, step, seen)
+local function _make_candidate(board, player, idx, dir, step, seen)
   assert(idx ~= nil, "missing idx")
   if seen[idx] or idx == player.position then
     return nil
   end
   seen[idx] = true
-  local tile = board:GetTile(idx)
+  local tile = board:get_tile(idx)
   assert(tile ~= nil, "missing tile: " .. tostring(idx))
   return {
     idx = idx,
@@ -20,12 +20,12 @@ local function _MakeCandidate(board, player, idx, dir, step, seen)
   }
 end
 
-local function _ForwardIndices(board, player, distance)
+local function _forward_indices(board, player, distance)
   local list = {}
   local current = player.position
   local facing = player.status.move_dir
   for step = 1, distance do
-    local next_idx, _, next_dir = board:StepForwardByFacing(current, facing, 1)
+    local next_idx, _, next_dir = board:step_forward_by_facing(current, facing, 1)
     current = next_idx
     facing = next_dir or facing
     table.insert(list, { idx = current, step = step, dir = "forward" })
@@ -33,31 +33,31 @@ local function _ForwardIndices(board, player, distance)
   return list
 end
 
-local function _BackwardIndices(board, player, distance)
+local function _backward_indices(board, player, distance)
   local list = {}
   local current = player.position
-  local len = board:Length()
+  local len = board:length()
   local facing = assert(player.status.move_dir, "missing move_dir")
   for step = 1, distance do
     assert(board.map ~= nil, "missing board.map")
-    assert(OPPOSITE[facing] ~= nil, "missing opposite dir: " .. tostring(facing))
-    local prev = board:StepForwardByFacing(current, OPPOSITE[facing], 1)
+    assert(opposite[facing] ~= nil, "missing opposite dir: " .. tostring(facing))
+    local prev = board:step_forward_by_facing(current, opposite[facing], 1)
     current = prev
     table.insert(list, { idx = current, step = step, dir = "backward" })
   end
   return list
 end
 
-local function _PriorityForCandidate(game, player, cand)
+local function _priority_for_candidate(game, player, cand)
   local tile = cand.tile
   local board = game.board
-  if board:HasRoadblock(cand.idx) or board:HasMine(cand.idx) then
+  if board:has_roadblock(cand.idx) or board:has_mine(cand.idx) then
     return nil
   end
 
   local st = nil
   if tile.type == "land" then
-      st = Tile.GetState(game, tile)
+      st = tile.get_state(game, tile)
   end
   if cand.dir == "forward" then
     if tile.type == "item" then
@@ -86,7 +86,7 @@ local function _PriorityForCandidate(game, player, cand)
   return nil
 end
 
-local function _FormatLabel(cand)
+local function _format_label(cand)
   local dir_label = "后方"
   if cand.dir == "forward" then
     dir_label = "前方"
@@ -94,25 +94,25 @@ local function _FormatLabel(cand)
   return dir_label .. cand.step .. "格：" .. cand.tile.name .. " (" .. cand.tile.type .. ")"
 end
 
-function Roadblock.Candidates(game, player, distance)
+function roadblock.candidates(game, player, distance)
   local board = game.board
   local seen = {}
   local list = {}
 
-  for _, entry in ipairs(_ForwardIndices(board, player, distance or 3)) do
-    local cand = _MakeCandidate(board, player, entry.idx, entry.dir, entry.step, seen)
+  for _, entry in ipairs(_forward_indices(board, player, distance or 3)) do
+    local cand = _make_candidate(board, player, entry.idx, entry.dir, entry.step, seen)
     if cand then
-      cand.priority = _PriorityForCandidate(game, player, cand)
+      cand.priority = _priority_for_candidate(game, player, cand)
       if cand.priority then
         table.insert(list, cand)
       end
     end
   end
 
-  for _, entry in ipairs(_BackwardIndices(board, player, distance or 3)) do
-    local cand = _MakeCandidate(board, player, entry.idx, entry.dir, entry.step, seen)
+  for _, entry in ipairs(_backward_indices(board, player, distance or 3)) do
+    local cand = _make_candidate(board, player, entry.idx, entry.dir, entry.step, seen)
     if cand then
-      cand.priority = _PriorityForCandidate(game, player, cand)
+      cand.priority = _priority_for_candidate(game, player, cand)
       if cand.priority then
         table.insert(list, cand)
       end
@@ -127,27 +127,27 @@ function Roadblock.Candidates(game, player, distance)
   end)
 
   for _, cand in ipairs(list) do
-    cand.label = _FormatLabel(cand)
+    cand.label = _format_label(cand)
   end
 
   return list
 end
 
-function Roadblock.PickBest(candidates)
+function roadblock.pick_best(candidates)
   assert(candidates ~= nil and #candidates > 0, "missing roadblock candidates")
   return candidates[1]
 end
 
-function Roadblock.Apply(game, player, idx)
+function roadblock.apply(game, player, idx)
   assert(idx ~= nil, "missing idx")
   assert(game.board ~= nil, "missing board")
-  game.board:PlaceRoadblock(idx)
-  local tile = game.board:GetTile(idx)
-  Logger.Event(player.name .. " 放置路障在 " .. tile.name)
+  game.board:place_roadblock(idx)
+  local tile = game.board:get_tile(idx)
+  logger.event(player.name .. " 放置路障在 " .. tile.name)
   local queued = false
   assert(game.ui_port ~= nil, "missing ui_port")
   if game.ui_port.wait_action_anim then
-    game:QueueActionAnim({
+    game:queue_action_anim({
       kind = "roadblock",
       player_id = player.id,
       tile_index = idx,
@@ -157,6 +157,6 @@ function Roadblock.Apply(game, player, idx)
   return { ok = true, action_anim = queued }
 end
 
-return Roadblock
+return roadblock
 
 

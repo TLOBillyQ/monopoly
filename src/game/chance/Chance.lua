@@ -1,17 +1,17 @@
-local Logger = require("src.core.Logger")
-local ChanceRegistry = require("src.game.chance.ChanceRegistry")
-local MonopolyEvent = require("src.game.MonopolyEvents")
+local logger = require("src.core.Logger")
+local chance_registry = require("src.game.chance.ChanceRegistry")
+local monopoly_event = require("src.game.MonopolyEvents")
 
-local ChanceEffects = {}
+local chance_effects = {}
 
-local function _EmitEvent(kind, payload)
+local function _emit_event(kind, payload)
   assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
   TriggerCustomEvent(kind, payload or {})
 end
 
-function ChanceEffects.Resolve(game, player, card, context)
-  if card.negative and player:HasAngel() then
-    _EmitEvent(MonopolyEvent.chance.applied, {
+function chance_effects.resolve(game, player, card, context)
+  if card.negative and player:has_angel() then
+    _emit_event(monopoly_event.chance.applied, {
       player = player,
       card = card,
       effect = card.effect,
@@ -20,12 +20,12 @@ function ChanceEffects.Resolve(game, player, card, context)
     return nil
   end
 
-  local handler = ChanceRegistry.handlers[card.effect]
+  local handler = chance_registry.handlers[card.effect]
   assert(handler ~= nil, "未知机会卡效果:" .. tostring(card.effect))
 
   return handler(game, player, card, context)
 end
 
-return ChanceEffects
+return chance_effects
 
 

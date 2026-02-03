@@ -2,7 +2,7 @@ require "vendor.third_party.ClassUtils"
 
 ---@class Dice
 ---骰子摇摇类，用于生成随机摇骰结果
-local Dice = Class("Dice")
+local dice = Class("Dice")
 
 ---掷骰子
 ---@param count number 骰子数量
@@ -10,7 +10,7 @@ local Dice = Class("Dice")
 ---@param rng RNG 随机数生成器
 ---@return number[] 每个骰子的结果
 ---@return number 总和
-function Dice.Roll(count, override_values, rng)
+function dice.roll(count, override_values, rng)
   local results = {}
   local total = 0
   if override_values and #override_values > 0 then
@@ -30,4 +30,4 @@ function Dice.Roll(count, override_values, rng)
   return results, total
 end
 
-return Dice
+return dice

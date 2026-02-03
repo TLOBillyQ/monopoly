@@ -1,28 +1,28 @@
-local Land = {}
+local land = {}
 local logger = require("src.core.Logger")
-local Tile = require("src.game.board.Tile")
-local BoardUtils = require("src.game.item.ItemBoardUtils")
-local Pricing = require("src.game.land.LandPricing")
-local LandActions = require("src.game.land.LandActions")
-local LandChoiceSpecs = require("src.game.land.LandChoiceSpecs")
-local Inventory = require("src.game.item.ItemInventory")
-local GameplayRules = require("Config.GameplayRules")
+local tile = require("src.game.board.Tile")
+local board_utils = require("src.game.item.ItemBoardUtils")
+local pricing = require("src.game.land.LandPricing")
+local land_actions = require("src.game.land.LandActions")
+local land_choice_specs = require("src.game.land.LandChoiceSpecs")
+local inventory = require("src.game.item.ItemInventory")
+local gameplay_rules = require("Config.GameplayRules")
 
-local tile_state = Tile.GetState
-local ITEM_IDS = GameplayRules.item_ids
+local tile_state = tile.get_state
+local item_ids = gameplay_rules.item_ids
 
-local function _CanBuy(ctx)
+local function _can_buy(ctx)
   local tile = ctx.tile
   local player = ctx.player
   assert(tile ~= nil, "missing tile")
   if tile.type ~= "land" then
     return false
   end
-  local st = LandActions.SafeTileState(ctx.game, tile)
+  local st = land_actions.safe_tile_state(ctx.game, tile)
   return not st.owner_id
 end
 
-local function _ApplyBuy(ctx)
+local function _apply_buy(ctx)
   local tile = ctx.tile
   local player = ctx.player
   if player.cash < tile.price then
@@ -33,34 +33,34 @@ local function _ApplyBuy(ctx)
       },
     }
   end
-  player:DeductCash(tile.price)
-  ctx.game:SetTileOwner(tile, player.id)
-  ctx.game:SetPlayerProperty(player, tile.id, true)
-  logger.Event(player.name .. " 购买 " .. tile.name .. " 花费 " .. tile.price)
+  player:deduct_cash(tile.price)
+  ctx.game:set_tile_owner(tile, player.id)
+  ctx.game:set_player_property(player, tile.id, true)
+  logger.event(player.name .. " 购买 " .. tile.name .. " 花费 " .. tile.price)
 end
 
-local function _CanUpgrade(ctx)
+local function _can_upgrade(ctx)
   local tile = ctx.tile
   local player = ctx.player
   assert(tile ~= nil, "missing tile")
   if tile.type ~= "land" then
     return false
   end
-  local st = LandActions.SafeTileState(ctx.game, tile)
+  local st = land_actions.safe_tile_state(ctx.game, tile)
   if st.owner_id ~= player.id then
     return false
   end
-  if (st.level or 0) >= Pricing.MaxLevel(tile) then
+  if (st.level or 0) >= pricing.max_level(tile) then
     return false
   end
   return true
 end
 
-local function _ApplyUpgrade(ctx)
+local function _apply_upgrade(ctx)
   local tile = ctx.tile
   local player = ctx.player
-  local st = LandActions.SafeTileState(ctx.game, tile)
-  local cost = Pricing.UpgradeCost(tile, st.level or 0)
+  local st = land_actions.safe_tile_state(ctx.game, tile)
+  local cost = pricing.upgrade_cost(tile, st.level or 0)
   if player.cash < cost then
     return {
       intent = {
@@ -69,104 +69,104 @@ local function _ApplyUpgrade(ctx)
       },
     }
   end
-  player:DeductCash(cost)
+  player:deduct_cash(cost)
   local new_level = (st.level or 0) + 1
-  ctx.game:SetTileLevel(tile, new_level)
+  ctx.game:set_tile_level(tile, new_level)
   local ui_port = assert(ctx.game.ui_port, "missing ui_port")
-  assert(ui_port.OnTileUpgraded ~= nil, "missing ui_port.OnTileUpgraded")
-  ui_port:OnTileUpgraded(tile.id, new_level)
-  logger.Event(player.name .. " 为 " .. tile.name .. " 加盖，花费 " .. cost)
+  assert(ui_port.on_tile_upgraded ~= nil, "missing ui_port.OnTileUpgraded")
+  ui_port:on_tile_upgraded(tile.id, new_level)
+  logger.event(player.name .. " 为 " .. tile.name .. " 加盖，花费 " .. cost)
 end
 
-local function _CanPayRent(ctx)
+local function _can_pay_rent(ctx)
   local tile = ctx.tile
   local player = ctx.player
   assert(tile ~= nil, "missing tile")
   if tile.type ~= "land" then
     return false
   end
-  local st = LandActions.SafeTileState(ctx.game, tile)
+  local st = land_actions.safe_tile_state(ctx.game, tile)
   return st.owner_id and st.owner_id ~= player.id
 end
 
-local function _ApplyPayRent(ctx)
+local function _apply_pay_rent(ctx)
   local tile = ctx.tile
   local player = ctx.player
   assert(tile ~= nil and tile.type == "land", "invalid land tile")
-  local owner, st = LandActions.ResolveRentOwner(ctx.game, tile, tile_state)
+  local owner, st = land_actions.resolve_rent_owner(ctx.game, tile, tile_state)
   assert(owner ~= nil, "missing rent owner")
 
   if player.status.pending_free_rent then
-    ctx.game:SetPlayerStatus(player, "pending_free_rent", false)
-    logger.Event(player.name .. " 使用免费卡，免租 " .. tile.name)
+    ctx.game:set_player_status(player, "pending_free_rent", false)
+    logger.event(player.name .. " 使用免费卡，免租 " .. tile.name)
     return
   end
 
-  local total_value = BoardUtils.TotalInvested(tile, st.level)
-  local strong_idx = Inventory.FindIndex(player, ITEM_IDS.strong)
+  local total_value = board_utils.total_invested(tile, st.level)
+  local strong_idx = inventory.find_index(player, item_ids.strong)
   if strong_idx and player.cash >= total_value then
     return {
       waiting = true,
       reason = "rent_choice",
       intent = {
         kind = "need_choice",
-        choice_spec = LandChoiceSpecs.RentPrompt(player.id, tile.id, "strong", total_value, tile.name),
+        choice_spec = land_choice_specs.rent_prompt(player.id, tile.id, "strong", total_value, tile.name),
       },
     }
   end
 
-  local free_idx = Inventory.FindIndex(player, ITEM_IDS.free_rent)
+  local free_idx = inventory.find_index(player, item_ids.free_rent)
   if free_idx then
     return {
       waiting = true,
       reason = "rent_choice",
       intent = {
         kind = "need_choice",
-        choice_spec = LandChoiceSpecs.RentPrompt(player.id, tile.id, "free", nil, tile.name),
+        choice_spec = land_choice_specs.rent_prompt(player.id, tile.id, "free", nil, tile.name),
       },
     }
   end
 
-  LandActions.ExecutePayRent(ctx.game, player.id, tile.id)
+  land_actions.execute_pay_rent(ctx.game, player.id, tile.id)
 end
 
-local function _CanTax(ctx)
+local function _can_tax(ctx)
   assert(ctx.tile ~= nil, "missing tile")
   return ctx.tile.type == "tax"
 end
 
-local function _ApplyTax(ctx)
+local function _apply_tax(ctx)
   local player = ctx.player
 
   if player.status.pending_tax_free then
-    logger.Event(player.name .. " 使用免税卡，本次免税")
-    ctx.game:SetPlayerStatus(player, "pending_tax_free", false)
+    logger.event(player.name .. " 使用免税卡，本次免税")
+    ctx.game:set_player_status(player, "pending_tax_free", false)
     return
   end
 
-  local tax_idx = Inventory.FindIndex(player, ITEM_IDS.tax_free)
+  local tax_idx = inventory.find_index(player, item_ids.tax_free)
   if tax_idx then
     return {
       waiting = true,
       reason = "tax_choice",
       intent = {
         kind = "need_choice",
-        choice_spec = LandChoiceSpecs.TaxPrompt(player.id),
+        choice_spec = land_choice_specs.tax_prompt(player.id),
       },
     }
   end
 
-  LandActions.ExecutePayTax(ctx.game, player.id)
+  land_actions.execute_pay_tax(ctx.game, player.id)
 end
 
-Land.executors = {
-  buy_land = { can_apply = _CanBuy, apply = _ApplyBuy },
-  upgrade_land = { can_apply = _CanUpgrade, apply = _ApplyUpgrade },
-  pay_rent = { can_apply = _CanPayRent, apply = _ApplyPayRent },
-  tax = { can_apply = _CanTax, apply = _ApplyTax },
+land.executors = {
+  buy_land = { can_apply = _can_buy, apply = _apply_buy },
+  upgrade_land = { can_apply = _can_upgrade, apply = _apply_upgrade },
+  pay_rent = { can_apply = _can_pay_rent, apply = _apply_pay_rent },
+  tax = { can_apply = _can_tax, apply = _apply_tax },
 }
 
-return Land
+return land
 
 
 

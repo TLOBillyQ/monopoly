@@ -1,25 +1,25 @@
-V3_ONE = math.Vector3(1.0, 1.0, 1.0)
-V3_LEFT = math.Vector3(0.0, 0.0, -1.0)
-V3_RIGHT = math.Vector3(0.0, 0.0, 1.0)
-V3_UP = math.Vector3(-1.0, 0.0, 0.0)
-V3_DOWN = math.Vector3(1.0, 0.0, 0.0)
+v3_one = math.Vector3(1.0, 1.0, 1.0)
+v3_left = math.Vector3(0.0, 0.0, -1.0)
+v3_right = math.Vector3(0.0, 0.0, 1.0)
+v3_up = math.Vector3(-1.0, 0.0, 0.0)
+v3_down = math.Vector3(1.0, 0.0, 0.0)
 
-Q_ZERO = math.Quaternion(0.0, 0.0, 0.0)
+q_zero = math.Quaternion(0.0, 0.0, 0.0)
 
-Q_LEFT = math.Quaternion(0.0, -180.0, 0.0)
-Q_RIGHT = Q_ZERO
-Q_UP = math.Quaternion(0.0, -90.0, 0.0)
-Q_DOWN = math.Quaternion(0.0, 90.0, 0.0)
+q_left = math.Quaternion(0.0, -180.0, 0.0)
+q_right = q_zero
+q_up = math.Quaternion(0.0, -90.0, 0.0)
+q_down = math.Quaternion(0.0, 90.0, 0.0)
 
-WALK_SPEED = 7.0
-VEHICLE_SPEED = 20.0
-VEHICLE_ACCEL = 20.0
-FPS = 30.0
+walk_speed = 7.0
+vehicle_speed = 20.0
+vehicle_accel = 20.0
+fps = 30.0
 
-FORWARD_ECA_EVENT_UI = "ui_forward"
+forward_eca_event_ui = "ui_forward"
 
-ECA_EVENT = {
-    VEHICLE = {
+eca_event = {
+    vehicle = {
         enter = "enter_vehicle",
         exit = "exit_vehicle",
         move = "move_vehicle",

@@ -1,16 +1,16 @@
-local Flow = require("src.core.Flow")
-local Logger = require("src.core.Logger")
-local Agent = require("src.game.game.Agent")
-local Inventory = require("src.game.item.ItemInventory")
-local Tile = require("src.game.board.Tile")
-local ChoiceManager = require("src.game.choice.ChoiceManager")
+local flow = require("src.core.Flow")
+local logger = require("src.core.Logger")
+local agent = require("src.game.game.Agent")
+local inventory = require("src.game.item.ItemInventory")
+local tile = require("src.game.board.Tile")
+local choice_manager = require("src.game.choice.ChoiceManager")
 require "vendor.third_party.ClassUtils"
 
 
-local TurnManager = Class("TurnManager")
+local turn_manager = Class("TurnManager")
 
-local function _BuildTurnLogLine(game, turn_count)
-  local player = game:CurrentPlayer()
+local function _build_turn_log_line(game, turn_count)
+  local player = game:current_player()
   local next_count = turn_count + 1
   if player.eliminated then
     next_count = turn_count
@@ -21,7 +21,7 @@ local function _BuildTurnLogLine(game, turn_count)
     return line
   end
 
-  local tile_state = Tile.get_state
+  local tile_state = tile.get_state
   local status = player.status
   local status_parts = {}
   local stay_turns = status.stay_turns
@@ -33,9 +33,9 @@ local function _BuildTurnLogLine(game, turn_count)
     table.insert(status_parts, "deity=" .. tostring(deity.type) .. ":" .. tostring(deity.remaining))
   end
   local items = {}
-  for _, it in ipairs(Inventory.Items(player)) do
+  for _, it in ipairs(inventory.items(player)) do
     local id = it.id
-    local name = Inventory.ItemName(id)
+    local name = inventory.item_name(id)
     table.insert(items, name .. "(" .. tostring(id) .. ")")
   end
   line = line
@@ -74,17 +74,17 @@ local function _BuildTurnLogLine(game, turn_count)
   return line
 end
 
-local function _GetChoice(game)
-  return game.store:Get({ "turn", "pending_choice" })
+local function _get_choice(game)
+  return game.store:get({ "turn", "pending_choice" })
 end
 
 
-local function _DecideChoiceAction(game, choice, pending_action)
+local function _decide_choice_action(game, choice, pending_action)
   if pending_action then
     return pending_action
   end
 
-  local auto_action = Agent.auto_action_for_choice(game, choice)
+  local auto_action = agent.auto_action_for_choice(game, choice)
   if auto_action then
     return auto_action
   end
@@ -95,12 +95,12 @@ local function _DecideChoiceAction(game, choice, pending_action)
 end
 
 
-local function _ResolveChoice(game, choice, action)
-  return ChoiceManager.Resolve(game, choice, action) or {}
+local function _resolve_choice(game, choice, action)
+  return choice_manager.resolve(game, choice, action) or {}
 end
 
 
-function TurnManager:Init(game, phases)
+function turn_manager:init(game, phases)
   self.game = game
   self.phases = phases
   self.flow = nil
@@ -108,42 +108,42 @@ function TurnManager:Init(game, phases)
 end
 
 
-function TurnManager:Dispatch(action)
+function turn_manager:dispatch(action)
   self.pending_action = action
 
   if not self.flow or not self.flow.current then
-    self.flow = self:_BuildFlow()
+    self.flow = self:_build_flow()
   end
 
   if self.flow and self.flow.current then
-    self:RunUntilWait()
+    self:run_until_wait()
   end
 end
 
 
-function TurnManager:_BuildFlow()
+function turn_manager:_build_flow()
   assert(self.phases, "TurnManager requires phases")
   local states = {}
   for name, fn in pairs(self.phases) do
     states[name] = function(args)
       if name == "start" then
-        local turn_count = self.game.store:Get({ "turn", "turn_count" })
-        Logger.Info(_BuildTurnLogLine(self.game, turn_count))
+        local turn_count = self.game.store:get({ "turn", "turn_count" })
+        logger.info(_build_turn_log_line(self.game, turn_count))
       end
-      self.game.store:Set({ "turn", "phase" }, name)
+      self.game.store:set({ "turn", "phase" }, name)
       return fn(self, args)
     end
   end
 
   states.wait_choice = function(args)
-    self.game.store:Set({ "turn", "phase" }, "wait_choice")
-    local choice = _GetChoice(self.game)
+    self.game.store:set({ "turn", "phase" }, "wait_choice")
+    local choice = _get_choice(self.game)
     if not choice then
       self.pending_action = nil
       return args.resume_state, args.resume_args
     end
 
-    self.pending_action = _DecideChoiceAction(self.game, choice, self.pending_action)
+    self.pending_action = _decide_choice_action(self.game, choice, self.pending_action)
 
     if not self.pending_action then
       return "wait_choice", args
@@ -155,11 +155,11 @@ function TurnManager:_BuildFlow()
     if action.choice_id and choice.id and action.choice_id ~= choice.id then
       return "wait_choice", args
     end
-    local res = _ResolveChoice(self.game, choice, action)
+    local res = _resolve_choice(self.game, choice, action)
     if res.stay then
       return "wait_choice", args
     end
-    local action_anim = self.game.store:Get({ "turn", "action_anim" })
+    local action_anim = self.game.store:get({ "turn", "action_anim" })
     if action_anim then
       return "wait_action_anim", args
     end
@@ -167,8 +167,8 @@ function TurnManager:_BuildFlow()
   end
 
   states.wait_move_anim = function(args)
-    self.game.store:Set({ "turn", "phase" }, "wait_move_anim")
-    local anim = self.game.store:Get({ "turn", "move_anim" })
+    self.game.store:set({ "turn", "phase" }, "wait_move_anim")
+    local anim = self.game.store:get({ "turn", "move_anim" })
     assert(anim ~= nil, "missing move_anim")
 
     local action = self.pending_action
@@ -179,13 +179,13 @@ function TurnManager:_BuildFlow()
     if action.seq and anim.seq and action.seq ~= anim.seq then
       return "wait_move_anim", args
     end
-    self.game.store:Set({ "turn", "move_anim" }, nil)
+    self.game.store:set({ "turn", "move_anim" }, nil)
     return args.resume_state, args.resume_args
   end
 
   states.wait_action_anim = function(args)
-    self.game.store:Set({ "turn", "phase" }, "wait_action_anim")
-    local anim = self.game.store:Get({ "turn", "action_anim" })
+    self.game.store:set({ "turn", "phase" }, "wait_action_anim")
+    local anim = self.game.store:get({ "turn", "action_anim" })
     assert(anim ~= nil, "missing action_anim")
 
     local action = self.pending_action
@@ -196,48 +196,48 @@ function TurnManager:_BuildFlow()
     if action.seq and anim.seq and action.seq ~= anim.seq then
       return "wait_action_anim", args
     end
-    self.game.store:Set({ "turn", "action_anim" }, nil)
+    self.game.store:set({ "turn", "action_anim" }, nil)
     return args.resume_state, args.resume_args
   end
 
-  return Flow:new({ start = "start", states = states })
+  return flow:new({ start = "start", states = states })
 end
 
 
-function TurnManager:NextPlayer()
+function turn_manager:next_player()
   local count = #self.game.players
-  local current = self.game.store:Get({ "turn", "current_player_index" })
+  local current = self.game.store:get({ "turn", "current_player_index" })
   local next_index = current % count + 1
-  self.game.store:Set({ "turn", "current_player_index" }, next_index)
+  self.game.store:set({ "turn", "current_player_index" }, next_index)
 end
 
 
-function TurnManager:RunUntilWait()
+function turn_manager:run_until_wait()
   if not self.flow or not self.flow.current then
-    self.flow = self:_BuildFlow()
+    self.flow = self:_build_flow()
   end
 
   while self.flow.current do
     if self.flow.current == "wait_choice" then
-      self.flow:Step()
+      self.flow:step()
       if self.flow.current == "wait_choice" and not self.pending_action then
-        self.game.store:Set({ "turn", "phase" }, "wait_choice")
+        self.game.store:set({ "turn", "phase" }, "wait_choice")
         return "wait_choice"
       end
     elseif self.flow.current == "wait_move_anim" then
-      self.flow:Step()
+      self.flow:step()
       if self.flow.current == "wait_move_anim" and not self.pending_action then
-        self.game.store:Set({ "turn", "phase" }, "wait_move_anim")
+        self.game.store:set({ "turn", "phase" }, "wait_move_anim")
         return "wait_move_anim"
       end
     elseif self.flow.current == "wait_action_anim" then
-      self.flow:Step()
+      self.flow:step()
       if self.flow.current == "wait_action_anim" and not self.pending_action then
-        self.game.store:Set({ "turn", "phase" }, "wait_action_anim")
+        self.game.store:set({ "turn", "phase" }, "wait_action_anim")
         return "wait_action_anim"
       end
     else
-      self.flow:Step()
+      self.flow:step()
     end
   end
 
@@ -246,8 +246,8 @@ function TurnManager:RunUntilWait()
 end
 
 
-function TurnManager:RunTurn()
-  return self:RunUntilWait()
+function turn_manager:run_turn()
+  return self:run_until_wait()
 end
 
-return TurnManager
+return turn_manager

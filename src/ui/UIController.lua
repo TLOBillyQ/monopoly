@@ -1,20 +1,20 @@
-local GameplayLoop = require("src.game.turn.GameplayLoop")
-local UIView = require("src.ui.UIView")
+local gameplay_loop = require("src.game.turn.GameplayLoop")
+local ui_view = require("src.ui.UIView")
 
-local UIController = {}
+local ui_controller = {}
 
-function UIController.Dispatch(state, game, intent, opts)
+function ui_controller.dispatch(state, game, intent, opts)
   assert(intent ~= nil, "missing intent")
   local intent_type = intent.type
   if intent_type == "ui_button"
       or intent_type == "choice_select"
       or intent_type == "choice_cancel" then
-    GameplayLoop.DispatchAction(game, state, intent, opts)
+    gameplay_loop.dispatch_action(game, state, intent, opts)
     return
   end
 
   if intent_type == "market_confirm" then
-    GameplayLoop.DispatchAction(game, state, {
+    gameplay_loop.dispatch_action(game, state, {
       type = "choice_select",
       choice_id = intent.choice_id,
       option_id = intent.option_id,
@@ -23,13 +23,13 @@ function UIController.Dispatch(state, game, intent, opts)
   end
 
   if intent_type == "market_select" then
-    UIView.SelectMarketOption(state, intent.option_id)
+    ui_view.select_market_option(state, intent.option_id)
     return
   end
 
   if intent_type == "popup_confirm" then
-    UIView.ClosePopup(state)
+    ui_view.close_popup(state)
   end
 end
 
-return UIController
+return ui_controller

@@ -4,9 +4,9 @@ local rad_to_deg = math.rad_to_deg or math.deg or function(radians)
     return radians * 180 / math.pi
 end
 
-local MovementManager = {}
+local movement_manager = {}
 
-function MovementManager.OneStep(scene, player_id, v3_dir, start_tile_id, end_tile_id)
+function movement_manager.one_step(scene, player_id, v3_dir, start_tile_id, end_tile_id)
     local start_tile = scene.tiles[start_tile_id]
     local end_tile = scene.tiles[end_tile_id]
 
@@ -15,7 +15,7 @@ function MovementManager.OneStep(scene, player_id, v3_dir, start_tile_id, end_ti
     local dist = pos_e - pos_s
     local len = dist:length()
 
-    local time = len / WALK_SPEED
+    local time = len / walk_speed
     local dir = v3_dir
     dir = math.Vector3(dist.x / len, dist.y / len, dist.z / len)
 
@@ -48,4 +48,4 @@ function MovementManager.OneStep(scene, player_id, v3_dir, start_tile_id, end_ti
     return time
 end
 
-return MovementManager
+return movement_manager
