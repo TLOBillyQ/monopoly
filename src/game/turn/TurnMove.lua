@@ -32,7 +32,7 @@ local function _dispatch_intent(game, payload)
     game.store:set({ "turn", "pending_choice" }, entry)
     assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
     local event_name = _resolve_event_name("need_choice")
-    TriggerCustomEvent(event_name, { game = game, choice = entry, choice_spec = spec })
+    TriggerCustomEvent(event_name, { choice = entry, choice_spec = spec })
     return
   end
   if intent.kind == "push_popup" and intent.payload then
@@ -41,7 +41,7 @@ local function _dispatch_intent(game, payload)
     ui_port:push_popup(intent.payload)
     assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
     local event_name = _resolve_event_name("push_popup")
-    TriggerCustomEvent(event_name, { game = game, payload = intent.payload })
+    TriggerCustomEvent(event_name, { payload = intent.payload })
   end
 end
 

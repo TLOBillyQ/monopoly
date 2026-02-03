@@ -1,8 +1,6 @@
 require "vendor.third_party.ClassUtils"
 require "vendor.third_party.Utils"
 
----@class Store
----@field state table
 ---状态存储类，管理游戏状态持久化
 local store = Class("Store")
 
@@ -21,7 +19,6 @@ local function _new_dirty()
 end
 
 ---创建新状态树
----@param init table? 初始状态表
 function store:init(init)
   self.state = deep_copy(init or {})
   self.version = 0
@@ -29,12 +26,7 @@ function store:init(init)
 end
 
 ---创建新状态树
----@param init table? 初始状态表
----@return Store 新Store对象
 ---根据路径读取状态值（路径缺失返回 nil）
----@param self Store
----@param path table 路径数组（如{"players", 1, "cash"}）
----@return any 状态值，不存在则返回nil
 function store:get(path)
   local node = self.state
   for i, key in ipairs(path) do
@@ -48,9 +40,6 @@ function store:get(path)
 end
 
 ---根据路径设置状态值（自动创建中间表）
----@param self Store
----@param path table 路径数组
----@param value any 要设置的值
 function store:set(path, value)
   local node = self.state
   for i = 1, #path - 1 do

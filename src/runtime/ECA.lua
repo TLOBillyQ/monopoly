@@ -1,30 +1,18 @@
 require "src.runtime.Macro"
 
----@export
----@desc 获取执行载具命令的玩家
----@return Role
 function get_vehicle_player()
     local role_id = vehicle_manager.player_id or 1
     return GameAPI.get_role(role_id)
 end
 
----@export
----@desc 获取载具移动方向
----@return Vector3
 function get_vehicle_move_direction()
     return vehicle_manager.move_direction or v3_left
 end
 
----@export
----@desc 获取载具移动时间
----@return Fixed
 function get_vehicle_move_time()
     return vehicle_manager.move_time or 0
 end
 
----@export
----@desc 获取刷载具的ID
----@return integer
 function get_spawn_vehicle_id()
     return vehicle_manager.vehicle_id or 4001
 end

@@ -1,12 +1,5 @@
 require "vendor.third_party.ClassUtils"
 
----@class Board
----@field path Tile[]
----@field tile_lookup table
----@field branches table
----@field index_by_id table
----@field map table
----@field overlays table
 ---棋盘管理类，负责路径、地块和分支的管理
 local board = Class("Board")
 
@@ -28,7 +21,6 @@ local function _pick_any_dir(neigh, avoid_dir)
 end
 
 ---创建新棋盘实例
----@param data table 棋盘数据（包含path/tile_lookup/branches/map/overlays）
 function board:init(data)
   local tile_lookup = data.tile_lookup
   local path = data.path
@@ -47,43 +39,27 @@ function board:init(data)
 end
 
 ---创建新棋盘实例
----@param data table 棋盘数据（包含path/tile_lookup/branches/map/overlays）
----@return Board 新棋盘对象
 ---获取棋盘长度（地块数）
----@param self Board
----@return number 棋盘上的地块总数
 function board:length()
   return #self.path
 end
 
 ---根据地块ID获取其在棋盘路径中的索引
----@param self Board
----@param id string|number 地块ID
----@return number? 索引，1-based；如不存在则返回nil
 function board:index_of_tile_id(id)
   return self.index_by_id[id]
 end
 
 ---根据索引获取地块
----@param self Board
----@param index number 地块索引（1-based）
----@return Tile? 地块对象，或nil
 function board:get_tile(index)
   return self.path[index]
 end
 
 ---根据ID获取地块
----@param self Board
----@param id string|number 地块ID
----@return Tile? 地块对象，或nil
 function board:get_tile_by_id(id)
   return self.tile_lookup[id]
 end
 
 ---查找第一个指定类型的地块
----@param self Board
----@param tile_type string 地块类型（如"land"）
----@return number?, Tile? 索引和地块对象；如不存在返回nil, nil
 function board:find_first_by_type(tile_type)
   for idx, tile in ipairs(self.path) do
     if tile.type == tile_type then
@@ -94,61 +70,43 @@ function board:find_first_by_type(tile_type)
 end
 
 ---获取棋盘覆盖物表（包含roadblocks和mines）
----@param self Board
----@return table 覆盖物表
 function board:get_overlays()
   return self.overlays
 end
 
 ---在指定位置放置路障
----@param self Board
----@param index number 位置索引
 function board:place_roadblock(index)
   self.overlays.roadblocks = self.overlays.roadblocks or {}
   self.overlays.roadblocks[index] = true
 end
 
 ---检查指定位置是否有路障
----@param self Board
----@param index number 位置索引
----@return boolean 是否有路障
 function board:has_roadblock(index)
   return self.overlays.roadblocks[index] and true or false
 end
 
 ---清除指定位置的路障
----@param self Board
----@param index number 位置索引
 function board:clear_roadblock(index)
   self.overlays.roadblocks[index] = nil
 end
 
 ---在指定位置放置地雷
----@param self Board
----@param index number 位置索引
 function board:place_mine(index)
   self.overlays.mines = self.overlays.mines or {}
   self.overlays.mines[index] = true
 end
 
 ---检查指定位置是否有地雷
----@param self Board
----@param index number 位置索引
----@return boolean 是否有地雷
 function board:has_mine(index)
   return self.overlays.mines[index] and true or false
 end
 
 ---清除指定位置的地雷
----@param self Board
----@param index number 位置索引
 function board:clear_mine(index)
   self.overlays.mines[index] = nil
 end
 
 ---清除指定位置的所有覆盖物（路障和地雷）
----@param self Board
----@param index number 位置索引
 function board:clear_all(index)
   self:clear_roadblock(index)
   self:clear_mine(index)
@@ -156,11 +114,6 @@ end
 
 
 ---按步数推进棋盘位置（考虑分支和绕圈）
----@param self Board
----@param index number 当前位置索引
----@param steps number 要移动的步数
----@param branch_parity number? 分支奇偶性（用于分支选择）
----@return number, number 新位置索引和绕圈次数
 function board:advance(index, steps, branch_parity)
   local length = self:length()
   if length == 0 then
@@ -188,11 +141,6 @@ function board:advance(index, steps, branch_parity)
 end
 
 ---根据朝向向前移动一步（用于精确导航）
----@param self Board
----@param current_index number 当前位置索引
----@param facing string? 面向方向（如"up"、"right"等）
----@param parity number? 奇偶性用于市场出口
----@return number, number, string 新位置、绕圈次数、新方向
 function board:step_forward_by_facing(current_index, facing, parity)
   local map = self.map
 
@@ -253,11 +201,6 @@ function board:step_forward_by_facing(current_index, facing, parity)
 end
 
 ---根据朝向向后移动一步
----@param self Board
----@param current_index number 当前位置索引
----@param facing string? 面向方向
----@param _parity number? 奇偶性（后退时不使用）
----@return number, number, string 新位置、绕圈次数、新方向
 function board:step_backward_by_facing(current_index, facing, _parity)
   local map = self.map
 

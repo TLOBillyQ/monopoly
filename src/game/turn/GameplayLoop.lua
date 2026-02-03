@@ -9,6 +9,7 @@ local logger = require("src.core.Logger")
 local gameplay_loop = {}
 
 local next_turn_cooldown = 0.4
+local camera_lock_offset_y = 50
 
 local function _build_log_prefix()
   return "[EggyAdapter]"
@@ -143,7 +144,8 @@ local function _refresh_view(state, game, next_model)
   assert(unit.get_position ~= nil, "missing unit.get_position: " .. tostring(current_id))
   local target_pos = assert(unit.get_position(), "missing target position: " .. tostring(current_id))
   assert(role.set_camera_lock_position ~= nil, "missing role.set_camera_lock_position")
-  role.set_camera_lock_position(target_pos)
+  local offset_pos = target_pos + math.Vector3(0.0, camera_lock_offset_y, 0.0)
+  role.set_camera_lock_position(offset_pos)
   return ui_model
 end
 

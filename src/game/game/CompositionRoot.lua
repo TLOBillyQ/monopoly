@@ -172,6 +172,7 @@ local function _build_initial_state(board, players, rng)
       action_anim_seq = 0,
       action_anim = nil,
       item_phase = {},
+      item_phase_active = "",
     },
     rng = rng:snapshot(),
     players = _snapshot_players(players),
