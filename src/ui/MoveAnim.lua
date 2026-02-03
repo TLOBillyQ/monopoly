@@ -6,7 +6,7 @@ end
 
 local movement_manager = {}
 
-function movement_manager.one_step(scene, player_id, v3_dir, start_tile_id, end_tile_id)
+local function _calc_step(scene, start_tile_id, end_tile_id)
     local start_tile = scene.tiles[start_tile_id]
     local end_tile = scene.tiles[end_tile_id]
 
@@ -14,10 +14,18 @@ function movement_manager.one_step(scene, player_id, v3_dir, start_tile_id, end_
     local pos_e = end_tile.get_position()
     local dist = pos_e - pos_s
     local len = dist:length()
-
     local time = len / walk_speed
-    local dir = v3_dir
-    dir = math.Vector3(dist.x / len, dist.y / len, dist.z / len)
+    local dir = math.Vector3(dist.x / len, dist.y / len, dist.z / len)
+    return dir, time
+end
+
+function movement_manager.step_duration(scene, start_tile_id, end_tile_id)
+    local _, time = _calc_step(scene, start_tile_id, end_tile_id)
+    return time
+end
+
+function movement_manager.one_step(scene, player_id, v3_dir, start_tile_id, end_tile_id)
+    local dir, time = _calc_step(scene, start_tile_id, end_tile_id)
 
     local unit = scene.units_by_player_id[player_id]
     if unit.set_direction then

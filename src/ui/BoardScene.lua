@@ -43,6 +43,10 @@ function board_scene.init(state, map_cfg)
   end
   scene.tiles = LuaAPI.query_units(tile_names)
   scene.buildings = LuaAPI.query_units(building_names)
+   for i = 1, 45 do
+      scene.tiles[i].set_physics_active(false)
+      scene.buildings[i].set_physics_active(false)
+    end
 
   scene.ground = LuaAPI.query_unit("ground")
   assert(scene.ground ~= nil, "missing ground unit")

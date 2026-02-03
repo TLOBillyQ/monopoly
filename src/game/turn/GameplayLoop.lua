@@ -11,7 +11,7 @@ local gameplay_loop = {}
 local next_turn_cooldown = 0.4
 
 local function _build_log_prefix()
-  return "[EggyAdapter]"
+  return "[Eggy]"
 end
 
 local function _log_once(state, level, key, ...)
@@ -485,7 +485,43 @@ function gameplay_loop.tick(game, state, dt)
           end
           assert(dir, "missing anim.direction")
           local move_anim = require("src.ui.MoveAnim")
-          return move_anim.one_step(state.board_scene, player_id, dir, from_index, to_index)
+          local visited = anim_ctx.visited
+          local steps = {}
+          local total_time = 0
+          local function _push_step(step_from, step_to)
+            if step_from == step_to then
+              return
+            end
+            local delay = total_time
+            local step_time = move_anim.step_duration(state.board_scene, step_from, step_to)
+            total_time = total_time + step_time
+            steps[#steps + 1] = { from = step_from, to = step_to, delay = delay }
+          end
+
+          if not visited or #visited <= 1 then
+            if from_index ~= to_index then
+              _push_step(from_index, to_index)
+            end
+          else
+            local step_from = from_index
+            for i = 1, #visited do
+              local step_to = visited[i]
+              _push_step(step_from, step_to)
+              step_from = step_to
+            end
+          end
+
+          for _, step in ipairs(steps) do
+            if step.delay <= 0 then
+              move_anim.one_step(state.board_scene, player_id, dir, step.from, step.to)
+            else
+              SetTimeOut(step.delay, function()
+                move_anim.one_step(state.board_scene, player_id, dir, step.from, step.to)
+              end)
+            end
+          end
+
+          return total_time
         end,
       })
     end

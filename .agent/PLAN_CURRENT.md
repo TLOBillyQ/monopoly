@@ -1,4 +1,4 @@
-# 参数精简与命名调整（内部函数）
+# 道具槽位图标随库存变化更新
 
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。本文件必须遵循仓库内 `.agent/PLANS.md` 的规范维护。
@@ -6,15 +6,14 @@
 ## 目的 / 全局视角
 
 
-这次改动只做内部函数的参数精简与不合理命名清理，保证行为和输出完全不变。完成后可以通过回归脚本与游戏烟测验证，外部调用不受影响。
+当玩家库存发生变化（获得、消耗、被偷、清空）时，道具槽位图标会立即刷新为对应的道具图标或空槽图标。改动完成后，可以在游戏内触发获得道具或消耗道具，观察 UI 立刻更新来验证。
 
 ## 进度
 
 
-- [x] (2026-02-03 14:31) 已重写 `PLAN_CURRENT.md`，记录可执行计划
-- [x] (2026-02-03 14:34) 调整内部函数签名并同步调用点
-- [x] (2026-02-03 14:34) 运行 `lua .agent/tests/regression.lua` 回归验证
-- [ ] (2026-02-03 14:31) 必要时进行一次游戏烟测验证
+- [x] (2026-02-03 17:10) 清空并重写 `PLAN_CURRENT.md`，切换到道具槽位图标更新任务
+- [x] (2026-02-03 17:10) 调整 `src/ui/UIView.lua` 复用统一的槽位图标设置逻辑，确保同名节点同步更新
+- [x] (2026-02-03 17:11) 运行 `lua .agent/tests/regression.lua` 回归验证
 
 ## 意外与发现
 
@@ -24,50 +23,59 @@
 ## 决策日志
 
 
-决策：仅调整仓库内部函数与调用点，保持外部回调与 `vendor/` 不变。理由：避免破坏对接与第三方代码，保证兼容性。日期/作者：2026-02-03 / Codex。
+- 决策：将 `set_item_slot_image` 提升为文件内共享本地函数，供初始化与刷新共同使用。
+  理由：确保道具槽位在初始化与库存变化时都按同一逻辑更新，并覆盖同名 UI 节点。
+  日期/作者：2026-02-03 / Codex。
 
 ## 结果与复盘
 
 
-待完成后补充实现结果与回顾。
+已完成回归脚本验证，未发现新增回归问题。
 
 ## 背景与导读
 
 
-本次变更集中在内部函数的签名与调用，涉及的文件包括 `src/game/board/Board.lua`、`src/game/movement/MovementManager.lua`、`src/game/item/ItemRoadblock.lua`、`src/game/item/ItemPhase.lua`、`src/game/turn/GameplayLoop.lua`、`src/game/item/ItemInventory.lua`、`src/game/land/Landing.lua`、`src/ui/ActionAnim.lua`。这些文件承载棋盘移动、道具流程、回合推进与动作动画等逻辑，且当前存在未使用的参数或占位符形参。
+道具槽位 UI 刷新由 `src/ui/UIView.lua` 的 `refresh_item_slots` 负责，图标映射来自 `src/runtime/Refs.lua`。初始化阶段 `init_ui_assets` 内部定义了 `set_item_slot_image` 并用于预设图标，但刷新逻辑只更新单节点，无法保证同名节点全部更新。本计划统一槽位图标设置逻辑，确保库存变化时 UI 完整刷新。
 
 ## 工作计划
 
 
-先清理 `Board.step_backward_by_facing` 的冗余参数，并在移动与道具模块中同步调整对应的调用。随后精简 `ItemPhase.is_enabled` 与 `GameplayLoop.step_turn` 的签名及调用。再处理 `ItemInventory.draw_random` 与 `draw_and_give` 的无用参数，并同步 `Landing` 中的调用。最后修正 `ActionAnim.play` 的占位符参数并更新 `GameplayLoop` 中的调用。所有修改都保持行为不变，只去掉无意义传参。
+只修改 `src/ui/UIView.lua`。把 `set_item_slot_image` 提升为文件内共享本地函数，内部使用 `ui_aliases.resolve` 并遍历 `UIManager.query_nodes_by_name` 的所有节点设置 `image_texture`。`init_ui_assets` 继续使用该函数保持初始化行为不变。`refresh_item_slots` 改为调用该函数设置图标，触摸开关逻辑维持原样。
 
 ## 具体步骤
 
 
-在仓库根目录依次编辑上述文件，严格按当前函数语义删除未使用参数并更新调用点。完成代码修改后，在 `c:\Users\Lzx_8\Desktop\dev\monopoly` 执行 `lua .agent/tests/regression.lua`。如需要烟测，在编辑器内启动游戏，观察回合推进、动作动画、路障与地雷移动流程无异常。
+在仓库根目录编辑 `src/ui/UIView.lua`，完成以下修改：
+
+    1) 将 `set_item_slot_image` 移到文件顶部 `_query_node` 附近，作为共享本地函数。
+    2) 在 `set_item_slot_image` 内使用 `ui_aliases.resolve` 并遍历 `UIManager.query_nodes_by_name` 返回的所有节点。
+    3) 在 `refresh_item_slots` 中调用 `set_item_slot_image` 设置图标。
+
+如需回归验证，在 `c:\Users\Lzx_8\Desktop\dev\monopoly` 运行：
+
+    lua .agent/tests/regression.lua
 
 ## 验证与验收
 
 
-回归脚本需要全部通过，且输出包含 `All regression checks passed`。烟测需确认核心交互与动画流程无回归，并且没有 Lua 报错或断言失败。
+回归脚本通过且输出包含 `All regression checks passed`。在游戏内触发获得道具与消耗道具，观察道具槽位图标及时更新为空或对应图标。
 
 ## 可重复性与恢复
 
 
-本次修改可重复执行且不会引入破坏性变更。如需回退，可将上述文件恢复到修改前版本。
+修改可重复执行且无破坏性变更。如需回退，只需恢复 `src/ui/UIView.lua` 的修改。
 
 ## 产物与备注
 
 
-预期回归输出示例（节选）：
-
-  ....
-  All regression checks passed (N)
+本次产物仅包含 `src/ui/UIView.lua` 的槽位图标设置逻辑调整，无新增文件。
 
 ## 接口与依赖
 
 
-不新增依赖，不改变公共接口。内部函数签名的调整需要同步所有调用点，确保 Lua 调用参数一致。
+不新增依赖，不新增公共接口。`src/ui/UIView.lua` 内部新增共享本地函数：
 
-变更记录：2026-02-03 14:31 新建并填充可执行计划，原因是进入实现阶段需完整记录步骤与验收方式。
-变更记录：2026-02-03 14:34 更新进度并记录回归已通过，原因是代码修改与测试已完成。
+    local function set_item_slot_image(slot_name, image_key)
+
+变更记录：2026-02-03 17:10 重写 `PLAN_CURRENT.md`，原因是切换到道具槽位图标更新任务。
+变更记录：2026-02-03 17:11 更新进度与结果，原因是回归脚本已通过。

@@ -174,6 +174,9 @@ end
 
 function agent_targeting.pick_roadblock_target(game, player)
   local candidates = roadblock.candidates(game, player, 3)
+  if not candidates or #candidates == 0 then
+    return nil
+  end
   local best = roadblock.pick_best(candidates)
   if not best then
     return nil

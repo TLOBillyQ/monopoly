@@ -5,12 +5,36 @@ local ui_aliases = require("src.ui.UIAliases")
 
 local ui_view = {}
 
+local CANVAS_BASE = "基础屏"
+local CANVAS_LOADING = "加载屏"
+local CANVAS_CHOICE = "通用选择屏"
+local CANVAS_MARKET = "黑市屏"
+local CANVAS_POPUP = "弹窗屏"
+local CANVAS_NAMES = {
+  CANVAS_BASE,
+  CANVAS_LOADING,
+  CANVAS_CHOICE,
+  CANVAS_MARKET,
+  CANVAS_POPUP,
+}
+
 local function _query_node(name)
   assert(name ~= nil, "missing ui node name")
   local resolved = ui_aliases.resolve(name)
   local list = UIManager.query_nodes_by_name(resolved)
   assert(list ~= nil and list[1] ~= nil, "missing ui node: " .. tostring(name))
   return list[1]
+end
+
+local function set_item_slot_image(slot_name, image_key)
+  assert(slot_name ~= nil, "missing slot name")
+  assert(image_key ~= nil, "missing image key for slot: " .. tostring(slot_name))
+  local resolved = ui_aliases.resolve(slot_name)
+  local nodes = UIManager.query_nodes_by_name(resolved)
+  assert(nodes ~= nil and nodes[1] ~= nil, "missing ui nodes for slot: " .. tostring(slot_name))
+  for _, node in ipairs(nodes) do
+    node.image_texture = image_key
+  end
 end
 
 local function _set_label(_, name, text)
@@ -31,6 +55,17 @@ end
 local function _set_touch_enabled(_, name, enabled)
   local node = _query_node(name)
   node.disabled = not enabled
+end
+
+local function _switch_canvas(ui, target)
+  assert(ui ~= nil, "missing ui state")
+  local target_name = target or CANVAS_BASE
+  ui:set_visible(CANVAS_BASE, true)
+  for _, name in ipairs(CANVAS_NAMES) do
+    if name ~= CANVAS_BASE then
+      ui:set_visible(name, name == target_name)
+    end
+  end
 end
 
 function ui_view.build_ui_state()
@@ -61,6 +96,7 @@ function ui_view.build_ui_state()
       root = "弹窗屏",
       confirm = "弹窗确认",
     },
+    popup_return_canvas = nil,
     query_node = _query_node,
     set_label = _set_label,
     set_button = _set_button,
@@ -73,16 +109,6 @@ function ui_view.init_ui_assets(layer)
   assert(layer ~= nil, "missing state")
   local refs = require("src.runtime.Refs")
   layer.ui_refs = refs
-
-  local function set_item_slot_image(slot_name, image_key)
-    assert(slot_name ~= nil, "missing slot name")
-    assert(image_key ~= nil, "missing image key for slot: " .. tostring(slot_name))
-    local nodes = UIManager.query_nodes_by_name(slot_name)
-    assert(nodes ~= nil, "missing ui nodes for slot: " .. tostring(slot_name))
-    for _, node in ipairs(nodes) do
-      node.image_texture = image_key
-    end
-  end
 
   for _, role in ipairs(all_roles) do
     UIManager.client_role = role
@@ -143,17 +169,12 @@ function ui_view.refresh_item_slots(layer, ui_model)
     local item_id = items[i]
     if item_id then
       local ref_key = refs[tostring(item_id)] or refs[item_id]
-      local node = ui.query_node(slot_name)
-      if ref_key then
-        node.image_texture = ref_key
-      else
-        node.image_texture = empty_key
-      end
+      local image_key = ref_key or empty_key
+      set_item_slot_image(slot_name, image_key)
       ui:set_touch_enabled(slot_name, true)
       item_ids[i] = item_id
     else
-      local node = ui.query_node(slot_name)
-      node.image_texture = empty_key
+      set_item_slot_image(slot_name, empty_key)
       ui:set_touch_enabled(slot_name, false)
     end
   end
@@ -190,6 +211,7 @@ function ui_view.open_choice_modal(layer, choice, market)
   layer.ui_dirty = true
 
   if choice.kind == "market_buy" and market_ui.is_panel_ready() then
+    _switch_canvas(layer.ui, CANVAS_MARKET)
     if layer.ui.choice_active then
       layer.ui:set_visible(layer.ui.choice.root, false)
       layer.ui.choice_active = false
@@ -208,6 +230,7 @@ function ui_view.open_choice_modal(layer, choice, market)
     market_view.close_market_panel(layer)
   end
 
+  _switch_canvas(layer.ui, CANVAS_CHOICE)
   layer.ui:set_label(layer.ui.choice.title, choice.title)
   layer.ui:set_label(layer.ui.choice.body, choice.body)
   layer.ui:set_visible(layer.ui.choice.root, true)
@@ -249,11 +272,24 @@ function ui_view.close_choice_modal(layer)
   end
   layer.market_choice_option_ids = nil
   layer.pending_choice_selected_option_id = nil
+  if layer.ui.popup_active then
+    _switch_canvas(layer.ui, CANVAS_POPUP)
+  else
+    _switch_canvas(layer.ui, CANVAS_BASE)
+  end
   layer.ui_dirty = true
 end
 
 function ui_view.push_popup(layer, payload)
   assert(payload ~= nil, "missing popup payload")
+  if layer.ui.market_active then
+    layer.ui.popup_return_canvas = CANVAS_MARKET
+  elseif layer.ui.choice_active then
+    layer.ui.popup_return_canvas = CANVAS_CHOICE
+  else
+    layer.ui.popup_return_canvas = CANVAS_BASE
+  end
+  _switch_canvas(layer.ui, CANVAS_POPUP)
   layer.ui:set_label(layer.ui.popup.title, payload.title)
   layer.ui:set_label(layer.ui.popup.body, payload.body)
   layer.ui:set_button(layer.ui.popup.confirm, payload.button_text)
@@ -270,6 +306,15 @@ function ui_view.close_popup(layer)
   layer.ui:set_visible(layer.ui.popup.root, false)
   layer.ui.popup_active = false
   layer.ui.popup_payload = nil
+  local target = layer.ui.popup_return_canvas
+  layer.ui.popup_return_canvas = nil
+  if target == CANVAS_MARKET and layer.ui.market_active then
+    _switch_canvas(layer.ui, CANVAS_MARKET)
+  elseif target == CANVAS_CHOICE and layer.ui.choice_active then
+    _switch_canvas(layer.ui, CANVAS_CHOICE)
+  else
+    _switch_canvas(layer.ui, CANVAS_BASE)
+  end
   layer.ui_dirty = true
 end
 
