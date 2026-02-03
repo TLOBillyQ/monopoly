@@ -1,5 +1,3 @@
-local ui_view = require("src.ui.UIView")
-
 local turn_dispatch = {}
 
 local next_turn_cooldown = 0.4
@@ -27,8 +25,9 @@ function turn_dispatch.clear_choice(state, opts)
   state.pending_choice = nil
   state.pending_choice_elapsed = 0
   state.pending_choice_id = nil
-  assert(opts ~= nil and opts.on_close_choice ~= nil, "missing opts.on_close_choice")
-  opts.on_close_choice(state)
+  if opts and opts.on_close_choice then
+    opts.on_close_choice(state)
+  end
 end
 
 function turn_dispatch.dispatch_action(game, state, action, opts)
@@ -105,11 +104,7 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
       opts.on_restart(game, state, action, opts)
     end
   elseif action.type == "choice_select" or action.type == "choice_cancel" then
-    turn_dispatch.clear_choice(state, {
-      on_close_choice = function(ctx)
-        ui_view.close_choice_modal(ctx)
-      end,
-    })
+    turn_dispatch.clear_choice(state, opts)
     if game then
       assert(game.dispatch_action ~= nil, "missing game.dispatch_action")
       game:dispatch_action(action)

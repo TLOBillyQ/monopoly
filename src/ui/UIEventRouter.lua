@@ -44,7 +44,10 @@ local function _register_node_click(cache, name, callback, registered)
     nodes = UIManager.query_nodes_by_name(resolved)
     cache[resolved] = nodes
   end
-  assert(nodes[1] ~= nil, "missing ui nodes: " .. tostring(resolved))
+  if not nodes or not nodes[1] then
+    _show_missing_button_tip(name)
+    return
+  end
   assert(registered ~= nil, "missing registered map")
   registered[resolved] = true
   for _, node in ipairs(nodes) do
@@ -99,6 +102,15 @@ function ui_event_router.bind(state, get_game, opts)
       return get_game()
     end
     return get_game
+  end
+
+  if not opts then
+    opts = {}
+  end
+  if not opts.on_close_choice then
+    opts.on_close_choice = function(ctx)
+      ui_view.close_choice_modal(ctx)
+    end
   end
 
   local function dispatch_intent(intent)

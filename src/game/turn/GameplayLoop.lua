@@ -128,10 +128,7 @@ local function _refresh_view(state, game, next_model)
   assert(GameAPI ~= nil and GameAPI.get_role ~= nil, "missing GameAPI.get_role")
   
   if camera_helper and eca_event and eca_event.camera and eca_event.camera.follow and TriggerCustomEvent then
-    camera_helper.target_role_id = 1
-    if state.camera_follow_player_id ~= current_id then
-      camera_helper.target_role_id = current_id
-    end
+    camera_helper.target_role_id = current_id
     TriggerCustomEvent(eca_event.camera.follow, {})
   end
   
@@ -202,7 +199,11 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
   ctx.game_finished = game.finished
   local auto_action = state.auto_runner:next_action(dt, ctx)
   if auto_action then
-    turn_dispatch.dispatch_action(game, state, auto_action)
+    turn_dispatch.dispatch_action(game, state, auto_action, {
+      on_close_choice = function(ctx)
+        ui_view.close_choice_modal(ctx)
+      end,
+    })
   end
   return auto_action
 end
@@ -255,7 +256,11 @@ function gameplay_loop.step_choice_timeout(game, state, dt, opts)
     assert(opts.build_action ~= nil, "missing opts.build_action")
     action = opts.build_action(game, state, choice)
     assert(action ~= nil, "missing timeout action")
-    turn_dispatch.dispatch_action(game, state, action)
+    turn_dispatch.dispatch_action(game, state, action, {
+      on_close_choice = function(ctx)
+        ui_view.close_choice_modal(ctx)
+      end,
+    })
   end
 end
 
@@ -514,4 +519,3 @@ function gameplay_loop.tick(game, state, dt)
 end
 
 return gameplay_loop
-

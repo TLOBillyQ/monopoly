@@ -8,11 +8,11 @@
 
 ## 进度
 
-- [ ] (2026-02-03 20:30) 清空并重写 `.agents/PLAN_CURRENT.md` 为本计划
-- [ ] 调整 `src/ui/UIEventRouter.lua` 的节点绑定为“缺失降级”
-- [ ] 移除 `src/game/turn/GameplayLoop.lua` 中相机跟随的无效判断
-- [ ] 通过回调注入改造 `src/game/turn/TurnDispatch.lua`，并补齐调用方回调
-- [ ] 运行 `lua .agents/tests/regression.lua` 并记录结果
+- [x] (2026-02-03 21:01) 清空并重写 `.agents/PLAN_CURRENT.md` 为本计划
+- [x] (2026-02-03 21:01) 调整 `src/ui/UIEventRouter.lua` 的节点绑定为“缺失降级”
+- [x] (2026-02-03 21:01) 移除 `src/game/turn/GameplayLoop.lua` 中相机跟随的无效判断
+- [x] (2026-02-03 21:01) 通过回调注入改造 `src/game/turn/TurnDispatch.lua`，并补齐调用方回调
+- [x] (2026-02-03 21:01) 运行 `lua .agents/tests/regression.lua` 并记录结果
 - [ ] 手动验证首回合按钮与选择流程、相机跟随行为
 
 ## 意外与发现
@@ -40,6 +40,10 @@
   理由：符合“未适配提示”的意图，降低配置变动风险。
   日期/作者：2026-02-03 / Codex。
 
+- 决策：自动回合与超时派发补齐 `opts.on_close_choice`。
+  理由：确保自动选择与超时选择仍能关闭选择弹窗，保持行为一致。
+  日期/作者：2026-02-03 / Codex。
+
 ## 结果与复盘
 
 尚未实施。完成后补充实现结果、残留问题与经验总结。
@@ -50,11 +54,11 @@
 
 ## 工作计划
 
-先改 `UIEventRouter`，让 `_register_node_click` 在节点不存在时记录提示并直接返回，不再 `assert`。然后移除 `GameplayLoop` 中相机跟随的无效条件判断，直接设置 `camera_helper.target_role_id` 并触发事件。接着把 `TurnDispatch` 中对 `UIView` 的直接调用替换为 `opts.on_close_choice` 回调，同时在 `UIEventRouter.bind` 和 `GameplayLoop` 自动选择流程中提供该回调，以保持原有 UI 关闭行为不变。最后运行回归脚本并进行手动验证。
+先改 `UIEventRouter`，让 `_register_node_click` 在节点不存在时记录提示并直接返回，不再 `assert`。然后移除 `GameplayLoop` 中相机跟随的无效条件判断，直接设置 `camera_helper.target_role_id` 并触发事件。接着把 `TurnDispatch` 中对 `UIView` 的直接调用替换为 `opts.on_close_choice` 回调，同时在 `UIEventRouter.bind` 与 `GameplayLoop` 自动/超时选择流程中提供该回调，以保持原有 UI 关闭行为不变。最后运行回归脚本并进行手动验证。
 
 ## 具体步骤
 
-在仓库根目录开始，先清空 `.agents/PLAN_CURRENT.md` 并写入本计划。然后编辑 `src/ui/UIEventRouter.lua`，让 `_register_node_click` 在 `UIManager.query_nodes_by_name` 结果为空时调用 `_show_missing_button_tip(name)` 并返回，同时避免 `assert`。接着编辑 `src/game/turn/GameplayLoop.lua`，删除对 `state.camera_follow_player_id` 的判断与相关分支，直接设置 `camera_helper.target_role_id = current_id` 后触发事件。然后编辑 `src/game/turn/TurnDispatch.lua`，移除对 `src.ui.UIView` 的 `require`，将 choice 关闭改为调用 `opts.on_close_choice`，并保证 `opts` 缺失时安全降级为不调用。再在 `src/ui/UIEventRouter.lua` 的 `bind` 中为 `opts.on_close_choice` 注入 `ui_view.close_choice_modal`，并在 `GameplayLoop.step_choice_timeout` 或 `GameplayLoop.dispatch_action` 的调用点补齐同样的回调。
+在仓库根目录开始，先清空 `.agents/PLAN_CURRENT.md` 并写入本计划。然后编辑 `src/ui/UIEventRouter.lua`，让 `_register_node_click` 在 `UIManager.query_nodes_by_name` 结果为空时调用 `_show_missing_button_tip(name)` 并返回，同时避免 `assert`。接着编辑 `src/game/turn/GameplayLoop.lua`，删除对 `state.camera_follow_player_id` 的判断与相关分支，直接设置 `camera_helper.target_role_id = current_id` 后触发事件。然后编辑 `src/game/turn/TurnDispatch.lua`，移除对 `src.ui.UIView` 的 `require`，将 choice 关闭改为调用 `opts.on_close_choice`，并保证 `opts` 缺失时安全降级为不调用。再在 `src/ui/UIEventRouter.lua` 的 `bind` 中为 `opts.on_close_choice` 注入 `ui_view.close_choice_modal`，并在 `GameplayLoop.step_choice_timeout` 与自动回合派发处补齐同样的回调。
 
 最后运行回归脚本：
 
@@ -81,3 +85,7 @@
 在 `src/game/turn/TurnDispatch.lua` 的 `dispatch_action(game, state, action, opts)` 中新增对 `opts.on_close_choice` 的调用约定，类型为函数 `(state) -> nil`，当 action 为 choice_select 或 choice_cancel 时调用。`UIEventRouter.bind` 需保证该回调存在，`GameplayLoop` 自动选择流程也需传入该回调以维持 UI 行为。
 
 变更记录：2026-02-03 20:30 新建计划，覆盖“UI 绑定降级 + TurnDispatch 回调注入 + 相机跟随无效判断移除”，原因是落实代码审查结论并修复 SOLID 问题。
+
+计划变更说明：补充自动回合派发的 `opts.on_close_choice` 回调，并更新进度与决策日志，确保自动选择也能关闭选择弹窗。
+
+计划变更说明：更新进度并记录回归脚本已通过，方便后续手动验证时对照状态。
