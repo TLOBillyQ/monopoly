@@ -2,8 +2,6 @@ local logger = require("src.core.Logger")
 local tile = require("src.game.board.Tile")
 local roadblock = {}
 
-local opposite = { up = "down", down = "up", left = "right", right = "left" }
-
 local function _make_candidate(board, player, idx, dir, step, seen)
   assert(idx ~= nil, "missing idx")
   if seen[idx] or idx == player.position then
@@ -36,13 +34,11 @@ end
 local function _backward_indices(board, player, distance)
   local list = {}
   local current = player.position
-  local len = board:length()
-  local facing = assert(player.status.move_dir, "missing move_dir")
+  local facing = player.status.move_dir
   for step = 1, distance do
-    assert(board.map ~= nil, "missing board.map")
-    assert(opposite[facing] ~= nil, "missing opposite dir: " .. tostring(facing))
-    local prev = board:step_forward_by_facing(current, opposite[facing], 1)
-    current = prev
+    local prev_idx, _, prev_dir = board:step_backward_by_facing(current, facing, 1)
+    current = prev_idx
+    facing = prev_dir or facing
     table.insert(list, { idx = current, step = step, dir = "backward" })
   end
   return list

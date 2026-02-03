@@ -38,9 +38,12 @@ function eggy_layer_board.refresh_board(layer, ui_model, log_once, build_log_pre
     for i = 1, tile_count do
       local tile_id = assert(tile_ids[i], "missing tile_id: " .. tostring(i))
       local unit = assert(tiles[i], "missing tile unit: " .. tostring(i))
+      local tile = assert(board.tiles[i], "missing board tile: " .. tostring(i))
       local tile_state = board_tiles[tile_id]
-      assert(tile_state ~= nil, "missing board tile state: " .. tostring(tile_id))
-      local owner_id = tile_state.owner_id
+      if tile.type == "land" then
+        assert(tile_state ~= nil, "missing board tile state: " .. tostring(tile_id))
+      end
+      local owner_id = tile_state and tile_state.owner_id or nil
       tile_renderer.render_tile(unit, tile_id, owner_id)
     end
 
@@ -66,7 +69,7 @@ function eggy_layer_board.refresh_board(layer, ui_model, log_once, build_log_pre
     end
 
     log_once(layer, "info", "tiles_ready", build_log_prefix(), "tile anchors ready:", tostring(tile_count))
-  end
+    end
 
   if not layer.player_units or layer.player_units_missing then
     local roles = assert(all_roles, "missing ALLROLES")

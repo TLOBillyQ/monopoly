@@ -93,6 +93,15 @@ local function _build_state()
   return state
 end
 
+local function _start_tick_loop(state, interval)
+  require "vendor.third_party.Utils"
+  local tick_interval = interval or 1
+  local tick_seconds = math.tofixed(tick_interval + 1) / 30.0
+  SetFrameOut(tick_interval, function()
+    gameplay_loop.tick(current_game, state, tick_seconds)
+  end, -1)
+end
+
 local function _install_game_init(state)
   RegisterTriggerEvent({ EVENT.GAME_INIT }, function()
     require "vendor.third_party.UIManager.Utils"
@@ -123,15 +132,6 @@ local function _install_game_init(state)
       _start_tick_loop(state)
     end
   end)
-end
-
-local function _start_tick_loop(state, interval)
-  require "vendor.third_party.Utils"
-  local tick_interval = interval or 1
-  local tick_seconds = math.tofixed(tick_interval + 1) / 30.0
-  SetFrameOut(tick_interval, function()
-    gameplay_loop.tick(current_game, state, tick_seconds)
-  end, -1)
 end
 
 local state = _build_state()

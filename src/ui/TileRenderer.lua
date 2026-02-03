@@ -23,20 +23,30 @@ function tile_renderer.render_tile(unit, tile_id, owner_id)
   local cfg = tiles_by_id[tile_id]
   assert(cfg ~= nil, "missing tile cfg: " .. tostring(tile_id))
   assert(unit ~= nil and unit.get_child_by_name ~= nil, "invalid tile unit")
+  local is_land = cfg.type == "land"
 
   local name_node = unit.get_child_by_name("name")
-  assert(name_node ~= nil and name_node.set_billboard_text ~= nil, "missing name node")
-  assert(cfg.name ~= nil, "missing tile name: " .. tostring(tile_id))
-  name_node.set_billboard_text(cfg.name)
+  if name_node and name_node.set_billboard_text then
+    assert(cfg.name ~= nil, "missing tile name: " .. tostring(tile_id))
+    name_node.set_billboard_text(cfg.name)
+  elseif is_land then
+    assert(false, "missing name node")
+  end
 
   local price_node = unit.get_child_by_name("price")
-  assert(price_node ~= nil and price_node.set_billboard_text ~= nil, "missing price node")
-  assert(cfg.price ~= nil, "missing tile price: " .. tostring(tile_id))
-  price_node.set_billboard_text("￥" .. tostring(cfg.price))
+  if price_node and price_node.set_billboard_text then
+    assert(cfg.price ~= nil, "missing tile price: " .. tostring(tile_id))
+    price_node.set_billboard_text("￥" .. tostring(cfg.price))
+  elseif is_land then
+    assert(false, "missing price node")
+  end
 
   local color_node = unit.get_child_by_name("color")
-  assert(color_node ~= nil and color_node.set_paint_area_color ~= nil, "missing color node")
-  color_node.set_paint_area_color(1, _resolve_color(owner_id))
+  if color_node and color_node.set_paint_area_color then
+    color_node.set_paint_area_color(1, _resolve_color(owner_id))
+  elseif is_land then
+    assert(false, "missing color node")
+  end
 end
 
 return tile_renderer
