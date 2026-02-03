@@ -58,10 +58,10 @@ local function _ensure_overlays(scene)
 end
 
 local function _get_overlay_bucket(overlays, kind)
-  if kind == "roadblock" or kind == "roadblocks" then
+  if kind == "roadblock" then
     return overlays.roadblocks
   end
-  if kind == "mine" or kind == "mines" then
+  if kind == "mine" then
     return overlays.mines
   end
   return nil

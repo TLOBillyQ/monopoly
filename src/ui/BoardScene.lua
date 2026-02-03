@@ -23,9 +23,11 @@ function board_scene.init(state, map_cfg)
     
   end
 
-  for i = 1, #roles do
-    roles[i].add_state(Enums.BuffState.BUFF_FORBID_CONTROL)
-  end
+  -- TODO：合理禁用逻辑
+  -- for i = 1, #roles do
+  --   local unit = roles[i].get_ctrl_unit()
+  --   unit.add_state(Enums.BuffState.BUFF_FORBID_CONTROL)
+  -- end
 
   local tile_names = {}
   local building_names = {}
