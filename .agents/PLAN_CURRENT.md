@@ -1,83 +1,83 @@
-# 排查并修复首回合按钮无响应
+# 修复 UI 绑定降级与回合分发解耦
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。本文件必须遵循仓库内 `.agents/PLANS.md` 的规范维护。
 
 ## 目的 / 全局视角
 
-玩家在游戏开始第一回合点击“行动按钮”或“托管按钮”无反应。完成后，按钮在第一回合即可响应：点击“行动按钮”能触发投骰或进入下一阶段，点击“托管按钮”能启用自动推进。验收方式是手动进入第一回合点击按钮并观察 UI 与回合推进是否正常。
+用户在 UI 配置不完整时不应直接崩溃；回合分发逻辑不应依赖 UI 模块；相机跟随逻辑应避免无效判断。完成后，缺失 UI 节点只会降级提示并跳过绑定，选择流程仍能正确关闭弹窗并提交动作，相机跟随行为与当前一致但逻辑更清晰。验收方式是启动游戏并操作按钮、触发选择流程、观察无崩溃且功能正常。
 
 ## 进度
 
-- [x] (2026-02-03 18:55) 清空并重写 `.agents/PLAN_CURRENT.md` 为本计划
-- [x] (2026-02-03 18:56) 添加临时 UI 调试提示并完成定位（已移除）
-- [x] (2026-02-03 18:56) 修复 `EButton` 触摸启用逻辑
-- [x] (2026-02-03 18:56) 移除调试提示并清理调试字段
-- [x] (2026-02-03 18:57) 运行 `lua .agents/tests/regression.lua` 并确认通过
+- [ ] (2026-02-03 20:30) 清空并重写 `.agents/PLAN_CURRENT.md` 为本计划
+- [ ] 调整 `src/ui/UIEventRouter.lua` 的节点绑定为“缺失降级”
+- [ ] 移除 `src/game/turn/GameplayLoop.lua` 中相机跟随的无效判断
+- [ ] 通过回调注入改造 `src/game/turn/TurnDispatch.lua`，并补齐调用方回调
+- [ ] 运行 `lua .agents/tests/regression.lua` 并记录结果
+- [ ] 手动验证首回合按钮与选择流程、相机跟随行为
 
 ## 意外与发现
 
-- 观察：`EButton.__update_disabled` 将 `disabled` 直接传给 `set_node_touch_enabled`，与 `ENode` 的方向相反，可能导致按钮默认不可点击。
-  证据：`vendor/third_party/UIManager/EButton.lua` 中 `set_node_touch_enabled(self.__protected_id, self.__protected_disabled)`。
+- 观察：`GameplayLoop` 中的相机跟随判断从未更新状态，因此条件永远为真。
+  证据：`src/game/turn/GameplayLoop.lua` 仅读取 `state.camera_follow_player_id`，未见写入点。
+
+- 观察：`TurnDispatch` 直接依赖 `UIView`，违反依赖倒置。
+  证据：`src/game/turn/TurnDispatch.lua` 在处理 choice 时调用 `ui_view.close_choice_modal`。
+
+- 观察：`UIEventRouter` 对缺失节点使用断言，导致 UI 皮肤变更即崩溃。
+  证据：`src/ui/UIEventRouter.lua` 的 `_register_node_click` 对空节点 `assert`。
 
 ## 决策日志
 
-- 决策：优先排查 UI 点击事件是否触发与 tick 是否运行，若点击无提示则优先修复 `vendor/third_party/UIManager/EButton.lua` 中 touch 启用逻辑。
-  理由：按钮无响应更像输入被禁用，且 `EButton` 的 touch_enabled 与 disabled 方向不一致。
+- 决策：删除相机跟随的无效判断，直接将目标角色设置为当前玩家并触发事件。
+  理由：当前判断没有写回，逻辑无效；移除判断可简化且不改变实际行为。
   日期/作者：2026-02-03 / Codex。
 
-- 决策：在未实际运行调试提示的情况下直接修复 `EButton` 触摸启用逻辑，并移除调试代码。
-  理由：代码层面已出现明确的方向错误，且当前环境无法实际运行游戏进行交互验证。
+- 决策：让 `TurnDispatch` 只通过 `opts.on_close_choice` 触发 UI 关闭，不再直接依赖 `UIView`。
+  理由：满足 SOLID 的依赖倒置原则，保持回合逻辑可复用。
+  日期/作者：2026-02-03 / Codex。
+
+- 决策：UI 绑定缺失时仅提示并跳过绑定，避免硬崩溃。
+  理由：符合“未适配提示”的意图，降低配置变动风险。
   日期/作者：2026-02-03 / Codex。
 
 ## 结果与复盘
 
-已修复 `EButton` 的触摸启用方向，按钮默认可点击。调试提示已移除。回归脚本已通过，仍需手动验证首回合按钮与托管功能。
+尚未实施。完成后补充实现结果、残留问题与经验总结。
 
 ## 背景与导读
 
-UI 事件通过 `src/ui/UIEventRouter.lua` 绑定按钮点击，转为 `ui_button` 行为交给 `src/game/turn/TurnDispatch.lua`。按钮是否可点击由 `src/ui/UIView.lua` 的 `apply_input_lock` 与 UIManager 的节点触摸启用控制。UIManager 的按钮实现位于 `vendor/third_party/UIManager/EButton.lua`。回合主循环由 `src/game/turn/GameplayLoop.lua` 的 `tick` 驱动，入口在 `src/app/init.lua` 的 `GAME_INIT` 事件中启动。
+`src/ui/UIEventRouter.lua` 负责将 UI 节点点击转为意图并派发。`src/game/turn/TurnDispatch.lua` 负责将意图转为游戏动作并处理回合推进。`src/game/turn/GameplayLoop.lua` 驱动 UI 刷新与相机跟随。`src/ui/UIView.lua` 提供 UI 弹窗与选择关闭能力。
 
 ## 工作计划
 
-先在 `src/app/init.lua` 与 `src/game/turn/GameplayLoop.lua` 添加最小调试提示确认 tick 是否运行，再在 `src/ui/UIEventRouter.lua` 的“行动按钮/托管按钮”回调添加点击提示确认点击事件是否触发。根据观察结果走分支修复。实际执行中按分支 A 直接修复 `vendor/third_party/UIManager/EButton.lua` 的触摸启用逻辑，并在完成后移除调试提示与调试字段。
+先改 `UIEventRouter`，让 `_register_node_click` 在节点不存在时记录提示并直接返回，不再 `assert`。然后移除 `GameplayLoop` 中相机跟随的无效条件判断，直接设置 `camera_helper.target_role_id` 并触发事件。接着把 `TurnDispatch` 中对 `UIView` 的直接调用替换为 `opts.on_close_choice` 回调，同时在 `UIEventRouter.bind` 和 `GameplayLoop` 自动选择流程中提供该回调，以保持原有 UI 关闭行为不变。最后运行回归脚本并进行手动验证。
 
 ## 具体步骤
 
-在仓库根目录执行以下修改与验证：
+在仓库根目录开始，先清空 `.agents/PLAN_CURRENT.md` 并写入本计划。然后编辑 `src/ui/UIEventRouter.lua`，让 `_register_node_click` 在 `UIManager.query_nodes_by_name` 结果为空时调用 `_show_missing_button_tip(name)` 并返回，同时避免 `assert`。接着编辑 `src/game/turn/GameplayLoop.lua`，删除对 `state.camera_follow_player_id` 的判断与相关分支，直接设置 `camera_helper.target_role_id = current_id` 后触发事件。然后编辑 `src/game/turn/TurnDispatch.lua`，移除对 `src.ui.UIView` 的 `require`，将 choice 关闭改为调用 `opts.on_close_choice`，并保证 `opts` 缺失时安全降级为不调用。再在 `src/ui/UIEventRouter.lua` 的 `bind` 中为 `opts.on_close_choice` 注入 `ui_view.close_choice_modal`，并在 `GameplayLoop.step_choice_timeout` 或 `GameplayLoop.dispatch_action` 的调用点补齐同样的回调。
 
-    1) 编辑 src/app/init.lua，在 state 中增加 debug 标记，并确保 tick 提示只出现一次。
-    2) 编辑 src/game/turn/GameplayLoop.lua，在 tick 首次运行时输出“tick ok”提示（受 debug 标记控制）。
-    3) 编辑 src/ui/UIEventRouter.lua，在“行动按钮/托管按钮”点击回调输出提示（受 debug 标记控制）。
-    4) 根据观察结果修复分支，优先修复 vendor/third_party/UIManager/EButton.lua 的触摸启用逻辑。
-    5) 移除所有调试提示代码与 debug 标记。
-    6) 运行 lua .agents/tests/regression.lua。
-
-## 验证与验收
-
-手动验收：
-
-    1) 启动游戏进入第一回合，点击“行动按钮”，应出现投骰提示或进入下一阶段。
-    2) 点击“托管按钮”，自动推进应开始。
-
-自动验证：
+最后运行回归脚本：
 
     工作目录：仓库根目录
     命令：lua .agents/tests/regression.lua
-    预期：All regression checks passed (34)
-    状态：已运行，通过（All regression checks passed (34)）
+
+## 验证与验收
+
+自动验证要求回归脚本通过，输出应包含 “All regression checks passed”。手动验证包含三步：进入游戏首回合点击“行动按钮”和“托管按钮”均应响应；触发一次选择流程后应能正常关闭选择弹窗；回合切换时相机跟随应与当前行为一致，且无异常报错或卡顿。如需验证缺失节点降级，可临时将任一按钮名改为不存在后启动，确认不会崩溃且有提示，再恢复。
 
 ## 可重复性与恢复
 
-修改可重复执行。若需回退，恢复 `src/app/init.lua`、`src/game/turn/GameplayLoop.lua`、`src/ui/UIEventRouter.lua`、`src/game/turn/TurnDispatch.lua`、`vendor/third_party/UIManager/EButton.lua` 到修改前版本即可。
+修改可重复执行。若需回退，恢复 `src/ui/UIEventRouter.lua`、`src/game/turn/GameplayLoop.lua`、`src/game/turn/TurnDispatch.lua` 到变更前版本即可。
 
 ## 产物与备注
 
-仅保留 `EButton` 触摸启用逻辑的修复，调试提示已移除。
+预期变更片段示例：
+
+    -- TurnDispatch.lua
+    -- 删除 UI 依赖，并使用 opts.on_close_choice
 
 ## 接口与依赖
 
-不新增接口。依赖现有 UIManager 事件机制与 `GlobalAPI.show_tips` 提示能力。
+在 `src/game/turn/TurnDispatch.lua` 的 `dispatch_action(game, state, action, opts)` 中新增对 `opts.on_close_choice` 的调用约定，类型为函数 `(state) -> nil`，当 action 为 choice_select 或 choice_cancel 时调用。`UIEventRouter.bind` 需保证该回调存在，`GameplayLoop` 自动选择流程也需传入该回调以维持 UI 行为。
 
-变更记录：2026-02-03 18:55 清空旧计划并写入“首回合按钮无响应”修复计划，原因是开始新任务并需按规范维护。
-变更记录：2026-02-03 18:56 更新进度与决策，记录 `EButton` 修复与未执行测试，原因是完成实施并清理调试代码。
-变更记录：2026-02-03 18:57 更新进度与验收记录，原因是已运行回归脚本并记录结果。
+变更记录：2026-02-03 20:30 新建计划，覆盖“UI 绑定降级 + TurnDispatch 回调注入 + 相机跟随无效判断移除”，原因是落实代码审查结论并修复 SOLID 问题。
