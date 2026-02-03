@@ -4,7 +4,7 @@ local alias_map = {
   btn_next = "行动按钮",
   btn_auto = "托管按钮",
   panel_turn = "倒计时",
-  choice_cancel = "取消按钮",
+  choice_cancel = "通用选择_取消",
   popup_confirm = "弹窗确认",
   modal_popup = "弹窗屏",
   market_panel = "黑市屏",
@@ -15,9 +15,9 @@ local alias_map = {
 }
 
 for i = 1, 4 do
-  local idx = tostring(i)
-  alias_map["choice_option" .. idx] = "道具名称" .. idx
-  alias_map["choice_option_" .. idx] = "道具名称" .. idx
+  local idx = string.format("%02d", i)
+  alias_map["choice_option" .. tostring(i)] = "通用选择_选项_" .. idx
+  alias_map["choice_option_" .. tostring(i)] = "通用选择_选项_" .. idx
 end
 
 for i = 1, 5 do

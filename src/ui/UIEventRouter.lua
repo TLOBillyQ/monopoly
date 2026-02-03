@@ -85,7 +85,7 @@ function ui_event_router.bind(state, get_game, opts)
     dispatch_intent({ type = "popup_confirm" })
   end, registered)
 
-  _register_node_click(cache, "取消按钮", function()
+  _register_node_click(cache, "通用选择_取消", function()
     local choice = state.ui_model and state.ui_model.choice
     assert(choice ~= nil, "missing choice")
     if choice.allow_cancel ~= false then
@@ -93,7 +93,12 @@ function ui_event_router.bind(state, get_game, opts)
     end
   end, registered)
 
-  for idx, name in ipairs({ "道具名称1", "道具名称2", "道具名称3", "道具名称4" }) do
+  for idx, name in ipairs({
+    "通用选择_选项_01",
+    "通用选择_选项_02",
+    "通用选择_选项_03",
+    "通用选择_选项_04",
+  }) do
     _register_node_click(cache, name, function()
       local choice = state.ui_model and state.ui_model.choice
       assert(choice ~= nil, "missing choice")

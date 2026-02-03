@@ -46,13 +46,15 @@ function ui_view.build_ui_state()
     },
     market_active = false,
     choice = {
-      root = "黑市屏",
-      cancel = "取消按钮",
+      root = "通用选择屏",
+      title = "通用选择_标题",
+      body = "通用选择_正文",
+      cancel = "通用选择_取消",
       option_buttons = {
-        "道具名称1",
-        "道具名称2",
-        "道具名称3",
-        "道具名称4",
+        "通用选择_选项_01",
+        "通用选择_选项_02",
+        "通用选择_选项_03",
+        "通用选择_选项_04",
       },
     },
     popup = {
