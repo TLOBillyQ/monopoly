@@ -118,7 +118,7 @@ function inventory.clear(player)
   player.inventory._suspend_on_change = false
 end
 
-function inventory.draw_random(_)
+function inventory.draw_random()
   local picked = Utils.choice_weight_list(items_cfg, 1, function(item)
     return item.weight or 0
   end, true)
@@ -153,8 +153,8 @@ function inventory.give(player, item_id, context)
   return true
 end
 
-function inventory.draw_and_give(player, rng, context)
-  local cfg = inventory.draw_random(rng)
+function inventory.draw_and_give(player, context)
+  local cfg = inventory.draw_random()
   assert(cfg ~= nil, "missing drawn item cfg")
   inventory.give(player, cfg.id, context)
 end

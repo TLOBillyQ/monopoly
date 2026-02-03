@@ -59,7 +59,7 @@ local function _dispatch_intent(game, payload)
   end
 end
 
-function item_phase.is_enabled(game, phase)
+function item_phase.is_enabled(phase)
   local queue = gameplay_rules.item_phase_queue
   assert(type(queue) == "table", "invalid item_phase_queue")
   for _, name in ipairs(queue) do
@@ -105,7 +105,7 @@ function item_phase.run(tm, phase, args)
   local game = tm.game
   local player = args.player
   assert(player ~= nil, "missing player")
-  if not item_phase.is_enabled(game, phase) then
+  if not item_phase.is_enabled(phase) then
     return nil
   end
 

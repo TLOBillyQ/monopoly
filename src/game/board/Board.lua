@@ -201,7 +201,7 @@ function board:step_forward_by_facing(current_index, facing, parity)
 end
 
 ---根据朝向向后移动一步
-function board:step_backward_by_facing(current_index, facing, _parity)
+function board:step_backward_by_facing(current_index, facing)
   local map = self.map
 
   local current_tile = self:get_tile(current_index)

@@ -53,7 +53,9 @@ function steal.handle_pass_players(game, player, encountered_ids)
   if #encountered_ids == 0 then
     return
   end
-  assert(inventory.find_index(player, item_ids.steal) ~= nil, "missing steal item")
+  if inventory.find_index(player, item_ids.steal) == nil then
+    return
+  end
 
   local queue = {}
   for _, target_id in ipairs(encountered_ids) do

@@ -36,7 +36,7 @@ local function _backward_indices(board, player, distance)
   local current = player.position
   local facing = player.status.move_dir
   for step = 1, distance do
-    local prev_idx, _, prev_dir = board:step_backward_by_facing(current, facing, 1)
+    local prev_idx, _, prev_dir = board:step_backward_by_facing(current, facing)
     current = prev_idx
     facing = prev_dir or facing
     table.insert(list, { idx = current, step = step, dir = "backward" })

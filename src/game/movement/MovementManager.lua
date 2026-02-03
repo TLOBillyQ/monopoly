@@ -26,12 +26,19 @@ function movement_manager.move(game, player, steps, opts)
   local start_tile = board:get_tile(current)
   local facing = opts.direction or player.status.move_dir
   local step_fn = board.step_forward_by_facing
+  local backward = false
   if steps < 0 then
     step_fn = board.step_backward_by_facing
+    backward = true
   end
 
   for step = 1, abs_steps do
-    local next_index, passed, step_dir = step_fn(board, current, facing, branch_parity)
+    local next_index, passed, step_dir
+    if backward then
+      next_index, passed, step_dir = step_fn(board, current, facing)
+    else
+      next_index, passed, step_dir = step_fn(board, current, facing, branch_parity)
+    end
     pass_start = pass_start + passed
     facing = step_dir or facing
     current = next_index

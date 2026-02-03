@@ -37,7 +37,7 @@ local function _build_tip(anim)
   return "动作动画"
 end
 
-function action_anim.play(_, anim)
+function action_anim.play(anim)
   assert(anim ~= nil, "missing anim")
   local duration = anim.duration or durations[anim.kind] or 1.0
   local tip_duration = duration

@@ -151,6 +151,7 @@ end
 
 function gameplay_loop.set_game(state, game)
   assert(game ~= nil, "missing game")
+  state.game = game
   game.ui_port = state
   event_handlers.install(game, logger, state)
   assert(game.pending_choice ~= nil, "missing game.pending_choice")
@@ -341,7 +342,7 @@ function gameplay_loop.step_action_anim(game, state, opts)
   game:dispatch_action({ type = "action_anim_done", seq = anim.seq })
 end
 
-function gameplay_loop.step_turn(game, state)
+function gameplay_loop.step_turn(game)
   assert(game ~= nil, "missing game")
   assert(not game.finished, "game finished")
   game:advance_turn()
@@ -400,7 +401,7 @@ function gameplay_loop.dispatch_action(game, state, action, opts)
       state.next_turn_locked = true
       state.next_turn_last_click = now
       state.next_turn_lock_phase = phase
-      gameplay_loop.step_turn(game, state)
+      gameplay_loop.step_turn(game)
     elseif action.id == "auto" then
       state.ui.auto_play = not state.ui.auto_play
       state.auto_runner:set_enabled(state.ui.auto_play)
@@ -502,7 +503,7 @@ function gameplay_loop.tick(game, state, dt)
       gameplay_loop.step_action_anim(game, state, {
         on_action_anim = function(ctx, anim_ctx)
           local action_anim = require("src.ui.ActionAnim")
-          return action_anim.play(ctx, anim_ctx)
+          return action_anim.play(anim_ctx)
         end,
       })
     end

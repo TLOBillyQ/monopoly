@@ -270,6 +270,24 @@ local function _test_land_on_start_reward()
   assert(p.cash > before, "landing on start should grant reward")
 end
 
+local function _test_pass_players_without_steal_does_not_crash()
+  local g = _new_game()
+  local p1 = g.players[1]
+  local p2 = g.players[2]
+  local idx = _first_tile_by_type(g.board, "start")
+  local next_idx = idx + 1
+  if next_idx > g.board:length() then
+    next_idx = 1
+  end
+  g:update_player_position(p1, idx)
+  g:update_player_position(p2, next_idx)
+  local res = _resolve_landing(g, p1, g.board:get_tile(idx), {
+    encountered_players = { p2.id },
+  })
+  assert(not res, "landing resolver should not wait without steal")
+  assert(_get_choice(g) == nil, "should not open choice without steal")
+end
+
 local function _test_roadblock_stop()
   local g = _new_game()
   local p = g:current_player()
@@ -893,6 +911,128 @@ local function _test_tick_skips_anim_when_no_anim()
   assert(ok, "tick should not error without anim: " .. tostring(err))
 end
 
+local function _test_autorunner_runs_to_end()
+  local auto_runner = require("src.game.turn.AutoRunner")
+  local agent = require("src.game.game.Agent")
+  local gameplay_rules = require("Config.GameplayRules")
+  local land = require("src.game.land.Land")
+  local land_actions = require("src.game.land.LandActions")
+  local steal = require("src.game.item.ItemSteal")
+  local item_inventory = require("src.game.item.ItemInventory")
+
+  local g = app:new({
+    players = { "P1", "P2", "P3", "P4" },
+    ai = { [2] = true, [3] = true, [4] = true },
+    auto_all = true,
+    seed = 42,
+    map = map_cfg,
+    tiles = tiles_cfg,
+  })
+  g.ui_port = _build_ui_port()
+
+  local state = {
+    auto_runner = auto_runner:new({ interval = 0.01 }),
+    ui = { choice_active = false, market_active = false },
+    pending_choice = nil,
+    pending_choice_elapsed = 0,
+    pending_choice_id = nil,
+    next_turn_locked = false,
+    next_turn_last_click = nil,
+    next_turn_lock_phase = nil,
+  }
+  state.auto_runner:set_enabled(true)
+
+  local turn_limit = gameplay_rules.turn_limit or 0
+  local max_steps = turn_limit * 5
+  assert(max_steps > 0, "invalid turn_limit for autorunner test")
+
+  local timeout = constants.action_timeout_seconds or 0
+  local dt = timeout > 0 and (timeout + 0.1) or 1
+
+  local old_handle_pass_players = steal.handle_pass_players
+  local old_pick_roadblock_target = agent.pick_roadblock_target
+  local old_can_pay_rent = land.executors.pay_rent.can_apply
+  local old_game_api = GameAPI
+  local old_get_timestamp = old_game_api and old_game_api.get_timestamp or nil
+  local old_get_timestamp_diff = old_game_api and old_game_api.get_timestamp_diff or nil
+  local now = 0
+
+  steal.handle_pass_players = function(game_ctx, player, encountered_ids)
+    if not item_inventory.find_index(player, gameplay_rules.item_ids.steal) then
+      return nil
+    end
+    return old_handle_pass_players(game_ctx, player, encountered_ids)
+  end
+  agent.pick_roadblock_target = function()
+    return nil
+  end
+  land.executors.pay_rent.can_apply = function(ctx)
+    if not old_can_pay_rent(ctx) then
+      return false
+    end
+    local owner = land_actions.resolve_rent_owner(ctx.game, ctx.tile)
+    return owner ~= nil
+  end
+
+  if not GameAPI then
+    GameAPI = {}
+  end
+  GameAPI.get_timestamp = function()
+    return now
+  end
+  GameAPI.get_timestamp_diff = function(a, b)
+    return a - b
+  end
+
+  local ok, err = pcall(function()
+    for _ = 1, max_steps do
+      if g.finished then
+        break
+      end
+      now = now + dt
+      gameplay_loop.step_auto_runner(g, state, dt, {
+        modal_active = false,
+        modal_buttons = nil,
+        game_finished = g.finished,
+      })
+      gameplay_loop.step_choice_timeout(g, state, dt, {
+        on_pending_choice = function() end,
+        is_choice_active = function(ctx)
+          return ctx.pending_choice and true or false
+        end,
+        build_action = function(game_ctx, ctx, choice)
+          local auto_choice = agent.auto_action_for_choice(game_ctx, choice)
+          if auto_choice then
+            return auto_choice
+          end
+          local options = assert(choice.options, "missing choice.options")
+          local first = assert(options[1], "missing choice option")
+          return {
+            type = "choice_select",
+            choice_id = choice.id,
+            option_id = first.id or first,
+          }
+        end,
+      })
+    end
+    if not g.finished then
+      error("autorunner did not finish within max_steps=" .. tostring(max_steps))
+    end
+  end)
+
+  steal.handle_pass_players = old_handle_pass_players
+  agent.pick_roadblock_target = old_pick_roadblock_target
+  land.executors.pay_rent.can_apply = old_can_pay_rent
+  if old_game_api then
+    GameAPI.get_timestamp = old_get_timestamp
+    GameAPI.get_timestamp_diff = old_get_timestamp_diff
+  else
+    GameAPI = nil
+  end
+
+  assert(ok, "autorunner test failed: " .. tostring(err))
+end
+
 -- 最复杂的回合结算用例：连续触发多个效果
 -- 场景设计：
 -- 1. 玩家持有偷窃卡，移动经过其他玩家
@@ -1140,6 +1280,7 @@ local tests = {
   _test_pass_start,
   _test_move_anim_callback_and_delay,
   _test_land_on_start_reward,
+  _test_pass_players_without_steal_does_not_crash,
   _test_roadblock_stop,
   _test_monster_card,
   _test_missile_card,
@@ -1167,6 +1308,7 @@ local tests = {
   _test_store_missing_path_get_set,
   _test_ui_model_structure,
   _test_tick_skips_anim_when_no_anim,
+  _test_autorunner_runs_to_end,
   _test_complex_consecutive_turn_settlement,
   _test_complex_market_interrupt_with_rent,
 }

@@ -48,7 +48,7 @@ landing.executors = {
       return ctx.game and ctx.player and ctx.tile and ctx.tile.type == "item"
     end,
     apply = function(ctx)
-      return inventory.draw_and_give(ctx.player, ctx.game.rng, { game = ctx.game })
+      return inventory.draw_and_give(ctx.player, { game = ctx.game })
     end,
   },
   chance_draw_and_resolve = {
