@@ -463,7 +463,7 @@ function gameplay_loop.tick(game, state, dt)
       gameplay_loop.step_action_anim(game, state, {
         on_action_anim = function(ctx, anim_ctx)
           local action_anim = require("src.ui.ActionAnim")
-          return action_anim.play(anim_ctx)
+          return action_anim.play(ctx, anim_ctx)
         end,
       })
     end

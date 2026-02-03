@@ -1,4 +1,5 @@
 local logger = require("src.core.Logger")
+local monopoly_event = require("src.game.MonopolyEvents")
 
 local mine_effect = {}
 
@@ -15,6 +16,14 @@ function mine_effect.apply(game, player, position)
   end
 
   board:clear_mine(position)
+  if TriggerCustomEvent and monopoly_event and monopoly_event.land and monopoly_event.land.mine_hit then
+    local tile = board:get_tile(position)
+    TriggerCustomEvent(monopoly_event.land.mine_hit, {
+      player = player,
+      tile_id = tile and tile.id or nil,
+      tile_index = position,
+    })
+  end
   if player:is_vehicle_indestructible() then
     logger.event(player.name .. " 座驾免疫地雷")
     return { detonated = true, protected = true }

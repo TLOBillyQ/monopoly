@@ -36,6 +36,38 @@ function event_handlers.install(_, logger, state)
     end)
   end
 
+  local ok, action_anim = pcall(require, "src.ui.ActionAnim")
+
+  local function _resolve_tile_index(payload)
+    if payload and payload.tile_index then
+      return payload.tile_index
+    end
+    local tile_id = nil
+    if payload and payload.tile and payload.tile.id then
+      tile_id = payload.tile.id
+    elseif payload and payload.tile_id then
+      tile_id = payload.tile_id
+    end
+    if tile_id and state and state.game and state.game.board and state.game.board.index_of_tile_id then
+      return state.game.board:index_of_tile_id(tile_id)
+    end
+    return nil
+  end
+
+  RegisterCustomEvent(monopoly_event.movement.roadblock_hit, function(_, _, data)
+    local idx = _resolve_tile_index(data)
+    if ok and action_anim and idx then
+      action_anim.clear_overlay(state, "roadblock", idx)
+    end
+  end)
+
+  RegisterCustomEvent(monopoly_event.land.mine_hit, function(_, _, data)
+    local idx = _resolve_tile_index(data)
+    if ok and action_anim and idx then
+      action_anim.clear_overlay(state, "mine", idx)
+    end
+  end)
+
   RegisterCustomEvent(monopoly_event.market.buy_failed, function(_, _, data)
     local popup = data.popup
     if popup then
