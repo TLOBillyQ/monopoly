@@ -64,6 +64,7 @@ local function _build_state()
     tick_started = false,
     ui_dirty = false,
     countdown_last = nil,
+    countdown_active_last = nil,
   }
 
   state.push_popup = function(_, payload)

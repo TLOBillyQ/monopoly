@@ -6,9 +6,9 @@ end
 
 local movement_manager = {}
 
-local function _calc_step(scene, start_tile_id, end_tile_id)
-    local start_tile = scene.tiles[start_tile_id]
-    local end_tile = scene.tiles[end_tile_id]
+local function _calc_step(scene, from_index, to_index)
+    local start_tile = scene.tiles[from_index]
+    local end_tile = scene.tiles[to_index]
 
     local pos_s = start_tile.get_position()
     local pos_e = end_tile.get_position()
@@ -19,20 +19,20 @@ local function _calc_step(scene, start_tile_id, end_tile_id)
     return dir, time
 end
 
-function movement_manager.step_duration(scene, start_tile_id, end_tile_id)
-    local _, time = _calc_step(scene, start_tile_id, end_tile_id)
+function movement_manager.step_duration(scene, from_index, to_index)
+    local _, time = _calc_step(scene, from_index, to_index)
     return time
 end
 
-function movement_manager.one_step(scene, player_id, v3_dir, start_tile_id, end_tile_id)
-    local dir, time = _calc_step(scene, start_tile_id, end_tile_id)
+function movement_manager.one_step(scene, player_id, dir, from_index, to_index)
+    local step_dir, time = _calc_step(scene, from_index, to_index)
 
     local unit = scene.units_by_player_id[player_id]
     if unit.set_direction then
-        unit.set_direction(dir)
+        unit.set_direction(step_dir)
     elseif unit.set_orientation then
-        local dx = dir.x
-        local dz = dir.z
+        local dx = step_dir.x
+        local dz = step_dir.z
         if dx ~= 0 or dz ~= 0 then
             local yaw_radians = 0.0
             if dz > 0 then
@@ -52,7 +52,7 @@ function movement_manager.one_step(scene, player_id, v3_dir, start_tile_id, end_
         end
     end
 
-    unit.start_move_by_direction(dir, time)
+    unit.force_start_move(step_dir, time)
     return time
 end
 

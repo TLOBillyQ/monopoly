@@ -40,8 +40,7 @@ local function _register_node_click(cache, name, callback, registered)
   assert(name ~= nil, "missing node name")
   local resolved = ui_aliases.resolve(name)
   local nodes = cache[resolved]
-  if nodes then
-  else
+  if not nodes then
     nodes = UIManager.query_nodes_by_name(resolved)
     cache[resolved] = nodes
   end
@@ -58,6 +57,16 @@ end
 local function _dispatch(state, game, intent, opts)
   assert(intent ~= nil, "missing intent")
   local intent_type = intent.type
+  if state and state.ui and state.ui.input_blocked then
+    if intent_type == "ui_button"
+        or intent_type == "choice_select"
+        or intent_type == "choice_cancel"
+        or intent_type == "market_confirm"
+        or intent_type == "market_select"
+        or intent_type == "popup_confirm" then
+      return
+    end
+  end
   if intent_type == "ui_button"
       or intent_type == "choice_select"
       or intent_type == "choice_cancel" then

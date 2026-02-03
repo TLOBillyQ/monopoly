@@ -163,6 +163,7 @@ local function _build_initial_state(board, players, rng)
       current_player_index = 1,
       turn_count = 0,
       countdown_seconds = 0,
+      countdown_active = false,
       phase = "start",
       pending_choice = nil,
       choice_seq = 0,

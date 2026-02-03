@@ -1,36 +1,5 @@
 require "src.runtime.Macro"
 
-
-vehicle_helper = {
-    player_id = nil,
-    vehicle_id = nil,
-    move_direction = nil,
-    move_time = nil,
-}
-
-vehicle_helper.forward_eca_event_enter = function(role_id, vehicle_id)
-    vehicle_helper.player_id = role_id
-    vehicle_helper.vehicle_id = vehicle_id
-    TriggerCustomEvent(eca_event.vehicle.enter, {})
-end
-vehicle_helper.forward_eca_event_exit = function(role_id)
-    vehicle_helper.player_id = role_id
-    TriggerCustomEvent(eca_event.vehicle.exit, {})
-end
-
-vehicle_helper.forward_eca_event_move = function(role_id, dir, time)
-    vehicle_helper.player_id = role_id
-    vehicle_helper.move_direction = dir
-    vehicle_helper.move_time = time
-    TriggerCustomEvent(eca_event.vehicle.move, {})
-end
-
--- 不太需要，当move到时间后，就相当于stop了
-vehicle_helper.forward_eca_event_stop = function(role_id)
-    vehicle_helper.player_id = role_id
-    TriggerCustomEvent(eca_event.vehicle.stop, {})
-end
-
 ---@export
 ---@desc 获取执行载具命令的玩家
 ---@return Role
@@ -59,11 +28,6 @@ end
 function get_spawn_vehicle_id()
     return vehicle_helper.vehicle_id or 4001
 end
-
-
-camera_helper = {
-    target_role_id = nil,
-}
 
 ---@export
 ---@desc 获取相机跟随玩家

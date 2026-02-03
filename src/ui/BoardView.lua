@@ -3,7 +3,7 @@ local tile_renderer = require("src.ui.TileRenderer")
 
 local eggy_layer_board = {}
 
-function eggy_layer_board.refresh_board(layer, ui_model, log_once, build_log_prefix)
+function eggy_layer_board.refresh_board(state, ui_model, log_once, build_log_prefix)
   assert(ui_model ~= nil, "missing ui_model")
   local board = assert(ui_model.board, "missing ui_model.board")
   local players = assert(board.players, "missing ui_model.board.players")
@@ -12,9 +12,9 @@ function eggy_layer_board.refresh_board(layer, ui_model, log_once, build_log_pre
   assert(tile_count > 0, "missing tile_count")
   assert(log_once ~= nil, "missing log_once")
   assert(build_log_prefix ~= nil, "missing build_log_prefix")
-  local scene = assert(layer.board_scene, "missing board_scene")
+  local scene = assert(state.board_scene, "missing board_scene")
 
-  if not layer.tile_positions or #layer.tile_positions < tile_count then
+  if not state.tile_positions or #state.tile_positions < tile_count then
     assert(type(scene.tiles) == "table", "missing board_scene.tiles")
     assert(#scene.tiles >= tile_count, "insufficient board_scene.tiles")
     local tiles = scene.tiles
@@ -26,8 +26,8 @@ function eggy_layer_board.refresh_board(layer, ui_model, log_once, build_log_pre
       positions[i] = unit.get_position()
     end
 
-    layer.tile_units = tiles
-    layer.tile_positions = positions
+    state.tile_units = tiles
+    state.tile_positions = positions
 
     local board_tiles = assert(board.tile_states, "missing ui_model.board.tile_states")
     local tile_ids = {}
@@ -65,13 +65,13 @@ function eggy_layer_board.refresh_board(layer, ui_model, log_once, build_log_pre
       end
     end
     if spacing_count > 0 then
-      layer.tile_spacing = (spacing / spacing_count) * 0.28
+      state.tile_spacing = (spacing / spacing_count) * 0.28
     end
 
-    log_once(layer, "info", "tiles_ready", build_log_prefix(), "tile anchors ready:", tostring(tile_count))
-    end
+    log_once(state, "info", "tiles_ready", build_log_prefix(), "tile anchors ready:", tostring(tile_count))
+  end
 
-  if not layer.player_units or layer.player_units_missing then
+  if not state.player_units or state.player_units_missing then
     local roles = assert(all_roles, "missing ALLROLES")
     local name_to_unit = {}
     local role_units = {}
@@ -97,10 +97,10 @@ function eggy_layer_board.refresh_board(layer, ui_model, log_once, build_log_pre
       mapped_count = mapped_count + 1
     end
 
-    layer.player_units = mapped
-    layer.player_units_missing = false
+    state.player_units = mapped
+    state.player_units_missing = false
     log_once(
-      layer,
+      state,
       "info",
       "player_units_ready",
       build_log_prefix(),
@@ -124,8 +124,8 @@ function eggy_layer_board.refresh_board(layer, ui_model, log_once, build_log_pre
     snapshot[pid] = tostring(pos) .. ":" .. tostring(eliminated)
   end
 
-  local need_sync = layer.board_sync_pending or false
-  local last_positions = assert(layer.board_last_positions, "missing board_last_positions")
+  local need_sync = state.board_sync_pending or false
+  local last_positions = assert(state.board_last_positions, "missing board_last_positions")
   if not need_sync then
     for pid, value in pairs(snapshot) do
       if last_positions[pid] ~= value then
@@ -136,11 +136,11 @@ function eggy_layer_board.refresh_board(layer, ui_model, log_once, build_log_pre
   end
 
   if suppress_sync then
-    layer.board_sync_pending = true
+    state.board_sync_pending = true
   end
 
   if suppress_sync or not need_sync then
-    layer.board_last_positions = snapshot
+    state.board_last_positions = snapshot
     return
   end
 
@@ -149,8 +149,8 @@ function eggy_layer_board.refresh_board(layer, ui_model, log_once, build_log_pre
     assert(player ~= nil, "missing player: " .. tostring(i))
     if not player.eliminated then
       local idx = assert(player.position, "missing player position: " .. tostring(i))
-      assert(layer.tile_positions ~= nil, "missing tile_positions")
-      assert(layer.tile_positions[idx] ~= nil, "missing tile_position: " .. tostring(idx))
+      assert(state.tile_positions ~= nil, "missing tile_positions")
+      assert(state.tile_positions[idx] ~= nil, "missing tile_position: " .. tostring(idx))
       local pid = assert(player.id, "missing player id: " .. tostring(i))
       local list = occupants[idx]
       if not list then
@@ -161,7 +161,7 @@ function eggy_layer_board.refresh_board(layer, ui_model, log_once, build_log_pre
     end
   end
 
-  local spacing = layer.tile_spacing or 0
+  local spacing = state.tile_spacing or 0
   assert(scene.ground ~= nil, "missing board_scene.ground")
   assert(scene.ground.get_position ~= nil, "missing board_scene.ground.get_position")
   local ground_pos = scene.ground.get_position()
@@ -172,11 +172,11 @@ function eggy_layer_board.refresh_board(layer, ui_model, log_once, build_log_pre
     assert(player ~= nil, "missing player: " .. tostring(i))
     if not player.eliminated then
       local idx = assert(player.position, "missing player position: " .. tostring(i))
-      assert(layer.tile_positions ~= nil, "missing tile_positions")
-      local base = assert(layer.tile_positions[idx], "missing tile_position: " .. tostring(idx))
+      assert(state.tile_positions ~= nil, "missing tile_positions")
+      local base = assert(state.tile_positions[idx], "missing tile_position: " .. tostring(idx))
       local pid = assert(player.id, "missing player id: " .. tostring(i))
-      assert(layer.player_units ~= nil, "missing player_units")
-      local unit = assert(layer.player_units[pid], "missing player unit: " .. tostring(pid))
+      assert(state.player_units ~= nil, "missing player_units")
+      local unit = assert(state.player_units[pid], "missing player unit: " .. tostring(pid))
       assert(unit.set_position ~= nil, "missing unit.set_position: " .. tostring(pid))
       local base_y = assert(base.y, "missing base.y: " .. tostring(idx))
       local y_offset = 0
@@ -211,16 +211,16 @@ function eggy_layer_board.refresh_board(layer, ui_model, log_once, build_log_pre
     end
   end
 
-  layer.board_sync_pending = false
-  layer.board_last_positions = snapshot
+  state.board_sync_pending = false
+  state.board_last_positions = snapshot
 end
 
-function eggy_layer_board.on_tile_upgraded(layer, tile_id, level)
+function eggy_layer_board.on_tile_upgraded(state, tile_id, level)
   assert(tile_id ~= nil, "missing tile_id")
   assert(level ~= nil, "missing level")
-  local scene = assert(layer.board_scene, "missing board_scene")
+  local scene = assert(state.board_scene, "missing board_scene")
   local buildings = assert(scene.buildings, "missing board_scene.buildings")
-  local board = assert(layer.game and layer.game.board, "missing board")
+  local board = assert(state.game and state.game.board, "missing board")
   assert(board.index_of_tile_id ~= nil, "missing board.index_of_tile_id")
   local idx = assert(board:index_of_tile_id(tile_id), "missing tile index: " .. tostring(tile_id))
   assert(buildings[idx] ~= nil, "missing building unit: " .. tostring(idx))
@@ -230,14 +230,14 @@ function eggy_layer_board.on_tile_upgraded(layer, tile_id, level)
   building_effects.spawn_upgrade_building_units(scene, root_quaternion, idx, lv)
 end
 
-function eggy_layer_board.on_tile_owner_changed(layer, tile_id, owner_id)
+function eggy_layer_board.on_tile_owner_changed(state, tile_id, owner_id)
   assert(tile_id ~= nil, "missing tile_id")
-  local board = assert(layer.game and layer.game.board, "missing board")
+  local board = assert(state.game and state.game.board, "missing board")
   assert(board.index_of_tile_id ~= nil, "missing board.index_of_tile_id")
   local idx = assert(board:index_of_tile_id(tile_id), "missing tile index: " .. tostring(tile_id))
-  assert(layer.tile_units ~= nil, "missing tile_units")
-  assert(layer.tile_units[idx] ~= nil, "missing tile unit: " .. tostring(idx))
-  tile_renderer.render_tile(layer.tile_units[idx], tile_id, owner_id)
+  assert(state.tile_units ~= nil, "missing tile_units")
+  assert(state.tile_units[idx] ~= nil, "missing tile unit: " .. tostring(idx))
+  tile_renderer.render_tile(state.tile_units[idx], tile_id, owner_id)
 end
 
 return eggy_layer_board

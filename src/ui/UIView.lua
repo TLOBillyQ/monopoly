@@ -72,6 +72,7 @@ function ui_view.build_ui_state()
   return {
     auto_play = false,
     auto_interval = 0.1,
+    input_blocked = false,
     item_slots = {
       "道具槽位1",
       "道具槽位2",
@@ -105,10 +106,10 @@ function ui_view.build_ui_state()
   }
 end
 
-function ui_view.init_ui_assets(layer)
-  assert(layer ~= nil, "missing state")
+function ui_view.init_ui_assets(state)
+  assert(state ~= nil, "missing state")
   local refs = require("src.runtime.Refs")
-  layer.ui_refs = refs
+  state.ui_refs = refs
 
   for _, role in ipairs(all_roles) do
     UIManager.client_role = role
@@ -122,8 +123,8 @@ function ui_view.init_ui_assets(layer)
   UIManager.client_role = nil
 end
 
-function ui_view.refresh_panel(layer, ui_model)
-  local ui = layer.ui
+function ui_view.refresh_panel(state, ui_model)
+  local ui = state.ui
   local panel = assert(ui_model.panel, "missing ui_model.panel")
 
   ui:set_label("倒计时", panel.turn_label)
@@ -137,24 +138,27 @@ function ui_view.refresh_panel(layer, ui_model)
     ui:set_label("玩家" .. tostring(i) .. "总资产", row.total_assets)
   end
 
-  ui_view.refresh_item_slots(layer, ui_model)
+  ui_view.refresh_item_slots(state, ui_model)
 
   local auto_label = panel.auto_label
   ui:set_button("行动按钮", "下一回合")
   ui:set_button("托管按钮", auto_label)
   ui:set_button("自动控制按钮", auto_label)
+  ui:set_touch_enabled("行动按钮", true)
+  ui:set_touch_enabled("托管按钮", true)
+  ui:set_touch_enabled("自动控制按钮", true)
 end
 
-function ui_view.refresh_turn_label(layer, label_text)
-  local ui = layer.ui
+function ui_view.refresh_turn_label(state, label_text)
+  local ui = state.ui
   if not ui or not ui.set_label then
     return
   end
   ui:set_label("倒计时", label_text)
 end
 
-function ui_view.refresh_item_slots(layer, ui_model)
-  local ui = layer.ui
+function ui_view.refresh_item_slots(state, ui_model)
+  local ui = state.ui
   assert(ui ~= nil and ui.item_slots ~= nil, "missing ui item slots")
 
   local slots = ui.item_slots
@@ -162,7 +166,7 @@ function ui_view.refresh_item_slots(layer, ui_model)
   ui.item_slot_item_ids = item_ids
 
   local items = ui_model.item_slots or {}
-  local refs = layer.ui_refs
+  local refs = state.ui_refs
   local empty_key = refs["空"]
 
   for i, slot_name in ipairs(slots) do
@@ -180,142 +184,193 @@ function ui_view.refresh_item_slots(layer, ui_model)
   end
 end
 
-function ui_view.refresh_board(layer, ui_model, log_once, build_log_prefix)
-  board_view.refresh_board(layer, ui_model, log_once, build_log_prefix)
+function ui_view.refresh_board(state, ui_model, log_once, build_log_prefix)
+  board_view.refresh_board(state, ui_model, log_once, build_log_prefix)
 end
 
-function ui_view.render(layer, ui_model, log_once, build_log_prefix)
-  ui_view.refresh_panel(layer, ui_model)
-  ui_view.refresh_board(layer, ui_model, log_once, build_log_prefix)
-end
-
-function ui_view.on_tile_upgraded(layer, tile_id, level)
-  board_view.on_tile_upgraded(layer, tile_id, level)
-end
-
-function ui_view.on_tile_owner_changed(layer, tile_id, owner_id)
-  board_view.on_tile_owner_changed(layer, tile_id, owner_id)
-end
-
-function ui_view.select_market_option(layer, option_id)
-  market_view.select_market_option(layer, option_id)
-end
-
-function ui_view.open_choice_modal(layer, choice, market)
-  assert(choice ~= nil, "missing choice")
-  local choice_id = assert(choice.id, "missing choice id")
-  if layer.pending_choice_id == choice_id
-      and (layer.ui.choice_active or layer.ui.market_active) then
+function ui_view.apply_input_lock(state)
+  local ui = state.ui
+  if not ui or not ui.set_touch_enabled then
     return
   end
-  layer.ui_dirty = true
+
+  if not ui.input_blocked then
+    ui:set_touch_enabled("行动按钮", true)
+    ui:set_touch_enabled("托管按钮", true)
+    ui:set_touch_enabled("自动控制按钮", true)
+    if ui.popup_active and ui.popup and ui.popup.confirm then
+      ui:set_touch_enabled(ui.popup.confirm, true)
+    end
+    return
+  end
+
+  ui:set_touch_enabled("行动按钮", false)
+  ui:set_touch_enabled("托管按钮", false)
+  ui:set_touch_enabled("自动控制按钮", false)
+
+  local slots = ui.item_slots or {}
+  for _, slot_name in ipairs(slots) do
+    ui:set_touch_enabled(slot_name, false)
+  end
+
+  if ui.choice then
+    local option_nodes = ui.choice.option_buttons or {}
+    for _, name in ipairs(option_nodes) do
+      ui:set_touch_enabled(name, false)
+    end
+    if ui.choice.cancel then
+      ui:set_touch_enabled(ui.choice.cancel, false)
+    end
+  end
+
+  local market_buttons = market_ui.item_buttons or {}
+  for _, name in ipairs(market_buttons) do
+    ui:set_touch_enabled(name, false)
+  end
+  if market_ui.confirm_button then
+    ui:set_touch_enabled(market_ui.confirm_button, false)
+  end
+  if market_ui.cancel_button then
+    ui:set_touch_enabled(market_ui.cancel_button, false)
+  end
+
+  if ui.popup and ui.popup.confirm then
+    ui:set_touch_enabled(ui.popup.confirm, false)
+  end
+end
+
+function ui_view.render(state, ui_model, log_once, build_log_prefix)
+  ui_view.refresh_panel(state, ui_model)
+  ui_view.refresh_board(state, ui_model, log_once, build_log_prefix)
+end
+
+function ui_view.on_tile_upgraded(state, tile_id, level)
+  board_view.on_tile_upgraded(state, tile_id, level)
+end
+
+function ui_view.on_tile_owner_changed(state, tile_id, owner_id)
+  board_view.on_tile_owner_changed(state, tile_id, owner_id)
+end
+
+function ui_view.select_market_option(state, option_id)
+  market_view.select_market_option(state, option_id)
+end
+
+function ui_view.open_choice_modal(state, choice, market)
+  assert(choice ~= nil, "missing choice")
+  local choice_id = assert(choice.id, "missing choice id")
+  if state.pending_choice_id == choice_id
+      and (state.ui.choice_active or state.ui.market_active) then
+    return
+  end
+  state.ui_dirty = true
 
   if choice.kind == "market_buy" and market_ui.is_panel_ready() then
-    _switch_canvas(layer.ui, CANVAS_MARKET)
-    if layer.ui.choice_active then
-      layer.ui:set_visible(layer.ui.choice.root, false)
-      layer.ui.choice_active = false
+    _switch_canvas(state.ui, CANVAS_MARKET)
+    if state.ui.choice_active then
+      state.ui:set_visible(state.ui.choice.root, false)
+      state.ui.choice_active = false
     end
     local market_view = market or {
       choice_id = choice_id,
       options = choice.options,
       allow_cancel = choice.allow_cancel,
       cancel_label = choice.cancel_label,
-      selected_option_id = layer.pending_choice_selected_option_id,
+      selected_option_id = state.pending_choice_selected_option_id,
     }
-    market_view.refresh_market(layer, market_view)
+    market_view.refresh_market(state, market_view)
     return
   end
-  if layer.ui.market_active then
-    market_view.close_market_panel(layer)
+  if state.ui.market_active then
+    market_view.close_market_panel(state)
   end
 
-  _switch_canvas(layer.ui, CANVAS_CHOICE)
-  layer.ui:set_label(layer.ui.choice.title, choice.title)
-  layer.ui:set_label(layer.ui.choice.body, choice.body)
-  layer.ui:set_visible(layer.ui.choice.root, true)
+  _switch_canvas(state.ui, CANVAS_CHOICE)
+  state.ui:set_label(state.ui.choice.title, choice.title)
+  state.ui:set_label(state.ui.choice.body, choice.body)
+  state.ui:set_visible(state.ui.choice.root, true)
 
-  local option_nodes = layer.ui.choice.option_buttons
+  local option_nodes = state.ui.choice.option_buttons
   for idx, name in ipairs(option_nodes) do
     local opt = choice.options[idx]
     if opt then
-      layer.ui:set_button(name, opt.label)
-      layer.ui:set_visible(name, true)
-      layer.ui:set_touch_enabled(name, true)
+      state.ui:set_button(name, opt.label)
+      state.ui:set_visible(name, true)
+      state.ui:set_touch_enabled(name, true)
     else
-      layer.ui:set_visible(name, false)
-      layer.ui:set_touch_enabled(name, false)
+      state.ui:set_visible(name, false)
+      state.ui:set_touch_enabled(name, false)
     end
   end
 
   if not choice.allow_cancel then
-    layer.ui:set_visible(layer.ui.choice.cancel, false)
-    layer.ui:set_touch_enabled(layer.ui.choice.cancel, false)
+    state.ui:set_visible(state.ui.choice.cancel, false)
+    state.ui:set_touch_enabled(state.ui.choice.cancel, false)
   else
-    layer.ui:set_button(layer.ui.choice.cancel, choice.cancel_label)
-    layer.ui:set_visible(layer.ui.choice.cancel, true)
-    layer.ui:set_touch_enabled(layer.ui.choice.cancel, true)
+    state.ui:set_button(state.ui.choice.cancel, choice.cancel_label)
+    state.ui:set_visible(state.ui.choice.cancel, true)
+    state.ui:set_touch_enabled(state.ui.choice.cancel, true)
   end
 
-  layer.ui.choice_active = true
-  layer.pending_choice_elapsed = 0
-  layer.pending_choice_id = choice_id
+  state.ui.choice_active = true
+  state.pending_choice_elapsed = 0
+  state.pending_choice_id = choice_id
 end
 
-function ui_view.close_choice_modal(layer)
-  if layer.ui.choice_active then
-    layer.ui:set_visible(layer.ui.choice.root, false)
-    layer.ui.choice_active = false
+function ui_view.close_choice_modal(state)
+  if state.ui.choice_active then
+    state.ui:set_visible(state.ui.choice.root, false)
+    state.ui.choice_active = false
   end
-  if layer.ui.market_active then
-    market_view.close_market_panel(layer)
+  if state.ui.market_active then
+    market_view.close_market_panel(state)
   end
-  layer.market_choice_option_ids = nil
-  layer.pending_choice_selected_option_id = nil
-  if layer.ui.popup_active then
-    _switch_canvas(layer.ui, CANVAS_POPUP)
+  state.market_choice_option_ids = nil
+  state.pending_choice_selected_option_id = nil
+  if state.ui.popup_active then
+    _switch_canvas(state.ui, CANVAS_POPUP)
   else
-    _switch_canvas(layer.ui, CANVAS_BASE)
+    _switch_canvas(state.ui, CANVAS_BASE)
   end
-  layer.ui_dirty = true
+  state.ui_dirty = true
 end
 
-function ui_view.push_popup(layer, payload)
+function ui_view.push_popup(state, payload)
   assert(payload ~= nil, "missing popup payload")
-  if layer.ui.market_active then
-    layer.ui.popup_return_canvas = CANVAS_MARKET
-  elseif layer.ui.choice_active then
-    layer.ui.popup_return_canvas = CANVAS_CHOICE
+  if state.ui.market_active then
+    state.ui.popup_return_canvas = CANVAS_MARKET
+  elseif state.ui.choice_active then
+    state.ui.popup_return_canvas = CANVAS_CHOICE
   else
-    layer.ui.popup_return_canvas = CANVAS_BASE
+    state.ui.popup_return_canvas = CANVAS_BASE
   end
-  _switch_canvas(layer.ui, CANVAS_POPUP)
-  layer.ui:set_label(layer.ui.popup.title, payload.title)
-  layer.ui:set_label(layer.ui.popup.body, payload.body)
-  layer.ui:set_button(layer.ui.popup.confirm, payload.button_text)
-  layer.ui:set_visible(layer.ui.popup.root, true)
-  layer.ui.popup_active = true
-  layer.ui.popup_payload = payload
-  layer.ui.popup_seq = layer.ui.popup_seq + 1
-  layer.ui_dirty = true
+  _switch_canvas(state.ui, CANVAS_POPUP)
+  state.ui:set_label(state.ui.popup.title, payload.title)
+  state.ui:set_label(state.ui.popup.body, payload.body)
+  state.ui:set_button(state.ui.popup.confirm, payload.button_text)
+  state.ui:set_visible(state.ui.popup.root, true)
+  state.ui.popup_active = true
+  state.ui.popup_payload = payload
+  state.ui.popup_seq = state.ui.popup_seq + 1
+  state.ui_dirty = true
   return true
 end
 
-function ui_view.close_popup(layer)
-  assert(layer.ui.popup_active == true, "popup not active")
-  layer.ui:set_visible(layer.ui.popup.root, false)
-  layer.ui.popup_active = false
-  layer.ui.popup_payload = nil
-  local target = layer.ui.popup_return_canvas
-  layer.ui.popup_return_canvas = nil
-  if target == CANVAS_MARKET and layer.ui.market_active then
-    _switch_canvas(layer.ui, CANVAS_MARKET)
-  elseif target == CANVAS_CHOICE and layer.ui.choice_active then
-    _switch_canvas(layer.ui, CANVAS_CHOICE)
+function ui_view.close_popup(state)
+  assert(state.ui.popup_active == true, "popup not active")
+  state.ui:set_visible(state.ui.popup.root, false)
+  state.ui.popup_active = false
+  state.ui.popup_payload = nil
+  local target = state.ui.popup_return_canvas
+  state.ui.popup_return_canvas = nil
+  if target == CANVAS_MARKET and state.ui.market_active then
+    _switch_canvas(state.ui, CANVAS_MARKET)
+  elseif target == CANVAS_CHOICE and state.ui.choice_active then
+    _switch_canvas(state.ui, CANVAS_CHOICE)
   else
-    _switch_canvas(layer.ui, CANVAS_BASE)
+    _switch_canvas(state.ui, CANVAS_BASE)
   end
-  layer.ui_dirty = true
+  state.ui_dirty = true
 end
 
 return ui_view

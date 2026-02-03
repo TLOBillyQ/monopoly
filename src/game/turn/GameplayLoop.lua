@@ -57,14 +57,17 @@ end
 local function _update_countdown(game, state)
   local timeout = constants.action_timeout_seconds or 0
   local seconds = 0
+  local active = false
   if timeout > 0 then
     if state.pending_choice and state.pending_choice_elapsed then
+      active = true
       local remaining = timeout - state.pending_choice_elapsed
       if remaining < 0 then
         remaining = 0
       end
       seconds = math.ceil(remaining)
     elseif state.ui and state.ui.popup_active then
+      active = true
       local remaining = timeout - (state.ui_modal_elapsed or 0)
       if remaining < 0 then
         remaining = 0
@@ -76,6 +79,11 @@ local function _update_countdown(game, state)
     state.countdown_last = seconds
     assert(game.store ~= nil and game.store.set ~= nil, "missing game.store.set")
     game.store:set({ "turn", "countdown_seconds" }, seconds)
+  end
+  if active ~= state.countdown_active_last then
+    state.countdown_active_last = active
+    assert(game.store ~= nil and game.store.set ~= nil, "missing game.store.set")
+    game.store:set({ "turn", "countdown_active" }, active)
   end
 end
 
@@ -132,11 +140,13 @@ local function _refresh_view(state, game, next_model)
   local current_id = assert(current.id, "missing current player id")
   assert(GameAPI ~= nil and GameAPI.get_role ~= nil, "missing GameAPI.get_role")
   
-  camera_helper.target_role_id = 1
-  if state.camera_follow_player_id ~= current_id then
-    camera_helper.target_role_id = current_id
+  if camera_helper and eca_event and eca_event.camera and eca_event.camera.follow and TriggerCustomEvent then
+    camera_helper.target_role_id = 1
+    if state.camera_follow_player_id ~= current_id then
+      camera_helper.target_role_id = current_id
+    end
+    TriggerCustomEvent(eca_event.camera.follow, {})
   end
-  TriggerCustomEvent(eca_event.camera.follow, {})
   
   return ui_model
 end
@@ -162,6 +172,10 @@ function gameplay_loop.set_game(state, game)
   state.player_units_missing = false
   state.ui_dirty = true
   state.countdown_last = nil
+  state.countdown_active_last = nil
+  if state.ui then
+    state.ui.input_blocked = false
+  end
 end
 
 function gameplay_loop.new_game(state)
@@ -187,6 +201,9 @@ end
 function gameplay_loop.step_auto_runner(game, state, dt, context)
   assert(game ~= nil, "missing game")
   assert(state.auto_runner ~= nil, "missing auto_runner")
+  if state.ui and state.ui.input_blocked then
+    return nil
+  end
   local ctx = context or {}
   ctx.game_finished = game.finished
   local auto_action = state.auto_runner:next_action(dt, ctx)
@@ -342,6 +359,13 @@ end
 
 function gameplay_loop.dispatch_action(game, state, action, opts)
   assert(action ~= nil, "missing action")
+  if state.ui and state.ui.input_blocked then
+    if action.type == "ui_button"
+        or action.type == "choice_select"
+        or action.type == "choice_cancel" then
+      return
+    end
+  end
   if action.type == "ui_button"
       or action.type == "choice_select"
       or action.type == "choice_cancel" then
@@ -425,6 +449,18 @@ function gameplay_loop.tick(game, state, dt)
     return
   end
 
+  assert(game.store ~= nil and game.store.get ~= nil, "missing game.store.Get")
+  local phase = game.store:get({ "turn", "phase" })
+  local input_blocked = phase == "wait_move_anim" or phase == "wait_action_anim"
+  local input_blocked_changed = false
+  if state.ui and state.ui.input_blocked ~= input_blocked then
+    state.ui.input_blocked = input_blocked
+    input_blocked_changed = true
+    if not input_blocked then
+      state.ui_dirty = true
+    end
+  end
+
   gameplay_loop.step_auto_runner(game, state, dt, {
     modal_active = false,
     modal_buttons = nil,
@@ -453,7 +489,7 @@ function gameplay_loop.tick(game, state, dt)
 
   gameplay_loop.step_modal_timeout(state, dt, {
     is_active = function(ctx)
-      return ctx.ui and ctx.ui.popup_active
+      return ctx.ui and ctx.ui.popup_active and not ctx.ui.input_blocked
     end,
     get_ref = function(ctx)
       assert(ctx.ui ~= nil, "missing ui")
@@ -465,8 +501,15 @@ function gameplay_loop.tick(game, state, dt)
     end,
   })
 
-  assert(game.store ~= nil and game.store.get ~= nil, "missing game.store.Get")
-  local phase = game.store:get({ "turn", "phase" })
+  phase = game.store:get({ "turn", "phase" })
+  input_blocked = phase == "wait_move_anim" or phase == "wait_action_anim"
+  if state.ui and state.ui.input_blocked ~= input_blocked then
+    state.ui.input_blocked = input_blocked
+    input_blocked_changed = true
+    if not input_blocked then
+      state.ui_dirty = true
+    end
+  end
   if phase == "wait_move_anim" then
     local anim = game.store:get({ "turn", "move_anim" })
     if anim then
@@ -554,6 +597,7 @@ function gameplay_loop.tick(game, state, dt)
     dirty.ui = true
   end
   local only_countdown = _is_only_turn_countdown(dirty)
+  local ui_refreshed = false
   if dirty.any or dirty.ui then
     local store_state = game.store.state
     local env = _build_ui_env(state, game)
@@ -563,11 +607,16 @@ function gameplay_loop.tick(game, state, dt)
       ui_view.refresh_turn_label(state, next_model.panel and next_model.panel.turn_label or "")
     else
       _refresh_view(state, game, next_model)
+      ui_refreshed = true
       if next_model.choice then
         ui_view.open_choice_modal(state, next_model.choice, next_model.market)
       end
     end
     state.ui_dirty = false
+  end
+
+  if state.ui and (input_blocked_changed or (state.ui.input_blocked and ui_refreshed)) then
+    ui_view.apply_input_lock(state)
   end
 
   if state.ui_model then

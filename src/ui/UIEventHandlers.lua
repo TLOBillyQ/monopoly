@@ -3,7 +3,7 @@ local monopoly_event = require("src.game.MonopolyEvents")
 local event_handlers = {}
 local installed = false
 
-function event_handlers.install(_, logger, ui_port)
+function event_handlers.install(_, logger, state)
   if installed then
     return
   end
@@ -39,7 +39,7 @@ function event_handlers.install(_, logger, ui_port)
   RegisterCustomEvent(monopoly_event.market.buy_failed, function(_, _, data)
     local popup = data.popup
     if popup then
-      ui_port:push_popup(popup)
+      state:push_popup(popup)
     end
   end)
 end

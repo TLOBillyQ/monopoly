@@ -84,11 +84,11 @@ local function _resolve_market_icon_key(refs, product_id, entry, cfg)
   return refs[name]
 end
 
-function eggy_layer_market.refresh_market_selection(layer, option_id)
-  local ui = layer.ui
+function eggy_layer_market.refresh_market_selection(state, option_id)
+  local ui = state.ui
   assert(ui ~= nil, "missing market ui")
   local price_text = ""
-  local refs = layer.ui_refs
+  local refs = state.ui_refs
   local icon_key = _resolve_ref_key(refs, market_ui.empty_ref_key)
   assert(option_id ~= nil, "missing market option_id")
   local entry, cfg = _resolve_market_entry(option_id)
@@ -104,18 +104,18 @@ function eggy_layer_market.refresh_market_selection(layer, option_id)
   end
 end
 
-function eggy_layer_market.select_market_option(layer, option_id)
-  layer.pending_choice_selected_option_id = option_id
-  eggy_layer_market.refresh_market_selection(layer, option_id)
+function eggy_layer_market.select_market_option(state, option_id)
+  state.pending_choice_selected_option_id = option_id
+  eggy_layer_market.refresh_market_selection(state, option_id)
 end
 
-function eggy_layer_market.refresh_market(layer, market)
-  local ui = layer.ui
+function eggy_layer_market.refresh_market(state, market)
+  local ui = state.ui
   assert(market ~= nil and market.options ~= nil and ui ~= nil, "missing market data/ui")
   ui:set_visible(market_ui.container, true)
   ui.market_active = true
 
-  local refs = layer.ui_refs
+  local refs = state.ui_refs
   local option_ids = {}
   local buttons = market_ui.item_buttons
   local labels = market_ui.item_labels
@@ -154,23 +154,23 @@ function eggy_layer_market.refresh_market(layer, market)
   ui:set_visible(market_ui.cancel_button, show_cancel)
   ui:set_touch_enabled(market_ui.cancel_button, show_cancel)
 
-  layer.market_choice_option_ids = option_ids
+  state.market_choice_option_ids = option_ids
   local selected = market.selected_option_id or option_ids[1]
-  eggy_layer_market.select_market_option(layer, selected)
-  layer.pending_choice_elapsed = 0
-  layer.pending_choice_id = market.choice_id
+  eggy_layer_market.select_market_option(state, selected)
+  state.pending_choice_elapsed = 0
+  state.pending_choice_id = market.choice_id
   return true
 end
 
-function eggy_layer_market.close_market_panel(layer)
-  local ui = layer.ui
+function eggy_layer_market.close_market_panel(state)
+  local ui = state.ui
   assert(ui ~= nil and ui.market_active == true, "market panel not active")
   ui:set_visible(market_ui.container, false)
   ui.market_active = false
-  layer.market_choice_option_ids = nil
-  layer.pending_choice_selected_option_id = nil
+  state.market_choice_option_ids = nil
+  state.pending_choice_selected_option_id = nil
   ui:set_label(market_ui.price_label, "")
-  local empty_key = _resolve_ref_key(layer.ui_refs, market_ui.empty_ref_key)
+  local empty_key = _resolve_ref_key(state.ui_refs, market_ui.empty_ref_key)
   local node = ui.query_node(market_ui.selected_card)
   node.image_texture = empty_key
   if node.reset_size then

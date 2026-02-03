@@ -17,16 +17,14 @@ function board_scene.init(state, map_cfg)
   }
   for i, role in ipairs(roles) do
     assert(role ~= nil, "missing role: " .. tostring(i))
-    assert(role.get_ctrl_unit ~= nil, "missing role.get_ctrl_unit: " .. tostring(i))
-    scene.units_by_player_id[i] = role.get_ctrl_unit()
+    local unit = role.get_ctrl_unit()
+    unit.set_physics_active(false)
+    scene.units_by_player_id[i] = unit
+    
   end
 
-  local first_unit = scene.units_by_player_id[1]
-  assert(first_unit ~= nil, "missing first unit")
-  assert(first_unit.add_state ~= nil, "missing unit.add_state")
-  assert(Enums ~= nil and Enums.BuffState ~= nil, "missing Enums.BuffState")
-  for _ = 1, #roles do
-    first_unit.add_state(Enums.BuffState.BUFF_FORBID_CONTROL)
+  for i = 1, #roles do
+    roles[i].add_state(Enums.BuffState.BUFF_FORBID_CONTROL)
   end
 
   local tile_names = {}
@@ -43,10 +41,9 @@ function board_scene.init(state, map_cfg)
   end
   scene.tiles = LuaAPI.query_units(tile_names)
   scene.buildings = LuaAPI.query_units(building_names)
-   for i = 1, 45 do
-      scene.tiles[i].set_physics_active(false)
-      scene.buildings[i].set_physics_active(false)
-    end
+  for i = 1, 45 do
+    scene.tiles[i].set_physics_active(false)
+  end
 
   scene.ground = LuaAPI.query_unit("ground")
   assert(scene.ground ~= nil, "missing ground unit")

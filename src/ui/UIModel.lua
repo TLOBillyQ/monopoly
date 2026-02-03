@@ -64,7 +64,11 @@ function ui_model.build(store_state, env)
     item_slots[i] = item and item.id or nil
   end
   local panel = {
-    turn_label = panel_view.build_turn_label(turn.turn_count, turn.countdown_seconds or 0),
+    turn_label = panel_view.build_turn_label(
+      turn.turn_count,
+      turn.countdown_seconds or 0,
+      turn.countdown_active == true
+    ),
     player_rows = panel_view.build_player_statuses(store_state, env.game, 4),
     auto_label = panel_view.build_auto_label(ui_runtime and ui_runtime.auto_play),
   }
@@ -146,7 +150,11 @@ function ui_model.update(prev, store_state, env, dirty)
 
   local panel = model.panel or {}
   if dirty.turn or dirty.turn_countdown or ui_dirty then
-    panel.turn_label = panel_view.build_turn_label(turn.turn_count, turn.countdown_seconds or 0)
+    panel.turn_label = panel_view.build_turn_label(
+      turn.turn_count,
+      turn.countdown_seconds or 0,
+      turn.countdown_active == true
+    )
   end
   if dirty.players or dirty.board_tiles or ui_dirty then
     panel.player_rows = panel_view.build_player_statuses(store_state, env.game, 4)
