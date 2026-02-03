@@ -122,6 +122,9 @@ local function _install_game_init(state)
       on_game_changed = function(new_game)
         current_game = new_game
       end,
+      on_restart = function(_, ctx_state, _, opts)
+        gameplay_loop.restart_game(ctx_state, opts)
+      end,
     })
 
     local role = GameAPI.get_role(1)

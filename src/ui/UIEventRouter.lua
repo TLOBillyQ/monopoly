@@ -1,6 +1,6 @@
 local ui_aliases = require("src.ui.UIAliases")
 local market_ui = require("src.ui.MarketUI")
-local gameplay_loop = require("src.game.turn.GameplayLoop")
+local turn_dispatch = require("src.game.turn.TurnDispatch")
 local ui_view = require("src.ui.UIView")
 
 local ui_event_router = {}
@@ -70,12 +70,12 @@ local function _dispatch(state, game, intent, opts)
   if intent_type == "ui_button"
       or intent_type == "choice_select"
       or intent_type == "choice_cancel" then
-    gameplay_loop.dispatch_action(game, state, intent, opts)
+    turn_dispatch.dispatch_action(game, state, intent, opts)
     return
   end
 
   if intent_type == "market_confirm" then
-    gameplay_loop.dispatch_action(game, state, {
+    turn_dispatch.dispatch_action(game, state, {
       type = "choice_select",
       choice_id = intent.choice_id,
       option_id = intent.option_id,

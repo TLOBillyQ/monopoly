@@ -5,10 +5,10 @@ local event_handlers = require("src.ui.UIEventHandlers")
 local ui_view = require("src.ui.UIView")
 local ui_model = require("src.ui.UIModel")
 local logger = require("src.core.Logger")
+local turn_dispatch = require("src.game.turn.TurnDispatch")
+local turn_anim = require("src.game.turn.TurnAnim")
 
 local gameplay_loop = {}
-
-local next_turn_cooldown = 0.4
 
 local function _build_log_prefix()
   return "[Eggy]"
@@ -39,19 +39,6 @@ local function _log_status(view)
     "回合:",
     tostring(view.turn_count)
   )
-end
-
-local function _get_timestamp()
-  assert(GameAPI ~= nil and GameAPI.get_timestamp ~= nil, "missing GameAPI.get_timestamp")
-  local ts = GameAPI.get_timestamp()
-  assert(type(ts) == "number", "invalid timestamp")
-  return ts
-end
-
-local function _get_timestamp_diff_seconds(timestamp_1, timestamp_2)
-  assert(GameAPI ~= nil and GameAPI.get_timestamp_diff ~= nil, "missing GameAPI.get_timestamp_diff")
-  assert(type(timestamp_1) == "number" and type(timestamp_2) == "number", "invalid timestamps")
-  return GameAPI.get_timestamp_diff(timestamp_1, timestamp_2)
 end
 
 local function _update_countdown(game, state)
@@ -191,11 +178,18 @@ function gameplay_loop.new_game(state)
 end
 
 function gameplay_loop.clear_choice(state, opts)
-  state.pending_choice = nil
-  state.pending_choice_elapsed = 0
-  state.pending_choice_id = nil
-  assert(opts ~= nil and opts.on_close_choice ~= nil, "missing opts.on_close_choice")
-  opts.on_close_choice(state)
+  turn_dispatch.clear_choice(state, opts)
+end
+
+function gameplay_loop.restart_game(state, opts)
+  local was_auto = state.ui.auto_play
+  local new_game = gameplay_loop.new_game(state)
+  gameplay_loop.set_game(state, new_game)
+  if opts and opts.on_game_changed then
+    opts.on_game_changed(new_game)
+  end
+  state.auto_runner:set_enabled(was_auto)
+  return new_game
 end
 
 function gameplay_loop.step_auto_runner(game, state, dt, context)
@@ -208,7 +202,7 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
   ctx.game_finished = game.finished
   local auto_action = state.auto_runner:next_action(dt, ctx)
   if auto_action then
-    gameplay_loop.dispatch_action(game, state, auto_action)
+    turn_dispatch.dispatch_action(game, state, auto_action)
   end
   return auto_action
 end
@@ -261,7 +255,7 @@ function gameplay_loop.step_choice_timeout(game, state, dt, opts)
     assert(opts.build_action ~= nil, "missing opts.build_action")
     action = opts.build_action(game, state, choice)
     assert(action ~= nil, "missing timeout action")
-    gameplay_loop.dispatch_action(game, state, action)
+    turn_dispatch.dispatch_action(game, state, action)
   end
 end
 
@@ -295,153 +289,48 @@ end
 
 function gameplay_loop.step_move_anim(game, state, opts)
   assert(state.wait_move_anim == true, "move anim disabled")
-  assert(game ~= nil, "missing game")
-  assert(game.store ~= nil, "missing game.store")
   assert(opts ~= nil and opts.on_move_anim ~= nil, "missing opts.on_move_anim")
-
-  local anim = game.store:get({ "turn", "move_anim" })
-  local phase = game.store:get({ "turn", "phase" })
-  assert(anim ~= nil and anim.seq ~= nil, "missing move_anim")
-
-  assert(phase == "wait_move_anim", "unexpected move anim phase: " .. tostring(phase))
-
-  if state.move_anim_seq == anim.seq then
-    return
-  end
-
-  state.move_anim_seq = anim.seq
-  local ok, delay = pcall(opts.on_move_anim, state, anim)
-  if ok and delay and delay > 0 then
-    SetTimeOut(delay, function()
-      assert(game.dispatch_action ~= nil, "missing game.dispatch_action")
-      game:dispatch_action({ type = "move_anim_done", seq = anim.seq })
-    end)
-    return
-  end
-  assert(game.dispatch_action ~= nil, "missing game.dispatch_action")
-  game:dispatch_action({ type = "move_anim_done", seq = anim.seq })
+  turn_anim.step_anim(game, state, {
+    anim_key = "move_anim",
+    phase = "wait_move_anim",
+    phase_label = "move anim",
+    seq_key = "move_anim_seq",
+    done_action = "move_anim_done",
+    on_anim = opts.on_move_anim,
+  })
 end
 
 function gameplay_loop.step_action_anim(game, state, opts)
   assert(state.wait_action_anim == true, "action anim disabled")
-  assert(game ~= nil, "missing game")
-  assert(game.store ~= nil, "missing game.store")
   assert(opts ~= nil and opts.on_action_anim ~= nil, "missing opts.on_action_anim")
-
-  local anim = game.store:get({ "turn", "action_anim" })
-  local phase = game.store:get({ "turn", "phase" })
-  assert(anim ~= nil and anim.seq ~= nil, "missing action_anim")
-
-  assert(phase == "wait_action_anim", "unexpected action anim phase: " .. tostring(phase))
-
-  if state.action_anim_seq == anim.seq then
-    return
-  end
-
-  state.action_anim_seq = anim.seq
-  local ok, delay = pcall(opts.on_action_anim, state, anim)
-  if ok and delay and delay > 0 then
-    SetTimeOut(delay, function()
-      assert(game.dispatch_action ~= nil, "missing game.dispatch_action")
-      game:dispatch_action({ type = "action_anim_done", seq = anim.seq })
-    end)
-    return
-  end
-  assert(game.dispatch_action ~= nil, "missing game.dispatch_action")
-  game:dispatch_action({ type = "action_anim_done", seq = anim.seq })
+  turn_anim.step_anim(game, state, {
+    anim_key = "action_anim",
+    phase = "wait_action_anim",
+    phase_label = "action anim",
+    seq_key = "action_anim_seq",
+    done_action = "action_anim_done",
+    on_anim = opts.on_action_anim,
+  })
 end
 
 function gameplay_loop.step_turn(game)
-  assert(game ~= nil, "missing game")
-  assert(not game.finished, "game finished")
-  game:advance_turn()
+  turn_dispatch.step_turn(game)
 end
 
 function gameplay_loop.dispatch_action(game, state, action, opts)
-  assert(action ~= nil, "missing action")
-  if state.ui and state.ui.input_blocked then
-    if action.type == "ui_button"
-        or action.type == "choice_select"
-        or action.type == "choice_cancel" then
-      return
+  local merged_opts = opts
+  if not merged_opts or not merged_opts.on_restart then
+    merged_opts = {}
+    if opts then
+      for key, value in pairs(opts) do
+        merged_opts[key] = value
+      end
+    end
+    merged_opts.on_restart = function(_, ctx_state, _, dispatch_opts)
+      gameplay_loop.restart_game(ctx_state or state, dispatch_opts or merged_opts)
     end
   end
-  if action.type == "ui_button"
-      or action.type == "choice_select"
-      or action.type == "choice_cancel" then
-    state.ui_dirty = true
-  end
-  if action.type == "ui_button" then
-    local slot_index = action.id and string.match(action.id, "^item_slot_(%d+)$")
-    if slot_index then
-      slot_index = tonumber(slot_index)
-      local choice = state.pending_choice
-      assert(choice ~= nil and choice.kind == "item_phase_choice", "invalid item phase choice")
-      assert(state.ui ~= nil, "missing state.ui")
-      assert(state.ui.item_slot_item_ids ~= nil, "missing item_slot_item_ids")
-      local item_id = assert(state.ui.item_slot_item_ids[slot_index], "missing item_id: " .. tostring(slot_index))
-      local options = assert(choice.options, "missing choice options")
-      local option_ok = false
-      for _, opt in ipairs(options) do
-        local opt_id = opt.id or opt
-        if opt_id == item_id then
-          option_ok = true
-          break
-        end
-      end
-      assert(option_ok, "invalid item option: " .. tostring(item_id))
-      gameplay_loop.dispatch_action(game, state, { type = "choice_select", choice_id = choice.id, option_id = item_id })
-      return
-    end
-    if action.id == "next" then
-      local phase = nil
-      assert(game ~= nil and game.store ~= nil, "missing game.store")
-      assert(game.store.get ~= nil, "missing store.Get")
-      phase = game.store:get({ "turn", "phase" })
-      local now = _get_timestamp()
-      if state.next_turn_locked then
-        local allow = false
-        if state.next_turn_lock_phase and phase and phase ~= state.next_turn_lock_phase then
-          allow = true
-        else
-          assert(state.next_turn_last_click ~= nil, "missing next_turn_last_click")
-          local diff = _get_timestamp_diff_seconds(now, state.next_turn_last_click)
-          if diff and diff >= next_turn_cooldown then
-            allow = true
-          end
-        end
-        if not allow then
-          return
-        end
-      end
-      state.next_turn_locked = true
-      state.next_turn_last_click = now
-      state.next_turn_lock_phase = phase
-      gameplay_loop.step_turn(game)
-    elseif action.id == "auto" then
-      state.ui.auto_play = not state.ui.auto_play
-      state.auto_runner:set_enabled(state.ui.auto_play)
-      state.auto_runner:reset_timer()
-    elseif action.id == "restart" then
-      local was_auto = state.ui.auto_play
-      local new_game = gameplay_loop.new_game(state)
-      gameplay_loop.set_game(state, new_game)
-      if opts and opts.on_game_changed then
-        opts.on_game_changed(new_game)
-      end
-      state.auto_runner:set_enabled(was_auto)
-    end
-  elseif action.type == "choice_select" or action.type == "choice_cancel" then
-    gameplay_loop.clear_choice(state, {
-      on_close_choice = function(ctx)
-        ui_view.close_choice_modal(ctx)
-      end,
-    })
-    if game then
-      assert(game.dispatch_action ~= nil, "missing game.dispatch_action")
-      game:dispatch_action(action)
-    end
-  end
+  turn_dispatch.dispatch_action(game, state, action, merged_opts)
 end
 
 function gameplay_loop.tick(game, state, dt)
