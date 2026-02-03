@@ -9,7 +9,6 @@ local logger = require("src.core.Logger")
 local gameplay_loop = {}
 
 local next_turn_cooldown = 0.4
-local camera_lock_offset_y = 50
 
 local function _build_log_prefix()
   return "[EggyAdapter]"
@@ -132,20 +131,13 @@ local function _refresh_view(state, game, next_model)
   local current = assert(players[current_index], "missing current player: " .. tostring(current_index))
   local current_id = assert(current.id, "missing current player id")
   assert(GameAPI ~= nil and GameAPI.get_role ~= nil, "missing GameAPI.get_role")
-  local role = assert(GameAPI.get_role(current_id), "missing role: " .. tostring(current_id))
+  
+  camera_helper.target_role_id = 1
   if state.camera_follow_player_id ~= current_id then
-    state.camera_follow_player_id = current_id
-    assert(role.set_camera_bind_mode ~= nil, "missing role.set_camera_bind_mode")
-    role.set_camera_bind_mode(Enums.CameraBindMode.TRACK)
+    camera_helper.target_role_id = current_id
   end
-
-  assert(state.player_units ~= nil, "missing state.player_units")
-  local unit = assert(state.player_units[current_id], "missing player unit: " .. tostring(current_id))
-  assert(unit.get_position ~= nil, "missing unit.get_position: " .. tostring(current_id))
-  local target_pos = assert(unit.get_position(), "missing target position: " .. tostring(current_id))
-  assert(role.set_camera_lock_position ~= nil, "missing role.set_camera_lock_position")
-  local offset_pos = target_pos + math.Vector3(0.0, camera_lock_offset_y, 0.0)
-  role.set_camera_lock_position(offset_pos)
+  TriggerCustomEvent(eca_event.camera.follow, {})
+  
   return ui_model
 end
 

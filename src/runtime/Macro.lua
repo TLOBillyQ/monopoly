@@ -24,6 +24,9 @@ eca_event = {
         exit = "exit_vehicle",
         move = "move_vehicle",
         stop = "stop_vehicle",
-    }
-
+    },
+    camera = {
+        follow = "follow_camera",
+    },
+    
 }
