@@ -27,11 +27,11 @@ end
 
 function EButton:__update_disabled()
     if UIManager.client_role then
-        UIManager.client_role.set_node_touch_enabled(self.__protected_id, self.__protected_disabled)
+        UIManager.client_role.set_node_touch_enabled(self.__protected_id, not self.__protected_disabled)
         UIManager.client_role.set_button_enabled(self.__protected_id, not self.__protected_disabled)
     else
         for _, role in ipairs(allroles) do
-            role.set_node_touch_enabled(self.__protected_id, self.__protected_disabled)
+            role.set_node_touch_enabled(self.__protected_id, not self.__protected_disabled)
             role.set_button_enabled(self.__protected_id, not self.__protected_disabled)
         end
     end
