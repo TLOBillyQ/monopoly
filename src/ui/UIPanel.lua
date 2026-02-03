@@ -2,8 +2,8 @@ local pricing = require("src.game.land.LandPricing")
 
 local panel = {}
 
-function panel.build_turn_label(turn_count)
-  return "回合: " .. tostring(turn_count)
+function panel.build_turn_label(turn_count, countdown_seconds)
+  return "回合: " .. tostring(turn_count) .. " | 倒计时: " .. tostring(countdown_seconds or 0)
 end
 
 function panel.build_player_label(player)

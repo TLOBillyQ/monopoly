@@ -58,6 +58,8 @@ local function _build_state()
     pending_choice_selected_option_id = nil,
     _log_once = {},
     tick_started = false,
+    ui_dirty = false,
+    countdown_last = nil,
   }
 
   state.push_popup = function(_, payload)

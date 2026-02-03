@@ -8,10 +8,24 @@ local store = Class("Store")
 
 local deep_copy = Utils.deep_copy
 
+local function _new_dirty()
+  return {
+    any = false,
+    players = false,
+    board_tiles = false,
+    turn = false,
+    market = false,
+    turn_countdown = false,
+    inventory_ids = {},
+  }
+end
+
 ---创建新状态树
 ---@param init table? 初始状态表
 function store:init(init)
   self.state = deep_copy(init or {})
+  self.version = 0
+  self.dirty = _new_dirty()
 end
 
 ---创建新状态树
@@ -50,6 +64,39 @@ function store:set(path, value)
     node = next_node
   end
   node[path[#path]] = value
+
+  self.version = (self.version or 0) + 1
+  if not self.dirty then
+    self.dirty = _new_dirty()
+  end
+  local dirty = self.dirty
+  dirty.any = true
+  local root = path and path[1]
+  if root == "players" then
+    dirty.players = true
+    if path[3] == "inventory" then
+      local pid = path[2]
+      if pid ~= nil then
+        dirty.inventory_ids[pid] = true
+      end
+    end
+  elseif root == "board" then
+    dirty.board_tiles = true
+  elseif root == "market" then
+    dirty.market = true
+  elseif root == "turn" then
+    if path[2] == "countdown_seconds" then
+      dirty.turn_countdown = true
+    else
+      dirty.turn = true
+    end
+  end
+end
+
+function store:consume_dirty()
+  local dirty = self.dirty or _new_dirty()
+  self.dirty = _new_dirty()
+  return dirty
 end
 
 return store

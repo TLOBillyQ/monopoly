@@ -10,6 +10,11 @@ local function _store_root(self)
   return self.store.state
 end
 
+local function _store_set(self, path, value)
+  assert(self.store ~= nil and self.store.set ~= nil, "missing store.set")
+  self.store:set(path, value)
+end
+
 local function _ensure_table(node, key)
   assert(type(node[key]) == "table", "missing table: " .. tostring(key))
   return node[key]
@@ -28,7 +33,7 @@ function game_state:set_player_status(player, key, value)
   local players = _ensure_table(root, "players")
   local player_node = _ensure_table(players, player.id)
   local status = _ensure_table(player_node, "status")
-  status[key] = _store_value(value)
+  _store_set(self, { "players", player.id, "status", key }, _store_value(value))
 end
 
 function game_state:set_player_seat(player, seat_id)
@@ -36,7 +41,7 @@ function game_state:set_player_seat(player, seat_id)
   local root = _store_root(self)
   local players = _ensure_table(root, "players")
   local player_node = _ensure_table(players, player.id)
-  player_node["seat_id"] = _store_value(seat_id)
+  _store_set(self, { "players", player.id, "seat_id" }, _store_value(seat_id))
 end
 
 function game_state:set_player_eliminated(player, eliminated)
@@ -44,7 +49,7 @@ function game_state:set_player_eliminated(player, eliminated)
   local root = _store_root(self)
   local players = _ensure_table(root, "players")
   local player_node = _ensure_table(players, player.id)
-  player_node["eliminated"] = _store_value(player.eliminated)
+  _store_set(self, { "players", player.id, "eliminated" }, _store_value(player.eliminated))
 end
 
 function game_state:set_player_property(player, tile_id, owned)
@@ -61,14 +66,14 @@ function game_state:set_player_property(player, tile_id, owned)
   local players = _ensure_table(root, "players")
   local player_node = _ensure_table(players, player.id)
   local properties = _ensure_table(player_node, "properties")
-  properties[tile_id] = store_value
+  _store_set(self, { "players", player.id, "properties", tile_id }, store_value)
 end
 
 function game_state:sync_player_inventory(player)
   local root = _store_root(self)
   local players = _ensure_table(root, "players")
   local player_node = _ensure_table(players, player.id)
-  player_node["inventory"] = _store_value(composition_root.snapshot_inventory(player.inventory))
+  _store_set(self, { "players", player.id, "inventory" }, _store_value(composition_root.snapshot_inventory(player.inventory)))
 end
 
 function game_state:update_tile(tile, updates)
@@ -77,9 +82,9 @@ function game_state:update_tile(tile, updates)
   local root = _store_root(self)
   local board = _ensure_table(root, "board")
   local tiles = _ensure_table(board, "tiles")
-  local tile_node = _ensure_table(tiles, tile.id)
+  _ensure_table(tiles, tile.id)
   for key, value in pairs(updates) do
-    tile_node[key] = _store_value(value)
+    _store_set(self, { "board", "tiles", tile.id, key }, _store_value(value))
   end
 end
 
@@ -89,8 +94,8 @@ function game_state:queue_action_anim(payload)
   local turn = _ensure_table(root, "turn")
   local seq = turn["action_anim_seq"] + 1
   payload.seq = seq
-  turn["action_anim_seq"] = seq
-  turn["action_anim"] = payload
+  _store_set(self, { "turn", "action_anim_seq" }, seq)
+  _store_set(self, { "turn", "action_anim" }, payload)
   return payload
 end
 
@@ -114,9 +119,9 @@ function game_state:reset_tile(tile)
   local root = _store_root(self)
   local board = _ensure_table(root, "board")
   local tiles = _ensure_table(board, "tiles")
-  local tile_node = _ensure_table(tiles, tile.id)
-  tile_node["owner_id"] = nil
-  tile_node["level"] = 0
+  _ensure_table(tiles, tile.id)
+  _store_set(self, { "board", "tiles", tile.id, "owner_id" }, nil)
+  _store_set(self, { "board", "tiles", tile.id, "level" }, 0)
 end
 
 function game_state:alive_players()
@@ -163,7 +168,7 @@ function game_state:update_player_position(player, new_index)
   local root = _store_root(self)
   local players = _ensure_table(root, "players")
   local player_node = _ensure_table(players, player.id)
-  player_node["position"] = _store_value(new_index)
+  _store_set(self, { "players", player.id, "position" }, _store_value(new_index))
   table.insert(self.occupants[new_index], player.id)
 end
 

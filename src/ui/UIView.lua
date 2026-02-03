@@ -117,6 +117,14 @@ function ui_view.refresh_panel(layer, ui_model)
   ui:set_button("自动控制按钮", auto_label)
 end
 
+function ui_view.refresh_turn_label(layer, label_text)
+  local ui = layer.ui
+  if not ui or not ui.set_label then
+    return
+  end
+  ui:set_label("倒计时", label_text)
+end
+
 function ui_view.refresh_item_slots(layer, ui_model)
   local ui = layer.ui
   assert(ui ~= nil and ui.item_slots ~= nil, "missing ui item slots")
@@ -177,6 +185,7 @@ function ui_view.open_choice_modal(layer, choice, market)
       and (layer.ui.choice_active or layer.ui.market_active) then
     return
   end
+  layer.ui_dirty = true
 
   if choice.kind == "market_buy" and market_ui.is_panel_ready() then
     if layer.ui.choice_active then
@@ -238,6 +247,7 @@ function ui_view.close_choice_modal(layer)
   end
   layer.market_choice_option_ids = nil
   layer.pending_choice_selected_option_id = nil
+  layer.ui_dirty = true
 end
 
 function ui_view.push_popup(layer, payload)
@@ -249,6 +259,7 @@ function ui_view.push_popup(layer, payload)
   layer.ui.popup_active = true
   layer.ui.popup_payload = payload
   layer.ui.popup_seq = layer.ui.popup_seq + 1
+  layer.ui_dirty = true
   return true
 end
 
@@ -257,6 +268,7 @@ function ui_view.close_popup(layer)
   layer.ui:set_visible(layer.ui.popup.root, false)
   layer.ui.popup_active = false
   layer.ui.popup_payload = nil
+  layer.ui_dirty = true
 end
 
 return ui_view

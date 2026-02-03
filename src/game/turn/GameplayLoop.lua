@@ -54,6 +54,46 @@ local function _get_timestamp_diff_seconds(timestamp_1, timestamp_2)
   return GameAPI.get_timestamp_diff(timestamp_1, timestamp_2)
 end
 
+local function _update_countdown(game, state)
+  local timeout = constants.action_timeout_seconds or 0
+  local seconds = 0
+  if timeout > 0 then
+    if state.pending_choice and state.pending_choice_elapsed then
+      local remaining = timeout - state.pending_choice_elapsed
+      if remaining < 0 then
+        remaining = 0
+      end
+      seconds = math.ceil(remaining)
+    elseif state.ui and state.ui.popup_active then
+      local remaining = timeout - (state.ui_modal_elapsed or 0)
+      if remaining < 0 then
+        remaining = 0
+      end
+      seconds = math.ceil(remaining)
+    end
+  end
+  if seconds ~= state.countdown_last then
+    state.countdown_last = seconds
+    assert(game.store ~= nil and game.store.set ~= nil, "missing game.store.set")
+    game.store:set({ "turn", "countdown_seconds" }, seconds)
+  end
+end
+
+local function _is_only_turn_countdown(dirty)
+  if not dirty or dirty.turn_countdown ~= true then
+    return false
+  end
+  if dirty.players or dirty.board_tiles or dirty.turn or dirty.market or dirty.ui then
+    return false
+  end
+  if dirty.inventory_ids then
+    for _ in pairs(dirty.inventory_ids) do
+      return false
+    end
+  end
+  return true
+end
+
 local function _build_item_index(state)
   state.item_name_by_id = {}
   for _, cfg in ipairs(items_cfg) do
@@ -61,22 +101,26 @@ local function _build_item_index(state)
   end
 end
 
-local function _build_ui_model(state, game)
-  local store_state = game.store.state
+local function _build_ui_env(state, game)
   local winner = game.winner
   local winner_name = game.winner_names or (winner and assert(winner.name, "missing winner name"))
-  return ui_model.build(store_state, {
+  return {
     game = game,
     ui_state = state,
     last_turn = game.last_turn,
     finished = game.finished,
     winner_name = winner_name,
-  })
+  }
 end
 
-local function _refresh_view(state, game)
+local function _build_ui_model(state, game)
   local store_state = game.store.state
-  local ui_model = _build_ui_model(state, game)
+  return ui_model.build(store_state, _build_ui_env(state, game))
+end
+
+local function _refresh_view(state, game, next_model)
+  local store_state = game.store.state
+  local ui_model = next_model
   state.ui_model = ui_model
   ui_view.render(state, ui_model, _log_once, _build_log_prefix)
 
@@ -121,6 +165,8 @@ function gameplay_loop.set_game(state, game)
   end
   state.player_units = nil
   state.player_units_missing = false
+  state.ui_dirty = true
+  state.countdown_last = nil
 end
 
 function gameplay_loop.new_game(state)
@@ -301,6 +347,11 @@ end
 
 function gameplay_loop.dispatch_action(game, state, action, opts)
   assert(action ~= nil, "missing action")
+  if action.type == "ui_button"
+      or action.type == "choice_select"
+      or action.type == "choice_cancel" then
+    state.ui_dirty = true
+  end
   if action.type == "ui_button" then
     local slot_index = action.id and string.match(action.id, "^item_slot_(%d+)$")
     if slot_index then
@@ -464,11 +515,33 @@ function gameplay_loop.tick(game, state, dt)
   end
   state.board_last_phase = phase
 
-  local ui_model = _refresh_view(state, game)
-  if ui_model.choice then
-    ui_view.open_choice_modal(state, ui_model.choice, ui_model.market)
+  _update_countdown(game, state)
+
+  assert(game.store ~= nil and game.store.consume_dirty ~= nil, "missing game.store.consume_dirty")
+  local dirty = game.store:consume_dirty()
+  if state.ui_dirty then
+    dirty.ui = true
   end
-  _log_status(ui_model)
+  local only_countdown = _is_only_turn_countdown(dirty)
+  if dirty.any or dirty.ui then
+    local store_state = game.store.state
+    local env = _build_ui_env(state, game)
+    local next_model = ui_model.update(state.ui_model, store_state, env, dirty)
+    state.ui_model = next_model
+    if only_countdown then
+      ui_view.refresh_turn_label(state, next_model.panel and next_model.panel.turn_label or "")
+    else
+      _refresh_view(state, game, next_model)
+      if next_model.choice then
+        ui_view.open_choice_modal(state, next_model.choice, next_model.market)
+      end
+    end
+    state.ui_dirty = false
+  end
+
+  if state.ui_model then
+    _log_status(state.ui_model)
+  end
 end
 
 return gameplay_loop

@@ -64,7 +64,7 @@ function ui_model.build(store_state, env)
     item_slots[i] = item and item.id or nil
   end
   local panel = {
-    turn_label = panel_view.build_turn_label(turn.turn_count),
+    turn_label = panel_view.build_turn_label(turn.turn_count, turn.countdown_seconds or 0),
     player_rows = panel_view.build_player_statuses(store_state, env.game, 4),
     auto_label = panel_view.build_auto_label(ui_runtime and ui_runtime.auto_play),
   }
@@ -117,6 +117,116 @@ function ui_model.build(store_state, env)
     finished = env.finished,
     winner_name = env.winner_name,
   }
+end
+
+function ui_model.update(prev, store_state, env, dirty)
+  assert(store_state ~= nil, "missing store_state")
+  if not prev then
+    return ui_model.build(store_state, env)
+  end
+  env = env or {}
+  dirty = dirty or {}
+  local ui_state = env.ui_state
+  local ui_runtime = ui_state and ui_state.ui
+  local current, turn = _resolve_current_player(store_state)
+  local ui_dirty = dirty.ui == true
+  local model = prev
+
+  if dirty.players or dirty.board_tiles or dirty.turn then
+    local board = model.board or {}
+    board.tiles = board_tiles
+    board.tile_states = store_state.board and store_state.board.tiles or {}
+    board.overlays = _build_overlays(env)
+    board.players = store_state.players
+    board.phase = turn.phase
+    board.move_anim = turn.move_anim
+    board.tile_count = #board_tiles
+    model.board = board
+  end
+
+  local panel = model.panel or {}
+  if dirty.turn or dirty.turn_countdown or ui_dirty then
+    panel.turn_label = panel_view.build_turn_label(turn.turn_count, turn.countdown_seconds or 0)
+  end
+  if dirty.players or dirty.board_tiles or ui_dirty then
+    panel.player_rows = panel_view.build_player_statuses(store_state, env.game, 4)
+  end
+  if ui_dirty then
+    panel.auto_label = panel_view.build_auto_label(ui_runtime and ui_runtime.auto_play)
+  end
+  model.panel = panel
+
+  local update_slots = dirty.players or ui_dirty
+  if not update_slots and dirty.inventory_ids then
+    for _ in pairs(dirty.inventory_ids) do
+      update_slots = true
+      break
+    end
+  end
+  if update_slots then
+    local slot_count = 5
+    if ui_runtime and type(ui_runtime.item_slots) == "table" and #ui_runtime.item_slots > 0 then
+      slot_count = #ui_runtime.item_slots
+    end
+    local current_items = {}
+    if current and current.inventory and type(current.inventory.items) == "table" then
+      current_items = current.inventory.items
+    end
+    local item_slots = {}
+    for i = 1, slot_count do
+      local item = current_items[i]
+      item_slots[i] = item and item.id or nil
+    end
+    model.item_slots = item_slots
+  end
+
+  if dirty.turn or dirty.market or ui_dirty then
+    local choice = nil
+    local pending = store_state.turn and store_state.turn.pending_choice
+    if pending then
+      choice = choice_view.build_choice_view(pending, { game = env.game })
+      choice.id = pending.id
+      choice.kind = pending.kind
+    end
+    model.choice = choice
+
+    local market = nil
+    if choice and choice.kind == "market_buy" then
+      market = {
+        choice_id = choice.id,
+        options = choice.options,
+        allow_cancel = choice.allow_cancel,
+        cancel_label = choice.cancel_label,
+        selected_option_id = ui_state and ui_state.pending_choice_selected_option_id or nil,
+      }
+    end
+    model.market = market
+  end
+
+  if ui_dirty then
+    local popup = nil
+    if ui_runtime and ui_runtime.popup_active and ui_runtime.popup_payload then
+      popup = {
+        title = ui_runtime.popup_payload.title,
+        body = ui_runtime.popup_payload.body,
+        button_text = ui_runtime.popup_payload.button_text,
+      }
+    end
+    model.popup = popup
+  end
+
+  if dirty.players or dirty.turn then
+    model.current_player_name = current.name
+    model.current_player_cash = current.cash
+    model.turn_count = turn.turn_count
+  end
+
+  model.board_tile_count = #board_tiles
+  model.last_turn = env.last_turn
+  model.finished = env.finished
+  model.winner_name = env.winner_name
+
+  return model
 end
 
 return ui_model
