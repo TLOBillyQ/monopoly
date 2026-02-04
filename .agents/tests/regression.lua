@@ -20,6 +20,7 @@ local bankruptcy_manager = require("src.game.game.BankruptcyManager")
 local map_cfg = require("Config.Map")
 local tiles_cfg = require("Config.Generated.Tiles")
 local logger = require("src.core.Logger")
+local number_utils = require("src.core.NumberUtils")
 
 if not math.tofixed then
   function math.tofixed(value)
@@ -847,6 +848,12 @@ local function _test_store_missing_path_get_set()
   assert(store:get({ "a", "b", "d" }) == nil, "missing leaf should return nil")
 end
 
+local function _test_number_utils_to_integer()
+  _assert_eq(number_utils.to_integer("12"), 12, "string integer should parse")
+  _assert_eq(number_utils.to_integer("-7"), -7, "negative string integer should parse")
+  _assert_eq(number_utils.to_integer("12.3"), nil, "float string should be rejected")
+end
+
 local function _test_ui_model_structure()
   local ui_model = require("src.ui.UIModel")
   local g = _new_game()
@@ -1340,6 +1347,7 @@ local tests = {
   _test_invalid_choice_option_rejected,
   _test_move_anim_wait_and_resume,
   _test_store_missing_path_get_set,
+  _test_number_utils_to_integer,
   _test_ui_model_structure,
   _test_tick_skips_anim_when_no_anim,
   _test_autorunner_runs_to_end,

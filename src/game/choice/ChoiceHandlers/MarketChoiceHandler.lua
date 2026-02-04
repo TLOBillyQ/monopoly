@@ -1,5 +1,6 @@
 local market_manager = require("src.game.market.MarketManager")
 local monopoly_event = require("src.game.MonopolyEvents")
+local number_utils = require("src.core.NumberUtils")
 
 local market_choice_handler = {}
 
@@ -56,7 +57,7 @@ function market_choice_handler.build(helpers)
       return finish_choice(game, false)
     end
 
-    local product_id = tonumber(action.option_id)
+    local product_id = number_utils.to_integer(action.option_id)
     local meta = choice.meta
     local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
     assert(product_id ~= nil, "missing product_id")
@@ -80,7 +81,7 @@ function market_choice_handler.build(helpers)
     local use = action.option_id == "use"
     local meta = choice.meta
     local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
-    local product_id = assert(tonumber(meta.product_id), "missing product_id")
+    local product_id = assert(number_utils.to_integer(meta.product_id), "missing product_id")
     if use then
       market_manager.buy_with_opts(game, player, product_id, { skip_vehicle_prompt = true })
     end

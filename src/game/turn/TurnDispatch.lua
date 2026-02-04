@@ -1,4 +1,5 @@
 local turn_dispatch = {}
+local number_utils = require("src.core.NumberUtils")
 
 local next_turn_cooldown = 0.4
 
@@ -47,7 +48,7 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
   if action.type == "ui_button" then
     local slot_index = action.id and string.match(action.id, "^item_slot_(%d+)$")
     if slot_index then
-      slot_index = tonumber(slot_index)
+      slot_index = number_utils.to_integer(slot_index)
       local choice = state.pending_choice
       assert(choice ~= nil and choice.kind == "item_phase_choice", "invalid item phase choice")
       assert(state.ui ~= nil, "missing state.ui")

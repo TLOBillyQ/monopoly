@@ -7,6 +7,7 @@ local remote_dice = require("src.game.item.ItemRemoteDice")
 local item_phase = require("src.game.item.ItemPhase")
 local gameplay_rules = require("Config.GameplayRules")
 local monopoly_event = require("src.game.MonopolyEvents")
+local number_utils = require("src.core.NumberUtils")
 
 local item_choice_handler = {}
 local item_ids = gameplay_rules.item_ids
@@ -120,7 +121,7 @@ function item_choice_handler.build(helpers)
     if is_cancel(action) then
       return _finish_and_clear(game)
     end
-    local idx = tonumber(action.option_id)
+    local idx = number_utils.to_integer(action.option_id)
     local meta = choice.meta
     local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
     assert(idx ~= nil, "missing demolish index")
@@ -140,7 +141,7 @@ function item_choice_handler.build(helpers)
     if is_cancel(action) then
       return _finish_and_clear(game)
     end
-    local idx = tonumber(action.option_id)
+    local idx = number_utils.to_integer(action.option_id)
     local meta = choice.meta
     local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
     assert(idx ~= nil, "missing roadblock index")
@@ -158,7 +159,7 @@ function item_choice_handler.build(helpers)
     if is_cancel(action) then
       return _finish_and_clear(game)
     end
-    local idx = tonumber(action.option_id)
+    local idx = number_utils.to_integer(action.option_id)
     local meta = choice.meta
     local stealer = assert(game.players[meta.player_id], "missing stealer: " .. tostring(meta.player_id))
     local target = assert(game.players[meta.target_id], "missing target: " .. tostring(meta.target_id))
@@ -216,7 +217,7 @@ function item_choice_handler.build(helpers)
     if is_cancel(action) then
       return _finish_and_clear(game)
     end
-    local target_id = tonumber(action.option_id)
+    local target_id = number_utils.to_integer(action.option_id)
     local meta = choice.meta
     local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
     local item_id = assert(meta.item_id, "missing item_id")
@@ -231,7 +232,7 @@ function item_choice_handler.build(helpers)
     if is_cancel(action) then
       return _finish_and_clear(game)
     end
-    local value = tonumber(action.option_id)
+    local value = number_utils.to_integer(action.option_id)
     local meta = choice.meta
     local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
     assert(value ~= nil, "missing dice value")
@@ -251,7 +252,7 @@ function item_choice_handler.build(helpers)
       finish_item_phase(game, phase)
       return finish_choice(game, false)
     end
-    local item_id = tonumber(action.option_id)
+    local item_id = number_utils.to_integer(action.option_id)
     if not item_id and action.option_id == "discard_item" then
       finish_choice(game, false)
       _open_discard_item_choice(game, player, phase)
@@ -276,7 +277,7 @@ function item_choice_handler.build(helpers)
       finish_choice(game, false)
       return _reopen_item_phase(game, player, phase)
     end
-    local idx = tonumber(action.option_id)
+    local idx = number_utils.to_integer(action.option_id)
     assert(idx ~= nil, "missing discard index")
     local dropped = assert(inventory.remove_by_index(player, idx), "missing dropped item")
     logger.event(player.name .. " 丢弃道具 " .. inventory.item_name(dropped.id))

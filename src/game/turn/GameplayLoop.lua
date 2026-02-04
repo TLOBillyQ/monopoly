@@ -126,8 +126,27 @@ local function _refresh_view(state, game, next_model)
   local current = assert(players[current_index], "missing current player: " .. tostring(current_index))
   local current_id = assert(current.id, "missing current player id")
   assert(GameAPI ~= nil and GameAPI.get_role ~= nil, "missing GameAPI.get_role")
-  
-  if camera_helper and eca_event and eca_event.camera and eca_event.camera.follow and TriggerCustomEvent then
+
+  local turn_count = turn.turn_count
+  local follow_ready = camera_helper and eca_event and eca_event.camera and eca_event.camera.follow and TriggerCustomEvent and true or false
+  local log_key = tostring(turn_count) .. ":" .. tostring(current_id)
+  if state._camera_follow_log_key ~= log_key then
+    state._camera_follow_log_key = log_key
+    logger.info(
+      _build_log_prefix(),
+      "相机跟随检查:",
+      "回合",
+      tostring(turn_count),
+      "玩家索引",
+      tostring(current_index),
+      "玩家ID",
+      tostring(current_id),
+      "事件可用",
+      tostring(follow_ready)
+    )
+  end
+
+  if follow_ready then
     camera_helper.target_role_id = current_id
     TriggerCustomEvent(eca_event.camera.follow, {})
   end

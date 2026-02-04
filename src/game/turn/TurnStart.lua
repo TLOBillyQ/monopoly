@@ -4,6 +4,17 @@ local item_phase = require("src.game.item.ItemPhase")
 local function _phase_start(tm)
   local player = tm.game:current_player()
   local tc = tm.game.store:get({ "turn", "turn_count" })
+  local current_index = tm.game.store:get({ "turn", "current_player_index" })
+  logger.info(
+    "[Eggy]",
+    "回合开始:",
+    "turn_count",
+    tostring(tc),
+    "current_player_index",
+    tostring(current_index),
+    "player_id",
+    tostring(player.id)
+  )
   tm.game.last_turn = {
     player_id = player.id,
     player_name = player.name,
@@ -18,10 +29,19 @@ local function _phase_start(tm)
     tm.game.last_turn.skipped = true
     return "end_turn", { player = player }
   end
+  local prev_tc = tc
   tc = tc + 1
   if tm.game.store then
     tm.game.store:set({ "turn", "turn_count" }, tc)
   end
+  logger.info(
+    "[Eggy]",
+    "回合计数更新:",
+    "from",
+    tostring(prev_tc),
+    "to",
+    tostring(tc)
+  )
   if player.status.stay_turns and player.status.stay_turns > 0 then
     tm.game:set_player_status(player, "stay_turns", player.status.stay_turns - 1)
     logger.event(player.name .. " 被扣留，剩余回合:", player.status.stay_turns)

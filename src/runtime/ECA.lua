@@ -1,4 +1,8 @@
 require "src.runtime.Macro"
+local logger = require("src.core.Logger")
+
+local last_camera_target_role_id = nil
+local last_camera_target_role_ok = nil
 
 ---@export
 ---@desc 获取执行载具命令的玩家
@@ -34,5 +38,19 @@ end
 ---@return Role
 function get_camera_target()
     local role_id = camera_helper.target_role_id or 1
-    return GameAPI.get_role(role_id)
+    local role = GameAPI.get_role(role_id)
+    local role_ok = role ~= nil
+    if role_id ~= last_camera_target_role_id or role_ok ~= last_camera_target_role_ok then
+        last_camera_target_role_id = role_id
+        last_camera_target_role_ok = role_ok
+        logger.info(
+            "[Eggy]",
+            "相机目标查询:",
+            "role_id",
+            tostring(role_id),
+            "role_ok",
+            tostring(role_ok)
+        )
+    end
+    return role
 end

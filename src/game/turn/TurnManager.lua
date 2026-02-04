@@ -216,6 +216,17 @@ function turn_manager:next_player()
   local current = self.game.store:get({ "turn", "current_player_index" })
   local next_index = current % count + 1
   self.game.store:set({ "turn", "current_player_index" }, next_index)
+  local turn_count = self.game.store:get({ "turn", "turn_count" })
+  logger.info(
+    "[Eggy]",
+    "切换玩家:",
+    "回合",
+    tostring(turn_count),
+    "current_index",
+    tostring(current),
+    "next_index",
+    tostring(next_index)
+  )
 end
 
 
