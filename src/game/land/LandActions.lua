@@ -1,6 +1,5 @@
 local land_actions = {}
 local constants = require("Config.Generated.Constants")
-local tile = require("src.game.board.Tile")
 local board_utils = require("src.game.item.ItemBoardUtils")
 local pricing = require("src.game.land.LandPricing")
 local inventory = require("src.game.item.ItemInventory")
@@ -8,8 +7,8 @@ local gameplay_rules = require("Config.GameplayRules")
 local monopoly_event = require("src.game.MonopolyEvents")
 local bankruptcy_manager = require("src.game.game.BankruptcyManager")
 
-local tile_state = tile.get_state
 local item_ids = gameplay_rules.item_ids
+local tile_state_path = { "board", "tiles", nil }
 
 local function _emit_event(kind, payload)
   assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
@@ -25,11 +24,55 @@ local function _eliminate_if_bankrupt(game, player)
 end
 
 function land_actions.safe_tile_state(game, tile)
-  local ok, st = pcall(tile_state, game, tile)
-  if not ok or type(st) ~= "table" then
+  if not (game and game.store and tile and tile.type == "land") then
+    return { owner_id = nil, level = 0 }
+  end
+  tile_state_path[3] = tile.id
+  local st = game.store:get(tile_state_path)
+  if type(st) ~= "table" then
     return { owner_id = nil, level = 0 }
   end
   return { owner_id = st.owner_id, level = st.level or 0 }
+end
+
+local function _ensure_land_neighbors(board)
+  if board.land_neighbors then
+    return board.land_neighbors
+  end
+  assert(board.map ~= nil and board.map.neighbors ~= nil, "missing board.map.neighbors")
+  local neighbors = board.map.neighbors
+  local land_neighbors = {}
+  for _, tile in ipairs(board.path or {}) do
+    if tile and tile.type == "land" then
+      local neigh = neighbors[tile.id]
+      assert(neigh ~= nil, "missing neighbors: " .. tostring(tile.id))
+      local list = {}
+      for _, next_id in pairs(neigh) do
+        local next_tile = board:get_tile_by_id(next_id)
+        if next_tile and next_tile.type == "land" then
+          list[#list + 1] = next_id
+        end
+      end
+      land_neighbors[tile.id] = list
+    end
+  end
+  board.land_neighbors = land_neighbors
+  return land_neighbors
+end
+
+local function _get_rent_cache(game, owner_id)
+  local version = game._land_rent_version or 0
+  local cache = game._land_rent_cache
+  if not cache or cache.version ~= version then
+    cache = { version = version, by_owner = {} }
+    game._land_rent_cache = cache
+  end
+  local owner_cache = cache.by_owner[owner_id]
+  if not owner_cache then
+    owner_cache = { tile_sum = {} }
+    cache.by_owner[owner_id] = owner_cache
+  end
+  return owner_cache.tile_sum
 end
 
 function land_actions.resolve_rent_owner(game, tile, state_fn)
@@ -61,7 +104,7 @@ end
 local function _contiguous_rent(game, board, index, owner_id)
   assert(board ~= nil, "missing board")
   assert(board.map ~= nil, "missing board.map")
-  local neighbors = assert(board.map.neighbors, "missing board.map.neighbors")
+  local land_neighbors = _ensure_land_neighbors(board)
 
   local start_tile = assert(board:get_tile(index), "missing start tile: " .. tostring(index))
   assert(start_tile.type == "land", "invalid start tile: " .. tostring(index))
@@ -70,29 +113,44 @@ local function _contiguous_rent(game, board, index, owner_id)
     return 0
   end
 
-  local rent_sum = 0
-  local visited = {}
-  local queue = { start_tile.id }
-  visited[start_tile.id] = true
+  local tile_sum = _get_rent_cache(game, owner_id)
+  local cached = tile_sum[start_tile.id]
+  if cached then
+    return cached
+  end
 
-  board_utils.queue_walk(queue, function(tile_id, push)
+  local rent_sum = 0
+  local visited = { [start_tile.id] = true }
+  local queue = { start_tile.id }
+  local head = 1
+  local component = {}
+
+  while head <= #queue do
+    local tile_id = queue[head]
+    head = head + 1
+
     local tile = board:get_tile_by_id(tile_id)
     assert(tile ~= nil, "missing tile: " .. tostring(tile_id))
     if tile.type == "land" then
       local st2 = land_actions.safe_tile_state(game, tile)
       if st2.owner_id == owner_id then
+        component[#component + 1] = tile_id
         rent_sum = rent_sum + pricing.rent_for_level(tile, st2.level or 0)
-        local neigh = assert(neighbors[tile_id], "missing neighbors: " .. tostring(tile_id))
-        for _, next_id in pairs(neigh) do
+        local neigh = land_neighbors[tile_id]
+        assert(neigh ~= nil, "missing neighbors: " .. tostring(tile_id))
+        for _, next_id in ipairs(neigh) do
           if not visited[next_id] then
             visited[next_id] = true
-            push(next_id)
+            queue[#queue + 1] = next_id
           end
         end
       end
     end
-  end)
+  end
 
+  for _, tile_id in ipairs(component) do
+    tile_sum[tile_id] = rent_sum
+  end
   return rent_sum
 end
 

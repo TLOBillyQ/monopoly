@@ -3,6 +3,26 @@ local monopoly_event = require("src.game.MonopolyEvents")
 
 local pipeline = {}
 
+local choice_seq_path = { "turn", "choice_seq" }
+local pending_choice_path = { "turn", "pending_choice" }
+local list_pool = {}
+
+local function _acquire_list()
+  local list = list_pool[#list_pool]
+  if list then
+    list_pool[#list_pool] = nil
+    return list
+  end
+  return {}
+end
+
+local function _release_list(list)
+  for i = #list, 1, -1 do
+    list[i] = nil
+  end
+  list_pool[#list_pool + 1] = list
+end
+
 local function _resolve_event_name(kind)
   assert(monopoly_event ~= nil, "missing MONOPOLY_EVENT")
   local intent = assert(monopoly_event.intent, "missing MONOPOLY_EVENT.intent")
@@ -16,9 +36,9 @@ local function _dispatch_intent(game, payload)
   if intent and intent.kind == "need_choice" and intent.choice_spec then
     assert(game and game.store, "Choice.open requires game.store")
     local spec = intent.choice_spec
-    local seq = game.store:get({ "turn", "choice_seq" }) or 0
+    local seq = game.store:get(choice_seq_path) or 0
     seq = seq + 1
-    game.store:set({ "turn", "choice_seq" }, seq)
+    game.store:set(choice_seq_path, seq)
     local entry = {
       id = seq,
       kind = spec.kind,
@@ -29,7 +49,7 @@ local function _dispatch_intent(game, payload)
       cancel_label = spec.cancel_label or "取消",
       meta = spec.meta,
     }
-    game.store:set({ "turn", "pending_choice" }, entry)
+    game.store:set(pending_choice_path, entry)
     assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
     local event_name = _resolve_event_name("need_choice")
     TriggerCustomEvent(event_name, { choice = entry, choice_spec = spec })
@@ -87,8 +107,14 @@ end
 function pipeline.run(effect_defs, player, tile, game_ctx, opts)
   opts = opts or {}
   local scanned = effect.scan(effect_defs, player, tile, game_ctx)
-  local mandatory = {}
-  local optional = {}
+  local mandatory = _acquire_list()
+  local optional = _acquire_list()
+
+  local function _finalize(result)
+    _release_list(mandatory)
+    _release_list(optional)
+    return result
+  end
 
   for _, entry in ipairs(scanned) do
     if entry.ok then
@@ -117,19 +143,19 @@ function pipeline.run(effect_defs, player, tile, game_ctx, opts)
       out.resume_state = out.resume_state or opts.resume_state
       out.resume_args = out.resume_args or opts.resume_args
       out.intent = nil
-      return out
+      return _finalize(out)
     end
 
     if opts.stop_if and opts.stop_if(out, res) then
-      return out
+      return _finalize(out)
     end
   end
 
   if opts.allow_optional == false or #optional == 0 then
-    return nil
+    return _finalize(nil)
   end
 
-  return _build_optional_choice(optional, player, tile, game_ctx, opts)
+  return _finalize(_build_optional_choice(optional, player, tile, game_ctx, opts))
 end
 
 return pipeline

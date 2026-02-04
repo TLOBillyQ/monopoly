@@ -5,6 +5,9 @@ local monopoly_event = require("src.game.MonopolyEvents")
 
 local inventory = {}
 
+local choice_seq_path = { "turn", "choice_seq" }
+local pending_choice_path = { "turn", "pending_choice" }
+
 local cfg_by_id = {}
 for _, cfg in ipairs(items_cfg) do
   cfg_by_id[cfg.id] = cfg
@@ -23,9 +26,9 @@ local function _dispatch_intent(game, payload)
   if intent.kind == "need_choice" and intent.choice_spec then
     assert(game ~= nil and game.store ~= nil, "Choice.open requires game.store")
     local spec = intent.choice_spec
-    local seq = game.store:get({ "turn", "choice_seq" }) or 0
+    local seq = game.store:get(choice_seq_path) or 0
     seq = seq + 1
-    game.store:set({ "turn", "choice_seq" }, seq)
+    game.store:set(choice_seq_path, seq)
     local entry = {
       id = seq,
       kind = spec.kind,
@@ -36,7 +39,7 @@ local function _dispatch_intent(game, payload)
       cancel_label = spec.cancel_label or "取消",
       meta = spec.meta,
     }
-    game.store:set({ "turn", "pending_choice" }, entry)
+    game.store:set(pending_choice_path, entry)
     assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
     local event_name = _resolve_event_name("need_choice")
     TriggerCustomEvent(event_name, { choice = entry, choice_spec = spec })

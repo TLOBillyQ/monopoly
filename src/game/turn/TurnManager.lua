@@ -2,7 +2,6 @@ local flow = require("src.core.Flow")
 local logger = require("src.core.Logger")
 local agent = require("src.game.game.Agent")
 local inventory = require("src.game.item.ItemInventory")
-local tile = require("src.game.board.Tile")
 local choice_manager = require("src.game.choice.ChoiceManager")
 require "vendor.third_party.ClassUtils"
 
@@ -21,7 +20,6 @@ local function _build_turn_log_line(game, turn_count)
     return line
   end
 
-  local tile_state = tile.get_state
   local status = player.status
   local status_parts = {}
   local stay_turns = status.stay_turns
@@ -32,11 +30,12 @@ local function _build_turn_log_line(game, turn_count)
   if deity then
     table.insert(status_parts, "deity=" .. tostring(deity.type) .. ":" .. tostring(deity.remaining))
   end
-  local items = {}
+  local item_name = inventory.item_name
+  local items_list = {}
   for _, it in ipairs(inventory.items(player)) do
     local id = it.id
-    local name = inventory.item_name(id)
-    table.insert(items, name .. "(" .. tostring(id) .. ")")
+    local name = item_name(id)
+    table.insert(items_list, name .. "(" .. tostring(id) .. ")")
   end
   line = line
     .. tostring(player.name)
@@ -44,32 +43,40 @@ local function _build_turn_log_line(game, turn_count)
   if #status_parts > 0 then
     line = line .. " 状态: " .. table.concat(status_parts, ", ")
   end
-  if #items > 0 then
-    line = line .. " 背包: " .. table.concat(items, ", ")
+  if #items_list > 0 then
+    line = line .. " 背包: " .. table.concat(items_list, ", ")
   end
-  local properties = {}
-  local ids = {}
-  for tile_id in pairs(player.properties) do
-    table.insert(ids, tile_id)
-  end
-  table.sort(ids, function(a, b)
-    if type(a) == "number" and type(b) == "number" then
-      return a < b
+  if next(player.properties) ~= nil then
+    local properties = {}
+    local ids = {}
+    for tile_id in pairs(player.properties) do
+      table.insert(ids, tile_id)
     end
-    return tostring(a) < tostring(b)
-  end)
-  for _, tile_id in ipairs(ids) do
-    local tile = game.board:get_tile_by_id(tile_id)
-    local name = tile.name
-    local level = 0
-    local ok, st = pcall(tile_state, game, tile)
-    if ok and type(st) == "table" then
-      level = st.level
+    table.sort(ids, function(a, b)
+      if type(a) == "number" and type(b) == "number" then
+        return a < b
+      end
+      return tostring(a) < tostring(b)
+    end)
+    local store = game.store
+    local store_get = store and store.get
+    local tile_state_path = { "board", "tiles", nil }
+    for _, tile_id in ipairs(ids) do
+      local tile = game.board:get_tile_by_id(tile_id)
+      local name = tile.name
+      local level = 0
+      if store_get then
+        tile_state_path[3] = tile_id
+        local st = store_get(store, tile_state_path)
+        if type(st) == "table" and st.level then
+          level = st.level
+        end
+      end
+      table.insert(properties, name .. "(Lv" .. tostring(level) .. ")")
     end
-    table.insert(properties, name .. "(Lv" .. tostring(level) .. ")")
-  end
-  if #properties > 0 then
-    line = line .. " 地产: " .. table.concat(properties, ", ")
+    if #properties > 0 then
+      line = line .. " 地产: " .. table.concat(properties, ", ")
+    end
   end
   return line
 end

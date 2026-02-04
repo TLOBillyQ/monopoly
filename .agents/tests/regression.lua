@@ -605,6 +605,12 @@ local function _test_land_rent_contiguous_sum()
   land_actions.execute_pay_rent(g, tenant.id, tile1.id)
   local expected = pricing.rent_for_level(tile1, 1) + pricing.rent_for_level(tile2, 2)
   _assert_eq(before - tenant.cash, expected, "contiguous rent sum")
+
+  g:set_tile_level(tile1, 2)
+  local before2 = tenant.cash
+  land_actions.execute_pay_rent(g, tenant.id, tile1.id)
+  local expected2 = pricing.rent_for_level(tile1, 2) + pricing.rent_for_level(tile2, 2)
+  _assert_eq(before2 - tenant.cash, expected2, "contiguous rent sum after upgrade")
 end
 
 local function _test_land_rent_graph_adjacency_breaks_path_neighbors()

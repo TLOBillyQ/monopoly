@@ -20,7 +20,12 @@ function building_effects.spawn_upgrade_building_units(scene, root_quaternion, b
     groups[idx] = nil
   end
   local pos = buildings[idx].get_position()
-  local ref_key = string.format("lv%d", lv)
+  local ref_keys = {
+    [1] = "一级建筑",
+    [2] = "二级建筑",
+    [3] = "三级建筑",
+  }
+  local ref_key = ref_keys[lv]
   local unit = GameAPI.create_unit_group(prefab.group[ref_key], pos + offsets[lv], root_quaternion)
   groups[idx] = unit
 end

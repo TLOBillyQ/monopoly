@@ -105,7 +105,21 @@ local function _apply_pay_rent(ctx)
   end
 
   local total_value = board_utils.total_invested(tile, st.level)
-  local strong_idx = inventory.find_index(player, item_ids.strong)
+  local strong_idx = nil
+  local free_idx = nil
+  for idx, it in ipairs(inventory.items(player)) do
+    if it.id == item_ids.strong then
+      strong_idx = idx
+      if free_idx then
+        break
+      end
+    elseif it.id == item_ids.free_rent then
+      free_idx = idx
+      if strong_idx then
+        break
+      end
+    end
+  end
   if strong_idx and player.cash >= total_value then
     return {
       waiting = true,
@@ -117,7 +131,6 @@ local function _apply_pay_rent(ctx)
     }
   end
 
-  local free_idx = inventory.find_index(player, item_ids.free_rent)
   if free_idx then
     return {
       waiting = true,

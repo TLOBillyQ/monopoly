@@ -13,25 +13,29 @@ function bankruptcy_manager.eliminate(game, player)
     owned_tile_set[tile_id] = true
     table.insert(owned_tile_ids, tile_id)
   end
-  local store_tiles = game.store:get({ "board", "tiles" })
-  for tile_id, st in pairs(store_tiles) do
-    if st and st.owner_id == player.id and not owned_tile_set[tile_id] then
-      owned_tile_set[tile_id] = true
-      table.insert(owned_tile_ids, tile_id)
+  local store_tiles = game.store and game.store.state and game.store.state.board and game.store.state.board.tiles
+  if store_tiles then
+    for tile_id, st in pairs(store_tiles) do
+      if st and st.owner_id == player.id and not owned_tile_set[tile_id] then
+        owned_tile_set[tile_id] = true
+        table.insert(owned_tile_ids, tile_id)
+      end
     end
   end
+  local owned_tiles = {}
   if #owned_tile_ids > 0 then
     local names = {}
     for _, tile_id in ipairs(owned_tile_ids) do
       local tile = game.board:get_tile_by_id(tile_id)
+      assert(tile ~= nil, "missing tile: " .. tostring(tile_id))
+      table.insert(owned_tiles, tile)
       table.insert(names, tile.name)
     end
     logger.event(player.name .. " 破产，清空地块: " .. table.concat(names, "、"))
   end
-  for _, tile_id in ipairs(owned_tile_ids) do
-    local tile = game.board:get_tile_by_id(tile_id)
+  for _, tile in ipairs(owned_tiles) do
     game:reset_tile(tile)
-    game:set_player_property(player, tile_id, false)
+    game:set_player_property(player, tile.id, false)
   end
 
   inventory.clear(player)

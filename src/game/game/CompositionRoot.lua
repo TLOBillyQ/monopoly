@@ -253,6 +253,8 @@ function composition_root.assemble(opts, game_or_class)
   game.finished = false
   game.winner = nil
   game.last_turn = nil
+  game._land_rent_version = 0
+  game._land_rent_cache = nil
 
   game:rebuild()
   game.turn_manager = turn_manager:new(game, phases)

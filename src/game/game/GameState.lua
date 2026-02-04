@@ -27,6 +27,10 @@ local function _store_value(v)
   return v
 end
 
+local function _bump_land_rent_version(self)
+  self._land_rent_version = (self._land_rent_version or 0) + 1
+end
+
 function game_state:set_player_status(player, key, value)
   player.status[key] = value
   local root = _store_root(self)
@@ -101,6 +105,7 @@ end
 
 function game_state:set_tile_owner(tile, owner_id)
   assert(tile ~= nil and tile.type == "land", "invalid tile for owner")
+  _bump_land_rent_version(self)
   local ui_port = self.ui_port
   assert(ui_port ~= nil and ui_port.on_tile_owner_changed ~= nil, "missing ui_port")
   ui_port:on_tile_owner_changed(tile.id, owner_id)
@@ -108,11 +113,13 @@ function game_state:set_tile_owner(tile, owner_id)
 end
 
 function game_state:set_tile_level(tile, level)
+  _bump_land_rent_version(self)
   self:update_tile(tile, { level = level })
 end
 
 function game_state:reset_tile(tile)
   assert(tile ~= nil and tile.type == "land", "invalid tile for reset")
+  _bump_land_rent_version(self)
   local ui_port = self.ui_port
   assert(ui_port ~= nil and ui_port.on_tile_owner_changed ~= nil, "missing ui_port")
   ui_port:on_tile_owner_changed(tile.id, nil)

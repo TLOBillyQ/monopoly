@@ -1,7 +1,6 @@
 local logger = require("src.core.Logger")
 local constants = require("Config.Generated.Constants")
 local chance_cfg = require("Config.Generated.ChanceCards")
-require "vendor.third_party.Utils"
 local inventory = require("src.game.item.ItemInventory")
 local chance_effects = require("src.game.chance.Chance")
 local mine_effect = require("src.game.effect.MineEffect")
@@ -9,6 +8,35 @@ local steal = require("src.game.item.ItemSteal")
 local market_manager = require("src.game.market.MarketManager")
 
 local landing = {}
+
+local chance_weights = {}
+local chance_total_weight = 0
+for i, cfg in ipairs(chance_cfg) do
+  local weight = cfg.weight or 0
+  if weight < 0 then
+    weight = 0
+  end
+  chance_weights[i] = weight
+  chance_total_weight = chance_total_weight + weight
+end
+
+local function _pick_chance_card()
+  if #chance_cfg == 0 then
+    return nil
+  end
+  if chance_total_weight <= 0 then
+    return chance_cfg[1]
+  end
+  local rand = LuaAPI.rand() * chance_total_weight
+  local accumulated = 0
+  for i, card in ipairs(chance_cfg) do
+    accumulated = accumulated + (chance_weights[i] or 0)
+    if accumulated >= rand then
+      return card
+    end
+  end
+  return chance_cfg[1]
+end
 
 landing.executors = {
   pass_players = {
@@ -56,10 +84,7 @@ landing.executors = {
       return ctx.game and ctx.player and ctx.tile and ctx.tile.type == "chance"
     end,
     apply = function(ctx)
-      local picked = Utils.choice_weight_list(chance_cfg, 1, function(item)
-        return item.weight or 0
-      end, true)
-      local card = picked[1] or chance_cfg[1]
+      local card = _pick_chance_card() or chance_cfg[1]
       if not card then
         return
       end
