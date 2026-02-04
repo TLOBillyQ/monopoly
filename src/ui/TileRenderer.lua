@@ -43,7 +43,11 @@ function tile_renderer.render_tile(unit, tile_id, owner_id)
 
   local color_node = unit.get_child_by_name("color")
   if color_node and color_node.set_paint_area_color then
-    color_node.set_paint_area_color(1, _resolve_color(owner_id))
+    local color = default_color
+    if owner_id then
+      color = _resolve_color
+    end
+    color_node.set_paint_area_color(1, color)
   elseif is_land then
     assert(false, "missing color node")
   end
