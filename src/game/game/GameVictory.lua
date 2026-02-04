@@ -39,6 +39,26 @@ local function _apply_winners(game, winners, message)
   game.winner_names = names
   assert(message ~= nil, "missing victory message")
   game.logger.event(message, game.winner_names)
+  if GameAPI and GameAPI.get_role then
+    local winner_ids = {}
+    for _, player in ipairs(winners) do
+      winner_ids[player.id] = true
+    end
+    for _, player in ipairs(game.players) do
+      local role = GameAPI.get_role(player.id)
+      if role then
+        if winner_ids[player.id] then
+          if role.game_win_and_show_result_panel then
+            role.game_win_and_show_result_panel()
+          end
+        else
+          if role.lose then
+            role.lose()
+          end
+        end
+      end
+    end
+  end
   game.finished = true
   return true
 end

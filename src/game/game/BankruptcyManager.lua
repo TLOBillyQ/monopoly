@@ -47,12 +47,11 @@ function bankruptcy_manager.eliminate(game, player)
   local ui_port = game.ui_port
   local scene = ui_port and ui_port.board_scene or nil
   if scene then
-    local unit = scene.units_by_player_id and scene.units_by_player_id[player.id] or nil
-    if not unit then
-      unit = ui_port.player_units and ui_port.player_units[player.id] or nil
-    end
-    if unit and unit.die then
-      unit.die()
+    if GameAPI and GameAPI.get_role then
+      local role = GameAPI.get_role(player.id)
+      if role and role.lose then
+        role.lose()
+      end
     end
 
     if scene.building_unit_groups and scene.tiles then
