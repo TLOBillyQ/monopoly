@@ -118,6 +118,7 @@ function ui_view.build_ui_state()
       body = "弹窗正文",
       confirm = "弹窗确认",
     },
+    popup_seq = 0,
     popup_return_canvas = nil,
     query_node = _query_node,
     set_label = _set_label,
