@@ -40,9 +40,10 @@ local function _show_missing_button_tip(name)
   GlobalAPI.show_tips("UI 节点未适配: " .. tostring(name), 2.0)
 end
 
-local function _register_node_click(cache, name, callback, registered)
+local function _register_node_click(cache, name, callback, registered, listeners)
   assert(name ~= nil, "missing node name")
   assert(registered ~= nil, "missing registered map")
+  assert(listeners ~= nil, "missing listeners list")
   local resolved = ui_aliases.resolve(name)
   if registered[resolved] then
     return
@@ -58,24 +59,25 @@ local function _register_node_click(cache, name, callback, registered)
   end
   registered[resolved] = true
   for _, node in ipairs(nodes) do
-    node:listen(UIManager.EVENT.CLICK, function(data)
+    local listener = node:listen(UIManager.EVENT.CLICK, function(data)
       callback(data)
     end)
+    table.insert(listeners, listener)
   end
+end
+
+local function _should_block_intent(state, intent_type)
+  if turn_dispatch.should_block_action then
+    return turn_dispatch.should_block_action(state, intent_type)
+  end
+  return false
 end
 
 local function _dispatch(state, game, intent, opts)
   assert(intent ~= nil, "missing intent")
   local intent_type = intent.type
-  if state and state.ui and state.ui.input_blocked then
-    if intent_type == "ui_button"
-        or intent_type == "choice_select"
-        or intent_type == "choice_cancel"
-        or intent_type == "market_confirm"
-        or intent_type == "market_select"
-        or intent_type == "popup_confirm" then
-      return
-    end
+  if _should_block_intent(state, intent_type) then
+    return
   end
   if intent_type == "ui_button"
       or intent_type == "choice_select"
@@ -103,6 +105,22 @@ local function _dispatch(state, game, intent, opts)
   end
 end
 
+function ui_event_router.unbind(state)
+  if not state then
+    return
+  end
+  local listeners = state.ui_event_router_listeners
+  if type(listeners) == "table" then
+    for _, listener in ipairs(listeners) do
+      if listener and listener.destroy then
+        listener:destroy()
+      end
+    end
+  end
+  state.ui_event_router_listeners = {}
+  state.ui_event_router_registered = {}
+end
+
 function ui_event_router.bind(state, get_game, opts)
   assert(state ~= nil, "missing state")
   local function resolve_game()
@@ -121,32 +139,37 @@ function ui_event_router.bind(state, get_game, opts)
     end
   end
 
+  ui_event_router.unbind(state)
+
   local function dispatch_intent(intent)
     _dispatch(state, resolve_game(), intent, opts)
   end
 
   local cache = {}
-  local registered = state.ui_event_router_registered
-  if not registered then
-    registered = {}
-    state.ui_event_router_registered = registered
-  end
+  local registered = state.ui_event_router_registered or {}
+  state.ui_event_router_registered = registered
+  local listeners = state.ui_event_router_listeners or {}
+  state.ui_event_router_listeners = listeners
   _register_node_click(cache, "行动按钮", function()
     dispatch_intent({ type = "ui_button", id = "next" })
-  end, registered)
+  end, registered, listeners)
   _register_node_click(cache, "托管按钮", function()
     dispatch_intent({ type = "ui_button", id = "auto" })
-  end, registered)
+  end, registered, listeners)
   for idx = 1, 5 do
     local node_name = "道具槽位" .. tostring(idx)
     local action_id = "item_slot_" .. tostring(idx)
     _register_node_click(cache, node_name, function()
+      local choice = state.ui_model and state.ui_model.choice
+      if not choice or choice.kind ~= "item_phase_choice" then
+        return
+      end
       dispatch_intent({ type = "ui_button", id = action_id })
-    end, registered)
+    end, registered, listeners)
   end
   _register_node_click(cache, "弹窗确认", function()
     dispatch_intent({ type = "popup_confirm" })
-  end, registered)
+  end, registered, listeners)
 
   _register_node_click(cache, "通用选择_取消", function()
     local choice = state.ui_model and state.ui_model.choice
@@ -154,7 +177,7 @@ function ui_event_router.bind(state, get_game, opts)
     if choice.allow_cancel ~= false then
       dispatch_intent({ type = "choice_cancel", choice_id = choice.id })
     end
-  end, registered)
+  end, registered, listeners)
 
   for idx, name in ipairs({
     "通用选择_选项_01",
@@ -173,7 +196,7 @@ function ui_event_router.bind(state, get_game, opts)
       if choice.allow_cancel ~= false then
         dispatch_intent({ type = "choice_cancel", choice_id = choice.id })
       end
-    end, registered)
+    end, registered, listeners)
   end
 
   for idx, name in ipairs(market_ui.item_buttons) do
@@ -186,7 +209,7 @@ function ui_event_router.bind(state, get_game, opts)
         return
       end
       dispatch_intent({ type = "market_select", option_id = option_id })
-    end, registered)
+    end, registered, listeners)
   end
 
   _register_node_click(cache, market_ui.confirm_button, function()
@@ -195,7 +218,7 @@ function ui_event_router.bind(state, get_game, opts)
     local option_id = state.pending_choice_selected_option_id
     assert(option_id ~= nil, "missing selected market option")
     dispatch_intent({ type = "market_confirm", choice_id = market.choice_id, option_id = option_id })
-  end, registered)
+  end, registered, listeners)
 
   _register_node_click(cache, market_ui.cancel_button, function()
     local choice = state.ui_model and state.ui_model.choice
@@ -203,7 +226,7 @@ function ui_event_router.bind(state, get_game, opts)
     if choice.allow_cancel ~= false then
       dispatch_intent({ type = "choice_cancel", choice_id = choice.id })
     end
-  end, registered)
+  end, registered, listeners)
 
   local market_close = "关闭"
   if market_ui.cancel_button ~= market_close then
@@ -213,7 +236,7 @@ function ui_event_router.bind(state, get_game, opts)
       if choice.allow_cancel ~= false then
         dispatch_intent({ type = "choice_cancel", choice_id = choice.id })
       end
-    end, registered)
+    end, registered, listeners)
   end
 
   local nodes = require("Data.UIManagerNodes")
@@ -223,7 +246,7 @@ function ui_event_router.bind(state, get_game, opts)
     if kind == "EButton" and not registered[name] then
       _register_node_click(cache, name, function()
         _show_missing_button_tip(name)
-      end, registered)
+      end, registered, listeners)
     end
   end
 end

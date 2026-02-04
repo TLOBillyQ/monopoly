@@ -2,8 +2,13 @@ local monopoly_event = require("Config.MonopolyEvents")
 
 local event_handlers = {}
 local installed = false
+local current_logger = nil
+local current_state = nil
 
 function event_handlers.install(_, logger, state)
+  current_logger = logger
+  current_state = state
+
   if installed then
     return
   end
@@ -30,8 +35,9 @@ function event_handlers.install(_, logger, state)
 
   for _, event_name in ipairs(log_events) do
     RegisterCustomEvent(event_name, function(_, _, data)
-      if data.text then
-        logger.event(data.text)
+      local log = current_logger
+      if log and data and data.text then
+        log.event(data.text)
       end
     end)
   end
@@ -48,30 +54,34 @@ function event_handlers.install(_, logger, state)
     elseif payload and payload.tile_id then
       tile_id = payload.tile_id
     end
-    if tile_id and state and state.game and state.game.board and state.game.board.index_of_tile_id then
-      return state.game.board:index_of_tile_id(tile_id)
+    local ctx = current_state
+    if tile_id and ctx and ctx.game and ctx.game.board and ctx.game.board.index_of_tile_id then
+      return ctx.game.board:index_of_tile_id(tile_id)
     end
     return nil
   end
 
   RegisterCustomEvent(monopoly_event.movement.roadblock_hit, function(_, _, data)
     local idx = _resolve_tile_index(data)
-    if ok and action_anim and idx then
-      action_anim.clear_overlay(state, "roadblock", idx)
+    local ctx = current_state
+    if ok and action_anim and idx and ctx then
+      action_anim.clear_overlay(ctx, "roadblock", idx)
     end
   end)
 
   RegisterCustomEvent(monopoly_event.land.mine_hit, function(_, _, data)
     local idx = _resolve_tile_index(data)
-    if ok and action_anim and idx then
-      action_anim.clear_overlay(state, "mine", idx)
+    local ctx = current_state
+    if ok and action_anim and idx and ctx then
+      action_anim.clear_overlay(ctx, "mine", idx)
     end
   end)
 
   RegisterCustomEvent(monopoly_event.market.buy_failed, function(_, _, data)
     local popup = data.popup
-    if popup then
-      state:push_popup(popup)
+    local ctx = current_state
+    if popup and ctx and ctx.push_popup then
+      ctx:push_popup(popup)
     end
   end)
 end

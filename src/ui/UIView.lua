@@ -190,6 +190,7 @@ function ui_view.refresh_item_slots(state, ui_model)
   ui.item_slot_item_ids = item_ids
 
   local items = ui_model.item_slots or {}
+  local allow_use = ui_model and ui_model.choice and ui_model.choice.kind == "item_phase_choice"
   local refs = state.ui_refs
   local empty_key = refs["空"]
 
@@ -199,7 +200,7 @@ function ui_view.refresh_item_slots(state, ui_model)
       local ref_key = refs[tostring(item_id)] or refs[item_id]
       local image_key = ref_key or empty_key
       set_item_slot_image(slot_name, image_key)
-      ui:set_touch_enabled(slot_name, true)
+      ui:set_touch_enabled(slot_name, allow_use == true)
       item_ids[i] = item_id
     else
       set_item_slot_image(slot_name, empty_key)

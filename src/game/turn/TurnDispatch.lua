@@ -2,6 +2,21 @@ local turn_dispatch = {}
 local number_utils = require("src.core.NumberUtils")
 
 local next_turn_cooldown = 0.4
+local input_blocked_types = {
+  ui_button = true,
+  choice_select = true,
+  choice_cancel = true,
+  market_confirm = true,
+  market_select = true,
+  popup_confirm = true,
+}
+
+local function _normalize_action_type(action_or_type)
+  if type(action_or_type) == "table" then
+    return action_or_type.type
+  end
+  return action_or_type
+end
 
 local function _get_timestamp()
   assert(GameAPI ~= nil and GameAPI.get_timestamp ~= nil, "missing GameAPI.get_timestamp")
@@ -31,14 +46,21 @@ function turn_dispatch.clear_choice(state, opts)
   end
 end
 
+function turn_dispatch.should_block_action(state, action_or_type)
+  if not (state and state.ui and state.ui.input_blocked) then
+    return false
+  end
+  local action_type = _normalize_action_type(action_or_type)
+  if not action_type then
+    return false
+  end
+  return input_blocked_types[action_type] == true
+end
+
 function turn_dispatch.dispatch_action(game, state, action, opts)
   assert(action ~= nil, "missing action")
-  if state.ui and state.ui.input_blocked then
-    if action.type == "ui_button"
-        or action.type == "choice_select"
-        or action.type == "choice_cancel" then
-      return
-    end
+  if turn_dispatch.should_block_action(state, action) then
+    return
   end
   if action.type == "ui_button"
       or action.type == "choice_select"
@@ -50,7 +72,9 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
     if slot_index then
       slot_index = number_utils.to_integer(slot_index)
       local choice = state.pending_choice
-      assert(choice ~= nil and choice.kind == "item_phase_choice", "invalid item phase choice")
+      if not choice or choice.kind ~= "item_phase_choice" then
+        return
+      end
       assert(state.ui ~= nil, "missing state.ui")
       assert(state.ui.item_slot_item_ids ~= nil, "missing item_slot_item_ids")
       local item_id = assert(state.ui.item_slot_item_ids[slot_index], "missing item_id: " .. tostring(slot_index))
