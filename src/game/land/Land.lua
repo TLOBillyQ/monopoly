@@ -94,7 +94,9 @@ local function _apply_pay_rent(ctx)
   local player = ctx.player
   assert(tile ~= nil and tile.type == "land", "invalid land tile")
   local owner, st = land_actions.resolve_rent_owner(ctx.game, tile, tile_state)
-  assert(owner ~= nil, "missing rent owner")
+  if not owner then
+    return
+  end
 
   if player.status.pending_free_rent then
     ctx.game:set_player_status(player, "pending_free_rent", false)

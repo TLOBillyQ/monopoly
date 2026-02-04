@@ -1,4 +1,4 @@
--- Quick regression checks (run with: lua .agent/tests/regression.lua)
+-- Quick regression checks (run with: lua .agents/tests/regression.lua)
 local app = require("src.game.game.Game")
 local movement_manager = require("src.game.movement.MovementManager")
 local turn_manager = require("src.game.turn.TurnManager")
@@ -630,6 +630,33 @@ local function _test_land_rent_graph_adjacency_breaks_path_neighbors()
   land_actions.execute_pay_rent(g, tenant.id, tile_a.id)
   local expected = pricing.rent_for_level(tile_a, 1)
   _assert_eq(before - tenant.cash, expected, "graph adjacency rent excludes non-neighbors")
+end
+
+local function _test_rent_owner_missing_skips_payment()
+  local land = require("src.game.land.Land")
+  local g = _new_game()
+  local tenant = g.players[1]
+  local owner = g.players[2]
+  local idx, tile = _first_land_tile(g.board)
+
+  g:set_tile_owner(tile, owner.id)
+  g:set_tile_level(tile, 1)
+  g:set_player_property(owner, tile.id, true)
+  g:update_player_position(tenant, idx)
+
+  g:set_player_status(tenant, "pending_free_rent", true)
+  owner:send_to_mountain(g)
+  local before = tenant.cash
+  land.executors.pay_rent.apply({ game = g, player = tenant, tile = tile })
+  _assert_eq(tenant.cash, before, "rent skipped when owner in mountain")
+  assert(tenant.status.pending_free_rent == true, "pending_free_rent should remain when owner missing")
+
+  g:set_player_status(tenant, "pending_free_rent", false)
+  owner.eliminated = true
+  local before2 = tenant.cash
+  local ok = land_actions.execute_pay_rent(g, tenant.id, tile.id)
+  _assert_eq(ok, false, "execute_pay_rent should return false when owner missing")
+  _assert_eq(tenant.cash, before2, "rent skipped when owner missing")
 end
 
 local function _test_board_indices_in_range_uses_graph_distance()
@@ -1295,6 +1322,7 @@ local tests = {
   _test_ai_skips_auto_buy_at_market,
   _test_land_rent_contiguous_sum,
   _test_land_rent_graph_adjacency_breaks_path_neighbors,
+  _test_rent_owner_missing_skips_payment,
   _test_board_indices_in_range_uses_graph_distance,
   _test_item_equalize_cash,
   _test_market_full_inventory_blocks_items,

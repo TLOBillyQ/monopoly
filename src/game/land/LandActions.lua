@@ -140,7 +140,9 @@ function land_actions.execute_pay_rent(game, player_id, tile_id)
   local player = game.players[player_id]
   local tile = game.board:get_tile_by_id(tile_id)
   local owner, st = land_actions.resolve_rent_owner(game, tile)
-  assert(owner ~= nil, "missing rent owner")
+  if not owner then
+    return false
+  end
 
   local board = game.board
   local idx = assert(board:index_of_tile_id(tile.id), "missing tile index: " .. tostring(tile.id))
