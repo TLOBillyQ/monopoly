@@ -45,7 +45,7 @@ function tile_renderer.render_tile(unit, tile_id, owner_id)
   if color_node and color_node.set_paint_area_color then
     local color = default_color
     if owner_id then
-      color = _resolve_color
+      color = _resolve_color(owner_id)
     end
     color_node.set_paint_area_color(1, color)
   elseif is_land then
