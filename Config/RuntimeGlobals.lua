@@ -1,4 +1,4 @@
-require "Config.RuntimeConstants"
+local runtime_constants = require("Config.RuntimeConstants")
 require "Config.RuntimeRefs"
 
 SetTimeOut = LuaAPI.call_delay_time
@@ -21,24 +21,24 @@ vehicle_helper = {
 vehicle_helper.forward_eca_event_enter = function(role_id, vehicle_id)
     vehicle_helper.player_id = role_id
     vehicle_helper.vehicle_id = vehicle_id
-    TriggerCustomEvent(eca_event.vehicle.enter, {})
+    TriggerCustomEvent(runtime_constants.eca_event.vehicle.enter, {})
 end
 vehicle_helper.forward_eca_event_exit = function(role_id)
     vehicle_helper.player_id = role_id
-    TriggerCustomEvent(eca_event.vehicle.exit, {})
+    TriggerCustomEvent(runtime_constants.eca_event.vehicle.exit, {})
 end
 
 vehicle_helper.forward_eca_event_move = function(role_id, dir, time)
     vehicle_helper.player_id = role_id
     vehicle_helper.move_direction = dir
     vehicle_helper.move_time = time
-    TriggerCustomEvent(eca_event.vehicle.move, {})
+    TriggerCustomEvent(runtime_constants.eca_event.vehicle.move, {})
 end
 
 -- 不太需要，当move到时间后，就相当于stop了
 vehicle_helper.forward_eca_event_stop = function(role_id)
     vehicle_helper.player_id = role_id
-    TriggerCustomEvent(eca_event.vehicle.stop, {})
+    TriggerCustomEvent(runtime_constants.eca_event.vehicle.stop, {})
 end
 
 camera_helper = {

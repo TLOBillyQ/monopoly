@@ -1,4 +1,4 @@
-local monopoly_event = {
+local monopoly_events = {
   movement = {
     moved = "mv.moved",
     passed_start = "mv.passed_start",
@@ -31,4 +31,12 @@ local monopoly_event = {
   },
 }
 
-return monopoly_event
+function monopoly_events.resolve_intent(kind)
+  assert(kind ~= nil, "missing intent kind")
+  local intent = assert(monopoly_events.intent, "missing monopoly_events.intent")
+  local event_name = intent[kind]
+  assert(event_name ~= nil, "missing intent event: " .. tostring(kind))
+  return event_name
+end
+
+return monopoly_events

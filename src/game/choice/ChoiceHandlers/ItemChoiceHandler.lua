@@ -6,18 +6,11 @@ local logger = require("src.core.Logger")
 local remote_dice = require("src.game.item.ItemRemoteDice")
 local item_phase = require("src.game.item.ItemPhase")
 local gameplay_rules = require("Config.GameplayRules")
-local monopoly_event = require("src.game.MonopolyEvents")
+local monopoly_event = require("Config.MonopolyEvents")
 local number_utils = require("src.core.NumberUtils")
 
 local item_choice_handler = {}
 local item_ids = gameplay_rules.item_ids
-
-local function _resolve_event_name(kind)
-  assert(monopoly_event ~= nil, "missing MONOPOLY_EVENT")
-  local intent = assert(monopoly_event.intent, "missing MONOPOLY_EVENT.intent")
-  assert(kind ~= nil, "missing event kind")
-  return intent[kind] or kind
-end
 
 local function _dispatch_intent(game, payload)
   assert(payload ~= nil, "missing payload")
@@ -40,7 +33,7 @@ local function _dispatch_intent(game, payload)
     }
     game.store:set({ "turn", "pending_choice" }, entry)
     assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = _resolve_event_name("need_choice")
+    local event_name = monopoly_event.resolve_intent("need_choice")
     TriggerCustomEvent(event_name, { choice = entry, choice_spec = spec })
     return
   end
@@ -49,7 +42,7 @@ local function _dispatch_intent(game, payload)
     assert(ui_port.push_popup ~= nil, "missing ui_port.push_popup")
     ui_port:push_popup(intent.payload)
     assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = _resolve_event_name("push_popup")
+    local event_name = monopoly_event.resolve_intent("push_popup")
     TriggerCustomEvent(event_name, { payload = intent.payload })
   end
 end

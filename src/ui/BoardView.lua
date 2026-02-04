@@ -1,6 +1,7 @@
 local building_effects = require("src.ui.BuildingEffects")
 local tile_renderer = require("src.ui.TileRenderer")
 local number_utils = require("src.core.NumberUtils")
+local runtime_constants = require("Config.RuntimeConstants")
 
 local eggy_layer_board = {}
 
@@ -227,7 +228,7 @@ function eggy_layer_board.on_tile_upgraded(state, tile_id, level)
   assert(buildings[idx] ~= nil, "missing building unit: " .. tostring(idx))
   local lv = assert(number_utils.to_integer(level), "invalid level: " .. tostring(level))
   assert(lv >= 1 and lv <= 3, "invalid level: " .. tostring(lv))
-  local root_quaternion = assert(q_zero, "missing Q_ZERO")
+  local root_quaternion = assert(runtime_constants.q_zero, "missing Q_ZERO")
   building_effects.spawn_upgrade_building_units(scene, root_quaternion, idx, lv)
 end
 

@@ -1,5 +1,5 @@
 local effect = require("src.game.effect.Effect")
-local monopoly_event = require("src.game.MonopolyEvents")
+local monopoly_event = require("Config.MonopolyEvents")
 
 local pipeline = {}
 
@@ -23,13 +23,6 @@ local function _release_list(list)
   list_pool[#list_pool + 1] = list
 end
 
-local function _resolve_event_name(kind)
-  assert(monopoly_event ~= nil, "missing MONOPOLY_EVENT")
-  local intent = assert(monopoly_event.intent, "missing MONOPOLY_EVENT.intent")
-  assert(kind ~= nil, "missing event kind")
-  return intent[kind] or kind
-end
-
 local function _dispatch_intent(game, payload)
   assert(payload ~= nil, "missing payload")
   local intent = payload.intent or payload
@@ -51,7 +44,7 @@ local function _dispatch_intent(game, payload)
     }
     game.store:set(pending_choice_path, entry)
     assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = _resolve_event_name("need_choice")
+    local event_name = monopoly_event.resolve_intent("need_choice")
     TriggerCustomEvent(event_name, { choice = entry, choice_spec = spec })
     return
   end
@@ -60,7 +53,7 @@ local function _dispatch_intent(game, payload)
     assert(ui_port.push_popup ~= nil, "missing ui_port.PushPopup")
     ui_port:push_popup(intent.payload)
     assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = _resolve_event_name("push_popup")
+    local event_name = monopoly_event.resolve_intent("push_popup")
     TriggerCustomEvent(event_name, { payload = intent.payload })
   end
 end

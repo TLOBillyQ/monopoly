@@ -1,4 +1,4 @@
-require "Config.RuntimeConstants"
+local runtime_constants = require("Config.RuntimeConstants")
 local logger = require("src.core.Logger")
 
 local last_camera_target_role_id = nil
@@ -16,7 +16,7 @@ end
 ---@desc 获取载具移动方向
 ---@return Vector3
 function get_vehicle_move_direction()
-    return vehicle_helper.move_direction or v3_left
+    return vehicle_helper.move_direction or runtime_constants.v3_left
 end
 
 ---@export

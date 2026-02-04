@@ -3,7 +3,7 @@ local gameplay_rules = require("Config.GameplayRules")
 local agent = require("src.game.game.Agent")
 local strategy = require("src.game.item.ItemStrategy")
 local inventory = require("src.game.item.ItemInventory")
-local monopoly_event = require("src.game.MonopolyEvents")
+local monopoly_event = require("Config.MonopolyEvents")
 
 local item_phase = {}
 
@@ -17,12 +17,6 @@ local phase_titles = {
   pre_move = "投骰后：使用道具？",
   post_action = "行动后：使用道具？",
 }
-
-local function _resolve_event_name(kind)
-  local intent = monopoly_event.intent
-  assert(kind ~= nil, "missing intent kind")
-  return intent[kind] or kind
-end
 
 local function _dispatch_intent(game, payload)
   assert(payload ~= nil, "missing intent payload")
@@ -45,7 +39,7 @@ local function _dispatch_intent(game, payload)
       meta = spec.meta,
     }
     game.store:set({ "turn", "pending_choice" }, entry)
-    local event_name = _resolve_event_name("need_choice")
+    local event_name = monopoly_event.resolve_intent("need_choice")
     TriggerCustomEvent(event_name, { choice = entry, choice_spec = spec })
     return
   end
@@ -54,7 +48,7 @@ local function _dispatch_intent(game, payload)
     local ui_port = game.ui_port
     assert(ui_port ~= nil and ui_port.push_popup ~= nil, "missing ui_port")
     ui_port:push_popup(intent.payload)
-    local event_name = _resolve_event_name("push_popup")
+    local event_name = monopoly_event.resolve_intent("push_popup")
     TriggerCustomEvent(event_name, { payload = intent.payload })
   end
 end

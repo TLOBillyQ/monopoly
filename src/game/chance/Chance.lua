@@ -1,6 +1,6 @@
 local logger = require("src.core.Logger")
 local chance_registry = require("src.game.chance.ChanceRegistry")
-local monopoly_event = require("src.game.MonopolyEvents")
+local monopoly_event = require("Config.MonopolyEvents")
 
 local chance_effects = {}
 

@@ -1,4 +1,4 @@
-local monopoly_event = require("src.game.MonopolyEvents")
+local monopoly_event = require("Config.MonopolyEvents")
 
 local event_handlers = {}
 local installed = false

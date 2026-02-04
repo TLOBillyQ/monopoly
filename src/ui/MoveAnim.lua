@@ -1,4 +1,4 @@
-require "Config.RuntimeConstants"
+local runtime_constants = require("Config.RuntimeConstants")
 
 local rad_to_deg = math.rad_to_deg or math.deg or function(radians)
     return radians * 180 / math.pi
@@ -14,7 +14,7 @@ local function _calc_step(scene, from_index, to_index)
     local pos_e = end_tile.get_position()
     local dist = pos_e - pos_s
     local len = dist:length()
-    local time = len / walk_speed
+    local time = len / runtime_constants.walk_speed
     local dir = math.Vector3(dist.x / len, dist.y / len, dist.z / len)
     return dir, time
 end

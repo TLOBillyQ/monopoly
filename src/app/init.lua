@@ -17,7 +17,7 @@ local map_cfg = require("Config.Map")
 local tiles_cfg = require("Config.Generated.Tiles")
 local ui_events = require("Config.UIEvents")
 local logger = require("src.core.Logger")
-local monopoly_event = require("src.game.MonopolyEvents")
+local monopoly_event = require("Config.MonopolyEvents")
 
 logger.configure_game_time()
 

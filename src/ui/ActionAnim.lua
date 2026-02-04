@@ -1,4 +1,4 @@
-require "Config.RuntimeConstants"
+local runtime_constants = require("Config.RuntimeConstants")
 
 local prefab = require("Data.Prefab")
 local logger = require("src.core.Logger")
@@ -71,14 +71,14 @@ local function _spawn_unit_group(group_id, pos)
   assert(group_id ~= nil, "missing group_id")
   assert(pos ~= nil, "missing pos")
   assert(GameAPI ~= nil and GameAPI.create_unit_group ~= nil, "missing GameAPI.create_unit_group")
-  return GameAPI.create_unit_group(group_id, pos, q_zero)
+  return GameAPI.create_unit_group(group_id, pos, runtime_constants.q_zero)
 end
 
 local function _spawn_unit(unit_id, pos)
   assert(unit_id ~= nil, "missing unit_id")
   assert(pos ~= nil, "missing pos")
   assert(GameAPI ~= nil and GameAPI.create_unit_with_scale ~= nil, "missing GameAPI.create_unit_with_scale")
-  return GameAPI.create_unit_with_scale(unit_id, pos, q_zero, v3_one)
+  return GameAPI.create_unit_with_scale(unit_id, pos, runtime_constants.q_zero, runtime_constants.v3_one)
 end
 
 local function _destroy_unit(entry)

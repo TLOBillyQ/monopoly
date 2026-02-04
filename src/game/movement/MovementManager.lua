@@ -1,7 +1,7 @@
 local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("Config.GameplayRules")
 local inventory = require("src.game.item.ItemInventory")
-local monopoly_event = require("src.game.MonopolyEvents")
+local monopoly_event = require("Config.MonopolyEvents")
 
 local movement_manager = {}
 local item_ids = gameplay_rules.item_ids

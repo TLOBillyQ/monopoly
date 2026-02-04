@@ -2,6 +2,7 @@ local agent = require("src.game.game.Agent")
 local constants = require("Config.Generated.Constants")
 local items_cfg = require("Config.Generated.Items")
 local gameplay_rules = require("Config.GameplayRules")
+local runtime_constants = require("Config.RuntimeConstants")
 local event_handlers = require("src.ui.UIEventHandlers")
 local ui_view = require("src.ui.UIView")
 local ui_model = require("src.ui.UIModel")
@@ -129,7 +130,13 @@ local function _refresh_view(state, game, next_model)
   assert(GameAPI ~= nil and GameAPI.get_role ~= nil, "missing GameAPI.get_role")
 
   local turn_count = turn.turn_count
-  local follow_ready = camera_helper and eca_event and eca_event.camera and eca_event.camera.follow and TriggerCustomEvent and true or false
+  local follow_ready = camera_helper
+    and runtime_constants.eca_event
+    and runtime_constants.eca_event.camera
+    and runtime_constants.eca_event.camera.follow
+    and TriggerCustomEvent
+    and true
+    or false
   local log_key = tostring(turn_count) .. ":" .. tostring(current_id)
   if state._camera_follow_log_key ~= log_key then
     state._camera_follow_log_key = log_key
@@ -149,7 +156,7 @@ local function _refresh_view(state, game, next_model)
 
   if follow_ready then
     camera_helper.target_role_id = current_id
-    TriggerCustomEvent(eca_event.camera.follow, {})
+    TriggerCustomEvent(runtime_constants.eca_event.camera.follow, {})
   end
   
   return ui_model
@@ -440,9 +447,9 @@ function gameplay_loop.tick(game, state, dt)
           local dir = anim_ctx.direction
           if dir then
           elseif anim_ctx.steps and anim_ctx.steps < 0 then
-            dir = v3_right
+            dir = runtime_constants.v3_right
           elseif anim_ctx.steps and anim_ctx.steps > 0 then
-            dir = v3_left
+            dir = runtime_constants.v3_left
           end
           assert(dir, "missing anim.direction")
           local move_anim = require("src.ui.MoveAnim")

@@ -1,7 +1,7 @@
 local items_cfg = require("Config.Generated.Items")
 require "vendor.third_party.Utils"
 local logger = require("src.core.Logger")
-local monopoly_event = require("src.game.MonopolyEvents")
+local monopoly_event = require("Config.MonopolyEvents")
 
 local inventory = {}
 
@@ -11,13 +11,6 @@ local pending_choice_path = { "turn", "pending_choice" }
 local cfg_by_id = {}
 for _, cfg in ipairs(items_cfg) do
   cfg_by_id[cfg.id] = cfg
-end
-
-local function _resolve_event_name(kind)
-  assert(monopoly_event ~= nil, "missing MONOPOLY_EVENT")
-  local intent = assert(monopoly_event.intent, "missing MONOPOLY_EVENT.intent")
-  assert(kind ~= nil, "missing event kind")
-  return intent[kind] or kind
 end
 
 local function _dispatch_intent(game, payload)
@@ -41,7 +34,7 @@ local function _dispatch_intent(game, payload)
     }
     game.store:set(pending_choice_path, entry)
     assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = _resolve_event_name("need_choice")
+    local event_name = monopoly_event.resolve_intent("need_choice")
     TriggerCustomEvent(event_name, { choice = entry, choice_spec = spec })
     return
   end
@@ -50,7 +43,7 @@ local function _dispatch_intent(game, payload)
     assert(ui_port.push_popup ~= nil, "missing ui_port.PushPopup")
     ui_port:push_popup(intent.payload)
     assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = _resolve_event_name("push_popup")
+    local event_name = monopoly_event.resolve_intent("push_popup")
     TriggerCustomEvent(event_name, { payload = intent.payload })
   end
 end

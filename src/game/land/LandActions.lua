@@ -4,7 +4,7 @@ local board_utils = require("src.game.item.ItemBoardUtils")
 local pricing = require("src.game.land.LandPricing")
 local inventory = require("src.game.item.ItemInventory")
 local gameplay_rules = require("Config.GameplayRules")
-local monopoly_event = require("src.game.MonopolyEvents")
+local monopoly_event = require("Config.MonopolyEvents")
 local bankruptcy_manager = require("src.game.game.BankruptcyManager")
 
 local item_ids = gameplay_rules.item_ids
