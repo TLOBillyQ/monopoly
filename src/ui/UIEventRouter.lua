@@ -16,11 +16,15 @@ local function _resolve_option_id(choice, payload, state)
   end
   local idx = payload.index or payload.option_index or payload.card_index or payload.choice_index
   if idx then
-    local mapped = state.market_choice_option_ids and state.market_choice_option_ids[idx]
+    local mapped = state and state.market_choice_option_ids and state.market_choice_option_ids[idx]
     if mapped then
       return mapped
     end
-    local opt = choice.options[idx]
+    local options = choice.options
+    if type(options) ~= "table" then
+      return nil
+    end
+    local opt = options[idx]
     if opt then
       return opt.id or opt
     end
@@ -38,7 +42,11 @@ end
 
 local function _register_node_click(cache, name, callback, registered)
   assert(name ~= nil, "missing node name")
+  assert(registered ~= nil, "missing registered map")
   local resolved = ui_aliases.resolve(name)
+  if registered[resolved] then
+    return
+  end
   local nodes = cache[resolved]
   if not nodes then
     nodes = UIManager.query_nodes_by_name(resolved)
@@ -48,7 +56,6 @@ local function _register_node_click(cache, name, callback, registered)
     _show_missing_button_tip(name)
     return
   end
-  assert(registered ~= nil, "missing registered map")
   registered[resolved] = true
   for _, node in ipairs(nodes) do
     node:listen(UIManager.EVENT.CLICK, function(data)
@@ -97,6 +104,7 @@ local function _dispatch(state, game, intent, opts)
 end
 
 function ui_event_router.bind(state, get_game, opts)
+  assert(state ~= nil, "missing state")
   local function resolve_game()
     if type(get_game) == "function" then
       return get_game()
@@ -118,7 +126,11 @@ function ui_event_router.bind(state, get_game, opts)
   end
 
   local cache = {}
-  local registered = {}
+  local registered = state.ui_event_router_registered
+  if not registered then
+    registered = {}
+    state.ui_event_router_registered = registered
+  end
   _register_node_click(cache, "行动按钮", function()
     dispatch_intent({ type = "ui_button", id = "next" })
   end, registered)
@@ -154,7 +166,9 @@ function ui_event_router.bind(state, get_game, opts)
       local choice = state.ui_model and state.ui_model.choice
       assert(choice ~= nil, "missing choice")
       local option_id = _resolve_option_id(choice, { index = idx }, state)
-      assert(option_id ~= nil, "missing option id")
+      if not option_id then
+        return
+      end
       dispatch_intent({ type = "choice_select", choice_id = choice.id, option_id = option_id })
       if choice.allow_cancel ~= false then
         dispatch_intent({ type = "choice_cancel", choice_id = choice.id })
@@ -168,7 +182,9 @@ function ui_event_router.bind(state, get_game, opts)
       local market = state.ui_model and state.ui_model.market
       assert(market ~= nil, "missing market")
       local option_id = _resolve_option_id(market, { index = idx }, state)
-      assert(option_id ~= nil, "missing option id")
+      if not option_id then
+        return
+      end
       dispatch_intent({ type = "market_select", option_id = option_id })
     end, registered)
   end
