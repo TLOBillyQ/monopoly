@@ -160,6 +160,10 @@ function gameplay_loop.set_game(state, game)
   state.game = game
   game.ui_port = state
   event_handlers.install(game, logger, state)
+  logger.set_info_per_turn_limit(gameplay_rules.info_log_per_turn_limit)
+  logger.set_info_turn_provider(function()
+    return game.store and game.store.state and game.store.state.turn and game.store.state.turn.turn_count
+  end)
   assert(game.pending_choice ~= nil, "missing game.pending_choice")
   local pending = game:pending_choice()
   state.pending_choice = pending

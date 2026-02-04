@@ -2,6 +2,10 @@ local logger = {
   entries = {},
   max_entries = 200,
   seq = 0,
+  info_per_turn_limit = nil,
+  info_turn_provider = nil,
+  info_turn = nil,
+  info_turn_count = 0,
   timestamp_provider = function()
     return 0
   end,
@@ -27,6 +31,23 @@ local function _format_timestamp(timestamp)
 end
 
 local function _push(level, ...)
+  if level == "info" then
+    local limit = logger.info_per_turn_limit
+    local provider = logger.info_turn_provider
+    if limit and limit > 0 and provider then
+      local turn = provider()
+      if turn ~= nil then
+        if logger.info_turn ~= turn then
+          logger.info_turn = turn
+          logger.info_turn_count = 0
+        end
+        if logger.info_turn_count >= limit then
+          return
+        end
+        logger.info_turn_count = logger.info_turn_count + 1
+      end
+    end
+  end
   local text = _stringify(...)
   local timestamp = _get_timestamp()
   local time_text = _format_timestamp(timestamp)
@@ -86,6 +107,14 @@ function logger.set_file_io_enabled(enabled)
   logger.enable_file_io = enabled == true
 end
 
+function logger.set_info_per_turn_limit(limit)
+  logger.info_per_turn_limit = limit
+end
+
+function logger.set_info_turn_provider(provider)
+  logger.info_turn_provider = provider
+end
+
 function logger.set_ui_sink(sink)
   logger.ui_sink = sink
 end
@@ -105,6 +134,8 @@ end
 function logger.clear()
   logger.entries = {}
   logger.seq = logger.seq + 1
+  logger.info_turn = nil
+  logger.info_turn_count = 0
 end
 
 function logger.get_seq()
