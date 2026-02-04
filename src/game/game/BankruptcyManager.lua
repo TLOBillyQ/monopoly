@@ -1,5 +1,6 @@
 local logger = require("src.core.Logger")
 local inventory = require("src.game.item.ItemInventory")
+local tile_renderer = require("src.ui.TileRenderer")
 
 local bankruptcy_manager = {}
 
@@ -43,6 +44,33 @@ function bankruptcy_manager.eliminate(game, player)
 
   game:set_player_eliminated(player, true)
 
+  local ui_port = game.ui_port
+  local scene = ui_port and ui_port.board_scene or nil
+  if scene then
+    local unit = scene.units_by_player_id and scene.units_by_player_id[player.id] or nil
+    if not unit then
+      unit = ui_port.player_units and ui_port.player_units[player.id] or nil
+    end
+    if unit and unit.die then
+      unit.die()
+    end
+
+    if scene.building_unit_groups and scene.tiles then
+      for _, tile_id in ipairs(owned_tile_ids) do
+        local idx = game.board:index_of_tile_id(tile_id)
+        local building = scene.building_unit_groups[idx]
+        if building then
+          GameAPI.destroy_unit_with_children(building, true)
+          scene.building_unit_groups[idx] = nil
+        end
+        local tile_unit = scene.tiles[idx]
+        if tile_unit then
+          tile_renderer.render_tile(tile_unit, tile_id, nil)
+        end
+      end
+    end
+  end
+
   for tile_idx, list in pairs(game.occupants) do
     for i = #list, 1, -1 do
       if list[i] == player.id then
@@ -53,5 +81,3 @@ function bankruptcy_manager.eliminate(game, player)
 end
 
 return bankruptcy_manager
-
-
