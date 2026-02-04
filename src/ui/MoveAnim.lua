@@ -30,29 +30,30 @@ function movement_manager.one_step(scene, player_id, dir, from_index, to_index)
     local unit = scene.units_by_player_id[player_id]
     if unit.set_direction then
         unit.set_direction(step_dir)
-    elseif unit.set_orientation then
-        local dx = step_dir.x
-        local dz = step_dir.z
-        if dx ~= 0 or dz ~= 0 then
-            local yaw_radians = 0.0
-            if dz > 0 then
-                yaw_radians = math.atan(dx / dz)
-            elseif dz < 0 then
-                if dx >= 0 then
-                    yaw_radians = math.atan(dx / dz) + math.pi
-                else
-                    yaw_radians = math.atan(dx / dz) - math.pi
-                end
-            elseif dx > 0 then
-                yaw_radians = math.pi / 2
-            elseif dx < 0 then
-                yaw_radians = -math.pi / 2
-            end
-            unit.set_orientation(math.Quaternion(0.0, rad_to_deg(yaw_radians), 0.0))
-        end
+    -- elseif unit.set_orientation then
+    --     local dx = step_dir.x
+    --     local dz = step_dir.z
+    --     if dx ~= 0 or dz ~= 0 then
+    --         local yaw_radians = 0.0
+    --         if dz > 0 then
+    --             yaw_radians = math.atan(dx / dz)
+    --         elseif dz < 0 then
+    --             if dx >= 0 then
+    --                 yaw_radians = math.atan(dx / dz) + math.pi
+    --             else
+    --                 yaw_radians = math.atan(dx / dz) - math.pi
+    --             end
+    --         elseif dx > 0 then
+    --             yaw_radians = math.pi / 2
+    --         elseif dx < 0 then
+    --             yaw_radians = -math.pi / 2
+    --         end
+    --         unit.set_orientation(math.Quaternion(0.0, rad_to_deg(yaw_radians), 0.0))
+    --     end
     end
 
-    unit.force_start_move(step_dir, time)
+   
+    unit.start_move_by_direction(step_dir, time)
     return time
 end
 
