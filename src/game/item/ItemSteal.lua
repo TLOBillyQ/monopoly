@@ -68,8 +68,6 @@ function steal.handle_pass_players(game, player, encountered_ids)
     return
   end
 
-  assert(game.ui_port ~= nil, "missing ui_port")
-
   local spec = steal.build_prompt_spec(game, player, queue, 1)
   assert(spec ~= nil, "missing steal prompt spec")
   return {

@@ -1,4 +1,4 @@
-require "src.runtime.Macro"
+require "Config.RuntimeConstants"
 
 local prefab = require("Data.Prefab")
 local logger = require("src.core.Logger")

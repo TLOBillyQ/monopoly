@@ -1,4 +1,4 @@
-require "src.runtime.Macro"
+require "Config.RuntimeConstants"
 local logger = require("src.core.Logger")
 
 local last_camera_target_role_id = nil

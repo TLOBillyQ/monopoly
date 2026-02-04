@@ -2,21 +2,14 @@ local market_view = require("src.ui.UIMarket")
 local board_view = require("src.ui.BoardView")
 local market_ui = require("src.ui.MarketUI")
 local ui_aliases = require("src.ui.UIAliases")
+local ui_events = require("Config.UIEvents")
 
 local ui_view = {}
 
 local CANVAS_BASE = "基础屏"
-local CANVAS_LOADING = "加载屏"
 local CANVAS_CHOICE = "通用选择屏"
 local CANVAS_MARKET = "黑市屏"
 local CANVAS_POPUP = "弹窗屏"
-local CANVAS_NAMES = {
-  CANVAS_BASE,
-  CANVAS_LOADING,
-  CANVAS_CHOICE,
-  CANVAS_MARKET,
-  CANVAS_POPUP,
-}
 
 local function _query_node(name)
   assert(name ~= nil, "missing ui node name")
@@ -68,10 +61,22 @@ end
 local function _switch_canvas(ui, target)
   assert(ui ~= nil, "missing ui state")
   local target_name = target or CANVAS_BASE
-  ui:set_visible(CANVAS_BASE, true)
-  for _, name in ipairs(CANVAS_NAMES) do
-    if name ~= CANVAS_BASE then
-      ui:set_visible(name, name == target_name)
+  for _, name in ipairs(ui_events.canvas_names) do
+    if name ~= CANVAS_BASE and name ~= target_name then
+      local hide_event = ui_events.hide[name]
+      if hide_event then
+        ui_events.send_to_all(hide_event, {})
+      end
+    end
+  end
+  local base_event = ui_events.show[CANVAS_BASE]
+  if base_event then
+    ui_events.send_to_all(base_event, {})
+  end
+  if target_name ~= CANVAS_BASE then
+    local target_event = ui_events.show[target_name]
+    if target_event then
+      ui_events.send_to_all(target_event, {})
     end
   end
 end
@@ -103,6 +108,8 @@ function ui_view.build_ui_state()
     },
     popup = {
       root = "弹窗屏",
+      title = "弹窗标题",
+      body = "弹窗正文",
       confirm = "弹窗确认",
     },
     popup_return_canvas = nil,
@@ -118,7 +125,7 @@ end
 
 function ui_view.init_ui_assets(state)
   assert(state ~= nil, "missing state")
-  local refs = require("src.runtime.Refs")
+  local refs = require("Config.RuntimeRefs")
   state.ui_refs = refs
 
   for _, role in ipairs(all_roles) do

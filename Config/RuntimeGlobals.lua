@@ -1,5 +1,5 @@
-require "src.runtime.Macro"
-require "src.runtime.Refs"
+require "Config.RuntimeConstants"
+require "Config.RuntimeRefs"
 
 SetTimeOut = LuaAPI.call_delay_time
 

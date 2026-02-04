@@ -1,105 +1,96 @@
-# ECanvas 调试屏日志输出（含开关）
-
+# 扁平化 Config/Runtime 并语义化重命名
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。本文件必须遵循仓库内 `.agents/PLANS.md` 的规范维护。
 
 ## 目的 / 全局视角
 
-
-为新加的调试界面“调试屏”提供日志显示能力：把 `src/core/Logger.lua` 产生的日志输出到 UI 的 `ELabel` 节点“日志”。增加配置开关，默认关闭；打开后日志持续刷新。验收方式是启动游戏后，在调试开关开启时看到“日志”标签实时追加行，关闭时不更新。
+把 `Config/Runtime` 扁平化到 `Config/` 根目录，并按语义重命名运行时文件，统一到现有 Config 的组织方式。完成后：所有引用改为新路径，回归脚本通过，运行时行为不变。
 
 ## 进度
 
-
-- [x] (2026-02-04 12:13Z) 清空并重写 `.agents/PLAN_CURRENT.md` 为本计划
-- [x] (2026-02-04 12:13Z) 识别调试 UI 节点与日志标签节点，并建立 UI 访问与刷新逻辑
-- [x] (2026-02-04 12:13Z) 在 `Logger` 增加可选的“UI 输出端”与缓存读取接口
-- [x] (2026-02-04 12:13Z) 在主循环中按配置开关驱动日志刷新到 UI
-- [x] (2026-02-04 12:13Z) 运行回归脚本或最小启动验证
+- [x] (2026-02-04 13:50Z) 清空并重写 `.agents/PLAN_CURRENT.md` 为本计划
+- [x] (2026-02-04 13:50Z) 迁移并重命名 `Config/Runtime` 下的 4 个文件到 `Config/`
+- [x] (2026-02-04 13:50Z) 更新所有 `require` 引用到新文件名
+- [x] (2026-02-04 13:50Z) 清理空目录并确认无旧路径残留
+- [x] (2026-02-04 13:50Z) 运行 `.agents/tests/regression.lua` 验证
 
 ## 意外与发现
 
-
-暂无。
+- 观察：回归脚本通过。
+  证据：`All regression checks passed (36)`
 
 ## 决策日志
 
-
-- 决策：调试开关放在 `Config/GameplayRules.lua`，默认关闭。
-  理由：避免新增文件，且不影响线上表现。
+- 决策：选择“扁平化到 Config 根目录 + 语义化重命名”。
+  理由：与现有 Config 组织一致，文件名表达用途且避免目录层级。
   日期/作者：2026-02-04 / Codex。
 
-- 决策：日志显示格式为“时间+等级+正文”。
-  理由：可读性最佳且无需额外结构。
-  日期/作者：2026-02-04 / Codex。
-
-- 决策：日志最多显示 50 行。
-  理由：信息量与性能平衡。
+- 决策：重命名规则如下：
+  - `Config/Runtime/Macro.lua` -> `Config/RuntimeConstants.lua`
+  - `Config/Runtime/Refs.lua` -> `Config/RuntimeRefs.lua`
+  - `Config/Runtime/Globals.lua` -> `Config/RuntimeGlobals.lua`
+  - `Config/Runtime/ECA.lua` -> `Config/RuntimeECA.lua`
+  理由：与内容语义对应，保持可读性。
   日期/作者：2026-02-04 / Codex。
 
 ## 结果与复盘
 
-
-已完成回归脚本验证，确认日志相关改动不影响既有用例，调试开关开启后即可通过 UI 观察日志输出。
+已完成 Config 扁平化与语义化重命名，引用已更新，回归测试通过。剩余事项：无。
 
 ## 背景与导读
 
-
-`src/core/Logger.lua` 当前只把日志写入内存 `logger.entries`，没有 UI 或文件输出。`src/ui/UIView.lua` 负责 UI 节点查询与文本设置，通过 `UIManager.query_nodes_by_name` 获取节点并设置 `node.text`。UI 节点列表在 `Data/UIManagerNodes.lua`，其中包含 `ECanvas` “调试屏”与 `ELabel` “日志”。主循环在 `src/game/turn/GameplayLoop.lua` 的 `tick` 中刷新 UI。
+上一轮迁移把 `src/runtime` 移到 `Config/Runtime`。为符合现有 Config 组织规范，需要进一步扁平化并语义化命名。涉及引用位于 `src/app/init.lua`、`src/ui/UIView.lua`、`src/ui/ActionAnim.lua`、`src/ui/MoveAnim.lua`，以及运行时模块内部 `require`。
 
 ## 工作计划
 
-
-先改配置，在 `Config/GameplayRules.lua` 新增调试开关与最大显示行数。再改 `src/core/Logger.lua` 增加日志读取与 UI sink 接口，并保留现有行为。然后在 `src/ui/UIView.lua` 增加设置“日志”文本与“调试屏”可见性的函数。最后在 `src/game/turn/GameplayLoop.lua` 里按配置驱动 UI 日志刷新，并在开关切换时清空/刷新。
+先移动并重命名 `Config/Runtime` 下的 4 个文件到 `Config/` 根目录，然后逐一更新所有 `require` 引用到新的文件名。最后删除空目录并全局搜索旧路径，运行回归脚本确认行为不变。
 
 ## 具体步骤
 
-
 在仓库根目录完成如下修改：
-1. 修改 `Config/GameplayRules.lua`，新增 `debug_log_enabled` 与 `debug_log_max_lines`。
-2. 修改 `src/core/Logger.lua`，新增 `set_ui_sink`、`get_seq`、`get_entries`、`get_text`，并在 `_push` 更新序号。
-3. 修改 `src/ui/UIView.lua`，新增 `set_debug_log` 与 `set_debug_visible`。
-4. 修改 `src/game/turn/GameplayLoop.lua`，根据开关刷新 UI 日志，且只在日志序号变化时更新。
-5. 运行 `lua .agents/tests/regression.lua`。
+1. 移动并重命名文件：
+   - `Config/Runtime/Macro.lua` -> `Config/RuntimeConstants.lua`
+   - `Config/Runtime/Refs.lua` -> `Config/RuntimeRefs.lua`
+   - `Config/Runtime/Globals.lua` -> `Config/RuntimeGlobals.lua`
+   - `Config/Runtime/ECA.lua` -> `Config/RuntimeECA.lua`
+2. 更新引用：
+   - `src/app/init.lua` 的 `Config.Runtime.Globals` / `Config.Runtime.ECA`。
+   - `src/ui/UIView.lua` 的 `Config.Runtime.Refs`。
+   - `src/ui/ActionAnim.lua` 与 `src/ui/MoveAnim.lua` 的 `Config.Runtime.Macro`。
+   - `Config/RuntimeGlobals.lua` 与 `Config/RuntimeECA.lua` 内部的 `require`。
+3. 删除空目录 `Config/Runtime`，并确认无旧路径残留。
+4. 运行 `lua .agents/tests/regression.lua`。
 
 ## 验证与验收
 
-
-运行 `lua .agents/tests/regression.lua`，预期输出 `All regression checks passed (N)`。启动游戏后：开关关闭时“日志”不更新；开关打开时，“日志”显示最近 50 行，格式 `YYYY-MM-DD HH:MM:SS [level] 文本`。
+运行 `lua .agents/tests/regression.lua`，预期输出 `All regression checks passed (36)`。启动游戏后初始化与 UI/动画/相机逻辑不因路径变更报错。
 
 ## 可重复性与恢复
 
-
-本变更为代码与配置调整，可重复执行。若需回退，删除新增接口与调用，并移除配置开关即可。
+本变更为路径与引用更新，可重复执行。若需回退，将文件移回 `Config/Runtime` 并恢复原 `require` 路径。
 
 ## 产物与备注
 
+    文件：Config/RuntimeConstants.lua
+    说明：原 Config/Runtime/Macro.lua
 
-    文件：Config/GameplayRules.lua
-    变更：新增 debug_log_enabled / debug_log_max_lines
+    文件：Config/RuntimeRefs.lua
+    说明：原 Config/Runtime/Refs.lua
 
-    文件：src/core/Logger.lua
-    变更：新增序号、读取接口与 UI sink 支持
+    文件：Config/RuntimeGlobals.lua
+    说明：原 Config/Runtime/Globals.lua
 
-    文件：src/ui/UIView.lua
-    变更：新增调试日志与可见性设置
-
-    文件：src/game/turn/GameplayLoop.lua
-    变更：按配置驱动日志刷新
-
-    回归输出：
-      All regression checks passed (36)
+    文件：Config/RuntimeECA.lua
+    说明：原 Config/Runtime/ECA.lua
 
 ## 接口与依赖
 
+路径变更：
+- `Config/Runtime/Macro.lua` -> `Config/RuntimeConstants.lua`
+- `Config/Runtime/Refs.lua` -> `Config/RuntimeRefs.lua`
+- `Config/Runtime/Globals.lua` -> `Config/RuntimeGlobals.lua`
+- `Config/Runtime/ECA.lua` -> `Config/RuntimeECA.lua`
 
-新增接口：
-- `src/core/Logger.lua`
-  - `logger.set_ui_sink(sink)`
-  - `logger.get_seq()`
-  - `logger.get_entries(max_lines)`
-  - `logger.get_text(max_lines)`
+依赖变更：所有 `require "Config.Runtime.*"` 更新为新文件名（不再使用子目录）。
 
-依赖 UIManager 的节点查询与 `node.text` 写入。
-
-计划变更说明：2026-02-04 补充回归验证结果与产物证据。
+计划变更说明：2026-02-04 补充完成状态与回归结果。

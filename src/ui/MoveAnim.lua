@@ -1,4 +1,4 @@
-require "src.runtime.Macro"
+require "Config.RuntimeConstants"
 
 local rad_to_deg = math.rad_to_deg or math.deg or function(radians)
     return radians * 180 / math.pi

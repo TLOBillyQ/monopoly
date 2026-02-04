@@ -1,4 +1,4 @@
-require "src.runtime.Globals"
+require "Config.RuntimeGlobals"
 require "src.game.game.BankruptcyManager"
 require "src.game.game.AgentTargeting"
 require "src.game.game.Agent"
@@ -15,6 +15,7 @@ local ui_model = require("src.ui.UIModel")
 local ui_event_router = require("src.ui.UIEventRouter")
 local map_cfg = require("Config.Map")
 local tiles_cfg = require("Config.Generated.Tiles")
+local ui_events = require("Config.UIEvents")
 local logger = require("src.core.Logger")
 local monopoly_event = require("src.game.MonopolyEvents")
 
@@ -112,7 +113,7 @@ local function _install_game_init(state)
   RegisterTriggerEvent({ EVENT.GAME_INIT }, function()
     require "vendor.third_party.UIManager.Utils"
     UIManager.Builder:new(require "Data.UIManagerNodes")
-    require "src.runtime.ECA"
+    require "Config.RuntimeECA"
     current_game = gameplay_loop.new_game(state)
     gameplay_loop.set_game(state, current_game)
     ui_event_router.bind(state, function()
@@ -126,14 +127,13 @@ local function _install_game_init(state)
       end,
     })
 
-    local role = GameAPI.get_role(1)
-    role.send_ui_custom_event("显示加载屏", {});
+    ui_events.send_to_all(ui_events.show["加载屏"], {})
     board_scene.init(state, map_cfg)
     ui_view.init_ui_assets(state)
 
     SetTimeOut(1.0, function()
-      role.send_ui_custom_event("隐藏加载屏", {});
-      role.send_ui_custom_event("显示基础屏", {});
+      ui_events.send_to_all(ui_events.hide["加载屏"], {})
+      ui_events.send_to_all(ui_events.show["基础屏"], {})
     end)
 
     if not state.tick_started then
