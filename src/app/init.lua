@@ -41,7 +41,6 @@ local function _build_state()
         players = { "玩家1", "AI2", "AI3", "AI4" },
         ai = { [2] = true, [3] = true, [4] = true },
         auto_all = true,
-        seed = GameAPI.get_timestamp(),
         map = map_cfg,
         tiles = tiles_cfg,
       })

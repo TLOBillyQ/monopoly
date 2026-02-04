@@ -51,6 +51,14 @@ LuaAPI.rand = LuaAPI.rand or function()
   return math.random()
 end
 
+GameAPI = GameAPI or {}
+if not GameAPI.random_int then
+  math.randomseed(1)
+  GameAPI.random_int = function(min, max)
+    return math.random(min, max)
+  end
+end
+
 TriggerCustomEvent = TriggerCustomEvent or function() end
 
 local function _build_ui_port(overrides)
@@ -165,7 +173,6 @@ local function _new_game()
     players = { "P1", "P2" },
     ai = { [2] = true },
     auto_all = false,
-    seed = 42,
     map = map_cfg,
     tiles = tiles_cfg,
   })
@@ -964,7 +971,6 @@ local function _test_autorunner_runs_to_end()
     players = { "P1", "P2", "P3", "P4" },
     ai = { [2] = true, [3] = true, [4] = true },
     auto_all = true,
-    seed = 42,
     map = map_cfg,
     tiles = tiles_cfg,
   })

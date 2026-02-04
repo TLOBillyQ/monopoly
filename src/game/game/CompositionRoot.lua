@@ -28,28 +28,13 @@ local composition_root = {}
 
 local deep_copy = Utils.deep_copy
 
-local function _new_rng(seed)
-  assert(seed ~= nil, "missing rng seed")
-  local rng = {
-    seed = seed,
-    state = seed,
-  }
-
+local function _new_rng()
+  local rng = {}
   function rng:next_int(min, max)
     assert(min ~= nil and max ~= nil, "rng.NextInt requires min/max")
-    local curr = self.state
-    assert(curr ~= nil, "missing rng state")
-    curr = (curr * 1103515245 + 12345) % 2147483648
-    self.state = curr
-    local span = max - min + 1
-    assert(span > 0, "invalid rng span: " .. tostring(span))
-    return min + (curr % span)
+    assert(GameAPI and GameAPI.random_int, "missing GameAPI.random_int")
+    return GameAPI.random_int(min, max)
   end
-
-  function rng:snapshot()
-    return { seed = self.seed, state = self.state }
-  end
-
   return rng
 end
 
@@ -155,7 +140,7 @@ local function _snapshot_market_limits()
   return limits
 end
 
-local function _build_initial_state(board, players, rng)
+local function _build_initial_state(board, players)
   return {
     board = { tiles = _snapshot_tiles(board.path) },
     market = { global_limits = _snapshot_market_limits() },
@@ -174,7 +159,6 @@ local function _build_initial_state(board, players, rng)
       item_phase = {},
       item_phase_active = "",
     },
-    rng = rng:snapshot(),
     players = _snapshot_players(players),
   }
 end
@@ -214,13 +198,11 @@ function composition_root.assemble(opts, game_or_class)
   assert(opts ~= nil, "missing assemble opts")
 
   local board = _create_board(opts)
-  local rng = _new_rng(opts.seed)
+  local rng = _new_rng()
   local players = _create_players(opts)
 
-  local initial_state = _build_initial_state(board, players, rng)
+  local initial_state = _build_initial_state(board, players)
   local store = store:new(initial_state)
-
-  rng._store = store
 
   for _, p in ipairs(players) do
     p._store = store

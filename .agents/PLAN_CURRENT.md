@@ -1,4 +1,4 @@
-# 首轮相机不跟随的定位计划
+# 使用 GameAPI.random_int 替换游戏 RNG
 
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。本文件必须遵循仓库内 `.agents/PLANS.md` 的规范维护。
@@ -6,17 +6,15 @@
 ## 目的 / 全局视角
 
 
-目标是在不改动行为的前提下，确认“前 4 回合相机不跟随”的直接原因。实现后应当能够通过日志判断 `_refresh_view` 是否被调用、`follow_camera` 事件是否触发以及相机目标是否有效，并据此明确原因归属。
+把游戏内自实现 RNG 改为统一调用 `GameAPI.random_int`，移除 `game.store.state.rng` 字段，并在回归脚本中补充 `GameAPI.random_int` 的本地模拟以保持可跑与稳定。验收方式是运行 `lua .agents/tests/regression.lua`，脚本输出通过且不报错。
 
 ## 进度
 
 
-- [x] (2026-02-04T11:36Z) 清空并重写 `.agents/PLAN_CURRENT.md` 为本计划
-- [x] (2026-02-04T11:36Z) 在 `src/game/turn/GameplayLoop.lua` 中记录相机跟随触发条件与回合信息
-- [x] (2026-02-04T11:36Z) 在 `src/runtime/ECA.lua` 中记录相机目标查询结果
-- [x] (2026-02-04T11:36Z) 在 `src/game/turn/TurnStart.lua` 与 `src/game/turn/TurnManager.lua` 中记录回合与玩家切换信息
-- [ ] (2026-02-04T11:36Z) 在编辑器侧核对 `follow_camera` 事件注册与加载屏相机状态
-- [ ] (2026-02-04T11:36Z) 运行游戏观察日志并汇总结论
+- [x] (2026-02-04 11:41Z) 清空并重写 `.agents/PLAN_CURRENT.md` 为本计划
+- [x] (2026-02-04 11:41Z) 修改 `src/game/game/CompositionRoot.lua` 使用 `GameAPI.random_int` 并移除 `rng` 快照
+- [x] (2026-02-04 11:41Z) 在 `.agents/tests/regression.lua` 增加 `GameAPI.random_int` 本地模拟
+- [x] (2026-02-04 11:41Z) 运行 `lua .agents/tests/regression.lua` 并确认通过
 
 ## 意外与发现
 
@@ -26,56 +24,58 @@
 ## 决策日志
 
 
-暂无。
+决策：游戏 RNG 仅使用 `GameAPI.random_int`，不再维护本地状态。理由：符合引擎随机一致性要求，并避免自实现带来的行为偏差。日期/作者：2026-02-04 / Codex。
+
+决策：本地回归脚本补充 `GameAPI.random_int` 模拟并固定随机种子。理由：保证脚本在无引擎环境下可稳定运行。日期/作者：2026-02-04 / Codex。
 
 ## 结果与复盘
 
 
-尚未完成。需要在观察日志后补充具体原因与修复建议。
+已完成代码修改并通过回归脚本验证，确认 `GameAPI.random_int` 缺失不会导致回归失败。
 
 ## 背景与导读
 
 
-相机跟随事件的触发入口位于 `src/game/turn/GameplayLoop.lua` 的 `_refresh_view`，它在 UI 刷新时设置 `camera_helper.target_role_id` 并触发 `TriggerCustomEvent(eca_event.camera.follow)`。相机目标的解析在 `src/runtime/ECA.lua` 的 `get_camera_target`。回合推进与玩家切换由 `src/game/turn/TurnStart.lua` 和 `src/game/turn/TurnManager.lua` 驱动。现象是首轮前 4 回合不跟随，第 5 回合开始正常。
+`src/game/game/CompositionRoot.lua` 负责组装 `game` 并创建 RNG，`src/game/turn/TurnRoll.lua` 通过 `game.rng:next_int` 投骰子，`.agents/tests/regression.lua` 是本地回归入口。此次调整只影响 RNG 生成方式和初始状态字段。
 
 ## 工作计划
 
 
-先补充最小日志来确认 `_refresh_view` 是否在回合 1 到 4 期间被调用，以及 `follow_camera` 事件是否可用并触发。随后在 `get_camera_target` 中确认 `camera_helper.target_role_id` 是否能解析到有效 Role。再记录回合与玩家切换，确保回合推进符合预期。最后在编辑器侧核对 `follow_camera` 事件注册与相机状态是否被加载流程覆盖。
+先改 `src/game/game/CompositionRoot.lua`，移除 LCG 自实现并把 `rng:next_int` 直接转为 `GameAPI.random_int`，同时删除 `rng` 快照写入。然后在 `.agents/tests/regression.lua` 增加 `GameAPI.random_int` 的本地模拟，最后运行回归脚本验证。
 
 ## 具体步骤
 
 
-在仓库根目录完成代码改动后，运行回归脚本做基础语法检查：
-
-    工作目录：c:\Users\Lzx_8\Desktop\dev\monopoly
-    命令：lua .agents/tests/regression.lua
-
-随后在蛋仔编辑器中启动游戏，观察日志输出的“相机跟随检查”“相机目标查询”“回合开始”“切换玩家”等字段是否覆盖回合 1 到 4。
+在仓库根目录依次完成代码修改后执行 `lua .agents/tests/regression.lua`，检查终端输出确认通过。
 
 ## 验证与验收
 
 
-验收方式为人工观察日志。回合 1 到 4 期间应能看到相机跟随检查日志与相机目标查询日志，并明确是否触发了 `follow_camera`。如果日志显示 `_refresh_view` 未触发或事件不可用，则判定为刷新或事件问题；如果事件触发但目标无效，则判定为目标映射问题；若事件注册缺失或被覆盖，则判定为编辑器侧配置问题。
+运行 `lua .agents/tests/regression.lua`，预期输出 `All regression checks passed (N)`，且无 `GameAPI.random_int` 缺失报错。
 
 ## 可重复性与恢复
 
 
-本变更仅添加日志，行为不变。若需要回退，删除新增日志并恢复原文件即可。再次运行回归脚本确认无语法错误。
+本变更为纯代码调整，可重复执行。若需回退，恢复 `CompositionRoot.lua` 的 RNG 实现并移除回归脚本中的 `GameAPI.random_int` 模拟即可。
 
 ## 产物与备注
 
 
-关键日志样例将以以下前缀输出，便于在编辑器控制台检索：
+    文件：src/game/game/CompositionRoot.lua
+    片段：
+      function rng:next_int(min, max)
+        assert(min ~= nil and max ~= nil, "rng.NextInt requires min/max")
+        assert(GameAPI and GameAPI.random_int, "missing GameAPI.random_int")
+        return GameAPI.random_int(min, max)
+      end
 
-    [Eggy] 相机跟随检查: 回合 <n> 玩家索引 <i> 玩家ID <id> 事件可用 <true/false>
-    [Eggy] 相机目标查询: role_id <id> role_ok <true/false>
-    [Eggy] 回合开始: turn_count <n> current_player_index <i> player_id <id>
-    [Eggy] 切换玩家: 回合 <n> current_index <i> next_index <j>
+    回归输出：
+      All regression checks passed (36)
 
 ## 接口与依赖
 
 
-不新增对外接口。新增日志依赖现有 `src/core/Logger`，并复用已有的 `TriggerCustomEvent` 与 `camera_helper`。
+依赖引擎提供 `GameAPI.random_int(min, max)`，其余接口不变。
 
-计划变更说明：2026-02-04 清空旧计划并写入首轮相机不跟随定位计划，因为用户请求执行该新任务。
+计划变更说明：2026-02-04 将 `.agents/PLAN_CURRENT.md` 替换为 RNG 改造计划以匹配当前任务。
+计划变更说明：2026-02-04 更新进度并记录回归脚本通过结果。
