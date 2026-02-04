@@ -28,6 +28,7 @@ function building_effects.spawn_upgrade_building_units(scene, root_quaternion, b
   local ref_key = ref_keys[lv]
   local unit = GameAPI.create_unit_group(prefab.group[ref_key], pos + offsets[lv], root_quaternion)
   groups[idx] = unit
+  scene.building_txt[idx].set_billboard_text(ref_key)
 end
 
 return building_effects

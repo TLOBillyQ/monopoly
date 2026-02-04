@@ -21,15 +21,15 @@ end
 
 function movement_manager.step_duration(scene, from_index, to_index)
     local _, time = _calc_step(scene, from_index, to_index)
-    return time
+    return time -- TODO: 确定每步等待时间
 end
 
 function movement_manager.one_step(scene, player_id, dir, from_index, to_index)
     local step_dir, time = _calc_step(scene, from_index, to_index)
 
     local unit = scene.units_by_player_id[player_id]
-    if unit.set_direction then
-        unit.set_direction(step_dir)
+    --if unit.set_direction then
+    --    unit.set_direction(step_dir)
     -- elseif unit.set_orientation then
     --     local dx = step_dir.x
     --     local dz = step_dir.z
@@ -50,8 +50,7 @@ function movement_manager.one_step(scene, player_id, dir, from_index, to_index)
     --         end
     --         unit.set_orientation(math.Quaternion(0.0, rad_to_deg(yaw_radians), 0.0))
     --     end
-    end
-
+    --end
    
     unit.start_move_by_direction(step_dir, time)
     return time
