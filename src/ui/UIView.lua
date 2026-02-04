@@ -57,6 +57,14 @@ local function _set_touch_enabled(_, name, enabled)
   node.disabled = not enabled
 end
 
+local function _set_debug_log(_, text)
+  _set_label(nil, "日志", text)
+end
+
+local function _set_debug_visible(_, visible)
+  _set_visible(nil, "调试屏", visible)
+end
+
 local function _switch_canvas(ui, target)
   assert(ui ~= nil, "missing ui state")
   local target_name = target or CANVAS_BASE
@@ -103,6 +111,8 @@ function ui_view.build_ui_state()
     set_button = _set_button,
     set_visible = _set_visible,
     set_touch_enabled = _set_touch_enabled,
+    set_debug_log = _set_debug_log,
+    set_debug_visible = _set_debug_visible,
   }
 end
 
@@ -242,6 +252,22 @@ end
 function ui_view.render(state, ui_model, log_once, build_log_prefix)
   ui_view.refresh_panel(state, ui_model)
   ui_view.refresh_board(state, ui_model, log_once, build_log_prefix)
+end
+
+function ui_view.set_debug_log(state, text)
+  local ui = state and state.ui
+  if not ui or not ui.set_debug_log then
+    return
+  end
+  ui:set_debug_log(text or "")
+end
+
+function ui_view.set_debug_visible(state, visible)
+  local ui = state and state.ui
+  if not ui or not ui.set_debug_visible then
+    return
+  end
+  ui:set_debug_visible(visible == true)
 end
 
 function ui_view.on_tile_upgraded(state, tile_id, level)

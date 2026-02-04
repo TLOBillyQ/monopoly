@@ -1,4 +1,6 @@
 local constants = {
+  debug_log_enabled = true,
+  debug_log_max_lines = 50,
   turn_limit = 1000,
   item_phase_queue = { "pre_action", "pre_move", "post_action" },
   item_ids = {

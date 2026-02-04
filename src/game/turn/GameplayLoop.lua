@@ -1,6 +1,7 @@
 local agent = require("src.game.game.Agent")
 local constants = require("Config.Generated.Constants")
 local items_cfg = require("Config.Generated.Items")
+local gameplay_rules = require("Config.GameplayRules")
 local event_handlers = require("src.ui.UIEventHandlers")
 local ui_view = require("src.ui.UIView")
 local ui_model = require("src.ui.UIModel")
@@ -534,6 +535,25 @@ function gameplay_loop.tick(game, state, dt)
 
   if state.ui_model then
     _log_status(state.ui_model)
+  end
+
+  local debug_enabled = gameplay_rules.debug_log_enabled == true
+  if state._debug_log_enabled ~= debug_enabled then
+    state._debug_log_enabled = debug_enabled
+    ui_view.set_debug_visible(state, debug_enabled)
+    if debug_enabled then
+      state._debug_log_seq = nil
+    else
+      ui_view.set_debug_log(state, "")
+    end
+  end
+  if debug_enabled then
+    local seq = logger.get_seq()
+    if seq ~= state._debug_log_seq then
+      state._debug_log_seq = seq
+      local max_lines = gameplay_rules.debug_log_max_lines or 50
+      ui_view.set_debug_log(state, logger.get_text(max_lines))
+    end
   end
 end
 
