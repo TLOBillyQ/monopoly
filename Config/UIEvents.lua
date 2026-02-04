@@ -24,7 +24,10 @@ end
 
 function ui_events.send_to_all(event_name, payload)
   assert(event_name ~= nil, "missing event_name")
-  local roles = assert(all_roles, "missing all_roles")
+  local roles = all_roles
+  if not roles then
+    return
+  end
   local data = payload or {}
   for _, role in ipairs(roles) do
     role.send_ui_custom_event(event_name, data)

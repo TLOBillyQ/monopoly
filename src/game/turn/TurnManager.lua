@@ -3,6 +3,7 @@ local logger = require("src.core.Logger")
 local agent = require("src.game.game.Agent")
 local inventory = require("src.game.item.ItemInventory")
 local choice_manager = require("src.game.choice.ChoiceManager")
+local gameplay_rules = require("Config.GameplayRules")
 require "vendor.third_party.ClassUtils"
 
 
@@ -89,6 +90,24 @@ end
 local function _decide_choice_action(game, choice, pending_action)
   if pending_action then
     return pending_action
+  end
+
+  local min_visible = gameplay_rules.auto_choice_min_visible_seconds or 0
+  if min_visible > 0 then
+    local meta = choice and choice.meta or {}
+    local actor = nil
+    if meta.player_id and game.players and game.players[meta.player_id] then
+      actor = game.players[meta.player_id]
+    elseif game.current_player then
+      actor = game:current_player()
+    end
+    if actor and agent.is_auto_player(actor) then
+      local ui_port = game.ui_port
+      local elapsed = ui_port and ui_port.pending_choice_elapsed or 0
+      if elapsed < min_visible then
+        return nil
+      end
+    end
   end
 
   local auto_action = agent.auto_action_for_choice(game, choice)

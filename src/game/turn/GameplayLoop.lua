@@ -98,6 +98,29 @@ local function _build_item_index(state)
   end
 end
 
+local function _resolve_choice_owner(game, choice)
+  local meta = choice and choice.meta or {}
+  if meta.player_id and game.players and game.players[meta.player_id] then
+    return game.players[meta.player_id]
+  end
+  if game.current_player then
+    return game:current_player()
+  end
+  return nil
+end
+
+local function _is_auto_popup_owner(game, state)
+  if not (game and state and state.ui) then
+    return false
+  end
+  local idx = state.ui.popup_owner_index
+  if not idx or not game.players then
+    return false
+  end
+  local actor = game.players[idx]
+  return actor and agent.is_auto_player(actor) or false
+end
+
 local function _build_ui_env(state, game)
   local winner = game.winner
   local winner_name = game.winner_names or (winner and assert(winner.name, "missing winner name"))
@@ -226,6 +249,15 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
   if state.ui and state.ui.input_blocked then
     return nil
   end
+  local min_popup_visible = gameplay_rules.auto_popup_min_visible_seconds or 0
+  if min_popup_visible > 0 and state.ui and state.ui.popup_active then
+    if _is_auto_popup_owner(game, state) then
+      local elapsed = state.ui_modal_elapsed or 0
+      if elapsed < min_popup_visible then
+        return nil
+      end
+    end
+  end
   local ctx = context or {}
   ctx.game_finished = game.finished
   local auto_action = state.auto_runner:next_action(dt, ctx)
@@ -280,6 +312,25 @@ function gameplay_loop.step_choice_timeout(game, state, dt, opts)
   end
 
   state.pending_choice_elapsed = state.pending_choice_elapsed + dt
+  local min_visible = gameplay_rules.auto_choice_min_visible_seconds or 0
+  if min_visible > 0 and state.pending_choice_elapsed >= min_visible then
+    local choice = state.pending_choice
+    local actor = _resolve_choice_owner(game, choice)
+    if actor and agent.is_auto_player(actor) then
+      local action
+      assert(opts.build_action ~= nil, "missing opts.build_action")
+      action = opts.build_action(game, state, choice)
+      if action then
+        state.pending_choice_elapsed = 0
+        turn_dispatch.dispatch_action(game, state, action, {
+          on_close_choice = function(ctx)
+            ui_view.close_choice_modal(ctx)
+          end,
+        })
+        return
+      end
+    end
+  end
   if state.pending_choice_elapsed >= timeout then
     local choice = state.pending_choice
     state.pending_choice_elapsed = 0
@@ -297,6 +348,12 @@ end
 
 function gameplay_loop.step_modal_timeout(state, dt, opts)
   local timeout = constants.action_timeout_seconds or 0
+  if opts and opts.get_timeout_seconds then
+    local override = opts.get_timeout_seconds(state)
+    if type(override) == "number" then
+      timeout = override
+    end
+  end
   if timeout <= 0 then
     state.ui_modal_elapsed = 0
     state.ui_modal_ref = nil
@@ -420,6 +477,18 @@ function gameplay_loop.tick(game, state, dt)
       assert(ctx.ui ~= nil, "missing ui")
       assert(ctx.ui.popup_active, "popup not active")
       return assert(ctx.ui.popup_seq, "missing popup_seq")
+    end,
+    get_timeout_seconds = function(ctx)
+      local min_visible = gameplay_rules.auto_popup_min_visible_seconds or 0
+      if min_visible <= 0 then
+        return nil
+      end
+      if ctx.ui and ctx.ui.popup_active and not ctx.ui.input_blocked then
+        if _is_auto_popup_owner(game, ctx) then
+          return min_visible
+        end
+      end
+      return nil
     end,
     on_timeout = function(ctx)
       ui_view.close_popup(ctx)

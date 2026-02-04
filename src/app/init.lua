@@ -68,7 +68,15 @@ local function _build_state()
   }
 
   state.push_popup = function(_, payload)
-    return ui_view.push_popup(state, payload)
+    local ok = ui_view.push_popup(state, payload)
+    if state.ui then
+      if ok and current_game and current_game.store and current_game.store.get then
+        state.ui.popup_owner_index = current_game.store:get({ "turn", "current_player_index" })
+      else
+        state.ui.popup_owner_index = nil
+      end
+    end
+    return ok
   end
   state.on_tile_upgraded = function(_, tile_id, level)
     ui_view.on_tile_upgraded(state, tile_id, level)
