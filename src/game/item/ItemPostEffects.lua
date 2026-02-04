@@ -47,7 +47,9 @@ local target_effects = {
         logger.event(target.name .. " 有天使，查税无效")
         return true
       end
-      if inventory.consume(target, item_ids.tax_free) then
+      local tax_free_idx = inventory.find_index(target, item_ids.tax_free)
+      if tax_free_idx then
+        inventory.remove_by_index(target, tax_free_idx)
         logger.event(target.name .. " 使用免税卡抵消查税")
         return true
       end
@@ -256,4 +258,3 @@ function item_effects.apply_post(game, player, item_id, context)
 end
 
 return item_effects
-

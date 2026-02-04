@@ -46,6 +46,24 @@ local function _assert_eq(a, b, msg)
   end
 end
 
+local function _with_patches(patches, fn)
+  local originals = {}
+  for i, patch in ipairs(patches) do
+    local target = patch.target or _G
+    originals[i] = { target = target, key = patch.key, value = target[patch.key] }
+    target[patch.key] = patch.value
+  end
+  local handler = debug and debug.traceback or function(err) return err end
+  local ok, err = xpcall(fn, handler)
+  for i = #originals, 1, -1 do
+    local patch = originals[i]
+    patch.target[patch.key] = patch.value
+  end
+  if not ok then
+    error(err)
+  end
+end
+
 LuaAPI = LuaAPI or {}
 LuaAPI.rand = LuaAPI.rand or function()
   return math.random()
@@ -65,7 +83,6 @@ local function _build_ui_port(overrides)
   local port = {
     wait_move_anim = false,
     wait_action_anim = false,
-    push_popup = function() end,
     push_popup = function() end,
     on_tile_owner_changed = function() end,
     on_tile_upgraded = function() end,
@@ -128,6 +145,19 @@ local function _get_choice(game)
   return game.store:get({ "turn", "pending_choice" })
 end
 
+local function _resolve_choice_first(game, pending)
+  if pending.options and #pending.options > 0 then
+    local first = pending.options[1]
+    choice_manager.resolve(game, pending, { option_id = first.id or first })
+    return true
+  end
+  if pending.allow_cancel then
+    choice_manager.resolve(game, pending, { type = "choice_cancel", choice_id = pending.id })
+    return true
+  end
+  return false
+end
+
 local max_landing_depth = 10
 
 local function _build_landing_ctx(game, move_result)
@@ -166,6 +196,27 @@ local function _resolve_landing(game, player, tile, move_result, depth)
     optional_cancel_label = "跳过",
     on_need_landing = handle_need_landing,
   })
+end
+
+local function _resolve_landing_with_choices(game, player, tile, move_result, max_iterations)
+  local res = _resolve_landing(game, player, tile, move_result, 0)
+  local iteration = 0
+  local limit = max_iterations or 10
+  while res and res.waiting and iteration < limit do
+    iteration = iteration + 1
+    local pending = _get_choice(game)
+    if not pending then
+      break
+    end
+    if not _resolve_choice_first(game, pending) then
+      break
+    end
+    if iteration < limit then
+      local current_tile = game.board:get_tile(player.position)
+      res = _resolve_landing(game, player, current_tile, move_result, iteration)
+    end
+  end
+  return res
 end
 
 local function _new_game()
@@ -246,23 +297,21 @@ local function _test_move_anim_callback_and_delay()
     end,
   }
   local delay_called = nil
-  local original_lua_api = LuaAPI
-  local original_set_timeout = SetTimeOut
-  LuaAPI = {
-    call_delay_time = function(delay, cb)
-      delay_called = delay
-      cb()
-    end,
-  }
-  SetTimeOut = LuaAPI.call_delay_time
-  gameplay_loop.step_move_anim(game, layer, {
-    on_move_anim = function(_, anim)
-      _assert_eq(anim.seq, 1, "anim seq forwarded")
-      return 0.2
-    end,
-  })
-  LuaAPI = original_lua_api
-  SetTimeOut = original_set_timeout
+  local function call_delay(delay, cb)
+    delay_called = delay
+    cb()
+  end
+  _with_patches({
+    { key = "LuaAPI", value = { call_delay_time = call_delay } },
+    { key = "SetTimeOut", value = call_delay },
+  }, function()
+    gameplay_loop.step_move_anim(game, layer, {
+      on_move_anim = function(_, anim)
+        _assert_eq(anim.seq, 1, "anim seq forwarded")
+        return 0.2
+      end,
+    })
+  end)
   _assert_eq(delay_called, 0.2, "delay requested")
   _assert_eq(#dispatched, 1, "move_anim_done dispatched")
   _assert_eq(dispatched[1].seq, 1, "move_anim_done seq")
@@ -320,8 +369,7 @@ local function _test_monster_card()
     end
     local pending = _get_choice(g)
     assert(pending and pending.kind == "demolish_target", "monster should open choice")
-    local first = pending.options[1]
-    choice_manager.resolve(g, pending, { option_id = first.id })
+    _resolve_choice_first(g, pending)
     res = true
   end
   local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
@@ -347,8 +395,7 @@ local function _test_missile_card()
     end
     local pending = _get_choice(g)
     assert(pending and pending.kind == "demolish_target", "missile should open choice")
-    local first = pending.options[1]
-    choice_manager.resolve(g, pending, { option_id = first.id })
+    _resolve_choice_first(g, pending)
     res = true
   end
   local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
@@ -381,9 +428,8 @@ local function _test_landing_optional_waits_without_ui_and_can_resolve()
   assert(res and res.waiting, "landing resolver should wait without manual UI interaction")
   local pending = _get_choice(g)
   assert(pending and pending.kind == "landing_optional_effect", "pending choice expected")
-  local first = pending.options and pending.options[1]
-  assert(first, "expected at least one optional effect")
-  choice_manager.resolve(g, pending, { option_id = first.id })
+  local resolved = _resolve_choice_first(g, pending)
+  assert(resolved, "expected at least one optional effect")
   assert(_tile_state(g, tile).owner_id == p.id, "land should be purchased after resolving choice")
   assert(p.cash < before_cash, "cash deducted for purchase")
 end
@@ -451,19 +497,21 @@ local function _test_chance_is_mandatory_effect_entrypoint()
 
   -- We verify execution by checking if LuaAPI.rand is used to pick a card
   local called = { rand = 0 }
-  local original_lua_api = LuaAPI
-  LuaAPI = LuaAPI or {}
-  LuaAPI.rand = function()
+  local prev_lua_api = LuaAPI
+  local lua_api = prev_lua_api or {}
+  local function rand()
     called.rand = called.rand + 1
     return 0 -- Pick first card
   end
-  
-  -- Ensure we don't crash on effect execution
-  -- We assume standard chance cards are safe or we mock chance_effects?
-  -- Mocking requires package reload. Let's trust integration.
-
-  _resolve_landing(g, p, tile, {})
-  LuaAPI = original_lua_api
+  _with_patches({
+    { key = "LuaAPI", value = lua_api },
+    { target = lua_api, key = "rand", value = rand },
+  }, function()
+    -- Ensure we don't crash on effect execution
+    -- We assume standard chance cards are safe or we mock chance_effects?
+    -- Mocking requires package reload. Let's trust integration.
+    _resolve_landing(g, p, tile, {})
+  end)
 
   assert(called.rand > 0, "chance logic was executed (LuaAPI.rand used)")
 end
@@ -888,33 +936,28 @@ local function _test_tick_skips_anim_when_no_anim()
   local main_view = require("src.ui.UIView")
   local ui_model = require("src.ui.UIModel")
 
-  local old_refresh = main_view.refresh_panel
-  local old_refresh_board = main_view.refresh_board
-  local old_open_choice = main_view.open_choice_modal
-  local old_build = ui_model.build
-  local old_game_api = GameAPI
-  local old_enums = Enums
-
-  main_view.refresh_panel = function() end
-  main_view.refresh_board = function() end
-  main_view.open_choice_modal = function() end
-  ui_model.build = function(store_state)
-    return {
-      state = store_state,
-      current_player_name = "P",
-      current_player_cash = 0,
-      turn_count = store_state.turn.turn_count,
-    }
-  end
-  GameAPI = {
-    get_role = function()
+  local game_api = GameAPI or {}
+  local patches = {
+    { target = main_view, key = "refresh_panel", value = function() end },
+    { target = main_view, key = "refresh_board", value = function() end },
+    { target = main_view, key = "open_choice_modal", value = function() end },
+    { target = ui_model, key = "build", value = function(store_state)
+      return {
+        state = store_state,
+        current_player_name = "P",
+        current_player_cash = 0,
+        turn_count = store_state.turn.turn_count,
+      }
+    end },
+    { key = "GameAPI", value = game_api },
+    { target = game_api, key = "get_role", value = function()
       return {
         set_camera_bind_mode = function() end,
         set_camera_lock_position = function() end,
       }
-    end,
+    end },
+    { key = "Enums", value = { CameraBindMode = { TRACK = 0 } } },
   }
-  Enums = { CameraBindMode = { TRACK = 0 } }
 
   local store = store:new({
     players = { [1] = { id = 1, name = "P1", cash = 0 } },
@@ -945,15 +988,10 @@ local function _test_tick_skips_anim_when_no_anim()
   }
 
   local ok, err = pcall(function()
-    gameplay_loop.tick(game, state, 0.1)
+    _with_patches(patches, function()
+      gameplay_loop.tick(game, state, 0.1)
+    end)
   end)
-
-  main_view.refresh_panel = old_refresh
-  main_view.refresh_board = old_refresh_board
-  main_view.open_choice_modal = old_open_choice
-  ui_model.build = old_build
-  GameAPI = old_game_api
-  Enums = old_enums
 
   assert(ok, "tick should not error without anim: " .. tostring(err))
 end
@@ -995,86 +1033,75 @@ local function _test_autorunner_runs_to_end()
   local timeout = constants.action_timeout_seconds or 0
   local dt = timeout > 0 and (timeout + 0.1) or 1
 
+  local now = 0
+
   local old_handle_pass_players = steal.handle_pass_players
   local old_pick_roadblock_target = agent.pick_roadblock_target
   local old_can_pay_rent = land.executors.pay_rent.can_apply
-  local old_game_api = GameAPI
-  local old_get_timestamp = old_game_api and old_game_api.get_timestamp or nil
-  local old_get_timestamp_diff = old_game_api and old_game_api.get_timestamp_diff or nil
-  local now = 0
-
-  steal.handle_pass_players = function(game_ctx, player, encountered_ids)
-    if not item_inventory.find_index(player, gameplay_rules.item_ids.steal) then
+  local game_api = GameAPI or {}
+  local patches = {
+    { target = steal, key = "handle_pass_players", value = function(game_ctx, player, encountered_ids)
+      if not item_inventory.find_index(player, gameplay_rules.item_ids.steal) then
+        return nil
+      end
+      return old_handle_pass_players(game_ctx, player, encountered_ids)
+    end },
+    { target = agent, key = "pick_roadblock_target", value = function()
       return nil
-    end
-    return old_handle_pass_players(game_ctx, player, encountered_ids)
-  end
-  agent.pick_roadblock_target = function()
-    return nil
-  end
-  land.executors.pay_rent.can_apply = function(ctx)
-    if not old_can_pay_rent(ctx) then
-      return false
-    end
-    local owner = land_actions.resolve_rent_owner(ctx.game, ctx.tile)
-    return owner ~= nil
-  end
-
-  if not GameAPI then
-    GameAPI = {}
-  end
-  GameAPI.get_timestamp = function()
-    return now
-  end
-  GameAPI.get_timestamp_diff = function(a, b)
-    return a - b
-  end
+    end },
+    { target = land.executors.pay_rent, key = "can_apply", value = function(ctx)
+      if not old_can_pay_rent(ctx) then
+        return false
+      end
+      local owner = land_actions.resolve_rent_owner(ctx.game, ctx.tile)
+      return owner ~= nil
+    end },
+    { key = "GameAPI", value = game_api },
+    { target = game_api, key = "get_timestamp", value = function()
+      return now
+    end },
+    { target = game_api, key = "get_timestamp_diff", value = function(a, b)
+      return a - b
+    end },
+  }
 
   local ok, err = pcall(function()
-    for _ = 1, max_steps do
-      if g.finished then
-        break
+    _with_patches(patches, function()
+      for _ = 1, max_steps do
+        if g.finished then
+          break
+        end
+        now = now + dt
+        gameplay_loop.step_auto_runner(g, state, dt, {
+          modal_active = false,
+          modal_buttons = nil,
+          game_finished = g.finished,
+        })
+        gameplay_loop.step_choice_timeout(g, state, dt, {
+          on_pending_choice = function() end,
+          is_choice_active = function(ctx)
+            return ctx.pending_choice and true or false
+          end,
+          build_action = function(game_ctx, ctx, choice)
+            local auto_choice = agent.auto_action_for_choice(game_ctx, choice)
+            if auto_choice then
+              return auto_choice
+            end
+            local options = assert(choice.options, "missing choice.options")
+            local first = assert(options[1], "missing choice option")
+            return {
+              type = "choice_select",
+              choice_id = choice.id,
+              option_id = first.id or first,
+            }
+          end,
+        })
       end
-      now = now + dt
-      gameplay_loop.step_auto_runner(g, state, dt, {
-        modal_active = false,
-        modal_buttons = nil,
-        game_finished = g.finished,
-      })
-      gameplay_loop.step_choice_timeout(g, state, dt, {
-        on_pending_choice = function() end,
-        is_choice_active = function(ctx)
-          return ctx.pending_choice and true or false
-        end,
-        build_action = function(game_ctx, ctx, choice)
-          local auto_choice = agent.auto_action_for_choice(game_ctx, choice)
-          if auto_choice then
-            return auto_choice
-          end
-          local options = assert(choice.options, "missing choice.options")
-          local first = assert(options[1], "missing choice option")
-          return {
-            type = "choice_select",
-            choice_id = choice.id,
-            option_id = first.id or first,
-          }
-        end,
-      })
-    end
-    if not g.finished then
-      error("autorunner did not finish within max_steps=" .. tostring(max_steps))
-    end
+      if not g.finished then
+        error("autorunner did not finish within max_steps=" .. tostring(max_steps))
+      end
+    end)
   end)
-
-  steal.handle_pass_players = old_handle_pass_players
-  agent.pick_roadblock_target = old_pick_roadblock_target
-  land.executors.pay_rent.can_apply = old_can_pay_rent
-  if old_game_api then
-    GameAPI.get_timestamp = old_get_timestamp
-    GameAPI.get_timestamp_diff = old_get_timestamp_diff
-  else
-    GameAPI = nil
-  end
 
   assert(ok, "autorunner test failed: " .. tostring(err))
 end
@@ -1131,17 +1158,16 @@ local function _test_complex_consecutive_turn_settlement()
     g.board:place_mine(mine_pos.id)
   end
   
-  -- 验证配置中存在向前移动的机会卡（测试依赖此配置）
-  -- 直接检查机会卡 3023: "后方有犬吠，你向前跑两格"
+  -- 验证配置中存在向前移动 2 格的机会卡（测试依赖此配置）
   local chance_cfg = require("Config.Generated.ChanceCards")
-  local has_card_3023 = false
+  local has_move_forward = false
   for _, card in ipairs(chance_cfg) do
-    if card.id == 3023 then
-      has_card_3023 = true
+    if card.effect == "move_forward" and card.steps == 2 and card.target == "self" then
+      has_move_forward = true
       break
     end
   end
-  assert(has_card_3023, "配置中需要存在机会卡 3023（向前移动2格）")
+  assert(has_move_forward, "配置中需要存在向前移动2格的机会卡")
   
   -- 记录初始状态
   local initial_has_steal_card = inventory.find_index(p1, 2007) and true or false
@@ -1161,10 +1187,8 @@ local function _test_complex_consecutive_turn_settlement()
     local steal_res = steal.handle_pass_players(g, p1, interrupt.encountered_ids or {})
     if steal_res and steal_res.waiting then
       local pending = _get_choice(g)
-      if pending and pending.options and #pending.options > 0 then
-        choice_manager.resolve(g, pending, { option_id = pending.options[1].id })
-      elseif pending and pending.allow_cancel then
-        choice_manager.resolve(g, pending, { type = "choice_cancel", choice_id = pending.id })
+      if pending then
+        _resolve_choice_first(g, pending)
       end
     end
     res1 = movement_manager.move(g, p1, interrupt.remaining_steps, {
@@ -1181,35 +1205,8 @@ local function _test_complex_consecutive_turn_settlement()
   
   -- 第二步：处理经过玩家的偷窃卡提示
   local tile_chance = g.board:get_tile(chance_idx)
-  local landing_res = _resolve_landing(g, p1, tile_chance, res1, 0)
-  
-  -- 在无UI模式下，应该自动处理偷窃并继续
-  -- 然后触发机会卡效果
-  -- 如果有等待选择，需要手动处理
-  local iteration = 0
-  local max_iterations = 10
-  while landing_res and landing_res.waiting and iteration < max_iterations do
-    iteration = iteration + 1
-    local pending = _get_choice(g)
-    if not pending then
-      break
-    end
-    
-    -- 自动选择第一个选项或取消
-    if pending.options and #pending.options > 0 then
-      choice_manager.resolve(g, pending, { option_id = pending.options[1].id })
-    elseif pending.allow_cancel then
-      choice_manager.resolve(g, pending, { type = "choice_cancel", choice_id = pending.id })
-    else
-      break
-    end
-    
-    -- 重新检查 landing
-    if iteration < max_iterations then
-      local current_tile = g.board:get_tile(p1.position)
-      landing_res = _resolve_landing(g, p1, current_tile, res1, iteration)
-    end
-  end
+  -- 在无UI模式下，自动处理偷窃并继续，然后触发机会卡效果
+  _resolve_landing_with_choices(g, p1, tile_chance, res1, 10)
   
   -- 验证连续触发的结果：
   -- 由于RNG的随机性和复杂的状态转换，我们主要验证系统没有崩溃
@@ -1291,30 +1288,7 @@ local function _test_complex_market_interrupt_with_rent()
   -- 如果没有中断或已处理，继续落地
   if not has_market_interrupt or (res.market_interrupt and res.market_interrupt.remaining_steps == 0) then
     local final_tile = g.board:get_tile(p1.position)
-    local landing_res = _resolve_landing(g, p1, final_tile, res, 0)
-    
-    -- 处理所有等待的选择（例如支付租金）
-    local iteration = 0
-    while landing_res and landing_res.waiting and iteration < 10 do
-      iteration = iteration + 1
-      local pending = _get_choice(g)
-      if not pending then
-        break
-      end
-      
-      if pending.options and #pending.options > 0 then
-        choice_manager.resolve(g, pending, { option_id = pending.options[1].id })
-      elseif pending.allow_cancel then
-        choice_manager.resolve(g, pending, { type = "choice_cancel", choice_id = pending.id })
-      else
-        break
-      end
-      
-      if iteration < 10 then
-        local current_tile = g.board:get_tile(p1.position)
-        landing_res = _resolve_landing(g, p1, current_tile, res, iteration)
-      end
-    end
+    _resolve_landing_with_choices(g, p1, final_tile, res, 10)
   end
   
   -- 验证：没有崩溃即为成功
@@ -1362,6 +1336,7 @@ local tests = {
 }
 
 for _, fn in ipairs(tests) do
+  math.randomseed(1)
   fn()
   io.stdout:write(".")
 end
