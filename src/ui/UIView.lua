@@ -10,6 +10,7 @@ local CANVAS_BASE = "基础屏"
 local CANVAS_CHOICE = "通用选择屏"
 local CANVAS_MARKET = "黑市屏"
 local CANVAS_POPUP = "弹窗屏"
+local CANVAS_DEBUG = "调试屏"
 
 local function _query_node(name)
   assert(name ~= nil, "missing ui node name")
@@ -54,15 +55,19 @@ local function _set_debug_log(_, text)
   _set_label(nil, "日志", text)
 end
 
-local function _set_debug_visible(_, visible)
-  _set_visible(nil, "调试屏", visible)
+local function _set_debug_visible(ui, visible)
+  if ui then
+    ui.debug_visible = visible == true
+  end
+  _set_visible(nil, CANVAS_DEBUG, visible)
 end
 
 local function _switch_canvas(ui, target)
   assert(ui ~= nil, "missing ui state")
   local target_name = target or CANVAS_BASE
   for _, name in ipairs(ui_events.canvas_names) do
-    if name ~= CANVAS_BASE and name ~= target_name then
+    local keep_debug = name == CANVAS_DEBUG and ui.debug_visible == true
+    if name ~= CANVAS_BASE and name ~= target_name and not keep_debug then
       local hide_event = ui_events.hide[name]
       if hide_event then
         ui_events.send_to_all(hide_event, {})
@@ -86,6 +91,7 @@ function ui_view.build_ui_state()
     auto_play = false,
     auto_interval = 0.1,
     input_blocked = false,
+    debug_visible = false,
     item_slots = {
       "道具槽位1",
       "道具槽位2",
