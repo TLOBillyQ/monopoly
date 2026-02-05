@@ -1,0 +1,7 @@
+从仓库看，这是运行在 Eggy 运行时的单进程 Lua 游戏，核心是回合制状态机 + 帧驱动 tick 循环，状态保存在内存 `Store`，UI 通过 `UIManager` 事件路由驱动；地图/物品/市场等由 `Config/Generated` 提供并在组装阶段注入。已确认证据：入口与 tick/事件绑定在 `src/app/init.lua:1`，组装与初始状态在 `src/game/game/CompositionRoot.lua:42`，内存状态树在 `src/core/Store.lua:4`，回合流转与等待状态在 `src/game/turn/TurnManager.lua:150`，UI 事件路由在 `src/ui/UIEventRouter.lua:43`。推断：代码内未见网络/数据库/队列或持久化写入，因此无外部服务依赖且重启会丢局（仅基于代码扫描推断）。
+
+- 失败模式：回合流转卡死在等待态；触发：动画完成事件未派发/序号不匹配，或 UI 节点缺失导致选择未发送；症状：`turn.phase` 长时间停在 `wait_choice`/`wait_move_anim`/`wait_action_anim`，操作无响应；检测：日志无“回合推进”，UI 出现“UI 节点未适配”提示，`Store` 的 `turn.phase` 不变（`src/game/turn/TurnManager.lua:164`、`src/ui/UIEventRouter.lua:35`）；缓解：为等待态加超时与兜底自动选择，校验动画 seq，一致性断言失败时自动重建或回退。
+- 失败模式：内存对象与 `Store` 状态不一致；触发：直接修改玩家/地块/库存而未经过 `Store:set` 或未触发库存回调；症状：UI 显示与实际逻辑不一致，AI 依据旧状态决策，回合日志与面板冲突；检测：对比 `Store.state` 与对象字段，观察 `dirty` 标记未变化（`src/core/Store.lua:42`、`src/game/game/GameState.lua:21`）；缓解：强制所有状态变更走 `GameState`/`Store`，为关键路径加一致性检查。
+- 失败模式：配置数据不一致导致崩溃或非法路径；触发：`Config.Map` 的 `path` 含不存在的 tile，或 `Config/Generated` 缺字段；症状：启动或进入回合时报 `assert`/nil 访问，棋盘渲染异常；检测：启动期报错定位到组装/建盘阶段（`src/game/game/CompositionRoot.lua:42`）；缓解：加启动期配置校验，生成流程加入一致性测试。
+- 失败模式：重启或异常中断导致局内数据丢失（数据损失）；触发：进程退出/崩溃/热更重载；症状：对局无法恢复，玩家进度清零；检测：复现崩溃后无恢复路径，`Store` 仅在内存维护（`src/core/Store.lua:21`）；缓解：引入持久化快照或回放日志，按回合/关键事件写盘。
+- 失败模式：运行时依赖不满足或版本差异；触发：`GameAPI`/`UIManager`/事件系统接口缺失或改名；症状：初始化 `assert` 失败、UI 不响应、计时器不触发；检测：日志显示缺少 API 或事件绑定失败（`src/app/init.lua:120`、`src/game/game/CompositionRoot.lua:31`）；缓解：启动时做能力探测，提供降级路径或提示版本不兼容。
