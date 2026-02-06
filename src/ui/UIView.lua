@@ -312,14 +312,14 @@ function ui_view.open_choice_modal(state, choice, market)
       state.ui:set_visible(state.ui.choice.root, false)
       state.ui.choice_active = false
     end
-    local market_view = market or {
+    local market_payload = market or {
       choice_id = choice_id,
       options = choice.options,
       allow_cancel = choice.allow_cancel,
       cancel_label = choice.cancel_label,
       selected_option_id = state.pending_choice_selected_option_id,
     }
-    market_view.refresh_market(state, market_view)
+    market_view.refresh_market(state, market_payload)
     return
   end
   if state.ui.market_active then
