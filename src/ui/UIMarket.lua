@@ -95,12 +95,17 @@ function eggy_layer_market.refresh_market_selection(state, option_id)
   local price = _resolve_market_price(entry)
   local currency = _resolve_market_currency(entry)
   price_text = "售价：" .. tostring(price) .. " " .. currency
-  icon_key = _resolve_market_icon_key(refs, option_id, entry, cfg)
+  local resolved_icon_key = _resolve_market_icon_key(refs, option_id, entry, cfg)
+  if resolved_icon_key ~= nil then
+    icon_key = resolved_icon_key
+  end
   ui:set_label(market_ui.price_label, price_text)
-  local node = ui.query_node(market_ui.selected_card)
-  node.image_texture = icon_key
-  if node.reset_size then
-    node:reset_size()
+  if icon_key ~= nil then
+    local node = ui.query_node(market_ui.selected_card)
+    node.image_texture = icon_key
+    if node.reset_size then
+      node:reset_size()
+    end
   end
 end
 
@@ -138,8 +143,13 @@ function eggy_layer_market.refresh_market(state, market)
       ui:set_visible(frame, true)
       local level = _resolve_market_level(cfg)
       local rarity_key = _resolve_ref_key(refs, market_ui.rarity_ref_keys[level])
-      local node = ui.query_node(frame)
-      node.image_texture = rarity_key
+      if rarity_key == nil then
+        rarity_key = _resolve_ref_key(refs, market_ui.empty_ref_key)
+      end
+      if rarity_key ~= nil then
+        local node = ui.query_node(frame)
+        node.image_texture = rarity_key
+      end
     else
       ui:set_visible(button, false)
       ui:set_touch_enabled(button, false)
