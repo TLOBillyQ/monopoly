@@ -7,6 +7,7 @@ local reconnect_service_mod = require("src.v2.application.ReconnectService")
 local projection_service_mod = require("src.v2.application.ProjectionService")
 local archive_repository_mod = require("src.v2.infrastructure.ArchiveRepository")
 local session_clock_mod = require("src.v2.infrastructure.SessionClock")
+local auto_agent_service = require("src.v2.domain.services.AutoAgentService")
 
 local deep_copy = Utils.deep_copy
 
@@ -210,10 +211,10 @@ function match_service:_step_choice_timeout(now)
   local command_type = command_types.choice_cancel
   local payload = {}
   if owner and owner.auto then
-    command_type = command_types.choice_select
-    local option = choice.options and choice.options[1]
-    if option then
-      payload.option_id = option.id or option
+    local auto_action = auto_agent_service.auto_choice_action(state, choice)
+    if auto_action and auto_action.type == "choice_select" then
+      command_type = command_types.choice_select
+      payload.option_id = auto_action.option_id
     end
   end
 

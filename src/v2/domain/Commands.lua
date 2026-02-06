@@ -2,6 +2,8 @@ local commands = {}
 
 commands.types = {
   next_turn = "next_turn",
+  use_item = "use_item",
+  market_buy = "market_buy",
   choice_select = "choice_select",
   choice_cancel = "choice_cancel",
   move_anim_done = "move_anim_done",
@@ -10,6 +12,7 @@ commands.types = {
   role_online = "role_online",
   tick = "tick",
   set_auto = "set_auto",
+  restart_match = "restart_match",
 }
 
 local function _normalize_payload(payload)

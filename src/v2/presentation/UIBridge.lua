@@ -114,6 +114,24 @@ function ui_bridge:bind_inputs(on_intent)
     on_intent({ type = "auto_toggle" })
   end)
 
+  for idx = 1, 5 do
+    _register_click(self.listeners, "道具槽位" .. tostring(idx), function()
+      local model = self.state.ui_model or {}
+      local choice = model.choice
+      if not choice or choice.kind ~= "item_phase_choice" then
+        return
+      end
+      local item_id = model.item_slots and model.item_slots[idx]
+      if not item_id then
+        return
+      end
+      on_intent({
+        type = "use_item",
+        item_id = item_id,
+      })
+    end)
+  end
+
   _register_click(self.listeners, "通用选择_取消", function()
     local choice = self.state.ui_model and self.state.ui_model.choice
     if choice and choice.allow_cancel ~= false then
@@ -157,6 +175,7 @@ function ui_bridge:bind_inputs(on_intent)
       local option_id = option.id or option
       self.state.pending_choice_selected_option_id = option_id
       ui_view.select_market_option(self.state, option_id)
+      on_intent({ type = "market_select", option_id = option_id, choice_id = market.choice_id })
     end)
   end
 
@@ -164,7 +183,7 @@ function ui_bridge:bind_inputs(on_intent)
     local market = self.state.ui_model and self.state.ui_model.market
     local option_id = self.state.pending_choice_selected_option_id
     if market and option_id then
-      on_intent({ type = "market_confirm", choice_id = market.choice_id, option_id = option_id })
+      on_intent({ type = "market_buy", choice_id = market.choice_id, option_id = option_id })
     end
   end)
 

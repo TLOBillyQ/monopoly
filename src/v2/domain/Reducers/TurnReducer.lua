@@ -18,8 +18,16 @@ function turn_reducer.apply(state, event)
   if event.type == event_types.turn_began then
     turn.turn_no = payload.turn_no or (turn.turn_no + 1)
     turn.last_dice = payload.dice
+    turn.last_rolls = payload.rolls or turn.last_rolls
     if payload.next_seed ~= nil then
       state.rng_seed = payload.next_seed
+    end
+    return
+  end
+
+  if event.type == event_types.phase_changed then
+    if payload.phase then
+      turn.phase = payload.phase
     end
     return
   end

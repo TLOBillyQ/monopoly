@@ -18,9 +18,11 @@ local function _append_property(player, tile_id)
 end
 
 local function _eliminate_if_needed(player)
-  if player.cash < 0 then
+  if player.cash <= 0 then
     player.eliminated = true
-    player.cash = 0
+    if player.cash < 0 then
+      player.cash = 0
+    end
   end
 end
 
@@ -35,7 +37,7 @@ function player_reducer.apply(state, event)
     return
   end
 
-  if event.type == event_types.tile_bought then
+  if event.type == event_types.land_bought then
     local player = _player(state, payload.owner_seat)
     if player then
       player.cash = player.cash - (payload.cost or 0)
@@ -45,7 +47,7 @@ function player_reducer.apply(state, event)
     return
   end
 
-  if event.type == event_types.tile_upgraded then
+  if event.type == event_types.land_upgraded then
     local player = _player(state, payload.owner_seat)
     if player then
       player.cash = player.cash - (payload.cost or 0)
@@ -93,6 +95,125 @@ function player_reducer.apply(state, event)
       player.auto = payload.enabled == true
     end
     return
+  end
+
+  if event.type == event_types.player_cash_changed then
+    local player = _player(state, payload.seat)
+    if player then
+      player.cash = (player.cash or 0) + (payload.delta or 0)
+      if payload.value ~= nil then
+        player.cash = payload.value
+      end
+      _eliminate_if_needed(player)
+    end
+    return
+  end
+
+  if event.type == event_types.player_balance_changed then
+    local player = _player(state, payload.seat)
+    if player then
+      player.balances = player.balances or {}
+      local currency = payload.currency
+      if currency == "金币" then
+        player.cash = (player.cash or 0) + (payload.delta or 0)
+        if payload.value ~= nil then
+          player.cash = payload.value
+        end
+        _eliminate_if_needed(player)
+      elseif currency ~= nil then
+        local current = player.balances[currency] or 0
+        player.balances[currency] = current + (payload.delta or 0)
+        if payload.value ~= nil then
+          player.balances[currency] = payload.value
+        end
+      end
+    end
+    return
+  end
+
+  if event.type == event_types.player_status_set then
+    local player = _player(state, payload.seat)
+    if player then
+      player.status = player.status or {}
+      player.status[payload.key] = payload.value
+    end
+    return
+  end
+
+  if event.type == event_types.player_seat_set then
+    local player = _player(state, payload.seat)
+    if player then
+      player.seat_vehicle_id = payload.vehicle_id
+    end
+    return
+  end
+
+  if event.type == event_types.player_property_set then
+    local player = _player(state, payload.seat)
+    if player then
+      player.properties = player.properties or {}
+      if payload.owned then
+        player.properties[payload.tile_id] = true
+      else
+        player.properties[payload.tile_id] = nil
+      end
+    end
+    return
+  end
+
+  if event.type == event_types.player_eliminated then
+    local player = _player(state, payload.seat)
+    if player then
+      player.eliminated = true
+      player.cash = 0
+      player.properties = {}
+      player.inventory = player.inventory or { items = {} }
+      player.inventory.items = {}
+      player.seat_vehicle_id = nil
+    end
+    return
+  end
+
+  if event.type == event_types.item_granted then
+    local player = _player(state, payload.seat)
+    if player then
+      player.inventory = player.inventory or { items = {}, max_slots = 5 }
+      player.inventory.items = player.inventory.items or {}
+      if #player.inventory.items < (player.inventory.max_slots or 5) then
+        player.inventory.items[#player.inventory.items + 1] = { id = payload.item_id }
+      end
+    end
+    return
+  end
+
+  if event.type == event_types.item_consumed then
+    local player = _player(state, payload.seat)
+    if player and player.inventory and player.inventory.items then
+      local remove_idx = nil
+      for index, item in ipairs(player.inventory.items) do
+        if item and item.id == payload.item_id then
+          remove_idx = index
+          break
+        end
+      end
+      if remove_idx then
+        table.remove(player.inventory.items, remove_idx)
+      end
+    end
+    return
+  end
+
+  if event.type == event_types.item_discarded then
+    local player = _player(state, payload.seat)
+    if player and player.inventory and player.inventory.items then
+      local count = payload.count or 1
+      for _ = 1, count do
+        if #player.inventory.items <= 0 then
+          break
+        end
+        table.remove(player.inventory.items, 1)
+      end
+    end
   end
 end
 

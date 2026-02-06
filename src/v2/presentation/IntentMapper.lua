@@ -33,6 +33,9 @@ function intent_mapper:to_command(intent, role_id, state)
       role_id = role_id,
       seat_id = seat,
       client_seq = intent.client_seq,
+      payload = {
+        dice = intent.dice,
+      },
     })
   end
 
@@ -42,6 +45,7 @@ function intent_mapper:to_command(intent, role_id, state)
       seat_id = seat,
       client_seq = intent.client_seq,
       payload = {
+        choice_id = intent.choice_id,
         option_id = intent.option_id,
       },
     })
@@ -58,6 +62,17 @@ function intent_mapper:to_command(intent, role_id, state)
     })
   end
 
+  if intent.type == "use_item" or intent.type == "item_use" then
+    return commands.new(command_types.use_item, {
+      role_id = role_id,
+      seat_id = seat,
+      client_seq = intent.client_seq,
+      payload = {
+        item_id = intent.item_id,
+      },
+    })
+  end
+
   if intent.type == "auto_toggle" then
     return commands.new(command_types.set_auto, {
       role_id = role_id,
@@ -69,19 +84,55 @@ function intent_mapper:to_command(intent, role_id, state)
     })
   end
 
-  if intent.type == "market_confirm" then
-    return commands.new(command_types.choice_select, {
+  if intent.type == "market_buy" or intent.type == "market_confirm" then
+    return commands.new(command_types.market_buy, {
       role_id = role_id,
       seat_id = seat,
       client_seq = intent.client_seq,
       payload = {
+        choice_id = intent.choice_id,
         option_id = intent.option_id,
+        product_id = intent.product_id,
       },
     })
   end
 
+  if intent.type == "market_select" then
+    return nil
+  end
+
   if intent.type == "market_cancel" then
     return commands.new(command_types.choice_cancel, {
+      role_id = role_id,
+      seat_id = seat,
+      client_seq = intent.client_seq,
+    })
+  end
+
+  if intent.type == "move_anim_done" or intent.type == "anim_move_done" then
+    return commands.new(command_types.move_anim_done, {
+      role_id = role_id,
+      seat_id = seat,
+      client_seq = intent.client_seq,
+      payload = {
+        seq = intent.seq,
+      },
+    })
+  end
+
+  if intent.type == "action_anim_done" or intent.type == "anim_action_done" then
+    return commands.new(command_types.action_anim_done, {
+      role_id = role_id,
+      seat_id = seat,
+      client_seq = intent.client_seq,
+      payload = {
+        seq = intent.seq,
+      },
+    })
+  end
+
+  if intent.type == "restart_match" then
+    return commands.new(command_types.restart_match, {
       role_id = role_id,
       seat_id = seat,
       client_seq = intent.client_seq,

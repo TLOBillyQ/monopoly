@@ -29,6 +29,11 @@ local function _turn_label(state)
   return "回合: " .. tostring(turn.turn_no)
 end
 
+local function _phase_label(state)
+  local phase = state.turn and state.turn.phase or "idle"
+  return "阶段: " .. tostring(phase)
+end
+
 local function _build_player_rows(state)
   local rows = {}
   for seat = 1, 4 do
@@ -104,6 +109,33 @@ local function _choice_projection(state)
   return choice, market
 end
 
+local function _build_item_slots(state, seat)
+  local player = state.players[seat]
+  if not player or not player.inventory then
+    return {}
+  end
+  local slots = {}
+  local max_slots = player.inventory.max_slots or 5
+  local items = player.inventory.items or {}
+  for index = 1, max_slots do
+    local item = items[index]
+    slots[index] = item and item.id or nil
+  end
+  return slots
+end
+
+local function _resolve_winner_name(state)
+  local match = state.match or {}
+  if match.winner_names and match.winner_names[1] then
+    return match.winner_names[1]
+  end
+  local winner_id = match.winner_ids and match.winner_ids[1]
+  if winner_id and state.players[winner_id] then
+    return state.players[winner_id].name
+  end
+  return nil
+end
+
 function projection_service.new(opts)
   opts = opts or {}
   local instance = {
@@ -116,6 +148,8 @@ end
 function projection_service:build(state)
   local current = state.players[state.turn.current_seat] or {}
   local choice, market = _choice_projection(state)
+  local winner_name = _resolve_winner_name(state)
+  local finished = state.match and state.match.finished or state.status ~= "running"
 
   return {
     board = {
@@ -125,24 +159,30 @@ function projection_service:build(state)
       players = state.players,
       phase = state.turn.phase,
       move_anim = state.turn.move_anim,
+      action_anim = state.turn.action_anim,
       tile_count = #self.board_tiles,
     },
     panel = {
       turn_label = _turn_label(state),
+      phase_label = _phase_label(state),
       player_rows = _build_player_rows(state),
       auto_label = current.auto and "自动：开" or "自动:关",
     },
-    item_slots = {},
+    item_slots = _build_item_slots(state, state.turn.current_seat),
     choice = choice,
     market = market,
     popup = nil,
     current_player_name = current.name or "",
     current_player_cash = current.cash or 0,
+    current_player_status = current.status or {},
+    current_player_deity = current.status and current.status.deity or { type = "", remaining = 0 },
+    current_player_vehicle = current.seat_vehicle_id,
     turn_count = state.turn.turn_no,
     board_tile_count = #self.board_tiles,
-    last_turn = nil,
-    finished = state.status ~= "running",
-    winner_name = nil,
+    last_turn = state.turn.last_turn,
+    finished = finished,
+    winner_name = winner_name,
+    winners = state.match and state.match.winner_names or {},
   }
 end
 
