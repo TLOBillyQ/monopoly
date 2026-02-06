@@ -36,7 +36,7 @@ function tile_renderer.render_tile(unit, tile_id, owner_id)
   local price_node = unit.get_child_by_name("price")
   if price_node and price_node.set_billboard_text then
     assert(cfg.price ~= nil, "missing tile price: " .. tostring(tile_id))
-    price_node.set_billboard_text("￥" .. tostring(cfg.price))
+    price_node.set_billboard_text("价格：" .. tostring(cfg.price))
   elseif is_land then
     assert(false, "missing price node")
   end
