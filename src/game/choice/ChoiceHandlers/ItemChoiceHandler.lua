@@ -6,7 +6,7 @@ local logger = require("src.core.Logger")
 local remote_dice = require("src.game.item.ItemRemoteDice")
 local item_phase = require("src.game.item.ItemPhase")
 local gameplay_rules = require("Config.GameplayRules")
-local monopoly_event = require("Config.MonopolyEvents")
+local monopoly_event = require("src.game.game.MonopolyEvents")
 local number_utils = require("src.core.NumberUtils")
 
 local item_choice_handler = {}

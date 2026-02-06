@@ -1,5 +1,5 @@
 local steal = require("src.game.item.ItemSteal")
-local monopoly_event = require("Config.MonopolyEvents")
+local monopoly_event = require("src.game.game.MonopolyEvents")
 local movement_manager = require("src.game.movement.MovementManager")
 local market_manager = require("src.game.market.MarketManager")
 

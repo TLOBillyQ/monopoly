@@ -1,4 +1,4 @@
-require "Config.RuntimeGlobals"
+require "src.core.RuntimeGlobals"
 require "src.game.game.BankruptcyManager"
 require "src.game.game.AgentTargeting"
 require "src.game.game.Agent"
@@ -15,9 +15,9 @@ local ui_model = require("src.ui.UIModel")
 local ui_event_router = require("src.ui.UIEventRouter")
 local map_cfg = require("Config.Map")
 local tiles_cfg = require("Config.Generated.Tiles")
-local ui_events = require("Config.UIEvents")
+local ui_events = require("src.ui.UIEvents")
 local logger = require("src.core.Logger")
-local monopoly_event = require("Config.MonopolyEvents")
+local monopoly_event = require("src.game.game.MonopolyEvents")
 
 logger.configure_game_time()
 
@@ -121,7 +121,7 @@ local function _install_game_init(state)
   RegisterTriggerEvent({ EVENT.GAME_INIT }, function()
     require "vendor.third_party.UIManager.Utils"
     UIManager.Builder:new(require "Data.UIManagerNodes")
-    require "Config.RuntimeECA"
+    require "src.core.RuntimeECA"
     current_game = gameplay_loop.new_game(state)
     gameplay_loop.set_game(state, current_game)
     ui_event_router.bind(state, function()

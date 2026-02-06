@@ -1,5 +1,5 @@
 local logger = require("src.core.Logger")
-local monopoly_event = require("Config.MonopolyEvents")
+local monopoly_event = require("src.game.game.MonopolyEvents")
 
 local mine_effect = {}
 

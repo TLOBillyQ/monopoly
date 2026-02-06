@@ -1,7 +1,7 @@
 local items_cfg = require("Config.Generated.Items")
 require "vendor.third_party.Utils"
 local logger = require("src.core.Logger")
-local monopoly_event = require("Config.MonopolyEvents")
+local monopoly_event = require("src.game.game.MonopolyEvents")
 
 local inventory = {}
 

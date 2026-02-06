@@ -1,7 +1,7 @@
 local land_choice_specs = require("src.game.land.LandChoiceSpecs")
 local inventory = require("src.game.item.ItemInventory")
 local gameplay_rules = require("Config.GameplayRules")
-local monopoly_event = require("Config.MonopolyEvents")
+local monopoly_event = require("src.game.game.MonopolyEvents")
 
 local land_choice_handler = {}
 local item_ids = gameplay_rules.item_ids

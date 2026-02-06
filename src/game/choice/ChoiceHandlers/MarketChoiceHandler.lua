@@ -1,5 +1,5 @@
 local market_manager = require("src.game.market.MarketManager")
-local monopoly_event = require("Config.MonopolyEvents")
+local monopoly_event = require("src.game.game.MonopolyEvents")
 local number_utils = require("src.core.NumberUtils")
 
 local market_choice_handler = {}

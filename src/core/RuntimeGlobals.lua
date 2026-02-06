@@ -1,5 +1,5 @@
 local runtime_constants = require("Config.RuntimeConstants")
-require "Config.RuntimeRefs"
+require("Config.RuntimeRefs")
 
 SetTimeOut = LuaAPI.call_delay_time
 

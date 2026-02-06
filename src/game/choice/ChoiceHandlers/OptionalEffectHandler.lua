@@ -1,6 +1,6 @@
 local effect = require("src.game.effect.Effect")
 local logger = require("src.core.Logger")
-local monopoly_event = require("Config.MonopolyEvents")
+local monopoly_event = require("src.game.game.MonopolyEvents")
 
 local optional_effect_handler = {}
 

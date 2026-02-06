@@ -3,7 +3,7 @@ local gameplay_rules = require("Config.GameplayRules")
 local agent = require("src.game.game.Agent")
 local strategy = require("src.game.item.ItemStrategy")
 local inventory = require("src.game.item.ItemInventory")
-local monopoly_event = require("Config.MonopolyEvents")
+local monopoly_event = require("src.game.game.MonopolyEvents")
 
 local item_phase = {}
 

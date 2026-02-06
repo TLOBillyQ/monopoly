@@ -1,6 +1,6 @@
 local inventory = require("src.game.item.ItemInventory")
 local tile = require("src.game.board.Tile")
-local monopoly_event = require("Config.MonopolyEvents")
+local monopoly_event = require("src.game.game.MonopolyEvents")
 local movement_manager = require("src.game.movement.MovementManager")
 local bankruptcy_manager = require("src.game.game.BankruptcyManager")
 

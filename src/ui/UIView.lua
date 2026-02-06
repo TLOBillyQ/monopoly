@@ -2,7 +2,7 @@ local market_view = require("src.ui.UIMarket")
 local board_view = require("src.ui.BoardView")
 local market_ui = require("src.ui.MarketUI")
 local ui_aliases = require("src.ui.UIAliases")
-local ui_events = require("Config.UIEvents")
+local ui_events = require("src.ui.UIEvents")
 
 local ui_view = {}
 

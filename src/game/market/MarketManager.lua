@@ -5,7 +5,7 @@ local logger = require("src.core.Logger")
 local inventory = require("src.game.item.ItemInventory")
 local agent = require("src.game.game.Agent")
 local land_choice_specs = require("src.game.land.LandChoiceSpecs")
-local monopoly_event = require("Config.MonopolyEvents")
+local monopoly_event = require("src.game.game.MonopolyEvents")
 local market_manager = {}
 
 local function _emit_event(kind, payload)

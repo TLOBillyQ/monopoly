@@ -1,5 +1,5 @@
 local effect = require("src.game.effect.Effect")
-local monopoly_event = require("Config.MonopolyEvents")
+local monopoly_event = require("src.game.game.MonopolyEvents")
 
 local pipeline = {}
 
