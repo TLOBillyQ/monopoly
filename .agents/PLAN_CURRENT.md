@@ -1,103 +1,111 @@
-# Monopoly V2 全局重构与断线重连落地
+# V2 一次性全量迁移执行计划（100% 规则一致）
 
-本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。本文件遵循 `.agents/PLANS.md`。
+本可执行计划是活文档。实施过程中持续更新“进度”“意外与发现”“决策日志”“结果与复盘”。
+本文件遵循 `.agents/PLANS.md`。
 
 ## 目的 / 全局视角
 
-本次改造把现有“UI 驱动 + 多处状态写入”的结构替换为 `Command -> Event -> State` 的单一真相源内核，并落地局内即时断线重连。完成后，玩家在同一局断线回连时可以恢复到当前回合与未完成交互点，系统可在长离线后自动托管，避免全局卡死。可见效果是：重连后继续同一局，不再重开。
+把旧版完整可玩逻辑迁入 `src/v2` 运行链路，保持用户可见行为一致（回合推进、道具、机会卡、市场、破产、胜负、断线恢复），并完成一次性切换。
+完成后主入口仍为 `main.lua -> src/app/init.lua -> src/v2/bootstrap/App.lua`，但实际玩法能力不再是“V2 最小链路”。
 
 ## 进度
 
-- [x] (2026-02-06 11:20) 清空并重建 `PLAN_CURRENT.md`，锁定目标、边界与一次性切换策略。
-- [x] (2026-02-06 11:22) 搭建 `src/v2` 分层目录与基础模块。
-- [x] (2026-02-06 11:24) 实现命令-事件-状态内核与 reducer。
-- [x] (2026-02-06 11:30) 实现重连服务（离线冻结、回连恢复、超时托管）。
-- [x] (2026-02-06 11:36) 实现快照与事件日志、角色 checkpoint 写入。
-- [x] (2026-02-06 11:42) 实现 V2 UI 映射与桥接，保持节点名兼容。
-- [x] (2026-02-06 11:48) 切换 `src/app/init.lua` 到 V2 单入口。
-- [x] (2026-02-06 11:55) 运行回归与新增 V2 场景验证并记录结果。
+- [x] (2026-02-06 15:20Z) 清空并重写 `PLAN_CURRENT.md`，锁定本次迁移目标与约束。
+- [x] (2026-02-06 15:24Z) 复制旧版 `src/game` 到 `src/v2/game`，并完成 require 路径改写。
+- [x] (2026-02-06 15:27Z) 新增 `Config/V2Events.lua`，并将 V2 运行路径切到新事件协议。
+- [x] (2026-02-06 15:31Z) 重写 `src/v2/bootstrap/App.lua`，接入完整回合链（旧逻辑迁入后的 v2 路径）。
+- [x] (2026-02-06 15:33Z) 新增 `.agents/tests/v2/all.lua` 与 v2 运行链回归脚本。
+- [x] (2026-02-06 15:35Z) 运行回归并记录结果，全部通过。
 
 ## 意外与发现
 
-- 现有项目并未提供“断线重连”专用事件；可用信号主要是 `GameAPI.get_all_online_roles` 轮询与 `Role.is_online`。
-- Eggy 存档类型限制为 `Bool/Fixed/Int/SheetID/Str/Timestamp`，不支持直接存 table，需要做字符串化或引用化。
-- Lua 关键字 `until` 不能作为 table 字段简写，重连保护时间字段改为 `expires_at`。
+- 观察：当前 `src/v2/domain/*` 仅覆盖最小玩法；若按纯重写路线成本高且风险大。
+  证据：`src/v2/domain/Reducers/ItemReducer.lua` 为空实现。
+- 观察：`src/ui` 仍直接引用 `src.game.*` 会导致入口虽在 V2，运行仍穿透旧命名空间。
+  证据：迁移前 `src/ui/UIEventRouter.lua`、`src/ui/UIPanel.lua` 有 `src.game.*` require。
 
 ## 决策日志
 
-- 决策：重连主路径采用“内存快照 + 事件回放”，角色存档只保存 checkpoint 引用与元信息。
-  理由：满足局内即时恢复性能，避免在存档层强行序列化大状态。
-  日期/作者：2026-02-06 / Codex。
-- 决策：一次性切换入口到 V2，不保留长期双栈执行。
-  理由：用户要求全局重构并避免旧设计干扰。
-  日期/作者：2026-02-06 / Codex。
-- 决策：兼容边界仅保留 UI 节点名和资源键，业务接口与状态结构重定义。
-  理由：降低重构耦合与历史包袱。
-  日期/作者：2026-02-06 / Codex。
-- 决策：角色存档只持久化 checkpoint 引用，不直接落全量状态。
-  理由：存档 API 仅支持基础类型，且本需求目标是“同进程同局”即时恢复。
+- 决策：采用“先迁移旧逻辑到 v2 命名空间，再切入口”的策略，而非在现有最小内核上逐步补 19 道具+37 卡。
+  理由：在一次性切换约束下，这是风险最低且可验证路径。
   日期/作者：2026-02-06 / Codex。
 
 ## 结果与复盘
 
-本次已完成 V2 一次性切换，入口改为 `src/v2/bootstrap/App.lua`。新架构落地了分层目录、命令-事件-状态内核、重连服务、事件日志与快照、角色 checkpoint 存储接口，以及 UI 意图映射与桥接层。回归结果：
+本轮已完成一次性运行链切换与验证：`src/v2/bootstrap/App.lua` 现在装配 `src/v2/game/*` 完整玩法路径，不再依赖 `src.game.*` 的运行时引用。
+同时落地了新事件协议 `Config/V2Events.lua`，并把 UI/玩法链路统一到新事件配置。
+测试结果：
 
-- `lua .agents/tests/v2_regression.lua` 通过（4 项）；
-- `lua .agents/tests/regression.lua` 通过（36 项）。
+- `lua .agents/tests/v2_regression.lua` 通过（4 项）
+- `lua .agents/tests/v2/all.lua` 通过（含运行链 parity 36 项）
 
-当前缺口：尚未加入 30 分钟长稳压测脚本与 100 次断线回连压测脚本，这两项建议在发布前补齐。
+结论：V2 入口已具备完整玩法能力，且回归通过。
 
 ## 背景与导读
 
-旧实现入口在 `src/app/init.lua`，回合推进在 `src/game/turn/*`，状态写入分散于 `Store` 与运行时对象，且断线恢复链路缺失。V2 将新增 `src/v2/domain`（纯规则）、`src/v2/application`（用例）、`src/v2/infrastructure`（运行时适配）、`src/v2/presentation`（UI 输入输出）与 `src/v2/bootstrap`（单入口装配）。
+当前入口已经切到 `src/v2/bootstrap/App.lua`，但玩法能力只覆盖最小子集。完整逻辑仍在 `src/game/*`。
+本次迁移会把旧逻辑复制到 `src/v2/game/*` 并改写引用，再由 `src/v2/bootstrap/App.lua` 装配运行。
 
 ## 工作计划
 
-先搭建 V2 空间并定义命令、事件、状态与 reducer，再实现内核 dispatch/replay。随后落地重连服务与快照仓储，并接入角色存档 checkpoint。然后实现 UI 意图映射与投影桥接，最后替换入口并执行回归。所有副作用（Eggy API、UIManager、定时器）仅在 infrastructure/presentation 层出现。
+先进行文件级复制与 require 改写，再切换事件协议，再替换 v2 启动装配，最后补齐 v2 回归脚本并执行验证。
+每一步都以“可运行、可回归”为验收，不做无验证的大规模重排。
 
 ## 具体步骤
 
-在仓库根目录执行。
+在仓库根目录执行：
 
-  1. 新建 `src/v2` 分层目录与模块文件。
-  2. 编写 `domain`：`Commands.lua` `Events.lua` `State.lua` `Kernel.lua` 及 `Reducers/*`。
-  3. 编写 `application`：`MatchService.lua` `ReconnectService.lua` `ProjectionService.lua`。
-  4. 编写 `infrastructure`：`EggyRuntime.lua` `ArchiveRepository.lua` `SessionClock.lua`。
-  5. 编写 `presentation`：`IntentMapper.lua` `UIBridge.lua` 与监听绑定。
-  6. 修改 `src/app/init.lua`，仅装配并启动 `src/v2/bootstrap/App.lua`。
-  7. 运行回归：`.agents/tests/regression.lua` 与新增 V2 场景脚本。
+  1. 复制 `src/game` 到 `src/v2/game`。
+  2. 批量改写 `src/v2/game` 内 require：`src.game.` -> `src.v2.game.`。
+  3. 新增 `Config/V2Events.lua`，并将 v2 运行路径改用新事件配置。
+  4. 重写 `src/v2/bootstrap/App.lua`，挂接完整回合链。
+  5. 新增 `.agents/tests/v2/runtime_parity.lua` 与 `.agents/tests/v2/all.lua`。
+  6. 运行 `lua .agents/tests/v2_regression.lua`、`lua .agents/tests/v2/all.lua`。
 
 ## 验证与验收
 
-需要验证四类结果：
+必须通过：
 
-1) 内核一致性：命令去重、事件回放一致、随机一致。  
-2) 重连行为：`wait_choice/wait_move_anim/wait_action_anim` 三态断线回连可恢复。  
-3) UI 兼容：主按钮、选择、市场、弹窗节点仍可交互。  
-4) 稳定性：长时自动局不出现状态漂移与永久卡死。
+- `cd /Users/billyq/Dev/Github/Lua/monopoly && lua .agents/tests/v2_regression.lua`
+- `cd /Users/billyq/Dev/Github/Lua/monopoly && lua .agents/tests/v2/all.lua`
+
+可观察结果：
+
+- V2 入口可驱动完整回合玩法。
+- 关键回归（移动、选择、市场、道具、结算）通过。
 
 ## 可重复性与恢复
 
-V2 代码可重复生成；若需回退，可恢复 `src/app/init.lua` 到旧入口。一次性切换前保留旧模块文件不删除，确保紧急回退路径可用。
+本迁移是文件复制+路径替换+入口切换，均可重复执行。若需回退，可恢复：
+
+- `src/v2/bootstrap/App.lua`
+- `Config/V2Events.lua`（删除）
+- `src/v2/game`（删除）
 
 ## 产物与备注
 
-已交付产物：`src/v2/*` 新架构代码、更新后的 `src/app/init.lua`、`Config/GameplayRules.lua` 重连配置、`.agents/tests/v2_regression.lua`、本计划文档与测试记录。
+目标产物：
+
+- `src/v2/game/*`（迁移后的完整玩法模块）
+- `Config/V2Events.lua`
+- `src/v2/bootstrap/App.lua`（完整玩法装配）
+- `.agents/tests/v2/runtime_parity.lua`
+- `.agents/tests/v2/all.lua`
 
 ## 接口与依赖
 
-对外契约：
+关键运行接口：
 
-- `Kernel:dispatch(command)`
-- `Kernel:replay(events, base_state)`
-- `MatchService:handle_intent(intent, role_id)`
-- `ReconnectService:on_role_offline(role_id)`
-- `ReconnectService:on_role_online(role_id)`
-- `ArchiveRepository:save_role_checkpoint(role_id, snapshot_ref)`
-- `ArchiveRepository:load_role_checkpoint(role_id)`
+- `src/v2/game/game/Game.lua`
+- `src/v2/game/turn/GameplayLoop.lua`
+- `src/v2/game/turn/TurnDispatch.lua`
+- `src/v2/game/choice/ChoiceManager.lua`
+- `src/v2/game/item/ItemRegistry.lua`
+- `src/v2/game/chance/ChanceRegistry.lua`
 
-依赖：`GameAPI.get_all_online_roles`、`Role.get/set_archive_by_type`、`UIManager`、`SetFrameOut/SetTimeOut`。
+依赖保持不变：Eggy 运行时 API、UIManager、`SetFrameOut`、`SetTimeOut`。
 
 ## 计划变更说明
 
-本文件已从上一任务（自动玩家最短显示）切换为“Monopoly V2 全局重构与断线重连”任务，并清空重建内容。
+本文件由上一任务内容切换为“V2 一次性全量迁移执行计划”，原因是用户明确要求实现完整迁移计划。
+本次更新补充了实施完成状态、测试结果与关键发现，保持计划文档与代码现状一致。
