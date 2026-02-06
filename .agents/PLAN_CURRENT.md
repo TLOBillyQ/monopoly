@@ -1,99 +1,103 @@
-# 自动玩家选择/弹窗最短显示 1 秒
+# Monopoly V2 全局重构与断线重连落地
 
-
-本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。本文件必须遵循仓库内 `.agents/PLANS.md` 的规范维护。
+本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。本文件遵循 `.agents/PLANS.md`。
 
 ## 目的 / 全局视角
 
-
-本次变更让自动玩家触发“通用选择屏”和“弹窗屏”时，画面至少显示 1.0 秒再自动继续。用户可通过自动运行观察到选择屏与弹窗屏不再瞬间消失，且自动流程不会卡住。手动玩家交互保持原状。
+本次改造把现有“UI 驱动 + 多处状态写入”的结构替换为 `Command -> Event -> State` 的单一真相源内核，并落地局内即时断线重连。完成后，玩家在同一局断线回连时可以恢复到当前回合与未完成交互点，系统可在长离线后自动托管，避免全局卡死。可见效果是：重连后继续同一局，不再重开。
 
 ## 进度
 
-
-- [x] (2026-02-04 11:20) 清空并重建计划，确认目标与范围
-- [x] (2026-02-04 11:25) 增加自动玩家最短显示配置与选择延迟路径
-- [x] (2026-02-04 11:28) 增加弹窗最短显示与自动关闭路径
-- [x] (2026-02-04 11:36) 运行回归脚本并记录结果
-- [ ] (2026-02-04 11:30) 手动验证自动玩家选择/弹窗显示时长
+- [x] (2026-02-06 11:20) 清空并重建 `PLAN_CURRENT.md`，锁定目标、边界与一次性切换策略。
+- [x] (2026-02-06 11:22) 搭建 `src/v2` 分层目录与基础模块。
+- [x] (2026-02-06 11:24) 实现命令-事件-状态内核与 reducer。
+- [x] (2026-02-06 11:30) 实现重连服务（离线冻结、回连恢复、超时托管）。
+- [x] (2026-02-06 11:36) 实现快照与事件日志、角色 checkpoint 写入。
+- [x] (2026-02-06 11:42) 实现 V2 UI 映射与桥接，保持节点名兼容。
+- [x] (2026-02-06 11:48) 切换 `src/app/init.lua` 到 V2 单入口。
+- [x] (2026-02-06 11:55) 运行回归与新增 V2 场景验证并记录结果。
 
 ## 意外与发现
 
-
-当前自动选择在 `TurnManager` 内同步解析，UI 刷新在 `GameplayLoop.tick`，导致选择屏可能完全不出现。该现象在 `src/game/turn/TurnManager.lua` 与 `src/game/turn/GameplayLoop.lua` 的调用顺序中可见。
-
-回归脚本的 autorunner 流程触发 `ui_view.close_choice_modal`，进而调用 `Config/UIEvents.send_to_all`，当测试环境没有 `all_roles` 时会断言失败。
-证据：回归输出包含 “missing all_roles”。
+- 现有项目并未提供“断线重连”专用事件；可用信号主要是 `GameAPI.get_all_online_roles` 轮询与 `Role.is_online`。
+- Eggy 存档类型限制为 `Bool/Fixed/Int/SheetID/Str/Timestamp`，不支持直接存 table，需要做字符串化或引用化。
+- Lua 关键字 `until` 不能作为 table 字段简写，重连保护时间字段改为 `expires_at`。
 
 ## 决策日志
 
-
-- 决策：最短显示时间统一为 1.0 秒，适用于所有自动玩家。
-  理由：满足可见性且不显著拖慢自动测试。
-  日期/作者：2026-02-04 / Codex。
-- 决策：弹窗达到最短显示后自动关闭。
-  理由：保持自动流程顺畅，避免长时间遮挡。
-  日期/作者：2026-02-04 / Codex。
-- 决策：弹窗归属通过 `turn.current_player_index` 记录到 `state.ui.popup_owner_index`。
-  理由：无需新增复杂映射即可判断自动玩家。
-  日期/作者：2026-02-04 / Codex。
-- 决策：`Config/UIEvents.send_to_all` 在 `all_roles` 为空时直接返回。
-  理由：测试环境缺少 UI 角色时不应中断自动流程，真实运行环境不受影响。
-  日期/作者：2026-02-04 / Codex。
+- 决策：重连主路径采用“内存快照 + 事件回放”，角色存档只保存 checkpoint 引用与元信息。
+  理由：满足局内即时恢复性能，避免在存档层强行序列化大状态。
+  日期/作者：2026-02-06 / Codex。
+- 决策：一次性切换入口到 V2，不保留长期双栈执行。
+  理由：用户要求全局重构并避免旧设计干扰。
+  日期/作者：2026-02-06 / Codex。
+- 决策：兼容边界仅保留 UI 节点名和资源键，业务接口与状态结构重定义。
+  理由：降低重构耦合与历史包袱。
+  日期/作者：2026-02-06 / Codex。
+- 决策：角色存档只持久化 checkpoint 引用，不直接落全量状态。
+  理由：存档 API 仅支持基础类型，且本需求目标是“同进程同局”即时恢复。
+  日期/作者：2026-02-06 / Codex。
 
 ## 结果与复盘
 
+本次已完成 V2 一次性切换，入口改为 `src/v2/bootstrap/App.lua`。新架构落地了分层目录、命令-事件-状态内核、重连服务、事件日志与快照、角色 checkpoint 存储接口，以及 UI 意图映射与桥接层。回归结果：
 
-已完成配置与逻辑改动并通过回归脚本。手动 UI 验证仍待完成。
+- `lua .agents/tests/v2_regression.lua` 通过（4 项）；
+- `lua .agents/tests/regression.lua` 通过（36 项）。
+
+当前缺口：尚未加入 30 分钟长稳压测脚本与 100 次断线回连压测脚本，这两项建议在发布前补齐。
 
 ## 背景与导读
 
-
-入口在 `src/app/init.lua`，`state.push_popup` 是弹窗入口。自动选择由 `src/game/turn/TurnManager.lua` 中 `_decide_choice_action` 调用 `src/game/game/Agent.lua` 的自动决策。UI 刷新与选择/弹窗超时处理在 `src/game/turn/GameplayLoop.lua` 的 `tick` 内完成。配置集中在 `Config/GameplayRules.lua`。
+旧实现入口在 `src/app/init.lua`，回合推进在 `src/game/turn/*`，状态写入分散于 `Store` 与运行时对象，且断线恢复链路缺失。V2 将新增 `src/v2/domain`（纯规则）、`src/v2/application`（用例）、`src/v2/infrastructure`（运行时适配）、`src/v2/presentation`（UI 输入输出）与 `src/v2/bootstrap`（单入口装配）。
 
 ## 工作计划
 
-
-先在 `Config/GameplayRules.lua` 增加两个配置项，随后在 `TurnManager` 延迟自动选择触发点，避免立刻解析。接着在 `GameplayLoop` 中在最短显示时间到达后主动派发自动选择，并在弹窗超时逻辑中对自动玩家使用更短的超时值。最后在 `step_auto_runner` 中阻断自动推进，确保弹窗显示时长生效，同时在 UI 事件发送处增加无角色时的安全短路以保证回归脚本可运行。
+先搭建 V2 空间并定义命令、事件、状态与 reducer，再实现内核 dispatch/replay。随后落地重连服务与快照仓储，并接入角色存档 checkpoint。然后实现 UI 意图映射与投影桥接，最后替换入口并执行回归。所有副作用（Eggy API、UIManager、定时器）仅在 infrastructure/presentation 层出现。
 
 ## 具体步骤
 
+在仓库根目录执行。
 
-在仓库根目录按以下顺序执行。
-
-  1. 编辑 `Config/GameplayRules.lua`，新增 `auto_choice_min_visible_seconds` 与 `auto_popup_min_visible_seconds`，默认值 1.0。
-  2. 编辑 `src/game/turn/TurnManager.lua`，在 `_decide_choice_action` 中对自动玩家进行最短显示判断，未达阈值直接返回 `nil`。
-  3. 编辑 `src/game/turn/GameplayLoop.lua`，在 `step_choice_timeout` 中对自动玩家达到最短显示后派发自动选择动作。
-  4. 编辑 `src/app/init.lua`，在 `state.push_popup` 成功后记录 `popup_owner_index`。
-  5. 编辑 `src/game/turn/GameplayLoop.lua`，在 `step_modal_timeout` 中为自动玩家弹窗使用最短显示超时值，并在 `step_auto_runner` 阻断自动推进。
-  6. 编辑 `Config/UIEvents.lua`，在 `all_roles` 为空时直接返回，避免测试环境断言失败。
-  7. 运行 `lua .agents/tests/regression.lua` 记录结果。
-  8. 手动启动项目并观察自动玩家选择屏/弹窗显示时长。
+  1. 新建 `src/v2` 分层目录与模块文件。
+  2. 编写 `domain`：`Commands.lua` `Events.lua` `State.lua` `Kernel.lua` 及 `Reducers/*`。
+  3. 编写 `application`：`MatchService.lua` `ReconnectService.lua` `ProjectionService.lua`。
+  4. 编写 `infrastructure`：`EggyRuntime.lua` `ArchiveRepository.lua` `SessionClock.lua`。
+  5. 编写 `presentation`：`IntentMapper.lua` `UIBridge.lua` 与监听绑定。
+  6. 修改 `src/app/init.lua`，仅装配并启动 `src/v2/bootstrap/App.lua`。
+  7. 运行回归：`.agents/tests/regression.lua` 与新增 V2 场景脚本。
 
 ## 验证与验收
 
+需要验证四类结果：
 
-运行回归脚本并确保通过，随后在自动运行场景观察：自动玩家触发选择时，选择屏可见至少 1 秒再自动选择；自动玩家触发弹窗时，弹窗可见至少 1 秒再自动关闭；手动玩家不被自动选择或自动关闭影响。
+1) 内核一致性：命令去重、事件回放一致、随机一致。  
+2) 重连行为：`wait_choice/wait_move_anim/wait_action_anim` 三态断线回连可恢复。  
+3) UI 兼容：主按钮、选择、市场、弹窗节点仍可交互。  
+4) 稳定性：长时自动局不出现状态漂移与永久卡死。
 
 ## 可重复性与恢复
 
-
-修改均为配置与条件分支，重复执行不会造成副作用。若需回退，恢复 `Config/GameplayRules.lua`、`Config/UIEvents.lua`、`src/game/turn/TurnManager.lua`、`src/game/turn/GameplayLoop.lua`、`src/app/init.lua` 的变更即可。
+V2 代码可重复生成；若需回退，可恢复 `src/app/init.lua` 到旧入口。一次性切换前保留旧模块文件不删除，确保紧急回退路径可用。
 
 ## 产物与备注
 
-
-核心变更集中在配置与回合/UI 驱动逻辑文件，回归测试输出如下。
-
-  ....................................
-  All regression checks passed (36)
+已交付产物：`src/v2/*` 新架构代码、更新后的 `src/app/init.lua`、`Config/GameplayRules.lua` 重连配置、`.agents/tests/v2_regression.lua`、本计划文档与测试记录。
 
 ## 接口与依赖
 
+对外契约：
 
-新增配置字段 `auto_choice_min_visible_seconds` 与 `auto_popup_min_visible_seconds`。其余逻辑复用 `agent.is_auto_player` 与 `ui_view.close_popup`，不引入新模块。
+- `Kernel:dispatch(command)`
+- `Kernel:replay(events, base_state)`
+- `MatchService:handle_intent(intent, role_id)`
+- `ReconnectService:on_role_offline(role_id)`
+- `ReconnectService:on_role_online(role_id)`
+- `ArchiveRepository:save_role_checkpoint(role_id, snapshot_ref)`
+- `ArchiveRepository:load_role_checkpoint(role_id)`
+
+依赖：`GameAPI.get_all_online_roles`、`Role.get/set_archive_by_type`、`UIManager`、`SetFrameOut/SetTimeOut`。
 
 ## 计划变更说明
 
-
-本计划替换旧任务内容，以满足“自动玩家选择/弹窗最短显示 1 秒”的实现需求，并补充了新的进度与决策记录。回归测试暴露 `all_roles` 缺失断言后，追加了 UI 事件安全短路的修改与记录。
+本文件已从上一任务（自动玩家最短显示）切换为“Monopoly V2 全局重构与断线重连”任务，并清空重建内容。

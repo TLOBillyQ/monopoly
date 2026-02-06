@@ -10,6 +10,14 @@ local gameplay_rules = {
 
   item_phase_queue = { "pre_action", "pre_move", "post_action" },
 
+  reconnect = {
+    freeze_on_disconnect = true,
+    grace_seconds = 20,
+    offline_auto_host_seconds = 90,
+    snapshot_interval_events = 20,
+    replay_max_events = 400,
+  },
+
   item_ids = {
     free_rent = 2001,
     remote_dice = 2002,
