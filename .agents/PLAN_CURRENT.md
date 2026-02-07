@@ -18,6 +18,7 @@
 - [x] (2026-02-07 14:50Z) assert 分级审计（边界降级、核心保留）
 - [x] (2026-02-07 15:00Z) 新增 6 个契约测试并接入 `.agents/tests/all.lua`
 - [x] (2026-02-07 15:05Z) 运行 `lua .agents/tests/all.lua` 并验收通过
+- [x] (2026-02-07 15:20Z) 按最新决策删除模块兼容壳并更新契约入口
 
 ## 意外与发现
 
@@ -32,8 +33,8 @@
   理由：用户已明确要求“全量切 Store 主源”，不做过渡双轨。
   日期/作者：2026-02-07 / Codex
 
-- 决策：模块重命名采用“新主模块 + 兼容壳”策略。
-  理由：保证旧 `require` 兼容，降低一次性切换风险。
+- 决策：模块重命名采用“新主模块直切换”策略，不保留兼容壳。
+  理由：用户明确要求“去除兼容壳”，并且仓库内引用已全部迁移完成。
   日期/作者：2026-02-07 / Codex
 
 - 决策：`store.state` 仅允许在聚合读入口出现（`GameplayLoop`、`UIModel`），其余模块统一走 `store:get`。
@@ -47,7 +48,7 @@
   - `Player` 已去行为化，旧行为调用在 `src/game` 已清零（静态扫描无命中）。
   - `GameState` 已接管玩家资金/状态/神力/座驾/位置/背包核心行为。
   - `BankruptcyManager` 已改为单来源单遍历（按 Store 的 player.properties）。
-  - `ItemBoardUtils`、`MarketUI/UIMarket` 已重组为主模块 + 兼容壳。
+  - `ItemBoardUtils`、`MarketUI`、`UIMarket` 旧模块已删除，统一收敛到新主模块。
   - `tile_state_path` 共享可变表已移除。
   - 边界断言降级：`Chance` / `ChanceRegistry` 在 `TriggerCustomEvent` 缺失时不崩溃。
 
@@ -79,9 +80,7 @@
 - `src/game/game/GameState.lua`
 - `src/game/game/BankruptcyManager.lua`
 - `src/game/land/LandActions.lua`
-- `src/game/item/ItemBoardUtils.lua`（兼容壳）
 - `src/game/land/LandBoardUtils.lua`（本次新增主模块）
-- `src/ui/MarketUI.lua` / `src/ui/UIMarket.lua`（兼容壳）
 - `src/ui/MarketLayout.lua` / `src/ui/MarketView.lua`（本次新增主模块）
 
 ## 工作计划
@@ -121,7 +120,7 @@
 - 本计划步骤可重复执行。
 - 若重构中测试失败，按模块粒度回退：
   1) 先恢复 `Player/GameState` 对应提交
-  2) 再恢复模块重命名与兼容壳
+  2) 再恢复模块重命名（含已删除旧模块）
   3) 最后恢复路径集中化
 - 每一阶段均以 `lua .agents/tests/all.lua` 作为回归关口。
 
@@ -146,8 +145,9 @@
 
 - `src/core/StorePaths.lua`：提供 `turn/players/board/market` 路径常量与动态路径函数。
 - `src/game/game/GameState.lua`：提供完整玩家域行为接口（资金、状态、位置、神力、座驾、背包、地产、淘汰）。
-- `src/game/item/ItemBoardUtils.lua`、`src/ui/MarketUI.lua`、`src/ui/UIMarket.lua`：兼容壳，仅转发到新模块。
+- `src/game/land/LandBoardUtils.lua`、`src/ui/MarketLayout.lua`、`src/ui/MarketView.lua`：作为唯一公开入口，不再提供旧别名模块。
 
 ---
 
-变更说明（2026-02-07）：完成全量 Store 主源迁移，追加了路径中心、Player 去行为化、GameState 接管、模块兼容壳、6 个契约测试与回归证据。这样修改是为了一次性收敛双真相和路径散落问题，并确保行为可验证。
+变更说明（2026-02-07）：完成全量 Store 主源迁移，追加了路径中心、Player 去行为化、GameState 接管、6 个契约测试与回归证据。这样修改是为了一次性收敛双真相和路径散落问题，并确保行为可验证。
+变更说明（2026-02-07）：根据最新决策删除 `ItemBoardUtils` / `MarketUI` / `UIMarket` 兼容壳，并把契约测试入口改为 `module_entrypoints`，避免“旧别名仍可用”的误导。

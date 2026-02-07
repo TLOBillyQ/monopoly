@@ -13,7 +13,7 @@ _run(".agents/tests/contracts/board_determinism.lua")
 _run(".agents/tests/contracts/store_single_source_player.lua")
 _run(".agents/tests/contracts/player_dto_no_methods.lua")
 _run(".agents/tests/contracts/land_safe_tile_state_no_shared_path.lua")
-_run(".agents/tests/contracts/module_alias_compat.lua")
+_run(".agents/tests/contracts/module_entrypoints.lua")
 _run(".agents/tests/contracts/assert_boundary_resilience.lua")
 _run(".agents/tests/contracts/runtime_context_boot.lua")
 
