@@ -15,6 +15,8 @@ local effect = require("src.game.effect.Effect")
 local choice_manager = require("src.game.choice.ChoiceManager")
 local board_utils = require("src.game.land.LandBoardUtils")
 local gameplay_loop = require("src.game.turn.GameplayLoop")
+local turn_anim = require("src.game.turn.TurnAnim")
+local tick_timeout = require("src.game.turn.TickTimeout")
 local constants = require("Config.Generated.Constants")
 local bankruptcy_manager = require("src.game.game.BankruptcyManager")
 local map_cfg = require("Config.Map")
@@ -305,7 +307,7 @@ local function _test_move_anim_callback_and_delay()
     { key = "LuaAPI", value = { call_delay_time = call_delay } },
     { key = "SetTimeOut", value = call_delay },
   }, function()
-    gameplay_loop.step_move_anim(game, layer, {
+    turn_anim.step_move_anim(game, layer, {
       on_move_anim = function(_, anim)
         _assert_eq(anim.seq, 1, "anim seq forwarded")
         return 0.2
@@ -465,9 +467,9 @@ local function _test_popup_timeout_auto_confirm()
       l.modal.active:confirm()
     end,
   }
-  gameplay_loop.step_modal_timeout(layer, near_timeout, timeout_opts)
+  tick_timeout.step_modal_timeout(layer, near_timeout, timeout_opts)
   _assert_eq(popup.confirm_called, 0, "popup should not auto confirm before timeout")
-  gameplay_loop.step_modal_timeout(layer, near_timeout + 1, timeout_opts)
+  tick_timeout.step_modal_timeout(layer, near_timeout + 1, timeout_opts)
   _assert_eq(popup.confirm_called, 1, "popup should auto confirm after timeout")
 end
 
@@ -1078,7 +1080,7 @@ local function _test_autorunner_runs_to_end()
           modal_buttons = nil,
           game_finished = g.finished,
         })
-        gameplay_loop.step_choice_timeout(g, state, dt, {
+        tick_timeout.step_choice_timeout(g, state, dt, {
           on_pending_choice = function() end,
           is_choice_active = function(ctx)
             return ctx.pending_choice and true or false

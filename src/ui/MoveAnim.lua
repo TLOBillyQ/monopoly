@@ -56,4 +56,65 @@ function movement_manager.one_step(scene, player_id, dir, from_index, to_index)
     return time
 end
 
+local function _resolve_direction(anim_ctx)
+  if anim_ctx.direction then
+    return anim_ctx.direction
+  end
+  if anim_ctx.steps and anim_ctx.steps < 0 then
+    return runtime_constants.v3_right
+  end
+  if anim_ctx.steps and anim_ctx.steps > 0 then
+    return runtime_constants.v3_left
+  end
+  return nil
+end
+
+local function _build_steps(board_scene, from_index, to_index, visited)
+  local steps = {}
+  local total_time = 0
+  local function _push_step(step_from, step_to)
+    if step_from == step_to then
+      return
+    end
+    local delay = total_time
+    local step_time = movement_manager.step_duration(board_scene, step_from, step_to)
+    total_time = total_time + step_time
+    steps[#steps + 1] = { from = step_from, to = step_to, delay = delay }
+  end
+
+  if not visited or #visited <= 1 then
+    if from_index ~= to_index then
+      _push_step(from_index, to_index)
+    end
+  else
+    local step_from = from_index
+    for i = 1, #visited do
+      local step_to = visited[i]
+      _push_step(step_from, step_to)
+      step_from = step_to
+    end
+  end
+
+  return steps, total_time
+end
+
+function movement_manager.play_sequence(board_scene, anim_ctx)
+  assert(anim_ctx ~= nil, "missing anim")
+  local player_id = assert(anim_ctx.player_id, "missing player_id")
+  local from_index = assert(anim_ctx.from_index, "missing from_index")
+  local to_index = assert(anim_ctx.to_index, "missing to_index")
+  local dir = assert(_resolve_direction(anim_ctx), "missing anim.direction")
+  local steps, total_time = _build_steps(board_scene, from_index, to_index, anim_ctx.visited)
+  for _, step in ipairs(steps) do
+    if step.delay <= 0 then
+      movement_manager.one_step(board_scene, player_id, dir, step.from, step.to)
+    else
+      SetTimeOut(step.delay, function()
+        movement_manager.one_step(board_scene, player_id, dir, step.from, step.to)
+      end)
+    end
+  end
+  return total_time
+end
+
 return movement_manager
