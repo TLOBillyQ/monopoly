@@ -10,11 +10,34 @@ local opposite = {
   right = "left",
 }
 
+local dir_priority = {
+  up = 1,
+  right = 2,
+  down = 3,
+  left = 4,
+}
+
+local function _sorted_dirs(neigh)
+  local keys = {}
+  for dir in pairs(neigh) do
+    table.insert(keys, dir)
+  end
+  table.sort(keys, function(a, b)
+    local pa = dir_priority[a] or 100
+    local pb = dir_priority[b] or 100
+    if pa ~= pb then
+      return pa < pb
+    end
+    return tostring(a) < tostring(b)
+  end)
+  return keys
+end
+
 local function _pick_any_dir(neigh, avoid_dir)
   assert(neigh ~= nil, "missing neighbors")
-  for dir, next_id in pairs(neigh) do
+  for _, dir in ipairs(_sorted_dirs(neigh)) do
     if dir ~= avoid_dir then
-      return dir, next_id
+      return dir, neigh[dir]
     end
   end
   assert(false, "no neighbor available")

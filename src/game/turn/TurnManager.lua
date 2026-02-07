@@ -178,8 +178,16 @@ function turn_manager:_build_flow()
     self.pending_action = nil
 
 
-    if action.choice_id and choice.id and action.choice_id ~= choice.id then
-      return "wait_choice", args
+    if action.type == "choice_select" or action.type == "choice_cancel" then
+      if not action.choice_id or not choice.id or action.choice_id ~= choice.id then
+        logger.warn(
+          "choice action mismatch:",
+          tostring(action.type),
+          "action_choice_id=" .. tostring(action.choice_id),
+          "pending_choice_id=" .. tostring(choice.id)
+        )
+        return "wait_choice", args
+      end
     end
     local res = _resolve_choice(self.game, choice, action)
     if res.stay then

@@ -3,7 +3,7 @@ local gameplay_rules = require("Config.GameplayRules")
 local agent = require("src.game.game.Agent")
 local strategy = require("src.game.item.ItemStrategy")
 local inventory = require("src.game.item.ItemInventory")
-local monopoly_event = require("src.game.game.MonopolyEvents")
+local intent_dispatcher = require("src.game.intent.IntentDispatcher")
 
 local item_phase = {}
 
@@ -17,41 +17,6 @@ local phase_titles = {
   pre_move = "投骰后：使用道具？",
   post_action = "行动后：使用道具？",
 }
-
-local function _dispatch_intent(game, payload)
-  assert(payload ~= nil, "missing intent payload")
-  local intent = payload.intent or payload
-  if intent.kind == "need_choice" then
-    assert(intent.choice_spec ~= nil, "missing choice spec")
-    assert(game and game.store, "Choice.open requires game.store")
-    local spec = intent.choice_spec
-    local seq = game.store:get({ "turn", "choice_seq" })
-    seq = seq + 1
-    game.store:set({ "turn", "choice_seq" }, seq)
-    local entry = {
-      id = seq,
-      kind = spec.kind,
-      title = spec.title,
-      body_lines = spec.body_lines,
-      options = spec.options,
-      allow_cancel = spec.allow_cancel,
-      cancel_label = spec.cancel_label,
-      meta = spec.meta,
-    }
-    game.store:set({ "turn", "pending_choice" }, entry)
-    local event_name = monopoly_event.resolve_intent("need_choice")
-    TriggerCustomEvent(event_name, { choice = entry, choice_spec = spec })
-    return
-  end
-  if intent.kind == "push_popup" then
-    assert(intent.payload ~= nil, "missing popup payload")
-    local ui_port = game.ui_port
-    assert(ui_port ~= nil and ui_port.push_popup ~= nil, "missing ui_port")
-    ui_port:push_popup(intent.payload)
-    local event_name = monopoly_event.resolve_intent("push_popup")
-    TriggerCustomEvent(event_name, { payload = intent.payload })
-  end
-end
 
 function item_phase.is_enabled(phase)
   local queue = gameplay_rules.item_phase_queue
@@ -113,7 +78,7 @@ function item_phase.run(tm, phase, args)
   if agent.is_auto_player(player) then
     local pre = strategy.auto_pre_action(game, player, phase)
     if pre then
-      _dispatch_intent(game, pre)
+      intent_dispatcher.dispatch(game, pre)
     end
     if pre and pre.waiting then
       store:set({ "turn", "item_phase_active" }, phase)
@@ -132,7 +97,7 @@ function item_phase.run(tm, phase, args)
   local spec = item_phase.build_choice_spec(player, phase)
   assert(spec ~= nil, "missing choice spec")
 
-  _dispatch_intent(game, { kind = "need_choice", choice_spec = spec })
+  intent_dispatcher.dispatch(game, { kind = "need_choice", choice_spec = spec })
 
   store:set({ "turn", "item_phase", phase }, { active = true })
   store:set({ "turn", "item_phase_active" }, phase)
@@ -155,4 +120,3 @@ function item_phase.build_choice_spec(player, phase)
 end
 
 return item_phase
-

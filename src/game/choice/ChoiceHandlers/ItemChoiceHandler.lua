@@ -6,46 +6,11 @@ local logger = require("src.core.Logger")
 local remote_dice = require("src.game.item.ItemRemoteDice")
 local item_phase = require("src.game.item.ItemPhase")
 local gameplay_rules = require("Config.GameplayRules")
-local monopoly_event = require("src.game.game.MonopolyEvents")
 local number_utils = require("src.core.NumberUtils")
+local intent_dispatcher = require("src.game.intent.IntentDispatcher")
 
 local item_choice_handler = {}
 local item_ids = gameplay_rules.item_ids
-
-local function _dispatch_intent(game, payload)
-  assert(payload ~= nil, "missing payload")
-  local intent = payload.intent or payload
-  if intent.kind == "need_choice" and intent.choice_spec then
-    assert(game ~= nil and game.store ~= nil, "Choice.open requires game.store")
-    local spec = intent.choice_spec
-    local seq = game.store:get({ "turn", "choice_seq" }) or 0
-    seq = seq + 1
-    game.store:set({ "turn", "choice_seq" }, seq)
-    local entry = {
-      id = seq,
-      kind = spec.kind,
-      title = spec.title or "请选择",
-      body_lines = spec.body_lines or {},
-      options = spec.options or {},
-      allow_cancel = spec.allow_cancel ~= false,
-      cancel_label = spec.cancel_label or "取消",
-      meta = spec.meta,
-    }
-    game.store:set({ "turn", "pending_choice" }, entry)
-    assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = monopoly_event.resolve_intent("need_choice")
-    TriggerCustomEvent(event_name, { choice = entry, choice_spec = spec })
-    return
-  end
-  if intent.kind == "push_popup" and intent.payload then
-    local ui_port = assert(game.ui_port, "missing ui_port")
-    assert(ui_port.push_popup ~= nil, "missing ui_port.push_popup")
-    ui_port:push_popup(intent.payload)
-    assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = monopoly_event.resolve_intent("push_popup")
-    TriggerCustomEvent(event_name, { payload = intent.payload })
-  end
-end
 
 function item_choice_handler.build(helpers)
   local is_cancel = helpers.is_cancel
@@ -67,7 +32,7 @@ function item_choice_handler.build(helpers)
       table.insert(lines, i .. ". " .. label)
       table.insert(options, { id = i, label = label })
     end
-    _dispatch_intent(game, {
+    intent_dispatcher.dispatch(game, {
       kind = "need_choice",
       choice_spec = {
         kind = "steal_item",
@@ -89,7 +54,7 @@ function item_choice_handler.build(helpers)
       table.insert(lines, i .. ". " .. label)
       table.insert(options, { id = i, label = label })
     end
-    _dispatch_intent(game, {
+    intent_dispatcher.dispatch(game, {
       kind = "need_choice",
       choice_spec = {
         kind = "discard_item",
@@ -106,7 +71,7 @@ function item_choice_handler.build(helpers)
   local function _reopen_item_phase(game, player, phase)
     local spec = item_phase.build_choice_spec(player, phase)
     assert(spec ~= nil, "missing item phase spec")
-    _dispatch_intent(game, { kind = "need_choice", choice_spec = spec })
+    intent_dispatcher.dispatch(game, { kind = "need_choice", choice_spec = spec })
     return { stay = true }
   end
 
@@ -126,7 +91,7 @@ function item_choice_handler.build(helpers)
       title = meta.title
     })
     local intent = res.intent or {}
-    _dispatch_intent(game, intent)
+    intent_dispatcher.dispatch(game, intent)
     return _finish_and_clear(game)
   end
 
@@ -143,7 +108,7 @@ function item_choice_handler.build(helpers)
     end
     local res = roadblock.apply(game, player, idx)
     if res then
-      _dispatch_intent(game, res)
+      intent_dispatcher.dispatch(game, res)
     end
     return _finish_and_clear(game)
   end
@@ -160,7 +125,7 @@ function item_choice_handler.build(helpers)
     local res = steal.steal_item_at_index(game, stealer, target, idx)
     logger.event("Steal choice result (multi)", res)
     assert(res ~= nil, "missing steal result")
-    _dispatch_intent(game, res.intent or {})
+    intent_dispatcher.dispatch(game, res.intent or {})
     return _finish_and_clear(game)
   end
 
@@ -181,13 +146,13 @@ function item_choice_handler.build(helpers)
         inventory.consume(stealer, item_ids.steal)
         local res = steal.steal_item_at_index(game, stealer, target, 1)
         assert(res ~= nil, "missing steal result")
-        _dispatch_intent(game, res.intent or {})
+        intent_dispatcher.dispatch(game, res.intent or {})
         return finish_choice(game, false)
       end
       if inventory.count(target) <= 1 then
         local res = steal.steal_item_at_index(game, stealer, target, 1)
         assert(res ~= nil, "missing steal result")
-        _dispatch_intent(game, res.intent or {})
+        intent_dispatcher.dispatch(game, res.intent or {})
         return finish_choice(game, false)
       end
       _open_steal_item_choice(game, stealer, target)
@@ -199,7 +164,7 @@ function item_choice_handler.build(helpers)
     if inventory.find_index(stealer, item_ids.steal) and queue[next_index] then
       local spec = steal.build_prompt_spec(game, stealer, queue, next_index)
       assert(spec ~= nil, "missing steal prompt spec")
-      _dispatch_intent(game, { kind = "need_choice", choice_spec = spec })
+      intent_dispatcher.dispatch(game, { kind = "need_choice", choice_spec = spec })
       return { stay = true }
     end
 
@@ -255,7 +220,7 @@ function item_choice_handler.build(helpers)
 
     local res = use_item(game, player, item_id)
     if type(res) == "table" and res.waiting then
-      _dispatch_intent(game, res.intent or {})
+      intent_dispatcher.dispatch(game, res.intent or {})
       return { stay = true }
     end
     finish_item_phase(game, phase)
@@ -291,4 +256,3 @@ function item_choice_handler.build(helpers)
 end
 
 return item_choice_handler
-

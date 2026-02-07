@@ -1,3 +1,10 @@
+local runtime_context = require("src.core.RuntimeContext")
+
+local runtime_ctx = runtime_context.new({
+  GameAPI = GameAPI,
+  LuaAPI = LuaAPI,
+})
+runtime_context.set_current(runtime_ctx)
 require "src.core.RuntimeGlobals"
 require "src.game.game.BankruptcyManager"
 require "src.game.game.AgentTargeting"

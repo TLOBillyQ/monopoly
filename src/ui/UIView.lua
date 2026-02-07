@@ -3,6 +3,7 @@ local board_view = require("src.ui.BoardView")
 local market_ui = require("src.ui.MarketUI")
 local ui_aliases = require("src.ui.UIAliases")
 local ui_events = require("src.ui.UIEvents")
+local logger = require("src.core.Logger")
 
 local ui_view = {}
 
@@ -294,12 +295,23 @@ function ui_view.on_tile_owner_changed(state, tile_id, owner_id)
 end
 
 function ui_view.select_market_option(state, option_id)
+  if not option_id then
+    logger.warn("select_market_option missing option_id")
+    return
+  end
   market_view.select_market_option(state, option_id)
 end
 
 function ui_view.open_choice_modal(state, choice, market)
-  assert(choice ~= nil, "missing choice")
-  local choice_id = assert(choice.id, "missing choice id")
+  if not choice then
+    logger.warn("open_choice_modal missing choice")
+    return
+  end
+  if not choice.id then
+    logger.warn("open_choice_modal missing choice id")
+    return
+  end
+  local choice_id = choice.id
   if state.pending_choice_id == choice_id
       and (state.ui.choice_active or state.ui.market_active) then
     return
@@ -398,7 +410,10 @@ function ui_view.push_popup(state, payload)
 end
 
 function ui_view.close_popup(state)
-  assert(state.ui.popup_active == true, "popup not active")
+  if not (state.ui and state.ui.popup_active) then
+    logger.warn("close_popup ignored: popup not active")
+    return
+  end
   state.ui:set_visible(state.ui.popup.root, false)
   state.ui.popup_active = false
   state.ui.popup_payload = nil

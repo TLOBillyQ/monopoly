@@ -1,42 +1,7 @@
 local steal = require("src.game.item.ItemSteal")
-local monopoly_event = require("src.game.game.MonopolyEvents")
 local movement_manager = require("src.game.movement.MovementManager")
 local market_manager = require("src.game.market.MarketManager")
-
-local function _dispatch_intent(game, payload)
-  assert(payload ~= nil, "missing payload")
-  local intent = payload.intent or payload
-  if intent.kind == "need_choice" and intent.choice_spec then
-    assert(game ~= nil and game.store ~= nil, "Choice.open requires game.store")
-    local spec = intent.choice_spec
-    local seq = game.store:get({ "turn", "choice_seq" }) or 0
-    seq = seq + 1
-    game.store:set({ "turn", "choice_seq" }, seq)
-    local entry = {
-      id = seq,
-      kind = spec.kind,
-      title = spec.title or "请选择",
-      body_lines = spec.body_lines or {},
-      options = spec.options or {},
-      allow_cancel = spec.allow_cancel ~= false,
-      cancel_label = spec.cancel_label or "取消",
-      meta = spec.meta,
-    }
-    game.store:set({ "turn", "pending_choice" }, entry)
-    assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = monopoly_event.resolve_intent("need_choice")
-    TriggerCustomEvent(event_name, { choice = entry, choice_spec = spec })
-    return
-  end
-  if intent.kind == "push_popup" and intent.payload then
-    local ui_port = assert(game.ui_port, "missing ui_port")
-    assert(ui_port.push_popup ~= nil, "missing ui_port.push_popup")
-    ui_port:push_popup(intent.payload)
-    assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = monopoly_event.resolve_intent("push_popup")
-    TriggerCustomEvent(event_name, { payload = intent.payload })
-  end
-end
+local intent_dispatcher = require("src.game.intent.IntentDispatcher")
 
 local function _phase_move(tm, args)
   local player = args.player
@@ -99,7 +64,7 @@ local function _phase_move(tm, args)
     local interrupt = move_result.steal_interrupt
     local res = steal.handle_pass_players(tm.game, player, interrupt.encountered_ids or {})
     if res and res.intent then
-      _dispatch_intent(tm.game, res.intent)
+      intent_dispatcher.dispatch(tm.game, res.intent)
     end
     if res and res.waiting then
       return "wait_choice", {
@@ -130,7 +95,7 @@ local function _phase_move(tm, args)
   if move_result.market_interrupt then
     local spec, intent = market_manager.build_choice_spec(player, tm.game)
     if spec then
-      _dispatch_intent(tm.game, { kind = "need_choice", choice_spec = spec })
+      intent_dispatcher.dispatch(tm.game, { kind = "need_choice", choice_spec = spec })
       return "wait_choice", {
         resume_state = "move",
         resume_args = {

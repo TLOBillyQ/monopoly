@@ -6,6 +6,14 @@ local store = Class("Store")
 
 local deep_copy = Utils.deep_copy
 
+local function _assert_path(path)
+  assert(type(path) == "table", "store path must be table")
+  assert(#path > 0, "store path is empty")
+  for i = 1, #path do
+    assert(path[i] ~= nil, "store path missing segment: " .. tostring(i))
+  end
+end
+
 local function _new_dirty()
   return {
     any = false,
@@ -28,6 +36,7 @@ end
 ---创建新状态树
 ---根据路径读取状态值（路径缺失返回 nil）
 function store:get(path)
+  _assert_path(path)
   local node = self.state
   for i, key in ipairs(path) do
     assert(type(node) == "table", "store path not table: " .. tostring(key))
@@ -41,6 +50,7 @@ end
 
 ---根据路径设置状态值（自动创建中间表）
 function store:set(path, value)
+  _assert_path(path)
   local node = self.state
   for i = 1, #path - 1 do
     local key = path[i]

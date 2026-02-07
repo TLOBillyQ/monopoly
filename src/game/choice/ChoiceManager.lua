@@ -49,7 +49,7 @@ end
 
 local function _finish_choice(game, stay)
   _clear_choice(game)
-  return { stay = stay }
+  return { status = stay and "waiting" or "resolved", stay = stay }
 end
 
 
@@ -140,19 +140,22 @@ function choice_manager.resolve(game, choice, action)
       _finish_item_phase(game, phase)
     end
     _clear_choice(game)
-    return { stay = false }
+    return { status = "resolved", stay = false }
   end
 
   if not _option_exists(choice, action.option_id) then
     logger.warn("invalid choice option:", tostring(choice.kind), tostring(action.option_id))
-    _clear_choice(game)
-    return { stay = false }
+    return { status = "rejected", stay = true }
   end
 
   local handler = choice_registry.handlers[choice.kind]
   assert(handler ~= nil, "unknown choice kind: " .. tostring(choice.kind))
-  return handler(game, choice, action)
+  local res = handler(game, choice, action)
+  if res and res.stay then
+    res.status = res.status or "waiting"
+    return res
+  end
+  return res or { status = "resolved", stay = false }
 end
 
 return choice_manager
-

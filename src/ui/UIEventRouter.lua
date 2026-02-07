@@ -2,6 +2,7 @@ local ui_aliases = require("src.ui.UIAliases")
 local market_ui = require("src.ui.MarketUI")
 local turn_dispatch = require("src.game.turn.TurnDispatch")
 local ui_view = require("src.ui.UIView")
+local logger = require("src.core.Logger")
 
 local ui_event_router = {}
 
@@ -79,6 +80,10 @@ local function _dispatch(state, game, intent, opts)
   if _should_block_intent(state, intent_type) then
     return
   end
+  if not game then
+    logger.warn("ui intent without game:", tostring(intent_type))
+    return
+  end
   if intent_type == "ui_button"
       or intent_type == "choice_select"
       or intent_type == "choice_cancel" then
@@ -87,6 +92,10 @@ local function _dispatch(state, game, intent, opts)
   end
 
   if intent_type == "market_confirm" then
+    if not intent.choice_id or not intent.option_id then
+      logger.warn("market_confirm missing ids:", tostring(intent.choice_id), tostring(intent.option_id))
+      return
+    end
     turn_dispatch.dispatch_action(game, state, {
       type = "choice_select",
       choice_id = intent.choice_id,
@@ -162,6 +171,7 @@ function ui_event_router.bind(state, get_game, opts)
     _register_node_click(cache, node_name, function()
       local choice = state.ui_model and state.ui_model.choice
       if not choice or choice.kind ~= "item_phase_choice" then
+        logger.warn("item_slot click ignored:", tostring(idx))
         return
       end
       dispatch_intent({ type = "ui_button", id = action_id })
@@ -173,7 +183,10 @@ function ui_event_router.bind(state, get_game, opts)
 
   _register_node_click(cache, "通用选择_取消", function()
     local choice = state.ui_model and state.ui_model.choice
-    assert(choice ~= nil, "missing choice")
+    if not choice then
+      logger.warn("choice_cancel without choice")
+      return
+    end
     if choice.allow_cancel ~= false then
       dispatch_intent({ type = "choice_cancel", choice_id = choice.id })
     end
@@ -187,25 +200,33 @@ function ui_event_router.bind(state, get_game, opts)
   }) do
     _register_node_click(cache, name, function()
       local choice = state.ui_model and state.ui_model.choice
-      assert(choice ~= nil, "missing choice")
+      if not choice then
+        logger.warn("choice_select without choice")
+        return
+      end
       local option_id = _resolve_option_id(choice, { index = idx }, state)
       if not option_id then
+        logger.warn("choice_select missing option:", tostring(idx))
         return
       end
       dispatch_intent({ type = "choice_select", choice_id = choice.id, option_id = option_id })
-      if choice.allow_cancel ~= false then
-        dispatch_intent({ type = "choice_cancel", choice_id = choice.id })
-      end
     end, registered, listeners)
   end
 
   for idx, name in ipairs(market_ui.item_buttons) do
     _register_node_click(cache, name, function()
-      assert(market_ui.is_ready(), "market ui not ready")
+      if not market_ui.is_ready() then
+        logger.warn("market ui not ready")
+        return
+      end
       local market = state.ui_model and state.ui_model.market
-      assert(market ~= nil, "missing market")
+      if not market then
+        logger.warn("market_select without market")
+        return
+      end
       local option_id = _resolve_option_id(market, { index = idx }, state)
       if not option_id then
+        logger.warn("market_select missing option:", tostring(idx))
         return
       end
       dispatch_intent({ type = "market_select", option_id = option_id })
@@ -214,15 +235,24 @@ function ui_event_router.bind(state, get_game, opts)
 
   _register_node_click(cache, market_ui.confirm_button, function()
     local market = state.ui_model and state.ui_model.market
-    assert(market ~= nil, "missing market")
+    if not market then
+      logger.warn("market_confirm without market")
+      return
+    end
     local option_id = state.pending_choice_selected_option_id
-    assert(option_id ~= nil, "missing selected market option")
+    if not option_id then
+      logger.warn("market_confirm missing selected option")
+      return
+    end
     dispatch_intent({ type = "market_confirm", choice_id = market.choice_id, option_id = option_id })
   end, registered, listeners)
 
   _register_node_click(cache, market_ui.cancel_button, function()
     local choice = state.ui_model and state.ui_model.choice
-    assert(choice ~= nil, "missing choice")
+    if not choice then
+      logger.warn("market_cancel without choice")
+      return
+    end
     if choice.allow_cancel ~= false then
       dispatch_intent({ type = "choice_cancel", choice_id = choice.id })
     end
@@ -232,7 +262,10 @@ function ui_event_router.bind(state, get_game, opts)
   if market_ui.cancel_button ~= market_close then
     _register_node_click(cache, market_close, function()
       local choice = state.ui_model and state.ui_model.choice
-      assert(choice ~= nil, "missing choice")
+      if not choice then
+        logger.warn("market_close without choice")
+        return
+      end
       if choice.allow_cancel ~= false then
         dispatch_intent({ type = "choice_cancel", choice_id = choice.id })
       end

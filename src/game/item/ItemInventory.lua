@@ -1,51 +1,13 @@
 local items_cfg = require("Config.Generated.Items")
 require "vendor.third_party.Utils"
 local logger = require("src.core.Logger")
-local monopoly_event = require("src.game.game.MonopolyEvents")
+local intent_dispatcher = require("src.game.intent.IntentDispatcher")
 
 local inventory = {}
-
-local choice_seq_path = { "turn", "choice_seq" }
-local pending_choice_path = { "turn", "pending_choice" }
 
 local cfg_by_id = {}
 for _, cfg in ipairs(items_cfg) do
   cfg_by_id[cfg.id] = cfg
-end
-
-local function _dispatch_intent(game, payload)
-  assert(payload ~= nil, "missing payload")
-  local intent = payload.intent or payload
-  if intent.kind == "need_choice" and intent.choice_spec then
-    assert(game ~= nil and game.store ~= nil, "Choice.open requires game.store")
-    local spec = intent.choice_spec
-    local seq = game.store:get(choice_seq_path) or 0
-    seq = seq + 1
-    game.store:set(choice_seq_path, seq)
-    local entry = {
-      id = seq,
-      kind = spec.kind,
-      title = spec.title or "请选择",
-      body_lines = spec.body_lines or {},
-      options = spec.options or {},
-      allow_cancel = spec.allow_cancel ~= false,
-      cancel_label = spec.cancel_label or "取消",
-      meta = spec.meta,
-    }
-    game.store:set(pending_choice_path, entry)
-    assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = monopoly_event.resolve_intent("need_choice")
-    TriggerCustomEvent(event_name, { choice = entry, choice_spec = spec })
-    return
-  end
-  if intent.kind == "push_popup" and intent.payload then
-    local ui_port = assert(game.ui_port, "missing ui_port")
-    assert(ui_port.push_popup ~= nil, "missing ui_port.PushPopup")
-    ui_port:push_popup(intent.payload)
-    assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = monopoly_event.resolve_intent("push_popup")
-    TriggerCustomEvent(event_name, { payload = intent.payload })
-  end
 end
 
 function inventory.cfg(item_id)
@@ -128,7 +90,7 @@ local function _notify_full(game, player, item_id)
   if player.is_ai or player.auto then
     return
   end
-  _dispatch_intent(game, {
+  intent_dispatcher.dispatch(game, {
     kind = "push_popup",
     payload = {
       title = "道具",
@@ -156,5 +118,3 @@ function inventory.draw_and_give(player, context)
 end
 
 return inventory
-
-

@@ -1,5 +1,7 @@
-local turn_dispatch = {}
 local number_utils = require("src.core.NumberUtils")
+local logger = require("src.core.Logger")
+
+local turn_dispatch = {}
 
 local next_turn_cooldown = 0.4
 local input_blocked_types = {
@@ -60,7 +62,7 @@ end
 function turn_dispatch.dispatch_action(game, state, action, opts)
   assert(action ~= nil, "missing action")
   if turn_dispatch.should_block_action(state, action) then
-    return
+    return { status = "blocked" }
   end
   if action.type == "ui_button"
       or action.type == "choice_select"
@@ -73,7 +75,7 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
       slot_index = number_utils.to_integer(slot_index)
       local choice = state.pending_choice
       if not choice or choice.kind ~= "item_phase_choice" then
-        return
+        return { status = "rejected" }
       end
       assert(state.ui ~= nil, "missing state.ui")
       assert(state.ui.item_slot_item_ids ~= nil, "missing item_slot_item_ids")
@@ -87,13 +89,15 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
           break
         end
       end
-      assert(option_ok, "invalid item option: " .. tostring(item_id))
-      turn_dispatch.dispatch_action(game, state, {
+      if not option_ok then
+        logger.warn("invalid item option:", tostring(item_id))
+        return { status = "rejected" }
+      end
+      return turn_dispatch.dispatch_action(game, state, {
         type = "choice_select",
         choice_id = choice.id,
         option_id = item_id,
       }, opts)
-      return
     end
     if action.id == "next" then
       local phase = nil
@@ -113,28 +117,51 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
           end
         end
         if not allow then
-          return
+          return { status = "rejected" }
         end
       end
       state.next_turn_locked = true
       state.next_turn_last_click = now
       state.next_turn_lock_phase = phase
       turn_dispatch.step_turn(game)
+      return { status = "applied" }
     elseif action.id == "auto" then
       state.ui.auto_play = not state.ui.auto_play
       state.auto_runner:set_enabled(state.ui.auto_play)
       state.auto_runner:reset_timer()
+      return { status = "applied" }
     elseif action.id == "restart" then
       assert(opts ~= nil and opts.on_restart ~= nil, "missing opts.on_restart")
       opts.on_restart(game, state, action, opts)
+      return { status = "applied" }
     end
+    return { status = "rejected" }
   elseif action.type == "choice_select" or action.type == "choice_cancel" then
-    turn_dispatch.clear_choice(state, opts)
+    local choice = state.pending_choice
+    if not choice or not choice.id then
+      logger.warn("choice action without pending choice:", tostring(action.type))
+      return { status = "rejected" }
+    end
+    if not action.choice_id or action.choice_id ~= choice.id then
+      logger.warn(
+        "choice action mismatch:",
+        tostring(action.type),
+        "action_choice_id=" .. tostring(action.choice_id),
+        "pending_choice_id=" .. tostring(choice.id)
+      )
+      return { status = "rejected" }
+    end
     if game then
       assert(game.dispatch_action ~= nil, "missing game.dispatch_action")
       game:dispatch_action(action)
     end
+    local pending = game and game.store and game.store.get and game.store:get({ "turn", "pending_choice" }) or nil
+    if not pending or not pending.id or pending.id ~= choice.id then
+      turn_dispatch.clear_choice(state, opts)
+    end
+    return { status = "applied" }
   end
+  return { status = "rejected" }
 end
 
 return turn_dispatch

@@ -1,43 +1,8 @@
 local effect = require("src.game.effect.Effect")
 local logger = require("src.core.Logger")
-local monopoly_event = require("src.game.game.MonopolyEvents")
+local intent_dispatcher = require("src.game.intent.IntentDispatcher")
 
 local optional_effect_handler = {}
-
-local function _dispatch_intent(game, payload)
-  assert(payload ~= nil, "missing payload")
-  local intent = payload.intent or payload
-  if intent.kind == "need_choice" and intent.choice_spec then
-    assert(game ~= nil and game.store ~= nil, "Choice.open requires game.store")
-    local spec = intent.choice_spec
-    local seq = game.store:get({ "turn", "choice_seq" }) or 0
-    seq = seq + 1
-    game.store:set({ "turn", "choice_seq" }, seq)
-    local entry = {
-      id = seq,
-      kind = spec.kind,
-      title = spec.title or "请选择",
-      body_lines = spec.body_lines or {},
-      options = spec.options or {},
-      allow_cancel = spec.allow_cancel ~= false,
-      cancel_label = spec.cancel_label or "取消",
-      meta = spec.meta,
-    }
-    game.store:set({ "turn", "pending_choice" }, entry)
-    assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = monopoly_event.resolve_intent("need_choice")
-    TriggerCustomEvent(event_name, { choice = entry, choice_spec = spec })
-    return
-  end
-  if intent.kind == "push_popup" and intent.payload then
-    local ui_port = assert(game.ui_port, "missing ui_port")
-    assert(ui_port.push_popup ~= nil, "missing ui_port.push_popup")
-    ui_port:push_popup(intent.payload)
-    assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = monopoly_event.resolve_intent("push_popup")
-    TriggerCustomEvent(event_name, { payload = intent.payload })
-  end
-end
 
 function optional_effect_handler.build(helpers)
   local contains = helpers.contains
@@ -64,7 +29,7 @@ function optional_effect_handler.build(helpers)
     local game_ctx = build_game_ctx(game, move_result)
 
     local res = effect.execute(target_eff, player, tile, game_ctx)
-    _dispatch_intent(game, res.result or res)
+    intent_dispatcher.dispatch(game, res.result or res)
     if res.ok ~= true then
       logger.warn("landing_optional_effect execute blocked:", tostring(res and res.reason))
     end
@@ -78,4 +43,3 @@ function optional_effect_handler.build(helpers)
 end
 
 return optional_effect_handler
-

@@ -54,6 +54,9 @@ local function _clear_scene_tiles(scene, board, owned_tile_ids)
 end
 
 function bankruptcy_manager.eliminate(game, player)
+  if player.eliminated then
+    return
+  end
   logger.event(player.name .. " 破产出局")
 
   local owned_tile_ids, owned_tiles, names = _collect_owned_tiles(game, player)

@@ -855,7 +855,7 @@ local function _test_invalid_choice_option_rejected()
     meta = { player_id = g:current_player().id },
   })
   choice_manager.resolve(g, choice, { option_id = 999 })
-  assert(_get_choice(g) == nil, "invalid option should clear choice")
+  assert(_get_choice(g) ~= nil, "invalid option should keep choice")
 end
 
 local function _test_move_anim_wait_and_resume()

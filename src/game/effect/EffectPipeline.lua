@@ -1,10 +1,8 @@
 local effect = require("src.game.effect.Effect")
-local monopoly_event = require("src.game.game.MonopolyEvents")
+local intent_dispatcher = require("src.game.intent.IntentDispatcher")
 
 local pipeline = {}
 
-local choice_seq_path = { "turn", "choice_seq" }
-local pending_choice_path = { "turn", "pending_choice" }
 local list_pool = {}
 
 local function _acquire_list()
@@ -21,41 +19,6 @@ local function _release_list(list)
     list[i] = nil
   end
   list_pool[#list_pool + 1] = list
-end
-
-local function _dispatch_intent(game, payload)
-  assert(payload ~= nil, "missing payload")
-  local intent = payload.intent or payload
-  if intent and intent.kind == "need_choice" and intent.choice_spec then
-    assert(game and game.store, "Choice.open requires game.store")
-    local spec = intent.choice_spec
-    local seq = game.store:get(choice_seq_path) or 0
-    seq = seq + 1
-    game.store:set(choice_seq_path, seq)
-    local entry = {
-      id = seq,
-      kind = spec.kind,
-      title = spec.title or "请选择",
-      body_lines = spec.body_lines or {},
-      options = spec.options or {},
-      allow_cancel = spec.allow_cancel ~= false,
-      cancel_label = spec.cancel_label or "取消",
-      meta = spec.meta,
-    }
-    game.store:set(pending_choice_path, entry)
-    assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = monopoly_event.resolve_intent("need_choice")
-    TriggerCustomEvent(event_name, { choice = entry, choice_spec = spec })
-    return
-  end
-  if intent and intent.kind == "push_popup" and intent.payload then
-    local ui_port = assert(game.ui_port, "missing ui_port")
-    assert(ui_port.push_popup ~= nil, "missing ui_port.PushPopup")
-    ui_port:push_popup(intent.payload)
-    assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-    local event_name = monopoly_event.resolve_intent("push_popup")
-    TriggerCustomEvent(event_name, { payload = intent.payload })
-  end
 end
 
 local function _build_optional_choice(optional, player, tile, game_ctx, opts)
@@ -93,7 +56,7 @@ local function _build_optional_choice(optional, player, tile, game_ctx, opts)
     resume_args = opts.resume_args,
   }
 
-  _dispatch_intent(game_ctx.game, { kind = "need_choice", choice_spec = choice_spec })
+  intent_dispatcher.dispatch(game_ctx.game, { kind = "need_choice", choice_spec = choice_spec })
   return out
 end
 
@@ -129,7 +92,7 @@ function pipeline.run(effect_defs, player, tile, game_ctx, opts)
 
     local payload = out or res
     if payload then
-      _dispatch_intent(game_ctx.game, payload)
+      intent_dispatcher.dispatch(game_ctx.game, payload)
     end
 
     if type(out) == "table" and out.waiting then
