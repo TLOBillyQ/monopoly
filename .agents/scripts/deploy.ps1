@@ -11,9 +11,21 @@
 #>
 
 param(
-    [Parameter(Mandatory=$true, HelpMessage="请输入目标目录的路径")]
+    [Parameter(Mandatory=$false, HelpMessage="请输入目标目录的路径")]
     [string]$TargetPath
 )
+
+# 未传入时按平台选择默认路径
+if (-not $TargetPath) {
+    if ($IsWindows) {
+        $TargetPath = "C:\\Eggy\\Project"
+    } elseif ($IsMacOS) {
+        $TargetPath = "/Users/billyq/Documents/eggy/LuaSource_monopoly"
+    } else {
+        Write-Host "✗ 不支持的系统平台，请显式传入 -TargetPath" -ForegroundColor Red
+        exit 1
+    }
+}
 
 # 规范化目标路径（移除末尾斜杠，解析完整路径）
 $TargetPath = $TargetPath.TrimEnd("/").TrimEnd("\")
