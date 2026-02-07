@@ -191,7 +191,7 @@ function item_choice_handler.build(helpers)
     local meta = choice.meta
     local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
     assert(value ~= nil, "missing dice value")
-    local dice_count = meta.dice_count or player:dice_count()
+    local dice_count = meta.dice_count or game:player_dice_count(player)
     if meta.item_id then
       inventory.consume(player, meta.item_id)
     end

@@ -1,10 +1,11 @@
 local logger = require("src.core.Logger")
 local item_phase = require("src.game.item.ItemPhase")
+local store_paths = require("src.core.StorePaths")
 
-local function _phase_start(tm)
-  local player = tm.game:current_player()
-  local tc = tm.game.store:get({ "turn", "turn_count" })
-  local current_index = tm.game.store:get({ "turn", "current_player_index" })
+local function _phase_start(turn_mgr)
+  local player = turn_mgr.game:current_player()
+  local tc = turn_mgr.game.store:get(store_paths.turn.turn_count)
+  local current_index = turn_mgr.game.store:get(store_paths.turn.current_player_index)
   logger.info(
     "[Eggy]",
     "回合开始:",
@@ -15,7 +16,7 @@ local function _phase_start(tm)
     "player_id",
     tostring(player.id)
   )
-  tm.game.last_turn = {
+  turn_mgr.game.last_turn = {
     player_id = player.id,
     player_name = player.name,
     skipped = false,
@@ -25,14 +26,14 @@ local function _phase_start(tm)
     note = nil,
   }
   if player.eliminated then
-    tm.game.last_turn.note = "已出局，跳过"
-    tm.game.last_turn.skipped = true
+    turn_mgr.game.last_turn.note = "已出局，跳过"
+    turn_mgr.game.last_turn.skipped = true
     return "end_turn", { player = player }
   end
   local prev_tc = tc
   tc = tc + 1
-  if tm.game.store then
-    tm.game.store:set({ "turn", "turn_count" }, tc)
+  if turn_mgr.game.store then
+    turn_mgr.game.store:set(store_paths.turn.turn_count, tc)
   end
   logger.info(
     "[Eggy]",
@@ -43,15 +44,15 @@ local function _phase_start(tm)
     tostring(tc)
   )
   if player.status.stay_turns and player.status.stay_turns > 0 then
-    tm.game:set_player_status(player, "stay_turns", player.status.stay_turns - 1)
+    turn_mgr.game:set_player_status(player, "stay_turns", player.status.stay_turns - 1)
     logger.event(player.name .. " 被扣留，剩余回合:", player.status.stay_turns)
-    tm.game.last_turn.note = "被扣留"
-    tm.game.last_turn.skipped = true
-    tm.game.last_turn.stay_turns = player.status.stay_turns
+    turn_mgr.game.last_turn.note = "被扣留"
+    turn_mgr.game.last_turn.skipped = true
+    turn_mgr.game.last_turn.stay_turns = player.status.stay_turns
     return "end_turn", { player = player }
   end
 
-  local phase_res = item_phase.run(tm, "pre_action", {
+  local phase_res = item_phase.run(turn_mgr, "pre_action", {
     player = player,
     resume_state = "roll",
     resume_args = { player = player },
@@ -69,5 +70,4 @@ local function _phase_start(tm)
 end
 
 return _phase_start
-
 

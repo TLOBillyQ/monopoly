@@ -25,10 +25,14 @@ local function _build_game()
       [2] = { 1 },
     },
     store = {
+      get = function(_, path)
+        if path[1] == "players" and path[3] == "properties" then
+          return { [1] = true, [2] = true }
+        end
+        return nil
+      end,
       state = {
-        board = {
-          tiles = {},
-        },
+        players = {},
       },
     },
   }

@@ -1,5 +1,5 @@
 local ui_aliases = require("src.ui.UIAliases")
-local market_ui = require("src.ui.MarketUI")
+local market_ui = require("src.ui.MarketLayout")
 local turn_dispatch = require("src.game.turn.TurnDispatch")
 local ui_view = require("src.ui.UIView")
 local logger = require("src.core.Logger")

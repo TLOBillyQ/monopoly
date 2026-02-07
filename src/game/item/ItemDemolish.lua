@@ -1,6 +1,6 @@
 local logger = require("src.core.Logger")
 local tile = require("src.game.board.Tile")
-local board_utils = require("src.game.item.ItemBoardUtils")
+local board_utils = require("src.game.land.LandBoardUtils")
 local constants = require("Config.Generated.Constants")
 
 local demolish = {}
@@ -29,7 +29,7 @@ local function _send_players_to_hospital(game, idx)
   local snapshot = { list_unpack(occupants) }
   for _, pid in ipairs(snapshot) do
     local target = assert(game.players[pid], "missing target player: " .. tostring(pid))
-    if target:is_vehicle_indestructible() then
+    if game:player_is_vehicle_indestructible(target) then
       logger.event(target.name .. " 座驾免疫导弹效果")
     else
       game:set_player_seat(target, nil)
@@ -170,5 +170,4 @@ function demolish.use(game, player, distance, consume_fn, opts)
 end
 
 return demolish
-
 

@@ -1,6 +1,6 @@
 local logger = require("src.core.Logger")
 local constants = require("Config.Generated.Constants")
-local board_utils = require("src.game.item.ItemBoardUtils")
+local board_utils = require("src.game.land.LandBoardUtils")
 local inventory = require("src.game.item.ItemInventory")
 local gameplay_rules = require("Config.GameplayRules")
 local bankruptcy_manager = require("src.game.game.BankruptcyManager")
@@ -19,11 +19,11 @@ local target_item_order = {
 
 local target_effects = {
   [item_ids.share_wealth] = {
-    apply = function(_, user, target, _context)
-      local total = user.cash + target.cash
+    apply = function(game, user, target, _context)
+      local total = game:player_balance(user, "金币") + game:player_balance(target, "金币")
       local half = math.floor(total / 2)
-      user:set_cash(half)
-      target:set_cash(total - half)
+      game:set_player_cash(user, half)
+      game:set_player_cash(target, total - half)
       logger.event(user.name .. " 使用均富卡，与 " .. target.name .. " 平分资金")
       return true
     end,
@@ -43,7 +43,7 @@ local target_effects = {
   },
   [item_ids.tax] = {
     apply = function(game, user, target, context)
-      if target:has_deity("angel") then
+      if game:player_has_deity(target, "angel") then
         logger.event(target.name .. " 有天使，查税无效")
         return true
       end
@@ -53,10 +53,10 @@ local target_effects = {
         logger.event(target.name .. " 使用免税卡抵消查税")
         return true
       end
-      local fee = math.floor(target.cash * 0.5)
-      target:deduct_cash(fee)
+      local fee = math.floor(game:player_balance(target, "金币") * 0.5)
+      game:deduct_player_cash(target, fee)
       logger.event(user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. fee .. " 税金")
-      if target.cash <= 0 then
+      if game:player_balance(target, "金币") <= 0 then
         bankruptcy_manager.eliminate(game, target)
       end
       return true
@@ -66,32 +66,32 @@ local target_effects = {
     filter_target = function(_, _, target)
       return target.status.deity and true or false
     end,
-    apply = function(_, user, target, _context)
+    apply = function(game, user, target, _context)
       local deity = assert(target.status.deity, "missing target deity")
-      target:clear_deity()
-      user:set_deity(deity.type, deity.remaining)
+      game:clear_player_deity(target)
+      game:set_player_deity(user, deity.type, deity.remaining)
       logger.event(user.name .. " 使用请神卡，从 " .. target.name .. " 请走 " .. deity.type)
       return true
     end,
   },
   [item_ids.send_poor] = {
-    require_user = function(user)
-      if not user:has_deity("poor") then
+    require_user = function(game, user)
+      if not game:player_has_deity(user, "poor") then
         return false
       end
       return true
     end,
-    apply = function(_, user, target, _context)
+    apply = function(game, user, target, _context)
       local remaining = assert(user.status.deity, "missing user deity").remaining
-      target:set_deity("poor", remaining)
-      user:clear_deity()
+      game:set_player_deity(target, "poor", remaining)
+      game:clear_player_deity(user)
       logger.event(user.name .. " 使用送神卡，将穷神送给 " .. target.name)
       return true
     end,
   },
   [item_ids.poor] = {
-    apply = function(_, user, target, _context)
-      target:set_deity("poor")
+    apply = function(game, user, target, _context)
+      game:set_player_deity(target, "poor")
       logger.event(user.name .. " 使用穷神卡，" .. target.name .. " 穷神附身")
       return true
     end,
@@ -129,7 +129,7 @@ local function _handle_set_status(game, player, cfg, _context)
 end
 
 local function _handle_deity(game, player, cfg, context)
-  player:set_deity(cfg.deity, constants.deity_duration_turns)
+  game:set_player_deity(player, cfg.deity, constants.deity_duration_turns)
   logger.event(player.name .. " 获得附身：" .. cfg.deity)
   if cfg.log then
     logger.event(player.name .. cfg.log)

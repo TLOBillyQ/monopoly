@@ -483,7 +483,7 @@ local function _test_landing_optional_stale_choice_is_blocked()
   assert(pending and pending.kind == "landing_optional_effect", "pending choice expected")
 
   -- Invalidate the option after choice is shown (simulate state change).
-  p:set_cash(0)
+  g:set_player_cash(p, 0)
 
   choice_manager.resolve(g, pending, { option_id = "buy_land" })
   assert(_tile_state(g, tile).owner_id == nil, "stale buy_land should be blocked")
@@ -584,7 +584,7 @@ local function _test_mandatory_payment_causes_bankruptcy()
   g:set_player_property(p1, tile.id, true)
   
   -- Give p2 very little cash (not enough to pay rent)
-  p2:set_cash(10)
+  g:set_player_cash(p2, 10)
   
   -- Move p2 to the land tile
   g:update_player_position(p2, idx)
@@ -617,6 +617,7 @@ local function _test_bankruptcy_resets_owned_tiles()
 
   g:set_tile_owner(tile2, p1.id)
   g:set_tile_level(tile2, 1)
+  g:set_player_property(p1, tile2.id, true)
 
   bankruptcy_manager.eliminate(g, p1)
 
@@ -634,7 +635,7 @@ local function _test_ai_skips_auto_buy_at_market()
   assert(ai_player.is_ai, "player 2 should be AI")
   
   -- Give AI player enough cash to buy something
-  ai_player:set_cash(1000)
+  g:set_player_cash(ai_player, 1000)
   
   local before_cash = ai_player.cash
   market_manager.auto_buy(g, ai_player)
@@ -707,7 +708,7 @@ local function _test_rent_owner_missing_skips_payment()
   g:update_player_position(tenant, idx)
 
   g:set_player_status(tenant, "pending_free_rent", true)
-  owner:send_to_mountain(g)
+  g:player_send_to_mountain(owner)
   local before = tenant.cash
   land.executors.pay_rent.apply({ game = g, player = tenant, tile = tile })
   _assert_eq(tenant.cash, before, "rent skipped when owner in mountain")
@@ -736,8 +737,8 @@ local function _test_item_equalize_cash()
   local g = _new_game()
   local user = g.players[1]
   local target = g.players[2]
-  user:set_cash(1000)
-  target:set_cash(9000)
+  g:set_player_cash(user, 1000)
+  g:set_player_cash(target, 9000)
   user.inventory:add({ id = 2011 })
   local res = executor.use_item(g, user, 2011, { by_ai = true })
   if type(res) == "table" and res.intent then
@@ -760,7 +761,7 @@ local function _test_market_full_inventory_blocks_items()
   local market_manager = require("src.game.market.MarketManager")
   local g = _new_game()
   local p = g:current_player()
-  p:set_cash(999999)
+  g:set_player_cash(p, 999999)
   for _ = 1, p.inventory.max_slots do
     p.inventory:add({ id = 2001 })
   end
@@ -784,7 +785,7 @@ local function _test_market_global_limit()
     end
   end
   assert(entry, "should find a market item with coin currency")
-  p:set_cash((entry.price or 0) + 1000)
+  g:set_player_cash(p, (entry.price or 0) + 1000)
   g.store:set({ "market", "global_limits", entry.product_id }, 1)
 
   local res = market_manager.buy_with_opts(g, p, entry.product_id, nil)
@@ -809,7 +810,7 @@ local function _test_zero_cash_no_buy_choice()
   local p = g:current_player()
   local idx, tile = _first_land_tile(g.board)
   g:update_player_position(p, idx)
-  p:set_cash(0)
+  g:set_player_cash(p, 0)
   local res = _resolve_landing(g, p, tile, {})
   assert(res and res.waiting, "buy choice should appear even when cash is zero")
   assert(_get_choice(g) ~= nil, "pending choice should exist")
@@ -1129,12 +1130,12 @@ local function _test_complex_consecutive_turn_settlement()
   
   -- 给 p1 偷窃卡（id=2007）和座驾
   p1.inventory:add({ id = 2007 })
-  p1:set_cash(10000)
+  g:set_player_cash(p1, 10000)
   g:set_player_seat(p1, 4001) -- 滑板座驾
   
   -- 给 p2 一些道具作为偷窃目标
   p2.inventory:add({ id = 2001 }) -- 路障卡
-  p2:set_cash(10000)
+  g:set_player_cash(p2, 10000)
   
   -- 设置初始位置
   g:update_player_position(p1, 10)
@@ -1229,8 +1230,8 @@ local function _test_complex_market_interrupt_with_rent()
   local p1 = g.players[1]
   local p2 = g.players[2]
   
-  p1:set_cash(50000)
-  p2:set_cash(50000)
+  g:set_player_cash(p1, 50000)
+  g:set_player_cash(p2, 50000)
   
   -- 找到黑市位置
   local market_idx = _first_tile_by_type(g.board, "market")

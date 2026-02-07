@@ -43,12 +43,12 @@ local function _resolve_landing(game, player, tile, move_result, depth)
   })
 end
 
-local function _phase_land(tm, args)
+local function _phase_land(turn_mgr, args)
   local player = args.player
   local move_result = args.move_result
-  local tile = tm.game.board:get_tile(player.position)
+  local tile = turn_mgr.game.board:get_tile(player.position)
 
-  local res = _resolve_landing(tm.game, player, tile, move_result)
+  local res = _resolve_landing(turn_mgr.game, player, tile, move_result)
   if res and res.waiting then
     local resume_state = res.resume_state or "landing"
     local resume_args = res.resume_args or { player = player, move_result = move_result }

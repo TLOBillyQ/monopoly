@@ -4,6 +4,7 @@ local agent = require("src.game.game.Agent")
 local strategy = require("src.game.item.ItemStrategy")
 local inventory = require("src.game.item.ItemInventory")
 local intent_dispatcher = require("src.game.intent.IntentDispatcher")
+local store_paths = require("src.core.StorePaths")
 
 local item_phase = {}
 
@@ -53,15 +54,15 @@ end
 
 function item_phase.finish(game, phase)
   local store = game.store
-  store:set({ "turn", "item_phase", phase }, { done = true })
-  local active = store:get({ "turn", "item_phase_active" })
+  store:set(store_paths.turn.item_phase_by_name(phase), { done = true })
+  local active = store:get(store_paths.turn.item_phase_active)
   if active == phase then
-    store:set({ "turn", "item_phase_active" }, "")
+    store:set(store_paths.turn.item_phase_active, "")
   end
 end
 
-function item_phase.run(tm, phase, args)
-  local game = tm.game
+function item_phase.run(turn_mgr, phase, args)
+  local game = turn_mgr.game
   local player = args.player
   assert(player ~= nil, "missing player")
   if not item_phase.is_enabled(phase) then
@@ -69,9 +70,9 @@ function item_phase.run(tm, phase, args)
   end
 
   local store = game.store
-  local phase_state = store:get({ "turn", "item_phase", phase })
+  local phase_state = store:get(store_paths.turn.item_phase_by_name(phase))
   if phase_state and phase_state.done then
-    store:set({ "turn", "item_phase", phase }, nil)
+    store:set(store_paths.turn.item_phase_by_name(phase), nil)
     return nil
   end
 
@@ -81,10 +82,10 @@ function item_phase.run(tm, phase, args)
       intent_dispatcher.dispatch(game, pre)
     end
     if pre and pre.waiting then
-      store:set({ "turn", "item_phase_active" }, phase)
+      store:set(store_paths.turn.item_phase_active, phase)
       return { waiting = true, resume_state = args.resume_state, resume_args = args.resume_args }
     end
-    if store:get({ "turn", "action_anim" }) then
+    if store:get(store_paths.turn.action_anim) then
       item_phase.finish(game, phase)
       return { waiting = true, wait_action_anim = true, resume_state = args.resume_state, resume_args = args.resume_args }
     end
@@ -102,8 +103,8 @@ function item_phase.run(tm, phase, args)
 
   intent_dispatcher.dispatch(game, { kind = "need_choice", choice_spec = spec })
 
-  store:set({ "turn", "item_phase", phase }, { active = true })
-  store:set({ "turn", "item_phase_active" }, phase)
+  store:set(store_paths.turn.item_phase_by_name(phase), { active = true })
+  store:set(store_paths.turn.item_phase_active, phase)
 
   return { waiting = true, resume_state = args.resume_state, resume_args = args.resume_args }
 end

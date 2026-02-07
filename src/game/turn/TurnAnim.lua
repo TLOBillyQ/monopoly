@@ -1,4 +1,5 @@
 local turn_anim = {}
+local store_paths = require("src.core.StorePaths")
 
 function turn_anim.step_anim(game, state, opts)
   assert(game ~= nil, "missing game")
@@ -9,8 +10,9 @@ function turn_anim.step_anim(game, state, opts)
   assert(opts.seq_key ~= nil, "missing opts.seq_key")
   assert(opts.done_action ~= nil, "missing opts.done_action")
 
-  local anim = game.store:get({ "turn", opts.anim_key })
-  local phase = game.store:get({ "turn", "phase" })
+  local anim_path = store_paths.turn[opts.anim_key]
+  local anim = game.store:get(anim_path)
+  local phase = game.store:get(store_paths.turn.phase)
   assert(anim ~= nil and anim.seq ~= nil, "missing " .. tostring(opts.anim_key))
 
   local phase_label = opts.phase_label or "anim"

@@ -67,7 +67,7 @@ landing.executors = {
       if move_result.passed_start and move_result.passed_start > 0 then
         return
       end
-      player:add_cash(constants.pass_start_bonus)
+      ctx.game:add_player_cash(player, constants.pass_start_bonus)
       logger.event(player.name .. " 停在起点，获得 " .. constants.pass_start_bonus .. " 金币")
     end,
   },
@@ -97,7 +97,7 @@ landing.executors = {
       return ctx.tile and ctx.tile.type == "hospital"
     end,
     apply = function(ctx)
-      ctx.player:apply_hospital_effects(ctx.game)
+      ctx.game:player_apply_hospital_effects(ctx.player)
     end,
   },
   mountain = {
@@ -105,7 +105,7 @@ landing.executors = {
       return ctx.tile and ctx.tile.type == "mountain"
     end,
     apply = function(ctx)
-      ctx.player:apply_mountain_effects(ctx.game)
+      ctx.game:player_apply_mountain_effects(ctx.player)
     end,
   },
   market = {
@@ -145,4 +145,3 @@ landing.executors = {
 }
 
 return landing
-

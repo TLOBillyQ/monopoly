@@ -9,6 +9,7 @@ local ui_model = require("src.ui.UIModel")
 local logger = require("src.core.Logger")
 local turn_dispatch = require("src.game.turn.TurnDispatch")
 local turn_anim = require("src.game.turn.TurnAnim")
+local store_paths = require("src.core.StorePaths")
 
 local gameplay_loop = {}
 
@@ -67,12 +68,12 @@ local function _update_countdown(game, state)
   if seconds ~= state.countdown_last then
     state.countdown_last = seconds
     assert(game.store ~= nil and game.store.set ~= nil, "missing game.store.set")
-    game.store:set({ "turn", "countdown_seconds" }, seconds)
+    game.store:set(store_paths.turn.countdown_seconds, seconds)
   end
   if active ~= state.countdown_active_last then
     state.countdown_active_last = active
     assert(game.store ~= nil and game.store.set ~= nil, "missing game.store.set")
-    game.store:set({ "turn", "countdown_active" }, active)
+    game.store:set(store_paths.turn.countdown_active, active)
   end
 end
 
@@ -284,7 +285,7 @@ function gameplay_loop.step_choice_timeout(game, state, dt, opts)
   assert(opts ~= nil, "missing opts")
   assert(opts.on_pending_choice ~= nil, "missing opts.on_pending_choice")
   assert(opts.is_choice_active ~= nil, "missing opts.is_choice_active")
-  local pending = game.store:get({ "turn", "pending_choice" })
+  local pending = game.store:get(store_paths.turn.pending_choice)
   if pending and (not state.pending_choice or state.pending_choice.id ~= pending.id) then
     state.pending_choice = pending
     state.pending_choice_elapsed = 0
@@ -432,7 +433,7 @@ function gameplay_loop.tick(game, state, dt)
   end
 
   assert(game.store ~= nil and game.store.get ~= nil, "missing game.store.Get")
-  local phase = game.store:get({ "turn", "phase" })
+  local phase = game.store:get(store_paths.turn.phase)
   local input_blocked = phase == "wait_move_anim" or phase == "wait_action_anim"
   local input_blocked_changed = false
   if state.ui and state.ui.input_blocked ~= input_blocked then
@@ -495,7 +496,7 @@ function gameplay_loop.tick(game, state, dt)
     end,
   })
 
-  phase = game.store:get({ "turn", "phase" })
+  phase = game.store:get(store_paths.turn.phase)
   input_blocked = phase == "wait_move_anim" or phase == "wait_action_anim"
   if state.ui and state.ui.input_blocked ~= input_blocked then
     state.ui.input_blocked = input_blocked
@@ -505,7 +506,7 @@ function gameplay_loop.tick(game, state, dt)
     end
   end
   if phase == "wait_move_anim" then
-    local anim = game.store:get({ "turn", "move_anim" })
+    local anim = game.store:get(store_paths.turn.move_anim)
     if anim then
       gameplay_loop.step_move_anim(game, state, {
         on_move_anim = function(_, anim_ctx)
@@ -563,7 +564,7 @@ function gameplay_loop.tick(game, state, dt)
       })
     end
   elseif phase == "wait_action_anim" then
-    local anim = game.store:get({ "turn", "action_anim" })
+    local anim = game.store:get(store_paths.turn.action_anim)
     if anim then
       gameplay_loop.step_action_anim(game, state, {
         on_action_anim = function(ctx, anim_ctx)

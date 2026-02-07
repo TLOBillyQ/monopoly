@@ -1,4 +1,5 @@
 require "vendor.third_party.ClassUtils"
+local store_paths = require("src.core.StorePaths")
 
 ---地块类，代表棋盘上的一个地块
 local tile = Class("Tile")
@@ -27,7 +28,7 @@ function tile.get_state(game, tile)
   assert(game and game.store, "Tile.GetState requires game.store")
   assert(tile and tile.type == "land", "Tile.GetState requires land tile")
 
-  local s = game.store:get({ "board", "tiles", tile.id })
+  local s = game.store:get(store_paths.board.tile(tile.id))
   assert(type(s) == "table", "missing tile state for tile " .. tostring(tile.id))
 
   return { owner_id = s.owner_id, level = s.level }

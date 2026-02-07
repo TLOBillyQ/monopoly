@@ -21,16 +21,16 @@ local function _roll_dice(count, override_values, rng)
   return results, total
 end
 
-local function _phase_roll(tm, args)
+local function _phase_roll(turn_mgr, args)
   args = args or {}
-  local game = tm.game
+  local game = turn_mgr.game
   local player = args.player or game:current_player()
   local rolls = args.rolls
   local raw_total = args.raw_total
   local total = args.total
 
   if not rolls then
-    local dice_count = player:dice_count()
+    local dice_count = game:player_dice_count(player)
     local override = nil
     if player.status.pending_remote_dice then
       override = player.status.pending_remote_dice.values
@@ -67,7 +67,7 @@ local function _phase_roll(tm, args)
     }
   end
 
-  local phase_res = item_phase.run(tm, "pre_move", {
+  local phase_res = item_phase.run(turn_mgr, "pre_move", {
     player = player,
     resume_state = "move",
     resume_args = { player = player, total = total, raw_total = raw_total },
@@ -84,5 +84,3 @@ local function _phase_roll(tm, args)
 end
 
 return _phase_roll
-
-

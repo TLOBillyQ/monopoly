@@ -1,18 +1,18 @@
 local land_actions = {}
 local constants = require("Config.Generated.Constants")
-local board_utils = require("src.game.item.ItemBoardUtils")
+local board_utils = require("src.game.land.LandBoardUtils")
 local pricing = require("src.game.land.LandPricing")
 local inventory = require("src.game.item.ItemInventory")
 local gameplay_rules = require("Config.GameplayRules")
 local monopoly_event = require("src.game.game.MonopolyEvents")
 local bankruptcy_manager = require("src.game.game.BankruptcyManager")
+local store_paths = require("src.core.StorePaths")
 
 local item_ids = gameplay_rules.item_ids
 local _emit_event = monopoly_event.emit
-local tile_state_path = { "board", "tiles", nil }
 
 local function _eliminate_if_bankrupt(game, player)
-  if not player or player.cash > 0 then
+  if not player or game:player_balance(player, "金币") > 0 then
     return
   end
   bankruptcy_manager.eliminate(game, player)
@@ -22,8 +22,7 @@ function land_actions.safe_tile_state(game, tile)
   if not (game and game.store and tile and tile.type == "land") then
     return { owner_id = nil, level = 0 }
   end
-  tile_state_path[3] = tile.id
-  local st = game.store:get(tile_state_path)
+  local st = game.store:get(store_paths.board.tile(tile.id))
   if type(st) ~= "table" then
     return { owner_id = nil, level = 0 }
   end
@@ -84,7 +83,7 @@ function land_actions.resolve_rent_owner(game, tile, state_fn)
     return nil, st
   end
 
-  if owner:is_in_mountain(game) then
+  if game:player_is_in_mountain(owner) then
     _emit_event(monopoly_event.land.rent_skipped_mountain, {
       owner = owner,
       tile = tile,
@@ -160,10 +159,10 @@ function land_actions.execute_strong_card(game, player_id, tile_id)
   assert(owner ~= nil, "missing owner")
 
   local total_value = board_utils.total_invested(tile, st.level)
-  if player.cash < total_value then return false end
+  if game:player_balance(player, "金币") < total_value then return false end
   assert(inventory.consume(player, item_ids.strong) == true, "consume strong card failed")
-  player:deduct_cash(total_value)
-  owner:add_cash(total_value)
+  game:deduct_player_cash(player, total_value)
+  game:add_player_cash(owner, total_value)
   game:set_tile_owner(tile, player.id)
   game:set_player_property(owner, tile.id, false)
   game:set_player_property(player, tile.id, true)
@@ -201,12 +200,12 @@ function land_actions.execute_pay_rent(game, player_id, tile_id)
   local idx = assert(board:index_of_tile_id(tile.id), "missing tile index: " .. tostring(tile.id))
   local rent = _contiguous_rent(game, board, idx, owner.id)
 
-  if player:has_deity("poor") then rent = rent * 2 end
-  if owner:has_deity("rich") then rent = rent * 2 end
+  if game:player_has_deity(player, "poor") then rent = rent * 2 end
+  if game:player_has_deity(owner, "rich") then rent = rent * 2 end
 
-  if player.cash >= rent then
-    player:deduct_cash(rent)
-    owner:add_cash(rent)
+  if game:player_balance(player, "金币") >= rent then
+    game:deduct_player_cash(player, rent)
+    game:add_player_cash(owner, rent)
     _emit_event(monopoly_event.land.rent_paid, {
       player = player,
       owner = owner,
@@ -216,9 +215,9 @@ function land_actions.execute_pay_rent(game, player_id, tile_id)
     })
     _eliminate_if_bankrupt(game, player)
   else
-    local paid = player.cash
-    owner:add_cash(paid)
-    player:set_cash(0)
+    local paid = game:player_balance(player, "金币")
+    game:add_player_cash(owner, paid)
+    game:set_player_cash(player, 0)
     _emit_event(monopoly_event.land.rent_bankrupt, {
       player = player,
       owner = owner,
@@ -243,10 +242,11 @@ end
 
 function land_actions.execute_pay_tax(game, player_id)
   local player = game.players[player_id]
-  local fee = math.floor(player.cash * constants.tax_rate)
-  if player.cash < fee then fee = player.cash end
+  local cash = game:player_balance(player, "金币")
+  local fee = math.floor(cash * constants.tax_rate)
+  if cash < fee then fee = cash end
 
-  player:deduct_cash(fee)
+  game:deduct_player_cash(player, fee)
   _emit_event(monopoly_event.land.tax_paid, {
     player = player,
     amount = fee,

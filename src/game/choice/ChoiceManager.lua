@@ -3,6 +3,7 @@ local executor = require("src.game.item.ItemExecutor")
 local item_phase = require("src.game.item.ItemPhase")
 local effect = require("src.game.effect.Effect")
 local landing_defs = require("Config.LandingEffects")
+local store_paths = require("src.core.StorePaths")
 
 local choice_manager = {}
 local choice_registry = {}
@@ -38,7 +39,7 @@ local function _is_cancel(action)
 end
 
 local function _clear_choice(game)
-  game.store:set({ "turn", "pending_choice" }, nil)
+  game.store:set(store_paths.turn.pending_choice, nil)
 end
 
 local function _use_item(game, player, item_id, context)
@@ -89,7 +90,7 @@ local function _finish_item_phase(game, phase)
 end
 
 local function _finish_active_item_phase(game)
-  local phase = game.store:get({ "turn", "item_phase_active" })
+  local phase = game.store:get(store_paths.turn.item_phase_active)
   if phase ~= "" then
     item_phase.finish(game, phase)
   end

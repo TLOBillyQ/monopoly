@@ -6,6 +6,7 @@ local inventory = require("src.game.item.ItemInventory")
 local agent = require("src.game.game.Agent")
 local land_choice_specs = require("src.game.land.LandChoiceSpecs")
 local monopoly_event = require("src.game.game.MonopolyEvents")
+local store_paths = require("src.core.StorePaths")
 local market_manager = {}
 local _emit_event = monopoly_event.emit
 
@@ -72,7 +73,7 @@ local function _remaining_global_limit(game, product_id)
   assert(game ~= nil, "missing game")
   assert(game.store ~= nil, "missing game.store")
   assert(product_id ~= nil, "missing product_id")
-  return game.store:get({ "market", "global_limits", product_id })
+  return game.store:get(store_paths.market.global_limit(product_id))
 end
 
 local function _can_buy_entry(game, player, entry)
@@ -84,7 +85,7 @@ local function _can_buy_entry(game, player, entry)
     return false
   end
   local price = _entry_price(entry)
-  return player:balance(_entry_currency(entry)) >= price
+  return game:player_balance(player, _entry_currency(entry)) >= price
 end
 
 function market_manager.list_buyable(player, game)
@@ -136,7 +137,7 @@ local function _consume_global_limit(game, product_id)
   if next_remaining < 0 then
     next_remaining = 0
   end
-  game.store:set({ "market", "global_limits", product_id }, next_remaining)
+  game.store:set(store_paths.market.global_limit(product_id), next_remaining)
 end
 
 function market_manager.buy_with_opts(game, player, product_id, opts)
@@ -161,7 +162,7 @@ function market_manager.buy_with_opts(game, player, product_id, opts)
 
   local price = _entry_price(entry)
   local currency = _entry_currency(entry)
-  if player:balance(currency) < price then
+  if game:player_balance(player, currency) < price then
     _emit_event(monopoly_event.market.buy_failed, {
       player = player,
       entry = entry,
@@ -181,7 +182,7 @@ function market_manager.buy_with_opts(game, player, product_id, opts)
       })
       return { ok = false }
     end
-    player:deduct_balance(currency, price)
+    game:deduct_player_balance(player, currency, price)
     inventory.give(player, product_id)
     _consume_global_limit(game, product_id)
     _emit_event(monopoly_event.market.bought_item, {
@@ -216,7 +217,7 @@ function market_manager.buy_with_opts(game, player, product_id, opts)
     }
   end
 
-  player:deduct_balance(currency, price)
+  game:deduct_player_balance(player, currency, price)
 
   assert(game ~= nil, "missing game")
   assert(game.set_player_seat ~= nil, "missing game.SetPlayerSeat")
@@ -260,5 +261,4 @@ function market_manager.auto_buy(game, player)
 end
 
 return market_manager
-
 

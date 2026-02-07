@@ -5,12 +5,13 @@ local monopoly_event = require("src.game.game.MonopolyEvents")
 local chance_effects = {}
 
 local function _emit_event(kind, payload)
-  assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-  TriggerCustomEvent(kind, payload or {})
+  if TriggerCustomEvent then
+    TriggerCustomEvent(kind, payload or {})
+  end
 end
 
 function chance_effects.resolve(game, player, card, context)
-  if card.negative and player:has_angel() then
+  if card.negative and game:player_has_angel(player) then
     _emit_event(monopoly_event.chance.applied, {
       player = player,
       card = card,
@@ -27,5 +28,3 @@ function chance_effects.resolve(game, player, card, context)
 end
 
 return chance_effects
-
-

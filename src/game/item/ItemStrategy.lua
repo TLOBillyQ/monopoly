@@ -93,7 +93,7 @@ function strategy.auto_pre_action(game, player, phase)
   if clear_result then return clear_result end
 
   local dice_result = _try_use(item_ids.remote_dice, function()
-    local dice_count = player:dice_count()
+    local dice_count = game:player_dice_count(player)
     return agent.pick_remote_dice_value(game, player, dice_count) and true or false
   end)
   if dice_result then return dice_result end
@@ -123,5 +123,4 @@ function strategy.auto_pre_action(game, player, phase)
 end
 
 return strategy
-
 

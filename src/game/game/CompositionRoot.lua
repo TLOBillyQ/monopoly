@@ -23,6 +23,7 @@ local item_phase = require("src.game.item.ItemPhase")
 local chance_registry = require("src.game.chance.ChanceRegistry")
 local logger = require("src.core.Logger")
 local market_cfg = require("Config.Generated.Market")
+local store_paths = require("src.core.StorePaths")
 
 local composition_root = {}
 
@@ -163,9 +164,9 @@ local function _build_initial_state(board, players)
   }
 end
 
-local function _phase_post(tm, args)
-  local player = args.player or tm.game:current_player()
-  local phase_res = item_phase.run(tm, "post_action", {
+local function _phase_post(turn_mgr, args)
+  local player = args.player or turn_mgr.game:current_player()
+  local phase_res = item_phase.run(turn_mgr, "post_action", {
     player = player,
     resume_state = "post_action",
     resume_args = { player = player },
@@ -181,16 +182,16 @@ local function _phase_post(tm, args)
   return "end_turn", { player = player }
 end
 
-local function _phase_end(tm, args)
+local function _phase_end(turn_mgr, args)
   local player = args.player
-  player:tick_deity()
-  player:clear_temporal_flags()
-  assert(tm.game ~= nil and tm.game.store ~= nil, "missing game/store")
-  tm.game.store:set({ "turn", "market_prompt" }, nil)
-  tm.game.store:set({ "turn", "post_action" }, nil)
-  tm.game.store:set({ "turn", "item_phase" }, {})
-  tm.game.store:set({ "turn", "item_phase_active" }, "")
-  tm:next_player()
+  turn_mgr.game:tick_player_deity(player)
+  turn_mgr.game:clear_player_temporal_flags(player)
+  assert(turn_mgr.game ~= nil and turn_mgr.game.store ~= nil, "missing game/store")
+  turn_mgr.game.store:set(store_paths.turn.market_prompt, nil)
+  turn_mgr.game.store:set(store_paths.turn.post_action, nil)
+  turn_mgr.game.store:set(store_paths.turn.item_phase, {})
+  turn_mgr.game.store:set(store_paths.turn.item_phase_active, "")
+  turn_mgr:next_player()
   return nil
 end
 
@@ -205,10 +206,9 @@ function composition_root.assemble(opts, game_or_class)
   local store = store:new(initial_state)
 
   for _, p in ipairs(players) do
-    p._store = store
     local pid = p.id
     p.inventory._on_change = function(inv)
-      store:set({ "players", pid, "inventory" }, _snapshot_inventory(inv))
+      store:set(store_paths.players.inventory(pid), _snapshot_inventory(inv))
     end
   end
 

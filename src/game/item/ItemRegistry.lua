@@ -18,7 +18,7 @@ function item_registry.target_candidates(game, player, item_id)
   local spec = item_effects.get_target_spec(item_id)
   assert(spec ~= nil, "missing target spec: " .. tostring(item_id))
 
-  if spec.require_user and not spec.require_user(player) then
+  if spec.require_user and not spec.require_user(game, player) then
     return {}
   end
 
@@ -84,7 +84,7 @@ local function _handle_target_player_item(game, player, item_id, context)
         if t.status.deity then
           deity_text = " 神:" .. t.status.deity.type
         end
-        table.insert(body_lines, t.name .. " 现金:" .. t.cash .. deity_text)
+        table.insert(body_lines, t.name .. " 现金:" .. tostring(game:player_balance(t, "金币")) .. deity_text)
         table.insert(options, { id = t.id, label = t.name })
       end
       return {
@@ -101,7 +101,7 @@ local function _handle_target_player_item(game, player, item_id, context)
 end
 
 local function _handle_remote_dice(game, player, item_id, context)
-  local dice_count = player:dice_count()
+  local dice_count = game:player_dice_count(player)
   return _run_item_choice_flow(game, player, item_id, context, {
     candidates = function()
       return { 1, 2, 3, 4, 5, 6 }
@@ -208,5 +208,4 @@ function item_registry.register_defaults()
 end
 
 return item_registry
-
 

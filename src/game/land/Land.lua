@@ -1,7 +1,7 @@
 local land = {}
 local logger = require("src.core.Logger")
 local tile = require("src.game.board.Tile")
-local board_utils = require("src.game.item.ItemBoardUtils")
+local board_utils = require("src.game.land.LandBoardUtils")
 local pricing = require("src.game.land.LandPricing")
 local land_actions = require("src.game.land.LandActions")
 local land_choice_specs = require("src.game.land.LandChoiceSpecs")
@@ -25,7 +25,7 @@ end
 local function _apply_buy(ctx)
   local tile = ctx.tile
   local player = ctx.player
-  if player.cash < tile.price then
+  if ctx.game:player_balance(player, "金币") < tile.price then
     return {
       intent = {
         kind = "push_popup",
@@ -33,7 +33,7 @@ local function _apply_buy(ctx)
       },
     }
   end
-  player:deduct_cash(tile.price)
+  ctx.game:deduct_player_cash(player, tile.price)
   ctx.game:set_tile_owner(tile, player.id)
   ctx.game:set_player_property(player, tile.id, true)
   logger.event(player.name .. " 购买 " .. tile.name .. " 花费 " .. tile.price)
@@ -61,7 +61,7 @@ local function _apply_upgrade(ctx)
   local player = ctx.player
   local st = land_actions.safe_tile_state(ctx.game, tile)
   local cost = pricing.upgrade_cost(tile, st.level or 0)
-  if player.cash < cost then
+  if ctx.game:player_balance(player, "金币") < cost then
     return {
       intent = {
         kind = "push_popup",
@@ -69,7 +69,7 @@ local function _apply_upgrade(ctx)
       },
     }
   end
-  player:deduct_cash(cost)
+  ctx.game:deduct_player_cash(player, cost)
   local new_level = (st.level or 0) + 1
   ctx.game:set_tile_level(tile, new_level)
   local ui_port = assert(ctx.game.ui_port, "missing ui_port")
@@ -120,7 +120,7 @@ local function _apply_pay_rent(ctx)
       end
     end
   end
-  if strong_idx and player.cash >= total_value then
+  if strong_idx and ctx.game:player_balance(player, "金币") >= total_value then
     return {
       waiting = true,
       reason = "rent_choice",
@@ -182,6 +182,4 @@ land.executors = {
 }
 
 return land
-
-
 

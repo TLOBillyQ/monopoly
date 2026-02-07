@@ -103,9 +103,10 @@ local function _richest_other(game, player, allow_ids)
   for _, p in ipairs(game.players) do
     if not p.eliminated and p.id ~= player.id then
       if not allow_ids or allow_ids[p.id] then
-        if not best_cash or p.cash > best_cash then
+        local cash = game:player_balance(p, "金币")
+        if not best_cash or cash > best_cash then
           best = p
-          best_cash = p.cash
+          best_cash = cash
         end
       end
     end
@@ -114,8 +115,9 @@ local function _richest_other(game, player, allow_ids)
 end
 
 local function _is_richest(game, player)
+  local player_cash = game:player_balance(player, "金币")
   for _, p in ipairs(game.players) do
-    if not p.eliminated and p.id ~= player.id and p.cash > player.cash then
+    if not p.eliminated and p.id ~= player.id and game:player_balance(p, "金币") > player_cash then
       return false
     end
   end
@@ -151,10 +153,10 @@ function agent_targeting.pick_target_player(game, player, item_id, options)
     local best = nil
     for _, p in ipairs(game.players) do
       if p.id ~= player.id and not p.eliminated and (not allowed or allowed[p.id]) then
-        if p:has_deity("angel") then
+        if game:player_has_deity(p, "angel") then
           best = p
           break
-        elseif p:has_deity("rich") and not best then
+        elseif game:player_has_deity(p, "rich") and not best then
           best = p
         end
       end
@@ -163,7 +165,7 @@ function agent_targeting.pick_target_player(game, player, item_id, options)
   end
 
   if item_id == item_ids.send_poor then
-    if not player:has_deity("poor") then
+    if not game:player_has_deity(player, "poor") then
       return nil
     end
     return _richest_other(game, player, allowed)

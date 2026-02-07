@@ -44,6 +44,9 @@ local function _resolve_current_player(state)
 end
 
 function ui_model.build(store_state, env)
+  if store_state and store_state.store and store_state.store.state then
+    store_state = store_state.store.state
+  end
   assert(store_state ~= nil, "missing store_state")
   env = env or {}
   local ui_state = env.ui_state

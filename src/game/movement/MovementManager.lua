@@ -143,7 +143,7 @@ function movement_manager.move(game, player, steps, opts)
 
   if pass_start > 0 then
     local bonus = pass_start * constants.pass_start_bonus
-    player:add_cash(bonus)
+    game:add_player_cash(player, bonus)
     _emit_event(monopoly_event.movement.passed_start, {
       player = player,
       count = pass_start,

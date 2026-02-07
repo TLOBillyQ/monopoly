@@ -1,13 +1,14 @@
 local tile = require("src.game.board.Tile")
 local pricing = require("src.game.land.LandPricing")
 local gameplay_rules = require("Config.GameplayRules")
+local store_paths = require("src.core.StorePaths")
 
 local game_victory = {}
 
 local tile_state = tile.get_state
 
 local function _total_assets(game, player)
-  local total = player.cash
+  local total = game:player_balance(player, "金币")
   assert(total ~= nil, "missing player cash")
   for tile_id in pairs(player.properties) do
     local tile = game.board:get_tile_by_id(tile_id)
@@ -71,7 +72,7 @@ function game_victory.check_victory(self)
   local turn_limit = gameplay_rules.turn_limit
   assert(turn_limit ~= nil, "missing turn_limit")
   if turn_limit > 0 then
-    local turn_count = self.store:get({ "turn", "turn_count" })
+    local turn_count = self.store:get(store_paths.turn.turn_count)
     if turn_count >= turn_limit then
       if #alive == 0 then
         return _apply_winners(self, {}, "游戏结束，无人生还")

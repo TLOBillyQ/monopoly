@@ -9,7 +9,7 @@ function mine_effect.apply(game, player, position)
   assert(player ~= nil, "missing player")
   assert(position ~= nil, "missing position")
 
-  if player:has_angel() then
+  if game:player_has_angel(player) then
     logger.event(player.name .. " 天使保护，地雷无效")
     board:clear_mine(position)
     return { detonated = true, protected = true }
@@ -24,15 +24,14 @@ function mine_effect.apply(game, player, position)
       tile_index = position,
     })
   end
-  if player:is_vehicle_indestructible() then
+  if game:player_is_vehicle_indestructible(player) then
     logger.event(player.name .. " 座驾免疫地雷")
     return { detonated = true, protected = true }
   end
   game:set_player_seat(player, nil)
   logger.event(player.name .. " 触发地雷，座驾被摧毁并送医")
-  player:send_to_hospital(game)
+  game:player_send_to_hospital(player)
   return { detonated = true, hospitalized = true, new_position = player.position }
 end
 
 return mine_effect
-

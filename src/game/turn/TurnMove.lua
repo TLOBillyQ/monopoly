@@ -2,12 +2,13 @@ local steal = require("src.game.item.ItemSteal")
 local movement_manager = require("src.game.movement.MovementManager")
 local market_manager = require("src.game.market.MarketManager")
 local intent_dispatcher = require("src.game.intent.IntentDispatcher")
+local store_paths = require("src.core.StorePaths")
 
-local function _phase_move(tm, args)
+local function _phase_move(turn_mgr, args)
   local player = args.player
   local total = args.total
   local raw_total = args.raw_total
-  assert(tm.game ~= nil, "missing game")
+  assert(turn_mgr.game ~= nil, "missing game")
   local move_result = args.move_result
 
   local move_opts = { branch_parity = raw_total }
@@ -19,16 +20,16 @@ local function _phase_move(tm, args)
 
   if not move_result then
     local start_index = player.position
-    move_result = movement_manager.move(tm.game, player, total, move_opts)
-    tm.game.last_turn.move_result = move_result
+    move_result = movement_manager.move(turn_mgr.game, player, total, move_opts)
+    turn_mgr.game.last_turn.move_result = move_result
 
-    local game = tm.game
+    local game = turn_mgr.game
     local store = assert(game.store, "missing game.store")
     local ui_port = assert(game.ui_port, "missing game.ui_port")
     if ui_port.wait_move_anim == true then
-      local seq = (store:get({ "turn", "move_anim_seq" }) or 0) + 1
-      store:set({ "turn", "move_anim_seq" }, seq)
-      store:set({ "turn", "move_anim" }, {
+      local seq = (store:get(store_paths.turn.move_anim_seq) or 0) + 1
+      store:set(store_paths.turn.move_anim_seq, seq)
+      store:set(store_paths.turn.move_anim, {
         seq = seq,
         player_id = player.id,
         from_index = start_index,
@@ -50,21 +51,21 @@ local function _phase_move(tm, args)
       }
     end
   else
-    tm.game.last_turn.move_result = move_result
+    turn_mgr.game.last_turn.move_result = move_result
   end
 
   if move_result.stopped_on_roadblock then
     local stay = player.status.stay_turns or 0
     if stay < 1 then
-      tm.game:set_player_status(player, "stay_turns", 1)
+      turn_mgr.game:set_player_status(player, "stay_turns", 1)
     end
   end
 
   if move_result.steal_interrupt then
     local interrupt = move_result.steal_interrupt
-    local res = steal.handle_pass_players(tm.game, player, interrupt.encountered_ids or {})
+    local res = steal.handle_pass_players(turn_mgr.game, player, interrupt.encountered_ids or {})
     if res and res.intent then
-      intent_dispatcher.dispatch(tm.game, res.intent)
+      intent_dispatcher.dispatch(turn_mgr.game, res.intent)
     end
     if res and res.waiting then
       return "wait_choice", {
@@ -93,9 +94,9 @@ local function _phase_move(tm, args)
   end
 
   if move_result.market_interrupt then
-    local spec, intent = market_manager.build_choice_spec(player, tm.game)
+    local spec, intent = market_manager.build_choice_spec(player, turn_mgr.game)
     if spec then
-      intent_dispatcher.dispatch(tm.game, { kind = "need_choice", choice_spec = spec })
+      intent_dispatcher.dispatch(turn_mgr.game, { kind = "need_choice", choice_spec = spec })
       return "wait_choice", {
         resume_state = "move",
         resume_args = {
@@ -109,7 +110,7 @@ local function _phase_move(tm, args)
       }
     end
     if intent then
-      local ui_port = assert(tm.game.ui_port, "missing game.ui_port")
+      local ui_port = assert(turn_mgr.game.ui_port, "missing game.ui_port")
       assert(ui_port.push_popup ~= nil, "missing ui_port.push_popup")
       ui_port:push_popup(intent.payload)
     end

@@ -1,25 +1,20 @@
 local logger = require("src.core.Logger")
 local inventory = require("src.game.item.ItemInventory")
 local tile_renderer = require("src.ui.TileRenderer")
+local store_paths = require("src.core.StorePaths")
 
 local bankruptcy_manager = {}
 
 local function _collect_owned_tiles(game, player)
   local owned_tile_ids = {}
-  local owned_tile_set = {}
-  for tile_id in pairs(player.properties) do
-    owned_tile_set[tile_id] = true
-    table.insert(owned_tile_ids, tile_id)
+  local props = nil
+  if game.store and game.store.get then
+    props = game.store:get(store_paths.players.properties(player.id))
   end
-
-  local store = game.store
-  local store_tiles = store and store.state and store.state.board and store.state.board.tiles or nil
-  if store_tiles then
-    for tile_id, st in pairs(store_tiles) do
-      if st and st.owner_id == player.id and not owned_tile_set[tile_id] then
-        owned_tile_set[tile_id] = true
-        table.insert(owned_tile_ids, tile_id)
-      end
+  props = props or {}
+  for tile_id, owned in pairs(props) do
+    if owned == true then
+      table.insert(owned_tile_ids, tile_id)
     end
   end
 
@@ -27,9 +22,12 @@ local function _collect_owned_tiles(game, player)
   local names = {}
   for _, tile_id in ipairs(owned_tile_ids) do
     local tile = game.board:get_tile_by_id(tile_id)
-    assert(tile ~= nil, "missing tile: " .. tostring(tile_id))
-    table.insert(owned_tiles, tile)
-    table.insert(names, tile.name)
+    if tile then
+      table.insert(owned_tiles, tile)
+      table.insert(names, tile.name)
+    else
+      logger.warn("bankruptcy skip missing tile:", tostring(tile_id))
+    end
   end
 
   return owned_tile_ids, owned_tiles, names

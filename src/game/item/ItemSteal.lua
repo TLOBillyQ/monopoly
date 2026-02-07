@@ -60,7 +60,7 @@ function steal.handle_pass_players(game, player, encountered_ids)
   local queue = {}
   for _, target_id in ipairs(encountered_ids) do
     local t = assert(game.players[target_id], "missing target player: " .. tostring(target_id))
-    if not t.eliminated and not t:has_deity("angel") then
+    if not t.eliminated and not game:player_has_deity(t, "angel") then
       table.insert(queue, t.id)
     end
   end
@@ -80,6 +80,5 @@ function steal.handle_pass_players(game, player, encountered_ids)
 end
 
 return steal
-
 
 

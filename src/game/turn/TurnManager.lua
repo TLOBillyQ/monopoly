@@ -4,16 +4,21 @@ local agent = require("src.game.game.Agent")
 local inventory = require("src.game.item.ItemInventory")
 local choice_manager = require("src.game.choice.ChoiceManager")
 local gameplay_rules = require("Config.GameplayRules")
+local store_paths = require("src.core.StorePaths")
 require "vendor.third_party.ClassUtils"
 
 
 local turn_manager = Class("TurnManager")
 
-local phase_path = { "turn", "phase" }
-local pending_choice_path = { "turn", "pending_choice" }
-local turn_count_path = { "turn", "turn_count" }
-local player_index_path = { "turn", "current_player_index" }
-local action_anim_path = { "turn", "action_anim" }
+local phase_path = store_paths.turn.phase
+local pending_choice_path = store_paths.turn.pending_choice
+local turn_count_path = store_paths.turn.turn_count
+local player_index_path = store_paths.turn.current_player_index
+local action_anim_path = store_paths.turn.action_anim
+local anim_path_by_key = {
+  move_anim = store_paths.turn.move_anim,
+  action_anim = store_paths.turn.action_anim,
+}
 
 local wait_states = {
   wait_choice = true,
@@ -59,14 +64,12 @@ local function _format_properties(game, player)
   end)
   local store = game.store
   local store_get = store and store.get
-  local tile_path = { "board", "tiles", nil }
   local props = {}
   for _, tile_id in ipairs(ids) do
     local tile = game.board:get_tile_by_id(tile_id)
     local level = 0
     if store_get then
-      tile_path[3] = tile_id
-      local st = store_get(store, tile_path)
+      local st = store_get(store, store_paths.board.tile(tile_id))
       if type(st) == "table" and st.level then
         level = st.level
       end
@@ -84,7 +87,7 @@ local function _build_turn_log_line(game, turn_count)
     return line .. tostring(player.name) .. " (已出局)"
   end
 
-  line = line .. tostring(player.name) .. " 金币=" .. tostring(player.cash)
+  line = line .. tostring(player.name) .. " 金币=" .. tostring(game:player_balance(player, "金币"))
   local status_parts = _format_status(player)
   if #status_parts > 0 then
     line = line .. " 状态: " .. table.concat(status_parts, ", ")
@@ -165,22 +168,22 @@ function turn_manager:dispatch(action)
 end
 
 
-local function _make_anim_wait(tm, state_name, store_key, done_action_type)
-  local anim_path = { "turn", store_key }
+local function _make_anim_wait(turn_mgr, state_name, store_key, done_action_type)
+  local anim_path = assert(anim_path_by_key[store_key], "missing anim path: " .. tostring(store_key))
   return function(args)
-    tm.game.store:set(phase_path, state_name)
-    local anim = tm.game.store:get(anim_path)
+    turn_mgr.game.store:set(phase_path, state_name)
+    local anim = turn_mgr.game.store:get(anim_path)
     assert(anim ~= nil, "missing " .. store_key)
 
-    local action = tm.pending_action
-    tm.pending_action = nil
+    local action = turn_mgr.pending_action
+    turn_mgr.pending_action = nil
     if not action or action.type ~= done_action_type then
       return state_name, args
     end
     if action.seq and anim.seq and action.seq ~= anim.seq then
       return state_name, args
     end
-    tm.game.store:set(anim_path, nil)
+    turn_mgr.game.store:set(anim_path, nil)
     return args.resume_state, args.resume_args
   end
 end
