@@ -5,10 +5,72 @@ local monopoly_event = require("src.game.game.MonopolyEvents")
 
 local movement_manager = {}
 local item_ids = gameplay_rules.item_ids
+local _emit_event = monopoly_event.emit
 
-local function _emit_event(kind, payload)
-  assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-  TriggerCustomEvent(kind, payload or {})
+local function _tile_label(tile)
+  if tile.row and tile.col then
+    return tile.name .. "（" .. tile.row .. "，" .. tile.col .. "）"
+  end
+  return tile.name
+end
+
+local function _check_roadblock(board, current, player)
+  if not board:has_roadblock(current) then
+    return false
+  end
+  board:clear_roadblock(current)
+  _emit_event(monopoly_event.movement.roadblock_hit, {
+    player = player,
+    tile = board:get_tile(current),
+    text = player.name .. " 触发路障，停在 " .. board:get_tile(current).name,
+  })
+  return true
+end
+
+local function _check_steal(player, encountered_step, step, abs_steps, facing, branch_parity, opts)
+  if opts.skip_steal_check or #encountered_step == 0 then
+    return nil
+  end
+  local has_steal = inventory.find_index(player, item_ids.steal)
+  local remaining = abs_steps - step
+  if not has_steal or remaining <= 0 then
+    return nil
+  end
+  _emit_event(monopoly_event.movement.steal_interrupt, {
+    player = player,
+    encountered_ids = encountered_step,
+    text = player.name .. " 经过玩家，触发偷窃中断",
+  })
+  return {
+    position = nil,
+    remaining_steps = remaining,
+    facing = facing,
+    branch_parity = branch_parity,
+    encountered_ids = encountered_step,
+  }
+end
+
+local function _check_market(board, current, step, steps, abs_steps, facing, branch_parity, player, opts)
+  if steps <= 0 or opts.skip_market_check then
+    return nil
+  end
+  local tile = board:get_tile(current)
+  assert(tile ~= nil, "missing tile: " .. tostring(current))
+  if tile.type ~= "market" or step >= steps then
+    return nil
+  end
+  local remaining = abs_steps - step
+  _emit_event(monopoly_event.movement.market_interrupt, {
+    player = player,
+    remaining_steps = remaining,
+    text = player.name .. " 经过黑市，剩余 " .. remaining .. " 步",
+  })
+  return {
+    position = nil,
+    remaining_steps = remaining,
+    facing = facing,
+    branch_parity = branch_parity,
+  }
 end
 
 function movement_manager.move(game, player, steps, opts)
@@ -26,10 +88,9 @@ function movement_manager.move(game, player, steps, opts)
   local start_tile = board:get_tile(current)
   local facing = opts.direction or player.status.move_dir
   local step_fn = board.step_forward_by_facing
-  local backward = false
-  if steps < 0 then
+  local backward = steps < 0
+  if backward then
     step_fn = board.step_backward_by_facing
-    backward = true
   end
 
   for step = 1, abs_steps do
@@ -42,82 +103,42 @@ function movement_manager.move(game, player, steps, opts)
     pass_start = pass_start + passed
     facing = step_dir or facing
     current = next_index
-    table.insert(visited, current)
+    visited[#visited + 1] = current
 
     local others = game.occupants[current] or {}
     local encountered_step = {}
     for _, pid in ipairs(others) do
       if pid ~= player.id then
-        table.insert(encountered_step, pid)
-        table.insert(encountered, pid)
+        encountered_step[#encountered_step + 1] = pid
+        encountered[#encountered + 1] = pid
       end
     end
 
-    if board:has_roadblock(current) then
-      board:clear_roadblock(current)
+    if _check_roadblock(board, current, player) then
       stopped_on_roadblock = true
-      _emit_event(monopoly_event.movement.roadblock_hit, {
-        player = player,
-        tile = board:get_tile(current),
-        text = player.name .. " 触发路障，停在 " .. board:get_tile(current).name,
-      })
       break
     end
 
-    if not opts.skip_steal_check and #encountered_step > 0 then
-      local has_steal = inventory.find_index(player, item_ids.steal)
-      local remaining = abs_steps - step
-      if has_steal and remaining > 0 then
-        steal_interrupt = {
-          position = current,
-          remaining_steps = remaining,
-          facing = facing,
-          branch_parity = branch_parity,
-          encountered_ids = encountered_step,
-        }
-        _emit_event(monopoly_event.movement.steal_interrupt, {
-          player = player,
-          encountered_ids = encountered_step,
-          text = player.name .. " 经过玩家，触发偷窃中断",
-        })
-        break
-      end
+    steal_interrupt = _check_steal(player, encountered_step, step, abs_steps, facing, branch_parity, opts)
+    if steal_interrupt then
+      steal_interrupt.position = current
+      break
     end
 
-    if steps > 0 and not opts.skip_market_check then
-      local tile = board:get_tile(current)
-      assert(tile ~= nil, "missing tile: " .. tostring(current))
-      if tile.type == "market" and step < steps then
-        market_interrupt = {
-          position = current,
-          remaining_steps = abs_steps - step,
-          facing = facing,
-          branch_parity = branch_parity,
-        }
-        _emit_event(monopoly_event.movement.market_interrupt, {
-          player = player,
-          remaining_steps = market_interrupt.remaining_steps,
-          text = player.name .. " 经过黑市，剩余 " .. market_interrupt.remaining_steps .. " 步",
-        })
-        break
-      end
+    market_interrupt = _check_market(board, current, step, steps, abs_steps, facing, branch_parity, player, opts)
+    if market_interrupt then
+      market_interrupt.position = current
+      break
     end
   end
 
   local landing_tile = board:get_tile(current)
-  local function _tile_label(tile, fallback_index)
-    local name = tile.name
-    if tile.row and tile.col then
-      return name .. "（" .. tile.row .. "，" .. tile.col .. "）"
-    end
-    return name
-  end
   _emit_event(monopoly_event.movement.moved, {
     player = player,
     from_tile = start_tile,
     to_tile = landing_tile,
     steps = steps,
-    text = player.name .. " 从 " .. _tile_label(start_tile, player.position) .. " 移动到 " .. _tile_label(landing_tile, current),
+    text = player.name .. " 从 " .. _tile_label(start_tile) .. " 移动到 " .. _tile_label(landing_tile),
   })
 
   if pass_start > 0 then
@@ -132,7 +153,6 @@ function movement_manager.move(game, player, steps, opts)
   end
 
   game:update_player_position(player, current)
-
   game:set_player_status(player, "move_dir", facing)
 
   return {

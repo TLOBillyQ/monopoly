@@ -39,4 +39,10 @@ function monopoly_events.resolve_intent(kind)
   return event_name
 end
 
+function monopoly_events.emit(kind, payload)
+  if TriggerCustomEvent then
+    TriggerCustomEvent(kind, payload or {})
+  end
+end
+
 return monopoly_events

@@ -8,16 +8,11 @@ local monopoly_event = require("src.game.game.MonopolyEvents")
 local bankruptcy_manager = require("src.game.game.BankruptcyManager")
 
 local item_ids = gameplay_rules.item_ids
+local _emit_event = monopoly_event.emit
 local tile_state_path = { "board", "tiles", nil }
 
-local function _emit_event(kind, payload)
-  assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-  TriggerCustomEvent(kind, payload or {})
-end
-
 local function _eliminate_if_bankrupt(game, player)
-  assert(player ~= nil, "missing player")
-  if player.cash > 0 then
+  if not player or player.cash > 0 then
     return
   end
   bankruptcy_manager.eliminate(game, player)

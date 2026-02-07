@@ -84,9 +84,7 @@ function inventory.draw_random()
 end
 
 local function _notify_full(game, player, item_id)
-  assert(game ~= nil, "missing game")
-  assert(game.ui_port ~= nil, "missing ui_port")
-  assert(player ~= nil, "missing player")
+  if not game or not game.ui_port then return end
   if player.is_ai or player.auto then
     return
   end
@@ -102,11 +100,12 @@ end
 function inventory.give(player, item_id, context)
   if inventory.is_full(player) then
     logger.warn(player.name .. " 的背包已满，无法获得道具 " .. item_id)
-    assert(context ~= nil and context.game ~= nil, "missing context.game")
-    _notify_full(context.game, player, item_id)
+    if context and context.game then
+      _notify_full(context.game, player, item_id)
+    end
     return false
   end
-  assert(inventory.add(player, { id = item_id }) == true, "inventory add failed: " .. tostring(item_id))
+  inventory.add(player, { id = item_id })
   logger.event(player.name .. " 获得道具 " .. inventory.item_name(item_id))
   return true
 end

@@ -9,81 +9,99 @@ require "vendor.third_party.ClassUtils"
 
 local turn_manager = Class("TurnManager")
 
+local phase_path = { "turn", "phase" }
+local pending_choice_path = { "turn", "pending_choice" }
+local turn_count_path = { "turn", "turn_count" }
+local player_index_path = { "turn", "current_player_index" }
+local action_anim_path = { "turn", "action_anim" }
+
+local wait_states = {
+  wait_choice = true,
+  wait_move_anim = true,
+  wait_action_anim = true,
+}
+
+local function _format_status(player)
+  local parts = {}
+  local stay_turns = player.status.stay_turns
+  if stay_turns ~= 0 then
+    parts[#parts + 1] = "stay_turns=" .. tostring(stay_turns)
+  end
+  local deity = player.status.deity
+  if deity then
+    parts[#parts + 1] = "deity=" .. tostring(deity.type) .. ":" .. tostring(deity.remaining)
+  end
+  return parts
+end
+
+local function _format_items(player)
+  local list = {}
+  local item_name = inventory.item_name
+  for _, it in ipairs(inventory.items(player)) do
+    list[#list + 1] = item_name(it.id) .. "(" .. tostring(it.id) .. ")"
+  end
+  return list
+end
+
+local function _format_properties(game, player)
+  if next(player.properties) == nil then
+    return {}
+  end
+  local ids = {}
+  for tile_id in pairs(player.properties) do
+    ids[#ids + 1] = tile_id
+  end
+  table.sort(ids, function(a, b)
+    if type(a) == "number" and type(b) == "number" then
+      return a < b
+    end
+    return tostring(a) < tostring(b)
+  end)
+  local store = game.store
+  local store_get = store and store.get
+  local tile_path = { "board", "tiles", nil }
+  local props = {}
+  for _, tile_id in ipairs(ids) do
+    local tile = game.board:get_tile_by_id(tile_id)
+    local level = 0
+    if store_get then
+      tile_path[3] = tile_id
+      local st = store_get(store, tile_path)
+      if type(st) == "table" and st.level then
+        level = st.level
+      end
+    end
+    props[#props + 1] = tile.name .. "(Lv" .. tostring(level) .. ")"
+  end
+  return props
+end
+
 local function _build_turn_log_line(game, turn_count)
   local player = game:current_player()
-  local next_count = turn_count + 1
-  if player.eliminated then
-    next_count = turn_count
-  end
+  local next_count = player.eliminated and turn_count or (turn_count + 1)
   local line = "回合" .. tostring(next_count) .. ": "
   if player.eliminated then
-    line = line .. tostring(player.name) .. " (已出局)"
-    return line
+    return line .. tostring(player.name) .. " (已出局)"
   end
 
-  local status = player.status
-  local status_parts = {}
-  local stay_turns = status.stay_turns
-  if stay_turns ~= 0 then
-    table.insert(status_parts, "stay_turns=" .. tostring(stay_turns))
-  end
-  local deity = status.deity
-  if deity then
-    table.insert(status_parts, "deity=" .. tostring(deity.type) .. ":" .. tostring(deity.remaining))
-  end
-  local item_name = inventory.item_name
-  local items_list = {}
-  for _, it in ipairs(inventory.items(player)) do
-    local id = it.id
-    local name = item_name(id)
-    table.insert(items_list, name .. "(" .. tostring(id) .. ")")
-  end
-  line = line
-    .. tostring(player.name)
-    .. " 金币=" .. tostring(player.cash)
+  line = line .. tostring(player.name) .. " 金币=" .. tostring(player.cash)
+  local status_parts = _format_status(player)
   if #status_parts > 0 then
     line = line .. " 状态: " .. table.concat(status_parts, ", ")
   end
+  local items_list = _format_items(player)
   if #items_list > 0 then
     line = line .. " 背包: " .. table.concat(items_list, ", ")
   end
-  if next(player.properties) ~= nil then
-    local properties = {}
-    local ids = {}
-    for tile_id in pairs(player.properties) do
-      table.insert(ids, tile_id)
-    end
-    table.sort(ids, function(a, b)
-      if type(a) == "number" and type(b) == "number" then
-        return a < b
-      end
-      return tostring(a) < tostring(b)
-    end)
-    local store = game.store
-    local store_get = store and store.get
-    local tile_state_path = { "board", "tiles", nil }
-    for _, tile_id in ipairs(ids) do
-      local tile = game.board:get_tile_by_id(tile_id)
-      local name = tile.name
-      local level = 0
-      if store_get then
-        tile_state_path[3] = tile_id
-        local st = store_get(store, tile_state_path)
-        if type(st) == "table" and st.level then
-          level = st.level
-        end
-      end
-      table.insert(properties, name .. "(Lv" .. tostring(level) .. ")")
-    end
-    if #properties > 0 then
-      line = line .. " 地产: " .. table.concat(properties, ", ")
-    end
+  local properties = _format_properties(game, player)
+  if #properties > 0 then
+    line = line .. " 地产: " .. table.concat(properties, ", ")
   end
   return line
 end
 
 local function _get_choice(game)
-  return game.store:get({ "turn", "pending_choice" })
+  return game.store:get(pending_choice_path)
 end
 
 
@@ -147,22 +165,43 @@ function turn_manager:dispatch(action)
 end
 
 
+local function _make_anim_wait(tm, state_name, store_key, done_action_type)
+  local anim_path = { "turn", store_key }
+  return function(args)
+    tm.game.store:set(phase_path, state_name)
+    local anim = tm.game.store:get(anim_path)
+    assert(anim ~= nil, "missing " .. store_key)
+
+    local action = tm.pending_action
+    tm.pending_action = nil
+    if not action or action.type ~= done_action_type then
+      return state_name, args
+    end
+    if action.seq and anim.seq and action.seq ~= anim.seq then
+      return state_name, args
+    end
+    tm.game.store:set(anim_path, nil)
+    return args.resume_state, args.resume_args
+  end
+end
+
+
 function turn_manager:_build_flow()
   assert(self.phases, "TurnManager requires phases")
   local states = {}
   for name, fn in pairs(self.phases) do
     states[name] = function(args)
       if name == "start" then
-        local turn_count = self.game.store:get({ "turn", "turn_count" })
-        logger.info(_build_turn_log_line(self.game, turn_count))
+        local tc = self.game.store:get(turn_count_path)
+        logger.info(_build_turn_log_line(self.game, tc))
       end
-      self.game.store:set({ "turn", "phase" }, name)
+      self.game.store:set(phase_path, name)
       return fn(self, args)
     end
   end
 
   states.wait_choice = function(args)
-    self.game.store:set({ "turn", "phase" }, "wait_choice")
+    self.game.store:set(phase_path, "wait_choice")
     local choice = _get_choice(self.game)
     if not choice then
       self.pending_action = nil
@@ -176,7 +215,6 @@ function turn_manager:_build_flow()
     end
     local action = self.pending_action
     self.pending_action = nil
-
 
     if action.type == "choice_select" or action.type == "choice_cancel" then
       if not action.choice_id or not choice.id or action.choice_id ~= choice.id then
@@ -193,46 +231,15 @@ function turn_manager:_build_flow()
     if res.stay then
       return "wait_choice", args
     end
-    local action_anim = self.game.store:get({ "turn", "action_anim" })
-    if action_anim then
+    local aa = self.game.store:get(action_anim_path)
+    if aa then
       return "wait_action_anim", args
     end
     return args.resume_state, args.resume_args
   end
 
-  states.wait_move_anim = function(args)
-    self.game.store:set({ "turn", "phase" }, "wait_move_anim")
-    local anim = self.game.store:get({ "turn", "move_anim" })
-    assert(anim ~= nil, "missing move_anim")
-
-    local action = self.pending_action
-    self.pending_action = nil
-    if not action or action.type ~= "move_anim_done" then
-      return "wait_move_anim", args
-    end
-    if action.seq and anim.seq and action.seq ~= anim.seq then
-      return "wait_move_anim", args
-    end
-    self.game.store:set({ "turn", "move_anim" }, nil)
-    return args.resume_state, args.resume_args
-  end
-
-  states.wait_action_anim = function(args)
-    self.game.store:set({ "turn", "phase" }, "wait_action_anim")
-    local anim = self.game.store:get({ "turn", "action_anim" })
-    assert(anim ~= nil, "missing action_anim")
-
-    local action = self.pending_action
-    self.pending_action = nil
-    if not action or action.type ~= "action_anim_done" then
-      return "wait_action_anim", args
-    end
-    if action.seq and anim.seq and action.seq ~= anim.seq then
-      return "wait_action_anim", args
-    end
-    self.game.store:set({ "turn", "action_anim" }, nil)
-    return args.resume_state, args.resume_args
-  end
+  states.wait_move_anim = _make_anim_wait(self, "wait_move_anim", "move_anim", "move_anim_done")
+  states.wait_action_anim = _make_anim_wait(self, "wait_action_anim", "action_anim", "action_anim_done")
 
   return flow:new({ start = "start", states = states })
 end
@@ -240,15 +247,15 @@ end
 
 function turn_manager:next_player()
   local count = #self.game.players
-  local current = self.game.store:get({ "turn", "current_player_index" })
+  local current = self.game.store:get(player_index_path)
   local next_index = current % count + 1
-  self.game.store:set({ "turn", "current_player_index" }, next_index)
-  local turn_count = self.game.store:get({ "turn", "turn_count" })
+  self.game.store:set(player_index_path, next_index)
+  local tc = self.game.store:get(turn_count_path)
   logger.info(
     "[Eggy]",
     "切换玩家:",
     "回合",
-    tostring(turn_count),
+    tostring(tc),
     "current_index",
     tostring(current),
     "next_index",
@@ -263,26 +270,11 @@ function turn_manager:run_until_wait()
   end
 
   while self.flow.current do
-    if self.flow.current == "wait_choice" then
-      self.flow:step()
-      if self.flow.current == "wait_choice" and not self.pending_action then
-        self.game.store:set({ "turn", "phase" }, "wait_choice")
-        return "wait_choice"
-      end
-    elseif self.flow.current == "wait_move_anim" then
-      self.flow:step()
-      if self.flow.current == "wait_move_anim" and not self.pending_action then
-        self.game.store:set({ "turn", "phase" }, "wait_move_anim")
-        return "wait_move_anim"
-      end
-    elseif self.flow.current == "wait_action_anim" then
-      self.flow:step()
-      if self.flow.current == "wait_action_anim" and not self.pending_action then
-        self.game.store:set({ "turn", "phase" }, "wait_action_anim")
-        return "wait_action_anim"
-      end
-    else
-      self.flow:step()
+    local current = self.flow.current
+    self.flow:step()
+    if wait_states[self.flow.current] and self.flow.current == current and not self.pending_action then
+      self.game.store:set(phase_path, self.flow.current)
+      return self.flow.current
     end
   end
 

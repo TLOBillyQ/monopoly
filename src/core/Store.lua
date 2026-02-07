@@ -39,7 +39,9 @@ function store:get(path)
   _assert_path(path)
   local node = self.state
   for i, key in ipairs(path) do
-    assert(type(node) == "table", "store path not table: " .. tostring(key))
+    if type(node) ~= "table" then
+      return nil
+    end
     node = node[key]
     if node == nil and i < #path then
       return nil

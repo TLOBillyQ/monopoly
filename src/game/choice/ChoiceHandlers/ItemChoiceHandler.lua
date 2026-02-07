@@ -145,17 +145,11 @@ function item_choice_handler.build(helpers)
 
     assert(action ~= nil, "missing action")
     if action.option_id == "use" then
-      if inventory.count(target) <= 0 then
-        inventory.consume(stealer, item_ids.steal)
-        local res = steal.steal_item_at_index(game, stealer, target, 1)
-        assert(res ~= nil, "missing steal result")
-        intent_dispatcher.dispatch(game, res.intent or {})
-        return finish_choice(game, false)
-      end
       if inventory.count(target) <= 1 then
         local res = steal.steal_item_at_index(game, stealer, target, 1)
-        assert(res ~= nil, "missing steal result")
-        intent_dispatcher.dispatch(game, res.intent or {})
+        if res then
+          intent_dispatcher.dispatch(game, res.intent or {})
+        end
         return finish_choice(game, false)
       end
       _open_steal_item_choice(game, stealer, target)

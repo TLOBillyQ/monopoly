@@ -34,8 +34,7 @@ function choice_registry.register_defaults(helpers)
 end
 
 local function _is_cancel(action)
-  assert(action ~= nil, "missing action")
-  return action.type == "choice_cancel"
+  return action ~= nil and action.type == "choice_cancel"
 end
 
 local function _clear_choice(game)
@@ -43,8 +42,7 @@ local function _clear_choice(game)
 end
 
 local function _use_item(game, player, item_id, context)
-  assert(context ~= nil, "missing item context")
-  return executor.use_item(game, player, item_id, context)
+  return executor.use_item(game, player, item_id, context or {})
 end
 
 local function _finish_choice(game, stay)
@@ -54,7 +52,7 @@ end
 
 
 local function _contains(list, value)
-  assert(type(list) == "table", "contains requires table")
+  if type(list) ~= "table" then return false end
   for _, v in ipairs(list) do
     if v == value then
       return true
@@ -64,10 +62,9 @@ local function _contains(list, value)
 end
 
 local function _option_exists(choice, option_id)
-  assert(choice ~= nil, "missing choice")
-  assert(option_id ~= nil, "missing option_id")
+  if not choice or not option_id then return false end
   local options = choice.options
-  assert(type(options) == "table" and #options > 0, "missing choice options")
+  if type(options) ~= "table" then return false end
   for _, opt in ipairs(options) do
     local id = opt
     if type(opt) == "table" then

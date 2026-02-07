@@ -7,11 +7,7 @@ local agent = require("src.game.game.Agent")
 local land_choice_specs = require("src.game.land.LandChoiceSpecs")
 local monopoly_event = require("src.game.game.MonopolyEvents")
 local market_manager = {}
-
-local function _emit_event(kind, payload)
-  assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
-  TriggerCustomEvent(kind, payload or {})
-end
+local _emit_event = monopoly_event.emit
 
 local items_by_id = {}
 for _, cfg in ipairs(items_cfg) do

@@ -1,6 +1,7 @@
 local monopoly_event = require("src.game.game.MonopolyEvents")
 
 local intent_dispatcher = {}
+local emit = monopoly_event.emit
 
 local choice_seq_path = { "turn", "choice_seq" }
 local pending_choice_path = { "turn", "pending_choice" }
@@ -26,9 +27,8 @@ function intent_dispatcher.open_choice(game, choice_spec, opts)
   }
   game.store:set(pending_choice_path, entry)
 
-  assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
   local event_name = monopoly_event.resolve_intent("need_choice")
-  TriggerCustomEvent(event_name, { choice = entry, choice_spec = choice_spec })
+  emit(event_name, { choice = entry, choice_spec = choice_spec })
   return entry
 end
 
@@ -38,9 +38,8 @@ function intent_dispatcher.push_popup(game, payload, opts)
   local ui_port = assert(game.ui_port, "missing ui_port")
   assert(ui_port.push_popup ~= nil, "missing ui_port.push_popup")
   ui_port:push_popup(payload)
-  assert(TriggerCustomEvent ~= nil, "missing TriggerCustomEvent")
   local event_name = monopoly_event.resolve_intent("push_popup")
-  TriggerCustomEvent(event_name, { payload = payload })
+  emit(event_name, { payload = payload })
   return true
 end
 
