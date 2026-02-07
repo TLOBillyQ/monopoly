@@ -17,6 +17,14 @@ local function _build_log_prefix()
   return "[Eggy]"
 end
 
+local function _dispatch_action_with_close_choice(game, state, action)
+  turn_dispatch.dispatch_action(game, state, action, {
+    on_close_choice = function(ctx)
+      ui_view.close_choice_modal(ctx)
+    end,
+  })
+end
+
 local function _log_once(state, level, key, ...)
   assert(state ~= nil, "missing state")
   assert(state._log_once ~= nil, "missing state._log_once")
@@ -42,6 +50,25 @@ local function _log_status(view)
     "回合:",
     tostring(view.turn_count)
   )
+end
+
+local function _is_phase_input_blocked(phase)
+  return phase == "wait_move_anim" or phase == "wait_action_anim"
+end
+
+local function _sync_input_blocked(state, phase)
+  if not state.ui then
+    return false
+  end
+  local input_blocked = _is_phase_input_blocked(phase)
+  if state.ui.input_blocked == input_blocked then
+    return false
+  end
+  state.ui.input_blocked = input_blocked
+  if not input_blocked then
+    state.ui_dirty = true
+  end
+  return true
 end
 
 local function _update_countdown(game, state)
@@ -141,11 +168,11 @@ end
 
 local function _refresh_view(state, game, next_model)
   local store_state = game.store.state
-  local ui_model = next_model
-  state.ui_model = ui_model
-  ui_view.render(state, ui_model, _log_once, _build_log_prefix)
+  local model = next_model
+  state.ui_model = model
+  ui_view.render(state, model, _log_once, _build_log_prefix)
 
-  assert(ui_model ~= nil, "missing ui_model")
+  assert(model ~= nil, "missing ui_model")
   local players = assert(store_state.players, "missing store_state.players")
   local turn = assert(store_state.turn, "missing store_state.turn")
   local current_index = assert(turn.current_player_index, "missing current_player_index")
@@ -183,7 +210,7 @@ local function _refresh_view(state, game, next_model)
     TriggerCustomEvent(runtime_constants.eca_event.camera.follow, {})
   end
   
-  return ui_model
+  return model
 end
 
 function gameplay_loop.set_game(state, game)
@@ -263,11 +290,7 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
   ctx.game_finished = game.finished
   local auto_action = state.auto_runner:next_action(dt, ctx)
   if auto_action then
-    turn_dispatch.dispatch_action(game, state, auto_action, {
-      on_close_choice = function(ctx)
-        ui_view.close_choice_modal(ctx)
-      end,
-    })
+    _dispatch_action_with_close_choice(game, state, auto_action)
   end
   return auto_action
 end
@@ -285,6 +308,7 @@ function gameplay_loop.step_choice_timeout(game, state, dt, opts)
   assert(opts ~= nil, "missing opts")
   assert(opts.on_pending_choice ~= nil, "missing opts.on_pending_choice")
   assert(opts.is_choice_active ~= nil, "missing opts.is_choice_active")
+  assert(opts.build_action ~= nil, "missing opts.build_action")
   local pending = game.store:get(store_paths.turn.pending_choice)
   if pending and (not state.pending_choice or state.pending_choice.id ~= pending.id) then
     state.pending_choice = pending
@@ -297,11 +321,8 @@ function gameplay_loop.step_choice_timeout(game, state, dt, opts)
     state.pending_choice_id = nil
   end
 
-  local active = false
-  active = opts.is_choice_active(state)
-
-  if active and state.pending_choice then
-  else
+  local active = opts.is_choice_active(state)
+  if not active or not state.pending_choice then
     state.pending_choice_elapsed = 0
     state.pending_choice_id = nil
     return
@@ -318,16 +339,10 @@ function gameplay_loop.step_choice_timeout(game, state, dt, opts)
     local choice = state.pending_choice
     local actor = _resolve_choice_owner(game, choice)
     if actor and agent.is_auto_player(actor) then
-      local action
-      assert(opts.build_action ~= nil, "missing opts.build_action")
-      action = opts.build_action(game, state, choice)
+      local action = opts.build_action(game, state, choice)
       if action then
         state.pending_choice_elapsed = 0
-        turn_dispatch.dispatch_action(game, state, action, {
-          on_close_choice = function(ctx)
-            ui_view.close_choice_modal(ctx)
-          end,
-        })
+        _dispatch_action_with_close_choice(game, state, action)
         return
       end
     end
@@ -335,15 +350,9 @@ function gameplay_loop.step_choice_timeout(game, state, dt, opts)
   if state.pending_choice_elapsed >= timeout then
     local choice = state.pending_choice
     state.pending_choice_elapsed = 0
-    local action
-    assert(opts.build_action ~= nil, "missing opts.build_action")
-    action = opts.build_action(game, state, choice)
+    local action = opts.build_action(game, state, choice)
     assert(action ~= nil, "missing timeout action")
-    turn_dispatch.dispatch_action(game, state, action, {
-      on_close_choice = function(ctx)
-        ui_view.close_choice_modal(ctx)
-      end,
-    })
+    _dispatch_action_with_close_choice(game, state, action)
   end
 end
 
@@ -432,17 +441,10 @@ function gameplay_loop.tick(game, state, dt)
     return
   end
 
-  assert(game.store ~= nil and game.store.get ~= nil, "missing game.store.Get")
-  local phase = game.store:get(store_paths.turn.phase)
-  local input_blocked = phase == "wait_move_anim" or phase == "wait_action_anim"
-  local input_blocked_changed = false
-  if state.ui and state.ui.input_blocked ~= input_blocked then
-    state.ui.input_blocked = input_blocked
-    input_blocked_changed = true
-    if not input_blocked then
-      state.ui_dirty = true
-    end
-  end
+  local store = assert(game.store, "missing game.store")
+  assert(store.get ~= nil, "missing game.store.get")
+  local phase = store:get(store_paths.turn.phase)
+  local input_blocked_changed = _sync_input_blocked(state, phase)
 
   gameplay_loop.step_auto_runner(game, state, dt, {
     modal_active = false,
@@ -496,17 +498,12 @@ function gameplay_loop.tick(game, state, dt)
     end,
   })
 
-  phase = game.store:get(store_paths.turn.phase)
-  input_blocked = phase == "wait_move_anim" or phase == "wait_action_anim"
-  if state.ui and state.ui.input_blocked ~= input_blocked then
-    state.ui.input_blocked = input_blocked
+  phase = store:get(store_paths.turn.phase)
+  if _sync_input_blocked(state, phase) then
     input_blocked_changed = true
-    if not input_blocked then
-      state.ui_dirty = true
-    end
   end
   if phase == "wait_move_anim" then
-    local anim = game.store:get(store_paths.turn.move_anim)
+    local anim = store:get(store_paths.turn.move_anim)
     if anim then
       gameplay_loop.step_move_anim(game, state, {
         on_move_anim = function(_, anim_ctx)
@@ -564,7 +561,7 @@ function gameplay_loop.tick(game, state, dt)
       })
     end
   elseif phase == "wait_action_anim" then
-    local anim = game.store:get(store_paths.turn.action_anim)
+    local anim = store:get(store_paths.turn.action_anim)
     if anim then
       gameplay_loop.step_action_anim(game, state, {
         on_action_anim = function(ctx, anim_ctx)
@@ -586,15 +583,15 @@ function gameplay_loop.tick(game, state, dt)
 
   _update_countdown(game, state)
 
-  assert(game.store ~= nil and game.store.consume_dirty ~= nil, "missing game.store.consume_dirty")
-  local dirty = game.store:consume_dirty()
+  assert(store.consume_dirty ~= nil, "missing game.store.consume_dirty")
+  local dirty = store:consume_dirty()
   if state.ui_dirty then
     dirty.ui = true
   end
   local only_countdown = _is_only_turn_countdown(dirty)
   local ui_refreshed = false
   if dirty.any or dirty.ui then
-    local store_state = game.store.state
+    local store_state = store.state
     local env = _build_ui_env(state, game)
     local next_model = ui_model.update(state.ui_model, store_state, env, dirty)
     state.ui_model = next_model
