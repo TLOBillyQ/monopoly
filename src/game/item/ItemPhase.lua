@@ -95,7 +95,10 @@ function item_phase.run(tm, phase, args)
   assert(game.ui_port ~= nil, "missing ui_port")
 
   local spec = item_phase.build_choice_spec(player, phase)
-  assert(spec ~= nil, "missing choice spec")
+  if spec == nil then
+    item_phase.finish(game, phase)
+    return nil
+  end
 
   intent_dispatcher.dispatch(game, { kind = "need_choice", choice_spec = spec })
 
@@ -107,7 +110,9 @@ end
 
 function item_phase.build_choice_spec(player, phase)
   local body_lines, options = _build_options(player, phase)
-  assert(#options > 0, "missing item options")
+  if #options == 0 then
+    return nil
+  end
   return {
     kind = "item_phase_choice",
     title = phase_titles[phase],

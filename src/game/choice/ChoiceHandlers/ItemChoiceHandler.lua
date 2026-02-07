@@ -70,7 +70,10 @@ function item_choice_handler.build(helpers)
 
   local function _reopen_item_phase(game, player, phase)
     local spec = item_phase.build_choice_spec(player, phase)
-    assert(spec ~= nil, "missing item phase spec")
+    if spec == nil then
+      finish_item_phase(game, phase)
+      return nil
+    end
     intent_dispatcher.dispatch(game, { kind = "need_choice", choice_spec = spec })
     return { stay = true }
   end
