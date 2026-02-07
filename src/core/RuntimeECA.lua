@@ -30,7 +30,7 @@ end
 ---@desc 获取刷载具的ID
 ---@return integer
 function get_spawn_vehicle_id()
-    return vehicle_helper.vehicle_id or 4001
+    return vehicle_helper.vehicle_id or 4012
 end
 
 ---@export

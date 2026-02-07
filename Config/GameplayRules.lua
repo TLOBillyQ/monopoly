@@ -3,8 +3,8 @@ local gameplay_rules = {
   debug_log_max_lines = 50,
   info_log_per_turn_limit = 1,
 
-  auto_choice_min_visible_seconds = 1.0,
-  auto_popup_min_visible_seconds = 1.0,
+  auto_choice_min_visible_seconds = 3.0,
+  auto_popup_min_visible_seconds = 3.0,
 
   turn_limit = 1000,
 

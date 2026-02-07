@@ -48,7 +48,7 @@ local function _build_state()
       return game:new({
         players = { "玩家1", "AI2", "AI3", "AI4" },
         ai = { [2] = true, [3] = true, [4] = true },
-        auto_all = true,
+        auto_all = false,
         map = map_cfg,
         tiles = tiles_cfg,
       })
