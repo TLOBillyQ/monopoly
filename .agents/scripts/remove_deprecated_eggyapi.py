@@ -40,11 +40,14 @@ def main():
     parser = argparse.ArgumentParser(
         description="删除 EggyAPI.lua 中标记为 @deprecated 的 API（含注释块）。"
     )
+    default_path = (
+        Path(__file__).resolve().parents[2] / ".agents" / "docs" / "eggy" / "EggyAPI.lua"
+    )
     parser.add_argument(
         "path",
         nargs="?",
-        default="EggyAPI.lua",
-        help="目标文件路径，默认 EggyAPI.lua",
+        default=str(default_path),
+        help="目标文件路径，默认 .agents/docs/eggy/EggyAPI.lua",
     )
     parser.add_argument(
         "--backup-suffix",
@@ -54,6 +57,8 @@ def main():
     args = parser.parse_args()
 
     target = Path(args.path)
+    if not target.exists():
+        raise FileNotFoundError(f"目标文件不存在: {target}")
     original = target.read_text(encoding="utf-8")
     updated = "".join(remove_deprecated_api(original.splitlines(keepends=True)))
 
