@@ -14,12 +14,15 @@ function event_handlers.install(_, logger, state)
   end
   installed = true
 
-  local log_events = {
+  local movement_log_events = {
     monopoly_event.movement.moved,
     monopoly_event.movement.passed_start,
     monopoly_event.movement.roadblock_hit,
     monopoly_event.movement.market_interrupt,
     monopoly_event.movement.steal_interrupt,
+  }
+
+  local log_events = {
     monopoly_event.land.rent_skipped_mountain,
     monopoly_event.land.strong_card_used,
     monopoly_event.land.free_rent_used,
@@ -38,6 +41,19 @@ function event_handlers.install(_, logger, state)
       local log = current_logger
       if log and data and data.text then
         log.event(data.text)
+      end
+    end)
+  end
+
+  for _, event_name in ipairs(movement_log_events) do
+    RegisterCustomEvent(event_name, function(_, _, data)
+      local log = current_logger
+      if log and data and data.text then
+        if log.event_no_tips then
+          log.event_no_tips(data.text)
+        else
+          log.event(data.text)
+        end
       end
     end)
   end

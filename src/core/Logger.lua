@@ -14,10 +14,13 @@ local logger = {
   end,
 }
 
-local function _stringify(...)
+local function _stringify(start_index, ...)
+  local start = start_index or 1
   local parts = {}
-  for i = 1, select("#", ...) do
-    parts[i] = tostring(select(i, ...))
+  local out_index = 1
+  for i = start, select("#", ...) do
+    parts[out_index] = tostring(select(i, ...))
+    out_index = out_index + 1
   end
   return table.concat(parts, " ")
 end
@@ -48,7 +51,22 @@ local function _push(level, ...)
       end
     end
   end
-  local text = _stringify(...)
+  local no_tip = false
+  local text_start = 1
+  if level == "event" then
+    local opts = select(1, ...)
+    if type(opts) == "table" and opts.no_tip == true then
+      no_tip = true
+      text_start = 2
+    end
+  end
+  local text = _stringify(text_start, ...)
+  if level == "event" and not no_tip then
+    local global_api = GlobalAPI
+    if global_api and global_api.show_tips then
+      global_api.show_tips(text, 2.0)
+    end
+  end
   local timestamp = _get_timestamp()
   local time_text = _format_timestamp(timestamp)
   logger.seq = logger.seq + 1
@@ -92,14 +110,10 @@ function logger.configure_game_time()
 
   logger.set_time_formatter(function(timestamp)
     assert(timestamp ~= nil, "missing timestamp")
-    local year = game_api.get_year(timestamp)
-    local month = game_api.get_month(timestamp)
-    local day = game_api.get_day(timestamp)
     local hour = game_api.get_hour(timestamp)
     local minute = game_api.get_minute(timestamp)
     local second = game_api.get_second(timestamp)
-    return tostring(year) .. "-" .. _pad2(month) .. "-" .. _pad2(day)
-      .. " " .. _pad2(hour) .. ":" .. _pad2(minute) .. ":" .. _pad2(second)
+    return _pad2(hour) .. ":" .. _pad2(minute) .. ":" .. _pad2(second)
   end)
 end
 
@@ -129,6 +143,10 @@ end
 
 function logger.event(...)
   _push("event", ...)
+end
+
+function logger.event_no_tips(...)
+  _push("event", { no_tip = true }, ...)
 end
 
 function logger.clear()

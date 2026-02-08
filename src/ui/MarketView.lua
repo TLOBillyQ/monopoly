@@ -137,9 +137,11 @@ function market_view.refresh_market(state, market)
       local name = _resolve_market_name(opt, opt_id, entry, cfg)
       ui:set_label(label, name)
       ui:set_visible(label, true)
+      ui:set_touch_enabled(label, false)
       ui:set_visible(button, true)
       ui:set_touch_enabled(button, true)
       ui:set_visible(frame, true)
+      ui:set_touch_enabled(frame, false)
       local level = _resolve_market_level(cfg)
       local rarity_key = _resolve_ref_key(refs, market_layout.rarity_ref_keys[level])
       if rarity_key == nil then
@@ -153,9 +155,13 @@ function market_view.refresh_market(state, market)
       ui:set_visible(button, false)
       ui:set_touch_enabled(button, false)
       ui:set_visible(label, false)
+      ui:set_touch_enabled(label, false)
       ui:set_visible(frame, false)
+      ui:set_touch_enabled(frame, false)
     end
   end
+
+  ui:set_touch_enabled(market_layout.selected_card, false)
 
   ui:set_visible(market_layout.confirm_button, true)
   ui:set_touch_enabled(market_layout.confirm_button, true)
@@ -179,6 +185,13 @@ function market_view.close_market_panel(state)
   state.market_choice_option_ids = nil
   state.pending_choice_selected_option_id = nil
   ui:set_label(market_layout.price_label, "")
+  for _, name in ipairs(market_layout.item_labels) do
+    ui:set_touch_enabled(name, false)
+  end
+  for _, name in ipairs(market_layout.item_frames) do
+    ui:set_touch_enabled(name, false)
+  end
+  ui:set_touch_enabled(market_layout.selected_card, false)
   local empty_key = _resolve_ref_key(state.ui_refs, market_layout.empty_ref_key)
   local node = ui.query_node(market_layout.selected_card)
   node.image_texture = empty_key
