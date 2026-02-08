@@ -35,9 +35,9 @@ local function _build_overlays(env)
   return env.game.board:get_overlays()
 end
 
-local function _resolve_current_player(state)
-  local turn = state.turn
-  local players = state.players
+local function _resolve_current_player(game)
+  local turn = game.turn
+  local players = game.players
   assert(turn ~= nil and players ~= nil, "missing turn or players")
   local idx = turn.current_player_index
   return players[idx], turn
@@ -60,9 +60,9 @@ local function _build_item_slots(current, ui_runtime)
   return item_slots
 end
 
-local function _build_choice_and_market(store_state, env, ui_state)
+local function _build_choice_and_market(game, env, ui_state)
   local choice = nil
-  local pending = store_state.turn and store_state.turn.pending_choice
+  local pending = game.turn and game.turn.pending_choice
   if pending then
     choice = choice_view.build_choice_view(pending, { game = env.game })
     choice.id = pending.id
@@ -92,15 +92,12 @@ local function _build_popup(ui_runtime)
   return nil
 end
 
-function ui_model.build(store_state, env)
-  if store_state and store_state.store and store_state.store.state then
-    store_state = store_state.store.state
-  end
-  assert(store_state ~= nil, "missing store_state")
+function ui_model.build(game, env)
+  assert(game ~= nil, "missing game")
   env = env or {}
   local ui_state = env.ui_state
   local ui_runtime = ui_state and ui_state.ui
-  local current, turn = _resolve_current_player(store_state)
+  local current, turn = _resolve_current_player(game)
   local overlays = _build_overlays(env)
   local item_slots = _build_item_slots(current, ui_runtime)
   local panel = {
@@ -109,18 +106,18 @@ function ui_model.build(store_state, env)
       turn.countdown_seconds or 0,
       turn.countdown_active == true
     ),
-    player_rows = panel_view.build_player_statuses(store_state, env.game, 4),
+    player_rows = panel_view.build_player_statuses(game, env.game, 4),
     auto_label = panel_view.build_auto_label(ui_runtime and ui_runtime.auto_play),
   }
-  local choice, market = _build_choice_and_market(store_state, env, ui_state)
+  local choice, market = _build_choice_and_market(game, env, ui_state)
   local popup = _build_popup(ui_runtime)
 
   return {
     board = {
       tiles = board_tiles,
-      tile_states = store_state.board and store_state.board.tiles or {},
+      tile_states = game.board and game.board.tile_lookup or {},
       overlays = overlays,
-      players = store_state.players,
+      players = game.players,
       phase = turn.phase,
       move_anim = turn.move_anim,
       tile_count = #board_tiles,
@@ -140,25 +137,25 @@ function ui_model.build(store_state, env)
   }
 end
 
-function ui_model.update(prev, store_state, env, dirty)
-  assert(store_state ~= nil, "missing store_state")
+function ui_model.update(prev, game, env, dirty)
+  assert(game ~= nil, "missing game")
   if not prev then
-    return ui_model.build(store_state, env)
+    return ui_model.build(game, env)
   end
   env = env or {}
   dirty = dirty or {}
   local ui_state = env.ui_state
   local ui_runtime = ui_state and ui_state.ui
-  local current, turn = _resolve_current_player(store_state)
+  local current, turn = _resolve_current_player(game)
   local ui_dirty = dirty.ui == true
   local model = prev
 
   if dirty.players or dirty.board_tiles or dirty.turn then
     local board = model.board or {}
     board.tiles = board_tiles
-    board.tile_states = store_state.board and store_state.board.tiles or {}
+    board.tile_states = game.board and game.board.tile_lookup or {}
     board.overlays = _build_overlays(env)
-    board.players = store_state.players
+    board.players = game.players
     board.phase = turn.phase
     board.move_anim = turn.move_anim
     board.tile_count = #board_tiles
@@ -174,7 +171,7 @@ function ui_model.update(prev, store_state, env, dirty)
     )
   end
   if dirty.players or dirty.board_tiles or ui_dirty then
-    panel.player_rows = panel_view.build_player_statuses(store_state, env.game, 4)
+    panel.player_rows = panel_view.build_player_statuses(game, env.game, 4)
   end
   if ui_dirty then
     panel.auto_label = panel_view.build_auto_label(ui_runtime and ui_runtime.auto_play)
@@ -193,7 +190,7 @@ function ui_model.update(prev, store_state, env, dirty)
   end
 
   if dirty.turn or dirty.market or ui_dirty then
-    local choice, market = _build_choice_and_market(store_state, env, ui_state)
+    local choice, market = _build_choice_and_market(game, env, ui_state)
     model.choice = choice
     model.market = market
   end

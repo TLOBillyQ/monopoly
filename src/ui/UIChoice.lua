@@ -1,5 +1,4 @@
 local choice = {}
-local store_paths = require("src.core.StorePaths")
 
 local function _join_lines(lines)
   assert(lines ~= nil, "missing body lines")
@@ -32,9 +31,9 @@ local function _build_phase_label(phase)
 end
 
 local function _build_phase_title(game, base_title)
-  assert(game ~= nil and game.store ~= nil, "missing game/store")
+  assert(game ~= nil, "missing game")
   assert(base_title ~= nil, "missing base title")
-  local phase_name = game.store:get(store_paths.turn.item_phase_active)
+  local phase_name = game.turn.item_phase_active
   if not phase_name or phase_name == "" then
     return base_title
   end

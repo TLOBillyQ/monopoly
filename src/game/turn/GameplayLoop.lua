@@ -6,7 +6,6 @@ local ui_view = require("src.ui.UIView")
 local logger = require("src.core.Logger")
 local turn_dispatch = require("src.game.turn.TurnDispatch")
 local turn_anim = require("src.game.turn.TurnAnim")
-local store_paths = require("src.core.StorePaths")
 local tick_timeout = require("src.game.turn.TickTimeout")
 local tick_ui_sync = require("src.game.turn.TickUISync")
 local move_anim = require("src.ui.MoveAnim")
@@ -59,9 +58,9 @@ local function _is_auto_popup_owner(game, state)
   return actor and agent.is_auto_player(actor) or false
 end
 
-local function _step_phase_animation(game, state, store, phase)
+local function _step_phase_animation(game, state, phase)
   if phase == "wait_move_anim" then
-    local anim_data = store:get(store_paths.turn.move_anim)
+    local anim_data = game.turn.move_anim
     if not anim_data then
       return
     end
@@ -73,7 +72,7 @@ local function _step_phase_animation(game, state, store, phase)
     return
   end
   if phase == "wait_action_anim" then
-    local anim_data = store:get(store_paths.turn.action_anim)
+    local anim_data = game.turn.action_anim
     if not anim_data then
       return
     end
@@ -104,7 +103,7 @@ function gameplay_loop.set_game(state, game)
   event_handlers.install(game, logger, state)
   logger.set_info_per_turn_limit(gameplay_rules.info_log_per_turn_limit)
   logger.set_info_turn_provider(function()
-    return game.store and game.store.state and game.store.state.turn and game.store.state.turn.turn_count
+    return game.turn and game.turn.turn_count
   end)
   assert(game.pending_choice ~= nil, "missing game.pending_choice")
   local pending = game:pending_choice()
@@ -196,9 +195,7 @@ function gameplay_loop.tick(game, state, dt)
     return
   end
 
-  local store = assert(game.store, "missing game.store")
-  assert(store.get ~= nil, "missing game.store.get")
-  local phase = store:get(store_paths.turn.phase)
+  local phase = game.turn.phase
   local input_blocked_changed = _sync_input_blocked(state, phase)
 
   gameplay_loop.step_auto_runner(game, state, dt, {
@@ -210,18 +207,17 @@ function gameplay_loop.tick(game, state, dt)
   tick_timeout.step_default_choice(game, state, dt)
   tick_timeout.step_default_modal(game, state, dt)
 
-  phase = store:get(store_paths.turn.phase)
+  phase = game.turn.phase
   if _sync_input_blocked(state, phase) then
     input_blocked_changed = true
   end
-  _step_phase_animation(game, state, store, phase)
+  _step_phase_animation(game, state, phase)
   _sync_phase_flags(state, phase)
 
   tick_ui_sync.update_countdown(game, state)
 
-  assert(store.consume_dirty ~= nil, "missing game.store.consume_dirty")
-  local dirty = store:consume_dirty()
-  local ui_refreshed = tick_ui_sync.refresh_from_dirty(game, state, store, dirty)
+  local dirty = game:consume_dirty()
+  local ui_refreshed = tick_ui_sync.refresh_from_dirty(game, state, dirty)
 
   if state.ui and (input_blocked_changed or (state.ui.input_blocked and ui_refreshed)) then
     ui_view.apply_input_lock(state)

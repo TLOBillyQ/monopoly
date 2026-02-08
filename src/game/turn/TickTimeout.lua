@@ -1,7 +1,6 @@
 local agent = require("src.game.game.Agent")
 local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("Config.GameplayRules")
-local store_paths = require("src.core.StorePaths")
 local turn_dispatch = require("src.game.turn.TurnDispatch")
 local ui_view = require("src.ui.UIView")
 
@@ -74,12 +73,11 @@ function tick_timeout.step_choice_timeout(game, state, dt, opts)
   end
 
   assert(game ~= nil, "missing game")
-  assert(game.store ~= nil, "missing game.store")
   assert(opts ~= nil, "missing opts")
   assert(opts.on_pending_choice ~= nil, "missing opts.on_pending_choice")
   assert(opts.is_choice_active ~= nil, "missing opts.is_choice_active")
   assert(opts.build_action ~= nil, "missing opts.build_action")
-  local pending = game.store:get(store_paths.turn.pending_choice)
+  local pending = game.turn.pending_choice
   if pending and (not state.pending_choice or state.pending_choice.id ~= pending.id) then
     state.pending_choice = pending
     state.pending_choice_elapsed = 0

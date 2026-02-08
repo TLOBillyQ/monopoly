@@ -2,7 +2,6 @@ local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("Config.GameplayRules")
 local runtime_constants = require("Config.RuntimeConstants")
 local logger = require("src.core.Logger")
-local store_paths = require("src.core.StorePaths")
 local ui_view = require("src.ui.UIView")
 local ui_model = require("src.ui.UIModel")
 
@@ -62,13 +61,15 @@ function tick_ui_sync.update_countdown(game, state)
   end
   if seconds ~= state.countdown_last then
     state.countdown_last = seconds
-    assert(game.store ~= nil and game.store.set ~= nil, "missing game.store.set")
-    game.store:set(store_paths.turn.countdown_seconds, seconds)
+    game.turn.countdown_seconds = seconds
+    game.dirty.turn_countdown = true
+    game.dirty.any = true
   end
   if active ~= state.countdown_active_last then
     state.countdown_active_last = active
-    assert(game.store ~= nil and game.store.set ~= nil, "missing game.store.set")
-    game.store:set(store_paths.turn.countdown_active, active)
+    game.turn.countdown_active = active
+    game.dirty.turn_countdown = true
+    game.dirty.any = true
   end
 end
 
@@ -100,19 +101,17 @@ local function _build_ui_env(state, game)
 end
 
 function tick_ui_sync.build_model(state, game)
-  local store_state = game.store.state
-  return ui_model.build(store_state, _build_ui_env(state, game))
+  return ui_model.build(game, _build_ui_env(state, game))
 end
 
 local function _refresh_view(state, game, next_model)
-  local store_state = game.store.state
   local model = next_model
   state.ui_model = model
   ui_view.render(state, model, _log_once, _build_log_prefix)
 
   assert(model ~= nil, "missing ui_model")
-  local players = assert(store_state.players, "missing store_state.players")
-  local turn = assert(store_state.turn, "missing store_state.turn")
+  local players = assert(game.players, "missing game.players")
+  local turn = assert(game.turn, "missing game.turn")
   local current_index = assert(turn.current_player_index, "missing current_player_index")
   local current = assert(players[current_index], "missing current player: " .. tostring(current_index))
   local current_id = assert(current.id, "missing current player id")
@@ -151,16 +150,15 @@ local function _refresh_view(state, game, next_model)
   return model
 end
 
-function tick_ui_sync.refresh_from_dirty(game, state, store, dirty)
+function tick_ui_sync.refresh_from_dirty(game, state, dirty)
   if state.ui_dirty then
     dirty.ui = true
   end
   local only_countdown = _is_only_turn_countdown(dirty)
   local ui_refreshed = false
   if dirty.any or dirty.ui then
-    local store_state = store.state
     local env = _build_ui_env(state, game)
-    local next_model = ui_model.update(state.ui_model, store_state, env, dirty)
+    local next_model = ui_model.update(state.ui_model, game, env, dirty)
     state.ui_model = next_model
     if only_countdown then
       ui_view.refresh_turn_label(state, next_model.panel and next_model.panel.turn_label or "")

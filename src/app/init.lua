@@ -26,7 +26,6 @@ local tiles_cfg = require("Config.Generated.Tiles")
 local ui_events = require("src.ui.UIEvents")
 local logger = require("src.core.Logger")
 local monopoly_event = require("src.game.game.MonopolyEvents")
-local store_paths = require("src.core.StorePaths")
 
 logger.configure_game_time()
 
@@ -79,8 +78,8 @@ local function _build_state()
   state.push_popup = function(_, payload)
     local ok = ui_view.push_popup(state, payload)
     if state.ui then
-      if ok and current_game and current_game.store and current_game.store.get then
-        state.ui.popup_owner_index = current_game.store:get(store_paths.turn.current_player_index)
+      if ok and current_game and current_game.turn then
+        state.ui.popup_owner_index = current_game.turn.current_player_index
       else
         state.ui.popup_owner_index = nil
       end

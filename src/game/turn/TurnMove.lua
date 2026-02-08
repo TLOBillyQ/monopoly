@@ -2,7 +2,6 @@ local steal = require("src.game.item.ItemSteal")
 local movement_manager = require("src.game.movement.MovementManager")
 local market_manager = require("src.game.market.MarketManager")
 local intent_dispatcher = require("src.game.intent.IntentDispatcher")
-local store_paths = require("src.core.StorePaths")
 
 local function _phase_move(turn_mgr, args)
   local player = args.player
@@ -24,12 +23,11 @@ local function _phase_move(turn_mgr, args)
     turn_mgr.game.last_turn.move_result = move_result
 
     local game = turn_mgr.game
-    local store = assert(game.store, "missing game.store")
     local ui_port = assert(game.ui_port, "missing game.ui_port")
     if ui_port.wait_move_anim == true then
-      local seq = (store:get(store_paths.turn.move_anim_seq) or 0) + 1
-      store:set(store_paths.turn.move_anim_seq, seq)
-      store:set(store_paths.turn.move_anim, {
+      local seq = (game.turn.move_anim_seq or 0) + 1
+      game.turn.move_anim_seq = seq
+      game.turn.move_anim = {
         seq = seq,
         player_id = player.id,
         from_index = start_index,
@@ -39,7 +37,9 @@ local function _phase_move(turn_mgr, args)
         stopped_on_roadblock = move_result.stopped_on_roadblock == true,
         market_interrupt = move_result.market_interrupt and true or false,
         steal_interrupt = move_result.steal_interrupt and true or false,
-      })
+      }
+      game.dirty.turn = true
+      game.dirty.any = true
       return "wait_move_anim", {
         resume_state = "move",
         resume_args = {

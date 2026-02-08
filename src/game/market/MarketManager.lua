@@ -6,7 +6,7 @@ local inventory = require("src.game.item.ItemInventory")
 local agent = require("src.game.game.Agent")
 local land_choice_specs = require("src.game.land.LandChoiceSpecs")
 local monopoly_event = require("src.game.game.MonopolyEvents")
-local store_paths = require("src.core.StorePaths")
+
 local market_manager = {}
 local _emit_event = monopoly_event.emit
 
@@ -71,9 +71,8 @@ end
 
 local function _remaining_global_limit(game, product_id)
   assert(game ~= nil, "missing game")
-  assert(game.store ~= nil, "missing game.store")
   assert(product_id ~= nil, "missing product_id")
-  return game.store:get(store_paths.market.global_limit(product_id))
+  return game.market_limits[product_id]
 end
 
 local function _can_buy_entry(game, player, entry)
@@ -130,14 +129,15 @@ end
 
 local function _consume_global_limit(game, product_id)
   assert(game ~= nil, "missing game")
-  assert(game.store ~= nil, "missing game.store")
   assert(product_id ~= nil, "missing product_id")
-  local remaining = assert(_remaining_global_limit(game, product_id), "missing global limit")
+  local remaining = assert(game.market_limits[product_id], "missing global limit")
   local next_remaining = remaining - 1
   if next_remaining < 0 then
     next_remaining = 0
   end
-  game.store:set(store_paths.market.global_limit(product_id), next_remaining)
+  game.market_limits[product_id] = next_remaining
+  game.dirty.market = true
+  game.dirty.any = true
 end
 
 function market_manager.buy_with_opts(game, player, product_id, opts)
@@ -261,4 +261,3 @@ function market_manager.auto_buy(game, player)
 end
 
 return market_manager
-

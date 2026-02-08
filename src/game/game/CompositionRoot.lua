@@ -8,7 +8,7 @@ local roles_cfg = require("Config.Generated.Roles")
 local tiles_cfg = require("Config.Generated.Tiles")
 local map_cfg = require("Config.Map")
 require "vendor.third_party.Utils"
-local store = require("src.core.Store")
+local dirty_tracker = require("src.core.DirtyTracker")
 local turn_manager = require("src.game.turn.TurnManager")
 local turn_start = require("src.game.turn.TurnStart")
 local turn_roll = require("src.game.turn.TurnRoll")
@@ -23,7 +23,6 @@ local item_phase = require("src.game.item.ItemPhase")
 local chance_registry = require("src.game.chance.ChanceRegistry")
 local logger = require("src.core.Logger")
 local market_cfg = require("Config.Generated.Market")
-local store_paths = require("src.core.StorePaths")
 
 local composition_root = {}
 
@@ -98,39 +97,16 @@ local function _snapshot_inventory(inv)
   return { items = deep_copy(inv.items), max_slots = inv.max_slots }
 end
 
-local function _snapshot_players(players)
-  local ps = {}
-  for _, p in ipairs(players) do
-    ps[p.id] = {
-      id = p.id,
-      name = p.name,
-      role_id = p.role_id,
-      is_ai = p.is_ai,
-      auto = p.auto,
-      cash = p.cash,
-      balances = deep_copy(p.balances),
-      position = p.position,
-      seat_id = p.seat_id,
-      eliminated = p.eliminated,
-      properties = deep_copy(p.properties),
-      status = deep_copy(p.status),
-      inventory = _snapshot_inventory(p.inventory),
-    }
-  end
-  return ps
-end
-
-local function _snapshot_tiles(path)
-  local ts = {}
-  for _, tile in ipairs(path) do
-    if tile.type == "land" then
-      ts[tile.id] = { owner_id = nil, level = 0 }
+local function _init_tile_state(board)
+  for _, t in ipairs(board.path) do
+    if t.type == "land" then
+      t.owner_id = nil
+      t.level = 0
     end
   end
-  return ts
 end
 
-local function _snapshot_market_limits()
+local function _build_market_limits()
   local limits = {}
   for _, entry in ipairs(market_cfg) do
     local limit = entry.limit
@@ -141,26 +117,23 @@ local function _snapshot_market_limits()
   return limits
 end
 
-local function _build_initial_state(board, players)
+local function _build_initial_turn()
   return {
-    board = { tiles = _snapshot_tiles(board.path) },
-    market = { global_limits = _snapshot_market_limits() },
-    turn = {
-      current_player_index = 1,
-      turn_count = 0,
-      countdown_seconds = 0,
-      countdown_active = false,
-      phase = "start",
-      pending_choice = nil,
-      choice_seq = 0,
-      move_anim_seq = 0,
-      move_anim = nil,
-      action_anim_seq = 0,
-      action_anim = nil,
-      item_phase = {},
-      item_phase_active = "",
-    },
-    players = _snapshot_players(players),
+    current_player_index = 1,
+    turn_count = 0,
+    countdown_seconds = 0,
+    countdown_active = false,
+    phase = "start",
+    pending_choice = nil,
+    choice_seq = 0,
+    move_anim_seq = 0,
+    move_anim = nil,
+    action_anim_seq = 0,
+    action_anim = nil,
+    item_phase = {},
+    item_phase_active = "",
+    market_prompt = nil,
+    post_action = nil,
   }
 end
 
@@ -186,11 +159,12 @@ local function _phase_end(turn_mgr, args)
   local player = args.player
   turn_mgr.game:tick_player_deity(player)
   turn_mgr.game:clear_player_temporal_flags(player)
-  assert(turn_mgr.game ~= nil and turn_mgr.game.store ~= nil, "missing game/store")
-  turn_mgr.game.store:set(store_paths.turn.market_prompt, nil)
-  turn_mgr.game.store:set(store_paths.turn.post_action, nil)
-  turn_mgr.game.store:set(store_paths.turn.item_phase, {})
-  turn_mgr.game.store:set(store_paths.turn.item_phase_active, "")
+  local game = turn_mgr.game
+  game.turn.market_prompt = nil
+  game.turn.post_action = nil
+  game.turn.item_phase = {}
+  game.turn.item_phase_active = ""
+  dirty_tracker.mark(game.dirty, "turn")
   turn_mgr:next_player()
   return nil
 end
@@ -202,13 +176,14 @@ function composition_root.assemble(opts, game_or_class)
   local rng = _new_rng()
   local players = _create_players(opts)
 
-  local initial_state = _build_initial_state(board, players)
-  local store = store:new(initial_state)
+  _init_tile_state(board)
+
+  local dirty = dirty_tracker.new()
 
   for _, p in ipairs(players) do
     local pid = p.id
-    p.inventory._on_change = function(inv)
-      store:set(store_paths.players.inventory(pid), _snapshot_inventory(inv))
+    p.inventory._on_change = function()
+      dirty_tracker.mark_inventory(dirty, pid)
     end
   end
 
@@ -229,7 +204,9 @@ function composition_root.assemble(opts, game_or_class)
   assert(game, "CompositionRoot.Assemble requires game instance or class")
   game.board = board
   game.players = players
-  game.store = store
+  game.turn = _build_initial_turn()
+  game.dirty = dirty
+  game.market_limits = _build_market_limits()
   game.rng = rng
   game.logger = logger
   game.finished = false
@@ -237,6 +214,10 @@ function composition_root.assemble(opts, game_or_class)
   game.last_turn = nil
   game._land_rent_version = 0
   game._land_rent_cache = nil
+
+  function game:consume_dirty()
+    return dirty_tracker.consume(self.dirty)
+  end
 
   game:rebuild()
   game.turn_manager = turn_manager:new(game, phases)

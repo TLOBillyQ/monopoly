@@ -4,21 +4,10 @@ local agent = require("src.game.game.Agent")
 local inventory = require("src.game.item.ItemInventory")
 local choice_manager = require("src.game.choice.ChoiceManager")
 local gameplay_rules = require("Config.GameplayRules")
-local store_paths = require("src.core.StorePaths")
 require "vendor.third_party.ClassUtils"
 
 
 local turn_manager = Class("TurnManager")
-
-local phase_path = store_paths.turn.phase
-local pending_choice_path = store_paths.turn.pending_choice
-local turn_count_path = store_paths.turn.turn_count
-local player_index_path = store_paths.turn.current_player_index
-local action_anim_path = store_paths.turn.action_anim
-local anim_path_by_key = {
-  move_anim = store_paths.turn.move_anim,
-  action_anim = store_paths.turn.action_anim,
-}
 
 local wait_states = {
   wait_choice = true,
@@ -62,18 +51,10 @@ local function _format_properties(game, player)
     end
     return tostring(a) < tostring(b)
   end)
-  local store = game.store
-  local store_get = store and store.get
   local props = {}
   for _, tile_id in ipairs(ids) do
     local tile = game.board:get_tile_by_id(tile_id)
-    local level = 0
-    if store_get then
-      local st = store_get(store, store_paths.board.tile(tile_id))
-      if type(st) == "table" and st.level then
-        level = st.level
-      end
-    end
+    local level = tile.level or 0
     props[#props + 1] = tile.name .. "(Lv" .. tostring(level) .. ")"
   end
   return props
@@ -104,7 +85,7 @@ local function _build_turn_log_line(game, turn_count)
 end
 
 local function _get_choice(game)
-  return game.store:get(pending_choice_path)
+  return game.turn.pending_choice
 end
 
 
@@ -168,12 +149,13 @@ function turn_manager:dispatch(action)
 end
 
 
-local function _make_anim_wait(turn_mgr, state_name, store_key, done_action_type)
-  local anim_path = assert(anim_path_by_key[store_key], "missing anim path: " .. tostring(store_key))
+local function _make_anim_wait(turn_mgr, state_name, anim_key, done_action_type)
   return function(args)
-    turn_mgr.game.store:set(phase_path, state_name)
-    local anim = turn_mgr.game.store:get(anim_path)
-    assert(anim ~= nil, "missing " .. store_key)
+    turn_mgr.game.turn.phase = state_name
+    turn_mgr.game.dirty.turn = true
+    turn_mgr.game.dirty.any = true
+    local anim = turn_mgr.game.turn[anim_key]
+    assert(anim ~= nil, "missing " .. anim_key)
 
     local action = turn_mgr.pending_action
     turn_mgr.pending_action = nil
@@ -183,7 +165,9 @@ local function _make_anim_wait(turn_mgr, state_name, store_key, done_action_type
     if action.seq and anim.seq and action.seq ~= anim.seq then
       return state_name, args
     end
-    turn_mgr.game.store:set(anim_path, nil)
+    turn_mgr.game.turn[anim_key] = nil
+    turn_mgr.game.dirty.turn = true
+    turn_mgr.game.dirty.any = true
     return args.resume_state, args.resume_args
   end
 end
@@ -195,16 +179,20 @@ function turn_manager:_build_flow()
   for name, fn in pairs(self.phases) do
     states[name] = function(args)
       if name == "start" then
-        local tc = self.game.store:get(turn_count_path)
+        local tc = self.game.turn.turn_count
         logger.info(_build_turn_log_line(self.game, tc))
       end
-      self.game.store:set(phase_path, name)
+      self.game.turn.phase = name
+      self.game.dirty.turn = true
+      self.game.dirty.any = true
       return fn(self, args)
     end
   end
 
   states.wait_choice = function(args)
-    self.game.store:set(phase_path, "wait_choice")
+    self.game.turn.phase = "wait_choice"
+    self.game.dirty.turn = true
+    self.game.dirty.any = true
     local choice = _get_choice(self.game)
     if not choice then
       self.pending_action = nil
@@ -234,7 +222,7 @@ function turn_manager:_build_flow()
     if res.stay then
       return "wait_choice", args
     end
-    local aa = self.game.store:get(action_anim_path)
+    local aa = self.game.turn.action_anim
     if aa then
       return "wait_action_anim", args
     end
@@ -250,10 +238,12 @@ end
 
 function turn_manager:next_player()
   local count = #self.game.players
-  local current = self.game.store:get(player_index_path)
+  local current = self.game.turn.current_player_index
   local next_index = current % count + 1
-  self.game.store:set(player_index_path, next_index)
-  local tc = self.game.store:get(turn_count_path)
+  self.game.turn.current_player_index = next_index
+  self.game.dirty.turn = true
+  self.game.dirty.any = true
+  local tc = self.game.turn.turn_count
   logger.info(
     "[Eggy]",
     "切换玩家:",
@@ -276,7 +266,9 @@ function turn_manager:run_until_wait()
     local current = self.flow.current
     self.flow:step()
     if wait_states[self.flow.current] and self.flow.current == current and not self.pending_action then
-      self.game.store:set(phase_path, self.flow.current)
+      self.game.turn.phase = self.flow.current
+      self.game.dirty.turn = true
+      self.game.dirty.any = true
       return self.flow.current
     end
   end

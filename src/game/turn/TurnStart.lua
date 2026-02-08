@@ -1,11 +1,10 @@
 local logger = require("src.core.Logger")
 local item_phase = require("src.game.item.ItemPhase")
-local store_paths = require("src.core.StorePaths")
 
 local function _phase_start(turn_mgr)
   local player = turn_mgr.game:current_player()
-  local tc = turn_mgr.game.store:get(store_paths.turn.turn_count)
-  local current_index = turn_mgr.game.store:get(store_paths.turn.current_player_index)
+  local tc = turn_mgr.game.turn.turn_count
+  local current_index = turn_mgr.game.turn.current_player_index
   logger.info(
     "[Eggy]",
     "回合开始:",
@@ -32,9 +31,9 @@ local function _phase_start(turn_mgr)
   end
   local prev_tc = tc
   tc = tc + 1
-  if turn_mgr.game.store then
-    turn_mgr.game.store:set(store_paths.turn.turn_count, tc)
-  end
+  turn_mgr.game.turn.turn_count = tc
+  turn_mgr.game.dirty.turn = true
+  turn_mgr.game.dirty.any = true
   logger.info(
     "[Eggy]",
     "回合计数更新:",
@@ -70,4 +69,3 @@ local function _phase_start(turn_mgr)
 end
 
 return _phase_start
-

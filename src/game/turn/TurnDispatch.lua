@@ -1,6 +1,5 @@
 local number_utils = require("src.core.NumberUtils")
 local logger = require("src.core.Logger")
-local store_paths = require("src.core.StorePaths")
 
 local turn_dispatch = {}
 
@@ -101,10 +100,8 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
       }, opts)
     end
     if action.id == "next" then
-      local phase = nil
-      assert(game ~= nil and game.store ~= nil, "missing game.store")
-      assert(game.store.get ~= nil, "missing store.Get")
-      phase = game.store:get(store_paths.turn.phase)
+      assert(game ~= nil, "missing game")
+      local phase = game.turn.phase
       local now = _get_timestamp()
       if state.next_turn_locked then
         local allow = false
@@ -156,7 +153,7 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
       assert(game.dispatch_action ~= nil, "missing game.dispatch_action")
       game:dispatch_action(action)
     end
-    local pending = game and game.store and game.store.get and game.store:get(store_paths.turn.pending_choice) or nil
+    local pending = game and game.turn and game.turn.pending_choice or nil
     if not pending or not pending.id or pending.id ~= choice.id then
       turn_dispatch.clear_choice(state, opts)
     end

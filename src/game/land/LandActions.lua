@@ -6,7 +6,6 @@ local inventory = require("src.game.item.ItemInventory")
 local gameplay_rules = require("Config.GameplayRules")
 local monopoly_event = require("src.game.game.MonopolyEvents")
 local bankruptcy_manager = require("src.game.game.BankruptcyManager")
-local store_paths = require("src.core.StorePaths")
 
 local item_ids = gameplay_rules.item_ids
 local _emit_event = monopoly_event.emit
@@ -19,14 +18,10 @@ local function _eliminate_if_bankrupt(game, player)
 end
 
 function land_actions.safe_tile_state(game, tile)
-  if not (game and game.store and tile and tile.type == "land") then
+  if not (game and tile and tile.type == "land") then
     return { owner_id = nil, level = 0 }
   end
-  local st = game.store:get(store_paths.board.tile(tile.id))
-  if type(st) ~= "table" then
-    return { owner_id = nil, level = 0 }
-  end
-  return { owner_id = st.owner_id, level = st.level or 0 }
+  return { owner_id = tile.owner_id, level = tile.level or 0 }
 end
 
 local function _ensure_land_neighbors(board)

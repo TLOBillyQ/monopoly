@@ -1,6 +1,5 @@
 local landing = require("src.game.land.Landing")
 local land = require("src.game.land.Land")
-local store_paths = require("src.core.StorePaths")
 require "vendor.third_party.ClassUtils"
 
 local executors = {}
@@ -74,11 +73,10 @@ function effect.build_game_ctx(game, move_result, opts)
   opts = opts or {}
   local phase = opts.phase
   if not phase then
-    phase = game.store:get(store_paths.turn.phase) or opts.phase_default
+    phase = game.turn.phase or opts.phase_default
   end
   return {
     game = game,
-    store = game.store,
     rng = game.rng,
     phase = phase or "wait_choice",
     move_result = move_result,

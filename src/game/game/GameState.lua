@@ -3,7 +3,6 @@ local constants = require("Config.Generated.Constants")
 local vehicles_cfg = require("Config.Generated.Vehicles")
 local logger = require("src.core.Logger")
 local bankruptcy_manager = require("src.game.game.BankruptcyManager")
-local store_paths = require("src.core.StorePaths")
 require "vendor.third_party.Utils"
 
 local game_state = {}
@@ -22,13 +21,6 @@ local default_vehicle_cfg = {
   indestructible = false,
 }
 
-local function _store_value(value)
-  if type(value) == "table" then
-    return deep_copy(value)
-  end
-  return value
-end
-
 local function _normalize_currency(currency)
   assert(currency ~= nil and currency ~= "", "missing currency")
   return currency
@@ -43,20 +35,35 @@ local function _player_status_table(player)
   return player.status
 end
 
+local function _mark_players(self)
+  self.dirty.any = true
+  self.dirty.players = true
+end
+
+local function _mark_board(self)
+  self.dirty.any = true
+  self.dirty.board_tiles = true
+end
+
+local function _mark_turn(self)
+  self.dirty.any = true
+  self.dirty.turn = true
+end
+
 function game_state:set_player_status(player, key, value)
   local status = _player_status_table(player)
   status[key] = value
-  self.store:set(store_paths.players.status_key(player.id, key), _store_value(value))
+  _mark_players(self)
 end
 
 function game_state:set_player_seat(player, seat_id)
   player.seat_id = seat_id
-  self.store:set(store_paths.players.seat_id(player.id), _store_value(seat_id))
+  _mark_players(self)
 end
 
 function game_state:set_player_eliminated(player, eliminated)
   player.eliminated = eliminated == true
-  self.store:set(store_paths.players.eliminated(player.id), player.eliminated)
+  _mark_players(self)
 end
 
 function game_state:set_player_property(player, tile_id, owned)
@@ -66,33 +73,16 @@ function game_state:set_player_property(player, tile_id, owned)
   else
     player.properties[tile_id] = nil
   end
-  self.store:set(store_paths.players.property(player.id, tile_id), owned and true or nil)
-end
-
-function game_state:sync_player_inventory(player)
-  self.store:set(
-    store_paths.players.inventory(player.id),
-    _store_value(composition_root.snapshot_inventory(player.inventory))
-  )
+  _mark_players(self)
 end
 
 function game_state:player_balance(player, currency)
   local key = _normalize_currency(currency)
   if key == "金币" then
-    local cash = self.store:get(store_paths.players.cash(player.id))
-    if cash ~= nil then
-      player.cash = cash
-      return cash
-    end
     return player.cash
   end
-  local value = self.store:get(store_paths.players.balance(player.id, key))
-  if value == nil and player.balances then
-    value = player.balances[key]
-  end
+  local value = player.balances and player.balances[key]
   assert(value ~= nil, "missing balance: " .. tostring(key))
-  player.balances = player.balances or {}
-  player.balances[key] = value
   return value
 end
 
@@ -103,7 +93,7 @@ function game_state:set_player_balance(player, currency, value)
   end
   player.balances = player.balances or {}
   player.balances[key] = value
-  self.store:set(store_paths.players.balance(player.id, key), value)
+  _mark_players(self)
   return value
 end
 
@@ -114,7 +104,7 @@ end
 
 function game_state:set_player_cash(player, amount)
   player.cash = amount
-  self.store:set(store_paths.players.cash(player.id), amount)
+  _mark_players(self)
   return amount
 end
 
@@ -151,7 +141,7 @@ function game_state:clear_player_deity(player)
   status.deity = status.deity or { type = "", remaining = 0 }
   status.deity.type = ""
   status.deity.remaining = 0
-  self.store:set(store_paths.players.deity(player.id), _store_value(status.deity))
+  _mark_players(self)
 end
 
 function game_state:set_player_deity(player, name, duration)
@@ -160,7 +150,7 @@ function game_state:set_player_deity(player, name, duration)
   status.deity = status.deity or { type = "", remaining = 0 }
   status.deity.type = name
   status.deity.remaining = duration or player.deity_duration_turns
-  self.store:set(store_paths.players.deity(player.id), _store_value(status.deity))
+  _mark_players(self)
 end
 
 function game_state:tick_player_deity(player)
@@ -175,7 +165,7 @@ function game_state:tick_player_deity(player)
     self:clear_player_deity(player)
     return
   end
-  self.store:set(store_paths.players.deity_remaining(player.id), deity.remaining)
+  _mark_players(self)
 end
 
 function game_state:clear_player_temporal_flags(player)
@@ -184,7 +174,7 @@ function game_state:clear_player_temporal_flags(player)
   status.pending_free_rent = false
   status.pending_tax_free = false
   status.pending_remote_dice = nil
-  self.store:set(store_paths.players.status(player.id), _store_value(status))
+  _mark_players(self)
 end
 
 function game_state:player_vehicle_cfg(player)
@@ -256,16 +246,18 @@ end
 function game_state:update_tile(tile, updates)
   assert(tile ~= nil and tile.type == "land", "invalid tile for update")
   for key, value in pairs(updates) do
-    self.store:set(store_paths.board.tile_key(tile.id, key), _store_value(value))
+    tile[key] = value
   end
+  _mark_board(self)
 end
 
 function game_state:queue_action_anim(payload)
   assert(payload ~= nil, "missing action anim payload")
-  local seq = (self.store:get(store_paths.turn.action_anim_seq) or 0) + 1
+  local seq = (self.turn.action_anim_seq or 0) + 1
   payload.seq = seq
-  self.store:set(store_paths.turn.action_anim_seq, seq)
-  self.store:set(store_paths.turn.action_anim, payload)
+  self.turn.action_anim_seq = seq
+  self.turn.action_anim = payload
+  _mark_turn(self)
   return payload
 end
 
@@ -289,8 +281,9 @@ function game_state:reset_tile(tile)
   local ui_port = self.ui_port
   assert(ui_port ~= nil and ui_port.on_tile_owner_changed ~= nil, "missing ui_port")
   ui_port:on_tile_owner_changed(tile.id, nil)
-  self.store:set(store_paths.board.tile_key(tile.id, "owner_id"), nil)
-  self.store:set(store_paths.board.tile_key(tile.id, "level"), 0)
+  tile.owner_id = nil
+  tile.level = 0
+  _mark_board(self)
 end
 
 function game_state:alive_players()
@@ -304,7 +297,7 @@ function game_state:alive_players()
 end
 
 function game_state:current_player()
-  local idx = self.store:get(store_paths.turn.current_player_index)
+  local idx = self.turn.current_player_index
   assert(idx ~= nil, "missing current_player_index")
   return self.players[idx]
 end
@@ -317,7 +310,7 @@ function game_state:rebuild()
   end
   for _, player in ipairs(self.players) do
     if not player.eliminated then
-      local idx = self.store:get(store_paths.players.position(player.id)) or player.position
+      local idx = player.position
       player.position = idx
       table.insert(self.occupants[idx], player.id)
     end
@@ -325,7 +318,7 @@ function game_state:rebuild()
 end
 
 function game_state:update_player_position(player, new_index)
-  local old_index = self.store:get(store_paths.players.position(player.id)) or player.position
+  local old_index = player.position
   if old_index and self.occupants and self.occupants[old_index] then
     local list = self.occupants[old_index]
     for i = #list, 1, -1 do
@@ -335,13 +328,13 @@ function game_state:update_player_position(player, new_index)
     end
   end
   player.position = new_index
-  self.store:set(store_paths.players.position(player.id), new_index)
+  _mark_players(self)
   self.occupants[new_index] = self.occupants[new_index] or {}
   table.insert(self.occupants[new_index], player.id)
 end
 
 function game_state:pending_choice()
-  return self.store:get(store_paths.turn.pending_choice)
+  return self.turn.pending_choice
 end
 
 return game_state

@@ -16,12 +16,11 @@ function panel.build_player_label(player)
   return player.name .. " $" .. player.cash
 end
 
-function panel.build_player_statuses(store_state, game, max_players)
-  local players = store_state and store_state.players or {}
+function panel.build_player_statuses(game, game_obj, max_players)
+  local players = game and game.players or {}
   local count = max_players or #players
   local out = {}
-  local board = game and game.board or nil
-  local board_state = store_state and store_state.board and store_state.board.tiles or {}
+  local board = game_obj and game_obj.board or nil
   for i = 1, count do
     local player = players[i]
     if player then
@@ -32,11 +31,7 @@ function panel.build_player_statuses(store_state, game, max_players)
         land_count = land_count + 1
         local tile = board and board.get_tile_by_id and board:get_tile_by_id(tile_id) or nil
         if tile and tile.type == "land" then
-          local level = 0
-          local st = board_state and board_state[tile_id]
-          if st and type(st) == "table" then
-            level = st.level or 0
-          end
+          local level = tile.level or 0
           total = total + pricing.total_invested(tile, level)
         end
       end

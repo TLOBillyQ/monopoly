@@ -3,7 +3,6 @@ local tile = require("src.game.board.Tile")
 local monopoly_event = require("src.game.game.MonopolyEvents")
 local movement_manager = require("src.game.movement.MovementManager")
 local bankruptcy_manager = require("src.game.game.BankruptcyManager")
-local store_paths = require("src.core.StorePaths")
 
 local chance_registry = {}
 local handlers = {}
@@ -211,12 +210,7 @@ local function _register_defaults()
     for _, idx in ipairs(context.visited) do
       local t = game.board:get_tile(idx)
       assert(t ~= nil, "missing tile: " .. tostring(idx))
-      local snap = game.store:get(store_paths.board.tile(t.id))
-      local lvl = 0
-      if type(snap) == "table" then
-        lvl = snap.level
-      end
-      if t.type == "land" and lvl > 0 then
+      if t.type == "land" and (t.level or 0) > 0 then
         game:set_tile_level(t, 0)
         _emit_event(monopoly_event.chance.applied, {
           card = { effect = "destroy_buildings_on_path" },

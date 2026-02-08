@@ -1,17 +1,12 @@
 local logger = require("src.core.Logger")
 local inventory = require("src.game.item.ItemInventory")
 local tile_renderer = require("src.ui.TileRenderer")
-local store_paths = require("src.core.StorePaths")
 
 local bankruptcy_manager = {}
 
 local function _collect_owned_tiles(game, player)
   local owned_tile_ids = {}
-  local props = nil
-  if game.store and game.store.get then
-    props = game.store:get(store_paths.players.properties(player.id))
-  end
-  props = props or {}
+  local props = player.properties or {}
   for tile_id, owned in pairs(props) do
     if owned == true then
       table.insert(owned_tile_ids, tile_id)
@@ -68,7 +63,6 @@ function bankruptcy_manager.eliminate(game, player)
   end
 
   inventory.clear(player)
-  game:sync_player_inventory(player)
 
   game:set_player_eliminated(player, true)
 

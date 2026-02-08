@@ -1,17 +1,16 @@
 local monopoly_event = require("src.game.game.MonopolyEvents")
-local store_paths = require("src.core.StorePaths")
 
 local intent_dispatcher = {}
 local emit = monopoly_event.emit
 
 function intent_dispatcher.open_choice(game, choice_spec, opts)
-  assert(game and game.store, "Choice.open requires game.store")
+  assert(game and game.turn, "Choice.open requires game.turn")
   assert(choice_spec ~= nil, "missing choice_spec")
   opts = opts or {}
 
-  local seq = game.store:get(store_paths.turn.choice_seq) or 0
+  local seq = game.turn.choice_seq or 0
   seq = seq + 1
-  game.store:set(store_paths.turn.choice_seq, seq)
+  game.turn.choice_seq = seq
 
   local entry = {
     id = seq,
@@ -23,7 +22,9 @@ function intent_dispatcher.open_choice(game, choice_spec, opts)
     cancel_label = choice_spec.cancel_label or "取消",
     meta = choice_spec.meta,
   }
-  game.store:set(store_paths.turn.pending_choice, entry)
+  game.turn.pending_choice = entry
+  game.dirty.turn = true
+  game.dirty.any = true
 
   local event_name = monopoly_event.resolve_intent("need_choice")
   emit(event_name, { choice = entry, choice_spec = choice_spec })
