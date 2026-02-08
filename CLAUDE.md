@@ -1,20 +1,19 @@
 # 指导原则
 
-使用直白简练的现代汉语
+使用直白简练的现代汉语。
 
 ## 可执行计划
- 
-- 编写复杂功能或进行重大重构时，应按照 `.agents/PLANS.md`中所述使用可执行计划，贯穿设计到实现的整个过程。
-- 新任务请清空PLAN_CURRENT.md之后写入。
 
-## Coding Rules
+编写复杂功能或进行重大重构时，按 `.agents/PLANS.md` 使用可执行计划。新任务先清空 `PLAN_CURRENT.md` 再写入。
 
-当做代码修改时，遵守 CodingDiscipline (`.agents/CODING.md`)
+## 编码纪律
 
-## API 读取规则
+代码修改遵守 `.agents/CODING.md`。
 
-当需要检索API文件时，遵守 ReadingDiscipline (`.agents/READING.md`)
+## 检索纪律
 
-## 本项目
+API 文档检索遵守 `.agents/READING.md`。
 
-关于本项目的信息，见`.agents/THIS.md`
+## 项目上下文
+
+运行环境与 API 检索路径见 `.agents/THIS.md`。
