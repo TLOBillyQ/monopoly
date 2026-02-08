@@ -1,18 +1,16 @@
 local monopoly_event = require("src.game.game.MonopolyEvents")
 
 local event_handlers = {}
-local installed = false
-local current_logger = nil
-local current_state = nil
+local context = { installed = false, logger = nil, state = nil }
 
 function event_handlers.install(_, logger, state)
-  current_logger = logger
-  current_state = state
+  context.logger = logger
+  context.state = state
 
-  if installed then
+  if context.installed then
     return
   end
-  installed = true
+  context.installed = true
 
   local movement_log_events = {
     monopoly_event.movement.moved,
@@ -38,7 +36,7 @@ function event_handlers.install(_, logger, state)
 
   for _, event_name in ipairs(log_events) do
     RegisterCustomEvent(event_name, function(_, _, data)
-      local log = current_logger
+      local log = context.logger
       if log and data and data.text then
         log.event(data.text)
       end
@@ -47,7 +45,7 @@ function event_handlers.install(_, logger, state)
 
   for _, event_name in ipairs(movement_log_events) do
     RegisterCustomEvent(event_name, function(_, _, data)
-      local log = current_logger
+      local log = context.logger
       if log and data and data.text then
         if log.event_no_tips then
           log.event_no_tips(data.text)
@@ -70,7 +68,7 @@ function event_handlers.install(_, logger, state)
     elseif payload and payload.tile_id then
       tile_id = payload.tile_id
     end
-    local ctx = current_state
+    local ctx = context.state
     if tile_id and ctx and ctx.game and ctx.game.board and ctx.game.board.index_of_tile_id then
       return ctx.game.board:index_of_tile_id(tile_id)
     end
@@ -79,7 +77,7 @@ function event_handlers.install(_, logger, state)
 
   RegisterCustomEvent(monopoly_event.movement.roadblock_hit, function(_, _, data)
     local idx = _resolve_tile_index(data)
-    local ctx = current_state
+    local ctx = context.state
     if ok and action_anim and idx and ctx then
       action_anim.clear_overlay(ctx, "roadblock", idx)
     end
@@ -87,7 +85,7 @@ function event_handlers.install(_, logger, state)
 
   RegisterCustomEvent(monopoly_event.land.mine_hit, function(_, _, data)
     local idx = _resolve_tile_index(data)
-    local ctx = current_state
+    local ctx = context.state
     if ok and action_anim and idx and ctx then
       action_anim.clear_overlay(ctx, "mine", idx)
     end
@@ -95,7 +93,7 @@ function event_handlers.install(_, logger, state)
 
   RegisterCustomEvent(monopoly_event.market.buy_failed, function(_, _, data)
     local popup = data.popup
-    local ctx = current_state
+    local ctx = context.state
     if popup and ctx and ctx.push_popup then
       ctx:push_popup(popup)
     end

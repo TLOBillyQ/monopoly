@@ -57,7 +57,7 @@ function panel.build_auto_label(auto_play)
   if auto_play then
     return "自动：开"
   end
-  return "自动:关"
+  return "自动：关"
 end
 
 return panel

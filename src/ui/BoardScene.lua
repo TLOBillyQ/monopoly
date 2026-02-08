@@ -18,15 +18,8 @@ function board_scene.init(state, map_cfg)
   for i, role in ipairs(roles) do
     assert(role ~= nil, "missing role: " .. tostring(i))
     local unit = role.get_ctrl_unit()
-    -- unit.set_physics_active(false)
     scene.units_by_player_id[i] = unit
   end
-
-  -- TODO：合理禁用逻辑
-  -- for i = 1, #roles do
-  --   local unit = roles[i].get_ctrl_unit()
-  --   unit.add_state(Enums.BuffState.BUFF_FORBID_CONTROL)
-  -- end
 
   local tile_names = {}
   local building_names = {}
@@ -43,7 +36,7 @@ function board_scene.init(state, map_cfg)
   scene.tiles = LuaAPI.query_units(tile_names)
   scene.buildings = LuaAPI.query_units(building_names)
   scene.building_txt = {}
-  for i = 1, 45 do
+  for i = 1, #tile_ids do
     scene.tiles[i].set_physics_active(false)
     local b = scene.buildings[i]
     if b ~= nil then

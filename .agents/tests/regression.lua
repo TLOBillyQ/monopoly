@@ -938,11 +938,12 @@ local function _test_tick_skips_anim_when_no_anim()
   local store = require("src.core.Store")
   local main_view = require("src.ui.UIView")
   local ui_model = require("src.ui.UIModel")
+  local board_view_mod = require("src.ui.BoardView")
 
   local game_api = GameAPI or {}
   local patches = {
     { target = main_view, key = "refresh_panel", value = function() end },
-    { target = main_view, key = "refresh_board", value = function() end },
+    { target = board_view_mod, key = "refresh_board", value = function() end },
     { target = main_view, key = "open_choice_modal", value = function() end },
     { target = ui_model, key = "build", value = function(store_state)
       return {

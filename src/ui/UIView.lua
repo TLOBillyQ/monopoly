@@ -32,12 +32,7 @@ local function set_item_slot_image(slot_name, image_key)
   end
 end
 
-local function _set_label(_, name, text)
-  local node = _query_node(name)
-  node.text = text or ""
-end
-
-local function _set_button(_, name, text)
+local function _set_text(_, name, text)
   local node = _query_node(name)
   node.text = text or ""
 end
@@ -53,7 +48,7 @@ local function _set_touch_enabled(_, name, enabled)
 end
 
 local function _set_debug_log(_, text)
-  _set_label(nil, "日志", text)
+  _set_text(nil, "日志", text)
 end
 
 local function _set_debug_visible(ui, visible)
@@ -122,8 +117,8 @@ function ui_view.build_ui_state()
     popup_seq = 0,
     popup_return_canvas = nil,
     query_node = _query_node,
-    set_label = _set_label,
-    set_button = _set_button,
+    set_label = _set_text,
+    set_button = _set_text,
     set_visible = _set_visible,
     set_touch_enabled = _set_touch_enabled,
     set_debug_log = _set_debug_log,
@@ -210,10 +205,6 @@ function ui_view.refresh_item_slots(state, ui_model)
   end
 end
 
-function ui_view.refresh_board(state, ui_model, log_once, build_log_prefix)
-  board_view.refresh_board(state, ui_model, log_once, build_log_prefix)
-end
-
 function ui_view.apply_input_lock(state)
   local ui = state.ui
   if not ui or not ui.set_touch_enabled then
@@ -267,7 +258,7 @@ end
 
 function ui_view.render(state, ui_model, log_once, build_log_prefix)
   ui_view.refresh_panel(state, ui_model)
-  ui_view.refresh_board(state, ui_model, log_once, build_log_prefix)
+  board_view.refresh_board(state, ui_model, log_once, build_log_prefix)
 end
 
 function ui_view.set_debug_log(state, text)
@@ -286,14 +277,6 @@ function ui_view.set_debug_visible(state, visible)
   ui:set_debug_visible(visible == true)
 end
 
-function ui_view.on_tile_upgraded(state, tile_id, level)
-  board_view.on_tile_upgraded(state, tile_id, level)
-end
-
-function ui_view.on_tile_owner_changed(state, tile_id, owner_id)
-  board_view.on_tile_owner_changed(state, tile_id, owner_id)
-end
-
 function ui_view.select_market_option(state, option_id)
   if not option_id then
     logger.warn("select_market_option missing option_id")
@@ -302,38 +285,23 @@ function ui_view.select_market_option(state, option_id)
   market_view.select_market_option(state, option_id)
 end
 
-function ui_view.open_choice_modal(state, choice, market)
-  if not choice then
-    logger.warn("open_choice_modal missing choice")
-    return
+local function _open_market_panel(state, choice, choice_id, market)
+  _switch_canvas(state.ui, CANVAS_MARKET)
+  if state.ui.choice_active then
+    state.ui:set_visible(state.ui.choice.root, false)
+    state.ui.choice_active = false
   end
-  if not choice.id then
-    logger.warn("open_choice_modal missing choice id")
-    return
-  end
-  local choice_id = choice.id
-  if state.pending_choice_id == choice_id
-      and (state.ui.choice_active or state.ui.market_active) then
-    return
-  end
-  state.ui_dirty = true
+  local market_payload = market or {
+    choice_id = choice_id,
+    options = choice.options,
+    allow_cancel = choice.allow_cancel,
+    cancel_label = choice.cancel_label,
+    selected_option_id = state.pending_choice_selected_option_id,
+  }
+  market_view.refresh_market(state, market_payload)
+end
 
-  if choice.kind == "market_buy" and market_ui.is_panel_ready() then
-    _switch_canvas(state.ui, CANVAS_MARKET)
-    if state.ui.choice_active then
-      state.ui:set_visible(state.ui.choice.root, false)
-      state.ui.choice_active = false
-    end
-    local market_payload = market or {
-      choice_id = choice_id,
-      options = choice.options,
-      allow_cancel = choice.allow_cancel,
-      cancel_label = choice.cancel_label,
-      selected_option_id = state.pending_choice_selected_option_id,
-    }
-    market_view.refresh_market(state, market_payload)
-    return
-  end
+local function _open_generic_choice(state, choice, choice_id)
   if state.ui.market_active then
     market_view.close_market_panel(state)
   end
@@ -368,6 +336,29 @@ function ui_view.open_choice_modal(state, choice, market)
   state.ui.choice_active = true
   state.pending_choice_elapsed = 0
   state.pending_choice_id = choice_id
+end
+
+function ui_view.open_choice_modal(state, choice, market)
+  if not choice then
+    logger.warn("open_choice_modal missing choice")
+    return
+  end
+  if not choice.id then
+    logger.warn("open_choice_modal missing choice id")
+    return
+  end
+  local choice_id = choice.id
+  if state.pending_choice_id == choice_id
+      and (state.ui.choice_active or state.ui.market_active) then
+    return
+  end
+  state.ui_dirty = true
+
+  if choice.kind == "market_buy" and market_ui.is_panel_ready() then
+    _open_market_panel(state, choice, choice_id, market)
+  else
+    _open_generic_choice(state, choice, choice_id)
+  end
 end
 
 function ui_view.close_choice_modal(state)

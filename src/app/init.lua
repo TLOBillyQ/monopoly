@@ -15,6 +15,7 @@ require "src.game.game.CompositionRoot"
 
 local auto_runner = require("src.game.turn.AutoRunner")
 local board_scene = require("src.ui.BoardScene")
+local board_view = require("src.ui.BoardView")
 local game = require("src.game.game.Game")
 local gameplay_loop = require("src.game.turn.GameplayLoop")
 local ui_view = require("src.ui.UIView")
@@ -87,10 +88,10 @@ local function _build_state()
     return ok
   end
   state.on_tile_upgraded = function(_, tile_id, level)
-    ui_view.on_tile_upgraded(state, tile_id, level)
+    board_view.on_tile_upgraded(state, tile_id, level)
   end
   state.on_tile_owner_changed = function(_, tile_id, owner_id)
-    ui_view.on_tile_owner_changed(state, tile_id, owner_id)
+    board_view.on_tile_owner_changed(state, tile_id, owner_id)
   end
 
   RegisterCustomEvent(monopoly_event.intent.need_choice, function(_, _, data)

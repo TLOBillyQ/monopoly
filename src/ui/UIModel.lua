@@ -43,16 +43,7 @@ local function _resolve_current_player(state)
   return players[idx], turn
 end
 
-function ui_model.build(store_state, env)
-  if store_state and store_state.store and store_state.store.state then
-    store_state = store_state.store.state
-  end
-  assert(store_state ~= nil, "missing store_state")
-  env = env or {}
-  local ui_state = env.ui_state
-  local ui_runtime = ui_state and ui_state.ui
-  local current, turn = _resolve_current_player(store_state)
-  local overlays = _build_overlays(env)
+local function _build_item_slots(current, ui_runtime)
   local slot_count = 5
   if ui_runtime and type(ui_runtime.item_slots) == "table" and #ui_runtime.item_slots > 0 then
     slot_count = #ui_runtime.item_slots
@@ -66,15 +57,10 @@ function ui_model.build(store_state, env)
     local item = current_items[i]
     item_slots[i] = item and item.id or nil
   end
-  local panel = {
-    turn_label = panel_view.build_turn_label(
-      turn.turn_count,
-      turn.countdown_seconds or 0,
-      turn.countdown_active == true
-    ),
-    player_rows = panel_view.build_player_statuses(store_state, env.game, 4),
-    auto_label = panel_view.build_auto_label(ui_runtime and ui_runtime.auto_play),
-  }
+  return item_slots
+end
+
+local function _build_choice_and_market(store_state, env, ui_state)
   local choice = nil
   local pending = store_state.turn and store_state.turn.pending_choice
   if pending then
@@ -92,14 +78,42 @@ function ui_model.build(store_state, env)
       selected_option_id = ui_state and ui_state.pending_choice_selected_option_id or nil,
     }
   end
-  local popup = nil
+  return choice, market
+end
+
+local function _build_popup(ui_runtime)
   if ui_runtime and ui_runtime.popup_active and ui_runtime.popup_payload then
-    popup = {
+    return {
       title = ui_runtime.popup_payload.title,
       body = ui_runtime.popup_payload.body,
       button_text = ui_runtime.popup_payload.button_text,
     }
   end
+  return nil
+end
+
+function ui_model.build(store_state, env)
+  if store_state and store_state.store and store_state.store.state then
+    store_state = store_state.store.state
+  end
+  assert(store_state ~= nil, "missing store_state")
+  env = env or {}
+  local ui_state = env.ui_state
+  local ui_runtime = ui_state and ui_state.ui
+  local current, turn = _resolve_current_player(store_state)
+  local overlays = _build_overlays(env)
+  local item_slots = _build_item_slots(current, ui_runtime)
+  local panel = {
+    turn_label = panel_view.build_turn_label(
+      turn.turn_count,
+      turn.countdown_seconds or 0,
+      turn.countdown_active == true
+    ),
+    player_rows = panel_view.build_player_statuses(store_state, env.game, 4),
+    auto_label = panel_view.build_auto_label(ui_runtime and ui_runtime.auto_play),
+  }
+  local choice, market = _build_choice_and_market(store_state, env, ui_state)
+  local popup = _build_popup(ui_runtime)
 
   return {
     board = {
@@ -175,55 +189,17 @@ function ui_model.update(prev, store_state, env, dirty)
     end
   end
   if update_slots then
-    local slot_count = 5
-    if ui_runtime and type(ui_runtime.item_slots) == "table" and #ui_runtime.item_slots > 0 then
-      slot_count = #ui_runtime.item_slots
-    end
-    local current_items = {}
-    if current and current.inventory and type(current.inventory.items) == "table" then
-      current_items = current.inventory.items
-    end
-    local item_slots = {}
-    for i = 1, slot_count do
-      local item = current_items[i]
-      item_slots[i] = item and item.id or nil
-    end
-    model.item_slots = item_slots
+    model.item_slots = _build_item_slots(current, ui_runtime)
   end
 
   if dirty.turn or dirty.market or ui_dirty then
-    local choice = nil
-    local pending = store_state.turn and store_state.turn.pending_choice
-    if pending then
-      choice = choice_view.build_choice_view(pending, { game = env.game })
-      choice.id = pending.id
-      choice.kind = pending.kind
-    end
+    local choice, market = _build_choice_and_market(store_state, env, ui_state)
     model.choice = choice
-
-    local market = nil
-    if choice and choice.kind == "market_buy" then
-      market = {
-        choice_id = choice.id,
-        options = choice.options,
-        allow_cancel = choice.allow_cancel,
-        cancel_label = choice.cancel_label,
-        selected_option_id = ui_state and ui_state.pending_choice_selected_option_id or nil,
-      }
-    end
     model.market = market
   end
 
   if ui_dirty then
-    local popup = nil
-    if ui_runtime and ui_runtime.popup_active and ui_runtime.popup_payload then
-      popup = {
-        title = ui_runtime.popup_payload.title,
-        body = ui_runtime.popup_payload.body,
-        button_text = ui_runtime.popup_payload.button_text,
-      }
-    end
-    model.popup = popup
+    model.popup = _build_popup(ui_runtime)
   end
 
   if dirty.players or dirty.turn then

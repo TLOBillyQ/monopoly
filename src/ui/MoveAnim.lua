@@ -1,10 +1,6 @@
 local runtime_constants = require("Config.RuntimeConstants")
 
-local rad_to_deg = math.rad_to_deg or math.deg or function(radians)
-    return radians * 180 / math.pi
-end
-
-local movement_manager = {}
+local move_anim = {}
 
 local function _calc_step(scene, from_index, to_index)
     local start_tile = scene.tiles[from_index]
@@ -19,39 +15,15 @@ local function _calc_step(scene, from_index, to_index)
     return dir, time
 end
 
-function movement_manager.step_duration(scene, from_index, to_index)
+function move_anim.step_duration(scene, from_index, to_index)
     local _, time = _calc_step(scene, from_index, to_index)
     return time -- TODO: 确定每步等待时间
 end
 
-function movement_manager.one_step(scene, player_id, dir, from_index, to_index)
+function move_anim.one_step(scene, player_id, from_index, to_index)
     local step_dir, time = _calc_step(scene, from_index, to_index)
 
     local unit = scene.units_by_player_id[player_id]
-    --if unit.set_direction then
-    --    unit.set_direction(step_dir)
-    -- elseif unit.set_orientation then
-    --     local dx = step_dir.x
-    --     local dz = step_dir.z
-    --     if dx ~= 0 or dz ~= 0 then
-    --         local yaw_radians = 0.0
-    --         if dz > 0 then
-    --             yaw_radians = math.atan(dx / dz)
-    --         elseif dz < 0 then
-    --             if dx >= 0 then
-    --                 yaw_radians = math.atan(dx / dz) + math.pi
-    --             else
-    --                 yaw_radians = math.atan(dx / dz) - math.pi
-    --             end
-    --         elseif dx > 0 then
-    --             yaw_radians = math.pi / 2
-    --         elseif dx < 0 then
-    --             yaw_radians = -math.pi / 2
-    --         end
-    --         unit.set_orientation(math.Quaternion(0.0, rad_to_deg(yaw_radians), 0.0))
-    --     end
-    --end
-   
     unit.start_move_by_direction(step_dir, time)
     return time
 end
@@ -77,7 +49,7 @@ local function _build_steps(board_scene, from_index, to_index, visited)
       return
     end
     local delay = total_time
-    local step_time = movement_manager.step_duration(board_scene, step_from, step_to)
+    local step_time = move_anim.step_duration(board_scene, step_from, step_to)
     total_time = total_time + step_time
     steps[#steps + 1] = { from = step_from, to = step_to, delay = delay }
   end
@@ -98,7 +70,7 @@ local function _build_steps(board_scene, from_index, to_index, visited)
   return steps, total_time
 end
 
-function movement_manager.play_sequence(board_scene, anim_ctx)
+function move_anim.play_sequence(board_scene, anim_ctx)
   assert(anim_ctx ~= nil, "missing anim")
   local player_id = assert(anim_ctx.player_id, "missing player_id")
   local from_index = assert(anim_ctx.from_index, "missing from_index")
@@ -107,14 +79,14 @@ function movement_manager.play_sequence(board_scene, anim_ctx)
   local steps, total_time = _build_steps(board_scene, from_index, to_index, anim_ctx.visited)
   for _, step in ipairs(steps) do
     if step.delay <= 0 then
-      movement_manager.one_step(board_scene, player_id, dir, step.from, step.to)
+      move_anim.one_step(board_scene, player_id, step.from, step.to)
     else
       SetTimeOut(step.delay, function()
-        movement_manager.one_step(board_scene, player_id, dir, step.from, step.to)
+        move_anim.one_step(board_scene, player_id, step.from, step.to)
       end)
     end
   end
   return total_time
 end
 
-return movement_manager
+return move_anim
