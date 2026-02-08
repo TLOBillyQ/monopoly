@@ -5,7 +5,7 @@ local runtime_ctx = runtime_context.new({
   LuaAPI = LuaAPI,
 })
 runtime_context.set_current(runtime_ctx)
-require "src.core.RuntimeGlobals"
+runtime_context.install_globals(runtime_ctx)
 require "src.game.game.BankruptcyManager"
 require "src.game.game.AgentTargeting"
 require "src.game.game.Agent"
@@ -129,7 +129,6 @@ local function _install_game_init(state)
   RegisterTriggerEvent({ EVENT.GAME_INIT }, function()
     require "vendor.third_party.UIManager.Utils"
     UIManager.Builder:new(require "Data.UIManagerNodes")
-    require "src.core.RuntimeECA"
     current_game = gameplay_loop.new_game(state)
     gameplay_loop.set_game(state, current_game)
     ui_event_router.bind(state, function()
