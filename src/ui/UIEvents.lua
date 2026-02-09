@@ -7,10 +7,12 @@ local ui_events = {
 }
 
 for _, entry in pairs(nodes) do
-  local name = entry[1]
-  local kind = entry[2]
-  if kind == "ECanvas" then
-    table.insert(ui_events.canvas_names, name)
+  if type(entry) == "table" then
+    local name = entry[1]
+    local kind = entry[2]
+    if kind == "ECanvas" then
+      table.insert(ui_events.canvas_names, name)
+    end
   end
 end
 
