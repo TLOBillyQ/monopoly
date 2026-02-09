@@ -1,8 +1,8 @@
 local inventory = require("src.game.item.ItemInventory")
 local tile = require("src.game.board.Tile")
 local monopoly_event = require("src.game.game.MonopolyEvents")
-local movement_manager = require("src.game.movement.MovementManager")
-local bankruptcy_manager = require("src.game.game.BankruptcyManager")
+local movement = require("src.game.movement.Movement")
+local bankruptcy = require("src.game.game.Bankruptcy")
 
 local chance_registry = {}
 local handlers = {}
@@ -43,7 +43,7 @@ local function _handle_bankruptcy_if_negative(game, player)
   if game:player_balance(player, "金币") > 0 then
     return
   end
-  bankruptcy_manager.eliminate(game, player)
+  bankruptcy.eliminate(game, player)
 end
 
 local function _apply_cash_and_maybe_bankrupt(game, player, delta)
@@ -52,7 +52,7 @@ local function _apply_cash_and_maybe_bankrupt(game, player, delta)
 end
 
 local function _move_steps(game, player, steps, opts)
-  local res = movement_manager.move(game, player, steps, opts)
+  local res = movement.move(game, player, steps, opts)
   assert(res ~= nil, "missing move result")
   if res.stopped_on_roadblock then
     local stay = player.status.stay_turns or 0

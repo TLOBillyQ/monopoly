@@ -9,15 +9,15 @@ local tiles_cfg = require("Config.Generated.Tiles")
 local map_cfg = require("Config.Map")
 require "vendor.third_party.Utils"
 local dirty_tracker = require("src.core.DirtyTracker")
-local turn_manager = require("src.game.turn.TurnManager")
+local turn_flow = require("src.game.turn.TurnFlow")
 local turn_start = require("src.game.turn.TurnStart")
 local turn_roll = require("src.game.turn.TurnRoll")
 local turn_move = require("src.game.turn.TurnMove")
 local turn_land = require("src.game.turn.TurnLand")
-local movement_manager = require("src.game.movement.MovementManager")
-local market_manager = require("src.game.market.MarketManager")
-local bankruptcy_manager = require("src.game.game.BankruptcyManager")
-local choice_manager = require("src.game.choice.ChoiceManager")
+local movement = require("src.game.movement.Movement")
+local market = require("src.game.market.Market")
+local bankruptcy = require("src.game.game.Bankruptcy")
+local choice_resolver = require("src.game.choice.ChoiceResolver")
 local item_registry = require("src.game.item.ItemRegistry")
 local item_phase = require("src.game.item.ItemPhase")
 local chance_registry = require("src.game.chance.ChanceRegistry")
@@ -220,7 +220,7 @@ function composition_root.assemble(opts, game_or_class)
   end
 
   game:rebuild()
-  game.turn_manager = turn_manager:new(game, phases)
+  game.turn_flow = turn_flow:new(game, phases)
 
   return game
 end

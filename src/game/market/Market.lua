@@ -7,7 +7,7 @@ local agent = require("src.game.game.Agent")
 local land_choice_specs = require("src.game.land.LandChoiceSpecs")
 local monopoly_event = require("src.game.game.MonopolyEvents")
 
-local market_manager = {}
+local market = {}
 local _emit_event = monopoly_event.emit
 
 local items_by_id = {}
@@ -87,7 +87,7 @@ local function _can_buy_entry(game, player, entry)
   return game:player_balance(player, _entry_currency(entry)) >= price
 end
 
-function market_manager.list_buyable(player, game)
+function market.list_buyable(player, game)
   local list = {}
   for _, entry in ipairs(market_cfg) do
     if _can_buy_entry(game, player, entry) then
@@ -100,10 +100,10 @@ function market_manager.list_buyable(player, game)
   return list
 end
 
-function market_manager.build_choice_spec(player, game)
+function market.build_choice_spec(player, game)
   local options = {}
   local body_lines = {}
-  for _, entry in ipairs(market_manager.list_buyable(player, game)) do
+  for _, entry in ipairs(market.list_buyable(player, game)) do
     local name = _entry_name(entry)
     local price = _entry_price(entry)
     local currency = _entry_currency(entry)
@@ -140,7 +140,7 @@ local function _consume_global_limit(game, product_id)
   game.dirty.any = true
 end
 
-function market_manager.buy_with_opts(game, player, product_id, opts)
+function market.buy_with_opts(game, player, product_id, opts)
   opts = opts or {}
   if type(product_id) ~= "number" or product_id <= 0 then
     logger.warn("invalid market product id:", tostring(product_id))
@@ -233,7 +233,7 @@ function market_manager.buy_with_opts(game, player, product_id, opts)
   return true
 end
 
-function market_manager.auto_buy(game, player)
+function market.auto_buy(game, player)
   if agent.is_auto_player(player) then
     _emit_event(monopoly_event.market.auto_skip, {
       player = player,
@@ -242,7 +242,7 @@ function market_manager.auto_buy(game, player)
     return
   end
 
-  local list = market_manager.list_buyable(player, game)
+  local list = market.list_buyable(player, game)
   table.sort(list, function(a, b)
     return (_entry_price(a) or 0) < (_entry_price(b) or 0)
   end)
@@ -255,9 +255,9 @@ function market_manager.auto_buy(game, player)
       end
     end
     if chosen then
-      market_manager.buy_with_opts(game, player, chosen.product_id, { skip_vehicle_prompt = true })
+      market.buy_with_opts(game, player, chosen.product_id, { skip_vehicle_prompt = true })
     end
   end
 end
 
-return market_manager
+return market

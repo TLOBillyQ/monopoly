@@ -3,7 +3,7 @@ local constants = require("Config.Generated.Constants")
 local board_utils = require("src.game.land.LandBoardUtils")
 local inventory = require("src.game.item.ItemInventory")
 local gameplay_rules = require("Config.GameplayRules")
-local bankruptcy_manager = require("src.game.game.BankruptcyManager")
+local bankruptcy = require("src.game.game.Bankruptcy")
 
 local item_effects = {}
 local item_ids = gameplay_rules.item_ids
@@ -57,7 +57,7 @@ local target_effects = {
       game:deduct_player_cash(target, fee)
       logger.event(user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. fee .. " 税金")
       if game:player_balance(target, "金币") <= 0 then
-        bankruptcy_manager.eliminate(game, target)
+        bankruptcy.eliminate(game, target)
       end
       return true
     end,

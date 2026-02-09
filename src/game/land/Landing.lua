@@ -5,7 +5,7 @@ local inventory = require("src.game.item.ItemInventory")
 local chance_effects = require("src.game.chance.Chance")
 local mine_effect = require("src.game.effect.MineEffect")
 local steal = require("src.game.item.ItemSteal")
-local market_manager = require("src.game.market.MarketManager")
+local market = require("src.game.market.Market")
 
 local landing = {}
 
@@ -115,7 +115,7 @@ landing.executors = {
     apply = function(ctx)
       local game = ctx.game
       local player = ctx.player
-      local spec, intent = market_manager.build_choice_spec(player, game)
+      local spec, intent = market.build_choice_spec(player, game)
       if intent then return { intent = intent } end
       assert(spec ~= nil, "missing market choice spec")
 

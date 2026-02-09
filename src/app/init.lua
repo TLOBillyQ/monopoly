@@ -6,7 +6,7 @@ local runtime_ctx = runtime_context.new({
 })
 runtime_context.set_current(runtime_ctx)
 runtime_context.install_globals(runtime_ctx)
-require "src.game.game.BankruptcyManager"
+require "src.game.game.Bankruptcy"
 require "src.game.game.AgentTargeting"
 require "src.game.game.Agent"
 require "src.game.game.GameState"

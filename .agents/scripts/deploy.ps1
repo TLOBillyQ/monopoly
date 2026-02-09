@@ -18,7 +18,7 @@ param(
 # 未传入时按平台选择默认路径
 if (-not $TargetPath) {
     if ($IsWindows) {
-        $TargetPath = "C:\\Eggy\\Project"
+        $TargetPath = "C:\\Users\\Lzx_8\\Desktop\\dev\\LuaSource_monopoly"
     } elseif ($IsMacOS) {
         $TargetPath = "/Users/billyq/Documents/eggy/LuaSource_monopoly"
     } else {

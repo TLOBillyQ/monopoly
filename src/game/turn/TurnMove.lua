@@ -1,6 +1,6 @@
 local steal = require("src.game.item.ItemSteal")
-local movement_manager = require("src.game.movement.MovementManager")
-local market_manager = require("src.game.market.MarketManager")
+local movement = require("src.game.movement.Movement")
+local market = require("src.game.market.Market")
 local intent_dispatcher = require("src.game.intent.IntentDispatcher")
 
 local function _phase_move(turn_mgr, args)
@@ -19,7 +19,7 @@ local function _phase_move(turn_mgr, args)
 
   if not move_result then
     local start_index = player.position
-    move_result = movement_manager.move(turn_mgr.game, player, total, move_opts)
+    move_result = movement.move(turn_mgr.game, player, total, move_opts)
     turn_mgr.game.last_turn.move_result = move_result
 
     local game = turn_mgr.game
@@ -94,7 +94,7 @@ local function _phase_move(turn_mgr, args)
   end
 
   if move_result.market_interrupt then
-    local spec, intent = market_manager.build_choice_spec(player, turn_mgr.game)
+    local spec, intent = market.build_choice_spec(player, turn_mgr.game)
     if spec then
       intent_dispatcher.dispatch(turn_mgr.game, { kind = "need_choice", choice_spec = spec })
       return "wait_choice", {

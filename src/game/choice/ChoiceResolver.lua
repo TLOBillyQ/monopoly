@@ -4,7 +4,7 @@ local item_phase = require("src.game.item.ItemPhase")
 local effect = require("src.game.effect.Effect")
 local landing_defs = require("Config.LandingEffects")
 
-local choice_manager = {}
+local choice_resolver = {}
 local choice_registry = {}
 local handlers = {}
 local defaults_registered = false
@@ -126,7 +126,7 @@ local helpers = {
   find_effect_by_id = _find_effect_by_id,
 }
 
-function choice_manager.resolve(game, choice, action)
+function choice_resolver.resolve(game, choice, action)
   choice_registry.register_defaults(helpers)
   assert(game ~= nil, "missing game")
   assert(choice ~= nil, "missing choice")
@@ -156,4 +156,4 @@ function choice_manager.resolve(game, choice, action)
   return res or { status = "resolved", stay = false }
 end
 
-return choice_manager
+return choice_resolver

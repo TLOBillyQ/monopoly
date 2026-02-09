@@ -2,7 +2,7 @@ local logger = require("src.core.Logger")
 local inventory = require("src.game.item.ItemInventory")
 local tile_renderer = require("src.ui.TileRenderer")
 
-local bankruptcy_manager = {}
+local bankruptcy = {}
 
 local function _collect_owned_tiles(game, player)
   local owned_tile_ids = {}
@@ -46,7 +46,7 @@ local function _clear_scene_tiles(scene, board, owned_tile_ids)
   end
 end
 
-function bankruptcy_manager.eliminate(game, player)
+function bankruptcy.eliminate(game, player)
   if player.eliminated then
     return
   end
@@ -88,4 +88,4 @@ function bankruptcy_manager.eliminate(game, player)
   end
 end
 
-return bankruptcy_manager
+return bankruptcy

@@ -3,7 +3,7 @@ local gameplay_rules = require("Config.GameplayRules")
 local inventory = require("src.game.item.ItemInventory")
 local monopoly_event = require("src.game.game.MonopolyEvents")
 
-local movement_manager = {}
+local movement = {}
 local item_ids = gameplay_rules.item_ids
 local _emit_event = monopoly_event.emit
 
@@ -73,7 +73,7 @@ local function _check_market(board, current, step, steps, abs_steps, facing, bra
   }
 end
 
-function movement_manager.move(game, player, steps, opts)
+function movement.move(game, player, steps, opts)
   opts = opts or {}
   local abs_steps = steps < 0 and -steps or steps
   local branch_parity = opts.branch_parity or abs_steps
@@ -167,4 +167,4 @@ function movement_manager.move(game, player, steps, opts)
   }
 end
 
-return movement_manager
+return movement

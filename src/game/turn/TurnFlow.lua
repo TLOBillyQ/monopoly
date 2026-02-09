@@ -2,12 +2,12 @@ local flow = require("src.core.Flow")
 local logger = require("src.core.Logger")
 local agent = require("src.game.game.Agent")
 local inventory = require("src.game.item.ItemInventory")
-local choice_manager = require("src.game.choice.ChoiceManager")
+local choice_resolver = require("src.game.choice.ChoiceResolver")
 local gameplay_rules = require("Config.GameplayRules")
 require "vendor.third_party.ClassUtils"
 
 
-local turn_manager = Class("TurnManager")
+local turn_flow = Class("TurnFlow")
 
 local wait_states = {
   wait_choice = true,
@@ -124,11 +124,11 @@ end
 
 
 local function _resolve_choice(game, choice, action)
-  return choice_manager.resolve(game, choice, action) or {}
+  return choice_resolver.resolve(game, choice, action) or {}
 end
 
 
-function turn_manager:init(game, phases)
+function turn_flow:init(game, phases)
   self.game = game
   self.phases = phases
   self.flow = nil
@@ -136,7 +136,7 @@ function turn_manager:init(game, phases)
 end
 
 
-function turn_manager:dispatch(action)
+function turn_flow:dispatch(action)
   self.pending_action = action
 
   if not self.flow or not self.flow.current then
@@ -173,8 +173,8 @@ local function _make_anim_wait(turn_mgr, state_name, anim_key, done_action_type)
 end
 
 
-function turn_manager:_build_flow()
-  assert(self.phases, "TurnManager requires phases")
+function turn_flow:_build_flow()
+  assert(self.phases, "TurnFlow requires phases")
   local states = {}
   for name, fn in pairs(self.phases) do
     states[name] = function(args)
@@ -236,7 +236,7 @@ function turn_manager:_build_flow()
 end
 
 
-function turn_manager:next_player()
+function turn_flow:next_player()
   local count = #self.game.players
   local current = self.game.turn.current_player_index
   local next_index = current % count + 1
@@ -257,7 +257,7 @@ function turn_manager:next_player()
 end
 
 
-function turn_manager:run_until_wait()
+function turn_flow:run_until_wait()
   if not self.flow or not self.flow.current then
     self.flow = self:_build_flow()
   end
@@ -278,8 +278,8 @@ function turn_manager:run_until_wait()
 end
 
 
-function turn_manager:run_turn()
+function turn_flow:run_turn()
   return self:run_until_wait()
 end
 
-return turn_manager
+return turn_flow

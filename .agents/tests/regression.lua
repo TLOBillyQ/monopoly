@@ -1,7 +1,7 @@
 -- Quick regression checks (run with: lua .agents/tests/regression.lua)
 local app = require("src.game.game.Game")
-local movement_manager = require("src.game.movement.MovementManager")
-local turn_manager = require("src.game.turn.TurnManager")
+local movement = require("src.game.movement.Movement")
+local turn_flow = require("src.game.turn.TurnFlow")
 local turn_move = require("src.game.turn.TurnMove")
 local inventory = require("src.game.item.ItemInventory")
 local executor = require("src.game.item.ItemExecutor")
@@ -12,13 +12,13 @@ local chance_effects = require("src.game.chance.Chance")
 local landing_defs = require("Config.LandingEffects")
 local effect_pipeline = require("src.game.effect.EffectPipeline")
 local effect = require("src.game.effect.Effect")
-local choice_manager = require("src.game.choice.ChoiceManager")
+local choice_resolver = require("src.game.choice.ChoiceResolver")
 local board_utils = require("src.game.land.LandBoardUtils")
 local gameplay_loop = require("src.game.turn.GameplayLoop")
 local turn_anim = require("src.game.turn.TurnAnim")
 local tick_timeout = require("src.game.turn.TickTimeout")
 local constants = require("Config.Generated.Constants")
-local bankruptcy_manager = require("src.game.game.BankruptcyManager")
+local bankruptcy = require("src.game.game.Bankruptcy")
 local map_cfg = require("Config.Map")
 local tiles_cfg = require("Config.Generated.Tiles")
 local logger = require("src.core.Logger")
@@ -115,17 +115,17 @@ local function _list_contains(list, value)
   return false
 end
 
-local function _next_choice_id(store)
-  local seq = store:get({ "turn", "choice_seq" }) or 0
+local function _next_choice_id(game)
+  local seq = game.turn.choice_seq or 0
   seq = seq + 1
-  store:set({ "turn", "choice_seq" }, seq)
+  game.turn.choice_seq = seq
   return seq
 end
 
 local function _open_choice(game, payload)
-  assert(game and game.store, "Choice.open requires game.store")
+  assert(game and game.turn, "Choice.open requires game.turn")
   payload = payload or {}
-  local id = _next_choice_id(game.store)
+  local id = _next_choice_id(game)
   local entry = {
     id = id,
     kind = payload.kind,
@@ -136,25 +136,27 @@ local function _open_choice(game, payload)
     cancel_label = payload.cancel_label or "取消",
     meta = payload.meta,
   }
-  game.store:set({ "turn", "pending_choice" }, entry)
+  game.turn.pending_choice = entry
+  game.dirty.turn = true
+  game.dirty.any = true
   return entry
 end
 
 local function _get_choice(game)
-  if not (game and game.store) then
+  if not (game and game.turn) then
     return nil
   end
-  return game.store:get({ "turn", "pending_choice" })
+  return game.turn.pending_choice
 end
 
 local function _resolve_choice_first(game, pending)
   if pending.options and #pending.options > 0 then
     local first = pending.options[1]
-    choice_manager.resolve(game, pending, { option_id = first.id or first })
+    choice_resolver.resolve(game, pending, { option_id = first.id or first })
     return true
   end
   if pending.allow_cancel then
-    choice_manager.resolve(game, pending, { type = "choice_cancel", choice_id = pending.id })
+    choice_resolver.resolve(game, pending, { type = "choice_cancel", choice_id = pending.id })
     return true
   end
   return false
@@ -274,7 +276,7 @@ local function _test_pass_start()
   local p = g:current_player()
   -- Passing start means stepping onto tile id 35.
   g:update_player_position(p, g.board:index_of_tile_id(24))
-  local res = movement_manager.move(g, p, 1, { branch_parity = 1 })
+  local res = movement.move(g, p, 1, { branch_parity = 1 })
   _assert_eq(res.passed_start, 1, "pass_start bonus")
 end
 
@@ -283,16 +285,9 @@ local function _test_move_anim_callback_and_delay()
   local dispatched = {}
   local layer = { wait_move_anim = true }
   local game = {
-    store = {
-      get = function(_, key)
-        if key[1] == "turn" and key[2] == "move_anim" then
-          return { seq = 1 }
-        end
-        if key[1] == "turn" and key[2] == "phase" then
-          return "wait_move_anim"
-        end
-        return nil
-      end,
+    turn = {
+      move_anim = { seq = 1 },
+      phase = "wait_move_anim",
     },
     dispatch_action = function(_, action)
       table.insert(dispatched, action)
@@ -351,7 +346,7 @@ local function _test_roadblock_stop()
   local g = _new_game()
   local p = g:current_player()
   g.board:place_roadblock(2)
-  local res = movement_manager.move(g, p, 3, { branch_parity = 3 })
+  local res = movement.move(g, p, 3, { branch_parity = 3 })
   _assert_eq(res.stopped_on_roadblock, true, "stopped on roadblock")
   _assert_eq(p.position, 2, "position should stop at roadblock")
 end
@@ -487,7 +482,7 @@ local function _test_landing_optional_stale_choice_is_blocked()
   -- Invalidate the option after choice is shown (simulate state change).
   g:set_player_cash(p, 0)
 
-  choice_manager.resolve(g, pending, { option_id = "buy_land" })
+  choice_resolver.resolve(g, pending, { option_id = "buy_land" })
   assert(_tile_state(g, tile).owner_id == nil, "stale buy_land should be blocked")
 end
 
@@ -524,19 +519,19 @@ local function _test_movement_examples_from_issue()
 
   -- 例子1: 起点=海口路(3)，步数=4，终点=天津路(32)
   g:update_player_position(p, g.board:index_of_tile_id(3))
-  local r1 = movement_manager.move(g, p, 4, { branch_parity = 4, skip_market_check = true })
+  local r1 = movement.move(g, p, 4, { branch_parity = 4, skip_market_check = true })
   _assert_eq(g.board:get_tile(p.position).id, 32, "example1 end tile")
   assert(#r1.visited == 4, "example1 visited steps")
 
   -- 例子2: 起点=天津路(32)，当前方向向下(下一格31)，步数=6，终点=澳门路(6)
   g:update_player_position(p, g.board:index_of_tile_id(32))
-  local r2 = movement_manager.move(g, p, 6, { branch_parity = 6, direction = "down", skip_market_check = true })
+  local r2 = movement.move(g, p, 6, { branch_parity = 6, direction = "down", skip_market_check = true })
   _assert_eq(g.board:get_tile(p.position).id, 6, "example2 end tile")
   assert(#r2.visited == 6, "example2 visited steps")
 
   -- 例子3: 起点=南昌路(25)，当前方向向右，步数=12，终点=南宁路(7)
   g:update_player_position(p, g.board:index_of_tile_id(25))
-  local r3 = movement_manager.move(g, p, 12, { branch_parity = 12, direction = "right", skip_market_check = true })
+  local r3 = movement.move(g, p, 12, { branch_parity = 12, direction = "right", skip_market_check = true })
   _assert_eq(g.board:get_tile(p.position).id, 7, "example3 end tile")
   assert(#r3.visited == 12, "example3 visited steps")
 end
@@ -548,9 +543,9 @@ local function _test_ai_picks_land_purchase()
   assert(agent.is_auto_player(ai_player), "player 2 should be AI")
   
   -- Set AI player as current player (index 2)
-  if g.store then
-    g.store:set({"turn", "current_player_index"}, 2)
-  end
+  g.turn.current_player_index = 2
+  g.dirty.turn = true
+  g.dirty.any = true
   
   assert(g:current_player() == ai_player, "AI should be current player")
   
@@ -569,7 +564,7 @@ local function _test_ai_picks_land_purchase()
   assert(action.option_id == "buy_land", "AI should pick buy_land")
   
   local before_cash = ai_player.cash
-  choice_manager.resolve(g, pending, action)
+  choice_resolver.resolve(g, pending, action)
   assert(ai_player.cash == before_cash - tile.price, "AI cash should decrease by land price")
   assert(_tile_state(g, tile).owner_id == ai_player.id, "land should be purchased")
 end
@@ -621,7 +616,7 @@ local function _test_bankruptcy_resets_owned_tiles()
   g:set_tile_level(tile2, 1)
   g:set_player_property(p1, tile2.id, true)
 
-  bankruptcy_manager.eliminate(g, p1)
+  bankruptcy.eliminate(g, p1)
 
   local st1 = _tile_state(g, tile1)
   local st2 = _tile_state(g, tile2)
@@ -631,7 +626,7 @@ local function _test_bankruptcy_resets_owned_tiles()
 end
 
 local function _test_ai_skips_auto_buy_at_market()
-  local market_manager = require("src.game.market.MarketManager")
+  local market = require("src.game.market.Market")
   local g = _new_game()
   local ai_player = g.players[2]
   assert(ai_player.is_ai, "player 2 should be AI")
@@ -640,7 +635,7 @@ local function _test_ai_skips_auto_buy_at_market()
   g:set_player_cash(ai_player, 1000)
   
   local before_cash = ai_player.cash
-  market_manager.auto_buy(g, ai_player)
+  market.auto_buy(g, ai_player)
   
   -- AI should not buy anything
   assert(ai_player.cash == before_cash, "AI should not spend money on auto_buy")
@@ -750,7 +745,7 @@ local function _test_item_equalize_cash()
     local pending = _get_choice(g)
     assert(pending and pending.kind == "item_target_player", "equalize should open choice")
     local first = pending.options[1]
-    choice_manager.resolve(g, pending, { option_id = first.id })
+    choice_resolver.resolve(g, pending, { option_id = first.id })
     res = true
   end
   local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
@@ -760,7 +755,7 @@ local function _test_item_equalize_cash()
 end
 
 local function _test_market_full_inventory_blocks_items()
-  local market_manager = require("src.game.market.MarketManager")
+  local market = require("src.game.market.Market")
   local g = _new_game()
   local p = g:current_player()
   g:set_player_cash(p, 999999)
@@ -768,14 +763,14 @@ local function _test_market_full_inventory_blocks_items()
     p.inventory:add({ id = 2001 })
   end
 
-  local list = market_manager.list_buyable(p, g)
+  local list = market.list_buyable(p, g)
   for _, entry in ipairs(list) do
     assert(entry.kind ~= "item", "item should be excluded when inventory full")
   end
 end
 
 local function _test_market_global_limit()
-  local market_manager = require("src.game.market.MarketManager")
+  local market = require("src.game.market.Market")
   local market_cfg = require("Config.Generated.Market")
   local g = _new_game()
   local p = g:current_player()
@@ -788,18 +783,18 @@ local function _test_market_global_limit()
   end
   assert(entry, "should find a market item with coin currency")
   g:set_player_cash(p, (entry.price or 0) + 1000)
-  g.store:set({ "market", "global_limits", entry.product_id }, 1)
+  g.market_limits[entry.product_id] = 1
 
-  local res = market_manager.buy_with_opts(g, p, entry.product_id, nil)
+  local res = market.buy_with_opts(g, p, entry.product_id, nil)
   local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
   assert(ok, "first purchase should succeed")
 
-  local list = market_manager.list_buyable(p, g)
+  local list = market.list_buyable(p, g)
   for _, item in ipairs(list) do
     assert(item.product_id ~= entry.product_id, "sold out item should be excluded from list")
   end
 
-  local spec = market_manager.build_choice_spec(p, g)
+  local spec = market.build_choice_spec(p, g)
   if spec and spec.options then
     for _, option in ipairs(spec.options) do
       assert(option.id ~= entry.product_id, "sold out item should be excluded from choice")
@@ -822,7 +817,7 @@ local function _test_movement_backward_wrap()
   local g = _new_game()
   local p = g:current_player()
   g:update_player_position(p, 1)
-  local res = movement_manager.move(g, p, -1, { branch_parity = 1 })
+  local res = movement.move(g, p, -1, { branch_parity = 1 })
   assert(p.position >= 1 and p.position <= g.board:length(), "backward index in range")
   assert(#res.visited == 1, "visited steps")
 end
@@ -857,7 +852,7 @@ local function _test_invalid_choice_option_rejected()
     options = { { id = 1, label = "X" } },
     meta = { player_id = g:current_player().id },
   })
-  choice_manager.resolve(g, choice, { option_id = 999 })
+  choice_resolver.resolve(g, choice, { option_id = 999 })
   assert(_get_choice(g) ~= nil, "invalid option should keep choice")
 end
 
@@ -883,27 +878,18 @@ local function _test_move_anim_wait_and_resume()
       return nil
     end,
   }
-  g.turn_manager = turn_manager:new(g, phases)
+  g.turn_flow = turn_flow:new(g, phases)
 
-  local res = g.turn_manager:run_until_wait()
+  local res = g.turn_flow:run_until_wait()
   assert(res == "wait_move_anim", "should wait for move anim")
-  local seq = g.store:get({ "turn", "move_anim", "seq" })
+  local seq = g.turn.move_anim and g.turn.move_anim.seq
   assert(seq, "move_anim seq should be set")
 
   g:dispatch_action({ type = "move_anim_done", seq = seq })
 
-  assert(g.store:get({ "turn", "move_anim" }) == nil, "move_anim should be cleared")
-  local phase = g.store:get({ "turn", "phase" })
+  assert(g.turn.move_anim == nil, "move_anim should be cleared")
+  local phase = g.turn.phase
   assert(phase ~= "wait_move_anim", "should resume after move anim done")
-end
-
-local function _test_store_missing_path_get_set()
-  local store = require("src.core.Store")
-  local store = store:new({})
-  assert(store:get({ "missing" }) == nil, "missing path should return nil")
-  store:set({ "a", "b", "c" }, 3)
-  _assert_eq(store:get({ "a", "b", "c" }), 3, "store set should create path")
-  assert(store:get({ "a", "b", "d" }) == nil, "missing leaf should return nil")
 end
 
 local function _test_number_utils_to_integer()
@@ -923,7 +909,7 @@ local function _test_ui_model_structure()
       item_slots = { 1, 2, 3, 4, 5 },
     },
   }
-  local model = ui_model.build(g.store.state, {
+  local model = ui_model.build(g, {
     game = g,
     ui_state = ui_state,
     last_turn = g.last_turn,
@@ -935,7 +921,7 @@ local function _test_ui_model_structure()
 end
 
 local function _test_tick_skips_anim_when_no_anim()
-  local store = require("src.core.Store")
+  local dirty_tracker = require("src.core.DirtyTracker")
   local main_view = require("src.ui.UIView")
   local ui_model = require("src.ui.UIModel")
   local board_view_mod = require("src.ui.BoardView")
@@ -945,12 +931,22 @@ local function _test_tick_skips_anim_when_no_anim()
     { target = main_view, key = "refresh_panel", value = function() end },
     { target = board_view_mod, key = "refresh_board", value = function() end },
     { target = main_view, key = "open_choice_modal", value = function() end },
-    { target = ui_model, key = "build", value = function(store_state)
+    { target = ui_model, key = "build", value = function(game_ctx)
       return {
-        state = store_state,
         current_player_name = "P",
         current_player_cash = 0,
-        turn_count = store_state.turn.turn_count,
+        turn_count = game_ctx.turn.turn_count,
+        panel = { turn_label = "" },
+        board = {},
+      }
+    end },
+    { target = ui_model, key = "update", value = function(_, game_ctx)
+      return {
+        current_player_name = "P",
+        current_player_cash = 0,
+        turn_count = game_ctx.turn.turn_count,
+        panel = { turn_label = "" },
+        board = {},
       }
     end },
     { key = "GameAPI", value = game_api },
@@ -963,11 +959,30 @@ local function _test_tick_skips_anim_when_no_anim()
     { key = "Enums", value = { CameraBindMode = { TRACK = 0 } } },
   }
 
-  local store = store:new({
-    players = { [1] = { id = 1, name = "P1", cash = 0 } },
-    turn = { phase = "move", current_player_index = 1, turn_count = 0 },
-  })
-  local game = { finished = false, store = store }
+  local game = {
+    finished = false,
+    winner = nil,
+    players = { [1] = { id = 1, name = "P1", cash = 0, eliminated = false, inventory = { items = {} } } },
+    board = {
+      get_overlays = function() return { roadblocks = {}, mines = {} } end,
+      tile_lookup = {},
+    },
+    turn = {
+      phase = "move",
+      current_player_index = 1,
+      turn_count = 0,
+      pending_choice = nil,
+      move_anim = nil,
+      action_anim = nil,
+    },
+    dirty = dirty_tracker.new(),
+  }
+  function game:consume_dirty()
+    return dirty_tracker.consume(self.dirty)
+  end
+  function game:current_player()
+    return self.players[self.turn.current_player_index]
+  end
   local state = {
     auto_runner = {
       next_action = function() return nil end,
@@ -988,7 +1003,7 @@ local function _test_tick_skips_anim_when_no_anim()
         get_position = function() return { x = 0, y = 0, z = 0 } end
       }
     },
-    ui = {},
+    ui = { input_blocked = false },
   }
 
   local ok, err = pcall(function()
@@ -1184,7 +1199,7 @@ local function _test_complex_consecutive_turn_settlement()
   
   -- 第一步：移动3格，经过p2，到达机会卡格子
   -- branch_parity 用于在分叉路口选择方向，设为与步数相同确保一致性
-  local res1 = movement_manager.move(g, p1, 3, { branch_parity = 3, skip_market_check = true })
+  local res1 = movement.move(g, p1, 3, { branch_parity = 3, skip_market_check = true })
   local first_res = res1
   if res1.steal_interrupt then
     local interrupt = res1.steal_interrupt
@@ -1195,7 +1210,7 @@ local function _test_complex_consecutive_turn_settlement()
         _resolve_choice_first(g, pending)
       end
     end
-    res1 = movement_manager.move(g, p1, interrupt.remaining_steps, {
+    res1 = movement.move(g, p1, interrupt.remaining_steps, {
       branch_parity = interrupt.branch_parity,
       direction = interrupt.facing,
       skip_market_check = true,
@@ -1283,7 +1298,7 @@ local function _test_complex_market_interrupt_with_rent()
   
   -- 移动
   local initial_cash = p1.cash
-  local res = movement_manager.move(g, p1, move_distance, { branch_parity = move_distance })
+  local res = movement.move(g, p1, move_distance, { branch_parity = move_distance })
   res.encountered_players = {}
   
   -- 如果触发了黑市中断
@@ -1330,7 +1345,6 @@ local tests = {
   _test_chance_move_backward_pass_intersection,
   _test_invalid_choice_option_rejected,
   _test_move_anim_wait_and_resume,
-  _test_store_missing_path_get_set,
   _test_number_utils_to_integer,
   _test_ui_model_structure,
   _test_tick_skips_anim_when_no_anim,
@@ -1346,3 +1360,4 @@ for _, fn in ipairs(tests) do
 end
 
 print("\nAll regression checks passed (" .. #tests .. ")")
+

@@ -1,4 +1,4 @@
-local market_manager = require("src.game.market.MarketManager")
+local market = require("src.game.market.Market")
 local intent_dispatcher = require("src.game.intent.IntentDispatcher")
 local number_utils = require("src.core.NumberUtils")
 
@@ -19,7 +19,7 @@ function market_choice_handler.build(helpers)
     local meta = choice.meta
     local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
     assert(product_id ~= nil, "missing product_id")
-    local res = market_manager.buy_with_opts(game, player, product_id, nil)
+    local res = market.buy_with_opts(game, player, product_id, nil)
     if type(res) == "table" then
       local intent = res.intent or {}
       intent_dispatcher.dispatch(game, intent)
@@ -41,7 +41,7 @@ function market_choice_handler.build(helpers)
     local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
     local product_id = assert(number_utils.to_integer(meta.product_id), "missing product_id")
     if use then
-      market_manager.buy_with_opts(game, player, product_id, { skip_vehicle_prompt = true })
+      market.buy_with_opts(game, player, product_id, { skip_vehicle_prompt = true })
     end
     return finish_choice(game, false)
   end

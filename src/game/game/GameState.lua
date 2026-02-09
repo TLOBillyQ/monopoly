@@ -2,7 +2,7 @@ local composition_root = require("src.game.game.CompositionRoot")
 local constants = require("Config.Generated.Constants")
 local vehicles_cfg = require("Config.Generated.Vehicles")
 local logger = require("src.core.Logger")
-local bankruptcy_manager = require("src.game.game.BankruptcyManager")
+local bankruptcy = require("src.game.game.Bankruptcy")
 require "vendor.third_party.Utils"
 
 local game_state = {}
@@ -204,13 +204,13 @@ function game_state:player_apply_hospital_effects(player)
   local fee = constants.hospital_fee
   if self:player_balance(player, "金币") < fee then
     logger.event(player.name .. " 资金不足，无法支付医药费 " .. fee)
-    bankruptcy_manager.eliminate(self, player)
+    bankruptcy.eliminate(self, player)
     return
   end
   self:deduct_player_cash(player, fee)
   logger.event(player.name .. " 支付医药费 " .. fee)
   if self:player_balance(player, "金币") <= 0 then
-    bankruptcy_manager.eliminate(self, player)
+    bankruptcy.eliminate(self, player)
     return
   end
   logger.event(player.name .. " 住院，需停留 " .. tostring(player.status.stay_turns) .. " 回合")

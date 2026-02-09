@@ -23,8 +23,8 @@ function game:advance_turn()
   if self.finished then
     return
   end
-  if self.turn_manager then
-    self.turn_manager:run_turn()
+  if self.turn_flow then
+    self.turn_flow:run_turn()
   end
   self:check_victory()
 end
@@ -33,8 +33,8 @@ function game:dispatch_action(action)
   if self.finished then
     return
   end
-  if self.turn_manager then
-    self.turn_manager:dispatch(action)
+  if self.turn_flow then
+    self.turn_flow:dispatch(action)
   end
   self:check_victory()
 end

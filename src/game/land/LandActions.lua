@@ -5,7 +5,7 @@ local pricing = require("src.game.land.LandPricing")
 local inventory = require("src.game.item.ItemInventory")
 local gameplay_rules = require("Config.GameplayRules")
 local monopoly_event = require("src.game.game.MonopolyEvents")
-local bankruptcy_manager = require("src.game.game.BankruptcyManager")
+local bankruptcy = require("src.game.game.Bankruptcy")
 
 local item_ids = gameplay_rules.item_ids
 local _emit_event = monopoly_event.emit
@@ -14,7 +14,7 @@ local function _eliminate_if_bankrupt(game, player)
   if not player or game:player_balance(player, "金币") > 0 then
     return
   end
-  bankruptcy_manager.eliminate(game, player)
+  bankruptcy.eliminate(game, player)
 end
 
 function land_actions.safe_tile_state(game, tile)
