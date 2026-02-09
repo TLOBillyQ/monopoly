@@ -393,7 +393,7 @@ function ui_view.push_popup(state, payload)
   _switch_canvas(state.ui, CANVAS_POPUP)
   state.ui:set_label(state.ui.popup.title, payload.title)
   state.ui:set_label(state.ui.popup.body, payload.body)
-  state.ui:set_button(state.ui.popup.confirm, payload.button_text)
+  state.ui:set_button(state.ui.popup.confirm, payload.button_text or "确认")
   state.ui:set_visible(state.ui.popup.root, true)
   state.ui.popup_active = true
   state.ui.popup_payload = payload
