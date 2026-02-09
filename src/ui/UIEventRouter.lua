@@ -197,6 +197,8 @@ function ui_event_router.bind(state, get_game, opts)
     "通用选择_选项_02",
     "通用选择_选项_03",
     "通用选择_选项_04",
+    "通用选择_选项_05",
+    "通用选择_选项_06",
   }) do
     _register_node_click(cache, name, function()
       local choice = state.ui_model and state.ui_model.choice
