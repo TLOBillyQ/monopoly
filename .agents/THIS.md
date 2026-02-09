@@ -4,6 +4,7 @@
 
 - 语言：Lua，环境说明见 `.agents/docs/eggy/lua_env.md` 与 `.agents/docs/eggy/lua_advanced.md`。
 - 平台：蛋仔编辑器（Eggy），核心记忆见 `.agents/docs/eggy/eggy_lua_agent_memory.md`。
+- 测试：`agents/tests/regressions.lua`
 
 ## API 检索路径
 
