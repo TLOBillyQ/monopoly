@@ -7,6 +7,7 @@ local bankruptcy = require("src.game.game.Bankruptcy")
 
 local item_effects = {}
 local item_ids = gameplay_rules.item_ids
+local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
 
 local target_item_order = {
   item_ids.share_wealth,
@@ -41,7 +42,7 @@ local target_effects = {
             player_id = target.id,
             from_index = from_index,
             to_index = idx,
-            focus_target_tile_index = idx,
+            duration = action_anim_duration,
           })
         end
       end
@@ -163,7 +164,7 @@ local function _handle_place_mine_here(game, player, _cfg, context)
       kind = "mine",
       player_id = player.id,
       tile_index = player.position,
-      focus_target_tile_index = player.position,
+      duration = action_anim_duration,
     })
     return { ok = true, action_anim = true }
   end
@@ -236,7 +237,7 @@ local function _handle_clear_obstacles_ahead(game, player, cfg, context)
       kind = "clear_obstacles",
       player_id = player.id,
       cleared_indices = cleared_indices,
-      focus_target_player_id = player.id,
+      duration = action_anim_duration,
     })
     return { ok = true, action_anim = true }
   end

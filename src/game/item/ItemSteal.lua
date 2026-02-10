@@ -5,6 +5,7 @@ local gameplay_rules = require("Config.GameplayRules")
 
 local steal = {}
 local item_ids = gameplay_rules.item_ids
+local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
 
 local function _fail_popup(game, stealer, target)
   local msg = "很遗憾，" .. target.name .. " 没有任何道具。"
@@ -38,7 +39,7 @@ function steal.steal_item_at_index(game, player, target, item_idx)
       target_player_id = target.id,
       item_id = item_ids.steal,
       item_name = "偷窃卡",
-      focus_target_player_id = target.id,
+      duration = action_anim_duration,
     })
     queued = true
   end
@@ -94,5 +95,4 @@ function steal.handle_pass_players(game, player, encountered_ids)
 end
 
 return steal
-
 

@@ -11,6 +11,7 @@ local item_registry = {}
 local handlers = {}
 local defaults_registered = false
 local item_ids = gameplay_rules.item_ids
+local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
 
 item_registry.handlers = handlers
 
@@ -54,7 +55,7 @@ local function _queue_target_player_anim(game, user, item_id, target)
     target_player_id = target.id,
     item_id = item_id,
     item_name = inventory.item_name(item_id),
-    focus_target_player_id = target.id,
+    duration = action_anim_duration,
   })
   return true
 end
@@ -270,4 +271,3 @@ function item_registry.register_defaults()
 end
 
 return item_registry
-

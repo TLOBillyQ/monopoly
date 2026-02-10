@@ -10,6 +10,7 @@ local gameplay_rules = require("Config.GameplayRules")
 
 local tile_state = tile.get_state
 local item_ids = gameplay_rules.item_ids
+local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
 
 local function _can_buy(ctx)
   local tile = ctx.tile
@@ -83,7 +84,7 @@ local function _apply_upgrade(ctx)
         kind = "upgrade_land",
         player_id = player.id,
         tile_index = tile_index,
-        focus_target_tile_index = tile_index,
+        duration = action_anim_duration,
       })
     end
   end
@@ -193,4 +194,3 @@ land.executors = {
 }
 
 return land
-

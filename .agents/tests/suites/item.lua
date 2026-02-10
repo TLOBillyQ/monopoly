@@ -7,6 +7,7 @@ local _tile_state = support.tile_state
 local _assert_eq = support.assert_eq
 local executor = support.executor
 local choice_resolver = support.choice_resolver
+local gameplay_rules = require("Config.GameplayRules")
 
 local function _test_monster_card()
   local g = _new_game()
@@ -84,7 +85,7 @@ local function _test_item_equalize_cash()
   _assert_eq(target.cash, 5000, "equalize target cash")
 end
 
-local function _test_target_item_manual_direct_exec_and_focus_anim()
+local function _test_target_item_manual_direct_exec_and_duration()
   local g = _new_game()
   g.ui_port = support.build_ui_port({ wait_action_anim = true })
   local user = g.players[1]
@@ -103,8 +104,12 @@ local function _test_target_item_manual_direct_exec_and_focus_anim()
   _assert_eq(_get_choice(g), nil, "choice should be resolved directly without reopening")
   _assert_eq(user.cash, 5000, "manual target item should apply to user")
   _assert_eq(target.cash, 5000, "manual target item should apply to target")
-  assert(g.turn.action_anim and g.turn.action_anim.kind == "item_target_player", "target item should queue focus anim")
-  _assert_eq(g.turn.action_anim.focus_target_player_id, target.id, "focus target player id")
+  assert(g.turn.action_anim and g.turn.action_anim.kind == "item_target_player", "target item should queue anim")
+  _assert_eq(
+    g.turn.action_anim.duration,
+    gameplay_rules.action_anim_default_seconds or 1.0,
+    "target item anim should use default duration"
+  )
 end
 
 local function _test_item_executor_fallback_item_use_anim()
@@ -116,6 +121,11 @@ local function _test_item_executor_fallback_item_use_anim()
   local res = executor.use_item(g, p, 2003, { by_ai = true })
   assert(type(res) == "table" and res.action_anim, "fallback item anim should be marked")
   assert(g.turn.action_anim and g.turn.action_anim.kind == "item_use", "fallback should queue item_use anim")
+  _assert_eq(
+    g.turn.action_anim.duration,
+    gameplay_rules.action_anim_default_seconds or 1.0,
+    "fallback item anim should use default duration"
+  )
 end
 
 local function _test_item_executor_keeps_specific_anim_without_fallback()
@@ -127,13 +137,18 @@ local function _test_item_executor_keeps_specific_anim_without_fallback()
   local res = executor.use_item(g, p, 2005, { by_ai = true })
   assert(type(res) == "table" and res.action_anim, "mine should return action anim marker")
   assert(g.turn.action_anim and g.turn.action_anim.kind == "mine", "specific mine anim should not be replaced")
+  _assert_eq(
+    g.turn.action_anim.duration,
+    gameplay_rules.action_anim_default_seconds or 1.0,
+    "specific mine anim should use default duration"
+  )
 end
 
 return {
   _test_monster_card,
   _test_missile_card,
   _test_item_equalize_cash,
-  _test_target_item_manual_direct_exec_and_focus_anim,
+  _test_target_item_manual_direct_exec_and_duration,
   _test_item_executor_fallback_item_use_anim,
   _test_item_executor_keeps_specific_anim_without_fallback,
 }

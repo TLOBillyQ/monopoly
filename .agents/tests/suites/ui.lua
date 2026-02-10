@@ -1110,8 +1110,7 @@ local function _test_action_anim_default_duration()
   _assert_eq(#durations, 2, "tip should be shown twice")
 end
 
-local function _test_action_anim_player_focus_and_restore()
-  local delayed = nil
+local function _test_action_anim_no_camera_focus_side_effect()
   local follow_events = 0
   local state = {
     game = {
@@ -1119,88 +1118,26 @@ local function _test_action_anim_player_focus_and_restore()
       players = { [1] = { id = 1 }, [2] = { id = 2 } },
     },
   }
-  local helper = { target_role_id = nil }
   _with_patches({
-    { key = "camera_helper", value = helper },
     { key = "GlobalAPI", value = { show_tips = function() end } },
-    { key = "SetTimeOut", value = function(_, cb) delayed = cb end },
     { key = "TriggerCustomEvent", value = function() follow_events = follow_events + 1 end },
   }, function()
-    action_anim.play(state, {
+    local duration = action_anim.play(state, {
       kind = "item_use",
       player_id = 1,
-      focus_target_player_id = 2,
       duration = 0.5,
     })
-    _assert_eq(helper.target_role_id, 2, "camera should follow target player during focus")
-    _assert_eq(state.camera_focus_active, true, "camera focus should be active")
-    assert(delayed ~= nil, "camera restore callback should be scheduled")
-    delayed()
-    _assert_eq(helper.target_role_id, 1, "camera should restore to current turn player")
-    _assert_eq(state.camera_focus_active, false, "camera focus should be cleared")
-    assert(follow_events >= 2, "follow event should fire on focus and restore")
+    _assert_eq(duration, 0.5, "action anim should still return duration")
   end)
+  _assert_eq(follow_events, 0, "action anim should not trigger camera follow events")
 end
 
-local function _test_action_anim_tile_focus_and_restore_track()
-  local delayed = nil
-  local bind_modes = {}
-  local lock_positions = {}
-  local helper = { target_role_id = nil }
-  local role = {
-    set_camera_bind_mode = function(mode)
-      bind_modes[#bind_modes + 1] = mode
-    end,
-    set_camera_lock_position = function(pos)
-      lock_positions[#lock_positions + 1] = pos
-    end,
-  }
-  local state = {
-    board_scene = {
-      tiles = {
-        [1] = { get_position = function() return math.Vector3(1, 2, 3) end },
-      },
-    },
-    game = {
-      turn = { current_player_index = 1 },
-      players = { [1] = { id = 1 } },
-    },
-  }
-  _with_patches({
-    { key = "all_roles", value = { role } },
-    { key = "camera_helper", value = helper },
-    { key = "Enums", value = { CameraBindMode = { BIND = 11, TRACK = 22 } } },
-    { key = "GlobalAPI", value = { show_tips = function() end } },
-    { key = "SetTimeOut", value = function(_, cb) delayed = cb end },
-    { key = "TriggerCustomEvent", value = function() end },
-  }, function()
-    action_anim.play(state, {
-      kind = "upgrade_land",
-      player_id = 1,
-      tile_index = 1,
-      focus_target_tile_index = 1,
-      duration = 0.5,
-    })
-    _assert_eq(bind_modes[1], 11, "tile focus should set BIND mode")
-    assert(#lock_positions > 0, "tile focus should lock camera position")
-    local first_lock_pos = lock_positions[1]
-    _assert_eq(first_lock_pos.x, 1, "tile focus lock x should match target")
-    _assert_eq(first_lock_pos.y, 52, "tile focus lock y should offset by +50")
-    _assert_eq(first_lock_pos.z, 3, "tile focus lock z should match target")
-    _assert_eq(state.camera_focus_active, true, "camera focus should be active")
-    assert(delayed ~= nil, "tile focus should schedule restore")
-    delayed()
-    _assert_eq(bind_modes[#bind_modes], 22, "tile focus should restore TRACK mode")
-    _assert_eq(state.camera_focus_active, false, "camera focus should be cleared")
-  end)
-end
-
-local function _test_tick_ui_sync_skip_follow_while_focus_active()
+local function _test_tick_ui_sync_turn_switch_still_follows()
   local dirty_tracker = require("src.core.DirtyTracker")
   local main_view = require("src.ui.UIView")
   local ui_model = require("src.ui.UIModel")
   local board_view_mod = require("src.ui.BoardView")
-  local helper = { target_role_id = 99 }
+  local helper = { target_role_id = nil }
   local follow_events = 0
   local game_api = GameAPI or {}
   local patches = {
@@ -1234,15 +1171,18 @@ local function _test_tick_ui_sync_skip_follow_while_focus_active()
   local game = {
     finished = false,
     winner = nil,
-    players = { [1] = { id = 1, name = "P1", cash = 0, eliminated = false, inventory = { items = {} } } },
+    players = {
+      [1] = { id = 1, name = "P1", cash = 0, eliminated = false, inventory = { items = {} } },
+      [2] = { id = 2, name = "P2", cash = 0, eliminated = false, inventory = { items = {} } },
+    },
     board = {
       get_overlays = function() return { roadblocks = {}, mines = {} } end,
       tile_lookup = {},
     },
     turn = {
       phase = "move",
-      current_player_index = 1,
-      turn_count = 0,
+      current_player_index = 2,
+      turn_count = 3,
       pending_choice = nil,
       move_anim = nil,
       action_anim = nil,
@@ -1270,9 +1210,12 @@ local function _test_tick_ui_sync_skip_follow_while_focus_active()
     board_sync_pending = false,
     next_turn_locked = false,
     next_turn_lock_phase = nil,
-    camera_focus_active = true,
+    ui_dirty = true,
     player_units = {
       [1] = {
+        get_position = function() return { x = 0, y = 0, z = 0 } end
+      },
+      [2] = {
         get_position = function() return { x = 0, y = 0, z = 0 } end
       }
     },
@@ -1283,8 +1226,8 @@ local function _test_tick_ui_sync_skip_follow_while_focus_active()
     gameplay_loop.tick(game, state, 0.1)
   end)
 
-  _assert_eq(helper.target_role_id, 99, "focus active should skip default follow override")
-  _assert_eq(follow_events, 0, "focus active should not trigger follow event")
+  _assert_eq(helper.target_role_id, 2, "turn switch should follow current player")
+  assert(follow_events >= 1, "turn switch should trigger follow event")
 end
 
 return {
@@ -1313,7 +1256,6 @@ return {
   _test_tick_skips_anim_when_no_anim,
   _test_action_anim_queue_consumes_in_order,
   _test_action_anim_default_duration,
-  _test_action_anim_player_focus_and_restore,
-  _test_action_anim_tile_focus_and_restore_track,
-  _test_tick_ui_sync_skip_follow_while_focus_active,
+  _test_action_anim_no_camera_focus_side_effect,
+  _test_tick_ui_sync_turn_switch_still_follows,
 }

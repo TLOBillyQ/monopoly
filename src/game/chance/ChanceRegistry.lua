@@ -3,10 +3,12 @@ local tile = require("src.game.board.Tile")
 local monopoly_event = require("src.game.game.MonopolyEvents")
 local movement = require("src.game.movement.Movement")
 local bankruptcy = require("src.game.game.Bankruptcy")
+local gameplay_rules = require("Config.GameplayRules")
 
 local chance_registry = {}
 local handlers = {}
 local defaults_registered = false
+local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
 
 chance_registry.handlers = handlers
 
@@ -66,7 +68,7 @@ local function _queue_action_anim(game, payload)
   return true
 end
 
-local function _queue_move_effect(game, player, from_index, to_index, visited, focus_tile_index)
+local function _queue_move_effect(game, player, from_index, to_index, visited)
   if not player then
     return false
   end
@@ -76,12 +78,8 @@ local function _queue_move_effect(game, player, from_index, to_index, visited, f
     from_index = from_index,
     to_index = to_index,
     visited = visited,
+    duration = action_anim_duration,
   }
-  if focus_tile_index then
-    payload.focus_target_tile_index = focus_tile_index
-  else
-    payload.focus_target_player_id = player.id
-  end
   return _queue_action_anim(game, payload)
 end
 
@@ -89,7 +87,7 @@ local function _move_steps(game, player, steps, opts)
   local from_index = player.position
   local res = movement.move(game, player, steps, opts)
   assert(res ~= nil, "missing move result")
-  _queue_move_effect(game, player, from_index, player.position, res.visited, player.position)
+  _queue_move_effect(game, player, from_index, player.position, res.visited)
   if res.stopped_on_roadblock then
     local stay = player.status.stay_turns or 0
     if stay < 1 then
@@ -354,7 +352,7 @@ local function _register_defaults()
       assert(idx ~= nil, "missing destination tile index: " .. tostring(card.destination_tile_id))
       game:update_player_position(player, idx)
       game:set_player_status(player, "move_dir", nil)
-      _queue_move_effect(game, player, from_index, idx, nil, idx)
+      _queue_move_effect(game, player, from_index, idx, nil)
       return {
         kind = "need_landing",
         player_id = player.id,
@@ -364,16 +362,16 @@ local function _register_defaults()
     end
     if card.destination == "hospital" then
       game:player_send_to_hospital(player)
-      _queue_move_effect(game, player, from_index, player.position, nil, player.position)
+      _queue_move_effect(game, player, from_index, player.position, nil)
     elseif card.destination == "mountain" then
       game:player_send_to_mountain(player)
-      _queue_move_effect(game, player, from_index, player.position, nil, player.position)
+      _queue_move_effect(game, player, from_index, player.position, nil)
     elseif card.destination == "tax" then
       local idx = game.board:find_first_by_type("tax")
       assert(idx ~= nil, "missing tax tile")
       game:update_player_position(player, idx)
       game:set_player_status(player, "move_dir", nil)
-      _queue_move_effect(game, player, from_index, idx, nil, idx)
+      _queue_move_effect(game, player, from_index, idx, nil)
       return {
         kind = "need_landing",
         player_id = player.id,
@@ -385,7 +383,7 @@ local function _register_defaults()
       assert(idx ~= nil, "missing market tile")
       game:update_player_position(player, idx)
       game:set_player_status(player, "move_dir", nil)
-      _queue_move_effect(game, player, from_index, idx, nil, idx)
+      _queue_move_effect(game, player, from_index, idx, nil)
       return {
         kind = "need_landing",
         player_id = player.id,

@@ -114,7 +114,6 @@ landing.executors = {
             player_id = player.id,
             item_id = cfg.id,
             item_name = item_name,
-            focus_target_player_id = player.id,
             duration = popup_show_seconds,
           })
         end
@@ -142,7 +141,6 @@ landing.executors = {
           player_id = ctx.player.id,
           card_id = card.id,
           card_desc = card.description,
-          focus_target_player_id = ctx.player.id,
           duration = popup_show_seconds,
         })
       end

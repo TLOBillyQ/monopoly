@@ -2,8 +2,10 @@ local logger = require("src.core.Logger")
 local tile = require("src.game.board.Tile")
 local board_utils = require("src.game.land.LandBoardUtils")
 local constants = require("Config.Generated.Constants")
+local gameplay_rules = require("Config.GameplayRules")
 
 local demolish = {}
+local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
 
 local list_unpack = table.unpack or unpack
 
@@ -101,7 +103,7 @@ function demolish.apply(game, player, idx, opts)
       player_id = player.id,
       tile_index = idx,
       item_id = opts.item_id,
-      focus_target_tile_index = idx,
+      duration = action_anim_duration,
     })
     queued = true
   end
@@ -171,4 +173,3 @@ function demolish.use(game, player, distance, consume_fn, opts)
 end
 
 return demolish
-

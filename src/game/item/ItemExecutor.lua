@@ -2,8 +2,10 @@ local item_effects = require("src.game.item.ItemPostEffects")
 local item_registry = require("src.game.item.ItemRegistry")
 local agent = require("src.game.game.Agent")
 local inventory = require("src.game.item.ItemInventory")
+local gameplay_rules = require("Config.GameplayRules")
 
 local executor = {}
+local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
 
 local function _is_success_result(res)
   if type(res) == "table" then
@@ -38,7 +40,7 @@ local function _with_fallback_item_anim(game, player, item_id, item_name, before
     player_id = player.id,
     item_id = item_id,
     item_name = item_name,
-    focus_target_player_id = player.id,
+    duration = action_anim_duration,
   })
   if type(res) == "table" then
     res.action_anim = true
@@ -71,6 +73,5 @@ function executor.use_item(game, player, item_id, context)
 end
 
 return executor
-
 
 

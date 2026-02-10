@@ -1,139 +1,132 @@
-# `src/` 热点深审落地：先执行 P1-01（GameState 与 UI 解耦）
+# 相机逻辑清理与 1s 原位阻断（仅保留回合切换跟随）
 
-本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
+本可执行计划是活文档。实施过程中持续更新“进度”“意外与发现”“决策日志”“结果与复盘”。
 
-本文件遵循 `/.agents/PLANS.md` 维护。
+本文件遵循 `.agents/PLANS.md`。
 
 ## 目的 / 全局视角
 
-这次任务先把已经完成的 Uncle Bob 审查结论落档，再立即执行第一条高优先级整改（P1-01）。用户可见目标是：在没有 UI 端口的上下文里，地块归属更新不再因 `missing ui_port` 断言崩溃；在有 UI 的正常流程里，地块归属变更仍会触发 UI 更新。验证方式是新增针对 `set_tile_owner/reset_tile` 的解耦测试，并跑回归确认不退化。
+本次改动要把非回合切换相机逻辑全部删除，只保留“回合切换时相机跟随当前玩家”。原先依赖焦点相机的流程停顿，改成在同一触发点通过 `action_anim.duration` 阻断 1 秒（默认来自 `Config/GameplayRules.lua` 的 `action_anim_default_seconds`）。
+
+用户可见结果：
+
+1. 回合切换仍会触发跟随。
+2. 道具/事件不再触发聚焦玩家或格子，也不再做锁相机/恢复相机。
+3. 原有焦点节点仍会阻断流程约 1 秒。
 
 ## 进度
 
-- [x] 里程碑 M0（2026-02-10 17:12）：完成审查结果入档与执行面收敛（热点范围、问题分级、接口候选清单写入当前计划）。
-- [x] 里程碑 M1（2026-02-10 17:18-17:21）：完成 P1-01（`GameState` 地块归属通知解耦）并通过回归（84 通过）。
-- [ ] 里程碑 M2：执行 P1-02（`GameplayLoop` 端口化拆分，分离“回合编排”与“UI/动画副作用”）。
-- [ ] 里程碑 M3：执行 P1-03（`RuntimeContext` 环境绑定与导出职责拆分，降低全局耦合）。
-- [ ] 里程碑 M4：处理高价值 P2（`UIModel` 职责拆分 + `TickTimeout` 超时策略显式化）。
-- [ ] 里程碑 M5：处理其余 P2/P3（`UIModalPresenter`、`UIRuntimePort`、`PaidCurrencyBridge`、`MarketView`、`UIEventRouter`）。
-- [ ] 里程碑 M6：全链路验收与复盘（回归、风险清单清零、回填“结果与复盘”章节）。
+- [x] (2026-02-10 18:08Z) 清空并重写 `PLAN_CURRENT.md`，建立本次活文档。
+- [x] (2026-02-10 18:15Z) 移除 `CameraFocus` 链路与运行时状态字段。
+- [x] (2026-02-10 18:18Z) 删除全部 `focus_target_*` 字段，并在原位补 `duration`。
+- [x] (2026-02-10 18:23Z) 更新相关回归测试（`ui.lua`、`item.lua`）。
+- [x] (2026-02-10 18:25Z) 运行 `lua .agents/tests/regression.lua` 并修正失败用例。
+- [x] (2026-02-10 18:26Z) 完成结果复盘与计划收尾。
 
 ## 意外与发现
 
-- 观察：当前代码中 `GameState` 只在 `set_tile_owner/reset_tile` 两处硬依赖 `ui_port.on_tile_owner_changed`，改造切口很小，适合先做最小重构。
-  证据：`src/game/game/GameState.lua` 第 306-325 行。
-- 观察：现有测试构建器默认给 `game.ui_port` 注入空实现，因此之前没有暴露“无 UI 崩溃”风险，需要补专门测试。
-  证据：`.agents/tests/TestSupport.lua` 第 228-237 行。
-- 观察：按“默认 no-op 通知器 + `GameplayLoop.set_game` 运行态桥接”实现后，不需要触碰其他 `ui_port` 依赖点即可保证兼容。
-  证据：`src/game/game/CompositionRoot.lua` 注入 no-op；`src/game/turn/GameplayLoop.lua` 在 `set_game` 中桥接回调。
-- 观察：新增两条测试后回归总数从 82 增长到 84，且全量通过。
-  证据：`lua .agents/tests/regression.lua` 输出 `All regression checks passed (84)`。
+- 观察：首轮回归失败于 `ui.lua` 新增测试，`camera_helper.target_role_id` 为 `nil`。
+  证据：`turn switch should follow current player | expected=2 got=nil`。
+
+- 观察：失败原因是该 tick 只触发倒计时增量刷新，命中“仅倒计时更新”分支，未走 `_refresh_view`，因此不会触发跟随事件。
+  证据：将测试状态加 `ui_dirty = true` 后通过。
 
 ## 决策日志
 
-- 决策：按审查建议先做 `P1-01`，不同时推进其他 P1/P2。
-  理由：先把“高层依赖低层 UI 细节”的硬耦合拆开，风险最低、收益最高。
+- 决策：阻断范围采用“替代原焦点动画”而非扩大到全部动作动画。
+  理由：与需求“原位阻断”一致，影响面最小。
   日期/作者：2026-02-10 / Codex
-- 决策：采用“新抽象 + 兼容旧字段”的过渡策略。
-  理由：减少改动面，避免一次性触及大量 `ui_port` 既有调用点。
+
+- 决策：清理强度采用“连字段一起删”。
+  理由：避免残留无效字段导致后续误用。
   日期/作者：2026-02-10 / Codex
-- 决策：默认通知器在组装层注入 no-op，实现层在 `GameState` 内按“notifier 优先、ui_port 兜底”分发。
-  理由：先消除硬断言，再保持运行时兼容，避免影响已有玩法链路。
-  日期/作者：2026-02-10 / Codex
-- 决策：运行态桥接放在 `GameplayLoop.set_game`，仅当 `state` 暴露回调时覆盖默认通知器。
-  理由：保证 app 流程仍触发地块 UI 更新，同时让无 UI 场景保持无副作用。
+
+- 决策：1 秒来源使用 `GameplayRules.action_anim_default_seconds`。
+  理由：满足当前 1 秒需求且保留配置弹性。
   日期/作者：2026-02-10 / Codex
 
 ## 结果与复盘
 
-`P1-01` 已完成并通过回归。`GameState` 中地块归属更新不再依赖 `ui_port` 强断言：  
-1) 无 UI 场景现在可以安全执行 `set_tile_owner/reset_tile`；  
-2) 有 UI 的 app 路径通过 `GameplayLoop.set_game` 注入通知桥接，保持地块表现更新；  
-3) 保留 `ui_port` 兜底兼容，避免本轮扩大改动面。
-
-缺口与后续：
-
-- 还未执行 P1-02（`GameplayLoop` 深度端口化）与 P1-03（`RuntimeContext` 环境解耦）。
-- 当前 notifier 仍是轻量接口，后续可统一为更完整的 board observer。
-
-失忆接力要点：截至 2026-02-10 17:21（本地时间）本任务仍处于“未提交代码”状态，工作树里有 5 个改动文件，分别是 `/.agents/PLAN_CURRENT.md`、`/.agents/tests/suites/gameplay.lua`、`src/game/game/CompositionRoot.lua`、`src/game/game/GameState.lua`、`src/game/turn/GameplayLoop.lua`。如果接手者看不到这 5 个文件改动，先执行 `git status --short` 校验上下文是否一致，再继续后续里程碑。
+- 已完成目标：非回合切换相机逻辑已移除，回合切换跟随保留，原焦点节点改为 `duration` 阻断。
+- 已完成验证：仓库中不再出现 `focus_target_player_id` 与 `focus_target_tile_index`；`src/ui/CameraFocus.lua` 已删除；全量回归通过。
+- 回归结果：`lua .agents/tests/regression.lua` 输出 `All regression checks passed (83)`。
+- 经验：`TickUISync` 的相机跟随触发在 `_refresh_view` 内，测试需要显式保证进入该路径。
 
 ## 背景与导读
 
-本计划基于一次已完成的热点深审。审查范围不是全仓 82 个 Lua 文件，而是近 10 次提交触达的 21 个热点文件，覆盖 `src/core`、`src/game`、`src/ui` 三层关键路径，目标是用 SRP/DIP/SOLID 识别结构性风险。审查时以当前 `main` 头部代码为准，并以回归可运行性作为约束（审查前后均要求 `lua .agents/tests/regression.lua` 可通过）。
+当前相机相关逻辑分两条路径：
 
-这次审查的总体结论是“可运行但结构风险集中在跨层耦合”。P0 级问题未发现，但 P1 级问题有三项，且都属于高层依赖低层细节或职责边界混杂。第一项是 `GameState` 在 `set_tile_owner/reset_tile` 中直接断言并调用 `ui_port.on_tile_owner_changed`，使领域状态更新绑定 UI 细节，导致无 UI 场景会崩溃。第二项是 `GameplayLoop` 同时承担回合编排、UI 弹窗、动画触发、输入锁和运行态 wiring，流程策略与表现副作用混在同一模块，后续替换前端或做 headless 测试成本高。第三项是 `RuntimeContext.install_globals` 直接写入全局 `GameAPI/LuaAPI` 与多组导出函数，运行环境绑定和业务 helper 构建耦合，测试隔离与环境替换困难。
+1. 回合切换跟随：位于 `src/game/turn/TickUISync.lua`，按 `(turn_count, current_player_id)` 触发跟随事件。
+2. 动作焦点相机：位于 `src/ui/CameraFocus.lua`，由 `src/ui/ActionAnim.lua` 调用，根据 `focus_target_player_id` 或 `focus_target_tile_index` 进行聚焦与恢复。
 
-P2 级问题主要是中期技术债，数量多但不构成立即故障。`UIModel` 同时做数据投影与展示文案构建，造成“模型改动”和“文案改动”互相牵连；`TickTimeout` 的默认超时策略在无显式策略时直接选第一项，扩展新选择类型时容易误选；`UIModalPresenter` 把画布切换、choice/market 分支、状态写入和脏标记集中在单入口，幂等性脆弱；`UIRuntimePort` 通过全局 `client_role` 切换上下文，嵌套场景下恢复语义不够显式；`PaidCurrencyBridge` 使用模块级 `runtime_state` 保存游戏态和角色映射，跨局生命周期边界不清晰。
-
-P3 级问题主要是可维护性和开放封闭性不足，不是立即阻断。`MarketView.refresh_market` 对槽位渲染逻辑有较多重复分支，布局或槽位数量调整时需要改主流程；`UIEventRouter` 路由节点名和槽位数量硬编码较多，新 UI 变体接入时需要改核心路由代码而不是仅改配置。
-
-审查还给出了一组“候选接口调整清单”，用于后续分阶段整改：一是把 `UIRuntimePort` 拆成更小端口（角色上下文、节点查询、纹理设置），降低调用方依赖面；二是把 `RuntimeContext` 的环境绑定与编辑器导出职责分离；三是让 `GameplayLoop` 通过端口调用 UI/动画能力，缩小对具体实现的依赖；四是把 `CompositionRoot` 收敛为纯组装层，不承载运行时策略判断；五是把 `PaidCurrencyBridge` 从全局状态转成显式实例上下文。
-
-为什么本轮只执行 `P1-01`：因为它改动切口最小、风险最低、收益最直接，能先解除“无 UI 崩溃”这一高概率问题，同时保留兼容路径，不打断现有玩法链路。`P1-02` 与 `P1-03` 仍保留在后续迭代，不在本次提交范围内。
-
-失忆后续做法：接手者不要重复改 `P1-01`，应直接从里程碑 M2 开始。M2 的起点是把 `GameplayLoop` 中 `ui_view`、`move_anim`、`tick_timeout` 的直接调用抽成端口依赖，先实现最小端口壳并保持现有行为，再逐段迁移调用点。M2 结束时必须做到“回合逻辑可在无 UI 端口下跑通”，否则禁止推进到 M3。
+回合流程阻断通过 `TurnFlow` 的 `wait_action_anim` 状态实现，动画时长由 `ActionAnim.play` 返回值驱动 `SetTimeOut`。因此改动只需更换 action payload，不改 `TurnFlow` 状态机。
 
 ## 工作计划
 
-先在 `GameState` 增加“地块归属通知器”抽象，默认允许 no-op，从而移除 `ui_port` 硬断言。然后在组装/运行入口把 UI 回调桥接到新抽象，保持现有视觉行为不变。最后补充两类测试：一类验证无 UI 时不崩溃，一类验证注入通知器可正确收到 owner 变更事件。全过程保持兼容旧 `ui_port` 路径，避免影响其他模块。
+先删除焦点相机模块引用与状态字段，保证项目中不再依赖该模块。随后逐个清理所有 action payload 的 `focus_target_*` 字段，并在同一位置补齐 `duration = gameplay_rules.action_anim_default_seconds`（已有 `duration` 的保持不变）。
+
+接着修改 `TickUISync`，移除对 `state.camera_focus_active` 的耦合判断，保持仅回合切换跟随。最后更新回归测试：删除焦点相关用例，改为验证“无焦点字段 + 有 duration + 回合切换仍跟随”。
 
 ## 具体步骤
 
-工作目录：`/Users/billyq/Dev/Github/Lua/monopoly`
+在仓库根目录执行：
 
-1. 修改 `src/game/game/GameState.lua`  
-   引入 `_notify_tile_owner_changed`，优先使用 `self.tile_owner_notifier`，兼容 `self.ui_port`，并移除 `missing ui_port` 强断言。
+1. 编辑与删除代码文件：
+   - `src/ui/CameraFocus.lua`（删除）
+   - `src/ui/ActionAnim.lua`
+   - `src/app/init.lua`
+   - `src/game/turn/TickUISync.lua`
+   - `src/game/item/ItemPostEffects.lua`
+   - `src/game/item/ItemRoadblock.lua`
+   - `src/game/item/ItemSteal.lua`
+   - `src/game/item/ItemExecutor.lua`
+   - `src/game/item/ItemDemolish.lua`
+   - `src/game/item/ItemRegistry.lua`
+   - `src/game/chance/ChanceRegistry.lua`
+   - `src/game/land/Landing.lua`
+   - `src/game/land/Land.lua`
+   - `src/game/effect/MineEffect.lua`
 
-2. 修改 `src/game/game/CompositionRoot.lua` 或等效组装点  
-   给新建 game 注入默认 no-op `tile_owner_notifier`，保证无 UI 场景稳定。
+2. 更新测试：
+   - `.agents/tests/suites/ui.lua`
+   - `.agents/tests/suites/item.lua`
 
-3. 修改 `src/game/turn/GameplayLoop.lua`（组装 UI 运行态）  
-   在 `set_game` 中把 UI 状态对象桥接到 `tile_owner_notifier`，确保 UI 回调持续生效。
+3. 运行回归：
 
-4. 修改 `.agents/tests/suites/gameplay.lua`  
-   增加 `P1-01` 回归测试：  
-   - 无 `ui_port` 时调用 `set_tile_owner/reset_tile` 不崩溃且状态正确。  
-   - 注入 `tile_owner_notifier` 时能收到 owner 变更通知。
-
-5. 执行并记录：  
-   `lua .agents/tests/regression.lua`
-
-如果出现失忆或上下文丢失，先按下面顺序恢复执行环境。先运行 `git status --short`，确认仍是这 5 个文件改动；再运行 `lua .agents/tests/regression.lua`，确认基线仍为 `All regression checks passed (84)`；最后再从 M2 开始编码。若基线不是 84，先排查是否有额外未记录改动，再决定是否继续。
+       lua .agents/tests/regression.lua
 
 ## 验证与验收
 
-验收标准：
+必须同时满足：
 
-- `GameState` 不再因缺失 `ui_port` 在地块归属更新处崩溃。
-- 默认路径（有 UI）仍能收到地块归属通知。
-- 新增测试稳定通过。
-- 全量回归通过（本次为 `84` 项）。
+1. 代码中不再出现 `focus_target_player_id` 与 `focus_target_tile_index`。
+2. `src/ui/CameraFocus.lua` 已删除且无引用。
+3. 回合切换仍触发相机 follow。
+4. 相关 action payload 提供 `duration`，默认值取 `action_anim_default_seconds`。
+5. `lua .agents/tests/regression.lua` 全通过。
 
 ## 可重复性与恢复
 
-改造步骤可重复执行。若出现兼容问题，可先回退到“仅保留旧 `ui_port` 路径”并保留新增测试作为保护，再逐步重新引入通知器。该路径可通过文件级回滚恢复。
-
-失忆恢复命令基线：只在确认需要回退时执行 `git checkout -- src/game/game/GameState.lua src/game/game/CompositionRoot.lua src/game/turn/GameplayLoop.lua .agents/tests/suites/gameplay.lua` 回到改造前代码；若只想回退计划文档，再单独执行 `git checkout -- .agents/PLAN_CURRENT.md`。任何回退后都要重新执行 `lua .agents/tests/regression.lua`，并把结果重新写入本计划的“进度”和“结果与复盘”。
+本次改动是纯代码与测试修改，可重复执行。若回归失败，按失败用例定位并仅修复与本计划相关代码。若需回退，直接用 git 还原本次修改文件。
 
 ## 产物与备注
 
-计划产物：
+关键输出：
 
-- 一条可执行的 P1 修复路径（代码 + 测试 + 回归证据）。
-- 审查结论正式入库到当前可执行计划，便于后续继续执行 P1/P2。
+    $ lua .agents/tests/regression.lua
+    ...................................................................................
+    All regression checks passed (83)
 
 ## 接口与依赖
 
-本轮新增/调整接口（计划目标）：
+内部 action payload 变更：
 
-- `game.tile_owner_notifier`：支持 `notify_owner_changed(tile_id, owner_id)` 的通知抽象（默认 no-op）。
-- `GameState` 的 `set_tile_owner/reset_tile` 改为依赖通知抽象，不再硬依赖 `ui_port`。
+- 删除字段：`focus_target_player_id`、`focus_target_tile_index`
+- 统一使用：`duration` 作为流程阻断时长
 
-保持不变：
+依赖不新增；继续使用现有模块：`TurnFlow`、`TurnAnim`、`ActionAnim`、`GameplayRules`。
 
-- 其他 `ui_port` 行为（如 `push_popup`、`wait_action_anim`）暂不改动。
-- 回合流程与玩法逻辑不变。
+---
 
-计划更新说明（2026-02-10）：按“先写入审查结果，再执行到 P1-01”要求，重写当前计划，纳入审查结论并锁定本轮最小改造范围。
-计划更新说明（2026-02-10）：完成 `P1-01` 代码与测试落地，回填回归结果（84 通过）与复盘结论。
+变更记录（2026-02-10 / Codex）：新建本计划，明确“删除焦点相机 + 原位 1s 阻断 + 回归验证”的完整实施路径。
+变更记录（2026-02-10 / Codex）：完成全部实现与回归，补充失败定位过程、修复动作与最终验收结果。

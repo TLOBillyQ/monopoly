@@ -1,7 +1,9 @@
 local logger = require("src.core.Logger")
 local monopoly_event = require("src.game.game.MonopolyEvents")
+local gameplay_rules = require("Config.GameplayRules")
 
 local mine_effect = {}
+local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
 
 function mine_effect.apply(game, player, position)
   assert(game ~= nil, "missing game")
@@ -39,7 +41,7 @@ function mine_effect.apply(game, player, position)
       player_id = player.id,
       from_index = from_index,
       to_index = player.position,
-      focus_target_tile_index = player.position,
+      duration = action_anim_duration,
     })
   end
   return { detonated = true, hospitalized = true, new_position = player.position }

@@ -142,7 +142,7 @@ local function _refresh_view(state, game, next_model)
     )
   end
 
-  if follow_ready and not state.camera_focus_active then
+  if follow_ready then
     camera_helper.target_role_id = current_id
     TriggerCustomEvent(runtime_constants.eca_event.camera.follow, {})
   end

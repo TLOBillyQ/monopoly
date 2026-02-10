@@ -1,6 +1,8 @@
 local logger = require("src.core.Logger")
 local tile = require("src.game.board.Tile")
+local gameplay_rules = require("Config.GameplayRules")
 local roadblock = {}
+local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
 
 local function _make_candidate(board, player, idx, dir, step, seen)
   assert(idx ~= nil, "missing idx")
@@ -147,7 +149,7 @@ function roadblock.apply(game, player, idx)
       kind = "roadblock",
       player_id = player.id,
       tile_index = idx,
-      focus_target_tile_index = idx,
+      duration = action_anim_duration,
     })
     queued = true
   end
@@ -155,5 +157,4 @@ function roadblock.apply(game, player, idx)
 end
 
 return roadblock
-
 

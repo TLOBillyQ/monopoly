@@ -3,7 +3,6 @@ local gameplay_rules = require("Config.GameplayRules")
 
 local prefab = require("Data.Prefab")
 local logger = require("src.core.Logger")
-local camera_focus = require("src.ui.CameraFocus")
 
 local action_anim = {}
 
@@ -196,7 +195,6 @@ function action_anim.play(state, anim)
     tip_duration = math.tofixed(duration)
   end
   _show_tip(_build_tip(anim), tip_duration)
-  camera_focus.begin(state, anim, duration)
 
   local kind = anim.kind
   if kind == "roadblock" then
@@ -240,4 +238,3 @@ function action_anim.play(state, anim)
 end
 
 return action_anim
-
