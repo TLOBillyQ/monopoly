@@ -216,8 +216,14 @@ function game_state:stop_all_players_movement()
       status.move_dir = nil
       players_dirty = true
     end
-    if vehicle_helper and vehicle_helper.forward_eca_event_stop then
-      vehicle_helper.forward_eca_event_stop(player.id)
+    if vehicle_helper and vehicle_helper.forward_eca_event_stop and player.seat_id ~= nil then
+      local role_ok = true
+      if vehicle_helper.resolve_role then
+        role_ok = vehicle_helper.resolve_role(player.id) ~= nil
+      end
+      if role_ok then
+        vehicle_helper.forward_eca_event_stop(player.id)
+      end
     end
   end
   if players_dirty then

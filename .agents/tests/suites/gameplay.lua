@@ -19,6 +19,43 @@ local tick_timeout = support.tick_timeout
 local constants = support.constants
 local bankruptcy = support.bankruptcy
 local mine_effect = require("src.game.effect.MineEffect")
+local runtime_context = require("src.core.RuntimeContext")
+
+local function _mock_lua_api(send_custom_event)
+  return {
+    call_delay_time = function() end,
+    global_register_custom_event = function() end,
+    global_register_trigger_event = function() end,
+    unit_register_custom_event = function() end,
+    unit_register_trigger_event = function() end,
+    global_send_custom_event = send_custom_event or function() end,
+  }
+end
+
+local function _with_runtime_context_globals(fn)
+  support.with_patches({
+    { key = "GameAPI", value = nil },
+    { key = "LuaAPI", value = nil },
+    { key = "SetTimeOut", value = nil },
+    { key = "RegisterCustomEvent", value = nil },
+    { key = "RegisterTriggerEvent", value = nil },
+    { key = "UnitCustomEvent", value = nil },
+    { key = "UnitTriggerEvent", value = nil },
+    { key = "TriggerCustomEvent", value = nil },
+    { key = "vehicle_helper", value = nil },
+    { key = "camera_helper", value = nil },
+    { key = "all_roles", value = nil },
+    { key = "ALLROLES", value = nil },
+    { key = "get_vehicle_player", value = nil },
+    { key = "get_vehicle_move_direction", value = nil },
+    { key = "get_vehicle_move_time", value = nil },
+    { key = "get_spawn_vehicle_id", value = nil },
+    { key = "get_vehicle_set_position_x", value = nil },
+    { key = "get_vehicle_set_position_y", value = nil },
+    { key = "get_vehicle_set_position_z", value = nil },
+    { key = "get_camera_target", value = nil },
+  }, fn)
+end
 
 local function _build_loop_state()
   local auto_runner = require("src.game.turn.AutoRunner")
@@ -149,12 +186,20 @@ end
 
 local function _test_stop_all_players_movement_clears_move_dir_and_stop_event()
   local g = _new_game()
+  g.players[1].seat_id = 4001
+  g.players[2].seat_id = nil
   g:set_player_status(g.players[1], "move_dir", "left")
   g:set_player_status(g.players[2], "move_dir", "right")
   local before_seq = g.turn.vehicle_resync_seq or 0
   local stopped_ids = {}
   support.with_patches({
     { key = "vehicle_helper", value = {
+      resolve_role = function(role_id)
+        if role_id == g.players[1].id then
+          return { id = role_id }
+        end
+        return nil
+      end,
       forward_eca_event_stop = function(role_id)
         table.insert(stopped_ids, role_id)
       end,
@@ -164,18 +209,27 @@ local function _test_stop_all_players_movement_clears_move_dir_and_stop_event()
   end)
   assert(g.players[1].status.move_dir == nil, "player1 move_dir should be cleared")
   assert(g.players[2].status.move_dir == nil, "player2 move_dir should be cleared")
-  assert(#stopped_ids == #g.players, "stop event should be sent to all players")
+  assert(#stopped_ids == 1, "stop event should only be sent to players with vehicle and valid role")
+  assert(stopped_ids[1] == g.players[1].id, "stop event should target player with valid role")
   assert((g.turn.vehicle_resync_seq or 0) == before_seq + 1, "stop should bump vehicle_resync_seq")
 end
 
 local function _test_end_turn_stops_all_players_movement()
   local g = _new_game()
+  g.players[1].seat_id = 4001
+  g.players[2].seat_id = nil
   g:set_player_status(g.players[1], "move_dir", "left")
   g:set_player_status(g.players[2], "move_dir", "right")
   local before_seq = g.turn.vehicle_resync_seq or 0
   local stopped_ids = {}
   support.with_patches({
     { key = "vehicle_helper", value = {
+      resolve_role = function(role_id)
+        if role_id == g.players[1].id then
+          return { id = role_id }
+        end
+        return nil
+      end,
       forward_eca_event_stop = function(role_id)
         table.insert(stopped_ids, role_id)
       end,
@@ -187,8 +241,91 @@ local function _test_end_turn_stops_all_players_movement()
   end)
   assert(g.players[1].status.move_dir == nil, "player1 move_dir should be cleared at end turn")
   assert(g.players[2].status.move_dir == nil, "player2 move_dir should be cleared at end turn")
-  assert(#stopped_ids == #g.players, "end turn should stop all players")
+  assert(#stopped_ids == 1, "end turn should only stop players with vehicle and valid role")
+  assert(stopped_ids[1] == g.players[1].id, "end turn stop should target valid vehicle player")
   assert((g.turn.vehicle_resync_seq or 0) == before_seq + 1, "end turn should bump vehicle_resync_seq")
+end
+
+local function _test_stop_all_players_movement_skips_invalid_role_without_error()
+  local g = _new_game()
+  g.players[1].seat_id = 4001
+  g.players[2].seat_id = 4002
+  g:set_player_status(g.players[1], "move_dir", "left")
+  g:set_player_status(g.players[2], "move_dir", "right")
+  local stopped_ids = {}
+  support.with_patches({
+    { key = "vehicle_helper", value = {
+      resolve_role = function(role_id)
+        if role_id == g.players[1].id then
+          return { id = role_id }
+        end
+        return nil
+      end,
+      forward_eca_event_stop = function(role_id)
+        table.insert(stopped_ids, role_id)
+      end,
+    } },
+  }, function()
+    g:stop_all_players_movement()
+  end)
+  assert(#stopped_ids == 1, "invalid role should be skipped during stop")
+  assert(stopped_ids[1] == g.players[1].id, "only valid role should receive stop")
+end
+
+local function _test_runtime_context_get_vehicle_player_fallback()
+  _with_runtime_context_globals(function()
+    local role2 = { name = "role2" }
+    local game_api = {
+      get_role = function(role_id)
+        if role_id == 2 then
+          return role2
+        end
+        return nil
+      end,
+      get_all_valid_roles = function()
+        return { role2 }
+      end,
+    }
+    local ctx = runtime_context.new({
+      GameAPI = game_api,
+      LuaAPI = _mock_lua_api(),
+    })
+    runtime_context.install_globals(ctx)
+    vehicle_helper.player_id = 99
+    local role = get_vehicle_player()
+    assert(role == role2, "get_vehicle_player should fallback to first valid role")
+  end)
+end
+
+local function _test_runtime_context_forward_stop_skips_invalid_role()
+  _with_runtime_context_globals(function()
+    local stop_events = 0
+    local game_api = {
+      get_role = function(role_id)
+        if role_id == 1 then
+          return { id = 1 }
+        end
+        return nil
+      end,
+      get_all_valid_roles = function()
+        return { { id = 1 } }
+      end,
+    }
+    local ctx = runtime_context.new({
+      GameAPI = game_api,
+      LuaAPI = _mock_lua_api(function(event_name)
+        if event_name == "stop_vehicle_forward" then
+          stop_events = stop_events + 1
+        end
+      end),
+    })
+    runtime_context.install_globals(ctx)
+    local invalid_ok = vehicle_helper.forward_eca_event_stop(2)
+    local valid_ok = vehicle_helper.forward_eca_event_stop(1)
+    assert(invalid_ok == false, "forward stop should reject invalid role")
+    assert(valid_ok == true, "forward stop should allow valid role")
+    assert(stop_events == 1, "forward stop should only emit event for valid role")
+  end)
 end
 
 local function _test_set_player_seat_emits_exit_then_enter()
@@ -578,6 +715,9 @@ return {
   _test_tile_owner_notifier_receives_owner_changes,
   _test_stop_all_players_movement_clears_move_dir_and_stop_event,
   _test_end_turn_stops_all_players_movement,
+  _test_stop_all_players_movement_skips_invalid_role_without_error,
+  _test_runtime_context_get_vehicle_player_fallback,
+  _test_runtime_context_forward_stop_skips_invalid_role,
   _test_set_player_seat_emits_exit_then_enter,
   _test_mine_destroy_vehicle_emits_exit_event,
   _test_autorunner_runs_to_end,

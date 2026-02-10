@@ -9,6 +9,48 @@ local last_camera_target_role_id = nil
 local last_camera_target_role_ok = nil
 
 local function _build_vehicle_helper()
+  local function _safe_get_role(role_id)
+    if role_id == nil then
+      return nil
+    end
+    if not (GameAPI and GameAPI.get_role) then
+      return nil
+    end
+    local ok, role = pcall(GameAPI.get_role, role_id)
+    if not ok then
+      return nil
+    end
+    return role
+  end
+
+  local function _first_valid_role()
+    local roles = all_roles
+    if type(roles) == "table" then
+      for _, role in ipairs(roles) do
+        if role ~= nil then
+          return role
+        end
+      end
+    end
+    if GameAPI and GameAPI.get_all_valid_roles then
+      local ok, valid_roles = pcall(GameAPI.get_all_valid_roles)
+      if ok and type(valid_roles) == "table" then
+        for _, role in ipairs(valid_roles) do
+          if role ~= nil then
+            return role
+          end
+        end
+      end
+    end
+    for role_id = 1, 8 do
+      local role = _safe_get_role(role_id)
+      if role ~= nil then
+        return role
+      end
+    end
+    return nil
+  end
+
   local helper = {
     player_id = nil,
     vehicle_id = nil,
@@ -18,6 +60,14 @@ local function _build_vehicle_helper()
     active_vehicle_by_player = {},
     needs_enter_wait_by_player = {},
   }
+
+  helper.resolve_role = function(role_id)
+    return _safe_get_role(role_id)
+  end
+
+  helper.resolve_any_role = function()
+    return _first_valid_role()
+  end
 
   helper.forward_eca_event_enter = function(role_id, vehicle_id)
     helper.player_id = role_id
@@ -46,8 +96,14 @@ local function _build_vehicle_helper()
   end
 
   helper.forward_eca_event_stop = function(role_id)
+    local role = helper.resolve_role(role_id)
+    if role == nil then
+      logger.warn("[Eggy]", "skip vehicle stop: invalid role_id", tostring(role_id))
+      return false
+    end
     helper.player_id = role_id
     TriggerCustomEvent(runtime_constants.eca_event.vehicle.stop, {})
+    return true
   end
 
   helper.forward_eca_event_set_position = function(role_id, pos)
@@ -143,8 +199,20 @@ function runtime_context.install_globals(ctx)
   ---@desc 获取执行载具命令的玩家
   ---@return Role
   function get_vehicle_player()
-    local role_id = vehicle_helper.player_id or 1
-    return GameAPI.get_role(role_id)
+    local role_id = vehicle_helper.player_id
+    local role = vehicle_helper.resolve_role and vehicle_helper.resolve_role(role_id) or nil
+    if role ~= nil then
+      return role
+    end
+    local fallback_role = vehicle_helper.resolve_any_role and vehicle_helper.resolve_any_role() or nil
+    if fallback_role ~= nil then
+      if role_id ~= nil then
+        logger.warn("[Eggy]", "vehicle player unresolved, fallback role used", tostring(role_id))
+      end
+      return fallback_role
+    end
+    logger.warn("[Eggy]", "vehicle player unresolved and no fallback role", tostring(role_id))
+    return nil
   end
 
   ---@export
