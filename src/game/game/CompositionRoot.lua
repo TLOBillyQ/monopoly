@@ -217,6 +217,9 @@ function composition_root.assemble(opts, game_or_class)
   game.last_turn = nil
   game._land_rent_version = 0
   game._land_rent_cache = nil
+  game.tile_owner_notifier = game.tile_owner_notifier or {
+    notify_owner_changed = function() end,
+  }
 
   function game:consume_dirty()
     return dirty_tracker.consume(self.dirty)

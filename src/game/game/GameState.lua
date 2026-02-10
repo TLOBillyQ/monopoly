@@ -50,6 +50,24 @@ local function _mark_turn(self)
   self.dirty.turn = true
 end
 
+local function _notify_tile_owner_changed(self, tile_id, owner_id)
+  local notifier = self and self.tile_owner_notifier or nil
+  if notifier and type(notifier.notify_owner_changed) == "function" then
+    notifier:notify_owner_changed(tile_id, owner_id)
+    return true
+  end
+  if notifier and type(notifier.on_tile_owner_changed) == "function" then
+    notifier:on_tile_owner_changed(tile_id, owner_id)
+    return true
+  end
+  local ui_port = self and self.ui_port or nil
+  if ui_port and type(ui_port.on_tile_owner_changed) == "function" then
+    ui_port:on_tile_owner_changed(tile_id, owner_id)
+    return true
+  end
+  return false
+end
+
 function game_state:set_player_status(player, key, value)
   local status = _player_status_table(player)
   status[key] = value
@@ -306,9 +324,7 @@ end
 function game_state:set_tile_owner(tile, owner_id)
   assert(tile ~= nil and tile.type == "land", "invalid tile for owner")
   _bump_land_rent_version(self)
-  local ui_port = self.ui_port
-  assert(ui_port ~= nil and ui_port.on_tile_owner_changed ~= nil, "missing ui_port")
-  ui_port:on_tile_owner_changed(tile.id, owner_id)
+  _notify_tile_owner_changed(self, tile.id, owner_id)
   self:update_tile(tile, { owner_id = owner_id })
 end
 
@@ -320,9 +336,7 @@ end
 function game_state:reset_tile(tile)
   assert(tile ~= nil and tile.type == "land", "invalid tile for reset")
   _bump_land_rent_version(self)
-  local ui_port = self.ui_port
-  assert(ui_port ~= nil and ui_port.on_tile_owner_changed ~= nil, "missing ui_port")
-  ui_port:on_tile_owner_changed(tile.id, nil)
+  _notify_tile_owner_changed(self, tile.id, nil)
   tile.owner_id = nil
   tile.level = 0
   _mark_board(self)

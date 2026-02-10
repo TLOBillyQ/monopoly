@@ -111,6 +111,42 @@ local function _test_bankruptcy_resets_owned_tiles()
   assert(next(p1.properties) == nil, "bankruptcy clears player properties")
 end
 
+local function _test_set_tile_owner_without_ui_port_does_not_crash()
+  local g = _new_game()
+  g.ui_port = nil
+  local _, tile_ref = _first_land_tile(g.board)
+  local p1 = g.players[1]
+
+  g:set_tile_owner(tile_ref, p1.id)
+  local st_owned = _tile_state(g, tile_ref)
+  assert(st_owned.owner_id == p1.id, "set_tile_owner should work without ui_port")
+
+  g:reset_tile(tile_ref)
+  local st_reset = _tile_state(g, tile_ref)
+  assert(st_reset.owner_id == nil, "reset_tile should clear owner without ui_port")
+  assert(st_reset.level == 0, "reset_tile should clear level without ui_port")
+end
+
+local function _test_tile_owner_notifier_receives_owner_changes()
+  local g = _new_game()
+  g.ui_port = nil
+  local _, tile_ref = _first_land_tile(g.board)
+  local p1 = g.players[1]
+  local calls = {}
+  g.tile_owner_notifier = {
+    notify_owner_changed = function(_, tile_id, owner_id)
+      calls[#calls + 1] = { tile_id = tile_id, owner_id = owner_id }
+    end,
+  }
+
+  g:set_tile_owner(tile_ref, p1.id)
+  g:reset_tile(tile_ref)
+
+  assert(#calls == 2, "tile_owner_notifier should receive owner set and reset")
+  assert(calls[1].tile_id == tile_ref.id and calls[1].owner_id == p1.id, "first notify should be owner set")
+  assert(calls[2].tile_id == tile_ref.id and calls[2].owner_id == nil, "second notify should be owner clear")
+end
+
 local function _test_stop_all_players_movement_clears_move_dir_and_stop_event()
   local g = _new_game()
   g:set_player_status(g.players[1], "move_dir", "left")
@@ -538,6 +574,8 @@ end
 return {
   _test_mandatory_payment_causes_bankruptcy,
   _test_bankruptcy_resets_owned_tiles,
+  _test_set_tile_owner_without_ui_port_does_not_crash,
+  _test_tile_owner_notifier_receives_owner_changes,
   _test_stop_all_players_movement_clears_move_dir_and_stop_event,
   _test_end_turn_stops_all_players_movement,
   _test_set_player_seat_emits_exit_then_enter,

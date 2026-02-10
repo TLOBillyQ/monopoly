@@ -128,6 +128,19 @@ function gameplay_loop.set_game(state, game)
   assert(game ~= nil, "missing game")
   state.game = game
   game.ui_port = state
+  if type(state.on_tile_owner_changed) == "function" then
+    game.tile_owner_notifier = {
+      notify_owner_changed = function(_, tile_id, owner_id)
+        state:on_tile_owner_changed(tile_id, owner_id)
+      end,
+    }
+  elseif type(state.notify_owner_changed) == "function" then
+    game.tile_owner_notifier = {
+      notify_owner_changed = function(_, tile_id, owner_id)
+        state:notify_owner_changed(tile_id, owner_id)
+      end,
+    }
+  end
   paid_currency_bridge.setup_for_game(game)
   event_handlers.install(game, logger, state)
   logger.set_info_per_turn_limit(gameplay_rules.info_log_per_turn_limit)
