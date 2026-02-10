@@ -6,6 +6,7 @@ local turn_dispatch = {}
 local next_turn_cooldown = 0.4
 local input_blocked_types = {
   ui_button = true,
+  choice_pick = true,
   choice_select = true,
   choice_cancel = true,
   market_confirm = true,

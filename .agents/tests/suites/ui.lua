@@ -23,6 +23,20 @@ local market_cfg = require("Config.Generated.Market")
 local runtime_constants = require("Config.RuntimeConstants")
 
 local function _build_popup_view_state(refs, card_node)
+  local function new_node(seed)
+    local node = seed or {}
+    if not node.listen then
+      function node:listen(_, cb)
+        self._listener_cb = cb
+        return {
+          destroy = function()
+            self._listener_cb = nil
+          end,
+        }
+      end
+    end
+    return node
+  end
   local state = {
     ui = ui_view.build_ui_state(),
     ui_refs = refs or { ["空"] = "EMPTY" },
@@ -30,16 +44,63 @@ local function _build_popup_view_state(refs, card_node)
   state.ui.choice_active = false
   state.ui.market_active = false
   local nodes = {
-    ["弹窗屏"] = {},
-    ["弹窗标题"] = {},
-    ["弹窗正文"] = {},
-    ["弹窗确认"] = {},
-    ["弹窗卡牌"] = card_node or {},
+    ["机会卡屏"] = new_node(),
+    ["机会卡_标题"] = new_node(),
+    ["请输入文字"] = new_node(),
+    ["取消按钮"] = new_node(),
+    ["机会卡_图片"] = new_node(card_node or {}),
   }
   local function query_nodes_by_name(name)
     local node = nodes[name]
     if not node then
-      node = {}
+      node = new_node()
+      nodes[name] = node
+    end
+    return { node }
+  end
+  return state, nodes, query_nodes_by_name
+end
+
+local function _build_choice_modal_state()
+  local function new_node()
+    local node = {}
+    function node:listen(_, cb)
+      self._listener_cb = cb
+      return {
+        destroy = function()
+          self._listener_cb = nil
+        end,
+      }
+    end
+    return node
+  end
+  local state = {
+    pending_choice_id = nil,
+    pending_choice_elapsed = 0,
+    pending_choice_selected_option_id = nil,
+    ui = ui_view.build_ui_state(),
+    ui_refs = { ["空"] = "EMPTY" },
+  }
+  local names = {
+    "玩家选择屏", "玩家选择_标题", "玩家选择_副标题",
+    "玩家选择_槽位1", "玩家选择_槽位2", "玩家选择_槽位3", "玩家选择_确认按钮",
+    "位置选择屏", "位置_副标题", "位置_放置文本",
+    "位置前1", "位置前2", "位置前3", "位置后1", "位置后2", "位置后3", "位置脚下", "位置_放置确认",
+    "遥控骰子屏", "遥控骰子_标题", "遥控骰子_正文",
+    "遥控骰子_选项_01", "遥控骰子_选项_02", "遥控骰子_选项_03",
+    "遥控骰子_选项_04", "遥控骰子_选项_05", "遥控骰子_选项_06", "遥控骰子_取消",
+    "建筑升级屏", "建筑升级_标题", "建筑升级_确定按钮", "建筑升级_取消",
+    "机会卡屏", "机会卡_标题", "请输入文字", "机会卡_图片", "取消按钮",
+    "黑市屏", "黑市购买按钮", "关闭", "售价：100", "选中卡牌",
+  }
+  local nodes = {}
+  for _, name in ipairs(names) do
+    nodes[name] = new_node()
+  end
+  local function query_nodes_by_name(name)
+    local node = nodes[name]
+    if not node then
+      node = new_node()
       nodes[name] = node
     end
     return { node }
@@ -813,8 +874,13 @@ local function _test_apply_input_lock_keeps_auto_controls_enabled()
       base_hidden_nodes = { "行动按钮", "道具槽位1" },
       base_hidden_labels = { "倒计时" },
       auto_control_nodes = { "托管按钮", "自动控制按钮" },
-      choice = { option_buttons = {}, cancel = "通用选择_取消" },
-      popup = { confirm = "弹窗确认" },
+      choice_screens = {
+        player = { option_buttons = {}, cancel = "取消按钮", confirm = "玩家选择_确认按钮" },
+        target = { option_buttons = {}, under_button = "位置脚下", cancel = "取消按钮", confirm = "位置_放置确认" },
+        remote = { option_buttons = {}, cancel = "遥控骰子_取消" },
+        building = { cancel = "建筑升级_取消", confirm = "建筑升级_确定按钮" },
+      },
+      popup_screen = { confirm = "取消按钮" },
       set_touch_enabled = function(_, name, enabled)
         touch[name] = enabled
       end,
@@ -861,7 +927,7 @@ local function _test_push_popup_sets_card_image_by_image_ref()
   end)
 
   _assert_eq(last_image_key, "ICON2001", "popup card should use mapped image")
-  _assert_eq(nodes["弹窗卡牌"].visible, true, "popup card should be visible when image exists")
+  _assert_eq(nodes["机会卡_图片"].visible, true, "popup card should be visible when image exists")
 end
 
 local function _test_push_popup_hides_card_and_clears_image_when_missing()
@@ -892,7 +958,7 @@ local function _test_push_popup_hides_card_and_clears_image_when_missing()
   end)
 
   _assert_eq(last_image_key, "EMPTY", "popup card should reset to empty key when image missing")
-  _assert_eq(nodes["弹窗卡牌"].visible, false, "popup card should hide when image missing")
+  _assert_eq(nodes["机会卡_图片"].visible, false, "popup card should hide when image missing")
 end
 
 local function _test_popup_timeout_closes_even_when_input_blocked()
@@ -918,7 +984,88 @@ local function _test_popup_timeout_closes_even_when_input_blocked()
   end)
 
   _assert_eq(state.ui.popup_active, false, "popup should auto close under input blocked")
-  _assert_eq(nodes["弹窗屏"].visible, false, "popup root should hide after timeout")
+  _assert_eq(nodes["机会卡屏"].visible, false, "popup root should hide after timeout")
+end
+
+local function _test_choice_modal_routes_to_new_screens()
+  local state, nodes, query_nodes = _build_choice_modal_state()
+
+  _with_patches({
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = nil },
+  }, function()
+    ui_view.open_choice_modal(state, {
+      id = 1,
+      kind = "item_target_player",
+      title = "选人",
+      body = "body",
+      options = {
+        { id = 11, label = "玩家A" },
+      },
+      allow_cancel = true,
+      cancel_label = "取消",
+    })
+    _assert_eq(state.ui.active_choice_screen_key, "player", "item_target_player should route to player screen")
+    _assert_eq(nodes["玩家选择屏"].visible, true, "player screen should be visible")
+
+    ui_view.open_choice_modal(state, {
+      id = 2,
+      kind = "roadblock_target",
+      title = "选位置",
+      body = "body",
+      options = {
+        { id = 1, label = "前方1格：商店" },
+      },
+      allow_cancel = true,
+      cancel_label = "放弃",
+    })
+    _assert_eq(state.ui.active_choice_screen_key, "target", "roadblock_target should route to target screen")
+    _assert_eq(nodes["位置选择屏"].visible, true, "target screen should be visible")
+
+    ui_view.open_choice_modal(state, {
+      id = 3,
+      kind = "remote_dice_value",
+      title = "遥控骰子",
+      body = "body",
+      options = {
+        { id = 1, label = "1" },
+        { id = 2, label = "2" },
+        { id = 3, label = "3" },
+      },
+      allow_cancel = true,
+      cancel_label = "放弃",
+    })
+    _assert_eq(state.ui.active_choice_screen_key, "remote", "remote_dice_value should route to remote screen")
+    _assert_eq(nodes["遥控骰子屏"].visible, true, "remote screen should be visible")
+
+    ui_view.open_choice_modal(state, {
+      id = 4,
+      kind = "landing_optional_effect",
+      title = "请选择",
+      body = "",
+      options = {
+        { id = "buy_land", label = "购买地块" },
+      },
+      allow_cancel = true,
+      cancel_label = "跳过",
+    })
+    _assert_eq(state.ui.active_choice_screen_key, "building", "buy_land optional should route to building screen")
+    _assert_eq(nodes["建筑升级屏"].visible, true, "building screen should be visible")
+    _assert_eq(nodes["建筑升级_标题"].text, "购买地块", "building title should follow option semantic")
+
+    ui_view.open_choice_modal(state, {
+      id = 5,
+      kind = "landing_optional_effect",
+      title = "可选效果",
+      body = "",
+      options = {
+        { id = "other_effect", label = "其他效果" },
+      },
+      allow_cancel = true,
+      cancel_label = "跳过",
+    })
+    _assert_eq(state.ui.active_choice_screen_key, "target", "non-building optional should fallback to target screen")
+  end)
 end
 
 local function _test_market_selection_updates_icon_without_resize()
@@ -962,7 +1109,7 @@ local function _test_market_close_resets_icon_without_resize()
     end,
   }
   local state = {
-    market_choice_option_ids = { 1, 2 },
+    choice_visible_option_ids = { 1, 2 },
     pending_choice_selected_option_id = 1,
     ui_refs = {
       ["空"] = 4321,
@@ -982,7 +1129,7 @@ local function _test_market_close_resets_icon_without_resize()
   market_view.close_market_panel(state)
 
   _assert_eq(state.ui.market_active, false, "market panel should be inactive")
-  _assert_eq(state.market_choice_option_ids, nil, "market options should clear")
+  _assert_eq(state.choice_visible_option_ids, nil, "market options should clear")
   _assert_eq(state.pending_choice_selected_option_id, nil, "selected market option should clear")
   _assert_eq(selected_node.image_texture, 4321, "market selected icon should reset to empty key")
   _assert_eq(reset_calls, 0, "market close should not call reset_size")
@@ -1340,6 +1487,7 @@ return {
   _test_push_popup_sets_card_image_by_image_ref,
   _test_push_popup_hides_card_and_clears_image_when_missing,
   _test_popup_timeout_closes_even_when_input_blocked,
+  _test_choice_modal_routes_to_new_screens,
   _test_market_selection_updates_icon_without_resize,
   _test_market_close_resets_icon_without_resize,
   _test_item_slot_uses_keep_size_path,

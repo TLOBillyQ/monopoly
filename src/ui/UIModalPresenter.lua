@@ -1,6 +1,7 @@
 local market_view = require("src.ui.MarketView")
 local market_ui = require("src.ui.MarketLayout")
 local modal_state = require("src.ui.UIModalStateCoordinator")
+local route_policy = require("src.ui.UIChoiceRoutePolicy")
 local runtime = require("src.ui.UIRuntimePort")
 local canvas = require("src.ui.UICanvasCoordinator")
 local logger = require("src.core.Logger")
@@ -27,10 +28,11 @@ end
 
 local function _set_popup_card_image(state, payload)
   local ui = state and state.ui
-  if not ui or not ui.popup or not ui.popup.card then
+  local popup = ui and ui.popup_screen or nil
+  if not ui or not popup or not popup.card then
     return
   end
-  local card_name = ui.popup.card
+  local card_name = popup.card
   local card_node = ui.query_node(card_name)
   local image_key = _resolve_popup_image_key(state, payload)
   if image_key ~= nil then
@@ -46,12 +48,104 @@ local function _set_popup_card_image(state, payload)
   ui:set_visible(card_name, false)
 end
 
-local function _open_market_panel(state, choice, choice_id, market)
-  canvas.switch(state.ui, canvas.CANVAS_MARKET)
-  if state.ui.choice_active then
-    state.ui:set_visible(state.ui.choice.root, false)
-    state.ui.choice_active = false
+local function _resolve_canvas_for_screen(screen_key)
+  if screen_key == "player" then
+    return canvas.CANVAS_PLAYER_CHOICE
   end
+  if screen_key == "target" then
+    return canvas.CANVAS_TARGET_CHOICE
+  end
+  if screen_key == "remote" then
+    return canvas.CANVAS_REMOTE_CHOICE
+  end
+  if screen_key == "building" then
+    return canvas.CANVAS_BUILDING_CHOICE
+  end
+  return canvas.CANVAS_BASE
+end
+
+local function _hide_choice_screens(ui)
+  local screens = ui.choice_screens or {}
+  for _, screen in pairs(screens) do
+    if screen.root then
+      ui:set_visible(screen.root, false)
+    end
+    local buttons = screen.option_buttons or {}
+    for _, name in ipairs(buttons) do
+      ui:set_touch_enabled(name, false)
+    end
+    if screen.under_button then
+      ui:set_visible(screen.under_button, false)
+      ui:set_touch_enabled(screen.under_button, false)
+    end
+  end
+  ui.choice_active = false
+  ui.active_choice_screen_key = nil
+end
+
+local function _resolve_option_id(option)
+  if type(option) == "table" then
+    return option.id
+  end
+  return option
+end
+
+local function _resolve_option_label(option)
+  if type(option) == "table" then
+    if option.label then
+      return option.label
+    end
+    if option.id ~= nil then
+      return tostring(option.id)
+    end
+  end
+  return tostring(option)
+end
+
+local function _is_under_option(option)
+  local label = _resolve_option_label(option)
+  if not label then
+    return false
+  end
+  return string.find(label, "脚下", 1, true) ~= nil
+    or string.find(label, "当前位置", 1, true) ~= nil
+end
+
+local function _set_option_node(ui, node_name, option)
+  if option then
+    ui:set_button(node_name, _resolve_option_label(option))
+    ui:set_visible(node_name, true)
+    ui:set_touch_enabled(node_name, true)
+    return _resolve_option_id(option)
+  end
+  ui:set_visible(node_name, false)
+  ui:set_touch_enabled(node_name, false)
+  return nil
+end
+
+local function _resolve_choice_title(choice, screen_key, selected_option_id)
+  if screen_key == "building" then
+    if selected_option_id == "buy_land" then
+      return "购买地块"
+    end
+    if selected_option_id == "upgrade_land" then
+      return "加盖建筑"
+    end
+    if choice and choice.title and choice.title ~= "" then
+      return choice.title
+    end
+    return "地产操作"
+  end
+  if choice and choice.title then
+    return choice.title
+  end
+  return "请选择"
+end
+
+local function _open_market_panel(state, choice, choice_id, market)
+  local ui = state.ui
+  canvas.switch(ui, canvas.CANVAS_MARKET)
+  _hide_choice_screens(ui)
   local market_payload = market or {
     choice_id = choice_id,
     options = choice.options,
@@ -62,40 +156,172 @@ local function _open_market_panel(state, choice, choice_id, market)
   market_view.refresh_market(state, market_payload)
 end
 
-local function _open_generic_choice(state, choice, choice_id)
-  if state.ui.market_active then
+local function _open_player_or_remote_screen(state, choice, choice_id, screen_key)
+  local ui = state.ui
+  local screen = ui.choice_screens[screen_key]
+  assert(screen ~= nil, "missing choice screen: " .. tostring(screen_key))
+
+  if ui.market_active then
     market_view.close_market_panel(state)
   end
 
-  canvas.switch(state.ui, canvas.CANVAS_CHOICE)
-  state.ui:set_label(state.ui.choice.title, choice.title)
-  state.ui:set_label(state.ui.choice.body, choice.body)
-  state.ui:set_visible(state.ui.choice.root, true)
+  _hide_choice_screens(ui)
+  canvas.switch(ui, _resolve_canvas_for_screen(screen_key))
+  ui:set_visible(screen.root, true)
 
-  local option_nodes = state.ui.choice.option_buttons
-  for idx, name in ipairs(option_nodes) do
-    local option = choice.options[idx]
-    if option then
-      state.ui:set_button(name, option.label)
-      state.ui:set_visible(name, true)
-      state.ui:set_touch_enabled(name, true)
-    else
-      state.ui:set_visible(name, false)
-      state.ui:set_touch_enabled(name, false)
+  if screen.title then
+    ui:set_label(screen.title, choice.title or "请选择")
+  end
+  if screen.body then
+    ui:set_label(screen.body, choice.body or "")
+  end
+
+  local option_ids = {}
+  local selected = nil
+  local options = choice.options or {}
+  for index, name in ipairs(screen.option_buttons or {}) do
+    local option = options[index]
+    local option_id = _set_option_node(ui, name, option)
+    option_ids[index] = option_id
+    if not selected and option_id ~= nil then
+      selected = option_id
     end
   end
 
-  if not choice.allow_cancel then
-    state.ui:set_visible(state.ui.choice.cancel, false)
-    state.ui:set_touch_enabled(state.ui.choice.cancel, false)
-  else
-    state.ui:set_button(state.ui.choice.cancel, choice.cancel_label)
-    state.ui:set_visible(state.ui.choice.cancel, true)
-    state.ui:set_touch_enabled(state.ui.choice.cancel, true)
+  if screen.confirm then
+    ui:set_button(screen.confirm, "确定")
+    ui:set_visible(screen.confirm, true)
+    ui:set_touch_enabled(screen.confirm, true)
   end
 
-  state.ui.choice_active = true
-  modal_state.open_choice(state, choice_id)
+  if screen.cancel then
+    local allow_cancel = choice.allow_cancel ~= false
+    ui:set_visible(screen.cancel, allow_cancel)
+    ui:set_touch_enabled(screen.cancel, allow_cancel)
+    if allow_cancel then
+      ui:set_button(screen.cancel, choice.cancel_label or "取消")
+    end
+  end
+
+  ui.choice_active = true
+  ui.active_choice_screen_key = screen_key
+  modal_state.open_choice(state, choice_id, option_ids, selected)
+end
+
+local function _open_target_screen(state, choice, choice_id)
+  local ui = state.ui
+  local screen = ui.choice_screens.target
+  assert(screen ~= nil, "missing target screen")
+
+  if ui.market_active then
+    market_view.close_market_panel(state)
+  end
+
+  _hide_choice_screens(ui)
+  canvas.switch(ui, canvas.CANVAS_TARGET_CHOICE)
+  ui:set_visible(screen.root, true)
+
+  ui:set_label(screen.title, choice.title or "请选择")
+  ui:set_label(screen.body, choice.body or "")
+
+  local non_under = {}
+  local under = nil
+  for _, option in ipairs(choice.options or {}) do
+    if _is_under_option(option) and under == nil then
+      under = option
+    else
+      non_under[#non_under + 1] = option
+    end
+  end
+
+  local option_ids = {}
+  local selected = nil
+  local flat_index = 0
+  for _, name in ipairs(screen.option_buttons or {}) do
+    flat_index = flat_index + 1
+    local option = non_under[flat_index]
+    local option_id = _set_option_node(ui, name, option)
+    option_ids[flat_index] = option_id
+    if not selected and option_id ~= nil then
+      selected = option_id
+    end
+  end
+
+  if screen.under_button then
+    flat_index = flat_index + 1
+    local under_id = _set_option_node(ui, screen.under_button, under)
+    option_ids[flat_index] = under_id
+    if not selected and under_id ~= nil then
+      selected = under_id
+    end
+  end
+
+  ui:set_button(screen.confirm, "确定")
+  ui:set_visible(screen.confirm, true)
+  ui:set_touch_enabled(screen.confirm, true)
+
+  local allow_cancel = choice.allow_cancel ~= false
+  ui:set_visible(screen.cancel, allow_cancel)
+  ui:set_touch_enabled(screen.cancel, allow_cancel)
+  if allow_cancel then
+    ui:set_button(screen.cancel, choice.cancel_label or "取消")
+  end
+
+  ui.choice_active = true
+  ui.active_choice_screen_key = "target"
+  modal_state.open_choice(state, choice_id, option_ids, selected)
+end
+
+local function _open_building_screen(state, choice, choice_id)
+  local ui = state.ui
+  local screen = ui.choice_screens.building
+  assert(screen ~= nil, "missing building screen")
+
+  if ui.market_active then
+    market_view.close_market_panel(state)
+  end
+
+  _hide_choice_screens(ui)
+  canvas.switch(ui, canvas.CANVAS_BUILDING_CHOICE)
+  ui:set_visible(screen.root, true)
+
+  local first_option = choice.options and choice.options[1] or nil
+  local selected = _resolve_option_id(first_option)
+  local title = _resolve_choice_title(choice, "building", selected)
+  ui:set_label(screen.title, title)
+
+  ui:set_button(screen.confirm, "确定")
+  ui:set_visible(screen.confirm, true)
+  ui:set_touch_enabled(screen.confirm, selected ~= nil)
+
+  local allow_cancel = choice.allow_cancel ~= false
+  ui:set_visible(screen.cancel, allow_cancel)
+  ui:set_touch_enabled(screen.cancel, allow_cancel)
+  if allow_cancel then
+    ui:set_button(screen.cancel, choice.cancel_label or "取消")
+  end
+
+  ui.choice_active = true
+  ui.active_choice_screen_key = "building"
+  modal_state.open_choice(state, choice_id, { selected }, selected)
+end
+
+function modal_presenter.select_choice_option(state, option_id)
+  if not option_id then
+    return
+  end
+  modal_state.select_choice_option(state, option_id)
+  local ui = state and state.ui
+  if not ui then
+    return
+  end
+  if ui.active_choice_screen_key == "building" then
+    local screen = ui.choice_screens and ui.choice_screens.building or nil
+    local choice = state.ui_model and state.ui_model.choice or nil
+    if screen and screen.title then
+      ui:set_label(screen.title, _resolve_choice_title(choice, "building", option_id))
+    end
+  end
 end
 
 function modal_presenter.open_choice_modal(state, choice, market)
@@ -118,51 +344,74 @@ function modal_presenter.open_choice_modal(state, choice, market)
     _open_market_panel(state, choice, choice_id, market)
     return
   end
-  _open_generic_choice(state, choice, choice_id)
+
+  local screen_key = route_policy.resolve(choice)
+  if screen_key == "market" then
+    _open_market_panel(state, choice, choice_id, market)
+    return
+  end
+  if screen_key == "player" or screen_key == "remote" then
+    _open_player_or_remote_screen(state, choice, choice_id, screen_key)
+    return
+  end
+  if screen_key == "building" then
+    _open_building_screen(state, choice, choice_id)
+    return
+  end
+  _open_target_screen(state, choice, choice_id)
 end
 
 function modal_presenter.close_choice_modal(state)
-  if state.ui.choice_active then
-    state.ui:set_visible(state.ui.choice.root, false)
-    state.ui.choice_active = false
+  local ui = state.ui
+  if ui.choice_active then
+    local key = ui.active_choice_screen_key
+    local screen = key and ui.choice_screens and ui.choice_screens[key] or nil
+    if screen and screen.root then
+      ui:set_visible(screen.root, false)
+    end
+    ui.choice_active = false
+    ui.active_choice_screen_key = nil
   end
-  if state.ui.market_active then
+  if ui.market_active then
     market_view.close_market_panel(state)
   end
   modal_state.close_choice(state)
-  if state.ui.popup_active then
-    canvas.switch(state.ui, canvas.CANVAS_POPUP)
+  if ui.popup_active then
+    canvas.switch(ui, canvas.CANVAS_POPUP)
   else
-    canvas.switch(state.ui, canvas.CANVAS_BASE)
+    canvas.switch(ui, canvas.CANVAS_BASE)
   end
   state.ui_dirty = true
 end
 
 function modal_presenter.push_popup(state, payload)
   assert(payload ~= nil, "missing popup payload")
-  state.ui.popup_return_canvas = canvas.resolve_popup_return_canvas(state.ui)
-  canvas.switch(state.ui, canvas.CANVAS_POPUP)
-  state.ui:set_label(state.ui.popup.title, payload.title)
-  state.ui:set_label(state.ui.popup.body, payload.body)
-  state.ui:set_button(state.ui.popup.confirm, payload.button_text or "确认")
+  local ui = state.ui
+  local popup = ui.popup_screen
+  ui.popup_return_canvas = canvas.resolve_popup_return_canvas(ui)
+  canvas.switch(ui, canvas.CANVAS_POPUP)
+  ui:set_label(popup.title, payload.title)
+  ui:set_label(popup.body, payload.body)
+  ui:set_button(popup.confirm, payload.button_text or "确认")
   _set_popup_card_image(state, payload)
-  state.ui:set_visible(state.ui.popup.root, true)
+  ui:set_visible(popup.root, true)
   modal_state.open_popup(state, payload)
   state.ui_dirty = true
   return true
 end
 
 function modal_presenter.close_popup(state)
-  if not (state.ui and state.ui.popup_active) then
+  local ui = state.ui
+  if not (ui and ui.popup_active) then
     logger.warn("close_popup ignored: popup not active")
     return
   end
-  state.ui:set_visible(state.ui.popup.root, false)
+  ui:set_visible(ui.popup_screen.root, false)
   modal_state.close_popup(state)
   _set_popup_card_image(state, nil)
-  local target = state.ui.popup_return_canvas
-  state.ui.popup_return_canvas = nil
-  canvas.switch(state.ui, canvas.resolve_canvas_after_popup(state.ui, target))
+  local target = ui.popup_return_canvas
+  ui.popup_return_canvas = nil
+  canvas.switch(ui, canvas.resolve_canvas_after_popup(ui, target))
   state.ui_dirty = true
 end
 

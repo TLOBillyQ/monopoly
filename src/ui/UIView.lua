@@ -47,6 +47,63 @@ local function _set_item_slot_image(slot_name, image_key)
   end
 end
 
+local function _build_choice_screens()
+  return {
+    player = {
+      key = "player",
+      root = "玩家选择屏",
+      title = "玩家选择_标题",
+      body = "玩家选择_副标题",
+      option_buttons = {
+        "玩家选择_槽位1",
+        "玩家选择_槽位2",
+        "玩家选择_槽位3",
+      },
+      confirm = "玩家选择_确认按钮",
+      cancel = "取消按钮",
+    },
+    target = {
+      key = "target",
+      root = "位置选择屏",
+      title = "位置_副标题",
+      body = "位置_放置文本",
+      option_buttons = {
+        "位置前1",
+        "位置前2",
+        "位置前3",
+        "位置后1",
+        "位置后2",
+        "位置后3",
+      },
+      under_button = "位置脚下",
+      confirm = "位置_放置确认",
+      cancel = "取消按钮",
+    },
+    remote = {
+      key = "remote",
+      root = "遥控骰子屏",
+      title = "遥控骰子_标题",
+      body = "遥控骰子_正文",
+      option_buttons = {
+        "遥控骰子_选项_01",
+        "遥控骰子_选项_02",
+        "遥控骰子_选项_03",
+        "遥控骰子_选项_04",
+        "遥控骰子_选项_05",
+        "遥控骰子_选项_06",
+      },
+      cancel = "遥控骰子_取消",
+    },
+    building = {
+      key = "building",
+      root = "建筑升级屏",
+      title = "建筑升级_标题",
+      confirm = "建筑升级_确定按钮",
+      cancel = "建筑升级_取消",
+    },
+  }
+end
+
 function ui_view.build_ui_state()
   local item_slots = {
     "道具槽位1",
@@ -69,26 +126,15 @@ function ui_view.build_ui_state()
     base_hidden_labels = { "倒计时" },
     auto_control_nodes = { "托管按钮", "自动控制按钮" },
     market_active = false,
-    choice = {
-      root = "通用选择屏",
-      title = "通用选择_标题",
-      body = "通用选择_正文",
-      cancel = "通用选择_取消",
-      option_buttons = {
-        "通用选择_选项_01",
-        "通用选择_选项_02",
-        "通用选择_选项_03",
-        "通用选择_选项_04",
-        "通用选择_选项_05",
-        "通用选择_选项_06",
-      },
-    },
-    popup = {
-      root = "弹窗屏",
-      title = "弹窗标题",
-      body = "弹窗正文",
-      confirm = "弹窗确认",
-      card = "弹窗卡牌",
+    choice_active = false,
+    active_choice_screen_key = nil,
+    choice_screens = _build_choice_screens(),
+    popup_screen = {
+      root = "机会卡屏",
+      title = "机会卡_标题",
+      body = "请输入文字",
+      confirm = "取消按钮",
+      card = "机会卡_图片",
     },
     popup_seq = 0,
     popup_return_canvas = nil,
@@ -211,6 +257,14 @@ function ui_view.select_market_option(state, option_id)
     return
   end
   market_view.select_market_option(state, option_id)
+end
+
+function ui_view.select_choice_option(state, option_id)
+  if not option_id then
+    logger.warn("select_choice_option missing option_id")
+    return
+  end
+  modal_presenter.select_choice_option(state, option_id)
 end
 
 function ui_view.open_choice_modal(state, choice, market)

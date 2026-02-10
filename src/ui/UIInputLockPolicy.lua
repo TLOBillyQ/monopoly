@@ -4,6 +4,25 @@ local role_context = require("src.ui.UIRoleContext")
 
 local input_lock_policy = {}
 
+local function _set_screen_locked(ui, screen)
+  if not screen then
+    return
+  end
+  local option_nodes = screen.option_buttons or {}
+  for _, name in ipairs(option_nodes) do
+    ui:set_touch_enabled(name, false)
+  end
+  if screen.under_button then
+    ui:set_touch_enabled(screen.under_button, false)
+  end
+  if screen.confirm then
+    ui:set_touch_enabled(screen.confirm, false)
+  end
+  if screen.cancel then
+    ui:set_touch_enabled(screen.cancel, false)
+  end
+end
+
 function input_lock_policy.apply(state, deps)
   assert(state ~= nil and state.ui ~= nil, "missing state.ui")
   assert(deps ~= nil and deps.runtime ~= nil, "missing deps.runtime")
@@ -15,8 +34,8 @@ function input_lock_policy.apply(state, deps)
   end
 
   if not ui.input_blocked then
-    if ui.popup_active and ui.popup and ui.popup.confirm then
-      ui:set_touch_enabled(ui.popup.confirm, true)
+    if ui.popup_active and ui.popup_screen and ui.popup_screen.confirm then
+      ui:set_touch_enabled(ui.popup_screen.confirm, true)
     end
     return
   end
@@ -36,15 +55,11 @@ function input_lock_policy.apply(state, deps)
     ui:set_touch_enabled(slot_name, false)
   end
 
-  if ui.choice then
-    local option_nodes = ui.choice.option_buttons or {}
-    for _, name in ipairs(option_nodes) do
-      ui:set_touch_enabled(name, false)
-    end
-    if ui.choice.cancel then
-      ui:set_touch_enabled(ui.choice.cancel, false)
-    end
-  end
+  local screens = ui.choice_screens or {}
+  _set_screen_locked(ui, screens.player)
+  _set_screen_locked(ui, screens.target)
+  _set_screen_locked(ui, screens.remote)
+  _set_screen_locked(ui, screens.building)
 
   local market_buttons = market_ui.item_buttons or {}
   for _, name in ipairs(market_buttons) do
@@ -57,8 +72,8 @@ function input_lock_policy.apply(state, deps)
     ui:set_touch_enabled(market_ui.cancel_button, false)
   end
 
-  if ui.popup and ui.popup.confirm then
-    ui:set_touch_enabled(ui.popup.confirm, false)
+  if ui.popup_screen and ui.popup_screen.confirm then
+    ui:set_touch_enabled(ui.popup_screen.confirm, false)
   end
 end
 

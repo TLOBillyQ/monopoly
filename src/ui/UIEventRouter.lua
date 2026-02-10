@@ -17,7 +17,7 @@ local function _resolve_option_id(choice, payload, state)
   end
   local index = payload.index or payload.option_index or payload.card_index or payload.choice_index
   if index then
-    local mapped = state and state.market_choice_option_ids and state.market_choice_option_ids[index]
+    local mapped = state and state.choice_visible_option_ids and state.choice_visible_option_ids[index]
     if mapped then
       return mapped
     end
@@ -51,6 +51,41 @@ local function _choice_cancel_intent(state, warn_label)
     return nil
   end
   return { type = "choice_cancel", choice_id = choice.id }
+end
+
+local function _choice_pick_intent(state, index, warn_label)
+  local choice = state.ui_model and state.ui_model.choice or nil
+  if not choice then
+    logger.warn(warn_label .. " without choice")
+    return nil
+  end
+  local option_id = _resolve_option_id(choice, { index = index }, state)
+  if not option_id then
+    logger.warn(warn_label .. " missing option:", tostring(index))
+    return nil
+  end
+  return { type = "choice_pick", option_id = option_id }
+end
+
+local function _choice_confirm_intent(state, warn_label)
+  local choice = state.ui_model and state.ui_model.choice or nil
+  if not choice then
+    logger.warn(warn_label .. " without choice")
+    return nil
+  end
+  local option_id = state.pending_choice_selected_option_id
+  if option_id == nil and type(state.choice_visible_option_ids) == "table" then
+    option_id = state.choice_visible_option_ids[1]
+  end
+  if option_id == nil then
+    logger.warn(warn_label .. " missing selected option")
+    return nil
+  end
+  return {
+    type = "choice_select",
+    choice_id = choice.id,
+    option_id = option_id,
+  }
 end
 
 local function _resolve_actor_role_id(data)
@@ -116,6 +151,11 @@ local function _dispatch(state, game, intent, opts)
     return
   end
 
+  if intent_type == "choice_pick" then
+    ui_view.select_choice_option(state, intent.option_id)
+    return
+  end
+
   if intent_type == "market_confirm" then
     if not intent.choice_id or not intent.option_id then
       logger.warn("market_confirm missing ids:", tostring(intent.choice_id), tostring(intent.option_id))
@@ -154,18 +194,6 @@ local function _build_route_specs(state)
       end,
     },
     {
-      name = "弹窗确认",
-      build_intent = function()
-        return { type = "popup_confirm" }
-      end,
-    },
-    {
-      name = "通用选择_取消",
-      build_intent = function()
-        return _choice_cancel_intent(state, "choice_cancel")
-      end,
-    },
-    {
       name = market_ui.confirm_button,
       build_intent = function()
         local market = state.ui_model and state.ui_model.market or nil
@@ -187,17 +215,52 @@ local function _build_route_specs(state)
         return _choice_cancel_intent(state, "market_cancel")
       end,
     },
-  }
-
-  local market_close = "关闭"
-  if market_ui.cancel_button ~= market_close then
-    specs[#specs + 1] = {
-      name = market_close,
+    {
+      name = "关闭",
       build_intent = function()
         return _choice_cancel_intent(state, "market_close")
       end,
-    }
-  end
+    },
+    {
+      name = "取消按钮",
+      build_intent = function()
+        if state.ui and state.ui.popup_active then
+          return { type = "popup_confirm" }
+        end
+        return _choice_cancel_intent(state, "choice_cancel")
+      end,
+    },
+    {
+      name = "玩家选择_确认按钮",
+      build_intent = function()
+        return _choice_confirm_intent(state, "player_confirm")
+      end,
+    },
+    {
+      name = "位置_放置确认",
+      build_intent = function()
+        return _choice_confirm_intent(state, "target_confirm")
+      end,
+    },
+    {
+      name = "建筑升级_确定按钮",
+      build_intent = function()
+        return _choice_confirm_intent(state, "building_confirm")
+      end,
+    },
+    {
+      name = "建筑升级_取消",
+      build_intent = function()
+        return _choice_cancel_intent(state, "building_cancel")
+      end,
+    },
+    {
+      name = "遥控骰子_取消",
+      build_intent = function()
+        return _choice_cancel_intent(state, "remote_cancel")
+      end,
+    },
+  }
 
   local item_slots = (state.ui and state.ui.item_slots) or {}
   if #item_slots == 0 then
@@ -218,29 +281,58 @@ local function _build_route_specs(state)
     }
   end
 
-  local choice_option_nodes = state.ui and state.ui.choice and state.ui.choice.option_buttons or nil
-  if type(choice_option_nodes) ~= "table" or #choice_option_nodes == 0 then
-    choice_option_nodes = {
-      "通用选择_选项_01",
-      "通用选择_选项_02",
-      "通用选择_选项_03",
-      "通用选择_选项_04",
-      "通用选择_选项_05",
-      "通用选择_选项_06",
+  local player_nodes = {
+    "玩家选择_槽位1",
+    "玩家选择_槽位2",
+    "玩家选择_槽位3",
+  }
+  for index, name in ipairs(player_nodes) do
+    specs[#specs + 1] = {
+      name = name,
+      build_intent = function()
+        return _choice_pick_intent(state, index, "player_pick")
+      end,
     }
   end
-  for index, name in ipairs(choice_option_nodes) do
+
+  local target_nodes = {
+    "位置前1",
+    "位置前2",
+    "位置前3",
+    "位置后1",
+    "位置后2",
+    "位置后3",
+    "位置脚下",
+  }
+  for index, name in ipairs(target_nodes) do
+    specs[#specs + 1] = {
+      name = name,
+      build_intent = function()
+        return _choice_pick_intent(state, index, "target_pick")
+      end,
+    }
+  end
+
+  local remote_nodes = {
+    "遥控骰子_选项_01",
+    "遥控骰子_选项_02",
+    "遥控骰子_选项_03",
+    "遥控骰子_选项_04",
+    "遥控骰子_选项_05",
+    "遥控骰子_选项_06",
+  }
+  for index, name in ipairs(remote_nodes) do
     specs[#specs + 1] = {
       name = name,
       build_intent = function()
         local choice = state.ui_model and state.ui_model.choice or nil
         if not choice then
-          logger.warn("choice_select without choice")
+          logger.warn("remote_select without choice")
           return nil
         end
         local option_id = _resolve_option_id(choice, { index = index }, state)
         if not option_id then
-          logger.warn("choice_select missing option:", tostring(index))
+          logger.warn("remote_select missing option:", tostring(index))
           return nil
         end
         return { type = "choice_select", choice_id = choice.id, option_id = option_id }

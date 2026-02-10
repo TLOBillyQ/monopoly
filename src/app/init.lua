@@ -73,7 +73,7 @@ local function _build_state()
     next_turn_locked = false,
     next_turn_last_click = nil,
     next_turn_lock_phase = nil,
-    market_choice_option_ids = nil,
+    choice_visible_option_ids = nil,
     pending_choice_selected_option_id = nil,
     _log_once = {},
     tick_started = false,
