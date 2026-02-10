@@ -1,6 +1,7 @@
 local logger = require("src.core.Logger")
 local constants = require("Config.Generated.Constants")
 local chance_cfg = require("Config.Generated.ChanceCards")
+local gameplay_rules = require("Config.GameplayRules")
 local inventory = require("src.game.item.ItemInventory")
 local chance_effects = require("src.game.chance.Chance")
 local intent_dispatcher = require("src.game.intent.IntentDispatcher")
@@ -39,19 +40,24 @@ local function _pick_chance_card()
   return chance_cfg[1]
 end
 
-local function _push_landing_popup(game, title, body)
+local function _push_landing_popup(game, title, body, opts)
   if not (game and game.ui_port) then
     return false
   end
+  opts = opts or {}
   intent_dispatcher.dispatch(game, {
     kind = "push_popup",
     payload = {
       title = title,
       body = body,
+      image_ref = opts.image_ref,
+      auto_close_seconds = opts.auto_close_seconds,
     },
   })
   return true
 end
+
+local popup_show_seconds = gameplay_rules.action_anim_default_seconds or 1.0
 
 landing.executors = {
   pass_players = {
@@ -96,7 +102,10 @@ landing.executors = {
       assert(cfg ~= nil, "missing drawn item cfg")
       local ok = inventory.give(player, cfg.id, { game = ctx.game })
       if ok then
-        _push_landing_popup(ctx.game, "道具卡", player.name .. " 获得道具 " .. inventory.item_name(cfg.id))
+        _push_landing_popup(ctx.game, "道具卡", player.name .. " 获得道具 " .. inventory.item_name(cfg.id), {
+          image_ref = cfg.id,
+          auto_close_seconds = popup_show_seconds,
+        })
       end
     end,
   },
@@ -110,7 +119,10 @@ landing.executors = {
         return
       end
       logger.event(ctx.player.name .. " 抽到机会卡 " .. card.description)
-      _push_landing_popup(ctx.game, "机会卡", ctx.player.name .. " 抽到机会卡：" .. card.description)
+      _push_landing_popup(ctx.game, "机会卡", ctx.player.name .. " 抽到机会卡：" .. card.description, {
+        image_ref = card.id,
+        auto_close_seconds = popup_show_seconds,
+      })
       local ui_port = ctx.game.ui_port
       if ui_port and ui_port.wait_action_anim then
         ctx.game:queue_action_anim({

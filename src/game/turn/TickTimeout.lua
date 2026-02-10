@@ -25,18 +25,6 @@ local function _resolve_choice_owner(game, choice)
   return nil
 end
 
-local function _is_auto_popup_owner(game, state)
-  if not (game and state and state.ui) then
-    return false
-  end
-  local idx = state.ui.popup_owner_index
-  if not idx or not game.players then
-    return false
-  end
-  local actor = game.players[idx]
-  return actor and agent.is_auto_player(actor) or false
-end
-
 local function _build_default_choice_action(game_ctx, choice)
   local auto_choice = agent.auto_action_for_choice(game_ctx, choice)
   if auto_choice then
@@ -51,17 +39,16 @@ local function _build_default_choice_action(game_ctx, choice)
   }
 end
 
-local function _modal_timeout_seconds(game, state)
-  local min_visible = gameplay_rules.auto_popup_min_visible_seconds or 0
-  if min_visible <= 0 then
-    return nil
+local function _modal_timeout_seconds(_, state)
+  local popup = state and state.ui and state.ui.popup_payload or nil
+  if popup and type(popup.auto_close_seconds) == "number" and popup.auto_close_seconds > 0 then
+    return popup.auto_close_seconds
   end
-  if state.ui and state.ui.popup_active and not state.ui.input_blocked then
-    if _is_auto_popup_owner(game, state) then
-      return min_visible
-    end
+  local timeout = gameplay_rules.popup_auto_close_seconds
+  if type(timeout) == "number" and timeout > 0 then
+    return timeout
   end
-  return nil
+  return 1.0
 end
 
 function tick_timeout.step_choice_timeout(game, state, dt, opts)
@@ -176,7 +163,7 @@ end
 function tick_timeout.step_default_modal(game, state, dt)
   tick_timeout.step_modal_timeout(state, dt, {
     is_active = function(ctx)
-      return ctx.ui and ctx.ui.popup_active and not ctx.ui.input_blocked
+      return ctx.ui and ctx.ui.popup_active
     end,
     get_ref = function(ctx)
       assert(ctx.ui ~= nil, "missing ui")

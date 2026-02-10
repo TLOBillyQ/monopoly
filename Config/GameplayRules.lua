@@ -5,6 +5,7 @@ local gameplay_rules = {
 
   auto_choice_min_visible_seconds = 3.0,
   auto_popup_min_visible_seconds = 3.0,
+  popup_auto_close_seconds = 1.0,
   action_anim_default_seconds = 1.0,
   ai_auto_turn_interval_seconds = 0.4,
 

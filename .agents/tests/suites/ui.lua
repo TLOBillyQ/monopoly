@@ -19,6 +19,31 @@ local ui_view = require("src.ui.UIView")
 local action_anim = require("src.ui.ActionAnim")
 local market_cfg = require("Config.Generated.Market")
 
+local function _build_popup_view_state(refs, card_node)
+  local state = {
+    ui = ui_view.build_ui_state(),
+    ui_refs = refs or { ["空"] = "EMPTY" },
+  }
+  state.ui.choice_active = false
+  state.ui.market_active = false
+  local nodes = {
+    ["弹窗屏"] = {},
+    ["弹窗标题"] = {},
+    ["弹窗正文"] = {},
+    ["弹窗确认"] = {},
+    ["弹窗卡牌"] = card_node or {},
+  }
+  local function query_nodes_by_name(name)
+    local node = nodes[name]
+    if not node then
+      node = {}
+      nodes[name] = node
+    end
+    return { node }
+  end
+  return state, nodes, query_nodes_by_name
+end
+
 local function _test_move_anim_callback_and_delay()
   local dispatched = {}
   local layer = { wait_move_anim = true }
@@ -444,6 +469,90 @@ local function _test_apply_input_lock_keeps_auto_controls_enabled()
   assert(touch["行动按钮"] == false, "action button should stay blocked")
   assert(touch["托管按钮"] == true, "auto button should stay enabled")
   assert(touch["自动控制按钮"] == true, "auto label control should stay enabled")
+end
+
+local function _test_push_popup_sets_card_image_by_image_ref()
+  local last_image_key = nil
+  local card_node = {
+    set_texture_keep_size = function(_, image_key)
+      last_image_key = image_key
+    end,
+  }
+  local state, nodes, query_nodes = _build_popup_view_state({
+    ["空"] = "EMPTY",
+    ["2001"] = "ICON2001",
+  }, card_node)
+
+  _with_patches({
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = nil },
+  }, function()
+    ui_view.push_popup(state, {
+      title = "道具卡",
+      body = "测试",
+      image_ref = 2001,
+    })
+  end)
+
+  _assert_eq(last_image_key, "ICON2001", "popup card should use mapped image")
+  _assert_eq(nodes["弹窗卡牌"].visible, true, "popup card should be visible when image exists")
+end
+
+local function _test_push_popup_hides_card_and_clears_image_when_missing()
+  local last_image_key = nil
+  local card_node = {
+    set_texture_keep_size = function(_, image_key)
+      last_image_key = image_key
+    end,
+  }
+  local state, nodes, query_nodes = _build_popup_view_state({
+    ["空"] = "EMPTY",
+    ["2001"] = "ICON2001",
+  }, card_node)
+
+  _with_patches({
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = nil },
+  }, function()
+    ui_view.push_popup(state, {
+      title = "道具卡",
+      body = "测试",
+      image_ref = 2001,
+    })
+    ui_view.push_popup(state, {
+      title = "黑市",
+      body = "测试2",
+    })
+  end)
+
+  _assert_eq(last_image_key, "EMPTY", "popup card should reset to empty key when image missing")
+  _assert_eq(nodes["弹窗卡牌"].visible, false, "popup card should hide when image missing")
+end
+
+local function _test_popup_timeout_closes_even_when_input_blocked()
+  local state, nodes, query_nodes = _build_popup_view_state({
+    ["空"] = "EMPTY",
+    ["2001"] = "ICON2001",
+  }, {
+    set_texture_keep_size = function() end,
+  })
+
+  _with_patches({
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = nil },
+  }, function()
+    ui_view.push_popup(state, {
+      title = "道具卡",
+      body = "测试",
+      image_ref = 2001,
+      auto_close_seconds = 0.1,
+    })
+    state.ui.input_blocked = true
+    tick_timeout.step_default_modal({}, state, 0.2)
+  end)
+
+  _assert_eq(state.ui.popup_active, false, "popup should auto close under input blocked")
+  _assert_eq(nodes["弹窗屏"].visible, false, "popup root should hide after timeout")
 end
 
 local function _test_market_selection_updates_icon_without_resize()
@@ -911,6 +1020,9 @@ return {
   _test_turn_dispatch_item_slot_uses_actor_slot_map,
   _test_ui_view_render_by_role_slots_are_isolated,
   _test_apply_input_lock_keeps_auto_controls_enabled,
+  _test_push_popup_sets_card_image_by_image_ref,
+  _test_push_popup_hides_card_and_clears_image_when_missing,
+  _test_popup_timeout_closes_even_when_input_blocked,
   _test_market_selection_updates_icon_without_resize,
   _test_market_close_resets_icon_without_resize,
   _test_item_slot_uses_keep_size_path,

@@ -11,6 +11,7 @@ local _with_patches = support.with_patches
 local turn_land = require("src.game.turn.TurnLand")
 local chance_cfg = require("Config.Generated.ChanceCards")
 local item_inventory = require("src.game.item.ItemInventory")
+local gameplay_rules = require("Config.GameplayRules")
 
 local function _test_land_on_start_reward()
   local g = _new_game()
@@ -139,6 +140,8 @@ local function _test_item_landing_pushes_popup_on_success()
   assert(popups[1].title == "道具卡", "item landing popup title mismatch")
   assert(string.find(popups[1].body, p.name, 1, true), "item landing popup should include player name")
   assert(string.find(popups[1].body, "免费卡", 1, true), "item landing popup should include item name")
+  assert(popups[1].image_ref == 2001, "item landing popup image_ref mismatch")
+  assert(popups[1].auto_close_seconds == gameplay_rules.action_anim_default_seconds, "item popup auto close mismatch")
 end
 
 local function _test_item_landing_full_inventory_no_duplicate_success_popup()
@@ -194,6 +197,8 @@ local function _test_chance_landing_pushes_popup()
   assert(popups[1].title == "机会卡", "chance landing popup title mismatch")
   assert(string.find(popups[1].body, p.name, 1, true), "chance landing popup should include player name")
   assert(string.find(popups[1].body, card_desc, 1, true), "chance landing popup should include card description")
+  assert(popups[1].image_ref == chance_cfg[1].id, "chance landing popup image_ref mismatch")
+  assert(popups[1].auto_close_seconds == gameplay_rules.action_anim_default_seconds, "chance popup auto close mismatch")
 end
 
 return {

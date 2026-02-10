@@ -122,6 +122,45 @@ local function set_item_slot_image(slot_name, image_key)
   end
 end
 
+local function _resolve_popup_image_key(state, payload)
+  if not payload then
+    return nil
+  end
+  if payload.image_key ~= nil then
+    return payload.image_key
+  end
+  local image_ref = payload.image_ref
+  if image_ref == nil then
+    return nil
+  end
+  local refs = state and state.ui_refs
+  if not refs then
+    return nil
+  end
+  return refs[tostring(image_ref)] or refs[image_ref]
+end
+
+local function _set_popup_card_image(state, payload)
+  local ui = state and state.ui
+  if not ui or not ui.popup or not ui.popup.card then
+    return
+  end
+  local card_name = ui.popup.card
+  local card_node = ui.query_node(card_name)
+  local image_key = _resolve_popup_image_key(state, payload)
+  if image_key ~= nil then
+    _set_node_texture_keep_size(card_node, image_key)
+    ui:set_visible(card_name, true)
+    return
+  end
+  local refs = state and state.ui_refs or nil
+  local empty_key = refs and refs["空"] or nil
+  if empty_key ~= nil then
+    _set_node_texture_keep_size(card_node, empty_key)
+  end
+  ui:set_visible(card_name, false)
+end
+
 local function _set_text(_, name, text)
   local node = _query_node(name)
   node.text = text or ""
@@ -255,6 +294,7 @@ function ui_view.build_ui_state()
       title = "弹窗标题",
       body = "弹窗正文",
       confirm = "弹窗确认",
+      card = "弹窗卡牌",
     },
     popup_seq = 0,
     popup_return_canvas = nil,
@@ -574,6 +614,7 @@ function ui_view.push_popup(state, payload)
   state.ui:set_label(state.ui.popup.title, payload.title)
   state.ui:set_label(state.ui.popup.body, payload.body)
   state.ui:set_button(state.ui.popup.confirm, payload.button_text or "确认")
+  _set_popup_card_image(state, payload)
   state.ui:set_visible(state.ui.popup.root, true)
   state.ui.popup_active = true
   state.ui.popup_payload = payload
@@ -590,6 +631,7 @@ function ui_view.close_popup(state)
   state.ui:set_visible(state.ui.popup.root, false)
   state.ui.popup_active = false
   state.ui.popup_payload = nil
+  _set_popup_card_image(state, nil)
   local target = state.ui.popup_return_canvas
   state.ui.popup_return_canvas = nil
   if target == CANVAS_MARKET and state.ui.market_active then
