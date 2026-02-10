@@ -3,6 +3,7 @@ local constants = require("Config.Generated.Constants")
 local chance_cfg = require("Config.Generated.ChanceCards")
 local inventory = require("src.game.item.ItemInventory")
 local chance_effects = require("src.game.chance.Chance")
+local intent_dispatcher = require("src.game.intent.IntentDispatcher")
 local mine_effect = require("src.game.effect.MineEffect")
 local steal = require("src.game.item.ItemSteal")
 local market = require("src.game.market.Market")
@@ -36,6 +37,20 @@ local function _pick_chance_card()
     end
   end
   return chance_cfg[1]
+end
+
+local function _push_landing_popup(game, title, body)
+  if not (game and game.ui_port) then
+    return false
+  end
+  intent_dispatcher.dispatch(game, {
+    kind = "push_popup",
+    payload = {
+      title = title,
+      body = body,
+    },
+  })
+  return true
 end
 
 landing.executors = {
@@ -76,7 +91,13 @@ landing.executors = {
       return ctx.game and ctx.player and ctx.tile and ctx.tile.type == "item"
     end,
     apply = function(ctx)
-      return inventory.draw_and_give(ctx.player, { game = ctx.game })
+      local player = ctx.player
+      local cfg = inventory.draw_random()
+      assert(cfg ~= nil, "missing drawn item cfg")
+      local ok = inventory.give(player, cfg.id, { game = ctx.game })
+      if ok then
+        _push_landing_popup(ctx.game, "道具卡", player.name .. " 获得道具 " .. inventory.item_name(cfg.id))
+      end
     end,
   },
   chance_draw_and_resolve = {
@@ -89,6 +110,7 @@ landing.executors = {
         return
       end
       logger.event(ctx.player.name .. " 抽到机会卡 " .. card.description)
+      _push_landing_popup(ctx.game, "机会卡", ctx.player.name .. " 抽到机会卡：" .. card.description)
       local ui_port = ctx.game.ui_port
       if ui_port and ui_port.wait_action_anim then
         ctx.game:queue_action_anim({

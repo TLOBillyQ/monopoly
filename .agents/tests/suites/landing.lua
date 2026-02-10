@@ -9,6 +9,8 @@ local _first_tile_by_type = support.first_tile_by_type
 local _tile_state = support.tile_state
 local _with_patches = support.with_patches
 local turn_land = require("src.game.turn.TurnLand")
+local chance_cfg = require("Config.Generated.ChanceCards")
+local item_inventory = require("src.game.item.ItemInventory")
 
 local function _test_land_on_start_reward()
   local g = _new_game()
@@ -114,6 +116,86 @@ local function _test_turn_land_bridges_to_wait_action_anim_for_chance()
   end)
 end
 
+local function _test_item_landing_pushes_popup_on_success()
+  local g = _new_game()
+  local popups = {}
+  g.ui_port = _build_ui_port({
+    push_popup = function(_, payload)
+      popups[#popups + 1] = payload
+    end,
+  })
+  local p = g:current_player()
+  local idx, tile_ref = _first_tile_by_type(g.board, "item")
+  g:update_player_position(p, idx)
+  _with_patches({
+    { target = item_inventory, key = "draw_random", value = function()
+      return { id = 2001, name = item_inventory.item_name(2001) }
+    end },
+  }, function()
+    local res = _resolve_landing(g, p, tile_ref, {})
+    assert(not res, "item landing should not wait")
+  end)
+  assert(#popups == 1, "item landing should push one popup")
+  assert(popups[1].title == "道具卡", "item landing popup title mismatch")
+  assert(string.find(popups[1].body, p.name, 1, true), "item landing popup should include player name")
+  assert(string.find(popups[1].body, "免费卡", 1, true), "item landing popup should include item name")
+end
+
+local function _test_item_landing_full_inventory_no_duplicate_success_popup()
+  local g = _new_game()
+  local popups = {}
+  g.ui_port = _build_ui_port({
+    push_popup = function(_, payload)
+      popups[#popups + 1] = payload
+    end,
+  })
+  local p = g:current_player()
+  while not p.inventory:is_full() do
+    local ok = p.inventory:add({ id = 2001 })
+    assert(ok == true, "preload inventory failed")
+  end
+  local idx, tile_ref = _first_tile_by_type(g.board, "item")
+  g:update_player_position(p, idx)
+  _with_patches({
+    { target = item_inventory, key = "draw_random", value = function()
+      return { id = 2002, name = item_inventory.item_name(2002) }
+    end },
+  }, function()
+    local res = _resolve_landing(g, p, tile_ref, {})
+    assert(not res, "item landing should not wait")
+  end)
+  assert(#popups == 1, "full inventory should only keep existing fail popup")
+  assert(popups[1].title == "道具", "full inventory popup title mismatch")
+  assert(string.find(popups[1].body, "背包已满", 1, true), "full inventory popup body mismatch")
+end
+
+local function _test_chance_landing_pushes_popup()
+  local g = _new_game()
+  local popups = {}
+  g.ui_port = _build_ui_port({
+    push_popup = function(_, payload)
+      popups[#popups + 1] = payload
+    end,
+  })
+  local p = g:current_player()
+  local idx, tile_ref = _first_tile_by_type(g.board, "chance")
+  g:update_player_position(p, idx)
+  local old_lua_api = LuaAPI
+  local patched = old_lua_api or {}
+  _with_patches({
+    { key = "LuaAPI", value = patched },
+    { target = patched, key = "rand", value = function() return 0 end },
+  }, function()
+    local res = _resolve_landing(g, p, tile_ref, {})
+    assert(not res, "chance landing should not wait")
+  end)
+  local card_desc = chance_cfg[1] and chance_cfg[1].description or ""
+  assert(#popups == 1, "chance landing should push one popup")
+  assert(popups[1].title == "机会卡", "chance landing popup title mismatch")
+  assert(string.find(popups[1].body, p.name, 1, true), "chance landing popup should include player name")
+  assert(string.find(popups[1].body, card_desc, 1, true), "chance landing popup should include card description")
+end
+
 return {
   _test_land_on_start_reward,
   _test_pass_players_without_steal_does_not_crash,
@@ -122,4 +204,7 @@ return {
   _test_landing_optional_stale_choice_is_blocked,
   _test_zero_cash_no_buy_choice,
   _test_turn_land_bridges_to_wait_action_anim_for_chance,
+  _test_item_landing_pushes_popup_on_success,
+  _test_item_landing_full_inventory_no_duplicate_success_popup,
+  _test_chance_landing_pushes_popup,
 }
