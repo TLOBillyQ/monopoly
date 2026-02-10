@@ -8,13 +8,6 @@ local current_context = nil
 local last_camera_target_role_id = nil
 local last_camera_target_role_ok = nil
 
-local function _zero_vector()
-  if math and math.Vector3 then
-    return math.Vector3(0.0, 0.0, 0.0)
-  end
-  return { x = 0.0, y = 0.0, z = 0.0 }
-end
-
 local function _build_vehicle_helper()
   local helper = {
     player_id = nil,
@@ -176,10 +169,27 @@ function runtime_context.install_globals(ctx)
   end
 
   ---@export
-  ---@desc 获取载具位置设置目标
-  ---@return Vector3
-  function get_vehicle_set_position()
-    return vehicle_helper.set_position or _zero_vector()
+  ---@desc 获取载具位置设置目标X
+  ---@return Fixed
+  function get_vehicle_set_position_x()
+    local pos = vehicle_helper.set_position
+    return pos and pos.x or 0
+  end
+
+  ---@export
+  ---@desc 获取载具位置设置目标Y
+  ---@return Fixed
+  function get_vehicle_set_position_y()
+    local pos = vehicle_helper.set_position
+    return pos and pos.y or 0
+  end
+
+  ---@export
+  ---@desc 获取载具位置设置目标Z
+  ---@return Fixed
+  function get_vehicle_set_position_z()
+    local pos = vehicle_helper.set_position
+    return pos and pos.z or 0
   end
 
   ---@export
