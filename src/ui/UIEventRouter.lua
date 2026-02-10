@@ -78,9 +78,9 @@ local function _register_node_click(cache, name, callback, registered, listeners
   end
 end
 
-local function _should_block_intent(state, intent_type)
+local function _should_block_intent(state, intent)
   if turn_dispatch.should_block_action then
-    return turn_dispatch.should_block_action(state, intent_type)
+    return turn_dispatch.should_block_action(state, intent)
   end
   return false
 end
@@ -88,7 +88,7 @@ end
 local function _dispatch(state, game, intent, opts)
   assert(intent ~= nil, "missing intent")
   local intent_type = intent.type
-  if _should_block_intent(state, intent_type) then
+  if _should_block_intent(state, intent) then
     return
   end
   if not game then

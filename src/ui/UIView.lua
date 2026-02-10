@@ -12,8 +12,12 @@ local CANVAS_CHOICE = "通用选择屏"
 local CANVAS_MARKET = "黑市屏"
 local CANVAS_POPUP = "弹窗屏"
 local CANVAS_DEBUG = "调试屏"
+local unmapped_role_warned = {}
 
 local function _set_client_role(role)
+  if not UIManager then
+    return
+  end
   UIManager.client_role = role
 end
 
@@ -57,17 +61,35 @@ local function _resolve_role_render_ctx(role, ui_model)
   local role_id = _resolve_role_id(role)
   local by_player = ui_model and ui_model.item_slots_by_player or nil
   local mapped = role_id ~= nil and by_player ~= nil and by_player[role_id] ~= nil
+  if role_id == nil and role == nil then
+    return {
+      role_id = nil,
+      display_player_id = current_player_id,
+      can_operate = true,
+      is_player_role = true,
+    }
+  end
   if mapped then
     return {
       role_id = role_id,
       display_player_id = role_id,
       can_operate = role_id == current_player_id,
+      is_player_role = true,
     }
+  end
+  if role_id ~= nil and not unmapped_role_warned[role_id] then
+    unmapped_role_warned[role_id] = true
+    logger.warn(
+      "role->player 映射失败，按观战回退:",
+      "role_id=" .. tostring(role_id),
+      "current_player_id=" .. tostring(current_player_id)
+    )
   end
   return {
     role_id = role_id,
     display_player_id = current_player_id,
     can_operate = false,
+    is_player_role = false,
   }
 end
 
@@ -150,18 +172,68 @@ local function _switch_canvas(ui, target)
   end
 end
 
+local function _apply_base_non_player_visibility(ui, visible)
+  local value = visible == true
+  local base_nodes = ui and ui.base_hidden_nodes or {}
+  local base_labels = ui and ui.base_hidden_labels or {}
+  for _, name in ipairs(base_nodes) do
+    ui:set_visible(name, value)
+  end
+  for _, name in ipairs(base_labels) do
+    ui:set_visible(name, value)
+  end
+end
+
+local function _render_auto_controls_for_role(ui, role_ctx, ui_model)
+  local panel = ui_model and ui_model.panel or nil
+  local display_player_id = role_ctx and role_ctx.display_player_id or nil
+  local auto_label = panel and panel.auto_label or "自动：关"
+  local by_player = panel and panel.auto_label_by_player or nil
+  if by_player and display_player_id and by_player[display_player_id] then
+    auto_label = by_player[display_player_id]
+  end
+
+  local controls = ui and ui.auto_control_nodes or { "托管按钮", "自动控制按钮" }
+  local auto_enabled = role_ctx and role_ctx.is_player_role == true
+  for _, name in ipairs(controls) do
+    ui:set_button(name, auto_label)
+    ui:set_visible(name, true)
+    ui:set_touch_enabled(name, auto_enabled)
+  end
+end
+
+local function _is_base_non_player_visible(ui, role_ctx)
+  if ui and ui.input_blocked then
+    return false
+  end
+  return role_ctx and role_ctx.can_operate == true
+end
+
 function ui_view.build_ui_state()
+  local item_slots = {
+    "道具槽位1",
+    "道具槽位2",
+    "道具槽位3",
+    "道具槽位4",
+    "道具槽位5",
+  }
+  local base_hidden_nodes = { "行动按钮" }
+  for _, name in ipairs(item_slots) do
+    table.insert(base_hidden_nodes, name)
+  end
   return {
     auto_play = false,
     auto_interval = 0.1,
     input_blocked = false,
     debug_visible = false,
-    item_slots = {
-      "道具槽位1",
-      "道具槽位2",
-      "道具槽位3",
-      "道具槽位4",
-      "道具槽位5",
+    item_slots = item_slots,
+    base_hidden_nodes = base_hidden_nodes,
+    base_hidden_labels = {
+      "倒计时",
+    },
+    auto_control_nodes = {
+      "托管按钮",
+      "自动控制按钮",
     },
     market_active = false,
     choice = {
@@ -231,21 +303,20 @@ function ui_view.refresh_panel(state, ui_model)
     ui.item_slot_item_ids_by_role = {}
   end
 
-  local auto_label = panel.auto_label
   _for_each_role_or_global(function(role)
     local ctx = _resolve_role_render_ctx(role, ui_model)
+    local base_visible = _is_base_non_player_visible(ui, ctx)
+    _apply_base_non_player_visibility(ui, base_visible)
+
     ui:set_label("倒计时", panel.turn_label)
     ui:set_button("行动按钮", "下一回合")
-    ui:set_button("托管按钮", auto_label)
-    ui:set_button("自动控制按钮", auto_label)
-    ui:set_touch_enabled("行动按钮", ctx.can_operate == true)
-    ui:set_touch_enabled("托管按钮", ctx.can_operate == true)
-    ui:set_touch_enabled("自动控制按钮", ctx.can_operate == true)
+    ui:set_touch_enabled("行动按钮", base_visible)
     ui_view.refresh_item_slots(state, ui_model, {
       role_id = ctx.role_id,
       display_player_id = ctx.display_player_id,
-      allow_interact = ctx.can_operate == true,
+      allow_interact = base_visible,
     })
+    _render_auto_controls_for_role(ui, ctx, ui_model)
   end)
   _set_client_role(nil)
 
@@ -326,9 +397,15 @@ function ui_view.apply_input_lock(state)
     return
   end
 
+  local model = state.ui_model or {}
+  _for_each_role_or_global(function(role)
+    local ctx = _resolve_role_render_ctx(role, model)
+    _apply_base_non_player_visibility(ui, false)
+    _render_auto_controls_for_role(ui, ctx, model)
+  end)
+  _set_client_role(nil)
+
   ui:set_touch_enabled("行动按钮", false)
-  ui:set_touch_enabled("托管按钮", false)
-  ui:set_touch_enabled("自动控制按钮", false)
 
   local slots = ui.item_slots or {}
   for _, slot_name in ipairs(slots) do

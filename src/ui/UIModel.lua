@@ -75,6 +75,28 @@ local function _build_item_slots_by_player(players, slot_count)
   return out
 end
 
+local function _build_auto_enabled_by_player(players)
+  local out = {}
+  for _, player in ipairs(players or {}) do
+    local player_id = player and player.id
+    if player_id then
+      out[player_id] = player.auto == true
+    end
+  end
+  return out
+end
+
+local function _build_auto_label_by_player(players, enabled_by_player)
+  local out = {}
+  for _, player in ipairs(players or {}) do
+    local player_id = player and player.id
+    if player_id then
+      out[player_id] = panel_view.build_auto_label(enabled_by_player and enabled_by_player[player_id] == true)
+    end
+  end
+  return out
+end
+
 local function _build_choice_and_market(game, env, ui_state)
   local choice = nil
   local pending = game.turn and game.turn.pending_choice
@@ -130,6 +152,8 @@ function ui_model.build(game, env)
   local current_player_id = current and current.id or nil
   local slot_count = _resolve_item_slot_count(ui_runtime)
   local item_slots_by_player = _build_item_slots_by_player(game.players, slot_count)
+  local auto_enabled_by_player = _build_auto_enabled_by_player(game.players)
+  local auto_label_by_player = _build_auto_label_by_player(game.players, auto_enabled_by_player)
   local item_slots = item_slots_by_player[current_player_id]
   if not item_slots then
     item_slots = _build_item_slots_for_player(current, slot_count)
@@ -141,7 +165,8 @@ function ui_model.build(game, env)
       turn.countdown_active == true
     ),
     player_rows = panel_view.build_player_statuses(game, env.game, 4),
-    auto_label = panel_view.build_auto_label(ui_runtime and ui_runtime.auto_play),
+    auto_label_by_player = auto_label_by_player,
+    auto_label = auto_label_by_player[current_player_id] or panel_view.build_auto_label(false),
   }
   local choice, market = _build_choice_and_market(game, env, ui_state)
   local popup = _build_popup(ui_runtime)
@@ -160,6 +185,7 @@ function ui_model.build(game, env)
     panel = panel,
     item_slots = item_slots,
     item_slots_by_player = item_slots_by_player,
+    auto_enabled_by_player = auto_enabled_by_player,
     current_player_id = current_player_id,
     item_choice_owner_id = item_choice_owner_id,
     choice = choice,
@@ -212,8 +238,10 @@ function ui_model.update(prev, game, env, dirty)
   if dirty.players or dirty.board_tiles or ui_dirty then
     panel.player_rows = panel_view.build_player_statuses(game, env.game, 4)
   end
-  if ui_dirty then
-    panel.auto_label = panel_view.build_auto_label(ui_runtime and ui_runtime.auto_play)
+  if dirty.players or dirty.turn or ui_dirty then
+    model.auto_enabled_by_player = _build_auto_enabled_by_player(game.players)
+    panel.auto_label_by_player = _build_auto_label_by_player(game.players, model.auto_enabled_by_player)
+    panel.auto_label = panel.auto_label_by_player[current_player_id] or panel_view.build_auto_label(false)
   end
   model.panel = panel
 

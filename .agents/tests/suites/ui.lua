@@ -163,6 +163,8 @@ local function _test_ui_model_player_slot_map_and_choice_owner()
   local g = _new_game()
   g.players[1].inventory:add({ id = 2001 })
   g.players[2].inventory:add({ id = 2002 })
+  g.players[1].auto = false
+  g.players[2].auto = true
   g.turn.pending_choice = {
     id = 77,
     kind = "item_phase_choice",
@@ -184,6 +186,12 @@ local function _test_ui_model_player_slot_map_and_choice_owner()
   assert(model.item_slots and model.item_slots[1] == 2001, "current player slot expected")
   assert(model.item_slots_by_player and model.item_slots_by_player[1][1] == 2001, "player1 slot map expected")
   assert(model.item_slots_by_player and model.item_slots_by_player[2][1] == 2002, "player2 slot map expected")
+  assert(model.auto_enabled_by_player and model.auto_enabled_by_player[1] == false, "player1 auto expected false")
+  assert(model.auto_enabled_by_player and model.auto_enabled_by_player[2] == true, "player2 auto expected true")
+  assert(model.panel and model.panel.auto_label_by_player and model.panel.auto_label_by_player[1] == "自动：关",
+    "player1 auto label expected")
+  assert(model.panel and model.panel.auto_label_by_player and model.panel.auto_label_by_player[2] == "自动：开",
+    "player2 auto label expected")
 end
 
 local function _test_turn_dispatch_rejects_non_current_actor()
@@ -191,13 +199,8 @@ local function _test_turn_dispatch_rejects_non_current_actor()
   local state = {
     ui = {
       input_blocked = false,
-      auto_play = false,
       item_slot_item_ids = {},
       item_slot_item_ids_by_role = {},
-    },
-    auto_runner = {
-      set_enabled = function() end,
-      reset_timer = function() end,
     },
   }
 
@@ -206,8 +209,8 @@ local function _test_turn_dispatch_rejects_non_current_actor()
     id = "auto",
     actor_role_id = 2,
   }, {})
-  assert(res_auto and res_auto.status == "rejected", "auto button should reject non-current actor")
-  assert(state.ui.auto_play == false, "auto_play should stay false")
+  assert(res_auto and res_auto.status == "applied", "auto button should allow non-current actor")
+  assert(g.players[2].auto == true, "player2 auto should toggle")
 
   local res_next = turn_dispatch.dispatch_action(g, state, {
     type = "ui_button",
@@ -215,6 +218,25 @@ local function _test_turn_dispatch_rejects_non_current_actor()
     actor_role_id = 2,
   }, {})
   assert(res_next and res_next.status == "rejected", "next button should reject non-current actor")
+end
+
+local function _test_turn_dispatch_auto_rejects_unmapped_role()
+  local g = _new_game()
+  local state = {
+    ui = {
+      input_blocked = false,
+      item_slot_item_ids = {},
+      item_slot_item_ids_by_role = {},
+    },
+  }
+  local before = g.players[1].auto
+  local res = turn_dispatch.dispatch_action(g, state, {
+    type = "ui_button",
+    id = "auto",
+    actor_role_id = 99,
+  }, {})
+  assert(res and res.status == "rejected", "auto button should reject unmapped role")
+  assert(g.players[1].auto == before, "mapped players auto should keep unchanged")
 end
 
 local function _test_turn_dispatch_item_slot_uses_actor_slot_map()
@@ -262,6 +284,8 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
   local image_logs = {}
   local node_map = {}
   local touch_logs = {}
+  local visible_logs = {}
+  local button_logs = {}
 
   local function role_key()
     local role = UIManager and UIManager.client_role or nil
@@ -306,8 +330,20 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
     },
     ui = {
       item_slots = { "道具槽位1", "道具槽位2", "道具槽位3", "道具槽位4", "道具槽位5" },
+      base_hidden_nodes = { "行动按钮", "道具槽位1", "道具槽位2", "道具槽位3", "道具槽位4", "道具槽位5" },
+      base_hidden_labels = { "倒计时" },
+      auto_control_nodes = { "托管按钮", "自动控制按钮" },
       set_label = function() end,
-      set_button = function() end,
+      set_button = function(_, name, text)
+        local rk = role_key()
+        button_logs[rk] = button_logs[rk] or {}
+        button_logs[rk][name] = text
+      end,
+      set_visible = function(_, name, visible)
+        local rk = role_key()
+        visible_logs[rk] = visible_logs[rk] or {}
+        visible_logs[rk][name] = visible
+      end,
       set_touch_enabled = function(_, name, enabled)
         local rk = role_key()
         touch_logs[rk] = touch_logs[rk] or {}
@@ -321,6 +357,10 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
     panel = {
       turn_label = "回合: 1",
       auto_label = "自动：关",
+      auto_label_by_player = {
+        [1] = "自动：关",
+        [2] = "自动：开",
+      },
       player_rows = {
         { name = "P1", cash = "现金: 1", land_count = "地块: 0", total_assets = "总资产: 1" },
         { name = "P2", cash = "现金: 1", land_count = "地块: 0", total_assets = "总资产: 1" },
@@ -354,8 +394,56 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
   assert(image_logs[2] and image_logs[2]["道具槽位1"] == "ICON2002", "role2 slot icon expected")
   assert(touch_logs[1] and touch_logs[1]["行动按钮"] == true, "current role action button should be enabled")
   assert(touch_logs[2] and touch_logs[2]["行动按钮"] == false, "non-current role action button should be disabled")
+  assert(touch_logs[1] and touch_logs[1]["托管按钮"] == true, "role1 auto button should be enabled")
+  assert(touch_logs[2] and touch_logs[2]["托管按钮"] == true, "role2 auto button should be enabled")
+  assert(button_logs[1] and button_logs[1]["托管按钮"] == "自动：关", "role1 auto label expected")
+  assert(button_logs[2] and button_logs[2]["托管按钮"] == "自动：开", "role2 auto label expected")
+  assert(visible_logs[2] and visible_logs[2]["倒计时"] == false, "non-current role countdown should be hidden")
+  assert(visible_logs[2] and visible_logs[2]["道具槽位1"] == false, "non-current role slot should be hidden")
+  assert(visible_logs[2] and visible_logs[2]["托管按钮"] == true, "auto button should stay visible")
   assert(state.ui.item_slot_item_ids_by_role[1] and state.ui.item_slot_item_ids_by_role[1][1] == 2001, "role1 slot map expected")
   assert(state.ui.item_slot_item_ids_by_role[2] and state.ui.item_slot_item_ids_by_role[2][1] == 2002, "role2 slot map expected")
+end
+
+local function _test_apply_input_lock_keeps_auto_controls_enabled()
+  local touch = {}
+  local state = {
+    ui_model = {
+      current_player_id = 1,
+      item_slots_by_player = { [1] = { 2001 } },
+      panel = {
+        auto_label = "自动：关",
+        auto_label_by_player = { [1] = "自动：关" },
+      },
+    },
+    ui = {
+      input_blocked = true,
+      item_slots = { "道具槽位1" },
+      base_hidden_nodes = { "行动按钮", "道具槽位1" },
+      base_hidden_labels = { "倒计时" },
+      auto_control_nodes = { "托管按钮", "自动控制按钮" },
+      choice = { option_buttons = {}, cancel = "通用选择_取消" },
+      popup = { confirm = "弹窗确认" },
+      set_touch_enabled = function(_, name, enabled)
+        touch[name] = enabled
+      end,
+      set_visible = function() end,
+      set_button = function() end,
+    },
+  }
+  local roles = {
+    { get_roleid = function() return 1 end },
+  }
+
+  _with_patches({
+    { key = "all_roles", value = roles },
+  }, function()
+    ui_view.apply_input_lock(state)
+  end)
+
+  assert(touch["行动按钮"] == false, "action button should stay blocked")
+  assert(touch["托管按钮"] == true, "auto button should stay enabled")
+  assert(touch["自动控制按钮"] == true, "auto label control should stay enabled")
 end
 
 local function _test_market_selection_updates_icon_without_resize()
@@ -815,8 +903,10 @@ return {
   _test_ui_model_structure,
   _test_ui_model_player_slot_map_and_choice_owner,
   _test_turn_dispatch_rejects_non_current_actor,
+  _test_turn_dispatch_auto_rejects_unmapped_role,
   _test_turn_dispatch_item_slot_uses_actor_slot_map,
   _test_ui_view_render_by_role_slots_are_isolated,
+  _test_apply_input_lock_keeps_auto_controls_enabled,
   _test_market_selection_updates_icon_without_resize,
   _test_market_close_resets_icon_without_resize,
   _test_item_slot_uses_keep_size_path,

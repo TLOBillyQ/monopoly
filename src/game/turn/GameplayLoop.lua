@@ -73,8 +73,14 @@ end
 local function _build_auto_context(game, context)
   local ctx = context or {}
   ctx.game_finished = game.finished
-  if not ctx.current_player_index then
-    ctx.current_player_index = game.turn and game.turn.current_player_index or nil
+  local current_player_index = ctx.current_player_index
+  if not current_player_index then
+    current_player_index = game.turn and game.turn.current_player_index or nil
+    ctx.current_player_index = current_player_index
+  end
+  if ctx.current_player_auto == nil then
+    local player = current_player_index and game.players and game.players[current_player_index] or nil
+    ctx.current_player_auto = player and player.auto == true or false
   end
   return ctx
 end
@@ -150,6 +156,10 @@ function gameplay_loop.set_game(state, game)
     state.ai_turn_runner:set_enabled(true)
     state.ai_turn_runner:reset_timer()
   end
+  if state.auto_runner then
+    state.auto_runner:set_enabled(true)
+    state.auto_runner:reset_timer()
+  end
   state.ai_turn_runner_active = false
 end
 
@@ -160,19 +170,20 @@ function gameplay_loop.new_game(state)
   _build_item_index(state)
   assert(state.auto_runner ~= nil, "missing auto_runner")
   assert(state.auto_runner.reset_timer ~= nil, "missing auto_runner.ResetTimer")
+  if state.auto_runner.set_enabled then
+    state.auto_runner:set_enabled(true)
+  end
   state.auto_runner:reset_timer()
   game.logger.info("启动蛋仔大富翁，玩家数:", #game.players)
   return game
 end
 
 function gameplay_loop.restart_game(state, opts)
-  local was_auto = state.ui.auto_play
   local new_game = gameplay_loop.new_game(state)
   gameplay_loop.set_game(state, new_game)
   if opts and opts.on_game_changed then
     opts.on_game_changed(new_game)
   end
-  state.auto_runner:set_enabled(was_auto)
   return new_game
 end
 
@@ -218,13 +229,6 @@ function gameplay_loop.step_ai_turn_runner(game, state, dt, context)
     end
     return nil
   end
-  if state.ui and state.ui.auto_play then
-    if state.ai_turn_runner_active then
-      runner:reset_timer()
-      state.ai_turn_runner_active = false
-    end
-    return nil
-  end
   if not _is_auto_player_turn(game) then
     if state.ai_turn_runner_active then
       runner:reset_timer()
@@ -248,6 +252,7 @@ function gameplay_loop.step_ai_turn_runner(game, state, dt, context)
   end
 
   local ctx = _build_auto_context(game, context)
+  ctx.current_player_auto = true
   local ai_action = runner:next_action(dt, ctx)
   if ai_action and ai_action.type == "ui_button" and not ai_action.actor_role_id then
     ai_action.actor_role_id = ctx.current_player_index
@@ -287,6 +292,11 @@ function gameplay_loop.tick(game, state, dt)
     modal_buttons = nil,
     game_finished = game.finished,
     current_player_index = game.turn and game.turn.current_player_index or nil,
+    current_player_auto = (function()
+      local idx = game.turn and game.turn.current_player_index or nil
+      local player = idx and game.players and game.players[idx] or nil
+      return player and player.auto == true or false
+    end)(),
   }
   gameplay_loop.step_auto_runner(game, state, dt, auto_ctx)
   gameplay_loop.step_ai_turn_runner(game, state, dt, auto_ctx)

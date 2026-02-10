@@ -26,7 +26,6 @@ local function _build_loop_state()
     ai_turn_runner = auto_runner:new({ interval = 0.4 }),
     ai_turn_runner_active = false,
     ui = {
-      auto_play = false,
       input_blocked = false,
       choice_active = false,
       market_active = false,
@@ -39,7 +38,7 @@ local function _build_loop_state()
     next_turn_last_click = nil,
     next_turn_lock_phase = nil,
   }
-  state.auto_runner:set_enabled(false)
+  state.auto_runner:set_enabled(true)
   state.ai_turn_runner:set_enabled(true)
   return state
 end
@@ -418,21 +417,33 @@ local function _test_ai_turn_not_advanced_when_input_blocked()
   end)
 end
 
-local function _test_ai_runner_disabled_when_autoplay_enabled()
+local function _test_auto_runner_depends_on_current_player_auto()
   local g = _new_game()
   g.ui_port = _build_ui_port()
   local state = _build_loop_state()
-  state.ui.auto_play = true
-  g.turn.current_player_index = 2
+  g.players[1].auto = true
+  g.players[2].auto = false
+  g.turn.current_player_index = 1
   g.turn.phase = "start"
   g.turn.turn_count = 1
 
   _with_timestamp_stub(function()
-    local ai_action = gameplay_loop.step_ai_turn_runner(g, state, 1.0, {
+    local action1 = gameplay_loop.step_auto_runner(g, state, 1.0, {
       game_finished = g.finished,
       current_player_index = g.turn.current_player_index,
+      current_player_auto = true,
     })
-    assert(ai_action == nil, "AI runner should not dispatch when auto_play is enabled")
+    assert(action1 and action1.type == "ui_button" and action1.id == "next",
+      "current player auto should dispatch next")
+
+    state.next_turn_locked = false
+    g.turn.current_player_index = 2
+    local action2 = gameplay_loop.step_auto_runner(g, state, 1.0, {
+      game_finished = g.finished,
+      current_player_index = g.turn.current_player_index,
+      current_player_auto = false,
+    })
+    assert(action2 == nil, "current player auto=false should not dispatch")
   end)
 end
 
@@ -445,5 +456,5 @@ return {
   _test_ai_turn_auto_advance_without_autoplay,
   _test_human_turn_not_auto_advanced,
   _test_ai_turn_not_advanced_when_input_blocked,
-  _test_ai_runner_disabled_when_autoplay_enabled,
+  _test_auto_runner_depends_on_current_player_auto,
 }

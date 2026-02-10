@@ -33,8 +33,8 @@ local function _get_timestamp_diff_seconds(timestamp_1, timestamp_2)
   return GameAPI.get_timestamp_diff(timestamp_1, timestamp_2)
 end
 
-local function _is_restricted_ui_button(action_id)
-  if action_id == "next" or action_id == "auto" then
+local function _is_turn_bound_ui_button(action_id)
+  if action_id == "next" then
     return true
   end
   if action_id and string.match(action_id, "^item_slot_(%d+)$") then
@@ -44,7 +44,7 @@ local function _is_restricted_ui_button(action_id)
 end
 
 local function _validate_actor_role(game, action)
-  if not _is_restricted_ui_button(action and action.id) then
+  if not _is_turn_bound_ui_button(action and action.id) then
     return true
   end
   assert(game ~= nil and game.turn ~= nil, "missing game.turn")
@@ -64,6 +64,21 @@ local function _validate_actor_role(game, action)
     return false
   end
   return true
+end
+
+local function _resolve_actor_player(game, action)
+  assert(game ~= nil and game.players ~= nil, "missing game.players")
+  local actor_role_id = action and action.actor_role_id or nil
+  if actor_role_id == nil then
+    logger.warn("ui_button missing actor_role_id:", tostring(action and action.id))
+    return nil
+  end
+  local player = game.players[actor_role_id]
+  if not player then
+    logger.warn("ui_button actor_role_id not mapped:", tostring(action and action.id), tostring(actor_role_id))
+    return nil
+  end
+  return player
 end
 
 function turn_dispatch.step_turn(game)
@@ -89,6 +104,11 @@ function turn_dispatch.should_block_action(state, action_or_type)
   if not action_type then
     return false
   end
+  if action_type == "ui_button"
+      and type(action_or_type) == "table"
+      and action_or_type.id == "auto" then
+    return false
+  end
   return input_blocked_types[action_type] == true
 end
 
@@ -103,6 +123,15 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
     state.ui_dirty = true
   end
   if action.type == "ui_button" then
+    if action.id == "auto" then
+      local player = _resolve_actor_player(game, action)
+      if not player then
+        return { status = "rejected" }
+      end
+      player.auto = not (player.auto == true)
+      return { status = "applied" }
+    end
+
     if not _validate_actor_role(game, action) then
       return { status = "rejected" }
     end
@@ -172,11 +201,6 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
       state.next_turn_last_click = now
       state.next_turn_lock_phase = phase
       turn_dispatch.step_turn(game)
-      return { status = "applied" }
-    elseif action.id == "auto" then
-      state.ui.auto_play = not state.ui.auto_play
-      state.auto_runner:set_enabled(state.ui.auto_play)
-      state.auto_runner:reset_timer()
       return { status = "applied" }
     elseif action.id == "restart" then
       assert(opts ~= nil and opts.on_restart ~= nil, "missing opts.on_restart")

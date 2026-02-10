@@ -31,6 +31,9 @@ function auto_runner:next_action(dt, env)
   if env.game_finished then
     return nil
   end
+  if env.current_player_auto ~= true then
+    return nil
+  end
 
   self.timer = self.timer + dt
   if self.timer < self.interval then
