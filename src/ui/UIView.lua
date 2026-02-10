@@ -224,18 +224,9 @@ local function _apply_base_non_player_visibility(ui, visible)
 end
 
 local function _render_auto_controls_for_role(ui, role_ctx, ui_model)
-  local panel = ui_model and ui_model.panel or nil
-  local display_player_id = role_ctx and role_ctx.display_player_id or nil
-  local auto_label = panel and panel.auto_label or "自动：关"
-  local by_player = panel and panel.auto_label_by_player or nil
-  if by_player and display_player_id and by_player[display_player_id] then
-    auto_label = by_player[display_player_id]
-  end
-
   local controls = ui and ui.auto_control_nodes or { "托管按钮", "自动控制按钮" }
   local auto_enabled = role_ctx and role_ctx.is_player_role == true
   for _, name in ipairs(controls) do
-    ui:set_button(name, auto_label)
     ui:set_visible(name, true)
     ui:set_touch_enabled(name, auto_enabled)
   end
@@ -349,7 +340,6 @@ function ui_view.refresh_panel(state, ui_model)
     _apply_base_non_player_visibility(ui, base_visible)
 
     ui:set_label("倒计时", panel.turn_label)
-    ui:set_button("行动按钮", "下一回合")
     ui:set_touch_enabled("行动按钮", base_visible)
     ui_view.refresh_item_slots(state, ui_model, {
       role_id = ctx.role_id,
