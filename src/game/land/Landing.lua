@@ -102,10 +102,22 @@ landing.executors = {
       assert(cfg ~= nil, "missing drawn item cfg")
       local ok = inventory.give(player, cfg.id, { game = ctx.game })
       if ok then
-        _push_landing_popup(ctx.game, "道具卡", player.name .. " 获得道具 " .. inventory.item_name(cfg.id), {
+        local item_name = inventory.item_name(cfg.id)
+        _push_landing_popup(ctx.game, "道具卡", player.name .. " 获得道具 " .. item_name, {
           image_ref = cfg.id,
           auto_close_seconds = popup_show_seconds,
         })
+        local ui_port = ctx.game.ui_port
+        if ui_port and ui_port.wait_action_anim then
+          ctx.game:queue_action_anim({
+            kind = "item_use",
+            player_id = player.id,
+            item_id = cfg.id,
+            item_name = item_name,
+            focus_target_player_id = player.id,
+            duration = popup_show_seconds,
+          })
+        end
       end
     end,
   },
@@ -131,6 +143,7 @@ landing.executors = {
           card_id = card.id,
           card_desc = card.description,
           focus_target_player_id = ctx.player.id,
+          duration = popup_show_seconds,
         })
       end
       return chance_effects.resolve(ctx.game, ctx.player, card, ctx.move_result)

@@ -117,6 +117,24 @@ local function _test_turn_land_bridges_to_wait_action_anim_for_chance()
   end)
 end
 
+local function _test_turn_land_bridges_to_wait_action_anim_for_item()
+  local g = _new_game()
+  g.ui_port = _build_ui_port({ wait_action_anim = true })
+  local p = g:current_player()
+  local idx, tile_ref = _first_tile_by_type(g.board, "item")
+  g:update_player_position(p, idx)
+  _with_patches({
+    { target = item_inventory, key = "draw_random", value = function()
+      return { id = 2001, name = item_inventory.item_name(2001) }
+    end },
+  }, function()
+    local next_state, _ = turn_land({ game = g }, { player = p, move_result = {} })
+    assert(next_state == "wait_action_anim", "item landing should bridge to wait_action_anim")
+    assert(g.turn.action_anim and g.turn.action_anim.kind == "item_use", "item action anim should be queued")
+    assert(g.turn.action_anim and g.turn.action_anim.item_id == 2001, "item action anim item_id mismatch")
+  end)
+end
+
 local function _test_item_landing_pushes_popup_on_success()
   local g = _new_game()
   local popups = {}
@@ -209,6 +227,7 @@ return {
   _test_landing_optional_stale_choice_is_blocked,
   _test_zero_cash_no_buy_choice,
   _test_turn_land_bridges_to_wait_action_anim_for_chance,
+  _test_turn_land_bridges_to_wait_action_anim_for_item,
   _test_item_landing_pushes_popup_on_success,
   _test_item_landing_full_inventory_no_duplicate_success_popup,
   _test_chance_landing_pushes_popup,
