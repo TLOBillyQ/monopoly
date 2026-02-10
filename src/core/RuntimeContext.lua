@@ -1,12 +1,12 @@
 local runtime_constants = require("Config.RuntimeConstants")
 local logger = require("src.core.Logger")
+local runtime_env_bindings = require("src.core.RuntimeEnvBindings")
+local runtime_editor_exports = require("src.core.RuntimeEditorExports")
 require("Config.RuntimeRefs")
 
 local runtime_context = {}
 
 local current_context = nil
-local last_camera_target_role_id = nil
-local last_camera_target_role_ok = nil
 
 local function _build_vehicle_helper()
   local function _safe_get_role(role_id)
@@ -161,23 +161,18 @@ end
 
 function runtime_context.install_globals(ctx)
   assert(ctx ~= nil and ctx.env ~= nil, "missing runtime context")
-  local env = ctx.env
+  runtime_context.install_environment(ctx)
+  runtime_context.install_runtime_helpers(ctx)
+  runtime_context.install_editor_exports(ctx)
+end
 
-  if env.GameAPI ~= nil then
-    GameAPI = env.GameAPI
-  end
-  if env.LuaAPI ~= nil then
-    LuaAPI = env.LuaAPI
-  end
+function runtime_context.install_environment(ctx)
+  assert(ctx ~= nil and ctx.env ~= nil, "missing runtime context")
+  runtime_env_bindings.install(ctx.env)
+end
 
-  assert(LuaAPI ~= nil, "missing LuaAPI")
-  SetTimeOut = LuaAPI.call_delay_time
-  RegisterCustomEvent = LuaAPI.global_register_custom_event
-  RegisterTriggerEvent = LuaAPI.global_register_trigger_event
-  UnitCustomEvent = LuaAPI.unit_register_custom_event
-  UnitTriggerEvent = LuaAPI.unit_register_trigger_event
-  TriggerCustomEvent = LuaAPI.global_send_custom_event
-
+function runtime_context.install_runtime_helpers(ctx)
+  assert(ctx ~= nil, "missing runtime context")
   if not ctx.vehicle_helper then
     ctx.vehicle_helper = _build_vehicle_helper()
   end
@@ -193,94 +188,11 @@ function runtime_context.install_globals(ctx)
   end
   all_roles = ctx.roles
   ALLROLES = ctx.roles
+end
 
-  -- Export ECA helper functions for Eggy Editor
-  ---@export
-  ---@desc 获取执行载具命令的玩家
-  ---@return Role
-  function get_vehicle_player()
-    local role_id = vehicle_helper.player_id
-    local role = vehicle_helper.resolve_role and vehicle_helper.resolve_role(role_id) or nil
-    if role ~= nil then
-      return role
-    end
-    local fallback_role = vehicle_helper.resolve_any_role and vehicle_helper.resolve_any_role() or nil
-    if fallback_role ~= nil then
-      if role_id ~= nil then
-        logger.warn("[Eggy]", "vehicle player unresolved, fallback role used", tostring(role_id))
-      end
-      return fallback_role
-    end
-    logger.warn("[Eggy]", "vehicle player unresolved and no fallback role", tostring(role_id))
-    return nil
-  end
-
-  ---@export
-  ---@desc 获取载具移动方向
-  ---@return Vector3
-  function get_vehicle_move_direction()
-    return vehicle_helper.move_direction or runtime_constants.v3_left
-  end
-
-  ---@export
-  ---@desc 获取载具移动时间
-  ---@return Fixed
-  function get_vehicle_move_time()
-    return vehicle_helper.move_time or 0
-  end
-
-  ---@export
-  ---@desc 获取刷载具的ID
-  ---@return integer
-  function get_spawn_vehicle_id()
-    return vehicle_helper.vehicle_id or 4012
-  end
-
-  ---@export
-  ---@desc 获取载具位置设置目标X
-  ---@return Fixed
-  function get_vehicle_set_position_x()
-    local pos = vehicle_helper.set_position
-    return pos and pos.x or 0
-  end
-
-  ---@export
-  ---@desc 获取载具位置设置目标Y
-  ---@return Fixed
-  function get_vehicle_set_position_y()
-    local pos = vehicle_helper.set_position
-    return pos and pos.y or 0
-  end
-
-  ---@export
-  ---@desc 获取载具位置设置目标Z
-  ---@return Fixed
-  function get_vehicle_set_position_z()
-    local pos = vehicle_helper.set_position
-    return pos and pos.z or 0
-  end
-
-  ---@export
-  ---@desc 获取相机跟随玩家
-  ---@return Role
-  function get_camera_target()
-    local role_id = camera_helper.target_role_id or 1
-    local role = GameAPI.get_role(role_id)
-    local role_ok = role ~= nil
-    if role_id ~= last_camera_target_role_id or role_ok ~= last_camera_target_role_ok then
-      last_camera_target_role_id = role_id
-      last_camera_target_role_ok = role_ok
-      logger.info(
-        "[Eggy]",
-        "相机目标查询:",
-        "role_id",
-        tostring(role_id),
-        "role_ok",
-        tostring(role_ok)
-      )
-    end
-    return role
-  end
+function runtime_context.install_editor_exports(ctx)
+  assert(ctx ~= nil, "missing runtime context")
+  runtime_editor_exports.install(ctx)
 end
 
 return runtime_context

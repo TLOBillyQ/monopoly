@@ -28,9 +28,10 @@ end
 
 function runtime_port.with_client_role(role, fn)
   assert(type(fn) == "function", "missing fn")
+  local previous_role = UIManager and UIManager.client_role or nil
   runtime_port.set_client_role(role)
   local ok, result = xpcall(fn, _traceback)
-  runtime_port.set_client_role(nil)
+  runtime_port.set_client_role(previous_role)
   if not ok then
     error(result)
   end

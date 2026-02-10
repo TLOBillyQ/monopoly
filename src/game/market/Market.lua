@@ -82,13 +82,13 @@ local function _remaining_global_limit(game, product_id)
 end
 
 local function _sync_managed_balance(game, player, currency)
-  if paid_currency_bridge.is_managed_currency(currency) then
+  if paid_currency_bridge.is_managed_currency(game, currency) then
     paid_currency_bridge.sync_player_currency(game, player, currency)
   end
 end
 
 local function _try_charge_player(game, player, currency, price)
-  if paid_currency_bridge.is_managed_currency(currency) then
+  if paid_currency_bridge.is_managed_currency(game, currency) then
     return paid_currency_bridge.consume_currency(game, player, currency, price)
   end
   game:deduct_player_balance(player, currency, price)
@@ -199,8 +199,8 @@ function market.buy_with_opts(game, player, product_id, opts)
   _sync_managed_balance(game, player, currency)
   if game:player_balance(player, currency) < price then
     local opened_panel = false
-    if paid_currency_bridge.is_managed_currency(currency) and not agent.is_auto_player(player) then
-      opened_panel = paid_currency_bridge.open_purchase_panel(player, currency)
+    if paid_currency_bridge.is_managed_currency(game, currency) and not agent.is_auto_player(player) then
+      opened_panel = paid_currency_bridge.open_purchase_panel(game, player, currency)
     end
     local body = player.name .. " 余额不足"
     if opened_panel then

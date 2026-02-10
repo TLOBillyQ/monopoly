@@ -164,9 +164,102 @@ local function _test_purchase_event_syncs_balance()
   end)
 end
 
+local function _test_bridge_isolates_context_between_games()
+  local g1 = _new_game()
+  local g2 = _new_game()
+  g2.players[1].id = 101
+  g2.players[2].id = 102
+
+  local roles = {
+    [1] = {
+      role_id = 1,
+      commodity_count = { [9001] = 6, [9002] = 0 },
+      get_roleid = nil,
+      get_commodity_count = nil,
+      consume_commodity = nil,
+      show_goods_purchase_panel = function() end,
+    },
+    [101] = {
+      role_id = 101,
+      commodity_count = { [9001] = 20, [9002] = 0 },
+      get_roleid = nil,
+      get_commodity_count = nil,
+      consume_commodity = nil,
+      show_goods_purchase_panel = function() end,
+    },
+  }
+  roles[1].get_roleid = function() return roles[1].role_id end
+  roles[1].get_commodity_count = function(commodity_id) return roles[1].commodity_count[commodity_id] or 0 end
+  roles[1].consume_commodity = function(commodity_id, count)
+    roles[1].commodity_count[commodity_id] = (roles[1].commodity_count[commodity_id] or 0) - count
+  end
+  roles[101].get_roleid = function() return roles[101].role_id end
+  roles[101].get_commodity_count = function(commodity_id) return roles[101].commodity_count[commodity_id] or 0 end
+  roles[101].consume_commodity = function(commodity_id, count)
+    roles[101].commodity_count[commodity_id] = (roles[101].commodity_count[commodity_id] or 0) - count
+  end
+
+  _with_patches({
+    { key = "GameAPI", value = {
+      random_int = function(min) return min end,
+      get_goods_list = function()
+        return {
+          { name = "金豆", goods_id = "goods_jindou", commodity_infos = { { 9001, 1 } } },
+          { name = "乐园币", goods_id = "goods_leyuanbi", commodity_infos = { { 9002, 1 } } },
+        }
+      end,
+      get_role = function(role_id)
+        return roles[role_id]
+      end,
+    } },
+    { key = "EVENT", value = { SPEC_ROLE_PURCHASE_GOODS = "SPEC_ROLE_PURCHASE_GOODS" } },
+    { key = "RegisterTriggerEvent", value = function() end },
+  }, function()
+    local bridge = _reload_bridge()
+    bridge.setup_for_game(g1)
+    bridge.setup_for_game(g2)
+
+    assert(g1:player_balance(g1.players[1], "金豆") == 6, "game1 initial managed balance expected")
+    assert(g2:player_balance(g2.players[1], "金豆") == 20, "game2 initial managed balance expected")
+
+    local ok = bridge.consume_currency(g1, g1.players[1], "金豆", 5)
+    assert(ok == true, "game1 consume should succeed with own context")
+    assert(g1:player_balance(g1.players[1], "金豆") == 1, "game1 balance should update after consume")
+    assert(g2:player_balance(g2.players[1], "金豆") == 20, "game2 balance should remain unchanged")
+  end)
+end
+
+local function _test_bridge_setup_works_when_sandbox_blocks_mode_metatable()
+  local game = _new_game()
+  local p = game.players[1]
+  local env = _build_fake_env(game, { jindou_count = 4 })
+  local base_setmetatable = setmetatable
+  local patch_list = {}
+  for _, patch in ipairs(env.patch_list) do
+    table.insert(patch_list, patch)
+  end
+  table.insert(patch_list, {
+    key = "setmetatable",
+    value = function(tbl, mt)
+      if type(mt) == "table" and (mt.__mode ~= nil or mt.__gc ~= nil) then
+        error("sandbox metatable mode is not supported")
+      end
+      return base_setmetatable(tbl, mt)
+    end,
+  })
+
+  _with_patches(patch_list, function()
+    local bridge = _reload_bridge()
+    bridge.setup_for_game(game)
+    assert(game:player_balance(p, "金豆") == 4, "setup should succeed under sandbox metatable restrictions")
+  end)
+end
+
 return {
   _test_paid_bridge_sync_balance_from_commodity,
   _test_market_buy_managed_currency_consumes_commodity,
   _test_market_insufficient_managed_currency_opens_panel,
   _test_purchase_event_syncs_balance,
+  _test_bridge_isolates_context_between_games,
+  _test_bridge_setup_works_when_sandbox_blocks_mode_metatable,
 }

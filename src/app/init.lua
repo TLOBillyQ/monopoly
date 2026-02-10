@@ -5,7 +5,9 @@ local runtime_ctx = runtime_context.new({
   LuaAPI = LuaAPI,
 })
 runtime_context.set_current(runtime_ctx)
-runtime_context.install_globals(runtime_ctx)
+runtime_context.install_environment(runtime_ctx)
+runtime_context.install_runtime_helpers(runtime_ctx)
+runtime_context.install_editor_exports(runtime_ctx)
 require "src.game.game.Bankruptcy"
 require "src.game.game.AgentTargeting"
 require "src.game.game.Agent"
@@ -138,14 +140,7 @@ local function _install_game_init(state)
     gameplay_loop.set_game(state, current_game)
     ui_event_router.bind(state, function()
       return current_game
-    end, {
-      on_game_changed = function(new_game)
-        current_game = new_game
-      end,
-      on_restart = function(_, ctx_state, _, opts)
-        gameplay_loop.restart_game(ctx_state, opts)
-      end,
-    })
+    end)
 
     ui_events.send_to_all(ui_events.show["加载屏"], {})
     board_scene.init(state, map_cfg)

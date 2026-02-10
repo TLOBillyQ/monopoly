@@ -202,10 +202,6 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
       state.next_turn_lock_phase = phase
       turn_dispatch.step_turn(game)
       return { status = "applied" }
-    elseif action.id == "restart" then
-      assert(opts ~= nil and opts.on_restart ~= nil, "missing opts.on_restart")
-      opts.on_restart(game, state, action, opts)
-      return { status = "applied" }
     end
     return { status = "rejected" }
   elseif action.type == "choice_select" or action.type == "choice_cancel" then

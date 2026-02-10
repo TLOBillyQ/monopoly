@@ -41,6 +41,18 @@ local function _show_missing_button_tip(name)
   GlobalAPI.show_tips("UI 节点未适配: " .. tostring(name), 2.0)
 end
 
+local function _choice_cancel_intent(state, warn_label)
+  local choice = state.ui_model and state.ui_model.choice or nil
+  if not choice then
+    logger.warn(warn_label .. " without choice")
+    return nil
+  end
+  if choice.allow_cancel == false then
+    return nil
+  end
+  return { type = "choice_cancel", choice_id = choice.id }
+end
+
 local function _resolve_actor_role_id(data)
   if not data or not data.role then
     return nil
@@ -150,15 +162,7 @@ local function _build_route_specs(state)
     {
       name = "通用选择_取消",
       build_intent = function()
-        local choice = state.ui_model and state.ui_model.choice or nil
-        if not choice then
-          logger.warn("choice_cancel without choice")
-          return nil
-        end
-        if choice.allow_cancel == false then
-          return nil
-        end
-        return { type = "choice_cancel", choice_id = choice.id }
+        return _choice_cancel_intent(state, "choice_cancel")
       end,
     },
     {
@@ -180,15 +184,7 @@ local function _build_route_specs(state)
     {
       name = market_ui.cancel_button,
       build_intent = function()
-        local choice = state.ui_model and state.ui_model.choice or nil
-        if not choice then
-          logger.warn("market_cancel without choice")
-          return nil
-        end
-        if choice.allow_cancel == false then
-          return nil
-        end
-        return { type = "choice_cancel", choice_id = choice.id }
+        return _choice_cancel_intent(state, "market_cancel")
       end,
     },
   }
@@ -198,21 +194,16 @@ local function _build_route_specs(state)
     specs[#specs + 1] = {
       name = market_close,
       build_intent = function()
-        local choice = state.ui_model and state.ui_model.choice or nil
-        if not choice then
-          logger.warn("market_close without choice")
-          return nil
-        end
-        if choice.allow_cancel == false then
-          return nil
-        end
-        return { type = "choice_cancel", choice_id = choice.id }
+        return _choice_cancel_intent(state, "market_close")
       end,
     }
   end
 
-  for index = 1, 5 do
-    local node_name = "道具槽位" .. tostring(index)
+  local item_slots = (state.ui and state.ui.item_slots) or {}
+  if #item_slots == 0 then
+    item_slots = { "道具槽位1", "道具槽位2", "道具槽位3", "道具槽位4", "道具槽位5" }
+  end
+  for index, node_name in ipairs(item_slots) do
     local action_id = "item_slot_" .. tostring(index)
     specs[#specs + 1] = {
       name = node_name,
@@ -227,14 +218,17 @@ local function _build_route_specs(state)
     }
   end
 
-  local choice_option_nodes = {
-    "通用选择_选项_01",
-    "通用选择_选项_02",
-    "通用选择_选项_03",
-    "通用选择_选项_04",
-    "通用选择_选项_05",
-    "通用选择_选项_06",
-  }
+  local choice_option_nodes = state.ui and state.ui.choice and state.ui.choice.option_buttons or nil
+  if type(choice_option_nodes) ~= "table" or #choice_option_nodes == 0 then
+    choice_option_nodes = {
+      "通用选择_选项_01",
+      "通用选择_选项_02",
+      "通用选择_选项_03",
+      "通用选择_选项_04",
+      "通用选择_选项_05",
+      "通用选择_选项_06",
+    }
+  end
   for index, name in ipairs(choice_option_nodes) do
     specs[#specs + 1] = {
       name = name,
@@ -296,7 +290,7 @@ function ui_event_router.unbind(state)
   state.ui_event_router_registered = {}
 end
 
-function ui_event_router.bind(state, get_game, opts)
+function ui_event_router.bind(state, get_game)
   assert(state ~= nil, "missing state")
   local function resolve_game()
     if type(get_game) == "function" then
@@ -305,14 +299,11 @@ function ui_event_router.bind(state, get_game, opts)
     return get_game
   end
 
-  if not opts then
-    opts = {}
-  end
-  if not opts.on_close_choice then
-    opts.on_close_choice = function(ctx)
+  local dispatch_opts = {
+    on_close_choice = function(ctx)
       ui_view.close_choice_modal(ctx)
-    end
-  end
+    end,
+  }
 
   ui_event_router.unbind(state)
 
@@ -320,7 +311,7 @@ function ui_event_router.bind(state, get_game, opts)
     if intent and intent.actor_role_id == nil then
       intent.actor_role_id = _resolve_actor_role_id(data)
     end
-    _dispatch(state, resolve_game(), intent, opts)
+    _dispatch(state, resolve_game(), intent, dispatch_opts)
   end
 
   local cache = {}

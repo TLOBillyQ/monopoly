@@ -3,12 +3,26 @@ local logger = require("src.core.Logger")
 
 local bridge = {}
 
-local runtime_state = {
-  game = nil,
-  resolved_by_currency = {},
-  player_id_by_role_id = {},
-  registered_role_ids = {},
-}
+local game_context_field = "__paid_currency_bridge_ctx"
+
+local function _new_context(game)
+  return {
+    game = game,
+    resolved_by_currency = {},
+    player_id_by_role_id = {},
+    registered_role_ids = {},
+  }
+end
+
+local function _resolve_context(game)
+  assert(game ~= nil, "missing game context")
+  local ctx = game[game_context_field]
+  if not ctx then
+    ctx = _new_context(game)
+    game[game_context_field] = ctx
+  end
+  return ctx
+end
 
 local function _list_goods()
   if not (GameAPI and GameAPI.get_goods_list) then
@@ -71,8 +85,8 @@ local function _resolve_currency_entry(goods_lookup, currency, cfg_entry)
   return nil
 end
 
-local function _resolve_goods_mapping()
-  runtime_state.resolved_by_currency = {}
+local function _resolve_goods_mapping(ctx)
+  ctx.resolved_by_currency = {}
   if paid_goods_cfg.enabled ~= true then
     return
   end
@@ -82,7 +96,7 @@ local function _resolve_goods_mapping()
   for currency, cfg_entry in pairs(currencies) do
     local resolved = _resolve_currency_entry(goods_lookup, currency, cfg_entry)
     if resolved then
-      runtime_state.resolved_by_currency[currency] = resolved
+      ctx.resolved_by_currency[currency] = resolved
     end
   end
 end
@@ -101,14 +115,14 @@ local function _resolve_role(player)
   return role
 end
 
-local function _sync_all_managed_currencies(game, player)
-  for currency in pairs(runtime_state.resolved_by_currency) do
+local function _sync_all_managed_currencies(ctx, game, player)
+  for currency in pairs(ctx.resolved_by_currency) do
     bridge.sync_player_currency(game, player, currency)
   end
 end
 
-local function _register_purchase_event(role_id)
-  if runtime_state.registered_role_ids[role_id] then
+local function _register_purchase_event(ctx, role_id)
+  if ctx.registered_role_ids[role_id] then
     return
   end
   if not RegisterTriggerEvent then
@@ -118,21 +132,21 @@ local function _register_purchase_event(role_id)
     return
   end
   RegisterTriggerEvent({ EVENT.SPEC_ROLE_PURCHASE_GOODS, role_id }, function(_, _, _)
-    local game = runtime_state.game
+    local game = ctx.game
     if not game or not game.players then
       return
     end
-    local player_id = runtime_state.player_id_by_role_id[role_id]
+    local player_id = ctx.player_id_by_role_id[role_id]
     local player = player_id and game.players[player_id] or nil
     if not player then
       return
     end
-    _sync_all_managed_currencies(game, player)
+    _sync_all_managed_currencies(ctx, game, player)
   end)
-  runtime_state.registered_role_ids[role_id] = true
+  ctx.registered_role_ids[role_id] = true
 end
 
-local function _bind_player_role(player)
+local function _bind_player_role(ctx, player)
   local role = _resolve_role(player)
   if not role then
     return
@@ -144,19 +158,21 @@ local function _bind_player_role(player)
   if not ok or not role_id then
     return
   end
-  runtime_state.player_id_by_role_id[role_id] = player.id
-  _register_purchase_event(role_id)
+  ctx.player_id_by_role_id[role_id] = player.id
+  _register_purchase_event(ctx, role_id)
 end
 
-function bridge.is_managed_currency(currency)
+function bridge.is_managed_currency(game, currency)
   if paid_goods_cfg.enabled ~= true then
     return false
   end
-  return runtime_state.resolved_by_currency[currency] ~= nil
+  local ctx = _resolve_context(game)
+  return ctx.resolved_by_currency[currency] ~= nil
 end
 
 function bridge.sync_player_currency(game, player, currency)
-  local resolved = runtime_state.resolved_by_currency[currency]
+  local ctx = _resolve_context(game)
+  local resolved = ctx.resolved_by_currency[currency]
   if not resolved then
     return false
   end
@@ -173,8 +189,9 @@ function bridge.sync_player_currency(game, player, currency)
   return true
 end
 
-function bridge.open_purchase_panel(player, currency)
-  local resolved = runtime_state.resolved_by_currency[currency]
+function bridge.open_purchase_panel(game, player, currency)
+  local ctx = _resolve_context(game)
+  local resolved = ctx.resolved_by_currency[currency]
   if not resolved then
     return false
   end
@@ -188,7 +205,8 @@ function bridge.open_purchase_panel(player, currency)
 end
 
 function bridge.consume_currency(game, player, currency, amount)
-  local resolved = runtime_state.resolved_by_currency[currency]
+  local ctx = _resolve_context(game)
+  local resolved = ctx.resolved_by_currency[currency]
   if not resolved then
     return false
   end
@@ -226,15 +244,16 @@ function bridge.consume_currency(game, player, currency, amount)
 end
 
 function bridge.setup_for_game(game)
-  runtime_state.game = game
-  runtime_state.player_id_by_role_id = {}
-  _resolve_goods_mapping()
+  local ctx = _resolve_context(game)
+  ctx.game = game
+  ctx.player_id_by_role_id = {}
+  _resolve_goods_mapping(ctx)
   if not game or not game.players then
     return
   end
   for _, player in ipairs(game.players) do
-    _bind_player_role(player)
-    _sync_all_managed_currencies(game, player)
+    _bind_player_role(ctx, player)
+    _sync_all_managed_currencies(ctx, game, player)
   end
 end
 

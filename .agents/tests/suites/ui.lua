@@ -13,6 +13,7 @@ local gameplay_loop = support.gameplay_loop
 local turn_flow = support.turn_flow
 local turn_move = support.turn_move
 local turn_dispatch = require("src.game.turn.TurnDispatch")
+local runtime_port = require("src.ui.UIRuntimePort")
 local market_view = require("src.ui.MarketView")
 local market_layout = require("src.ui.MarketLayout")
 local ui_view = require("src.ui.UIView")
@@ -114,6 +115,92 @@ local function _test_popup_timeout_auto_confirm()
   _assert_eq(popup.confirm_called, 0, "popup should not auto confirm before timeout")
   tick_timeout.step_modal_timeout(layer, near_timeout + 1, timeout_opts)
   _assert_eq(popup.confirm_called, 1, "popup should auto confirm after timeout")
+end
+
+local function _test_runtime_port_with_client_role_restores_nested_context()
+  local role1 = { name = "r1" }
+  local role2 = { name = "r2" }
+  local original = { name = "origin" }
+  local manager = { client_role = original }
+
+  _with_patches({
+    { key = "UIManager", value = manager },
+  }, function()
+    runtime_port.with_client_role(role1, function()
+      assert(UIManager.client_role == role1, "outer with_client_role should set role1")
+      runtime_port.with_client_role(role2, function()
+        assert(UIManager.client_role == role2, "nested with_client_role should set role2")
+      end)
+      assert(UIManager.client_role == role1, "nested with_client_role should restore outer role")
+    end)
+    assert(UIManager.client_role == original, "with_client_role should restore original role")
+
+    local ok = pcall(function()
+      runtime_port.with_client_role(role1, function()
+        error("boom")
+      end)
+    end)
+    assert(ok == false, "with_client_role should rethrow callback error")
+    assert(UIManager.client_role == original, "with_client_role should restore role after error")
+  end)
+end
+
+local function _test_choice_timeout_supports_explicit_timeout_strategy()
+  local game = {
+    players = { [1] = { id = 1 } },
+    turn = {
+      pending_choice = {
+        id = 7,
+        kind = "test",
+        options = { { id = 11, label = "a" } },
+      },
+      current_player_index = 1,
+    },
+    current_player = function(self)
+      return self.players[self.turn.current_player_index]
+    end,
+  }
+  local state = {
+    pending_choice = nil,
+    pending_choice_elapsed = 0,
+    pending_choice_id = nil,
+  }
+  local dispatched = nil
+  _with_patches({
+    { target = turn_dispatch, key = "dispatch_action", value = function(_, _, action)
+      dispatched = action
+    end },
+    { target = ui_view, key = "close_choice_modal", value = function() end },
+  }, function()
+    tick_timeout.step_choice_timeout(game, state, 0.11, {
+      on_pending_choice = function() end,
+      is_choice_active = function()
+        return true
+      end,
+      get_timeout_seconds = function()
+        return 0.1
+      end,
+      build_action = function(_, _, choice)
+        return {
+          type = "choice_select",
+          choice_id = choice.id,
+          option_id = 11,
+        }
+      end,
+    })
+  end)
+  assert(dispatched and dispatched.type == "choice_select", "explicit timeout strategy should dispatch action")
+  assert(dispatched and dispatched.choice_id == 7, "explicit timeout strategy should use pending choice id")
+end
+
+local function _test_tick_timeout_default_policy_isolation()
+  local policy = tick_timeout.default_policy()
+  policy.choice.get_timeout_seconds = function()
+    return 999
+  end
+  local fresh_policy = tick_timeout.default_policy()
+  local timeout = fresh_policy.choice.get_timeout_seconds()
+  assert(timeout ~= 999, "default policy should not be mutated by external override")
 end
 
 local function _test_invalid_choice_option_rejected()
@@ -1233,6 +1320,9 @@ end
 return {
   _test_move_anim_callback_and_delay,
   _test_popup_timeout_auto_confirm,
+  _test_runtime_port_with_client_role_restores_nested_context,
+  _test_choice_timeout_supports_explicit_timeout_strategy,
+  _test_tick_timeout_default_policy_isolation,
   _test_invalid_choice_option_rejected,
   _test_move_anim_wait_and_resume,
   _test_move_anim_zero_distance_safe,

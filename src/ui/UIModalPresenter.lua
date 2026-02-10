@@ -1,41 +1,11 @@
 local market_view = require("src.ui.MarketView")
 local market_ui = require("src.ui.MarketLayout")
-local ui_events = require("src.ui.UIEvents")
 local modal_state = require("src.ui.UIModalStateCoordinator")
 local runtime = require("src.ui.UIRuntimePort")
+local canvas = require("src.ui.UICanvasCoordinator")
 local logger = require("src.core.Logger")
 
 local modal_presenter = {}
-
-local CANVAS_BASE = "基础屏"
-local CANVAS_CHOICE = "通用选择屏"
-local CANVAS_MARKET = "黑市屏"
-local CANVAS_POPUP = "弹窗屏"
-local CANVAS_DEBUG = "调试屏"
-
-local function _switch_canvas(ui, target)
-  assert(ui ~= nil, "missing ui")
-  local target_name = target or CANVAS_BASE
-  for _, name in ipairs(ui_events.canvas_names) do
-    local keep_debug = name == CANVAS_DEBUG and ui.debug_visible == true
-    if name ~= CANVAS_BASE and name ~= target_name and not keep_debug then
-      local hide_event = ui_events.hide[name]
-      if hide_event then
-        ui_events.send_to_all(hide_event, {})
-      end
-    end
-  end
-  local base_event = ui_events.show[CANVAS_BASE]
-  if base_event then
-    ui_events.send_to_all(base_event, {})
-  end
-  if target_name ~= CANVAS_BASE then
-    local target_event = ui_events.show[target_name]
-    if target_event then
-      ui_events.send_to_all(target_event, {})
-    end
-  end
-end
 
 local function _resolve_popup_image_key(state, payload)
   if not payload then
@@ -77,7 +47,7 @@ local function _set_popup_card_image(state, payload)
 end
 
 local function _open_market_panel(state, choice, choice_id, market)
-  _switch_canvas(state.ui, CANVAS_MARKET)
+  canvas.switch(state.ui, canvas.CANVAS_MARKET)
   if state.ui.choice_active then
     state.ui:set_visible(state.ui.choice.root, false)
     state.ui.choice_active = false
@@ -97,7 +67,7 @@ local function _open_generic_choice(state, choice, choice_id)
     market_view.close_market_panel(state)
   end
 
-  _switch_canvas(state.ui, CANVAS_CHOICE)
+  canvas.switch(state.ui, canvas.CANVAS_CHOICE)
   state.ui:set_label(state.ui.choice.title, choice.title)
   state.ui:set_label(state.ui.choice.body, choice.body)
   state.ui:set_visible(state.ui.choice.root, true)
@@ -161,23 +131,17 @@ function modal_presenter.close_choice_modal(state)
   end
   modal_state.close_choice(state)
   if state.ui.popup_active then
-    _switch_canvas(state.ui, CANVAS_POPUP)
+    canvas.switch(state.ui, canvas.CANVAS_POPUP)
   else
-    _switch_canvas(state.ui, CANVAS_BASE)
+    canvas.switch(state.ui, canvas.CANVAS_BASE)
   end
   state.ui_dirty = true
 end
 
 function modal_presenter.push_popup(state, payload)
   assert(payload ~= nil, "missing popup payload")
-  if state.ui.market_active then
-    state.ui.popup_return_canvas = CANVAS_MARKET
-  elseif state.ui.choice_active then
-    state.ui.popup_return_canvas = CANVAS_CHOICE
-  else
-    state.ui.popup_return_canvas = CANVAS_BASE
-  end
-  _switch_canvas(state.ui, CANVAS_POPUP)
+  state.ui.popup_return_canvas = canvas.resolve_popup_return_canvas(state.ui)
+  canvas.switch(state.ui, canvas.CANVAS_POPUP)
   state.ui:set_label(state.ui.popup.title, payload.title)
   state.ui:set_label(state.ui.popup.body, payload.body)
   state.ui:set_button(state.ui.popup.confirm, payload.button_text or "确认")
@@ -198,13 +162,7 @@ function modal_presenter.close_popup(state)
   _set_popup_card_image(state, nil)
   local target = state.ui.popup_return_canvas
   state.ui.popup_return_canvas = nil
-  if target == CANVAS_MARKET and state.ui.market_active then
-    _switch_canvas(state.ui, CANVAS_MARKET)
-  elseif target == CANVAS_CHOICE and state.ui.choice_active then
-    _switch_canvas(state.ui, CANVAS_CHOICE)
-  else
-    _switch_canvas(state.ui, CANVAS_BASE)
-  end
+  canvas.switch(state.ui, canvas.resolve_canvas_after_popup(state.ui, target))
   state.ui_dirty = true
 end
 

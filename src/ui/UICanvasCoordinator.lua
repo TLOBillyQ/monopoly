@@ -1,0 +1,55 @@
+local ui_events = require("src.ui.UIEvents")
+
+local coordinator = {}
+
+coordinator.CANVAS_BASE = "基础屏"
+coordinator.CANVAS_CHOICE = "通用选择屏"
+coordinator.CANVAS_MARKET = "黑市屏"
+coordinator.CANVAS_POPUP = "弹窗屏"
+coordinator.CANVAS_DEBUG = "调试屏"
+
+function coordinator.switch(ui, target)
+  assert(ui ~= nil, "missing ui")
+  local target_name = target or coordinator.CANVAS_BASE
+  for _, name in ipairs(ui_events.canvas_names) do
+    local keep_debug = name == coordinator.CANVAS_DEBUG and ui.debug_visible == true
+    if name ~= coordinator.CANVAS_BASE and name ~= target_name and not keep_debug then
+      local hide_event = ui_events.hide[name]
+      if hide_event then
+        ui_events.send_to_all(hide_event, {})
+      end
+    end
+  end
+  local base_event = ui_events.show[coordinator.CANVAS_BASE]
+  if base_event then
+    ui_events.send_to_all(base_event, {})
+  end
+  if target_name ~= coordinator.CANVAS_BASE then
+    local target_event = ui_events.show[target_name]
+    if target_event then
+      ui_events.send_to_all(target_event, {})
+    end
+  end
+end
+
+function coordinator.resolve_popup_return_canvas(ui)
+  if ui.market_active then
+    return coordinator.CANVAS_MARKET
+  end
+  if ui.choice_active then
+    return coordinator.CANVAS_CHOICE
+  end
+  return coordinator.CANVAS_BASE
+end
+
+function coordinator.resolve_canvas_after_popup(ui, target)
+  if target == coordinator.CANVAS_MARKET and ui.market_active then
+    return coordinator.CANVAS_MARKET
+  end
+  if target == coordinator.CANVAS_CHOICE and ui.choice_active then
+    return coordinator.CANVAS_CHOICE
+  end
+  return coordinator.CANVAS_BASE
+end
+
+return coordinator

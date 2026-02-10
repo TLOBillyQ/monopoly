@@ -328,6 +328,62 @@ local function _test_runtime_context_forward_stop_skips_invalid_role()
   end)
 end
 
+local function _test_runtime_context_split_install_stages()
+  _with_runtime_context_globals(function()
+    local role1 = { id = 1, get_roleid = function() return 1 end }
+    local game_api = {
+      get_role = function(role_id)
+        if role_id == 1 then
+          return role1
+        end
+        return nil
+      end,
+      get_all_valid_roles = function()
+        return { role1 }
+      end,
+    }
+    local lua_api = _mock_lua_api()
+    local ctx = runtime_context.new({
+      GameAPI = game_api,
+      LuaAPI = lua_api,
+    })
+
+    runtime_context.install_environment(ctx)
+    assert(SetTimeOut == lua_api.call_delay_time, "install_environment should bind SetTimeOut")
+    assert(type(get_vehicle_player) ~= "function", "install_environment should not export helpers")
+
+    runtime_context.install_runtime_helpers(ctx)
+    assert(vehicle_helper ~= nil, "install_runtime_helpers should expose vehicle_helper")
+    assert(camera_helper ~= nil, "install_runtime_helpers should expose camera_helper")
+
+    runtime_context.install_editor_exports(ctx)
+    vehicle_helper.player_id = 1
+    local role = get_vehicle_player()
+    assert(role == role1, "install_editor_exports should expose get_vehicle_player")
+  end)
+end
+
+local function _test_runtime_context_install_environment_fails_fast()
+  _with_runtime_context_globals(function()
+    local ctx = runtime_context.new({
+      GameAPI = {},
+      LuaAPI = {
+        call_delay_time = function() end,
+        global_register_custom_event = function() end,
+        global_register_trigger_event = function() end,
+        unit_register_custom_event = function() end,
+        unit_register_trigger_event = function() end,
+      },
+    })
+    local ok, err = pcall(function()
+      runtime_context.install_environment(ctx)
+    end)
+    assert(ok == false, "install_environment should fail when LuaAPI is incomplete")
+    assert(tostring(err):find("missing LuaAPI.global_send_custom_event") ~= nil,
+      "install_environment should report missing LuaAPI.global_send_custom_event")
+  end)
+end
+
 local function _test_set_player_seat_emits_exit_then_enter()
   local g = _new_game()
   local p = g.players[1]
@@ -621,6 +677,72 @@ local function _test_complex_market_interrupt_with_rent()
   assert(true, "黑市中断 + 租金支付场景完成")
 end
 
+local function _test_tick_headless_ports_cover_anim_phases()
+  local g = _new_game()
+  local state = _build_loop_state()
+  state.ui = nil
+  state.wait_move_anim = true
+  state.wait_action_anim = true
+  local dispatched = {}
+  g.dispatch_action = function(_, action)
+    dispatched[#dispatched + 1] = action
+  end
+
+  local calls = {
+    move_anim = 0,
+    action_anim = 0,
+    countdown = 0,
+    refresh = 0,
+  }
+
+  state.gameplay_loop_ports = {
+    play_move_anim = function(_, anim_ctx)
+      calls.move_anim = calls.move_anim + 1
+      assert(anim_ctx and anim_ctx.seq == 101, "move anim ctx should be injected")
+      return 0
+    end,
+    play_action_anim = function(_, anim_ctx)
+      calls.action_anim = calls.action_anim + 1
+      assert(anim_ctx and anim_ctx.seq == 201, "action anim ctx should be injected")
+      return 0
+    end,
+    step_choice_timeout = function() end,
+    step_modal_timeout = function() end,
+    update_countdown = function()
+      calls.countdown = calls.countdown + 1
+    end,
+    refresh_from_dirty = function()
+      calls.refresh = calls.refresh + 1
+      return false
+    end,
+    sync_debug_log = function() end,
+    log_status = function() end,
+    close_choice_modal = function() end,
+    open_choice_modal = function() end,
+    apply_input_lock = function() end,
+    build_model = function()
+      return { choice = nil, market = nil }
+    end,
+  }
+
+  g.turn.phase = "wait_move_anim"
+  g.turn.move_anim = { seq = 101 }
+  gameplay_loop.tick(g, state, 0.1)
+  assert(calls.move_anim == 1, "headless move anim should use injected port")
+  assert(dispatched[1] and dispatched[1].type == "move_anim_done", "move anim should dispatch move_anim_done")
+  assert(dispatched[1] and dispatched[1].seq == 101, "move anim seq should be forwarded")
+
+  g.turn.phase = "wait_action_anim"
+  g.turn.action_anim = { seq = 201 }
+  gameplay_loop.tick(g, state, 0.1)
+  assert(calls.action_anim == 1, "headless action anim should use injected port")
+  assert(dispatched[2] and dispatched[2].type == "action_anim_done", "action anim should dispatch action_anim_done")
+  assert(dispatched[2] and dispatched[2].seq == 201, "action anim seq should be forwarded")
+
+  assert(calls.countdown >= 2, "countdown should still step under custom ports")
+  assert(calls.refresh >= 2, "refresh_from_dirty should still be called under custom ports")
+end
+
 local function _test_ai_turn_auto_advance_without_autoplay()
   local g = _new_game()
   g.ui_port = _build_ui_port()
@@ -718,11 +840,14 @@ return {
   _test_stop_all_players_movement_skips_invalid_role_without_error,
   _test_runtime_context_get_vehicle_player_fallback,
   _test_runtime_context_forward_stop_skips_invalid_role,
+  _test_runtime_context_split_install_stages,
+  _test_runtime_context_install_environment_fails_fast,
   _test_set_player_seat_emits_exit_then_enter,
   _test_mine_destroy_vehicle_emits_exit_event,
   _test_autorunner_runs_to_end,
   _test_complex_consecutive_turn_settlement,
   _test_complex_market_interrupt_with_rent,
+  _test_tick_headless_ports_cover_anim_phases,
   _test_ai_turn_auto_advance_without_autoplay,
   _test_human_turn_not_auto_advanced,
   _test_ai_turn_not_advanced_when_input_blocked,

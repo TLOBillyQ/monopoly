@@ -57,8 +57,7 @@ local function _resolve_market_price(entry)
 end
 
 local function _resolve_market_level(cfg)
-  assert(cfg ~= nil, "missing market cfg")
-  local level = cfg.tier
+  local level = cfg and cfg.tier or 1
   if level < 1 then
     return 1
   end
@@ -93,6 +92,38 @@ local function _set_node_texture_keep_size(node, image_key)
     return
   end
   node.image_texture = image_key
+end
+
+local function _set_market_slot_hidden(ui, button, label, frame)
+  ui:set_visible(button, false)
+  ui:set_touch_enabled(button, false)
+  ui:set_visible(label, false)
+  ui:set_touch_enabled(label, false)
+  ui:set_visible(frame, false)
+  ui:set_touch_enabled(frame, false)
+end
+
+local function _set_market_slot_visible(ui, refs, slot, opt)
+  local opt_id = opt.id or opt
+  local entry, cfg = _resolve_market_entry(opt_id)
+  local name = _resolve_market_name(opt, opt_id, entry, cfg)
+  ui:set_label(slot.label, name)
+  ui:set_visible(slot.label, true)
+  ui:set_touch_enabled(slot.label, false)
+  ui:set_visible(slot.button, true)
+  ui:set_touch_enabled(slot.button, true)
+  ui:set_visible(slot.frame, true)
+  ui:set_touch_enabled(slot.frame, false)
+  local level = _resolve_market_level(cfg)
+  local rarity_key = _resolve_ref_key(refs, market_layout.rarity_ref_keys[level])
+  if rarity_key == nil then
+    rarity_key = _resolve_ref_key(refs, market_layout.empty_ref_key)
+  end
+  if rarity_key ~= nil then
+    local node = ui.query_node(slot.frame)
+    _set_node_texture_keep_size(node, rarity_key)
+  end
+  return opt_id
 end
 
 function market_view.refresh_market_selection(state, option_id)
@@ -132,40 +163,19 @@ function market_view.refresh_market(state, market)
   local buttons = market_layout.item_buttons
   local labels = market_layout.item_labels
   local frames = market_layout.item_frames
-  local max_slots = #buttons
+  local max_slots = math.max(#buttons, #labels, #frames)
   for idx = 1, max_slots do
     local opt = market.options[idx]
     local button = buttons[idx]
     local label = labels[idx]
     local frame = frames[idx]
-    if opt then
-      local opt_id = opt.id or opt
-      option_ids[idx] = opt_id
-      local entry, cfg = _resolve_market_entry(opt_id)
-      local name = _resolve_market_name(opt, opt_id, entry, cfg)
-      ui:set_label(label, name)
-      ui:set_visible(label, true)
-      ui:set_touch_enabled(label, false)
-      ui:set_visible(button, true)
-      ui:set_touch_enabled(button, true)
-      ui:set_visible(frame, true)
-      ui:set_touch_enabled(frame, false)
-      local level = _resolve_market_level(cfg)
-      local rarity_key = _resolve_ref_key(refs, market_layout.rarity_ref_keys[level])
-      if rarity_key == nil then
-        rarity_key = _resolve_ref_key(refs, market_layout.empty_ref_key)
+    if button and label and frame then
+      local slot = { button = button, label = label, frame = frame }
+      if opt then
+        option_ids[idx] = _set_market_slot_visible(ui, refs, slot, opt)
+      else
+        _set_market_slot_hidden(ui, button, label, frame)
       end
-      if rarity_key ~= nil then
-        local node = ui.query_node(frame)
-        _set_node_texture_keep_size(node, rarity_key)
-      end
-    else
-      ui:set_visible(button, false)
-      ui:set_touch_enabled(button, false)
-      ui:set_visible(label, false)
-      ui:set_touch_enabled(label, false)
-      ui:set_visible(frame, false)
-      ui:set_touch_enabled(frame, false)
     end
   end
 

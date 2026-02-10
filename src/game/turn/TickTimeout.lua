@@ -25,17 +25,21 @@ local function _resolve_choice_owner(game, choice)
   return nil
 end
 
+local function _pick_first_choice_option(choice)
+  local options = assert(choice.options, "missing choice.options")
+  local first = assert(options[1], "missing choice option")
+  return first.id or first
+end
+
 local function _build_default_choice_action(game_ctx, choice)
   local auto_choice = agent.auto_action_for_choice(game_ctx, choice)
   if auto_choice then
     return auto_choice
   end
-  local options = assert(choice.options, "missing choice.options")
-  local first = assert(options[1], "missing choice option")
   return {
     type = "choice_select",
     choice_id = choice.id,
-    option_id = first.id or first,
+    option_id = _pick_first_choice_option(choice),
   }
 end
 
@@ -52,18 +56,24 @@ local function _modal_timeout_seconds(_, state)
 end
 
 function tick_timeout.step_choice_timeout(game, state, dt, opts)
+  assert(game ~= nil, "missing game")
+  assert(opts ~= nil, "missing opts")
+  assert(opts.on_pending_choice ~= nil, "missing opts.on_pending_choice")
+  assert(opts.is_choice_active ~= nil, "missing opts.is_choice_active")
+  assert(opts.build_action ~= nil, "missing opts.build_action")
   local timeout = constants.action_timeout_seconds or 0
+  if type(opts.get_timeout_seconds) == "function" then
+    local override = opts.get_timeout_seconds(game, state)
+    if type(override) == "number" then
+      timeout = override
+    end
+  end
   if timeout <= 0 then
     state.pending_choice_elapsed = 0
     state.pending_choice_id = nil
     return
   end
 
-  assert(game ~= nil, "missing game")
-  assert(opts ~= nil, "missing opts")
-  assert(opts.on_pending_choice ~= nil, "missing opts.on_pending_choice")
-  assert(opts.is_choice_active ~= nil, "missing opts.is_choice_active")
-  assert(opts.build_action ~= nil, "missing opts.build_action")
   local pending = game.turn.pending_choice
   if pending and (not state.pending_choice or state.pending_choice.id ~= pending.id) then
     state.pending_choice = pending
@@ -90,6 +100,12 @@ function tick_timeout.step_choice_timeout(game, state, dt, opts)
 
   state.pending_choice_elapsed = state.pending_choice_elapsed + dt
   local min_visible = gameplay_rules.auto_choice_min_visible_seconds or 0
+  if type(opts.get_min_visible_seconds) == "function" then
+    local override_min_visible = opts.get_min_visible_seconds(game, state, state.pending_choice)
+    if type(override_min_visible) == "number" and override_min_visible >= 0 then
+      min_visible = override_min_visible
+    end
+  end
   if min_visible > 0 and state.pending_choice_elapsed >= min_visible then
     local choice = state.pending_choice
     local actor = _resolve_choice_owner(game, choice)
@@ -148,19 +164,63 @@ end
 local function _noop()
 end
 
+local default_policy = {
+  choice = {
+    get_timeout_seconds = function()
+      return constants.action_timeout_seconds or 0
+    end,
+    get_min_visible_seconds = function()
+      return gameplay_rules.auto_choice_min_visible_seconds or 0
+    end,
+    build_action = function(game_ctx, _, choice)
+      return _build_default_choice_action(game_ctx, choice)
+    end,
+  },
+  modal = {
+    get_timeout_seconds = function(game, state)
+      return _modal_timeout_seconds(game, state)
+    end,
+    on_timeout = function(ctx)
+      ui_view.close_popup(ctx)
+    end,
+  },
+}
+
+local function _clone_policy(policy)
+  local copied = {}
+  for key, value in pairs(policy) do
+    if type(value) == "table" then
+      local item = {}
+      for sub_key, sub_value in pairs(value) do
+        item[sub_key] = sub_value
+      end
+      copied[key] = item
+    else
+      copied[key] = value
+    end
+  end
+  return copied
+end
+
+function tick_timeout.default_policy()
+  return _clone_policy(default_policy)
+end
+
 function tick_timeout.step_default_choice(game, state, dt)
+  local policy = tick_timeout.default_policy()
   tick_timeout.step_choice_timeout(game, state, dt, {
     on_pending_choice = _noop,
     is_choice_active = function(ctx)
       return ctx.pending_choice ~= nil
     end,
-    build_action = function(game_ctx, _, choice)
-      return _build_default_choice_action(game_ctx, choice)
-    end,
+    build_action = policy.choice.build_action,
+    get_timeout_seconds = policy.choice.get_timeout_seconds,
+    get_min_visible_seconds = policy.choice.get_min_visible_seconds,
   })
 end
 
 function tick_timeout.step_default_modal(game, state, dt)
+  local policy = tick_timeout.default_policy()
   tick_timeout.step_modal_timeout(state, dt, {
     is_active = function(ctx)
       return ctx.ui and ctx.ui.popup_active
@@ -170,12 +230,10 @@ function tick_timeout.step_default_modal(game, state, dt)
       assert(ctx.ui.popup_active, "popup not active")
       return assert(ctx.ui.popup_seq, "missing popup_seq")
     end,
-    get_timeout_seconds = function(ctx)
-      return _modal_timeout_seconds(game, ctx)
+    get_timeout_seconds = function(state_ctx)
+      return policy.modal.get_timeout_seconds(game, state_ctx)
     end,
-    on_timeout = function(ctx)
-      ui_view.close_popup(ctx)
-    end,
+    on_timeout = policy.modal.on_timeout,
   })
 end
 

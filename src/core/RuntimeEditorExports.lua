@@ -1,0 +1,84 @@
+local runtime_constants = require("Config.RuntimeConstants")
+local logger = require("src.core.Logger")
+
+local runtime_editor_exports = {}
+
+local last_camera_target_role_id = nil
+local last_camera_target_role_ok = nil
+
+local function _install_vehicle_exports(vehicle_helper)
+  function get_vehicle_player()
+    local role_id = vehicle_helper.player_id
+    local role = vehicle_helper.resolve_role and vehicle_helper.resolve_role(role_id) or nil
+    if role ~= nil then
+      return role
+    end
+    local fallback_role = vehicle_helper.resolve_any_role and vehicle_helper.resolve_any_role() or nil
+    if fallback_role ~= nil then
+      if role_id ~= nil then
+        logger.warn("[Eggy]", "vehicle player unresolved, fallback role used", tostring(role_id))
+      end
+      return fallback_role
+    end
+    logger.warn("[Eggy]", "vehicle player unresolved and no fallback role", tostring(role_id))
+    return nil
+  end
+
+  function get_vehicle_move_direction()
+    return vehicle_helper.move_direction or runtime_constants.v3_left
+  end
+
+  function get_vehicle_move_time()
+    return vehicle_helper.move_time or 0
+  end
+
+  function get_spawn_vehicle_id()
+    return vehicle_helper.vehicle_id or 4012
+  end
+
+  function get_vehicle_set_position_x()
+    local pos = vehicle_helper.set_position
+    return pos and pos.x or 0
+  end
+
+  function get_vehicle_set_position_y()
+    local pos = vehicle_helper.set_position
+    return pos and pos.y or 0
+  end
+
+  function get_vehicle_set_position_z()
+    local pos = vehicle_helper.set_position
+    return pos and pos.z or 0
+  end
+end
+
+local function _install_camera_exports(camera_helper)
+  function get_camera_target()
+    local role_id = camera_helper.target_role_id or 1
+    local role = GameAPI.get_role(role_id)
+    local role_ok = role ~= nil
+    if role_id ~= last_camera_target_role_id or role_ok ~= last_camera_target_role_ok then
+      last_camera_target_role_id = role_id
+      last_camera_target_role_ok = role_ok
+      logger.info(
+        "[Eggy]",
+        "相机目标查询:",
+        "role_id",
+        tostring(role_id),
+        "role_ok",
+        tostring(role_ok)
+      )
+    end
+    return role
+  end
+end
+
+function runtime_editor_exports.install(ctx)
+  assert(ctx ~= nil, "missing runtime context")
+  assert(ctx.vehicle_helper ~= nil, "missing context.vehicle_helper")
+  assert(ctx.camera_helper ~= nil, "missing context.camera_helper")
+  _install_vehicle_exports(ctx.vehicle_helper)
+  _install_camera_exports(ctx.camera_helper)
+end
+
+return runtime_editor_exports
