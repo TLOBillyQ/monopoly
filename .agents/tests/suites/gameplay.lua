@@ -110,6 +110,46 @@ local function _test_bankruptcy_resets_owned_tiles()
   assert(next(p1.properties) == nil, "bankruptcy clears player properties")
 end
 
+local function _test_stop_all_players_movement_clears_move_dir_and_stop_event()
+  local g = _new_game()
+  g:set_player_status(g.players[1], "move_dir", "left")
+  g:set_player_status(g.players[2], "move_dir", "right")
+  local stopped_ids = {}
+  support.with_patches({
+    { key = "vehicle_helper", value = {
+      forward_eca_event_stop = function(role_id)
+        table.insert(stopped_ids, role_id)
+      end,
+    } },
+  }, function()
+    g:stop_all_players_movement()
+  end)
+  assert(g.players[1].status.move_dir == nil, "player1 move_dir should be cleared")
+  assert(g.players[2].status.move_dir == nil, "player2 move_dir should be cleared")
+  assert(#stopped_ids == #g.players, "stop event should be sent to all players")
+end
+
+local function _test_end_turn_stops_all_players_movement()
+  local g = _new_game()
+  g:set_player_status(g.players[1], "move_dir", "left")
+  g:set_player_status(g.players[2], "move_dir", "right")
+  local stopped_ids = {}
+  support.with_patches({
+    { key = "vehicle_helper", value = {
+      forward_eca_event_stop = function(role_id)
+        table.insert(stopped_ids, role_id)
+      end,
+    } },
+  }, function()
+    local phase_end = g.turn_flow.phases and g.turn_flow.phases.end_turn
+    assert(type(phase_end) == "function", "end_turn phase should exist")
+    phase_end(g.turn_flow, { player = g.players[1] })
+  end)
+  assert(g.players[1].status.move_dir == nil, "player1 move_dir should be cleared at end turn")
+  assert(g.players[2].status.move_dir == nil, "player2 move_dir should be cleared at end turn")
+  assert(#stopped_ids == #g.players, "end turn should stop all players")
+end
+
 local function _test_autorunner_runs_to_end()
   local auto_runner = require("src.game.turn.AutoRunner")
   local agent = require("src.game.game.Agent")
@@ -450,6 +490,8 @@ end
 return {
   _test_mandatory_payment_causes_bankruptcy,
   _test_bankruptcy_resets_owned_tiles,
+  _test_stop_all_players_movement_clears_move_dir_and_stop_event,
+  _test_end_turn_stops_all_players_movement,
   _test_autorunner_runs_to_end,
   _test_complex_consecutive_turn_settlement,
   _test_complex_market_interrupt_with_rent,

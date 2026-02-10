@@ -177,6 +177,24 @@ function game_state:clear_player_temporal_flags(player)
   _mark_players(self)
 end
 
+function game_state:stop_all_players_movement()
+  local players = self.players or {}
+  local dirty = false
+  for _, player in ipairs(players) do
+    local status = _player_status_table(player)
+    if status.move_dir ~= nil then
+      status.move_dir = nil
+      dirty = true
+    end
+    if vehicle_helper and vehicle_helper.forward_eca_event_stop then
+      vehicle_helper.forward_eca_event_stop(player.id)
+    end
+  end
+  if dirty then
+    _mark_players(self)
+  end
+end
+
 function game_state:player_vehicle_cfg(player)
   local seat_id = player.seat_id
   if seat_id then

@@ -160,6 +160,7 @@ local function _phase_end(turn_mgr, args)
   local player = args.player
   turn_mgr.game:tick_player_deity(player)
   turn_mgr.game:clear_player_temporal_flags(player)
+  turn_mgr.game:stop_all_players_movement()
   local game = turn_mgr.game
   game.turn.market_prompt = nil
   game.turn.post_action = nil
