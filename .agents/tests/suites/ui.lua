@@ -202,6 +202,191 @@ local function _test_move_anim_zero_distance_safe()
   _assert_eq(start_move_called, 0, "zero distance should skip unit move")
 end
 
+local function _test_move_anim_vehicle_uses_vehicle_helper()
+  local function _vec3(x, y, z)
+    local vector_mt = {}
+    vector_mt.__sub = function(a, b)
+      return _vec3(a.x - b.x, a.y - b.y, a.z - b.z)
+    end
+    local vector = setmetatable({ x = x, y = y, z = z }, vector_mt)
+    function vector:length()
+      local sum = self.x * self.x + self.y * self.y + self.z * self.z
+      return math.sqrt(sum)
+    end
+    return vector
+  end
+
+  local unit_move_called = 0
+  local vehicle_moves = {}
+  local scene = {
+    tiles = {
+      [1] = { get_position = function() return _vec3(0, 0, 0) end },
+      [2] = { get_position = function() return _vec3(10, 0, 0) end },
+    },
+    units_by_player_id = {
+      [1] = {
+        start_move_by_direction = function()
+          unit_move_called = unit_move_called + 1
+        end,
+      },
+    },
+  }
+
+  _with_patches({
+    { key = "vehicle_helper", value = {
+      consume_enter_delay = function()
+        return 0
+      end,
+      forward_eca_event_move = function(role_id, dir, time)
+        vehicle_moves[#vehicle_moves + 1] = { role_id = role_id, dir = dir, time = time }
+      end,
+    } },
+  }, function()
+    local total = move_anim.play_sequence(scene, {
+      player_id = 1,
+      from_index = 1,
+      to_index = 2,
+      direction = { x = 1, y = 0, z = 0 },
+      vehicle_id = 4001,
+    })
+    assert(total > 0, "vehicle move total time should be positive")
+  end)
+
+  _assert_eq(unit_move_called, 0, "vehicle move should not call unit.start_move_by_direction")
+  _assert_eq(#vehicle_moves, 1, "vehicle move should forward one eca move event")
+  _assert_eq(vehicle_moves[1].role_id, 1, "vehicle move role id should match")
+  assert(vehicle_moves[1].time > 0, "vehicle move time should be positive")
+end
+
+local function _test_move_anim_vehicle_enter_delay_once()
+  local function _vec3(x, y, z)
+    local vector_mt = {}
+    vector_mt.__sub = function(a, b)
+      return _vec3(a.x - b.x, a.y - b.y, a.z - b.z)
+    end
+    local vector = setmetatable({ x = x, y = y, z = z }, vector_mt)
+    function vector:length()
+      local sum = self.x * self.x + self.y * self.y + self.z * self.z
+      return math.sqrt(sum)
+    end
+    return vector
+  end
+
+  local consume_calls = 0
+  local timeout_delays = {}
+  local scene = {
+    tiles = {
+      [1] = { get_position = function() return _vec3(0, 0, 0) end },
+      [2] = { get_position = function() return _vec3(10, 0, 0) end },
+    },
+    units_by_player_id = { [1] = {} },
+  }
+
+  _with_patches({
+    { key = "SetTimeOut", value = function(delay)
+      timeout_delays[#timeout_delays + 1] = delay
+    end },
+    { key = "vehicle_helper", value = {
+      forward_eca_event_move = function() end,
+      consume_enter_delay = function()
+        consume_calls = consume_calls + 1
+        if consume_calls == 1 then
+          return 1.2
+        end
+        return 0
+      end,
+    } },
+  }, function()
+    move_anim.play_sequence(scene, {
+      player_id = 1,
+      from_index = 1,
+      to_index = 2,
+      direction = { x = 1, y = 0, z = 0 },
+      vehicle_id = 4001,
+    })
+    _assert_eq(#timeout_delays, 1, "first vehicle move should be delayed by enter wait")
+    assert(math.abs(timeout_delays[1] - 1.2) < 0.0001, "first delay should include 1.2s enter wait")
+
+    timeout_delays = {}
+    move_anim.play_sequence(scene, {
+      player_id = 1,
+      from_index = 1,
+      to_index = 2,
+      direction = { x = 1, y = 0, z = 0 },
+      vehicle_id = 4001,
+    })
+    _assert_eq(#timeout_delays, 0, "second move should not include enter wait delay")
+  end)
+end
+
+local function _test_board_view_vehicle_resync_uses_set_position()
+  local board_view = require("src.ui.BoardView")
+
+  local function _vec3(x, y, z)
+    local vector_mt = {}
+    vector_mt.__add = function(a, b)
+      return _vec3(a.x + b.x, a.y + b.y, a.z + b.z)
+    end
+    return setmetatable({ x = x, y = y, z = z }, vector_mt)
+  end
+
+  local set_pos_calls = {}
+  local unit_set_calls = 0
+  local state = {
+    board_scene = {
+      ground = {
+        get_position = function()
+          return { y = 0 }
+        end,
+      },
+    },
+    tile_positions = { _vec3(5, 2, 7) },
+    board_last_positions = { [1] = "1:0" },
+    board_last_vehicle_resync_seq = 1,
+    board_sync_pending = false,
+    tile_spacing = 0,
+    player_units = {
+      [1] = {
+        set_position = function()
+          unit_set_calls = unit_set_calls + 1
+        end,
+      },
+    },
+    player_units_missing = false,
+  }
+
+  local model = {
+    board = {
+      players = { { id = 1, position = 1, eliminated = false, seat_id = 4001 } },
+      tiles = { { id = 1, type = "start" } },
+      tile_states = {},
+      phase = "start",
+      move_anim = nil,
+      tile_count = 1,
+      vehicle_resync_seq = 1,
+    },
+  }
+
+  _with_patches({
+    { target = math, key = "Vector3", value = _vec3 },
+    { key = "vehicle_helper", value = {
+      forward_eca_event_set_position = function(role_id, pos)
+        set_pos_calls[#set_pos_calls + 1] = { role_id = role_id, pos = pos }
+      end,
+    } },
+  }, function()
+    board_view.refresh_board(state, model, function() end, function() return "[test]" end)
+    _assert_eq(#set_pos_calls, 0, "same resync seq should not force vehicle set_position")
+
+    model.board.vehicle_resync_seq = 2
+    board_view.refresh_board(state, model, function() end, function() return "[test]" end)
+  end)
+
+  _assert_eq(unit_set_calls, 0, "vehicle player should not call unit.set_position")
+  _assert_eq(#set_pos_calls, 1, "resync seq change should trigger set_position")
+  _assert_eq(set_pos_calls[1].role_id, 1, "set_position role id should match player")
+end
+
 local function _test_ui_model_structure()
   local ui_model = require("src.ui.UIModel")
   local g = _new_game()
@@ -1055,6 +1240,9 @@ return {
   _test_invalid_choice_option_rejected,
   _test_move_anim_wait_and_resume,
   _test_move_anim_zero_distance_safe,
+  _test_move_anim_vehicle_uses_vehicle_helper,
+  _test_move_anim_vehicle_enter_delay_once,
+  _test_board_view_vehicle_resync_uses_set_position,
   _test_ui_model_structure,
   _test_ui_model_player_slot_map_and_choice_owner,
   _test_turn_dispatch_rejects_non_current_actor,

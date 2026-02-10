@@ -164,7 +164,7 @@ local function _build_snapshot(players)
   return snapshot
 end
 
-local function _compute_need_sync(state, snapshot)
+local function _compute_need_sync(state, snapshot, vehicle_resync_seq)
   local need_sync = state.board_sync_pending or false
   local last_positions = assert(state.board_last_positions, "missing board_last_positions")
   if not need_sync then
@@ -174,6 +174,9 @@ local function _compute_need_sync(state, snapshot)
         break
       end
     end
+  end
+  if not need_sync and state.board_last_vehicle_resync_seq ~= vehicle_resync_seq then
+    need_sync = true
   end
   return need_sync
 end
@@ -238,7 +241,6 @@ local function _place_players(state, players, occupants, spacing, min_player_y)
       local idx, base, pid = _resolve_active_player_base(state, player, i)
       assert(state.player_units ~= nil, "missing player_units")
       local unit = assert(state.player_units[pid], "missing player unit: " .. tostring(pid))
-      assert(unit.set_position ~= nil, "missing unit.set_position: " .. tostring(pid))
       local base_y = assert(base.y, "missing base.y: " .. tostring(idx))
       local y_offset = 0
       if base_y < min_player_y then
@@ -247,7 +249,13 @@ local function _place_players(state, players, occupants, spacing, min_player_y)
       local list = occupants[idx]
       local slot, count = _resolve_occupant_slot(list, pid)
       local ox, oz = _calc_slot_offset(slot, count, spacing)
-      unit.set_position(base + math.Vector3(ox, y_offset, oz))
+      local target_pos = base + math.Vector3(ox, y_offset, oz)
+      if player.seat_id and vehicle_helper and vehicle_helper.forward_eca_event_set_position then
+        vehicle_helper.forward_eca_event_set_position(pid, target_pos)
+      else
+        assert(unit.set_position ~= nil, "missing unit.set_position: " .. tostring(pid))
+        unit.set_position(target_pos)
+      end
     end
   end)
 end
@@ -269,9 +277,10 @@ function board_view.refresh_board(state, ui_model, log_once, build_log_prefix)
   local phase = board.phase
   local anim = board.move_anim
   local suppress_sync = phase == "wait_move_anim" and anim
+  local vehicle_resync_seq = board.vehicle_resync_seq or 0
 
   local snapshot = _build_snapshot(players)
-  local need_sync = _compute_need_sync(state, snapshot)
+  local need_sync = _compute_need_sync(state, snapshot, vehicle_resync_seq)
 
   if suppress_sync then
     state.board_sync_pending = true
@@ -279,6 +288,7 @@ function board_view.refresh_board(state, ui_model, log_once, build_log_prefix)
 
   if suppress_sync or not need_sync then
     state.board_last_positions = snapshot
+    state.board_last_vehicle_resync_seq = vehicle_resync_seq
     return
   end
 
@@ -289,6 +299,7 @@ function board_view.refresh_board(state, ui_model, log_once, build_log_prefix)
 
   state.board_sync_pending = false
   state.board_last_positions = snapshot
+  state.board_last_vehicle_resync_seq = vehicle_resync_seq
 end
 
 function board_view.on_tile_upgraded(state, tile_id, level)

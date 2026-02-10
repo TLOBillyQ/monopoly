@@ -32,6 +32,7 @@ local runtime_constants = {
   -- 仓库内未引用，暂保留兼容
   vehicle_speed = 20.0,
   vehicle_accel = 20.0,
+  vehicle_enter_delay = 1.2,
   fps = 30.0,
   forward_eca_event_ui = "ui_forward",
 
@@ -41,6 +42,7 @@ local runtime_constants = {
       exit = "exit_vehicle_forward",
       move = "move_vehicle_forward",
       stop = "stop_vehicle_forward",
+      set_position = "set_position_vehicle_forward",
     },
     camera = {
       follow = "follow_camera",

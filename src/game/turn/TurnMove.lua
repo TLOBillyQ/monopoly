@@ -34,6 +34,7 @@ local function _phase_move(turn_mgr, args)
         to_index = player.position,
         visited = move_result.visited,
         steps = move_result.steps,
+        vehicle_id = player.seat_id,
         stopped_on_roadblock = move_result.stopped_on_roadblock == true,
         market_interrupt = move_result.market_interrupt and true or false,
         steal_interrupt = move_result.steal_interrupt and true or false,

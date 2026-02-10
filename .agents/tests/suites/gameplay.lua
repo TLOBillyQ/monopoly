@@ -18,6 +18,7 @@ local gameplay_loop = support.gameplay_loop
 local tick_timeout = support.tick_timeout
 local constants = support.constants
 local bankruptcy = support.bankruptcy
+local mine_effect = require("src.game.effect.MineEffect")
 
 local function _build_loop_state()
   local auto_runner = require("src.game.turn.AutoRunner")
@@ -114,6 +115,7 @@ local function _test_stop_all_players_movement_clears_move_dir_and_stop_event()
   local g = _new_game()
   g:set_player_status(g.players[1], "move_dir", "left")
   g:set_player_status(g.players[2], "move_dir", "right")
+  local before_seq = g.turn.vehicle_resync_seq or 0
   local stopped_ids = {}
   support.with_patches({
     { key = "vehicle_helper", value = {
@@ -127,12 +129,14 @@ local function _test_stop_all_players_movement_clears_move_dir_and_stop_event()
   assert(g.players[1].status.move_dir == nil, "player1 move_dir should be cleared")
   assert(g.players[2].status.move_dir == nil, "player2 move_dir should be cleared")
   assert(#stopped_ids == #g.players, "stop event should be sent to all players")
+  assert((g.turn.vehicle_resync_seq or 0) == before_seq + 1, "stop should bump vehicle_resync_seq")
 end
 
 local function _test_end_turn_stops_all_players_movement()
   local g = _new_game()
   g:set_player_status(g.players[1], "move_dir", "left")
   g:set_player_status(g.players[2], "move_dir", "right")
+  local before_seq = g.turn.vehicle_resync_seq or 0
   local stopped_ids = {}
   support.with_patches({
     { key = "vehicle_helper", value = {
@@ -148,6 +152,50 @@ local function _test_end_turn_stops_all_players_movement()
   assert(g.players[1].status.move_dir == nil, "player1 move_dir should be cleared at end turn")
   assert(g.players[2].status.move_dir == nil, "player2 move_dir should be cleared at end turn")
   assert(#stopped_ids == #g.players, "end turn should stop all players")
+  assert((g.turn.vehicle_resync_seq or 0) == before_seq + 1, "end turn should bump vehicle_resync_seq")
+end
+
+local function _test_set_player_seat_emits_exit_then_enter()
+  local g = _new_game()
+  local p = g.players[1]
+  p.seat_id = 4001
+  local calls = {}
+  local helper = {
+    needs_enter_wait_by_player = {},
+    forward_eca_event_exit = function(role_id)
+      calls[#calls + 1] = "exit:" .. tostring(role_id)
+    end,
+    forward_eca_event_enter = function(role_id, vehicle_id)
+      calls[#calls + 1] = "enter:" .. tostring(role_id) .. ":" .. tostring(vehicle_id)
+    end,
+  }
+  support.with_patches({
+    { key = "vehicle_helper", value = helper },
+  }, function()
+    g:set_player_seat(p, 4004)
+  end)
+  assert(calls[1] == "exit:1", "seat replace should exit old vehicle first")
+  assert(calls[2] == "enter:1:4004", "seat replace should enter new vehicle")
+  assert(p.seat_id == 4004, "seat id should update")
+  assert(helper.needs_enter_wait_by_player[1] == true, "seat replace should mark enter wait")
+end
+
+local function _test_mine_destroy_vehicle_emits_exit_event()
+  local g = _new_game()
+  local p = g.players[1]
+  p.seat_id = 4001
+  local exited = {}
+  support.with_patches({
+    { key = "vehicle_helper", value = {
+      forward_eca_event_exit = function(role_id)
+        exited[#exited + 1] = role_id
+      end,
+    } },
+  }, function()
+    mine_effect.apply(g, p, p.position)
+  end)
+  assert(p.seat_id == nil, "mine should clear seat_id")
+  assert(#exited == 1 and exited[1] == p.id, "mine should emit exit event when vehicle destroyed")
 end
 
 local function _test_autorunner_runs_to_end()
@@ -492,6 +540,8 @@ return {
   _test_bankruptcy_resets_owned_tiles,
   _test_stop_all_players_movement_clears_move_dir_and_stop_event,
   _test_end_turn_stops_all_players_movement,
+  _test_set_player_seat_emits_exit_then_enter,
+  _test_mine_destroy_vehicle_emits_exit_event,
   _test_autorunner_runs_to_end,
   _test_complex_consecutive_turn_settlement,
   _test_complex_market_interrupt_with_rent,

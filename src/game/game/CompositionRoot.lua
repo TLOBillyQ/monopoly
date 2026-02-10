@@ -128,6 +128,7 @@ local function _build_initial_turn()
     choice_seq = 0,
     move_anim_seq = 0,
     move_anim = nil,
+    vehicle_resync_seq = 0,
     action_anim_seq = 0,
     action_anim = nil,
     action_anim_queue = {},

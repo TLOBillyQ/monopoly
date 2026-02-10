@@ -57,6 +57,18 @@ function game_state:set_player_status(player, key, value)
 end
 
 function game_state:set_player_seat(player, seat_id)
+  local old_seat_id = player.seat_id
+  if old_seat_id ~= seat_id and vehicle_helper then
+    if old_seat_id ~= nil and vehicle_helper.forward_eca_event_exit then
+      vehicle_helper.forward_eca_event_exit(player.id)
+    end
+    if seat_id ~= nil and vehicle_helper.forward_eca_event_enter then
+      vehicle_helper.forward_eca_event_enter(player.id, seat_id)
+      if vehicle_helper.needs_enter_wait_by_player then
+        vehicle_helper.needs_enter_wait_by_player[player.id] = true
+      end
+    end
+  end
   player.seat_id = seat_id
   _mark_players(self)
 end
@@ -179,19 +191,23 @@ end
 
 function game_state:stop_all_players_movement()
   local players = self.players or {}
-  local dirty = false
+  local players_dirty = false
   for _, player in ipairs(players) do
     local status = _player_status_table(player)
     if status.move_dir ~= nil then
       status.move_dir = nil
-      dirty = true
+      players_dirty = true
     end
     if vehicle_helper and vehicle_helper.forward_eca_event_stop then
       vehicle_helper.forward_eca_event_stop(player.id)
     end
   end
-  if dirty then
+  if players_dirty then
     _mark_players(self)
+  end
+  if self.turn then
+    self.turn.vehicle_resync_seq = (self.turn.vehicle_resync_seq or 0) + 1
+    _mark_turn(self)
   end
 end
 

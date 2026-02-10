@@ -8,22 +8,40 @@ local current_context = nil
 local last_camera_target_role_id = nil
 local last_camera_target_role_ok = nil
 
+local function _zero_vector()
+  if math and math.Vector3 then
+    return math.Vector3(0.0, 0.0, 0.0)
+  end
+  return { x = 0.0, y = 0.0, z = 0.0 }
+end
+
 local function _build_vehicle_helper()
   local helper = {
     player_id = nil,
     vehicle_id = nil,
     move_direction = nil,
     move_time = nil,
+    set_position = nil,
+    active_vehicle_by_player = {},
+    needs_enter_wait_by_player = {},
   }
 
   helper.forward_eca_event_enter = function(role_id, vehicle_id)
     helper.player_id = role_id
     helper.vehicle_id = vehicle_id
+    if role_id ~= nil then
+      helper.active_vehicle_by_player[role_id] = vehicle_id
+      helper.needs_enter_wait_by_player[role_id] = true
+    end
     TriggerCustomEvent(runtime_constants.eca_event.vehicle.enter, {})
   end
 
   helper.forward_eca_event_exit = function(role_id)
     helper.player_id = role_id
+    if role_id ~= nil then
+      helper.active_vehicle_by_player[role_id] = nil
+      helper.needs_enter_wait_by_player[role_id] = nil
+    end
     TriggerCustomEvent(runtime_constants.eca_event.vehicle.exit, {})
   end
 
@@ -37,6 +55,27 @@ local function _build_vehicle_helper()
   helper.forward_eca_event_stop = function(role_id)
     helper.player_id = role_id
     TriggerCustomEvent(runtime_constants.eca_event.vehicle.stop, {})
+  end
+
+  helper.forward_eca_event_set_position = function(role_id, pos)
+    helper.player_id = role_id
+    helper.set_position = pos
+    TriggerCustomEvent(runtime_constants.eca_event.vehicle.set_position, {})
+  end
+
+  helper.consume_enter_delay = function(role_id, vehicle_id)
+    if role_id == nil or vehicle_id == nil then
+      return 0
+    end
+    local active_vehicle = helper.active_vehicle_by_player[role_id]
+    if active_vehicle ~= vehicle_id then
+      helper.forward_eca_event_enter(role_id, vehicle_id)
+    end
+    if helper.needs_enter_wait_by_player[role_id] then
+      helper.needs_enter_wait_by_player[role_id] = nil
+      return runtime_constants.vehicle_enter_delay or 0
+    end
+    return 0
   end
 
   return helper
@@ -134,6 +173,13 @@ function runtime_context.install_globals(ctx)
   ---@return integer
   function get_spawn_vehicle_id()
     return vehicle_helper.vehicle_id or 4012
+  end
+
+  ---@export
+  ---@desc 获取载具位置设置目标
+  ---@return Vector3
+  function get_vehicle_set_position()
+    return vehicle_helper.set_position or _zero_vector()
   end
 
   ---@export
