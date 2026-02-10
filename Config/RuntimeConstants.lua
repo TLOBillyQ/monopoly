@@ -41,7 +41,7 @@ local runtime_constants = {
       exit = "exit_vehicle_forward",
       move = "move_vehicle_forward",
       stop = "stop_vehicle_forward",
-    }
+    },
     camera = {
       follow = "follow_camera",
     },

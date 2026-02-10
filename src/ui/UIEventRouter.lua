@@ -1,7 +1,7 @@
-local ui_aliases = require("src.ui.UIAliases")
 local market_ui = require("src.ui.MarketLayout")
 local turn_dispatch = require("src.game.turn.TurnDispatch")
 local ui_view = require("src.ui.UIView")
+local runtime = require("src.ui.UIRuntimePort")
 local logger = require("src.core.Logger")
 
 local ui_event_router = {}
@@ -15,9 +15,9 @@ local function _resolve_option_id(choice, payload, state)
   if option_id then
     return option_id
   end
-  local idx = payload.index or payload.option_index or payload.card_index or payload.choice_index
-  if idx then
-    local mapped = state and state.market_choice_option_ids and state.market_choice_option_ids[idx]
+  local index = payload.index or payload.option_index or payload.card_index or payload.choice_index
+  if index then
+    local mapped = state and state.market_choice_option_ids and state.market_choice_option_ids[index]
     if mapped then
       return mapped
     end
@@ -25,9 +25,9 @@ local function _resolve_option_id(choice, payload, state)
     if type(options) ~= "table" then
       return nil
     end
-    local opt = options[idx]
-    if opt then
-      return opt.id or opt
+    local option = options[index]
+    if option then
+      return option.id or option
     end
   end
   return nil
@@ -42,34 +42,35 @@ local function _show_missing_button_tip(name)
 end
 
 local function _resolve_actor_role_id(data)
-  if not data or not data.role or not data.role.get_roleid then
+  if not data or not data.role then
     return nil
   end
-  local ok, role_id = pcall(data.role.get_roleid)
-  if not ok then
-    return nil
-  end
-  return role_id
+  return runtime.resolve_role_id(data.role)
 end
 
 local function _register_node_click(cache, name, callback, registered, listeners)
   assert(name ~= nil, "missing node name")
+  assert(type(callback) == "function", "missing callback")
   assert(registered ~= nil, "missing registered map")
   assert(listeners ~= nil, "missing listeners list")
-  local resolved = ui_aliases.resolve(name)
-  if registered[resolved] then
+  if registered[name] then
     return
   end
-  local nodes = cache[resolved]
+  local nodes = cache[name]
   if not nodes then
-    nodes = UIManager.query_nodes_by_name(resolved)
-    cache[resolved] = nodes
+    local ok, result = pcall(runtime.query_nodes, name)
+    if not ok then
+      _show_missing_button_tip(name)
+      return
+    end
+    nodes = result
+    cache[name] = nodes
   end
   if not nodes or not nodes[1] then
     _show_missing_button_tip(name)
     return
   end
-  registered[resolved] = true
+  registered[name] = true
   for _, node in ipairs(nodes) do
     local listener = node:listen(UIManager.EVENT.CLICK, function(data)
       callback(data)
@@ -95,6 +96,7 @@ local function _dispatch(state, game, intent, opts)
     logger.warn("ui intent without game:", tostring(intent_type))
     return
   end
+
   if intent_type == "ui_button"
       or intent_type == "choice_select"
       or intent_type == "choice_cancel" then
@@ -123,6 +125,159 @@ local function _dispatch(state, game, intent, opts)
   if intent_type == "popup_confirm" then
     ui_view.close_popup(state)
   end
+end
+
+local function _build_route_specs(state)
+  local specs = {
+    {
+      name = "行动按钮",
+      build_intent = function()
+        return { type = "ui_button", id = "next" }
+      end,
+    },
+    {
+      name = "托管按钮",
+      build_intent = function()
+        return { type = "ui_button", id = "auto" }
+      end,
+    },
+    {
+      name = "弹窗确认",
+      build_intent = function()
+        return { type = "popup_confirm" }
+      end,
+    },
+    {
+      name = "通用选择_取消",
+      build_intent = function()
+        local choice = state.ui_model and state.ui_model.choice or nil
+        if not choice then
+          logger.warn("choice_cancel without choice")
+          return nil
+        end
+        if choice.allow_cancel == false then
+          return nil
+        end
+        return { type = "choice_cancel", choice_id = choice.id }
+      end,
+    },
+    {
+      name = market_ui.confirm_button,
+      build_intent = function()
+        local market = state.ui_model and state.ui_model.market or nil
+        if not market then
+          logger.warn("market_confirm without market")
+          return nil
+        end
+        local option_id = state.pending_choice_selected_option_id
+        if not option_id then
+          logger.warn("market_confirm missing selected option")
+          return nil
+        end
+        return { type = "market_confirm", choice_id = market.choice_id, option_id = option_id }
+      end,
+    },
+    {
+      name = market_ui.cancel_button,
+      build_intent = function()
+        local choice = state.ui_model and state.ui_model.choice or nil
+        if not choice then
+          logger.warn("market_cancel without choice")
+          return nil
+        end
+        if choice.allow_cancel == false then
+          return nil
+        end
+        return { type = "choice_cancel", choice_id = choice.id }
+      end,
+    },
+  }
+
+  local market_close = "关闭"
+  if market_ui.cancel_button ~= market_close then
+    specs[#specs + 1] = {
+      name = market_close,
+      build_intent = function()
+        local choice = state.ui_model and state.ui_model.choice or nil
+        if not choice then
+          logger.warn("market_close without choice")
+          return nil
+        end
+        if choice.allow_cancel == false then
+          return nil
+        end
+        return { type = "choice_cancel", choice_id = choice.id }
+      end,
+    }
+  end
+
+  for index = 1, 5 do
+    local node_name = "道具槽位" .. tostring(index)
+    local action_id = "item_slot_" .. tostring(index)
+    specs[#specs + 1] = {
+      name = node_name,
+      build_intent = function()
+        local choice = state.ui_model and state.ui_model.choice or nil
+        if not choice or choice.kind ~= "item_phase_choice" then
+          logger.warn("item_slot click ignored:", tostring(index))
+          return nil
+        end
+        return { type = "ui_button", id = action_id }
+      end,
+    }
+  end
+
+  local choice_option_nodes = {
+    "通用选择_选项_01",
+    "通用选择_选项_02",
+    "通用选择_选项_03",
+    "通用选择_选项_04",
+    "通用选择_选项_05",
+    "通用选择_选项_06",
+  }
+  for index, name in ipairs(choice_option_nodes) do
+    specs[#specs + 1] = {
+      name = name,
+      build_intent = function()
+        local choice = state.ui_model and state.ui_model.choice or nil
+        if not choice then
+          logger.warn("choice_select without choice")
+          return nil
+        end
+        local option_id = _resolve_option_id(choice, { index = index }, state)
+        if not option_id then
+          logger.warn("choice_select missing option:", tostring(index))
+          return nil
+        end
+        return { type = "choice_select", choice_id = choice.id, option_id = option_id }
+      end,
+    }
+  end
+
+  for index, name in ipairs(market_ui.item_buttons) do
+    specs[#specs + 1] = {
+      name = name,
+      build_intent = function()
+        if not market_ui.is_ready() then
+          logger.warn("market ui not ready")
+          return nil
+        end
+        local market = state.ui_model and state.ui_model.market or nil
+        if not market then
+          logger.warn("market_select without market")
+          return nil
+        end
+        local option_id = _resolve_option_id(market, { index = index }, state)
+        if not option_id then
+          logger.warn("market_select missing option:", tostring(index))
+          return nil
+        end
+        return { type = "market_select", option_id = option_id }
+      end,
+    }
+  end
+
+  return specs
 end
 
 function ui_event_router.unbind(state)
@@ -173,117 +328,13 @@ function ui_event_router.bind(state, get_game, opts)
   state.ui_event_router_registered = registered
   local listeners = state.ui_event_router_listeners or {}
   state.ui_event_router_listeners = listeners
-  _register_node_click(cache, "行动按钮", function(data)
-    dispatch_intent({ type = "ui_button", id = "next" }, data)
-  end, registered, listeners)
-  _register_node_click(cache, "托管按钮", function(data)
-    dispatch_intent({ type = "ui_button", id = "auto" }, data)
-  end, registered, listeners)
-  for idx = 1, 5 do
-    local node_name = "道具槽位" .. tostring(idx)
-    local action_id = "item_slot_" .. tostring(idx)
-    _register_node_click(cache, node_name, function(data)
-      local choice = state.ui_model and state.ui_model.choice
-      if not choice or choice.kind ~= "item_phase_choice" then
-        logger.warn("item_slot click ignored:", tostring(idx))
-        return
-      end
-      dispatch_intent({ type = "ui_button", id = action_id }, data)
-    end, registered, listeners)
-  end
-  _register_node_click(cache, "弹窗确认", function(data)
-    dispatch_intent({ type = "popup_confirm" }, data)
-  end, registered, listeners)
 
-  _register_node_click(cache, "通用选择_取消", function(data)
-    local choice = state.ui_model and state.ui_model.choice
-    if not choice then
-      logger.warn("choice_cancel without choice")
-      return
-    end
-    if choice.allow_cancel ~= false then
-      dispatch_intent({ type = "choice_cancel", choice_id = choice.id }, data)
-    end
-  end, registered, listeners)
-
-  for idx, name in ipairs({
-    "通用选择_选项_01",
-    "通用选择_选项_02",
-    "通用选择_选项_03",
-    "通用选择_选项_04",
-    "通用选择_选项_05",
-    "通用选择_选项_06",
-  }) do
-    _register_node_click(cache, name, function(data)
-      local choice = state.ui_model and state.ui_model.choice
-      if not choice then
-        logger.warn("choice_select without choice")
-        return
-      end
-      local option_id = _resolve_option_id(choice, { index = idx }, state)
-      if not option_id then
-        logger.warn("choice_select missing option:", tostring(idx))
-        return
-      end
-      dispatch_intent({ type = "choice_select", choice_id = choice.id, option_id = option_id }, data)
-    end, registered, listeners)
-  end
-
-  for idx, name in ipairs(market_ui.item_buttons) do
-    _register_node_click(cache, name, function(data)
-      if not market_ui.is_ready() then
-        logger.warn("market ui not ready")
-        return
-      end
-      local market = state.ui_model and state.ui_model.market
-      if not market then
-        logger.warn("market_select without market")
-        return
-      end
-      local option_id = _resolve_option_id(market, { index = idx }, state)
-      if not option_id then
-        logger.warn("market_select missing option:", tostring(idx))
-        return
-      end
-      dispatch_intent({ type = "market_select", option_id = option_id }, data)
-    end, registered, listeners)
-  end
-
-  _register_node_click(cache, market_ui.confirm_button, function(data)
-    local market = state.ui_model and state.ui_model.market
-    if not market then
-      logger.warn("market_confirm without market")
-      return
-    end
-    local option_id = state.pending_choice_selected_option_id
-    if not option_id then
-      logger.warn("market_confirm missing selected option")
-      return
-    end
-    dispatch_intent({ type = "market_confirm", choice_id = market.choice_id, option_id = option_id }, data)
-  end, registered, listeners)
-
-  _register_node_click(cache, market_ui.cancel_button, function(data)
-    local choice = state.ui_model and state.ui_model.choice
-    if not choice then
-      logger.warn("market_cancel without choice")
-      return
-    end
-    if choice.allow_cancel ~= false then
-      dispatch_intent({ type = "choice_cancel", choice_id = choice.id }, data)
-    end
-  end, registered, listeners)
-
-  local market_close = "关闭"
-  if market_ui.cancel_button ~= market_close then
-    _register_node_click(cache, market_close, function(data)
-      local choice = state.ui_model and state.ui_model.choice
-      if not choice then
-        logger.warn("market_close without choice")
-        return
-      end
-      if choice.allow_cancel ~= false then
-        dispatch_intent({ type = "choice_cancel", choice_id = choice.id }, data)
+  local route_specs = _build_route_specs(state)
+  for _, route in ipairs(route_specs) do
+    _register_node_click(cache, route.name, function(data)
+      local intent = route.build_intent(data)
+      if intent then
+        dispatch_intent(intent, data)
       end
     end, registered, listeners)
   end

@@ -17,6 +17,7 @@ local market_view = require("src.ui.MarketView")
 local market_layout = require("src.ui.MarketLayout")
 local ui_view = require("src.ui.UIView")
 local action_anim = require("src.ui.ActionAnim")
+local move_anim = require("src.ui.MoveAnim")
 local market_cfg = require("Config.Generated.Market")
 
 local function _build_popup_view_state(refs, card_node)
@@ -159,6 +160,46 @@ local function _test_move_anim_wait_and_resume()
   assert(g.turn.move_anim == nil, "move_anim should be cleared")
   local phase = g.turn.phase
   assert(phase ~= "wait_move_anim", "should resume after move anim done")
+end
+
+local function _test_move_anim_zero_distance_safe()
+  local function _vec3(x, y, z)
+    local vector_mt = {}
+    vector_mt.__sub = function(a, b)
+      return _vec3(a.x - b.x, a.y - b.y, a.z - b.z)
+    end
+    local vector = setmetatable({ x = x, y = y, z = z }, vector_mt)
+    function vector:length()
+      local sum = self.x * self.x + self.y * self.y + self.z * self.z
+      return math.sqrt(sum)
+    end
+    return vector
+  end
+
+  local start_move_called = 0
+  local scene = {
+    tiles = {
+      [1] = { get_position = function() return _vec3(1, 2, 3) end },
+      [2] = { get_position = function() return _vec3(1, 2, 3) end },
+    },
+    units_by_player_id = {
+      [1] = {
+        start_move_by_direction = function()
+          start_move_called = start_move_called + 1
+        end,
+      },
+    },
+  }
+
+  local total = move_anim.play_sequence(scene, {
+    player_id = 1,
+    from_index = 1,
+    to_index = 2,
+    direction = { x = 0, y = 0, z = 1 },
+  })
+
+  _assert_eq(total, 0, "zero distance should return zero duration")
+  _assert_eq(start_move_called, 0, "zero distance should skip unit move")
 end
 
 local function _test_ui_model_structure()
@@ -1013,6 +1054,7 @@ return {
   _test_popup_timeout_auto_confirm,
   _test_invalid_choice_option_rejected,
   _test_move_anim_wait_and_resume,
+  _test_move_anim_zero_distance_safe,
   _test_ui_model_structure,
   _test_ui_model_player_slot_map_and_choice_owner,
   _test_turn_dispatch_rejects_non_current_actor,

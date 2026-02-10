@@ -2,6 +2,16 @@ local runtime_constants = require("Config.RuntimeConstants")
 
 local move_anim = {}
 
+local function _zero_vector()
+  if runtime_constants.v3_zero then
+    return runtime_constants.v3_zero
+  end
+  if math and math.Vector3 then
+    return math.Vector3(0.0, 0.0, 0.0)
+  end
+  return { x = 0.0, y = 0.0, z = 0.0 }
+end
+
 local function _calc_step(scene, from_index, to_index)
     local start_tile = scene.tiles[from_index]
     local end_tile = scene.tiles[to_index]
@@ -10,7 +20,14 @@ local function _calc_step(scene, from_index, to_index)
     local pos_e = end_tile.get_position()
     local dist = pos_e - pos_s
     local len = dist:length()
-    local time = len / runtime_constants.walk_speed
+    if len <= 0 then
+      return _zero_vector(), 0
+    end
+    local walk_speed = runtime_constants.walk_speed or 0
+    if walk_speed <= 0 then
+      return _zero_vector(), 0
+    end
+    local time = len / walk_speed
     local dir = math.Vector3(dist.x / len, dist.y / len, dist.z / len)
     return dir, time
 end
@@ -22,6 +39,9 @@ end
 
 function move_anim.one_step(scene, player_id, from_index, to_index)
     local step_dir, time = _calc_step(scene, from_index, to_index)
+    if time <= 0 then
+      return 0
+    end
 
     local unit = scene.units_by_player_id[player_id]
     unit.start_move_by_direction(step_dir, time)
@@ -48,8 +68,11 @@ local function _build_steps(board_scene, from_index, to_index, visited)
     if step_from == step_to then
       return
     end
-    local delay = total_time
     local step_time = move_anim.step_duration(board_scene, step_from, step_to)
+    if step_time <= 0 then
+      return
+    end
+    local delay = total_time
     total_time = total_time + step_time
     steps[#steps + 1] = { from = step_from, to = step_to, delay = delay }
   end
@@ -75,7 +98,7 @@ function move_anim.play_sequence(board_scene, anim_ctx)
   local player_id = assert(anim_ctx.player_id, "missing player_id")
   local from_index = assert(anim_ctx.from_index, "missing from_index")
   local to_index = assert(anim_ctx.to_index, "missing to_index")
-  local dir = assert(_resolve_direction(anim_ctx), "missing anim.direction")
+  assert(_resolve_direction(anim_ctx), "missing anim.direction")
   local steps, total_time = _build_steps(board_scene, from_index, to_index, anim_ctx.visited)
   for _, step in ipairs(steps) do
     if step.delay <= 0 then

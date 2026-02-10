@@ -1,4 +1,5 @@
 local market_layout = require("src.ui.MarketLayout")
+local modal_state = require("src.ui.UIModalStateCoordinator")
 local items_cfg = require("Config.Generated.Items")
 local market_cfg = require("Config.Generated.Market")
 local vehicles_cfg = require("Config.Generated.Vehicles")
@@ -116,7 +117,7 @@ function market_view.refresh_market_selection(state, option_id)
 end
 
 function market_view.select_market_option(state, option_id)
-  state.pending_choice_selected_option_id = option_id
+  modal_state.select_market_option(state, option_id)
   market_view.refresh_market_selection(state, option_id)
 end
 
@@ -176,11 +177,9 @@ function market_view.refresh_market(state, market)
   ui:set_visible(market_layout.cancel_button, show_cancel)
   ui:set_touch_enabled(market_layout.cancel_button, show_cancel)
 
-  state.market_choice_option_ids = option_ids
   local selected = market.selected_option_id or option_ids[1]
+  modal_state.open_market(state, market.choice_id, option_ids, selected)
   market_view.select_market_option(state, selected)
-  state.pending_choice_elapsed = 0
-  state.pending_choice_id = market.choice_id
   return true
 end
 
@@ -189,8 +188,7 @@ function market_view.close_market_panel(state)
   assert(ui ~= nil and ui.market_active == true, "market panel not active")
   ui:set_visible(market_layout.container, false)
   ui.market_active = false
-  state.market_choice_option_ids = nil
-  state.pending_choice_selected_option_id = nil
+  modal_state.close_choice(state)
   ui:set_label(market_layout.price_label, "")
   for _, name in ipairs(market_layout.item_labels) do
     ui:set_touch_enabled(name, false)
