@@ -37,11 +37,11 @@ local runtime_constants = {
 
   eca_event = {
     vehicle = {
-      enter = "enter_vehicle",
-      exit = "exit_vehicle",
-      move = "move_vehicle",
-      stop = "stop_vehicle",
-    },
+      enter = "enter_vehicle_forward",
+      exit = "exit_vehicle_forward",
+      move = "move_vehicle_forward",
+      stop = "stop_vehicle_forward",
+    }
     camera = {
       follow = "follow_camera",
     },
