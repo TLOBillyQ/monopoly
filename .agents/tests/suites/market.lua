@@ -1,6 +1,24 @@
 local support = require("TestSupport")
 local _new_game = support.new_game
 
+local function _contains_product(list, product_id)
+  for _, entry in ipairs(list) do
+    if entry.product_id == product_id then
+      return true
+    end
+  end
+  return false
+end
+
+local function _contains_option(options, product_id)
+  for _, option in ipairs(options) do
+    if option.id == product_id then
+      return true
+    end
+  end
+  return false
+end
+
 local function _test_ai_skips_auto_buy_at_market()
   local market = require("src.game.market.Market")
   local g = _new_game()
@@ -63,8 +81,47 @@ local function _test_market_global_limit()
   end
 end
 
+local function _test_market_disabled_products_hidden()
+  local market = require("src.game.market.Market")
+  local g = _new_game()
+  local p = g:current_player()
+  g:set_player_balance(p, "金豆", 999999)
+
+  local blocked_product_ids = { 4007, 4008, 4009 }
+
+  local list = market.list_buyable(p, g)
+  for _, product_id in ipairs(blocked_product_ids) do
+    assert(not _contains_product(list, product_id), "disabled product should be hidden: " .. tostring(product_id))
+  end
+
+  local spec = market.build_choice_spec(p, g)
+  if spec and spec.options then
+    for _, product_id in ipairs(blocked_product_ids) do
+      assert(not _contains_option(spec.options, product_id), "disabled option should be hidden: " .. tostring(product_id))
+    end
+  end
+end
+
+local function _test_buy_disabled_market_product_rejected()
+  local market = require("src.game.market.Market")
+  local g = _new_game()
+  local p = g:current_player()
+  g:set_player_balance(p, "金豆", 999999)
+
+  local blocked_product_id = 4007
+  local before_balance = g:player_balance(p, "金豆")
+  local before_seat_id = p.seat_id
+
+  local res = market.buy_with_opts(g, p, blocked_product_id, nil)
+  assert(type(res) == "table" and res.ok == false, "disabled market product should be rejected")
+  assert(g:player_balance(p, "金豆") == before_balance, "balance should not change when buying disabled product")
+  assert(p.seat_id == before_seat_id, "seat should not change when buying disabled product")
+end
+
 return {
   _test_ai_skips_auto_buy_at_market,
   _test_market_full_inventory_blocks_items,
   _test_market_global_limit,
+  _test_market_disabled_products_hidden,
+  _test_buy_disabled_market_product_rejected,
 }

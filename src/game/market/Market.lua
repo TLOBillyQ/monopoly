@@ -69,6 +69,11 @@ local function _entry_currency(entry)
   return "金币"
 end
 
+local function _entry_market_enabled(entry)
+  assert(entry ~= nil, "missing market entry")
+  return entry.market_enabled ~= false
+end
+
 local function _remaining_global_limit(game, product_id)
   assert(game ~= nil, "missing game")
   assert(product_id ~= nil, "missing product_id")
@@ -76,6 +81,9 @@ local function _remaining_global_limit(game, product_id)
 end
 
 local function _can_buy_entry(game, player, entry)
+  if not _entry_market_enabled(entry) then
+    return false
+  end
   if entry.kind == "item" and inventory.is_full(player) then
     return false
   end
@@ -148,6 +156,15 @@ function market.buy_with_opts(game, player, product_id, opts)
   end
   local entry = entries_by_id[product_id]
   assert(entry ~= nil, "missing market entry: " .. tostring(product_id))
+  if not _entry_market_enabled(entry) then
+    _emit_event(monopoly_event.market.buy_failed, {
+      player = player,
+      entry = entry,
+      reason = "disabled",
+      popup = { title = "黑市", body = player.name .. " 该商品暂不可购买" },
+    })
+    return { ok = false }
+  end
 
   local remaining = _remaining_global_limit(game, product_id)
   if remaining <= 0 then
