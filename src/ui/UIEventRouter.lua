@@ -41,6 +41,17 @@ local function _show_missing_button_tip(name)
   GlobalAPI.show_tips("UI 节点未适配: " .. tostring(name), 2.0)
 end
 
+local function _resolve_actor_role_id(data)
+  if not data or not data.role or not data.role.get_roleid then
+    return nil
+  end
+  local ok, role_id = pcall(data.role.get_roleid)
+  if not ok then
+    return nil
+  end
+  return role_id
+end
+
 local function _register_node_click(cache, name, callback, registered, listeners)
   assert(name ~= nil, "missing node name")
   assert(registered ~= nil, "missing registered map")
@@ -150,7 +161,10 @@ function ui_event_router.bind(state, get_game, opts)
 
   ui_event_router.unbind(state)
 
-  local function dispatch_intent(intent)
+  local function dispatch_intent(intent, data)
+    if intent and intent.actor_role_id == nil then
+      intent.actor_role_id = _resolve_actor_role_id(data)
+    end
     _dispatch(state, resolve_game(), intent, opts)
   end
 
@@ -159,36 +173,36 @@ function ui_event_router.bind(state, get_game, opts)
   state.ui_event_router_registered = registered
   local listeners = state.ui_event_router_listeners or {}
   state.ui_event_router_listeners = listeners
-  _register_node_click(cache, "行动按钮", function()
-    dispatch_intent({ type = "ui_button", id = "next" })
+  _register_node_click(cache, "行动按钮", function(data)
+    dispatch_intent({ type = "ui_button", id = "next" }, data)
   end, registered, listeners)
-  _register_node_click(cache, "托管按钮", function()
-    dispatch_intent({ type = "ui_button", id = "auto" })
+  _register_node_click(cache, "托管按钮", function(data)
+    dispatch_intent({ type = "ui_button", id = "auto" }, data)
   end, registered, listeners)
   for idx = 1, 5 do
     local node_name = "道具槽位" .. tostring(idx)
     local action_id = "item_slot_" .. tostring(idx)
-    _register_node_click(cache, node_name, function()
+    _register_node_click(cache, node_name, function(data)
       local choice = state.ui_model and state.ui_model.choice
       if not choice or choice.kind ~= "item_phase_choice" then
         logger.warn("item_slot click ignored:", tostring(idx))
         return
       end
-      dispatch_intent({ type = "ui_button", id = action_id })
+      dispatch_intent({ type = "ui_button", id = action_id }, data)
     end, registered, listeners)
   end
-  _register_node_click(cache, "弹窗确认", function()
-    dispatch_intent({ type = "popup_confirm" })
+  _register_node_click(cache, "弹窗确认", function(data)
+    dispatch_intent({ type = "popup_confirm" }, data)
   end, registered, listeners)
 
-  _register_node_click(cache, "通用选择_取消", function()
+  _register_node_click(cache, "通用选择_取消", function(data)
     local choice = state.ui_model and state.ui_model.choice
     if not choice then
       logger.warn("choice_cancel without choice")
       return
     end
     if choice.allow_cancel ~= false then
-      dispatch_intent({ type = "choice_cancel", choice_id = choice.id })
+      dispatch_intent({ type = "choice_cancel", choice_id = choice.id }, data)
     end
   end, registered, listeners)
 
@@ -200,7 +214,7 @@ function ui_event_router.bind(state, get_game, opts)
     "通用选择_选项_05",
     "通用选择_选项_06",
   }) do
-    _register_node_click(cache, name, function()
+    _register_node_click(cache, name, function(data)
       local choice = state.ui_model and state.ui_model.choice
       if not choice then
         logger.warn("choice_select without choice")
@@ -211,12 +225,12 @@ function ui_event_router.bind(state, get_game, opts)
         logger.warn("choice_select missing option:", tostring(idx))
         return
       end
-      dispatch_intent({ type = "choice_select", choice_id = choice.id, option_id = option_id })
+      dispatch_intent({ type = "choice_select", choice_id = choice.id, option_id = option_id }, data)
     end, registered, listeners)
   end
 
   for idx, name in ipairs(market_ui.item_buttons) do
-    _register_node_click(cache, name, function()
+    _register_node_click(cache, name, function(data)
       if not market_ui.is_ready() then
         logger.warn("market ui not ready")
         return
@@ -231,11 +245,11 @@ function ui_event_router.bind(state, get_game, opts)
         logger.warn("market_select missing option:", tostring(idx))
         return
       end
-      dispatch_intent({ type = "market_select", option_id = option_id })
+      dispatch_intent({ type = "market_select", option_id = option_id }, data)
     end, registered, listeners)
   end
 
-  _register_node_click(cache, market_ui.confirm_button, function()
+  _register_node_click(cache, market_ui.confirm_button, function(data)
     local market = state.ui_model and state.ui_model.market
     if not market then
       logger.warn("market_confirm without market")
@@ -246,30 +260,30 @@ function ui_event_router.bind(state, get_game, opts)
       logger.warn("market_confirm missing selected option")
       return
     end
-    dispatch_intent({ type = "market_confirm", choice_id = market.choice_id, option_id = option_id })
+    dispatch_intent({ type = "market_confirm", choice_id = market.choice_id, option_id = option_id }, data)
   end, registered, listeners)
 
-  _register_node_click(cache, market_ui.cancel_button, function()
+  _register_node_click(cache, market_ui.cancel_button, function(data)
     local choice = state.ui_model and state.ui_model.choice
     if not choice then
       logger.warn("market_cancel without choice")
       return
     end
     if choice.allow_cancel ~= false then
-      dispatch_intent({ type = "choice_cancel", choice_id = choice.id })
+      dispatch_intent({ type = "choice_cancel", choice_id = choice.id }, data)
     end
   end, registered, listeners)
 
   local market_close = "关闭"
   if market_ui.cancel_button ~= market_close then
-    _register_node_click(cache, market_close, function()
+    _register_node_click(cache, market_close, function(data)
       local choice = state.ui_model and state.ui_model.choice
       if not choice then
         logger.warn("market_close without choice")
         return
       end
       if choice.allow_cancel ~= false then
-        dispatch_intent({ type = "choice_cancel", choice_id = choice.id })
+        dispatch_intent({ type = "choice_cancel", choice_id = choice.id }, data)
       end
     end, registered, listeners)
   end

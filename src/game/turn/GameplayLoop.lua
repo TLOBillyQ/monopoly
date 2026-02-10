@@ -167,7 +167,13 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
   end
   local ctx = context or {}
   ctx.game_finished = game.finished
+  if not ctx.current_player_index then
+    ctx.current_player_index = game.turn and game.turn.current_player_index or nil
+  end
   local auto_action = state.auto_runner:next_action(dt, ctx)
+  if auto_action and auto_action.type == "ui_button" and not auto_action.actor_role_id then
+    auto_action.actor_role_id = ctx.current_player_index
+  end
   if auto_action then
     _dispatch_action_with_close_choice(game, state, auto_action)
   end
@@ -202,6 +208,7 @@ function gameplay_loop.tick(game, state, dt)
     modal_active = false,
     modal_buttons = nil,
     game_finished = game.finished,
+    current_player_index = game.turn and game.turn.current_player_index or nil,
   })
 
   tick_timeout.step_default_choice(game, state, dt)

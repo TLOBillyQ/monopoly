@@ -13,6 +13,64 @@ local CANVAS_MARKET = "黑市屏"
 local CANVAS_POPUP = "弹窗屏"
 local CANVAS_DEBUG = "调试屏"
 
+local function _set_client_role(role)
+  UIManager.client_role = role
+end
+
+local function _resolve_role_id(role)
+  if not role or not role.get_roleid then
+    return nil
+  end
+  local ok, role_id = pcall(role.get_roleid)
+  if not ok then
+    return nil
+  end
+  return role_id
+end
+
+local function _with_client_role(role, fn)
+  _set_client_role(role)
+  local ok, err = pcall(fn)
+  _set_client_role(nil)
+  if not ok then
+    error(err)
+  end
+end
+
+local function _for_each_role_or_global(fn)
+  local roles = all_roles
+  if roles and #roles > 0 then
+    for _, role in ipairs(roles) do
+      _with_client_role(role, function()
+        fn(role)
+      end)
+    end
+    return
+  end
+  _with_client_role(nil, function()
+    fn(nil)
+  end)
+end
+
+local function _resolve_role_render_ctx(role, ui_model)
+  local current_player_id = ui_model and ui_model.current_player_id or nil
+  local role_id = _resolve_role_id(role)
+  local by_player = ui_model and ui_model.item_slots_by_player or nil
+  local mapped = role_id ~= nil and by_player ~= nil and by_player[role_id] ~= nil
+  if mapped then
+    return {
+      role_id = role_id,
+      display_player_id = role_id,
+      can_operate = role_id == current_player_id,
+    }
+  end
+  return {
+    role_id = role_id,
+    display_player_id = current_player_id,
+    can_operate = false,
+  }
+end
+
 local function _query_node(name)
   assert(name ~= nil, "missing ui node name")
   local resolved = ui_aliases.resolve(name)
@@ -118,6 +176,7 @@ function ui_view.build_ui_state()
     },
     popup_seq = 0,
     popup_return_canvas = nil,
+    item_slot_item_ids_by_role = {},
     query_node = _query_node,
     set_label = _set_text,
     set_button = _set_text,
@@ -133,23 +192,21 @@ function ui_view.init_ui_assets(state)
   local refs = require("Config.RuntimeRefs")
   state.ui_refs = refs
 
-  for _, role in ipairs(all_roles) do
-    UIManager.client_role = role
+  _for_each_role_or_global(function()
     for i = 1, 5 do
       local num = 3000 + i
       local image_key = refs[tostring(num)]
       assert(image_key ~= nil, "missing item icon: " .. tostring(num))
       set_item_slot_image("道具槽位" .. tostring(i), image_key)
     end
-  end
-  UIManager.client_role = nil
+  end)
 end
 
 function ui_view.refresh_panel(state, ui_model)
   local ui = state.ui
   local panel = assert(ui_model.panel, "missing ui_model.panel")
 
-  ui:set_label("倒计时", panel.turn_label)
+  _set_client_role(nil)
   local player_rows = panel.player_rows or {}
   for i = 1, 4 do
     local row = player_rows[i]
@@ -160,15 +217,35 @@ function ui_view.refresh_panel(state, ui_model)
     ui:set_label("玩家" .. tostring(i) .. "总资产", row.total_assets)
   end
 
-  ui_view.refresh_item_slots(state, ui_model)
+  if type(ui.item_slot_item_ids_by_role) ~= "table" then
+    ui.item_slot_item_ids_by_role = {}
+  end
 
   local auto_label = panel.auto_label
-  ui:set_button("行动按钮", "下一回合")
-  ui:set_button("托管按钮", auto_label)
-  ui:set_button("自动控制按钮", auto_label)
-  ui:set_touch_enabled("行动按钮", true)
-  ui:set_touch_enabled("托管按钮", true)
-  ui:set_touch_enabled("自动控制按钮", true)
+  _for_each_role_or_global(function(role)
+    local ctx = _resolve_role_render_ctx(role, ui_model)
+    ui:set_label("倒计时", panel.turn_label)
+    ui:set_button("行动按钮", "下一回合")
+    ui:set_button("托管按钮", auto_label)
+    ui:set_button("自动控制按钮", auto_label)
+    ui:set_touch_enabled("行动按钮", ctx.can_operate == true)
+    ui:set_touch_enabled("托管按钮", ctx.can_operate == true)
+    ui:set_touch_enabled("自动控制按钮", ctx.can_operate == true)
+    ui_view.refresh_item_slots(state, ui_model, {
+      role_id = ctx.role_id,
+      display_player_id = ctx.display_player_id,
+      allow_interact = ctx.can_operate == true,
+    })
+  end)
+  _set_client_role(nil)
+
+  local current_player_id = ui_model.current_player_id
+  local by_role = ui.item_slot_item_ids_by_role
+  if current_player_id and by_role and by_role[current_player_id] then
+    ui.item_slot_item_ids = by_role[current_player_id]
+  else
+    ui.item_slot_item_ids = {}
+  end
 end
 
 function ui_view.refresh_turn_label(state, label_text)
@@ -176,21 +253,32 @@ function ui_view.refresh_turn_label(state, label_text)
   if not ui or not ui.set_label then
     return
   end
-  ui:set_label("倒计时", label_text)
+  _for_each_role_or_global(function()
+    ui:set_label("倒计时", label_text)
+  end)
+  _set_client_role(nil)
 end
 
-function ui_view.refresh_item_slots(state, ui_model)
+function ui_view.refresh_item_slots(state, ui_model, opts)
   local ui = state.ui
   assert(ui ~= nil and ui.item_slots ~= nil, "missing ui item slots")
+  opts = opts or {}
 
   local slots = ui.item_slots
   local item_ids = {}
-  ui.item_slot_item_ids = item_ids
-
-  local items = ui_model.item_slots or {}
+  local role_id = opts.role_id
+  local display_player_id = opts.display_player_id or ui_model.current_player_id
+  local allow_interact = opts.allow_interact ~= false
+  local by_player = ui_model.item_slots_by_player or {}
+  local items = by_player[display_player_id] or ui_model.item_slots or {}
   local allow_use = ui_model and ui_model.choice and ui_model.choice.kind == "item_phase_choice"
+  local choice_owner_id = ui_model and ui_model.item_choice_owner_id or ui_model.current_player_id
   local refs = state.ui_refs
   local empty_key = refs["空"]
+  local allow_slot_click = allow_use == true
+    and allow_interact == true
+    and display_player_id ~= nil
+    and choice_owner_id == display_player_id
 
   for i, slot_name in ipairs(slots) do
     local item_id = items[i]
@@ -198,13 +286,21 @@ function ui_view.refresh_item_slots(state, ui_model)
       local ref_key = refs[tostring(item_id)] or refs[item_id]
       local image_key = ref_key or empty_key
       set_item_slot_image(slot_name, image_key)
-      ui:set_touch_enabled(slot_name, allow_use == true)
+      ui:set_touch_enabled(slot_name, allow_slot_click)
       item_ids[i] = item_id
     else
       set_item_slot_image(slot_name, empty_key)
       ui:set_touch_enabled(slot_name, false)
     end
   end
+
+  if role_id ~= nil then
+    if type(ui.item_slot_item_ids_by_role) ~= "table" then
+      ui.item_slot_item_ids_by_role = {}
+    end
+    ui.item_slot_item_ids_by_role[role_id] = item_ids
+  end
+  ui.item_slot_item_ids = item_ids
 end
 
 function ui_view.apply_input_lock(state)
@@ -214,9 +310,6 @@ function ui_view.apply_input_lock(state)
   end
 
   if not ui.input_blocked then
-    ui:set_touch_enabled("行动按钮", true)
-    ui:set_touch_enabled("托管按钮", true)
-    ui:set_touch_enabled("自动控制按钮", true)
     if ui.popup_active and ui.popup and ui.popup.confirm then
       ui:set_touch_enabled(ui.popup.confirm, true)
     end

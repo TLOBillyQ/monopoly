@@ -43,14 +43,18 @@ local function _resolve_current_player(game)
   return players[idx], turn
 end
 
-local function _build_item_slots(current, ui_runtime)
+local function _resolve_item_slot_count(ui_runtime)
   local slot_count = 5
   if ui_runtime and type(ui_runtime.item_slots) == "table" and #ui_runtime.item_slots > 0 then
     slot_count = #ui_runtime.item_slots
   end
+  return slot_count
+end
+
+local function _build_item_slots_for_player(player, slot_count)
   local current_items = {}
-  if current and current.inventory and type(current.inventory.items) == "table" then
-    current_items = current.inventory.items
+  if player and player.inventory and type(player.inventory.items) == "table" then
+    current_items = player.inventory.items
   end
   local item_slots = {}
   for i = 1, slot_count do
@@ -58,6 +62,17 @@ local function _build_item_slots(current, ui_runtime)
     item_slots[i] = item and item.id or nil
   end
   return item_slots
+end
+
+local function _build_item_slots_by_player(players, slot_count)
+  local out = {}
+  for _, player in ipairs(players or {}) do
+    local player_id = player and player.id
+    if player_id then
+      out[player_id] = _build_item_slots_for_player(player, slot_count)
+    end
+  end
+  return out
 end
 
 local function _build_choice_and_market(game, env, ui_state)
@@ -92,6 +107,19 @@ local function _build_popup(ui_runtime)
   return nil
 end
 
+local function _resolve_item_choice_owner_id(game, choice, current_player_id)
+  local owner_id = current_player_id
+  local pending = game and game.turn and game.turn.pending_choice or nil
+  if pending and pending.meta and pending.meta.player_id then
+    owner_id = pending.meta.player_id
+    return owner_id
+  end
+  if choice and choice.meta and choice.meta.player_id then
+    owner_id = choice.meta.player_id
+  end
+  return owner_id
+end
+
 function ui_model.build(game, env)
   assert(game ~= nil, "missing game")
   env = env or {}
@@ -99,7 +127,13 @@ function ui_model.build(game, env)
   local ui_runtime = ui_state and ui_state.ui
   local current, turn = _resolve_current_player(game)
   local overlays = _build_overlays(env)
-  local item_slots = _build_item_slots(current, ui_runtime)
+  local current_player_id = current and current.id or nil
+  local slot_count = _resolve_item_slot_count(ui_runtime)
+  local item_slots_by_player = _build_item_slots_by_player(game.players, slot_count)
+  local item_slots = item_slots_by_player[current_player_id]
+  if not item_slots then
+    item_slots = _build_item_slots_for_player(current, slot_count)
+  end
   local panel = {
     turn_label = panel_view.build_turn_label(
       turn.turn_count,
@@ -111,6 +145,7 @@ function ui_model.build(game, env)
   }
   local choice, market = _build_choice_and_market(game, env, ui_state)
   local popup = _build_popup(ui_runtime)
+  local item_choice_owner_id = _resolve_item_choice_owner_id(game, choice, current_player_id)
 
   return {
     board = {
@@ -124,6 +159,9 @@ function ui_model.build(game, env)
     },
     panel = panel,
     item_slots = item_slots,
+    item_slots_by_player = item_slots_by_player,
+    current_player_id = current_player_id,
+    item_choice_owner_id = item_choice_owner_id,
     choice = choice,
     market = market,
     popup = popup,
@@ -149,6 +187,7 @@ function ui_model.update(prev, game, env, dirty)
   local current, turn = _resolve_current_player(game)
   local ui_dirty = dirty.ui == true
   local model = prev
+  local current_player_id = current and current.id or nil
 
   if dirty.players or dirty.board_tiles or dirty.turn then
     local board = model.board or {}
@@ -178,7 +217,7 @@ function ui_model.update(prev, game, env, dirty)
   end
   model.panel = panel
 
-  local update_slots = dirty.players or ui_dirty
+  local update_slots = dirty.players or dirty.turn or ui_dirty
   if not update_slots and dirty.inventory_ids then
     for _ in pairs(dirty.inventory_ids) do
       update_slots = true
@@ -186,13 +225,19 @@ function ui_model.update(prev, game, env, dirty)
     end
   end
   if update_slots then
-    model.item_slots = _build_item_slots(current, ui_runtime)
+    local slot_count = _resolve_item_slot_count(ui_runtime)
+    local by_player = _build_item_slots_by_player(game.players, slot_count)
+    model.item_slots_by_player = by_player
+    model.item_slots = by_player[current_player_id] or _build_item_slots_for_player(current, slot_count)
   end
 
   if dirty.turn or dirty.market or ui_dirty then
     local choice, market = _build_choice_and_market(game, env, ui_state)
     model.choice = choice
     model.market = market
+    model.item_choice_owner_id = _resolve_item_choice_owner_id(game, choice, current_player_id)
+  elseif dirty.players or update_slots then
+    model.item_choice_owner_id = _resolve_item_choice_owner_id(game, model.choice, current_player_id)
   end
 
   if ui_dirty then
@@ -203,6 +248,7 @@ function ui_model.update(prev, game, env, dirty)
     model.current_player_name = current.name
     model.current_player_cash = current.cash
     model.turn_count = turn.turn_count
+    model.current_player_id = current_player_id
   end
 
   model.board_tile_count = #board_tiles

@@ -12,6 +12,7 @@ local choice_resolver = support.choice_resolver
 local gameplay_loop = support.gameplay_loop
 local turn_flow = support.turn_flow
 local turn_move = support.turn_move
+local turn_dispatch = require("src.game.turn.TurnDispatch")
 
 local function _test_move_anim_callback_and_delay()
   local dispatched = {}
@@ -152,6 +153,206 @@ local function _test_ui_model_structure()
   assert(model.board and model.board.tiles and model.board.tile_states, "ui_model.board data")
 end
 
+local function _test_ui_model_player_slot_map_and_choice_owner()
+  local ui_model = require("src.ui.UIModel")
+  local g = _new_game()
+  g.players[1].inventory:add({ id = 2001 })
+  g.players[2].inventory:add({ id = 2002 })
+  g.turn.pending_choice = {
+    id = 77,
+    kind = "item_phase_choice",
+    options = { { id = 2002, label = "用道具" } },
+    allow_cancel = true,
+    cancel_label = "取消",
+    meta = { player_id = 2 },
+  }
+
+  local model = ui_model.build(g, {
+    game = g,
+    ui_state = { ui = { item_slots = { 1, 2, 3, 4, 5 }, auto_play = false } },
+    last_turn = g.last_turn,
+    finished = g.finished,
+  })
+
+  assert(model.current_player_id == 1, "current_player_id expected")
+  assert(model.item_choice_owner_id == 2, "item_choice_owner_id expected")
+  assert(model.item_slots and model.item_slots[1] == 2001, "current player slot expected")
+  assert(model.item_slots_by_player and model.item_slots_by_player[1][1] == 2001, "player1 slot map expected")
+  assert(model.item_slots_by_player and model.item_slots_by_player[2][1] == 2002, "player2 slot map expected")
+end
+
+local function _test_turn_dispatch_rejects_non_current_actor()
+  local g = _new_game()
+  local state = {
+    ui = {
+      input_blocked = false,
+      auto_play = false,
+      item_slot_item_ids = {},
+      item_slot_item_ids_by_role = {},
+    },
+    auto_runner = {
+      set_enabled = function() end,
+      reset_timer = function() end,
+    },
+  }
+
+  local res_auto = turn_dispatch.dispatch_action(g, state, {
+    type = "ui_button",
+    id = "auto",
+    actor_role_id = 2,
+  }, {})
+  assert(res_auto and res_auto.status == "rejected", "auto button should reject non-current actor")
+  assert(state.ui.auto_play == false, "auto_play should stay false")
+
+  local res_next = turn_dispatch.dispatch_action(g, state, {
+    type = "ui_button",
+    id = "next",
+    actor_role_id = 2,
+  }, {})
+  assert(res_next and res_next.status == "rejected", "next button should reject non-current actor")
+end
+
+local function _test_turn_dispatch_item_slot_uses_actor_slot_map()
+  local g = _new_game()
+  local captured = nil
+  g.turn.pending_choice = {
+    id = 66,
+    kind = "item_phase_choice",
+    options = { { id = 3001, label = "用 3001" } },
+    allow_cancel = true,
+    cancel_label = "取消",
+    meta = { player_id = 1 },
+  }
+  function g:dispatch_action(action)
+    captured = action
+    self.turn.pending_choice = nil
+  end
+
+  local state = {
+    pending_choice = g.turn.pending_choice,
+    ui = {
+      input_blocked = false,
+      item_slot_item_ids = { [1] = 9999 },
+      item_slot_item_ids_by_role = {
+        [1] = { [1] = 3001 },
+        [2] = { [1] = 4001 },
+      },
+    },
+  }
+
+  local res = turn_dispatch.dispatch_action(g, state, {
+    type = "ui_button",
+    id = "item_slot_1",
+    actor_role_id = 1,
+  }, {})
+
+  assert(res and res.status == "applied", "item slot action should apply")
+  assert(captured and captured.type == "choice_select", "choice_select should dispatch")
+  assert(captured and captured.option_id == 3001, "should read actor role slot mapping")
+end
+
+local function _test_ui_view_render_by_role_slots_are_isolated()
+  local main_view = require("src.ui.UIView")
+
+  local image_logs = {}
+  local node_map = {}
+  local touch_logs = {}
+
+  local function role_key()
+    local role = UIManager and UIManager.client_role or nil
+    if role and role.get_roleid then
+      return role.get_roleid()
+    end
+    return 0
+  end
+
+  for i = 1, 5 do
+    local node_name = "道具槽位" .. tostring(i)
+    local storage = {}
+    node_map[node_name] = setmetatable({}, {
+      __index = function(_, k)
+        return storage[k]
+      end,
+      __newindex = function(t, k, v)
+        if k == "image_texture" then
+          local rk = role_key()
+          image_logs[rk] = image_logs[rk] or {}
+          image_logs[rk][node_name] = v
+        end
+        storage[k] = v
+      end,
+    })
+  end
+
+  local function query_nodes_by_name(name)
+    local node = node_map[name]
+    if not node then
+      node = {}
+      node_map[name] = node
+    end
+    return { node }
+  end
+
+  local state = {
+    ui_refs = {
+      ["空"] = "EMPTY",
+      ["2001"] = "ICON2001",
+      ["2002"] = "ICON2002",
+    },
+    ui = {
+      item_slots = { "道具槽位1", "道具槽位2", "道具槽位3", "道具槽位4", "道具槽位5" },
+      set_label = function() end,
+      set_button = function() end,
+      set_touch_enabled = function(_, name, enabled)
+        local rk = role_key()
+        touch_logs[rk] = touch_logs[rk] or {}
+        touch_logs[rk][name] = enabled
+      end,
+      item_slot_item_ids_by_role = {},
+    },
+  }
+
+  local ui_model = {
+    panel = {
+      turn_label = "回合: 1",
+      auto_label = "自动：关",
+      player_rows = {
+        { name = "P1", cash = "现金: 1", land_count = "地块: 0", total_assets = "总资产: 1" },
+        { name = "P2", cash = "现金: 1", land_count = "地块: 0", total_assets = "总资产: 1" },
+        { name = "", cash = "", land_count = "", total_assets = "" },
+        { name = "", cash = "", land_count = "", total_assets = "" },
+      },
+    },
+    item_slots_by_player = {
+      [1] = { 2001 },
+      [2] = { 2002 },
+    },
+    item_slots = { 2001 },
+    current_player_id = 1,
+    item_choice_owner_id = 1,
+    choice = nil,
+  }
+
+  local roles = {
+    { get_roleid = function() return 1 end },
+    { get_roleid = function() return 2 end },
+  }
+
+  _with_patches({
+    { key = "all_roles", value = roles },
+    { key = "UIManager", value = { client_role = nil, query_nodes_by_name = query_nodes_by_name } },
+  }, function()
+    main_view.refresh_panel(state, ui_model)
+  end)
+
+  assert(image_logs[1] and image_logs[1]["道具槽位1"] == "ICON2001", "role1 slot icon expected")
+  assert(image_logs[2] and image_logs[2]["道具槽位1"] == "ICON2002", "role2 slot icon expected")
+  assert(touch_logs[1] and touch_logs[1]["行动按钮"] == true, "current role action button should be enabled")
+  assert(touch_logs[2] and touch_logs[2]["行动按钮"] == false, "non-current role action button should be disabled")
+  assert(state.ui.item_slot_item_ids_by_role[1] and state.ui.item_slot_item_ids_by_role[1][1] == 2001, "role1 slot map expected")
+  assert(state.ui.item_slot_item_ids_by_role[2] and state.ui.item_slot_item_ids_by_role[2][1] == 2002, "role2 slot map expected")
+end
+
 local function _test_tick_skips_anim_when_no_anim()
   local dirty_tracker = require("src.core.DirtyTracker")
   local main_view = require("src.ui.UIView")
@@ -253,5 +454,9 @@ return {
   _test_invalid_choice_option_rejected,
   _test_move_anim_wait_and_resume,
   _test_ui_model_structure,
+  _test_ui_model_player_slot_map_and_choice_owner,
+  _test_turn_dispatch_rejects_non_current_actor,
+  _test_turn_dispatch_item_slot_uses_actor_slot_map,
+  _test_ui_view_render_by_role_slots_are_isolated,
   _test_tick_skips_anim_when_no_anim,
 }

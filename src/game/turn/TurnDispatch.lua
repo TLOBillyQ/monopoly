@@ -33,6 +33,39 @@ local function _get_timestamp_diff_seconds(timestamp_1, timestamp_2)
   return GameAPI.get_timestamp_diff(timestamp_1, timestamp_2)
 end
 
+local function _is_restricted_ui_button(action_id)
+  if action_id == "next" or action_id == "auto" then
+    return true
+  end
+  if action_id and string.match(action_id, "^item_slot_(%d+)$") then
+    return true
+  end
+  return false
+end
+
+local function _validate_actor_role(game, action)
+  if not _is_restricted_ui_button(action and action.id) then
+    return true
+  end
+  assert(game ~= nil and game.turn ~= nil, "missing game.turn")
+  local current_index = game.turn.current_player_index
+  local actor_role_id = action.actor_role_id
+  if actor_role_id == nil then
+    logger.warn("ui_button missing actor_role_id:", tostring(action.id))
+    return false
+  end
+  if actor_role_id ~= current_index then
+    logger.warn(
+      "ui_button blocked by actor check:",
+      tostring(action.id),
+      "actor=" .. tostring(actor_role_id),
+      "current=" .. tostring(current_index)
+    )
+    return false
+  end
+  return true
+end
+
 function turn_dispatch.step_turn(game)
   assert(game ~= nil, "missing game")
   assert(not game.finished, "game finished")
@@ -70,6 +103,9 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
     state.ui_dirty = true
   end
   if action.type == "ui_button" then
+    if not _validate_actor_role(game, action) then
+      return { status = "rejected" }
+    end
     local slot_index = action.id and string.match(action.id, "^item_slot_(%d+)$")
     if slot_index then
       slot_index = number_utils.to_integer(slot_index)
@@ -78,8 +114,22 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
         return { status = "rejected" }
       end
       assert(state.ui ~= nil, "missing state.ui")
-      assert(state.ui.item_slot_item_ids ~= nil, "missing item_slot_item_ids")
-      local item_id = assert(state.ui.item_slot_item_ids[slot_index], "missing item_id: " .. tostring(slot_index))
+      local item_ids = nil
+      if action.actor_role_id and type(state.ui.item_slot_item_ids_by_role) == "table" then
+        item_ids = state.ui.item_slot_item_ids_by_role[action.actor_role_id]
+      end
+      if not item_ids then
+        item_ids = state.ui.item_slot_item_ids
+      end
+      if not item_ids then
+        logger.warn("missing item_slot_item_ids for slot:", tostring(slot_index))
+        return { status = "rejected" }
+      end
+      local item_id = item_ids[slot_index]
+      if not item_id then
+        logger.warn("missing item_id:", tostring(slot_index))
+        return { status = "rejected" }
+      end
       local options = assert(choice.options, "missing choice options")
       local option_ok = false
       for _, opt in ipairs(options) do
