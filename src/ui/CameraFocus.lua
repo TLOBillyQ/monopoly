@@ -1,6 +1,7 @@
 local runtime_constants = require("Config.RuntimeConstants")
 
 local camera_focus = {}
+local lock_height_offset = 50.0
 
 local function _resolve_tile_pos(state, tile_index)
   assert(state ~= nil, "missing state")
@@ -78,6 +79,10 @@ local function _lock_camera_to_tile(state, tile_index)
     return false
   end
   local pos = _resolve_tile_pos(state, tile_index)
+  local lock_pos = pos
+  if pos and type(pos) == "table" and pos.x ~= nil and pos.y ~= nil and pos.z ~= nil and math and math.Vector3 then
+    lock_pos = math.Vector3(pos.x, pos.y + lock_height_offset, pos.z)
+  end
   local roles = _collect_camera_roles(state)
   if #roles == 0 then
     return false
@@ -87,7 +92,7 @@ local function _lock_camera_to_tile(state, tile_index)
   for _, role in ipairs(roles) do
     if role and role.set_camera_lock_position then
       local ok = pcall(function()
-        role.set_camera_lock_position(pos)
+        role.set_camera_lock_position(lock_pos)
       end)
       if ok then
         locked = true
