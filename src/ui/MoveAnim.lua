@@ -57,18 +57,33 @@ local function _calc_vehicle_step_time(len)
   return 2 * (speed / accel) + (len - critical_dist) / speed
 end
 
-local function _use_vehicle_helper(anim_ctx)
+local function _is_vehicle_anim(anim_ctx)
+  return anim_ctx and anim_ctx.vehicle_id ~= nil
+end
+
+local function _is_vehicle_move_mode(anim_ctx)
   return anim_ctx
-    and anim_ctx.vehicle_id ~= nil
+    and _is_vehicle_anim(anim_ctx)
+    and runtime_constants.vehicle_move_api_enabled == true
     and vehicle_helper
     and vehicle_helper.forward_eca_event_move
     and true
     or false
 end
 
+local function _is_vehicle_jump_mode(anim_ctx)
+  return anim_ctx
+    and _is_vehicle_anim(anim_ctx)
+    and runtime_constants.vehicle_move_api_enabled ~= true
+    and vehicle_helper
+    and vehicle_helper.forward_eca_event_set_position
+    and true
+    or false
+end
+
 local function _calc_step_time(scene, from_index, to_index, anim_ctx)
   local _, len = _calc_step_vector(scene, from_index, to_index)
-  if _use_vehicle_helper(anim_ctx) then
+  if _is_vehicle_anim(anim_ctx) then
     return _calc_vehicle_step_time(len)
   end
   return _calc_walk_step_time(len)
@@ -84,7 +99,13 @@ function move_anim.one_step(scene, player_id, from_index, to_index, anim_ctx)
   if time <= 0 then
     return 0
   end
-  if _use_vehicle_helper(anim_ctx) then
+  if _is_vehicle_jump_mode(anim_ctx) then
+    local end_tile = scene.tiles[to_index]
+    local target_pos = end_tile.get_position()
+    vehicle_helper.forward_eca_event_set_position(player_id, target_pos)
+    return time
+  end
+  if _is_vehicle_move_mode(anim_ctx) then
     vehicle_helper.forward_eca_event_move(player_id, step_dir, time)
     return time
   end
@@ -140,10 +161,10 @@ local function _build_steps(board_scene, from_index, to_index, visited, anim_ctx
 end
 
 local function _consume_enter_delay(anim_ctx, player_id)
-  if not _use_vehicle_helper(anim_ctx) then
+  if not _is_vehicle_anim(anim_ctx) then
     return 0
   end
-  if not vehicle_helper.consume_enter_delay then
+  if not (vehicle_helper and vehicle_helper.consume_enter_delay) then
     return 0
   end
   return vehicle_helper.consume_enter_delay(player_id, anim_ctx.vehicle_id) or 0

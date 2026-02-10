@@ -1,4 +1,4 @@
-# 黑市金豆/乐园币付费道具接入（官方商城桥接）
+# 载具移动降级：禁用 move API，改为 set_position 逐格跳
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
@@ -6,124 +6,104 @@
 
 ## 目的 / 全局视角
 
-当前黑市里部分道具和座驾使用“金豆/乐园币”计价，但余额完全是本地字段，和官方商品库存没有打通。改造后，金豆/乐园币将以官方 `commodity` 库存为准：余额不足可直接拉起官方购买面板，购买成功自动回写余额，黑市扣费通过 `consume_commodity` 真实消耗。用户可观察到：在黑市买金豆/乐园币商品时，余额和官方库存一致，充值后可立即继续购买。
+当前载具 `move` 事件链不稳定，导致移动表现偶发异常。本次改动将有载具玩家的移动执行从 `forward_eca_event_move` 降级为 `forward_eca_event_set_position` 逐格跳转，保留原分支并加开关控制，默认禁用 move API。改造后，用户可见行为是：有载具玩家仍按路径逐格移动（跳格），无载具玩家保持原来逻辑，回合流程与 enter/exit/stop 不变。
 
 ## 进度
 
-- [x] (2026-02-10 08:20Z) 清空并重写 `/.agents/PLAN_CURRENT.md`，建立本任务计划。
-- [x] (2026-02-10 08:28Z) 新增 `Config/RuntimePaidGoods.lua` 与 `src/game/commerce/PaidCurrencyBridge.lua`。
-- [x] (2026-02-10 08:31Z) 在 `GameplayLoop` 与 `Market` 接入托管币种同步、扣费与补购面板逻辑。
-- [x] (2026-02-10 08:35Z) 新增 `/.agents/tests/suites/paid_currency.lua` 并挂载到 `regression.lua`。
-- [x] (2026-02-10 08:36Z) 执行全量回归，`All regression checks passed (81)`。
+- [x] (2026-02-10) 清空并重写 `/.agents/PLAN_CURRENT.md`，建立本次任务文档。
+- [x] (2026-02-10) 新增运行时开关并改造 `MoveAnim` 载具执行路径。
+- [x] (2026-02-10) 调整 `/.agents/tests/suites/ui.lua` 并补充回滚开关测试。
+- [x] (2026-02-10) 执行 `lua .agents/tests/regression.lua` 并回填结果（82 通过）。
 
 ## 意外与发现
 
-- 观察：在测试环境下常缺少 `GameAPI.get_goods_list/get_role`，如果强依赖会导致逻辑不可用。
-  证据：桥接模块新增能力探测与安全降级；回归 `81` 项通过。
-- 观察：黑市托管币种扣费需要兼容“价格不是商品最小单位整数倍”的配置错误。
-  证据：`PaidCurrencyBridge.consume_currency` 已做对齐校验并拒绝扣费，避免错账。
+- 观察：默认禁用 move API 后，载具路径的 step_time 仍需沿用载具速度/加速度模型，否则观感会明显变慢。
+  证据：`MoveAnim._calc_step_time` 已改为“只要是载具动画就按载具模型算时长”，不再依赖 move helper 可用性。
+- 观察：开关回滚路径需要测试保护，避免后续误删 move 分支。
+  证据：新增测试 `_test_move_anim_vehicle_move_api_enabled_uses_move_event`。
 
 ## 决策日志
 
-- 决策：接入入口仅放在黑市购买链路，不新增主界面充值按钮。
-  理由：用户已明确选择“黑市内触发”，改动范围最小且不依赖新增 UI 节点。
+- 决策：保留旧 move 分支，仅通过 `vehicle_move_api_enabled` 开关控制是否启用。
+  理由：降低回滚成本，后续验证稳定后可一键恢复。
   日期/作者：2026-02-10 / Codex
-- 决策：官方商品映射按“商品名配置”实现。
-  理由：避免硬编码商品 ID，降低编辑器商品改名/重建后的维护成本。
+- 决策：默认 `vehicle_move_api_enabled = false`。
+  理由：当前需求是“暂时屏蔽 move API”。
   日期/作者：2026-02-10 / Codex
-- 决策：金豆/乐园币扣费口径采用官方库存，黑市扣费调用 `consume_commodity`。
-  理由：避免本地余额与真实库存双轨漂移。
+- 决策：首跳仍保留 `consume_enter_delay` 逻辑。
+  理由：避免载具刚刷出时首跳丢失。
   日期/作者：2026-02-10 / Codex
 
 ## 结果与复盘
 
-本次目标已完成，黑市里的金豆/乐园币消费链路已接入官方商品库存：
+本次降级目标已完成：默认情况下，载具移动不再发送 `forward_eca_event_move`，改为按路径逐格发送 `forward_eca_event_set_position`。同时保留了旧 move 分支，并通过 `vehicle_move_api_enabled` 开关实现可回滚控制。首跳 enter 延迟逻辑保持不变。
 
-- 新增 `RuntimePaidGoods` 配置，按商品名映射“金豆/乐园币 -> goods/commodity”。
-- 新增 `PaidCurrencyBridge`，实现商品解析、余额同步、扣费、补购面板、购买成功事件回写。
-- `GameplayLoop.set_game` 已在开局/重开时初始化桥接。
-- `Market` 已改为托管币种优先同步余额，扣费走 `consume_commodity`，不足时拉起购买面板。
-- 新增 `paid_currency` 回归套件，覆盖同步、扣费、不足拉面板、购买成功回写。
-
-验收结果：`lua .agents/tests/regression.lua` 输出 `All regression checks passed (81)`，满足“行为可观察 + 全量通过”。
+测试侧已更新默认路径断言，并新增“开关开启恢复 move API”回归用例。全量回归结果：`lua .agents/tests/regression.lua` 输出 `All regression checks passed (82)`，验收标准全部满足。
 
 ## 背景与导读
 
-本次改动涉及四层：
+改动核心集中在以下文件：
 
-第一层是配置层，在 `Config` 新增“币种 -> 官方商品名”的映射；
-第二层是桥接层，在 `src/game/commerce` 负责读 `GameAPI.get_goods_list`、同步余额、拉起购买面板、处理购买成功事件；
-第三层是业务层，在 `src/game/market/Market.lua` 将金豆/乐园币消费改为桥接扣费并在余额不足时触发补购；
-第四层是测试层，在 `/.agents/tests` 增加回归用例验证关键行为。
+- `Config/RuntimeConstants.lua`：新增开关 `vehicle_move_api_enabled`。
+- `src/ui/MoveAnim.lua`：新增“跳格模式”判断，默认用 set_position 逐格执行。
+- `/.agents/tests/suites/ui.lua`：把载具移动断言从 `forward_eca_event_move` 改为 `forward_eca_event_set_position`，并新增“开关恢复 move”测试。
 
-关键现状：
+不改动：
 
-- 黑市数据来自 `Config/Generated/Market.lua`，已有 `currency = 金豆/乐园币`。
-- 玩家余额字段由 `GameState` 维护，当前金豆/乐园币只在黑市消费时做本地扣减。
-- 工程已有事件与 API 封装，可直接注册 `EVENT.SPEC_ROLE_PURCHASE_GOODS`。
+- `RuntimeContext` 导出接口与 helper 结构；
+- `enter/exit/stop` 生命周期；
+- `BoardView` 的回合末位置拉回机制。
 
 ## 工作计划
 
-先补配置与桥接模块，确保在“无 API / 无商品映射”情况下可以安全降级。然后在 `GameplayLoop.set_game` 中初始化桥接，保证开局与重开都生效。接着修改 `Market.buy_with_opts` 和可购买判断：对托管币种先同步余额，扣费时走桥接，余额不足时对真人玩家拉起官方购买面板。最后补充测试桩与回归用例，覆盖“同步、扣费、余额不足拉面板、购买成功回写”四条主链路，并跑全量回归。
+先在常量层加开关，再改 `MoveAnim` 的模式选择：默认走 set_position 逐格跳，开关打开才走 move API。随后调整 UI 测试覆盖默认与回滚两条路径。最后跑全量回归并记录结果。
 
 ## 具体步骤
 
 工作目录：`/Users/billyq/Dev/Github/Lua/monopoly`
 
-1. 新增 `Config/RuntimePaidGoods.lua`，定义金豆/乐园币商品名映射。
-2. 新增 `src/game/commerce/PaidCurrencyBridge.lua`，实现：
-   - 商品名解析（`GameAPI.get_goods_list`）
-   - 余额同步（`Role.get_commodity_count` -> `game:set_player_balance`）
-   - 扣费（`Role.consume_commodity`）
-   - 补购面板（`Role.show_goods_purchase_panel`）
-   - 购买成功事件处理（`EVENT.SPEC_ROLE_PURCHASE_GOODS`）
-3. 修改 `src/game/turn/GameplayLoop.lua`，在 `set_game` 初始化桥接。
-4. 修改 `src/game/market/Market.lua`，接入托管币种同步、扣费和补购触发。
-5. 新增 `/.agents/tests/suites/paid_currency.lua` 并在 `/.agents/tests/regression.lua` 挂载。
-6. 运行：
+1. 修改 `Config/RuntimeConstants.lua`，新增 `vehicle_move_api_enabled = false`。
+2. 修改 `src/ui/MoveAnim.lua`：
+   - 新增 `_is_vehicle_jump_mode(anim_ctx)`；
+   - 收敛 `_use_vehicle_helper` 为“仅开关开启时”；
+   - 在 `one_step` 中跳格模式改为 `forward_eca_event_set_position(player_id, target_pos)`；
+   - 保留 `consume_enter_delay`，首跳延迟不变。
+3. 修改 `/.agents/tests/suites/ui.lua`：
+   - 更新默认模式测试断言为 set_position；
+   - 保留首跳延迟测试；
+   - 新增开关开启时恢复 move API 的测试。
+4. 执行：
    lua .agents/tests/regression.lua
 
 ## 验证与验收
 
-验收以“行为可观察”为准：
+验收标准：
 
-- 当托管币种余额足够时，黑市购买成功且官方库存减少。
-- 当托管币种余额不足时，黑市不扣款并弹官方购买面板。
-- 触发 `SPEC_ROLE_PURCHASE_GOODS` 后，玩家金豆/乐园币余额立即更新。
-- 非托管币种（如金币）行为不变。
-- 运行 `lua .agents/tests/regression.lua`，预期全部通过。
+- 默认开关关闭时，有载具移动不调用 `forward_eca_event_move`，逐格调用 `forward_eca_event_set_position`。
+- 开关开启时，恢复调用 `forward_eca_event_move`，不走 set_position 路径。
+- 首跳 enter 延迟仍生效。
+- 无载具路径行为不变。
+- 全量回归通过。
 
 ## 可重复性与恢复
 
-本改动可重复执行；若线上商品名配置缺失，桥接会降级为“仅本地余额判断 + 余额不足提示”，不会阻断流程。回滚时按顺序撤销：`Market` 接入 -> `GameplayLoop` 接入 -> `PaidCurrencyBridge` -> `RuntimePaidGoods`。
+本次改动可重复执行。若需恢复旧行为，仅将 `vehicle_move_api_enabled` 设为 `true`。若出现异常，可按文件粒度回滚 `MoveAnim` 与测试修改。
 
 ## 产物与备注
 
-主要产物：
-
-- 付费币桥接配置与模块。
-- 黑市托管币种扣费改造。
-- 购买成功余额自动同步机制。
-- 回归用例与测试桩。
+产物包含：一个运行时开关、`MoveAnim` 双路径逻辑（默认跳格 + 可回滚 move）、以及 UI 回归用例更新。
 
 ## 接口与依赖
 
-新增模块接口（`src.game.commerce.PaidCurrencyBridge`）：
+新增配置字段：
 
-- `setup_for_game(game)`
-- `is_managed_currency(currency)`
-- `sync_player_currency(game, player, currency)`
-- `consume_currency(game, player, currency, amount)`
-- `open_purchase_panel(player, currency)`
+- `runtime_constants.vehicle_move_api_enabled`（boolean）
 
-依赖 API：
+依赖保持不变：
 
-- `GameAPI.get_goods_list`
-- `GameAPI.get_role`
-- `Role.get_commodity_count`
-- `Role.consume_commodity`
-- `Role.show_goods_purchase_panel`
-- `EVENT.SPEC_ROLE_PURCHASE_GOODS`
+- `vehicle_helper.forward_eca_event_set_position`
+- `vehicle_helper.forward_eca_event_move`
+- `vehicle_helper.consume_enter_delay`
 
-计划更新说明（2026-02-10）：新建“黑市金豆/乐园币付费道具接入”可执行计划，替换旧任务文档。
-计划更新说明（2026-02-10）：完成桥接模块、黑市接入与回归验证，并回填结果与证据。
+计划更新说明（2026-02-10）：按“载具移动降级”需求重写本计划，替换上一任务内容。
+计划更新说明（2026-02-10）：完成代码改造、测试补充与全量回归验证，回填实施证据与复盘结论。

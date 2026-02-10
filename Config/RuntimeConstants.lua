@@ -32,6 +32,8 @@ local runtime_constants = {
   -- 仓库内未引用，暂保留兼容
   vehicle_speed = 20.0,
   vehicle_accel = 20.0,
+  -- 默认关闭：载具移动降级为 set_position 逐格跳
+  vehicle_move_api_enabled = false,
   vehicle_enter_delay = 1.2,
   fps = 30.0,
   forward_eca_event_ui = "ui_forward",

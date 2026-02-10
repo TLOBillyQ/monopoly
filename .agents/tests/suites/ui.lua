@@ -19,6 +19,7 @@ local ui_view = require("src.ui.UIView")
 local action_anim = require("src.ui.ActionAnim")
 local move_anim = require("src.ui.MoveAnim")
 local market_cfg = require("Config.Generated.Market")
+local runtime_constants = require("Config.RuntimeConstants")
 
 local function _build_popup_view_state(refs, card_node)
   local state = {
@@ -202,7 +203,7 @@ local function _test_move_anim_zero_distance_safe()
   _assert_eq(start_move_called, 0, "zero distance should skip unit move")
 end
 
-local function _test_move_anim_vehicle_uses_vehicle_helper()
+local function _test_move_anim_vehicle_uses_set_position_jump()
   local function _vec3(x, y, z)
     local vector_mt = {}
     vector_mt.__sub = function(a, b)
@@ -217,7 +218,7 @@ local function _test_move_anim_vehicle_uses_vehicle_helper()
   end
 
   local unit_move_called = 0
-  local vehicle_moves = {}
+  local vehicle_set_positions = {}
   local scene = {
     tiles = {
       [1] = { get_position = function() return _vec3(0, 0, 0) end },
@@ -233,12 +234,13 @@ local function _test_move_anim_vehicle_uses_vehicle_helper()
   }
 
   _with_patches({
+    { target = runtime_constants, key = "vehicle_move_api_enabled", value = false },
     { key = "vehicle_helper", value = {
       consume_enter_delay = function()
         return 0
       end,
-      forward_eca_event_move = function(role_id, dir, time)
-        vehicle_moves[#vehicle_moves + 1] = { role_id = role_id, dir = dir, time = time }
+      forward_eca_event_set_position = function(role_id, pos)
+        vehicle_set_positions[#vehicle_set_positions + 1] = { role_id = role_id, pos = pos }
       end,
     } },
   }, function()
@@ -252,10 +254,9 @@ local function _test_move_anim_vehicle_uses_vehicle_helper()
     assert(total > 0, "vehicle move total time should be positive")
   end)
 
-  _assert_eq(unit_move_called, 0, "vehicle move should not call unit.start_move_by_direction")
-  _assert_eq(#vehicle_moves, 1, "vehicle move should forward one eca move event")
-  _assert_eq(vehicle_moves[1].role_id, 1, "vehicle move role id should match")
-  assert(vehicle_moves[1].time > 0, "vehicle move time should be positive")
+  _assert_eq(unit_move_called, 0, "vehicle jump should not call unit.start_move_by_direction")
+  _assert_eq(#vehicle_set_positions, 1, "vehicle jump should forward one set_position event")
+  _assert_eq(vehicle_set_positions[1].role_id, 1, "vehicle jump role id should match")
 end
 
 local function _test_move_anim_vehicle_enter_delay_once()
@@ -283,11 +284,12 @@ local function _test_move_anim_vehicle_enter_delay_once()
   }
 
   _with_patches({
+    { target = runtime_constants, key = "vehicle_move_api_enabled", value = false },
     { key = "SetTimeOut", value = function(delay)
       timeout_delays[#timeout_delays + 1] = delay
     end },
     { key = "vehicle_helper", value = {
-      forward_eca_event_move = function() end,
+      forward_eca_event_set_position = function() end,
       consume_enter_delay = function()
         consume_calls = consume_calls + 1
         if consume_calls == 1 then
@@ -317,6 +319,57 @@ local function _test_move_anim_vehicle_enter_delay_once()
     })
     _assert_eq(#timeout_delays, 0, "second move should not include enter wait delay")
   end)
+end
+
+local function _test_move_anim_vehicle_move_api_enabled_uses_move_event()
+  local function _vec3(x, y, z)
+    local vector_mt = {}
+    vector_mt.__sub = function(a, b)
+      return _vec3(a.x - b.x, a.y - b.y, a.z - b.z)
+    end
+    local vector = setmetatable({ x = x, y = y, z = z }, vector_mt)
+    function vector:length()
+      local sum = self.x * self.x + self.y * self.y + self.z * self.z
+      return math.sqrt(sum)
+    end
+    return vector
+  end
+
+  local move_calls = 0
+  local set_pos_calls = 0
+  local scene = {
+    tiles = {
+      [1] = { get_position = function() return _vec3(0, 0, 0) end },
+      [2] = { get_position = function() return _vec3(10, 0, 0) end },
+    },
+    units_by_player_id = { [1] = {} },
+  }
+
+  _with_patches({
+    { target = runtime_constants, key = "vehicle_move_api_enabled", value = true },
+    { key = "vehicle_helper", value = {
+      consume_enter_delay = function()
+        return 0
+      end,
+      forward_eca_event_move = function()
+        move_calls = move_calls + 1
+      end,
+      forward_eca_event_set_position = function()
+        set_pos_calls = set_pos_calls + 1
+      end,
+    } },
+  }, function()
+    move_anim.play_sequence(scene, {
+      player_id = 1,
+      from_index = 1,
+      to_index = 2,
+      direction = { x = 1, y = 0, z = 0 },
+      vehicle_id = 4001,
+    })
+  end)
+
+  _assert_eq(move_calls, 1, "move api enabled should use forward_eca_event_move")
+  _assert_eq(set_pos_calls, 0, "move api enabled should not use set_position jump")
 end
 
 local function _test_board_view_vehicle_resync_uses_set_position()
@@ -1240,8 +1293,9 @@ return {
   _test_invalid_choice_option_rejected,
   _test_move_anim_wait_and_resume,
   _test_move_anim_zero_distance_safe,
-  _test_move_anim_vehicle_uses_vehicle_helper,
+  _test_move_anim_vehicle_uses_set_position_jump,
   _test_move_anim_vehicle_enter_delay_once,
+  _test_move_anim_vehicle_move_api_enabled_uses_move_event,
   _test_board_view_vehicle_resync_uses_set_position,
   _test_ui_model_structure,
   _test_ui_model_player_slot_map_and_choice_owner,
