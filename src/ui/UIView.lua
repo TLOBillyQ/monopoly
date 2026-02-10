@@ -226,6 +226,19 @@ end
 local function _render_auto_controls_for_role(ui, role_ctx, ui_model)
   local controls = ui and ui.auto_control_nodes or { "托管按钮", "自动控制按钮" }
   local auto_enabled = role_ctx and role_ctx.is_player_role == true
+  local panel = ui_model and ui_model.panel or nil
+  local labels_by_player = panel and panel.auto_label_by_player or nil
+  local display_player_id = role_ctx and role_ctx.display_player_id or nil
+  local auto_label = nil
+  if labels_by_player and display_player_id ~= nil then
+    auto_label = labels_by_player[display_player_id]
+  end
+  if not auto_label then
+    auto_label = panel and panel.auto_label or nil
+  end
+  if auto_label and ui and ui.set_button then
+    ui:set_button("托管按钮", auto_label)
+  end
   for _, name in ipairs(controls) do
     ui:set_visible(name, true)
     ui:set_touch_enabled(name, auto_enabled)
