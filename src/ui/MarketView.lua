@@ -84,6 +84,16 @@ local function _resolve_market_icon_key(refs, product_id, entry, cfg)
   return refs[name]
 end
 
+local function _set_node_texture_keep_size(node, image_key)
+  assert(node ~= nil, "missing image node")
+  assert(image_key ~= nil, "missing image key")
+  if node.set_texture_keep_size then
+    node:set_texture_keep_size(image_key)
+    return
+  end
+  node.image_texture = image_key
+end
+
 function market_view.refresh_market_selection(state, option_id)
   local ui = state.ui
   assert(ui ~= nil, "missing market ui")
@@ -101,10 +111,7 @@ function market_view.refresh_market_selection(state, option_id)
   ui:set_label(market_layout.price_label, price_text)
   if icon_key ~= nil then
     local node = ui.query_node(market_layout.selected_card)
-    node.image_texture = icon_key
-    if node.reset_size then
-      node:reset_size()
-    end
+    _set_node_texture_keep_size(node, icon_key)
   end
 end
 
@@ -149,7 +156,7 @@ function market_view.refresh_market(state, market)
       end
       if rarity_key ~= nil then
         local node = ui.query_node(frame)
-        node.image_texture = rarity_key
+        _set_node_texture_keep_size(node, rarity_key)
       end
     else
       ui:set_visible(button, false)
@@ -194,10 +201,7 @@ function market_view.close_market_panel(state)
   ui:set_touch_enabled(market_layout.selected_card, false)
   local empty_key = _resolve_ref_key(state.ui_refs, market_layout.empty_ref_key)
   local node = ui.query_node(market_layout.selected_card)
-  node.image_texture = empty_key
-  if node.reset_size then
-    node:reset_size()
-  end
+  _set_node_texture_keep_size(node, empty_key)
 end
 
 return market_view

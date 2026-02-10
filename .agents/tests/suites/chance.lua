@@ -5,7 +5,9 @@ local _visited_tile_ids = support.visited_tile_ids
 local _list_contains = support.list_contains
 local _first_tile_by_type = support.first_tile_by_type
 local _with_patches = support.with_patches
+local _assert_eq = support.assert_eq
 local chance_effects = support.chance_effects
+local _build_ui_port = support.build_ui_port
 
 local function _test_chance_is_mandatory_effect_entrypoint()
   local g = _new_game()
@@ -53,8 +55,39 @@ local function _test_chance_move_backward_pass_intersection()
   assert(_list_contains(visited_ids, 45), "backward move should pass intersection")
 end
 
+local function _test_chance_move_backward_queues_move_effect_anim()
+  local g = _new_game()
+  g.ui_port = _build_ui_port({ wait_action_anim = true })
+  local p = g:current_player()
+  g:update_player_position(p, g.board:index_of_tile_id(32))
+  g:set_player_status(p, "move_dir", "down")
+  local out = chance_effects.resolve(g, p, { effect = "move_backward", steps = 2, target = "self" }, {})
+  assert(out and out.move_result, "move_backward should return move result")
+  assert(g.turn.action_anim and g.turn.action_anim.kind == "move_effect", "move_backward should queue move_effect anim")
+  _assert_eq(g.turn.action_anim.to_index, p.position, "move_effect to_index should match player position")
+end
+
+local function _test_chance_forced_move_queues_move_effect_anim()
+  local g = _new_game()
+  g.ui_port = _build_ui_port({ wait_action_anim = true })
+  local p = g:current_player()
+  local dest = 38
+  local out = chance_effects.resolve(g, p, {
+    effect = "forced_move",
+    destination_tile_id = dest,
+    target = "self",
+  }, {})
+  local idx = g.board:index_of_tile_id(dest)
+  assert(out and out.kind == "need_landing", "forced_move destination tile should return need_landing")
+  _assert_eq(out.board_index, idx, "forced_move board_index should match destination")
+  assert(g.turn.action_anim and g.turn.action_anim.kind == "move_effect", "forced_move should queue move_effect anim")
+  _assert_eq(g.turn.action_anim.to_index, idx, "forced_move anim to_index should match destination")
+end
+
 return {
   _test_chance_is_mandatory_effect_entrypoint,
   _test_chance_move_backward_pass_market,
   _test_chance_move_backward_pass_intersection,
+  _test_chance_move_backward_queues_move_effect_anim,
+  _test_chance_forced_move_queues_move_effect_anim,
 }

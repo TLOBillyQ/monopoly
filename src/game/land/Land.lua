@@ -76,6 +76,17 @@ local function _apply_upgrade(ctx)
   assert(ui_port.on_tile_upgraded ~= nil, "missing ui_port.OnTileUpgraded")
   ui_port:on_tile_upgraded(tile.id, new_level)
   logger.event(player.name .. " 为 " .. tile.name .. " 加盖，花费 " .. cost)
+  if ui_port.wait_action_anim then
+    local tile_index = ctx.game.board:index_of_tile_id(tile.id)
+    if tile_index then
+      ctx.game:queue_action_anim({
+        kind = "upgrade_land",
+        player_id = player.id,
+        tile_index = tile_index,
+        focus_target_tile_index = tile_index,
+      })
+    end
+  end
 end
 
 local function _can_pay_rent(ctx)

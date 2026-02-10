@@ -58,6 +58,27 @@ local function _is_auto_popup_owner(game, state)
   return actor and agent.is_auto_player(actor) or false
 end
 
+local function _is_auto_player_turn(game)
+  if not (game and game.turn and game.players) then
+    return false
+  end
+  local idx = game.turn.current_player_index
+  local player = idx and game.players[idx] or nil
+  if not player then
+    return false
+  end
+  return agent.is_auto_player(player) == true
+end
+
+local function _build_auto_context(game, context)
+  local ctx = context or {}
+  ctx.game_finished = game.finished
+  if not ctx.current_player_index then
+    ctx.current_player_index = game.turn and game.turn.current_player_index or nil
+  end
+  return ctx
+end
+
 local function _step_phase_animation(game, state, phase)
   if phase == "wait_move_anim" then
     local anim_data = game.turn.move_anim
@@ -125,6 +146,11 @@ function gameplay_loop.set_game(state, game)
   if state.ui then
     state.ui.input_blocked = false
   end
+  if state.ai_turn_runner then
+    state.ai_turn_runner:set_enabled(true)
+    state.ai_turn_runner:reset_timer()
+  end
+  state.ai_turn_runner_active = false
 end
 
 function gameplay_loop.new_game(state)
@@ -165,11 +191,7 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
       end
     end
   end
-  local ctx = context or {}
-  ctx.game_finished = game.finished
-  if not ctx.current_player_index then
-    ctx.current_player_index = game.turn and game.turn.current_player_index or nil
-  end
+  local ctx = _build_auto_context(game, context)
   local auto_action = state.auto_runner:next_action(dt, ctx)
   if auto_action and auto_action.type == "ui_button" and not auto_action.actor_role_id then
     auto_action.actor_role_id = ctx.current_player_index
@@ -178,6 +200,62 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
     _dispatch_action_with_close_choice(game, state, auto_action)
   end
   return auto_action
+end
+
+function gameplay_loop.step_ai_turn_runner(game, state, dt, context)
+  assert(game ~= nil, "missing game")
+  local runner = state and state.ai_turn_runner or nil
+  if not runner then
+    return nil
+  end
+  if not runner.enabled then
+    runner:set_enabled(true)
+  end
+  if state.ui and state.ui.input_blocked then
+    if state.ai_turn_runner_active then
+      runner:reset_timer()
+      state.ai_turn_runner_active = false
+    end
+    return nil
+  end
+  if state.ui and state.ui.auto_play then
+    if state.ai_turn_runner_active then
+      runner:reset_timer()
+      state.ai_turn_runner_active = false
+    end
+    return nil
+  end
+  if not _is_auto_player_turn(game) then
+    if state.ai_turn_runner_active then
+      runner:reset_timer()
+      state.ai_turn_runner_active = false
+    end
+    return nil
+  end
+  if not state.ai_turn_runner_active then
+    state.ai_turn_runner_active = true
+    runner:reset_timer()
+  end
+
+  local min_popup_visible = gameplay_rules.auto_popup_min_visible_seconds or 0
+  if min_popup_visible > 0 and state.ui and state.ui.popup_active then
+    if _is_auto_popup_owner(game, state) then
+      local elapsed = state.ui_modal_elapsed or 0
+      if elapsed < min_popup_visible then
+        return nil
+      end
+    end
+  end
+
+  local ctx = _build_auto_context(game, context)
+  local ai_action = runner:next_action(dt, ctx)
+  if ai_action and ai_action.type == "ui_button" and not ai_action.actor_role_id then
+    ai_action.actor_role_id = ctx.current_player_index
+  end
+  if ai_action then
+    _dispatch_action_with_close_choice(game, state, ai_action)
+  end
+  return ai_action
 end
 
 function gameplay_loop.dispatch_action(game, state, action, opts)
@@ -204,12 +282,14 @@ function gameplay_loop.tick(game, state, dt)
   local phase = game.turn.phase
   local input_blocked_changed = _sync_input_blocked(state, phase)
 
-  gameplay_loop.step_auto_runner(game, state, dt, {
+  local auto_ctx = {
     modal_active = false,
     modal_buttons = nil,
     game_finished = game.finished,
     current_player_index = game.turn and game.turn.current_player_index or nil,
-  })
+  }
+  gameplay_loop.step_auto_runner(game, state, dt, auto_ctx)
+  gameplay_loop.step_ai_turn_runner(game, state, dt, auto_ctx)
 
   tick_timeout.step_default_choice(game, state, dt)
   tick_timeout.step_default_modal(game, state, dt)

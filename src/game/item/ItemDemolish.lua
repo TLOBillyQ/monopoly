@@ -101,6 +101,7 @@ function demolish.apply(game, player, idx, opts)
       player_id = player.id,
       tile_index = idx,
       item_id = opts.item_id,
+      focus_target_tile_index = idx,
     })
     queued = true
   end

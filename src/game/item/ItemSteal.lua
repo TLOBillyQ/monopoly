@@ -29,9 +29,23 @@ function steal.steal_item_at_index(game, player, target, item_idx)
   inventory.consume(player, item_ids.steal)
   local name = inventory.item_name(stolen.id)
   logger.event(player.name .. " 使用偷窃卡，从 " .. target.name .. " 偷走道具 " .. name)
+  local queued = false
+  local ui_port = game.ui_port
+  if ui_port and ui_port.wait_action_anim then
+    game:queue_action_anim({
+      kind = "item_target_player",
+      player_id = player.id,
+      target_player_id = target.id,
+      item_id = item_ids.steal,
+      item_name = "偷窃卡",
+      focus_target_player_id = target.id,
+    })
+    queued = true
+  end
   return {
     ok = true,
     stolen = stolen,
+    action_anim = queued,
     intent = { kind = "push_popup", payload = { title = "偷窃成功", body = player.name .. " 从 " .. target.name .. " 偷走了 " .. name } },
   }
 end

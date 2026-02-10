@@ -130,6 +130,7 @@ local function _build_initial_turn()
     move_anim = nil,
     action_anim_seq = 0,
     action_anim = nil,
+    action_anim_queue = {},
     item_phase = {},
     item_phase_active = "",
     market_prompt = nil,

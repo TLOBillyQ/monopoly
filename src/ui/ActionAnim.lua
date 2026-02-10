@@ -1,20 +1,21 @@
 local runtime_constants = require("Config.RuntimeConstants")
+local gameplay_rules = require("Config.GameplayRules")
 
 local prefab = require("Data.Prefab")
 local logger = require("src.core.Logger")
+local camera_focus = require("src.ui.CameraFocus")
 
 local action_anim = {}
 
 local durations = {
-  roll = 1.0,
-  roadblock = 0.8,
-  mine = 0.8,
   missile = 1.2,
   monster = 1.2,
-  clear_obstacles = 1.0,
 }
 
 local function _build_tip(anim)
+  if anim.focus_text and anim.focus_text ~= "" then
+    return anim.focus_text
+  end
   local kind = anim.kind
   if kind == "roll" then
     local rolls = anim.rolls and table.concat(anim.rolls, ",") or "?"
@@ -36,6 +37,22 @@ local function _build_tip(anim)
   if kind == "clear_obstacles" then
     local count = anim.cleared_indices and #anim.cleared_indices or 0
     return "清障动画：清除数量 " .. tostring(count)
+  end
+  if kind == "upgrade_land" then
+    return "加盖动画：格子 " .. tostring(anim.tile_index or "?")
+  end
+  if kind == "chance" then
+    return "机会卡展示：" .. tostring(anim.card_desc or anim.card_id or "?")
+  end
+  if kind == "item_use" then
+    return "道具生效：" .. tostring(anim.item_name or anim.item_id or "?")
+  end
+  if kind == "item_target_player" then
+    return "目标道具：" .. tostring(anim.item_name or anim.item_id or "?")
+      .. " -> 玩家 " .. tostring(anim.target_player_id or "?")
+  end
+  if kind == "move_effect" then
+    return "位移动画：" .. tostring(anim.from_index or "?") .. " -> " .. tostring(anim.to_index or "?")
   end
   return "动作动画"
 end
@@ -160,15 +177,26 @@ local function _spawn_transient(group_id, unit_id, pos, duration)
   end
 end
 
+local function _show_tip(text, duration)
+  if GlobalAPI and GlobalAPI.show_tips then
+    GlobalAPI.show_tips(text, duration)
+  end
+end
+
 function action_anim.play(state, anim)
   assert(anim ~= nil, "missing anim")
   assert(state ~= nil, "missing state")
-  local duration = anim.duration or durations[anim.kind] or 1.0
+  local default_duration = gameplay_rules.action_anim_default_seconds or 1.0
+  local duration = anim.duration or durations[anim.kind] or default_duration
+  if duration <= 0 then
+    duration = default_duration
+  end
   local tip_duration = duration
   if type(duration) == "number" and math and math.tofixed then
     tip_duration = math.tofixed(duration)
   end
-  GlobalAPI.show_tips(_build_tip(anim), tip_duration)
+  _show_tip(_build_tip(anim), tip_duration)
+  camera_focus.begin(state, anim, duration)
 
   local kind = anim.kind
   if kind == "roadblock" then
@@ -181,7 +209,7 @@ function action_anim.play(state, anim)
     local group_id = prefab.group["地雷"]
     local unit_id = prefab.unit and prefab.unit["地雷"] or nil
     if not group_id and not unit_id then
-      GlobalAPI.show_tips("缺少地雷 prefab，跳过生成", 1.5)
+      _show_tip("缺少地雷 prefab，跳过生成", 1.5)
       logger.warn("[Eggy]", "地雷 prefab 缺失，已跳过生成")
     else
       _spawn_overlay(state, "mine", tile_index, group_id, unit_id)

@@ -89,6 +89,16 @@ landing.executors = {
         return
       end
       logger.event(ctx.player.name .. " 抽到机会卡 " .. card.description)
+      local ui_port = ctx.game.ui_port
+      if ui_port and ui_port.wait_action_anim then
+        ctx.game:queue_action_anim({
+          kind = "chance",
+          player_id = ctx.player.id,
+          card_id = card.id,
+          card_desc = card.description,
+          focus_target_player_id = ctx.player.id,
+        })
+      end
       return chance_effects.resolve(ctx.game, ctx.player, card, ctx.move_result)
     end,
   },

@@ -4,6 +4,17 @@ local effect = require("src.game.effect.Effect")
 
 local max_landing_depth = 10
 
+local function _has_action_anim(game)
+  if not game or not game.turn then
+    return false
+  end
+  if game.turn.action_anim then
+    return true
+  end
+  local queue = game.turn.action_anim_queue
+  return type(queue) == "table" and #queue > 0
+end
+
 local function _resolve_landing(game, player, tile, move_result, depth)
   depth = depth or 0
   local game_ctx = effect.build_game_ctx(game, move_result, {
@@ -52,7 +63,20 @@ local function _phase_land(turn_mgr, args)
   if res and res.waiting then
     local resume_state = res.resume_state or "landing"
     local resume_args = res.resume_args or { player = player, move_result = move_result }
+    if _has_action_anim(turn_mgr.game) then
+      return "wait_action_anim", {
+        resume_state = "wait_choice",
+        resume_args = { resume_state = resume_state, resume_args = resume_args },
+      }
+    end
     return "wait_choice", { resume_state = resume_state, resume_args = resume_args }
+  end
+
+  if _has_action_anim(turn_mgr.game) then
+    return "wait_action_anim", {
+      resume_state = "post_action",
+      resume_args = { player = player },
+    }
   end
 
   return "post_action", { player = player }

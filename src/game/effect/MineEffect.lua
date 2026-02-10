@@ -30,7 +30,18 @@ function mine_effect.apply(game, player, position)
   end
   game:set_player_seat(player, nil)
   logger.event(player.name .. " 触发地雷，座驾被摧毁并送医")
+  local from_index = position
   game:player_send_to_hospital(player)
+  local ui_port = game.ui_port
+  if ui_port and ui_port.wait_action_anim then
+    game:queue_action_anim({
+      kind = "move_effect",
+      player_id = player.id,
+      from_index = from_index,
+      to_index = player.position,
+      focus_target_tile_index = player.position,
+    })
+  end
   return { detonated = true, hospitalized = true, new_position = player.position }
 end
 

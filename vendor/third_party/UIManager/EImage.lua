@@ -50,12 +50,18 @@ end
 
 -- 更新图片预设
 function EImage:__update_image_texture()
+    self:__apply_image_texture(false)
+end
+
+function EImage:__apply_image_texture(reset_size)
+    local should_reset_size = reset_size == true
     if UIManager.client_role then
         UIManager.client_role.set_image_texture_by_key_with_auto_resize(self.__protected_id,
-            self.__protected_image_texture, false)
+            self.__protected_image_texture, should_reset_size)
     else
         for _, role in ipairs(allroles) do
-            role.set_image_texture_by_key_with_auto_resize(self.__protected_id, self.__protected_image_texture, false)
+            role.set_image_texture_by_key_with_auto_resize(self.__protected_id, self.__protected_image_texture,
+                should_reset_size)
         end
     end
 end
@@ -68,15 +74,18 @@ function EImage:__set_transition_time(value)
     self.__protected_transition_time = math.tofixed(value)
 end
 
+function EImage:set_texture_keep_size(image_key)
+    self.__protected_image_texture = image_key
+    self:__apply_image_texture(false)
+end
+
+function EImage:set_texture_native_size(image_key)
+    self.__protected_image_texture = image_key
+    self:__apply_image_texture(true)
+end
+
 function EImage:reset_size()
-    if UIManager.client_role then
-        UIManager.client_role.set_image_texture_by_key_with_auto_resize(self.__protected_id,
-            self.__protected_image_texture, true)
-    else
-        for _, role in ipairs(allroles) do
-            role.set_image_texture_by_key_with_auto_resize(self.__protected_id, self.__protected_image_texture, true)
-        end
-    end
+    self:__apply_image_texture(true)
 end
 
 return EImage

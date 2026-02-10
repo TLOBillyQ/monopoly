@@ -19,6 +19,46 @@ local tick_timeout = support.tick_timeout
 local constants = support.constants
 local bankruptcy = support.bankruptcy
 
+local function _build_loop_state()
+  local auto_runner = require("src.game.turn.AutoRunner")
+  local state = {
+    auto_runner = auto_runner:new({ interval = 0.01 }),
+    ai_turn_runner = auto_runner:new({ interval = 0.4 }),
+    ai_turn_runner_active = false,
+    ui = {
+      auto_play = false,
+      input_blocked = false,
+      choice_active = false,
+      market_active = false,
+      popup_active = false,
+    },
+    pending_choice = nil,
+    pending_choice_elapsed = 0,
+    pending_choice_id = nil,
+    next_turn_locked = false,
+    next_turn_last_click = nil,
+    next_turn_lock_phase = nil,
+  }
+  state.auto_runner:set_enabled(false)
+  state.ai_turn_runner:set_enabled(true)
+  return state
+end
+
+local function _with_timestamp_stub(fn)
+  local now = 0
+  local game_api = GameAPI or {}
+  return support.with_patches({
+    { key = "GameAPI", value = game_api },
+    { target = game_api, key = "get_timestamp", value = function()
+      now = now + 1
+      return now
+    end },
+    { target = game_api, key = "get_timestamp_diff", value = function(a, b)
+      return a - b
+    end },
+  }, fn)
+end
+
 local function _test_mandatory_payment_causes_bankruptcy()
   local g = _new_game()
   local p1 = g.players[1]
@@ -321,10 +361,89 @@ local function _test_complex_market_interrupt_with_rent()
   assert(true, "黑市中断 + 租金支付场景完成")
 end
 
+local function _test_ai_turn_auto_advance_without_autoplay()
+  local g = _new_game()
+  g.ui_port = _build_ui_port()
+  local state = _build_loop_state()
+  g.turn.current_player_index = 2
+  g.turn.phase = "start"
+  g.turn.turn_count = 1
+
+  _with_timestamp_stub(function()
+    local a1 = gameplay_loop.step_ai_turn_runner(g, state, 0.2, {
+      game_finished = g.finished,
+      current_player_index = g.turn.current_player_index,
+    })
+    assert(a1 == nil, "should not trigger before reaching AI interval")
+    local a2 = gameplay_loop.step_ai_turn_runner(g, state, 0.2, {
+      game_finished = g.finished,
+      current_player_index = g.turn.current_player_index,
+    })
+    assert(a2 and a2.type == "ui_button" and a2.id == "next", "AI turn should auto dispatch next")
+  end)
+end
+
+local function _test_human_turn_not_auto_advanced()
+  local g = _new_game()
+  g.ui_port = _build_ui_port()
+  local state = _build_loop_state()
+  g.turn.current_player_index = 1
+  g.turn.phase = "start"
+  g.turn.turn_count = 1
+
+  _with_timestamp_stub(function()
+    local action = gameplay_loop.step_ai_turn_runner(g, state, 1.0, {
+      game_finished = g.finished,
+      current_player_index = g.turn.current_player_index,
+    })
+    assert(action == nil, "human turn should not auto dispatch next")
+  end)
+end
+
+local function _test_ai_turn_not_advanced_when_input_blocked()
+  local g = _new_game()
+  g.ui_port = _build_ui_port()
+  local state = _build_loop_state()
+  state.ui.input_blocked = true
+  g.turn.current_player_index = 2
+  g.turn.phase = "wait_action_anim"
+  g.turn.turn_count = 1
+
+  _with_timestamp_stub(function()
+    local action = gameplay_loop.step_ai_turn_runner(g, state, 1.0, {
+      game_finished = g.finished,
+      current_player_index = g.turn.current_player_index,
+    })
+    assert(action == nil, "blocked phase should not auto dispatch next")
+  end)
+end
+
+local function _test_ai_runner_disabled_when_autoplay_enabled()
+  local g = _new_game()
+  g.ui_port = _build_ui_port()
+  local state = _build_loop_state()
+  state.ui.auto_play = true
+  g.turn.current_player_index = 2
+  g.turn.phase = "start"
+  g.turn.turn_count = 1
+
+  _with_timestamp_stub(function()
+    local ai_action = gameplay_loop.step_ai_turn_runner(g, state, 1.0, {
+      game_finished = g.finished,
+      current_player_index = g.turn.current_player_index,
+    })
+    assert(ai_action == nil, "AI runner should not dispatch when auto_play is enabled")
+  end)
+end
+
 return {
   _test_mandatory_payment_causes_bankruptcy,
   _test_bankruptcy_resets_owned_tiles,
   _test_autorunner_runs_to_end,
   _test_complex_consecutive_turn_settlement,
   _test_complex_market_interrupt_with_rent,
+  _test_ai_turn_auto_advance_without_autoplay,
+  _test_human_turn_not_auto_advanced,
+  _test_ai_turn_not_advanced_when_input_blocked,
+  _test_ai_runner_disabled_when_autoplay_enabled,
 }

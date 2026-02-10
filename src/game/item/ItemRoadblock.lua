@@ -147,6 +147,7 @@ function roadblock.apply(game, player, idx)
       kind = "roadblock",
       player_id = player.id,
       tile_index = idx,
+      focus_target_tile_index = idx,
     })
     queued = true
   end

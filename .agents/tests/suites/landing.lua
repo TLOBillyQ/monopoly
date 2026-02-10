@@ -7,6 +7,8 @@ local _get_choice = support.get_choice
 local _first_land_tile = support.first_land_tile
 local _first_tile_by_type = support.first_tile_by_type
 local _tile_state = support.tile_state
+local _with_patches = support.with_patches
+local turn_land = require("src.game.turn.TurnLand")
 
 local function _test_land_on_start_reward()
   local g = _new_game()
@@ -94,6 +96,24 @@ local function _test_zero_cash_no_buy_choice()
   assert(_get_choice(g) ~= nil, "pending choice should exist")
 end
 
+local function _test_turn_land_bridges_to_wait_action_anim_for_chance()
+  local g = _new_game()
+  g.ui_port = _build_ui_port({ wait_action_anim = true })
+  local p = g:current_player()
+  local idx, tile_ref = _first_tile_by_type(g.board, "chance")
+  g:update_player_position(p, idx)
+  local old_lua_api = LuaAPI
+  local patched = old_lua_api or {}
+  _with_patches({
+    { key = "LuaAPI", value = patched },
+    { target = patched, key = "rand", value = function() return 0 end },
+  }, function()
+    local next_state, _ = turn_land({ game = g }, { player = p, move_result = {} })
+    assert(next_state == "wait_action_anim", "chance landing should bridge to wait_action_anim")
+    assert(g.turn.action_anim and g.turn.action_anim.kind == "chance", "chance action anim should be queued")
+  end)
+end
+
 return {
   _test_land_on_start_reward,
   _test_pass_players_without_steal_does_not_crash,
@@ -101,4 +121,5 @@ return {
   _test_landing_optional_waits_without_ui_and_can_resolve,
   _test_landing_optional_stale_choice_is_blocked,
   _test_zero_cash_no_buy_choice,
+  _test_turn_land_bridges_to_wait_action_anim_for_chance,
 }

@@ -256,7 +256,15 @@ function game_state:queue_action_anim(payload)
   local seq = (self.turn.action_anim_seq or 0) + 1
   payload.seq = seq
   self.turn.action_anim_seq = seq
-  self.turn.action_anim = payload
+  local queue = self.turn.action_anim_queue
+  if type(queue) ~= "table" then
+    queue = {}
+    self.turn.action_anim_queue = queue
+  end
+  queue[#queue + 1] = payload
+  if not self.turn.action_anim then
+    self.turn.action_anim = table.remove(queue, 1)
+  end
   _mark_turn(self)
   return payload
 end

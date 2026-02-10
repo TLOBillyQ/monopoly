@@ -79,6 +79,16 @@ local function _query_node(name)
   return list[1]
 end
 
+local function _set_node_texture_keep_size(node, image_key)
+  assert(node ~= nil, "missing image node")
+  assert(image_key ~= nil, "missing image key")
+  if node.set_texture_keep_size then
+    node:set_texture_keep_size(image_key)
+    return
+  end
+  node.image_texture = image_key
+end
+
 local function set_item_slot_image(slot_name, image_key)
   assert(slot_name ~= nil, "missing slot name")
   assert(image_key ~= nil, "missing image key for slot: " .. tostring(slot_name))
@@ -86,7 +96,7 @@ local function set_item_slot_image(slot_name, image_key)
   local nodes = UIManager.query_nodes_by_name(resolved)
   assert(nodes ~= nil and nodes[1] ~= nil, "missing ui nodes for slot: " .. tostring(slot_name))
   for _, node in ipairs(nodes) do
-    node.image_texture = image_key
+    _set_node_texture_keep_size(node, image_key)
   end
 end
 

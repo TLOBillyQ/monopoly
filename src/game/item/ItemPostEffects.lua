@@ -31,8 +31,19 @@ local target_effects = {
   [item_ids.exile] = {
     apply = function(game, user, target, context)
       local idx = game.board:find_first_by_type("mountain")
+      local from_index = target.position
       if idx then
         game:update_player_position(target, idx)
+        local ui_port = game.ui_port
+        if ui_port and ui_port.wait_action_anim then
+          game:queue_action_anim({
+            kind = "move_effect",
+            player_id = target.id,
+            from_index = from_index,
+            to_index = idx,
+            focus_target_tile_index = idx,
+          })
+        end
       end
       game:set_player_status(target, "move_dir", nil)
       game:set_player_status(target, "stay_turns", constants.mountain_stay_turns)
@@ -152,6 +163,7 @@ local function _handle_place_mine_here(game, player, _cfg, context)
       kind = "mine",
       player_id = player.id,
       tile_index = player.position,
+      focus_target_tile_index = player.position,
     })
     return { ok = true, action_anim = true }
   end
@@ -224,6 +236,7 @@ local function _handle_clear_obstacles_ahead(game, player, cfg, context)
       kind = "clear_obstacles",
       player_id = player.id,
       cleared_indices = cleared_indices,
+      focus_target_player_id = player.id,
     })
     return { ok = true, action_anim = true }
   end

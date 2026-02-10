@@ -23,6 +23,7 @@ local ui_model = require("src.ui.UIModel")
 local ui_event_router = require("src.ui.UIEventRouter")
 local map_cfg = require("Config.Map")
 local tiles_cfg = require("Config.Generated.Tiles")
+local gameplay_rules = require("Config.GameplayRules")
 local ui_events = require("src.ui.UIEvents")
 local logger = require("src.core.Logger")
 local monopoly_event = require("src.game.game.MonopolyEvents")
@@ -55,6 +56,10 @@ local function _build_state()
       })
     end,
     auto_runner = auto_runner:new({ interval = ui.auto_interval }),
+    ai_turn_runner = auto_runner:new({
+      interval = gameplay_rules.ai_auto_turn_interval_seconds or 0.4,
+    }),
+    ai_turn_runner_active = false,
     tile_units = nil,
     tile_positions = nil,
     tile_spacing = nil,
@@ -63,6 +68,10 @@ local function _build_state()
     board_last_positions = {},
     board_sync_pending = false,
     board_last_phase = nil,
+    camera_focus_active = false,
+    camera_focus_token = 0,
+    camera_focus_restore_role_id = nil,
+    camera_focus_lock_mode = nil,
     next_turn_locked = false,
     next_turn_last_click = nil,
     next_turn_lock_phase = nil,

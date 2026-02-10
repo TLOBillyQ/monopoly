@@ -172,6 +172,19 @@ local function _make_anim_wait(turn_mgr, state_name, anim_key, done_action_type)
   end
 end
 
+local function _next_action_anim(game)
+  assert(game ~= nil and game.turn ~= nil, "missing game.turn")
+  local queue = game.turn.action_anim_queue
+  if type(queue) ~= "table" or #queue == 0 then
+    return nil
+  end
+  local anim = table.remove(queue, 1)
+  game.turn.action_anim = anim
+  game.dirty.turn = true
+  game.dirty.any = true
+  return anim
+end
+
 
 function turn_flow:_build_flow()
   assert(self.phases, "TurnFlow requires phases")
@@ -230,7 +243,38 @@ function turn_flow:_build_flow()
   end
 
   states.wait_move_anim = _make_anim_wait(self, "wait_move_anim", "move_anim", "move_anim_done")
-  states.wait_action_anim = _make_anim_wait(self, "wait_action_anim", "action_anim", "action_anim_done")
+  states.wait_action_anim = function(args)
+    self.game.turn.phase = "wait_action_anim"
+    self.game.dirty.turn = true
+    self.game.dirty.any = true
+    local anim = self.game.turn.action_anim
+    if not anim then
+      local next_anim = _next_action_anim(self.game)
+      if next_anim then
+        return "wait_action_anim", args
+      end
+      self.pending_action = nil
+      return args.resume_state, args.resume_args
+    end
+
+    local action = self.pending_action
+    self.pending_action = nil
+    if not action or action.type ~= "action_anim_done" then
+      return "wait_action_anim", args
+    end
+    if action.seq and anim.seq and action.seq ~= anim.seq then
+      return "wait_action_anim", args
+    end
+
+    self.game.turn.action_anim = nil
+    self.game.dirty.turn = true
+    self.game.dirty.any = true
+
+    if _next_action_anim(self.game) then
+      return "wait_action_anim", args
+    end
+    return args.resume_state, args.resume_args
+  end
 
   return flow:new({ start = "start", states = states })
 end
