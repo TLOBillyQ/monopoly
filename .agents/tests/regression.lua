@@ -10,6 +10,7 @@ local suites = {
   require("movement"),
   require("landing"),
   require("market"),
+  require("paid_currency"),
   require("ui"),
   require("gameplay"),
   require("misc"),

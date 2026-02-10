@@ -6,6 +6,7 @@ local inventory = require("src.game.item.ItemInventory")
 local agent = require("src.game.game.Agent")
 local land_choice_specs = require("src.game.land.LandChoiceSpecs")
 local monopoly_event = require("src.game.game.MonopolyEvents")
+local paid_currency_bridge = require("src.game.commerce.PaidCurrencyBridge")
 
 local market = {}
 local _emit_event = monopoly_event.emit
@@ -80,6 +81,20 @@ local function _remaining_global_limit(game, product_id)
   return game.market_limits[product_id]
 end
 
+local function _sync_managed_balance(game, player, currency)
+  if paid_currency_bridge.is_managed_currency(currency) then
+    paid_currency_bridge.sync_player_currency(game, player, currency)
+  end
+end
+
+local function _try_charge_player(game, player, currency, price)
+  if paid_currency_bridge.is_managed_currency(currency) then
+    return paid_currency_bridge.consume_currency(game, player, currency, price)
+  end
+  game:deduct_player_balance(player, currency, price)
+  return true
+end
+
 local function _can_buy_entry(game, player, entry)
   if not _entry_market_enabled(entry) then
     return false
@@ -92,7 +107,9 @@ local function _can_buy_entry(game, player, entry)
     return false
   end
   local price = _entry_price(entry)
-  return game:player_balance(player, _entry_currency(entry)) >= price
+  local currency = _entry_currency(entry)
+  _sync_managed_balance(game, player, currency)
+  return game:player_balance(player, currency) >= price
 end
 
 function market.list_buyable(player, game)
@@ -179,12 +196,21 @@ function market.buy_with_opts(game, player, product_id, opts)
 
   local price = _entry_price(entry)
   local currency = _entry_currency(entry)
+  _sync_managed_balance(game, player, currency)
   if game:player_balance(player, currency) < price then
+    local opened_panel = false
+    if paid_currency_bridge.is_managed_currency(currency) and not agent.is_auto_player(player) then
+      opened_panel = paid_currency_bridge.open_purchase_panel(player, currency)
+    end
+    local body = player.name .. " 余额不足"
+    if opened_panel then
+      body = player.name .. " 余额不足，已打开购买面板"
+    end
     _emit_event(monopoly_event.market.buy_failed, {
       player = player,
       entry = entry,
       reason = "insufficient_balance",
-      popup = { title = "黑市", body = player.name .. " 余额不足" },
+      popup = { title = "黑市", body = body },
     })
     return { ok = false }
   end
@@ -199,7 +225,15 @@ function market.buy_with_opts(game, player, product_id, opts)
       })
       return { ok = false }
     end
-    game:deduct_player_balance(player, currency, price)
+    if not _try_charge_player(game, player, currency, price) then
+      _emit_event(monopoly_event.market.buy_failed, {
+        player = player,
+        entry = entry,
+        reason = "charge_failed",
+        popup = { title = "黑市", body = player.name .. " 支付失败" },
+      })
+      return { ok = false }
+    end
     inventory.give(player, product_id)
     _consume_global_limit(game, product_id)
     _emit_event(monopoly_event.market.bought_item, {
@@ -234,7 +268,15 @@ function market.buy_with_opts(game, player, product_id, opts)
     }
   end
 
-  game:deduct_player_balance(player, currency, price)
+  if not _try_charge_player(game, player, currency, price) then
+    _emit_event(monopoly_event.market.buy_failed, {
+      player = player,
+      entry = entry,
+      reason = "charge_failed",
+      popup = { title = "黑市", body = player.name .. " 支付失败" },
+    })
+    return { ok = false }
+  end
 
   assert(game ~= nil, "missing game")
   assert(game.set_player_seat ~= nil, "missing game.SetPlayerSeat")

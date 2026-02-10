@@ -9,6 +9,7 @@ local turn_anim = require("src.game.turn.TurnAnim")
 local tick_timeout = require("src.game.turn.TickTimeout")
 local tick_ui_sync = require("src.game.turn.TickUISync")
 local move_anim = require("src.ui.MoveAnim")
+local paid_currency_bridge = require("src.game.commerce.PaidCurrencyBridge")
 
 local gameplay_loop = {}
 
@@ -127,6 +128,7 @@ function gameplay_loop.set_game(state, game)
   assert(game ~= nil, "missing game")
   state.game = game
   game.ui_port = state
+  paid_currency_bridge.setup_for_game(game)
   event_handlers.install(game, logger, state)
   logger.set_info_per_turn_limit(gameplay_rules.info_log_per_turn_limit)
   logger.set_info_turn_provider(function()
