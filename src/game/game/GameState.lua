@@ -1,6 +1,7 @@
 local composition_root = require("src.game.game.CompositionRoot")
 local constants = require("Config.Generated.Constants")
 local vehicles_cfg = require("Config.Generated.Vehicles")
+local vehicle_feature = require("src.game.vehicle.VehicleFeature")
 local logger = require("src.core.Logger")
 local bankruptcy = require("src.game.game.Bankruptcy")
 require "vendor.third_party.Utils"
@@ -75,6 +76,13 @@ function game_state:set_player_status(player, key, value)
 end
 
 function game_state:set_player_seat(player, seat_id)
+  seat_id = vehicle_feature.resolve_seat_id(seat_id)
+  if not vehicle_feature.is_enabled() then
+    player.seat_id = nil
+    _mark_players(self)
+    return
+  end
+
   local old_seat_id = player.seat_id
   if old_seat_id ~= seat_id and vehicle_helper then
     if old_seat_id ~= nil and vehicle_helper.forward_eca_event_exit then
@@ -216,7 +224,8 @@ function game_state:stop_all_players_movement()
       status.move_dir = nil
       players_dirty = true
     end
-    if vehicle_helper and vehicle_helper.forward_eca_event_stop and player.seat_id ~= nil then
+    local seat_id = vehicle_feature.resolve_seat_id(player.seat_id)
+    if vehicle_helper and vehicle_helper.forward_eca_event_stop and seat_id ~= nil then
       local role_ok = true
       if vehicle_helper.resolve_role then
         role_ok = vehicle_helper.resolve_role(player.id) ~= nil
@@ -236,7 +245,7 @@ function game_state:stop_all_players_movement()
 end
 
 function game_state:player_vehicle_cfg(player)
-  local seat_id = player.seat_id
+  local seat_id = vehicle_feature.resolve_seat_id(player.seat_id)
   if seat_id then
     local cfg = vehicle_by_id[seat_id]
     assert(cfg ~= nil, "missing vehicle cfg: " .. tostring(seat_id))

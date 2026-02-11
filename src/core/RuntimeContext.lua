@@ -2,6 +2,7 @@ local runtime_constants = require("Config.RuntimeConstants")
 local logger = require("src.core.Logger")
 local runtime_env_bindings = require("src.core.RuntimeEnvBindings")
 local runtime_editor_exports = require("src.core.RuntimeEditorExports")
+local vehicle_feature = require("src.game.vehicle.VehicleFeature")
 require("Config.RuntimeRefs")
 
 local runtime_context = {}
@@ -84,6 +85,9 @@ local function _build_vehicle_helper()
   end
 
   helper.forward_eca_event_enter = function(role_id, vehicle_id)
+    if not vehicle_feature.is_enabled() then
+      return false
+    end
     if _ensure_valid_role(role_id, "enter") == nil then
       return false
     end
@@ -98,6 +102,9 @@ local function _build_vehicle_helper()
   end
 
   helper.forward_eca_event_exit = function(role_id)
+    if not vehicle_feature.is_enabled() then
+      return false
+    end
     if _ensure_valid_role(role_id, "exit") == nil then
       return false
     end
@@ -111,6 +118,9 @@ local function _build_vehicle_helper()
   end
 
   helper.forward_eca_event_move = function(role_id, dir, time)
+    if not vehicle_feature.is_enabled() then
+      return false
+    end
     if _ensure_valid_role(role_id, "move") == nil then
       return false
     end
@@ -122,6 +132,9 @@ local function _build_vehicle_helper()
   end
 
   helper.forward_eca_event_stop = function(role_id)
+    if not vehicle_feature.is_enabled() then
+      return false
+    end
     if _ensure_valid_role(role_id, "stop") == nil then
       return false
     end
@@ -131,6 +144,9 @@ local function _build_vehicle_helper()
   end
 
   helper.forward_eca_event_set_position = function(role_id, pos)
+    if not vehicle_feature.is_enabled() then
+      return false
+    end
     if _ensure_valid_role(role_id, "set_position") == nil then
       return false
     end
@@ -141,6 +157,9 @@ local function _build_vehicle_helper()
   end
 
   helper.consume_enter_delay = function(role_id, vehicle_id)
+    if not vehicle_feature.is_enabled() then
+      return 0
+    end
     if role_id == nil or vehicle_id == nil then
       return 0
     end

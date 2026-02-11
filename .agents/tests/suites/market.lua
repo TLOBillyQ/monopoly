@@ -118,10 +118,44 @@ local function _test_buy_disabled_market_product_rejected()
   assert(p.seat_id == before_seat_id, "seat should not change when buying disabled product")
 end
 
+local function _test_market_vehicle_hidden_when_feature_disabled()
+  local market = require("src.game.market.Market")
+  local g = _new_game()
+  local p = g:current_player()
+  g:set_player_balance(p, "金豆", 999999)
+
+  local vehicle_product_id = 4001
+  local list = market.list_buyable(p, g)
+  assert(not _contains_product(list, vehicle_product_id), "vehicle should be hidden when feature disabled")
+
+  local spec = market.build_choice_spec(p, g)
+  if spec and spec.options then
+    assert(not _contains_option(spec.options, vehicle_product_id), "vehicle option should be hidden when feature disabled")
+  end
+end
+
+local function _test_buy_vehicle_rejected_when_feature_disabled()
+  local market = require("src.game.market.Market")
+  local g = _new_game()
+  local p = g:current_player()
+  g:set_player_balance(p, "金豆", 999999)
+
+  local vehicle_product_id = 4001
+  local before_balance = g:player_balance(p, "金豆")
+  local before_seat_id = p.seat_id
+  local res = market.buy_with_opts(g, p, vehicle_product_id, nil)
+
+  assert(type(res) == "table" and res.ok == false, "vehicle buy should be rejected when feature disabled")
+  assert(g:player_balance(p, "金豆") == before_balance, "balance should not change when vehicle buy is rejected")
+  assert(p.seat_id == before_seat_id, "seat should not change when vehicle buy is rejected")
+end
+
 return {
   _test_ai_skips_auto_buy_at_market,
   _test_market_full_inventory_blocks_items,
   _test_market_global_limit,
   _test_market_disabled_products_hidden,
   _test_buy_disabled_market_product_rejected,
+  _test_market_vehicle_hidden_when_feature_disabled,
+  _test_buy_vehicle_rejected_when_feature_disabled,
 }

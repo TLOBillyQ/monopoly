@@ -7,6 +7,7 @@ local agent = require("src.game.game.Agent")
 local land_choice_specs = require("src.game.land.LandChoiceSpecs")
 local monopoly_event = require("src.game.game.MonopolyEvents")
 local paid_currency_bridge = require("src.game.commerce.PaidCurrencyBridge")
+local vehicle_feature = require("src.game.vehicle.VehicleFeature")
 
 local market = {}
 local _emit_event = monopoly_event.emit
@@ -75,6 +76,13 @@ local function _entry_market_enabled(entry)
   return entry.market_enabled ~= false
 end
 
+local function _entry_vehicle_enabled(entry)
+  if not vehicle_feature.is_vehicle_market_entry(entry) then
+    return true
+  end
+  return vehicle_feature.is_enabled()
+end
+
 local function _remaining_global_limit(game, product_id)
   assert(game ~= nil, "missing game")
   assert(product_id ~= nil, "missing product_id")
@@ -96,6 +104,9 @@ local function _try_charge_player(game, player, currency, price)
 end
 
 local function _can_buy_entry(game, player, entry)
+  if not _entry_vehicle_enabled(entry) then
+    return false
+  end
   if not _entry_market_enabled(entry) then
     return false
   end
@@ -173,6 +184,15 @@ function market.buy_with_opts(game, player, product_id, opts)
   end
   local entry = entries_by_id[product_id]
   assert(entry ~= nil, "missing market entry: " .. tostring(product_id))
+  if not _entry_vehicle_enabled(entry) then
+    _emit_event(monopoly_event.market.buy_failed, {
+      player = player,
+      entry = entry,
+      reason = "vehicle_disabled",
+      popup = { title = "黑市", body = player.name .. " 当前对局已关闭载具功能" },
+    })
+    return { ok = false }
+  end
   if not _entry_market_enabled(entry) then
     _emit_event(monopoly_event.market.buy_failed, {
       player = player,

@@ -2,6 +2,7 @@ local building_effects = require("src.ui.BuildingEffects")
 local tile_renderer = require("src.ui.TileRenderer")
 local number_utils = require("src.core.NumberUtils")
 local runtime_constants = require("Config.RuntimeConstants")
+local vehicle_feature = require("src.game.vehicle.VehicleFeature")
 
 local board_view = {}
 
@@ -250,7 +251,8 @@ local function _place_players(state, players, occupants, spacing, min_player_y)
       local slot, count = _resolve_occupant_slot(list, pid)
       local ox, oz = _calc_slot_offset(slot, count, spacing)
       local target_pos = base + math.Vector3(ox, y_offset, oz)
-      if player.seat_id and vehicle_helper and vehicle_helper.forward_eca_event_set_position then
+      local seat_id = vehicle_feature.resolve_seat_id(player.seat_id)
+      if seat_id and vehicle_helper and vehicle_helper.forward_eca_event_set_position then
         vehicle_helper.forward_eca_event_set_position(pid, target_pos)
       else
         assert(unit.set_position ~= nil, "missing unit.set_position: " .. tostring(pid))

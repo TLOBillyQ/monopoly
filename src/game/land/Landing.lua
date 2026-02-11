@@ -8,36 +8,58 @@ local intent_dispatcher = require("src.game.intent.IntentDispatcher")
 local mine_effect = require("src.game.effect.MineEffect")
 local steal = require("src.game.item.ItemSteal")
 local market = require("src.game.market.Market")
+local vehicle_feature = require("src.game.vehicle.VehicleFeature")
 
 local landing = {}
 
 local chance_weights = {}
-local chance_total_weight = 0
 for i, cfg in ipairs(chance_cfg) do
   local weight = cfg.weight or 0
   if weight < 0 then
     weight = 0
   end
   chance_weights[i] = weight
-  chance_total_weight = chance_total_weight + weight
+end
+
+local function _is_drawable_chance_card(card)
+  if vehicle_feature.is_vehicle_chance_card(card) and not vehicle_feature.is_enabled() then
+    return false
+  end
+  return true
 end
 
 local function _pick_chance_card()
+  local total_weight = 0
+  local first_drawable = nil
+  for i, card in ipairs(chance_cfg) do
+    if _is_drawable_chance_card(card) then
+      first_drawable = first_drawable or card
+      total_weight = total_weight + (chance_weights[i] or 0)
+    end
+  end
+
+  if first_drawable == nil then
+    return nil
+  end
+  if total_weight <= 0 then
+    return first_drawable
+  end
+
+  local rand = LuaAPI.rand() * total_weight
+  local accumulated = 0
+  for i, card in ipairs(chance_cfg) do
+    if _is_drawable_chance_card(card) then
+      accumulated = accumulated + (chance_weights[i] or 0)
+      if accumulated >= rand then
+        return card
+      end
+    end
+  end
+
   if #chance_cfg == 0 then
     return nil
   end
-  if chance_total_weight <= 0 then
-    return chance_cfg[1]
-  end
-  local rand = LuaAPI.rand() * chance_total_weight
-  local accumulated = 0
-  for i, card in ipairs(chance_cfg) do
-    accumulated = accumulated + (chance_weights[i] or 0)
-    if accumulated >= rand then
-      return card
-    end
-  end
-  return chance_cfg[1]
+  return first_drawable
 end
 
 local function _push_landing_popup(game, title, body, opts)

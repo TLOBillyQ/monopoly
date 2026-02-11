@@ -18,6 +18,8 @@ local gameplay_loop = support.gameplay_loop
 local tick_timeout = support.tick_timeout
 local constants = support.constants
 local bankruptcy = support.bankruptcy
+local turn_move = support.turn_move
+local gameplay_rules = require("Config.GameplayRules")
 local mine_effect = require("src.game.effect.MineEffect")
 local runtime_context = require("src.core.RuntimeContext")
 
@@ -193,6 +195,7 @@ local function _test_stop_all_players_movement_clears_move_dir_and_stop_event()
   local before_seq = g.turn.vehicle_resync_seq or 0
   local stopped_ids = {}
   support.with_patches({
+    { target = gameplay_rules, key = "vehicle_enabled", value = true },
     { key = "vehicle_helper", value = {
       resolve_role = function(role_id)
         if role_id == g.players[1].id then
@@ -223,6 +226,7 @@ local function _test_end_turn_stops_all_players_movement()
   local before_seq = g.turn.vehicle_resync_seq or 0
   local stopped_ids = {}
   support.with_patches({
+    { target = gameplay_rules, key = "vehicle_enabled", value = true },
     { key = "vehicle_helper", value = {
       resolve_role = function(role_id)
         if role_id == g.players[1].id then
@@ -254,6 +258,7 @@ local function _test_stop_all_players_movement_skips_invalid_role_without_error(
   g:set_player_status(g.players[2], "move_dir", "right")
   local stopped_ids = {}
   support.with_patches({
+    { target = gameplay_rules, key = "vehicle_enabled", value = true },
     { key = "vehicle_helper", value = {
       resolve_role = function(role_id)
         if role_id == g.players[1].id then
@@ -311,20 +316,24 @@ local function _test_runtime_context_forward_stop_skips_invalid_role()
         return { { id = 1 } }
       end,
     }
-    local ctx = runtime_context.new({
-      GameAPI = game_api,
-      LuaAPI = _mock_lua_api(function(event_name)
-        if event_name == "stop_vehicle_forward" then
-          stop_events = stop_events + 1
-        end
-      end),
-    })
-    runtime_context.install_globals(ctx)
-    local invalid_ok = vehicle_helper.forward_eca_event_stop(2)
-    local valid_ok = vehicle_helper.forward_eca_event_stop(1)
-    assert(invalid_ok == false, "forward stop should reject invalid role")
-    assert(valid_ok == true, "forward stop should allow valid role")
-    assert(stop_events == 1, "forward stop should only emit event for valid role")
+    support.with_patches({
+      { target = gameplay_rules, key = "vehicle_enabled", value = true },
+    }, function()
+      local ctx = runtime_context.new({
+        GameAPI = game_api,
+        LuaAPI = _mock_lua_api(function(event_name)
+          if event_name == "stop_vehicle_forward" then
+            stop_events = stop_events + 1
+          end
+        end),
+      })
+      runtime_context.install_globals(ctx)
+      local invalid_ok = vehicle_helper.forward_eca_event_stop(2)
+      local valid_ok = vehicle_helper.forward_eca_event_stop(1)
+      assert(invalid_ok == false, "forward stop should reject invalid role")
+      assert(valid_ok == true, "forward stop should allow valid role")
+      assert(stop_events == 1, "forward stop should only emit event for valid role")
+    end)
   end)
 end
 
@@ -399,6 +408,7 @@ local function _test_set_player_seat_emits_exit_then_enter()
     end,
   }
   support.with_patches({
+    { target = gameplay_rules, key = "vehicle_enabled", value = true },
     { key = "vehicle_helper", value = helper },
   }, function()
     g:set_player_seat(p, 4004)
@@ -415,6 +425,7 @@ local function _test_mine_destroy_vehicle_emits_exit_event()
   p.seat_id = 4001
   local exited = {}
   support.with_patches({
+    { target = gameplay_rules, key = "vehicle_enabled", value = true },
     { key = "vehicle_helper", value = {
       forward_eca_event_exit = function(role_id)
         exited[#exited + 1] = role_id
@@ -425,6 +436,41 @@ local function _test_mine_destroy_vehicle_emits_exit_event()
   end)
   assert(p.seat_id == nil, "mine should clear seat_id")
   assert(#exited == 1 and exited[1] == p.id, "mine should emit exit event when vehicle destroyed")
+end
+
+local function _test_vehicle_feature_disabled_ignores_seat_bonus()
+  local g = _new_game()
+  local p = g:current_player()
+  p.seat_id = 4010
+
+  assert(g:player_dice_count(p) == constants.default_dice_count, "disabled vehicle should not increase dice count")
+  assert(g:player_is_vehicle_indestructible(p) == false, "disabled vehicle should not grant mine immunity")
+end
+
+local function _test_turn_move_anim_omits_vehicle_id_when_disabled()
+  local g = _new_game()
+  local p = g:current_player()
+  p.seat_id = 4001
+  g.last_turn = {}
+  g.ui_port = _build_ui_port({ wait_move_anim = true })
+
+  support.with_patches({
+    { target = movement, key = "move", value = function()
+      return {
+        visited = {},
+        steps = 1,
+        stopped_on_roadblock = false,
+        market_interrupt = nil,
+        steal_interrupt = nil,
+      }
+    end },
+  }, function()
+    local next_state = turn_move({ game = g }, { player = p, total = 1, raw_total = 1 })
+    assert(next_state == "wait_move_anim", "move phase should wait for move_anim")
+  end)
+
+  assert(g.turn.move_anim ~= nil, "turn move should create move_anim payload")
+  assert(g.turn.move_anim.vehicle_id == nil, "disabled vehicle should not be written into move_anim payload")
 end
 
 local function _test_autorunner_runs_to_end()
@@ -543,7 +589,11 @@ local function _test_complex_consecutive_turn_settlement()
 
   p1.inventory:add({ id = 2007 })
   g:set_player_cash(p1, 10000)
-  g:set_player_seat(p1, 4001)
+  support.with_patches({
+    { target = gameplay_rules, key = "vehicle_enabled", value = true },
+  }, function()
+    g:set_player_seat(p1, 4001)
+  end)
 
   p2.inventory:add({ id = 2001 })
   g:set_player_cash(p2, 10000)
@@ -928,6 +978,8 @@ return {
   _test_runtime_context_install_environment_fails_fast,
   _test_set_player_seat_emits_exit_then_enter,
   _test_mine_destroy_vehicle_emits_exit_event,
+  _test_vehicle_feature_disabled_ignores_seat_bonus,
+  _test_turn_move_anim_omits_vehicle_id_when_disabled,
   _test_autorunner_runs_to_end,
   _test_complex_consecutive_turn_settlement,
   _test_complex_market_interrupt_with_rent,

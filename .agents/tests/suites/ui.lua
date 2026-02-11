@@ -23,6 +23,7 @@ local action_anim = require("src.ui.ActionAnim")
 local move_anim = require("src.ui.MoveAnim")
 local market_cfg = require("Config.Generated.Market")
 local runtime_constants = require("Config.RuntimeConstants")
+local gameplay_rules = require("Config.GameplayRules")
 
 local function _build_popup_view_state(refs, card_node)
   local function new_node(seed)
@@ -383,6 +384,7 @@ local function _test_move_anim_vehicle_uses_set_position_jump()
   }
 
   _with_patches({
+    { target = gameplay_rules, key = "vehicle_enabled", value = true },
     { target = runtime_constants, key = "vehicle_move_api_enabled", value = false },
     { key = "vehicle_helper", value = {
       consume_enter_delay = function()
@@ -433,6 +435,7 @@ local function _test_move_anim_vehicle_enter_delay_once()
   }
 
   _with_patches({
+    { target = gameplay_rules, key = "vehicle_enabled", value = true },
     { target = runtime_constants, key = "vehicle_move_api_enabled", value = false },
     { key = "SetTimeOut", value = function(delay)
       timeout_delays[#timeout_delays + 1] = delay
@@ -495,6 +498,7 @@ local function _test_move_anim_vehicle_move_api_enabled_uses_move_event()
   }
 
   _with_patches({
+    { target = gameplay_rules, key = "vehicle_enabled", value = true },
     { target = runtime_constants, key = "vehicle_move_api_enabled", value = true },
     { key = "vehicle_helper", value = {
       consume_enter_delay = function()
@@ -570,6 +574,7 @@ local function _test_board_view_vehicle_resync_uses_set_position()
   }
 
   _with_patches({
+    { target = gameplay_rules, key = "vehicle_enabled", value = true },
     { target = math, key = "Vector3", value = _vec3 },
     { key = "vehicle_helper", value = {
       forward_eca_event_set_position = function(role_id, pos)
@@ -587,6 +592,70 @@ local function _test_board_view_vehicle_resync_uses_set_position()
   _assert_eq(unit_set_calls, 0, "vehicle player should not call unit.set_position")
   _assert_eq(#set_pos_calls, 1, "resync seq change should trigger set_position")
   _assert_eq(set_pos_calls[1].role_id, 1, "set_position role id should match player")
+end
+
+local function _test_board_view_vehicle_disabled_uses_unit_set_position()
+  local board_view = require("src.ui.BoardView")
+
+  local function _vec3(x, y, z)
+    local vector_mt = {}
+    vector_mt.__add = function(a, b)
+      return _vec3(a.x + b.x, a.y + b.y, a.z + b.z)
+    end
+    return setmetatable({ x = x, y = y, z = z }, vector_mt)
+  end
+
+  local set_pos_calls = {}
+  local unit_set_calls = 0
+  local state = {
+    board_scene = {
+      ground = {
+        get_position = function()
+          return { y = 0 }
+        end,
+      },
+    },
+    tile_positions = { _vec3(5, 2, 7) },
+    board_last_positions = { [1] = "1:0" },
+    board_last_vehicle_resync_seq = 1,
+    board_sync_pending = false,
+    tile_spacing = 0,
+    player_units = {
+      [1] = {
+        set_position = function()
+          unit_set_calls = unit_set_calls + 1
+        end,
+      },
+    },
+    player_units_missing = false,
+  }
+
+  local model = {
+    board = {
+      players = { { id = 1, position = 1, eliminated = false, seat_id = 4001 } },
+      tiles = { { id = 1, type = "start" } },
+      tile_states = {},
+      phase = "start",
+      move_anim = nil,
+      tile_count = 1,
+      vehicle_resync_seq = 2,
+    },
+  }
+
+  _with_patches({
+    { target = gameplay_rules, key = "vehicle_enabled", value = false },
+    { target = math, key = "Vector3", value = _vec3 },
+    { key = "vehicle_helper", value = {
+      forward_eca_event_set_position = function(role_id, pos)
+        set_pos_calls[#set_pos_calls + 1] = { role_id = role_id, pos = pos }
+      end,
+    } },
+  }, function()
+    board_view.refresh_board(state, model, function() end, function() return "[test]" end)
+  end)
+
+  _assert_eq(#set_pos_calls, 0, "vehicle helper should not be called when feature disabled")
+  _assert_eq(unit_set_calls, 1, "disabled vehicle should fall back to unit.set_position")
 end
 
 local function _test_ui_model_structure()
@@ -1871,6 +1940,7 @@ return {
   _test_move_anim_vehicle_enter_delay_once,
   _test_move_anim_vehicle_move_api_enabled_uses_move_event,
   _test_board_view_vehicle_resync_uses_set_position,
+  _test_board_view_vehicle_disabled_uses_unit_set_position,
   _test_ui_model_structure,
   _test_ui_model_player_slot_map_and_choice_owner,
   _test_ui_model_player_profile_prefers_role_api_with_fallback,

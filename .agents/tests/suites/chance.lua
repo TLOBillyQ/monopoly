@@ -8,6 +8,7 @@ local _with_patches = support.with_patches
 local _assert_eq = support.assert_eq
 local chance_effects = support.chance_effects
 local _build_ui_port = support.build_ui_port
+local gameplay_rules = require("Config.GameplayRules")
 
 local function _test_chance_is_mandatory_effect_entrypoint()
   local g = _new_game()
@@ -84,10 +85,45 @@ local function _test_chance_forced_move_queues_move_effect_anim()
   _assert_eq(g.turn.action_anim.to_index, idx, "forced_move anim to_index should match destination")
 end
 
+local function _test_chance_set_vehicle_ignored_when_feature_disabled()
+  local g = _new_game()
+  local p = g:current_player()
+  p.seat_id = nil
+
+  chance_effects.resolve(g, p, {
+    effect = "set_vehicle",
+    target = "self",
+    negative = false,
+    vehicle_id = 4001,
+  }, {})
+
+  assert(p.seat_id == nil, "set_vehicle should be ignored when feature disabled")
+end
+
+local function _test_chance_set_vehicle_works_when_feature_enabled()
+  local g = _new_game()
+  local p = g:current_player()
+
+  _with_patches({
+    { target = gameplay_rules, key = "vehicle_enabled", value = true },
+  }, function()
+    chance_effects.resolve(g, p, {
+      effect = "set_vehicle",
+      target = "self",
+      negative = false,
+      vehicle_id = 4001,
+    }, {})
+  end)
+
+  assert(p.seat_id == 4001, "set_vehicle should take effect when feature enabled")
+end
+
 return {
   _test_chance_is_mandatory_effect_entrypoint,
   _test_chance_move_backward_pass_market,
   _test_chance_move_backward_pass_intersection,
   _test_chance_move_backward_queues_move_effect_anim,
   _test_chance_forced_move_queues_move_effect_anim,
+  _test_chance_set_vehicle_ignored_when_feature_disabled,
+  _test_chance_set_vehicle_works_when_feature_enabled,
 }

@@ -5,6 +5,7 @@ local movement = require("src.game.movement.Movement")
 local bankruptcy = require("src.game.game.Bankruptcy")
 local gameplay_rules = require("Config.GameplayRules")
 local vehicles_cfg = require("Config.Generated.Vehicles")
+local vehicle_feature = require("src.game.vehicle.VehicleFeature")
 
 local chance_registry = {}
 local handlers = {}
@@ -240,6 +241,9 @@ local function _register_defaults()
   end)
 
   chance_registry.register("set_vehicle", function(game, player, card)
+    if not vehicle_feature.is_enabled() then
+      return
+    end
     game:set_player_seat(player, card.vehicle_id)
     local vehicle_name = vehicle_name_by_id[card.vehicle_id] or tostring(card.vehicle_id)
     _emit_event(monopoly_event.chance.applied, {
