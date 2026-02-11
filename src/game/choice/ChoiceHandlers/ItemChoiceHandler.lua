@@ -46,28 +46,6 @@ function item_choice_handler.build(helpers)
     })
   end
 
-  local function _open_discard_item_choice(game, player, phase)
-    local lines = {}
-    local options = {}
-    for i, it in ipairs(inventory.items(player)) do
-      local label = inventory.item_name(it.id)
-      table.insert(lines, i .. ". " .. label)
-      table.insert(options, { id = i, label = label })
-    end
-    intent_dispatcher.dispatch(game, {
-      kind = "need_choice",
-      choice_spec = {
-        kind = "discard_item",
-        title = "选择要丢弃的道具",
-        body_lines = lines,
-        options = options,
-        allow_cancel = true,
-        cancel_label = "返回",
-        meta = { player_id = player.id, phase = phase },
-      },
-    })
-  end
-
   local function _reopen_item_phase(game, player, phase)
     local spec = item_phase.build_choice_spec(player, phase)
     if spec == nil then
@@ -208,11 +186,6 @@ function item_choice_handler.build(helpers)
       return finish_choice(game, false)
     end
     local item_id = number_utils.to_integer(action.option_id)
-    if not item_id and action.option_id == "discard_item" then
-      finish_choice(game, false)
-      _open_discard_item_choice(game, player, phase)
-      return { stay = true }
-    end
     assert(item_id ~= nil, "missing item_id")
 
     local res = use_item(game, player, item_id)
@@ -224,22 +197,6 @@ function item_choice_handler.build(helpers)
     return finish_choice(game, false)
   end
 
-  local function _handle_discard_item(game, choice, action)
-    local meta = choice.meta
-    local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
-    local phase = meta.phase
-    if is_cancel(action) then
-      finish_choice(game, false)
-      return _reopen_item_phase(game, player, phase)
-    end
-    local idx = number_utils.to_integer(action.option_id)
-    assert(idx ~= nil, "missing discard index")
-    local dropped = assert(inventory.remove_by_index(player, idx), "missing dropped item")
-    logger.event(player.name .. " 丢弃道具 " .. inventory.item_name(dropped.id))
-    finish_choice(game, false)
-    return _reopen_item_phase(game, player, phase)
-  end
-
   return {
     item_phase_choice = _handle_item_phase_choice,
     demolish_target = _handle_demolish_target,
@@ -248,7 +205,6 @@ function item_choice_handler.build(helpers)
     steal_prompt = _handle_steal_prompt,
     item_target_player = _handle_item_target_player,
     remote_dice_value = _handle_remote_dice_value,
-    discard_item = _handle_discard_item,
   }
 end
 

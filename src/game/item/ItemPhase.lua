@@ -44,10 +44,6 @@ local function _build_options(player, phase)
       table.insert(body_lines, line)
     end
   end
-  if inventory.count(player) > 0 then
-    table.insert(options, { id = "discard_item", label = "丢弃道具" })
-    table.insert(body_lines, "丢弃道具：从背包丢弃一张")
-  end
   return body_lines, options
 end
 
