@@ -52,18 +52,30 @@ local function _toggle_debug_visible(state)
 end
 
 local function _record_debug_toggle_click(state)
-  if not _is_base_screen_active(state) then
+  local ui = state and state.ui
+  local base_active = _is_base_screen_active(state)
+  local input_blocked = ui and ui.input_blocked or false
+  if not base_active then
+    logger.info("[调试屏] 图片_82点击忽略: 非基础屏", "input_blocked=" .. tostring(input_blocked))
     return
   end
-  local ui = state.ui
   local now = _get_timestamp()
   local first_click = ui.debug_toggle_first_click_timestamp
   local click_count = ui.debug_toggle_click_count or 0
+  logger.info(
+    "[调试屏] 图片_82点击",
+    "now=" .. tostring(now),
+    "first=" .. tostring(first_click),
+    "count=" .. tostring(click_count),
+    "input_blocked=" .. tostring(input_blocked)
+  )
   if first_click ~= nil then
     local diff = _get_timestamp_diff_seconds(now, first_click)
+    logger.info("[调试屏] 图片_82时间差", "diff=" .. tostring(diff))
     if diff > 3 then
       first_click = now
       click_count = 0
+      logger.info("[调试屏] 图片_82计数重置")
     end
   else
     first_click = now
@@ -71,10 +83,23 @@ local function _record_debug_toggle_click(state)
   click_count = click_count + 1
   ui.debug_toggle_first_click_timestamp = first_click
   ui.debug_toggle_click_count = click_count
+  logger.info(
+    "[调试屏] 图片_82计数更新",
+    "first=" .. tostring(first_click),
+    "count=" .. tostring(click_count)
+  )
   if click_count >= 10 then
     ui.debug_toggle_first_click_timestamp = nil
     ui.debug_toggle_click_count = 0
+    logger.info(
+      "[调试屏] 触发显隐切换",
+      "current=" .. tostring(_resolve_debug_enabled(state))
+    )
     _toggle_debug_visible(state)
+    logger.info(
+      "[调试屏] 切换完成",
+      "next=" .. tostring(_resolve_debug_enabled(state))
+    )
   end
 end
 
@@ -186,6 +211,9 @@ local function _register_node_click(cache, name, callback, registered, listeners
     local ok, result = pcall(runtime.query_nodes, name)
     if not ok then
       _show_missing_button_tip(name)
+      if name == "图片_82" then
+        logger.info("[调试屏] 图片_82注册失败: query_nodes异常")
+      end
       return
     end
     nodes = result
@@ -193,7 +221,13 @@ local function _register_node_click(cache, name, callback, registered, listeners
   end
   if not nodes or not nodes[1] then
     _show_missing_button_tip(name)
+    if name == "图片_82" then
+      logger.info("[调试屏] 图片_82注册失败: 未找到节点")
+    end
     return
+  end
+  if name == "图片_82" then
+    logger.info("[调试屏] 图片_82注册成功", "nodes=" .. tostring(#nodes))
   end
   registered[name] = true
   for _, node in ipairs(nodes) do
