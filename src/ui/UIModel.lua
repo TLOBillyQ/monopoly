@@ -3,6 +3,10 @@ local panel_builder = require("src.ui.UIModelPanelBuilder")
 
 local ui_model = {}
 
+local FALLBACK_CURRENT_PLAYER_NAME = "-"
+local FALLBACK_CURRENT_PLAYER_CASH = 0
+local FALLBACK_CURRENT_PLAYER_ID = nil
+
 local function _build_ui_env(state, game)
   local winner = game.winner
   local winner_name = game.winner_names or (winner and assert(winner.name, "missing winner name"))
@@ -15,9 +19,17 @@ local function _build_ui_env(state, game)
   }
 end
 
-local function _fill_meta(model, env, current, turn, current_player_id)
-  model.current_player_name = current.name
-  model.current_player_cash = current.cash
+local function _resolve_current_player_meta(current)
+  if current == nil then
+    return FALLBACK_CURRENT_PLAYER_NAME, FALLBACK_CURRENT_PLAYER_CASH, FALLBACK_CURRENT_PLAYER_ID
+  end
+  return current.name or FALLBACK_CURRENT_PLAYER_NAME, current.cash or FALLBACK_CURRENT_PLAYER_CASH, current.id
+end
+
+local function _fill_meta(model, env, current, turn)
+  local current_name, current_cash, current_player_id = _resolve_current_player_meta(current)
+  model.current_player_name = current_name
+  model.current_player_cash = current_cash
   model.turn_count = turn.turn_count
   model.current_player_id = current_player_id
   model.board_tile_count = #projection.board_tiles()
@@ -33,7 +45,7 @@ function ui_model.build(game, env)
   local ui_state = env.ui_state
   local ui_runtime = ui_state and ui_state.ui
   local current, turn = projection.resolve_current_player(game)
-  local current_player_id = current and current.id or nil
+  local _, _, current_player_id = _resolve_current_player_meta(current)
   local slot_count = projection.resolve_item_slot_count(ui_runtime)
   local item_slots_by_player = projection.build_item_slots_by_player(game.players, slot_count)
   local auto_enabled_by_player = projection.build_auto_enabled_by_player(game.players)
@@ -63,7 +75,7 @@ function ui_model.build(game, env)
     market = market,
     popup = projection.build_popup(ui_runtime),
   }
-  return _fill_meta(model, env, current, turn, current_player_id)
+  return _fill_meta(model, env, current, turn)
 end
 
 function ui_model.update(prev, game, env, dirty)
@@ -76,7 +88,7 @@ function ui_model.update(prev, game, env, dirty)
   local ui_state = env.ui_state
   local ui_runtime = ui_state and ui_state.ui
   local current, turn = projection.resolve_current_player(game)
-  local current_player_id = current and current.id or nil
+  local current_name, current_cash, current_player_id = _resolve_current_player_meta(current)
   local ui_dirty = dirty.ui == true
   local model = prev
 
@@ -139,8 +151,8 @@ function ui_model.update(prev, game, env, dirty)
   end
 
   if dirty.players or dirty.turn then
-    model.current_player_name = current.name
-    model.current_player_cash = current.cash
+    model.current_player_name = current_name
+    model.current_player_cash = current_cash
     model.turn_count = turn.turn_count
     model.current_player_id = current_player_id
   end
