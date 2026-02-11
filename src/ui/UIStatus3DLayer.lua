@@ -1,4 +1,5 @@
 local logger = require("src.core.Logger")
+local number_utils = require("src.core.NumberUtils")
 local ui_nodes = require("Data.UIManagerNodes")
 
 local ui_status_3d_layer = {}
@@ -55,7 +56,7 @@ local function _split_export_node_id(raw_id)
   if prefix == "" or node_id_raw == "" then
     return nil, nil
   end
-  return prefix, tonumber(node_id_raw) or node_id_raw
+  return prefix, node_id_raw
 end
 
 local function _build_meta(cache)
@@ -96,7 +97,7 @@ local function _build_meta(cache)
       return nil, "missing status text node: " .. tostring(spec.text)
     end
   end
-  cache.meta = { layer_key = tonumber(layer_prefix) or layer_prefix, node_ids_by_status = resolved }
+  cache.meta = { layer_key = number_utils.to_integer(layer_prefix) or layer_prefix, node_ids_by_status = resolved }
   return cache.meta
 end
 
