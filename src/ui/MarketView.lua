@@ -80,7 +80,11 @@ local function _resolve_market_icon_key(refs, product_id, entry, cfg)
   if ref then
     return ref
   end
-  local name = cfg.name or entry.name
+  -- 允许配置缺失；名字也缺失时返回 nil，交给 UI 空图兜底。
+  local name = (cfg and cfg.name) or (entry and entry.name)
+  if name == nil or name == "" then
+    return nil
+  end
   return refs[name]
 end
 
