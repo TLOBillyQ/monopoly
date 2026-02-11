@@ -4,6 +4,10 @@ local role_context = require("src.ui.UIRoleContext")
 
 local input_lock_policy = {}
 
+local function _set_debug_toggle_touch(ui, enabled)
+  ui:set_touch_enabled("图片_82", enabled == true)
+end
+
 local function _set_screen_locked(ui, screen)
   if not screen then
     return
@@ -37,6 +41,7 @@ function input_lock_policy.apply(state, deps)
     if ui.popup_active and ui.popup_screen and ui.popup_screen.confirm then
       ui:set_touch_enabled(ui.popup_screen.confirm, true)
     end
+    _set_debug_toggle_touch(ui, true)
     return
   end
 
@@ -75,6 +80,8 @@ function input_lock_policy.apply(state, deps)
   if ui.popup_screen and ui.popup_screen.confirm then
     ui:set_touch_enabled(ui.popup_screen.confirm, false)
   end
+
+  _set_debug_toggle_touch(ui, true)
 end
 
 return input_lock_policy

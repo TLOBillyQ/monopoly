@@ -263,7 +263,6 @@ local function _build_route_specs(state)
     {
       name = "托管按钮",
       build_intent = function()
-        _record_debug_toggle_click(state)
         return { type = "ui_button", id = "auto" }
       end,
     },
@@ -483,6 +482,10 @@ function ui_event_router.bind(state, get_game)
       end
     end, registered, listeners)
   end
+
+  _register_node_click(cache, "图片_82", function()
+    _record_debug_toggle_click(state)
+  end, registered, listeners)
 
   local nodes = require("Data.UIManagerNodes")
   for _, entry in pairs(nodes) do
