@@ -57,7 +57,7 @@ local function _push_landing_popup(game, title, body, opts)
   return true
 end
 
-local popup_show_seconds = gameplay_rules.action_anim_default_seconds or 1.0
+local popup_show_seconds = gameplay_rules.popup_auto_close_seconds or 1.0
 
 landing.executors = {
   pass_players = {
