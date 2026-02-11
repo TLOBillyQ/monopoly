@@ -100,6 +100,14 @@ local function _build_ui_env(state, game)
   }
 end
 
+local function _resolve_debug_enabled(state)
+  local ui = state and state.ui
+  if ui and ui.debug_log_enabled_override ~= nil then
+    return ui.debug_log_enabled_override == true
+  end
+  return gameplay_rules.debug_log_enabled == true
+end
+
 function tick_ui_sync.build_model(state, game)
   return ui_model.build(game, _build_ui_env(state, game))
 end
@@ -175,7 +183,7 @@ function tick_ui_sync.refresh_from_dirty(game, state, dirty)
 end
 
 function tick_ui_sync.sync_debug_log_panel(state)
-  local debug_enabled = gameplay_rules.debug_log_enabled == true
+  local debug_enabled = _resolve_debug_enabled(state)
   if state._debug_log_enabled ~= debug_enabled then
     state._debug_log_enabled = debug_enabled
     ui_view.set_debug_visible(state, debug_enabled)

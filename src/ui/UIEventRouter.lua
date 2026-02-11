@@ -3,10 +3,80 @@ local turn_dispatch = require("src.game.turn.TurnDispatch")
 local ui_view = require("src.ui.UIView")
 local runtime = require("src.ui.UIRuntimePort")
 local logger = require("src.core.Logger")
+local gameplay_rules = require("Config.GameplayRules")
 
 local ui_event_router = {}
 
 local missing_button_tips = {}
+
+local function _get_timestamp()
+  assert(GameAPI ~= nil and GameAPI.get_timestamp ~= nil, "missing GameAPI.get_timestamp")
+  local timestamp = GameAPI.get_timestamp()
+  assert(type(timestamp) == "number", "invalid timestamp")
+  return timestamp
+end
+
+local function _get_timestamp_diff_seconds(timestamp_1, timestamp_2)
+  assert(GameAPI ~= nil and GameAPI.get_timestamp_diff ~= nil, "missing GameAPI.get_timestamp_diff")
+  assert(type(timestamp_1) == "number" and type(timestamp_2) == "number", "invalid timestamps")
+  return GameAPI.get_timestamp_diff(timestamp_1, timestamp_2)
+end
+
+local function _is_base_screen_active(state)
+  local ui = state and state.ui
+  if not ui then
+    return false
+  end
+  if ui.market_active or ui.choice_active or ui.popup_active then
+    return false
+  end
+  return true
+end
+
+local function _resolve_debug_enabled(state)
+  local ui = state and state.ui
+  if ui and ui.debug_log_enabled_override ~= nil then
+    return ui.debug_log_enabled_override == true
+  end
+  return gameplay_rules.debug_log_enabled == true
+end
+
+local function _toggle_debug_visible(state)
+  local ui = state and state.ui
+  if not ui then
+    return
+  end
+  local next_enabled = not _resolve_debug_enabled(state)
+  ui.debug_log_enabled_override = next_enabled
+  ui_view.set_debug_visible(state, next_enabled)
+end
+
+local function _record_debug_toggle_click(state)
+  if not _is_base_screen_active(state) then
+    return
+  end
+  local ui = state.ui
+  local now = _get_timestamp()
+  local first_click = ui.debug_toggle_first_click_timestamp
+  local click_count = ui.debug_toggle_click_count or 0
+  if first_click ~= nil then
+    local diff = _get_timestamp_diff_seconds(now, first_click)
+    if diff > 3 then
+      first_click = now
+      click_count = 0
+    end
+  else
+    first_click = now
+  end
+  click_count = click_count + 1
+  ui.debug_toggle_first_click_timestamp = first_click
+  ui.debug_toggle_click_count = click_count
+  if click_count >= 10 then
+    ui.debug_toggle_first_click_timestamp = nil
+    ui.debug_toggle_click_count = 0
+    _toggle_debug_visible(state)
+  end
+end
 
 local function _resolve_option_id(choice, payload, state)
   assert(choice ~= nil, "missing choice")
@@ -189,6 +259,7 @@ local function _build_route_specs(state)
     {
       name = "托管按钮",
       build_intent = function()
+        _record_debug_toggle_click(state)
         return { type = "ui_button", id = "auto" }
       end,
     },
