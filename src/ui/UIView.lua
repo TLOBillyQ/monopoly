@@ -244,10 +244,6 @@ function ui_view.apply_role_control_lock(state, enabled)
   role_control_lock_policy.sync(state, enabled, { runtime = runtime })
 end
 
-function ui_view.apply_role_control_lock_for_role(state, role_id, enabled)
-  role_control_lock_policy.set_role_lock(state, role_id, enabled, { runtime = runtime })
-end
-
 function ui_view.render(state, ui_model, log_once, build_log_prefix)
   ui_view.refresh_panel(state, ui_model)
   board_view.refresh_board(state, ui_model, log_once, build_log_prefix)

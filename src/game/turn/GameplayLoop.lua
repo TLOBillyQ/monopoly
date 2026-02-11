@@ -162,7 +162,12 @@ local function _sync_role_control_lock(game, state, ports)
   end
   local enabled = _resolve_role_control_lock_enabled(game)
   if enabled then
-    ports.apply_role_control_lock(state, true)
+    local suppress = state.role_control_lock_suppress or 0
+    if suppress > 0 then
+      ports.apply_role_control_lock(state, false)
+    else
+      ports.apply_role_control_lock(state, true)
+    end
     state.role_control_lock_active = true
     return
   end
@@ -216,6 +221,7 @@ function gameplay_loop.set_game(state, game)
     ports.apply_role_control_lock(state, false)
   end
   state.role_control_lock_active = false
+  state.role_control_lock_suppress = 0
   ports.reset_status_3d(state)
   state.game = game
   game.ui_port = state

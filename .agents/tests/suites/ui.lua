@@ -628,75 +628,16 @@ local function _test_move_anim_step_unlocks_and_relocks()
     { key = "SetTimeOut", value = function(_, cb) cb() end },
   }, function()
     local anim_ctx = {
-      on_step_lock = function(enabled, _, meta)
-        table.insert(calls, { enabled = enabled, player_id = meta and meta.player_id })
+      on_step_lock = function(enabled)
+        table.insert(calls, enabled)
       end,
       direction = { x = 1, y = 0, z = 0 },
     }
     move_anim.one_step(scene, 1, 1, 2, anim_ctx)
   end)
 
-  _assert_eq(calls[1].enabled, false, "step should unlock at begin")
-  _assert_eq(calls[1].player_id, 1, "step unlock should target moving player")
-  _assert_eq(calls[2].enabled, true, "step should relock at end")
-  _assert_eq(calls[2].player_id, 1, "step relock should target moving player")
-end
-
-local function _test_step_unlock_does_not_affect_other_roles()
-  local function _vec3(x, y, z)
-    local vector_mt = {}
-    vector_mt.__sub = function(a, b)
-      return _vec3(a.x - b.x, a.y - b.y, a.z - b.z)
-    end
-    local vector = setmetatable({ x = x, y = y, z = z }, vector_mt)
-    function vector:length()
-      local sum = self.x * self.x + self.y * self.y + self.z * self.z
-      return math.sqrt(sum)
-    end
-    return vector
-  end
-
-  local scene = {
-    tiles = {
-      [1] = { get_position = function() return _vec3(0, 0, 0) end },
-      [2] = { get_position = function() return _vec3(10, 0, 0) end },
-    },
-    units_by_player_id = { [1] = { start_move_by_direction = function() end } },
-  }
-
-  local state = { role_control_lock = { by_role = {}, warn_once = {} } }
-  local unit1 = { count = 1 }
-  function unit1.get_state_count() return unit1.count end
-  function unit1.add_state() unit1.count = unit1.count + 1 end
-  function unit1.remove_state() unit1.count = unit1.count - 1 end
-  local unit2 = { count = 1 }
-  function unit2.get_state_count() return unit2.count end
-  function unit2.add_state() unit2.count = unit2.count + 1 end
-  function unit2.remove_state() unit2.count = unit2.count - 1 end
-  state.role_control_lock.by_role[1] = { unit = unit1, owned = true }
-  state.role_control_lock.by_role[2] = { unit = unit2, owned = true }
-
-  local unlock_calls = {}
-  _with_patches({
-    { key = "SetTimeOut", value = function(_, cb) cb() end },
-    { target = ui_view, key = "apply_role_control_lock_for_role", value = function(_, role_id, enabled)
-      table.insert(unlock_calls, { role_id = role_id, enabled = enabled })
-    end },
-  }, function()
-    local anim_ctx = {
-      on_step_lock = function(enabled, _, meta)
-        if meta then
-          ui_view.apply_role_control_lock_for_role(state, meta.player_id, enabled)
-        end
-      end,
-      direction = { x = 1, y = 0, z = 0 },
-    }
-    move_anim.one_step(scene, 1, 1, 2, anim_ctx)
-  end)
-
-  _assert_eq(#unlock_calls, 2, "should call lock toggle twice")
-  _assert_eq(unlock_calls[1].role_id, 1, "only moving player should be toggled")
-  _assert_eq(unlock_calls[2].role_id, 1, "only moving player should be toggled")
+  _assert_eq(calls[1], false, "step should unlock at begin")
+  _assert_eq(calls[2], true, "step should relock at end")
 end
 
 local function _test_board_view_vehicle_disabled_uses_unit_set_position()
@@ -2205,7 +2146,6 @@ return {
   _test_move_anim_wait_and_resume,
   _test_move_anim_zero_distance_safe,
   _test_move_anim_step_unlocks_and_relocks,
-  _test_step_unlock_does_not_affect_other_roles,
   _test_move_anim_vehicle_uses_set_position_jump,
   _test_move_anim_vehicle_enter_delay_once,
   _test_move_anim_vehicle_move_api_enabled_uses_move_event,

@@ -74,6 +74,7 @@ local function _build_state()
     next_turn_last_click = nil,
     next_turn_lock_phase = nil,
     role_control_lock_active = false,
+    role_control_lock_suppress = 0,
     choice_visible_option_ids = nil,
     pending_choice_selected_option_id = nil,
     _log_once = {},
