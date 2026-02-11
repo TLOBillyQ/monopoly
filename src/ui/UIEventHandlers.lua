@@ -34,20 +34,29 @@ function event_handlers.install(_, logger, state)
     monopoly_event.chance.applied,
   }
 
+  local function _event_data(data)
+    if type(data) == "table" then
+      return data
+    end
+    return nil
+  end
+
   for _, event_name in ipairs(log_events) do
     RegisterCustomEvent(event_name, function(_, _, data)
+      local event_data = _event_data(data)
       local log = context.logger
-      if log and data and data.text then
-        log.event(data.text)
+      if log and event_data and event_data.text then
+        log.event(event_data.text)
       end
     end)
   end
 
   for _, event_name in ipairs(movement_log_events) do
     RegisterCustomEvent(event_name, function(_, _, data)
+      local event_data = _event_data(data)
       local log = context.logger
-      if log and data and data.text then
-        log.event(data.text)
+      if log and event_data and event_data.text then
+        log.event(event_data.text)
       end
     end)
   end
@@ -55,13 +64,16 @@ function event_handlers.install(_, logger, state)
   local ok, action_anim = pcall(require, "src.ui.ActionAnim")
 
   local function _resolve_tile_index(payload)
-    if payload and payload.tile_index then
+    if type(payload) ~= "table" then
+      return nil
+    end
+    if payload.tile_index then
       return payload.tile_index
     end
     local tile_id = nil
-    if payload and payload.tile and payload.tile.id then
+    if payload.tile and payload.tile.id then
       tile_id = payload.tile.id
-    elseif payload and payload.tile_id then
+    elseif payload.tile_id then
       tile_id = payload.tile_id
     end
     local ctx = context.state
@@ -88,7 +100,8 @@ function event_handlers.install(_, logger, state)
   end)
 
   RegisterCustomEvent(monopoly_event.market.buy_failed, function(_, _, data)
-    local popup = data.popup
+    local event_data = _event_data(data)
+    local popup = event_data and event_data.popup or nil
     local ctx = context.state
     if popup and ctx and ctx.push_popup then
       ctx:push_popup(popup)
