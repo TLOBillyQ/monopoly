@@ -163,10 +163,14 @@ local function _choice_confirm_intent(state, warn_label)
 end
 
 local function _resolve_actor_role_id(data)
-  if not data or not data.role then
+  local role = data and data.role or nil
+  if not role and UIManager and UIManager.client_role then
+    role = UIManager.client_role
+  end
+  if not role then
     return nil
   end
-  return runtime.resolve_role_id(data.role)
+  return runtime.resolve_role_id(role)
 end
 
 local function _register_node_click(cache, name, callback, registered, listeners)

@@ -718,6 +718,42 @@ local function _test_turn_dispatch_rejects_non_current_actor()
   assert(res_next and res_next.status == "rejected", "next button should reject non-current actor")
 end
 
+local function _test_turn_dispatch_rejects_choice_non_owner()
+  local g = _new_game()
+  local state = {
+    ui = {
+      input_blocked = false,
+      item_slot_item_ids = {},
+      item_slot_item_ids_by_role = {},
+    },
+  }
+  g.turn.pending_choice = {
+    id = 9,
+    kind = "market_buy",
+    options = { { id = 1, label = "X" } },
+    allow_cancel = true,
+    meta = { player_id = 1 },
+  }
+  state.pending_choice = g.turn.pending_choice
+
+  local dispatched = nil
+  function g:dispatch_action(action)
+    dispatched = action
+    self.turn.pending_choice = nil
+  end
+
+  local res = turn_dispatch.dispatch_action(g, state, {
+    type = "choice_select",
+    choice_id = 9,
+    option_id = 1,
+    actor_role_id = 2,
+  }, {})
+
+  assert(res and res.status == "rejected", "choice_select should reject non-owner actor")
+  assert(dispatched == nil, "rejected choice should not dispatch")
+  assert(g.turn.pending_choice ~= nil, "rejected choice should keep pending")
+end
+
 local function _test_turn_dispatch_auto_rejects_unmapped_role()
   local g = _new_game()
   local state = {
@@ -1630,6 +1666,7 @@ return {
   _test_ui_model_player_slot_map_and_choice_owner,
   _test_ui_model_player_profile_prefers_role_api_with_fallback,
   _test_turn_dispatch_rejects_non_current_actor,
+  _test_turn_dispatch_rejects_choice_non_owner,
   _test_turn_dispatch_auto_rejects_unmapped_role,
   _test_turn_dispatch_item_slot_uses_actor_slot_map,
   _test_ui_view_render_by_role_slots_are_isolated,

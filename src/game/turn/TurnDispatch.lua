@@ -67,6 +67,35 @@ local function _validate_actor_role(game, action)
   return true
 end
 
+local function _resolve_choice_owner_role_id(game, choice)
+  if not (choice and choice.meta and choice.meta.player_id) then
+    return game.turn.current_player_index
+  end
+  if game.players and game.players[choice.meta.player_id] then
+    return choice.meta.player_id
+  end
+  return game.turn.current_player_index
+end
+
+local function _validate_choice_actor(game, action, choice)
+  local actor_role_id = action and action.actor_role_id or nil
+  if actor_role_id == nil then
+    logger.warn("choice action missing actor_role_id:", tostring(action and action.type))
+    return false
+  end
+  local expected = _resolve_choice_owner_role_id(game, choice)
+  if expected ~= nil and actor_role_id ~= expected then
+    logger.warn(
+      "choice action blocked by actor check:",
+      tostring(action and action.type),
+      "actor=" .. tostring(actor_role_id),
+      "expected=" .. tostring(expected)
+    )
+    return false
+  end
+  return true
+end
+
 local function _resolve_actor_player(game, action)
   assert(game ~= nil and game.players ~= nil, "missing game.players")
   local actor_role_id = action and action.actor_role_id or nil
@@ -209,6 +238,9 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
     local choice = state.pending_choice
     if not choice or not choice.id then
       logger.warn("choice action without pending choice:", tostring(action.type))
+      return { status = "rejected" }
+    end
+    if not _validate_choice_actor(game, action, choice) then
       return { status = "rejected" }
     end
     if not action.choice_id or action.choice_id ~= choice.id then

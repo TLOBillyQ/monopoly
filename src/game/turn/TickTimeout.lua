@@ -25,6 +25,25 @@ local function _resolve_choice_owner(game, choice)
   return nil
 end
 
+local function _resolve_choice_owner_id(game, choice)
+  local meta = choice and choice.meta or {}
+  if meta.player_id and game.players and game.players[meta.player_id] then
+    return meta.player_id
+  end
+  return game.turn and game.turn.current_player_index or nil
+end
+
+local function _ensure_action_actor_role_id(game, choice, action)
+  if not action or action.actor_role_id ~= nil then
+    return action
+  end
+  local owner_id = _resolve_choice_owner_id(game, choice)
+  if owner_id ~= nil then
+    action.actor_role_id = owner_id
+  end
+  return action
+end
+
 local function _pick_first_choice_option(choice)
   local options = assert(choice.options, "missing choice.options")
   local first = assert(options[1], "missing choice option")
@@ -112,6 +131,7 @@ function tick_timeout.step_choice_timeout(game, state, dt, opts)
     if actor and agent.is_auto_player(actor) then
       local action = opts.build_action(game, state, choice)
       if action then
+        _ensure_action_actor_role_id(game, choice, action)
         state.pending_choice_elapsed = 0
         _dispatch_action_with_close_choice(game, state, action)
         return
@@ -123,6 +143,7 @@ function tick_timeout.step_choice_timeout(game, state, dt, opts)
     state.pending_choice_elapsed = 0
     local action = opts.build_action(game, state, choice)
     assert(action ~= nil, "missing timeout action")
+    _ensure_action_actor_role_id(game, choice, action)
     _dispatch_action_with_close_choice(game, state, action)
   end
 end
