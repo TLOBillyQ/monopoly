@@ -1,49 +1,6 @@
 local runtime_constants = require("Config.RuntimeConstants")
-local logger = require("src.core.Logger")
-local player_move_behavior = require("src.ui.PlayerMoveBehavior")
 
 local move_anim = {}
-local _calc_step_vector
-
-local function _count_visited(anim_ctx)
-  if not anim_ctx or type(anim_ctx.visited) ~= "table" then
-    return 0
-  end
-  return #anim_ctx.visited
-end
-
-local function _safe_len(scene, from_index, to_index)
-  local ok, _, len = pcall(_calc_step_vector, scene, from_index, to_index)
-  if ok then
-    return len
-  end
-  return nil
-end
-
-local function _log_non_positive_duration(scene, anim_ctx, total, source)
-  if anim_ctx == nil then
-    return
-  end
-  local from_index = anim_ctx.from_index
-  local to_index = anim_ctx.to_index
-  if from_index == nil or to_index == nil or from_index == to_index then
-    return
-  end
-  if total ~= nil and total > 0 then
-    return
-  end
-  logger.warn(
-    "[Eggy] non-positive move duration",
-    "source=", tostring(source),
-    "player_id=", tostring(anim_ctx.player_id),
-    "from=", tostring(from_index),
-    "to=", tostring(to_index),
-    "visited=", tostring(_count_visited(anim_ctx)),
-    "walk_speed=", tostring(runtime_constants.walk_speed),
-    "step_len=", tostring(_safe_len(scene, from_index, to_index)),
-    "total=", tostring(total)
-  )
-end
 
 local function _zero_vector()
   if runtime_constants.v3_zero then
@@ -55,7 +12,7 @@ local function _zero_vector()
   return { x = 0.0, y = 0.0, z = 0.0 }
 end
 
-_calc_step_vector = function(scene, from_index, to_index)
+local function _calc_step_vector(scene, from_index, to_index)
   local start_tile = scene.tiles[from_index]
   local end_tile = scene.tiles[to_index]
   local pos_s = start_tile.get_position()
@@ -218,11 +175,7 @@ function move_anim.play_sequence(board_scene, anim_ctx)
   local player_id = assert(anim_ctx.player_id, "missing player_id")
   local from_index = assert(anim_ctx.from_index, "missing from_index")
   local to_index = assert(anim_ctx.to_index, "missing to_index")
-  if runtime_constants.player_move_bt_enabled == true then
-    local total = player_move_behavior.play(board_scene, anim_ctx, { source = "move_anim" })
-    _log_non_positive_duration(board_scene, anim_ctx, total, "move_anim.bt")
-    return total
-  end
+  assert(_resolve_direction(anim_ctx), "missing anim.direction")
   local steps, total_time = _build_steps(board_scene, from_index, to_index, anim_ctx.visited, anim_ctx)
   local enter_delay = 0
   if #steps > 0 then
@@ -243,7 +196,6 @@ function move_anim.play_sequence(board_scene, anim_ctx)
       end)
     end
   end
-  _log_non_positive_duration(board_scene, anim_ctx, total_time, "move_anim.legacy")
   return total_time
 end
 

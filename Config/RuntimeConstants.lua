@@ -35,11 +35,6 @@ local runtime_constants = {
   -- 默认关闭：载具移动降级为 set_position 逐格跳
   vehicle_move_api_enabled = false,
   vehicle_enter_delay = 1.2,
-  player_move_bt_enabled = false,
-  player_move_bt_tick_seconds = 1 / 30,
-  player_ground_clearance = 1.5,
-  player_move_disable_player_collision = true,
-  player_move_hard_stop_each_step = false,
   fps = 30.0,
   forward_eca_event_ui = "ui_forward",
 

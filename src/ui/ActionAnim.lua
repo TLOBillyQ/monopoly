@@ -3,7 +3,6 @@ local gameplay_rules = require("Config.GameplayRules")
 
 local prefab = require("Data.Prefab")
 local logger = require("src.core.Logger")
-local move_anim = require("src.ui.MoveAnim")
 
 local action_anim = {}
 
@@ -198,19 +197,7 @@ function action_anim.play(state, anim)
   _show_tip(_build_tip(anim), tip_duration)
 
   local kind = anim.kind
-  if kind == "move_effect" then
-    local player_id = assert(anim.player_id, "missing move_effect player_id")
-    local game = assert(state.game, "missing state.game")
-    local player = assert(game.players[player_id], "missing move_effect player: " .. tostring(player_id))
-    local move_ctx = {
-      player_id = player_id,
-      from_index = assert(anim.from_index, "missing move_effect from_index"),
-      to_index = assert(anim.to_index, "missing move_effect to_index"),
-      visited = anim.visited,
-      vehicle_id = player.seat_id,
-    }
-    return move_anim.play_sequence(assert(state.board_scene, "missing board_scene"), move_ctx)
-  elseif kind == "roadblock" then
+  if kind == "roadblock" then
     local tile_index = assert(anim.tile_index, "missing roadblock tile_index")
     local group_id = prefab.group["路障"]
     local unit_id = prefab.unit and prefab.unit["路障"] or nil

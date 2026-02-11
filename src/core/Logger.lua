@@ -141,10 +141,6 @@ function logger.warn(...)
   _push("warn", ...)
 end
 
-function logger.error(...)
-  _push("error", ...)
-end
-
 function logger.event(...)
   _push("event", ...)
 end
