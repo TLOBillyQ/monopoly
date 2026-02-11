@@ -59,6 +59,10 @@ local function _clear_scene_tiles(scene, board, owned_tile_ids)
       GameAPI.destroy_unit_with_children(building, true)
       scene.building_unit_groups[idx] = nil
     end
+    local building_txt = scene.building_txt and scene.building_txt[idx] or nil
+    if building_txt and building_txt.set_billboard_text then
+      building_txt.set_billboard_text("  ")
+    end
     local tile_unit = scene.tiles[idx]
     if tile_unit then
       tile_renderer.render_tile(tile_unit, tile_id, nil)
