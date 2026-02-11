@@ -380,6 +380,22 @@ local function _build_route_specs(state)
     },
   }
 
+  local popup = state.ui and state.ui.popup_screen or nil
+  local dismiss_nodes = popup and popup.dismiss_nodes or nil
+  if type(dismiss_nodes) == "table" then
+    for _, name in ipairs(dismiss_nodes) do
+      specs[#specs + 1] = {
+        name = name,
+        build_intent = function()
+          if state.ui and state.ui.popup_active then
+            return { type = "popup_confirm" }
+          end
+          return nil
+        end,
+      }
+    end
+  end
+
   local item_slots = (state.ui and state.ui.item_slots) or {}
   if #item_slots == 0 then
     item_slots = { "道具槽位1", "道具槽位2", "道具槽位3", "道具槽位4", "道具槽位5" }

@@ -9,10 +9,6 @@ local function _set_debug_toggle_touch(ui, enabled)
 end
 
 local function _can_popup_confirm(ui)
-  local kind = ui and ui.popup_kind or nil
-  if kind == "bankruptcy" then
-    return false
-  end
   return true
 end
 
@@ -85,8 +81,8 @@ function input_lock_policy.apply(state, deps)
     ui:set_touch_enabled(market_ui.cancel_button, false)
   end
 
-  if ui.popup_screen and ui.popup_screen.confirm then
-    ui:set_touch_enabled(ui.popup_screen.confirm, false)
+  if ui.popup_active and ui.popup_screen and ui.popup_screen.confirm then
+    ui:set_touch_enabled(ui.popup_screen.confirm, true)
   end
 
   _set_debug_toggle_touch(ui, true)

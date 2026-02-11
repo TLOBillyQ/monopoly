@@ -48,6 +48,20 @@ local function _set_popup_card_image(state, payload)
   ui:set_visible(card_name, false)
 end
 
+local function _set_popup_dismiss_touch(ui, enabled)
+  local popup = ui and ui.popup_screen or nil
+  if not popup then
+    return
+  end
+  local nodes = popup.dismiss_nodes
+  if type(nodes) ~= "table" then
+    return
+  end
+  for _, name in ipairs(nodes) do
+    ui:set_touch_enabled(name, enabled == true)
+  end
+end
+
 local function _resolve_bankruptcy_text(payload)
   if payload and payload.text and payload.text ~= "" then
     return payload.text
@@ -471,6 +485,7 @@ function modal_presenter.push_popup(state, payload)
     _set_popup_card_image(state, payload)
     ui:set_visible(popup.root, true)
   end
+  _set_popup_dismiss_touch(ui, true)
   modal_state.open_popup(state, payload)
   state.ui_dirty = true
   return true
@@ -493,6 +508,7 @@ function modal_presenter.close_popup(state)
     ui:set_visible(ui.popup_screen.root, false)
     _set_popup_card_image(state, nil)
   end
+  _set_popup_dismiss_touch(ui, false)
   modal_state.close_popup(state)
   ui.popup_kind = nil
   local target = ui.popup_return_canvas

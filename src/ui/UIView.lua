@@ -138,6 +138,7 @@ function ui_view.build_ui_state()
       title = "卡牌展示_标题",
       confirm = "取消按钮",
       card = "卡牌展示_图片",
+      dismiss_nodes = { "卡牌展示_灰底", "卡牌展示_图片" },
     },
     bankruptcy_screen = {
       root = "破产展示屏",

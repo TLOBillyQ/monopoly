@@ -134,6 +134,9 @@ function turn_dispatch.should_block_action(state, action_or_type)
   if not action_type then
     return false
   end
+  if action_type == "popup_confirm" then
+    return false
+  end
   if action_type == "ui_button"
       and type(action_or_type) == "table"
       and action_or_type.id == "auto" then
