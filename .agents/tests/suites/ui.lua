@@ -16,6 +16,7 @@ local turn_dispatch = require("src.game.turn.TurnDispatch")
 local runtime_port = require("src.ui.UIRuntimePort")
 local market_view = require("src.ui.MarketView")
 local market_layout = require("src.ui.MarketLayout")
+local ui_event_router = require("src.ui.UIEventRouter")
 local ui_view = require("src.ui.UIView")
 local action_anim = require("src.ui.ActionAnim")
 local move_anim = require("src.ui.MoveAnim")
@@ -44,11 +45,10 @@ local function _build_popup_view_state(refs, card_node)
   state.ui.choice_active = false
   state.ui.market_active = false
   local nodes = {
-    ["机会卡屏"] = new_node(),
-    ["机会卡_标题"] = new_node(),
-    ["请输入文字"] = new_node(),
+    ["卡牌展示屏"] = new_node(),
+    ["卡牌展示_标题"] = new_node(),
     ["取消按钮"] = new_node(),
-    ["机会卡_图片"] = new_node(card_node or {}),
+    ["卡牌展示_图片"] = new_node(card_node or {}),
   }
   local function query_nodes_by_name(name)
     local node = nodes[name]
@@ -83,14 +83,14 @@ local function _build_choice_modal_state()
   }
   local names = {
     "玩家选择屏", "玩家选择_标题", "玩家选择_副标题",
-    "玩家选择_槽位1", "玩家选择_槽位2", "玩家选择_槽位3", "玩家选择_确认按钮",
+    "玩家选择_槽位1", "玩家选择_槽位2", "玩家选择_槽位3",
     "位置选择屏", "位置_副标题", "位置_放置文本",
-    "位置前1", "位置前2", "位置前3", "位置后1", "位置后2", "位置后3", "位置脚下", "位置_放置确认",
+    "位置前1", "位置前2", "位置前3", "位置后1", "位置后2", "位置后3", "位置脚下",
     "遥控骰子屏", "遥控骰子_标题", "遥控骰子_正文",
     "遥控骰子_选项_01", "遥控骰子_选项_02", "遥控骰子_选项_03",
     "遥控骰子_选项_04", "遥控骰子_选项_05", "遥控骰子_选项_06", "遥控骰子_取消",
-    "建筑升级屏", "建筑升级_标题", "建筑升级_确定按钮", "建筑升级_取消",
-    "机会卡屏", "机会卡_标题", "请输入文字", "机会卡_图片", "取消按钮",
+    "建筑升级屏", "建筑升级_标题", "建筑升级_文本", "建筑升级_确定按钮", "建筑升级_取消",
+    "卡牌展示屏", "卡牌展示_标题", "卡牌展示_图片", "取消按钮",
     "黑市屏", "黑市购买按钮", "关闭", "售价：100", "选中卡牌",
   }
   local nodes = {}
@@ -737,6 +737,7 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
   local node_map = {}
   local touch_logs = {}
   local visible_logs = {}
+  local label_logs = {}
   local button_logs = {}
 
   local function role_key()
@@ -784,8 +785,12 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
       item_slots = { "道具槽位1", "道具槽位2", "道具槽位3", "道具槽位4", "道具槽位5" },
       base_hidden_nodes = { "行动按钮", "道具槽位1", "道具槽位2", "道具槽位3", "道具槽位4", "道具槽位5" },
       base_hidden_labels = { "倒计时" },
-      auto_control_nodes = { "托管按钮", "自动控制按钮" },
-      set_label = function() end,
+      auto_control_nodes = { "托管按钮", "托管_文本" },
+      set_label = function(_, name, text)
+        local rk = role_key()
+        label_logs[rk] = label_logs[rk] or {}
+        label_logs[rk][name] = text
+      end,
       set_button = function(_, name, text)
         local rk = role_key()
         button_logs[rk] = button_logs[rk] or {}
@@ -848,11 +853,14 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
   assert(touch_logs[2] and touch_logs[2]["行动按钮"] == false, "non-current role action button should be disabled")
   assert(touch_logs[1] and touch_logs[1]["托管按钮"] == true, "role1 auto button should be enabled")
   assert(touch_logs[2] and touch_logs[2]["托管按钮"] == true, "role2 auto button should be enabled")
-  assert(button_logs[1] and button_logs[1]["托管按钮"] == "自动：关", "role1 auto label should show status")
-  assert(button_logs[2] and button_logs[2]["托管按钮"] == "自动：开", "role2 auto label should show status")
+  assert(touch_logs[1] and touch_logs[1]["托管_文本"] == false, "role1 auto label should stay non-clickable")
+  assert(touch_logs[2] and touch_logs[2]["托管_文本"] == false, "role2 auto label should stay non-clickable")
+  assert(label_logs[1] and label_logs[1]["托管_文本"] == "自动：关", "role1 auto label should show status")
+  assert(label_logs[2] and label_logs[2]["托管_文本"] == "自动：开", "role2 auto label should show status")
   assert(visible_logs[2] and visible_logs[2]["倒计时"] == false, "non-current role countdown should be hidden")
   assert(visible_logs[2] and visible_logs[2]["道具槽位1"] == false, "non-current role slot should be hidden")
   assert(visible_logs[2] and visible_logs[2]["托管按钮"] == true, "auto button should stay visible")
+  assert(visible_logs[2] and visible_logs[2]["托管_文本"] == true, "auto label should stay visible")
   assert(state.ui.item_slot_item_ids_by_role[1] and state.ui.item_slot_item_ids_by_role[1][1] == 2001, "role1 slot map expected")
   assert(state.ui.item_slot_item_ids_by_role[2] and state.ui.item_slot_item_ids_by_role[2][1] == 2002, "role2 slot map expected")
 end
@@ -873,12 +881,12 @@ local function _test_apply_input_lock_keeps_auto_controls_enabled()
       item_slots = { "道具槽位1" },
       base_hidden_nodes = { "行动按钮", "道具槽位1" },
       base_hidden_labels = { "倒计时" },
-      auto_control_nodes = { "托管按钮", "自动控制按钮" },
+      auto_control_nodes = { "托管按钮", "托管_文本" },
       choice_screens = {
-        player = { option_buttons = {}, cancel = "取消按钮", confirm = "玩家选择_确认按钮" },
-        target = { option_buttons = {}, under_button = "位置脚下", cancel = "取消按钮", confirm = "位置_放置确认" },
+        player = { option_buttons = {}, cancel = "取消按钮" },
+        target = { option_buttons = {}, under_button = "位置脚下", cancel = "取消按钮" },
         remote = { option_buttons = {}, cancel = "遥控骰子_取消" },
-        building = { cancel = "建筑升级_取消", confirm = "建筑升级_确定按钮" },
+        building = { body = "建筑升级_文本", cancel = "建筑升级_取消", confirm = "建筑升级_确定按钮" },
       },
       popup_screen = { confirm = "取消按钮" },
       set_touch_enabled = function(_, name, enabled)
@@ -900,7 +908,7 @@ local function _test_apply_input_lock_keeps_auto_controls_enabled()
 
   assert(touch["行动按钮"] == false, "action button should stay blocked")
   assert(touch["托管按钮"] == true, "auto button should stay enabled")
-  assert(touch["自动控制按钮"] == true, "auto label control should stay enabled")
+  assert(touch["托管_文本"] == false, "auto label should stay non-clickable")
 end
 
 local function _test_push_popup_sets_card_image_by_image_ref()
@@ -927,7 +935,7 @@ local function _test_push_popup_sets_card_image_by_image_ref()
   end)
 
   _assert_eq(last_image_key, "ICON2001", "popup card should use mapped image")
-  _assert_eq(nodes["机会卡_图片"].visible, true, "popup card should be visible when image exists")
+  _assert_eq(nodes["卡牌展示_图片"].visible, true, "popup card should be visible when image exists")
 end
 
 local function _test_push_popup_hides_card_and_clears_image_when_missing()
@@ -958,7 +966,7 @@ local function _test_push_popup_hides_card_and_clears_image_when_missing()
   end)
 
   _assert_eq(last_image_key, "EMPTY", "popup card should reset to empty key when image missing")
-  _assert_eq(nodes["机会卡_图片"].visible, false, "popup card should hide when image missing")
+  _assert_eq(nodes["卡牌展示_图片"].visible, false, "popup card should hide when image missing")
 end
 
 local function _test_popup_timeout_closes_even_when_input_blocked()
@@ -984,7 +992,7 @@ local function _test_popup_timeout_closes_even_when_input_blocked()
   end)
 
   _assert_eq(state.ui.popup_active, false, "popup should auto close under input blocked")
-  _assert_eq(nodes["机会卡屏"].visible, false, "popup root should hide after timeout")
+  _assert_eq(nodes["卡牌展示屏"].visible, false, "popup root should hide after timeout")
 end
 
 local function _test_choice_modal_routes_to_new_screens()
@@ -1052,6 +1060,7 @@ local function _test_choice_modal_routes_to_new_screens()
     _assert_eq(state.ui.active_choice_screen_key, "building", "buy_land optional should route to building screen")
     _assert_eq(nodes["建筑升级屏"].visible, true, "building screen should be visible")
     _assert_eq(nodes["建筑升级_标题"].text, "购买地块", "building title should follow option semantic")
+    _assert_eq(nodes["建筑升级_文本"].text, "", "building body should sync from choice body")
 
     ui_view.open_choice_modal(state, {
       id = 5,
@@ -1066,6 +1075,88 @@ local function _test_choice_modal_routes_to_new_screens()
     })
     _assert_eq(state.ui.active_choice_screen_key, "target", "non-building optional should fallback to target screen")
   end)
+end
+
+local function _test_ui_event_router_player_target_click_direct_submit()
+  local function new_node()
+    local node = {}
+    function node:listen(_, cb)
+      self._listener_cb = cb
+      return {
+        destroy = function()
+          self._listener_cb = nil
+        end,
+      }
+    end
+    return node
+  end
+
+  local node_map = {}
+  local function query_nodes_by_name(name)
+    local node = node_map[name]
+    if not node then
+      node = new_node()
+      node_map[name] = node
+    end
+    return { node }
+  end
+
+  local captured = {}
+  local state = {
+    ui = ui_view.build_ui_state(),
+    ui_model = {
+      choice = {
+        id = 10,
+        kind = "item_target_player",
+        allow_cancel = true,
+        options = {
+          { id = 11, label = "玩家A" },
+          { id = 22, label = "玩家B" },
+          { id = 33, label = "玩家C" },
+        },
+      },
+    },
+    pending_choice_selected_option_id = nil,
+    choice_visible_option_ids = nil,
+  }
+
+  _with_patches({
+    { key = "all_roles", value = nil },
+    { key = "GlobalAPI", value = { show_tips = function() end } },
+    { key = "UIManager", value = {
+      EVENT = { CLICK = "click" },
+      query_nodes_by_name = query_nodes_by_name,
+    } },
+    { target = turn_dispatch, key = "dispatch_action", value = function(_, _, action)
+      table.insert(captured, action)
+    end },
+  }, function()
+    ui_event_router.bind(state, function()
+      return {}
+    end)
+    node_map["玩家选择_槽位2"]._listener_cb({})
+
+    state.ui_model.choice = {
+      id = 20,
+      kind = "roadblock_target",
+      allow_cancel = true,
+      options = {
+        { id = 101, label = "前1" },
+        { id = 102, label = "前2" },
+        { id = 103, label = "前3" },
+        { id = 201, label = "后1" },
+        { id = 202, label = "后2" },
+      },
+    }
+    node_map["位置后1"]._listener_cb({})
+  end)
+
+  _assert_eq(captured[1] and captured[1].type, "choice_select", "player click should dispatch choice_select")
+  _assert_eq(captured[1] and captured[1].choice_id, 10, "player click should keep choice id")
+  _assert_eq(captured[1] and captured[1].option_id, 22, "player click should submit clicked option")
+  _assert_eq(captured[2] and captured[2].type, "choice_select", "target click should dispatch choice_select")
+  _assert_eq(captured[2] and captured[2].choice_id, 20, "target click should keep choice id")
+  _assert_eq(captured[2] and captured[2].option_id, 201, "target click should submit clicked option")
 end
 
 local function _test_market_selection_updates_icon_without_resize()
@@ -1488,6 +1579,7 @@ return {
   _test_push_popup_hides_card_and_clears_image_when_missing,
   _test_popup_timeout_closes_even_when_input_blocked,
   _test_choice_modal_routes_to_new_screens,
+  _test_ui_event_router_player_target_click_direct_submit,
   _test_market_selection_updates_icon_without_resize,
   _test_market_close_resets_icon_without_resize,
   _test_item_slot_uses_keep_size_path,

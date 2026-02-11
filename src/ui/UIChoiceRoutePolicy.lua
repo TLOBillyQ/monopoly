@@ -52,7 +52,7 @@ function policy.resolve(choice)
 end
 
 function policy.requires_confirm(screen_key)
-  return screen_key == "player" or screen_key == "target" or screen_key == "building"
+  return screen_key == "building"
 end
 
 return policy

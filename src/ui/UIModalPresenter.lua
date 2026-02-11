@@ -256,9 +256,11 @@ local function _open_target_screen(state, choice, choice_id)
     end
   end
 
-  ui:set_button(screen.confirm, "确定")
-  ui:set_visible(screen.confirm, true)
-  ui:set_touch_enabled(screen.confirm, true)
+  if screen.confirm then
+    ui:set_button(screen.confirm, "确定")
+    ui:set_visible(screen.confirm, true)
+    ui:set_touch_enabled(screen.confirm, true)
+  end
 
   local allow_cancel = choice.allow_cancel ~= false
   ui:set_visible(screen.cancel, allow_cancel)
@@ -289,6 +291,9 @@ local function _open_building_screen(state, choice, choice_id)
   local selected = _resolve_option_id(first_option)
   local title = _resolve_choice_title(choice, "building", selected)
   ui:set_label(screen.title, title)
+  if screen.body then
+    ui:set_label(screen.body, choice.body or "")
+  end
 
   ui:set_button(screen.confirm, "确定")
   ui:set_visible(screen.confirm, true)
@@ -391,7 +396,6 @@ function modal_presenter.push_popup(state, payload)
   ui.popup_return_canvas = canvas.resolve_popup_return_canvas(ui)
   canvas.switch(ui, canvas.CANVAS_POPUP)
   ui:set_label(popup.title, payload.title)
-  ui:set_label(popup.body, payload.body)
   ui:set_button(popup.confirm, payload.button_text or "确认")
   _set_popup_card_image(state, payload)
   ui:set_visible(popup.root, true)

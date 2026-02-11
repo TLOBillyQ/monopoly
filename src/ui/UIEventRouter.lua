@@ -53,7 +53,7 @@ local function _choice_cancel_intent(state, warn_label)
   return { type = "choice_cancel", choice_id = choice.id }
 end
 
-local function _choice_pick_intent(state, index, warn_label)
+local function _choice_select_intent(state, index, warn_label)
   local choice = state.ui_model and state.ui_model.choice or nil
   if not choice then
     logger.warn(warn_label .. " without choice")
@@ -64,7 +64,11 @@ local function _choice_pick_intent(state, index, warn_label)
     logger.warn(warn_label .. " missing option:", tostring(index))
     return nil
   end
-  return { type = "choice_pick", option_id = option_id }
+  return {
+    type = "choice_select",
+    choice_id = choice.id,
+    option_id = option_id,
+  }
 end
 
 local function _choice_confirm_intent(state, warn_label)
@@ -151,11 +155,6 @@ local function _dispatch(state, game, intent, opts)
     return
   end
 
-  if intent_type == "choice_pick" then
-    ui_view.select_choice_option(state, intent.option_id)
-    return
-  end
-
   if intent_type == "market_confirm" then
     if not intent.choice_id or not intent.option_id then
       logger.warn("market_confirm missing ids:", tostring(intent.choice_id), tostring(intent.option_id))
@@ -231,18 +230,6 @@ local function _build_route_specs(state)
       end,
     },
     {
-      name = "玩家选择_确认按钮",
-      build_intent = function()
-        return _choice_confirm_intent(state, "player_confirm")
-      end,
-    },
-    {
-      name = "位置_放置确认",
-      build_intent = function()
-        return _choice_confirm_intent(state, "target_confirm")
-      end,
-    },
-    {
       name = "建筑升级_确定按钮",
       build_intent = function()
         return _choice_confirm_intent(state, "building_confirm")
@@ -290,7 +277,7 @@ local function _build_route_specs(state)
     specs[#specs + 1] = {
       name = name,
       build_intent = function()
-        return _choice_pick_intent(state, index, "player_pick")
+        return _choice_select_intent(state, index, "player_select")
       end,
     }
   end
@@ -308,7 +295,7 @@ local function _build_route_specs(state)
     specs[#specs + 1] = {
       name = name,
       build_intent = function()
-        return _choice_pick_intent(state, index, "target_pick")
+        return _choice_select_intent(state, index, "target_select")
       end,
     }
   end

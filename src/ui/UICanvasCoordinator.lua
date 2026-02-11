@@ -8,7 +8,7 @@ coordinator.CANVAS_TARGET_CHOICE = "位置选择屏"
 coordinator.CANVAS_REMOTE_CHOICE = "遥控骰子屏"
 coordinator.CANVAS_BUILDING_CHOICE = "建筑升级屏"
 coordinator.CANVAS_MARKET = "黑市屏"
-coordinator.CANVAS_POPUP = "机会卡屏"
+coordinator.CANVAS_POPUP = "卡牌展示屏"
 coordinator.CANVAS_DEBUG = "调试屏"
 
 local function _resolve_choice_canvas(ui)

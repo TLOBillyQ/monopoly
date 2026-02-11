@@ -17,7 +17,7 @@ end
 
 function panel_presenter.render_auto_controls_for_role(ui, ctx, ui_model)
   assert(ui ~= nil, "missing ui")
-  local controls = ui.auto_control_nodes or { "托管按钮", "自动控制按钮" }
+  local controls = ui.auto_control_nodes or { "托管按钮", "托管_文本" }
   local auto_enabled = ctx and ctx.is_player_role == true
   local panel = ui_model and ui_model.panel or nil
   local labels_by_player = panel and panel.auto_label_by_player or nil
@@ -29,12 +29,16 @@ function panel_presenter.render_auto_controls_for_role(ui, ctx, ui_model)
   if not auto_label then
     auto_label = panel and panel.auto_label or nil
   end
-  if auto_label and ui.set_button then
-    ui:set_button("托管按钮", auto_label)
+  if auto_label and ui.set_label then
+    ui:set_label("托管_文本", auto_label)
   end
   for _, name in ipairs(controls) do
     ui:set_visible(name, true)
-    ui:set_touch_enabled(name, auto_enabled)
+    if name == "托管按钮" then
+      ui:set_touch_enabled(name, auto_enabled)
+    else
+      ui:set_touch_enabled(name, false)
+    end
   end
 end
 
