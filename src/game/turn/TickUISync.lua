@@ -140,20 +140,6 @@ local function _refresh_view(state, game, next_model)
     and TriggerCustomEvent
     and true
     or false
-  local log_key = tostring(turn_count) .. ":" .. tostring(current_id)
-  if state._camera_follow_log_key ~= log_key then
-    state._camera_follow_log_key = log_key
-    logger.info(
-      _build_log_prefix(),
-      "相机跟随检查:",
-      "玩家索引",
-      tostring(current_index),
-      "玩家ID",
-      tostring(current_id),
-      "事件可用",
-      tostring(follow_ready)
-    )
-  end
 
   if follow_ready then
     camera_helper.target_role_id = current_id
