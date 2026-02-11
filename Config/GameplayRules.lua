@@ -3,6 +3,7 @@ local gameplay_rules = {
   debug_log_max_lines = 50,
   info_log_per_turn_limit = 1,
   vehicle_enabled = false,
+  role_control_lock_enabled = true,
 
   auto_choice_min_visible_seconds = 3.0,
   auto_popup_min_visible_seconds = 3.0,

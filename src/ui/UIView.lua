@@ -2,6 +2,7 @@ local board_view = require("src.ui.BoardView")
 local market_view = require("src.ui.MarketView")
 local panel_presenter = require("src.ui.UIPanelPresenter")
 local input_lock_policy = require("src.ui.UIInputLockPolicy")
+local role_control_lock_policy = require("src.ui.UIRoleControlLockPolicy")
 local modal_presenter = require("src.ui.UIModalPresenter")
 local runtime = require("src.ui.UIRuntimePort")
 local logger = require("src.core.Logger")
@@ -119,6 +120,7 @@ function ui_view.build_ui_state()
     auto_play = false,
     auto_interval = 0.1,
     input_blocked = false,
+    role_control_lock = { by_role = {}, warn_once = {} },
     debug_visible = false,
     debug_log_enabled_override = nil,
     debug_toggle_first_click_timestamp = nil,
@@ -235,6 +237,10 @@ end
 
 function ui_view.apply_input_lock(state)
   input_lock_policy.apply(state, { runtime = runtime })
+end
+
+function ui_view.apply_role_control_lock(state, enabled)
+  role_control_lock_policy.sync(state, enabled, { runtime = runtime })
 end
 
 function ui_view.render(state, ui_model, log_once, build_log_prefix)

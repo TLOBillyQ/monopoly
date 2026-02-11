@@ -27,7 +27,33 @@ local function _default_apply_input_lock(state)
   ui_view.apply_input_lock(state)
 end
 
+local function _apply_role_control_lock_suppress(state, enabled)
+  if state.role_control_lock_suppress == nil then
+    state.role_control_lock_suppress = 0
+  end
+  if enabled == true then
+    state.role_control_lock_suppress = math.max(0, state.role_control_lock_suppress - 1)
+  else
+    state.role_control_lock_suppress = state.role_control_lock_suppress + 1
+  end
+  local should_lock = state.role_control_lock_suppress == 0
+  ui_view.apply_role_control_lock(state, should_lock)
+end
+
+local function _default_apply_role_control_lock(state, enabled)
+  ui_view.apply_role_control_lock(state, enabled)
+end
+
 local function _default_play_move_anim(state, anim_ctx)
+  if anim_ctx then
+    local prev = anim_ctx.on_step_lock
+    anim_ctx.on_step_lock = function(enabled, step_time, meta)
+      if prev then
+        prev(enabled, step_time, meta)
+      end
+      _apply_role_control_lock_suppress(state, enabled)
+    end
+  end
   return move_anim.play_sequence(state.board_scene, anim_ctx)
 end
 
@@ -76,6 +102,7 @@ local default_ports = {
   close_choice_modal = _default_close_choice_modal,
   open_choice_modal = _default_open_choice_modal,
   apply_input_lock = _default_apply_input_lock,
+  apply_role_control_lock = _default_apply_role_control_lock,
   play_move_anim = _default_play_move_anim,
   play_action_anim = _default_play_action_anim,
   step_choice_timeout = _default_step_choice_timeout,

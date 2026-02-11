@@ -12,6 +12,8 @@ local choice_resolver = support.choice_resolver
 local gameplay_loop = support.gameplay_loop
 local turn_flow = support.turn_flow
 local turn_move = support.turn_move
+local event_handlers = require("src.ui.UIEventHandlers")
+local paid_currency_bridge = require("src.game.commerce.PaidCurrencyBridge")
 local turn_dispatch = require("src.game.turn.TurnDispatch")
 local runtime_port = require("src.ui.UIRuntimePort")
 local market_view = require("src.ui.MarketView")
@@ -21,6 +23,7 @@ local ui_view = require("src.ui.UIView")
 local ui_status_3d_layer = require("src.ui.UIStatus3DLayer")
 local action_anim = require("src.ui.ActionAnim")
 local move_anim = require("src.ui.MoveAnim")
+local role_control_lock_policy = require("src.ui.UIRoleControlLockPolicy")
 local market_cfg = require("Config.Generated.Market")
 local runtime_constants = require("Config.RuntimeConstants")
 local gameplay_rules = require("Config.GameplayRules")
@@ -592,6 +595,49 @@ local function _test_board_view_vehicle_resync_uses_set_position()
   _assert_eq(unit_set_calls, 0, "vehicle player should not call unit.set_position")
   _assert_eq(#set_pos_calls, 1, "resync seq change should trigger set_position")
   _assert_eq(set_pos_calls[1].role_id, 1, "set_position role id should match player")
+end
+
+local function _test_move_anim_step_unlocks_and_relocks()
+  local function _vec3(x, y, z)
+    local vector_mt = {}
+    vector_mt.__sub = function(a, b)
+      return _vec3(a.x - b.x, a.y - b.y, a.z - b.z)
+    end
+    local vector = setmetatable({ x = x, y = y, z = z }, vector_mt)
+    function vector:length()
+      local sum = self.x * self.x + self.y * self.y + self.z * self.z
+      return math.sqrt(sum)
+    end
+    return vector
+  end
+
+  local calls = {}
+  local scene = {
+    tiles = {
+      [1] = { get_position = function() return _vec3(0, 0, 0) end },
+      [2] = { get_position = function() return _vec3(10, 0, 0) end },
+    },
+    units_by_player_id = {
+      [1] = {
+        start_move_by_direction = function() end,
+      },
+    },
+  }
+
+  _with_patches({
+    { key = "SetTimeOut", value = function(_, cb) cb() end },
+  }, function()
+    local anim_ctx = {
+      on_step_lock = function(enabled)
+        table.insert(calls, enabled)
+      end,
+      direction = { x = 1, y = 0, z = 0 },
+    }
+    move_anim.one_step(scene, 1, 1, 2, anim_ctx)
+  end)
+
+  _assert_eq(calls[1], false, "step should unlock at begin")
+  _assert_eq(calls[2], true, "step should relock at end")
 end
 
 local function _test_board_view_vehicle_disabled_uses_unit_set_position()
@@ -1621,6 +1667,169 @@ local function _test_action_anim_no_camera_focus_side_effect()
   _assert_eq(follow_events, 0, "action anim should not trigger camera follow events")
 end
 
+local function _make_unit(initial_count)
+  local unit = {
+    count = initial_count or 0,
+    add_calls = 0,
+    remove_calls = 0,
+  }
+  function unit.get_state_count()
+    return unit.count
+  end
+  function unit.add_state()
+    unit.add_calls = unit.add_calls + 1
+    unit.count = unit.count + 1
+  end
+  function unit.remove_state()
+    unit.remove_calls = unit.remove_calls + 1
+    unit.count = math.max(0, unit.count - 1)
+  end
+  return unit
+end
+
+local function _test_role_control_lock_add_remove_owned_only()
+  local unit1 = _make_unit(0)
+  local unit2 = _make_unit(2)
+  local role1 = {
+    get_roleid = function() return 1 end,
+    get_ctrl_unit = function() return unit1 end,
+  }
+  local role2 = {
+    get_roleid = function() return 2 end,
+    get_ctrl_unit = function() return unit2 end,
+  }
+  local roles = { role1, role2 }
+  local runtime = {
+    for_each_role_or_global = function(fn)
+      for _, role in ipairs(roles) do
+        fn(role)
+      end
+    end,
+    resolve_role_id = function(role)
+      return role.get_roleid()
+    end,
+  }
+  local state = { role_control_lock = { by_role = {}, warn_once = {} } }
+
+  _with_patches({
+    { key = "Enums", value = { BuffState = { BUFF_FORBID_CONTROL = 32 } } },
+  }, function()
+    role_control_lock_policy.sync(state, true, { runtime = runtime })
+    role_control_lock_policy.sync(state, false, { runtime = runtime })
+  end)
+
+  assert(unit1.add_calls == 1, "role1 should add buff when empty")
+  assert(unit1.remove_calls == 1, "role1 should remove owned buff")
+  assert(unit2.add_calls == 0, "role2 should not add when already locked")
+  assert(unit2.remove_calls == 0, "role2 should not remove external lock")
+end
+
+local function _test_role_control_lock_unit_swap_release_old_and_lock_new()
+  local unit1 = _make_unit(0)
+  local unit2 = _make_unit(0)
+  local current_unit = unit1
+  local role = {
+    get_roleid = function() return 1 end,
+    get_ctrl_unit = function() return current_unit end,
+  }
+  local runtime = {
+    for_each_role_or_global = function(fn)
+      fn(role)
+    end,
+    resolve_role_id = function(r)
+      return r.get_roleid()
+    end,
+  }
+  local state = { role_control_lock = { by_role = {}, warn_once = {} } }
+
+  _with_patches({
+    { key = "Enums", value = { BuffState = { BUFF_FORBID_CONTROL = 32 } } },
+  }, function()
+    role_control_lock_policy.sync(state, true, { runtime = runtime })
+    current_unit = unit2
+    role_control_lock_policy.sync(state, true, { runtime = runtime })
+  end)
+
+  assert(unit1.add_calls == 1, "old unit should be locked once")
+  assert(unit1.remove_calls == 1, "old unit should be released on swap")
+  assert(unit2.add_calls == 1, "new unit should be locked on swap")
+end
+
+local function _test_gameplay_loop_full_turn_lock_toggle()
+  local calls = {}
+  local ports = {
+    reset_status_3d = function() end,
+    close_choice_modal = function() end,
+    open_choice_modal = function() end,
+    apply_input_lock = function() end,
+    apply_role_control_lock = function(_, enabled)
+      table.insert(calls, enabled)
+    end,
+    play_move_anim = function() end,
+    play_action_anim = function() end,
+    step_choice_timeout = function() end,
+    step_modal_timeout = function() end,
+    update_countdown = function() end,
+    build_model = function() return {} end,
+    refresh_from_dirty = function() return false end,
+    log_status = function() end,
+    sync_debug_log = function() end,
+    sync_status_3d = function() end,
+  }
+  local state = {
+    ui = { input_blocked = false },
+    gameplay_loop_ports = ports,
+    auto_runner = { set_enabled = function() end, reset_timer = function() end, next_action = function() end },
+    ai_turn_runner = { set_enabled = function() end, reset_timer = function() end, next_action = function() end },
+    ai_turn_runner_active = false,
+    pending_choice = nil,
+    pending_choice_elapsed = 0,
+    pending_choice_id = nil,
+    ui_modal_elapsed = 0,
+    ui_modal_ref = nil,
+    _log_once = {},
+    item_name_by_id = {},
+    ui_dirty = false,
+    board_last_phase = nil,
+    board_sync_pending = false,
+    next_turn_locked = false,
+    next_turn_lock_phase = nil,
+    board_last_positions = {},
+    countdown_last = nil,
+    countdown_active_last = nil,
+    action_button_elapsed = 0,
+    action_button_active = false,
+    role_control_lock_active = false,
+  }
+  local game = {
+    finished = false,
+    players = { [1] = { id = 1, name = "P1", auto = false } },
+    turn = { current_player_index = 1, phase = "start", turn_count = 1 },
+    logger = { info = function() end },
+    advance_turn = function() end,
+    dispatch_action = function() end,
+    consume_dirty = function() return { any = false } end,
+  }
+  function game:pending_choice()
+    return nil
+  end
+
+  _with_patches({
+    { target = gameplay_rules, key = "role_control_lock_enabled", value = true },
+    { target = event_handlers, key = "install", value = function() end },
+    { target = paid_currency_bridge, key = "setup_for_game", value = function() end },
+  }, function()
+    gameplay_loop.set_game(state, game)
+    gameplay_loop.tick(game, state, 0.1)
+    game.finished = true
+    gameplay_loop.tick(game, state, 0.1)
+  end)
+
+  _assert_eq(calls[1], false, "set_game should clear lock first")
+  _assert_eq(calls[2], true, "active game should enable lock")
+  _assert_eq(calls[3], false, "finished game should clear lock")
+end
+
 local function _build_status3d_test_env()
   local created_layers = {}
   local destroyed_layers = {}
@@ -1936,6 +2145,7 @@ return {
   _test_invalid_choice_option_rejected,
   _test_move_anim_wait_and_resume,
   _test_move_anim_zero_distance_safe,
+  _test_move_anim_step_unlocks_and_relocks,
   _test_move_anim_vehicle_uses_set_position_jump,
   _test_move_anim_vehicle_enter_delay_once,
   _test_move_anim_vehicle_move_api_enabled_uses_move_event,
@@ -1950,6 +2160,9 @@ return {
   _test_turn_dispatch_item_slot_uses_actor_slot_map,
   _test_ui_view_render_by_role_slots_are_isolated,
   _test_apply_input_lock_keeps_auto_controls_enabled,
+  _test_role_control_lock_add_remove_owned_only,
+  _test_role_control_lock_unit_swap_release_old_and_lock_new,
+  _test_gameplay_loop_full_turn_lock_toggle,
   _test_push_popup_sets_card_image_by_image_ref,
   _test_push_popup_hides_card_and_clears_image_when_missing,
   _test_popup_timeout_closes_even_when_input_blocked,

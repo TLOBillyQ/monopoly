@@ -103,6 +103,13 @@ function move_anim.one_step(scene, player_id, from_index, to_index, anim_ctx)
   if time <= 0 then
     return 0
   end
+  if anim_ctx and type(anim_ctx.on_step_lock) == "function" then
+    local meta = { player_id = player_id, from = from_index, to = to_index }
+    anim_ctx.on_step_lock(false, time, meta)
+    SetTimeOut(time, function()
+      anim_ctx.on_step_lock(true, time, meta)
+    end)
+  end
   if _is_vehicle_jump_mode(anim_ctx) then
     local end_tile = scene.tiles[to_index]
     local target_pos = end_tile.get_position()

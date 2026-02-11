@@ -146,6 +146,37 @@ local function _is_action_button_wait_active(game, state)
   return true
 end
 
+local function _resolve_role_control_lock_enabled(game)
+  if gameplay_rules.role_control_lock_enabled ~= true then
+    return false
+  end
+  if not game or game.finished then
+    return false
+  end
+  return true
+end
+
+local function _sync_role_control_lock(game, state, ports)
+  if not state or not ports or not ports.apply_role_control_lock then
+    return
+  end
+  local enabled = _resolve_role_control_lock_enabled(game)
+  if enabled then
+    local suppress = state.role_control_lock_suppress or 0
+    if suppress > 0 then
+      ports.apply_role_control_lock(state, false)
+    else
+      ports.apply_role_control_lock(state, true)
+    end
+    state.role_control_lock_active = true
+    return
+  end
+  if state.role_control_lock_active then
+    ports.apply_role_control_lock(state, false)
+    state.role_control_lock_active = false
+  end
+end
+
 local function _update_action_button_timer(ctx)
   local state = ctx.state
   if not state then
@@ -186,6 +217,11 @@ end
 function gameplay_loop.set_game(state, game)
   assert(game ~= nil, "missing game")
   local ports = _resolve_ports(state)
+  if ports.apply_role_control_lock then
+    ports.apply_role_control_lock(state, false)
+  end
+  state.role_control_lock_active = false
+  state.role_control_lock_suppress = 0
   ports.reset_status_3d(state)
   state.game = game
   game.ui_port = state
@@ -340,6 +376,7 @@ function gameplay_loop.tick(game, state, dt)
   local ports = _resolve_ports(state)
   local phase = game.turn.phase
   local input_blocked_changed = _sync_input_blocked(state, phase)
+  _sync_role_control_lock(game, state, ports)
 
   local auto_ctx = {
     modal_active = false,

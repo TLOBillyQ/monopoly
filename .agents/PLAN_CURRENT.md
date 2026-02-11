@@ -1,4 +1,4 @@
-# 载具总开关（默认关闭）全链路硬禁用
+# 全回合角色控制硬锁（BUFF_FORBID_CONTROL）
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
@@ -6,70 +6,54 @@
 
 ## 目的 / 全局视角
 
-当前版本里，载具会影响黑市购买、机会卡奖励、掷骰数量、地雷/导弹免疫、移动动画与编辑器事件。为提升稳定性，本次改动引入统一开关 `vehicle_enabled`，默认关闭，并在关闭时硬禁用所有载具链路。改完后，用户新开局将看不到任何载具入口，也不会触发载具规则或表现，哪怕历史状态里残留 `seat_id` 也不会产生效果。
+当前对局中，客户端仍可通过摇杆或技能进行手动操作，可能干扰回合驱动与动画等待。目标是在现有 UI 锁与动作校验之上增加“角色控制硬锁”，对局期间强制所有角色进入不可控状态。改完后，玩家在对局未结束时无法手动移动/跳跃/前扑/技能，但 UI 流程（行动按钮、选择框）仍可正常推进。验收以“编辑器内手动操作无响应 + 回合流程不被阻断”为准。
 
 ## 进度
 
-- [x] (2026-02-11 09:20Z) 清空并重写 `.agents/PLAN_CURRENT.md`，建立本任务活文档
-- [x] (2026-02-11 09:24Z) 新增 `src/game/vehicle/VehicleFeature.lua`，封装载具开关与判定函数
-- [x] (2026-02-11 09:30Z) 修改规则层：`GameState` 与 `TurnMove`，关闭时忽略 `seat_id`
-- [x] (2026-02-11 09:34Z) 修改入口层：`Market`、`Landing`、`ChanceRegistry`，关闭时屏蔽载具来源
-- [x] (2026-02-11 09:38Z) 修改表现层：`MoveAnim`、`BoardView`、`RuntimeContext`，关闭时短路载具行为
-- [x] (2026-02-11 09:45Z) 增补回归测试并兼容开启态旧行为
-- [x] (2026-02-11 09:47Z) 运行 `lua .agents/tests/regression.lua`，输出 `All regression checks passed (111)`
+- [x] (2026-02-11 16:30Z) 清空并重写 `.agents/PLAN_CURRENT.md`，建立本任务活文档
+- [x] (2026-02-11 16:40Z) 新增角色控制锁策略模块 `src/ui/UIRoleControlLockPolicy.lua`
+- [x] (2026-02-11 16:50Z) 接入 UI 与端口：`src/ui/UIView.lua`、`src/game/turn/GameplayLoopPorts.lua`
+- [x] (2026-02-11 16:55Z) 在 `GameplayLoop` 注入全回合锁定状态机
+- [x] (2026-02-11 17:05Z) 扩展回归测试：`.agents/tests/suites/ui.lua`
+- [x] (2026-02-11 17:15Z) 运行 `lua .agents/tests/regression.lua`，输出 `All regression checks passed (114)`
+- [x] (2026-02-11 17:40Z) 调整移动动画步进期解锁，并重新回归，输出 `All regression checks passed (115)`
 
 ## 意外与发现
 
-- 观察：关闭态下，黑市若仍有道具可买，面板会继续正常展示；仅载具条目会被过滤，不影响黑市主流程。
-  证据：新增用例 `_test_market_vehicle_hidden_when_feature_disabled` 与 `_test_buy_vehicle_rejected_when_feature_disabled` 通过。
-
-- 观察：旧有载具相关回归在默认关闭后会失效，必须在测试内显式临时打开 `gameplay_rules.vehicle_enabled` 才能验证“开启态”兼容。
-  证据：`.agents/tests/suites/gameplay.lua` 与 `.agents/tests/suites/ui.lua` 中载具用例已补丁开启并通过全量回归。
+- 观察：全量回归通过（含步进期解锁补丁）。
+  证据：`All regression checks passed (115)`。
 
 ## 决策日志
 
-- 决策：载具开关放在 `Config/GameplayRules.lua`，键名为 `vehicle_enabled`，默认 `false`。
-  理由：项目已有通用玩法开关配置，复用成本最低，读取路径一致。
+- 决策：仅使用 `BUFF_FORBID_CONTROL`，不启用 `Role.set_role_ctrl_enabled` 兜底。
+  理由：需求已锁定“仅 BuffState”，避免引入跨版本行为差异。
   日期/作者：2026-02-11 / Codex
 
-- 决策：不改 `Config/Generated/*` 的静态表，全部采用运行时策略屏蔽。
-  理由：减少配置回归风险，避免对策划表造成额外维护成本。
-  日期/作者：2026-02-11 / Codex
-
-- 决策：关闭态不做存档迁移，采用“残留 `seat_id` 统一按无载具处理”。
-  理由：满足当前需求且实现最稳，避免引入迁移脚本复杂度。
+- 决策：锁定范围为“全回合、全玩家”，并在每 tick 重新同步。
+  理由：最小改动下保证防干扰强度，并应对角色单位热切换。
   日期/作者：2026-02-11 / Codex
 
 ## 结果与复盘
 
-本次已完成载具总开关的全链路硬禁用落地，且保持开启态兼容。核心结果如下：
-
-1. 新增 `vehicle_enabled=false` 默认配置与统一策略模块 `VehicleFeature`，规则/入口/表现统一走该模块判定。
-2. 关闭态下，载具获取来源（黑市、机会卡）已屏蔽，规则效果（掷骰、免疫、move_anim 载具字段）已失效，表现与运行时 ECA 载具事件已短路。
-3. 回归验证通过：`lua .agents/tests/regression.lua` 输出 `All regression checks passed (111)`。
-
-对照目标，本计划全部达成。当前剩余风险仅为“运行时热切换”未实现，这与需求锁定一致（仅开局读取）。
+本次新增了角色控制锁策略模块，并在 GameplayLoop 内全回合同步；根据编辑器反馈补充“移动动画步进期解锁”。回归已通过，仍需在编辑器内完成手动验收（步进期可控、其他时间不可控，且 UI 流程正常）。若出现 UI 被连带阻断，可通过 `role_control_lock_enabled=false` 快速回滚。
 
 ## 背景与导读
 
-核心链路分三层。规则层主要在 `src/game/game/GameState.lua` 与 `src/game/turn/TurnMove.lua`，决定 `seat_id` 如何影响骰子、免疫和移动动画数据。入口层主要在 `src/game/market/Market.lua`、`src/game/land/Landing.lua`、`src/game/chance/ChanceRegistry.lua`，负责载具的购买和抽取来源。表现层主要在 `src/ui/MoveAnim.lua`、`src/ui/BoardView.lua`、`src/core/RuntimeContext.lua`，负责载具动画、位置同步与编辑器 ECA 事件桥接。
-
-本计划新增统一策略模块 `src/game/vehicle/VehicleFeature.lua`，让以上各层都通过同一接口读取载具开关，避免散落的布尔判断失控。
+核心入口在 `src/game/turn/GameplayLoop.lua` 的 tick 驱动与 `GameplayLoopPorts` 端口，UI 入口在 `src/ui/UIView.lua`。本次新增 `src/ui/UIRoleControlLockPolicy.lua`，通过 `Role.get_ctrl_unit()` 对 LifeEntity 的 BuffStateComp 执行 `BUFF_FORBID_CONTROL`。该策略不触碰 UI 节点显隐，只影响角色控制。
 
 ## 工作计划
 
-先新增 `VehicleFeature` 提供 `is_enabled`、`resolve_seat_id`、`is_vehicle_market_entry`、`is_vehicle_chance_card`。随后改规则层，让 `GameState` 与 `TurnMove` 在关闭态不再把 `seat_id` 当作有效载具输入。再改入口层，确保黑市与机会卡不再生成载具来源，同时给 `set_vehicle` 处理器加兜底。最后改表现层，把载具动画和编辑器载具事件统一短路。
-
-测试分两组：一组新增“关闭态”用例，证明硬禁用生效；另一组修补已有载具测试，在测试内临时打开开关，保证开启态行为不回退。全部完成后跑全量回归。
+先新增策略模块，封装对 `BUFF_FORBID_CONTROL` 的加解锁与“owned”标记，避免误删外部已有状态。然后扩展 `UIView` 与 `GameplayLoopPorts` 提供 `apply_role_control_lock`。最后在 `GameplayLoop` 中注入全回合同步逻辑，并补齐回归用例验证“加锁/解锁/单位切换/回合结束清理”等行为。
 
 ## 具体步骤
 
 在仓库根目录按顺序执行：
 
-1. 改配置与新增模块。
-2. 改规则层、入口层、表现层。
-3. 修改 `.agents/tests/suites/{market,chance,gameplay,ui}.lua`。
-4. 运行：
+1. 新增 `src/ui/UIRoleControlLockPolicy.lua`。
+2. 修改 `src/ui/UIView.lua` 与 `src/game/turn/GameplayLoopPorts.lua`。
+3. 修改 `src/game/turn/GameplayLoop.lua` 与 `src/app/init.lua`。
+4. 修改 `.agents/tests/suites/ui.lua`，新增 3 个用例并挂入 suite。
+5. 运行：
 
     lua .agents/tests/regression.lua
 
@@ -79,53 +63,38 @@
 
 ## 验证与验收
 
-验收分关闭态与开启态。
-
-关闭态（默认）下，黑市不出现载具商品，机会卡不会产出载具效果，掷骰与免疫不再受载具影响，移动与位置同步不再走载具 helper，运行时桥接不再转发载具 ECA 事件。
-
-开启态（测试补丁打开）下，已有载具相关回归继续通过，证明兼容旧行为。
-
-最终必须以 `lua .agents/tests/regression.lua` 全量通过作为交付门槛。
+自动回归必须通过 `lua .agents/tests/regression.lua`。编辑器内验收包括：开局后任意玩家尝试摇杆移动/跳跃/前扑/技能无响应；点击“行动按钮/选择框确认”仍能推进回合；对局结束或重开后锁不残留。
 
 ## 可重复性与恢复
 
-本次变更不涉及数据迁移。若需要回滚，可按模块逆序撤销：先撤测试变更，再撤表现层、入口层、规则层，最后移除 `VehicleFeature` 与 `vehicle_enabled` 配置。每一步都可单独执行并重新跑回归确认。
+本次改动不涉及数据迁移，回滚路径为：先移除 `GameplayLoop` 中的锁同步，再移除端口与 UI 接口，最后删除 `UIRoleControlLockPolicy` 并撤测试。每一步都可独立回滚并重新跑回归。
 
 ## 产物与备注
 
 实际产物：
 
 - `Config/GameplayRules.lua`
-- `src/game/vehicle/VehicleFeature.lua`
-- `src/game/game/GameState.lua`
-- `src/game/turn/TurnMove.lua`
-- `src/game/market/Market.lua`
-- `src/game/land/Landing.lua`
-- `src/game/chance/ChanceRegistry.lua`
-- `src/ui/MoveAnim.lua`
-- `src/ui/BoardView.lua`
-- `src/core/RuntimeContext.lua`
-- `.agents/tests/suites/market.lua`
-- `.agents/tests/suites/chance.lua`
-- `.agents/tests/suites/gameplay.lua`
+- `src/ui/UIRoleControlLockPolicy.lua`
+- `src/ui/UIView.lua`
+- `src/game/turn/GameplayLoopPorts.lua`
+- `src/game/turn/GameplayLoop.lua`
+- `src/app/init.lua`
 - `.agents/tests/suites/ui.lua`
 
 ## 接口与依赖
 
-新增模块接口：
+新增接口：
 
-- `vehicle_feature.is_enabled() -> boolean`
-- `vehicle_feature.resolve_seat_id(seat_id) -> number|nil`
-- `vehicle_feature.is_vehicle_market_entry(entry) -> boolean`
-- `vehicle_feature.is_vehicle_chance_card(card) -> boolean`
+- `ui_view.apply_role_control_lock(state, enabled)`
+- `gameplay_loop_ports.apply_role_control_lock(state, enabled)`
 
 新增配置：
 
-- `Config.GameplayRules.vehicle_enabled`（默认 `false`）
+- `Config.GameplayRules.role_control_lock_enabled`（默认 `true`）
 
-改动依赖：
+依赖说明：
 
-- 黑市/机会卡/移动动画/运行时桥接必须统一使用 `vehicle_feature`，不直接散写 `gameplay_rules.vehicle_enabled`。
+- `role.get_ctrl_unit()` 必须返回 LifeEntity（具备 BuffStateComp）。
 
-(2026-02-11) 更新说明：初始化计划文档并锁定实现范围、默认值与验收口径。
-(2026-02-11) 更新说明：完成全链路实现与回归验证，补全进度、发现与复盘，确保可追溯交接。
+(2026-02-11) 更新说明：完成代码实现与测试补齐，并通过全量回归。
+(2026-02-11) 更新说明：按编辑器反馈补充“步进期解锁”，回归再次通过。
