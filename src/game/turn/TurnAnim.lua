@@ -1,4 +1,13 @@
+local logger = require("src.core.Logger")
+
 local turn_anim = {}
+
+local function _trace_error(err)
+  if debug and debug.traceback then
+    return debug.traceback(err, 2)
+  end
+  return tostring(err)
+end
 
 function turn_anim.step_anim(game, state, opts)
   assert(game ~= nil, "missing game")
@@ -20,7 +29,21 @@ function turn_anim.step_anim(game, state, opts)
   end
 
   state[opts.seq_key] = anim.seq
-  local ok, delay = pcall(opts.on_anim, state, anim)
+  local ok, delay = xpcall(function()
+    return opts.on_anim(state, anim)
+  end, _trace_error)
+  if not ok then
+    logger.error(
+      "[Eggy] anim callback failed",
+      "phase=", tostring(phase),
+      "anim_key=", tostring(opts.anim_key),
+      "seq=", tostring(anim.seq),
+      "player_id=", tostring(anim.player_id),
+      "from=", tostring(anim.from_index),
+      "to=", tostring(anim.to_index),
+      "err=", tostring(delay)
+    )
+  end
   if ok and delay and delay > 0 then
     SetTimeOut(delay, function()
       assert(game.dispatch_action ~= nil, "missing game.dispatch_action")

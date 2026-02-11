@@ -22,6 +22,7 @@ local action_anim = require("src.ui.ActionAnim")
 local move_anim = require("src.ui.MoveAnim")
 local market_cfg = require("Config.Generated.Market")
 local runtime_constants = require("Config.RuntimeConstants")
+local logger = require("src.core.Logger")
 
 local function _build_popup_view_state(refs, card_node)
   local function new_node(seed)
@@ -139,6 +140,44 @@ local function _test_move_anim_callback_and_delay()
   _assert_eq(delay_called, 0.2, "delay requested")
   _assert_eq(#dispatched, 1, "move_anim_done dispatched")
   _assert_eq(dispatched[1].seq, 1, "move_anim_done seq")
+end
+
+local function _test_move_anim_callback_error_logged_and_done()
+  local dispatched = {}
+  local errors = {}
+  local layer = { wait_move_anim = true }
+  local game = {
+    turn = {
+      move_anim = {
+        seq = 2,
+        player_id = 1,
+        from_index = 1,
+        to_index = 4,
+      },
+      phase = "wait_move_anim",
+    },
+    dispatch_action = function(_, action)
+      table.insert(dispatched, action)
+    end,
+  }
+
+  _with_patches({
+    { target = logger, key = "error", value = function(...)
+      errors[#errors + 1] = table.concat({ ... }, " ")
+    end },
+  }, function()
+    turn_anim.step_move_anim(game, layer, {
+      on_move_anim = function()
+        error("move callback boom")
+      end,
+    })
+  end)
+
+  _assert_eq(#dispatched, 1, "error path should still dispatch move_anim_done")
+  _assert_eq(dispatched[1].type, "move_anim_done", "error path should dispatch done action")
+  assert(#errors >= 1, "error path should write logger.error")
+  assert(string.find(errors[1], "wait_move_anim", 1, true), "error log should contain phase")
+  assert(string.find(errors[1], "move callback boom", 1, true), "error log should contain stack message")
 end
 
 local function _test_popup_timeout_auto_confirm()
@@ -340,15 +379,74 @@ local function _test_move_anim_zero_distance_safe()
     },
   }
 
-  local total = move_anim.play_sequence(scene, {
-    player_id = 1,
-    from_index = 1,
-    to_index = 2,
-    direction = { x = 0, y = 0, z = 1 },
-  })
+  local total = nil
+  _with_patches({
+    { target = runtime_constants, key = "player_move_bt_enabled", value = false },
+  }, function()
+    total = move_anim.play_sequence(scene, {
+      player_id = 1,
+      from_index = 1,
+      to_index = 2,
+      direction = { x = 0, y = 0, z = 1 },
+    })
+  end)
 
   _assert_eq(total, 0, "zero distance should return zero duration")
   _assert_eq(start_move_called, 0, "zero distance should skip unit move")
+end
+
+local function _test_move_anim_bt_missing_ground_still_moves()
+  local function _vec3(x, y, z)
+    local vector_mt = {}
+    vector_mt.__sub = function(a, b)
+      return _vec3(a.x - b.x, a.y - b.y, a.z - b.z)
+    end
+    local vector = setmetatable({ x = x, y = y, z = z }, vector_mt)
+    function vector:length()
+      local sum = self.x * self.x + self.y * self.y + self.z * self.z
+      return math.sqrt(sum)
+    end
+    return vector
+  end
+
+  local move_calls = 0
+  local scene = {
+    tiles = {
+      [1] = { get_position = function() return _vec3(0, 0, 0) end },
+      [2] = { get_position = function() return _vec3(7, 0, 0) end },
+    },
+    units_by_player_id = {
+      [1] = {
+        start_move_by_direction = function()
+          move_calls = move_calls + 1
+        end,
+        force_stop_move = function() end,
+        set_position = function() end,
+      },
+    },
+  }
+
+  local total = 0
+  _with_patches({
+    { target = runtime_constants, key = "player_move_bt_enabled", value = true },
+    { target = runtime_constants, key = "player_move_disable_player_collision", value = false },
+    { target = runtime_constants, key = "player_move_hard_stop_each_step", value = false },
+    { key = "SetTimeOut", value = function(_, cb)
+      if cb then
+        cb()
+      end
+    end },
+  }, function()
+    total = move_anim.play_sequence(scene, {
+      player_id = 1,
+      from_index = 1,
+      to_index = 2,
+      steps = 1,
+    })
+  end)
+
+  assert(total > 0, "missing ground should not force instant move done")
+  _assert_eq(move_calls, 1, "bt path should still dispatch one move step")
 end
 
 local function _test_move_anim_vehicle_uses_set_position_jump()
@@ -382,6 +480,7 @@ local function _test_move_anim_vehicle_uses_set_position_jump()
   }
 
   _with_patches({
+    { target = runtime_constants, key = "player_move_bt_enabled", value = false },
     { target = runtime_constants, key = "vehicle_move_api_enabled", value = false },
     { key = "vehicle_helper", value = {
       consume_enter_delay = function()
@@ -432,6 +531,7 @@ local function _test_move_anim_vehicle_enter_delay_once()
   }
 
   _with_patches({
+    { target = runtime_constants, key = "player_move_bt_enabled", value = false },
     { target = runtime_constants, key = "vehicle_move_api_enabled", value = false },
     { key = "SetTimeOut", value = function(delay)
       timeout_delays[#timeout_delays + 1] = delay
@@ -494,6 +594,7 @@ local function _test_move_anim_vehicle_move_api_enabled_uses_move_event()
   }
 
   _with_patches({
+    { target = runtime_constants, key = "player_move_bt_enabled", value = false },
     { target = runtime_constants, key = "vehicle_move_api_enabled", value = true },
     { key = "vehicle_helper", value = {
       consume_enter_delay = function()
@@ -518,6 +619,535 @@ local function _test_move_anim_vehicle_move_api_enabled_uses_move_event()
 
   _assert_eq(move_calls, 1, "move api enabled should use forward_eca_event_move")
   _assert_eq(set_pos_calls, 0, "move api enabled should not use set_position jump")
+end
+
+local function _test_move_anim_bt_disable_collision_and_restore()
+  local function _vec3(x, y, z)
+    local vector_mt = {}
+    vector_mt.__sub = function(a, b)
+      return _vec3(a.x - b.x, a.y - b.y, a.z - b.z)
+    end
+    local vector = setmetatable({ x = x, y = y, z = z }, vector_mt)
+    function vector:length()
+      local sum = self.x * self.x + self.y * self.y + self.z * self.z
+      return math.sqrt(sum)
+    end
+    return vector
+  end
+
+  local move_calls = 0
+  local stop_calls = 0
+  local collisions = {}
+  local mover = {
+    start_move_by_direction = function()
+      move_calls = move_calls + 1
+    end,
+    force_stop_move = function()
+      stop_calls = stop_calls + 1
+    end,
+    set_position = function() end,
+  }
+  local scene = {
+    ground = {
+      get_position = function()
+        return { y = 0 }
+      end,
+    },
+    tiles = {
+      [1] = { get_position = function() return _vec3(0, 0, 0) end },
+      [2] = { get_position = function() return _vec3(7, 0, 0) end },
+    },
+    units_by_player_id = {
+      [1] = mover,
+      [2] = { set_position = function() end },
+    },
+  }
+
+  _with_patches({
+    { target = runtime_constants, key = "player_move_bt_enabled", value = true },
+    { target = runtime_constants, key = "player_move_disable_player_collision", value = true },
+    { target = runtime_constants, key = "player_move_hard_stop_each_step", value = true },
+    { key = "SetTimeOut", value = function(_, cb)
+      if cb then
+        cb()
+      end
+    end },
+    { key = "GameAPI", value = {
+      enable_collision_between_units = function(_, _, enabled)
+        collisions[#collisions + 1] = enabled
+      end,
+    } },
+  }, function()
+    local total = move_anim.play_sequence(scene, {
+      player_id = 1,
+      from_index = 1,
+      to_index = 2,
+      steps = 1,
+    })
+    assert(total > 0, "bt move should return positive duration")
+  end)
+
+  _assert_eq(move_calls, 1, "bt move should still start one step")
+  assert(stop_calls >= 3, "bt move should hard stop during lifecycle")
+  assert(#collisions >= 2, "bt move should disable and restore collision")
+  _assert_eq(collisions[1], false, "first collision call should disable")
+  _assert_eq(collisions[#collisions], true, "last collision call should restore")
+end
+
+local function _test_move_anim_bt_hard_stop_each_step()
+  local function _vec3(x, y, z)
+    local vector_mt = {}
+    vector_mt.__sub = function(a, b)
+      return _vec3(a.x - b.x, a.y - b.y, a.z - b.z)
+    end
+    local vector = setmetatable({ x = x, y = y, z = z }, vector_mt)
+    function vector:length()
+      local sum = self.x * self.x + self.y * self.y + self.z * self.z
+      return math.sqrt(sum)
+    end
+    return vector
+  end
+
+  local move_calls = 0
+  local stop_calls = 0
+  local snap_calls = 0
+  local scene = {
+    ground = {
+      get_position = function()
+        return { y = 0 }
+      end,
+    },
+    tiles = {
+      [1] = { get_position = function() return _vec3(0, 0, 0) end },
+      [2] = { get_position = function() return _vec3(7, 0, 0) end },
+      [3] = { get_position = function() return _vec3(14, 0, 0) end },
+    },
+    units_by_player_id = {
+      [1] = {
+        start_move_by_direction = function()
+          move_calls = move_calls + 1
+        end,
+        force_stop_move = function()
+          stop_calls = stop_calls + 1
+        end,
+        set_position = function()
+          snap_calls = snap_calls + 1
+        end,
+      },
+    },
+  }
+
+  _with_patches({
+    { target = runtime_constants, key = "player_move_bt_enabled", value = true },
+    { target = runtime_constants, key = "player_move_disable_player_collision", value = false },
+    { target = runtime_constants, key = "player_move_hard_stop_each_step", value = true },
+    { key = "SetTimeOut", value = function(_, cb)
+      if cb then
+        cb()
+      end
+    end },
+  }, function()
+    move_anim.play_sequence(scene, {
+      player_id = 1,
+      from_index = 1,
+      to_index = 3,
+      visited = { 2, 3 },
+      steps = 2,
+    })
+  end)
+
+  _assert_eq(move_calls, 2, "bt move should execute every visited step")
+  assert(stop_calls >= 4, "bt move should hard stop at start, per step and finalize")
+  assert(snap_calls >= 4, "bt move should snap at start, per step and finalize")
+end
+
+local function _test_move_anim_bt_default_only_hard_stop_finalize()
+  local function _vec3(x, y, z)
+    local vector_mt = {}
+    vector_mt.__sub = function(a, b)
+      return _vec3(a.x - b.x, a.y - b.y, a.z - b.z)
+    end
+    local vector = setmetatable({ x = x, y = y, z = z }, vector_mt)
+    function vector:length()
+      local sum = self.x * self.x + self.y * self.y + self.z * self.z
+      return math.sqrt(sum)
+    end
+    return vector
+  end
+
+  local move_calls = 0
+  local stop_calls = 0
+  local snap_calls = 0
+  local scene = {
+    ground = {
+      get_position = function()
+        return { y = 0 }
+      end,
+    },
+    tiles = {
+      [1] = { get_position = function() return _vec3(0, 0, 0) end },
+      [2] = { get_position = function() return _vec3(7, 0, 0) end },
+      [3] = { get_position = function() return _vec3(14, 0, 0) end },
+    },
+    units_by_player_id = {
+      [1] = {
+        start_move_by_direction = function()
+          move_calls = move_calls + 1
+        end,
+        force_stop_move = function()
+          stop_calls = stop_calls + 1
+        end,
+        set_position = function()
+          snap_calls = snap_calls + 1
+        end,
+      },
+    },
+  }
+
+  _with_patches({
+    { target = runtime_constants, key = "player_move_bt_enabled", value = true },
+    { target = runtime_constants, key = "player_move_disable_player_collision", value = false },
+    { target = runtime_constants, key = "player_move_hard_stop_each_step", value = false },
+    { key = "SetTimeOut", value = function(_, cb)
+      if cb then
+        cb()
+      end
+    end },
+  }, function()
+    move_anim.play_sequence(scene, {
+      player_id = 1,
+      from_index = 1,
+      to_index = 3,
+      visited = { 2, 3 },
+      steps = 2,
+    })
+  end)
+
+  _assert_eq(move_calls, 2, "bt move should execute every visited step")
+  _assert_eq(stop_calls, 2, "default bt move should only hard stop at prepare and finalize")
+  _assert_eq(snap_calls, 2, "default bt move should only snap at prepare and finalize")
+end
+
+local function _test_move_anim_bt_clamp_player_above_ground()
+  local function _vec3(x, y, z)
+    local vector_mt = {}
+    vector_mt.__sub = function(a, b)
+      return _vec3(a.x - b.x, a.y - b.y, a.z - b.z)
+    end
+    local vector = setmetatable({ x = x, y = y, z = z }, vector_mt)
+    function vector:length()
+      local sum = self.x * self.x + self.y * self.y + self.z * self.z
+      return math.sqrt(sum)
+    end
+    return vector
+  end
+
+  local snap_positions = {}
+  local scene = {
+    ground = {
+      get_position = function()
+        return { y = 0 }
+      end,
+    },
+    tiles = {
+      [1] = { get_position = function() return _vec3(0, -3, 0) end },
+      [2] = { get_position = function() return _vec3(7, -4, 0) end },
+    },
+    units_by_player_id = {
+      [1] = {
+        start_move_by_direction = function() end,
+        force_stop_move = function() end,
+        set_position = function(pos)
+          snap_positions[#snap_positions + 1] = pos
+        end,
+      },
+    },
+  }
+
+  _with_patches({
+    { target = runtime_constants, key = "player_move_bt_enabled", value = true },
+    { target = runtime_constants, key = "player_move_disable_player_collision", value = false },
+    { target = runtime_constants, key = "player_move_hard_stop_each_step", value = false },
+    { target = runtime_constants, key = "player_ground_clearance", value = 1.5 },
+    { key = "SetTimeOut", value = function(_, cb)
+      if cb then
+        cb()
+      end
+    end },
+  }, function()
+    move_anim.play_sequence(scene, {
+      player_id = 1,
+      from_index = 1,
+      to_index = 2,
+      steps = 1,
+    })
+  end)
+
+  assert(#snap_positions >= 2, "bt move should still snap at prepare/finalize")
+  for _, pos in ipairs(snap_positions) do
+    assert(pos.y >= 1.5, "snap y should be clamped above ground")
+  end
+end
+
+local function _test_move_anim_bt_collision_ref_count_concurrent_sessions()
+  local function _vec3(x, y, z)
+    local vector_mt = {}
+    vector_mt.__sub = function(a, b)
+      return _vec3(a.x - b.x, a.y - b.y, a.z - b.z)
+    end
+    local vector = setmetatable({ x = x, y = y, z = z }, vector_mt)
+    function vector:length()
+      local sum = self.x * self.x + self.y * self.y + self.z * self.z
+      return math.sqrt(sum)
+    end
+    return vector
+  end
+
+  local move_calls = 0
+  local collisions = {}
+  local timers = {}
+  local scene = {
+    ground = {
+      get_position = function()
+        return { y = 0 }
+      end,
+    },
+    tiles = {
+      [1] = { get_position = function() return _vec3(0, 0, 0) end },
+      [2] = { get_position = function() return _vec3(7, 0, 0) end },
+    },
+    units_by_player_id = {
+      [1] = {
+        start_move_by_direction = function()
+          move_calls = move_calls + 1
+        end,
+        force_stop_move = function() end,
+        set_position = function() end,
+      },
+      [2] = {
+        start_move_by_direction = function()
+          move_calls = move_calls + 1
+        end,
+        force_stop_move = function() end,
+        set_position = function() end,
+      },
+    },
+  }
+
+  _with_patches({
+    { target = runtime_constants, key = "player_move_bt_enabled", value = true },
+    { target = runtime_constants, key = "player_move_disable_player_collision", value = true },
+    { target = runtime_constants, key = "player_move_hard_stop_each_step", value = false },
+    { key = "SetTimeOut", value = function(_, cb)
+      if cb then
+        timers[#timers + 1] = cb
+      end
+    end },
+    { key = "GameAPI", value = {
+      enable_collision_between_units = function(_, _, enabled)
+        collisions[#collisions + 1] = enabled
+      end,
+    } },
+  }, function()
+    move_anim.play_sequence(scene, {
+      player_id = 1,
+      from_index = 1,
+      to_index = 2,
+      steps = 1,
+    })
+    move_anim.play_sequence(scene, {
+      player_id = 2,
+      from_index = 1,
+      to_index = 2,
+      steps = 1,
+    })
+
+    _assert_eq(move_calls, 2, "both sessions should dispatch movement")
+    _assert_eq(#collisions, 1, "concurrent sessions should only disable collision once")
+    _assert_eq(collisions[1], false, "first collision call should disable")
+    _assert_eq(#timers, 2, "concurrent sessions should keep two pending step timers")
+
+    timers[1]()
+    _assert_eq(#collisions, 1, "first session finalize should not restore early")
+    timers[2]()
+  end)
+
+  _assert_eq(#collisions, 2, "second session finalize should restore collision")
+  _assert_eq(collisions[2], true, "last collision call should restore")
+end
+
+local function _test_action_anim_move_effect_uses_bt_move()
+  local function _vec3(x, y, z)
+    local vector_mt = {}
+    vector_mt.__sub = function(a, b)
+      return _vec3(a.x - b.x, a.y - b.y, a.z - b.z)
+    end
+    local vector = setmetatable({ x = x, y = y, z = z }, vector_mt)
+    function vector:length()
+      local sum = self.x * self.x + self.y * self.y + self.z * self.z
+      return math.sqrt(sum)
+    end
+    return vector
+  end
+
+  local move_calls = 0
+  local state = {
+    game = {
+      players = { [1] = { id = 1, seat_id = nil } },
+      turn = { current_player_index = 1 },
+    },
+    board_scene = {
+      ground = {
+        get_position = function()
+          return { y = 0 }
+        end,
+      },
+      tiles = {
+        [1] = { get_position = function() return _vec3(0, 0, 0) end },
+        [2] = { get_position = function() return _vec3(7, 0, 0) end },
+      },
+      units_by_player_id = {
+        [1] = {
+          start_move_by_direction = function()
+            move_calls = move_calls + 1
+          end,
+          force_stop_move = function() end,
+          set_position = function() end,
+        },
+      },
+    },
+  }
+
+  local duration = 0
+  _with_patches({
+    { target = runtime_constants, key = "player_move_bt_enabled", value = true },
+    { target = runtime_constants, key = "player_move_disable_player_collision", value = false },
+    { key = "SetTimeOut", value = function(_, cb)
+      if cb then
+        cb()
+      end
+    end },
+    { key = "GlobalAPI", value = { show_tips = function() end } },
+  }, function()
+    duration = action_anim.play(state, {
+      kind = "move_effect",
+      player_id = 1,
+      from_index = 1,
+      to_index = 2,
+    })
+  end)
+
+  assert(duration > 0, "move_effect should return movement duration")
+  _assert_eq(move_calls, 1, "move_effect should execute one movement step")
+end
+
+local function _test_board_view_suppress_sync_for_wait_action_move_effect()
+  local board_view = require("src.ui.BoardView")
+
+  local function _vec3(x, y, z)
+    local vector_mt = {}
+    vector_mt.__add = function(a, b)
+      return _vec3(a.x + b.x, a.y + b.y, a.z + b.z)
+    end
+    return setmetatable({ x = x, y = y, z = z }, vector_mt)
+  end
+
+  local unit_set_calls = 0
+  local state = {
+    board_scene = {
+      ground = {
+        get_position = function()
+          return { y = 0 }
+        end,
+      },
+    },
+    tile_positions = { _vec3(5, 2, 7) },
+    board_last_positions = { [1] = "0:0" },
+    board_last_vehicle_resync_seq = 1,
+    board_sync_pending = false,
+    tile_spacing = 0,
+    player_units = {
+      [1] = {
+        set_position = function()
+          unit_set_calls = unit_set_calls + 1
+        end,
+      },
+    },
+    player_units_missing = false,
+  }
+
+  local model = {
+    board = {
+      players = { { id = 1, position = 1, eliminated = false } },
+      tiles = { { id = 1, type = "start" } },
+      tile_states = {},
+      phase = "wait_action_anim",
+      move_anim = nil,
+      action_anim = { kind = "move_effect", player_id = 1 },
+      tile_count = 1,
+      vehicle_resync_seq = 1,
+    },
+  }
+
+  _with_patches({
+    { target = math, key = "Vector3", value = _vec3 },
+  }, function()
+    board_view.refresh_board(state, model, function() end, function() return "[test]" end)
+  end)
+
+  _assert_eq(unit_set_calls, 0, "wait_action_anim+move_effect should suppress board sync")
+  _assert_eq(state.board_sync_pending, true, "suppressed sync should mark pending")
+end
+
+local function _test_move_anim_feature_flag_fallback_legacy_path()
+  local function _vec3(x, y, z)
+    local vector_mt = {}
+    vector_mt.__sub = function(a, b)
+      return _vec3(a.x - b.x, a.y - b.y, a.z - b.z)
+    end
+    local vector = setmetatable({ x = x, y = y, z = z }, vector_mt)
+    function vector:length()
+      local sum = self.x * self.x + self.y * self.y + self.z * self.z
+      return math.sqrt(sum)
+    end
+    return vector
+  end
+
+  local move_calls = 0
+  local timeout_delays = {}
+  local scene = {
+    tiles = {
+      [1] = { get_position = function() return _vec3(0, 0, 0) end },
+      [2] = { get_position = function() return _vec3(7, 0, 0) end },
+      [3] = { get_position = function() return _vec3(14, 0, 0) end },
+    },
+    units_by_player_id = {
+      [1] = {
+        start_move_by_direction = function()
+          move_calls = move_calls + 1
+        end,
+      },
+    },
+  }
+
+  _with_patches({
+    { target = runtime_constants, key = "player_move_bt_enabled", value = false },
+    { key = "SetTimeOut", value = function(delay)
+      timeout_delays[#timeout_delays + 1] = delay
+    end },
+  }, function()
+    move_anim.play_sequence(scene, {
+      player_id = 1,
+      from_index = 1,
+      to_index = 3,
+      visited = { 2, 3 },
+      direction = { x = 1, y = 0, z = 0 },
+      steps = 2,
+    })
+  end)
+
+  _assert_eq(move_calls, 1, "legacy path should dispatch first step immediately")
+  _assert_eq(#timeout_delays, 1, "legacy path should defer remaining step with timeout")
 end
 
 local function _test_board_view_vehicle_resync_uses_set_position()
@@ -593,6 +1223,7 @@ local function _test_ui_model_structure()
   local g = _new_game()
   local player = g:current_player()
   player.inventory:add({ id = 2001 })
+  g.turn.action_anim = { kind = "item_use", seq = 9 }
   local ui_state = {
     ui = {
       auto_play = false,
@@ -608,6 +1239,7 @@ local function _test_ui_model_structure()
   assert(model.panel and model.panel.turn_label, "ui_model.panel.turn_label expected")
   assert(type(model.item_slots) == "table" and model.item_slots[1] == 2001, "ui_model.item_slots[1] expected")
   assert(model.board and model.board.tiles and model.board.tile_states, "ui_model.board data")
+  assert(model.board and model.board.action_anim and model.board.action_anim.seq == 9, "ui_model.board.action_anim expected")
 end
 
 local function _test_ui_model_player_slot_map_and_choice_owner()
@@ -1615,6 +2247,7 @@ end
 
 return {
   _test_move_anim_callback_and_delay,
+  _test_move_anim_callback_error_logged_and_done,
   _test_popup_timeout_auto_confirm,
   _test_runtime_port_with_client_role_restores_nested_context,
   _test_choice_timeout_supports_explicit_timeout_strategy,
@@ -1622,9 +2255,18 @@ return {
   _test_invalid_choice_option_rejected,
   _test_move_anim_wait_and_resume,
   _test_move_anim_zero_distance_safe,
+  _test_move_anim_bt_missing_ground_still_moves,
   _test_move_anim_vehicle_uses_set_position_jump,
   _test_move_anim_vehicle_enter_delay_once,
   _test_move_anim_vehicle_move_api_enabled_uses_move_event,
+  _test_move_anim_bt_disable_collision_and_restore,
+  _test_move_anim_bt_hard_stop_each_step,
+  _test_move_anim_bt_default_only_hard_stop_finalize,
+  _test_move_anim_bt_clamp_player_above_ground,
+  _test_move_anim_bt_collision_ref_count_concurrent_sessions,
+  _test_action_anim_move_effect_uses_bt_move,
+  _test_board_view_suppress_sync_for_wait_action_move_effect,
+  _test_move_anim_feature_flag_fallback_legacy_path,
   _test_board_view_vehicle_resync_uses_set_position,
   _test_ui_model_structure,
   _test_ui_model_player_slot_map_and_choice_owner,

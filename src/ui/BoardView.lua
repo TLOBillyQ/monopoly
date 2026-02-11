@@ -1,6 +1,7 @@
 local building_effects = require("src.ui.BuildingEffects")
 local tile_renderer = require("src.ui.TileRenderer")
 local number_utils = require("src.core.NumberUtils")
+local player_positioning = require("src.ui.PlayerPositioning")
 local runtime_constants = require("Config.RuntimeConstants")
 
 local board_view = {}
@@ -197,14 +198,6 @@ local function _build_occupants(state, players)
   return occupants
 end
 
-local function _resolve_min_player_y(scene)
-  assert(scene.ground ~= nil, "missing board_scene.ground")
-  assert(scene.ground.get_position ~= nil, "missing board_scene.ground.get_position")
-  local ground_pos = scene.ground.get_position()
-  assert(ground_pos ~= nil and ground_pos.y ~= nil, "missing ground position")
-  return ground_pos.y + 1.5
-end
-
 local function _resolve_occupant_slot(list, pid)
   local count = list and #list or 1
   local slot = 1
@@ -276,7 +269,9 @@ function board_view.refresh_board(state, ui_model, log_once, build_log_prefix)
 
   local phase = board.phase
   local anim = board.move_anim
-  local suppress_sync = phase == "wait_move_anim" and anim
+  local action_anim = board.action_anim
+  local suppress_sync = (phase == "wait_move_anim" and anim)
+    or (phase == "wait_action_anim" and action_anim and action_anim.kind == "move_effect")
   local vehicle_resync_seq = board.vehicle_resync_seq or 0
 
   local snapshot = _build_snapshot(players)
@@ -294,7 +289,7 @@ function board_view.refresh_board(state, ui_model, log_once, build_log_prefix)
 
   local occupants = _build_occupants(state, players)
   local spacing = state.tile_spacing or 0
-  local min_player_y = _resolve_min_player_y(scene)
+  local min_player_y = player_positioning.resolve_min_player_y(scene)
   _place_players(state, players, occupants, spacing, min_player_y)
 
   state.board_sync_pending = false

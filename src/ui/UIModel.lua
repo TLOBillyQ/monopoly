@@ -51,6 +51,7 @@ function ui_model.build(game, env)
       players = game.players,
       phase = turn.phase,
       move_anim = turn.move_anim,
+      action_anim = turn.action_anim,
       vehicle_resync_seq = turn.vehicle_resync_seq or 0,
       tile_count = #projection.board_tiles(),
     },
@@ -88,6 +89,7 @@ function ui_model.update(prev, game, env, dirty)
     board.players = game.players
     board.phase = turn.phase
     board.move_anim = turn.move_anim
+    board.action_anim = turn.action_anim
     board.vehicle_resync_seq = turn.vehicle_resync_seq or 0
     board.tile_count = #projection.board_tiles()
     model.board = board
