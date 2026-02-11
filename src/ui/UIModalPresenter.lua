@@ -3,6 +3,7 @@ local market_ui = require("src.ui.MarketLayout")
 local modal_state = require("src.ui.UIModalStateCoordinator")
 local route_policy = require("src.ui.UIChoiceRoutePolicy")
 local role_avatar = require("src.ui.UIRoleAvatar")
+local role_context = require("src.ui.UIRoleContext")
 local runtime = require("src.ui.UIRuntimePort")
 local canvas = require("src.ui.UICanvasCoordinator")
 local logger = require("src.core.Logger")
@@ -136,6 +137,47 @@ local function _resolve_canvas_for_screen(screen_key)
   return canvas.CANVAS_BASE
 end
 
+local function _should_show_modal_for_ctx(ctx, kind)
+  if ctx and ctx.can_operate == true then
+    return true
+  end
+  return kind == "chance_card" or kind == "item_card" or kind == "bankruptcy"
+end
+
+local function _switch_canvas_for_role(ui, role, target)
+  if role then
+    canvas.switch_for_role(ui, target, role)
+    return
+  end
+  canvas.switch(ui, target)
+end
+
+local function _switch_modal_canvas(state, target_canvas)
+  local ui = state.ui
+  runtime.for_each_role_or_global(function(role)
+    local ctx = role_context.resolve(role, state.ui_model, { runtime = runtime })
+    if ctx.can_operate == true then
+      _switch_canvas_for_role(ui, role, target_canvas)
+    else
+      _switch_canvas_for_role(ui, role, canvas.CANVAS_BASE)
+    end
+  end)
+  runtime.set_client_role(nil)
+end
+
+local function _switch_popup_canvas(state, kind, target_canvas, fallback_canvas)
+  local ui = state.ui
+  runtime.for_each_role_or_global(function(role)
+    local ctx = role_context.resolve(role, state.ui_model, { runtime = runtime })
+    if _should_show_modal_for_ctx(ctx, kind) then
+      _switch_canvas_for_role(ui, role, target_canvas)
+    else
+      _switch_canvas_for_role(ui, role, fallback_canvas or canvas.CANVAS_BASE)
+    end
+  end)
+  runtime.set_client_role(nil)
+end
+
 local function _hide_choice_screens(ui)
   local screens = ui.choice_screens or {}
   for _, screen in pairs(screens) do
@@ -216,7 +258,7 @@ end
 
 local function _open_market_panel(state, choice, choice_id, market)
   local ui = state.ui
-  canvas.switch(ui, canvas.CANVAS_MARKET)
+  _switch_modal_canvas(state, canvas.CANVAS_MARKET)
   _hide_choice_screens(ui)
   local market_payload = market or {
     choice_id = choice_id,
@@ -238,7 +280,7 @@ local function _open_player_or_remote_screen(state, choice, choice_id, screen_ke
   end
 
   _hide_choice_screens(ui)
-  canvas.switch(ui, _resolve_canvas_for_screen(screen_key))
+  _switch_modal_canvas(state, _resolve_canvas_for_screen(screen_key))
   ui:set_visible(screen.root, true)
 
   if screen.title then
@@ -290,7 +332,7 @@ local function _open_target_screen(state, choice, choice_id)
   end
 
   _hide_choice_screens(ui)
-  canvas.switch(ui, canvas.CANVAS_TARGET_CHOICE)
+  _switch_modal_canvas(state, canvas.CANVAS_TARGET_CHOICE)
   ui:set_visible(screen.root, true)
 
   ui:set_label(screen.title, choice.title or "请选择")
@@ -356,7 +398,7 @@ local function _open_building_screen(state, choice, choice_id)
   end
 
   _hide_choice_screens(ui)
-  canvas.switch(ui, canvas.CANVAS_BUILDING_CHOICE)
+  _switch_modal_canvas(state, canvas.CANVAS_BUILDING_CHOICE)
   ui:set_visible(screen.root, true)
 
   local first_option = choice.options and choice.options[1] or nil
@@ -454,9 +496,9 @@ function modal_presenter.close_choice_modal(state)
   end
   modal_state.close_choice(state)
   if ui.popup_active then
-    canvas.switch(ui, canvas.CANVAS_POPUP)
+    _switch_popup_canvas(state, ui.popup_kind or "card", canvas.CANVAS_POPUP, canvas.CANVAS_BASE)
   else
-    canvas.switch(ui, canvas.CANVAS_BASE)
+    _switch_modal_canvas(state, canvas.CANVAS_BASE)
   end
   state.ui_dirty = true
 end
@@ -469,7 +511,7 @@ function modal_presenter.push_popup(state, payload)
   ui.popup_kind = kind
   if kind == "bankruptcy" then
     local screen = ui.bankruptcy_screen
-    canvas.switch(ui, canvas.CANVAS_BANKRUPTCY)
+    _switch_popup_canvas(state, kind, canvas.CANVAS_BANKRUPTCY, canvas.CANVAS_BASE)
     if screen and screen.text then
       ui:set_label(screen.text, _resolve_bankruptcy_text(payload))
     end
@@ -479,7 +521,7 @@ function modal_presenter.push_popup(state, payload)
     end
   else
     local popup = ui.popup_screen
-    canvas.switch(ui, canvas.CANVAS_POPUP)
+    _switch_popup_canvas(state, kind, canvas.CANVAS_POPUP, canvas.CANVAS_BASE)
     ui:set_label(popup.title, payload.title)
     ui:set_button(popup.confirm, payload.button_text or "确认")
     _set_popup_card_image(state, payload)
@@ -513,7 +555,8 @@ function modal_presenter.close_popup(state)
   ui.popup_kind = nil
   local target = ui.popup_return_canvas
   ui.popup_return_canvas = nil
-  canvas.switch(ui, canvas.resolve_canvas_after_popup(ui, target))
+  local next_canvas = canvas.resolve_canvas_after_popup(ui, target)
+  _switch_popup_canvas(state, kind, next_canvas, canvas.CANVAS_BASE)
   state.ui_dirty = true
 end
 

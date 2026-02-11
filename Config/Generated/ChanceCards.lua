@@ -7,7 +7,7 @@ local chance_cards = {
   { id = 3006, description = "你去游乐场，支付1000金币。", weight = 400, negative = true, target = "self", effect = "pay_cash", amount = 1000 },
   { id = 3007, description = "你捐助失学儿童，捐出2000金币。", weight = 400, negative = true, target = "self", effect = "pay_cash", amount = 2000 },
   { id = 3008, description = "你扶老人去医院，垫付5000金币。", weight = 400, negative = true, target = "self", effect = "pay_cash", amount = 5000 },
-  { id = 3009, description = "口罩封城，每人领取3000金币救济金。", weight = 400, negative = false, target = "all", effect = "add_cash", amount = 3000 },
+  { id = 3009, description = "普天同庆，每人领取3000金币红包。", weight = 400, negative = false, target = "all", effect = "add_cash", amount = 3000 },
   { id = 3010, description = "洪水无情人有情，每人向灾区捐献3000金币。", weight = 400, negative = true, target = "all", effect = "pay_cash", amount = 3000 },
   { id = 3011, description = "股灾降临，每人损失20%金币。", weight = 400, negative = true, target = "all", effect = "percent_pay_cash", percent = 20 },
   { id = 3012, description = "破财消灾，你给每个其他玩家3000金币。", weight = 300, negative = true, target = "self", effect = "pay_others", amount = 3000 },

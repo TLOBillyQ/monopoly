@@ -66,6 +66,24 @@ local function _build_popup_view_state(refs, card_node)
   return state, nodes, query_nodes_by_name
 end
 
+local function _build_role_with_events(role_id, events)
+  return {
+    get_roleid = function() return role_id end,
+    send_ui_custom_event = function(event_name)
+      events[#events + 1] = event_name
+    end,
+  }
+end
+
+local function _has_event(list, name)
+  for _, value in ipairs(list or {}) do
+    if value == name then
+      return true
+    end
+  end
+  return false
+end
+
 local function _build_choice_modal_state()
   local function new_node()
     local node = {}
@@ -1214,6 +1232,129 @@ local function _test_push_popup_hides_card_and_clears_image_when_missing()
   _assert_eq(nodes["卡牌展示_图片"].visible, false, "popup card should hide when image missing")
 end
 
+local function _test_popup_hidden_for_non_current_role()
+  local state, _, query_nodes = _build_popup_view_state({
+    ["空"] = "EMPTY",
+  }, {
+    set_texture_keep_size = function() end,
+  })
+  state.ui_model = {
+    current_player_id = 1,
+    item_slots_by_player = { [1] = {}, [2] = {} },
+  }
+  local role1_events = {}
+  local role2_events = {}
+  local roles = {
+    _build_role_with_events(1, role1_events),
+    _build_role_with_events(2, role2_events),
+  }
+
+  _with_patches({
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = roles },
+    { target = runtime_port, key = "for_each_role_or_global", value = function(fn)
+      for _, role in ipairs(roles) do
+        fn(role)
+      end
+    end },
+    { target = runtime_port, key = "resolve_role_id", value = function(role)
+      return role.get_roleid()
+    end },
+  }, function()
+    ui_view.push_popup(state, {
+      title = "黑市",
+      body = "测试",
+    })
+  end)
+
+  assert(_has_event(role1_events, "显示卡牌展示屏"), "current role should see popup canvas")
+  assert(not _has_event(role2_events, "显示卡牌展示屏"), "non-current role should not see popup canvas")
+end
+
+local function _test_popup_visible_for_all_roles_when_allowed_kind()
+  local state, _, query_nodes = _build_popup_view_state({
+    ["空"] = "EMPTY",
+  }, {
+    set_texture_keep_size = function() end,
+  })
+  state.ui_model = {
+    current_player_id = 1,
+    item_slots_by_player = { [1] = {}, [2] = {} },
+  }
+  local role1_events = {}
+  local role2_events = {}
+  local roles = {
+    _build_role_with_events(1, role1_events),
+    _build_role_with_events(2, role2_events),
+  }
+
+  _with_patches({
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = roles },
+    { target = runtime_port, key = "for_each_role_or_global", value = function(fn)
+      for _, role in ipairs(roles) do
+        fn(role)
+      end
+    end },
+    { target = runtime_port, key = "resolve_role_id", value = function(role)
+      return role.get_roleid()
+    end },
+  }, function()
+    ui_view.push_popup(state, {
+      title = "机会卡",
+      body = "测试",
+      kind = "chance_card",
+    })
+    ui_view.push_popup(state, {
+      title = "道具卡",
+      body = "测试",
+      kind = "item_card",
+    })
+  end)
+
+  assert(_has_event(role1_events, "显示卡牌展示屏"), "current role should see popup canvas")
+  assert(_has_event(role2_events, "显示卡牌展示屏"), "non-current role should see popup canvas")
+end
+
+local function _test_bankruptcy_popup_visible_for_all_roles()
+  local state, _, query_nodes = _build_popup_view_state({
+    ["空"] = "EMPTY",
+  }, {
+    set_texture_keep_size = function() end,
+  })
+  state.ui_model = {
+    current_player_id = 1,
+    item_slots_by_player = { [1] = {}, [2] = {} },
+  }
+  local role1_events = {}
+  local role2_events = {}
+  local roles = {
+    _build_role_with_events(1, role1_events),
+    _build_role_with_events(2, role2_events),
+  }
+
+  _with_patches({
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = roles },
+    { target = runtime_port, key = "for_each_role_or_global", value = function(fn)
+      for _, role in ipairs(roles) do
+        fn(role)
+      end
+    end },
+    { target = runtime_port, key = "resolve_role_id", value = function(role)
+      return role.get_roleid()
+    end },
+  }, function()
+    ui_view.push_popup(state, {
+      kind = "bankruptcy",
+      text = "破产测试",
+    })
+  end)
+
+  assert(_has_event(role1_events, "显示破产展示屏"), "current role should see bankruptcy canvas")
+  assert(_has_event(role2_events, "显示破产展示屏"), "non-current role should see bankruptcy canvas")
+end
+
 local function _test_popup_timeout_closes_even_when_input_blocked()
   local state, nodes, query_nodes = _build_popup_view_state({
     ["空"] = "EMPTY",
@@ -2203,6 +2344,9 @@ return {
   _test_gameplay_loop_full_turn_lock_toggle,
   _test_push_popup_sets_card_image_by_image_ref,
   _test_push_popup_hides_card_and_clears_image_when_missing,
+  _test_popup_hidden_for_non_current_role,
+  _test_popup_visible_for_all_roles_when_allowed_kind,
+  _test_bankruptcy_popup_visible_for_all_roles,
   _test_popup_timeout_closes_even_when_input_blocked,
   _test_choice_modal_routes_to_new_screens,
   _test_ui_event_router_player_target_click_direct_submit,
