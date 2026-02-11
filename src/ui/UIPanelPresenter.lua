@@ -1,4 +1,5 @@
 local role_context = require("src.ui.UIRoleContext")
+local player_colors = require("src.ui.PlayerColors")
 
 local panel_presenter = {}
 
@@ -64,6 +65,35 @@ local function _set_player_avatar(ui, runtime, avatar_name, image_key)
   runtime.set_node_texture_auto_size(avatar_node, image_key)
 end
 
+local function _apply_player_colors(role, runtime, player, index)
+  if not role then
+    return
+  end
+  local set_image_color = role.set_image_color
+  local set_label_color = role.set_label_color
+  if not set_image_color and not set_label_color then
+    return
+  end
+  local player_id = player and player.id or nil
+  local color = player_colors.resolve_owner_color(player_id)
+  if set_image_color then
+    local image_node = runtime.query_node("玩家" .. tostring(index) .. "底板颜色")
+    pcall(set_image_color, role, image_node, color, 0)
+  end
+  if set_label_color then
+    local label_names = {
+      "玩家" .. tostring(index) .. "名字",
+      "玩家" .. tostring(index) .. "现金",
+      "玩家" .. tostring(index) .. "地块数量",
+      "玩家" .. tostring(index) .. "总资产",
+    }
+    for _, name in ipairs(label_names) do
+      local label_node = runtime.query_node(name)
+      pcall(set_label_color, role, label_node, color, 0)
+    end
+  end
+end
+
 function panel_presenter.refresh(state, ui_model, deps)
   assert(state ~= nil and state.ui ~= nil, "missing state.ui")
   assert(ui_model ~= nil and ui_model.panel ~= nil, "missing ui_model.panel")
@@ -72,6 +102,7 @@ function panel_presenter.refresh(state, ui_model, deps)
   local refresh_item_slots = assert(deps.refresh_item_slots, "missing deps.refresh_item_slots")
   local ui = state.ui
   local panel = ui_model.panel
+  local players = ui_model.board and ui_model.board.players or {}
 
   runtime.set_client_role(nil)
   local player_rows = panel.player_rows or {}
@@ -106,6 +137,10 @@ function panel_presenter.refresh(state, ui_model, deps)
       allow_interact = base_visible,
     })
     panel_presenter.render_auto_controls_for_role(ui, ctx, ui_model)
+
+    for i = 1, 4 do
+      _apply_player_colors(role, runtime, players[i], i)
+    end
   end)
   runtime.set_client_role(nil)
 
