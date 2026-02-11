@@ -743,6 +743,90 @@ local function _test_tick_headless_ports_cover_anim_phases()
   assert(calls.refresh >= 2, "refresh_from_dirty should still be called under custom ports")
 end
 
+local function _test_action_button_timeout_auto_advances()
+  local g = _new_game()
+  local state = _build_loop_state()
+  g.ui_port = _build_ui_port()
+  g.turn.current_player_index = 1
+  g.turn.phase = "start"
+  g.turn.pending_choice = nil
+
+  local advanced = 0
+  g.advance_turn = function()
+    advanced = advanced + 1
+  end
+
+  state.gameplay_loop_ports = {
+    close_choice_modal = function() end,
+    open_choice_modal = function() end,
+    apply_input_lock = function() end,
+    play_move_anim = function() return 0 end,
+    play_action_anim = function() return 0 end,
+    step_choice_timeout = function() end,
+    step_modal_timeout = function() end,
+    update_countdown = function() end,
+    refresh_from_dirty = function()
+      return false
+    end,
+    sync_debug_log = function() end,
+    log_status = function() end,
+    build_model = function()
+      return { choice = nil, market = nil }
+    end,
+  }
+
+  _with_timestamp_stub(function()
+    local dt = (constants.action_timeout_seconds or 0) + 0.1
+    gameplay_loop.tick(g, state, dt)
+  end)
+
+  assert(advanced == 1, "action button timeout should advance turn")
+end
+
+local function _test_action_button_timeout_blocked_when_input_locked()
+  local g = _new_game()
+  local state = _build_loop_state()
+  g.ui_port = _build_ui_port()
+  g.turn.current_player_index = 1
+  g.turn.phase = "wait_action_anim"
+  g.turn.pending_choice = nil
+
+  state.ui.input_blocked = true
+
+  local advanced = 0
+  g.advance_turn = function()
+    advanced = advanced + 1
+  end
+
+  state.gameplay_loop_ports = {
+    close_choice_modal = function() end,
+    open_choice_modal = function() end,
+    apply_input_lock = function() end,
+    play_move_anim = function() return 0 end,
+    play_action_anim = function() return 0 end,
+    step_choice_timeout = function() end,
+    step_modal_timeout = function() end,
+    update_countdown = function() end,
+    refresh_from_dirty = function()
+      return false
+    end,
+    sync_debug_log = function() end,
+    log_status = function() end,
+    build_model = function()
+      return { choice = nil, market = nil }
+    end,
+  }
+
+  _with_timestamp_stub(function()
+    local dt = (constants.action_timeout_seconds or 0) + 0.1
+    gameplay_loop.tick(g, state, dt)
+  end)
+
+  assert(advanced == 0, "input locked should block action button timeout")
+  assert(state.action_button_active == false, "input locked should disable action timer")
+  assert(state.action_button_elapsed == 0, "input locked should reset action timer")
+end
+
 local function _test_ai_turn_auto_advance_without_autoplay()
   local g = _new_game()
   g.ui_port = _build_ui_port()
@@ -848,6 +932,8 @@ return {
   _test_complex_consecutive_turn_settlement,
   _test_complex_market_interrupt_with_rent,
   _test_tick_headless_ports_cover_anim_phases,
+  _test_action_button_timeout_auto_advances,
+  _test_action_button_timeout_blocked_when_input_locked,
   _test_ai_turn_auto_advance_without_autoplay,
   _test_human_turn_not_auto_advanced,
   _test_ai_turn_not_advanced_when_input_blocked,

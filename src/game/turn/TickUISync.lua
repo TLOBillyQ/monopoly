@@ -55,6 +55,13 @@ function tick_ui_sync.update_countdown(game, state)
         remaining = 0
       end
       seconds = math.ceil(remaining)
+    elseif state.action_button_active then
+      active = true
+      local remaining = timeout - (state.action_button_elapsed or 0)
+      if remaining < 0 then
+        remaining = 0
+      end
+      seconds = math.ceil(remaining)
     end
   end
   if seconds ~= state.countdown_last then

@@ -1,5 +1,6 @@
 local agent = require("src.game.game.Agent")
 local items_cfg = require("Config.Generated.Items")
+local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("Config.GameplayRules")
 local event_handlers = require("src.ui.UIEventHandlers")
 local logger = require("src.core.Logger")
@@ -123,6 +124,63 @@ local function _sync_phase_flags(state, phase)
     state.next_turn_lock_phase = phase
   end
   state.board_last_phase = phase
+end
+
+local function _is_action_button_wait_active(game, state)
+  if not (game and state and state.ui) then
+    return false
+  end
+  if game.finished then
+    return false
+  end
+  local ui = state.ui
+  if ui.input_blocked then
+    return false
+  end
+  if ui.choice_active or ui.market_active or ui.popup_active then
+    return false
+  end
+  if game.turn and game.turn.pending_choice then
+    return false
+  end
+  return true
+end
+
+local function _update_action_button_timer(ctx)
+  local state = ctx.state
+  if not state then
+    return
+  end
+  if not _is_action_button_wait_active(ctx.game, state) then
+    state.action_button_active = false
+    state.action_button_elapsed = 0
+    return
+  end
+
+  local timeout = constants.action_timeout_seconds or 0
+  if timeout <= 0 then
+    state.action_button_active = false
+    state.action_button_elapsed = 0
+    return
+  end
+  state.action_button_active = true
+
+  local elapsed = (state.action_button_elapsed or 0) + (ctx.dt or 0)
+  if elapsed < timeout then
+    state.action_button_elapsed = elapsed
+    return
+  end
+
+  state.action_button_elapsed = 0
+  local current_index = ctx.game and ctx.game.turn and ctx.game.turn.current_player_index or nil
+  if not current_index then
+    return
+  end
+  _dispatch_action_with_close_choice(ctx.game, state, {
+    type = "ui_button",
+    id = "next",
+    actor_role_id = current_index,
+  }, ctx.ports)
 end
 
 function gameplay_loop.set_game(state, game)
@@ -298,6 +356,12 @@ function gameplay_loop.tick(game, state, dt)
 
   ports.step_choice_timeout(game, state, dt)
   ports.step_modal_timeout(game, state, dt)
+  _update_action_button_timer({
+    game = game,
+    state = state,
+    dt = dt,
+    ports = ports,
+  })
 
   phase = game.turn.phase
   if _sync_input_blocked(state, phase) then

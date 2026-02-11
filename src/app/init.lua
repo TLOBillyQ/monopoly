@@ -80,6 +80,8 @@ local function _build_state()
     ui_dirty = false,
     countdown_last = nil,
     countdown_active_last = nil,
+    action_button_elapsed = 0,
+    action_button_active = false,
   }
 
   state.push_popup = function(_, payload)

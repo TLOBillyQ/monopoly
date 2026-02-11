@@ -1,70 +1,72 @@
-# 基础屏倒计时常驻与回合计数日志精简
+# 行动按钮等待倒计时与超时自动推进
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”“意外与发现”“决策日志”“结果与复盘”。
 
-本文件遵循 `/.agents/PLANS.md`。
+本文件遵循 `.agents/PLANS.md`。
 
 ## 目的 / 全局视角
 
-改动完成后，基础屏的“倒计时”标签不再因输入锁或角色切换而隐藏，并且文案只显示时间。日志与提示中移除回合计数信息，玩家仍能看到其他状态提示。验收可通过 UI 观察倒计时常驻与回归日志检查来确认。
+完成后，玩家进入回合、等待按下“行动按钮”的空档会显示倒计时，并在超时后自动触发“行动按钮”。验收方式是进入游戏观察基础屏倒计时从满值开始递减，超时自动推进回合，且在弹窗/选择期间倒计时切换为对应逻辑。
 
 ## 进度
 
-- [x] (2026-02-11 14:15) 写入本计划并确认范围
-- [x] (2026-02-11 14:18) 更新基础屏倒计时常驻与文案
-- [x] (2026-02-11 14:18) 精简回合计数相关日志
-- [x] (2026-02-11 14:18) 同步测试与文档
-- [ ] (2026-02-11 14:25) 运行回归与检索验收（已完成：回归；剩余：运行时日志观察）
+- [x] (2026-02-11 15:00) 清空并写入 `.agents/PLAN_CURRENT.md`
+- [x] (2026-02-11 15:00) 增加行动按钮等待计时与超时自动触发
+- [x] (2026-02-11 15:00) 倒计时展示覆盖行动按钮等待阶段
+- [x] (2026-02-11 15:00) 增加/调整回归测试
+- [ ] (2026-02-11 15:02) 运行回归并做手动验收（已完成：回归；剩余：手动验收）
 
 ## 意外与发现
 
-回归脚本曾失败于 “item slot action should apply”，原因是 item_slot 分支派发的 `choice_select` 缺少 `actor_role_id`，触发 `_validate_choice_actor` 拒绝。已补充该字段后回归通过。
-证据：`lua .agents/tests/regression.lua` -> `All regression checks passed (98)`。
+暂无。
 
 ## 决策日志
 
-- 决策：倒计时文案统一为 `倒计时:<秒数>`，不再包含回合数或空格。
-  理由：与需求“只显示时间”的口径一致，减少显示歧义。
+- 决策：行动按钮等待倒计时使用 `Config.Generated.Constants.action_timeout_seconds`。
+  理由：复用现有超时配置，避免新增字段与配置分散。
   日期/作者：2026-02-11 / Codex
 
-- 决策：倒计时可见性由面板刷新时强制置为可见，并移出 `base_hidden_labels`。
-  理由：确保输入锁与非当前角色场景下也保持常驻显示。
+- 决策：倒计时超时自动派发 `ui_button` 的 `next`。
+  理由：与选择/弹窗超时一致，保证回合能自动推进。
   日期/作者：2026-02-11 / Codex
 
-- 决策：item_slot 触发的内部 `choice_select` 补齐 `actor_role_id`。
-  理由：与 `choice_select` 的角色校验对齐，避免被错误拒绝。
+- 决策：倒计时仅在基础屏可操作状态下生效（无选择/市场/弹窗、未输入锁）。
+  理由：避免与选择/弹窗倒计时冲突，也避免动画期间误触发。
   日期/作者：2026-02-11 / Codex
 
 ## 结果与复盘
 
-已完成倒计时常驻与日志精简、测试与文档同步，并修复 item_slot 选择被拒的问题。回归测试通过；运行时日志观察尚未补充。
+已完成行动按钮等待计时、超时自动派发与倒计时展示接入，并新增回归测试覆盖自动推进与输入锁场景。回归脚本已通过，仍需手动验收倒计时与自动推进表现。
 
 ## 背景与导读
 
-倒计时标签由 `src/ui/UIPanel.lua` 构建文案，并在 `src/ui/UIPanelPresenter.lua` 中写入 UI。当前基础屏使用 `src/ui/UIView.lua` 的 `base_hidden_labels` 配置来控制非当前角色可见性，导致倒计时会被隐藏。回合计数日志散落在 `src/game/turn/TickUISync.lua`、`src/game/turn/TurnStart.lua` 与 `src/game/turn/TurnFlow.lua` 中，需要统一去除回合数相关输出。
+回合逻辑由 `src/game/turn/GameplayLoop.lua` 驱动，选择与弹窗超时由 `src/game/turn/TickTimeout.lua` 处理，倒计时显示由 `src/game/turn/TickUISync.lua` 计算并写入 `game.turn.countdown_seconds`。当前倒计时只在 `pending_choice` 或 `popup_active` 时激活，基础屏等待“行动按钮”时没有倒计时。行动按钮派发发生在 `src/game/turn/TurnDispatch.lua`，点击 `next` 会调用 `game:advance_turn()`。
 
 ## 工作计划
 
-先修改 UI 侧：移除倒计时的隐藏配置，并确保倒计时始终可见，随后修改 `build_turn_label` 仅输出时间。再集中精简回合计数日志，去掉回合数字字段或整条回合计数日志。完成后更新 UI 测试与基础屏文档，最后运行回归测试与检索确认。
+先在状态对象中新增“行动按钮等待”计时字段，并在 `GameplayLoop.tick` 中统一维护计时与超时自动派发。随后在 `TickUISync.update_countdown` 中补上该阶段倒计时显示。最后在 `gameplay` 测试套件中新增回归用例，覆盖“等待阶段超时会自动派发 next”和“输入锁时不会自动派发”。
 
 ## 具体步骤
 
-工作目录为 `C:\Users\Lzx_8\Desktop\dev\monopoly`。先修改 `src/ui/UIView.lua`、`src/ui/UIPanelPresenter.lua`、`src/ui/UIPanel.lua`，确保倒计时常驻且文案为 `倒计时:<秒数>`。随后修改 `src/game/turn/TickUISync.lua`、`src/game/turn/TurnStart.lua`、`src/game/turn/TurnFlow.lua` 清理回合计数日志。接着更新 `.agents/tests/suites/ui.lua` 与 `.agents/docs/ui/01_UI_基础屏.md`。最后运行回归脚本并记录输出要点。
+工作目录为 `C:\Users\Lzx_8\Desktop\dev\monopoly`。先清空 `.agents/PLAN_CURRENT.md` 并写入本计划内容。接着修改 `src/app/init.lua` 在 `_build_state()` 中新增 `action_button_elapsed` 与 `action_button_active` 初始化字段，并在 `src/game/turn/GameplayLoop.lua` 中加入行动按钮等待计时逻辑：仅当基础屏可操作且无选择/弹窗时递增 `action_button_elapsed`，达到 `action_timeout_seconds` 后自动派发 `{ type = "ui_button", id = "next", actor_role_id = game.turn.current_player_index }`，同时重置计时。随后在 `src/game/turn/TickUISync.lua` 的 `update_countdown` 中新增分支，当 `action_button_active` 为真时使用 `action_button_elapsed` 计算剩余秒数并更新 `countdown_seconds`。最后更新 `.agents/tests/suites/gameplay.lua` 增加用例，模拟等待阶段超时触发 `game:advance_turn()`，并确保输入锁时不触发。
 
 ## 验证与验收
 
-运行 `lua .agents/tests/regression.lua`，预期全通过。进入游戏观察基础屏倒计时在非当前玩家与 `input_blocked=true` 时仍显示，文案为 `倒计时:<秒数>`。检索日志输出确保不再出现“回合: X / 回合X:”计数信息，但保留诸如“停留X回合”状态提示。
+运行 `lua .agents/tests/regression.lua`，预期全部通过。进入游戏后观察基础屏倒计时在等待行动按钮阶段从满值递减，计时归零时自动推进回合；在选择/弹窗出现时倒计时应切换为对应选择/弹窗计时；动画输入锁期间不自动派发。
 
 ## 可重复性与恢复
 
-修改步骤可重复执行；若需要回滚，可针对具体文件执行 `git checkout -- <file>` 并重新跑回归。
+改动可重复执行。若需要回滚，可对涉及文件执行 `git checkout -- <file>` 并重新运行回归脚本。
 
 ## 产物与备注
 
-本次改动涉及以下文件：`src/ui/UIView.lua`、`src/ui/UIPanelPresenter.lua`、`src/ui/UIPanel.lua`、`src/game/turn/TickUISync.lua`、`src/game/turn/TurnStart.lua`、`src/game/turn/TurnFlow.lua`、`.agents/tests/suites/ui.lua`、`.agents/docs/ui/01_UI_基础屏.md`。
+本次改动涉及以下文件：`src/app/init.lua`、`src/game/turn/GameplayLoop.lua`、`src/game/turn/TickUISync.lua`、`.agents/tests/suites/gameplay.lua`、`.agents/PLAN_CURRENT.md`。
+
+回归输出摘要：
+  All regression checks passed (100)
 
 ## 接口与依赖
 
-不新增公共接口。倒计时文案由 `src/ui/UIPanel.lua` 的 `build_turn_label` 统一生成；可见性由 `src/ui/UIPanelPresenter.lua` 在刷新面板时强制保持可见。
+新增状态字段：`action_button_elapsed`（数值，单位秒），`action_button_active`（布尔）。这些字段仅在 UI 运行态使用，不对外暴露公共 API。行动按钮超时仍使用 `Config.Generated.Constants.action_timeout_seconds`。
 
-修改说明：更新进度与结果记录，补充 item_slot `actor_role_id` 修复结论与回归通过证据。
+修改说明：更新进度与结果，补充回归通过证据并保留手动验收待办。
