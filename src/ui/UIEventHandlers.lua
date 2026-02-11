@@ -47,11 +47,7 @@ function event_handlers.install(_, logger, state)
     RegisterCustomEvent(event_name, function(_, _, data)
       local log = context.logger
       if log and data and data.text then
-        if log.event_no_tips then
-          log.event_no_tips(data.text)
-        else
-          log.event(data.text)
-        end
+        log.event(data.text)
       end
     end)
   end

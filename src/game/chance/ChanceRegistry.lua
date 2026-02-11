@@ -4,6 +4,7 @@ local monopoly_event = require("src.game.game.MonopolyEvents")
 local movement = require("src.game.movement.Movement")
 local bankruptcy = require("src.game.game.Bankruptcy")
 local gameplay_rules = require("Config.GameplayRules")
+local vehicles_cfg = require("Config.Generated.Vehicles")
 
 local chance_registry = {}
 local handlers = {}
@@ -13,6 +14,10 @@ local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
 chance_registry.handlers = handlers
 
 local tile_state = tile.get_state
+local vehicle_name_by_id = {}
+for _, cfg in ipairs(vehicles_cfg) do
+  vehicle_name_by_id[cfg.id] = cfg.name
+end
 
 local function _emit_event(kind, payload)
   if TriggerCustomEvent then
@@ -231,11 +236,12 @@ local function _register_defaults()
 
   chance_registry.register("set_vehicle", function(game, player, card)
     game:set_player_seat(player, card.vehicle_id)
+    local vehicle_name = vehicle_name_by_id[card.vehicle_id] or tostring(card.vehicle_id)
     _emit_event(monopoly_event.chance.applied, {
       player = player,
       card = card,
       effect = card.effect,
-      text = player.name .. " 获得座驾 " .. tostring(card.vehicle_id),
+      text = player.name .. " 获得座驾 " .. vehicle_name,
     })
   end)
 

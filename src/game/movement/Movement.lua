@@ -8,9 +8,6 @@ local item_ids = gameplay_rules.item_ids
 local _emit_event = monopoly_event.emit
 
 local function _tile_label(tile)
-  if tile.row and tile.col then
-    return tile.name .. "（" .. tile.row .. "，" .. tile.col .. "）"
-  end
   return tile.name
 end
 
