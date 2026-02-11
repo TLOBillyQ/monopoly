@@ -48,6 +48,64 @@ local function _set_popup_card_image(state, payload)
   ui:set_visible(card_name, false)
 end
 
+local function _resolve_bankruptcy_text(payload)
+  if payload and payload.text and payload.text ~= "" then
+    return payload.text
+  end
+  if payload and payload.reason and payload.reason ~= "" then
+    return payload.reason
+  end
+  if payload and payload.player_name and payload.player_name ~= "" then
+    return payload.player_name .. " 破产出局"
+  end
+  return "破产出局"
+end
+
+local function _resolve_bankruptcy_avatar_key(payload)
+  if not payload then
+    return nil
+  end
+  if payload.avatar_key ~= nil then
+    return payload.avatar_key
+  end
+  local player_id = payload.player_id
+  if not player_id or not GameAPI or not GameAPI.get_role then
+    return nil
+  end
+  local ok, role = pcall(GameAPI.get_role, player_id)
+  if not ok or not role or type(role.get_head_icon) ~= "function" then
+    return nil
+  end
+  local ok_icon, icon = pcall(role.get_head_icon)
+  if not ok_icon then
+    return nil
+  end
+  return icon
+end
+
+local function _set_bankruptcy_avatar_image(state, payload)
+  local ui = state and state.ui
+  local screen = ui and ui.bankruptcy_screen or nil
+  if not ui or not screen or not screen.avatar then
+    return
+  end
+  local avatar_node = ui.query_node(screen.avatar)
+  local image_key = _resolve_bankruptcy_avatar_key(payload)
+  if image_key ~= nil then
+    runtime.set_node_texture_keep_size(avatar_node, image_key)
+    ui:set_visible(screen.avatar, true)
+    return
+  end
+  local refs = state and state.ui_refs or nil
+  local empty_key = refs and refs["空"] or nil
+  if empty_key ~= nil then
+    runtime.set_node_texture_keep_size(avatar_node, empty_key)
+    ui:set_visible(screen.avatar, true)
+    return
+  end
+  ui:set_visible(screen.avatar, false)
+end
+
 local function _resolve_canvas_for_screen(screen_key)
   if screen_key == "player" then
     return canvas.CANVAS_PLAYER_CHOICE
@@ -392,13 +450,27 @@ end
 function modal_presenter.push_popup(state, payload)
   assert(payload ~= nil, "missing popup payload")
   local ui = state.ui
-  local popup = ui.popup_screen
   ui.popup_return_canvas = canvas.resolve_popup_return_canvas(ui)
-  canvas.switch(ui, canvas.CANVAS_POPUP)
-  ui:set_label(popup.title, payload.title)
-  ui:set_button(popup.confirm, payload.button_text or "确认")
-  _set_popup_card_image(state, payload)
-  ui:set_visible(popup.root, true)
+  local kind = payload.kind or "card"
+  ui.popup_kind = kind
+  if kind == "bankruptcy" then
+    local screen = ui.bankruptcy_screen
+    canvas.switch(ui, canvas.CANVAS_BANKRUPTCY)
+    if screen and screen.text then
+      ui:set_label(screen.text, _resolve_bankruptcy_text(payload))
+    end
+    _set_bankruptcy_avatar_image(state, payload)
+    if screen and screen.root then
+      ui:set_visible(screen.root, true)
+    end
+  else
+    local popup = ui.popup_screen
+    canvas.switch(ui, canvas.CANVAS_POPUP)
+    ui:set_label(popup.title, payload.title)
+    ui:set_button(popup.confirm, payload.button_text or "确认")
+    _set_popup_card_image(state, payload)
+    ui:set_visible(popup.root, true)
+  end
   modal_state.open_popup(state, payload)
   state.ui_dirty = true
   return true
@@ -410,9 +482,19 @@ function modal_presenter.close_popup(state)
     logger.warn("close_popup ignored: popup not active")
     return
   end
-  ui:set_visible(ui.popup_screen.root, false)
+  local kind = ui.popup_kind or "card"
+  if kind == "bankruptcy" then
+    local screen = ui.bankruptcy_screen
+    if screen and screen.root then
+      ui:set_visible(screen.root, false)
+    end
+    _set_bankruptcy_avatar_image(state, nil)
+  else
+    ui:set_visible(ui.popup_screen.root, false)
+    _set_popup_card_image(state, nil)
+  end
   modal_state.close_popup(state)
-  _set_popup_card_image(state, nil)
+  ui.popup_kind = nil
   local target = ui.popup_return_canvas
   ui.popup_return_canvas = nil
   canvas.switch(ui, canvas.resolve_canvas_after_popup(ui, target))

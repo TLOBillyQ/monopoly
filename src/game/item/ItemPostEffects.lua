@@ -69,7 +69,7 @@ local target_effects = {
       game:deduct_player_cash(target, fee)
       logger.event(user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. fee .. " 税金")
       if game:player_balance(target, "金币") <= 0 then
-        bankruptcy.eliminate(game, target)
+        bankruptcy.eliminate(game, target, { reason = target.name .. " 支付查税费用后破产" })
       end
       return true
     end,

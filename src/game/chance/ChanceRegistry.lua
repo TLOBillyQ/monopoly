@@ -46,16 +46,16 @@ local function _adjust_chance_delta(game, player, delta)
   return delta
 end
 
-local function _handle_bankruptcy_if_negative(game, player)
+local function _handle_bankruptcy_if_negative(game, player, reason)
   if game:player_balance(player, "金币") > 0 then
     return
   end
-  bankruptcy.eliminate(game, player)
+  bankruptcy.eliminate(game, player, { reason = reason })
 end
 
-local function _apply_cash_and_maybe_bankrupt(game, player, delta)
+local function _apply_cash_and_maybe_bankrupt(game, player, delta, reason)
   _apply_cash_change(game, player, delta)
-  _handle_bankruptcy_if_negative(game, player)
+  _handle_bankruptcy_if_negative(game, player, reason)
 end
 
 local function _queue_action_anim(game, payload)
@@ -139,7 +139,8 @@ local function _register_defaults()
       for _, p in ipairs(game.players) do
         if not p.eliminated then
           local delta = _adjust_chance_delta(game, p, -card.amount)
-          _apply_cash_and_maybe_bankrupt(game, p, delta)
+          local reason = p.name .. " 支付机会卡费用 " .. _abs_value(delta) .. " 后破产"
+          _apply_cash_and_maybe_bankrupt(game, p, delta, reason)
           _emit_event(monopoly_event.chance.applied, {
             player = p,
             card = card,
@@ -150,7 +151,8 @@ local function _register_defaults()
       end
     else
       local delta = _adjust_chance_delta(game, player, -card.amount)
-      _apply_cash_and_maybe_bankrupt(game, player, delta)
+      local reason = player.name .. " 支付机会卡费用 " .. _abs_value(delta) .. " 后破产"
+      _apply_cash_and_maybe_bankrupt(game, player, delta, reason)
       _emit_event(monopoly_event.chance.applied, {
         player = player,
         card = card,
@@ -166,7 +168,8 @@ local function _register_defaults()
         if not p.eliminated then
           local fee = math.floor(game:player_balance(p, "金币") * (card.percent / 100))
           local delta = _adjust_chance_delta(game, p, -fee)
-          _apply_cash_and_maybe_bankrupt(game, p, delta)
+          local reason = p.name .. " 按比例支付机会卡费用 " .. _abs_value(delta) .. " 后破产"
+          _apply_cash_and_maybe_bankrupt(game, p, delta, reason)
           _emit_event(monopoly_event.chance.applied, {
             player = p,
             card = card,
@@ -178,7 +181,8 @@ local function _register_defaults()
     else
       local fee = math.floor(game:player_balance(player, "金币") * (card.percent / 100))
       local delta = _adjust_chance_delta(game, player, -fee)
-      _apply_cash_and_maybe_bankrupt(game, player, delta)
+      local reason = player.name .. " 按比例支付机会卡费用 " .. _abs_value(delta) .. " 后破产"
+      _apply_cash_and_maybe_bankrupt(game, player, delta, reason)
       _emit_event(monopoly_event.chance.applied, {
         player = player,
         card = card,
@@ -196,7 +200,8 @@ local function _register_defaults()
           fee = fee * 2
         end
         if not game:player_is_in_mountain(other) then
-          _apply_cash_and_maybe_bankrupt(game, player, -fee)
+          local reason = player.name .. " 向他人支付后破产"
+          _apply_cash_and_maybe_bankrupt(game, player, -fee, reason)
           _apply_cash_change(game, other, fee)
         end
       end

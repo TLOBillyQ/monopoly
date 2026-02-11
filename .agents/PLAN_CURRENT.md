@@ -1,72 +1,102 @@
-# 行动按钮等待倒计时与超时自动推进
+# 接入破产展示屏
 
-本可执行计划是活文档。实施过程中必须持续更新“进度”“意外与发现”“决策日志”“结果与复盘”。
 
-本文件遵循 `.agents/PLANS.md`。
+本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
+
+本计划遵循 `.agents/PLANS.md`，实施过程中需要保持本文件自洽且完整。
+
 
 ## 目的 / 全局视角
 
-完成后，玩家进入回合、等待按下“行动按钮”的空档会显示倒计时，并在超时后自动触发“行动按钮”。验收方式是进入游戏观察基础屏倒计时从满值开始递减，超时自动推进回合，且在弹窗/选择期间倒计时切换为对应逻辑。
+
+当任意玩家破产出局时，弹出“破产展示屏”，展示破产原因与玩家头像，并按现有弹窗超时逻辑自动关闭。完成后应能通过触发破产路径看到该屏幕出现并自动关闭。
+
 
 ## 进度
 
-- [x] (2026-02-11 15:00) 清空并写入 `.agents/PLAN_CURRENT.md`
-- [x] (2026-02-11 15:00) 增加行动按钮等待计时与超时自动触发
-- [x] (2026-02-11 15:00) 倒计时展示覆盖行动按钮等待阶段
-- [x] (2026-02-11 15:00) 增加/调整回归测试
-- [ ] (2026-02-11 15:02) 运行回归并做手动验收（已完成：回归；剩余：手动验收）
+
+- [x] (2026-02-11 00:00Z) 清空并重写 `.agents/PLAN_CURRENT.md`
+- [x] (2026-02-11 00:30Z) 接入破产展示屏 UI 与弹窗流程
+- [x] (2026-02-11 00:30Z) 破产逻辑发出展示请求并补充原因文本
+- [x] (2026-02-11 00:30Z) 验证与记录结果
+
 
 ## 意外与发现
 
-暂无。
+
+- 观察：暂无
+  证据：暂无
+
 
 ## 决策日志
 
-- 决策：行动按钮等待倒计时使用 `Config.Generated.Constants.action_timeout_seconds`。
-  理由：复用现有超时配置，避免新增字段与配置分散。
+
+- 决策：破产展示屏在任意出局时弹出，文案由调用方提供，自动超时关闭
+  理由：符合用户选择且复用现有弹窗超时机制
   日期/作者：2026-02-11 / Codex
 
-- 决策：倒计时超时自动派发 `ui_button` 的 `next`。
-  理由：与选择/弹窗超时一致，保证回合能自动推进。
-  日期/作者：2026-02-11 / Codex
-
-- 决策：倒计时仅在基础屏可操作状态下生效（无选择/市场/弹窗、未输入锁）。
-  理由：避免与选择/弹窗倒计时冲突，也避免动画期间误触发。
-  日期/作者：2026-02-11 / Codex
 
 ## 结果与复盘
 
-已完成行动按钮等待计时、超时自动派发与倒计时展示接入，并新增回归测试覆盖自动推进与输入锁场景。回归脚本已通过，仍需手动验收倒计时与自动推进表现。
+
+已完成破产展示屏接入与破产原因传递。回归脚本通过，等待手动触发破产路径确认表现。
+
+验证结果：`lua .agents/tests/regression.lua` 通过（100/100）。
+
 
 ## 背景与导读
 
-回合逻辑由 `src/game/turn/GameplayLoop.lua` 驱动，选择与弹窗超时由 `src/game/turn/TickTimeout.lua` 处理，倒计时显示由 `src/game/turn/TickUISync.lua` 计算并写入 `game.turn.countdown_seconds`。当前倒计时只在 `pending_choice` 或 `popup_active` 时激活，基础屏等待“行动按钮”时没有倒计时。行动按钮派发发生在 `src/game/turn/TurnDispatch.lua`，点击 `next` 会调用 `game:advance_turn()`。
+
+当前弹窗仅接入“卡牌展示屏”，入口在 `src/ui/UIView.lua` 与 `src/ui/UIModalPresenter.lua`，通过 `push_popup` 展示。UI 资源里已经存在“破产展示屏”与相关节点，但未接入。破产逻辑集中在 `src/game/game/Bankruptcy.lua`，被租金、税务、道具、医院、机会卡等路径调用。
+
 
 ## 工作计划
 
-先在状态对象中新增“行动按钮等待”计时字段，并在 `GameplayLoop.tick` 中统一维护计时与超时自动派发。随后在 `TickUISync.update_countdown` 中补上该阶段倒计时显示。最后在 `gameplay` 测试套件中新增回归用例，覆盖“等待阶段超时会自动派发 next”和“输入锁时不会自动派发”。
+
+先在 UI 层新增“破产展示屏”的节点映射与画布常量，并在弹窗展示逻辑中根据 `payload.kind` 选择卡牌或破产屏。破产屏展示文字与头像，不启用确认按钮。随后在破产逻辑处统一发送 `push_popup`，并在各破产触发点传入原因文本。最后运行回归脚本并手动触发破产验证。
+
 
 ## 具体步骤
 
-工作目录为 `C:\Users\Lzx_8\Desktop\dev\monopoly`。先清空 `.agents/PLAN_CURRENT.md` 并写入本计划内容。接着修改 `src/app/init.lua` 在 `_build_state()` 中新增 `action_button_elapsed` 与 `action_button_active` 初始化字段，并在 `src/game/turn/GameplayLoop.lua` 中加入行动按钮等待计时逻辑：仅当基础屏可操作且无选择/弹窗时递增 `action_button_elapsed`，达到 `action_timeout_seconds` 后自动派发 `{ type = "ui_button", id = "next", actor_role_id = game.turn.current_player_index }`，同时重置计时。随后在 `src/game/turn/TickUISync.lua` 的 `update_countdown` 中新增分支，当 `action_button_active` 为真时使用 `action_button_elapsed` 计算剩余秒数并更新 `countdown_seconds`。最后更新 `.agents/tests/suites/gameplay.lua` 增加用例，模拟等待阶段超时触发 `game:advance_turn()`，并确保输入锁时不触发。
+
+1. 修改 `src/ui/UIView.lua`，新增 `bankruptcy_screen`（root、text、avatar）并增加 `popup_kind` 字段。
+2. 修改 `src/ui/UICanvasCoordinator.lua`，新增 `CANVAS_BANKRUPTCY = "破产展示屏"`。
+3. 修改 `src/ui/UIModalPresenter.lua`，根据 `payload.kind` 切换画布并设置文案与头像，关闭时隐藏对应屏幕并清理状态。
+4. 修改 `src/ui/UIInputLockPolicy.lua`，仅在卡牌弹窗时启用确认按钮。
+5. 修改 `src/game/game/Bankruptcy.lua`，增加 `opts` 参数并发出破产弹窗 payload。
+6. 修改 `src/game/land/LandActions.lua`、`src/game/game/GameState.lua`、`src/game/chance/ChanceRegistry.lua`、`src/game/item/ItemPostEffects.lua`，在破产触发时传入原因文本。
+
 
 ## 验证与验收
 
-运行 `lua .agents/tests/regression.lua`，预期全部通过。进入游戏后观察基础屏倒计时在等待行动按钮阶段从满值递减，计时归零时自动推进回合；在选择/弹窗出现时倒计时应切换为对应选择/弹窗计时；动画输入锁期间不自动派发。
+
+- 运行回归脚本：
+  在 `c:\Users\Lzx_8\Desktop\dev\monopoly` 执行：
+    lua .agents/tests/regression.lua
+  预期：脚本通过且无报错。
+
+- 手动验证：触发任意破产路径，观察“破产展示屏”出现、文字正确、头像显示，并在超时后自动关闭。
+
 
 ## 可重复性与恢复
 
-改动可重复执行。若需要回滚，可对涉及文件执行 `git checkout -- <file>` 并重新运行回归脚本。
+
+改动为可逆代码修改，无数据迁移。若出现问题，可回退新增的破产弹窗分支与原因传递逻辑。
+
 
 ## 产物与备注
 
-本次改动涉及以下文件：`src/app/init.lua`、`src/game/turn/GameplayLoop.lua`、`src/game/turn/TickUISync.lua`、`.agents/tests/suites/gameplay.lua`、`.agents/PLAN_CURRENT.md`。
 
-回归输出摘要：
-  All regression checks passed (100)
+破产弹窗 payload 示例：
+  { kind = "bankruptcy", player_id = 2, text = "玩家2 资金不足，支付租金后破产" }
+
 
 ## 接口与依赖
 
-新增状态字段：`action_button_elapsed`（数值，单位秒），`action_button_active`（布尔）。这些字段仅在 UI 运行态使用，不对外暴露公共 API。行动按钮超时仍使用 `Config.Generated.Constants.action_timeout_seconds`。
 
-修改说明：更新进度与结果，补充回归通过证据并保留手动验收待办。
+- `bankruptcy.eliminate(game, player, opts)` 新增 `opts.reason` 可选字段。
+- `push_popup` 新增 `payload.kind = "bankruptcy"`，使用 `payload.text` 与 `payload.player_id`。
+
+
+(2026-02-11) 本计划由 Codex 创建，原因：实现“破产展示屏”接入与触发逻辑。
+(2026-02-11) 更新进度与结果，原因：已完成实现并记录回归测试结果。

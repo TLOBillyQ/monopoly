@@ -137,6 +137,12 @@ function ui_view.build_ui_state()
       confirm = "取消按钮",
       card = "卡牌展示_图片",
     },
+    bankruptcy_screen = {
+      root = "破产展示屏",
+      text = "破产_文字",
+      avatar = "破产玩家头像",
+    },
+    popup_kind = nil,
     popup_seq = 0,
     popup_return_canvas = nil,
     item_slot_item_ids_by_role = {},

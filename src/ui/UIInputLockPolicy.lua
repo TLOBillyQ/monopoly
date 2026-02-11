@@ -8,6 +8,14 @@ local function _set_debug_toggle_touch(ui, enabled)
   ui:set_touch_enabled("图片_82", enabled == true)
 end
 
+local function _can_popup_confirm(ui)
+  local kind = ui and ui.popup_kind or nil
+  if kind == "bankruptcy" then
+    return false
+  end
+  return true
+end
+
 local function _set_screen_locked(ui, screen)
   if not screen then
     return
@@ -39,7 +47,7 @@ function input_lock_policy.apply(state, deps)
 
   if not ui.input_blocked then
     if ui.popup_active and ui.popup_screen and ui.popup_screen.confirm then
-      ui:set_touch_enabled(ui.popup_screen.confirm, true)
+      ui:set_touch_enabled(ui.popup_screen.confirm, _can_popup_confirm(ui))
     end
     _set_debug_toggle_touch(ui, true)
     return

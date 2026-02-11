@@ -10,11 +10,11 @@ local bankruptcy = require("src.game.game.Bankruptcy")
 local item_ids = gameplay_rules.item_ids
 local _emit_event = monopoly_event.emit
 
-local function _eliminate_if_bankrupt(game, player)
+local function _eliminate_if_bankrupt(game, player, reason)
   if not player or game:player_balance(player, "金币") > 0 then
     return
   end
-  bankruptcy.eliminate(game, player)
+  bankruptcy.eliminate(game, player, { reason = reason })
 end
 
 function land_actions.safe_tile_state(game, tile)
@@ -208,19 +208,20 @@ function land_actions.execute_pay_rent(game, player_id, tile_id)
       amount = rent,
       text = player.name .. " 向 " .. owner.name .. " 支付租金 " .. rent,
     })
-    _eliminate_if_bankrupt(game, player)
+    _eliminate_if_bankrupt(game, player, player.name .. " 支付租金后破产")
   else
     local paid = game:player_balance(player, "金币")
     game:add_player_cash(owner, paid)
     game:set_player_cash(player, 0)
+    local reason = player.name .. " 资金不足，支付(".. owner.name ..") " .. paid .. " 后破产"
     _emit_event(monopoly_event.land.rent_bankrupt, {
       player = player,
       owner = owner,
       tile = tile,
       amount = paid,
-      text = player.name .. " 资金不足，支付(".. owner.name ..") " .. paid .. " 后破产",
+      text = reason,
     })
-    _eliminate_if_bankrupt(game, player)
+    _eliminate_if_bankrupt(game, player, reason)
   end
   return true
 end
@@ -248,7 +249,7 @@ function land_actions.execute_pay_tax(game, player_id)
     text = player.name .. " 在税务局支付税金 " .. fee,
   })
 
-  _eliminate_if_bankrupt(game, player)
+  _eliminate_if_bankrupt(game, player, player.name .. " 支付税金后破产")
   return true
 end
 
