@@ -76,6 +76,24 @@ local function _release_all(lock_state, buff_id)
   end
 end
 
+local function _set_role_lock(lock_state, role_id, enabled, buff_id)
+  local entry = lock_state.by_role[role_id]
+  if not entry or not entry.unit then
+    return
+  end
+  if enabled == true then
+    local count = entry.unit.get_state_count(buff_id)
+    if count == 0 then
+      entry.unit.add_state(buff_id)
+      entry.owned = true
+    end
+    return
+  end
+  if entry.owned then
+    _remove_lock(entry.unit, buff_id)
+  end
+end
+
 function lock_policy.sync(state, enabled, deps)
   assert(state ~= nil, "missing state")
   assert(deps ~= nil and deps.runtime ~= nil, "missing deps.runtime")
@@ -121,6 +139,21 @@ function lock_policy.sync(state, enabled, deps)
       lock_state.by_role[role_id] = nil
     end
   end
+end
+
+function lock_policy.set_role_lock(state, role_id, enabled, deps)
+  assert(state ~= nil, "missing state")
+  assert(deps ~= nil and deps.runtime ~= nil, "missing deps.runtime")
+  local lock_state = _resolve_lock_state(state)
+  local buff_id = Enums and Enums.BuffState and Enums.BuffState.BUFF_FORBID_CONTROL or nil
+  if not buff_id then
+    _warn_once(lock_state, "missing_buff_enum", "missing Enums.BuffState.BUFF_FORBID_CONTROL")
+    return
+  end
+  if not role_id then
+    return
+  end
+  _set_role_lock(lock_state, role_id, enabled, buff_id)
 end
 
 return lock_policy

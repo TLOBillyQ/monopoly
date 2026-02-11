@@ -27,19 +27,6 @@ local function _default_apply_input_lock(state)
   ui_view.apply_input_lock(state)
 end
 
-local function _apply_role_control_lock_suppress(state, enabled)
-  if state.role_control_lock_suppress == nil then
-    state.role_control_lock_suppress = 0
-  end
-  if enabled == true then
-    state.role_control_lock_suppress = math.max(0, state.role_control_lock_suppress - 1)
-  else
-    state.role_control_lock_suppress = state.role_control_lock_suppress + 1
-  end
-  local should_lock = state.role_control_lock_suppress == 0
-  ui_view.apply_role_control_lock(state, should_lock)
-end
-
 local function _default_apply_role_control_lock(state, enabled)
   ui_view.apply_role_control_lock(state, enabled)
 end
@@ -51,7 +38,10 @@ local function _default_play_move_anim(state, anim_ctx)
       if prev then
         prev(enabled, step_time, meta)
       end
-      _apply_role_control_lock_suppress(state, enabled)
+      if not meta or not meta.player_id then
+        return
+      end
+      ui_view.apply_role_control_lock_for_role(state, meta.player_id, enabled)
     end
   end
   return move_anim.play_sequence(state.board_scene, anim_ctx)
