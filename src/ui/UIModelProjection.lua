@@ -38,7 +38,16 @@ function projection.resolve_current_player(game)
   local players = game.players
   assert(turn ~= nil and players ~= nil, "missing turn or players")
   local idx = turn.current_player_index
-  return players[idx], turn
+  if type(idx) ~= "number" then
+    return nil, turn,
+      string.format("invalid current player index: index=%s, player_count=%d", tostring(idx), #players)
+  end
+  local current = players[idx]
+  if current == nil then
+    return nil, turn,
+      string.format("current player not found: index=%s, player_count=%d", tostring(idx), #players)
+  end
+  return current, turn
 end
 
 function projection.build_overlays(env)
