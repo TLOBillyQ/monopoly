@@ -8,6 +8,19 @@ local function _set_debug_toggle_touch(ui, enabled)
   ui:set_touch_enabled("图片_82", enabled == true)
 end
 
+local function _force_item_slots_visible_for_player(ui, ctx)
+  if not ui or not ui.set_visible then
+    return
+  end
+  if not ctx or ctx.is_player_role ~= true then
+    return
+  end
+  local slots = ui.item_slots or {}
+  for _, slot_name in ipairs(slots) do
+    ui:set_visible(slot_name, true)
+  end
+end
+
 local function _can_popup_confirm(ui)
   return true
 end
@@ -53,6 +66,7 @@ function input_lock_policy.apply(state, deps)
   runtime.for_each_role_or_global(function(role)
     local ctx = role_context.resolve(role, model, { runtime = runtime })
     panel_presenter.apply_base_non_player_visibility(ui, false)
+    _force_item_slots_visible_for_player(ui, ctx)
     panel_presenter.render_auto_controls_for_role(ui, ctx, model)
   end)
   runtime.set_client_role(nil)

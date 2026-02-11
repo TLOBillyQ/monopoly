@@ -50,6 +50,19 @@ function panel_presenter.is_base_non_player_visible(ui, ctx)
   return ctx and ctx.can_operate == true
 end
 
+local function _force_item_slots_visible_for_player(ui, ctx)
+  if not ui or not ui.set_visible then
+    return
+  end
+  if not ctx or ctx.is_player_role ~= true then
+    return
+  end
+  local slots = ui.item_slots or {}
+  for _, slot_name in ipairs(slots) do
+    ui:set_visible(slot_name, true)
+  end
+end
+
 local function _resolve_avatar_key(row, empty_avatar_key)
   if row and row.avatar ~= nil then
     return row.avatar
@@ -127,6 +140,7 @@ function panel_presenter.refresh(state, ui_model, deps)
     local ctx = role_context.resolve(role, ui_model, { runtime = runtime })
     local base_visible = panel_presenter.is_base_non_player_visible(ui, ctx)
     panel_presenter.apply_base_non_player_visibility(ui, base_visible)
+    _force_item_slots_visible_for_player(ui, ctx)
 
     ui:set_visible("倒计时", true)
     ui:set_label("倒计时", panel.turn_label)

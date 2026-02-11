@@ -1121,7 +1121,7 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
   assert(label_logs[1] and label_logs[1]["托管_文本"] == "自动：关", "role1 auto label should show status")
   assert(label_logs[2] and label_logs[2]["托管_文本"] == "自动：开", "role2 auto label should show status")
   assert(visible_logs[2] and visible_logs[2]["倒计时"] == true, "non-current role countdown should be visible")
-  assert(visible_logs[2] and visible_logs[2]["道具槽位1"] == false, "non-current role slot should be hidden")
+  assert(visible_logs[2] and visible_logs[2]["道具槽位1"] == true, "non-current role slot should be visible")
   assert(visible_logs[2] and visible_logs[2]["托管按钮"] == true, "auto button should stay visible")
   assert(visible_logs[2] and visible_logs[2]["托管_文本"] == true, "auto label should stay visible")
   assert(state.ui.item_slot_item_ids_by_role[1] and state.ui.item_slot_item_ids_by_role[1][1] == 2001, "role1 slot map expected")
@@ -1130,6 +1130,7 @@ end
 
 local function _test_apply_input_lock_keeps_auto_controls_enabled()
   local touch = {}
+  local visible = {}
   local state = {
     ui_model = {
       current_player_id = 1,
@@ -1155,7 +1156,9 @@ local function _test_apply_input_lock_keeps_auto_controls_enabled()
       set_touch_enabled = function(_, name, enabled)
         touch[name] = enabled
       end,
-      set_visible = function() end,
+      set_visible = function(_, name, value)
+        visible[name] = value
+      end,
       set_button = function() end,
     },
   }
@@ -1172,6 +1175,7 @@ local function _test_apply_input_lock_keeps_auto_controls_enabled()
   assert(touch["行动按钮"] == false, "action button should stay blocked")
   assert(touch["托管按钮"] == true, "auto button should stay enabled")
   assert(touch["托管_文本"] == false, "auto label should stay non-clickable")
+  assert(visible["道具槽位1"] == true, "item slot should stay visible when locked")
 end
 
 local function _test_push_popup_sets_card_image_by_image_ref()
