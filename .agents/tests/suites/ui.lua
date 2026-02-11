@@ -18,6 +18,7 @@ local market_view = require("src.ui.MarketView")
 local market_layout = require("src.ui.MarketLayout")
 local ui_event_router = require("src.ui.UIEventRouter")
 local ui_view = require("src.ui.UIView")
+local ui_status_3d_layer = require("src.ui.UIStatus3DLayer")
 local action_anim = require("src.ui.ActionAnim")
 local move_anim = require("src.ui.MoveAnim")
 local market_cfg = require("Config.Generated.Market")
@@ -1551,6 +1552,214 @@ local function _test_action_anim_no_camera_focus_side_effect()
   _assert_eq(follow_events, 0, "action anim should not trigger camera follow events")
 end
 
+local function _build_status3d_test_env()
+  local created_layers = {}
+  local destroyed_layers = {}
+  local layer_visibility = {}
+  local node_visibility = {}
+
+  local function _set_layer_visible(layer, observer_id, visible)
+    if not layer_visibility[layer] then
+      layer_visibility[layer] = {}
+    end
+    layer_visibility[layer][observer_id] = visible == true
+  end
+
+  local function _set_node_visible(observer_id, node, visible)
+    if not node_visibility[observer_id] then
+      node_visibility[observer_id] = {}
+    end
+    node_visibility[observer_id][node] = visible == true
+  end
+
+  local observers = {
+    {
+      id = 1,
+      set_node_visible = function(node, visible)
+        _set_node_visible(1, node, visible)
+      end,
+    },
+    {
+      id = 2,
+      set_node_visible = function(node, visible)
+        _set_node_visible(2, node, visible)
+      end,
+    },
+  }
+
+  local roles = {
+    [1] = {
+      get_ctrl_unit = function()
+        return {
+          create_scene_ui_bind_unit = function(_, _, _, _, _, _)
+            local layer = "layer_1"
+            created_layers[#created_layers + 1] = layer
+            return layer
+          end,
+        }
+      end,
+      set_node_visible = observers[1].set_node_visible,
+    },
+    [2] = {
+      get_ctrl_unit = function()
+        return {
+          create_scene_ui_bind_unit = function(_, _, _, _, _, _)
+            local layer = "layer_2"
+            created_layers[#created_layers + 1] = layer
+            return layer
+          end,
+        }
+      end,
+      set_node_visible = observers[2].set_node_visible,
+    },
+  }
+
+  local game_api = {
+    get_role = function(player_id)
+      return roles[player_id]
+    end,
+    get_all_valid_roles = function()
+      return observers
+    end,
+    set_scene_ui_visible = function(layer, observer_role, visible)
+      _set_layer_visible(layer, observer_role.id, visible)
+    end,
+    get_eui_node_at_scene_ui = function(layer, node_id)
+      return tostring(layer) .. ":" .. tostring(node_id)
+    end,
+    destroy_scene_ui = function(layer)
+      destroyed_layers[#destroyed_layers + 1] = layer
+    end,
+  }
+
+  return {
+    game_api = game_api,
+    created_layers = created_layers,
+    destroyed_layers = destroyed_layers,
+    layer_visibility = layer_visibility,
+    node_visibility = node_visibility,
+  }
+end
+
+local function _build_status3d_game(opts)
+  opts = opts or {}
+  local tile_type = opts.tile_type or "start"
+  local player_status_1 = opts.player_status_1 or { stay_turns = 0, deity = { type = "", remaining = 0 } }
+  local player_status_2 = opts.player_status_2 or { stay_turns = 0, deity = { type = "", remaining = 0 } }
+  return {
+    players = {
+      [1] = {
+        id = 1,
+        position = 1,
+        eliminated = false,
+        status = player_status_1,
+      },
+      [2] = {
+        id = 2,
+        position = 2,
+        eliminated = false,
+        status = player_status_2,
+      },
+    },
+    board = {
+      get_tile = function(_, index)
+        if index == 1 then
+          return { type = tile_type }
+        end
+        return { type = "start" }
+      end,
+    },
+    last_turn = opts.last_turn,
+  }
+end
+
+local function _test_status3d_init_and_global_visibility()
+  local env = _build_status3d_test_env()
+  local state = {}
+  local game = _build_status3d_game()
+  _with_patches({
+    { key = "GameAPI", value = env.game_api },
+    { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
+  }, function()
+    ui_status_3d_layer.sync(game, state, { any = true, players = true })
+  end)
+
+  _assert_eq(#env.created_layers, 2, "status3d should create one layer per player")
+  for _, layer in ipairs(env.created_layers) do
+    _assert_eq(env.layer_visibility[layer][1], false, "observer1 should see hidden layer when player has no status")
+    _assert_eq(env.layer_visibility[layer][2], false, "observer2 should see hidden layer when player has no status")
+  end
+end
+
+local function _test_status3d_priority_single_status()
+  local env = _build_status3d_test_env()
+  local state = {}
+  local game = _build_status3d_game({
+    tile_type = "hospital",
+    player_status_1 = {
+      stay_turns = 2,
+      deity = { type = "poor", remaining = 5 },
+    },
+  })
+  _with_patches({
+    { key = "GameAPI", value = env.game_api },
+    { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
+  }, function()
+    ui_status_3d_layer.sync(game, state, { any = true, players = true })
+  end)
+
+  local node_set = state.ui_status_3d.nodes_by_player_id[1]
+  local hospital_bg = node_set.hospital.bg
+  local poor_bg = node_set.poor.bg
+  _assert_eq(env.node_visibility[1][hospital_bg], true, "hospital should win over poor deity")
+  _assert_eq(env.node_visibility[1][poor_bg], false, "poor deity node should be hidden when hospital active")
+  _assert_eq(env.layer_visibility["layer_1"][1], true, "layer should be visible when status exists")
+end
+
+local function _test_status3d_roadblock_only_current_turn()
+  local env = _build_status3d_test_env()
+  local state = {}
+  local game = _build_status3d_game({
+    last_turn = {
+      player_id = 1,
+      move_result = { stopped_on_roadblock = true },
+    },
+  })
+  _with_patches({
+    { key = "GameAPI", value = env.game_api },
+    { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
+  }, function()
+    ui_status_3d_layer.sync(game, state, { any = true, turn = true })
+    local roadblock_bg = state.ui_status_3d.nodes_by_player_id[1].roadblock.bg
+    _assert_eq(env.node_visibility[1][roadblock_bg], true, "roadblock should show at trigger turn")
+    _assert_eq(env.layer_visibility["layer_1"][1], true, "roadblock turn should show layer")
+
+    game.last_turn = {
+      player_id = 2,
+      move_result = { stopped_on_roadblock = true },
+    }
+    ui_status_3d_layer.sync(game, state, { any = true, turn = true })
+    _assert_eq(env.node_visibility[1][roadblock_bg], false, "roadblock should hide after trigger turn")
+    _assert_eq(env.layer_visibility["layer_1"][1], false, "no status after trigger turn should hide layer")
+  end)
+end
+
+local function _test_status3d_reset_destroy_layers()
+  local env = _build_status3d_test_env()
+  local state = {}
+  local game = _build_status3d_game()
+  _with_patches({
+    { key = "GameAPI", value = env.game_api },
+    { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
+  }, function()
+    ui_status_3d_layer.sync(game, state, { any = true, players = true })
+    ui_status_3d_layer.reset(state)
+  end)
+
+  _assert_eq(#env.destroyed_layers, 2, "reset should destroy all created layers")
+  assert(state.ui_status_3d == nil, "reset should clear state cache")
+end
+
 local function _test_tick_ui_sync_turn_switch_still_follows()
   local dirty_tracker = require("src.core.DirtyTracker")
   local main_view = require("src.ui.UIView")
@@ -1683,5 +1892,9 @@ return {
   _test_action_anim_queue_consumes_in_order,
   _test_action_anim_default_duration,
   _test_action_anim_no_camera_focus_side_effect,
+  _test_status3d_init_and_global_visibility,
+  _test_status3d_priority_single_status,
+  _test_status3d_roadblock_only_current_turn,
+  _test_status3d_reset_destroy_layers,
   _test_tick_ui_sync_turn_switch_still_follows,
 }

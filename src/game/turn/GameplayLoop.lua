@@ -186,6 +186,7 @@ end
 function gameplay_loop.set_game(state, game)
   assert(game ~= nil, "missing game")
   local ports = _resolve_ports(state)
+  ports.reset_status_3d(state)
   state.game = game
   game.ui_port = state
   if type(state.on_tile_owner_changed) == "function" then
@@ -374,6 +375,7 @@ function gameplay_loop.tick(game, state, dt)
 
   local dirty = game:consume_dirty()
   local ui_refreshed = ports.refresh_from_dirty(game, state, dirty)
+  ports.sync_status_3d(game, state, dirty)
 
   if state.ui and (input_blocked_changed or (state.ui.input_blocked and ui_refreshed)) then
     ports.apply_input_lock(state)

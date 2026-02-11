@@ -4,6 +4,7 @@ local runtime_constants = require("Config.RuntimeConstants")
 local logger = require("src.core.Logger")
 local ui_view = require("src.ui.UIView")
 local ui_model = require("src.ui.UIModel")
+local ui_status_3d = require("src.ui.UIStatus3DLayer")
 
 local tick_ui_sync = {}
 
@@ -204,6 +205,14 @@ function tick_ui_sync.sync_debug_log_panel(state)
       ui_view.set_debug_log(state, logger.get_text(max_lines))
     end
   end
+end
+
+function tick_ui_sync.reset_status_3d(state)
+  ui_status_3d.reset(state)
+end
+
+function tick_ui_sync.sync_status_3d(game, state, dirty)
+  ui_status_3d.sync(game, state, dirty)
 end
 
 return tick_ui_sync

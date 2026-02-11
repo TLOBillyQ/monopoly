@@ -64,6 +64,14 @@ local function _default_sync_debug_log(state)
   tick_ui_sync.sync_debug_log_panel(state)
 end
 
+local function _default_reset_status_3d(state)
+  tick_ui_sync.reset_status_3d(state)
+end
+
+local function _default_sync_status_3d(game, state, dirty)
+  tick_ui_sync.sync_status_3d(game, state, dirty)
+end
+
 local default_ports = {
   close_choice_modal = _default_close_choice_modal,
   open_choice_modal = _default_open_choice_modal,
@@ -77,6 +85,8 @@ local default_ports = {
   refresh_from_dirty = _default_refresh_from_dirty,
   log_status = _default_log_status,
   sync_debug_log = _default_sync_debug_log,
+  reset_status_3d = _default_reset_status_3d,
+  sync_status_3d = _default_sync_status_3d,
 }
 
 function gameplay_loop_ports.resolve(override_ports)
