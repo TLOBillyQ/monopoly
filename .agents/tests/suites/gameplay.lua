@@ -272,7 +272,7 @@ local function _test_stop_all_players_movement_skips_invalid_role_without_error(
   assert(stopped_ids[1] == g.players[1].id, "only valid role should receive stop")
 end
 
-local function _test_runtime_context_get_vehicle_player_fallback()
+local function _test_runtime_context_get_vehicle_player_no_fallback()
   _with_runtime_context_globals(function()
     local role2 = { name = "role2" }
     local game_api = {
@@ -293,7 +293,7 @@ local function _test_runtime_context_get_vehicle_player_fallback()
     runtime_context.install_globals(ctx)
     vehicle_helper.player_id = 99
     local role = get_vehicle_player()
-    assert(role == role2, "get_vehicle_player should fallback to first valid role")
+    assert(role == nil, "get_vehicle_player should return nil when role missing")
   end)
 end
 
@@ -838,7 +838,7 @@ return {
   _test_stop_all_players_movement_clears_move_dir_and_stop_event,
   _test_end_turn_stops_all_players_movement,
   _test_stop_all_players_movement_skips_invalid_role_without_error,
-  _test_runtime_context_get_vehicle_player_fallback,
+  _test_runtime_context_get_vehicle_player_no_fallback,
   _test_runtime_context_forward_stop_skips_invalid_role,
   _test_runtime_context_split_install_stages,
   _test_runtime_context_install_environment_fails_fast,

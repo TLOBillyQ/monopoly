@@ -16,14 +16,7 @@ local function _install_vehicle_exports(vehicle_helper)
     if role ~= nil then
       return role
     end
-    local fallback_role = vehicle_helper.resolve_any_role and vehicle_helper.resolve_any_role() or nil
-    if fallback_role ~= nil then
-      if role_id ~= nil then
-        logger.warn("[Eggy]", "vehicle player unresolved, fallback role used", tostring(role_id))
-      end
-      return fallback_role
-    end
-    logger.warn("[Eggy]", "vehicle player unresolved and no fallback role", tostring(role_id))
+    logger.warn("[Eggy]", "vehicle player unresolved", tostring(role_id))
     return nil
   end
 

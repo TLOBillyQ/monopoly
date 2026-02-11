@@ -51,6 +51,20 @@ local function _build_vehicle_helper()
     return nil
   end
 
+  local function _ensure_valid_role(role_id, action)
+    local role = _safe_get_role(role_id)
+    if role ~= nil then
+      return role
+    end
+    logger.warn(
+      "[Eggy]",
+      "skip vehicle event: invalid role",
+      tostring(action),
+      tostring(role_id)
+    )
+    return nil
+  end
+
   local helper = {
     player_id = nil,
     vehicle_id = nil,
@@ -70,6 +84,9 @@ local function _build_vehicle_helper()
   end
 
   helper.forward_eca_event_enter = function(role_id, vehicle_id)
+    if _ensure_valid_role(role_id, "enter") == nil then
+      return false
+    end
     helper.player_id = role_id
     helper.vehicle_id = vehicle_id
     if role_id ~= nil then
@@ -77,28 +94,35 @@ local function _build_vehicle_helper()
       helper.needs_enter_wait_by_player[role_id] = true
     end
     TriggerCustomEvent(runtime_constants.eca_event.vehicle.enter, {})
+    return true
   end
 
   helper.forward_eca_event_exit = function(role_id)
+    if _ensure_valid_role(role_id, "exit") == nil then
+      return false
+    end
     helper.player_id = role_id
     if role_id ~= nil then
       helper.active_vehicle_by_player[role_id] = nil
       helper.needs_enter_wait_by_player[role_id] = nil
     end
     TriggerCustomEvent(runtime_constants.eca_event.vehicle.exit, {})
+    return true
   end
 
   helper.forward_eca_event_move = function(role_id, dir, time)
+    if _ensure_valid_role(role_id, "move") == nil then
+      return false
+    end
     helper.player_id = role_id
     helper.move_direction = dir
     helper.move_time = time
     TriggerCustomEvent(runtime_constants.eca_event.vehicle.move, {})
+    return true
   end
 
   helper.forward_eca_event_stop = function(role_id)
-    local role = helper.resolve_role(role_id)
-    if role == nil then
-      logger.warn("[Eggy]", "skip vehicle stop: invalid role_id", tostring(role_id))
+    if _ensure_valid_role(role_id, "stop") == nil then
       return false
     end
     helper.player_id = role_id
@@ -107,9 +131,13 @@ local function _build_vehicle_helper()
   end
 
   helper.forward_eca_event_set_position = function(role_id, pos)
+    if _ensure_valid_role(role_id, "set_position") == nil then
+      return false
+    end
     helper.player_id = role_id
     helper.set_position = pos
     TriggerCustomEvent(runtime_constants.eca_event.vehicle.set_position, {})
+    return true
   end
 
   helper.consume_enter_delay = function(role_id, vehicle_id)
