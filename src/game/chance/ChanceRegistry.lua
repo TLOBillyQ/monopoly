@@ -281,7 +281,7 @@ local function _register_defaults()
         local st = tile_state(game, t)
         assert(st ~= nil, "missing tile state: " .. tostring(t.id))
         if st.owner_id then
-          local owner = assert(game.players[st.owner_id], "missing owner: " .. tostring(st.owner_id))
+          local owner = assert(game:find_player_by_id(st.owner_id), "missing owner: " .. tostring(st.owner_id))
           game:set_player_property(owner, t.id, false)
         end
         game:reset_tile(t)

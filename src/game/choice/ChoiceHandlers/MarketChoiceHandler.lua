@@ -17,7 +17,7 @@ function market_choice_handler.build(helpers)
 
     local product_id = number_utils.to_integer(action.option_id)
     local meta = choice.meta
-    local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
+    local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
     assert(product_id ~= nil, "missing product_id")
     local res = market.buy_with_opts(game, player, product_id, nil)
     if type(res) == "table" then
@@ -38,7 +38,7 @@ function market_choice_handler.build(helpers)
     assert(action ~= nil, "missing action")
     local use = action.option_id == "use"
     local meta = choice.meta
-    local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
+    local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
     local product_id = assert(number_utils.to_integer(meta.product_id), "missing product_id")
     if use then
       market.buy_with_opts(game, player, product_id, { skip_vehicle_prompt = true })

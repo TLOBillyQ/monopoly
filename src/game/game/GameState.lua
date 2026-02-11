@@ -367,6 +367,28 @@ function game_state:alive_players()
   return alive
 end
 
+function game_state:find_player_by_id(player_id)
+  if player_id == nil then
+    return nil
+  end
+  local by_id = self.player_by_id
+  if type(by_id) == "table" then
+    local cached = by_id[player_id]
+    if cached then
+      return cached
+    end
+  end
+  for _, player in ipairs(self.players or {}) do
+    if player and player.id == player_id then
+      if type(by_id) == "table" then
+        by_id[player_id] = player
+      end
+      return player
+    end
+  end
+  return nil
+end
+
 function game_state:current_player()
   local idx = self.turn.current_player_index
   assert(idx ~= nil, "missing current_player_index")

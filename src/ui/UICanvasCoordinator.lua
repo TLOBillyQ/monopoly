@@ -56,6 +56,31 @@ function coordinator.switch(ui, target)
   end
 end
 
+function coordinator.switch_for_role(ui, target, role)
+  assert(ui ~= nil, "missing ui")
+  assert(role ~= nil, "missing role")
+  local target_name = target or coordinator.CANVAS_BASE
+  for _, name in ipairs(ui_events.canvas_names) do
+    local keep_debug = name == coordinator.CANVAS_DEBUG and ui.debug_visible == true
+    if name ~= coordinator.CANVAS_BASE and name ~= target_name and not keep_debug then
+      local hide_event = ui_events.hide[name]
+      if hide_event then
+        ui_events.send_to_role(role, hide_event, {})
+      end
+    end
+  end
+  local base_event = ui_events.show[coordinator.CANVAS_BASE]
+  if base_event then
+    ui_events.send_to_role(role, base_event, {})
+  end
+  if target_name ~= coordinator.CANVAS_BASE then
+    local target_event = ui_events.show[target_name]
+    if target_event then
+      ui_events.send_to_role(role, target_event, {})
+    end
+  end
+end
+
 function coordinator.resolve_popup_return_canvas(ui)
   if ui.market_active then
     return coordinator.CANVAS_MARKET

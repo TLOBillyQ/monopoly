@@ -50,17 +50,23 @@ local function _validate_actor_role(game, action)
   end
   assert(game ~= nil and game.turn ~= nil, "missing game.turn")
   local current_index = game.turn.current_player_index
+  local current_player = current_index and game.players and game.players[current_index] or nil
+  local current_id = current_player and current_player.id or nil
   local actor_role_id = action.actor_role_id
   if actor_role_id == nil then
     logger.warn("ui_button missing actor_role_id:", tostring(action.id))
     return false
   end
-  if actor_role_id ~= current_index then
+  if current_id == nil then
+    logger.warn("ui_button missing current player id:", tostring(action.id))
+    return false
+  end
+  if actor_role_id ~= current_id then
     logger.warn(
       "ui_button blocked by actor check:",
       tostring(action.id),
       "actor=" .. tostring(actor_role_id),
-      "current=" .. tostring(current_index)
+      "current=" .. tostring(current_id)
     )
     return false
   end
@@ -69,12 +75,15 @@ end
 
 local function _resolve_choice_owner_role_id(game, choice)
   if not (choice and choice.meta and choice.meta.player_id) then
-    return game.turn.current_player_index
+    local current = game:current_player()
+    return current and current.id or nil
   end
-  if game.players and game.players[choice.meta.player_id] then
-    return choice.meta.player_id
+  local owner = game:find_player_by_id(choice.meta.player_id)
+  if owner then
+    return owner.id
   end
-  return game.turn.current_player_index
+  local current = game:current_player()
+  return current and current.id or nil
 end
 
 local function _validate_choice_actor(game, action, choice)
@@ -103,7 +112,7 @@ local function _resolve_actor_player(game, action)
     logger.warn("ui_button missing actor_role_id:", tostring(action and action.id))
     return nil
   end
-  local player = game.players[actor_role_id]
+  local player = game:find_player_by_id(actor_role_id)
   if not player then
     logger.warn("ui_button actor_role_id not mapped:", tostring(action and action.id), tostring(actor_role_id))
     return nil

@@ -82,6 +82,10 @@ local function _build_auto_context(game, context)
     current_player_index = game.turn and game.turn.current_player_index or nil
     ctx.current_player_index = current_player_index
   end
+  if ctx.current_player_id == nil then
+    local player = current_player_index and game.players and game.players[current_player_index] or nil
+    ctx.current_player_id = player and player.id or nil
+  end
   if ctx.current_player_auto == nil then
     local player = current_player_index and game.players and game.players[current_player_index] or nil
     ctx.current_player_auto = player and player.auto == true or false
@@ -204,13 +208,14 @@ local function _update_action_button_timer(ctx)
 
   state.action_button_elapsed = 0
   local current_index = ctx.game and ctx.game.turn and ctx.game.turn.current_player_index or nil
-  if not current_index then
+  local current_player = current_index and ctx.game.players and ctx.game.players[current_index] or nil
+  if not current_player then
     return
   end
   _dispatch_action_with_close_choice(ctx.game, state, {
     type = "ui_button",
     id = "next",
-    actor_role_id = current_index,
+    actor_role_id = current_player.id,
   }, ctx.ports)
 end
 
@@ -309,7 +314,7 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
   local ctx = _build_auto_context(game, context)
   local auto_action = state.auto_runner:next_action(dt, ctx)
   if auto_action and auto_action.type == "ui_button" and not auto_action.actor_role_id then
-    auto_action.actor_role_id = ctx.current_player_index
+    auto_action.actor_role_id = ctx.current_player_id
   end
   if auto_action then
     _dispatch_action_with_close_choice(game, state, auto_action, ports)
@@ -360,7 +365,7 @@ function gameplay_loop.step_ai_turn_runner(game, state, dt, context)
   ctx.current_player_auto = true
   local ai_action = runner:next_action(dt, ctx)
   if ai_action and ai_action.type == "ui_button" and not ai_action.actor_role_id then
-    ai_action.actor_role_id = ctx.current_player_index
+    ai_action.actor_role_id = ctx.current_player_id
   end
   if ai_action then
     _dispatch_action_with_close_choice(game, state, ai_action, ports)
@@ -383,6 +388,11 @@ function gameplay_loop.tick(game, state, dt)
     modal_buttons = nil,
     game_finished = game.finished,
     current_player_index = game.turn and game.turn.current_player_index or nil,
+    current_player_id = (function()
+      local idx = game.turn and game.turn.current_player_index or nil
+      local player = idx and game.players and game.players[idx] or nil
+      return player and player.id or nil
+    end)(),
     current_player_auto = (function()
       local idx = game.turn and game.turn.current_player_index or nil
       local player = idx and game.players and game.players[idx] or nil

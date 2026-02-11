@@ -98,6 +98,32 @@ local function _each_player(players, fn)
   end
 end
 
+local function _resolve_role_id(role, fallback)
+  if role and role.get_roleid then
+    local ok, role_id = pcall(role.get_roleid)
+    if ok and role_id ~= nil then
+      return role_id
+    end
+  end
+  return fallback
+end
+
+local function _resolve_roles_from_players(players)
+  local roles = {}
+  if not (GameAPI and GameAPI.get_role) then
+    return roles
+  end
+  for _, player in ipairs(players or {}) do
+    if player and player.id ~= nil then
+      local ok, role = pcall(GameAPI.get_role, player.id)
+      if ok and role ~= nil then
+        roles[#roles + 1] = role
+      end
+    end
+  end
+  return roles
+end
+
 local function _build_role_units(roles)
   local name_to_unit = {}
   local role_units = {}
@@ -105,7 +131,8 @@ local function _build_role_units(roles)
     assert(role ~= nil, "missing role: " .. tostring(i))
     assert(role.get_ctrl_unit ~= nil, "missing role.get_ctrl_unit: " .. tostring(i))
     local unit = role.get_ctrl_unit()
-    role_units[i] = unit
+    local role_id = _resolve_role_id(role, i)
+    role_units[role_id] = unit
     assert(role.get_name ~= nil, "missing role.get_name: " .. tostring(i))
     local name = assert(role.get_name(), "missing role name: " .. tostring(i))
     name_to_unit[name] = unit
@@ -118,7 +145,11 @@ local function _ensure_player_units(state, players, log_once, build_log_prefix)
     return
   end
 
-  local roles = assert(all_roles, "missing ALLROLES")
+  local roles = all_roles
+  if type(roles) ~= "table" or #roles == 0 then
+    roles = _resolve_roles_from_players(players)
+  end
+  assert(type(roles) == "table" and #roles > 0, "missing ALLROLES")
   local name_to_unit, role_units = _build_role_units(roles)
 
   local mapped = {}

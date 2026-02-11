@@ -137,7 +137,7 @@ local function _register_purchase_event(ctx, role_id)
       return
     end
     local player_id = ctx.player_id_by_role_id[role_id]
-    local player = player_id and game.players[player_id] or nil
+    local player = player_id and game:find_player_by_id(player_id) or nil
     if not player then
       return
     end

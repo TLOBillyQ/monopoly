@@ -1,5 +1,6 @@
 local pricing = require("src.game.land.LandPricing")
 local number_utils = require("src.core.NumberUtils")
+local role_avatar = require("src.ui.UIRoleAvatar")
 
 local panel = {}
 
@@ -32,14 +33,7 @@ local function _resolve_role_name(role)
 end
 
 local function _resolve_role_avatar(role)
-  if not role or type(role.get_head_icon) ~= "function" then
-    return nil
-  end
-  local ok, avatar = pcall(role.get_head_icon)
-  if not ok then
-    return nil
-  end
-  return avatar
+  return role_avatar.resolve_from_role(role)
 end
 
 local function _resolve_player_profile(player)

@@ -28,7 +28,7 @@ local function _resolve_landing(game, player, tile, move_result, depth)
     end
     local target_player = player
     if out.player_id then
-      target_player = game.players[out.player_id]
+      target_player = game:find_player_by_id(out.player_id)
     end
     local next_tile = nil
     if target_player then

@@ -23,7 +23,7 @@ function optional_effect_handler.build(helpers)
     local effect_defs = get_container_defs_by_choice_kind(choice.kind)
     local target_eff = assert(find_effect_by_id(effect_defs, effect_id), "missing target effect: " .. tostring(effect_id))
 
-    local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
+    local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
     local tile = assert(game.board:get_tile_by_id(meta.tile_id), "missing tile: " .. tostring(meta.tile_id))
     local move_result = meta.move_result
     local game_ctx = build_game_ctx(game, move_result)

@@ -36,4 +36,13 @@ function ui_events.send_to_all(event_name, payload)
   end
 end
 
+function ui_events.send_to_role(role, event_name, payload)
+  assert(role ~= nil, "missing role")
+  assert(event_name ~= nil, "missing event_name")
+  if not role.send_ui_custom_event then
+    return
+  end
+  role.send_ui_custom_event(event_name, payload or {})
+end
+
 return ui_events

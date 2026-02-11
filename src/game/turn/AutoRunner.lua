@@ -48,7 +48,7 @@ function auto_runner:next_action(dt, env)
     return { type = "modal_confirm" }
   end
 
-  local actor_role_id = env.current_player_index
+  local actor_role_id = env.current_player_id or env.current_player_index
   return { type = "ui_button", id = "next", actor_role_id = actor_role_id }
 end
 

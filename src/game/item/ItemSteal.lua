@@ -55,7 +55,7 @@ function steal.build_prompt_spec(game, player, queue, index)
   assert(queue ~= nil, "missing queue")
   local target_id = assert(queue[index], "missing target id")
   assert(player ~= nil, "missing player")
-  local target = assert(game.players[target_id], "missing target player: " .. tostring(target_id))
+  local target = assert(game:find_player_by_id(target_id), "missing target player: " .. tostring(target_id))
   return land_choice_specs.build_use_skip(
     "steal_prompt",
     "是否使用偷窃卡",
@@ -74,7 +74,7 @@ function steal.handle_pass_players(game, player, encountered_ids)
 
   local queue = {}
   for _, target_id in ipairs(encountered_ids) do
-    local t = assert(game.players[target_id], "missing target player: " .. tostring(target_id))
+    local t = assert(game:find_player_by_id(target_id), "missing target player: " .. tostring(target_id))
     if not t.eliminated and not game:player_has_deity(t, "angel") then
       table.insert(queue, t.id)
     end

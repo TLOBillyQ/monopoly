@@ -1,100 +1,114 @@
-# 全回合角色控制硬锁（BUFF_FORBID_CONTROL）
+# 非当前回合屏幕显示策略调整
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
-本计划遵循 `.agents/PLANS.md`，实施与停顿时都要保持本文档自洽、可接续、可复现。
+本计划遵循 `\.agents\PLANS.md` 的要求，并在实现前先清空并写入 `\.agents\PLAN_CURRENT.md`。
 
-## 目的 / 全局视角
+## 摘要
 
-当前对局中，客户端仍可通过摇杆或技能进行手动操作，可能干扰回合驱动与动画等待。目标是在现有 UI 锁与动作校验之上增加“角色控制硬锁”，对局期间强制所有角色进入不可控状态。改完后，玩家在对局未结束时无法手动移动/跳跃/前扑/技能，但 UI 流程（行动按钮、选择框）仍可正常推进。验收以“编辑器内手动操作无响应 + 回合流程不被阻断”为准。
+目标是在非当前回合时隐藏除“机会卡/道具卡展示屏、破产屏”以外的所有额外屏幕，同时保留基础HUD（玩家信息、倒计时等）。实现后可观察到：非当前玩家只会看到基础HUD与机会/道具卡展示屏、破产屏，其它选择屏、黑市屏与一般弹窗不再显示。
+
+## 假设与默认
+
+默认“自己的回合”以 `UIRoleContext.resolve(...).can_operate` 为准。若没有角色列表，按单人/本地模式处理，仍显示当前屏幕。
 
 ## 进度
 
-- [x] (2026-02-11 16:30Z) 清空并重写 `.agents/PLAN_CURRENT.md`，建立本任务活文档
-- [x] (2026-02-11 16:40Z) 新增角色控制锁策略模块 `src/ui/UIRoleControlLockPolicy.lua`
-- [x] (2026-02-11 16:50Z) 接入 UI 与端口：`src/ui/UIView.lua`、`src/game/turn/GameplayLoopPorts.lua`
-- [x] (2026-02-11 16:55Z) 在 `GameplayLoop` 注入全回合锁定状态机
-- [x] (2026-02-11 17:05Z) 扩展回归测试：`.agents/tests/suites/ui.lua`
-- [x] (2026-02-11 17:15Z) 运行 `lua .agents/tests/regression.lua`，输出 `All regression checks passed (114)`
-- [x] (2026-02-11 17:40Z) 调整移动动画步进期解锁，并重新回归，输出 `All regression checks passed (115)`
+- [ ] (2026-02-11 00:00Z) 写入 `\.agents\PLAN_CURRENT.md` 并开始实现
+- [ ] (2026-02-11 00:00Z) 完成代码修改与回归验证
 
 ## 意外与发现
 
-- 观察：全量回归通过（含步进期解锁补丁）。
-  证据：`All regression checks passed (115)`。
+暂无。
 
 ## 决策日志
 
-- 决策：仅使用 `BUFF_FORBID_CONTROL`，不启用 `Role.set_role_ctrl_enabled` 兜底。
-  理由：需求已锁定“仅 BuffState”，避免引入跨版本行为差异。
+- 决策：非当前回合仍显示“机会卡/道具卡展示屏、破产屏”，其余屏幕隐藏，基础HUD常驻
+  理由：用户明确要求“破产屏显示，玩家信息常驻，其他不显示”
   日期/作者：2026-02-11 / Codex
-
-- 决策：锁定范围为“全回合、全玩家”，并在每 tick 重新同步。
-  理由：最小改动下保证防干扰强度，并应对角色单位热切换。
+- 决策：机会卡/道具卡通过新增 `popup.kind` 标识进行放行
+  理由：标题文本易变且容易误判，显式字段更稳定
   日期/作者：2026-02-11 / Codex
 
 ## 结果与复盘
 
-本次新增了角色控制锁策略模块，并在 GameplayLoop 内全回合同步；根据编辑器反馈补充“移动动画步进期解锁”。回归已通过，仍需在编辑器内完成手动验收（步进期可控、其他时间不可控，且 UI 流程正常）。若出现 UI 被连带阻断，可通过 `role_control_lock_enabled=false` 快速回滚。
+待实现后补充。
 
 ## 背景与导读
 
-核心入口在 `src/game/turn/GameplayLoop.lua` 的 tick 驱动与 `GameplayLoopPorts` 端口，UI 入口在 `src/ui/UIView.lua`。本次新增 `src/ui/UIRoleControlLockPolicy.lua`，通过 `Role.get_ctrl_unit()` 对 LifeEntity 的 BuffStateComp 执行 `BUFF_FORBID_CONTROL`。该策略不触碰 UI 节点显隐，只影响角色控制。
+当前 UI 屏幕通过 `src/ui/UICanvasCoordinator.lua` 调用 `UIEvents.send_to_all` 对所有角色同步显示/隐藏，导致非当前回合同样看到选择屏、黑市屏与普通弹窗。弹窗展示由 `src/ui/UIModalPresenter.lua` 触发，机会卡/道具卡展示来源于 `src/game/land/Landing.lua` 的 `push_popup` 逻辑，破产屏通过 `payload.kind = "bankruptcy"` 区分。
+
+关键文件与职责：
+- `src/ui/UIModalPresenter.lua`：负责选择屏、黑市屏、弹窗的打开/关闭与可见性。
+- `src/ui/UICanvasCoordinator.lua`：切换当前可见 Canvas（屏幕）。
+- `src/ui/UIEvents.lua`：向角色发送 UI 显示/隐藏事件。
+- `src/game/land/Landing.lua`：机会卡/道具卡弹窗入口。
+- `src/ui/UIRoleContext.lua`：判断当前角色是否可操作（是否“自己的回合”）。
+
+## 接口与对外行为变更
+
+新增或扩展对外接口/类型：
+- `push_popup` 新增 `payload.kind` 可选值：`"chance_card"`、`"item_card"`。
+- `src/ui/UIEvents.lua` 新增 `send_to_role(role, event_name, payload)`。
+- `src/ui/UICanvasCoordinator.lua` 新增 `switch_for_role(ui, target, role)`，用于按角色切换屏幕。
+
+对外行为变更：
+- 非当前回合仅显示基础HUD与机会/道具卡展示屏、破产屏，其它屏幕隐藏。
+- 当前回合显示行为保持不变。
 
 ## 工作计划
 
-先新增策略模块，封装对 `BUFF_FORBID_CONTROL` 的加解锁与“owned”标记，避免误删外部已有状态。然后扩展 `UIView` 与 `GameplayLoopPorts` 提供 `apply_role_control_lock`。最后在 `GameplayLoop` 中注入全回合同步逻辑，并补齐回归用例验证“加锁/解锁/单位切换/回合结束清理”等行为。
+先为机会卡/道具卡弹窗补充明确的 `payload.kind`，确保可稳定识别。然后新增“按角色切换 Canvas”的能力，并在 `UIModalPresenter` 中基于角色上下文决定是否展示选择屏、黑市屏、普通弹窗。最后补充 UI 测试覆盖：验证非当前回合只展示允许屏幕，并确认当前回合不受影响。
 
 ## 具体步骤
 
-在仓库根目录按顺序执行：
+在仓库根目录 `c:\Users\Lzx_8\Desktop\dev\monopoly` 执行。
 
-1. 新增 `src/ui/UIRoleControlLockPolicy.lua`。
-2. 修改 `src/ui/UIView.lua` 与 `src/game/turn/GameplayLoopPorts.lua`。
-3. 修改 `src/game/turn/GameplayLoop.lua` 与 `src/app/init.lua`。
-4. 修改 `.agents/tests/suites/ui.lua`，新增 3 个用例并挂入 suite。
-5. 运行：
+1. 清空并写入 `\.agents\PLAN_CURRENT.md` 为本计划内容。
+2. 修改 `src/game/land/Landing.lua`：在机会卡与道具卡弹窗 `payload` 中加入 `kind = "chance_card"` 与 `kind = "item_card"`。
+3. 修改 `src/ui/UIEvents.lua`：新增 `send_to_role`，封装 `role.send_ui_custom_event`。
+4. 修改 `src/ui/UICanvasCoordinator.lua`：新增 `switch_for_role`，按角色发送显示/隐藏事件，逻辑与 `switch` 保持一致但仅作用于指定角色。
+5. 修改 `src/ui/UIModalPresenter.lua`：
+   - 引入 `UIRoleContext`，判断角色是否可操作。
+   - 为选择屏/黑市屏/弹窗建立“按角色可见性”判断：
+     - 当前回合角色：全部显示。
+     - 非当前回合角色：仅允许 `kind = "chance_card" / "item_card" / "bankruptcy"`。
+   - 在 `open_choice_modal`、`close_choice_modal`、`push_popup`、`close_popup` 中改用 `switch_for_role`，对非当前回合角色强制回到基础屏，并仅对允许弹窗展示对应屏幕。
+   - 对非当前回合角色执行“只隐藏屏幕可见性”的逻辑，避免改动全局 `ui.choice_active / ui.market_active / ui.popup_active` 状态。
+6. 补充测试 `\.agents\tests\suites\ui.lua`：
+   - 新增用例：非当前回合时，普通弹窗不触发非当前角色的 Canvas 显示事件。
+   - 新增用例：非当前回合时，`kind = "chance_card"` 与 `kind = "item_card"` 的弹窗会触发显示事件。
+   - 新增用例：`kind = "bankruptcy"` 弹窗对非当前回合角色可见。
 
-    lua .agents/tests/regression.lua
+## 测试场景与验收
 
-预期输出末尾包含：
-
-    All regression checks passed (...)
-
-## 验证与验收
-
-自动回归必须通过 `lua .agents/tests/regression.lua`。编辑器内验收包括：开局后任意玩家尝试摇杆移动/跳跃/前扑/技能无响应；点击“行动按钮/选择框确认”仍能推进回合；对局结束或重开后锁不残留。
+1. 运行回归测试：
+   命令：`lua .agents/tests/regression.lua`
+   预期：全部通过，新增 UI 用例通过。
+2. 手动场景：
+   触发机会卡/道具卡与破产流程，观察非当前回合玩家能看到对应屏幕；触发黑市/选择屏/偷窃弹窗时，非当前回合玩家不再看到这些屏幕。
 
 ## 可重复性与恢复
 
-本次改动不涉及数据迁移，回滚路径为：先移除 `GameplayLoop` 中的锁同步，再移除端口与 UI 接口，最后删除 `UIRoleControlLockPolicy` 并撤测试。每一步都可独立回滚并重新跑回归。
+改动可重复应用。若需回滚，删除新增的 `payload.kind` 标识与按角色切换逻辑，恢复 `UICanvasCoordinator.switch` 的全员广播路径。
 
 ## 产物与备注
 
-实际产物：
+预期新增片段示例：
+    Landing 弹窗：
+      payload = { title = "道具卡", body = "...", kind = "item_card", ... }
 
-- `Config/GameplayRules.lua`
-- `src/ui/UIRoleControlLockPolicy.lua`
-- `src/ui/UIView.lua`
-- `src/game/turn/GameplayLoopPorts.lua`
-- `src/game/turn/GameplayLoop.lua`
-- `src/app/init.lua`
-- `.agents/tests/suites/ui.lua`
+    UIEvents 新增：
+      function ui_events.send_to_role(role, event_name, payload) ... end
 
 ## 接口与依赖
 
-新增接口：
+需使用：
+- `src/ui/UIRoleContext.lua`：判定是否当前回合。
+- `src/ui/UIEvents.lua`：新增按角色发送事件。
+- `src/ui/UICanvasCoordinator.lua`：新增按角色切换屏幕。
 
-- `ui_view.apply_role_control_lock(state, enabled)`
-- `gameplay_loop_ports.apply_role_control_lock(state, enabled)`
-
-新增配置：
-
-- `Config.GameplayRules.role_control_lock_enabled`（默认 `true`）
-
-依赖说明：
-
-- `role.get_ctrl_unit()` 必须返回 LifeEntity（具备 BuffStateComp）。
-
-(2026-02-11) 更新说明：完成代码实现与测试补齐，并通过全量回归。
-(2026-02-11) 更新说明：按编辑器反馈补充“步进期解锁”，回归再次通过。
+里程碑结束时必须存在的新接口：
+- `UIEvents.send_to_role(role, event_name, payload)`
+- `UICanvasCoordinator.switch_for_role(ui, target, role)`
+- `push_popup payload.kind` 新值：`chance_card` / `item_card`

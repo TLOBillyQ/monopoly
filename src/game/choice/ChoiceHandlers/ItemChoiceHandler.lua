@@ -84,7 +84,7 @@ function item_choice_handler.build(helpers)
     end
     local idx = number_utils.to_integer(action.option_id)
     local meta = choice.meta
-    local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
+    local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
     assert(idx ~= nil, "missing demolish index")
     if meta.item_id then
       inventory.consume(player, meta.item_id)
@@ -104,7 +104,7 @@ function item_choice_handler.build(helpers)
     end
     local idx = number_utils.to_integer(action.option_id)
     local meta = choice.meta
-    local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
+    local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
     assert(idx ~= nil, "missing roadblock index")
     if meta.item_id then
       inventory.consume(player, meta.item_id)
@@ -122,8 +122,8 @@ function item_choice_handler.build(helpers)
     end
     local idx = number_utils.to_integer(action.option_id)
     local meta = choice.meta
-    local stealer = assert(game.players[meta.player_id], "missing stealer: " .. tostring(meta.player_id))
-    local target = assert(game.players[meta.target_id], "missing target: " .. tostring(meta.target_id))
+    local stealer = assert(game:find_player_by_id(meta.player_id), "missing stealer: " .. tostring(meta.player_id))
+    local target = assert(game:find_player_by_id(meta.target_id), "missing target: " .. tostring(meta.target_id))
     assert(idx ~= nil, "missing steal index")
     local res = steal.steal_item_at_index(game, stealer, target, idx)
     logger.event("Steal choice result (multi)", res)
@@ -137,8 +137,8 @@ function item_choice_handler.build(helpers)
       return finish_choice(game, false)
     end
     local meta = choice.meta
-    local stealer = assert(game.players[meta.player_id], "missing stealer: " .. tostring(meta.player_id))
-    local target = assert(game.players[meta.target_id], "missing target: " .. tostring(meta.target_id))
+    local stealer = assert(game:find_player_by_id(meta.player_id), "missing stealer: " .. tostring(meta.player_id))
+    local target = assert(game:find_player_by_id(meta.target_id), "missing target: " .. tostring(meta.target_id))
     if target.eliminated then
       return finish_choice(game, false)
     end
@@ -174,7 +174,7 @@ function item_choice_handler.build(helpers)
     end
     local target_id = number_utils.to_integer(action.option_id)
     local meta = choice.meta
-    local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
+    local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
     local item_id = assert(meta.item_id, "missing item_id")
     assert(target_id ~= nil, "missing target_id")
     local res = use_item(game, player, item_id, { target_id = target_id })
@@ -189,7 +189,7 @@ function item_choice_handler.build(helpers)
     end
     local value = number_utils.to_integer(action.option_id)
     local meta = choice.meta
-    local player = assert(game.players[meta.player_id], "missing player: " .. tostring(meta.player_id))
+    local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
     assert(value ~= nil, "missing dice value")
     local dice_count = meta.dice_count or game:player_dice_count(player)
     if meta.item_id then
@@ -201,7 +201,7 @@ function item_choice_handler.build(helpers)
 
   local function _handle_item_phase_choice(game, choice, action)
     local meta = choice.meta
-    local player = game.players[meta.player_id]
+    local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
     local phase = meta.phase
     if is_cancel(action) then
       finish_item_phase(game, phase)
@@ -226,7 +226,7 @@ function item_choice_handler.build(helpers)
 
   local function _handle_discard_item(game, choice, action)
     local meta = choice.meta
-    local player = game.players[meta.player_id]
+    local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
     local phase = meta.phase
     if is_cancel(action) then
       finish_choice(game, false)

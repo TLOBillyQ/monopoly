@@ -98,8 +98,8 @@ local function _decide_choice_action(game, choice, pending_action)
   if min_visible > 0 then
     local meta = choice and choice.meta or {}
     local actor = nil
-    if meta.player_id and game.players and game.players[meta.player_id] then
-      actor = game.players[meta.player_id]
+    if meta.player_id and game.find_player_by_id then
+      actor = game:find_player_by_id(meta.player_id)
     elseif game.current_player then
       actor = game:current_player()
     end

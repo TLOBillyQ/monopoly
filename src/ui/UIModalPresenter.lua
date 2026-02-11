@@ -2,6 +2,7 @@ local market_view = require("src.ui.MarketView")
 local market_ui = require("src.ui.MarketLayout")
 local modal_state = require("src.ui.UIModalStateCoordinator")
 local route_policy = require("src.ui.UIChoiceRoutePolicy")
+local role_avatar = require("src.ui.UIRoleAvatar")
 local runtime = require("src.ui.UIRuntimePort")
 local canvas = require("src.ui.UICanvasCoordinator")
 local logger = require("src.core.Logger")
@@ -80,21 +81,20 @@ local function _resolve_bankruptcy_avatar_key(payload)
     return nil
   end
   if payload.avatar_key ~= nil then
-    return payload.avatar_key
+    local sanitized = role_avatar.sanitize_image_key(payload.avatar_key)
+    if sanitized ~= nil then
+      return sanitized
+    end
   end
   local player_id = payload.player_id
   if not player_id or not GameAPI or not GameAPI.get_role then
     return nil
   end
   local ok, role = pcall(GameAPI.get_role, player_id)
-  if not ok or not role or type(role.get_head_icon) ~= "function" then
+  if not ok or not role then
     return nil
   end
-  local ok_icon, icon = pcall(role.get_head_icon)
-  if not ok_icon then
-    return nil
-  end
-  return icon
+  return role_avatar.resolve_from_role(role)
 end
 
 local function _set_bankruptcy_avatar_image(state, payload)
@@ -106,14 +106,14 @@ local function _set_bankruptcy_avatar_image(state, payload)
   local avatar_node = ui.query_node(screen.avatar)
   local image_key = _resolve_bankruptcy_avatar_key(payload)
   if image_key ~= nil then
-    runtime.set_node_texture_keep_size(avatar_node, image_key)
+    runtime.set_node_texture_auto_size(avatar_node, image_key)
     ui:set_visible(screen.avatar, true)
     return
   end
   local refs = state and state.ui_refs or nil
   local empty_key = refs and refs["空"] or nil
   if empty_key ~= nil then
-    runtime.set_node_texture_keep_size(avatar_node, empty_key)
+    runtime.set_node_texture_auto_size(avatar_node, empty_key)
     ui:set_visible(screen.avatar, true)
     return
   end

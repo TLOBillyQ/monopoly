@@ -30,7 +30,7 @@ local function _send_players_to_hospital(game, idx)
   local count = 0
   local snapshot = { list_unpack(occupants) }
   for _, pid in ipairs(snapshot) do
-    local target = assert(game.players[pid], "missing target player: " .. tostring(pid))
+    local target = assert(game:find_player_by_id(pid), "missing target player: " .. tostring(pid))
     if game:player_is_vehicle_indestructible(target) then
       logger.event(target.name .. " 座驾免疫导弹效果")
     else

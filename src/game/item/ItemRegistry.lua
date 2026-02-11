@@ -108,7 +108,7 @@ end
 local function _handle_target_player_item(game, player, item_id, context)
   context = context or {}
   if context.target_id then
-    local target = game.players[context.target_id]
+    local target = game:find_player_by_id(context.target_id)
     if not target or target.id == player.id or target.eliminated then
       logger.warn("目标玩家无效:", tostring(context.target_id))
       return false

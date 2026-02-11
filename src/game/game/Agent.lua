@@ -32,8 +32,11 @@ end
 
 local function _choice_owner(game, choice)
   local meta = choice.meta or {}
-  if meta.player_id and game.players[meta.player_id] then
-    return game.players[meta.player_id]
+  if meta.player_id and game.find_player_by_id then
+    local player = game:find_player_by_id(meta.player_id)
+    if player then
+      return player
+    end
   end
   return game:current_player()
 end

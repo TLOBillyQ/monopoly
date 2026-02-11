@@ -16,8 +16,11 @@ end
 
 local function _resolve_choice_owner(game, choice)
   local meta = choice and choice.meta or {}
-  if meta.player_id and game.players and game.players[meta.player_id] then
-    return game.players[meta.player_id]
+  if meta.player_id and game.find_player_by_id then
+    local player = game:find_player_by_id(meta.player_id)
+    if player then
+      return player
+    end
   end
   if game.current_player then
     return game:current_player()
@@ -27,10 +30,15 @@ end
 
 local function _resolve_choice_owner_id(game, choice)
   local meta = choice and choice.meta or {}
-  if meta.player_id and game.players and game.players[meta.player_id] then
-    return meta.player_id
+  if meta.player_id and game.find_player_by_id then
+    local player = game:find_player_by_id(meta.player_id)
+    if player then
+      return player.id
+    end
   end
-  return game.turn and game.turn.current_player_index or nil
+  local current = game.turn and game.turn.current_player_index or nil
+  local player = current and game.players and game.players[current] or nil
+  return player and player.id or nil
 end
 
 local function _ensure_action_actor_role_id(game, choice, action)

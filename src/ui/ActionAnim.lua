@@ -29,7 +29,7 @@ local function _resolve_player_name(state, player_id)
     return "未知玩家"
   end
   local game = state and state.game or nil
-  local player = game and game.players and game.players[player_id] or nil
+  local player = game and game.find_player_by_id and game:find_player_by_id(player_id) or nil
   if player and player.name then
     return player.name
   end
@@ -257,7 +257,7 @@ function action_anim.play(state, anim)
     end
     local player_id = assert(anim.player_id, "missing clear_obstacles player_id")
     local game = assert(state.game, "missing state.game")
-    local player = assert(game.players[player_id], "missing player: " .. tostring(player_id))
+    local player = assert(game:find_player_by_id(player_id), "missing player: " .. tostring(player_id))
     local pos = _resolve_tile_pos(state, player.position) + math.Vector3(0.0, 1.0, 0.0)
     local robot_id = prefab.group["清障机器人"]
     _spawn_transient(robot_id, nil, pos, duration)

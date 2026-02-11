@@ -65,13 +65,46 @@ end
 
 local function _create_players(opts)
   local players = {}
+  local ai_map = opts.ai or {}
+  local role_roster = opts.role_roster
+
+  if type(role_roster) == "table" and #role_roster > 0 then
+    for i, entry in ipairs(role_roster) do
+      local role_id = entry and (entry.role_id or entry.id) or nil
+      assert(role_id ~= nil, "missing role_id in role_roster: " .. tostring(i))
+      local name = entry and entry.name or nil
+      if not name or name == "" then
+        name = "玩家" .. tostring(i)
+      end
+      local is_ai = ai_map[role_id] or ai_map[i]
+      local player = player:new({
+        id = role_id,
+        name = name,
+        role_id = role_id,
+        is_ai = is_ai,
+        auto = opts.auto_all,
+        start_index = 1,
+        constants = constants,
+        balances = {
+          ["金币"] = constants.starting_cash,
+          ["金豆"] = constants.starting_jindou,
+          ["乐园币"] = constants.starting_leyuanbi,
+        },
+        deity_duration_turns = constants.deity_duration_turns,
+        inventory = inventory:new({ constants = constants }),
+      })
+      table.insert(players, player)
+    end
+    return players
+  end
+
   local names = assert(opts.players, "missing player names")
   if #names == 1 then
     names = { names[1], "玩家2", "玩家3", "玩家4" }
   end
   for i, name in ipairs(names) do
     local role = roles_cfg[((i - 1) % #roles_cfg) + 1]
-    local is_ai = opts.ai[i]
+    local is_ai = ai_map[i]
     local player = player:new({
       id = i,
       name = name,
@@ -91,6 +124,16 @@ local function _create_players(opts)
     table.insert(players, player)
   end
   return players
+end
+
+local function _build_player_by_id(players)
+  local out = {}
+  for _, p in ipairs(players or {}) do
+    if p and p.id ~= nil then
+      out[p.id] = p
+    end
+  end
+  return out
 end
 
 local function _snapshot_inventory(inv)
@@ -207,6 +250,7 @@ function composition_root.assemble(opts, game_or_class)
   assert(game, "CompositionRoot.Assemble requires game instance or class")
   game.board = board
   game.players = players
+  game.player_by_id = _build_player_by_id(players)
   game.turn = _build_initial_turn()
   game.dirty = dirty
   game.market_limits = _build_market_limits()

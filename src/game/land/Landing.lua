@@ -73,6 +73,7 @@ local function _push_landing_popup(game, title, body, opts)
     payload = {
       title = title,
       body = body,
+      kind = opts.kind,
       image_ref = opts.image_ref,
       auto_close_seconds = opts.auto_close_seconds,
     },
@@ -129,6 +130,7 @@ landing.executors = {
       if ok then
         local item_name = inventory.item_name(cfg.id)
         _push_landing_popup(ctx.game, "道具卡", player.name .. " 获得道具 " .. item_name, {
+          kind = "item_card",
           image_ref = cfg.id,
           auto_close_seconds = popup_show_seconds,
         })
@@ -156,6 +158,7 @@ landing.executors = {
       end
       logger.event(ctx.player.name .. " 抽到机会卡 " .. card.description)
       _push_landing_popup(ctx.game, "机会卡", ctx.player.name .. " 抽到机会卡：" .. card.description, {
+        kind = "chance_card",
         image_ref = card.id,
         auto_close_seconds = popup_show_seconds,
       })

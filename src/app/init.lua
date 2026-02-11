@@ -32,7 +32,59 @@ local monopoly_event = require("src.game.game.MonopolyEvents")
 
 logger.configure_game_time()
 
+local max_player_count = 4
+
 local current_game = nil
+
+local function _resolve_roles()
+  if type(all_roles) == "table" and #all_roles > 0 then
+    return all_roles
+  end
+  if GameAPI and GameAPI.get_all_valid_roles then
+    local ok, roles = pcall(GameAPI.get_all_valid_roles)
+    if ok and type(roles) == "table" then
+      return roles
+    end
+  end
+  return {}
+end
+
+local function _build_role_roster(max_players)
+  local roster = {}
+  local roles = _resolve_roles()
+  for _, role in ipairs(roles) do
+    local role_id = nil
+    if role and role.get_roleid then
+      local ok, id = pcall(role.get_roleid)
+      if ok and id ~= nil then
+        role_id = id
+      end
+    end
+    if role_id ~= nil then
+      local role_name = nil
+      if role.get_name then
+        local ok, name = pcall(role.get_name)
+        if ok and name and name ~= "" then
+          role_name = name
+        end
+      end
+      roster[#roster + 1] = { role_id = role_id, name = role_name }
+    end
+    if max_players and #roster >= max_players then
+      break
+    end
+  end
+  if max_players and #roles > max_players then
+    logger.warn(
+      "[Eggy]",
+      "角色数量超过上限，已截断:",
+      tostring(#roles),
+      "->",
+      tostring(max_players)
+    )
+  end
+  return roster
+end
 
 local function _build_state()
   local ui = ui_view.build_ui_state()
@@ -49,6 +101,17 @@ local function _build_state()
     action_anim_seq = nil,
     item_name_by_id = {},
     game_factory = function()
+      local role_roster = _build_role_roster(max_player_count)
+      if #role_roster > 0 then
+        logger.info("[Eggy]", "使用角色驱动初始化，角色数量:", tostring(#role_roster))
+        return game:new({
+          role_roster = role_roster,
+          auto_all = false,
+          map = map_cfg,
+          tiles = tiles_cfg,
+        })
+      end
+      logger.warn("[Eggy]", "角色列表为空，回退调试玩家初始化")
       return game:new({
         players = { "玩家1", "AI2", "AI3", "AI4" },
         ai = { [2] = true, [3] = true, [4] = true },
@@ -147,7 +210,7 @@ local function _install_game_init(state)
     end)
 
     ui_events.send_to_all(ui_events.show["加载屏"], {})
-    board_scene.init(state, map_cfg)
+    board_scene.init(state, map_cfg, current_game)
     ui_view.init_ui_assets(state)
 
     SetTimeOut(1.0, function()

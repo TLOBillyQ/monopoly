@@ -1,24 +1,23 @@
 local board_scene = {}
 
-function board_scene.init(state, map_cfg)
+function board_scene.init(state, map_cfg, game)
   assert(state ~= nil, "missing state")
   assert(map_cfg ~= nil, "missing map_cfg")
+  assert(game ~= nil and game.players ~= nil, "missing game.players")
 
   local scene = {
     building_unit_groups = {},
     units_by_player_id = {},
   }
 
-  local roles = {
-    GameAPI.get_role(1),
-    GameAPI.get_role(2),
-    GameAPI.get_role(3),
-    GameAPI.get_role(4),
-  }
-  for i, role in ipairs(roles) do
-    assert(role ~= nil, "missing role: " .. tostring(i))
+  assert(GameAPI ~= nil and GameAPI.get_role ~= nil, "missing GameAPI.get_role")
+  for i, player in ipairs(game.players) do
+    local player_id = assert(player.id, "missing player id: " .. tostring(i))
+    local role = GameAPI.get_role(player_id)
+    assert(role ~= nil, "missing role: " .. tostring(player_id))
+    assert(role.get_ctrl_unit ~= nil, "missing role.get_ctrl_unit: " .. tostring(player_id))
     local unit = role.get_ctrl_unit()
-    scene.units_by_player_id[i] = unit
+    scene.units_by_player_id[player_id] = unit
   end
 
   local tile_names = {}

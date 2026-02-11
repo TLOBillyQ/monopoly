@@ -774,7 +774,7 @@ local function _test_ui_model_player_profile_prefers_role_api_with_fallback()
         return "远端昵称1"
       end,
       get_head_icon = function()
-        return "HEAD_ICON_1"
+        return 12345
       end,
     },
     [2] = {
@@ -803,9 +803,46 @@ local function _test_ui_model_player_profile_prefers_role_api_with_fallback()
   local row1 = model and model.panel and model.panel.player_rows and model.panel.player_rows[1] or nil
   local row2 = model and model.panel and model.panel.player_rows and model.panel.player_rows[2] or nil
   assert(row1 and row1.name == "远端昵称1", "player1 should use role name")
-  assert(row1 and row1.avatar == "HEAD_ICON_1", "player1 should use role avatar")
+  assert(row1 and row1.avatar == 12345, "player1 should use role avatar")
   assert(row2 and row2.name == "本地玩家2 (出局)", "player2 name should fallback to local name with eliminated suffix")
   assert(row2 and row2.avatar == nil, "player2 avatar should fallback to nil when role api failed")
+end
+
+local function _test_ui_model_player_profile_accepts_stringified_avatar()
+  local ui_model = require("src.ui.UIModel")
+  local g = _new_game()
+  g.players[1].name = "本地玩家1"
+  local icon_obj = setmetatable({}, {
+    __tostring = function()
+      return "67890"
+    end,
+  })
+  local role_by_id = {
+    [1] = {
+      get_name = function()
+        return "远端昵称1"
+      end,
+      get_head_icon = function()
+        return icon_obj
+      end,
+    },
+  }
+  local model = nil
+  _with_patches({
+    { target = GameAPI, key = "get_role", value = function(role_id)
+      return role_by_id[role_id]
+    end },
+  }, function()
+    model = ui_model.build(g, {
+      game = g,
+      ui_state = { ui = { item_slots = { 1, 2, 3, 4, 5 }, auto_play = false } },
+      last_turn = g.last_turn,
+      finished = g.finished,
+    })
+  end)
+
+  local row1 = model and model.panel and model.panel.player_rows and model.panel.player_rows[1] or nil
+  assert(row1 and row1.avatar == 67890, "player1 avatar should parse stringified icon key")
 end
 
 local function _test_turn_dispatch_rejects_non_current_actor()
@@ -2154,6 +2191,7 @@ return {
   _test_ui_model_structure,
   _test_ui_model_player_slot_map_and_choice_owner,
   _test_ui_model_player_profile_prefers_role_api_with_fallback,
+  _test_ui_model_player_profile_accepts_stringified_avatar,
   _test_turn_dispatch_rejects_non_current_actor,
   _test_turn_dispatch_rejects_choice_non_owner,
   _test_turn_dispatch_auto_rejects_unmapped_role,

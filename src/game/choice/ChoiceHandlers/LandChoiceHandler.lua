@@ -26,7 +26,7 @@ function land_choice_handler.build(helpers)
       land_actions.execute_free_card(game, player_id, tile_id)
     else
       if card_kind == "strong" then
-        local player = game.players[player_id]
+        local player = assert(game:find_player_by_id(player_id), "missing player: " .. tostring(player_id))
         if inventory.find_index(player, item_ids.free_rent) then
           intent_dispatcher.dispatch(game, {
             kind = "need_choice",

@@ -71,7 +71,7 @@ function land_actions.resolve_rent_owner(game, tile, state_fn)
   end
   local owner = nil
   if st.owner_id then
-    owner = game.players[st.owner_id]
+    owner = game:find_player_by_id(st.owner_id)
   end
   if not owner or owner.eliminated then
     game:set_tile_owner(tile, nil)
@@ -144,12 +144,12 @@ local function _contiguous_rent(game, board, index, owner_id)
 end
 
 function land_actions.execute_strong_card(game, player_id, tile_id)
-  local player = game.players[player_id]
+  local player = game:find_player_by_id(player_id)
   local tile = game.board:get_tile_by_id(tile_id)
   local st = land_actions.safe_tile_state(game, tile)
   local owner = nil
   if st.owner_id then
-    owner = game.players[st.owner_id]
+    owner = game:find_player_by_id(st.owner_id)
   end
   assert(owner ~= nil, "missing owner")
 
@@ -172,7 +172,7 @@ function land_actions.execute_strong_card(game, player_id, tile_id)
 end
 
 function land_actions.execute_free_card(game, player_id, tile_id)
-  local player = game.players[player_id]
+  local player = game:find_player_by_id(player_id)
   local tile = game.board:get_tile_by_id(tile_id)
   assert(inventory.consume(player, item_ids.free_rent) == true, "consume free rent failed")
   _emit_event(monopoly_event.land.free_rent_used, {
@@ -184,7 +184,7 @@ function land_actions.execute_free_card(game, player_id, tile_id)
 end
 
 function land_actions.execute_pay_rent(game, player_id, tile_id)
-  local player = game.players[player_id]
+  local player = game:find_player_by_id(player_id)
   local tile = game.board:get_tile_by_id(tile_id)
   local owner, st = land_actions.resolve_rent_owner(game, tile)
   if not owner then
@@ -227,7 +227,7 @@ function land_actions.execute_pay_rent(game, player_id, tile_id)
 end
 
 function land_actions.execute_tax_free_card(game, player_id)
-  local player = game.players[player_id]
+  local player = game:find_player_by_id(player_id)
   assert(inventory.consume(player, item_ids.tax_free) == true, "consume tax_free failed")
   _emit_event(monopoly_event.land.tax_free, {
     player = player,
@@ -237,7 +237,7 @@ function land_actions.execute_tax_free_card(game, player_id)
 end
 
 function land_actions.execute_pay_tax(game, player_id)
-  local player = game.players[player_id]
+  local player = game:find_player_by_id(player_id)
   local cash = game:player_balance(player, "金币")
   local fee = math.floor(cash * constants.tax_rate)
   if cash < fee then fee = cash end
