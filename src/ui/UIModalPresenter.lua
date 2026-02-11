@@ -295,7 +295,7 @@ local function _open_building_screen(state, choice, choice_id)
     ui:set_label(screen.body, choice.body or "")
   end
 
-  ui:set_button(screen.confirm, "确定")
+  ui:set_button(screen.confirm, "")
   ui:set_visible(screen.confirm, true)
   ui:set_touch_enabled(screen.confirm, selected ~= nil)
 
@@ -303,7 +303,7 @@ local function _open_building_screen(state, choice, choice_id)
   ui:set_visible(screen.cancel, allow_cancel)
   ui:set_touch_enabled(screen.cancel, allow_cancel)
   if allow_cancel then
-    ui:set_button(screen.cancel, choice.cancel_label or "取消")
+    ui:set_button(screen.cancel, "")
   end
 
   ui.choice_active = true

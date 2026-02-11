@@ -49,6 +49,21 @@ function panel_presenter.is_base_non_player_visible(ui, ctx)
   return ctx and ctx.can_operate == true
 end
 
+local function _resolve_avatar_key(row, empty_avatar_key)
+  if row and row.avatar ~= nil then
+    return row.avatar
+  end
+  return empty_avatar_key
+end
+
+local function _set_player_avatar(ui, runtime, avatar_name, image_key)
+  if image_key == nil then
+    return
+  end
+  local avatar_node = ui.query_node and ui.query_node(avatar_name) or runtime.query_node(avatar_name)
+  runtime.set_node_texture_keep_size(avatar_node, image_key)
+end
+
 function panel_presenter.refresh(state, ui_model, deps)
   assert(state ~= nil and state.ui ~= nil, "missing state.ui")
   assert(ui_model ~= nil and ui_model.panel ~= nil, "missing ui_model.panel")
@@ -60,6 +75,8 @@ function panel_presenter.refresh(state, ui_model, deps)
 
   runtime.set_client_role(nil)
   local player_rows = panel.player_rows or {}
+  local refs = state.ui_refs or {}
+  local empty_avatar_key = refs["空"]
   for i = 1, 4 do
     local row = player_rows[i]
     assert(row ~= nil, "missing player row: " .. tostring(i))
@@ -67,6 +84,8 @@ function panel_presenter.refresh(state, ui_model, deps)
     ui:set_label("玩家" .. tostring(i) .. "现金", row.cash)
     ui:set_label("玩家" .. tostring(i) .. "地块数量", row.land_count)
     ui:set_label("玩家" .. tostring(i) .. "总资产", row.total_assets)
+    local avatar_key = _resolve_avatar_key(row, empty_avatar_key)
+    _set_player_avatar(ui, runtime, "玩家" .. tostring(i) .. "头像", avatar_key)
   end
 
   if type(ui.item_slot_item_ids_by_role) ~= "table" then

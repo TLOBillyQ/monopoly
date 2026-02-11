@@ -646,6 +646,52 @@ local function _test_ui_model_player_slot_map_and_choice_owner()
     "player2 auto label expected")
 end
 
+local function _test_ui_model_player_profile_prefers_role_api_with_fallback()
+  local ui_model = require("src.ui.UIModel")
+  local g = _new_game()
+  g.players[1].name = "本地玩家1"
+  g.players[2].name = "本地玩家2"
+  g.players[2].eliminated = true
+  local role_by_id = {
+    [1] = {
+      get_name = function()
+        return "远端昵称1"
+      end,
+      get_head_icon = function()
+        return "HEAD_ICON_1"
+      end,
+    },
+    [2] = {
+      get_name = function()
+        error("name failed")
+      end,
+      get_head_icon = function()
+        error("avatar failed")
+      end,
+    },
+  }
+  local model = nil
+  _with_patches({
+    { target = GameAPI, key = "get_role", value = function(role_id)
+      return role_by_id[role_id]
+    end },
+  }, function()
+    model = ui_model.build(g, {
+      game = g,
+      ui_state = { ui = { item_slots = { 1, 2, 3, 4, 5 }, auto_play = false } },
+      last_turn = g.last_turn,
+      finished = g.finished,
+    })
+  end)
+
+  local row1 = model and model.panel and model.panel.player_rows and model.panel.player_rows[1] or nil
+  local row2 = model and model.panel and model.panel.player_rows and model.panel.player_rows[2] or nil
+  assert(row1 and row1.name == "远端昵称1", "player1 should use role name")
+  assert(row1 and row1.avatar == "HEAD_ICON_1", "player1 should use role avatar")
+  assert(row2 and row2.name == "本地玩家2 (出局)", "player2 name should fallback to local name with eliminated suffix")
+  assert(row2 and row2.avatar == nil, "player2 avatar should fallback to nil when role api failed")
+end
+
 local function _test_turn_dispatch_rejects_non_current_actor()
   local g = _new_game()
   local state = {
@@ -748,14 +794,13 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
     return 0
   end
 
-  for i = 1, 5 do
-    local node_name = "道具槽位" .. tostring(i)
+  local function new_texture_node(node_name)
     local storage = {}
-    node_map[node_name] = setmetatable({}, {
+    return setmetatable({}, {
       __index = function(_, k)
         return storage[k]
       end,
-      __newindex = function(t, k, v)
+      __newindex = function(_, k, v)
         if k == "image_texture" then
           local rk = role_key()
           image_logs[rk] = image_logs[rk] or {}
@@ -764,6 +809,15 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
         storage[k] = v
       end,
     })
+  end
+
+  for i = 1, 5 do
+    local node_name = "道具槽位" .. tostring(i)
+    node_map[node_name] = new_texture_node(node_name)
+  end
+  for i = 1, 4 do
+    local node_name = "玩家" .. tostring(i) .. "头像"
+    node_map[node_name] = new_texture_node(node_name)
   end
 
   local function query_nodes_by_name(name)
@@ -819,10 +873,10 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
         [2] = "自动：开",
       },
       player_rows = {
-        { name = "P1", cash = "现金: 1", land_count = "地块: 0", total_assets = "总资产: 1" },
-        { name = "P2", cash = "现金: 1", land_count = "地块: 0", total_assets = "总资产: 1" },
-        { name = "", cash = "", land_count = "", total_assets = "" },
-        { name = "", cash = "", land_count = "", total_assets = "" },
+        { name = "P1", avatar = "AVATAR_1", cash = "现金: 1", land_count = "地块: 0", total_assets = "总资产: 1" },
+        { name = "P2", avatar = nil, cash = "现金: 1", land_count = "地块: 0", total_assets = "总资产: 1" },
+        { name = "", avatar = nil, cash = "", land_count = "", total_assets = "" },
+        { name = "", avatar = nil, cash = "", land_count = "", total_assets = "" },
       },
     },
     item_slots_by_player = {
@@ -849,6 +903,8 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
 
   assert(image_logs[1] and image_logs[1]["道具槽位1"] == "ICON2001", "role1 slot icon expected")
   assert(image_logs[2] and image_logs[2]["道具槽位1"] == "ICON2002", "role2 slot icon expected")
+  assert(image_logs[0] and image_logs[0]["玩家1头像"] == "AVATAR_1", "player1 avatar should use row avatar")
+  assert(image_logs[0] and image_logs[0]["玩家2头像"] == "EMPTY", "player2 avatar should fallback to empty key")
   assert(touch_logs[1] and touch_logs[1]["行动按钮"] == true, "current role action button should be enabled")
   assert(touch_logs[2] and touch_logs[2]["行动按钮"] == false, "non-current role action button should be disabled")
   assert(touch_logs[1] and touch_logs[1]["托管按钮"] == true, "role1 auto button should be enabled")
@@ -1061,6 +1117,8 @@ local function _test_choice_modal_routes_to_new_screens()
     _assert_eq(nodes["建筑升级屏"].visible, true, "building screen should be visible")
     _assert_eq(nodes["建筑升级_标题"].text, "购买地块", "building title should follow option semantic")
     _assert_eq(nodes["建筑升级_文本"].text, "", "building body should sync from choice body")
+    _assert_eq(nodes["建筑升级_确定按钮"].text, "", "building confirm text should be empty")
+    _assert_eq(nodes["建筑升级_取消"].text, "", "building cancel text should be empty")
 
     ui_view.open_choice_modal(state, {
       id = 5,
@@ -1570,6 +1628,7 @@ return {
   _test_board_view_vehicle_resync_uses_set_position,
   _test_ui_model_structure,
   _test_ui_model_player_slot_map_and_choice_owner,
+  _test_ui_model_player_profile_prefers_role_api_with_fallback,
   _test_turn_dispatch_rejects_non_current_actor,
   _test_turn_dispatch_auto_rejects_unmapped_role,
   _test_turn_dispatch_item_slot_uses_actor_slot_map,

@@ -2,6 +2,54 @@ local pricing = require("src.game.land.LandPricing")
 
 local panel = {}
 
+local function _resolve_role(player)
+  if not player or player.id == nil then
+    return nil
+  end
+  if not (GameAPI and GameAPI.get_role) then
+    return nil
+  end
+  local ok, role = pcall(GameAPI.get_role, player.id)
+  if not ok then
+    return nil
+  end
+  return role
+end
+
+local function _resolve_role_name(role)
+  if not role or type(role.get_name) ~= "function" then
+    return nil
+  end
+  local ok, role_name = pcall(role.get_name)
+  if not ok then
+    return nil
+  end
+  if role_name == nil or role_name == "" then
+    return nil
+  end
+  return role_name
+end
+
+local function _resolve_role_avatar(role)
+  if not role or type(role.get_head_icon) ~= "function" then
+    return nil
+  end
+  local ok, avatar = pcall(role.get_head_icon)
+  if not ok then
+    return nil
+  end
+  return avatar
+end
+
+local function _resolve_player_profile(player)
+  local role = _resolve_role(player)
+  local display_name = _resolve_role_name(role) or player.name
+  return {
+    name = panel.build_player_label(display_name, player.eliminated == true),
+    avatar = _resolve_role_avatar(role),
+  }
+end
+
 function panel.build_turn_label(turn_count, countdown_seconds, countdown_active)
   if countdown_active then
     return "回合: " .. tostring(turn_count) .. " | 倒计时: " .. tostring(countdown_seconds or 0)
@@ -9,11 +57,12 @@ function panel.build_turn_label(turn_count, countdown_seconds, countdown_active)
   return "回合: " .. tostring(turn_count)
 end
 
-function panel.build_player_label(player)
-  if player.eliminated then
-    return player.name .. " (出局)"
+function panel.build_player_label(player_name, eliminated)
+  local display_name = player_name or ""
+  if eliminated then
+    return display_name .. " (出局)"
   end
-  return player.name .. " $" .. player.cash
+  return display_name
 end
 
 function panel.build_player_statuses(game, game_obj, max_players)
@@ -24,6 +73,7 @@ function panel.build_player_statuses(game, game_obj, max_players)
   for i = 1, count do
     local player = players[i]
     if player then
+      local profile = _resolve_player_profile(player)
       local cash = player.cash or 0
       local land_count = 0
       local total = cash
@@ -36,13 +86,14 @@ function panel.build_player_statuses(game, game_obj, max_players)
         end
       end
       out[i] = {
-        name = panel.build_player_label(player),
+        name = profile.name,
+        avatar = profile.avatar,
         cash = "现金: " .. tostring(cash),
         land_count = "地块: " .. tostring(land_count),
         total_assets = "总资产: " .. tostring(total),
       }
     else
-      out[i] = { name = "", cash = "", land_count = "", total_assets = "" }
+      out[i] = { name = "", avatar = nil, cash = "", land_count = "", total_assets = "" }
     end
   end
   return out
