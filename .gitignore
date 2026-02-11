@@ -26,3 +26,6 @@ Thumbs.db
 # Logs
 *.log
 __pycache__/
+.tmp_designation_full.js
+.tmp_designation_lean.js
+.tmp_designation.html
