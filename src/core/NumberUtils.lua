@@ -1,16 +1,21 @@
 local number_utils = {}
 
 local _tointeger = math and math.tointeger
-if not _tointeger then
-  _tointeger = function(value)
-    if type(value) ~= "number" then
-      return nil
-    end
-    if math and math.floor then
-      return math.floor(value)
-    end
-    return value
+
+local function _truncate_number(value)
+  if type(value) ~= "number" then
+    return nil
   end
+  if _tointeger then
+    local as_int = _tointeger(value)
+    if as_int ~= nil then
+      return as_int
+    end
+  end
+  if math and math.floor then
+    return math.floor(value)
+  end
+  return value
 end
 
 local function _parse_integer_string(value)
@@ -54,6 +59,14 @@ function number_utils.to_integer(value)
     return _parse_integer_string(value)
   end
   return nil
+end
+
+function number_utils.format_integer_part(value)
+  local truncated = _truncate_number(value)
+  if truncated ~= nil then
+    return tostring(truncated)
+  end
+  return tostring(value)
 end
 
 return number_utils

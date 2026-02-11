@@ -6,6 +6,7 @@ local remote_dice = require("src.game.item.ItemRemoteDice")
 local agent = require("src.game.game.Agent")
 local gameplay_rules = require("Config.GameplayRules")
 local inventory = require("src.game.item.ItemInventory")
+local number_utils = require("src.core.NumberUtils")
 
 local item_registry = {}
 local handlers = {}
@@ -147,7 +148,8 @@ local function _handle_target_player_item(game, player, item_id, context)
         if t.status.deity then
           deity_text = " 神:" .. t.status.deity.type
         end
-        table.insert(body_lines, t.name .. " 现金:" .. tostring(game:player_balance(t, "金币")) .. deity_text)
+        local cash_text = number_utils.format_integer_part(game:player_balance(t, "金币"))
+        table.insert(body_lines, t.name .. " 现金:" .. cash_text .. deity_text)
         table.insert(options, { id = t.id, label = t.name })
       end
       return {

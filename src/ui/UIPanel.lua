@@ -1,4 +1,5 @@
 local pricing = require("src.game.land.LandPricing")
+local number_utils = require("src.core.NumberUtils")
 
 local panel = {}
 
@@ -85,9 +86,9 @@ function panel.build_player_statuses(game, game_obj, max_players)
       out[i] = {
         name = profile.name,
         avatar = profile.avatar,
-        cash = "现金: " .. tostring(cash),
-        land_count = "地块: " .. tostring(land_count),
-        total_assets = "总资产: " .. tostring(total),
+        cash = "现金: " .. number_utils.format_integer_part(cash),
+        land_count = "地块: " .. number_utils.format_integer_part(land_count),
+        total_assets = "总资产: " .. number_utils.format_integer_part(total),
       }
     else
       out[i] = { name = "", avatar = nil, cash = "", land_count = "", total_assets = "" }

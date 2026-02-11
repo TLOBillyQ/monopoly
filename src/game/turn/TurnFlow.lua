@@ -4,6 +4,7 @@ local agent = require("src.game.game.Agent")
 local inventory = require("src.game.item.ItemInventory")
 local choice_resolver = require("src.game.choice.ChoiceResolver")
 local gameplay_rules = require("Config.GameplayRules")
+local number_utils = require("src.core.NumberUtils")
 require "vendor.third_party.ClassUtils"
 
 
@@ -67,7 +68,7 @@ local function _build_turn_log_line(game)
     return line .. " (已出局)"
   end
 
-  line = line .. " 金币=" .. tostring(game:player_balance(player, "金币"))
+  line = line .. " 金币=" .. number_utils.format_integer_part(game:player_balance(player, "金币"))
   local status_parts = _format_status(player)
   if #status_parts > 0 then
     line = line .. " 状态: " .. table.concat(status_parts, ", ")

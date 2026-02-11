@@ -5,6 +5,7 @@ local logger = require("src.core.Logger")
 local ui_view = require("src.ui.UIView")
 local ui_model = require("src.ui.UIModel")
 local ui_status_3d = require("src.ui.UIStatus3DLayer")
+local number_utils = require("src.core.NumberUtils")
 
 local tick_ui_sync = {}
 
@@ -33,7 +34,7 @@ function tick_ui_sync.log_status(view)
     "玩家:",
     tostring(view.current_player_name),
     "现金:",
-    tostring(view.current_player_cash)
+    number_utils.format_integer_part(view.current_player_cash)
   )
 end
 

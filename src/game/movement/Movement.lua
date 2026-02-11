@@ -2,6 +2,7 @@ local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("Config.GameplayRules")
 local inventory = require("src.game.item.ItemInventory")
 local monopoly_event = require("src.game.game.MonopolyEvents")
+local number_utils = require("src.core.NumberUtils")
 
 local movement = {}
 local item_ids = gameplay_rules.item_ids
@@ -145,7 +146,7 @@ function movement.move(game, player, steps, opts)
       player = player,
       count = pass_start,
       bonus = bonus,
-      text = player.name .. " 经过起点，获得 " .. bonus .. " 金币",
+      text = player.name .. " 经过起点，获得 " .. number_utils.format_integer_part(bonus) .. " 金币",
     })
   end
 

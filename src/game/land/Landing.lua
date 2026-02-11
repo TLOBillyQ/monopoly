@@ -9,6 +9,7 @@ local mine_effect = require("src.game.effect.MineEffect")
 local steal = require("src.game.item.ItemSteal")
 local market = require("src.game.market.Market")
 local vehicle_feature = require("src.game.vehicle.VehicleFeature")
+local number_utils = require("src.core.NumberUtils")
 
 local landing = {}
 
@@ -111,7 +112,9 @@ landing.executors = {
         return
       end
       ctx.game:add_player_cash(player, constants.pass_start_bonus)
-      logger.event(player.name .. " 停在起点，获得 " .. constants.pass_start_bonus .. " 金币")
+      logger.event(
+        player.name .. " 停在起点，获得 " .. number_utils.format_integer_part(constants.pass_start_bonus) .. " 金币"
+      )
     end,
   },
   item_draw_and_give = {

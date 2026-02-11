@@ -6,6 +6,7 @@ local bankruptcy = require("src.game.game.Bankruptcy")
 local gameplay_rules = require("Config.GameplayRules")
 local vehicles_cfg = require("Config.Generated.Vehicles")
 local vehicle_feature = require("src.game.vehicle.VehicleFeature")
+local number_utils = require("src.core.NumberUtils")
 
 local chance_registry = {}
 local handlers = {}
@@ -119,7 +120,7 @@ local function _register_defaults()
             player = p,
             card = card,
             effect = card.effect,
-            text = p.name .. " 获得 " .. delta .. " 金币",
+            text = p.name .. " 获得 " .. number_utils.format_integer_part(delta) .. " 金币",
           })
         end
       end
@@ -130,7 +131,7 @@ local function _register_defaults()
         player = player,
         card = card,
         effect = card.effect,
-        text = player.name .. " 获得 " .. delta .. " 金币",
+        text = player.name .. " 获得 " .. number_utils.format_integer_part(delta) .. " 金币",
       })
     end
   end)
@@ -146,7 +147,7 @@ local function _register_defaults()
             player = p,
             card = card,
             effect = card.effect,
-            text = p.name .. " 支付 " .. _abs_value(delta) .. " 金币",
+            text = p.name .. " 支付 " .. number_utils.format_integer_part(_abs_value(delta)) .. " 金币",
           })
         end
       end
@@ -158,7 +159,7 @@ local function _register_defaults()
         player = player,
         card = card,
         effect = card.effect,
-        text = player.name .. " 支付 " .. _abs_value(delta) .. " 金币",
+        text = player.name .. " 支付 " .. number_utils.format_integer_part(_abs_value(delta)) .. " 金币",
       })
     end
   end)
@@ -175,7 +176,7 @@ local function _register_defaults()
             player = p,
             card = card,
             effect = card.effect,
-            text = p.name .. " 按比例支付 " .. _abs_value(delta) .. " 金币",
+            text = p.name .. " 按比例支付 " .. number_utils.format_integer_part(_abs_value(delta)) .. " 金币",
           })
         end
       end
@@ -188,7 +189,7 @@ local function _register_defaults()
         player = player,
         card = card,
         effect = card.effect,
-        text = player.name .. " 按比例支付 " .. _abs_value(delta) .. " 金币",
+        text = player.name .. " 按比例支付 " .. number_utils.format_integer_part(_abs_value(delta)) .. " 金币",
       })
     end
   end)
@@ -211,7 +212,7 @@ local function _register_defaults()
       player = player,
       card = card,
       effect = card.effect,
-      text = player.name .. " 向每位玩家支付 " .. card.amount,
+      text = player.name .. " 向每位玩家支付 " .. number_utils.format_integer_part(card.amount),
     })
   end)
 
@@ -236,7 +237,7 @@ local function _register_defaults()
       player = player,
       card = card,
       effect = card.effect,
-      text = player.name .. " 收取每位玩家 " .. card.amount,
+      text = player.name .. " 收取每位玩家 " .. number_utils.format_integer_part(card.amount),
     })
   end)
 
