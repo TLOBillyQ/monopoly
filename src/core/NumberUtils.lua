@@ -47,13 +47,22 @@ local function _parse_integer_string(value)
     end
     num = num * 10 + digit
   end
-  return _tointeger(sign * num)
+  if _tointeger then
+    return _tointeger(sign * num)
+  end
+  return sign * num
 end
 
 function number_utils.to_integer(value)
   local value_type = type(value)
   if value_type == "number" then
-    return _tointeger(value)
+    if _tointeger then
+      return _tointeger(value)
+    end
+    if math and math.floor and value == math.floor(value) then
+      return value
+    end
+    return nil
   end
   if value_type == "string" then
     return _parse_integer_string(value)
@@ -62,9 +71,19 @@ function number_utils.to_integer(value)
 end
 
 function number_utils.format_integer_part(value)
-  local truncated = _truncate_number(value)
+  local value_type = type(value)
+  local truncated = nil
+  if value_type == "number" then
+    truncated = _truncate_number(value)
+  elseif value_type == "string" then
+    local as_number = tonumber(value)
+    if as_number ~= nil then
+      truncated = _truncate_number(as_number)
+    end
+  end
   if truncated ~= nil then
-    return tostring(truncated)
+    local as_int = _tointeger and _tointeger(truncated) or truncated
+    return string.format("%d", as_int)
   end
   return tostring(value)
 end
