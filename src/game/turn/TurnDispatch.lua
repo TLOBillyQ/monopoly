@@ -206,6 +206,7 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
         type = "choice_select",
         choice_id = choice.id,
         option_id = item_id,
+        actor_role_id = action.actor_role_id,
       }, opts)
     end
     if action.id == "next" then

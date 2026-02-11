@@ -1,90 +1,70 @@
-# 事件日志全量 Showtips 与提示文案清理
+# 基础屏倒计时常驻与回合计数日志精简
 
-本可执行计划是活文档。实施过程中持续更新“进度”“意外与发现”“决策日志”“结果与复盘”。
+本可执行计划是活文档。实施过程中必须持续更新“进度”“意外与发现”“决策日志”“结果与复盘”。
 
 本文件遵循 `/.agents/PLANS.md`。
 
 ## 目的 / 全局视角
 
-把所有事件日志都改为走 `show_tips`，并清理提示文本，移除坐标、索引、玩家 ID 等内部信息，优先使用 `Config/Generated` 的 `name/description` 数据。完成后玩家能看到更友好的提示文本，并能通过回归脚本与手工场景确认提示正确显示。
+改动完成后，基础屏的“倒计时”标签不再因输入锁或角色切换而隐藏，并且文案只显示时间。日志与提示中移除回合计数信息，玩家仍能看到其他状态提示。验收可通过 UI 观察倒计时常驻与回归日志检查来确认。
 
 ## 进度
 
-- [x] (2026-02-11 14:12Z) 重写计划，明确改动范围与验收路径。
-- [x] (2026-02-11 14:12Z) 修改 `src/ui/UIEventHandlers.lua`，移动事件统一走 `log.event`。
-- [x] (2026-02-11 14:12Z) 修改 `src/game/movement/Movement.lua`，移动提示移除坐标。
-- [x] (2026-02-11 14:12Z) 修改 `src/game/chance/ChanceRegistry.lua`，机会卡座驾提示使用名称。
-- [x] (2026-02-11 14:12Z) 修改 `src/ui/ActionAnim.lua`，动画提示使用地块/玩家名称。
-- [ ] (2026-02-11 14:12Z) 运行回归测试（失败：`.agents/tests/suites/ui.lua:810` 断言未通过）。
+- [x] (2026-02-11 14:15) 写入本计划并确认范围
+- [x] (2026-02-11 14:18) 更新基础屏倒计时常驻与文案
+- [x] (2026-02-11 14:18) 精简回合计数相关日志
+- [x] (2026-02-11 14:18) 同步测试与文档
+- [ ] (2026-02-11 14:25) 运行回归与检索验收（已完成：回归；剩余：运行时日志观察）
 
 ## 意外与发现
 
-- 观察：回归脚本在 `item slot action should apply` 断言处失败，需确认是否与本次 UI 提示改动无关。
-  证据：`lua .agents/tests/regression.lua` 报错 `.agents/tests/suites/ui.lua:810`。
+回归脚本曾失败于 “item slot action should apply”，原因是 item_slot 分支派发的 `choice_select` 缺少 `actor_role_id`，触发 `_validate_choice_actor` 拒绝。已补充该字段后回归通过。
+证据：`lua .agents/tests/regression.lua` -> `All regression checks passed (98)`。
 
 ## 决策日志
 
-- 决策：移动事件不再使用 `event_no_tips`，统一走 `log.event`。
-  理由：满足“所有 event log 走 show_tips”的需求。
+- 决策：倒计时文案统一为 `倒计时:<秒数>`，不再包含回合数或空格。
+  理由：与需求“只显示时间”的口径一致，减少显示歧义。
   日期/作者：2026-02-11 / Codex
 
-- 决策：动作动画提示解析地块与玩家名称，缺失时降级显示“未知地块/玩家 ID”。
-  理由：去除内部索引信息，同时保证提示稳定可用。
+- 决策：倒计时可见性由面板刷新时强制置为可见，并移出 `base_hidden_labels`。
+  理由：确保输入锁与非当前角色场景下也保持常驻显示。
   日期/作者：2026-02-11 / Codex
 
-- 决策：机会卡送座驾提示使用 `Config/Generated/Vehicles.lua` 的 `name`。
-  理由：玩家侧文案优先显示名称而不是 ID。
+- 决策：item_slot 触发的内部 `choice_select` 补齐 `actor_role_id`。
+  理由：与 `choice_select` 的角色校验对齐，避免被错误拒绝。
   日期/作者：2026-02-11 / Codex
 
 ## 结果与复盘
 
-当前已完成所有代码修改，但回归测试失败，尚未完成验证。需要确认失败是否与本次改动相关，并在验证通过后补充最终结果与证据。
+已完成倒计时常驻与日志精简、测试与文档同步，并修复 item_slot 选择被拒的问题。回归测试通过；运行时日志观察尚未补充。
 
 ## 背景与导读
 
-事件日志由 `src/core/Logger.lua` 触发 `show_tips`，UI 事件在 `src/ui/UIEventHandlers.lua` 中注册并写入日志。移动事件文本在 `src/game/movement/Movement.lua` 生成。机会卡与动作动画的提示文本分别在 `src/game/chance/ChanceRegistry.lua` 与 `src/ui/ActionAnim.lua` 生成。`Config/Generated` 目录提供名称与描述数据（例如 `Vehicles.lua`）。
+倒计时标签由 `src/ui/UIPanel.lua` 构建文案，并在 `src/ui/UIPanelPresenter.lua` 中写入 UI。当前基础屏使用 `src/ui/UIView.lua` 的 `base_hidden_labels` 配置来控制非当前角色可见性，导致倒计时会被隐藏。回合计数日志散落在 `src/game/turn/TickUISync.lua`、`src/game/turn/TurnStart.lua` 与 `src/game/turn/TurnFlow.lua` 中，需要统一去除回合数相关输出。
 
 ## 工作计划
 
-先确保移动类事件统一写入 `log.event`，保证所有事件日志都能显示提示。再清理移动提示中的坐标信息。随后补齐机会卡座驾提示使用名称，并调整动作动画提示为地块/玩家名称。最后运行回归脚本并记录结果。
+先修改 UI 侧：移除倒计时的隐藏配置，并确保倒计时始终可见，随后修改 `build_turn_label` 仅输出时间。再集中精简回合计数日志，去掉回合数字字段或整条回合计数日志。完成后更新 UI 测试与基础屏文档，最后运行回归测试与检索确认。
 
 ## 具体步骤
 
-工作目录：`C:\Users\Lzx_8\Desktop\dev\monopoly`
-
-1. 修改 `src/ui/UIEventHandlers.lua` 移动事件处理为统一 `log.event(data.text)`。
-2. 修改 `src/game/movement/Movement.lua` 的 `_tile_label`，移除坐标拼接。
-3. 修改 `src/game/chance/ChanceRegistry.lua`，新增座驾名映射并替换事件文案。
-4. 修改 `src/ui/ActionAnim.lua`，新增名称解析并用于提示文本。
-5. 运行回归：
-    lua .agents/tests/regression.lua
+工作目录为 `C:\Users\Lzx_8\Desktop\dev\monopoly`。先修改 `src/ui/UIView.lua`、`src/ui/UIPanelPresenter.lua`、`src/ui/UIPanel.lua`，确保倒计时常驻且文案为 `倒计时:<秒数>`。随后修改 `src/game/turn/TickUISync.lua`、`src/game/turn/TurnStart.lua`、`src/game/turn/TurnFlow.lua` 清理回合计数日志。接着更新 `.agents/tests/suites/ui.lua` 与 `.agents/docs/ui/01_UI_基础屏.md`。最后运行回归脚本并记录输出要点。
 
 ## 验证与验收
 
-运行 `lua .agents/tests/regression.lua`，预期全部通过；当前在 `.agents/tests/suites/ui.lua:810` 失败。需修复或确认无关后补充通过证据。
+运行 `lua .agents/tests/regression.lua`，预期全通过。进入游戏观察基础屏倒计时在非当前玩家与 `input_blocked=true` 时仍显示，文案为 `倒计时:<秒数>`。检索日志输出确保不再出现“回合: X / 回合X:”计数信息，但保留诸如“停留X回合”状态提示。
 
 ## 可重复性与恢复
 
-改动可重复执行。若需回滚，可对修改文件执行 `git checkout -- <file>`，然后重新运行回归测试确认恢复。
+修改步骤可重复执行；若需要回滚，可针对具体文件执行 `git checkout -- <file>` 并重新跑回归。
 
 ## 产物与备注
 
-本次修改文件：
-
-    src/ui/UIEventHandlers.lua
-    src/game/movement/Movement.lua
-    src/game/chance/ChanceRegistry.lua
-    src/ui/ActionAnim.lua
-
-回归失败摘要：
-
-    lua .agents/tests/regression.lua
-    .agents/tests/suites/ui.lua:810: item slot action should apply
+本次改动涉及以下文件：`src/ui/UIView.lua`、`src/ui/UIPanelPresenter.lua`、`src/ui/UIPanel.lua`、`src/game/turn/TickUISync.lua`、`src/game/turn/TurnStart.lua`、`src/game/turn/TurnFlow.lua`、`.agents/tests/suites/ui.lua`、`.agents/docs/ui/01_UI_基础屏.md`。
 
 ## 接口与依赖
 
-- 内部接口调整：`src/ui/ActionAnim.lua` 的 `_build_tip` 签名变为 `_build_tip(state, anim)`，仅供模块内部调用。
-- 依赖新增：`src/game/chance/ChanceRegistry.lua` 引入 `Config.Generated.Vehicles` 用于座驾名称映射。
-- 对外协议不变。
+不新增公共接口。倒计时文案由 `src/ui/UIPanel.lua` 的 `build_turn_label` 统一生成；可见性由 `src/ui/UIPanelPresenter.lua` 在刷新面板时强制保持可见。
 
-本次修订：按新需求重写计划并记录已完成的代码改动与当前回归失败情况，便于后续确认与修复。
+修改说明：更新进度与结果记录，补充 item_slot `actor_role_id` 修复结论与回归通过证据。

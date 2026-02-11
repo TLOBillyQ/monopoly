@@ -238,6 +238,29 @@ local function _register_node_click(cache, name, callback, registered, listeners
   end
 end
 
+local function _enable_debug_toggle_touch(cache)
+  local nodes = cache and cache["图片_82"] or nil
+  if not nodes or not nodes[1] then
+    local ok, result = pcall(runtime.query_nodes, "图片_82")
+    if not ok then
+      logger.info("[调试屏] 图片_82触控启用失败: query_nodes异常")
+      return
+    end
+    nodes = result
+  end
+  if not nodes or not nodes[1] then
+    logger.info("[调试屏] 图片_82触控启用失败: 未找到节点")
+    return
+  end
+  runtime.for_each_role_or_global(function()
+    for _, node in ipairs(nodes) do
+      node.disabled = false
+    end
+  end)
+  runtime.set_client_role(nil)
+  logger.info("[调试屏] 图片_82触控已启用", "nodes=" .. tostring(#nodes))
+end
+
 local function _should_block_intent(state, intent)
   if turn_dispatch.should_block_action then
     return turn_dispatch.should_block_action(state, intent)
@@ -520,6 +543,7 @@ function ui_event_router.bind(state, get_game)
   _register_node_click(cache, "图片_82", function()
     _record_debug_toggle_click(state)
   end, registered, listeners)
+  _enable_debug_toggle_touch(cache)
 
   local nodes = require("Data.UIManagerNodes")
   for _, entry in pairs(nodes) do

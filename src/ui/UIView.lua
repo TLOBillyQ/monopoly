@@ -125,7 +125,7 @@ function ui_view.build_ui_state()
     debug_toggle_click_count = 0,
     item_slots = item_slots,
     base_hidden_nodes = base_hidden_nodes,
-    base_hidden_labels = { "倒计时" },
+    base_hidden_labels = {},
     auto_control_nodes = { "托管按钮", "托管_文本" },
     market_active = false,
     choice_active = false,

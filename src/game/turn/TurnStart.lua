@@ -8,8 +8,6 @@ local function _phase_start(turn_mgr)
   logger.info(
     "[Eggy]",
     "回合开始:",
-    "turn_count",
-    tostring(tc),
     "current_player_index",
     tostring(current_index),
     "player_id",
@@ -29,19 +27,10 @@ local function _phase_start(turn_mgr)
     turn_mgr.game.last_turn.skipped = true
     return "end_turn", { player = player }
   end
-  local prev_tc = tc
   tc = tc + 1
   turn_mgr.game.turn.turn_count = tc
   turn_mgr.game.dirty.turn = true
   turn_mgr.game.dirty.any = true
-  logger.info(
-    "[Eggy]",
-    "回合计数更新:",
-    "from",
-    tostring(prev_tc),
-    "to",
-    tostring(tc)
-  )
   if player.status.stay_turns and player.status.stay_turns > 0 then
     turn_mgr.game:set_player_status(player, "stay_turns", player.status.stay_turns - 1)
     logger.event(player.name .. " 被扣留，剩余回合:", player.status.stay_turns)

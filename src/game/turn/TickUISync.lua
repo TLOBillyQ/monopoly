@@ -32,9 +32,7 @@ function tick_ui_sync.log_status(view)
     "玩家:",
     tostring(view.current_player_name),
     "现金:",
-    tostring(view.current_player_cash),
-    "回合:",
-    tostring(view.turn_count)
+    tostring(view.current_player_cash)
   )
 end
 
@@ -139,8 +137,6 @@ local function _refresh_view(state, game, next_model)
     logger.info(
       _build_log_prefix(),
       "相机跟随检查:",
-      "回合",
-      tostring(turn_count),
       "玩家索引",
       tostring(current_index),
       "玩家ID",

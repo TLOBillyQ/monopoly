@@ -874,7 +874,7 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
     ui = {
       item_slots = { "道具槽位1", "道具槽位2", "道具槽位3", "道具槽位4", "道具槽位5" },
       base_hidden_nodes = { "行动按钮", "道具槽位1", "道具槽位2", "道具槽位3", "道具槽位4", "道具槽位5" },
-      base_hidden_labels = { "倒计时" },
+      base_hidden_labels = {},
       auto_control_nodes = { "托管按钮", "托管_文本" },
       set_label = function(_, name, text)
         local rk = role_key()
@@ -902,7 +902,7 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
 
   local ui_model = {
     panel = {
-      turn_label = "回合: 1",
+      turn_label = "倒计时:0",
       auto_label = "自动：关",
       auto_label_by_player = {
         [1] = "自动：关",
@@ -949,7 +949,7 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
   assert(touch_logs[2] and touch_logs[2]["托管_文本"] == false, "role2 auto label should stay non-clickable")
   assert(label_logs[1] and label_logs[1]["托管_文本"] == "自动：关", "role1 auto label should show status")
   assert(label_logs[2] and label_logs[2]["托管_文本"] == "自动：开", "role2 auto label should show status")
-  assert(visible_logs[2] and visible_logs[2]["倒计时"] == false, "non-current role countdown should be hidden")
+  assert(visible_logs[2] and visible_logs[2]["倒计时"] == true, "non-current role countdown should be visible")
   assert(visible_logs[2] and visible_logs[2]["道具槽位1"] == false, "non-current role slot should be hidden")
   assert(visible_logs[2] and visible_logs[2]["托管按钮"] == true, "auto button should stay visible")
   assert(visible_logs[2] and visible_logs[2]["托管_文本"] == true, "auto label should stay visible")
@@ -972,7 +972,7 @@ local function _test_apply_input_lock_keeps_auto_controls_enabled()
       input_blocked = true,
       item_slots = { "道具槽位1" },
       base_hidden_nodes = { "行动按钮", "道具槽位1" },
-      base_hidden_labels = { "倒计时" },
+      base_hidden_labels = {},
       auto_control_nodes = { "托管按钮", "托管_文本" },
       choice_screens = {
         player = { option_buttons = {}, cancel = "取消按钮" },

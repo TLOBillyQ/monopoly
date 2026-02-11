@@ -50,11 +50,8 @@ local function _resolve_player_profile(player)
   }
 end
 
-function panel.build_turn_label(turn_count, countdown_seconds, countdown_active)
-  if countdown_active then
-    return "回合: " .. tostring(turn_count) .. " | 倒计时: " .. tostring(countdown_seconds or 0)
-  end
-  return "回合: " .. tostring(turn_count)
+function panel.build_turn_label(_, countdown_seconds)
+  return "倒计时:" .. tostring(countdown_seconds or 0)
 end
 
 function panel.build_player_label(player_name, eliminated)

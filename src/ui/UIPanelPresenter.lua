@@ -97,6 +97,7 @@ function panel_presenter.refresh(state, ui_model, deps)
     local base_visible = panel_presenter.is_base_non_player_visible(ui, ctx)
     panel_presenter.apply_base_non_player_visibility(ui, base_visible)
 
+    ui:set_visible("倒计时", true)
     ui:set_label("倒计时", panel.turn_label)
     ui:set_touch_enabled("行动按钮", base_visible)
     refresh_item_slots(state, ui_model, {

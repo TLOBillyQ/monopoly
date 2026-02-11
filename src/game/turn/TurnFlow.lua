@@ -60,15 +60,14 @@ local function _format_properties(game, player)
   return props
 end
 
-local function _build_turn_log_line(game, turn_count)
+local function _build_turn_log_line(game)
   local player = game:current_player()
-  local next_count = player.eliminated and turn_count or (turn_count + 1)
-  local line = "回合" .. tostring(next_count) .. ": "
+  local line = "玩家 " .. tostring(player.name)
   if player.eliminated then
-    return line .. tostring(player.name) .. " (已出局)"
+    return line .. " (已出局)"
   end
 
-  line = line .. tostring(player.name) .. " 金币=" .. tostring(game:player_balance(player, "金币"))
+  line = line .. " 金币=" .. tostring(game:player_balance(player, "金币"))
   local status_parts = _format_status(player)
   if #status_parts > 0 then
     line = line .. " 状态: " .. table.concat(status_parts, ", ")
@@ -192,8 +191,7 @@ function turn_flow:_build_flow()
   for name, fn in pairs(self.phases) do
     states[name] = function(args)
       if name == "start" then
-        local tc = self.game.turn.turn_count
-        logger.info(_build_turn_log_line(self.game, tc))
+        logger.info(_build_turn_log_line(self.game))
       end
       self.game.turn.phase = name
       self.game.dirty.turn = true
@@ -287,12 +285,9 @@ function turn_flow:next_player()
   self.game.turn.current_player_index = next_index
   self.game.dirty.turn = true
   self.game.dirty.any = true
-  local tc = self.game.turn.turn_count
   logger.info(
     "[Eggy]",
     "切换玩家:",
-    "回合",
-    tostring(tc),
     "current_index",
     tostring(current),
     "next_index",
