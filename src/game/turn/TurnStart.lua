@@ -37,7 +37,11 @@ local function _phase_start(turn_mgr)
     turn_mgr.game.last_turn.note = "被扣留"
     turn_mgr.game.last_turn.skipped = true
     turn_mgr.game.last_turn.stay_turns = player.status.stay_turns
-    return "end_turn", { player = player }
+    local turn = turn_mgr.game.turn
+    turn.detained_wait_active = true
+    turn.detained_wait_elapsed = 0
+    turn.detained_wait_seconds = 5
+    return "detained_wait", { player = player }
   end
 
   local phase_res = item_phase.run(turn_mgr, "pre_action", {

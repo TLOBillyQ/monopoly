@@ -42,7 +42,15 @@ function tick_ui_sync.update_countdown(game, state)
   local timeout = constants.action_timeout_seconds or 0
   local seconds = 0
   local active = false
-  if timeout > 0 then
+  if game.turn and game.turn.detained_wait_active then
+    active = true
+    local turn = game.turn
+    local remaining = (turn.detained_wait_seconds or 0) - (turn.detained_wait_elapsed or 0)
+    if remaining < 0 then
+      remaining = 0
+    end
+    seconds = math.ceil(remaining)
+  elseif timeout > 0 then
     if state.pending_choice and state.pending_choice_elapsed then
       active = true
       local remaining = timeout - state.pending_choice_elapsed

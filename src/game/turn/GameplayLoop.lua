@@ -25,7 +25,7 @@ local function _dispatch_action_with_close_choice(game, state, action, ports)
 end
 
 local function _is_phase_input_blocked(phase)
-  return phase == "wait_move_anim" or phase == "wait_action_anim"
+  return phase == "wait_move_anim" or phase == "wait_action_anim" or phase == "detained_wait"
 end
 
 local function _sync_input_blocked(state, phase)
@@ -219,6 +219,31 @@ local function _update_action_button_timer(ctx)
   }, ctx.ports)
 end
 
+local function _update_detained_wait_timer(game, state, dt)
+  if not (game and state) then
+    return
+  end
+  local turn = game.turn
+  if not (turn and turn.detained_wait_active) then
+    return
+  end
+  local elapsed = (turn.detained_wait_elapsed or 0) + (dt or 0)
+  local timeout = turn.detained_wait_seconds or 0
+  if timeout <= 0 then
+    turn.detained_wait_active = false
+    turn.detained_wait_elapsed = 0
+    turn_dispatch.step_turn(game)
+    return
+  end
+  if elapsed < timeout then
+    turn.detained_wait_elapsed = elapsed
+    return
+  end
+  turn.detained_wait_active = false
+  turn.detained_wait_elapsed = 0
+  turn_dispatch.step_turn(game)
+end
+
 function gameplay_loop.set_game(state, game)
   assert(game ~= nil, "missing game")
   local ports = _resolve_ports(state)
@@ -410,6 +435,7 @@ function gameplay_loop.tick(game, state, dt)
     dt = dt,
     ports = ports,
   })
+  _update_detained_wait_timer(game, state, dt)
 
   phase = game.turn.phase
   if _sync_input_blocked(state, phase) then

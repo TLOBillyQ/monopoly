@@ -14,6 +14,7 @@ local wait_states = {
   wait_choice = true,
   wait_move_anim = true,
   wait_action_anim = true,
+  detained_wait = true,
 }
 
 local function _format_status(player)
@@ -273,6 +274,15 @@ function turn_flow:_build_flow()
       return "wait_action_anim", args
     end
     return args.resume_state, args.resume_args
+  end
+  states.detained_wait = function(args)
+    self.game.turn.phase = "detained_wait"
+    self.game.dirty.turn = true
+    self.game.dirty.any = true
+    if self.game.turn.detained_wait_active then
+      return "detained_wait", args
+    end
+    return "end_turn", args
   end
 
   return flow:new({ start = "start", states = states })
