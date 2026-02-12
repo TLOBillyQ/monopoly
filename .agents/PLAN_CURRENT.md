@@ -1,4 +1,4 @@
-# 下一轮：UI 事件路由拆分与节点校验
+# 下一轮：Clean Code 小步重构（UI 路由与配置清理）
 
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
@@ -7,67 +7,53 @@
 
 ## 目的 / 全局视角
 
-本轮目标是把 UI 事件路由拆分为职责清晰的模块，增加 UI 节点启动期校验，并去除 UI 事件对全局角色的隐式依赖。完成后，UI 交互逻辑更容易定位与测试，节点缺失可在启动时暴露而不是运行时才提示。可见结果：UI 初始化时会执行节点校验并给出明确错误信息，`UIEventRouter` 体积显著缩小，测试脚本在无 `all_roles` 情况也能运行。
+本轮目标是在不改变行为的前提下，做小步、低风险的 Clean Code 清理，范围仅限 `src/` 与 `Config/`。完成后，UI 事件路由的函数参数符合团队规范，配置文件无噪音格式问题，可读性更好。可见结果：回归脚本通过，文件 diff 主要是结构与格式优化。
 
 ## 进度
 
-- [x] (2025-03-04 13:30Z) 拆分 UIEventRouter 的职责（状态判断 / 输入解析 / 节点注册）。
-- [x] (2025-03-04 13:30Z) 增加 UI 节点启动期校验。
-- [x] (2025-03-04 13:30Z) 为 UIEvents 增加角色注入接口，移除隐式全局依赖。
-- [x] (2025-03-04 13:30Z) 回归验证与新增测试。
+- [x] (2025-03-04 14:30Z) 清理 Config 中的格式噪音。
+- [x] (2025-03-04 14:30Z) UIEventRouter 参数规约与小幅整理。
+- [x] (2025-03-04 14:30Z) 回归验证。
 
 ## 意外与发现
 
-- 观察：`UIEventBindings.register_missing_button_tip` 迭代时遇到 `validate` 函数导致崩溃。
-  证据：过滤非 table 后回归通过。
+暂无。实施过程中记录发现与证据。
 
 ## 决策日志
 
-- 决策：UI 事件路由拆成 3 个模块，`UIEventRouter` 仅做协调。
-  理由：减少单文件职责混杂，便于测试与维护。
+- 决策：只做低风险重构，不改变行为。
+  理由：需求为 clean code，优先稳定与可读性。
   日期/作者：2025-03-04 / Codex
 
 ## 结果与复盘
 
-完成 UI 事件路由拆分、节点校验与角色注入，回归通过，UI 逻辑更易测试与维护。
+完成小步 clean code 改造，配置噪音消除，UI 路由参数符合规范，回归通过。
 
 ## 背景与导读
 
-目前 `src/presentation/interaction/UIEventRouter.lua` 同时承担节点注册、状态判断、输入解析、调试开关与提示输出，违反 SRP。`src/presentation/shared/UIEvents.lua` 直接读取全局 `all_roles`，导致 UI 事件不可在无运行时环境复用。`Data/UIManagerNodes.lua` 是 UI 节点映射，但缺少启动期校验，节点漂移只能在运行时提示。
+`UIEventRouter` 里存在超过 3 个参数的函数（违反编码纪律），且有轻微排版噪音。`Config/RuntimeRefs.lua` 存在尾随空格。此次仅做局部整理。
 
 相关文件：
 - `src/presentation/interaction/UIEventRouter.lua`
-- `src/presentation/shared/UIEvents.lua`
-- `Data/UIManagerNodes.lua`
-- `src/app/init.lua`
-- `.agents/tests/suites/presentation_ui.lua`
+- `Config/RuntimeRefs.lua`
 
 ## 工作计划
 
-先拆分 `UIEventRouter`：把节点注册与事件监听移动到 `UIEventBindings.lua`，把 UI 状态判断逻辑移动到 `UIEventState.lua`，把输入解析/意图生成移动到 `UIEventIntents.lua`。`UIEventRouter` 仅负责调用新模块的公开接口。随后在 UI 初始化链路中加入 `UIManagerNodes` 的校验函数，检查必要节点是否存在。最后在 `UIEvents` 中增加 `set_roles(roles)` 或 `configure({ roles = ... })`，在初始化阶段注入角色列表并移除对 `all_roles` 的直接依赖。
+先清理 `Config/RuntimeRefs.lua` 的尾随空格。然后把 `UIEventRouter` 内 `_dispatch` 改为接收单一上下文表，避免超过 3 个参数，并顺带移除多余空行，保持行为不变。最后运行回归脚本确认无行为变化。
 
 ## 具体步骤
 
-1) 拆分 UIEventRouter。
+1) 清理配置格式。
 
-新增以下模块：
-- `src/presentation/interaction/UIEventState.lua`：提供 `is_base_screen_active(state)`、`resolve_debug_enabled(state)` 等纯状态判断。
-- `src/presentation/interaction/UIEventBindings.lua`：提供 `register_node_click(...)` 等节点注册与监听安装。
-- `src/presentation/interaction/UIEventIntents.lua`：提供 `choice_cancel_intent(...)`、`choice_select_intent(...)`、`choice_confirm_intent(...)` 等输入解析。
+在 `Config/RuntimeRefs.lua` 移除尾随空格，避免无意义 diff。
 
-修改 `UIEventRouter.lua`：移除上述函数实现，改为调用新模块。保持现有对外 API 与行为不变。
+2) UIEventRouter 参数规约。
 
-2) 增加 UI 节点启动期校验。
+把 `_dispatch(state, game, intent, opts)` 改为 `_dispatch(ctx)`，由调用处传入 `{ state = ..., game = ..., intent = ..., opts = ... }`。保证所有调用点更新且行为不变。
 
-在 `Data/UIManagerNodes.lua` 新增导出函数 `validate(required_names)`，返回缺失列表。调用点放在 `src/app/init.lua` 的 UI 初始化后，传入当前业务所需节点集合（从 `UIEventRouter` 与 `UIStatus3DLayer` 使用的节点名称抽取）。缺失时使用 `error` 报出清晰提示。
+3) 回归验证。
 
-3) UIEvents 注入角色列表。
-
-在 `src/presentation/shared/UIEvents.lua` 增加 `set_roles(roles)`，内部保存角色列表；`send_to_all` 从内部角色列表读取，不再直接访问 `all_roles`。在 `src/app/init.lua` 初始化阶段调用 `UIEvents.set_roles(all_roles)`。
-
-4) 回归与新增测试。
-
-在 `.agents/tests/suites/presentation_ui.lua` 增加节点校验失败/成功用例与 `UIEvents` 无全局角色测试。运行现有回归脚本，确保行为不变。
+运行现有回归脚本，确认无行为变化。
 
 ## 验证与验收
 
@@ -77,35 +63,24 @@
     lua .agents/tests/gameplay_loop_no_ui.lua
     lua .agents/tests/dep_rules.lua
 
-新增测试预期：
-- 缺失节点时提示明确错误信息。
-- `UIEvents.send_to_all` 在未注入 roles 时无崩溃。
+预期：全部通过。
 
 ## 可重复性与恢复
 
-每一步为独立改动，若 UI 路由拆分导致行为偏差，可先回滚新模块并恢复到单文件实现。节点校验如影响旧数据，可先降级为 warning 并记录缺失列表。
+每一步为小改动，可独立回滚。若回归失败，先回滚 UIEventRouter 参数调整。
 
 ## 产物与备注
 
-预期新增/修改：
+预期修改：
 
-    src/presentation/interaction/UIEventState.lua
-    src/presentation/interaction/UIEventBindings.lua
-    src/presentation/interaction/UIEventIntents.lua
+    Config/RuntimeRefs.lua
     src/presentation/interaction/UIEventRouter.lua
-    src/presentation/shared/UIEvents.lua
-    Data/UIManagerNodes.lua
-    src/app/init.lua
-    .agents/tests/suites/presentation_ui.lua
 
 ## 接口与依赖
 
-- `UIEventState` 只读 state，不触发副作用。
-- `UIEventBindings` 只处理节点查询与监听注册。
-- `UIEventIntents` 只生成意图，不执行动作。
-- `UIEvents` 必须通过 `set_roles` 注入角色列表。
+- `_dispatch` 改为单参数上下文对象，避免超过 3 个参数。
 
 ---
 
-变更说明（2025-03-04 / Codex）：清空旧计划，写入“UI 事件路由拆分与节点校验”可执行计划。
-变更说明（2025-03-04 / Codex）：完成全部步骤与回归验证，记录按钮提示注册的迭代修复。
+变更说明（2025-03-04 / Codex）：清空旧计划，写入 Clean Code 小步重构计划。
+变更说明（2025-03-04 / Codex）：完成全部步骤并回归验证。

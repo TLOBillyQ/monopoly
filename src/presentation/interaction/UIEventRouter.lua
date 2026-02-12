@@ -103,8 +103,13 @@ local function _should_block_intent(state, intent)
   return false
 end
 
-local function _dispatch(state, game, intent, opts)
+local function _dispatch(ctx)
+  assert(ctx ~= nil, "missing ctx")
+  local intent = ctx.intent
   assert(intent ~= nil, "missing intent")
+  local state = ctx.state
+  local game = ctx.game
+  local opts = ctx.opts
   local intent_type = intent.type
   if _should_block_intent(state, intent) then
     return
@@ -372,7 +377,12 @@ function ui_event_router.bind(state, get_game)
     if intent and intent.actor_role_id == nil then
       intent.actor_role_id = _resolve_actor_role_id(data)
     end
-    _dispatch(state, resolve_game(), intent, dispatch_opts)
+    _dispatch({
+      state = state,
+      game = resolve_game(),
+      intent = intent,
+      opts = dispatch_opts,
+    })
   end
 
   local cache = {}
