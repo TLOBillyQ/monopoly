@@ -14,6 +14,10 @@
 - [x] (2025-03-04 15:28Z) 以当前 UI 导出为基准完成节点名对齐。
 - [x] (2025-03-04 15:28Z) 修正倒计时标签节点名一致性。
 - [x] (2025-03-04 15:40Z) 补充交互与回归验证记录。
+- [x] (2025-03-04 15:55Z) 修复入口模块路径兼容层缺失。
+- [x] (2025-03-04 16:05Z) 更新入口引用并移除兼容层。
+- [x] (2025-03-04 16:20Z) 修复 UIManager Builder 误建节点问题。
+- [x] (2025-03-04 16:30Z) 修复 build_log_prefix 传参错误。
 
 ## 意外与发现
 
@@ -21,6 +25,14 @@
   证据：`Data/UIManagerNodes.lua` 中没有“倒计时”节点，`src/presentation/ui/UIPanelPresenter.lua` 与 `src/presentation/api/UIView.lua` 使用了“倒计时”。
 - 观察：回归测试断言仍使用旧节点名“倒计时”，导致用例失败。
   证据：`lua .agents/tests/regression.lua` 报错 `non-current role countdown should be visible`，定位到 `.agents/tests/suites/presentation_ui.lua` 的断言。
+- 观察：运行时从 `src.presentation.*` 直连模块加载失败，因为实际实现位于子目录（`render/api/state/interaction/shared`）。
+  证据：客户端报错 `module not found: 'src.presentation.BoardScene'` 等一系列路径。
+- 观察：入口模块需要改为新路径，兼容层已不再需要。
+  证据：`src/app/init.lua` 中旧 require 已替换为 `src.presentation.render/api/state/interaction/shared` 路径。
+- 观察：`Data/UIManagerNodes.lua` 在节点表里挂了 `validate`，导致 Builder 把函数当节点配置。
+  证据：报错 `Builder.lua:40: attempt to index a function value (local '_config')`，对应 `validate` 键。
+- 观察：`build_log_prefix` 被当作字符串传入，导致 `BoardView` 调用时报错。
+  证据：报错 `BoardView.lua:68: attempt to call a string value (local 'build_log_prefix')`，调用点在 `GameplayLoopPortsAdapter.lua`。
 
 ## 决策日志
 
@@ -34,7 +46,7 @@
 
 ## 结果与复盘
 
-已完成倒计时节点名对齐与回归验证，UI 节点表与逻辑保持一致，回归通过。剩余人工验收需要在 Eggy 编辑器内完成。经验：UI 节点名调整需要同步测试断言，否则回归会误报。
+已完成倒计时节点名对齐与回归验证，UI 节点表与逻辑保持一致，回归通过。入口已更新为新路径并移除兼容层。修复了 UIManager Builder 误把 `validate` 当节点的问题，以及 `build_log_prefix` 传参错误。剩余人工验收需要在 Eggy 编辑器内完成。经验：UI 节点名调整需要同步测试断言，否则回归会误报；入口路径变更要同步调用方并清理兼容层；节点表只应包含节点配置；日志前缀应传函数而不是字符串。
 
 ## 背景与导读
 
@@ -137,6 +149,9 @@
     src/presentation/ui/UIPanelPresenter.lua
     src/presentation/shared/UIAliases.lua
     .agents/tests/suites/presentation_ui.lua
+    src/app/init.lua
+    Data/UIManagerNodes.lua
+    src/presentation/api/GameplayLoopPortsAdapter.lua
 
 关键证据（示例）：
 

@@ -204,9 +204,15 @@ local function _build_missing_list(lookup, required_names)
   return missing
 end
 
-function nodes.validate(required_names)
+local function _validate(required_names)
   local lookup = _build_node_names()
   return _build_missing_list(lookup, required_names)
 end
+
+setmetatable(nodes, {
+  __index = {
+    validate = _validate,
+  },
+})
 
 return nodes

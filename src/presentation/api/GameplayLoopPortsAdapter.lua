@@ -147,7 +147,7 @@ local function _default_refresh_from_dirty(game, state, dirty)
     if only_countdown then
       ui_view.refresh_turn_label(state, next_model.panel and next_model.panel.turn_label or "")
     else
-      ui_view.render(state, next_model, tick_ui_sync.log_once, tick_ui_sync.log_prefix())
+      ui_view.render(state, next_model, tick_ui_sync.log_once, tick_ui_sync.log_prefix)
       ui_refreshed = true
       if next_model.choice then
         ui_view.open_choice_modal(state, next_model.choice, next_model.market)
