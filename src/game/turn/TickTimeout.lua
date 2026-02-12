@@ -2,14 +2,28 @@ local agent = require("src.game.game.Agent")
 local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("Config.GameplayRules")
 local turn_dispatch = require("src.game.turn.TurnDispatch")
-local ui_view = require("src.presentation.api.UIView")
 
 local tick_timeout = {}
 
+local function _resolve_ports(state)
+  local ports = state and state.gameplay_loop_ports or nil
+  if not ports then
+    return nil
+  end
+  if type(ports.close_choice_modal) == "function" or type(ports.close_popup) == "function" then
+    return ports
+  end
+  return nil
+end
+
 local function _dispatch_action_with_close_choice(game, state, action)
-  turn_dispatch.dispatch_action(game, state, action, {
+  local ports = _resolve_ports(state)
+  if not ports then
+    return turn_dispatch.dispatch_action(game, state, action)
+  end
+  return turn_dispatch.dispatch_action(game, state, action, {
     on_close_choice = function(ctx)
-      ui_view.close_choice_modal(ctx)
+      ports.close_choice_modal(ctx)
     end,
   })
 end
@@ -210,6 +224,12 @@ local default_policy = {
       return _modal_timeout_seconds(game, state)
     end,
     on_timeout = function(ctx)
+      local ports = _resolve_ports(ctx)
+      if ports and ports.close_popup then
+        ports.close_popup(ctx)
+        return
+      end
+      local ui_view = require("src.presentation.api.UIView")
       ui_view.close_popup(ctx)
     end,
   },

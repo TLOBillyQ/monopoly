@@ -10,15 +10,16 @@
 
 ## 进度
 
-- [ ] (2025-03-04 00:00Z) 明确端口职责与命名，完成端口接口草案。
-- [ ] (2025-03-04 00:00Z) 在组合根注入端口实现，替换核心对 UI 的直接依赖。
-- [ ] (2025-03-04 00:00Z) 将 UI 同步/事件处理迁移到 `presentation` 侧，并适配端口调用。
-- [ ] (2025-03-04 00:00Z) 补齐验证脚本与回归步骤，确认无 UI 也能跑核心流程。
+- [x] (2025-03-04 08:45Z) 明确端口职责与命名，完成端口接口草案并落地到默认端口。
+- [x] (2025-03-04 08:52Z) 在运行期注入端口实现，核心流程改为使用端口安装事件处理。
+- [x] (2025-03-04 09:05Z) UI 同步与渲染调用迁移到端口默认实现，核心模块移除直接 UI 依赖。
+- [x] (2025-03-04 09:20Z) 破产渲染清理迁移为端口回调。
+- [x] (2025-03-04 09:26Z) 新增无 UI 回归脚本并可运行。
 
 ## 意外与发现
 
-- 观察：无。
-  证据：无。
+- 观察：`tick_ui_sync` 内的渲染与调试面板逻辑已迁移到端口默认实现。
+  证据：`rg -n "src\.presentation" src/game` 只剩 `GameplayLoopPorts.lua`。
 
 ## 决策日志
 
@@ -28,7 +29,7 @@
 
 ## 结果与复盘
 
-待完成后补充。届时总结端口解耦效果、是否影响 UI 行为、哪些模块仍需要进一步拆分。
+已完成核心层对 `src.presentation` 的直接依赖清理，端口默认实现承接 UI 行为，并新增无 UI 回归脚本。后续如需继续拆分，可考虑把 `move_anim` 也下沉到 presentation 专属端口模块。
 
 ## 背景与导读
 
@@ -75,13 +76,13 @@
 
 在仓库根目录 `/Users/billyq/Dev/Github/Lua/monopoly` 执行以下命令：
 
-    lua .agents/tests/regressions.lua
+    lua .agents/tests/regression.lua
 
 预期：已有回归脚本通过。
 
 新增或更新一个无 UI 测试脚本后，运行：
 
-    lua .agents/tests/<新脚本名>.lua
+    lua .agents/tests/gameplay_loop_no_ui.lua
 
 预期：脚本输出包含“tick ok”或类似成功标记，且运行时不加载 `src/presentation`。
 
@@ -95,19 +96,18 @@
 
 ## 产物与备注
 
-预期会修改的文件（路径可能增删，以实现为准）：
+实际修改的文件：
 
     src/game/turn/GameplayLoopPorts.lua
     src/game/turn/GameplayLoop.lua
     src/game/turn/TickUISync.lua
     src/game/turn/TickTimeout.lua
     src/game/game/Bankruptcy.lua
-    src/presentation/api/UIEventHandlers.lua
-    .agents/tests/<新脚本名>.lua
+    .agents/tests/gameplay_loop_no_ui.lua
 
-示例验证输出（示意）：
+验证输出（示意）：
 
-    $ lua .agents/tests/<新脚本名>.lua
+    $ lua .agents/tests/gameplay_loop_no_ui.lua
     tick ok
 
 ## 接口与依赖
@@ -129,10 +129,11 @@
 - `sync_debug_log(state)`
 - `reset_status_3d(state)`
 - `sync_status_3d(game, state, dirty)`
+- `install_event_handlers(game, logger, state)`
 - `on_bankruptcy_tiles_cleared(game, player, owned_tile_ids)`（新增）
 
 默认实现放在 `presentation` 侧，核心逻辑只调用端口，不直接依赖 UI 模块。
 
 ---
 
-变更说明（2025-03-04 / Codex）：清空旧计划，新增“解耦核心游戏逻辑与 UI 依赖”的可执行计划，依据 SRP/DIP 重构方案落地为端口化步骤。
+变更说明（2025-03-04 / Codex）：已执行端口解耦，核心层移除 `src.presentation` 依赖，新增无 UI 回归脚本并更新验收命令。

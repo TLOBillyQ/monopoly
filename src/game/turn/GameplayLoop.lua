@@ -2,7 +2,6 @@ local agent = require("src.game.game.Agent")
 local items_cfg = require("Config.Generated.Items")
 local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("Config.GameplayRules")
-local event_handlers = require("src.presentation.api.UIEventHandlers")
 local logger = require("src.core.Logger")
 local turn_dispatch = require("src.game.turn.TurnDispatch")
 local turn_anim = require("src.game.turn.TurnAnim")
@@ -13,7 +12,14 @@ local gameplay_loop = {}
 
 local function _resolve_ports(state)
   local override = state and state.gameplay_loop_ports or nil
-  return gameplay_loop_ports.resolve(override)
+  if override and not override._resolved then
+    state.gameplay_loop_ports = gameplay_loop_ports.resolve(override)
+    state.gameplay_loop_ports._resolved = true
+  elseif not override then
+    state.gameplay_loop_ports = gameplay_loop_ports.resolve(nil)
+    state.gameplay_loop_ports._resolved = true
+  end
+  return state.gameplay_loop_ports
 end
 
 local function _dispatch_action_with_close_choice(game, state, action, ports)
@@ -254,6 +260,7 @@ function gameplay_loop.set_game(state, game)
   state.role_control_lock_suppress = 0
   ports.reset_status_3d(state)
   state.game = game
+  state.gameplay_loop_ports = ports
   game.ui_port = state
   if type(state.on_tile_owner_changed) == "function" then
     game.tile_owner_notifier = {
@@ -269,7 +276,9 @@ function gameplay_loop.set_game(state, game)
     }
   end
   paid_currency_bridge.setup_for_game(game)
-  event_handlers.install(game, logger, state)
+  if ports and ports.install_event_handlers then
+    ports.install_event_handlers(game, logger, state)
+  end
   logger.set_info_per_turn_limit(gameplay_rules.info_log_per_turn_limit)
   logger.set_info_turn_provider(function()
     return game.turn and game.turn.turn_count

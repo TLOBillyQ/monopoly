@@ -1,6 +1,5 @@
 local logger = require("src.core.Logger")
 local inventory = require("src.game.item.ItemInventory")
-local tile_renderer = require("src.presentation.render.TileRenderer")
 
 local bankruptcy = {}
 
@@ -48,25 +47,10 @@ local function _collect_owned_tiles(game, player)
   return owned_tile_ids, owned_tiles, names
 end
 
-local function _clear_scene_tiles(scene, board, owned_tile_ids)
-  if not scene or not scene.building_unit_groups or not scene.tiles then
-    return
-  end
-  for _, tile_id in ipairs(owned_tile_ids) do
-    local idx = board:index_of_tile_id(tile_id)
-    local building = scene.building_unit_groups[idx]
-    if building then
-      GameAPI.destroy_unit_with_children(building, true)
-      scene.building_unit_groups[idx] = nil
-    end
-    local building_txt = scene.building_txt and scene.building_txt[idx] or nil
-    if building_txt and building_txt.set_billboard_text then
-      building_txt.set_billboard_text("  ")
-    end
-    local tile_unit = scene.tiles[idx]
-    if tile_unit then
-      tile_renderer.render_tile(tile_unit, tile_id, nil)
-    end
+local function _notify_tiles_cleared(game, player, owned_tile_ids)
+  local ports = game and game.ui_port and game.ui_port.gameplay_loop_ports or nil
+  if ports and type(ports.on_bankruptcy_tiles_cleared) == "function" then
+    ports.on_bankruptcy_tiles_cleared(game, player, owned_tile_ids)
   end
 end
 
@@ -92,7 +76,6 @@ function bankruptcy.eliminate(game, player, opts)
   _push_bankruptcy_popup(game, player, opts)
 
   local ui_port = game.ui_port
-  local scene = ui_port and ui_port.board_scene or nil
   if GameAPI and GameAPI.get_role then
     local role = GameAPI.get_role(player.id)
     if role and role.lose then
@@ -101,7 +84,7 @@ function bankruptcy.eliminate(game, player, opts)
   end
 
   if #owned_tile_ids > 0 then
-    _clear_scene_tiles(scene, game.board, owned_tile_ids)
+    _notify_tiles_cleared(game, player, owned_tile_ids)
   end
 
   for tile_idx, list in pairs(game.occupants) do

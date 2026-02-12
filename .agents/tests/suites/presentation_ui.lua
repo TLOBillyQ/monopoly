@@ -12,6 +12,7 @@ local choice_resolver = support.choice_resolver
 local gameplay_loop = support.gameplay_loop
 local turn_flow = support.turn_flow
 local turn_move = support.turn_move
+local gameplay_loop_ports = require("src.game.turn.GameplayLoopPorts")
 local event_handlers = require("src.presentation.api.UIEventHandlers")
 local paid_currency_bridge = require("src.game.commerce.PaidCurrencyBridge")
 local turn_dispatch = require("src.game.turn.TurnDispatch")
@@ -1194,6 +1195,7 @@ local function _test_push_popup_sets_card_image_by_image_ref()
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
+    state.gameplay_loop_ports = gameplay_loop_ports.resolve()
     ui_view.push_popup(state, {
       title = "道具卡",
       body = "测试",
