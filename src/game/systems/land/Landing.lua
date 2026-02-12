@@ -4,7 +4,7 @@ local chance_cfg = require("Config.Generated.ChanceCards")
 local gameplay_rules = require("Config.GameplayRules")
 local inventory = require("src.game.systems.items.ItemInventory")
 local chance_effects = require("src.game.systems.chance.Chance")
-local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
+local landing_presenter = require("src.game.systems.land.LandingPresenter")
 local mine_effect = require("src.game.systems.effects.MineEffect")
 local steal = require("src.game.systems.items.ItemSteal")
 local market = require("src.game.systems.market.Market")
@@ -63,24 +63,6 @@ local function _pick_chance_card()
   return first_drawable
 end
 
-local function _push_landing_popup(game, title, body, opts)
-  if not (game and game.ui_port) then
-    return false
-  end
-  opts = opts or {}
-  intent_dispatcher.dispatch(game, {
-    kind = "push_popup",
-    payload = {
-      title = title,
-      body = body,
-      kind = opts.kind,
-      image_ref = opts.image_ref,
-      auto_close_seconds = opts.auto_close_seconds,
-    },
-  })
-  return true
-end
-
 local popup_show_seconds = gameplay_rules.popup_auto_close_seconds or 1.0
 
 landing.executors = {
@@ -129,21 +111,18 @@ landing.executors = {
       local ok = inventory.give(player, cfg.id, { game = ctx.game })
       if ok then
         local item_name = inventory.item_name(cfg.id)
-        _push_landing_popup(ctx.game, "道具卡", player.name .. " 获得道具 " .. item_name, {
+        landing_presenter.push_popup(ctx.game, "道具卡", player.name .. " 获得道具 " .. item_name, {
           kind = "item_card",
           image_ref = cfg.id,
           auto_close_seconds = popup_show_seconds,
         })
-        local ui_port = ctx.game.ui_port
-        if ui_port and ui_port.wait_action_anim then
-          ctx.game:queue_action_anim({
-            kind = "item_use",
-            player_id = player.id,
-            item_id = cfg.id,
-            item_name = item_name,
-            duration = popup_show_seconds,
-          })
-        end
+        landing_presenter.queue_action_anim(ctx.game, {
+          kind = "item_use",
+          player_id = player.id,
+          item_id = cfg.id,
+          item_name = item_name,
+          duration = popup_show_seconds,
+        })
       end
     end,
   },
@@ -157,21 +136,18 @@ landing.executors = {
         return
       end
       logger.event(ctx.player.name .. " 抽到机会卡 " .. card.description)
-      _push_landing_popup(ctx.game, "机会卡", ctx.player.name .. " 抽到机会卡：" .. card.description, {
+      landing_presenter.push_popup(ctx.game, "机会卡", ctx.player.name .. " 抽到机会卡：" .. card.description, {
         kind = "chance_card",
         image_ref = card.id,
         auto_close_seconds = popup_show_seconds,
       })
-      local ui_port = ctx.game.ui_port
-      if ui_port and ui_port.wait_action_anim then
-        ctx.game:queue_action_anim({
-          kind = "chance",
-          player_id = ctx.player.id,
-          card_id = card.id,
-          card_desc = card.description,
-          duration = popup_show_seconds,
-        })
-      end
+      landing_presenter.queue_action_anim(ctx.game, {
+        kind = "chance",
+        player_id = ctx.player.id,
+        card_id = card.id,
+        card_desc = card.description,
+        duration = popup_show_seconds,
+      })
       return chance_effects.resolve(ctx.game, ctx.player, card, ctx.move_result)
     end,
   },

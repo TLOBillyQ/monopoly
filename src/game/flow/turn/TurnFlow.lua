@@ -1,12 +1,7 @@
 local flow = require("src.core.Flow")
-local logger = require("src.core.Logger")
-local agent = require("src.game.core.runtime.Agent")
-local inventory = require("src.game.systems.items.ItemInventory")
-local choice_resolver = require("src.game.systems.choices.ChoiceResolver")
-local gameplay_rules = require("Config.GameplayRules")
-local number_utils = require("src.core.NumberUtils")
+local turn_decision = require("src.game.flow.turn.TurnDecision")
+local turn_waits = require("src.game.flow.turn.TurnWaits")
 require "vendor.third_party.ClassUtils"
-
 
 local turn_flow = Class("TurnFlow")
 
@@ -17,117 +12,9 @@ local wait_states = {
   detained_wait = true,
 }
 
-local function _format_status(player)
-  local parts = {}
-  local stay_turns = player.status.stay_turns
-  if stay_turns ~= 0 then
-    parts[#parts + 1] = "stay_turns=" .. tostring(stay_turns)
-  end
-  local deity = player.status.deity
-  if deity then
-    parts[#parts + 1] = "deity=" .. tostring(deity.type) .. ":" .. tostring(deity.remaining)
-  end
-  return parts
-end
-
-local function _format_items(player)
-  local list = {}
-  local item_name = inventory.item_name
-  for _, it in ipairs(inventory.items(player)) do
-    list[#list + 1] = item_name(it.id) .. "(" .. tostring(it.id) .. ")"
-  end
-  return list
-end
-
-local function _format_properties(game, player)
-  if next(player.properties) == nil then
-    return {}
-  end
-  local ids = {}
-  for tile_id in pairs(player.properties) do
-    ids[#ids + 1] = tile_id
-  end
-  table.sort(ids, function(a, b)
-    if type(a) == "number" and type(b) == "number" then
-      return a < b
-    end
-    return tostring(a) < tostring(b)
-  end)
-  local props = {}
-  for _, tile_id in ipairs(ids) do
-    local tile = game.board:get_tile_by_id(tile_id)
-    local level = tile.level or 0
-    props[#props + 1] = tile.name .. "(Lv" .. tostring(level) .. ")"
-  end
-  return props
-end
-
-local function _build_turn_log_line(game)
-  local player = game:current_player()
-  local line = "玩家 " .. tostring(player.name)
-  if player.eliminated then
-    return line .. " (已出局)"
-  end
-
-  line = line .. " 金币=" .. number_utils.format_integer_part(game:player_balance(player, "金币"))
-  local status_parts = _format_status(player)
-  if #status_parts > 0 then
-    line = line .. " 状态: " .. table.concat(status_parts, ", ")
-  end
-  local items_list = _format_items(player)
-  if #items_list > 0 then
-    line = line .. " 背包: " .. table.concat(items_list, ", ")
-  end
-  local properties = _format_properties(game, player)
-  if #properties > 0 then
-    line = line .. " 地产: " .. table.concat(properties, ", ")
-  end
-  return line
-end
-
 local function _get_choice(game)
   return game.turn.pending_choice
 end
-
-
-local function _decide_choice_action(game, choice, pending_action)
-  if pending_action then
-    return pending_action
-  end
-
-  local min_visible = gameplay_rules.auto_choice_min_visible_seconds or 0
-  if min_visible > 0 then
-    local meta = choice and choice.meta or {}
-    local actor = nil
-    if meta.player_id and game.find_player_by_id then
-      actor = game:find_player_by_id(meta.player_id)
-    elseif game.current_player then
-      actor = game:current_player()
-    end
-    if actor and agent.is_auto_player(actor) then
-      local ui_port = game.ui_port
-      local elapsed = ui_port and ui_port.pending_choice_elapsed or 0
-      if elapsed < min_visible then
-        return nil
-      end
-    end
-  end
-
-  local auto_action = agent.auto_action_for_choice(game, choice)
-  if auto_action then
-    return auto_action
-  end
-
-  assert(game.ui_port ~= nil, "missing ui_port")
-
-  return nil
-end
-
-
-local function _resolve_choice(game, choice, action)
-  return choice_resolver.resolve(game, choice, action) or {}
-end
-
 
 function turn_flow:init(game, phases)
   self.game = game
@@ -135,7 +22,6 @@ function turn_flow:init(game, phases)
   self.flow = nil
   self.pending_action = nil
 end
-
 
 function turn_flow:dispatch(action)
   self.pending_action = action
@@ -149,43 +35,9 @@ function turn_flow:dispatch(action)
   end
 end
 
-
-local function _make_anim_wait(turn_mgr, state_name, anim_key, done_action_type)
-  return function(args)
-    turn_mgr.game.turn.phase = state_name
-    turn_mgr.game.dirty.turn = true
-    turn_mgr.game.dirty.any = true
-    local anim = turn_mgr.game.turn[anim_key]
-    assert(anim ~= nil, "missing " .. anim_key)
-
-    local action = turn_mgr.pending_action
-    turn_mgr.pending_action = nil
-    if not action or action.type ~= done_action_type then
-      return state_name, args
-    end
-    if action.seq and anim.seq and action.seq ~= anim.seq then
-      return state_name, args
-    end
-    turn_mgr.game.turn[anim_key] = nil
-    turn_mgr.game.dirty.turn = true
-    turn_mgr.game.dirty.any = true
-    return args.resume_state, args.resume_args
-  end
+local function _resolve_choice(game, choice, action)
+  return turn_decision.resolve_choice(game, choice, action)
 end
-
-local function _next_action_anim(game)
-  assert(game ~= nil and game.turn ~= nil, "missing game.turn")
-  local queue = game.turn.action_anim_queue
-  if type(queue) ~= "table" or #queue == 0 then
-    return nil
-  end
-  local anim = table.remove(queue, 1)
-  game.turn.action_anim = anim
-  game.dirty.turn = true
-  game.dirty.any = true
-  return anim
-end
-
 
 function turn_flow:_build_flow()
   assert(self.phases, "TurnFlow requires phases")
@@ -193,7 +45,7 @@ function turn_flow:_build_flow()
   for name, fn in pairs(self.phases) do
     states[name] = function(args)
       if name == "start" then
-        logger.info(_build_turn_log_line(self.game))
+        turn_decision.log_turn_start(self.game)
       end
       self.game.turn.phase = name
       self.game.dirty.turn = true
@@ -212,7 +64,7 @@ function turn_flow:_build_flow()
       return args.resume_state, args.resume_args
     end
 
-    self.pending_action = _decide_choice_action(self.game, choice, self.pending_action)
+    self.pending_action = turn_decision.decide_choice_action(self.game, choice, self.pending_action)
 
     if not self.pending_action then
       return "wait_choice", args
@@ -222,6 +74,7 @@ function turn_flow:_build_flow()
 
     if action.type == "choice_select" or action.type == "choice_cancel" then
       if not action.choice_id or not choice.id or action.choice_id ~= choice.id then
+        local logger = require("src.core.Logger")
         logger.warn(
           "choice action mismatch:",
           tostring(action.type),
@@ -242,38 +95,9 @@ function turn_flow:_build_flow()
     return args.resume_state, args.resume_args
   end
 
-  states.wait_move_anim = _make_anim_wait(self, "wait_move_anim", "move_anim", "move_anim_done")
+  states.wait_move_anim = turn_waits.make_anim_wait(self, "wait_move_anim", "move_anim", "move_anim_done")
   states.wait_action_anim = function(args)
-    self.game.turn.phase = "wait_action_anim"
-    self.game.dirty.turn = true
-    self.game.dirty.any = true
-    local anim = self.game.turn.action_anim
-    if not anim then
-      local next_anim = _next_action_anim(self.game)
-      if next_anim then
-        return "wait_action_anim", args
-      end
-      self.pending_action = nil
-      return args.resume_state, args.resume_args
-    end
-
-    local action = self.pending_action
-    self.pending_action = nil
-    if not action or action.type ~= "action_anim_done" then
-      return "wait_action_anim", args
-    end
-    if action.seq and anim.seq and action.seq ~= anim.seq then
-      return "wait_action_anim", args
-    end
-
-    self.game.turn.action_anim = nil
-    self.game.dirty.turn = true
-    self.game.dirty.any = true
-
-    if _next_action_anim(self.game) then
-      return "wait_action_anim", args
-    end
-    return args.resume_state, args.resume_args
+    return turn_waits.wait_action_anim(self, args)
   end
   states.detained_wait = function(args)
     self.game.turn.phase = "detained_wait"
@@ -288,7 +112,6 @@ function turn_flow:_build_flow()
   return flow:new({ start = "start", states = states })
 end
 
-
 function turn_flow:next_player()
   local count = #self.game.players
   local current = self.game.turn.current_player_index
@@ -296,6 +119,7 @@ function turn_flow:next_player()
   self.game.turn.current_player_index = next_index
   self.game.dirty.turn = true
   self.game.dirty.any = true
+  local logger = require("src.core.Logger")
   logger.info(
     "[Eggy]",
     "切换玩家:",
@@ -305,7 +129,6 @@ function turn_flow:next_player()
     tostring(next_index)
   )
 end
-
 
 function turn_flow:run_until_wait()
   if not self.flow or not self.flow.current then
@@ -326,7 +149,6 @@ function turn_flow:run_until_wait()
   self.flow = nil
   return nil
 end
-
 
 function turn_flow:run_turn()
   return self:run_until_wait()
