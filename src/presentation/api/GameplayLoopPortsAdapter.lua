@@ -37,6 +37,47 @@ local function _default_apply_input_lock(state)
   ui_view.apply_input_lock(state)
 end
 
+local function _default_get_ui_state(state)
+  return state and state.ui or nil
+end
+
+local function _default_is_input_blocked(state)
+  local ui = _default_get_ui_state(state)
+  return ui and ui.input_blocked == true or false
+end
+
+local function _default_is_popup_active(state)
+  local ui = _default_get_ui_state(state)
+  return ui and ui.popup_active == true or false
+end
+
+local function _default_is_choice_active(state)
+  local ui = _default_get_ui_state(state)
+  return ui and ui.choice_active == true or false
+end
+
+local function _default_is_market_active(state)
+  local ui = _default_get_ui_state(state)
+  return ui and ui.market_active == true or false
+end
+
+local function _default_get_popup_owner_index(state)
+  local ui = _default_get_ui_state(state)
+  return ui and ui.popup_owner_index or nil
+end
+
+local function _default_set_input_blocked(state, blocked)
+  local ui = _default_get_ui_state(state)
+  if not ui then
+    return false
+  end
+  if ui.input_blocked == blocked then
+    return false
+  end
+  ui.input_blocked = blocked
+  return true
+end
+
 local function _default_apply_role_control_lock(state, enabled)
   local ui_view = require("src.presentation.api.UIView")
   ui_view.apply_role_control_lock(state, enabled)
@@ -223,6 +264,13 @@ function adapter.build(_)
     sync_status_3d = _default_sync_status_3d,
     install_event_handlers = _default_install_event_handlers,
     on_bankruptcy_tiles_cleared = _default_on_bankruptcy_tiles_cleared,
+    get_ui_state = _default_get_ui_state,
+    is_input_blocked = _default_is_input_blocked,
+    is_popup_active = _default_is_popup_active,
+    is_choice_active = _default_is_choice_active,
+    is_market_active = _default_is_market_active,
+    get_popup_owner_index = _default_get_popup_owner_index,
+    set_input_blocked = _default_set_input_blocked,
   }
 end
 

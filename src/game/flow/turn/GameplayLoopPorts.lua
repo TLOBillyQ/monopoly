@@ -1,4 +1,5 @@
 local gameplay_loop_ports = {}
+local port_types = require("src.game.flow.turn.GameplayLoopPortTypes")
 
 local function _resolve_base_ports()
   return {
@@ -20,6 +21,13 @@ local function _resolve_base_ports()
     sync_status_3d = function() end,
     install_event_handlers = function() end,
     on_bankruptcy_tiles_cleared = function() end,
+    get_ui_state = function() return nil end,
+    is_input_blocked = function() return false end,
+    is_popup_active = function() return false end,
+    is_choice_active = function() return false end,
+    is_market_active = function() return false end,
+    get_popup_owner_index = function() return nil end,
+    set_input_blocked = function() end,
   }
 end
 
@@ -30,15 +38,63 @@ function gameplay_loop_ports.resolve(override_ports)
     return base_ports
   end
   local resolved = {}
-  for key, fn in pairs(base_ports) do
+  for _, key in ipairs(port_types.keys) do
+    local fn = base_ports[key]
     if type(override_ports[key]) == "function" then
       resolved[key] = override_ports[key]
     else
       resolved[key] = fn
     end
   end
+  if override_ports.get_ui_state == nil then
+    resolved.get_ui_state = function(state)
+      return state and state.ui or nil
+    end
+  end
+  if override_ports.is_input_blocked == nil then
+    resolved.is_input_blocked = function(state)
+      local ui = resolved.get_ui_state(state)
+      return ui and ui.input_blocked == true or false
+    end
+  end
+  if override_ports.is_popup_active == nil then
+    resolved.is_popup_active = function(state)
+      local ui = resolved.get_ui_state(state)
+      return ui and ui.popup_active == true or false
+    end
+  end
+  if override_ports.is_choice_active == nil then
+    resolved.is_choice_active = function(state)
+      local ui = resolved.get_ui_state(state)
+      return ui and ui.choice_active == true or false
+    end
+  end
+  if override_ports.is_market_active == nil then
+    resolved.is_market_active = function(state)
+      local ui = resolved.get_ui_state(state)
+      return ui and ui.market_active == true or false
+    end
+  end
+  if override_ports.get_popup_owner_index == nil then
+    resolved.get_popup_owner_index = function(state)
+      local ui = resolved.get_ui_state(state)
+      return ui and ui.popup_owner_index or nil
+    end
+  end
+  if override_ports.set_input_blocked == nil then
+    resolved.set_input_blocked = function(state, blocked)
+      local ui = resolved.get_ui_state(state)
+      if not ui then
+        return false
+      end
+      if ui.input_blocked == blocked then
+        return false
+      end
+      ui.input_blocked = blocked
+      return true
+    end
+  end
   return resolved
 end
 
 return gameplay_loop_ports
-

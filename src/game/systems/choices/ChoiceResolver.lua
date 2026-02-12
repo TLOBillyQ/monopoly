@@ -3,35 +3,9 @@ local executor = require("src.game.systems.items.ItemExecutor")
 local item_phase = require("src.game.systems.items.ItemPhase")
 local effect = require("src.game.systems.effects.Effect")
 local landing_defs = require("Config.LandingEffects")
+local choice_registry = require("src.game.systems.choices.ChoiceRegistry")
 
 local choice_resolver = {}
-local choice_registry = {}
-local handlers = {}
-local defaults_registered = false
-
-choice_registry.handlers = handlers
-
-function choice_registry.register(kind, handler)
-  handlers[kind] = handler
-end
-
-function choice_registry.register_defaults(helpers)
-  if defaults_registered then
-    return
-  end
-  defaults_registered = true
-  local groups = {
-    require("src.game.systems.choices.ChoiceHandlers.OptionalEffectHandler").build(helpers),
-    require("src.game.systems.choices.ChoiceHandlers.LandChoiceHandler").build(helpers),
-    require("src.game.systems.choices.ChoiceHandlers.ItemChoiceHandler").build(helpers),
-    require("src.game.systems.choices.ChoiceHandlers.MarketChoiceHandler").build(helpers),
-  }
-  for _, group in ipairs(groups) do
-    for key, handler in pairs(group) do
-      choice_registry.register(key, handler)
-    end
-  end
-end
 
 local function _is_cancel(action)
   return action ~= nil and action.type == "choice_cancel"
@@ -126,8 +100,11 @@ local helpers = {
   find_effect_by_id = _find_effect_by_id,
 }
 
+function choice_resolver.helpers()
+  return helpers
+end
+
 function choice_resolver.resolve(game, choice, action)
-  choice_registry.register_defaults(helpers)
   assert(game ~= nil, "missing game")
   assert(choice ~= nil, "missing choice")
   assert(action ~= nil, "missing action")

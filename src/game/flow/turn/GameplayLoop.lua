@@ -40,14 +40,18 @@ local function _is_phase_input_blocked(phase)
 end
 
 local function _sync_input_blocked(state, phase)
-  if not state.ui then
+  local ports = _resolve_ports(state)
+  if not ports.get_ui_state or not ports.set_input_blocked then
+    return false
+  end
+  local ui = ports.get_ui_state(state)
+  if not ui then
     return false
   end
   local input_blocked = _is_phase_input_blocked(phase)
-  if state.ui.input_blocked == input_blocked then
+  if not ports.set_input_blocked(state, input_blocked) then
     return false
   end
-  state.ui.input_blocked = input_blocked
   if not input_blocked then
     state.ui_dirty = true
   end
@@ -62,10 +66,11 @@ local function _build_item_index(state)
 end
 
 local function _is_auto_popup_owner(game, state)
-  if not (game and state and state.ui) then
+  local ports = _resolve_ports(state)
+  if not (game and state and ports and ports.get_popup_owner_index) then
     return false
   end
-  local idx = state.ui.popup_owner_index
+  local idx = ports.get_popup_owner_index(state)
   if not idx or not game.players then
     return false
   end
@@ -142,17 +147,22 @@ local function _sync_phase_flags(state, phase)
 end
 
 local function _is_action_button_wait_active(game, state)
-  if not (game and state and state.ui) then
+  local ports = _resolve_ports(state)
+  if not (game and state and ports) then
+    return false
+  end
+  if ports.get_ui_state and not ports.get_ui_state(state) then
     return false
   end
   if game.finished then
     return false
   end
-  local ui = state.ui
-  if ui.input_blocked then
+  if ports.is_input_blocked and ports.is_input_blocked(state) then
     return false
   end
-  if ui.choice_active or ui.market_active or ui.popup_active then
+  if (ports.is_choice_active and ports.is_choice_active(state))
+      or (ports.is_market_active and ports.is_market_active(state))
+      or (ports.is_popup_active and ports.is_popup_active(state)) then
     return false
   end
   if game.turn and game.turn.pending_choice then
@@ -306,8 +316,8 @@ function gameplay_loop.set_game(state, game)
   state.ui_dirty = true
   state.countdown_last = nil
   state.countdown_active_last = nil
-  if state.ui then
-    state.ui.input_blocked = false
+  if ports.set_input_blocked then
+    ports.set_input_blocked(state, false)
   end
   if state.ai_turn_runner then
     state.ai_turn_runner:set_enabled(true)
@@ -339,11 +349,11 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
   assert(game ~= nil, "missing game")
   assert(state.auto_runner ~= nil, "missing auto_runner")
   local ports = _resolve_ports(state)
-  if state.ui and state.ui.input_blocked then
+  if ports.is_input_blocked and ports.is_input_blocked(state) then
     return nil
   end
   local min_popup_visible = gameplay_rules.auto_popup_min_visible_seconds or 0
-  if min_popup_visible > 0 and state.ui and state.ui.popup_active then
+  if min_popup_visible > 0 and ports.is_popup_active and ports.is_popup_active(state) then
     if _is_auto_popup_owner(game, state) then
       local elapsed = state.ui_modal_elapsed or 0
       if elapsed < min_popup_visible then
@@ -372,7 +382,7 @@ function gameplay_loop.step_ai_turn_runner(game, state, dt, context)
   if not runner.enabled then
     runner:set_enabled(true)
   end
-  if state.ui and state.ui.input_blocked then
+  if ports.is_input_blocked and ports.is_input_blocked(state) then
     if state.ai_turn_runner_active then
       runner:reset_timer()
       state.ai_turn_runner_active = false
@@ -392,7 +402,7 @@ function gameplay_loop.step_ai_turn_runner(game, state, dt, context)
   end
 
   local min_popup_visible = gameplay_rules.auto_popup_min_visible_seconds or 0
-  if min_popup_visible > 0 and state.ui and state.ui.popup_active then
+  if min_popup_visible > 0 and ports.is_popup_active and ports.is_popup_active(state) then
     if _is_auto_popup_owner(game, state) then
       local elapsed = state.ui_modal_elapsed or 0
       if elapsed < min_popup_visible then
@@ -465,10 +475,12 @@ function gameplay_loop.tick(game, state, dt)
   local ui_refreshed = ports.refresh_from_dirty(game, state, dirty)
   ports.sync_status_3d(game, state, dirty)
 
-  if state.ui and (input_blocked_changed or (state.ui.input_blocked and ui_refreshed)) then
-    ports.apply_input_lock(state)
+  if ports.get_ui_state and ports.is_input_blocked then
+    local ui = ports.get_ui_state(state)
+    if ui and (input_blocked_changed or (ports.is_input_blocked(state) and ui_refreshed)) then
+      ports.apply_input_lock(state)
+    end
   end
-
   if state.ui_model then
     ports.log_status(state.ui_model)
   end

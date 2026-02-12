@@ -1,25 +1,9 @@
-local number_utils = require("src.core.NumberUtils")
 local logger = require("src.core.Logger")
+local validator = require("src.game.flow.turn.TurnDispatchValidator")
 
 local turn_dispatch = {}
 
 local next_turn_cooldown = 0.4
-local input_blocked_types = {
-  ui_button = true,
-  choice_pick = true,
-  choice_select = true,
-  choice_cancel = true,
-  market_confirm = true,
-  market_select = true,
-  popup_confirm = true,
-}
-
-local function _normalize_action_type(action_or_type)
-  if type(action_or_type) == "table" then
-    return action_or_type.type
-  end
-  return action_or_type
-end
 
 local function _get_timestamp()
   assert(GameAPI ~= nil and GameAPI.get_timestamp ~= nil, "missing GameAPI.get_timestamp")
@@ -32,77 +16,6 @@ local function _get_timestamp_diff_seconds(timestamp_1, timestamp_2)
   assert(GameAPI ~= nil and GameAPI.get_timestamp_diff ~= nil, "missing GameAPI.get_timestamp_diff")
   assert(type(timestamp_1) == "number" and type(timestamp_2) == "number", "invalid timestamps")
   return GameAPI.get_timestamp_diff(timestamp_1, timestamp_2)
-end
-
-local function _is_turn_bound_ui_button(action_id)
-  if action_id == "next" then
-    return true
-  end
-  if action_id and string.match(action_id, "^item_slot_(%d+)$") then
-    return true
-  end
-  return false
-end
-
-local function _validate_actor_role(game, action)
-  if not _is_turn_bound_ui_button(action and action.id) then
-    return true
-  end
-  assert(game ~= nil and game.turn ~= nil, "missing game.turn")
-  local current_index = game.turn.current_player_index
-  local current_player = current_index and game.players and game.players[current_index] or nil
-  local current_id = current_player and current_player.id or nil
-  local actor_role_id = action.actor_role_id
-  if actor_role_id == nil then
-    logger.warn("ui_button missing actor_role_id:", tostring(action.id))
-    return false
-  end
-  if current_id == nil then
-    logger.warn("ui_button missing current player id:", tostring(action.id))
-    return false
-  end
-  if actor_role_id ~= current_id then
-    logger.warn(
-      "ui_button blocked by actor check:",
-      tostring(action.id),
-      "actor=" .. tostring(actor_role_id),
-      "current=" .. tostring(current_id)
-    )
-    return false
-  end
-  return true
-end
-
-local function _resolve_choice_owner_role_id(game, choice)
-  if not (choice and choice.meta and choice.meta.player_id) then
-    local current = game:current_player()
-    return current and current.id or nil
-  end
-  local owner = game:find_player_by_id(choice.meta.player_id)
-  if owner then
-    return owner.id
-  end
-  local current = game:current_player()
-  return current and current.id or nil
-end
-
-local function _validate_choice_actor(game, action, choice)
-  local actor_role_id = action and action.actor_role_id or nil
-  if actor_role_id == nil then
-    logger.warn("choice action missing actor_role_id:", tostring(action and action.type))
-    return false
-  end
-  local expected = _resolve_choice_owner_role_id(game, choice)
-  if expected ~= nil and actor_role_id ~= expected then
-    logger.warn(
-      "choice action blocked by actor check:",
-      tostring(action and action.type),
-      "actor=" .. tostring(actor_role_id),
-      "expected=" .. tostring(expected)
-    )
-    return false
-  end
-  return true
 end
 
 local function _resolve_actor_player(game, action)
@@ -136,22 +49,7 @@ function turn_dispatch.clear_choice(state, opts)
 end
 
 function turn_dispatch.should_block_action(state, action_or_type)
-  if not (state and state.ui and state.ui.input_blocked) then
-    return false
-  end
-  local action_type = _normalize_action_type(action_or_type)
-  if not action_type then
-    return false
-  end
-  if action_type == "popup_confirm" then
-    return false
-  end
-  if action_type == "ui_button"
-      and type(action_or_type) == "table"
-      and action_or_type.id == "auto" then
-    return false
-  end
-  return input_blocked_types[action_type] == true
+  return validator.should_block_action(state, action_or_type)
 end
 
 function turn_dispatch.dispatch_action(game, state, action, opts)
@@ -174,52 +72,15 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
       return { status = "applied" }
     end
 
-    if not _validate_actor_role(game, action) then
+    if not validator.validate_actor_role(game, action) then
       return { status = "rejected" }
     end
-    local slot_index = action.id and string.match(action.id, "^item_slot_(%d+)$")
-    if slot_index then
-      slot_index = number_utils.to_integer(slot_index)
-      local choice = state.pending_choice
-      if not choice or choice.kind ~= "item_phase_choice" then
+    local slot_result = validator.resolve_item_slot_action(state, action)
+    if slot_result ~= nil then
+      if not slot_result.ok then
         return { status = "rejected" }
       end
-      assert(state.ui ~= nil, "missing state.ui")
-      local item_ids = nil
-      if action.actor_role_id and type(state.ui.item_slot_item_ids_by_role) == "table" then
-        item_ids = state.ui.item_slot_item_ids_by_role[action.actor_role_id]
-      end
-      if not item_ids then
-        item_ids = state.ui.item_slot_item_ids
-      end
-      if not item_ids then
-        logger.warn("missing item_slot_item_ids for slot:", tostring(slot_index))
-        return { status = "rejected" }
-      end
-      local item_id = item_ids[slot_index]
-      if not item_id then
-        logger.warn("missing item_id:", tostring(slot_index))
-        return { status = "rejected" }
-      end
-      local options = assert(choice.options, "missing choice options")
-      local option_ok = false
-      for _, opt in ipairs(options) do
-        local opt_id = opt.id or opt
-        if opt_id == item_id then
-          option_ok = true
-          break
-        end
-      end
-      if not option_ok then
-        logger.warn("invalid item option:", tostring(item_id))
-        return { status = "rejected" }
-      end
-      return turn_dispatch.dispatch_action(game, state, {
-        type = "choice_select",
-        choice_id = choice.id,
-        option_id = item_id,
-        actor_role_id = action.actor_role_id,
-      }, opts)
+      return turn_dispatch.dispatch_action(game, state, slot_result.action, opts)
     end
     if action.id == "next" then
       assert(game ~= nil, "missing game")
@@ -249,20 +110,7 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
     return { status = "rejected" }
   elseif action.type == "choice_select" or action.type == "choice_cancel" then
     local choice = state.pending_choice
-    if not choice or not choice.id then
-      logger.warn("choice action without pending choice:", tostring(action.type))
-      return { status = "rejected" }
-    end
-    if not _validate_choice_actor(game, action, choice) then
-      return { status = "rejected" }
-    end
-    if not action.choice_id or action.choice_id ~= choice.id then
-      logger.warn(
-        "choice action mismatch:",
-        tostring(action.type),
-        "action_choice_id=" .. tostring(action.choice_id),
-        "pending_choice_id=" .. tostring(choice.id)
-      )
+    if not validator.validate_choice_action(game, action, choice) then
       return { status = "rejected" }
     end
     if game then

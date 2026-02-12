@@ -17,7 +17,7 @@ local turn_land = require("src.game.flow.turn.TurnLand")
 local movement = require("src.game.systems.movement.Movement")
 local market = require("src.game.systems.market.Market")
 local bankruptcy = require("src.game.core.runtime.Bankruptcy")
-local choice_resolver = require("src.game.systems.choices.ChoiceResolver")
+local choice_registry = require("src.game.systems.choices.ChoiceRegistry")
 local item_registry = require("src.game.systems.items.ItemRegistry")
 local item_phase = require("src.game.systems.items.ItemPhase")
 local chance_registry = require("src.game.systems.chance.ChanceRegistry")
@@ -237,6 +237,7 @@ function composition_root.assemble(opts, game_or_class)
   end
 
   item_registry.register_defaults()
+  choice_registry.register_defaults(require("src.game.systems.choices.ChoiceResolver").helpers())
   chance_registry.register_defaults()
   local phases = {
     start = turn_start,
