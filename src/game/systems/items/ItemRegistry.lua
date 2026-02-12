@@ -43,7 +43,16 @@ function item_registry.register_defaults()
   item_registry.register(item_ids.missile, item_handlers.handle_demolish)
 
   for _, id in ipairs(item_effects.target_item_ids()) do
-    item_registry.register(id, item_handlers.handle_target_player_item)
+    item_registry.register(id, function(game, player, item_id, context)
+      local next_context = {}
+      if type(context) == "table" then
+        for key, value in pairs(context) do
+          next_context[key] = value
+        end
+      end
+      next_context.resolve_target_candidates = item_registry.target_candidates
+      return item_handlers.handle_target_player_item(game, player, item_id, next_context)
+    end)
   end
 end
 

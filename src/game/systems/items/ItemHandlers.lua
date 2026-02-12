@@ -84,14 +84,15 @@ end
 
 function handlers.handle_target_player_item(game, player, item_id, context)
   context = context or {}
-  local item_registry = require("src.game.systems.items.ItemRegistry")
+  local resolve_candidates = context.resolve_target_candidates
+  assert(resolve_candidates ~= nil, "missing resolve_target_candidates")
   if context.target_id then
     local target = game:find_player_by_id(context.target_id)
     if not target or target.id == player.id or target.eliminated then
       logger.warn("目标玩家无效:", tostring(context.target_id))
       return false
     end
-    local candidates = item_registry.target_candidates(game, player, item_id)
+    local candidates = resolve_candidates(game, player, item_id)
     local matched = false
     for _, cand in ipairs(candidates) do
       if cand.id == target.id then
@@ -108,7 +109,7 @@ function handlers.handle_target_player_item(game, player, item_id, context)
 
   return _run_item_choice_flow(game, player, item_id, context, {
     candidates = function(inner_game, inner_player, inner_item_id)
-      return item_registry.target_candidates(inner_game, inner_player, inner_item_id)
+      return resolve_candidates(inner_game, inner_player, inner_item_id)
     end,
     on_empty = function()
       logger.warn("没有可选择的目标玩家")

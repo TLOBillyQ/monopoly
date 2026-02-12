@@ -1,5 +1,6 @@
 local logger = require("src.core.Logger")
 local validator = require("src.game.flow.turn.TurnDispatchValidator")
+local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
 
 local turn_dispatch = {}
 
@@ -49,7 +50,9 @@ function turn_dispatch.clear_choice(state, opts)
 end
 
 function turn_dispatch.should_block_action(state, action_or_type)
-  return validator.should_block_action(state, action_or_type)
+  local ports = gameplay_loop_ports.resolve(state and state.gameplay_loop_ports or nil)
+  local ui_state = ports.get_ui_state and ports.get_ui_state(state) or nil
+  return validator.should_block_action(ui_state, action_or_type)
 end
 
 function turn_dispatch.dispatch_action(game, state, action, opts)
@@ -75,7 +78,9 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
     if not validator.validate_actor_role(game, action) then
       return { status = "rejected" }
     end
-    local slot_result = validator.resolve_item_slot_action(state, action)
+    local ports = gameplay_loop_ports.resolve(state and state.gameplay_loop_ports or nil)
+    local ui_state = ports.get_ui_state and ports.get_ui_state(state) or nil
+    local slot_result = validator.resolve_item_slot_action(ui_state, state, action)
     if slot_result ~= nil then
       if not slot_result.ok then
         return { status = "rejected" }

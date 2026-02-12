@@ -101,7 +101,16 @@ local helpers = {
 }
 
 function choice_resolver.helpers()
-  return helpers
+  local out = {}
+  for key, value in pairs(helpers) do
+    out[key] = value
+  end
+  return setmetatable(out, {
+    __newindex = function()
+      error("helpers is read-only")
+    end,
+    __metatable = false,
+  })
 end
 
 function choice_resolver.resolve(game, choice, action)

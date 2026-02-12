@@ -40,6 +40,9 @@ function gameplay_loop_ports.resolve(override_ports)
   local resolved = {}
   for _, key in ipairs(port_types.keys) do
     local fn = base_ports[key]
+    if fn == nil then
+      error("missing base port: " .. tostring(key))
+    end
     if type(override_ports[key]) == "function" then
       resolved[key] = override_ports[key]
     else

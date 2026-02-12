@@ -23,6 +23,7 @@ local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
 local gameplay_rules = require("Config.GameplayRules")
 local mine_effect = require("src.game.systems.effects.MineEffect")
 local runtime_context = require("src.core.RuntimeContext")
+local dispatch_validator = require("src.game.flow.turn.TurnDispatchValidator")
 
 local function _mock_lua_api(send_custom_event)
   return {
@@ -196,6 +197,28 @@ local function _test_tile_owner_notifier_receives_owner_changes()
   assert(#calls == 2, "tile_owner_notifier should receive owner set and reset")
   assert(calls[1].tile_id == tile_ref.id and calls[1].owner_id == p1.id, "first notify should be owner set")
   assert(calls[2].tile_id == tile_ref.id and calls[2].owner_id == nil, "second notify should be owner clear")
+end
+
+local function _test_dispatch_validator_accepts_ui_state_snapshot()
+  local ui_state = {
+    input_blocked = true,
+    item_slot_item_ids = { [1] = 2001 },
+  }
+  local blocked = dispatch_validator.should_block_action(ui_state, { type = "ui_button" })
+  assert(blocked == true, "validator should block when ui_state.input_blocked")
+
+  local state = {
+    pending_choice = {
+      id = 1,
+      kind = "item_phase_choice",
+      options = { { id = 2001 } },
+    },
+  }
+  local res = dispatch_validator.resolve_item_slot_action(ui_state, state, {
+    id = "item_slot_1",
+    actor_role_id = 1,
+  })
+  assert(res and res.ok, "validator should resolve item slot action")
 end
 
 local function _test_stop_all_players_movement_clears_move_dir_and_stop_event()
@@ -1067,6 +1090,7 @@ return {
   _test_bankruptcy_resets_owned_tiles,
   _test_set_tile_owner_without_ui_port_does_not_crash,
   _test_tile_owner_notifier_receives_owner_changes,
+  _test_dispatch_validator_accepts_ui_state_snapshot,
   _test_stop_all_players_movement_clears_move_dir_and_stop_event,
   _test_end_turn_stops_all_players_movement,
   _test_stop_all_players_movement_skips_invalid_role_without_error,

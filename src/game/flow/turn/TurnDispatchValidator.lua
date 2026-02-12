@@ -43,8 +43,8 @@ local function _resolve_choice_owner_role_id(game, choice)
   return current and current.id or nil
 end
 
-function validator.should_block_action(state, action_or_type)
-  if not (state and state.ui and state.ui.input_blocked) then
+function validator.should_block_action(ui_state, action_or_type)
+  if not (ui_state and ui_state.input_blocked) then
     return false
   end
   local action_type = _normalize_action_type(action_or_type)
@@ -130,7 +130,7 @@ function validator.validate_choice_action(game, action, choice)
   return true
 end
 
-function validator.resolve_item_slot_action(state, action)
+function validator.resolve_item_slot_action(ui_state, state, action)
   local slot_index = action.id and string.match(action.id, "^item_slot_(%d+)$")
   if not slot_index then
     return nil
@@ -140,13 +140,16 @@ function validator.resolve_item_slot_action(state, action)
   if not choice or choice.kind ~= "item_phase_choice" then
     return { ok = false }
   end
-  assert(state.ui ~= nil, "missing state.ui")
+  ui_state = ui_state or (state and state.ui) or nil
+  if not ui_state then
+    return { ok = false }
+  end
   local item_ids = nil
-  if action.actor_role_id and type(state.ui.item_slot_item_ids_by_role) == "table" then
-    item_ids = state.ui.item_slot_item_ids_by_role[action.actor_role_id]
+  if action.actor_role_id and type(ui_state.item_slot_item_ids_by_role) == "table" then
+    item_ids = ui_state.item_slot_item_ids_by_role[action.actor_role_id]
   end
   if not item_ids then
-    item_ids = state.ui.item_slot_item_ids
+    item_ids = ui_state.item_slot_item_ids
   end
   if not item_ids then
     logger.warn("missing item_slot_item_ids for slot:", tostring(slot_index))
