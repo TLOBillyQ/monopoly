@@ -193,7 +193,7 @@ end
 local function _start_tick_loop(state, interval)
   require "vendor.third_party.Utils"
   local tick_interval = interval or 1
-  local tick_seconds = math.tofixed(tick_interval + 1) / 30.0
+  local tick_seconds = math.tofixed(tick_interval) / 30.0
   SetFrameOut(tick_interval, function()
     gameplay_loop.tick(current_game, state, tick_seconds)
   end, -1)
