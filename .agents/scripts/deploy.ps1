@@ -20,7 +20,7 @@ if (-not $TargetPath) {
     if ($IsWindows) {
         $TargetPath = "C:\\Users\\Lzx_8\\Desktop\\dev\\LuaSource_monopoly"
     } elseif ($IsMacOS) {
-        $TargetPath = "/Users/billyq/Documents/eggy/LuaSource_monopoly"
+        $TargetPath = "/Users/billyq/Documents/eggy/LuaSource_monopoly_1"
     } else {
         Write-Host "✗ 不支持的系统平台，请显式传入 -TargetPath" -ForegroundColor Red
         exit 1
