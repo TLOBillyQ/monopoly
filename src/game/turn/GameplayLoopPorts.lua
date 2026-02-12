@@ -1,7 +1,7 @@
-local ui_view = require("src.presentation.UIView")
+local ui_view = require("src.presentation.api.UIView")
 local tick_timeout = require("src.game.turn.TickTimeout")
 local tick_ui_sync = require("src.game.turn.TickUISync")
-local move_anim = require("src.presentation.MoveAnim")
+local move_anim = require("src.presentation.render.MoveAnim")
 
 local gameplay_loop_ports = {}
 
@@ -11,7 +11,7 @@ local function _load_action_anim_player()
   if _action_anim_player then
     return _action_anim_player
   end
-  _action_anim_player = require("src.presentation.ActionAnim")
+  _action_anim_player = require("src.presentation.render.ActionAnim")
   return _action_anim_player
 end
 

@@ -19,6 +19,7 @@ local tick_timeout = support.tick_timeout
 local constants = support.constants
 local bankruptcy = support.bankruptcy
 local turn_move = support.turn_move
+local turn_dispatch = require("src.game.turn.TurnDispatch")
 local gameplay_rules = require("Config.GameplayRules")
 local mine_effect = require("src.game.effect.MineEffect")
 local runtime_context = require("src.core.RuntimeContext")
@@ -61,16 +62,27 @@ end
 
 local function _build_loop_state()
   local auto_runner = require("src.game.turn.AutoRunner")
+  local ui_port = _build_ui_port()
   local state = {
+    gameplay_loop_ports = {
+      refresh_from_dirty = function() return false end,
+      build_model = function() return nil end,
+      sync_status_3d = function() end,
+      reset_status_3d = function() end,
+      update_countdown = function() end,
+      log_status = function() end,
+      sync_debug_log = function() end,
+    },
+    ui = ui_port.ui,
+    ui_refs = ui_port.ui_refs,
+    ui_model = nil,
+    set_label = ui_port.set_label,
+    set_visible = ui_port.set_visible,
+    set_touch_enabled = ui_port.set_touch_enabled,
+    query_node = ui_port.query_node,
     auto_runner = auto_runner:new({ interval = 0.01 }),
     ai_turn_runner = auto_runner:new({ interval = 0.4 }),
     ai_turn_runner_active = false,
-    ui = {
-      input_blocked = false,
-      choice_active = false,
-      market_active = false,
-      popup_active = false,
-    },
     pending_choice = nil,
     pending_choice_elapsed = 0,
     pending_choice_id = nil,
@@ -491,8 +503,23 @@ local function _test_autorunner_runs_to_end()
   g.ui_port = _build_ui_port()
 
   local state = {
+    gameplay_loop_ports = {
+      refresh_from_dirty = function() return false end,
+      build_model = function() return nil end,
+      sync_status_3d = function() end,
+      reset_status_3d = function() end,
+      update_countdown = function() end,
+      log_status = function() end,
+      sync_debug_log = function() end,
+    },
+    ui = g.ui_port.ui,
+    ui_refs = g.ui_port.ui_refs,
+    ui_model = nil,
+    set_label = g.ui_port.set_label,
+    set_visible = g.ui_port.set_visible,
+    set_touch_enabled = g.ui_port.set_touch_enabled,
+    query_node = g.ui_port.query_node,
     auto_runner = auto_runner:new({ interval = 0.01 }),
-    ui = { choice_active = false, market_active = false },
     pending_choice = nil,
     pending_choice_elapsed = 0,
     pending_choice_id = nil,
@@ -508,8 +535,23 @@ local function _test_autorunner_runs_to_end()
 
   local timeout = constants.action_timeout_seconds or 0
   local dt = timeout > 0 and (timeout + 0.1) or 1
+  if dt > 1 then
+    dt = 1
+  end
 
   local now = 0
+
+  local function _drive_auto_turn(game_ctx, state_ctx, auto_action)
+    if not auto_action or auto_action.type ~= "ui_button" then
+      return
+    end
+    turn_dispatch.dispatch_action(game_ctx, state_ctx, auto_action)
+    local guard = 0
+    while game_ctx.turn and game_ctx.turn.phase == "detained_wait" and guard < 20 do
+      gameplay_loop.tick(game_ctx, state_ctx, dt)
+      guard = guard + 1
+    end
+  end
 
   local old_handle_pass_players = steal.handle_pass_players
   local old_pick_roadblock_target = agent.pick_roadblock_target
@@ -544,15 +586,71 @@ local function _test_autorunner_runs_to_end()
   local ok, err = pcall(function()
     support.with_patches(patches, function()
       for _ = 1, max_steps do
-        if g.finished then
-          break
-        end
-        now = now + dt
+        state.ui_dirty = false
+        g.dirty.ui = false
+        g.dirty.players = false
+        g.dirty.turn = false
+        g.dirty.board_tiles = false
+        g.dirty.any = false
         gameplay_loop.step_auto_runner(g, state, dt, {
           modal_active = false,
           modal_buttons = nil,
           game_finished = g.finished,
+          current_player_index = g.turn and g.turn.current_player_index or nil,
+          current_player_id = (function()
+            local idx = g.turn and g.turn.current_player_index or nil
+            local player = idx and g.players and g.players[idx] or nil
+            return player and player.id or nil
+          end)(),
+          current_player_auto = (function()
+            local idx = g.turn and g.turn.current_player_index or nil
+            local player = idx and g.players and g.players[idx] or nil
+            return player and player.auto == true or false
+          end)(),
         })
+        tick_timeout.step_choice_timeout(g, state, dt, {
+          on_pending_choice = function() end,
+          is_choice_active = function(ctx)
+            return ctx.pending_choice and true or false
+          end,
+          build_action = function(game_ctx, ctx, choice)
+            local auto_choice = agent.auto_action_for_choice(game_ctx, choice)
+            if auto_choice then
+              return auto_choice
+            end
+            local options = assert(choice.options, "missing choice.options")
+            local first = assert(options[1], "missing choice option")
+            return {
+              type = "choice_select",
+              choice_id = choice.id,
+              option_id = first.id or first,
+            }
+          end,
+        })
+        if g.finished then
+          break
+        end
+        now = now + dt
+        local auto_action = gameplay_loop.step_auto_runner(g, state, dt, {
+          modal_active = false,
+          modal_buttons = nil,
+          game_finished = g.finished,
+          current_player_index = g.turn and g.turn.current_player_index or nil,
+          current_player_id = (function()
+            local idx = g.turn and g.turn.current_player_index or nil
+            local player = idx and g.players and g.players[idx] or nil
+            return player and player.id or nil
+          end)(),
+          current_player_auto = (function()
+            local idx = g.turn and g.turn.current_player_index or nil
+            local player = idx and g.players and g.players[idx] or nil
+            return player and player.auto == true or false
+          end)(),
+        })
+        _drive_auto_turn(g, state, auto_action)
+        if g.turn and g.turn.phase == "detained_wait" then
+          gameplay_loop.tick(g, state, dt)
+        end
         tick_timeout.step_choice_timeout(g, state, dt, {
           on_pending_choice = function() end,
           is_choice_active = function(ctx)

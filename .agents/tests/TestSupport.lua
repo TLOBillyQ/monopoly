@@ -74,6 +74,17 @@ LuaAPI.rand = LuaAPI.rand or function()
 end
 
 GameAPI = GameAPI or {}
+UIManager = UIManager or {}
+if not UIManager.query_nodes_by_name then
+  UIManager.query_nodes_by_name = function(name)
+    local node = {
+      name = name,
+      set_texture_keep_size = function() end,
+      set_texture_native_size = function() end,
+    }
+    return { node }
+  end
+end
 if not GameAPI.random_int then
   math.randomseed(1)
   GameAPI.random_int = function(min, max)
@@ -84,12 +95,28 @@ end
 TriggerCustomEvent = TriggerCustomEvent or function() end
 
 local function build_ui_port(overrides)
+  local ui_view = require("src.presentation.api.UIView")
+  local ui_state = ui_view.build_ui_state()
+  local refs = { ["空"] = "EMPTY" }
   local port = {
+    ui = ui_state,
+    ui_refs = refs,
+    ui_model = nil,
+    set_label = ui_state.set_label,
+    set_visible = ui_state.set_visible,
+    set_touch_enabled = ui_state.set_touch_enabled,
+    query_node = ui_state.query_node,
     wait_move_anim = false,
     wait_action_anim = false,
     push_popup = function() end,
     on_tile_owner_changed = function() end,
     on_tile_upgraded = function() end,
+    build_model = function(state, game)
+      return ui_view.build_model(state, game)
+    end,
+    refresh_from_dirty = function(game, state, dirty)
+      return ui_view.refresh_from_dirty(game, state, dirty)
+    end,
   }
   if overrides then
     for key, value in pairs(overrides) do

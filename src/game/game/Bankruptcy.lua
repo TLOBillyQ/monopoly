@@ -1,6 +1,6 @@
 local logger = require("src.core.Logger")
 local inventory = require("src.game.item.ItemInventory")
-local tile_renderer = require("src.presentation.TileRenderer")
+local tile_renderer = require("src.presentation.render.TileRenderer")
 
 local bankruptcy = {}
 

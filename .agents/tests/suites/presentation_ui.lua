@@ -12,18 +12,18 @@ local choice_resolver = support.choice_resolver
 local gameplay_loop = support.gameplay_loop
 local turn_flow = support.turn_flow
 local turn_move = support.turn_move
-local event_handlers = require("src.ui.UIEventHandlers")
+local event_handlers = require("src.presentation.api.UIEventHandlers")
 local paid_currency_bridge = require("src.game.commerce.PaidCurrencyBridge")
 local turn_dispatch = require("src.game.turn.TurnDispatch")
-local runtime_port = require("src.ui.UIRuntimePort")
-local market_view = require("src.ui.MarketView")
-local market_layout = require("src.ui.MarketLayout")
-local ui_event_router = require("src.ui.UIEventRouter")
-local ui_view = require("src.ui.UIView")
-local ui_status_3d_layer = require("src.ui.UIStatus3DLayer")
-local action_anim = require("src.ui.ActionAnim")
-local move_anim = require("src.ui.MoveAnim")
-local role_control_lock_policy = require("src.ui.UIRoleControlLockPolicy")
+local runtime_port = require("src.presentation.api.UIRuntimePort")
+local market_view = require("src.presentation.render.MarketView")
+local market_layout = require("src.presentation.shared.MarketLayout")
+local ui_event_router = require("src.presentation.interaction.UIEventRouter")
+local ui_view = require("src.presentation.api.UIView")
+local ui_status_3d_layer = require("src.presentation.render.UIStatus3DLayer")
+local action_anim = require("src.presentation.render.ActionAnim")
+local move_anim = require("src.presentation.render.MoveAnim")
+local role_control_lock_policy = require("src.presentation.interaction.UIRoleControlLockPolicy")
 local market_cfg = require("Config.Generated.Market")
 local runtime_constants = require("Config.RuntimeConstants")
 local gameplay_rules = require("Config.GameplayRules")
@@ -547,7 +547,7 @@ local function _test_move_anim_vehicle_move_api_enabled_uses_move_event()
 end
 
 local function _test_board_view_vehicle_resync_uses_set_position()
-  local board_view = require("src.ui.BoardView")
+  local board_view = require("src.presentation.render.BoardView")
 
   local function _vec3(x, y, z)
     local vector_mt = {}
@@ -659,7 +659,7 @@ local function _test_move_anim_step_unlocks_and_relocks()
 end
 
 local function _test_board_view_vehicle_disabled_uses_unit_set_position()
-  local board_view = require("src.ui.BoardView")
+  local board_view = require("src.presentation.render.BoardView")
 
   local function _vec3(x, y, z)
     local vector_mt = {}
@@ -723,7 +723,7 @@ local function _test_board_view_vehicle_disabled_uses_unit_set_position()
 end
 
 local function _test_ui_model_structure()
-  local ui_model = require("src.ui.UIModel")
+  local ui_model = require("src.presentation.state.UIModel")
   local g = _new_game()
   local player = g:current_player()
   player.inventory:add({ id = 2001 })
@@ -745,7 +745,7 @@ local function _test_ui_model_structure()
 end
 
 local function _test_ui_model_player_slot_map_and_choice_owner()
-  local ui_model = require("src.ui.UIModel")
+  local ui_model = require("src.presentation.state.UIModel")
   local g = _new_game()
   g.players[1].inventory:add({ id = 2001 })
   g.players[2].inventory:add({ id = 2002 })
@@ -781,7 +781,7 @@ local function _test_ui_model_player_slot_map_and_choice_owner()
 end
 
 local function _test_ui_model_player_profile_prefers_role_api_with_fallback()
-  local ui_model = require("src.ui.UIModel")
+  local ui_model = require("src.presentation.state.UIModel")
   local g = _new_game()
   g.players[1].name = "本地玩家1"
   g.players[2].name = "本地玩家2"
@@ -827,7 +827,7 @@ local function _test_ui_model_player_profile_prefers_role_api_with_fallback()
 end
 
 local function _test_ui_model_player_profile_accepts_stringified_avatar()
-  local ui_model = require("src.ui.UIModel")
+  local ui_model = require("src.presentation.state.UIModel")
   local g = _new_game()
   g.players[1].name = "本地玩家1"
   local icon_obj = setmetatable({}, {
@@ -984,7 +984,7 @@ local function _test_turn_dispatch_item_slot_uses_actor_slot_map()
 end
 
 local function _test_ui_view_render_by_role_slots_are_isolated()
-  local main_view = require("src.ui.UIView")
+  local main_view = require("src.presentation.api.UIView")
 
   local image_logs = {}
   local node_map = {}
@@ -1661,9 +1661,9 @@ end
 
 local function _test_tick_skips_anim_when_no_anim()
   local dirty_tracker = require("src.core.DirtyTracker")
-  local main_view = require("src.ui.UIView")
-  local ui_model = require("src.ui.UIModel")
-  local board_view_mod = require("src.ui.BoardView")
+  local main_view = require("src.presentation.api.UIView")
+  local ui_model = require("src.presentation.state.UIModel")
+  local board_view_mod = require("src.presentation.render.BoardView")
 
   local game_api = GameAPI or {}
   local patches = {
@@ -2222,9 +2222,9 @@ end
 
 local function _test_tick_ui_sync_turn_switch_still_follows()
   local dirty_tracker = require("src.core.DirtyTracker")
-  local main_view = require("src.ui.UIView")
-  local ui_model = require("src.ui.UIModel")
-  local board_view_mod = require("src.ui.BoardView")
+  local main_view = require("src.presentation.api.UIView")
+  local ui_model = require("src.presentation.state.UIModel")
+  local board_view_mod = require("src.presentation.render.BoardView")
   local helper = { target_role_id = nil }
   local follow_events = 0
   local game_api = GameAPI or {}

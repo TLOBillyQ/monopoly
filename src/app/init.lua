@@ -16,17 +16,17 @@ require "src.game.game.GameVictory"
 require "src.game.game.CompositionRoot"
 
 local auto_runner = require("src.game.turn.AutoRunner")
-local board_scene = require("src.ui.BoardScene")
-local board_view = require("src.ui.BoardView")
+local board_scene = require("src.presentation.BoardScene")
+local board_view = require("src.presentation.BoardView")
 local game = require("src.game.game.Game")
 local gameplay_loop = require("src.game.turn.GameplayLoop")
-local ui_view = require("src.ui.UIView")
-local ui_model = require("src.ui.UIModel")
-local ui_event_router = require("src.ui.UIEventRouter")
+local ui_view = require("src.presentation.UIView")
+local ui_model = require("src.presentation.UIModel")
+local ui_event_router = require("src.presentation.UIEventRouter")
 local map_cfg = require("Config.Map")
 local tiles_cfg = require("Config.Generated.Tiles")
 local gameplay_rules = require("Config.GameplayRules")
-local ui_events = require("src.ui.UIEvents")
+local ui_events = require("src.presentation.UIEvents")
 local logger = require("src.core.Logger")
 local monopoly_event = require("src.game.game.MonopolyEvents")
 
