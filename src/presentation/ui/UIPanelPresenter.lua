@@ -142,8 +142,8 @@ function panel_presenter.refresh(state, ui_model, deps)
     panel_presenter.apply_base_non_player_visibility(ui, base_visible)
     _force_item_slots_visible_for_player(ui, ctx)
 
-    ui:set_visible("倒计时", true)
-    ui:set_label("倒计时", panel.turn_label)
+    ui:set_visible("倒计时文本", true)
+    ui:set_label("倒计时文本", panel.turn_label)
     ui:set_touch_enabled("行动按钮", base_visible)
     refresh_item_slots(state, ui_model, {
       role_id = ctx.role_id,

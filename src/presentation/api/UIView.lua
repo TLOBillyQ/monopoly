@@ -188,7 +188,7 @@ function ui_view.refresh_turn_label(state, label_text)
     return
   end
   runtime.for_each_role_or_global(function()
-    ui:set_label("倒计时", label_text)
+    ui:set_label("倒计时文本", label_text)
   end)
   runtime.set_client_role(nil)
 end

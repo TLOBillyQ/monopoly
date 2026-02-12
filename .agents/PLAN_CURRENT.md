@@ -10,14 +10,17 @@
 
 ## 进度
 
-- [ ] (2025-03-04 15:00Z) 清点新 UI 节点与旧逻辑的映射差异。
-- [ ] (2025-03-04 15:00Z) 更新 UI 节点表与依赖配置。
-- [ ] (2025-03-04 15:00Z) 修正 UI 事件绑定与面板渲染。
-- [ ] (2025-03-04 15:00Z) 补充交互与回归验证记录。
+- [x] (2025-03-04 15:20Z) 清点现有 UI 节点与旧逻辑的映射差异。
+- [x] (2025-03-04 15:28Z) 以当前 UI 导出为基准完成节点名对齐。
+- [x] (2025-03-04 15:28Z) 修正倒计时标签节点名一致性。
+- [x] (2025-03-04 15:40Z) 补充交互与回归验证记录。
 
 ## 意外与发现
 
-暂无。实施过程中记录发现与证据。
+- 观察：倒计时标签名称在逻辑层使用“倒计时”，而节点表为“倒计时文本/倒计时横线”。
+  证据：`Data/UIManagerNodes.lua` 中没有“倒计时”节点，`src/presentation/ui/UIPanelPresenter.lua` 与 `src/presentation/api/UIView.lua` 使用了“倒计时”。
+- 观察：回归测试断言仍使用旧节点名“倒计时”，导致用例失败。
+  证据：`lua .agents/tests/regression.lua` 报错 `non-current role countdown should be visible`，定位到 `.agents/tests/suites/presentation_ui.lua` 的断言。
 
 ## 决策日志
 
@@ -31,7 +34,7 @@
 
 ## 结果与复盘
 
-未开始。完成后补充“做到了什么、仍缺什么、经验教训”。
+已完成倒计时节点名对齐与回归验证，UI 节点表与逻辑保持一致，回归通过。剩余人工验收需要在 Eggy 编辑器内完成。经验：UI 节点名调整需要同步测试断言，否则回归会误报。
 
 ## 背景与导读
 
@@ -50,7 +53,7 @@
 3) `UIEventRouter` 的所有可点击节点与事件绑定。
 4) `MarketLayout` 与 `MarketView` 的黑市面板节点。
 
-若发现名称变化，统一在逻辑层替换为新名称；若新 UI 缺失节点，补充 UI 导出或用占位节点替代，并在计划里记录原因。
+若发现名称变化，统一在逻辑层替换为新名称；若 UI 缺失节点，补充 UI 导出或用占位节点替代，并在计划里记录原因。
 
 然后更新 UI 接入的关键文件，保持行为不变：
 - 更新 `Data/UIManagerNodes.lua` 为新 UI 导出内容（整表替换）。
@@ -72,6 +75,8 @@
 
 把结果与现有逻辑中对应节点名逐条对照，形成“保持/替换/缺失”列表。
 
+当前结论：以当前 UI 导出为准时，唯一缺口是倒计时标签名称不一致，已统一为“倒计时文本”。其余逻辑依赖节点在 `Data/UIManagerNodes.lua` 中可找到。
+
 2) 更新 UI 节点表。
 
 用新 UI 导出文件替换 `Data/UIManagerNodes.lua`。若导出文件缺失必要节点，回到 Eggy UI 补齐并重新导出，然后再次替换。
@@ -84,7 +89,7 @@
 - `src/presentation/shared/MarketLayout.lua` 与 `src/presentation/render/MarketView.lua`：更新黑市面板的容器与按钮列表。
 - `src/presentation/ui/UIPanelPresenter.lua`：更新玩家信息、道具槽位、倒计时、托管按钮等节点名。
 
-每修改一处，立刻在 `Data/UIManagerNodes.lua` 中确认名称存在，避免运行时 query_nodes 失败。
+每修改一处，立刻在 `Data/UIManagerNodes.lua` 中确认名称存在，避免运行时 query_nodes 失败。已完成倒计时标签名对齐（“倒计时文本”）。
 
 4) 跑回归脚本。
 
@@ -95,6 +100,7 @@
     lua .agents/tests/dep_rules.lua
 
 全部通过后进入人工验收。
+已执行回归并通过。
 
 5) 人工验收（编辑器内）。
 
@@ -113,7 +119,7 @@
 - `lua .agents/tests/gameplay_loop_no_ui.lua`：无错误退出。
 - `lua .agents/tests/dep_rules.lua`：无错误退出。
 
-人工验收：完成“加载屏 → 基础屏 → 选择屏/黑市/弹窗/破产/调试屏”全流程，观察 UI 可见与交互响应符合预期。
+人工验收：完成“加载屏 → 基础屏 → 选择屏/黑市/弹窗/破产/调试屏”全流程，观察 UI 可见与交互响应符合预期。回归测试已通过。
 
 ## 可重复性与恢复
 
@@ -129,12 +135,12 @@
     src/presentation/shared/MarketLayout.lua
     src/presentation/render/MarketView.lua
     src/presentation/ui/UIPanelPresenter.lua
+    src/presentation/shared/UIAliases.lua
+    .agents/tests/suites/presentation_ui.lua
 
 关键证据（示例）：
 
-    [INFO] UI 节点校验通过
-    [INFO] 显示基础屏
-    [INFO] 调试屏切换完成
+    All regression checks passed (122)
 
 ## 接口与依赖
 
