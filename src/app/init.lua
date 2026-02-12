@@ -23,6 +23,7 @@ local gameplay_loop = require("src.game.flow.turn.GameplayLoop")
 local ui_view = require("src.presentation.UIView")
 local ui_model = require("src.presentation.UIModel")
 local ui_event_router = require("src.presentation.UIEventRouter")
+local market_ui = require("src.presentation.shared.MarketLayout")
 local map_cfg = require("Config.Map")
 local tiles_cfg = require("Config.Generated.Tiles")
 local gameplay_rules = require("Config.GameplayRules")
@@ -202,13 +203,51 @@ end
 local function _install_game_init(state)
   RegisterTriggerEvent({ EVENT.GAME_INIT }, function()
     require "vendor.third_party.UIManager.Utils"
-    UIManager.Builder:new(require "Data.UIManagerNodes")
+    local ui_nodes = require("Data.UIManagerNodes")
+    UIManager.Builder:new(ui_nodes)
     state.gameplay_loop_ports = require("src.presentation.api.GameplayLoopPortsAdapter").build(state)
     current_game = gameplay_loop.new_game(state)
     gameplay_loop.set_game(state, current_game)
     ui_event_router.bind(state, function()
       return current_game
     end)
+
+    if ui_events.set_roles then
+      ui_events.set_roles(all_roles)
+    end
+
+    local required_nodes = {
+      "行动按钮",
+      "托管按钮",
+      "取消按钮",
+      "建筑升级_确定按钮",
+      "建筑升级_取消",
+      "遥控骰子_取消",
+      "图片_82",
+      "玩家选择_槽位1",
+      "玩家选择_槽位2",
+      "玩家选择_槽位3",
+      "位置前1",
+      "位置前2",
+      "位置前3",
+      "位置后1",
+      "位置后2",
+      "位置后3",
+      "位置脚下",
+      "遥控骰子_选项_01",
+      "遥控骰子_选项_02",
+      "遥控骰子_选项_03",
+      "遥控骰子_选项_04",
+      "遥控骰子_选项_05",
+      "遥控骰子_选项_06",
+    }
+    for _, name in ipairs(market_ui.item_buttons or {}) do
+      required_nodes[#required_nodes + 1] = name
+    end
+    local missing = ui_nodes.validate(required_nodes)
+    if #missing > 0 then
+      error("UI 节点缺失: " .. table.concat(missing, ", "))
+    end
 
     ui_events.send_to_all(ui_events.show["加载屏"], {})
     board_scene.init(state, map_cfg, current_game)

@@ -3,11 +3,11 @@ local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
 local ui_view = require("src.presentation.api.UIView")
 local runtime = require("src.presentation.api.UIRuntimePort")
 local logger = require("src.core.Logger")
-local gameplay_rules = require("Config.GameplayRules")
+local ui_event_bindings = require("src.presentation.interaction.UIEventBindings")
+local ui_event_intents = require("src.presentation.interaction.UIEventIntents")
+local ui_event_state = require("src.presentation.interaction.UIEventState")
 
 local ui_event_router = {}
-
-local missing_button_tips = {}
 
 local function _get_timestamp()
   assert(GameAPI ~= nil and GameAPI.get_timestamp ~= nil, "missing GameAPI.get_timestamp")
@@ -22,38 +22,19 @@ local function _get_timestamp_diff_seconds(timestamp_1, timestamp_2)
   return GameAPI.get_timestamp_diff(timestamp_1, timestamp_2)
 end
 
-local function _is_base_screen_active(state)
-  local ui = state and state.ui
-  if not ui then
-    return false
-  end
-  if ui.market_active or ui.choice_active or ui.popup_active then
-    return false
-  end
-  return true
-end
-
-local function _resolve_debug_enabled(state)
-  local ui = state and state.ui
-  if ui and ui.debug_log_enabled_override ~= nil then
-    return ui.debug_log_enabled_override == true
-  end
-  return gameplay_rules.debug_log_enabled == true
-end
-
 local function _toggle_debug_visible(state)
   local ui = state and state.ui
   if not ui then
     return
   end
-  local next_enabled = not _resolve_debug_enabled(state)
+  local next_enabled = not ui_event_state.resolve_debug_enabled(state)
   ui.debug_log_enabled_override = next_enabled
   ui_view.set_debug_visible(state, next_enabled)
 end
 
 local function _record_debug_toggle_click(state)
   local ui = state and state.ui
-  local base_active = _is_base_screen_active(state)
+  local base_active = ui_event_state.is_base_screen_active(state)
   local input_blocked = ui and ui.input_blocked or false
   if not base_active then
     logger.info("[调试屏] 图片_82点击忽略: 非基础屏", "input_blocked=" .. tostring(input_blocked))
@@ -93,98 +74,14 @@ local function _record_debug_toggle_click(state)
     ui.debug_toggle_click_count = 0
     logger.info(
       "[调试屏] 触发显隐切换",
-      "current=" .. tostring(_resolve_debug_enabled(state))
+      "current=" .. tostring(ui_event_state.resolve_debug_enabled(state))
     )
     _toggle_debug_visible(state)
     logger.info(
       "[调试屏] 切换完成",
-      "next=" .. tostring(_resolve_debug_enabled(state))
+      "next=" .. tostring(ui_event_state.resolve_debug_enabled(state))
     )
   end
-end
-
-local function _resolve_option_id(choice, payload, state)
-  assert(choice ~= nil, "missing choice")
-  assert(payload ~= nil, "missing payload")
-  local option_id = payload.option_id or payload.option or nil
-  if option_id then
-    return option_id
-  end
-  local index = payload.index or payload.option_index or payload.card_index or payload.choice_index
-  if index then
-    local mapped = state and state.choice_visible_option_ids and state.choice_visible_option_ids[index]
-    if mapped then
-      return mapped
-    end
-    local options = choice.options
-    if type(options) ~= "table" then
-      return nil
-    end
-    local option = options[index]
-    if option then
-      return option.id or option
-    end
-  end
-  return nil
-end
-
-local function _show_missing_button_tip(name)
-  if missing_button_tips[name] then
-    return
-  end
-  missing_button_tips[name] = true
-  GlobalAPI.show_tips("UI 节点未适配: " .. tostring(name), 2.0)
-end
-
-local function _choice_cancel_intent(state, warn_label)
-  local choice = state.ui_model and state.ui_model.choice or nil
-  if not choice then
-    logger.warn(warn_label .. " without choice")
-    return nil
-  end
-  if choice.allow_cancel == false then
-    return nil
-  end
-  return { type = "choice_cancel", choice_id = choice.id }
-end
-
-local function _choice_select_intent(state, index, warn_label)
-  local choice = state.ui_model and state.ui_model.choice or nil
-  if not choice then
-    logger.warn(warn_label .. " without choice")
-    return nil
-  end
-  local option_id = _resolve_option_id(choice, { index = index }, state)
-  if not option_id then
-    logger.warn(warn_label .. " missing option:", tostring(index))
-    return nil
-  end
-  return {
-    type = "choice_select",
-    choice_id = choice.id,
-    option_id = option_id,
-  }
-end
-
-local function _choice_confirm_intent(state, warn_label)
-  local choice = state.ui_model and state.ui_model.choice or nil
-  if not choice then
-    logger.warn(warn_label .. " without choice")
-    return nil
-  end
-  local option_id = state.pending_choice_selected_option_id
-  if option_id == nil and type(state.choice_visible_option_ids) == "table" then
-    option_id = state.choice_visible_option_ids[1]
-  end
-  if option_id == nil then
-    logger.warn(warn_label .. " missing selected option")
-    return nil
-  end
-  return {
-    type = "choice_select",
-    choice_id = choice.id,
-    option_id = option_id,
-  }
 end
 
 local function _resolve_actor_role_id(data)
@@ -198,68 +95,6 @@ local function _resolve_actor_role_id(data)
   return runtime.resolve_role_id(role)
 end
 
-local function _register_node_click(cache, name, callback, registered, listeners)
-  assert(name ~= nil, "missing node name")
-  assert(type(callback) == "function", "missing callback")
-  assert(registered ~= nil, "missing registered map")
-  assert(listeners ~= nil, "missing listeners list")
-  if registered[name] then
-    return
-  end
-  local nodes = cache[name]
-  if not nodes then
-    local ok, result = pcall(runtime.query_nodes, name)
-    if not ok then
-      _show_missing_button_tip(name)
-      if name == "图片_82" then
-        logger.info("[调试屏] 图片_82注册失败: query_nodes异常")
-      end
-      return
-    end
-    nodes = result
-    cache[name] = nodes
-  end
-  if not nodes or not nodes[1] then
-    _show_missing_button_tip(name)
-    if name == "图片_82" then
-      logger.info("[调试屏] 图片_82注册失败: 未找到节点")
-    end
-    return
-  end
-  if name == "图片_82" then
-    logger.info("[调试屏] 图片_82注册成功", "nodes=" .. tostring(#nodes))
-  end
-  registered[name] = true
-  for _, node in ipairs(nodes) do
-    local listener = node:listen(UIManager.EVENT.CLICK, function(data)
-      callback(data)
-    end)
-    table.insert(listeners, listener)
-  end
-end
-
-local function _enable_debug_toggle_touch(cache)
-  local nodes = cache and cache["图片_82"] or nil
-  if not nodes or not nodes[1] then
-    local ok, result = pcall(runtime.query_nodes, "图片_82")
-    if not ok then
-      logger.info("[调试屏] 图片_82触控启用失败: query_nodes异常")
-      return
-    end
-    nodes = result
-  end
-  if not nodes or not nodes[1] then
-    logger.info("[调试屏] 图片_82触控启用失败: 未找到节点")
-    return
-  end
-  runtime.for_each_role_or_global(function()
-    for _, node in ipairs(nodes) do
-      node.disabled = false
-    end
-  end)
-  runtime.set_client_role(nil)
-  logger.info("[调试屏] 图片_82触控已启用", "nodes=" .. tostring(#nodes))
-end
 
 local function _should_block_intent(state, intent)
   if turn_dispatch.should_block_action then
@@ -342,13 +177,13 @@ local function _build_route_specs(state)
     {
       name = market_ui.cancel_button,
       build_intent = function()
-        return _choice_cancel_intent(state, "market_cancel")
+        return ui_event_intents.choice_cancel_intent(state, "market_cancel")
       end,
     },
     {
       name = "关闭",
       build_intent = function()
-        return _choice_cancel_intent(state, "market_close")
+        return ui_event_intents.choice_cancel_intent(state, "market_close")
       end,
     },
     {
@@ -357,25 +192,25 @@ local function _build_route_specs(state)
         if state.ui and state.ui.popup_active then
           return { type = "popup_confirm" }
         end
-        return _choice_cancel_intent(state, "choice_cancel")
+        return ui_event_intents.choice_cancel_intent(state, "choice_cancel")
       end,
     },
     {
       name = "建筑升级_确定按钮",
       build_intent = function()
-        return _choice_confirm_intent(state, "building_confirm")
+        return ui_event_intents.choice_confirm_intent(state, "building_confirm")
       end,
     },
     {
       name = "建筑升级_取消",
       build_intent = function()
-        return _choice_cancel_intent(state, "building_cancel")
+        return ui_event_intents.choice_cancel_intent(state, "building_cancel")
       end,
     },
     {
       name = "遥控骰子_取消",
       build_intent = function()
-        return _choice_cancel_intent(state, "remote_cancel")
+        return ui_event_intents.choice_cancel_intent(state, "remote_cancel")
       end,
     },
   }
@@ -424,7 +259,7 @@ local function _build_route_specs(state)
     specs[#specs + 1] = {
       name = name,
       build_intent = function()
-        return _choice_select_intent(state, index, "player_select")
+        return ui_event_intents.choice_select_intent(state, index, "player_select")
       end,
     }
   end
@@ -442,7 +277,7 @@ local function _build_route_specs(state)
     specs[#specs + 1] = {
       name = name,
       build_intent = function()
-        return _choice_select_intent(state, index, "target_select")
+        return ui_event_intents.choice_select_intent(state, index, "target_select")
       end,
     }
   end
@@ -464,7 +299,7 @@ local function _build_route_specs(state)
           logger.warn("remote_select without choice")
           return nil
         end
-        local option_id = _resolve_option_id(choice, { index = index }, state)
+        local option_id = ui_event_intents.resolve_option_id(choice, { index = index }, state)
         if not option_id then
           logger.warn("remote_select missing option:", tostring(index))
           return nil
@@ -487,7 +322,7 @@ local function _build_route_specs(state)
           logger.warn("market_select without market")
           return nil
         end
-        local option_id = _resolve_option_id(market, { index = index }, state)
+        local option_id = ui_event_intents.resolve_option_id(market, { index = index }, state)
         if not option_id then
           logger.warn("market_select missing option:", tostring(index))
           return nil
@@ -548,7 +383,7 @@ function ui_event_router.bind(state, get_game)
 
   local route_specs = _build_route_specs(state)
   for _, route in ipairs(route_specs) do
-    _register_node_click(cache, route.name, function(data)
+    ui_event_bindings.register_node_click(cache, route.name, function(data)
       local intent = route.build_intent(data)
       if intent then
         dispatch_intent(intent, data)
@@ -556,21 +391,11 @@ function ui_event_router.bind(state, get_game)
     end, registered, listeners)
   end
 
-  _register_node_click(cache, "图片_82", function()
+  ui_event_bindings.register_node_click(cache, "图片_82", function()
     _record_debug_toggle_click(state)
   end, registered, listeners)
-  _enable_debug_toggle_touch(cache)
-
-  local nodes = require("Data.UIManagerNodes")
-  for _, entry in pairs(nodes) do
-    local name = entry[1]
-    local kind = entry[2]
-    if kind == "EButton" and not registered[name] then
-      _register_node_click(cache, name, function()
-        _show_missing_button_tip(name)
-      end, registered, listeners)
-    end
-  end
+  ui_event_bindings.enable_debug_toggle_touch(cache)
+  ui_event_bindings.register_missing_button_tip(cache, registered, listeners)
 end
 
 return ui_event_router

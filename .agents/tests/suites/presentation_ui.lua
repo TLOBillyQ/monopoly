@@ -1128,6 +1128,19 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
   assert(state.ui.item_slot_item_ids_by_role[2] and state.ui.item_slot_item_ids_by_role[2][1] == 2002, "role2 slot map expected")
 end
 
+local function _test_ui_events_send_without_roles_no_crash()
+  local ui_events = require("src.presentation.shared.UIEvents")
+  ui_events.set_roles(nil)
+  ui_events.send_to_all("测试事件", { ok = true })
+end
+
+local function _test_ui_nodes_validate_reports_missing()
+  local nodes = require("Data.UIManagerNodes")
+  local missing = nodes.validate({ "不存在的节点_测试" })
+  assert(#missing == 1, "validate should return missing node list")
+  assert(missing[1] == "不存在的节点_测试", "missing node name should match")
+end
+
 local function _test_apply_input_lock_keeps_auto_controls_enabled()
   local touch = {}
   local visible = {}
@@ -2346,6 +2359,8 @@ return {
   _test_turn_dispatch_auto_rejects_unmapped_role,
   _test_turn_dispatch_item_slot_uses_actor_slot_map,
   _test_ui_view_render_by_role_slots_are_isolated,
+  _test_ui_events_send_without_roles_no_crash,
+  _test_ui_nodes_validate_reports_missing,
   _test_apply_input_lock_keeps_auto_controls_enabled,
   _test_role_control_lock_add_remove_owned_only,
   _test_role_control_lock_unit_swap_release_old_and_lock_new,

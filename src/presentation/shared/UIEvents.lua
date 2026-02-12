@@ -4,6 +4,7 @@ local ui_events = {
   canvas_names = {},
   show = {},
   hide = {},
+  roles = nil,
 }
 
 for _, entry in pairs(nodes) do
@@ -24,9 +25,13 @@ for _, name in ipairs(ui_events.canvas_names) do
 end
 
 
+function ui_events.set_roles(roles)
+  ui_events.roles = roles
+end
+
 function ui_events.send_to_all(event_name, payload)
   assert(event_name ~= nil, "missing event_name")
-  local roles = all_roles
+  local roles = ui_events.roles
   if not roles then
     return
   end

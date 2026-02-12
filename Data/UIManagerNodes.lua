@@ -1,6 +1,6 @@
 ---AUTTO EXPORT BY EGGITOR PLUGIN, PLEASE DO NOT EDIT
 
-return {
+local nodes = {
 	["1519736575|1002562102"] = {"日志", "ELabel"},
 	["1519736575|1011261148"] = {"底框10", "EImage"},
 	["1519736575|1012795873"] = {"底框5", "EImage"},
@@ -180,3 +180,33 @@ return {
 	["1519736575|2147314485"] = {"基础屏", "ECanvas"},
 	--length = 177
 }
+
+local function _build_node_names()
+  local names = {}
+  for _, entry in pairs(nodes) do
+    if type(entry) == "table" then
+      local name = entry[1]
+      if name then
+        names[name] = true
+      end
+    end
+  end
+  return names
+end
+
+local function _build_missing_list(lookup, required_names)
+  local missing = {}
+  for _, name in ipairs(required_names or {}) do
+    if not lookup[name] then
+      missing[#missing + 1] = name
+    end
+  end
+  return missing
+end
+
+function nodes.validate(required_names)
+  local lookup = _build_node_names()
+  return _build_missing_list(lookup, required_names)
+end
+
+return nodes
