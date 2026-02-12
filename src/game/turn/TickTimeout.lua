@@ -2,7 +2,7 @@ local agent = require("src.game.game.Agent")
 local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("Config.GameplayRules")
 local turn_dispatch = require("src.game.turn.TurnDispatch")
-local ui_view = require("src.ui.UIView")
+local ui_view = require("src.presentation.UIView")
 
 local tick_timeout = {}
 

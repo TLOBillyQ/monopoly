@@ -2,9 +2,9 @@ local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("Config.GameplayRules")
 local runtime_constants = require("Config.RuntimeConstants")
 local logger = require("src.core.Logger")
-local ui_view = require("src.ui.UIView")
-local ui_model = require("src.ui.UIModel")
-local ui_status_3d = require("src.ui.UIStatus3DLayer")
+local ui_view = require("src.presentation.UIView")
+local ui_model = require("src.presentation.UIModel")
+local ui_status_3d = require("src.presentation.UIStatus3DLayer")
 local number_utils = require("src.core.NumberUtils")
 
 local tick_ui_sync = {}

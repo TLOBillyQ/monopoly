@@ -16,17 +16,18 @@
 ## 进度
 
 - [x] (2026-02-12 13:48Z) 确认现状与约束：读取 `AGENTS.md`、`.agents/CODING.md`、`.agents/PLANS.md`，盘点 `src/ui` 文件与 game 层依赖点。
-- [ ] 执行目录重构：创建 `src/presentation` 六层并迁移 `src/ui` 现有文件。
-- [ ] 修正新目录内部 require 路径为 `src.presentation.*`。
-- [ ] 建立 `src/ui` 全量兼容桥接（每文件单行 re-export）。
-- [ ] 迁移 game 层四个直接依赖点到 `src.presentation.*`。
-- [ ] 增加并执行 require 回归验证脚本（覆盖 `src.presentation.*` 与 `src.ui.*`）。
-- [ ] 更新文档：补充分层导读、deprecated 说明与后续删除条件。
-- [ ] (收尾) 更新“意外与发现/决策日志/结果与复盘”并同步真实状态。
+- [x] (2026-02-12 15:12Z) 执行目录重构：创建 `src/presentation` 六层并迁移 `src/ui` 现有文件。
+- [x] (2026-02-12 15:16Z) 修正新目录内部 require 路径为 `src.presentation.*`。
+- [x] (2026-02-12 15:18Z) 建立 `src/ui` 全量兼容桥接（每文件单行 re-export）。
+- [x] (2026-02-12 15:20Z) 迁移 game 层四个直接依赖点到 `src.presentation.*`。
+- [x] (2026-02-12 15:26Z) 增加并执行 require 回归验证脚本（覆盖 `src.presentation.*` 与 `src.ui.*`）。
+- [x] (2026-02-12 15:30Z) 更新文档：补充分层导读、deprecated 说明与后续删除条件。
+- [x] (2026-02-12 15:32Z) (收尾) 更新“意外与发现/决策日志/结果与复盘”并同步真实状态。
 
 ## 意外与发现
 
-- 暂无。实施中若发现循环依赖或 require 顺序问题，在此记录证据输出。
+- 观察：原 `src/ui` 内部互相 `require("src.ui.*")`，迁移后必须补全子层路径，否则出现 `src.presentation.<Module>` 找不到。
+  证据：运行 `lua .agents/tests/presentation_require_smoke.lua` 初次失败报错 `module 'src.presentation.BoardView' not found`，修正后通过。
 
 ## 决策日志
 
@@ -38,9 +39,17 @@
   理由：确保风险可控，便于行为等价验证。
   日期/作者：2026-02-12 / Codex
 
+- 决策：兼容层使用每文件 `return require("src.presentation.<layer>.<Name>")` 直转发，不做额外逻辑。
+  理由：减少维护点，保证旧路径行为与新路径一致。
+  日期/作者：2026-02-12 / Codex
+
 ## 结果与复盘
 
-- 待实施完成后填写：总结完成项、遗留项、验证结果与经验。
+已完成 `src/ui` -> `src/presentation` 的六层迁移，game 侧关键依赖已切换到新路径；兼容层可保证旧路径继续可用。新增冒烟脚本验证新旧路径 require 均通过。
+
+遗留：无。
+
+经验：迁移前应统一规范模块内的 require 路径，避免出现“新路径下还在 require 旧路径”的混用。
 
 ## 背景与导读
 
@@ -111,7 +120,7 @@
 实施后将在此补充关键证据片段：
 
     $ lua .agents/tests/presentation_require_smoke.lua
-    All requires passed: ...
+    All requires passed: 60
 
 以及关键 diff 摘要（路径迁移 + 桥接 + game 引用替换）。
 
@@ -129,4 +138,4 @@ game 层后续应优先依赖 `src.presentation.api` 或明确子层（如 `src.
 
 ---
 
-变更说明（2026-02-12 / Codex）：新建本可执行计划，基于用户确认方案细化为可执行步骤、验证命令和迁移映射，并定义活文档章节的维护要求。
+变更说明（2026-02-12 / Codex）：完成分层迁移、路径修正、兼容层搭建与回归脚本，并更新活文档章节与验收证据。
