@@ -1,5 +1,5 @@
-local app = require("src.game.game.Game")
-local gameplay_loop = require("src.game.turn.GameplayLoop")
+local app = require("src.game.core.runtime.Game")
+local gameplay_loop = require("src.game.flow.turn.GameplayLoop")
 local map_cfg = require("Config.Map")
 local tiles_cfg = require("Config.Generated.Tiles")
 

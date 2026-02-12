@@ -10,7 +10,7 @@ local pricing = support.pricing
 local choice_resolver = support.choice_resolver
 
 local function _test_ai_picks_land_purchase()
-  local agent = require("src.game.game.Agent")
+  local agent = require("src.game.core.runtime.Agent")
   local g = _new_game()
   local ai_player = g.players[2]
   assert(agent.is_auto_player(ai_player), "player 2 should be AI")
@@ -93,7 +93,7 @@ local function _test_land_rent_graph_adjacency_breaks_path_neighbors()
 end
 
 local function _test_rent_owner_missing_skips_payment()
-  local land = require("src.game.land.Land")
+  local land = require("src.game.systems.land.Land")
   local g = _new_game()
   local tenant = g.players[1]
   local owner = g.players[2]

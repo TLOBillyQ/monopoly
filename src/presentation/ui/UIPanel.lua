@@ -1,4 +1,4 @@
-local pricing = require("src.game.land.LandPricing")
+local pricing = require("src.game.systems.land.LandPricing")
 local number_utils = require("src.core.NumberUtils")
 local role_avatar = require("src.presentation.state.UIRoleAvatar")
 

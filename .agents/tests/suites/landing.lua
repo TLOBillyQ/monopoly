@@ -8,9 +8,9 @@ local _first_land_tile = support.first_land_tile
 local _first_tile_by_type = support.first_tile_by_type
 local _tile_state = support.tile_state
 local _with_patches = support.with_patches
-local turn_land = require("src.game.turn.TurnLand")
+local turn_land = require("src.game.flow.turn.TurnLand")
 local chance_cfg = require("Config.Generated.ChanceCards")
-local item_inventory = require("src.game.item.ItemInventory")
+local item_inventory = require("src.game.systems.items.ItemInventory")
 local gameplay_rules = require("Config.GameplayRules")
 
 local function _test_land_on_start_reward()

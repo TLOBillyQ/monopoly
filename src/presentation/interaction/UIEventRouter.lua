@@ -1,5 +1,5 @@
 local market_ui = require("src.presentation.shared.MarketLayout")
-local turn_dispatch = require("src.game.turn.TurnDispatch")
+local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
 local ui_view = require("src.presentation.api.UIView")
 local runtime = require("src.presentation.api.UIRuntimePort")
 local logger = require("src.core.Logger")

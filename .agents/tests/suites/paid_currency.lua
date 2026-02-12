@@ -3,13 +3,13 @@ local _new_game = support.new_game
 local _with_patches = support.with_patches
 
 local function _reload_bridge()
-  package.loaded["src.game.commerce.PaidCurrencyBridge"] = nil
-  return require("src.game.commerce.PaidCurrencyBridge")
+  package.loaded["src.game.systems.commerce.PaidCurrencyBridge"] = nil
+  return require("src.game.systems.commerce.PaidCurrencyBridge")
 end
 
 local function _reload_market()
-  package.loaded["src.game.market.Market"] = nil
-  return require("src.game.market.Market")
+  package.loaded["src.game.systems.market.Market"] = nil
+  return require("src.game.systems.market.Market")
 end
 
 local function _build_fake_env(game, opts)

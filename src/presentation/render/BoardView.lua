@@ -2,7 +2,7 @@ local building_effects = require("src.presentation.render.BuildingEffects")
 local tile_renderer = require("src.presentation.render.TileRenderer")
 local number_utils = require("src.core.NumberUtils")
 local runtime_constants = require("Config.RuntimeConstants")
-local vehicle_feature = require("src.game.vehicle.VehicleFeature")
+local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
 
 local board_view = {}
 

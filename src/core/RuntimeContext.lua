@@ -2,7 +2,7 @@ local runtime_constants = require("Config.RuntimeConstants")
 local logger = require("src.core.Logger")
 local runtime_env_bindings = require("src.core.RuntimeEnvBindings")
 local runtime_editor_exports = require("src.core.RuntimeEditorExports")
-local vehicle_feature = require("src.game.vehicle.VehicleFeature")
+local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
 require("Config.RuntimeRefs")
 
 local runtime_context = {}

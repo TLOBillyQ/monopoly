@@ -1,8 +1,8 @@
 local gameplay_rules = require("Config.GameplayRules")
 local runtime_constants = require("Config.RuntimeConstants")
 local logger = require("src.core.Logger")
-local tick_timeout = require("src.game.turn.TickTimeout")
-local tick_ui_sync = require("src.game.turn.TickUISync")
+local tick_timeout = require("src.game.flow.turn.TickTimeout")
+local tick_ui_sync = require("src.game.flow.turn.TickUISync")
 local move_anim = require("src.presentation.render.MoveAnim")
 
 local adapter = {}
@@ -227,4 +227,3 @@ function adapter.build(_)
 end
 
 return adapter
-

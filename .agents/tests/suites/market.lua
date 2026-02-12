@@ -20,7 +20,7 @@ local function _contains_option(options, product_id)
 end
 
 local function _test_ai_skips_auto_buy_at_market()
-  local market = require("src.game.market.Market")
+  local market = require("src.game.systems.market.Market")
   local g = _new_game()
   local ai_player = g.players[2]
   assert(ai_player.is_ai, "player 2 should be AI")
@@ -34,7 +34,7 @@ local function _test_ai_skips_auto_buy_at_market()
 end
 
 local function _test_market_full_inventory_blocks_items()
-  local market = require("src.game.market.Market")
+  local market = require("src.game.systems.market.Market")
   local g = _new_game()
   local p = g:current_player()
   g:set_player_cash(p, 999999)
@@ -49,7 +49,7 @@ local function _test_market_full_inventory_blocks_items()
 end
 
 local function _test_market_global_limit()
-  local market = require("src.game.market.Market")
+  local market = require("src.game.systems.market.Market")
   local market_cfg = require("Config.Generated.Market")
   local g = _new_game()
   local p = g:current_player()
@@ -82,7 +82,7 @@ local function _test_market_global_limit()
 end
 
 local function _test_market_disabled_products_hidden()
-  local market = require("src.game.market.Market")
+  local market = require("src.game.systems.market.Market")
   local g = _new_game()
   local p = g:current_player()
   g:set_player_balance(p, "金豆", 999999)
@@ -103,7 +103,7 @@ local function _test_market_disabled_products_hidden()
 end
 
 local function _test_buy_disabled_market_product_rejected()
-  local market = require("src.game.market.Market")
+  local market = require("src.game.systems.market.Market")
   local g = _new_game()
   local p = g:current_player()
   g:set_player_balance(p, "金豆", 999999)
@@ -119,7 +119,7 @@ local function _test_buy_disabled_market_product_rejected()
 end
 
 local function _test_market_vehicle_hidden_when_feature_disabled()
-  local market = require("src.game.market.Market")
+  local market = require("src.game.systems.market.Market")
   local g = _new_game()
   local p = g:current_player()
   g:set_player_balance(p, "金豆", 999999)
@@ -135,7 +135,7 @@ local function _test_market_vehicle_hidden_when_feature_disabled()
 end
 
 local function _test_buy_vehicle_rejected_when_feature_disabled()
-  local market = require("src.game.market.Market")
+  local market = require("src.game.systems.market.Market")
   local g = _new_game()
   local p = g:current_player()
   g:set_player_balance(p, "金豆", 999999)

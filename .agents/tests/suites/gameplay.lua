@@ -19,9 +19,9 @@ local tick_timeout = support.tick_timeout
 local constants = support.constants
 local bankruptcy = support.bankruptcy
 local turn_move = support.turn_move
-local turn_dispatch = require("src.game.turn.TurnDispatch")
+local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
 local gameplay_rules = require("Config.GameplayRules")
-local mine_effect = require("src.game.effect.MineEffect")
+local mine_effect = require("src.game.systems.effects.MineEffect")
 local runtime_context = require("src.core.RuntimeContext")
 
 local function _mock_lua_api(send_custom_event)
@@ -61,7 +61,7 @@ local function _with_runtime_context_globals(fn)
 end
 
 local function _build_loop_state()
-  local auto_runner = require("src.game.turn.AutoRunner")
+  local auto_runner = require("src.game.flow.turn.AutoRunner")
   local ui_port = _build_ui_port()
   local state = {
     gameplay_loop_ports = {
@@ -486,12 +486,12 @@ local function _test_turn_move_anim_omits_vehicle_id_when_disabled()
 end
 
 local function _test_autorunner_runs_to_end()
-  local auto_runner = require("src.game.turn.AutoRunner")
-  local agent = require("src.game.game.Agent")
+  local auto_runner = require("src.game.flow.turn.AutoRunner")
+  local agent = require("src.game.core.runtime.Agent")
   local gameplay_rules = require("Config.GameplayRules")
-  local land = require("src.game.land.Land")
-  local land_actions = require("src.game.land.LandActions")
-  local item_inventory = require("src.game.item.ItemInventory")
+  local land = require("src.game.systems.land.Land")
+  local land_actions = require("src.game.systems.land.LandActions")
+  local item_inventory = require("src.game.systems.items.ItemInventory")
 
   local g = app:new({
     players = { "P1", "P2", "P3", "P4" },

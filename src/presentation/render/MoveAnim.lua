@@ -1,5 +1,5 @@
 local runtime_constants = require("Config.RuntimeConstants")
-local vehicle_feature = require("src.game.vehicle.VehicleFeature")
+local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
 
 local move_anim = {}
 
