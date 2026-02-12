@@ -4,9 +4,6 @@ local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
 local move_anim = {}
 
 local function _zero_vector()
-  if runtime_constants.v3_zero then
-    return runtime_constants.v3_zero
-  end
   if math and math.Vector3 then
     return math.Vector3(0.0, 0.0, 0.0)
   end
