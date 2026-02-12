@@ -229,8 +229,6 @@ local default_policy = {
         ports.close_popup(ctx)
         return
       end
-      local ui_view = require("src.presentation.api.UIView")
-      ui_view.close_popup(ctx)
     end,
   },
 }

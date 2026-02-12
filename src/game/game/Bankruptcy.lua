@@ -48,7 +48,7 @@ local function _collect_owned_tiles(game, player)
 end
 
 local function _notify_tiles_cleared(game, player, owned_tile_ids)
-  local ports = game and game.ui_port and game.ui_port.gameplay_loop_ports or nil
+  local ports = game and game.gameplay_loop_ports or nil
   if ports and type(ports.on_bankruptcy_tiles_cleared) == "function" then
     ports.on_bankruptcy_tiles_cleared(game, player, owned_tile_ids)
   end

@@ -203,6 +203,7 @@ local function _install_game_init(state)
   RegisterTriggerEvent({ EVENT.GAME_INIT }, function()
     require "vendor.third_party.UIManager.Utils"
     UIManager.Builder:new(require "Data.UIManagerNodes")
+    state.gameplay_loop_ports = require("src.presentation.api.GameplayLoopPortsAdapter").build(state)
     current_game = gameplay_loop.new_game(state)
     gameplay_loop.set_game(state, current_game)
     ui_event_router.bind(state, function()

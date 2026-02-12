@@ -13,13 +13,18 @@ local gameplay_loop = {}
 local function _resolve_ports(state)
   local override = state and state.gameplay_loop_ports or nil
   if override and not override._resolved then
-    state.gameplay_loop_ports = gameplay_loop_ports.resolve(override)
-    state.gameplay_loop_ports._resolved = true
-  elseif not override then
-    state.gameplay_loop_ports = gameplay_loop_ports.resolve(nil)
-    state.gameplay_loop_ports._resolved = true
+    local resolved = gameplay_loop_ports.resolve(override)
+    resolved._resolved = true
+    state.gameplay_loop_ports = resolved
+    return resolved
   end
-  return state.gameplay_loop_ports
+  if not override then
+    local resolved = gameplay_loop_ports.resolve(nil)
+    resolved._resolved = true
+    state.gameplay_loop_ports = resolved
+    return resolved
+  end
+  return override
 end
 
 local function _dispatch_action_with_close_choice(game, state, action, ports)
@@ -262,6 +267,7 @@ function gameplay_loop.set_game(state, game)
   state.game = game
   state.gameplay_loop_ports = ports
   game.ui_port = state
+  game.gameplay_loop_ports = ports
   if type(state.on_tile_owner_changed) == "function" then
     game.tile_owner_notifier = {
       notify_owner_changed = function(_, tile_id, owner_id)
