@@ -16,6 +16,7 @@ local event_handlers = require("src.presentation.api.UIEventHandlers")
 local paid_currency_bridge = require("src.game.systems.commerce.PaidCurrencyBridge")
 local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
 local runtime_port = require("src.presentation.api.UIRuntimePort")
+local ui_intent_dispatcher = require("src.presentation.interaction.UIIntentDispatcher")
 local market_view = require("src.presentation.render.MarketView")
 local market_layout = require("src.presentation.shared.MarketLayout")
 local ui_event_router = require("src.presentation.interaction.UIEventRouter")
@@ -983,6 +984,83 @@ local function _test_turn_dispatch_item_slot_uses_actor_slot_map()
   assert(captured and captured.option_id == 3001, "should read actor role slot mapping")
 end
 
+local function _test_ui_intent_dispatcher_market_confirm_routes_choice_select()
+  local captured = nil
+  local state = {
+    ui = {
+      input_blocked = false,
+      item_slot_item_ids = {},
+      item_slot_item_ids_by_role = {},
+    },
+  }
+  local game = {}
+
+  _with_patches({
+    { target = turn_dispatch, key = "dispatch_action", value = function(_, _, action)
+      captured = action
+    end },
+  }, function()
+    ui_intent_dispatcher.dispatch(state, game, {
+      type = "market_confirm",
+      choice_id = 12,
+      option_id = 34,
+    }, {})
+  end)
+
+  assert(captured and captured.type == "choice_select", "market_confirm should route as choice_select")
+  _assert_eq(captured and captured.choice_id, 12, "market_confirm should keep choice id")
+  _assert_eq(captured and captured.option_id, 34, "market_confirm should keep option id")
+end
+
+local function _test_ui_intent_dispatcher_market_select_updates_ui_only()
+  local selected_option = nil
+  local state = {
+    ui = {
+      input_blocked = false,
+      item_slot_item_ids = {},
+      item_slot_item_ids_by_role = {},
+    },
+  }
+  local game = {}
+
+  _with_patches({
+    { target = ui_view, key = "select_market_option", value = function(_, option_id)
+      selected_option = option_id
+    end },
+  }, function()
+    ui_intent_dispatcher.dispatch(state, game, {
+      type = "market_select",
+      option_id = 99,
+    }, {})
+  end)
+
+  _assert_eq(selected_option, 99, "market_select should update selected option")
+end
+
+local function _test_ui_intent_dispatcher_popup_confirm_closes_popup()
+  local closed = 0
+  local state = {
+    ui = {
+      input_blocked = false,
+      item_slot_item_ids = {},
+      item_slot_item_ids_by_role = {},
+    },
+  }
+  local game = {}
+
+  _with_patches({
+    { target = ui_view, key = "close_popup", value = function()
+      closed = closed + 1
+    end },
+  }, function()
+    ui_intent_dispatcher.dispatch(state, game, {
+      type = "popup_confirm",
+    }, {})
+  end)
+
+  _assert_eq(closed, 1, "popup_confirm should close popup once")
+end
+
 local function _test_ui_view_render_by_role_slots_are_isolated()
   local main_view = require("src.presentation.api.UIView")
 
@@ -1567,6 +1645,73 @@ local function _test_ui_event_router_player_target_click_direct_submit()
   _assert_eq(captured[2] and captured[2].option_id, 201, "target click should submit clicked option")
 end
 
+local function _test_ui_event_router_debug_toggle_uses_role_context()
+  local function new_node()
+    local node = {}
+    function node:listen(_, cb)
+      self._listener_cb = cb
+      return {
+        destroy = function()
+          self._listener_cb = nil
+        end,
+      }
+    end
+    return node
+  end
+
+  local node_map = {
+    ["基础_行动日志按钮"] = new_node(),
+    ["图片_82"] = new_node(),
+  }
+  local function query_nodes_by_name(name)
+    local node = node_map[name]
+    if not node then
+      node = new_node()
+      node_map[name] = node
+    end
+    return { node }
+  end
+
+  local state = {
+    ui = ui_view.build_ui_state(),
+    ui_model = { choice = nil },
+    pending_choice_selected_option_id = nil,
+    choice_visible_option_ids = nil,
+  }
+  local role = {
+    get_roleid = function()
+      return 101
+    end,
+  }
+
+  _with_patches({
+    { key = "all_roles", value = nil },
+    { key = "GlobalAPI", value = { show_tips = function() end } },
+    { key = "UIManager", value = {
+      EVENT = { CLICK = "click" },
+      query_nodes_by_name = query_nodes_by_name,
+      client_role = nil,
+    } },
+  }, function()
+    ui_event_router.bind(state, function()
+      return {}
+    end)
+
+    local role_id = role.get_roleid()
+    _assert_eq(state.ui.debug_visible_by_role[role_id], nil, "debug role flag should start nil")
+    local before = require("src.presentation.interaction.UIEventState").resolve_debug_enabled(state)
+    node_map["基础_行动日志按钮"]._listener_cb({ role = role })
+    local first_value = state.ui.debug_visible_by_role[role_id]
+    _assert_eq(first_value, not before, "debug toggle should invert role visibility")
+    _assert_eq(UIManager.client_role, nil, "debug toggle should restore client role")
+
+    node_map["基础_行动日志按钮"]._listener_cb({ role = role })
+    local second_value = state.ui.debug_visible_by_role[role_id]
+    assert(second_value ~= first_value, "debug toggle should flip role visibility after second click")
+    _assert_eq(UIManager.client_role, nil, "debug toggle should restore client role after second click")
+  end)
+end
+
 local function _test_market_selection_updates_icon_without_resize()
   local entry = assert(market_cfg[1], "missing market cfg entry")
   local option_id = entry.product_id
@@ -1978,8 +2123,6 @@ local function _test_gameplay_loop_full_turn_lock_toggle()
     ui = { input_blocked = false },
     gameplay_loop_ports = ports,
     auto_runner = { set_enabled = function() end, reset_timer = function() end, next_action = function() end },
-    ai_turn_runner = { set_enabled = function() end, reset_timer = function() end, next_action = function() end },
-    ai_turn_runner_active = false,
     pending_choice = nil,
     pending_choice_elapsed = 0,
     pending_choice_id = nil,
@@ -2358,6 +2501,9 @@ return {
   _test_turn_dispatch_rejects_choice_non_owner,
   _test_turn_dispatch_auto_rejects_unmapped_role,
   _test_turn_dispatch_item_slot_uses_actor_slot_map,
+  _test_ui_intent_dispatcher_market_confirm_routes_choice_select,
+  _test_ui_intent_dispatcher_market_select_updates_ui_only,
+  _test_ui_intent_dispatcher_popup_confirm_closes_popup,
   _test_ui_view_render_by_role_slots_are_isolated,
   _test_ui_events_send_without_roles_no_crash,
   _test_ui_nodes_validate_reports_missing,
@@ -2373,6 +2519,7 @@ return {
   _test_popup_timeout_closes_even_when_input_blocked,
   _test_choice_modal_routes_to_new_screens,
   _test_ui_event_router_player_target_click_direct_submit,
+  _test_ui_event_router_debug_toggle_uses_role_context,
   _test_market_selection_updates_icon_without_resize,
   _test_market_close_resets_icon_without_resize,
   _test_item_slot_uses_keep_size_path,

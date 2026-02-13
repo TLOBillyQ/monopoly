@@ -82,8 +82,6 @@ local function _build_loop_state()
     set_touch_enabled = ui_port.set_touch_enabled,
     query_node = ui_port.query_node,
     auto_runner = auto_runner:new({ interval = 0.01 }),
-    ai_turn_runner = auto_runner:new({ interval = 0.4 }),
-    ai_turn_runner_active = false,
     pending_choice = nil,
     pending_choice_elapsed = 0,
     pending_choice_id = nil,
@@ -92,7 +90,6 @@ local function _build_loop_state()
     next_turn_lock_phase = nil,
   }
   state.auto_runner:set_enabled(true)
-  state.ai_turn_runner:set_enabled(true)
   return state
 end
 
@@ -998,29 +995,78 @@ local function _test_action_button_timeout_blocked_when_input_locked()
   assert(state.action_button_elapsed == 0, "input locked should reset action timer")
 end
 
-local function _test_ai_turn_auto_advance_without_autoplay()
+local function _test_action_button_timeout_blocked_when_popup_active()
+  local g = _new_game()
+  local state = _build_loop_state()
+  g.ui_port = _build_ui_port()
+  g.turn.current_player_index = 1
+  g.turn.phase = "start"
+  g.turn.pending_choice = nil
+
+  state.ui.popup_active = true
+
+  local advanced = 0
+  g.advance_turn = function()
+    advanced = advanced + 1
+  end
+
+  state.gameplay_loop_ports = {
+    close_choice_modal = function() end,
+    open_choice_modal = function() end,
+    apply_input_lock = function() end,
+    play_move_anim = function() return 0 end,
+    play_action_anim = function() return 0 end,
+    step_choice_timeout = function() end,
+    step_modal_timeout = function() end,
+    update_countdown = function() end,
+    refresh_from_dirty = function()
+      return false
+    end,
+    sync_debug_log = function() end,
+    log_status = function() end,
+    build_model = function()
+      return { choice = nil, market = nil }
+    end,
+  }
+
+  _with_timestamp_stub(function()
+    local dt = (constants.action_timeout_seconds or 0) + 0.1
+    gameplay_loop.tick(g, state, dt)
+  end)
+
+  assert(advanced == 0, "popup active should block action button timeout")
+  assert(state.action_button_active == false, "popup active should disable action timer")
+  assert(state.action_button_elapsed == 0, "popup active should reset action timer")
+end
+
+local function _test_auto_runner_auto_advances_ai_player()
   local g = _new_game()
   g.ui_port = _build_ui_port()
   local state = _build_loop_state()
+  state.auto_runner.interval = 0.4
   g.turn.current_player_index = 2
   g.turn.phase = "start"
   g.turn.turn_count = 1
 
   _with_timestamp_stub(function()
-    local a1 = gameplay_loop.step_ai_turn_runner(g, state, 0.2, {
+    local a1 = gameplay_loop.step_auto_runner(g, state, 0.2, {
       game_finished = g.finished,
       current_player_index = g.turn.current_player_index,
+      current_player_id = g.players[2].id,
+      current_player_auto = true,
     })
-    assert(a1 == nil, "should not trigger before reaching AI interval")
-    local a2 = gameplay_loop.step_ai_turn_runner(g, state, 0.2, {
+    assert(a1 == nil, "should not trigger before reaching auto interval")
+    local a2 = gameplay_loop.step_auto_runner(g, state, 0.2, {
       game_finished = g.finished,
       current_player_index = g.turn.current_player_index,
+      current_player_id = g.players[2].id,
+      current_player_auto = true,
     })
-    assert(a2 and a2.type == "ui_button" and a2.id == "next", "AI turn should auto dispatch next")
+    assert(a2 and a2.type == "ui_button" and a2.id == "next", "ai player should auto dispatch next")
   end)
 end
 
-local function _test_human_turn_not_auto_advanced()
+local function _test_auto_runner_human_turn_not_auto_advanced()
   local g = _new_game()
   g.ui_port = _build_ui_port()
   local state = _build_loop_state()
@@ -1029,15 +1075,17 @@ local function _test_human_turn_not_auto_advanced()
   g.turn.turn_count = 1
 
   _with_timestamp_stub(function()
-    local action = gameplay_loop.step_ai_turn_runner(g, state, 1.0, {
+    local action = gameplay_loop.step_auto_runner(g, state, 1.0, {
       game_finished = g.finished,
       current_player_index = g.turn.current_player_index,
+      current_player_id = g.players[1].id,
+      current_player_auto = false,
     })
     assert(action == nil, "human turn should not auto dispatch next")
   end)
 end
 
-local function _test_ai_turn_not_advanced_when_input_blocked()
+local function _test_auto_runner_not_advanced_when_input_blocked()
   local g = _new_game()
   g.ui_port = _build_ui_port()
   local state = _build_loop_state()
@@ -1047,9 +1095,11 @@ local function _test_ai_turn_not_advanced_when_input_blocked()
   g.turn.turn_count = 1
 
   _with_timestamp_stub(function()
-    local action = gameplay_loop.step_ai_turn_runner(g, state, 1.0, {
+    local action = gameplay_loop.step_auto_runner(g, state, 1.0, {
       game_finished = g.finished,
       current_player_index = g.turn.current_player_index,
+      current_player_id = g.players[2].id,
+      current_player_auto = true,
     })
     assert(action == nil, "blocked phase should not auto dispatch next")
   end)
@@ -1108,8 +1158,9 @@ return {
   _test_tick_headless_ports_cover_anim_phases,
   _test_action_button_timeout_auto_advances,
   _test_action_button_timeout_blocked_when_input_locked,
-  _test_ai_turn_auto_advance_without_autoplay,
-  _test_human_turn_not_auto_advanced,
-  _test_ai_turn_not_advanced_when_input_blocked,
+  _test_action_button_timeout_blocked_when_popup_active,
+  _test_auto_runner_auto_advances_ai_player,
+  _test_auto_runner_human_turn_not_auto_advanced,
+  _test_auto_runner_not_advanced_when_input_blocked,
   _test_auto_runner_depends_on_current_player_auto,
 }

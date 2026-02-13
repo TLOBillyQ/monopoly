@@ -112,9 +112,7 @@ local function _phase_move(turn_mgr, args)
       }
     end
     if intent then
-      local ui_port = assert(turn_mgr.game.ui_port, "missing game.ui_port")
-      assert(ui_port.push_popup ~= nil, "missing ui_port.push_popup")
-      ui_port:push_popup(intent.payload)
+      intent_dispatcher.dispatch(turn_mgr.game, intent)
     end
   end
 

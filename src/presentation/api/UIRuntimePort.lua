@@ -15,6 +15,13 @@ function runtime_port.set_client_role(role)
   end
 end
 
+function runtime_port.get_client_role()
+  if UIManager then
+    return UIManager.client_role
+  end
+  return nil
+end
+
 function runtime_port.resolve_role_id(role)
   if not role or not role.get_roleid then
     return nil

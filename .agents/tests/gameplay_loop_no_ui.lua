@@ -68,7 +68,6 @@ local state = {
   _log_once = {},
   gameplay_loop_ports = build_ports(),
   auto_runner = { set_enabled = noop, reset_timer = noop, next_action = function() end },
-  ai_turn_runner = { set_enabled = noop, reset_timer = noop, next_action = function() end },
 }
 
 local game = app:new({
