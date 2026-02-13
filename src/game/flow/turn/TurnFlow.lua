@@ -1,6 +1,7 @@
 local flow = require("src.core.Flow")
-local turn_decision = require("src.game.flow.turn.TurnDecision")
 local turn_waits = require("src.game.flow.turn.TurnWaits")
+local turn_choice_handler = require("src.game.flow.turn.TurnChoiceHandler")
+local turn_logger = require("src.game.flow.turn.TurnLogger")
 require "vendor.third_party.ClassUtils"
 
 local turn_flow = Class("TurnFlow")
@@ -11,10 +12,6 @@ local wait_states = {
   wait_action_anim = true,
   detained_wait = true,
 }
-
-local function _get_choice(game)
-  return game.turn.pending_choice
-end
 
 function turn_flow:init(game, phases)
   self.game = game
@@ -35,17 +32,13 @@ function turn_flow:dispatch(action)
   end
 end
 
-local function _resolve_choice(game, choice, action)
-  return turn_decision.resolve_choice(game, choice, action)
-end
-
 function turn_flow:_build_flow()
   assert(self.phases, "TurnFlow requires phases")
   local states = {}
   for name, fn in pairs(self.phases) do
     states[name] = function(args)
       if name == "start" then
-        turn_decision.log_turn_start(self.game)
+        turn_logger.log_turn_start(self.game)
       end
       self.game.turn.phase = name
       self.game.dirty.turn = true
@@ -55,44 +48,7 @@ function turn_flow:_build_flow()
   end
 
   states.wait_choice = function(args)
-    self.game.turn.phase = "wait_choice"
-    self.game.dirty.turn = true
-    self.game.dirty.any = true
-    local choice = _get_choice(self.game)
-    if not choice then
-      self.pending_action = nil
-      return args.resume_state, args.resume_args
-    end
-
-    self.pending_action = turn_decision.decide_choice_action(self.game, choice, self.pending_action)
-
-    if not self.pending_action then
-      return "wait_choice", args
-    end
-    local action = self.pending_action
-    self.pending_action = nil
-
-    if action.type == "choice_select" or action.type == "choice_cancel" then
-      if not action.choice_id or not choice.id or action.choice_id ~= choice.id then
-        local logger = require("src.core.Logger")
-        logger.warn(
-          "choice action mismatch:",
-          tostring(action.type),
-          "action_choice_id=" .. tostring(action.choice_id),
-          "pending_choice_id=" .. tostring(choice.id)
-        )
-        return "wait_choice", args
-      end
-    end
-    local res = _resolve_choice(self.game, choice, action)
-    if res.stay then
-      return "wait_choice", args
-    end
-    local aa = self.game.turn.action_anim
-    if aa then
-      return "wait_action_anim", args
-    end
-    return args.resume_state, args.resume_args
+    return turn_choice_handler.handle_wait_choice(self, args)
   end
 
   states.wait_move_anim = turn_waits.make_anim_wait(self, "wait_move_anim", "move_anim", "move_anim_done")

@@ -255,7 +255,7 @@ local function _sync_layer_status(cache, player, status_key)
       local role = GameAPI.get_role(player_id)
       if role and role.set_label_text then
         local text = "当前回合无法行动\n剩余停留回合数：" .. tostring(stay_turns)
-        pcall(role.set_label_text, role, node_pair.text, text)
+        pcall(role.set_label_text, node_pair.text, text)
       end
     end
     return
@@ -276,7 +276,7 @@ local function _sync_layer_status(cache, player, status_key)
     local role = GameAPI.get_role(player_id)
     if role and role.set_label_text then
       local text = "当前回合无法行动\n剩余停留回合数：" .. tostring(stay_turns)
-      pcall(role.set_label_text, role, node_pair.text, text)
+      pcall(role.set_label_text, node_pair.text, text)
     end
   end
   _set_layer_visible_for_roles(layer, roles, status_key ~= nil)

@@ -1,11 +1,10 @@
-local market_ui = require("src.presentation.shared.MarketLayout")
-local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
-local ui_view = require("src.presentation.api.UIView")
 local runtime = require("src.presentation.api.UIRuntimePort")
+local ui_view = require("src.presentation.api.UIView")
 local logger = require("src.core.Logger")
 local ui_event_bindings = require("src.presentation.interaction.UIEventBindings")
-local ui_event_intents = require("src.presentation.interaction.UIEventIntents")
 local ui_event_state = require("src.presentation.interaction.UIEventState")
+local ui_intent_builder = require("src.presentation.interaction.UIIntentBuilder")
+local ui_intent_dispatcher = require("src.presentation.interaction.UIIntentDispatcher")
 
 local ui_event_router = {}
 
@@ -112,252 +111,44 @@ local function _resolve_actor_role_id(data)
 end
 
 
-local function _should_block_intent(state, intent)
-  if turn_dispatch.should_block_action then
-    return turn_dispatch.should_block_action(state, intent)
-  end
-  return false
-end
-
-local function _dispatch(ctx)
-  assert(ctx ~= nil, "missing ctx")
-  local intent = ctx.intent
-  assert(intent ~= nil, "missing intent")
-  local state = ctx.state
-  local game = ctx.game
-  local opts = ctx.opts
-  local intent_type = intent.type
-  if _should_block_intent(state, intent) then
-    return
-  end
-  if not game then
-    logger.warn("ui intent without game:", tostring(intent_type))
-    return
-  end
-
-  if intent_type == "ui_button"
-      or intent_type == "choice_select"
-      or intent_type == "choice_cancel" then
-    turn_dispatch.dispatch_action(game, state, intent, opts)
-    return
-  end
-
-  if intent_type == "market_confirm" then
-    if not intent.choice_id or not intent.option_id then
-      logger.warn("market_confirm missing ids:", tostring(intent.choice_id), tostring(intent.option_id))
-      return
-    end
-    turn_dispatch.dispatch_action(game, state, {
-      type = "choice_select",
-      choice_id = intent.choice_id,
-      option_id = intent.option_id,
-    }, opts)
-    return
-  end
-
-  if intent_type == "market_select" then
-    ui_view.select_market_option(state, intent.option_id)
-    return
-  end
-
-  if intent_type == "popup_confirm" then
-    ui_view.close_popup(state)
-  end
-end
-
 local function _build_route_specs(state)
-  local specs = {
-    {
-      name = "行动按钮",
-      build_intent = function()
-        return { type = "ui_button", id = "next" }
-      end,
-    },
-    {
-      name = "托管按钮",
-      build_intent = function()
-        return { type = "ui_button", id = "auto" }
-      end,
-    },
-    {
-      name = "基础_行动日志按钮",
-      build_intent = function(data)
-        _toggle_debug_visible_for_role(state, data and data.role or nil)
-        return nil
-      end,
-    },
-    {
-      name = market_ui.confirm_button,
-      build_intent = function()
-        local market = state.ui_model and state.ui_model.market or nil
-        if not market then
-          logger.warn("market_confirm without market")
-          return nil
-        end
-        local option_id = state.pending_choice_selected_option_id
-        if not option_id then
-          logger.warn("market_confirm missing selected option")
-          return nil
-        end
-        return { type = "market_confirm", choice_id = market.choice_id, option_id = option_id }
-      end,
-    },
-    {
-      name = market_ui.cancel_button,
-      build_intent = function()
-        return ui_event_intents.choice_cancel_intent(state, "market_cancel")
-      end,
-    },
-    {
-      name = "关闭",
-      build_intent = function()
-        return ui_event_intents.choice_cancel_intent(state, "market_close")
-      end,
-    },
-    {
-      name = "取消按钮",
-      build_intent = function()
-        if state.ui and state.ui.popup_active then
-          return { type = "popup_confirm" }
-        end
-        return ui_event_intents.choice_cancel_intent(state, "choice_cancel")
-      end,
-    },
-    {
-      name = "建筑升级_确定按钮",
-      build_intent = function()
-        return ui_event_intents.choice_confirm_intent(state, "building_confirm")
-      end,
-    },
-    {
-      name = "建筑升级_取消",
-      build_intent = function()
-        return ui_event_intents.choice_cancel_intent(state, "building_cancel")
-      end,
-    },
-    {
-      name = "遥控骰子_取消",
-      build_intent = function()
-        return ui_event_intents.choice_cancel_intent(state, "remote_cancel")
-      end,
-    },
+  local specs = {}
+
+  local base_specs = ui_intent_builder.build_basic_intents(state)
+  for _, spec in ipairs(base_specs) do
+    specs[#specs + 1] = spec
+  end
+  specs[#specs + 1] = {
+    name = "基础_行动日志按钮",
+    build_intent = function(data)
+      _toggle_debug_visible_for_role(state, data and data.role or nil)
+      return nil
+    end,
   }
 
-  local popup = state.ui and state.ui.popup_screen or nil
-  local dismiss_nodes = popup and popup.dismiss_nodes or nil
-  if type(dismiss_nodes) == "table" then
-    for _, name in ipairs(dismiss_nodes) do
-      specs[#specs + 1] = {
-        name = name,
-        build_intent = function()
-          if state.ui and state.ui.popup_active then
-            return { type = "popup_confirm" }
-          end
-          return nil
-        end,
-      }
-    end
+  local popup_specs = ui_intent_builder.build_popup_intents(state)
+  for _, spec in ipairs(popup_specs) do
+    specs[#specs + 1] = spec
   end
-
-  local item_slots = (state.ui and state.ui.item_slots) or {}
-  if #item_slots == 0 then
-    item_slots = { "道具槽位1", "道具槽位2", "道具槽位3", "道具槽位4", "道具槽位5" }
+  local item_specs = ui_intent_builder.build_item_slot_intents(state)
+  for _, spec in ipairs(item_specs) do
+    specs[#specs + 1] = spec
   end
-  for index, node_name in ipairs(item_slots) do
-    local action_id = "item_slot_" .. tostring(index)
-    specs[#specs + 1] = {
-      name = node_name,
-      build_intent = function()
-        local choice = state.ui_model and state.ui_model.choice or nil
-        if not choice or choice.kind ~= "item_phase_choice" then
-          logger.warn("item_slot click ignored:", tostring(index))
-          return nil
-        end
-        return { type = "ui_button", id = action_id }
-      end,
-    }
+  local player_specs = ui_intent_builder.build_player_intents(state)
+  for _, spec in ipairs(player_specs) do
+    specs[#specs + 1] = spec
   end
-
-  local player_nodes = {
-    "玩家选择_槽位1",
-    "玩家选择_槽位2",
-    "玩家选择_槽位3",
-  }
-  for index, name in ipairs(player_nodes) do
-    specs[#specs + 1] = {
-      name = name,
-      build_intent = function()
-        return ui_event_intents.choice_select_intent(state, index, "player_select")
-      end,
-    }
+  local target_specs = ui_intent_builder.build_target_intents(state)
+  for _, spec in ipairs(target_specs) do
+    specs[#specs + 1] = spec
   end
-
-  local target_nodes = {
-    "位置前1",
-    "位置前2",
-    "位置前3",
-    "位置后1",
-    "位置后2",
-    "位置后3",
-    "位置脚下",
-  }
-  for index, name in ipairs(target_nodes) do
-    specs[#specs + 1] = {
-      name = name,
-      build_intent = function()
-        return ui_event_intents.choice_select_intent(state, index, "target_select")
-      end,
-    }
+  local remote_specs = ui_intent_builder.build_remote_intents(state)
+  for _, spec in ipairs(remote_specs) do
+    specs[#specs + 1] = spec
   end
-
-  local remote_nodes = {
-    "遥控骰子_选项_01",
-    "遥控骰子_选项_02",
-    "遥控骰子_选项_03",
-    "遥控骰子_选项_04",
-    "遥控骰子_选项_05",
-    "遥控骰子_选项_06",
-  }
-  for index, name in ipairs(remote_nodes) do
-    specs[#specs + 1] = {
-      name = name,
-      build_intent = function()
-        local choice = state.ui_model and state.ui_model.choice or nil
-        if not choice then
-          logger.warn("remote_select without choice")
-          return nil
-        end
-        local option_id = ui_event_intents.resolve_option_id(choice, { index = index }, state)
-        if not option_id then
-          logger.warn("remote_select missing option:", tostring(index))
-          return nil
-        end
-        return { type = "choice_select", choice_id = choice.id, option_id = option_id }
-      end,
-    }
-  end
-
-  for index, name in ipairs(market_ui.item_buttons) do
-    specs[#specs + 1] = {
-      name = name,
-      build_intent = function()
-        if not market_ui.is_ready() then
-          logger.warn("market ui not ready")
-          return nil
-        end
-        local market = state.ui_model and state.ui_model.market or nil
-        if not market then
-          logger.warn("market_select without market")
-          return nil
-        end
-        local option_id = ui_event_intents.resolve_option_id(market, { index = index }, state)
-        if not option_id then
-          logger.warn("market_select missing option:", tostring(index))
-          return nil
-        end
-        return { type = "market_select", option_id = option_id }
-      end,
-    }
+  local market_specs = ui_intent_builder.build_market_item_intents(state)
+  for _, spec in ipairs(market_specs) do
+    specs[#specs + 1] = spec
   end
 
   return specs
@@ -400,12 +191,7 @@ function ui_event_router.bind(state, get_game)
     if intent and intent.actor_role_id == nil then
       intent.actor_role_id = _resolve_actor_role_id(data)
     end
-    _dispatch({
-      state = state,
-      game = resolve_game(),
-      intent = intent,
-      opts = dispatch_opts,
-    })
+    ui_intent_dispatcher.dispatch(state, resolve_game(), intent, dispatch_opts)
   end
 
   local cache = {}

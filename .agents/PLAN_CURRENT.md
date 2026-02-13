@@ -1,4 +1,4 @@
-# 基础屏托管光效与调试屏开关可执行计划
+# 重构执行计划：解耦回合流程与 UI 依赖
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
@@ -6,14 +6,17 @@
 
 ## 目的 / 全局视角
 
-把“基础屏-AI托管光效”绑定到本地角色玩家的托管状态，同时把“基础_行动日志按钮”作为调试屏的单击开关（仅本地角色生效）。完成后，玩家能在基础屏直观看到托管开关状态，也可用行动日志按钮快速切换调试屏。验证方式是：在基础屏切换托管开关时光效跟随显隐；点击行动日志按钮仅本地调试屏显隐；“图片_82”的 10 连点逻辑仍可用。
+把回合流程从 UI/运行时细节中解耦，降低高层策略对低层实现的依赖，让核心流程可被独立测试与替换。完成后应当能用“无 UI 端口”跑通回合推进与选择流程，同时 UI 仍可通过适配层正常驱动。验证方式是：在现有 UI 下功能不变；新增的无 UI 端口测试或脚本可推进回合并触发选择处理；手动或脚本可观察到日志与状态变化。
 
 ## 进度
 
-- [x] (2025-03-08 08:12Z) 清空旧计划并建立新计划骨架。
-- [x] (2025-03-08 08:16Z) 实现基础屏 AI 托管光效显隐逻辑。
-- [x] (2025-03-08 08:20Z) 接入行动日志按钮切换调试屏（本地角色）。
-- [ ] (2025-03-08 08:20Z) 自测基础屏托管与调试屏显隐。
+- [x] (2025-03-08 09:05Z) 清空旧计划并建立新计划骨架。
+- [x] (2025-03-08 09:10Z) 梳理当前回合流程与 UI 依赖点。
+- [x] (2025-03-08 09:15Z) 设计并实现 GameplayPorts 抽象与默认实现。
+- [x] (2025-03-08 09:25Z) 拆分 UIEventRouter 职责并迁移路由/意图/派发。
+- [x] (2025-03-08 09:35Z) 拆分 CompositionRoot 的工厂与注册职责。
+- [x] (2025-03-08 09:40Z) 拆分 TurnFlow 的选择处理与日志职责。
+- [ ] (2025-03-08 09:40Z) 增补测试与验证脚本。
 
 ## 意外与发现
 
@@ -21,74 +24,84 @@
 
 ## 决策日志
 
-- 决策：托管光效仅跟随“本地角色玩家”状态，无法映射时隐藏。
-  理由：与“本地角色生效”要求一致，避免观战或无映射角色误显示。
-  日期/作者：2025-03-08 / Codex
-
-- 决策：调试屏显隐通过 `UIManager.client_role` 仅本地切换。
-  理由：UI 事件广播默认全角色，使用本地 client_role 更稳妥地控制本地显隐。
+- 决策：优先做“端口抽象 + 事件路由拆分”，其余拆分作为后续里程碑。
+  理由：对耦合风险下降最大，且对现有 UI 影响可控。
   日期/作者：2025-03-08 / Codex
 
 ## 结果与复盘
 
-已完成代码改动，尚未进行人工验证。
+已完成端口抽象与主要模块拆分，待补充测试验证。
 
 ## 背景与导读
 
-基础屏 UI 节点由 `Data/UIManagerNodes.lua` 提供，显示/隐藏与触控设置由 `UIRuntimePort` 与 UIManager 节点访问完成。托管状态来源于 `player.auto` 字段，经 `UIModelProjection.build_auto_enabled_by_player` 生成 `ui_model.auto_enabled_by_player`。基础屏 UI 刷新由 `UIPanelPresenter.refresh` 执行，调试屏显隐由 `UIView.set_debug_visible` 控制。
+回合推进入口在 `src/game/flow/turn/GameplayLoop.lua`，其中通过 `GameplayLoopPorts` 与 `GameplayLoopPortsAdapter` 访问 UI 与运行时细节。当前 `GameplayLoop` 在 `set_game`/`tick` 中直接调用 UI 端口的状态、输入锁、弹窗与渲染逻辑，导致高层流程对 UI 细节耦合严重。UI 事件入口在 `src/presentation/interaction/UIEventRouter.lua`，该文件同时负责节点绑定、意图构造、业务派发、调试开关与节流，职责混杂。`src/game/core/runtime/CompositionRoot.lua` 同时承担对象创建、注册、阶段编排、游戏初始化。`src/game/flow/turn/TurnFlow.lua` 同时负责状态机推进与 choice 处理、日志记录。
 
 术语解释：
-- “本地角色玩家”指 `UIRoleContext.resolve` 结果中的 `role_id` 映射到玩家时的角色。
-- “托管开关”指 `player.auto` 的布尔值。
+- “端口”指以函数集合形式抽象的依赖层接口，用于在领域层与 UI/运行时细节之间解耦。
+- “无 UI 端口”指不依赖 UI 层的端口实现，用于测试或服务器模拟。
+- “意图”指 UI 事件转换出的领域动作（如 `ui_button`、`choice_select`）。
 
 ## 工作计划
 
-先扩展 `UIPanelPresenter.refresh`，在 per-role 刷新流程中同步 `基础屏-AI托管光效` 的显示状态。状态取自 `ui_model.auto_enabled_by_player`，按 `UIRoleContext.resolve` 计算的 `role_id` 映射，无法映射时隐藏。必要时新增小的私有函数用于计算“本地角色玩家”的托管状态，避免逻辑散落。
-
-随后修改 `UIEventRouter._build_route_specs`，新增 `基础_行动日志按钮` 的路由。点击后切换调试屏显示/隐藏，但仅对本地角色生效：通过 `UIManager.client_role` 设置到当前点击的 `data.role`，并调用 `UIView.set_debug_visible`。保持原有“图片_82” 10 连点逻辑不变。
-
-最后补充简要自测步骤，验证托管光效与调试屏显隐符合预期。
+首先创建 `GameplayPorts` 抽象与默认空实现，将 `GameplayLoop` 对 UI 端口的直接依赖收敛为接口调用；将 UI 相关实现保留在 `GameplayLoopPortsAdapter`。完成后确保 `GameplayLoop` 在没有 UI 端口时仍能执行核心回合推进逻辑，且不会访问不存在的 UI 状态。然后拆分 `UIEventRouter`：把节点绑定留在路由层、意图构造移到新模块、派发逻辑移到新模块；保持现有功能行为一致。接着拆分 `CompositionRoot`：把对象创建、注册、相位表构建拆为独立模块并保留原入口，避免对外接口变化。最后拆分 `TurnFlow` 中 choice 处理与日志，保留状态机推进职责，新增测试脚本验证“无 UI 端口”与基础流程。
 
 ## 具体步骤
 
-1) 托管光效显隐
+1) 端口抽象与默认实现  
+在 `src/game/flow/turn/` 新增 `GameplayPorts.lua`，定义 `resolve` 与默认空实现。把 `GameplayLoop` 依赖的端口方法集中列出并提供空实现；`GameplayLoop` 中任何直接使用 `GameplayLoopPortsAdapter` 的位置改为依赖该端口抽象。更新 `GameplayLoopPortsAdapter` 只负责提供 UI 实现。
 
-在 `src/presentation/ui/UIPanelPresenter.lua` 中新增私有函数，基于 `ui_model.auto_enabled_by_player` 与 `UIRoleContext.resolve` 计算 `基础屏-AI托管光效` 的可见性。把该函数放入 `refresh` 的 `runtime.for_each_role_or_global` 循环内执行，确保 per-role 生效。
+2) UIEventRouter 拆分  
+新增 `src/presentation/interaction/UIIntentBuilder.lua`，只负责从状态+输入构造意图。新增 `src/presentation/interaction/UIIntentDispatcher.lua`，只负责把意图交给 `TurnDispatch` 或 UI 操作。`UIEventRouter` 仅保留节点绑定与调试开关入口。保证旧节点名与行为保持一致。
 
-2) 行动日志按钮切换调试屏
+3) CompositionRoot 拆分  
+新增 `src/game/core/runtime/GameFactory.lua`（创建 board/players/rng）、`src/game/core/runtime/PhaseRegistry.lua`（构建 phases）、`src/game/core/runtime/Bootstrap.lua`（注册 items/choices/chance）。`CompositionRoot.assemble` 变为编排调用，行为保持一致。
 
-在 `src/presentation/interaction/UIEventRouter.lua` 的 `_build_route_specs` 中新增一条路由，name 为 `基础_行动日志按钮`，点击后调用新的 `_toggle_debug_visible_for_role`。该函数将 `UIManager.client_role` 临时设置为 `data.role`（若为 nil 则使用当前值），再调用 `UIView.set_debug_visible` 切换显隐。
+4) TurnFlow 拆分  
+新增 `src/game/flow/turn/TurnChoiceHandler.lua` 与 `src/game/flow/turn/TurnLogger.lua`，`TurnFlow` 中选择处理与日志改为调用这两个模块。
 
-3) 自测
-
-进入基础屏：
-- 点击“托管按钮”，本地角色 `基础屏-AI托管光效` 随托管开关显隐。
-- 点击“基础_行动日志按钮”，调试屏本地显隐切换，其他角色不受影响。
-- “图片_82” 10 连点仍可切换调试屏。
+5) 测试与验证  
+新增一个最小脚本或测试：创建 game，使用无 UI 端口，调用 `game:advance_turn()` 进入回合并触发 `pending_choice` 的处理路径，观察日志或状态变化。确保 UI 模式下功能不变。
 
 ## 验证与验收
 
-人工验收即可：按“自测”步骤观察 UI 行为。若需回归，可运行 `.agents/tests/` 下既有脚本，但本次不强制。
+1) 运行最小验证脚本，预期回合推进、无 UI 端口无报错。  
+2) 在现有 UI 环境中运行回归流程：进入游戏、点击行动按钮、触发选择、确认 UI 行为不变。  
+3) 若已有测试框架，运行 `agents/tests/` 下相关脚本，确保通过。
 
 ## 可重复性与恢复
 
-变更为纯 UI 显隐逻辑，可重复执行。若行为异常，回退对应函数改动即可恢复。
+变更主要为模块拆分与端口抽象，可重复执行。若出现回归问题，按模块逐一回退：先回退 `UIEventRouter` 拆分，再回退 `GameplayPorts` 抽象，最后回退 `CompositionRoot` 与 `TurnFlow` 拆分。
 
 ## 产物与备注
 
-改动文件：
+预期新增文件：
 
-    src/presentation/ui/UIPanelPresenter.lua
+    src/game/flow/turn/GameplayPorts.lua
+    src/presentation/interaction/UIIntentBuilder.lua
+    src/presentation/interaction/UIIntentDispatcher.lua
+    src/game/core/runtime/GameFactory.lua
+    src/game/core/runtime/PhaseRegistry.lua
+    src/game/core/runtime/Bootstrap.lua
+    src/game/flow/turn/TurnChoiceHandler.lua
+    src/game/flow/turn/TurnLogger.lua
+
+预期修改文件：
+
+    src/game/flow/turn/GameplayLoop.lua
+    src/game/flow/turn/GameplayLoopPortsAdapter.lua
     src/presentation/interaction/UIEventRouter.lua
-    src/presentation/api/UIView.lua
-    src/presentation/interaction/UIEventState.lua
-    src/game/flow/turn/TickUISync.lua
+    src/game/core/runtime/CompositionRoot.lua
+    src/game/flow/turn/TurnFlow.lua
 
 ## 接口与依赖
 
-- `UIView.set_debug_visible(state, visible)` 继续作为调试屏显隐入口。
-- `UIRoleContext.resolve(role, ui_model, { runtime = runtime })` 用于本地角色映射。
+新增接口：
+- `GameplayPorts.resolve(override_ports)` 返回包含默认方法的端口对象。
 
-变更说明（2025-03-08 / Codex）：创建新计划并准备实现托管光效与调试屏切换。
+`GameplayLoop` 只依赖 `GameplayPorts` 抽象，不直接引用 UI 实现。
 
-变更说明（2025-03-08 / Codex）：更新进度与产物列表，记录已完成实现。
+变更说明（2025-03-08 / Codex）：创建重构执行计划，明确端口解耦与模块拆分路线。
+
+变更说明（2025-03-08 / Codex）：修正进度状态，记录完成骨架构建。
+
+变更说明（2025-03-08 / Codex）：完成端口与模块拆分，待补充测试验证。
