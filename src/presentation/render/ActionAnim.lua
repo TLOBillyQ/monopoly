@@ -3,12 +3,26 @@ local gameplay_rules = require("Config.GameplayRules")
 
 local prefab = require("Data.Prefab")
 local logger = require("src.core.Logger")
+local runtime = require("src.presentation.api.UIRuntimePort")
 
 local action_anim = {}
 
 local durations = {
   missile = 1.2,
   monster = 1.2,
+}
+
+local dice_screen_nodes = {
+  screen = "骰子屏",
+  spin = "骰子-旋转骰子底图",
+  faces = {
+    "骰子-骰子点数1",
+    "骰子-骰子点数2",
+    "骰子-骰子点数3",
+    "骰子-骰子点数4",
+    "骰子-骰子点数5",
+    "骰子-骰子点数6",
+  },
 }
 
 local function _resolve_tile_name(state, tile_index)
@@ -211,6 +225,96 @@ local function _show_tip(text, duration)
   end
 end
 
+local function _resolve_roll_face(anim)
+  if not anim then
+    return nil
+  end
+  local total = anim.total
+  if type(total) == "number" then
+    if total >= 1 and total <= 6 then
+      return total
+    end
+    if total > 6 then
+      local rolls = anim.rolls
+      local first = type(rolls) == "table" and rolls[1] or nil
+      if type(first) == "number" and first >= 1 and first <= 6 then
+        return first
+      end
+    end
+  end
+  local rolls = anim.rolls
+  local first = type(rolls) == "table" and rolls[1] or nil
+  if type(first) == "number" and first >= 1 and first <= 6 then
+    return first
+  end
+  return nil
+end
+
+local function _set_node_visible(node, visible)
+  if not node then
+    return
+  end
+  node.visible = visible == true
+end
+
+local function _set_dice_face_visible(nodes, face)
+  for index, node in ipairs(nodes.faces or {}) do
+    _set_node_visible(node, face == index)
+  end
+end
+
+local function _spin_node(node, duration)
+  if not node or not duration or duration <= 0 then
+    return
+  end
+  local steps = 12
+  local step_time = duration / steps
+  pcall(function()
+    node.rotation = runtime_constants.q_zero
+  end)
+  for i = 1, steps do
+    local delay = step_time * (i - 1)
+    local angle = 360 * i / steps
+    SetTimeOut(delay, function()
+      pcall(function()
+        node.rotation = math.Quaternion(0.0, 0.0, angle)
+      end)
+    end)
+  end
+end
+
+local function _play_roll_dice_screen(_, anim, duration, hold_seconds)
+  local face = _resolve_roll_face(anim)
+  runtime.for_each_role_or_global(function()
+    local nodes = {
+      screen = runtime.query_node(dice_screen_nodes.screen),
+      spin = runtime.query_node(dice_screen_nodes.spin),
+      faces = {},
+    }
+    for index, name in ipairs(dice_screen_nodes.faces) do
+      nodes.faces[index] = runtime.query_node(name)
+    end
+
+    _set_node_visible(nodes.screen, true)
+    _set_node_visible(nodes.spin, true)
+    _set_dice_face_visible(nodes, nil)
+
+    _spin_node(nodes.spin, duration)
+
+    SetTimeOut(duration, function()
+      if face then
+        _set_dice_face_visible(nodes, face)
+      end
+    end)
+
+    SetTimeOut(duration + hold_seconds, function()
+      _set_node_visible(nodes.screen, false)
+      _set_node_visible(nodes.spin, false)
+      _set_dice_face_visible(nodes, nil)
+    end)
+  end)
+end
+
 function action_anim.play(state, anim)
   assert(anim ~= nil, "missing anim")
   assert(state ~= nil, "missing state")
@@ -219,13 +323,18 @@ function action_anim.play(state, anim)
   if duration <= 0 then
     duration = default_duration
   end
+
+  local kind = anim.kind
+  if kind == "roll" then
+    local hold_seconds = 0.5
+    _play_roll_dice_screen(state, anim, duration, hold_seconds)
+    return duration + hold_seconds
+  end
   local tip_duration = duration
   if type(duration) == "number" and math and math.tofixed then
     tip_duration = math.tofixed(duration)
   end
   _show_tip(_build_tip(state, anim), tip_duration)
-
-  local kind = anim.kind
   if kind == "roadblock" then
     local tile_index = assert(anim.tile_index, "missing roadblock tile_index")
     local group_id = prefab.group["路障"]
