@@ -22,10 +22,6 @@ local function _build_player_by_id(players)
   return out
 end
 
-local function _snapshot_inventory(inv)
-  return { items = deep_copy(inv.items), max_slots = inv.max_slots }
-end
-
 local function _init_tile_state(board)
   for _, t in ipairs(board.path) do
     if t.type == "land" then
@@ -122,7 +118,5 @@ function composition_root.assemble(opts, game_or_class)
 
   return game
 end
-
-composition_root.snapshot_inventory = _snapshot_inventory
 
 return composition_root

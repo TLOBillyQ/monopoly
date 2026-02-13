@@ -33,7 +33,7 @@ function input_lock_policy.apply(state, deps)
     if ui.popup_active and ui.popup_screen and ui.popup_screen.confirm then
       ui:set_touch_enabled(ui.popup_screen.confirm, _can_popup_confirm())
     end
-    ui_touch_policy.set_debug_toggle_touch(ui, true)
+    ui_touch_policy.set_action_log_toggle_touch(ui, true)
     return
   end
 
@@ -67,7 +67,7 @@ function input_lock_policy.apply(state, deps)
 
   -- 业务例外：托管开关与调试开关在输入锁期间仍允许切换。
   ui_touch_policy.set_auto_controls_touch(ui, true)
-  ui_touch_policy.set_debug_toggle_touch(ui, true)
+  ui_touch_policy.set_action_log_toggle_touch(ui, true)
 end
 
 return input_lock_policy

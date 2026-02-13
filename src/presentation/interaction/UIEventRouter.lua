@@ -27,7 +27,7 @@ local function _build_default_route_specs(state)
   end
 
   _append(ui_intent_builder.build_basic_intents(state))
-  _append(ui_intent_builder.build_debug_intents(state))
+  _append(ui_intent_builder.build_action_log_intents(state))
   _append(ui_intent_builder.build_popup_intents(state))
   _append(ui_intent_builder.build_item_slot_intents(state))
   _append(ui_intent_builder.build_player_intents(state))
@@ -93,7 +93,7 @@ function ui_event_router.bind(state, get_game)
       end
     end, registered, listeners)
   end
-  ui_event_bindings.enable_debug_toggle_touch(cache)
+  ui_event_bindings.enable_action_log_toggle_touch(cache)
   ui_event_bindings.register_missing_button_tip(cache, registered, listeners)
 end
 

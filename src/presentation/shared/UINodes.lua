@@ -12,15 +12,15 @@ nodes.canvas = {
   debug = "调试屏",
 }
 
-nodes.debug = {
+nodes.action_log = {
   toggle_image = "倒计时时钟",
   toggle_button = "基础_行动日志按钮",
   log_label = "日志",
 }
 
-nodes.debug.toggle_targets = {
-  nodes.debug.toggle_button,
-  nodes.debug.toggle_image,
+nodes.action_log.toggle_targets = {
+  nodes.action_log.toggle_button,
+  nodes.action_log.toggle_image,
 }
 
 nodes.buttons = {
@@ -142,7 +142,7 @@ function nodes.required_click_nodes(opts)
     nodes.choice.remote.options[6],
   }
 
-  for _, name in ipairs(nodes.debug.toggle_targets or {}) do
+  for _, name in ipairs(nodes.action_log.toggle_targets or {}) do
     required[#required + 1] = name
   end
 

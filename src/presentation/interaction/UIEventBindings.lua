@@ -28,7 +28,7 @@ function bindings.register_node_click(cache, name, callback, registered, listene
     local ok, result = pcall(runtime.query_nodes, name)
     if not ok then
       _show_missing_button_tip(name)
-      if name == ui_nodes.debug.toggle_image then
+      if name == ui_nodes.action_log.toggle_image then
         logger.info("[调试屏] 倒计时时钟注册失败: query_nodes异常")
       end
       return
@@ -38,12 +38,12 @@ function bindings.register_node_click(cache, name, callback, registered, listene
   end
   if not nodes or not nodes[1] then
     _show_missing_button_tip(name)
-    if name == ui_nodes.debug.toggle_image then
+    if name == ui_nodes.action_log.toggle_image then
       logger.info("[调试屏] 倒计时时钟注册失败: 未找到节点")
     end
     return
   end
-  if name == ui_nodes.debug.toggle_image then
+  if name == ui_nodes.action_log.toggle_image then
     logger.info("[调试屏] 倒计时时钟注册成功", "nodes=" .. tostring(#nodes))
   end
   registered[name] = true
@@ -55,10 +55,10 @@ function bindings.register_node_click(cache, name, callback, registered, listene
   end
 end
 
-function bindings.enable_debug_toggle_touch(cache)
-  local nodes = cache and cache[ui_nodes.debug.toggle_image] or nil
+function bindings.enable_action_log_toggle_touch(cache)
+  local nodes = cache and cache[ui_nodes.action_log.toggle_image] or nil
   if not nodes or not nodes[1] then
-    local ok, result = pcall(runtime.query_nodes, ui_nodes.debug.toggle_image)
+    local ok, result = pcall(runtime.query_nodes, ui_nodes.action_log.toggle_image)
     if not ok then
       logger.info("[调试屏] 倒计时时钟触控启用失败: query_nodes异常")
       return

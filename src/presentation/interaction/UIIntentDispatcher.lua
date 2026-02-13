@@ -90,7 +90,7 @@ function intent_dispatcher.dispatch_view_command(state, intent)
     return false
   end
 
-  if intent_type == "toggle_debug" then
+  if intent_type == "toggle_action_log" then
     local ui = state and state.ui or nil
     if not ui then
       return true

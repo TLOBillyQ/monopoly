@@ -1062,7 +1062,7 @@ local function _test_ui_intent_dispatcher_popup_confirm_closes_popup()
   _assert_eq(closed, 1, "popup_confirm should close popup once")
 end
 
-local function _test_ui_intent_dispatcher_toggle_debug_uses_actor_role_context()
+local function _test_ui_intent_dispatcher_toggle_action_log_uses_actor_role_context()
   local state = {
     ui = ui_view.build_ui_state(),
   }
@@ -1095,22 +1095,22 @@ local function _test_ui_intent_dispatcher_toggle_debug_uses_actor_role_context()
     end },
   }, function()
     ui_intent_dispatcher.dispatch(state, game, {
-      type = "toggle_debug",
+      type = "toggle_action_log",
       actor_role_id = 101,
     }, {})
-    _assert_eq(state.ui.debug_visible_by_role[101], true, "toggle_debug should enable debug for actor role")
-    _assert_eq(UIManager.client_role, nil, "toggle_debug should restore client role")
+    _assert_eq(state.ui.debug_visible_by_role[101], true, "toggle_action_log should enable action_log for actor role")
+    _assert_eq(UIManager.client_role, nil, "toggle_action_log should restore client role")
 
     ui_intent_dispatcher.dispatch(state, game, {
-      type = "toggle_debug",
+      type = "toggle_action_log",
       actor_role_id = 101,
     }, {})
-    _assert_eq(state.ui.debug_visible_by_role[101], false, "toggle_debug second click should disable debug")
-    _assert_eq(UIManager.client_role, nil, "toggle_debug second click should restore client role")
+    _assert_eq(state.ui.debug_visible_by_role[101], false, "toggle_action_log second click should disable action_log")
+    _assert_eq(UIManager.client_role, nil, "toggle_action_log second click should restore client role")
   end)
 
-  _assert_eq(visible_calls[1], true, "first toggle_debug should enable debug")
-  _assert_eq(visible_calls[2], false, "second toggle_debug should disable debug")
+  _assert_eq(visible_calls[1], true, "first toggle_action_log should enable action_log")
+  _assert_eq(visible_calls[2], false, "second toggle_action_log should disable action_log")
 end
 
 local function _test_ui_view_render_by_role_slots_are_isolated()
@@ -1772,7 +1772,7 @@ local function _test_ui_event_router_player_target_click_direct_submit()
   _assert_eq(captured[2] and captured[2].option_id, 201, "target click should submit clicked option")
 end
 
-local function _test_ui_event_router_debug_toggle_uses_role_context()
+local function _test_ui_event_router_action_log_toggle_uses_role_context()
   local function new_node()
     local node = {}
     function node:listen(_, cb)
@@ -1825,18 +1825,18 @@ local function _test_ui_event_router_debug_toggle_uses_role_context()
     end)
 
     local role_id = role.get_roleid()
-    _assert_eq(state.ui.debug_visible_by_role[role_id], nil, "debug role flag should start nil")
-    assert(type(node_map["倒计时时钟"]._listener_cb) == "function", "debug image should bind click listener")
+    _assert_eq(state.ui.debug_visible_by_role[role_id], nil, "action_log role flag should start nil")
+    assert(type(node_map["倒计时时钟"]._listener_cb) == "function", "action_log image should bind click listener")
     local before = require("src.presentation.interaction.UIEventState").resolve_debug_enabled(state)
     node_map["基础_行动日志按钮"]._listener_cb({ role = role })
     local first_value = state.ui.debug_visible_by_role[role_id]
-    _assert_eq(first_value, not before, "debug toggle should invert role visibility")
-    _assert_eq(UIManager.client_role, nil, "debug toggle should restore client role")
+    _assert_eq(first_value, not before, "action_log toggle should invert role visibility")
+    _assert_eq(UIManager.client_role, nil, "action_log toggle should restore client role")
 
     node_map["倒计时时钟"]._listener_cb({ role = role })
     local second_value = state.ui.debug_visible_by_role[role_id]
-    assert(second_value ~= first_value, "debug toggle should flip role visibility after second click")
-    _assert_eq(UIManager.client_role, nil, "debug toggle should restore client role after second click")
+    assert(second_value ~= first_value, "action_log toggle should flip role visibility after second click")
+    _assert_eq(UIManager.client_role, nil, "action_log toggle should restore client role after second click")
   end)
 end
 
@@ -2632,7 +2632,7 @@ return {
   _test_ui_intent_dispatcher_market_confirm_routes_choice_select,
   _test_ui_intent_dispatcher_market_select_updates_ui_only,
   _test_ui_intent_dispatcher_popup_confirm_closes_popup,
-  _test_ui_intent_dispatcher_toggle_debug_uses_actor_role_context,
+  _test_ui_intent_dispatcher_toggle_action_log_uses_actor_role_context,
   _test_ui_view_render_by_role_slots_are_isolated,
   _test_ui_events_send_without_roles_no_crash,
   _test_ui_nodes_validate_reports_missing,
@@ -2651,7 +2651,7 @@ return {
   _test_popup_timeout_closes_even_when_input_blocked,
   _test_choice_modal_routes_to_new_screens,
   _test_ui_event_router_player_target_click_direct_submit,
-  _test_ui_event_router_debug_toggle_uses_role_context,
+  _test_ui_event_router_action_log_toggle_uses_role_context,
   _test_market_selection_updates_icon_without_resize,
   _test_market_close_resets_icon_without_resize,
   _test_item_slot_uses_keep_size_path,

@@ -32,7 +32,7 @@ local function _set_touch_enabled(_, name, enabled)
 end
 
 local function _set_debug_log(_, text)
-  _set_text(nil, ui_nodes.debug.log_label, text)
+  _set_text(nil, ui_nodes.action_log.log_label, text)
 end
 
 local function _set_debug_visible(ui, visible)

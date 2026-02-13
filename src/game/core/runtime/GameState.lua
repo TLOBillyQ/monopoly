@@ -187,10 +187,6 @@ function game_state:mark_board_dirty()
   _mark_board(self)
 end
 
-function game_state:snapshot_inventory(inv)
-  return { items = deep_copy(inv.items), max_slots = inv.max_slots }
-end
-
 function game_state:new(opts)
   opts = opts or {}
   if opts.__skip_assemble == true then
