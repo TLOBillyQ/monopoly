@@ -124,7 +124,9 @@ function ui_view.build_ui_state()
     input_blocked = false,
     role_control_lock = { by_role = {}, warn_once = {} },
     debug_visible = false,
+    debug_visible_by_role = {},
     debug_log_enabled_override = nil,
+    debug_log_enabled_by_role = {},
     debug_toggle_first_click_timestamp = nil,
     debug_toggle_click_count = 0,
     item_slots = item_slots,
@@ -287,7 +289,22 @@ function ui_view.set_debug_visible(state, visible)
   if not ui or not ui.set_debug_visible then
     return
   end
-  ui:set_debug_visible(visible == true)
+  local resolved = visible == true
+  ui:set_debug_visible(resolved)
+  local role = UIManager and UIManager.client_role or nil
+  if role then
+    if type(ui.debug_visible_by_role) ~= "table" then
+      ui.debug_visible_by_role = {}
+    end
+    if type(ui.debug_log_enabled_by_role) ~= "table" then
+      ui.debug_log_enabled_by_role = {}
+    end
+    local role_id = runtime.resolve_role_id(role) or tostring(role)
+    ui.debug_visible_by_role[role_id] = resolved
+    ui.debug_log_enabled_by_role[role_id] = resolved
+  else
+    ui.debug_visible = resolved
+  end
 end
 
 function ui_view.select_market_option(state, option_id)

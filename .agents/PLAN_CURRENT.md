@@ -1,4 +1,4 @@
-# 接入基础屏回合光效与地块 owner 颜色可执行计划
+# 基础屏托管光效与调试屏开关可执行计划
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
@@ -6,113 +6,89 @@
 
 ## 目的 / 全局视角
 
-把基础屏的回合高亮、本地回合提示与地块 owner 颜色来源接入现有 UI 刷新链路。完成后，所有客户端都能看到当前回合玩家的高亮光效，本地玩家回合开始时出现 1 秒“星星中心爆开 + 行动提示”，购买地块后地块颜色与玩家底板颜色一致。验证方式是：运行回归脚本通过，并在编辑器内观察 UI 行为符合预期。
+把“基础屏-AI托管光效”绑定到本地角色玩家的托管状态，同时把“基础_行动日志按钮”作为调试屏的单击开关（仅本地角色生效）。完成后，玩家能在基础屏直观看到托管开关状态，也可用行动日志按钮快速切换调试屏。验证方式是：在基础屏切换托管开关时光效跟随显隐；点击行动日志按钮仅本地调试屏显隐；“图片_82”的 10 连点逻辑仍可用。
 
 ## 进度
 
-- [x] (2025-03-08 03:32Z) 清空旧计划并建立新计划骨架。
-- [x] (2025-03-08 03:42Z) 新增回合特效模块并接入 UI 刷新链路。
-- [x] (2025-03-08 03:43Z) 注入 owner 颜色来源并接入初始化流程。
-- [x] (2025-03-08 03:52Z) 运行回归脚本与依赖规则检查。
+- [x] (2025-03-08 08:12Z) 清空旧计划并建立新计划骨架。
+- [x] (2025-03-08 08:16Z) 实现基础屏 AI 托管光效显隐逻辑。
+- [x] (2025-03-08 08:20Z) 接入行动日志按钮切换调试屏（本地角色）。
+- [ ] (2025-03-08 08:20Z) 自测基础屏托管与调试屏显隐。
 
 ## 意外与发现
 
-- 观察：UIManager 的 `EImage.image_color` 仅存于脚本封装层，缺少显式读取 API，读取需依赖节点对象上的 `image_color` 属性。
-  证据：`vendor/third_party/UIManager/EImage.lua` 仅提供 `image_color` 字段，未暴露 `get_image_color` 函数。
+- 暂无。
 
 ## 决策日志
 
-- 决策：以 `UIManager.query_node` 返回的 `EImage.image_color` 作为底板颜色来源，绑定 `game.players` 槽位顺序。
-  理由：现有 UI 没有独立颜色表，EImage 具备可读写颜色属性，且与设计意图一致。
+- 决策：托管光效仅跟随“本地角色玩家”状态，无法映射时隐藏。
+  理由：与“本地角色生效”要求一致，避免观战或无映射角色误显示。
   日期/作者：2025-03-08 / Codex
 
-- 决策：新增 `src/presentation/ui/UITurnEffects.lua`，由 `UIView.render` 触发同步。
-  理由：将回合高亮与本地提示逻辑收敛为单一职责模块，避免分散在 UI 层。
+- 决策：调试屏显隐通过 `UIManager.client_role` 仅本地切换。
+  理由：UI 事件广播默认全角色，使用本地 client_role 更稳妥地控制本地显隐。
   日期/作者：2025-03-08 / Codex
 
 ## 结果与复盘
 
-已完成回合高亮、本地回合提示与 owner 颜色注入；回归脚本与依赖规则检查通过。仍需在 Eggy 编辑器内做一次人工验收，确认动画播放与颜色一致性。
+已完成代码改动，尚未进行人工验证。
 
 ## 背景与导读
 
-基础屏 UI 节点由 `Data/UIManagerNodes.lua` 提供，显示/隐藏与属性设置通过 `UIRuntimePort` 与 UIManager 节点访问完成。当前回合信息在 `src/presentation/state/UIModel.lua` 中生成，UI 刷新在 `src/presentation/api/UIView.lua` 的 `render` 方法中触发。地块颜色渲染在 `src/presentation/render/TileRenderer.lua` 内通过 `PlayerColors.resolve_owner_color` 获取颜色。
+基础屏 UI 节点由 `Data/UIManagerNodes.lua` 提供，显示/隐藏与触控设置由 `UIRuntimePort` 与 UIManager 节点访问完成。托管状态来源于 `player.auto` 字段，经 `UIModelProjection.build_auto_enabled_by_player` 生成 `ui_model.auto_enabled_by_player`。基础屏 UI 刷新由 `UIPanelPresenter.refresh` 执行，调试屏显隐由 `UIView.set_debug_visible` 控制。
 
 术语解释：
-- “当前回合玩家”指 `ui_model.current_player_id` 对应玩家。
-- “本地回合提示”指仅本地客户端显示的 `基础_星星中心爆开` 与 `基础_行动提示`。
-- “owner 颜色”指土地所有者颜色，应用到地块染色。
+- “本地角色玩家”指 `UIRoleContext.resolve` 结果中的 `role_id` 映射到玩家时的角色。
+- “托管开关”指 `player.auto` 的布尔值。
 
 ## 工作计划
 
-先新增回合特效模块 `src/presentation/ui/UITurnEffects.lua`，提供 `sync` 方法，内部处理两类逻辑：全员可见的“当前回合高亮”，以及仅本地可见的“回合提示”。随后在 `UIView.render` 中调用该模块，确保在面板刷新后执行。
+先扩展 `UIPanelPresenter.refresh`，在 per-role 刷新流程中同步 `基础屏-AI托管光效` 的显示状态。状态取自 `ui_model.auto_enabled_by_player`，按 `UIRoleContext.resolve` 计算的 `role_id` 映射，无法映射时隐藏。必要时新增小的私有函数用于计算“本地角色玩家”的托管状态，避免逻辑散落。
 
-再扩展 `PlayerColors` 支持外部注入颜色映射，并在 `UIView` 增加 `capture_player_colors`，读取 `玩家1-4底板颜色` 的 `image_color`，按 `game.players` 顺序映射到 `owner_id`，在 `EVENT.GAME_INIT` 中调用。
+随后修改 `UIEventRouter._build_route_specs`，新增 `基础_行动日志按钮` 的路由。点击后切换调试屏显示/隐藏，但仅对本地角色生效：通过 `UIManager.client_role` 设置到当前点击的 `data.role`，并调用 `UIView.set_debug_visible`。保持原有“图片_82” 10 连点逻辑不变。
 
-完成后运行回归脚本，并在编辑器内观察 UI 行为。
+最后补充简要自测步骤，验证托管光效与调试屏显隐符合预期。
 
 ## 具体步骤
 
-1) 新增回合特效模块。
+1) 托管光效显隐
 
-在 `src/presentation/ui/UITurnEffects.lua` 中实现：
-- `sync(state, ui_model)`：调用回合高亮与本地提示同步函数。
-- 回合高亮：设置 `基础_玩家1-4高亮光效` 可见性，仅当前槽位可见，使用 `runtime.set_client_role(nil)` 覆盖所有客户端。
-- 本地提示：按 `role_id == current_player_id` 判定，仅本地显示“星星中心爆开 + 行动提示”1 秒并隐藏；用 `state.ui_turn_prompt_seq_by_role` 防抖。
+在 `src/presentation/ui/UIPanelPresenter.lua` 中新增私有函数，基于 `ui_model.auto_enabled_by_player` 与 `UIRoleContext.resolve` 计算 `基础屏-AI托管光效` 的可见性。把该函数放入 `refresh` 的 `runtime.for_each_role_or_global` 循环内执行，确保 per-role 生效。
 
-2) 接入 UI 刷新链路。
+2) 行动日志按钮切换调试屏
 
-在 `src/presentation/api/UIView.lua` 的 `render` 中，`panel_presenter.refresh` 后调用 `turn_effects.sync(state, ui_model)`。
+在 `src/presentation/interaction/UIEventRouter.lua` 的 `_build_route_specs` 中新增一条路由，name 为 `基础_行动日志按钮`，点击后调用新的 `_toggle_debug_visible_for_role`。该函数将 `UIManager.client_role` 临时设置为 `data.role`（若为 nil 则使用当前值），再调用 `UIView.set_debug_visible` 切换显隐。
 
-3) 注入 owner 颜色来源。
+3) 自测
 
-- 在 `src/presentation/shared/PlayerColors.lua` 增加 `set_owner_colors(colors_by_owner_id)`。
-- 在 `src/presentation/api/UIView.lua` 增加 `capture_player_colors(state, game)`：读取 `玩家1-4底板颜色` 节点的 `image_color`，按 `game.players` 顺序映射并注入。
-- 在 `src/app/init.lua` 的 `EVENT.GAME_INIT` 中，`ui_view.init_ui_assets(state)` 后调用 `ui_view.capture_player_colors(state, current_game)`。
-
-4) 验证。
-
-运行回归脚本并观察 UI 行为。
+进入基础屏：
+- 点击“托管按钮”，本地角色 `基础屏-AI托管光效` 随托管开关显隐。
+- 点击“基础_行动日志按钮”，调试屏本地显隐切换，其他角色不受影响。
+- “图片_82” 10 连点仍可切换调试屏。
 
 ## 验证与验收
 
-命令：
-
-    lua .agents/tests/regression.lua
-    lua .agents/tests/gameplay_loop_no_ui.lua
-    lua .agents/tests/dep_rules.lua
-
-预期：全部无错误退出。
-
-人工验收：
-- 当前回合玩家高亮始终显示，回合切换时更新。
-- 本地玩家回合开始时出现“星星中心爆开 + 行动提示”，1 秒后消失，非本地不显示。
-- 购买地块后颜色与玩家底板颜色一致。
+人工验收即可：按“自测”步骤观察 UI 行为。若需回归，可运行 `.agents/tests/` 下既有脚本，但本次不强制。
 
 ## 可重复性与恢复
 
-所有步骤可重复执行。若回合特效表现异常，可临时在 `UIView.render` 中注释调用进行回退。颜色注入异常时，可恢复 `PlayerColors.lua` 默认颜色表。
+变更为纯 UI 显隐逻辑，可重复执行。若行为异常，回退对应函数改动即可恢复。
 
 ## 产物与备注
 
-已改动文件：
+改动文件：
 
-    src/presentation/ui/UITurnEffects.lua
+    src/presentation/ui/UIPanelPresenter.lua
+    src/presentation/interaction/UIEventRouter.lua
     src/presentation/api/UIView.lua
-    src/presentation/shared/PlayerColors.lua
-    src/app/init.lua
-
-关键证据（示例）：
-
-    ..........................................................................................................................
-    All regression checks passed (122)
-    tick ok
-    dep_rules ok
+    src/presentation/interaction/UIEventState.lua
+    src/game/flow/turn/TickUISync.lua
 
 ## 接口与依赖
 
-- `PlayerColors.set_owner_colors(colors_by_owner_id)`：注入 owner 颜色映射。
-- `UIView.capture_player_colors(state, game)`：从 UI 读取底板颜色并注入。
-- `UITurnEffects.sync(state, ui_model)`：统一同步回合高亮与本地提示。
+- `UIView.set_debug_visible(state, visible)` 继续作为调试屏显隐入口。
+- `UIRoleContext.resolve(role, ui_model, { runtime = runtime })` 用于本地角色映射。
 
-变更说明（2025-03-08 / Codex）：更新进度与验证结果，补充回归脚本输出。
+变更说明（2025-03-08 / Codex）：创建新计划并准备实现托管光效与调试屏切换。
+
+变更说明（2025-03-08 / Codex）：更新进度与产物列表，记录已完成实现。

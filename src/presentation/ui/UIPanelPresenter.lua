@@ -70,6 +70,21 @@ local function _resolve_avatar_key(row, empty_avatar_key)
   return empty_avatar_key
 end
 
+local function _resolve_auto_effect_visible(ui_model, ctx)
+  if not ui_model or not ctx then
+    return false
+  end
+  local role_id = ctx.role_id
+  if role_id == nil then
+    return false
+  end
+  if ctx.is_player_role ~= true then
+    return false
+  end
+  local auto_by_player = ui_model.auto_enabled_by_player or {}
+  return auto_by_player[role_id] == true
+end
+
 local function _set_player_avatar(ui, runtime, avatar_name, image_key)
   if image_key == nil then
     return
@@ -141,6 +156,7 @@ function panel_presenter.refresh(state, ui_model, deps)
     local base_visible = panel_presenter.is_base_non_player_visible(ui, ctx)
     panel_presenter.apply_base_non_player_visibility(ui, base_visible)
     _force_item_slots_visible_for_player(ui, ctx)
+    ui:set_visible("基础屏-AI托管光效", _resolve_auto_effect_visible(ui_model, ctx))
 
     ui:set_visible("倒计时文本", true)
     ui:set_label("倒计时文本", panel.turn_label)

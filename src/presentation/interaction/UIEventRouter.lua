@@ -27,12 +27,28 @@ local function _toggle_debug_visible(state)
   if not ui then
     return
   end
+  ui.debug_log_enabled_override = nil
   local next_enabled = not ui_event_state.resolve_debug_enabled(state)
-  ui.debug_log_enabled_override = next_enabled
   ui_view.set_debug_visible(state, next_enabled)
 end
 
-local function _record_debug_toggle_click(state)
+local function _toggle_debug_visible_for_role(state, role)
+  local ui = state and state.ui
+  if not ui then
+    return
+  end
+  local previous_role = UIManager and UIManager.client_role or nil
+  if UIManager then
+    UIManager.client_role = role or previous_role
+  end
+  ui.debug_log_enabled_override = nil
+  local next_enabled = not ui_event_state.resolve_debug_enabled(state)
+  ui_view.set_debug_visible(state, next_enabled)
+  if UIManager then
+    UIManager.client_role = previous_role
+  end
+end
+local function _record_debug_toggle_click(state, role)
   local ui = state and state.ui
   local base_active = ui_event_state.is_base_screen_active(state)
   local input_blocked = ui and ui.input_blocked or false
@@ -76,7 +92,7 @@ local function _record_debug_toggle_click(state)
       "[调试屏] 触发显隐切换",
       "current=" .. tostring(ui_event_state.resolve_debug_enabled(state))
     )
-    _toggle_debug_visible(state)
+    _toggle_debug_visible_for_role(state, role)
     logger.info(
       "[调试屏] 切换完成",
       "next=" .. tostring(ui_event_state.resolve_debug_enabled(state))
@@ -161,6 +177,13 @@ local function _build_route_specs(state)
       name = "托管按钮",
       build_intent = function()
         return { type = "ui_button", id = "auto" }
+      end,
+    },
+    {
+      name = "基础_行动日志按钮",
+      build_intent = function(data)
+        _toggle_debug_visible_for_role(state, data and data.role or nil)
+        return nil
       end,
     },
     {
@@ -401,8 +424,8 @@ function ui_event_router.bind(state, get_game)
     end, registered, listeners)
   end
 
-  ui_event_bindings.register_node_click(cache, "图片_82", function()
-    _record_debug_toggle_click(state)
+  ui_event_bindings.register_node_click(cache, "图片_82", function(data)
+    _record_debug_toggle_click(state, data and data.role or nil)
   end, registered, listeners)
   ui_event_bindings.enable_debug_toggle_touch(cache)
   ui_event_bindings.register_missing_button_tip(cache, registered, listeners)
