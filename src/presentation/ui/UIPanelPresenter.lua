@@ -136,7 +136,7 @@ function panel_presenter.refresh(state, ui_model, deps)
   runtime.set_client_role(nil)
   local player_rows = panel.player_rows or {}
   local refs = state.ui_refs or {}
-  local empty_avatar_key = refs["空"]
+  local empty_avatar_key = refs["Empty"]
   for i = 1, 4 do
     local row = player_rows[i]
     assert(row ~= nil, "missing player row: " .. tostring(i))

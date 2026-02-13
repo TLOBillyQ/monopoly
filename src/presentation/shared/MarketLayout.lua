@@ -43,7 +43,7 @@ local market_layout = {
   title = "黑市",
   icon_placeholder = "选中卡牌",
   rarity_ref_keys = { [1] = "lv1", [2] = "lv2", [3] = "lv3" },
-  empty_ref_key = "空",
+  empty_ref_key = "Empty",
 }
 
 function market_layout.is_ready()

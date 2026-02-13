@@ -37,7 +37,7 @@ local function _set_popup_card_image(state, payload)
     return
   end
   local refs = state and state.ui_refs or nil
-  local empty_key = refs and refs["空"] or nil
+  local empty_key = refs and refs["Empty"] or nil
   if empty_key ~= nil then
     runtime.set_node_texture_keep_size(card_node, empty_key)
   end
@@ -106,7 +106,7 @@ local function _set_bankruptcy_avatar_image(state, payload)
     return
   end
   local refs = state and state.ui_refs or nil
-  local empty_key = refs and refs["空"] or nil
+  local empty_key = refs and refs["Empty"] or nil
   if empty_key ~= nil then
     runtime.set_node_texture_auto_size(avatar_node, empty_key)
     ui:set_visible(screen.avatar, true)

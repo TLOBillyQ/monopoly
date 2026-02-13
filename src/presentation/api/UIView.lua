@@ -217,7 +217,7 @@ function ui_view.refresh_item_slots(state, ui_model, opts)
   local allow_use = ui_model and ui_model.choice and ui_model.choice.kind == "item_phase_choice"
   local choice_owner_id = ui_model and ui_model.item_choice_owner_id or ui_model.current_player_id
   local refs = state.ui_refs
-  local empty_key = refs["空"]
+  local empty_key = refs["Empty"]
   local allow_slot_click = allow_use == true
     and allow_interact == true
     and display_player_id ~= nil

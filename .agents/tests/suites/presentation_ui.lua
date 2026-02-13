@@ -46,7 +46,7 @@ local function _build_popup_view_state(refs, card_node)
   end
   local state = {
     ui = ui_view.build_ui_state(),
-    ui_refs = refs or { ["空"] = "EMPTY" },
+    ui_refs = refs or { ["Empty"] = "EMPTY" },
   }
   state.ui.choice_active = false
   state.ui.market_active = false
@@ -103,7 +103,7 @@ local function _build_choice_modal_state()
     pending_choice_elapsed = 0,
     pending_choice_selected_option_id = nil,
     ui = ui_view.build_ui_state(),
-    ui_refs = { ["空"] = "EMPTY" },
+    ui_refs = { ["Empty"] = "EMPTY" },
   }
   local names = {
     "玩家选择屏", "玩家选择_标题", "玩家选择_副标题",
@@ -1116,7 +1116,7 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
 
   local state = {
     ui_refs = {
-      ["空"] = "EMPTY",
+      ["Empty"] = "EMPTY",
       ["2001"] = "ICON2001",
       ["2002"] = "ICON2002",
     },
@@ -1277,7 +1277,7 @@ local function _test_push_popup_sets_card_image_by_image_ref()
     end,
   }
   local state, nodes, query_nodes = _build_popup_view_state({
-    ["空"] = "EMPTY",
+    ["Empty"] = "EMPTY",
     ["2001"] = "ICON2001",
   }, card_node)
 
@@ -1305,7 +1305,7 @@ local function _test_push_popup_hides_card_and_clears_image_when_missing()
     end,
   }
   local state, nodes, query_nodes = _build_popup_view_state({
-    ["空"] = "EMPTY",
+    ["Empty"] = "EMPTY",
     ["2001"] = "ICON2001",
   }, card_node)
 
@@ -1331,7 +1331,7 @@ end
 
 local function _test_popup_hidden_for_non_current_role()
   local state, _, query_nodes = _build_popup_view_state({
-    ["空"] = "EMPTY",
+    ["Empty"] = "EMPTY",
   }, {
     set_texture_keep_size = function() end,
   })
@@ -1370,7 +1370,7 @@ end
 
 local function _test_popup_visible_for_all_roles_when_allowed_kind()
   local state, _, query_nodes = _build_popup_view_state({
-    ["空"] = "EMPTY",
+    ["Empty"] = "EMPTY",
   }, {
     set_texture_keep_size = function() end,
   })
@@ -1415,7 +1415,7 @@ end
 
 local function _test_bankruptcy_popup_visible_for_all_roles()
   local state, _, query_nodes = _build_popup_view_state({
-    ["空"] = "EMPTY",
+    ["Empty"] = "EMPTY",
   }, {
     set_texture_keep_size = function() end,
   })
@@ -1454,7 +1454,7 @@ end
 
 local function _test_popup_timeout_closes_even_when_input_blocked()
   local state, nodes, query_nodes = _build_popup_view_state({
-    ["空"] = "EMPTY",
+    ["Empty"] = "EMPTY",
     ["2001"] = "ICON2001",
   }, {
     set_texture_keep_size = function() end,
@@ -1723,7 +1723,7 @@ local function _test_market_selection_updates_icon_without_resize()
   local labels = {}
   local state = {
     ui_refs = {
-      ["空"] = 1001,
+      ["Empty"] = 1001,
       [tostring(option_id)] = 1002,
     },
     ui = {
@@ -1756,7 +1756,7 @@ local function _test_market_close_resets_icon_without_resize()
     choice_visible_option_ids = { 1, 2 },
     pending_choice_selected_option_id = 1,
     ui_refs = {
-      ["空"] = 4321,
+      ["Empty"] = 4321,
     },
     ui = {
       market_active = true,
@@ -1790,7 +1790,7 @@ local function _test_item_slot_uses_keep_size_path()
   }
   local state = {
     ui_refs = {
-      ["空"] = "EMPTY",
+      ["Empty"] = "EMPTY",
       ["2001"] = "ICON2001",
     },
     ui = {
