@@ -1,12 +1,13 @@
 local market_ui = require("src.presentation.shared.MarketLayout")
 local panel_presenter = require("src.presentation.ui.UIPanelPresenter")
 local role_context = require("src.presentation.state.UIRoleContext")
+local ui_nodes = require("src.presentation.shared.UINodes")
 
 local input_lock_policy = {}
 
 local function _set_debug_toggle_touch(ui, enabled)
-  ui:set_touch_enabled("图片_82", enabled == true)
-  ui:set_touch_enabled("基础_行动日志按钮", enabled == true)
+  ui:set_touch_enabled(ui_nodes.debug.toggle_image, enabled == true)
+  ui:set_touch_enabled(ui_nodes.debug.toggle_button, enabled == true)
 end
 
 local function _force_item_slots_visible_for_player(ui, ctx)
@@ -72,7 +73,7 @@ function input_lock_policy.apply(state, deps)
   end)
   runtime.set_client_role(nil)
 
-  ui:set_touch_enabled("行动按钮", false)
+  ui:set_touch_enabled(ui_nodes.buttons.action, false)
 
   local slots = ui.item_slots or {}
   for _, slot_name in ipairs(slots) do

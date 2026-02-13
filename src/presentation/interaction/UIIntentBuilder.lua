@@ -1,19 +1,20 @@
 local logger = require("src.core.Logger")
 local ui_event_intents = require("src.presentation.interaction.UIEventIntents")
 local market_ui = require("src.presentation.shared.MarketLayout")
+local ui_nodes = require("src.presentation.shared.UINodes")
 
 local intent_builder = {}
 
 function intent_builder.build_basic_intents(state)
   return {
     {
-      name = "行动按钮",
+      name = ui_nodes.buttons.action,
       build_intent = function()
         return { type = "ui_button", id = "next" }
       end,
     },
     {
-      name = "托管按钮",
+      name = ui_nodes.buttons.auto,
       build_intent = function()
         return { type = "ui_button", id = "auto" }
       end,
@@ -41,13 +42,13 @@ function intent_builder.build_basic_intents(state)
       end,
     },
     {
-      name = "关闭",
+      name = ui_nodes.buttons.close,
       build_intent = function()
         return ui_event_intents.choice_cancel_intent(state, "market_close")
       end,
     },
     {
-      name = "取消按钮",
+      name = ui_nodes.buttons.cancel,
       build_intent = function()
         if state.ui and state.ui.popup_active then
           return { type = "popup_confirm" }
@@ -56,19 +57,19 @@ function intent_builder.build_basic_intents(state)
       end,
     },
     {
-      name = "建筑升级_确定按钮",
+      name = ui_nodes.buttons.building_confirm,
       build_intent = function()
         return ui_event_intents.choice_confirm_intent(state, "building_confirm")
       end,
     },
     {
-      name = "建筑升级_取消",
+      name = ui_nodes.buttons.building_cancel,
       build_intent = function()
         return ui_event_intents.choice_cancel_intent(state, "building_cancel")
       end,
     },
     {
-      name = "遥控骰子_取消",
+      name = ui_nodes.buttons.remote_cancel,
       build_intent = function()
         return ui_event_intents.choice_cancel_intent(state, "remote_cancel")
       end,
@@ -122,11 +123,7 @@ end
 
 function intent_builder.build_player_intents(state)
   local specs = {}
-  local player_nodes = {
-    "玩家选择_槽位1",
-    "玩家选择_槽位2",
-    "玩家选择_槽位3",
-  }
+  local player_nodes = ui_nodes.choice.player.slots
   for index, name in ipairs(player_nodes) do
     specs[#specs + 1] = {
       name = name,
@@ -140,15 +137,7 @@ end
 
 function intent_builder.build_target_intents(state)
   local specs = {}
-  local target_nodes = {
-    "位置前1",
-    "位置前2",
-    "位置前3",
-    "位置后1",
-    "位置后2",
-    "位置后3",
-    "位置脚下",
-  }
+  local target_nodes = ui_nodes.choice.target.slots
   for index, name in ipairs(target_nodes) do
     specs[#specs + 1] = {
       name = name,
@@ -157,19 +146,19 @@ function intent_builder.build_target_intents(state)
       end,
     }
   end
+  local under_index = #target_nodes + 1
+  specs[#specs + 1] = {
+    name = ui_nodes.choice.target.under,
+    build_intent = function()
+      return ui_event_intents.choice_select_intent(state, under_index, "target_select")
+    end,
+  }
   return specs
 end
 
 function intent_builder.build_remote_intents(state)
   local specs = {}
-  local remote_nodes = {
-    "遥控骰子_选项_01",
-    "遥控骰子_选项_02",
-    "遥控骰子_选项_03",
-    "遥控骰子_选项_04",
-    "遥控骰子_选项_05",
-    "遥控骰子_选项_06",
-  }
+  local remote_nodes = ui_nodes.choice.remote.options
   for index, name in ipairs(remote_nodes) do
     specs[#specs + 1] = {
       name = name,

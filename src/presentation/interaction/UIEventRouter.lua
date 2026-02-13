@@ -1,22 +1,12 @@
 local runtime = require("src.presentation.api.UIRuntimePort")
 local ui_view = require("src.presentation.api.UIView")
-local logger = require("src.core.Logger")
 local ui_event_bindings = require("src.presentation.interaction.UIEventBindings")
 local ui_event_state = require("src.presentation.interaction.UIEventState")
 local ui_intent_builder = require("src.presentation.interaction.UIIntentBuilder")
 local ui_intent_dispatcher = require("src.presentation.interaction.UIIntentDispatcher")
+local intent_providers = require("src.presentation.interaction.UIIntentProviders")
 
 local ui_event_router = {}
-
-local function _toggle_debug_visible(state)
-  local ui = state and state.ui
-  if not ui then
-    return
-  end
-  ui.debug_log_enabled_override = nil
-  local next_enabled = not ui_event_state.resolve_debug_enabled(state)
-  ui_view.set_debug_visible(state, next_enabled)
-end
 
 local function _toggle_debug_visible_for_role(state, role)
   local ui = state and state.ui
@@ -46,48 +36,43 @@ local function _resolve_actor_role_id(data)
   return runtime.resolve_role_id(role)
 end
 
-
-local function _build_route_specs(state)
-  local specs = {}
-
-  local base_specs = ui_intent_builder.build_basic_intents(state)
-  for _, spec in ipairs(base_specs) do
-    specs[#specs + 1] = spec
+local function _register_default_providers()
+  if ui_event_router._providers_registered then
+    return
   end
-  specs[#specs + 1] = {
-    name = "基础_行动日志按钮",
-    build_intent = function(data)
-      _toggle_debug_visible_for_role(state, data and data.role or nil)
-      return nil
-    end,
-  }
-
-  local popup_specs = ui_intent_builder.build_popup_intents(state)
-  for _, spec in ipairs(popup_specs) do
-    specs[#specs + 1] = spec
-  end
-  local item_specs = ui_intent_builder.build_item_slot_intents(state)
-  for _, spec in ipairs(item_specs) do
-    specs[#specs + 1] = spec
-  end
-  local player_specs = ui_intent_builder.build_player_intents(state)
-  for _, spec in ipairs(player_specs) do
-    specs[#specs + 1] = spec
-  end
-  local target_specs = ui_intent_builder.build_target_intents(state)
-  for _, spec in ipairs(target_specs) do
-    specs[#specs + 1] = spec
-  end
-  local remote_specs = ui_intent_builder.build_remote_intents(state)
-  for _, spec in ipairs(remote_specs) do
-    specs[#specs + 1] = spec
-  end
-  local market_specs = ui_intent_builder.build_market_item_intents(state)
-  for _, spec in ipairs(market_specs) do
-    specs[#specs + 1] = spec
-  end
-
-  return specs
+  ui_event_router._providers_registered = true
+  intent_providers.registry.register(function(state)
+    return ui_intent_builder.build_basic_intents(state)
+  end)
+  intent_providers.registry.register(function(state)
+    return {
+      {
+        name = "基础_行动日志按钮",
+        build_intent = function(data)
+          _toggle_debug_visible_for_role(state, data and data.role or nil)
+          return nil
+        end,
+      },
+    }
+  end)
+  intent_providers.registry.register(function(state)
+    return ui_intent_builder.build_popup_intents(state)
+  end)
+  intent_providers.registry.register(function(state)
+    return ui_intent_builder.build_item_slot_intents(state)
+  end)
+  intent_providers.registry.register(function(state)
+    return ui_intent_builder.build_player_intents(state)
+  end)
+  intent_providers.registry.register(function(state)
+    return ui_intent_builder.build_target_intents(state)
+  end)
+  intent_providers.registry.register(function(state)
+    return ui_intent_builder.build_remote_intents(state)
+  end)
+  intent_providers.registry.register(function(state)
+    return ui_intent_builder.build_market_item_intents(state)
+  end)
 end
 
 function ui_event_router.unbind(state)
@@ -108,6 +93,7 @@ end
 
 function ui_event_router.bind(state, get_game)
   assert(state ~= nil, "missing state")
+  _register_default_providers()
   local function resolve_game()
     if type(get_game) == "function" then
       return get_game()
@@ -136,7 +122,7 @@ function ui_event_router.bind(state, get_game)
   local listeners = state.ui_event_router_listeners or {}
   state.ui_event_router_listeners = listeners
 
-  local route_specs = _build_route_specs(state)
+  local route_specs = intent_providers.registry.build_specs(state)
   for _, route in ipairs(route_specs) do
     ui_event_bindings.register_node_click(cache, route.name, function(data)
       local intent = route.build_intent(data)

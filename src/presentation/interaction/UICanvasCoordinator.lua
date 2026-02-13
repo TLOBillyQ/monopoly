@@ -1,16 +1,17 @@
 local ui_events = require("src.presentation.shared.UIEvents")
+local ui_nodes = require("src.presentation.shared.UINodes")
 
 local coordinator = {}
 
-coordinator.CANVAS_BASE = "基础屏"
-coordinator.CANVAS_PLAYER_CHOICE = "玩家选择屏"
-coordinator.CANVAS_TARGET_CHOICE = "位置选择屏"
-coordinator.CANVAS_REMOTE_CHOICE = "遥控骰子屏"
-coordinator.CANVAS_BUILDING_CHOICE = "建筑升级屏"
-coordinator.CANVAS_MARKET = "黑市屏"
-coordinator.CANVAS_POPUP = "卡牌展示屏"
-coordinator.CANVAS_BANKRUPTCY = "破产展示屏"
-coordinator.CANVAS_DEBUG = "调试屏"
+coordinator.CANVAS_BASE = ui_nodes.canvas.base
+coordinator.CANVAS_PLAYER_CHOICE = ui_nodes.canvas.player_choice
+coordinator.CANVAS_TARGET_CHOICE = ui_nodes.canvas.target_choice
+coordinator.CANVAS_REMOTE_CHOICE = ui_nodes.canvas.remote_choice
+coordinator.CANVAS_BUILDING_CHOICE = ui_nodes.canvas.building_choice
+coordinator.CANVAS_MARKET = ui_nodes.canvas.market
+coordinator.CANVAS_POPUP = ui_nodes.canvas.popup
+coordinator.CANVAS_BANKRUPTCY = ui_nodes.canvas.bankruptcy
+coordinator.CANVAS_DEBUG = ui_nodes.canvas.debug
 
 local function _resolve_choice_canvas(ui)
   if not ui or not ui.choice_active then

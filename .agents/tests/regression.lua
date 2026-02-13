@@ -12,6 +12,7 @@ local suites = {
   require("market"),
   require("paid_currency"),
   require("presentation_ui"),
+  require("presentation_ui_action_anim"),
   require("gameplay"),
   require("misc"),
 }

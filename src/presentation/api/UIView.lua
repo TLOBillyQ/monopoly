@@ -7,6 +7,7 @@ local modal_presenter = require("src.presentation.ui.UIModalPresenter")
 local runtime = require("src.presentation.api.UIRuntimePort")
 local turn_effects = require("src.presentation.ui.UITurnEffects")
 local player_colors = require("src.presentation.shared.PlayerColors")
+local ui_nodes = require("src.presentation.shared.UINodes")
 local logger = require("src.core.Logger")
 
 local ui_view = {}
@@ -31,14 +32,14 @@ local function _set_touch_enabled(_, name, enabled)
 end
 
 local function _set_debug_log(_, text)
-  _set_text(nil, "日志", text)
+  _set_text(nil, ui_nodes.debug.log_label, text)
 end
 
 local function _set_debug_visible(ui, visible)
   if ui then
     ui.debug_visible = visible == true
   end
-  _set_visible(nil, "调试屏", visible)
+  _set_visible(nil, ui_nodes.canvas.debug, visible)
 end
 
 local function _set_item_slot_image(slot_name, image_key)
@@ -54,54 +55,36 @@ local function _build_choice_screens()
   return {
     player = {
       key = "player",
-      root = "玩家选择屏",
-      title = "玩家选择_标题",
-      body = "玩家选择_副标题",
-      option_buttons = {
-        "玩家选择_槽位1",
-        "玩家选择_槽位2",
-        "玩家选择_槽位3",
-      },
-      cancel = "取消按钮",
+      root = ui_nodes.choice.player.root,
+      title = ui_nodes.choice.player.title,
+      body = ui_nodes.choice.player.body,
+      option_buttons = ui_nodes.choice.player.slots,
+      cancel = ui_nodes.choice.player.cancel,
     },
     target = {
       key = "target",
-      root = "位置选择屏",
-      title = "位置_副标题",
-      body = "位置_放置文本",
-      option_buttons = {
-        "位置前1",
-        "位置前2",
-        "位置前3",
-        "位置后1",
-        "位置后2",
-        "位置后3",
-      },
-      under_button = "位置脚下",
-      cancel = "取消按钮",
+      root = ui_nodes.choice.target.root,
+      title = ui_nodes.choice.target.title,
+      body = ui_nodes.choice.target.body,
+      option_buttons = ui_nodes.choice.target.slots,
+      under_button = ui_nodes.choice.target.under,
+      cancel = ui_nodes.choice.target.cancel,
     },
     remote = {
       key = "remote",
-      root = "遥控骰子屏",
-      title = "遥控骰子_标题",
-      body = "遥控骰子_正文",
-      option_buttons = {
-        "遥控骰子_选项_01",
-        "遥控骰子_选项_02",
-        "遥控骰子_选项_03",
-        "遥控骰子_选项_04",
-        "遥控骰子_选项_05",
-        "遥控骰子_选项_06",
-      },
-      cancel = "遥控骰子_取消",
+      root = ui_nodes.choice.remote.root,
+      title = ui_nodes.choice.remote.title,
+      body = ui_nodes.choice.remote.body,
+      option_buttons = ui_nodes.choice.remote.options,
+      cancel = ui_nodes.choice.remote.cancel,
     },
     building = {
       key = "building",
-      root = "建筑升级屏",
-      title = "建筑升级_标题",
-      body = "建筑升级_文本",
-      confirm = "建筑升级_确定按钮",
-      cancel = "建筑升级_取消",
+      root = ui_nodes.choice.building.root,
+      title = ui_nodes.choice.building.title,
+      body = ui_nodes.choice.building.body,
+      confirm = ui_nodes.choice.building.confirm,
+      cancel = ui_nodes.choice.building.cancel,
     },
   }
 end
@@ -114,7 +97,7 @@ function ui_view.build_ui_state()
     "道具槽位4",
     "道具槽位5",
   }
-  local base_hidden_nodes = { "行动按钮" }
+  local base_hidden_nodes = { ui_nodes.buttons.action }
   for _, name in ipairs(item_slots) do
     table.insert(base_hidden_nodes, name)
   end
@@ -132,22 +115,22 @@ function ui_view.build_ui_state()
     item_slots = item_slots,
     base_hidden_nodes = base_hidden_nodes,
     base_hidden_labels = {},
-    auto_control_nodes = { "托管按钮", "托管_文本" },
+    auto_control_nodes = { ui_nodes.buttons.auto, ui_nodes.labels.auto },
     market_active = false,
     choice_active = false,
     active_choice_screen_key = nil,
     choice_screens = _build_choice_screens(),
     popup_screen = {
-      root = "卡牌展示屏",
-      title = "卡牌展示_标题",
-      confirm = "取消按钮",
-      card = "卡牌展示_图片",
-      dismiss_nodes = { "卡牌展示_灰底", "卡牌展示_图片" },
+      root = ui_nodes.popup.root,
+      title = ui_nodes.popup.title,
+      confirm = ui_nodes.popup.confirm,
+      card = ui_nodes.popup.card,
+      dismiss_nodes = ui_nodes.popup.dismiss_nodes,
     },
     bankruptcy_screen = {
-      root = "破产展示屏",
-      text = "破产_文字",
-      avatar = "破产玩家头像",
+      root = ui_nodes.bankruptcy.root,
+      text = ui_nodes.bankruptcy.text,
+      avatar = ui_nodes.bankruptcy.avatar,
     },
     popup_kind = nil,
     popup_seq = 0,
@@ -191,7 +174,7 @@ function ui_view.capture_player_colors(state, game)
       break
     end
     if player and player.id ~= nil then
-      local node = runtime.query_node("玩家" .. tostring(index) .. "底板颜色")
+      local node = runtime.query_node(string.format(ui_nodes.panel.player_color, index))
       local color = node and node.image_color or nil
       if color ~= nil then
         colors_by_owner[player.id] = color
@@ -214,7 +197,7 @@ function ui_view.refresh_turn_label(state, label_text)
     return
   end
   runtime.for_each_role_or_global(function()
-    ui:set_label("倒计时文本", label_text)
+    ui:set_label(ui_nodes.labels.countdown, label_text)
   end)
   runtime.set_client_role(nil)
 end

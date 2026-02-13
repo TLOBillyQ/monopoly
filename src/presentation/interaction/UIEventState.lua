@@ -1,4 +1,5 @@
 local gameplay_rules = require("Config.GameplayRules")
+local runtime = require("src.presentation.api.UIRuntimePort")
 
 local ui_event_state = {}
 
@@ -21,7 +22,6 @@ function ui_event_state.resolve_debug_enabled(state)
     end
     local role = UIManager and UIManager.client_role or nil
     if role and type(ui.debug_log_enabled_by_role) == "table" then
-      local runtime = require("src.presentation.api.UIRuntimePort")
       local role_id = runtime.resolve_role_id(role) or tostring(role)
       if ui.debug_log_enabled_by_role[role_id] ~= nil then
         return ui.debug_log_enabled_by_role[role_id] == true
