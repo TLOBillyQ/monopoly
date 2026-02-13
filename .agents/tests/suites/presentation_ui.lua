@@ -25,6 +25,7 @@ local ui_status_3d_layer = require("src.presentation.render.UIStatus3DLayer")
 local action_anim = require("src.presentation.render.ActionAnim")
 local move_anim = require("src.presentation.render.MoveAnim")
 local role_control_lock_policy = require("src.presentation.interaction.UIRoleControlLockPolicy")
+local ui_touch_policy = require("src.presentation.interaction.UITouchPolicy")
 local market_cfg = require("Config.Generated.Market")
 local runtime_constants = require("Config.RuntimeConstants")
 local gameplay_rules = require("Config.GameplayRules")
@@ -1313,6 +1314,37 @@ local function _test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapp
   assert(touch["托管_文本"] == false, "auto label should stay non-clickable when role mapping is missing")
 end
 
+local function _test_ui_touch_policy_auto_controls_touch()
+  local touch = {}
+  local ui = {
+    auto_control_nodes = { "托管按钮", "托管_文本" },
+    set_touch_enabled = function(_, name, enabled)
+      touch[name] = enabled
+    end,
+  }
+
+  ui_touch_policy.set_auto_controls_touch(ui, true)
+  _assert_eq(touch["托管按钮"], true, "auto button should be clickable when enabled")
+  _assert_eq(touch["托管_文本"], false, "auto label should stay non-clickable")
+
+  ui_touch_policy.set_auto_controls_touch(ui, false)
+  _assert_eq(touch["托管按钮"], false, "auto button should be non-clickable when disabled")
+  _assert_eq(touch["托管_文本"], false, "auto label should stay non-clickable when disabled")
+end
+
+local function _test_ui_touch_policy_runtime_nodes_touch_enabled()
+  local node1 = { disabled = true }
+  local node2 = { disabled = true }
+
+  ui_touch_policy.set_runtime_nodes_touch_enabled({ node1, node2 }, true)
+  _assert_eq(node1.disabled, false, "runtime node should be enabled")
+  _assert_eq(node2.disabled, false, "runtime node should be enabled")
+
+  ui_touch_policy.set_runtime_nodes_touch_enabled({ node1, node2 }, false)
+  _assert_eq(node1.disabled, true, "runtime node should be disabled")
+  _assert_eq(node2.disabled, true, "runtime node should be disabled")
+end
+
 local function _test_push_popup_sets_card_image_by_image_ref()
   local last_image_key = nil
   local card_node = {
@@ -2554,6 +2586,8 @@ return {
   _test_ui_nodes_validate_reports_missing,
   _test_apply_input_lock_keeps_auto_controls_enabled,
   _test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapped,
+  _test_ui_touch_policy_auto_controls_touch,
+  _test_ui_touch_policy_runtime_nodes_touch_enabled,
   _test_role_control_lock_add_remove_owned_only,
   _test_role_control_lock_unit_swap_release_old_and_lock_new,
   _test_gameplay_loop_full_turn_lock_toggle,

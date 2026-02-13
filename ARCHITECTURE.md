@@ -31,6 +31,7 @@
   - `UIEventRouter.lua`：UI 点击路由到 intent（按 bind 时构建 route specs）。
   - `UIIntentBuilder.lua` + `intent_builders/`：按职责组装点击意图（基础按钮、弹窗、道具槽、选择、黑市）。
   - `UIIntentDispatcher.lua`：将 intent 分流到游戏动作或视图命令。
+  - `UITouchPolicy.lua`：触控策略统一入口（托管/调试开关、批量触控、选择屏锁定、运行时节点触控）。
 - `src/presentation/state/`：UI 读模型层。
   - `UIModel.lua`：从 game + env 构建/增量更新 UIModel。
   - `UIModelProjection.lua`：投影函数（当前玩家、地块、道具槽、choice/market/popup）。
@@ -127,6 +128,8 @@ sequenceDiagram
 
 - UI 事件扩展：`src/presentation/interaction/UIEventRouter.lua`
   - 在 `_build_default_route_specs` 增加 route spec（节点名 + `build_intent`）。
+- UI 触控策略扩展：`src/presentation/interaction/UITouchPolicy.lua`
+  - 新增或调整“谁可点/谁不可点”规则时，优先修改该模块；`UIInputLockPolicy` 只做流程编排，不重复写触控细节。
 - UI 动作语义扩展：`src/game/flow/turn/TurnDispatch.lua`
   - 新增 `action.type` 或 `ui_button.id` 分支，并走 validator。
 - Tick 行为扩展：`src/game/flow/turn/GameplayLoop.lua` 与 `GameplayLoopRuntime.lua`
@@ -146,8 +149,9 @@ sequenceDiagram
 4. `src/game/flow/turn/GameplayLoop.lua`：把握每帧做什么。
 5. `src/game/flow/turn/GameplayLoopRuntime.lua` 与 `src/game/flow/turn/TurnDispatch.lua`：理解输入锁、超时、动作落地。
 6. `src/presentation/interaction/UIEventRouter.lua`：理解 UI 点击如何变成 intent/action。
-7. `src/presentation/state/UIModel.lua` 与 `src/presentation/state/UIModelProjection.lua`：理解领域状态如何投影为 UI。
-8. `src/presentation/api/GameplayLoopPortsAdapter.lua` 与 `src/presentation/api/UIView.lua`：理解渲染层与流程层的接口边界。
+7. `src/presentation/interaction/UITouchPolicy.lua` 与 `src/presentation/interaction/UIInputLockPolicy.lua`：理解输入锁期间的触控放行/锁定边界。
+8. `src/presentation/state/UIModel.lua` 与 `src/presentation/state/UIModelProjection.lua`：理解领域状态如何投影为 UI。
+9. `src/presentation/api/GameplayLoopPortsAdapter.lua` 与 `src/presentation/api/UIView.lua`：理解渲染层与流程层的接口边界。
 
 读完以上文件，基本可以独立定位：
 - “按钮点击为什么没生效”（先看 `UIEventRouter.lua` -> `TurnDispatch.lua`）。

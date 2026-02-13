@@ -1,6 +1,7 @@
 local role_context = require("src.presentation.state.UIRoleContext")
 local player_colors = require("src.presentation.shared.PlayerColors")
 local ui_nodes = require("src.presentation.shared.UINodes")
+local ui_touch_policy = require("src.presentation.interaction.UITouchPolicy")
 
 local panel_presenter = {}
 
@@ -36,12 +37,8 @@ function panel_presenter.render_auto_controls_for_role(ui, ctx, ui_model)
   end
   for _, name in ipairs(controls) do
     ui:set_visible(name, true)
-    if name == ui_nodes.buttons.auto then
-      ui:set_touch_enabled(name, auto_enabled)
-    else
-      ui:set_touch_enabled(name, false)
-    end
   end
+  ui_touch_policy.set_auto_controls_touch(ui, auto_enabled, controls)
 end
 
 function panel_presenter.is_base_non_player_visible(ui, ctx)

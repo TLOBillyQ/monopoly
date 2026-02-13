@@ -42,7 +42,7 @@ local function _build_default_route_specs(state)
   end
 
   _append(ui_intent_builder.build_basic_intents(state))
-  for _, name in ipairs({ ui_nodes.debug.toggle_button, ui_nodes.debug.toggle_image }) do
+  for _, name in ipairs(ui_nodes.debug.toggle_targets or {}) do
     specs[#specs + 1] = {
       name = name,
       build_intent = function(data)

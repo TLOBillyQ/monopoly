@@ -23,6 +23,7 @@ local gameplay_loop = require("src.game.flow.turn.GameplayLoop")
 local ui_view = require("src.presentation.api.UIView")
 local ui_model = require("src.presentation.state.UIModel")
 local ui_event_router = require("src.presentation.interaction.UIEventRouter")
+local ui_nodes = require("src.presentation.shared.UINodes")
 local market_ui = require("src.presentation.shared.MarketLayout")
 local map_cfg = require("Config.Map")
 local tiles_cfg = require("Config.Generated.Tiles")
@@ -198,8 +199,8 @@ end
 local function _install_game_init(state)
   RegisterTriggerEvent({ EVENT.GAME_INIT }, function()
     require "vendor.third_party.UIManager.Utils"
-    local ui_nodes = require("Data.UIManagerNodes")
-    UIManager.Builder:new(ui_nodes)
+    local ui_manager_nodes = require("Data.UIManagerNodes")
+    UIManager.Builder:new(ui_manager_nodes)
     state.gameplay_loop_ports = require("src.presentation.api.GameplayLoopPortsAdapter").build(state)
     current_game = gameplay_loop.new_game(state)
     gameplay_loop.set_game(state, current_game)
@@ -211,35 +212,10 @@ local function _install_game_init(state)
       ui_events.set_roles(all_roles)
     end
 
-    local required_nodes = {
-      "行动按钮",
-      "托管按钮",
-      "取消按钮",
-      "建筑升级_确定按钮",
-      "建筑升级_取消",
-      "遥控骰子_取消",
-      "倒计时时钟",
-      "玩家选择_槽位1",
-      "玩家选择_槽位2",
-      "玩家选择_槽位3",
-      "位置前1",
-      "位置前2",
-      "位置前3",
-      "位置后1",
-      "位置后2",
-      "位置后3",
-      "位置脚下",
-      "遥控骰子_选项_01",
-      "遥控骰子_选项_02",
-      "遥控骰子_选项_03",
-      "遥控骰子_选项_04",
-      "遥控骰子_选项_05",
-      "遥控骰子_选项_06",
-    }
-    for _, name in ipairs(market_ui.item_buttons or {}) do
-      required_nodes[#required_nodes + 1] = name
-    end
-    local missing = ui_nodes.validate(required_nodes)
+    local required_nodes = ui_nodes.required_click_nodes({
+      extra = market_ui.item_buttons or {},
+    })
+    local missing = ui_manager_nodes.validate(required_nodes)
     if #missing > 0 then
       error("UI 节点缺失: " .. table.concat(missing, ", "))
     end

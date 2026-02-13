@@ -1,6 +1,7 @@
 local logger = require("src.core.Logger")
 local runtime = require("src.presentation.api.UIRuntimePort")
 local ui_nodes = require("src.presentation.shared.UINodes")
+local ui_touch_policy = require("src.presentation.interaction.UITouchPolicy")
 
 local bindings = {}
 
@@ -69,9 +70,7 @@ function bindings.enable_debug_toggle_touch(cache)
     return
   end
   runtime.for_each_role_or_global(function()
-    for _, node in ipairs(nodes) do
-      node.disabled = false
-    end
+    ui_touch_policy.set_runtime_nodes_touch_enabled(nodes, true)
   end)
   runtime.set_client_role(nil)
   logger.info("[调试屏] 倒计时时钟触控已启用", "nodes=" .. tostring(#nodes))

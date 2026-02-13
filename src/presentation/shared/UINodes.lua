@@ -18,6 +18,11 @@ nodes.debug = {
   log_label = "日志",
 }
 
+nodes.debug.toggle_targets = {
+  nodes.debug.toggle_button,
+  nodes.debug.toggle_image,
+}
+
 nodes.buttons = {
   action = "行动按钮",
   auto = "托管按钮",
@@ -110,5 +115,42 @@ nodes.panel = {
   player_avatar = "玩家%s头像",
   player_color = "玩家%s底板颜色",
 }
+
+function nodes.required_click_nodes(opts)
+  local required = {
+    nodes.buttons.action,
+    nodes.buttons.auto,
+    nodes.buttons.cancel,
+    nodes.buttons.building_confirm,
+    nodes.buttons.building_cancel,
+    nodes.buttons.remote_cancel,
+    nodes.debug.toggle_image,
+    nodes.choice.player.slots[1],
+    nodes.choice.player.slots[2],
+    nodes.choice.player.slots[3],
+    nodes.choice.target.slots[1],
+    nodes.choice.target.slots[2],
+    nodes.choice.target.slots[3],
+    nodes.choice.target.slots[4],
+    nodes.choice.target.slots[5],
+    nodes.choice.target.slots[6],
+    nodes.choice.target.under,
+    nodes.choice.remote.options[1],
+    nodes.choice.remote.options[2],
+    nodes.choice.remote.options[3],
+    nodes.choice.remote.options[4],
+    nodes.choice.remote.options[5],
+    nodes.choice.remote.options[6],
+  }
+
+  local extra = opts and opts.extra or nil
+  if type(extra) == "table" then
+    for _, name in ipairs(extra) do
+      required[#required + 1] = name
+    end
+  end
+
+  return required
+end
 
 return nodes
