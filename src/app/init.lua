@@ -252,6 +252,7 @@ local function _install_game_init(state)
     ui_events.send_to_all(ui_events.show["加载屏"], {})
     board_scene.init(state, map_cfg, current_game)
     ui_view.init_ui_assets(state)
+    ui_view.capture_player_colors(state, current_game)
 
     SetTimeOut(1.0, function()
       ui_events.send_to_all(ui_events.hide["加载屏"], {})

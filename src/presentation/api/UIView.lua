@@ -5,6 +5,8 @@ local input_lock_policy = require("src.presentation.interaction.UIInputLockPolic
 local role_control_lock_policy = require("src.presentation.interaction.UIRoleControlLockPolicy")
 local modal_presenter = require("src.presentation.ui.UIModalPresenter")
 local runtime = require("src.presentation.api.UIRuntimePort")
+local turn_effects = require("src.presentation.ui.UITurnEffects")
+local player_colors = require("src.presentation.shared.PlayerColors")
 local logger = require("src.core.Logger")
 
 local ui_view = {}
@@ -175,6 +177,28 @@ function ui_view.init_ui_assets(state)
   runtime.set_client_role(nil)
 end
 
+function ui_view.capture_player_colors(state, game)
+  assert(state ~= nil, "missing state")
+  local players = game and game.players or nil
+  if type(players) ~= "table" then
+    return
+  end
+  local colors_by_owner = {}
+  for index, player in ipairs(players) do
+    if index > 4 then
+      break
+    end
+    if player and player.id ~= nil then
+      local node = runtime.query_node("玩家" .. tostring(index) .. "底板颜色")
+      local color = node and node.image_color or nil
+      if color ~= nil then
+        colors_by_owner[player.id] = color
+      end
+    end
+  end
+  player_colors.set_owner_colors(colors_by_owner)
+end
+
 function ui_view.refresh_panel(state, ui_model)
   panel_presenter.refresh(state, ui_model, {
     runtime = runtime,
@@ -247,6 +271,7 @@ end
 function ui_view.render(state, ui_model, log_once, build_log_prefix)
   ui_view.refresh_panel(state, ui_model)
   board_view.refresh_board(state, ui_model, log_once, build_log_prefix)
+  turn_effects.sync(state, ui_model)
 end
 
 function ui_view.set_debug_log(state, text)

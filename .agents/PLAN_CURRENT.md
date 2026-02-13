@@ -1,4 +1,4 @@
-# 接入新 UI（Eggy UIManagerNodes）可执行计划
+# 接入基础屏回合光效与地块 owner 颜色可执行计划
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
@@ -6,167 +6,113 @@
 
 ## 目的 / 全局视角
 
-目标是把新 UI 资源接入现有 Lua 逻辑，确保所有界面能显示、可交互、逻辑响应正确。完成后，玩家能正常进入基础屏，触发选择类弹窗、黑市、卡牌展示、破产展示与调试开关；并且 UI 事件能驱动游戏回合逻辑。验证方式是：跑回归脚本通过，并在编辑器内完成一次完整交互流程（显示/隐藏各屏、点击按钮触发行为）。
+把基础屏的回合高亮、本地回合提示与地块 owner 颜色来源接入现有 UI 刷新链路。完成后，所有客户端都能看到当前回合玩家的高亮光效，本地玩家回合开始时出现 1 秒“星星中心爆开 + 行动提示”，购买地块后地块颜色与玩家底板颜色一致。验证方式是：运行回归脚本通过，并在编辑器内观察 UI 行为符合预期。
 
 ## 进度
 
-- [x] (2025-03-04 15:20Z) 清点现有 UI 节点与旧逻辑的映射差异。
-- [x] (2025-03-04 15:28Z) 以当前 UI 导出为基准完成节点名对齐。
-- [x] (2025-03-04 15:28Z) 修正倒计时标签节点名一致性。
-- [x] (2025-03-04 15:40Z) 补充交互与回归验证记录。
-- [x] (2025-03-04 15:55Z) 修复入口模块路径兼容层缺失。
-- [x] (2025-03-04 16:05Z) 更新入口引用并移除兼容层。
-- [x] (2025-03-04 16:20Z) 修复 UIManager Builder 误建节点问题。
-- [x] (2025-03-04 16:30Z) 修复 build_log_prefix 传参错误。
+- [x] (2025-03-08 03:32Z) 清空旧计划并建立新计划骨架。
+- [x] (2025-03-08 03:42Z) 新增回合特效模块并接入 UI 刷新链路。
+- [x] (2025-03-08 03:43Z) 注入 owner 颜色来源并接入初始化流程。
+- [x] (2025-03-08 03:52Z) 运行回归脚本与依赖规则检查。
 
 ## 意外与发现
 
-- 观察：倒计时标签名称在逻辑层使用“倒计时”，而节点表为“倒计时文本/倒计时横线”。
-  证据：`Data/UIManagerNodes.lua` 中没有“倒计时”节点，`src/presentation/ui/UIPanelPresenter.lua` 与 `src/presentation/api/UIView.lua` 使用了“倒计时”。
-- 观察：回归测试断言仍使用旧节点名“倒计时”，导致用例失败。
-  证据：`lua .agents/tests/regression.lua` 报错 `non-current role countdown should be visible`，定位到 `.agents/tests/suites/presentation_ui.lua` 的断言。
-- 观察：运行时从 `src.presentation.*` 直连模块加载失败，因为实际实现位于子目录（`render/api/state/interaction/shared`）。
-  证据：客户端报错 `module not found: 'src.presentation.BoardScene'` 等一系列路径。
-- 观察：入口模块需要改为新路径，兼容层已不再需要。
-  证据：`src/app/init.lua` 中旧 require 已替换为 `src.presentation.render/api/state/interaction/shared` 路径。
-- 观察：`Data/UIManagerNodes.lua` 在节点表里挂了 `validate`，导致 Builder 把函数当节点配置。
-  证据：报错 `Builder.lua:40: attempt to index a function value (local '_config')`，对应 `validate` 键。
-- 观察：`build_log_prefix` 被当作字符串传入，导致 `BoardView` 调用时报错。
-  证据：报错 `BoardView.lua:68: attempt to call a string value (local 'build_log_prefix')`，调用点在 `GameplayLoopPortsAdapter.lua`。
+- 观察：UIManager 的 `EImage.image_color` 仅存于脚本封装层，缺少显式读取 API，读取需依赖节点对象上的 `image_color` 属性。
+  证据：`vendor/third_party/UIManager/EImage.lua` 仅提供 `image_color` 字段，未暴露 `get_image_color` 函数。
 
 ## 决策日志
 
-- 决策：以 `Data/UIManagerNodes.lua` 为单一事实源，所有 UI 名称以此为准。
-  理由：Eggy 导出文件是 UI 实际节点来源，能避免逻辑与 UI 名称不一致。
-  日期/作者：2025-03-04 / Codex
+- 决策：以 `UIManager.query_node` 返回的 `EImage.image_color` 作为底板颜色来源，绑定 `game.players` 槽位顺序。
+  理由：现有 UI 没有独立颜色表，EImage 具备可读写颜色属性，且与设计意图一致。
+  日期/作者：2025-03-08 / Codex
 
-- 决策：保持“基础屏常驻，其他屏叠加”的切屏逻辑不变。
-  理由：`UICanvasCoordinator` 与 `UIModalPresenter` 已形成稳定的状态机，变更风险高。
-  日期/作者：2025-03-04 / Codex
+- 决策：新增 `src/presentation/ui/UITurnEffects.lua`，由 `UIView.render` 触发同步。
+  理由：将回合高亮与本地提示逻辑收敛为单一职责模块，避免分散在 UI 层。
+  日期/作者：2025-03-08 / Codex
 
 ## 结果与复盘
 
-已完成倒计时节点名对齐与回归验证，UI 节点表与逻辑保持一致，回归通过。入口已更新为新路径并移除兼容层。修复了 UIManager Builder 误把 `validate` 当节点的问题，以及 `build_log_prefix` 传参错误。剩余人工验收需要在 Eggy 编辑器内完成。经验：UI 节点名调整需要同步测试断言，否则回归会误报；入口路径变更要同步调用方并清理兼容层；节点表只应包含节点配置；日志前缀应传函数而不是字符串。
+已完成回合高亮、本地回合提示与 owner 颜色注入；回归脚本与依赖规则检查通过。仍需在 Eggy 编辑器内做一次人工验收，确认动画播放与颜色一致性。
 
 ## 背景与导读
 
-本项目 UI 由 Eggy 编辑器导出，节点清单位于 `Data/UIManagerNodes.lua`。显示/隐藏逻辑通过 `src/presentation/shared/UIEvents.lua` 生成 UI 事件，`src/presentation/interaction/UICanvasCoordinator.lua` 负责屏幕切换。交互输入在 `src/presentation/interaction/UIEventRouter.lua` 中绑定，UI 文本与图像渲染由 `src/presentation/api/UIView.lua` 与 `src/presentation/ui/UIPanelPresenter.lua` 驱动。黑市与弹窗相关逻辑在 `src/presentation/render/MarketView.lua`、`src/presentation/ui/UIModalPresenter.lua`。
+基础屏 UI 节点由 `Data/UIManagerNodes.lua` 提供，显示/隐藏与属性设置通过 `UIRuntimePort` 与 UIManager 节点访问完成。当前回合信息在 `src/presentation/state/UIModel.lua` 中生成，UI 刷新在 `src/presentation/api/UIView.lua` 的 `render` 方法中触发。地块颜色渲染在 `src/presentation/render/TileRenderer.lua` 内通过 `PlayerColors.resolve_owner_color` 获取颜色。
 
 术语解释：
-- “ECanvas”是 UI 的顶层屏幕节点，相当于一个整屏界面（例如基础屏、黑市屏）。
-- “节点名”是 Eggy UI 元素的唯一名称（例如“行动按钮”、“取消按钮”）。逻辑必须通过名称查询节点。
-- “UI 事件”是 UIManager 触发的自定义事件，前缀为“显示/隐藏 + 屏幕名”。
+- “当前回合玩家”指 `ui_model.current_player_id` 对应玩家。
+- “本地回合提示”指仅本地客户端显示的 `基础_星星中心爆开` 与 `基础_行动提示`。
+- “owner 颜色”指土地所有者颜色，应用到地块染色。
 
 ## 工作计划
 
-先确认新 UI 节点与现有逻辑的名称是否一致，并列出所有必须存在的节点。以 `Data/UIManagerNodes.lua` 为权威，逐一对照以下逻辑依赖：
-1) `UIView.build_ui_state` 里的基础节点（道具槽位、基础屏节点、弹窗根节点等）。
-2) `UICanvasCoordinator` 与 `UIEvents` 的所有 ECanvas 名称。
-3) `UIEventRouter` 的所有可点击节点与事件绑定。
-4) `MarketLayout` 与 `MarketView` 的黑市面板节点。
+先新增回合特效模块 `src/presentation/ui/UITurnEffects.lua`，提供 `sync` 方法，内部处理两类逻辑：全员可见的“当前回合高亮”，以及仅本地可见的“回合提示”。随后在 `UIView.render` 中调用该模块，确保在面板刷新后执行。
 
-若发现名称变化，统一在逻辑层替换为新名称；若 UI 缺失节点，补充 UI 导出或用占位节点替代，并在计划里记录原因。
+再扩展 `PlayerColors` 支持外部注入颜色映射，并在 `UIView` 增加 `capture_player_colors`，读取 `玩家1-4底板颜色` 的 `image_color`，按 `game.players` 顺序映射到 `owner_id`，在 `EVENT.GAME_INIT` 中调用。
 
-然后更新 UI 接入的关键文件，保持行为不变：
-- 更新 `Data/UIManagerNodes.lua` 为新 UI 导出内容（整表替换）。
-- 若新 UI 的黑市面板节点不同，更新 `src/presentation/shared/MarketLayout.lua` 的 `container` 与按钮列表。
-- 若选择屏、弹窗、破产屏节点名发生变化，更新 `src/presentation/api/UIView.lua` 中 `choice_screens`、`popup_screen`、`bankruptcy_screen` 的名称。
-- 若按钮/点击节点名变化，更新 `src/presentation/interaction/UIEventRouter.lua` 的路由规格。
-- 若基础屏玩家信息/道具槽位名称变化，更新 `src/presentation/ui/UIPanelPresenter.lua` 与 `UIView.refresh_item_slots` 的节点名。
-
-最后跑回归与人工验收，确保切屏、交互与渲染正常。
+完成后运行回归脚本，并在编辑器内观察 UI 行为。
 
 ## 具体步骤
 
-1) 清点 UI 节点差异。
+1) 新增回合特效模块。
 
-在仓库根目录执行：
+在 `src/presentation/ui/UITurnEffects.lua` 中实现：
+- `sync(state, ui_model)`：调用回合高亮与本地提示同步函数。
+- 回合高亮：设置 `基础_玩家1-4高亮光效` 可见性，仅当前槽位可见，使用 `runtime.set_client_role(nil)` 覆盖所有客户端。
+- 本地提示：按 `role_id == current_player_id` 判定，仅本地显示“星星中心爆开 + 行动提示”1 秒并隐藏；用 `state.ui_turn_prompt_seq_by_role` 防抖。
 
-    rg -n "ECanvas" Data/UIManagerNodes.lua
-    rg -n "行动按钮|取消按钮|建筑升级|遥控骰子|黑市|卡牌展示|破产|玩家选择|位置选择" Data/UIManagerNodes.lua
+2) 接入 UI 刷新链路。
 
-把结果与现有逻辑中对应节点名逐条对照，形成“保持/替换/缺失”列表。
+在 `src/presentation/api/UIView.lua` 的 `render` 中，`panel_presenter.refresh` 后调用 `turn_effects.sync(state, ui_model)`。
 
-当前结论：以当前 UI 导出为准时，唯一缺口是倒计时标签名称不一致，已统一为“倒计时文本”。其余逻辑依赖节点在 `Data/UIManagerNodes.lua` 中可找到。
+3) 注入 owner 颜色来源。
 
-2) 更新 UI 节点表。
+- 在 `src/presentation/shared/PlayerColors.lua` 增加 `set_owner_colors(colors_by_owner_id)`。
+- 在 `src/presentation/api/UIView.lua` 增加 `capture_player_colors(state, game)`：读取 `玩家1-4底板颜色` 节点的 `image_color`，按 `game.players` 顺序映射并注入。
+- 在 `src/app/init.lua` 的 `EVENT.GAME_INIT` 中，`ui_view.init_ui_assets(state)` 后调用 `ui_view.capture_player_colors(state, current_game)`。
 
-用新 UI 导出文件替换 `Data/UIManagerNodes.lua`。若导出文件缺失必要节点，回到 Eggy UI 补齐并重新导出，然后再次替换。
+4) 验证。
 
-3) 同步逻辑依赖名称。
+运行回归脚本并观察 UI 行为。
 
-按以下文件顺序更新：
-- `src/presentation/api/UIView.lua`：更新 `choice_screens`、`popup_screen`、`bankruptcy_screen` 中的根节点、标题节点、按钮节点。
-- `src/presentation/interaction/UIEventRouter.lua`：更新 `_build_route_specs` 中绑定的按钮/节点名称。
-- `src/presentation/shared/MarketLayout.lua` 与 `src/presentation/render/MarketView.lua`：更新黑市面板的容器与按钮列表。
-- `src/presentation/ui/UIPanelPresenter.lua`：更新玩家信息、道具槽位、倒计时、托管按钮等节点名。
+## 验证与验收
 
-每修改一处，立刻在 `Data/UIManagerNodes.lua` 中确认名称存在，避免运行时 query_nodes 失败。已完成倒计时标签名对齐（“倒计时文本”）。
-
-4) 跑回归脚本。
-
-在仓库根目录执行：
+命令：
 
     lua .agents/tests/regression.lua
     lua .agents/tests/gameplay_loop_no_ui.lua
     lua .agents/tests/dep_rules.lua
 
-全部通过后进入人工验收。
-已执行回归并通过。
+预期：全部无错误退出。
 
-5) 人工验收（编辑器内）。
-
-在 Eggy 编辑器启动游戏，验证以下流程：
-- 启动时显示“加载屏”，1 秒后切回“基础屏”。
-- 触发玩家选择、位置选择、遥控骰子、建筑升级，按钮可点且返回逻辑正确。
-- 触发黑市面板，商品列表可选、确认/取消正常。
-- 触发卡牌展示弹窗，确认/点击灰底可关闭。
-- 触发破产展示屏，文字与头像正确显示。
-- 点击“图片_82”连续 10 次切换调试屏显示。
-
-## 验证与验收
-
-验证命令与预期：
-- `lua .agents/tests/regression.lua`：无错误退出。
-- `lua .agents/tests/gameplay_loop_no_ui.lua`：无错误退出。
-- `lua .agents/tests/dep_rules.lua`：无错误退出。
-
-人工验收：完成“加载屏 → 基础屏 → 选择屏/黑市/弹窗/破产/调试屏”全流程，观察 UI 可见与交互响应符合预期。回归测试已通过。
+人工验收：
+- 当前回合玩家高亮始终显示，回合切换时更新。
+- 本地玩家回合开始时出现“星星中心爆开 + 行动提示”，1 秒后消失，非本地不显示。
+- 购买地块后颜色与玩家底板颜色一致。
 
 ## 可重复性与恢复
 
-以上步骤可重复执行。若更新 UI 节点表后出现运行时节点缺失，优先回退到旧版 `Data/UIManagerNodes.lua` 或补齐 UI 导出。所有逻辑层改名均可通过 `git checkout -- <file>` 回滚。
+所有步骤可重复执行。若回合特效表现异常，可临时在 `UIView.render` 中注释调用进行回退。颜色注入异常时，可恢复 `PlayerColors.lua` 默认颜色表。
 
 ## 产物与备注
 
-预期改动文件（按需）：
+已改动文件：
 
-    Data/UIManagerNodes.lua
+    src/presentation/ui/UITurnEffects.lua
     src/presentation/api/UIView.lua
-    src/presentation/interaction/UIEventRouter.lua
-    src/presentation/shared/MarketLayout.lua
-    src/presentation/render/MarketView.lua
-    src/presentation/ui/UIPanelPresenter.lua
-    src/presentation/shared/UIAliases.lua
-    .agents/tests/suites/presentation_ui.lua
+    src/presentation/shared/PlayerColors.lua
     src/app/init.lua
-    Data/UIManagerNodes.lua
-    src/presentation/api/GameplayLoopPortsAdapter.lua
 
 关键证据（示例）：
 
+    ..........................................................................................................................
     All regression checks passed (122)
+    tick ok
+    dep_rules ok
 
 ## 接口与依赖
 
-依赖 UI 节点名称稳定可查询。以下节点在逻辑层必须存在：
-- ECanvas：基础屏、玩家选择屏、位置选择屏、遥控骰子屏、建筑升级屏、黑市屏、卡牌展示屏、破产展示屏、调试屏、加载屏。
-- 按钮：行动按钮、托管按钮、取消按钮、建筑升级_确定按钮、建筑升级_取消、遥控骰子_取消、黑市购买按钮、关闭。
-- 选择项：玩家选择_槽位1-3、位置前1-3/后1-3/脚下、遥控骰子_选项_01-06。
-- 展示：卡牌展示_标题、卡牌展示_图片、卡牌展示_灰底、破产_文字、破产玩家头像。
+- `PlayerColors.set_owner_colors(colors_by_owner_id)`：注入 owner 颜色映射。
+- `UIView.capture_player_colors(state, game)`：从 UI 读取底板颜色并注入。
+- `UITurnEffects.sync(state, ui_model)`：统一同步回合高亮与本地提示。
 
-若新 UI 名称不同，必须在逻辑层完成同义替换或补充映射。
-
----
-
-变更说明（2025-03-04 / Codex）：清空旧计划，写入“接入新 UI”可执行计划，补齐所有必备章节与验收标准。
+变更说明（2025-03-08 / Codex）：更新进度与验证结果，补充回归脚本输出。
