@@ -138,6 +138,21 @@ local function _set_node_visible_for_roles(node, roles, visible)
   end
 end
 
+local function _create_scene_ui_bind_unit(role, ctrl_unit, meta)
+  assert(meta ~= nil, "missing meta")
+  local offset = math.Vector3(0, 4, 0)
+  if ctrl_unit and ctrl_unit.create_scene_ui_bind_unit then
+    return ctrl_unit.create_scene_ui_bind_unit(meta.layer_key, Enums.ModelSocket.socket_head, offset, -1.0, true, true)
+  end
+  if role and role.create_scene_ui_bind_unit then
+    return role.create_scene_ui_bind_unit(meta.layer_key, Enums.ModelSocket.socket_head, offset, -1.0, true, true)
+  end
+  if SceneUI and SceneUI.create_scene_ui_bind_unit then
+    return SceneUI.create_scene_ui_bind_unit(meta.layer_key, Enums.ModelSocket.socket_head, offset, -1.0, true, true)
+  end
+  return nil
+end
+
 local function _ensure_layer_for_player(cache, player)
   local player_id = player.id
   if cache.layers_by_player_id[player_id] ~= nil then
@@ -159,18 +174,28 @@ local function _ensure_layer_for_player(cache, player)
     cache.disabled = true
     return false
   end
-  local layer = ctrl_unit.create_scene_ui_bind_unit(meta.layer_key, Enums.ModelSocket.socket_head, math.Vector3(0, 3, 0), -1.0, true, true)
+  local layer = _create_scene_ui_bind_unit(role, ctrl_unit, meta)
   if layer == nil then
     _warn_once(cache, "create_layer_failed_" .. tostring(player_id), "status3d create layer failed:", tostring(player_id))
     return false
   end
   local nodes_by_status = {}
   for status_key, node_ids in pairs(meta.node_ids_by_status) do
-    nodes_by_status[status_key] = {
-      bg = GameAPI.get_eui_node_at_scene_ui(layer, node_ids.bg),
-      text = GameAPI.get_eui_node_at_scene_ui(layer, node_ids.text),
-    }
+    local bg = GameAPI.get_eui_node_at_scene_ui(layer, node_ids.bg)
+    local text = GameAPI.get_eui_node_at_scene_ui(layer, node_ids.text)
+    if not bg or not text then
+      _warn_once(cache, "missing_node_" .. tostring(status_key), "status3d node missing:", tostring(status_key))
+    end
+    nodes_by_status[status_key] = { bg = bg, text = text }
   end
+  local roles = _resolve_observer_roles()
+  for _, node_pair in pairs(nodes_by_status) do
+    if node_pair then
+      _set_node_visible_for_roles(node_pair.bg, roles, false)
+      _set_node_visible_for_roles(node_pair.text, roles, false)
+    end
+  end
+  _set_layer_visible_for_roles(layer, roles, false)
   cache.layers_by_player_id[player_id] = layer
   cache.nodes_by_player_id[player_id] = nodes_by_status
   cache.last_status_key_by_player[player_id] = INIT_STATUS
