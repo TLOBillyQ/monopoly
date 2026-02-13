@@ -1,21 +1,16 @@
 local market_ui = require("src.presentation.shared.MarketLayout")
-local panel_presenter = require("src.presentation.ui.UIPanelPresenter")
-local role_context = require("src.presentation.state.UIRoleContext")
 local ui_nodes = require("src.presentation.shared.UINodes")
 local ui_touch_policy = require("src.presentation.interaction.UITouchPolicy")
 
 local input_lock_policy = {}
 
-local function _force_item_slots_visible_for_player(ui, ctx)
+local function _set_base_hidden_nodes_visible(ui, visible)
   if not ui or not ui.set_visible then
     return
   end
-  if not ctx or ctx.is_player_role ~= true then
-    return
-  end
-  local slots = ui.item_slots or {}
-  for _, slot_name in ipairs(slots) do
-    ui:set_visible(slot_name, true)
+  local nodes = ui.base_hidden_nodes or {}
+  for _, name in ipairs(nodes) do
+    ui:set_visible(name, visible == true)
   end
 end
 
@@ -26,8 +21,7 @@ end
 
 function input_lock_policy.apply(state, deps)
   assert(state ~= nil and state.ui ~= nil, "missing state.ui")
-  assert(deps ~= nil and deps.runtime ~= nil, "missing deps.runtime")
-  local runtime = deps.runtime
+  assert(deps ~= nil, "missing deps")
   local ui = state.ui
 
   if not ui.set_touch_enabled then
@@ -43,19 +37,14 @@ function input_lock_policy.apply(state, deps)
     return
   end
 
-  local model = state.ui_model or {}
-  runtime.for_each_role_or_global(function(role)
-    local ctx = role_context.resolve(role, model, { runtime = runtime })
-    panel_presenter.apply_base_non_player_visibility(ui, false)
-    _force_item_slots_visible_for_player(ui, ctx)
-    panel_presenter.render_auto_controls_for_role(ui, ctx, model)
-  end)
-  runtime.set_client_role(nil)
+  _set_base_hidden_nodes_visible(ui, false)
+  ui_touch_policy.set_many_touch_enabled(ui, ui.item_slots or {}, false)
+  for _, slot_name in ipairs(ui.item_slots or {}) do
+    ui:set_visible(slot_name, true)
+  end
 
   -- 输入锁开启：先整体锁住回合内操作入口。
   ui:set_touch_enabled(ui_nodes.buttons.action, false)
-
-  ui_touch_policy.set_many_touch_enabled(ui, ui.item_slots or {}, false)
 
   local screens = ui.choice_screens or {}
   ui_touch_policy.set_choice_screen_locked(ui, screens.player)

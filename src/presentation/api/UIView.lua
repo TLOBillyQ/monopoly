@@ -110,8 +110,6 @@ function ui_view.build_ui_state()
     debug_visible_by_role = {},
     debug_log_enabled_override = nil,
     debug_log_enabled_by_role = {},
-    debug_toggle_first_click_timestamp = nil,
-    debug_toggle_click_count = 0,
     item_slots = item_slots,
     base_hidden_nodes = base_hidden_nodes,
     base_hidden_labels = {},

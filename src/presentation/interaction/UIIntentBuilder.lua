@@ -1,4 +1,5 @@
 local basic_intents = require("src.presentation.interaction.intent_builders.BasicIntents")
+local debug_intents = require("src.presentation.interaction.intent_builders.DebugIntents")
 local popup_intents = require("src.presentation.interaction.intent_builders.PopupIntents")
 local item_slot_intents = require("src.presentation.interaction.intent_builders.ItemSlotIntents")
 local choice_intents = require("src.presentation.interaction.intent_builders.ChoiceIntents")
@@ -8,6 +9,10 @@ local intent_builder = {}
 
 function intent_builder.build_basic_intents(state)
   return basic_intents.build(state)
+end
+
+function intent_builder.build_debug_intents()
+  return debug_intents.build()
 end
 
 function intent_builder.build_popup_intents(state)

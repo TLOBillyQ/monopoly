@@ -1062,6 +1062,57 @@ local function _test_ui_intent_dispatcher_popup_confirm_closes_popup()
   _assert_eq(closed, 1, "popup_confirm should close popup once")
 end
 
+local function _test_ui_intent_dispatcher_toggle_debug_uses_actor_role_context()
+  local state = {
+    ui = ui_view.build_ui_state(),
+  }
+  local game = {}
+  local role = {
+    get_roleid = function()
+      return 101
+    end,
+  }
+  local visible_calls = {}
+
+  _with_patches({
+    { key = "all_roles", value = { role } },
+    { key = "UIManager", value = {
+      client_role = nil,
+      query_nodes_by_name = function()
+        return { { visible = false } }
+      end,
+    } },
+    { target = gameplay_rules, key = "debug_log_enabled", value = false },
+    { target = ui_view, key = "set_debug_visible", value = function(ctx, visible)
+      visible_calls[#visible_calls + 1] = visible
+      ctx.ui.debug_visible = visible == true
+      local active = UIManager and UIManager.client_role or nil
+      if active and active.get_roleid then
+        local role_id = active.get_roleid()
+        ctx.ui.debug_visible_by_role[role_id] = visible == true
+        ctx.ui.debug_log_enabled_by_role[role_id] = visible == true
+      end
+    end },
+  }, function()
+    ui_intent_dispatcher.dispatch(state, game, {
+      type = "toggle_debug",
+      actor_role_id = 101,
+    }, {})
+    _assert_eq(state.ui.debug_visible_by_role[101], true, "toggle_debug should enable debug for actor role")
+    _assert_eq(UIManager.client_role, nil, "toggle_debug should restore client role")
+
+    ui_intent_dispatcher.dispatch(state, game, {
+      type = "toggle_debug",
+      actor_role_id = 101,
+    }, {})
+    _assert_eq(state.ui.debug_visible_by_role[101], false, "toggle_debug second click should disable debug")
+    _assert_eq(UIManager.client_role, nil, "toggle_debug second click should restore client role")
+  end)
+
+  _assert_eq(visible_calls[1], true, "first toggle_debug should enable debug")
+  _assert_eq(visible_calls[2], false, "second toggle_debug should disable debug")
+end
+
 local function _test_ui_view_render_by_role_slots_are_isolated()
   local main_view = require("src.presentation.api.UIView")
 
@@ -2581,6 +2632,7 @@ return {
   _test_ui_intent_dispatcher_market_confirm_routes_choice_select,
   _test_ui_intent_dispatcher_market_select_updates_ui_only,
   _test_ui_intent_dispatcher_popup_confirm_closes_popup,
+  _test_ui_intent_dispatcher_toggle_debug_uses_actor_role_context,
   _test_ui_view_render_by_role_slots_are_isolated,
   _test_ui_events_send_without_roles_no_crash,
   _test_ui_nodes_validate_reports_missing,

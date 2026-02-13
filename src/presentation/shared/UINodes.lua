@@ -124,7 +124,6 @@ function nodes.required_click_nodes(opts)
     nodes.buttons.building_confirm,
     nodes.buttons.building_cancel,
     nodes.buttons.remote_cancel,
-    nodes.debug.toggle_image,
     nodes.choice.player.slots[1],
     nodes.choice.player.slots[2],
     nodes.choice.player.slots[3],
@@ -142,6 +141,10 @@ function nodes.required_click_nodes(opts)
     nodes.choice.remote.options[5],
     nodes.choice.remote.options[6],
   }
+
+  for _, name in ipairs(nodes.debug.toggle_targets or {}) do
+    required[#required + 1] = name
+  end
 
   local extra = opts and opts.extra or nil
   if type(extra) == "table" then

@@ -1,8 +1,34 @@
 local logger = require("src.core.Logger")
 local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
+local runtime = require("src.presentation.api.UIRuntimePort")
 local ui_view = require("src.presentation.api.UIView")
+local ui_event_state = require("src.presentation.interaction.UIEventState")
 
 local intent_dispatcher = {}
+
+local function _resolve_role_by_id(role_id)
+  if role_id == nil then
+    return runtime.get_client_role()
+  end
+  local roles = all_roles
+  if type(roles) ~= "table" then
+    return {
+      get_roleid = function()
+        return role_id
+      end,
+    }
+  end
+  for _, role in ipairs(roles) do
+    if runtime.resolve_role_id(role) == role_id then
+      return role
+    end
+  end
+  return {
+    get_roleid = function()
+      return role_id
+    end,
+  }
+end
 
 local function _should_block_intent(state, intent)
   if turn_dispatch.should_block_action then
@@ -62,6 +88,20 @@ function intent_dispatcher.dispatch_view_command(state, intent)
   local intent_type = intent and intent.type
   if not intent_type then
     return false
+  end
+
+  if intent_type == "toggle_debug" then
+    local ui = state and state.ui or nil
+    if not ui then
+      return true
+    end
+    local active_role = _resolve_role_by_id(intent.actor_role_id)
+    runtime.with_client_role(active_role, function()
+      ui.debug_log_enabled_override = nil
+      local next_enabled = not ui_event_state.resolve_debug_enabled(state)
+      ui_view.set_debug_visible(state, next_enabled)
+    end)
+    return true
   end
 
   if intent_type == "market_select" then

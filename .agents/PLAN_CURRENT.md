@@ -1,4 +1,4 @@
-# 执行计划：UI 交互节点配置收敛（倒计时/行动日志链路）
+# 执行计划：UI 交互职责解耦（InputLock / Router）
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
@@ -6,133 +6,104 @@
 
 ## 目的 / 全局视角
 
-本次改造要解决“UI 节点重命名后多处散落硬编码导致回归”的结构性问题。完成后，用户可以只在一个地方（`src/presentation/shared/UINodes.lua`）维护调试开关目标节点与关键点击节点清单，`UIEventRouter` 与启动校验自动使用该配置，不再分别手写。可见结果是：节点重命名后，启动不会因漏改校验清单报错，行动日志开关也不会因漏改路由失效。
+本轮改造要完成上一轮评审提出的“职责边界收口”：输入锁策略不再直接依赖面板呈现器，事件路由层不再直接改 UI 状态。完成后，用户可继续使用现有按钮交互（行动日志、托管、输入锁期间弹窗确认等）且行为不变，但代码结构会更稳定：触控策略集中在策略模块，路由层专注“事件 -> intent”。可见结果是全量回归通过，并且新增/修改调试开关行为时只需改 intent/handler，不必改 router 内部状态逻辑。
 
 ## 进度
 
-- [x] (2026-02-13 18:20Z) 读取 `.agents/PLANS.md` 与当前架构上下文，确认采用“先收敛配置源，再替换调用方”的增量策略。
-- [x] (2026-02-13 18:22Z) 重建 `PLAN_CURRENT.md` 为本任务活文档。
-- [x] (2026-02-13 18:26Z) 在 `src/presentation/shared/UINodes.lua` 增加统一配置导出：`debug.toggle_targets` 与 `required_click_nodes(opts)`。
-- [x] (2026-02-13 18:27Z) `src/presentation/interaction/UIEventRouter.lua` 改为消费 `UINodes.debug.toggle_targets`。
-- [x] (2026-02-13 18:28Z) `src/app/init.lua` 改为消费 `UINodes.required_click_nodes({ extra = market_ui.item_buttons })`。
-- [x] (2026-02-13 18:30Z) 运行 `lua .agents/tests/regression.lua` 并通过：`All regression checks passed (129)`。
-- [x] (2026-02-13 18:36Z) 启动下一阶段：输入锁/触控策略收敛，更新可执行计划并进入实施。
-- [x] (2026-02-13 18:41Z) 抽取统一触控策略模块：新增 `src/presentation/interaction/UITouchPolicy.lua`。
-- [x] (2026-02-13 18:42Z) 替换旧触控设置路径，`UIPanelPresenter`/`UIInputLockPolicy` 改为共用 `UITouchPolicy`。
-- [x] (2026-02-13 18:44Z) 运行全量回归并通过：`All regression checks passed (129)`。
-- [x] (2026-02-13 18:50Z) 收敛 `UIEventBindings.enable_debug_toggle_touch` 的节点级触控写入到 `UITouchPolicy`。
-- [x] (2026-02-13 18:51Z) 运行全量回归并通过：`All regression checks passed (129)`。
-- [x] (2026-02-13 18:57Z) 新增 `UITouchPolicy` 直接回归用例（auto controls / runtime nodes）。
-- [x] (2026-02-13 18:58Z) 运行全量回归并通过：`All regression checks passed (131)`。
-- [x] (2026-02-13 19:05Z) 收敛 choice/market 触控锁定逻辑到 `UITouchPolicy`（批量触控与屏幕锁定 helper）。
-- [x] (2026-02-13 19:06Z) 运行全量回归并通过：`All regression checks passed (131)`。
-- [x] (2026-02-13 19:12Z) 完成输入锁边界注释化收口（放行/锁定规则），并清理未使用参数命名。
-- [x] (2026-02-13 19:13Z) 运行全量回归并通过：`All regression checks passed (131)`。
+- [x] (2026-02-13 19:20Z) 清空并重建 `PLAN_CURRENT.md`，切换到本轮“职责解耦”主题。
+- [x] (2026-02-13 19:22Z) 读取并确认 `UIIntentBuilder` / `UIIntentDispatcher` 当前调试开关处理路径。
+- [x] (2026-02-13 19:24Z) 解耦 `UIInputLockPolicy` 对 `UIPanelPresenter` 与 `UIRoleContext` 的依赖，改为纯触控策略编排。
+- [x] (2026-02-13 19:25Z) 调整 `UIEventRouter`：debug 点击仅产出 intent，不直接调用 `UIView.set_debug_visible`。
+- [x] (2026-02-13 19:26Z) 在 `UIIntentDispatcher` 落地 debug 切换处理，保持按角色切换行为。
+- [x] (2026-02-13 19:27Z) 收敛 `UINodes.required_click_nodes` 与 `debug.toggle_targets`，移除双源列表。
+- [x] (2026-02-13 19:29Z) 补充测试：新增 `toggle_debug` dispatcher 角色上下文用例。
+- [x] (2026-02-13 19:31Z) 首次回归失败后修复 fallback，再次运行通过：`All regression checks passed (132)`。
+- [x] (2026-02-13 20:05Z) 删除调试屏“3秒10击”历史残留字段：`debug_toggle_first_click_timestamp` 与 `debug_toggle_click_count`。
+- [x] (2026-02-13 20:07Z) 第二轮收口：新增 `DebugIntents`，`UIEventRouter` 不再本地拼装 debug route specs。
+- [x] (2026-02-13 20:09Z) 运行全量回归通过：`All regression checks passed (132)`。
 
 ## 意外与发现
 
-- 观察：`src/app/init.lua` 目前仍直接维护 `required_nodes` 字符串数组，属于高层策略对低层节点细节的直接依赖。
-  证据：`src/app/init.lua` 的 `_install_game_init` 内部 `required_nodes = { ... }`。
-- 观察：`UIEventRouter` 已支持双节点调试开关，但列表定义在 router 内部，而非节点配置源。
-  证据：`src/presentation/interaction/UIEventRouter.lua` 中 `for _, name in ipairs({ ui_nodes.debug.toggle_button, ui_nodes.debug.toggle_image })`。
-- 观察：将 required list 与调试目标统一后，不需要改测试即可保持行为稳定。
-  证据：全量回归输出 `All regression checks passed (129)`。
-- 观察：触控启用逻辑仍在多个模块分别写入，后写覆盖前写，排查成本高。
-  证据：`UIPanelPresenter.render_auto_controls_for_role` 与 `UIInputLockPolicy.apply` 都会设置托管控件 touch。
-- 观察：收敛触控策略后，既有回归无需调整即可通过。
-  证据：全量回归输出 `All regression checks passed (129)`。
-- 观察：节点级 `disabled` 写入迁移后，行为仍保持一致。
-  证据：迁移后全量回归输出 `All regression checks passed (129)`。
-- 观察：加入策略层直测后，回归通过数提升到 131，触控回归定位粒度提升。
-  证据：全量回归输出 `All regression checks passed (131)`。
-- 观察：choice/market 触控锁定下沉后，行为未变化且重复循环显著减少。
-  证据：迁移后全量回归输出 `All regression checks passed (131)`。
-- 观察：输入锁边界注释化后，可读性提升且无行为变化。
-  证据：注释化后全量回归输出 `All regression checks passed (131)`。
+- 观察：`UIInputLockPolicy.apply` 目前仍调用 `panel_presenter` 与 `role_context`，属于策略层依赖呈现细节。
+  证据：`src/presentation/interaction/UIInputLockPolicy.lua` 顶部 require 与 `runtime.for_each_role_or_global` 代码段。
+
+- 观察：`UIEventRouter` 当前 debug 切换在路由层直接调用 `ui_view.set_debug_visible`，路由职责偏重。
+  证据：`src/presentation/interaction/UIEventRouter.lua` 的 `_toggle_debug_visible_for_role`。
+
+- 观察：把 debug 切换下沉到 dispatcher 后，`all_roles=nil` 场景会丢失 role context，导致按角色状态未写入。
+  证据：首次回归报错 `debug toggle should invert role visibility | expected=false got=nil`。
+
+- 观察：在 dispatcher 增加“伪 role 回退（仅实现 get_roleid）”后，按角色切换行为恢复。
+  证据：二次回归输出 `All regression checks passed (132)`。
+
+- 观察：仓库已不存在“3秒内点击10次才开启调试屏”的执行逻辑，仅剩 UI state 残留字段。
+  证据：`UIView.build_ui_state` 字段定义 + 全仓无其他引用。
+
+- 观察：将 debug route specs 下沉到独立 builder 后，router 仅负责汇总 builder 输出，职责更单一。
+  证据：`UIEventRouter._build_default_route_specs` 改为 `_append(ui_intent_builder.build_debug_intents(state))`。
 
 ## 决策日志
 
-- 决策：本轮只做“配置收敛 + 调用方替换”，不同时推进触控策略大重构。
-  理由：这是最小可交付改造，风险低，能直接降低节点重命名回归概率。
+- 决策：先做“行为不变重构”，不改 UI 可见行为与按钮语义。
+  理由：该任务目标是结构收口，不是产品行为变更；可降低回归风险。
   日期/作者：2026-02-13 / Copilot
-- 决策：保留 `app/init.lua` 对 `market_ui.item_buttons` 的追加逻辑，通过 `UINodes.required_click_nodes({ extra = ... })` 注入可变列表。
-  理由：黑市按钮数量由布局定义，仍应由调用方在运行期拼入。
+
+- 决策：输入锁阶段的“托管可点、调试可点、弹窗确认可点”保持不变，作为硬约束写入测试。
+  理由：这三项是现有功能契约，之前已发生过回归。
   日期/作者：2026-02-13 / Copilot
-- 决策：`required_click_nodes` 返回“新数组”，不在 `UINodes` 内缓存可变结果。
-  理由：避免调用方意外修改共享引用，降低后续调试成本。
+
+- 决策：`toggle_debug` 在缺少 `all_roles` 时使用最小伪 role 回退，而不是降级为 global 切换。
+  理由：需要维持既有“按 actor_role_id 写入 debug_visible_by_role”的测试契约与运行时语义。
   日期/作者：2026-02-13 / Copilot
-- 决策：下一阶段采用“提取轻量策略模块 + 保持原接口不变”的方式收敛触控逻辑。
-  理由：能降低重复逻辑且不扩散改动面，回归风险可控。
+
+- 决策：本轮“删除该功能”按 A 路径执行为“删除3秒10击残留，不删除当前 debug toggle 功能”。
+  理由：当前门槛逻辑已退役，仅有残留字段；保留现有点击 toggle 行为可避免产品行为回归。
   日期/作者：2026-02-13 / Copilot
-- 决策：`UIEventBindings` 的节点级 `disabled` 直接写入暂不并入 `UITouchPolicy`。
-  理由：初始阶段先保守落地，避免扩大改动面。
-  日期/作者：2026-02-13 / Copilot
-- 决策：在回归稳定后，将 `UIEventBindings` 的节点级写入纳入 `UITouchPolicy.set_runtime_nodes_touch_enabled`。
-  理由：进一步减少触控规则分散，实现单点维护，且验证通过后风险可控。
+
+- 决策：第二轮收口采用新增 `DebugIntents` 文件，而不是继续塞进 `BasicIntents`。
+  理由：避免基础按钮意图与调试入口耦合，后续维护更清晰。
   日期/作者：2026-02-13 / Copilot
 
 ## 结果与复盘
 
-第一阶段（节点配置收敛）与第二阶段（触控策略收敛）均已完成并通过全量回归（129）。
+本轮“职责解耦”已完成并通过全量回归（132）。
 
 完成项：
 
-1. `UINodes` 成为“调试开关目标 + required click nodes”统一配置源；
-2. `UIEventRouter` 从配置读取调试开关节点，不再内联双节点列表；
-3. `app/init` 启动校验从配置函数取 required nodes，不再维护长字符串数组。
+1. `UIInputLockPolicy` 移除对 `UIPanelPresenter`、`UIRoleContext` 的直接依赖，改为纯触控编排；
+2. `UIEventRouter` 不再直接切换 debug 可见性，改为发出 `toggle_debug` intent；
+3. `UIIntentDispatcher` 承接 debug 切换执行，并保持按角色上下文生效；
+4. `UINodes.required_click_nodes` 复用 `debug.toggle_targets`，避免双源；
+5. 新增 dispatcher 级测试覆盖 toggle_debug 角色上下文行为。
 
-用户可见收益：UI 节点改名时，修改点集中到 `UINodes`，减少“漏改路由/漏改校验清单”导致的启动失败和点击失效。
+新增完成项：
 
-第二阶段成果：
+6. 删除 `UIView` 中“3秒10击”未使用残留状态字段；
+7. 新增 `intent_builders/DebugIntents.lua`，并由 `UIIntentBuilder` 暴露 `build_debug_intents`；
+8. `UIEventRouter` 删除本地 debug spec 拼装，改为消费 builder 输出；
+9. 全量回归保持通过（132）。
 
-1. 新增 `UITouchPolicy` 统一托管控件触控与调试开关触控规则；
-2. `UIPanelPresenter` 与 `UIInputLockPolicy` 复用同一触控策略，减少重复实现；
-3. 托管按钮在输入锁时保持可点击的行为不变。
-
-第三步成果：
-
-1. `UIEventBindings.enable_debug_toggle_touch` 不再直接写 `node.disabled`；
-2. 节点级触控启用通过 `UITouchPolicy.set_runtime_nodes_touch_enabled` 统一处理；
-3. 全量回归保持 129 通过。
-
-第四步成果：
-
-1. 新增 `UITouchPolicy` 直接测试，覆盖托管控件 touch 规则与 runtime 节点 disabled 开关；
-2. 触控策略从“仅集成回归覆盖”提升为“策略层+集成层双覆盖”；
-3. 全量回归更新为 131 通过。
-
-第五步成果：
-
-1. `UITouchPolicy` 新增 `set_many_touch_enabled` 与 `set_choice_screen_locked`；
-2. `UIInputLockPolicy` 不再内联 choice/market 锁定循环，改为复用策略函数；
-3. 全量回归保持 131 通过。
-
-第六步成果：
-
-1. `UIInputLockPolicy` 明确标注了输入锁期间“必须放行/必须锁定”的交互边界；
-2. 轻量清理 `_can_popup_confirm` 未使用参数，降低阅读噪音；
-3. 全量回归保持 131 通过。
-
-剩余债务：若后续新增更多触控类型（比如 market/choice 特例），建议继续按同模式补策略层直测。
+收益：路由层职责更单一，输入锁策略与呈现实现边界更清晰，后续扩展 debug 行为时改动点集中。
 
 ## 背景与导读
 
-与本任务直接相关的文件如下：
+本轮只涉及 `src/presentation` 的交互链路与配置源：
 
-- `src/presentation/shared/UINodes.lua`：UI 节点名常量定义。
-- `src/presentation/interaction/UIEventRouter.lua`：UI 点击路由到 intent 的入口。
-- `src/app/init.lua`：启动流程，包含 UI 必需节点校验。
-- `Data/UIManagerNodes.lua`：编辑器导出的节点清单，提供 `validate(required_names)` 用于启动校验。
+- `src/presentation/interaction/UIInputLockPolicy.lua`：输入锁期间触控规则编排。
+- `src/presentation/interaction/UITouchPolicy.lua`：触控策略细节实现。
+- `src/presentation/interaction/UIEventRouter.lua`：UI 点击路由入口。
+- `src/presentation/interaction/UIIntentBuilder.lua` 与 `UIIntentDispatcher.lua`：intent 构建与分发。
+- `src/presentation/shared/UINodes.lua`：节点常量与 required click nodes 配置。
 
-“required click nodes” 指启动时必须存在的可交互节点列表；若缺失会在 `GAME_INIT` 阶段抛错，阻止进入游戏。
+“路由纯 intent”是指：router 只负责收集事件并产出 intent，真正状态写入在 dispatcher/handler 执行。
 
 ## 工作计划
 
-先在 `UINodes` 增加两个稳定导出：调试开关目标节点列表、统一 required click nodes 构建函数。随后将 `UIEventRouter` 和 `app/init` 改为消费这些导出，移除本地重复硬编码。最后跑全量回归验证行为不变。
+先定位 debug toggle 的 intent 处理位置，把 `UIEventRouter` 的直接 UI 调用下沉到 intent 执行端。随后将 `UIInputLockPolicy` 中与面板渲染相关的依赖移除，仅保留触控锁定/放行策略调用。最后补充测试并跑全量回归，确保行为不变。
 
 ## 具体步骤
 
-在仓库根目录执行：
+在仓库根目录按顺序执行：
 
     lua .agents/tests/regression.lua
 
@@ -140,52 +111,44 @@
 
     All regression checks passed (N)
 
-其中 `N` 取决于当前回归集数量，需大于等于本轮前的通过数。
+其中 `N` 应不低于当前基线 131。
 
 ## 验证与验收
 
 验收标准：
 
-1. `UINodes` 中存在统一导出函数，返回 required click nodes 列表。
-2. `UIEventRouter` 不再内联调试按钮列表，改为读取 `UINodes` 配置。
-3. `app/init.lua` 不再硬编码整段 required nodes 字符串数组。
-4. 全量回归通过。
+1. `UIInputLockPolicy.lua` 不再 require `UIPanelPresenter` 与 `UIRoleContext`。
+2. `UIEventRouter.lua` 不再直接调用 `UIView.set_debug_visible`。
+3. debug toggle 点击后行为保持与当前一致（可切换显示状态，按角色上下文生效）。
+4. `UINodes.required_click_nodes` 复用 `debug.toggle_targets`，避免双源。
+5. 全量回归通过。
 
 ## 可重复性与恢复
 
-改动为增量、可重复执行。若回归失败，按以下顺序恢复：
+本方案采用小步修改，每一步都可独立回滚。若失败，按模块回退：
 
-1. 回退 `src/app/init.lua` 的 required nodes 来源；
-2. 回退 `src/presentation/interaction/UIEventRouter.lua` 的调试目标来源；
-3. 回退 `src/presentation/shared/UINodes.lua` 新增导出；
-4. 重新运行回归定位最小失败面。
+1. 回退 router 的 debug intent 路由改动；
+2. 回退 input lock 的依赖删除；
+3. 回退 UINodes 清单收敛；
+4. 重跑回归，定位最小失败集。
 
 ## 产物与备注
 
-预计产物：
+预计修改文件：
 
-- 修改：`src/presentation/shared/UINodes.lua`
-- 修改：`src/presentation/interaction/UIEventRouter.lua`
-- 修改：`src/app/init.lua`
-- （如需）修改：`.agents/tests/suites/presentation_ui.lua`
+- `src/presentation/interaction/UIInputLockPolicy.lua`
+- `src/presentation/interaction/UIEventRouter.lua`
+- `src/presentation/interaction/UIIntentBuilder.lua`（如需）
+- `src/presentation/interaction/UIIntentDispatcher.lua`（如需）
+- `src/presentation/shared/UINodes.lua`
+- `.agents/tests/suites/presentation_ui.lua`（如需）
 
 ## 接口与依赖
 
-新增（或确认）接口：
+目标接口约束：
 
-- `ui_nodes.debug.toggle_targets`：调试开关可点击节点列表。
-- `ui_nodes.required_click_nodes(opts)`：返回启动校验所需节点名数组；`opts.extra` 可追加动态节点。
+- 路由层只负责组装 intent，不执行 UI 状态写入。
+- 输入锁策略层只负责调用 `UITouchPolicy` 与最小 UI 触控 API。
+- `required_click_nodes` 与 `debug.toggle_targets` 共享同一配置源。
 
-调用方约束：
-
-- `UIEventRouter` 仅消费 `toggle_targets`，不再自己拼列表。
-- `app/init` 仅消费 `required_click_nodes`，不再维护重复字符串数组。
-
-变更说明（2026-02-13 / Copilot）：创建并启用本任务可执行计划，进入实施阶段。
-变更说明（2026-02-13 / Copilot）：完成配置收敛改造并记录回归结果（129 通过）。
-变更说明（2026-02-13 / Copilot）：启动第二阶段触控策略收敛并更新任务清单。
-变更说明（2026-02-13 / Copilot）：完成第二阶段触控策略收敛并记录回归结果（129 通过）。
-变更说明（2026-02-13 / Copilot）：完成节点级触控写入收敛并记录回归结果（129 通过）。
-变更说明（2026-02-13 / Copilot）：新增 UITouchPolicy 单测并记录回归结果（131 通过）。
-变更说明（2026-02-13 / Copilot）：完成 choice/market 触控锁定收敛并记录回归结果（131 通过）。
-变更说明（2026-02-13 / Copilot）：完成输入锁边界注释化收口并记录回归结果（131 通过）。
+变更说明（2026-02-13 / Copilot）：重建执行计划，进入“职责解耦”实施阶段。
