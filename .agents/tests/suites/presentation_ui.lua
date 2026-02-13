@@ -1269,6 +1269,50 @@ local function _test_apply_input_lock_keeps_auto_controls_enabled()
   assert(visible["道具槽位1"] == true, "item slot should stay visible when locked")
 end
 
+local function _test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapped()
+  local touch = {}
+  local state = {
+    ui_model = {
+      current_player_id = 1,
+      item_slots_by_player = {},
+      panel = {
+        auto_label = "自动：关",
+      },
+    },
+    ui = {
+      input_blocked = true,
+      item_slots = { "道具槽位1" },
+      base_hidden_nodes = { "行动按钮", "道具槽位1" },
+      base_hidden_labels = {},
+      auto_control_nodes = { "托管按钮", "托管_文本" },
+      choice_screens = {
+        player = { option_buttons = {}, cancel = "取消按钮" },
+        target = { option_buttons = {}, under_button = "位置脚下", cancel = "取消按钮" },
+        remote = { option_buttons = {}, cancel = "遥控骰子_取消" },
+        building = { body = "建筑升级_文本", cancel = "建筑升级_取消", confirm = "建筑升级_确定按钮" },
+      },
+      popup_screen = { confirm = "取消按钮" },
+      set_touch_enabled = function(_, name, enabled)
+        touch[name] = enabled
+      end,
+      set_visible = function() end,
+      set_button = function() end,
+    },
+  }
+  local roles = {
+    { get_roleid = function() return 1 end },
+  }
+
+  _with_patches({
+    { key = "all_roles", value = roles },
+  }, function()
+    ui_view.apply_input_lock(state)
+  end)
+
+  assert(touch["托管按钮"] == true, "auto button should stay enabled when role mapping is missing")
+  assert(touch["托管_文本"] == false, "auto label should stay non-clickable when role mapping is missing")
+end
+
 local function _test_push_popup_sets_card_image_by_image_ref()
   local last_image_key = nil
   local card_node = {
@@ -1661,7 +1705,7 @@ local function _test_ui_event_router_debug_toggle_uses_role_context()
 
   local node_map = {
     ["基础_行动日志按钮"] = new_node(),
-    ["图片_82"] = new_node(),
+    ["倒计时时钟"] = new_node(),
   }
   local function query_nodes_by_name(name)
     local node = node_map[name]
@@ -1699,13 +1743,14 @@ local function _test_ui_event_router_debug_toggle_uses_role_context()
 
     local role_id = role.get_roleid()
     _assert_eq(state.ui.debug_visible_by_role[role_id], nil, "debug role flag should start nil")
+    assert(type(node_map["倒计时时钟"]._listener_cb) == "function", "debug image should bind click listener")
     local before = require("src.presentation.interaction.UIEventState").resolve_debug_enabled(state)
     node_map["基础_行动日志按钮"]._listener_cb({ role = role })
     local first_value = state.ui.debug_visible_by_role[role_id]
     _assert_eq(first_value, not before, "debug toggle should invert role visibility")
     _assert_eq(UIManager.client_role, nil, "debug toggle should restore client role")
 
-    node_map["基础_行动日志按钮"]._listener_cb({ role = role })
+    node_map["倒计时时钟"]._listener_cb({ role = role })
     local second_value = state.ui.debug_visible_by_role[role_id]
     assert(second_value ~= first_value, "debug toggle should flip role visibility after second click")
     _assert_eq(UIManager.client_role, nil, "debug toggle should restore client role after second click")
@@ -2508,6 +2553,7 @@ return {
   _test_ui_events_send_without_roles_no_crash,
   _test_ui_nodes_validate_reports_missing,
   _test_apply_input_lock_keeps_auto_controls_enabled,
+  _test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapped,
   _test_role_control_lock_add_remove_owned_only,
   _test_role_control_lock_unit_swap_release_old_and_lock_new,
   _test_gameplay_loop_full_turn_lock_toggle,

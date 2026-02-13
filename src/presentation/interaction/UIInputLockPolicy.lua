@@ -5,6 +5,17 @@ local ui_nodes = require("src.presentation.shared.UINodes")
 
 local input_lock_policy = {}
 
+local function _set_auto_controls_touch_unlocked(ui)
+  local controls = ui and ui.auto_control_nodes or { ui_nodes.buttons.auto, ui_nodes.labels.auto }
+  for _, name in ipairs(controls) do
+    if name == ui_nodes.buttons.auto then
+      ui:set_touch_enabled(name, true)
+    else
+      ui:set_touch_enabled(name, false)
+    end
+  end
+end
+
 local function _set_debug_toggle_touch(ui, enabled)
   ui:set_touch_enabled(ui_nodes.debug.toggle_image, enabled == true)
   ui:set_touch_enabled(ui_nodes.debug.toggle_button, enabled == true)
@@ -101,6 +112,7 @@ function input_lock_policy.apply(state, deps)
     ui:set_touch_enabled(ui.popup_screen.confirm, true)
   end
 
+  _set_auto_controls_touch_unlocked(ui)
   _set_debug_toggle_touch(ui, true)
 end
 

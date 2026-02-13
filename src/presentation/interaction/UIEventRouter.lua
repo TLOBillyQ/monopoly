@@ -4,6 +4,7 @@ local ui_event_bindings = require("src.presentation.interaction.UIEventBindings"
 local ui_event_state = require("src.presentation.interaction.UIEventState")
 local ui_intent_builder = require("src.presentation.interaction.UIIntentBuilder")
 local ui_intent_dispatcher = require("src.presentation.interaction.UIIntentDispatcher")
+local ui_nodes = require("src.presentation.shared.UINodes")
 
 local ui_event_router = {}
 
@@ -41,15 +42,15 @@ local function _build_default_route_specs(state)
   end
 
   _append(ui_intent_builder.build_basic_intents(state))
-  _append({
-    {
-      name = "基础_行动日志按钮",
+  for _, name in ipairs({ ui_nodes.debug.toggle_button, ui_nodes.debug.toggle_image }) do
+    specs[#specs + 1] = {
+      name = name,
       build_intent = function(data)
         _toggle_debug_visible_for_role(state, data and data.role or nil)
         return nil
       end,
-    },
-  })
+    }
+  end
   _append(ui_intent_builder.build_popup_intents(state))
   _append(ui_intent_builder.build_item_slot_intents(state))
   _append(ui_intent_builder.build_player_intents(state))

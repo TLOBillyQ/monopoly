@@ -28,7 +28,7 @@ function bindings.register_node_click(cache, name, callback, registered, listene
     if not ok then
       _show_missing_button_tip(name)
       if name == ui_nodes.debug.toggle_image then
-        logger.info("[调试屏] 图片_82注册失败: query_nodes异常")
+        logger.info("[调试屏] 倒计时时钟注册失败: query_nodes异常")
       end
       return
     end
@@ -38,12 +38,12 @@ function bindings.register_node_click(cache, name, callback, registered, listene
   if not nodes or not nodes[1] then
     _show_missing_button_tip(name)
     if name == ui_nodes.debug.toggle_image then
-      logger.info("[调试屏] 图片_82注册失败: 未找到节点")
+      logger.info("[调试屏] 倒计时时钟注册失败: 未找到节点")
     end
     return
   end
   if name == ui_nodes.debug.toggle_image then
-    logger.info("[调试屏] 图片_82注册成功", "nodes=" .. tostring(#nodes))
+    logger.info("[调试屏] 倒计时时钟注册成功", "nodes=" .. tostring(#nodes))
   end
   registered[name] = true
   for _, node in ipairs(nodes) do
@@ -59,13 +59,13 @@ function bindings.enable_debug_toggle_touch(cache)
   if not nodes or not nodes[1] then
     local ok, result = pcall(runtime.query_nodes, ui_nodes.debug.toggle_image)
     if not ok then
-      logger.info("[调试屏] 图片_82触控启用失败: query_nodes异常")
+      logger.info("[调试屏] 倒计时时钟触控启用失败: query_nodes异常")
       return
     end
     nodes = result
   end
   if not nodes or not nodes[1] then
-    logger.info("[调试屏] 图片_82触控启用失败: 未找到节点")
+    logger.info("[调试屏] 倒计时时钟触控启用失败: 未找到节点")
     return
   end
   runtime.for_each_role_or_global(function()
@@ -74,7 +74,7 @@ function bindings.enable_debug_toggle_touch(cache)
     end
   end)
   runtime.set_client_role(nil)
-  logger.info("[调试屏] 图片_82触控已启用", "nodes=" .. tostring(#nodes))
+  logger.info("[调试屏] 倒计时时钟触控已启用", "nodes=" .. tostring(#nodes))
 end
 
 function bindings.register_missing_button_tip(cache, registered, listeners)

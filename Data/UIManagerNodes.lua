@@ -149,7 +149,7 @@ local nodes = {
 	["1519736575|1929034406"] = {"基础_玩家3高亮光效", "EAnimation"},
 	["1519736575|1933915421"] = {"财神状态-文本", "ELabel"},
 	["1519736575|1938206113"] = {"破产_底", "EImage"},
-	["1519736575|1943594240"] = {"图片_82", "EImage"},
+	["1519736575|1943594240"] = {"倒计时时钟", "EImage"},
 	["1519736575|1947900782"] = {"玩家1底板颜色", "EImage"},
 	["1519736575|1950071759"] = {"基础屏-AI托管光效", "EAnimation"},
 	["1519736575|1960301211"] = {"玩家1名字", "ELabel"},
@@ -182,37 +182,37 @@ local nodes = {
 }
 
 local function _build_node_names()
-  local names = {}
-  for _, entry in pairs(nodes) do
-    if type(entry) == "table" then
-      local name = entry[1]
-      if name then
-        names[name] = true
-      end
-    end
-  end
-  return names
+	local names = {}
+	for _, entry in pairs(nodes) do
+		if type(entry) == "table" then
+			local name = entry[1]
+			if name then
+				names[name] = true
+			end
+		end
+	end
+	return names
 end
 
 local function _build_missing_list(lookup, required_names)
-  local missing = {}
-  for _, name in ipairs(required_names or {}) do
-    if not lookup[name] then
-      missing[#missing + 1] = name
-    end
-  end
-  return missing
+	local missing = {}
+	for _, name in ipairs(required_names or {}) do
+		if not lookup[name] then
+			missing[#missing + 1] = name
+		end
+	end
+	return missing
 end
 
 local function _validate(required_names)
-  local lookup = _build_node_names()
-  return _build_missing_list(lookup, required_names)
+	local lookup = _build_node_names()
+	return _build_missing_list(lookup, required_names)
 end
 
 setmetatable(nodes, {
-  __index = {
-    validate = _validate,
-  },
+	__index = {
+		validate = _validate,
+	},
 })
 
 return nodes

@@ -13,7 +13,7 @@ nodes.canvas = {
 }
 
 nodes.debug = {
-  toggle_image = "图片_82",
+  toggle_image = "倒计时时钟",
   toggle_button = "基础_行动日志按钮",
   log_label = "日志",
 }
