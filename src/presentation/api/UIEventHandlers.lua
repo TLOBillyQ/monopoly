@@ -3,6 +3,63 @@ local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
 local event_handlers = {}
 local context = { installed = false, logger = nil, state = nil }
 
+local function _resolve_actor_display_name(player)
+  if type(player) ~= "table" then
+    return nil
+  end
+  local player_id = player.id
+  if player_id ~= nil and GameAPI and type(GameAPI.get_role) == "function" then
+    local ok_role, role = pcall(GameAPI.get_role, player_id)
+    if ok_role and role and type(role.get_name) == "function" then
+      local ok_name, role_name = pcall(role.get_name)
+      if ok_name and role_name ~= nil and role_name ~= "" then
+        return role_name
+      end
+    end
+  end
+  local player_name = player.name
+  if player_name ~= nil and player_name ~= "" then
+    return player_name
+  end
+  return nil
+end
+
+local function _build_other_action_prompt_text(event_data)
+  if type(event_data) ~= "table" then
+    return nil
+  end
+  local raw_text = event_data.prompt_text or event_data.text
+  if type(raw_text) ~= "string" or raw_text == "" then
+    return nil
+  end
+  local actor_name = _resolve_actor_display_name(event_data.player)
+  if actor_name == nil or actor_name == "" then
+    return raw_text
+  end
+  return string.gsub(raw_text, "玩家", actor_name)
+end
+
+local function _sync_other_player_action_prompt(event_data)
+  local state = context.state
+  if type(state) ~= "table" then
+    return
+  end
+  local player = event_data and event_data.player or nil
+  local actor_player_id = player and player.id or nil
+  if actor_player_id == nil then
+    return
+  end
+  local prompt_text = _build_other_action_prompt_text(event_data)
+  if prompt_text == nil or prompt_text == "" then
+    return
+  end
+  state.ui_other_action_prompt_pending = {
+    actor_player_id = actor_player_id,
+    text = prompt_text,
+  }
+  state.ui_dirty = true
+end
+
 function event_handlers.install(_, logger, state)
   context.logger = logger
   context.state = state
@@ -58,6 +115,7 @@ function event_handlers.install(_, logger, state)
       if log and event_data and event_data.text then
         log.event(event_data.text)
       end
+      _sync_other_player_action_prompt(event_data)
     end)
   end
 

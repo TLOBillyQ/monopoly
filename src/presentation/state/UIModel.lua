@@ -63,6 +63,8 @@ function ui_model.build(game, env)
       players = game.players,
       phase = turn.phase,
       move_anim = turn.move_anim,
+      turn_start_prompt_seq = turn.turn_start_prompt_seq or 0,
+      turn_start_prompt_player_id = turn.turn_start_prompt_player_id,
       vehicle_resync_seq = turn.vehicle_resync_seq or 0,
       tile_count = #projection.board_tiles(),
     },
@@ -100,6 +102,8 @@ function ui_model.update(prev, game, env, dirty)
     board.players = game.players
     board.phase = turn.phase
     board.move_anim = turn.move_anim
+    board.turn_start_prompt_seq = turn.turn_start_prompt_seq or 0
+    board.turn_start_prompt_player_id = turn.turn_start_prompt_player_id
     board.vehicle_resync_seq = turn.vehicle_resync_seq or 0
     board.tile_count = #projection.board_tiles()
     model.board = board

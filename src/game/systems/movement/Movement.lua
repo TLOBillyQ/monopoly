@@ -8,6 +8,10 @@ local movement = {}
 local item_ids = gameplay_rules.item_ids
 local _emit_event = monopoly_event.emit
 
+local function _build_other_action_prompt_text()
+  return "玩家正在行动"
+end
+
 local function _tile_label(tile)
   return tile.name
 end
@@ -21,6 +25,7 @@ local function _check_roadblock(board, current, player)
     player = player,
     tile = board:get_tile(current),
     text = player.name .. " 触发路障，停在 " .. board:get_tile(current).name,
+    prompt_text = _build_other_action_prompt_text(),
   })
   return true
 end
@@ -38,6 +43,7 @@ local function _check_steal(player, encountered_step, step, abs_steps, facing, b
     player = player,
     encountered_ids = encountered_step,
     text = player.name .. " 经过玩家，触发偷窃中断",
+    prompt_text = _build_other_action_prompt_text(),
   })
   return {
     position = nil,
@@ -62,6 +68,7 @@ local function _check_market(board, current, step, steps, abs_steps, facing, bra
     player = player,
     remaining_steps = remaining,
     text = player.name .. " 经过黑市，剩余 " .. remaining .. " 步",
+    prompt_text = _build_other_action_prompt_text(),
   })
   return {
     position = nil,
@@ -137,6 +144,7 @@ function movement.move(game, player, steps, opts)
     to_tile = landing_tile,
     steps = steps,
     text = player.name .. " 从 " .. _tile_label(start_tile) .. " 移动到 " .. _tile_label(landing_tile),
+    prompt_text = _build_other_action_prompt_text(),
   })
 
   if pass_start > 0 then
@@ -147,6 +155,7 @@ function movement.move(game, player, steps, opts)
       count = pass_start,
       bonus = bonus,
       text = player.name .. " 经过起点，获得 " .. number_utils.format_integer_part(bonus) .. " 金币",
+      prompt_text = _build_other_action_prompt_text(),
     })
   end
 

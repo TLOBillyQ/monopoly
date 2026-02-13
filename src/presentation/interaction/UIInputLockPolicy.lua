@@ -6,6 +6,7 @@ local input_lock_policy = {}
 
 local function _set_debug_toggle_touch(ui, enabled)
   ui:set_touch_enabled("图片_82", enabled == true)
+  ui:set_touch_enabled("基础_行动日志按钮", enabled == true)
 end
 
 local function _force_item_slots_visible_for_player(ui, ctx)
