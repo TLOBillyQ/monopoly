@@ -24,6 +24,8 @@ function panel_builder.build(game, env, turn, current_player_id, auto_enabled_by
     player_rows = panel_view.build_player_statuses(game, env.game, 4),
     auto_label_by_player = auto_label_by_player,
     auto_label = auto_label_by_player[current_player_id] or panel_view.build_auto_label(false),
+    no_action_visible = turn.detained_wait_active == true,
+    no_action_text = "本回合无法行动",
   }
 end
 
@@ -43,6 +45,10 @@ function panel_builder.update(panel, game, env, turn, current_player_id, auto_en
   if flags.auto_label then
     panel.auto_label_by_player = panel_builder.build_auto_label_by_player(game.players, auto_enabled_by_player)
     panel.auto_label = panel.auto_label_by_player[current_player_id] or panel_view.build_auto_label(false)
+  end
+  if flags.turn_label or flags.turn then
+    panel.no_action_visible = turn.detained_wait_active == true
+    panel.no_action_text = "本回合无法行动"
   end
   return panel
 end

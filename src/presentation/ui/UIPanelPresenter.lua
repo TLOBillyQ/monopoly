@@ -144,6 +144,8 @@ function panel_presenter.refresh(state, ui_model, deps)
 
     ui:set_visible("倒计时文本", true)
     ui:set_label("倒计时文本", panel.turn_label)
+    ui:set_visible("基础_无法行动提示", panel.no_action_visible == true)
+    ui:set_label("基础_无法行动提示", panel.no_action_text or "")
     ui:set_touch_enabled("行动按钮", base_visible)
     refresh_item_slots(state, ui_model, {
       role_id = ctx.role_id,
