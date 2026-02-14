@@ -22,6 +22,7 @@
 - [x] (2026-02-14T06:03Z) 里程碑 M5：统一 debug 开关策略，消除重复实现（SRP/DRY）
 - [x] (2026-02-14T06:05Z) 里程碑 M6：回归验证、更新架构文档与复盘
 - [x] (2026-02-14T06:09Z) 按 `.agents/docs/eggy/lua_env.md` 重审未提交改动（通过）
+- [x] (2026-02-14T07:09Z) 里程碑 M3 追加收尾：清理 ports 平铺兼容层并迁移调用方/测试桩到分组接口
 
 ## 意外与发现
 
@@ -55,6 +56,9 @@
 - 决策：M6 保留端口平铺兼容层，不在本轮删除。  
   理由：现有调用面较广，先完成分组迁移与回归稳定，再在后续小步清理兼容入口。  
   日期/作者：2026-02-14 / Copilot CLI
+- 决策：根据用户要求重申 M3，立即清理残留兼容层并同步改造调用方与测试桩。  
+  理由：当前调用面已可控，继续保留兼容层会掩盖接口边界并增加维护负担。  
+  日期/作者：2026-02-14 / Copilot CLI
 
 ## 结果与复盘
 
@@ -64,7 +68,8 @@
 2) `TickUISync` 去除了对 UI 运行时细节的反向依赖，debug 策略统一由 `UIEventState` 提供；  
 3) GameplayLoop ports 增加 `modal/anim/ui_sync/debug/state` 分组并迁移主循环使用；  
 4) `GameVictory` 改为发出 `game.finished` 事件，胜负面板行为下沉到 `UIEventHandlers`；  
-5) `ARCHITECTURE.md` 已同步更新端口分组与胜负事件链路说明。
+5) 已移除 ports 平铺兼容逻辑（resolver/adapter/callers/测试桩均切到分组接口）；  
+6) `ARCHITECTURE.md` 已同步更新端口分组与胜负事件链路说明。
 
 ## 背景与导读
 

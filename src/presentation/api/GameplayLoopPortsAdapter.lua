@@ -250,71 +250,44 @@ local function _default_on_bankruptcy_tiles_cleared(game, _, owned_tile_ids)
 end
 
 function adapter.build(_)
-  local ports = {
-    close_choice_modal = _default_close_choice_modal,
-    open_choice_modal = _default_open_choice_modal,
-    close_popup = _default_close_popup,
-    apply_input_lock = _default_apply_input_lock,
-    apply_role_control_lock = _default_apply_role_control_lock,
-    play_move_anim = _default_play_move_anim,
-    play_action_anim = _default_play_action_anim,
-    step_choice_timeout = _default_step_choice_timeout,
-    step_modal_timeout = _default_step_modal_timeout,
-    update_countdown = _default_update_countdown,
-    build_model = _default_build_model,
-    refresh_from_dirty = _default_refresh_from_dirty,
-    log_status = _default_log_status,
-    sync_debug_log = _default_sync_debug_log,
-    resolve_debug_enabled = _default_resolve_debug_enabled,
-    reset_status_3d = _default_reset_status_3d,
-    sync_status_3d = _default_sync_status_3d,
-    install_event_handlers = _default_install_event_handlers,
-    on_bankruptcy_tiles_cleared = _default_on_bankruptcy_tiles_cleared,
-    get_ui_state = _default_get_ui_state,
-    is_input_blocked = _default_is_input_blocked,
-    is_popup_active = _default_is_popup_active,
-    is_choice_active = _default_is_choice_active,
-    is_market_active = _default_is_market_active,
-    get_popup_owner_index = _default_get_popup_owner_index,
-    set_input_blocked = _default_set_input_blocked,
+  return {
+    modal = {
+      close_choice_modal = _default_close_choice_modal,
+      open_choice_modal = _default_open_choice_modal,
+      close_popup = _default_close_popup,
+    },
+    anim = {
+      play_move_anim = _default_play_move_anim,
+      play_action_anim = _default_play_action_anim,
+      reset_status_3d = _default_reset_status_3d,
+      sync_status_3d = _default_sync_status_3d,
+    },
+    ui_sync = {
+      apply_input_lock = _default_apply_input_lock,
+      step_choice_timeout = _default_step_choice_timeout,
+      step_modal_timeout = _default_step_modal_timeout,
+      update_countdown = _default_update_countdown,
+      build_model = _default_build_model,
+      refresh_from_dirty = _default_refresh_from_dirty,
+      get_ui_state = _default_get_ui_state,
+      is_input_blocked = _default_is_input_blocked,
+      is_popup_active = _default_is_popup_active,
+      is_choice_active = _default_is_choice_active,
+      is_market_active = _default_is_market_active,
+      get_popup_owner_index = _default_get_popup_owner_index,
+      set_input_blocked = _default_set_input_blocked,
+    },
+    debug = {
+      log_status = _default_log_status,
+      sync_debug_log = _default_sync_debug_log,
+      resolve_debug_enabled = _default_resolve_debug_enabled,
+    },
+    state = {
+      apply_role_control_lock = _default_apply_role_control_lock,
+      install_event_handlers = _default_install_event_handlers,
+      on_bankruptcy_tiles_cleared = _default_on_bankruptcy_tiles_cleared,
+    },
   }
-  ports.modal = {
-    close_choice_modal = ports.close_choice_modal,
-    open_choice_modal = ports.open_choice_modal,
-    close_popup = ports.close_popup,
-  }
-  ports.anim = {
-    play_move_anim = ports.play_move_anim,
-    play_action_anim = ports.play_action_anim,
-    reset_status_3d = ports.reset_status_3d,
-    sync_status_3d = ports.sync_status_3d,
-  }
-  ports.ui_sync = {
-    apply_input_lock = ports.apply_input_lock,
-    step_choice_timeout = ports.step_choice_timeout,
-    step_modal_timeout = ports.step_modal_timeout,
-    update_countdown = ports.update_countdown,
-    build_model = ports.build_model,
-    refresh_from_dirty = ports.refresh_from_dirty,
-    get_ui_state = ports.get_ui_state,
-    is_input_blocked = ports.is_input_blocked,
-    is_popup_active = ports.is_popup_active,
-    is_choice_active = ports.is_choice_active,
-    is_market_active = ports.is_market_active,
-    get_popup_owner_index = ports.get_popup_owner_index,
-    set_input_blocked = ports.set_input_blocked,
-  }
-  ports.debug = {
-    log_status = ports.log_status,
-    sync_debug_log = ports.sync_debug_log,
-    resolve_debug_enabled = ports.resolve_debug_enabled,
-  }
-  ports.state = {
-    apply_role_control_lock = ports.apply_role_control_lock,
-    install_event_handlers = ports.install_event_handlers,
-    on_bankruptcy_tiles_cleared = ports.on_bankruptcy_tiles_cleared,
-  }
-  return ports
 end
 
 return adapter

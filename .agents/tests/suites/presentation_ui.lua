@@ -2255,23 +2255,68 @@ end
 local function _test_gameplay_loop_full_turn_lock_toggle()
   local calls = {}
   local ports = {
-    reset_status_3d = function() end,
-    close_choice_modal = function() end,
-    open_choice_modal = function() end,
-    apply_input_lock = function() end,
-    apply_role_control_lock = function(_, enabled)
-      table.insert(calls, enabled)
-    end,
-    play_move_anim = function() end,
-    play_action_anim = function() end,
-    step_choice_timeout = function() end,
-    step_modal_timeout = function() end,
-    update_countdown = function() end,
-    build_model = function() return {} end,
-    refresh_from_dirty = function() return false end,
-    log_status = function() end,
-    sync_debug_log = function() end,
-    sync_status_3d = function() end,
+    modal = {
+      close_choice_modal = function() end,
+      open_choice_modal = function() end,
+      close_popup = function() end,
+    },
+    state = {
+      apply_role_control_lock = function(_, enabled)
+        table.insert(calls, enabled)
+      end,
+      install_event_handlers = function() end,
+      on_bankruptcy_tiles_cleared = function() end,
+    },
+    anim = {
+      reset_status_3d = function() end,
+      play_move_anim = function() end,
+      play_action_anim = function() end,
+      sync_status_3d = function() end,
+    },
+    ui_sync = {
+      apply_input_lock = function() end,
+      step_choice_timeout = function() end,
+      step_modal_timeout = function() end,
+      update_countdown = function() end,
+      build_model = function() return {} end,
+      refresh_from_dirty = function() return false end,
+      get_ui_state = function(state)
+        return state and state.ui or nil
+      end,
+      is_input_blocked = function(state)
+        local ui = state and state.ui or nil
+        return ui and ui.input_blocked == true or false
+      end,
+      is_popup_active = function(state)
+        local ui = state and state.ui or nil
+        return ui and ui.popup_active == true or false
+      end,
+      is_choice_active = function(state)
+        local ui = state and state.ui or nil
+        return ui and ui.choice_active == true or false
+      end,
+      is_market_active = function(state)
+        local ui = state and state.ui or nil
+        return ui and ui.market_active == true or false
+      end,
+      get_popup_owner_index = function() return nil end,
+      set_input_blocked = function(state, blocked)
+        local ui = state and state.ui or nil
+        if not ui then
+          return false
+        end
+        if ui.input_blocked == blocked then
+          return false
+        end
+        ui.input_blocked = blocked
+        return true
+      end,
+    },
+    debug = {
+      log_status = function() end,
+      sync_debug_log = function() end,
+      resolve_debug_enabled = function() return false end,
+    },
   }
   local state = {
     ui = { input_blocked = false },

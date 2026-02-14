@@ -10,14 +10,6 @@ local paid_currency_bridge = require("src.game.systems.commerce.PaidCurrencyBrid
 
 local gameplay_loop = {}
 
-local function _resolve_port_group(ports, key)
-  local grouped = ports and ports[key]
-  if type(grouped) == "table" then
-    return grouped
-  end
-  return ports
-end
-
 local function _resolve_ports(state)
   local override = state and state.gameplay_loop_ports or nil
   if override and not override._resolved then
@@ -36,7 +28,7 @@ local function _resolve_ports(state)
 end
 
 local function _dispatch_action_with_close_choice(game, state, action, ports)
-  local modal_ports = _resolve_port_group(ports, "modal")
+  local modal_ports = ports.modal
   turn_dispatch.dispatch_action(game, state, action, {
     on_close_choice = function(ctx)
       modal_ports.close_choice_modal(ctx)
@@ -53,7 +45,7 @@ end
 
 local function _is_auto_popup_owner(game, state)
   local ports = _resolve_ports(state)
-  local ui_sync_ports = _resolve_port_group(ports, "ui_sync")
+  local ui_sync_ports = ports.ui_sync
   if not (game and state and ui_sync_ports and ui_sync_ports.get_popup_owner_index) then
     return false
   end
@@ -87,7 +79,7 @@ local function _build_auto_context(game, context)
 end
 
 local function _step_phase_animation(game, state, phase, ports)
-  local anim_ports = _resolve_port_group(ports, "anim")
+  local anim_ports = ports.anim
   if phase == "wait_move_anim" then
     local anim_data = game.turn.move_anim
     if not anim_data then
@@ -116,10 +108,10 @@ end
 function gameplay_loop.set_game(state, game)
   assert(game ~= nil, "missing game")
   local ports = _resolve_ports(state)
-  local anim_ports = _resolve_port_group(ports, "anim")
-  local state_ports = _resolve_port_group(ports, "state")
-  local ui_sync_ports = _resolve_port_group(ports, "ui_sync")
-  local modal_ports = _resolve_port_group(ports, "modal")
+  local anim_ports = ports.anim
+  local state_ports = ports.state
+  local ui_sync_ports = ports.ui_sync
+  local modal_ports = ports.modal
   if state_ports.apply_role_control_lock then
     state_ports.apply_role_control_lock(state, false)
   end
@@ -196,7 +188,7 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
   assert(game ~= nil, "missing game")
   assert(state.auto_runner ~= nil, "missing auto_runner")
   local ports = _resolve_ports(state)
-  local ui_sync_ports = _resolve_port_group(ports, "ui_sync")
+  local ui_sync_ports = ports.ui_sync
   if ui_sync_ports.is_input_blocked and ui_sync_ports.is_input_blocked(state) then
     return nil
   end
@@ -226,9 +218,9 @@ function gameplay_loop.tick(game, state, dt)
   end
 
   local ports = _resolve_ports(state)
-  local ui_sync_ports = _resolve_port_group(ports, "ui_sync")
-  local anim_ports = _resolve_port_group(ports, "anim")
-  local debug_ports = _resolve_port_group(ports, "debug")
+  local ui_sync_ports = ports.ui_sync
+  local anim_ports = ports.anim
+  local debug_ports = ports.debug
   local phase = game.turn.phase
   local input_blocked_changed = gameplay_loop_runtime.sync_input_blocked(state, phase, ports)
   gameplay_loop_runtime.sync_role_control_lock(game, state, ports)

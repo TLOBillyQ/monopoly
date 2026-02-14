@@ -11,8 +11,12 @@ local function _resolve_ports(state)
   if not ports then
     return nil
   end
-  if type(ports.close_choice_modal) == "function" or type(ports.close_popup) == "function" then
-    return ports
+  local modal_ports = ports.modal
+  if type(modal_ports) ~= "table" then
+    return nil
+  end
+  if type(modal_ports.close_choice_modal) == "function" or type(modal_ports.close_popup) == "function" then
+    return modal_ports
   end
   return nil
 end

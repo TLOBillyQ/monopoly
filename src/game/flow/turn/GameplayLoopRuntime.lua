@@ -8,15 +8,16 @@ function runtime.is_phase_input_blocked(phase)
 end
 
 function runtime.sync_input_blocked(state, phase, ports)
-  if not ports or not ports.get_ui_state or not ports.set_input_blocked then
+  local ui_sync_ports = ports and ports.ui_sync or nil
+  if not ui_sync_ports or not ui_sync_ports.get_ui_state or not ui_sync_ports.set_input_blocked then
     return false
   end
-  local ui = ports.get_ui_state(state)
+  local ui = ui_sync_ports.get_ui_state(state)
   if not ui then
     return false
   end
   local input_blocked = runtime.is_phase_input_blocked(phase)
-  if not ports.set_input_blocked(state, input_blocked) then
+  if not ui_sync_ports.set_input_blocked(state, input_blocked) then
     return false
   end
   if not input_blocked then
@@ -47,42 +48,44 @@ local function _resolve_role_control_lock_enabled(game)
 end
 
 function runtime.sync_role_control_lock(game, state, ports)
-  if not state or not ports or not ports.apply_role_control_lock then
+  local state_ports = ports and ports.state or nil
+  if not state or not state_ports or not state_ports.apply_role_control_lock then
     return
   end
   local enabled = _resolve_role_control_lock_enabled(game)
   if enabled then
     local suppress = state.role_control_lock_suppress or 0
     if suppress > 0 then
-      ports.apply_role_control_lock(state, false)
+      state_ports.apply_role_control_lock(state, false)
     else
-      ports.apply_role_control_lock(state, true)
+      state_ports.apply_role_control_lock(state, true)
     end
     state.role_control_lock_active = true
     return
   end
   if state.role_control_lock_active then
-    ports.apply_role_control_lock(state, false)
+    state_ports.apply_role_control_lock(state, false)
     state.role_control_lock_active = false
   end
 end
 
 local function _is_action_button_wait_active(game, state, ports)
+  local ui_sync_ports = ports and ports.ui_sync or nil
   if not (game and state and ports) then
     return false
   end
-  if ports.get_ui_state and not ports.get_ui_state(state) then
+  if ui_sync_ports and ui_sync_ports.get_ui_state and not ui_sync_ports.get_ui_state(state) then
     return false
   end
   if game.finished then
     return false
   end
-  if ports.is_input_blocked and ports.is_input_blocked(state) then
+  if ui_sync_ports and ui_sync_ports.is_input_blocked and ui_sync_ports.is_input_blocked(state) then
     return false
   end
-  if (ports.is_choice_active and ports.is_choice_active(state))
-      or (ports.is_market_active and ports.is_market_active(state))
-      or (ports.is_popup_active and ports.is_popup_active(state)) then
+  if (ui_sync_ports and ui_sync_ports.is_choice_active and ui_sync_ports.is_choice_active(state))
+      or (ui_sync_ports and ui_sync_ports.is_market_active and ui_sync_ports.is_market_active(state))
+      or (ui_sync_ports and ui_sync_ports.is_popup_active and ui_sync_ports.is_popup_active(state)) then
     return false
   end
   if game.turn and game.turn.pending_choice then
