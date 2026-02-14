@@ -100,6 +100,36 @@ local function _resolve_choice_title(choice, screen_key, selected_option_id)
   return "请选择"
 end
 
+local function _resolve_building_action_label(selected_option_id)
+  if selected_option_id == "buy_land" then
+    return "购买"
+  end
+  if selected_option_id == "upgrade_land" then
+    return "加盖"
+  end
+  return nil
+end
+
+local function _build_building_screen_body(choice, game, selected_option_id)
+  if not choice or not route_policy.is_building_choice(choice) then
+    return choice and choice.body or ""
+  end
+  local action_label = _resolve_building_action_label(selected_option_id)
+  if not action_label then
+    return choice.body or ""
+  end
+  local meta = choice.meta or {}
+  local tile_id = meta.tile_id
+  if not tile_id or not game or not game.board or not game.board.get_tile_by_id then
+    return choice.body or ""
+  end
+  local tile = game.board:get_tile_by_id(tile_id)
+  if not tile or not tile.name then
+    return choice.body or ""
+  end
+  return action_label .. " " .. tile.name .. "？"
+end
+
 local function _switch_modal_canvas(state, target_canvas)
   local ui = state.ui
   runtime.for_each_role_or_global(function(role)
@@ -262,7 +292,7 @@ function renderer.open_building_screen(state, choice, choice_id)
   local title = _resolve_choice_title(choice, "building", selected)
   ui:set_label(screen.title, title)
   if screen.body then
-    ui:set_label(screen.body, choice.body or "")
+    ui:set_label(screen.body, _build_building_screen_body(choice, state.game, selected))
   end
 
   ui:set_button(screen.confirm, "")
