@@ -1,4 +1,5 @@
 local runtime_constants = require("Config.RuntimeConstants")
+local ui_events = require("src.presentation.shared.UIEvents")
 
 local dice = {}
 
@@ -31,6 +32,10 @@ function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
   local runtime = assert(opts and opts.runtime, "missing runtime")
   local dice_nodes = assert(opts and opts.dice_screen_nodes, "missing dice_screen_nodes")
   local face = _resolve_roll_face(anim)
+  local show_event = ui_events.show[dice_nodes.screen]
+  if show_event then
+    ui_events.send_to_all(show_event, {})
+  end
   runtime.for_each_role_or_global(function()
     local nodes = {
       screen = runtime.query_node(dice_nodes.screen),
@@ -73,6 +78,10 @@ function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
     end)
 
     SetTimeOut(duration + hold_seconds, function()
+      local hide_event = ui_events.hide[dice_nodes.screen]
+      if hide_event then
+        ui_events.send_to_all(hide_event, {})
+      end
       nodes.screen.visible = false
       nodes.spin.visible = false
       for _, node in ipairs(nodes.faces or {}) do

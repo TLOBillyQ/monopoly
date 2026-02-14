@@ -296,10 +296,14 @@ local function _register_defaults()
   end)
 
   chance_registry.register("move_backward", function(game, player, card)
-    return _move_steps(game, player, -(card.steps or 0), {
+    local res = _move_steps(game, player, -(card.steps or 0), {
       skip_steal_check = true,
       skip_market_check = true,
     })
+    if res and res.move_result then
+      res.move_result.allow_optional = true
+    end
+    return res
   end)
 
   chance_registry.register("move_forward", function(game, player, card)
