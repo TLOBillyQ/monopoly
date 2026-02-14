@@ -13,6 +13,14 @@ local wait_states = {
   detained_wait = true,
 }
 
+local function _emit_turn_prompt(turn, player_id)
+  if not (turn and player_id) then
+    return
+  end
+  turn.turn_start_prompt_seq = (turn.turn_start_prompt_seq or 0) + 1
+  turn.turn_start_prompt_player_id = player_id
+end
+
 function turn_flow:init(game, phases)
   self.game = game
   self.phases = phases
@@ -73,6 +81,8 @@ function turn_flow:next_player()
   local current = self.game.turn.current_player_index
   local next_index = current % count + 1
   self.game.turn.current_player_index = next_index
+  local next_player = self.game.players[next_index]
+  _emit_turn_prompt(self.game.turn, next_player and next_player.id)
   self.game.dirty.turn = true
   self.game.dirty.any = true
   local logger = require("src.core.Logger")

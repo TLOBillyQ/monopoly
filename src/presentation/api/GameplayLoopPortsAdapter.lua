@@ -199,7 +199,7 @@ local function _default_sync_debug_log(state)
       state._debug_log_seq = seq
       local ui_view = require("src.presentation.api.UIView")
       local max_lines = gameplay_rules.debug_log_max_lines or 50
-      ui_view.set_debug_log(state, logger.get_text(max_lines))
+      ui_view.set_debug_log(state, logger.get_text_by_level("event", max_lines))
     end
   end
 end

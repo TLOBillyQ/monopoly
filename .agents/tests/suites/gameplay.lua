@@ -1105,6 +1105,31 @@ local function _test_auto_runner_not_advanced_when_input_blocked()
   end)
 end
 
+local function _test_turn_prompt_initialized_for_first_player()
+  local g = _new_game()
+  local current_player = g:current_player()
+
+  assert((g.turn.turn_start_prompt_seq or 0) == 1, "first turn should initialize prompt seq")
+  assert(g.turn.turn_start_prompt_player_id == current_player.id,
+    "first turn prompt target should be current player")
+end
+
+local function _test_turn_prompt_emitted_on_next_player_switch()
+  local g = _new_game()
+  local before_seq = g.turn.turn_start_prompt_seq or 0
+  local before_index = g.turn.current_player_index
+  local expected_next_index = before_index % #g.players + 1
+  local expected_player = g.players[expected_next_index]
+
+  g.turn_flow:next_player()
+
+  assert(g.turn.current_player_index == expected_next_index, "next_player should switch player index")
+  assert((g.turn.turn_start_prompt_seq or 0) == before_seq + 1,
+    "next_player should emit one new prompt seq")
+  assert(g.turn.turn_start_prompt_player_id == expected_player.id,
+    "next_player prompt target should be switched player")
+end
+
 local function _test_auto_runner_depends_on_current_player_auto()
   local g = _new_game()
   g.ui_port = _build_ui_port()
@@ -1163,4 +1188,6 @@ return {
   _test_auto_runner_human_turn_not_auto_advanced,
   _test_auto_runner_not_advanced_when_input_blocked,
   _test_auto_runner_depends_on_current_player_auto,
+  _test_turn_prompt_initialized_for_first_player,
+  _test_turn_prompt_emitted_on_next_player_switch,
 }

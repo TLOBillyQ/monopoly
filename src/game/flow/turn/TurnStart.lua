@@ -4,10 +4,6 @@ local item_phase = require("src.game.systems.items.ItemPhase")
 local function _phase_start(turn_mgr)
   local player = turn_mgr.game:current_player()
   local turn = turn_mgr.game.turn
-  turn.turn_start_prompt_seq = (turn.turn_start_prompt_seq or 0) + 1
-  turn.turn_start_prompt_player_id = player.id
-  turn_mgr.game.dirty.turn = true
-  turn_mgr.game.dirty.any = true
   local tc = turn_mgr.game.turn.turn_count
   local current_index = turn_mgr.game.turn.current_player_index
   logger.info(

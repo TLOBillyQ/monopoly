@@ -170,8 +170,7 @@ local function _format_entry(entry)
   return "[" .. level .. "] " .. text
 end
 
-function logger.get_entries(max_lines)
-  local entries = logger.entries
+local function _take_entries(entries, max_lines)
   local total = #entries
   local want = max_lines or total
   if want > total then
@@ -184,8 +183,34 @@ function logger.get_entries(max_lines)
   return out
 end
 
+function logger.get_entries(max_lines)
+  return _take_entries(logger.entries, max_lines)
+end
+
+function logger.get_entries_by_level(level, max_lines)
+  if level == nil then
+    return logger.get_entries(max_lines)
+  end
+  local matched = {}
+  for _, entry in ipairs(logger.entries) do
+    if entry.level == level then
+      matched[#matched + 1] = entry
+    end
+  end
+  return _take_entries(matched, max_lines)
+end
+
 function logger.get_text(max_lines)
   local list = logger.get_entries(max_lines)
+  local lines = {}
+  for _, entry in ipairs(list) do
+    lines[#lines + 1] = _format_entry(entry)
+  end
+  return table.concat(lines, "\n")
+end
+
+function logger.get_text_by_level(level, max_lines)
+  local list = logger.get_entries_by_level(level, max_lines)
   local lines = {}
   for _, entry in ipairs(list) do
     lines[#lines + 1] = _format_entry(entry)
