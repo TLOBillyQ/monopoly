@@ -4,6 +4,16 @@ local role_avatar = require("src.presentation.state.UIRoleAvatar")
 
 local panel = {}
 
+local function _normalize_display_amount(value)
+  if type(value) ~= "number" then
+    return value
+  end
+  if value < 0 then
+    return 0
+  end
+  return value
+end
+
 local function _resolve_role(player)
   if not player or player.id == nil then
     return nil
@@ -80,9 +90,9 @@ function panel.build_player_statuses(game, game_obj, max_players)
       out[i] = {
         name = profile.name,
         avatar = profile.avatar,
-        cash = "现金: " .. number_utils.format_integer_part(cash),
+        cash = "现金: " .. number_utils.format_integer_part(_normalize_display_amount(cash)),
         land_count = "地块: " .. number_utils.format_integer_part(land_count),
-        total_assets = "总资产: " .. number_utils.format_integer_part(total),
+        total_assets = "总资产: " .. number_utils.format_integer_part(_normalize_display_amount(total)),
       }
     else
       out[i] = { name = "", avatar = nil, cash = "", land_count = "", total_assets = "" }

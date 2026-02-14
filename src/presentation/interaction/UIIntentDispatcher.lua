@@ -77,6 +77,7 @@ function intent_dispatcher.dispatch_game_action(state, game, intent, opts)
       type = "choice_select",
       choice_id = intent.choice_id,
       option_id = intent.option_id,
+      actor_role_id = intent.actor_role_id,
     }, opts)
     return true
   end

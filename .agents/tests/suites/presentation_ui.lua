@@ -746,6 +746,32 @@ local function _test_ui_model_structure()
   assert(model.board and model.board.tiles and model.board.tile_states, "ui_model.board data")
 end
 
+local function _test_ui_panel_clamps_negative_assets_to_zero()
+  local ui_panel = require("src.presentation.ui.UIPanel")
+  local statuses = ui_panel.build_player_statuses({
+    players = {
+      {
+        id = 1,
+        name = "P1",
+        cash = -123,
+        eliminated = false,
+        properties = {},
+      },
+    },
+  }, {
+    board = {
+      get_tile_by_id = function()
+        return nil
+      end,
+    },
+  }, 1)
+
+  local row = statuses and statuses[1] or nil
+  assert(row ~= nil, "panel row should exist")
+  _assert_eq(row.cash, "现金: 0", "negative cash should render as zero")
+  _assert_eq(row.total_assets, "总资产: 0", "negative total assets should render as zero")
+end
+
 local function _test_ui_model_player_slot_map_and_choice_owner()
   local ui_model = require("src.presentation.state.UIModel")
   local g = _new_game()
@@ -2622,6 +2648,7 @@ return {
   _test_board_view_vehicle_resync_uses_set_position,
   _test_board_view_vehicle_disabled_uses_unit_set_position,
   _test_ui_model_structure,
+  _test_ui_panel_clamps_negative_assets_to_zero,
   _test_ui_model_player_slot_map_and_choice_owner,
   _test_ui_model_player_profile_prefers_role_api_with_fallback,
   _test_ui_model_player_profile_accepts_stringified_avatar,

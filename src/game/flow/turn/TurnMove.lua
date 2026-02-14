@@ -10,6 +10,18 @@ local function _phase_move(turn_mgr, args)
   local raw_total = args.raw_total
   assert(turn_mgr.game ~= nil, "missing game")
   local move_result = args.move_result
+  local game = turn_mgr.game
+
+  local pending_multiplier = player.status.pending_dice_multiplier
+  if pending_multiplier and pending_multiplier > 1 then
+    if raw_total ~= nil and total == raw_total then
+      total = raw_total * pending_multiplier
+    end
+    game:set_player_status(player, "pending_dice_multiplier", 1)
+    if game.last_turn then
+      game.last_turn.total = total
+    end
+  end
 
   local move_opts = { branch_parity = raw_total }
   if args.continue_from_market or args.continue_from_steal then
@@ -23,7 +35,6 @@ local function _phase_move(turn_mgr, args)
     move_result = movement.move(turn_mgr.game, player, total, move_opts)
     turn_mgr.game.last_turn.move_result = move_result
 
-    local game = turn_mgr.game
     local ui_port = assert(game.ui_port, "missing game.ui_port")
     if ui_port.wait_move_anim == true then
       local seq = (game.turn.move_anim_seq or 0) + 1

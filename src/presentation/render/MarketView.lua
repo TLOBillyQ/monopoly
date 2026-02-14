@@ -115,7 +115,7 @@ local function _set_market_slot_visible(ui, refs, slot, opt)
   ui:set_visible(slot.label, true)
   ui:set_touch_enabled(slot.label, false)
   ui:set_visible(slot.button, true)
-  ui:set_touch_enabled(slot.button, true)
+  ui:set_touch_enabled(slot.button, opt.can_buy == true)
   ui:set_visible(slot.frame, true)
   ui:set_touch_enabled(slot.frame, false)
   local level = _resolve_market_level(cfg)
@@ -168,6 +168,7 @@ function market_view.refresh_market(state, market)
   local labels = market_layout.item_labels
   local frames = market_layout.item_frames
   local max_slots = math.max(#buttons, #labels, #frames)
+  local first_buyable = nil
   for idx = 1, max_slots do
     local opt = market.options[idx]
     local button = buttons[idx]
@@ -176,6 +177,9 @@ function market_view.refresh_market(state, market)
     if button and label and frame then
       local slot = { button = button, label = label, frame = frame }
       if opt then
+        if opt.can_buy == true and first_buyable == nil then
+          first_buyable = opt.id or opt
+        end
         option_ids[idx] = _set_market_slot_visible(ui, refs, slot, opt)
       else
         _set_market_slot_hidden(ui, button, label, frame)
@@ -191,7 +195,10 @@ function market_view.refresh_market(state, market)
   ui:set_visible(market_layout.cancel_button, show_cancel)
   ui:set_touch_enabled(market_layout.cancel_button, show_cancel)
 
-  local selected = market.selected_option_id or option_ids[1]
+  local selected = market.selected_option_id
+  if selected == nil or (first_buyable ~= nil and selected ~= first_buyable) then
+    selected = first_buyable or option_ids[1]
+  end
   modal_state.open_market(state, market.choice_id, option_ids, selected)
   market_view.select_market_option(state, selected)
   return true

@@ -132,7 +132,8 @@ local function _apply_pay_rent(ctx)
       end
     end
   end
-  if strong_idx and ctx.game:player_balance(player, "金币") >= total_value then
+  local can_use_strong = strong_idx and ctx.game:player_balance(player, "金币") >= total_value
+  if can_use_strong then
     return {
       waiting = true,
       reason = "rent_choice",
@@ -144,14 +145,8 @@ local function _apply_pay_rent(ctx)
   end
 
   if free_idx then
-    return {
-      waiting = true,
-      reason = "rent_choice",
-      intent = {
-        kind = "need_choice",
-        choice_spec = land_choice_specs.rent_prompt(player.id, tile.id, "free", nil, tile.name),
-      },
-    }
+    land_actions.execute_free_card(ctx.game, player.id, tile.id)
+    return
   end
 
   land_actions.execute_pay_rent(ctx.game, player.id, tile.id)

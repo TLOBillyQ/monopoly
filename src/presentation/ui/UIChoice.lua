@@ -61,6 +61,7 @@ function choice.build_choice_view(pending, opts)
       label = label,
       id = opt.id or opt,
       raw = opt,
+      can_buy = opt.can_buy,
     })
   end
 

@@ -136,19 +136,58 @@ function market.list_buyable(player, game)
   return list
 end
 
+local function _sorted_market_entries()
+  local entries = {}
+  for _, entry in ipairs(market_cfg) do
+    table.insert(entries, entry)
+  end
+  table.sort(entries, function(a, b)
+    return (a.order or 0) < (b.order or 0)
+  end)
+  return entries
+end
+
+local function _build_visible_entries(player, game, limit)
+  local buyable = {}
+  local unbuyable = {}
+  for _, entry in ipairs(_sorted_market_entries()) do
+    if _can_buy_entry(game, player, entry) then
+      buyable[#buyable + 1] = entry
+    else
+      unbuyable[#unbuyable + 1] = entry
+    end
+  end
+  local visible = {}
+  for _, entry in ipairs(buyable) do
+    visible[#visible + 1] = { entry = entry, can_buy = true }
+    if limit and #visible >= limit then
+      return visible, buyable
+    end
+  end
+  for _, entry in ipairs(unbuyable) do
+    visible[#visible + 1] = { entry = entry, can_buy = false }
+    if limit and #visible >= limit then
+      return visible, buyable
+    end
+  end
+  return visible, buyable
+end
+
 function market.build_choice_spec(player, game)
   local options = {}
   local body_lines = {}
-  for _, entry in ipairs(market.list_buyable(player, game)) do
+  local visible, buyable = _build_visible_entries(player, game, 10)
+  for _, slot in ipairs(visible) do
+    local entry = slot.entry
     local name = _entry_name(entry)
     local price = _entry_price(entry)
     local currency = _entry_currency(entry)
     local label = name .. " - " .. price .. " " .. currency
     table.insert(body_lines, label)
-    table.insert(options, { id = entry.product_id, label = label })
+    table.insert(options, { id = entry.product_id, label = label, can_buy = slot.can_buy })
   end
 
-  if #options == 0 then
+  if #buyable == 0 then
     return nil, { kind = "push_popup", payload = { title = "黑市", body = player.name .. " 暂无可购买商品" } }
   end
 
