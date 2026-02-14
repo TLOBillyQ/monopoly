@@ -69,6 +69,7 @@ function choice.build_choice_view(pending, opts)
     title = title,
     body = body,
     options = options,
+    meta = pending.meta,
     cancel_label = pending.cancel_label or "取消",
     allow_cancel = pending.allow_cancel ~= false,
   }
