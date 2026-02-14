@@ -7,6 +7,7 @@ local turn_flow = require("src.game.flow.turn.TurnFlow")
 local bootstrap = require("src.game.core.runtime.Bootstrap")
 local game_factory = require("src.game.core.runtime.GameFactory")
 local phase_registry = require("src.game.core.runtime.PhaseRegistry")
+local number_utils = require("src.core.NumberUtils")
 
 local composition_root = {}
 
@@ -34,8 +35,8 @@ end
 local function _build_market_limits()
   local limits = {}
   for _, entry in ipairs(market_cfg) do
-    local limit = entry.limit
-    if type(limit) == "number" and limit >= 1 then
+    local limit = number_utils.to_integer(entry.limit)
+    if limit and limit >= 1 then
       limits[entry.product_id] = limit
     end
   end

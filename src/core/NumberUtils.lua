@@ -1,21 +1,37 @@
 local number_utils = {}
 
 local _tointeger = math and math.tointeger
+local _numeric_type_names = {
+  number = true,
+  integer = true,
+  fixed = true,
+}
 
-local function _truncate_number(value)
-  if type(value) ~= "number" then
-    return nil
-  end
+local function _is_numeric_type_name(value_type)
+  return _numeric_type_names[value_type] == true
+end
+
+local function _to_integer_safe(value)
   if _tointeger then
-    local as_int = _tointeger(value)
-    if as_int ~= nil then
+    local ok, as_int = pcall(_tointeger, value)
+    if ok and as_int ~= nil then
       return as_int
     end
   end
   if math and math.floor then
-    return math.floor(value)
+    local ok, floored = pcall(math.floor, value)
+    if ok and floored ~= nil then
+      return floored
+    end
   end
-  return value
+  return nil
+end
+
+local function _truncate_number(value)
+  if not number_utils.is_numeric(value) then
+    return nil
+  end
+  return _to_integer_safe(value)
 end
 
 local function _parse_integer_string(value)
@@ -53,36 +69,36 @@ local function _parse_integer_string(value)
   return sign * num
 end
 
+function number_utils.is_numeric(value)
+  local value_type = type(value)
+  if _is_numeric_type_name(value_type) then
+    return true
+  end
+  if value_type == "string" then
+    return false
+  end
+  return _to_integer_safe(value) ~= nil
+end
+
 function number_utils.to_integer(value)
   local value_type = type(value)
-  if value_type == "number" then
-    if _tointeger then
-      return _tointeger(value)
-    end
-    if math and math.floor and value == math.floor(value) then
-      return value
+  if value_type == "string" then
+    local parsed = _parse_integer_string(value)
+    if parsed ~= nil then
+      return parsed
     end
     return nil
   end
-  if value_type == "string" then
-    return _parse_integer_string(value)
+  if number_utils.is_numeric(value) then
+    return _to_integer_safe(value)
   end
   return nil
 end
 
 function number_utils.format_integer_part(value)
-  local value_type = type(value)
-  local truncated = nil
-  if value_type == "number" then
-    truncated = _truncate_number(value)
-  elseif value_type == "string" then
-    local as_number = tonumber(value)
-    if as_number ~= nil then
-      truncated = _truncate_number(as_number)
-    end
-  end
+  local truncated = _truncate_number(value)
   if truncated ~= nil then
-    local as_int = _tointeger and _tointeger(truncated) or truncated
+    local as_int = _to_integer_safe(truncated) or truncated
     return string.format("%d", as_int)
   end
   return tostring(value)

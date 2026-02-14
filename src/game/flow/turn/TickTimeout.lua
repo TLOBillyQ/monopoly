@@ -2,6 +2,7 @@ local agent = require("src.game.core.runtime.Agent")
 local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("Config.GameplayRules")
 local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
+local number_utils = require("src.core.NumberUtils")
 
 local tick_timeout = {}
 
@@ -86,11 +87,11 @@ end
 
 local function _modal_timeout_seconds(_, state)
   local popup = state and state.ui and state.ui.popup_payload or nil
-  if popup and type(popup.auto_close_seconds) == "number" and popup.auto_close_seconds > 0 then
+  if popup and number_utils.is_numeric(popup.auto_close_seconds) and popup.auto_close_seconds > 0 then
     return popup.auto_close_seconds
   end
   local timeout = gameplay_rules.popup_auto_close_seconds
-  if type(timeout) == "number" and timeout > 0 then
+  if number_utils.is_numeric(timeout) and timeout > 0 then
     return timeout
   end
   return 1.0
@@ -105,7 +106,7 @@ function tick_timeout.step_choice_timeout(game, state, dt, opts)
   local timeout = constants.action_timeout_seconds or 0
   if type(opts.get_timeout_seconds) == "function" then
     local override = opts.get_timeout_seconds(game, state)
-    if type(override) == "number" then
+    if number_utils.is_numeric(override) then
       timeout = override
     end
   end
@@ -143,7 +144,7 @@ function tick_timeout.step_choice_timeout(game, state, dt, opts)
   local min_visible = gameplay_rules.auto_choice_min_visible_seconds or 0
   if type(opts.get_min_visible_seconds) == "function" then
     local override_min_visible = opts.get_min_visible_seconds(game, state, state.pending_choice)
-    if type(override_min_visible) == "number" and override_min_visible >= 0 then
+    if number_utils.is_numeric(override_min_visible) and override_min_visible >= 0 then
       min_visible = override_min_visible
     end
   end
@@ -174,7 +175,7 @@ function tick_timeout.step_modal_timeout(state, dt, opts)
   local timeout = constants.action_timeout_seconds or 0
   if opts and opts.get_timeout_seconds then
     local override = opts.get_timeout_seconds(state)
-    if type(override) == "number" then
+    if number_utils.is_numeric(override) then
       timeout = override
     end
   end

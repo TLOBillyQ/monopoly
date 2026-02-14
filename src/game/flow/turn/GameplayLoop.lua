@@ -10,6 +10,14 @@ local paid_currency_bridge = require("src.game.systems.commerce.PaidCurrencyBrid
 
 local gameplay_loop = {}
 
+local function _resolve_port_group(ports, key)
+  local grouped = ports and ports[key]
+  if type(grouped) == "table" then
+    return grouped
+  end
+  return ports
+end
+
 local function _resolve_ports(state)
   local override = state and state.gameplay_loop_ports or nil
   if override and not override._resolved then
@@ -28,9 +36,10 @@ local function _resolve_ports(state)
 end
 
 local function _dispatch_action_with_close_choice(game, state, action, ports)
+  local modal_ports = _resolve_port_group(ports, "modal")
   turn_dispatch.dispatch_action(game, state, action, {
     on_close_choice = function(ctx)
-      ports.close_choice_modal(ctx)
+      modal_ports.close_choice_modal(ctx)
     end,
   })
 end
@@ -44,10 +53,11 @@ end
 
 local function _is_auto_popup_owner(game, state)
   local ports = _resolve_ports(state)
-  if not (game and state and ports and ports.get_popup_owner_index) then
+  local ui_sync_ports = _resolve_port_group(ports, "ui_sync")
+  if not (game and state and ui_sync_ports and ui_sync_ports.get_popup_owner_index) then
     return false
   end
-  local idx = ports.get_popup_owner_index(state)
+  local idx = ui_sync_ports.get_popup_owner_index(state)
   if not idx or not game.players then
     return false
   end
@@ -77,6 +87,7 @@ local function _build_auto_context(game, context)
 end
 
 local function _step_phase_animation(game, state, phase, ports)
+  local anim_ports = _resolve_port_group(ports, "anim")
   if phase == "wait_move_anim" then
     local anim_data = game.turn.move_anim
     if not anim_data then
@@ -84,7 +95,7 @@ local function _step_phase_animation(game, state, phase, ports)
     end
     turn_anim.step_move_anim(game, state, {
       on_move_anim = function(_, anim_ctx)
-        return ports.play_move_anim(state, anim_ctx)
+        return anim_ports.play_move_anim(state, anim_ctx)
       end,
     })
     return
@@ -96,7 +107,7 @@ local function _step_phase_animation(game, state, phase, ports)
     end
     turn_anim.step_action_anim(game, state, {
       on_action_anim = function(ctx, anim_ctx)
-        return ports.play_action_anim(ctx, anim_ctx)
+        return anim_ports.play_action_anim(ctx, anim_ctx)
       end,
     })
   end
@@ -105,12 +116,16 @@ end
 function gameplay_loop.set_game(state, game)
   assert(game ~= nil, "missing game")
   local ports = _resolve_ports(state)
-  if ports.apply_role_control_lock then
-    ports.apply_role_control_lock(state, false)
+  local anim_ports = _resolve_port_group(ports, "anim")
+  local state_ports = _resolve_port_group(ports, "state")
+  local ui_sync_ports = _resolve_port_group(ports, "ui_sync")
+  local modal_ports = _resolve_port_group(ports, "modal")
+  if state_ports.apply_role_control_lock then
+    state_ports.apply_role_control_lock(state, false)
   end
   state.role_control_lock_active = false
   state.role_control_lock_suppress = 0
-  ports.reset_status_3d(state)
+  anim_ports.reset_status_3d(state)
   state.game = game
   state.gameplay_loop_ports = ports
   game.ui_port = state
@@ -129,8 +144,8 @@ function gameplay_loop.set_game(state, game)
     }
   end
   paid_currency_bridge.setup_for_game(game)
-  if ports and ports.install_event_handlers then
-    ports.install_event_handlers(game, logger, state)
+  if state_ports and state_ports.install_event_handlers then
+    state_ports.install_event_handlers(game, logger, state)
   end
   logger.set_info_per_turn_limit(gameplay_rules.info_log_per_turn_limit)
   logger.set_info_turn_provider(function()
@@ -142,10 +157,10 @@ function gameplay_loop.set_game(state, game)
   if pending then
     state.pending_choice_elapsed = 0
     state.pending_choice_id = pending.id
-    local model = ports.build_model(state, game)
+    local model = ui_sync_ports.build_model(state, game)
     state.ui_model = model
     if model.choice then
-      ports.open_choice_modal(state, model.choice, model.market)
+      modal_ports.open_choice_modal(state, model.choice, model.market)
     end
   end
   state.player_units = nil
@@ -153,8 +168,8 @@ function gameplay_loop.set_game(state, game)
   state.ui_dirty = true
   state.countdown_last = nil
   state.countdown_active_last = nil
-  if ports.set_input_blocked then
-    ports.set_input_blocked(state, false)
+  if ui_sync_ports.set_input_blocked then
+    ui_sync_ports.set_input_blocked(state, false)
   end
   if state.auto_runner then
     state.auto_runner:set_enabled(true)
@@ -181,11 +196,12 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
   assert(game ~= nil, "missing game")
   assert(state.auto_runner ~= nil, "missing auto_runner")
   local ports = _resolve_ports(state)
-  if ports.is_input_blocked and ports.is_input_blocked(state) then
+  local ui_sync_ports = _resolve_port_group(ports, "ui_sync")
+  if ui_sync_ports.is_input_blocked and ui_sync_ports.is_input_blocked(state) then
     return nil
   end
   local min_popup_visible = gameplay_rules.auto_popup_min_visible_seconds or 0
-  if min_popup_visible > 0 and ports.is_popup_active and ports.is_popup_active(state) then
+  if min_popup_visible > 0 and ui_sync_ports.is_popup_active and ui_sync_ports.is_popup_active(state) then
     if _is_auto_popup_owner(game, state) then
       local elapsed = state.ui_modal_elapsed or 0
       if elapsed < min_popup_visible then
@@ -210,6 +226,9 @@ function gameplay_loop.tick(game, state, dt)
   end
 
   local ports = _resolve_ports(state)
+  local ui_sync_ports = _resolve_port_group(ports, "ui_sync")
+  local anim_ports = _resolve_port_group(ports, "anim")
+  local debug_ports = _resolve_port_group(ports, "debug")
   local phase = game.turn.phase
   local input_blocked_changed = gameplay_loop_runtime.sync_input_blocked(state, phase, ports)
   gameplay_loop_runtime.sync_role_control_lock(game, state, ports)
@@ -234,8 +253,8 @@ function gameplay_loop.tick(game, state, dt)
   }
   gameplay_loop.step_auto_runner(game, state, dt, auto_ctx)
 
-  ports.step_choice_timeout(game, state, dt)
-  ports.step_modal_timeout(game, state, dt)
+  ui_sync_ports.step_choice_timeout(game, state, dt)
+  ui_sync_ports.step_modal_timeout(game, state, dt)
   gameplay_loop_runtime.update_action_button_timer({
     game = game,
     state = state,
@@ -258,23 +277,23 @@ function gameplay_loop.tick(game, state, dt)
   _step_phase_animation(game, state, phase, ports)
   gameplay_loop_runtime.sync_phase_flags(state, phase)
 
-  ports.update_countdown(game, state)
+  ui_sync_ports.update_countdown(game, state)
 
   local dirty = game:consume_dirty()
-  local ui_refreshed = ports.refresh_from_dirty(game, state, dirty)
-  ports.sync_status_3d(game, state, dirty)
+  local ui_refreshed = ui_sync_ports.refresh_from_dirty(game, state, dirty)
+  anim_ports.sync_status_3d(game, state, dirty)
 
-  if ports.get_ui_state and ports.is_input_blocked then
-    local ui = ports.get_ui_state(state)
-    if ui and (input_blocked_changed or (ports.is_input_blocked(state) and ui_refreshed)) then
-      ports.apply_input_lock(state)
+  if ui_sync_ports.get_ui_state and ui_sync_ports.is_input_blocked then
+    local ui = ui_sync_ports.get_ui_state(state)
+    if ui and (input_blocked_changed or (ui_sync_ports.is_input_blocked(state) and ui_refreshed)) then
+      ui_sync_ports.apply_input_lock(state)
     end
   end
   if state.ui_model then
-    ports.log_status(state.ui_model)
+    debug_ports.log_status(state.ui_model)
   end
 
-  ports.sync_debug_log(state)
+  debug_ports.sync_debug_log(state)
 end
 
 return gameplay_loop

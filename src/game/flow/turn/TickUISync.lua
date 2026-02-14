@@ -1,5 +1,4 @@
 local constants = require("Config.Generated.Constants")
-local gameplay_rules = require("Config.GameplayRules")
 local runtime_constants = require("Config.RuntimeConstants")
 local logger = require("src.core.Logger")
 local number_utils = require("src.core.NumberUtils")
@@ -120,24 +119,6 @@ local function _build_ui_env(state, game)
   }
 end
 
-local function _resolve_debug_enabled(state)
-  local ui = state and state.ui
-  if ui then
-    if ui.debug_log_enabled_override ~= nil then
-      return ui.debug_log_enabled_override == true
-    end
-    local role = UIManager and UIManager.client_role or nil
-    if role and type(ui.debug_log_enabled_by_role) == "table" then
-      local runtime = require("src.presentation.api.UIRuntimePort")
-      local role_id = runtime.resolve_role_id(role) or tostring(role)
-      if ui.debug_log_enabled_by_role[role_id] ~= nil then
-        return ui.debug_log_enabled_by_role[role_id] == true
-      end
-    end
-  end
-  return gameplay_rules.debug_log_enabled == true
-end
-
 function tick_ui_sync.build_ui_env(state, game)
   return _build_ui_env(state, game)
 end
@@ -148,10 +129,6 @@ end
 
 function tick_ui_sync.is_only_turn_countdown(dirty)
   return _is_only_turn_countdown(dirty)
-end
-
-function tick_ui_sync.resolve_debug_enabled(state)
-  return _resolve_debug_enabled(state)
 end
 
 return tick_ui_sync

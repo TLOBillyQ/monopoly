@@ -1,4 +1,5 @@
 local gameplay_rules = require("Config.GameplayRules")
+local number_utils = require("src.core.NumberUtils")
 
 local runtime = require("src.presentation.api.UIRuntimePort")
 local registry = require("src.presentation.render.ActionAnimRegistry")
@@ -76,8 +77,11 @@ function action_anim.play(state, anim)
 
   local handler = registry.resolve(anim.kind)
   local tip_duration = duration
-  if type(duration) == "number" and math and math.tofixed then
-    tip_duration = math.tofixed(duration)
+  if number_utils.is_numeric(duration) and math and math.tofixed then
+    local ok, as_fixed = pcall(math.tofixed, duration)
+    if ok and as_fixed ~= nil then
+      tip_duration = as_fixed
+    end
   end
 
   if anim.kind ~= "roll" then

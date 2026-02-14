@@ -60,6 +60,33 @@ local function _sync_other_player_action_prompt(event_data)
   state.ui_dirty = true
 end
 
+local function _apply_game_result_panels(event_data)
+  if not (GameAPI and type(GameAPI.get_role) == "function") then
+    return
+  end
+  local state = context.state
+  local game = state and state.game or nil
+  local players = game and game.players or nil
+  if type(players) ~= "table" then
+    return
+  end
+  local winner_ids = event_data and event_data.winner_ids or {}
+  for _, player in ipairs(players) do
+    local ok_role, role = pcall(GameAPI.get_role, player.id)
+    if ok_role and role then
+      if winner_ids[player.id] then
+        if role.game_win_and_show_result_panel then
+          role.game_win_and_show_result_panel()
+        end
+      else
+        if role.lose then
+          role.lose()
+        end
+      end
+    end
+  end
+end
+
 function event_handlers.install(_, logger, state)
   context.logger = logger
   context.state = state
@@ -164,6 +191,11 @@ function event_handlers.install(_, logger, state)
     if popup and ctx and ctx.push_popup then
       ctx:push_popup(popup)
     end
+  end)
+
+  RegisterCustomEvent(monopoly_event.game.finished, function(_, _, data)
+    local event_data = _event_data(data)
+    _apply_game_result_panels(event_data)
   end)
 end
 

@@ -15,6 +15,7 @@ port_types.keys = {
   "refresh_from_dirty",
   "log_status",
   "sync_debug_log",
+  "resolve_debug_enabled",
   "reset_status_3d",
   "sync_status_3d",
   "install_event_handlers",

@@ -1,29 +1,42 @@
 local runtime_constants = require("Config.RuntimeConstants")
 local ui_events = require("src.presentation.shared.UIEvents")
+local number_utils = require("src.core.NumberUtils")
 
 local dice = {}
+
+local function _resolve_face_value(value)
+  local face = number_utils.to_integer(value)
+  if face and face >= 1 and face <= 6 then
+    return face
+  end
+  return nil
+end
 
 local function _resolve_roll_face(anim)
   if not anim then
     return nil
   end
   local total = anim.total
-  if type(total) == "number" then
-    if total >= 1 and total <= 6 then
-      return total
-    end
-    if total > 6 then
+  local total_face = _resolve_face_value(total)
+  if total_face then
+    return total_face
+  end
+  local total_value = number_utils.to_integer(total)
+  if total_value ~= nil then
+    if total_value > 6 then
       local rolls = anim.rolls
       local first = type(rolls) == "table" and rolls[1] or nil
-      if type(first) == "number" and first >= 1 and first <= 6 then
-        return first
+      local first_face = _resolve_face_value(first)
+      if first_face then
+        return first_face
       end
     end
   end
   local rolls = anim.rolls
   local first = type(rolls) == "table" and rolls[1] or nil
-  if type(first) == "number" and first >= 1 and first <= 6 then
-    return first
+  local first_face = _resolve_face_value(first)
+  if first_face then
+    return first_face
   end
   return nil
 end

@@ -3,6 +3,7 @@ local runtime_constants = require("Config.RuntimeConstants")
 local logger = require("src.core.Logger")
 local tick_timeout = require("src.game.flow.turn.TickTimeout")
 local tick_ui_sync = require("src.game.flow.turn.TickUISync")
+local ui_event_state = require("src.presentation.interaction.UIEventState")
 local move_anim = require("src.presentation.render.MoveAnim")
 
 local adapter = {}
@@ -181,8 +182,12 @@ local function _default_log_status(view)
   tick_ui_sync.log_status(view)
 end
 
+local function _default_resolve_debug_enabled(state)
+  return ui_event_state.resolve_debug_enabled(state)
+end
+
 local function _default_sync_debug_log(state)
-  local debug_enabled = tick_ui_sync.resolve_debug_enabled(state)
+  local debug_enabled = _default_resolve_debug_enabled(state)
   if state._debug_log_enabled ~= debug_enabled then
     state._debug_log_enabled = debug_enabled
     local ui_view = require("src.presentation.api.UIView")
@@ -245,7 +250,7 @@ local function _default_on_bankruptcy_tiles_cleared(game, _, owned_tile_ids)
 end
 
 function adapter.build(_)
-  return {
+  local ports = {
     close_choice_modal = _default_close_choice_modal,
     open_choice_modal = _default_open_choice_modal,
     close_popup = _default_close_popup,
@@ -260,6 +265,7 @@ function adapter.build(_)
     refresh_from_dirty = _default_refresh_from_dirty,
     log_status = _default_log_status,
     sync_debug_log = _default_sync_debug_log,
+    resolve_debug_enabled = _default_resolve_debug_enabled,
     reset_status_3d = _default_reset_status_3d,
     sync_status_3d = _default_sync_status_3d,
     install_event_handlers = _default_install_event_handlers,
@@ -272,6 +278,43 @@ function adapter.build(_)
     get_popup_owner_index = _default_get_popup_owner_index,
     set_input_blocked = _default_set_input_blocked,
   }
+  ports.modal = {
+    close_choice_modal = ports.close_choice_modal,
+    open_choice_modal = ports.open_choice_modal,
+    close_popup = ports.close_popup,
+  }
+  ports.anim = {
+    play_move_anim = ports.play_move_anim,
+    play_action_anim = ports.play_action_anim,
+    reset_status_3d = ports.reset_status_3d,
+    sync_status_3d = ports.sync_status_3d,
+  }
+  ports.ui_sync = {
+    apply_input_lock = ports.apply_input_lock,
+    step_choice_timeout = ports.step_choice_timeout,
+    step_modal_timeout = ports.step_modal_timeout,
+    update_countdown = ports.update_countdown,
+    build_model = ports.build_model,
+    refresh_from_dirty = ports.refresh_from_dirty,
+    get_ui_state = ports.get_ui_state,
+    is_input_blocked = ports.is_input_blocked,
+    is_popup_active = ports.is_popup_active,
+    is_choice_active = ports.is_choice_active,
+    is_market_active = ports.is_market_active,
+    get_popup_owner_index = ports.get_popup_owner_index,
+    set_input_blocked = ports.set_input_blocked,
+  }
+  ports.debug = {
+    log_status = ports.log_status,
+    sync_debug_log = ports.sync_debug_log,
+    resolve_debug_enabled = ports.resolve_debug_enabled,
+  }
+  ports.state = {
+    apply_role_control_lock = ports.apply_role_control_lock,
+    install_event_handlers = ports.install_event_handlers,
+    on_bankruptcy_tiles_cleared = ports.on_bankruptcy_tiles_cleared,
+  }
+  return ports
 end
 
 return adapter

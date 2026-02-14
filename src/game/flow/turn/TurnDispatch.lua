@@ -1,4 +1,5 @@
 local logger = require("src.core.Logger")
+local number_utils = require("src.core.NumberUtils")
 local validator = require("src.game.flow.turn.TurnDispatchValidator")
 local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
 
@@ -9,13 +10,13 @@ local next_turn_cooldown = 0.4
 local function _get_timestamp()
   assert(GameAPI ~= nil and GameAPI.get_timestamp ~= nil, "missing GameAPI.get_timestamp")
   local ts = GameAPI.get_timestamp()
-  assert(type(ts) == "number", "invalid timestamp")
+  assert(number_utils.is_numeric(ts), "invalid timestamp")
   return ts
 end
 
 local function _get_timestamp_diff_seconds(timestamp_1, timestamp_2)
   assert(GameAPI ~= nil and GameAPI.get_timestamp_diff ~= nil, "missing GameAPI.get_timestamp_diff")
-  assert(type(timestamp_1) == "number" and type(timestamp_2) == "number", "invalid timestamps")
+  assert(number_utils.is_numeric(timestamp_1) and number_utils.is_numeric(timestamp_2), "invalid timestamps")
   return GameAPI.get_timestamp_diff(timestamp_1, timestamp_2)
 end
 

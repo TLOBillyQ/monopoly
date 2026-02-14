@@ -346,7 +346,19 @@ local function _register_defaults()
 
   chance_registry.register("discard_properties", function(game, player, card)
     local to_drop = card.count
-    for tile_id in pairs(player.properties) do
+    local property_ids = {}
+    for tile_id in pairs(player.properties or {}) do
+      property_ids[#property_ids + 1] = tile_id
+    end
+    table.sort(property_ids, function(a, b)
+      local ai = number_utils.to_integer(a)
+      local bi = number_utils.to_integer(b)
+      if ai ~= nil and bi ~= nil then
+        return ai < bi
+      end
+      return tostring(a) < tostring(b)
+    end)
+    for _, tile_id in ipairs(property_ids) do
       local tile = game.board:get_tile_by_id(tile_id)
       assert(tile ~= nil, "missing tile: " .. tostring(tile_id))
       game:reset_tile(tile)

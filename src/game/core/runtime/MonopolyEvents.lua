@@ -25,6 +25,9 @@ local monopoly_events = {
   chance = {
     applied = "ch.applied",
   },
+  game = {
+    finished = "gm.finished",
+  },
   intent = {
     need_choice = "it.need_choice",
     push_popup = "it.push_popup",

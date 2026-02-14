@@ -37,8 +37,10 @@ local function _format_properties(game, player)
     ids[#ids + 1] = tile_id
   end
   table.sort(ids, function(a, b)
-    if type(a) == "number" and type(b) == "number" then
-      return a < b
+    local ai = number_utils.to_integer(a)
+    local bi = number_utils.to_integer(b)
+    if ai ~= nil and bi ~= nil then
+      return ai < bi
     end
     return tostring(a) < tostring(b)
   end)

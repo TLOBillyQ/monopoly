@@ -25,7 +25,7 @@
   - `TurnDispatch.lua`：UI action 校验与落地执行。
 - `src/game/flow/intent/IntentDispatcher.lua`：领域意图入口（`need_choice` / `push_popup`）。
 - `src/presentation/api/`：表现层对回合层的适配接口。
-  - `GameplayLoopPortsAdapter.lua`：把 UI 能力封装为 ports 给 `GameplayLoop` 使用。
+  - `GameplayLoopPortsAdapter.lua`：把 UI 能力封装为 ports 给 `GameplayLoop` 使用（按 `modal/anim/ui_sync/debug/state` 分组，并保留平铺兼容）。
   - `UIView.lua`：具体 UI 渲染、弹窗/选择框、输入锁策略调用。
 - `src/presentation/interaction/`：表现层交互编排。
   - `UIEventRouter.lua`：UI 点击路由到 intent（按 bind 时构建 route specs）。
@@ -115,6 +115,8 @@ sequenceDiagram
 - `Game`（`src/game/core/runtime/Game.lua`）
   - 领域门面，控制回合推进与动作分发。
   - 生命周期由 `CompositionRoot.assemble` 完成实体装配。
+- `GameVictory`（`src/game/core/runtime/GameVictory.lua`）
+  - 仅负责胜负计算与领域状态更新；通过 `MonopolyEvents.game.finished` 发出结算事件。
 - `turn`（在 `CompositionRoot.lua` 初始化）
   - 持有回合态：`current_player_index`、`phase`、`pending_choice`、动画序列、计时字段等。
 - `dirty`（`src/core/DirtyTracker.lua`，由 `CompositionRoot.lua` 接入）
@@ -135,7 +137,9 @@ sequenceDiagram
 - Tick 行为扩展：`src/game/flow/turn/GameplayLoop.lua` 与 `GameplayLoopRuntime.lua`
   - 编排逻辑放 `GameplayLoop`，计时/锁策略放 `GameplayLoopRuntime`。
 - 表现能力替换：`src/presentation/api/GameplayLoopPortsAdapter.lua`
-  - 可替换 ports 实现以适配不同 UI 运行时或测试桩。
+  - 可替换 ports 实现以适配不同 UI 运行时或测试桩；优先按分组子接口替换。
+- 胜负表现扩展：`src/presentation/api/UIEventHandlers.lua`
+  - 监听 `MonopolyEvents.game.finished` 并执行胜负面板展示，避免领域层直接依赖 UI 引擎细节。
 - UI 投影扩展：`src/presentation/state/UIModelProjection.lua`
   - 新增投影函数，再由 `UIModel.build/update` 接入。
 

@@ -3,6 +3,7 @@ local modal_state = require("src.presentation.interaction.UIModalStateCoordinato
 local items_cfg = require("Config.Generated.Items")
 local market_cfg = require("Config.Generated.Market")
 local vehicles_cfg = require("Config.Generated.Vehicles")
+local number_utils = require("src.core.NumberUtils")
 
 local market_view = {}
 
@@ -68,7 +69,7 @@ local function _resolve_market_level(cfg)
 end
 
 local function _resolve_ref_key(refs, key)
-  if type(key) == "number" then
+  if number_utils.is_numeric(key) then
     return key
   end
   return refs[key]
