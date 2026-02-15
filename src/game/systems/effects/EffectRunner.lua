@@ -1,6 +1,6 @@
 require "vendor.third_party.ClassUtils"
 
-local effect = Class("Effect")
+local effect_runner = Class("EffectRunner")
 
 local function _build_ctx(player, tile, game_ctx)
   local ctx = {}
@@ -39,7 +39,7 @@ local function _can_apply(eff, ctx, game_ctx)
   return true
 end
 
-function effect.scan(effect_defs, player, tile, game_ctx)
+function effect_runner.scan(effect_defs, player, tile, game_ctx)
   assert(effect_defs ~= nil, "missing effect_defs")
   assert(game_ctx ~= nil, "missing game_ctx")
   local ctx = _build_ctx(player, tile, game_ctx)
@@ -58,7 +58,7 @@ function effect.scan(effect_defs, player, tile, game_ctx)
   return entries
 end
 
-function effect.execute(eff, player, tile, game_ctx)
+function effect_runner.execute(eff, player, tile, game_ctx)
   assert(game_ctx ~= nil, "missing game_ctx")
   local ctx = _build_ctx(player, tile, game_ctx)
   local ok, reason = _can_apply(eff, ctx, game_ctx)
@@ -69,7 +69,7 @@ function effect.execute(eff, player, tile, game_ctx)
   return { ok = true, result = exec.apply(ctx) }
 end
 
-function effect.build_game_ctx(game, move_result, opts)
+function effect_runner.build_game_ctx(game, move_result, opts)
   opts = opts or {}
   local phase = opts.phase
   if not phase then
@@ -86,4 +86,4 @@ function effect.build_game_ctx(game, move_result, opts)
   }
 end
 
-return effect
+return effect_runner

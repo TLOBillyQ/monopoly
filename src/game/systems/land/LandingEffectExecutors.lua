@@ -8,7 +8,7 @@ local pricing = require("src.game.systems.land.LandPricing")
 local land_actions = require("src.game.systems.land.LandActions")
 local land_choice_specs = require("src.game.systems.land.LandChoiceSpecs")
 local inventory = require("src.game.systems.items.ItemInventory")
-local chance_effects = require("src.game.systems.chance.Chance")
+local chance_resolver = require("src.game.systems.chance.ChanceResolver")
 local landing_presenter = require("src.game.systems.land.LandingPresenter")
 local mine_effect = require("src.game.systems.effects.MineEffect")
 local steal = require("src.game.systems.items.ItemSteal")
@@ -17,7 +17,7 @@ local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
 local number_utils = require("src.core.NumberUtils")
 local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
 
-local land = {}
+local landing_effect_executors = {}
 
 local tile_state = tile.get_state
 local item_ids = gameplay_rules.item_ids
@@ -327,7 +327,7 @@ local executors = {
         card_desc = card.description,
         duration = popup_show_seconds,
       })
-      return chance_effects.resolve(ctx.game, ctx.player, card, ctx.move_result)
+      return chance_resolver.resolve(ctx.game, ctx.player, card, ctx.move_result)
     end,
   },
   hospital = {
@@ -388,12 +388,12 @@ local executors = {
   },
 }
 
-land.executors = executors
+landing_effect_executors.executors = executors
 
-function land.register_effect_executors(effect_registry)
+function landing_effect_executors.register_effect_executors(effect_registry)
   assert(effect_registry ~= nil, "missing effect_registry")
   assert(effect_registry.register_many ~= nil, "invalid effect_registry")
   effect_registry:register_many(executors)
 end
 
-return land
+return landing_effect_executors

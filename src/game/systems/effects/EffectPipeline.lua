@@ -1,4 +1,4 @@
-local effect = require("src.game.systems.effects.Effect")
+local effect_runner = require("src.game.systems.effects.EffectRunner")
 local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
 
 local pipeline = {}
@@ -62,7 +62,7 @@ end
 
 function pipeline.run(effect_defs, player, tile, game_ctx, opts)
   opts = opts or {}
-  local scanned = effect.scan(effect_defs, player, tile, game_ctx)
+  local scanned = effect_runner.scan(effect_defs, player, tile, game_ctx)
   local mandatory = _acquire_list()
   local optional = _acquire_list()
 
@@ -83,7 +83,7 @@ function pipeline.run(effect_defs, player, tile, game_ctx, opts)
   end
 
   for _, eff in ipairs(mandatory) do
-    local res = effect.execute(eff, player, tile, game_ctx)
+    local res = effect_runner.execute(eff, player, tile, game_ctx)
     local out = res and res.result
 
     if opts.on_need_landing and type(out) == "table" and out.kind == "need_landing" then

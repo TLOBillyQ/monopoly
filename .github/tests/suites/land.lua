@@ -93,7 +93,7 @@ local function _test_land_rent_graph_adjacency_breaks_path_neighbors()
 end
 
 local function _test_rent_owner_missing_skips_payment()
-  local land = require("src.game.systems.land.Land")
+  local land = require("src.game.systems.land.LandingEffectExecutors")
   local g = _new_game()
   local tenant = g.players[1]
   local owner = g.players[2]

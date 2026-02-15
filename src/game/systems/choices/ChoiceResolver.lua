@@ -1,7 +1,7 @@
 local logger = require("src.core.Logger")
 local executor = require("src.game.systems.items.ItemExecutor")
 local item_phase = require("src.game.systems.items.ItemPhase")
-local effect = require("src.game.systems.effects.Effect")
+local effect_runner = require("src.game.systems.effects.EffectRunner")
 local landing_defs = require("Config.LandingEffects")
 
 local choice_resolver = {}
@@ -52,7 +52,7 @@ local function _option_exists(choice, option_id)
 end
 
 local function _build_game_ctx(game, move_result)
-  return effect.build_game_ctx(game, move_result, {
+  return effect_runner.build_game_ctx(game, move_result, {
     phase_default = "wait_choice",
     on_landing = true,
   })

@@ -1,6 +1,6 @@
 local landing_defs = require("Config.LandingEffects")
 local effect_pipeline = require("src.game.systems.effects.EffectPipeline")
-local effect = require("src.game.systems.effects.Effect")
+local effect_runner = require("src.game.systems.effects.EffectRunner")
 
 local max_landing_depth = 10
 
@@ -17,7 +17,7 @@ end
 
 local function _resolve_landing(game, player, tile, move_result, depth)
   depth = depth or 0
-  local game_ctx = effect.build_game_ctx(game, move_result, {
+  local game_ctx = effect_runner.build_game_ctx(game, move_result, {
     phase_default = "landing",
     on_landing = true,
   })
