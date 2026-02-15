@@ -29,6 +29,7 @@ local ui_touch_policy = require("src.presentation.interaction.UITouchPolicy")
 local market_cfg = require("Config.Generated.Market")
 local runtime_constants = require("Config.RuntimeConstants")
 local gameplay_rules = require("Config.GameplayRules")
+local vec3 = require("fixtures.vec3")
 
 local function _build_popup_view_state(refs, card_node)
   local function new_node(seed)
@@ -337,18 +338,7 @@ local function _test_move_anim_wait_and_resume()
 end
 
 local function _test_move_anim_zero_distance_safe()
-  local function _vec3(x, y, z)
-    local vector_mt = {}
-    vector_mt.__sub = function(a, b)
-      return _vec3(a.x - b.x, a.y - b.y, a.z - b.z)
-    end
-    local vector = setmetatable({ x = x, y = y, z = z }, vector_mt)
-    function vector:length()
-      local sum = self.x * self.x + self.y * self.y + self.z * self.z
-      return math.sqrt(sum)
-    end
-    return vector
-  end
+  local _vec3 = vec3.with_sub_length
 
   local start_move_called = 0
   local scene = {
@@ -377,18 +367,7 @@ local function _test_move_anim_zero_distance_safe()
 end
 
 local function _test_move_anim_vehicle_uses_set_position_jump()
-  local function _vec3(x, y, z)
-    local vector_mt = {}
-    vector_mt.__sub = function(a, b)
-      return _vec3(a.x - b.x, a.y - b.y, a.z - b.z)
-    end
-    local vector = setmetatable({ x = x, y = y, z = z }, vector_mt)
-    function vector:length()
-      local sum = self.x * self.x + self.y * self.y + self.z * self.z
-      return math.sqrt(sum)
-    end
-    return vector
-  end
+  local _vec3 = vec3.with_sub_length
 
   local unit_move_called = 0
   local vehicle_set_positions = {}
@@ -434,18 +413,7 @@ local function _test_move_anim_vehicle_uses_set_position_jump()
 end
 
 local function _test_move_anim_vehicle_enter_delay_once()
-  local function _vec3(x, y, z)
-    local vector_mt = {}
-    vector_mt.__sub = function(a, b)
-      return _vec3(a.x - b.x, a.y - b.y, a.z - b.z)
-    end
-    local vector = setmetatable({ x = x, y = y, z = z }, vector_mt)
-    function vector:length()
-      local sum = self.x * self.x + self.y * self.y + self.z * self.z
-      return math.sqrt(sum)
-    end
-    return vector
-  end
+  local _vec3 = vec3.with_sub_length
 
   local consume_calls = 0
   local timeout_delays = {}
@@ -497,18 +465,7 @@ local function _test_move_anim_vehicle_enter_delay_once()
 end
 
 local function _test_move_anim_vehicle_move_api_enabled_uses_move_event()
-  local function _vec3(x, y, z)
-    local vector_mt = {}
-    vector_mt.__sub = function(a, b)
-      return _vec3(a.x - b.x, a.y - b.y, a.z - b.z)
-    end
-    local vector = setmetatable({ x = x, y = y, z = z }, vector_mt)
-    function vector:length()
-      local sum = self.x * self.x + self.y * self.y + self.z * self.z
-      return math.sqrt(sum)
-    end
-    return vector
-  end
+  local _vec3 = vec3.with_sub_length
 
   local move_calls = 0
   local set_pos_calls = 0
@@ -551,13 +508,7 @@ end
 local function _test_board_view_vehicle_resync_uses_set_position()
   local board_view = require("src.presentation.render.BoardView")
 
-  local function _vec3(x, y, z)
-    local vector_mt = {}
-    vector_mt.__add = function(a, b)
-      return _vec3(a.x + b.x, a.y + b.y, a.z + b.z)
-    end
-    return setmetatable({ x = x, y = y, z = z }, vector_mt)
-  end
+  local _vec3 = vec3.with_add
 
   local set_pos_calls = {}
   local unit_set_calls = 0
@@ -618,18 +569,7 @@ local function _test_board_view_vehicle_resync_uses_set_position()
 end
 
 local function _test_move_anim_step_unlocks_and_relocks()
-  local function _vec3(x, y, z)
-    local vector_mt = {}
-    vector_mt.__sub = function(a, b)
-      return _vec3(a.x - b.x, a.y - b.y, a.z - b.z)
-    end
-    local vector = setmetatable({ x = x, y = y, z = z }, vector_mt)
-    function vector:length()
-      local sum = self.x * self.x + self.y * self.y + self.z * self.z
-      return math.sqrt(sum)
-    end
-    return vector
-  end
+  local _vec3 = vec3.with_sub_length
 
   local calls = {}
   local scene = {
@@ -663,13 +603,7 @@ end
 local function _test_board_view_vehicle_disabled_uses_unit_set_position()
   local board_view = require("src.presentation.render.BoardView")
 
-  local function _vec3(x, y, z)
-    local vector_mt = {}
-    vector_mt.__add = function(a, b)
-      return _vec3(a.x + b.x, a.y + b.y, a.z + b.z)
-    end
-    return setmetatable({ x = x, y = y, z = z }, vector_mt)
-  end
+  local _vec3 = vec3.with_add
 
   local set_pos_calls = {}
   local unit_set_calls = 0

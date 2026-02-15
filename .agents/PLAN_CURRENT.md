@@ -1,247 +1,106 @@
-# 回合与UI边界重构计划（分治里程碑版）
+# .agents/tests 重构可执行计划（里程碑版）
 
-本可执行计划是活文档。实施过程中必须持续更新“进度”“意外与发现”“决策日志”“结果与复盘”。  
-本计划遵循 `.agents/PLANS.md`。
+本可执行计划是活文档。实施过程中必须持续更新“进度”“意外与发现”“决策日志”“结果与复盘”四个章节。  
+本文件严格遵循 `.agents/PLANS.md`，并替代此前已完成的旧计划。
 
 ## 目的 / 全局视角
 
-本计划用于把当前审查中发现的关键结构债拆成可落地的小步改造：先修确定性逻辑风险，再逐步清理依赖方向与接口耦合，最后收敛重复策略与验证。完成后，用户可观察到三类结果：
-1) 业务行为不变且回归通过；
-2) 关键模块职责更单一、跨层依赖减少；
-3) 后续新增功能改动面更小、更容易测试。
+本计划解决 `.agents/tests` 的可维护性问题，重点是把超大测试文件拆为单一职责结构，降低对全局补丁和环境细节的耦合，并提升失败定位效率。改造完成后，用户可以在不阅读巨型文件的前提下定位测试意图，可以从失败输出直接看到失败用例名，还可以用一条回归命令覆盖完整检查而不是手动拼接。可观察结果是：回归行为保持稳定（基线仍通过），测试组织更清晰，新增测试改动面显著收敛。
 
 ## 进度
 
-- [x] (2026-02-14T05:46Z) 完成全量代码审查与问题分级（P1/P2/P3）
-- [x] (2026-02-14T05:47Z) 输出重构方向并确定“先稳后拆”的顺序
-- [x] (2026-02-14T05:48Z) 将重构拆分为可独立验收的分治里程碑
-- [x] (2026-02-14T05:58Z) 里程碑 M1：修复 `discard_properties` 遍历删除风险（P1）
-- [x] (2026-02-14T05:59Z) 里程碑 M2：去除 `TickUISync` 对 UI 细节的反向依赖（DIP）
-- [x] (2026-02-14T06:01Z) 里程碑 M3：拆分 GameplayLoop Ports 大接口（ISP/SRP）
-- [x] (2026-02-14T06:03Z) 里程碑 M4：胜负结算事件化，分离领域与表现层（SRP/DIP）
-- [x] (2026-02-14T06:03Z) 里程碑 M5：统一 debug 开关策略，消除重复实现（SRP/DRY）
-- [x] (2026-02-14T06:05Z) 里程碑 M6：回归验证、更新架构文档与复盘
-- [x] (2026-02-14T06:09Z) 按 `.agents/docs/eggy/lua_env.md` 重审未提交改动（通过）
-- [x] (2026-02-14T07:09Z) 里程碑 M3 追加收尾：清理 ports 平铺兼容层并迁移调用方/测试桩到分组接口
+- [x] (2026-02-14T07:44Z) 清空旧计划并建立新计划骨架
+- [x] (2026-02-14T07:44Z) 写入重构目标、背景、验证口径与里程碑范围
+- [x] (2026-02-15T08:03Z) 里程碑 M1：完成基线回归，确认 `All regression checks passed (135)`
+- [x] (2026-02-15T08:07Z) 里程碑 M2：新增 `fixtures/vec3.lua` 并替换 `presentation_ui.lua` 7 处重复向量 helper
+- [x] (2026-02-15T08:09Z) 里程碑 M3：将 `gameplay` 与 `presentation_ui` 拆为分域 suite 切片模块并接入回归入口
+- [x] (2026-02-15T08:10Z) 里程碑 M4：升级 `TestHarness` 支持命名 suite/case 与失败聚合输出
+- [x] (2026-02-15T08:11Z) 里程碑 M5：统一 `regression.lua` 入口并串联 `dep_rules` 与 `gameplay_loop_no_ui`
+- [x] (2026-02-15T08:11Z) 里程碑 M6：全量验证通过并完成计划复盘回写
+- [x] (2026-02-15T08:29Z) 收尾约束：将 `dep_rules` 与 `gameplay_loop_no_ui` 下沉到 `internal/`，`.agents/tests` 根目录只保留 `regression.lua` 作为入口脚本
 
 ## 意外与发现
 
-- 观察：`discard_properties` 在 `pairs(player.properties)` 中删除同一 table 的 key，存在行为不稳定风险。  
-  证据：`src/game/systems/chance/ChanceRegistry.lua:349-365` + `src/game/core/runtime/GameStatePlayers.lua:71-77`。
-- 观察：回合层 `TickUISync` 直接读取 `UIManager` 并 require presentation 模块，依赖方向反转。  
-  证据：`src/game/flow/turn/TickUISync.lua:129-133`。
-- 观察：GameplayLoop Ports 当前是 29 个函数的大接口，适配层聚合了过多职责。  
-  证据：`src/game/flow/turn/GameplayLoopPortTypes.lua:3-29`、`src/presentation/api/GameplayLoopPortsAdapter.lua:20-275`。
-- 观察：胜负结算混入 UI 引擎调用，领域规则与表现细节耦合。  
-  证据：`src/game/core/runtime/GameVictory.lua:42-60`。
-- 观察：端口分组可在不破坏旧调用的前提下落地，`GameplayLoop` 已迁移到分组优先读取。  
-  证据：`src/game/flow/turn/GameplayLoopPorts.lua`、`src/game/flow/turn/GameplayLoop.lua`。
-- 观察：当前仓库回归基线稳定。  
-  证据：执行 `lua .agents/tests/regression.lua` 输出 `All regression checks passed (135)`。
+改造前 `.agents/tests/regression.lua` 基线为 `All regression checks passed (135)`；改造后在统一入口下输出 `All regression checks passed (135)`、`dep_rules ok`、`tick ok`，证明重构未改变既有行为。`presentation_ui.lua` 的 `_vec3` 重复块已从 7 处收敛到统一夹具引用。拆分实施采用“切片注册”而非一次性大规模搬移函数体，避免在一步到位执行中引入高风险合并冲突。
 
 ## 决策日志
 
-- 决策：采用“先行为安全，再架构优化”的顺序。  
-  理由：先处理确定性业务风险（P1）可快速降风险，后续拆层在行为稳定基线上进行更安全。  
-  日期/作者：2026-02-14 / Copilot CLI
-- 决策：每个里程碑必须可单独回归与可回滚，不做跨里程碑大爆改。  
-  理由：降低一次性改动面，减少排障复杂度。  
-  日期/作者：2026-02-14 / Copilot CLI
-- 决策：M3 引入“兼容适配阶段”，先增量并行，再删除旧路径。  
-  理由：端口拆分涉及面大，先保留兼容层可避免中断现有逻辑。  
-  日期/作者：2026-02-14 / Copilot CLI
-- 决策：M4 改为“领域发事件、表现层消费”，将胜负面板逻辑迁移到 `UIEventHandlers`。  
-  理由：让 `GameVictory` 保持领域纯度，减少引擎 API 对核心规则的污染。  
-  日期/作者：2026-02-14 / Copilot CLI
-- 决策：M6 保留端口平铺兼容层，不在本轮删除。  
-  理由：现有调用面较广，先完成分组迁移与回归稳定，再在后续小步清理兼容入口。  
-  日期/作者：2026-02-14 / Copilot CLI
-- 决策：根据用户要求重申 M3，立即清理残留兼容层并同步改造调用方与测试桩。  
-  理由：当前调用面已可控，继续保留兼容层会掩盖接口边界并增加维护负担。  
-  日期/作者：2026-02-14 / Copilot CLI
+决策：采用“先稳基线，再抽夹具，再拆文件，再强化执行器，最后统一入口”的顺序。理由：先锁定行为，再动结构，能把风险约束在可回归验证的最小范围内。日期/作者：2026-02-14 / Copilot CLI。  
+决策：重构阶段不改变业务逻辑与断言语义，只允许做测试结构重排、夹具提取和执行入口增强。理由：避免“重构夹带行为改动”导致排障复杂度激增。日期/作者：2026-02-14 / Copilot CLI。  
+决策：以 `.agents/tests/regression.lua` 为唯一用户入口目标，同时把 `dep_rules` 与 `gameplay_loop_no_ui` 纳入同一流程并放入 `internal/`。理由：减少人工漏跑并保持根目录入口单一。日期/作者：2026-02-14 / Copilot CLI。
+决策：一步到位拆分采用“registry + slice wrapper”方案，保留原测试函数实现，重构 suite 组织与执行模型。理由：满足快速拆分与低风险并存，避免在单次提交中改动上千行测试函数体。日期/作者：2026-02-15 / Copilot CLI。  
+决策：`TestHarness` 对旧数组 suite 与新命名 suite 双兼容。理由：确保迁移过程可渐进落地，不阻断现有 suite。日期/作者：2026-02-15 / Copilot CLI。
 
 ## 结果与复盘
 
-已完成 M1-M6 全部里程碑并通过回归（`All regression checks passed (135)`）。  
-主要结果：  
-1) 修复了 `discard_properties` 的遍历删除不稳定风险；  
-2) `TickUISync` 去除了对 UI 运行时细节的反向依赖，debug 策略统一由 `UIEventState` 提供；  
-3) GameplayLoop ports 增加 `modal/anim/ui_sync/debug/state` 分组并迁移主循环使用；  
-4) `GameVictory` 改为发出 `game.finished` 事件，胜负面板行为下沉到 `UIEventHandlers`；  
-5) 已移除 ports 平铺兼容逻辑（resolver/adapter/callers/测试桩均切到分组接口）；  
-6) `ARCHITECTURE.md` 已同步更新端口分组与胜负事件链路说明。
+本轮已完成 M1 到 M6。主要结果如下：一是新增 `.agents/tests/fixtures/vec3.lua` 并消除 `presentation_ui` 内重复向量构造逻辑；二是新增 `gameplay_registry/presentation_ui_registry` 与 8 个分域 suite 文件，完成测试组织拆分；三是 `TestHarness` 已支持命名用例与失败聚合，失败定位能力提升；四是 `regression.lua` 已统一串联 suite 回归、`internal/dep_rules.lua` 和 `internal/gameplay_loop_no_ui.lua`，且 `.agents/tests` 根目录仅保留 `regression.lua` 作为入口脚本。最终验收输出为 `All regression checks passed (135)`、`dep_rules ok`、`tick ok`，与目标“结构优化且行为不变”一致。
 
 ## 背景与导读
 
-与本计划最相关的模块如下：
-- 回合编排与端口：
-  - `src/game/flow/turn/GameplayLoop.lua`
-  - `src/game/flow/turn/GameplayLoopPortTypes.lua`
-  - `src/game/flow/turn/GameplayLoopPorts.lua`
-  - `src/presentation/api/GameplayLoopPortsAdapter.lua`
-- 回合同步与调试判定：
-  - `src/game/flow/turn/TickUISync.lua`
-  - `src/presentation/interaction/UIEventState.lua`
-- 业务风险点（机会卡丢地产）：
-  - `src/game/systems/chance/ChanceRegistry.lua`
-- 领域与表现耦合点（胜负结算）：
-  - `src/game/core/runtime/GameVictory.lua`
-- 回归入口：
-  - `.agents/tests/regression.lua`
+本任务作用域只在 `.agents/tests`。`regression.lua` 是唯一回归入口，负责加载各 suite 并调用 `TestHarness.run_all`，随后执行 `internal/dep_rules.lua` 与 `internal/gameplay_loop_no_ui.lua`；`TestHarness.lua` 是执行器；`TestSupport.lua` 提供共享 helper 和 patch 机制；`suites/gameplay.lua` 与 `suites/presentation_ui.lua` 是历史热点。所谓“夹具”是指测试中重复使用的构造器与桩对象，例如向量构造、UI 节点工厂和端口双对象；所谓“可观测性”是指失败时能否快速看见具体失败测试及其上下文，而不需要二次插桩。
 
-术语说明：
-- DIP（依赖倒置）：高层策略依赖抽象，不直接依赖低层细节。
-- SRP（单一职责）：一个模块只因一种原因变化。
-- ISP（接口隔离）：调用方只依赖自己真正需要的最小接口。
+## 里程碑
 
-## 里程碑（分治）
+### 里程碑 M1：基线与防回归护栏
 
-### 里程碑 M1：修复 P1 行为风险（`discard_properties`）
+本里程碑的范围是先建立稳定参照，确认后续每一步都可证明“行为未退化”。工作内容是在当前工作目录运行现有回归命令并记录结果，将该结果写入计划证据，并约定每个后续里程碑都必须重复同一验证。完成后新增能力是“每一步改动都有对照结果”，不再依赖主观判断。验收命令是运行 `lua .agents/tests/regression.lua`，预期看到 `All regression checks passed (135)` 或更高通过数且无失败。
 
-目标是把“遍历中删除”改成“先收集再删除”，保证丢地产数量与结果可预测。完成后可通过构造 `count=1/2/全部` 场景验证地产数量变化准确。
+### 里程碑 M2：抽离公共夹具
 
-分治步骤：
-1. 在 `ChanceRegistry.discard_properties` 内先复制 `tile_id` 到数组并排序（稳定顺序）。
-2. 再按数组逐项执行 `reset_tile + set_player_property(..., false)`。
-3. 保持原有日志与事件语义不变。
-4. 补回归测试或最小场景验证脚本。
+本里程碑的范围是消除重复 helper，统一测试构造方式。工作内容是在 `.agents/tests` 下新增夹具模块（例如 `fixtures/math.lua`、`fixtures/ui_nodes.lua`），把 `presentation_ui.lua` 等文件里重复定义的 `_vec3` 与节点工厂迁入夹具，并让原测试通过 require 复用。完成后新增能力是“同类测试共享同一构造语义”，单点调整即可全局生效。验收标准是重复 helper 的搜索命中显著下降，且全量回归继续通过。
 
-验收：对应场景不再出现漏删或非确定顺序。
+### 里程碑 M3：拆分超大 suite
 
-### 里程碑 M2：修复依赖方向（`TickUISync` 不直连 UI 细节）
+本里程碑的范围是按变化原因拆解大文件。工作内容是把 `suites/presentation_ui.lua` 拆为按子域聚合的 suite 文件（例如 modal、router、anim、status3d），把 `suites/gameplay.lua` 拆为 turn/runtime_context/vehicle 等子域文件，并在 `regression.lua` 中按既有顺序注册新 suite。完成后新增能力是“改某个子域只触达对应 suite”，降低冲突与阅读负担。验收标准是原有测试数量不减少、语义不变、回归全绿。
 
-目标是让回合层不直接触碰 `UIManager` 和 presentation 的运行时实现。完成后 `TickUISync` 仅通过 ports 或注入函数获取 debug 开关状态。
+### 里程碑 M4：升级 TestHarness 可观测性
 
-分治步骤：
-1. 在 ports 抽象层新增 `resolve_debug_enabled(state)`（默认实现保底）。
-2. `GameplayLoopPortsAdapter` 负责绑定现有 UI 判定逻辑。
-3. `TickUISync` 改为调用注入能力，不再 `require("src.presentation.api.UIRuntimePort")`。
-4. 保持现有调试开关行为不变（含按 role 覆盖）。
+本里程碑的范围是仅增强测试执行反馈，不改业务断言。工作内容是把 `TestHarness` 从“匿名函数列表”升级为“带名称的测试项执行”，在失败时输出 suite 名、测试名、错误栈摘要与失败计数，成功时仍保持简洁进度。完成后新增能力是“失败即定位”，无需反复手动二分。验收方式是注入一个可控失败样例，确认输出中包含命名信息并在恢复后回归通过。
 
-验收：行为一致、跨层 require 减少、回合层无 UIManager 直接依赖。
+### 里程碑 M5：统一回归入口
 
-### 里程碑 M3：拆分 GameplayLoop Ports 大接口
+本里程碑的范围是统一执行路径与检查覆盖。工作内容是在 `regression.lua` 中串联 suite 回归、`internal/dep_rules.lua` 与 `internal/gameplay_loop_no_ui.lua`，保证用户执行一条命令即可跑完整检查，且 `.agents/tests` 根目录只有一个入口脚本；必要时把阶段结果打印为简短小结。完成后新增能力是“单命令门禁”，减少漏跑风险。验收标准是单命令可覆盖三类检查，并在任一阶段失败时明确标识失败阶段。
 
-目标是把 29 个端口按职责拆为小接口集合，降低编排层与适配层耦合。完成后新增/修改单个能力只影响对应子接口。
+### 里程碑 M6：收尾与复盘
 
-分治步骤：
-1. 定义分组：`modal_ports`、`anim_ports`、`ui_sync_ports`、`debug_ports`、`state_ports`。
-2. 在 `GameplayLoopPorts` 保留兼容入口（旧字段映射到新分组）。
-3. `GameplayLoop` 分批改为依赖分组接口（一次仅迁移一组）。
-4. 迁移完成后再删旧平铺字段与兼容映射。
-
-验收：
-- `GameplayLoop.lua` 依赖的字段数量显著下降；
-- `GameplayLoopPortsAdapter` 结构按分组可读；
-- 回归通过。
-
-### 里程碑 M4：胜负结算事件化
-
-目标是让 `GameVictory` 只负责计算赢家与设置领域状态，UI 表现动作移到表现层订阅。完成后领域层可脱离引擎 API 独立测试。
-
-分治步骤：
-1. 在 `GameVictory` 产出胜负事件（含 winners/winner_names）。
-2. 在 UI 事件处理层消费该事件并调用 `role.game_win_and_show_result_panel/lose`。
-3. 保留短期兼容开关（必要时允许旧路径兜底）。
-4. 验证多人并列胜利、无人存活、回合上限触发三类分支。
-
-验收：`GameVictory` 内不再直接操作 UI role 展示 API。
-
-### 里程碑 M5：统一 debug 开关策略
-
-目标是合并 `TickUISync` 与 `UIEventState` 重复判定，实现单一事实来源。完成后 debug 显示行为在所有入口一致。
-
-分治步骤：
-1. 抽取统一策略模块（建议 `presentation/interaction` 层）。
-2. `UIIntentDispatcher` 与 `GameplayLoopPortsAdapter` 共用该策略。
-3. 删除重复逻辑并保留等价单测/回归场景。
-
-验收：两处重复逻辑收敛为一处，行为无回归。
-
-### 里程碑 M6：收尾与验证
-
-目标是收敛兼容层、补齐测试与文档，形成稳定交付。完成后计划中的结构债修复具备可持续维护基础。
-
-分治步骤：
-1. 删除 M3/M4 引入的临时兼容代码（若已无引用）。
-2. 补充关键路径测试说明（至少覆盖 M1/M2/M4）。
-3. 更新 `ARCHITECTURE.md` 中端口与分层描述。
-4. 全量回归并记录基线结果。
-
-验收：代码路径简化，文档与实现一致。
+本里程碑的范围是清理临时兼容、补充说明并固化结果。工作内容是删除重构期间临时桥接代码，补充关键重构点注释或简短文档说明，确认测试入口和目录结构稳定，然后写入最终复盘。完成后新增能力是“结构可持续维护”，后续新增测试不必继续堆积到巨型文件。验收标准是最终回归通过，计划四个活文档章节完整更新，且结果可被新手复现。
 
 ## 工作计划
 
-按 M1 -> M6 顺序串行执行；每个里程碑只改与目标直接相关的文件，避免跨里程碑“顺手重构”。每完成一个里程碑，必须先跑回归，再更新本计划“进度/发现/决策/复盘”，然后进入下一个里程碑。涉及大改（M3/M4）时采用“并行路径 + 兼容层”策略，确保主干行为始终可运行。
+实施顺序固定为 M1 到 M6，避免并行改动带来的交叉噪声。每次只处理一个里程碑，并把影响面限定在 `.agents/tests`。每个里程碑结束必须先跑全量回归，再回写本计划四个活文档章节，确认无遗留后再进入下一阶段。
 
 ## 具体步骤
 
-工作目录：`/Users/billyq/Dev/Github/Lua/monopoly`
+工作目录固定为 `/Users/billyq/Dev/Github/Lua/monopoly`。  
+步骤一是建立基线并记录结果：
+    lua .agents/tests/regression.lua
+预期输出片段：
+    All regression checks passed (135)
 
-1) 进入里程碑实施前基线检查
-   - `lua .agents/tests/regression.lua`
-   - 预期：`All regression checks passed (N)`
-
-2) 实施每个里程碑后统一执行
-   - `lua .agents/tests/regression.lua`
-   - 若失败：仅修复与当前里程碑直接相关的问题，不扩散改动面。
-
-3) 每次停点更新计划
-   - 更新本文件“进度/意外与发现/决策日志/结果与复盘”。
+步骤二是在每个里程碑改动后重复执行同一命令，确认未引入回归。  
+步骤三统一入口验证只执行：
+    lua .agents/tests/regression.lua
+预期表现是同一命令输出三段结果（suite 回归、dep_rules、no_ui smoke），且失败时能定位具体阶段。  
+步骤四是每次停点更新本文件中的“进度”“意外与发现”“决策日志”“结果与复盘”，保持计划可从零继续执行。
 
 ## 验证与验收
 
-总体验收标准：
-1. 业务行为不倒退（回归通过）。
-2. 关键架构目标达成：
-   - `TickUISync` 去除 UI 细节依赖；
-   - GameplayLoop 端口由平铺大接口拆为分组；
-   - `GameVictory` 去除直接 UI 调用。
-3. P1 风险点修复可被场景证明：`discard_properties` 丢地产数量稳定可预测。
-
-建议验证清单：
-- 自动回归：`lua .agents/tests/regression.lua`
-- 手动场景：
-  - 触发机会卡丢地产（不同 count）
-  - 切换调试开关（含多 role）
-  - 回合上限触发胜负结算
+验收以可观察行为为准而非文件数量。首先，回归通过数不得下降，且现有断言语义保持不变。其次，拆分后任一 suite 失败时应能从输出直接看到 suite 与测试名称。再次，统一入口完成后执行一条主命令应覆盖全部关键检查，不再依赖人工记忆额外脚本。最后，新增测试应默认落入对应子域文件而不是回填到超大文件，这一点通过代码审查路径即可直观看到。
 
 ## 可重复性与恢复
 
-本计划按里程碑增量执行，任一里程碑失败可独立回退，不影响前序稳定里程碑。M3/M4 的兼容层保证中途可运行；若出现不可控回归，先回退当前里程碑变更再重试，不跨里程碑补丁式修复。
+本计划每步都可重复执行，不依赖一次性状态。若某里程碑失败，应只回退该里程碑涉及文件并重新运行回归，不允许跨里程碑补丁式修修补补。若拆分过程中出现 require 路径错误，优先恢复上一步可运行状态，再按最小粒度重新拆分并立即验证。整个过程不触碰生产代码路径，确保恢复成本低且边界清晰。
 
 ## 产物与备注
 
-计划产物：
-- `.agents/PLAN_CURRENT.md`（本文件）
-- `/Users/billyq/.copilot/session-state/0403e262-a78c-4b54-a776-863188a64789/plan.md`（会话镜像）
-
-分析产物（本次审查已生成）：
-- `.../files/review_scope.txt`
-- `.../files/review_metrics.csv`
-- `.../files/review_hotspots.txt`
-- `.../files/review_dep_edges.csv`
-- `.../files/review_cross_layer.txt`
-- `.../files/review_summary_stats.txt`
+实施后应保留的核心产物是新的 `.agents/PLAN_CURRENT.md` 与更新后的 `.agents/tests` 结构。辅助产物包括重构过程中保留的最小证据片段，例如回归通过输出、失败定位输出样例和关键搜索结果。除本计划和测试代码外，不新增与任务无关的文档文件，避免仓库噪声。
 
 ## 接口与依赖
 
-实施时优先复用现有模块，不新增跨层全局变量。
-- 回合层对 UI 的需求通过 `GameplayLoopPorts` 暴露。
-- 表现层细节留在 `src/presentation/**`。
-- 领域事件通过既有事件通道（`MonopolyEvents` / `UIEventHandlers`）传递。
-
-M3 里程碑结束时，至少应存在以下分组能力（命名可微调，但语义需稳定）：
-- `ports.modal.*`
-- `ports.anim.*`
-- `ports.ui_sync.*`
-- `ports.debug.*`
-- `ports.state.*`
+`TestHarness.run_all` 在重构后应支持可命名测试项，最低要求是能关联 suite 名与测试名。`TestSupport` 继续作为共享工具入口，但内部应逐步转向按职责拆分的 fixtures 模块，减少单文件持续膨胀。`regression.lua` 继续作为主入口并持有 suite 注册顺序，顺序调整必须在计划中记录理由。所有改动只依赖仓库内现有 Lua 模块与运行方式，不引入新的测试框架。
 
 ### 变更记录
 
-- 2026-02-14：基于全量审查结果重写为分治里程碑计划，明确 M1-M6 验收与回滚策略。
-- 2026-02-14：执行完成 M1-M6；完成端口分组迁移、胜负事件化、debug 策略收敛、P1 修复与回归验证。
-- 2026-02-14：依据 `lua_env.md` 复审未提交代码，未发现沙盒禁用库/键类型/隐式转换相关违规。
-- 2026-02-14：根据环境约束移除 `discard_properties` 中对 `type(...) == \"number\"` 的假设，改为 `math.tointeger` 判定。
-- 2026-02-14：订正 `NumberUtils` 并全仓替换显式数值类型判断/转换入口，统一走 `NumberUtils`；回归通过 135。
+2026-02-14：按用户要求清空旧计划并重写为 `.agents/tests` 重构计划，新增从 M1 到 M6 的完整里程碑与验收口径，原因是当前任务目标已从“旧重构收尾”切换为“测试代码结构化重构”。
+2026-02-15：执行一步到位重构并完成 M1-M6；新增 fixtures、suite 切片注册、命名化 harness 与统一回归入口，原因是用户要求直接推进到终态交付。  
+2026-02-15：将 `dep_rules.lua` 与 `gameplay_loop_no_ui.lua` 下沉到 `.agents/tests/internal/` 并改由 regression 调用，原因是用户要求根目录仅保留 regression 唯一入口。
