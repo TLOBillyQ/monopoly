@@ -38,7 +38,8 @@ function panel_presenter.render_auto_controls_for_role(ui, ctx, ui_model)
   for _, name in ipairs(controls) do
     ui:set_visible(name, true)
   end
-  ui_touch_policy.set_auto_controls_touch(ui, auto_enabled, controls)
+  local allow_touch = auto_enabled
+  ui_touch_policy.set_auto_controls_touch(ui, allow_touch, controls)
 end
 
 function panel_presenter.is_base_non_player_visible(ui, ctx)

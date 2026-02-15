@@ -2,6 +2,8 @@ local logger = require("src.core.Logger")
 local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
 local runtime = require("src.presentation.api.UIRuntimePort")
 local ui_view = require("src.presentation.api.UIView")
+local canvas = require("src.presentation.interaction.UICanvasCoordinator")
+local ui_events = require("src.presentation.shared.UIEvents")
 local ui_event_state = require("src.presentation.interaction.UIEventState")
 
 local intent_dispatcher = {}
@@ -101,6 +103,26 @@ function intent_dispatcher.dispatch_view_command(state, intent)
       ui.debug_log_enabled_override = nil
       local next_enabled = not ui_event_state.resolve_debug_enabled(state)
       ui_view.set_debug_visible(state, next_enabled)
+      if active_role == nil then
+        return
+      end
+      local role_id = runtime.resolve_role_id(active_role) or tostring(active_role)
+      if type(ui.debug_visible_by_role) ~= "table" then
+        ui.debug_visible_by_role = {}
+      end
+      if type(ui.debug_log_enabled_by_role) ~= "table" then
+        ui.debug_log_enabled_by_role = {}
+      end
+      ui.debug_visible_by_role[role_id] = next_enabled
+      ui.debug_log_enabled_by_role[role_id] = next_enabled
+      if next_enabled then
+        canvas.switch_for_role(ui, canvas.CANVAS_DEBUG, active_role)
+      else
+        local hide_event = ui_events.hide[canvas.CANVAS_DEBUG]
+        if hide_event then
+          ui_events.send_to_role(active_role, hide_event, {})
+        end
+      end
     end)
     return true
   end

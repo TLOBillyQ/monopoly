@@ -11,10 +11,13 @@ local durations = {
   missile = 1.2,
   monster = 1.2,
 }
+local roll_spin_seconds = 1.0
 
 local dice_screen_nodes = {
   screen = "骰子屏",
   spin = "骰子-旋转骰子底图",
+  fx_end_1 = "骰子-摇骰子结束特效1",
+  fx_end_2 = "骰子-摇骰子结束特效2",
   faces = {
     "骰子-骰子点数1",
     "骰子-骰子点数2",
@@ -36,11 +39,11 @@ local function _register_default_handlers()
     return
   end
   registry.register("roll", function(state, anim, duration, opts)
-    handlers.play_roll_dice_screen(state, anim, duration, opts.hold_seconds or 0.5, {
+    handlers.play_roll_dice_screen(state, anim, roll_spin_seconds, opts.hold_seconds or 0.5, {
       runtime = runtime,
       dice_screen_nodes = dice_screen_nodes,
     })
-    return duration + (opts.hold_seconds or 0.5)
+    return roll_spin_seconds + (opts.hold_seconds or 0.5)
   end)
   registry.register("roadblock", function(state, anim, duration, opts)
     handlers.play_overlay(state, anim, duration, opts)

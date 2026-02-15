@@ -3,6 +3,7 @@ local ui_events = require("src.presentation.shared.UIEvents")
 local number_utils = require("src.core.NumberUtils")
 
 local dice = {}
+local spin_steps = 12
 
 local function _resolve_face_value(value)
   local face = number_utils.to_integer(value)
@@ -16,34 +17,20 @@ local function _resolve_roll_face(anim)
   if not anim then
     return nil
   end
-  local total = anim.total
-  local total_face = _resolve_face_value(total)
-  if total_face then
-    return total_face
-  end
-  local total_value = number_utils.to_integer(total)
-  if total_value ~= nil then
-    if total_value > 6 then
-      local rolls = anim.rolls
-      local first = type(rolls) == "table" and rolls[1] or nil
-      local first_face = _resolve_face_value(first)
-      if first_face then
-        return first_face
-      end
-    end
-  end
   local rolls = anim.rolls
   local first = type(rolls) == "table" and rolls[1] or nil
   local first_face = _resolve_face_value(first)
   if first_face then
     return first_face
   end
-  return nil
+  return _resolve_face_value(anim.total)
 end
 
 function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
   local runtime = assert(opts and opts.runtime, "missing runtime")
   local dice_nodes = assert(opts and opts.dice_screen_nodes, "missing dice_screen_nodes")
+  duration = duration or 0
+  hold_seconds = hold_seconds or 0
   local face = _resolve_roll_face(anim)
   local show_event = ui_events.show[dice_nodes.screen]
   if show_event then
@@ -53,6 +40,8 @@ function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
     local nodes = {
       screen = runtime.query_node(dice_nodes.screen),
       spin = runtime.query_node(dice_nodes.spin),
+      fx_end_1 = runtime.query_node(dice_nodes.fx_end_1),
+      fx_end_2 = runtime.query_node(dice_nodes.fx_end_2),
       faces = {},
     }
     for index, name in ipairs(dice_nodes.faces) do
@@ -61,19 +50,20 @@ function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
 
     nodes.screen.visible = true
     nodes.spin.visible = true
-    for index, node in ipairs(nodes.faces or {}) do
-      node.visible = face == index
+    nodes.fx_end_1.visible = false
+    nodes.fx_end_2.visible = false
+    for _, node in ipairs(nodes.faces or {}) do
+      node.visible = false
     end
 
     if duration and duration > 0 then
-      local steps = 12
-      local step_time = duration / steps
+      local step_time = duration / spin_steps
       pcall(function()
         nodes.spin.rotation = runtime_constants.q_zero
       end)
-      for i = 1, steps do
+      for i = 1, spin_steps do
         local delay = step_time * (i - 1)
-        local angle = 360 * i / steps
+        local angle = 720 * i / spin_steps
         SetTimeOut(delay, function()
           pcall(function()
             nodes.spin.rotation = math.Quaternion(0.0, 0.0, angle)
@@ -83,6 +73,9 @@ function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
     end
 
     SetTimeOut(duration, function()
+      nodes.spin.visible = false
+      nodes.fx_end_1.visible = true
+      nodes.fx_end_2.visible = true
       if face then
         for index, node in ipairs(nodes.faces or {}) do
           node.visible = face == index
@@ -97,6 +90,8 @@ function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
       end
       nodes.screen.visible = false
       nodes.spin.visible = false
+      nodes.fx_end_1.visible = false
+      nodes.fx_end_2.visible = false
       for _, node in ipairs(nodes.faces or {}) do
         node.visible = false
       end

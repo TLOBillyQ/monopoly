@@ -10,6 +10,8 @@ local gameplay_rules = {
   popup_auto_close_seconds = 1.0,
   action_anim_default_seconds = 1.0,
   ai_auto_turn_interval_seconds = 0.4,
+  -- 临时测试开关：开启后将非1号玩家视作AI，便于后续整体清理。
+  test_force_non_p1_ai = true,
 
   turn_limit = 1000,
 

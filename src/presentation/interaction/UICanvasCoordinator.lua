@@ -1,4 +1,5 @@
 local ui_events = require("src.presentation.shared.UIEvents")
+local runtime = require("src.presentation.api.UIRuntimePort")
 local ui_nodes = require("src.presentation.shared.UINodes")
 
 local coordinator = {}
@@ -36,9 +37,19 @@ end
 function coordinator.switch(ui, target)
   assert(ui ~= nil, "missing ui")
   local target_name = target or coordinator.CANVAS_BASE
+  local debug_by_role = ui.debug_visible_by_role
+  local keep_debug = ui.debug_visible == true
+  if keep_debug ~= true and type(debug_by_role) == "table" then
+    for _, enabled in pairs(debug_by_role) do
+      if enabled == true then
+        keep_debug = true
+        break
+      end
+    end
+  end
   for _, name in ipairs(ui_events.canvas_names) do
-    local keep_debug = name == coordinator.CANVAS_DEBUG and ui.debug_visible == true
-    if name ~= coordinator.CANVAS_BASE and name ~= target_name and not keep_debug then
+    local keep_debug_canvas = name == coordinator.CANVAS_DEBUG and keep_debug
+    if name ~= coordinator.CANVAS_BASE and name ~= target_name and not keep_debug_canvas then
       local hide_event = ui_events.hide[name]
       if hide_event then
         ui_events.send_to_all(hide_event, {})
@@ -61,9 +72,15 @@ function coordinator.switch_for_role(ui, target, role)
   assert(ui ~= nil, "missing ui")
   assert(role ~= nil, "missing role")
   local target_name = target or coordinator.CANVAS_BASE
+  local role_id = runtime.resolve_role_id(role) or tostring(role)
+  local debug_by_role = ui.debug_visible_by_role
+  local keep_debug = false
+  if type(debug_by_role) == "table" then
+    keep_debug = debug_by_role[role_id] == true
+  end
   for _, name in ipairs(ui_events.canvas_names) do
-    local keep_debug = name == coordinator.CANVAS_DEBUG and ui.debug_visible == true
-    if name ~= coordinator.CANVAS_BASE and name ~= target_name and not keep_debug then
+    local keep_debug_canvas = name == coordinator.CANVAS_DEBUG and keep_debug
+    if name ~= coordinator.CANVAS_BASE and name ~= target_name and not keep_debug_canvas then
       local hide_event = ui_events.hide[name]
       if hide_event then
         ui_events.send_to_role(role, hide_event, {})
