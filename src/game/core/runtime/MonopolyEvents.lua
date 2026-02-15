@@ -15,6 +15,7 @@ local monopoly_events = {
     tax_free = "land.tax_free",
     tax_paid = "land.tax_paid",
     mine_hit = "land.mine_hit",
+    tile_upgraded = "land.tile_upgraded",
   },
   market = {
     bought_item = "mk.bought_item",

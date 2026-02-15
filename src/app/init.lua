@@ -11,7 +11,6 @@ runtime_context.install_editor_exports(runtime_ctx)
 require "src.game.core.runtime.Bankruptcy"
 require "src.game.core.runtime.AgentTargeting"
 require "src.game.core.runtime.Agent"
-require "src.game.core.runtime.GameState"
 require "src.game.core.runtime.GameVictory"
 require "src.game.core.runtime.CompositionRoot"
 
@@ -179,6 +178,12 @@ local function _build_state()
   state.on_tile_owner_changed = function(_, tile_id, owner_id)
     board_view.on_tile_owner_changed(state, tile_id, owner_id)
   end
+
+  RegisterCustomEvent(monopoly_event.land.tile_upgraded, function(_, _, data)
+    if data and data.tile_id and data.level then
+      state:on_tile_upgraded(data.tile_id, data.level)
+    end
+  end)
 
   RegisterCustomEvent(monopoly_event.intent.need_choice, function(_, _, data)
     state.pending_choice = data.choice

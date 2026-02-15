@@ -3,7 +3,6 @@ local executor = require("src.game.systems.items.ItemExecutor")
 local item_phase = require("src.game.systems.items.ItemPhase")
 local effect = require("src.game.systems.effects.Effect")
 local landing_defs = require("Config.LandingEffects")
-local choice_registry = require("src.game.systems.choices.ChoiceRegistry")
 
 local choice_resolver = {}
 
@@ -132,6 +131,8 @@ function choice_resolver.resolve(game, choice, action)
     return { status = "rejected", stay = true }
   end
 
+  local registries = assert(game.registries, "missing game.registries")
+  local choice_registry = assert(registries.choices, "missing choice registry")
   local handler = choice_registry.handlers[choice.kind]
   assert(handler ~= nil, "unknown choice kind: " .. tostring(choice.kind))
   local res = handler(game, choice, action)

@@ -1,19 +1,16 @@
-local registry = {}
+require "vendor.third_party.ClassUtils"
 
-local handlers = {}
-local defaults_registered = false
+local choice_registry = Class("ChoiceRegistry")
 
-registry.handlers = handlers
-
-function registry.register(kind, handler)
-  handlers[kind] = handler
+function choice_registry:init()
+  self.handlers = {}
 end
 
-function registry.register_defaults(helpers)
-  if defaults_registered then
-    return
-  end
-  defaults_registered = true
+function choice_registry:register(kind, handler)
+  self.handlers[kind] = handler
+end
+
+function choice_registry:register_defaults(helpers)
   local groups = {
     require("src.game.systems.choices.ChoiceHandlers.OptionalEffectHandler").build(helpers),
     require("src.game.systems.choices.ChoiceHandlers.LandChoiceHandler").build(helpers),
@@ -22,9 +19,9 @@ function registry.register_defaults(helpers)
   }
   for _, group in ipairs(groups) do
     for key, handler in pairs(group) do
-      registry.register(key, handler)
+      self:register(key, handler)
     end
   end
 end
 
-return registry
+return choice_registry

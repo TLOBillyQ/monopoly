@@ -1,5 +1,4 @@
 local item_effects = require("src.game.systems.items.ItemPostEffects")
-local item_registry = require("src.game.systems.items.ItemRegistry")
 local agent = require("src.game.core.runtime.Agent")
 local inventory = require("src.game.systems.items.ItemInventory")
 local gameplay_rules = require("Config.GameplayRules")
@@ -58,6 +57,8 @@ function executor.use_item(game, player, item_id, context)
   assert(cfg ~= nil, "missing item cfg: " .. tostring(item_id))
   local before_anim_seq = game.turn and game.turn.action_anim_seq or 0
 
+  local registries = assert(game.registries, "missing game.registries")
+  local item_registry = assert(registries.items, "missing item registry")
   local handler = item_registry.handlers[item_id]
   if handler then
     local res = handler(game, player, item_id, context)
@@ -73,4 +74,3 @@ function executor.use_item(game, player, item_id, context)
 end
 
 return executor
-

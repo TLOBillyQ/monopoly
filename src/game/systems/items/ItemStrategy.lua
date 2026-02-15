@@ -5,13 +5,14 @@ local logger = require("src.core.Logger")
 local inventory = require("src.game.systems.items.ItemInventory")
 local executor = require("src.game.systems.items.ItemExecutor")
 local demolish = require("src.game.systems.items.ItemDemolish")
-local item_registry = require("src.game.systems.items.ItemRegistry")
 
 local strategy = {}
 local item_ids = gameplay_rules.item_ids
 
 function strategy.target_candidates(game, player, item_id)
-  return item_registry.target_candidates(game, player, item_id)
+  local registries = assert(game.registries, "missing game.registries")
+  local item_registry = assert(registries.items, "missing item registry")
+  return item_registry:target_candidates(game, player, item_id)
 end
 
 function strategy.has_obstacles_ahead(game, player, distance)

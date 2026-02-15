@@ -1,5 +1,4 @@
 local logger = require("src.core.Logger")
-local chance_registry = require("src.game.systems.chance.ChanceRegistry")
 local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
 
 local chance_effects = {}
@@ -21,6 +20,8 @@ function chance_effects.resolve(game, player, card, context)
     return nil
   end
 
+  local registries = assert(game.registries, "missing game.registries")
+  local chance_registry = assert(registries.chances, "missing chance registry")
   local handler = chance_registry.handlers[card.effect]
   assert(handler ~= nil, "未知机会卡效果:" .. tostring(card.effect))
 

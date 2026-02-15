@@ -7,13 +7,10 @@ local gameplay_rules = require("Config.GameplayRules")
 local vehicles_cfg = require("Config.Generated.Vehicles")
 local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
 local number_utils = require("src.core.NumberUtils")
+require "vendor.third_party.ClassUtils"
 
-local chance_registry = {}
-local handlers = {}
-local defaults_registered = false
+local chance_registry = Class("ChanceRegistry")
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
-
-chance_registry.handlers = handlers
 
 local tile_state = tile.get_state
 local vehicle_name_by_id = {}
@@ -109,8 +106,8 @@ local function _move_steps(game, player, steps, opts)
   }
 end
 
-local function _register_defaults()
-  chance_registry.register("add_cash", function(game, player, card)
+local function _register_defaults(registry)
+  registry:register("add_cash", function(game, player, card)
     if card.target == "all" then
       for _, p in ipairs(game.players) do
         if not p.eliminated then
@@ -136,7 +133,7 @@ local function _register_defaults()
     end
   end)
 
-  chance_registry.register("pay_cash", function(game, player, card)
+  registry:register("pay_cash", function(game, player, card)
     if card.target == "all" then
       for _, p in ipairs(game.players) do
         if not p.eliminated then
@@ -164,7 +161,7 @@ local function _register_defaults()
     end
   end)
 
-  chance_registry.register("percent_pay_cash", function(game, player, card)
+  registry:register("percent_pay_cash", function(game, player, card)
     if card.target == "all" then
       for _, p in ipairs(game.players) do
         if not p.eliminated then
@@ -194,7 +191,7 @@ local function _register_defaults()
     end
   end)
 
-  chance_registry.register("pay_others", function(game, player, card)
+  registry:register("pay_others", function(game, player, card)
     for _, other in ipairs(game.players) do
       if other.id ~= player.id and not other.eliminated then
         local fee = card.amount
@@ -216,7 +213,7 @@ local function _register_defaults()
     })
   end)
 
-  chance_registry.register("collect_from_others", function(game, player, card)
+  registry:register("collect_from_others", function(game, player, card)
     for _, other in ipairs(game.players) do
       if other.id ~= player.id and not other.eliminated then
         local fee = card.amount
@@ -241,7 +238,7 @@ local function _register_defaults()
     })
   end)
 
-  chance_registry.register("set_vehicle", function(game, player, card)
+  registry:register("set_vehicle", function(game, player, card)
     if not vehicle_feature.is_enabled() then
       return
     end
@@ -255,7 +252,7 @@ local function _register_defaults()
     })
   end)
 
-  chance_registry.register("destroy_buildings_on_path", function(game, _, _, context)
+  registry:register("destroy_buildings_on_path", function(game, _, _, context)
     assert(context ~= nil and context.visited ~= nil, "missing context.visited")
     for _, idx in ipairs(context.visited) do
       local t = game.board:get_tile(idx)
@@ -272,7 +269,7 @@ local function _register_defaults()
     end
   end)
 
-  chance_registry.register("reset_tiles_on_path", function(game, _, _, context)
+  registry:register("reset_tiles_on_path", function(game, _, _, context)
     assert(context ~= nil and context.visited ~= nil, "missing context.visited")
     for _, idx in ipairs(context.visited) do
       local t = game.board:get_tile(idx)
@@ -295,7 +292,7 @@ local function _register_defaults()
     end
   end)
 
-  chance_registry.register("move_backward", function(game, player, card)
+  registry:register("move_backward", function(game, player, card)
     local res = _move_steps(game, player, -(card.steps or 0), {
       skip_steal_check = true,
       skip_market_check = true,
@@ -306,15 +303,15 @@ local function _register_defaults()
     return res
   end)
 
-  chance_registry.register("move_forward", function(game, player, card)
+  registry:register("move_forward", function(game, player, card)
     return _move_steps(game, player, card.steps or 0)
   end)
 
-  chance_registry.register("grant_item", function(game, player, card)
+  registry:register("grant_item", function(game, player, card)
     inventory.give(player, card.item_id, { game = game })
   end)
 
-  chance_registry.register("discard_items", function(game, player, card)
+  registry:register("discard_items", function(game, player, card)
     local to_drop = card.count
     if to_drop == 0 then
       to_drop = inventory.count(player)
@@ -344,7 +341,7 @@ local function _register_defaults()
     end
   end)
 
-  chance_registry.register("discard_properties", function(game, player, card)
+  registry:register("discard_properties", function(game, player, card)
     local to_drop = card.count
     local property_ids = {}
     for tile_id in pairs(player.properties or {}) do
@@ -377,7 +374,7 @@ local function _register_defaults()
     end
   end)
 
-  chance_registry.register("forced_move", function(game, player, card, context)
+  registry:register("forced_move", function(game, player, card, context)
     local from_index = player.position
     if card.destination_tile_id then
       local idx = game.board:index_of_tile_id(card.destination_tile_id)
@@ -426,16 +423,16 @@ local function _register_defaults()
   end)
 end
 
-function chance_registry.register(effect, handler)
-  handlers[effect] = handler
+function chance_registry:init()
+  self.handlers = {}
 end
 
-function chance_registry.register_defaults()
-  if defaults_registered then
-    return
-  end
-  defaults_registered = true
-  _register_defaults()
+function chance_registry:register(effect, handler)
+  self.handlers[effect] = handler
+end
+
+function chance_registry:register_defaults()
+  _register_defaults(self)
 end
 
 return chance_registry

@@ -86,7 +86,7 @@ function composition_root.assemble(opts, game_or_class)
     end
   end
 
-  bootstrap.ensure_defaults()
+  local registries = bootstrap.create_registries()
   local phases = phase_registry.build_default_phases()
   local game = game_or_class
   if type(game_or_class) == "table" and rawget(game_or_class, "__name") and rawget(game_or_class, "new") then
@@ -102,6 +102,8 @@ function composition_root.assemble(opts, game_or_class)
   game.turn.turn_start_prompt_player_id = first_player and first_player.id or nil
   game.dirty = dirty
   game.market_limits = _build_market_limits()
+  game.registries = registries
+  game.effect_registry = registries.effects
   game.rng = rng
   game.logger = logger
   game.finished = false
