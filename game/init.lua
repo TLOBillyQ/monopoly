@@ -1,12 +1,31 @@
 local bootstrap = require("game.bootstrap")
-local state = require("game.state")
+local state_turn = require("game.state.turn")
+local state_player = require("game.state.player")
+local state_tile = require("game.state.tile")
+local state_hospital = require("game.state.hospital")
 local win = require("game.rule.win")
 require "lib.third_party.ClassUtils"
 
 
 local game = Class("Game")
 
-for key, fn in pairs(state) do
+-- 注入 Turn 状态方法
+for key, fn in pairs(state_turn) do
+  game[key] = fn
+end
+
+-- 注入 Player 状态方法
+for key, fn in pairs(state_player) do
+  game[key] = fn
+end
+
+-- 注入 Tile 状态方法
+for key, fn in pairs(state_tile) do
+  game[key] = fn
+end
+
+-- 注入 Hospital/Mountain 方法
+for key, fn in pairs(state_hospital) do
   game[key] = fn
 end
 

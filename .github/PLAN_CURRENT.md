@@ -1,228 +1,69 @@
-# 彻底重构方案（参考 deepfuture）
+# Uncle Bob 审查后续：职责拆分计划
 
-参考 cloudwu/deepfuture 的游戏项目结构，采用直白功能命名。
+## 执行状态
 
-## 设计原则
+✅ **已完成**
 
-1. **直白命名** - 用 `game/` `visual/` `turn/` 替代抽象术语
-2. **无 lib/ 前缀** - 直接放在项目根目录
-3. **小写命名** - 目录和文件全小写，snake_case
-4. **适度 init.lua** - 按需使用，不强求
-5. **最大深度 3 层** - 消除深层嵌套
-6. **合并碎片化** - <300行合并，>500行保留子目录
+## 完成内容
 
-## 命名对照（旧 → 新）
+### 阶段 1：拆分 game/state.lua ✅
 
-| 原命名 | 新命名 | 理由 |
-|--------|--------|------|
-| `world/` | `game/` | 直白，游戏核心 |
-| `flow/` | `turn/` | 具体，表示回合流程 |
-| `ui/` | `visual/` | deepfuture 风格 |
-| `policy/` | `rule/` | 直白，游戏规则 |
-| `effect/` | `effect/` | 保留，已够简洁 |
-| `input/` | `control/` | 操控层 |
-
-## 目录映射（旧 → 新）
-
+创建了新目录结构：
 ```
-src/                                    → 删除
-├── app/init.lua                        → app.lua
-├── core/                               → core/
-│   ├── Logger.lua                      → logger.lua
-│   ├── Flow.lua                        → flow.lua
-│   ├── DirtyTracker.lua                → dirty.lua
-│   ├── NumberUtils.lua                 → math.lua
-│   ├── RuntimeContext.lua              → context.lua
-│   ├── RuntimeEnvBindings.lua          → env.lua
-│   └── RuntimeEditorExports.lua        → editor.lua
-├── game/core/runtime/                  → game/
-│   ├── Game.lua                        → init.lua (门面)
-│   ├── GameFactory.lua                 → factory.lua
-│   ├── bootstrap/CompositionRoot.lua   → bootstrap.lua
-│   ├── state/                          → state.lua (合并)
-│   ├── policies/                       → rule/
-│   └── events/MonopolyEvents.lua       → event.lua
-├── game/core/player/                   → game/
-│   ├── Player.lua                      → player.lua
-│   └── Inventory.lua                   → bag.lua (背包)
-├── game/systems/                       → game/
-│   ├── board/                          → board.lua + tile.lua
-│   ├── land/                           → land/
-│   ├── items/                          → item/
-│   ├── effects/                        → effect/
-│   ├── chance/                         → chance.lua
-│   ├── choices/                        → choice/
-│   ├── market/Market.lua               → shop.lua (商店)
-│   └── movement/Movement.lua           → move.lua
-├── game/flow/                          → turn/ (回合流程)
-│   ├── turn/GameplayLoop.lua           → init.lua
-│   ├── turn/GameplayLoopRuntime.lua    → runtime.lua
-│   ├── turn/TurnDispatch.lua           → dispatch.lua
-│   ├── turn/TurnFlow.lua               → phase.lua
-│   ├── intent/IntentDispatcher.lua     → intent.lua
-│   └── turn/Turn*.lua                  → step/*.lua
-└── presentation/                       → visual/
-    ├── api/                            → 合并到 init.lua
-    ├── state/                          → model.lua
-    ├── render/                         → render/
-    ├── interaction/                    → control/
-    └── ui/                             → widget/
+game/state/
+├── turn.lua      -- 回合状态（34行）
+├── player.lua    -- 玩家状态（223行）
+├── tile.lua      -- 地块状态（59行）
+└── hospital.lua  -- 特殊地点效果（61行）
 ```
 
-## 新目录结构
+**已删除 `game/state.lua` facade 文件**。
 
-```
-.
-├── core/                   -- 基础设施层
-│   ├── logger.lua
-│   ├── flow.lua
-│   ├── dirty.lua
-│   ├── math.lua
-│   ├── context.lua
-│   ├── env.lua
-│   └── editor.lua
-├── game/                   -- 游戏核心层
-│   ├── init.lua            -- 游戏门面 (原 Game.lua)
-│   ├── player.lua
-│   ├── bag.lua             -- 背包系统 (原 Inventory)
-│   ├── factory.lua
-│   ├── bootstrap.lua
-│   ├── event.lua
-│   ├── state.lua           -- 聚合 state
-│   ├── board.lua
-│   ├── tile.lua
-│   ├── shop.lua            -- 商店 (原 Market)
-│   ├── move.lua
-│   ├── rule/               -- 游戏规则
-│   │   ├── agent.lua
-│   │   ├── target.lua
-│   │   ├── bankrupt.lua
-│   │   └── win.lua         -- 胜利条件
-│   ├── land/               -- 土地系统
-│   │   ├── init.lua
-│   │   ├── rule.lua
-│   │   ├── price.lua
-│   │   ├── action.lua
-│   │   └── effect.lua
-│   ├── item/               -- 道具系统
-│   │   ├── init.lua
-│   │   ├── registry.lua
-│   │   ├── executor.lua
-│   │   ├── strategy.lua
-│   │   ├── phase.lua
-│   │   ├── post.lua
-│   │   └── handler/
-│   │       ├── init.lua
-│   │       ├── demolish.lua
-│   │       ├── steal.lua
-│   │       ├── roadblock.lua
-│   │       └── dice.lua    -- 遥控骰子
-│   └── effect/             -- 效果系统
-│       ├── pipeline.lua
-│       ├── executor.lua
-│       ├── runner.lua
-│       └── mine.lua
-├── turn/                   -- 回合流程层
-│   ├── init.lua            -- gameplay loop
-│   ├── runtime.lua
-│   ├── dispatch.lua
-│   ├── intent.lua
-│   ├── auto.lua
-│   ├── phase.lua           -- 回合阶段
-│   └── step/               -- 回合步骤
-│       ├── begin.lua       -- 回合开始
-│       ├── roll.lua        -- 掷骰
-│       ├── walk.lua        -- 移动
-│       ├── arrive.lua      -- 落地
-│       ├── decide.lua      -- 决策
-│       ├── wait.lua
-│       ├── anim.lua
-│       └── log.lua
-├── chance.lua              -- 机会卡
-├── choice/                 -- 选择系统
-│   ├── init.lua            -- registry
-│   ├── resolve.lua
-│   └── handler.lua
-├── visual/                 -- 视觉表现层
-│   ├── init.lua            -- view + ports
-│   ├── model.lua           -- ui model
-│   ├── render/             -- 场景渲染
-│   │   ├── board.lua
-│   │   ├── tile.lua
-│   │   ├── move.lua
-│   │   ├── action.lua
-│   │   └── effect.lua
-│   ├── control/            -- 输入控制
-│   │   ├── router.lua
-│   │   ├── dispatch.lua
-│   │   ├── intent.lua
-│   │   ├── builder.lua
-│   │   └── policy.lua
-│   └── widget/             -- UI组件
-│       ├── panel.lua
-│       ├── modal.lua
-│       └── choice.lua
-├── app.lua                 -- 应用组装
-└── main.lua                -- 入口
-```
-
-## Require 路径对比
-
-| 旧路径 | 新路径 | 说明 |
-|--------|--------|------|
-| `src.game.core.runtime.Game` | `game` | 门面直接用目录名 |
-| `src.game.core.runtime.bootstrap.CompositionRoot` | `game.bootstrap` | 扁平 |
-| `src.game.flow.turn.GameplayLoop` | `turn` | 简洁 |
-| `src.game.flow.turn.TurnDispatch` | `turn.dispatch` | 去重复 |
-| `src.presentation.api.UIView` | `visual` | 直白 |
-| `src.presentation.interaction.UIEventRouter` | `visual.control.router` | 操控层 |
-| `src.core.Logger` | `core.logger` | 一致 |
-| `src.game.systems.market.Market` | `game.shop` | 商店 |
-| `src.game.core.player.Inventory` | `game.bag` | 背包 |
-
-## 文件合并原则
-
-- **<300行且职责紧密** → 合并
-- **>500行或处理器多** → 保留子目录
-
-## 具体合并
-
-| 原文件 | 新文件 | 行数 |
-|--------|--------|------|
-| state/*4个 | game/state.lua | ~300 |
-| chance/*2个 | chance.lua | 469 |
-| choice/*4个 | choice/*.lua | 550 |
-| item/handler/* | item/handler/*.lua | 686 |
-
-## 包路径配置
-
+`game/init.lua` 改为直接引入子模块：
 ```lua
--- main.lua
-package.path = "?.lua;?/init.lua;" .. package.path
-
-local app = require "app"
-app.start()
+local state_turn = require("game.state.turn")
+local state_player = require("game.state.player")
+local state_tile = require("game.state.tile")
+local state_hospital = require("game.state.hospital")
 ```
 
-## 迁移步骤
+### 阶段 2：拆分 visual/model.lua ✅
 
-1. **创建新目录** - core/, game/, turn/, visual/
-2. **迁移 core/**
-3. **迁移 game/**
-4. **迁移 turn/**
-5. **迁移 visual/**
-6. **创建 app.lua**
-7. **更新 main.lua**
-8. **测试**
-9. **删除 src/**
+创建了新目录结构：
+```
+visual/model/
+├── projection.lua    -- 数据投影（159行）
+├── panel.lua         -- 面板构建（50行）
+├── avatar.lua        -- 头像处理（57行）
+└── context.lua       -- 角色上下文（42行）
+```
 
-## 深度对比
+保留 `visual/model.lua` 作为协调器（非 facade），因其 `build/update` 函数确实需要协调多个子模块。
 
-| 路径 | 旧深度 | 新深度 |
-|------|--------|--------|
-| CompositionRoot | 5 | 2 |
-| GameplayLoop | 5 | 2 |
-| UIEventRouter | 5 | 3 |
-| ItemDemolish | 5 | 3 |
-| GameStateTurn | 5 | 2 |
-| Market | 4 | 2 |
+### 测试回归 ✅
+
+- [x] 依赖规则检查通过
+- [x] 完整测试套件通过（Exit code: 0）
+
+## 收益
+
+| 文件 | 拆分前行数 | 拆分后行数 | 职责数 |
+|------|-----------|-----------|--------|
+| game/state.lua | 456 | 已删除 | - |
+| game/state/*.lua | - | 各 34-223 | 各 1 个职责 |
+| visual/model.lua | 480 | 183（协调器）| 1（协调器）|
+| visual/model/*.lua | - | 各 42-159 | 各 1 个职责 |
+
+**符合 CODING.md 第 4 节**：单文件不超过 300 行。
+
+## 架构改进
+
+1. **SRP 遵守**：每个子模块只有一个修改理由
+2. **依赖显式**：调用者必须明确依赖具体子模块，无隐藏依赖
+3. **测试覆盖**：所有现有测试通过，无需修改
+4. **依赖清晰**：子模块间无循环依赖
+
+## 后续建议（可选）
+
+- P2 级问题：消除全局变量（vehicle_helper, camera_helper）
+- P3 级问题：函数重复代码提取
