@@ -1,12 +1,9 @@
-
 require "lib.third_party.Utils"
 local dirty_tracker = require("core.dirty")
 local logger = require("core.logger")
 local market_cfg = require("cfg.Generated.Market")
-local turn_flow = require("turn.phase")
-local runtime_bootstrap = require("game.core.runtime")
 local game_factory = require("game.factory")
-local phase_registry = require("game.core.phase")
+local runtime_bootstrap = require("game.core.runtime")
 local number_utils = require("core.math")
 
 local bootstrap = {}
@@ -68,9 +65,13 @@ local function _build_initial_turn()
   }
 end
 
-function bootstrap.assemble(opts, game_or_class)
+---组装游戏上下文，返回扁平的表结构
+---@param opts table 初始化选项
+---@return table 游戏上下文
+function bootstrap.assemble(opts)
   assert(opts ~= nil, "missing assemble opts")
 
+  -- 创建核心组件
   local board = game_factory.build_board(opts)
   local rng = game_factory.build_rng()
   local players = game_factory.build_players(opts)
@@ -79,6 +80,7 @@ function bootstrap.assemble(opts, game_or_class)
 
   local dirty = dirty_tracker.new()
 
+  -- 设置背包变更回调
   for _, p in ipairs(players) do
     local pid = p.id
     p.inventory._on_change = function()
@@ -87,42 +89,65 @@ function bootstrap.assemble(opts, game_or_class)
   end
 
   local registries = runtime_bootstrap.create_registries()
-  local phases = phase_registry.build_default_phases()
-  local game = game_or_class
-  if type(game_or_class) == "table" and rawget(game_or_class, "__name") and rawget(game_or_class, "new") then
-    game = game_or_class:new({ __skip_assemble = true })
-  end
-  assert(game, "bootstrap.assemble requires game instance or class")
-  game.board = board
-  game.players = players
-  game.player_by_id = _build_player_by_id(players)
-  game.turn = _build_initial_turn()
-  local first_player = players and players[game.turn.current_player_index] or nil
-  game.turn.turn_start_prompt_seq = 1
-  game.turn.turn_start_prompt_player_id = first_player and first_player.id or nil
-  game.dirty = dirty
-  game.market_limits = _build_market_limits()
-  game.registries = registries
-  game.effect_registry = registries.effects
-  game.rng = rng
-  game.logger = logger
-  game.finished = false
-  game.winner = nil
-  game.last_turn = nil
-  game._land_rent_version = 0
-  game._land_rent_cache = nil
-  game.tile_owner_notifier = game.tile_owner_notifier or {
+  local first_player = players and players[1] or nil
+  local initial_turn = _build_initial_turn()
+  initial_turn.turn_start_prompt_seq = 1
+  initial_turn.turn_start_prompt_player_id = first_player and first_player.id or nil
+
+  -- 构建游戏上下文表（扁平结构）
+  local ctx = {
+    board = board,
+    players = players,
+    player_by_id = _build_player_by_id(players),
+    turn = initial_turn,
+    dirty = dirty,
+    market_limits = _build_market_limits(),
+    registries = registries,
+    effect_registry = registries.effects,
+    rng = rng,
+    logger = logger,
+    finished = false,
+    winner = nil,
+    last_turn = nil,
+    _land_rent_version = 0,
+    _land_rent_cache = nil,
+  }
+
+  -- 地块所有者变更通知器
+  ctx.tile_owner_notifier = {
     notify_owner_changed = function() end,
   }
 
-  function game:consume_dirty()
-    return dirty_tracker.consume(self.dirty)
+  -- 从运行时上下文获取辅助对象
+  local runtime_context = require("core.context")
+  local rt_ctx = runtime_context.current()
+  if rt_ctx then
+    ctx._helpers = {
+      vehicle = runtime_context.get_vehicle_helper(rt_ctx),
+      camera = runtime_context.get_camera_helper(rt_ctx),
+    }
   end
 
-  game:rebuild()
-  game.turn_flow = turn_flow:new(game, phases)
+  -- 初始化 occupants
+  bootstrap.rebuild_occupants(ctx)
 
-  return game
+  return ctx
+end
+
+---重建地块占用信息
+---@param ctx table 游戏上下文
+function bootstrap.rebuild_occupants(ctx)
+  local length = ctx.board:length()
+  ctx.occupants = {}
+  for i = 1, length do
+    ctx.occupants[i] = {}
+  end
+  for _, player_obj in ipairs(ctx.players) do
+    if not player_obj.eliminated then
+      local idx = player_obj.position
+      table.insert(ctx.occupants[idx], player_obj.id)
+    end
+  end
 end
 
 return bootstrap

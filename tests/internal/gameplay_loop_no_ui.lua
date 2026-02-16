@@ -70,13 +70,14 @@ local state = {
   auto_runner = { set_enabled = noop, reset_timer = noop, next_action = function() end },
 }
 
-local game = app:new({
+app.setup({
   players = { "玩家1", "玩家2", "玩家3", "玩家4" },
   ai = {},
   auto_all = false,
   map = map_cfg,
   tiles = tiles_cfg,
 })
+local game = app
 
 gameplay_loop.set_game(state, game)
 gameplay_loop.tick(game, state, 0.1)

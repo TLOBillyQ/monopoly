@@ -32,6 +32,14 @@ local function _mark_players(self)
   self.dirty.players = true
 end
 
+local function _vehicle_helper(self)
+  if self._helpers and self._helpers.vehicle then
+    return self._helpers.vehicle
+  end
+  -- 回退：兼容旧测试代码（全局变量）
+  return _G.vehicle_helper or nil
+end
+
 function player.set_player_status(self, player_obj, key, value)
   local status = _player_status_table(player_obj)
   status[key] = value
@@ -47,14 +55,15 @@ function player.set_player_seat(self, player_obj, seat_id)
   end
 
   local old_seat_id = player_obj.seat_id
-  if old_seat_id ~= seat_id and vehicle_helper then
-    if old_seat_id ~= nil and vehicle_helper.forward_eca_event_exit then
-      vehicle_helper.forward_eca_event_exit(player_obj.id)
+  local vh = _vehicle_helper(self)
+  if old_seat_id ~= seat_id and vh then
+    if old_seat_id ~= nil and vh.forward_eca_event_exit then
+      vh.forward_eca_event_exit(player_obj.id)
     end
-    if seat_id ~= nil and vehicle_helper.forward_eca_event_enter then
-      vehicle_helper.forward_eca_event_enter(player_obj.id, seat_id)
-      if vehicle_helper.needs_enter_wait_by_player then
-        vehicle_helper.needs_enter_wait_by_player[player_obj.id] = true
+    if seat_id ~= nil and vh.forward_eca_event_enter then
+      vh.forward_eca_event_enter(player_obj.id, seat_id)
+      if vh.needs_enter_wait_by_player then
+        vh.needs_enter_wait_by_player[player_obj.id] = true
       end
     end
   end
@@ -181,6 +190,7 @@ end
 function player.stop_all_players_movement(self)
   local players = self.players or {}
   local players_dirty = false
+  local vh = _vehicle_helper(self)
   for _, player_obj in ipairs(players) do
     local status = _player_status_table(player_obj)
     if status.move_dir ~= nil then
@@ -188,13 +198,13 @@ function player.stop_all_players_movement(self)
       players_dirty = true
     end
     local seat_id = vehicle_feature.resolve_seat_id(player_obj.seat_id)
-    if vehicle_helper and vehicle_helper.forward_eca_event_stop and seat_id ~= nil then
+    if vh and vh.forward_eca_event_stop and seat_id ~= nil then
       local role_ok = true
-      if vehicle_helper.resolve_role then
-        role_ok = vehicle_helper.resolve_role(player_obj.id) ~= nil
+      if vh.resolve_role then
+        role_ok = vh.resolve_role(player_obj.id) ~= nil
       end
       if role_ok then
-        vehicle_helper.forward_eca_event_stop(player_obj.id)
+        vh.forward_eca_event_stop(player_obj.id)
       end
     end
   end
@@ -282,6 +292,21 @@ function player.update_player_position(self, player_obj, new_index)
   _mark_players(self)
   self.occupants[new_index] = self.occupants[new_index] or {}
   table.insert(self.occupants[new_index], player_obj.id)
+end
+
+function player.rebuild(game)
+  local length = game.board:length()
+  game.occupants = {}
+  for i = 1, length do
+    game.occupants[i] = {}
+  end
+  for _, player_obj in ipairs(game.players) do
+    if not player_obj.eliminated then
+      local idx = player_obj.position
+      player_obj.position = idx
+      table.insert(game.occupants[idx], player_obj.id)
+    end
+  end
 end
 
 return player

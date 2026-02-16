@@ -117,24 +117,26 @@ local function _build_state()
       local forced_ai = _build_non_p1_ai_map(#role_roster)
       if #role_roster > 0 then
         logger.info("[Eggy]", "使用角色驱动初始化，角色数量:", tostring(#role_roster))
-        return game:new({
+          game.setup({
           role_roster = role_roster,
           ai = forced_ai,
           auto_all = false,
           map = map_cfg,
           tiles = tiles_cfg,
         })
+        return game
       end
       logger.warn("[Eggy]", "角色列表为空，回退调试玩家初始化")
       local player_names = { "玩家1", "AI2", "AI3", "AI4" }
       local fallback_ai = _build_non_p1_ai_map(#player_names) or { [2] = true, [3] = true, [4] = true }
-      return game:new({
+      game.setup({
         players = player_names,
         ai = fallback_ai,
         auto_all = false,
         map = map_cfg,
         tiles = tiles_cfg,
       })
+      return game
     end,
     auto_runner = auto_runner:new({ interval = ui.auto_interval }),
     tile_units = nil,

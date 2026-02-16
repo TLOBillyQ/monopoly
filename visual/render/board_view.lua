@@ -267,7 +267,17 @@ local function _calc_slot_offset(slot, count, spacing)
   return ox, oz
 end
 
+local function _vehicle_helper_from_state(state)
+  local game = state and state.game or nil
+  if game and game._helpers and game._helpers.vehicle then
+    return game._helpers.vehicle
+  end
+  -- 回退：兼容旧测试代码（全局变量）
+  return _G.vehicle_helper or nil
+end
+
 local function _place_players(state, players, occupants, spacing, min_player_y)
+  local vh = _vehicle_helper_from_state(state)
   _each_player(players, function(player, i)
     if not player.eliminated then
       local idx, base, pid = _resolve_active_player_base(state, player, i)
@@ -283,8 +293,8 @@ local function _place_players(state, players, occupants, spacing, min_player_y)
       local ox, oz = _calc_slot_offset(slot, count, spacing)
       local target_pos = base + math.Vector3(ox, y_offset, oz)
       local seat_id = vehicle_feature.resolve_seat_id(player.seat_id)
-      if seat_id and vehicle_helper and vehicle_helper.forward_eca_event_set_position then
-        vehicle_helper.forward_eca_event_set_position(pid, target_pos)
+      if seat_id and vh and vh.forward_eca_event_set_position then
+        vh.forward_eca_event_set_position(pid, target_pos)
       else
         assert(unit.set_position ~= nil, "missing unit.set_position: " .. tostring(pid))
         unit.set_position(target_pos)

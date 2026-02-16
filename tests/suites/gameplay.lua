@@ -580,13 +580,14 @@ local function _test_autorunner_runs_to_end()
   local land_actions = require("game.land.action")
   local item_inventory = require("game.item.inventory")
 
-  local g = app:new({
+  app.setup({
     players = { "P1", "P2", "P3", "P4" },
     ai = { [2] = true, [3] = true, [4] = true },
     auto_all = true,
     map = map_cfg,
     tiles = tiles_cfg,
   })
+  local g = app
   g.ui_port = _build_ui_port()
 
   local state = {

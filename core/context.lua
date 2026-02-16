@@ -227,6 +227,7 @@ function context.install_runtime_helpers(ctx)
     ctx.camera_helper = { target_role_id = 1 }
   end
 
+  -- 导出全局变量（向后兼容：编辑器导出和测试依赖）
   vehicle_helper = ctx.vehicle_helper
   camera_helper = ctx.camera_helper
 
@@ -235,6 +236,16 @@ function context.install_runtime_helpers(ctx)
   end
   all_roles = ctx.roles
   ALLROLES = ctx.roles
+end
+
+function context.get_vehicle_helper(ctx)
+  assert(ctx ~= nil, "missing runtime context")
+  return ctx.vehicle_helper
+end
+
+function context.get_camera_helper(ctx)
+  assert(ctx ~= nil, "missing runtime context")
+  return ctx.camera_helper
 end
 
 function context.install_editor_exports(ctx)

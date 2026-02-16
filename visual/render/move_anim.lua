@@ -62,22 +62,32 @@ local function _is_vehicle_anim(anim_ctx)
   return vehicle_feature.resolve_seat_id(anim_ctx.vehicle_id) ~= nil
 end
 
+local function _vehicle_helper(anim_ctx)
+  if anim_ctx and anim_ctx.vehicle_helper then
+    return anim_ctx.vehicle_helper
+  end
+  -- 回退：兼容旧测试代码（全局变量）
+  return _G.vehicle_helper or nil
+end
+
 local function _is_vehicle_move_mode(anim_ctx)
+  local vh = _vehicle_helper(anim_ctx)
   return anim_ctx
     and _is_vehicle_anim(anim_ctx)
     and runtime_constants.vehicle_move_api_enabled == true
-    and vehicle_helper
-    and vehicle_helper.forward_eca_event_move
+    and vh
+    and vh.forward_eca_event_move
     and true
     or false
 end
 
 local function _is_vehicle_jump_mode(anim_ctx)
+  local vh = _vehicle_helper(anim_ctx)
   return anim_ctx
     and _is_vehicle_anim(anim_ctx)
     and runtime_constants.vehicle_move_api_enabled ~= true
-    and vehicle_helper
-    and vehicle_helper.forward_eca_event_set_position
+    and vh
+    and vh.forward_eca_event_set_position
     and true
     or false
 end
@@ -107,14 +117,15 @@ function move_anim.one_step(scene, player_id, from_index, to_index, anim_ctx)
       anim_ctx.on_step_lock(true, time, meta)
     end)
   end
+  local vh = _vehicle_helper(anim_ctx)
   if _is_vehicle_jump_mode(anim_ctx) then
     local end_tile = scene.tiles[to_index]
     local target_pos = end_tile.get_position()
-    vehicle_helper.forward_eca_event_set_position(player_id, target_pos)
+    vh.forward_eca_event_set_position(player_id, target_pos)
     return time
   end
   if _is_vehicle_move_mode(anim_ctx) then
-    vehicle_helper.forward_eca_event_move(player_id, step_dir, time)
+    vh.forward_eca_event_move(player_id, step_dir, time)
     return time
   end
   local unit = scene.units_by_player_id[player_id]
@@ -173,10 +184,11 @@ local function _consume_enter_delay(anim_ctx, player_id)
   if vehicle_id == nil then
     return 0
   end
-  if not (vehicle_helper and vehicle_helper.consume_enter_delay) then
+  local vh = _vehicle_helper(anim_ctx)
+  if not (vh and vh.consume_enter_delay) then
     return 0
   end
-  return vehicle_helper.consume_enter_delay(player_id, vehicle_id) or 0
+  return vh.consume_enter_delay(player_id, vehicle_id) or 0
 end
 
 function move_anim.play_sequence(board_scene, anim_ctx)

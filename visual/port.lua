@@ -106,6 +106,10 @@ local function _default_play_move_anim(state, anim_ctx)
       end
       _apply_role_control_lock_suppress(state, enabled, _default_apply_role_control_lock)
     end
+    if not anim_ctx.vehicle_helper then
+      local game = state and state.game or nil
+      anim_ctx.vehicle_helper = game and game._helpers and game._helpers.vehicle or nil
+    end
   end
   return move_anim.play_sequence(state.board_scene, anim_ctx)
 end
@@ -160,6 +164,7 @@ local function _default_refresh_from_dirty(game, state, dirty)
       local current_id = assert(current.id, "missing current player id")
       assert(GameAPI ~= nil and GameAPI.get_role ~= nil, "missing GameAPI.get_role")
 
+      local camera_helper = (game._helpers and game._helpers.camera) or _G.camera_helper or nil
       local follow_ready = camera_helper
         and runtime_constants
         and runtime_constants.eca_event
