@@ -1,4 +1,4 @@
-local agent = require("src.game.core.runtime.Agent")
+local agent = require("src.game.core.runtime.policies.Agent")
 local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("Config.GameplayRules")
 local turn_dispatch = require("src.game.flow.turn.TurnDispatch")

@@ -1,4 +1,4 @@
-local agent_targeting = require("src.game.core.runtime.AgentTargeting")
+local agent_targeting = require("src.game.core.runtime.policies.AgentTargeting")
 
 local agent = {}
 

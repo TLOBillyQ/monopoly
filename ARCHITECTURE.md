@@ -17,7 +17,7 @@
 - `main.lua`：唯一入口，加载应用初始化。
 - `src/app/init.lua`：应用装配层。负责运行时注入、状态构建、事件注册、定时 tick 启动。
 - `src/game/core/runtime/`：领域运行时核心。
-  - `CompositionRoot.lua`：组装 `board/players/turn/dirty/turn_flow`。
+  - `bootstrap/CompositionRoot.lua`：组装 `board/players/turn/dirty/turn_flow`。
   - `Game.lua`：领域门面，暴露 `advance_turn`、`dispatch_action`。
 - `src/game/flow/turn/`：回合流程层。
   - `GameplayLoop.lua`：每帧调度中枢。
@@ -54,7 +54,7 @@ graph TD
   D --> E
 
   H --> J[src/game/core/runtime/Game.lua]
-  J --> K[src/game/core/runtime/CompositionRoot.lua]
+  J --> K[src/game/core/runtime/bootstrap/CompositionRoot.lua]
 
   D --> L[src/presentation/state/UIModel.lua]
   L --> M[src/presentation/state/UIModelProjection.lua]
@@ -115,7 +115,7 @@ sequenceDiagram
 - `Game`（`src/game/core/runtime/Game.lua`）
   - 领域门面，控制回合推进与动作分发。
   - 生命周期由 `CompositionRoot.assemble` 完成实体装配。
-- `GameVictory`（`src/game/core/runtime/GameVictory.lua`）
+- `GameVictory`（`src/game/core/runtime/policies/GameVictory.lua`）
   - 仅负责胜负计算与领域状态更新；通过 `MonopolyEvents.game.finished` 发出结算事件。
 - `turn`（在 `CompositionRoot.lua` 初始化）
   - 持有回合态：`current_player_index`、`phase`、`pending_choice`、动画序列、计时字段等。
@@ -149,7 +149,7 @@ sequenceDiagram
 
 1. `main.lua`：确认入口极简。
 2. `src/app/init.lua`：看初始化装配、事件绑定、tick 启动。
-3. `src/game/core/runtime/CompositionRoot.lua` 与 `src/game/core/runtime/Game.lua`：理解领域对象如何组装与推进。
+3. `src/game/core/runtime/bootstrap/CompositionRoot.lua` 与 `src/game/core/runtime/Game.lua`：理解领域对象如何组装与推进。
 4. `src/game/flow/turn/GameplayLoop.lua`：把握每帧做什么。
 5. `src/game/flow/turn/GameplayLoopRuntime.lua` 与 `src/game/flow/turn/TurnDispatch.lua`：理解输入锁、超时、动作落地。
 6. `src/presentation/interaction/UIEventRouter.lua`：理解 UI 点击如何变成 intent/action。

@@ -1,4 +1,4 @@
-local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
+local monopoly_event = require("src.game.core.runtime.events.MonopolyEvents")
 
 local intent_dispatcher = {}
 local emit = monopoly_event.emit

@@ -1,5 +1,5 @@
 local logger = require("src.core.Logger")
-local agent = require("src.game.core.runtime.Agent")
+local agent = require("src.game.core.runtime.policies.Agent")
 local inventory = require("src.game.systems.items.ItemInventory")
 local gameplay_rules = require("Config.GameplayRules")
 local number_utils = require("src.core.NumberUtils")

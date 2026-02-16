@@ -15,7 +15,7 @@ local steal = require("src.game.systems.items.ItemSteal")
 local market = require("src.game.systems.market.Market")
 local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
 local number_utils = require("src.core.NumberUtils")
-local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
+local monopoly_event = require("src.game.core.runtime.events.MonopolyEvents")
 
 local landing_effect_executors = {}
 

@@ -1,5 +1,5 @@
 local item_effects = require("src.game.systems.items.ItemPostEffects")
-local agent = require("src.game.core.runtime.Agent")
+local agent = require("src.game.core.runtime.policies.Agent")
 local inventory = require("src.game.systems.items.ItemInventory")
 local gameplay_rules = require("Config.GameplayRules")
 

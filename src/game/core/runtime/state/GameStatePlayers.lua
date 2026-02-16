@@ -2,7 +2,7 @@ local constants = require("Config.Generated.Constants")
 local vehicles_cfg = require("Config.Generated.Vehicles")
 local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
 local logger = require("src.core.Logger")
-local bankruptcy = require("src.game.core.runtime.Bankruptcy")
+local bankruptcy = require("src.game.core.runtime.policies.Bankruptcy")
 
 local game_state_players = {}
 

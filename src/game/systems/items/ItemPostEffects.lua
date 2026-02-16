@@ -3,7 +3,7 @@ local constants = require("Config.Generated.Constants")
 local board_utils = require("src.game.systems.land.LandBoardUtils")
 local inventory = require("src.game.systems.items.ItemInventory")
 local gameplay_rules = require("Config.GameplayRules")
-local bankruptcy = require("src.game.core.runtime.Bankruptcy")
+local bankruptcy = require("src.game.core.runtime.policies.Bankruptcy")
 
 local item_effects = {}
 local item_ids = gameplay_rules.item_ids

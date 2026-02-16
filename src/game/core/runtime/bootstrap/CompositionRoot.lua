@@ -4,9 +4,9 @@ local dirty_tracker = require("src.core.DirtyTracker")
 local logger = require("src.core.Logger")
 local market_cfg = require("Config.Generated.Market")
 local turn_flow = require("src.game.flow.turn.TurnFlow")
-local bootstrap = require("src.game.core.runtime.Bootstrap")
+local bootstrap = require("src.game.core.runtime.bootstrap.Bootstrap")
 local game_factory = require("src.game.core.runtime.GameFactory")
-local phase_registry = require("src.game.core.runtime.PhaseRegistry")
+local phase_registry = require("src.game.core.runtime.bootstrap.PhaseRegistry")
 local number_utils = require("src.core.NumberUtils")
 
 local composition_root = {}

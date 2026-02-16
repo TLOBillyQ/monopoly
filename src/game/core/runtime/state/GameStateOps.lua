@@ -1,6 +1,6 @@
-local game_state_players = require("src.game.core.runtime.GameStatePlayers")
-local game_state_tiles = require("src.game.core.runtime.GameStateTiles")
-local game_state_turn = require("src.game.core.runtime.GameStateTurn")
+local game_state_players = require("src.game.core.runtime.state.GameStatePlayers")
+local game_state_tiles = require("src.game.core.runtime.state.GameStateTiles")
+local game_state_turn = require("src.game.core.runtime.state.GameStateTurn")
 
 local game_state_ops = {}
 

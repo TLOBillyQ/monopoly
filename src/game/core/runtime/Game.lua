@@ -1,6 +1,6 @@
-local composition_root = require("src.game.core.runtime.CompositionRoot")
-local game_state_ops = require("src.game.core.runtime.GameStateOps")
-local game_victory = require("src.game.core.runtime.GameVictory")
+local composition_root = require("src.game.core.runtime.bootstrap.CompositionRoot")
+local game_state_ops = require("src.game.core.runtime.state.GameStateOps")
+local game_victory = require("src.game.core.runtime.policies.GameVictory")
 require "vendor.third_party.ClassUtils"
 
 

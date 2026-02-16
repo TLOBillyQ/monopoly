@@ -1,6 +1,6 @@
 local items_cfg = require("Config.Generated.Items")
 local gameplay_rules = require("Config.GameplayRules")
-local agent = require("src.game.core.runtime.Agent")
+local agent = require("src.game.core.runtime.policies.Agent")
 local strategy = require("src.game.systems.items.ItemStrategy")
 local inventory = require("src.game.systems.items.ItemInventory")
 local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")

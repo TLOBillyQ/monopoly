@@ -1,4 +1,4 @@
-local agent = require("src.game.core.runtime.Agent")
+local agent = require("src.game.core.runtime.policies.Agent")
 local item_effects = require("src.game.systems.items.ItemPostEffects")
 local gameplay_rules = require("Config.GameplayRules")
 local logger = require("src.core.Logger")

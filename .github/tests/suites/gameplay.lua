@@ -574,7 +574,7 @@ end
 
 local function _test_autorunner_runs_to_end()
   local auto_runner = require("src.game.flow.turn.AutoRunner")
-  local agent = require("src.game.core.runtime.Agent")
+  local agent = require("src.game.core.runtime.policies.Agent")
   local gameplay_rules = require("Config.GameplayRules")
   local land = require("src.game.systems.land.LandingEffectExecutors")
   local land_actions = require("src.game.systems.land.LandActions")

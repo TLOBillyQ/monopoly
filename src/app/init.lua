@@ -8,11 +8,11 @@ runtime_context.set_current(runtime_ctx)
 runtime_context.install_environment(runtime_ctx)
 runtime_context.install_runtime_helpers(runtime_ctx)
 runtime_context.install_editor_exports(runtime_ctx)
-require "src.game.core.runtime.Bankruptcy"
-require "src.game.core.runtime.AgentTargeting"
-require "src.game.core.runtime.Agent"
-require "src.game.core.runtime.GameVictory"
-require "src.game.core.runtime.CompositionRoot"
+require "src.game.core.runtime.policies.Bankruptcy"
+require "src.game.core.runtime.policies.AgentTargeting"
+require "src.game.core.runtime.policies.Agent"
+require "src.game.core.runtime.policies.GameVictory"
+require "src.game.core.runtime.bootstrap.CompositionRoot"
 
 local auto_runner = require("src.game.flow.turn.AutoRunner")
 local board_scene = require("src.presentation.render.BoardScene")
@@ -29,7 +29,7 @@ local tiles_cfg = require("Config.Generated.Tiles")
 local gameplay_rules = require("Config.GameplayRules")
 local ui_events = require("src.presentation.shared.UIEvents")
 local logger = require("src.core.Logger")
-local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
+local monopoly_event = require("src.game.core.runtime.events.MonopolyEvents")
 
 logger.configure_game_time()
 
