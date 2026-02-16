@@ -1,0 +1,66 @@
+local land_choice_specs = require("game.land.choice_spec")
+local inventory = require("game.item.inventory")
+local gameplay_rules = require("cfg.GameplayRules")
+local intent_dispatcher = require("turn.intent")
+
+local land_choice_handler = {}
+local item_ids = gameplay_rules.item_ids
+
+function land_choice_handler.build(helpers)
+  local is_cancel = helpers.is_cancel
+  local finish_choice = helpers.finish_choice
+  local land_actions = require("game.land.action")
+
+  local function _handle_rent_prompt(game, choice, action)
+    local meta = choice.meta
+    local player_id = meta.player_id
+    local tile_id = meta.tile_id
+    local card_kind = meta.card_kind
+
+    assert(action ~= nil, "missing action")
+    local use_card = (action.option_id == "use") and not is_cancel(action)
+
+    if use_card and card_kind == "strong" then
+      land_actions.execute_strong_card(game, player_id, tile_id)
+    elseif use_card and card_kind == "free" then
+      land_actions.execute_free_card(game, player_id, tile_id)
+    else
+      if card_kind == "strong" then
+        local player = assert(game:find_player_by_id(player_id), "missing player: " .. tostring(player_id))
+        if inventory.find_index(player, item_ids.free_rent) then
+          intent_dispatcher.dispatch(game, {
+            kind = "need_choice",
+            choice_spec = land_choice_specs.rent_prompt(player_id, tile_id, "free"),
+          })
+          return { stay = true }
+        end
+      end
+      land_actions.execute_pay_rent(game, player_id, tile_id)
+    end
+
+    return finish_choice(game, false)
+  end
+
+  local function _handle_tax_prompt(game, choice, action)
+    local meta = choice.meta
+    local player_id = meta.player_id
+
+    assert(action ~= nil, "missing action")
+    local use_card = (action.option_id == "use") and not is_cancel(action)
+
+    if use_card then
+      land_actions.execute_tax_free_card(game, player_id)
+    else
+      land_actions.execute_pay_tax(game, player_id)
+    end
+
+    return finish_choice(game, false)
+  end
+
+  return {
+    rent_card_prompt = _handle_rent_prompt,
+    tax_card_prompt = _handle_tax_prompt,
+  }
+end
+
+return land_choice_handler

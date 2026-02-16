@@ -1,1 +1,1 @@
-require "src.app.init"
+require "app"
