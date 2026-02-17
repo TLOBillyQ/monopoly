@@ -13,9 +13,9 @@
 - `tests/specs/contract/`：边界契约。
 - `tests/specs/integration/`：跨模块 tick 行为。
 - `tests/specs/regression/`：高价值回归链路。
-- `tests/suites/`：历史 suite 源文件；由 `tests/specs/regression/suites_migrated_spec.lua` 统一桥接为 spec 执行。
+- `tests/specs/regression/legacy_src/`：迁移期 suite 源文件；由 `tests/specs/regression/suites_migrated_spec.lua` 统一桥接为 spec 执行。
 
-已删除：`*_registry.lua` 与切片 suite（`gameplay_core/runtime/loop`、`presentation_ui_*` 切片文件）。
+已删除：`tests/suites/` 目录、`*_registry.lua` 与切片 suite（`gameplay_core/runtime/loop`、`presentation_ui_*` 切片文件）。
 
 ## 运行
 

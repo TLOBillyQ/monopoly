@@ -35,17 +35,17 @@ local function _build_spec(module_name)
 end
 
 local modules = {
-  "chance",
-  "land",
-  "item",
-  "movement",
-  "landing",
-  "market",
-  "paid_currency",
-  "presentation_ui",
-  "presentation_ui_action_anim",
-  "gameplay",
-  "misc",
+  "regression.legacy_src.chance",
+  "regression.legacy_src.land",
+  "regression.legacy_src.item",
+  "regression.legacy_src.movement",
+  "regression.legacy_src.landing",
+  "regression.legacy_src.market",
+  "regression.legacy_src.paid_currency",
+  "regression.legacy_src.presentation_ui",
+  "regression.legacy_src.presentation_ui_action_anim",
+  "regression.legacy_src.gameplay",
+  "regression.legacy_src.misc",
 }
 
 local specs = {}
