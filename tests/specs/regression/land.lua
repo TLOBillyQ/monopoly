@@ -119,9 +119,24 @@ local function _test_rent_owner_missing_skips_payment()
   _assert_eq(tenant.cash, before2, "rent skipped when owner missing")
 end
 
-return {
+local _tests = {
   _test_ai_picks_land_purchase,
   _test_land_rent_contiguous_sum,
   _test_land_rent_graph_adjacency_breaks_path_neighbors,
   _test_rent_owner_missing_skips_payment,
+}
+
+local _cases = {}
+for index, run in ipairs(_tests) do
+  _cases[#_cases + 1] = {
+    id = "land.case_" .. tostring(index),
+    desc = "land migrated case " .. tostring(index),
+    run = run,
+  }
+end
+
+return {
+  layer = "regression",
+  domain = "land",
+  cases = _cases,
 }

@@ -2611,7 +2611,7 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
   assert(follow_events >= 1, "turn switch should trigger follow event")
 end
 
-return {
+local _tests = {
   _test_move_anim_callback_and_delay,
   _test_popup_timeout_auto_confirm,
   _test_runtime_port_with_client_role_restores_nested_context,
@@ -2670,4 +2670,19 @@ return {
   _test_status3d_roadblock_only_current_turn,
   _test_status3d_reset_destroy_layers,
   _test_tick_ui_sync_turn_switch_still_follows,
+}
+
+local _cases = {}
+for index, run in ipairs(_tests) do
+  _cases[#_cases + 1] = {
+    id = "presentation_ui.case_" .. tostring(index),
+    desc = "presentation_ui migrated case " .. tostring(index),
+    run = run,
+  }
+end
+
+return {
+  layer = "regression",
+  domain = "presentation_ui",
+  cases = _cases,
 }

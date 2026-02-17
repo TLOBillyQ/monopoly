@@ -150,7 +150,7 @@ local function _test_buy_vehicle_rejected_when_feature_disabled()
   assert(p.seat_id == before_seat_id, "seat should not change when vehicle buy is rejected")
 end
 
-return {
+local _tests = {
   _test_ai_skips_auto_buy_at_market,
   _test_market_full_inventory_blocks_items,
   _test_market_global_limit,
@@ -158,4 +158,19 @@ return {
   _test_buy_disabled_market_product_rejected,
   _test_market_vehicle_hidden_when_feature_disabled,
   _test_buy_vehicle_rejected_when_feature_disabled,
+}
+
+local _cases = {}
+for index, run in ipairs(_tests) do
+  _cases[#_cases + 1] = {
+    id = "market.case_" .. tostring(index),
+    desc = "market migrated case " .. tostring(index),
+    run = run,
+  }
+end
+
+return {
+  layer = "regression",
+  domain = "market",
+  cases = _cases,
 }

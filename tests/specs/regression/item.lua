@@ -144,11 +144,26 @@ local function _test_item_executor_keeps_specific_anim_without_fallback()
   )
 end
 
-return {
+local _tests = {
   _test_monster_card,
   _test_missile_card,
   _test_item_equalize_cash,
   _test_target_item_manual_direct_exec_and_duration,
   _test_item_executor_fallback_item_use_anim,
   _test_item_executor_keeps_specific_anim_without_fallback,
+}
+
+local _cases = {}
+for index, run in ipairs(_tests) do
+  _cases[#_cases + 1] = {
+    id = "item.case_" .. tostring(index),
+    desc = "item migrated case " .. tostring(index),
+    run = run,
+  }
+end
+
+return {
+  layer = "regression",
+  domain = "item",
+  cases = _cases,
 }

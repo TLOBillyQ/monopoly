@@ -13,7 +13,8 @@
 - `tests/specs/contract/`：边界契约。
 - `tests/specs/integration/`：跨模块 tick 行为。
 - `tests/specs/regression/`：高价值回归链路。
-- `tests/specs/regression/legacy_src/`：迁移期 suite 源文件；由 `tests/specs/regression/suites_migrated_spec.lua` 统一桥接为 spec 执行。
+
+回归模块已全部迁移为标准 spec 返回，不再使用桥接清单模式。
 
 已删除：`tests/suites/` 目录、`*_registry.lua` 与切片 suite（`gameplay_core/runtime/loop`、`presentation_ui_*` 切片文件）。
 
@@ -21,6 +22,8 @@
 
 - 默认回归（新架构 + internal 脚本）：
   - `lua tests/regression.lua`
+
+internal 检查（`dep_rules`、`gameplay_loop_no_ui`）已改为 integration specs，通过同一 runner 管道执行。
 
 - 仅跑某些 layer：
   - `TEST_LAYERS=contract,unit lua tests/regression.lua`

@@ -219,7 +219,7 @@ local function _test_chance_landing_pushes_popup()
   assert(popups[1].auto_close_seconds == gameplay_rules.action_anim_default_seconds, "chance popup auto close mismatch")
 end
 
-return {
+local _tests = {
   _test_land_on_start_reward,
   _test_pass_players_without_steal_does_not_crash,
   _test_landing_optional_waits_with_ui,
@@ -231,4 +231,19 @@ return {
   _test_item_landing_pushes_popup_on_success,
   _test_item_landing_full_inventory_no_duplicate_success_popup,
   _test_chance_landing_pushes_popup,
+}
+
+local _cases = {}
+for index, run in ipairs(_tests) do
+  _cases[#_cases + 1] = {
+    id = "landing.case_" .. tostring(index),
+    desc = "landing migrated case " .. tostring(index),
+    run = run,
+  }
+end
+
+return {
+  layer = "regression",
+  domain = "landing",
+  cases = _cases,
 }

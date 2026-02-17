@@ -152,7 +152,22 @@ local function _test_action_anim_roll_screen_two_stage_timeline()
   end)
 end
 
-return {
+local _tests = {
   _test_action_anim_overlay_handler_returns_duration,
   _test_action_anim_roll_screen_two_stage_timeline,
+}
+
+local _cases = {}
+for index, run in ipairs(_tests) do
+  _cases[#_cases + 1] = {
+    id = "presentation_ui_action_anim.case_" .. tostring(index),
+    desc = "presentation_ui_action_anim migrated case " .. tostring(index),
+    run = run,
+  }
+end
+
+return {
+  layer = "regression",
+  domain = "presentation_ui_action_anim",
+  cases = _cases,
 }

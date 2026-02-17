@@ -118,7 +118,7 @@ local function _test_chance_set_vehicle_works_when_feature_enabled()
   assert(p.seat_id == 4001, "set_vehicle should take effect when feature enabled")
 end
 
-return {
+local _tests = {
   _test_chance_is_mandatory_effect_entrypoint,
   _test_chance_move_backward_pass_market,
   _test_chance_move_backward_pass_intersection,
@@ -126,4 +126,19 @@ return {
   _test_chance_forced_move_queues_move_effect_anim,
   _test_chance_set_vehicle_ignored_when_feature_disabled,
   _test_chance_set_vehicle_works_when_feature_enabled,
+}
+
+local _cases = {}
+for index, run in ipairs(_tests) do
+  _cases[#_cases + 1] = {
+    id = "chance.case_" .. tostring(index),
+    desc = "chance migrated case " .. tostring(index),
+    run = run,
+  }
+end
+
+return {
+  layer = "regression",
+  domain = "chance",
+  cases = _cases,
 }

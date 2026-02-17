@@ -1238,7 +1238,7 @@ local function _test_auto_runner_depends_on_current_player_auto()
   end)
 end
 
-return {
+local _tests = {
   _test_mandatory_payment_causes_bankruptcy,
   _test_bankruptcy_resets_owned_tiles,
   _test_set_tile_owner_without_ui_port_does_not_crash,
@@ -1268,4 +1268,19 @@ return {
   _test_auto_runner_depends_on_current_player_auto,
   _test_turn_prompt_initialized_for_first_player,
   _test_turn_prompt_emitted_on_next_player_switch,
+}
+
+local _cases = {}
+for index, run in ipairs(_tests) do
+  _cases[#_cases + 1] = {
+    id = "gameplay.case_" .. tostring(index),
+    desc = "gameplay migrated case " .. tostring(index),
+    run = run,
+  }
+end
+
+return {
+  layer = "regression",
+  domain = "gameplay",
+  cases = _cases,
 }

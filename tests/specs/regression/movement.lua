@@ -61,10 +61,25 @@ local function _test_movement_backward_wrap()
   assert(#res.visited == 1, "visited steps")
 end
 
-return {
+local _tests = {
   _test_pass_start,
   _test_roadblock_stop,
   _test_movement_examples_from_issue,
   _test_board_indices_in_range_uses_graph_distance,
   _test_movement_backward_wrap,
+}
+
+local _cases = {}
+for index, run in ipairs(_tests) do
+  _cases[#_cases + 1] = {
+    id = "movement.case_" .. tostring(index),
+    desc = "movement migrated case " .. tostring(index),
+    run = run,
+  }
+end
+
+return {
+  layer = "regression",
+  domain = "movement",
+  cases = _cases,
 }

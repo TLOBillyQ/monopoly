@@ -272,11 +272,26 @@ local function _test_bridge_setup_works_when_sandbox_blocks_mode_metatable()
   end)
 end
 
-return {
+local _tests = {
   _test_paid_bridge_sync_balance_from_commodity,
   _test_market_buy_managed_currency_consumes_commodity,
   _test_market_insufficient_managed_currency_opens_panel,
   _test_purchase_event_syncs_balance,
   _test_bridge_isolates_context_between_games,
   _test_bridge_setup_works_when_sandbox_blocks_mode_metatable,
+}
+
+local _cases = {}
+for index, run in ipairs(_tests) do
+  _cases[#_cases + 1] = {
+    id = "paid_currency.case_" .. tostring(index),
+    desc = "paid_currency migrated case " .. tostring(index),
+    run = run,
+  }
+end
+
+return {
+  layer = "regression",
+  domain = "paid_currency",
+  cases = _cases,
 }
