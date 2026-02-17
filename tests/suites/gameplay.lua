@@ -1,5 +1,6 @@
 local support = require("TestSupport")
 local _new_game = support.new_game
+local _with_turn_flow = support.with_turn_flow
 local _build_ui_port = support.build_ui_port
 local _resolve_landing = support.resolve_landing
 local _resolve_landing_with_choices = support.resolve_landing_with_choices
@@ -318,6 +319,7 @@ end
 
 local function _test_end_turn_stops_all_players_movement()
   local g = _new_game()
+  _with_turn_flow(g)
   g.players[1].seat_id = 4001
   g.players[2].seat_id = nil
   g:set_player_status(g.players[1], "move_dir", "left")
@@ -1184,6 +1186,7 @@ end
 
 local function _test_turn_prompt_emitted_on_next_player_switch()
   local g = _new_game()
+  _with_turn_flow(g)
   local before_seq = g.turn.turn_start_prompt_seq or 0
   local before_index = g.turn.current_player_index
   local expected_next_index = before_index % #g.players + 1

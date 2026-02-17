@@ -188,37 +188,4 @@ function flow.is_running()
   return CURRENT.thread ~= nil
 end
 
--- ==================== 兼容性层 ====================
--- 提供旧的 Class 风格 API，供 turn/phase.lua 和测试使用
-
-require "lib.third_party.ClassUtils"
-
----旧的 Flow 类包装器
----兼容旧的 flow:new({ start = "xxx", states = {} }) 用法
-local FlowCompat = Class("Flow")
-
-function FlowCompat:init(opts)
-  opts = opts or {}
-  self._states = opts.states or {}
-  self.current = opts.start or nil
-  self.args = opts.args or {}
-end
-
-function FlowCompat:step()
-  assert(self.current ~= nil, "flow current state missing")
-  local fn = self._states[self.current]
-  assert(fn, "flow state not found: " .. tostring(self.current))
-  local next_state, next_args = fn(self.args)
-  self.current = next_state
-  self.args = next_args or {}
-  return self.current
-end
-
----创建新的状态机实例（兼容性接口）
----@param opts table 配置选项 { start = "state", states = {} }
----@return table 状态机实例
-function flow:new(opts)
-  return FlowCompat(opts)
-end
-
 return flow

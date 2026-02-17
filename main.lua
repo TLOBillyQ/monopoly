@@ -1,1 +1,1 @@
-require "app"
+-- Application entry point

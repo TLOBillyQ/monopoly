@@ -7,24 +7,21 @@ local function _resolve_choice(game, choice, action)
   return turn_decision.resolve_choice(game, choice, action)
 end
 
-function choice_handler.handle_wait_choice(turn_flow, args)
-  local game = turn_flow.game
+function choice_handler.handle_wait_choice(game, args, pending_action)
   game.turn.phase = "wait_choice"
   game.dirty.turn = true
   game.dirty.any = true
   local choice = game.turn.pending_choice
   if not choice then
-    turn_flow.pending_action = nil
     return args.resume_state, args.resume_args
   end
 
-  turn_flow.pending_action = turn_decision.decide_choice_action(game, choice, turn_flow.pending_action)
+  pending_action = turn_decision.decide_choice_action(game, choice, pending_action)
 
-  if not turn_flow.pending_action then
+  if not pending_action then
     return "wait_choice", args
   end
-  local action = turn_flow.pending_action
-  turn_flow.pending_action = nil
+  local action = pending_action
 
   if action.type == "choice_select" or action.type == "choice_cancel" then
     if not action.choice_id or not choice.id or action.choice_id ~= choice.id then

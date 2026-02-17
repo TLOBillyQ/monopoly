@@ -33,11 +33,6 @@ function game.setup(opts)
   -- 绑定胜利检查
   game.check_victory = win.check_victory
 
-  -- 兼容性：创建 turn_flow 包装器供测试使用
-  local phase_registry = require("game.core.phase")
-  local turn_flow_compat = require("turn.phase")
-  game.turn_flow = turn_flow_compat:new(game, phase_registry.build_default_phases())
-
   -- 启动状态机
   flow.enter("start", {})
 
@@ -113,29 +108,29 @@ end
 ---@param player_id number 玩家ID
 ---@return table|nil
 function game.find_player_by_id(self, player_id)
-  return state_player.find_player_by_id(game, player_id)
+  return state_player.find_player_by_id(self, player_id)
 end
 
 ---消费脏数据标记
 ---@param self table game 对象
 ---@return table
-function game.consume_dirty(_self)
+function game.consume_dirty(self)
   local dirty_tracker = require("core.dirty")
-  return dirty_tracker.consume(game.dirty)
+  return dirty_tracker.consume(self.dirty)
 end
 
 ---获取待处理的选择
 ---@param self table game 对象
 ---@return table|nil
-function game.pending_choice(_self)
-  return turn_states.pending_choice(game)
+function game.pending_choice(self)
+  return turn_states.pending_choice(self)
 end
 
 ---队列动作动画
 ---@param self table game 对象
 ---@param payload table 动画数据
-function game.queue_action_anim(_self, payload)
-  return turn_states.queue_action_anim(game, payload)
+function game.queue_action_anim(self, payload)
+  return turn_states.queue_action_anim(self, payload)
 end
 
 ---设置玩家状态
@@ -144,12 +139,12 @@ end
 ---@param key string 状态键
 ---@param value any 状态值
 function game.set_player_status(self, player, key, value)
-  return state_player.set_player_status(game, player, key, value)
+  return state_player.set_player_status(self, player, key, value)
 end
 
 ---停止所有玩家移动
-function game.stop_all_players_movement(_self)
-  return state_player.stop_all_players_movement(game)
+function game.stop_all_players_movement(self)
+  return state_player.stop_all_players_movement(self)
 end
 
 ---获取玩家骰子数量
@@ -157,7 +152,7 @@ end
 ---@param player table 玩家对象
 ---@return number
 function game.player_dice_count(self, player)
-  return state_player.player_dice_count(game, player)
+  return state_player.player_dice_count(self, player)
 end
 
 ---设置玩家金币
@@ -165,7 +160,7 @@ end
 ---@param player table 玩家对象
 ---@param amount number 金额
 function game.set_player_cash(self, player, amount)
-  return state_player.set_player_cash(game, player, amount)
+  return state_player.set_player_cash(self, player, amount)
 end
 
 ---添加玩家金币
@@ -173,7 +168,7 @@ end
 ---@param player table 玩家对象
 ---@param amount number 金额
 function game.add_player_cash(self, player, amount)
-  return state_player.add_player_cash(game, player, amount)
+  return state_player.add_player_cash(self, player, amount)
 end
 
 ---扣除玩家金币
@@ -181,7 +176,7 @@ end
 ---@param player table 玩家对象
 ---@param amount number 金额
 function game.deduct_player_cash(self, player, amount)
-  return state_player.deduct_player_cash(game, player, amount)
+  return state_player.deduct_player_cash(self, player, amount)
 end
 
 ---获取玩家余额
@@ -190,7 +185,7 @@ end
 ---@param currency string 货币类型
 ---@return number
 function game.player_balance(self, player, currency)
-  return state_player.player_balance(game, player, currency)
+  return state_player.player_balance(self, player, currency)
 end
 
 ---设置玩家余额
@@ -199,7 +194,7 @@ end
 ---@param currency string 货币类型
 ---@param value number 金额
 function game.set_player_balance(self, player, currency, value)
-  return state_player.set_player_balance(game, player, currency, value)
+  return state_player.set_player_balance(self, player, currency, value)
 end
 
 ---扣除玩家余额
@@ -208,7 +203,7 @@ end
 ---@param currency string 货币类型
 ---@param amount number 金额
 function game.deduct_player_balance(self, player, currency, amount)
-  return state_player.deduct_player_balance(game, player, currency, amount)
+  return state_player.deduct_player_balance(self, player, currency, amount)
 end
 
 ---检查玩家是否有神明庇护
@@ -217,7 +212,7 @@ end
 ---@param name string 神明名称
 ---@return boolean
 function game.player_has_deity(self, player, name)
-  return state_player.player_has_deity(game, player, name)
+  return state_player.player_has_deity(self, player, name)
 end
 
 ---检查玩家是否有天使庇护
@@ -225,14 +220,14 @@ end
 ---@param player table 玩家对象
 ---@return boolean
 function game.player_has_angel(self, player)
-  return state_player.player_has_angel(game, player)
+  return state_player.player_has_angel(self, player)
 end
 
 ---清除玩家神明
 ---@param self table game 对象
 ---@param player table 玩家对象
 function game.clear_player_deity(self, player)
-  return state_player.clear_player_deity(game, player)
+  return state_player.clear_player_deity(self, player)
 end
 
 ---设置玩家神明
@@ -241,7 +236,7 @@ end
 ---@param name string 神明名称
 ---@param duration number 持续回合
 function game.set_player_deity(self, player, name, duration)
-  return state_player.set_player_deity(game, player, name, duration)
+  return state_player.set_player_deity(self, player, name, duration)
 end
 
 ---设置玩家座位（载具）
@@ -249,7 +244,7 @@ end
 ---@param player table 玩家对象
 ---@param seat_id number 座位ID
 function game.set_player_seat(self, player, seat_id)
-  return state_player.set_player_seat(game, player, seat_id)
+  return state_player.set_player_seat(self, player, seat_id)
 end
 
 ---获取玩家载具配置
@@ -257,7 +252,7 @@ end
 ---@param player table 玩家对象
 ---@return table
 function game.player_vehicle_cfg(self, player)
-  return state_player.player_vehicle_cfg(game, player)
+  return state_player.player_vehicle_cfg(self, player)
 end
 
 ---获取玩家载具名称
@@ -265,7 +260,7 @@ end
 ---@param player table 玩家对象
 ---@return string
 function game.player_vehicle_name(self, player)
-  return state_player.player_vehicle_name(game, player)
+  return state_player.player_vehicle_name(self, player)
 end
 
 ---检查玩家载具是否不可摧毁
@@ -273,7 +268,7 @@ end
 ---@param player table 玩家对象
 ---@return boolean
 function game.player_is_vehicle_indestructible(self, player)
-  return state_player.player_is_vehicle_indestructible(game, player)
+  return state_player.player_is_vehicle_indestructible(self, player)
 end
 
 ---设置玩家出局状态
@@ -281,7 +276,7 @@ end
 ---@param player table 玩家对象
 ---@param eliminated boolean 是否出局
 function game.set_player_eliminated(self, player, eliminated)
-  return state_player.set_player_eliminated(game, player, eliminated)
+  return state_player.set_player_eliminated(self, player, eliminated)
 end
 
 ---设置玩家财产
@@ -290,7 +285,7 @@ end
 ---@param tile_id number 地块ID
 ---@param owned boolean 是否拥有
 function game.set_player_property(self, player, tile_id, owned)
-  return state_player.set_player_property(game, player, tile_id, owned)
+  return state_player.set_player_property(self, player, tile_id, owned)
 end
 
 ---更新玩家位置
@@ -298,14 +293,14 @@ end
 ---@param player table 玩家对象
 ---@param new_index number 新位置
 function game.update_player_position(self, player, new_index)
-  return state_player.update_player_position(game, player, new_index)
+  return state_player.update_player_position(self, player, new_index)
 end
 
 ---清除玩家临时标记
 ---@param self table game 对象
 ---@param player table 玩家对象
 function game.clear_player_temporal_flags(self, player)
-  return state_player.clear_player_temporal_flags(game, player)
+  return state_player.clear_player_temporal_flags(self, player)
 end
 
 ---检查玩家是否在山中
@@ -313,21 +308,21 @@ end
 ---@param player table 玩家对象
 ---@return boolean
 function game.player_is_in_mountain(self, player)
-  return state_hospital.player_is_in_mountain(game, player)
+  return state_hospital.player_is_in_mountain(self, player)
 end
 
 ---送玩家去医院
 ---@param self table game 对象
 ---@param player table 玩家对象
 function game.player_send_to_hospital(self, player)
-  return state_hospital.player_send_to_hospital(game, player)
+  return state_hospital.player_send_to_hospital(self, player)
 end
 
 ---送玩家去矿山
 ---@param self table game 对象
 ---@param player table 玩家对象
 function game.player_send_to_mountain(self, player)
-  return state_hospital.player_send_to_mountain(game, player)
+  return state_hospital.player_send_to_mountain(self, player)
 end
 
 ---设置地块所有者
@@ -335,7 +330,7 @@ end
 ---@param tile table 地块对象
 ---@param owner_id number 所有者ID
 function game.set_tile_owner(self, tile, owner_id)
-  return state_tile.set_tile_owner(game, tile, owner_id)
+  return state_tile.set_tile_owner(self, tile, owner_id)
 end
 
 ---设置地块等级
@@ -343,14 +338,14 @@ end
 ---@param tile table 地块对象
 ---@param level number 等级
 function game.set_tile_level(self, tile, level)
-  return state_tile.set_tile_level(game, tile, level)
+  return state_tile.set_tile_level(self, tile, level)
 end
 
 ---重置地块
 ---@param self table game 对象
 ---@param tile table 地块对象
 function game.reset_tile(self, tile)
-  return state_tile.reset_tile(game, tile)
+  return state_tile.reset_tile(self, tile)
 end
 
 ---更新地块
@@ -358,19 +353,19 @@ end
 ---@param tile table 地块对象
 ---@param updates table 更新字段
 function game.update_tile(self, tile, updates)
-  return state_tile.update_tile(game, tile, updates)
+  return state_tile.update_tile(self, tile, updates)
 end
 
 ---重建地块占用信息
-function game.rebuild(_self)
-  return state_player.rebuild(game)
+function game.rebuild(self)
+  return state_player.rebuild(self)
 end
 
 ---获取存活玩家列表
 ---@param self table game 对象
 ---@return table
-function game.alive_players(_self)
-  return state_player.alive_players(game)
+function game.alive_players(self)
+  return state_player.alive_players(self)
 end
 
 return game

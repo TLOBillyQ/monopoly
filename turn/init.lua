@@ -144,7 +144,7 @@ function gameplay_loop.set_game(state, game)
     return game.turn and game.turn.turn_count
   end)
   assert(game.pending_choice ~= nil, "missing game.pending_choice")
-  local pending = game.pending_choice()
+  local pending = game:pending_choice()
   state.pending_choice = pending
   if pending then
     state.pending_choice_elapsed = 0
@@ -276,7 +276,7 @@ function gameplay_loop.tick(game, state, dt)
 
   ui_sync_ports.update_countdown(game, state)
 
-  local dirty = game.consume_dirty()
+  local dirty = game:consume_dirty()
   local ui_refreshed = ui_sync_ports.refresh_from_dirty(game, state, dirty)
   anim_ports.sync_status_3d(game, state, dirty)
 

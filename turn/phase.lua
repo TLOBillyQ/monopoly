@@ -24,18 +24,18 @@ end
 function turn_flow:init(game, phases)
   self.game = game
   self.phases = phases
-  self.flow = nil
+  self.flow_loaded = false
   self.pending_action = nil
 end
 
 function turn_flow:dispatch(action)
   self.pending_action = action
 
-  if not self.flow or not self.flow.current then
-    self.flow = self:_build_flow()
+  if not self.flow_loaded then
+    self:_build_flow()
   end
 
-  if self.flow and self.flow.current then
+  if flow.is_running() then
     self:run_until_wait()
   end
 end
@@ -56,7 +56,9 @@ function turn_flow:_build_flow()
   end
 
   states.wait_choice = function(args)
-    return turn_choice_handler.handle_wait_choice(self, args)
+    local next_state, next_args = turn_choice_handler.handle_wait_choice(self.game, args, self.pending_action)
+    self.pending_action = nil
+    return next_state, next_args
   end
 
   states.wait_move_anim = turn_waits.make_anim_wait(self, "wait_move_anim", "move_anim", "move_anim_done")
@@ -73,7 +75,12 @@ function turn_flow:_build_flow()
     return "end_turn", args
   end
 
-  return flow:new({ start = "start", states = states })
+  flow.load(states)
+  if flow.is_running() then
+    flow.reset()
+  end
+  flow.enter("start", {})
+  self.flow_loaded = true
 end
 
 function turn_flow:next_player()
@@ -97,22 +104,22 @@ function turn_flow:next_player()
 end
 
 function turn_flow:run_until_wait()
-  if not self.flow or not self.flow.current then
-    self.flow = self:_build_flow()
+  if not self.flow_loaded then
+    self:_build_flow()
   end
 
-  while self.flow.current do
-    local current = self.flow.current
-    self.flow:step()
-    if wait_states[self.flow.current] and self.flow.current == current and not self.pending_action then
-      self.game.turn.phase = self.flow.current
+  while flow.is_running() do
+    local current = flow.current()
+    flow.update()
+    if wait_states[flow.current()] and flow.current() == current and not self.pending_action then
+      self.game.turn.phase = flow.current()
       self.game.dirty.turn = true
       self.game.dirty.any = true
-      return self.flow.current
+      return flow.current()
     end
   end
 
-  self.flow = nil
+  self.flow_loaded = false
   return nil
 end
 

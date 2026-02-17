@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "WebFetch(domain:github.com)",
-      "Bash(lua tests/regression.lua:*)"
+      "Bash(lua tests/regression.lua:*)",
+      "Bash(for f in chance/*.lua chance/effects/*.lua:*)",
+      "Bash(do luac -p:*)",
+      "Bash(echo:*)",
+      "Bash(done)"
     ]
   }
 }

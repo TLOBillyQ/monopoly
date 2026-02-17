@@ -329,6 +329,15 @@ M.resolve_choice_first = resolve_choice_first
 M.resolve_landing = resolve_landing
 M.resolve_landing_with_choices = resolve_landing_with_choices
 M.new_game = new_game
+
+local function with_turn_flow(app)
+  if not app.turn_flow then
+    local phase_registry = require("game.core.phase")
+    app.turn_flow = turn_flow:new(app, phase_registry.build_default_phases())
+  end
+  return app
+end
+M.with_turn_flow = with_turn_flow
 M.first_land_tile = first_land_tile
 M.first_tile_by_type = first_tile_by_type
 M.first_adjacent_land_pair = first_adjacent_land_pair
