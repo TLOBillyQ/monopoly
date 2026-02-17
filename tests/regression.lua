@@ -4,6 +4,5 @@ package.path = "?.lua;?/init.lua;./tests/?.lua;./tests/runner/?.lua;./tests/supp
 local runner = require("runner.init")
 
 runner.run({
-  include_legacy = nil,
   include_internal = true,
 })

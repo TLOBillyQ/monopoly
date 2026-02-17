@@ -3,7 +3,7 @@
 ## 目标
 
 当前测试入口已切到新 runner：`tests/regression.lua -> tests/runner/init.lua`。
-默认只跑新架构 specs（`tests/specs/*`），旧 `tests/suites/*` 不再是主执行路径。
+统一执行新架构 specs（`tests/specs/*`）。
 
 ## 目录
 
@@ -13,7 +13,7 @@
 - `tests/specs/contract/`：边界契约。
 - `tests/specs/integration/`：跨模块 tick 行为。
 - `tests/specs/regression/`：高价值回归链路。
-- `tests/suites/`：legacy 用例（仅显式开启时参与，兼容执行走完整 suite）。
+- `tests/suites/`：历史 suite 源文件；由 `tests/specs/regression/suites_migrated_spec.lua` 统一桥接为 spec 执行。
 
 已删除：`*_registry.lua` 与切片 suite（`gameplay_core/runtime/loop`、`presentation_ui_*` 切片文件）。
 
@@ -21,9 +21,6 @@
 
 - 默认回归（新架构 + internal 脚本）：
   - `lua tests/regression.lua`
-
-- 显式包含 legacy suites：
-  - `TEST_INCLUDE_LEGACY=1 lua tests/regression.lua`
 
 - 仅跑某些 layer：
   - `TEST_LAYERS=contract,unit lua tests/regression.lua`

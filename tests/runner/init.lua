@@ -1,5 +1,4 @@
 local report = require("runner.report")
-local legacy_adapter = require("runner.legacy_adapter")
 
 local runner = {}
 
@@ -17,24 +16,21 @@ local function _split_csv(value)
   return set
 end
 
-local function _truthy_env(name)
-  local value = os.getenv(name)
-  if not value then
-    return false
-  end
-  value = string.lower(value)
-  return value == "1" or value == "true" or value == "yes" or value == "on"
-end
-
 local function _new_specs()
-  return {
+  local specs = {
     require("contract.ports_contract_spec"),
     require("unit.runtime_phase_flags_spec"),
     require("unit.action_button_timer_spec"),
     require("integration.turn_phase_anim_spec"),
     require("integration.visual_input_lock_spec"),
     require("regression.gameplay_main_flow_spec"),
+    require("regression.modal_choice_timeout_spec"),
   }
+  local migrated_suite_specs = require("regression.suites_migrated_spec")
+  for _, spec in ipairs(migrated_suite_specs) do
+    specs[#specs + 1] = spec
+  end
+  return specs
 end
 
 local function _append_all(target, items)
@@ -116,11 +112,6 @@ function runner.run(opts)
   local specs = {}
   _append_all(specs, _new_specs())
 
-  local include_legacy = opts.include_legacy
-  if include_legacy == nil then
-    include_legacy = _truthy_env("TEST_INCLUDE_LEGACY")
-  end
-
   local include_internal = opts.include_internal
   if include_internal == nil then
     include_internal = true
@@ -134,13 +125,10 @@ function runner.run(opts)
     filter = nil
   end
 
-  if include_legacy == true then
-    _append_all(specs, legacy_adapter.collect_legacy_specs())
-  end
-
   local total, failures = _run_specs(specs, filter)
   if include_internal ~= false then
-    legacy_adapter.run_legacy_internal_scripts()
+    dofile("tests/internal/dep_rules.lua")
+    dofile("tests/internal/gameplay_loop_no_ui.lua")
   end
   report.finish(total, failures)
 end
