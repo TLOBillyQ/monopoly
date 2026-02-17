@@ -86,8 +86,8 @@ local function _step_phase_animation(game, state, phase, ports)
       return
     end
     turn_anim.step_move_anim(game, state, {
-      on_move_anim = function(_, anim_ctx)
-        return anim_ports.play_move_anim(state, anim_ctx)
+      on_move_anim = function(ctx, anim_ctx)
+        return anim_ports.play_move_anim(ctx, anim_ctx)
       end,
     })
     return
@@ -219,7 +219,7 @@ function gameplay_loop.tick(game, state, dt)
 
   -- 驱动 flow 状态机
   if game.update then
-    game.update()
+    game:update()
   end
 
   local ports = _resolve_ports(state)
@@ -227,6 +227,7 @@ function gameplay_loop.tick(game, state, dt)
   local anim_ports = ports.anim
   local debug_ports = ports.debug
   local phase = game.turn.phase
+  local initial_phase = phase
   local input_blocked_changed = gameplay_loop_runtime.sync_input_blocked(state, phase, ports)
   gameplay_loop_runtime.sync_role_control_lock(game, state, ports)
 
@@ -268,6 +269,9 @@ function gameplay_loop.tick(game, state, dt)
   gameplay_loop_runtime.update_detained_wait_timer(game, state, dt, turn_dispatch.step_turn)
 
   phase = game.turn.phase
+  if phase ~= initial_phase then
+    gameplay_loop_runtime.sync_input_blocked(state, phase, ports)
+  end
   if gameplay_loop_runtime.sync_input_blocked(state, phase, ports) then
     input_blocked_changed = true
   end

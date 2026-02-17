@@ -330,7 +330,7 @@ local function _test_move_anim_wait_and_resume()
   local seq = g.turn.move_anim and g.turn.move_anim.seq
   assert(seq, "move_anim seq should be set")
 
-  g:dispatch_action({ type = "move_anim_done", seq = seq })
+  g.turn_flow:dispatch({ type = "move_anim_done", seq = seq })
 
   assert(g.turn.move_anim == nil, "move_anim should be cleared")
   local phase = g.turn.phase
@@ -917,9 +917,9 @@ local function _test_turn_dispatch_item_slot_uses_actor_slot_map()
     cancel_label = "取消",
     meta = { player_id = 1 },
   }
-  function g:dispatch_action(action)
+  function g.dispatch_action(_, action)
     captured = action
-    self.turn.pending_choice = nil
+    g.turn.pending_choice = nil
   end
 
   local state = {

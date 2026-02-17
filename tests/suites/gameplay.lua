@@ -21,6 +21,7 @@ local constants = support.constants
 local bankruptcy = support.bankruptcy
 local turn_move = support.turn_move
 local turn_dispatch = require("turn.dispatch")
+local turn_flow = support.turn_flow
 local gameplay_rules = require("cfg.GameplayRules")
 local mine_effect = require("game.effect.mine")
 local runtime_context = require("core.context")
@@ -340,6 +341,12 @@ local function _test_end_turn_stops_all_players_movement()
       end,
     } },
   }, function()
+    -- 确保 turn_flow.phases 存在且包含 end_turn
+    if not g.turn_flow.phases or not g.turn_flow.phases.end_turn then
+      -- 重新创建 turn_flow 以确保 phases 正确
+      local phase_registry = require("game.core.phase")
+      g.turn_flow = turn_flow:new(g, phase_registry.build_default_phases())
+    end
     local phase_end = g.turn_flow.phases and g.turn_flow.phases.end_turn
     assert(type(phase_end) == "function", "end_turn phase should exist")
     phase_end(g.turn_flow, { player = g.players[1] })

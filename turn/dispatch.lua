@@ -27,7 +27,7 @@ local function _resolve_actor_player(game, action)
     logger.warn("ui_button missing actor_role_id:", tostring(action and action.id))
     return nil
   end
-  local player = game.find_player_by_id(actor_role_id)
+  local player = game:find_player_by_id(actor_role_id)
   if not player then
     logger.warn("ui_button actor_role_id not mapped:", tostring(action and action.id), tostring(actor_role_id))
     return nil
@@ -38,7 +38,7 @@ end
 function turn_dispatch.step_turn(game)
   assert(game ~= nil, "missing game")
   assert(not game.finished, "game finished")
-  game.advance_turn()
+  game:advance_turn()
 end
 
 function turn_dispatch.clear_choice(state, opts)
@@ -123,7 +123,7 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
     end
     if game then
       assert(game.dispatch_action ~= nil, "missing game.dispatch_action")
-      game.dispatch_action(action)
+      game:dispatch_action(action)
     end
     local pending = game and game.turn and game.turn.pending_choice or nil
     if not pending or not pending.id or pending.id ~= choice.id then

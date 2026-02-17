@@ -121,7 +121,7 @@ end
 ---回合开始状态
 function turn.start(args)
   local game = require("game.init")
-  local player = game.current_player()
+  local player = game:current_player()
   local turn_data = game.turn
 
   if not player then
@@ -172,7 +172,7 @@ end
 ---投骰子状态
 function turn.roll(args)
   local game = require("game.init")
-  local player = args and args.player or game.current_player()
+  local player = args and args.player or game:current_player()
 
   if not player then
     return flow.state.end_turn, {}

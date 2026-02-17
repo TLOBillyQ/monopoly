@@ -31,7 +31,7 @@ function game.setup(opts)
   end
 
   -- 绑定胜利检查
-  game.check_victory = win.check_victory
+  game.check_victory = function(self) return win.check_victory(self) end
 
   -- 启动状态机
   flow.enter("start", {})
@@ -40,8 +40,9 @@ function game.setup(opts)
 end
 
 ---更新游戏状态机，每帧调用
-function game.update()
-  if game.finished then
+---@param self table game 对象
+function game.update(self)
+  if self.finished then
     return nil
   end
 
@@ -49,8 +50,8 @@ function game.update()
   local current = flow.update()
 
   -- 同步 turn.phase 用于 UI 显示
-  if current and game.turn then
-    game.turn.phase = current
+  if current and self.turn then
+    self.turn.phase = current
   end
 
   return current
@@ -58,49 +59,52 @@ end
 
 ---分发玩家动作
 ---在状态等待时由外部调用
+---@param self table game 对象
 ---@param action table 玩家动作
-function game.dispatch_action(action)
-  if game.finished then
+function game.dispatch_action(self, action)
+  if self.finished then
     return
   end
 
   -- 动作存储在 game 表中，由当前状态处理
-  game.pending_action = action
+  self.pending_action = action
 
   -- 驱动一次状态机更新以处理动作
-  game.update()
+  self:update()
 end
 
 ---推进到下一玩家回合
 ---供 turn_dispatch 使用
-function game.advance_turn()
-  if game.finished then
+---@param self table game 对象
+function game.advance_turn(self)
+  if self.finished then
     return
   end
 
-  local current_idx = game.turn.current_player_index
-  local count = #game.players
+  local current_idx = self.turn.current_player_index
+  local count = #self.players
   local next_idx = current_idx % count + 1
 
-  game.turn.current_player_index = next_idx
-  game.turn.turn_count = game.turn.turn_count + 1
-  game.dirty.turn = true
-  game.dirty.any = true
+  self.turn.current_player_index = next_idx
+  self.turn.turn_count = self.turn.turn_count + 1
+  self.dirty.turn = true
+  self.dirty.any = true
 
-  game.check_victory()
+  self:check_victory()
 
   -- 重新进入 start 状态
   flow.enter("start", {})
 end
 
 ---获取当前玩家
+---@param self table game 对象
 ---@return table|nil
-function game.current_player()
-  local idx = game.turn and game.turn.current_player_index
+function game.current_player(self)
+  local idx = self.turn and self.turn.current_player_index
   if not idx then
     return nil
   end
-  return game.players and game.players[idx]
+  return self.players and self.players[idx]
 end
 
 ---通过ID查找玩家
