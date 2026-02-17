@@ -30,24 +30,69 @@ end
 
 local function build_ports()
   return {
-    close_choice_modal = noop,
-    open_choice_modal = noop,
-    close_popup = noop,
-    apply_input_lock = noop,
-    apply_role_control_lock = noop,
-    play_move_anim = noop,
-    play_action_anim = noop,
-    step_choice_timeout = noop,
-    step_modal_timeout = noop,
-    update_countdown = noop,
-    build_model = function() return {} end,
-    refresh_from_dirty = function() return false end,
-    log_status = noop,
-    sync_debug_log = noop,
-    reset_status_3d = noop,
-    sync_status_3d = noop,
-    install_event_handlers = noop,
-    on_bankruptcy_tiles_cleared = noop,
+    modal = {
+      close_choice_modal = noop,
+      open_choice_modal = noop,
+      close_popup = noop,
+    },
+    anim = {
+      play_move_anim = noop,
+      play_action_anim = noop,
+      reset_status_3d = noop,
+      sync_status_3d = noop,
+    },
+    ui_sync = {
+      apply_input_lock = noop,
+      step_choice_timeout = noop,
+      step_modal_timeout = noop,
+      update_countdown = noop,
+      build_model = function() return {} end,
+      refresh_from_dirty = function() return false end,
+      get_ui_state = function(state)
+        return state and state.ui or nil
+      end,
+      is_input_blocked = function(state)
+        local ui = state and state.ui or nil
+        return ui and ui.input_blocked == true or false
+      end,
+      is_popup_active = function(state)
+        local ui = state and state.ui or nil
+        return ui and ui.popup_active == true or false
+      end,
+      is_choice_active = function(state)
+        local ui = state and state.ui or nil
+        return ui and ui.choice_active == true or false
+      end,
+      is_market_active = function(state)
+        local ui = state and state.ui or nil
+        return ui and ui.market_active == true or false
+      end,
+      get_popup_owner_index = function(state)
+        local ui = state and state.ui or nil
+        return ui and ui.popup_owner_index or nil
+      end,
+      set_input_blocked = function(state, blocked)
+        local ui = state and state.ui or nil
+        if not ui then
+          return false
+        end
+        if ui.input_blocked == blocked then
+          return false
+        end
+        ui.input_blocked = blocked
+        return true
+      end,
+    },
+    debug = {
+      log_status = noop,
+      sync_debug_log = noop,
+      resolve_debug_enabled = function() return false end,
+    },
+    state = {
+      apply_role_control_lock = noop,
+      install_event_handlers = noop,
+      on_bankruptcy_tiles_cleared = noop,
+    },
   }
 end
 
