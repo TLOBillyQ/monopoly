@@ -2,39 +2,27 @@
 
 ## 概览
 
-项目入口是 `main.lua`，仅负责加载 `src/app/init.lua`。初始化阶段完成三件事：
-- 建立运行时上下文与环境绑定（`src/core/RuntimeContext.lua`，由 `src/app/init.lua` 调用）。
-- 组装游戏与 UI 状态，创建 `Game` 实例并注入到主循环（`src/game/core/runtime/Game.lua`、`src/game/flow/turn/GameplayLoop.lua`）。
-- 绑定 UI 事件到意图分发链路（`src/presentation/interaction/UIEventRouter.lua`）。
+项目入口是 `main.lua`。初始化阶段完成三件事：
+- 建立运行时上下文与环境绑定（`core/context.lua` + `core/env.lua`）。
+- 组装游戏状态并注入回合循环（`game/init.lua` + `turn/init.lua`）。
+- 绑定引擎生命周期事件（`EVENT.GAME_INIT`）并注册 tick 处理（`LuaAPI.set_tick_handler`）。
 
-运行期采用“回合推进 + 脏标记 UI 刷新”模型：
-- 领域状态推进：`Game:advance_turn()` / `Game:dispatch_action()`。
-- 回合编排：`GameplayLoop.tick()`。
-- 脏数据消费与 UI 投影：`game:consume_dirty()` + `UIModel.update()`。
+运行期采用“回合推进 + 脏标记刷新”模型：
+- 领域状态推进：`game.advance_turn()` / `game.dispatch_action()`。
+- 回合编排：`gameplay_loop.tick()`。
+- 脏数据消费：`game:consume_dirty()`。
 
 ## 目录职责
 
-- `main.lua`：唯一入口，加载应用初始化。
-- `src/app/init.lua`：应用装配层。负责运行时注入、状态构建、事件注册、定时 tick 启动。
-- `src/game/core/runtime/`：领域运行时核心。
-  - `bootstrap/CompositionRoot.lua`：组装 `board/players/turn/dirty/turn_flow`。
-  - `Game.lua`：领域门面，暴露 `advance_turn`、`dispatch_action`。
-- `src/game/flow/turn/`：回合流程层。
-  - `GameplayLoop.lua`：每帧调度中枢。
-  - `GameplayLoopRuntime.lua`：输入锁、控制锁、超时计时等运行时细节。
-  - `TurnDispatch.lua`：UI action 校验与落地执行。
-- `src/game/flow/intent/IntentDispatcher.lua`：领域意图入口（`need_choice` / `push_popup`）。
-- `src/presentation/api/`：表现层对回合层的适配接口。
-  - `GameplayLoopPortsAdapter.lua`：把 UI 能力封装为 ports 给 `GameplayLoop` 使用（按 `modal/anim/ui_sync/debug/state` 分组，并保留平铺兼容）。
-  - `UIView.lua`：具体 UI 渲染、弹窗/选择框、输入锁策略调用。
-- `src/presentation/interaction/`：表现层交互编排。
-  - `UIEventRouter.lua`：UI 点击路由到 intent（按 bind 时构建 route specs）。
-  - `UIIntentBuilder.lua` + `intent_builders/`：按职责组装点击意图（基础按钮、弹窗、道具槽、选择、黑市）。
-  - `UIIntentDispatcher.lua`：将 intent 分流到游戏动作或视图命令。
-  - `UITouchPolicy.lua`：触控策略统一入口（托管/调试开关、批量触控、选择屏锁定、运行时节点触控）。
-- `src/presentation/state/`：UI 读模型层。
-  - `UIModel.lua`：从 game + env 构建/增量更新 UIModel。
-  - `UIModelProjection.lua`：投影函数（当前玩家、地块、道具槽、choice/market/popup）。
+- `main.lua`：唯一入口；注册 `GAME_INIT` 与 tick 处理，统一启动链路。
+- `core/context.lua`：运行时上下文；安装环境绑定、全局 helper、编辑器导出。
+- `core/env.lua`：将 `LuaAPI`/`GameAPI` 绑定到运行时所需全局函数。
+- `game/init.lua`：领域门面；`setup/update/dispatch_action/advance_turn`。
+- `game/bootstrap.lua`：组装 board/players/turn/dirty/registries。
+- `turn/init.lua`：每帧调度中枢（`set_game/new_game/tick`）。
+- `turn/runtime.lua`：输入锁、控制锁、超时计时等运行时细节。
+- `turn/dispatch.lua`：UI action 校验与落地执行。
+- `turn/ports.lua`：ports 分组接口与默认实现（`modal/anim/ui_sync/debug/state`）。
 
 ## 分层依赖（Mermaid）
 
@@ -70,32 +58,29 @@ graph TD
 ```mermaid
 sequenceDiagram
   participant M as main.lua
-  participant A as src/app/init.lua
-  participant V as UIEventRouter
-  participant P as GameplayLoopPortsAdapter
-  participant L as GameplayLoop
-  participant G as Game
+  participant E as EVENT.GAME_INIT
+  participant C as core/context.lua
+  participant G as game/init.lua
+  participant L as turn/init.lua
+  participant T as LuaAPI.set_tick_handler
 
-  M->>A: require
-  A->>A: _build_state()
-  A->>P: build(state)
-  A->>L: new_game(state)
-  L->>G: state.game_factory() -> game:new(...)
-  A->>L: set_game(state, game)
-  A->>V: bind(state, get_game)
-  A->>A: _start_tick_loop() (SetFrameOut)
+  M->>E: global_register_trigger_event
+  E->>C: context.install_globals()
+  E->>G: game.setup(...)
+  E->>L: gameplay_loop.set_game(state, game)
+  E->>T: bind tick callback
 ```
 
 ### Tick 序列
 
 ```mermaid
 sequenceDiagram
-  participant T as Timer(SetFrameOut)
-  participant L as GameplayLoop.tick
-  participant R as GameplayLoopRuntime
+  participant T as TickCallback
+  participant L as gameplay_loop.tick
+  participant R as turn/runtime.lua
   participant D as TurnDispatch
   participant G as Game/TurnFlow
-  participant U as UIModel+UIView(ports)
+  participant U as ports(ui_sync/anim)
 
   T->>L: tick(game, state, dt)
   L->>R: sync_input_blocked / sync_role_control_lock
