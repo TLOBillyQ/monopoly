@@ -3,7 +3,7 @@
 .SYNOPSIS
     将项目文件部署到目标目录
 .DESCRIPTION
-    拷贝 cfg/, chance/, choice/, core/, Data/, game/, lib/, turn/, visual/ 目录以及 main.lua 到指定的目标目录
+    拷贝 cfg/, chance/, choice/, core/, Data/, game/, lib/, turn/, visual/ 目录以及 main.lua 到指定目标目录
 .PARAMETER TargetPath
     目标目录的绝对路径
 .EXAMPLE
@@ -33,9 +33,8 @@ if (Test-Path $TargetPath) {
     $TargetPath = (Resolve-Path $TargetPath).Path
 }
 
-# 获取脚本所在目录的上两级目录（项目根目录）
-$ScriptRoot = Split-Path -Parent $PSScriptRoot
-$ProjectRoot = Split-Path -Parent $ScriptRoot
+# 获取脚本所在目录的上一级目录（项目根目录）
+$ProjectRoot = Split-Path -Parent $PSScriptRoot
 
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host "开始部署项目文件" -ForegroundColor Cyan
