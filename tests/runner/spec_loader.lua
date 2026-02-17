@@ -1,40 +1,57 @@
 local spec_loader = {}
 
-local function _base_specs()
-  return {
-    require("contract.ports_contract_spec"),
-    require("unit.runtime_phase_flags_spec"),
-    require("unit.action_button_timer_spec"),
-    require("integration.turn_phase_anim_spec"),
-    require("integration.visual_input_lock_spec"),
-    require("integration.internal_dep_rules_spec"),
-    require("integration.internal_gameplay_loop_no_ui_spec"),
-    require("regression.gameplay_main_flow_spec"),
-    require("regression.modal_choice_timeout_spec"),
-    require("regression.chance"),
-    require("regression.land"),
-    require("regression.item"),
-    require("regression.movement"),
-    require("regression.landing"),
-    require("regression.market"),
-    require("regression.paid_currency"),
-    require("regression.presentation_ui"),
-    require("regression.presentation_ui_action_anim"),
-    require("regression.gameplay"),
-    require("regression.misc"),
-  }
-end
-
-local function _append_all(target, items)
-  for _, item in ipairs(items or {}) do
-    target[#target + 1] = item
+local function _read_stdout(cmd)
+  local pipe = io.popen(cmd)
+  if not pipe then
+    return nil
   end
+  local output = pipe:read("*a") or ""
+  pipe:close()
+  return output
 end
 
-function spec_loader.collect_all()
+local function _collect_spec_paths()
+  local output = _read_stdout("find tests/specs -type f -name '*_spec.lua' 2>/dev/null")
+  if not output or output == "" then
+    return {}
+  end
+  local paths = {}
+  for line in string.gmatch(output, "[^\r\n]+") do
+    if line ~= "" then
+      paths[#paths + 1] = line
+    end
+  end
+  table.sort(paths)
+  return paths
+end
+
+local function _path_to_module(path)
+  local normalized = path:gsub("\\", "/")
+  if normalized:sub(1, #"tests/specs/") ~= "tests/specs/" then
+    return nil
+  end
+  local sub = normalized:sub(#"tests/specs/" + 1)
+  if sub:sub(-4) ~= ".lua" then
+    return nil
+  end
+  sub = sub:sub(1, -5)
+  return (sub:gsub("/", "."))
+end
+
+local function _load_specs_for_layers()
   local specs = {}
-  _append_all(specs, _base_specs())
+  for _, path in ipairs(_collect_spec_paths()) do
+    local module = _path_to_module(path)
+    if module then
+      specs[#specs + 1] = require(module)
+    end
+  end
   return specs
+end
+
+function spec_loader.collect_all(opts)
+  local _ = opts or {}
+  return _load_specs_for_layers()
 end
 
 return spec_loader

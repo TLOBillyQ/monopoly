@@ -1,10 +1,10 @@
 local support = require("support.regression_support")
-local _new_game = support.new_game
-local _build_ui_port = support.build_ui_port
-local _open_choice = support.open_choice
-local _get_choice = support.get_choice
-local _assert_eq = support.assert_eq
-local _with_patches = support.with_patches
+local new_game = support.new_game
+local build_ui_port = support.build_ui_port
+local open_choice = support.open_choice
+local get_choice = support.get_choice
+local assert_eq = support.assert_eq
+local with_patches = support.with_patches
 local turn_anim = support.turn_anim
 local tick_timeout = support.tick_timeout
 local constants = support.constants
@@ -151,24 +151,24 @@ local function _test_move_anim_callback_and_delay()
     delay_called = delay
     cb()
   end
-  _with_patches({
+  with_patches({
     { key = "LuaAPI", value = { call_delay_time = call_delay } },
     { key = "SetTimeOut", value = call_delay },
   }, function()
     turn_anim.step_move_anim(game, layer, {
       on_move_anim = function(_, anim)
-        _assert_eq(anim.seq, 1, "anim seq forwarded")
+        assert_eq(anim.seq, 1, "anim seq forwarded")
         return 0.2
       end,
     })
   end)
-  _assert_eq(delay_called, 0.2, "delay requested")
-  _assert_eq(#dispatched, 1, "move_anim_done dispatched")
-  _assert_eq(dispatched[1].seq, 1, "move_anim_done seq")
+  assert_eq(delay_called, 0.2, "delay requested")
+  assert_eq(#dispatched, 1, "move_anim_done dispatched")
+  assert_eq(dispatched[1].seq, 1, "move_anim_done seq")
 end
 
 local function _test_popup_timeout_auto_confirm()
-  local g = _new_game()
+  local g = new_game()
   local layer = {}
   layer.ui_modal_elapsed = 0
   layer.ui_modal_ref = nil
@@ -199,9 +199,9 @@ local function _test_popup_timeout_auto_confirm()
     end,
   }
   tick_timeout.step_modal_timeout(layer, near_timeout, timeout_opts)
-  _assert_eq(popup.confirm_called, 0, "popup should not auto confirm before timeout")
+  assert_eq(popup.confirm_called, 0, "popup should not auto confirm before timeout")
   tick_timeout.step_modal_timeout(layer, near_timeout + 1, timeout_opts)
-  _assert_eq(popup.confirm_called, 1, "popup should auto confirm after timeout")
+  assert_eq(popup.confirm_called, 1, "popup should auto confirm after timeout")
 end
 
 local function _test_runtime_port_with_client_role_restores_nested_context()
@@ -210,7 +210,7 @@ local function _test_runtime_port_with_client_role_restores_nested_context()
   local original = { name = "origin" }
   local manager = { client_role = original }
 
-  _with_patches({
+  with_patches({
     { key = "UIManager", value = manager },
   }, function()
     runtime_port.with_client_role(role1, function()
@@ -253,7 +253,7 @@ local function _test_choice_timeout_supports_explicit_timeout_strategy()
     pending_choice_id = nil,
   }
   local dispatched = nil
-  _with_patches({
+  with_patches({
     { target = turn_dispatch, key = "dispatch_action", value = function(_, _, action)
       dispatched = action
     end },
@@ -291,19 +291,19 @@ local function _test_tick_timeout_default_policy_isolation()
 end
 
 local function _test_invalid_choice_option_rejected()
-  local g = _new_game()
-  local choice = _open_choice(g, {
+  local g = new_game()
+  local choice = open_choice(g, {
     kind = "market_buy",
     options = { { id = 1, label = "X" } },
     meta = { player_id = g:current_player().id },
   })
   choice_resolver.resolve(g, choice, { option_id = 999 })
-  assert(_get_choice(g) ~= nil, "invalid option should keep choice")
+  assert(get_choice(g) ~= nil, "invalid option should keep choice")
 end
 
 local function _test_move_anim_wait_and_resume()
-  local g = _new_game()
-  g.ui_port = _build_ui_port({ wait_move_anim = true })
+  local g = new_game()
+  g.ui_port = build_ui_port({ wait_move_anim = true })
   local player = g:current_player()
   g.last_turn = {
     player_id = player.id,
@@ -362,8 +362,8 @@ local function _test_move_anim_zero_distance_safe()
     direction = { x = 0, y = 0, z = 1 },
   })
 
-  _assert_eq(total, 0, "zero distance should return zero duration")
-  _assert_eq(start_move_called, 0, "zero distance should skip unit move")
+  assert_eq(total, 0, "zero distance should return zero duration")
+  assert_eq(start_move_called, 0, "zero distance should skip unit move")
 end
 
 local function _test_move_anim_vehicle_uses_set_position_jump()
@@ -385,7 +385,7 @@ local function _test_move_anim_vehicle_uses_set_position_jump()
     },
   }
 
-  _with_patches({
+  with_patches({
     { target = gameplay_rules, key = "vehicle_enabled", value = true },
     { target = runtime_constants, key = "vehicle_move_api_enabled", value = false },
     { key = "vehicle_helper", value = {
@@ -407,9 +407,9 @@ local function _test_move_anim_vehicle_uses_set_position_jump()
     assert(total > 0, "vehicle move total time should be positive")
   end)
 
-  _assert_eq(unit_move_called, 0, "vehicle jump should not call unit.start_move_by_direction")
-  _assert_eq(#vehicle_set_positions, 1, "vehicle jump should forward one set_position event")
-  _assert_eq(vehicle_set_positions[1].role_id, 1, "vehicle jump role id should match")
+  assert_eq(unit_move_called, 0, "vehicle jump should not call unit.start_move_by_direction")
+  assert_eq(#vehicle_set_positions, 1, "vehicle jump should forward one set_position event")
+  assert_eq(vehicle_set_positions[1].role_id, 1, "vehicle jump role id should match")
 end
 
 local function _test_move_anim_vehicle_enter_delay_once()
@@ -425,7 +425,7 @@ local function _test_move_anim_vehicle_enter_delay_once()
     units_by_player_id = { [1] = {} },
   }
 
-  _with_patches({
+  with_patches({
     { target = gameplay_rules, key = "vehicle_enabled", value = true },
     { target = runtime_constants, key = "vehicle_move_api_enabled", value = false },
     { key = "SetTimeOut", value = function(delay)
@@ -449,7 +449,7 @@ local function _test_move_anim_vehicle_enter_delay_once()
       direction = { x = 1, y = 0, z = 0 },
       vehicle_id = 4001,
     })
-    _assert_eq(#timeout_delays, 1, "first vehicle move should be delayed by enter wait")
+    assert_eq(#timeout_delays, 1, "first vehicle move should be delayed by enter wait")
     assert(math.abs(timeout_delays[1] - 1.2) < 0.0001, "first delay should include 1.2s enter wait")
 
     timeout_delays = {}
@@ -460,7 +460,7 @@ local function _test_move_anim_vehicle_enter_delay_once()
       direction = { x = 1, y = 0, z = 0 },
       vehicle_id = 4001,
     })
-    _assert_eq(#timeout_delays, 0, "second move should not include enter wait delay")
+    assert_eq(#timeout_delays, 0, "second move should not include enter wait delay")
   end)
 end
 
@@ -477,7 +477,7 @@ local function _test_move_anim_vehicle_move_api_enabled_uses_move_event()
     units_by_player_id = { [1] = {} },
   }
 
-  _with_patches({
+  with_patches({
     { target = gameplay_rules, key = "vehicle_enabled", value = true },
     { target = runtime_constants, key = "vehicle_move_api_enabled", value = true },
     { key = "vehicle_helper", value = {
@@ -501,8 +501,8 @@ local function _test_move_anim_vehicle_move_api_enabled_uses_move_event()
     })
   end)
 
-  _assert_eq(move_calls, 1, "move api enabled should use forward_eca_event_move")
-  _assert_eq(set_pos_calls, 0, "move api enabled should not use set_position jump")
+  assert_eq(move_calls, 1, "move api enabled should use forward_eca_event_move")
+  assert_eq(set_pos_calls, 0, "move api enabled should not use set_position jump")
 end
 
 local function _test_board_view_vehicle_resync_uses_set_position()
@@ -547,7 +547,7 @@ local function _test_board_view_vehicle_resync_uses_set_position()
     },
   }
 
-  _with_patches({
+  with_patches({
     { target = gameplay_rules, key = "vehicle_enabled", value = true },
     { target = math, key = "Vector3", value = _vec3 },
     { key = "vehicle_helper", value = {
@@ -557,15 +557,15 @@ local function _test_board_view_vehicle_resync_uses_set_position()
     } },
   }, function()
     board_view.refresh_board(state, model, function() end, function() return "[test]" end)
-    _assert_eq(#set_pos_calls, 0, "same resync seq should not force vehicle set_position")
+    assert_eq(#set_pos_calls, 0, "same resync seq should not force vehicle set_position")
 
     model.board.vehicle_resync_seq = 2
     board_view.refresh_board(state, model, function() end, function() return "[test]" end)
   end)
 
-  _assert_eq(unit_set_calls, 0, "vehicle player should not call unit.set_position")
-  _assert_eq(#set_pos_calls, 1, "resync seq change should trigger set_position")
-  _assert_eq(set_pos_calls[1].role_id, 1, "set_position role id should match player")
+  assert_eq(unit_set_calls, 0, "vehicle player should not call unit.set_position")
+  assert_eq(#set_pos_calls, 1, "resync seq change should trigger set_position")
+  assert_eq(set_pos_calls[1].role_id, 1, "set_position role id should match player")
 end
 
 local function _test_move_anim_step_unlocks_and_relocks()
@@ -584,7 +584,7 @@ local function _test_move_anim_step_unlocks_and_relocks()
     },
   }
 
-  _with_patches({
+  with_patches({
     { key = "SetTimeOut", value = function(_, cb) cb() end },
   }, function()
     local anim_ctx = {
@@ -596,8 +596,8 @@ local function _test_move_anim_step_unlocks_and_relocks()
     move_anim.one_step(scene, 1, 1, 2, anim_ctx)
   end)
 
-  _assert_eq(calls[1], false, "step should unlock at begin")
-  _assert_eq(calls[2], true, "step should relock at end")
+  assert_eq(calls[1], false, "step should unlock at begin")
+  assert_eq(calls[2], true, "step should relock at end")
 end
 
 local function _test_board_view_vehicle_disabled_uses_unit_set_position()
@@ -642,7 +642,7 @@ local function _test_board_view_vehicle_disabled_uses_unit_set_position()
     },
   }
 
-  _with_patches({
+  with_patches({
     { target = gameplay_rules, key = "vehicle_enabled", value = false },
     { target = math, key = "Vector3", value = _vec3 },
     { key = "vehicle_helper", value = {
@@ -654,13 +654,13 @@ local function _test_board_view_vehicle_disabled_uses_unit_set_position()
     board_view.refresh_board(state, model, function() end, function() return "[test]" end)
   end)
 
-  _assert_eq(#set_pos_calls, 0, "vehicle helper should not be called when feature disabled")
-  _assert_eq(unit_set_calls, 1, "disabled vehicle should fall back to unit.set_position")
+  assert_eq(#set_pos_calls, 0, "vehicle helper should not be called when feature disabled")
+  assert_eq(unit_set_calls, 1, "disabled vehicle should fall back to unit.set_position")
 end
 
 local function _test_ui_model_structure()
   local ui_model = require("visual.model")
-  local g = _new_game()
+  local g = new_game()
   local player = g:current_player()
   player.inventory:add({ id = 2001 })
   local ui_state = {
@@ -702,13 +702,13 @@ local function _test_ui_panel_clamps_negative_assets_to_zero()
 
   local row = statuses and statuses[1] or nil
   assert(row ~= nil, "panel row should exist")
-  _assert_eq(row.cash, "现金: 0", "negative cash should render as zero")
-  _assert_eq(row.total_assets, "总资产: 0", "negative total assets should render as zero")
+  assert_eq(row.cash, "现金: 0", "negative cash should render as zero")
+  assert_eq(row.total_assets, "总资产: 0", "negative total assets should render as zero")
 end
 
 local function _test_ui_model_player_slot_map_and_choice_owner()
   local ui_model = require("visual.model")
-  local g = _new_game()
+  local g = new_game()
   g.players[1].inventory:add({ id = 2001 })
   g.players[2].inventory:add({ id = 2002 })
   g.players[1].auto = false
@@ -744,7 +744,7 @@ end
 
 local function _test_ui_model_player_profile_prefers_role_api_with_fallback()
   local ui_model = require("visual.model")
-  local g = _new_game()
+  local g = new_game()
   g.players[1].name = "本地玩家1"
   g.players[2].name = "本地玩家2"
   g.players[2].eliminated = true
@@ -767,7 +767,7 @@ local function _test_ui_model_player_profile_prefers_role_api_with_fallback()
     },
   }
   local model = nil
-  _with_patches({
+  with_patches({
     { target = GameAPI, key = "get_role", value = function(role_id)
       return role_by_id[role_id]
     end },
@@ -790,7 +790,7 @@ end
 
 local function _test_ui_model_player_profile_accepts_stringified_avatar()
   local ui_model = require("visual.model")
-  local g = _new_game()
+  local g = new_game()
   g.players[1].name = "本地玩家1"
   local icon_obj = setmetatable({}, {
     __tostring = function()
@@ -808,7 +808,7 @@ local function _test_ui_model_player_profile_accepts_stringified_avatar()
     },
   }
   local model = nil
-  _with_patches({
+  with_patches({
     { target = GameAPI, key = "get_role", value = function(role_id)
       return role_by_id[role_id]
     end },
@@ -826,7 +826,7 @@ local function _test_ui_model_player_profile_accepts_stringified_avatar()
 end
 
 local function _test_turn_dispatch_rejects_non_current_actor()
-  local g = _new_game()
+  local g = new_game()
   local state = {
     ui = {
       input_blocked = false,
@@ -852,7 +852,7 @@ local function _test_turn_dispatch_rejects_non_current_actor()
 end
 
 local function _test_turn_dispatch_rejects_choice_non_owner()
-  local g = _new_game()
+  local g = new_game()
   local state = {
     ui = {
       input_blocked = false,
@@ -888,7 +888,7 @@ local function _test_turn_dispatch_rejects_choice_non_owner()
 end
 
 local function _test_turn_dispatch_auto_rejects_unmapped_role()
-  local g = _new_game()
+  local g = new_game()
   local state = {
     ui = {
       input_blocked = false,
@@ -907,7 +907,7 @@ local function _test_turn_dispatch_auto_rejects_unmapped_role()
 end
 
 local function _test_turn_dispatch_item_slot_uses_actor_slot_map()
-  local g = _new_game()
+  local g = new_game()
   local captured = nil
   g.turn.pending_choice = {
     id = 66,
@@ -956,7 +956,7 @@ local function _test_ui_intent_dispatcher_market_confirm_routes_choice_select()
   }
   local game = {}
 
-  _with_patches({
+  with_patches({
     { target = turn_dispatch, key = "dispatch_action", value = function(_, _, action)
       captured = action
     end },
@@ -969,8 +969,8 @@ local function _test_ui_intent_dispatcher_market_confirm_routes_choice_select()
   end)
 
   assert(captured and captured.type == "choice_select", "market_confirm should route as choice_select")
-  _assert_eq(captured and captured.choice_id, 12, "market_confirm should keep choice id")
-  _assert_eq(captured and captured.option_id, 34, "market_confirm should keep option id")
+  assert_eq(captured and captured.choice_id, 12, "market_confirm should keep choice id")
+  assert_eq(captured and captured.option_id, 34, "market_confirm should keep option id")
 end
 
 local function _test_ui_intent_dispatcher_market_select_updates_ui_only()
@@ -984,7 +984,7 @@ local function _test_ui_intent_dispatcher_market_select_updates_ui_only()
   }
   local game = {}
 
-  _with_patches({
+  with_patches({
     { target = ui_view, key = "select_market_option", value = function(_, option_id)
       selected_option = option_id
     end },
@@ -995,7 +995,7 @@ local function _test_ui_intent_dispatcher_market_select_updates_ui_only()
     }, {})
   end)
 
-  _assert_eq(selected_option, 99, "market_select should update selected option")
+  assert_eq(selected_option, 99, "market_select should update selected option")
 end
 
 local function _test_ui_intent_dispatcher_popup_confirm_closes_popup()
@@ -1009,7 +1009,7 @@ local function _test_ui_intent_dispatcher_popup_confirm_closes_popup()
   }
   local game = {}
 
-  _with_patches({
+  with_patches({
     { target = ui_view, key = "close_popup", value = function()
       closed = closed + 1
     end },
@@ -1019,7 +1019,7 @@ local function _test_ui_intent_dispatcher_popup_confirm_closes_popup()
     }, {})
   end)
 
-  _assert_eq(closed, 1, "popup_confirm should close popup once")
+  assert_eq(closed, 1, "popup_confirm should close popup once")
 end
 
 local function _test_ui_intent_dispatcher_toggle_action_log_uses_actor_role_context()
@@ -1034,7 +1034,7 @@ local function _test_ui_intent_dispatcher_toggle_action_log_uses_actor_role_cont
   }
   local visible_calls = {}
 
-  _with_patches({
+  with_patches({
     { key = "all_roles", value = { role } },
     { key = "UIManager", value = {
       client_role = nil,
@@ -1058,19 +1058,19 @@ local function _test_ui_intent_dispatcher_toggle_action_log_uses_actor_role_cont
       type = "toggle_action_log",
       actor_role_id = 101,
     }, {})
-    _assert_eq(state.ui.debug_visible_by_role[101], true, "toggle_action_log should enable action_log for actor role")
-    _assert_eq(UIManager.client_role, nil, "toggle_action_log should restore client role")
+    assert_eq(state.ui.debug_visible_by_role[101], true, "toggle_action_log should enable action_log for actor role")
+    assert_eq(UIManager.client_role, nil, "toggle_action_log should restore client role")
 
     ui_intent_dispatcher.dispatch(state, game, {
       type = "toggle_action_log",
       actor_role_id = 101,
     }, {})
-    _assert_eq(state.ui.debug_visible_by_role[101], false, "toggle_action_log second click should disable action_log")
-    _assert_eq(UIManager.client_role, nil, "toggle_action_log second click should restore client role")
+    assert_eq(state.ui.debug_visible_by_role[101], false, "toggle_action_log second click should disable action_log")
+    assert_eq(UIManager.client_role, nil, "toggle_action_log second click should restore client role")
   end)
 
-  _assert_eq(visible_calls[1], true, "first toggle_action_log should enable action_log")
-  _assert_eq(visible_calls[2], false, "second toggle_action_log should disable action_log")
+  assert_eq(visible_calls[1], true, "first toggle_action_log should enable action_log")
+  assert_eq(visible_calls[2], false, "second toggle_action_log should disable action_log")
 end
 
 local function _test_ui_view_render_by_role_slots_are_isolated()
@@ -1191,7 +1191,7 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
     { get_roleid = function() return 2 end },
   }
 
-  _with_patches({
+  with_patches({
     { key = "all_roles", value = roles },
     { key = "UIManager", value = { client_role = nil, query_nodes_by_name = query_nodes_by_name } },
   }, function()
@@ -1269,7 +1269,7 @@ local function _test_apply_input_lock_keeps_auto_controls_enabled()
     { get_roleid = function() return 1 end },
   }
 
-  _with_patches({
+  with_patches({
     { key = "all_roles", value = roles },
   }, function()
     ui_view.apply_input_lock(state)
@@ -1315,7 +1315,7 @@ local function _test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapp
     { get_roleid = function() return 1 end },
   }
 
-  _with_patches({
+  with_patches({
     { key = "all_roles", value = roles },
   }, function()
     ui_view.apply_input_lock(state)
@@ -1335,12 +1335,12 @@ local function _test_ui_touch_policy_auto_controls_touch()
   }
 
   ui_touch_policy.set_auto_controls_touch(ui, true)
-  _assert_eq(touch["托管按钮"], true, "auto button should be clickable when enabled")
-  _assert_eq(touch["托管_文本"], false, "auto label should stay non-clickable")
+  assert_eq(touch["托管按钮"], true, "auto button should be clickable when enabled")
+  assert_eq(touch["托管_文本"], false, "auto label should stay non-clickable")
 
   ui_touch_policy.set_auto_controls_touch(ui, false)
-  _assert_eq(touch["托管按钮"], false, "auto button should be non-clickable when disabled")
-  _assert_eq(touch["托管_文本"], false, "auto label should stay non-clickable when disabled")
+  assert_eq(touch["托管按钮"], false, "auto button should be non-clickable when disabled")
+  assert_eq(touch["托管_文本"], false, "auto label should stay non-clickable when disabled")
 end
 
 local function _test_ui_touch_policy_runtime_nodes_touch_enabled()
@@ -1348,12 +1348,12 @@ local function _test_ui_touch_policy_runtime_nodes_touch_enabled()
   local node2 = { disabled = true }
 
   ui_touch_policy.set_runtime_nodes_touch_enabled({ node1, node2 }, true)
-  _assert_eq(node1.disabled, false, "runtime node should be enabled")
-  _assert_eq(node2.disabled, false, "runtime node should be enabled")
+  assert_eq(node1.disabled, false, "runtime node should be enabled")
+  assert_eq(node2.disabled, false, "runtime node should be enabled")
 
   ui_touch_policy.set_runtime_nodes_touch_enabled({ node1, node2 }, false)
-  _assert_eq(node1.disabled, true, "runtime node should be disabled")
-  _assert_eq(node2.disabled, true, "runtime node should be disabled")
+  assert_eq(node1.disabled, true, "runtime node should be disabled")
+  assert_eq(node2.disabled, true, "runtime node should be disabled")
 end
 
 local function _test_push_popup_sets_card_image_by_image_ref()
@@ -1368,7 +1368,7 @@ local function _test_push_popup_sets_card_image_by_image_ref()
     ["2001"] = "ICON2001",
   }, card_node)
 
-  _with_patches({
+  with_patches({
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
@@ -1380,8 +1380,8 @@ local function _test_push_popup_sets_card_image_by_image_ref()
     })
   end)
 
-  _assert_eq(last_image_key, "ICON2001", "popup card should use mapped image")
-  _assert_eq(nodes["卡牌展示_图片"].visible, true, "popup card should be visible when image exists")
+  assert_eq(last_image_key, "ICON2001", "popup card should use mapped image")
+  assert_eq(nodes["卡牌展示_图片"].visible, true, "popup card should be visible when image exists")
 end
 
 local function _test_push_popup_hides_card_and_clears_image_when_missing()
@@ -1396,7 +1396,7 @@ local function _test_push_popup_hides_card_and_clears_image_when_missing()
     ["2001"] = "ICON2001",
   }, card_node)
 
-  _with_patches({
+  with_patches({
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
@@ -1412,8 +1412,8 @@ local function _test_push_popup_hides_card_and_clears_image_when_missing()
     })
   end)
 
-  _assert_eq(last_image_key, "EMPTY", "popup card should reset to empty key when image missing")
-  _assert_eq(nodes["卡牌展示_图片"].visible, false, "popup card should hide when image missing")
+  assert_eq(last_image_key, "EMPTY", "popup card should reset to empty key when image missing")
+  assert_eq(nodes["卡牌展示_图片"].visible, false, "popup card should hide when image missing")
 end
 
 local function _test_popup_hidden_for_non_current_role()
@@ -1433,7 +1433,7 @@ local function _test_popup_hidden_for_non_current_role()
     _build_role_with_events(2, role2_events),
   }
 
-  _with_patches({
+  with_patches({
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = roles },
     { target = runtime_port, key = "for_each_role_or_global", value = function(fn)
@@ -1472,7 +1472,7 @@ local function _test_popup_visible_for_all_roles_when_allowed_kind()
     _build_role_with_events(2, role2_events),
   }
 
-  _with_patches({
+  with_patches({
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = roles },
     { target = runtime_port, key = "for_each_role_or_global", value = function(fn)
@@ -1517,7 +1517,7 @@ local function _test_bankruptcy_popup_visible_for_all_roles()
     _build_role_with_events(2, role2_events),
   }
 
-  _with_patches({
+  with_patches({
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = roles },
     { target = runtime_port, key = "for_each_role_or_global", value = function(fn)
@@ -1547,7 +1547,7 @@ local function _test_popup_timeout_closes_even_when_input_blocked()
     set_texture_keep_size = function() end,
   })
 
-  _with_patches({
+  with_patches({
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
@@ -1562,14 +1562,14 @@ local function _test_popup_timeout_closes_even_when_input_blocked()
     tick_timeout.step_default_modal({}, state, 0.2)
   end)
 
-  _assert_eq(state.ui.popup_active, false, "popup should auto close under input blocked")
-  _assert_eq(nodes["卡牌展示屏"].visible, false, "popup root should hide after timeout")
+  assert_eq(state.ui.popup_active, false, "popup should auto close under input blocked")
+  assert_eq(nodes["卡牌展示屏"].visible, false, "popup root should hide after timeout")
 end
 
 local function _test_choice_modal_routes_to_new_screens()
   local state, nodes, query_nodes = _build_choice_modal_state()
 
-  _with_patches({
+  with_patches({
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
@@ -1584,8 +1584,8 @@ local function _test_choice_modal_routes_to_new_screens()
       allow_cancel = true,
       cancel_label = "取消",
     })
-    _assert_eq(state.ui.active_choice_screen_key, "player", "item_target_player should route to player screen")
-    _assert_eq(nodes["玩家选择屏"].visible, true, "player screen should be visible")
+    assert_eq(state.ui.active_choice_screen_key, "player", "item_target_player should route to player screen")
+    assert_eq(nodes["玩家选择屏"].visible, true, "player screen should be visible")
 
     ui_view.open_choice_modal(state, {
       id = 2,
@@ -1598,8 +1598,8 @@ local function _test_choice_modal_routes_to_new_screens()
       allow_cancel = true,
       cancel_label = "放弃",
     })
-    _assert_eq(state.ui.active_choice_screen_key, "target", "roadblock_target should route to target screen")
-    _assert_eq(nodes["位置选择屏"].visible, true, "target screen should be visible")
+    assert_eq(state.ui.active_choice_screen_key, "target", "roadblock_target should route to target screen")
+    assert_eq(nodes["位置选择屏"].visible, true, "target screen should be visible")
 
     ui_view.open_choice_modal(state, {
       id = 3,
@@ -1614,8 +1614,8 @@ local function _test_choice_modal_routes_to_new_screens()
       allow_cancel = true,
       cancel_label = "放弃",
     })
-    _assert_eq(state.ui.active_choice_screen_key, "remote", "remote_dice_value should route to remote screen")
-    _assert_eq(nodes["遥控骰子屏"].visible, true, "remote screen should be visible")
+    assert_eq(state.ui.active_choice_screen_key, "remote", "remote_dice_value should route to remote screen")
+    assert_eq(nodes["遥控骰子屏"].visible, true, "remote screen should be visible")
 
     ui_view.open_choice_modal(state, {
       id = 4,
@@ -1628,12 +1628,12 @@ local function _test_choice_modal_routes_to_new_screens()
       allow_cancel = true,
       cancel_label = "跳过",
     })
-    _assert_eq(state.ui.active_choice_screen_key, "building", "buy_land optional should route to building screen")
-    _assert_eq(nodes["建筑升级屏"].visible, true, "building screen should be visible")
-    _assert_eq(nodes["建筑升级_标题"].text, "购买地块", "building title should follow option semantic")
-    _assert_eq(nodes["建筑升级_文本"].text, "", "building body should sync from choice body")
-    _assert_eq(nodes["建筑升级_确定按钮"].text, "", "building confirm text should be empty")
-    _assert_eq(nodes["建筑升级_取消"].text, "", "building cancel text should be empty")
+    assert_eq(state.ui.active_choice_screen_key, "building", "buy_land optional should route to building screen")
+    assert_eq(nodes["建筑升级屏"].visible, true, "building screen should be visible")
+    assert_eq(nodes["建筑升级_标题"].text, "购买地块", "building title should follow option semantic")
+    assert_eq(nodes["建筑升级_文本"].text, "", "building body should sync from choice body")
+    assert_eq(nodes["建筑升级_确定按钮"].text, "", "building confirm text should be empty")
+    assert_eq(nodes["建筑升级_取消"].text, "", "building cancel text should be empty")
 
     ui_view.open_choice_modal(state, {
       id = 5,
@@ -1646,7 +1646,7 @@ local function _test_choice_modal_routes_to_new_screens()
       allow_cancel = true,
       cancel_label = "跳过",
     })
-    _assert_eq(state.ui.active_choice_screen_key, "target", "non-building optional should fallback to target screen")
+    assert_eq(state.ui.active_choice_screen_key, "target", "non-building optional should fallback to target screen")
   end)
 end
 
@@ -1693,7 +1693,7 @@ local function _test_ui_event_router_player_target_click_direct_submit()
     choice_visible_option_ids = nil,
   }
 
-  _with_patches({
+  with_patches({
     { key = "all_roles", value = nil },
     { key = "GlobalAPI", value = { show_tips = function() end } },
     { key = "UIManager", value = {
@@ -1724,12 +1724,12 @@ local function _test_ui_event_router_player_target_click_direct_submit()
     node_map["位置后1"]._listener_cb({})
   end)
 
-  _assert_eq(captured[1] and captured[1].type, "choice_select", "player click should dispatch choice_select")
-  _assert_eq(captured[1] and captured[1].choice_id, 10, "player click should keep choice id")
-  _assert_eq(captured[1] and captured[1].option_id, 22, "player click should submit clicked option")
-  _assert_eq(captured[2] and captured[2].type, "choice_select", "target click should dispatch choice_select")
-  _assert_eq(captured[2] and captured[2].choice_id, 20, "target click should keep choice id")
-  _assert_eq(captured[2] and captured[2].option_id, 201, "target click should submit clicked option")
+  assert_eq(captured[1] and captured[1].type, "choice_select", "player click should dispatch choice_select")
+  assert_eq(captured[1] and captured[1].choice_id, 10, "player click should keep choice id")
+  assert_eq(captured[1] and captured[1].option_id, 22, "player click should submit clicked option")
+  assert_eq(captured[2] and captured[2].type, "choice_select", "target click should dispatch choice_select")
+  assert_eq(captured[2] and captured[2].choice_id, 20, "target click should keep choice id")
+  assert_eq(captured[2] and captured[2].option_id, 201, "target click should submit clicked option")
 end
 
 local function _test_ui_event_router_action_log_toggle_uses_role_context()
@@ -1771,7 +1771,7 @@ local function _test_ui_event_router_action_log_toggle_uses_role_context()
     end,
   }
 
-  _with_patches({
+  with_patches({
     { key = "all_roles", value = nil },
     { key = "GlobalAPI", value = { show_tips = function() end } },
     { key = "UIManager", value = {
@@ -1785,18 +1785,18 @@ local function _test_ui_event_router_action_log_toggle_uses_role_context()
     end)
 
     local role_id = role.get_roleid()
-    _assert_eq(state.ui.debug_visible_by_role[role_id], nil, "action_log role flag should start nil")
+    assert_eq(state.ui.debug_visible_by_role[role_id], nil, "action_log role flag should start nil")
     assert(type(node_map["倒计时时钟"]._listener_cb) == "function", "action_log image should bind click listener")
     local before = require("visual.control.state").resolve_debug_enabled(state)
     node_map["基础_行动日志按钮"]._listener_cb({ role = role })
     local first_value = state.ui.debug_visible_by_role[role_id]
-    _assert_eq(first_value, not before, "action_log toggle should invert role visibility")
-    _assert_eq(UIManager.client_role, nil, "action_log toggle should restore client role")
+    assert_eq(first_value, not before, "action_log toggle should invert role visibility")
+    assert_eq(UIManager.client_role, nil, "action_log toggle should restore client role")
 
     node_map["倒计时时钟"]._listener_cb({ role = role })
     local second_value = state.ui.debug_visible_by_role[role_id]
     assert(second_value ~= first_value, "action_log toggle should flip role visibility after second click")
-    _assert_eq(UIManager.client_role, nil, "action_log toggle should restore client role after second click")
+    assert_eq(UIManager.client_role, nil, "action_log toggle should restore client role after second click")
   end)
 end
 
@@ -1819,7 +1819,7 @@ local function _test_market_selection_updates_icon_without_resize()
         labels[name] = text
       end,
       query_node = function(name)
-        _assert_eq(name, market_layout.selected_card, "selected card node expected")
+        assert_eq(name, market_layout.selected_card, "selected card node expected")
         return selected_node
       end,
     },
@@ -1827,9 +1827,9 @@ local function _test_market_selection_updates_icon_without_resize()
 
   market_view.refresh_market_selection(state, option_id)
 
-  _assert_eq(selected_node.image_texture, 1002, "market selected icon should update")
-  _assert_eq(reset_calls, 0, "market selected icon should not call reset_size")
-  _assert_eq(labels[market_layout.price_label], "售价：" .. tostring(entry.price) .. " " .. entry.currency,
+  assert_eq(selected_node.image_texture, 1002, "market selected icon should update")
+  assert_eq(reset_calls, 0, "market selected icon should not call reset_size")
+  assert_eq(labels[market_layout.price_label], "售价：" .. tostring(entry.price) .. " " .. entry.currency,
     "market price label should update")
 end
 
@@ -1852,7 +1852,7 @@ local function _test_market_close_resets_icon_without_resize()
       set_label = function() end,
       set_touch_enabled = function() end,
       query_node = function(name)
-        _assert_eq(name, market_layout.selected_card, "selected card node expected")
+        assert_eq(name, market_layout.selected_card, "selected card node expected")
         return selected_node
       end,
     },
@@ -1860,11 +1860,11 @@ local function _test_market_close_resets_icon_without_resize()
 
   market_view.close_market_panel(state)
 
-  _assert_eq(state.ui.market_active, false, "market panel should be inactive")
-  _assert_eq(state.choice_visible_option_ids, nil, "market options should clear")
-  _assert_eq(state.pending_choice_selected_option_id, nil, "selected market option should clear")
-  _assert_eq(selected_node.image_texture, 4321, "market selected icon should reset to empty key")
-  _assert_eq(reset_calls, 0, "market close should not call reset_size")
+  assert_eq(state.ui.market_active, false, "market panel should be inactive")
+  assert_eq(state.choice_visible_option_ids, nil, "market options should clear")
+  assert_eq(state.pending_choice_selected_option_id, nil, "selected market option should clear")
+  assert_eq(selected_node.image_texture, 4321, "market selected icon should reset to empty key")
+  assert_eq(reset_calls, 0, "market close should not call reset_size")
 end
 
 local function _test_item_slot_uses_keep_size_path()
@@ -1895,7 +1895,7 @@ local function _test_item_slot_uses_keep_size_path()
     choice = nil,
   }
 
-  _with_patches({
+  with_patches({
     { key = "UIManager", value = { query_nodes_by_name = function() return { slot_node } end } },
   }, function()
     ui_view.refresh_item_slots(state, ui_model, {
@@ -1904,8 +1904,8 @@ local function _test_item_slot_uses_keep_size_path()
     })
   end)
 
-  _assert_eq(keep_size_calls, 1, "item slot should use keep-size texture path")
-  _assert_eq(last_image_key, "ICON2001", "item slot should set expected image key")
+  assert_eq(keep_size_calls, 1, "item slot should use keep-size texture path")
+  assert_eq(last_image_key, "ICON2001", "item slot should set expected image key")
 end
 
 local function _test_tick_skips_anim_when_no_anim()
@@ -1995,7 +1995,7 @@ local function _test_tick_skips_anim_when_no_anim()
   }
 
   local ok, err = pcall(function()
-    _with_patches(patches, function()
+    with_patches(patches, function()
       gameplay_loop.tick(game, state, 0.1)
     end)
   end)
@@ -2047,12 +2047,12 @@ local function _test_action_anim_queue_consumes_in_order()
   g.turn_flow = turn_flow:new(g, phases)
 
   local state = g.turn_flow:run_until_wait()
-  _assert_eq(state, "wait_action_anim", "should wait action anim")
-  _assert_eq(g.turn.action_anim.seq, 1, "current anim should be seq1")
+  assert_eq(state, "wait_action_anim", "should wait action anim")
+  assert_eq(g.turn.action_anim.seq, 1, "current anim should be seq1")
 
   g.turn_flow:dispatch({ type = "action_anim_done", seq = 1 })
-  _assert_eq(g.turn.phase, "wait_action_anim", "should still wait second anim")
-  _assert_eq(g.turn.action_anim.seq, 2, "current anim should switch to seq2")
+  assert_eq(g.turn.phase, "wait_action_anim", "should still wait second anim")
+  assert_eq(g.turn.action_anim.seq, 2, "current anim should switch to seq2")
 
   g.turn_flow:dispatch({ type = "action_anim_done", seq = 2 })
   assert(g.turn.phase ~= "wait_action_anim", "should leave action anim wait after queue drained")
@@ -2064,16 +2064,16 @@ local function _test_action_anim_default_duration()
   local state = {
     game = { turn = { current_player_index = 1 }, players = { [1] = { id = 1 } } },
   }
-  _with_patches({
+  with_patches({
     { key = "GlobalAPI", value = { show_tips = function(_, duration) durations[#durations + 1] = duration end } },
     { key = "SetTimeOut", value = function() end },
   }, function()
     local d1 = action_anim.play(state, { kind = "item_use", player_id = 1 })
     local d2 = action_anim.play(state, { kind = "item_use", player_id = 1, duration = 1.8 })
-    _assert_eq(d1, 1.0, "default action anim duration should be 1s")
-    _assert_eq(d2, 1.8, "explicit action anim duration should override")
+    assert_eq(d1, 1.0, "default action anim duration should be 1s")
+    assert_eq(d2, 1.8, "explicit action anim duration should override")
   end)
-  _assert_eq(#durations, 2, "tip should be shown twice")
+  assert_eq(#durations, 2, "tip should be shown twice")
 end
 
 local function _test_action_anim_no_camera_focus_side_effect()
@@ -2084,7 +2084,7 @@ local function _test_action_anim_no_camera_focus_side_effect()
       players = { [1] = { id = 1 }, [2] = { id = 2 } },
     },
   }
-  _with_patches({
+  with_patches({
     { key = "GlobalAPI", value = { show_tips = function() end } },
     { key = "TriggerCustomEvent", value = function() follow_events = follow_events + 1 end },
   }, function()
@@ -2093,9 +2093,9 @@ local function _test_action_anim_no_camera_focus_side_effect()
       player_id = 1,
       duration = 0.5,
     })
-    _assert_eq(duration, 0.5, "action anim should still return duration")
+    assert_eq(duration, 0.5, "action anim should still return duration")
   end)
-  _assert_eq(follow_events, 0, "action anim should not trigger camera follow events")
+  assert_eq(follow_events, 0, "action anim should not trigger camera follow events")
 end
 
 local function _make_unit(initial_count)
@@ -2142,7 +2142,7 @@ local function _test_role_control_lock_add_remove_owned_only()
   }
   local state = { role_control_lock = { by_role = {}, warn_once = {} } }
 
-  _with_patches({
+  with_patches({
     { key = "Enums", value = { BuffState = { BUFF_FORBID_CONTROL = 32 } } },
   }, function()
     role_control_lock_policy.sync(state, true, { runtime = runtime })
@@ -2173,7 +2173,7 @@ local function _test_role_control_lock_unit_swap_release_old_and_lock_new()
   }
   local state = { role_control_lock = { by_role = {}, warn_once = {} } }
 
-  _with_patches({
+  with_patches({
     { key = "Enums", value = { BuffState = { BUFF_FORBID_CONTROL = 32 } } },
   }, function()
     role_control_lock_policy.sync(state, true, { runtime = runtime })
@@ -2288,7 +2288,7 @@ local function _test_gameplay_loop_full_turn_lock_toggle()
     return nil
   end
 
-  _with_patches({
+  with_patches({
     { target = gameplay_rules, key = "role_control_lock_enabled", value = true },
     { target = event_handlers, key = "install", value = function() end },
     { target = paid_currency_bridge, key = "setup_for_game", value = function() end },
@@ -2299,9 +2299,9 @@ local function _test_gameplay_loop_full_turn_lock_toggle()
     gameplay_loop.tick(game, state, 0.1)
   end)
 
-  _assert_eq(calls[1], false, "set_game should clear lock first")
-  _assert_eq(calls[2], true, "active game should enable lock")
-  _assert_eq(calls[3], false, "finished game should clear lock")
+  assert_eq(calls[1], false, "set_game should clear lock first")
+  assert_eq(calls[2], true, "active game should enable lock")
+  assert_eq(calls[3], false, "finished game should clear lock")
 end
 
 local function _build_status3d_test_env()
@@ -2429,17 +2429,17 @@ local function _test_status3d_init_and_global_visibility()
   local env = _build_status3d_test_env()
   local state = {}
   local game = _build_status3d_game()
-  _with_patches({
+  with_patches({
     { key = "GameAPI", value = env.game_api },
     { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
   }, function()
     ui_status_3d_layer.sync(game, state, { any = true, players = true })
   end)
 
-  _assert_eq(#env.created_layers, 2, "status3d should create one layer per player")
+  assert_eq(#env.created_layers, 2, "status3d should create one layer per player")
   for _, layer in ipairs(env.created_layers) do
-    _assert_eq(env.layer_visibility[layer][1], false, "observer1 should see hidden layer when player has no status")
-    _assert_eq(env.layer_visibility[layer][2], false, "observer2 should see hidden layer when player has no status")
+    assert_eq(env.layer_visibility[layer][1], false, "observer1 should see hidden layer when player has no status")
+    assert_eq(env.layer_visibility[layer][2], false, "observer2 should see hidden layer when player has no status")
   end
 end
 
@@ -2453,7 +2453,7 @@ local function _test_status3d_priority_single_status()
       deity = { type = "poor", remaining = 5 },
     },
   })
-  _with_patches({
+  with_patches({
     { key = "GameAPI", value = env.game_api },
     { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
   }, function()
@@ -2463,9 +2463,9 @@ local function _test_status3d_priority_single_status()
   local node_set = state.ui_status_3d.nodes_by_player_id[1]
   local hospital_bg = node_set.hospital.bg
   local poor_bg = node_set.poor.bg
-  _assert_eq(env.node_visibility[1][hospital_bg], true, "hospital should win over poor deity")
-  _assert_eq(env.node_visibility[1][poor_bg], false, "poor deity node should be hidden when hospital active")
-  _assert_eq(env.layer_visibility["layer_1"][1], true, "layer should be visible when status exists")
+  assert_eq(env.node_visibility[1][hospital_bg], true, "hospital should win over poor deity")
+  assert_eq(env.node_visibility[1][poor_bg], false, "poor deity node should be hidden when hospital active")
+  assert_eq(env.layer_visibility["layer_1"][1], true, "layer should be visible when status exists")
 end
 
 local function _test_status3d_roadblock_only_current_turn()
@@ -2477,22 +2477,22 @@ local function _test_status3d_roadblock_only_current_turn()
       move_result = { stopped_on_roadblock = true },
     },
   })
-  _with_patches({
+  with_patches({
     { key = "GameAPI", value = env.game_api },
     { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
   }, function()
     ui_status_3d_layer.sync(game, state, { any = true, turn = true })
     local roadblock_bg = state.ui_status_3d.nodes_by_player_id[1].roadblock.bg
-    _assert_eq(env.node_visibility[1][roadblock_bg], true, "roadblock should show at trigger turn")
-    _assert_eq(env.layer_visibility["layer_1"][1], true, "roadblock turn should show layer")
+    assert_eq(env.node_visibility[1][roadblock_bg], true, "roadblock should show at trigger turn")
+    assert_eq(env.layer_visibility["layer_1"][1], true, "roadblock turn should show layer")
 
     game.last_turn = {
       player_id = 2,
       move_result = { stopped_on_roadblock = true },
     }
     ui_status_3d_layer.sync(game, state, { any = true, turn = true })
-    _assert_eq(env.node_visibility[1][roadblock_bg], false, "roadblock should hide after trigger turn")
-    _assert_eq(env.layer_visibility["layer_1"][1], false, "no status after trigger turn should hide layer")
+    assert_eq(env.node_visibility[1][roadblock_bg], false, "roadblock should hide after trigger turn")
+    assert_eq(env.layer_visibility["layer_1"][1], false, "no status after trigger turn should hide layer")
   end)
 end
 
@@ -2500,7 +2500,7 @@ local function _test_status3d_reset_destroy_layers()
   local env = _build_status3d_test_env()
   local state = {}
   local game = _build_status3d_game()
-  _with_patches({
+  with_patches({
     { key = "GameAPI", value = env.game_api },
     { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
   }, function()
@@ -2508,7 +2508,7 @@ local function _test_status3d_reset_destroy_layers()
     ui_status_3d_layer.reset(state)
   end)
 
-  _assert_eq(#env.destroyed_layers, 2, "reset should destroy all created layers")
+  assert_eq(#env.destroyed_layers, 2, "reset should destroy all created layers")
   assert(state.ui_status_3d == nil, "reset should clear state cache")
 end
 
@@ -2602,12 +2602,12 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
     ui = { input_blocked = false },
   }
 
-  _with_patches(patches, function()
+  with_patches(patches, function()
     state.gameplay_loop_ports = require("visual.port").build(state)
     gameplay_loop.tick(game, state, 0.1)
   end)
 
-  _assert_eq(helper.target_role_id, 2, "turn switch should follow current player")
+  assert_eq(helper.target_role_id, 2, "turn switch should follow current player")
   assert(follow_events >= 1, "turn switch should trigger follow event")
 end
 

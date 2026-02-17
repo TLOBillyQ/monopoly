@@ -2,7 +2,7 @@ local app = require("game")
 local map_cfg = require("cfg.Map")
 local tiles_cfg = require("cfg.Generated.Tiles")
 
-local function _new_game()
+local function new_game()
   app.setup({
     players = { "P1", "P2" },
     ai = { [2] = true },
@@ -13,7 +13,7 @@ local function _new_game()
   return app
 end
 
-local function _contains_product(list, product_id)
+local function contains_product(list, product_id)
   for _, entry in ipairs(list) do
     if entry.product_id == product_id then
       return true
@@ -22,7 +22,7 @@ local function _contains_product(list, product_id)
   return false
 end
 
-local function _contains_option(options, product_id)
+local function contains_option(options, product_id)
   for _, option in ipairs(options) do
     if option.id == product_id then
       return true
@@ -33,7 +33,7 @@ end
 
 local function _test_ai_skips_auto_buy_at_market()
   local market = require("game.shop")
-  local g = _new_game()
+  local g = new_game()
   local ai_player = g.players[2]
   assert(ai_player.is_ai, "player 2 should be AI")
 
@@ -47,7 +47,7 @@ end
 
 local function _test_market_full_inventory_blocks_items()
   local market = require("game.shop")
-  local g = _new_game()
+  local g = new_game()
   local p = g:current_player()
   g:set_player_cash(p, 999999)
   for _ = 1, p.inventory.max_slots do
@@ -63,7 +63,7 @@ end
 local function _test_market_global_limit()
   local market = require("game.shop")
   local market_cfg = require("cfg.Generated.Market")
-  local g = _new_game()
+  local g = new_game()
   local p = g:current_player()
   local entry = nil
   for _, cfg in ipairs(market_cfg) do
@@ -95,7 +95,7 @@ end
 
 local function _test_market_disabled_products_hidden()
   local market = require("game.shop")
-  local g = _new_game()
+  local g = new_game()
   local p = g:current_player()
   g:set_player_balance(p, "金豆", 999999)
 
@@ -103,20 +103,20 @@ local function _test_market_disabled_products_hidden()
 
   local list = market.list_buyable(p, g)
   for _, product_id in ipairs(blocked_product_ids) do
-    assert(not _contains_product(list, product_id), "disabled product should be hidden: " .. tostring(product_id))
+    assert(not contains_product(list, product_id), "disabled product should be hidden: " .. tostring(product_id))
   end
 
   local spec = market.build_choice_spec(p, g)
   if spec and spec.options then
     for _, product_id in ipairs(blocked_product_ids) do
-      assert(not _contains_option(spec.options, product_id), "disabled option should be hidden: " .. tostring(product_id))
+      assert(not contains_option(spec.options, product_id), "disabled option should be hidden: " .. tostring(product_id))
     end
   end
 end
 
 local function _test_buy_disabled_market_product_rejected()
   local market = require("game.shop")
-  local g = _new_game()
+  local g = new_game()
   local p = g:current_player()
   g:set_player_balance(p, "金豆", 999999)
 
@@ -132,23 +132,23 @@ end
 
 local function _test_market_vehicle_hidden_when_feature_disabled()
   local market = require("game.shop")
-  local g = _new_game()
+  local g = new_game()
   local p = g:current_player()
   g:set_player_balance(p, "金豆", 999999)
 
   local vehicle_product_id = 4001
   local list = market.list_buyable(p, g)
-  assert(not _contains_product(list, vehicle_product_id), "vehicle should be hidden when feature disabled")
+  assert(not contains_product(list, vehicle_product_id), "vehicle should be hidden when feature disabled")
 
   local spec = market.build_choice_spec(p, g)
   if spec and spec.options then
-    assert(not _contains_option(spec.options, vehicle_product_id), "vehicle option should be hidden when feature disabled")
+    assert(not contains_option(spec.options, vehicle_product_id), "vehicle option should be hidden when feature disabled")
   end
 end
 
 local function _test_buy_vehicle_rejected_when_feature_disabled()
   local market = require("game.shop")
-  local g = _new_game()
+  local g = new_game()
   local p = g:current_player()
   g:set_player_balance(p, "金豆", 999999)
 

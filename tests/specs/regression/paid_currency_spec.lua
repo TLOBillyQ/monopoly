@@ -1,24 +1,24 @@
 local support = require("support.regression_support")
-local _new_game = support.new_game
-local _with_patches = support.with_patches
+local new_game = support.new_game
+local with_patches = support.with_patches
 
 local game_context_field = "__paid_currency_bridge_ctx"
 
-local function _reload_bridge()
+local function reload_bridge()
   package.loaded["game.commerce.paid_bridge"] = nil
   return require("game.commerce.paid_bridge")
 end
 
-local function _clear_bridge_context(game)
+local function clear_bridge_context(game)
   game[game_context_field] = nil
 end
 
-local function _reload_market()
+local function reload_market()
   package.loaded["game.shop"] = nil
   return require("game.shop")
 end
 
-local function _build_fake_env(game, opts)
+local function build_fake_env(game, opts)
   opts = opts or {}
   local jindou_commodity = opts.jindou_commodity or 9001
   local leyuanbi_commodity = opts.leyuanbi_commodity or 9002
@@ -107,12 +107,12 @@ local function _build_fake_env(game, opts)
 end
 
 local function _test_paid_bridge_sync_balance_from_commodity()
-  local game = _new_game()
-  _clear_bridge_context(game)
+  local game = new_game()
+  clear_bridge_context(game)
   local p = game.players[1]
-  local env = _build_fake_env(game, { jindou_count = 7, leyuanbi_count = 3 })
-  _with_patches(env.patch_list, function()
-    local bridge = _reload_bridge()
+  local env = build_fake_env(game, { jindou_count = 7, leyuanbi_count = 3 })
+  with_patches(env.patch_list, function()
+    local bridge = reload_bridge()
     bridge.setup_for_game(game)
     assert(game:player_balance(p, "金豆") == 7, "jindou balance should sync from commodity")
     assert(game:player_balance(p, "乐园币") == 3, "leyuanbi balance should sync from commodity")
@@ -124,13 +124,13 @@ local function _test_paid_bridge_sync_balance_from_commodity()
 end
 
 local function _test_market_buy_managed_currency_consumes_commodity()
-  local game = _new_game()
-  _clear_bridge_context(game)
+  local game = new_game()
+  clear_bridge_context(game)
   local p = game.players[1]
-  local env = _build_fake_env(game, { jindou_count = 10 })
-  _with_patches(env.patch_list, function()
-    local bridge = _reload_bridge()
-    local market = _reload_market()
+  local env = build_fake_env(game, { jindou_count = 10 })
+  with_patches(env.patch_list, function()
+    local bridge = reload_bridge()
+    local market = reload_market()
     bridge.setup_for_game(game)
     local ok = market.buy_with_opts(game, p, 2009, nil)
     assert(ok == true, "managed currency purchase should succeed")
@@ -141,13 +141,13 @@ local function _test_market_buy_managed_currency_consumes_commodity()
 end
 
 local function _test_market_insufficient_managed_currency_opens_panel()
-  local game = _new_game()
-  _clear_bridge_context(game)
+  local game = new_game()
+  clear_bridge_context(game)
   local p = game.players[1]
-  local env = _build_fake_env(game, { jindou_count = 1 })
-  _with_patches(env.patch_list, function()
-    local bridge = _reload_bridge()
-    local market = _reload_market()
+  local env = build_fake_env(game, { jindou_count = 1 })
+  with_patches(env.patch_list, function()
+    local bridge = reload_bridge()
+    local market = reload_market()
     bridge.setup_for_game(game)
     local result = market.buy_with_opts(game, p, 2009, nil)
     assert(type(result) == "table" and result.ok == false, "insufficient managed currency should fail")
@@ -158,12 +158,12 @@ local function _test_market_insufficient_managed_currency_opens_panel()
 end
 
 local function _test_purchase_event_syncs_balance()
-  local game = _new_game()
-  _clear_bridge_context(game)
+  local game = new_game()
+  clear_bridge_context(game)
   local p = game.players[1]
-  local env = _build_fake_env(game, { jindou_count = 2 })
-  _with_patches(env.patch_list, function()
-    local bridge = _reload_bridge()
+  local env = build_fake_env(game, { jindou_count = 2 })
+  with_patches(env.patch_list, function()
+    local bridge = reload_bridge()
     bridge.setup_for_game(game)
     local role = env.role_by_player_id[p.id]
     role.commodity_count[env.jindou_commodity] = 9
@@ -177,8 +177,8 @@ end
 local function _test_bridge_isolates_context_between_games()
   -- 由于 app 是单例，我们只能测试同一个游戏实例上的隔离性
   -- 通过设置不同的商品数量来模拟不同的游戏上下文
-  local g = _new_game()
-  _clear_bridge_context(g)
+  local g = new_game()
+  clear_bridge_context(g)
   local p1 = g.players[1]
   local p2 = g.players[2]
   -- 手动设置不同的初始余额来验证隔离性
@@ -214,7 +214,7 @@ local function _test_bridge_isolates_context_between_games()
     roles[2].commodity_count[commodity_id] = (roles[2].commodity_count[commodity_id] or 0) - count
   end
 
-  _with_patches({
+  with_patches({
     { key = "GameAPI", value = {
       random_int = function(min) return min end,
       get_goods_list = function()
@@ -230,7 +230,7 @@ local function _test_bridge_isolates_context_between_games()
     { key = "EVENT", value = { SPEC_ROLE_PURCHASE_GOODS = "SPEC_ROLE_PURCHASE_GOODS" } },
     { key = "RegisterTriggerEvent", value = function() end },
   }, function()
-    local bridge = _reload_bridge()
+    local bridge = reload_bridge()
     bridge.setup_for_game(g)
 
     -- 验证初始余额设置正确
@@ -246,10 +246,10 @@ local function _test_bridge_isolates_context_between_games()
 end
 
 local function _test_bridge_setup_works_when_sandbox_blocks_mode_metatable()
-  local game = _new_game()
-  _clear_bridge_context(game)
+  local game = new_game()
+  clear_bridge_context(game)
   local p = game.players[1]
-  local env = _build_fake_env(game, { jindou_count = 4 })
+  local env = build_fake_env(game, { jindou_count = 4 })
   local base_setmetatable = setmetatable
   local patch_list = {}
   for _, patch in ipairs(env.patch_list) do
@@ -265,8 +265,8 @@ local function _test_bridge_setup_works_when_sandbox_blocks_mode_metatable()
     end,
   })
 
-  _with_patches(patch_list, function()
-    local bridge = _reload_bridge()
+  with_patches(patch_list, function()
+    local bridge = reload_bridge()
     bridge.setup_for_game(game)
     assert(game:player_balance(p, "金豆") == 4, "setup should succeed under sandbox metatable restrictions")
   end)

@@ -3,7 +3,7 @@
 ## 目标
 
 当前测试入口已切到新 runner：`tests/regression.lua -> tests/runner/init.lua`。
-统一执行新架构 specs（`tests/specs/*`）。
+统一执行新架构 specs（`tests/specs/*/*_spec.lua`）。
 
 ## 目录
 
@@ -35,7 +35,7 @@ internal 检查（`dep_rules`、`gameplay_loop_no_ui`）已改为 integration sp
 
 ## 新增用例规范
 
-每个 spec 文件返回：
+每个 spec 文件命名约定为 `*_spec.lua`，并返回：
 - `layer`
 - `domain`
 - `cases`

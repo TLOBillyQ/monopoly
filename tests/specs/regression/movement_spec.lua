@@ -5,7 +5,7 @@ local map_cfg = require("cfg.Map")
 local tiles_cfg = require("cfg.Generated.Tiles")
 local assertions = require("support.assertions")
 
-local function _new_game()
+local function new_game()
   app.setup({
     players = { "P1", "P2" },
     ai = { [2] = true },
@@ -17,7 +17,7 @@ local function _new_game()
 end
 
 local function _test_pass_start()
-  local g = _new_game()
+  local g = new_game()
   local p = g:current_player()
   g:update_player_position(p, g.board:index_of_tile_id(24))
   local res = movement.move(g, p, 1, { branch_parity = 1 })
@@ -25,7 +25,7 @@ local function _test_pass_start()
 end
 
 local function _test_roadblock_stop()
-  local g = _new_game()
+  local g = new_game()
   local p = g:current_player()
   g.board:place_roadblock(2)
   local res = movement.move(g, p, 3, { branch_parity = 3 })
@@ -34,7 +34,7 @@ local function _test_roadblock_stop()
 end
 
 local function _test_movement_examples_from_issue()
-  local g = _new_game()
+  local g = new_game()
   local p = g:current_player()
 
   g:update_player_position(p, g.board:index_of_tile_id(3))
@@ -54,7 +54,7 @@ local function _test_movement_examples_from_issue()
 end
 
 local function _test_board_indices_in_range_uses_graph_distance()
-  local g = _new_game()
+  local g = new_game()
   local idx_a = g.board:index_of_tile_id(27)
   local idx_b = g.board:index_of_tile_id(28)
   assert(idx_a and idx_b, "expected tile ids 27/28")
@@ -65,7 +65,7 @@ local function _test_board_indices_in_range_uses_graph_distance()
 end
 
 local function _test_movement_backward_wrap()
-  local g = _new_game()
+  local g = new_game()
   local p = g:current_player()
   g:update_player_position(p, 1)
   local res = movement.move(g, p, -1, { branch_parity = 1 })

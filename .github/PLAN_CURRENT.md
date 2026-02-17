@@ -8,27 +8,36 @@
 
 这项工作的目标是把 `tests/` 从“可运行但层级混杂”的状态，重构为“层级语义一致、扩展不改核心、职责边界清晰”的状态。完成后，新增测试文件不需要修改核心 loader，回归测试目录命名统一，复杂回归场景不再塞在单个巨型 Lua 文件里，维护成本与误改风险显著下降。
 
-用户可见的成功信号有三点：第一，运行 `lua tests/regression.lua` 仍能执行完整测试；第二，新增一个符合约定的 `*_spec.lua` 文件后，无需改 `tests/runner/spec_loader.lua` 也会被执行；第三，目录结构和命名规则在 `tests/README.md` 中有清晰可执行说明，并由测试规则守卫。
+用户可见的成功信号有三点：第一，运行 `lua tests/regression.lua` 仍能执行完整测试；第二，新增一个符合约定的 `tests/specs/<layer>/<name>_spec.lua` 文件后，无需改 `tests/runner/spec_loader.lua` 也会被执行；第三，目录结构和命名规则在 `tests/README.md` 中有清晰可执行说明，并由测试规则守卫。
 
 ## 进度
 
-- [ ] (2026-02-17 00:00Z) 阶段 0：建立基线，确认现有 `tests/` 结构、执行链路与通过状态
-- [ ] (2026-02-17 00:00Z) 阶段 1：统一 `tests/specs/**` 命名与层级语义（统一为 `*_spec.lua`）
-- [ ] (2026-02-17 00:00Z) 阶段 2：将 `tests/specs/regression/gameplay.lua` 拆分为薄 spec + support 场景构建模块
-- [ ] (2026-02-17 00:00Z) 阶段 3：将 `tests/runner/spec_loader.lua` 从硬编码清单改为约定驱动加载
-- [ ] (2026-02-17 00:00Z) 阶段 4：补充层级守卫（依赖边界与 spec 元数据约束）
-- [ ] (2026-02-17 00:00Z) 阶段 5：文档收敛与全链路验收（README + 回归命令 +过滤器验证）
+- [x] (2026-02-17 03:04Z) 阶段 0：建立基线，确认现有 `tests/` 结构、执行链路与通过状态（已完成：列出文件与执行回归；剩余：无）
+- [x] (2026-02-17 03:56Z) 阶段 1：统一 `tests/specs/**` 命名与层级语义（已完成：回归层统一为 `*_spec.lua` 并清理命名；剩余：无）
+- [ ] (2026-02-17 04:15Z) 阶段 2：将 `tests/specs/regression/gameplay_spec.lua` 拆分为薄 spec + support 场景构建模块（已完成：提取 runtime_context 相关辅助到 `tests/support/regression/runtime_context_helpers.lua`，并抽离 loop_state 构建到 `tests/support/regression/loop_state_builder.lua`；剩余：拆分回归场景）
+- [x] (2026-02-17 03:27Z) 阶段 3：将 `tests/runner/spec_loader.lua` 从硬编码清单改为约定驱动加载（已完成：实现按 `tests/specs/**/*_spec.lua` 自动发现；回归通过；剩余：文档跟进）
+- [ ] (2026-02-17 03:04Z) 阶段 4：补充层级守卫（依赖边界与 spec 元数据约束）
+- [ ] (2026-02-17 03:04Z) 阶段 5：文档收敛与全链路验收（README + 回归命令 +过滤器验证）
 
 ## 意外与发现
 
-- 观察：`tests/specs/regression/` 目录同时存在 `*_spec.lua` 与非 `_spec.lua` 文件，命名语义不统一。
-  证据：`find tests/specs/regression -type f | sort` 可见如 `gameplay.lua` 与 `gameplay_main_flow_spec.lua` 并存。
+- 观察：`tests/specs/regression/` 已完成命名统一，全部为 `*_spec.lua`。
+  证据：`find tests/specs/regression -type f -name '*_spec.lua' | sort`。
+
+- 观察：阶段 1 调整后回归仍通过，未引入新增失败。
+  证据：`lua tests/regression.lua` 输出 `All regression checks passed (151)`。
+
+- 观察：已新增 `tests/support/regression/runtime_context_helpers.lua` 与 `tests/support/regression/loop_state_builder.lua`，`gameplay_spec` 中 runtime_context 与 loop_state 相关逻辑已迁出。
+  证据：`tests/specs/regression/gameplay_spec.lua` 顶部引用 `support.regression.runtime_context_helpers`。
 
 - 观察：`tests/runner/spec_loader.lua` 使用硬编码 `require(...)` 列表收集 spec。
   证据：文件内 `_base_specs()` 显式列举 `contract/unit/integration/regression` 每个模块。
 
-- 观察：`tests/specs/regression/gameplay.lua` 体量大且承担构建端口、全局打桩、上下文模拟与断言多重职责。
+- 观察：`tests/specs/regression/gameplay_spec.lua` 体量大且承担构建端口、全局打桩、上下文模拟与断言多重职责。
   证据：文件顶部连续定义 `_mock_lua_api`、`_with_runtime_context_globals`、`_build_test_ports`、`_build_loop_state` 等辅助函数。
+
+- 观察：`tests/runner/spec_loader.lua` 现可基于文件系统自动发现 spec，而不再需要硬编码清单。
+  证据：`tests/runner/spec_loader.lua` 改为扫描 `tests/specs/**/*_spec.lua` 并映射模块名。
 
 ## 决策日志
 
@@ -44,31 +53,39 @@
   理由：测试基础设施改动范围大，拆阶段可降低回归风险并便于回滚。
   日期/作者：2026-02-17 / Codex
 
+- 决策：spec loader 通过 `find tests/specs -name '*_spec.lua'` 自动发现 spec，并按 `tests/specs/<layer>/<name>_spec.lua` 映射 `require("<layer>.<name>_spec")`。
+  理由：阶段 1 已完成命名统一，可收敛为严格约定驱动。
+  日期/作者：2026-02-17 / Codex
+
+- 决策：先提取 runtime_context 与 loop_state 相关辅助到 `tests/support/regression/`，作为阶段 2 的第一步。
+  理由：`gameplay_spec` 体积最大，优先拆出跨用例复用的底层装配逻辑，降低后续拆分风险。
+  日期/作者：2026-02-17 / Codex
+
 ## 结果与复盘
 
-当前为计划初始化版本，尚未进入实现阶段。里程碑完成后需在本节补充：已完成目标、未完成项、关键经验、与“目的/全局视角”的对照评估。
+阶段 0、阶段 1 与阶段 3 已完成：基线回归通过，回归层命名统一，spec loader 约定驱动化。阶段 2 已开始，已抽离 runtime_context 相关辅助。剩余阶段尚未实施。后续需对照“目的/全局视角”补足完整复盘。
 
 ## 背景与导读
 
 本仓库测试执行入口是 `tests/regression.lua`，它设置 `package.path` 并调用 `tests/runner/init.lua` 的 `runner.run(...)`。`runner` 负责收集 spec、按过滤条件执行 case、并输出报告。`tests/specs/` 按层分为 `unit`、`contract`、`integration`、`regression`，理论上应表达从小到大的测试粒度。
 
-当前主要问题是“层级语义与职责边界偏移”。所谓“层级语义”，是指目录名和文件名让读者一眼知道测试粒度与用途；“职责边界”，是指每个模块只做一件事，例如 spec 文件聚焦行为断言，support 文件负责构建测试上下文。实际现状里，`tests/specs/regression/gameplay.lua` 同时承担大量 support 职责，`tests/runner/spec_loader.lua` 作为核心编排却硬编码每个 spec，导致扩展时必须修改核心。
+当前主要问题是“层级语义与职责边界偏移”。所谓“层级语义”，是指目录名和文件名让读者一眼知道测试粒度与用途；“职责边界”，是指每个模块只做一件事，例如 spec 文件聚焦行为断言，support 文件负责构建测试上下文。实际现状里，`tests/specs/regression/gameplay_spec.lua` 同时承担大量 support 职责，`tests/runner/spec_loader.lua` 作为核心编排却硬编码每个 spec，导致扩展时必须修改核心。
 
 关键文件导读如下（均为仓库相对路径）：
 
 - `tests/regression.lua`：测试入口。
 - `tests/runner/init.lua`：执行器，负责跑 case 与汇总结果。
 - `tests/runner/spec_loader.lua`：收集 spec（当前为静态清单）。
-- `tests/specs/regression/gameplay.lua`：主要的巨型回归文件（重点拆分对象）。
+- `tests/specs/regression/gameplay_spec.lua`：主要的巨型回归文件（重点拆分对象）。
 - `tests/support/*.lua`：当前通用测试支持模块。
 - `tests/internal/*.lua` 与 `tests/specs/integration/internal_*_spec.lua`：内部规则和行为验证。
 - `tests/README.md`：测试分层、运行方式、约束说明。
 
 ## 工作计划
 
-本计划按六个阶段推进，每阶段都要求“先改最小可验证单元，再跑对应验证命令”。阶段 0 先冻结基线，记录当前测试通过情况和文件列表，作为后续对照。阶段 1 处理“可见层级问题”：统一 `tests/specs/**` 命名规则，把回归目录中的非 `_spec.lua` 文件改名到一致规范，并同步 `require` 路径。阶段 2 处理“职责边界问题”：从 `tests/specs/regression/gameplay.lua` 中提取环境装配与桩函数到 `tests/support/regression/` 子模块，使 spec 文件只保留场景描述与断言。
+本计划按六个阶段推进，每阶段都要求“先改最小可验证单元，再跑对应验证命令”。阶段 0 先冻结基线，记录当前测试通过情况和文件列表，作为后续对照。阶段 1 处理“可见层级问题”：统一 `tests/specs/**` 命名规则，把回归目录中的非 `_spec.lua` 文件改名到一致规范，并同步 `require` 路径。阶段 2 处理“职责边界问题”：从 `tests/specs/regression/gameplay_spec.lua` 中提取环境装配与桩函数到 `tests/support/regression/` 子模块，使 spec 文件只保留场景描述与断言。
 
-阶段 3 处理“扩展性问题”：重写 `tests/runner/spec_loader.lua`，由静态清单改为约定驱动加载（例如扫描 `tests/specs/*/*_spec.lua` 并映射模块名），保证新增 spec 默认可发现，减少对核心编排的修改。阶段 4 增加守卫机制，在 internal/integration 检查中加入层级依赖规则与 spec 元数据校验，防止未来回退到混杂结构。阶段 5 汇总文档与验收，更新 `tests/README.md`，给出新增 spec 标准流程，并执行全链路命令验证行为不变、结构更清晰。
+阶段 3 处理“扩展性问题”：重写 `tests/runner/spec_loader.lua`，由静态清单改为约定驱动加载（扫描 `tests/specs/**/*_spec.lua` 并映射模块名），保证新增 spec 默认可发现，减少对核心编排的修改。阶段 4 增加守卫机制，在 internal/integration 检查中加入层级依赖规则与 spec 元数据校验，防止未来回退到混杂结构。阶段 5 汇总文档与验收，更新 `tests/README.md`，给出新增 spec 标准流程，并执行全链路命令验证行为不变、结构更清晰。
 
 每一阶段都必须更新“进度、意外与发现、决策日志、结果与复盘”四个活文档章节，并在文末追加“本次更新说明”。
 
@@ -118,7 +135,7 @@
     # lua tests/regression.lua
     # 回滚临时文件
 
-预期：新增符合命名约定的 spec 无需改 loader 即可被执行。
+预期：新增符合命名约定（`*_spec.lua`）的 spec 无需改 loader 即可被执行。
 
 5) 阶段 4：层级守卫与元数据校验
 
@@ -159,10 +176,13 @@
 
 ## 产物与备注
 
-以下是应在实施过程中持续补充的短证据模板（示例格式，非当前真实输出）：
+以下是应在实施过程中持续补充的短证据模板（含本次基线输出）：
 
     $ lua tests/regression.lua
-    [tests] total=128 passed=128 failed=0
+    ...dep_rules ok
+    .tick ok
+    ...................................................................................................................................................
+    All regression checks passed (151)
 
     $ TEST_LAYERS=contract,unit lua tests/regression.lua
     [tests] total=24 passed=24 failed=0
@@ -190,4 +210,4 @@
 ---
 
 更新说明（2026-02-17 / Codex）：
-本次新增 `PLAN_CURRENT.md`，写入“全阶段可执行计划”，覆盖阶段划分、实施顺序、验证命令、活文档四章节与接口约束。目的为把 tests 层级治理从审查建议升级为可直接执行的落地方案。
+已完成阶段 0 基线采集、阶段 1 命名统一与阶段 3 loader 约定驱动化，阶段 2 已启动并抽离 runtime_context 辅助。补充对应的进度、发现、决策与回归输出证据。

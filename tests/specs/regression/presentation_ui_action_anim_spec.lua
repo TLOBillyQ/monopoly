@@ -7,7 +7,7 @@ if not math.Vector3 then
   end
 end
 
-local function _with_patches(patches, fn)
+local function with_patches(patches, fn)
   local originals = {}
   for i, patch in ipairs(patches) do
     local target = patch.target or _G
@@ -91,7 +91,7 @@ local function _test_action_anim_roll_screen_two_stage_timeline()
     end
   end
 
-  _with_patches({
+  with_patches({
     {
       key = "SetTimeOut",
       value = function(delay, cb)
