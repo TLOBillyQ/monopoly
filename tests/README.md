@@ -47,8 +47,6 @@ internal 检查（`dep_rules`、`gameplay_loop_no_ui`）已改为 integration sp
 - `act`（可选）
 - `assert`（可选）
 
-也支持兼容的 `run` 单函数形式。
-
 ## 迁移约束
 
 - 不在新测试中直接构造散乱端口表，统一走 `support/context_builder.lua`。

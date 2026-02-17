@@ -21,6 +21,7 @@
 - [x] (2026-02-17 11:05) 完成剩余 8 个回归模块的直接依赖切换：`chance/land/landing/item/paid_currency/modal_choice_timeout/gameplay/presentation_ui` 不再直接 `require("TestSupport")`。
 - [x] (2026-02-17 11:08) 抽离 `tests/support/patch.lua` 并让 `tests/support/time_stub.lua` 改用新 patch 支撑。
 - [x] (2026-02-17 11:12) 修复 `gameplay` 域过滤执行下的 2 个顺序依赖用例（case_20 / case_22），确保 domain filter 与全量回归一致通过。
+- [x] (2026-02-17 11:24) 完成 support 层去链：`tests/support/regression_support.lua` 改为自包含实现，不再透传 `TestSupport`。
 - [x] (2026-02-17 10:12) 将 `tests/internal/*` 逐步 spec 化，减少 `dofile` 直跑模式。
 - [x] (2026-02-17 10:15) 完成文档与命名收口（`legacy_src` 重命名为 `suite_src`）。
 - [x] (2026-02-17 10:28) 完成“全迁移执行链”：删除 `suites_migrated_spec.lua`/`manifest.lua`，11 个回归模块直接以标准 spec 形式接入 runner。
@@ -206,4 +207,6 @@
 ---
 
 本次更新说明：在“全迁移执行链”基础上继续推进去耦，完成剩余 8 个回归模块的直接 `TestSupport` 依赖切换，并新增 `support.patch` 统一补丁能力；已验证 `lua tests/regression.lua`（151 通过）及 `TEST_LAYERS=regression TEST_DOMAINS=chance,land,landing,item,paid_currency,timeout_modal_choice,gameplay,presentation_ui`（124 通过）。
+
+补充：`tests/support/regression_support.lua` 已改为自包含实现，`tests/specs/regression/*.lua` 与 `tests/support/*.lua` 形成独立依赖链，不再通过 `regression_support -> TestSupport` 间接引用旧层。
 
