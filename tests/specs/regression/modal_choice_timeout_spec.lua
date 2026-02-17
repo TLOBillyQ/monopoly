@@ -1,6 +1,6 @@
 local tick_timeout = require("turn.timeout")
 local turn_dispatch = require("turn.dispatch")
-local support = require("TestSupport")
+local patch = require("support.patch")
 local assertions = require("support.assertions")
 
 local function _test_popup_timeout_closes_even_when_input_blocked()
@@ -53,7 +53,7 @@ local function _test_choice_timeout_supports_explicit_timeout_strategy()
   }
   local dispatched = nil
 
-  support.with_patches({
+  patch.with_patches({
     {
       target = turn_dispatch,
       key = "dispatch_action",

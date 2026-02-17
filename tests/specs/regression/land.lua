@@ -1,4 +1,4 @@
-local support = require("TestSupport")
+local support = require("support.regression_support")
 local _new_game = support.new_game
 local _first_land_tile = support.first_land_tile
 local _first_adjacent_land_pair = support.first_adjacent_land_pair

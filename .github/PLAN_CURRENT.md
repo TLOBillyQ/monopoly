@@ -17,7 +17,10 @@
 - [x] (2026-02-17 09:30) 新增 contract/unit/integration/regression 首批用例，并补 timeout 核心场景。
 - [x] (2026-02-17 10:05) 拆分 `tests/runner/init.lua` 职责（收集、过滤、执行、后置检查分离）。
 - [x] (2026-02-17 10:08) 将 `suites_migrated_spec.lua` 的模块硬编码迁移为 manifest 驱动。
-- [ ] (2026-02-17 09:40) 分批将回归模块从 `TestSupport` 迁移到 `tests/support/*` 窄接口（执行链已全迁移，依赖收口待后续轮次）。
+- [ ] (2026-02-17 09:40) 分批将回归模块从 `TestSupport` 迁移到 `tests/support/*` 窄接口（已完成首批：`misc`、`movement`、`market`）。
+- [x] (2026-02-17 11:05) 完成剩余 8 个回归模块的直接依赖切换：`chance/land/landing/item/paid_currency/modal_choice_timeout/gameplay/presentation_ui` 不再直接 `require("TestSupport")`。
+- [x] (2026-02-17 11:08) 抽离 `tests/support/patch.lua` 并让 `tests/support/time_stub.lua` 改用新 patch 支撑。
+- [x] (2026-02-17 11:12) 修复 `gameplay` 域过滤执行下的 2 个顺序依赖用例（case_20 / case_22），确保 domain filter 与全量回归一致通过。
 - [x] (2026-02-17 10:12) 将 `tests/internal/*` 逐步 spec 化，减少 `dofile` 直跑模式。
 - [x] (2026-02-17 10:15) 完成文档与命名收口（`legacy_src` 重命名为 `suite_src`）。
 - [x] (2026-02-17 10:28) 完成“全迁移执行链”：删除 `suites_migrated_spec.lua`/`manifest.lua`，11 个回归模块直接以标准 spec 形式接入 runner。
@@ -32,6 +35,9 @@
 
 - 观察：执行链已经不再依赖桥接文件，回归模块直接为标准 spec；当前主要技术债仅剩 `TestSupport` 依赖收口。
   证据：`tests/runner/spec_loader.lua` 直接 `require("regression.<module>")`；`tests/specs/regression/suites_migrated_spec.lua` 与 `manifest.lua` 已删除。
+
+- 观察：`misc`、`movement`、`market` 三个模块已完成去 `TestSupport`，且回归通过，说明可以按专题滚动迁移。
+  证据：`tests/specs/regression/misc.lua`、`movement.lua`、`market.lua` 不再 `require("TestSupport")`；`lua tests/regression.lua` -> `All regression checks passed (151)`。
 
 ## 决策日志
 
@@ -138,7 +144,7 @@
 
 - `tests/runner/init.lua` 只做编排，不再直接包含具体后置脚本路径。（已达成）
 - 桥接层（`suites_migrated_spec.lua` / `manifest.lua`）已删除，回归模块直接由 `spec_loader` 加载。（已达成）
-- 回归模块中 `require("TestSupport")` 数量持续下降，最终为 0。（进行中）
+- 回归模块中 `require("TestSupport")` 数量持续下降，最终为 0。（已达成：`tests/specs/regression/*.lua` 直接引用为 0）
 - internal 检查通过 spec 管道执行，不再 `dofile` 直跑。（已达成）
 
 ## 可重复性与恢复
@@ -162,6 +168,12 @@
 - 执行器：`tests/runner/init.lua`、`tests/runner/report.lua`
 - 回归模块：`tests/specs/regression/*.lua`（直接 spec 返回）
 - 支撑层：`tests/support/*.lua`
+
+首批去耦完成模块：
+
+- `tests/specs/regression/misc.lua`
+- `tests/specs/regression/movement.lua`
+- `tests/specs/regression/market.lua`
 
 ## 接口与依赖
 
@@ -193,5 +205,5 @@
 
 ---
 
-本次更新说明：落实了计划中的关键里程碑（runner 拆分、manifest 化、internal spec 化、`legacy_src` 命名收口为 `suite_src`），并同步更新了进度、证据与后续重点。
+本次更新说明：在“全迁移执行链”基础上继续推进去耦，完成剩余 8 个回归模块的直接 `TestSupport` 依赖切换，并新增 `support.patch` 统一补丁能力；已验证 `lua tests/regression.lua`（151 通过）及 `TEST_LAYERS=regression TEST_DOMAINS=chance,land,landing,item,paid_currency,timeout_modal_choice,gameplay,presentation_ui`（124 通过）。
 

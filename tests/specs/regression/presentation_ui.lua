@@ -1,4 +1,4 @@
-local support = require("TestSupport")
+local support = require("support.regression_support")
 local _new_game = support.new_game
 local _build_ui_port = support.build_ui_port
 local _open_choice = support.open_choice

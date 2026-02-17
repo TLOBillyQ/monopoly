@@ -1,4 +1,4 @@
-local support = require("TestSupport")
+local support = require("support.regression_support")
 local _new_game = support.new_game
 local _with_turn_flow = support.with_turn_flow
 local _build_ui_port = support.build_ui_port
@@ -924,6 +924,7 @@ end
 
 local function _test_tick_headless_ports_cover_anim_phases()
   local g = _new_game()
+  g.update = nil
   local state = _build_loop_state()
   state.ui = nil
   state.wait_move_anim = true
@@ -1030,6 +1031,7 @@ end
 
 local function _test_action_button_timeout_blocked_when_input_locked()
   local g = _new_game()
+  g.update = nil
   local state = _build_loop_state()
   g.ui_port = _build_ui_port()
   g.turn.current_player_index = 1

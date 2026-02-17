@@ -1,5 +1,17 @@
-local support = require("TestSupport")
-local _new_game = support.new_game
+local app = require("game")
+local map_cfg = require("cfg.Map")
+local tiles_cfg = require("cfg.Generated.Tiles")
+
+local function _new_game()
+  app.setup({
+    players = { "P1", "P2" },
+    ai = { [2] = true },
+    auto_all = false,
+    map = map_cfg,
+    tiles = tiles_cfg,
+  })
+  return app
+end
 
 local function _contains_product(list, product_id)
   for _, entry in ipairs(list) do

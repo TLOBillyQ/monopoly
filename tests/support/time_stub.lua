@@ -1,11 +1,11 @@
-local support = require("TestSupport")
+local patch = require("support.patch")
 
 local time_stub = {}
 
 function time_stub.with_timestamp_stub(fn)
   local now = 0
   local game_api = GameAPI or {}
-  return support.with_patches({
+  return patch.with_patches({
     { key = "GameAPI", value = game_api },
     {
       target = game_api,
