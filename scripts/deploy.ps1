@@ -3,7 +3,7 @@
 .SYNOPSIS
     将项目文件部署到目标目录
 .DESCRIPTION
-    拷贝 Config/, src/, vendor/ 目录以及 Data/UIManagerNodes.lua 和 main.lua 到指定的目标目录
+    拷贝 cfg/, chance/, choice/, core/, Data/, game/, lib/, turn/, visual/ 目录以及 main.lua 到指定的目标目录
 .PARAMETER TargetPath
     目标目录的绝对路径
 .EXAMPLE
@@ -57,12 +57,11 @@ if (-not (Test-Path $TargetPath)) {
 }
 
 # 定义要拷贝的目录列表
-$Directories = @("Config", "src", "vendor")
+$Directories = @("cfg", "chance", "choice", "core", "Data", "game", "lib", "turn", "visual")
 
 # 定义要拷贝的单个文件列表
 $Files = @(
-    @{Source = "main.lua"; Target = "main.lua"},
-    @{Source = "Data/UIManagerNodes.lua"; Target = "Data/UIManagerNodes.lua"}
+    @{Source = "main.lua"; Target = "main.lua"}
 )
 
 # 拷贝目录
