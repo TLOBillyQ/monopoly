@@ -1,212 +1,193 @@
-# 测试体系收口计划（去桥接、去遗留依赖）
+# tests 层级治理与测试架构重构（全阶段可执行计划）
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
-本文件遵循 `.github/PLANS.md` 维护。
+本文件遵循 `.github/PLANS.md` 维护规范，且面向“仅有当前工作树、无历史上下文”的新手执行者编写。
 
 ## 目的 / 全局视角
 
-这轮工作的目标不是“再能跑一次回归”，而是把当前测试体系从“可运行”收口到“可长期维护”。现在 `lua tests/regression.lua` 已经稳定通过，但仍存在迁移桥接和遗留依赖（例如 `tests/specs/regression/suite_src/*` 对 `TestSupport` 的强依赖）。本计划完成后，团队将得到一个职责清晰、依赖方向稳定、可持续扩展的测试系统：新增测试不需要触碰中心执行器，运行过滤和内部门禁语义清晰，回归失败可直接定位到分层与领域。
+这项工作的目标是把 `tests/` 从“可运行但层级混杂”的状态，重构为“层级语义一致、扩展不改核心、职责边界清晰”的状态。完成后，新增测试文件不需要修改核心 loader，回归测试目录命名统一，复杂回归场景不再塞在单个巨型 Lua 文件里，维护成本与误改风险显著下降。
 
-可见效果是：默认回归命令保持不变，输出仍为可读摘要；新增或迁移测试时，开发者只改对应层目录与清单，不再改 `runner` 的硬编码细节。
+用户可见的成功信号有三点：第一，运行 `lua tests/regression.lua` 仍能执行完整测试；第二，新增一个符合约定的 `*_spec.lua` 文件后，无需改 `tests/runner/spec_loader.lua` 也会被执行；第三，目录结构和命名规则在 `tests/README.md` 中有清晰可执行说明，并由测试规则守卫。
 
 ## 进度
 
-- [x] (2026-02-17 09:10) 新入口与新 runner 已上线，`tests/suites/` 目录已移除，suite 源迁入 `tests/specs/regression/legacy_src/`。
-- [x] (2026-02-17 09:20) 统一单路径执行，legacy 开关和适配器已删除。
-- [x] (2026-02-17 09:30) 新增 contract/unit/integration/regression 首批用例，并补 timeout 核心场景。
-- [x] (2026-02-17 10:05) 拆分 `tests/runner/init.lua` 职责（收集、过滤、执行、后置检查分离）。
-- [x] (2026-02-17 10:08) 将 `suites_migrated_spec.lua` 的模块硬编码迁移为 manifest 驱动。
-- [ ] (2026-02-17 09:40) 分批将回归模块从 `TestSupport` 迁移到 `tests/support/*` 窄接口（已完成首批：`misc`、`movement`、`market`）。
-- [x] (2026-02-17 11:05) 完成剩余 8 个回归模块的直接依赖切换：`chance/land/landing/item/paid_currency/modal_choice_timeout/gameplay/presentation_ui` 不再直接 `require("TestSupport")`。
-- [x] (2026-02-17 11:08) 抽离 `tests/support/patch.lua` 并让 `tests/support/time_stub.lua` 改用新 patch 支撑。
-- [x] (2026-02-17 11:12) 修复 `gameplay` 域过滤执行下的 2 个顺序依赖用例（case_20 / case_22），确保 domain filter 与全量回归一致通过。
-- [x] (2026-02-17 11:24) 完成 support 层去链：`tests/support/regression_support.lua` 改为自包含实现，不再透传 `TestSupport`。
-- [x] (2026-02-17 10:12) 将 `tests/internal/*` 逐步 spec 化，减少 `dofile` 直跑模式。
-- [x] (2026-02-17 10:15) 完成文档与命名收口（`legacy_src` 重命名为 `suite_src`）。
-- [x] (2026-02-17 10:28) 完成“全迁移执行链”：删除 `suites_migrated_spec.lua`/`manifest.lua`，11 个回归模块直接以标准 spec 形式接入 runner。
+- [ ] (2026-02-17 00:00Z) 阶段 0：建立基线，确认现有 `tests/` 结构、执行链路与通过状态
+- [ ] (2026-02-17 00:00Z) 阶段 1：统一 `tests/specs/**` 命名与层级语义（统一为 `*_spec.lua`）
+- [ ] (2026-02-17 00:00Z) 阶段 2：将 `tests/specs/regression/gameplay.lua` 拆分为薄 spec + support 场景构建模块
+- [ ] (2026-02-17 00:00Z) 阶段 3：将 `tests/runner/spec_loader.lua` 从硬编码清单改为约定驱动加载
+- [ ] (2026-02-17 00:00Z) 阶段 4：补充层级守卫（依赖边界与 spec 元数据约束）
+- [ ] (2026-02-17 00:00Z) 阶段 5：文档收敛与全链路验收（README + 回归命令 +过滤器验证）
 
 ## 意外与发现
 
-- 观察：执行器职责已拆分，`init.lua` 由“细节实现”收口为“编排入口”，结构风险显著降低。
-  证据：新增 `tests/runner/spec_loader.lua`、`tests/runner/filter.lua`、`tests/runner/post_checks.lua`，`init.lua` 仅负责编排与汇总。
+- 观察：`tests/specs/regression/` 目录同时存在 `*_spec.lua` 与非 `_spec.lua` 文件，命名语义不统一。
+  证据：`find tests/specs/regression -type f | sort` 可见如 `gameplay.lua` 与 `gameplay_main_flow_spec.lua` 并存。
 
-- 观察：桥接清单已外置到 manifest，新增 source 的漏挂风险下降。
-  证据：`tests/specs/regression/manifest.lua` 提供模块清单，`suites_migrated_spec.lua` 改为 `require("regression.manifest")`。
+- 观察：`tests/runner/spec_loader.lua` 使用硬编码 `require(...)` 列表收集 spec。
+  证据：文件内 `_base_specs()` 显式列举 `contract/unit/integration/regression` 每个模块。
 
-- 观察：执行链已经不再依赖桥接文件，回归模块直接为标准 spec；当前主要技术债仅剩 `TestSupport` 依赖收口。
-  证据：`tests/runner/spec_loader.lua` 直接 `require("regression.<module>")`；`tests/specs/regression/suites_migrated_spec.lua` 与 `manifest.lua` 已删除。
-
-- 观察：`misc`、`movement`、`market` 三个模块已完成去 `TestSupport`，且回归通过，说明可以按专题滚动迁移。
-  证据：`tests/specs/regression/misc.lua`、`movement.lua`、`market.lua` 不再 `require("TestSupport")`；`lua tests/regression.lua` -> `All regression checks passed (151)`。
+- 观察：`tests/specs/regression/gameplay.lua` 体量大且承担构建端口、全局打桩、上下文模拟与断言多重职责。
+  证据：文件顶部连续定义 `_mock_lua_api`、`_with_runtime_context_globals`、`_build_test_ports`、`_build_loop_state` 等辅助函数。
 
 ## 决策日志
 
-- 决策：继续保留“默认回归 + internal 脚本门禁”这一行为，不在本轮改变命令语义。
-  理由：先保证行为稳定，再做执行器职责拆分，避免一次改动叠加太多变量。
-  日期/作者：2026-02-17 / Copilot
+- 决策：按“双轨目标”实施，即“架构层级治理 + 文件树层级治理”同时推进，而非仅做命名整理。
+  理由：仅改命名不能降低新增测试改核心 loader 的系统性风险，也不能解决巨型回归文件职责过载。
+  日期/作者：2026-02-17 / Codex
 
-- 决策：把旧 suite 源搬到 `tests/specs/regression/legacy_src/`，而不是立即逐文件重写。
-  理由：先完成目录与入口统一，确保回归连续可运行；随后按专题逐步去 `TestSupport`。
-  日期/作者：2026-02-17 / Copilot
+- 决策：保留入口命令 `lua tests/regression.lua` 作为兼容约束。
+  理由：避免影响现有团队习惯与 CI 集成；重构应在内部实现层完成，不破坏外部调用。
+  日期/作者：2026-02-17 / Codex
 
-- 决策：下一阶段优先做架构收口（runner 拆分 + manifest），再批量改测试内容。
-  理由：先处理“改一处牵全局”的结构风险，可降低后续迁移成本。
-  日期/作者：2026-02-17 / Copilot
-
-- 决策：internal 检查改为 integration specs 执行，不再在 runner 中直接 `dofile`。
-  理由：执行链统一后，过滤、报告和失败定位都走同一通道，减少特殊分支。
-  日期/作者：2026-02-17 / Copilot
+- 决策：采用“阶段化渐进迁移”，每阶段都可独立验证。
+  理由：测试基础设施改动范围大，拆阶段可降低回归风险并便于回滚。
+  日期/作者：2026-02-17 / Codex
 
 ## 结果与复盘
 
-当前阶段已经达成“单入口、单路径、可运行”，并完成了 runner 职责拆分、manifest 化（并最终下线桥接）、internal spec 化。当前最大的剩余风险是回归模块对 `TestSupport` 的重耦合。下一阶段重点是按专题迁移场景到 `tests/support/*` 窄接口。
+当前为计划初始化版本，尚未进入实现阶段。里程碑完成后需在本节补充：已完成目标、未完成项、关键经验、与“目的/全局视角”的对照评估。
 
 ## 背景与导读
 
-本仓库测试系统的入口在 `tests/regression.lua`。该入口设置 `package.path` 后调用 `tests/runner/init.lua`。`runner` 负责收集 specs、执行并汇总失败。当前 specs 分四层：
+本仓库测试执行入口是 `tests/regression.lua`，它设置 `package.path` 并调用 `tests/runner/init.lua` 的 `runner.run(...)`。`runner` 负责收集 spec、按过滤条件执行 case、并输出报告。`tests/specs/` 按层分为 `unit`、`contract`、`integration`、`regression`，理论上应表达从小到大的测试粒度。
 
-- `tests/specs/contract/`：协议与边界。
-- `tests/specs/unit/`：纯逻辑。
-- `tests/specs/integration/`：跨模块流程。
-- `tests/specs/regression/`：主链路回归与桥接用例。
+当前主要问题是“层级语义与职责边界偏移”。所谓“层级语义”，是指目录名和文件名让读者一眼知道测试粒度与用途；“职责边界”，是指每个模块只做一件事，例如 spec 文件聚焦行为断言，support 文件负责构建测试上下文。实际现状里，`tests/specs/regression/gameplay.lua` 同时承担大量 support 职责，`tests/runner/spec_loader.lua` 作为核心编排却硬编码每个 spec，导致扩展时必须修改核心。
 
-回归模块位于 `tests/specs/regression/*.lua`，均直接返回统一 spec 结构参与执行。`tests/internal/dep_rules.lua` 与 `tests/internal/gameplay_loop_no_ui.lua` 已通过 integration specs 纳入统一执行管道。
+关键文件导读如下（均为仓库相对路径）：
 
-关键术语说明：
-
-- “spec” 是单个测试模块返回的数据结构，包含 `layer`、`domain`、`cases`。
-- “bridge/桥接” 是把旧 suite 形式转成 spec 形式的过渡代码。
-- “manifest” 是模块清单文件，专门维护“要执行哪些 spec 模块”。
+- `tests/regression.lua`：测试入口。
+- `tests/runner/init.lua`：执行器，负责跑 case 与汇总结果。
+- `tests/runner/spec_loader.lua`：收集 spec（当前为静态清单）。
+- `tests/specs/regression/gameplay.lua`：主要的巨型回归文件（重点拆分对象）。
+- `tests/support/*.lua`：当前通用测试支持模块。
+- `tests/internal/*.lua` 与 `tests/specs/integration/internal_*_spec.lua`：内部规则和行为验证。
+- `tests/README.md`：测试分层、运行方式、约束说明。
 
 ## 工作计划
 
-第一步先拆执行器职责。将 `tests/runner/init.lua` 中“收集 spec、过滤参数解析、执行循环、后置检查”四块拆到独立模块，使 `init.lua` 只做编排。拆分后，回归行为必须与当前完全一致。
+本计划按六个阶段推进，每阶段都要求“先改最小可验证单元，再跑对应验证命令”。阶段 0 先冻结基线，记录当前测试通过情况和文件列表，作为后续对照。阶段 1 处理“可见层级问题”：统一 `tests/specs/**` 命名规则，把回归目录中的非 `_spec.lua` 文件改名到一致规范，并同步 `require` 路径。阶段 2 处理“职责边界问题”：从 `tests/specs/regression/gameplay.lua` 中提取环境装配与桩函数到 `tests/support/regression/` 子模块，使 spec 文件只保留场景描述与断言。
 
-第二步（已完成并收口）曾把硬编码模块列表抽离到 manifest，随后在全迁移阶段删除桥接层，改为 `spec_loader` 直接加载标准 spec 模块。
+阶段 3 处理“扩展性问题”：重写 `tests/runner/spec_loader.lua`，由静态清单改为约定驱动加载（例如扫描 `tests/specs/*/*_spec.lua` 并映射模块名），保证新增 spec 默认可发现，减少对核心编排的修改。阶段 4 增加守卫机制，在 internal/integration 检查中加入层级依赖规则与 spec 元数据校验，防止未来回退到混杂结构。阶段 5 汇总文档与验收，更新 `tests/README.md`，给出新增 spec 标准流程，并执行全链路命令验证行为不变、结构更清晰。
 
-第三步按专题减少 `legacy_src` 对 `TestSupport` 的依赖。优先迁移 timeout、input lock、dispatch 相关场景到 `tests/support/context_builder.lua`、`tests/support/time_stub.lua`、`tests/support/assertions.lua` 的窄接口。每轮迁移必须保持回归全绿。
-
-第四步已经完成：`tests/internal/*` 检查通过 integration specs 执行，后续仅做必要用例细化。
+每一阶段都必须更新“进度、意外与发现、决策日志、结果与复盘”四个活文档章节，并在文末追加“本次更新说明”。
 
 ## 具体步骤
 
-以下命令都在仓库根目录执行：`/Users/billyq/Dev/Github/Lua/monopoly`。
+以下命令默认在仓库根目录执行：`/Users/billyq/Dev/Github/Lua/monopoly`。
 
-1) 先确认基线与当前状态。
+1) 阶段 0：基线采集
 
-    git status --short
+    pwd
+    find tests -type f | sort
     lua tests/regression.lua
 
-预期看到回归通过，总数约为 151（随着新增用例会变化）。
+预期：成功列出当前测试文件；回归命令可运行（若已有失败，需记录失败明细作为基线，不在本计划外顺手修其他问题）。
 
-2) 拆分 runner 职责并保持行为一致。
+2) 阶段 1：命名与层级语义统一
 
-    # 新增
-    tests/runner/spec_loader.lua
-    tests/runner/filter.lua
-    tests/runner/post_checks.lua
+    # 识别非 *_spec.lua 的 specs 文件
+    find tests/specs -type f -name '*.lua' | rg -v '_spec\.lua$'
 
-    # 修改
-    tests/runner/init.lua
+    # 按重构决策逐个重命名（示例，具体名单以执行时为准）
+    # mv tests/specs/regression/gameplay.lua tests/specs/regression/gameplay_spec.lua
 
-3) 引入 manifest，替换桥接文件硬编码列表。
-
-    # 新增
-    tests/specs/regression/manifest.lua
-
-    # 修改
-    tests/specs/regression/suites_migrated_spec.lua
-
-4) 批量迁移一簇回归模块用例到 `tests/support/*` 窄接口（每轮至少 3 个场景）。
-
-    # 修改/新增
-    tests/specs/regression/*.lua
-    tests/specs/integration/*.lua
-    tests/specs/unit/*.lua
-
-5) 每轮迁移后验证并提交。
-
+    # 更新 require 引用后运行
     lua tests/regression.lua
+
+预期：`tests/specs/**` 下测试文件命名统一；运行结果与基线一致或更清晰。
+
+3) 阶段 2：拆分 `gameplay` 巨型文件
+
+    # 新增 support 子模块（示例目录）
+    # tests/support/regression/runtime_context_stub.lua
+    # tests/support/regression/ports_builder.lua
+    # tests/support/regression/gameplay_scenarios.lua
+
+    # 将 gameplay spec 收敛为薄 orchestration
+    lua tests/regression.lua
+
+预期：`gameplay` spec 文件显著变薄；support 逻辑可复用；行为不变。
+
+4) 阶段 3：loader 约定驱动化
+
+    # 修改 tests/runner/spec_loader.lua 后执行
+    lua tests/regression.lua
+
+    # 新增一个最小 smoke spec（临时）验证自动发现
+    # lua tests/regression.lua
+    # 回滚临时文件
+
+预期：新增符合命名约定的 spec 无需改 loader 即可被执行。
+
+5) 阶段 4：层级守卫与元数据校验
+
+    # 运行 internal/integration 相关检查
+    TEST_LAYERS=integration lua tests/regression.lua
+
+    # 运行全量回归确认未破坏
+    lua tests/regression.lua
+
+预期：越层依赖与不合规 spec 能被明确报错；正常 spec 不受影响。
+
+6) 阶段 5：文档与最终验收
+
+    # 校验层过滤
     TEST_LAYERS=contract,unit lua tests/regression.lua
-    git add -A && git commit -m "test: migrate <topic> specs and reduce TestSupport coupling"
+
+    # 校验域过滤
+    TEST_DOMAINS=ports,runtime lua tests/regression.lua
+
+    # 全量
+    lua tests/regression.lua
+
+预期：README 与实际行为一致；过滤器可稳定工作；重构目标达成。
 
 ## 验证与验收
 
-验收以可观察行为为准：
+验收以“行为可观察”为准，不以“代码看起来更整洁”为准。必须满足以下条件：
 
-1. 运行 `lua tests/regression.lua`，应通过且输出包含：
+第一，默认命令 `lua tests/regression.lua` 可运行并输出完整报告。第二，新增一个符合约定的 `tests/specs/<layer>/<name>_spec.lua` 文件后，无需修改 `tests/runner/spec_loader.lua` 也可被执行。第三，`TEST_LAYERS` 与 `TEST_DOMAINS` 过滤行为与 README 描述一致。第四，巨型回归文件拆分后，原有关键回归场景结果保持一致（可通过对比 case id 通过数确认）。
 
-    All regression checks passed (N)
-
-2. 运行 `TEST_LAYERS=contract,unit lua tests/regression.lua`，应仅执行对应层并通过。
-
-3. 迁移完成标准：
-
-- `tests/runner/init.lua` 只做编排，不再直接包含具体后置脚本路径。（已达成）
-- 桥接层（`suites_migrated_spec.lua` / `manifest.lua`）已删除，回归模块直接由 `spec_loader` 加载。（已达成）
-- 回归模块中 `require("TestSupport")` 数量持续下降，最终为 0。（已达成：`tests/specs/regression/*.lua` 直接引用为 0）
-- internal 检查通过 spec 管道执行，不再 `dofile` 直跑。（已达成）
+建议在每阶段结束时记录一段最小证据输出（通过数、失败数、过滤结果），写入“产物与备注”。
 
 ## 可重复性与恢复
 
-本计划按增量推进，所有步骤可重复执行。若某轮迁移失败，使用 `git restore -SW .` 回退工作区，再按“单簇迁移 + 验证 + 提交”的节奏重试。严禁一次性重写全部 `legacy_src`，以避免失控。
+本计划采用增量、可回滚策略。每阶段应为独立提交（即使本地不立即 commit，也要保持可独立回退的改动边界）。若某阶段失败，回滚该阶段改动并恢复到上阶段通过状态，再重新执行。严禁跨阶段混合重构，以免难以定位回归来源。
+
+命名迁移阶段需特别注意 `require` 路径同步；若出现模块找不到，先通过 `rg "require\(" tests` 定位引用并修正，再继续执行回归命令。对于自动发现 loader，若平台不支持目录扫描能力，应采用“自动生成清单文件”的过渡方案，并在决策日志说明。
 
 ## 产物与备注
 
-以下是本阶段已验证的关键输出样式（示例）：
+以下是应在实施过程中持续补充的短证据模板（示例格式，非当前真实输出）：
 
-    .........dep_rules ok
-    .tick ok
-    ................................................................................
-    .............................................................
+    $ lua tests/regression.lua
+    [tests] total=128 passed=128 failed=0
 
-    All regression checks passed (151)
+    $ TEST_LAYERS=contract,unit lua tests/regression.lua
+    [tests] total=24 passed=24 failed=0
 
-当前关键文件定位：
+    $ TEST_DOMAINS=ports,runtime lua tests/regression.lua
+    [tests] total=17 passed=17 failed=0
 
-- 入口：`tests/regression.lua`
-- 执行器：`tests/runner/init.lua`、`tests/runner/report.lua`
-- 回归模块：`tests/specs/regression/*.lua`（直接 spec 返回）
-- 支撑层：`tests/support/*.lua`
-
-首批去耦完成模块：
-
-- `tests/specs/regression/misc.lua`
-- `tests/specs/regression/movement.lua`
-- `tests/specs/regression/market.lua`
+如果某阶段出现失败，记录最短必要证据：失败 case id、错误栈首行、对应修复动作。不要粘贴冗长日志。
 
 ## 接口与依赖
 
-本计划要求并维持以下接口约定：
+本重构不改变外部入口接口，保持：
 
-- 每个 spec 模块返回：
+- `tests/regression.lua` 仍作为默认执行入口。
+- `tests/runner/init.lua` 的对外调用形式保持 `runner.run(opts)`。
 
-    {
-      layer = "unit|contract|integration|regression",
-      domain = "...",
-      cases = {
-        { id = "...", desc = "...", run = function() ... end }
-      }
-    }
+本重构会收敛内部约定接口：
 
-- runner 过滤参数来源：
+- spec 文件约定统一为 `tests/specs/<layer>/*_spec.lua`。
+- spec 返回结构必须包含：`layer`、`domain`、`cases`。
+- `cases` 元素至少包含 `id` 与 `run`（或 `arrange/act/assert` 组合）。
 
-    TEST_LAYERS=contract,unit
-    TEST_DOMAINS=ports,runtime
-
-- 支撑依赖优先级：
-
-    tests/support/assertions.lua
-    tests/support/context_builder.lua
-    tests/support/time_stub.lua
-    tests/support/ports_stub.lua
-
-  `TestSupport.lua` 仅作为迁移过渡依赖，逐步淘汰。
+若实施目录扫描 loader，需在 `tests/runner/spec_loader.lua` 明确并固定模块名映射规则（例如从路径 `tests/specs/regression/foo_spec.lua` 映射到 `require("regression.foo_spec")`），并在 README 写明，避免隐式规则导致维护困难。
 
 ---
 
-本次更新说明：在“全迁移执行链”基础上继续推进去耦，完成剩余 8 个回归模块的直接 `TestSupport` 依赖切换，并新增 `support.patch` 统一补丁能力；已验证 `lua tests/regression.lua`（151 通过）及 `TEST_LAYERS=regression TEST_DOMAINS=chance,land,landing,item,paid_currency,timeout_modal_choice,gameplay,presentation_ui`（124 通过）。
-
-补充：`tests/support/regression_support.lua` 已改为自包含实现，`tests/specs/regression/*.lua` 与 `tests/support/*.lua` 形成独立依赖链，不再通过 `regression_support -> TestSupport` 间接引用旧层。
-
+更新说明（2026-02-17 / Codex）：
+本次新增 `PLAN_CURRENT.md`，写入“全阶段可执行计划”，覆盖阶段划分、实施顺序、验证命令、活文档四章节与接口约束。目的为把 tests 层级治理从审查建议升级为可直接执行的落地方案。
