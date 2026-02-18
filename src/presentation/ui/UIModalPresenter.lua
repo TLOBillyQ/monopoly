@@ -1,6 +1,6 @@
 local market_ui = require("src.presentation.shared.MarketLayout")
 local modal_state = require("src.presentation.interaction.UIModalStateCoordinator")
-local choice_renderer = require("src.presentation.ui.ChoiceScreenRenderer")
+local choice_renderer = require("src.presentation.ui.ChoiceScreenService")
 local popup_renderer = require("src.presentation.ui.PopupRenderer")
 local market_renderer = require("src.presentation.ui.MarketModalRenderer")
 local canvas = require("src.presentation.interaction.UICanvasCoordinator")

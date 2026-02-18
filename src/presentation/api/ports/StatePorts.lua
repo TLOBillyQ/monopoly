@@ -3,7 +3,7 @@ local M = {}
 function M.build()
   return {
     apply_role_control_lock = function(state, enabled)
-      local ui_view = require("src.presentation.api.UIView")
+      local ui_view = require("src.presentation.api.UIViewService")
       ui_view.apply_role_control_lock(state, enabled)
     end,
     install_event_handlers = function(game, log, state)

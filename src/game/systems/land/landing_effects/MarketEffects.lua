@@ -1,4 +1,4 @@
-local market = require("src.game.systems.market.Market")
+local market_service = require("src.game.systems.market.MarketService")
 
 local M = {}
 
@@ -8,7 +8,7 @@ M.executors = {
       return ctx.tile and ctx.tile.type == "market"
     end,
     apply = function(ctx)
-      local spec, intent = market.build_choice_spec(ctx.player, ctx.game)
+      local spec, intent = market_service.choice.build(ctx.player, ctx.game)
       if intent then return { intent = intent } end
       assert(spec ~= nil, "missing market choice spec")
       return { waiting = true, reason = "market_choice", intent = { kind = "need_choice", choice_spec = spec } }

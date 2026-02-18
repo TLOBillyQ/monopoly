@@ -14,7 +14,7 @@ function M.build()
       local debug_enabled = ui_event_state.resolve_debug_enabled(state)
       if state._debug_log_enabled ~= debug_enabled then
         state._debug_log_enabled = debug_enabled
-        local ui_view = require("src.presentation.api.UIView")
+        local ui_view = require("src.presentation.api.UIViewService")
         ui_view.set_debug_visible(state, debug_enabled)
         if debug_enabled then
           state._debug_log_seq = nil
@@ -26,7 +26,7 @@ function M.build()
         local seq = logger.get_seq()
         if seq ~= state._debug_log_seq then
           state._debug_log_seq = seq
-          local ui_view = require("src.presentation.api.UIView")
+          local ui_view = require("src.presentation.api.UIViewService")
           local max_lines = gameplay_rules.debug_log_max_lines or 50
           ui_view.set_debug_log(state, logger.get_text_by_level("event", max_lines))
         end

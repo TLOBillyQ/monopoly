@@ -1,6 +1,6 @@
 local steal = require("src.game.systems.items.ItemSteal")
 local movement = require("src.game.systems.movement.Movement")
-local market = require("src.game.systems.market.Market")
+local market_service = require("src.game.systems.market.MarketService")
 local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
 local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
 
@@ -107,7 +107,7 @@ local function _phase_move(turn_mgr, args)
   end
 
   if move_result.market_interrupt then
-    local spec, intent = market.build_choice_spec(player, turn_mgr.game)
+    local spec, intent = market_service.choice.build(player, turn_mgr.game)
     if spec then
       intent_dispatcher.dispatch(turn_mgr.game, { kind = "need_choice", choice_spec = spec })
       return "wait_choice", {

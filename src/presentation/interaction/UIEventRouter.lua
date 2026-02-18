@@ -1,5 +1,5 @@
 local runtime = require("src.presentation.api.UIRuntimePort")
-local ui_view = require("src.presentation.api.UIView")
+local ui_view = require("src.presentation.api.UIViewService")
 local ui_event_bindings = require("src.presentation.interaction.UIEventBindings")
 local ui_intent_builder = require("src.presentation.interaction.UIIntentBuilder")
 local ui_intent_dispatcher = require("src.presentation.interaction.UIIntentDispatcher")

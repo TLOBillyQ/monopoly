@@ -21,8 +21,8 @@ function chance_resolver.resolve(game, player, card, context)
   end
 
   local registries = assert(game.registries, "missing game.registries")
-  local chance_registry = assert(registries.chances, "missing chance registry")
-  local handler = chance_registry.handlers[card.effect]
+  local chance_handlers = assert(registries.chances, "missing chance handlers")
+  local handler = chance_handlers[card.effect]
   assert(handler ~= nil, "未知机会卡效果:" .. tostring(card.effect))
 
   return handler(game, player, card, context)

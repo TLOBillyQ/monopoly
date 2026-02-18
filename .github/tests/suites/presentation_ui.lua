@@ -20,8 +20,8 @@ local ui_intent_dispatcher = require("src.presentation.interaction.UIIntentDispa
 local market_view = require("src.presentation.render.MarketView")
 local market_layout = require("src.presentation.shared.MarketLayout")
 local ui_event_router = require("src.presentation.interaction.UIEventRouter")
-local ui_view = require("src.presentation.api.UIView")
-local ui_status_3d_layer = require("src.presentation.render.UIStatus3DLayer")
+local ui_view = require("src.presentation.api.UIViewService")
+local ui_status_3d_layer = require("src.presentation.render.Status3DService")
 local action_anim = require("src.presentation.render.ActionAnim")
 local move_anim = require("src.presentation.render.MoveAnim")
 local role_control_lock_policy = require("src.presentation.interaction.UIRoleControlLockPolicy")
@@ -506,7 +506,7 @@ local function _test_move_anim_vehicle_move_api_enabled_uses_move_event()
 end
 
 local function _test_board_view_vehicle_resync_uses_set_position()
-  local board_view = require("src.presentation.render.BoardView")
+  local board_view = require("src.presentation.render.BoardRuntime")
 
   local _vec3 = vec3.with_add
 
@@ -556,11 +556,11 @@ local function _test_board_view_vehicle_resync_uses_set_position()
       end,
     } },
   }, function()
-    board_view.refresh_board(state, model, function() end, function() return "[test]" end)
+    board_view.refresh(state, model, function() end, function() return "[test]" end)
     _assert_eq(#set_pos_calls, 0, "same resync seq should not force vehicle set_position")
 
     model.board.vehicle_resync_seq = 2
-    board_view.refresh_board(state, model, function() end, function() return "[test]" end)
+    board_view.refresh(state, model, function() end, function() return "[test]" end)
   end)
 
   _assert_eq(unit_set_calls, 0, "vehicle player should not call unit.set_position")
@@ -601,7 +601,7 @@ local function _test_move_anim_step_unlocks_and_relocks()
 end
 
 local function _test_board_view_vehicle_disabled_uses_unit_set_position()
-  local board_view = require("src.presentation.render.BoardView")
+  local board_view = require("src.presentation.render.BoardRuntime")
 
   local _vec3 = vec3.with_add
 
@@ -651,7 +651,7 @@ local function _test_board_view_vehicle_disabled_uses_unit_set_position()
       end,
     } },
   }, function()
-    board_view.refresh_board(state, model, function() end, function() return "[test]" end)
+    board_view.refresh(state, model, function() end, function() return "[test]" end)
   end)
 
   _assert_eq(#set_pos_calls, 0, "vehicle helper should not be called when feature disabled")
@@ -1074,7 +1074,7 @@ local function _test_ui_intent_dispatcher_toggle_action_log_uses_actor_role_cont
 end
 
 local function _test_ui_view_render_by_role_slots_are_isolated()
-  local main_view = require("src.presentation.api.UIView")
+  local main_view = require("src.presentation.api.UIViewService")
 
   local image_logs = {}
   local node_map = {}
@@ -1910,14 +1910,14 @@ end
 
 local function _test_tick_skips_anim_when_no_anim()
   local dirty_tracker = require("src.core.DirtyTracker")
-  local main_view = require("src.presentation.api.UIView")
+  local main_view = require("src.presentation.api.UIViewService")
   local ui_model = require("src.presentation.state.UIModel")
-  local board_view_mod = require("src.presentation.render.BoardView")
+  local board_view_mod = require("src.presentation.render.BoardRuntime")
 
   local game_api = GameAPI or {}
   local patches = {
     { target = main_view, key = "refresh_panel", value = function() end },
-    { target = board_view_mod, key = "refresh_board", value = function() end },
+    { target = board_view_mod, key = "refresh", value = function() end },
     { target = main_view, key = "open_choice_modal", value = function() end },
     { target = ui_model, key = "build", value = function(game_ctx)
       return {
@@ -2514,15 +2514,15 @@ end
 
 local function _test_tick_ui_sync_turn_switch_still_follows()
   local dirty_tracker = require("src.core.DirtyTracker")
-  local main_view = require("src.presentation.api.UIView")
+  local main_view = require("src.presentation.api.UIViewService")
   local ui_model = require("src.presentation.state.UIModel")
-  local board_view_mod = require("src.presentation.render.BoardView")
+  local board_view_mod = require("src.presentation.render.BoardRuntime")
   local helper = { target_role_id = nil }
   local follow_events = 0
   local game_api = GameAPI or {}
   local patches = {
     { target = main_view, key = "refresh_panel", value = function() end },
-    { target = board_view_mod, key = "refresh_board", value = function() end },
+    { target = board_view_mod, key = "refresh", value = function() end },
     { target = main_view, key = "open_choice_modal", value = function() end },
     { target = ui_model, key = "build", value = function(game_ctx)
       return {

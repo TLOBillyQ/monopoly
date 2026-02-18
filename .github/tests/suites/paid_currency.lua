@@ -8,8 +8,8 @@ local function _reload_bridge()
 end
 
 local function _reload_market()
-  package.loaded["src.game.systems.market.Market"] = nil
-  return require("src.game.systems.market.Market")
+  package.loaded["src.game.systems.market.MarketService"] = nil
+  return require("src.game.systems.market.MarketService")
 end
 
 local function _build_fake_env(game, opts)
@@ -124,7 +124,7 @@ local function _test_market_buy_managed_currency_consumes_commodity()
     local bridge = _reload_bridge()
     local market = _reload_market()
     bridge.setup_for_game(game)
-    local ok = market.buy_with_opts(game, p, 2009, nil)
+    local ok = market.purchase.execute(game, p, 2009, nil)
     assert(ok == true, "managed currency purchase should succeed")
     assert(#env.consume_calls == 1, "managed currency purchase should consume commodity")
     assert(env.consume_calls[1].count == 5, "consume count should match item price")
@@ -140,7 +140,7 @@ local function _test_market_insufficient_managed_currency_opens_panel()
     local bridge = _reload_bridge()
     local market = _reload_market()
     bridge.setup_for_game(game)
-    local result = market.buy_with_opts(game, p, 2009, nil)
+    local result = market.purchase.execute(game, p, 2009, nil)
     assert(type(result) == "table" and result.ok == false, "insufficient managed currency should fail")
     assert(#env.consume_calls == 0, "insufficient balance should not consume commodity")
     assert(#env.buy_calls == 1, "insufficient balance should open purchase panel")

@@ -1,0 +1,87 @@
+local specs = require("src.presentation.render.status3d_service.specs")
+local scene = require("src.presentation.render.status3d_service.scene")
+
+local M = {}
+
+function M.resolve_player_status_key(game, player)
+  if player == nil or player.eliminated == true then
+    return nil
+  end
+  local status = player.status or {}
+  local stay_turns = status.stay_turns or 0
+  if stay_turns > 0 and game.board and game.board.get_tile then
+    local tile = game.board:get_tile(player.position)
+    local tile_type = tile and tile.type or nil
+    if tile_type == "hospital" then
+      return "hospital"
+    end
+    if tile_type == "mountain" then
+      return "mountain"
+    end
+  end
+  local last_turn = game.last_turn
+  if last_turn and last_turn.player_id == player.id then
+    local move_result = last_turn.move_result
+    if move_result and move_result.stopped_on_roadblock == true then
+      return "roadblock"
+    end
+  end
+  local deity = status.deity
+  if deity and (deity.remaining or 0) > 0 then
+    if deity.type == "poor" then
+      return "poor"
+    end
+    if deity.type == "rich" then
+      return "rich"
+    end
+    if deity.type == "angel" then
+      return "angel"
+    end
+  end
+  return nil
+end
+
+function M.sync_layer_status(cache, player, status_key)
+  local player_id = player.id
+  local layer = cache.layers_by_player_id[player_id]
+  local nodes = cache.nodes_by_player_id[player_id]
+  if not layer or not nodes then
+    return
+  end
+  if cache.last_status_key_by_player[player_id] == status_key then
+    local stay_turns = player.status and player.status.stay_turns or 0
+    local node_pair = status_key and nodes[status_key] or nil
+    local should_update = status_key == "hospital" or status_key == "mountain" or status_key == "roadblock"
+    if should_update and stay_turns > 0 and node_pair and node_pair.text and GameAPI and GameAPI.get_role then
+      local role = GameAPI.get_role(player_id)
+      if role and role.set_label_text then
+        local text = "当前回合无法行动\n剩余停留回合数：" .. tostring(stay_turns)
+        pcall(role.set_label_text, node_pair.text, text)
+      end
+    end
+    return
+  end
+  local roles = scene.resolve_observer_roles()
+  for _, key in ipairs(specs.status_priority) do
+    local node_pair = nodes[key]
+    if node_pair then
+      local visible = status_key == key
+      scene.set_node_visible_for_roles(node_pair.bg, roles, visible)
+      scene.set_node_visible_for_roles(node_pair.text, roles, visible)
+    end
+  end
+  local stay_turns = player.status and player.status.stay_turns or 0
+  local node_pair = status_key and nodes[status_key] or nil
+  local should_update = status_key == "hospital" or status_key == "mountain" or status_key == "roadblock"
+  if should_update and stay_turns > 0 and node_pair and node_pair.text and GameAPI and GameAPI.get_role then
+    local role = GameAPI.get_role(player_id)
+    if role and role.set_label_text then
+      local text = "当前回合无法行动\n剩余停留回合数：" .. tostring(stay_turns)
+      pcall(role.set_label_text, node_pair.text, text)
+    end
+  end
+  scene.set_layer_visible_for_roles(layer, roles, status_key ~= nil)
+  cache.last_status_key_by_player[player_id] = status_key
+end
+
+return M

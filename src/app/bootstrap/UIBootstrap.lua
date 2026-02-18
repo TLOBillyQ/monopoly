@@ -1,6 +1,6 @@
 local board_scene = require("src.presentation.render.BoardScene")
 local gameplay_loop = require("src.game.flow.turn.GameplayLoop")
-local ui_view = require("src.presentation.api.UIView")
+local ui_view = require("src.presentation.api.UIViewService")
 local ui_event_router = require("src.presentation.interaction.UIEventRouter")
 local ui_nodes = require("src.presentation.shared.UINodes")
 local market_ui = require("src.presentation.shared.MarketLayout")

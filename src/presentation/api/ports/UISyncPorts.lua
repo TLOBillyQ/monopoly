@@ -13,7 +13,7 @@ end
 function M.build()
   return {
     apply_input_lock = function(state)
-      local ui_view = require("src.presentation.api.UIView")
+      local ui_view = require("src.presentation.api.UIViewService")
       ui_view.apply_input_lock(state)
     end,
     step_choice_timeout = function(game, state, dt)
@@ -38,7 +38,7 @@ function M.build()
       local ui_refreshed = false
       if dirty.any or dirty.ui then
         local ui_model = require("src.presentation.state.UIModel")
-        local ui_view = require("src.presentation.api.UIView")
+        local ui_view = require("src.presentation.api.UIViewService")
         local env = tick_ui_sync.build_ui_env(state, game)
         local next_model = ui_model.update(state.ui_model, game, env, dirty)
         state.ui_model = next_model

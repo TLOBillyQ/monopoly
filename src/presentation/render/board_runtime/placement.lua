@@ -1,0 +1,130 @@
+local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
+
+local M = {}
+
+local function _resolve_player_id(player, i)
+  return assert(player.id, "missing player id: " .. tostring(i))
+end
+
+local function _resolve_active_player_base(state, player, i)
+  local idx = assert(player.position, "missing player position: " .. tostring(i))
+  assert(state.tile_positions ~= nil, "missing tile_positions")
+  local base = assert(state.tile_positions[idx], "missing tile_position: " .. tostring(idx))
+  local pid = _resolve_player_id(player, i)
+  return idx, base, pid
+end
+
+local function _build_snapshot(players)
+  local snapshot = {}
+  for i, player in ipairs(players) do
+    assert(player ~= nil, "missing player: " .. tostring(i))
+    local pid = _resolve_player_id(player, i)
+    local pos = player.position
+    local eliminated = player.eliminated and 1 or 0
+    snapshot[pid] = tostring(pos) .. ":" .. tostring(eliminated)
+  end
+  return snapshot
+end
+
+function M.compute_need_sync(state, snapshot, vehicle_resync_seq)
+  local need_sync = state.board_sync_pending or false
+  local last_positions = assert(state.board_last_positions, "missing board_last_positions")
+  if not need_sync then
+    for pid, value in pairs(snapshot) do
+      if last_positions[pid] ~= value then
+        need_sync = true
+        break
+      end
+    end
+  end
+  if not need_sync and state.board_last_vehicle_resync_seq ~= vehicle_resync_seq then
+    need_sync = true
+  end
+  return need_sync
+end
+
+function M.build_occupants(state, players)
+  local occupants = {}
+  for i, player in ipairs(players) do
+    assert(player ~= nil, "missing player: " .. tostring(i))
+    if not player.eliminated then
+      local idx, _, pid = _resolve_active_player_base(state, player, i)
+      local list = occupants[idx]
+      if not list then
+        list = {}
+        occupants[idx] = list
+      end
+      list[#list + 1] = pid
+    end
+  end
+  return occupants
+end
+
+function M.resolve_min_player_y(scene)
+  assert(scene.ground ~= nil, "missing board_scene.ground")
+  assert(scene.ground.get_position ~= nil, "missing board_scene.ground.get_position")
+  local ground_pos = scene.ground.get_position()
+  assert(ground_pos ~= nil and ground_pos.y ~= nil, "missing ground position")
+  return ground_pos.y + 1.5
+end
+
+local function _resolve_occupant_slot(list, pid)
+  local count = list and #list or 1
+  local slot = 1
+  if list and count > 1 then
+    for s = 1, count do
+      if list[s] == pid then
+        slot = s
+        break
+      end
+    end
+  end
+  return slot, count
+end
+
+local function _calc_slot_offset(slot, count, spacing)
+  if count <= 1 or spacing <= 0 then
+    return 0.0, 0.0
+  end
+  local per_row = 0
+  while per_row * per_row < count do
+    per_row = per_row + 1
+  end
+  local row = math.floor((slot - 1) / per_row)
+  local col = (slot - 1) % per_row
+  local start = -(per_row - 1) * spacing * 0.5
+  local ox = start + col * spacing
+  local oz = start + row * spacing
+  return ox, oz
+end
+
+function M.place_players(state, players, occupants, spacing, min_player_y)
+  for i, player in ipairs(players) do
+    assert(player ~= nil, "missing player: " .. tostring(i))
+    if not player.eliminated then
+      local idx, base, pid = _resolve_active_player_base(state, player, i)
+      assert(state.player_units ~= nil, "missing player_units")
+      local unit = assert(state.player_units[pid], "missing player unit: " .. tostring(pid))
+      local base_y = assert(base.y, "missing base.y: " .. tostring(idx))
+      local y_offset = 0
+      if base_y < min_player_y then
+        y_offset = min_player_y - base_y
+      end
+      local list = occupants[idx]
+      local slot, count = _resolve_occupant_slot(list, pid)
+      local ox, oz = _calc_slot_offset(slot, count, spacing)
+      local target_pos = base + math.Vector3(ox, y_offset, oz)
+      local seat_id = vehicle_feature.resolve_seat_id(player.seat_id)
+      if seat_id and vehicle_helper and vehicle_helper.forward_eca_event_set_position then
+        vehicle_helper.forward_eca_event_set_position(pid, target_pos)
+      else
+        assert(unit.set_position ~= nil, "missing unit.set_position: " .. tostring(pid))
+        unit.set_position(target_pos)
+      end
+    end
+  end
+end
+
+M.build_snapshot = _build_snapshot
+
+return M
