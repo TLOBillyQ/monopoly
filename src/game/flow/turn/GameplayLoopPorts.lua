@@ -74,6 +74,21 @@ local function _resolve_grouped_override(override_ports)
   return nil
 end
 
+local function _has_legacy_flat_override(override_ports)
+  if type(override_ports) ~= "table" then
+    return false
+  end
+  for _, group_name in ipairs(port_types.group_names) do
+    local keys = port_types.groups[group_name]
+    for _, key in ipairs(keys) do
+      if type(override_ports[key]) == "function" then
+        return true
+      end
+    end
+  end
+  return false
+end
+
 local function _copy_group_ports(base_group, override_group, required_keys)
   local merged = {}
   for _, key in ipairs(required_keys) do
@@ -143,20 +158,35 @@ end
 
 local base_ports = _resolve_base_ports()
 
-function gameplay_loop_ports.resolve(override_ports)
-  local grouped_override = _resolve_grouped_override(override_ports)
-  if not grouped_override then
-    return base_ports
-  end
-
+local function _build_resolved_ports(grouped_override)
   local resolved = {}
   for _, group_name in ipairs(port_types.group_names) do
     local base_group = base_ports[group_name]
-    local override_group = grouped_override[group_name]
+    local override_group = grouped_override and grouped_override[group_name] or nil
     resolved[group_name] = _copy_group_ports(base_group, override_group, port_types.groups[group_name])
   end
   _fill_ui_sync_defaults(resolved.ui_sync, base_ports.ui_sync)
   return resolved
+end
+
+function gameplay_loop_ports.resolve(override_ports)
+  if override_ports == nil then
+    return _build_resolved_ports(nil)
+  end
+  if type(override_ports) ~= "table" then
+    error("invalid gameplay_loop_ports override: expected table")
+  end
+
+  local grouped_override = _resolve_grouped_override(override_ports)
+  if grouped_override then
+    return _build_resolved_ports(grouped_override)
+  end
+
+  if _has_legacy_flat_override(override_ports) then
+    error("legacy flat gameplay_loop_ports is not supported; use grouped ports: modal/anim/ui_sync/debug/state")
+  end
+
+  return _build_resolved_ports(nil)
 end
 
 return gameplay_loop_ports

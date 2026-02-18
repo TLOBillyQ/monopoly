@@ -227,6 +227,60 @@ local function _test_bankruptcy_resets_owned_tiles()
   assert(next(p1.properties) == nil, "bankruptcy clears player properties")
 end
 
+local function _test_bankruptcy_notifier_reads_grouped_ports()
+  local g = _new_game()
+  local p1 = g.players[1]
+  local _, tile_ref = _first_land_tile(g.board)
+  local calls = {}
+
+  g:set_tile_owner(tile_ref, p1.id)
+  g:set_player_property(p1, tile_ref.id, true)
+  g.gameplay_loop_ports = {
+    state = {
+      on_bankruptcy_tiles_cleared = function(_, player, owned_tile_ids)
+        calls[#calls + 1] = {
+          player_id = player and player.id or nil,
+          owned_tile_ids = owned_tile_ids,
+        }
+      end,
+    },
+  }
+
+  bankruptcy.eliminate(g, p1)
+
+  assert(#calls == 1, "grouped bankruptcy notifier should be invoked once")
+  assert(calls[1].player_id == p1.id, "notifier should receive eliminated player")
+  assert(type(calls[1].owned_tile_ids) == "table", "notifier should receive owned_tile_ids list")
+  assert(calls[1].owned_tile_ids[1] == tile_ref.id, "notifier should receive cleared tile id")
+end
+
+local function _test_chance_pay_others_stops_after_bankruptcy()
+  local g = app:new({
+    players = { "P1", "P2", "P3", "P4" },
+    ai = {},
+    auto_all = false,
+    map = map_cfg,
+    tiles = tiles_cfg,
+  })
+  local p1 = g.players[1]
+  local p2 = g.players[2]
+  local p3 = g.players[3]
+  local p4 = g.players[4]
+
+  g:set_player_cash(p1, 15)
+  g:set_player_cash(p2, 0)
+  g:set_player_cash(p3, 0)
+  g:set_player_cash(p4, 0)
+
+  local chance_handler = assert(g.registries.chances.handlers.pay_others, "missing pay_others handler")
+  chance_handler(g, p1, { effect = "pay_others", amount = 10 })
+
+  assert(p1.eliminated == true, "payer should be eliminated when cash becomes non-positive")
+  assert(g:player_balance(p2, "金币") == 10, "first recipient should receive transfer")
+  assert(g:player_balance(p3, "金币") == 10, "second recipient should receive transfer before bankruptcy stop")
+  assert(g:player_balance(p4, "金币") == 0, "later recipients should not receive transfer after bankruptcy")
+end
+
 local function _test_set_tile_owner_without_ui_port_does_not_crash()
   local g = _new_game()
   g.ui_port = nil
@@ -1230,6 +1284,8 @@ end
 return {
   _test_mandatory_payment_causes_bankruptcy,
   _test_bankruptcy_resets_owned_tiles,
+  _test_bankruptcy_notifier_reads_grouped_ports,
+  _test_chance_pay_others_stops_after_bankruptcy,
   _test_set_tile_owner_without_ui_port_does_not_crash,
   _test_tile_owner_notifier_receives_owner_changes,
   _test_dispatch_validator_accepts_ui_state_snapshot,

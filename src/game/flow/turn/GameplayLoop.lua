@@ -11,20 +11,18 @@ local paid_currency_bridge = require("src.game.systems.commerce.PaidCurrencyBrid
 local gameplay_loop = {}
 
 local function _resolve_ports(state)
-  local override = state and state.gameplay_loop_ports or nil
-  if override and not override._resolved then
-    local resolved = gameplay_loop_ports.resolve(override)
-    resolved._resolved = true
-    state.gameplay_loop_ports = resolved
-    return resolved
+  if not state then
+    return gameplay_loop_ports.resolve(nil)
   end
-  if not override then
-    local resolved = gameplay_loop_ports.resolve(nil)
-    resolved._resolved = true
-    state.gameplay_loop_ports = resolved
-    return resolved
+  local override = state.gameplay_loop_ports
+  if state._resolved_gameplay_loop_ports and state._resolved_gameplay_loop_ports_source == override then
+    return state._resolved_gameplay_loop_ports
   end
-  return override
+  local resolved = gameplay_loop_ports.resolve(override)
+  state._resolved_gameplay_loop_ports = resolved
+  state._resolved_gameplay_loop_ports_source = override
+  state.gameplay_loop_ports = resolved
+  return resolved
 end
 
 local function _dispatch_action_with_close_choice(game, state, action, ports)

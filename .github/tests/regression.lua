@@ -1,5 +1,7 @@
--- Quick regression checks (run with: lua .agents/tests/regression.lua)
-package.path = package.path .. ";./.agents/tests/?.lua;./.agents/tests/suites/?.lua;./.agents/tests/fixtures/?.lua"
+-- Quick regression checks (run with: lua .github/tests/regression.lua)
+package.path = package.path
+  .. ";./.github/tests/?.lua;./.github/tests/suites/?.lua;./.github/tests/fixtures/?.lua"
+  .. ";./.agents/tests/?.lua;./.agents/tests/suites/?.lua;./.agents/tests/fixtures/?.lua"
 
 local harness = require("TestHarness")
 
@@ -24,5 +26,5 @@ local suites = {
 }
 
 harness.run_all(suites)
-dofile(".agents/tests/internal/dep_rules.lua")
-dofile(".agents/tests/internal/gameplay_loop_no_ui.lua")
+dofile(".github/tests/internal/dep_rules.lua")
+dofile(".github/tests/internal/gameplay_loop_no_ui.lua")

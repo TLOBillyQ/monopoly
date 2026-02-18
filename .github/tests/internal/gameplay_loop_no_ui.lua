@@ -30,24 +30,42 @@ end
 
 local function build_ports()
   return {
-    close_choice_modal = noop,
-    open_choice_modal = noop,
-    close_popup = noop,
-    apply_input_lock = noop,
-    apply_role_control_lock = noop,
-    play_move_anim = noop,
-    play_action_anim = noop,
-    step_choice_timeout = noop,
-    step_modal_timeout = noop,
-    update_countdown = noop,
-    build_model = function() return {} end,
-    refresh_from_dirty = function() return false end,
-    log_status = noop,
-    sync_debug_log = noop,
-    reset_status_3d = noop,
-    sync_status_3d = noop,
-    install_event_handlers = noop,
-    on_bankruptcy_tiles_cleared = noop,
+    modal = {
+      close_choice_modal = noop,
+      open_choice_modal = noop,
+      close_popup = noop,
+    },
+    anim = {
+      play_move_anim = noop,
+      play_action_anim = noop,
+      reset_status_3d = noop,
+      sync_status_3d = noop,
+    },
+    ui_sync = {
+      apply_input_lock = noop,
+      step_choice_timeout = noop,
+      step_modal_timeout = noop,
+      update_countdown = noop,
+      build_model = function() return {} end,
+      refresh_from_dirty = function() return false end,
+      get_ui_state = function(state) return state and state.ui or nil end,
+      is_input_blocked = function() return false end,
+      is_popup_active = function() return false end,
+      is_choice_active = function() return false end,
+      is_market_active = function() return false end,
+      get_popup_owner_index = function() return nil end,
+      set_input_blocked = function() return false end,
+    },
+    debug = {
+      log_status = noop,
+      sync_debug_log = noop,
+      resolve_debug_enabled = function() return false end,
+    },
+    state = {
+      apply_role_control_lock = noop,
+      install_event_handlers = noop,
+      on_bankruptcy_tiles_cleared = noop,
+    },
   }
 end
 

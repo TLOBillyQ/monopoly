@@ -45,7 +45,7 @@ local function _adjust_chance_delta(game, player, delta)
   return delta
 end
 
-local function _handle_bankruptcy_if_negative(game, player, reason)
+local function _handle_bankruptcy_if_non_positive(game, player, reason)
   if game:player_balance(player, "金币") > 0 then
     return
   end
@@ -54,7 +54,7 @@ end
 
 local function _apply_cash_and_maybe_bankrupt(game, player, delta, reason)
   _apply_cash_change(game, player, delta)
-  _handle_bankruptcy_if_negative(game, player, reason)
+  _handle_bankruptcy_if_non_positive(game, player, reason)
 end
 
 local function _queue_action_anim(game, payload)
@@ -193,6 +193,9 @@ local function _register_defaults(registry)
 
   registry:register("pay_others", function(game, player, card)
     for _, other in ipairs(game.players) do
+      if player.eliminated then
+        break
+      end
       if other.id ~= player.id and not other.eliminated then
         local fee = card.amount
         if game:player_has_deity(player, "poor") then

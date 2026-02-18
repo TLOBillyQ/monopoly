@@ -2,6 +2,7 @@ local logger = require("src.core.Logger")
 local inventory = require("src.game.systems.items.ItemInventory")
 
 local bankruptcy = {}
+local warned_missing_tiles_cleared_callback = false
 
 local function _resolve_bankruptcy_text(player, opts)
   if opts and opts.reason and opts.reason ~= "" then
@@ -49,8 +50,19 @@ end
 
 local function _notify_tiles_cleared(game, player, owned_tile_ids)
   local ports = game and game.gameplay_loop_ports or nil
-  if ports and type(ports.on_bankruptcy_tiles_cleared) == "function" then
-    ports.on_bankruptcy_tiles_cleared(game, player, owned_tile_ids)
+  local callback = nil
+  if ports and type(ports.state) == "table" and type(ports.state.on_bankruptcy_tiles_cleared) == "function" then
+    callback = ports.state.on_bankruptcy_tiles_cleared
+  elseif ports and type(ports.on_bankruptcy_tiles_cleared) == "function" then
+    callback = ports.on_bankruptcy_tiles_cleared
+  end
+  if callback then
+    callback(game, player, owned_tile_ids)
+    return
+  end
+  if not warned_missing_tiles_cleared_callback then
+    warned_missing_tiles_cleared_callback = true
+    logger.warn("missing gameplay_loop_ports.state.on_bankruptcy_tiles_cleared")
   end
 end
 
