@@ -12,6 +12,9 @@ local function _is_numeric_type_name(value_type)
 end
 
 local function _to_integer_safe(value)
+  if value == nil then
+    return nil
+  end
   if _tointeger then
     local ok, as_int = pcall(_tointeger, value)
     if ok and as_int ~= nil then
@@ -71,6 +74,9 @@ end
 
 function number_utils.is_numeric(value)
   local value_type = type(value)
+  if value_type == "nil" then
+    return false
+  end
   if _is_numeric_type_name(value_type) then
     return true
   end

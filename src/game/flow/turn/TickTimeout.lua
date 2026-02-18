@@ -91,8 +91,9 @@ end
 
 local function _modal_timeout_seconds(_, state)
   local popup = state and state.ui and state.ui.popup_payload or nil
-  if popup and number_utils.is_numeric(popup.auto_close_seconds) and popup.auto_close_seconds > 0 then
-    return popup.auto_close_seconds
+  local auto_close_seconds = popup and popup.auto_close_seconds or nil
+  if auto_close_seconds ~= nil and number_utils.is_numeric(auto_close_seconds) and auto_close_seconds > 0 then
+    return auto_close_seconds
   end
   local timeout = gameplay_rules.popup_auto_close_seconds
   if number_utils.is_numeric(timeout) and timeout > 0 then
@@ -179,7 +180,7 @@ function tick_timeout.step_modal_timeout(state, dt, opts)
   local timeout = constants.action_timeout_seconds or 0
   if opts and opts.get_timeout_seconds then
     local override = opts.get_timeout_seconds(state)
-    if number_utils.is_numeric(override) then
+    if override ~= nil and number_utils.is_numeric(override) then
       timeout = override
     end
   end
