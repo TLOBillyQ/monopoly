@@ -56,6 +56,8 @@ local names = {
   "_test_status3d_priority_single_status",
   "_test_status3d_roadblock_only_current_turn",
   "_test_status3d_reset_destroy_layers",
+  "_test_turn_effects_prompt_visibility_follows_phase_and_role",
+  "_test_turn_effects_other_prompt_fallback_text",
   "_test_tick_ui_sync_turn_switch_still_follows",
 }
 

@@ -24,6 +24,7 @@ local ui_view = require("src.presentation.api.UIViewService")
 local ui_status_3d_layer = require("src.presentation.render.Status3DService")
 local action_anim = require("src.presentation.render.ActionAnim")
 local move_anim = require("src.presentation.render.MoveAnim")
+local turn_effects = require("src.presentation.ui.UITurnEffects")
 local role_control_lock_policy = require("src.presentation.interaction.UIRoleControlLockPolicy")
 local ui_touch_policy = require("src.presentation.interaction.UITouchPolicy")
 local market_cfg = require("Config.Generated.Market")
@@ -2512,6 +2513,130 @@ local function _test_status3d_reset_destroy_layers()
   assert(state.ui_status_3d == nil, "reset should clear state cache")
 end
 
+local function _build_turn_effect_runtime_env(role_ids)
+  local active_role = nil
+  local roles = {}
+  for _, role_id in ipairs(role_ids or {}) do
+    local captured_role_id = role_id
+    roles[#roles + 1] = {
+      get_roleid = function()
+        return captured_role_id
+      end,
+    }
+  end
+
+  local per_role_nodes = {}
+  for _, role_id in ipairs(role_ids or {}) do
+    per_role_nodes[role_id] = {
+      ["基础_星星中心爆开"] = { visible = false },
+      ["基础_行动提示"] = { visible = false },
+      ["基础_其他玩家行动提示"] = { visible = false, text = "" },
+    }
+  end
+
+  local global_nodes = {
+    ["基础_玩家1高亮光效"] = { visible = false },
+    ["基础_玩家2高亮光效"] = { visible = false },
+    ["基础_玩家3高亮光效"] = { visible = false },
+    ["基础_玩家4高亮光效"] = { visible = false },
+  }
+
+  return {
+    roles = roles,
+    per_role_nodes = per_role_nodes,
+    set_client_role = function(role)
+      active_role = role
+    end,
+    for_each_role_or_global = function(fn)
+      for _, role in ipairs(roles) do
+        fn(role)
+      end
+    end,
+    query_node = function(name)
+      local global_node = global_nodes[name]
+      if global_node then
+        return global_node
+      end
+      local role_id = active_role and active_role.get_roleid and active_role.get_roleid() or nil
+      assert(role_id ~= nil, "missing role_id for node: " .. tostring(name))
+      local role_nodes = per_role_nodes[role_id]
+      assert(role_nodes ~= nil, "missing role nodes: " .. tostring(role_id))
+      local node = role_nodes[name]
+      assert(node ~= nil, "missing role node: " .. tostring(name))
+      return node
+    end,
+  }
+end
+
+local function _test_turn_effects_prompt_visibility_follows_phase_and_role()
+  local env = _build_turn_effect_runtime_env({ 1, 2 })
+  local state = {}
+  local ui_model = {
+    current_player_id = 1,
+    current_player_name = "P1",
+    board = {
+      phase = "start",
+      players = { { id = 1 }, { id = 2 } },
+    },
+  }
+
+  _with_patches({
+    { target = runtime_port, key = "set_client_role", value = env.set_client_role },
+    { target = runtime_port, key = "for_each_role_or_global", value = env.for_each_role_or_global },
+    { target = runtime_port, key = "query_node", value = env.query_node },
+  }, function()
+    turn_effects.sync(state, ui_model)
+    _assert_eq(env.per_role_nodes[1]["基础_行动提示"].visible, true, "current player should see action prompt in start phase")
+    _assert_eq(env.per_role_nodes[1]["基础_星星中心爆开"].visible, true, "current player should see action star in start phase")
+    _assert_eq(env.per_role_nodes[2]["基础_行动提示"].visible, false, "other player should hide local action prompt")
+    _assert_eq(env.per_role_nodes[2]["基础_其他玩家行动提示"].visible, true, "other player should always see other-action prompt")
+    _assert_eq(env.per_role_nodes[2]["基础_其他玩家行动提示"].text, "P1正在行动", "other prompt text should use current player name")
+
+    ui_model.board.phase = "wait_move_anim"
+    turn_effects.sync(state, ui_model)
+    _assert_eq(env.per_role_nodes[1]["基础_行动提示"].visible, false, "current player prompt should hide after action begins")
+    _assert_eq(env.per_role_nodes[1]["基础_星星中心爆开"].visible, false, "current player star should hide after action begins")
+    _assert_eq(env.per_role_nodes[2]["基础_其他玩家行动提示"].visible, true, "other player prompt should stay visible in non-turn phase")
+
+    ui_model.board.phase = "end_turn"
+    turn_effects.sync(state, ui_model)
+    _assert_eq(env.per_role_nodes[1]["基础_行动提示"].visible, true, "current player prompt should show in end_turn phase")
+
+    ui_model.current_player_id = 2
+    ui_model.current_player_name = "P2"
+    ui_model.board.phase = "start"
+    turn_effects.sync(state, ui_model)
+    _assert_eq(env.per_role_nodes[1]["基础_其他玩家行动提示"].visible, true, "switched non-current player should see other-action prompt")
+    _assert_eq(env.per_role_nodes[1]["基础_其他玩家行动提示"].text, "P2正在行动", "other prompt text should follow current player switch")
+    _assert_eq(env.per_role_nodes[2]["基础_行动提示"].visible, true, "new current player should see local action prompt")
+    _assert_eq(env.per_role_nodes[2]["基础_其他玩家行动提示"].visible, false, "current player should hide other-action prompt")
+  end)
+end
+
+local function _test_turn_effects_other_prompt_fallback_text()
+  local env = _build_turn_effect_runtime_env({ 1, 2 })
+  local state = {}
+  local ui_model = {
+    current_player_id = 1,
+    current_player_name = nil,
+    board = {
+      phase = "wait_action_anim",
+      players = { { id = 1 }, { id = 2 } },
+    },
+  }
+
+  _with_patches({
+    { target = runtime_port, key = "set_client_role", value = env.set_client_role },
+    { target = runtime_port, key = "for_each_role_or_global", value = env.for_each_role_or_global },
+    { target = runtime_port, key = "query_node", value = env.query_node },
+  }, function()
+    turn_effects.sync(state, ui_model)
+    _assert_eq(env.per_role_nodes[1]["基础_行动提示"].visible, false, "current player local prompt should hide in wait_action_anim")
+    _assert_eq(env.per_role_nodes[2]["基础_其他玩家行动提示"].visible, true, "other player prompt should show without current player name")
+    _assert_eq(env.per_role_nodes[2]["基础_其他玩家行动提示"].text, "其他玩家正在行动", "other prompt should use fallback text")
+  end)
+end
+
 local function _test_tick_ui_sync_turn_switch_still_follows()
   local dirty_tracker = require("src.core.DirtyTracker")
   local main_view = require("src.presentation.api.UIViewService")
@@ -2669,5 +2794,7 @@ return {
   _test_status3d_priority_single_status,
   _test_status3d_roadblock_only_current_turn,
   _test_status3d_reset_destroy_layers,
+  _test_turn_effects_prompt_visibility_follows_phase_and_role,
+  _test_turn_effects_other_prompt_fallback_text,
   _test_tick_ui_sync_turn_switch_still_follows,
 }
