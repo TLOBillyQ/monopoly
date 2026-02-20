@@ -6,6 +6,7 @@ local ui_model = require("src.presentation.state.UIModel")
 local map_cfg = require("Config.Map")
 local tiles_cfg = require("Config.Generated.Tiles")
 local gameplay_rules = require("Config.GameplayRules")
+local test_profile_bootstrap = require("src.app.testing.TestProfileBootstrap")
 local logger = require("src.core.Logger")
 local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
 
@@ -92,26 +93,30 @@ function M.build_state(get_current_game)
     game_factory = function()
       local role_roster = _build_role_roster(max_player_count)
       local forced_ai = _build_non_p1_ai_map(#role_roster)
+      local created_game = nil
       if #role_roster > 0 then
         logger.info("[Eggy]", "使用角色驱动初始化，角色数量:", tostring(#role_roster))
-        return game:new({
+        created_game = game:new({
           role_roster = role_roster,
           ai = forced_ai,
           auto_all = false,
           map = map_cfg,
           tiles = tiles_cfg,
         })
+      else
+        logger.warn("[Eggy]", "角色列表为空，回退调试玩家初始化")
+        local player_names = { "玩家1", "AI2", "AI3", "AI4" }
+        local fallback_ai = _build_non_p1_ai_map(#player_names) or { [2] = true, [3] = true, [4] = true }
+        created_game = game:new({
+          players = player_names,
+          ai = fallback_ai,
+          auto_all = false,
+          map = map_cfg,
+          tiles = tiles_cfg,
+        })
       end
-      logger.warn("[Eggy]", "角色列表为空，回退调试玩家初始化")
-      local player_names = { "玩家1", "AI2", "AI3", "AI4" }
-      local fallback_ai = _build_non_p1_ai_map(#player_names) or { [2] = true, [3] = true, [4] = true }
-      return game:new({
-        players = player_names,
-        ai = fallback_ai,
-        auto_all = false,
-        map = map_cfg,
-        tiles = tiles_cfg,
-      })
+      test_profile_bootstrap.apply(created_game)
+      return created_game
     end,
     auto_runner = auto_runner:new({ interval = ui.auto_interval }),
     tile_units = nil,

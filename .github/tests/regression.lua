@@ -13,6 +13,7 @@ local suites = {
   require("landing"),
   require("market"),
   require("paid_currency"),
+  require("test_profiles"),
   require("presentation_ui_timing_anim"),
   require("presentation_ui_model_dispatch"),
   require("presentation_ui_interaction"),
