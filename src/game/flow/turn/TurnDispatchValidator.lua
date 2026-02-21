@@ -131,12 +131,8 @@ function validator.validate_choice_actor(game, action, choice)
   return true
 end
 
-function validator.validate_choice_action(game, action, choice)
-  if not choice or not choice.id then
-    logger.warn("choice action without pending choice:", tostring(action and action.type))
-    return false
-  end
-  if not validator.validate_choice_actor(game, action, choice) then
+function validator.validate_choice_id(action, choice)
+  if not action or not choice then
     return false
   end
   if not action.choice_id or action.choice_id ~= choice.id then
@@ -149,6 +145,17 @@ function validator.validate_choice_action(game, action, choice)
     return false
   end
   return true
+end
+
+function validator.validate_choice_action(game, action, choice)
+  if not choice or not choice.id then
+    logger.warn("choice action without pending choice:", tostring(action and action.type))
+    return false
+  end
+  if not validator.validate_choice_actor(game, action, choice) then
+    return false
+  end
+  return validator.validate_choice_id(action, choice)
 end
 
 function validator.resolve_item_slot_action(item_slot_source, state, action)

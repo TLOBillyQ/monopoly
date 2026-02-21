@@ -4,6 +4,29 @@ local market_service = require("src.game.systems.market.MarketService")
 local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
 local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
 
+local function _build_move_resume_args(player, raw_total, extra)
+  local out = {
+    player = player,
+    raw_total = raw_total,
+  }
+  if not extra then
+    return out
+  end
+  for key, value in pairs(extra) do
+    out[key] = value
+  end
+  return out
+end
+
+local function _build_interrupt_resume_args(player, raw_total, interrupt, source_flag)
+  return _build_move_resume_args(player, raw_total, {
+    [source_flag] = true,
+    remaining_steps = interrupt.remaining_steps,
+    facing = interrupt.facing,
+    branch_parity = interrupt.branch_parity,
+  })
+end
+
 local function _phase_move(turn_mgr, args)
   local player = args.player
   local total = args.total
@@ -55,12 +78,10 @@ local function _phase_move(turn_mgr, args)
       game.dirty.any = true
       return "wait_move_anim", {
         resume_state = "move",
-        resume_args = {
-          player = player,
+        resume_args = _build_move_resume_args(player, raw_total, {
           total = total,
-          raw_total = raw_total,
           move_result = move_result,
-        },
+        }),
       }
     end
   else
@@ -83,25 +104,11 @@ local function _phase_move(turn_mgr, args)
     if res and res.waiting then
       return "wait_choice", {
         resume_state = "move",
-        resume_args = {
-          player = player,
-          continue_from_steal = true,
-          remaining_steps = interrupt.remaining_steps,
-          facing = interrupt.facing,
-          branch_parity = interrupt.branch_parity,
-          raw_total = raw_total,
-        },
+        resume_args = _build_interrupt_resume_args(player, raw_total, interrupt, "continue_from_steal"),
       }
     end
     if interrupt.remaining_steps and interrupt.remaining_steps > 0 then
-      return "move", {
-        player = player,
-        continue_from_steal = true,
-        remaining_steps = interrupt.remaining_steps,
-        facing = interrupt.facing,
-        branch_parity = interrupt.branch_parity,
-        raw_total = raw_total,
-      }
+      return "move", _build_interrupt_resume_args(player, raw_total, interrupt, "continue_from_steal")
     end
     move_result.encountered_players = {}
   end
@@ -112,14 +119,12 @@ local function _phase_move(turn_mgr, args)
       intent_dispatcher.dispatch(turn_mgr.game, { kind = "need_choice", choice_spec = spec })
       return "wait_choice", {
         resume_state = "move",
-        resume_args = {
-          player = player,
-          continue_from_market = true,
-          remaining_steps = move_result.market_interrupt.remaining_steps,
-          facing = move_result.market_interrupt.facing,
-          branch_parity = move_result.market_interrupt.branch_parity,
-          raw_total = raw_total,
-        },
+        resume_args = _build_interrupt_resume_args(
+          player,
+          raw_total,
+          move_result.market_interrupt,
+          "continue_from_market"
+        ),
       }
     end
     if intent then

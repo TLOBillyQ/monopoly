@@ -1,5 +1,5 @@
 local turn_decision = require("src.game.flow.turn.TurnDecision")
-local logger = require("src.core.Logger")
+local validator = require("src.game.flow.turn.TurnDispatchValidator")
 
 local choice_handler = {}
 
@@ -27,13 +27,7 @@ function choice_handler.handle_wait_choice(turn_flow, args)
   turn_flow.pending_action = nil
 
   if action.type == "choice_select" or action.type == "choice_cancel" then
-    if not action.choice_id or not choice.id or action.choice_id ~= choice.id then
-      logger.warn(
-        "choice action mismatch:",
-        tostring(action.type),
-        "action_choice_id=" .. tostring(action.choice_id),
-        "pending_choice_id=" .. tostring(choice.id)
-      )
+    if not validator.validate_choice_id(action, choice) then
       return "wait_choice", args
     end
   end
