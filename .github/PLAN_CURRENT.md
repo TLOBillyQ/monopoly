@@ -14,7 +14,7 @@
 - [x] (2026-02-21 09:22Z) 完成核心链路审查结论归档（P1/P2/P3 风险、文件与函数定位、验证建议）。
 - [x] (2026-02-21 09:27Z) 完成里程碑 1：`UIIntentDispatcher` 改为 `TurnActionPort` 注入，`UIBootstrap` 注入 `TurnActionPortAdapter`，`dep_rules` 收紧到 `presentation/interaction -> src.game.*` 并通过。
 - [x] (2026-02-21 15:13Z) 完成里程碑 2：`GameplayLoop.set_game` 拆分为初始化/环境配置/pending_choice/状态复位四段；`TurnDispatch` 改为一次性解析 dispatch context；`TurnDispatchValidator` 通过 `ItemSlotData` 抽象读取道具槽；回归通过。
-- [ ] 里程碑 3：将 `UIChoiceRoutePolicy` 从硬编码语义改为显式路由元数据契约。
+- [x] (2026-02-21 15:17Z) 完成里程碑 3：`IntentDispatcher.open_choice` 注入 `route_key/requires_confirm`，`UIChoiceRoutePolicy` 优先使用显式路由元数据并保留 legacy fallback，补齐表驱动测试与回归。
 - [ ] 里程碑 4：降低启动层与运行时全局注入耦合（`UIBootstrap`、`RuntimeContext`、`GameStartup`）。
 - [ ] 里程碑 5：补齐单测/集成测试，并完成一次全量回归与双端手测抽样。
 
@@ -30,6 +30,8 @@
   证据：`rg "src\\.game\\." src/presentation` 命中 `src/presentation/api/ports/UISyncPorts.lua`、`src/presentation/render/MoveAnim.lua` 等文件。
 - 观察：`TurnDispatch` 原实现在一次 action 流程里多次 `gameplay_loop_ports.resolve`，而且把 UI 槽位字段名暴露给 validator，导致测试替身要模拟完整 UI 结构。
   证据：里程碑 2 改造前 `TurnDispatch.lua` 在 `should_block_action` 与 `dispatch_action` 内重复 resolve；`TurnDispatchValidator.lua` 直接读取 `item_slot_item_ids(_by_role)`。
+- 观察：路由语义若只存在于 `UIChoiceRoutePolicy`，choice 构建链路无法表达“新 kind 使用哪个屏、是否需要确认”；新增 kind 时必须改策略代码。
+  证据：里程碑 3 改造前 `UIChoiceRoutePolicy.resolve` 仅基于 `choice.kind` 与 option 语义判断。
 
 ## 决策日志
 
@@ -53,9 +55,13 @@
   理由：把 validator 与 UI 字段结构解耦，同时避免一次 action 链路重复解析 ports，降低接口面并保持行为不变。
   日期/作者：2026-02-21 / Codex。
 
+- 决策：里程碑 3 在 `IntentDispatcher.open_choice` 统一注入 `route_key/requires_confirm`，`UIChoiceRoutePolicy` 只做“优先读显式字段 + 兼容 fallback”。
+  理由：把路由契约前移到 choice 生成阶段，避免策略层继续承担新增 kind 的主维护压力，同时保持旧数据可用。
+  日期/作者：2026-02-21 / Codex。
+
 ## 结果与复盘
 
-里程碑 1-2 已完成。里程碑 2 完成项：`GameplayLoop.set_game` 完成职责拆分；`TurnDispatch` 改为最小 dispatch context 并复用；`TurnDispatchValidator` 通过 `ItemSlotData` 访问槽位数据。回归结果：`lua .github/tests/regression.lua` 通过（143/143，包含 `dep_rules ok` 与 `tick ok`）。遗留项：choice 路由仍是语义硬编码，进入里程碑 3 处理。
+里程碑 1-3 已完成。里程碑 3 完成项：choice 在生成时携带 `route_key/requires_confirm`；`UIChoiceRoutePolicy` 优先显式字段，保留 legacy 回退；新增表驱动测试覆盖“显式/回退/未知”三类路由。回归结果：`lua .github/tests/regression.lua` 通过（143/143，包含 `dep_rules ok` 与 `tick ok`）。遗留项：启动层与 runtime context 仍需按里程碑 4 解耦。
 
 ## 背景与导读
 
@@ -257,3 +263,4 @@
 - 2026-02-21：将 `PLAN_CURRENT.md` 从“编辑器快速测试配置实施计划”切换为“核心链路解耦重构实施计划（P1 先行）”。原因：用户要求把审查得到的重构方案落为可执行计划，且 `ARCHITECTURE.md` 已更新，原计划不再匹配当前主任务。
 - 2026-02-21：更新为“里程碑 1 已完成”状态，补充端口化实现、`dep_rules` 约束范围调整与回归结果。原因：用户要求执行到里程碑 1，并需把实施证据写回活文档。
 - 2026-02-21：更新为“里程碑 2 已完成”状态，补充 `set_game` 职责拆分、`TurnDispatch` 最小上下文化、`ItemSlotData` 抽象与回归结果。原因：用户要求继续推进到里程碑 2。
+- 2026-02-21：更新为“里程碑 3 已完成”状态，补充 choice 路由元数据契约、策略兼容回退与测试结果。原因：用户要求提交并推进里程碑 3。

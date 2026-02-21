@@ -1,4 +1,3 @@
-local market_ui = require("src.presentation.shared.MarketLayout")
 local modal_state = require("src.presentation.interaction.UIModalStateCoordinator")
 local choice_renderer = require("src.presentation.ui.ChoiceScreenService")
 local popup_renderer = require("src.presentation.ui.PopupRenderer")
@@ -27,11 +26,6 @@ function modal_presenter.open_choice_modal(state, choice, market)
     return
   end
   state.ui_dirty = true
-
-  if choice.kind == "market_buy" and market_ui.is_panel_ready() then
-    market_renderer.open_market_panel(state, choice, choice_id, market)
-    return
-  end
 
   local screen_key = choice_renderer.resolve_screen_key(choice)
   if screen_key == "market" then

@@ -29,6 +29,10 @@ function policy.is_building_choice(choice)
 end
 
 function policy.resolve(choice)
+  local explicit_route = choice and (choice.route_key or (type(choice.route) == "table" and choice.route.route_key) or nil)
+  if explicit_route ~= nil and explicit_route ~= "" then
+    return explicit_route
+  end
   if not choice then
     return "target"
   end
@@ -51,8 +55,15 @@ function policy.resolve(choice)
   return "target"
 end
 
-function policy.requires_confirm(screen_key)
-  return screen_key == "building"
+function policy.requires_confirm(choice_or_screen)
+  if type(choice_or_screen) == "table" then
+    local explicit = choice_or_screen.requires_confirm
+    if type(explicit) == "boolean" then
+      return explicit
+    end
+    return policy.resolve(choice_or_screen) == "building"
+  end
+  return choice_or_screen == "building"
 end
 
 return policy

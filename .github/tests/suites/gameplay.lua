@@ -24,6 +24,7 @@ local gameplay_rules = require("Config.GameplayRules")
 local mine_effect = require("src.game.systems.effects.MineEffect")
 local runtime_context = require("src.core.RuntimeContext")
 local dispatch_validator = require("src.game.flow.turn.TurnDispatchValidator")
+local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
 
 local function _mock_lua_api(send_custom_event)
   return {
@@ -337,6 +338,30 @@ local function _test_dispatch_validator_accepts_ui_state_snapshot()
     actor_role_id = 1,
   })
   assert(res and res.ok, "validator should resolve item slot action")
+end
+
+local function _test_intent_dispatcher_sets_choice_route_metadata()
+  local g = _new_game()
+  local choice_spec = {
+    kind = "remote_dice_value",
+    title = "遥控骰子",
+    body_lines = { "选择点数" },
+    options = { { id = 1, label = "1" }, { id = 2, label = "2" } },
+    allow_cancel = true,
+    cancel_label = "取消",
+  }
+  local entry = intent_dispatcher.open_choice(g, choice_spec, {})
+  assert(entry.route_key == "remote", "intent_dispatcher should inject explicit route_key")
+  assert(entry.requires_confirm == false, "remote route should not require confirm")
+
+  local custom_entry = intent_dispatcher.open_choice(g, {
+    kind = "item_target_player",
+    title = "自定义路由",
+    options = { { id = 1, label = "A" } },
+    route = { route_key = "building", requires_confirm = true },
+  }, {})
+  assert(custom_entry.route_key == "building", "explicit route should override inferred route")
+  assert(custom_entry.requires_confirm == true, "explicit requires_confirm should be kept")
 end
 
 local function _test_stop_all_players_movement_clears_move_dir_and_stop_event()
@@ -1289,6 +1314,7 @@ return {
   _test_set_tile_owner_without_ui_port_does_not_crash,
   _test_tile_owner_notifier_receives_owner_changes,
   _test_dispatch_validator_accepts_ui_state_snapshot,
+  _test_intent_dispatcher_sets_choice_route_metadata,
   _test_stop_all_players_movement_clears_move_dir_and_stop_event,
   _test_end_turn_stops_all_players_movement,
   _test_stop_all_players_movement_skips_invalid_role_without_error,

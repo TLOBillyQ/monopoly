@@ -27,6 +27,7 @@ local move_anim = require("src.presentation.render.MoveAnim")
 local turn_effects = require("src.presentation.ui.UITurnEffects")
 local role_control_lock_policy = require("src.presentation.interaction.UIRoleControlLockPolicy")
 local ui_touch_policy = require("src.presentation.interaction.UITouchPolicy")
+local ui_choice_route_policy = require("src.presentation.interaction.UIChoiceRoutePolicy")
 local market_cfg = require("Config.Generated.Market")
 local runtime_constants = require("Config.RuntimeConstants")
 local gameplay_rules = require("Config.GameplayRules")
@@ -1655,6 +1656,39 @@ local function _test_choice_modal_routes_to_new_screens()
   end)
 end
 
+local function _test_choice_route_policy_prefers_explicit_route_metadata()
+  local cases = {
+    {
+      label = "explicit market",
+      choice = { kind = "roadblock_target", route_key = "market", requires_confirm = false },
+      route = "market",
+      confirm = false,
+    },
+    {
+      label = "explicit building confirm",
+      choice = { kind = "item_target_player", route_key = "building", requires_confirm = true },
+      route = "building",
+      confirm = true,
+    },
+    {
+      label = "legacy fallback",
+      choice = { kind = "remote_dice_value" },
+      route = "remote",
+      confirm = false,
+    },
+    {
+      label = "unknown fallback",
+      choice = { kind = "unknown_kind" },
+      route = "target",
+      confirm = false,
+    },
+  }
+  for _, c in ipairs(cases) do
+    _assert_eq(ui_choice_route_policy.resolve(c.choice), c.route, c.label .. " route")
+    _assert_eq(ui_choice_route_policy.requires_confirm(c.choice), c.confirm, c.label .. " confirm")
+  end
+end
+
 local function _test_ui_event_router_player_target_click_direct_submit()
   local function new_node()
     local node = {}
@@ -2790,6 +2824,7 @@ return {
   _test_bankruptcy_popup_visible_for_all_roles,
   _test_popup_timeout_closes_even_when_input_blocked,
   _test_choice_modal_routes_to_new_screens,
+  _test_choice_route_policy_prefers_explicit_route_metadata,
   _test_ui_event_router_player_target_click_direct_submit,
   _test_ui_event_router_action_log_toggle_uses_role_context,
   _test_market_selection_updates_icon_without_resize,

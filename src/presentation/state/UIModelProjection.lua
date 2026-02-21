@@ -106,6 +106,8 @@ function projection.build_choice_and_market(game, env, ui_state)
     choice = choice_view.build_choice_view(pending, { game = env.game })
     choice.id = pending.id
     choice.kind = pending.kind
+    choice.route_key = pending.route_key
+    choice.requires_confirm = pending.requires_confirm == true
   end
   local market = nil
   if choice and choice.kind == "market_buy" then
