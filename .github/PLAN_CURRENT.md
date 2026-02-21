@@ -15,8 +15,8 @@
 - [x] (2026-02-21 09:27Z) 完成里程碑 1：`UIIntentDispatcher` 改为 `TurnActionPort` 注入，`UIBootstrap` 注入 `TurnActionPortAdapter`，`dep_rules` 收紧到 `presentation/interaction -> src.game.*` 并通过。
 - [x] (2026-02-21 15:13Z) 完成里程碑 2：`GameplayLoop.set_game` 拆分为初始化/环境配置/pending_choice/状态复位四段；`TurnDispatch` 改为一次性解析 dispatch context；`TurnDispatchValidator` 通过 `ItemSlotData` 抽象读取道具槽；回归通过。
 - [x] (2026-02-21 15:17Z) 完成里程碑 3：`IntentDispatcher.open_choice` 注入 `route_key/requires_confirm`，`UIChoiceRoutePolicy` 优先使用显式路由元数据并保留 legacy fallback，补齐表驱动测试与回归。
-- [ ] 里程碑 4：降低启动层与运行时全局注入耦合（`UIBootstrap`、`RuntimeContext`、`GameStartup`）。
-- [ ] 里程碑 5：补齐单测/集成测试，并完成一次全量回归与双端手测抽样。
+- [x] (2026-02-21 15:24Z) 完成里程碑 4：新增 `GameStartupEventBridge`/`GameRuntimeBootstrap`，`UIBootstrap` 改为仅 UI 装配与路由绑定，`RuntimeContext.install_runtime_helpers` 支持返回 helper 且可关闭全局写入。
+- [x] (2026-02-21 15:24Z) 完成里程碑 5：补齐里程碑 4/5 测试，执行 `regression`、`presentation_ui` 分片与部署脚本，自动化与部署准备均通过。
 
 ## 意外与发现
 
@@ -32,6 +32,10 @@
   证据：里程碑 2 改造前 `TurnDispatch.lua` 在 `should_block_action` 与 `dispatch_action` 内重复 resolve；`TurnDispatchValidator.lua` 直接读取 `item_slot_item_ids(_by_role)`。
 - 观察：路由语义若只存在于 `UIChoiceRoutePolicy`，choice 构建链路无法表达“新 kind 使用哪个屏、是否需要确认”；新增 kind 时必须改策略代码。
   证据：里程碑 3 改造前 `UIChoiceRoutePolicy.resolve` 仅基于 `choice.kind` 与 option 语义判断。
+- 观察：`GameStartup.build_state` 中混入事件注册会让“构建状态”和“订阅事件”无法独立测试，且在无事件环境下不够纯净。
+  证据：里程碑 4 改造前 `build_state` 内直接 `RegisterCustomEvent(...)`。
+- 观察：`RuntimeContext.install_runtime_helpers` 若总是写全局，会阻碍无全局环境下的隔离测试。
+  证据：新增 `install_globals=false` 分支后，可在测试里先拿 helper 返回值，再按需安装全局。
 
 ## 决策日志
 
@@ -59,9 +63,17 @@
   理由：把路由契约前移到 choice 生成阶段，避免策略层继续承担新增 kind 的主维护压力，同时保持旧数据可用。
   日期/作者：2026-02-21 / Codex。
 
+- 决策：里程碑 4 采用“双桥接”拆分：`GameStartupEventBridge` 处理事件订阅，`GameRuntimeBootstrap` 处理 game/loop 启动；`UIBootstrap` 只处理 UI 生命周期。
+  理由：在不改变 `GAME_INIT` 时序的前提下，把启动职责边界明确化，避免一次性迁移导致行为回退。
+  日期/作者：2026-02-21 / Codex。
+
+- 决策：`RuntimeContext.install_runtime_helpers(ctx, opts)` 默认保持兼容（继续写全局），同时提供 `install_globals=false` 供测试与无全局调用路径使用。
+  理由：兼顾线上兼容与结构解耦目标，迁移成本最低。
+  日期/作者：2026-02-21 / Codex。
+
 ## 结果与复盘
 
-里程碑 1-3 已完成。里程碑 3 完成项：choice 在生成时携带 `route_key/requires_confirm`；`UIChoiceRoutePolicy` 优先显式字段，保留 legacy 回退；新增表驱动测试覆盖“显式/回退/未知”三类路由。回归结果：`lua .github/tests/regression.lua` 通过（143/143，包含 `dep_rules ok` 与 `tick ok`）。遗留项：启动层与 runtime context 仍需按里程碑 4 解耦。
+里程碑 1-5 已完成。里程碑 4 完成项：`GameStartup` 状态构建与事件订阅解耦，`UIBootstrap` 不再直接创建 game/loop，`RuntimeContext` 新增无全局 helper 路径。里程碑 5 完成项：补齐对应测试并完成自动化回归与部署脚本验证。结果：`lua .github/tests/regression.lua`（143/143）、`presentation_ui` 分片（62/62）均通过，`deploy.ps1` 执行成功。遗留项：双端人工手测仍需在编辑器内按清单执行（无法由 CLI 自动判定交互观测结果）。
 
 ## 背景与导读
 
@@ -264,3 +276,4 @@
 - 2026-02-21：更新为“里程碑 1 已完成”状态，补充端口化实现、`dep_rules` 约束范围调整与回归结果。原因：用户要求执行到里程碑 1，并需把实施证据写回活文档。
 - 2026-02-21：更新为“里程碑 2 已完成”状态，补充 `set_game` 职责拆分、`TurnDispatch` 最小上下文化、`ItemSlotData` 抽象与回归结果。原因：用户要求继续推进到里程碑 2。
 - 2026-02-21：更新为“里程碑 3 已完成”状态，补充 choice 路由元数据契约、策略兼容回退与测试结果。原因：用户要求提交并推进里程碑 3。
+- 2026-02-21：更新为“里程碑 4-5 已完成”状态，补充启动层/运行时解耦、新增测试、回归与部署脚本结果。原因：用户要求执行所有剩余计划。

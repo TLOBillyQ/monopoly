@@ -25,6 +25,9 @@ local mine_effect = require("src.game.systems.effects.MineEffect")
 local runtime_context = require("src.core.RuntimeContext")
 local dispatch_validator = require("src.game.flow.turn.TurnDispatchValidator")
 local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
+local game_startup = require("src.app.bootstrap.GameStartup")
+local game_startup_event_bridge = require("src.app.bootstrap.GameStartupEventBridge")
+local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
 
 local function _mock_lua_api(send_custom_event)
   return {
@@ -547,6 +550,85 @@ local function _test_runtime_context_split_install_stages()
     vehicle_helper.player_id = 1
     local role = get_vehicle_player()
     assert(role == role1, "install_editor_exports should expose get_vehicle_player")
+  end)
+end
+
+local function _test_runtime_context_install_helpers_without_globals()
+  _with_runtime_context_globals(function()
+    local role1 = { id = 1, get_roleid = function() return 1 end }
+    local ctx = runtime_context.new({
+      GameAPI = {
+        get_role = function(role_id)
+          if role_id == 1 then
+            return role1
+          end
+          return nil
+        end,
+        get_all_valid_roles = function()
+          return { role1 }
+        end,
+      },
+      LuaAPI = _mock_lua_api(),
+    })
+    runtime_context.install_environment(ctx)
+    local helpers = runtime_context.install_runtime_helpers(ctx, { install_globals = false })
+    assert(helpers ~= nil and helpers.vehicle_helper ~= nil, "install_runtime_helpers should return helpers")
+    assert(vehicle_helper == nil, "install_runtime_helpers install_globals=false should not write vehicle_helper")
+    assert(all_roles == nil, "install_runtime_helpers install_globals=false should not write all_roles")
+
+    runtime_context.install_runtime_helper_globals(helpers)
+    assert(vehicle_helper == helpers.vehicle_helper, "install_runtime_helper_globals should expose helper")
+    assert(all_roles == helpers.roles, "install_runtime_helper_globals should expose roles")
+  end)
+end
+
+local function _test_game_startup_build_state_is_pure_and_bridge_installs_events()
+  local events = {}
+  local state = nil
+  local current_game = nil
+  support.with_patches({
+    { key = "RegisterCustomEvent", value = function(event_name, handler)
+      events[event_name] = handler
+    end },
+    { key = "RegisterTriggerEvent", value = function() end },
+    { key = "all_roles", value = {} },
+    { key = "GameAPI", value = {
+      get_all_valid_roles = function()
+        return {}
+      end,
+    } },
+  }, function()
+    state = game_startup.build_state(function()
+      return current_game
+    end)
+    assert(next(events) == nil, "build_state should not register custom events")
+
+    game_startup_event_bridge.install(state, function()
+      return current_game
+    end)
+    assert(type(events[monopoly_event.land.tile_upgraded]) == "function", "bridge should register tile_upgraded")
+    assert(type(events[monopoly_event.intent.need_choice]) == "function", "bridge should register need_choice")
+
+    local opened = nil
+    local choice_payload = { id = 11, kind = "item_target_player", options = { { id = 1, label = "A" } } }
+    current_game = {
+      turn = { pending_choice = choice_payload },
+      winner = nil,
+      winner_names = nil,
+      last_turn = nil,
+      finished = false,
+      players = {},
+      board = { get_overlays = function() return { roadblocks = {}, mines = {} } end, tile_lookup = {}, path = {} },
+    }
+    support.with_patches({
+      { target = require("src.presentation.api.UIViewService"), key = "open_choice_modal", value = function(_, choice)
+        opened = choice
+      end },
+    }, function()
+      events[monopoly_event.intent.need_choice](nil, nil, { choice = choice_payload })
+    end)
+    assert(state.pending_choice_id == 11, "bridge should sync pending_choice_id from event")
+    assert(opened ~= nil and opened.id == 11, "bridge should open choice modal from event")
   end)
 end
 
@@ -1321,7 +1403,9 @@ return {
   _test_runtime_context_get_vehicle_player_no_fallback,
   _test_runtime_context_forward_stop_skips_invalid_role,
   _test_runtime_context_split_install_stages,
+  _test_runtime_context_install_helpers_without_globals,
   _test_runtime_context_install_environment_fails_fast,
+  _test_game_startup_build_state_is_pure_and_bridge_installs_events,
   _test_set_player_seat_emits_exit_then_enter,
   _test_mine_destroy_vehicle_emits_exit_event,
   _test_vehicle_feature_disabled_ignores_seat_bonus,

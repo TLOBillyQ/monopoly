@@ -218,8 +218,13 @@ function runtime_context.install_environment(ctx)
   runtime_env_bindings.install(ctx.env)
 end
 
-function runtime_context.install_runtime_helpers(ctx)
+function runtime_context.install_runtime_helpers(ctx, opts)
   assert(ctx ~= nil, "missing runtime context")
+  opts = opts or {}
+  local install_globals = opts.install_globals
+  if install_globals == nil then
+    install_globals = true
+  end
   if not ctx.vehicle_helper then
     ctx.vehicle_helper = _build_vehicle_helper()
   end
@@ -227,14 +232,27 @@ function runtime_context.install_runtime_helpers(ctx)
     ctx.camera_helper = { target_role_id = 1 }
   end
 
-  vehicle_helper = ctx.vehicle_helper
-  camera_helper = ctx.camera_helper
-
   if not ctx.roles then
     runtime_context.refresh_roles(ctx)
   end
-  all_roles = ctx.roles
-  ALLROLES = ctx.roles
+  local helpers = {
+    vehicle_helper = ctx.vehicle_helper,
+    camera_helper = ctx.camera_helper,
+    roles = ctx.roles,
+  }
+  if install_globals then
+    runtime_context.install_runtime_helper_globals(helpers)
+  end
+  return helpers
+end
+
+function runtime_context.install_runtime_helper_globals(helpers)
+  assert(helpers ~= nil, "missing helpers")
+  vehicle_helper = helpers.vehicle_helper
+  camera_helper = helpers.camera_helper
+  all_roles = helpers.roles
+  ALLROLES = helpers.roles
+  return helpers
 end
 
 function runtime_context.install_editor_exports(ctx)

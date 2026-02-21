@@ -2,13 +2,11 @@ local auto_runner = require("src.game.flow.turn.AutoRunner")
 local board_view = require("src.presentation.render.BoardRuntime")
 local game = require("src.game.core.runtime.Game")
 local ui_view = require("src.presentation.api.UIViewService")
-local ui_model = require("src.presentation.state.UIModel")
 local map_cfg = require("Config.Map")
 local tiles_cfg = require("Config.Generated.Tiles")
 local gameplay_rules = require("Config.GameplayRules")
 local test_profile_bootstrap = require("src.app.testing.TestProfileBootstrap")
 local logger = require("src.core.Logger")
-local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
 
 local max_player_count = 4
 
@@ -161,33 +159,6 @@ function M.build_state(get_current_game)
   state.on_tile_owner_changed = function(_, tile_id, owner_id)
     board_view.on_tile_owner_changed(state, tile_id, owner_id)
   end
-
-  RegisterCustomEvent(monopoly_event.land.tile_upgraded, function(_, _, data)
-    if data and data.tile_id and data.level then
-      state:on_tile_upgraded(data.tile_id, data.level)
-    end
-  end)
-
-  RegisterCustomEvent(monopoly_event.intent.need_choice, function(_, _, data)
-    state.pending_choice = data.choice
-    state.pending_choice_elapsed = 0
-    state.pending_choice_id = data.choice.id
-    local current_game = get_current_game()
-    assert(current_game ~= nil, "missing current_game")
-    local winner = current_game.winner
-    local winner_name = current_game.winner_names or (winner and assert(winner.name, "missing winner name"))
-    local built_model = ui_model.build(current_game, {
-      game = current_game,
-      ui_state = state,
-      last_turn = current_game.last_turn,
-      finished = current_game.finished,
-      winner_name = winner_name,
-    })
-    state.ui_model = built_model
-    if built_model.choice then
-      ui_view.open_choice_modal(state, built_model.choice, built_model.market)
-    end
-  end)
 
   return state
 end

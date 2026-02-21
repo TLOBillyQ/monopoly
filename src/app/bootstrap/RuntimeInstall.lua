@@ -9,7 +9,7 @@ function M.install()
   })
   runtime_context.set_current(runtime_ctx)
   runtime_context.install_environment(runtime_ctx)
-  runtime_context.install_runtime_helpers(runtime_ctx)
+  runtime_context.install_runtime_helpers(runtime_ctx, { install_globals = true })
   runtime_context.install_editor_exports(runtime_ctx)
   require "src.game.core.runtime.Bankruptcy"
   require "src.game.core.runtime.AgentTargeting"

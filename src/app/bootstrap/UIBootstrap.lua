@@ -1,6 +1,4 @@
 local board_scene = require("src.presentation.render.BoardScene")
-local gameplay_loop = require("src.game.flow.turn.GameplayLoop")
-local turn_action_port_adapter = require("src.app.ports.TurnActionPortAdapter")
 local ui_view = require("src.presentation.api.UIViewService")
 local ui_event_router = require("src.presentation.interaction.UIEventRouter")
 local ui_nodes = require("src.presentation.shared.UINodes")
@@ -10,26 +8,19 @@ local ui_events = require("src.presentation.shared.UIEvents")
 
 local M = {}
 
-local function _start_tick_loop(state, current_game_ref, interval)
-  require "vendor.third_party.Utils"
-  local tick_interval = interval or 1
-  local tick_seconds = math.tofixed(tick_interval) / 30.0
-  SetFrameOut(tick_interval, function()
-    gameplay_loop.tick(current_game_ref[1], state, tick_seconds)
-  end, -1)
-end
-
 -- current_game_ref 是一个单元素数组 { nil }，供 set/get 当前 game 使用
-function M.install(state, current_game_ref)
+function M.install(state, current_game_ref, opts)
+  opts = opts or {}
   RegisterTriggerEvent({ EVENT.GAME_INIT }, function()
     require "vendor.third_party.UIManager.Utils"
     local ui_manager_nodes = require("Data.UIManagerNodes")
     UIManager.Builder:new(ui_manager_nodes)
-    state.turn_action_port = turn_action_port_adapter.build(state)
-    state.gameplay_loop_ports = require("src.presentation.api.GameplayLoopPortsAdapter").build(state)
-    local current_game = gameplay_loop.new_game(state)
-    current_game_ref[1] = current_game
-    gameplay_loop.set_game(state, current_game)
+    local current_game = current_game_ref[1]
+    if not current_game and type(opts.start_runtime) == "function" then
+      current_game = opts.start_runtime(state, current_game_ref)
+    end
+    assert(current_game ~= nil, "missing current_game")
+
     ui_event_router.bind(state, function()
       return current_game_ref[1]
     end)
@@ -55,11 +46,6 @@ function M.install(state, current_game_ref)
       ui_events.send_to_all(ui_events.hide["加载屏"], {})
       ui_events.send_to_all(ui_events.show["基础屏"], {})
     end)
-
-    if not state.tick_started then
-      state.tick_started = true
-      _start_tick_loop(state, current_game_ref)
-    end
   end)
 end
 
