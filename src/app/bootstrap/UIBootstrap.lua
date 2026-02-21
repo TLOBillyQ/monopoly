@@ -1,5 +1,6 @@
 local board_scene = require("src.presentation.render.BoardScene")
 local gameplay_loop = require("src.game.flow.turn.GameplayLoop")
+local turn_action_port_adapter = require("src.app.ports.TurnActionPortAdapter")
 local ui_view = require("src.presentation.api.UIViewService")
 local ui_event_router = require("src.presentation.interaction.UIEventRouter")
 local ui_nodes = require("src.presentation.shared.UINodes")
@@ -24,6 +25,7 @@ function M.install(state, current_game_ref)
     require "vendor.third_party.UIManager.Utils"
     local ui_manager_nodes = require("Data.UIManagerNodes")
     UIManager.Builder:new(ui_manager_nodes)
+    state.turn_action_port = turn_action_port_adapter.build(state)
     state.gameplay_loop_ports = require("src.presentation.api.GameplayLoopPortsAdapter").build(state)
     local current_game = gameplay_loop.new_game(state)
     current_game_ref[1] = current_game

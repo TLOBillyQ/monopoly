@@ -949,6 +949,14 @@ end
 local function _test_ui_intent_dispatcher_market_confirm_routes_choice_select()
   local captured = nil
   local state = {
+    turn_action_port = {
+      dispatch_action = function(_, _, action)
+        captured = action
+      end,
+      should_block_action = function()
+        return false
+      end,
+    },
     ui = {
       input_blocked = false,
       item_slot_item_ids = {},
@@ -957,11 +965,7 @@ local function _test_ui_intent_dispatcher_market_confirm_routes_choice_select()
   }
   local game = {}
 
-  _with_patches({
-    { target = turn_dispatch, key = "dispatch_action", value = function(_, _, action)
-      captured = action
-    end },
-  }, function()
+  _with_patches({}, function()
     ui_intent_dispatcher.dispatch(state, game, {
       type = "market_confirm",
       choice_id = 12,
@@ -1677,6 +1681,14 @@ local function _test_ui_event_router_player_target_click_direct_submit()
 
   local captured = {}
   local state = {
+    turn_action_port = {
+      dispatch_action = function(_, _, action)
+        table.insert(captured, action)
+      end,
+      should_block_action = function()
+        return false
+      end,
+    },
     ui = ui_view.build_ui_state(),
     ui_model = {
       choice = {
@@ -1701,9 +1713,6 @@ local function _test_ui_event_router_player_target_click_direct_submit()
       EVENT = { CLICK = "click" },
       query_nodes_by_name = query_nodes_by_name,
     } },
-    { target = turn_dispatch, key = "dispatch_action", value = function(_, _, action)
-      table.insert(captured, action)
-    end },
   }, function()
     ui_event_router.bind(state, function()
       return {}

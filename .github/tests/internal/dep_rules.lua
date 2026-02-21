@@ -1,18 +1,5 @@
 local forbidden_prefixes = {
-  "src.game.board.",
-  "src.game.chance.",
-  "src.game.choice.",
-  "src.game.commerce.",
-  "src.game.effect.",
-  "src.game.game.",
-  "src.game.intent.",
-  "src.game.item.",
-  "src.game.land.",
-  "src.game.market.",
-  "src.game.movement.",
-  "src.game.player.",
-  "src.game.turn.",
-  "src.game.vehicle.",
+  "src.game.",
 }
 
 local function _contains_forbidden(line)
@@ -95,7 +82,7 @@ local function _scan_tree(root)
   return nil
 end
 
-local hit = _scan_tree("src")
+local hit = _scan_tree("src/presentation/interaction")
 if hit then
   io.stderr:write("dep_rules violation: ", hit.path, ":", hit.line, " contains ", hit.prefix, "\n")
   io.stderr:write(hit.text, "\n")

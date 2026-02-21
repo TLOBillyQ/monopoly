@@ -1,6 +1,6 @@
 local logger = require("src.core.Logger")
-local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
 local runtime = require("src.presentation.api.UIRuntimePort")
+local turn_action_port = require("src.presentation.api.TurnActionPort")
 local ui_view = require("src.presentation.api.UIViewService")
 local canvas = require("src.presentation.interaction.UICanvasCoordinator")
 local ui_events = require("src.presentation.shared.UIEvents")
@@ -32,17 +32,21 @@ local function _resolve_role_by_id(role_id)
   }
 end
 
-local function _should_block_intent(state, intent)
-  if turn_dispatch.should_block_action then
-    return turn_dispatch.should_block_action(state, intent)
-  end
-  return false
+local function _resolve_turn_action_port(state, opts)
+  local override_port = opts and opts.turn_action_port or nil
+  local state_port = state and state.turn_action_port or nil
+  return turn_action_port.resolve(override_port or state_port)
+end
+
+local function _should_block_intent(state, intent, action_port)
+  return action_port.should_block_action(state, intent)
 end
 
 function intent_dispatcher.dispatch(state, game, intent, opts)
   assert(intent ~= nil, "missing intent")
   local intent_type = intent.type
-  if _should_block_intent(state, intent) then
+  local action_port = _resolve_turn_action_port(state, opts)
+  if _should_block_intent(state, intent, action_port) then
     return
   end
   if not game then
@@ -50,14 +54,14 @@ function intent_dispatcher.dispatch(state, game, intent, opts)
     return
   end
 
-  if intent_dispatcher.dispatch_game_action(state, game, intent, opts) then
+  if intent_dispatcher.dispatch_game_action(state, game, intent, opts, action_port) then
     return
   end
 
   intent_dispatcher.dispatch_view_command(state, intent)
 end
 
-function intent_dispatcher.dispatch_game_action(state, game, intent, opts)
+function intent_dispatcher.dispatch_game_action(state, game, intent, opts, action_port)
   local intent_type = intent and intent.type
   if not intent_type then
     return false
@@ -66,7 +70,7 @@ function intent_dispatcher.dispatch_game_action(state, game, intent, opts)
   if intent_type == "ui_button"
       or intent_type == "choice_select"
       or intent_type == "choice_cancel" then
-    turn_dispatch.dispatch_action(game, state, intent, opts)
+    action_port.dispatch_action(game, state, intent, opts)
     return true
   end
 
@@ -75,7 +79,7 @@ function intent_dispatcher.dispatch_game_action(state, game, intent, opts)
       logger.warn("market_confirm missing ids:", tostring(intent.choice_id), tostring(intent.option_id))
       return true
     end
-    turn_dispatch.dispatch_action(game, state, {
+    action_port.dispatch_action(game, state, {
       type = "choice_select",
       choice_id = intent.choice_id,
       option_id = intent.option_id,

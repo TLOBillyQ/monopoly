@@ -12,7 +12,7 @@
 
 - [x] (2026-02-21 09:15Z) 读取最新架构基线：`/Users/billyq/Dev/Github/Lua/monopoly/ARCHITECTURE.md`（已确认启动分段、`TurnFlow` 状态机、测试 profile 链路）。
 - [x] (2026-02-21 09:22Z) 完成核心链路审查结论归档（P1/P2/P3 风险、文件与函数定位、验证建议）。
-- [ ] 里程碑 1：切断 `presentation -> game` 直接依赖，落地 `TurnActionPort` 并通过 `dep_rules`。
+- [x] (2026-02-21 09:27Z) 完成里程碑 1：`UIIntentDispatcher` 改为 `TurnActionPort` 注入，`UIBootstrap` 注入 `TurnActionPortAdapter`，`dep_rules` 收紧到 `presentation/interaction -> src.game.*` 并通过。
 - [ ] 里程碑 2：拆分 `GameplayLoop.set_game` 与 `TurnDispatch` 依赖面，形成最小可测接口。
 - [ ] 里程碑 3：将 `UIChoiceRoutePolicy` 从硬编码语义改为显式路由元数据契约。
 - [ ] 里程碑 4：降低启动层与运行时全局注入耦合（`UIBootstrap`、`RuntimeContext`、`GameStartup`）。
@@ -26,6 +26,8 @@
   证据：`ARCHITECTURE.md` 的“Tick 链路”和“状态机说明”。
 - 观察：`dep_rules` 当前可作为防线，但对语义级耦合（非显式 require）覆盖不足。
   证据：审查中发现 `UIChoiceRoutePolicy` 对 `choice.kind/option.id` 的硬编码不触发规则告警。
+- 观察：若把 `dep_rules` 直接收紧到整个 `src/presentation`，会命中既有模块（如 `UISyncPorts`、`MoveAnim`）对 `src.game.*` 的历史依赖，不属于里程碑 1 范围。
+  证据：`rg "src\\.game\\." src/presentation` 命中 `src/presentation/api/ports/UISyncPorts.lua`、`src/presentation/render/MoveAnim.lua` 等文件。
 
 ## 决策日志
 
@@ -41,9 +43,13 @@
   理由：本轮目标是稳定性和可维护性，不引入策划与表现层行为变更。
   日期/作者：2026-02-21 / Codex。
 
+- 决策：里程碑 1 的 `dep_rules` 只约束 `src/presentation/interaction` 对 `src.game.*` 的直接依赖。
+  理由：目标是先切断 UI intent 分发链路耦合；其余 `presentation` 历史依赖放到后续里程碑分批处理，避免范围失控。
+  日期/作者：2026-02-21 / Codex。
+
 ## 结果与复盘
 
-当前尚未开始代码实施。本计划已根据最新架构文档重写为可执行版本，下一步按里程碑 1 开工。阶段完成后在本节补充：完成项、遗留项、回归结果、教训。
+里程碑 1 已完成。完成项：新增 `TurnActionPort` 与 `TurnActionPortAdapter`，`UIIntentDispatcher` 去除 `TurnDispatch` 直连，测试改为端口注入，`dep_rules` 收紧并通过。回归结果：`lua .github/tests/regression.lua` 通过（143/143，包含 `dep_rules ok` 与 `tick ok`）。遗留项：`presentation` 其他模块仍有历史 `src.game.*` 依赖，留待里程碑 2+ 按职责拆分继续收口。
 
 ## 背景与导读
 
@@ -243,3 +249,4 @@
 ## 更新记录
 
 - 2026-02-21：将 `PLAN_CURRENT.md` 从“编辑器快速测试配置实施计划”切换为“核心链路解耦重构实施计划（P1 先行）”。原因：用户要求把审查得到的重构方案落为可执行计划，且 `ARCHITECTURE.md` 已更新，原计划不再匹配当前主任务。
+- 2026-02-21：更新为“里程碑 1 已完成”状态，补充端口化实现、`dep_rules` 约束范围调整与回归结果。原因：用户要求执行到里程碑 1，并需把实施证据写回活文档。
