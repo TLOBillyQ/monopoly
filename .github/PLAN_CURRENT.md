@@ -17,6 +17,7 @@
 - [x] (2026-02-21 23:38Z) 实施第一批低风险清理：补齐 `gameplay_loop` 与 `presentation_ui_action_status` 的 slice 覆盖，删除 `UIModelPanelBuilder` 的无效条件分支。
 - [x] (2026-02-21 23:39Z) 实施第二批结构清理：`PopupRenderer` 提取节点贴图回退公共逻辑，收敛重复实现。
 - [x] (2026-02-21 23:40Z) 最终验证完成：`lua .github/tests/regression.lua` 通过（`149`），`dep_rules ok`、`tick ok`。
+- [x] (2026-02-21 15:40Z) 后续清理（选项 1）：移除 `ChoiceScreenService` 纯转发层，`UIModalPresenter` 直接依赖 `choice_screen_service/openers` 与 `common`，回归保持 `149` 全绿。
 
 ## 意外与发现
 
@@ -40,9 +41,15 @@
   理由：实测被 `land` 套件间接使用，删除会破坏回归稳定性。
   日期/作者：2026-02-21 / Codex。
 
+- 决策：删除 `ChoiceScreenService` 包装层并把唯一业务逻辑内聚到 `UIModalPresenter`。
+  理由：该模块多数函数仅转发，增加无效跳转；改为直接依赖 `openers/common` 可降低维护路径长度且不改行为。
+  日期/作者：2026-02-21 / Codex。
+
 ## 结果与复盘
 
 本轮深度清理已完成并通过回归。主要成果有三类：第一，修复测试覆盖盲区，`regression` 用例数从 `143` 提升到 `149`；第二，去掉了 `UIModelPanelBuilder` 中不可达条件（`flags.turn`）；第三，合并了 `PopupRenderer` 内重复的节点贴图回退逻辑，减少未来维护分叉风险。
+
+按后续指令已追加一轮包装层清理：删除 `ChoiceScreenService`，并将 `select_choice_option` 的 building 标题刷新逻辑迁入 `UIModalPresenter`。回归结果保持不变。
 
 回顾中最重要的教训是：对“测试工具是否未使用”的判断必须以回归执行结果二次确认，不能只依赖静态引用搜索。该问题已通过“误删即回补 + 回归复测”的方式闭环。
 
@@ -101,6 +108,8 @@
   - `.github/tests/suites/presentation_ui_action_status.lua`
   - `src/presentation/state/UIModelPanelBuilder.lua`
   - `src/presentation/ui/PopupRenderer.lua`
+  - `src/presentation/ui/UIModalPresenter.lua`
+  - `src/presentation/ui/ChoiceScreenService.lua`（已删除）
   - `.github/tests/TestSupport.lua`（仅回补误删，净效果为保持原行为）
 - 回归摘要：
   - 清理前：`All regression checks passed (143)`

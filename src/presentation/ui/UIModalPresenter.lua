@@ -1,5 +1,6 @@
 local modal_state = require("src.presentation.interaction.UIModalStateCoordinator")
-local choice_renderer = require("src.presentation.ui.ChoiceScreenService")
+local choice_openers = require("src.presentation.ui.choice_screen_service.openers")
+local choice_common = require("src.presentation.ui.choice_screen_service.common")
 local popup_renderer = require("src.presentation.ui.PopupRenderer")
 local market_renderer = require("src.presentation.ui.MarketModalRenderer")
 local canvas = require("src.presentation.interaction.UICanvasCoordinator")
@@ -8,7 +9,22 @@ local logger = require("src.core.Logger")
 local modal_presenter = {}
 
 function modal_presenter.select_choice_option(state, option_id)
-  choice_renderer.select_choice_option(state, option_id)
+  if not option_id then
+    return
+  end
+  modal_state.select_choice_option(state, option_id)
+  local ui = state and state.ui
+  if not ui then
+    return
+  end
+  if ui.active_choice_screen_key ~= "building" then
+    return
+  end
+  local screen = ui.choice_screens and ui.choice_screens.building or nil
+  local choice = state.ui_model and state.ui_model.choice or nil
+  if screen and screen.title then
+    ui:set_label(screen.title, choice_common.resolve_choice_title(choice, "building", option_id))
+  end
 end
 
 function modal_presenter.open_choice_modal(state, choice, market)
@@ -27,7 +43,7 @@ function modal_presenter.open_choice_modal(state, choice, market)
   end
   state.ui_dirty = true
 
-  local screen_key = choice_renderer.resolve_screen_key(choice)
+  local screen_key = choice_common.resolve_screen_key(choice)
   if screen_key == "market" then
     market_renderer.open_market_panel(state, choice, choice_id, market)
     return
@@ -38,7 +54,7 @@ function modal_presenter.open_choice_modal(state, choice, market)
     state.ui.market_active = false
   end
 
-  choice_renderer.open_choice_modal(state, choice, market)
+  choice_openers.open_choice_modal(state, choice, market)
 end
 
 function modal_presenter.close_choice_modal(state)
