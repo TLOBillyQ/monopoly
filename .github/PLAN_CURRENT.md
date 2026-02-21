@@ -13,7 +13,7 @@
 - [x] (2026-02-21 09:15Z) 读取最新架构基线：`/Users/billyq/Dev/Github/Lua/monopoly/ARCHITECTURE.md`（已确认启动分段、`TurnFlow` 状态机、测试 profile 链路）。
 - [x] (2026-02-21 09:22Z) 完成核心链路审查结论归档（P1/P2/P3 风险、文件与函数定位、验证建议）。
 - [x] (2026-02-21 09:27Z) 完成里程碑 1：`UIIntentDispatcher` 改为 `TurnActionPort` 注入，`UIBootstrap` 注入 `TurnActionPortAdapter`，`dep_rules` 收紧到 `presentation/interaction -> src.game.*` 并通过。
-- [ ] 里程碑 2：拆分 `GameplayLoop.set_game` 与 `TurnDispatch` 依赖面，形成最小可测接口。
+- [x] (2026-02-21 15:13Z) 完成里程碑 2：`GameplayLoop.set_game` 拆分为初始化/环境配置/pending_choice/状态复位四段；`TurnDispatch` 改为一次性解析 dispatch context；`TurnDispatchValidator` 通过 `ItemSlotData` 抽象读取道具槽；回归通过。
 - [ ] 里程碑 3：将 `UIChoiceRoutePolicy` 从硬编码语义改为显式路由元数据契约。
 - [ ] 里程碑 4：降低启动层与运行时全局注入耦合（`UIBootstrap`、`RuntimeContext`、`GameStartup`）。
 - [ ] 里程碑 5：补齐单测/集成测试，并完成一次全量回归与双端手测抽样。
@@ -28,6 +28,8 @@
   证据：审查中发现 `UIChoiceRoutePolicy` 对 `choice.kind/option.id` 的硬编码不触发规则告警。
 - 观察：若把 `dep_rules` 直接收紧到整个 `src/presentation`，会命中既有模块（如 `UISyncPorts`、`MoveAnim`）对 `src.game.*` 的历史依赖，不属于里程碑 1 范围。
   证据：`rg "src\\.game\\." src/presentation` 命中 `src/presentation/api/ports/UISyncPorts.lua`、`src/presentation/render/MoveAnim.lua` 等文件。
+- 观察：`TurnDispatch` 原实现在一次 action 流程里多次 `gameplay_loop_ports.resolve`，而且把 UI 槽位字段名暴露给 validator，导致测试替身要模拟完整 UI 结构。
+  证据：里程碑 2 改造前 `TurnDispatch.lua` 在 `should_block_action` 与 `dispatch_action` 内重复 resolve；`TurnDispatchValidator.lua` 直接读取 `item_slot_item_ids(_by_role)`。
 
 ## 决策日志
 
@@ -47,9 +49,13 @@
   理由：目标是先切断 UI intent 分发链路耦合；其余 `presentation` 历史依赖放到后续里程碑分批处理，避免范围失控。
   日期/作者：2026-02-21 / Codex。
 
+- 决策：里程碑 2 新增 `ItemSlotData` 抽象，并在 `TurnDispatch` 内部构造 dispatch context（`ports/ui_sync/item_slot_source`）后在递归分发中复用。
+  理由：把 validator 与 UI 字段结构解耦，同时避免一次 action 链路重复解析 ports，降低接口面并保持行为不变。
+  日期/作者：2026-02-21 / Codex。
+
 ## 结果与复盘
 
-里程碑 1 已完成。完成项：新增 `TurnActionPort` 与 `TurnActionPortAdapter`，`UIIntentDispatcher` 去除 `TurnDispatch` 直连，测试改为端口注入，`dep_rules` 收紧并通过。回归结果：`lua .github/tests/regression.lua` 通过（143/143，包含 `dep_rules ok` 与 `tick ok`）。遗留项：`presentation` 其他模块仍有历史 `src.game.*` 依赖，留待里程碑 2+ 按职责拆分继续收口。
+里程碑 1-2 已完成。里程碑 2 完成项：`GameplayLoop.set_game` 完成职责拆分；`TurnDispatch` 改为最小 dispatch context 并复用；`TurnDispatchValidator` 通过 `ItemSlotData` 访问槽位数据。回归结果：`lua .github/tests/regression.lua` 通过（143/143，包含 `dep_rules ok` 与 `tick ok`）。遗留项：choice 路由仍是语义硬编码，进入里程碑 3 处理。
 
 ## 背景与导读
 
@@ -250,3 +256,4 @@
 
 - 2026-02-21：将 `PLAN_CURRENT.md` 从“编辑器快速测试配置实施计划”切换为“核心链路解耦重构实施计划（P1 先行）”。原因：用户要求把审查得到的重构方案落为可执行计划，且 `ARCHITECTURE.md` 已更新，原计划不再匹配当前主任务。
 - 2026-02-21：更新为“里程碑 1 已完成”状态，补充端口化实现、`dep_rules` 约束范围调整与回归结果。原因：用户要求执行到里程碑 1，并需把实施证据写回活文档。
+- 2026-02-21：更新为“里程碑 2 已完成”状态，补充 `set_game` 职责拆分、`TurnDispatch` 最小上下文化、`ItemSlotData` 抽象与回归结果。原因：用户要求继续推进到里程碑 2。

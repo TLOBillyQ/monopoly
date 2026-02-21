@@ -103,44 +103,52 @@ local function _step_phase_animation(game, state, phase, ports)
   end
 end
 
-function gameplay_loop.set_game(state, game)
-  assert(game ~= nil, "missing game")
+local function _initialize_ports(state, game)
   local ports = _resolve_ports(state)
-  local anim_ports = ports.anim
-  local state_ports = ports.state
-  local ui_sync_ports = ports.ui_sync
-  local modal_ports = ports.modal
-  if state_ports.apply_role_control_lock then
-    state_ports.apply_role_control_lock(state, false)
-  end
-  state.role_control_lock_active = false
-  state.role_control_lock_suppress = 0
-  anim_ports.reset_status_3d(state)
   state.game = game
   state.gameplay_loop_ports = ports
   game.ui_port = state
   game.gameplay_loop_ports = ports
+  return ports
+end
+
+local function _configure_tile_owner_notifier(state, game)
   if type(state.on_tile_owner_changed) == "function" then
     game.tile_owner_notifier = {
       notify_owner_changed = function(_, tile_id, owner_id)
         state:on_tile_owner_changed(tile_id, owner_id)
       end,
     }
-  elseif type(state.notify_owner_changed) == "function" then
+    return
+  end
+  if type(state.notify_owner_changed) == "function" then
     game.tile_owner_notifier = {
       notify_owner_changed = function(_, tile_id, owner_id)
         state:notify_owner_changed(tile_id, owner_id)
       end,
     }
   end
+end
+
+local function _configure_environment(state, game, ports)
+  local anim_ports = ports.anim
+  local state_ports = ports.state
+  state_ports.apply_role_control_lock(state, false)
+  state.role_control_lock_active = false
+  state.role_control_lock_suppress = 0
+  anim_ports.reset_status_3d(state)
+  _configure_tile_owner_notifier(state, game)
   paid_currency_bridge.setup_for_game(game)
-  if state_ports and state_ports.install_event_handlers then
-    state_ports.install_event_handlers(game, logger, state)
-  end
+  state_ports.install_event_handlers(game, logger, state)
   logger.set_info_per_turn_limit(gameplay_rules.info_log_per_turn_limit)
   logger.set_info_turn_provider(function()
     return game.turn and game.turn.turn_count
   end)
+end
+
+local function _configure_pending_choice(state, game, ports)
+  local ui_sync_ports = ports.ui_sync
+  local modal_ports = ports.modal
   assert(game.pending_choice ~= nil, "missing game.pending_choice")
   local pending = game:pending_choice()
   state.pending_choice = pending
@@ -153,6 +161,10 @@ function gameplay_loop.set_game(state, game)
       modal_ports.open_choice_modal(state, model.choice, model.market)
     end
   end
+end
+
+local function _reset_runtime_state(state, ports)
+  local ui_sync_ports = ports.ui_sync
   state.player_units = nil
   state.player_units_missing = false
   state.ui_dirty = true
@@ -165,6 +177,14 @@ function gameplay_loop.set_game(state, game)
     state.auto_runner:set_enabled(true)
     state.auto_runner:reset_timer()
   end
+end
+
+function gameplay_loop.set_game(state, game)
+  assert(game ~= nil, "missing game")
+  local ports = _initialize_ports(state, game)
+  _configure_environment(state, game, ports)
+  _configure_pending_choice(state, game, ports)
+  _reset_runtime_state(state, ports)
 end
 
 function gameplay_loop.new_game(state)

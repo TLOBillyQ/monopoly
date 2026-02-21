@@ -1,5 +1,6 @@
 local logger = require("src.core.Logger")
 local number_utils = require("src.core.NumberUtils")
+local item_slot_data = require("src.game.flow.turn.ItemSlotData")
 local validator = require("src.game.flow.turn.TurnDispatchValidator")
 local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
 
@@ -50,16 +51,32 @@ function turn_dispatch.clear_choice(state, opts)
   end
 end
 
-function turn_dispatch.should_block_action(state, action_or_type)
+local function _resolve_dispatch_context(state, context)
+  if context then
+    return context
+  end
   local ports = gameplay_loop_ports.resolve(state and state.gameplay_loop_ports or nil)
   local ui_sync_ports = ports.ui_sync
   local ui_state = ui_sync_ports.get_ui_state and ui_sync_ports.get_ui_state(state) or nil
-  return validator.should_block_action(ui_state, action_or_type)
+  local item_slot_source = item_slot_data.from_ui_state(ui_state)
+  return {
+    ports = ports,
+    ui_sync_ports = ui_sync_ports,
+    item_slot_source = item_slot_source,
+  }
 end
 
-function turn_dispatch.dispatch_action(game, state, action, opts)
+function turn_dispatch.should_block_action(state, action_or_type)
+  local dispatch_ctx = _resolve_dispatch_context(state)
+  local ui_sync_ports = dispatch_ctx.ui_sync_ports
+  local blocked = ui_sync_ports.is_input_blocked and ui_sync_ports.is_input_blocked(state) or false
+  return validator.should_block_action(blocked, action_or_type)
+end
+
+local function _dispatch_action(game, state, action, opts, dispatch_ctx)
   assert(action ~= nil, "missing action")
-  if turn_dispatch.should_block_action(state, action) then
+  local ctx = _resolve_dispatch_context(state, dispatch_ctx)
+  if validator.should_block_action(ctx.ui_sync_ports.is_input_blocked and ctx.ui_sync_ports.is_input_blocked(state) or false, action) then
     return { status = "blocked" }
   end
   if action.type == "ui_button"
@@ -80,15 +97,12 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
     if not validator.validate_actor_role(game, action) then
       return { status = "rejected" }
     end
-    local ports = gameplay_loop_ports.resolve(state and state.gameplay_loop_ports or nil)
-    local ui_sync_ports = ports.ui_sync
-    local ui_state = ui_sync_ports.get_ui_state and ui_sync_ports.get_ui_state(state) or nil
-    local slot_result = validator.resolve_item_slot_action(ui_state, state, action)
+    local slot_result = validator.resolve_item_slot_action(ctx.item_slot_source, state, action)
     if slot_result ~= nil then
       if not slot_result.ok then
         return { status = "rejected" }
       end
-      return turn_dispatch.dispatch_action(game, state, slot_result.action, opts)
+      return _dispatch_action(game, state, slot_result.action, opts, ctx)
     end
     if action.id == "next" then
       assert(game ~= nil, "missing game")
@@ -132,6 +146,10 @@ function turn_dispatch.dispatch_action(game, state, action, opts)
     return { status = "applied" }
   end
   return { status = "rejected" }
+end
+
+function turn_dispatch.dispatch_action(game, state, action, opts)
+  return _dispatch_action(game, state, action, opts, nil)
 end
 
 return turn_dispatch

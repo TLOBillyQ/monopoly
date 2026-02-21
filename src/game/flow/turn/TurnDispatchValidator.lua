@@ -1,5 +1,5 @@
-local number_utils = require("src.core.NumberUtils")
 local logger = require("src.core.Logger")
+local item_slot_data = require("src.game.flow.turn.ItemSlotData")
 
 local validator = {}
 
@@ -43,8 +43,29 @@ local function _resolve_choice_owner_role_id(game, choice)
   return current and current.id or nil
 end
 
-function validator.should_block_action(ui_state, action_or_type)
-  if not (ui_state and ui_state.input_blocked) then
+local function _resolve_input_blocked(ui_state_or_flag)
+  if type(ui_state_or_flag) == "boolean" then
+    return ui_state_or_flag
+  end
+  return ui_state_or_flag and ui_state_or_flag.input_blocked == true or false
+end
+
+local function _resolve_item_slot_source(item_slot_source)
+  if type(item_slot_source) == "table" and type(item_slot_source.resolve_slot_action) == "function" then
+    return item_slot_source
+  end
+  return item_slot_data.from_ui_state(item_slot_source)
+end
+
+local function _resolve_item_slot_id(source, actor_role_id, slot_id)
+  if not source or type(source.resolve_slot_action) ~= "function" then
+    return nil
+  end
+  return source.resolve_slot_action(actor_role_id, slot_id)
+end
+
+function validator.should_block_action(ui_state_or_flag, action_or_type)
+  if not _resolve_input_blocked(ui_state_or_flag) then
     return false
   end
   local action_type = _normalize_action_type(action_or_type)
@@ -130,34 +151,18 @@ function validator.validate_choice_action(game, action, choice)
   return true
 end
 
-function validator.resolve_item_slot_action(ui_state, state, action)
-  local slot_index = action.id and string.match(action.id, "^item_slot_(%d+)$")
-  if not slot_index then
+function validator.resolve_item_slot_action(item_slot_source, state, action)
+  if not (action and action.id and string.match(action.id, "^item_slot_(%d+)$")) then
     return nil
   end
-  slot_index = number_utils.to_integer(slot_index)
   local choice = state.pending_choice
   if not choice or choice.kind ~= "item_phase_choice" then
     return { ok = false }
   end
-  ui_state = ui_state or (state and state.ui) or nil
-  if not ui_state then
-    return { ok = false }
-  end
-  local item_ids = nil
-  if action.actor_role_id and type(ui_state.item_slot_item_ids_by_role) == "table" then
-    item_ids = ui_state.item_slot_item_ids_by_role[action.actor_role_id]
-  end
-  if not item_ids then
-    item_ids = ui_state.item_slot_item_ids
-  end
-  if not item_ids then
-    logger.warn("missing item_slot_item_ids for slot:", tostring(slot_index))
-    return { ok = false }
-  end
-  local item_id = item_ids[slot_index]
+  local source = _resolve_item_slot_source(item_slot_source)
+  local item_id = _resolve_item_slot_id(source, action.actor_role_id, action.id)
   if not item_id then
-    logger.warn("missing item_id:", tostring(slot_index))
+    logger.warn("missing item_id:", tostring(action.id))
     return { ok = false }
   end
   local options = assert(choice.options, "missing choice options")
