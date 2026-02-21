@@ -3,6 +3,7 @@ local runtime = require("src.presentation.api.UIRuntimePort")
 local canvas = require("src.presentation.interaction.UICanvasCoordinator")
 
 local renderer = {}
+local _apply_node_image
 
 local function _resolve_popup_image_key(state, payload)
   if not payload then
@@ -30,18 +31,11 @@ local function _set_popup_card_image(state, payload)
   end
   local card_name = popup.card
   local card_node = ui.query_node(card_name)
-  local image_key = _resolve_popup_image_key(state, payload)
-  if image_key ~= nil then
-    runtime.set_node_texture_keep_size(card_node, image_key)
-    ui:set_visible(card_name, true)
-    return
-  end
   local refs = state and state.ui_refs or nil
   local empty_key = refs and refs["Empty"] or nil
-  if empty_key ~= nil then
-    runtime.set_node_texture_keep_size(card_node, empty_key)
-  end
-  ui:set_visible(card_name, false)
+  _apply_node_image(ui, card_name, card_node, _resolve_popup_image_key(state, payload), empty_key, function(node, key)
+    runtime.set_node_texture_keep_size(node, key)
+  end, false)
 end
 
 local function _set_popup_dismiss_touch(ui, enabled)
@@ -92,6 +86,20 @@ local function _resolve_bankruptcy_avatar_key(payload)
   return role_avatar.resolve_from_role(role)
 end
 
+_apply_node_image = function(ui, node_name, node, image_key, empty_key, set_texture, show_when_empty)
+  if image_key ~= nil then
+    set_texture(node, image_key)
+    ui:set_visible(node_name, true)
+    return
+  end
+  if empty_key ~= nil then
+    set_texture(node, empty_key)
+    ui:set_visible(node_name, show_when_empty == true)
+    return
+  end
+  ui:set_visible(node_name, false)
+end
+
 local function _set_bankruptcy_avatar_image(state, payload)
   local ui = state and state.ui
   local screen = ui and ui.bankruptcy_screen or nil
@@ -99,20 +107,11 @@ local function _set_bankruptcy_avatar_image(state, payload)
     return
   end
   local avatar_node = ui.query_node(screen.avatar)
-  local image_key = _resolve_bankruptcy_avatar_key(payload)
-  if image_key ~= nil then
-    runtime.set_node_texture_auto_size(avatar_node, image_key)
-    ui:set_visible(screen.avatar, true)
-    return
-  end
   local refs = state and state.ui_refs or nil
   local empty_key = refs and refs["Empty"] or nil
-  if empty_key ~= nil then
-    runtime.set_node_texture_auto_size(avatar_node, empty_key)
-    ui:set_visible(screen.avatar, true)
-    return
-  end
-  ui:set_visible(screen.avatar, false)
+  _apply_node_image(ui, screen.avatar, avatar_node, _resolve_bankruptcy_avatar_key(payload), empty_key, function(node, key)
+    runtime.set_node_texture_auto_size(node, key)
+  end, true)
 end
 
 local function _should_show_modal_for_ctx(ctx, kind)

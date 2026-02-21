@@ -1,279 +1,116 @@
-# 核心链路解耦重构实施计划（P1 先行）
+# 代码库深度清理实施计划
 
 本可执行计划是活文档。实施过程中必须持续维护“进度”“意外与发现”“决策日志”“结果与复盘”四个章节。本文件遵循 `/Users/billyq/Dev/Github/Lua/monopoly/.github/PLANS.md`。
 
 ## 目的 / 全局视角
 
-这次重构的目标不是改玩法，而是降低核心链路的结构风险。完成后，开发者可以在不拉起完整游戏运行时的前提下，单独测试 UI intent 分发、动作分发和路由策略；同时新增或调整 choice/action 时，不需要再修改多个“大函数”。
+本次深度清理的目标是：在不改变玩法与 UI 行为的前提下，减少代码噪音和维护成本，删除明确无用代码，收敛重复实现，统一低层工具的调用路径。完成后，开发者能更快定位核心逻辑，新增功能时需要改动的文件更少，回归成本更可控。
 
-用户可见的验收方式是：现有回归（`regression + dep_rules + tick + presentation_ui`）保持全绿；并且新增的分层测试可以只依赖端口 mock 运行，证明核心链路的耦合已下降。
+可见验收方式是：`regression` 全绿，核心交互测试全绿，且仓库中高置信无用项数量显著下降（有证据链与改动清单）。
 
 ## 进度
 
-- [x] (2026-02-21 09:15Z) 读取最新架构基线：`/Users/billyq/Dev/Github/Lua/monopoly/ARCHITECTURE.md`（已确认启动分段、`TurnFlow` 状态机、测试 profile 链路）。
-- [x] (2026-02-21 09:22Z) 完成核心链路审查结论归档（P1/P2/P3 风险、文件与函数定位、验证建议）。
-- [x] (2026-02-21 09:27Z) 完成里程碑 1：`UIIntentDispatcher` 改为 `TurnActionPort` 注入，`UIBootstrap` 注入 `TurnActionPortAdapter`，`dep_rules` 收紧到 `presentation/interaction -> src.game.*` 并通过。
-- [x] (2026-02-21 15:13Z) 完成里程碑 2：`GameplayLoop.set_game` 拆分为初始化/环境配置/pending_choice/状态复位四段；`TurnDispatch` 改为一次性解析 dispatch context；`TurnDispatchValidator` 通过 `ItemSlotData` 抽象读取道具槽；回归通过。
-- [x] (2026-02-21 15:17Z) 完成里程碑 3：`IntentDispatcher.open_choice` 注入 `route_key/requires_confirm`，`UIChoiceRoutePolicy` 优先使用显式路由元数据并保留 legacy fallback，补齐表驱动测试与回归。
-- [x] (2026-02-21 15:24Z) 完成里程碑 4：新增 `GameStartupEventBridge`/`GameRuntimeBootstrap`，`UIBootstrap` 改为仅 UI 装配与路由绑定，`RuntimeContext.install_runtime_helpers` 支持返回 helper 且可关闭全局写入。
-- [x] (2026-02-21 15:24Z) 完成里程碑 5：补齐里程碑 4/5 测试，执行 `regression`、`presentation_ui` 分片与部署脚本，自动化与部署准备均通过。
+- [x] (2026-02-21 23:28Z) 读取并确认计划规范与仓库约束（`PLANS.md` / `CODING.md` / `THIS.md`）。
+- [x] (2026-02-21 23:29Z) 清空并重建当前计划文件，切换到“代码库深度清理”任务。
+- [x] (2026-02-21 23:31Z) 基线验证完成：`lua .github/tests/regression.lua` 通过（`143`）。
+- [x] (2026-02-21 23:34Z) 全库审计完成：识别出“回归漏跑测试”“UI 图片渲染重复逻辑”“无效分支条件”等高置信清理点。
+- [x] (2026-02-21 23:38Z) 实施第一批低风险清理：补齐 `gameplay_loop` 与 `presentation_ui_action_status` 的 slice 覆盖，删除 `UIModelPanelBuilder` 的无效条件分支。
+- [x] (2026-02-21 23:39Z) 实施第二批结构清理：`PopupRenderer` 提取节点贴图回退公共逻辑，收敛重复实现。
+- [x] (2026-02-21 23:40Z) 最终验证完成：`lua .github/tests/regression.lua` 通过（`149`），`dep_rules ok`、`tick ok`。
 
 ## 意外与发现
 
-- 观察：架构已从“单段 init”演进为“立即安装运行时 + `GAME_INIT` 延迟装配 UI/loop”，这要求重构时避免回退到旧初始化模型。
-  证据：`ARCHITECTURE.md` 中“初始化分两段”和“启动链路”章节。
-- 观察：`TurnFlow` 已成为回合推进核心，`GameplayLoop` 的职责应该聚焦在调度而不是阶段跳转细节。
-  证据：`ARCHITECTURE.md` 的“Tick 链路”和“状态机说明”。
-- 观察：`dep_rules` 当前可作为防线，但对语义级耦合（非显式 require）覆盖不足。
-  证据：审查中发现 `UIChoiceRoutePolicy` 对 `choice.kind/option.id` 的硬编码不触发规则告警。
-- 观察：若把 `dep_rules` 直接收紧到整个 `src/presentation`，会命中既有模块（如 `UISyncPorts`、`MoveAnim`）对 `src.game.*` 的历史依赖，不属于里程碑 1 范围。
-  证据：`rg "src\\.game\\." src/presentation` 命中 `src/presentation/api/ports/UISyncPorts.lua`、`src/presentation/render/MoveAnim.lua` 等文件。
-- 观察：`TurnDispatch` 原实现在一次 action 流程里多次 `gameplay_loop_ports.resolve`，而且把 UI 槽位字段名暴露给 validator，导致测试替身要模拟完整 UI 结构。
-  证据：里程碑 2 改造前 `TurnDispatch.lua` 在 `should_block_action` 与 `dispatch_action` 内重复 resolve；`TurnDispatchValidator.lua` 直接读取 `item_slot_item_ids(_by_role)`。
-- 观察：路由语义若只存在于 `UIChoiceRoutePolicy`，choice 构建链路无法表达“新 kind 使用哪个屏、是否需要确认”；新增 kind 时必须改策略代码。
-  证据：里程碑 3 改造前 `UIChoiceRoutePolicy.resolve` 仅基于 `choice.kind` 与 option 语义判断。
-- 观察：`GameStartup.build_state` 中混入事件注册会让“构建状态”和“订阅事件”无法独立测试，且在无事件环境下不够纯净。
-  证据：里程碑 4 改造前 `build_state` 内直接 `RegisterCustomEvent(...)`。
-- 观察：`RuntimeContext.install_runtime_helpers` 若总是写全局，会阻碍无全局环境下的隔离测试。
-  证据：新增 `install_globals=false` 分支后，可在测试里先拿 helper 返回值，再按需安装全局。
+- 观察：`gameplay_loop` 与 `presentation_ui_action_status` 的 slice 上限偏小，导致已定义测试未进入回归。
+  证据：基线 `regression` 为 `143`；修正 slice 后为 `149`。
+
+- 观察：静态“未引用”判断会漏掉测试运行时的间接依赖。
+  证据：删除 `TestSupport.first_adjacent_land_pair` 后，`land` 套件报错 `attempt to call a nil value`；已回补并恢复全绿。
 
 ## 决策日志
 
-- 决策：按“P1 先行，P2/P3 随后”的两批路线推进。
-  理由：先解决高风险耦合（跨层依赖、职责过载），才能避免后续重构反复返工。
+- 决策：先做“证据驱动”的清理，不做主观式大改。
+  理由：深度清理最怕误删，先建立引用证据和测试护栏可控性最高。
   日期/作者：2026-02-21 / Codex。
 
-- 决策：先改接口注入，再改内部实现。
-  理由：通过兼容适配层控制风险，保证每一步都可回归验证，避免一次性大改导致定位困难。
+- 决策：分两批实施，第一批仅低风险删除和去重，第二批再做小范围结构重排。
+  理由：将风险前置隔离，保证每批都能独立回归验证。
   日期/作者：2026-02-21 / Codex。
 
-- 决策：保留现有玩法行为和 UI 表现为硬约束，重构只改结构与依赖方向。
-  理由：本轮目标是稳定性和可维护性，不引入策划与表现层行为变更。
-  日期/作者：2026-02-21 / Codex。
-
-- 决策：里程碑 1 的 `dep_rules` 只约束 `src/presentation/interaction` 对 `src.game.*` 的直接依赖。
-  理由：目标是先切断 UI intent 分发链路耦合；其余 `presentation` 历史依赖放到后续里程碑分批处理，避免范围失控。
-  日期/作者：2026-02-21 / Codex。
-
-- 决策：里程碑 2 新增 `ItemSlotData` 抽象，并在 `TurnDispatch` 内部构造 dispatch context（`ports/ui_sync/item_slot_source`）后在递归分发中复用。
-  理由：把 validator 与 UI 字段结构解耦，同时避免一次 action 链路重复解析 ports，降低接口面并保持行为不变。
-  日期/作者：2026-02-21 / Codex。
-
-- 决策：里程碑 3 在 `IntentDispatcher.open_choice` 统一注入 `route_key/requires_confirm`，`UIChoiceRoutePolicy` 只做“优先读显式字段 + 兼容 fallback”。
-  理由：把路由契约前移到 choice 生成阶段，避免策略层继续承担新增 kind 的主维护压力，同时保持旧数据可用。
-  日期/作者：2026-02-21 / Codex。
-
-- 决策：里程碑 4 采用“双桥接”拆分：`GameStartupEventBridge` 处理事件订阅，`GameRuntimeBootstrap` 处理 game/loop 启动；`UIBootstrap` 只处理 UI 生命周期。
-  理由：在不改变 `GAME_INIT` 时序的前提下，把启动职责边界明确化，避免一次性迁移导致行为回退。
-  日期/作者：2026-02-21 / Codex。
-
-- 决策：`RuntimeContext.install_runtime_helpers(ctx, opts)` 默认保持兼容（继续写全局），同时提供 `install_globals=false` 供测试与无全局调用路径使用。
-  理由：兼顾线上兼容与结构解耦目标，迁移成本最低。
+- 决策：保留 `TestSupport.first_adjacent_land_pair`，不再作为“僵尸 helper”清理对象。
+  理由：实测被 `land` 套件间接使用，删除会破坏回归稳定性。
   日期/作者：2026-02-21 / Codex。
 
 ## 结果与复盘
 
-里程碑 1-5 已完成。里程碑 4 完成项：`GameStartup` 状态构建与事件订阅解耦，`UIBootstrap` 不再直接创建 game/loop，`RuntimeContext` 新增无全局 helper 路径。里程碑 5 完成项：补齐对应测试并完成自动化回归与部署脚本验证。结果：`lua .github/tests/regression.lua`（143/143）、`presentation_ui` 分片（62/62）均通过，`deploy.ps1` 执行成功。遗留项：双端人工手测仍需在编辑器内按清单执行（无法由 CLI 自动判定交互观测结果）。
+本轮深度清理已完成并通过回归。主要成果有三类：第一，修复测试覆盖盲区，`regression` 用例数从 `143` 提升到 `149`；第二，去掉了 `UIModelPanelBuilder` 中不可达条件（`flags.turn`）；第三，合并了 `PopupRenderer` 内重复的节点贴图回退逻辑，减少未来维护分叉风险。
+
+回顾中最重要的教训是：对“测试工具是否未使用”的判断必须以回归执行结果二次确认，不能只依赖静态引用搜索。该问题已通过“误删即回补 + 回归复测”的方式闭环。
 
 ## 背景与导读
 
-本仓库当前主链路是：
-`main.lua -> src/app/init.lua -> RuntimeInstall.install -> GameStartup.build_state -> UIBootstrap.install(GAME_INIT) -> GameplayLoop.tick/TurnFlow/TurnDispatch -> UIModel/UIView`。
+本仓库是 Lua 项目，运行链路入口为 `main.lua` 与 `src/app/init.lua`，核心玩法在 `src/game`，表现层在 `src/presentation`，配置与生成数据在 `Config` 与 `Data`。已有测试入口为 `/Users/billyq/Dev/Github/Lua/monopoly/.github/tests/regression.lua`。
 
-这条链路里的结构风险主要有四类：
-
-第一类是依赖方向错误。典型问题是交互层直接依赖游戏分发实现，使高层策略无法仅依赖抽象接口。
-
-第二类是职责混杂。典型问题是 `GameplayLoop.set_game` 一次做太多事情，任何一个子能力修改都要进入同一函数。
-
-第三类是路由语义硬编码。典型问题是 choice 路由通过 `kind/option` 猜测，扩展新选择类型时容易落错页面。
-
-第四类是启动期隐式全局注入。典型问题是 runtime helper 构建与全局写入耦合，导致测试和替换困难。
-
-本计划限定以下文件为主实施区：
-
-- `/Users/billyq/Dev/Github/Lua/monopoly/src/app/bootstrap/GameStartup.lua`
-- `/Users/billyq/Dev/Github/Lua/monopoly/src/app/bootstrap/UIBootstrap.lua`
-- `/Users/billyq/Dev/Github/Lua/monopoly/src/core/RuntimeContext.lua`
-- `/Users/billyq/Dev/Github/Lua/monopoly/src/game/flow/turn/GameplayLoop.lua`
-- `/Users/billyq/Dev/Github/Lua/monopoly/src/game/flow/turn/GameplayLoopRuntime.lua`
-- `/Users/billyq/Dev/Github/Lua/monopoly/src/game/flow/turn/TurnDispatch.lua`
-- `/Users/billyq/Dev/Github/Lua/monopoly/src/game/flow/turn/TurnDispatchValidator.lua`
-- `/Users/billyq/Dev/Github/Lua/monopoly/src/game/flow/turn/GameplayLoopPorts.lua`
-- `/Users/billyq/Dev/Github/Lua/monopoly/src/presentation/interaction/UIEventRouter.lua`
-- `/Users/billyq/Dev/Github/Lua/monopoly/src/presentation/interaction/UIIntentBuilder.lua`
-- `/Users/billyq/Dev/Github/Lua/monopoly/src/presentation/interaction/UIIntentDispatcher.lua`
-- `/Users/billyq/Dev/Github/Lua/monopoly/src/presentation/interaction/UIInputLockPolicy.lua`
-- `/Users/billyq/Dev/Github/Lua/monopoly/src/presentation/interaction/UITouchPolicy.lua`
-- `/Users/billyq/Dev/Github/Lua/monopoly/src/presentation/interaction/UIChoiceRoutePolicy.lua`
-- `/Users/billyq/Dev/Github/Lua/monopoly/Config/GameplayRules.lua`
-- `/Users/billyq/Dev/Github/Lua/monopoly/Config/Map.lua`
-- `/Users/billyq/Dev/Github/Lua/monopoly/.github/tests/internal/dep_rules.lua`
-
-## 里程碑
-
-### 里程碑 1：UI intent 分发端口化（先切断跨层硬依赖）
-
-本里程碑只处理 `UIIntentDispatcher` 的依赖方向。完成后，`presentation/interaction` 不再直接 `require src.game.flow.turn.TurnDispatch`，改为依赖注入的 `TurnActionPort`。这一步完成后就能独立测试 UI intent 分发，不需要完整 game runtime。
-
-工作内容包括：在交互层定义最小动作端口（分发 action、检查阻塞、必要时读取最小 UI 数据），在启动装配阶段完成注入，保留兼容适配器让旧路径可运行。`dep_rules` 必须在此里程碑结束时保持通过。
-
-验收命令：
-
-    cd /Users/billyq/Dev/Github/Lua/monopoly
-    lua .github/tests/internal/dep_rules.lua
-
-预期结果：不再出现 `presentation` 到 `src.game.*` 的直接违规依赖；现有回归不倒退。
-
-### 里程碑 2：回合主循环与动作分发职责拆分
-
-本里程碑聚焦 `GameplayLoop.set_game` 和 `TurnDispatch`。完成后，`set_game` 只做编排，初始化细节下沉到小函数；`TurnDispatch` 只依赖最小端口，不直接碰 UI 结构细节。
-
-工作内容包括：
-
-- 在 `GameplayLoop.lua` 提取 `initialize_ports`、`configure_environment`、`configure_pending_choice` 等职责函数。
-- 在 `TurnDispatch.lua` 引入最小注入端口，减少 `resolve` 与具体 `state.ui` 读取。
-- 在 `TurnDispatchValidator.lua` 通过抽象 `ItemSlotData` 访问道具槽数据，不直接绑定 UI 字段结构。
-
-验收命令：
-
-    cd /Users/billyq/Dev/Github/Lua/monopoly
-    lua .github/tests/regression.lua
-
-预期结果：`All regression checks passed`、`dep_rules ok`、`tick ok`；并能通过 mock 端口测试 `dispatch_action` 关键分支。
-
-### 里程碑 3：Choice 路由契约显式化
-
-本里程碑解决 `UIChoiceRoutePolicy` 的硬编码语义问题。完成后，路由基于显式字段（如 `route_key`、`requires_confirm`），而不是猜测 `kind/option.id`。
-
-工作内容包括：
-
-- 在 choice 产生路径中补充路由元数据（兼容期保留旧字段 fallback）。
-- `UIChoiceRoutePolicy.resolve` 优先使用显式契约，逐步移除硬编码组合判断。
-- 增加表驱动测试覆盖“有元数据/无元数据/未知类型”三类情况。
-
-验收场景：新增一种 choice 类型时，仅改数据契约即可路由正确，不需要改策略分支。
-
-### 里程碑 4：启动层与运行时上下文解耦
-
-本里程碑处理 `UIBootstrap`、`GameStartup`、`RuntimeContext` 的边界。完成后，运行时 helper 默认以返回对象传递，启动层选择是否做兼容全局挂载；`build_state` 与事件注册分离。
-
-工作内容包括：
-
-- `UIBootstrap` 不再创建 game/loop，仅负责 UI 节点装配和路由绑定。
-- `GameStartup.build_state` 保持纯状态构建，事件订阅迁到桥接模块。
-- `RuntimeContext.install_runtime_helpers` 以返回 context 为主路径，全局写入仅作兼容开关。
-
-验收场景：在测试环境可仅创建 state + mock context 完成交互层测试，不依赖引擎全局。
-
-### 里程碑 5：测试补齐与回归收口
-
-本里程碑用于把结构重构转化为稳定产物。完成后，新增测试覆盖主要端口与策略，且现有回归全部通过。
-
-工作内容包括：
-
-- 单测：`UIIntentDispatcher` 端口注入路径、`TurnDispatch` 最小端口分支、`UIChoiceRoutePolicy` 表驱动。
-- 集成：启动链路注入 fake port/fake runtime context，验证 intent->dispatch->tick 基本闭环。
-- 回归：跑全量 + presentation UI 分片 + dep_rules。
+本次清理只处理“行为不变”的内容：无引用代码、重复逻辑、过时封装、冗余中间层、测试中的重复样板。禁止修改策划数值、地图规则和 UI 交互语义。
 
 ## 工作计划
 
-实施顺序必须遵守“先建立兼容接口，再迁移调用方，最后收紧规则”的原则。第一阶段先引入 `TurnActionPort` 和适配层，确保行为不变且可单测。第二阶段拆分 `GameplayLoop` 与 `TurnDispatch`，把混杂职责下沉为可测小函数。第三阶段切换 choice 路由契约，减少策略分支。第四阶段再处理启动层和 runtime 全局注入，避免在前两阶段引入额外变量。最后一阶段补测试并做回归收口。
-
-每个阶段结束都要保证：已有用例全绿、关键手测路径可走通。若某阶段失败，先回退该阶段新增的入口绑定，再恢复上一阶段稳定状态继续推进。
+先执行基线回归，确保当前分支健康。然后做静态审计，建立“候选清理项 -> 证据 -> 风险”的列表。实施时按风险从低到高推进：先删明确无引用项，再合并重复代码，最后做小范围函数职责收敛。每一批改动结束都跑回归，确保行为不变。
 
 ## 具体步骤
 
-1. 基线确认（每次开始重构前执行）：
+1. 基线回归：
 
     cd /Users/billyq/Dev/Github/Lua/monopoly
     lua .github/tests/regression.lua
 
-2. 里程碑 1 实施完成后验证：
+2. 全库审计（引用关系与重复逻辑）：
 
     cd /Users/billyq/Dev/Github/Lua/monopoly
-    lua .github/tests/internal/dep_rules.lua
-
-3. 里程碑 2-4 每阶段完成后验证：
+    rg "require\(" src Config .github/tests
 
     cd /Users/billyq/Dev/Github/Lua/monopoly
-    lua .github/tests/regression.lua
+    rg "TODO|deprecated|legacy|unused|兼容" src .github/tests
 
-4. 里程碑 5 最终验证：
+3. 实施低风险清理后回归：
 
     cd /Users/billyq/Dev/Github/Lua/monopoly
     lua .github/tests/regression.lua
 
+4. 实施结构清理后回归：
+
     cd /Users/billyq/Dev/Github/Lua/monopoly
-    lua -e 'package.path=package.path..";./.github/tests/?.lua;./.github/tests/suites/?.lua;./.github/tests/fixtures/?.lua"; local h=require("TestHarness"); h.run_all({require("presentation_ui_timing_anim"),require("presentation_ui_model_dispatch"),require("presentation_ui_interaction"),require("presentation_ui_popup_market"),require("presentation_ui_action_status"),require("presentation_ui_action_anim")})'
-
-5. 编辑器抽样手测（双端）：
-
-    pwsh /Users/billyq/Dev/Github/Lua/monopoly/.github/scripts/deploy.ps1 -TargetPath "/Users/billyq/Documents/eggy/LuaSource_monopoly"
-
-    # 主端操作：投骰、choice、黑市、调试开关
-    # 副端观察：可见性隔离/同步是否符合预期
+    lua .github/tests/regression.lua
 
 ## 验证与验收
 
-本计划的通过标准分三层。
+验收通过需同时满足：
 
-第一层是自动化稳定性：`regression.lua`、`dep_rules.lua`、`presentation_ui` 分片全部通过。
-
-第二层是结构目标：
-
-- `UIIntentDispatcher` 不再直接依赖 `src.game.*`。
-- `GameplayLoop.set_game` 拆分后函数职责清晰且可单测。
-- `TurnDispatchValidator` 不直接读取 UI 细节字段。
-- `UIChoiceRoutePolicy` 基于显式路由元数据。
-- `RuntimeContext` 支持无全局注入的 context 返回路径。
-
-第三层是行为不变：关键 UI 流程（投骰、choice、黑市、弹窗、破产）在双端抽样下与现有体验一致。
+1. `regression.lua` 全通过。
+2. 无新增跨层违规依赖（以现有 `dep_rules` 为准）。
+3. 清理项都有“删除/合并理由 + 引用证据 + 风险说明”。
+4. 用户可见行为不变（choice、行动分发、UI 交互路径不变）。
 
 ## 可重复性与恢复
 
-本计划按里程碑增量执行，可重复。每次只推进一个里程碑，验证通过后再进入下一步。若某一步失败：
-
-- 先撤回本里程碑新增入口（适配器绑定/新注入点），保留已稳定的前一里程碑代码。
-- 保持 `default` 配置可运行，不改策划数值与地图规则。
-- 所有回退都以“恢复回归全绿”为准，不做破坏性 git 操作。
+每批改动保持独立且可回滚，不使用破坏性 git 操作。若某批引发回归失败，回退该批新增改动并保留前一批已验证结果。
 
 ## 产物与备注
 
-实施完成后，至少应新增或更新以下产物：
-
-- 新/改接口定义与适配器（`TurnActionPort`、`ItemSlotData`、相关注入点）。
-- `GameplayLoop`/`TurnDispatch` 的拆分实现与对应测试。
-- `UIChoiceRoutePolicy` 新契约与兼容回退路径。
-- 启动层与 runtime context 解耦实现。
-- 覆盖上述结构变更的单测/集成测试。
-
-必要时记录每个里程碑的关键日志片段，用于证明“行为不变 + 结构改善”同时成立。
+- 变更文件：
+  - `.github/tests/suites/gameplay_loop.lua`
+  - `.github/tests/suites/presentation_ui_action_status.lua`
+  - `src/presentation/state/UIModelPanelBuilder.lua`
+  - `src/presentation/ui/PopupRenderer.lua`
+  - `.github/tests/TestSupport.lua`（仅回补误删，净效果为保持原行为）
+- 回归摘要：
+  - 清理前：`All regression checks passed (143)`
+  - 清理后：`All regression checks passed (149)`，并保持 `dep_rules ok`、`tick ok`
 
 ## 接口与依赖
 
-本计划实施后，核心接口目标如下（命名可微调，但语义必须保留）：
+本次清理优先复用已有抽象：`TurnActionPort`、`GameplayLoopPorts`、`UIRuntimePort`。不新增外部依赖，不引入新框架。若需要新增内部工具函数，必须放在现有模块边界内，避免再造并行层。
 
-- `TurnActionPort`
-  - `dispatch_action(game, state, action)`
-  - `should_block_action(action_type, state)`
+---
 
-- `ItemSlotData`
-  - `get_item_ids(actor_role_id)`
-  - `resolve_slot_action(actor_role_id, slot_index_or_id)`
-
-- `RuntimeContext.install_runtime_helpers(...)`
-  - 返回 `{ vehicle_helper, camera_helper, roles, ... }` 的 context 对象；全局写入路径仅用于兼容。
-
-- `UIChoiceRoutePolicy.resolve(choice, option, context)`
-  - 优先读取显式路由字段（例如 `route_key`），旧字段仅兼容。
-
-依赖保持现有 Lua 运行时和仓库测试体系，不引入新工具链。
-
-## 更新记录
-
-- 2026-02-21：将 `PLAN_CURRENT.md` 从“编辑器快速测试配置实施计划”切换为“核心链路解耦重构实施计划（P1 先行）”。原因：用户要求把审查得到的重构方案落为可执行计划，且 `ARCHITECTURE.md` 已更新，原计划不再匹配当前主任务。
-- 2026-02-21：更新为“里程碑 1 已完成”状态，补充端口化实现、`dep_rules` 约束范围调整与回归结果。原因：用户要求执行到里程碑 1，并需把实施证据写回活文档。
-- 2026-02-21：更新为“里程碑 2 已完成”状态，补充 `set_game` 职责拆分、`TurnDispatch` 最小上下文化、`ItemSlotData` 抽象与回归结果。原因：用户要求继续推进到里程碑 2。
-- 2026-02-21：更新为“里程碑 3 已完成”状态，补充 choice 路由元数据契约、策略兼容回退与测试结果。原因：用户要求提交并推进里程碑 3。
-- 2026-02-21：更新为“里程碑 4-5 已完成”状态，补充启动层/运行时解耦、新增测试、回归与部署脚本结果。原因：用户要求执行所有剩余计划。
+更新记录（2026-02-21 23:29Z）：新任务“代码库深度清理”已重建计划文件，替换上一任务的重构计划，避免上下文污染。
+更新记录（2026-02-21 23:40Z）：已补齐回归遗漏测试、完成 UI 去重清理并验证全绿；同时记录一次误删回补，修正“静态引用即未使用”的假设。
