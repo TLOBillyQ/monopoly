@@ -85,7 +85,7 @@ function runtime_port.set_node_texture_keep_size(node, image_key)
   node.image_texture = image_key
 end
 
-function runtime_port.set_node_texture_auto_size(node, image_key)
+function runtime_port.set_node_texture_native_size(node, image_key)
   assert(node ~= nil, "missing image node")
   assert(image_key ~= nil, "missing image key")
   if node.set_texture_native_size then

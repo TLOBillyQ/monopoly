@@ -110,7 +110,7 @@ local function _set_bankruptcy_avatar_image(state, payload)
   local refs = state and state.ui_refs or nil
   local empty_key = refs and refs["Empty"] or nil
   _apply_node_image(ui, screen.avatar, avatar_node, _resolve_bankruptcy_avatar_key(payload), empty_key, function(node, key)
-    runtime.set_node_texture_auto_size(node, key)
+    runtime.set_node_texture_native_size(node, key)
   end, true)
 end
 

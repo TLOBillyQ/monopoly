@@ -89,7 +89,7 @@ local function _set_player_avatar(ui, runtime, avatar_name, image_key)
     return
   end
   local avatar_node = ui.query_node and ui.query_node(avatar_name) or runtime.query_node(avatar_name)
-  runtime.set_node_texture_auto_size(avatar_node, image_key)
+  runtime.set_node_texture_keep_size(avatar_node, image_key)
 end
 
 local function _apply_player_colors(role, runtime, player, index)

@@ -234,6 +234,47 @@ local function _test_runtime_port_with_client_role_restores_nested_context()
   end)
 end
 
+local function _test_runtime_port_native_size_prefers_native_method()
+  local native_calls = 0
+  local keep_calls = 0
+  local node = {
+    set_texture_native_size = function(_, image_key)
+      native_calls = native_calls + 1
+      _assert_eq(image_key, "IMG_NATIVE", "native path should forward image key")
+    end,
+    set_texture_keep_size = function()
+      keep_calls = keep_calls + 1
+    end,
+  }
+
+  runtime_port.set_node_texture_native_size(node, "IMG_NATIVE")
+
+  _assert_eq(native_calls, 1, "native path should prefer set_texture_native_size")
+  _assert_eq(keep_calls, 0, "native path should not fallback to keep-size when native exists")
+end
+
+local function _test_runtime_port_native_size_fallback_keep_size()
+  local keep_calls = 0
+  local node = {
+    set_texture_keep_size = function(_, image_key)
+      keep_calls = keep_calls + 1
+      _assert_eq(image_key, "IMG_KEEP", "keep-size fallback should forward image key")
+    end,
+  }
+
+  runtime_port.set_node_texture_native_size(node, "IMG_KEEP")
+
+  _assert_eq(keep_calls, 1, "native path should fallback to keep-size when native is missing")
+end
+
+local function _test_runtime_port_native_size_fallback_image_texture()
+  local node = {}
+
+  runtime_port.set_node_texture_native_size(node, "IMG_TEXTURE")
+
+  _assert_eq(node.image_texture, "IMG_TEXTURE", "native path should fallback to image_texture field")
+end
+
 local function _test_choice_timeout_supports_explicit_timeout_strategy()
   local game = {
     players = { [1] = { id = 1 } },
@@ -1545,6 +1586,34 @@ local function _test_bankruptcy_popup_visible_for_all_roles()
   assert(_has_event(role2_events, "显示破产展示屏"), "non-current role should see bankruptcy canvas")
 end
 
+local function _test_bankruptcy_popup_avatar_uses_native_size_path()
+  local native_calls = 0
+  local avatar_image_key = nil
+  local state, _, query_nodes = _build_popup_view_state({
+    ["Empty"] = "EMPTY",
+  }, {
+    set_texture_keep_size = function() end,
+  })
+
+  _with_patches({
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = nil },
+    { target = runtime_port, key = "set_node_texture_native_size", value = function(_, image_key)
+      native_calls = native_calls + 1
+      avatar_image_key = image_key
+    end },
+  }, function()
+    ui_view.push_popup(state, {
+      kind = "bankruptcy",
+      text = "破产测试",
+      avatar_key = 2002,
+    })
+  end)
+
+  _assert_eq(native_calls, 1, "bankruptcy popup avatar should use native-size path")
+  _assert_eq(avatar_image_key, 2002, "bankruptcy popup avatar should forward payload image key")
+end
+
 local function _test_popup_timeout_closes_even_when_input_blocked()
   local state, nodes, query_nodes = _build_popup_view_state({
     ["Empty"] = "EMPTY",
@@ -2779,10 +2848,70 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
   assert(follow_events >= 1, "turn switch should trigger follow event")
 end
 
+local function _test_panel_avatar_uses_keep_size_path()
+  local presenter = require("src.presentation.ui.UIPanelPresenter")
+  local keep_size_calls = 0
+  local state = {
+    ui_refs = { ["Empty"] = "EMPTY_AVATAR" },
+    ui = {
+      item_slots = {},
+      base_hidden_nodes = {},
+      base_hidden_labels = {},
+      auto_control_nodes = { "托管按钮", "托管_文本" },
+      item_slot_item_ids_by_role = {},
+      set_label = function() end,
+      set_visible = function() end,
+      set_touch_enabled = function() end,
+      query_node = function()
+        return {}
+      end,
+    },
+  }
+  local ui_model = {
+    current_player_id = 1,
+    auto_enabled_by_player = { [1] = false },
+    board = { players = {} },
+    item_slots_by_player = {},
+    panel = {
+      turn_label = "倒计时:0",
+      auto_label = "自动：关",
+      auto_label_by_player = { [1] = "自动：关" },
+      no_action_visible = false,
+      no_action_text = "",
+      player_rows = {
+        { name = "P1", avatar = "A1", cash = "", land_count = "", total_assets = "" },
+        { name = "P2", avatar = nil, cash = "", land_count = "", total_assets = "" },
+        { name = "P3", avatar = nil, cash = "", land_count = "", total_assets = "" },
+        { name = "P4", avatar = nil, cash = "", land_count = "", total_assets = "" },
+      },
+    },
+  }
+  local runtime = {
+    set_client_role = function() end,
+    resolve_role_id = function() return nil end,
+    for_each_role_or_global = function(fn)
+      fn(nil)
+    end,
+    set_node_texture_keep_size = function()
+      keep_size_calls = keep_size_calls + 1
+    end,
+  }
+
+  presenter.refresh(state, ui_model, {
+    runtime = runtime,
+    refresh_item_slots = function() end,
+  })
+
+  _assert_eq(keep_size_calls, 4, "panel avatar should use keep-size path")
+end
+
 return {
   _test_move_anim_callback_and_delay,
   _test_popup_timeout_auto_confirm,
   _test_runtime_port_with_client_role_restores_nested_context,
+  _test_runtime_port_native_size_prefers_native_method,
+  _test_runtime_port_native_size_fallback_keep_size,
+  _test_runtime_port_native_size_fallback_image_texture,
   _test_choice_timeout_supports_explicit_timeout_strategy,
   _test_tick_timeout_default_policy_isolation,
   _test_invalid_choice_option_rejected,
@@ -2822,6 +2951,7 @@ return {
   _test_popup_hidden_for_non_current_role,
   _test_popup_visible_for_all_roles_when_allowed_kind,
   _test_bankruptcy_popup_visible_for_all_roles,
+  _test_bankruptcy_popup_avatar_uses_native_size_path,
   _test_popup_timeout_closes_even_when_input_blocked,
   _test_choice_modal_routes_to_new_screens,
   _test_choice_route_policy_prefers_explicit_route_metadata,
@@ -2841,4 +2971,5 @@ return {
   _test_turn_effects_prompt_visibility_follows_phase_and_role,
   _test_turn_effects_other_prompt_fallback_text,
   _test_tick_ui_sync_turn_switch_still_follows,
+  _test_panel_avatar_uses_keep_size_path,
 }

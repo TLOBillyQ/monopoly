@@ -2,6 +2,9 @@ local names = {
   "_test_move_anim_callback_and_delay",
   "_test_popup_timeout_auto_confirm",
   "_test_runtime_port_with_client_role_restores_nested_context",
+  "_test_runtime_port_native_size_prefers_native_method",
+  "_test_runtime_port_native_size_fallback_keep_size",
+  "_test_runtime_port_native_size_fallback_image_texture",
   "_test_choice_timeout_supports_explicit_timeout_strategy",
   "_test_tick_timeout_default_policy_isolation",
   "_test_invalid_choice_option_rejected",
@@ -41,8 +44,10 @@ local names = {
   "_test_popup_hidden_for_non_current_role",
   "_test_popup_visible_for_all_roles_when_allowed_kind",
   "_test_bankruptcy_popup_visible_for_all_roles",
+  "_test_bankruptcy_popup_avatar_uses_native_size_path",
   "_test_popup_timeout_closes_even_when_input_blocked",
   "_test_choice_modal_routes_to_new_screens",
+  "_test_choice_route_policy_prefers_explicit_route_metadata",
   "_test_ui_event_router_player_target_click_direct_submit",
   "_test_ui_event_router_action_log_toggle_uses_role_context",
   "_test_market_selection_updates_icon_without_resize",
@@ -59,6 +64,7 @@ local names = {
   "_test_turn_effects_prompt_visibility_follows_phase_and_role",
   "_test_turn_effects_other_prompt_fallback_text",
   "_test_tick_ui_sync_turn_switch_still_follows",
+  "_test_panel_avatar_uses_keep_size_path",
 }
 
 local function slice(suite_name, first_index, last_index)
