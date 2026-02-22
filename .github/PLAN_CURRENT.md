@@ -1,135 +1,134 @@
-# 代码库深度清理实施计划
+# 基础屏交互异常修复计划（头像/日志按钮/托管/移动输入锁）
 
-本可执行计划是活文档。实施过程中必须持续维护“进度”“意外与发现”“决策日志”“结果与复盘”四个章节。本文件遵循 `/Users/billyq/Dev/Github/Lua/monopoly/.github/PLANS.md`。
+本可执行计划是活文档。实施过程中必须持续维护“进度”“意外与发现”“决策日志”“结果与复盘”四个章节。本文件遵循 `.github/PLANS.md`。
 
 ## 目的 / 全局视角
 
-本次深度清理的目标是：在不改变玩法与 UI 行为的前提下，减少代码噪音和维护成本，删除明确无用代码，收敛重复实现，统一低层工具的调用路径。完成后，开发者能更快定位核心逻辑，新增功能时需要改动的文件更少，回归成本更可控。
-
-可见验收方式是：`regression` 全绿，核心交互测试全绿，且仓库中高置信无用项数量显著下降（有证据链与改动清单）。
+本次修复目标是恢复基础屏四项核心交互稳定性：头像显示不变形、行动日志按钮可稳定开关调试屏、托管按钮可随时开关、其他玩家移动时主控玩家不能输入移动。完成后可通过回归测试和实机交互复验直接观察到行为恢复。
 
 ## 进度
 
-- [x] (2026-02-21 23:28Z) 读取并确认计划规范与仓库约束（`PLANS.md` / `CODING.md` / `THIS.md`）。
-- [x] (2026-02-21 23:29Z) 清空并重建当前计划文件，切换到“代码库深度清理”任务。
-- [x] (2026-02-21 23:31Z) 基线验证完成：`lua .github/tests/regression.lua` 通过（`143`）。
-- [x] (2026-02-21 23:34Z) 全库审计完成：识别出“回归漏跑测试”“UI 图片渲染重复逻辑”“无效分支条件”等高置信清理点。
-- [x] (2026-02-21 23:38Z) 实施第一批低风险清理：补齐 `gameplay_loop` 与 `presentation_ui_action_status` 的 slice 覆盖，删除 `UIModelPanelBuilder` 的无效条件分支。
-- [x] (2026-02-21 23:39Z) 实施第二批结构清理：`PopupRenderer` 提取节点贴图回退公共逻辑，收敛重复实现。
-- [x] (2026-02-21 23:40Z) 最终验证完成：`lua .github/tests/regression.lua` 通过（`149`），`dep_rules ok`、`tick ok`。
-- [x] (2026-02-21 15:40Z) 后续清理（选项 1）：移除 `ChoiceScreenService` 纯转发层，`UIModalPresenter` 直接依赖 `choice_screen_service/openers` 与 `common`，回归保持 `149` 全绿。
-- [x] (2026-02-21 15:43Z) 后续清理（继续）：`TurnMove` 提取续跑参数构造函数，`TurnDispatchValidator` 与 `TurnChoiceHandler` 复用 choice-id 校验逻辑；回归保持 `149` 全绿。
+- [x] (2026-02-21 16:09Z) 完成故障链路排查，确认四项问题的入口与受影响模块。
+- [x] (2026-02-21 16:09Z) 清空并重建 `PLAN_CURRENT.md` 为本任务计划。
+- [x] (2026-02-21 16:12Z) 实施头像渲染修复（固定控件尺寸贴图路径）。
+- [x] (2026-02-21 16:12Z) 实施调试屏开关修复（按角色状态同步，避免被全局默认覆盖）。
+- [x] (2026-02-21 16:12Z) 实施托管按钮兜底修复（缺失事件角色时可回退到当前客户端角色）。
+- [x] (2026-02-21 16:12Z) 实施移动期输入锁修复（仅移动者临时放行，其他角色保持禁止控制）。
+- [x] (2026-02-21 16:13Z) 补充回归测试（新增 5 条）并执行 `lua .github/tests/regression.lua`。
+- [x] (2026-02-21 16:13Z) 更新结果与复盘，补齐最终验证证据。
+- [x] (2026-02-22 02:36Z) 头像二次修复：新增 `reset_then_keep_size` 贴图路径，修复基础屏头像持续拉伸。
+- [x] (2026-02-22 02:36Z) 头像二次修复：补齐头像源失败告警与 `Empty` 缺失降级隐藏逻辑，避免串头像残留。
+- [x] (2026-02-22 02:36Z) 回归验证通过：`lua .github/tests/regression.lua` -> `All regression checks passed (156)`。
 
 ## 意外与发现
 
-- 观察：`gameplay_loop` 与 `presentation_ui_action_status` 的 slice 上限偏小，导致已定义测试未进入回归。
-  证据：基线 `regression` 为 `143`；修正 slice 后为 `149`。
+- 观察：行动日志按钮点击事件已正确绑定并会派发 `toggle_action_log`，失效根因在后续 `DebugPorts.sync_debug_log` 以无角色上下文读取默认配置，覆盖了角色开关状态。
+  证据：`src/presentation/interaction/UIIntentDispatcher.lua` + `src/presentation/api/ports/DebugPorts.lua`。
 
-- 观察：静态“未引用”判断会漏掉测试运行时的间接依赖。
-  证据：删除 `TestSupport.first_adjacent_land_pair` 后，`land` 套件报错 `attempt to call a nil value`；已回补并恢复全绿。
+- 观察：头像渲染当前使用 `set_texture_native_size` 优先路径，和道具槽位的 keep-size 路径不一致，容易引起控件尺寸被贴图原尺寸影响。
+  证据：`src/presentation/ui/UIPanelPresenter.lua` + `src/presentation/api/UIRuntimePort.lua`。
+
+- 观察：`UIEventRouter` 在点击回调未携带 `data.role` 且 `UIManager.client_role=nil` 时，会丢失 `actor_role_id`，导致托管开关动作被 `TurnDispatch` 拒绝。
+  证据：`src/presentation/interaction/UIEventRouter.lua` + `src/game/flow/turn/TurnDispatch.lua`。
+
+- 观察：即使改成 keep-size，若历史上该 `EImage` 被 auto-resize 过，节点尺寸可能已污染；只换贴图不 reset 会延续拉伸结果。
+  证据：`vendor/third_party/UIManager/EImage.lua`（`set_texture_native_size`/`reset_size` 语义）+ 实机复现。
+
+- 观察：当 `refs[\"Empty\"]` 缺失且头像 key 无效时，旧逻辑会跳过写入，导致头像节点残留上一次贴图，看起来像“串头像”。
+  证据：`src/presentation/ui/UIPanelPresenter.lua` 旧 `_set_player_avatar` 早退分支。
 
 ## 决策日志
 
-- 决策：先做“证据驱动”的清理，不做主观式大改。
-  理由：深度清理最怕误删，先建立引用证据和测试护栏可控性最高。
+- 决策：调试屏开关继续保持“按角色隔离”语义，不改为全局联动。
+  理由：现有状态结构已按角色存储，且多角色并行 UI 环境下更安全。
   日期/作者：2026-02-21 / Codex。
 
-- 决策：分两批实施，第一批仅低风险删除和去重，第二批再做小范围结构重排。
-  理由：将风险前置隔离，保证每批都能独立回归验证。
+- 决策：移动锁采用“仅放行当前移动角色，其余角色保持禁止控制 Buff”。
+  理由：满足主控防误操作，同时不阻断移动中角色自身动画驱动。
   日期/作者：2026-02-21 / Codex。
 
-- 决策：保留 `TestSupport.first_adjacent_land_pair`，不再作为“僵尸 helper”清理对象。
-  理由：实测被 `land` 套件间接使用，删除会破坏回归稳定性。
-  日期/作者：2026-02-21 / Codex。
-
-- 决策：删除 `ChoiceScreenService` 包装层并把唯一业务逻辑内聚到 `UIModalPresenter`。
-  理由：该模块多数函数仅转发，增加无效跳转；改为直接依赖 `openers/common` 可降低维护路径长度且不改行为。
-  日期/作者：2026-02-21 / Codex。
-
-- 决策：将 choice-id 不匹配日志与判定收敛到 `TurnDispatchValidator.validate_choice_id`，`TurnChoiceHandler` 直接复用。
-  理由：减少重复判定代码，避免两处日志与行为漂移。
+- 决策：托管按钮在缺失 `data.role` 时，先回退 `UIManager.client_role`，并缓存上次有效角色作最后兜底。
+  理由：兼容 UI 事件上下文不稳定场景，避免“按钮按了无响应”。
   日期/作者：2026-02-21 / Codex。
 
 ## 结果与复盘
 
-本轮深度清理已完成并通过回归。主要成果有三类：第一，修复测试覆盖盲区，`regression` 用例数从 `143` 提升到 `149`；第二，去掉了 `UIModelPanelBuilder` 中不可达条件（`flags.turn`）；第三，合并了 `PopupRenderer` 内重复的节点贴图回退逻辑，减少未来维护分叉风险。
+本轮四项问题已全部实现并通过回归。实现方式保持最小侵入：头像仅切换贴图路径；调试日志同步改成按角色维度；托管按钮补上 actor 兜底；移动动画锁从全局 suppress 切换成“按角色豁免”。
 
-按后续指令已追加一轮包装层清理：删除 `ChoiceScreenService`，并将 `select_choice_option` 的 building 标题刷新逻辑迁入 `UIModalPresenter`。回归结果保持不变。
+自动化验证结果：
 
-继续清理阶段又完成两项：`TurnMove` 的 move/interrupt 续跑参数改为统一 helper 构造；`choice_select/cancel` 的 choice-id 校验收敛为单一实现并在两个调用点复用。结果仍保持回归全绿。
+- `lua .github/tests/regression.lua` 通过，`All regression checks passed (154)`。
+- 新增 5 条 UI 回归用例，覆盖头像 keep-size、调试角色状态同步、托管 actor 兜底、动画锁豁免、角色控制锁豁免。
 
-回顾中最重要的教训是：对“测试工具是否未使用”的判断必须以回归执行结果二次确认，不能只依赖静态引用搜索。该问题已通过“误删即回补 + 回归复测”的方式闭环。
+本次经验：表现层“按角色状态”逻辑不能在无角色上下文下做全局覆盖；动画锁策略应优先建模为“角色集合”，避免布尔开关导致全局误放行。
+
+头像二次修复后，关键经验是：头像节点更新需要“先 reset 再 keep-size”来消除历史尺寸污染；同时当空头像资源缺失时必须显式隐藏节点，不能静默跳过写入，否则会保留旧贴图产生错头像错觉。
 
 ## 背景与导读
 
-本仓库是 Lua 项目，运行链路入口为 `main.lua` 与 `src/app/init.lua`，核心玩法在 `src/game`，表现层在 `src/presentation`，配置与生成数据在 `Config` 与 `Data`。已有测试入口为 `/Users/billyq/Dev/Github/Lua/monopoly/.github/tests/regression.lua`。
+本任务集中在表现层与回合同步层。
 
-本次清理只处理“行为不变”的内容：无引用代码、重复逻辑、过时封装、冗余中间层、测试中的重复样板。禁止修改策划数值、地图规则和 UI 交互语义。
+- 头像渲染：`src/presentation/ui/UIPanelPresenter.lua`，通过 `UIRuntimePort` 给玩家头像节点设置贴图。
+- 行动日志按钮与调试屏：`src/presentation/interaction/UIIntentDispatcher.lua`、`src/presentation/interaction/UIEventState.lua`、`src/presentation/api/ports/DebugPorts.lua`。
+- 托管按钮动作分发：`src/presentation/interaction/UIEventRouter.lua` -> `src/game/flow/turn/TurnDispatch.lua`。
+- 移动期输入锁与角色控制锁：`src/presentation/api/ports/AnimPorts.lua`、`src/presentation/interaction/UIRoleControlLockPolicy.lua`、`src/game/flow/turn/GameplayLoopRuntime.lua`。
+- 测试入口：`.github/tests/regression.lua`，UI 相关主套件在 `.github/tests/suites/presentation_ui.lua`。
 
 ## 工作计划
 
-先执行基线回归，确保当前分支健康。然后做静态审计，建立“候选清理项 -> 证据 -> 风险”的列表。实施时按风险从低到高推进：先删明确无引用项，再合并重复代码，最后做小范围函数职责收敛。每一批改动结束都跑回归，确保行为不变。
+先改最小行为面：头像贴图路径与托管角色兜底。随后处理调试状态同步策略，确保点击后不会被 tick 覆盖。最后重构移动锁为角色豁免模型，避免全局解锁导致主控在他人移动中可输入。所有改动后补测试并跑全量回归。
 
 ## 具体步骤
 
-1. 基线回归：
-
-    cd /Users/billyq/Dev/Github/Lua/monopoly
-    lua .github/tests/regression.lua
-
-2. 全库审计（引用关系与重复逻辑）：
-
-    cd /Users/billyq/Dev/Github/Lua/monopoly
-    rg "require\(" src Config .github/tests
-
-    cd /Users/billyq/Dev/Github/Lua/monopoly
-    rg "TODO|deprecated|legacy|unused|兼容" src .github/tests
-
-3. 实施低风险清理后回归：
-
-    cd /Users/billyq/Dev/Github/Lua/monopoly
-    lua .github/tests/regression.lua
-
-4. 实施结构清理后回归：
+1. 修改 `UIPanelPresenter` 的头像贴图调用，从 auto-size 路径改为 keep-size。
+2. 在 `UIEventState` 增加按角色解析函数，并在 `DebugPorts.sync_debug_log` 按角色同步可见性与日志文本。
+3. 在 `UIEventRouter` 增强 `actor_role_id` 解析兜底，记录 `last_actor_role_id`。
+4. 在 `AnimPorts` 和 `UIRoleControlLockPolicy` 引入按角色豁免锁策略，并在 `GameplayLoopRuntime` 去除旧的全局 suppress 逻辑依赖。
+5. 在 `presentation_ui` 套件新增/调整对应测试。
+6. 运行：
 
     cd /Users/billyq/Dev/Github/Lua/monopoly
     lua .github/tests/regression.lua
 
 ## 验证与验收
 
-验收通过需同时满足：
-
-1. `regression.lua` 全通过。
-2. 无新增跨层违规依赖（以现有 `dep_rules` 为准）。
-3. 清理项都有“删除/合并理由 + 引用证据 + 风险说明”。
-4. 用户可见行为不变（choice、行动分发、UI 交互路径不变）。
+- 回归要求：`lua .github/tests/regression.lua` 全绿。
+- 行为验收：
+  - 头像使用固定控件尺寸显示。
+  - 行动日志按钮每次点击都能稳定切换调试屏显示状态。
+  - 托管按钮可在输入锁与动画阶段正常开关。
+  - 他人移动期间主控无法输入移动。
 
 ## 可重复性与恢复
 
-每批改动保持独立且可回滚，不使用破坏性 git 操作。若某批引发回归失败，回退该批新增改动并保留前一批已验证结果。
+本计划修改均为局部逻辑替换与测试补充，不涉及数据迁移。若某一步失败，可按文件级回退该步骤改动并重跑回归。
 
 ## 产物与备注
 
-- 变更文件：
-  - `.github/tests/suites/gameplay_loop.lua`
-  - `.github/tests/suites/presentation_ui_action_status.lua`
-  - `src/presentation/state/UIModelPanelBuilder.lua`
-  - `src/presentation/ui/PopupRenderer.lua`
-  - `src/presentation/ui/UIModalPresenter.lua`
-  - `src/presentation/ui/ChoiceScreenService.lua`（已删除）
-  - `src/game/flow/turn/TurnMove.lua`
-  - `src/game/flow/turn/TurnDispatchValidator.lua`
-  - `src/game/flow/turn/TurnChoiceHandler.lua`
-  - `.github/tests/TestSupport.lua`（仅回补误删，净效果为保持原行为）
-- 回归摘要：
-  - 清理前：`All regression checks passed (143)`
-  - 清理后：`All regression checks passed (149)`，并保持 `dep_rules ok`、`tick ok`
+变更文件：
+
+- `.github/PLAN_CURRENT.md`
+- `src/presentation/ui/UIPanelPresenter.lua`
+- `src/presentation/interaction/UIEventState.lua`
+- `src/presentation/api/ports/DebugPorts.lua`
+- `src/presentation/interaction/UIEventRouter.lua`
+- `src/presentation/interaction/UIRoleControlLockPolicy.lua`
+- `src/presentation/api/ports/AnimPorts.lua`
+- `src/game/flow/turn/GameplayLoopRuntime.lua`
+- `src/presentation/api/ui_view_service/state.lua`
+- `src/presentation/api/UIRuntimePort.lua`
+- `src/presentation/ui/UIPanel.lua`
+- `.github/tests/suites/presentation_ui.lua`
+- `.github/tests/suites/presentation_ui_registry.lua`
+- `.github/tests/suites/presentation_ui_action_status.lua`
+
+关键输出摘要：
+
+    ............................................................................................................................................................
+    All regression checks passed (156)
+    dep_rules ok
+    tick ok
 
 ## 接口与依赖
 
-本次清理优先复用已有抽象：`TurnActionPort`、`GameplayLoopPorts`、`UIRuntimePort`。不新增外部依赖，不引入新框架。若需要新增内部工具函数，必须放在现有模块边界内，避免再造并行层。
-
----
-
-更新记录（2026-02-21 23:29Z）：新任务“代码库深度清理”已重建计划文件，替换上一任务的重构计划，避免上下文污染。
-更新记录（2026-02-21 23:40Z）：已补齐回归遗漏测试、完成 UI 去重清理并验证全绿；同时记录一次误删回补，修正“静态引用即未使用”的假设。
+不新增外部依赖，仅调整现有模块内接口与调用关系；对外玩法协议不变。

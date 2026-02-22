@@ -81,6 +81,7 @@ function lock_policy.sync(state, enabled, deps)
   assert(deps ~= nil and deps.runtime ~= nil, "missing deps.runtime")
   local runtime = deps.runtime
   local lock_state = _resolve_lock_state(state)
+  local exempt_by_role = state.role_control_lock_exempt_by_role or {}
   local buff_id = Enums and Enums.BuffState and Enums.BuffState.BUFF_FORBID_CONTROL or nil
   if not buff_id then
     _warn_once(lock_state, "missing_buff_enum", "missing Enums.BuffState.BUFF_FORBID_CONTROL")
@@ -102,6 +103,10 @@ function lock_policy.sync(state, enabled, deps)
     seen_roles[role_id] = true
 
     local unit = role.get_ctrl_unit and role.get_ctrl_unit() or nil
+    if exempt_by_role[role_id] == true then
+      _sync_role_lock(lock_state, role_id, nil, buff_id)
+      return
+    end
     if not unit then
       _sync_role_lock(lock_state, role_id, nil, buff_id)
       return

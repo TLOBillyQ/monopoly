@@ -20,6 +20,8 @@ function M.build_ui_state()
     auto_interval = 0.1,
     input_blocked = false,
     role_control_lock = { by_role = {}, warn_once = {} },
+    role_control_lock_exempt_by_role = {},
+    role_control_lock_exempt_count_by_role = {},
     debug_visible = false,
     debug_visible_by_role = {},
     debug_log_enabled_override = nil,

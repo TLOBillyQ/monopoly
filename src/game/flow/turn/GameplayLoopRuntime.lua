@@ -54,12 +54,7 @@ function runtime.sync_role_control_lock(game, state, ports)
   end
   local enabled = _resolve_role_control_lock_enabled(game)
   if enabled then
-    local suppress = state.role_control_lock_suppress or 0
-    if suppress > 0 then
-      state_ports.apply_role_control_lock(state, false)
-    else
-      state_ports.apply_role_control_lock(state, true)
-    end
+    state_ports.apply_role_control_lock(state, true)
     state.role_control_lock_active = true
     return
   end

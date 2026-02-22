@@ -17,17 +17,41 @@ local function _apply_role_control_lock(state, enabled)
   ui_view.apply_role_control_lock(state, enabled)
 end
 
-local function _apply_role_control_lock_suppress(state, enabled, lock_fn)
-  if state.role_control_lock_suppress == nil then
-    state.role_control_lock_suppress = 0
+local function _update_role_control_lock_exempt(state, enabled, meta, lock_fn)
+  local role_id = meta and meta.player_id or nil
+  if role_id == nil then
+    lock_fn(state, state.role_control_lock_active == true)
+    return
   end
+
+  local counts = state.role_control_lock_exempt_count_by_role
+  if type(counts) ~= "table" then
+    counts = {}
+    state.role_control_lock_exempt_count_by_role = counts
+  end
+
+  local exempt_by_role = state.role_control_lock_exempt_by_role
+  if type(exempt_by_role) ~= "table" then
+    exempt_by_role = {}
+    state.role_control_lock_exempt_by_role = exempt_by_role
+  end
+
+  local current = counts[role_id] or 0
   if enabled == true then
-    state.role_control_lock_suppress = math.max(0, state.role_control_lock_suppress - 1)
+    current = math.max(0, current - 1)
   else
-    state.role_control_lock_suppress = state.role_control_lock_suppress + 1
+    current = current + 1
   end
-  local should_lock = state.role_control_lock_suppress == 0
-  lock_fn(state, should_lock)
+
+  if current <= 0 then
+    counts[role_id] = nil
+    exempt_by_role[role_id] = nil
+  else
+    counts[role_id] = current
+    exempt_by_role[role_id] = true
+  end
+
+  lock_fn(state, state.role_control_lock_active == true)
 end
 
 function M.build()
@@ -39,7 +63,7 @@ function M.build()
           if prev then
             prev(enabled, step_time, meta)
           end
-          _apply_role_control_lock_suppress(state, enabled, _apply_role_control_lock)
+          _update_role_control_lock_exempt(state, enabled, meta, _apply_role_control_lock)
         end
       end
       return move_anim.play_sequence(state.board_scene, anim_ctx)
