@@ -28,6 +28,7 @@ local turn_effects = require("src.presentation.ui.UITurnEffects")
 local role_control_lock_policy = require("src.presentation.interaction.UIRoleControlLockPolicy")
 local ui_touch_policy = require("src.presentation.interaction.UITouchPolicy")
 local ui_choice_route_policy = require("src.presentation.interaction.UIChoiceRoutePolicy")
+local logger = require("src.core.Logger")
 local market_cfg = require("Config.Generated.Market")
 local runtime_constants = require("Config.RuntimeConstants")
 local gameplay_rules = require("Config.GameplayRules")
@@ -1120,6 +1121,238 @@ local function _test_ui_intent_dispatcher_toggle_action_log_uses_actor_role_cont
   _assert_eq(visible_calls[2], false, "second toggle_action_log should disable action_log")
 end
 
+local function _test_ui_intent_dispatcher_toggle_action_log_ignores_block_without_game()
+  local visible_calls = {}
+  local dispatch_calls = 0
+  local state = {
+    ui = ui_view.build_ui_state(),
+    turn_action_port = {
+      dispatch_action = function()
+        dispatch_calls = dispatch_calls + 1
+      end,
+      should_block_action = function()
+        return true
+      end,
+    },
+  }
+  local role = {
+    get_roleid = function()
+      return 101
+    end,
+  }
+
+  _with_patches({
+    { key = "all_roles", value = { role } },
+    { key = "UIManager", value = {
+      client_role = nil,
+      query_nodes_by_name = function()
+        return { { visible = false } }
+      end,
+    } },
+    { target = gameplay_rules, key = "debug_log_enabled", value = false },
+    { target = ui_view, key = "set_debug_visible", value = function(ctx, visible)
+      visible_calls[#visible_calls + 1] = visible
+      ctx.ui.debug_visible = visible == true
+      local active = UIManager and UIManager.client_role or nil
+      if active and active.get_roleid then
+        local role_id = active.get_roleid()
+        ctx.ui.debug_visible_by_role[role_id] = visible == true
+      end
+    end },
+  }, function()
+    ui_intent_dispatcher.dispatch(state, nil, {
+      type = "toggle_action_log",
+      actor_role_id = 101,
+    }, {})
+  end)
+
+  _assert_eq(dispatch_calls, 0, "toggle_action_log should not dispatch gameplay action")
+  _assert_eq(state.ui.debug_visible_by_role[101], true, "toggle_action_log should bypass block without game")
+  _assert_eq(visible_calls[1], true, "toggle_action_log should still toggle visible state")
+end
+
+local function _test_ui_intent_dispatcher_toggle_action_log_resolves_role_via_game_api()
+  local events = {}
+  local state = {
+    ui = ui_view.build_ui_state(),
+  }
+  local game = {}
+  local role = _build_role_with_events(101, events)
+
+  _with_patches({
+    { key = "all_roles", value = nil },
+    { key = "GameAPI", value = {
+      get_role = function(role_id)
+        if role_id == 101 then
+          return role
+        end
+        return nil
+      end,
+    } },
+    { key = "UIManager", value = {
+      client_role = nil,
+      query_nodes_by_name = function()
+        return { { visible = false } }
+      end,
+    } },
+    { target = gameplay_rules, key = "debug_log_enabled", value = false },
+  }, function()
+    ui_intent_dispatcher.dispatch(state, game, {
+      type = "toggle_action_log",
+      actor_role_id = 101,
+    }, {})
+  end)
+
+  assert(_has_event(events, "显示调试屏"), "toggle_action_log should send 显示调试屏 via GameAPI role fallback")
+  _assert_eq(state.ui.debug_visible_by_role[101], true, "toggle_action_log should enable role debug state")
+end
+
+local function _test_ui_intent_dispatcher_toggle_action_log_warns_when_role_event_channel_missing()
+  local warn_count = 0
+  local state = {
+    ui = ui_view.build_ui_state(),
+  }
+  local game = {}
+  local ok = false
+
+  _with_patches({
+    { key = "all_roles", value = nil },
+    { key = "GameAPI", value = {} },
+    { key = "UIManager", value = {
+      client_role = nil,
+      query_nodes_by_name = function()
+        return { { visible = false } }
+      end,
+    } },
+    { target = gameplay_rules, key = "debug_log_enabled", value = false },
+    { target = logger, key = "warn", value = function(...)
+      if tostring((...)) == "toggle_action_log missing role event channel:" then
+        warn_count = warn_count + 1
+      end
+    end },
+  }, function()
+    ok = pcall(function()
+      ui_intent_dispatcher.dispatch(state, game, {
+        type = "toggle_action_log",
+        actor_role_id = 101,
+      }, {})
+    end)
+  end)
+
+  assert(ok == true, "toggle_action_log should not crash when role event channel is missing")
+  _assert_eq(state.ui.debug_visible_by_role[101], true, "toggle_action_log should still toggle debug state")
+  _assert_eq(warn_count, 1, "toggle_action_log should warn once when role cannot send ui event")
+end
+
+local function _test_ui_intent_dispatcher_auto_button_forces_local_role_id()
+  local captured = nil
+  local state = {
+    turn_action_port = {
+      dispatch_action = function(_, _, action)
+        captured = action
+      end,
+      should_block_action = function()
+        return false
+      end,
+    },
+    ui = {
+      input_blocked = false,
+      item_slot_item_ids = {},
+      item_slot_item_ids_by_role = {},
+    },
+  }
+  local game = {}
+  local local_role = {
+    get_roleid = function()
+      return 1
+    end,
+  }
+
+  _with_patches({
+    { key = "UIManager", value = { client_role = local_role } },
+  }, function()
+    ui_intent_dispatcher.dispatch(state, game, {
+      type = "ui_button",
+      id = "auto",
+      actor_role_id = 2,
+    }, {})
+  end)
+
+  _assert_eq(captured and captured.actor_role_id, 1, "auto dispatch should force local role id")
+end
+
+local function _test_ui_intent_dispatcher_auto_button_ignores_missing_local_role()
+  local captured = nil
+  local state = {
+    turn_action_port = {
+      dispatch_action = function(_, _, action)
+        captured = action
+      end,
+      should_block_action = function()
+        return false
+      end,
+    },
+    ui = {
+      input_blocked = false,
+      item_slot_item_ids = {},
+      item_slot_item_ids_by_role = {},
+    },
+  }
+  local game = {}
+
+  _with_patches({
+    { key = "UIManager", value = { client_role = nil } },
+  }, function()
+    ui_intent_dispatcher.dispatch(state, game, {
+      type = "ui_button",
+      id = "auto",
+      actor_role_id = 2,
+    }, {})
+  end)
+
+  _assert_eq(captured, nil, "auto dispatch should be ignored when local role missing")
+end
+
+local function _test_ui_intent_dispatcher_auto_button_toggles_local_role_during_other_turn()
+  local g = _new_game()
+  g.turn.current_player_index = 1
+  local state = {
+    turn_action_port = {
+      dispatch_action = function(game, state_ctx, action, opts)
+        return turn_dispatch.dispatch_action(game, state_ctx, action, opts)
+      end,
+      should_block_action = function()
+        return false
+      end,
+    },
+    ui = {
+      input_blocked = false,
+      item_slot_item_ids = {},
+      item_slot_item_ids_by_role = {},
+    },
+  }
+  local local_role = {
+    get_roleid = function()
+      return 2
+    end,
+  }
+  local before_1 = g.players[1].auto
+  local before_2 = g.players[2].auto
+
+  _with_patches({
+    { key = "UIManager", value = { client_role = local_role } },
+  }, function()
+    ui_intent_dispatcher.dispatch(state, g, {
+      type = "ui_button",
+      id = "auto",
+      actor_role_id = 1,
+    }, {})
+  end)
+
+  _assert_eq(g.players[1].auto, before_1, "other-turn auto click should not change current player auto")
+  _assert_eq(g.players[2].auto, not before_2, "other-turn auto click should toggle local role auto")
+end
+
 local function _test_ui_view_render_by_role_slots_are_isolated()
   local main_view = require("src.presentation.api.UIViewService")
 
@@ -1240,7 +1473,7 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
 
   _with_patches({
     { key = "all_roles", value = roles },
-    { key = "UIManager", value = { client_role = nil, query_nodes_by_name = query_nodes_by_name } },
+    { key = "UIManager", value = { client_role = roles[1], query_nodes_by_name = query_nodes_by_name } },
   }, function()
     main_view.refresh_panel(state, ui_model)
   end)
@@ -1252,7 +1485,7 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
   assert(touch_logs[1] and touch_logs[1]["行动按钮"] == true, "current role action button should be enabled")
   assert(touch_logs[2] and touch_logs[2]["行动按钮"] == false, "non-current role action button should be disabled")
   assert(touch_logs[1] and touch_logs[1]["托管按钮"] == true, "role1 auto button should be enabled")
-  assert(touch_logs[2] and touch_logs[2]["托管按钮"] == true, "role2 auto button should be enabled")
+  assert(touch_logs[2] and touch_logs[2]["托管按钮"] == false, "non-local role auto button should be disabled")
   assert(touch_logs[1] and touch_logs[1]["托管_文本"] == false, "role1 auto label should stay non-clickable")
   assert(touch_logs[2] and touch_logs[2]["托管_文本"] == false, "role2 auto label should stay non-clickable")
   assert(label_logs[1] and label_logs[1]["托管_文本"] == "自动：关", "role1 auto label should show status")
@@ -1370,6 +1603,76 @@ local function _test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapp
 
   assert(touch["托管按钮"] == true, "auto button should stay enabled when role mapping is missing")
   assert(touch["托管_文本"] == false, "auto label should stay non-clickable when role mapping is missing")
+end
+
+local function _test_ui_view_render_auto_button_keeps_local_touch_when_unmapped_role_exists()
+  local main_view = require("src.presentation.api.UIViewService")
+  local touch_logs = {}
+  local state = {
+    ui_refs = { ["Empty"] = "EMPTY", ["2001"] = "ICON2001" },
+    ui = {
+      item_slots = { "道具槽位1" },
+      base_hidden_nodes = { "行动按钮", "道具槽位1" },
+      base_hidden_labels = {},
+      auto_control_nodes = { "托管按钮", "托管_文本" },
+      item_slot_item_ids_by_role = {},
+      set_label = function() end,
+      set_visible = function() end,
+      set_touch_enabled = function(_, name, enabled)
+        local role = UIManager and UIManager.client_role or nil
+        local role_id = role and role.get_roleid and role.get_roleid() or 0
+        touch_logs[role_id] = touch_logs[role_id] or {}
+        touch_logs[role_id][name] = enabled
+      end,
+      query_node = function()
+        return {}
+      end,
+    },
+  }
+  local ui_model = {
+    panel = {
+      turn_label = "倒计时:0",
+      auto_label = "自动：关",
+      auto_label_by_player = {
+        [1] = "自动：关",
+      },
+      player_rows = {
+        { name = "P1", avatar = nil, cash = "", land_count = "", total_assets = "" },
+        { name = "P2", avatar = nil, cash = "", land_count = "", total_assets = "" },
+        { name = "P3", avatar = nil, cash = "", land_count = "", total_assets = "" },
+        { name = "P4", avatar = nil, cash = "", land_count = "", total_assets = "" },
+      },
+    },
+    board = { players = {} },
+    current_player_id = 1,
+    auto_enabled_by_player = { [1] = false },
+    item_slots_by_player = { [1] = { 2001 } },
+  }
+  local local_role = {
+    get_roleid = function()
+      return 1
+    end,
+  }
+  local unmapped_role = {
+    get_roleid = function()
+      return 99
+    end,
+  }
+
+  _with_patches({
+    { key = "all_roles", value = { local_role, unmapped_role } },
+    { key = "UIManager", value = {
+      client_role = local_role,
+      query_nodes_by_name = function()
+        return { {} }
+      end,
+    } },
+  }, function()
+    main_view.refresh_panel(state, ui_model)
+  end)
+
+  assert(touch_logs[1] and touch_logs[1]["托管按钮"] == true, "local role auto button should stay enabled")
+  assert(touch_logs[99] and touch_logs[99]["托管按钮"] == false, "unmapped role auto button should stay disabled")
 end
 
 local function _test_ui_touch_policy_auto_controls_touch()
@@ -2936,11 +3239,18 @@ return {
   _test_ui_intent_dispatcher_market_select_updates_ui_only,
   _test_ui_intent_dispatcher_popup_confirm_closes_popup,
   _test_ui_intent_dispatcher_toggle_action_log_uses_actor_role_context,
+  _test_ui_intent_dispatcher_toggle_action_log_ignores_block_without_game,
+  _test_ui_intent_dispatcher_toggle_action_log_resolves_role_via_game_api,
+  _test_ui_intent_dispatcher_toggle_action_log_warns_when_role_event_channel_missing,
+  _test_ui_intent_dispatcher_auto_button_forces_local_role_id,
+  _test_ui_intent_dispatcher_auto_button_ignores_missing_local_role,
+  _test_ui_intent_dispatcher_auto_button_toggles_local_role_during_other_turn,
   _test_ui_view_render_by_role_slots_are_isolated,
   _test_ui_events_send_without_roles_no_crash,
   _test_ui_nodes_validate_reports_missing,
   _test_apply_input_lock_keeps_auto_controls_enabled,
   _test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapped,
+  _test_ui_view_render_auto_button_keeps_local_touch_when_unmapped_role_exists,
   _test_ui_touch_policy_auto_controls_touch,
   _test_ui_touch_policy_runtime_nodes_touch_enabled,
   _test_role_control_lock_add_remove_owned_only,

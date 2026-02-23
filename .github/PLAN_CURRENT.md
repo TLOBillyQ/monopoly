@@ -1,126 +1,192 @@
-# 纹理接口语义重构执行计划（keep_size / native_size）
+# Turn 流程依赖倒置与策略统一重构
 
-本可执行计划是活文档。实施过程中必须持续更新“进度”“意外与发现”“决策日志”“结果与复盘”四个章节。本文件遵循 `.github/PLANS.md`。
+
+本可执行计划是活文档。实施过程中必须持续更新“进度”“意外与发现”“决策日志”“结果与复盘”。
+
+本文件遵循 `/.github/PLANS.md` 的维护要求。
 
 ## 目的 / 全局视角
 
-本次改动只解决纹理接口语义混乱问题，不改变业务行为。完成后，表现层只保留两种清晰语义：`keep_size`（保持节点尺寸）与 `native_size`（按贴图原始尺寸重置节点）。用户侧可见结果是：现有 UI 行为不变，但接口名和调用点更可读，后续排查缩放问题不再被 `auto_size` 命名误导。
+
+当前 `src/game/flow/turn` 可以运行，但回合策略层仍直接依赖平台全局（例如 `GameAPI` 和 UI 状态细节），并且自动决策与超时策略分散在多个模块。结果是：同一条规则需要多处改动，行为容易漂移，且在无 UI 或测试桩不完整时容易触发断言。
+
+本次重构完成后，用户可见行为不改变，但“稳定性与一致性”会提升：倒计时展示与真实超时一致，自动选择在所有入口遵循同一策略，回合核心可在 headless 场景稳定推进。验收方式是新增/更新回归测试，并运行统一回归命令，确认所有旧行为保留且新增约束成立。
 
 ## 进度
 
-- [x] (2026-02-22 04:21Z) 清空并重建 `PLAN_CURRENT.md`，写入本次执行计划。
-- [x] (2026-02-22 04:24Z) 在 `UIRuntimePort` 新增 `set_node_texture_native_size`，并将 `set_node_texture_auto_size` 改为兼容别名 + warn once。
-- [x] (2026-02-22 04:24Z) 迁移 `presentation` 调用点：`PopupRenderer` 改用 `native_size`，`MarketView` 删除本地纹理 helper 并统一走 runtime。
-- [x] (2026-02-22 04:24Z) 补充/更新 `presentation_ui` 套件与切片注册，覆盖新接口语义与兼容告警。
-- [x] (2026-02-22 04:24Z) 运行 `rg` 校验剩余 `auto_size` 调用点并执行 `lua .github/tests/regression.lua` 全量回归。
-- [x] (2026-02-22 04:24Z) 更新“结果与复盘”与“产物与备注”证据。
-- [x] (2026-02-22 04:27Z) 第二阶段完成：删除 `set_node_texture_auto_size` 兼容别名与对应测试，`auto_size` 在 `src` 与 `.github/tests` 零命中。
+
+- [x] (2026-02-23 02:31Z) 完成审查结论整理，并将重构方向落入本可执行计划。
+- [ ] 拆出时钟与超时解析端口，移除 `TurnDispatch` 对 `GameAPI` 的直接依赖。
+- [ ] 合并自动选择策略入口，收敛 `TurnDecision` 与 `TickTimeout` 的重复逻辑。
+- [ ] 统一动作门禁判定，消除“输入锁/等待态/弹窗态”的分散判定。
+- [ ] 统一倒计时显示与真实超时来源，避免 UI 展示与实际关闭时机不一致。
+- [ ] 补齐测试并跑 `lua .github/tests/regression.lua` 完成验收。
 
 ## 意外与发现
 
-- 观察：`UIRuntimePort.set_node_texture_auto_size` 当前行为实际优先走 `set_texture_native_size`，命名与行为不一致。
-  证据：`src/presentation/api/UIRuntimePort.lua`。
 
-- 观察：`MarketView` 维护了本地 `_set_node_texture_keep_size`，与 runtime 回退策略重复。
-  证据：`src/presentation/render/MarketView.lua`。
+- 观察：`TurnDispatch` 直接读取 `GameAPI.get_timestamp/get_timestamp_diff`，策略层依赖平台全局，测试环境必须打补丁。
+  证据：`src/game/flow/turn/TurnDispatch.lua:12`，`src/game/flow/turn/TurnDispatch.lua:19`。
 
-- 观察：`presentation_ui_registry` 原有名称表缺失 `_test_choice_route_policy_prefers_explicit_route_metadata`，会导致后续索引名称错位；本次已补齐，避免新增测试后错位扩大。
-  证据：`.github/tests/suites/presentation_ui_registry.lua`。
+- 观察：自动选择逻辑同时存在于 `TurnDecision.decide_choice_action` 与 `TickTimeout.step_choice_timeout`，最小展示时长与触发时机靠两处协作。
+  证据：`src/game/flow/turn/TurnDecision.lua:79`，`src/game/flow/turn/TickTimeout.lua:105`。
+
+- 观察：弹窗倒计时展示使用 `constants.action_timeout_seconds`，但实际关闭可走 `popup_payload.auto_close_seconds` 或 `gameplay_rules.popup_auto_close_seconds`。
+  证据：`src/game/flow/turn/TickUISync.lua:46`，`src/game/flow/turn/TickTimeout.lua:92`。
 
 ## 决策日志
 
-- 决策：采用 `keep_size` / `native_size` 作为唯一语义名，不再新增第三种抽象命名。
-  理由：直接镜像底层 `EImage` 语义，减少解释成本。
-  日期/作者：2026-02-22 / Codex。
 
-- 决策：按第二阶段计划删除 `set_node_texture_auto_size` 兼容别名与告警测试。
-  理由：所有调用点已迁移到 `set_node_texture_native_size`，继续保留别名会延长语义歧义。
-  日期/作者：2026-02-22 / Codex。
+- 决策：先做“依赖倒置 + 策略统一”，不改玩家可见交互语义。
+  理由：当前主要风险是可维护性和一致性，不是功能缺失；先保证行为等价可降低重构风险。
+  日期/作者：2026-02-23 / Codex
+
+- 决策：以“端口 + 纯函数策略”方式重构，不引入复杂对象层级。
+  理由：Lua 项目当前以模块函数为主，保持同风格可减少迁移成本。
+  日期/作者：2026-02-23 / Codex
+
+- 决策：测试优先覆盖行为不变与一致性约束，不追求一次性重写所有历史测试结构。
+  理由：回归面已较大，增量补测比全面重构测试框架更稳妥。
+  日期/作者：2026-02-23 / Codex
 
 ## 结果与复盘
 
-本轮已完成两阶段重构：先引入 `native_size` 并迁移调用点，再删除 `auto_size` 兼容层。当前表现层纹理接口仅保留 `keep_size` 与 `native_size` 两个语义名。回归结果全绿，未引入行为回退。
 
-关键结果：
-
-- 表现层纹理语义统一为两类：`keep_size` 与 `native_size`。
-- `PopupRenderer` 的破产头像路径改为显式 `native_size`。
-- `MarketView` 删除本地纹理 helper，统一复用 `UIRuntimePort` 回退策略。
-- 补齐 runtime texture 行为测试与 popup native 路径测试，并修正 suite 切片范围。
+计划已建立，尚未开始代码实施。本章节在每个里程碑完成后更新：记录已交付行为、剩余缺口、以及是否仍满足“行为等价 + 一致性提升”的初始目标。
 
 ## 背景与导读
 
-关键模块如下：
 
-- `src/presentation/api/UIRuntimePort.lua`：表现层统一运行时端口，负责纹理设置的回退策略。
-- `src/presentation/ui/PopupRenderer.lua`：弹窗图片渲染，破产头像路径依赖“重置尺寸”语义。
-- `src/presentation/render/MarketView.lua`：黑市卡片与稀有度框渲染，目前有本地纹理 helper。
-- `.github/tests/suites/presentation_ui.lua`：表现层回归主套件。
-- `.github/tests/suites/presentation_ui_registry.lua` 与 `.github/tests/suites/presentation_ui_action_status.lua`：测试名映射与切片范围。
+`turn` 流程的运行入口在 `src/game/flow/turn/GameplayLoop.lua`。它每帧调用超时、动画、UI 同步和自动执行器。状态机本体在 `src/game/flow/turn/TurnFlow.lua`，具体阶段由 `src/game/core/runtime/PhaseRegistry.lua` 组装，包含 `start/roll/move/landing/post_action/end_turn`。
+
+动作分发在 `src/game/flow/turn/TurnDispatch.lua`，输入合法性在 `src/game/flow/turn/TurnDispatchValidator.lua`。选择态处理在 `src/game/flow/turn/TurnChoiceHandler.lua`，选择解析落到 `src/game/systems/choices/ChoiceResolver.lua`。超时逻辑在 `src/game/flow/turn/TickTimeout.lua`，倒计时展示在 `src/game/flow/turn/TickUISync.lua`。
+
+所谓“端口”，是把外部能力（时间、UI、调试、动画）封装成一组函数接口，让核心规则只依赖接口而不是直接调用全局。项目已有端口骨架：`src/game/flow/turn/GameplayLoopPorts.lua` 和 `src/game/flow/turn/GameplayLoopPortTypes.lua`。本次重构会沿用这一路径扩展，而不是新建第二套机制。
+
+测试主入口是 `/.github/tests/regression.lua`。`gameplay` 相关用例集中在 `/.github/tests/suites/gameplay.lua`，切片映射在 `/.github/tests/suites/gameplay_registry.lua`。headless 验证脚本在 `/.github/tests/internal/gameplay_loop_no_ui.lua`。
+
+## 里程碑一：时钟依赖倒置（先消除硬依赖）
+
+
+本里程碑目标是让回合核心不再直接读取 `GameAPI`。完成后，`TurnDispatch` 的“下一回合冷却”依赖可由端口注入，headless 测试不需要再依赖全局补丁。用户可见行为保持不变，但测试和维护成本显著下降。
+
+实施上，在 `GameplayLoopPortTypes` 新增 `clock` 分组（例如 `now()`、`diff_seconds(a,b)`），在 `GameplayLoopPorts` 提供默认实现。默认实现优先走 `GameAPI`，若环境缺失则安全降级（返回可预测值并让逻辑走保守分支，不崩溃）。随后改 `TurnDispatch`：删除 `_get_timestamp/_get_timestamp_diff_seconds` 对全局的直接断言，改为从 dispatch context 读 `clock` 端口。
+
+验收证据是：旧测试仍通过，且新增一条测试验证“未注入 GameAPI 但注入 clock 端口时 next 冷却逻辑仍生效”。
+
+## 里程碑二：统一自动选择策略（收敛重复逻辑）
+
+
+本里程碑目标是把自动选择规则集中到一个策略模块，避免 `TurnDecision` 和 `TickTimeout` 分别维护。完成后，最小可见时长、AI 自动选择、超时兜底在所有路径上由同一套规则产出动作。
+
+实施上，新增 `src/game/flow/turn/TurnChoiceAutoPolicy.lua`（命名可在实施时微调，但必须单一职责），提供一个统一入口，例如 `decide(game, state, choice, ctx)`。`TurnDecision.decide_choice_action` 改为调用该入口；`TickTimeout.step_choice_timeout` 也调用同入口，传入 `reason = "min_visible" | "timeout"` 之类上下文，避免重复拼动作。
+
+验收证据是：新增测试覆盖“同一个 choice 在 wait_choice 路径与 tick_timeout 路径生成相同动作”；并验证 `auto_choice_min_visible_seconds` 生效时不会提前动作。
+
+## 里程碑三：统一动作门禁与超时展示（保证一致性）
+
+
+本里程碑目标是收敛“动作是否允许”和“UI 倒计时显示”两类一致性问题。完成后，阻塞规则可以在单点说明并测试，倒计时显示数值与真实触发时机一致。
+
+实施上，抽出门禁策略函数（可放在 `TurnDispatchValidator` 内部或新模块，但最终必须只有一个判断入口），把 `input_blocked`、`wait_choice`、`popup_active`、`detained_wait` 等判定整合为显式规则。与此同时，在 `TickUISync.update_countdown` 侧引入与 `TickTimeout` 共享的“有效超时解析”函数，弹窗倒计时要读取与 `step_modal_timeout` 相同的超时来源。
+
+验收证据是：新增测试验证“popup_payload.auto_close_seconds=3 时，倒计时从 3 递减并在约 3 秒触发关闭”；并验证阻塞矩阵下 `ui_button next`、`choice_select` 的放行/拦截符合策略。
 
 ## 工作计划
 
-先收敛接口层，再迁移调用点，最后补测试和回归。整个过程坚持“命名重构不改行为”：每个调用点保持原先缩放语义，仅替换到更准确的函数名或统一入口。测试上新增接口优先级与兼容告警覆盖，避免未来误改回退顺序。
+
+先做端口扩展，再做策略收敛，最后处理一致性显示。这个顺序的原因是：时钟依赖倒置能先把核心逻辑从环境细节里抽离，后续策略重构就能在更稳定的测试条件下进行；若反过来做，容易把行为差异和环境问题混在一起，调试成本高。
+
+具体编辑顺序如下。第一步修改 `src/game/flow/turn/GameplayLoopPortTypes.lua` 与 `src/game/flow/turn/GameplayLoopPorts.lua` 增加 `clock` 分组及默认实现，同时保证旧调用者不传 `clock` 也不会崩。第二步修改 `src/game/flow/turn/TurnDispatch.lua` 改为读取 context 中的 `clock` 端口，并保持对 `next_turn_cooldown` 的行为等价。第三步新增统一自动策略模块，并改造 `TurnDecision.lua` 与 `TickTimeout.lua` 调用。第四步统一门禁判定与超时展示来源，涉及 `TurnDispatchValidator.lua`、`GameplayLoopRuntime.lua`、`TickUISync.lua`。第五步补测试，必要时调整 `/.github/tests/suites/gameplay_registry.lua` 的命名与切片索引，让新增测试被回归入口覆盖。
 
 ## 具体步骤
 
-1. 修改 `src/presentation/api/UIRuntimePort.lua`：
-   - 新增 `set_node_texture_native_size(node, image_key)`；
-   - 第二阶段删除 `set_node_texture_auto_size` 兼容别名与相关告警逻辑。
 
-2. 修改调用点：
-   - `src/presentation/ui/PopupRenderer.lua`：`set_node_texture_auto_size` -> `set_node_texture_native_size`；
-   - `src/presentation/render/MarketView.lua`：删除本地 `_set_node_texture_keep_size`，改用 runtime 端口。
+在仓库根目录 `/Users/billyq/Dev/Github/Lua/monopoly` 按以下顺序执行。
 
-3. 更新测试：
-   - 在 `.github/tests/suites/presentation_ui.lua` 新增 runtime texture 语义测试与 popup native 路径测试；
-   - 第二阶段删除 auto_size 兼容告警测试；
-   - 若新增/删除测试导致序号变化，更新 registry 与 action_status 切片范围。
+    1) 编辑端口与分发：
+       - src/game/flow/turn/GameplayLoopPortTypes.lua
+       - src/game/flow/turn/GameplayLoopPorts.lua
+       - src/game/flow/turn/TurnDispatch.lua
 
-4. 执行验证命令（仓库根目录）：
+    2) 新增并接入自动策略：
+       - 新建 src/game/flow/turn/TurnChoiceAutoPolicy.lua
+       - 修改 src/game/flow/turn/TurnDecision.lua
+       - 修改 src/game/flow/turn/TickTimeout.lua
 
-    rg -n "set_node_texture_auto_size" src .github/tests
-    lua .github/tests/regression.lua
+    3) 统一门禁与倒计时来源：
+       - 修改 src/game/flow/turn/TurnDispatchValidator.lua
+       - 修改 src/game/flow/turn/GameplayLoopRuntime.lua
+       - 修改 src/game/flow/turn/TickUISync.lua
 
-## 验证与验收
+    4) 增补测试并接入回归：
+       - 修改 .github/tests/suites/gameplay.lua
+       - 如有新增索引，修改 .github/tests/suites/gameplay_registry.lua
+       - 如需 headless 补测，修改 .github/tests/internal/gameplay_loop_no_ui.lua
 
-验收标准：
+    5) 运行回归：
+       cd /Users/billyq/Dev/Github/Lua/monopoly && lua .github/tests/regression.lua
 
-- `rg -n "set_node_texture_auto_size" src .github/tests` 结果零命中。
-- `lua .github/tests/regression.lua` 全绿。
-- `PopupRenderer`、`MarketView`、`UIPanelPresenter` 语义分别保持：popup 破产头像 native-size、市场与基础屏头像 keep-size。
+预期关键输出包含：
 
-## 可重复性与恢复
-
-本次为语义重构，不涉及存档与配置迁移。若回归失败，可按模块回退：优先回退调用点迁移（`PopupRenderer`/`MarketView`），保留 `UIRuntimePort` 的 `native_size` 主接口，缩小排查面。
-
-## 产物与备注
-
-变更文件：
-
-- `.github/PLAN_CURRENT.md`
-- `src/presentation/api/UIRuntimePort.lua`
-- `src/presentation/ui/PopupRenderer.lua`
-- `src/presentation/render/MarketView.lua`
-- `.github/tests/suites/presentation_ui.lua`
-- `.github/tests/suites/presentation_ui_registry.lua`
-- `.github/tests/suites/presentation_ui_action_status.lua`
-
-关键输出摘要：
-
-    rg -n "set_node_texture_auto_size" src .github/tests
-    (无输出)
-
-    lua .github/tests/regression.lua
-    ......................................................................................................................................................
-    All regression checks passed (150)
+    All regression checks passed (...)
     dep_rules ok
     tick ok
 
+## 验证与验收
+
+
+验收分三层。第一层是行为等价：不改玩法语义，原有关键流程（投骰、移动、落地、选择、动画等待）全部按旧规则推进。第二层是一致性：自动选择路径统一，弹窗倒计时显示与实际关闭一致。第三层是可测试性：在 headless 条件下，回合流程不因平台全局缺失而崩溃。
+
+执行回归命令：
+
+    cd /Users/billyq/Dev/Github/Lua/monopoly
+    lua .github/tests/regression.lua
+
+如果失败，按“新增测试失败优先于旧测试波动”的原则排查：先确认新策略是否破坏既有语义，再决定是修代码还是修错误断言。最终验收标准是回归全绿，且新增测试能够在改造前失败、改造后通过。
+
+## 可重复性与恢复
+
+
+本计划步骤可重复执行，不涉及数据迁移。若中途失败，允许按文件粒度回退当次改动后重跑回归，不需要重建环境。建议每完成一个里程碑就运行一次 `lua .github/tests/regression.lua`，避免累计偏差导致定位困难。
+
+如果需要完整回退本任务，可按提交边界撤销以下路径：`src/game/flow/turn/*` 中本次新增/修改文件、`.github/tests/suites/gameplay.lua`、`.github/tests/suites/gameplay_registry.lua`、`.github/tests/internal/gameplay_loop_no_ui.lua`、`.github/PLAN_CURRENT.md`。回退后再次运行回归确认恢复。
+
+## 产物与备注
+
+
+本任务实施完成时应有三类产物。第一类是代码产物：端口扩展、策略模块、门禁与倒计时一致性改造。第二类是测试产物：覆盖时钟端口注入、自动策略统一、弹窗倒计时一致性的新增用例。第三类是文档产物：本计划中的“进度”“决策日志”“结果与复盘”必须与真实实现状态同步。
+
+建议在本节追加简短证据片段，例如：
+
+    [PASS] _test_choice_auto_policy_consistent_between_wait_and_timeout
+    [PASS] _test_popup_countdown_uses_effective_modal_timeout
+    All regression checks passed (N)
+
 ## 接口与依赖
 
-不新增外部依赖。内部纹理接口统一为：
-- `runtime_port.set_node_texture_keep_size(node, image_key)`
-- `runtime_port.set_node_texture_native_size(node, image_key)`
 
-本次更新说明：已将计划从“待执行”状态更新为“已执行完成”，补充了实际变更文件、验证输出与一条新增发现（测试注册名缺失），目的是保证该计划作为活文档可独立复现与审计。
+本次改造不新增第三方依赖，继续使用现有 Lua 模块体系。
+
+里程碑完成时必须稳定存在以下接口（命名可微调，但语义必须一致）：
+
+    -- in src/game/flow/turn/GameplayLoopPortTypes.lua
+    groups.clock = { "now", "diff_seconds" }
+
+    -- in src/game/flow/turn/GameplayLoopPorts.lua
+    clock.now() -> number
+    clock.diff_seconds(ts1, ts2) -> number
+
+    -- in src/game/flow/turn/TurnChoiceAutoPolicy.lua
+    decide(game, state, choice, ctx) -> action|nil
+
+    -- in src/game/flow/turn/TickTimeout.lua (共享超时来源)
+    resolve_modal_timeout_seconds(game, state, opts) -> number
+
+动作门禁应通过单一入口调用（保留在 `TurnDispatchValidator` 或独立模块均可），禁止出现多份分叉规则。
+
+## 变更记录（本次）
+
+
+- 已清空旧 `PLAN_CURRENT.md` 并写入本计划，原因是当前任务已切换为“turn 流程重构方案”，旧计划主题与目标不再匹配。
+- 本次版本补全了可执行计划的必需章节与里程碑验收标准，原因是要保证新手在无历史上下文下也能直接落地实施。

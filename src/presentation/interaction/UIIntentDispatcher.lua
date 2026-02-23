@@ -8,22 +8,35 @@ local ui_event_state = require("src.presentation.interaction.UIEventState")
 
 local intent_dispatcher = {}
 
+local function _resolve_role_by_game_api(role_id)
+  if role_id == nil then
+    return nil
+  end
+  if not (GameAPI and type(GameAPI.get_role) == "function") then
+    return nil
+  end
+  local ok, role = pcall(GameAPI.get_role, role_id)
+  if not ok then
+    return nil
+  end
+  return role
+end
+
 local function _resolve_role_by_id(role_id)
   if role_id == nil then
     return runtime.get_client_role()
   end
   local roles = all_roles
-  if type(roles) ~= "table" then
-    return {
-      get_roleid = function()
-        return role_id
-      end,
-    }
-  end
-  for _, role in ipairs(roles) do
-    if runtime.resolve_role_id(role) == role_id then
-      return role
+  if type(roles) == "table" then
+    for _, role in ipairs(roles) do
+      if runtime.resolve_role_id(role) == role_id then
+        return role
+      end
     end
+  end
+  local role_from_game_api = _resolve_role_by_game_api(role_id)
+  if role_from_game_api ~= nil then
+    return role_from_game_api
   end
   return {
     get_roleid = function()
@@ -42,10 +55,32 @@ local function _should_block_intent(state, intent, action_port)
   return action_port.should_block_action(state, intent)
 end
 
+local function _resolve_local_role_id()
+  local local_role = runtime.get_client_role()
+  return runtime.resolve_role_id(local_role)
+end
+
+local function _normalize_auto_intent(intent)
+  local local_role_id = _resolve_local_role_id()
+  if local_role_id == nil then
+    logger.warn("auto intent ignored without local role_id")
+    return nil
+  end
+  local action = {}
+  for k, v in pairs(intent) do
+    action[k] = v
+  end
+  action.actor_role_id = local_role_id
+  return action
+end
+
 function intent_dispatcher.dispatch(state, game, intent, opts)
   assert(intent ~= nil, "missing intent")
   local intent_type = intent.type
   local action_port = _resolve_turn_action_port(state, opts)
+  if intent_type == "toggle_action_log" and intent_dispatcher.dispatch_view_command(state, intent) then
+    return
+  end
   if _should_block_intent(state, intent, action_port) then
     return
   end
@@ -70,7 +105,14 @@ function intent_dispatcher.dispatch_game_action(state, game, intent, opts, actio
   if intent_type == "ui_button"
       or intent_type == "choice_select"
       or intent_type == "choice_cancel" then
-    action_port.dispatch_action(game, state, intent, opts)
+    local action = intent
+    if intent_type == "ui_button" and intent.id == "auto" then
+      action = _normalize_auto_intent(intent)
+      if action == nil then
+        return true
+      end
+    end
+    action_port.dispatch_action(game, state, action, opts)
     return true
   end
 
@@ -119,6 +161,9 @@ function intent_dispatcher.dispatch_view_command(state, intent)
       end
       ui.debug_visible_by_role[role_id] = next_enabled
       ui.debug_log_enabled_by_role[role_id] = next_enabled
+      if next_enabled and type(active_role.send_ui_custom_event) ~= "function" then
+        logger.warn("toggle_action_log missing role event channel:", tostring(role_id))
+      end
       if next_enabled then
         canvas.switch_for_role(ui, canvas.CANVAS_DEBUG, active_role)
       else
