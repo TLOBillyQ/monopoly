@@ -1,8 +1,8 @@
 local logger = require("src.core.Logger")
-local agent = require("src.game.core.runtime.Agent")
 local inventory = require("src.game.systems.items.ItemInventory")
 local gameplay_rules = require("Config.GameplayRules")
 local number_utils = require("src.core.NumberUtils")
+local choice_auto_policy = require("src.game.flow.turn.TurnChoiceAutoPolicy")
 
 local turn_decision = {}
 
@@ -77,35 +77,19 @@ function turn_decision.build_turn_log_line(game)
 end
 
 function turn_decision.decide_choice_action(game, choice, pending_action)
-  if pending_action then
-    return pending_action
-  end
-
   local min_visible = gameplay_rules.auto_choice_min_visible_seconds or 0
-  if min_visible > 0 then
-    local meta = choice and choice.meta or {}
-    local actor = nil
-    if meta.player_id and game.find_player_by_id then
-      actor = game:find_player_by_id(meta.player_id)
-    elseif game.current_player then
-      actor = game:current_player()
-    end
-    if actor and agent.is_auto_player(actor) then
-      local ui_port = game.ui_port
-      local elapsed = ui_port and ui_port.pending_choice_elapsed or 0
-      if elapsed < min_visible then
-        return nil
-      end
-    end
+  local ui_port = game and game.ui_port or nil
+  local elapsed = ui_port and ui_port.pending_choice_elapsed or 0
+  local action = choice_auto_policy.decide(game, ui_port, choice, {
+    mode = "wait_choice",
+    pending_action = pending_action,
+    min_visible_seconds = min_visible,
+    elapsed_seconds = elapsed,
+  })
+  if action then
+    return action
   end
-
-  local auto_action = agent.auto_action_for_choice(game, choice)
-  if auto_action then
-    return auto_action
-  end
-
   assert(game.ui_port ~= nil, "missing ui_port")
-
   return nil
 end
 

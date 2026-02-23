@@ -1,5 +1,6 @@
 local gameplay_loop_ports = {}
 local port_types = require("src.game.flow.turn.GameplayLoopPortTypes")
+local number_utils = require("src.core.NumberUtils")
 
 local function _base_modal_ports()
   return {
@@ -44,6 +45,38 @@ local function _base_debug_ports()
   }
 end
 
+local function _base_clock_ports()
+  return {
+    now = function()
+      if GameAPI and type(GameAPI.get_timestamp) == "function" then
+        local ok, ts = pcall(GameAPI.get_timestamp)
+        if ok and number_utils.is_numeric(ts) then
+          return ts
+        end
+      end
+      if os and type(os.clock) == "function" then
+        return os.clock()
+      end
+      return 0
+    end,
+    diff_seconds = function(timestamp_1, timestamp_2)
+      if number_utils.is_numeric(timestamp_1)
+          and number_utils.is_numeric(timestamp_2)
+          and GameAPI
+          and type(GameAPI.get_timestamp_diff) == "function" then
+        local ok, diff = pcall(GameAPI.get_timestamp_diff, timestamp_1, timestamp_2)
+        if ok and number_utils.is_numeric(diff) then
+          return diff
+        end
+      end
+      if number_utils.is_numeric(timestamp_1) and number_utils.is_numeric(timestamp_2) then
+        return timestamp_1 - timestamp_2
+      end
+      return 0
+    end,
+  }
+end
+
 local function _base_state_ports()
   return {
     apply_role_control_lock = function() end,
@@ -58,6 +91,7 @@ local function _resolve_base_ports()
     anim = _base_anim_ports(),
     ui_sync = _base_ui_sync_ports(),
     debug = _base_debug_ports(),
+    clock = _base_clock_ports(),
     state = _base_state_ports(),
   }
 end

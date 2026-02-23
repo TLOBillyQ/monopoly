@@ -30,6 +30,10 @@ local names = {
   "_test_auto_runner_depends_on_current_player_auto",
   "_test_turn_prompt_initialized_for_first_player",
   "_test_turn_prompt_emitted_on_next_player_switch",
+  "_test_turn_dispatch_uses_clock_ports_without_game_api",
+  "_test_choice_auto_policy_consistent_between_wait_and_timeout",
+  "_test_popup_countdown_uses_effective_modal_timeout",
+  "_test_dispatch_gate_blocks_next_when_choice_active",
 }
 
 local function slice(suite_name, first_index, last_index)

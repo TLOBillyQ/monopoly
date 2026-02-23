@@ -1,3 +1,3 @@
 local registry = require("gameplay_registry")
 
-return registry.slice("gameplay.loop", 17, 34)
+return registry.slice("gameplay.loop", 17, 38)

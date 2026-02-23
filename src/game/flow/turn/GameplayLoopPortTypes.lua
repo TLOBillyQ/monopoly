@@ -32,6 +32,10 @@ port_types.groups = {
     "sync_debug_log",
     "resolve_debug_enabled",
   },
+  clock = {
+    "now",
+    "diff_seconds",
+  },
   state = {
     "apply_role_control_lock",
     "install_event_handlers",
@@ -44,6 +48,7 @@ port_types.group_names = {
   "anim",
   "ui_sync",
   "debug",
+  "clock",
   "state",
 }
 

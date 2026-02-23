@@ -2,6 +2,7 @@ local constants = require("Config.Generated.Constants")
 local runtime_constants = require("Config.RuntimeConstants")
 local logger = require("src.core.Logger")
 local number_utils = require("src.core.NumberUtils")
+local tick_timeout = require("src.game.flow.turn.TickTimeout")
 
 local tick_ui_sync = {}
 
@@ -63,12 +64,15 @@ function tick_ui_sync.update_countdown(game, state)
       end
       seconds = math.ceil(remaining)
     elseif state.ui and state.ui.popup_active then
-      active = true
-      local remaining = timeout - (state.ui_modal_elapsed or 0)
-      if remaining < 0 then
-        remaining = 0
+      local popup_timeout = tick_timeout.resolve_modal_timeout_seconds(game, state)
+      if popup_timeout > 0 then
+        active = true
+        local remaining = popup_timeout - (state.ui_modal_elapsed or 0)
+        if remaining < 0 then
+          remaining = 0
+        end
+        seconds = math.ceil(remaining)
       end
-      seconds = math.ceil(remaining)
     elseif state.action_button_active then
       active = true
       local remaining = timeout - (state.action_button_elapsed or 0)

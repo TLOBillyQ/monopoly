@@ -16,11 +16,11 @@
 
 
 - [x] (2026-02-23 02:31Z) 完成审查结论整理，并将重构方向落入本可执行计划。
-- [ ] 拆出时钟与超时解析端口，移除 `TurnDispatch` 对 `GameAPI` 的直接依赖。
-- [ ] 合并自动选择策略入口，收敛 `TurnDecision` 与 `TickTimeout` 的重复逻辑。
-- [ ] 统一动作门禁判定，消除“输入锁/等待态/弹窗态”的分散判定。
-- [ ] 统一倒计时显示与真实超时来源，避免 UI 展示与实际关闭时机不一致。
-- [ ] 补齐测试并跑 `lua .github/tests/regression.lua` 完成验收。
+- [x] (2026-02-23 02:40Z) 拆出时钟端口：`GameplayLoopPortTypes/GameplayLoopPorts` 新增 `clock`，`TurnDispatch` 改为读端口时间源。
+- [x] (2026-02-23 02:43Z) 合并自动选择策略：新增 `TurnChoiceAutoPolicy`，`TurnDecision` 与 `TickTimeout` 统一接入。
+- [x] (2026-02-23 02:45Z) 统一动作门禁入口：`TurnDispatch` 通过 `TurnDispatchValidator.resolve_gate_state/should_block_action` 做单点判定。
+- [x] (2026-02-23 02:46Z) 统一弹窗倒计时来源：`TickUISync` 改为读取 `TickTimeout.resolve_modal_timeout_seconds`。
+- [x] (2026-02-23 02:48Z) 增补 4 条回归测试并执行 `lua .github/tests/regression.lua`，结果 `154/154` 通过。
 
 ## 意外与发现
 
@@ -33,6 +33,9 @@
 
 - 观察：弹窗倒计时展示使用 `constants.action_timeout_seconds`，但实际关闭可走 `popup_payload.auto_close_seconds` 或 `gameplay_rules.popup_auto_close_seconds`。
   证据：`src/game/flow/turn/TickUISync.lua:46`，`src/game/flow/turn/TickTimeout.lua:92`。
+
+- 观察：测试桩最初把 `clock.now()` 固定为 `0`，导致 `next` 冷却永远不满足，`autorunner` 用例卡死。
+  证据：回归失败日志 `autorunner did not finish within max_steps=5000`，修复后回归恢复全绿。
 
 ## 决策日志
 
@@ -49,10 +52,18 @@
   理由：回归面已较大，增量补测比全面重构测试框架更稳妥。
   日期/作者：2026-02-23 / Codex
 
+- 决策：门禁增强只对 `ui_button:next` 增加 choice/market/popup/detained 语义阻塞，不扩大到 `choice_select`。
+  理由：保持现有“选择态可提交”的行为，避免无关交互回归。
+  日期/作者：2026-02-23 / Codex
+
+- 决策：测试端口 `clock` 默认实现改为优先读 `GameAPI`，而不是固定常量。
+  理由：保证旧测试补丁语义不变，避免把基础设施差异误判为业务回归。
+  日期/作者：2026-02-23 / Codex
+
 ## 结果与复盘
 
 
-计划已建立，尚未开始代码实施。本章节在每个里程碑完成后更新：记录已交付行为、剩余缺口、以及是否仍满足“行为等价 + 一致性提升”的初始目标。
+已完成三项里程碑并通过回归验收。交付结果如下：一是 `TurnDispatch` 不再硬依赖全局 `GameAPI`；二是自动选择规则收敛到 `TurnChoiceAutoPolicy` 单入口；三是弹窗倒计时展示与真实超时来源一致，动作门禁进入 `TurnDispatchValidator` 单点判定。回归命令 `lua .github/tests/regression.lua` 输出 `All regression checks passed (154)`，满足“行为等价 + 一致性提升”的初始目标。
 
 ## 背景与导读
 
@@ -116,13 +127,11 @@
 
     3) 统一门禁与倒计时来源：
        - 修改 src/game/flow/turn/TurnDispatchValidator.lua
-       - 修改 src/game/flow/turn/GameplayLoopRuntime.lua
        - 修改 src/game/flow/turn/TickUISync.lua
 
     4) 增补测试并接入回归：
        - 修改 .github/tests/suites/gameplay.lua
        - 如有新增索引，修改 .github/tests/suites/gameplay_registry.lua
-       - 如需 headless 补测，修改 .github/tests/internal/gameplay_loop_no_ui.lua
 
     5) 运行回归：
        cd /Users/billyq/Dev/Github/Lua/monopoly && lua .github/tests/regression.lua
@@ -159,9 +168,11 @@
 
 建议在本节追加简短证据片段，例如：
 
+    [PASS] _test_turn_dispatch_uses_clock_ports_without_game_api
     [PASS] _test_choice_auto_policy_consistent_between_wait_and_timeout
     [PASS] _test_popup_countdown_uses_effective_modal_timeout
-    All regression checks passed (N)
+    [PASS] _test_dispatch_gate_blocks_next_when_choice_active
+    All regression checks passed (154)
 
 ## 接口与依赖
 
@@ -181,7 +192,7 @@
     decide(game, state, choice, ctx) -> action|nil
 
     -- in src/game/flow/turn/TickTimeout.lua (共享超时来源)
-    resolve_modal_timeout_seconds(game, state, opts) -> number
+    resolve_modal_timeout_seconds(game, state) -> number
 
 动作门禁应通过单一入口调用（保留在 `TurnDispatchValidator` 或独立模块均可），禁止出现多份分叉规则。
 
@@ -190,3 +201,4 @@
 
 - 已清空旧 `PLAN_CURRENT.md` 并写入本计划，原因是当前任务已切换为“turn 流程重构方案”，旧计划主题与目标不再匹配。
 - 本次版本补全了可执行计划的必需章节与里程碑验收标准，原因是要保证新手在无历史上下文下也能直接落地实施。
+- 本次版本将计划状态更新为“已实施完成”，同步补充了真实回归结果与实施中发现，原因是活文档必须与当前代码状态一致。

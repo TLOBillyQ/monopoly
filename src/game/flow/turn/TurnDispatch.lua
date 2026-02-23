@@ -8,19 +8,6 @@ local turn_dispatch = {}
 
 local next_turn_cooldown = 0.4
 
-local function _get_timestamp()
-  assert(GameAPI ~= nil and GameAPI.get_timestamp ~= nil, "missing GameAPI.get_timestamp")
-  local ts = GameAPI.get_timestamp()
-  assert(number_utils.is_numeric(ts), "invalid timestamp")
-  return ts
-end
-
-local function _get_timestamp_diff_seconds(timestamp_1, timestamp_2)
-  assert(GameAPI ~= nil and GameAPI.get_timestamp_diff ~= nil, "missing GameAPI.get_timestamp_diff")
-  assert(number_utils.is_numeric(timestamp_1) and number_utils.is_numeric(timestamp_2), "invalid timestamps")
-  return GameAPI.get_timestamp_diff(timestamp_1, timestamp_2)
-end
-
 local function _resolve_actor_player(game, action)
   assert(game ~= nil and game.players ~= nil, "missing game.players")
   local actor_role_id = action and action.actor_role_id or nil
@@ -62,21 +49,47 @@ local function _resolve_dispatch_context(state, context)
   return {
     ports = ports,
     ui_sync_ports = ui_sync_ports,
+    clock_ports = ports.clock,
     item_slot_source = item_slot_source,
   }
 end
 
+local function _resolve_timestamp_now(dispatch_ctx)
+  local clock_ports = dispatch_ctx and dispatch_ctx.clock_ports or nil
+  if clock_ports and type(clock_ports.now) == "function" then
+    local ok, ts = pcall(clock_ports.now)
+    if ok and number_utils.is_numeric(ts) then
+      return ts
+    end
+  end
+  return 0
+end
+
+local function _resolve_timestamp_diff_seconds(dispatch_ctx, timestamp_1, timestamp_2)
+  local clock_ports = dispatch_ctx and dispatch_ctx.clock_ports or nil
+  if clock_ports and type(clock_ports.diff_seconds) == "function" then
+    local ok, diff = pcall(clock_ports.diff_seconds, timestamp_1, timestamp_2)
+    if ok and number_utils.is_numeric(diff) then
+      return diff
+    end
+  end
+  if number_utils.is_numeric(timestamp_1) and number_utils.is_numeric(timestamp_2) then
+    return timestamp_1 - timestamp_2
+  end
+  return 0
+end
+
 function turn_dispatch.should_block_action(state, action_or_type)
   local dispatch_ctx = _resolve_dispatch_context(state)
-  local ui_sync_ports = dispatch_ctx.ui_sync_ports
-  local blocked = ui_sync_ports.is_input_blocked and ui_sync_ports.is_input_blocked(state) or false
-  return validator.should_block_action(blocked, action_or_type)
+  local gate_state = validator.resolve_gate_state(state, dispatch_ctx.ui_sync_ports)
+  return validator.should_block_action(gate_state, action_or_type)
 end
 
 local function _dispatch_action(game, state, action, opts, dispatch_ctx)
   assert(action ~= nil, "missing action")
   local ctx = _resolve_dispatch_context(state, dispatch_ctx)
-  if validator.should_block_action(ctx.ui_sync_ports.is_input_blocked and ctx.ui_sync_ports.is_input_blocked(state) or false, action) then
+  local gate_state = validator.resolve_gate_state(state, ctx.ui_sync_ports)
+  if validator.should_block_action(gate_state, action) then
     return { status = "blocked" }
   end
   if action.type == "ui_button"
@@ -107,14 +120,15 @@ local function _dispatch_action(game, state, action, opts, dispatch_ctx)
     if action.id == "next" then
       assert(game ~= nil, "missing game")
       local phase = game.turn.phase
-      local now = _get_timestamp()
+      local now = _resolve_timestamp_now(ctx)
       if state.next_turn_locked then
         local allow = false
         if state.next_turn_lock_phase and phase and phase ~= state.next_turn_lock_phase then
           allow = true
+        elseif state.next_turn_last_click == nil then
+          allow = true
         else
-          assert(state.next_turn_last_click ~= nil, "missing next_turn_last_click")
-          local diff = _get_timestamp_diff_seconds(now, state.next_turn_last_click)
+          local diff = _resolve_timestamp_diff_seconds(ctx, now, state.next_turn_last_click)
           if diff and diff >= next_turn_cooldown then
             allow = true
           end

@@ -1,8 +1,8 @@
-local agent = require("src.game.core.runtime.Agent")
 local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("Config.GameplayRules")
 local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
 local number_utils = require("src.core.NumberUtils")
+local choice_auto_policy = require("src.game.flow.turn.TurnChoiceAutoPolicy")
 
 local tick_timeout = {}
 
@@ -33,20 +33,6 @@ local function _dispatch_action_with_close_choice(game, state, action)
   })
 end
 
-local function _resolve_choice_owner(game, choice)
-  local meta = choice and choice.meta or {}
-  if meta.player_id and game.find_player_by_id then
-    local player = game:find_player_by_id(meta.player_id)
-    if player then
-      return player
-    end
-  end
-  if game.current_player then
-    return game:current_player()
-  end
-  return nil
-end
-
 local function _resolve_choice_owner_id(game, choice)
   local meta = choice and choice.meta or {}
   if meta.player_id and game.find_player_by_id then
@@ -71,25 +57,7 @@ local function _ensure_action_actor_role_id(game, choice, action)
   return action
 end
 
-local function _pick_first_choice_option(choice)
-  local options = assert(choice.options, "missing choice.options")
-  local first = assert(options[1], "missing choice option")
-  return first.id or first
-end
-
-local function _build_default_choice_action(game_ctx, choice)
-  local auto_choice = agent.auto_action_for_choice(game_ctx, choice)
-  if auto_choice then
-    return auto_choice
-  end
-  return {
-    type = "choice_select",
-    choice_id = choice.id,
-    option_id = _pick_first_choice_option(choice),
-  }
-end
-
-local function _modal_timeout_seconds(_, state)
+function tick_timeout.resolve_modal_timeout_seconds(_, state)
   local popup = state and state.ui and state.ui.popup_payload or nil
   local auto_close_seconds = popup and popup.auto_close_seconds or nil
   if auto_close_seconds ~= nil and number_utils.is_numeric(auto_close_seconds) and auto_close_seconds > 0 then
@@ -155,21 +123,27 @@ function tick_timeout.step_choice_timeout(game, state, dt, opts)
   end
   if min_visible > 0 and state.pending_choice_elapsed >= min_visible then
     local choice = state.pending_choice
-    local actor = _resolve_choice_owner(game, choice)
-    if actor and agent.is_auto_player(actor) then
-      local action = opts.build_action(game, state, choice)
-      if action then
-        _ensure_action_actor_role_id(game, choice, action)
-        state.pending_choice_elapsed = 0
-        _dispatch_action_with_close_choice(game, state, action)
-        return
-      end
+    local action = opts.build_action(game, state, choice, {
+      mode = "tick_min_visible",
+      elapsed_seconds = state.pending_choice_elapsed,
+      min_visible_seconds = min_visible,
+    })
+    if action then
+      _ensure_action_actor_role_id(game, choice, action)
+      state.pending_choice_elapsed = 0
+      _dispatch_action_with_close_choice(game, state, action)
+      return
     end
   end
   if state.pending_choice_elapsed >= timeout then
     local choice = state.pending_choice
     state.pending_choice_elapsed = 0
-    local action = opts.build_action(game, state, choice)
+    local action = opts.build_action(game, state, choice, {
+      mode = "tick_timeout",
+      elapsed_seconds = state.pending_choice_elapsed,
+      timeout_seconds = timeout,
+      min_visible_seconds = min_visible,
+    })
     assert(action ~= nil, "missing timeout action")
     _ensure_action_actor_role_id(game, choice, action)
     _dispatch_action_with_close_choice(game, state, action)
@@ -221,13 +195,13 @@ local default_policy = {
     get_min_visible_seconds = function()
       return gameplay_rules.auto_choice_min_visible_seconds or 0
     end,
-    build_action = function(game_ctx, _, choice)
-      return _build_default_choice_action(game_ctx, choice)
+    build_action = function(game_ctx, state_ctx, choice, action_ctx)
+      return choice_auto_policy.decide(game_ctx, state_ctx, choice, action_ctx)
     end,
   },
   modal = {
     get_timeout_seconds = function(game, state)
-      return _modal_timeout_seconds(game, state)
+      return tick_timeout.resolve_modal_timeout_seconds(game, state)
     end,
     on_timeout = function(ctx)
       local ports = _resolve_ports(ctx)

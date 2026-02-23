@@ -24,6 +24,8 @@ local gameplay_rules = require("Config.GameplayRules")
 local mine_effect = require("src.game.systems.effects.MineEffect")
 local runtime_context = require("src.core.RuntimeContext")
 local dispatch_validator = require("src.game.flow.turn.TurnDispatchValidator")
+local tick_ui_sync = require("src.game.flow.turn.TickUISync")
+local choice_auto_policy = require("src.game.flow.turn.TurnChoiceAutoPolicy")
 local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
 local game_startup = require("src.app.bootstrap.GameStartup")
 local game_startup_event_bridge = require("src.app.bootstrap.GameStartupEventBridge")
@@ -123,6 +125,20 @@ local function _build_test_ports(overrides)
       log_status = overrides.log_status or function() end,
       sync_debug_log = overrides.sync_debug_log or function() end,
       resolve_debug_enabled = overrides.resolve_debug_enabled or function() return false end,
+    },
+    clock = {
+      now = overrides.now or function()
+        if GameAPI and type(GameAPI.get_timestamp) == "function" then
+          return GameAPI.get_timestamp()
+        end
+        return 0
+      end,
+      diff_seconds = overrides.diff_seconds or function(timestamp_1, timestamp_2)
+        if GameAPI and type(GameAPI.get_timestamp_diff) == "function" then
+          return GameAPI.get_timestamp_diff(timestamp_1, timestamp_2)
+        end
+        return (timestamp_1 or 0) - (timestamp_2 or 0)
+      end,
     },
     state = {
       apply_role_control_lock = overrides.apply_role_control_lock or function() end,
@@ -1388,6 +1404,128 @@ local function _test_auto_runner_depends_on_current_player_auto()
   end)
 end
 
+local function _test_turn_dispatch_uses_clock_ports_without_game_api()
+  local g = _new_game()
+  local state = _build_loop_state()
+  state.game = g
+  g.ui_port = state
+  local current_player = g:current_player()
+  local now = 1.0
+  local stepped = 0
+
+  state.gameplay_loop_ports = _build_test_ports({
+    now = function()
+      return now
+    end,
+    diff_seconds = function(timestamp_1, timestamp_2)
+      return (timestamp_1 or 0) - (timestamp_2 or 0)
+    end,
+  })
+  state.next_turn_locked = true
+  state.next_turn_last_click = 1.0
+  state.next_turn_lock_phase = g.turn.phase
+
+  support.with_patches({
+    { target = turn_dispatch, key = "step_turn", value = function()
+      stepped = stepped + 1
+    end },
+    { key = "GameAPI", value = {} },
+  }, function()
+    now = 1.2
+    local rejected = turn_dispatch.dispatch_action(g, state, {
+      type = "ui_button",
+      id = "next",
+      actor_role_id = current_player.id,
+    })
+    assert(rejected.status == "rejected", "next should respect cooldown via clock port")
+
+    now = 1.6
+    local applied = turn_dispatch.dispatch_action(g, state, {
+      type = "ui_button",
+      id = "next",
+      actor_role_id = current_player.id,
+    })
+    assert(applied.status == "applied", "next should pass when clock diff reaches cooldown")
+  end)
+
+  assert(stepped == 1, "step_turn should run exactly once")
+end
+
+local function _test_choice_auto_policy_consistent_between_wait_and_timeout()
+  local g = _new_game()
+  local auto_player = g.players[g.turn.current_player_index]
+  auto_player.auto = true
+  local state = { pending_choice_elapsed = 1.2 }
+  local choice = {
+    id = 1001,
+    kind = "market_buy",
+    options = { { id = "buy", label = "购买" } },
+  }
+
+  local from_wait = choice_auto_policy.decide(g, state, choice, {
+    mode = "wait_choice",
+    min_visible_seconds = 0.5,
+    elapsed_seconds = state.pending_choice_elapsed,
+  })
+  local from_timeout = choice_auto_policy.decide(g, state, choice, {
+    mode = "tick_timeout",
+    min_visible_seconds = 0.5,
+    elapsed_seconds = state.pending_choice_elapsed,
+  })
+  assert(from_wait and from_timeout, "auto policy should return actions for auto actor")
+  assert(from_wait.type == from_timeout.type, "wait/timeout should resolve to same action type")
+  assert(from_wait.choice_id == from_timeout.choice_id, "wait/timeout should target same choice")
+  assert(from_wait.option_id == from_timeout.option_id, "wait/timeout should target same option")
+end
+
+local function _test_popup_countdown_uses_effective_modal_timeout()
+  local g = _new_game()
+  local state = _build_loop_state()
+  state.ui.popup_active = true
+  state.ui.popup_payload = { auto_close_seconds = 3 }
+  state.ui_modal_elapsed = 1.2
+  state.pending_choice = nil
+  state.action_button_active = false
+  state.countdown_last = nil
+  state.countdown_active_last = nil
+
+  support.with_patches({
+    { target = constants, key = "action_timeout_seconds", value = 10 },
+    { target = gameplay_rules, key = "popup_auto_close_seconds", value = 8 },
+  }, function()
+    tick_ui_sync.update_countdown(g, state)
+  end)
+
+  assert(g.turn.countdown_seconds == 2, "popup countdown should use popup effective timeout")
+  assert(g.turn.countdown_active == true, "popup countdown should stay active")
+end
+
+local function _test_dispatch_gate_blocks_next_when_choice_active()
+  local g = _new_game()
+  local state = _build_loop_state()
+  state.game = g
+  state.ui.input_blocked = false
+  state.ui.choice_active = true
+  state.ui.market_active = false
+  state.ui.popup_active = false
+  local current_player = g:current_player()
+
+  local should_block_next = turn_dispatch.should_block_action(state, {
+    type = "ui_button",
+    id = "next",
+    actor_role_id = current_player.id,
+  })
+  local should_block_choice = turn_dispatch.should_block_action(state, {
+    type = "choice_select",
+    choice_id = 1,
+    option_id = 1,
+    actor_role_id = current_player.id,
+  })
+
+  assert(should_block_next == true, "choice active should block next")
+  assert(should_block_choice == false, "choice active should not block choice confirm")
+end
+
 return {
   _test_mandatory_payment_causes_bankruptcy,
   _test_bankruptcy_resets_owned_tiles,
@@ -1423,4 +1561,8 @@ return {
   _test_auto_runner_depends_on_current_player_auto,
   _test_turn_prompt_initialized_for_first_player,
   _test_turn_prompt_emitted_on_next_player_switch,
+  _test_turn_dispatch_uses_clock_ports_without_game_api,
+  _test_choice_auto_policy_consistent_between_wait_and_timeout,
+  _test_popup_countdown_uses_effective_modal_timeout,
+  _test_dispatch_gate_blocks_next_when_choice_active,
 }
