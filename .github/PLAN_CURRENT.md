@@ -23,7 +23,7 @@
 
 - [x] (2026-02-24 11:19Z) 阅读调研报告，确认 H1-H4 / M1-M3 问题分级。
 - [x] (2026-02-24 11:19Z) 回归基线确认：`lua .github/tests/regression.lua` -> 154 通过，dep_rules ok，tick ok。
-- [ ] 里程碑 M0：冻结基线与行为清单。
+- [x] (2026-02-24 12:00Z) 里程碑 M0：冻结基线与行为清单（基线证据已记录）。
 - [ ] 里程碑 M1：压平 interaction 链（H3 + M1 部分）。
 - [ ] 里程碑 M2：收敛 UI 投影链（M3）。
 - [ ] 里程碑 M3：删薄封装、保留硬边界（M1 + H4 部分）。
@@ -112,11 +112,11 @@
 
 1. **删除 `UIIntentBuilder.lua`（纯转发门面）**。它的 9 个方法各只调一次对应子模块的 `.build()`，没有组合、过滤、变换逻辑。
 2. **在 `UIEventRouter.lua` 的 `_build_default_route_specs` 中直接 require 各 `intent_builders/*` 并调用 `.build()`**。即把原来 `ui_intent_builder.build_basic_intents(state)` 替换为 `basic_intents.build(state)`。这消除中间层，减少一跳。
-3. **评估 `TurnActionPortAdapter.lua` + `TurnActionPort.lua` 能否合并为 `TurnDispatch` 上的直接调用**。`UIIntentDispatcher.lua` 当前通过 `TurnActionPort.resolve()` 获取端口再调 `dispatch_action`。如果把 resolve 逻辑内联到 `UIIntentDispatcher` 中（10 行左右），可以删除 `TurnActionPort.lua` 和 `TurnActionPortAdapter.lua` 两个文件。但需注意 `GameplayLoop.lua` 也通过 ports 间接使用 `TurnDispatch`，那条路径不经过 `TurnActionPort`，所以删除不影响它。
+3. **`TurnActionPort` 先保留接口，再评估是否删除**。`UIIntentDispatcher.lua` 当前通过 `TurnActionPort.resolve()` 获取端口再调 `dispatch_action`。本里程碑先完成 `UIIntentBuilder` 删除与路由收敛；`TurnActionPortAdapter.lua` + `TurnActionPort.lua` 仅在满足“单消费者 + 无默认值语义 + 不承担依赖方向边界”时才删除。若不满足，仅做内联简化，不删接口名。
 
 这一步完成后，新增一个按钮语义只需：(a) 新增或修改一个 `intent_builders/XxxIntents.lua`；(b) 在 `UIEventRouter._build_default_route_specs` 加一行 `_append(xxx.build(state))`。从 4 个文件降到 2 个。
 
-完成标志：`UIIntentBuilder.lua` 已删除；`TurnActionPortAdapter.lua` 和 `TurnActionPort.lua` 已合并或删除；回归通过 >= 154。
+完成标志：`UIIntentBuilder.lua` 已删除；按钮语义链路改动文件数 <= 2；`TurnActionPort*` 已完成保留或删除决策并记录理由；回归通过 >= 154。
 
 ### 里程碑 M2：收敛 UI 投影链
 
@@ -124,7 +124,8 @@
 
 1. **`UIModelPanelBuilder.lua` 的 `build` 和 `update` 内联到 `UIModel.lua`**。`UIModelPanelBuilder` 只被 `UIModel` 调用，没有其他消费者。它的逻辑（构建回合标签、玩家行、自动标签）可以直接写在 `UIModel` 的 `build` 和 `update` 函数内部。
 2. **`UIModelProjection.lua` 的简单投影函数（如 `resolve_current_player`、`board_tiles`、`resolve_item_slot_count`、`build_item_slots_by_player`）内联到 `UIModel.lua`**。如果 `UIModelProjection` 中某些函数被其他模块引用（不只是 `UIModel`），则保留该函数在 `UIModelProjection` 中，不强制内联。
-3. 删除已清空的文件。
+3. **按字段映射清单迁移并逐项核对**：`turn/current_player`、`players`、`board_tiles`、`item_slots`、`market`、`choice`、`auto_tag`。每迁移一项都在回归前后检查对应 UI 数据结构是否一致。
+4. 删除已清空的文件。
 
 这一步完成后，改一个展示字段只需在 `UIModel.lua` 中修改，不再跨 3 个文件。
 
@@ -132,7 +133,7 @@
 
 ### 里程碑 M3：删薄封装、保留硬边界
 
-逐个评估 `src/` 中行数 <= 25 且命中抽象命名模式（Adapter/Port/Service/Builder/Presenter）的文件。对每个文件判断：它是否提供独立语义（边界隔离、默认值、错误处理），还是只做单纯转发。只删只做单纯转发的文件。
+逐个评估 `src/` 中行数 <= 25 且命中抽象命名模式（Adapter/Port/Service/Builder/Presenter）的文件。删除前必须同时满足 3 个门槛：1) 单消费者；2) 无默认值/回退语义；3) 不承担依赖方向边界。只删满足三门槛且仅做单纯转发的文件。
 
 调研列出的候选清单（按风险从低到高）：
 
@@ -160,8 +161,8 @@
 
 1. 在 `src/presentation/interaction/UIEventRouter.lua` 顶部，把 `require("src.presentation.interaction.UIIntentBuilder")` 替换为直接 require 各 `intent_builders/*`。把 `_build_default_route_specs` 中的 `ui_intent_builder.build_xxx(state)` 替换为对应的 `xxx.build(state)`。
 2. 删除 `src/presentation/interaction/UIIntentBuilder.lua`。
-3. 在 `src/presentation/interaction/UIIntentDispatcher.lua` 中，把 `_resolve_turn_action_port` 的 resolve 逻辑从 `TurnActionPort.resolve()` 内联为本地函数。
-4. 删除 `src/presentation/api/TurnActionPort.lua` 和 `src/app/ports/TurnActionPortAdapter.lua`。
+3. 在 `src/presentation/interaction/UIIntentDispatcher.lua` 中评估 `_resolve_turn_action_port` 是否可内联；默认先保留 `TurnActionPort` 接口名，避免边界语义提前丢失。
+4. 仅当满足 M3 三门槛时，才删除 `src/presentation/api/TurnActionPort.lua` 和 `src/app/ports/TurnActionPortAdapter.lua`；否则保留并记录原因。
 5. 检查是否有其他文件引用了 `TurnActionPort` 或 `TurnActionPortAdapter`：
 
         grep -rn "TurnActionPort" src/
@@ -206,8 +207,8 @@
 1. `lua .github/tests/regression.lua` 通过数 >= 154。
 2. `dep_rules` 通过（依赖方向未被破坏）。
 3. `gameplay_loop_no_ui` 通过（无 UI tick 仍正常）。
-4. 新增一个按钮语义只需改 2 个文件（而非 4-5 个）。这通过检查 `UIEventRouter` 和 `intent_builders/` 的结构来验证：不再有 `UIIntentBuilder.lua` 中间层。
-5. 改一个展示字段只需改 `UIModel.lua`（而非跨 3 个文件）。这通过检查 `UIModelPanelBuilder.lua` 已不存在来验证。
+4. 新增一个按钮语义只需改 <= 2 个文件（`UIEventRouter.lua` + 一个 `intent_builders/*`，而非 4-5 个）。这通过检查提交文件列表验证。
+5. 改一个展示字段只需改 <= 1 个文件（`UIModel.lua`，而非跨 3 个文件）。这通过检查提交文件列表与 `UIModelPanelBuilder.lua` 状态验证。
 6. `ARCHITECTURE.md` 反映当前结构。
 
 
@@ -251,14 +252,14 @@ M3 删除的文件（M3 完成后填写）：
 5. `src/game/core/runtime/Game.lua`：领域门面，不动。
 6. `src/presentation/api/UIViewService.lua`：UI 渲染门面，不动。
 7. `src/presentation/interaction/UIEventRouter.lua`：收敛后成为 interaction 单入口。
-8. `src/presentation/interaction/UIIntentDispatcher.lua`：intent 分流，内联 resolve 后变简单。
+8. `src/presentation/interaction/UIIntentDispatcher.lua`：intent 分流，先完成路由收敛，再评估 resolve 是否内联。
 9. `src/presentation/state/UIModel.lua`：收敛后成为 UI 状态单入口。
 
 被删除或合并的中间层（计划值，实际以执行为准）：
 
 1. `src/presentation/interaction/UIIntentBuilder.lua` -> 删除（转发内联到 `UIEventRouter`）。
-2. `src/presentation/api/TurnActionPort.lua` -> 删除（resolve 内联到 `UIIntentDispatcher`）。
-3. `src/app/ports/TurnActionPortAdapter.lua` -> 删除（不再需要端口对象）。
+2. `src/presentation/api/TurnActionPort.lua` -> 待评估（满足三门槛才删除；否则保留接口名）。
+3. `src/app/ports/TurnActionPortAdapter.lua` -> 待评估（满足三门槛才删除；否则保留并记录原因）。
 4. `src/presentation/state/UIModelPanelBuilder.lua` -> 合并到 `UIModel.lua`。
 5. `src/presentation/state/UIModelProjection.lua` -> 部分或全部合并到 `UIModel.lua`。
 6. `src/presentation/api/GameplayLoopPortsAdapter.lua` -> 评估后决定。
@@ -268,3 +269,5 @@ M3 删除的文件（M3 完成后填写）：
 ## 本次更新说明
 
 本次更新将 `PLAN_CURRENT.md` 从"全量重写路线图（src_next 双轨）"改写为"原地收敛路线图（M0-M3）"。改写原因：调研报告（`.github/docs/reports/research.md`）确认当前架构方向合理，问题是层数过厚而非架构错误。原地删层比新建平行目录风险更低、改动更小、验证更简单。新计划聚焦调研报告的 H3（交互链过深）、M1（薄封装比例偏高）、M3（投影链过碎）三个问题，按收益降序排列里程碑。
+
+2026-02-24 补充优化：根据评审建议，新增 M3“三门槛删薄封装”规则，调整 M1 为“先删 `UIIntentBuilder`、`TurnActionPort` 后评估”，在 M2 增加字段映射清单，并把验收标准量化为“按钮语义 <=2 文件、展示字段 <=1 文件”。同时把 M0 进度与已记录基线证据对齐，减少执行歧义。
