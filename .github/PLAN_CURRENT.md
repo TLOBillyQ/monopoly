@@ -1,5 +1,4 @@
-# 托管按钮全角色可点击与按角色独立切换改造计划
-
+# src / Config / vendor 全量重写路线图（降复杂度版）
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”“意外与发现”“决策日志”“结果与复盘”。
 
@@ -7,124 +6,189 @@
 
 ## 目的 / 全局视角
 
+当前项目在 `src/` 里存在较多抽象层叠加（ports、adapter、policy、dispatcher、service 并存），导致修改一个行为需要跨多层跳转。你希望“彻底重写”，核心目标不是改功能，而是把结构压扁到可维护形态，同时保留现有玩法行为。
 
-当前实现里，托管按钮在 UI 表现层仍受“是否本地角色”限制，导致非本地角色视角可能不能点击托管按钮；同时 `auto` 意图在分发层会被重写为本地角色，无法严格表达“谁点击，切谁的托管状态”。这与最新产品期望冲突。
-
-本计划完成后，用户可见行为会变成：任意角色视角在任意时机（包括输入锁开启）都能点击托管按钮；点击只切换该角色自己的 `player.auto`；其他角色状态不受影响。验证方式是跑 UI 交互切片测试与全量回归，且新增用例能稳定证明“全角色可点 + 独立切换 + 缺失 actor_role_id 拒绝”。
+这份路线图覆盖 `src/`、`Config/`、`vendor/` 三块。完成后，用户可见结果是：项目仍可正常启动和运行，`lua .github/tests/regression.lua` 通过，部署脚本仍可一键发布，但代码层数明显减少、依赖方向清晰、删除冗余 vendor 包不影响运行。
 
 ## 进度
 
-
-- [x] (2026-02-24 12:12 +08:00) 完成 `research.md` 结论对齐，明确新产品期望与旧实现冲突点。
-- [x] (2026-02-24 12:15 +08:00) 确认测试入口与命令可执行：`lua .github/tests/regression.lua`、`presentation_ui_interaction` 切片命令。
-- [ ] 待实施：修改 `UIPanelPresenter`，移除“本地角色匹配”对托管按钮触控的限制。
-- [ ] 待实施：修改 `UIIntentDispatcher`，优先保留事件侧传入的 `intent.actor_role_id`，缺失时再回退本地角色解析。
-- [ ] 待实施：补充并更新 `presentation_ui` 相关测试，覆盖全角色可点与按角色独立切换。
-- [ ] 待实施：执行 UI 切片回归与全量回归，记录通过证据并更新本计划“结果与复盘”。
+- [x] (2026-02-24) 完成现状盘点：`src` 183 个文件、`Config` 19 个文件、`vendor` 29 个文件。
+- [x] (2026-02-24) 完成回归基线：`lua .github/tests/regression.lua` 通过（154）。
+- [x] (2026-02-24) 完成 vendor 依赖核查：运行时直接依赖主要是 `ClassUtils`、`Utils`、`UIManager.Utils`。
+- [ ] 里程碑 0：冻结行为基线与重写边界文档。
+- [ ] 里程碑 1：建立 `src_next/` 最小骨架与双轨启动开关。
+- [ ] 里程碑 2：迁移核心回合内核（turn flow + dispatch + dirty）。
+- [ ] 里程碑 3：重写 `Config/` 结构（静态配置、生成配置、校验脚本）。
+- [ ] 里程碑 4：vendor 收缩（替代 `ClassUtils/Utils`，隔离 UIManager，移除未用包）。
+- [ ] 里程碑 5：迁移 UI 交互主链并完成主回归。
+- [ ] 里程碑 6：切换入口、删除旧实现、更新部署。
 
 ## 意外与发现
 
+观察：`vendor/third_party/Behavior` 与 `vendor/third_party/NavMesh` 在业务代码中没有直接引用，当前更像历史遗留。
+证据：全仓 `rg "vendor\.third_party" -n` 命中主要集中在 `ClassUtils`、`Utils`、`UIManager`。
 
-现有回归中已经存在“非本地角色托管按钮应禁用”的断言，这与新产品期望相反。证据是 `.github/tests/suites/presentation_ui.lua` 里 `_test_ui_view_render_by_role_slots_are_isolated` 和 `_test_ui_view_render_auto_button_keeps_local_touch_when_unmapped_role_exists` 对非本地角色断言为 `false`。这意味着改造不仅是功能代码改动，还必须同步改测试预期。
+观察：现有测试体系已经足够作为“行为保护网”，能支撑渐进式重写，不必 Big Bang 一次性替换。
+证据：
 
-在 Windows PowerShell 下执行 `lua .github/tests/regression.lua` 时，命令输出首行会出现 `'[' is not recognized as an internal or external command`，但后续 `All regression checks passed (154)`、`dep_rules ok`、`tick ok` 均正常。该噪声不影响本次行为验证，但要在验收记录里注明，避免误判。
-
-## 决策日志
-
-
-决策：托管按钮触控权限以产品语义为准，直接定义为“全角色始终可点”，不再让 `UIPanelPresenter` 复用“本地角色匹配”变量。
-理由：`allow_touch` 的职责是交互权限，不应混入身份判定语义；输入锁策略也已把托管按钮定义为例外放行。
-日期/作者：2026-02-24 / Codex。
-
-决策：`_normalize_auto_intent` 采用“保留上游 actor，再回退本地解析”的顺序。
-理由：`UIEventRouter` 已按点击上下文写入 `intent.actor_role_id`，分发层不应无条件覆盖；保留回退是为了兼容缺失上下文的旧调用路径。
-日期/作者：2026-02-24 / Codex。
-
-决策：动作层保持现有 `TurnDispatch` 逻辑，不新增 `auto` 的当前回合限制。
-理由：新需求是“切换自己的托管状态”，而不是“仅当前回合玩家可切换”；当前 `_resolve_actor_player` 通过 `actor_role_id` 定位玩家即可满足语义。
-日期/作者：2026-02-24 / Codex。
-
-## 结果与复盘
-
-
-本节在代码改造与回归完成后填写。完成标准是：`UIPanelPresenter` 与 `UIIntentDispatcher` 已按计划改动，新增测试通过，且全量回归通过并附关键输出证据。
-
-## 背景与导读
-
-
-本改造涉及三个层面。第一个层面是 UI 触控呈现，在 `src/presentation/ui/UIPanelPresenter.lua`，函数 `render_auto_controls_for_role` 会给托管按钮和托管文本设置可见性与触控。第二个层面是意图分发，在 `src/presentation/interaction/UIIntentDispatcher.lua`，函数 `_normalize_auto_intent` 会把托管点击意图标准化为动作。第三个层面是动作落地，在 `src/game/flow/turn/TurnDispatch.lua`，`action.id == "auto"` 分支依据 `actor_role_id` 查找玩家并切换 `player.auto`。
-
-这里的“输入锁”是 `state.ui.input_blocked`。输入锁开启时，大多数按钮被禁用，但 `src/presentation/interaction/UIInputLockPolicy.lua` 明确调用 `set_auto_controls_touch(ui, true)`，把托管按钮定义为例外放行。这里的“按角色独立切换”是指：角色 A 点击只改变 A 的 `player.auto`，不会改变角色 B 的 `player.auto`。
-
-测试主入口是 `/.github/tests/regression.lua`。与本需求最相关的切片是 `presentation_ui_interaction`，它从 `.github/tests/suites/presentation_ui.lua` 选取第 28 到 37 个测试，覆盖输入锁、触控策略和 UI 交互。
-
-## 工作计划
-
-
-里程碑一聚焦 UI 触控语义收敛。先改 `src/presentation/ui/UIPanelPresenter.lua`，把 `allow_touch` 从“本地角色匹配结果”改成恒为 `true`。这一步只解决“能不能点”的问题，不触碰托管状态切换逻辑。里程碑完成后，所有角色视角都应该在 UI 层获得托管按钮点击权限。
-
-里程碑二聚焦动作归属正确性。改 `src/presentation/interaction/UIIntentDispatcher.lua` 的 `_normalize_auto_intent`，先读取 `intent.actor_role_id`，若为空再用 `_resolve_local_role_id()` 兜底。这样可以保证事件路由传来的“点击角色”不会被覆盖，最终由 `TurnDispatch` 正确切换对应玩家状态。里程碑完成后，应能稳定满足“谁点击，切谁自己”。
-
-里程碑三聚焦回归证明。修改 `.github/tests/suites/presentation_ui.lua` 现有断言并新增测试，覆盖三类场景：全角色可点、角色间切换互不影响、缺失 `actor_role_id` 时拒绝切换。随后先跑 UI 切片，再跑全量回归，确认没有引入旧行为回退。
-
-## 具体步骤
-
-
-在工作目录 `C:\Users\Lzx_8\Desktop\dev\monopoly` 进行以下操作。
-
-先修改 UI 触控逻辑。编辑 `src/presentation/ui/UIPanelPresenter.lua` 的 `render_auto_controls_for_role`，保留标签与可见性逻辑，删除 `allow_touch` 对 `auto_enabled` 的依赖，直接传入恒定 `true` 给 `ui_touch_policy.set_auto_controls_touch`。
-
-再修改意图标准化逻辑。编辑 `src/presentation/interaction/UIIntentDispatcher.lua`，将 `_normalize_auto_intent` 的 `actor_role_id` 解析改为：优先 `intent.actor_role_id`，为空时回退 `_resolve_local_role_id()`，两者都为空则记录警告并返回 `nil`。
-
-然后修改测试。编辑 `.github/tests/suites/presentation_ui.lua`，把“非本地角色托管按钮为 false”的旧断言改为 true。补充至少两条测试：第一条验证两个角色点击托管后各自 `player.auto` 独立变化；第二条验证缺失 `actor_role_id` 的 `auto` 动作返回 `rejected` 且玩家状态不变。
-
-先跑切片回归，定位问题更快。命令与预期如下（缩进块为示例）：
-
-    cd C:\Users\Lzx_8\Desktop\dev\monopoly
-    lua -e "package.path=package.path..';./.github/tests/?.lua;./.github/tests/suites/?.lua;./.github/tests/fixtures/?.lua'; local h=require('TestHarness'); h.run_all({require('presentation_ui_interaction')})"
-
-    ..........
-    All regression checks passed (10)
-
-切片通过后跑全量回归。命令与预期如下：
-
-    cd C:\Users\Lzx_8\Desktop\dev\monopoly
     lua .github/tests/regression.lua
-
-    ..........................................................................................................................................................
     All regression checks passed (154)
     dep_rules ok
     tick ok
 
+观察：部署脚本硬编码了 `Config/`、`src/`、`vendor/` 三目录，重写必须同步考虑发布路径。
+证据：`.github/scripts/deploy.ps1` 的 `$Directories = @("Config", "src", "vendor")`。
+
+## 决策日志
+
+决策：采用“双轨重写 + 最后切换”，而不是直接在 `src/` 原地大改。
+理由：当前测试覆盖可用，双轨可以随时回滚，降低一次性重写风险。
+日期/作者：2026-02-24 / Codex。
+
+决策：先重写 `src` 核心流程，再重写 `Config` 结构，最后处理 vendor 收缩与清理。
+理由：玩法行为由流程层决定，先锁行为再换配置和依赖，排错成本最低。
+日期/作者：2026-02-24 / Codex。
+
+决策：`UIManager` 暂时保留，不在第一阶段自研替代。
+理由：这是平台绑定层，替换收益低且风险高；先把业务层从平台 API 解耦。
+日期/作者：2026-02-24 / Codex。
+
+## 结果与复盘
+
+本节在里程碑 6 完成后填写。完成标准：
+1. 新入口默认走重写实现。
+2. 回归测试通过。
+3. 旧目录或旧模块已删除或只保留兼容壳。
+4. 部署脚本与文档同步更新。
+
+## 背景与导读
+
+当前入口是 `main.lua -> src/app/init.lua`。启动分为运行时安装、状态构建、`GAME_INIT` 后 UI 装配与 tick 启动。业务主循环集中在 `src/game/flow/turn/GameplayLoop.lua`，再通过 `ports` 系列转接到表现层。这个结构可扩展，但层级较深，修改链路长。
+
+`Config/` 目前包含地图、规则、测试档位和 `Generated/*`。数据本身不大，但读取分散在多模块中。重写目标是“数据结构稳定 + 单点校验 + 明确加载顺序”。
+
+`vendor/` 目前既有运行时必需组件（`UIManager`、部分 `Utils/ClassUtils`），也有疑似未使用组件（`Behavior`、`NavMesh`）。重写目标是“保留必要、替换可替换、删除未使用”。
+
+## 工作计划
+
+### 里程碑 0：冻结现状与验收红线
+
+先把“什么算不退化”写清楚：启动链路、回合推进、托管、选择、市场、动画等待、结算。以现有回归套件为主，不先增大范围。产出一份行为清单和一组必须常绿的命令。
+
+完成标志：项目在旧实现下回归全绿，且行为清单与关键命令写入计划。
+
+### 里程碑 1：建立 `src_next/` 最小骨架
+
+新增 `src_next/`，只放四层：`app`（装配）、`domain`（规则与状态）、`ui`（表现协调）、`runtime`（平台桥接）。入口先不切换，通过开关并行运行最小 smoke 流程。
+
+完成标志：`src_next` 能独立跑通最小一局（至少 2 玩家，能推进回合）。
+
+### 里程碑 2：迁移回合内核
+
+优先迁 `Game + TurnFlow + Dispatch + Dirty`，保持接口简单：一个 `tick(game_state, input)` 返回状态变更和 UI 事件。把当前 `ports/adapter/policy` 链压成更少层次，先保留行为兼容。
+
+完成标志：核心玩法（掷骰、移动、落地、next、choice）在 `src_next` 通过对应测试。
+
+### 里程碑 3：重写 Config
+
+拆成三类：
+1. 稳定手写配置（规则、运行常量、测试 profile）。
+2. 生成产物（items/tiles/market/chance）。
+3. 加载与校验层（schema 校验、默认值、错误提示）。
+
+所有业务代码只依赖一个配置入口，不再各处直接 `require Config.*`。
+
+完成标志：配置读取路径收敛，错误配置在启动期能报清楚。
+
+### 里程碑 4：收缩 vendor
+
+先在 `src_next/runtime/lib/` 落地内部替代函数：深拷贝、随机选择、计时器封装。逐步移除对 `vendor.third_party.Utils` 和 `ClassUtils` 的依赖。`UIManager` 维持在单一桥接层，不让业务直接接触。
+
+对 `Behavior/NavMesh` 做“禁引用 + 清点”后再删除，避免误删隐式依赖。
+
+完成标志：业务路径不再直接 require `ClassUtils/Utils`，vendor 体积明显缩小。
+
+### 里程碑 5：迁移 UI 主链
+
+把 `UIEventRouter -> IntentBuilder/Dispatcher -> TurnDispatch` 的多层跳转收敛为“输入映射 + 领域命令 + 渲染刷新”三段。保留现有节点命名和 `Data/UIManagerNodes.lua`，避免美术资源联调风险。
+
+完成标志：`presentation_ui_*` 相关回归在新实现下通过。
+
+### 里程碑 6：切换与清理
+
+切换 `main.lua` 到新入口。稳定后删除旧 `src/` 冗余模块，按新结构回填文档，最后更新部署脚本路径（若仍需叫 `src`，则在切换前完成目录改名）。
+
+完成标志：默认运行新实现，全回归通过，发布脚本可用，旧实现可归档。
+
+## 具体步骤
+
+工作目录：`C:\Users\Lzx_8\Desktop\dev\monopoly`
+
+先执行并记录基线：
+
+    lua .github/tests/regression.lua
+
+建立重写分支并创建新目录：
+
+    git checkout -b rewrite/core-next
+    mkdir src_next
+    mkdir src_next\app src_next\domain src_next\ui src_next\runtime
+
+先做最小启动链（不迁所有功能），验证新骨架能加载：
+
+    lua -e "package.path=package.path..';./?.lua;./src_next/?.lua;./src_next/?/init.lua'; print('src_next bootstrap smoke')"
+
+分阶段迁移后，每阶段至少跑一次回归：
+
+    lua .github/tests/regression.lua
+
+迁移后期补跑依赖规则与无 UI tick：
+
+    lua .github/tests/internal/dep_rules.lua
+    lua .github/tests/internal/gameplay_loop_no_ui.lua
+
+切换入口前，先在计划里写明回滚点，再改 `main.lua` 和部署脚本。
+
 ## 验证与验收
 
-
-验收以“行为可观察”而非“代码已改”为准。第一，输入锁开启时，任意角色视角托管按钮都可点，且托管文本仍不可点。第二，角色 A 点击只切换 A，角色 B 状态保持原值；角色 B 点击后只切换 B。第三，缺失 `actor_role_id` 的 `auto` 输入不会误切换任意玩家，并返回拒绝状态。第四，全量回归通过。
-
-当上述行为同时成立，并且 `lua .github/tests/regression.lua` 输出 `All regression checks passed (154)` 时，视为验收通过。
+验收以行为为准，不以“目录变了”为准。必须同时满足：
+1. 启动无报错，可进入游戏并推进回合。
+2. `lua .github/tests/regression.lua` 通过。
+3. `dep_rules` 与 `gameplay_loop_no_ui` 通过。
+4. 发布脚本能把正确目录拷贝到目标路径。
+5. `vendor` 清理后，运行时没有缺模块错误。
 
 ## 可重复性与恢复
 
-
-本计划步骤可重复执行，不涉及数据迁移。若中途失败，优先按文件粒度回滚本次改动后重跑切片测试，再跑全量回归。建议每完成一个里程碑就执行一次 `presentation_ui_interaction` 切片，减少一次性排错成本。
-
-若需要恢复到改造前状态，可使用 Git 按文件回退：仅回退 `UIPanelPresenter.lua`、`UIIntentDispatcher.lua` 与 `presentation_ui.lua` 的本次变更，然后重新运行回归确认恢复。
+本路线默认可重复执行。双轨结构下，任何里程碑出问题都可回退到旧入口：
+1. 保持 `main.lua` 默认仍指向旧 `src`，直到里程碑 5 结束。
+2. 每个里程碑独立提交，失败时按提交回退，不跨里程碑混改。
+3. 若切换后出现问题，立即把入口切回旧实现并重跑回归。
 
 ## 产物与备注
 
+本计划执行后应产出：
+1. `src_next/` 新架构代码。
+2. 配置新入口与校验脚本。
+3. vendor 依赖清单与删减记录。
+4. 新版架构文档与迁移说明。
 
-本计划实施后应产生三类直接产物：`UIPanelPresenter.lua` 的触控判定收敛修改，`UIIntentDispatcher.lua` 的角色绑定修正，以及 `presentation_ui.lua` 的测试更新与新增。提交说明建议按“功能改动”和“测试改动”分开，便于审查。
-
-终端证据以两段为准：一段是切片回归 `All regression checks passed (10)`，另一段是全量回归 `All regression checks passed (154)`。若 Windows 环境仍出现 `'[' is not recognized ...` 噪声，在证据备注中标注“已复现但不影响结果判断”。
+关键证据保持短小，优先保存“命令 + 通过行”。
 
 ## 接口与依赖
 
+重写后建议稳定以下接口：
+1. `src_next/app/init.lua`：应用启动入口。
+2. `src_next/domain/game.lua`：游戏状态与回合推进。
+3. `src_next/domain/turn.lua`：动作分发与阶段流转。
+4. `src_next/ui/runtime_bridge.lua`：唯一 UIManager 交互层。
+5. `src_next/runtime/config_loader.lua`：统一配置读取与校验。
 
-本改造不引入新依赖库。核心接口保持原路径，仅调整实现语义。`src/presentation/ui/UIPanelPresenter.lua` 的 `panel_presenter.render_auto_controls_for_role(ui, ctx, ui_model, local_role_id)` 保持签名不变，但必须保证托管按钮触控始终放行。`src/presentation/interaction/UIIntentDispatcher.lua` 的 `_normalize_auto_intent(intent)` 保持签名不变，但必须保证输出动作 `action.actor_role_id` 优先继承 `intent.actor_role_id`。`src/game/flow/turn/TurnDispatch.lua` 的 `action.id == "auto"` 分支保持现有逻辑，继续以 `actor_role_id` 解析目标玩家。
-
-测试依赖仍使用现有 `TestHarness` 与 `presentation_ui` 套件，不新增测试框架。里程碑结束时，必须能通过现有命令直接复现验收结果，不依赖手工 UI 操作。
+依赖约束：
+1. `ui` 不直接依赖 `domain` 内部结构，只用明确接口。
+2. `domain` 不直接依赖 UIManager。
+3. 业务代码不直接 require `vendor.third_party.*`。
 
 ## 本次更新说明
 
-
-本次更新将旧版“托管按钮连续开关问题分析”重写为符合 `/.github/PLANS.md` 的可执行计划，并根据 `research.md` 最新结论纳入“全角色可点击、按角色独立切换”的明确目标。重写原因是旧文档偏结论说明，缺少可执行里程碑、验证命令、回退路径和活文档四个必需章节，无法直接指导无上下文执行者落地。
+本次更新清空了旧的 `PLAN_CURRENT.md`（托管按钮专项），改写为面向“`src/ + Config/ + vendor/` 全量重写”的可执行路线图。改写原因是任务目标已从单点修复变为系统性重构，需要新的里程碑、验收和回滚策略。
