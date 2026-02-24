@@ -1,4 +1,4 @@
-# Turn 流程依赖倒置与策略统一重构
+# 托管按钮全角色可点击与按角色独立切换改造计划
 
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”“意外与发现”“决策日志”“结果与复盘”。
@@ -8,197 +8,123 @@
 ## 目的 / 全局视角
 
 
-当前 `src/game/flow/turn` 可以运行，但回合策略层仍直接依赖平台全局（例如 `GameAPI` 和 UI 状态细节），并且自动决策与超时策略分散在多个模块。结果是：同一条规则需要多处改动，行为容易漂移，且在无 UI 或测试桩不完整时容易触发断言。
+当前实现里，托管按钮在 UI 表现层仍受“是否本地角色”限制，导致非本地角色视角可能不能点击托管按钮；同时 `auto` 意图在分发层会被重写为本地角色，无法严格表达“谁点击，切谁的托管状态”。这与最新产品期望冲突。
 
-本次重构完成后，用户可见行为不改变，但“稳定性与一致性”会提升：倒计时展示与真实超时一致，自动选择在所有入口遵循同一策略，回合核心可在 headless 场景稳定推进。验收方式是新增/更新回归测试，并运行统一回归命令，确认所有旧行为保留且新增约束成立。
+本计划完成后，用户可见行为会变成：任意角色视角在任意时机（包括输入锁开启）都能点击托管按钮；点击只切换该角色自己的 `player.auto`；其他角色状态不受影响。验证方式是跑 UI 交互切片测试与全量回归，且新增用例能稳定证明“全角色可点 + 独立切换 + 缺失 actor_role_id 拒绝”。
 
 ## 进度
 
 
-- [x] (2026-02-23 02:31Z) 完成审查结论整理，并将重构方向落入本可执行计划。
-- [x] (2026-02-23 02:40Z) 拆出时钟端口：`GameplayLoopPortTypes/GameplayLoopPorts` 新增 `clock`，`TurnDispatch` 改为读端口时间源。
-- [x] (2026-02-23 02:43Z) 合并自动选择策略：新增 `TurnChoiceAutoPolicy`，`TurnDecision` 与 `TickTimeout` 统一接入。
-- [x] (2026-02-23 02:45Z) 统一动作门禁入口：`TurnDispatch` 通过 `TurnDispatchValidator.resolve_gate_state/should_block_action` 做单点判定。
-- [x] (2026-02-23 02:46Z) 统一弹窗倒计时来源：`TickUISync` 改为读取 `TickTimeout.resolve_modal_timeout_seconds`。
-- [x] (2026-02-23 02:48Z) 增补 4 条回归测试并执行 `lua .github/tests/regression.lua`，结果 `154/154` 通过。
+- [x] (2026-02-24 12:12 +08:00) 完成 `research.md` 结论对齐，明确新产品期望与旧实现冲突点。
+- [x] (2026-02-24 12:15 +08:00) 确认测试入口与命令可执行：`lua .github/tests/regression.lua`、`presentation_ui_interaction` 切片命令。
+- [ ] 待实施：修改 `UIPanelPresenter`，移除“本地角色匹配”对托管按钮触控的限制。
+- [ ] 待实施：修改 `UIIntentDispatcher`，优先保留事件侧传入的 `intent.actor_role_id`，缺失时再回退本地角色解析。
+- [ ] 待实施：补充并更新 `presentation_ui` 相关测试，覆盖全角色可点与按角色独立切换。
+- [ ] 待实施：执行 UI 切片回归与全量回归，记录通过证据并更新本计划“结果与复盘”。
 
 ## 意外与发现
 
 
-- 观察：`TurnDispatch` 直接读取 `GameAPI.get_timestamp/get_timestamp_diff`，策略层依赖平台全局，测试环境必须打补丁。
-  证据：`src/game/flow/turn/TurnDispatch.lua:12`，`src/game/flow/turn/TurnDispatch.lua:19`。
+现有回归中已经存在“非本地角色托管按钮应禁用”的断言，这与新产品期望相反。证据是 `.github/tests/suites/presentation_ui.lua` 里 `_test_ui_view_render_by_role_slots_are_isolated` 和 `_test_ui_view_render_auto_button_keeps_local_touch_when_unmapped_role_exists` 对非本地角色断言为 `false`。这意味着改造不仅是功能代码改动，还必须同步改测试预期。
 
-- 观察：自动选择逻辑同时存在于 `TurnDecision.decide_choice_action` 与 `TickTimeout.step_choice_timeout`，最小展示时长与触发时机靠两处协作。
-  证据：`src/game/flow/turn/TurnDecision.lua:79`，`src/game/flow/turn/TickTimeout.lua:105`。
-
-- 观察：弹窗倒计时展示使用 `constants.action_timeout_seconds`，但实际关闭可走 `popup_payload.auto_close_seconds` 或 `gameplay_rules.popup_auto_close_seconds`。
-  证据：`src/game/flow/turn/TickUISync.lua:46`，`src/game/flow/turn/TickTimeout.lua:92`。
-
-- 观察：测试桩最初把 `clock.now()` 固定为 `0`，导致 `next` 冷却永远不满足，`autorunner` 用例卡死。
-  证据：回归失败日志 `autorunner did not finish within max_steps=5000`，修复后回归恢复全绿。
+在 Windows PowerShell 下执行 `lua .github/tests/regression.lua` 时，命令输出首行会出现 `'[' is not recognized as an internal or external command`，但后续 `All regression checks passed (154)`、`dep_rules ok`、`tick ok` 均正常。该噪声不影响本次行为验证，但要在验收记录里注明，避免误判。
 
 ## 决策日志
 
 
-- 决策：先做“依赖倒置 + 策略统一”，不改玩家可见交互语义。
-  理由：当前主要风险是可维护性和一致性，不是功能缺失；先保证行为等价可降低重构风险。
-  日期/作者：2026-02-23 / Codex
+决策：托管按钮触控权限以产品语义为准，直接定义为“全角色始终可点”，不再让 `UIPanelPresenter` 复用“本地角色匹配”变量。
+理由：`allow_touch` 的职责是交互权限，不应混入身份判定语义；输入锁策略也已把托管按钮定义为例外放行。
+日期/作者：2026-02-24 / Codex。
 
-- 决策：以“端口 + 纯函数策略”方式重构，不引入复杂对象层级。
-  理由：Lua 项目当前以模块函数为主，保持同风格可减少迁移成本。
-  日期/作者：2026-02-23 / Codex
+决策：`_normalize_auto_intent` 采用“保留上游 actor，再回退本地解析”的顺序。
+理由：`UIEventRouter` 已按点击上下文写入 `intent.actor_role_id`，分发层不应无条件覆盖；保留回退是为了兼容缺失上下文的旧调用路径。
+日期/作者：2026-02-24 / Codex。
 
-- 决策：测试优先覆盖行为不变与一致性约束，不追求一次性重写所有历史测试结构。
-  理由：回归面已较大，增量补测比全面重构测试框架更稳妥。
-  日期/作者：2026-02-23 / Codex
-
-- 决策：门禁增强只对 `ui_button:next` 增加 choice/market/popup/detained 语义阻塞，不扩大到 `choice_select`。
-  理由：保持现有“选择态可提交”的行为，避免无关交互回归。
-  日期/作者：2026-02-23 / Codex
-
-- 决策：测试端口 `clock` 默认实现改为优先读 `GameAPI`，而不是固定常量。
-  理由：保证旧测试补丁语义不变，避免把基础设施差异误判为业务回归。
-  日期/作者：2026-02-23 / Codex
+决策：动作层保持现有 `TurnDispatch` 逻辑，不新增 `auto` 的当前回合限制。
+理由：新需求是“切换自己的托管状态”，而不是“仅当前回合玩家可切换”；当前 `_resolve_actor_player` 通过 `actor_role_id` 定位玩家即可满足语义。
+日期/作者：2026-02-24 / Codex。
 
 ## 结果与复盘
 
 
-已完成三项里程碑并通过回归验收。交付结果如下：一是 `TurnDispatch` 不再硬依赖全局 `GameAPI`；二是自动选择规则收敛到 `TurnChoiceAutoPolicy` 单入口；三是弹窗倒计时展示与真实超时来源一致，动作门禁进入 `TurnDispatchValidator` 单点判定。回归命令 `lua .github/tests/regression.lua` 输出 `All regression checks passed (154)`，满足“行为等价 + 一致性提升”的初始目标。
+本节在代码改造与回归完成后填写。完成标准是：`UIPanelPresenter` 与 `UIIntentDispatcher` 已按计划改动，新增测试通过，且全量回归通过并附关键输出证据。
 
 ## 背景与导读
 
 
-`turn` 流程的运行入口在 `src/game/flow/turn/GameplayLoop.lua`。它每帧调用超时、动画、UI 同步和自动执行器。状态机本体在 `src/game/flow/turn/TurnFlow.lua`，具体阶段由 `src/game/core/runtime/PhaseRegistry.lua` 组装，包含 `start/roll/move/landing/post_action/end_turn`。
+本改造涉及三个层面。第一个层面是 UI 触控呈现，在 `src/presentation/ui/UIPanelPresenter.lua`，函数 `render_auto_controls_for_role` 会给托管按钮和托管文本设置可见性与触控。第二个层面是意图分发，在 `src/presentation/interaction/UIIntentDispatcher.lua`，函数 `_normalize_auto_intent` 会把托管点击意图标准化为动作。第三个层面是动作落地，在 `src/game/flow/turn/TurnDispatch.lua`，`action.id == "auto"` 分支依据 `actor_role_id` 查找玩家并切换 `player.auto`。
 
-动作分发在 `src/game/flow/turn/TurnDispatch.lua`，输入合法性在 `src/game/flow/turn/TurnDispatchValidator.lua`。选择态处理在 `src/game/flow/turn/TurnChoiceHandler.lua`，选择解析落到 `src/game/systems/choices/ChoiceResolver.lua`。超时逻辑在 `src/game/flow/turn/TickTimeout.lua`，倒计时展示在 `src/game/flow/turn/TickUISync.lua`。
+这里的“输入锁”是 `state.ui.input_blocked`。输入锁开启时，大多数按钮被禁用，但 `src/presentation/interaction/UIInputLockPolicy.lua` 明确调用 `set_auto_controls_touch(ui, true)`，把托管按钮定义为例外放行。这里的“按角色独立切换”是指：角色 A 点击只改变 A 的 `player.auto`，不会改变角色 B 的 `player.auto`。
 
-所谓“端口”，是把外部能力（时间、UI、调试、动画）封装成一组函数接口，让核心规则只依赖接口而不是直接调用全局。项目已有端口骨架：`src/game/flow/turn/GameplayLoopPorts.lua` 和 `src/game/flow/turn/GameplayLoopPortTypes.lua`。本次重构会沿用这一路径扩展，而不是新建第二套机制。
-
-测试主入口是 `/.github/tests/regression.lua`。`gameplay` 相关用例集中在 `/.github/tests/suites/gameplay.lua`，切片映射在 `/.github/tests/suites/gameplay_registry.lua`。headless 验证脚本在 `/.github/tests/internal/gameplay_loop_no_ui.lua`。
-
-## 里程碑一：时钟依赖倒置（先消除硬依赖）
-
-
-本里程碑目标是让回合核心不再直接读取 `GameAPI`。完成后，`TurnDispatch` 的“下一回合冷却”依赖可由端口注入，headless 测试不需要再依赖全局补丁。用户可见行为保持不变，但测试和维护成本显著下降。
-
-实施上，在 `GameplayLoopPortTypes` 新增 `clock` 分组（例如 `now()`、`diff_seconds(a,b)`），在 `GameplayLoopPorts` 提供默认实现。默认实现优先走 `GameAPI`，若环境缺失则安全降级（返回可预测值并让逻辑走保守分支，不崩溃）。随后改 `TurnDispatch`：删除 `_get_timestamp/_get_timestamp_diff_seconds` 对全局的直接断言，改为从 dispatch context 读 `clock` 端口。
-
-验收证据是：旧测试仍通过，且新增一条测试验证“未注入 GameAPI 但注入 clock 端口时 next 冷却逻辑仍生效”。
-
-## 里程碑二：统一自动选择策略（收敛重复逻辑）
-
-
-本里程碑目标是把自动选择规则集中到一个策略模块，避免 `TurnDecision` 和 `TickTimeout` 分别维护。完成后，最小可见时长、AI 自动选择、超时兜底在所有路径上由同一套规则产出动作。
-
-实施上，新增 `src/game/flow/turn/TurnChoiceAutoPolicy.lua`（命名可在实施时微调，但必须单一职责），提供一个统一入口，例如 `decide(game, state, choice, ctx)`。`TurnDecision.decide_choice_action` 改为调用该入口；`TickTimeout.step_choice_timeout` 也调用同入口，传入 `reason = "min_visible" | "timeout"` 之类上下文，避免重复拼动作。
-
-验收证据是：新增测试覆盖“同一个 choice 在 wait_choice 路径与 tick_timeout 路径生成相同动作”；并验证 `auto_choice_min_visible_seconds` 生效时不会提前动作。
-
-## 里程碑三：统一动作门禁与超时展示（保证一致性）
-
-
-本里程碑目标是收敛“动作是否允许”和“UI 倒计时显示”两类一致性问题。完成后，阻塞规则可以在单点说明并测试，倒计时显示数值与真实触发时机一致。
-
-实施上，抽出门禁策略函数（可放在 `TurnDispatchValidator` 内部或新模块，但最终必须只有一个判断入口），把 `input_blocked`、`wait_choice`、`popup_active`、`detained_wait` 等判定整合为显式规则。与此同时，在 `TickUISync.update_countdown` 侧引入与 `TickTimeout` 共享的“有效超时解析”函数，弹窗倒计时要读取与 `step_modal_timeout` 相同的超时来源。
-
-验收证据是：新增测试验证“popup_payload.auto_close_seconds=3 时，倒计时从 3 递减并在约 3 秒触发关闭”；并验证阻塞矩阵下 `ui_button next`、`choice_select` 的放行/拦截符合策略。
+测试主入口是 `/.github/tests/regression.lua`。与本需求最相关的切片是 `presentation_ui_interaction`，它从 `.github/tests/suites/presentation_ui.lua` 选取第 28 到 37 个测试，覆盖输入锁、触控策略和 UI 交互。
 
 ## 工作计划
 
 
-先做端口扩展，再做策略收敛，最后处理一致性显示。这个顺序的原因是：时钟依赖倒置能先把核心逻辑从环境细节里抽离，后续策略重构就能在更稳定的测试条件下进行；若反过来做，容易把行为差异和环境问题混在一起，调试成本高。
+里程碑一聚焦 UI 触控语义收敛。先改 `src/presentation/ui/UIPanelPresenter.lua`，把 `allow_touch` 从“本地角色匹配结果”改成恒为 `true`。这一步只解决“能不能点”的问题，不触碰托管状态切换逻辑。里程碑完成后，所有角色视角都应该在 UI 层获得托管按钮点击权限。
 
-具体编辑顺序如下。第一步修改 `src/game/flow/turn/GameplayLoopPortTypes.lua` 与 `src/game/flow/turn/GameplayLoopPorts.lua` 增加 `clock` 分组及默认实现，同时保证旧调用者不传 `clock` 也不会崩。第二步修改 `src/game/flow/turn/TurnDispatch.lua` 改为读取 context 中的 `clock` 端口，并保持对 `next_turn_cooldown` 的行为等价。第三步新增统一自动策略模块，并改造 `TurnDecision.lua` 与 `TickTimeout.lua` 调用。第四步统一门禁判定与超时展示来源，涉及 `TurnDispatchValidator.lua`、`GameplayLoopRuntime.lua`、`TickUISync.lua`。第五步补测试，必要时调整 `/.github/tests/suites/gameplay_registry.lua` 的命名与切片索引，让新增测试被回归入口覆盖。
+里程碑二聚焦动作归属正确性。改 `src/presentation/interaction/UIIntentDispatcher.lua` 的 `_normalize_auto_intent`，先读取 `intent.actor_role_id`，若为空再用 `_resolve_local_role_id()` 兜底。这样可以保证事件路由传来的“点击角色”不会被覆盖，最终由 `TurnDispatch` 正确切换对应玩家状态。里程碑完成后，应能稳定满足“谁点击，切谁自己”。
+
+里程碑三聚焦回归证明。修改 `.github/tests/suites/presentation_ui.lua` 现有断言并新增测试，覆盖三类场景：全角色可点、角色间切换互不影响、缺失 `actor_role_id` 时拒绝切换。随后先跑 UI 切片，再跑全量回归，确认没有引入旧行为回退。
 
 ## 具体步骤
 
 
-在仓库根目录 `/Users/billyq/Dev/Github/Lua/monopoly` 按以下顺序执行。
+在工作目录 `C:\Users\Lzx_8\Desktop\dev\monopoly` 进行以下操作。
 
-    1) 编辑端口与分发：
-       - src/game/flow/turn/GameplayLoopPortTypes.lua
-       - src/game/flow/turn/GameplayLoopPorts.lua
-       - src/game/flow/turn/TurnDispatch.lua
+先修改 UI 触控逻辑。编辑 `src/presentation/ui/UIPanelPresenter.lua` 的 `render_auto_controls_for_role`，保留标签与可见性逻辑，删除 `allow_touch` 对 `auto_enabled` 的依赖，直接传入恒定 `true` 给 `ui_touch_policy.set_auto_controls_touch`。
 
-    2) 新增并接入自动策略：
-       - 新建 src/game/flow/turn/TurnChoiceAutoPolicy.lua
-       - 修改 src/game/flow/turn/TurnDecision.lua
-       - 修改 src/game/flow/turn/TickTimeout.lua
+再修改意图标准化逻辑。编辑 `src/presentation/interaction/UIIntentDispatcher.lua`，将 `_normalize_auto_intent` 的 `actor_role_id` 解析改为：优先 `intent.actor_role_id`，为空时回退 `_resolve_local_role_id()`，两者都为空则记录警告并返回 `nil`。
 
-    3) 统一门禁与倒计时来源：
-       - 修改 src/game/flow/turn/TurnDispatchValidator.lua
-       - 修改 src/game/flow/turn/TickUISync.lua
+然后修改测试。编辑 `.github/tests/suites/presentation_ui.lua`，把“非本地角色托管按钮为 false”的旧断言改为 true。补充至少两条测试：第一条验证两个角色点击托管后各自 `player.auto` 独立变化；第二条验证缺失 `actor_role_id` 的 `auto` 动作返回 `rejected` 且玩家状态不变。
 
-    4) 增补测试并接入回归：
-       - 修改 .github/tests/suites/gameplay.lua
-       - 如有新增索引，修改 .github/tests/suites/gameplay_registry.lua
+先跑切片回归，定位问题更快。命令与预期如下（缩进块为示例）：
 
-    5) 运行回归：
-       cd /Users/billyq/Dev/Github/Lua/monopoly && lua .github/tests/regression.lua
+    cd C:\Users\Lzx_8\Desktop\dev\monopoly
+    lua -e "package.path=package.path..';./.github/tests/?.lua;./.github/tests/suites/?.lua;./.github/tests/fixtures/?.lua'; local h=require('TestHarness'); h.run_all({require('presentation_ui_interaction')})"
 
-预期关键输出包含：
+    ..........
+    All regression checks passed (10)
 
-    All regression checks passed (...)
+切片通过后跑全量回归。命令与预期如下：
+
+    cd C:\Users\Lzx_8\Desktop\dev\monopoly
+    lua .github/tests/regression.lua
+
+    ..........................................................................................................................................................
+    All regression checks passed (154)
     dep_rules ok
     tick ok
 
 ## 验证与验收
 
 
-验收分三层。第一层是行为等价：不改玩法语义，原有关键流程（投骰、移动、落地、选择、动画等待）全部按旧规则推进。第二层是一致性：自动选择路径统一，弹窗倒计时显示与实际关闭一致。第三层是可测试性：在 headless 条件下，回合流程不因平台全局缺失而崩溃。
+验收以“行为可观察”而非“代码已改”为准。第一，输入锁开启时，任意角色视角托管按钮都可点，且托管文本仍不可点。第二，角色 A 点击只切换 A，角色 B 状态保持原值；角色 B 点击后只切换 B。第三，缺失 `actor_role_id` 的 `auto` 输入不会误切换任意玩家，并返回拒绝状态。第四，全量回归通过。
 
-执行回归命令：
-
-    cd /Users/billyq/Dev/Github/Lua/monopoly
-    lua .github/tests/regression.lua
-
-如果失败，按“新增测试失败优先于旧测试波动”的原则排查：先确认新策略是否破坏既有语义，再决定是修代码还是修错误断言。最终验收标准是回归全绿，且新增测试能够在改造前失败、改造后通过。
+当上述行为同时成立，并且 `lua .github/tests/regression.lua` 输出 `All regression checks passed (154)` 时，视为验收通过。
 
 ## 可重复性与恢复
 
 
-本计划步骤可重复执行，不涉及数据迁移。若中途失败，允许按文件粒度回退当次改动后重跑回归，不需要重建环境。建议每完成一个里程碑就运行一次 `lua .github/tests/regression.lua`，避免累计偏差导致定位困难。
+本计划步骤可重复执行，不涉及数据迁移。若中途失败，优先按文件粒度回滚本次改动后重跑切片测试，再跑全量回归。建议每完成一个里程碑就执行一次 `presentation_ui_interaction` 切片，减少一次性排错成本。
 
-如果需要完整回退本任务，可按提交边界撤销以下路径：`src/game/flow/turn/*` 中本次新增/修改文件、`.github/tests/suites/gameplay.lua`、`.github/tests/suites/gameplay_registry.lua`、`.github/tests/internal/gameplay_loop_no_ui.lua`、`.github/PLAN_CURRENT.md`。回退后再次运行回归确认恢复。
+若需要恢复到改造前状态，可使用 Git 按文件回退：仅回退 `UIPanelPresenter.lua`、`UIIntentDispatcher.lua` 与 `presentation_ui.lua` 的本次变更，然后重新运行回归确认恢复。
 
 ## 产物与备注
 
 
-本任务实施完成时应有三类产物。第一类是代码产物：端口扩展、策略模块、门禁与倒计时一致性改造。第二类是测试产物：覆盖时钟端口注入、自动策略统一、弹窗倒计时一致性的新增用例。第三类是文档产物：本计划中的“进度”“决策日志”“结果与复盘”必须与真实实现状态同步。
+本计划实施后应产生三类直接产物：`UIPanelPresenter.lua` 的触控判定收敛修改，`UIIntentDispatcher.lua` 的角色绑定修正，以及 `presentation_ui.lua` 的测试更新与新增。提交说明建议按“功能改动”和“测试改动”分开，便于审查。
 
-建议在本节追加简短证据片段，例如：
-
-    [PASS] _test_turn_dispatch_uses_clock_ports_without_game_api
-    [PASS] _test_choice_auto_policy_consistent_between_wait_and_timeout
-    [PASS] _test_popup_countdown_uses_effective_modal_timeout
-    [PASS] _test_dispatch_gate_blocks_next_when_choice_active
-    All regression checks passed (154)
+终端证据以两段为准：一段是切片回归 `All regression checks passed (10)`，另一段是全量回归 `All regression checks passed (154)`。若 Windows 环境仍出现 `'[' is not recognized ...` 噪声，在证据备注中标注“已复现但不影响结果判断”。
 
 ## 接口与依赖
 
 
-本次改造不新增第三方依赖，继续使用现有 Lua 模块体系。
+本改造不引入新依赖库。核心接口保持原路径，仅调整实现语义。`src/presentation/ui/UIPanelPresenter.lua` 的 `panel_presenter.render_auto_controls_for_role(ui, ctx, ui_model, local_role_id)` 保持签名不变，但必须保证托管按钮触控始终放行。`src/presentation/interaction/UIIntentDispatcher.lua` 的 `_normalize_auto_intent(intent)` 保持签名不变，但必须保证输出动作 `action.actor_role_id` 优先继承 `intent.actor_role_id`。`src/game/flow/turn/TurnDispatch.lua` 的 `action.id == "auto"` 分支保持现有逻辑，继续以 `actor_role_id` 解析目标玩家。
 
-里程碑完成时必须稳定存在以下接口（命名可微调，但语义必须一致）：
+测试依赖仍使用现有 `TestHarness` 与 `presentation_ui` 套件，不新增测试框架。里程碑结束时，必须能通过现有命令直接复现验收结果，不依赖手工 UI 操作。
 
-    -- in src/game/flow/turn/GameplayLoopPortTypes.lua
-    groups.clock = { "now", "diff_seconds" }
-
-    -- in src/game/flow/turn/GameplayLoopPorts.lua
-    clock.now() -> number
-    clock.diff_seconds(ts1, ts2) -> number
-
-    -- in src/game/flow/turn/TurnChoiceAutoPolicy.lua
-    decide(game, state, choice, ctx) -> action|nil
-
-    -- in src/game/flow/turn/TickTimeout.lua (共享超时来源)
-    resolve_modal_timeout_seconds(game, state) -> number
-
-动作门禁应通过单一入口调用（保留在 `TurnDispatchValidator` 或独立模块均可），禁止出现多份分叉规则。
-
-## 变更记录（本次）
+## 本次更新说明
 
 
-- 已清空旧 `PLAN_CURRENT.md` 并写入本计划，原因是当前任务已切换为“turn 流程重构方案”，旧计划主题与目标不再匹配。
-- 本次版本补全了可执行计划的必需章节与里程碑验收标准，原因是要保证新手在无历史上下文下也能直接落地实施。
-- 本次版本将计划状态更新为“已实施完成”，同步补充了真实回归结果与实施中发现，原因是活文档必须与当前代码状态一致。
+本次更新将旧版“托管按钮连续开关问题分析”重写为符合 `/.github/PLANS.md` 的可执行计划，并根据 `research.md` 最新结论纳入“全角色可点击、按角色独立切换”的明确目标。重写原因是旧文档偏结论说明，缺少可执行里程碑、验证命令、回退路径和活文档四个必需章节，无法直接指导无上下文执行者落地。

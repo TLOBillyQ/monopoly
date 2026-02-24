@@ -8,6 +8,12 @@
 2. **角色控制锁定（Role Control Lock）** - 控制角色是否可被操作
 3. **托管状态管理** - 记录玩家是否处于托管模式
 
+### 1.1 产品期望（最新）
+
+1. 所有角色视角下，托管按钮都应始终可点击（含输入锁开启期间）。
+2. 点击托管按钮只切换**当前点击角色自身**的 `player.auto`，不影响其他角色。
+3. 托管按钮触控权限不应依赖“是否本地角色”的限制逻辑。
+
 ---
 
 ## 2. 核心文件与逻辑
@@ -158,7 +164,7 @@ ui_touch_policy.set_action_log_toggle_touch(ui, true)
 
 **重点**：托管按钮是输入锁的例外，即使输入被锁定，托管按钮仍然可以点击。这是由 `UIInputLockPolicy` 保证的。
 
-**注意**：`UIPanelPresenter.render_auto_controls_for_role` 中错误地使用 `auto_enabled`（表示是否是本地角色）来控制托管按钮的触控，这会导致托管按钮被意外禁用。正确的做法是始终允许托管按钮可点击。
+**注意**：`UIPanelPresenter.render_auto_controls_for_role` 中使用“本地角色匹配”来控制托管按钮触控，会与“所有角色都可点击”的产品期望冲突。
 
 ---
 
@@ -173,7 +179,7 @@ function ui_event_router.bind(state, get_game)
   -- ...
   local function dispatch_intent(intent, data)
     if intent and intent.actor_role_id == nil then
-      intent.actor_role_id = _resolve_actor_role_id(data, state)
+      intent.actor_role_id = _resolve_actor_role_id(data)
     end
     -- ...
     ui_intent_dispatcher.dispatch(state, resolve_game(), intent, dispatch_opts)
@@ -201,8 +207,8 @@ end
 **`src/presentation/interaction/UIIntentDispatcher.lua:74-86`**
 
 ```lua
-local function _normalize_auto_intent(state, intent)
-  local local_role_id = _resolve_local_role_id(state, intent)
+local function _normalize_auto_intent(intent)
+  local local_role_id = _resolve_local_role_id()
   if local_role_id == nil then
     logger.warn("auto intent ignored without local role_id")
     return nil
@@ -211,15 +217,15 @@ local function _normalize_auto_intent(state, intent)
   for k, v in pairs(intent) do
     action[k] = v
   end
-  action.actor_role_id = local_role_id  -- 关键：绑定本地角色ID
+  action.actor_role_id = local_role_id  -- 关键：绑定当前点击角色ID
   return action
 end
 ```
 
 关键逻辑：
 - 托管意图必须通过 `_normalize_auto_intent` 标准化
-- 若无法解析本地角色ID，意图被忽略（返回 `nil`）
-- 标准化后的动作包含 `actor_role_id`，用于后续权限验证
+- 若无法解析当前点击角色ID，意图被忽略（返回 `nil`）
+- 标准化后的动作包含 `actor_role_id`，用于定位要切换托管状态的玩家
 
 ### 4.3 动作验证与分发
 
@@ -231,7 +237,7 @@ if intent_type == "ui_button"
     or intent_type == "choice_cancel" then
   local action = intent
   if intent_type == "ui_button" and intent.id == "auto" then
-    action = _normalize_auto_intent(state, intent)
+    action = _normalize_auto_intent(intent)
     if action == nil then
       return true  -- 已处理但无效
     end
@@ -318,11 +324,11 @@ end
 **`src/presentation/state/UIModelPanelBuilder.lua`**
 
 ```lua
-function M.build_auto_label_by_player(players)
+function M.build_auto_label_by_player(players, enabled_by_player)
   local out = {}
   for _, player in ipairs(players or {}) do
     if player and player.id then
-      out[player.id] = M.build_auto_label(player.auto == true)
+      out[player.id] = M.build_auto_label(enabled_by_player and enabled_by_player[player.id] == true)
     end
   end
   return out
@@ -414,12 +420,12 @@ end
 **语义混淆**：
 - `auto_enabled` 实际含义：**"当前角色是否是本地角色"**
 - 但变量名暗示：**"托管是否启用"**
-- 结果是：只有本地角色才能点击托管按钮
+- 结果是：非本地角色视角会被禁用托管按钮，不符合最新产品期望
 
 **为什么这是问题**：
 1. 托管按钮应在任何情况下都可点击（输入锁的例外）
-2. 角色匹配检查已在 `TurnDispatchValidator.validate_actor_role` 中处理
-3. UI层不应重复限制托管按钮的触控
+2. 点击托管仅依赖 `actor_role_id` 定位玩家并切换 `player.auto`
+3. UI层不应以“本地角色匹配”额外限制托管按钮触控
 
 ### 6.3 UIInputLockPolicy 的正确实现
 
@@ -431,13 +437,13 @@ ui_touch_policy.set_auto_controls_touch(ui, true)
 ui_touch_policy.set_action_log_toggle_touch(ui, true)
 ```
 
-这里明确将托管按钮设为始终可点击（`true`），无论输入锁状态如何。
+这里明确将托管按钮设为始终可点击（`true`），无论输入锁状态如何，也不区分是否本地角色。
 
 ---
 
 ## 7. 角色控制锁定机制
 
-### 4.1 配置开关
+### 7.1 配置开关
 
 **`Config/GameplayRules.lua`**
 ```lua
@@ -447,7 +453,7 @@ local gameplay_rules = {
 }
 ```
 
-### 4.2 角色控制锁实现
+### 7.2 角色控制锁实现
 
 **`src/presentation/interaction/UIRoleControlLockPolicy.lua`**
 
@@ -474,7 +480,7 @@ local function _sync_role_lock(lock_state, role_id, unit, buff_id)
 end
 ```
 
-### 4.3 豁免机制
+### 7.3 豁免机制
 
 **`src/presentation/api/ui_view_service/state.lua`**
 ```lua
@@ -489,7 +495,7 @@ end
 
 ---
 
-## 5. 动作验证器中的特殊处理
+## 8. 动作验证器中的特殊处理
 
 **`src/game/flow/turn/TurnDispatchValidator.lua:141-148`**
 
@@ -512,9 +518,9 @@ end
 
 ---
 
-## 6. 自动执行逻辑
+## 9. 自动执行逻辑
 
-### 6.1 AutoRunner
+### 9.1 AutoRunner
 
 **`src/game/flow/turn/AutoRunner.lua`**
 
@@ -548,7 +554,7 @@ function auto_runner:next_action(dt, env)
 end
 ```
 
-### 6.2 游戏循环中的自动执行
+### 9.2 游戏循环中的自动执行
 
 **`src/game/flow/turn/GameplayLoop.lua:205-231`**
 
@@ -577,9 +583,9 @@ end
 
 ---
 
-## 7. 关键总结
+## 10. 关键总结
 
-### 7.1 锁定层次
+### 10.1 锁定层次
 
 | 层次 | 机制 | 控制范围 | 托管按钮例外 |
 |------|------|----------|--------------|
@@ -588,7 +594,7 @@ end
 | 动作验证 | `should_block_action` | 动作是否被接受 | ✅ 是 |
 | 自动执行 | `step_auto_runner` | AI 自动点击 next | 输入锁开启时暂停 |
 
-### 7.2 托管按钮特殊性
+### 10.2 托管按钮特殊性
 
 托管按钮在以下层面都被特殊处理：
 
@@ -596,7 +602,7 @@ end
 2. **TurnDispatchValidator**: 返回 `false` 不阻止托管动作
 3. **GameplayLoop**: 输入锁开启时暂停 auto_runner，但托管按钮仍可点击切换状态
 
-### 7.3 状态流转
+### 10.3 状态流转
 
 ```
 玩家点击托管按钮
@@ -617,9 +623,9 @@ UIPanelPresenter 根据 auto_enabled 更新托管按钮视觉效果
 
 ---
 
-## 8. 问题根因深度分析
+## 11. 问题根因深度分析
 
-### 8.1 触控权限的多层检查
+### 11.1 触控权限的多层检查
 
 托管按钮的触控状态受多层逻辑影响：
 
@@ -629,7 +635,7 @@ UIPanelPresenter 根据 auto_enabled 更新托管按钮视觉效果
 | 面板呈现器 | UIPanelPresenter.lua | `allow_touch = auto_enabled` | 角色匹配才允许 |
 | 触控策略 | UITouchPolicy.lua | 根据参数设置按钮触控 | 按传入参数执行 |
 
-### 8.2 竞争条件分析
+### 11.2 根因分析
 
 **`GameplayLoop.tick` 执行顺序**（简化）：
 
@@ -651,14 +657,15 @@ function gameplay_loop.tick(game, state, dt)
 end
 ```
 
-**问题场景**：
+**问题本质**：
 
 1. `refresh_from_dirty` 调用 `UIPanelPresenter.refresh`
-2. `render_auto_controls_for_role` 设置 `allow_touch = false`（角色不匹配）
-3. 若 `apply_input_lock` 因条件未满足未被调用
-4. 托管按钮保持禁用状态
+2. `render_auto_controls_for_role` 用“本地角色匹配”覆盖托管按钮触控
+3. 覆盖后的结果与产品期望冲突：非本地角色视角下托管按钮不可点
 
-### 8.3 语义混淆详解
+该问题核心是**权限语义错误**，不是输入锁时序本身。
+
+### 11.3 语义混淆详解
 
 **变量命名问题**：
 
@@ -682,14 +689,12 @@ auto_enabled_by_player  -- 按玩家ID索引的托管状态表
 **UIPanelPresenter 应改为**：
 
 ```lua
-local is_local_role = ctx ~= nil and ctx.role_id == local_role_id
--- ...
 local allow_touch = true  -- 托管按钮始终可点击
 ```
 
 ---
 
-## 9. 修复方案对比
+## 12. 修复方案对比
 
 ### 方案A：修改 UIPanelPresenter（推荐）
 
@@ -701,7 +706,7 @@ local allow_touch = true
 **优点**：
 
 - 与 `UIInputLockPolicy` 逻辑一致
-- 托管按钮行为符合预期（始终可点击）
+- 满足产品期望：所有角色可随时点击托管按钮
 - 改动最小，风险最低
 
 ### 方案B：移除 UIPanelPresenter 的触控控制
@@ -718,7 +723,7 @@ end
 **优点**：
 
 - 单一职责，`UIInputLockPolicy` 专门处理触控策略
-- 避免未来再次出现竞争条件
+- 避免未来再次出现权限覆盖冲突
 
 ### 方案C：统一触控策略入口
 
@@ -729,11 +734,25 @@ end
 - 增加复杂性
 - 需要修改多处调用
 
+### 方案D：补强 auto 意图角色绑定（建议与方案A组合）
+
+在 `_normalize_auto_intent` 中优先保留 `intent.actor_role_id`，仅在缺失时回退 `_resolve_local_role_id()`。
+
+```lua
+local actor_role_id = intent.actor_role_id or _resolve_local_role_id()
+action.actor_role_id = actor_role_id
+```
+
+**收益**：
+
+- 明确“谁点击，切谁的托管状态”
+- 降低事件上下文变化导致的角色绑定风险
+
 ---
 
-## 10. 相关测试用例
+## 13. 相关测试用例
 
-### 10.1 现有测试
+### 13.1 现有测试
 
 **`.github/tests/suites/presentation_ui.lua:1514-1560`**
 
@@ -745,23 +764,33 @@ local function _test_apply_input_lock_keeps_auto_controls_enabled()
 end
 ```
 
-### 10.2 建议新增测试
+### 13.2 建议新增测试
 
 ```lua
--- 验证托管按钮在UI刷新后仍可点击
-function test_auto_button_clickable_after_ui_refresh()
-  -- 开启托管
-  player.auto = true
-  -- 触发UI刷新
-  ui_sync_ports.refresh_from_dirty(game, state, {ui = true})
-  -- 断言：托管按钮触控仍启用
-  assert(auto_button_touch_enabled == true)
+-- 1) 所有角色视角下托管按钮都可点击（含 input_blocked=true）
+function test_auto_button_enabled_for_all_roles_when_locked()
+  assert(role1_touch["托管按钮"] == true)
+  assert(role2_touch["托管按钮"] == true)
+end
 
-  -- 关闭托管
-  player.auto = false
-  -- 触发UI刷新
-  ui_sync_ports.refresh_from_dirty(game, state, {ui = true})
-  -- 断言：托管按钮触控仍启用
-  assert(auto_button_touch_enabled == true)
+-- 2) 角色A点击只切换角色A的 player.auto，不影响角色B
+function test_auto_toggle_only_affects_actor_role()
+  dispatch_auto_click(role1)
+  assert(player1.auto == true)
+  assert(player2.auto == false)
+end
+
+-- 3) 角色A/B交替点击时，各自状态独立切换
+function test_auto_toggle_is_independent_between_roles()
+  dispatch_auto_click(role1)
+  dispatch_auto_click(role2)
+  assert(player1.auto == true)
+  assert(player2.auto == true)
+end
+
+-- 4) actor_role_id 缺失时应拒绝，不应误切换他人状态
+function test_auto_toggle_rejected_without_actor_role_id()
+  local result = dispatch_auto_without_actor()
+  assert(result.status == "rejected")
 end
 ```
