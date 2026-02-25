@@ -1,7 +1,12 @@
 local runtime = require("src.presentation.api.UIRuntimePort")
 local ui_view = require("src.presentation.api.UIViewService")
 local ui_event_bindings = require("src.presentation.interaction.UIEventBindings")
-local ui_intent_builder = require("src.presentation.interaction.UIIntentBuilder")
+local basic_intents = require("src.presentation.interaction.intent_builders.BasicIntents")
+local action_log_intents = require("src.presentation.interaction.intent_builders.ActionLogIntents")
+local popup_intents = require("src.presentation.interaction.intent_builders.PopupIntents")
+local item_slot_intents = require("src.presentation.interaction.intent_builders.ItemSlotIntents")
+local choice_intents = require("src.presentation.interaction.intent_builders.ChoiceIntents")
+local market_intents = require("src.presentation.interaction.intent_builders.MarketIntents")
 local ui_intent_dispatcher = require("src.presentation.interaction.UIIntentDispatcher")
 
 local ui_event_router = {}
@@ -26,14 +31,14 @@ local function _build_default_route_specs(state)
     end
   end
 
-  _append(ui_intent_builder.build_basic_intents(state))
-  _append(ui_intent_builder.build_action_log_intents(state))
-  _append(ui_intent_builder.build_popup_intents(state))
-  _append(ui_intent_builder.build_item_slot_intents(state))
-  _append(ui_intent_builder.build_player_intents(state))
-  _append(ui_intent_builder.build_target_intents(state))
-  _append(ui_intent_builder.build_remote_intents(state))
-  _append(ui_intent_builder.build_market_item_intents(state))
+  _append(basic_intents.build(state))
+  _append(action_log_intents.build())
+  _append(popup_intents.build(state))
+  _append(item_slot_intents.build(state))
+  _append(choice_intents.build_player(state))
+  _append(choice_intents.build_target(state))
+  _append(choice_intents.build_remote(state))
+  _append(market_intents.build_items(state))
 
   return specs
 end
