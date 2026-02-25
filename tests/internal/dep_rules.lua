@@ -11,6 +11,42 @@ local function _contains_forbidden(line)
   return nil
 end
 
+local function _is_windows()
+  return package.config:sub(1, 1) == "\\"
+end
+
+local function _build_list_command(root)
+  if _is_windows() then
+    local win_root = root:gsub("/", "\\")
+    return 'dir /b /s /a-d "' .. win_root .. '\\*.lua" 2>nul'
+  end
+  return 'find "' .. root .. '" -type f -name "*.lua" 2>/dev/null'
+end
+
+local function _collect_lua_files(root)
+  local cmd = _build_list_command(root)
+  local p = io.popen(cmd)
+  if not p then
+    return nil, "cannot run list command: " .. cmd
+  end
+
+  local files = {}
+  for line in p:lines() do
+    if line and line ~= "" then
+      files[#files + 1] = line
+    end
+  end
+
+  local ok, why, code = p:close()
+  if ok == nil or ok == false then
+    return nil, "list command failed: " .. tostring(why) .. " " .. tostring(code)
+  end
+  if #files == 0 then
+    return nil, "no lua files found under: " .. tostring(root)
+  end
+  return files
+end
+
 local function _scan_file(path)
   local file = io.open(path, "r")
   if not file then
@@ -34,55 +70,28 @@ local function _scan_file(path)
   return nil
 end
 
-local function _walk_dir(dir, entries)
-  local p = io.popen('ls -1 "' .. dir .. '"')
-  if not p then
-    return
-  end
-  for name in p:lines() do
-    if name ~= "." and name ~= ".." then
-      local full = dir .. "/" .. name
-      entries[#entries + 1] = full
-    end
-  end
-  p:close()
-end
-
-local function _is_dir(path)
-  local p = io.popen('[ -d "' .. path .. '" ] && echo dir')
-  if not p then
-    return false
-  end
-  local res = p:read("*l")
-  p:close()
-  return res == "dir"
-end
-
-local function _is_lua(path)
-  return path:sub(-4) == ".lua"
-end
-
 local function _scan_tree(root)
-  local queue = { root }
-  while #queue > 0 do
-    local current = table.remove(queue, 1)
-    if _is_dir(current) then
-      local entries = {}
-      _walk_dir(current, entries)
-      for _, entry in ipairs(entries) do
-        queue[#queue + 1] = entry
-      end
-    elseif _is_lua(current) then
-      local hit = _scan_file(current)
-      if hit then
-        return hit
-      end
+  local files, files_err = _collect_lua_files(root)
+  if not files then
+    return nil, files_err
+  end
+  for _, path in ipairs(files) do
+    local hit, scan_err = _scan_file(path)
+    if hit then
+      return hit
+    end
+    if scan_err then
+      return nil, scan_err
     end
   end
   return nil
 end
 
-local hit = _scan_tree("src/presentation/interaction")
+local hit, err = _scan_tree("src/presentation/interaction")
+if err then
+  io.stderr:write("dep_rules error: ", err, "\n")
+  os.exit(1)
+end
 if hit then
   io.stderr:write("dep_rules violation: ", hit.path, ":", hit.line, " contains ", hit.prefix, "\n")
   io.stderr:write(hit.text, "\n")

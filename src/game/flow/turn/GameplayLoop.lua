@@ -230,39 +230,27 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
   return auto_action
 end
 
-function gameplay_loop.tick(game, state, dt)
-  if not game then
-    return
-  end
-
-  local ports = _resolve_ports(state)
-  local ui_sync_ports = ports.ui_sync
-  local anim_ports = ports.anim
-  local debug_ports = ports.debug
-  local phase = game.turn.phase
-  local input_blocked_changed = gameplay_loop_runtime.sync_input_blocked(state, phase, ports)
-  gameplay_loop_runtime.sync_role_control_lock(game, state, ports)
-
-  local auto_ctx = {
+local function _build_tick_auto_context(game)
+  local idx = game.turn and game.turn.current_player_index or nil
+  local player = idx and game.players and game.players[idx] or nil
+  local is_player_auto = player and player.auto == true or false
+  local is_ai_auto = player and agent.is_auto_player(player) == true or false
+  return {
     modal_active = false,
     modal_buttons = nil,
     game_finished = game.finished,
-    current_player_index = game.turn and game.turn.current_player_index or nil,
-    current_player_id = (function()
-      local idx = game.turn and game.turn.current_player_index or nil
-      local player = idx and game.players and game.players[idx] or nil
-      return player and player.id or nil
-    end)(),
-    current_player_auto = (function()
-      local idx = game.turn and game.turn.current_player_index or nil
-      local player = idx and game.players and game.players[idx] or nil
-      local is_player_auto = player and player.auto == true or false
-      local is_ai_auto = player and agent.is_auto_player(player) == true or false
-      return is_player_auto or is_ai_auto
-    end)(),
+    current_player_index = idx,
+    current_player_id = player and player.id or nil,
+    current_player_auto = is_player_auto or is_ai_auto,
   }
-  gameplay_loop.step_auto_runner(game, state, dt, auto_ctx)
+end
 
+local function _step_tick_auto_runner(game, state, dt)
+  gameplay_loop.step_auto_runner(game, state, dt, _build_tick_auto_context(game))
+end
+
+local function _step_tick_timeouts(game, state, dt, ports)
+  local ui_sync_ports = ports.ui_sync
   ui_sync_ports.step_choice_timeout(game, state, dt)
   ui_sync_ports.step_modal_timeout(game, state, dt)
   gameplay_loop_runtime.update_action_button_timer({
@@ -279,14 +267,22 @@ function gameplay_loop.tick(game, state, dt)
     end,
   })
   gameplay_loop_runtime.update_detained_wait_timer(game, state, dt, turn_dispatch.step_turn)
+end
 
-  phase = game.turn.phase
+local function _sync_tick_phase(game, state, ports, input_blocked_changed)
+  local phase = game.turn.phase
   if gameplay_loop_runtime.sync_input_blocked(state, phase, ports) then
     input_blocked_changed = true
   end
   _step_phase_animation(game, state, phase, ports)
   gameplay_loop_runtime.sync_phase_flags(state, phase)
+  return input_blocked_changed
+end
 
+local function _refresh_tick_from_dirty(game, state, ports, input_blocked_changed)
+  local ui_sync_ports = ports.ui_sync
+  local anim_ports = ports.anim
+  local debug_ports = ports.debug
   ui_sync_ports.update_countdown(game, state)
 
   local dirty = game:consume_dirty()
@@ -304,6 +300,22 @@ function gameplay_loop.tick(game, state, dt)
   end
 
   debug_ports.sync_debug_log(state)
+end
+
+function gameplay_loop.tick(game, state, dt)
+  if not game then
+    return
+  end
+
+  local ports = _resolve_ports(state)
+  local phase = game.turn.phase
+  local input_blocked_changed = gameplay_loop_runtime.sync_input_blocked(state, phase, ports)
+  gameplay_loop_runtime.sync_role_control_lock(game, state, ports)
+
+  _step_tick_auto_runner(game, state, dt)
+  _step_tick_timeouts(game, state, dt, ports)
+  input_blocked_changed = _sync_tick_phase(game, state, ports, input_blocked_changed)
+  _refresh_tick_from_dirty(game, state, ports, input_blocked_changed)
 end
 
 return gameplay_loop
