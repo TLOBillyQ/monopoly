@@ -1,224 +1,151 @@
-# 架构复杂度深度调研（src / Config / vendor）
+# 架构复杂度复审（是否过度工程 + 改进建议）
 
-更新时间：2026-02-24
+更新时间：2026-02-25  
+范围：`ARCHITECTURE.md`、`src/`、`Config/`、`vendor/`、`tests/`
 
-调研范围：`ARCHITECTURE.md`、`src/`、`Config/`、`vendor/`、`tests/`
+## 1. 核心判断
 
-## 1. 结论
+结论：**当前不是“系统性过度工程”，但存在“局部过度抽象”与“质量门槛失真”问题。**
 
-结论：**架构已完成初步收敛，但仍存在优化空间**。
+- 不是系统性过度工程：主链路已比旧版本收敛，核心能力仍可维护。
+- 存在局部过度工程：UI 交互链条仍偏长，少量薄封装增加跳转成本。
+- 更高优先级风险：依赖规则检查在 Windows 下存在“假通过”可能，影响架构约束可信度。
 
-核心变化：近期已删除 `UIIntentBuilder.lua`、`UIModelProjection.lua`、`UIModelPanelBuilder.lua` 等转发层，UI 链路和模型链路已缩短。但 `GameplayLoop.tick` 职责仍较集中，部分薄封装文件依然存在。
-
-一句话判断：**方向正确，持续收敛中。**
-
----
-
-## 2. 调研方法
-
-本次采用"文档-实现对照 + 定量扫描 + 关键链路抽样"：
-
-1. 对照 `ARCHITECTURE.md` 的分层声明与真实代码主链。
-2. 统计规模与抽象命名密度（Adapter/Port/Service/Registry/Dispatcher/Handler/Builder/Coordinator）。
-3. 抽样薄封装文件（低行数 + 单纯转发）。
-4. 评审启动链、Tick 链、UI 交互链的跳转层数。
+一句话：**架构方向正确，但需要先修“约束可信度”，再做复杂度收敛。**
 
 ---
 
-## 3. 定量画像
+## 2. 判断标准（用于定义“是否过度工程”）
 
-### 3.1 规模
+本次用 4 条标准判断：
 
-- `src/` 文件数：**179**（Lua 文件）
-- `Config/` 文件数：**19**
-- `vendor/` 文件数：**29**
+1. 抽象是否带来独立语义，而非仅转发。
+2. 新增一个功能是否需要跨 3 层以上同步修改。
+3. 分层约束是否可被测试稳定验证（不能“看似通过”）。
+4. 关键主循环是否承载过多横切职责，导致回归半径扩大。
 
-### 3.2 抽象命名密度
-
-- 命中抽象命名模式的 `src` 文件：**~45 / 179（约 25%）**
-- 主要模式：Port(5), Adapter(3), Service(8), Registry(4), Dispatcher(2), Handler(12), Builder(6), Coordinator(5)
-
-### 3.3 薄封装文件（<= 25 行）
-
-- `src` 中行数 `<= 25` 的文件：**~25**
-- 典型样本：
-  - `TurnActionPort.lua`: 22 行（默认回退行为封装）
-  - `GameplayLoopPortsAdapter.lua`: 19 行（端口注入适配）
-  - `ActionLogIntents.lua`: 18 行（Intent 构造转发）
-  - `PopupIntents.lua`: 24 行（Intent 构造转发）
-
-### 3.4 复杂度集中目录
-
-- `src/presentation/interaction`: **12** 文件（已减少，原 18）
-- `src/presentation/api`: **6** 文件（已减少，原 15）
-- `src/game/flow/turn`: **8** 文件（已减少，原 21）
-
-**关键变化**：`interaction` 和 `api` 目录已合并简化，`UIIntentBuilder` 已删除。
+只要第 2、3、4 条同时偏弱，就可认定为局部过度工程风险区。
 
 ---
 
-## 4. 证据清单（按风险分级）
+## 3. 复核证据（已重算）
 
-## 中等风险
+### 3.1 规模画像
 
-### M1. GameplayLoop.tick 职责仍较集中
+- `src` Lua 文件：`179`
+- `Config` 文件：`19`
+- `vendor` 文件：`29`
+- `src` 中 `<=25` 行文件：`29`
 
-- `GameplayLoop.tick`（233-307 行，约 75 行）同时处理：
-  - 输入锁同步
-  - 角色控制锁
-  - Auto runner 步进
-  - 超时处理（choice + modal + action button + detained）
-  - 动画步进（move + action）
-  - 倒计时更新
-  - Dirty 刷新
-  - Debug 同步
+### 3.2 抽象密度（按文件名命中）
 
-- 文件位置：`src/game/flow/turn/GameplayLoop.lua:233-307`
+- 文件名包含 `Port/Adapter/Service/Registry/Dispatcher/Handler/Builder/Coordinator` 的文件：`34 / 179`（约 19%）
 
-影响：子功能改动可能引发连锁回归；排错边界不够清晰。建议按职责拆分为子函数文件。
+说明：该比例不高到“必然过度设计”，但应关注命名抽象是否持续增长。
 
-### M2. 部分薄封装仍然存在
+### 3.3 关键链路与职责集中
 
-**已删除**（原高风险，现已解决）：
-
-- ~~`UIIntentBuilder.lua`~~ 已删除
-- ~~`UIModelProjection.lua`~~ 已删除
-- ~~`UIModelPanelBuilder.lua`~~ 已删除
-
-**仍存在**：
-
-- `TurnActionPort.lua`: 22 行，提供默认回退端口语义
-- `GameplayLoopPortsAdapter.lua`: 19 行，测试依赖的端口注入层
-- `ActionLogIntents.lua`: 18 行，单纯转发
-- `PopupIntents.lua`: 24 行，单纯转发
-
-影响：文件数量和跳转数量仍可增加理解成本。
-
-### M3. UI 输入链仍有 3-4 层
-
-当前链路：
+- `GameplayLoop.tick` 位于 `233-307`，约 `75` 行，仍承担多类横切职责。
+- UI 输入主链：
 
 ```text
-UIEventRouter (105 行)
-  -> intent_builders/* (6 个文件)
-  -> UIIntentDispatcher (192 行)
-    -> TurnActionPort (22 行)
-      -> TurnDispatch
+UIEventRouter(91)
+  -> intent_builders/* (6 文件, 231 行)
+  -> UIIntentDispatcher(172)
+  -> TurnActionPort(19)
+  -> TurnDispatch
 ```
 
-对比原架构（已优化）：
+### 3.4 已完成收敛（正向）
 
-- ~~`UIIntentBuilder`~~ 已删除，减少了一层门面
+- `UIIntentBuilder.lua`、`UIModelProjection.lua`、`UIModelPanelBuilder.lua` 已删除。
+- `UIModel.lua` 已成为单一入口（当前约 `333` 行）。
 
-影响：新增按钮语义仍需改 2-3 处（intent_builder + router + 可能 dispatcher）。
+### 3.5 约束校验风险（重点）
 
-## 低风险（合理设计）
-
-### L1. Flow + DirtyTracker 设计正确
-
-- `Flow` 保持极简状态步进：`src/core/Flow.lua`
-- `DirtyTracker` 结构清晰，适合增量渲染：`src/core/DirtyTracker.lua`
-
-### L2. UIModel 已合并为单一入口
-
-- `UIModel.lua`（约 360 行）现在是唯一 UI 数据组装入口
-- 已合并原 `UIModelProjection` 和 `UIModelPanelBuilder` 的功能
-- 改一个展示字段只需改 1 处
-
-### L3. 测试入口统一
-
-- 回归测试：`tests/regression.lua`
-- 依赖规则检查：`tests/internal/dep_rules.lua`
-- GameplayLoop 隔离测试：`tests/internal/gameplay_loop_no_ui.lua`
+- `tests/internal/dep_rules.lua` 使用 `ls` 与 `[ -d ]`，在 Windows 环境下会出现命令错误但仍可能输出 `dep_rules ok`。
+- 这意味着“依赖约束通过”目前不总是可信，属于流程级风险。
 
 ---
 
-## 5. 反证与边界
+## 4. 是否过度工程：分区判断
 
-"模块多"不必然等于过度设计。本项目的关键判断依据：
+### A. 非过度工程区（保持）
 
-1. **抽象层是否有语义增量**：`UIModel` 合并后语义清晰，属于正向改进。
-2. **改动链路长度**：从原来的 4-5 层减少到 2-3 层，已显著改善。
-3. **主循环复杂度**：`GameplayLoop.tick` 仍承载较多横切关注点，建议继续拆分。
+- `Flow`、`DirtyTracker` 等核心结构仍然直接、可预测。
+- 回归与隔离测试可运行（`regression` / `gameplay_loop_no_ui`）。
+- 近阶段删除多层门面是明确的去复杂化动作。
 
-当前判断：**收敛进行中，不是过度设计**。
+### B. 轻度过度工程区（需要收敛）
 
----
+- `interaction` 层对简单输入语义仍有多跳转发。
+- 部分小文件虽短，但承担的语义与边界不一致，导致“看起来薄、实际上不能随便删”。
+- `GameplayLoop.tick` 作为协调中心仍偏重，修改局部逻辑时回归半径偏大。
 
-## 6. 收敛方案（M1-M3，更新版）
+### C. 高优先级修复区（先做）
 
-## M1：拆分 GameplayLoop.tick 子职责
-
-目标：将 `tick` 函数按职责拆分为子函数文件，降低单函数复杂度。
-
-拆分方向：
-
-- `gameplay_loop_auto.lua`：auto runner 相关逻辑
-- `gameplay_loop_timeout.lua`：各类超时处理
-- `gameplay_loop_anim.lua`：动画步进协调
-- `gameplay_loop_sync.lua`：状态同步（input lock, role control）
-
-边界：仅 `src/game/flow/turn/` 目录。
-
-验收：
-
-- `lua tests/regression.lua` 通过
-- `lua tests/internal/gameplay_loop_no_ui.lua` 通过
-
-## M2：进一步压平 interaction 链
-
-目标：评估是否将 `intent_builders/*` 内联到 `UIEventRouter`，减少文件分散。
-
-当前状态：6 个 intent_builder 文件，共 250 行。
-
-方案对比：
-
-- **方案 A**：保持现状（文件分散但职责清晰）
-- **方案 B**：内联到 UIEventRouter（减少文件，但增加单文件长度）
-
-建议：当前规模（250 行）可接受，暂不改动，观察增长趋势。
-
-## M3：删除或合并剩余薄封装
-
-目标：删除纯转发层，保留真正边界层。
-
-优先级：
-
-1. `ActionLogIntents.lua` + `PopupIntents.lua` -> 内联到调用方
-2. `TurnActionPort.lua` -> 评估是否合并到 `TurnDispatch`
-3. `GameplayLoopPortsAdapter.lua` -> 评估测试是否可改为依赖注入
-
-边界：优先处理无独立语义且 <=25 行的文件。
-
-验收：
-
-- `lua tests/regression.lua` 通过
-- `lua tests/internal/dep_rules.lua` 通过
+- `dep_rules` 的跨平台不可靠会削弱所有后续架构改造的验收价值。  
+  **先修它，再谈深度重构。**
 
 ---
 
-## 7. 建议执行的下一步动作
+## 5. 改进建议（按优先级）
 
-1. **拆分 GameplayLoop.tick**：按 M1 方案拆分子职责，降低单函数复杂度。
+### P0（1 天内）：先修质量门槛可信度
 
-2. **评估 intent_builders 合并**：若未来新增 intent 类型，优先考虑内联到 UIEventRouter。
+1. 重写 `dep_rules.lua` 的目录遍历方式，避免依赖 shell 的 `ls` / `[ -d ]`。
+2. 在 CI 固定一个 Linux 任务跑 `dep_rules`，并在本地保留 Windows 可运行版本。
+3. 验收要求：出现命令错误时必须直接失败，不允许“错误 + 通过”并存。
 
-3. **删除 ActionLogIntents + PopupIntents**：内联到对应调用方，减少文件数。
+### P1（2-4 天）：收敛复杂度热点
 
-4. **建立薄封装监控**：新增文件 <=20 行时触发审查，防止薄封装反弹。
+1. 拆分 `GameplayLoop.tick`，但优先“同文件私有函数 + runtime 模块化”，避免一次性拆太多新文件。
+2. 压平 UI 交互链：把无额外状态语义的 intent 构造逻辑合并到 `UIEventRouter` 局部表。
+3. 保留 `TurnActionPort` 边界，不建议直接并入 `TurnDispatch`（避免破坏 `presentation -> game` 依赖约束）。
+
+### P2（持续）：建立“薄封装准入规则”
+
+1. 新增小文件时必须满足至少一条：
+   - 提供独立语义边界；
+   - 隔离跨层依赖；
+   - 显著提升测试可注入性。
+2. `<=20` 行且仅转发的新增文件，默认进入评审清单。
+3. 每两周输出一次“抽象命名密度 + 薄封装数量”趋势，防止反弹。
 
 ---
 
-## 8. 最终判断
+## 6. 可执行落地计划
 
-当前架构**已进入健康区间**，主要问题（多层转发、模型投影碎片化）已解决。
+### Step 1：质量门槛修复
 
-剩余优化点（GameplayLoop 拆分、剩余薄封装）属于**渐进改进**，不影响功能开发。
+- 修复 `tests/internal/dep_rules.lua` 跨平台执行。
+- 验收：
+  - `lua tests/internal/dep_rules.lua`
+  - 错误场景下退出码必须非 0
 
-建议：
+### Step 2：Tick 职责收敛
 
-- **短期**：执行 M3，删除剩余薄封装（1-2 天工作量）
-- **中期**：执行 M1，拆分 GameplayLoop（3-5 天工作量）
-- **长期**：保持监控，防止架构复杂度反弹
+- 对 `GameplayLoop.tick` 做职责分组拆分（同步、超时、动画、刷新）。
+- 验收：
+  - `lua tests/internal/gameplay_loop_no_ui.lua`
+  - `lua tests/regression.lua`
 
-**当前架构可支撑业务迭代，无需重写。**
+### Step 3：UI 交互链减层
+
+- 合并低语义 intent builder（先从纯节点映射类开始）。
+- 验收：
+  - `lua tests/regression.lua`
+  - `lua tests/internal/dep_rules.lua`
+
+---
+
+## 7. 最终结论
+
+当前架构**可继续支撑迭代，无需重写**。  
+本项目的主要问题不是“大而乱”，而是**局部抽象收益不足 + 架构约束验证不够可靠**。
+
+优先顺序应当是：
+
+1. 先修验证可信度（P0）
+2. 再降热点复杂度（P1）
+3. 最后做长期治理（P2）
