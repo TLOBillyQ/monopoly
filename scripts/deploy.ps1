@@ -33,9 +33,8 @@ if (Test-Path $TargetPath) {
     $TargetPath = (Resolve-Path $TargetPath).Path
 }
 
-# 获取脚本所在目录的上两级目录（项目根目录）
-$ScriptRoot = Split-Path -Parent $PSScriptRoot
-$ProjectRoot = Split-Path -Parent $ScriptRoot
+# 获取脚本所在目录的上一级目录（项目根目录）
+$ProjectRoot = Split-Path -Parent $PSScriptRoot
 
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host "开始部署项目文件" -ForegroundColor Cyan
