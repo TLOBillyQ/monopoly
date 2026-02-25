@@ -2,18 +2,18 @@
 
 本可执行计划是活文档。实施过程中必须持续更新"进度""意外与发现""决策日志""结果与复盘"。
 
-本文件遵循 `.github/PLANS.md` 的维护要求。调研报告来源：`.github/docs/reports/research.md`。
+本文件遵循 `.agents/harness/PLANS.md` 的维护要求。调研报告来源：`.agents/research.md`。
 
 
 ## 目的 / 全局视角
 
-调研（`.github/docs/reports/research.md`）确认：当前架构方向合理（状态机 + dirty 增量刷新），但实现层数过厚。问题不是"模块多"，而是"抽象层之间缺少语义增量 + 主循环职责过载 + 一条常见改动链路跨太多文件"。这导致新增一个按钮、改一个展示字段、排查一个启动失败，都需要跨多个薄封装文件追踪。
+调研（`.agents/research.md`）确认：当前架构方向合理（状态机 + dirty 增量刷新），但实现层数过厚。问题不是"模块多"，而是"抽象层之间缺少语义增量 + 主循环职责过载 + 一条常见改动链路跨太多文件"。这导致新增一个按钮、改一个展示字段、排查一个启动失败，都需要跨多个薄封装文件追踪。
 
 本计划的目标是**原地收敛**，不新建 `src_next/`，不改功能，只压层数。完成后用户可见结果是：
 
 1. 新增一个 UI 按钮语义，只需改 1-2 个文件（而非 4-5 个）。
 2. 改一个展示字段，只需改 `UIModel.lua`（而非跨 `UIModelProjection` + `UIModelPanelBuilder` + `UIModel` 三处）。
-3. `lua .github/tests/regression.lua` 通过数不减少（当前基线 154）。
+3. `lua tests/regression.lua` 通过数不减少（当前基线 154）。
 4. `ARCHITECTURE.md` 同步更新，新人阅读路径缩短。
 
 如何看到它在工作：每完成一个里程碑，运行回归，通过数 >= 154；再检查被收敛的文件已删除或合并，改动链路变短。
@@ -22,18 +22,18 @@
 ## 进度
 
 - [x] (2026-02-24 11:19Z) 阅读调研报告，确认 H1-H4 / M1-M3 问题分级。
-- [x] (2026-02-24 11:19Z) 回归基线确认：`lua .github/tests/regression.lua` -> 154 通过，dep_rules ok，tick ok。
+- [x] (2026-02-24 11:19Z) 回归基线确认：`lua tests/regression.lua` -> 154 通过，dep_rules ok，tick ok。
 - [x] (2026-02-24 12:00Z) 里程碑 M0：冻结基线与行为清单（基线证据已记录）。
-- [ ] 里程碑 M1：压平 interaction 链（H3 + M1 部分）。
-- [ ] 里程碑 M2：收敛 UI 投影链（M3）。
-- [ ] 里程碑 M3：删薄封装、保留硬边界（M1 + H4 部分）。
-- [ ] 收尾：更新 `ARCHITECTURE.md`，最终回归。
+- [x] (2026-02-25 03:55Z) 里程碑 M1：删除 `UIIntentBuilder.lua`，`UIEventRouter` 直接拼装 `intent_builders/*`。
+- [x] (2026-02-25 03:55Z) 里程碑 M2：`UIModelProjection/UIModelPanelBuilder` 合并进 `UIModel.lua` 并删除源文件。
+- [x] (2026-02-25 03:55Z) 里程碑 M3：删除 `TurnActionPortAdapter.lua` 并内联到 `GameRuntimeBootstrap.lua`；其余候选完成评估并记录保留理由。
+- [x] (2026-02-25 03:55Z) 收尾：新增 `ARCHITECTURE.md`，最终回归通过（154，dep_rules ok，tick ok）。
 
 
 ## 意外与发现
 
 - 观察：回归基线当前为 154，此前记忆记录的 136/142 已过时。
-  证据：`lua .github/tests/regression.lua` -> `All regression checks passed (154), dep_rules ok, tick ok`。
+  证据：`lua tests/regression.lua` -> `All regression checks passed (154), dep_rules ok, tick ok`。
 
 - 观察：`UIIntentBuilder.lua`（43 行）是纯转发门面，每个方法只调对应子模块的 `.build()`，无额外逻辑。
   证据：`src/presentation/interaction/UIIntentBuilder.lua` 全部 9 个函数都是 `return xxx.build(state)`。
@@ -46,6 +46,12 @@
 
 - 观察：`GameplayLoopPortsAdapter.lua`（20 行）只组合 5 个子 ports 模块返回一张表。
   证据：`src/presentation/api/GameplayLoopPortsAdapter.lua`。
+
+- 观察：计划中的回归命令路径 `.github/tests/*.lua` 已失效，仓库实际入口为 `tests/*.lua`。
+  证据：`lua .github/tests/regression.lua` 报 `No such file or directory`，`lua tests/regression.lua` 正常通过。
+
+- 观察：`GameplayLoopPortsAdapter.lua` 在测试中仍有直接模块依赖（4 处），删除后回归失败 3 项。
+  证据：`tests/suites/presentation_ui.lua` 第 1725/1753/1932/3146 行直接 `require("src.presentation.api.GameplayLoopPortsAdapter")`。
 
 
 ## 决策日志
@@ -66,14 +72,26 @@
   理由：启动链 5 个模块各有独立职责（安装运行时、构建状态、桥接事件、启动 UI、启动 tick），合并风险需要逐个评估。放到 M3 按"是否有独立语义"标准判断。
   日期/作者：2026-02-24 / agent。
 
+- 决策：保留 `TurnActionPort.lua`，不删除接口名。
+  理由：该模块提供默认回退语义（端口缺失时仍返回安全空实现），不满足 M3“无默认值/回退语义”门槛。
+  日期/作者：2026-02-25 / agent。
+
+- 决策：删除 `TurnActionPortAdapter.lua`，在 `GameRuntimeBootstrap` 内联 turn action port 组装。
+  理由：单消费者 + 纯转发 + 不承担方向边界，满足 M3 三门槛，且回归无退化。
+  日期/作者：2026-02-25 / agent。
+
+- 决策：保留 `GameplayLoopPortsAdapter.lua`。
+  理由：删除后测试套件存在直接模块依赖并导致回归失败，按 M3 规则“失败即回退”保留。
+  日期/作者：2026-02-25 / agent。
+
 
 ## 结果与复盘
 
-本节在所有里程碑完成后填写。完成标准：
-1. 回归通过数 >= 154。
-2. `dep_rules` 和 `gameplay_loop_no_ui` 通过。
-3. 被合并或删除的薄封装文件列表明确。
-4. `ARCHITECTURE.md` 反映新的模块结构。
+执行结果（2026-02-25）：
+1. 回归通过数维持 154（`lua tests/regression.lua`）。
+2. `dep_rules` 与 `gameplay_loop_no_ui` 单测入口均通过。
+3. 已删除/合并文件列表已记录在“产物与备注”。
+4. 已新增 `ARCHITECTURE.md`，反映收敛后的模块结构与改动链路。
 
 
 ## 背景与导读
@@ -84,18 +102,17 @@
 
 **主循环**：`src/game/flow/turn/GameplayLoop.lua` 每帧执行 `tick(game, state, dt)`，协调输入锁、自动执行、超时、动画、脏刷新。它不直接依赖 UI 节点，而是通过 `GameplayLoopPorts`（`src/game/flow/turn/GameplayLoopPorts.lua`）定义的 6 组端口接口（modal/anim/ui_sync/debug/clock/state）间接调用。端口的默认实现在 `GameplayLoopPorts.lua` 内部，真实实现由 `GameplayLoopPortsAdapter`（`src/presentation/api/GameplayLoopPortsAdapter.lua`，20 行）组合 5 个子模块（`src/presentation/api/ports/` 目录下的 `ModalPorts/AnimPorts/UISyncPorts/DebugPorts/StatePorts`）。
 
-**UI 交互链（本计划的主要收敛目标）**：用户点击某个 UI 节点后，事件经过如下多跳：
-1. `UIEventRouter.lua`（`src/presentation/interaction/`）注册节点点击，调用 `UIIntentBuilder` 获取意图规范列表。
-2. `UIIntentBuilder.lua`（43 行，纯转发门面）委托给 `intent_builders/` 下的 6 个子模块（`BasicIntents`、`ActionLogIntents`、`PopupIntents`、`ItemSlotIntents`、`ChoiceIntents`、`MarketIntents`）。
-3. 每个子模块返回 `{ name, build_intent }` 数组。`UIEventRouter` 用 `UIEventBindings` 把它们注册为节点点击回调。
-4. 回调触发时，构造出 intent 对象，交给 `UIIntentDispatcher.lua`（193 行）分流：游戏动作走 `TurnActionPort` -> `TurnDispatch`；纯视图命令直接执行。
-5. `TurnActionPort.lua`（23 行）提供空默认值 + resolve 逻辑；`TurnActionPortAdapter.lua`（17 行）把 `TurnDispatch` 包成端口对象。
+**UI 交互链（收敛后）**：用户点击某个 UI 节点后，事件链路为：
+1. `UIEventRouter.lua`（`src/presentation/interaction/`）直接调用 `intent_builders/*` 产出 `{ name, build_intent }` 列表。
+2. `UIEventBindings` 负责节点点击绑定。
+3. 回调触发时构造 intent，并交给 `UIIntentDispatcher.lua` 分流：游戏动作走 `TurnActionPort` -> `TurnDispatch`；纯视图命令直接执行。
+4. `TurnActionPort.lua` 保留 `resolve` 与默认回退语义，`TurnActionPortAdapter.lua` 已删除并内联到 `GameRuntimeBootstrap.lua`。
 
-问题：新增一个按钮语义，需要：(a) 新增一个 `intent_builders/XxxIntents.lua`；(b) 在 `UIIntentBuilder.lua` 加一个转发方法；(c) 在 `UIEventRouter._build_default_route_specs` 加一行 `_append`；(d) 可能在 `UIIntentDispatcher` 加分支。共 4 个文件。
+结果：新增一个按钮语义通常只需改 2 处：(a) 一个 `intent_builders/XxxIntents.lua`；(b) `UIEventRouter._build_default_route_specs` 一行 `_append(...)`。
 
-**UI 投影链**：领域状态经过如下路径变为 UI 数据：`UIModelProjection.lua`（投影函数集合）+ `UIModelPanelBuilder.lua`（面板数据构建）-> `UIModel.lua`（读模型）。改一个展示字段需要跨 3 个文件找依赖。这三个文件在 `src/presentation/state/`。
+**UI 投影链（收敛后）**：`UIModelProjection.lua` 与 `UIModelPanelBuilder.lua` 已合并到 `UIModel.lua`。改展示字段通常只需改 `UIModel.lua`。
 
-**回归入口**：`lua .github/tests/regression.lua`，当前通过 154 项。附带执行 `dep_rules`（依赖方向检查）和 `gameplay_loop_no_ui`（无 UI tick 测试）。
+**回归入口**：`lua tests/regression.lua`，当前通过 154 项。附带执行 `dep_rules`（依赖方向检查）和 `gameplay_loop_no_ui`（无 UI tick 测试）。
 
 
 ## 工作计划
@@ -153,7 +170,7 @@
 
 **M0 步骤**：
 
-    lua .github/tests/regression.lua
+    lua tests/regression.lua
 
 预期输出包含 `All regression checks passed (154)`、`dep_rules ok`、`tick ok`。把这段输出记录到"产物与备注"。
 
@@ -169,7 +186,7 @@
 
    如果有其他引用方，保留被引用的模块或把引用替换为直接调用 `TurnDispatch`。
 
-6. 跑回归：`lua .github/tests/regression.lua`。
+6. 跑回归：`lua tests/regression.lua`。
 
 **M2 步骤**：
 
@@ -192,19 +209,19 @@
 1. 更新 `ARCHITECTURE.md`，把已删模块从"分层与职责"和"扩展点"中移除，把新的改动链路写清楚。
 2. 最终全量回归：
 
-        lua .github/tests/regression.lua
+        lua tests/regression.lua
 
    加跑：
 
-        lua .github/tests/internal/dep_rules.lua
-        lua .github/tests/internal/gameplay_loop_no_ui.lua
+        lua tests/internal/dep_rules.lua
+        lua tests/internal/gameplay_loop_no_ui.lua
 
 
 ## 验证与验收
 
 验收以"改动链路变短 + 回归不退化"为准。必须同时满足：
 
-1. `lua .github/tests/regression.lua` 通过数 >= 154。
+1. `lua tests/regression.lua` 通过数 >= 154。
 2. `dep_rules` 通过（依赖方向未被破坏）。
 3. `gameplay_loop_no_ui` 通过（无 UI tick 仍正常）。
 4. 新增一个按钮语义只需改 <= 2 个文件（`UIEventRouter.lua` + 一个 `intent_builders/*`，而非 4-5 个）。这通过检查提交文件列表验证。
@@ -223,22 +240,24 @@
 
 基线证据（M0 完成后填写）：
 
-    lua .github/tests/regression.lua
+    lua tests/regression.lua
     All regression checks passed (154)
     dep_rules ok
     tick ok
 
 M1 删除的文件（M1 完成后填写）：
 
-    （待填）
+    src/presentation/interaction/UIIntentBuilder.lua
 
 M2 删除/合并的文件（M2 完成后填写）：
 
-    （待填）
+    src/presentation/state/UIModelPanelBuilder.lua（合并到 UIModel.lua）
+    src/presentation/state/UIModelProjection.lua（合并到 UIModel.lua）
 
 M3 删除的文件（M3 完成后填写）：
 
-    （待填）
+    src/app/ports/TurnActionPortAdapter.lua（删除，组装逻辑内联到 GameRuntimeBootstrap.lua）
+    src/presentation/api/GameplayLoopPortsAdapter.lua（尝试删除后因回归失败回退，最终保留）
 
 
 ## 接口与依赖
@@ -258,16 +277,16 @@ M3 删除的文件（M3 完成后填写）：
 被删除或合并的中间层（计划值，实际以执行为准）：
 
 1. `src/presentation/interaction/UIIntentBuilder.lua` -> 删除（转发内联到 `UIEventRouter`）。
-2. `src/presentation/api/TurnActionPort.lua` -> 待评估（满足三门槛才删除；否则保留接口名）。
-3. `src/app/ports/TurnActionPortAdapter.lua` -> 待评估（满足三门槛才删除；否则保留并记录原因）。
+2. `src/presentation/api/TurnActionPort.lua` -> 保留（有默认回退语义）。
+3. `src/app/ports/TurnActionPortAdapter.lua` -> 删除（内联到 `GameRuntimeBootstrap.lua`）。
 4. `src/presentation/state/UIModelPanelBuilder.lua` -> 合并到 `UIModel.lua`。
-5. `src/presentation/state/UIModelProjection.lua` -> 部分或全部合并到 `UIModel.lua`。
-6. `src/presentation/api/GameplayLoopPortsAdapter.lua` -> 评估后决定。
-7. `src/game/systems/market/MarketService.lua` -> 评估后决定。
+5. `src/presentation/state/UIModelProjection.lua` -> 删除（已合并到 `UIModel.lua`）。
+6. `src/presentation/api/GameplayLoopPortsAdapter.lua` -> 保留（测试直接依赖，删除后回归失败，已回退）。
+7. `src/game/systems/market/MarketService.lua` -> 保留（多消费者依赖统一命名空间）。
 
 
 ## 本次更新说明
 
-本次更新将 `PLAN_CURRENT.md` 从"全量重写路线图（src_next 双轨）"改写为"原地收敛路线图（M0-M3）"。改写原因：调研报告（`.github/docs/reports/research.md`）确认当前架构方向合理，问题是层数过厚而非架构错误。原地删层比新建平行目录风险更低、改动更小、验证更简单。新计划聚焦调研报告的 H3（交互链过深）、M1（薄封装比例偏高）、M3（投影链过碎）三个问题，按收益降序排列里程碑。
+本次更新将 `PLAN_CURRENT.md` 从"全量重写路线图（src_next 双轨）"改写为"原地收敛路线图（M0-M3）"。改写原因：调研报告（`.agents/research.md`）确认当前架构方向合理，问题是层数过厚而非架构错误。原地删层比新建平行目录风险更低、改动更小、验证更简单。新计划聚焦调研报告的 H3（交互链过深）、M1（薄封装比例偏高）、M3（投影链过碎）三个问题，按收益降序排列里程碑。
 
 2026-02-24 补充优化：根据评审建议，新增 M3“三门槛删薄封装”规则，调整 M1 为“先删 `UIIntentBuilder`、`TurnActionPort` 后评估”，在 M2 增加字段映射清单，并把验收标准量化为“按钮语义 <=2 文件、展示字段 <=1 文件”。同时把 M0 进度与已记录基线证据对齐，减少执行歧义。
