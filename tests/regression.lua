@@ -32,6 +32,7 @@ local suites = {
   require("presentation_ui_popup_market"),
   require("presentation_ui_action_status"),
   require("presentation_ui_action_anim"),
+  require("presentation_ui_event_bindings"),
   require("gameplay_core"),
   require("gameplay_runtime"),
   require("gameplay_loop"),

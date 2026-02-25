@@ -98,7 +98,7 @@ function ui_event_router.bind(state, get_game)
       end
     end, registered, listeners)
   end
-  ui_event_bindings.enable_action_log_toggle_touch(cache)
+  ui_event_bindings.enable_action_log_toggle_touch(cache, state.ui)
   ui_event_bindings.register_missing_button_tip(cache, registered, listeners)
 end
 

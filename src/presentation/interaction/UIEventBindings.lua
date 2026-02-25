@@ -61,29 +61,71 @@ function bindings.register_node_click(cache, name, callback, registered, listene
   end
 end
 
-function bindings.enable_action_log_toggle_touch(cache)
+local function _set_node_touch_enabled_fallback(node, enabled)
+  if not node then
+    return false
+  end
+  node.disabled = not enabled
+  return true
+end
+
+function bindings.enable_action_log_toggle_touch(cache, ui)
   local targets = ui_nodes.action_log.toggle_targets or {}
   local enabled_count = 0
-  for _, name in ipairs(targets) do
-    local nodes = cache and cache[name] or nil
-    if not nodes or not nodes[1] then
-      local ok, result = pcall(runtime.query_nodes, name)
-      if not ok then
-        logger.info("[调试屏] 行动日志触控启用失败: query_nodes异常", "node=" .. tostring(name))
-      else
-        nodes = result
+  local main_path_ok = false
+
+  if ui and ui.set_touch_enabled then
+    local ok, err = pcall(ui_touch_policy.set_action_log_toggle_touch, ui, true)
+    if ok then
+      main_path_ok = true
+      enabled_count = #targets
+    else
+      for _, name in ipairs(targets) do
+        logger.info(
+          "[调试屏] 行动日志触控启用失败: 按名称设置异常",
+          "node=" .. tostring(name),
+          "err=" .. tostring(err)
+        )
       end
     end
-    if nodes and nodes[1] then
-      runtime.for_each_role_or_global(function()
-        ui_touch_policy.set_runtime_nodes_touch_enabled(nodes, true)
-      end)
-      enabled_count = enabled_count + #nodes
-    else
-      logger.info("[调试屏] 行动日志触控启用失败: 未找到节点", "node=" .. tostring(name))
+  end
+
+  if not main_path_ok then
+    for _, name in ipairs(targets) do
+      local nodes = cache and cache[name] or nil
+      if not nodes or not nodes[1] then
+        local ok, result = pcall(runtime.query_nodes, name)
+        if not ok then
+          logger.info(
+            "[调试屏] 行动日志触控启用失败: query_nodes异常",
+            "node=" .. tostring(name),
+            "err=" .. tostring(result)
+          )
+        else
+          nodes = result
+        end
+      end
+      if nodes and nodes[1] then
+        for index, node in ipairs(nodes) do
+          local ok, err = pcall(_set_node_touch_enabled_fallback, node, true)
+          if ok then
+            enabled_count = enabled_count + 1
+          else
+            logger.info(
+              "[调试屏] 行动日志触控启用失败: 节点触控设置异常",
+              "node=" .. tostring(name),
+              "index=" .. tostring(index),
+              "err=" .. tostring(err)
+            )
+          end
+        end
+      else
+        logger.info("[调试屏] 行动日志触控启用失败: 未找到节点", "node=" .. tostring(name))
+      end
     end
   end
-  runtime.set_client_role(nil)
+
+  pcall(runtime.set_client_role, nil)
   logger.info("[调试屏] 行动日志触控已启用", "nodes=" .. tostring(enabled_count))
 end
 
