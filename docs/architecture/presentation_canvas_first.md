@@ -36,3 +36,13 @@ src/presentation/canvas_runtime/
 
 1. Keep compatibility wrappers while migrating call sites.
 2. Remove wrappers only after all call sites are migrated and regression passes.
+
+## New Canvas Template
+
+1. Create `src/presentation/canvas/<canvas_key>/nodes.lua`.
+2. Create `src/presentation/canvas/<canvas_key>/contract.lua`.
+3. Add `intents.lua` only for clickable nodes in that canvas.
+4. Add `presenter.lua` for render/open/close logic.
+5. Add `touch_policy.lua` if this canvas has custom touch rules.
+6. Register route specs in `src/presentation/canvas_runtime/CanvasRegistry.lua`.
+7. Add/adjust regression tests before removing any compatibility mapping.

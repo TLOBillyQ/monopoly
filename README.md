@@ -16,3 +16,10 @@
 3. 在线文档 <https://u5-creator.s3.game.163.com/manual/pc_md/overview.html>
 
 不盲目通读，只按需检索。
+
+## Presentation 架构
+
+- 当前采用 canvas-first 组织：`src/presentation/canvas/*`。
+- 跨 canvas 编排统一走 `src/presentation/canvas_runtime/*`。
+- 详细约束与迁移规范见：
+  - `docs/architecture/presentation_canvas_first.md`
