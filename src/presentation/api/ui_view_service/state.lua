@@ -9,8 +9,43 @@ function M.build_ui_state()
   for _, name in ipairs(item_slots) do
     table.insert(base_hidden_nodes, name)
   end
+  local choice_screens = core.build_choice_screens()
+  local popup_screen = {
+    root = ui_nodes.popup.canvas,
+    title = ui_nodes.popup.title,
+    card = ui_nodes.popup.card,
+    dismiss_nodes = ui_nodes.popup.dismiss_nodes,
+  }
+  local bankruptcy_screen = {
+    root = ui_nodes.bankruptcy.canvas,
+    text = ui_nodes.bankruptcy.text,
+    avatar = ui_nodes.bankruptcy.avatar,
+  }
+  local auto_control_nodes = { ui_nodes.always_show.auto_button, ui_nodes.always_show.auto_label }
+  local canvas_state = {
+    base = {
+      item_slots = item_slots,
+      hidden_nodes = base_hidden_nodes,
+      hidden_labels = {},
+    },
+    always_show = {
+      auto_control_nodes = auto_control_nodes,
+      action_log = {
+        toggle_targets = ui_nodes.action_log.toggle_targets,
+      },
+    },
+    choice = {
+      screens = choice_screens,
+    },
+    popup = {
+      screen = popup_screen,
+    },
+    bankruptcy = {
+      screen = bankruptcy_screen,
+    },
+  }
   return {
-    canvas_state = {},
+    canvas_state = canvas_state,
     local_actor_role_id = nil,
     auto_play = false,
     auto_interval = 0.1,
@@ -22,25 +57,16 @@ function M.build_ui_state()
     debug_visible_by_role = {},
     debug_log_enabled_override = nil,
     debug_log_enabled_by_role = {},
-    item_slots = item_slots,
-    base_hidden_nodes = base_hidden_nodes,
+    item_slots = canvas_state.base.item_slots,
+    base_hidden_nodes = canvas_state.base.hidden_nodes,
     base_hidden_labels = {},
-    auto_control_nodes = { ui_nodes.always_show.auto_button, ui_nodes.always_show.auto_label },
+    auto_control_nodes = canvas_state.always_show.auto_control_nodes,
     market_active = false,
     choice_active = false,
     active_choice_screen_key = nil,
-    choice_screens = core.build_choice_screens(),
-    popup_screen = {
-      root = ui_nodes.popup.canvas,
-      title = ui_nodes.popup.title,
-      card = ui_nodes.popup.card,
-      dismiss_nodes = ui_nodes.popup.dismiss_nodes,
-    },
-    bankruptcy_screen = {
-      root = ui_nodes.bankruptcy.canvas,
-      text = ui_nodes.bankruptcy.text,
-      avatar = ui_nodes.bankruptcy.avatar,
-    },
+    choice_screens = canvas_state.choice.screens,
+    popup_screen = canvas_state.popup.screen,
+    bankruptcy_screen = canvas_state.bankruptcy.screen,
     popup_kind = nil,
     popup_seq = 0,
     popup_return_canvas = nil,
