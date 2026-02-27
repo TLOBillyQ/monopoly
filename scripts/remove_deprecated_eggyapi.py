@@ -41,13 +41,13 @@ def main():
         description="删除 EggyAPI.lua 中标记为 @deprecated 的 API（含注释块）。"
     )
     default_path = (
-        Path(__file__).resolve().parents[1] / ".agents" / "docs" / "eggy" / "EggyAPI.lua"
+        Path(__file__).resolve().parents[1] / "EggyAPI.lua"
     )
     parser.add_argument(
         "path",
         nargs="?",
         default=str(default_path),
-        help="目标文件路径，默认 .agents/docs/eggy/EggyAPI.lua",
+        help="目标文件路径，默认 EggyAPI.lua",
     )
     parser.add_argument(
         "--backup-suffix",
