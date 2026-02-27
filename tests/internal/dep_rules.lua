@@ -1,15 +1,15 @@
-local forbidden_prefixes = {
-  "src.game.",
+local rules = {
+  {
+    root = "src/presentation/interaction",
+    forbidden = { "src.game." },
+    description = "interaction layer must not require src.game.* directly",
+  },
+  {
+    root = "src/presentation/canvas",
+    forbidden = { "src.presentation.shared.UINodes" },
+    description = "canvas modules must not depend on legacy shared UINodes directly",
+  },
 }
-
-local function _contains_forbidden(line)
-  for _, prefix in ipairs(forbidden_prefixes) do
-    if line:find(prefix, 1, true) then
-      return prefix
-    end
-  end
-  return nil
-end
 
 local function _is_windows()
   return package.config:sub(1, 1) == "\\"
@@ -37,9 +37,9 @@ local function _collect_lua_files(root)
     end
   end
 
-  local ok, why, code = p:close()
+  local ok = p:close()
   if ok == nil or ok == false then
-    return nil, "list command failed: " .. tostring(why) .. " " .. tostring(code)
+    return nil, "list command failed: " .. tostring(cmd)
   end
   if #files == 0 then
     return nil, "no lua files found under: " .. tostring(root)
@@ -47,7 +47,7 @@ local function _collect_lua_files(root)
   return files
 end
 
-local function _scan_file(path)
+local function _scan_file(path, forbidden)
   local file = io.open(path, "r")
   if not file then
     return nil, "cannot open: " .. tostring(path)
@@ -55,28 +55,29 @@ local function _scan_file(path)
   local lineno = 0
   for line in file:lines() do
     lineno = lineno + 1
-    local hit = _contains_forbidden(line)
-    if hit then
-      file:close()
-      return {
-        path = path,
-        line = lineno,
-        prefix = hit,
-        text = line,
-      }
+    for _, prefix in ipairs(forbidden) do
+      if line:find(prefix, 1, true) then
+        file:close()
+        return {
+          path = path,
+          line = lineno,
+          prefix = prefix,
+          text = line,
+        }
+      end
     end
   end
   file:close()
   return nil
 end
 
-local function _scan_tree(root)
-  local files, files_err = _collect_lua_files(root)
+local function _scan_tree(rule)
+  local files, files_err = _collect_lua_files(rule.root)
   if not files then
     return nil, files_err
   end
   for _, path in ipairs(files) do
-    local hit, scan_err = _scan_file(path)
+    local hit, scan_err = _scan_file(path, rule.forbidden)
     if hit then
       return hit
     end
@@ -87,15 +88,18 @@ local function _scan_tree(root)
   return nil
 end
 
-local hit, err = _scan_tree("src/presentation/interaction")
-if err then
-  io.stderr:write("dep_rules error: ", err, "\n")
-  os.exit(1)
-end
-if hit then
-  io.stderr:write("dep_rules violation: ", hit.path, ":", hit.line, " contains ", hit.prefix, "\n")
-  io.stderr:write(hit.text, "\n")
-  os.exit(1)
+for _, rule in ipairs(rules) do
+  local hit, err = _scan_tree(rule)
+  if err and not tostring(err):find("no lua files found under", 1, true) then
+    io.stderr:write("dep_rules error: ", err, "\n")
+    os.exit(1)
+  end
+  if hit then
+    io.stderr:write("dep_rules violation: ", hit.path, ":", hit.line, " contains ", hit.prefix, "\n")
+    io.stderr:write("rule: ", rule.description, "\n")
+    io.stderr:write(hit.text, "\n")
+    os.exit(1)
+  end
 end
 
 print("dep_rules ok")
