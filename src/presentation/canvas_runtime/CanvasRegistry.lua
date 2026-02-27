@@ -1,15 +1,15 @@
 local basic_intents = require("src.presentation.interaction.intent_builders.BasicIntents")
-local action_log_intents = require("src.presentation.interaction.intent_builders.ActionLogIntents")
 local popup_intents = require("src.presentation.interaction.intent_builders.PopupIntents")
 local item_slot_intents = require("src.presentation.interaction.intent_builders.ItemSlotIntents")
 local choice_intents = require("src.presentation.interaction.intent_builders.ChoiceIntents")
 local market_intents = require("src.presentation.interaction.intent_builders.MarketIntents")
+local always_show_intents = require("src.presentation.canvas.always_show.intents")
 
 local registry = {}
 
 local canvas_specs = {
   { key = "base", build = function(state) return basic_intents.build(state) end },
-  { key = "always_show", build = function() return action_log_intents.build() end },
+  { key = "always_show", build = function() return always_show_intents.build() end },
   { key = "popup", build = function(state) return popup_intents.build(state) end },
   { key = "item_slots", build = function(state) return item_slot_intents.build(state) end },
   { key = "player_choice", build = function(state) return choice_intents.build_player(state) end },

@@ -5,6 +5,7 @@ local ui_view = require("src.presentation.api.UIViewService")
 local canvas = require("src.presentation.interaction.UICanvasCoordinator")
 local ui_events = require("src.presentation.shared.UIEvents")
 local ui_event_state = require("src.presentation.interaction.UIEventState")
+local local_actor_resolver = require("src.presentation.canvas_runtime.LocalActorResolver")
 
 local intent_dispatcher = {}
 
@@ -55,22 +56,18 @@ local function _should_block_intent(state, intent, action_port)
   return action_port.should_block_action(state, intent)
 end
 
-local function _resolve_local_role_id()
-  local local_role = runtime.get_client_role()
-  return runtime.resolve_role_id(local_role)
-end
-
-local function _normalize_auto_intent(intent)
-  local local_role_id = _resolve_local_role_id()
-  if local_role_id == nil then
-    logger.warn("auto intent ignored without local role_id")
-    return nil
-  end
+local function _normalize_auto_intent(state, intent)
   local action = {}
   for k, v in pairs(intent) do
     action[k] = v
   end
-  action.actor_role_id = local_role_id
+  local local_role_id = local_actor_resolver.resolve_local(state)
+  if local_role_id ~= nil then
+    action.actor_role_id = local_role_id
+  elseif action.actor_role_id == nil then
+    logger.warn("auto intent missing actor_role_id")
+    return nil
+  end
   return action
 end
 
@@ -107,7 +104,7 @@ function intent_dispatcher.dispatch_game_action(state, game, intent, opts, actio
       or intent_type == "choice_cancel" then
     local action = intent
     if intent_type == "ui_button" and intent.id == "auto" then
-      action = _normalize_auto_intent(intent)
+      action = _normalize_auto_intent(state, intent)
       if action == nil then
         return true
       end

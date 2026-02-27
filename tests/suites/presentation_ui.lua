@@ -1280,7 +1280,7 @@ local function _test_ui_intent_dispatcher_auto_button_forces_local_role_id()
   _assert_eq(captured and captured.actor_role_id, 1, "auto dispatch should force local role id")
 end
 
-local function _test_ui_intent_dispatcher_auto_button_ignores_missing_local_role()
+local function _test_ui_intent_dispatcher_auto_button_falls_back_to_intent_actor_when_local_missing()
   local captured = nil
   local state = {
     turn_action_port = {
@@ -1309,7 +1309,7 @@ local function _test_ui_intent_dispatcher_auto_button_ignores_missing_local_role
     }, {})
   end)
 
-  _assert_eq(captured, nil, "auto dispatch should be ignored when local role missing")
+  _assert_eq(captured and captured.actor_role_id, 2, "auto dispatch should fallback to intent actor when local role missing")
 end
 
 local function _test_ui_intent_dispatcher_auto_button_toggles_local_role_during_other_turn()
@@ -3258,7 +3258,7 @@ return {
   _test_ui_intent_dispatcher_toggle_action_log_resolves_role_via_game_api,
   _test_ui_intent_dispatcher_toggle_action_log_warns_when_role_event_channel_missing,
   _test_ui_intent_dispatcher_auto_button_forces_local_role_id,
-  _test_ui_intent_dispatcher_auto_button_ignores_missing_local_role,
+  _test_ui_intent_dispatcher_auto_button_falls_back_to_intent_actor_when_local_missing,
   _test_ui_intent_dispatcher_auto_button_toggles_local_role_during_other_turn,
   _test_ui_view_render_by_role_slots_are_isolated,
   _test_ui_events_send_without_roles_no_crash,
