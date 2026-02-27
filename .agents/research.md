@@ -117,13 +117,13 @@ Eggitor 导出统一添加了 **屏幕前缀**，命名规则：`{屏幕}_节点
 
 | # | 问题 | 影响 |
 |---|---|---|
-| 1 | `取消按钮` → `黑市_取消按钮`：此按钮被 popup 和 player_choice 共用。改名为黑市前缀后，popup/player_choice 的取消还用同一个按钮？ | UINodes 3 处引用 |
-| 2 | `倒计时时钟` 完全消失，行动日志切换入口改用什么节点？ | UIEventBindings 注册逻辑 |
+| 1 | `取消按钮` → `黑市_取消按钮`：此按钮被 popup 和 player_choice 共用。改名为黑市前缀后，popup/player_choice 的取消还用同一个按钮？ 不是同一个按钮| UINodes 3 处引用 |
+| 2 | `倒计时时钟` 完全消失，行动日志切换入口改用什么节点？行动日志切换是`始终显示_行动日志图标` | UIEventBindings 注册逻辑 |
 | 3 | `基础_无法行动提示` 消失，功能保留还是废弃？ | UIPanelPresenter |
 | 4 | `玩家选择_副标题` 消失，功能保留还是废弃？ | core.lua choice screen |
-| 5 | 骰子动画特效节点（摇骰子结束特效 1/2）已移除，骰子动画流程是否简化？ | ActionAnim |
-| 6 | `玩家选择_槽位4` 已在数据源，代码只接了 1-3，是否扩展？ | UINodes + intent builders |
-| 7 | `位置_确认按钮` 在数据源但代码未接入，位置选择是否需要确认步骤？ | UINodes target choice |
+| 5 | 骰子动画特效节点（摇骰子结束特效 1/2）已移除，骰子动画流程是否简化？简化 | ActionAnim |
+| 6 | `玩家选择_槽位4` 已在数据源，代码只接了 1-3，是否扩展？扩展 | UINodes + intent builders |
+| 7 | `位置_确认按钮` 在数据源但代码未接入，位置选择是否需要确认步骤？ 不需要| UINodes target choice |
 
 ---
 
