@@ -1,5 +1,6 @@
 local ui_nodes = require("src.presentation.shared.UINodes")
 local core = require("src.presentation.api.ui_view_service.core")
+local always_show_contract = require("src.presentation.canvas.always_show.contract")
 
 local M = {}
 
@@ -31,7 +32,7 @@ function M.build_ui_state()
     always_show = {
       auto_control_nodes = auto_control_nodes,
       action_log = {
-        toggle_targets = ui_nodes.action_log.toggle_targets,
+        toggle_targets = always_show_contract.action_log.toggle_targets,
       },
     },
     choice = {

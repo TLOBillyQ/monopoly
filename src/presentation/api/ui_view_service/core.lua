@@ -1,5 +1,6 @@
 local runtime = require("src.presentation.api.UIRuntimePort")
 local ui_nodes = require("src.presentation.shared.UINodes")
+local always_show_contract = require("src.presentation.canvas.always_show.contract")
 
 local M = {}
 
@@ -23,7 +24,7 @@ local function set_touch_enabled(_, name, enabled)
 end
 
 local function set_debug_log(_, text)
-  set_text(nil, ui_nodes.action_log.label, text)
+  set_text(nil, always_show_contract.action_log.label, text)
 end
 
 local function set_debug_visible(ui, visible)

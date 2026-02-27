@@ -1,4 +1,5 @@
 local ui_nodes = require("src.presentation.shared.UINodes")
+local always_show_contract = require("src.presentation.canvas.always_show.contract")
 
 local touch_policy = {}
 
@@ -36,7 +37,7 @@ function touch_policy.set_action_log_toggle_touch(ui, enabled)
     return
   end
   local value = enabled == true
-  local targets = ui_nodes.action_log.toggle_targets
+  local targets = always_show_contract.action_log.toggle_targets
     or { ui_nodes.always_show.action_log_button }
   for _, name in ipairs(targets) do
     ui:set_touch_enabled(name, value)

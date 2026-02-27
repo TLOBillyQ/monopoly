@@ -1,6 +1,7 @@
 local logger = require("src.core.Logger")
 local runtime = require("src.presentation.api.UIRuntimePort")
 local ui_nodes = require("src.presentation.shared.UINodes")
+local always_show_contract = require("src.presentation.canvas.always_show.contract")
 local ui_touch_policy = require("src.presentation.interaction.UITouchPolicy")
 
 local bindings = {}
@@ -64,7 +65,7 @@ local function _set_node_touch_enabled_fallback(node, enabled)
 end
 
 function bindings.enable_action_log_toggle_touch(cache, ui)
-  local targets = ui_nodes.action_log.toggle_targets or {}
+  local targets = always_show_contract.action_log.toggle_targets or {}
   local enabled_count = 0
   local main_path_ok = false
 

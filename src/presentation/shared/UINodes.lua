@@ -28,11 +28,6 @@ nodes.dice = dice_nodes
 nodes.loading = loading_nodes
 nodes.debug = debug_nodes
 
-nodes.action_log = {
-  label = always_show_contract.action_log.label,
-  toggle_targets = always_show_contract.action_log.toggle_targets,
-}
-
 nodes.canvas = {
   base = nodes.base.canvas,
   always_show = nodes.always_show.canvas,
@@ -66,7 +61,7 @@ function nodes.required_click_nodes(opts)
   for _, name in ipairs(nodes.remote_choice.options) do
     required[#required + 1] = name
   end
-  for _, name in ipairs(nodes.action_log.toggle_targets or {}) do
+  for _, name in ipairs(always_show_contract.action_log.toggle_targets or {}) do
     required[#required + 1] = name
   end
 
