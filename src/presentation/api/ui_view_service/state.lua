@@ -10,6 +10,8 @@ function M.build_ui_state()
     table.insert(base_hidden_nodes, name)
   end
   return {
+    canvas_state = {},
+    local_actor_role_id = nil,
     auto_play = false,
     auto_interval = 0.1,
     input_blocked = false,
