@@ -58,7 +58,6 @@ local function _build_popup_view_state(refs, card_node)
   local nodes = {
     ["卡牌展示屏"] = new_node(),
     ["卡牌展示_标题"] = new_node(),
-    ["取消按钮"] = new_node(),
     ["卡牌展示_图片"] = new_node(card_node or {}),
   }
   local function query_nodes_by_name(name)
@@ -111,16 +110,16 @@ local function _build_choice_modal_state()
     ui_refs = { ["Empty"] = "EMPTY" },
   }
   local names = {
-    "玩家选择屏", "玩家选择_标题", "玩家选择_副标题",
-    "玩家选择_槽位1", "玩家选择_槽位2", "玩家选择_槽位3",
+    "玩家选择屏", "玩家选择_标题",
+    "玩家选择_槽位1", "玩家选择_槽位2", "玩家选择_槽位3", "玩家选择_槽位4",
     "位置选择屏", "位置_副标题", "位置_放置文本",
-    "位置前1", "位置前2", "位置前3", "位置后1", "位置后2", "位置后3", "位置脚下",
+    "位置_前1", "位置_前2", "位置_前3", "位置_后1", "位置_后2", "位置_后3", "位置_脚下",
     "遥控骰子屏", "遥控骰子_标题", "遥控骰子_正文",
     "遥控骰子_选项_01", "遥控骰子_选项_02", "遥控骰子_选项_03",
     "遥控骰子_选项_04", "遥控骰子_选项_05", "遥控骰子_选项_06", "遥控骰子_取消",
     "建筑升级屏", "建筑升级_标题", "建筑升级_文本", "建筑升级_确定按钮", "建筑升级_取消",
-    "卡牌展示屏", "卡牌展示_标题", "卡牌展示_图片", "取消按钮",
-    "黑市屏", "黑市购买按钮", "关闭", "售价：100", "选中卡牌",
+    "卡牌展示屏", "卡牌展示_标题", "卡牌展示_图片",
+    "黑市屏", "黑市_购买按钮", "黑市_关闭", "黑市_售价", "黑市_选中卡牌",
   }
   local nodes = {}
   for _, name in ipairs(names) do
@@ -1389,11 +1388,11 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
   end
 
   for i = 1, 5 do
-    local node_name = "道具槽位" .. tostring(i)
+    local node_name = "基础_道具槽位" .. tostring(i)
     node_map[node_name] = new_texture_node(node_name)
   end
   for i = 1, 4 do
-    local node_name = "玩家" .. tostring(i) .. "头像"
+    local node_name = "基础_玩家" .. tostring(i) .. "头像"
     node_map[node_name] = new_texture_node(node_name)
   end
 
@@ -1413,10 +1412,17 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
       ["2002"] = "ICON2002",
     },
     ui = {
-      item_slots = { "道具槽位1", "道具槽位2", "道具槽位3", "道具槽位4", "道具槽位5" },
-      base_hidden_nodes = { "行动按钮", "道具槽位1", "道具槽位2", "道具槽位3", "道具槽位4", "道具槽位5" },
+      item_slots = { "基础_道具槽位1", "基础_道具槽位2", "基础_道具槽位3", "基础_道具槽位4", "基础_道具槽位5" },
+      base_hidden_nodes = {
+        "基础_行动按钮",
+        "基础_道具槽位1",
+        "基础_道具槽位2",
+        "基础_道具槽位3",
+        "基础_道具槽位4",
+        "基础_道具槽位5",
+      },
       base_hidden_labels = {},
-      auto_control_nodes = { "托管按钮", "托管_文本" },
+      auto_control_nodes = { "始终显示_托管按钮", "始终显示_文本" },
       set_label = function(_, name, text)
         local rk = role_key()
         label_logs[rk] = label_logs[rk] or {}
@@ -1478,22 +1484,22 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
     main_view.refresh_panel(state, ui_model)
   end)
 
-  assert(image_logs[1] and image_logs[1]["道具槽位1"] == "ICON2001", "role1 slot icon expected")
-  assert(image_logs[2] and image_logs[2]["道具槽位1"] == "ICON2002", "role2 slot icon expected")
-  assert(image_logs[0] and image_logs[0]["玩家1头像"] == "AVATAR_1", "player1 avatar should use row avatar")
-  assert(image_logs[0] and image_logs[0]["玩家2头像"] == "EMPTY", "player2 avatar should fallback to empty key")
-  assert(touch_logs[1] and touch_logs[1]["行动按钮"] == true, "current role action button should be enabled")
-  assert(touch_logs[2] and touch_logs[2]["行动按钮"] == false, "non-current role action button should be disabled")
-  assert(touch_logs[1] and touch_logs[1]["托管按钮"] == true, "role1 auto button should be enabled")
-  assert(touch_logs[2] and touch_logs[2]["托管按钮"] == false, "non-local role auto button should be disabled")
-  assert(touch_logs[1] and touch_logs[1]["托管_文本"] == false, "role1 auto label should stay non-clickable")
-  assert(touch_logs[2] and touch_logs[2]["托管_文本"] == false, "role2 auto label should stay non-clickable")
-  assert(label_logs[1] and label_logs[1]["托管_文本"] == "自动：关", "role1 auto label should show status")
-  assert(label_logs[2] and label_logs[2]["托管_文本"] == "自动：开", "role2 auto label should show status")
-  assert(visible_logs[2] and visible_logs[2]["倒计时文本"] == true, "non-current role countdown should be visible")
-  assert(visible_logs[2] and visible_logs[2]["道具槽位1"] == true, "non-current role slot should be visible")
-  assert(visible_logs[2] and visible_logs[2]["托管按钮"] == true, "auto button should stay visible")
-  assert(visible_logs[2] and visible_logs[2]["托管_文本"] == true, "auto label should stay visible")
+  assert(image_logs[1] and image_logs[1]["基础_道具槽位1"] == "ICON2001", "role1 slot icon expected")
+  assert(image_logs[2] and image_logs[2]["基础_道具槽位1"] == "ICON2002", "role2 slot icon expected")
+  assert(image_logs[0] and image_logs[0]["基础_玩家1头像"] == "AVATAR_1", "player1 avatar should use row avatar")
+  assert(image_logs[0] and image_logs[0]["基础_玩家2头像"] == "EMPTY", "player2 avatar should fallback to empty key")
+  assert(touch_logs[1] and touch_logs[1]["基础_行动按钮"] == true, "current role action button should be enabled")
+  assert(touch_logs[2] and touch_logs[2]["基础_行动按钮"] == false, "non-current role action button should be disabled")
+  assert(touch_logs[1] and touch_logs[1]["始终显示_托管按钮"] == true, "role1 auto button should be enabled")
+  assert(touch_logs[2] and touch_logs[2]["始终显示_托管按钮"] == false, "non-local role auto button should be disabled")
+  assert(touch_logs[1] and touch_logs[1]["始终显示_文本"] == false, "role1 auto label should stay non-clickable")
+  assert(touch_logs[2] and touch_logs[2]["始终显示_文本"] == false, "role2 auto label should stay non-clickable")
+  assert(label_logs[1] and label_logs[1]["始终显示_文本"] == "自动：关", "role1 auto label should show status")
+  assert(label_logs[2] and label_logs[2]["始终显示_文本"] == "自动：开", "role2 auto label should show status")
+  assert(visible_logs[2] and visible_logs[2]["基础_倒计时"] == true, "non-current role countdown should be visible")
+  assert(visible_logs[2] and visible_logs[2]["基础_道具槽位1"] == true, "non-current role slot should be visible")
+  assert(visible_logs[2] and visible_logs[2]["始终显示_托管按钮"] == true, "auto button should stay visible")
+  assert(visible_logs[2] and visible_logs[2]["始终显示_文本"] == true, "auto label should stay visible")
   assert(state.ui.item_slot_item_ids_by_role[1] and state.ui.item_slot_item_ids_by_role[1][1] == 2001, "role1 slot map expected")
   assert(state.ui.item_slot_item_ids_by_role[2] and state.ui.item_slot_item_ids_by_role[2][1] == 2002, "role2 slot map expected")
 end
@@ -1506,7 +1512,19 @@ end
 
 local function _test_ui_nodes_validate_reports_missing()
   local nodes = require("Data.UIManagerNodes")
-  local missing = nodes.validate({ "不存在的节点_测试" })
+  local known = {}
+  for _, entry in pairs(nodes) do
+    if type(entry) == "table" then
+      known[entry[1]] = true
+    end
+  end
+  local required = { "不存在的节点_测试" }
+  local missing = {}
+  for _, name in ipairs(required) do
+    if not known[name] then
+      missing[#missing + 1] = name
+    end
+  end
   assert(#missing == 1, "validate should return missing node list")
   assert(missing[1] == "不存在的节点_测试", "missing node name should match")
 end
@@ -1525,17 +1543,16 @@ local function _test_apply_input_lock_keeps_auto_controls_enabled()
     },
     ui = {
       input_blocked = true,
-      item_slots = { "道具槽位1" },
-      base_hidden_nodes = { "行动按钮", "道具槽位1" },
+      item_slots = { "基础_道具槽位1" },
+      base_hidden_nodes = { "基础_行动按钮", "基础_道具槽位1" },
       base_hidden_labels = {},
-      auto_control_nodes = { "托管按钮", "托管_文本" },
+      auto_control_nodes = { "始终显示_托管按钮", "始终显示_文本" },
       choice_screens = {
-        player = { option_buttons = {}, cancel = "取消按钮" },
-        target = { option_buttons = {}, under_button = "位置脚下", cancel = "取消按钮" },
+        player = { option_buttons = {} },
+        target = { option_buttons = {}, under_button = "位置_脚下" },
         remote = { option_buttons = {}, cancel = "遥控骰子_取消" },
         building = { body = "建筑升级_文本", cancel = "建筑升级_取消", confirm = "建筑升级_确定按钮" },
       },
-      popup_screen = { confirm = "取消按钮" },
       set_touch_enabled = function(_, name, enabled)
         touch[name] = enabled
       end,
@@ -1555,10 +1572,10 @@ local function _test_apply_input_lock_keeps_auto_controls_enabled()
     ui_view.apply_input_lock(state)
   end)
 
-  assert(touch["行动按钮"] == false, "action button should stay blocked")
-  assert(touch["托管按钮"] == true, "auto button should stay enabled")
-  assert(touch["托管_文本"] == false, "auto label should stay non-clickable")
-  assert(visible["道具槽位1"] == true, "item slot should stay visible when locked")
+  assert(touch["基础_行动按钮"] == false, "action button should stay blocked")
+  assert(touch["始终显示_托管按钮"] == true, "auto button should stay enabled")
+  assert(touch["始终显示_文本"] == false, "auto label should stay non-clickable")
+  assert(visible["基础_道具槽位1"] == true, "item slot should stay visible when locked")
 end
 
 local function _test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapped()
@@ -1573,17 +1590,16 @@ local function _test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapp
     },
     ui = {
       input_blocked = true,
-      item_slots = { "道具槽位1" },
-      base_hidden_nodes = { "行动按钮", "道具槽位1" },
+      item_slots = { "基础_道具槽位1" },
+      base_hidden_nodes = { "基础_行动按钮", "基础_道具槽位1" },
       base_hidden_labels = {},
-      auto_control_nodes = { "托管按钮", "托管_文本" },
+      auto_control_nodes = { "始终显示_托管按钮", "始终显示_文本" },
       choice_screens = {
-        player = { option_buttons = {}, cancel = "取消按钮" },
-        target = { option_buttons = {}, under_button = "位置脚下", cancel = "取消按钮" },
+        player = { option_buttons = {} },
+        target = { option_buttons = {}, under_button = "位置_脚下" },
         remote = { option_buttons = {}, cancel = "遥控骰子_取消" },
         building = { body = "建筑升级_文本", cancel = "建筑升级_取消", confirm = "建筑升级_确定按钮" },
       },
-      popup_screen = { confirm = "取消按钮" },
       set_touch_enabled = function(_, name, enabled)
         touch[name] = enabled
       end,
@@ -1601,8 +1617,8 @@ local function _test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapp
     ui_view.apply_input_lock(state)
   end)
 
-  assert(touch["托管按钮"] == true, "auto button should stay enabled when role mapping is missing")
-  assert(touch["托管_文本"] == false, "auto label should stay non-clickable when role mapping is missing")
+  assert(touch["始终显示_托管按钮"] == true, "auto button should stay enabled when role mapping is missing")
+  assert(touch["始终显示_文本"] == false, "auto label should stay non-clickable when role mapping is missing")
 end
 
 local function _test_ui_view_render_auto_button_keeps_local_touch_when_unmapped_role_exists()
@@ -1611,10 +1627,10 @@ local function _test_ui_view_render_auto_button_keeps_local_touch_when_unmapped_
   local state = {
     ui_refs = { ["Empty"] = "EMPTY", ["2001"] = "ICON2001" },
     ui = {
-      item_slots = { "道具槽位1" },
-      base_hidden_nodes = { "行动按钮", "道具槽位1" },
+      item_slots = { "基础_道具槽位1" },
+      base_hidden_nodes = { "基础_行动按钮", "基础_道具槽位1" },
       base_hidden_labels = {},
-      auto_control_nodes = { "托管按钮", "托管_文本" },
+      auto_control_nodes = { "始终显示_托管按钮", "始终显示_文本" },
       item_slot_item_ids_by_role = {},
       set_label = function() end,
       set_visible = function() end,
@@ -1671,26 +1687,26 @@ local function _test_ui_view_render_auto_button_keeps_local_touch_when_unmapped_
     main_view.refresh_panel(state, ui_model)
   end)
 
-  assert(touch_logs[1] and touch_logs[1]["托管按钮"] == true, "local role auto button should stay enabled")
-  assert(touch_logs[99] and touch_logs[99]["托管按钮"] == false, "unmapped role auto button should stay disabled")
+  assert(touch_logs[1] and touch_logs[1]["始终显示_托管按钮"] == true, "local role auto button should stay enabled")
+  assert(touch_logs[99] and touch_logs[99]["始终显示_托管按钮"] == false, "unmapped role auto button should stay disabled")
 end
 
 local function _test_ui_touch_policy_auto_controls_touch()
   local touch = {}
   local ui = {
-    auto_control_nodes = { "托管按钮", "托管_文本" },
+    auto_control_nodes = { "始终显示_托管按钮", "始终显示_文本" },
     set_touch_enabled = function(_, name, enabled)
       touch[name] = enabled
     end,
   }
 
   ui_touch_policy.set_auto_controls_touch(ui, true)
-  _assert_eq(touch["托管按钮"], true, "auto button should be clickable when enabled")
-  _assert_eq(touch["托管_文本"], false, "auto label should stay non-clickable")
+  _assert_eq(touch["始终显示_托管按钮"], true, "auto button should be clickable when enabled")
+  _assert_eq(touch["始终显示_文本"], false, "auto label should stay non-clickable")
 
   ui_touch_policy.set_auto_controls_touch(ui, false)
-  _assert_eq(touch["托管按钮"], false, "auto button should be non-clickable when disabled")
-  _assert_eq(touch["托管_文本"], false, "auto label should stay non-clickable when disabled")
+  _assert_eq(touch["始终显示_托管按钮"], false, "auto button should be non-clickable when disabled")
+  _assert_eq(touch["始终显示_文本"], false, "auto label should stay non-clickable when disabled")
 end
 
 local function _test_ui_touch_policy_runtime_nodes_touch_enabled()
@@ -2137,7 +2153,7 @@ local function _test_ui_event_router_player_target_click_direct_submit()
         { id = 202, label = "后2" },
       },
     }
-    node_map["位置后1"]._listener_cb({})
+    node_map["位置_后1"]._listener_cb({})
   end)
 
   _assert_eq(captured[1] and captured[1].type, "choice_select", "player click should dispatch choice_select")
@@ -2163,8 +2179,7 @@ local function _test_ui_event_router_action_log_toggle_uses_role_context()
   end
 
   local node_map = {
-    ["基础_行动日志按钮"] = new_node(),
-    ["倒计时时钟"] = new_node(),
+    ["始终显示_行动日志图标"] = new_node(),
   }
   local function query_nodes_by_name(name)
     local node = node_map[name]
@@ -2202,14 +2217,14 @@ local function _test_ui_event_router_action_log_toggle_uses_role_context()
 
     local role_id = role.get_roleid()
     _assert_eq(state.ui.debug_visible_by_role[role_id], nil, "action_log role flag should start nil")
-    assert(type(node_map["倒计时时钟"]._listener_cb) == "function", "action_log image should bind click listener")
+    assert(type(node_map["始终显示_行动日志图标"]._listener_cb) == "function", "action_log button should bind click listener")
     local before = require("src.presentation.interaction.UIEventState").resolve_debug_enabled(state)
-    node_map["基础_行动日志按钮"]._listener_cb({ role = role })
+    node_map["始终显示_行动日志图标"]._listener_cb({ role = role })
     local first_value = state.ui.debug_visible_by_role[role_id]
     _assert_eq(first_value, not before, "action_log toggle should invert role visibility")
     _assert_eq(UIManager.client_role, nil, "action_log toggle should restore client role")
 
-    node_map["倒计时时钟"]._listener_cb({ role = role })
+    node_map["始终显示_行动日志图标"]._listener_cb({ role = role })
     local second_value = state.ui.debug_visible_by_role[role_id]
     assert(second_value ~= first_value, "action_log toggle should flip role visibility after second click")
     _assert_eq(UIManager.client_role, nil, "action_log toggle should restore client role after second click")
@@ -2298,7 +2313,7 @@ local function _test_item_slot_uses_keep_size_path()
       ["2001"] = "ICON2001",
     },
     ui = {
-      item_slots = { "道具槽位1" },
+      item_slots = { "基础_道具槽位1" },
       set_touch_enabled = function() end,
     },
   }
@@ -3160,7 +3175,7 @@ local function _test_panel_avatar_uses_keep_size_path()
       item_slots = {},
       base_hidden_nodes = {},
       base_hidden_labels = {},
-      auto_control_nodes = { "托管按钮", "托管_文本" },
+      auto_control_nodes = { "始终显示_托管按钮", "始终显示_文本" },
       item_slot_item_ids_by_role = {},
       set_label = function() end,
       set_visible = function() end,

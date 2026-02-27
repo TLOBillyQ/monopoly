@@ -1,13 +1,7 @@
 local runtime = require("src.presentation.api.UIRuntimePort")
+local ui_nodes = require("src.presentation.shared.UINodes")
 
 local turn_effects = {}
-
-local highlight_nodes = {
-  "基础_玩家1高亮光效",
-  "基础_玩家2高亮光效",
-  "基础_玩家3高亮光效",
-  "基础_玩家4高亮光效",
-}
 
 local function _resolve_current_player_index(ui_model)
   local board = ui_model and ui_model.board or nil
@@ -32,7 +26,7 @@ local function _set_node_visible(node, visible)
 end
 
 local function _set_highlight_visible(index)
-  for i, name in ipairs(highlight_nodes) do
+  for i, name in ipairs(ui_nodes.base.player_action_effects) do
     local node = runtime.query_node(name)
     _set_node_visible(node, index ~= nil and i == index)
   end
@@ -58,8 +52,8 @@ end
 
 local function _get_prompt_nodes()
   return {
-    star = runtime.query_node("基础_星星中心爆开"),
-    label = runtime.query_node("基础_行动提示"),
+    star = runtime.query_node(ui_nodes.base.action_hint_effect),
+    label = runtime.query_node(ui_nodes.base.action_hint),
   }
 end
 
@@ -88,7 +82,7 @@ local function _sync_local_turn_prompt(_, ui_model)
 end
 
 local function _get_other_action_prompt_label_node()
-  return runtime.query_node("基础_其他玩家行动提示")
+  return runtime.query_node(ui_nodes.base.other_player_hint)
 end
 
 local function _set_other_action_prompt(role, text, visible)

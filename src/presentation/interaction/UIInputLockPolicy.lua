@@ -14,11 +14,6 @@ local function _set_base_hidden_nodes_visible(ui, visible)
   end
 end
 
--- 输入锁期间，弹窗确认是少数允许放行的操作。
-local function _can_popup_confirm()
-  return true
-end
-
 function input_lock_policy.apply(state, deps)
   assert(state ~= nil and state.ui ~= nil, "missing state.ui")
   assert(deps ~= nil, "missing deps")
@@ -28,11 +23,8 @@ function input_lock_policy.apply(state, deps)
     return
   end
 
-  -- 未锁定：仅维护弹窗确认与调试开关触控，不干预其他路径。
+  -- 未锁定：仅维护调试开关触控，不干预其他路径。
   if not ui.input_blocked then
-    if ui.popup_active and ui.popup_screen and ui.popup_screen.confirm then
-      ui:set_touch_enabled(ui.popup_screen.confirm, _can_popup_confirm())
-    end
     ui_touch_policy.set_action_log_toggle_touch(ui, true)
     return
   end
@@ -44,7 +36,7 @@ function input_lock_policy.apply(state, deps)
   end
 
   -- 输入锁开启：先整体锁住回合内操作入口。
-  ui:set_touch_enabled(ui_nodes.buttons.action, false)
+  ui:set_touch_enabled(ui_nodes.base.action_button, false)
 
   local screens = ui.choice_screens or {}
   ui_touch_policy.set_choice_screen_locked(ui, screens.player)
@@ -58,11 +50,6 @@ function input_lock_policy.apply(state, deps)
   end
   if market_ui.cancel_button then
     ui:set_touch_enabled(market_ui.cancel_button, false)
-  end
-
-  if ui.popup_active and ui.popup_screen and ui.popup_screen.confirm then
-    -- 弹窗超时/确认链路依赖该按钮，锁定时仍需保持可点。
-    ui:set_touch_enabled(ui.popup_screen.confirm, true)
   end
 
   -- 业务例外：托管开关与调试开关在输入锁期间仍允许切换。

@@ -40,7 +40,7 @@ function service.refresh_turn_label(state_ctx, label_text)
   end
   local runtime = require("src.presentation.api.UIRuntimePort")
   runtime.for_each_role_or_global(function()
-    ui:set_label(require("src.presentation.shared.UINodes").labels.countdown, label_text)
+    ui:set_label(require("src.presentation.shared.UINodes").base.countdown, label_text)
   end)
   runtime.set_client_role(nil)
 end

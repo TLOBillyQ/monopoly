@@ -119,13 +119,6 @@ function M.open_target_screen(state, choice, choice_id)
     ui:set_touch_enabled(screen.confirm, true)
   end
 
-  local allow_cancel = choice.allow_cancel ~= false
-  ui:set_visible(screen.cancel, allow_cancel)
-  ui:set_touch_enabled(screen.cancel, allow_cancel)
-  if allow_cancel then
-    ui:set_button(screen.cancel, choice.cancel_label or "取消")
-  end
-
   ui.choice_active = true
   ui.active_choice_screen_key = "target"
   modal_state.open_choice(state, choice_id, option_ids, selected)

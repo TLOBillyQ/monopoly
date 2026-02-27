@@ -4,14 +4,8 @@ local core = require("src.presentation.api.ui_view_service.core")
 local M = {}
 
 function M.build_ui_state()
-  local item_slots = {
-    "道具槽位1",
-    "道具槽位2",
-    "道具槽位3",
-    "道具槽位4",
-    "道具槽位5",
-  }
-  local base_hidden_nodes = { ui_nodes.buttons.action }
+  local item_slots = ui_nodes.base.item_slots
+  local base_hidden_nodes = { ui_nodes.base.action_button }
   for _, name in ipairs(item_slots) do
     table.insert(base_hidden_nodes, name)
   end
@@ -29,20 +23,19 @@ function M.build_ui_state()
     item_slots = item_slots,
     base_hidden_nodes = base_hidden_nodes,
     base_hidden_labels = {},
-    auto_control_nodes = { ui_nodes.buttons.auto, ui_nodes.labels.auto },
+    auto_control_nodes = { ui_nodes.always_show.auto_button, ui_nodes.always_show.auto_label },
     market_active = false,
     choice_active = false,
     active_choice_screen_key = nil,
     choice_screens = core.build_choice_screens(),
     popup_screen = {
-      root = ui_nodes.popup.root,
+      root = ui_nodes.popup.canvas,
       title = ui_nodes.popup.title,
-      confirm = ui_nodes.popup.confirm,
       card = ui_nodes.popup.card,
       dismiss_nodes = ui_nodes.popup.dismiss_nodes,
     },
     bankruptcy_screen = {
-      root = ui_nodes.bankruptcy.root,
+      root = ui_nodes.bankruptcy.canvas,
       text = ui_nodes.bankruptcy.text,
       avatar = ui_nodes.bankruptcy.avatar,
     },

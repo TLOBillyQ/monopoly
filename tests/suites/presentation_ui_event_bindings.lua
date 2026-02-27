@@ -21,8 +21,7 @@ end
 local function _test_enable_action_log_toggle_touch_fallback_never_crash_on_bad_cached_nodes()
   logger.clear()
   local cache = {
-    [ui_nodes.action_log.toggle_button] = { _build_crash_node() },
-    [ui_nodes.action_log.toggle_image] = { _build_crash_node() },
+    [ui_nodes.always_show.action_log_button] = { _build_crash_node() },
   }
   local manager = { client_role = { any = true } }
 
@@ -57,11 +56,9 @@ local function _test_enable_action_log_toggle_touch_prefers_named_ui_touch_path(
     bindings.enable_action_log_toggle_touch({}, ui)
   end)
 
-  _assert_eq(#calls, 2, "ui path should touch two action-log toggle nodes")
-  _assert_eq(calls[1].name, ui_nodes.action_log.toggle_button, "first touch should target toggle button")
+  _assert_eq(#calls, 1, "ui path should touch one action-log toggle node")
+  _assert_eq(calls[1].name, ui_nodes.always_show.action_log_button, "touch should target action-log button")
   _assert_eq(calls[1].enabled, true, "toggle button should be enabled")
-  _assert_eq(calls[2].name, ui_nodes.action_log.toggle_image, "second touch should target countdown clock")
-  _assert_eq(calls[2].enabled, true, "countdown clock should be enabled")
 end
 
 return {

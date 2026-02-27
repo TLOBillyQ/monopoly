@@ -64,15 +64,13 @@ local function _test_action_anim_roll_screen_two_stage_timeline()
   local nodes = {}
   local node_names = {
     "骰子屏",
-    "骰子-旋转骰子底图",
-    "骰子-摇骰子结束特效1",
-    "骰子-摇骰子结束特效2",
-    "骰子-骰子点数1",
-    "骰子-骰子点数2",
-    "骰子-骰子点数3",
-    "骰子-骰子点数4",
-    "骰子-骰子点数5",
-    "骰子-骰子点数6",
+    "骰子_旋转中",
+    "骰子_点数1",
+    "骰子_点数2",
+    "骰子_点数3",
+    "骰子_点数4",
+    "骰子_点数5",
+    "骰子_点数6",
   }
   for _, name in ipairs(node_names) do
     nodes[name] = { visible = false, name = name }
@@ -126,28 +124,22 @@ local function _test_action_anim_roll_screen_two_stage_timeline()
 
     assert(total_duration == 1.5, "roll action duration should use 1s spin + hold")
     assert(nodes["骰子屏"].visible == true, "dice screen should be visible at start")
-    assert(nodes["骰子-旋转骰子底图"].visible == true, "spin node should be visible at start")
-    assert(nodes["骰子-摇骰子结束特效1"].visible == false, "fx1 should be hidden at start")
-    assert(nodes["骰子-摇骰子结束特效2"].visible == false, "fx2 should be hidden at start")
+    assert(nodes["骰子_旋转中"].visible == true, "spin node should be visible at start")
     for i = 1, 6 do
-      assert(nodes["骰子-骰子点数" .. i].visible == false, "face should be hidden while spinning")
+      assert(nodes["骰子_点数" .. i].visible == false, "face should be hidden while spinning")
     end
 
     run_timers_until(1.0)
-    assert(nodes["骰子-旋转骰子底图"].visible == false, "spin node should hide at 1s")
-    assert(nodes["骰子-摇骰子结束特效1"].visible == true, "fx1 should show at 1s")
-    assert(nodes["骰子-摇骰子结束特效2"].visible == true, "fx2 should show at 1s")
-    assert(nodes["骰子-骰子点数1"].visible == true, "first roll face should be shown")
+    assert(nodes["骰子_旋转中"].visible == false, "spin node should hide at 1s")
+    assert(nodes["骰子_点数1"].visible == true, "first roll face should be shown")
     for i = 2, 6 do
-      assert(nodes["骰子-骰子点数" .. i].visible == false, "other faces should remain hidden")
+      assert(nodes["骰子_点数" .. i].visible == false, "other faces should remain hidden")
     end
 
     run_timers_until(1.5)
     assert(nodes["骰子屏"].visible == false, "dice screen should hide after hold")
-    assert(nodes["骰子-摇骰子结束特效1"].visible == false, "fx1 should hide after hold")
-    assert(nodes["骰子-摇骰子结束特效2"].visible == false, "fx2 should hide after hold")
     for i = 1, 6 do
-      assert(nodes["骰子-骰子点数" .. i].visible == false, "all faces should hide after hold")
+      assert(nodes["骰子_点数" .. i].visible == false, "all faces should hide after hold")
     end
   end)
 end

@@ -1,50 +1,24 @@
 local market_layout = {
   container = "黑市屏",
-  confirm_button = "黑市购买按钮",
-  cancel_button = "关闭",
-  price_label = "售价：100",
-  selected_card = "选中卡牌",
-  item_buttons = {
-    "黑市购买项1",
-    "黑市购买项2",
-    "黑市购买项3",
-    "黑市购买项4",
-    "黑市购买项5",
-    "黑市购买项6",
-    "黑市购买项7",
-    "黑市购买项8",
-    "黑市购买项9",
-    "黑市购买项10",
-  },
-  item_labels = {
-    "道具名称1",
-    "道具名称2",
-    "道具名称3",
-    "道具名称4",
-    "道具名称5",
-    "道具名称6",
-    "道具名称7",
-    "道具名称8",
-    "道具名称9",
-    "道具名称10",
-  },
-  item_frames = {
-    "底框1",
-    "底框2",
-    "底框3",
-    "底框4",
-    "底框5",
-    "底框6",
-    "底框7",
-    "底框8",
-    "底框9",
-    "底框10",
-  },
+  confirm_button = "黑市_购买按钮",
+  cancel_button = "黑市_关闭",
+  price_label = "黑市_售价",
+  selected_card = "黑市_选中卡牌",
+  item_buttons = {},
+  item_labels = {},
+  item_frames = {},
   title = "黑市",
-  icon_placeholder = "选中卡牌",
+  icon_placeholder = "黑市_选中卡牌",
   rarity_ref_keys = { [1] = "lv1", [2] = "lv2", [3] = "lv3" },
   empty_ref_key = "Empty",
 }
+
+for i = 1, 10 do
+  local idx = tostring(i)
+  market_layout.item_buttons[i] = "黑市_购买项" .. idx
+  market_layout.item_labels[i] = "黑市_道具名称" .. idx
+  market_layout.item_frames[i] = "黑市_底框" .. idx
+end
 
 function market_layout.is_ready()
   return type(market_layout.container) == "string" and market_layout.container ~= ""

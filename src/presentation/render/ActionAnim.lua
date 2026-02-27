@@ -4,6 +4,7 @@ local number_utils = require("src.core.NumberUtils")
 local runtime = require("src.presentation.api.UIRuntimePort")
 local registry = require("src.presentation.render.ActionAnimRegistry")
 local handlers = require("src.presentation.render.ActionAnimHandlers")
+local ui_nodes = require("src.presentation.shared.UINodes")
 
 local action_anim = {}
 
@@ -12,21 +13,6 @@ local durations = {
   monster = 1.2,
 }
 local roll_spin_seconds = 1.0
-
-local dice_screen_nodes = {
-  screen = "骰子屏",
-  spin = "骰子-旋转骰子底图",
-  fx_end_1 = "骰子-摇骰子结束特效1",
-  fx_end_2 = "骰子-摇骰子结束特效2",
-  faces = {
-    "骰子-骰子点数1",
-    "骰子-骰子点数2",
-    "骰子-骰子点数3",
-    "骰子-骰子点数4",
-    "骰子-骰子点数5",
-    "骰子-骰子点数6",
-  },
-}
 
 local function _show_tip(text, duration)
   if GlobalAPI and GlobalAPI.show_tips then
@@ -41,7 +27,7 @@ local function _register_default_handlers()
   registry.register("roll", function(state, anim, duration, opts)
     handlers.play_roll_dice_screen(state, anim, roll_spin_seconds, opts.hold_seconds or 0.5, {
       runtime = runtime,
-      dice_screen_nodes = dice_screen_nodes,
+      dice_screen_nodes = ui_nodes.dice,
     })
     return roll_spin_seconds + (opts.hold_seconds or 0.5)
   end)

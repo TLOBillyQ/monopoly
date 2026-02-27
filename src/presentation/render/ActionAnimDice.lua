@@ -32,16 +32,14 @@ function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
   duration = duration or 0
   hold_seconds = hold_seconds or 0
   local face = _resolve_roll_face(anim)
-  local show_event = ui_events.show[dice_nodes.screen]
+  local show_event = ui_events.show[dice_nodes.canvas]
   if show_event then
     ui_events.send_to_all(show_event, {})
   end
   runtime.for_each_role_or_global(function()
     local nodes = {
-      screen = runtime.query_node(dice_nodes.screen),
+      screen = runtime.query_node(dice_nodes.canvas),
       spin = runtime.query_node(dice_nodes.spin),
-      fx_end_1 = runtime.query_node(dice_nodes.fx_end_1),
-      fx_end_2 = runtime.query_node(dice_nodes.fx_end_2),
       faces = {},
     }
     for index, name in ipairs(dice_nodes.faces) do
@@ -50,8 +48,6 @@ function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
 
     nodes.screen.visible = true
     nodes.spin.visible = true
-    nodes.fx_end_1.visible = false
-    nodes.fx_end_2.visible = false
     for _, node in ipairs(nodes.faces or {}) do
       node.visible = false
     end
@@ -74,8 +70,6 @@ function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
 
     SetTimeOut(duration, function()
       nodes.spin.visible = false
-      nodes.fx_end_1.visible = true
-      nodes.fx_end_2.visible = true
       if face then
         for index, node in ipairs(nodes.faces or {}) do
           node.visible = face == index
@@ -84,14 +78,12 @@ function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
     end)
 
     SetTimeOut(duration + hold_seconds, function()
-      local hide_event = ui_events.hide[dice_nodes.screen]
+      local hide_event = ui_events.hide[dice_nodes.canvas]
       if hide_event then
         ui_events.send_to_all(hide_event, {})
       end
       nodes.screen.visible = false
       nodes.spin.visible = false
-      nodes.fx_end_1.visible = false
-      nodes.fx_end_2.visible = false
       for _, node in ipairs(nodes.faces or {}) do
         node.visible = false
       end

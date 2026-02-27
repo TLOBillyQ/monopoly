@@ -23,7 +23,7 @@ local function set_touch_enabled(_, name, enabled)
 end
 
 local function set_debug_log(_, text)
-  set_text(nil, ui_nodes.action_log.log_label, text)
+  set_text(nil, ui_nodes.action_log.label, text)
 end
 
 local function set_debug_visible(ui, visible)
@@ -46,36 +46,33 @@ local function build_choice_screens()
   return {
     player = {
       key = "player",
-      root = ui_nodes.choice.player.root,
-      title = ui_nodes.choice.player.title,
-      body = ui_nodes.choice.player.body,
-      option_buttons = ui_nodes.choice.player.slots,
-      cancel = ui_nodes.choice.player.cancel,
+      root = ui_nodes.player_choice.canvas,
+      title = ui_nodes.player_choice.title,
+      option_buttons = ui_nodes.player_choice.slots,
     },
     target = {
       key = "target",
-      root = ui_nodes.choice.target.root,
-      title = ui_nodes.choice.target.title,
-      body = ui_nodes.choice.target.body,
-      option_buttons = ui_nodes.choice.target.slots,
-      under_button = ui_nodes.choice.target.under,
-      cancel = ui_nodes.choice.target.cancel,
+      root = ui_nodes.target_choice.canvas,
+      title = ui_nodes.target_choice.title,
+      body = ui_nodes.target_choice.body,
+      option_buttons = ui_nodes.target_choice.slots,
+      under_button = ui_nodes.target_choice.under,
     },
     remote = {
       key = "remote",
-      root = ui_nodes.choice.remote.root,
-      title = ui_nodes.choice.remote.title,
-      body = ui_nodes.choice.remote.body,
-      option_buttons = ui_nodes.choice.remote.options,
-      cancel = ui_nodes.choice.remote.cancel,
+      root = ui_nodes.remote_choice.canvas,
+      title = ui_nodes.remote_choice.title,
+      body = ui_nodes.remote_choice.body,
+      option_buttons = ui_nodes.remote_choice.options,
+      cancel = ui_nodes.remote_choice.cancel,
     },
     building = {
       key = "building",
-      root = ui_nodes.choice.building.root,
-      title = ui_nodes.choice.building.title,
-      body = ui_nodes.choice.building.body,
-      confirm = ui_nodes.choice.building.confirm,
-      cancel = ui_nodes.choice.building.cancel,
+      root = ui_nodes.building_choice.canvas,
+      title = ui_nodes.building_choice.title,
+      body = ui_nodes.building_choice.body,
+      confirm = ui_nodes.building_choice.confirm,
+      cancel = ui_nodes.building_choice.cancel,
     },
   }
 end

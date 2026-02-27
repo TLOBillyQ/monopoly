@@ -21,9 +21,9 @@ function touch_policy.set_auto_controls_touch(ui, auto_enabled, controls)
   if not ui or not ui.set_touch_enabled then
     return
   end
-  controls = controls or ui.auto_control_nodes or { ui_nodes.buttons.auto, ui_nodes.labels.auto }
+  controls = controls or ui.auto_control_nodes or { ui_nodes.always_show.auto_button, ui_nodes.always_show.auto_label }
   for _, name in ipairs(controls) do
-    if name == ui_nodes.buttons.auto then
+    if name == ui_nodes.always_show.auto_button then
       ui:set_touch_enabled(name, auto_enabled == true)
     else
       ui:set_touch_enabled(name, false)
@@ -37,7 +37,7 @@ function touch_policy.set_action_log_toggle_touch(ui, enabled)
   end
   local value = enabled == true
   local targets = ui_nodes.action_log.toggle_targets
-    or { ui_nodes.action_log.toggle_button, ui_nodes.action_log.toggle_image }
+    or { ui_nodes.always_show.action_log_button }
   for _, name in ipairs(targets) do
     ui:set_touch_enabled(name, value)
   end

@@ -160,7 +160,6 @@ function renderer.show_popup(state, payload)
     local popup = ui.popup_screen
     renderer.switch_popup_canvas(state, kind, canvas.CANVAS_POPUP, canvas.CANVAS_BASE)
     ui:set_label(popup.title, payload.title)
-    ui:set_button(popup.confirm, payload.button_text or "确认")
     _set_popup_card_image(state, payload)
     ui:set_visible(popup.root, true)
   end

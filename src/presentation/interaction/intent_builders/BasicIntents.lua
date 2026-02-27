@@ -8,13 +8,13 @@ local basic_intents = {}
 function basic_intents.build(state)
   return {
     {
-      name = ui_nodes.buttons.action,
+      name = ui_nodes.base.action_button,
       build_intent = function()
         return { type = "ui_button", id = "next" }
       end,
     },
     {
-      name = ui_nodes.buttons.auto,
+      name = ui_nodes.always_show.auto_button,
       build_intent = function()
         return { type = "ui_button", id = "auto" }
       end,
@@ -42,34 +42,25 @@ function basic_intents.build(state)
       end,
     },
     {
-      name = ui_nodes.buttons.close,
+      name = ui_nodes.market.close,
       build_intent = function()
         return ui_event_intents.choice_cancel_intent(state, "market_close")
       end,
     },
     {
-      name = ui_nodes.buttons.cancel,
-      build_intent = function()
-        if state.ui and state.ui.popup_active then
-          return { type = "popup_confirm" }
-        end
-        return ui_event_intents.choice_cancel_intent(state, "choice_cancel")
-      end,
-    },
-    {
-      name = ui_nodes.buttons.building_confirm,
+      name = ui_nodes.building_choice.confirm,
       build_intent = function()
         return ui_event_intents.choice_confirm_intent(state, "building_confirm")
       end,
     },
     {
-      name = ui_nodes.buttons.building_cancel,
+      name = ui_nodes.building_choice.cancel,
       build_intent = function()
         return ui_event_intents.choice_cancel_intent(state, "building_cancel")
       end,
     },
     {
-      name = ui_nodes.buttons.remote_cancel,
+      name = ui_nodes.remote_choice.cancel,
       build_intent = function()
         return ui_event_intents.choice_cancel_intent(state, "remote_cancel")
       end,

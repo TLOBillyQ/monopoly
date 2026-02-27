@@ -20,7 +20,7 @@ end
 
 function panel_presenter.render_auto_controls_for_role(ui, ctx, ui_model, local_role_id)
   assert(ui ~= nil, "missing ui")
-  local controls = ui.auto_control_nodes or { ui_nodes.buttons.auto, ui_nodes.labels.auto }
+  local controls = ui.auto_control_nodes or { ui_nodes.always_show.auto_button, ui_nodes.always_show.auto_label }
   local auto_enabled = false
   if local_role_id ~= nil then
     auto_enabled = ctx ~= nil and ctx.role_id == local_role_id
@@ -38,7 +38,7 @@ function panel_presenter.render_auto_controls_for_role(ui, ctx, ui_model, local_
     auto_label = panel and panel.auto_label or nil
   end
   if auto_label and ui.set_label then
-    ui:set_label(ui_nodes.labels.auto, auto_label)
+    ui:set_label(ui_nodes.always_show.auto_label, auto_label)
   end
   for _, name in ipairs(controls) do
     ui:set_visible(name, true)
@@ -109,15 +109,15 @@ local function _apply_player_colors(role, runtime, player, index)
   local player_id = player and player.id or nil
   local color = player_colors.resolve_owner_color(player_id)
   if set_image_color then
-    local image_node = runtime.query_node(string.format(ui_nodes.panel.player_color, index))
+    local image_node = runtime.query_node(string.format(ui_nodes.base.player_color, index))
     pcall(set_image_color, role, image_node, color, 0)
   end
   if set_label_color then
     local label_names = {
-      string.format(ui_nodes.panel.player_name, index),
-      string.format(ui_nodes.panel.player_cash, index),
-      string.format(ui_nodes.panel.player_land_count, index),
-      string.format(ui_nodes.panel.player_total_assets, index),
+      string.format(ui_nodes.base.player_name, index),
+      string.format(ui_nodes.base.player_cash, index),
+      string.format(ui_nodes.base.player_land_count, index),
+      string.format(ui_nodes.base.player_total_assets, index),
     }
     for _, name in ipairs(label_names) do
       local label_node = runtime.query_node(name)
@@ -148,12 +148,12 @@ function panel_presenter.refresh(state, ui_model, deps)
   for i = 1, 4 do
     local row = player_rows[i]
     assert(row ~= nil, "missing player row: " .. tostring(i))
-    ui:set_label(string.format(ui_nodes.panel.player_name, i), row.name)
-    ui:set_label(string.format(ui_nodes.panel.player_cash, i), row.cash)
-    ui:set_label(string.format(ui_nodes.panel.player_land_count, i), row.land_count)
-    ui:set_label(string.format(ui_nodes.panel.player_total_assets, i), row.total_assets)
+    ui:set_label(string.format(ui_nodes.base.player_name, i), row.name)
+    ui:set_label(string.format(ui_nodes.base.player_cash, i), row.cash)
+    ui:set_label(string.format(ui_nodes.base.player_land_count, i), row.land_count)
+    ui:set_label(string.format(ui_nodes.base.player_total_assets, i), row.total_assets)
     local avatar_key = _resolve_avatar_key(row, empty_avatar_key)
-    _set_player_avatar(ui, runtime, string.format(ui_nodes.panel.player_avatar, i), avatar_key)
+    _set_player_avatar(ui, runtime, string.format(ui_nodes.base.player_avatar, i), avatar_key)
   end
 
   if type(ui.item_slot_item_ids_by_role) ~= "table" then
@@ -165,13 +165,15 @@ function panel_presenter.refresh(state, ui_model, deps)
     local base_visible = panel_presenter.is_base_non_player_visible(ui, ctx)
     panel_presenter.apply_base_non_player_visibility(ui, base_visible)
     _force_item_slots_visible_for_player(ui, ctx)
-    ui:set_visible(ui_nodes.effects.auto, _resolve_auto_effect_visible(ui_model, ctx))
+    ui:set_visible(ui_nodes.always_show.auto_effect, _resolve_auto_effect_visible(ui_model, ctx))
 
-    ui:set_visible(ui_nodes.labels.countdown, true)
-    ui:set_label(ui_nodes.labels.countdown, panel.turn_label)
-    ui:set_visible(ui_nodes.labels.no_action, panel.no_action_visible == true)
-    ui:set_label(ui_nodes.labels.no_action, panel.no_action_text or "")
-    ui:set_touch_enabled(ui_nodes.buttons.action, base_visible)
+    ui:set_visible(ui_nodes.base.countdown, true)
+    ui:set_label(ui_nodes.base.countdown, panel.turn_label)
+    if panel.no_action_visible == true then
+      ui:set_visible(ui_nodes.base.action_hint, true)
+      ui:set_label(ui_nodes.base.action_hint, panel.no_action_text or "")
+    end
+    ui:set_touch_enabled(ui_nodes.base.action_button, base_visible)
     refresh_item_slots(state, ui_model, {
       role_id = ctx.role_id,
       display_player_id = ctx.display_player_id,

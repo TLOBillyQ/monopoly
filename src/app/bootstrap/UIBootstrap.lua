@@ -8,6 +8,29 @@ local ui_events = require("src.presentation.shared.UIEvents")
 
 local M = {}
 
+local function _validate_required_nodes(ui_manager_nodes, required_nodes)
+  if type(ui_manager_nodes.validate) == "function" then
+    return ui_manager_nodes.validate(required_nodes)
+  end
+
+  local known = {}
+  for _, entry in pairs(ui_manager_nodes) do
+    if type(entry) == "table" and type(entry[1]) == "string" and entry[1] ~= "" then
+      known[entry[1]] = true
+    end
+  end
+
+  local missing = {}
+  local seen = {}
+  for _, name in ipairs(required_nodes or {}) do
+    if type(name) == "string" and name ~= "" and not known[name] and not seen[name] then
+      missing[#missing + 1] = name
+      seen[name] = true
+    end
+  end
+  return missing
+end
+
 -- current_game_ref 是一个单元素数组 { nil }，供 set/get 当前 game 使用
 function M.install(state, current_game_ref, opts)
   opts = opts or {}
@@ -32,7 +55,7 @@ function M.install(state, current_game_ref, opts)
     local required_nodes = ui_nodes.required_click_nodes({
       extra = market_ui.item_buttons or {},
     })
-    local missing = ui_manager_nodes.validate(required_nodes)
+    local missing = _validate_required_nodes(ui_manager_nodes, required_nodes)
     if #missing > 0 then
       error("UI 节点缺失: " .. table.concat(missing, ", "))
     end

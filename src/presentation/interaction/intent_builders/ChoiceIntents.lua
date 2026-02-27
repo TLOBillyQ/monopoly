@@ -6,7 +6,7 @@ local choice_intents = {}
 
 function choice_intents.build_player(state)
   local specs = {}
-  local player_nodes = ui_nodes.choice.player.slots
+  local player_nodes = ui_nodes.player_choice.slots
   for index, name in ipairs(player_nodes) do
     specs[#specs + 1] = {
       name = name,
@@ -20,7 +20,7 @@ end
 
 function choice_intents.build_target(state)
   local specs = {}
-  local target_nodes = ui_nodes.choice.target.slots
+  local target_nodes = ui_nodes.target_choice.slots
   for index, name in ipairs(target_nodes) do
     specs[#specs + 1] = {
       name = name,
@@ -31,7 +31,7 @@ function choice_intents.build_target(state)
   end
   local under_index = #target_nodes + 1
   specs[#specs + 1] = {
-    name = ui_nodes.choice.target.under,
+    name = ui_nodes.target_choice.under,
     build_intent = function()
       return ui_event_intents.choice_select_intent(state, under_index, "target_select")
     end,
@@ -41,7 +41,7 @@ end
 
 function choice_intents.build_remote(state)
   local specs = {}
-  local remote_nodes = ui_nodes.choice.remote.options
+  local remote_nodes = ui_nodes.remote_choice.options
   for index, name in ipairs(remote_nodes) do
     specs[#specs + 1] = {
       name = name,

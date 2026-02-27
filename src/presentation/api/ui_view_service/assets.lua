@@ -15,7 +15,7 @@ function M.init_ui_assets(state)
       local ref_id = tostring(3000 + index)
       local image_key = refs[ref_id]
       assert(image_key ~= nil, "missing item icon: " .. tostring(ref_id))
-      core.set_item_slot_image("道具槽位" .. tostring(index), image_key)
+      core.set_item_slot_image("基础_道具槽位" .. tostring(index), image_key)
     end
   end)
   runtime.set_client_role(nil)
@@ -33,7 +33,7 @@ function M.capture_player_colors(state, game)
       break
     end
     if player and player.id ~= nil then
-      local node = runtime.query_node(string.format(ui_nodes.panel.player_color, index))
+      local node = runtime.query_node(string.format(ui_nodes.base.player_color, index))
       local color = node and node.image_color or nil
       if color ~= nil then
         colors_by_owner[player.id] = color

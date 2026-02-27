@@ -6,7 +6,13 @@ function item_slot_intents.build(state)
   local specs = {}
   local item_slots = (state.ui and state.ui.item_slots) or {}
   if #item_slots == 0 then
-    item_slots = { "道具槽位1", "道具槽位2", "道具槽位3", "道具槽位4", "道具槽位5" }
+    item_slots = {
+      "基础_道具槽位1",
+      "基础_道具槽位2",
+      "基础_道具槽位3",
+      "基础_道具槽位4",
+      "基础_道具槽位5",
+    }
   end
   for index, node_name in ipairs(item_slots) do
     local action_id = "item_slot_" .. tostring(index)
