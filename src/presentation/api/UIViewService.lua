@@ -1,6 +1,6 @@
 local board_runtime = require("src.presentation.render.BoardRuntime")
 local market_view = require("src.presentation.render.MarketView")
-local panel_presenter = require("src.presentation.ui.UIPanelPresenter")
+local base_presenter = require("src.presentation.canvas.base.presenter")
 local input_lock_policy = require("src.presentation.interaction.UIInputLockPolicy")
 local role_control_lock_policy = require("src.presentation.interaction.UIRoleControlLockPolicy")
 local modal_presenter = require("src.presentation.ui.UIModalPresenter")
@@ -27,7 +27,7 @@ function service.capture_player_colors(ui_state, game)
 end
 
 function service.refresh_panel(state_ctx, ui_model)
-  panel_presenter.refresh(state_ctx, ui_model, {
+  base_presenter.refresh(state_ctx, ui_model, {
     runtime = require("src.presentation.api.UIRuntimePort"),
     refresh_item_slots = service.refresh_item_slots,
   })

@@ -1,8 +1,8 @@
 local modal_state = require("src.presentation.interaction.UIModalStateCoordinator")
 local choice_openers = require("src.presentation.ui.choice_screen_service.openers")
 local choice_common = require("src.presentation.ui.choice_screen_service.common")
-local popup_renderer = require("src.presentation.ui.PopupRenderer")
-local market_renderer = require("src.presentation.ui.MarketModalRenderer")
+local popup_presenter = require("src.presentation.canvas.popup.presenter")
+local market_presenter = require("src.presentation.canvas.market.presenter")
 local canvas = require("src.presentation.interaction.UICanvasCoordinator")
 local logger = require("src.core.Logger")
 
@@ -45,12 +45,12 @@ function modal_presenter.open_choice_modal(state, choice, market)
 
   local screen_key = choice_common.resolve_screen_key(choice)
   if screen_key == "market" then
-    market_renderer.open_market_panel(state, choice, choice_id, market)
+    market_presenter.open(state, choice, choice_id, market)
     return
   end
 
   if state.ui.market_active then
-    market_renderer.close_market_panel(state)
+    market_presenter.close(state)
     state.ui.market_active = false
   end
 
@@ -69,12 +69,12 @@ function modal_presenter.close_choice_modal(state)
     ui.active_choice_screen_key = nil
   end
   if ui.market_active then
-    market_renderer.close_market_panel(state)
+    market_presenter.close(state)
     ui.market_active = false
   end
   modal_state.close_choice(state)
   if ui.popup_active then
-    popup_renderer.switch_popup_canvas(state, ui.popup_kind or "card", canvas.CANVAS_POPUP, canvas.CANVAS_BASE)
+    popup_presenter.switch_canvas(state, ui.popup_kind or "card", canvas.CANVAS_POPUP, canvas.CANVAS_BASE)
   else
     canvas.switch(ui, canvas.CANVAS_BASE)
   end
@@ -85,7 +85,7 @@ function modal_presenter.push_popup(state, payload)
   assert(payload ~= nil, "missing popup payload")
   local ui = state.ui
   ui.popup_return_canvas = canvas.resolve_popup_return_canvas(ui)
-  popup_renderer.show_popup(state, payload)
+  popup_presenter.show(state, payload)
   modal_state.open_popup(state, payload)
   state.ui_dirty = true
   return true
@@ -98,13 +98,13 @@ function modal_presenter.close_popup(state)
     return
   end
   local kind = ui.popup_kind or "card"
-  popup_renderer.hide_popup(state)
+  popup_presenter.hide(state)
   modal_state.close_popup(state)
   ui.popup_kind = nil
   local target = ui.popup_return_canvas
   ui.popup_return_canvas = nil
   local next_canvas = canvas.resolve_canvas_after_popup(ui, target)
-  popup_renderer.switch_popup_canvas(state, kind, next_canvas, canvas.CANVAS_BASE)
+  popup_presenter.switch_canvas(state, kind, next_canvas, canvas.CANVAS_BASE)
   state.ui_dirty = true
 end
 
