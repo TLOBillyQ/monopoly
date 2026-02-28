@@ -3058,15 +3058,16 @@ local function _build_turn_effect_runtime_env(role_ids)
     per_role_nodes[role_id] = {
       ["基础_星星中心爆开"] = { visible = false },
       ["基础_行动提示"] = { visible = false },
+      ["基础_行动提示特效"] = { visible = false },
       ["基础_其他玩家行动提示"] = { visible = false, text = "" },
     }
   end
 
   local global_nodes = {
-    ["基础_玩家1高亮光效"] = { visible = false },
-    ["基础_玩家2高亮光效"] = { visible = false },
-    ["基础_玩家3高亮光效"] = { visible = false },
-    ["基础_玩家4高亮光效"] = { visible = false },
+    ["基础_玩家1行动动效"] = { visible = false },
+    ["基础_玩家2行动动效"] = { visible = false },
+    ["基础_玩家3行动动效"] = { visible = false },
+    ["基础_玩家4行动动效"] = { visible = false },
   }
 
   return {
@@ -3115,7 +3116,7 @@ local function _test_turn_effects_prompt_visibility_follows_phase_and_role()
   }, function()
     turn_effects.sync(state, ui_model)
     _assert_eq(env.per_role_nodes[1]["基础_行动提示"].visible, true, "current player should see action prompt in start phase")
-    _assert_eq(env.per_role_nodes[1]["基础_星星中心爆开"].visible, true, "current player should see action star in start phase")
+    _assert_eq(env.per_role_nodes[1]["基础_行动提示特效"].visible, true, "current player should see action star in start phase")
     _assert_eq(env.per_role_nodes[2]["基础_行动提示"].visible, false, "other player should hide local action prompt")
     _assert_eq(env.per_role_nodes[2]["基础_其他玩家行动提示"].visible, true, "other player should always see other-action prompt")
     _assert_eq(env.per_role_nodes[2]["基础_其他玩家行动提示"].text, "P1正在行动", "other prompt text should use current player name")
@@ -3123,7 +3124,7 @@ local function _test_turn_effects_prompt_visibility_follows_phase_and_role()
     ui_model.board.phase = "wait_move_anim"
     turn_effects.sync(state, ui_model)
     _assert_eq(env.per_role_nodes[1]["基础_行动提示"].visible, false, "current player prompt should hide after action begins")
-    _assert_eq(env.per_role_nodes[1]["基础_星星中心爆开"].visible, false, "current player star should hide after action begins")
+    _assert_eq(env.per_role_nodes[1]["基础_行动提示特效"].visible, false, "current player star should hide after action begins")
     _assert_eq(env.per_role_nodes[2]["基础_其他玩家行动提示"].visible, true, "other player prompt should stay visible in non-turn phase")
 
     ui_model.board.phase = "end_turn"
@@ -3178,20 +3179,32 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
     { target = board_view_mod, key = "refresh", value = function() end },
     { target = main_view, key = "open_choice_modal", value = function() end },
     { target = ui_model, key = "build", value = function(game_ctx)
+      local _player_rows = {
+        { name = "P1", cash = "0", land_count = "0", total_assets = "0" },
+        { name = "P2", cash = "0", land_count = "0", total_assets = "0" },
+        { name = "", cash = "", land_count = "", total_assets = "" },
+        { name = "", cash = "", land_count = "", total_assets = "" },
+      }
       return {
         current_player_name = "P",
         current_player_cash = 0,
         turn_count = game_ctx.turn.turn_count,
-        panel = { turn_label = "" },
+        panel = { turn_label = "", player_rows = _player_rows },
         board = {},
       }
     end },
     { target = ui_model, key = "update", value = function(_, game_ctx)
+      local _player_rows = {
+        { name = "P1", cash = "0", land_count = "0", total_assets = "0" },
+        { name = "P2", cash = "0", land_count = "0", total_assets = "0" },
+        { name = "", cash = "", land_count = "", total_assets = "" },
+        { name = "", cash = "", land_count = "", total_assets = "" },
+      }
       return {
         current_player_name = "P",
         current_player_cash = 0,
         turn_count = game_ctx.turn.turn_count,
-        panel = { turn_label = "" },
+        panel = { turn_label = "", player_rows = _player_rows },
         board = {},
       }
     end },
@@ -3252,7 +3265,8 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
         get_position = function() return { x = 0, y = 0, z = 0 } end
       }
     },
-    ui = { input_blocked = false },
+    ui = ui_view.build_ui_state(),
+    ui_refs = { ["Empty"] = "EMPTY" },
   }
 
   _with_patches(patches, function()

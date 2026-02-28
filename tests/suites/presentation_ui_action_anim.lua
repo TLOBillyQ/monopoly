@@ -145,6 +145,9 @@ local function _test_action_anim_roll_screen_two_stage_timeline()
 end
 
 return {
-  _test_action_anim_overlay_handler_returns_duration,
-  _test_action_anim_roll_screen_two_stage_timeline,
+  name = "presentation_ui_action_anim",
+  tests = {
+    { name = "action_anim_overlay_handler_returns_duration", run = _test_action_anim_overlay_handler_returns_duration },
+    { name = "action_anim_roll_screen_two_stage_timeline", run = _test_action_anim_roll_screen_two_stage_timeline },
+  },
 }

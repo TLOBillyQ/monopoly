@@ -220,15 +220,18 @@ local function _test_chance_landing_pushes_popup()
 end
 
 return {
-  _test_land_on_start_reward,
-  _test_pass_players_without_steal_does_not_crash,
-  _test_landing_optional_waits_with_ui,
-  _test_landing_optional_waits_without_ui_and_can_resolve,
-  _test_landing_optional_stale_choice_is_blocked,
-  _test_zero_cash_no_buy_choice,
-  _test_turn_land_bridges_to_wait_action_anim_for_chance,
-  _test_turn_land_bridges_to_wait_action_anim_for_item,
-  _test_item_landing_pushes_popup_on_success,
-  _test_item_landing_full_inventory_no_duplicate_success_popup,
-  _test_chance_landing_pushes_popup,
+  name = "landing",
+  tests = {
+    { name = "land_on_start_reward", run = _test_land_on_start_reward },
+    { name = "pass_players_without_steal_does_not_crash", run = _test_pass_players_without_steal_does_not_crash },
+    { name = "landing_optional_waits_with_ui", run = _test_landing_optional_waits_with_ui },
+    { name = "landing_optional_waits_without_ui_and_can_resolve", run = _test_landing_optional_waits_without_ui_and_can_resolve },
+    { name = "landing_optional_stale_choice_is_blocked", run = _test_landing_optional_stale_choice_is_blocked },
+    { name = "zero_cash_no_buy_choice", run = _test_zero_cash_no_buy_choice },
+    { name = "turn_land_bridges_to_wait_action_anim_for_chance", run = _test_turn_land_bridges_to_wait_action_anim_for_chance },
+    { name = "turn_land_bridges_to_wait_action_anim_for_item", run = _test_turn_land_bridges_to_wait_action_anim_for_item },
+    { name = "item_landing_pushes_popup_on_success", run = _test_item_landing_pushes_popup_on_success },
+    { name = "item_landing_full_inventory_no_duplicate_success_popup", run = _test_item_landing_full_inventory_no_duplicate_success_popup },
+    { name = "chance_landing_pushes_popup", run = _test_chance_landing_pushes_popup },
+  },
 }

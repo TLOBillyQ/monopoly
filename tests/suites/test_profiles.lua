@@ -122,10 +122,10 @@ end
 return {
   name = "test_profiles",
   tests = {
-    _test_default_profile_map_is_stable,
-    _test_unknown_profile_falls_back_default_map,
-    _test_quick_profiles_map_cover_target_tiles,
-    _test_profile_bootstrap_quick_all_injects_resources,
-    _test_profile_bootstrap_quick_bankruptcy_applies_tile_override,
+    { name = "default_profile_map_is_stable", run = _test_default_profile_map_is_stable },
+    { name = "unknown_profile_falls_back_default_map", run = _test_unknown_profile_falls_back_default_map },
+    { name = "quick_profiles_map_cover_target_tiles", run = _test_quick_profiles_map_cover_target_tiles },
+    { name = "profile_bootstrap_quick_all_injects_resources", run = _test_profile_bootstrap_quick_all_injects_resources },
+    { name = "profile_bootstrap_quick_bankruptcy_applies_tile_override", run = _test_profile_bootstrap_quick_bankruptcy_applies_tile_override },
   },
 }

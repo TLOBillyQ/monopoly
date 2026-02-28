@@ -151,11 +151,14 @@ local function _test_buy_vehicle_rejected_when_feature_disabled()
 end
 
 return {
-  _test_ai_skips_auto_buy_at_market,
-  _test_market_full_inventory_blocks_items,
-  _test_market_global_limit,
-  _test_market_disabled_products_hidden,
-  _test_buy_disabled_market_product_rejected,
-  _test_market_vehicle_hidden_when_feature_disabled,
-  _test_buy_vehicle_rejected_when_feature_disabled,
+  name = "market",
+  tests = {
+    { name = "ai_skips_auto_buy_at_market", run = _test_ai_skips_auto_buy_at_market },
+    { name = "market_full_inventory_blocks_items", run = _test_market_full_inventory_blocks_items },
+    { name = "market_global_limit", run = _test_market_global_limit },
+    { name = "market_disabled_products_hidden", run = _test_market_disabled_products_hidden },
+    { name = "buy_disabled_market_product_rejected", run = _test_buy_disabled_market_product_rejected },
+    { name = "market_vehicle_hidden_when_feature_disabled", run = _test_market_vehicle_hidden_when_feature_disabled },
+    { name = "buy_vehicle_rejected_when_feature_disabled", run = _test_buy_vehicle_rejected_when_feature_disabled },
+  },
 }

@@ -9,5 +9,8 @@ local function _test_number_utils_to_integer()
 end
 
 return {
-  _test_number_utils_to_integer,
+  name = "misc",
+  tests = {
+    { name = "number_utils_to_integer", run = _test_number_utils_to_integer },
+  },
 }

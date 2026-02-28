@@ -65,9 +65,12 @@ local function _test_movement_backward_wrap()
 end
 
 return {
-  _test_pass_start,
-  _test_roadblock_stop,
-  _test_movement_examples_from_issue,
-  _test_board_indices_in_range_uses_graph_distance,
-  _test_movement_backward_wrap,
+  name = "movement",
+  tests = {
+    { name = "pass_start", run = _test_pass_start },
+    { name = "roadblock_stop", run = _test_roadblock_stop },
+    { name = "movement_examples_from_issue", run = _test_movement_examples_from_issue },
+    { name = "board_indices_in_range_uses_graph_distance", run = _test_board_indices_in_range_uses_graph_distance },
+    { name = "movement_backward_wrap", run = _test_movement_backward_wrap },
+  },
 }

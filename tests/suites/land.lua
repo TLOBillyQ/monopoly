@@ -123,8 +123,11 @@ local function _test_rent_owner_missing_skips_payment()
 end
 
 return {
-  _test_ai_picks_land_purchase,
-  _test_land_rent_contiguous_sum,
-  _test_land_rent_graph_adjacency_breaks_path_neighbors,
-  _test_rent_owner_missing_skips_payment,
+  name = "land",
+  tests = {
+    { name = "ai_picks_land_purchase", run = _test_ai_picks_land_purchase },
+    { name = "land_rent_contiguous_sum", run = _test_land_rent_contiguous_sum },
+    { name = "land_rent_graph_adjacency_breaks_path_neighbors", run = _test_land_rent_graph_adjacency_breaks_path_neighbors },
+    { name = "rent_owner_missing_skips_payment", run = _test_rent_owner_missing_skips_payment },
+  },
 }

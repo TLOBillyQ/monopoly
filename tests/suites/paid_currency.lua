@@ -256,10 +256,13 @@ local function _test_bridge_setup_works_when_sandbox_blocks_mode_metatable()
 end
 
 return {
-  _test_paid_bridge_sync_balance_from_commodity,
-  _test_market_buy_managed_currency_consumes_commodity,
-  _test_market_insufficient_managed_currency_opens_panel,
-  _test_purchase_event_syncs_balance,
-  _test_bridge_isolates_context_between_games,
-  _test_bridge_setup_works_when_sandbox_blocks_mode_metatable,
+  name = "paid_currency",
+  tests = {
+    { name = "paid_bridge_sync_balance_from_commodity", run = _test_paid_bridge_sync_balance_from_commodity },
+    { name = "market_buy_managed_currency_consumes_commodity", run = _test_market_buy_managed_currency_consumes_commodity },
+    { name = "market_insufficient_managed_currency_opens_panel", run = _test_market_insufficient_managed_currency_opens_panel },
+    { name = "purchase_event_syncs_balance", run = _test_purchase_event_syncs_balance },
+    { name = "bridge_isolates_context_between_games", run = _test_bridge_isolates_context_between_games },
+    { name = "bridge_setup_works_when_sandbox_blocks_mode_metatable", run = _test_bridge_setup_works_when_sandbox_blocks_mode_metatable },
+  },
 }

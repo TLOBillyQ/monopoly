@@ -183,13 +183,16 @@ local function _test_item_executor_keeps_specific_anim_without_fallback()
 end
 
 return {
-  _test_monster_card,
-  _test_missile_card,
-  _test_demolish_card_no_target_returns_false,
-  _test_item_phase_filters_unusable_target_items,
-  _test_item_phase_keeps_demolish_when_target_exists,
-  _test_item_equalize_cash,
-  _test_target_item_manual_direct_exec_and_duration,
-  _test_item_executor_fallback_item_use_anim,
-  _test_item_executor_keeps_specific_anim_without_fallback,
+  name = "item",
+  tests = {
+    { name = "monster_card", run = _test_monster_card },
+    { name = "missile_card", run = _test_missile_card },
+    { name = "demolish_card_no_target_returns_false", run = _test_demolish_card_no_target_returns_false },
+    { name = "item_phase_filters_unusable_target_items", run = _test_item_phase_filters_unusable_target_items },
+    { name = "item_phase_keeps_demolish_when_target_exists", run = _test_item_phase_keeps_demolish_when_target_exists },
+    { name = "item_equalize_cash", run = _test_item_equalize_cash },
+    { name = "target_item_manual_direct_exec_and_duration", run = _test_target_item_manual_direct_exec_and_duration },
+    { name = "item_executor_fallback_item_use_anim", run = _test_item_executor_fallback_item_use_anim },
+    { name = "item_executor_keeps_specific_anim_without_fallback", run = _test_item_executor_keeps_specific_anim_without_fallback },
+  },
 }

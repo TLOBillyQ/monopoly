@@ -122,11 +122,14 @@ local function _test_chance_set_vehicle_works_when_feature_enabled()
 end
 
 return {
-  _test_chance_is_mandatory_effect_entrypoint,
-  _test_chance_move_backward_pass_market,
-  _test_chance_move_backward_pass_intersection,
-  _test_chance_move_backward_queues_move_effect_anim,
-  _test_chance_forced_move_queues_move_effect_anim,
-  _test_chance_set_vehicle_ignored_when_feature_disabled,
-  _test_chance_set_vehicle_works_when_feature_enabled,
+  name = "chance",
+  tests = {
+    { name = "chance_is_mandatory_effect_entrypoint", run = _test_chance_is_mandatory_effect_entrypoint },
+    { name = "chance_move_backward_pass_market", run = _test_chance_move_backward_pass_market },
+    { name = "chance_move_backward_pass_intersection", run = _test_chance_move_backward_pass_intersection },
+    { name = "chance_move_backward_queues_move_effect_anim", run = _test_chance_move_backward_queues_move_effect_anim },
+    { name = "chance_forced_move_queues_move_effect_anim", run = _test_chance_forced_move_queues_move_effect_anim },
+    { name = "chance_set_vehicle_ignored_when_feature_disabled", run = _test_chance_set_vehicle_ignored_when_feature_disabled },
+    { name = "chance_set_vehicle_works_when_feature_enabled", run = _test_chance_set_vehicle_works_when_feature_enabled },
+  },
 }
