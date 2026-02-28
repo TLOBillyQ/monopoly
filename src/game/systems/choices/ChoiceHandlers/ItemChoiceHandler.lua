@@ -47,7 +47,7 @@ function item_choice_handler.build(helpers)
   end
 
   local function _reopen_item_phase(game, player, phase)
-    local spec = item_phase.build_choice_spec(player, phase)
+    local spec = item_phase.build_choice_spec(game, player, phase)
     if spec == nil then
       finish_item_phase(game, phase)
       return nil

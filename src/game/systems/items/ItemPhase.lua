@@ -29,13 +29,12 @@ function item_phase.is_enabled(phase)
   return false
 end
 
-local function _build_options(player, phase)
+local function _build_options(game, player, phase)
   local options = {}
   local body_lines = {}
   for _, it in ipairs(inventory.items(player)) do
     local cfg = cfg_by_id[it.id]
-    local timing = cfg.timing
-    if strategy.timing_allowed(phase, timing, false) then
+    if cfg and strategy.can_offer_in_phase(game, player, it.id, phase) then
       table.insert(options, { id = it.id, label = cfg.name })
       local line = cfg.name
       if cfg.usage and #cfg.usage > 0 then
@@ -97,7 +96,7 @@ function item_phase.run(turn_mgr, phase, args)
 
   assert(game.ui_port ~= nil, "missing ui_port")
 
-  local spec = item_phase.build_choice_spec(player, phase)
+  local spec = item_phase.build_choice_spec(game, player, phase)
   if spec == nil then
     item_phase.finish(game, phase)
     return nil
@@ -114,8 +113,10 @@ function item_phase.run(turn_mgr, phase, args)
   return { waiting = true, resume_state = args.resume_state, resume_args = args.resume_args }
 end
 
-function item_phase.build_choice_spec(player, phase)
-  local body_lines, options = _build_options(player, phase)
+function item_phase.build_choice_spec(game, player, phase)
+  assert(game ~= nil, "missing game")
+  assert(player ~= nil, "missing player")
+  local body_lines, options = _build_options(game, player, phase)
   if #options == 0 then
     return nil
   end

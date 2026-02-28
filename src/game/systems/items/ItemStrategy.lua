@@ -5,9 +5,14 @@ local logger = require("src.core.Logger")
 local inventory = require("src.game.systems.items.ItemInventory")
 local executor = require("src.game.systems.items.ItemExecutor")
 local demolish = require("src.game.systems.items.ItemDemolish")
+local roadblock = require("src.game.systems.items.ItemRoadblock")
 
 local strategy = {}
 local item_ids = gameplay_rules.item_ids
+local target_item_set = {}
+for _, target_item_id in ipairs(item_effects.target_item_ids()) do
+  target_item_set[target_item_id] = true
+end
 
 function strategy.target_candidates(game, player, item_id)
   local registries = assert(game.registries, "missing game.registries")
@@ -48,6 +53,32 @@ function strategy.timing_allowed(phase, timing, allow_missing_phase)
     return false
   end
   return allowed[timing] == true
+end
+
+function strategy.can_offer_in_phase(game, player, item_id, phase)
+  local cfg = inventory.cfg(item_id)
+  if not cfg then
+    return false
+  end
+  if not strategy.timing_allowed(phase, cfg.timing, false) then
+    return false
+  end
+
+  if item_id == item_ids.roadblock then
+    local candidates = roadblock.candidates(game, player, 3)
+    return type(candidates) == "table" and #candidates > 0
+  end
+
+  if item_id == item_ids.monster or item_id == item_ids.missile then
+    return demolish.find_target(game, player, 3) ~= nil
+  end
+
+  if target_item_set[item_id] then
+    local candidates = strategy.target_candidates(game, player, item_id)
+    return type(candidates) == "table" and #candidates > 0
+  end
+
+  return true
 end
 
 function strategy.auto_pre_action(game, player, phase)

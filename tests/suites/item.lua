@@ -8,6 +8,7 @@ local _assert_eq = support.assert_eq
 local executor = support.executor
 local choice_resolver = support.choice_resolver
 local gameplay_rules = require("Config.GameplayRules")
+local item_phase = require("src.game.systems.items.ItemPhase")
 
 local function _test_monster_card()
   local g = _new_game()
@@ -59,6 +60,40 @@ local function _test_missile_card()
   _assert_eq(g.board:has_roadblock(idx), false, "roadblock cleared")
   _assert_eq(g.board:has_mine(idx), false, "mine cleared")
   assert(g.players[2].status.stay_turns > 0, "target sent to hospital")
+end
+
+local function _test_demolish_card_no_target_returns_false()
+  local g = _new_game()
+  local p = g:current_player()
+  p.inventory:add({ id = 2008 })
+
+  local res = executor.use_item(g, p, 2008, { by_ai = false })
+  _assert_eq(res, false, "demolish without target should return false instead of crashing")
+end
+
+local function _test_item_phase_filters_unusable_target_items()
+  local g = _new_game()
+  local p = g:current_player()
+  p.inventory:add({ id = 2008 }) -- 怪兽卡（无可拆目标）
+  p.inventory:add({ id = 2011 }) -- 均富卡（目标玩家已出局）
+  g.players[2].eliminated = true
+
+  local spec = item_phase.build_choice_spec(g, p, "post_action")
+  _assert_eq(spec, nil, "item_phase should not expose unusable target items")
+end
+
+local function _test_item_phase_keeps_demolish_when_target_exists()
+  local g = _new_game()
+  local p = g:current_player()
+  local idx = 3
+  local tile_ref = g.board:get_tile(idx)
+  g:set_tile_owner(tile_ref, 2)
+  g:set_tile_level(tile_ref, 1)
+  p.inventory:add({ id = 2008 })
+
+  local spec = item_phase.build_choice_spec(g, p, "post_action")
+  assert(spec and spec.options and #spec.options > 0, "item_phase should include demolish when target exists")
+  _assert_eq(spec.options[1].id, 2008, "demolish item should be selectable when target exists")
 end
 
 local function _test_item_equalize_cash()
@@ -147,6 +182,9 @@ end
 return {
   _test_monster_card,
   _test_missile_card,
+  _test_demolish_card_no_target_returns_false,
+  _test_item_phase_filters_unusable_target_items,
+  _test_item_phase_keeps_demolish_when_target_exists,
   _test_item_equalize_cash,
   _test_target_item_manual_direct_exec_and_duration,
   _test_item_executor_fallback_item_use_anim,

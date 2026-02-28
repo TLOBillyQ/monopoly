@@ -113,7 +113,10 @@ end
 function demolish.use(game, player, distance, consume_fn, opts)
   opts = opts or {}
   local best_idx = demolish.find_target(game, player, distance)
-  assert(best_idx ~= nil, "missing demolish target")
+  if best_idx == nil then
+    logger.warn((opts.title or "拆除类道具") .. " 无可用目标")
+    return false
+  end
 
   if not opts.by_ai then
     local idxs = board_utils.indices_in_range(game.board, player.position, distance)
