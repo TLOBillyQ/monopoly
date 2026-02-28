@@ -451,9 +451,9 @@ local function _test_end_turn_stops_all_players_movement()
       end,
     } },
   }, function()
-    local phase_end = g.turn_flow.phases and g.turn_flow.phases.end_turn
+    local phase_end = g.turn_engine.phases and g.turn_engine.phases.end_turn
     assert(type(phase_end) == "function", "end_turn phase should exist")
-    phase_end(g.turn_flow, { player = g.players[1] })
+    phase_end(g.turn_engine.turn_mgr, { player = g.players[1] })
   end)
   assert(g.players[1].status.move_dir == nil, "player1 move_dir should be cleared at end turn")
   assert(g.players[2].status.move_dir == nil, "player2 move_dir should be cleared at end turn")
@@ -1380,7 +1380,7 @@ local function _test_turn_prompt_emitted_on_next_player_switch()
   local expected_next_index = before_index % #g.players + 1
   local expected_player = g.players[expected_next_index]
 
-  g.turn_flow:next_player()
+  g.turn_engine:next_player()
 
   assert(g.turn.current_player_index == expected_next_index, "next_player should switch player index")
   assert((g.turn.turn_start_prompt_seq or 0) == before_seq + 1,

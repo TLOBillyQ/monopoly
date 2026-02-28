@@ -24,6 +24,7 @@ local ui_view = require("src.presentation.api.UIViewService")
 local ui_status_3d_layer = require("src.presentation.render.Status3DService")
 local action_anim = require("src.presentation.render.ActionAnim")
 local move_anim = require("src.presentation.render.MoveAnim")
+local turn_engine_cls = require("src.game.core.runtime.TurnEngine")
 local turn_effects = require("src.presentation.ui.UITurnEffects")
 local role_control_lock_policy = require("src.presentation.interaction.UIRoleControlLockPolicy")
 local ui_touch_policy = require("src.presentation.interaction.UITouchPolicy")
@@ -366,9 +367,9 @@ local function _test_move_anim_wait_and_resume()
       return nil
     end,
   }
-  g.turn_flow = turn_flow:new(g, phases)
+  g.turn_engine = turn_engine_cls:new(g, phases, { experimental_coroutine_turn = true })
 
-  local res = g.turn_flow:run_until_wait()
+  local res = g.turn_engine:run_turn()
   assert(res == "wait_move_anim", "should wait for move anim")
   local seq = g.turn.move_anim and g.turn.move_anim.seq
   assert(seq, "move_anim seq should be set")
@@ -2568,21 +2569,21 @@ local function _test_action_anim_queue_consumes_in_order()
   function g:player_balance(player)
     return player.cash
   end
-  g.turn_flow = turn_flow:new(g, phases)
+  local engine = turn_engine_cls:new(g, phases, { experimental_coroutine_turn = true })
 
-  local state = g.turn_flow:run_until_wait()
+  local state = engine:run_turn()
   _assert_eq(state, "wait_action_anim", "should wait action anim")
   _assert_eq(g.turn.action_anim.seq, 1, "current anim should be seq1")
 
-  g.turn_flow:dispatch({ type = "action_anim_done", seq = 999 })
+  engine:dispatch({ type = "action_anim_done", seq = 999 })
   _assert_eq(g.turn.phase, "wait_action_anim", "wrong seq should keep wait_action_anim")
   _assert_eq(g.turn.action_anim.seq, 1, "wrong seq should keep current anim")
 
-  g.turn_flow:dispatch({ type = "action_anim_done", seq = 1 })
+  engine:dispatch({ type = "action_anim_done", seq = 1 })
   _assert_eq(g.turn.phase, "wait_action_anim", "should still wait second anim")
   _assert_eq(g.turn.action_anim.seq, 2, "current anim should switch to seq2")
 
-  g.turn_flow:dispatch({ type = "action_anim_done", seq = 2 })
+  engine:dispatch({ type = "action_anim_done", seq = 2 })
   assert(g.turn.phase ~= "wait_action_anim", "should leave action anim wait after queue drained")
   assert(g.turn.action_anim == nil, "action_anim should be nil after queue drained")
 end

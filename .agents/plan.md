@@ -14,7 +14,7 @@
 
 - [x] (2026-02-28 12:42:00 +08:00) 前置：协程运行时骨架与 CanvasStore/CanvasRenderPipeline 落地（前一轮计划里程碑 0-5）。
 - [x] (2026-02-28 13:15:00 +08:00) 里程碑 A：补全协程路径测试覆盖，建立行为一致性验证。新增 5 个测试（wait_move_anim / wait_action_anim / detained_wait / full_turn_lifecycle / legacy_parity），总测试 168 条，8 条预存失败不变。dep_rules 新增 canvas_runtime 不得引用 intent_builders 规则。
-- [ ] 里程碑 B：默认开启协程路径，迁移测试中的 turn_flow 直接替换。
+- [x] (2026-02-28 14:30:00 +08:00) 里程碑 B：默认开启协程路径，迁移测试中的 turn_flow 直接替换。`experimental_coroutine_turn` 默认值改为 `true`。4 处直接 `turn_flow` 引用迁移至 `turn_engine` 接口（presentation_ui 2 处改用 TurnEngine 构造 + run_turn/dispatch，gameplay 2 处改用 turn_engine.phases/turn_mgr/next_player）。全量回归 168 条（8 条预存失败不变），legacy 回退验证通过。
 - [ ] 里程碑 C：消除 resume_state/resume_args 在 phase 业务中的传播。
 - [ ] 里程碑 D：退役 shared/UINodes 兼容层与 intent_builders 目录。
 - [ ] 里程碑 E：退役旧 TurnFlow 主路径，完成收尾。
