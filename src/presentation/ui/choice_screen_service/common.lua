@@ -128,6 +128,40 @@ function M.build_secondary_confirm_body(choice, game, selected_option_id)
   return action_label .. " " .. tile.name .. "？"
 end
 
+function M.resolve_option_label_by_id(choice, option_id)
+  if not choice or not option_id then
+    return nil
+  end
+  local options = choice.options
+  if type(options) ~= "table" then
+    return nil
+  end
+  for _, opt in ipairs(options) do
+    local id = type(opt) == "table" and opt.id or opt
+    if id == option_id then
+      return type(opt) == "table" and opt.label or tostring(opt)
+    end
+  end
+  return nil
+end
+
+function M.resolve_pre_confirm_title(choice, source_screen)
+  if source_screen == "base_inline" or source_screen == nil then
+    return "使用道具"
+  end
+  if choice and choice.title and choice.title ~= "" then
+    return choice.title
+  end
+  return "请确认"
+end
+
+function M.resolve_pre_confirm_body(option_label)
+  if not option_label or option_label == "" then
+    return "确认选择？"
+  end
+  return "确认选择 " .. tostring(option_label) .. "？"
+end
+
 function M.switch_modal_canvas(state, target_canvas)
   local ui = state.ui
   runtime.for_each_role_or_global(function(role)

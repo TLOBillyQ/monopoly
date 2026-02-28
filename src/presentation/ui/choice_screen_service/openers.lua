@@ -165,4 +165,33 @@ function M.open_secondary_confirm_screen(state, choice, choice_id)
   modal_state.open_choice(state, choice_id, { selected }, selected)
 end
 
+function M.open_pre_confirm_screen(state, choice, option_id, title, body)
+  local ui = state.ui
+  local screen = ui.choice_screens.secondary_confirm
+  assert(screen ~= nil, "missing secondary_confirm screen")
+
+  common.hide_choice_screens(ui)
+  common.switch_modal_canvas(state, canvas.CANVAS_SECONDARY_CONFIRM)
+  ui:set_visible(screen.root, true)
+
+  ui:set_label(screen.title, title or "请确认")
+  if screen.body then
+    ui:set_label(screen.body, body or "")
+  end
+
+  ui:set_button(screen.confirm, "")
+  ui:set_visible(screen.confirm, true)
+  ui:set_touch_enabled(screen.confirm, option_id ~= nil)
+
+  ui:set_visible(screen.cancel, true)
+  ui:set_touch_enabled(screen.cancel, true)
+  if screen.cancel then
+    ui:set_button(screen.cancel, "")
+  end
+
+  ui.choice_active = true
+  ui.active_choice_screen_key = "secondary_confirm"
+  modal_state.open_choice(state, choice.id, { option_id }, option_id)
+end
+
 return M
