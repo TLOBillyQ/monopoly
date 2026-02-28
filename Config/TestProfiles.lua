@@ -55,6 +55,21 @@ local profiles = {
       },
     },
   },
+  ui_quick_status3d = {
+    map_module = "Config.Maps.UIQuickAll",
+    bootstrap = {
+      players = {
+        [1] = {
+          cash = 60000,
+          items = { 2004, 2015, 2016, 2017, 2018, 2019 },
+        },
+        [2] = {
+          cash = 60000,
+          items = { 2004, 2015, 2016, 2017, 2018, 2019 },
+        },
+      },
+    },
+  },
 }
 
 local M = {}
