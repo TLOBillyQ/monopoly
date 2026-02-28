@@ -8,6 +8,7 @@ local ui_event_state = require("src.presentation.interaction.UIEventState")
 local local_actor_resolver = require("src.presentation.canvas_runtime.LocalActorResolver")
 local choice_openers = require("src.presentation.ui.choice_screen_service.openers")
 local choice_common = require("src.presentation.ui.choice_screen_service.common")
+local number_utils = require("src.core.NumberUtils")
 
 local intent_dispatcher = {}
 
@@ -110,7 +111,7 @@ local function _resolve_item_slot_option(state, intent)
   if not slot_str then
     return nil, nil
   end
-  local slot_index = tonumber(slot_str)
+  local slot_index = number_utils.to_integer(slot_str)
   local item_ids = state.ui and state.ui.item_slot_item_ids or nil
   if not item_ids or not slot_index then
     return nil, nil
