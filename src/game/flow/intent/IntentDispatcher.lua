@@ -30,6 +30,9 @@ end
 
 local function _infer_legacy_route_key(choice_spec)
   local kind = choice_spec and choice_spec.kind
+  if kind == "item_phase_choice" then
+    return "base_inline"
+  end
   if kind == "market_buy" then
     return "market"
   end
@@ -45,7 +48,7 @@ local function _infer_legacy_route_key(choice_spec)
   if _is_building_route(choice_spec) then
     return "building"
   end
-  return "target"
+  return "base_inline"
 end
 
 local function _resolve_choice_route(choice_spec)

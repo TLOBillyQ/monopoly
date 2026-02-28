@@ -1,259 +1,157 @@
-# Presentation 层纯 Canvas-First 重设计计划（可执行）
+# 卡牌选择路径修复：可执行计划
 
-更新时间：2026-02-27  
-适用范围：`src/presentation/**`  
-目标：将当前“共享节点 + 功能分层”重构为“按 Canvas 组织的垂直切片架构”，并彻底消除跨 canvas 的隐式耦合。
+更新时间：2026-02-28
+负责人：Codex + 项目维护者
+适用范围：`src/presentation/**`、`src/game/**`（仅 choice 路由与 UI 交互）
 
+---
 
-## 1. 设计目标
+## 1. 背景与目标
 
-1. 以 `canvas` 作为 Presentation 层第一维组织单位。
-2. 每个 canvas 自治：节点定义、事件路由、渲染、触控策略、可见性策略都在本 canvas 模块内闭环。
-3. 上层只通过统一调度器操作 canvas，不再直接拼接各功能模块。
-4. 本地玩家身份在运行期固定（session 级），不依赖点击瞬时 `UIManager.client_role`。
-5. 保持现有玩法行为不回归（回归用例全绿）。
+### 已确认问题
+1. 位置选择屏/遥控骰子屏被当作通用卡牌选择屏使用。
+2. 当存在可出卡牌时，应在基础屏通过 `基础_可出牌外框*` 高亮并点击直接选择。
 
+### 目标（全代码库，不限 test_profile）
+1. 卡牌可选场景只走基础屏，不再回落到任何专用选择屏。
+2. 位置选择屏/遥控骰子屏仅用于其专属业务流程。
+3. 卡牌选择行为为“高亮可选 + 单击直选 + 无二次确认”。
 
-## 2. 非目标
+---
 
-1. 不改玩法规则（`src/game/**`）业务语义。
-2. 不改 UIManager 第三方库实现（`vendor/third_party/UIManager/**`）。
-3. 不做美术节点重命名（除已存在迁移约定外）。
+## 2. 约束与设计决策
 
+1. `item_phase_choice` 统一路由到 `base_inline`（新约定）。
+2. 专用屏路由白名单：
+   - `market_buy -> market`
+   - `item_target_player -> player`
+   - `roadblock_target|demolish_target -> target`
+   - `remote_dice_value -> remote`
+   - `landing_optional_effect|land_optional_effect` 且仅 `buy_land|upgrade_land` -> building
+3. 未命中白名单的 choice 不允许回落到 `target/remote/player/building`，默认 `base_inline`。
+4. 基础屏点击卡槽仍经过 `TurnDispatchValidator` 的 owner/option 校验。
 
-## 3. 目标架构（落地形态）
+---
 
-新增目录（核心）：
+## 3. 里程碑执行计划
 
-```text
-src/presentation/canvas/
-  base/
-    contract.lua
-    nodes.lua
-    intents.lua
-    presenter.lua
-    touch_policy.lua
-  always_show/
-    contract.lua
-    nodes.lua
-    intents.lua
-    presenter.lua
-    touch_policy.lua
-  player_choice/
-  target_choice/
-  remote_choice/
-  building_choice/
-  market/
-  popup/
-  bankruptcy/
-  dice/
-  loading/
-  debug/
-src/presentation/canvas_runtime/
-  CanvasRegistry.lua
-  CanvasState.lua
-  CanvasEventRouter.lua
-  CanvasCoordinator.lua
-  LocalActorResolver.lua
-```
+## M1：路由契约收敛（先堵住错误弹窗）
 
-核心约束：
+### 改动文件
+1. `src/game/flow/intent/IntentDispatcher.lua`
+2. `src/presentation/interaction/UIChoiceRoutePolicy.lua`
+3. `src/presentation/ui/choice_screen_service/openers.lua`
+4. `src/presentation/ui/UIModalPresenter.lua`
 
-1. `nodes.action_log` 并入 `always_show`（不再保留全局功能组）。
-2. 除 `canvas_runtime/*` 与 canvas 自身模块外，禁止直接引用其他 canvas 的节点常量。
-3. 事件路由按 canvas 注册，不再由单一 `UIEventRouter` 聚合硬编码 builders。
-4. `auto`/`action_log` 等全局按钮走 `LocalActorResolver` 的固定本地 actor。
+### 执行步骤
+1. 在游戏侧为 `item_phase_choice` 显式注入 `route_key = "base_inline"`。
+2. 展示侧 `UIChoiceRoutePolicy.resolve` 增加 `base_inline`，并把 unknown fallback 从 `target` 改为 `base_inline`。
+3. `open_choice_modal` 在 `base_inline` 下不打开任何 choice screen。
+4. 若当前有遗留 choice screen 激活，进入 `base_inline` 时主动关闭并回到基础画布。
 
+### 验收标准
+1. `item_phase_choice` 期间 `state.ui.active_choice_screen_key == nil`。
+2. 不再出现“位置选择屏/遥控骰子屏被通用复用”。
 
-## 4. 迁移策略
+### 提交信息
+`fix(choice-route): enforce base-inline route and remove modal fallback`
 
-采用“兼容层 + 分阶段切流”：
+---
 
-1. 先引入新架构与适配层，不立即删除旧接口。
-2. 每个里程碑完成后切换一批调用点到新模块。
-3. 最后统一删除旧路径与兼容代码。
+## M2：基础屏可出牌外框与直选链路
 
+### 改动文件
+1. `src/presentation/api/ui_view_service/state.lua`
+2. `src/presentation/api/ui_view_service/item_slots.lua`
+3. `src/presentation/ui/UIPanelPresenter.lua`
+4. `src/presentation/interaction/intent_builders/ItemSlotIntents.lua`
+5. `src/presentation/shared/UINodes.lua`（仅引用，不新增跨 canvas 耦合）
 
-## 5. 里程碑与执行清单
+### 执行步骤
+1. 在 UI state 中显式维护 `card_outlines`（与 `item_slots` 同索引）。
+2. 基于 `choice.kind == "item_phase_choice"` + `choice.options` 计算可用道具集合。
+3. 仅高亮可用槽位对应的 `基础_可出牌外框*`。
+4. 仅可用槽位可点击；不可用槽位外框隐藏且不可点击。
+5. 点击后直接派发 `choice_select`，不弹确认框。
 
-## M0：基线冻结与约束护栏
+### 验收标准
+1. 可出牌时只见基础屏外框提示。
+2. 点击高亮槽位立即完成选择。
+3. 不可出牌槽位无触发。
 
-改动：
+### 提交信息
+`feat(base-ui): highlight playable card outlines and direct select`
 
-1. 新增 `docs/architecture/presentation_canvas_first.md`（架构约束说明）。
-2. 在 `tests/internal/dep_rules.lua` 增加规则：
-   - 禁止新代码新增 `src/presentation/shared/UINodes.lua` 的旧分层访问模式。
-   - 禁止 canvas 模块之间跨目录直接 `require`（仅允许经 `canvas_runtime`）。
+---
 
-验收：
+## M3：测试补齐与全场景回归
 
-1. `lua tests/internal/dep_rules.lua` 通过。
-2. `lua tests/regression.lua` 通过（基线确认）。
+### 改动文件
+1. `tests/suites/presentation_ui.lua`
+2. `tests/suites/gameplay.lua`
+3. `tests/internal/dep_rules.lua`（如需添加路由契约检查）
 
+### 执行步骤
+1. 新增 `item_phase_choice -> base_inline` 路由断言。
+2. 新增“专用屏白名单”参数化测试，覆盖所有 choice kind。
+3. 新增“unknown kind 不回落 target”测试。
+4. 新增“外框显示/触控/直选”测试。
+5. 保留并验证 `roadblock_target`、`demolish_target`、`remote_dice_value` 专用屏行为。
 
-## M1：建立 Canvas Runtime 骨架
-
-改动文件（新增）：
-
-1. `src/presentation/canvas_runtime/CanvasRegistry.lua`
-2. `src/presentation/canvas_runtime/CanvasState.lua`
-3. `src/presentation/canvas_runtime/CanvasEventRouter.lua`
-4. `src/presentation/canvas_runtime/CanvasCoordinator.lua`
-5. `src/presentation/canvas_runtime/LocalActorResolver.lua`
-
-改动文件（接入）：
-
-1. `src/presentation/api/UIViewService.lua`
-2. `src/presentation/interaction/UIEventRouter.lua`（改为委托到 `CanvasEventRouter`，先保留旧逻辑 fallback）
-3. `src/app/bootstrap/UIBootstrap.lua`
-
-验收：
-
-1. 老功能不变，事件仍可触发。
-2. 回归全绿。
-
-
-## M2：节点定义彻底 Canvas 化
-
-改动：
-
-1. 为每个 canvas 新增 `nodes.lua` 与 `contract.lua`。
-2. `action_log` 逻辑并入 `always_show`：
-   - `always_show.nodes.action_log_button`
-   - `always_show.nodes.action_log_label`
-   - `always_show.contract.toggle_targets`
-3. `src/presentation/shared/UINodes.lua` 降级为只读兼容映射（deprecated），内部转发到各 canvas `nodes.lua`。
-
-验收：
-
-1. 旧调用仍可运行（通过兼容映射）。
-2. 新代码全部通过 canvas 节点文件取值。
-
-
-## M3：交互层按 Canvas 切片
-
-改动：
-
-1. 将 `intent_builders/*` 拆到各 canvas `intents.lua`。
-2. `UIEventBindings.lua` 仅保留通用绑定能力，不再持有业务节点名。
-3. `UIIntentDispatcher.lua`：
-   - `auto` 意图优先使用 `intent.actor_role_id`
-   - 缺失时使用 `LocalActorResolver` 固定本地 actor
-   - 不再因 `UIManager.client_role=nil` 吞事件
-4. `ActionLogIntents.lua` 迁移到 `always_show/intents.lua`。
-
-验收：
-
-1. 托管按钮支持高频连续切换。
-2. `toggle_action_log` 行为无回归。
-
-
-## M4：渲染层按 Canvas 切片
-
-改动：
-
-1. 将以下能力迁移到对应 canvas presenter：
-   - 基础信息渲染（当前 `UIPanelPresenter.lua`）
-   - 选择弹窗开闭（`choice_screen_service/*`）
-   - 卡牌/破产弹窗（`PopupRenderer.lua`）
-   - 黑市展示（`MarketModalRenderer.lua`）
-2. `UIModalPresenter.lua` 改为 orchestrator（只调 canvas presenter）。
-3. `UICanvasCoordinator.lua` 只保留“显示/隐藏 canvas”通用能力。
-
-验收：
-
-1. 所有 modal/canvas 切换路径一致。
-2. 回归全绿。
-
-
-## M5：状态构建层按 Canvas 切片
-
-改动：
-
-1. `api/ui_view_service/*` 拆分为：
-   - `canvas_runtime/CanvasState.lua`（统一 state 容器）
-   - 各 canvas `presenter.lua` 的 state slice 读写
-2. `state.ui` 内字段改成 `ui.canvas_state.<canvas_key>.*`。
-3. 移除旧 `choice_screens/popup_screen/bankruptcy_screen` 平铺结构，提供兼容 getter（短期）。
-
-验收：
-
-1. `ui` 状态字段来源可追踪到单一 canvas。
-2. 不再在 service 层组装跨 canvas 结构体。
-
-
-## M6：删除兼容层与旧入口
-
-改动：
-
-1. 删除/清空旧模块逻辑（保留空壳导出或直接移除）：
-   - `interaction/intent_builders/*`（若已全部迁移）
-   - `shared/UINodes.lua` 中 deprecated 映射
-   - `UIEventRouter` 中旧聚合 route 逻辑
-2. 清理旧测试假设（旧节点名、旧路径、旧行为）。
-
-验收：
-
-1. `rg` 检索无旧路径残留（见“最终验收”）。
-2. 回归全绿。
-
-
-## M7：文档与交付
-
-改动：
-
-1. 更新 `README.md` 的 presentation 架构说明。
-2. 更新 `docs/architecture/presentation_canvas_first.md`（最终版）。
-3. 增加“新增 canvas 的开发模板/步骤”。
-
-验收：
-
-1. 新增一个示例 canvas 能按模板独立接入。
-
-
-## 6. 关键实现规则（必须遵守）
-
-1. Canvas 模块之间禁止直接读对方节点常量。
-2. 事件 actor 解析统一走 `LocalActorResolver`，不得在业务层临时读取 `UIManager.client_role` 做最终裁决。
-3. `UIRuntimePort` 保持基础能力，业务决策不放入 runtime。
-4. 每个里程碑完成后必须跑全量回归。
-
-
-## 7. 最终验收标准
-
-命令：
-
+### 验收命令
 ```bash
-lua tests/internal/dep_rules.lua
+lua tests/suites/presentation_ui.lua
+lua tests/suites/gameplay.lua
 lua tests/regression.lua
 ```
 
-残留搜索（预期 0 匹配）：
+### 提交信息
+`test(choice-route): add whitelist and base-inline regression coverage`
 
-```bash
-rg "ui_nodes\\.action_log"
-rg "intent_builders"
-rg "choice_screens|popup_screen|bankruptcy_screen" src/presentation/api/ui_view_service
-rg "UIManager\\.client_role" src/presentation/interaction
-```
+---
 
-行为验收（人工）：
+## M4：联调、发布与回滚预案
 
-1. 托管按钮连续快速点击可稳定开关。
-2. 行动日志开关只作用当前本地客户端玩家。
-3. 各 modal/canvas 切换无串屏、无卡死。
+### 联调步骤
+1. 启动本地对局并覆盖至少三类流程：
+   - 道具阶段可出牌
+   - 路障/导弹目标选择
+   - 遥控骰子点数选择
+2. 人工确认：
+   - 可出牌只在基础屏外框体现
+   - 专用流程只弹对应专用屏
+   - 高频点击不会出现串屏
 
+### 发布步骤
+1. 按 M1 -> M2 -> M3 顺序合并。
+2. 每个里程碑单独提交并通过对应测试。
+3. 部署前跑一次 `lua tests/regression.lua`。
 
-## 8. 执行顺序建议
+### 回滚方案
+1. 若线上出现选择失效：优先回滚 M2（外框与触控层）。
+2. 若线上出现弹窗路径异常：回滚 M1（路由契约层）。
+3. 回滚后保留测试代码，作为后续修复护栏。
 
-`M0 -> M1 -> M2 -> M3 -> M4 -> M5 -> M6 -> M7`
+---
 
-每个里程碑单独提交，建议 commit 粒度：
+## 4. 验收清单（最终）
 
-1. `refactor(presentation): canvas-runtime scaffold`
-2. `refactor(presentation): canvas nodes/contracts`
-3. `refactor(interaction): canvas intents and actor resolver`
-4. `refactor(ui): canvas presenters and modal orchestration`
-5. `refactor(state): canvas state slices`
-6. `chore(presentation): remove legacy compatibility`
-7. `docs(presentation): canvas-first architecture`
+1. 任意可出牌场景均不弹位置选择屏/遥控骰子屏。
+2. 基础屏 `基础_可出牌外框*` 仅高亮可出牌项。
+3. 点击可出牌项后立即完成选择，无二次确认。
+4. 专用屏仅在其专属 kind 触发。
+5. 全量回归通过：
+   - `lua tests/suites/presentation_ui.lua`
+   - `lua tests/suites/gameplay.lua`
+   - `lua tests/regression.lua`
+
+---
+
+## 5. 执行顺序与提交节奏
+
+执行顺序：`M1 -> M2 -> M3 -> M4`
+
+建议提交：
+1. `fix(choice-route): enforce base-inline route and remove modal fallback`
+2. `feat(base-ui): highlight playable card outlines and direct select`
+3. `test(choice-route): add whitelist and base-inline regression coverage`

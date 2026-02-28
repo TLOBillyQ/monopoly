@@ -1,3 +1,5 @@
+local logger = require("src.core.Logger")
+
 local policy = {}
 
 local function _resolve_option_id(option)
@@ -34,9 +36,12 @@ function policy.resolve(choice)
     return explicit_route
   end
   if not choice then
-    return "target"
+    return "base_inline"
   end
   local kind = choice.kind
+  if kind == "item_phase_choice" then
+    return "base_inline"
+  end
   if kind == "market_buy" then
     return "market"
   end
@@ -52,7 +57,8 @@ function policy.resolve(choice)
   if policy.is_building_choice(choice) then
     return "building"
   end
-  return "target"
+  logger.warn("choice route fallback to base_inline:", tostring(kind))
+  return "base_inline"
 end
 
 function policy.requires_confirm(choice_or_screen)

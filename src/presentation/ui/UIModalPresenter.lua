@@ -54,6 +54,16 @@ function modal_presenter.open_choice_modal(state, choice, market)
     state.ui.market_active = false
   end
 
+  if screen_key == "base_inline" then
+    if state.ui.choice_active then
+      modal_presenter.close_choice_modal(state)
+    else
+      modal_state.close_choice(state)
+      canvas.switch(state.ui, canvas.CANVAS_BASE)
+    end
+    return
+  end
+
   choice_openers.open_choice_modal(state, choice, market)
 end
 

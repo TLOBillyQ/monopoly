@@ -1,11 +1,15 @@
 local modal_state = require("src.presentation.interaction.UIModalStateCoordinator")
 local canvas = require("src.presentation.interaction.UICanvasCoordinator")
 local common = require("src.presentation.ui.choice_screen_service.common")
+local logger = require("src.core.Logger")
 
 local M = {}
 
 function M.open_choice_modal(state, choice, market)
   local screen_key = common.resolve_screen_key(choice)
+  if screen_key == "base_inline" then
+    return false
+  end
   if screen_key == "market" then
     return false
   end
@@ -17,8 +21,12 @@ function M.open_choice_modal(state, choice, market)
     M.open_building_screen(state, choice, choice.id)
     return true
   end
-  M.open_target_screen(state, choice, choice.id)
-  return true
+  if screen_key == "target" then
+    M.open_target_screen(state, choice, choice.id)
+    return true
+  end
+  logger.warn("unsupported choice screen key:", tostring(screen_key))
+  return false
 end
 
 function M.open_player_or_remote_screen(state, choice, choice_id, screen_key)

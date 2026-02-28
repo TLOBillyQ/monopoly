@@ -121,6 +121,7 @@ function item_phase.build_choice_spec(player, phase)
   end
   return {
     kind = "item_phase_choice",
+    route_key = "base_inline",
     title = phase_titles[phase],
     body_lines = body_lines,
     options = options,
