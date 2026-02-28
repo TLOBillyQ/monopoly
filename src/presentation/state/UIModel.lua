@@ -75,9 +75,17 @@ local function _build_item_slots_for_player(player, slot_count)
     current_items = player.inventory.items
   end
   local item_slots = {}
-  for i = 1, slot_count do
+  local pos = 1
+  for i = 1, #current_items do
+    if pos > slot_count then break end
     local item = current_items[i]
-    item_slots[i] = item and item.id or nil
+    if item and item.id then
+      item_slots[pos] = item.id
+      pos = pos + 1
+    end
+  end
+  for i = pos, slot_count do
+    item_slots[i] = nil
   end
   return item_slots
 end

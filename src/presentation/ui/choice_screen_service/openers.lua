@@ -47,7 +47,12 @@ function M.open_player_or_remote_screen(state, choice, choice_id, screen_key)
 
   local option_ids = {}
   local selected = nil
-  local options = choice.options or {}
+  local options = {}
+  for _, opt in ipairs(choice.options or {}) do
+    if opt ~= nil then
+      options[#options + 1] = opt
+    end
+  end
   for index, name in ipairs(screen.option_buttons or {}) do
     local option = options[index]
     local option_id = common.set_option_node(ui, name, option)
