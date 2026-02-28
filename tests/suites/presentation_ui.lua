@@ -2045,6 +2045,7 @@ local function _test_choice_modal_routes_to_new_screens()
     _assert_eq(nodes["通用二次确认屏"].visible, true, "secondary confirm should be visible for item phase ask")
     _assert_eq(nodes["通用二次确认_标题"].text, "行动前：使用道具？", "item phase ask title")
     _assert_eq(nodes["通用二次确认_文本"].text, "是否使用道具？", "item phase ask body")
+    _assert_eq(nodes["通用二次确认_确定按钮"].disabled, false, "confirm button must be touchable for item phase ask")
     _assert_eq(nodes["位置选择屏"].visible, false, "target screen should stay hidden for item phase")
     _assert_eq(nodes["遥控骰子屏"].visible, false, "remote screen should stay hidden for item phase")
 
