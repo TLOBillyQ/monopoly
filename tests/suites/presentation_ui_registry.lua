@@ -56,7 +56,7 @@ local names = {
   "_test_popup_visible_for_all_roles_when_allowed_kind",                      -- 51
   "_test_bankruptcy_popup_visible_for_all_roles",                             -- 52
   "_test_bankruptcy_popup_avatar_uses_native_size_path",                      -- 53
-  -- action_status: 54-75
+  -- action_status: 54-76
   "_test_popup_timeout_closes_even_when_input_blocked",                       -- 54
   "_test_choice_modal_routes_to_new_screens",                                 -- 55
   "_test_choice_route_policy_prefers_explicit_route_metadata",                -- 56
@@ -78,7 +78,8 @@ local names = {
   "_test_turn_effects_prompt_visibility_follows_phase_and_role",              -- 72
   "_test_turn_effects_other_prompt_fallback_text",                            -- 73
   "_test_tick_ui_sync_turn_switch_still_follows",                             -- 74
-  "_test_panel_avatar_uses_keep_size_path",                                   -- 75
+  "_test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailable",      -- 75
+  "_test_panel_avatar_uses_keep_size_path",                                   -- 76
 }
 
 local function slice(suite_name, first_index, last_index)

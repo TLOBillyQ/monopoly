@@ -29,6 +29,7 @@ local role_control_lock_policy = require("src.presentation.interaction.UIRoleCon
 local ui_touch_policy = require("src.presentation.interaction.UITouchPolicy")
 local ui_choice_route_policy = require("src.presentation.interaction.UIChoiceRoutePolicy")
 local logger = require("src.core.Logger")
+local runtime_event_bridge = require("src.core.RuntimeEventBridge")
 local market_cfg = require("Config.Generated.Market")
 local runtime_constants = require("Config.RuntimeConstants")
 local gameplay_rules = require("Config.GameplayRules")
@@ -3251,12 +3252,138 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
   }
 
   _with_patches(patches, function()
+    runtime_event_bridge._reset_for_tests()
     state.gameplay_loop_ports = require("src.presentation.api.GameplayLoopPortsAdapter").build(state)
     gameplay_loop.tick(game, state, 0.1)
+    runtime_event_bridge._reset_for_tests()
   end)
 
   _assert_eq(helper.target_role_id, 2, "turn switch should follow current player")
   assert(follow_events >= 1, "turn switch should trigger follow event")
+end
+
+local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailable()
+  local dirty_tracker = require("src.core.DirtyTracker")
+  local main_view = require("src.presentation.api.UIViewService")
+  local ui_model = require("src.presentation.state.UIModel")
+  local board_view_mod = require("src.presentation.render.BoardRuntime")
+  local helper = { target_role_id = nil }
+  local follow_events = 0
+  local game_api = GameAPI or {}
+  local name = "j4MHTwbxEfG+CjRaYHE42T"
+  local newenv = {}
+  local function wrapped_trigger()
+    local _ = name
+    local __ = newenv
+    follow_events = follow_events + 1
+  end
+  local patches = {
+    { target = main_view, key = "refresh_panel", value = function() end },
+    { target = board_view_mod, key = "refresh", value = function() end },
+    { target = main_view, key = "open_choice_modal", value = function() end },
+    { target = ui_model, key = "build", value = function(game_ctx)
+      local _player_rows = {
+        { name = "P1", cash = "0", land_count = "0", total_assets = "0" },
+        { name = "P2", cash = "0", land_count = "0", total_assets = "0" },
+        { name = "", cash = "", land_count = "", total_assets = "" },
+        { name = "", cash = "", land_count = "", total_assets = "" },
+      }
+      return {
+        current_player_name = "P",
+        current_player_cash = 0,
+        turn_count = game_ctx.turn.turn_count,
+        panel = { turn_label = "", player_rows = _player_rows },
+        board = {},
+      }
+    end },
+    { target = ui_model, key = "update", value = function(_, game_ctx)
+      local _player_rows = {
+        { name = "P1", cash = "0", land_count = "0", total_assets = "0" },
+        { name = "P2", cash = "0", land_count = "0", total_assets = "0" },
+        { name = "", cash = "", land_count = "", total_assets = "" },
+        { name = "", cash = "", land_count = "", total_assets = "" },
+      }
+      return {
+        current_player_name = "P",
+        current_player_cash = 0,
+        turn_count = game_ctx.turn.turn_count,
+        panel = { turn_label = "", player_rows = _player_rows },
+        board = {},
+      }
+    end },
+    { key = "GameAPI", value = game_api },
+    { target = game_api, key = "get_role", value = function() return {} end },
+    { key = "Enums", value = { CameraBindMode = { TRACK = 0 } } },
+    { key = "camera_helper", value = helper },
+    { key = "TriggerCustomEvent", value = wrapped_trigger },
+  }
+  local game = {
+    finished = false,
+    winner = nil,
+    players = {
+      [1] = { id = 1, name = "P1", cash = 0, eliminated = false, inventory = { items = {} } },
+      [2] = { id = 2, name = "P2", cash = 0, eliminated = false, inventory = { items = {} } },
+    },
+    board = {
+      get_overlays = function() return { roadblocks = {}, mines = {} } end,
+      tile_lookup = {},
+    },
+    turn = {
+      phase = "move",
+      current_player_index = 2,
+      turn_count = 3,
+      pending_choice = nil,
+      move_anim = nil,
+      action_anim = nil,
+    },
+    dirty = dirty_tracker.new(),
+  }
+  function game:consume_dirty()
+    return dirty_tracker.consume(self.dirty)
+  end
+  function game:current_player()
+    return self.players[self.turn.current_player_index]
+  end
+  local state = {
+    auto_runner = {
+      next_action = function() return nil end,
+      reset_timer = function() end,
+    },
+    _log_once = {},
+    pending_choice = nil,
+    pending_choice_elapsed = 0,
+    pending_choice_id = nil,
+    ui_modal_elapsed = 0,
+    ui_modal_ref = nil,
+    board_last_phase = nil,
+    board_sync_pending = false,
+    next_turn_locked = false,
+    next_turn_lock_phase = nil,
+    ui_dirty = true,
+    player_units = {
+      [1] = {
+        get_position = function() return { x = 0, y = 0, z = 0 } end
+      },
+      [2] = {
+        get_position = function() return { x = 0, y = 0, z = 0 } end
+      }
+    },
+    ui = ui_view.build_ui_state(),
+    ui_refs = { ["Empty"] = "EMPTY" },
+  }
+
+  _with_patches(patches, function()
+    runtime_event_bridge._reset_for_tests()
+    local ok, err = pcall(function()
+      state.gameplay_loop_ports = require("src.presentation.api.GameplayLoopPortsAdapter").build(state)
+      gameplay_loop.tick(game, state, 0.1)
+    end)
+    runtime_event_bridge._reset_for_tests()
+    assert(ok == true, "turn switch should not fail when follow event is unavailable: " .. tostring(err))
+  end)
+
+  _assert_eq(helper.target_role_id, 2, "turn switch should still track current player on degraded follow event")
+  _assert_eq(follow_events, 0, "degraded follow event path should avoid wrapped TriggerCustomEvent call")
 end
 
 local function _test_panel_avatar_uses_keep_size_path()
@@ -3391,5 +3518,6 @@ return {
   _test_turn_effects_prompt_visibility_follows_phase_and_role,
   _test_turn_effects_other_prompt_fallback_text,
   _test_tick_ui_sync_turn_switch_still_follows,
+  _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailable,
   _test_panel_avatar_uses_keep_size_path,
 }

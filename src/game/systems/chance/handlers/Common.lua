@@ -18,9 +18,7 @@ for _, cfg in ipairs(vehicles_cfg) do
 end
 
 function common.emit_event(kind, payload)
-  if TriggerCustomEvent then
-    TriggerCustomEvent(kind, payload or {})
-  end
+  monopoly_event.emit(kind, payload or {})
 end
 
 function common.abs_value(value)

@@ -1,3 +1,5 @@
+local runtime_event_bridge = require("src.core.RuntimeEventBridge")
+
 local monopoly_events = {
   movement = {
     moved = "mv.moved",
@@ -44,9 +46,9 @@ function monopoly_events.resolve_intent(kind)
 end
 
 function monopoly_events.emit(kind, payload)
-  if TriggerCustomEvent then
-    TriggerCustomEvent(kind, payload or {})
-  end
+  runtime_event_bridge.emit_custom_event(kind, payload or {}, {
+    feature_key = "event." .. tostring(kind),
+  })
 end
 
 return monopoly_events

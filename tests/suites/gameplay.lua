@@ -23,6 +23,7 @@ local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
 local gameplay_rules = require("Config.GameplayRules")
 local mine_effect = require("src.game.systems.effects.MineEffect")
 local runtime_context = require("src.core.RuntimeContext")
+local runtime_event_bridge = require("src.core.RuntimeEventBridge")
 local dispatch_validator = require("src.game.flow.turn.TurnDispatchValidator")
 local tick_ui_sync = require("src.game.flow.turn.TickUISync")
 local choice_auto_policy = require("src.game.flow.turn.TurnChoiceAutoPolicy")
@@ -531,6 +532,7 @@ local function _test_runtime_context_forward_stop_skips_invalid_role()
     support.with_patches({
       { target = gameplay_rules, key = "vehicle_enabled", value = true },
     }, function()
+      runtime_event_bridge._reset_for_tests()
       local ctx = runtime_context.new({
         GameAPI = game_api,
         LuaAPI = _mock_lua_api(function(event_name)
@@ -545,6 +547,85 @@ local function _test_runtime_context_forward_stop_skips_invalid_role()
       assert(invalid_ok == false, "forward stop should reject invalid role")
       assert(valid_ok == true, "forward stop should allow valid role")
       assert(stop_events == 1, "forward stop should only emit event for valid role")
+      runtime_event_bridge._reset_for_tests()
+    end)
+  end)
+end
+
+local function _test_runtime_event_bridge_detects_unbound_binding_without_call()
+  local calls = 0
+  local name = "j4MHTwbxEfG+CjRaYHE42T"
+  local newenv = {}
+
+  local function wrapped_trigger()
+    local _ = name
+    local __ = newenv
+    calls = calls + 1
+  end
+
+  support.with_patches({
+    { key = "TriggerCustomEvent", value = wrapped_trigger },
+  }, function()
+    runtime_event_bridge._reset_for_tests()
+    assert(runtime_event_bridge.is_trigger_available() == false,
+      "bridge should reject unbound wrapper before dispatch")
+    local emitted = runtime_event_bridge.emit_custom_event("follow_camera", {}, {
+      feature_key = "test.unbound",
+    })
+    assert(emitted == false, "bridge should skip dispatch when wrapper binding is unbound")
+    assert(calls == 0, "bridge precheck should avoid calling wrapped TriggerCustomEvent")
+    runtime_event_bridge._reset_for_tests()
+  end)
+end
+
+local function _test_runtime_context_vehicle_events_gracefully_degrade_when_trigger_unavailable()
+  _with_runtime_context_globals(function()
+    local calls = 0
+    local name = "j4MHTwbxEfG+CjRaYHE42T"
+    local newenv = {}
+
+    local function wrapped_trigger()
+      local _ = name
+      local __ = newenv
+      calls = calls + 1
+    end
+
+    local game_api = {
+      get_role = function(role_id)
+        if role_id == 1 then
+          return { id = 1 }
+        end
+        return nil
+      end,
+      get_all_valid_roles = function()
+        return { { id = 1 } }
+      end,
+    }
+
+    support.with_patches({
+      { target = gameplay_rules, key = "vehicle_enabled", value = true },
+      { key = "TriggerCustomEvent", value = wrapped_trigger },
+    }, function()
+      runtime_event_bridge._reset_for_tests()
+      local ctx = runtime_context.new({
+        GameAPI = game_api,
+        LuaAPI = _mock_lua_api(wrapped_trigger),
+      })
+      runtime_context.install_globals(ctx)
+
+      local enter_ok = vehicle_helper.forward_eca_event_enter(1, 4001)
+      local move_ok = vehicle_helper.forward_eca_event_move(1, { x = 1, y = 0, z = 0 }, 0.2)
+      local stop_ok = vehicle_helper.forward_eca_event_stop(1)
+      local set_pos_ok = vehicle_helper.forward_eca_event_set_position(1, { x = 10, y = 0, z = 8 })
+
+      assert(enter_ok == true, "valid role enter should keep success semantics during degradation")
+      assert(move_ok == true, "valid role move should keep success semantics during degradation")
+      assert(stop_ok == true, "valid role stop should keep success semantics during degradation")
+      assert(set_pos_ok == true, "valid role set_position should keep success semantics during degradation")
+      assert(vehicle_helper.player_id == 1, "helper state should still update under degradation")
+      assert(vehicle_helper.vehicle_id == 4001, "helper vehicle id should still update under degradation")
+      assert(calls == 0, "degraded path should skip wrapped TriggerCustomEvent dispatch")
+      runtime_event_bridge._reset_for_tests()
     end)
   end)
 end
@@ -1555,6 +1636,8 @@ return {
   _test_stop_all_players_movement_skips_invalid_role_without_error,
   _test_runtime_context_get_vehicle_player_no_fallback,
   _test_runtime_context_forward_stop_skips_invalid_role,
+  _test_runtime_event_bridge_detects_unbound_binding_without_call,
+  _test_runtime_context_vehicle_events_gracefully_degrade_when_trigger_unavailable,
   _test_runtime_context_split_install_stages,
   _test_runtime_context_install_helpers_without_globals,
   _test_runtime_context_install_environment_fails_fast,

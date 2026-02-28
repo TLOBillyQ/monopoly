@@ -1,17 +1,10 @@
-local logger = require("src.core.Logger")
 local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
 
 local chance_resolver = {}
 
-local function _emit_event(kind, payload)
-  if TriggerCustomEvent then
-    TriggerCustomEvent(kind, payload or {})
-  end
-end
-
 function chance_resolver.resolve(game, player, card, context)
   if card.negative and game:player_has_angel(player) then
-    _emit_event(monopoly_event.chance.applied, {
+    monopoly_event.emit(monopoly_event.chance.applied, {
       player = player,
       card = card,
       effect = card.effect,

@@ -1,6 +1,6 @@
 local gameplay_rules = require("Config.GameplayRules")
 local runtime_constants = require("Config.RuntimeConstants")
-local logger = require("src.core.Logger")
+local runtime_event_bridge = require("src.core.RuntimeEventBridge")
 local tick_timeout = require("src.game.flow.turn.TickTimeout")
 local tick_ui_sync = require("src.game.flow.turn.TickUISync")
 local canvas_store = require("src.presentation.canvas_runtime.CanvasStore")
@@ -58,17 +58,20 @@ function M.build()
           local current_id = assert(current.id, "missing current player id")
           assert(GameAPI ~= nil and GameAPI.get_role ~= nil, "missing GameAPI.get_role")
 
-          local follow_ready = camera_helper
+          if camera_helper then
+            camera_helper.target_role_id = current_id
+          end
+          if camera_helper
             and runtime_constants
             and runtime_constants.eca_event
             and runtime_constants.eca_event.camera
             and runtime_constants.eca_event.camera.follow
-            and TriggerCustomEvent
-            and true
-            or false
-          if follow_ready then
-            camera_helper.target_role_id = current_id
-            TriggerCustomEvent(runtime_constants.eca_event.camera.follow, {})
+          then
+            runtime_event_bridge.emit_custom_event(
+              runtime_constants.eca_event.camera.follow,
+              {},
+              { feature_key = "camera.follow" }
+            )
           end
         end
         state.ui_dirty = false

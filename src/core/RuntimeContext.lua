@@ -1,4 +1,5 @@
 local runtime_constants = require("Config.RuntimeConstants")
+local runtime_event_bridge = require("src.core.RuntimeEventBridge")
 local logger = require("src.core.Logger")
 local runtime_env_bindings = require("src.core.RuntimeEnvBindings")
 local runtime_editor_exports = require("src.core.RuntimeEditorExports")
@@ -97,7 +98,11 @@ local function _build_vehicle_helper()
       helper.active_vehicle_by_player[role_id] = vehicle_id
       helper.needs_enter_wait_by_player[role_id] = true
     end
-    TriggerCustomEvent(runtime_constants.eca_event.vehicle.enter, {})
+    runtime_event_bridge.emit_custom_event(
+      runtime_constants.eca_event.vehicle.enter,
+      {},
+      { feature_key = "vehicle.enter" }
+    )
     return true
   end
 
@@ -113,7 +118,11 @@ local function _build_vehicle_helper()
       helper.active_vehicle_by_player[role_id] = nil
       helper.needs_enter_wait_by_player[role_id] = nil
     end
-    TriggerCustomEvent(runtime_constants.eca_event.vehicle.exit, {})
+    runtime_event_bridge.emit_custom_event(
+      runtime_constants.eca_event.vehicle.exit,
+      {},
+      { feature_key = "vehicle.exit" }
+    )
     return true
   end
 
@@ -127,7 +136,11 @@ local function _build_vehicle_helper()
     helper.player_id = role_id
     helper.move_direction = dir
     helper.move_time = time
-    TriggerCustomEvent(runtime_constants.eca_event.vehicle.move, {})
+    runtime_event_bridge.emit_custom_event(
+      runtime_constants.eca_event.vehicle.move,
+      {},
+      { feature_key = "vehicle.move" }
+    )
     return true
   end
 
@@ -139,7 +152,11 @@ local function _build_vehicle_helper()
       return false
     end
     helper.player_id = role_id
-    TriggerCustomEvent(runtime_constants.eca_event.vehicle.stop, {})
+    runtime_event_bridge.emit_custom_event(
+      runtime_constants.eca_event.vehicle.stop,
+      {},
+      { feature_key = "vehicle.stop" }
+    )
     return true
   end
 
@@ -152,7 +169,11 @@ local function _build_vehicle_helper()
     end
     helper.player_id = role_id
     helper.set_position = pos
-    TriggerCustomEvent(runtime_constants.eca_event.vehicle.set_position, {})
+    runtime_event_bridge.emit_custom_event(
+      runtime_constants.eca_event.vehicle.set_position,
+      {},
+      { feature_key = "vehicle.set_position" }
+    )
     return true
   end
 
