@@ -1,6 +1,5 @@
 local runtime = require("src.presentation.api.UIRuntimePort")
 local player_colors = require("src.presentation.shared.PlayerColors")
-local base_nodes = require("src.presentation.canvas.base.nodes")
 local core = require("src.presentation.api.ui_view_service.core")
 
 local M = {}
@@ -27,20 +26,7 @@ function M.capture_player_colors(state, game)
   if type(players) ~= "table" then
     return
   end
-  local colors_by_owner = {}
-  for index, player in ipairs(players) do
-    if index > 4 then
-      break
-    end
-    if player and player.id ~= nil then
-      local node = runtime.query_node(string.format(base_nodes.player_color, index))
-      local color = node and node.image_color or nil
-      if color ~= nil then
-        colors_by_owner[player.id] = color
-      end
-    end
-  end
-  player_colors.set_owner_colors(colors_by_owner)
+  player_colors.remap_by_index(players)
 end
 
 return M

@@ -41,6 +41,7 @@ local suites = {
   require("presentation_ui_action_status"),
   require("presentation_ui_action_anim"),
   require("presentation_ui_event_bindings"),
+  require("presentation_player_colors"),
 
   -- integration: cross-cutting
   require("test_profiles"),
