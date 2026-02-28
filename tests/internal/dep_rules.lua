@@ -9,6 +9,11 @@ local rules = {
     forbidden = { "src.presentation.shared.UINodes" },
     description = "canvas modules must not depend on legacy shared UINodes directly",
   },
+  {
+    root = "src/presentation/canvas_runtime",
+    forbidden = { "intent_builders" },
+    description = "canvas_runtime must not depend on legacy intent_builders",
+  },
 }
 
 local function _is_windows()
