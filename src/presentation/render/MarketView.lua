@@ -131,7 +131,7 @@ function market_view.refresh_market_selection(state, option_id)
   local entry, cfg = _resolve_market_entry(option_id)
   local price = _resolve_market_price(entry)
   local currency = _resolve_market_currency(entry)
-  local price_text = "售价：" .. tostring(price) .. " " .. currency
+  local price_text = tostring(price) .. " " .. currency
   local resolved_icon_key = _resolve_market_icon_key(refs, option_id, entry, cfg)
   if resolved_icon_key ~= nil then
     icon_key = resolved_icon_key

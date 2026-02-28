@@ -2283,7 +2283,7 @@ local function _test_market_selection_updates_icon_without_resize()
 
   _assert_eq(selected_node.image_texture, 1002, "market selected icon should update")
   _assert_eq(reset_calls, 0, "market selected icon should not call reset_size")
-  _assert_eq(labels[market_layout.price_label], "售价：" .. tostring(entry.price) .. " " .. entry.currency,
+  _assert_eq(labels[market_layout.price_label], tostring(entry.price) .. " " .. entry.currency,
     "market price label should update")
 end
 
