@@ -1,0 +1,79 @@
+-- Scans src/ for forbidden globals that are unavailable in the game runtime sandbox.
+-- Run as part of regression: dofile("tests/internal/forbidden_globals.lua")
+
+local forbidden = {
+  { pattern = "%f[%w]tonumber%s*%(", name = "tonumber", replacement = "NumberUtils.to_integer()" },
+}
+
+local function _is_windows()
+  return package.config:sub(1, 1) == "\\"
+end
+
+local function _build_list_command(root)
+  if _is_windows() then
+    local win_root = root:gsub("/", "\\")
+    return 'dir /b /s /a-d "' .. win_root .. '\\*.lua" 2>nul'
+  end
+  return 'find "' .. root .. '" -type f -name "*.lua" 2>/dev/null'
+end
+
+local function _collect_lua_files(root)
+  local cmd = _build_list_command(root)
+  local p = io.popen(cmd)
+  if not p then
+    return nil, "cannot run list command: " .. cmd
+  end
+  local files = {}
+  for line in p:lines() do
+    if line and line ~= "" then
+      files[#files + 1] = line
+    end
+  end
+  local ok = p:close()
+  if ok == nil or ok == false then
+    return nil, "list command failed: " .. tostring(cmd)
+  end
+  if #files == 0 then
+    return nil, "no lua files found under: " .. tostring(root)
+  end
+  return files
+end
+
+local files, err = _collect_lua_files("src")
+if not files then
+  io.stderr:write("forbidden_globals error: ", err, "\n")
+  os.exit(1)
+end
+
+local violations = {}
+for _, path in ipairs(files) do
+  local file = io.open(path, "r")
+  if file then
+    local lineno = 0
+    for line in file:lines() do
+      lineno = lineno + 1
+      if not line:match("^%s*%-%-") then
+        for _, rule in ipairs(forbidden) do
+          if line:find(rule.pattern) then
+            violations[#violations + 1] = {
+              path = path, line = lineno, name = rule.name,
+              replacement = rule.replacement, text = line,
+            }
+          end
+        end
+      end
+    end
+    file:close()
+  end
+end
+
+if #violations > 0 then
+  for _, v in ipairs(violations) do
+    io.stderr:write("forbidden_globals: ", v.path, ":", v.line,
+      " uses ", v.name, " (use ", v.replacement, " instead)\n")
+    io.stderr:write("  ", v.text, "\n")
+  end
+  os.exit(1)
+end
+
+print("forbidden_globals ok")

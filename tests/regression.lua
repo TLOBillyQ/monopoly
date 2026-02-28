@@ -53,3 +53,7 @@ dofile_first({
   ".agents/tests/internal/gameplay_loop_no_ui.lua",
   "tests/internal/gameplay_loop_no_ui.lua",
 })
+dofile_first({
+  ".agents/tests/internal/forbidden_globals.lua",
+  "tests/internal/forbidden_globals.lua",
+})
