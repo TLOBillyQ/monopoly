@@ -1,5 +1,5 @@
 local runtime = require("src.presentation.api.UIRuntimePort")
-local ui_nodes = require("src.presentation.shared.UINodes")
+local base_nodes = require("src.presentation.canvas.base.nodes")
 
 local turn_effects = {}
 
@@ -26,7 +26,7 @@ local function _set_node_visible(node, visible)
 end
 
 local function _set_highlight_visible(index)
-  for i, name in ipairs(ui_nodes.base.player_action_effects) do
+  for i, name in ipairs(base_nodes.player_action_effects) do
     local node = runtime.query_node(name)
     _set_node_visible(node, index ~= nil and i == index)
   end
@@ -52,8 +52,8 @@ end
 
 local function _get_prompt_nodes()
   return {
-    star = runtime.query_node(ui_nodes.base.action_hint_effect),
-    label = runtime.query_node(ui_nodes.base.action_hint),
+    star = runtime.query_node(base_nodes.action_hint_effect),
+    label = runtime.query_node(base_nodes.action_hint),
   }
 end
 
@@ -82,7 +82,7 @@ local function _sync_local_turn_prompt(_, ui_model)
 end
 
 local function _get_other_action_prompt_label_node()
-  return runtime.query_node(ui_nodes.base.other_player_hint)
+  return runtime.query_node(base_nodes.other_player_hint)
 end
 
 local function _set_other_action_prompt(role, text, visible)

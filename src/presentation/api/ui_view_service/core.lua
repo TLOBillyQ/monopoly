@@ -1,5 +1,9 @@
 local runtime = require("src.presentation.api.UIRuntimePort")
-local ui_nodes = require("src.presentation.shared.UINodes")
+local debug_nodes = require("src.presentation.canvas.debug.nodes")
+local player_choice_nodes = require("src.presentation.canvas.player_choice.nodes")
+local target_choice_nodes = require("src.presentation.canvas.target_choice.nodes")
+local remote_choice_nodes = require("src.presentation.canvas.remote_choice.nodes")
+local building_choice_nodes = require("src.presentation.canvas.building_choice.nodes")
 local always_show_contract = require("src.presentation.canvas.always_show.contract")
 
 local M = {}
@@ -31,7 +35,7 @@ local function set_debug_visible(ui, visible)
   if ui then
     ui.debug_visible = visible == true
   end
-  set_visible(nil, ui_nodes.canvas.debug, visible)
+  set_visible(nil, debug_nodes.canvas, visible)
 end
 
 local function set_item_slot_image(slot_name, image_key)
@@ -47,33 +51,33 @@ local function build_choice_screens()
   return {
     player = {
       key = "player",
-      root = ui_nodes.player_choice.canvas,
-      title = ui_nodes.player_choice.title,
-      option_buttons = ui_nodes.player_choice.slots,
+      root = player_choice_nodes.canvas,
+      title = player_choice_nodes.title,
+      option_buttons = player_choice_nodes.slots,
     },
     target = {
       key = "target",
-      root = ui_nodes.target_choice.canvas,
-      title = ui_nodes.target_choice.title,
-      body = ui_nodes.target_choice.body,
-      option_buttons = ui_nodes.target_choice.slots,
-      under_button = ui_nodes.target_choice.under,
+      root = target_choice_nodes.canvas,
+      title = target_choice_nodes.title,
+      body = target_choice_nodes.body,
+      option_buttons = target_choice_nodes.slots,
+      under_button = target_choice_nodes.under,
     },
     remote = {
       key = "remote",
-      root = ui_nodes.remote_choice.canvas,
-      title = ui_nodes.remote_choice.title,
-      body = ui_nodes.remote_choice.body,
-      option_buttons = ui_nodes.remote_choice.options,
-      cancel = ui_nodes.remote_choice.cancel,
+      root = remote_choice_nodes.canvas,
+      title = remote_choice_nodes.title,
+      body = remote_choice_nodes.body,
+      option_buttons = remote_choice_nodes.options,
+      cancel = remote_choice_nodes.cancel,
     },
     building = {
       key = "building",
-      root = ui_nodes.building_choice.canvas,
-      title = ui_nodes.building_choice.title,
-      body = ui_nodes.building_choice.body,
-      confirm = ui_nodes.building_choice.confirm,
-      cancel = ui_nodes.building_choice.cancel,
+      root = building_choice_nodes.canvas,
+      title = building_choice_nodes.title,
+      body = building_choice_nodes.body,
+      confirm = building_choice_nodes.confirm,
+      cancel = building_choice_nodes.cancel,
     },
   }
 end

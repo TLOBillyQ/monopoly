@@ -1,4 +1,7 @@
-local ui_nodes = require("src.presentation.shared.UINodes")
+local base_nodes = require("src.presentation.canvas.base.nodes")
+local popup_nodes = require("src.presentation.canvas.popup.nodes")
+local bankruptcy_nodes = require("src.presentation.canvas.bankruptcy.nodes")
+local always_show_nodes = require("src.presentation.canvas.always_show.nodes")
 local core = require("src.presentation.api.ui_view_service.core")
 local always_show_contract = require("src.presentation.canvas.always_show.contract")
 local canvas_store = require("src.presentation.canvas_runtime.CanvasStore")
@@ -6,25 +9,25 @@ local canvas_store = require("src.presentation.canvas_runtime.CanvasStore")
 local M = {}
 
 function M.build_ui_state()
-  local item_slots = ui_nodes.base.item_slots
-  local card_outlines = ui_nodes.base.card_outlines
-  local base_hidden_nodes = { ui_nodes.base.action_button }
+  local item_slots = base_nodes.item_slots
+  local card_outlines = base_nodes.card_outlines
+  local base_hidden_nodes = { base_nodes.action_button }
   for _, name in ipairs(item_slots) do
     table.insert(base_hidden_nodes, name)
   end
   local choice_screens = core.build_choice_screens()
   local popup_screen = {
-    root = ui_nodes.popup.canvas,
-    title = ui_nodes.popup.title,
-    card = ui_nodes.popup.card,
-    dismiss_nodes = ui_nodes.popup.dismiss_nodes,
+    root = popup_nodes.canvas,
+    title = popup_nodes.title,
+    card = popup_nodes.card,
+    dismiss_nodes = popup_nodes.dismiss_nodes,
   }
   local bankruptcy_screen = {
-    root = ui_nodes.bankruptcy.canvas,
-    text = ui_nodes.bankruptcy.text,
-    avatar = ui_nodes.bankruptcy.avatar,
+    root = bankruptcy_nodes.canvas,
+    text = bankruptcy_nodes.text,
+    avatar = bankruptcy_nodes.avatar,
   }
-  local auto_control_nodes = { ui_nodes.always_show.auto_button, ui_nodes.always_show.auto_label }
+  local auto_control_nodes = { always_show_nodes.auto_button, always_show_nodes.auto_label }
   local canvas_state = {
     base = {
       item_slots = item_slots,

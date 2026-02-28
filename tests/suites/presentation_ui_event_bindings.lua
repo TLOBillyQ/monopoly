@@ -2,7 +2,6 @@ local support = require("TestSupport")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 local bindings = require("src.presentation.interaction.UIEventBindings")
-local ui_nodes = require("src.presentation.shared.UINodes")
 local logger = require("src.core.Logger")
 local runtime = require("src.presentation.api.UIRuntimePort")
 local canvas_registry = require("src.presentation.canvas_runtime.CanvasRegistry")
@@ -34,7 +33,7 @@ end
 local function _test_enable_action_log_toggle_touch_fallback_never_crash_on_bad_cached_nodes()
   logger.clear()
   local cache = {
-    [ui_nodes.always_show.action_log_button] = { _build_crash_node() },
+    [always_show_nodes.action_log_button] = { _build_crash_node() },
   }
   local manager = { client_role = { any = true } }
 
@@ -70,7 +69,7 @@ local function _test_enable_action_log_toggle_touch_prefers_named_ui_touch_path(
   end)
 
   _assert_eq(#calls, 1, "ui path should touch one action-log toggle node")
-  _assert_eq(calls[1].name, ui_nodes.always_show.action_log_button, "touch should target action-log button")
+  _assert_eq(calls[1].name, always_show_nodes.action_log_button, "touch should target action-log button")
   _assert_eq(calls[1].enabled, true, "toggle button should be enabled")
 end
 

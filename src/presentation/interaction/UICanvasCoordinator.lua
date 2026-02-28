@@ -1,18 +1,26 @@
 local ui_events = require("src.presentation.shared.UIEvents")
 local runtime = require("src.presentation.api.UIRuntimePort")
-local ui_nodes = require("src.presentation.shared.UINodes")
+local base_nodes = require("src.presentation.canvas.base.nodes")
+local player_choice_nodes = require("src.presentation.canvas.player_choice.nodes")
+local target_choice_nodes = require("src.presentation.canvas.target_choice.nodes")
+local remote_choice_nodes = require("src.presentation.canvas.remote_choice.nodes")
+local building_choice_nodes = require("src.presentation.canvas.building_choice.nodes")
+local market_nodes = require("src.presentation.canvas.market.nodes")
+local popup_nodes = require("src.presentation.canvas.popup.nodes")
+local bankruptcy_nodes = require("src.presentation.canvas.bankruptcy.nodes")
+local debug_nodes = require("src.presentation.canvas.debug.nodes")
 
 local coordinator = {}
 
-coordinator.CANVAS_BASE = ui_nodes.canvas.base
-coordinator.CANVAS_PLAYER_CHOICE = ui_nodes.canvas.player_choice
-coordinator.CANVAS_TARGET_CHOICE = ui_nodes.canvas.target_choice
-coordinator.CANVAS_REMOTE_CHOICE = ui_nodes.canvas.remote_choice
-coordinator.CANVAS_BUILDING_CHOICE = ui_nodes.canvas.building_choice
-coordinator.CANVAS_MARKET = ui_nodes.canvas.market
-coordinator.CANVAS_POPUP = ui_nodes.canvas.popup
-coordinator.CANVAS_BANKRUPTCY = ui_nodes.canvas.bankruptcy
-coordinator.CANVAS_DEBUG = ui_nodes.canvas.debug
+coordinator.CANVAS_BASE = base_nodes.canvas
+coordinator.CANVAS_PLAYER_CHOICE = player_choice_nodes.canvas
+coordinator.CANVAS_TARGET_CHOICE = target_choice_nodes.canvas
+coordinator.CANVAS_REMOTE_CHOICE = remote_choice_nodes.canvas
+coordinator.CANVAS_BUILDING_CHOICE = building_choice_nodes.canvas
+coordinator.CANVAS_MARKET = market_nodes.canvas
+coordinator.CANVAS_POPUP = popup_nodes.canvas
+coordinator.CANVAS_BANKRUPTCY = bankruptcy_nodes.canvas
+coordinator.CANVAS_DEBUG = debug_nodes.canvas
 
 local function _resolve_choice_canvas(ui)
   if not ui or not ui.choice_active then

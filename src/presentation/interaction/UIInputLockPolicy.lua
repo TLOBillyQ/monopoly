@@ -1,5 +1,5 @@
 local market_ui = require("src.presentation.shared.MarketLayout")
-local ui_nodes = require("src.presentation.shared.UINodes")
+local base_nodes = require("src.presentation.canvas.base.nodes")
 local ui_touch_policy = require("src.presentation.interaction.UITouchPolicy")
 
 local input_lock_policy = {}
@@ -36,7 +36,7 @@ function input_lock_policy.apply(state, deps)
   end
 
   -- 输入锁开启：先整体锁住回合内操作入口。
-  ui:set_touch_enabled(ui_nodes.base.action_button, false)
+  ui:set_touch_enabled(base_nodes.action_button, false)
 
   local screens = ui.choice_screens or {}
   ui_touch_policy.set_choice_screen_locked(ui, screens.player)

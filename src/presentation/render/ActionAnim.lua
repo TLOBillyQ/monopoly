@@ -4,7 +4,7 @@ local number_utils = require("src.core.NumberUtils")
 local runtime = require("src.presentation.api.UIRuntimePort")
 local registry = require("src.presentation.render.ActionAnimRegistry")
 local handlers = require("src.presentation.render.ActionAnimHandlers")
-local ui_nodes = require("src.presentation.shared.UINodes")
+local dice_nodes = require("src.presentation.canvas.dice.nodes")
 
 local action_anim = {}
 
@@ -27,7 +27,7 @@ local function _register_default_handlers()
   registry.register("roll", function(state, anim, duration, opts)
     handlers.play_roll_dice_screen(state, anim, roll_spin_seconds, opts.hold_seconds or 0.5, {
       runtime = runtime,
-      dice_screen_nodes = ui_nodes.dice,
+      dice_screen_nodes = dice_nodes,
     })
     return roll_spin_seconds + (opts.hold_seconds or 0.5)
   end)

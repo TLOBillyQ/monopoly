@@ -5,14 +5,14 @@ local rules = {
     description = "interaction layer must not require src.game.* directly",
   },
   {
-    root = "src/presentation/canvas",
-    forbidden = { "src.presentation.shared.UINodes" },
-    description = "canvas modules must not depend on legacy shared UINodes directly",
+    root = "src/presentation",
+    forbidden = { "shared.UINodes" },
+    description = "no module may depend on retired shared.UINodes",
   },
   {
-    root = "src/presentation/canvas_runtime",
+    root = "src/presentation",
     forbidden = { "intent_builders" },
-    description = "canvas_runtime must not depend on legacy intent_builders",
+    description = "no module may depend on retired intent_builders",
   },
 }
 

@@ -1,4 +1,4 @@
-local ui_nodes = require("src.presentation.shared.UINodes")
+local always_show_nodes = require("src.presentation.canvas.always_show.nodes")
 local always_show_contract = require("src.presentation.canvas.always_show.contract")
 
 local touch_policy = {}
@@ -22,9 +22,9 @@ function touch_policy.set_auto_controls_touch(ui, auto_enabled, controls)
   if not ui or not ui.set_touch_enabled then
     return
   end
-  controls = controls or ui.auto_control_nodes or { ui_nodes.always_show.auto_button, ui_nodes.always_show.auto_label }
+  controls = controls or ui.auto_control_nodes or { always_show_nodes.auto_button, always_show_nodes.auto_label }
   for _, name in ipairs(controls) do
-    if name == ui_nodes.always_show.auto_button then
+    if name == always_show_nodes.auto_button then
       ui:set_touch_enabled(name, auto_enabled == true)
     else
       ui:set_touch_enabled(name, false)
@@ -38,7 +38,7 @@ function touch_policy.set_action_log_toggle_touch(ui, enabled)
   end
   local value = enabled == true
   local targets = always_show_contract.action_log.toggle_targets
-    or { ui_nodes.always_show.action_log_button }
+    or { always_show_nodes.action_log_button }
   for _, name in ipairs(targets) do
     ui:set_touch_enabled(name, value)
   end

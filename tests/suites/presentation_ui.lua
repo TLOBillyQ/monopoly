@@ -2412,7 +2412,7 @@ local function _test_item_slot_refresh_shows_only_playable_outlines()
 end
 
 local function _test_item_slot_intents_include_outline_nodes()
-  local item_slot_intents = require("src.presentation.interaction.intent_builders.ItemSlotIntents")
+  local item_slot_intents = require("src.presentation.canvas.base.item_slot_intents")
   local state = {
     ui = {
       item_slots = { "基础_道具槽位1" },
