@@ -204,6 +204,30 @@ function intent_dispatcher.dispatch_game_action(state, game, intent, opts, actio
     return false
   end
 
+  -- item-phase ask: "是否使用道具？" confirm/cancel
+  if state._item_phase_ask_active then
+    if intent_type == "choice_select" then
+      state._item_phase_ask_active = nil
+      state._item_phase_confirmed = true
+      ui_view.close_choice_modal(state)
+      return true
+    end
+    if intent_type == "choice_cancel" then
+      state._item_phase_ask_active = nil
+      state._item_phase_confirmed = nil
+      ui_view.close_choice_modal(state)
+      local choice = state.ui_model and state.ui_model.choice or nil
+      if choice and choice.id then
+        action_port.dispatch_action(game, state, {
+          type = "choice_cancel",
+          choice_id = choice.id,
+          actor_role_id = intent.actor_role_id,
+        }, opts)
+      end
+      return true
+    end
+  end
+
   -- pre-confirm: confirmed action from secondary confirm screen
   if state._pre_confirm_active then
     if intent_type == "choice_select" then

@@ -2041,7 +2041,10 @@ local function _test_choice_modal_routes_to_new_screens()
       allow_cancel = true,
       cancel_label = "结束阶段",
     })
-    _assert_eq(state.ui.active_choice_screen_key, nil, "item_phase_choice should stay on base inline route")
+    _assert_eq(state.ui.active_choice_screen_key, "secondary_confirm", "item_phase_choice should first ask via secondary confirm")
+    _assert_eq(nodes["通用二次确认屏"].visible, true, "secondary confirm should be visible for item phase ask")
+    _assert_eq(nodes["通用二次确认_标题"].text, "行动前：使用道具？", "item phase ask title")
+    _assert_eq(nodes["通用二次确认_文本"].text, "是否使用道具？", "item phase ask body")
     _assert_eq(nodes["位置选择屏"].visible, false, "target screen should stay hidden for item phase")
     _assert_eq(nodes["遥控骰子屏"].visible, false, "remote screen should stay hidden for item phase")
 

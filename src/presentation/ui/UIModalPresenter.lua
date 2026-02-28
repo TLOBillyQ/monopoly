@@ -58,6 +58,13 @@ function modal_presenter.open_choice_modal(state, choice, market)
   end
 
   if screen_key == "base_inline" then
+    if choice and choice.kind == "item_phase_choice" and not state._item_phase_confirmed then
+      state._item_phase_ask_active = true
+      local title = choice.title or "使用道具？"
+      choice_openers.open_pre_confirm_screen(state, choice, nil, title, "是否使用道具？")
+      return
+    end
+    state._item_phase_confirmed = nil
     if state.ui.choice_active then
       modal_presenter.close_choice_modal(state)
     else
