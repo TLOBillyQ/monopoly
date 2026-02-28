@@ -3,6 +3,7 @@ local legacy = require("src.presentation.interaction.UICanvasCoordinator")
 local coordinator = {}
 
 coordinator.CANVAS_BASE = legacy.CANVAS_BASE
+coordinator.CANVAS_ALWAYS_SHOW = legacy.CANVAS_ALWAYS_SHOW
 coordinator.CANVAS_PLAYER_CHOICE = legacy.CANVAS_PLAYER_CHOICE
 coordinator.CANVAS_TARGET_CHOICE = legacy.CANVAS_TARGET_CHOICE
 coordinator.CANVAS_REMOTE_CHOICE = legacy.CANVAS_REMOTE_CHOICE

@@ -20,6 +20,7 @@
 - [x] (2026-02-28 16:33:00 +08:00) 里程碑 T（测试重构）：修复 presentation_ui_registry（66→75 名称）和 gameplay_registry（35→38 名称）的名称/切片对齐，恢复 13 条被静默丢弃的测试并修复其 3 条夹具过期失败。10 个独立 suite 全部转为 name+tests 格式消除匿名输出。regression.lua 按 core/runtime/presentation/integration 四域分组。验收：全量回归 181 条（168+13），失败 0。
 - [x] (2026-02-28 16:37:00 +08:00) 里程碑 D：退役 shared/UINodes 兼容层与 intent_builders 目录。14 个 src/ 文件迁移至直接引用 canvas/*/nodes.lua，required_click_nodes 移入 UIBootstrap，测试引用迁移至 canvas.base.item_slot_intents。删除 UINodes.lua 和 intent_builders/（5 文件）。dep_rules 扩展为全 src/presentation 范围守护。验收：全量回归 180 条，失败 0。
 - [x] (2026-02-28 16:37:00 +08:00) 里程碑 E：退役旧 TurnFlow 主路径。TurnEngine 移除 legacy 分支和 get_legacy_flow()，Game._resolve_turn_runtime() 简化为直接返回 turn_engine，CompositionRoot 不再创建 game.turn_flow。删除 TurnFlow.lua/TurnChoiceHandler.lua/TurnWaits.lua/Flow.lua。Session.from_turn_flow() 移除。experimental_coroutine_turn 配置项移除。dep_rules 新增 runtime 不得引用 TurnFlow 规则。验收：全量回归 180 条（-1 legacy parity），失败 0。
+- [x] (2026-02-28 16:57:00 +08:00) 收尾修复：修复“基础屏常驻 UI 不显示”回归。`UICanvasCoordinator.switch/switch_for_role` 现在保留并显式显示 `始终显示屏`；`UIBootstrap` 启动后与基础屏一起显示常驻屏。补充回归用例 `canvas_switch_keeps_always_show_visible`。验收：全量回归 181 条，失败 0。
 
 ## 意外与发现
 

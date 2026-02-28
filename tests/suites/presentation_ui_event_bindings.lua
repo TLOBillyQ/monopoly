@@ -6,6 +6,8 @@ local logger = require("src.core.Logger")
 local runtime = require("src.presentation.api.UIRuntimePort")
 local canvas_registry = require("src.presentation.canvas_runtime.CanvasRegistry")
 local canvas_store = require("src.presentation.canvas_runtime.CanvasStore")
+local canvas = require("src.presentation.interaction.UICanvasCoordinator")
+local ui_events = require("src.presentation.shared.UIEvents")
 local base_nodes = require("src.presentation.canvas.base.nodes")
 local always_show_nodes = require("src.presentation.canvas.always_show.nodes")
 
@@ -121,6 +123,45 @@ local function _test_canvas_store_patch_slice_marks_dirty()
   _assert_eq(dirty_after_consume.any, false, "canvas store consume should clear dirty flag")
 end
 
+local function _test_canvas_switch_keeps_always_show_visible()
+  local calls = {}
+  local role = { id = "r1" }
+  local canvas_names = {
+    base_nodes.canvas,
+    always_show_nodes.canvas,
+    "其他屏",
+  }
+  local show = {
+    [base_nodes.canvas] = "show_base",
+    [always_show_nodes.canvas] = "show_always",
+    ["其他屏"] = "show_other",
+  }
+  local hide = {
+    [base_nodes.canvas] = "hide_base",
+    [always_show_nodes.canvas] = "hide_always",
+    ["其他屏"] = "hide_other",
+  }
+  _with_patches({
+    { target = ui_events, key = "canvas_names", value = canvas_names },
+    { target = ui_events, key = "show", value = show },
+    { target = ui_events, key = "hide", value = hide },
+    { target = ui_events, key = "send_to_all", value = function(event_name)
+      calls[#calls + 1] = "all:" .. tostring(event_name)
+    end },
+    { target = ui_events, key = "send_to_role", value = function(_, event_name)
+      calls[#calls + 1] = "role:" .. tostring(event_name)
+    end },
+  }, function()
+    canvas.switch({ debug_visible = false }, nil)
+    canvas.switch_for_role({ debug_visible_by_role = {} }, nil, role)
+  end)
+
+  local joined = table.concat(calls, "|")
+  assert(not joined:find("hide_always", 1, true), "always_show canvas should not be hidden")
+  assert(joined:find("all:show_always", 1, true), "switch() should show always_show canvas")
+  assert(joined:find("role:show_always", 1, true), "switch_for_role() should show always_show canvas")
+end
+
 return {
   name = "presentation_ui.event_bindings",
   tests = {
@@ -139,6 +180,10 @@ return {
     {
       name = "canvas_store_patch_slice_marks_dirty",
       run = _test_canvas_store_patch_slice_marks_dirty,
+    },
+    {
+      name = "canvas_switch_keeps_always_show_visible",
+      run = _test_canvas_switch_keeps_always_show_visible,
     },
   },
 }

@@ -108,6 +108,10 @@ function M.install(state, current_game_ref, opts)
     SetTimeOut(1.0, function()
       ui_events.send_to_all(ui_events.hide["加载屏"], {})
       ui_events.send_to_all(ui_events.show["基础屏"], {})
+      local always_show_event = ui_events.show[always_show_nodes.canvas]
+      if always_show_event then
+        ui_events.send_to_all(always_show_event, {})
+      end
     end)
   end)
 end

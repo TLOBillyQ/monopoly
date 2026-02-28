@@ -1,6 +1,7 @@
 local ui_events = require("src.presentation.shared.UIEvents")
 local runtime = require("src.presentation.api.UIRuntimePort")
 local base_nodes = require("src.presentation.canvas.base.nodes")
+local always_show_nodes = require("src.presentation.canvas.always_show.nodes")
 local player_choice_nodes = require("src.presentation.canvas.player_choice.nodes")
 local target_choice_nodes = require("src.presentation.canvas.target_choice.nodes")
 local remote_choice_nodes = require("src.presentation.canvas.remote_choice.nodes")
@@ -13,6 +14,7 @@ local debug_nodes = require("src.presentation.canvas.debug.nodes")
 local coordinator = {}
 
 coordinator.CANVAS_BASE = base_nodes.canvas
+coordinator.CANVAS_ALWAYS_SHOW = always_show_nodes.canvas
 coordinator.CANVAS_PLAYER_CHOICE = player_choice_nodes.canvas
 coordinator.CANVAS_TARGET_CHOICE = target_choice_nodes.canvas
 coordinator.CANVAS_REMOTE_CHOICE = remote_choice_nodes.canvas
@@ -57,7 +59,10 @@ function coordinator.switch(ui, target)
   end
   for _, name in ipairs(ui_events.canvas_names) do
     local keep_debug_canvas = name == coordinator.CANVAS_DEBUG and keep_debug
-    if name ~= coordinator.CANVAS_BASE and name ~= target_name and not keep_debug_canvas then
+    if name ~= coordinator.CANVAS_BASE
+      and name ~= coordinator.CANVAS_ALWAYS_SHOW
+      and name ~= target_name
+      and not keep_debug_canvas then
       local hide_event = ui_events.hide[name]
       if hide_event then
         ui_events.send_to_all(hide_event, {})
@@ -67,6 +72,10 @@ function coordinator.switch(ui, target)
   local base_event = ui_events.show[coordinator.CANVAS_BASE]
   if base_event then
     ui_events.send_to_all(base_event, {})
+  end
+  local always_show_event = ui_events.show[coordinator.CANVAS_ALWAYS_SHOW]
+  if always_show_event then
+    ui_events.send_to_all(always_show_event, {})
   end
   if target_name ~= coordinator.CANVAS_BASE then
     local target_event = ui_events.show[target_name]
@@ -88,7 +97,10 @@ function coordinator.switch_for_role(ui, target, role)
   end
   for _, name in ipairs(ui_events.canvas_names) do
     local keep_debug_canvas = name == coordinator.CANVAS_DEBUG and keep_debug
-    if name ~= coordinator.CANVAS_BASE and name ~= target_name and not keep_debug_canvas then
+    if name ~= coordinator.CANVAS_BASE
+      and name ~= coordinator.CANVAS_ALWAYS_SHOW
+      and name ~= target_name
+      and not keep_debug_canvas then
       local hide_event = ui_events.hide[name]
       if hide_event then
         ui_events.send_to_role(role, hide_event, {})
@@ -98,6 +110,10 @@ function coordinator.switch_for_role(ui, target, role)
   local base_event = ui_events.show[coordinator.CANVAS_BASE]
   if base_event then
     ui_events.send_to_role(role, base_event, {})
+  end
+  local always_show_event = ui_events.show[coordinator.CANVAS_ALWAYS_SHOW]
+  if always_show_event then
+    ui_events.send_to_role(role, always_show_event, {})
   end
   if target_name ~= coordinator.CANVAS_BASE then
     local target_event = ui_events.show[target_name]
