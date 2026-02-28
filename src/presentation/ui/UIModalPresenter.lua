@@ -4,6 +4,7 @@ local choice_common = require("src.presentation.ui.choice_screen_service.common"
 local popup_presenter = require("src.presentation.canvas.popup.presenter")
 local market_presenter = require("src.presentation.canvas.market.presenter")
 local canvas = require("src.presentation.interaction.UICanvasCoordinator")
+local canvas_store = require("src.presentation.canvas_runtime.CanvasStore")
 local logger = require("src.core.Logger")
 
 local modal_presenter = {}
@@ -45,6 +46,7 @@ function modal_presenter.open_choice_modal(state, choice, market)
 
   local screen_key = choice_common.resolve_screen_key(choice)
   if screen_key == "market" then
+    canvas_store.mark_dirty(state, "market")
     market_presenter.open(state, choice, choice_id, market)
     return
   end
@@ -52,6 +54,7 @@ function modal_presenter.open_choice_modal(state, choice, market)
   if state.ui.market_active then
     market_presenter.close(state)
     state.ui.market_active = false
+    canvas_store.mark_dirty(state, "market")
   end
 
   if screen_key == "base_inline" then
@@ -60,6 +63,7 @@ function modal_presenter.open_choice_modal(state, choice, market)
     else
       modal_state.close_choice(state)
       canvas.switch(state.ui, canvas.CANVAS_BASE)
+      canvas_store.mark_dirty(state, "choice")
     end
     return
   end
@@ -77,10 +81,12 @@ function modal_presenter.close_choice_modal(state)
     end
     ui.choice_active = false
     ui.active_choice_screen_key = nil
+    canvas_store.mark_dirty(state, "choice")
   end
   if ui.market_active then
     market_presenter.close(state)
     ui.market_active = false
+    canvas_store.mark_dirty(state, "market")
   end
   modal_state.close_choice(state)
   if ui.popup_active then
@@ -97,6 +103,7 @@ function modal_presenter.push_popup(state, payload)
   ui.popup_return_canvas = canvas.resolve_popup_return_canvas(ui)
   popup_presenter.show(state, payload)
   modal_state.open_popup(state, payload)
+  canvas_store.mark_dirty(state, "popup")
   state.ui_dirty = true
   return true
 end
@@ -111,6 +118,7 @@ function modal_presenter.close_popup(state)
   popup_presenter.hide(state)
   modal_state.close_popup(state)
   ui.popup_kind = nil
+  canvas_store.mark_dirty(state, "popup")
   local target = ui.popup_return_canvas
   ui.popup_return_canvas = nil
   local next_canvas = canvas.resolve_canvas_after_popup(ui, target)

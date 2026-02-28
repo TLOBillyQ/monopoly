@@ -1,6 +1,7 @@
 local ui_nodes = require("src.presentation.shared.UINodes")
 local core = require("src.presentation.api.ui_view_service.core")
 local always_show_contract = require("src.presentation.canvas.always_show.contract")
+local canvas_store = require("src.presentation.canvas_runtime.CanvasStore")
 
 local M = {}
 
@@ -47,7 +48,7 @@ function M.build_ui_state()
       screen = bankruptcy_screen,
     },
   }
-  return {
+  local ui_state = {
     canvas_state = canvas_state,
     local_actor_role_id = nil,
     auto_play = false,
@@ -83,6 +84,8 @@ function M.build_ui_state()
     set_debug_log = core.set_debug_log,
     set_debug_visible = core.set_debug_visible,
   }
+  canvas_store.ensure(ui_state)
+  return ui_state
 end
 
 return M

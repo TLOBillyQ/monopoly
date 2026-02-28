@@ -35,6 +35,7 @@ local suites = {
   require("presentation_ui_event_bindings"),
   require("gameplay_core"),
   require("gameplay_runtime"),
+  require("gameplay_coroutine"),
   require("gameplay_loop"),
   require("misc"),
 }

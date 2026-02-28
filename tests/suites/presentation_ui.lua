@@ -2574,6 +2574,10 @@ local function _test_action_anim_queue_consumes_in_order()
   _assert_eq(state, "wait_action_anim", "should wait action anim")
   _assert_eq(g.turn.action_anim.seq, 1, "current anim should be seq1")
 
+  g.turn_flow:dispatch({ type = "action_anim_done", seq = 999 })
+  _assert_eq(g.turn.phase, "wait_action_anim", "wrong seq should keep wait_action_anim")
+  _assert_eq(g.turn.action_anim.seq, 1, "wrong seq should keep current anim")
+
   g.turn_flow:dispatch({ type = "action_anim_done", seq = 1 })
   _assert_eq(g.turn.phase, "wait_action_anim", "should still wait second anim")
   _assert_eq(g.turn.action_anim.seq, 2, "current anim should switch to seq2")

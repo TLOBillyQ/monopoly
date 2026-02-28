@@ -19,12 +19,25 @@ function game:init(opts)
   composition_root.assemble(opts, self)
 end
 
+local function _resolve_turn_runtime(self)
+  if self.turn_engine and self.turn_engine.get_legacy_flow then
+    local legacy_flow = self.turn_engine:get_legacy_flow()
+    -- 兼容测试或运行时替换 game.turn_flow 的场景。
+    if self.turn_flow and legacy_flow and self.turn_flow ~= legacy_flow then
+      return self.turn_flow
+    end
+    return self.turn_engine
+  end
+  return self.turn_engine or self.turn_flow
+end
+
 function game:advance_turn()
   if self.finished then
     return
   end
-  if self.turn_flow then
-    self.turn_flow:run_turn()
+  local runtime = _resolve_turn_runtime(self)
+  if runtime and runtime.run_turn then
+    runtime:run_turn()
   end
   self:check_victory()
 end
@@ -33,8 +46,9 @@ function game:dispatch_action(action)
   if self.finished then
     return
   end
-  if self.turn_flow then
-    self.turn_flow:dispatch(action)
+  local runtime = _resolve_turn_runtime(self)
+  if runtime and runtime.dispatch then
+    runtime:dispatch(action)
   end
   self:check_victory()
 end

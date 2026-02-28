@@ -3,6 +3,7 @@ local runtime_constants = require("Config.RuntimeConstants")
 local logger = require("src.core.Logger")
 local tick_timeout = require("src.game.flow.turn.TickTimeout")
 local tick_ui_sync = require("src.game.flow.turn.TickUISync")
+local canvas_store = require("src.presentation.canvas_runtime.CanvasStore")
 
 local M = {}
 
@@ -105,7 +106,9 @@ function M.build()
       if ui.input_blocked == blocked then
         return false
       end
-      ui.input_blocked = blocked
+      canvas_store.patch_slice(state, "base", function()
+        ui.input_blocked = blocked
+      end)
       return true
     end,
   }

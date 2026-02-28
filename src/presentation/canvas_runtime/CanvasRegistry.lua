@@ -1,20 +1,22 @@
-local basic_intents = require("src.presentation.interaction.intent_builders.BasicIntents")
-local popup_intents = require("src.presentation.interaction.intent_builders.PopupIntents")
-local item_slot_intents = require("src.presentation.interaction.intent_builders.ItemSlotIntents")
-local choice_intents = require("src.presentation.interaction.intent_builders.ChoiceIntents")
-local market_intents = require("src.presentation.interaction.intent_builders.MarketIntents")
+local base_intents = require("src.presentation.canvas.base.intents")
+local popup_intents = require("src.presentation.canvas.popup.intents")
+local item_slot_intents = require("src.presentation.canvas.base.item_slot_intents")
+local player_choice_intents = require("src.presentation.canvas.player_choice.intents")
+local target_choice_intents = require("src.presentation.canvas.target_choice.intents")
+local remote_choice_intents = require("src.presentation.canvas.remote_choice.intents")
+local market_intents = require("src.presentation.canvas.market.intents")
 local always_show_intents = require("src.presentation.canvas.always_show.intents")
 
 local registry = {}
 
 local canvas_specs = {
-  { key = "base", build = function(state) return basic_intents.build(state) end },
+  { key = "base", build = function(state) return base_intents.build(state) end },
   { key = "always_show", build = function() return always_show_intents.build() end },
   { key = "popup", build = function(state) return popup_intents.build(state) end },
   { key = "item_slots", build = function(state) return item_slot_intents.build(state) end },
-  { key = "player_choice", build = function(state) return choice_intents.build_player(state) end },
-  { key = "target_choice", build = function(state) return choice_intents.build_target(state) end },
-  { key = "remote_choice", build = function(state) return choice_intents.build_remote(state) end },
+  { key = "player_choice", build = function(state) return player_choice_intents.build(state) end },
+  { key = "target_choice", build = function(state) return target_choice_intents.build(state) end },
+  { key = "remote_choice", build = function(state) return remote_choice_intents.build(state) end },
   { key = "market", build = function(state) return market_intents.build_items(state) end },
 }
 

@@ -1,10 +1,9 @@
-local board_runtime = require("src.presentation.render.BoardRuntime")
 local market_view = require("src.presentation.render.MarketView")
 local base_presenter = require("src.presentation.canvas.base.presenter")
+local render_pipeline = require("src.presentation.canvas_runtime.CanvasRenderPipeline")
 local input_lock_policy = require("src.presentation.interaction.UIInputLockPolicy")
 local role_control_lock_policy = require("src.presentation.interaction.UIRoleControlLockPolicy")
 local modal_presenter = require("src.presentation.ui.UIModalPresenter")
-local turn_effects = require("src.presentation.ui.UITurnEffects")
 local logger = require("src.core.Logger")
 
 local state = require("src.presentation.api.ui_view_service.state")
@@ -58,9 +57,10 @@ function service.apply_role_control_lock(state_ctx, enabled)
 end
 
 function service.render(state_ctx, ui_model, log_once, build_log_prefix)
-  service.refresh_panel(state_ctx, ui_model)
-  board_runtime.refresh(state_ctx, ui_model, log_once, build_log_prefix)
-  turn_effects.sync(state_ctx, ui_model)
+  render_pipeline.render(state_ctx, ui_model, log_once, build_log_prefix, {
+    runtime = require("src.presentation.api.UIRuntimePort"),
+    refresh_item_slots = service.refresh_item_slots,
+  })
 end
 
 function service.set_debug_log(state_ctx, text)
