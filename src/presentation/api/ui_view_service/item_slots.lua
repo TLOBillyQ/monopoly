@@ -33,14 +33,10 @@ local function _set_outline_touch_enabled(ui, outline_name, enabled)
   end
 end
 
-local function _reset_slot_animation(slot_name)
+local function _reset_slot_animation(index)
   local role = runtime.get_client_role()
-  if not role or not role.reset_animation then
-    return
-  end
-  local ok, node = pcall(runtime.query_node, slot_name)
-  if ok and node then
-    pcall(role.reset_animation, node)
+  if role then
+    ui_events.send_to_role(role, "重置高亮道具槽位牌" .. index, {})
   end
 end
 
@@ -66,7 +62,6 @@ function M.refresh_item_slots(state, ui_model, opts)
     and display_player_id ~= nil
     and choice_owner_id == display_player_id
   local option_id_set = _build_option_id_set(ui_model and ui_model.choice or nil)
-  local highlighted = ui._item_slots_highlighted or {}
 
   for index, slot_name in ipairs(slots) do
     local item_id = items[index]
@@ -79,25 +74,18 @@ function M.refresh_item_slots(state, ui_model, opts)
       ui:set_touch_enabled(slot_name, can_pick)
       if can_pick then
         ui_events.send_to_all("高亮道具槽位牌" .. index, {})
-        highlighted[index] = true
-      elseif highlighted[index] then
-        _reset_slot_animation(slot_name)
-        highlighted[index] = nil
+      else
+        _reset_slot_animation(index)
       end
       item_ids[index] = item_id
     else
       core.set_item_slot_image(slot_name, empty_key)
       ui:set_touch_enabled(slot_name, false)
-      if highlighted[index] then
-        _reset_slot_animation(slot_name)
-        highlighted[index] = nil
-      end
+      _reset_slot_animation(index)
     end
     _set_outline_visible(ui, outline_name, can_pick)
     _set_outline_touch_enabled(ui, outline_name, can_pick)
   end
-
-  ui._item_slots_highlighted = highlighted
 
   if role_id ~= nil then
     if type(ui.item_slot_item_ids_by_role) ~= "table" then
