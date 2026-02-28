@@ -1,5 +1,8 @@
 local support = require("TestSupport")
-local _new_game = support.new_game
+local default_map = require("Config.Maps.DefaultMap")
+local function _new_game()
+  return support.new_game({ map = default_map })
+end
 local _assert_eq = support.assert_eq
 local movement = support.movement
 local board_utils = support.board_utils

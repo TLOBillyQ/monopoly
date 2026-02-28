@@ -252,15 +252,16 @@ local function resolve_landing_with_choices(game, player, tile_ref, move_result,
   return res
 end
 
-local function new_game()
+local function new_game(opts)
+  opts = opts or {}
   local game = app:new({
-    players = { "P1", "P2" },
-    ai = { [2] = true },
-    auto_all = false,
-    map = map_cfg,
-    tiles = tiles_cfg,
+    players = opts.players or { "P1", "P2" },
+    ai = opts.ai or { [2] = true },
+    auto_all = opts.auto_all == true,
+    map = opts.map or map_cfg,
+    tiles = opts.tiles or tiles_cfg,
   })
-  game.ui_port = build_ui_port()
+  game.ui_port = build_ui_port(opts.ui_port)
   return game
 end
 

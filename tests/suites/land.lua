@@ -1,5 +1,8 @@
 local support = require("TestSupport")
-local _new_game = support.new_game
+local default_map = require("Config.Maps.DefaultMap")
+local function _new_game()
+  return support.new_game({ map = default_map })
+end
 local _first_land_tile = support.first_land_tile
 local _first_adjacent_land_pair = support.first_adjacent_land_pair
 local _tile_state = support.tile_state

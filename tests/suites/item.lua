@@ -1,5 +1,8 @@
 local support = require("TestSupport")
-local _new_game = support.new_game
+local default_map = require("Config.Maps.DefaultMap")
+local function _new_game()
+  return support.new_game({ map = default_map })
+end
 local _open_choice = support.open_choice
 local _get_choice = support.get_choice
 local _resolve_choice_first = support.resolve_choice_first
