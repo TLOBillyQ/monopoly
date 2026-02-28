@@ -19,6 +19,15 @@ local rules = {
     forbidden = { "TurnFlow" },
     description = "runtime must not depend on retired TurnFlow",
   },
+  {
+    root = "src/presentation/canvas/base",
+    forbidden = {
+      "canvas.always_show", "canvas.market", "canvas.building_choice",
+      "canvas.remote_choice", "canvas.player_choice", "canvas.popup",
+      "canvas.target_choice",
+    },
+    description = "base canvas must not import other canvas modules",
+  },
 }
 
 local function _is_windows()

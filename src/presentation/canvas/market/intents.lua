@@ -27,4 +27,31 @@ function intents.build_items(state)
   return specs
 end
 
+function intents.build_controls(state)
+  return {
+    {
+      name = nodes.confirm,
+      build_intent = function()
+        local market = state.ui_model and state.ui_model.market or nil
+        if not market then
+          logger.warn("market_confirm without market")
+          return nil
+        end
+        local option_id = state.pending_choice_selected_option_id
+        if not option_id then
+          logger.warn("market_confirm missing selected option")
+          return nil
+        end
+        return { type = "market_confirm", choice_id = market.choice_id, option_id = option_id }
+      end,
+    },
+    {
+      name = nodes.close,
+      build_intent = function()
+        return ui_event_intents.choice_cancel_intent(state, "market_close")
+      end,
+    },
+  }
+end
+
 return intents

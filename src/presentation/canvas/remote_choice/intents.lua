@@ -24,6 +24,12 @@ function intents.build(state)
       end,
     }
   end
+  specs[#specs + 1] = {
+    name = nodes.cancel,
+    build_intent = function()
+      return ui_event_intents.choice_cancel_intent(state, "remote_cancel")
+    end,
+  }
   return specs
 end
 
