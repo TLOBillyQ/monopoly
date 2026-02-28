@@ -34,12 +34,13 @@ local function _set_outline_touch_enabled(ui, outline_name, enabled)
 end
 
 local function _reset_slot_animation(slot_name)
-  if not (Role and Role.reset_animation) then
+  local role = runtime.get_client_role()
+  if not role or not role.reset_animation then
     return
   end
   local ok, node = pcall(runtime.query_node, slot_name)
   if ok and node then
-    pcall(Role.reset_animation, node)
+    pcall(role.reset_animation, node)
   end
 end
 
