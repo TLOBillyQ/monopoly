@@ -34,8 +34,6 @@ local runtime_constants = {
   vehicle_accel = 20.0,
   -- 默认关闭：载具移动降级为 set_position 逐格跳
   vehicle_move_api_enabled = false,
-  -- 默认开启：回合逻辑走协程路径（TurnEngine coroutine mode）。
-  experimental_coroutine_turn = true,
   vehicle_enter_delay = 1.2,
   fps = 30.0,
   forward_eca_event_ui = "ui_forward",

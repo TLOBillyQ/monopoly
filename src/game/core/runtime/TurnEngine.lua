@@ -1,5 +1,3 @@
-local runtime_constants = require("Config.RuntimeConstants")
-local turn_flow = require("src.game.flow.turn.TurnFlow")
 local scheduler = require("src.game.runtime_coroutine.Scheduler")
 local session_factory = require("src.game.runtime_coroutine.Session")
 local action_router = require("src.game.runtime_coroutine.ActionRouter")
@@ -42,18 +40,7 @@ function turn_engine:init(game, phases, opts)
   opts = opts or {}
   self.game = game
   self.phases = phases
-  self.experimental = opts.experimental_coroutine_turn
-  if self.experimental == nil then
-    self.experimental = runtime_constants.experimental_coroutine_turn == true
-  end
-  self.mode = self.experimental and "coroutine" or "legacy"
-  if self.mode == "legacy" then
-    self.legacy_flow = opts.legacy_flow or turn_flow:new(game, phases)
-    self.turn_mgr = self.legacy_flow
-    self.session = nil
-    return
-  end
-  self.legacy_flow = opts.legacy_flow
+  self.mode = "coroutine"
   self.turn_mgr = _build_turn_mgr(self)
   self.session = session_factory.new({
     game = game,
@@ -63,12 +50,8 @@ function turn_engine:init(game, phases, opts)
   })
 end
 
-function turn_engine:get_legacy_flow()
-  return self.legacy_flow
-end
-
 function turn_engine:is_coroutine_mode()
-  return self.mode == "coroutine"
+  return true
 end
 
 function turn_engine:next_player()
@@ -83,18 +66,12 @@ function turn_engine:next_player()
 end
 
 local function _sync_snapshot(engine)
-  if engine.mode ~= "coroutine" then
-    return nil
-  end
   local snapshot = engine.session and engine.session:snapshot() or nil
   compat_bridge.sync_to_legacy_turn(engine.game, snapshot)
   return snapshot
 end
 
 function turn_engine:dispatch(action)
-  if self.mode == "legacy" then
-    return self.legacy_flow:dispatch(action)
-  end
   scheduler.dispatch(self.session, action_router.from_action(action))
   local res = scheduler.step(self.session, 0)
   _sync_snapshot(self)
@@ -102,9 +79,6 @@ function turn_engine:dispatch(action)
 end
 
 function turn_engine:run_turn()
-  if self.mode == "legacy" then
-    return self.legacy_flow:run_turn()
-  end
   local res = scheduler.step(self.session, 0)
   _sync_snapshot(self)
   return res and res.wait_state or nil

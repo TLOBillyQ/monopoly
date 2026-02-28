@@ -14,6 +14,11 @@ local rules = {
     forbidden = { "intent_builders" },
     description = "no module may depend on retired intent_builders",
   },
+  {
+    root = "src/game/core/runtime",
+    forbidden = { "TurnFlow" },
+    description = "runtime must not depend on retired TurnFlow",
+  },
 }
 
 local function _is_windows()

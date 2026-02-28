@@ -94,27 +94,4 @@ function session.new(opts)
   return _build_session(opts)
 end
 
-function session.from_turn_flow(turn_flow)
-  assert(turn_flow ~= nil and turn_flow.game ~= nil, "missing turn_flow")
-  return _build_session({
-    game = turn_flow.game,
-    phases = turn_flow.phases,
-    mode = "legacy",
-    take_action = function()
-      local action = turn_flow.pending_action
-      turn_flow.pending_action = nil
-      return action
-    end,
-    set_action = function(action)
-      turn_flow.pending_action = action
-    end,
-    clear_action = function()
-      turn_flow.pending_action = nil
-    end,
-    mark_phase = function(phase)
-      _mark_phase_default(turn_flow.game, phase)
-    end,
-  })
-end
-
 return session

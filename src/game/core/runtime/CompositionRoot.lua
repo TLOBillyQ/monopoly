@@ -3,12 +3,10 @@ require "vendor.third_party.Utils"
 local dirty_tracker = require("src.core.DirtyTracker")
 local logger = require("src.core.Logger")
 local market_cfg = require("Config.Generated.Market")
-local turn_flow = require("src.game.flow.turn.TurnFlow")
 local turn_engine = require("src.game.core.runtime.TurnEngine")
 local bootstrap = require("src.game.core.runtime.Bootstrap")
 local game_factory = require("src.game.core.runtime.GameFactory")
 local phase_registry = require("src.game.core.runtime.PhaseRegistry")
-local runtime_constants = require("Config.RuntimeConstants")
 local number_utils = require("src.core.NumberUtils")
 
 local composition_root = {}
@@ -122,11 +120,7 @@ function composition_root.assemble(opts, game_or_class)
   end
 
   game:rebuild()
-  game.turn_flow = turn_flow:new(game, phases)
-  game.turn_engine = turn_engine:new(game, phases, {
-    legacy_flow = game.turn_flow,
-    experimental_coroutine_turn = runtime_constants.experimental_coroutine_turn == true,
-  })
+  game.turn_engine = turn_engine:new(game, phases)
 
   return game
 end

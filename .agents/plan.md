@@ -18,8 +18,8 @@
 - [x] (2026-02-28 16:00:34 +08:00) 里程碑 C：消除 phase 业务中的 `resume_state/resume_args` 传播。`TurnStart/TurnRoll/TurnMove/TurnLand`、`ItemPhase`、`EffectPipeline`、`PhaseRegistry` 已统一改为 `next_state/next_args` 协议；`Await.lua` 删除 `_resume()` 并改为读取 `next_*`。验收搜索：`src/game/flow/turn` 与 `src/game/systems` 下 `resume_state/resume_args` 命中为 0。全量回归 168 条，8 条预存失败不变。
 - [x] (2026-02-28 16:07:05 +08:00) 里程碑 S（稳定性）：清零 8 条预存失败。根因是 `GameplayRules.test_profile=ui_quick_all` 导致 `Config.Map` 指向 10 格快速环图，历史测试中的硬编码 tile id 与路径假设失效。修复方式：`tests/suites/chance.lua`、`land.lua`、`item.lua`、`movement.lua` 显式使用 `Config.Maps.DefaultMap`；`tests/TestSupport.lua` 支持 `new_game(opts)` 传入 map/ui_port 覆盖。验收：全量回归通过，失败 0。
 - [x] (2026-02-28 16:33:00 +08:00) 里程碑 T（测试重构）：修复 presentation_ui_registry（66→75 名称）和 gameplay_registry（35→38 名称）的名称/切片对齐，恢复 13 条被静默丢弃的测试并修复其 3 条夹具过期失败。10 个独立 suite 全部转为 name+tests 格式消除匿名输出。regression.lua 按 core/runtime/presentation/integration 四域分组。验收：全量回归 181 条（168+13），失败 0。
-- [ ] 里程碑 D：退役 shared/UINodes 兼容层与 intent_builders 目录。
-- [ ] 里程碑 E：退役旧 TurnFlow 主路径，完成收尾。
+- [x] (2026-02-28 16:37:00 +08:00) 里程碑 D：退役 shared/UINodes 兼容层与 intent_builders 目录。14 个 src/ 文件迁移至直接引用 canvas/*/nodes.lua，required_click_nodes 移入 UIBootstrap，测试引用迁移至 canvas.base.item_slot_intents。删除 UINodes.lua 和 intent_builders/（5 文件）。dep_rules 扩展为全 src/presentation 范围守护。验收：全量回归 180 条，失败 0。
+- [x] (2026-02-28 16:37:00 +08:00) 里程碑 E：退役旧 TurnFlow 主路径。TurnEngine 移除 legacy 分支和 get_legacy_flow()，Game._resolve_turn_runtime() 简化为直接返回 turn_engine，CompositionRoot 不再创建 game.turn_flow。删除 TurnFlow.lua/TurnChoiceHandler.lua/TurnWaits.lua/Flow.lua。Session.from_turn_flow() 移除。experimental_coroutine_turn 配置项移除。dep_rules 新增 runtime 不得引用 TurnFlow 规则。验收：全量回归 180 条（-1 legacy parity），失败 0。
 
 ## 意外与发现
 

@@ -3,7 +3,6 @@ local M = {}
 
 local app = require("src.game.core.runtime.Game")
 local movement = require("src.game.systems.movement.Movement")
-local turn_flow = require("src.game.flow.turn.TurnFlow")
 local turn_move = require("src.game.flow.turn.TurnMove")
 local inventory = require("src.game.systems.items.ItemInventory")
 local executor = require("src.game.systems.items.ItemExecutor")
@@ -301,7 +300,6 @@ end
 
 M.app = app
 M.movement = movement
-M.turn_flow = turn_flow
 M.turn_move = turn_move
 M.inventory = inventory
 M.executor = executor
