@@ -76,7 +76,7 @@ function runtime_event_bridge.emit_custom_event(event_name, payload, opts)
 
   local available, reason = _resolve_trigger_available()
   if not available then
-    _disable_feature(feature_key, "precheck failed: " .. tostring(reason))
+    _warn_feature_once(feature_key, "precheck failed: " .. tostring(reason))
     return false
   end
 
