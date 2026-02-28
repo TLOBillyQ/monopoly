@@ -381,6 +381,21 @@ local function _test_intent_dispatcher_sets_choice_route_metadata()
   }, {})
   assert(custom_entry.route_key == "building", "explicit route should override inferred route")
   assert(custom_entry.requires_confirm == true, "explicit requires_confirm should be kept")
+
+  local inline_entry = intent_dispatcher.open_choice(g, {
+    kind = "item_phase_choice",
+    title = "行动前：使用道具？",
+    options = { { id = 2001, label = "路障卡" } },
+  }, {})
+  assert(inline_entry.route_key == "base_inline", "item_phase_choice should use base_inline route")
+  assert(inline_entry.requires_confirm == false, "base_inline route should not require confirm")
+
+  local unknown_entry = intent_dispatcher.open_choice(g, {
+    kind = "unknown_choice_kind",
+    title = "未知流程",
+    options = { { id = 1, label = "A" } },
+  }, {})
+  assert(unknown_entry.route_key == "base_inline", "unknown choice should fallback to base_inline route")
 end
 
 local function _test_stop_all_players_movement_clears_move_dir_and_stop_event()

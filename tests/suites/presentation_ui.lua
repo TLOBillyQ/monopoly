@@ -2031,6 +2031,21 @@ local function _test_choice_modal_routes_to_new_screens()
 
     ui_view.open_choice_modal(state, {
       id = 5,
+      kind = "item_phase_choice",
+      title = "行动前：使用道具？",
+      body = "",
+      options = {
+        { id = 2001, label = "路障卡" },
+      },
+      allow_cancel = true,
+      cancel_label = "结束阶段",
+    })
+    _assert_eq(state.ui.active_choice_screen_key, nil, "item_phase_choice should stay on base inline route")
+    _assert_eq(nodes["位置选择屏"].visible, false, "target screen should stay hidden for item phase")
+    _assert_eq(nodes["遥控骰子屏"].visible, false, "remote screen should stay hidden for item phase")
+
+    ui_view.open_choice_modal(state, {
+      id = 6,
       kind = "landing_optional_effect",
       title = "可选效果",
       body = "",
@@ -2040,7 +2055,8 @@ local function _test_choice_modal_routes_to_new_screens()
       allow_cancel = true,
       cancel_label = "跳过",
     })
-    _assert_eq(state.ui.active_choice_screen_key, "target", "non-building optional should fallback to target screen")
+    _assert_eq(state.ui.active_choice_screen_key, nil, "non-building optional should not open dedicated screen")
+    _assert_eq(nodes["位置选择屏"].visible, false, "target screen should stay hidden for base_inline route")
   end)
 end
 
@@ -2065,9 +2081,15 @@ local function _test_choice_route_policy_prefers_explicit_route_metadata()
       confirm = false,
     },
     {
+      label = "item phase inline",
+      choice = { kind = "item_phase_choice" },
+      route = "base_inline",
+      confirm = false,
+    },
+    {
       label = "unknown fallback",
       choice = { kind = "unknown_kind" },
-      route = "target",
+      route = "base_inline",
       confirm = false,
     },
   }
@@ -2337,6 +2359,77 @@ local function _test_item_slot_uses_keep_size_path()
 
   _assert_eq(keep_size_calls, 1, "item slot should use keep-size texture path")
   _assert_eq(last_image_key, "ICON2001", "item slot should set expected image key")
+end
+
+local function _test_item_slot_refresh_shows_only_playable_outlines()
+  local touch_state = {}
+  local visible_state = {}
+  local state = {
+    ui_refs = {
+      ["Empty"] = "EMPTY",
+      ["2001"] = "ICON2001",
+      ["2002"] = "ICON2002",
+      ["2003"] = "ICON2003",
+    },
+    ui = {
+      item_slots = { "基础_道具槽位1", "基础_道具槽位2", "基础_道具槽位3" },
+      card_outlines = { "基础_可出牌外框1", "基础_可出牌外框2", "基础_可出牌外框3" },
+      set_touch_enabled = function(_, name, enabled)
+        touch_state[name] = enabled == true
+      end,
+      set_visible = function(_, name, visible)
+        visible_state[name] = visible == true
+      end,
+    },
+  }
+  local ui_model = {
+    current_player_id = 1,
+    item_choice_owner_id = 1,
+    item_slots = { 2001, 2002, 2003 },
+    item_slots_by_player = { [1] = { 2001, 2002, 2003 } },
+    choice = {
+      kind = "item_phase_choice",
+      options = { { id = 2001 }, { id = 2003 } },
+    },
+  }
+
+  _with_patches({
+    { key = "UIManager", value = { query_nodes_by_name = function() return { { set_texture_keep_size = function() end } } end } },
+  }, function()
+    ui_view.refresh_item_slots(state, ui_model, {
+      display_player_id = 1,
+      allow_interact = true,
+    })
+  end)
+
+  _assert_eq(visible_state["基础_可出牌外框1"], true, "playable slot 1 outline should be visible")
+  _assert_eq(visible_state["基础_可出牌外框2"], false, "unplayable slot 2 outline should be hidden")
+  _assert_eq(visible_state["基础_可出牌外框3"], true, "playable slot 3 outline should be visible")
+  _assert_eq(touch_state["基础_道具槽位1"], true, "playable slot 1 should be clickable")
+  _assert_eq(touch_state["基础_道具槽位2"], false, "unplayable slot 2 should be locked")
+  _assert_eq(touch_state["基础_道具槽位3"], true, "playable slot 3 should be clickable")
+end
+
+local function _test_item_slot_intents_include_outline_nodes()
+  local item_slot_intents = require("src.presentation.interaction.intent_builders.ItemSlotIntents")
+  local state = {
+    ui = {
+      item_slots = { "基础_道具槽位1" },
+      card_outlines = { "基础_可出牌外框1" },
+    },
+    ui_model = {
+      choice = {
+        kind = "item_phase_choice",
+      },
+    },
+  }
+
+  local specs = item_slot_intents.build(state)
+  _assert_eq(#specs, 2, "item slot intents should include slot and outline")
+  _assert_eq(specs[1].name, "基础_道具槽位1", "slot intent node expected")
+  _assert_eq(specs[2].name, "基础_可出牌外框1", "outline intent node expected")
+  local intent = specs[2].build_intent()
+  _assert_eq(intent and intent.id, "item_slot_1", "outline click should map to slot action")
 end
 
 local function _test_tick_skips_anim_when_no_anim()
@@ -3285,6 +3378,8 @@ return {
   _test_market_selection_updates_icon_without_resize,
   _test_market_close_resets_icon_without_resize,
   _test_item_slot_uses_keep_size_path,
+  _test_item_slot_refresh_shows_only_playable_outlines,
+  _test_item_slot_intents_include_outline_nodes,
   _test_tick_skips_anim_when_no_anim,
   _test_action_anim_queue_consumes_in_order,
   _test_action_anim_default_duration,
