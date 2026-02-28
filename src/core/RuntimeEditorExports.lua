@@ -69,7 +69,13 @@ local function _install_camera_exports(camera_helper)
   ---@return Role
   function get_camera_target()
     local role_id = camera_helper.target_role_id or 1
-    local role = GameAPI.get_role(role_id)
+    if not (GameAPI and GameAPI.get_role) then
+      return nil
+    end
+    local ok, role = pcall(GameAPI.get_role, role_id)
+    if not ok then
+      return nil
+    end
     return role
   end
 end

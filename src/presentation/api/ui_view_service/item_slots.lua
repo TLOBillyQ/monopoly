@@ -1,4 +1,5 @@
 local core = require("src.presentation.api.ui_view_service.core")
+local ui_events = require("src.presentation.shared.UIEvents")
 
 local M = {}
 
@@ -63,6 +64,9 @@ function M.refresh_item_slots(state, ui_model, opts)
       core.set_item_slot_image(slot_name, image_key)
       can_pick = allow_slot_click and option_id_set[tostring(item_id)] == true
       ui:set_touch_enabled(slot_name, can_pick)
+      if can_pick then
+        ui_events.send_to_all("高亮道具槽位牌" .. index, {})
+      end
       item_ids[index] = item_id
     else
       core.set_item_slot_image(slot_name, empty_key)

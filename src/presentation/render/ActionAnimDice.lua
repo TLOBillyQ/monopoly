@@ -36,6 +36,7 @@ function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
   if show_event then
     ui_events.send_to_all(show_event, {})
   end
+  ui_events.send_to_all("旋转骰子", {})
   runtime.for_each_role_or_global(function()
     local nodes = {
       screen = runtime.query_node(dice_nodes.canvas),

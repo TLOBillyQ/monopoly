@@ -1,194 +1,266 @@
-# 协程切流验证与旧路径退役可执行计划
+# 架构收敛（薄封装与 Port 减重）可执行计划
 
-本可执行计划是活文档。实施过程中必须持续更新"进度"、"意外与发现"、"决策日志"、"结果与复盘"。
+本可执行计划是活文档。实施过程中必须持续更新“进度”“意外与发现”“决策日志”“结果与复盘”四个章节。
 
-本文件严格遵循 `.agents/harness/PLANS.md` 的维护规范。任何后续实施者必须先阅读该文件，再执行本计划。
+本文件严格遵循 `.agents/harness/PLANS.md`。后续实施者在编码前必须先重读该规范，并按本文档的里程碑顺序推进。
 
 ## 目的 / 全局视角
 
-前一轮工作完成了协程运行时骨架（`src/game/runtime_coroutine/` 的 7 个模块）和 Canvas 运行时结构（`CanvasStore`、`CanvasRenderPipeline`、canvas intents 路由），但系统仍处于"混合态"：旧 `TurnFlow` 是默认主路径，协程路径仅有 2 个基础测试，`resume_state/resume_args` 仍在 8 个生产文件中传播，`shared/UINodes` 仍被 14 个生产文件引用。
 
-本计划的用户价值是：把协程路径从"实验性骨架"提升为"可信赖的默认路径"，然后安全退役旧状态机和旧 UI 兼容层。改完后，用户能观察到三个结果：第一，新增等待点只需写一行 `await` 调用而非维护 `resume_state/resume_args` 传递链；第二，回合逻辑在协程路径下行为与旧路径完全一致（测试证明）；第三，UI 节点引用统一收口到 canvas 模块，不再散落在 `shared/UINodes`。
+这项工作的目标是把当前“能跑但间接层较多”的结构收敛成“同等行为、但更少中间层”的结构。对玩家和策划来说，改造后应该看不到玩法回归：游戏启动流程、回合推进、UI 交互、弹窗与动画都保持原有行为；对维护者来说，新增需求时需要跨越的文件和抽象层显著减少。
+
+可观察的成功标准是：第一，`lua tests/regression.lua` 全量回归仍然通过（当前基线 182 条）；第二，被判定为可删除的薄封装文件在仓库中消失且无残留引用；第三，`GameplayLoop` 与 UI 端口接线简化后，仍能通过同一套回归证明“行为不变”。
 
 ## 进度
 
-- [x] (2026-02-28 12:42:00 +08:00) 前置：协程运行时骨架与 CanvasStore/CanvasRenderPipeline 落地（前一轮计划里程碑 0-5）。
-- [x] (2026-02-28 13:15:00 +08:00) 里程碑 A：补全协程路径测试覆盖，建立行为一致性验证。新增 5 个测试（wait_move_anim / wait_action_anim / detained_wait / full_turn_lifecycle / legacy_parity），总测试 168 条，8 条预存失败不变。dep_rules 新增 canvas_runtime 不得引用 intent_builders 规则。
-- [x] (2026-02-28 14:30:00 +08:00) 里程碑 B：默认开启协程路径，迁移测试中的 turn_flow 直接替换。`experimental_coroutine_turn` 默认值改为 `true`。4 处直接 `turn_flow` 引用迁移至 `turn_engine` 接口（presentation_ui 2 处改用 TurnEngine 构造 + run_turn/dispatch，gameplay 2 处改用 turn_engine.phases/turn_mgr/next_player）。全量回归 168 条（8 条预存失败不变），legacy 回退验证通过。
-- [x] (2026-02-28 16:00:34 +08:00) 里程碑 C：消除 phase 业务中的 `resume_state/resume_args` 传播。`TurnStart/TurnRoll/TurnMove/TurnLand`、`ItemPhase`、`EffectPipeline`、`PhaseRegistry` 已统一改为 `next_state/next_args` 协议；`Await.lua` 删除 `_resume()` 并改为读取 `next_*`。验收搜索：`src/game/flow/turn` 与 `src/game/systems` 下 `resume_state/resume_args` 命中为 0。全量回归 168 条，8 条预存失败不变。
-- [x] (2026-02-28 16:07:05 +08:00) 里程碑 S（稳定性）：清零 8 条预存失败。根因是 `GameplayRules.test_profile=ui_quick_all` 导致 `Config.Map` 指向 10 格快速环图，历史测试中的硬编码 tile id 与路径假设失效。修复方式：`tests/suites/chance.lua`、`land.lua`、`item.lua`、`movement.lua` 显式使用 `Config.Maps.DefaultMap`；`tests/TestSupport.lua` 支持 `new_game(opts)` 传入 map/ui_port 覆盖。验收：全量回归通过，失败 0。
-- [x] (2026-02-28 16:33:00 +08:00) 里程碑 T（测试重构）：修复 presentation_ui_registry（66→75 名称）和 gameplay_registry（35→38 名称）的名称/切片对齐，恢复 13 条被静默丢弃的测试并修复其 3 条夹具过期失败。10 个独立 suite 全部转为 name+tests 格式消除匿名输出。regression.lua 按 core/runtime/presentation/integration 四域分组。验收：全量回归 181 条（168+13），失败 0。
-- [x] (2026-02-28 16:37:00 +08:00) 里程碑 D：退役 shared/UINodes 兼容层与 intent_builders 目录。14 个 src/ 文件迁移至直接引用 canvas/*/nodes.lua，required_click_nodes 移入 UIBootstrap，测试引用迁移至 canvas.base.item_slot_intents。删除 UINodes.lua 和 intent_builders/（5 文件）。dep_rules 扩展为全 src/presentation 范围守护。验收：全量回归 180 条，失败 0。
-- [x] (2026-02-28 16:37:00 +08:00) 里程碑 E：退役旧 TurnFlow 主路径。TurnEngine 移除 legacy 分支和 get_legacy_flow()，Game._resolve_turn_runtime() 简化为直接返回 turn_engine，CompositionRoot 不再创建 game.turn_flow。删除 TurnFlow.lua/TurnChoiceHandler.lua/TurnWaits.lua/Flow.lua。Session.from_turn_flow() 移除。experimental_coroutine_turn 配置项移除。dep_rules 新增 runtime 不得引用 TurnFlow 规则。验收：全量回归 180 条（-1 legacy parity），失败 0。
-- [x] (2026-02-28 16:57:00 +08:00) 收尾修复：修复“基础屏常驻 UI 不显示”回归。`UICanvasCoordinator.switch/switch_for_role` 现在保留并显式显示 `始终显示屏`；`UIBootstrap` 启动后与基础屏一起显示常驻屏。补充回归用例 `canvas_switch_keeps_always_show_visible`。验收：全量回归 181 条，失败 0。
+
+- [x] (2026-02-28 14:25Z) 已重读 `.agents/harness/PLANS.md`，确认本计划结构与活文档要求。
+- [x] (2026-02-28 14:26Z) 已完成当前基线验证：`lua tests/regression.lua` 通过，结果为 `All regression checks passed (182)`。
+- [x] (2026-02-28 14:27Z) 已核对关键引用事实：`GameplayLoopPortsAdapter` 在 `tests/suites/presentation_ui.lua` 仍被引用；`CanvasCoordinator` 当前无引用。
+- [ ] 里程碑 M0：固化证据与回归护栏。
+- [ ] 里程碑 M1：删除死代码与“仅测试依赖”适配层迁移。
+- [ ] 里程碑 M2：内联单消费者薄封装并删除对应文件。
+- [ ] 里程碑 M2b：合并 Agent + AgentTargeting 紧耦合文件。
+- [ ] 里程碑 M3：塌缩 `GameStateOps` 链路，保持 `Game` 公共方法不变。
+- [ ] 里程碑 M4：Port 基础设施收敛到“声明 + 实现聚合”双文件结构。
+- [ ] 里程碑 M5a：拆分 state bag 为子对象并增量迁移消费者。
+- [ ] 里程碑 M5b：去重路由/auto context、拆除循环依赖触发点。
 
 ## 意外与发现
 
-- 观察：前一轮计划标记里程碑 0-5 全部完成，但第二轮审计发现实际是"骨架落地 + 混合态"，而非真正的切流完成。旧 `TurnFlow` 仍是默认路径，`experimental_coroutine_turn` 默认为 `false`。
-  证据：`Config/RuntimeConstants.lua:38` 中 `experimental_coroutine_turn = false`；`Game._resolve_turn_runtime()` 在 `game.turn_flow` 被外部替换时优先走旧实例。
 
-- 观察：`Await` 模块是"双模"设计——在旧路径中被当作同步轮询函数调用（每帧调用返回 `{wait=true}` 或 `{next_state, next_args}`），在协程路径中由 `TurnScript` 包裹 `yield` 实现真正挂起。这个设计是有意的，允许渐进切流。
-  证据：`TurnWaits.lua` 和 `TurnChoiceHandler.lua` 同步调用 `await.*` 并检查返回值；`TurnScript.lua:43` 调用同一个 `await.*` 后根据 `wait_res.wait` 决定是否 `coroutine.yield`。
+- 观察：`src/presentation/api/GameplayLoopPortsAdapter.lua` 不是生产消费者，但仍被测试依赖，不能直接当“死代码”删除。
+  证据：`tests/suites/presentation_ui.lua:1742,1770,1949,3256,3378` 存在 `require("src.presentation.api.GameplayLoopPortsAdapter")`。
 
-- 观察：`CanvasRegistry` 已完成从 `intent_builders` 到 `canvas/*/intents.lua` 的迁移，但 `intent_builders/` 目录仍存在，且 `tests/suites/presentation_ui.lua:2414` 仍引用 `ItemSlotIntents`。
-  证据：`CanvasRegistry.lua` 顶部 8 个 require 全部指向 `canvas.*` 模块；`intent_builders/` 目录含 5 个文件仍在文件系统中。
+- 观察：`src/presentation/canvas_runtime/CanvasCoordinator.lua` 是纯转发文件，当前没有调用点。
+  证据：`rg "require\\(\"src\\.presentation\\.canvas_runtime\\.CanvasCoordinator\"\\)"` 返回 0 命中。
 
-- 观察：测试中 3 个文件直接替换 `game.turn_flow` 字段，这会绕过 `TurnEngine`，阻碍协程路径成为默认。
-  证据：`tests/suites/presentation_ui.lua:369,2571`、`tests/suites/gameplay.lua:454,1383`。
+- 观察：`TurnEngine` 目前通过 `CompatBridge.sync_to_legacy_turn` 仅同步 `game.turn.phase`，逻辑体很小，适合就地内联。
+  证据：`src/game/core/runtime/TurnEngine.lua:68-71`，`src/game/runtime_coroutine/CompatBridge.lua:3-17`。
 
-- 观察：协程路径测试仅有 2 个（`gameplay_coroutine.lua`），只覆盖 `wait_choice` 的 `choice_cancel` 解决。未覆盖 `wait_move_anim`、`wait_action_anim`、`detained_wait`、`await.seconds`、完整回合串联、错误恢复。
-  证据：`tests/suites/gameplay_coroutine.lua` 全文 71 行，2 个 `it()` 块。
+- 观察：`UIViewService` 在多个函数体内延迟 `require("src.presentation.api.UIRuntimePort")`，体现了依赖环风险。
+  证据：`src/presentation/api/UIViewService.lua:30,40,53,57,61`。
+
+- 观察：choice 路由规则在 game 与 presentation 各维护一份，存在重复与漂移风险。
+  证据：`src/game/flow/intent/IntentDispatcher.lua:13-68` 与 `src/presentation/interaction/UIChoiceRoutePolicy.lua:33-73`。
+
+- 观察：`UIEventRouter` 不是纯单消费者——除 `UIBootstrap` 外，`tests/suites/presentation_ui.lua:21` 也 require 了它。内联前需先迁移测试引用。
+  证据：`src/app/bootstrap/UIBootstrap.lua:3` 与 `tests/suites/presentation_ui.lua:21`。
+
+- 观察：`AgentTargeting`（193 行）包含落点模拟、优先级排序、道具策略等真实业务逻辑，不属于"薄封装"。Agent.lua 中 4 个纯转发函数（L11-24）才是薄封装部分。合并方向应为"将 AgentTargeting 内容搬入 Agent.lua 并消除转发"，而非简单内联。
+  证据：`src/game/core/runtime/AgentTargeting.lua:1-193`，`src/game/core/runtime/Agent.lua:11-24`。
 
 ## 决策日志
 
-- 决策：保留前一轮计划的所有决策（兼容桥策略、切流顺序、运行时开关、Game 层兼容分支、CanvasRegistry 迁移方向），不做推翻。
-  理由：前一轮决策经过验证是可行的，骨架已落地且回归通过。
-  日期/作者：2026-02-28 / Claude Opus 4。
 
-- 决策：新计划以"测试先行"为核心策略——先补足协程路径测试（里程碑 A），测试全绿后才改默认值（里程碑 B），然后才做 phase 改造和旧路径退役。
-  理由：当前协程路径测试覆盖极低（2 个测试），直接切流风险过高。测试是切流的前置门控。
-  日期/作者：2026-02-28 / Claude Opus 4。
+- 决策：按“先低风险删除/内联，再做结构塌缩”的顺序执行，先做 M1/M2，再做 M3-M5。
+  理由：M1/M2 改动局部且可快速回归，能先降低文件数量与认知负担，再进入高耦合改造。
+  日期/作者：2026-02-28 / Copilot GPT-5.3-Codex。
 
-- 决策：`resume_state/resume_args` 的消除（里程碑 C）排在默认切流（里程碑 B）之后，而非之前。
-  理由：`resume_state/resume_args` 目前被 `Await._resume()` 兼容函数消化，不影响协程路径正确性。先切流再清理，避免同时改变两个维度增加回归风险。
-  日期/作者：2026-02-28 / Claude Opus 4。
+- 决策：`GameplayLoopPortsAdapter` 先迁移测试调用点，再删除文件；`CanvasCoordinator` 可直接删除。
+  理由：两者都薄封装，但 adapter 仍有测试引用，直接删会先破坏基线。
+  日期/作者：2026-02-28 / Copilot GPT-5.3-Codex。
 
-- 决策：UINodes 退役（里程碑 D）与逻辑层切流（里程碑 B/C）解耦，可并行推进。
-  理由：UI 层和逻辑层的遗留依赖互相独立，一方的迁移不依赖另一方完成。
-  日期/作者：2026-02-28 / Claude Opus 4。
+- 决策：`GameStateOps` 删除后不改变 `Game` 对外方法名，缺失的方法直接在 `Game.lua` 补齐或由 `GameStatePlayers/Tiles/Turn` 提供。
+  理由：外部系统已依赖 `game:rebuild()`/`game:current_player()` 等方法，先保证兼容签名，再收敛内部层级。
+  日期/作者：2026-02-28 / Copilot GPT-5.3-Codex。
 
-- 决策：在 D/E 前插入“测试重构里程碑 T”，先统一测试结构和夹具契约，再继续删除旧路径/兼容层。
-  理由：D/E 将带来大规模文件迁移和删除，若测试仍按历史文件散落组织，回归失败定位成本高；先重构测试可显著降低后续改造风险。
-  日期/作者：2026-02-28 / Codex GPT-5。
+- 决策：Port 收敛阶段强制保留 fallback/no-op 契约并补测试，不以“删文件”替代“行为证明”。
+  理由：`GameplayLoopPorts.resolve` 当前承担默认值语义，若无契约测试，后续回归定位成本高。
+  日期/作者：2026-02-28 / Copilot GPT-5.3-Codex。
+
+- 决策：state bag 拆分采用“先并存别名，再逐步去别名”的增量策略，不做一次性大迁移。
+  理由：该改动横跨 `GameStartup`、`GameplayLoop`、UI 同步和 timeout，分批可控且便于回滚。
+  日期/作者：2026-02-28 / Copilot GPT-5.3-Codex。
+
+- 决策：`AgentTargeting`（193 行真实逻辑）从 M2"薄封装内联"中独立为 M2b，作为"紧耦合文件合并"单独执行。
+  理由：AgentTargeting 不是薄封装，合并后产出 ~300 行文件，风险显著高于其他 M2 操作（UIEventRouter 20 行、CompatBridge 17 行等）。独立里程碑可单独回滚。
+  日期/作者：2026-02-28 / Copilot Claude-Opus-4.6。
+
+- 决策：`UIEventRouter` 内联前需先迁移 `tests/suites/presentation_ui.lua:21` 的测试引用，与 M1 处理 adapter 的模式一致。
+  理由：UIEventRouter 有 2 个消费者（UIBootstrap + 测试），直接删除会破坏基线。
+  日期/作者：2026-02-28 / Copilot Claude-Opus-4.6。
+
+- 决策：`GameStateOps` 中非纯转发方法的归属明确为：`rebuild()`（重建 occupants 表）→ 内联到 `Game.lua`；`_mark_players`/`_mark_board` dirty 标记 → 搬入 `Game.lua`。
+  理由：`rebuild` 直接操作 `game.occupants` 和 `game.players`，属于 Game 自身职责；dirty 标记同理，不适合下沉到子模块。
+  日期/作者：2026-02-28 / Copilot Claude-Opus-4.6。
+
+- 决策：原 M5 拆分为 M5a（state bag 拆分）和 M5b（逻辑去重 + 循环 require 清理），两者无前置依赖可独立推进。
+  理由：四个独立维度打包在一个里程碑中，任一出问题都会阻塞整个 M5。拆分后可单独回滚、单独验收。
+  日期/作者：2026-02-28 / Copilot Claude-Opus-4.6。
+
+- 决策：M4 收敛时，`clock` port 的多级 fallback（`GameAPI.get_timestamp` → `os.clock` → 0）必须保留在声明侧 `GameplayLoopPorts.lua`，不可移到 `PresentationPorts.lua`。
+  理由：clock fallback 含平台检测逻辑，属于 gameplay 层契约而非 presentation 实现；移走会导致无 presentation 时时钟失效。
+  日期/作者：2026-02-28 / Copilot Claude-Opus-4.6。
 
 ## 结果与复盘
 
-前一轮工作的成果已在前一版 plan.md 中记录，此处总结：协程运行时 7 个模块已落地，`TurnEngine` 双模切换可用，`CanvasStore/CanvasRenderPipeline/CanvasRegistry` 已实现，全量回归 163 条通过。残留问题是测试覆盖不足、默认路径未切换、`resume_state/resume_args` 和 `UINodes` 遗留依赖未清理。
 
-本轮计划的目标是把这些残留问题逐一解决，实现真正的切流完成。
+当前处于“计划已重写、尚未实施代码改造”阶段。阶段性成果是：目标边界、改造顺序、验证口径、回滚策略已经固定，且已修正“adapter 为 0 消费者”的事实偏差。后续复盘将在每个里程碑完成后更新，重点记录行为一致性和风险消解情况。
 
 ## 背景与导读
 
-本仓库是一个 Lua 实现的大富翁游戏，运行在 Eggy 游戏平台上。入口是 `main.lua`，它只做 `require "src.app.init"`。启动链路在 `src/app/init.lua`：安装运行时、创建状态对象、绑定事件桥、安装 UI、启动 tick。
 
-游戏回合内核有两套实现并存。旧内核在 `src/game/flow/turn/TurnFlow.lua`，通过 `src/core/Flow.lua` 做字符串状态推进（"start" -> "roll" -> "move" -> "land" -> "end_turn"），遇到 `wait_choice`、`wait_action_anim`、`wait_move_anim` 时停下等外部 action。新内核在 `src/game/runtime_coroutine/` 下，用 Lua coroutine 实现真正的 yield/resume 语义。`src/game/core/runtime/TurnEngine.lua` 根据 `experimental_coroutine_turn` 开关选择走哪条路径。`src/game/core/runtime/Game.lua` 的 `_resolve_turn_runtime()` 是入口分发器。
+仓库入口是 `main.lua -> src/app/init.lua`，启动链路依次经过 `RuntimeInstall`、`GameStartup`、`UIBootstrap` 和运行时绑定。游戏核心在 `src/game/core/runtime/`，回合推进已统一由 `TurnEngine` 协程路径执行。presentation 层分为 canvas 运行时（`src/presentation/canvas_runtime/`）、交互层（`src/presentation/interaction/`）和 UI/API 适配层（`src/presentation/api/`）。
 
-UI 层采用 Canvas-First 架构。`src/presentation/canvas/` 下 13 个子模块各有 `nodes.lua`（节点定义）、`contract.lua`（画布契约）、`intents.lua`（意图构建）。`src/presentation/canvas_runtime/` 下的 `CanvasRegistry`、`CanvasStore`、`CanvasRenderPipeline`、`CanvasEventRouter` 提供运行时编排。遗留兼容层包括 `src/presentation/shared/UINodes.lua`（节点字符串集中定义，14 个文件引用）和 `src/presentation/interaction/intent_builders/`（旧意图构建，CanvasRegistry 已不引用但目录未删除）。
+本计划聚焦的“薄封装/中间层”包括：`UIEventRouter`、`TurnActionPort`、`CompatBridge`、`Signals`、`CanvasCoordinator`、`GameplayLoopPortsAdapter`、`GameStateOps`，以及 `GameplayLoopPorts + ports/*.lua + GameplayLoopPortTypes` 形成的 Port 组合基础设施。另外，`Agent` 与 `AgentTargeting` 虽非薄封装，但存在紧耦合的转发关系（Agent.lua 4 个函数纯转发 AgentTargeting），适合合并为单文件。上述模块的共同问题不是“功能错误”，而是“路径过长、重复逻辑多、改动面被放大”。
 
-关键术语：`Await` 是 `src/game/runtime_coroutine/Await.lua`，提供 `choice/move_anim/action_anim/detained/seconds` 五个等待原语。`Session` 是 `src/game/runtime_coroutine/Session.lua`，是协程执行上下文，也能从旧 `TurnFlow` 创建兼容包装。`resume_state/resume_args` 是旧内核的 continuation 传递机制，每个 phase 函数返回 `(wait_state, {resume_state=X, resume_args=Y})` 告知 Flow 回来后跳到哪、带什么参数。
-
-测试入口是 `lua tests/regression.lua`，聚合 20 个 suite（30 个文件），当前 163 条通过。协程专项测试在 `tests/suites/gameplay_coroutine.lua`（2 条）。依赖规则在 `tests/internal/dep_rules.lua`（2 条规则）。
+术语说明：本文中的“Port”是 Lua table 形式的函数集合，用于把 gameplay loop 与 presentation 细节解耦；“fallback/no-op”是指某个端口未提供实现时使用空函数或默认返回，保证流程不崩溃；“state bag”是 `GameStartup.build_state()` 创建的大型状态表，当前包含 UI、动画、回合、棋盘、计时器、锁等多类字段。
 
 ## 工作计划
 
-里程碑 A 的目标是让协程路径达到"可信赖"级别，方法是补足测试覆盖。当前只有 2 个测试验证协程路径，需要扩展到覆盖所有 4 种等待态（`wait_choice`、`wait_action_anim`、`wait_move_anim`、`detained_wait`）、完整回合串联、以及新旧路径行为一致性。所有新测试写入 `tests/suites/gameplay_coroutine.lua`。同时在 `tests/internal/dep_rules.lua` 新增规则：`src/presentation/canvas_runtime` 不得引用 `intent_builders`。完成后全量回归必须通过。
 
-里程碑 B 的目标是把协程路径设为默认。修改 `Config/RuntimeConstants.lua` 中 `experimental_coroutine_turn` 的默认值为 `true`。然后逐个迁移测试中直接替换 `game.turn_flow` 的写法（`tests/suites/presentation_ui.lua` 的 2 处、`tests/suites/gameplay.lua` 的 2 处），改为通过 `TurnEngine` 接口或传入协程配置。`Game._resolve_turn_runtime()` 的兼容分支暂保留，但旧 `TurnFlow` 不再是默认。全量回归通过后提交。
+里程碑 M0 的范围是“先证明现状，再改代码”。这一阶段不做功能改动，只固定基线和证据：记录回归通过数、关键文件引用关系、将要删除文件的消费者清单。完成后得到一份可复核的“改造前快照”，防止后续争议。
 
-里程碑 C 的目标是消除 `resume_state/resume_args` 在 phase 文件中的传播。具体做法是改造 `TurnStart.lua`、`TurnRoll.lua`、`TurnMove.lua`、`TurnLand.lua` 中的 phase 函数，使其在协程路径下不再返回 `(wait_state, {resume_state, resume_args})`，而是由协程栈帧自然保存上下文。`ItemPhase.lua` 和 `EffectPipeline.lua` 中的 resume 逻辑同步改造。`Await.lua` 中的 `_resume()` 兼容函数在全部 phase 改造完成后移除。这一步改动影响面最大（8 个生产文件、~60 个引用点），需要逐文件改造并频繁跑回归。
+里程碑 M1 的范围是“删除无消费者文件 + 迁移测试对 adapter 的依赖”。先在 `tests/suites/presentation_ui.lua` 把 `GameplayLoopPortsAdapter.build(state)` 替换为直接构建 grouped ports（与生产代码一致），然后删除 `src/presentation/api/GameplayLoopPortsAdapter.lua`。`src/presentation/canvas_runtime/CanvasCoordinator.lua` 因无消费者可直接删除。完成后，文件数减少且行为不变。
 
-里程碑 S（稳定性）的目标是清零历史失败用例并恢复回归门禁可信度。具体做法是将受影响的核心逻辑测试（chance/land/item/movement）与 UI 快速测试档位解耦，显式使用 `Config.Maps.DefaultMap` 构造 game；同时给 `tests/TestSupport.lua` 增加 `new_game(opts)` 入参，避免后续再出现“全局 profile 变更导致核心测试漂移”的问题。
+里程碑 M2 的范围是"内联单消费者薄封装"。先迁移 `tests/suites/presentation_ui.lua:21` 对 `UIEventRouter` 的 require（改为直接 require `CanvasEventRouter`），再把 `UIEventRouter` 内联到 `UIBootstrap`；把 `TurnActionPort.resolve` 内联到 `UIIntentDispatcher`；把 `CompatBridge` 内联到 `TurnEngine`；把 `Signals` 常量与判定函数内联到 `Scheduler/ActionRouter`。完成后要求：删除对应文件，且调用方无行为变化。
 
-里程碑 T（测试重构）的目标是整理当前所有测试并对齐当前代码重构方案。具体做法是：第一，按能力域重组测试入口（`core`、`runtime_coroutine`、`presentation`、`integration`），将“遗留命名/历史模块命名”逐步替换为“行为语义命名”；第二，为每个 suite 显式声明运行时档位（default map / quick map / coroutine flag / legacy fallback）并统一通过 `TestSupport.new_game(opts)` 构造；第三，补充测试模板与约束文档，要求新增测试必须声明依赖的 map/profile/runtime，不得隐式依赖 `GameplayRules.test_profile` 全局值。
+里程碑 M2b 的范围是"合并 Agent + AgentTargeting 紧耦合文件"。将 `AgentTargeting.lua`（193 行真实业务逻辑：落点模拟、优先级排序、道具策略）的内容搬入 `Agent.lua`，消除 Agent 中 4 个纯转发函数（L11-24），同时更新 `RuntimeInstall.lua` 的 preload 引用。合并后产出 ~300 行文件，风险高于 M2 其他操作，因此独立执行和回滚。完成后要求：`AgentTargeting.lua` 删除，Agent 对外行为不变，全量回归通过。
 
-里程碑 D 的目标是退役 `shared/UINodes.lua` 和 `interaction/intent_builders/` 目录。逐文件迁移 14 个引用 `UINodes` 的生产文件，改为直接引用对应 `canvas/*/nodes.lua` 或 `canvas/*/contract.lua` 导出的节点。迁移 `tests/suites/presentation_ui.lua:2414` 对 `ItemSlotIntents` 的引用到 `canvas/base/item_slot_intents.lua`。全部迁移后删除 `shared/UINodes.lua` 和 `interaction/intent_builders/` 目录，更新 dep_rules。
+里程碑 M3 的范围是"塌缩 `GameStateOps`"。`Game.lua` 改为直接 mixin `GameStatePlayers`、`GameStateTiles`、`GameStateTurn`；`GameStateOps.lua` 删除前，先处理其非纯转发方法的归属：`rebuild()`（L153-166，重建 `game.occupants` 表的循环逻辑）内联到 `Game.lua`；`_mark_players`/`_mark_board` dirty 标记函数（L7-15）搬入 `Game.lua`，对应的 `mark_players_dirty`/`mark_board_dirty` 公开方法一并迁移。确保 `CompositionRoot` 仍可调用 `game:rebuild()`。完成后要求：`GameStateOps` 不再被引用，公开方法签名保持兼容。
 
-里程碑 E 的目标是退役旧 `TurnFlow` 主路径。`TurnEngine.lua` 移除 legacy 模式分支和 `get_legacy_flow()` 方法。`Game._resolve_turn_runtime()` 简化为只返回 `turn_engine`，移除 `turn_flow` 兼容检测。`CompositionRoot.lua` 不再创建 `game.turn_flow`。如果 `TurnFlow.lua` 和 `Flow.lua` 无其他使用者，直接删除；否则降级为独立工具模块。更新文档。
+里程碑 M4 的范围是"Port 基础设施收敛"。将 `src/presentation/api/ports/*.lua` 的 concrete 构建逻辑聚合到一个 `src/presentation/api/PresentationPorts.lua`，并在 `src/game/flow/turn/GameplayLoopPorts.lua` 内保留接口声明和 fallback 规则。注意：`clock` port 的多级 fallback（`GameAPI.get_timestamp` → `os.clock` → 0）含平台检测逻辑，必须保留在声明侧 `GameplayLoopPorts.lua`，不可移到 `PresentationPorts.lua`。`GameplayLoopPortTypes.lua` 与中间 resolve 层并入后删除。完成后要求：`GameplayLoop` 仍只依赖 grouped ports，fallback 行为有测试覆盖。
+
+里程碑 M5a 的范围是"state bag 拆分"。在 `GameStartup.build_state()` 建立 `state.ui/state.anim/state.turn/state.board/state.timers/state.locks` 子对象并保留旧字段别名，再分批迁移 `GameplayLoop`、tick/timeout、UI 同步代码。每一批迁移后先保留别名并回归，再进入下一批。
+
+里程碑 M5b 的范围是"逻辑去重 + 循环 require 清理"。把 `IntentDispatcher` 的 choice 路由推断委托给 `UIChoiceRoutePolicy`（消除两侧重复 if-chain）；提取 `AutoContext` 构建函数统一 `GameplayLoop` 中 `_build_auto_context()` 与 `_build_tick_auto_context()` 两段近似逻辑；把 `UIViewService` 对 `UIRuntimePort` 的延迟 `require` 改为显式依赖注入或顶层依赖，拆除依赖环触发点。M5a 与 M5b 无前置依赖，可独立推进和回滚。
 
 ## 具体步骤
 
-所有命令均在工作目录 `c:\Users\Lzx_8\Desktop\dev\monopoly` 执行。
 
-里程碑 A 的步骤如下。
+所有命令在仓库根目录执行：`C:\Users\Lzx_8\Desktop\dev\monopoly`。
 
-第一步，锁定当前基线。执行：
-
-    lua tests/regression.lua
-
-预期输出：
-
-    All regression checks passed (163)
-
-第二步，在 `tests/suites/gameplay_coroutine.lua` 中新增以下测试（保留现有 2 个不变）：
-
-- `coroutine_mode_resolves_wait_move_anim`：构造进入 `wait_move_anim` 的 phase，在协程模式下 dispatch `move_anim_done` action（含正确 seq），断言状态前进。再 dispatch 错误 seq，断言保持等待。
-- `coroutine_mode_resolves_wait_action_anim`：构造进入 `wait_action_anim` 的 phase，在协程模式下 dispatch `action_anim_done`，断言 seq 校验和状态前进。
-- `coroutine_mode_resolves_detained_wait`：构造 `detained_wait` 状态，dispatch 解除 action，断言状态前进。
-- `coroutine_mode_full_turn_lifecycle`：构造完整回合 phase 链（start -> roll -> move -> land -> end_turn），在协程模式下驱动至完成，断言最终 phase 为 nil 或 done。
-- `coroutine_and_legacy_produce_same_result`：同一局面分别用 `experimental_coroutine_turn=false` 和 `true` 驱动一个完整回合，断言最终游戏状态（玩家位置、余额、pending_choice）一致。
-
-第三步，在 `tests/internal/dep_rules.lua` 新增规则：
-
-    {
-      root = "src/presentation/canvas_runtime",
-      forbidden = { "intent_builders" },
-      description = "canvas_runtime must not depend on legacy intent_builders",
-    }
-
-第四步，执行回归验证：
+先执行 M0。运行回归并记录基线，然后运行引用检查命令，输出保存到“产物与备注”。
 
     lua tests/regression.lua
+    rg -n "require\\(\"src\\.presentation\\.api\\.GameplayLoopPortsAdapter\"\\)" tests/suites/presentation_ui.lua
+    rg -n "require\\(\"src\\.presentation\\.canvas_runtime\\.CanvasCoordinator\"\\)" src tests
 
-预期输出包含新增测试全部通过且总数增长。
+再执行 M1。先改测试，再删文件，再跑全量回归；若回归通过，提交一个独立变更。测试中 grouped ports 的构建方式必须与生产逻辑一致，不要新造临时协议。
 
-里程碑 B 的步骤如下。
+    lua tests/regression.lua
+    rg -n "GameplayLoopPortsAdapter|CanvasCoordinator" src tests
 
-第一步，修改 `Config/RuntimeConstants.lua` 第 38 行，将 `experimental_coroutine_turn = false` 改为 `experimental_coroutine_turn = true`。
+再执行 M2。先迁移 `tests/suites/presentation_ui.lua:21` 对 `UIEventRouter` 的 require（改为直接 require `CanvasEventRouter`），再按“UI -> runtime”顺序内联并逐步删除封装文件，每删除一个文件都运行一次回归，避免累积故障。`TurnActionPort` 内联时保留“默认 reject + should_block_action=false”的原语义。
 
-第二步，逐个修复因默认路径改变而失败的测试。主要涉及 `tests/suites/presentation_ui.lua` 中直接 `g.turn_flow = turn_flow:new(g, phases)` 的两处和 `tests/suites/gameplay.lua` 中直接访问 `g.turn_flow.phases` 和 `g.turn_flow:next_player()` 的两处。改为通过 `g.turn_engine` 或 `g:advance_turn()`/`g:dispatch_action()` 接口操作。
+    lua tests/regression.lua
+    rg -n "UIEventRouter|TurnActionPort|CompatBridge|Signals" src tests
 
-第三步，全量回归通过后提交。
+再执行 M2b。将 `AgentTargeting.lua` 全部内容搬入 `Agent.lua`，消除 4 个纯转发函数，更新 `RuntimeInstall.lua` preload。此步产出 ~300 行合并文件，独立回归验证。
 
-后续里程碑 T/D/E 的步骤将在前置里程碑完成后细化。
+    lua tests/regression.lua
+    rg -n "AgentTargeting" src tests
 
-里程碑 T 的步骤如下。
+再执行 M3。先改 `Game.lua` mixin 与缺失方法归属，再删除 `GameStateOps.lua`，然后验证 `CompositionRoot` 初始化路径。这里必须额外检查 `game:rebuild()` 在建局时仍执行一次。
 
-第一步，建立测试清单并按能力域标注。对 `tests/suites/*.lua` 逐文件标记域、依赖 map/profile、依赖 runtime（coroutine/legacy）、是否 UI 相关，产出清单写入 `plan.md` 的“产物与备注”。
+    lua tests/regression.lua
+    rg -n "GameStateOps" src tests
 
-第二步，重构聚合入口。将 `tests/regression.lua` 的 suites 装配改为按能力域聚合（core/runtime/presentation/integration），保留兼容别名 1 个版本周期，避免一次性改动影响定位。
+再执行 M4。先引入 `PresentationPorts.build()` 并切换调用点，再把旧 `ports/*.lua` 与 `GameplayLoopPortTypes.lua` 收敛删除。若某 fallback 行为变更，先补测试再继续删除。
 
-第三步，统一夹具入口。所有 suite 改为只通过 `TestSupport.new_game(opts)` 创建 game，禁止各 suite 直接拼装 map/profile；对现有特殊档位（`ui_quick_*`）改为显式 opts。
+    lua tests/regression.lua
+    rg -n "src\\.presentation\\.api\\.ports\\.|GameplayLoopPortTypes" src tests
 
-第四步，命名与断言规范化。把 `suite_x.case_y` 不可读命名替换为稳定语义名，断言失败信息统一包含“能力域 + 场景 + 期望/实际”，并为 flaky 场景加 deterministic 种子说明。
+再执行 M5a。state bag 拆分必须分批推进：每一批迁移后先保留别名并回归，再进入下一批。
 
-第五步，门禁分层。新增最小执行矩阵：`core` 每次必跑，`runtime+presentation` PR 必跑，`integration` 夜间跑；输出命令别名并在 README/计划中记录。
+    lua tests/regression.lua
+    rg -n "pending_choice_elapsed|ui_modal_elapsed|wait_move_anim|wait_action_anim|move_anim_seq|action_anim_seq" src tests
+
+最后执行 M5b。choice 路由与 auto context 去重、循环 require 清理。M5b 与 M5a 无前置依赖，可独立推进。
+
+    lua tests/regression.lua
+    rg -n "_resolve_choice_route|_build_tick_auto_context|_build_auto_context" src
+    rg -n "require.*UIRuntimePort" src/presentation/api/UIViewService.lua
 
 ## 验证与验收
 
-里程碑 A 的验收：运行 `lua tests/regression.lua`，总测试数从 163 增加到至少 168（新增 5 个协程路径测试），全部通过。新增测试在 `experimental_coroutine_turn = false` 时不执行或跳过，在测试内部设为 `true` 时执行并通过。
 
-里程碑 B 的验收：运行 `lua tests/regression.lua`，全量通过且默认走协程路径。可通过在测试前临时设 `experimental_coroutine_turn = false` 验证旧路径仍可用。
+M0 验收标准：回归命令输出 `All regression checks passed (182)`，并能复现 adapter/CanvasCoordinator 的引用结论。
 
-里程碑 C 的验收：在 `src/game/flow/turn/` 和 `src/game/systems/` 下搜索 `resume_state` 和 `resume_args`，命中数为 0（`Await.lua` 中的 `_resume` 函数也已移除）。全量回归通过。
+M1 验收标准：`GameplayLoopPortsAdapter` 与 `canvas_runtime/CanvasCoordinator` 文件已删除；`rg` 在 `src` 与 `tests` 下无残留 require；全量回归通过。
 
-里程碑 T 的验收：`tests/suites` 全文件完成能力域标注；`tests/regression.lua` 已按能力域聚合；新增测试模板生效且 `new_game(opts)` 成为唯一建局入口；回归输出不再出现 `suite_x.case_y` 匿名失败；全量回归通过。
+M2 验收标准：`UIEventRouter`、`TurnActionPort`、`CompatBridge`、`Signals` 文件删除；`tests/suites/presentation_ui.lua` 中 UIEventRouter 引用已迁移；调用方改为直接依赖目标模块；全量回归通过。
 
-里程碑 D 的验收：搜索 `shared.UINodes` 和 `shared/UINodes`，在 `src/` 下命中数为 0。`intent_builders/` 目录不存在。全量回归通过。
+M2b 验收标准：`AgentTargeting.lua` 删除且无引用；`Agent.lua` 包含全部 targeting 逻辑（~300 行）；`RuntimeInstall.lua` preload 已更新；全量回归通过。
 
-里程碑 E 的验收：`TurnFlow.lua` 和 `Flow.lua` 不被 `src/game/core/runtime/` 下任何文件引用。`Game._resolve_turn_runtime()` 中不存在 `turn_flow` 兼容分支。全量回归通过。
+M3 验收标准：`GameStateOps.lua` 删除且无引用；`CompositionRoot` 初始化后 `game:rebuild()` 仍有效；全量回归通过。
+
+M4 验收标准：Port 结构收敛为 `GameplayLoopPorts.lua + PresentationPorts.lua` 两个核心文件；旧 `ports/*.lua` 与 `GameplayLoopPortTypes.lua` 删除；fallback/no-op 行为有测试证明；全量回归通过。
+
+M5a 验收标准：state 子对象成为主读写入口，旧字段仅剩短期兼容别名或已清理；全量回归通过。
+
+M5b 验收标准：choice route 与 auto context 重复逻辑合并为单一入口；`UIViewService` 不再在函数体内延迟 require `UIRuntimePort`；全量回归通过。
 
 ## 可重复性与恢复
 
-每个里程碑可独立提交，且提交后可重复跑 `lua tests/regression.lua`。若里程碑 B 切流后回归失败，优先将 `experimental_coroutine_turn` 改回 `false` 回退到旧路径，确认回归恢复后再排查。里程碑 C 的 phase 改造逐文件进行，每改一个跑一次回归，失败则 revert 该文件改动。里程碑 D/E 是删除操作，如有失败用 `git checkout` 恢复被删文件。
+
+每个里程碑单独提交，且都以“回归全绿”作为提交门槛。若某里程碑失败，优先回滚该里程碑涉及文件，不跨里程碑混合修复。涉及删除文件时，先确认 `rg` 无引用再删除；若误删，使用版本控制恢复并重新执行该里程碑。
+
+state bag 迁移期间保留别名层，保证步骤可重复。若发现行为回归，先恢复别名写回路径，再定位具体消费者，不做“静默兜底”。
 
 ## 产物与备注
 
-    [前置] 回归结果：All regression checks passed (163)
-    [前置] 行为验证：协程骨架可用，旧路径为默认，CanvasRegistry 已切到 canvas intents。
-    [前置] 文件：src/game/runtime_coroutine/*, src/presentation/canvas_runtime/*, Config/RuntimeConstants.lua
 
-后续里程碑的产物将在完成后补充到此处。
+以下是已获取的当前基线证据（实施前）：
+
+    [baseline] lua tests/regression.lua
+    All regression checks passed (182)
+    dep_rules ok
+    tick ok
+
+    [evidence] tests/suites/presentation_ui.lua
+    require("src.presentation.api.GameplayLoopPortsAdapter") at lines 1742,1770,1949,3256,3378
+
+    [evidence] UIEventRouter consumers
+    src/app/bootstrap/UIBootstrap.lua:3
+    tests/suites/presentation_ui.lua:21
+
+    [evidence] canvas_runtime/CanvasCoordinator
+    require count = 0
+
+后续每个里程碑完成后，在本节追加最小证据：一段回归结果 + 一段关键 `rg` 命中变化。
 
 ## 接口与依赖
 
-本计划不引入新的外部依赖。协程内核只用 Lua 标准 `coroutine` 库。
 
-里程碑 A 新增测试依赖现有 `tests/TestSupport.lua` 提供的 `support.make_game()` 和 `support.turn_flow` 工具函数。如果需要创建协程模式的 game 实例，通过 `support.make_game({experimental_coroutine_turn = true})` 或在测试中直接构造 `TurnEngine`（参考现有 `gameplay_coroutine.lua` 第 20-30 行的模式）。
+本计划不引入外部第三方依赖，只在现有 Lua 模块内重组接口。
 
-里程碑 C 改造后，`Await.lua` 的接口将简化：`choice(session, spec)` 不再需要 `args` 参数中的 `resume_state/resume_args`，返回值直接是 choice 结果而非 `{next_state, next_args}`。具体签名在里程碑 B 完成后确定。
+M4 完成时，`src/presentation/api/PresentationPorts.lua` 需要提供稳定接口（注意：`clock` 不在此处，其多级 fallback 含平台检测逻辑，保留在声明侧 `GameplayLoopPorts.lua`）：
 
-里程碑 D 迁移后，节点引用统一从 `src/presentation/canvas/<key>/nodes.lua` 导出。每个 canvas 模块的 `nodes.lua` 应导出该画布所需的全部节点常量。
+    local presentation_ports = {}
+    function presentation_ports.build(state)
+      return {
+        modal = {...},
+        anim = {...},
+        ui_sync = {...},
+        debug = {...},
+        state = {...},
+      }
+    end
+    return presentation_ports
+
+M5b 完成时，建议新增（或等价内联）统一 auto context 接口，供 `GameplayLoop.step_auto_runner` 与 tick 逻辑共用：
+
+    local auto_context = {}
+    function auto_context.build(game, context) ... end
+    function auto_context.build_tick(game) ... end
+    return auto_context
+
+`UIIntentDispatcher` 内联 `TurnActionPort` 后，必须保持以下行为契约不变：缺失端口时 `dispatch_action` 返回 `{ status = "rejected" }`，`should_block_action` 返回 `false`。
 
 ## 本次修订记录
 
-本次修订基于第二轮深度代码审计，重新评估了前一轮计划中标记为"完成"的里程碑 0-5 的实际落地状态。发现系统处于"混合态"而非"切流完成"，因此制定了新的里程碑 A-E，聚焦于测试补全、默认切流、遗留清理和旧路径退役。前一轮计划的决策和骨架代码全部保留并继续使用。这样做的原因是：前一轮建立了正确的架构骨架，本轮的目标是把骨架变为可信赖的生产路径。
+
+- 修订 1：将旧的"协程切流"历史计划整体替换为"架构收敛（薄封装与 Port 减重）"新计划，原因是当前需求已转为落实 `.agents/research.md` 的收敛方案。新版本补齐了可执行顺序、验收口径、回滚策略，并修正了 `GameplayLoopPortsAdapter` 仍被测试依赖这一事实。
+  日期/作者：2026-02-28 / Copilot GPT-5.3-Codex。
+
+- 修订 2（审查修正）：基于代码验证，修正以下 7 项问题：
+  1. 回归基线从 181 更正为 182（实测结果）。
+  2. `GameplayLoopPortsAdapter` 测试引用从 4 处更正为 5 处（补充 line 3378）。
+  3. `UIEventRouter` 消费者从"仅 UIBootstrap"更正为"UIBootstrap + tests/suites/presentation_ui.lua:21"，M2 增加测试迁移步骤。
+  4. `AgentTargeting`（193 行真实逻辑）从 M2"薄封装内联"中独立为 M2b"紧耦合文件合并"，降低风险耦合。
+  5. M3 中 `GameStateOps` 非纯转发方法（`rebuild`/`_mark_*`）的归属方案明确写入：均内联到 `Game.lua`。
+  6. 原 M5 拆分为 M5a（state bag 拆分）和 M5b（逻辑去重 + 循环 require 清理），两者无前置依赖可独立回滚。
+  7. M4 标注 `clock` port 多级 fallback 必须保留在声明侧 `GameplayLoopPorts.lua`，接口示例中移除 clock。
+  日期/作者：2026-02-28 / Copilot Claude-Opus-4.6。

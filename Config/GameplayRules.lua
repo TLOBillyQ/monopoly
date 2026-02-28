@@ -13,7 +13,7 @@ local gameplay_rules = {
   -- 临时测试开关：开启后将非1号玩家视作AI，便于后续整体清理。
   test_force_non_p1_ai = true,
   -- 编辑器快速测试档位：default/ui_quick_all/ui_quick_choice/ui_quick_bankruptcy
-  test_profile = "ui_quick_all",
+  test_profile = "default",
 
   turn_limit = 1000,
 
