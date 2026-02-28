@@ -43,44 +43,42 @@ end
 
 function M.sync_layer_status(cache, player, status_key)
   local player_id = player.id
-  local layer = cache.layers_by_player_id[player_id]
-  local nodes = cache.nodes_by_player_id[player_id]
-  if not layer or not nodes then
+  local player_layers = cache.layers[player_id]
+  if not player_layers then
     return
   end
   if cache.last_status_key_by_player[player_id] == status_key then
-    local stay_turns = player.status and player.status.stay_turns or 0
-    local node_pair = status_key and nodes[status_key] or nil
-    local should_update = status_key == "hospital" or status_key == "mountain" or status_key == "roadblock"
-    if should_update and stay_turns > 0 and node_pair and node_pair.text and GameAPI and GameAPI.get_role then
-      local role = GameAPI.get_role(player_id)
-      if role and role.set_label_text then
-        local text = "当前回合无法行动\n剩余停留回合数：" .. tostring(stay_turns)
-        pcall(role.set_label_text, node_pair.text, text)
+    if specs.text_statuses[status_key] then
+      local stay_turns = player.status and player.status.stay_turns or 0
+      local text_node = cache.text_nodes[player_id] and cache.text_nodes[player_id][status_key]
+      if stay_turns > 0 and text_node and GameAPI and GameAPI.get_role then
+        local role = GameAPI.get_role(player_id)
+        if role and role.set_label_text then
+          local text = "当前回合无法行动\n剩余停留回合数：" .. tostring(stay_turns)
+          pcall(role.set_label_text, text_node, text)
+        end
       end
     end
     return
   end
   local roles = scene.resolve_observer_roles()
   for _, key in ipairs(specs.status_priority) do
-    local node_pair = nodes[key]
-    if node_pair then
-      local visible = status_key == key
-      scene.set_node_visible_for_roles(node_pair.bg, roles, visible)
-      scene.set_node_visible_for_roles(node_pair.text, roles, visible)
+    local layer = player_layers[key]
+    if layer then
+      scene.set_layer_visible_for_roles(layer, roles, status_key == key)
     end
   end
-  local stay_turns = player.status and player.status.stay_turns or 0
-  local node_pair = status_key and nodes[status_key] or nil
-  local should_update = status_key == "hospital" or status_key == "mountain" or status_key == "roadblock"
-  if should_update and stay_turns > 0 and node_pair and node_pair.text and GameAPI and GameAPI.get_role then
-    local role = GameAPI.get_role(player_id)
-    if role and role.set_label_text then
-      local text = "当前回合无法行动\n剩余停留回合数：" .. tostring(stay_turns)
-      pcall(role.set_label_text, node_pair.text, text)
+  if specs.text_statuses[status_key] then
+    local stay_turns = player.status and player.status.stay_turns or 0
+    local text_node = cache.text_nodes[player_id] and cache.text_nodes[player_id][status_key]
+    if stay_turns > 0 and text_node and GameAPI and GameAPI.get_role then
+      local role = GameAPI.get_role(player_id)
+      if role and role.set_label_text then
+        local text = "当前回合无法行动\n剩余停留回合数：" .. tostring(stay_turns)
+        pcall(role.set_label_text, text_node, text)
+      end
     end
   end
-  scene.set_layer_visible_for_roles(layer, roles, status_key ~= nil)
   cache.last_status_key_by_player[player_id] = status_key
 end
 

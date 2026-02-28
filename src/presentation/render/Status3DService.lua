@@ -10,9 +10,11 @@ function M.reset(state)
   end
   local cache = state.ui_status_3d
   if GameAPI and GameAPI.destroy_scene_ui then
-    for _, layer in pairs(cache.layers_by_player_id or {}) do
-      if layer ~= nil then
-        pcall(GameAPI.destroy_scene_ui, layer)
+    for _, player_layers in pairs(cache.layers or {}) do
+      for _, layer in pairs(player_layers) do
+        if layer ~= nil then
+          pcall(GameAPI.destroy_scene_ui, layer)
+        end
       end
     end
   end
@@ -27,7 +29,7 @@ function M.sync(game, state, dirty)
   if cache.disabled then
     return
   end
-  if not (GameAPI and GameAPI.get_role and GameAPI.get_eui_node_at_scene_ui and GameAPI.set_scene_ui_visible) then
+  if not (GameAPI and GameAPI.get_role and GameAPI.set_scene_ui_visible) then
     meta.warn_once(cache, "missing_gameapi", "status3d disabled: missing scene ui GameAPI methods")
     cache.disabled = true
     return
@@ -46,7 +48,7 @@ function M.sync(game, state, dirty)
   local has_dirty = dirty and (dirty.players or dirty.turn or dirty.any)
   local has_missing_layer = false
   for _, player in ipairs(game.players or {}) do
-    if cache.layers_by_player_id[player.id] == nil then
+    if cache.layers[player.id] == nil then
       has_missing_layer = true
       break
     end
@@ -55,10 +57,10 @@ function M.sync(game, state, dirty)
     return
   end
   for _, player in ipairs(game.players or {}) do
-    scene.ensure_layer_for_player(cache, player)
+    scene.ensure_layers_for_player(cache, player)
   end
   for _, player in ipairs(game.players or {}) do
-    if cache.layers_by_player_id[player.id] ~= nil then
+    if cache.layers[player.id] ~= nil then
       status.sync_layer_status(cache, player, status.resolve_player_status_key(game, player))
     end
   end

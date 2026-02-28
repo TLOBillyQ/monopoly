@@ -2836,7 +2836,6 @@ local function _build_status3d_test_env()
   local created_layers = {}
   local destroyed_layers = {}
   local layer_visibility = {}
-  local node_visibility = {}
 
   local function _set_layer_visible(layer, observer_id, visible)
     if not layer_visibility[layer] then
@@ -2845,52 +2844,38 @@ local function _build_status3d_test_env()
     layer_visibility[layer][observer_id] = visible == true
   end
 
-  local function _set_node_visible(observer_id, node, visible)
-    if not node_visibility[observer_id] then
-      node_visibility[observer_id] = {}
-    end
-    node_visibility[observer_id][node] = visible == true
-  end
-
   local observers = {
-    {
-      id = 1,
-      set_node_visible = function(node, visible)
-        _set_node_visible(1, node, visible)
-      end,
-    },
-    {
-      id = 2,
-      set_node_visible = function(node, visible)
-        _set_node_visible(2, node, visible)
-      end,
-    },
+    { id = 1 },
+    { id = 2 },
   }
 
+  local layer_counter = { [1] = 0, [2] = 0 }
   local roles = {
     [1] = {
       get_ctrl_unit = function()
         return {
-          create_scene_ui_bind_unit = function(_, _, _, _, _, _)
-            local layer = "layer_1"
+          create_scene_ui_bind_unit = function(layout_id, _, _, _, _, _)
+            layer_counter[1] = layer_counter[1] + 1
+            local layer = "layer_1_" .. tostring(layout_id)
             created_layers[#created_layers + 1] = layer
             return layer
           end,
         }
       end,
-      set_node_visible = observers[1].set_node_visible,
+      set_label_text = function() end,
     },
     [2] = {
       get_ctrl_unit = function()
         return {
-          create_scene_ui_bind_unit = function(_, _, _, _, _, _)
-            local layer = "layer_2"
+          create_scene_ui_bind_unit = function(layout_id, _, _, _, _, _)
+            layer_counter[2] = layer_counter[2] + 1
+            local layer = "layer_2_" .. tostring(layout_id)
             created_layers[#created_layers + 1] = layer
             return layer
           end,
         }
       end,
-      set_node_visible = observers[2].set_node_visible,
+      set_label_text = function() end,
     },
   }
 
@@ -2904,9 +2889,6 @@ local function _build_status3d_test_env()
     set_scene_ui_visible = function(layer, observer_role, visible)
       _set_layer_visible(layer, observer_role.id, visible)
     end,
-    get_eui_node_at_scene_ui = function(layer, node_id)
-      return tostring(layer) .. ":" .. tostring(node_id)
-    end,
     destroy_scene_ui = function(layer)
       destroyed_layers[#destroyed_layers + 1] = layer
     end,
@@ -2917,7 +2899,6 @@ local function _build_status3d_test_env()
     created_layers = created_layers,
     destroyed_layers = destroyed_layers,
     layer_visibility = layer_visibility,
-    node_visibility = node_visibility,
   }
 end
 
@@ -2964,7 +2945,7 @@ local function _test_status3d_init_and_global_visibility()
     ui_status_3d_layer.sync(game, state, { any = true, players = true })
   end)
 
-  _assert_eq(#env.created_layers, 2, "status3d should create one layer per player")
+  _assert_eq(#env.created_layers, 12, "status3d should create 6 layers per player (2 players)")
   for _, layer in ipairs(env.created_layers) do
     _assert_eq(env.layer_visibility[layer][1], false, "observer1 should see hidden layer when player has no status")
     _assert_eq(env.layer_visibility[layer][2], false, "observer2 should see hidden layer when player has no status")
@@ -2981,6 +2962,9 @@ local function _test_status3d_priority_single_status()
       deity = { type = "poor", remaining = 5 },
     },
   })
+  local prefab = require("Data.Prefab")
+  local hospital_layout = prefab.scene_eui["医院状态"]
+  local poor_layout = prefab.scene_eui["穷神状态"]
   _with_patches({
     { key = "GameAPI", value = env.game_api },
     { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
@@ -2988,12 +2972,10 @@ local function _test_status3d_priority_single_status()
     ui_status_3d_layer.sync(game, state, { any = true, players = true })
   end)
 
-  local node_set = state.ui_status_3d.nodes_by_player_id[1]
-  local hospital_bg = node_set.hospital.bg
-  local poor_bg = node_set.poor.bg
-  _assert_eq(env.node_visibility[1][hospital_bg], true, "hospital should win over poor deity")
-  _assert_eq(env.node_visibility[1][poor_bg], false, "poor deity node should be hidden when hospital active")
-  _assert_eq(env.layer_visibility["layer_1"][1], true, "layer should be visible when status exists")
+  local hospital_layer = "layer_1_" .. tostring(hospital_layout)
+  local poor_layer = "layer_1_" .. tostring(poor_layout)
+  _assert_eq(env.layer_visibility[hospital_layer][1], true, "hospital layer should be visible (priority over poor)")
+  _assert_eq(env.layer_visibility[poor_layer][1], false, "poor layer should be hidden when hospital active")
 end
 
 local function _test_status3d_roadblock_only_current_turn()
@@ -3005,22 +2987,22 @@ local function _test_status3d_roadblock_only_current_turn()
       move_result = { stopped_on_roadblock = true },
     },
   })
+  local prefab = require("Data.Prefab")
+  local roadblock_layout = prefab.scene_eui["路障状态"]
   _with_patches({
     { key = "GameAPI", value = env.game_api },
     { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
   }, function()
     ui_status_3d_layer.sync(game, state, { any = true, turn = true })
-    local roadblock_bg = state.ui_status_3d.nodes_by_player_id[1].roadblock.bg
-    _assert_eq(env.node_visibility[1][roadblock_bg], true, "roadblock should show at trigger turn")
-    _assert_eq(env.layer_visibility["layer_1"][1], true, "roadblock turn should show layer")
+    local roadblock_layer = "layer_1_" .. tostring(roadblock_layout)
+    _assert_eq(env.layer_visibility[roadblock_layer][1], true, "roadblock should show at trigger turn")
 
     game.last_turn = {
       player_id = 2,
       move_result = { stopped_on_roadblock = true },
     }
     ui_status_3d_layer.sync(game, state, { any = true, turn = true })
-    _assert_eq(env.node_visibility[1][roadblock_bg], false, "roadblock should hide after trigger turn")
-    _assert_eq(env.layer_visibility["layer_1"][1], false, "no status after trigger turn should hide layer")
+    _assert_eq(env.layer_visibility[roadblock_layer][1], false, "roadblock should hide after trigger turn")
   end)
 end
 
@@ -3036,7 +3018,7 @@ local function _test_status3d_reset_destroy_layers()
     ui_status_3d_layer.reset(state)
   end)
 
-  _assert_eq(#env.destroyed_layers, 2, "reset should destroy all created layers")
+  _assert_eq(#env.destroyed_layers, 12, "reset should destroy all created layers (6 per player × 2)")
   assert(state.ui_status_3d == nil, "reset should clear state cache")
 end
 
