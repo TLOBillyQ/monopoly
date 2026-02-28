@@ -1,302 +1,233 @@
 # Monopoly 项目重写研究：Canvas-First UI + 协程化逻辑层
 
-更新时间：2026-02-28  
-范围：`src/presentation/**`、`src/game/**`、`src/app/bootstrap/**`
+更新时间：2026-02-28（第二轮深度审计）
+范围：`src/presentation/**`、`src/game/**`、`src/app/bootstrap/**`、`tests/**`
 
 ---
 
 ## 1. 结论摘要
 
-1. 项目已经完成了第一阶段的 Canvas-First 迁移，但仍是“结构先行、运行时未完全收敛”状态。
-2. UI 层核心问题不是“有没有 canvas 目录”，而是“状态与事件仍在多处并行维护”，导致选择屏、弹窗、输入锁、倒计时存在跨模块时序耦合。
-3. 逻辑层当前是显式状态机（`wait_choice`/`wait_move_anim`/`wait_action_anim` + `resume_state/resume_args`）实现，功能可用但复杂度高、错误面大。
-4. 若目标是长期稳定扩展，推荐进行“协程化回合脚本内核”重写：把等待点从“字符串状态跳转”改为“`yield/await` 语义”。
-5. 推荐策略：先建协程运行时骨架并保持外部接口不变，再按阶段切流，避免一次性推翻。
+1. 协程运行时骨架（`src/game/runtime_coroutine/`）已落地，7 个模块均为可运行实现，非空壳。`TurnEngine` 通过 `experimental_coroutine_turn` 开关在新旧路径间切换，当前默认 `false`（走旧 `TurnFlow`）。
+2. Canvas 运行时层（`src/presentation/canvas_runtime/`）已完成结构迁移：`CanvasRegistry` 已不再依赖 `interaction/intent_builders/*`，改为引用 `canvas/*/intents.lua`。`CanvasStore`、`CanvasRenderPipeline` 均已实现。
+3. 但"骨架落地"不等于"切流完成"。系统仍处于"混合态"——旧 `TurnFlow` 仍是实际主路径，`Await` 模块被旧路径以"函数调用+轮询"方式使用而非协程 `yield`，`resume_state/resume_args` 仍在 8 个生产文件中传播，`shared/UINodes` 仍被 14 个生产文件引用。
+4. 协程路径测试覆盖极低：仅 2 个测试，只覆盖 `wait_choice` 的基本解决，未覆盖动画等待、detained、seconds、多阶段串联、错误恢复。
+5. 下一步的核心问题是：**在默认开启协程路径之前，必须先补足测试覆盖，消除混合态中的隐式耦合，才能安全切流。**
 
 ---
 
-## 2. 现状深度分析
+## 2. 第一轮研究回顾
+
+第一轮研究（2026-02-28 早间）建立了完整的目标架构设计和分阶段路线，详见本节以下子节。这些分析在第二轮审计后仍然有效，但需要根据实际落地情况做修正。
 
 ## 2.1 代码规模与模块分布
 
-1. `src/presentation`：101 个 Lua 文件，约 6455 行。
-2. `src/game`：96 个 Lua 文件，约 9558 行。
-3. 回归测试主入口：`tests/regression.lua`，当前聚合 19 个 suite。
-
-这个规模已经超过“轻量脚本堆叠”边界，进入“需要明确运行时架构约束”的阶段。
+1. `src/presentation`：约 68 个 Lua 文件，分布在 `canvas/`（13 个子模块）、`canvas_runtime/`（7 个文件）、`interaction/`（15 个文件）、`render/`（15 个文件）、`api/`（16 个文件）、`ui/`（8 个文件）、`shared/`（5 个文件）、`state/`（3 个文件）。
+2. `src/game`：约 96 个 Lua 文件，分布在 `core/runtime/`（23 个文件）、`flow/turn/`（22 个文件）、`systems/`（48 个文件）、`runtime_coroutine/`（7 个文件）。
+3. `src/core`：7 个工具文件。
+4. 回归测试主入口：`tests/regression.lua`，当前聚合 20 个 suite，30 个测试文件。
 
 ## 2.2 启动与运行拓扑
 
 关键链路：
 
 1. `main.lua` -> `src/app/init.lua`
-2. `GameStartup` 构建运行态 state（同时承载 UI state + gameplay loop state）
+2. `GameStartup` 构建运行态 state
 3. `UIBootstrap` 在 `GAME_INIT` 绑定 UI 节点并启动 runtime
 4. `GameRuntimeBootstrap` 用 `SetFrameOut` 驱动 `GameplayLoop.tick(...)`
 
-观察：
+`state` 仍是全局大状态对象，同时被 UI、输入、动画、倒计时、回合流使用。
 
-1. `state` 是“全局大状态对象”，同时被 UI、输入、动画、倒计时、回合流使用。
-2. 这让 UI 与逻辑存在隐式共享状态通道，调试时难界定状态所有权。
-
-## 2.3 UI 层：Canvas-First 已落地一半
+## 2.3 UI 层：Canvas-First 结构已落地，运行时收敛未完成
 
 已完成部分：
 
-1. 存在 `src/presentation/canvas/*` 与 `src/presentation/canvas_runtime/*`。
-2. 节点已按 canvas 拆分，例如 `canvas/base/nodes.lua`、`canvas/always_show/nodes.lua`。
-3. 事件路由统一从 `UIEventRouter` 委托到 `CanvasEventRouter`。
+1. `CanvasRegistry` 已改为从 `canvas/*/intents.lua` 构建路由，不再引用 `interaction/intent_builders/*`。
+2. `CanvasStore` 已实现 `ensure/get_slice/patch_slice/mark_dirty/consume_dirty` 接口。
+3. `CanvasRenderPipeline` 已协调 dirty 状态、base_presenter、BoardRuntime、UITurnEffects。
+4. `CanvasEventRouter` 已作为事件分发层。
+5. 13 个 canvas 子模块各有 `nodes.lua`、`contract.lua`，7 个有 `intents.lua`。
 
 未完成/风险点：
 
-1. `CanvasRegistry` 仍直接引用 `interaction/intent_builders/*`，说明意图层仍是“旧聚合”模式。
-2. `UIViewService` 仍同时编排 `render/*`、`ui/*`、`canvas/*`，属于混合 orchestrator。
-3. 兼容入口 `shared/UINodes.lua` 仍被广泛使用（历史包袱未清空）。
-4. modal/choice/popup 状态分散在：
-   - `state.ui`（`choice_active/market_active/popup_active`）
-   - `state.pending_choice_*`
-   - `game.turn.pending_choice`
-5. `UISyncPorts.refresh_from_dirty` 在“模型更新 -> UI 刷新 -> 打开 choice modal”链路里同时做相机跟随、输入锁、UI 渲染，职责过重。
+1. `shared/UINodes.lua` 仍被 14 个生产文件引用（UIViewService、UIBootstrap、UITouchPolicy、UIInputLockPolicy、UIEventBindings、UICanvasCoordinator、UIPanelPresenter、UITurnEffects、ActionAnim、intent_builders/ChoiceIntents、intent_builders/BasicIntents、ui_view_service/state、ui_view_service/core、ui_view_service/assets）。
+2. `interaction/intent_builders/` 目录仍存在且被 1 个测试文件引用（`presentation_ui.lua:2414`）。虽然 CanvasRegistry 已不使用，但目录未删除。
+3. modal/choice/popup 状态仍分散在 `state.ui`、`state.pending_choice_*`、`game.turn.pending_choice`。
+4. dep_rules 仅有 2 条规则：interaction 不引 game、canvas 不引 UINodes。缺少"canvas_runtime 不引 intent_builders"等进一步约束。
 
-结论：目录形态是 Canvas-First，但运行时仍是“中心化服务 + 多处状态并写”。
+## 2.4 逻辑层：混合态——Await 已被旧路径调用但非协程驱动
 
-## 2.4 逻辑层：显式状态机复杂度偏高
+当前实际执行路径（默认模式，`experimental_coroutine_turn = false`）：
 
-当前核心：
+1. `Game.advance_turn()` -> `_resolve_turn_runtime()` -> `TurnEngine` -> legacy `TurnFlow`。
+2. `TurnFlow.run_until_wait()` 循环调用 `Flow.step()`，遇到 wait 状态停下。
+3. `TurnWaits.lua` 和 `TurnChoiceHandler.lua` 已改为调用 `Await.choice/move_anim/action_anim`，但方式是同步函数调用 + 返回 `{wait=true}` 或 `{next_state, next_args}`，**不使用 `coroutine.yield`**。
+4. `resume_state/resume_args` 仍由 phase 文件（TurnStart、TurnRoll、TurnMove、TurnLand）产生，经 Await 提取后传回 Flow。
 
-1. `src/core/Flow.lua` 负责字符串状态推进。
-2. `TurnFlow` 维护 `wait_choice`/`wait_move_anim`/`wait_action_anim`/`detained_wait`。
-3. 各 phase 通过返回 `next_state + resume_args` 手动串接。
+协程路径（`experimental_coroutine_turn = true`）：
 
-主要复杂性来源：
+1. `TurnEngine` 创建 `Session` + `Scheduler`。
+2. `Scheduler.step()` 调用 `coroutine.resume()`，`TurnScript` 内部 `coroutine.yield()` 实现真正挂起。
+3. 但此路径仅有 2 个测试覆盖，未经生产验证。
 
-1. 业务 phase 中大量 `resume_state/resume_args` 传递（`TurnStart/Roll/Move/Land`）。
-2. 动画等待依赖“外部 action done 事件 + seq 对齐”。
-3. choice 等待依赖 `pending_action`、auto policy、validator、resolver 多模块协作。
-4. timeout 逻辑独立在 `TickTimeout`，再通过 `GameplayLoop` 拼接。
-5. 没有使用 Lua 协程（全仓 `coroutine.*` 命中为 0），意味着“等待语义”全部由显式状态字符串编码。
-
-直接后果：
-
-1. 新增等待点成本高，容易遗漏恢复参数。
-2. 时序 bug（重复弹窗、等待卡死、错误回落）更容易发生。
-3. 代码可读性下降，业务逻辑被状态跳转噪音淹没。
+关键发现：**Await 模块是"双模"设计。在旧路径中被当作轮询函数使用（每帧调用，返回 wait 或 next），在新路径中被 TurnScript 在协程内调用（yield 由 TurnScript 包裹）。这个设计是有意的——允许渐进切流。**
 
 ---
 
-## 3. 重写目标
+## 3. 第二轮审计：差距分析
 
-## 3.1 UI：Canvas-First Runtime 2.0
+## 3.1 协程路径测试覆盖缺口
 
-目标：
+当前仅有 `tests/suites/gameplay_coroutine.lua` 的 2 个测试：
 
-1. 每个 canvas 形成“节点 + 状态 slice + 意图 + 渲染 + 触控”闭环。
-2. 跨 canvas 交互只通过 `canvas_runtime` 的显式接口。
-3. `UIViewService` 降级为薄适配，不再承担业务编排。
-4. 去除 `shared/UINodes.lua` 兼容依赖，改为生成式 node contract。
+1. `turn_engine_defaults_to_legacy_mode`：验证默认走旧路径。
+2. `turn_engine_coroutine_mode_resolves_wait_choice`：验证协程路径下 wait_choice 能被 choice_cancel 解决。
 
-## 3.2 逻辑：协程化回合内核
+未覆盖的关键场景：
 
-目标：
+1. `wait_move_anim` 在协程路径下的解决（seq 校验）。
+2. `wait_action_anim` 在协程路径下的解决（action_anim_queue 消费）。
+3. `detained_wait` 在协程路径下的行为。
+4. `await.seconds` 时间等待。
+5. 多阶段完整回合串联（start -> roll -> move -> land -> end_turn）。
+6. 协程错误传播与恢复。
+7. CompatBridge 同步正确性。
+8. 新旧路径行为一致性对比测试。
 
-1. 回合流程改为“单协程脚本 + await 原语”。
-2. 等待点由 `yield` 表达，而非手写 `wait_*` 字符串。
-3. 保持对外接口不变：
-   - `game:advance_turn()`
-   - `game:dispatch_action(action)`
-4. 对 UI 暴露稳定事件契约（choice/popup/anim/timer），减少双向耦合。
+## 3.2 旧路径遗留依赖
 
----
+| 依赖类型 | 生产文件数 | 测试文件数 | 总引用点 | 清理优先级 |
+|---|---|---|---|---|
+| `shared/UINodes` 引用 | 14 | 2 | ~16 | 高 |
+| `intent_builders` 引用 | 目录内互引 | 1 | ~2 | 中（目录可删） |
+| `resume_state/resume_args` | 8 | 3 | ~60 | 高（切流后消除） |
+| `game.turn_flow` 字段替换（测试） | N/A | 3 | ~11 | 高（阻塞严格切流） |
+| `wait_*` 字符串字面量 | 15 | 7 | ~70 | 中（实现细节） |
+| `src/core/Flow.lua` 导入 | 1（TurnFlow） | 0 | 1 | 低（最后删除） |
 
-## 4. 目标架构设计
+## 3.3 Game.lua 兼容逻辑分析
 
-## 4.1 UI 目标架构（Canvas-First）
+`Game._resolve_turn_runtime()` 有一个重要的兼容分支：如果外部替换了 `game.turn_flow`（测试常用），则优先走替换实例而非 `TurnEngine`。这意味着测试中 `g.turn_flow = turn_flow:new(g, phases)` 的写法会绕过 `TurnEngine`。要让协程路径成为默认，必须先把这些测试改为通过 `TurnEngine` 接口操作。
 
-建议目录：
+## 3.4 CanvasStore 实际使用深度
 
-```text
-src/presentation/canvas/<canvas_key>/
-  nodes.lua
-  contract.lua
-  state.lua
-  intents.lua
-  presenter.lua
-  touch_policy.lua
-
-src/presentation/canvas_runtime/
-  CanvasRegistry.lua
-  CanvasStore.lua
-  CanvasCoordinator.lua
-  CanvasEventRouter.lua
-  CanvasRenderPipeline.lua
-  LocalActorResolver.lua
-```
-
-核心设计：
-
-1. `CanvasStore` 统一管理 `ui.canvas_state.<canvas_key>`，禁止 canvas 直接写其他 canvas 状态。
-2. `CanvasRenderPipeline` 以 dirty-slice 驱动，避免全量 render。
-3. `CanvasEventRouter` 仅分发事件，不做业务判定。
-4. `route_key` 成为唯一选择屏路由输入；未知路由默认 `base_inline`。
-5. 建立节点契约生成脚本（从 `Data/UIManagerNodes.lua` 生成），替代手写字符串散落。
-
-## 4.2 逻辑目标架构（协程内核）
-
-建议目录：
-
-```text
-src/game/runtime_coroutine/
-  Scheduler.lua
-  TurnScript.lua
-  Await.lua
-  Signals.lua
-  Session.lua
-  ActionRouter.lua
-  CompatBridge.lua
-```
-
-核心对象：
-
-1. `TurnScript`：每位当前玩家回合对应一个 coroutine。
-2. `Scheduler`：在 tick 中推进 coroutine，处理 signal/timeout。
-3. `Await`：统一等待原语。
-4. `Signals`：事件总线（choice resolved、anim done、timer elapsed、external interrupt）。
-
-Await 原语建议：
-
-1. `await.choice(spec)`：发起选择并等待结果。
-2. `await.action_anim(payload)`：播放动作动画并等待完成。
-3. `await.move_anim(payload)`：播放移动动画并等待完成。
-4. `await.seconds(sec, opts)`：等待时长（可取消）。
-5. `await.until(predicate, opts)`：条件等待。
-
-示意（伪代码）：
-
-```lua
-function turn_script.run(ctx)
-  local player = ctx:current_player()
-  if player.eliminated then
-    return ctx:end_turn()
-  end
-
-  await.item_phase("pre_action", player)
-  local roll = await.roll(player)
-  await.item_phase("pre_move", player)
-  local move_res = await.move(player, roll)
-  await.resolve_landing(player, move_res)
-  await.item_phase("post_action", player)
-  ctx:end_turn()
-end
-```
-
-结果：
-
-1. `resume_state/resume_args` 消失。
-2. `wait_choice/wait_action_anim/wait_move_anim` 作为实现细节下沉到 Scheduler，不暴露给业务 phase。
+`CanvasStore` 已实现但需要验证：当前渲染链是否真正以 dirty-slice 驱动，还是仍有旧路径直接写 `state.ui` 绕过 store。`CanvasRenderPipeline` 内部仍调用 `base_presenter`、`BoardRuntime`、`UITurnEffects`，这些模块是否统一通过 store 消费状态，需要进一步确认。
 
 ---
 
-## 5. 分阶段重写路线（可执行）
+## 4. 目标架构设计（不变，保留第一轮设计）
 
-## Phase 0：冻结基线与契约
+## 4.1 UI 目标架构
 
-1. 冻结当前回归基线（`tests/regression.lua`）。
-2. 新增协程重写验收集：
-   - 事件顺序
-   - choice owner 校验
-   - 动画等待语义
-3. 新增依赖规则：禁止新代码继续扩散 `interaction/intent_builders/*`。
+目标目录结构：
 
-交付物：
+    src/presentation/canvas/<canvas_key>/
+      nodes.lua
+      contract.lua
+      state.lua
+      intents.lua
+      presenter.lua
+      touch_policy.lua
 
-1. `docs/architecture/rewrite_canvas_coroutine.md`
-2. 测试护栏脚本。
+    src/presentation/canvas_runtime/
+      CanvasRegistry.lua
+      CanvasStore.lua
+      CanvasCoordinator.lua
+      CanvasEventRouter.lua
+      CanvasRenderPipeline.lua
+      LocalActorResolver.lua
 
-## Phase 1：引入协程运行时骨架（不切流）
+核心设计原则不变：CanvasStore 单写、dirty-slice 增量渲染、route_key 唯一路由、节点契约生成。
 
-1. 新建 `runtime_coroutine/*` 空实现。
-2. `CompatBridge` 把协程输出映射为当前 `game.turn` 结构（只镜像，不主导）。
-3. 保持 `TurnFlow` 仍为主路径。
+## 4.2 逻辑目标架构
 
-验收：
+目标目录结构（已存在）：
 
-1. 全回归通过。
-2. 新增协程骨架测试通过。
+    src/game/runtime_coroutine/
+      Scheduler.lua
+      TurnScript.lua
+      Await.lua
+      Signals.lua
+      Session.lua
+      ActionRouter.lua
+      CompatBridge.lua
 
-## Phase 2：先切等待点，再切 phase 业务
-
-顺序：
-
-1. `wait_action_anim` -> 协程 await。
-2. `wait_move_anim` -> 协程 await。
-3. `wait_choice` -> 协程 await。
-4. timeout/auto 决策接入 scheduler signal。
-
-策略：
-
-1. 每次只替换一个等待类型。
-2. 通过 feature flag 切换（例如 `runtime_constants.experimental_coroutine_turn = true`）。
-
-## Phase 3：UI Canvas Runtime 2.0 切流
-
-1. 引入 `CanvasStore` + `CanvasRenderPipeline`。
-2. 把 `intent_builders` 分批迁移到 canvas intents。
-3. `UIViewService` 去中心化，只保留 API 适配。
-4. 删除 `shared/UINodes` 兼容映射。
-
-## Phase 4：删除旧状态机路径
-
-1. 移除 `src/core/Flow.lua` 在 turn 主流程中的依赖。
-2. 旧 `TurnFlow` 退化为兼容层或直接移除。
-3. 清理 `resume_state/resume_args` 相关字段与分支。
-
-## Phase 5：性能与可维护性收尾
-
-1. coroutine 生命周期监控（泄漏检测、挂起统计、超时告警）。
-2. UI 渲染 dirty 统计与压测。
-3. 文档与新开发模板完善。
+核心设计原则不变：单协程脚本 + await 原语、yield 语义等待、稳定事件契约。
 
 ---
 
-## 6. 风险与缓解
+## 5. 修正后的阶段路线
 
-1. 风险：事件顺序变更导致行为回归。  
-   缓解：建立事件快照测试，对比旧内核输出序列。
+原计划 Phase 0-5 中，Phase 0（冻结基线）和 Phase 1（协程骨架引入）已完成。Phase 2-5 虽在计划中被标记为完成，但第二轮审计发现实际是"骨架 + 混合态"，而非"切流完成"。具体修正如下：
 
-2. 风险：协程泄漏或挂死。  
-   缓解：Scheduler 强制超时与状态诊断日志（coroutine id、await 类型、等待时长）。
+## Phase A（当前阶段）：协程路径测试补全 + 行为一致性验证
 
-3. 风险：UI 状态双写窗口期产生闪烁。  
-   缓解：切流期间采用“新 store 主写、旧字段只读镜像”。
+目标：在不改变默认路径的前提下，把协程路径的测试覆盖提升到可信赖级别。
 
-4. 风险：自动托管与手动输入竞争。  
-   缓解：ActionRouter 统一仲裁，建立优先级（人工输入 > 系统超时 > auto）。
+1. 补充 `gameplay_coroutine.lua` 测试：覆盖所有 4 种等待态 + 完整回合 + 错误恢复。
+2. 新增"行为一致性"测试：同一局面分别走旧路径和新路径，断言最终状态一致。
+3. 在 dep_rules 中新增规则：`canvas_runtime` 不得引用 `intent_builders`。
+
+## Phase B：默认开启协程路径
+
+目标：将 `experimental_coroutine_turn` 默认值改为 `true`，全量走协程调度。
+
+1. 修改 `Config/RuntimeConstants.lua` 默认值。
+2. 将测试中直接替换 `game.turn_flow` 的写法迁移为通过 `TurnEngine` 接口。
+3. 全回归通过后，保留旧 `TurnFlow` 作为回退但不再是默认。
+
+## Phase C：消除 resume_state/resume_args 传播
+
+目标：phase 文件不再产生和消费 `resume_state/resume_args`，等待恢复由协程栈帧自然处理。
+
+1. 改造 TurnStart/TurnRoll/TurnMove/TurnLand 的 phase 函数，使其在协程内直接 await 而非返回 wait 状态。
+2. 改造 ItemPhase/EffectPipeline 的 resume 逻辑。
+3. Await 模块移除 `_resume()` 兼容函数。
+
+## Phase D：UINodes 兼容层退役
+
+目标：`shared/UINodes.lua` 不再被任何生产代码引用。
+
+1. 逐文件迁移 14 个引用点到对应 `canvas/*/nodes.lua` 或 `canvas/*/contract.lua`。
+2. 删除 `shared/UINodes.lua`。
+3. 删除 `interaction/intent_builders/` 目录。
+4. 更新 dep_rules 移除已无必要的规则。
+
+## Phase E：旧 TurnFlow 退役 + 收尾
+
+目标：`TurnFlow` 和 `src/core/Flow.lua` 不再被回合主路径引用。
+
+1. `TurnEngine` 移除 legacy 模式分支。
+2. `Game._resolve_turn_runtime()` 简化为只返回 `turn_engine`。
+3. 删除 `TurnFlow.lua`、`Flow.lua`（或降级为独立工具）。
+4. 完善文档与模板。
 
 ---
 
-## 7. 验收标准（重写完成定义）
+## 6. 风险与缓解（更新）
 
-1. UI：
-   - 不再依赖 `shared/UINodes` 兼容层。
-   - 每个 canvas 有独立 state/intents/presenter。
-   - 选择屏路由只由 `route_key` 决定，无隐式 fallback。
+1. 风险：协程路径测试不足导致默认切流后回归。
+   缓解：Phase A 是前置门控，不通过不切流。
 
-2. 逻辑：
-   - 回合主流程由 coroutine 驱动。
-   - 不再出现 `resume_state/resume_args` 业务传递。
-   - `wait_*` 状态不再暴露为业务 phase 的直接跳转目标。
+2. 风险：测试中直接替换 `game.turn_flow` 的写法与 TurnEngine 冲突。
+   缓解：Phase B 逐个迁移，保留 `_resolve_turn_runtime()` 兼容分支直到测试全部迁移完。
 
-3. 质量：
-   - `lua tests/regression.lua` 全绿。
-   - 新增协程回归套件全绿。
-   - 关键路径日志可追踪（choice、anim、timeout、auto）。
+3. 风险：CanvasStore 与旧 `state.ui` 直写并存导致状态不一致。
+   缓解：增加测试断言 CanvasStore 是唯一写入口；旁路写入应触发警告。
+
+4. 风险：UINodes 引用点分散在 14 个文件，迁移量大。
+   缓解：逐文件处理，每次迁移一个文件后跑回归。
 
 ---
 
-## 8. 立即执行建议（下一步）
+## 7. 验收标准（最终完成定义）
 
-1. 先做一个最小 POC：仅把 `wait_choice` 改为 `await.choice`，其他保持不变。
-2. 同时落地 `CanvasStore`，先接入 `base` + `always_show` 两个 canvas。
-3. 在 POC 阶段加一个运行时开关，允许一键回退旧 TurnFlow。
-4. POC 通过后再扩到 `move/land/item_phase`，避免大爆炸改造。
+1. 逻辑层：`experimental_coroutine_turn` 为默认 `true`，且不存在 `resume_state/resume_args` 在 phase 业务中传播。
+2. UI 层：`shared/UINodes.lua` 不存在或零引用，`intent_builders/` 目录已删除。
+3. 质量：`lua tests/regression.lua` 全绿，`gameplay_coroutine` 套件覆盖所有等待态。
+4. 可回退：旧 `TurnFlow` 可通过开关恢复（Phase E 之前）。
 
+---
+
+## 8. 立即下一步
+
+Phase A 是当前最高优先级：补全协程路径测试。这是所有后续切流的前提条件。具体行动见 `.agents/plan.md`。
