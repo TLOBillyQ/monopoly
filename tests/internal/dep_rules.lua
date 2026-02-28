@@ -22,7 +22,7 @@ local rules = {
   {
     root = "src/presentation/canvas/base",
     forbidden = {
-      "canvas.always_show", "canvas.market", "canvas.building_choice",
+      "canvas.always_show", "canvas.market", "canvas.secondary_confirm",
       "canvas.remote_choice", "canvas.player_choice", "canvas.popup",
       "canvas.target_choice",
     },

@@ -10,7 +10,7 @@ local function _resolve_option_id(option)
   return option
 end
 
-local function _is_building_route(choice_spec)
+local function _is_secondary_confirm_route(choice_spec)
   local kind = choice_spec and choice_spec.kind
   if kind ~= "landing_optional_effect" and kind ~= "land_optional_effect" then
     return false
@@ -45,8 +45,8 @@ local function _infer_legacy_route_key(choice_spec)
   if kind == "roadblock_target" or kind == "demolish_target" then
     return "target"
   end
-  if _is_building_route(choice_spec) then
-    return "building"
+  if _is_secondary_confirm_route(choice_spec) then
+    return "secondary_confirm"
   end
   return "base_inline"
 end
@@ -64,7 +64,7 @@ local function _resolve_choice_route(choice_spec)
     return meta.route_key, meta.requires_confirm
   end
   local route_key = _infer_legacy_route_key(choice_spec)
-  return route_key, route_key == "building"
+  return route_key, route_key == "secondary_confirm"
 end
 
 function intent_dispatcher.open_choice(game, choice_spec, opts)

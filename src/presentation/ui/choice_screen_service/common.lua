@@ -14,8 +14,8 @@ function M.resolve_canvas_for_screen(screen_key)
   if screen_key == "remote" then
     return canvas.CANVAS_REMOTE_CHOICE
   end
-  if screen_key == "building" then
-    return canvas.CANVAS_BUILDING_CHOICE
+  if screen_key == "secondary_confirm" then
+    return canvas.CANVAS_SECONDARY_CONFIRM
   end
   return canvas.CANVAS_BASE
 end
@@ -80,7 +80,7 @@ function M.set_option_node(ui, node_name, option)
 end
 
 function M.resolve_choice_title(choice, screen_key, selected_option_id)
-  if screen_key == "building" then
+  if screen_key == "secondary_confirm" then
     if selected_option_id == "buy_land" then
       return "购买地块"
     end
@@ -98,7 +98,7 @@ function M.resolve_choice_title(choice, screen_key, selected_option_id)
   return "请选择"
 end
 
-local function _resolve_building_action_label(selected_option_id)
+local function _resolve_confirm_action_label(selected_option_id)
   if selected_option_id == "buy_land" then
     return "购买"
   end
@@ -108,11 +108,11 @@ local function _resolve_building_action_label(selected_option_id)
   return nil
 end
 
-function M.build_building_screen_body(choice, game, selected_option_id)
-  if not choice or not route_policy.is_building_choice(choice) then
+function M.build_secondary_confirm_body(choice, game, selected_option_id)
+  if not choice or not route_policy.is_secondary_confirm_choice(choice) then
     return choice and choice.body or ""
   end
-  local action_label = _resolve_building_action_label(selected_option_id)
+  local action_label = _resolve_confirm_action_label(selected_option_id)
   if not action_label then
     return choice.body or ""
   end

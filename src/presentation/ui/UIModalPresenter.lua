@@ -18,13 +18,13 @@ function modal_presenter.select_choice_option(state, option_id)
   if not ui then
     return
   end
-  if ui.active_choice_screen_key ~= "building" then
+  if ui.active_choice_screen_key ~= "secondary_confirm" then
     return
   end
-  local screen = ui.choice_screens and ui.choice_screens.building or nil
+  local screen = ui.choice_screens and ui.choice_screens.secondary_confirm or nil
   local choice = state.ui_model and state.ui_model.choice or nil
   if screen and screen.title then
-    ui:set_label(screen.title, choice_common.resolve_choice_title(choice, "building", option_id))
+    ui:set_label(screen.title, choice_common.resolve_choice_title(choice, "secondary_confirm", option_id))
   end
 end
 

@@ -7,7 +7,7 @@ local always_show_contract = require("src.presentation.canvas.always_show.contra
 local player_choice_nodes = require("src.presentation.canvas.player_choice.nodes")
 local target_choice_nodes = require("src.presentation.canvas.target_choice.nodes")
 local remote_choice_nodes = require("src.presentation.canvas.remote_choice.nodes")
-local building_choice_nodes = require("src.presentation.canvas.building_choice.nodes")
+local secondary_confirm_nodes = require("src.presentation.canvas.secondary_confirm.nodes")
 local market_ui = require("src.presentation.shared.MarketLayout")
 local map_cfg = require("Config.Map")
 local ui_events = require("src.presentation.shared.UIEvents")
@@ -18,8 +18,8 @@ local function _required_click_nodes(opts)
   local required = {
     base_nodes.action_button,
     always_show_nodes.auto_button,
-    building_choice_nodes.confirm,
-    building_choice_nodes.cancel,
+    secondary_confirm_nodes.confirm,
+    secondary_confirm_nodes.cancel,
     remote_choice_nodes.cancel,
   }
   for _, name in ipairs(player_choice_nodes.slots) do

@@ -5,7 +5,7 @@ local always_show_nodes = require("src.presentation.canvas.always_show.nodes")
 local player_choice_nodes = require("src.presentation.canvas.player_choice.nodes")
 local target_choice_nodes = require("src.presentation.canvas.target_choice.nodes")
 local remote_choice_nodes = require("src.presentation.canvas.remote_choice.nodes")
-local building_choice_nodes = require("src.presentation.canvas.building_choice.nodes")
+local secondary_confirm_nodes = require("src.presentation.canvas.secondary_confirm.nodes")
 local market_nodes = require("src.presentation.canvas.market.nodes")
 local popup_nodes = require("src.presentation.canvas.popup.nodes")
 local bankruptcy_nodes = require("src.presentation.canvas.bankruptcy.nodes")
@@ -18,7 +18,7 @@ coordinator.CANVAS_ALWAYS_SHOW = always_show_nodes.canvas
 coordinator.CANVAS_PLAYER_CHOICE = player_choice_nodes.canvas
 coordinator.CANVAS_TARGET_CHOICE = target_choice_nodes.canvas
 coordinator.CANVAS_REMOTE_CHOICE = remote_choice_nodes.canvas
-coordinator.CANVAS_BUILDING_CHOICE = building_choice_nodes.canvas
+coordinator.CANVAS_SECONDARY_CONFIRM = secondary_confirm_nodes.canvas
 coordinator.CANVAS_MARKET = market_nodes.canvas
 coordinator.CANVAS_POPUP = popup_nodes.canvas
 coordinator.CANVAS_BANKRUPTCY = bankruptcy_nodes.canvas
@@ -38,8 +38,8 @@ local function _resolve_choice_canvas(ui)
   if key == "remote" then
     return coordinator.CANVAS_REMOTE_CHOICE
   end
-  if key == "building" then
-    return coordinator.CANVAS_BUILDING_CHOICE
+  if key == "secondary_confirm" then
+    return coordinator.CANVAS_SECONDARY_CONFIRM
   end
   return nil
 end

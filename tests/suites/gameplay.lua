@@ -378,9 +378,9 @@ local function _test_intent_dispatcher_sets_choice_route_metadata()
     kind = "item_target_player",
     title = "自定义路由",
     options = { { id = 1, label = "A" } },
-    route = { route_key = "building", requires_confirm = true },
+    route = { route_key = "secondary_confirm", requires_confirm = true },
   }, {})
-  assert(custom_entry.route_key == "building", "explicit route should override inferred route")
+  assert(custom_entry.route_key == "secondary_confirm", "explicit route should override inferred route")
   assert(custom_entry.requires_confirm == true, "explicit requires_confirm should be kept")
 
   local inline_entry = intent_dispatcher.open_choice(g, {

@@ -118,7 +118,7 @@ local function _build_choice_modal_state()
     "遥控骰子屏", "遥控骰子_标题", "遥控骰子_正文",
     "遥控骰子_选项_01", "遥控骰子_选项_02", "遥控骰子_选项_03",
     "遥控骰子_选项_04", "遥控骰子_选项_05", "遥控骰子_选项_06", "遥控骰子_取消",
-    "建筑升级屏", "建筑升级_标题", "建筑升级_文本", "建筑升级_确定按钮", "建筑升级_取消",
+    "通用二次确认屏", "通用二次确认_标题", "通用二次确认_文本", "通用二次确认_确定按钮", "通用二次确认_取消",
     "卡牌展示屏", "卡牌展示_标题", "卡牌展示_图片",
     "黑市屏", "黑市_购买按钮", "黑市_关闭", "黑市_售价", "黑市_选中卡牌",
   }
@@ -1552,7 +1552,7 @@ local function _test_apply_input_lock_keeps_auto_controls_enabled()
         player = { option_buttons = {} },
         target = { option_buttons = {}, under_button = "位置_脚下" },
         remote = { option_buttons = {}, cancel = "遥控骰子_取消" },
-        building = { body = "建筑升级_文本", cancel = "建筑升级_取消", confirm = "建筑升级_确定按钮" },
+        secondary_confirm = { body = "通用二次确认_文本", cancel = "通用二次确认_取消", confirm = "通用二次确认_确定按钮" },
       },
       set_touch_enabled = function(_, name, enabled)
         touch[name] = enabled
@@ -1599,7 +1599,7 @@ local function _test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapp
         player = { option_buttons = {} },
         target = { option_buttons = {}, under_button = "位置_脚下" },
         remote = { option_buttons = {}, cancel = "遥控骰子_取消" },
-        building = { body = "建筑升级_文本", cancel = "建筑升级_取消", confirm = "建筑升级_确定按钮" },
+        secondary_confirm = { body = "通用二次确认_文本", cancel = "通用二次确认_取消", confirm = "通用二次确认_确定按钮" },
       },
       set_touch_enabled = function(_, name, enabled)
         touch[name] = enabled
@@ -2023,12 +2023,12 @@ local function _test_choice_modal_routes_to_new_screens()
       allow_cancel = true,
       cancel_label = "跳过",
     })
-    _assert_eq(state.ui.active_choice_screen_key, "building", "buy_land optional should route to building screen")
-    _assert_eq(nodes["建筑升级屏"].visible, true, "building screen should be visible")
-    _assert_eq(nodes["建筑升级_标题"].text, "购买地块", "building title should follow option semantic")
-    _assert_eq(nodes["建筑升级_文本"].text, "", "building body should sync from choice body")
-    _assert_eq(nodes["建筑升级_确定按钮"].text, "", "building confirm text should be empty")
-    _assert_eq(nodes["建筑升级_取消"].text, "", "building cancel text should be empty")
+    _assert_eq(state.ui.active_choice_screen_key, "secondary_confirm", "buy_land optional should route to building screen")
+    _assert_eq(nodes["通用二次确认屏"].visible, true, "building screen should be visible")
+    _assert_eq(nodes["通用二次确认_标题"].text, "购买地块", "building title should follow option semantic")
+    _assert_eq(nodes["通用二次确认_文本"].text, "", "building body should sync from choice body")
+    _assert_eq(nodes["通用二次确认_确定按钮"].text, "", "building confirm text should be empty")
+    _assert_eq(nodes["通用二次确认_取消"].text, "", "building cancel text should be empty")
 
     ui_view.open_choice_modal(state, {
       id = 5,
@@ -2071,8 +2071,8 @@ local function _test_choice_route_policy_prefers_explicit_route_metadata()
     },
     {
       label = "explicit building confirm",
-      choice = { kind = "item_target_player", route_key = "building", requires_confirm = true },
-      route = "building",
+      choice = { kind = "item_target_player", route_key = "secondary_confirm", requires_confirm = true },
+      route = "secondary_confirm",
       confirm = true,
     },
     {

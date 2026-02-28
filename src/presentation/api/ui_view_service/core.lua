@@ -3,7 +3,7 @@ local debug_nodes = require("src.presentation.canvas.debug.nodes")
 local player_choice_nodes = require("src.presentation.canvas.player_choice.nodes")
 local target_choice_nodes = require("src.presentation.canvas.target_choice.nodes")
 local remote_choice_nodes = require("src.presentation.canvas.remote_choice.nodes")
-local building_choice_nodes = require("src.presentation.canvas.building_choice.nodes")
+local secondary_confirm_nodes = require("src.presentation.canvas.secondary_confirm.nodes")
 local always_show_contract = require("src.presentation.canvas.always_show.contract")
 
 local M = {}
@@ -71,13 +71,13 @@ local function build_choice_screens()
       option_buttons = remote_choice_nodes.options,
       cancel = remote_choice_nodes.cancel,
     },
-    building = {
-      key = "building",
-      root = building_choice_nodes.canvas,
-      title = building_choice_nodes.title,
-      body = building_choice_nodes.body,
-      confirm = building_choice_nodes.confirm,
-      cancel = building_choice_nodes.cancel,
+    secondary_confirm = {
+      key = "secondary_confirm",
+      root = secondary_confirm_nodes.canvas,
+      title = secondary_confirm_nodes.title,
+      body = secondary_confirm_nodes.body,
+      confirm = secondary_confirm_nodes.confirm,
+      cancel = secondary_confirm_nodes.cancel,
     },
   }
 end

@@ -17,8 +17,8 @@ function M.open_choice_modal(state, choice, market)
     M.open_player_or_remote_screen(state, choice, choice.id, screen_key)
     return true
   end
-  if screen_key == "building" then
-    M.open_building_screen(state, choice, choice.id)
+  if screen_key == "secondary_confirm" then
+    M.open_secondary_confirm_screen(state, choice, choice.id)
     return true
   end
   if screen_key == "target" then
@@ -132,21 +132,21 @@ function M.open_target_screen(state, choice, choice_id)
   modal_state.open_choice(state, choice_id, option_ids, selected)
 end
 
-function M.open_building_screen(state, choice, choice_id)
+function M.open_secondary_confirm_screen(state, choice, choice_id)
   local ui = state.ui
-  local screen = ui.choice_screens.building
-  assert(screen ~= nil, "missing building screen")
+  local screen = ui.choice_screens.secondary_confirm
+  assert(screen ~= nil, "missing secondary_confirm screen")
 
   common.hide_choice_screens(ui)
-  common.switch_modal_canvas(state, canvas.CANVAS_BUILDING_CHOICE)
+  common.switch_modal_canvas(state, canvas.CANVAS_SECONDARY_CONFIRM)
   ui:set_visible(screen.root, true)
 
   local first_option = choice.options and choice.options[1] or nil
   local selected = common.resolve_option_id(first_option)
-  local title = common.resolve_choice_title(choice, "building", selected)
+  local title = common.resolve_choice_title(choice, "secondary_confirm", selected)
   ui:set_label(screen.title, title)
   if screen.body then
-    ui:set_label(screen.body, common.build_building_screen_body(choice, state.game, selected))
+    ui:set_label(screen.body, common.build_secondary_confirm_body(choice, state.game, selected))
   end
 
   ui:set_button(screen.confirm, "")
@@ -161,7 +161,7 @@ function M.open_building_screen(state, choice, choice_id)
   end
 
   ui.choice_active = true
-  ui.active_choice_screen_key = "building"
+  ui.active_choice_screen_key = "secondary_confirm"
   modal_state.open_choice(state, choice_id, { selected }, selected)
 end
 

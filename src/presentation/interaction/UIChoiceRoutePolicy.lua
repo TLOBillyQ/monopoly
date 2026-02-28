@@ -9,7 +9,7 @@ local function _resolve_option_id(option)
   return option
 end
 
-function policy.is_building_choice(choice)
+function policy.is_secondary_confirm_choice(choice)
   if not choice then
     return false
   end
@@ -54,8 +54,8 @@ function policy.resolve(choice)
   if kind == "roadblock_target" or kind == "demolish_target" then
     return "target"
   end
-  if policy.is_building_choice(choice) then
-    return "building"
+  if policy.is_secondary_confirm_choice(choice) then
+    return "secondary_confirm"
   end
   logger.warn("choice route fallback to base_inline:", tostring(kind))
   return "base_inline"
@@ -67,9 +67,9 @@ function policy.requires_confirm(choice_or_screen)
     if type(explicit) == "boolean" then
       return explicit
     end
-    return policy.resolve(choice_or_screen) == "building"
+    return policy.resolve(choice_or_screen) == "secondary_confirm"
   end
-  return choice_or_screen == "building"
+  return choice_or_screen == "secondary_confirm"
 end
 
 return policy

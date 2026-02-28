@@ -6,7 +6,7 @@ local target_choice_intents = require("src.presentation.canvas.target_choice.int
 local remote_choice_intents = require("src.presentation.canvas.remote_choice.intents")
 local market_intents = require("src.presentation.canvas.market.intents")
 local always_show_intents = require("src.presentation.canvas.always_show.intents")
-local building_choice_intents = require("src.presentation.canvas.building_choice.intents")
+local secondary_confirm_intents = require("src.presentation.canvas.secondary_confirm.intents")
 
 local registry = {}
 
@@ -20,7 +20,7 @@ local canvas_specs = {
   { key = "remote_choice", build = function(state) return remote_choice_intents.build(state) end },
   { key = "market", build = function(state) return market_intents.build_items(state) end },
   { key = "market_controls", build = function(state) return market_intents.build_controls(state) end },
-  { key = "building_choice", build = function(state) return building_choice_intents.build(state) end },
+  { key = "secondary_confirm", build = function(state) return secondary_confirm_intents.build(state) end },
 }
 
 function registry.build_route_specs(state)
