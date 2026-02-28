@@ -6,6 +6,7 @@ local M = {}
 
 function M.build_ui_state()
   local item_slots = ui_nodes.base.item_slots
+  local card_outlines = ui_nodes.base.card_outlines
   local base_hidden_nodes = { ui_nodes.base.action_button }
   for _, name in ipairs(item_slots) do
     table.insert(base_hidden_nodes, name)
@@ -26,6 +27,7 @@ function M.build_ui_state()
   local canvas_state = {
     base = {
       item_slots = item_slots,
+      card_outlines = card_outlines,
       hidden_nodes = base_hidden_nodes,
       hidden_labels = {},
     },
@@ -59,6 +61,7 @@ function M.build_ui_state()
     debug_log_enabled_override = nil,
     debug_log_enabled_by_role = {},
     item_slots = canvas_state.base.item_slots,
+    card_outlines = canvas_state.base.card_outlines,
     base_hidden_nodes = canvas_state.base.hidden_nodes,
     base_hidden_labels = {},
     auto_control_nodes = canvas_state.always_show.auto_control_nodes,

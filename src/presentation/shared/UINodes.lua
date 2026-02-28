@@ -61,6 +61,9 @@ function nodes.required_click_nodes(opts)
   for _, name in ipairs(nodes.remote_choice.options) do
     required[#required + 1] = name
   end
+  for _, name in ipairs(nodes.base.card_outlines or {}) do
+    required[#required + 1] = name
+  end
   for _, name in ipairs(always_show_contract.action_log.toggle_targets or {}) do
     required[#required + 1] = name
   end

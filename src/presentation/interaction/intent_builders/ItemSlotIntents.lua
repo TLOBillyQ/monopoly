@@ -5,6 +5,7 @@ local item_slot_intents = {}
 function item_slot_intents.build(state)
   local specs = {}
   local item_slots = (state.ui and state.ui.item_slots) or {}
+  local card_outlines = (state.ui and state.ui.card_outlines) or {}
   if #item_slots == 0 then
     item_slots = {
       "基础_道具槽位1",
@@ -27,6 +28,20 @@ function item_slot_intents.build(state)
         return { type = "ui_button", id = action_id }
       end,
     }
+    local outline_name = card_outlines[index]
+    if outline_name then
+      specs[#specs + 1] = {
+        name = outline_name,
+        build_intent = function()
+          local choice = state.ui_model and state.ui_model.choice or nil
+          if not choice or choice.kind ~= "item_phase_choice" then
+            logger.warn("item_slot outline click ignored:", tostring(index))
+            return nil
+          end
+          return { type = "ui_button", id = action_id }
+        end,
+      }
+    end
   end
   return specs
 end
