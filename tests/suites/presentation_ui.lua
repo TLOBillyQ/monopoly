@@ -2531,7 +2531,7 @@ end
 local function _test_action_anim_queue_consumes_in_order()
   local phases = {
     start = function()
-      return "wait_action_anim", { resume_state = "done", resume_args = {} }
+      return "wait_action_anim", { next_state = "done", next_args = {} }
     end,
     done = function()
       return nil

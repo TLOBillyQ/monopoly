@@ -56,8 +56,8 @@ local function _phase_roll(turn_mgr, args)
       total = total,
     })
     return "wait_action_anim", {
-      resume_state = "roll",
-      resume_args = {
+      next_state = "roll",
+      next_args = {
         player = player,
         rolls = rolls,
         raw_total = raw_total,
@@ -69,16 +69,16 @@ local function _phase_roll(turn_mgr, args)
 
   local phase_res = item_phase.run(turn_mgr, "pre_move", {
     player = player,
-    resume_state = "move",
-    resume_args = { player = player, total = total, raw_total = raw_total },
+    next_state = "move",
+    next_args = { player = player, total = total, raw_total = raw_total },
   })
   if phase_res and phase_res.waiting then
-    local resume_state = phase_res.resume_state or "move"
-    local resume_args = phase_res.resume_args or { player = player, total = total, raw_total = raw_total }
+    local next_state = phase_res.next_state or "move"
+    local next_args = phase_res.next_args or { player = player, total = total, raw_total = raw_total }
     if phase_res.wait_action_anim then
-      return "wait_action_anim", { resume_state = resume_state, resume_args = resume_args }
+      return "wait_action_anim", { next_state = next_state, next_args = next_args }
     end
-    return "wait_choice", { resume_state = resume_state, resume_args = resume_args }
+    return "wait_choice", { next_state = next_state, next_args = next_args }
   end
   return "move", { player = player, total = total, raw_total = raw_total }
 end

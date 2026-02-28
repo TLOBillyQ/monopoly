@@ -84,11 +84,11 @@ function item_phase.run(turn_mgr, phase, args)
       game.turn.item_phase_active = phase
       game.dirty.turn = true
       game.dirty.any = true
-      return { waiting = true, resume_state = args.resume_state, resume_args = args.resume_args }
+      return { waiting = true, next_state = args.next_state, next_args = args.next_args }
     end
     if game.turn.action_anim then
       item_phase.finish(game, phase)
-      return { waiting = true, wait_action_anim = true, resume_state = args.resume_state, resume_args = args.resume_args }
+      return { waiting = true, wait_action_anim = true, next_state = args.next_state, next_args = args.next_args }
     end
     item_phase.finish(game, phase)
     return nil
@@ -110,7 +110,7 @@ function item_phase.run(turn_mgr, phase, args)
   game.dirty.turn = true
   game.dirty.any = true
 
-  return { waiting = true, resume_state = args.resume_state, resume_args = args.resume_args }
+  return { waiting = true, next_state = args.next_state, next_args = args.next_args }
 end
 
 function item_phase.build_choice_spec(game, player, phase)

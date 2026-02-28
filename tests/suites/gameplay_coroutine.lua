@@ -27,7 +27,7 @@ local function _test_turn_engine_coroutine_mode_resolves_wait_choice()
     local g = support.new_game()
     g.turn_engine = turn_engine:new(g, {
       start = function()
-        return "wait_choice", { resume_state = "done", resume_args = {} }
+        return "wait_choice", { next_state = "done", next_args = {} }
       end,
       done = function()
         return nil
@@ -73,7 +73,7 @@ local function _test_coroutine_mode_resolves_wait_move_anim()
     g.turn_engine = turn_engine:new(g, {
       start = function()
         g.turn.move_anim = { seq = move_seq, player_id = g:current_player().id }
-        return "wait_move_anim", { resume_state = "done", resume_args = {} }
+        return "wait_move_anim", { next_state = "done", next_args = {} }
       end,
       done = function()
         return nil
@@ -106,7 +106,7 @@ local function _test_coroutine_mode_resolves_wait_action_anim()
     g.turn_engine = turn_engine:new(g, {
       start = function()
         g.turn.action_anim = { seq = anim_seq, kind = "roll", player_id = g:current_player().id }
-        return "wait_action_anim", { resume_state = "done", resume_args = {} }
+        return "wait_action_anim", { next_state = "done", next_args = {} }
       end,
       done = function()
         return nil
@@ -219,7 +219,7 @@ local function _test_coroutine_and_legacy_produce_same_result()
     local phases = {
       start = function()
         counter.value = counter.value + 1
-        return "wait_choice", { resume_state = "done", resume_args = {} }
+        return "wait_choice", { next_state = "done", next_args = {} }
       end,
       done = function()
         counter.value = counter.value + 10

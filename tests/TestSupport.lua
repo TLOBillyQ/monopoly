@@ -221,8 +221,8 @@ local function resolve_landing(game, player, tile_ref, move_result, depth)
   end
 
   return effect_pipeline.run(landing_defs, player, tile_ref, ctx, {
-    resume_state = "post_action",
-    resume_args = { player = player },
+    next_state = "post_action",
+    next_args = { player = player },
     optional_choice_kind = "landing_optional_effect",
     optional_reason = "landing_optional",
     optional_allow_cancel = true,

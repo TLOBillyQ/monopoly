@@ -4,7 +4,7 @@ local market_service = require("src.game.systems.market.MarketService")
 local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
 local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
 
-local function _build_move_resume_args(player, raw_total, extra)
+local function _build_move_args(player, raw_total, extra)
   local out = {
     player = player,
     raw_total = raw_total,
@@ -18,8 +18,8 @@ local function _build_move_resume_args(player, raw_total, extra)
   return out
 end
 
-local function _build_interrupt_resume_args(player, raw_total, interrupt, source_flag)
-  return _build_move_resume_args(player, raw_total, {
+local function _build_interrupt_args(player, raw_total, interrupt, source_flag)
+  return _build_move_args(player, raw_total, {
     [source_flag] = true,
     remaining_steps = interrupt.remaining_steps,
     facing = interrupt.facing,
@@ -77,8 +77,8 @@ local function _phase_move(turn_mgr, args)
       game.dirty.turn = true
       game.dirty.any = true
       return "wait_move_anim", {
-        resume_state = "move",
-        resume_args = _build_move_resume_args(player, raw_total, {
+        next_state = "move",
+        next_args = _build_move_args(player, raw_total, {
           total = total,
           move_result = move_result,
         }),
@@ -103,12 +103,12 @@ local function _phase_move(turn_mgr, args)
     end
     if res and res.waiting then
       return "wait_choice", {
-        resume_state = "move",
-        resume_args = _build_interrupt_resume_args(player, raw_total, interrupt, "continue_from_steal"),
+        next_state = "move",
+        next_args = _build_interrupt_args(player, raw_total, interrupt, "continue_from_steal"),
       }
     end
     if interrupt.remaining_steps and interrupt.remaining_steps > 0 then
-      return "move", _build_interrupt_resume_args(player, raw_total, interrupt, "continue_from_steal")
+      return "move", _build_interrupt_args(player, raw_total, interrupt, "continue_from_steal")
     end
     move_result.encountered_players = {}
   end
@@ -118,8 +118,8 @@ local function _phase_move(turn_mgr, args)
     if spec then
       intent_dispatcher.dispatch(turn_mgr.game, { kind = "need_choice", choice_spec = spec })
       return "wait_choice", {
-        resume_state = "move",
-        resume_args = _build_interrupt_resume_args(
+        next_state = "move",
+        next_args = _build_interrupt_args(
           player,
           raw_total,
           move_result.market_interrupt,

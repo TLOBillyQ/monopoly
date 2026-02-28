@@ -44,8 +44,8 @@ local function _resolve_landing(game, player, tile, move_result, depth)
   end
 
   return effect_pipeline.run(landing_defs, player, tile, game_ctx, {
-    resume_state = "post_action",
-    resume_args = { player = player },
+    next_state = "post_action",
+    next_args = { player = player },
     optional_choice_kind = "landing_optional_effect",
     optional_reason = "landing_optional",
     optional_allow_cancel = true,
@@ -61,21 +61,21 @@ local function _phase_land(turn_mgr, args)
 
   local res = _resolve_landing(turn_mgr.game, player, tile, move_result)
   if res and res.waiting then
-    local resume_state = res.resume_state or "landing"
-    local resume_args = res.resume_args or { player = player, move_result = move_result }
+    local next_state = res.next_state or "landing"
+    local next_args = res.next_args or { player = player, move_result = move_result }
     if _has_action_anim(turn_mgr.game) then
       return "wait_action_anim", {
-        resume_state = "wait_choice",
-        resume_args = { resume_state = resume_state, resume_args = resume_args },
+        next_state = "wait_choice",
+        next_args = { next_state = next_state, next_args = next_args },
       }
     end
-    return "wait_choice", { resume_state = resume_state, resume_args = resume_args }
+    return "wait_choice", { next_state = next_state, next_args = next_args }
   end
 
   if _has_action_anim(turn_mgr.game) then
     return "wait_action_anim", {
-      resume_state = "post_action",
-      resume_args = { player = player },
+      next_state = "post_action",
+      next_args = { player = player },
     }
   end
 

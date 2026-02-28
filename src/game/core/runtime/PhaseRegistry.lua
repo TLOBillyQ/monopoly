@@ -11,16 +11,16 @@ local function _phase_post(turn_mgr, args)
   local player = args.player or turn_mgr.game:current_player()
   local phase_res = item_phase.run(turn_mgr, "post_action", {
     player = player,
-    resume_state = "post_action",
-    resume_args = { player = player },
+    next_state = "post_action",
+    next_args = { player = player },
   })
   if phase_res and phase_res.waiting then
-    local resume_state = phase_res.resume_state or "post_action"
-    local resume_args = phase_res.resume_args or { player = player }
+    local next_state = phase_res.next_state or "post_action"
+    local next_args = phase_res.next_args or { player = player }
     if phase_res.wait_action_anim then
-      return "wait_action_anim", { resume_state = resume_state, resume_args = resume_args }
+      return "wait_action_anim", { next_state = next_state, next_args = next_args }
     end
-    return "wait_choice", { resume_state = resume_state, resume_args = resume_args }
+    return "wait_choice", { next_state = next_state, next_args = next_args }
   end
   return "end_turn", { player = player }
 end

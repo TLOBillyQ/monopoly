@@ -3,9 +3,9 @@ local validator = require("src.game.flow.turn.TurnDispatchValidator")
 
 local await = {}
 
-local function _resume(args)
+local function _next(args)
   args = args or {}
-  return args.resume_state, args.resume_args
+  return args.next_state, args.next_args
 end
 
 local function _mark_dirty(game)
@@ -47,10 +47,10 @@ local function _await_anim_done(session, args, opts)
   end
   game.turn[opts.anim_key] = nil
   _mark_dirty(game)
-  local resume_state, resume_args = _resume(args)
+  local next_state, next_args = _next(args)
   return {
-    next_state = resume_state,
-    next_args = resume_args,
+    next_state = next_state,
+    next_args = next_args,
   }
 end
 
@@ -61,10 +61,10 @@ function await.choice(session, args)
   local choice = game.turn.pending_choice
   if not choice then
     session:clear_pending_action()
-    local resume_state, resume_args = _resume(args)
+    local next_state, next_args = _next(args)
     return {
-      next_state = resume_state,
-      next_args = resume_args,
+      next_state = next_state,
+      next_args = next_args,
     }
   end
 
@@ -90,10 +90,10 @@ function await.choice(session, args)
     }
   end
 
-  local resume_state, resume_args = _resume(args)
+  local next_state, next_args = _next(args)
   return {
-    next_state = resume_state,
-    next_args = resume_args,
+    next_state = next_state,
+    next_args = next_args,
   }
 end
 
@@ -117,10 +117,10 @@ function await.action_anim(session, args)
       return { wait = true }
     end
     session:clear_pending_action()
-    local resume_state, resume_args = _resume(args)
+    local next_state, next_args = _next(args)
     return {
-      next_state = resume_state,
-      next_args = resume_args,
+      next_state = next_state,
+      next_args = next_args,
     }
   end
 
@@ -138,10 +138,10 @@ function await.action_anim(session, args)
   if _next_action_anim(game) then
     return { wait = true }
   end
-  local resume_state, resume_args = _resume(args)
+  local next_state, next_args = _next(args)
   return {
-    next_state = resume_state,
-    next_args = resume_args,
+    next_state = next_state,
+    next_args = next_args,
   }
 end
 
