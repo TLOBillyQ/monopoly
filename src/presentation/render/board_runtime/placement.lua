@@ -1,4 +1,4 @@
-local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
+local gameplay_read_port = require("src.presentation.read_model.GameplayReadPort")
 local runtime_state = require("src.core.RuntimeState")
 
 local M = {}
@@ -116,7 +116,7 @@ function M.place_players(state, players, occupants, spacing, min_player_y)
       local slot, count = _resolve_occupant_slot(list, pid)
       local ox, oz = _calc_slot_offset(slot, count, spacing)
       local target_pos = base + math.Vector3(ox, y_offset, oz)
-      local seat_id = vehicle_feature.resolve_seat_id(player.seat_id)
+      local seat_id = gameplay_read_port.resolve_vehicle_seat_id(player.seat_id)
       if seat_id and vehicle_helper and vehicle_helper.forward_eca_event_set_position then
         vehicle_helper.forward_eca_event_set_position(pid, target_pos)
       else

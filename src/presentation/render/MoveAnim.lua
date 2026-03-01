@@ -1,5 +1,5 @@
 local runtime_constants = require("Config.RuntimeConstants")
-local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
+local gameplay_read_port = require("src.presentation.read_model.GameplayReadPort")
 
 local move_anim = {}
 
@@ -59,7 +59,7 @@ local function _is_vehicle_anim(anim_ctx)
   if anim_ctx == nil then
     return false
   end
-  return vehicle_feature.resolve_seat_id(anim_ctx.vehicle_id) ~= nil
+  return gameplay_read_port.resolve_vehicle_seat_id(anim_ctx.vehicle_id) ~= nil
 end
 
 local function _is_vehicle_move_mode(anim_ctx)
@@ -169,7 +169,7 @@ local function _build_steps(board_scene, from_index, to_index, visited, anim_ctx
 end
 
 local function _consume_enter_delay(anim_ctx, player_id)
-  local vehicle_id = anim_ctx and vehicle_feature.resolve_seat_id(anim_ctx.vehicle_id) or nil
+  local vehicle_id = anim_ctx and gameplay_read_port.resolve_vehicle_seat_id(anim_ctx.vehicle_id) or nil
   if vehicle_id == nil then
     return 0
   end

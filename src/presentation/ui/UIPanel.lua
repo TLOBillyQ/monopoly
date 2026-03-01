@@ -1,4 +1,4 @@
-local pricing = require("src.game.systems.land.LandPricing")
+local gameplay_read_port = require("src.presentation.read_model.GameplayReadPort")
 local number_utils = require("src.core.NumberUtils")
 local role_avatar = require("src.presentation.state.UIRoleAvatar")
 
@@ -84,7 +84,7 @@ function panel.build_player_statuses(game, game_obj, max_players)
         local tile = board and board.get_tile_by_id and board:get_tile_by_id(tile_id) or nil
         if tile and tile.type == "land" then
           local level = tile.level or 0
-          total = total + pricing.total_invested(tile, level)
+          total = total + gameplay_read_port.total_land_invested(tile, level)
         end
       end
       out[i] = {

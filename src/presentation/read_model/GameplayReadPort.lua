@@ -1,0 +1,47 @@
+local gameplay_rules = require("Config.GameplayRules")
+
+local gameplay_read_port = {}
+
+local function _normalize_level(level)
+  if type(level) ~= "number" or level < 0 then
+    return 0
+  end
+  return level
+end
+
+local function _purchase_price(tile)
+  if type(tile) ~= "table" then
+    return 0
+  end
+  local price = tile.price
+  if type(price) ~= "number" then
+    return 0
+  end
+  return price
+end
+
+function gameplay_read_port.resolve_vehicle_seat_id(seat_id)
+  if gameplay_rules.vehicle_enabled ~= true then
+    return nil
+  end
+  return seat_id
+end
+
+function gameplay_read_port.total_land_invested(tile, level)
+  local total = _purchase_price(tile)
+  local costs = tile and tile.upgrade_costs or nil
+  if type(costs) ~= "table" then
+    return total
+  end
+  local max_level = _normalize_level(level)
+  local max_cost_index = #costs
+  if max_level > max_cost_index then
+    max_level = max_cost_index
+  end
+  for i = 1, max_level do
+    total = total + (costs[i] or 0)
+  end
+  return total
+end
+
+return gameplay_read_port

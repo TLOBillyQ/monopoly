@@ -1,42 +1,13 @@
-local map_cfg = require("Config.Map")
-local tiles_cfg = require("Config.Generated.Tiles")
-local choice_view = require("src.presentation.ui.UIChoice")
-local panel_view = require("src.presentation.ui.UIPanel")
+local board_slice = require("src.presentation.state.ui_model.BoardSlice")
+local item_slice = require("src.presentation.state.ui_model.ItemSlice")
+local choice_slice = require("src.presentation.state.ui_model.ChoiceSlice")
+local panel_slice = require("src.presentation.state.ui_model.PanelSlice")
 
 local ui_model = {}
 
 local FALLBACK_CURRENT_PLAYER_NAME = "-"
 local FALLBACK_CURRENT_PLAYER_CASH = 0
 local FALLBACK_CURRENT_PLAYER_ID = nil
-local tiles_by_id = {}
-
-for _, cfg in ipairs(tiles_cfg) do
-  tiles_by_id[cfg.id] = cfg
-end
-
-local function _build_board_tiles()
-  local out = {}
-  assert(map_cfg.path ~= nil, "missing map path")
-  for i, tile_id in ipairs(map_cfg.path) do
-    local cfg = tiles_by_id[tile_id]
-    assert(cfg ~= nil, "missing tile cfg: " .. tostring(tile_id))
-    out[i] = {
-      id = tile_id,
-      name = cfg.name,
-      type = cfg.type,
-      price = cfg.price,
-      row = cfg.row,
-      col = cfg.col,
-    }
-  end
-  return out
-end
-
-local board_tiles = _build_board_tiles()
-
-local function _board_tiles()
-  return board_tiles
-end
 
 local function _resolve_current_player(game)
   local turn = game.turn
@@ -53,161 +24,6 @@ local function _resolve_current_player(game)
       string.format("current player not found: index=%s, player_count=%d", tostring(idx), #players)
   end
   return current, turn
-end
-
-local function _build_overlays(env)
-  assert(env ~= nil and env.game ~= nil and env.game.board ~= nil and env.game.board.get_overlays ~= nil,
-    "missing board overlays")
-  return env.game.board:get_overlays()
-end
-
-local function _resolve_item_slot_count(ui_runtime)
-  local slot_count = 5
-  if ui_runtime and type(ui_runtime.item_slots) == "table" and #ui_runtime.item_slots > 0 then
-    slot_count = #ui_runtime.item_slots
-  end
-  return slot_count
-end
-
-local function _build_item_slots_for_player(player, slot_count)
-  local current_items = {}
-  if player and player.inventory and type(player.inventory.items) == "table" then
-    current_items = player.inventory.items
-  end
-  local item_slots = {}
-  local pos = 1
-  for i = 1, #current_items do
-    if pos > slot_count then break end
-    local item = current_items[i]
-    if item and item.id then
-      item_slots[pos] = item.id
-      pos = pos + 1
-    end
-  end
-  for i = pos, slot_count do
-    item_slots[i] = nil
-  end
-  return item_slots
-end
-
-local function _build_item_slots_by_player(players, slot_count)
-  local out = {}
-  for _, player in ipairs(players or {}) do
-    local player_id = player and player.id
-    if player_id then
-      out[player_id] = _build_item_slots_for_player(player, slot_count)
-    end
-  end
-  return out
-end
-
-local function _build_auto_enabled_by_player(players)
-  local out = {}
-  for _, player in ipairs(players or {}) do
-    local player_id = player and player.id
-    if player_id then
-      out[player_id] = player.auto == true
-    end
-  end
-  return out
-end
-
-local function _build_choice_and_market(game, env, ui_state)
-  local choice = nil
-  local pending = game.turn and game.turn.pending_choice
-  if pending then
-    choice = choice_view.build_choice_view(pending, { game = env.game })
-    choice.id = pending.id
-    choice.kind = pending.kind
-    choice.route_key = pending.route_key
-    choice.requires_confirm = pending.requires_confirm == true
-  end
-  local market = nil
-  if choice and choice.kind == "market_buy" then
-    market = {
-      choice_id = choice.id,
-      options = choice.options,
-      allow_cancel = choice.allow_cancel,
-      cancel_label = choice.cancel_label,
-      selected_option_id = ui_state and ui_state.pending_choice_selected_option_id or nil,
-    }
-  end
-  return choice, market
-end
-
-local function _build_popup(ui_runtime)
-  if ui_runtime and ui_runtime.popup_active and ui_runtime.popup_payload then
-    return {
-      title = ui_runtime.popup_payload.title,
-      body = ui_runtime.popup_payload.body,
-      button_text = ui_runtime.popup_payload.button_text,
-    }
-  end
-  return nil
-end
-
-local function _resolve_item_choice_owner_id(game, choice, current_player_id)
-  local owner_id = current_player_id
-  local pending = game and game.turn and game.turn.pending_choice or nil
-  if pending and pending.meta and pending.meta.player_id then
-    owner_id = pending.meta.player_id
-    return owner_id
-  end
-  if choice and choice.meta and choice.meta.player_id then
-    owner_id = choice.meta.player_id
-  end
-  return owner_id
-end
-
-local function _build_auto_label_by_player(players, enabled_by_player)
-  local out = {}
-  for _, player in ipairs(players or {}) do
-    local player_id = player and player.id
-    if player_id then
-      out[player_id] = panel_view.build_auto_label(enabled_by_player and enabled_by_player[player_id] == true)
-    end
-  end
-  return out
-end
-
-local function _build_panel(game, env, turn, current_player_id, auto_enabled_by_player)
-  local auto_label_by_player = _build_auto_label_by_player(game.players, auto_enabled_by_player)
-  return {
-    turn_label = panel_view.build_turn_label(
-      turn.turn_count,
-      turn.countdown_seconds or 0,
-      turn.countdown_active == true
-    ),
-    player_rows = panel_view.build_player_statuses(game, env.game, 4),
-    auto_label_by_player = auto_label_by_player,
-    auto_label = auto_label_by_player[current_player_id] or panel_view.build_auto_label(false),
-    no_action_visible = turn.detained_wait_active == true,
-    no_action_text = "本回合无法行动",
-  }
-end
-
-local function _update_panel(panel, game, env, turn, current_player_id, auto_enabled_by_player, flags)
-  panel = panel or {}
-  flags = flags or {}
-  if flags.turn_label then
-    panel.turn_label = panel_view.build_turn_label(
-      turn.turn_count,
-      turn.countdown_seconds or 0,
-      turn.countdown_active == true
-    )
-  end
-  if flags.player_rows then
-    panel.player_rows = panel_view.build_player_statuses(game, env.game, 4)
-  end
-  if flags.auto_label then
-    panel.auto_label_by_player = _build_auto_label_by_player(game.players, auto_enabled_by_player)
-    panel.auto_label = panel.auto_label_by_player[current_player_id] or panel_view.build_auto_label(false)
-  end
-  if flags.turn_label then
-    panel.no_action_visible = turn.detained_wait_active == true
-    panel.no_action_text = "本回合无法行动"
-  end
-  return panel
 end
 
 local function _build_ui_env(state, game)
@@ -235,7 +51,7 @@ local function _fill_meta(model, env, current, turn)
   model.current_player_cash = current_cash
   model.turn_count = turn.turn_count
   model.current_player_id = current_player_id
-  model.board_tile_count = #_board_tiles()
+  model.board_tile_count = board_slice.tile_count()
   model.last_turn = env.last_turn
   model.finished = env.finished
   model.winner_name = env.winner_name
@@ -249,36 +65,25 @@ function ui_model.build(game, env)
   local ui_runtime = ui_state and ui_state.ui
   local current, turn = _resolve_current_player(game)
   local _, _, current_player_id = _resolve_current_player_meta(current)
-  local slot_count = _resolve_item_slot_count(ui_runtime)
-  local item_slots_by_player = _build_item_slots_by_player(game.players, slot_count)
-  local auto_enabled_by_player = _build_auto_enabled_by_player(game.players)
+  local slot_count = item_slice.resolve_slot_count(ui_runtime)
+  local item_slots_by_player = item_slice.build_item_slots_by_player(game.players, slot_count)
+  local auto_enabled_by_player = item_slice.build_auto_enabled_by_player(game.players)
   local item_slots = item_slots_by_player[current_player_id]
   if not item_slots then
-    item_slots = _build_item_slots_for_player(current, slot_count)
+    item_slots = item_slice.build_item_slots_for_player(current, slot_count)
   end
-  local choice, market = _build_choice_and_market(game, env, ui_state)
+  local choice, market = choice_slice.build_choice_and_market(game, env, ui_state)
 
   local model = {
-    board = {
-      tiles = _board_tiles(),
-      tile_states = game.board and game.board.tile_lookup or {},
-      overlays = _build_overlays(env),
-      players = game.players,
-      phase = turn.phase,
-      move_anim = turn.move_anim,
-      turn_start_prompt_seq = turn.turn_start_prompt_seq or 0,
-      turn_start_prompt_player_id = turn.turn_start_prompt_player_id,
-      vehicle_resync_seq = turn.vehicle_resync_seq or 0,
-      tile_count = #_board_tiles(),
-    },
-    panel = _build_panel(game, env, turn, current_player_id, auto_enabled_by_player),
+    board = board_slice.build(game, env, turn),
+    panel = panel_slice.build(game, env, turn, current_player_id, auto_enabled_by_player),
     item_slots = item_slots,
     item_slots_by_player = item_slots_by_player,
     auto_enabled_by_player = auto_enabled_by_player,
-    item_choice_owner_id = _resolve_item_choice_owner_id(game, choice, current_player_id),
+    item_choice_owner_id = item_slice.resolve_item_choice_owner_id(game, choice, current_player_id),
     choice = choice,
     market = market,
-    popup = _build_popup(ui_runtime),
+    popup = choice_slice.build_popup(ui_runtime),
   }
   return _fill_meta(model, env, current, turn)
 end
@@ -298,25 +103,14 @@ function ui_model.update(prev, game, env, dirty)
   local model = prev
 
   if dirty.players or dirty.board_tiles or dirty.turn then
-    local board = model.board or {}
-    board.tiles = _board_tiles()
-    board.tile_states = game.board and game.board.tile_lookup or {}
-    board.overlays = _build_overlays(env)
-    board.players = game.players
-    board.phase = turn.phase
-    board.move_anim = turn.move_anim
-    board.turn_start_prompt_seq = turn.turn_start_prompt_seq or 0
-    board.turn_start_prompt_player_id = turn.turn_start_prompt_player_id
-    board.vehicle_resync_seq = turn.vehicle_resync_seq or 0
-    board.tile_count = #_board_tiles()
-    model.board = board
+    model.board = board_slice.update(model.board, game, env, turn)
   end
 
   if dirty.players or dirty.turn or ui_dirty then
-    model.auto_enabled_by_player = _build_auto_enabled_by_player(game.players)
+    model.auto_enabled_by_player = item_slice.build_auto_enabled_by_player(game.players)
   end
 
-  model.panel = _update_panel(
+  model.panel = panel_slice.update(
     model.panel,
     game,
     env,
@@ -338,23 +132,23 @@ function ui_model.update(prev, game, env, dirty)
     end
   end
   if update_slots then
-    local slot_count = _resolve_item_slot_count(ui_runtime)
-    local by_player = _build_item_slots_by_player(game.players, slot_count)
+    local slot_count = item_slice.resolve_slot_count(ui_runtime)
+    local by_player = item_slice.build_item_slots_by_player(game.players, slot_count)
     model.item_slots_by_player = by_player
-    model.item_slots = by_player[current_player_id] or _build_item_slots_for_player(current, slot_count)
+    model.item_slots = by_player[current_player_id] or item_slice.build_item_slots_for_player(current, slot_count)
   end
 
   if dirty.turn or dirty.market or ui_dirty then
-    local choice, market = _build_choice_and_market(game, env, ui_state)
+    local choice, market = choice_slice.build_choice_and_market(game, env, ui_state)
     model.choice = choice
     model.market = market
-    model.item_choice_owner_id = _resolve_item_choice_owner_id(game, choice, current_player_id)
+    model.item_choice_owner_id = item_slice.resolve_item_choice_owner_id(game, choice, current_player_id)
   elseif dirty.players or update_slots then
-    model.item_choice_owner_id = _resolve_item_choice_owner_id(game, model.choice, current_player_id)
+    model.item_choice_owner_id = item_slice.resolve_item_choice_owner_id(game, model.choice, current_player_id)
   end
 
   if ui_dirty then
-    model.popup = _build_popup(ui_runtime)
+    model.popup = choice_slice.build_popup(ui_runtime)
   end
 
   if dirty.players or dirty.turn then
@@ -364,7 +158,7 @@ function ui_model.update(prev, game, env, dirty)
     model.current_player_id = current_player_id
   end
 
-  model.board_tile_count = #_board_tiles()
+  model.board_tile_count = board_slice.tile_count()
   model.last_turn = env.last_turn
   model.finished = env.finished
   model.winner_name = env.winner_name
