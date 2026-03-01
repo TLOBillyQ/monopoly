@@ -5,6 +5,7 @@ local input_lock_policy = require("src.presentation.interaction.UIInputLockPolic
 local role_control_lock_policy = require("src.presentation.interaction.UIRoleControlLockPolicy")
 local modal_presenter = require("src.presentation.ui.UIModalPresenter")
 local logger = require("src.core.Logger")
+local runtime = require("src.presentation.api.UIRuntimePort")
 
 local state = require("src.presentation.api.ui_view_service.state")
 local assets = require("src.presentation.api.ui_view_service.assets")
@@ -27,7 +28,7 @@ end
 
 function service.refresh_panel(state_ctx, ui_model)
   base_presenter.refresh(state_ctx, ui_model, {
-    runtime = require("src.presentation.api.UIRuntimePort"),
+    runtime = runtime,
     refresh_item_slots = service.refresh_item_slots,
   })
 end
@@ -37,7 +38,6 @@ function service.refresh_turn_label(state_ctx, label_text)
   if not ui or not ui.set_label then
     return
   end
-  local runtime = require("src.presentation.api.UIRuntimePort")
   runtime.for_each_role_or_global(function()
     ui:set_label(require("src.presentation.canvas.base.nodes").countdown, label_text)
   end)
@@ -49,16 +49,16 @@ function service.refresh_item_slots(state_ctx, ui_model, opts)
 end
 
 function service.apply_input_lock(state_ctx)
-  input_lock_policy.apply(state_ctx, { runtime = require("src.presentation.api.UIRuntimePort") })
+  input_lock_policy.apply(state_ctx, { runtime = runtime })
 end
 
 function service.apply_role_control_lock(state_ctx, enabled)
-  role_control_lock_policy.sync(state_ctx, enabled, { runtime = require("src.presentation.api.UIRuntimePort") })
+  role_control_lock_policy.sync(state_ctx, enabled, { runtime = runtime })
 end
 
 function service.render(state_ctx, ui_model, log_once, build_log_prefix)
   render_pipeline.render(state_ctx, ui_model, log_once, build_log_prefix, {
-    runtime = require("src.presentation.api.UIRuntimePort"),
+    runtime = runtime,
     refresh_item_slots = service.refresh_item_slots,
   })
 end

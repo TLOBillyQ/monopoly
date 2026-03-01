@@ -33,11 +33,28 @@ local function _set_outline_touch_enabled(ui, outline_name, enabled)
   end
 end
 
-local function _reset_slot_animation(index)
+local function _emit_slot_animation(index, event_prefix)
+  local event_name = event_prefix .. tostring(index)
   local role = runtime.get_client_role()
   if role then
-    ui_events.send_to_role(role, "重置高亮道具槽位牌" .. index, {})
+    ui_events.send_to_role(role, event_name, {})
+    return
   end
+  ui_events.send_to_all(event_name, {})
+end
+
+local function _emit_global_reset_animation()
+  local role = runtime.get_client_role()
+  local event_name = "重置高亮"
+  if role then
+    ui_events.send_to_role(role, event_name, {})
+    return
+  end
+  ui_events.send_to_all(event_name, {})
+end
+
+local function _reset_slot_animation(index)
+  _emit_slot_animation(index, "重置高亮道具槽位牌")
 end
 
 function M.refresh_item_slots(state, ui_model, opts)
@@ -62,6 +79,7 @@ function M.refresh_item_slots(state, ui_model, opts)
     and display_player_id ~= nil
     and choice_owner_id == display_player_id
   local option_id_set = _build_option_id_set(ui_model and ui_model.choice or nil)
+  local slot_pickable = {}
 
   for index, slot_name in ipairs(slots) do
     local item_id = items[index]
@@ -72,19 +90,26 @@ function M.refresh_item_slots(state, ui_model, opts)
       core.set_item_slot_image(slot_name, image_key)
       can_pick = allow_slot_click and option_id_set[tostring(item_id)] == true
       ui:set_touch_enabled(slot_name, can_pick)
-      if can_pick then
-        ui_events.send_to_all("高亮道具槽位牌" .. index, {})
-      else
-        _reset_slot_animation(index)
-      end
       item_ids[index] = item_id
     else
       core.set_item_slot_image(slot_name, empty_key)
       ui:set_touch_enabled(slot_name, false)
-      _reset_slot_animation(index)
     end
+    slot_pickable[index] = can_pick
     _set_outline_visible(ui, outline_name, can_pick)
     _set_outline_touch_enabled(ui, outline_name, can_pick)
+  end
+
+  _emit_global_reset_animation()
+  for index, can_pick in ipairs(slot_pickable) do
+    if not can_pick then
+      _reset_slot_animation(index)
+    end
+  end
+  for index, can_pick in ipairs(slot_pickable) do
+    if can_pick then
+      _emit_slot_animation(index, "高亮道具槽位牌")
+    end
   end
 
   if role_id ~= nil then

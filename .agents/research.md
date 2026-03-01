@@ -1,179 +1,136 @@
-# 项目架构分析与简化方案
+# 项目架构分析与简化方案（执行结果更新）
 
-下面是对整个项目的架构分析和简化方案。
+本文基于已落地变更更新（分支：`copilot/execute-research-plan-20260301`，提交：`df73efa`），重点记录“计划执行后的实际状态”。
 
 ---
 
-## 当前架构总览（219 文件, ~15,800 行）
+## 当前架构总览（执行后，src: 209 个 Lua 文件，约 17,962 行）
 
 ```
-main.lua → src/app/init.lua (启动编排)
-  ├─ bootstrap/ (5 个启动文件: RuntimeInstall → GameStartup → EventBridge → UIBootstrap → GameRuntimeBootstrap)
+main.lua → src/app/init.lua（启动编排）
+  ├─ bootstrap/（5 个启动文件: RuntimeInstall → GameStartup → EventBridge → UIBootstrap → GameRuntimeBootstrap）
   │
-  ├─ src/core/          (6 文件) — Logger, RuntimeContext, 工具函数
+  ├─ src/core/                         （8 文件）— Logger, RuntimeContext, NumberUtils, ChoiceRoutePolicy 等
   │
   ├─ src/game/
-  │   ├─ core/runtime/  (15 文件) — Game, TurnEngine, CompositionRoot, GameStateOps, Bankruptcy, Agent...
-  │   ├─ core/player/   (2 文件)  — Player, Inventory
-  │   ├─ runtime_coroutine/ (7 文件) — Scheduler, Session, TurnScript, ActionRouter, Await...
-  │   ├─ flow/turn/     (17 文件) — GameplayLoop, TurnDispatch, TurnMove, TurnLand, TurnRoll...
-  │   ├─ flow/intent/   (1 文件)  — IntentDispatcher
-  │   └─ systems/       (10 子目录) — board, land, movement, market, items, effects, chance, choices...
+  │   ├─ core/runtime/                 （19 文件）— Game, TurnEngine, CompositionRoot, Bankruptcy, Agent...
+  │   ├─ core/player/                  （2 文件）— Player, Inventory
+  │   ├─ runtime_coroutine/            （5 文件）— Scheduler, Session, TurnScript, ActionRouter, Await
+  │   ├─ flow/turn/                    （18 文件）— GameplayLoop, AutoContext, GameplayLoopPorts...
+  │   ├─ flow/intent/                  （1 文件）— IntentDispatcher
+  │   └─ systems/                      （10 子目录 / 52 文件）
   │
   └─ src/presentation/
-      ├─ api/           (6 文件 + ports/ 5 文件 + ui_view_service/ 5 文件)
-      ├─ canvas_runtime/(7 文件) — CanvasStore, CanvasEventRouter, CanvasRenderPipeline...
-      ├─ interaction/   (11 文件) — UICanvasCoordinator, UIIntentDispatcher, UIEventBindings...
-      ├─ state/         (3 文件) — UIModel, UIRoleContext, UIRoleAvatar
-      ├─ ui/            (7 文件) — UIPanel, UIChoice, UIModalPresenter, PopupRenderer...
-      ├─ render/        (12 文件) — BoardScene, MoveAnim, ActionAnim, Status3D...
-      ├─ shared/        (4 文件) — UIEvents, UIAliases, PlayerColors, MarketLayout
-      └─ canvas/        (12 子目录) — 每个屏一个目录 (base, always_show, popup, market...)
+      ├─ api/                          （9 文件，含 PresentationPorts + ui_view_service/5）
+      ├─ canvas_runtime/               （6 文件）
+      ├─ interaction/                  （10 文件）
+      ├─ state/                        （3 文件）
+      ├─ ui/                           （9 文件）
+      ├─ render/                       （20 文件）
+      ├─ shared/                       （4 文件）
+      └─ canvas/                       （12 子目录 / 36 文件）
 ```
 
 ---
 
-## 核心问题（按严重度排序）
+## 执行结果快照（可复核）
 
-> **审查意见**：整体按"问题 → 方案 → 收益"组织清晰；建议每个关键结论补上证据来源（文件:行号或检索命令），便于复核。
-
-### 1. 过度间接 — 薄封装泛滥（~8 个纯转发文件, ~400 行）
-
-| 薄封装 | 行数 | 消费者 | 做了什么 |
-|--------|------|--------|----------|
-| GameStateOps | 141 | Game (mixin) | 30+ 函数逐行转发 GameStatePlayers/Tiles/Turn |
-| GameStatePlayers | 19 | GameStateOps | 再转发 5 个 player_state/*Ops |
-| UIEventRouter | 16 | UIBootstrap（1 处） | 包装 CanvasEventRouter |
-| TurnActionPort | 19 | UIIntentDispatcher（1 处） | 规范化 port 表 |
-| CompatBridge | 17 | TurnEngine（1 处） | 同步 phase 到 legacy turn |
-| Signals | 11 | Scheduler+ActionRouter | 2 个字符串常量 |
-| CanvasCoordinator | 25 | 零消费者 | 克隆 UICanvasCoordinator |
-| GameplayLoopPortsAdapter | 16 | 零消费者 | 复制 GameRuntimeBootstrap |
-
-> **审查意见**：`GameplayLoopPortsAdapter` 目前并非"零消费者"，测试中仍有引用（`tests/suites/presentation_ui.lua` 多处 `require`）；该项应标注为"仅测试依赖"并给出迁移步骤。
-
-### 2. Port 基础设施过重（~540 行 / 7 文件）
-
-GameplayLoop ← GameplayLoopPorts(208 行 fallback 构建) ← ports/(5 个文件) ← 各自 require(UIViewService)。多数 port 函数仅 1-2 行 `require("UIViewService").xxx(state)`。这实际上只是为了解耦 game/flow 和 presentation，但代价太高。
-
-> **审查意见**：判断方向正确，建议补一张"7 文件明细表"（每文件行数、调用点、是否可合并）来支撑 540 行结论。
-
-### 3. 上帝对象 state（40+ 字段）
-
-GameStartup.build_state() 创建一个巨型 table，同时承载：UI 状态、动画序列、待决选择、棋盘位置、锁标志、计时器、game 引用、factory 闭包。整个 presentation 和 flow 层都传递这个 bag。
-
-### 4. 逻辑重复
-
-- 选择路由：IntentDispatcher._resolve_choice_route() 和 UIChoiceRoutePolicy.resolve() 相同 if-chain
-- 自动上下文：GameplayLoop 里 _build_auto_context() 和 _build_tick_auto_context() 近似重复
-- Agent ↔ AgentTargeting：4 个函数纯转发
-
-### 5. 循环依赖导致延迟 require
-
-UIViewService 在 5 个函数体内 require("UIRuntimePort") 而非文件顶部——说明依赖图有环。
+- 回归结果：`lua tests/regression.lua` → `All regression checks passed (187)`，且 `dep_rules / tick / forbidden_globals` 全部通过。
+- 语法校验：`lua -e "assert(loadfile(...))"` 关键入口文件通过（`main.lua`、`src/app/init.lua`、`Game.lua`、`GameplayLoop.lua`、`UIViewService.lua`）。
+- 已删除模块引用清零（`rg` 校验）：  
+  `GameplayLoopPortsAdapter`、`UIEventRouter`、`TurnActionPort`、`CompatBridge`、`Signals`、`AgentTargeting`、`GameStateOps`、`GameplayLoopPortTypes` 均无残留 `require`。
+- `UIViewService` 对 `UIRuntimePort` 已改为顶层依赖：仅保留 1 处文件级 `require`。
+- `GameplayLoop` 中 `_build_auto_context` / `_build_tick_auto_context` 已删除，改由 `AutoContext` 统一构建。
 
 ---
 
-## 简化方案（收敛路线，不新建目录）
+## 各阶段实际落地情况（对照 plan）
 
-### 阶段 0：删除死代码
+### 阶段 0：基线固化（已完成）
 
-- 删 CanvasCoordinator.lua（0 消费者）
-- 删 GameplayLoopPortsAdapter.lua（0 消费者）
-- 预计减少 ~40 行
+- 固化回归基线为 187，并记录关键引用与后续清零目标。
 
-> **审查意见**：该阶段需修正事实：`GameplayLoopPortsAdapter.lua` 当前被测试依赖，不能直接按死代码删除；建议先替换测试入口再删除。
+### 阶段 1：删除死代码与测试过渡层（已完成）
 
-### 阶段 1：内联单消费者薄封装
+- 删除：`src/presentation/canvas_runtime/CanvasCoordinator.lua`
+- 删除：`src/presentation/api/GameplayLoopPortsAdapter.lua`
+- 测试迁移：`tests/suites/presentation_ui.lua` 改为 `PresentationPorts.build()` 构建 grouped ports。
 
-| 操作 | 方式 |
-|------|------|
-| UIEventRouter → 内联到 UIBootstrap | 3 行替换 |
-| TurnActionPort → 内联到 UIIntentDispatcher | nil 检查直接写 |
-| CompatBridge → 内联到 TurnEngine | 10 行逻辑搬入 |
-| Signals → 内联到 Scheduler | 常量搬入 |
-| 合并 Agent + AgentTargeting 为单文件 | 消除 4 个透传 |
-| 预计减少 ~100 行，减少 5 个文件 | |
+### 阶段 2：内联低风险薄封装（已完成）
 
-> **审查意见**：建议按风险拆批执行：先 `UIEventRouter`/`Signals`（低风险），再 `TurnActionPort`/`CompatBridge`（行为风险更高）。
+- 删除：`src/presentation/interaction/UIEventRouter.lua`
+- 删除：`src/game/runtime_coroutine/Signals.lua`
+- 调整接线：`UIBootstrap` 与测试直接使用 `CanvasEventRouter`；`Scheduler/ActionRouter` 内联信号常量与判定。
 
-### 阶段 2：塌缩 GameStateOps 链
+### 阶段 3：内联中风险薄封装 + Agent 合并（已完成）
 
-当前:
-```
-Game ──mixin──> GameStateOps ──> GameStatePlayers ──> 5个*Ops
-```
+- 删除：`src/presentation/api/TurnActionPort.lua`（默认 reject / 不阻塞语义保留在 `UIIntentDispatcher`）
+- 删除：`src/game/runtime_coroutine/CompatBridge.lua`（快照同步逻辑内联到 `TurnEngine`）
+- 合并并删除：`src/game/core/runtime/AgentTargeting.lua` → 逻辑并入 `Agent.lua`
+- 更新：`RuntimeInstall.lua` 移除 `AgentTargeting` preload。
 
-目标:
-```
-Game ──mixin──> GameStatePlayers (直接聚合 5 个 *Ops)
-      ──mixin──> GameStateTiles
-      ──mixin──> GameStateTurn
-```
+### 阶段 4：塌缩 GameStateOps（已完成）
 
-删除 GameStateOps.lua（141 行纯透传）。Game.lua 直接 mixin 三个子模块。
+- 删除：`src/game/core/runtime/GameStateOps.lua`
+- `Game.lua` 改为直接 mixin：
+  - `GameStatePlayers`
+  - `GameStateTiles`
+  - `GameStateTurn`
+- `rebuild`、`mark_players_dirty`、`mark_board_dirty` 保留在 `Game.lua`，对外接口兼容。
 
-> **审查意见**：这里应增加"mixin 顺序不变性"验收项，重点验证同名方法覆盖顺序与初始化副作用。
+### 阶段 5：Port 基础设施收敛（已完成）
 
-### 阶段 3：简化 Port 基础设施
+- 新增：`src/presentation/api/PresentationPorts.lua`（聚合 modal/anim/ui_sync/debug/state）
+- 保留并重构：`src/game/flow/turn/GameplayLoopPorts.lua`（接口 + fallback/no-op）
+- 删除：`src/game/flow/turn/GameplayLoopPortTypes.lua`
+- 删除：`src/presentation/api/ports/*.lua`（5 个分散端口实现）
+- `GameRuntimeBootstrap` 切换为 `PresentationPorts.build()`。
 
-当前 7 文件 ~540 行:
-- GameplayLoopPortTypes + GameplayLoopPorts + 5 个 ports/*.lua
+### 阶段 6：去重与依赖收敛（已完成）
 
-目标 2 文件 ~200 行:
-- GameplayLoopPorts.lua — 声明接口 + no-op fallback
-- PresentationPorts.lua — 一个文件聚合全部 concrete 实现
-
-把 ModalPorts/AnimPorts/UISyncPorts/DebugPorts/StatePorts 各自的 .build() 合并到 PresentationPorts.build()。消除中间 resolve 层。
-
-> **审查意见**：建议保留最小契约测试（尤其 fallback/no-op 行为），否则 Port 收敛后失败定位成本会升高。
-
-### 阶段 4：拆分 state bag
-
-从 40+ 平铺字段 → 子对象
-
-```lua
-state = {
-  ui      = { ... },      -- UI 显示状态（已存在）
-  anim    = { ... },      -- 动画序列 + wait 标志
-  turn    = { ... },      -- pending_choice, elapsed, id
-  board   = { ... },      -- positions, sync_pending, scene
-  timers  = { ... },      -- countdown, action_button
-  locks   = { ... },      -- next_turn, role_control, input
-}
-```
-
-渐进迁移：先加子对象，旧字段保留为 alias，逐步删除。
-
-> **审查意见**：建议补充 alias 退出机制（旧字段访问告警 + 明确清理条件），避免长期双轨。
-
-### 阶段 5：统一重复逻辑
-
-- 选择路由：UIChoiceRoutePolicy.resolve() 为唯一入口，IntentDispatcher 调用它
-- auto context：提取 AutoContext.build(game) 工具函数
-- 解决循环 require：UIRuntimePort 移到 presentation/shared/ 或拆分接口
-
-> **审查意见**：循环依赖改造建议先给出最小依赖环和拆环顺序（先抽哪层接口），否则执行风险偏高。
+- 新增：`src/core/ChoiceRoutePolicy.lua`，统一 choice route 推断与 confirm 规则。
+- `IntentDispatcher` 与 `UIChoiceRoutePolicy` 均复用 `ChoiceRoutePolicy`。
+- 新增：`src/game/flow/turn/AutoContext.lua`，统一 auto context 构建。
+- `UIViewService` 清理函数体内 `require("UIRuntimePort")`，改为顶层依赖。
 
 ---
 
-## 预期收益
+## 问题闭环状态（执行后）
 
-| 指标 | 当前 | 目标 |
-|------|------|------|
-| 纯透传/死代码文件 | 8+ | 0 |
-| Port 基础设施 | 7 文件 540 行 | 2 文件 ~200 行 |
-| state bag 字段 | 40+ 平铺 | 6 个子对象 |
-| 重复逻辑 | 2 处 | 0 |
-| 总文件数 | 219 | ~207 |
-| 总行数 | ~15,800 | ~14,800（-1000） |
+| 问题 | 执行前 | 执行后状态 |
+|------|--------|------------|
+| 薄封装泛滥 | 8 个重点薄封装待处理 | 关键薄封装/过渡层已清理，引用清零 |
+| Port 基础设施碎片化 | 7 文件 / 543 行（不含 adapter/bootstrap） | 已收敛为 `GameplayLoopPorts + PresentationPorts` 双核心 |
+| state bag 过大 | 35 顶层字段 + 3 回调 | **未拆分**（保持兼容，后续可独立推进） |
+| route 与 auto context 重复 | 2 组核心重复逻辑 | 已合并为单一策略/单一构建入口 |
+| UIViewService 延迟 require | 函数体内 5 处 | 已降为文件级 1 处 |
 
-> **审查意见**：收益表建议拆分"确定值/估算值"，并补充统一验收口径（回归通过数、启动耗时、关键路径性能）。
+---
+
+## 实际收益（执行前 vs 执行后）
+
+| 指标 | 执行前 | 执行后 | 变化 |
+|------|--------|--------|------|
+| src Lua 文件数 | 220 | 209 | -11 |
+| src Lua 行数 | ~18,293 | ~17,962 | -331 |
+| runtime_coroutine 文件数 | 7 | 5 | -2 |
+| presentation/api 文件数 | 15 | 9 | -6 |
+| 关键中间层文件 | 多处分散 | 统一到核心模块 | 结构收敛完成 |
+| 回归通过数 | 187 | 187 | 行为保持稳定 |
+
+补充说明：  
+Port 侧“文件数量收敛”目标已完成；“行数显著压缩”未完全兑现（当前两核心文件合计约 560 行），但已移除跨文件跳转与重复入口，后续可在不改接口前提下继续做语义级瘦身。
+
+---
+
+## 当前遗留与后续建议
+
+1. **state bag 子对象化仍未落地**：`GameStartup.build_state()` 仍为 35 个顶层字段，建议后续按 `ui/anim/turn/board/timers/locks` 子对象分批迁移。
+2. **Port 行数优化可继续**：`PresentationPorts.lua` 目前聚合后可读性提升，但仍可抽出内部私有 helper（不新增对外层级）进一步降复杂度。
+3. **收益口径建议固定**：后续继续使用同一回归入口（187 基线）和同一 `rg` 清零口径，保持横向可比。
 
 ---
 
 ## 核心原则
 
-**不加目录、不加层。只删、合并、内联。每个阶段独立可验证，回归跑通即合。**
-
-> **总评**：方向正确且可执行性高；补齐证据链与每阶段验收标准后，可以直接作为实施清单。
+**不加目录、不加层，只删、合并、内联；每步都以可验证回归为准绳。**

@@ -1,6 +1,6 @@
 local board_scene = require("src.presentation.render.BoardScene")
 local ui_view = require("src.presentation.api.UIViewService")
-local ui_event_router = require("src.presentation.interaction.UIEventRouter")
+local canvas_event_router = require("src.presentation.canvas_runtime.CanvasEventRouter")
 local base_nodes = require("src.presentation.canvas.base.nodes")
 local always_show_nodes = require("src.presentation.canvas.always_show.nodes")
 local always_show_contract = require("src.presentation.canvas.always_show.contract")
@@ -84,7 +84,7 @@ function M.install(state, current_game_ref, opts)
     end
     assert(current_game ~= nil, "missing current_game")
 
-    ui_event_router.bind(state, function()
+    canvas_event_router.bind(state, function()
       return current_game_ref[1]
     end)
 

@@ -1,6 +1,57 @@
 local gameplay_loop_ports = {}
-local port_types = require("src.game.flow.turn.GameplayLoopPortTypes")
 local number_utils = require("src.core.NumberUtils")
+
+local port_groups = {
+  modal = {
+    "close_choice_modal",
+    "open_choice_modal",
+    "close_popup",
+  },
+  anim = {
+    "play_move_anim",
+    "play_action_anim",
+    "reset_status_3d",
+    "sync_status_3d",
+  },
+  ui_sync = {
+    "apply_input_lock",
+    "step_choice_timeout",
+    "step_modal_timeout",
+    "update_countdown",
+    "build_model",
+    "refresh_from_dirty",
+    "get_ui_state",
+    "is_input_blocked",
+    "is_popup_active",
+    "is_choice_active",
+    "is_market_active",
+    "get_popup_owner_index",
+    "set_input_blocked",
+  },
+  debug = {
+    "log_status",
+    "sync_debug_log",
+    "resolve_debug_enabled",
+  },
+  clock = {
+    "now",
+    "diff_seconds",
+  },
+  state = {
+    "apply_role_control_lock",
+    "install_event_handlers",
+    "on_bankruptcy_tiles_cleared",
+  },
+}
+
+local group_names = {
+  "modal",
+  "anim",
+  "ui_sync",
+  "debug",
+  "clock",
+  "state",
+}
 
 local function _base_modal_ports()
   return {
@@ -100,7 +151,7 @@ local function _resolve_grouped_override(override_ports)
   if type(override_ports) ~= "table" then
     return nil
   end
-  for _, group_name in ipairs(port_types.group_names) do
+  for _, group_name in ipairs(group_names) do
     if type(override_ports[group_name]) == "table" then
       return override_ports
     end
@@ -112,8 +163,8 @@ local function _has_legacy_flat_override(override_ports)
   if type(override_ports) ~= "table" then
     return false
   end
-  for _, group_name in ipairs(port_types.group_names) do
-    local keys = port_types.groups[group_name]
+  for _, group_name in ipairs(group_names) do
+    local keys = port_groups[group_name]
     for _, key in ipairs(keys) do
       if type(override_ports[key]) == "function" then
         return true
@@ -194,10 +245,10 @@ local base_ports = _resolve_base_ports()
 
 local function _build_resolved_ports(grouped_override)
   local resolved = {}
-  for _, group_name in ipairs(port_types.group_names) do
+  for _, group_name in ipairs(group_names) do
     local base_group = base_ports[group_name]
     local override_group = grouped_override and grouped_override[group_name] or nil
-    resolved[group_name] = _copy_group_ports(base_group, override_group, port_types.groups[group_name])
+    resolved[group_name] = _copy_group_ports(base_group, override_group, port_groups[group_name])
   end
   _fill_ui_sync_defaults(resolved.ui_sync, base_ports.ui_sync)
   return resolved

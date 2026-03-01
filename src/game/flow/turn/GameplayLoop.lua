@@ -6,6 +6,7 @@ local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
 local turn_anim = require("src.game.flow.turn.TurnAnim")
 local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
 local gameplay_loop_runtime = require("src.game.flow.turn.GameplayLoopRuntime")
+local auto_context = require("src.game.flow.turn.AutoContext")
 local paid_currency_bridge = require("src.game.systems.commerce.PaidCurrencyBridge")
 
 local gameplay_loop = {}
@@ -53,27 +54,6 @@ local function _is_auto_popup_owner(game, state)
   end
   local actor = game.players[idx]
   return actor and agent.is_auto_player(actor) or false
-end
-
-local function _build_auto_context(game, context)
-  local ctx = context or {}
-  ctx.game_finished = game.finished
-  local current_player_index = ctx.current_player_index
-  if not current_player_index then
-    current_player_index = game.turn and game.turn.current_player_index or nil
-    ctx.current_player_index = current_player_index
-  end
-  if ctx.current_player_id == nil then
-    local player = current_player_index and game.players and game.players[current_player_index] or nil
-    ctx.current_player_id = player and player.id or nil
-  end
-  if ctx.current_player_auto == nil then
-    local player = current_player_index and game.players and game.players[current_player_index] or nil
-    local is_player_auto = player and player.auto == true or false
-    local is_ai_auto = player and agent.is_auto_player(player) == true or false
-    ctx.current_player_auto = is_player_auto or is_ai_auto
-  end
-  return ctx
 end
 
 local function _step_phase_animation(game, state, phase, ports)
@@ -219,7 +199,7 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
       end
     end
   end
-  local ctx = _build_auto_context(game, context)
+  local ctx = auto_context.build(game, context)
   local auto_action = state.auto_runner:next_action(dt, ctx)
   if auto_action and auto_action.type == "ui_button" and not auto_action.actor_role_id then
     auto_action.actor_role_id = ctx.current_player_id
@@ -230,23 +210,8 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
   return auto_action
 end
 
-local function _build_tick_auto_context(game)
-  local idx = game.turn and game.turn.current_player_index or nil
-  local player = idx and game.players and game.players[idx] or nil
-  local is_player_auto = player and player.auto == true or false
-  local is_ai_auto = player and agent.is_auto_player(player) == true or false
-  return {
-    modal_active = false,
-    modal_buttons = nil,
-    game_finished = game.finished,
-    current_player_index = idx,
-    current_player_id = player and player.id or nil,
-    current_player_auto = is_player_auto or is_ai_auto,
-  }
-end
-
 local function _step_tick_auto_runner(game, state, dt)
-  gameplay_loop.step_auto_runner(game, state, dt, _build_tick_auto_context(game))
+  gameplay_loop.step_auto_runner(game, state, dt, auto_context.build_tick(game))
 end
 
 local function _step_tick_timeouts(game, state, dt, ports)
