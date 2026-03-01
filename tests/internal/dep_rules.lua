@@ -67,6 +67,14 @@ local rules = {
     },
     description = "tests must not depend on retired core runtime proxy modules",
   },
+  {
+    root = "src",
+    forbidden_patterns = {
+      "clock%.now%(",
+      "clock%.diff_seconds%(",
+    },
+    description = "source must not use retired clock.now/diff_seconds aliases",
+  },
 }
 
 local forbidden_files = {

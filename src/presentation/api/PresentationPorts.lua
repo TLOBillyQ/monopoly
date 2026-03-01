@@ -6,6 +6,7 @@ local ui_event_state = require("src.presentation.interaction.UIEventState")
 local logger = require("src.core.Logger")
 local number_utils = require("src.core.NumberUtils")
 local move_anim = require("src.presentation.render.MoveAnim")
+local runtime_state = require("src.core.RuntimeState")
 
 local presentation_ports = {}
 
@@ -16,13 +17,11 @@ local function _build_log_prefix()
 end
 
 local function _log_once(state, level, key, ...)
-  if state._log_once == nil then
-    state._log_once = {}
-  end
-  if state._log_once[key] then
+  local debug_runtime = runtime_state.ensure_debug_runtime(state)
+  if debug_runtime.log_once[key] then
     return
   end
-  state._log_once[key] = true
+  debug_runtime.log_once[key] = true
   if level == "warn" then
     logger.warn(...)
   else
@@ -82,9 +81,10 @@ local function _apply_role_control_lock(state, enabled)
 end
 
 local function _update_role_control_lock_exempt(state, enabled, meta, lock_fn)
+  local turn_runtime = runtime_state.ensure_turn_runtime(state)
   local role_id = meta and meta.player_id or nil
   if role_id == nil then
-    lock_fn(state, state.role_control_lock_active == true)
+    lock_fn(state, turn_runtime.role_control_lock_active == true)
     return
   end
 
@@ -115,7 +115,7 @@ local function _update_role_control_lock_exempt(state, enabled, meta, lock_fn)
     exempt_by_role[role_id] = true
   end
 
-  lock_fn(state, state.role_control_lock_active == true)
+  lock_fn(state, turn_runtime.role_control_lock_active == true)
 end
 
 local function _get_ui_state(state)
@@ -298,7 +298,12 @@ function presentation_ports.build()
       end,
       on_bankruptcy_tiles_cleared = function(game, _, owned_tile_ids)
         local ui_port = game and game.ui_port or nil
-        local scene = ui_port and ui_port.board_scene or nil
+        local scene = nil
+        if ui_port and type(ui_port.get_board_scene) == "function" then
+          scene = ui_port:get_board_scene()
+        else
+          scene = ui_port and ui_port.board_scene or nil
+        end
         if not scene or not scene.building_unit_groups or not scene.tiles then
           return
         end

@@ -1,4 +1,5 @@
 local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
+local runtime_state = require("src.core.RuntimeState")
 
 local M = {}
 
@@ -27,8 +28,9 @@ local function _build_snapshot(players)
 end
 
 function M.compute_need_sync(state, snapshot, vehicle_resync_seq)
-  local need_sync = state.board_sync_pending or false
-  local last_positions = assert(state.board_last_positions, "missing board_last_positions")
+  local board_runtime = runtime_state.ensure_board_runtime(state)
+  local need_sync = board_runtime.board_sync_pending or false
+  local last_positions = assert(board_runtime.board_last_positions, "missing board_runtime.board_last_positions")
   if not need_sync then
     for pid, value in pairs(snapshot) do
       if last_positions[pid] ~= value then
@@ -37,7 +39,7 @@ function M.compute_need_sync(state, snapshot, vehicle_resync_seq)
       end
     end
   end
-  if not need_sync and state.board_last_vehicle_resync_seq ~= vehicle_resync_seq then
+  if not need_sync and board_runtime.board_last_vehicle_resync_seq ~= vehicle_resync_seq then
     need_sync = true
   end
   return need_sync

@@ -58,8 +58,6 @@ local port_groups = {
     "wall_diff_seconds",
     "cpu_now_seconds",
     "cpu_diff_seconds",
-    "now",
-    "diff_seconds",
   },
   state = {
     "apply_role_control_lock",
@@ -163,15 +161,6 @@ local function _base_clock_ports()
       return 0
     end,
     cpu_diff_seconds = function(timestamp_1, timestamp_2)
-      if number_utils.is_numeric(timestamp_1) and number_utils.is_numeric(timestamp_2) then
-        return timestamp_1 - timestamp_2
-      end
-      return 0
-    end,
-    now = function()
-      return 0
-    end,
-    diff_seconds = function(timestamp_1, timestamp_2)
       if number_utils.is_numeric(timestamp_1) and number_utils.is_numeric(timestamp_2) then
         return timestamp_1 - timestamp_2
       end
@@ -293,22 +282,18 @@ local function _fill_ui_sync_defaults(ui_sync_ports, base_ui_sync_ports)
   end
 end
 
-local function _fill_clock_defaults(clock_ports, base_clock_ports, override_clock_ports)
-  local has_legacy_now = override_clock_ports and type(override_clock_ports.now) == "function"
-  local has_legacy_diff = override_clock_ports and type(override_clock_ports.diff_seconds) == "function"
-
-  if has_legacy_now and clock_ports.wall_now_seconds == base_clock_ports.wall_now_seconds then
-    clock_ports.wall_now_seconds = override_clock_ports.now
+local function _fill_clock_defaults(clock_ports, base_clock_ports)
+  if clock_ports.wall_now_seconds == base_clock_ports.wall_now_seconds then
+    clock_ports.wall_now_seconds = base_clock_ports.wall_now_seconds
   end
-  if has_legacy_diff and clock_ports.wall_diff_seconds == base_clock_ports.wall_diff_seconds then
-    clock_ports.wall_diff_seconds = override_clock_ports.diff_seconds
+  if clock_ports.wall_diff_seconds == base_clock_ports.wall_diff_seconds then
+    clock_ports.wall_diff_seconds = base_clock_ports.wall_diff_seconds
   end
-
-  if clock_ports.now == base_clock_ports.now then
-    clock_ports.now = clock_ports.wall_now_seconds
+  if clock_ports.cpu_now_seconds == base_clock_ports.cpu_now_seconds then
+    clock_ports.cpu_now_seconds = base_clock_ports.cpu_now_seconds
   end
-  if clock_ports.diff_seconds == base_clock_ports.diff_seconds then
-    clock_ports.diff_seconds = clock_ports.wall_diff_seconds
+  if clock_ports.cpu_diff_seconds == base_clock_ports.cpu_diff_seconds then
+    clock_ports.cpu_diff_seconds = base_clock_ports.cpu_diff_seconds
   end
 end
 
@@ -322,7 +307,7 @@ local function _build_resolved_ports(grouped_override)
     resolved[group_name] = _copy_group_ports(base_group, override_group, port_groups[group_name])
   end
   _fill_ui_sync_defaults(resolved.ui_sync, base_ports.ui_sync)
-  _fill_clock_defaults(resolved.clock, base_ports.clock, grouped_override and grouped_override.clock or nil)
+  _fill_clock_defaults(resolved.clock, base_ports.clock)
   return resolved
 end
 

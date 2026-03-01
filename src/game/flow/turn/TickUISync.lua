@@ -3,6 +3,7 @@ local runtime_constants = require("Config.RuntimeConstants")
 local logger = require("src.core.Logger")
 local number_utils = require("src.core.NumberUtils")
 local tick_timeout = require("src.game.flow.turn.TickTimeout")
+local runtime_state = require("src.core.RuntimeState")
 
 local tick_ui_sync = {}
 
@@ -12,11 +13,12 @@ end
 
 local function _log_once(state, level, key, ...)
   assert(state ~= nil, "missing state")
-  assert(state._log_once ~= nil, "missing state._log_once")
-  if state._log_once[key] then
+  local debug_runtime = runtime_state.ensure_debug_runtime(state)
+  assert(debug_runtime.log_once ~= nil, "missing state.debug_runtime.log_once")
+  if debug_runtime.log_once[key] then
     return
   end
-  state._log_once[key] = true
+  debug_runtime.log_once[key] = true
   if level == "warn" then
     logger.warn(...)
   else

@@ -1,5 +1,6 @@
 local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("Config.GameplayRules")
+local runtime_state = require("src.core.RuntimeState")
 
 local runtime = {}
 
@@ -27,39 +28,19 @@ function runtime.sync_input_blocked(state, phase, ports)
 end
 
 function runtime.sync_phase_flags(state, phase)
-  if state.board_last_phase == "wait_move_anim" and phase ~= "wait_move_anim" then
-    state.board_sync_pending = true
+  local board_runtime = runtime_state.ensure_board_runtime(state)
+  local turn_runtime = runtime_state.ensure_turn_runtime(state)
+  if board_runtime.board_last_phase == "wait_move_anim" and phase ~= "wait_move_anim" then
+    board_runtime.board_sync_pending = true
   end
-  if state.next_turn_locked and state.next_turn_lock_phase and phase and phase ~= state.next_turn_lock_phase then
-    state.next_turn_locked = false
-    state.next_turn_lock_phase = phase
+  if turn_runtime.next_turn_locked
+      and turn_runtime.next_turn_lock_phase
+      and phase
+      and phase ~= turn_runtime.next_turn_lock_phase then
+    turn_runtime.next_turn_locked = false
+    turn_runtime.next_turn_lock_phase = phase
   end
-  state.board_last_phase = phase
-end
-
-local function _resolve_ui_runtime_field(state, key)
-  if not state then
-    return nil
-  end
-  if key == "wait_move_anim"
-      or key == "wait_action_anim"
-      or key == "pending_choice_elapsed"
-      or key == "board_scene" then
-    return state[key]
-  end
-  return nil
-end
-
-local function _update_ui_runtime_field(state, key, value)
-  if not state then
-    return
-  end
-  if key == "wait_move_anim"
-      or key == "wait_action_anim"
-      or key == "pending_choice_elapsed"
-      or key == "board_scene" then
-    state[key] = value
-  end
+  board_runtime.board_last_phase = phase
 end
 
 function runtime.build_ui_runtime_port(state)
@@ -68,7 +49,11 @@ function runtime.build_ui_runtime_port(state)
     return state._ui_runtime_port
   end
 
-  local port = {}
+  local port = {
+    wait_move_anim = state.wait_move_anim == true,
+    wait_action_anim = state.wait_action_anim == true,
+    state = state,
+  }
   port.push_popup = function(_, payload)
     if type(state.push_popup) == "function" then
       return state:push_popup(payload)
@@ -82,15 +67,9 @@ function runtime.build_ui_runtime_port(state)
     end
     return false
   end
-
-  setmetatable(port, {
-    __index = function(_, key)
-      return _resolve_ui_runtime_field(state, key)
-    end,
-    __newindex = function(_, key, value)
-      _update_ui_runtime_field(state, key, value)
-    end,
-  })
+  port.get_board_scene = function()
+    return state.board_scene
+  end
 
   state._ui_runtime_port = port
   return port
@@ -107,6 +86,7 @@ local function _resolve_role_control_lock_enabled(game)
 end
 
 function runtime.sync_role_control_lock(game, state, ports)
+  local turn_runtime = runtime_state.ensure_turn_runtime(state)
   local state_ports = ports and ports.state or nil
   if not state or not state_ports or not state_ports.apply_role_control_lock then
     return
@@ -114,12 +94,12 @@ function runtime.sync_role_control_lock(game, state, ports)
   local enabled = _resolve_role_control_lock_enabled(game)
   if enabled then
     state_ports.apply_role_control_lock(state, true)
-    state.role_control_lock_active = true
+    turn_runtime.role_control_lock_active = true
     return
   end
-  if state.role_control_lock_active then
+  if turn_runtime.role_control_lock_active then
     state_ports.apply_role_control_lock(state, false)
-    state.role_control_lock_active = false
+    turn_runtime.role_control_lock_active = false
   end
 end
 

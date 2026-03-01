@@ -8,6 +8,7 @@ local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
 local gameplay_loop_runtime = require("src.game.flow.turn.GameplayLoopRuntime")
 local auto_context = require("src.game.flow.turn.AutoContext")
 local paid_currency_bridge = require("src.game.systems.commerce.PaidCurrencyBridge")
+local runtime_state = require("src.core.RuntimeState")
 
 local gameplay_loop = {}
 
@@ -36,9 +37,10 @@ local function _dispatch_action_with_close_choice(game, state, action, ports)
 end
 
 local function _build_item_index(state)
-  state.item_name_by_id = {}
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  ui_runtime.item_name_by_id = {}
   for _, cfg in ipairs(items_cfg) do
-    state.item_name_by_id[cfg.id] = cfg.name or tostring(cfg.id)
+    ui_runtime.item_name_by_id[cfg.id] = cfg.name or tostring(cfg.id)
   end
 end
 
@@ -113,9 +115,10 @@ end
 local function _configure_environment(state, game, ports)
   local anim_ports = ports.anim
   local state_ports = ports.state
+  local turn_runtime = runtime_state.ensure_turn_runtime(state)
   state_ports.apply_role_control_lock(state, false)
-  state.role_control_lock_active = false
-  state.role_control_lock_suppress = 0
+  turn_runtime.role_control_lock_active = false
+  turn_runtime.role_control_lock_suppress = 0
   anim_ports.reset_status_3d(state)
   _configure_tile_owner_notifier(state, game)
   paid_currency_bridge.setup_for_game(game)
@@ -161,6 +164,7 @@ end
 
 function gameplay_loop.set_game(state, game)
   assert(game ~= nil, "missing game")
+  runtime_state.ensure_all(state)
   local ports = _initialize_ports(state, game)
   _configure_environment(state, game, ports)
   _configure_pending_choice(state, game, ports)

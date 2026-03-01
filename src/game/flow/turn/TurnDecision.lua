@@ -79,8 +79,9 @@ end
 function turn_decision.decide_choice_action(game, choice, pending_action)
   local min_visible = gameplay_rules.auto_choice_min_visible_seconds or 0
   local ui_port = game and game.ui_port or nil
-  local elapsed = ui_port and ui_port.pending_choice_elapsed or 0
-  local action = choice_auto_policy.decide(game, ui_port, choice, {
+  local state = ui_port and ui_port.state or ui_port
+  local elapsed = state and state.pending_choice_elapsed or 0
+  local action = choice_auto_policy.decide(game, state, choice, {
     mode = "wait_choice",
     pending_action = pending_action,
     min_visible_seconds = min_visible,

@@ -2,6 +2,7 @@ local anchors = require("src.presentation.render.board_runtime.anchors")
 local player_units = require("src.presentation.render.board_runtime.player_units")
 local placement = require("src.presentation.render.board_runtime.placement")
 local events = require("src.presentation.render.board_runtime.events")
+local runtime_state = require("src.core.RuntimeState")
 
 local M = {}
 
@@ -26,14 +27,15 @@ function M.refresh(state, ui_model, log_once, build_log_prefix)
 
   local snapshot = placement.build_snapshot(players)
   local need_sync = placement.compute_need_sync(state, snapshot, vehicle_resync_seq)
+  local board_runtime = runtime_state.ensure_board_runtime(state)
 
   if suppress_sync then
-    state.board_sync_pending = true
+    board_runtime.board_sync_pending = true
   end
 
   if suppress_sync or not need_sync then
-    state.board_last_positions = snapshot
-    state.board_last_vehicle_resync_seq = vehicle_resync_seq
+    board_runtime.board_last_positions = snapshot
+    board_runtime.board_last_vehicle_resync_seq = vehicle_resync_seq
     return
   end
 
@@ -42,9 +44,9 @@ function M.refresh(state, ui_model, log_once, build_log_prefix)
   local min_player_y = placement.resolve_min_player_y(scene)
   placement.place_players(state, players, occupants, spacing, min_player_y)
 
-  state.board_sync_pending = false
-  state.board_last_positions = snapshot
-  state.board_last_vehicle_resync_seq = vehicle_resync_seq
+  board_runtime.board_sync_pending = false
+  board_runtime.board_last_positions = snapshot
+  board_runtime.board_last_vehicle_resync_seq = vehicle_resync_seq
 end
 
 M.refresh_board = M.refresh

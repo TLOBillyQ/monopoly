@@ -1,5 +1,6 @@
 local turn_anim = {}
 local runtime_ports = require("src.core.RuntimePorts")
+local runtime_state = require("src.core.RuntimeState")
 
 function turn_anim.step_anim(game, state, opts)
   assert(game ~= nil, "missing game")
@@ -16,11 +17,12 @@ function turn_anim.step_anim(game, state, opts)
   local phase_label = opts.phase_label or "anim"
   assert(phase == opts.phase, "unexpected " .. phase_label .. " phase: " .. tostring(phase))
 
-  if state[opts.seq_key] == anim.seq then
+  local anim_runtime = runtime_state.ensure_anim_runtime(state)
+  if anim_runtime[opts.seq_key] == anim.seq then
     return
   end
 
-  state[opts.seq_key] = anim.seq
+  anim_runtime[opts.seq_key] = anim.seq
   local ok, delay = pcall(opts.on_anim, state, anim)
   if ok and delay and delay > 0 then
     runtime_ports.schedule(delay, function()

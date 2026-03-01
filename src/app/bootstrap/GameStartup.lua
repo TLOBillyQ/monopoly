@@ -7,6 +7,7 @@ local tiles_cfg = require("Config.Generated.Tiles")
 local gameplay_rules = require("Config.GameplayRules")
 local test_profile_bootstrap = require("src.app.testing.TestProfileBootstrap")
 local logger = require("src.core.Logger")
+local runtime_state = require("src.core.RuntimeState")
 
 local max_player_count = 4
 
@@ -84,10 +85,7 @@ function M.build_state(get_current_game)
     ui_modal_elapsed = 0,
     ui_modal_ref = nil,
     wait_move_anim = true,
-    move_anim_seq = nil,
     wait_action_anim = true,
-    action_anim_seq = nil,
-    item_name_by_id = {},
     game_factory = function()
       local role_roster = _build_role_roster(max_player_count)
       local forced_ai = _build_non_p1_ai_map(#role_roster)
@@ -122,17 +120,8 @@ function M.build_state(get_current_game)
     tile_spacing = nil,
     player_units = nil,
     player_units_missing = false,
-    board_last_positions = {},
-    board_sync_pending = false,
-    board_last_phase = nil,
-    next_turn_locked = false,
-    next_turn_last_click = nil,
-    next_turn_lock_phase = nil,
-    role_control_lock_active = false,
-    role_control_lock_suppress = 0,
     choice_visible_option_ids = nil,
     pending_choice_selected_option_id = nil,
-    _log_once = {},
     tick_started = false,
     ui_dirty = false,
     countdown_last = nil,
@@ -141,32 +130,7 @@ function M.build_state(get_current_game)
     action_button_active = false,
   }
 
-  -- Low-risk first cut for state segmentation: keep legacy top-level fields,
-  -- and expose grouped runtime views for incremental migration.
-  state.ui_runtime = {
-    item_name_by_id = state.item_name_by_id,
-    choice_visible_option_ids = state.choice_visible_option_ids,
-    pending_choice_selected_option_id = state.pending_choice_selected_option_id,
-  }
-  state.board_runtime = {
-    board_last_positions = state.board_last_positions,
-    board_sync_pending = state.board_sync_pending,
-    board_last_phase = state.board_last_phase,
-  }
-  state.anim_runtime = {
-    move_anim_seq = state.move_anim_seq,
-    action_anim_seq = state.action_anim_seq,
-  }
-  state.turn_runtime = {
-    next_turn_locked = state.next_turn_locked,
-    next_turn_last_click = state.next_turn_last_click,
-    next_turn_lock_phase = state.next_turn_lock_phase,
-    role_control_lock_active = state.role_control_lock_active,
-    role_control_lock_suppress = state.role_control_lock_suppress,
-  }
-  state.debug_runtime = {
-    log_once = state._log_once,
-  }
+  runtime_state.ensure_all(state)
 
   state.push_popup = function(_, payload)
     local ok = ui_view.push_popup(state, payload)

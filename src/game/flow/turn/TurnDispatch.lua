@@ -3,6 +3,7 @@ local number_utils = require("src.core.NumberUtils")
 local item_slot_data = require("src.game.flow.turn.ItemSlotData")
 local validator = require("src.game.flow.turn.TurnDispatchValidator")
 local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
+local runtime_state = require("src.core.RuntimeState")
 
 local turn_dispatch = {}
 
@@ -62,12 +63,6 @@ local function _resolve_timestamp_now(dispatch_ctx)
       return ts
     end
   end
-  if clock_ports and type(clock_ports.now) == "function" then
-    local ok, ts = pcall(clock_ports.now)
-    if ok and number_utils.is_numeric(ts) then
-      return ts
-    end
-  end
   return 0
 end
 
@@ -75,12 +70,6 @@ local function _resolve_timestamp_diff_seconds(dispatch_ctx, timestamp_1, timest
   local clock_ports = dispatch_ctx and dispatch_ctx.clock_ports or nil
   if clock_ports and type(clock_ports.wall_diff_seconds) == "function" then
     local ok, diff = pcall(clock_ports.wall_diff_seconds, timestamp_1, timestamp_2)
-    if ok and number_utils.is_numeric(diff) then
-      return diff
-    end
-  end
-  if clock_ports and type(clock_ports.diff_seconds) == "function" then
-    local ok, diff = pcall(clock_ports.diff_seconds, timestamp_1, timestamp_2)
     if ok and number_utils.is_numeric(diff) then
       return diff
     end
@@ -131,16 +120,17 @@ local function _dispatch_action(game, state, action, opts, dispatch_ctx)
     end
     if action.id == "next" then
       assert(game ~= nil, "missing game")
+      local turn_runtime = runtime_state.ensure_turn_runtime(state)
       local phase = game.turn.phase
       local now = _resolve_timestamp_now(ctx)
-      if state.next_turn_locked then
+      if turn_runtime.next_turn_locked then
         local allow = false
-        if state.next_turn_lock_phase and phase and phase ~= state.next_turn_lock_phase then
+        if turn_runtime.next_turn_lock_phase and phase and phase ~= turn_runtime.next_turn_lock_phase then
           allow = true
-        elseif state.next_turn_last_click == nil then
+        elseif turn_runtime.next_turn_last_click == nil then
           allow = true
         else
-          local diff = _resolve_timestamp_diff_seconds(ctx, now, state.next_turn_last_click)
+          local diff = _resolve_timestamp_diff_seconds(ctx, now, turn_runtime.next_turn_last_click)
           if diff and diff >= next_turn_cooldown then
             allow = true
           end
@@ -149,9 +139,9 @@ local function _dispatch_action(game, state, action, opts, dispatch_ctx)
           return { status = "rejected" }
         end
       end
-      state.next_turn_locked = true
-      state.next_turn_last_click = now
-      state.next_turn_lock_phase = phase
+      turn_runtime.next_turn_locked = true
+      turn_runtime.next_turn_last_click = now
+      turn_runtime.next_turn_lock_phase = phase
       turn_dispatch.step_turn(game)
       return { status = "applied" }
     end

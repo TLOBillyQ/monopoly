@@ -130,13 +130,13 @@ local function _build_test_ports(overrides)
       resolve_debug_enabled = overrides.resolve_debug_enabled or function() return false end,
     },
     clock = {
-      wall_now_seconds = overrides.wall_now_seconds or overrides.now or function()
+      wall_now_seconds = overrides.wall_now_seconds or function()
         if GameAPI and type(GameAPI.get_timestamp) == "function" then
           return GameAPI.get_timestamp()
         end
         return 0
       end,
-      wall_diff_seconds = overrides.wall_diff_seconds or overrides.diff_seconds or function(timestamp_1, timestamp_2)
+      wall_diff_seconds = overrides.wall_diff_seconds or function(timestamp_1, timestamp_2)
         if GameAPI and type(GameAPI.get_timestamp_diff) == "function" then
           return GameAPI.get_timestamp_diff(timestamp_1, timestamp_2)
         end
@@ -149,18 +149,6 @@ local function _build_test_ports(overrides)
         return 0
       end,
       cpu_diff_seconds = overrides.cpu_diff_seconds or function(timestamp_1, timestamp_2)
-        return (timestamp_1 or 0) - (timestamp_2 or 0)
-      end,
-      now = overrides.now or function()
-        if GameAPI and type(GameAPI.get_timestamp) == "function" then
-          return GameAPI.get_timestamp()
-        end
-        return 0
-      end,
-      diff_seconds = overrides.diff_seconds or function(timestamp_1, timestamp_2)
-        if GameAPI and type(GameAPI.get_timestamp_diff) == "function" then
-          return GameAPI.get_timestamp_diff(timestamp_1, timestamp_2)
-        end
         return (timestamp_1 or 0) - (timestamp_2 or 0)
       end,
     },
@@ -196,9 +184,16 @@ local function _build_loop_state()
     pending_choice = nil,
     pending_choice_elapsed = 0,
     pending_choice_id = nil,
-    next_turn_locked = false,
-    next_turn_last_click = nil,
-    next_turn_lock_phase = nil,
+    turn_runtime = {
+      next_turn_locked = false,
+      next_turn_last_click = nil,
+      next_turn_lock_phase = nil,
+      role_control_lock_active = false,
+      role_control_lock_suppress = 0,
+    },
+    debug_runtime = {
+      log_once = {},
+    },
   }
   state.auto_runner:set_enabled(true)
   return state
@@ -1512,7 +1507,7 @@ local function _test_auto_runner_depends_on_current_player_auto()
     assert(action1 and action1.type == "ui_button" and action1.id == "next",
       "current player auto should dispatch next")
 
-    state.next_turn_locked = false
+    state.turn_runtime.next_turn_locked = false
     g.turn.current_player_index = 2
     local action2 = gameplay_loop.step_auto_runner(g, state, 1.0, {
       game_finished = g.finished,
@@ -1533,16 +1528,16 @@ local function _test_turn_dispatch_uses_clock_ports_without_game_api()
   local stepped = 0
 
   state.gameplay_loop_ports = _build_test_ports({
-    now = function()
+    wall_now_seconds = function()
       return now
     end,
-    diff_seconds = function(timestamp_1, timestamp_2)
+    wall_diff_seconds = function(timestamp_1, timestamp_2)
       return (timestamp_1 or 0) - (timestamp_2 or 0)
     end,
   })
-  state.next_turn_locked = true
-  state.next_turn_last_click = 1.0
-  state.next_turn_lock_phase = g.turn.phase
+  state.turn_runtime.next_turn_locked = true
+  state.turn_runtime.next_turn_last_click = 1.0
+  state.turn_runtime.next_turn_lock_phase = g.turn.phase
 
   support.with_patches({
     { target = turn_dispatch, key = "step_turn", value = function()
@@ -1589,10 +1584,7 @@ local function _test_gameplay_loop_set_game_uses_runtime_ui_port_dto()
   assert(g.ui_port ~= state, "set_game should inject a minimal runtime ui port instead of raw state")
   assert(g.ui_port.wait_move_anim == true, "runtime ui port should expose wait_move_anim")
   assert(g.ui_port.wait_action_anim == true, "runtime ui port should expose wait_action_anim")
-  assert(g.ui_port.board_scene == state.board_scene, "runtime ui port should expose board_scene")
-
-  state.pending_choice_elapsed = 2.5
-  assert(g.ui_port.pending_choice_elapsed == 2.5, "runtime ui port should proxy dynamic elapsed field")
+  assert(g.ui_port:get_board_scene() == state.board_scene, "runtime ui port should expose board_scene getter")
 
   g.ui_port:push_popup({ kind = "test_popup" })
   assert(state._last_popup and state._last_popup.kind == "test_popup", "runtime ui port should forward popup calls")
@@ -1650,8 +1642,6 @@ local function _test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics()
     local clock = ports.clock
     assert(clock.wall_now_seconds() == 77, "wall clock should use GameAPI timestamp")
     assert(clock.wall_diff_seconds(10, 9) == 0.6, "wall diff should use GameAPI timestamp diff")
-    assert(clock.now() == 77, "legacy now alias should map to wall clock")
-    assert(clock.diff_seconds(10, 9) == 0.6, "legacy diff alias should map to wall clock")
     assert(clock.cpu_now_seconds() == 3.5, "cpu clock should remain isolated from wall clock source")
     assert(clock.cpu_diff_seconds(10, 9) == 1, "cpu diff should stay arithmetic and source-agnostic")
   end)
