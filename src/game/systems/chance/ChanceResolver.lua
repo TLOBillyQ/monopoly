@@ -1,4 +1,4 @@
-local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
+local monopoly_event = require("src.core.events.MonopolyEvents")
 
 local chance_resolver = {}
 
@@ -22,3 +22,4 @@ function chance_resolver.resolve(game, player, card, context)
 end
 
 return chance_resolver
+

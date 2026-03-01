@@ -1,7 +1,7 @@
 local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("Config.GameplayRules")
 local inventory = require("src.game.systems.items.ItemInventory")
-local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
+local monopoly_event = require("src.core.events.MonopolyEvents")
 local number_utils = require("src.core.NumberUtils")
 
 local movement = {}
@@ -175,3 +175,4 @@ function movement.move(game, player, steps, opts)
 end
 
 return movement
+

@@ -1,4 +1,4 @@
-local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
+local monopoly_event = require("src.core.events.MonopolyEvents")
 local ui_model = require("src.presentation.state.UIModel")
 local ui_view = require("src.presentation.api.UIViewService")
 
@@ -45,3 +45,4 @@ function M.install(state, get_current_game)
 end
 
 return M
+

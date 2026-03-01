@@ -1,4 +1,4 @@
-local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
+local monopoly_event = require("src.core.events.MonopolyEvents")
 
 local land_events = {}
 local emit = monopoly_event.emit
@@ -25,3 +25,4 @@ function land_events.apply(game, result)
 end
 
 return land_events
+

@@ -1,4 +1,4 @@
-local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
+local monopoly_event = require("src.core.events.MonopolyEvents")
 local choice_route_policy = require("src.core.ChoiceRoutePolicy")
 
 local intent_dispatcher = {}
@@ -72,3 +72,4 @@ function intent_dispatcher.dispatch(game, payload, opts)
 end
 
 return intent_dispatcher
+

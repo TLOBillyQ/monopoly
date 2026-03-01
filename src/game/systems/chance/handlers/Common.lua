@@ -1,6 +1,6 @@
 local inventory = require("src.game.systems.items.ItemInventory")
 local tile = require("src.game.systems.board.Tile")
-local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
+local monopoly_event = require("src.core.events.MonopolyEvents")
 local movement = require("src.game.systems.movement.Movement")
 local bankruptcy = require("src.game.core.runtime.Bankruptcy")
 local gameplay_rules = require("Config.GameplayRules")
@@ -108,3 +108,4 @@ function common.dependencies()
 end
 
 return common
+

@@ -1,7 +1,7 @@
 local tile = require("src.game.systems.board.Tile")
 local pricing = require("src.game.systems.land.LandPricing")
 local gameplay_rules = require("Config.GameplayRules")
-local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
+local monopoly_event = require("src.core.events.MonopolyEvents")
 
 local game_victory = {}
 
@@ -91,3 +91,4 @@ function game_victory.check_victory(self)
 end
 
 return game_victory
+

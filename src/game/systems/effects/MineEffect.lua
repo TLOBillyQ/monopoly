@@ -1,5 +1,5 @@
 local logger = require("src.core.Logger")
-local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
+local monopoly_event = require("src.core.events.MonopolyEvents")
 local gameplay_rules = require("Config.GameplayRules")
 local action_anim_port = require("src.core.ActionAnimPort")
 
@@ -46,3 +46,4 @@ function mine_effect.apply(game, player, position)
 end
 
 return mine_effect
+

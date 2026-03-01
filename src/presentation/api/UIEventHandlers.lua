@@ -1,4 +1,4 @@
-local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
+local monopoly_event = require("src.core.events.MonopolyEvents")
 
 local event_handlers = {}
 local context = { installed = false, logger = nil, state = nil }
@@ -142,3 +142,4 @@ function event_handlers.install(_, logger, state)
 end
 
 return event_handlers
+

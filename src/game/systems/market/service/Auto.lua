@@ -1,5 +1,5 @@
 local agent = require("src.game.core.runtime.Agent")
-local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
+local monopoly_event = require("src.core.events.MonopolyEvents")
 local query = require("src.game.systems.market.service.Eligibility")
 local purchase = require("src.game.systems.market.service.Purchase")
 local context = require("src.game.systems.market.service.Context")
@@ -38,3 +38,4 @@ function auto.execute(game, player)
 end
 
 return auto
+

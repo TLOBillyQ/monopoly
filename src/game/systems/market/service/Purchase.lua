@@ -2,7 +2,7 @@ local logger = require("src.core.Logger")
 local inventory = require("src.game.systems.items.ItemInventory")
 local agent = require("src.game.core.runtime.Agent")
 local land_choice_specs = require("src.game.systems.land.LandChoiceSpecs")
-local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
+local monopoly_event = require("src.core.events.MonopolyEvents")
 local context = require("src.game.systems.market.service.Context")
 
 local purchase = {}
@@ -149,3 +149,4 @@ function purchase.execute(game, player, product_id, opts)
 end
 
 return purchase
+

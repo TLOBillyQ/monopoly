@@ -31,7 +31,7 @@ local choice_auto_policy = require("src.game.flow.turn.TurnChoiceAutoPolicy")
 local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
 local game_startup = require("src.app.bootstrap.GameStartup")
 local game_startup_event_bridge = require("src.app.bootstrap.GameStartupEventBridge")
-local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
+local monopoly_event = require("src.core.events.MonopolyEvents")
 
 local function _mock_lua_api(send_custom_event)
   return {
@@ -1767,3 +1767,4 @@ return {
   _test_popup_countdown_uses_effective_modal_timeout,
   _test_dispatch_gate_blocks_next_when_choice_active,
 }
+

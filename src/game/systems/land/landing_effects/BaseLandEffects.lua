@@ -6,7 +6,7 @@ local land_choice_specs = require("src.game.systems.land.LandChoiceSpecs")
 local inventory = require("src.game.systems.items.ItemInventory")
 local pricing = require("src.game.systems.land.LandPricing")
 local board_utils = require("src.game.systems.land.LandBoardUtils")
-local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
+local monopoly_event = require("src.core.events.MonopolyEvents")
 local action_anim_port = require("src.core.ActionAnimPort")
 
 local tile_state = tile.get_state
@@ -174,3 +174,4 @@ M.executors = {
 }
 
 return M
+
