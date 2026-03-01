@@ -1,6 +1,7 @@
 local logger = require("src.core.Logger")
 local monopoly_event = require("src.game.core.runtime.MonopolyEvents")
 local gameplay_rules = require("Config.GameplayRules")
+local action_anim_port = require("src.core.ActionAnimPort")
 
 local mine_effect = {}
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
@@ -34,16 +35,13 @@ function mine_effect.apply(game, player, position)
   logger.event(player.name .. " 触发地雷，座驾被摧毁并送医")
   local from_index = position
   game:player_send_to_hospital(player)
-  local ui_port = game.ui_port
-  if ui_port and ui_port.wait_action_anim then
-    game:queue_action_anim({
-      kind = "move_effect",
-      player_id = player.id,
-      from_index = from_index,
-      to_index = player.position,
-      duration = action_anim_duration,
-    })
-  end
+  action_anim_port.queue(game, {
+    kind = "move_effect",
+    player_id = player.id,
+    from_index = from_index,
+    to_index = player.position,
+    duration = action_anim_duration,
+  })
   return { detonated = true, hospitalized = true, new_position = player.position }
 end
 

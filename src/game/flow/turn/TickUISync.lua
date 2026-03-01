@@ -4,6 +4,7 @@ local logger = require("src.core.Logger")
 local number_utils = require("src.core.NumberUtils")
 local tick_timeout = require("src.game.flow.turn.TickTimeout")
 local runtime_state = require("src.core.RuntimeState")
+local turn_ui_sync_shared = require("src.core.TurnUISyncShared")
 
 local tick_ui_sync = {}
 
@@ -98,35 +99,8 @@ function tick_ui_sync.update_countdown(game, state)
   end
 end
 
-local function _is_only_turn_countdown(dirty)
-  if not dirty or dirty.turn_countdown ~= true then
-    return false
-  end
-  if dirty.players or dirty.board_tiles or dirty.turn or dirty.market or dirty.ui then
-    return false
-  end
-  if dirty.inventory_ids then
-    for _ in pairs(dirty.inventory_ids) do
-      return false
-    end
-  end
-  return true
-end
-
-local function _build_ui_env(state, game)
-  local winner = game.winner
-  local winner_name = game.winner_names or (winner and assert(winner.name, "missing winner name"))
-  return {
-    game = game,
-    ui_state = state,
-    last_turn = game.last_turn,
-    finished = game.finished,
-    winner_name = winner_name,
-  }
-end
-
 function tick_ui_sync.build_ui_env(state, game)
-  return _build_ui_env(state, game)
+  return turn_ui_sync_shared.build_ui_env(state, game)
 end
 
 function tick_ui_sync.runtime_constants()
@@ -134,7 +108,7 @@ function tick_ui_sync.runtime_constants()
 end
 
 function tick_ui_sync.is_only_turn_countdown(dirty)
-  return _is_only_turn_countdown(dirty)
+  return turn_ui_sync_shared.is_only_turn_countdown(dirty)
 end
 
 return tick_ui_sync

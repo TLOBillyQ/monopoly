@@ -2,6 +2,7 @@ local item_effects = require("src.game.systems.items.ItemPostEffects")
 local agent = require("src.game.core.runtime.Agent")
 local inventory = require("src.game.systems.items.ItemInventory")
 local gameplay_rules = require("Config.GameplayRules")
+local action_anim_port = require("src.core.ActionAnimPort")
 
 local executor = {}
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
@@ -23,8 +24,7 @@ local function _with_fallback_item_anim(game, player, item_id, item_name, before
   if not _is_success_result(res) then
     return res
   end
-  local ui_port = game and game.ui_port
-  if not (ui_port and ui_port.wait_action_anim) then
+  if not action_anim_port.is_enabled(game) then
     return res
   end
   if type(res) == "table" and res.action_anim then
@@ -34,7 +34,7 @@ local function _with_fallback_item_anim(game, player, item_id, item_name, before
   if current_seq > before_seq then
     return res
   end
-  game:queue_action_anim({
+  action_anim_port.queue(game, {
     kind = "item_use",
     player_id = player.id,
     item_id = item_id,

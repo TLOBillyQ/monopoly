@@ -7,6 +7,7 @@ local logger = require("src.core.Logger")
 local number_utils = require("src.core.NumberUtils")
 local move_anim = require("src.presentation.render.MoveAnim")
 local runtime_state = require("src.core.RuntimeState")
+local turn_ui_sync_shared = require("src.core.TurnUISyncShared")
 
 local presentation_ports = {}
 
@@ -27,33 +28,6 @@ local function _log_once(state, level, key, ...)
   else
     logger.info(...)
   end
-end
-
-local function _build_ui_env(state, game)
-  local winner = game.winner
-  local winner_name = game.winner_names or (winner and winner.name)
-  return {
-    game = game,
-    ui_state = state,
-    last_turn = game.last_turn,
-    finished = game.finished,
-    winner_name = winner_name,
-  }
-end
-
-local function _is_only_turn_countdown(dirty)
-  if not dirty or dirty.turn_countdown ~= true then
-    return false
-  end
-  if dirty.players or dirty.board_tiles or dirty.turn or dirty.market or dirty.ui then
-    return false
-  end
-  if dirty.inventory_ids then
-    for _ in pairs(dirty.inventory_ids) do
-      return false
-    end
-  end
-  return true
 end
 
 local function _log_status(view)
@@ -171,19 +145,19 @@ function presentation_ports.build()
       end,
       build_model = function(state, game)
         local ui_model = require("src.presentation.state.UIModel")
-        local env = _build_ui_env(state, game)
+        local env = turn_ui_sync_shared.build_ui_env(state, game)
         return ui_model.build(game, env)
       end,
       refresh_from_dirty = function(game, state, dirty)
         if state.ui_dirty then
           dirty.ui = true
         end
-        local only_countdown = _is_only_turn_countdown(dirty)
+        local only_countdown = turn_ui_sync_shared.is_only_turn_countdown(dirty)
         local ui_refreshed = false
         if dirty.any or dirty.ui then
           local ui_model = require("src.presentation.state.UIModel")
           local ui_view = require("src.presentation.api.UIViewService")
-          local env = _build_ui_env(state, game)
+          local env = turn_ui_sync_shared.build_ui_env(state, game)
           local next_model = ui_model.update(state.ui_model, game, env, dirty)
           state.ui_model = next_model
           if only_countdown then

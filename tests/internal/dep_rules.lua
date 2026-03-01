@@ -75,6 +75,14 @@ local rules = {
     },
     description = "source must not use retired clock.now/diff_seconds aliases",
   },
+  {
+    root = "src/game/systems",
+    forbidden_patterns = {
+      "ui_port%.wait_action_anim",
+      "game%.ui_port%.wait_action_anim",
+    },
+    description = "systems layer must use ActionAnimPort instead of direct ui_port.wait_action_anim checks",
+  },
 }
 
 local forbidden_files = {

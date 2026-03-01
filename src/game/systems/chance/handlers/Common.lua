@@ -7,6 +7,7 @@ local gameplay_rules = require("Config.GameplayRules")
 local vehicles_cfg = require("Config.Generated.Vehicles")
 local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
 local number_utils = require("src.core.NumberUtils")
+local action_anim_port = require("src.core.ActionAnimPort")
 
 local common = {}
 
@@ -55,18 +56,10 @@ function common.apply_cash_and_maybe_bankrupt(game, player, delta, reason)
 end
 
 function common.queue_action_anim(game, payload)
-  if not game or not payload then
+  if not payload then
     return false
   end
-  local ui_port = game.ui_port
-  if not (ui_port and ui_port.wait_action_anim) then
-    return false
-  end
-  if not game.queue_action_anim then
-    return false
-  end
-  game:queue_action_anim(payload)
-  return true
+  return action_anim_port.queue(game, payload)
 end
 
 function common.queue_move_effect(game, player, from_index, to_index, visited)

@@ -7,6 +7,7 @@ local roadblock = require("src.game.systems.items.ItemRoadblock")
 local remote_dice = require("src.game.systems.items.ItemRemoteDice")
 local demolish = require("src.game.systems.items.ItemDemolish")
 local gameplay_rules = require("Config.GameplayRules")
+local action_anim_port = require("src.core.ActionAnimPort")
 
 local handlers = {}
 local item_ids = gameplay_rules.item_ids
@@ -23,11 +24,7 @@ local function _resolve_apply_ok(res)
 end
 
 local function _queue_target_player_anim(game, user, item_id, target)
-  local ui_port = game.ui_port
-  if not (ui_port and ui_port.wait_action_anim) then
-    return false
-  end
-  game:queue_action_anim({
+  return action_anim_port.queue(game, {
     kind = "item_target_player",
     player_id = user.id,
     target_player_id = target.id,
@@ -35,7 +32,6 @@ local function _queue_target_player_anim(game, user, item_id, target)
     item_name = inventory.item_name(item_id),
     duration = action_anim_duration,
   })
-  return true
 end
 
 local function _apply_target_player_item(game, user, item_id, target, context)

@@ -1,4 +1,5 @@
 local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
+local action_anim_port = require("src.core.ActionAnimPort")
 
 local landing_presenter = {}
 
@@ -21,11 +22,7 @@ function landing_presenter.push_popup(game, title, body, opts)
 end
 
 function landing_presenter.queue_action_anim(game, payload)
-  if not (game and game.ui_port and game.ui_port.wait_action_anim) then
-    return false
-  end
-  game:queue_action_anim(payload)
-  return true
+  return action_anim_port.queue(game, payload)
 end
 
 return landing_presenter

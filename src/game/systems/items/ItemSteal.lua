@@ -2,6 +2,7 @@ local logger = require("src.core.Logger")
 local inventory = require("src.game.systems.items.ItemInventory")
 local land_choice_specs = require("src.game.systems.land.LandChoiceSpecs")
 local gameplay_rules = require("Config.GameplayRules")
+local action_anim_port = require("src.core.ActionAnimPort")
 
 local steal = {}
 local item_ids = gameplay_rules.item_ids
@@ -30,19 +31,14 @@ function steal.steal_item_at_index(game, player, target, item_idx)
   inventory.consume(player, item_ids.steal)
   local name = inventory.item_name(stolen.id)
   logger.event(player.name .. " 使用偷窃卡，从 " .. target.name .. " 偷走道具 " .. name)
-  local queued = false
-  local ui_port = game.ui_port
-  if ui_port and ui_port.wait_action_anim then
-    game:queue_action_anim({
-      kind = "item_target_player",
-      player_id = player.id,
-      target_player_id = target.id,
-      item_id = item_ids.steal,
-      item_name = "偷窃卡",
-      duration = action_anim_duration,
-    })
-    queued = true
-  end
+  local queued = action_anim_port.queue(game, {
+    kind = "item_target_player",
+    player_id = player.id,
+    target_player_id = target.id,
+    item_id = item_ids.steal,
+    item_name = "偷窃卡",
+    duration = action_anim_duration,
+  })
   return {
     ok = true,
     stolen = stolen,

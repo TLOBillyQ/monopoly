@@ -3,6 +3,7 @@ local tile = require("src.game.systems.board.Tile")
 local board_utils = require("src.game.systems.land.LandBoardUtils")
 local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("Config.GameplayRules")
+local action_anim_port = require("src.core.ActionAnimPort")
 
 local demolish = {}
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
@@ -95,18 +96,13 @@ function demolish.apply(game, player, idx, opts)
   if opts.injure then
     kind = "missile"
   end
-  local queued = false
-  assert(game.ui_port ~= nil, "missing ui_port")
-  if game.ui_port.wait_action_anim then
-    game:queue_action_anim({
-      kind = kind,
-      player_id = player.id,
-      tile_index = idx,
-      item_id = opts.item_id,
-      duration = action_anim_duration,
-    })
-    queued = true
-  end
+  local queued = action_anim_port.queue(game, {
+    kind = kind,
+    player_id = player.id,
+    tile_index = idx,
+    item_id = opts.item_id,
+    duration = action_anim_duration,
+  })
   return { ok = true, action_anim = queued }
 end
 

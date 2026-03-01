@@ -4,6 +4,7 @@ local board_utils = require("src.game.systems.land.LandBoardUtils")
 local inventory = require("src.game.systems.items.ItemInventory")
 local gameplay_rules = require("Config.GameplayRules")
 local bankruptcy = require("src.game.core.runtime.Bankruptcy")
+local action_anim_port = require("src.core.ActionAnimPort")
 
 local item_effects = {}
 local item_ids = gameplay_rules.item_ids
@@ -35,16 +36,13 @@ local target_effects = {
       local from_index = target.position
       if idx then
         game:update_player_position(target, idx)
-        local ui_port = game.ui_port
-        if ui_port and ui_port.wait_action_anim then
-          game:queue_action_anim({
-            kind = "move_effect",
-            player_id = target.id,
-            from_index = from_index,
-            to_index = idx,
-            duration = action_anim_duration,
-          })
-        end
+        action_anim_port.queue(game, {
+          kind = "move_effect",
+          player_id = target.id,
+          from_index = from_index,
+          to_index = idx,
+          duration = action_anim_duration,
+        })
       end
       game:set_player_status(target, "move_dir", nil)
       game:set_player_status(target, "stay_turns", constants.mountain_stay_turns)
@@ -158,14 +156,13 @@ end
 local function _handle_place_mine_here(game, player, _cfg, context)
   game.board:place_mine(player.position)
   logger.event(player.name .. " 在脚下埋设地雷")
-  assert(game.ui_port ~= nil, "missing ui_port")
-  if game.ui_port.wait_action_anim then
-    game:queue_action_anim({
-      kind = "mine",
-      player_id = player.id,
-      tile_index = player.position,
-      duration = action_anim_duration,
-    })
+  local queued = action_anim_port.queue(game, {
+    kind = "mine",
+    player_id = player.id,
+    tile_index = player.position,
+    duration = action_anim_duration,
+  })
+  if queued then
     return { ok = true, action_anim = true }
   end
   return true
@@ -231,14 +228,13 @@ local function _handle_clear_obstacles_ahead(game, player, cfg, context)
     end
   end)
   logger.event(player.name .. " 清除前方障碍数：" .. cleared)
-  assert(game.ui_port ~= nil, "missing ui_port")
-  if game.ui_port.wait_action_anim then
-    game:queue_action_anim({
-      kind = "clear_obstacles",
-      player_id = player.id,
-      cleared_indices = cleared_indices,
-      duration = action_anim_duration,
-    })
+  local queued = action_anim_port.queue(game, {
+    kind = "clear_obstacles",
+    player_id = player.id,
+    cleared_indices = cleared_indices,
+    duration = action_anim_duration,
+  })
+  if queued then
     return { ok = true, action_anim = true }
   end
   return true
