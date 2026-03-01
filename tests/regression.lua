@@ -43,6 +43,7 @@ local suites = {
   require("presentation_ui_event_bindings"),
   require("presentation_player_colors"),
   require("read_model_contract"),
+  require("usecase_boundary_contract"),
 
   -- integration: cross-cutting
   require("test_profiles"),

@@ -26,6 +26,26 @@ local function _test_total_land_invested_handles_missing_costs_like_domain()
     "read model should match domain when upgrade_costs missing")
 end
 
+local function _test_total_land_invested_caps_by_upgrade_cost_length()
+  local tile = {
+    price = 100,
+    upgrade_costs = { 10, 20 },
+  }
+  _assert_eq(gameplay_read_port.total_land_invested(tile, 8), 130,
+    "read model should cap invested total by available upgrade_costs")
+  _assert_eq(land_pricing.total_invested(tile, 8), 130,
+    "domain pricing should keep the same cap behavior")
+end
+
+local function _test_total_land_invested_handles_sparse_upgrade_cost_entries()
+  local tile = {
+    price = 200,
+    upgrade_costs = { 10, nil, 40 },
+  }
+  _assert_eq(gameplay_read_port.total_land_invested(tile, 3), land_pricing.total_invested(tile, 3),
+    "read model should match domain for sparse upgrade costs")
+end
+
 local function _test_vehicle_seat_resolution_follows_feature_flag()
   _with_patches({
     { target = gameplay_rules, key = "vehicle_enabled", value = true },
@@ -45,6 +65,8 @@ return {
   tests = {
     { name = "total_land_invested_matches_domain_pricing", run = _test_total_land_invested_matches_domain_pricing },
     { name = "total_land_invested_handles_missing_costs_like_domain", run = _test_total_land_invested_handles_missing_costs_like_domain },
+    { name = "total_land_invested_caps_by_upgrade_cost_length", run = _test_total_land_invested_caps_by_upgrade_cost_length },
+    { name = "total_land_invested_handles_sparse_upgrade_cost_entries", run = _test_total_land_invested_handles_sparse_upgrade_cost_entries },
     { name = "vehicle_seat_resolution_follows_feature_flag", run = _test_vehicle_seat_resolution_follows_feature_flag },
   },
 }

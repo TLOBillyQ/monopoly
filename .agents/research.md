@@ -1,4 +1,4 @@
-# Monopoly 代码库 Clean Architecture 重写研究（2026-03-01，R5 同步）
+# Monopoly 代码库 Clean Architecture 重写研究（2026-03-02，R6 执行后）
 
 技能使用：`clean-architecture-reviewer`
 
@@ -7,15 +7,15 @@
 - 扫描范围：`src/*`、`tests/internal/*`、`tests/suites/*`、`.agents/plan.md`。
 - 实测基线：
   - `lua tests/internal/dep_rules.lua` -> `dep_rules ok`
-  - `lua tests/regression.lua` -> `All regression checks passed (193)` + `dep_rules ok / tick ok / forbidden_globals ok`
+  - `lua tests/regression.lua` -> `All regression checks passed (199)` + `dep_rules ok / tick ok / forbidden_globals ok`
 - 代码规模（Lua）：
   - `src/core`：13 文件 / 1270 行
-  - `src/game/core`：19 文件 / 1455 行
+  - `src/game/core`：19 文件 / 1456 行
   - `src/game/flow`：19 文件 / 2541 行
   - `src/game/runtime`：2 文件 / 147 行
   - `src/game/runtime_coroutine`：5 文件 / 442 行
-  - `src/game/systems`：52 文件 / 5062 行
-  - `src/presentation`：113 文件 / 6858 行
+  - `src/game/systems`：53 文件 / 5079 行
+  - `src/presentation`：115 文件 / 6887 行
   - `src/app`：7 文件 / 531 行
 - 关键依赖方向（当前）：
   - `presentation -> game/core`：0
@@ -45,57 +45,61 @@
 - Interface Adapters：`presentation/*`、`app/bootstrap/*`、`presentation/api/*`。
 - Frameworks & Drivers：Eggy `GameAPI`、全局事件、`Config/*`、第三方运行时。
 
-当前依赖方向已满足“向内依赖”底线，边界违例由 `dep_rules` 守护。
+依赖方向已满足 Clean Architecture 的 Dependency Rule 底线，且由 `dep_rules` 自动化守护。
 
 ## 架构结论
 
-R5 执行后，Clean Architecture 的核心约束已满足：`presentation` 不再直连 `game/core|flow|systems`，关键边界均有自动化验证。当前阶段从“修复依赖方向错误”转入“复杂度治理与语义一致性守护”。
+R6 执行后，核心架构约束保持稳定：`presentation` 对 `game` 三层直连均为 0，兼容桥路径已纳入规则治理，热点模块完成一轮切片并保持行为等价。当前阶段应从“边界修复”转向“兼容桥退役收口 + 复杂度持续下降”。
 
 ## 主要问题（P0-P3）
 
 - P0（阻断级）：未发现。
-  - 证据：`dep_rules` 与回归均通过，未出现核心层直连框架全局回流。
+  - 证据：`dep_rules` + `regression` 双绿，核心层未出现全局 API 回流。
 
-- P1（高优先级）：无依赖方向级阻断问题，但兼容桥仍存在生命周期管理需求。
-  - 证据：`src/game/core/runtime/MonopolyEvents.lua` 当前为兼容桥（转发到 `src/core/events/MonopolyEvents.lua`）。
-  - 风险：若长期保留无治理，可能造成路径认知分裂。
+- P1（高优先级）：`MonopolyEvents` 兼容桥仍存在，需完成最终退役闭环。
+  - 证据：`src/game/core/runtime/MonopolyEvents.lua` 仍保留 thin-forwarder。
+  - 风险：长期保留会形成路径双轨认知。
 
-- P2（中优先级）：复杂度热点仍在少数模块，建议继续切片。
-  - 证据：`PresentationPorts` 入口虽已变薄，但 `ActionAnimUnits`、`LandRules` 仍是高复杂度中心。
+- P2（中优先级）：复杂度热点仍集中在部分大文件（虽已下降）。
+  - 证据：`ActionAnimUnits.lua` 已降至 26 行、`LandRules.lua` 已降至 159 行；但 `ActionAnimUnitOverlay.lua`（226 行）等仍有进一步切片空间。
 
-- P3（改进项）：`GameplayReadPort` 与领域规则存在镜像语义，需要持续契约守护。
-  - 证据：已新增 `read_model_contract` 测试；后续规则变更需同步检查。
+- P3（改进项）：契约测试覆盖已扩展，但 read-model/use-case 边界仍可继续扩面。
+  - 证据：`read_model_contract` 与 `usecase_boundary_contract` 已纳入回归；可继续覆盖更多跨模块语义约束。
 
 ## 重构方案（最小可落地顺序）
 
-1. 兼容桥治理：为 `MonopolyEvents` 旧路径兼容桥设置退役里程碑与 dep_rules 守护。
-   - 影响范围：`src/game/core/runtime/MonopolyEvents.lua`、`tests/internal/dep_rules.lua`。
-   - 预期收益：完成路径收敛，减少历史路径认知成本。
-   - 回归风险：低。
+1. 兼容桥退役收口：删除 `src/game/core/runtime/MonopolyEvents.lua`，并在 `dep_rules` 改为“禁止文件存在 + 禁止旧路径引用”。
+   - 影响范围：兼容桥文件、`tests/internal/dep_rules.lua`。
+   - 预期收益：完成事件契约路径单一化。
+   - 回归风险：低（当前内部引用已清零）。
 
-2. 继续模块切片：优先 `ActionAnimUnits` 与 `LandRules`。
-   - 影响范围：对应模块及其调用点。
-   - 预期收益：降低单点拥塞，提升并行开发效率。
+2. 继续热点切片：针对 `ActionAnimUnitOverlay` 与 `LandRentResolver` 再拆为“计算函数 + 副作用函数”。
+   - 影响范围：`src/presentation/render/*`、`src/game/systems/land/*`。
+   - 预期收益：降低单模块认知负担，提升可测试性。
    - 回归风险：中。
 
-3. 契约测试扩展：继续补齐 read-model 与 use-case 边界契约。
-   - 影响范围：`tests/suites/*`。
-   - 预期收益：防止“结构重构后语义漂移”。
+3. 契约测试扩面：增加“跨模块一致性”用例（事件契约、租金链路、动画桥接语义）。
+   - 影响范围：`tests/suites/*contract*.lua`。
+   - 预期收益：防止后续重构造成语义漂移。
    - 回归风险：低。
 
 ## 测试建议
 
-- 用例级测试（必须）：覆盖 `TurnDispatch` 与关键回合流转的输入输出契约。
-- 边界契约测试（必须）：保持 `read_model_contract`，并增加更多领域规则映射用例。
-- 依赖规则测试（必须）：继续执行 `dep_rules`，新增兼容桥退役守护。
-- 回归测试（保持）：`lua tests/regression.lua` 基线更新为 193。
+- 用例级测试（必须）：继续覆盖 `TurnDispatch`、`GameplayLoop`、`LandRules` 关键路径。
+- 边界契约测试（必须）：
+  - 保持 `read_model_contract` 与 `usecase_boundary_contract`。
+  - 新增事件契约与兼容桥退役后的路径约束测试。
+- 依赖规则测试（必须）：
+  - 继续执行 `dep_rules`，将兼容桥治理升级为“禁止文件存在”。
+- 回归测试（保持）：
+  - `lua tests/regression.lua` 以 199 为当前基线。
 
 ## 权衡说明
 
-- 短期成本：继续切片会带来模块数量增加与少量样板代码。
-- 长期收益：边界稳定、职责清晰、回归定位成本持续下降。
-- 取舍建议：优先做低风险高收益的“兼容桥治理 + 契约测试扩展”，再推进高复杂度模块切片。
+- 短期成本：继续切片与契约扩面会增加模块和测试条目。
+- 长期收益：边界路径更单一、复杂度更低、回归定位更快。
+- 取舍建议：优先完成“兼容桥退役”这一低风险高收益动作，再推进下一轮复杂度切片。
 
 ## 最终评审结论
 
-R5 已完成且验证通过，代码库已进入“边界稳定、持续降复杂度”的阶段。下一轮应以复杂度治理和兼容桥退役为主线，保持回归与依赖规则双绿。
+R6 已执行完成，架构从“边界受控”进入“边界收口 + 持续降复杂度”阶段。下一轮建议以兼容桥彻底退役为里程碑起点，并保持契约测试与依赖规则同步增强。

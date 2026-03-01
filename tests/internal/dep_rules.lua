@@ -70,6 +70,22 @@ local rules = {
   {
     root = "src",
     forbidden_patterns = {
+      "require%(\"src%.game%.core%.runtime%.MonopolyEvents\"%)",
+      "require%('src%.game%.core%.runtime%.MonopolyEvents'%)",
+    },
+    description = "source must not depend on MonopolyEvents compatibility bridge path",
+  },
+  {
+    root = "tests",
+    forbidden_patterns = {
+      "require%(\"src%.game%.core%.runtime%.MonopolyEvents\"%)",
+      "require%('src%.game%.core%.runtime%.MonopolyEvents'%)",
+    },
+    description = "tests must not depend on MonopolyEvents compatibility bridge path",
+  },
+  {
+    root = "src",
+    forbidden_patterns = {
       "clock%.now%(",
       "clock%.diff_seconds%(",
     },
@@ -97,6 +113,8 @@ local forbidden_files = {
   "src/game/core/runtime/TurnEngine.lua",
   "src/game/core/runtime/PhaseRegistry.lua",
 }
+
+local monopoly_events_bridge_path = "src/game/core/runtime/MonopolyEvents.lua"
 
 local function _is_windows()
   return package.config:sub(1, 1) == "\\"
@@ -257,6 +275,36 @@ local function _scan_presentation_system_requires()
   return nil
 end
 
+local function _scan_monopoly_events_bridge()
+  local file = io.open(monopoly_events_bridge_path, "r")
+  if not file then
+    return nil
+  end
+  local content = file:read("*a") or ""
+  file:close()
+  local has_forward = content:find("return require%(\"src%.core%.events%.MonopolyEvents\"%)") ~= nil
+  if not has_forward then
+    return {
+      path = monopoly_events_bridge_path,
+      line = 1,
+      token = "bridge-forward",
+      text = "bridge must only forward to src.core.events.MonopolyEvents",
+      description = "MonopolyEvents compatibility bridge must stay a thin forwarder until retirement",
+    }
+  end
+  local has_warn = content:find("Compatibility bridge") ~= nil
+  if not has_warn then
+    return {
+      path = monopoly_events_bridge_path,
+      line = 1,
+      token = "bridge-comment",
+      text = "missing compatibility bridge retirement comment",
+      description = "MonopolyEvents bridge must include explicit retirement intent to avoid long-term drift",
+    }
+  end
+  return nil
+end
+
 for _, rule in ipairs(rules) do
   local hit, err = _scan_tree(rule)
   if err and not tostring(err):find("no lua files found under", 1, true) then
@@ -280,6 +328,14 @@ if presentation_hit then
   io.stderr:write("dep_rules violation: ", presentation_hit.path, ":", presentation_hit.line, " contains ", presentation_hit.token, "\n")
   io.stderr:write("rule: ", presentation_hit.description, "\n")
   io.stderr:write(presentation_hit.text, "\n")
+  os.exit(1)
+end
+
+local bridge_hit = _scan_monopoly_events_bridge()
+if bridge_hit then
+  io.stderr:write("dep_rules violation: ", bridge_hit.path, ":", bridge_hit.line, " contains ", bridge_hit.token, "\n")
+  io.stderr:write("rule: ", bridge_hit.description, "\n")
+  io.stderr:write(bridge_hit.text, "\n")
   os.exit(1)
 end
 
