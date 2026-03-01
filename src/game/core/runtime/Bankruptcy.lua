@@ -1,4 +1,5 @@
 local logger = require("src.core.Logger")
+local runtime_ports = require("src.core.RuntimePorts")
 local inventory = require("src.game.systems.items.ItemInventory")
 
 local bankruptcy = {}
@@ -87,13 +88,8 @@ function bankruptcy.eliminate(game, player, opts)
   game:set_player_eliminated(player, true)
   _push_bankruptcy_popup(game, player, opts)
 
-  local ui_port = game.ui_port
-  if GameAPI and GameAPI.get_role then
-    local role = GameAPI.get_role(player.id)
-    if role and role.lose then
-      role.lose()
-    end
-  end
+  local role = runtime_ports.resolve_role(player.id)
+  runtime_ports.mark_role_lose(role)
 
   if #owned_tile_ids > 0 then
     _notify_tiles_cleared(game, player, owned_tile_ids)

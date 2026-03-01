@@ -141,6 +141,33 @@ function M.build_state(get_current_game)
     action_button_active = false,
   }
 
+  -- Low-risk first cut for state segmentation: keep legacy top-level fields,
+  -- and expose grouped runtime views for incremental migration.
+  state.ui_runtime = {
+    item_name_by_id = state.item_name_by_id,
+    choice_visible_option_ids = state.choice_visible_option_ids,
+    pending_choice_selected_option_id = state.pending_choice_selected_option_id,
+  }
+  state.board_runtime = {
+    board_last_positions = state.board_last_positions,
+    board_sync_pending = state.board_sync_pending,
+    board_last_phase = state.board_last_phase,
+  }
+  state.anim_runtime = {
+    move_anim_seq = state.move_anim_seq,
+    action_anim_seq = state.action_anim_seq,
+  }
+  state.turn_runtime = {
+    next_turn_locked = state.next_turn_locked,
+    next_turn_last_click = state.next_turn_last_click,
+    next_turn_lock_phase = state.next_turn_lock_phase,
+    role_control_lock_active = state.role_control_lock_active,
+    role_control_lock_suppress = state.role_control_lock_suppress,
+  }
+  state.debug_runtime = {
+    log_once = state._log_once,
+  }
+
   state.push_popup = function(_, payload)
     local ok = ui_view.push_popup(state, payload)
     if state.ui then

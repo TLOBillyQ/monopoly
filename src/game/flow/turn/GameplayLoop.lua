@@ -87,7 +87,7 @@ local function _initialize_ports(state, game)
   local ports = _resolve_ports(state)
   state.game = game
   state.gameplay_loop_ports = ports
-  game.ui_port = state
+  game.ui_port = gameplay_loop_runtime.build_ui_runtime_port(state)
   game.gameplay_loop_ports = ports
   return ports
 end
@@ -252,6 +252,7 @@ local function _refresh_tick_from_dirty(game, state, ports, input_blocked_change
 
   local dirty = game:consume_dirty()
   local ui_refreshed = ui_sync_ports.refresh_from_dirty(game, state, dirty)
+  gameplay_loop_runtime.sync_turn_camera_follow(game, state, ports, ui_refreshed)
   anim_ports.sync_status_3d(game, state, dirty)
 
   if ui_sync_ports.get_ui_state and ui_sync_ports.is_input_blocked then

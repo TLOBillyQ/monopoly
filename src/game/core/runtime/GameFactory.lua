@@ -4,6 +4,7 @@ local player = require("src.game.core.player.Player")
 local inventory = require("src.game.core.player.Inventory")
 local constants = require("Config.Generated.Constants")
 local roles_cfg = require("Config.Generated.Roles")
+local runtime_ports = require("src.core.RuntimePorts")
 require "vendor.third_party.Utils"
 
 local game_factory = {}
@@ -11,9 +12,7 @@ local game_factory = {}
 local function _new_rng()
   local rng = {}
   function rng:next_int(min, max)
-    assert(min ~= nil and max ~= nil, "rng.next_int requires min/max")
-    assert(GameAPI and GameAPI.random_int, "missing GameAPI.random_int")
-    return GameAPI.random_int(min, max)
+    return runtime_ports.rng_next_int(min, max)
   end
   return rng
 end

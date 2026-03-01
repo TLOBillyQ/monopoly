@@ -37,6 +37,65 @@ function runtime.sync_phase_flags(state, phase)
   state.board_last_phase = phase
 end
 
+local function _resolve_ui_runtime_field(state, key)
+  if not state then
+    return nil
+  end
+  if key == "wait_move_anim"
+      or key == "wait_action_anim"
+      or key == "pending_choice_elapsed"
+      or key == "board_scene" then
+    return state[key]
+  end
+  return nil
+end
+
+local function _update_ui_runtime_field(state, key, value)
+  if not state then
+    return
+  end
+  if key == "wait_move_anim"
+      or key == "wait_action_anim"
+      or key == "pending_choice_elapsed"
+      or key == "board_scene" then
+    state[key] = value
+  end
+end
+
+function runtime.build_ui_runtime_port(state)
+  assert(type(state) == "table", "missing state")
+  if type(state._ui_runtime_port) == "table" then
+    return state._ui_runtime_port
+  end
+
+  local port = {}
+  port.push_popup = function(_, payload)
+    if type(state.push_popup) == "function" then
+      return state:push_popup(payload)
+    end
+    return false
+  end
+  port.on_tile_owner_changed = function(_, tile_id, owner_id)
+    if type(state.on_tile_owner_changed) == "function" then
+      state:on_tile_owner_changed(tile_id, owner_id)
+      return true
+    end
+    return false
+  end
+
+  setmetatable(port, {
+    __index = function(_, key)
+      return _resolve_ui_runtime_field(state, key)
+    end,
+    __newindex = function(_, key, value)
+      _update_ui_runtime_field(state, key, value)
+    end,
+  })
+
+  state._ui_runtime_port = port
+  return port
+end
+
 local function _resolve_role_control_lock_enabled(game)
   if gameplay_rules.role_control_lock_enabled ~= true then
     return false
@@ -87,6 +146,24 @@ local function _is_action_button_wait_active(game, state, ports)
     return false
   end
   return true
+end
+
+function runtime.sync_turn_camera_follow(game, state, ports, ui_refreshed)
+  if ui_refreshed ~= true then
+    return
+  end
+  local ui_sync_ports = ports and ports.ui_sync or nil
+  if not (ui_sync_ports and type(ui_sync_ports.follow_camera) == "function") then
+    return
+  end
+  local turn = game and game.turn or nil
+  local current_index = turn and turn.current_player_index or nil
+  local current = current_index and game and game.players and game.players[current_index] or nil
+  local current_id = current and current.id or nil
+  if current_id == nil then
+    return
+  end
+  ui_sync_ports.follow_camera(state, current_id)
 end
 
 function runtime.update_action_button_timer(ctx)

@@ -38,10 +38,14 @@
 
 ### Application Rules（应用级用例）
 
-- 回合主流程：`start -> roll -> move -> landing -> post_action -> end_turn`（`src/game/core/runtime/PhaseRegistry.lua` + `src/game/flow/turn/*`）。
+- ~~回合主流程：`start -> roll -> move -> landing -> post_action -> end_turn`（`src/game/core/runtime/PhaseRegistry.lua` + `src/game/flow/turn/*`）。~~
+- 回合主流程：`start -> roll -> move -> landing -> post_action -> end_turn`（`src/game/runtime/PhaseRegistry.lua` + `src/game/flow/turn/*`）。
 - 协程调度与等待态：`wait_choice / wait_move_anim / wait_action_anim / detained_wait`（`src/game/runtime_coroutine/*`）。
 - 输入动作分发：`ui_button / choice_select / choice_cancel` 到领域动作（`src/game/flow/turn/TurnDispatch.lua`）。
-- UI 同步与超时控制：倒计时、modal 自动关闭、输入锁（`src/game/flow/turn/TickTimeout.lua`、`TickUISync.lua`，由 `PresentationPorts` 调用）。
+- ~~UI 同步与超时控制：倒计时、modal 自动关闭、输入锁（`src/game/flow/turn/TickTimeout.lua`、`TickUISync.lua`，由 `PresentationPorts` 调用）。~~
+- UI 同步与超时控制：倒计时、modal 自动关闭、输入锁（`src/game/flow/turn/TickTimeout.lua`、`TickUISync.lua`，由 `GameplayLoopPorts` 默认实现承载，`PresentationPorts` 不再反向依赖这两模块）。
+
+> **[R2] 路径与调用方向已按实现更新：`PhaseRegistry` 已迁移到 `src/game/runtime`，`PresentationPorts` 已解除对 `TickTimeout/TickUISync` 的依赖。✓**
 
 > **[R] Application Rules 准确。PhaseRegistry.build_default_phases 确认了 6 阶段流程。注意 PhaseRegistry 在 `game/core` 但依赖 `game/flow`，这正是 P1 所指出的矛盾。✓**
 
@@ -78,23 +82,27 @@
 
 - P1: 用例层与适配层边界混杂，UI 细节回流到用例编排。
   - 证据 1：`src/game/flow/turn/GameplayLoop.lua:90` 直接把 `state` 赋给 `game.ui_port`，`:91` 又挂载 `game.gameplay_loop_ports`。
-  - 证据 2：`src/presentation/api/PresentationPorts.lua:4-5` 反向依赖 `game/flow` 的 `TickTimeout` 与 `TickUISync`，导致 adapter 反向携带 use-case 实现。
+  - ~~证据 2：`src/presentation/api/PresentationPorts.lua:4-5` 反向依赖 `game/flow` 的 `TickTimeout` 与 `TickUISync`，导致 adapter 反向携带 use-case 实现。~~
   - 风险：任何 UI 交互/渲染改动都更容易扩散到回合循环。
 
 > **[R] P1（边界混杂）证据准确。**
 > - 证据 1：GameplayLoop _initialize_ports 第 90 行 game.ui_port = state、第 91 行 game.gameplay_loop_ports = ports ✓
 > - 证据 2：PresentationPorts.lua:4-5 反向引用 TickTimeout / TickUISync，违反 Dependency Rule ✓
 > - 补充：PresentationPorts 还引用了 CanvasStore(:6)、UIEventState(:7)，这些属同层引用，无违规。
+>
+> **[R2] 复评：该问题“证据 2”已修复（`PresentationPorts` 不再 require `TickTimeout/TickUISync`）；但“证据 1”仍成立（`game.ui_port = state` 仍是跨层共享状态）。结论：P1 部分关闭。**
 
 - P1: “core” 命名层并非真正内层，职责与依赖方向不一致。
-  - 证据 1：`src/game/core/runtime/PhaseRegistry.lua:3-6` 依赖 `src.game.flow.turn.*`。
-  - 证据 2：`src/game/core/runtime/TurnEngine.lua:1-3` 依赖 `runtime_coroutine` 实现细节。
+  - ~~证据 1：`src/game/core/runtime/PhaseRegistry.lua:3-6` 依赖 `src.game.flow.turn.*`。~~
+  - ~~证据 2：`src/game/core/runtime/TurnEngine.lua:1-3` 依赖 `runtime_coroutine` 实现细节。~~
   - 风险：目录语义误导，后续贡献者更难判断可改动边界。
 
 > **[R] P1（core 命名）证据准确。**
 > - PhaseRegistry:3-6 依赖 TurnStart/Roll/Move/Land（均在 game.flow.turn） ✓
 > - TurnEngine:1-3 依赖 Scheduler/Session/ActionRouter（均在 game.runtime_coroutine） ✓
 > - 补充：core->flow 4条 + core->runtime_coroutine 3条 = 7条反向引用。把 PhaseRegistry+TurnEngine 外移到 flow 层即可全部清除。
+>
+> **[R2] 复评：已完成迁移并收口。`PhaseRegistry` 与 `TurnEngine` 已迁移到 `src/game/runtime/`，且旧 `core/runtime` 代理文件已删除；该 P1 问题可判定为已关闭。✓**
 
 - P2: 端口抽象存在，但端口默认实现夹带框架细节。
   - 证据：`src/game/flow/turn/GameplayLoopPorts.lua:102-121` 在 `clock` 默认端口直接读 `GameAPI`。
@@ -165,6 +173,8 @@
 
 > **[R] 方案 5 价值最高/风险最低，强烈建议前置执行。新增的两条规则（禁止 core 用 GameAPI、禁止 core->flow）将立即暴露全部 P0+P1 违规点，为后续重构提供明确的完成定义。✓**
 
+> **[R2] 复评：已满足并超出初始要求。`dep_rules` 已包含 core 全局 API 禁止、core->flow 禁止、旧代理路径禁止（src+tests）以及“代理文件不得存在”检查。✓**
+
 ## 测试建议
 
 - 用例级测试（必须）：对 `TurnStart/Roll/Move/Land/PostAction` 做端口替身测试，验证状态迁移与领域事件，不依赖 Eggy 全局。
@@ -180,6 +190,46 @@
 - 短期成本：需要重排部分模块职责并补端口测试，预计会增加少量样板代码与迁移工时。
 - 长期收益：核心规则对运行时/UI 解耦后，可测试性、可替换性和变更隔离能力显著提升，后续功能迭代风险明显下降。
 - 取舍建议：优先做 P0（全局依赖反转）和守护测试，再做目录语义与状态分片；这样投入最小、收益最大且可持续验证。
+
+## 执行收口更新（2026-03-01）
+
+- 已完成兼容代理彻底清理：
+  - 删除 `src/game/core/runtime/TurnEngine.lua`
+  - 删除 `src/game/core/runtime/PhaseRegistry.lua`
+  - tests 调用路径统一为 `src/game/runtime/TurnEngine`（无旧路径残留）
+- 已增强架构守护：
+  - `tests/internal/dep_rules.lua` 新增“禁止 `src.game.core.runtime.(TurnEngine|PhaseRegistry)` 旧路径引用”规则（覆盖 `src` 与 `tests`）
+  - `tests/internal/dep_rules.lua` 新增“禁止代理文件存在”检查
+- 当前基线验证：
+  - `lua tests/internal/dep_rules.lua` -> `dep_rules ok`
+  - `lua tests/regression.lua` -> `All regression checks passed (187)` 且 `dep_rules ok / tick ok / forbidden_globals ok`
+
+## 实现复评结论（2026-03-01）
+
+> **[R2] 总体结论：实现与 research 的核心重构目标“基本满足”，其中 P0 与大部分 P1/P2 已关闭；剩余主要缺口是 state 分片仅完成首切。**
+>
+> **[R2] 满足项（已关闭）：**
+> - 运行时端口替换全局直连：`GameFactory`/`Bankruptcy`/`TurnAnim` 已通过 `RuntimePorts` 接口化。
+> - `core/runtime` 编排外移：`TurnEngine`、`PhaseRegistry` 已迁移至 `src/game/runtime/`，旧代理已删除。
+> - `PresentationPorts` 反向依赖修复：不再依赖 `TickTimeout/TickUISync`。
+> - 架构守护测试落地：`dep_rules` 已具备反向依赖与代理回流防护。
+>
+> **[R2] 部分满足项（仍有改进空间）：**
+> - state 分片：`GameStartup.build_state` 已增加 `ui_runtime/board_runtime/anim_runtime/turn_runtime/debug_runtime` 视图，但 `GameplayLoop` 仍通过 `game.ui_port = state` 共享整包状态（见 `src/game/flow/turn/GameplayLoop.lua:90-91`），跨边界 DTO 化尚未完成。
+> - adapter 职责纯化：`PresentationPorts.ui_sync.refresh_from_dirty` 仍内含较多流程判断（如 dirty 分支、camera follow 触发），边界虽改善但尚未达到“纯 adapter”极限形态。
+
+## 执行复评结论（2026-03-01）
+
+> **[R3] 结论：M10-M12 已落地，第二轮边界收口完成。**
+>
+> **[R3] 关闭项：**
+> - state DTO：`GameplayLoop.set_game` 已改为注入最小 `ui_runtime_port`（`game.ui_port` 不再直指整包 `state`）。
+> - adapter 纯化：camera follow 的流程判定已迁回 `GameplayLoopRuntime`，`PresentationPorts.ui_sync.refresh_from_dirty` 收敛为渲染逻辑，`follow_camera` 仅保留桥接触发。
+> - clock 语义：`GameplayLoopPorts.clock` 已拆分 `wall_now_seconds/wall_diff_seconds` 与 `cpu_now_seconds/cpu_diff_seconds`，并保留 `now/diff_seconds` 到 wall-clock 的兼容映射，不再混合 `os.clock` fallback。
+>
+> **[R3] 验证结果：**
+> - `lua tests/internal/dep_rules.lua` -> `dep_rules ok`
+> - `lua tests/regression.lua` -> `All regression checks passed (190)` 且 `dep_rules ok / tick ok / forbidden_globals ok`
 
 > **[R] 权衡说明务实。取舍建议与评审意见一致：守护测试 + P0 先行是最优起步。✓**
 >

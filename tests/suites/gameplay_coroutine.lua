@@ -1,5 +1,5 @@
 local support = require("TestSupport")
-local turn_engine = require("src.game.core.runtime.TurnEngine")
+local turn_engine = require("src.game.runtime.TurnEngine")
 
 ---------------------------------------------------------------------------
 -- 1. legacy mode default

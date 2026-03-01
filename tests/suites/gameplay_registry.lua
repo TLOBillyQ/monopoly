@@ -17,7 +17,7 @@ local names = {
   "_test_runtime_context_split_install_stages",                               -- 14
   "_test_runtime_context_install_helpers_without_globals",                    -- 15
   "_test_runtime_context_install_environment_fails_fast",                     -- 16
-  -- loop: 17-38
+  -- loop: 17-41
   "_test_game_startup_build_state_is_pure_and_bridge_installs_events",        -- 17
   "_test_set_player_seat_emits_exit_then_enter",                              -- 18
   "_test_mine_destroy_vehicle_emits_exit_event",                              -- 19
@@ -37,9 +37,12 @@ local names = {
   "_test_turn_prompt_initialized_for_first_player",                           -- 33
   "_test_turn_prompt_emitted_on_next_player_switch",                          -- 34
   "_test_turn_dispatch_uses_clock_ports_without_game_api",                    -- 35
-  "_test_choice_auto_policy_consistent_between_wait_and_timeout",             -- 36
-  "_test_popup_countdown_uses_effective_modal_timeout",                       -- 37
-  "_test_dispatch_gate_blocks_next_when_choice_active",                       -- 38
+  "_test_gameplay_loop_set_game_uses_runtime_ui_port_dto",                    -- 36
+  "_test_gameplay_loop_refresh_drives_camera_follow_via_port",                -- 37
+  "_test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics",             -- 38
+  "_test_choice_auto_policy_consistent_between_wait_and_timeout",             -- 39
+  "_test_popup_countdown_uses_effective_modal_timeout",                       -- 40
+  "_test_dispatch_gate_blocks_next_when_choice_active",                       -- 41
 }
 
 local function slice(suite_name, first_index, last_index)

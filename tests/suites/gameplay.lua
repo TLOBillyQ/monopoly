@@ -15,6 +15,7 @@ local app = support.app
 local map_cfg = support.map_cfg
 local tiles_cfg = support.tiles_cfg
 local gameplay_loop = support.gameplay_loop
+local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
 local tick_timeout = support.tick_timeout
 local constants = support.constants
 local bankruptcy = support.bankruptcy
@@ -89,6 +90,7 @@ local function _build_test_ports(overrides)
       update_countdown = overrides.update_countdown or function() end,
       build_model = overrides.build_model or function() return nil end,
       refresh_from_dirty = overrides.refresh_from_dirty or function() return false end,
+      follow_camera = overrides.follow_camera or function() return false end,
       get_ui_state = overrides.get_ui_state or function(state) return state and state.ui or nil end,
       is_input_blocked = overrides.is_input_blocked or function(state)
         local ui = state and state.ui or nil
@@ -128,6 +130,27 @@ local function _build_test_ports(overrides)
       resolve_debug_enabled = overrides.resolve_debug_enabled or function() return false end,
     },
     clock = {
+      wall_now_seconds = overrides.wall_now_seconds or overrides.now or function()
+        if GameAPI and type(GameAPI.get_timestamp) == "function" then
+          return GameAPI.get_timestamp()
+        end
+        return 0
+      end,
+      wall_diff_seconds = overrides.wall_diff_seconds or overrides.diff_seconds or function(timestamp_1, timestamp_2)
+        if GameAPI and type(GameAPI.get_timestamp_diff) == "function" then
+          return GameAPI.get_timestamp_diff(timestamp_1, timestamp_2)
+        end
+        return (timestamp_1 or 0) - (timestamp_2 or 0)
+      end,
+      cpu_now_seconds = overrides.cpu_now_seconds or function()
+        if os and type(os.clock) == "function" then
+          return os.clock()
+        end
+        return 0
+      end,
+      cpu_diff_seconds = overrides.cpu_diff_seconds or function(timestamp_1, timestamp_2)
+        return (timestamp_1 or 0) - (timestamp_2 or 0)
+      end,
       now = overrides.now or function()
         if GameAPI and type(GameAPI.get_timestamp) == "function" then
           return GameAPI.get_timestamp()
@@ -1547,6 +1570,93 @@ local function _test_turn_dispatch_uses_clock_ports_without_game_api()
   assert(stepped == 1, "step_turn should run exactly once")
 end
 
+local function _test_gameplay_loop_set_game_uses_runtime_ui_port_dto()
+  local g = _new_game()
+  local state = _build_loop_state()
+  state.wait_move_anim = true
+  state.wait_action_anim = true
+  state.board_scene = { marker = "scene" }
+  state.push_popup = function(_, payload)
+    state._last_popup = payload
+    return true
+  end
+  state.on_tile_owner_changed = function(_, tile_id, owner_id)
+    state._last_tile_owner = { tile_id = tile_id, owner_id = owner_id }
+  end
+
+  gameplay_loop.set_game(state, g)
+
+  assert(g.ui_port ~= state, "set_game should inject a minimal runtime ui port instead of raw state")
+  assert(g.ui_port.wait_move_anim == true, "runtime ui port should expose wait_move_anim")
+  assert(g.ui_port.wait_action_anim == true, "runtime ui port should expose wait_action_anim")
+  assert(g.ui_port.board_scene == state.board_scene, "runtime ui port should expose board_scene")
+
+  state.pending_choice_elapsed = 2.5
+  assert(g.ui_port.pending_choice_elapsed == 2.5, "runtime ui port should proxy dynamic elapsed field")
+
+  g.ui_port:push_popup({ kind = "test_popup" })
+  assert(state._last_popup and state._last_popup.kind == "test_popup", "runtime ui port should forward popup calls")
+
+  g.ui_port:on_tile_owner_changed(11, 22)
+  assert(state._last_tile_owner and state._last_tile_owner.tile_id == 11, "runtime ui port should forward tile owner callback")
+  assert(state._last_tile_owner and state._last_tile_owner.owner_id == 22, "runtime ui port should forward owner id")
+end
+
+local function _test_gameplay_loop_refresh_drives_camera_follow_via_port()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local followed_player_id = nil
+  g.turn.current_player_index = 2
+  g.dirty.any = true
+  g.dirty.ui = true
+
+  state.gameplay_loop_ports = _build_test_ports({
+    refresh_from_dirty = function()
+      return true
+    end,
+    follow_camera = function(_, player_id)
+      followed_player_id = player_id
+      return true
+    end,
+    update_countdown = function() end,
+    sync_status_3d = function() end,
+    sync_debug_log = function() end,
+  })
+
+  gameplay_loop.tick(g, state, 0.1)
+
+  assert(followed_player_id == g.players[2].id, "camera follow should be driven by use-case loop with current player id")
+end
+
+local function _test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics()
+  support.with_patches({
+    { key = "GameAPI", value = {} },
+    { target = os, key = "clock", value = function() return 9.25 end },
+  }, function()
+    local ports = gameplay_loop_ports.resolve(nil)
+    local clock = ports.clock
+    assert(clock.wall_now_seconds() == 0, "wall clock should not fallback to cpu clock when GameAPI timestamp is unavailable")
+    assert(clock.cpu_now_seconds() == 9.25, "cpu clock should use os.clock source")
+  end)
+
+  support.with_patches({
+    { key = "GameAPI", value = {
+      get_timestamp = function() return 77 end,
+      get_timestamp_diff = function() return 0.6 end,
+    } },
+    { target = os, key = "clock", value = function() return 3.5 end },
+  }, function()
+    local ports = gameplay_loop_ports.resolve(nil)
+    local clock = ports.clock
+    assert(clock.wall_now_seconds() == 77, "wall clock should use GameAPI timestamp")
+    assert(clock.wall_diff_seconds(10, 9) == 0.6, "wall diff should use GameAPI timestamp diff")
+    assert(clock.now() == 77, "legacy now alias should map to wall clock")
+    assert(clock.diff_seconds(10, 9) == 0.6, "legacy diff alias should map to wall clock")
+    assert(clock.cpu_now_seconds() == 3.5, "cpu clock should remain isolated from wall clock source")
+    assert(clock.cpu_diff_seconds(10, 9) == 1, "cpu diff should stay arithmetic and source-agnostic")
+  end)
+end
+
 local function _test_choice_auto_policy_consistent_between_wait_and_timeout()
   local g = _new_game()
   local auto_player = g.players[g.turn.current_player_index]
@@ -1660,6 +1770,9 @@ return {
   _test_turn_prompt_initialized_for_first_player,
   _test_turn_prompt_emitted_on_next_player_switch,
   _test_turn_dispatch_uses_clock_ports_without_game_api,
+  _test_gameplay_loop_set_game_uses_runtime_ui_port_dto,
+  _test_gameplay_loop_refresh_drives_camera_follow_via_port,
+  _test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics,
   _test_choice_auto_policy_consistent_between_wait_and_timeout,
   _test_popup_countdown_uses_effective_modal_timeout,
   _test_dispatch_gate_blocks_next_when_choice_active,

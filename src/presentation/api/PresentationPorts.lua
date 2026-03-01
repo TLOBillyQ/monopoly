@@ -1,16 +1,72 @@
 local gameplay_rules = require("Config.GameplayRules")
 local runtime_constants = require("Config.RuntimeConstants")
 local runtime_event_bridge = require("src.core.RuntimeEventBridge")
-local tick_timeout = require("src.game.flow.turn.TickTimeout")
-local tick_ui_sync = require("src.game.flow.turn.TickUISync")
 local canvas_store = require("src.presentation.canvas_runtime.CanvasStore")
 local ui_event_state = require("src.presentation.interaction.UIEventState")
 local logger = require("src.core.Logger")
+local number_utils = require("src.core.NumberUtils")
 local move_anim = require("src.presentation.render.MoveAnim")
 
 local presentation_ports = {}
 
 local _action_anim_player = nil
+
+local function _build_log_prefix()
+  return "[Eggy]"
+end
+
+local function _log_once(state, level, key, ...)
+  if state._log_once == nil then
+    state._log_once = {}
+  end
+  if state._log_once[key] then
+    return
+  end
+  state._log_once[key] = true
+  if level == "warn" then
+    logger.warn(...)
+  else
+    logger.info(...)
+  end
+end
+
+local function _build_ui_env(state, game)
+  local winner = game.winner
+  local winner_name = game.winner_names or (winner and winner.name)
+  return {
+    game = game,
+    ui_state = state,
+    last_turn = game.last_turn,
+    finished = game.finished,
+    winner_name = winner_name,
+  }
+end
+
+local function _is_only_turn_countdown(dirty)
+  if not dirty or dirty.turn_countdown ~= true then
+    return false
+  end
+  if dirty.players or dirty.board_tiles or dirty.turn or dirty.market or dirty.ui then
+    return false
+  end
+  if dirty.inventory_ids then
+    for _ in pairs(dirty.inventory_ids) do
+      return false
+    end
+  end
+  return true
+end
+
+local function _log_status(view)
+  assert(view ~= nil, "missing view")
+  logger.info(
+    _build_log_prefix(),
+    "玩家:",
+    tostring(view.current_player_name),
+    "现金:",
+    number_utils.format_integer_part(view.current_player_cash)
+  )
+end
 
 local function _load_action_anim_player()
   if _action_anim_player then
@@ -113,66 +169,56 @@ function presentation_ports.build()
         local ui_view = require("src.presentation.api.UIViewService")
         ui_view.apply_input_lock(state)
       end,
-      step_choice_timeout = function(game, state, dt)
-        tick_timeout.step_default_choice(game, state, dt)
-      end,
-      step_modal_timeout = function(game, state, dt)
-        tick_timeout.step_default_modal(game, state, dt)
-      end,
-      update_countdown = function(game, state)
-        tick_ui_sync.update_countdown(game, state)
-      end,
       build_model = function(state, game)
         local ui_model = require("src.presentation.state.UIModel")
-        local env = tick_ui_sync.build_ui_env(state, game)
+        local env = _build_ui_env(state, game)
         return ui_model.build(game, env)
       end,
       refresh_from_dirty = function(game, state, dirty)
         if state.ui_dirty then
           dirty.ui = true
         end
-        local only_countdown = tick_ui_sync.is_only_turn_countdown(dirty)
+        local only_countdown = _is_only_turn_countdown(dirty)
         local ui_refreshed = false
         if dirty.any or dirty.ui then
           local ui_model = require("src.presentation.state.UIModel")
           local ui_view = require("src.presentation.api.UIViewService")
-          local env = tick_ui_sync.build_ui_env(state, game)
+          local env = _build_ui_env(state, game)
           local next_model = ui_model.update(state.ui_model, game, env, dirty)
           state.ui_model = next_model
           if only_countdown then
             ui_view.refresh_turn_label(state, next_model.panel and next_model.panel.turn_label or "")
           else
-            ui_view.render(state, next_model, tick_ui_sync.log_once, tick_ui_sync.log_prefix)
+            ui_view.render(state, next_model, _log_once, _build_log_prefix)
             ui_refreshed = true
             if next_model.choice then
               ui_view.open_choice_modal(state, next_model.choice, next_model.market)
-            end
-            local players = assert(game.players, "missing game.players")
-            local turn = assert(game.turn, "missing game.turn")
-            local current_index = assert(turn.current_player_index, "missing current_player_index")
-            local current = assert(players[current_index], "missing current player: " .. tostring(current_index))
-            local current_id = assert(current.id, "missing current player id")
-            assert(GameAPI ~= nil and GameAPI.get_role ~= nil, "missing GameAPI.get_role")
-
-            if camera_helper then
-              camera_helper.target_role_id = current_id
-            end
-            if camera_helper
-              and runtime_constants
-              and runtime_constants.eca_event
-              and runtime_constants.eca_event.camera
-              and runtime_constants.eca_event.camera.follow
-            then
-              runtime_event_bridge.emit_custom_event(
-                runtime_constants.eca_event.camera.follow,
-                {},
-                { feature_key = "camera.follow" }
-              )
             end
           end
           state.ui_dirty = false
         end
         return ui_refreshed
+      end,
+      follow_camera = function(_, player_id)
+        if player_id == nil then
+          return false
+        end
+        if camera_helper then
+          camera_helper.target_role_id = player_id
+        end
+        if camera_helper
+            and runtime_constants
+            and runtime_constants.eca_event
+            and runtime_constants.eca_event.camera
+            and runtime_constants.eca_event.camera.follow then
+          runtime_event_bridge.emit_custom_event(
+            runtime_constants.eca_event.camera.follow,
+            {},
+            { feature_key = "camera.follow" }
+          )
+          return true
+        end
+        return false
       end,
       get_ui_state = function(state)
         return _get_ui_state(state)
@@ -213,7 +259,7 @@ function presentation_ports.build()
     },
     debug = {
       log_status = function(view)
-        tick_ui_sync.log_status(view)
+        _log_status(view)
       end,
       sync_debug_log = function(state)
         local debug_enabled = ui_event_state.resolve_debug_enabled(state)

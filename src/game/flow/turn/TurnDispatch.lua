@@ -56,6 +56,12 @@ end
 
 local function _resolve_timestamp_now(dispatch_ctx)
   local clock_ports = dispatch_ctx and dispatch_ctx.clock_ports or nil
+  if clock_ports and type(clock_ports.wall_now_seconds) == "function" then
+    local ok, ts = pcall(clock_ports.wall_now_seconds)
+    if ok and number_utils.is_numeric(ts) then
+      return ts
+    end
+  end
   if clock_ports and type(clock_ports.now) == "function" then
     local ok, ts = pcall(clock_ports.now)
     if ok and number_utils.is_numeric(ts) then
@@ -67,6 +73,12 @@ end
 
 local function _resolve_timestamp_diff_seconds(dispatch_ctx, timestamp_1, timestamp_2)
   local clock_ports = dispatch_ctx and dispatch_ctx.clock_ports or nil
+  if clock_ports and type(clock_ports.wall_diff_seconds) == "function" then
+    local ok, diff = pcall(clock_ports.wall_diff_seconds, timestamp_1, timestamp_2)
+    if ok and number_utils.is_numeric(diff) then
+      return diff
+    end
+  end
   if clock_ports and type(clock_ports.diff_seconds) == "function" then
     local ok, diff = pcall(clock_ports.diff_seconds, timestamp_1, timestamp_2)
     if ok and number_utils.is_numeric(diff) then

@@ -28,6 +28,50 @@ local rules = {
     },
     description = "base canvas must not import other canvas modules",
   },
+  {
+    root = "src/game/core",
+    forbidden_patterns = {
+      "%f[%w_]GameAPI%f[^%w_]",
+      "%f[%w_]GlobalAPI%f[^%w_]",
+      "%f[%w_]SetTimeOut%f[^%w_]",
+      "%f[%w_]RegisterTriggerEvent%f[^%w_]",
+      "%f[%w_]RegisterCustomEvent%f[^%w_]",
+    },
+    description = "game core must not use runtime global APIs directly",
+  },
+  {
+    root = "src/game/core",
+    forbidden_patterns = {
+      "require%(\"src%.game%.flow%..-\"%)",
+      "require%('src%.game%.flow%..-'%)",
+    },
+    description = "game core must not depend on src.game.flow.* directly",
+  },
+  {
+    root = "src",
+    forbidden_patterns = {
+      "require%(\"src%.game%.core%.runtime%.TurnEngine\"%)",
+      "require%('src%.game%.core%.runtime%.TurnEngine'%)",
+      "require%(\"src%.game%.core%.runtime%.PhaseRegistry\"%)",
+      "require%('src%.game%.core%.runtime%.PhaseRegistry'%)",
+    },
+    description = "source must not depend on retired core runtime proxy modules",
+  },
+  {
+    root = "tests",
+    forbidden_patterns = {
+      "require%(\"src%.game%.core%.runtime%.TurnEngine\"%)",
+      "require%('src%.game%.core%.runtime%.TurnEngine'%)",
+      "require%(\"src%.game%.core%.runtime%.PhaseRegistry\"%)",
+      "require%('src%.game%.core%.runtime%.PhaseRegistry'%)",
+    },
+    description = "tests must not depend on retired core runtime proxy modules",
+  },
+}
+
+local forbidden_files = {
+  "src/game/core/runtime/TurnEngine.lua",
+  "src/game/core/runtime/PhaseRegistry.lua",
 }
 
 local function _is_windows()
@@ -66,7 +110,7 @@ local function _collect_lua_files(root)
   return files
 end
 
-local function _scan_file(path, forbidden)
+local function _scan_file(path, forbidden, forbidden_patterns)
   local file = io.open(path, "r")
   if not file then
     return nil, "cannot open: " .. tostring(path)
@@ -74,13 +118,24 @@ local function _scan_file(path, forbidden)
   local lineno = 0
   for line in file:lines() do
     lineno = lineno + 1
-    for _, prefix in ipairs(forbidden) do
+    for _, prefix in ipairs(forbidden or {}) do
       if line:find(prefix, 1, true) then
         file:close()
         return {
           path = path,
           line = lineno,
-          prefix = prefix,
+          token = prefix,
+          text = line,
+        }
+      end
+    end
+    for _, pattern in ipairs(forbidden_patterns or {}) do
+      if line:find(pattern) then
+        file:close()
+        return {
+          path = path,
+          line = lineno,
+          token = pattern,
           text = line,
         }
       end
@@ -96,7 +151,7 @@ local function _scan_tree(rule)
     return nil, files_err
   end
   for _, path in ipairs(files) do
-    local hit, scan_err = _scan_file(path, rule.forbidden)
+    local hit, scan_err = _scan_file(path, rule.forbidden, rule.forbidden_patterns)
     if hit then
       return hit
     end
@@ -114,9 +169,18 @@ for _, rule in ipairs(rules) do
     os.exit(1)
   end
   if hit then
-    io.stderr:write("dep_rules violation: ", hit.path, ":", hit.line, " contains ", hit.prefix, "\n")
+    io.stderr:write("dep_rules violation: ", hit.path, ":", hit.line, " contains ", hit.token, "\n")
     io.stderr:write("rule: ", rule.description, "\n")
     io.stderr:write(hit.text, "\n")
+    os.exit(1)
+  end
+end
+
+for _, path in ipairs(forbidden_files) do
+  local file = io.open(path, "r")
+  if file then
+    file:close()
+    io.stderr:write("dep_rules violation: forbidden file exists: ", path, "\n")
     os.exit(1)
   end
 end

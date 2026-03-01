@@ -3,10 +3,10 @@ require "vendor.third_party.Utils"
 local dirty_tracker = require("src.core.DirtyTracker")
 local logger = require("src.core.Logger")
 local market_cfg = require("Config.Generated.Market")
-local turn_engine = require("src.game.core.runtime.TurnEngine")
+local turn_engine = require("src.game.runtime.TurnEngine")
 local bootstrap = require("src.game.core.runtime.Bootstrap")
 local game_factory = require("src.game.core.runtime.GameFactory")
-local phase_registry = require("src.game.core.runtime.PhaseRegistry")
+local phase_registry = require("src.game.runtime.PhaseRegistry")
 local number_utils = require("src.core.NumberUtils")
 
 local composition_root = {}

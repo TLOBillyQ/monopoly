@@ -1,4 +1,5 @@
 local turn_anim = {}
+local runtime_ports = require("src.core.RuntimePorts")
 
 function turn_anim.step_anim(game, state, opts)
   assert(game ~= nil, "missing game")
@@ -22,7 +23,7 @@ function turn_anim.step_anim(game, state, opts)
   state[opts.seq_key] = anim.seq
   local ok, delay = pcall(opts.on_anim, state, anim)
   if ok and delay and delay > 0 then
-    SetTimeOut(delay, function()
+    runtime_ports.schedule(delay, function()
       assert(game.dispatch_action ~= nil, "missing game.dispatch_action")
       game:dispatch_action({ type = opts.done_action, seq = anim.seq })
     end)
