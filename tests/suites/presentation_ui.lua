@@ -18,7 +18,7 @@ local runtime_port = require("src.presentation.api.UIRuntimePort")
 local ui_intent_dispatcher = require("src.presentation.interaction.UIIntentDispatcher")
 local market_view = require("src.presentation.render.MarketView")
 local market_layout = require("src.presentation.shared.MarketLayout")
-local ui_event_router = require("src.presentation.interaction.UIEventRouter")
+local canvas_event_router = require("src.presentation.canvas_runtime.CanvasEventRouter")
 local ui_view = require("src.presentation.api.UIViewService")
 local ui_status_3d_layer = require("src.presentation.render.Status3DService")
 local action_anim = require("src.presentation.render.ActionAnim")
@@ -1739,7 +1739,7 @@ local function _test_push_popup_sets_card_image_by_image_ref()
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
-    state.gameplay_loop_ports = require("src.presentation.api.GameplayLoopPortsAdapter").build(state)
+    state.gameplay_loop_ports = require("src.presentation.api.PresentationPorts").build(state)
     ui_view.push_popup(state, {
       title = "道具卡",
       body = "测试",
@@ -1767,7 +1767,7 @@ local function _test_push_popup_hides_card_and_clears_image_when_missing()
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
-    state.gameplay_loop_ports = require("src.presentation.api.GameplayLoopPortsAdapter").build(state)
+    state.gameplay_loop_ports = require("src.presentation.api.PresentationPorts").build(state)
     ui_view.push_popup(state, {
       title = "道具卡",
       body = "测试",
@@ -1946,7 +1946,7 @@ local function _test_popup_timeout_closes_even_when_input_blocked()
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
-    state.gameplay_loop_ports = require("src.presentation.api.GameplayLoopPortsAdapter").build(state)
+    state.gameplay_loop_ports = require("src.presentation.api.PresentationPorts").build(state)
     ui_view.push_popup(state, {
       title = "道具卡",
       body = "测试",
@@ -2163,7 +2163,7 @@ local function _test_ui_event_router_player_target_click_direct_submit()
       query_nodes_by_name = query_nodes_by_name,
     } },
   }, function()
-    ui_event_router.bind(state, function()
+    canvas_event_router.bind(state, function()
       return {}
     end)
     node_map["玩家选择_槽位2"]._listener_cb({})
@@ -2238,7 +2238,7 @@ local function _test_ui_event_router_action_log_toggle_uses_role_context()
       client_role = nil,
     } },
   }, function()
-    ui_event_router.bind(state, function()
+    canvas_event_router.bind(state, function()
       return {}
     end)
 
@@ -2435,6 +2435,131 @@ local function _test_item_slot_intents_include_outline_nodes()
   _assert_eq(specs[2].name, "基础_可出牌外框1", "outline intent node expected")
   local intent = specs[2].build_intent()
   _assert_eq(intent and intent.id, "item_slot_1", "outline click should map to slot action")
+end
+
+local function _test_item_slot_refresh_resets_highlight_without_client_role()
+  local ui_events = require("src.presentation.shared.UIEvents")
+  local events = {}
+  local phase = ""
+
+  local function _record(channel, event_name)
+    events[#events + 1] = {
+      phase = phase,
+      channel = channel,
+      event_name = event_name,
+    }
+  end
+
+  local function _has_event(phase_name, event_name)
+    for _, entry in ipairs(events) do
+      if entry.phase == phase_name and entry.event_name == event_name then
+        return true
+      end
+    end
+    return false
+  end
+
+  local state = {
+    ui_refs = {
+      ["Empty"] = "EMPTY",
+      ["2002"] = "ICON2002",
+      ["2003"] = "ICON2003",
+      ["2004"] = "ICON2004",
+      ["2007"] = "ICON2007",
+      ["2008"] = "ICON2008",
+    },
+    ui = {
+      item_slots = { "基础_道具槽位1", "基础_道具槽位2", "基础_道具槽位3", "基础_道具槽位4", "基础_道具槽位5" },
+      card_outlines = { "基础_可出牌外框1", "基础_可出牌外框2", "基础_可出牌外框3", "基础_可出牌外框4", "基础_可出牌外框5" },
+      set_touch_enabled = function() end,
+      set_visible = function() end,
+    },
+  }
+
+  local pre_action_model = {
+    current_player_id = 1,
+    item_choice_owner_id = 1,
+    item_slots_by_player = {
+      [1] = { 2002, 2004, 2007, 2008, 2003 },
+    },
+    choice = {
+      kind = "item_phase_choice",
+      options = { { id = 2002 } },
+    },
+  }
+
+  local remote_choice_model = {
+    current_player_id = 1,
+    item_choice_owner_id = 1,
+    item_slots_by_player = {
+      [1] = { 2002, 2004, 2007, 2008, 2003 },
+    },
+    choice = {
+      kind = "remote_dice_value",
+      options = { { id = 1 }, { id = 2 } },
+    },
+  }
+
+  local pre_move_model = {
+    current_player_id = 1,
+    item_choice_owner_id = 1,
+    item_slots_by_player = {
+      [1] = { 2004, 2007, 2008, 2003, nil },
+    },
+    choice = {
+      kind = "item_phase_choice",
+      options = { { id = 2003 } },
+    },
+  }
+
+  _with_patches({
+    {
+      key = "UIManager",
+      value = {
+        client_role = nil,
+        query_nodes_by_name = function()
+          return { { set_texture_keep_size = function() end } }
+        end,
+      },
+    },
+    {
+      target = ui_events,
+      key = "send_to_all",
+      value = function(event_name)
+        _record("all", event_name)
+      end,
+    },
+    {
+      target = ui_events,
+      key = "send_to_role",
+      value = function(_, event_name)
+        _record("role", event_name)
+      end,
+    },
+  }, function()
+    phase = "pre_action"
+    ui_view.refresh_item_slots(state, pre_action_model, {
+      display_player_id = 1,
+      allow_interact = true,
+    })
+
+    phase = "remote_choice"
+    ui_view.refresh_item_slots(state, remote_choice_model, {
+      display_player_id = 1,
+      allow_interact = true,
+    })
+
+    phase = "pre_move"
+    ui_view.refresh_item_slots(state, pre_move_model, {
+      display_player_id = 1,
+      allow_interact = true,
+    })
+  end)
+
+  _assert_eq(_has_event("pre_action", "高亮道具槽位牌1"), true, "pre_action should highlight remote dice slot")
+  _assert_eq(_has_event("remote_choice", "重置高亮道具槽位牌1"), true, "remote choice should reset slot1 highlight without client role")
+  _assert_eq(_has_event("pre_move", "高亮道具槽位牌4"), true, "pre_move should highlight dice multiplier slot")
+  _assert_eq(_has_event("pre_move", "重置高亮道具槽位牌1"), true, "pre_move should clear stale slot1 highlight")
 end
 
 local function _test_tick_skips_anim_when_no_anim()
@@ -3257,7 +3382,7 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
 
   _with_patches(patches, function()
     runtime_event_bridge._reset_for_tests()
-    state.gameplay_loop_ports = require("src.presentation.api.GameplayLoopPortsAdapter").build(state)
+    state.gameplay_loop_ports = require("src.presentation.api.PresentationPorts").build(state)
     gameplay_loop.tick(game, state, 0.1)
     runtime_event_bridge._reset_for_tests()
   end)
@@ -3379,7 +3504,7 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
   _with_patches(patches, function()
     runtime_event_bridge._reset_for_tests()
     local ok, err = pcall(function()
-      state.gameplay_loop_ports = require("src.presentation.api.GameplayLoopPortsAdapter").build(state)
+      state.gameplay_loop_ports = require("src.presentation.api.PresentationPorts").build(state)
       gameplay_loop.tick(game, state, 0.1)
     end)
     runtime_event_bridge._reset_for_tests()
@@ -3524,4 +3649,5 @@ return {
   _test_tick_ui_sync_turn_switch_still_follows,
   _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailable,
   _test_panel_avatar_uses_keep_size_path,
+  _test_item_slot_refresh_resets_highlight_without_client_role,
 }

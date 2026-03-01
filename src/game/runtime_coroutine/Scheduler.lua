@@ -1,8 +1,12 @@
-local signals = require("src.game.runtime_coroutine.Signals")
 local turn_script = require("src.game.runtime_coroutine.TurnScript")
 local action_router = require("src.game.runtime_coroutine.ActionRouter")
 
 local scheduler = {}
+local SIGNAL_ACTION = "action"
+
+local function _is_action(signal)
+  return type(signal) == "table" and signal.type == SIGNAL_ACTION
+end
 
 local function _ensure_queue(session)
   if type(session.queue) ~= "table" then
@@ -41,7 +45,7 @@ function scheduler.step(session, dt)
 
   while #queue > 0 do
     local signal = table.remove(queue, 1)
-    if signals.is_action(signal) then
+    if _is_action(signal) then
       session:set_pending_action(signal.action)
     end
     local ok, yielded = coroutine.resume(co, signal)

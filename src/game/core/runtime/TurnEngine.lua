@@ -1,7 +1,6 @@
 local scheduler = require("src.game.runtime_coroutine.Scheduler")
 local session_factory = require("src.game.runtime_coroutine.Session")
 local action_router = require("src.game.runtime_coroutine.ActionRouter")
-local compat_bridge = require("src.game.runtime_coroutine.CompatBridge")
 require "vendor.third_party.ClassUtils"
 
 local turn_engine = Class("TurnEngine")
@@ -67,7 +66,14 @@ end
 
 local function _sync_snapshot(engine)
   local snapshot = engine.session and engine.session:snapshot() or nil
-  compat_bridge.sync_to_legacy_turn(engine.game, snapshot)
+  local game = engine.game
+  if type(game) == "table" and type(game.turn) == "table" and type(snapshot) == "table" then
+    if snapshot.wait_state then
+      game.turn.phase = snapshot.wait_state
+    elseif snapshot.current_state then
+      game.turn.phase = snapshot.current_state
+    end
+  end
   return snapshot
 end
 
