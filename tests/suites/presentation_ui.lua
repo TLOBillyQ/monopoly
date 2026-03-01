@@ -2557,7 +2557,10 @@ local function _test_item_slot_refresh_resets_highlight_without_client_role()
   end)
 
   _assert_eq(_has_event("pre_action", "高亮道具槽位牌1"), true, "pre_action should highlight remote dice slot")
+  _assert_eq(_has_event("pre_action", "重置高亮"), true, "pre_action should issue global reset before highlighting")
+  _assert_eq(_has_event("remote_choice", "重置高亮"), true, "remote choice should issue global reset before slot reorder")
   _assert_eq(_has_event("remote_choice", "重置高亮道具槽位牌1"), true, "remote choice should reset slot1 highlight without client role")
+  _assert_eq(_has_event("pre_move", "重置高亮"), true, "pre_move should issue global reset before highlighting playable slots")
   _assert_eq(_has_event("pre_move", "高亮道具槽位牌4"), true, "pre_move should highlight dice multiplier slot")
   _assert_eq(_has_event("pre_move", "重置高亮道具槽位牌1"), true, "pre_move should clear stale slot1 highlight")
 end
