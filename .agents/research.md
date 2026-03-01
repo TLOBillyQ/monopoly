@@ -5,26 +5,28 @@
 ## 研究范围与证据
 
 - 扫描范围：`src/*`、`tests/internal/*`、`docs/architecture/*`。
-- 实测回归：`lua tests/regression.lua`，结果为 `All regression checks passed (187)`，并且 `dep_rules ok / tick ok / forbidden_globals ok`。
+- 实测回归：`lua tests/regression.lua`，结果为 `All regression checks passed (190)`，并且 `dep_rules ok / tick ok / forbidden_globals ok`。
 - 代码规模（Lua）：
-  - `src/core` 8 文件 / 887 行
-  - `src/game/core` 21 文件 / 1447 行
-  - `src/game/flow` 19 文件 / 2214 行
+  - `src/core` 12 文件 / 1083 行
+  - `src/game/core` 19 文件 / 1313 行
+  - `src/game/flow` 19 文件 / 2309 行
+  - `src/game/runtime` 2 文件 / 129 行
   - `src/game/runtime_coroutine` 5 文件 / 394 行
-  - `src/game/systems` 52 文件 / 4507 行
-  - `src/presentation` 97 文件 / 5958 行
-  - `src/app` 7 文件 / 452 行
+  - `src/game/systems` 52 文件 / 4473 行
+  - `src/presentation` 97 文件 / 5985 行
+  - `src/app` 7 文件 / 472 行
 
 > **[R] 代码规模：全部精确命中，已独立复现验证。✓**
 
 - 目录级依赖矩阵（摘录）：
   - ~~`presentation -> game/*` 存在 6 条直接依赖（`game/core` 1，`game/flow` 2，`game/systems` 3）。~~
-  - `presentation -> game/*` 存在 **5** 条直接依赖（`game/core` 1，`game/flow` 2，`game/systems` **2**）。
-  - `game/core -> game/flow` 存在 4 条直接依赖（`PhaseRegistry` -> `TurnStart/Roll/Move/Land`）。
-  - `game/core -> game/runtime_coroutine` 存在 3 条直接依赖（`TurnEngine`）。
+  - ~~`presentation -> game/*` 存在 **5** 条直接依赖（`game/core` 1，`game/flow` 2，`game/systems` **2**）。~~
+  - `presentation -> game/*` 当前存在 **4** 条直接依赖（`game/core` 1，`game/flow` **0**，`game/systems` **3**）。
+  - `game/core -> game/flow` 当前为 0 条直接依赖。
+  - `game/core -> game/runtime_coroutine` 当前为 0 条直接依赖。
 
-> **[R] 依赖矩阵：`game/core->flow` 4条 ✓、`game/core->runtime_coroutine` 3条 ✓。**
-> **`presentation->game/systems` 实际为 2 条（`LandPricing` + `VehicleFeature`），原文误计为 3，总数应为 5 而非 6。已修正。**
+> **[R] 依赖矩阵（当前）：`game/core->flow` 0条、`game/core->runtime_coroutine` 0条，历史反向依赖已关闭。✓**
+> **`presentation->game/flow` 已清零；`presentation->game/systems` 当前为 3 条（`VehicleFeature` 2 + `LandPricing` 1），总数为 4。**
 
 ## 系统策略与用例提炼
 
@@ -180,10 +182,10 @@
 - 用例级测试（必须）：对 `TurnStart/Roll/Move/Land/PostAction` 做端口替身测试，验证状态迁移与领域事件，不依赖 Eggy 全局。
 - 边界契约测试（必须）：固定 `GameplayLoopPorts`、`PresentationPorts` 的端口签名与默认语义（尤其 `clock`、`modal`、`state`）。
 - 依赖规则测试（必须）：把上文新增规则并入 `tests/internal/dep_rules.lua`，CI 中强制执行。
-- 回归测试（保持）：继续使用 `lua tests/regression.lua`（当前基线 187）作为行为等价门槛。
+- 回归测试（保持）：继续使用 `lua tests/regression.lua`（当前基线 190）作为行为等价门槛。
 - 高风险场景专项：补“破产清算 + 动画等待 + 市场中断 + 偷窃中断”串联路径，确保拆边界后行为不变。
 
-> **[R] 测试建议全面且分层清晰。回归基线 187 与实测一致。高风险场景列表覆盖了 Bankruptcy + TurnAnim（SetTimeOut）+ Market + Steal 的交叉路径，切中要害。✓**
+> **[R] 测试建议全面且分层清晰。回归基线 190 与实测一致。高风险场景列表覆盖了 Bankruptcy + TurnAnim（SetTimeOut）+ Market + Steal 的交叉路径，切中要害。✓**
 
 ## 权衡说明
 
@@ -234,3 +236,44 @@
 > **[R] 权衡说明务实。取舍建议与评审意见一致：守护测试 + P0 先行是最优起步。✓**
 >
 > **[R] 整体评审结论：本研究文档质量优秀，证据链完整且绝大多数精确命中源码。发现 1 处数据纠正（presentation->game/systems 依赖数 3→2，总数 6→5）、行号微调 1 处（GameplayLoopPorts clock 端口 102-121→99-129）、1 条优先级建议（守护测试前置）、1 条影响范围低估提醒（state 分片）。核心论点和重构方向均成立。**
+
+## 当前代码库复评（2026-03-01）
+
+> **[R4] 架构结论：当前实现已从“核心依赖外部细节”收敛到“边界基本可守护”，P0 已关闭、主要剩余问题在 P1/P2 的边界纯度与体量治理。代码可持续演进，但仍需继续降低 `presentation -> game/systems` 直连与超大文件复杂度。**
+
+### [R4] 关键证据
+
+- 回归与规则：
+  - `lua tests/internal/dep_rules.lua` -> `dep_rules ok`
+  - `lua tests/regression.lua` -> `All regression checks passed (190)` + `dep_rules ok / tick ok / forbidden_globals ok`
+- 目录规模（Lua）：
+  - `src/presentation` 97 文件 / 5985 行
+  - `src/game/systems` 52 文件 / 4473 行
+  - 两层合计约 10458 行（体量主负担）
+- 依赖方向（当前）：
+  - `presentation -> game/core`: 1
+  - `presentation -> game/flow`: 0
+  - `presentation -> game/systems`: 3
+  - `game/core -> game/flow`: 0
+  - `game/core -> game/runtime_coroutine`: 0
+
+### [R4] 满足项（已关闭）
+
+- `clock.now/diff_seconds` 旧兼容链路已清零，wall/cpu 语义分离保持稳定。
+- `systems` 层动画门控已统一收敛到 `src/core/ActionAnimPort.lua`，并由 dep_rules 禁止回流到 `ui_port.wait_action_anim` 直连写法。
+- `TickUISync` 与 `PresentationPorts` 的公共语义（`build_ui_env` / `is_only_turn_countdown`）已抽取到 `src/core/TurnUISyncShared.lua`，减少重复维护点。
+
+### [R4] 部分满足项（仍有改进空间）
+
+- P1（边界纯度）：`presentation -> game/systems` 仍有 3 条直连，当前命中：
+  - `src/presentation/render/MoveAnim.lua` -> `VehicleFeature`
+  - `src/presentation/render/board_runtime/placement.lua` -> `VehicleFeature`
+  - `src/presentation/ui/UIPanel.lua` -> `LandPricing`
+  这类依赖虽可运行，但仍让 adapter 读取 use-case/规则细节。
+- P2（体量与复杂度）：超大模块仍集中在 `UIModel.lua`（341 行）、`UIIntentDispatcher.lua`（319 行）、`PresentationPorts.lua`（314 行）等，后续变更扩散风险依旧偏高。
+
+### [R4] 建议的下一步（增量、可回滚）
+
+1. 为 `VehicleFeature`/`LandPricing` 提供 adapter 侧只读端口（或 view-model 映射），逐步清理 `presentation -> game/systems` 直连。
+2. 对 `UIModel` 与 `UIIntentDispatcher` 采用“按用例切片”的子模块拆分（只拆职责，不改行为），并保持回归基线 190 不下降。
+3. 在 dep_rules 增加可选守护：限制 `src/presentation/**` 直接 require `src.game.systems.*`（先白名单后递减），避免新反向依赖进入主干。
