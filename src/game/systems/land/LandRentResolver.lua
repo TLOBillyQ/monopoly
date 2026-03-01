@@ -1,4 +1,5 @@
 local pricing = require("src.game.systems.land.LandPricing")
+local rent_math = require("src.game.systems.land.LandRentMath")
 
 local resolver = {}
 
@@ -87,34 +88,16 @@ function resolver.contiguous_rent(game, board, index, owner_id)
     return cached
   end
 
-  local rent_sum = 0
-  local visited = { [start_tile.id] = true }
-  local queue = { start_tile.id }
-  local head = 1
-  local component = {}
-
-  while head <= #queue do
-    local tile_id = queue[head]
-    head = head + 1
-
+  local rent_sum, component = rent_math.compute_contiguous_rent(start_tile.id, owner_id, land_neighbors,
+    function(tile_id)
     local tile = board:get_tile_by_id(tile_id)
     assert(tile ~= nil, "missing tile: " .. tostring(tile_id))
-    if tile.type == "land" then
-      local st2 = resolver.safe_tile_state(game, tile)
-      if st2.owner_id == owner_id then
-        component[#component + 1] = tile_id
-        rent_sum = rent_sum + pricing.rent_for_level(tile, st2.level or 0)
-        local neigh = land_neighbors[tile_id]
-        assert(neigh ~= nil, "missing neighbors: " .. tostring(tile_id))
-        for _, next_id in ipairs(neigh) do
-          if not visited[next_id] then
-            visited[next_id] = true
-            queue[#queue + 1] = next_id
-          end
-        end
-      end
+    if tile.type ~= "land" then
+      return nil, 0
     end
-  end
+    local st2 = resolver.safe_tile_state(game, tile)
+    return st2.owner_id, pricing.rent_for_level(tile, st2.level or 0)
+  end)
 
   for _, tile_id in ipairs(component) do
     tile_sum[tile_id] = rent_sum
