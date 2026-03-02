@@ -30,12 +30,30 @@ function host_runtime_port.emit_custom_event(event_name, payload)
   return runtime_event_bridge.emit_custom_event(event_name, payload)
 end
 
+local function _role_matches_predicate(role, predicate)
+  if role == nil then
+    return false
+  end
+  if predicate == nil then
+    return true
+  end
+  return predicate(role) == true
+end
+
 function host_runtime_port.resolve_role(player_id)
+  return host_runtime_port.resolve_role_with(player_id)
+end
+
+function host_runtime_port.resolve_role_with(player_id, predicate)
   local role = runtime_ports.resolve_role(player_id)
-  if role ~= nil then
+  if _role_matches_predicate(role, predicate) then
     return role
   end
-  return host_runtime_port.resolve_game_role(player_id)
+  role = host_runtime_port.resolve_game_role(player_id)
+  if _role_matches_predicate(role, predicate) then
+    return role
+  end
+  return nil
 end
 
 function host_runtime_port.resolve_game_role(player_id)

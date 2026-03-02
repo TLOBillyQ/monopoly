@@ -20,12 +20,14 @@ function status_ops.set_player_seat(self, player, seat_id)
 
   local old_seat_id = player.seat_id
   local vehicle = runtime_ports.resolve_vehicle_helper()
+  local emit_exit = vehicle and (vehicle.emit_vehicle_exit or vehicle.forward_eca_event_exit) or nil
+  local emit_enter = vehicle and (vehicle.emit_vehicle_enter or vehicle.forward_eca_event_enter) or nil
   if old_seat_id ~= seat_id and vehicle then
-    if old_seat_id ~= nil and vehicle.forward_eca_event_exit then
-      vehicle.forward_eca_event_exit(player.id)
+    if old_seat_id ~= nil and emit_exit then
+      emit_exit(player.id)
     end
-    if seat_id ~= nil and vehicle.forward_eca_event_enter then
-      vehicle.forward_eca_event_enter(player.id, seat_id)
+    if seat_id ~= nil and emit_enter then
+      emit_enter(player.id, seat_id)
       if vehicle.needs_enter_wait_by_player then
         vehicle.needs_enter_wait_by_player[player.id] = true
       end
@@ -62,6 +64,7 @@ end
 function status_ops.stop_all_players_movement(self)
   local players = self.players or {}
   local vehicle = runtime_ports.resolve_vehicle_helper()
+  local emit_stop = vehicle and (vehicle.emit_vehicle_stop or vehicle.forward_eca_event_stop) or nil
   local players_dirty = false
   for _, player in ipairs(players) do
     local status = common.player_status_table(player)
@@ -70,13 +73,13 @@ function status_ops.stop_all_players_movement(self)
       players_dirty = true
     end
     local seat_id = vehicle_feature.resolve_seat_id(player.seat_id)
-    if vehicle and vehicle.forward_eca_event_stop and seat_id ~= nil then
+    if vehicle and emit_stop and seat_id ~= nil then
       local role_ok = true
       if vehicle.resolve_role then
         role_ok = vehicle.resolve_role(player.id) ~= nil
       end
       if role_ok then
-        vehicle.forward_eca_event_stop(player.id)
+        emit_stop(player.id)
       end
     end
   end

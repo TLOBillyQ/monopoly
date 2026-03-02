@@ -119,8 +119,9 @@ function M.place_players(state, players, occupants, spacing, min_player_y)
       local target_pos = base + math.Vector3(ox, y_offset, oz)
       local seat_id = gameplay_read_port.resolve_vehicle_seat_id(player.seat_id)
       local vehicle = runtime_ports.resolve_vehicle_helper()
-      if seat_id and vehicle and vehicle.forward_eca_event_set_position then
-        vehicle.forward_eca_event_set_position(pid, target_pos)
+      local emit_set_position = vehicle and (vehicle.emit_vehicle_set_position or vehicle.forward_eca_event_set_position) or nil
+      if seat_id and emit_set_position then
+        emit_set_position(pid, target_pos)
       else
         assert(unit.set_position ~= nil, "missing unit.set_position: " .. tostring(pid))
         unit.set_position(target_pos)

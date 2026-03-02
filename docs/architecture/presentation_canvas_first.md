@@ -34,7 +34,7 @@ src/presentation/canvas_runtime/
 
 ## Migration Notes
 
-1. Keep compatibility wrappers while migrating call sites.
+1. Keep temporary wrappers while migrating call sites.
 2. Remove wrappers only after all call sites are migrated and regression passes.
 
 ## New Canvas Template
@@ -45,4 +45,4 @@ src/presentation/canvas_runtime/
 4. Add `presenter.lua` for render/open/close logic.
 5. Add `touch_policy.lua` if this canvas has custom touch rules.
 6. Register route specs in `src/presentation/canvas_runtime/CanvasRegistry.lua`.
-7. Add/adjust regression tests before removing any compatibility mapping.
+7. Add/adjust regression tests before removing any temporary mapping.

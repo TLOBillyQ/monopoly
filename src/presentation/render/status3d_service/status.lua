@@ -5,15 +5,9 @@ local host_runtime = require("src.presentation.api.HostRuntimePort")
 local M = {}
 
 local function _resolve_role(player_id)
-  local role = host_runtime.resolve_role(player_id)
-  if role ~= nil and role.set_label_text ~= nil then
-    return role
-  end
-  role = host_runtime.resolve_game_role(player_id)
-  if role ~= nil and role.set_label_text ~= nil then
-    return role
-  end
-  return nil
+  return host_runtime.resolve_role_with(player_id, function(role)
+    return role.set_label_text ~= nil
+  end)
 end
 
 function M.resolve_player_status_key(game, player)

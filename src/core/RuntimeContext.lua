@@ -91,7 +91,7 @@ local function _build_vehicle_helper(get_roles)
     return _first_valid_role()
   end
 
-  helper.forward_eca_event_enter = function(role_id, vehicle_id)
+  helper.emit_vehicle_enter = function(role_id, vehicle_id)
     if not vehicle_feature.is_enabled() then
       return false
     end
@@ -112,7 +112,7 @@ local function _build_vehicle_helper(get_roles)
     return true
   end
 
-  helper.forward_eca_event_exit = function(role_id)
+  helper.emit_vehicle_exit = function(role_id)
     if not vehicle_feature.is_enabled() then
       return false
     end
@@ -132,7 +132,7 @@ local function _build_vehicle_helper(get_roles)
     return true
   end
 
-  helper.forward_eca_event_move = function(role_id, dir, time)
+  helper.emit_vehicle_move = function(role_id, dir, time)
     if not vehicle_feature.is_enabled() then
       return false
     end
@@ -150,7 +150,7 @@ local function _build_vehicle_helper(get_roles)
     return true
   end
 
-  helper.forward_eca_event_stop = function(role_id)
+  helper.emit_vehicle_stop = function(role_id)
     if not vehicle_feature.is_enabled() then
       return false
     end
@@ -166,7 +166,7 @@ local function _build_vehicle_helper(get_roles)
     return true
   end
 
-  helper.forward_eca_event_set_position = function(role_id, pos)
+  helper.emit_vehicle_set_position = function(role_id, pos)
     if not vehicle_feature.is_enabled() then
       return false
     end
@@ -183,6 +183,26 @@ local function _build_vehicle_helper(get_roles)
     return true
   end
 
+  helper.forward_eca_event_enter = function(role_id, vehicle_id)
+    return helper.emit_vehicle_enter(role_id, vehicle_id)
+  end
+
+  helper.forward_eca_event_exit = function(role_id)
+    return helper.emit_vehicle_exit(role_id)
+  end
+
+  helper.forward_eca_event_move = function(role_id, dir, time)
+    return helper.emit_vehicle_move(role_id, dir, time)
+  end
+
+  helper.forward_eca_event_stop = function(role_id)
+    return helper.emit_vehicle_stop(role_id)
+  end
+
+  helper.forward_eca_event_set_position = function(role_id, pos)
+    return helper.emit_vehicle_set_position(role_id, pos)
+  end
+
   helper.consume_enter_delay = function(role_id, vehicle_id)
     if not vehicle_feature.is_enabled() then
       return 0
@@ -192,7 +212,7 @@ local function _build_vehicle_helper(get_roles)
     end
     local active_vehicle = helper.active_vehicle_by_player[role_id]
     if active_vehicle ~= vehicle_id then
-      helper.forward_eca_event_enter(role_id, vehicle_id)
+      helper.emit_vehicle_enter(role_id, vehicle_id)
     end
     if helper.needs_enter_wait_by_player[role_id] then
       helper.needs_enter_wait_by_player[role_id] = nil

@@ -2,7 +2,7 @@ local support = require("TestSupport")
 local turn_engine = require("src.game.runtime.TurnEngine")
 
 ---------------------------------------------------------------------------
--- 1. legacy mode default
+-- 1. coroutine mode default
 ---------------------------------------------------------------------------
 local function _test_turn_engine_defaults_to_coroutine_mode()
   local g = support.new_game()

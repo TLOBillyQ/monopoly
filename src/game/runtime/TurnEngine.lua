@@ -39,12 +39,10 @@ function turn_engine:init(game, phases, opts)
   opts = opts or {}
   self.game = game
   self.phases = phases
-  self.mode = "coroutine"
   self.turn_mgr = _build_turn_mgr(self)
   self.session = session_factory.new({
     game = game,
     phases = phases,
-    mode = "coroutine",
     turn_mgr = self.turn_mgr,
   })
 end

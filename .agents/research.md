@@ -1,188 +1,190 @@
-# Monopoly 架构研究（当前评估与后续方向）
+# Monopoly 代码清理调研（兼容层/遗留/转发）
 
-技能使用：`clean-architecture-reviewer`
+本文件是调研备忘，不是可执行计划。P1 的可执行细节见 `.agents/plan.md`。
 
-## 1) 研究范围与证据
+更新时间：2026-03-02
 
-本次评估聚焦当前代码库的分层、依赖方向与边界穿越方式，抽样范围覆盖：
+## 本轮已完成的实际清理
 
-- 启动与装配：`src/app/bootstrap/*`、`src/app/init.lua`
-- 核心策略：`src/game/core/*`、`src/game/runtime/*`
-- 用例编排：`src/game/flow/turn/*`
-- 适配层：`src/presentation/*`
-- 规则守护与契约：`tests/internal/dep_rules.lua`、`tests/suites/*contract*.lua`
+1. 删除协程引擎中的冗余 mode 兼容字段
+- `src/game/runtime/TurnEngine.lua`
+- 删除 `self.mode = "coroutine"`
+- 删除传入 `session_factory.new` 的 `mode = "coroutine"`
 
-验证基线：
+2. 删除协程 session 中已无行为价值的 legacy mode 字段
+- `src/game/runtime_coroutine/Session.lua`
+- 删除 `mode = opts.mode or "legacy"`
+- 删除 `snapshot()` 的 `mode` 输出
 
-- `lua tests/internal/dep_rules.lua` -> `dep_rules ok`
-- `lua tests/regression.lua` -> `All regression checks passed (208)`（含 `tick ok`、`forbidden_globals ok`）
+3. 清理历史文案噪音
+- `tests/suites/gameplay_coroutine.lua`
+- 注释 `legacy mode default` -> `coroutine mode default`
 
----
+结论：这部分属于“兼容遗留字段清理”，不影响运行时语义，减少了无效状态面与误导性术语。
 
-## 2) 系统策略与关键用例
+## 回归验证
 
-企业级规则（Entities / Enterprise Rules）：
+已执行：
+- `lua tests/regression.lua`
 
-- 玩家资产/状态与胜负：`src/game/core/player/*`、`src/game/core/runtime/player_state/*`、`src/game/core/runtime/GameVictory.lua`
-- 棋盘/地块/租金计算：`src/game/systems/board/*`、`src/game/systems/land/*`
+结果：
+- `All regression checks passed (209)`
+- `dep_rules ok`
+- `tick ok`
+- `forbidden_globals ok`
 
-应用级规则（Use Cases / Application Rules）：
+说明：单文件 suite 直接执行会因 Lua 路径未注入 `tests/` 出现 `require("TestSupport")` 失败；全量回归通过，覆盖了对应模块行为。
 
-- 回合推进与动作分发：`src/game/runtime/TurnEngine.lua`、`src/game/flow/turn/TurnDispatch.lua`
-- Tick 编排：`src/game/flow/turn/GameplayLoop.lua`、`GameplayLoopTickFlow.lua`
-- 自动行为与超时策略：`AutoRunner.lua`、`TurnTimerPolicy.lua`、`TurnRoleControlPolicy.lua`、`TurnCameraPolicy.lua`
+## 深度盘点：当前仍存在的兼容/转发层
 
----
+### A. 运行时 legacy 兜底（可控但仍在）
 
-## 3) 分层与边界映射
+核心位置：
+- `src/core/RuntimePorts.lua`
+- `src/app/bootstrap/RuntimeInstall.lua`
+- `tests/TestSupport.lua`
+- `tests/suites/runtime_ports_contract.lua`
 
-分层映射（由内向外）：
+现状：
+- `RuntimeInstall.lua:9-12` 接收 `context_policy` 参数（默认 `"strict"`，可选 `"legacy"`），据此调用 `RuntimePorts.set_legacy_global_fallback_enabled`。
+- `RuntimePorts.lua` 在 legacy 模式下回退读取全局 `all_roles/ALLROLES`、`vehicle_helper`、`camera_helper` 与 `GameAPI.get_role`（见 `_resolve_roles_from_legacy_globals` 及 `_default_resolve_role`）。
 
-- `Entities`：`src/game/core/player`、`src/game/systems/*` 中纯规则模块
-- `Use Cases`：`src/game/core/runtime`、`src/game/runtime`、`src/game/flow/turn`
-- `Interface Adapters`：`src/presentation/api`、`src/presentation/interaction`、`src/presentation/render`
-- `Frameworks & Drivers`：`GameAPI`/`GlobalAPI`/`SetTimeOut`/`RegisterTriggerEvent` 等运行时宿主 API
+结论：这是当前最大的“兼容层主体”，不是死代码，测试也在显式覆盖，不能一次性删除。
 
-边界穿越现状：
+### B. 载具事件 forward_* 转发层（命名与职责有历史包袱）
 
-- 正向：`src/app/bootstrap/GameRuntimeBootstrap.lua` 通过 `PresentationPorts.build()` 注入 `gameplay_loop_ports`。
-- 正向：`src/core/RuntimePorts.lua` 作为核心对宿主能力的统一端口。
-- 残余：`RuntimePorts` 与 `RuntimeContext` 仍保留全局变量 fallback（`all_roles` / `vehicle_helper` / `camera_helper`），并支持可选全局写回。
+核心位置：
+- `src/core/RuntimeContext.lua`（`forward_eca_event_enter/exit/move/stop/set_position`）
+- `src/presentation/render/MoveAnim.lua`
+- `src/game/core/runtime/player_state/StatusOps.lua`
+- `src/presentation/render/board_runtime/placement.lua`
 
----
+现状：
+- 该层在“逻辑动作 -> ECA 自定义事件”之间承担转发。
+- 调用点分布在 runtime/game/presentation，多模块依赖。
 
-## 4) 架构结论
+代码证据（调用分布）：
+- `src/game/core/runtime/player_state/StatusOps.lua:25,28,79`
+- `src/presentation/render/MoveAnim.lua:117,122`
+- `src/presentation/render/board_runtime/placement.lua:123`
 
-当前代码库已具备清晰的“核心规则 -> 用例编排 -> 表现适配”主干，且依赖规则守护与回归基线稳定。  
-但运行时能力边界仍有“上下文注入 + 全局 fallback”双轨，导致内层行为在特定场景下仍受外部隐式状态影响。  
-整体属于“方向正确、边界尚未完全收口”的阶段。
+结论：是可重构对象，但不是可直接删对象。应先做接口收敛，再统一改名/替换。
 
----
+### C. 事件桥接链（必要桥接，但层次偏多）
 
-## 5) 主要问题（P0-P3）
+核心位置：
+- `src/core/RuntimeEventBridge.lua`
+- `src/core/events/MonopolyEvents.lua`
+- `src/app/bootstrap/GameStartupEventBridge.lua`
+- `src/presentation/api/HostRuntimePort.lua`
 
-- `P0`：未发现会立即破坏核心业务正确性的依赖反向错误。
+现状：
+- `MonopolyEvents` 作为事件名目录 + 发射入口。
+- `RuntimeEventBridge` 负责 TriggerCustomEvent 安全预检和熔断。
+- 启动和表现层又各自套一层 bridge/port。
 
-- `P1`：运行时端口存在隐式全局回退，边界不完全封闭。
-  - 位置：`src/core/RuntimePorts.lua`、`src/core/RuntimeContext.lua`
-  - 现象：`resolve_roles/resolve_vehicle_helper/resolve_camera_helper` 在缺少 context 时回退到全局变量或 `GameAPI`。
-  - 风险：同一用例在不同启动路径下可能出现不同行为，问题定位困难。
+结论：有明确价值，但命名“bridge”较多，认知成本高。建议后续做“单一入口 + 薄包装”归并。
 
-- `P1`：运行时上下文与端口配置为全局单例，可并发性与可组合性受限。 Qin: 不存在这个问题，因为没有这个需求
-  - 位置：`runtime_context.set_current/current`、`runtime_ports.configure`
-  - 风险：多实例运行、并行测试、热重载场景容易产生状态污染。
+### D. 表现层角色解析 fallback（仍有双轨）
 
-- `P2`：适配层仍有较多直接宿主 API 访问，未完全经由统一端口。
-  - 位置示例：`src/presentation/ui/UIPanel.lua`、`src/presentation/ui/PopupRenderer.lua`、`src/presentation/api/UIEventHandlers.lua`
-  - 风险：替换渲染宿主或做离线回放测试时，mock 面过大。
+核心位置：
+- `src/presentation/api/HostRuntimePort.lua`
+- `src/presentation/render/status3d_service/scene.lua`
+- `src/presentation/render/status3d_service/status.lua`
 
-- `P2`：契约命名与语义尚未完全去“兼容化”。
-  - 位置：`tests/suites/runtime_compat_contract.lua`（suite 名虽已迁移为 `runtime_ports_contract`，文件名仍含 compat）
-  - 风险：团队心智仍默认“兼容桥长期存在”，影响后续治理决策。
+现状：
+- `host_runtime.resolve_role` 已包含 fallback 到 `resolve_game_role`。
+- status3d 内部仍手动再 fallback 一次（带方法能力校验）。
 
-- `P3`：守护规则描述存在历史术语残留。
-  - 位置：`tests/internal/dep_rules.lua` 的若干 description 仍提及 `RuntimeCompat` 表述。
-  - 风险：规则意图与当前实现不完全对齐，增加维护噪音。
+代码证据（`scene.lua:8-18`）：
 
----
+    local function _resolve_role(player_id)
+      local role = host_runtime.resolve_role(player_id)
+      if role ~= nil and type(role.get_ctrl_unit) == "function" then
+        return role
+      end
+      role = host_runtime.resolve_game_role(player_id)
+      if role ~= nil and type(role.get_ctrl_unit) == "function" then
+        return role
+      end
+      return nil
+    end
 
-## 6) 重构方案（最小可落地步骤）
+`status.lua:7-17` 结构相同，谓词换为 `role.set_label_text ~= nil`。
 
-1. 收口运行时能力入口（context-first 单轨）
-- 改动范围：`src/core/RuntimePorts.lua`、`src/core/RuntimeContext.lua`、`src/app/bootstrap/RuntimeInstall.lua`
-- 做法：将全局 fallback 下沉到单独 `LegacyRuntimeAdapter`；`RuntimePorts` 默认只读 context，非 legacy 模式不触达全局。
-- 预期收益：边界行为确定性提升，依赖方向更清晰。
-- 回归风险：历史启动路径若未注入 context 可能暴露空指针，需配套启动契约测试。
+结论：可进一步统一为“带谓词的角色解析接口”，减少重复 fallback 逻辑。
 
-2. 去全局单例化（引入作用域容器）Qin:不存在这个问题，因为没有这个需求
-- 改动范围：`src/core/RuntimeContext.lua`、`src/core/RuntimePorts.lua`、`src/app/bootstrap/*`
-- 做法：把 `current/configured` 改为与 game/state 绑定的 scoped container（显式传入/挂载）。
-- 预期收益：支持多实例与并发测试，减少状态串扰。
-- 回归风险：调用链参数会增加，短期重构面较大。
+### E. UI 节点别名层（UIAliases）
 
-3. 统一适配层宿主访问端口
-- 改动范围：`src/presentation/ui/*`、`src/presentation/api/*`、`src/presentation/render/*`
-- 做法：新增并推广 `RoleReadPort/TimerPort/ScenePort`，替代散落的 `GameAPI/SetTimeOut/GlobalAPI` 直接调用。
-- 预期收益：适配层可替换性和可测试性提升，mock 粒度统一。
-- 回归风险：UI 行为时序敏感，需要分批迁移并回归验证。
+核心位置：
+- `src/presentation/shared/UIAliases.lua`
+- `src/presentation/api/UIRuntimePort.lua`
 
-4. 继续细化 turn 用例编排职责
-- 改动范围：`src/game/flow/turn/GameplayLoopTickFlow.lua` 及策略模块
-- 做法：保持语义不变前提下，继续把“phase 驱动、timeout 驱动、dirty 刷新驱动”拆成更窄的用例函数。
-- 预期收益：单点复杂度下降，回归定位更快。
-- 回归风险：tick 顺序敏感，需严格保持调用顺序契约。
+现状：
+- 别名映射仍被 `query_nodes` 使用，服务于 Canvas 节点中文名与代码键名对齐。
 
-5. 同步更新命名与规则语义
-- 改动范围：`tests/suites/runtime_compat_contract.lua`（重命名）、`tests/internal/dep_rules.lua`（描述文本）
-- 做法：将“compat”语义从文件名和规则描述中彻底移除。
-- 预期收益：团队认知与当前架构一致，减少历史债务心智残留。
-- 回归风险：低，主要是测试注册路径与文案同步。
+结论：当前是“在役适配层”，应保留；未来仅在全量节点规范完成后考虑下线。
 
----
+## 不建议现在直接删除的项
 
-## 7) 测试建议
+1. `RuntimePorts` legacy fallback 开关与路径
+- 原因：有契约测试覆盖，且测试/降级路径仍依赖。
 
-- 用例级测试（必须）：
-  - 锁定 `gameplay_loop.tick` 的时序契约：auto runner、timeout、phase sync、dirty refresh 的先后关系与触发条件。
-  - 继续覆盖 action timeout、popup timeout、camera follow、dispatch gate 的组合场景。
+2. `RuntimeEventBridge`
+- 原因：承担 TriggerCustomEvent 的安全预检与熔断，直接删除会丢失安全行为。
 
-- 边界契约测试（必须）：
-  - 为 `RuntimeInstall` 增加“严格 context 模式”契约：未注入 context 时显式失败或受控降级，不允许隐式全局取值。
-  - 为 `PresentationPorts` 增加契约：关键 UI 行为只通过端口访问宿主能力。
+3. `MonopolyEvents`
+- 原因：业务事件名集中定义被广泛引用，删掉会导致全局散乱字符串。
 
-- 架构守护测试（建议）：
-  - 在 `dep_rules` 增加规则：`src/core` 除 `LegacyRuntimeAdapter` 外不得读写 `all_roles/ALLROLES/vehicle_helper/camera_helper`。
-  - 增加“启动路径矩阵”回归：正式模式、legacy 模式、测试模式三套入口都可稳定启动。
+4. `UIAliases`
+- 原因：UI 查询链条仍显式依赖，尚未完成节点命名一体化。
 
----
+## 下一阶段清理路线（建议）
 
-## 8) 权衡说明
+### P1（低风险，建议先做）
 
-短期成本：
+P1 可执行计划已交付至 `.agents/plan.md`，范围包含：
+1. 在 `HostRuntimePort` 引入带谓词能力校验的统一角色解析接口，并收敛 `status3d_service/*` 的重复 fallback。
+2. 对 `forward_eca_event_*` 做语义化命名迁移（先别名兼容，后逐步替换调用点）。
+3. 清理 tests/docs 中仅注释层遗留词（如 `legacy mode`、`compatibility wrappers`）。
 
-- 运行时端口与上下文改为作用域化后，函数签名和装配代码会变长，重构面广。
-- UI 适配层端口化迁移会带来阶段性重复代码和双轨维护。
+#### P1 执行回填（2026-03-02）
 
-长期收益：
+已完成：
+1. 统一角色解析入口
+- `src/presentation/api/HostRuntimePort.lua` 新增 `resolve_role_with(player_id, predicate)`。
+- `src/presentation/render/status3d_service/scene.lua` 与 `status.lua` 改为调用统一入口并以内联谓词做能力校验。
 
-- 核心用例对宿主细节的耦合进一步降低，行为可预测性显著提升。
-- 依赖规则更容易长期守住，回归定位和新人上手成本下降。
-- 支持多实例、并行测试、离线模拟等后续能力演进。
+2. 载具事件语义化命名迁移（兼容保留）
+- `src/core/RuntimeContext.lua` 新增 `emit_vehicle_enter/exit/move/stop/set_position`。
+- 保留 `forward_eca_event_*` 作为别名转调，避免现有调用和测试桩断裂。
+- `StatusOps.lua`、`MoveAnim.lua`、`placement.lua` 已迁移为“优先新名，回退旧名”。
 
-总体建议：优先做“边界收口 + 单例去除”两步，再推进表现层全面端口化；这是当前收益/风险比最高的演进路径。
+3. 注释噪音清理
+- `tests/suites/runtime_ports_contract.lua`：`legacy mode` -> `legacy policy`。
+- `docs/architecture/presentation_canvas_first.md`：`compatibility wrappers/mapping` -> `temporary wrappers/mapping`。
 
----
+验证证据：
+- `rg "resolve_game_role\\(" src/presentation/render/status3d_service -n` -> No matches found
+- `rg "legacy mode|compatibility wrappers|legacy bridge" tests docs -n -i` -> No matches found
+- `lua tests/regression.lua` -> All regression checks passed (209), dep_rules ok, tick ok, forbidden_globals ok
 
-## 9) 执行状态（R14 回填）
+### P2（中风险，需要分批）
 
-以下状态基于本轮已落地改动与回归结果（`lua tests/regression.lua` -> `All regression checks passed (209)`，`lua tests/internal/dep_rules.lua` -> `dep_rules ok`）。
+1. 收缩 `RuntimeInstall` legacy 能力面
+- 保留开关，但将 fallback 读取能力限定在最小集合（仅测试/特定入口）。
 
-- `已完成`：步骤 1（收口运行时能力入口，context-first 默认路径）
-  - 已落地：`src/core/RuntimePorts.lua` 增加显式 `legacy_global_fallback` 开关，默认不再隐式读取全局 `all_roles/vehicle_helper/camera_helper`。
-  - 已落地：`src/app/bootstrap/RuntimeInstall.lua` 增加 `context_policy=strict|legacy` 与 `skip_context_install` 受控策略；strict 模式缺失 context 时显式失败。
-  - 备注：未单独引入 `LegacyRuntimeAdapter` 文件，采用 `RuntimePorts` 内显式 legacy 分支达成同等治理目标。
+2. 载具转发层接口收敛
+- 先在 `RuntimeContext` 内聚为统一 dispatcher，再替换外层调用。
 
-- `不纳入`：步骤 2（去全局单例化）
-  - 根据注释“没有这个需求”，本轮未执行该项。
+### P3（高风险，最后做）
 
-- `已完成`：步骤 3（统一适配层宿主访问端口）
-  - 已迁移关键路径：`src/presentation/ui/UIPanel.lua`、`src/presentation/ui/PopupRenderer.lua`、`src/presentation/api/UIEventHandlers.lua` 改为通过 `RuntimePorts.resolve_role` 读取角色。
-  - 已新增迁移：`src/presentation/interaction/ui_intent_dispatcher/ViewCommandDispatcher.lua`、`src/presentation/render/BoardScene.lua`、`src/presentation/render/board_runtime/player_units.lua`、`src/presentation/render/status3d_service/scene.lua`、`src/presentation/render/status3d_service/status.lua`。
-  - 收口结果：新增 `src/presentation/api/HostRuntimePort.lua`，将 `render/api/interaction` 的宿主调用统一收敛到端口层；`status3d` 保留受控 `resolve_game_role` 回退以兼容测试桩与观察者角色对象差异。
-  - 证据：`rg "\\b(GameAPI|GlobalAPI|SetTimeOut|RegisterCustomEvent|TriggerCustomEvent)\\b" src/presentation -n` 仅命中 `HostRuntimePort.lua`（另有一处 `Status3DService` 告警文案字符串命中）。
+1. 逐步移除 runtime legacy 模式
+- 前提：所有入口都走 context strict，且 regression + contract 全绿。
+- 完成后再删除 `set_legacy_global_fallback_enabled` 及关联测试。
 
-- `已完成`：步骤 4（继续细化 turn 用例编排职责）
-  - 已完成职责拆分：新增 `src/game/flow/turn/GameplayLoopTickSteps.lua`，承载 timeout/phase/dirty 三类驱动细节。
-  - 已完成壳层收口：`src/game/flow/turn/GameplayLoopTickFlow.lua` 仅保留编排顺序与依赖注入，复杂分支下沉到步骤模块。
-  - 已完成时序验证：在 `tests/suites/gameplay.lua` 的 `_test_tick_headless_ports_cover_anim_phases` 增强执行顺序断言，锁定 `sync_input_blocked -> role_control -> auto_runner -> timeout -> phase -> dirty_refresh` 契约。
+## 风险与边界
 
-- `已完成`：步骤 5（同步更新命名与规则语义）
-  - 已完成：`tests/suites/runtime_compat_contract.lua` -> `tests/suites/runtime_ports_contract.lua`，并同步 `tests/regression.lua` 注册入口。
-  - 已完成：`tests/internal/dep_rules.lua` 清理 `MonopolyEvents compatibility bridge` 历史术语。
-  - 已新增：`dep_rules.lua` 中 RuntimeCompat 规则描述调整为“retired runtime bridge path”，降低历史兼容语义噪音。
-
-本次增量验证（2026-03-02）：
-
-- `lua tests/regression.lua` -> `All regression checks passed (209)`（含 `tick ok`、`forbidden_globals ok`）
-- `lua tests/internal/dep_rules.lua` -> `dep_rules ok`
-- `rg "GameplayLoopTickFlow" tests/suites -n` -> 当前无直连字符串命中（时序验证由 loop suite 行为断言覆盖）
+1. 当前仓库对“可控降级（legacy）”有明确测试契约，不能在本轮直接硬删。
+2. 事件桥与载具 forward 层跨越 app/core/game/presentation，需按调用链分批迁移。
+3. 本轮已经完成一组“零行为改动”的实质清理，适合作为后续大项重构的起点。

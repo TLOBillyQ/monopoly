@@ -63,13 +63,27 @@ local function _is_vehicle_anim(anim_ctx)
   return gameplay_read_port.resolve_vehicle_seat_id(anim_ctx.vehicle_id) ~= nil
 end
 
+local function _resolve_emit_vehicle_move(vehicle)
+  if not vehicle then
+    return nil
+  end
+  return vehicle.emit_vehicle_move or vehicle.forward_eca_event_move
+end
+
+local function _resolve_emit_vehicle_set_position(vehicle)
+  if not vehicle then
+    return nil
+  end
+  return vehicle.emit_vehicle_set_position or vehicle.forward_eca_event_set_position
+end
+
 local function _is_vehicle_move_mode(anim_ctx)
   local vehicle = runtime_ports.resolve_vehicle_helper()
   return anim_ctx
     and _is_vehicle_anim(anim_ctx)
     and runtime_constants.vehicle_move_api_enabled == true
     and vehicle
-    and vehicle.forward_eca_event_move
+    and _resolve_emit_vehicle_move(vehicle)
     and true
     or false
 end
@@ -80,7 +94,7 @@ local function _is_vehicle_jump_mode(anim_ctx)
     and _is_vehicle_anim(anim_ctx)
     and runtime_constants.vehicle_move_api_enabled ~= true
     and vehicle
-    and vehicle.forward_eca_event_set_position
+    and _resolve_emit_vehicle_set_position(vehicle)
     and true
     or false
 end
@@ -112,14 +126,16 @@ function move_anim.one_step(scene, player_id, from_index, to_index, anim_ctx)
   end
   if _is_vehicle_jump_mode(anim_ctx) then
     local vehicle = runtime_ports.resolve_vehicle_helper()
+    local emit_set_position = _resolve_emit_vehicle_set_position(vehicle)
     local end_tile = scene.tiles[to_index]
     local target_pos = end_tile.get_position()
-    vehicle.forward_eca_event_set_position(player_id, target_pos)
+    emit_set_position(player_id, target_pos)
     return time
   end
   if _is_vehicle_move_mode(anim_ctx) then
     local vehicle = runtime_ports.resolve_vehicle_helper()
-    vehicle.forward_eca_event_move(player_id, step_dir, time)
+    local emit_move = _resolve_emit_vehicle_move(vehicle)
+    emit_move(player_id, step_dir, time)
     return time
   end
   local unit = scene.units_by_player_id[player_id]

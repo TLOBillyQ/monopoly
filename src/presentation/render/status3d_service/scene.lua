@@ -6,15 +6,9 @@ local host_runtime = require("src.presentation.api.HostRuntimePort")
 local M = {}
 
 local function _resolve_role(player_id)
-  local role = host_runtime.resolve_role(player_id)
-  if role ~= nil and type(role.get_ctrl_unit) == "function" then
-    return role
-  end
-  role = host_runtime.resolve_game_role(player_id)
-  if role ~= nil and type(role.get_ctrl_unit) == "function" then
-    return role
-  end
-  return nil
+  return host_runtime.resolve_role_with(player_id, function(role)
+    return type(role.get_ctrl_unit) == "function"
+  end)
 end
 
 local function _resolve_observer_roles()

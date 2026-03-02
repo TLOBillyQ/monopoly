@@ -17,7 +17,6 @@ local function _build_session(opts)
   local s = {
     game = opts.game,
     phases = opts.phases,
-    mode = opts.mode or "legacy",
     turn_mgr = opts.turn_mgr,
     queue = {},
     script = nil,
@@ -80,7 +79,6 @@ local function _build_session(opts)
     local turn = self.game and self.game.turn or nil
     local pending_choice = turn and turn.pending_choice or nil
     return {
-      mode = self.mode,
       wait_state = self.wait_state,
       current_state = self.current_state,
       pending_choice_id = pending_choice and pending_choice.id or nil,
