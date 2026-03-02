@@ -33,6 +33,9 @@ local function _apply_player_bootstrap(game, players)
 
     local items = player_cfg.items
     if type(items) == "table" then
+      if player_cfg.inventory_slots then
+        player.inventory.max_slots = player_cfg.inventory_slots
+      end
       inventory.clear(player)
       for _, item_id in ipairs(items) do
         local ok = inventory.give(player, item_id, { game = game })
