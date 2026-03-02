@@ -4,32 +4,9 @@ local ui_view = require("src.presentation.api.UIViewService")
 local canvas = require("src.presentation.interaction.UICanvasCoordinator")
 local ui_events = require("src.presentation.shared.UIEvents")
 local ui_event_state = require("src.presentation.interaction.UIEventState")
-local runtime_ports = require("src.core.RuntimePorts")
+local role_context = require("src.presentation.interaction.ui_intent_dispatcher.RoleContext")
 
 local view_command_dispatcher = {}
-
-local function _resolve_role_by_id(role_id)
-  if role_id == nil then
-    return runtime.get_client_role()
-  end
-  local roles = runtime_ports.resolve_roles()
-  if type(roles) == "table" then
-    for _, role in ipairs(roles) do
-      if runtime.resolve_role_id(role) == role_id then
-        return role
-      end
-    end
-  end
-  local resolved = runtime_ports.resolve_role(role_id)
-  if resolved ~= nil then
-    return resolved
-  end
-  return {
-    get_roleid = function()
-      return role_id
-    end,
-  }
-end
 
 function view_command_dispatcher.dispatch(state, intent)
   local intent_type = intent and intent.type
@@ -42,7 +19,7 @@ function view_command_dispatcher.dispatch(state, intent)
     if not ui then
       return true
     end
-    local active_role = _resolve_role_by_id(intent.actor_role_id)
+    local active_role = role_context.resolve_by_id(intent.actor_role_id)
     runtime.with_client_role(active_role, function()
       ui.debug_log_enabled_override = nil
       local next_enabled = not ui_event_state.resolve_debug_enabled(state)

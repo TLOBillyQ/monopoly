@@ -1,0 +1,29 @@
+local runtime = require("src.presentation.api.UIRuntimePort")
+local host_runtime = require("src.presentation.api.HostRuntimePort")
+
+local role_context = {}
+
+function role_context.resolve_by_id(role_id)
+  if role_id == nil then
+    return runtime.get_client_role()
+  end
+  local roles = host_runtime.resolve_roles()
+  if type(roles) == "table" then
+    for _, role in ipairs(roles) do
+      if runtime.resolve_role_id(role) == role_id then
+        return role
+      end
+    end
+  end
+  local resolved = host_runtime.resolve_role(role_id)
+  if resolved ~= nil then
+    return resolved
+  end
+  return {
+    get_roleid = function()
+      return role_id
+    end,
+  }
+end
+
+return role_context

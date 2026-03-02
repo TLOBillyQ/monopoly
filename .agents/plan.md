@@ -1,4 +1,5 @@
-# R16 代码膨胀收敛执行计划（RuntimePorts 首轮拆分）
+# R17 代码膨胀收敛执行计划（热点去中心化交易）
+
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
@@ -6,144 +7,182 @@
 
 ## 目的 / 全局视角
 
-这轮工作的目标是把最近两天最突出的膨胀热点 `src/core/RuntimePorts.lua` 做一次可回归验证的收缩拆分，在不改变业务行为的前提下，把“策略管理”和“默认端口实现”从单文件拆开。用户可见结果是游戏行为和测试结果不变；维护者可见结果是热点文件体积下降、职责更聚焦、后续修改冲突减少。
 
-本轮改完后，应该能观察到三个事实：一是 `RuntimePorts.lua` 行数下降；二是 `runtime_ports_contract` 与全量回归仍通过；三是研究文档补充了“已执行收缩动作 + 可量化结果”，而不是停留在建议。
+本轮目标是把“代码膨胀风险”从单点问题变成可控的工程流程问题。研究结论显示，最近两天 `src/` 净增 +1269，风险集中在 `core/presentation` 边界层，且热点文件改动频次高。用户可见收益是：功能行为不变，但后续同类需求改动时冲突更少、评审更快、回归风险更低。
+
+本计划把“交易”定义为一组有约束的工程交换：用少量模块新增，换取热点文件职责收敛与碰撞面下降。完成后应观察到三类证据：热点文件职责收敛、关键回归测试通过、研究文档与计划文档可复算。
 
 ## 进度
 
-- [x] (2026-03-02 22:18 +08:00) 读取 `.agents/harness/PLANS.md` 与当前 `plan/research`，确认本轮范围与验收标准。
-- [x] (2026-03-02 22:20 +08:00) 重写本计划为 R16 活文档，补齐必需章节并写入可执行命令。
-- [x] (2026-03-02 22:24 +08:00) 拆分 `src/core/RuntimePorts.lua`：新增 `ContextPolicy.lua` 与 `DefaultPorts.lua`，保持对外接口签名不变。
-- [x] (2026-03-02 22:25 +08:00) 运行契约测试、依赖规则与全量回归，记录输出证据。
-- [x] (2026-03-02 22:27 +08:00) 更新 `.agents/research.md`：补充“执行后结果”和收缩效果。
-- [x] (2026-03-02 22:28 +08:00) 回填本计划“结果与复盘”与文档更新记录。
+
+- [x] (2026-03-02 23:18 +08:00) 读取 `.agents/harness/PLANS.md`、`.agents/research.md` 与现有 `.agents/plan.md`，确认本轮目标从 R16 单点拆分升级为多热点去中心化。
+- [x] (2026-03-02 23:20 +08:00) 建立 R17 计划骨架并写入本文件，补齐强制章节、里程碑、验收与恢复策略。
+- [x] (2026-03-02 23:21 +08:00) 记录实施前基线并固化到“产物与备注”：热点文件行数已落盘。
+- [x] (2026-03-02 23:25 +08:00) 完成里程碑 1：拆分 `HostRuntimePort` 与 `UISyncPorts`，新增 host_runtime 与 ui_sync 子模块承接职责。
+- [x] (2026-03-02 23:26 +08:00) 完成里程碑 2：拆分 `ViewCommandDispatcher` 角色上下文与 `RuntimeInstall` 默认端口配置。
+- [x] (2026-03-02 23:35 +08:00) 完成里程碑 3：补齐回归测试与文档闭环。`dep_rules` 与 `regression` 全部通过（213 checks），验证行为未变。
 
 ## 意外与发现
 
-- 观察：目前计划文件仍停留在 R15 的完成态，和用户当前“以降膨胀为目标并执行”需求不匹配。
-  证据：`.agents/plan.md` 标题与进度均指向 R15，且条目已全完成。
 
-- 观察：最近两天净增最高文件与高频碰撞文件重叠在 `RuntimePorts.lua`，优先拆它能用最小范围验证“降膨胀”策略。
-  证据：`.agents/research.md` 的 Top 文件统计与触达频次统计均将其排在首位。
+- 观察：当前 `plan.md` 仍是 R16“已完成态”，与最新研究结论中的风险中心（多热点并发增长）不一致。
+  证据：旧计划聚焦 `RuntimePorts.lua` 首轮拆分，研究文件已将风险描述升级为 `RuntimeInstall`、`HostRuntimePort`、`ViewCommandDispatcher` 等热点簇。
 
-- 观察：`RuntimePorts.lua` 在拆分后从 299 行降到 119 行，单文件热区显著收缩。
-  证据：`wc -l src/core/RuntimePorts.lua` 输出从 `299` 变为 `119`。
+- 观察：热点文件中既有“高净增文件”也有“高频触达文件”，二者重叠不完全，说明单看行数不足以指导治理。
+  证据：`RuntimePorts.lua` 触达 9 次但净增 +119；`HostRuntimePort.lua` 净增 +136 且仍在接口边界层。
 
-- 观察：拆分后契约测试与全量回归均通过，说明本轮收缩未改变可观察行为。
-  证据：`runtime_ports_contract` 输出 `All regression checks passed (7)`；`lua tests/regression.lua` 输出 `All regression checks passed (213)`。
+- 观察：当前终端环境缺少 Lua 运行时，测试命令无法执行。
+  证据：执行 `lua tests/internal/dep_rules.lua` 和 `lua tests/regression.lua` 均返回 `zsh:1: command not found: lua`。
+
+- 观察：通过 Homebrew 安装 Lua 5.4.8 后，测试顺利执行并全部通过。
+  证据：`dep_rules ok`；`All regression checks passed (213)`；`tick ok`；`forbidden_globals ok`。
 
 ## 决策日志
 
-- 决策：本轮只做一轮“热点单文件拆分”，不并行改多个模块。
-  理由：用户要求“可执行并更新研究文档”，先交付一轮完整闭环（改动-验证-回填）比大范围改造更稳。
+
+- 决策：R17 采用“热点去中心化交易”而不是继续只做单文件缩行。
+  理由：研究结论显示风险已从单点膨胀转为热点簇并发增长，治理目标应从“行数下降”升级为“改动集中度下降 + 职责边界清晰”。
   日期/作者：2026-03-02 / Codex
 
-- 决策：保持 `RuntimePorts` 对外函数签名完全不变，拆分仅发生在内部实现。
-  理由：能显著降低回归风险，避免牵一发而动全身。
+- 决策：本轮优先改 `presentation` 与 `app bootstrap` 边界，再触达 `core` 中枢文件。
+  理由：`RuntimePorts` 已在 R16 做过首轮收缩，继续优先处理 `HostRuntimePort`、`PresentationPorts`、`ViewCommandDispatcher` 能更快降低跨层耦合。
   日期/作者：2026-03-02 / Codex
 
-- 决策：将默认实现函数集中到 `DefaultPorts.build(...)` 返回表，不在 `RuntimePorts` 里保留任何默认实现细节。
-  理由：把热点文件定位为“端口入口层”，避免再次因默认实现增长而膨胀。
+- 决策：在测试环境缺失时先完成结构性拆分并记录阻塞证据，不做未经验证的语义扩展。
+  理由：用户要求执行计划；先完成低风险职责拆分并保留可回归入口，待环境补齐后再完成验收闭环。
   日期/作者：2026-03-02 / Codex
 
 ## 结果与复盘
 
-本轮已完成一次可验证的降膨胀收缩。具体做法是把 `RuntimePorts.lua` 的策略与默认行为拆到 `src/core/runtime_ports/ContextPolicy.lua` 和 `src/core/runtime_ports/DefaultPorts.lua`，主文件仅保留状态与端口路由。`RuntimePorts.lua` 行数从 299 降到 119，单文件阅读和碰撞面明显下降。
 
-验证方面，`runtime_ports_contract`、`dep_rules`、`regression` 全部通过，说明拆分没有改变既有行为，也未破坏依赖规则。当前仍未处理的膨胀点是 `HostRuntimePort.lua` 与 `ViewCommandDispatcher.lua`，它们应作为下一轮压缩对象。
+本轮 R17 “热点去中心化交易”已全部完成。三个里程碑均达成：
 
-下一轮建议优先做 `HostRuntimePort` 的角色解析职责外提，再处理 `ViewCommandDispatcher` 中 intent 分发与角色解析耦合问题，继续保持“单热点、可回归”的节奏。
+1. **里程碑 1**（presentation 端口去重）：`HostRuntimePort` 从 136 行降至 80 行，`UISyncPorts` 从 119 行降至 44 行。职责分别迁移到 `host_runtime/` 与 `ui_sync/` 子模块。
+
+2. **里程碑 2**（分发与装配解耦）：`ViewCommandDispatcher` 从 90 行降至 67 行，`RuntimeInstall` 从 91 行降至 41 行。角色解析与默认端口配置分别迁移到 `RoleContext.lua` 与 `RuntimePortDefaults.lua`。
+
+3. **里程碑 3**（证据固化）：安装 Lua 5.4.8 后，`dep_rules` 与 `regression`（213 checks）全部通过，验证行为未变。
+
+**量化结果**：4 个热点文件共减少 204 行（-43.8%），新增 8 个职责聚焦的小模块共 331 行。热点文件从”多职责混杂”转变为”薄入口 + 子模块承接”架构，后续改动碰撞面显著下降。
+
+**风险收敛结论**：本轮把代码膨胀风险从”单文件绝对行数”升级为”改动集中度治理”，通过新增模块分散热点，验证后再提交，形成可重复的交易模式。
 
 ## 背景与导读
 
-`RuntimePorts` 是运行时端口层，对项目多个模块提供调度、角色解析、事件发射和计时能力。这里的“端口”指跨边界调用时的稳定接口；“默认实现”指端口在未注入 mock 或替代实现时使用的具体执行逻辑；“上下文策略”指 strict/legacy 等兼容行为开关。
 
-当前问题不是功能错误，而是单文件过度承载多类职责：一方面管理策略状态（例如 legacy fallback）；另一方面实现大量默认能力函数（例如 resolve_role、emit_event、clock）。这种混合会导致文件持续膨胀、改动碰撞集中、评审成本上升。
+本仓库当前的“代码膨胀”不是指业务规则无限增加，而是指边界层与装配层持续吸收职责，导致少数文件成为高频碰撞点。这里的“边界层”是连接核心逻辑与表现层/框架层的适配接口；“去中心化”是把一个文件里的多类职责拆到更小、更稳定的模块，减少每次需求都改同一文件。
 
-本轮涉及的核心文件如下：
+本轮直接相关文件如下。`src/presentation/api/HostRuntimePort.lua` 负责宿主运行时接口；`src/presentation/api/presentation_ports/UISyncPorts.lua` 负责 UI 同步端口；`src/presentation/interaction/ui_intent_dispatcher/ViewCommandDispatcher.lua` 负责意图分发；`src/app/bootstrap/RuntimeInstall.lua` 负责启动装配。它们都处于高频改动路径。
 
-`src/core/RuntimePorts.lua`：现有热点文件，需收缩。
+本计划不引入外部依赖，不改变玩法规则，不修改公开行为语义。所有改动都以“内部职责重分配 + 契约测试兜底”为前提。
 
-`src/core/runtime_ports/ContextPolicy.lua`（新增）：负责策略合法性与 fallback 归一化。
+## 里程碑
 
-`src/core/runtime_ports/DefaultPorts.lua`（新增）：负责默认端口函数集合。
 
-`tests/suites/runtime_ports_contract.lua`：验证端口契约未回归。
+里程碑 1（presentation 端口去重）聚焦 `HostRuntimePort` 与 `UISyncPorts`。目标是把重复透传与职责重叠收敛为明确边界，减少后续同一需求需要同时改多个端口文件的概率。验收方式是相关回归测试通过，并且端口文件变成薄入口。
 
-`.agents/research.md`：补充执行后结果和量化指标。
+里程碑 2（分发与装配解耦）聚焦 `ViewCommandDispatcher` 与 `RuntimeInstall`。目标是把“意图解释”“角色解析”“装配 wiring”分开，让交互改动不再频繁触达启动装配。验收方式是 UI 交互回归通过，且装配文件仅保留依赖连接逻辑。
+
+里程碑 3（证据固化与文档闭环）聚焦测试证据、统计复算与文档回填。目标是把本轮交易结果固化为可重复流程。验收方式是 `research` 与 `plan` 同步更新且证据片段可复算。
 
 ## 工作计划
 
-先拆分，再验证，再回写文档。拆分阶段把 `RuntimePorts.lua` 内与策略相关的纯函数迁移到 `ContextPolicy.lua`，把默认端口实现函数迁移到 `DefaultPorts.lua`，`RuntimePorts.lua` 仅保留状态、注入、路由与对外 API。迁移时保持所有对外函数名和参数不变，避免调用方改动。
 
-随后运行三组验证：第一组是 `runtime_ports_contract`，确认端口行为一致；第二组是 `dep_rules`，确认依赖关系未破坏；第三组是 `regression`，确认整体行为不变。若失败，优先修正拆分引入的问题，不额外扩展范围。
+实施顺序为“先边界去重，再分发解耦，最后证据固化”。第一步在 `presentation` 端口层明确职责切面：入口文件负责对外 API，内部能力由小模块承接。第二步在 `interaction/bootstrap` 层分离解释逻辑和装配逻辑，确保热点文件不继续吸收业务判断。
 
-最后更新研究文档，新增“R16 执行结果”段落，写清本轮实际减了什么、还剩什么膨胀风险，以及下一步压缩对象。
+实现过程中保持外部调用入口与函数签名兼容，避免大面积调用方修改。每完成一个里程碑立即跑测试并回填文档，禁止全部改完后一次性验证。
 
 ## 具体步骤
 
-所有命令在仓库根目录 `/Users/billyq/Dev/Github/Lua/monopoly` 执行。
 
-1. 记录改动前体量基线。
+所有命令在仓库根目录 `/Users/gangan/Dev/repo/monopoly` 执行。
 
-    wc -l src/core/RuntimePorts.lua
+1. 记录实施前基线，写入“产物与备注”。
 
-    预期：输出约 299 行（当前热点状态）。
+    wc -l src/core/RuntimePorts.lua src/app/bootstrap/RuntimeInstall.lua src/presentation/api/HostRuntimePort.lua src/presentation/api/PresentationPorts.lua src/presentation/api/presentation_ports/UISyncPorts.lua src/presentation/interaction/ui_intent_dispatcher/ViewCommandDispatcher.lua
 
-2. 执行拆分改动（新增模块 + 收缩 RuntimePorts）。
+2. 实施里程碑 1：端口去重。
 
-    # 通过编辑器或补丁修改：
-    # - 新增 src/core/runtime_ports/ContextPolicy.lua
-    # - 新增 src/core/runtime_ports/DefaultPorts.lua
-    # - 修改 src/core/RuntimePorts.lua
+    # 编辑文件：
+    # - src/presentation/api/HostRuntimePort.lua
+    # - src/presentation/api/presentation_ports/UISyncPorts.lua
+    # - 新增 src/presentation/api/host_runtime/*
+    # - 新增 src/presentation/api/presentation_ports/ui_sync/*
 
-    预期：`RuntimePorts.lua` 体积明显下降，模块职责更清晰。
+3. 跑第一轮验证。
 
-3. 运行契约与规则测试。
-
-    lua -e "package.path = package.path .. ';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; local harness = require('TestHarness'); harness.run_all({ require('runtime_ports_contract') })"
     lua tests/internal/dep_rules.lua
-
-    预期：均通过，无新增违规。
-
-4. 运行全量回归。
-
     lua tests/regression.lua
 
-    预期：全部通过（数量若变化需解释）。
+4. 实施里程碑 2：分发与装配解耦。
 
-5. 更新研究文档和计划回填。
+    # 编辑文件：
+    # - src/presentation/interaction/ui_intent_dispatcher/ViewCommandDispatcher.lua
+    # - src/app/bootstrap/RuntimeInstall.lua
+    # - 新增 src/presentation/interaction/ui_intent_dispatcher/RoleContext.lua
+    # - 新增 src/app/bootstrap/runtime_install/RuntimePortDefaults.lua
 
-    # 编辑 .agents/research.md 与 .agents/plan.md
+5. 跑第二轮验证。
 
-    预期：研究文档包含“执行后结果”，计划四大活文档章节均为最新状态。
+    lua tests/internal/dep_rules.lua
+    lua tests/regression.lua
+
+6. 回填文档并完成闭环。
+
+    # 编辑文件：
+    # - .agents/research.md
+    # - .agents/plan.md
 
 ## 验证与验收
 
-验收标准是“收缩可量化 + 行为可证明不变”。收缩可量化由 `wc -l` 对比证明；行为不变由 `runtime_ports_contract`、`dep_rules`、`regression` 三组测试共同证明。三项任一失败都视为本轮未完成。
+
+验收采用双轨标准。第一轨是行为不变：运行 `lua tests/internal/dep_rules.lua` 与 `lua tests/regression.lua`，预期全部通过。第二轨是结构收敛：热点文件职责重叠减少，且高频文件不再承担多类职责。
+
+双轨验收均已完成：行为不变轨通过 `dep_rules` 与 `regression`（213 checks）验证；结构收敛轨通过热点文件行数对比与新增模块清单验证。
 
 ## 可重复性与恢复
 
-本计划步骤可重复执行。若拆分后测试失败，先保留现场并记录到“意外与发现”，再按最小修复原则处理。禁止用破坏性命令回滚工作树。若需要撤销本轮改动，使用新的反向提交而不是改写历史。
+
+本计划按里程碑增量执行，可重复运行。每个里程碑完成后都要先记录现场，再进入下一步，避免失败时回退范围过大。若某里程碑失败，恢复策略是只撤销该里程碑变更并保留已验证里程碑，不做破坏性历史改写。
 
 ## 产物与备注
 
-执行后在此补充关键证据片段：
 
-    拆分后体量：
-      - 改动前：299  src/core/RuntimePorts.lua
-      - 改动后：119  src/core/RuntimePorts.lua
+实施前基线（2026-03-02）：
 
-    runtime_ports_contract：
-      .......
-      All regression checks passed (7)
+    wc -l:
+      119 src/core/RuntimePorts.lua
+       91 src/app/bootstrap/RuntimeInstall.lua
+      136 src/presentation/api/HostRuntimePort.lua
+       22 src/presentation/api/PresentationPorts.lua
+      119 src/presentation/api/presentation_ports/UISyncPorts.lua
+       90 src/presentation/interaction/ui_intent_dispatcher/ViewCommandDispatcher.lua
+      577 total
 
-    dep_rules：
+实施后（里程碑 1/2）：
+
+    热点文件行数：
+       80 src/presentation/api/HostRuntimePort.lua
+       44 src/presentation/api/presentation_ports/UISyncPorts.lua
+       67 src/presentation/interaction/ui_intent_dispatcher/ViewCommandDispatcher.lua
+       41 src/app/bootstrap/RuntimeInstall.lua
+
+    新增承接模块：
+       51 src/presentation/api/host_runtime/RoleResolver.lua
+       33 src/presentation/api/host_runtime/UnitLifecycle.lua
+       26 src/presentation/api/host_runtime/SceneUI.lua
+       42 src/presentation/api/presentation_ports/ui_sync/UIModelSync.lua
+       30 src/presentation/api/presentation_ports/ui_sync/CameraSync.lua
+       62 src/presentation/api/presentation_ports/ui_sync/UIGateSync.lua
+       29 src/presentation/interaction/ui_intent_dispatcher/RoleContext.lua
+       58 src/app/bootstrap/runtime_install/RuntimePortDefaults.lua
+
+    测试验证（里程碑 3 完成后）：
+
+    lua tests/internal/dep_rules.lua:
       dep_rules ok
 
-    regression：
-      .....................................................................................................................................................................................................................
+    lua tests/regression.lua:
       All regression checks passed (213)
       dep_rules ok
       tick ok
@@ -151,15 +190,18 @@
 
 ## 接口与依赖
 
-本轮不引入外部依赖。接口约束如下：
 
-`src/core/RuntimePorts.lua` 对外公开函数名必须保持不变：`configure/install_context_policy/set_legacy_fallback_policy/context_policy/legacy_fallback_policy/rng_next_int/schedule/resolve_role/resolve_roles/mark_role_lose/resolve_vehicle_helper/resolve_camera_helper/emit_event/wall_now_seconds/wall_diff_seconds/cpu_now_seconds/cpu_diff_seconds/reset_for_tests`。
+本轮不新增第三方依赖。接口约束如下：`HostRuntimePort` 负责宿主桥接，不承载 UI 同步策略；`UISyncPorts` 负责 UI 同步端口入口，不承载具体实现细节；`RuntimeInstall` 负责依赖装配，不承载默认端口实现细节；`ViewCommandDispatcher` 负责命令分发，不承载角色解析策略细节。
 
-`ContextPolicy.lua` 只处理策略归一化与合法性判断，不依赖 `GameAPI`。
-
-`DefaultPorts.lua` 只实现默认端口行为，通过注入函数读取策略状态，不直接持有策略全局状态。
+若出现接口职责冲突，优先新增小模块承接而不是回填到现有热点文件。
 
 ## 文档更新记录
 
-2026-03-02（本次）：将计划从 R15 切换到 R16，目标改为“执行一次可验证的降膨胀拆分”，并补齐本轮验收标准与步骤。改动原因是用户明确要求“制定可执行计划并执行后更新研究文档”。
-2026-03-02（执行回填）：完成 `RuntimePorts` 首轮拆分与验证，新增 `src/core/runtime_ports/ContextPolicy.lua`、`src/core/runtime_ports/DefaultPorts.lua`，并将证据回填到计划。改动原因是把“建议”转成“已执行结果”，满足本轮交付目标。
+
+2026-03-02（R16）：完成 `RuntimePorts` 首轮拆分与验证，形成单热点收缩闭环。
+
+2026-03-02（R17 计划重建）：依据重新调研结论将计划升级为“热点去中心化交易”，把目标从单文件收缩扩展到 `presentation/interaction/bootstrap` 多热点协同收敛，并重写里程碑、步骤、验收与恢复策略。改动原因是研究已确认风险由单点膨胀演化为多热点并发增长。
+
+2026-03-02（R17 执行回填）：完成里程碑 1 与里程碑 2 的结构拆分，新增 8 个承接模块并收缩 4 个热点文件；测试阶段因缺少 `lua` 命令受阻，已记录证据并保留里程碑 3 待完成状态。改动原因是先完成低风险职责去中心化，再等待运行环境补齐后闭环验证。
+
+2026-03-02（R17 最终完成）：安装 Lua 5.4.8 后完成里程碑 3，回归测试全部通过（213 checks），更新进度、结果与复盘、产物与备注、验证与验收等章节，标记 R17 完整闭环。改动原因是交付可验证的代码膨胀收敛交易，形成可重复的工程模式。
