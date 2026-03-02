@@ -1,23 +1,19 @@
-# Monopoly 代码清理调研（兼容层 / 遗留 / 转发）
+# Monopoly 代码库清理研究（基于当前工作树）
 
-本文件是调研与审查备忘，不是可执行计划。执行步骤与过程记录见 `.agents/plan.md`。
+本文件是调研结论，不是执行计划。执行细节见 `.agents/plan.md`。
 
 更新时间：2026-03-02
 审查方法：Clean Architecture Reviewer（Dependency Rule / 用例边界 / 端口适配）
-文档重写方式：Doc Co-authoring（以读者可验证为中心）
 
 ---
 
 ## 1. 执行摘要
 
-本轮在“可控降级保留”的前提下，完成了两类关键收敛：
-1. legacy fallback 从“总开关 + 默认全开”收敛为“分项策略 + 默认角色相关 fallback”。
-2. 载具事件接口完成 `forward_eca_event_*` 到 `emit_vehicle_*` 的迁移与退役，仓库已不存在 forward 旧名调用。
+当前工作树已完成两项高价值收敛：
+1. runtime legacy 兼容开关旧 API 已退役，运行时统一使用分项策略接口。
+2. 载具事件接口已统一到 `emit_vehicle_*`，`forward_eca_event_*` 在 `src/tests` 检索清零。
 
-对读者可见结果：
-- 运行时兼容策略更可解释，默认行为更窄。
-- 事件接口命名统一，减少历史命名噪音。
-- 回归与依赖规则持续全绿，行为未回归。
+结论：兼容层已从“历史双轨并行”进入“策略受控 + 命名统一”阶段，后续应聚焦策略层进一步瘦身，而不是再做命名迁移。
 
 ---
 
@@ -25,124 +21,118 @@
 
 ### 架构结论
 
-当前设计满足“核心策略优先、细节后置”的演进方向。兼容层仍存在，但已从“混合职责”演进为“边界内显式策略”，变更扩散风险明显下降。
+当前设计总体符合 Clean Architecture 的核心约束：运行时边界通过端口收敛，外层细节不再通过历史别名向内层渗透。系统仍保留受控 legacy 策略，但已不属于无边界兼容状态。
 
 ### 主要问题（P0-P3）
 
-- P0：未发现核心业务被外部细节直接控制、且无法替换的阻断问题。
-- P1：legacy fallback 仍在役，`set_legacy_global_fallback_enabled` 仍保留兼容接口，后续仍需明确退役窗口。
-- P1：`enable_legacy_helper_fallback` 目前仅少量显式使用，需继续监控避免新增隐式依赖点。
-- P2：运行时端口层同时承载“策略配置 + 兼容桥接”职责，仍可继续拆薄但不构成当前阻断。
-- P3：文档与术语一致性已提升，但历史上下文在部分测试描述里仍需持续压缩。
+- P0：未发现核心业务直接被外部细节硬绑定且不可替换的阻断问题。
+- P1：`context_policy = "legacy"` 仍是在役策略，说明降级路径尚未彻底退场。
+- P1：`enable_legacy_helper_fallback` 仍可开启 helper 全局回退，需持续限制其使用面。
+- P2：`RuntimePorts` 仍承担“策略配置 + 默认实现 + 兼容语义”多重职责，后续可继续拆薄。
+- P3：测试命名与注释中仍有少量“legacy”历史语义，虽不影响行为，但增加长期认知负担。
 
-### 重构方案（最小可落地步骤）
+### 重构方案（最小可落地）
 
-1. 已完成：legacy fallback 分项策略化
-- 影响范围：`src/core/RuntimePorts.lua`、`src/app/bootstrap/RuntimeInstall.lua`、`tests/suites/runtime_ports_contract.lua`
-- 预期收益：从单一总开关转为能力位控制（`roles/role/vehicle/camera`），默认更安全。
-- 回归风险：低；通过契约测试覆盖默认收敛与显式放开两条路径。
+1. 已完成：旧兼容开关 API 退役
+- 影响范围：`src/core/RuntimePorts.lua`、`tests/suites/runtime_ports_contract.lua`
+- 预期收益：删除无调用兼容 API，减少边界噪音与误用入口。
+- 回归风险：低，已由回归和契约验证覆盖。
 
-2. 已完成：`forward_eca_event_*` 迁移与退役
-- 影响范围：`src/core/RuntimeContext.lua`、`StatusOps`、`MoveAnim`、`placement`、相关测试桩
-- 预期收益：统一事件语义为 `emit_vehicle_*`，降低边界命名历史负担。
-- 回归风险：中到低；先迁移测试调用再删除兼容别名，分阶段落地。
+2. 已完成：forward 事件别名退役
+- 影响范围：`RuntimeContext`、`StatusOps`、`MoveAnim`、`board_runtime/placement`、相关测试桩
+- 预期收益：接口语义统一到 `emit_vehicle_*`，跨层沟通成本下降。
+- 回归风险：低到中，已通过分阶段迁移与全量回归消化。
 
-3. 已完成：测试初始化收敛
-- 影响范围：`tests/TestSupport.lua`
-- 预期收益：减少对旧兼容开关 API 的默认依赖，改为显式分项策略。
-- 回归风险：低；全量回归验证通过。
+3. 建议下一步：legacy 策略使用面继续收口
+- 影响范围：`RuntimeInstall`、调用入口与运行配置
+- 预期收益：将 legacy 从“常规可选”收敛为“极少数受控场景”。
+- 回归风险：中，需要入口级灰度和契约补强。
 
-4. 下一步：兼容开关退役准备
-- 影响范围：`RuntimePorts` 兼容 API 与契约测试
-- 预期收益：进一步压缩兼容面，减少未来维护分叉。
-- 回归风险：中；需要先确认仓库与外部注入路径无旧接口依赖。
+4. 建议后续：RuntimePorts 职责拆薄（可选）
+- 影响范围：`RuntimePorts` 与调用方注入层
+- 预期收益：降低单模块复杂度，提升可替换性与可测性。
+- 回归风险：中，属于结构性优化，应分批执行。
 
 ### 测试建议
 
-1. 用例级测试：继续围绕移动/停靠/状态同步做黑盒验证，不绑定旧接口名。
-2. 边界契约测试：保持 strict 与 legacy 两态契约，并为退役阶段增加“旧接口清零”断言。
-3. 回归门槛：每批次继续执行 `lua tests/regression.lua` + `lua tests/internal/dep_rules.lua`。
+1. 用例级测试：继续使用黑盒行为验证，不对旧兼容接口名做断言。
+2. 边界契约测试：保留 strict/legacy 双态契约，并追加 legacy 使用面约束断言。
+3. 放行门槛：每批次保持 `lua tests/regression.lua` + `lua tests/internal/dep_rules.lua` 全绿。
 
 ### 权衡说明
 
-短期成本是迁移期间存在策略与契约双维护；长期收益是边界更稳定、接口更统一、细节更可替换。当前策略遵循“先迁移再删除”的低风险路径，符合持续交付约束。
+短期保留 legacy 策略能降低运行环境切换风险，但会增加持续维护成本。当前代码库已完成“低风险高收益”的兼容别名退役，下一步应在风险可控前提下继续压缩 legacy 入口，而不是再扩张兼容语义。
 
 ---
 
-## 3. 提交后代码库审查与清理结果
+## 3. 现状盘点（关键模块）
 
-### A. 本轮关键提交
+### A. Runtime 策略层
 
-- `d8245ca`：`refactor(runtime): scope legacy fallback policy by capability`
-- `42a8d7a`：`refactor(runtime): retire forward vehicle event aliases`
+- 核心文件：
+  - `src/core/RuntimePorts.lua`
+  - `src/app/bootstrap/RuntimeInstall.lua`
+  - `tests/suites/runtime_ports_contract.lua`
+- 现状：
+  - 分项策略 API 在役：`set_legacy_fallback_policy` / `legacy_fallback_policy`。
+  - 旧兼容开关 API 已删除。
+  - `context_policy = "legacy"` + `enable_legacy_helper_fallback` 仍保留。
+- 判断：
+  - 处于“可控兼容”阶段；下一步是策略入口收口而非接口命名清理。
 
-### B. 已落地清理
+### B. 事件发射链
 
-1. legacy fallback 策略分项化
-- `RuntimePorts` 新增 `set_legacy_fallback_policy` / `legacy_fallback_policy`。
-- `RuntimeInstall` 默认 legacy 仅开角色相关 fallback，helper fallback 需 `enable_legacy_helper_fallback = true`。
+- 核心文件：
+  - `src/core/RuntimeContext.lua`
+  - `src/game/core/runtime/player_state/StatusOps.lua`
+  - `src/presentation/render/MoveAnim.lua`
+  - `src/presentation/render/board_runtime/placement.lua`
+- 现状：
+  - `emit_vehicle_*` 统一在役。
+  - `forward_eca_event_*` 已移除。
+- 判断：
+  - 该链路本轮清理闭环完成。
 
-2. forward 旧接口退役
-- 删除 `RuntimeContext` 的 `forward_eca_event_*` 兼容别名。
-- 生产调用统一为 `emit_vehicle_*`。
+### C. 仍在役但不建议本批删除
 
-3. 测试与引导收敛
-- `tests/suites/gameplay.lua`、`tests/suites/presentation_ui.lua` 测试桩迁移为 `emit_vehicle_*`。
-- `tests/TestSupport.lua` 改用分项策略初始化。
+- `src/core/RuntimeEventBridge.lua`
+- `src/core/events/MonopolyEvents.lua`
+- `src/presentation/shared/UIAliases.lua`
 
-### C. 仍保留的兼容点（有意）
-
-- `RuntimePorts.set_legacy_global_fallback_enabled` 与 `legacy_global_fallback_enabled` 仍保留，当前仅作兼容层 API。
-- `runtime_ports_contract` 仍保留对该兼容开关的验证断言，作为退役前保护。
+判断：这些模块仍承担稳定职责，不属于“死兼容层”，应避免与 runtime 策略收口混批改动。
 
 ---
 
-## 4. 验证证据
+## 4. 验证证据（当前工作树）
 
 执行命令：
+- `rg "set_legacy_global_fallback_enabled|legacy_global_fallback_enabled\(" src tests -n`
+- `rg "forward_eca_event_" src tests -n`
+- `rg "set_legacy_fallback_policy\(|context_policy|enable_legacy_helper_fallback" src tests -n`
 - `lua tests/regression.lua`
 - `lua tests/internal/dep_rules.lua`
-- `rg "forward_eca_event_" src tests -n`
-- `rg "set_legacy_global_fallback_enabled|legacy_global_fallback_enabled" src tests -n`
-- `rg "enable_legacy_helper_fallback|set_legacy_fallback_policy\(" src tests -n`
 
 结果摘要：
-1. 回归通过：`All regression checks passed (210)`，`dep_rules ok`，`tick ok`，`forbidden_globals ok`。
-2. 依赖规则单测通过：`dep_rules ok`。
-3. `forward_eca_event_*` 在 `src/tests` 检索清零。
-4. legacy 兼容开关仅剩兼容 API 本体 + 契约测试断言。
-5. 分项策略与 helper opt-in 在运行时安装与测试中可被稳定检索。
+1. 旧兼容开关 API 检索清零（No matches）。
+2. forward 旧事件接口检索清零（No matches）。
+3. 分项策略与 legacy 策略入口仍可稳定检索（符合当前受控设计）。
+4. 回归通过：`All regression checks passed (210)`，`dep_rules ok`，`tick ok`，`forbidden_globals ok`。
+5. 依赖规则单测通过：`dep_rules ok`。
 
 ---
 
-## 5. 不建议当前批次直接删除的项
+## 5. 下一阶段建议
 
-1. `set_legacy_global_fallback_enabled`（兼容入口）
-- 原因：仍有契约测试覆盖；需先做仓库外依赖确认再下线。
+1. 继续收口 legacy 使用面
+- 把 `context_policy = "legacy"` 的实际使用场景做清单化，限制新增入口。
 
-2. `RuntimeEventBridge`
-- 原因：承担自定义事件的安全发射与降级保护，不应与接口清理混改。
+2. 明确 helper fallback 使用治理
+- 对 `enable_legacy_helper_fallback` 增加调用审计或测试约束，避免回退路径扩散。
 
-3. `MonopolyEvents`
-- 原因：事件名目录化仍有强组织价值。
-
-4. `UIAliases`
-- 原因：Canvas 迁移尚未完成，仍为在役适配层。
-
----
-
-## 6. 下一阶段建议（与 plan 对齐）
-
-1. 发起兼容开关退役预检
-- 清点仓库外/启动脚本是否仍依赖 `set_legacy_global_fallback_enabled`。
-
-2. 若预检通过，执行兼容 API 退役
-- 删除 `set_legacy_global_fallback_enabled`/`legacy_global_fallback_enabled` 及对应兼容断言。
-
-3. 保持放行标准不变
-- 每批次必须通过契约测试与全量回归。
+3. 维持放行纪律
+- 每批清理必须同时满足契约测试与全量回归通过。
 
 完成条件：
 - 业务行为不变。
 - strict 路径覆盖完整。
-- legacy 兼容入口具备明确下线证据并完成移除。
+- legacy 策略入口持续收敛且可追踪。

@@ -19,13 +19,6 @@ local function _normalized_legacy_fallback_policy(policy)
   }
 end
 
-local function _is_any_legacy_fallback_enabled()
-  return legacy_fallback_policy.roles
-    or legacy_fallback_policy.role
-    or legacy_fallback_policy.vehicle
-    or legacy_fallback_policy.camera
-end
-
 local function _default_rng_next_int(min, max)
   assert(min ~= nil and max ~= nil, "rng.next_int requires min/max")
   assert(GameAPI and GameAPI.random_int, "missing GameAPI.random_int")
@@ -190,23 +183,6 @@ end
 
 function runtime_ports.configure(ports)
   configured = ports or nil
-end
-
-function runtime_ports.set_legacy_global_fallback_enabled(enabled)
-  if enabled == true then
-    runtime_ports.set_legacy_fallback_policy({
-      roles = true,
-      role = true,
-      vehicle = true,
-      camera = true,
-    })
-    return
-  end
-  runtime_ports.set_legacy_fallback_policy()
-end
-
-function runtime_ports.legacy_global_fallback_enabled()
-  return _is_any_legacy_fallback_enabled()
 end
 
 function runtime_ports.set_legacy_fallback_policy(policy)

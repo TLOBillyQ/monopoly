@@ -110,8 +110,6 @@ local function _test_runtime_install_legacy_defaults_to_role_only_fallback()
     local roles = runtime_ports.resolve_roles()
     local vehicle = runtime_ports.resolve_vehicle_helper()
     local camera = runtime_ports.resolve_camera_helper()
-    _assert_eq(runtime_ports.legacy_global_fallback_enabled(), true,
-      "legacy install should enable explicit global fallback mode")
     _assert_eq(policy.roles, true, "legacy install should enable roles fallback by default")
     _assert_eq(policy.role, true, "legacy install should enable role fallback by default")
     _assert_eq(policy.vehicle, false, "legacy install should disable vehicle helper fallback by default")

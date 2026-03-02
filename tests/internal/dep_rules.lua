@@ -343,6 +343,68 @@ local function _scan_presentation_system_requires()
   return nil
 end
 
+local legacy_policy_usage_allowlist = {
+  ["tests/suites/runtime_ports_contract.lua"] = {
+    allow_context_policy_legacy = true,
+    allow_helper_opt_in = true,
+  },
+}
+
+local function _scan_legacy_policy_usages()
+  local roots = { "src", "tests" }
+  for _, root in ipairs(roots) do
+    local files, err = _collect_lua_files(root)
+    if not files then
+      if not tostring(err):find("no lua files found under", 1, true) then
+        return nil, err
+      end
+    else
+      for _, path in ipairs(files) do
+        local normalized = _normalize_path(path)
+        local relpath = normalized:match(".*(src/.+)") or normalized:match(".*(tests/.+)") or normalized
+        if not relpath:match("tests/internal/dep_rules.lua$") then
+          local allow = legacy_policy_usage_allowlist[relpath] or {}
+          local file = io.open(path, "r")
+          if not file then
+            return nil, "cannot open: " .. tostring(path)
+          end
+          local lineno = 0
+          for line in file:lines() do
+            lineno = lineno + 1
+            if line:find("context_policy%s*=%s*\"legacy\"")
+              or line:find("context_policy%s*=%s*'legacy'") then
+              if not allow.allow_context_policy_legacy then
+                file:close()
+                return {
+                  path = relpath,
+                  line = lineno,
+                  token = "context_policy = legacy",
+                  text = line,
+                  description = "legacy context_policy usage must be isolated to explicit contract tests",
+                }
+              end
+            end
+            if line:find("enable_legacy_helper_fallback%s*=%s*true") then
+              if not allow.allow_helper_opt_in then
+                file:close()
+                return {
+                  path = relpath,
+                  line = lineno,
+                  token = "enable_legacy_helper_fallback = true",
+                  text = line,
+                  description = "legacy helper opt-in must be isolated to explicit contract tests",
+                }
+              end
+            end
+          end
+          file:close()
+        end
+      end
+    end
+  end
+  return nil
+end
+
 for _, rule in ipairs(rules) do
   local hit, err = _scan_tree(rule)
   if err and not tostring(err):find("no lua files found under", 1, true) then
@@ -366,6 +428,18 @@ if presentation_hit then
   io.stderr:write("dep_rules violation: ", presentation_hit.path, ":", presentation_hit.line, " contains ", presentation_hit.token, "\n")
   io.stderr:write("rule: ", presentation_hit.description, "\n")
   io.stderr:write(presentation_hit.text, "\n")
+  os.exit(1)
+end
+
+local legacy_usage_hit, legacy_usage_err = _scan_legacy_policy_usages()
+if legacy_usage_err and not tostring(legacy_usage_err):find("no lua files found under", 1, true) then
+  io.stderr:write("dep_rules error: ", legacy_usage_err, "\n")
+  os.exit(1)
+end
+if legacy_usage_hit then
+  io.stderr:write("dep_rules violation: ", legacy_usage_hit.path, ":", legacy_usage_hit.line, " contains ", legacy_usage_hit.token, "\n")
+  io.stderr:write("rule: ", legacy_usage_hit.description, "\n")
+  io.stderr:write(legacy_usage_hit.text, "\n")
   os.exit(1)
 end
 
