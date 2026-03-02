@@ -1,111 +1,158 @@
-# Monopoly 架构可视化文档交付 可执行计划
+# R15 Legacy 收口与 RuntimePorts 拆分执行计划
 
 本可执行计划是活文档。实施过程中必须持续更新"进度"、"意外与发现"、"决策日志"、"结果与复盘"。
 
-本文件必须遵循 `./.agents/harness/PLANS.md` 维护。执行者只依赖当前工作树与本文件即可复现实施与验收过程。
+本文件遵循 `.agents/harness/PLANS.md` 维护，任何执行或范围调整都必须先同步更新本文件，再继续实施。
 
 
 ## 目的 / 全局视角
 
-本轮目标是为 Monopoly 项目创建一套完整的架构可视化文档，交付到 `docs/arch/` 目录。完成后开发者可以在 `docs/arch/overview.md` 找到全局导航索引，快速定位到各专题文档中的 Mermaid 图表，理解分层架构、启动流程、回合引擎状态机、游戏子系统协作、展示层 Canvas 架构、端到端数据流、模块依赖关系以及配置数据模型。
+这轮工作的目标是把“阶段性兼容”继续压缩成“最小可控入口”，并把 `RuntimePorts` 从“多职责聚合点”拆回“清晰边界接口”。对用户可见的结果是：游戏行为不变、回归测试持续全绿，但内部调用路径更短、更稳定，后续退役 legacy 代码时不再需要大范围联动改动。
 
-验收方法：查看 `docs/arch/` 目录，确认 8 个 `.md` 文件存在且包含 Mermaid 图表。在 GitHub 上渲染后可直接浏览图表。回归测试不受影响（纯文档变更）。
-
+本轮完成后，应能通过检索看到 legacy 入口进一步减少，通过契约测试证明 `RuntimePorts` 仍满足现有调用方，通过全量回归证明功能无回归。也就是说，用户看不到行为变化，但维护者可以更快定位问题、更安全地删除兼容代码。
 
 ## 进度
 
-- [x] (2026-03-02T12:26Z) 完成仓库全面探索：src/app、src/core、src/game、src/presentation、Config/、tests/ 各层结构与职责。
-- [x] (2026-03-02T12:30Z) 创建 docs/arch/overview.md — 全局架构总览（分层图 + 组件关系图 + 索引）。
-- [x] (2026-03-02T12:30Z) 创建 docs/arch/bootstrap.md — 五阶段启动时序图 + 对象生命周期图。
-- [x] (2026-03-02T12:30Z) 创建 docs/arch/turn-engine.md — 协程调度模型 + 回合阶段状态机 + 类图。
-- [x] (2026-03-02T12:30Z) 创建 docs/arch/game-systems.md — 10 个子系统组件图 + 阶段协作全景。
-- [x] (2026-03-02T12:30Z) 创建 docs/arch/presentation.md — Canvas-First 架构 + 交互分发 + 渲染管线。
-- [x] (2026-03-02T12:30Z) 创建 docs/arch/data-flow.md — 端到端数据流 + 帧 tick 流 + 事件流。
-- [x] (2026-03-02T12:30Z) 创建 docs/arch/dependencies.md — 层间依赖规则 + 端口适配器模式 + 核心模块依赖图。
-- [x] (2026-03-02T12:30Z) 创建 docs/arch/config-data.md — 配置结构 + ER 图 + 数据驱动设计。
-- [x] (2026-03-02T12:31Z) 更新 .agents/plan.md 为当前任务计划。
-- [ ] 确认回归测试不受影响。
-- [ ] 完成 code review 与最终验收。
-
+- [x] (2026-03-02 10:45 +08:00) 重新建立本轮计划文档骨架，并对齐 `.agents/harness/PLANS.md` 必需章节。
+- [ ] 盘点并分类 `context_policy`、`enable_legacy_helper_fallback`、`set_legacy_fallback_policy(` 的现存调用点，形成“保留/迁移/删除”清单。
+- [ ] 在 `src/app/bootstrap/RuntimeInstall.lua` 收口 legacy 入口：统一入口函数，移除分散策略分支，保留单点可观测开关。
+- [ ] 在 `src/core/RuntimePorts.lua` 完成职责拆分：策略解析与端口实现分离，兼容语义下沉至适配层。
+- [ ] 同步更新并补强 `tests/suites/runtime_ports_contract.lua`，确保 strict 路径与 legacy 受控路径都可验证。
+- [ ] 更新 `tests/internal/dep_rules.lua`，阻止新增 legacy 入口扩散（只允许白名单模块触达）。
+- [ ] 执行回归与检索验收，记录证据到“产物与备注”。
+- [ ] 提交代码并回填“结果与复盘”与文档更新记录。
 
 ## 意外与发现
 
-探索过程中确认 TurnEngine 已移除 legacy mode，始终走协程路径。TurnFlow/Flow/TurnChoiceHandler/TurnWaits 等旧模块已删除，只保留协程运行时。这一发现确保了 turn-engine.md 只描述协程模型，不需要描述已退役的传统状态机。
+- 观察：上一轮清理后，`forward_eca_event_*` 与全局 legacy 开关已清零，但 policy 型 legacy 入口仍集中在 Runtime 安装与端口层，说明“语义兼容”已从 API 层转移到策略层。
+  证据：`rg "context_policy|enable_legacy_helper_fallback|set_legacy_fallback_policy\\(" src tests -n` 仍有命中。
 
-Canvas 画布数量实际为 11 个（含 debug），注册到 CanvasRegistry 的路由规格为 10 个（debug 画布不注册路由）。
-
-docs/architecture/ 已存在一份 presentation_canvas_first.md，本轮在新目录 docs/arch/ 下工作，不修改已有文档。
-
+- 观察：`.agents/plan.md` 在本次改写前处于缺失状态，属于流程风险点（执行无法继续追踪）。
+  证据：`Test-Path .agents/plan.md` 返回 `False`。
 
 ## 决策日志
 
-决策一：图表格式采用 Mermaid 而非 PlantUML。理由是 GitHub 原生支持 Mermaid 渲染，无需额外工具链。日期/作者：2026-03-02 / Copilot。
+- 决策：本轮先做“收口 + 拆分 + 防护折叠”的小步闭环，不直接一次性删除全部 legacy policy 分支。
+  理由：当前回归面较大，先把入口集中和职责拆干净，再做最终退役，风险更低且更易验证。
+  日期/作者：2026-03-02 / Codex
 
-决策二：文档交付到 `docs/arch/` 而非覆盖 `docs/architecture/`。理由是 issue 明确要求 `docs/arch/*.md`，且 `docs/architecture/` 已有其他文档，避免冲突。日期/作者：2026-03-02 / Copilot。
-
-决策三：以中文书写文档正文。理由是仓库现有文档（plan.md、backlog.md、注释）均使用中文，保持一致性。日期/作者：2026-03-02 / Copilot。
-
+- 决策：把规则治理（`dep_rules`）与实现改动同批推进，而不是最后补。
+  理由：治理规则晚于实现落地会出现短窗口回退风险；同批推进可把“禁止扩散”前置为默认行为。
+  日期/作者：2026-03-02 / Codex
 
 ## 结果与复盘
 
-8 个架构文档已全部交付至 `docs/arch/`，覆盖全局总览、启动序列、回合引擎、游戏子系统、展示层、数据流、模块依赖、配置数据模型。包含 30+ 个 Mermaid 图表，涵盖 graph/flowchart/sequenceDiagram/stateDiagram/classDiagram/erDiagram/mindmap 等多种图表类型。纯文档变更，不影响代码行为与回归测试。
-
+当前处于计划建立阶段，尚未执行代码改动。本节在每个里程碑完成后更新“完成内容、未完成项、风险变化、是否达到目的”。最终完成标准是：功能行为不变、strict 路径覆盖完整、legacy 入口降到约定白名单且具备可观测退役窗口。
 
 ## 背景与导读
 
-Monopoly 是一个用 Lua 编写的大富翁游戏项目，运行在 Eggy 引擎上。项目采用分层架构：基础设施层（`src/core/`）提供运行时上下文与端口注入；游戏逻辑层（`src/game/`）包含核心状态、回合引擎、流程编排与子系统；展示层（`src/presentation/`）基于 Canvas-First 模式组织 UI；应用层（`src/app/`）负责启动与组装；配置层（`Config/`）提供数据驱动的游戏参数。
+本仓库是 Lua 项目，运行时入口与核心逻辑分层组织。这里的 “legacy” 指为了兼容历史调用保留的策略或路径；“收口”指把多个分散入口合并成单点入口，减少扩散；“RuntimePorts” 指运行时对外提供的端口接口层，理想状态只表达能力契约，不混入策略决策或历史兼容细节。
 
-各文档位于 `docs/arch/` 目录，以 `overview.md` 为索引入口。
+本轮主要关注以下文件：
 
+`src/app/bootstrap/RuntimeInstall.lua` 负责运行时装配与策略注入，当前仍可能承接部分 legacy policy 决策。
+
+`src/core/RuntimePorts.lua` 是端口层核心文件，当前职责可能混合“接口定义、默认实现选择、兼容兜底逻辑”。
+
+`tests/suites/runtime_ports_contract.lua` 用于验证端口契约与关键行为，是拆分后的核心保护网。
+
+`tests/internal/dep_rules.lua` 用于限制依赖方向与禁用路径扩散，是防止 legacy 回流的治理边界。
+
+`.agents/research.md` 记录这两天清理结果与当前卡点，本计划直接落实其中“继续收口 legacy 入口，并推进 RuntimePorts 职责拆分，逐步把阶段性防护代码折叠掉”这一目标。
+
+## 里程碑
+
+里程碑 1 聚焦“看清现状并锁定边界”。完成标准是得到一份可执行的 legacy 调用清单，并明确哪些入口必须保留到下一阶段，哪些可以立即迁移。验证方式是检索命中可解释且无未知调用点。
+
+里程碑 2 聚焦“RuntimeInstall 收口”。完成标准是 legacy policy 只有一个装配入口，调用方不再直接拼装 fallback 细节。验证方式是契约测试通过，且检索结果显示策略配置集中化。
+
+里程碑 3 聚焦“RuntimePorts 拆分与防护折叠”。完成标准是 `RuntimePorts` 仅保留端口职责，兼容语义转移到适配层或显式策略模块，阶段性防护代码减少且仍可观测。验证方式是回归全绿、dep_rules 全绿、legacy 命中下降。
+
+里程碑 4 聚焦“提交与复盘”。完成标准是提交包含代码、测试、文档更新，复盘明确下一次最终退役的前置条件与剩余阻塞。
 
 ## 工作计划
 
-在仓库根目录创建 `docs/arch/` 目录，依次编写 8 个 Markdown 文件。每个文件包含 Mermaid 图表与简要说明文字。完成后运行回归测试确认无副作用，最后提交所有文件。
+先做静态清点，再做最小改动闭环。第一步在 `src/` 与 `tests/` 内检索所有 legacy policy 相关符号，逐个归类为“短期保留（有业务依赖）”或“立即迁移（仅历史冗余）”。归类结果直接写入本计划“产物与备注”，避免执行中丢上下文。
 
+第二步改 `RuntimeInstall.lua`。目标不是新增能力，而是把 legacy 策略注入统一到单一函数或单一配置对象，调用者只表达“是否允许兼容策略”，不直接触达兼容细节。这样可以把后续退役变为替换单点实现，而不是全仓搜索替换。
+
+第三步改 `RuntimePorts.lua`。把“端口契约”和“策略/兼容选择”拆开：端口层保留稳定函数签名，策略分支迁移到独立策略模块或安装阶段装配逻辑。若存在阶段性防护分支，优先折叠重复判断，保留最小必要断言，并在注释中说明退役条件。
+
+第四步补测试与规则。`runtime_ports_contract.lua` 需要覆盖 strict 与受控 legacy 两类路径，保证行为一致；`dep_rules.lua` 需要新增或收紧规则，防止新模块绕过集中入口直接引用 legacy 开关。
+
+最后执行全量验证并提交。若任何验证失败，先在本计划“意外与发现”记录症状与证据，再决定是回滚单步还是补丁修复，确保计划始终可从当前状态重启。
 
 ## 具体步骤
 
-所有命令在仓库根目录 `/home/runner/work/monopoly/monopoly` 执行。
+所有命令在仓库根目录 `c:\Users\Lzx_8\Desktop\dev\repo\monopoly` 执行。
 
-创建目录：
+1. 建立 legacy 调用基线，保存命中结果。
 
-    mkdir -p docs/arch
+    rg "context_policy|enable_legacy_helper_fallback|set_legacy_fallback_policy\\(" src tests -n
 
-创建 8 个文档文件（overview / bootstrap / turn-engine / game-systems / presentation / data-flow / dependencies / config-data）。
+    预期：仍有少量命中，且主要集中在 Runtime 安装与端口相关模块。
 
-确认回归测试不受影响：
+2. 执行 RuntimeInstall 收口改动后，复查命中分布。
+
+    rg "context_policy|enable_legacy_helper_fallback|set_legacy_fallback_policy\\(" src tests -n
+
+    预期：命中总量不增加，分布更集中，新增调用点为 0。
+
+3. 执行 RuntimePorts 拆分后，运行契约与规则测试。
+
+    lua tests/suites/runtime_ports_contract.lua
+    lua tests/internal/dep_rules.lua
+
+    预期：`runtime_ports_contract` 与 `dep_rules` 全部通过，无新增违规依赖。
+
+4. 运行全量回归确认业务行为不变。
 
     lua tests/regression.lua
 
-预期输出包含"All regression checks passed"。
+    预期：全量回归通过（当前基线约 210 项，若数量变化需在“意外与发现”解释原因）。
 
+5. 提交并回填文档。
+
+    git status --short
+    git add -A
+    git commit -m "refactor runtime legacy entry contraction and RuntimePorts split"
+
+    预期：提交仅包含本轮计划内文件与必要测试更新。
 
 ## 验证与验收
 
-验收标准共三条。第一，`docs/arch/` 目录下存在 8 个 `.md` 文件。第二，每个文件包含至少一个 Mermaid 代码块。第三，`lua tests/regression.lua` 全绿。
+验收以“行为不变 + 边界更清晰 + 扩散被阻断”为准。行为不变由 `lua tests/regression.lua` 证明；边界更清晰由 legacy 检索命中集中化和 `runtime_ports_contract` 通过共同证明；扩散被阻断由 `lua tests/internal/dep_rules.lua` 证明。
 
+如果出现“测试通过但命中扩散”的情况，视为未验收，因为这说明治理目标失败。只有当三类证据同时成立，才允许进入下一轮最终退役计划。
 
 ## 可重复性与恢复
 
-本计划可重复执行。所有操作均为纯文件创建，不修改已有源代码或测试。若需回退，删除 `docs/arch/` 目录即可。
+本计划采用增量小步策略，每一步都可独立重复执行。检索命令与测试命令可重复运行且不会污染仓库状态。
 
+若改动后测试失败，先保留现场并记录到“意外与发现”，再按最小粒度修复。禁止跨模块大回滚；优先回滚最近单文件改动以恢复可测状态。若提交后发现问题，使用新提交修复，不改写历史，确保追踪链完整。
 
 ## 产物与备注
 
-交付文件清单：
+以下内容在执行后补充真实输出片段，作为“确实生效”的证据：
 
-    docs/arch/overview.md        — 全局架构总览
-    docs/arch/bootstrap.md       — 启动序列
-    docs/arch/turn-engine.md     — 回合引擎
-    docs/arch/game-systems.md    — 游戏子系统
-    docs/arch/presentation.md    — 展示层架构
-    docs/arch/data-flow.md       — 数据流
-    docs/arch/dependencies.md    — 模块依赖关系
-    docs/arch/config-data.md     — 配置与数据模型
-
+    [待补] legacy 检索命中摘要（改动前/后对比）
+    [待补] runtime_ports_contract 通过输出关键行
+    [待补] dep_rules 通过输出关键行
+    [待补] regression 通过输出关键行
+    [待补] 最终提交哈希与变更摘要
 
 ## 接口与依赖
 
-本轮不改动任何源代码或测试，仅新增文档文件。无新增库依赖。
+本轮不引入新外部依赖，继续使用 Lua 现有测试与检索工具链。关键接口约束如下：
 
-本次修订说明（2026-03-02T12:31Z）：初始版本，完整创建架构可视化文档交付计划。
+`src/core/RuntimePorts.lua` 对外暴露的端口函数签名必须保持向后兼容，调用方不应因为本轮拆分而修改业务参数结构。
+
+`src/app/bootstrap/RuntimeInstall.lua` 负责策略装配，legacy policy 只允许通过该层受控进入，其他模块不得新增直接开关调用。
+
+`tests/suites/runtime_ports_contract.lua` 必须覆盖 strict 与受控 legacy 路径，确保同一输入下业务可观察结果一致。
+
+`tests/internal/dep_rules.lua` 必须把 legacy 触达限制在白名单模块，作为最终退役前的强约束。
+
+## 文档更新记录
+
+2026-03-02（本次）：重建缺失的 `.agents/plan.md`，将研究结论中的下一步目标落成可执行计划，新增里程碑、验证命令、风险恢复与活文档章节，目的是让后续执行可以无外部上下文直接推进。
