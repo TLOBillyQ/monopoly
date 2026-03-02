@@ -164,3 +164,34 @@ R10 不是表面整理，而是完成了一轮可验证的架构收敛：
 3. 完整执行全部里程碑并完成局部 + 全量验证；
 4. 更新研究文档记录落地事实、证据与偏差；
 5. 提交（里程碑提交 + 轮次收口提交）。
+
+---
+
+## 11) R12-R13 执行结果更新（2026-03-02）
+
+本次按“执行工作流”完成了 `.agents/plan.md` 中 R12-R13 全部里程碑（M46-M51），并完成全量验收。
+
+### 11.1 R12（M46-M48）落地结果
+
+- M46：新增 `src/game/flow/turn/TurnTimerPolicy.lua`，将 action button / detained wait 计时器从 `GameplayLoopRuntime.lua` 抽离。
+- M47：新增 `TurnRoleControlPolicy.lua` 与 `TurnCameraPolicy.lua`，将 role control lock 与 camera follow 从 `GameplayLoopRuntime.lua` 抽离到策略模块。
+- M48：复用 `gameplay.loop` 既有关键断言（action timeout、popup timeout、camera follow、dispatch gate）完成语义回归验证。
+
+结果：`GameplayLoopRuntime.lua` 已降为轻量编排（输入锁、phase flags、runtime ui port），tick 语义无回归。
+
+### 11.2 R13（M49-M51）落地结果
+
+- M49：完成 compat 残留扫描，确认业务代码无 compat 依赖，仅剩测试契约迁移点与规则文本。
+- M50：`tests/suites/runtime_compat_contract.lua` 迁移为 `RuntimePorts/RuntimeContext` 契约（suite 名：`runtime_ports_contract`），不再 `require("src.core.RuntimeCompat")`。
+- M51：删除 `src/core/RuntimeCompat.lua`；`tests/internal/dep_rules.lua` 移除 tests 白名单扫描，改为 tests 侧统一硬禁 compat 依赖。
+
+结果：compat 完成物理退役，守护从“白名单治理”升级为“统一规则治理”。
+
+### 11.3 最终证据
+
+- `lua tests/internal/dep_rules.lua` -> `dep_rules ok`
+- `lua tests/regression.lua` -> `All regression checks passed (208)`
+- 同次输出包含：`tick ok`、`forbidden_globals ok`
+- `rg "RuntimeCompat" -n src tests` -> 无 active require 命中（仅 dep_rules 规则文本保留）
+
+结论：R12-R13 目标均达成，且行为回归与依赖守护保持稳定。
