@@ -64,6 +64,14 @@ local rules = {
     description = "presentation layer must not depend on RuntimeCompat; use RuntimePorts/context",
   },
   {
+    root = "tests",
+    forbidden_patterns = {
+      "require%(\"src%.core%.RuntimeCompat\"%)",
+      "require%('src%.core%.RuntimeCompat'%)",
+    },
+    description = "tests must not depend on RuntimeCompat; validate RuntimePorts/RuntimeContext contracts directly",
+  },
+  {
     root = "src/game/core",
     forbidden_patterns = {
       "require%(\"src%.game%.flow%..-\"%)",
@@ -168,10 +176,6 @@ local presentation_game_systems_whitelist = {
   -- ["src/presentation/example.lua"] = {
   --   ["src.game.systems.some.Module"] = true,
   -- },
-}
-
-local runtime_compat_tests_whitelist = {
-  ["tests/suites/runtime_compat_contract.lua"] = true,
 }
 
 local forbidden_files = {
@@ -339,67 +343,6 @@ local function _scan_presentation_system_requires()
   return nil
 end
 
-local function _to_tests_relpath(path)
-  local normalized = _normalize_path(path)
-  local rel = normalized:match(".*(tests/.+)")
-  return rel or normalized
-end
-
-local function _scan_runtime_compat_requires_in_tests()
-  local files, err = _collect_lua_files("tests")
-  if not files then
-    return nil, err
-  end
-
-  local observed = {}
-  local patterns = {
-    "require%(\"src%.core%.RuntimeCompat\"%)",
-    "require%('src%.core%.RuntimeCompat'%)",
-  }
-
-  for _, path in ipairs(files) do
-    local relpath = _to_tests_relpath(path)
-    local file = io.open(path, "r")
-    if not file then
-      return nil, "cannot open: " .. tostring(path)
-    end
-    local lineno = 0
-    for line in file:lines() do
-      lineno = lineno + 1
-      for _, pattern in ipairs(patterns) do
-        if line:find(pattern) then
-          observed[relpath] = true
-          if not runtime_compat_tests_whitelist[relpath] then
-            file:close()
-            return {
-              path = relpath,
-              line = lineno,
-              token = "src.core.RuntimeCompat",
-              text = line,
-              description = "tests must not depend on RuntimeCompat except runtime_compat_contract whitelist",
-            }
-          end
-        end
-      end
-    end
-    file:close()
-  end
-
-  for relpath in pairs(runtime_compat_tests_whitelist) do
-    if not observed[relpath] then
-      return {
-        path = relpath,
-        line = 1,
-        token = "src.core.RuntimeCompat",
-        text = "stale whitelist entry",
-        description = "runtime_compat tests whitelist must only keep active dependencies (decay-only governance)",
-      }
-    end
-  end
-
-  return nil
-end
-
 for _, rule in ipairs(rules) do
   local hit, err = _scan_tree(rule)
   if err and not tostring(err):find("no lua files found under", 1, true) then
@@ -423,19 +366,6 @@ if presentation_hit then
   io.stderr:write("dep_rules violation: ", presentation_hit.path, ":", presentation_hit.line, " contains ", presentation_hit.token, "\n")
   io.stderr:write("rule: ", presentation_hit.description, "\n")
   io.stderr:write(presentation_hit.text, "\n")
-  os.exit(1)
-end
-
-local runtime_compat_hit, runtime_compat_err = _scan_runtime_compat_requires_in_tests()
-if runtime_compat_err and not tostring(runtime_compat_err):find("no lua files found under", 1, true) then
-  io.stderr:write("dep_rules error: ", runtime_compat_err, "\n")
-  os.exit(1)
-end
-if runtime_compat_hit then
-  io.stderr:write("dep_rules violation: ", runtime_compat_hit.path, ":", runtime_compat_hit.line,
-    " contains ", runtime_compat_hit.token, "\n")
-  io.stderr:write("rule: ", runtime_compat_hit.description, "\n")
-  io.stderr:write(runtime_compat_hit.text, "\n")
   os.exit(1)
 end
 

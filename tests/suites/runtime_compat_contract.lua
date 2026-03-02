@@ -2,111 +2,95 @@ local support = require("TestSupport")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
-local runtime_compat = require("src.core.RuntimeCompat")
+local runtime_ports = require("src.core.RuntimePorts")
 local runtime_context = require("src.core.RuntimeContext")
 
-local function _test_runtime_compat_fallback_works_without_context()
-  runtime_compat.reset_for_tests()
+local function _reset_runtime_contract_state()
+  runtime_ports.reset_for_tests()
+  runtime_context.set_current(nil)
+end
+
+local function _test_runtime_ports_resolve_roles_fallback_works_without_context()
+  _reset_runtime_contract_state()
   _with_patches({
     { target = runtime_context, key = "current", value = function() return nil end },
     { key = "all_roles", value = { { id = 1 } } },
   }, function()
-    local roles = runtime_compat.get_roles()
+    local roles = runtime_ports.resolve_roles()
     _assert_eq(type(roles), "table", "fallback roles should resolve when context is absent")
-    local hits = runtime_compat.get_fallback_hits()
-    _assert_eq(hits.roles, 1, "roles fallback hit should be counted")
+    _assert_eq(roles[1].id, 1, "roles should fallback to all_roles when context is absent")
   end)
-  runtime_compat.reset_for_tests()
+  _reset_runtime_contract_state()
 end
 
-local function _test_runtime_compat_strict_context_first_blocks_global_fallback()
-  runtime_compat.reset_for_tests()
-  runtime_compat.configure({ strict_context_first = true })
+local function _test_runtime_ports_resolve_roles_prefers_context_over_globals()
+  _reset_runtime_contract_state()
+  local ctx = runtime_context.new({})
+  ctx.roles = { { id = 2 } }
+  runtime_context.set_current(ctx)
   _with_patches({
-    { target = runtime_context, key = "current", value = function() return {} end },
     { key = "all_roles", value = { { id = 1 } } },
-    { key = "vehicle_helper", value = { test = true } },
-    { key = "camera_helper", value = { test = true } },
   }, function()
-    _assert_eq(runtime_compat.get_roles(), nil, "strict context-first should not fallback to all_roles when context exists")
-    _assert_eq(runtime_compat.get_vehicle_helper(), nil,
-      "strict context-first should not fallback to vehicle_helper when context exists")
-    _assert_eq(runtime_compat.get_camera_helper(), nil,
-      "strict context-first should not fallback to camera_helper when context exists")
-    local hits = runtime_compat.get_fallback_hits()
-    _assert_eq(hits.roles, 0, "roles fallback count should remain zero in strict context-first mode")
-    _assert_eq(hits.vehicle_helper, 0, "vehicle fallback count should remain zero in strict context-first mode")
-    _assert_eq(hits.camera_helper, 0, "camera fallback count should remain zero in strict context-first mode")
+    local roles = runtime_ports.resolve_roles()
+    _assert_eq(roles[1].id, 2, "runtime ports should prefer context roles when context exists")
   end)
-  runtime_compat.reset_for_tests()
+  _reset_runtime_contract_state()
 end
 
-local function _test_runtime_compat_default_strict_context_first_blocks_fallback_on_context_hit()
-  runtime_compat.reset_for_tests()
+local function _test_runtime_ports_resolve_helpers_prefer_context_over_globals()
+  _reset_runtime_contract_state()
+  local ctx = runtime_context.new({})
+  ctx.vehicle_helper = { id = "vehicle_ctx" }
+  ctx.camera_helper = { id = "camera_ctx" }
+  runtime_context.set_current(ctx)
   _with_patches({
-    { target = runtime_context, key = "current", value = function()
-      return {}
-    end },
-    { key = "all_roles", value = { { id = 1 } } },
-    { key = "vehicle_helper", value = { test = true } },
-    { key = "camera_helper", value = { test = true } },
-  }, function()
-    _assert_eq(runtime_compat.get_roles(), nil, "default strict context-first should block roles fallback when context exists")
-    _assert_eq(runtime_compat.get_vehicle_helper(), nil,
-      "default strict context-first should block vehicle fallback when context exists")
-    _assert_eq(runtime_compat.get_camera_helper(), nil,
-      "default strict context-first should block camera fallback when context exists")
-    local hits = runtime_compat.get_fallback_hits()
-    _assert_eq(hits.roles, 0, "roles fallback count should remain zero under default strict mode")
-    _assert_eq(hits.vehicle_helper, 0, "vehicle fallback count should remain zero under default strict mode")
-    _assert_eq(hits.camera_helper, 0, "camera fallback count should remain zero under default strict mode")
-  end)
-  runtime_compat.reset_for_tests()
-end
-
-local function _test_runtime_compat_context_hit_does_not_increment_fallback_hits()
-  runtime_compat.reset_for_tests()
-  _with_patches({
-    { target = runtime_context, key = "current", value = function()
-      return {
-        roles = { { id = 2 } },
-        vehicle_helper = { id = "vehicle_ctx" },
-        camera_helper = { id = "camera_ctx" },
-      }
-    end },
-    { key = "all_roles", value = { { id = 1 } } },
     { key = "vehicle_helper", value = { id = "vehicle_global" } },
     { key = "camera_helper", value = { id = "camera_global" } },
   }, function()
-    local roles = runtime_compat.get_roles()
-    local vehicle = runtime_compat.get_vehicle_helper()
-    local camera = runtime_compat.get_camera_helper()
-    _assert_eq(roles[1].id, 2, "context roles should win over global fallback")
-    _assert_eq(vehicle.id, "vehicle_ctx", "context vehicle helper should win over global fallback")
-    _assert_eq(camera.id, "camera_ctx", "context camera helper should win over global fallback")
-    local hits = runtime_compat.get_fallback_hits()
-    _assert_eq(hits.roles, 0, "roles fallback should remain zero when context hits")
-    _assert_eq(hits.vehicle_helper, 0, "vehicle fallback should remain zero when context hits")
-    _assert_eq(hits.camera_helper, 0, "camera fallback should remain zero when context hits")
+    local vehicle = runtime_ports.resolve_vehicle_helper()
+    local camera = runtime_ports.resolve_camera_helper()
+    _assert_eq(vehicle.id, "vehicle_ctx", "vehicle helper should prefer context binding")
+    _assert_eq(camera.id, "camera_ctx", "camera helper should prefer context binding")
   end)
-  runtime_compat.reset_for_tests()
+  _reset_runtime_contract_state()
+end
+
+local function _test_runtime_ports_resolve_roles_falls_back_to_game_api_when_needed()
+  _reset_runtime_contract_state()
+  _with_patches({
+    { target = runtime_context, key = "current", value = function() return nil end },
+    { key = "all_roles", value = nil },
+    { key = "ALLROLES", value = nil },
+    { key = "GameAPI", value = {
+      get_all_valid_roles = function()
+        return { { id = 3 } }
+      end,
+    } },
+  }, function()
+    local roles = runtime_ports.resolve_roles()
+    _assert_eq(roles[1].id, 3, "roles should fallback to GameAPI when context/global roles are missing")
+  end)
+  _reset_runtime_contract_state()
 end
 
 return {
-  name = "runtime_compat_contract",
+  name = "runtime_ports_contract",
   tests = {
-    { name = "runtime_compat_fallback_works_without_context", run = _test_runtime_compat_fallback_works_without_context },
     {
-      name = "runtime_compat_strict_context_first_blocks_global_fallback",
-      run = _test_runtime_compat_strict_context_first_blocks_global_fallback
+      name = "runtime_ports_resolve_roles_fallback_works_without_context",
+      run = _test_runtime_ports_resolve_roles_fallback_works_without_context
     },
     {
-      name = "runtime_compat_context_hit_does_not_increment_fallback_hits",
-      run = _test_runtime_compat_context_hit_does_not_increment_fallback_hits
+      name = "runtime_ports_resolve_roles_prefers_context_over_globals",
+      run = _test_runtime_ports_resolve_roles_prefers_context_over_globals
     },
     {
-      name = "runtime_compat_default_strict_context_first_blocks_fallback_on_context_hit",
-      run = _test_runtime_compat_default_strict_context_first_blocks_fallback_on_context_hit
+      name = "runtime_ports_resolve_helpers_prefer_context_over_globals",
+      run = _test_runtime_ports_resolve_helpers_prefer_context_over_globals
+    },
+    {
+      name = "runtime_ports_resolve_roles_falls_back_to_game_api_when_needed",
+      run = _test_runtime_ports_resolve_roles_falls_back_to_game_api_when_needed
     },
   },
 }
