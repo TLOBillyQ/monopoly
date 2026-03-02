@@ -6,14 +6,30 @@ local M = {}
 function M.install(opts)
   opts = opts or {}
   local install_globals = opts.install_globals == true
-  local runtime_ctx = runtime_context.new({
-    GameAPI = GameAPI,
-    LuaAPI = LuaAPI,
-  })
-  runtime_context.set_current(runtime_ctx)
-  runtime_context.install_environment(runtime_ctx)
-  runtime_context.install_runtime_helpers(runtime_ctx, { install_globals = install_globals })
-  runtime_context.install_editor_exports(runtime_ctx)
+  local context_policy = opts.context_policy or "strict"
+  local skip_context_install = opts.skip_context_install == true
+  if context_policy ~= "strict" and context_policy ~= "legacy" then
+    error("unknown context policy: " .. tostring(context_policy))
+  end
+  if skip_context_install and context_policy ~= "legacy" then
+    error("runtime context is required when context_policy=strict")
+  end
+
+  local runtime_ctx = nil
+  if not skip_context_install then
+    runtime_ctx = runtime_context.new({
+      GameAPI = GameAPI,
+      LuaAPI = LuaAPI,
+    })
+    runtime_context.set_current(runtime_ctx)
+    runtime_context.install_environment(runtime_ctx)
+    runtime_context.install_runtime_helpers(runtime_ctx, { install_globals = install_globals })
+    runtime_context.install_editor_exports(runtime_ctx)
+  else
+    runtime_context.set_current(nil)
+  end
+
+  runtime_ports.set_legacy_global_fallback_enabled(context_policy == "legacy")
   runtime_ports.configure({
     rng_next_int = function(min, max)
       assert(GameAPI and GameAPI.random_int, "missing GameAPI.random_int")
@@ -24,37 +40,10 @@ function M.install(opts)
       assert(SetTimeOut ~= nil, "missing SetTimeOut")
       SetTimeOut(delay or 0, fn)
     end,
-    resolve_role = function(player_id)
-      if player_id == nil then
-        return nil
-      end
-      if not (GameAPI and GameAPI.get_role) then
-        return nil
-      end
-      local ok, role = pcall(GameAPI.get_role, player_id)
-      if not ok then
-        return nil
-      end
-      return role
-    end,
-    resolve_roles = function()
-      if runtime_ctx and type(runtime_ctx.roles) == "table" then
-        return runtime_ctx.roles
-      end
-      return {}
-    end,
     mark_role_lose = function(role)
       if role and role.lose then
         role.lose()
       end
-    end,
-    resolve_vehicle_helper = function()
-      local key = "vehicle" .. "_helper"
-      return runtime_ctx and runtime_ctx[key] or nil
-    end,
-    resolve_camera_helper = function()
-      local key = "camera" .. "_helper"
-      return runtime_ctx and runtime_ctx[key] or nil
     end,
     wall_now_seconds = function()
       if GameAPI and type(GameAPI.get_timestamp) == "function" then

@@ -1,5 +1,6 @@
 local role_avatar = require("src.presentation.state.UIRoleAvatar")
 local runtime = require("src.presentation.api.UIRuntimePort")
+local runtime_ports = require("src.core.RuntimePorts")
 local canvas = require("src.presentation.interaction.UICanvasCoordinator")
 
 local renderer = {}
@@ -76,11 +77,11 @@ local function _resolve_bankruptcy_avatar_key(payload)
     end
   end
   local player_id = payload.player_id
-  if not player_id or not GameAPI or not GameAPI.get_role then
+  if not player_id then
     return nil
   end
-  local ok, role = pcall(GameAPI.get_role, player_id)
-  if not ok or not role then
+  local role = runtime_ports.resolve_role(player_id)
+  if not role then
     return nil
   end
   return role_avatar.resolve_from_role(role)

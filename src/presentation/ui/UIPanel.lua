@@ -1,6 +1,7 @@
 local gameplay_read_port = require("src.presentation.read_model.GameplayReadPort")
 local number_utils = require("src.core.NumberUtils")
 local role_avatar = require("src.presentation.state.UIRoleAvatar")
+local runtime_ports = require("src.core.RuntimePorts")
 
 local panel = {}
 
@@ -18,14 +19,7 @@ local function _resolve_role(player)
   if not player or player.id == nil then
     return nil
   end
-  if not (GameAPI and GameAPI.get_role) then
-    return nil
-  end
-  local ok, role = pcall(GameAPI.get_role, player.id)
-  if not ok then
-    return nil
-  end
-  return role
+  return runtime_ports.resolve_role(player.id)
 end
 
 local function _resolve_role_name(role)

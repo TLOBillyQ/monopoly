@@ -46,7 +46,7 @@ local suites = {
   require("usecase_boundary_contract"),
   require("cross_module_contract"),
   require("ui_gate_contract"),
-  require("runtime_compat_contract"),
+  require("runtime_ports_contract"),
 
   -- integration: cross-cutting
   require("test_profiles"),

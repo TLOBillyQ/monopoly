@@ -2,6 +2,7 @@ local runtime_ports = {}
 local runtime_context = require("src.core.RuntimeContext")
 
 local configured = nil
+local legacy_global_fallback_enabled = false
 
 local function _default_rng_next_int(min, max)
   assert(min ~= nil and max ~= nil, "rng.next_int requires min/max")
@@ -18,25 +19,20 @@ local function _default_schedule(delay, fn)
   fn()
 end
 
-local function _default_resolve_role(player_id)
-  if player_id == nil then
+local function _try_get_role_id(role)
+  if role == nil then
     return nil
   end
-  if not (GameAPI and GameAPI.get_role) then
-    return nil
+  if type(role.get_roleid) == "function" then
+    local ok, role_id = pcall(role.get_roleid, role)
+    if ok then
+      return role_id
+    end
   end
-  local ok, role = pcall(GameAPI.get_role, player_id)
-  if not ok then
-    return nil
-  end
-  return role
+  return role.id
 end
 
-local function _default_resolve_roles()
-  local ctx = runtime_context.current()
-  if ctx and type(ctx.roles) == "table" then
-    return ctx.roles
-  end
+local function _resolve_roles_from_legacy_globals()
   if type(all_roles) == "table" then
     return all_roles
   end
@@ -52,6 +48,38 @@ local function _default_resolve_roles()
   return {}
 end
 
+local function _default_resolve_roles()
+  local ctx = runtime_context.current()
+  if ctx and type(ctx.roles) == "table" then
+    return ctx.roles
+  end
+  if legacy_global_fallback_enabled then
+    return _resolve_roles_from_legacy_globals()
+  end
+  return {}
+end
+
+local function _default_resolve_role(player_id)
+  if player_id == nil then
+    return nil
+  end
+  local roles = _default_resolve_roles()
+  if type(roles) == "table" then
+    for _, role in ipairs(roles) do
+      if _try_get_role_id(role) == player_id then
+        return role
+      end
+    end
+  end
+  if legacy_global_fallback_enabled and GameAPI and type(GameAPI.get_role) == "function" then
+    local ok, role = pcall(GameAPI.get_role, player_id)
+    if ok then
+      return role
+    end
+  end
+  return nil
+end
+
 local function _default_mark_role_lose(role)
   if role and role.lose then
     role.lose()
@@ -63,6 +91,9 @@ local function _default_resolve_vehicle_helper()
   if ctx and type(ctx.vehicle_helper) == "table" then
     return ctx.vehicle_helper
   end
+  if not legacy_global_fallback_enabled then
+    return nil
+  end
   return vehicle_helper
 end
 
@@ -70,6 +101,9 @@ local function _default_resolve_camera_helper()
   local ctx = runtime_context.current()
   if ctx and type(ctx.camera_helper) == "table" then
     return ctx.camera_helper
+  end
+  if not legacy_global_fallback_enabled then
+    return nil
   end
   return camera_helper
 end
@@ -136,6 +170,14 @@ function runtime_ports.configure(ports)
   configured = ports or nil
 end
 
+function runtime_ports.set_legacy_global_fallback_enabled(enabled)
+  legacy_global_fallback_enabled = enabled == true
+end
+
+function runtime_ports.legacy_global_fallback_enabled()
+  return legacy_global_fallback_enabled == true
+end
+
 function runtime_ports.rng_next_int(min, max)
   local fn = _resolve_port("rng_next_int", _default_rng_next_int)
   return fn(min, max)
@@ -198,6 +240,7 @@ end
 
 function runtime_ports.reset_for_tests()
   configured = nil
+  legacy_global_fallback_enabled = false
 end
 
 return runtime_ports

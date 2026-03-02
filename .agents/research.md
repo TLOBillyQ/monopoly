@@ -68,7 +68,7 @@
   - 现象：`resolve_roles/resolve_vehicle_helper/resolve_camera_helper` 在缺少 context 时回退到全局变量或 `GameAPI`。
   - 风险：同一用例在不同启动路径下可能出现不同行为，问题定位困难。
 
-- `P1`：运行时上下文与端口配置为全局单例，可并发性与可组合性受限。
+- `P1`：运行时上下文与端口配置为全局单例，可并发性与可组合性受限。 Qin: 不存在这个问题，因为没有这个需求
   - 位置：`runtime_context.set_current/current`、`runtime_ports.configure`
   - 风险：多实例运行、并行测试、热重载场景容易产生状态污染。
 
@@ -94,7 +94,7 @@
 - 预期收益：边界行为确定性提升，依赖方向更清晰。
 - 回归风险：历史启动路径若未注入 context 可能暴露空指针，需配套启动契约测试。
 
-2. 去全局单例化（引入作用域容器）
+2. 去全局单例化（引入作用域容器）Qin:不存在这个问题，因为没有这个需求
 - 改动范围：`src/core/RuntimeContext.lua`、`src/core/RuntimePorts.lua`、`src/app/bootstrap/*`
 - 做法：把 `current/configured` 改为与 game/state 绑定的 scoped container（显式传入/挂载）。
 - 预期收益：支持多实例与并发测试，减少状态串扰。
@@ -150,3 +150,29 @@
 - 支持多实例、并行测试、离线模拟等后续能力演进。
 
 总体建议：优先做“边界收口 + 单例去除”两步，再推进表现层全面端口化；这是当前收益/风险比最高的演进路径。
+
+---
+
+## 9) 执行状态（R14 回填）
+
+以下状态基于本轮已落地改动与回归结果（`lua tests/regression.lua` -> `All regression checks passed (209)`，`lua tests/internal/dep_rules.lua` -> `dep_rules ok`）。
+
+- `已完成`：步骤 1（收口运行时能力入口，context-first 默认路径）
+  - 已落地：`src/core/RuntimePorts.lua` 增加显式 `legacy_global_fallback` 开关，默认不再隐式读取全局 `all_roles/vehicle_helper/camera_helper`。
+  - 已落地：`src/app/bootstrap/RuntimeInstall.lua` 增加 `context_policy=strict|legacy` 与 `skip_context_install` 受控策略；strict 模式缺失 context 时显式失败。
+  - 备注：未单独引入 `LegacyRuntimeAdapter` 文件，采用 `RuntimePorts` 内显式 legacy 分支达成同等治理目标。
+
+- `不纳入`：步骤 2（去全局单例化）
+  - 根据注释“没有这个需求”，本轮未执行该项。
+
+- `部分完成`：步骤 3（统一适配层宿主访问端口）
+  - 已迁移关键路径：`src/presentation/ui/UIPanel.lua`、`src/presentation/ui/PopupRenderer.lua`、`src/presentation/api/UIEventHandlers.lua` 改为通过 `RuntimePorts.resolve_role` 读取角色。
+  - 未完成范围：`src/presentation/render/*` 等其余宿主 API 直连点仍待后续分批迁移。
+
+- `未开始`：步骤 4（继续细化 turn 用例编排职责）
+  - 本轮未触及 `GameplayLoopTickFlow.lua` 的进一步职责拆分。
+
+- `部分完成`：步骤 5（同步更新命名与规则语义）
+  - 已完成：`tests/suites/runtime_compat_contract.lua` -> `tests/suites/runtime_ports_contract.lua`，并同步 `tests/regression.lua` 注册入口。
+  - 已完成：`tests/internal/dep_rules.lua` 清理 `MonopolyEvents compatibility bridge` 历史术语。
+  - 未完成：`dep_rules.lua` 中关于 `RuntimeCompat` 的描述仍保留，后续可继续去兼容化命名。

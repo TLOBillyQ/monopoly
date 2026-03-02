@@ -105,7 +105,7 @@ local rules = {
       "require%(\"src%.game%.core%.runtime%.MonopolyEvents\"%)",
       "require%('src%.game%.core%.runtime%.MonopolyEvents'%)",
     },
-    description = "source must not depend on MonopolyEvents compatibility bridge path",
+    description = "source must not depend on MonopolyEvents retired bridge path",
   },
   {
     root = "tests",
@@ -113,7 +113,7 @@ local rules = {
       "require%(\"src%.game%.core%.runtime%.MonopolyEvents\"%)",
       "require%('src%.game%.core%.runtime%.MonopolyEvents'%)",
     },
-    description = "tests must not depend on MonopolyEvents compatibility bridge path",
+    description = "tests must not depend on MonopolyEvents retired bridge path",
   },
   {
     root = "src",
