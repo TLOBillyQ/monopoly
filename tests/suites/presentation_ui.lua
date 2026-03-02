@@ -436,7 +436,7 @@ local function _test_move_anim_vehicle_uses_set_position_jump()
       consume_enter_delay = function()
         return 0
       end,
-      forward_eca_event_set_position = function(role_id, pos)
+      emit_vehicle_set_position = function(role_id, pos)
         vehicle_set_positions[#vehicle_set_positions + 1] = { role_id = role_id, pos = pos }
       end,
     } },
@@ -476,7 +476,7 @@ local function _test_move_anim_vehicle_enter_delay_once()
       timeout_delays[#timeout_delays + 1] = delay
     end },
     { key = "vehicle_helper", value = {
-      forward_eca_event_set_position = function() end,
+      emit_vehicle_set_position = function() end,
       consume_enter_delay = function()
         consume_calls = consume_calls + 1
         if consume_calls == 1 then
@@ -528,10 +528,10 @@ local function _test_move_anim_vehicle_move_api_enabled_uses_move_event()
       consume_enter_delay = function()
         return 0
       end,
-      forward_eca_event_move = function()
+      emit_vehicle_move = function()
         move_calls = move_calls + 1
       end,
-      forward_eca_event_set_position = function()
+      emit_vehicle_set_position = function()
         set_pos_calls = set_pos_calls + 1
       end,
     } },
@@ -545,7 +545,7 @@ local function _test_move_anim_vehicle_move_api_enabled_uses_move_event()
     })
   end)
 
-  _assert_eq(move_calls, 1, "move api enabled should use forward_eca_event_move")
+  _assert_eq(move_calls, 1, "move api enabled should use emit_vehicle_move")
   _assert_eq(set_pos_calls, 0, "move api enabled should not use set_position jump")
 end
 
@@ -595,7 +595,7 @@ local function _test_board_view_vehicle_resync_uses_set_position()
     { target = gameplay_rules, key = "vehicle_enabled", value = true },
     { target = math, key = "Vector3", value = _vec3 },
     { key = "vehicle_helper", value = {
-      forward_eca_event_set_position = function(role_id, pos)
+      emit_vehicle_set_position = function(role_id, pos)
         set_pos_calls[#set_pos_calls + 1] = { role_id = role_id, pos = pos }
       end,
     } },
@@ -690,7 +690,7 @@ local function _test_board_view_vehicle_disabled_uses_unit_set_position()
     { target = gameplay_rules, key = "vehicle_enabled", value = false },
     { target = math, key = "Vector3", value = _vec3 },
     { key = "vehicle_helper", value = {
-      forward_eca_event_set_position = function(role_id, pos)
+      emit_vehicle_set_position = function(role_id, pos)
         set_pos_calls[#set_pos_calls + 1] = { role_id = role_id, pos = pos }
       end,
     } },

@@ -20,8 +20,8 @@ function status_ops.set_player_seat(self, player, seat_id)
 
   local old_seat_id = player.seat_id
   local vehicle = runtime_ports.resolve_vehicle_helper()
-  local emit_exit = vehicle and (vehicle.emit_vehicle_exit or vehicle.forward_eca_event_exit) or nil
-  local emit_enter = vehicle and (vehicle.emit_vehicle_enter or vehicle.forward_eca_event_enter) or nil
+  local emit_exit = vehicle and vehicle.emit_vehicle_exit or nil
+  local emit_enter = vehicle and vehicle.emit_vehicle_enter or nil
   if old_seat_id ~= seat_id and vehicle then
     if old_seat_id ~= nil and emit_exit then
       emit_exit(player.id)
@@ -64,7 +64,7 @@ end
 function status_ops.stop_all_players_movement(self)
   local players = self.players or {}
   local vehicle = runtime_ports.resolve_vehicle_helper()
-  local emit_stop = vehicle and (vehicle.emit_vehicle_stop or vehicle.forward_eca_event_stop) or nil
+  local emit_stop = vehicle and vehicle.emit_vehicle_stop or nil
   local players_dirty = false
   for _, player in ipairs(players) do
     local status = common.player_status_table(player)

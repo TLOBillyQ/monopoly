@@ -438,7 +438,7 @@ local function _test_stop_all_players_movement_clears_move_dir_and_stop_event()
         end
         return nil
       end,
-      forward_eca_event_stop = function(role_id)
+      emit_vehicle_stop = function(role_id)
         table.insert(stopped_ids, role_id)
       end,
     } },
@@ -469,7 +469,7 @@ local function _test_end_turn_stops_all_players_movement()
         end
         return nil
       end,
-      forward_eca_event_stop = function(role_id)
+      emit_vehicle_stop = function(role_id)
         table.insert(stopped_ids, role_id)
       end,
     } },
@@ -501,7 +501,7 @@ local function _test_stop_all_players_movement_skips_invalid_role_without_error(
         end
         return nil
       end,
-      forward_eca_event_stop = function(role_id)
+      emit_vehicle_stop = function(role_id)
         table.insert(stopped_ids, role_id)
       end,
     } },
@@ -564,8 +564,8 @@ local function _test_runtime_context_forward_stop_skips_invalid_role()
         end),
       })
       runtime_context.install_globals(ctx)
-      local invalid_ok = vehicle_helper.forward_eca_event_stop(2)
-      local valid_ok = vehicle_helper.forward_eca_event_stop(1)
+      local invalid_ok = vehicle_helper.emit_vehicle_stop(2)
+      local valid_ok = vehicle_helper.emit_vehicle_stop(1)
       assert(invalid_ok == false, "forward stop should reject invalid role")
       assert(valid_ok == true, "forward stop should allow valid role")
       assert(stop_events == 1, "forward stop should only emit event for valid role")
@@ -635,10 +635,10 @@ local function _test_runtime_context_vehicle_events_gracefully_degrade_when_trig
       })
       runtime_context.install_globals(ctx)
 
-      local enter_ok = vehicle_helper.forward_eca_event_enter(1, 4001)
-      local move_ok = vehicle_helper.forward_eca_event_move(1, { x = 1, y = 0, z = 0 }, 0.2)
-      local stop_ok = vehicle_helper.forward_eca_event_stop(1)
-      local set_pos_ok = vehicle_helper.forward_eca_event_set_position(1, { x = 10, y = 0, z = 8 })
+      local enter_ok = vehicle_helper.emit_vehicle_enter(1, 4001)
+      local move_ok = vehicle_helper.emit_vehicle_move(1, { x = 1, y = 0, z = 0 }, 0.2)
+      local stop_ok = vehicle_helper.emit_vehicle_stop(1)
+      local set_pos_ok = vehicle_helper.emit_vehicle_set_position(1, { x = 10, y = 0, z = 8 })
 
       assert(enter_ok == true, "valid role enter should keep success semantics during degradation")
       assert(move_ok == true, "valid role move should keep success semantics during degradation")
@@ -796,10 +796,10 @@ local function _test_set_player_seat_emits_exit_then_enter()
   local calls = {}
   local helper = {
     needs_enter_wait_by_player = {},
-    forward_eca_event_exit = function(role_id)
+    emit_vehicle_exit = function(role_id)
       calls[#calls + 1] = "exit:" .. tostring(role_id)
     end,
-    forward_eca_event_enter = function(role_id, vehicle_id)
+    emit_vehicle_enter = function(role_id, vehicle_id)
       calls[#calls + 1] = "enter:" .. tostring(role_id) .. ":" .. tostring(vehicle_id)
     end,
   }
@@ -823,7 +823,7 @@ local function _test_mine_destroy_vehicle_emits_exit_event()
   support.with_patches({
     { target = gameplay_rules, key = "vehicle_enabled", value = true },
     { key = "vehicle_helper", value = {
-      forward_eca_event_exit = function(role_id)
+      emit_vehicle_exit = function(role_id)
         exited[#exited + 1] = role_id
       end,
     } },

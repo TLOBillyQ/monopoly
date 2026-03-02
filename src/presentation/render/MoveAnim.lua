@@ -67,14 +67,14 @@ local function _resolve_emit_vehicle_move(vehicle)
   if not vehicle then
     return nil
   end
-  return vehicle.emit_vehicle_move or vehicle.forward_eca_event_move
+  return vehicle.emit_vehicle_move
 end
 
 local function _resolve_emit_vehicle_set_position(vehicle)
   if not vehicle then
     return nil
   end
-  return vehicle.emit_vehicle_set_position or vehicle.forward_eca_event_set_position
+  return vehicle.emit_vehicle_set_position
 end
 
 local function _is_vehicle_move_mode(anim_ctx)
