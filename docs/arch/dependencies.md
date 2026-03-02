@@ -119,7 +119,7 @@ classDiagram
         +debug.log(msg)
         +clock.now() : number
         +state.get_ui() : UIState
-    end
+    }
 
     RuntimePorts <.. RuntimeInstall : 注入
     PresentationPorts <.. UIBootstrap : 注入
