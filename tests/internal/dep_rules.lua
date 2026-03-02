@@ -146,7 +146,7 @@ local rules = {
       "%f[%w_]vehicle_helper%f[^%w_]",
       "%f[%w_]camera_helper%f[^%w_]",
     },
-    description = "app layer must not read legacy runtime globals directly; use RuntimeCompat/context",
+    description = "app layer must not read legacy runtime globals directly; use RuntimePorts/context",
   },
   {
     root = "src/game",
@@ -156,7 +156,7 @@ local rules = {
       "%f[%w_]vehicle_helper%f[^%w_]",
       "%f[%w_]camera_helper%f[^%w_]",
     },
-    description = "game layer must not read legacy runtime globals directly; use RuntimeCompat/context",
+    description = "game layer must not read legacy runtime globals directly; use RuntimePorts/context",
   },
   {
     root = "src/presentation",
@@ -166,7 +166,7 @@ local rules = {
       "%f[%w_]vehicle_helper%f[^%w_]",
       "%f[%w_]camera_helper%f[^%w_]",
     },
-    description = "presentation layer must not read legacy runtime globals directly; use RuntimeCompat/context",
+    description = "presentation layer must not read legacy runtime globals directly; use RuntimePorts/context",
   },
 }
 
