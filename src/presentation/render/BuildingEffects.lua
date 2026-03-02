@@ -1,4 +1,5 @@
 local prefab = require("Data.Prefab")
+local host_runtime = require("src.presentation.api.HostRuntimePort")
 
 local building_effects = {}
 
@@ -16,7 +17,7 @@ function building_effects.spawn_upgrade_building_units(scene, root_quaternion, b
   local lv = level
   local groups = assert(scene.building_unit_groups, "missing scene.building_unit_groups")
   if groups[idx] then
-    GameAPI.destroy_unit_with_children(groups[idx], true)
+    host_runtime.destroy_unit_with_children(groups[idx], true)
     groups[idx] = nil
   end
   local pos = buildings[idx].get_position()
@@ -26,7 +27,7 @@ function building_effects.spawn_upgrade_building_units(scene, root_quaternion, b
     [3] = "三级建筑",
   }
   local ref_key = ref_keys[lv]
-  local unit = GameAPI.create_unit_group(prefab.group[ref_key], pos + offsets[lv], root_quaternion)
+  local unit = host_runtime.create_unit_group(prefab.group[ref_key], pos + offsets[lv], root_quaternion)
   groups[idx] = unit
   scene.building_txt[idx].set_billboard_text(ref_key)
 end

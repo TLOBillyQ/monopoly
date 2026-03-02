@@ -1,19 +1,17 @@
 local specs = require("src.presentation.render.status3d_service.specs")
 local scene = require("src.presentation.render.status3d_service.scene")
-local runtime_ports = require("src.core.RuntimePorts")
+local host_runtime = require("src.presentation.api.HostRuntimePort")
 
 local M = {}
 
 local function _resolve_role(player_id)
-  local role = runtime_ports.resolve_role(player_id)
+  local role = host_runtime.resolve_role(player_id)
   if role ~= nil and role.set_label_text ~= nil then
     return role
   end
-  if GameAPI and type(GameAPI.get_role) == "function" then
-    local ok, fallback = pcall(GameAPI.get_role, player_id)
-    if ok and fallback ~= nil then
-      return fallback
-    end
+  role = host_runtime.resolve_game_role(player_id)
+  if role ~= nil and role.set_label_text ~= nil then
+    return role
   end
   return nil
 end

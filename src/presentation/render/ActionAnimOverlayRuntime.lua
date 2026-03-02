@@ -1,5 +1,6 @@
 local logger = require("src.core.Logger")
 local runtime_constants = require("Config.RuntimeConstants")
+local host_runtime = require("src.presentation.api.HostRuntimePort")
 
 local runtime = {}
 
@@ -23,19 +24,13 @@ end
 local function _spawn_unit_group(group_id, pos)
   assert(group_id ~= nil, "missing group_id")
   assert(pos ~= nil, "missing pos")
-  if not (GameAPI ~= nil and GameAPI.create_unit_group ~= nil) then
-    return nil, "missing GameAPI.create_unit_group"
-  end
-  return GameAPI.create_unit_group(group_id, pos, runtime_constants.q_zero)
+  return host_runtime.create_unit_group(group_id, pos, runtime_constants.q_zero)
 end
 
 local function _spawn_unit(unit_id, pos)
   assert(unit_id ~= nil, "missing unit_id")
   assert(pos ~= nil, "missing pos")
-  if not (GameAPI ~= nil and GameAPI.create_unit_with_scale ~= nil) then
-    return nil, "missing GameAPI.create_unit_with_scale"
-  end
-  return GameAPI.create_unit_with_scale(unit_id, pos, runtime_constants.q_zero, runtime_constants.v3_one)
+  return host_runtime.create_unit_with_scale(unit_id, pos, runtime_constants.q_zero, runtime_constants.v3_one)
 end
 
 local function _destroy_unit(entry)
@@ -43,14 +38,10 @@ local function _destroy_unit(entry)
     return
   end
   if entry.kind == "group" then
-    if GameAPI and GameAPI.destroy_unit_with_children then
-      GameAPI.destroy_unit_with_children(entry.handle, true)
-    end
+    host_runtime.destroy_unit_with_children(entry.handle, true)
     return
   end
-  if GameAPI and GameAPI.destroy_unit then
-    GameAPI.destroy_unit(entry.handle)
-  end
+  host_runtime.destroy_unit(entry.handle)
 end
 
 function runtime.clear_overlay(scene, kind, tile_index)
@@ -129,7 +120,7 @@ function runtime.spawn_transient(group_id, unit_id, pos, duration)
   end
 
   if duration and duration > 0 then
-    SetTimeOut(duration, function()
+    host_runtime.schedule(duration, function()
       _destroy_unit(entry)
     end)
     return

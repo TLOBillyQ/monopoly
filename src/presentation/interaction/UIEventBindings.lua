@@ -3,6 +3,7 @@ local runtime = require("src.presentation.api.UIRuntimePort")
 local always_show_nodes = require("src.presentation.canvas.always_show.nodes")
 local always_show_contract = require("src.presentation.canvas.always_show.contract")
 local ui_touch_policy = require("src.presentation.interaction.UITouchPolicy")
+local host_runtime = require("src.presentation.api.HostRuntimePort")
 
 local bindings = {}
 
@@ -13,7 +14,7 @@ local function _show_missing_button_tip(name)
     return
   end
   missing_button_tips[name] = true
-  GlobalAPI.show_tips("UI 节点未适配: " .. tostring(name), 2.0)
+  host_runtime.show_tips("UI 节点未适配: " .. tostring(name), 2.0)
 end
 
 function bindings.register_node_click(cache, name, callback, registered, listeners)

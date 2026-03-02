@@ -106,7 +106,7 @@ function move_anim.one_step(scene, player_id, from_index, to_index, anim_ctx)
   if anim_ctx and type(anim_ctx.on_step_lock) == "function" then
     local meta = { player_id = player_id, from = from_index, to = to_index }
     anim_ctx.on_step_lock(false, time, meta)
-    SetTimeOut(time, function()
+    runtime_ports.schedule(time, function()
       anim_ctx.on_step_lock(true, time, meta)
     end)
   end
@@ -206,7 +206,7 @@ function move_anim.play_sequence(board_scene, anim_ctx)
     if step.delay <= 0 then
       move_anim.one_step(board_scene, player_id, step.from, step.to, anim_ctx)
     else
-      SetTimeOut(step.delay, function()
+      runtime_ports.schedule(step.delay, function()
         move_anim.one_step(board_scene, player_id, step.from, step.to, anim_ctx)
       end)
     end

@@ -18,6 +18,14 @@
 - [x] (2026-03-02 15:26 +08:00) 完成里程碑 M54：`UIPanel`、`PopupRenderer`、`UIEventHandlers` 迁移为通过 `RuntimePorts.resolve_role` 访问角色对象。
 - [x] (2026-03-02 15:29 +08:00) 完成里程碑 M55：`runtime_compat_contract.lua` 重命名为 `runtime_ports_contract.lua`，回归入口同步更新，`dep_rules` 历史文案清理。
 - [x] (2026-03-02 15:34 +08:00) 执行最终验收并回填证据：依赖守护通过，回归通过（N=209），关键路径搜索完成。
+- [x] (2026-03-02 16:18 +08:00) 计划刷新：根据“彻底完成步骤3”的新目标，新增 M56-M58 收尾里程碑，覆盖 `src/presentation/render/*` 与 `src/presentation/api/*` 余量直连点。
+- [x] (2026-03-02 16:31 +08:00) 完成里程碑 M56：新增 `src/presentation/api/HostRuntimePort.lua`，统一封装 schedule/tips/event/scene/unit 能力。
+- [x] (2026-03-02 16:39 +08:00) 完成里程碑 M57：`render/api/interaction` 余量宿主 API 调用迁移到 `HostRuntimePort`，业务模块不再散点直连。
+- [x] (2026-03-02 16:43 +08:00) 完成里程碑 M58：修复 status3d 兼容回归后全量通过；搜索证明 `src/presentation` 宿主 API 直连仅留在端口层。
+- [x] (2026-03-02 16:55 +08:00) 计划刷新：根据“完成步骤4”的新目标，新增 M59-M61 里程碑，聚焦 turn tick 编排职责细化且语义不变。
+- [ ] 完成里程碑 M59：拆分 `GameplayLoopTickFlow` 中 phase/timeout/dirty 驱动逻辑为更窄策略函数，并保持调用顺序不变。
+- [ ] 完成里程碑 M60：补齐/调整 `gameplay_loop` 相关回归断言，锁定 auto runner、timeout、phase sync、dirty refresh 的时序契约。
+- [ ] 完成里程碑 M61：执行收口验证并回填证据，证明步骤4完成且行为无回归。
 
 ## 意外与发现
 
@@ -26,6 +34,8 @@
 当前风险重心因此从“并发状态污染”转移为“默认隐式回退导致行为不确定”。这使 context-first 收口成为第一优先级，且验证口径必须聚焦“默认路径可预测”而非“多实例能力”。
 
 首次回归在切换严格默认后出现 18 项失败，集中在测试环境仍依赖 `all_roles/vehicle_helper/camera_helper` 隐式全局回退。修复策略是在 `tests/TestSupport.lua` 显式开启 `runtime_ports.set_legacy_global_fallback_enabled(true)`，让测试环境以可见配置进入 legacy 模式，而非依赖默认隐式行为。修复后回归恢复全绿并新增 1 条契约用例，总数从 208 提升到 209。
+
+步骤3收尾阶段首次迁移后出现 4 项 `status3d` 失败。根因是测试环境 `runtime_ports.resolve_role` 返回观察者对象（仅 `id`），而 `status3d` 层创建需要玩家 role（含 `get_ctrl_unit/set_label_text`）。修复方式是在 `HostRuntimePort` 增加 `resolve_game_role`，并在 `status3d_service/scene.lua`、`status3d_service/status.lua` 中对能力缺失对象做受控回退。修复后回归恢复全绿。
 
 ## 决策日志
 
@@ -45,9 +55,17 @@
 理由：保持生产默认严格模式不被测试历史路径反向污染，同时确保测试可控、可复现。
 日期/作者：2026-03-02 / Codex GPT-5。
 
+决策：将 presentation 层宿主能力集中到 `HostRuntimePort`，并允许仅端口层保留对宿主全局 API 的直接调用。
+理由：这是“彻底完成步骤3”且不改变现有行为的最小改造面，能同时提升替换性和测试可控性。
+日期/作者：2026-03-02 / Codex GPT-5。
+
+决策：步骤4采用“先拆分、后验证、最后收口”的三段式推进（M59-M61），每段都以全量回归作为闸门。
+理由：tick 逻辑时序敏感，分段推进能最小化定位半径并降低一次性重构风险。
+日期/作者：2026-03-02 / Codex GPT-5。
+
 ## 结果与复盘
 
-R14 已完成实施。默认运行时路径已收口到 context-first，并把 legacy 回退改为显式开关；安装阶段新增严格模式下“缺 context 直接失败”的契约；表现层高频角色解析路径已改为 RuntimePorts 访问；测试契约已从 `runtime_compat_contract` 迁移到 `runtime_ports_contract`。最终回归通过且通过数提升到 209，说明新增契约覆盖已纳入主回归。
+R14 的步骤1/3/5已完成，当前进入步骤4实施阶段。已完成部分包含：默认运行时路径收口到 context-first、legacy 回退显式化、presentation 宿主能力收口到 `HostRuntimePort`、runtime 契约去 compat 命名。下一阶段目标是在不改变行为的前提下细化 turn tick 编排职责，并用回归证据证明语义稳定。
 
 ## 背景与导读
 
@@ -65,6 +83,18 @@ R14 已完成实施。默认运行时路径已收口到 context-first，并把 l
 
 里程碑 M55 的目标是统一团队语义。执行者应重命名仍含 compat 语义的测试文件，或在不改路径的情况下先完成 suite 名称与断言语义统一；同时同步更新 `dep_rules.lua` 中历史术语描述，使规则文本与当前架构一致。该里程碑以低风险文本与契约同步为主，但必须跑完整回归确认无注册路径回归。
 
+里程碑 M56 的目标是把 presentation 层的宿主细节集中到一个可替换端口。执行者新增 `src/presentation/api/HostRuntimePort.lua`（或同等端口文件），封装 `SetTimeOut`、`GlobalAPI.show_tips`、`RegisterCustomEvent`、`GameAPI.create/destroy unit`、`GameAPI.set_scene_ui_visible` 等能力。render/api 模块改为只调用该端口，不再直接访问宿主全局。
+
+里程碑 M57 的目标是完成步骤3剩余迁移。执行者按 `rg "GameAPI|GlobalAPI|SetTimeOut|RegisterCustomEvent|TriggerCustomEvent" src/presentation -n` 结果逐个清理。允许端口层内部访问宿主全局，但业务/渲染模块不得继续散点访问。
+
+里程碑 M58 的目标是收口证明与兼容修复。执行者跑全量回归并针对失败点做最小修复，确保行为不变；最后用搜索证据证明 `src/presentation/render/*` 与 `src/presentation/api/*`（端口文件除外）不再包含宿主 API 直连。
+
+里程碑 M59 的目标是降低 tick 编排复杂度而不改变时序语义。执行者从 `src/game/flow/turn/GameplayLoopTickFlow.lua` 入手，将 phase 驱动、timeout 驱动、dirty 刷新驱动拆分为窄职责函数（必要时新增 `src/game/flow/turn/*Policy.lua` 或 `*Step.lua` 文件），并保持对外接口与调用顺序稳定。
+
+里程碑 M60 的目标是把“语义不变”写成可执行证据。执行者在 `tests/suites/gameplay_loop.lua` 与相关 `gameplay*.lua` 套件补齐断言，重点覆盖 auto runner、choice/modal timeout、phase sync、dirty refresh 的顺序与触发条件。
+
+里程碑 M61 的目标是完成步骤4收口。执行者执行全量回归和关键搜索，确认 `GameplayLoopTickFlow` 主体复杂度下降且测试证据齐备，并回填计划文档中的结果与复盘。
+
 ## 具体步骤
 
 在仓库根目录 `C:\Users\Lzx_8\Desktop\dev\repo\monopoly` 先执行基线命令并记录输出。命令为 `lua tests/internal/dep_rules.lua` 与 `lua tests/regression.lua`。若任一失败，先停止实施并在“意外与发现”记录失败片段，再定位现有代码问题，不带入新改动。
@@ -76,6 +106,24 @@ R14 已完成实施。默认运行时路径已收口到 context-first，并把 l
 进入 M54 时，使用 `rg "GameAPI|GlobalAPI|SetTimeOut|RegisterTriggerEvent" src/presentation -n` 盘点直连宿主调用，按高频文件分批迁移。每批迁移后都先跑 `lua tests/regression.lua`，通过后再进入下一批，以减小定位半径。
 
 进入 M55 时，先搜索 `rg "compat|RuntimeCompat" tests/internal tests/suites -n`，再统一命名与描述语义并更新相关测试注册。最后执行 `lua tests/internal/dep_rules.lua`、`lua tests/regression.lua` 与 `rg "RuntimeCompat" -n src tests` 作为收尾验收。
+
+进入 M56 时，新增 `src/presentation/api/HostRuntimePort.lua` 并先迁移 `ActionAnim.lua`、`ActionAnimDice.lua`、`MoveAnim.lua`、`ActionAnimOverlayRuntime.lua`、`BuildingEffects.lua`、`Status3DService.lua` 等 render 热路径。
+
+进入 M57 时，迁移 `UIEventHandlers.lua`、`UIEventBindings.lua`、`presentation_ports/StatePorts.lua` 与前一轮新增的 render 子模块余量点。每批迁移后执行 `lua tests/regression.lua`。
+
+进入 M58 时，执行以下收口命令并记录证据：
+`rg "\\b(GameAPI|GlobalAPI|SetTimeOut|RegisterCustomEvent|TriggerCustomEvent)\\b" src/presentation/render src/presentation/api -n`
+`lua tests/internal/dep_rules.lua`
+`lua tests/regression.lua`
+
+进入 M59 时，先用 `rg "tick|timeout|dirty|phase|auto_runner" src/game/flow/turn -n` 定位复杂路径，再修改 `GameplayLoopTickFlow.lua` 与必要策略文件。每次拆分后执行 `lua tests/regression.lua`。
+
+进入 M60 时，更新 `tests/suites/gameplay_loop.lua`（必要时联动 `tests/suites/gameplay.lua`/`gameplay_runtime.lua`）以补齐时序断言。完成后执行 `lua tests/regression.lua`。
+
+进入 M61 时，执行收口验证并回填证据：
+`lua tests/internal/dep_rules.lua`
+`lua tests/regression.lua`
+`rg "GameplayLoopTickFlow" tests/suites -n`
 
 预期关键输出至少包含 `dep_rules ok`、`All regression checks passed (N)`，且 `N` 不低于实施前基线。
 
@@ -95,6 +143,7 @@ R14 已完成实施。默认运行时路径已收口到 context-first，并把 l
     [evidence] lua tests/regression.lua -> All regression checks passed (209)
     [evidence] rg "RuntimeCompat" -n src tests -> only dep_rules pattern/description hits, no runtime require usage
     [evidence] rg "GameAPI.get_role" src/presentation/ui/UIPanel.lua src/presentation/ui/PopupRenderer.lua src/presentation/api/UIEventHandlers.lua -n -> no hits
+    [evidence] rg "\b(GameAPI|GlobalAPI|SetTimeOut|RegisterCustomEvent|TriggerCustomEvent)\b" src/presentation -n -> only HostRuntimePort (and one status3d warning string) hits
 
 ## 接口与依赖
 
@@ -103,3 +152,7 @@ R14 已完成实施。默认运行时路径已收口到 context-first，并把 l
 本次修订说明（2026-03-02）：根据 `.agents/research.md` 的注释，移除“去全局单例化以支持并发/多实例”的计划项，重排为“context-first 边界收口 + 表现层端口化 + 命名治理”的 R14 执行计划，并将验证口径统一到 dep_rules 与 regression。
 
 本次修订说明（2026-03-02，执行回填）：按 R14 执行 M52-M55 全部里程碑。主要改动为 RuntimePorts 默认严格化与显式 legacy 开关、RuntimeInstall 受控降级策略、presentation 高频路径迁移到 RuntimePorts、runtime 契约文件去 compat 命名并纳入回归。中途因测试环境历史依赖出现 18 项失败，最终以 TestSupport 显式 legacy 模式修复，回归恢复并通过 209 项。
+
+本次修订说明（2026-03-02，步骤3收尾）：新增并落地 M56-M58。通过 `HostRuntimePort` 完成 presentation 层宿主能力收口，迁移 `render/api/interaction` 余量直连点；处理 status3d 观察者对象兼容问题后，`dep_rules` 与回归继续全绿（N=209）。
+
+本次修订说明（2026-03-02，步骤4计划）：根据“制定完成步骤4计划”的要求，新增 M59-M61 里程碑并明确实施顺序、文件范围、验证命令与验收口径。计划目标是细化 turn tick 编排职责且保持行为语义不变。

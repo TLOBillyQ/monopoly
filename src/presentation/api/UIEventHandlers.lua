@@ -1,5 +1,6 @@
 local monopoly_event = require("src.core.events.MonopolyEvents")
 local runtime_ports = require("src.core.RuntimePorts")
+local host_runtime = require("src.presentation.api.HostRuntimePort")
 
 local event_handlers = {}
 local context = { installed = false, logger = nil, state = nil }
@@ -67,7 +68,7 @@ function event_handlers.install(_, logger, state)
   end
 
   for _, event_name in ipairs(log_events) do
-    RegisterCustomEvent(event_name, function(_, _, data)
+    host_runtime.register_custom_event(event_name, function(_, _, data)
       local event_data = _event_data(data)
       local log = context.logger
       if log and event_data and event_data.text then
@@ -77,7 +78,7 @@ function event_handlers.install(_, logger, state)
   end
 
   for _, event_name in ipairs(movement_log_events) do
-    RegisterCustomEvent(event_name, function(_, _, data)
+    host_runtime.register_custom_event(event_name, function(_, _, data)
       local event_data = _event_data(data)
       local log = context.logger
       if log and event_data and event_data.text then
@@ -108,7 +109,7 @@ function event_handlers.install(_, logger, state)
     return nil
   end
 
-  RegisterCustomEvent(monopoly_event.movement.roadblock_hit, function(_, _, data)
+  host_runtime.register_custom_event(monopoly_event.movement.roadblock_hit, function(_, _, data)
     local idx = _resolve_tile_index(data)
     local ctx = context.state
     if ok and action_anim and idx and ctx then
@@ -116,7 +117,7 @@ function event_handlers.install(_, logger, state)
     end
   end)
 
-  RegisterCustomEvent(monopoly_event.land.mine_hit, function(_, _, data)
+  host_runtime.register_custom_event(monopoly_event.land.mine_hit, function(_, _, data)
     local idx = _resolve_tile_index(data)
     local ctx = context.state
     if ok and action_anim and idx and ctx then
@@ -124,7 +125,7 @@ function event_handlers.install(_, logger, state)
     end
   end)
 
-  RegisterCustomEvent(monopoly_event.market.buy_failed, function(_, _, data)
+  host_runtime.register_custom_event(monopoly_event.market.buy_failed, function(_, _, data)
     local event_data = _event_data(data)
     local popup = event_data and event_data.popup or nil
     local ctx = context.state
@@ -133,7 +134,7 @@ function event_handlers.install(_, logger, state)
     end
   end)
 
-  RegisterCustomEvent(monopoly_event.game.finished, function(_, _, data)
+  host_runtime.register_custom_event(monopoly_event.game.finished, function(_, _, data)
     local event_data = _event_data(data)
     _apply_game_result_panels(event_data)
   end)

@@ -1,4 +1,5 @@
 local state_ports = {}
+local host_runtime = require("src.presentation.api.HostRuntimePort")
 
 function state_ports.build()
   return {
@@ -26,7 +27,7 @@ function state_ports.build()
         local idx = game.board:index_of_tile_id(tile_id)
         local building = scene.building_unit_groups[idx]
         if building then
-          GameAPI.destroy_unit_with_children(building, true)
+          host_runtime.destroy_unit_with_children(building, true)
           scene.building_unit_groups[idx] = nil
         end
         local building_txt = scene.building_txt and scene.building_txt[idx] or nil

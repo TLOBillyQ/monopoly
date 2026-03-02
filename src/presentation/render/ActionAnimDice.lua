@@ -1,6 +1,7 @@
 local runtime_constants = require("Config.RuntimeConstants")
 local ui_events = require("src.presentation.shared.UIEvents")
 local number_utils = require("src.core.NumberUtils")
+local host_runtime = require("src.presentation.api.HostRuntimePort")
 
 local dice = {}
 local spin_steps = 12
@@ -61,7 +62,7 @@ function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
       for i = 1, spin_steps do
         local delay = step_time * (i - 1)
         local angle = 720 * i / spin_steps
-        SetTimeOut(delay, function()
+        host_runtime.schedule(delay, function()
           pcall(function()
             nodes.spin.rotation = math.Quaternion(0.0, 0.0, angle)
           end)
@@ -69,7 +70,7 @@ function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
       end
     end
 
-    SetTimeOut(duration, function()
+    host_runtime.schedule(duration, function()
       nodes.spin.visible = false
       if face then
         for index, node in ipairs(nodes.faces or {}) do
@@ -78,7 +79,7 @@ function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
       end
     end)
 
-    SetTimeOut(duration + hold_seconds, function()
+    host_runtime.schedule(duration + hold_seconds, function()
       local hide_event = ui_events.hide[dice_nodes.canvas]
       if hide_event then
         ui_events.send_to_all(hide_event, {})

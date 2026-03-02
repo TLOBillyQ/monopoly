@@ -2,6 +2,7 @@ local gameplay_rules = require("Config.GameplayRules")
 local number_utils = require("src.core.NumberUtils")
 
 local runtime = require("src.presentation.api.UIRuntimePort")
+local host_runtime = require("src.presentation.api.HostRuntimePort")
 local registry = require("src.presentation.render.ActionAnimRegistry")
 local handlers = require("src.presentation.render.ActionAnimHandlers")
 local dice_nodes = require("src.presentation.canvas.dice.nodes")
@@ -15,9 +16,7 @@ local durations = {
 local roll_spin_seconds = 0.9
 
 local function _show_tip(text, duration)
-  if GlobalAPI and GlobalAPI.show_tips then
-    GlobalAPI.show_tips(text, duration)
-  end
+  host_runtime.show_tips(text, duration)
 end
 
 local function _register_default_handlers()

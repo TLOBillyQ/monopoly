@@ -165,16 +165,16 @@
 - `不纳入`：步骤 2（去全局单例化）
   - 根据注释“没有这个需求”，本轮未执行该项。
 
-- `部分完成`：步骤 3（统一适配层宿主访问端口）
+- `已完成`：步骤 3（统一适配层宿主访问端口）
   - 已迁移关键路径：`src/presentation/ui/UIPanel.lua`、`src/presentation/ui/PopupRenderer.lua`、`src/presentation/api/UIEventHandlers.lua` 改为通过 `RuntimePorts.resolve_role` 读取角色。
   - 已新增迁移：`src/presentation/interaction/ui_intent_dispatcher/ViewCommandDispatcher.lua`、`src/presentation/render/BoardScene.lua`、`src/presentation/render/board_runtime/player_units.lua`、`src/presentation/render/status3d_service/scene.lua`、`src/presentation/render/status3d_service/status.lua`。
-  - 迁移说明：`status3d` 在优先走 `RuntimePorts` 的同时，保留受控 `GameAPI.get_role` 回退用于兼容测试桩与观察者角色对象差异。
-  - 未完成范围：`src/presentation/render/*` 仍存在其他宿主 API 直连点（例如 `GameAPI.create_unit_*`、`SetTimeOut`），待后续分批迁移。
+  - 收口结果：新增 `src/presentation/api/HostRuntimePort.lua`，将 `render/api/interaction` 的宿主调用统一收敛到端口层；`status3d` 保留受控 `resolve_game_role` 回退以兼容测试桩与观察者角色对象差异。
+  - 证据：`rg "\\b(GameAPI|GlobalAPI|SetTimeOut|RegisterCustomEvent|TriggerCustomEvent)\\b" src/presentation -n` 仅命中 `HostRuntimePort.lua`（另有一处 `Status3DService` 告警文案字符串命中）。
 
 - `未开始`：步骤 4（继续细化 turn 用例编排职责）
   - 本轮未触及 `GameplayLoopTickFlow.lua` 的进一步职责拆分。
 
-- `部分完成`：步骤 5（同步更新命名与规则语义）
+- `已完成`：步骤 5（同步更新命名与规则语义）
   - 已完成：`tests/suites/runtime_compat_contract.lua` -> `tests/suites/runtime_ports_contract.lua`，并同步 `tests/regression.lua` 注册入口。
   - 已完成：`tests/internal/dep_rules.lua` 清理 `MonopolyEvents compatibility bridge` 历史术语。
   - 已新增：`dep_rules.lua` 中 RuntimeCompat 规则描述调整为“retired runtime bridge path”，降低历史兼容语义噪音。

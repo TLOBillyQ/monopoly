@@ -1,19 +1,18 @@
 local meta = require("src.presentation.render.status3d_service.meta")
 local specs = require("src.presentation.render.status3d_service.specs")
 local runtime_ports = require("src.core.RuntimePorts")
+local host_runtime = require("src.presentation.api.HostRuntimePort")
 
 local M = {}
 
 local function _resolve_role(player_id)
-  local role = runtime_ports.resolve_role(player_id)
-  if role ~= nil and role.get_ctrl_unit ~= nil then
+  local role = host_runtime.resolve_role(player_id)
+  if role ~= nil and type(role.get_ctrl_unit) == "function" then
     return role
   end
-  if GameAPI and type(GameAPI.get_role) == "function" then
-    local ok, fallback = pcall(GameAPI.get_role, player_id)
-    if ok and fallback ~= nil then
-      return fallback
-    end
+  role = host_runtime.resolve_game_role(player_id)
+  if role ~= nil and type(role.get_ctrl_unit) == "function" then
+    return role
   end
   return nil
 end
@@ -27,13 +26,12 @@ local function _resolve_observer_roles()
 end
 
 local function _set_layer_visible_for_roles(layer, roles, visible)
-  if not (GameAPI and GameAPI.set_scene_ui_visible) then
+  if not host_runtime.has_scene_ui_support() then
     return
   end
-  local target_visible = visible == true
   for _, role in ipairs(roles) do
     if role ~= nil then
-      pcall(GameAPI.set_scene_ui_visible, layer, role, target_visible)
+      host_runtime.set_scene_ui_visible(layer, role, visible)
     end
   end
 end
