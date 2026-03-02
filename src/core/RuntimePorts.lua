@@ -1,4 +1,5 @@
 local runtime_ports = {}
+local runtime_context = require("src.core.RuntimeContext")
 
 local configured = nil
 
@@ -35,6 +36,14 @@ local function _default_mark_role_lose(role)
   if role and role.lose then
     role.lose()
   end
+end
+
+local function _default_resolve_vehicle_helper()
+  local ctx = runtime_context.current()
+  if ctx and type(ctx.vehicle_helper) == "table" then
+    return ctx.vehicle_helper
+  end
+  return vehicle_helper
 end
 
 local function _default_emit_event(event_name, payload)
@@ -117,6 +126,11 @@ end
 function runtime_ports.mark_role_lose(role)
   local marker = _resolve_port("mark_role_lose", _default_mark_role_lose)
   return marker(role)
+end
+
+function runtime_ports.resolve_vehicle_helper()
+  local resolver = _resolve_port("resolve_vehicle_helper", _default_resolve_vehicle_helper)
+  return resolver()
 end
 
 function runtime_ports.emit_event(event_name, payload)

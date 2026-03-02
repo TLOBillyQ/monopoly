@@ -41,6 +41,34 @@ local function _test_runtime_compat_strict_context_first_blocks_global_fallback(
   runtime_compat.reset_for_tests()
 end
 
+local function _test_runtime_compat_context_hit_does_not_increment_fallback_hits()
+  runtime_compat.reset_for_tests()
+  _with_patches({
+    { target = runtime_context, key = "current", value = function()
+      return {
+        roles = { { id = 2 } },
+        vehicle_helper = { id = "vehicle_ctx" },
+        camera_helper = { id = "camera_ctx" },
+      }
+    end },
+    { key = "all_roles", value = { { id = 1 } } },
+    { key = "vehicle_helper", value = { id = "vehicle_global" } },
+    { key = "camera_helper", value = { id = "camera_global" } },
+  }, function()
+    local roles = runtime_compat.get_roles()
+    local vehicle = runtime_compat.get_vehicle_helper()
+    local camera = runtime_compat.get_camera_helper()
+    _assert_eq(roles[1].id, 2, "context roles should win over global fallback")
+    _assert_eq(vehicle.id, "vehicle_ctx", "context vehicle helper should win over global fallback")
+    _assert_eq(camera.id, "camera_ctx", "context camera helper should win over global fallback")
+    local hits = runtime_compat.get_fallback_hits()
+    _assert_eq(hits.roles, 0, "roles fallback should remain zero when context hits")
+    _assert_eq(hits.vehicle_helper, 0, "vehicle fallback should remain zero when context hits")
+    _assert_eq(hits.camera_helper, 0, "camera fallback should remain zero when context hits")
+  end)
+  runtime_compat.reset_for_tests()
+end
+
 return {
   name = "runtime_compat_contract",
   tests = {
@@ -48,6 +76,10 @@ return {
     {
       name = "runtime_compat_strict_context_first_blocks_global_fallback",
       run = _test_runtime_compat_strict_context_first_blocks_global_fallback
+    },
+    {
+      name = "runtime_compat_context_hit_does_not_increment_fallback_hits",
+      run = _test_runtime_compat_context_hit_does_not_increment_fallback_hits
     },
   },
 }

@@ -3,10 +3,10 @@ local items_cfg = require("Config.Generated.Items")
 local gameplay_rules = require("Config.GameplayRules")
 local logger = require("src.core.Logger")
 local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
-local turn_anim = require("src.game.flow.turn.TurnAnim")
 local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
 local gameplay_loop_runtime = require("src.game.flow.turn.GameplayLoopRuntime")
 local auto_context = require("src.game.flow.turn.AutoContext")
+local tick_flow = require("src.game.flow.turn.GameplayLoopTickFlow")
 local paid_currency_bridge = require("src.game.systems.commerce.PaidCurrencyBridge")
 local runtime_state = require("src.core.RuntimeState")
 
@@ -56,33 +56,6 @@ local function _is_auto_popup_owner(game, state)
   end
   local actor = game.players[idx]
   return actor and agent.is_auto_player(actor) or false
-end
-
-local function _step_phase_animation(game, state, phase, ports)
-  local anim_ports = ports.anim
-  if phase == "wait_move_anim" then
-    local anim_data = game.turn.move_anim
-    if not anim_data then
-      return
-    end
-    turn_anim.step_move_anim(game, state, {
-      on_move_anim = function(_, anim_ctx)
-        return anim_ports.play_move_anim(state, anim_ctx)
-      end,
-    })
-    return
-  end
-  if phase == "wait_action_anim" then
-    local anim_data = game.turn.action_anim
-    if not anim_data then
-      return
-    end
-    turn_anim.step_action_anim(game, state, {
-      on_action_anim = function(ctx, anim_ctx)
-        return anim_ports.play_action_anim(ctx, anim_ctx)
-      end,
-    })
-  end
 end
 
 local function _initialize_ports(state, game)
@@ -214,78 +187,16 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
   return auto_action
 end
 
-local function _step_tick_auto_runner(game, state, dt)
-  gameplay_loop.step_auto_runner(game, state, dt, auto_context.build_tick(game))
-end
-
-local function _step_tick_timeouts(game, state, dt, ports)
-  local ui_sync_ports = ports.ui_sync
-  ui_sync_ports.step_choice_timeout(game, state, dt)
-  ui_sync_ports.step_modal_timeout(game, state, dt)
-  gameplay_loop_runtime.update_action_button_timer({
-    game = game,
-    state = state,
-    dt = dt,
-    ports = ports,
-    dispatch_next = function(actor_role_id)
-      _dispatch_action_with_close_choice(game, state, {
-        type = "ui_button",
-        id = "next",
-        actor_role_id = actor_role_id,
-      }, ports)
-    end,
-  })
-  gameplay_loop_runtime.update_detained_wait_timer(game, state, dt, turn_dispatch.step_turn)
-end
-
-local function _sync_tick_phase(game, state, ports, input_blocked_changed)
-  local phase = game.turn.phase
-  if gameplay_loop_runtime.sync_input_blocked(state, phase, ports) then
-    input_blocked_changed = true
-  end
-  _step_phase_animation(game, state, phase, ports)
-  gameplay_loop_runtime.sync_phase_flags(state, phase)
-  return input_blocked_changed
-end
-
-local function _refresh_tick_from_dirty(game, state, ports, input_blocked_changed)
-  local ui_sync_ports = ports.ui_sync
-  local anim_ports = ports.anim
-  local debug_ports = ports.debug
-  ui_sync_ports.update_countdown(game, state)
-
-  local dirty = game:consume_dirty()
-  local ui_refreshed = ui_sync_ports.refresh_from_dirty(game, state, dirty)
-  gameplay_loop_runtime.sync_turn_camera_follow(game, state, ports, ui_refreshed)
-  anim_ports.sync_status_3d(game, state, dirty)
-
-  if ui_sync_ports.get_ui_state and ui_sync_ports.is_input_blocked then
-    local ui = ui_sync_ports.get_ui_state(state)
-    if ui and (input_blocked_changed or (ui_sync_ports.is_input_blocked(state) and ui_refreshed)) then
-      ui_sync_ports.apply_input_lock(state)
-    end
-  end
-  if state.ui_model then
-    debug_ports.log_status(state.ui_model)
-  end
-
-  debug_ports.sync_debug_log(state)
-end
-
 function gameplay_loop.tick(game, state, dt)
   if not game then
     return
   end
 
   local ports = _resolve_ports(state)
-  local phase = game.turn.phase
-  local input_blocked_changed = gameplay_loop_runtime.sync_input_blocked(state, phase, ports)
-  gameplay_loop_runtime.sync_role_control_lock(game, state, ports)
-
-  _step_tick_auto_runner(game, state, dt)
-  _step_tick_timeouts(game, state, dt, ports)
-  input_blocked_changed = _sync_tick_phase(game, state, ports, input_blocked_changed)
-  _refresh_tick_from_dirty(game, state, ports, input_blocked_changed)
+  tick_flow.tick(game, state, dt, ports, {
+    step_auto_runner = gameplay_loop.step_auto_runner,
+    dispatch_action_with_close_choice = _dispatch_action_with_close_choice,
+  })
 end
 
 return gameplay_loop

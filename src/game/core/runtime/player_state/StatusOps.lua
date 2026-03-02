@@ -1,6 +1,6 @@
 local common = require("src.game.core.runtime.player_state.Common")
 local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
-local runtime_compat = require("src.core.RuntimeCompat")
+local runtime_ports = require("src.core.RuntimePorts")
 
 local status_ops = {}
 
@@ -19,7 +19,7 @@ function status_ops.set_player_seat(self, player, seat_id)
   end
 
   local old_seat_id = player.seat_id
-  local vehicle = runtime_compat.get_vehicle_helper()
+  local vehicle = runtime_ports.resolve_vehicle_helper()
   if old_seat_id ~= seat_id and vehicle then
     if old_seat_id ~= nil and vehicle.forward_eca_event_exit then
       vehicle.forward_eca_event_exit(player.id)
@@ -61,7 +61,7 @@ end
 
 function status_ops.stop_all_players_movement(self)
   local players = self.players or {}
-  local vehicle = runtime_compat.get_vehicle_helper()
+  local vehicle = runtime_ports.resolve_vehicle_helper()
   local players_dirty = false
   for _, player in ipairs(players) do
     local status = common.player_status_table(player)

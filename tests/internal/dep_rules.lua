@@ -42,6 +42,14 @@ local rules = {
   {
     root = "src/game/core",
     forbidden_patterns = {
+      "require%(\"src%.core%.RuntimeCompat\"%)",
+      "require%('src%.core%.RuntimeCompat'%)",
+    },
+    description = "game core must not depend on RuntimeCompat; use RuntimePorts/context-injected ports",
+  },
+  {
+    root = "src/game/core",
+    forbidden_patterns = {
       "require%(\"src%.game%.flow%..-\"%)",
       "require%('src%.game%.flow%..-'%)",
     },
@@ -126,10 +134,6 @@ local rules = {
     },
     description = "game layer must not read legacy runtime globals directly; use RuntimeCompat/context",
   },
-  -- Known transition note:
-  -- src/game/core/runtime/player_state/StatusOps.lua currently depends on RuntimeCompat.get_vehicle_helper().
-  -- This is acceptable in R9 because it no longer reads legacy globals directly.
-  -- Retirement condition: replace RuntimeCompat access with explicit vehicle port injection in game core.
   {
     root = "src/presentation",
     forbidden_patterns = {

@@ -672,12 +672,14 @@ local function _test_runtime_context_split_install_stages()
     assert(SetTimeOut == lua_api.call_delay_time, "install_environment should bind SetTimeOut")
     assert(type(get_vehicle_player) ~= "function", "install_environment should not export helpers")
 
-    runtime_context.install_runtime_helpers(ctx)
-    assert(vehicle_helper ~= nil, "install_runtime_helpers should expose vehicle_helper")
-    assert(camera_helper ~= nil, "install_runtime_helpers should expose camera_helper")
+    local helpers = runtime_context.install_runtime_helpers(ctx)
+    assert(helpers ~= nil and helpers.vehicle_helper ~= nil, "install_runtime_helpers should return vehicle helper")
+    assert(helpers ~= nil and helpers.camera_helper ~= nil, "install_runtime_helpers should return camera helper")
+    assert(vehicle_helper == nil, "install_runtime_helpers should not export globals by default")
+    assert(camera_helper == nil, "install_runtime_helpers should not export globals by default")
 
     runtime_context.install_editor_exports(ctx)
-    vehicle_helper.player_id = 1
+    helpers.vehicle_helper.player_id = 1
     local role = get_vehicle_player()
     assert(role == role1, "install_editor_exports should expose get_vehicle_player")
   end)

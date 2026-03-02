@@ -236,7 +236,7 @@ end
 function runtime_context.install_globals(ctx)
   assert(ctx ~= nil and ctx.env ~= nil, "missing runtime context")
   runtime_context.install_environment(ctx)
-  runtime_context.install_runtime_helpers(ctx)
+  runtime_context.install_runtime_helpers(ctx, { install_globals = true })
   runtime_context.install_editor_exports(ctx)
 end
 
@@ -250,7 +250,7 @@ function runtime_context.install_runtime_helpers(ctx, opts)
   opts = opts or {}
   local install_globals = opts.install_globals
   if install_globals == nil then
-    install_globals = true
+    install_globals = false
   end
   if not ctx.vehicle_helper then
     ctx.vehicle_helper = _build_vehicle_helper(function()

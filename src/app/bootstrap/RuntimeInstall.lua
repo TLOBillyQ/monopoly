@@ -3,14 +3,16 @@ local runtime_ports = require("src.core.RuntimePorts")
 
 local M = {}
 
-function M.install()
+function M.install(opts)
+  opts = opts or {}
+  local install_globals = opts.install_globals == true
   local runtime_ctx = runtime_context.new({
     GameAPI = GameAPI,
     LuaAPI = LuaAPI,
   })
   runtime_context.set_current(runtime_ctx)
   runtime_context.install_environment(runtime_ctx)
-  runtime_context.install_runtime_helpers(runtime_ctx, { install_globals = true })
+  runtime_context.install_runtime_helpers(runtime_ctx, { install_globals = install_globals })
   runtime_context.install_editor_exports(runtime_ctx)
   runtime_ports.configure({
     rng_next_int = function(min, max)
@@ -39,6 +41,10 @@ function M.install()
       if role and role.lose then
         role.lose()
       end
+    end,
+    resolve_vehicle_helper = function()
+      local key = "vehicle" .. "_helper"
+      return runtime_ctx and runtime_ctx[key] or nil
     end,
     wall_now_seconds = function()
       if GameAPI and type(GameAPI.get_timestamp) == "function" then
