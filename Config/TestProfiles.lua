@@ -70,6 +70,32 @@ local profiles = {
       },
     },
   },
+  ui_quick_all_items = {
+    map_module = "Config.Maps.UIQuickAll",
+    bootstrap = {
+      players = {
+        [1] = {
+          cash = 200000,
+          balances = {
+            ["金豆"] = 500,
+            ["乐园币"] = 500,
+          },
+          inventory_slots = 19,
+          items = {
+            2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+            2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019,
+          },
+        },
+        [2] = {
+          cash = 200000,
+          balances = {
+            ["金豆"] = 500,
+            ["乐园币"] = 500,
+          },
+        },
+      },
+    },
+  },
 }
 
 local M = {}

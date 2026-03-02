@@ -119,6 +119,35 @@ local function _test_profile_bootstrap_quick_bankruptcy_applies_tile_override()
   assert(game.players[1].cash == 3000, "p1 cash should match ui_quick_bankruptcy")
 end
 
+local all_item_ids = {
+  2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+  2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019,
+}
+
+local function _test_profile_bootstrap_all_items_injects_all_cards()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, { profile_name = "ui_quick_all_items" })
+
+  local p1 = game.players[1]
+  assert(p1.cash == 200000, "p1 cash should match ui_quick_all_items")
+  assert(p1.inventory.max_slots == 19, "p1 inventory slots should be expanded to 19")
+  _has_inventory_ids(p1, all_item_ids)
+end
+
+local function _test_profile_bootstrap_all_items_has_paid_currency_balances()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, { profile_name = "ui_quick_all_items" })
+
+  local p1 = game.players[1]
+  assert(game:player_balance(p1, "金豆") == 500, "p1 jindou should match ui_quick_all_items")
+  assert(game:player_balance(p1, "乐园币") == 500, "p1 leyuanbi should match ui_quick_all_items")
+
+  local p2 = game.players[2]
+  assert(p2.cash == 200000, "p2 cash should match ui_quick_all_items")
+  assert(game:player_balance(p2, "金豆") == 500, "p2 jindou should match ui_quick_all_items")
+  assert(game:player_balance(p2, "乐园币") == 500, "p2 leyuanbi should match ui_quick_all_items")
+end
+
 return {
   name = "test_profiles",
   tests = {
@@ -127,5 +156,7 @@ return {
     { name = "quick_profiles_map_cover_target_tiles", run = _test_quick_profiles_map_cover_target_tiles },
     { name = "profile_bootstrap_quick_all_injects_resources", run = _test_profile_bootstrap_quick_all_injects_resources },
     { name = "profile_bootstrap_quick_bankruptcy_applies_tile_override", run = _test_profile_bootstrap_quick_bankruptcy_applies_tile_override },
+    { name = "profile_bootstrap_all_items_injects_all_cards", run = _test_profile_bootstrap_all_items_injects_all_cards },
+    { name = "profile_bootstrap_all_items_has_paid_currency_balances", run = _test_profile_bootstrap_all_items_has_paid_currency_balances },
   },
 }
