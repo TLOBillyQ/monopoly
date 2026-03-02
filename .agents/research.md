@@ -94,3 +94,14 @@ R10 不是表面整理，而是完成了一轮可验证的架构收敛：
 - 回归与守护规则保持全绿。
 
 这为后续继续退役 compat 与进一步降低 turn 复杂度提供了稳定基线。
+
+---
+
+## 8) 本次复验更新（2026-03-02）
+
+本次按执行请求重新复验：
+
+- `lua tests/internal/dep_rules.lua` -> `dep_rules ok`
+- `lua tests/regression.lua` -> `All regression checks passed (207)`（含 `tick ok`、`forbidden_globals ok`）
+
+补充执行注意事项：`tests/suites/gameplay_core.lua` 依赖回归入口提供 package.path，直接单跑会出现 `module 'gameplay_registry' not found`；因此该套件应通过 `tests/regression.lua` 统一执行。
