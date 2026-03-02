@@ -99,6 +99,47 @@ local rules = {
     },
     description = "systems layer must use ActionAnimPort instead of direct ui_port.wait_action_anim checks",
   },
+  {
+    root = "src/game/flow/turn",
+    forbidden_patterns = {
+      "state%.ui%."
+    },
+    description = "turn flow must use ui_sync.resolve_ui_gate/ui_sync ports instead of direct state.ui reads",
+  },
+  {
+    root = "src/app",
+    forbidden_patterns = {
+      "%f[%w_]all_roles%f[^%w_]",
+      "%f[%w_]ALLROLES%f[^%w_]",
+      "%f[%w_]vehicle_helper%f[^%w_]",
+      "%f[%w_]camera_helper%f[^%w_]",
+    },
+    description = "app layer must not read legacy runtime globals directly; use RuntimeCompat/context",
+  },
+  {
+    root = "src/game",
+    forbidden_patterns = {
+      "%f[%w_]all_roles%f[^%w_]",
+      "%f[%w_]ALLROLES%f[^%w_]",
+      "%f[%w_]vehicle_helper%f[^%w_]",
+      "%f[%w_]camera_helper%f[^%w_]",
+    },
+    description = "game layer must not read legacy runtime globals directly; use RuntimeCompat/context",
+  },
+  -- Known transition note:
+  -- src/game/core/runtime/player_state/StatusOps.lua currently depends on RuntimeCompat.get_vehicle_helper().
+  -- This is acceptable in R9 because it no longer reads legacy globals directly.
+  -- Retirement condition: replace RuntimeCompat access with explicit vehicle port injection in game core.
+  {
+    root = "src/presentation",
+    forbidden_patterns = {
+      "%f[%w_]all_roles%f[^%w_]",
+      "%f[%w_]ALLROLES%f[^%w_]",
+      "%f[%w_]vehicle_helper%f[^%w_]",
+      "%f[%w_]camera_helper%f[^%w_]",
+    },
+    description = "presentation layer must not read legacy runtime globals directly; use RuntimeCompat/context",
+  },
 }
 
 -- Keep this whitelist minimal and only for temporary migration bridges.

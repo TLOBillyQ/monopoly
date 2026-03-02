@@ -1,5 +1,6 @@
 local meta = require("src.presentation.render.status3d_service.meta")
 local specs = require("src.presentation.render.status3d_service.specs")
+local runtime_compat = require("src.core.RuntimeCompat")
 
 local M = {}
 
@@ -10,8 +11,9 @@ local function _resolve_observer_roles()
       return roles
     end
   end
-  if type(all_roles) == "table" then
-    return all_roles
+  local roles = runtime_compat.get_roles()
+  if type(roles) == "table" then
+    return roles
   end
   return {}
 end

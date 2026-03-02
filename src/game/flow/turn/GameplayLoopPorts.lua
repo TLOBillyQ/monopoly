@@ -1,5 +1,6 @@
 local gameplay_loop_ports = {}
 local number_utils = require("src.core.NumberUtils")
+local ui_sync_defaults = require("src.game.flow.turn.GameplayLoopUISyncDefaults")
 
 local _tick_timeout = nil
 local _tick_ui_sync = nil
@@ -37,6 +38,7 @@ local port_groups = {
     "step_choice_timeout",
     "step_modal_timeout",
     "update_countdown",
+    "resolve_ui_gate",
     "build_model",
     "refresh_from_dirty",
     "follow_camera",
@@ -93,31 +95,7 @@ local function _base_anim_ports()
 end
 
 local function _base_ui_sync_ports()
-  return {
-    apply_input_lock = function() end,
-    step_choice_timeout = function(game, state, dt)
-      local tick_timeout = _load_tick_timeout()
-      tick_timeout.step_default_choice(game, state, dt)
-    end,
-    step_modal_timeout = function(game, state, dt)
-      local tick_timeout = _load_tick_timeout()
-      tick_timeout.step_default_modal(game, state, dt)
-    end,
-    update_countdown = function(game, state)
-      local tick_ui_sync = _load_tick_ui_sync()
-      tick_ui_sync.update_countdown(game, state)
-    end,
-    build_model = function() return {} end,
-    refresh_from_dirty = function() return false end,
-    follow_camera = function() return false end,
-    get_ui_state = function() return nil end,
-    is_input_blocked = function() return false end,
-    is_popup_active = function() return false end,
-    is_choice_active = function() return false end,
-    is_market_active = function() return false end,
-    get_popup_owner_index = function() return nil end,
-    set_input_blocked = function() return false end,
-  }
+  return ui_sync_defaults.build_base_ui_sync_ports(_load_tick_timeout, _load_tick_ui_sync)
 end
 
 local function _base_debug_ports()
@@ -131,33 +109,15 @@ end
 local function _base_clock_ports()
   return {
     wall_now_seconds = function()
-      if GameAPI and type(GameAPI.get_timestamp) == "function" then
-        local ok, ts = pcall(GameAPI.get_timestamp)
-        if ok and number_utils.is_numeric(ts) then
-          return ts
-        end
-      end
       return 0
     end,
     wall_diff_seconds = function(timestamp_1, timestamp_2)
-      if number_utils.is_numeric(timestamp_1)
-          and number_utils.is_numeric(timestamp_2)
-          and GameAPI
-          and type(GameAPI.get_timestamp_diff) == "function" then
-        local ok, diff = pcall(GameAPI.get_timestamp_diff, timestamp_1, timestamp_2)
-        if ok and number_utils.is_numeric(diff) then
-          return diff
-        end
-      end
       if number_utils.is_numeric(timestamp_1) and number_utils.is_numeric(timestamp_2) then
         return timestamp_1 - timestamp_2
       end
       return 0
     end,
     cpu_now_seconds = function()
-      if os and type(os.clock) == "function" then
-        return os.clock()
-      end
       return 0
     end,
     cpu_diff_seconds = function(timestamp_1, timestamp_2)
@@ -232,54 +192,7 @@ local function _copy_group_ports(base_group, override_group, required_keys)
 end
 
 local function _fill_ui_sync_defaults(ui_sync_ports, base_ui_sync_ports)
-  if ui_sync_ports.get_ui_state == base_ui_sync_ports.get_ui_state then
-    ui_sync_ports.get_ui_state = function(state)
-      return state and state.ui or nil
-    end
-  end
-  if ui_sync_ports.is_input_blocked == base_ui_sync_ports.is_input_blocked then
-    ui_sync_ports.is_input_blocked = function(state)
-      local ui = ui_sync_ports.get_ui_state(state)
-      return ui and ui.input_blocked == true or false
-    end
-  end
-  if ui_sync_ports.is_popup_active == base_ui_sync_ports.is_popup_active then
-    ui_sync_ports.is_popup_active = function(state)
-      local ui = ui_sync_ports.get_ui_state(state)
-      return ui and ui.popup_active == true or false
-    end
-  end
-  if ui_sync_ports.is_choice_active == base_ui_sync_ports.is_choice_active then
-    ui_sync_ports.is_choice_active = function(state)
-      local ui = ui_sync_ports.get_ui_state(state)
-      return ui and ui.choice_active == true or false
-    end
-  end
-  if ui_sync_ports.is_market_active == base_ui_sync_ports.is_market_active then
-    ui_sync_ports.is_market_active = function(state)
-      local ui = ui_sync_ports.get_ui_state(state)
-      return ui and ui.market_active == true or false
-    end
-  end
-  if ui_sync_ports.get_popup_owner_index == base_ui_sync_ports.get_popup_owner_index then
-    ui_sync_ports.get_popup_owner_index = function(state)
-      local ui = ui_sync_ports.get_ui_state(state)
-      return ui and ui.popup_owner_index or nil
-    end
-  end
-  if ui_sync_ports.set_input_blocked == base_ui_sync_ports.set_input_blocked then
-    ui_sync_ports.set_input_blocked = function(state, blocked)
-      local ui = ui_sync_ports.get_ui_state(state)
-      if not ui then
-        return false
-      end
-      if ui.input_blocked == blocked then
-        return false
-      end
-      ui.input_blocked = blocked
-      return true
-    end
-  end
+  ui_sync_defaults.fill_ui_sync_defaults(ui_sync_ports, base_ui_sync_ports)
 end
 
 local function _fill_clock_defaults(clock_ports, base_clock_ports)

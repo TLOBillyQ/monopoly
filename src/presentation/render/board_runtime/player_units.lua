@@ -1,4 +1,5 @@
 local M = {}
+local runtime_compat = require("src.core.RuntimeCompat")
 
 local function _resolve_player_id(player, i)
   return assert(player.id, "missing player id: " .. tostring(i))
@@ -51,11 +52,11 @@ function M.ensure_player_units(state, players, log_once, build_log_prefix)
     return
   end
 
-  local roles = all_roles
+  local roles = runtime_compat.get_roles()
   if type(roles) ~= "table" or #roles == 0 then
     roles = _resolve_roles_from_players(players)
   end
-  assert(type(roles) == "table" and #roles > 0, "missing ALLROLES")
+  assert(type(roles) == "table" and #roles > 0, "missing runtime roles")
   local name_to_unit, role_units = _build_role_units(roles)
 
   local mapped = {}

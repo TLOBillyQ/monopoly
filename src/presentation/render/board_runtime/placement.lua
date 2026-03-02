@@ -1,5 +1,6 @@
 local gameplay_read_port = require("src.presentation.read_model.GameplayReadPort")
 local runtime_state = require("src.core.RuntimeState")
+local runtime_compat = require("src.core.RuntimeCompat")
 
 local M = {}
 
@@ -117,8 +118,9 @@ function M.place_players(state, players, occupants, spacing, min_player_y)
       local ox, oz = _calc_slot_offset(slot, count, spacing)
       local target_pos = base + math.Vector3(ox, y_offset, oz)
       local seat_id = gameplay_read_port.resolve_vehicle_seat_id(player.seat_id)
-      if seat_id and vehicle_helper and vehicle_helper.forward_eca_event_set_position then
-        vehicle_helper.forward_eca_event_set_position(pid, target_pos)
+      local vehicle = runtime_compat.get_vehicle_helper()
+      if seat_id and vehicle and vehicle.forward_eca_event_set_position then
+        vehicle.forward_eca_event_set_position(pid, target_pos)
       else
         assert(unit.set_position ~= nil, "missing unit.set_position: " .. tostring(pid))
         unit.set_position(target_pos)

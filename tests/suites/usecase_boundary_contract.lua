@@ -4,6 +4,7 @@ local _with_patches = support.with_patches
 
 local turn_action_port = require("src.presentation.interaction.ui_intent_dispatcher.TurnActionPort")
 local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
+local runtime_ports = require("src.core.RuntimePorts")
 
 local function _test_turn_action_port_resolve_defaults()
   local resolved = turn_action_port.resolve({}, nil)
@@ -57,20 +58,42 @@ local function _test_turn_action_port_normalize_auto_intent_contract()
 end
 
 local function _test_gameplay_loop_clock_contract_split_sources()
-  _with_patches({
-    { key = "GameAPI", value = {
-      get_timestamp = function() return 42 end,
-      get_timestamp_diff = function(a, b) return (a - b) * 10 end,
-    } },
-    { target = os, key = "clock", value = function() return 1.5 end },
-  }, function()
-    local ports = gameplay_loop_ports.resolve(nil)
-    local clock = ports.clock
-    _assert_eq(clock.wall_now_seconds(), 42, "wall clock must use GameAPI timestamp")
-    _assert_eq(clock.wall_diff_seconds(9, 7), 20, "wall diff must use GameAPI diff")
-    _assert_eq(clock.cpu_now_seconds(), 1.5, "cpu clock must use os.clock")
-    _assert_eq(clock.cpu_diff_seconds(9, 7), 2, "cpu diff must remain arithmetic")
-  end)
+  runtime_ports.reset_for_tests()
+  local default_ports = gameplay_loop_ports.resolve(nil)
+  local default_clock = default_ports.clock
+  _assert_eq(default_clock.wall_now_seconds(), 0, "default wall clock should be environment-agnostic zero fallback")
+  _assert_eq(default_clock.wall_diff_seconds(9, 7), 2, "default wall diff should stay arithmetic fallback")
+  _assert_eq(default_clock.cpu_now_seconds(), 0, "default cpu clock should be environment-agnostic zero fallback")
+  _assert_eq(default_clock.cpu_diff_seconds(9, 7), 2, "default cpu diff should remain arithmetic")
+
+  runtime_ports.configure({
+    wall_now_seconds = function() return 42 end,
+    wall_diff_seconds = function(a, b) return (a - b) * 10 end,
+    cpu_now_seconds = function() return 1.5 end,
+    cpu_diff_seconds = function(a, b) return a - b end,
+  })
+  local injected_ports = gameplay_loop_ports.resolve({
+    clock = {
+      wall_now_seconds = function()
+        return runtime_ports.wall_now_seconds()
+      end,
+      wall_diff_seconds = function(a, b)
+        return runtime_ports.wall_diff_seconds(a, b)
+      end,
+      cpu_now_seconds = function()
+        return runtime_ports.cpu_now_seconds()
+      end,
+      cpu_diff_seconds = function(a, b)
+        return runtime_ports.cpu_diff_seconds(a, b)
+      end,
+    },
+  })
+  local clock = injected_ports.clock
+  _assert_eq(clock.wall_now_seconds(), 42, "injected wall clock should be used when provided")
+  _assert_eq(clock.wall_diff_seconds(9, 7), 20, "injected wall diff should preserve injected semantics")
+  _assert_eq(clock.cpu_now_seconds(), 1.5, "injected cpu clock should be used when provided")
+  _assert_eq(clock.cpu_diff_seconds(9, 7), 2, "injected cpu diff should remain arithmetic")
+  runtime_ports.reset_for_tests()
 end
 
 return {

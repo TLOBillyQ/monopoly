@@ -66,7 +66,7 @@ function tick_ui_sync.update_countdown(game, state)
         remaining = 0
       end
       seconds = math.ceil(remaining)
-    elseif state.ui and state.ui.popup_active then
+    elseif tick_timeout.resolve_modal_gate(state).popup_active == true then
       local popup_timeout = tick_timeout.resolve_modal_timeout_seconds(game, state)
       if popup_timeout > 0 then
         active = true

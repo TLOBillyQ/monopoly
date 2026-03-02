@@ -2,6 +2,7 @@ local canvas_store = require("src.presentation.canvas_runtime.CanvasStore")
 local runtime_constants = require("Config.RuntimeConstants")
 local runtime_event_bridge = require("src.core.RuntimeEventBridge")
 local turn_ui_sync_shared = require("src.core.TurnUISyncShared")
+local runtime_compat = require("src.core.RuntimeCompat")
 
 local ui_sync_ports = {}
 
@@ -45,10 +46,11 @@ function ui_sync_ports.build(common)
       if player_id == nil then
         return false
       end
-      if camera_helper then
-        camera_helper.target_role_id = player_id
+      local camera = runtime_compat.get_camera_helper()
+      if camera then
+        camera.target_role_id = player_id
       end
-      if camera_helper
+      if camera
           and runtime_constants
           and runtime_constants.eca_event
           and runtime_constants.eca_event.camera
@@ -64,6 +66,19 @@ function ui_sync_ports.build(common)
     end,
     get_ui_state = function(state)
       return common.get_ui_state(state)
+    end,
+    resolve_ui_gate = function(state)
+      local ui = common.get_ui_state(state)
+      local popup = ui and ui.popup_payload or nil
+      return {
+        input_blocked = ui and ui.input_blocked == true or false,
+        choice_active = ui and ui.choice_active == true or false,
+        market_active = ui and ui.market_active == true or false,
+        popup_active = ui and ui.popup_active == true or false,
+        popup_seq = ui and ui.popup_seq or nil,
+        popup_auto_close_seconds = popup and popup.auto_close_seconds or nil,
+        popup_owner_index = ui and ui.popup_owner_index or nil,
+      }
     end,
     is_input_blocked = function(state)
       local ui = common.get_ui_state(state)

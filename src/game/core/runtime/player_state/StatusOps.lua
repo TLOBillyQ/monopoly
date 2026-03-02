@@ -1,5 +1,6 @@
 local common = require("src.game.core.runtime.player_state.Common")
 local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
+local runtime_compat = require("src.core.RuntimeCompat")
 
 local status_ops = {}
 
@@ -18,14 +19,15 @@ function status_ops.set_player_seat(self, player, seat_id)
   end
 
   local old_seat_id = player.seat_id
-  if old_seat_id ~= seat_id and vehicle_helper then
-    if old_seat_id ~= nil and vehicle_helper.forward_eca_event_exit then
-      vehicle_helper.forward_eca_event_exit(player.id)
+  local vehicle = runtime_compat.get_vehicle_helper()
+  if old_seat_id ~= seat_id and vehicle then
+    if old_seat_id ~= nil and vehicle.forward_eca_event_exit then
+      vehicle.forward_eca_event_exit(player.id)
     end
-    if seat_id ~= nil and vehicle_helper.forward_eca_event_enter then
-      vehicle_helper.forward_eca_event_enter(player.id, seat_id)
-      if vehicle_helper.needs_enter_wait_by_player then
-        vehicle_helper.needs_enter_wait_by_player[player.id] = true
+    if seat_id ~= nil and vehicle.forward_eca_event_enter then
+      vehicle.forward_eca_event_enter(player.id, seat_id)
+      if vehicle.needs_enter_wait_by_player then
+        vehicle.needs_enter_wait_by_player[player.id] = true
       end
     end
   end
@@ -59,6 +61,7 @@ end
 
 function status_ops.stop_all_players_movement(self)
   local players = self.players or {}
+  local vehicle = runtime_compat.get_vehicle_helper()
   local players_dirty = false
   for _, player in ipairs(players) do
     local status = common.player_status_table(player)
@@ -67,13 +70,13 @@ function status_ops.stop_all_players_movement(self)
       players_dirty = true
     end
     local seat_id = vehicle_feature.resolve_seat_id(player.seat_id)
-    if vehicle_helper and vehicle_helper.forward_eca_event_stop and seat_id ~= nil then
+    if vehicle and vehicle.forward_eca_event_stop and seat_id ~= nil then
       local role_ok = true
-      if vehicle_helper.resolve_role then
-        role_ok = vehicle_helper.resolve_role(player.id) ~= nil
+      if vehicle.resolve_role then
+        role_ok = vehicle.resolve_role(player.id) ~= nil
       end
       if role_ok then
-        vehicle_helper.forward_eca_event_stop(player.id)
+        vehicle.forward_eca_event_stop(player.id)
       end
     end
   end

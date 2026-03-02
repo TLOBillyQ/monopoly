@@ -1628,23 +1628,22 @@ local function _test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics()
     local ports = gameplay_loop_ports.resolve(nil)
     local clock = ports.clock
     assert(clock.wall_now_seconds() == 0, "wall clock should not fallback to cpu clock when GameAPI timestamp is unavailable")
-    assert(clock.cpu_now_seconds() == 9.25, "cpu clock should use os.clock source")
+    assert(clock.cpu_now_seconds() == 0, "default cpu clock should be environment-agnostic before runtime injection")
   end)
 
-  support.with_patches({
-    { key = "GameAPI", value = {
-      get_timestamp = function() return 77 end,
-      get_timestamp_diff = function() return 0.6 end,
-    } },
-    { target = os, key = "clock", value = function() return 3.5 end },
-  }, function()
-    local ports = gameplay_loop_ports.resolve(nil)
-    local clock = ports.clock
-    assert(clock.wall_now_seconds() == 77, "wall clock should use GameAPI timestamp")
-    assert(clock.wall_diff_seconds(10, 9) == 0.6, "wall diff should use GameAPI timestamp diff")
-    assert(clock.cpu_now_seconds() == 3.5, "cpu clock should remain isolated from wall clock source")
-    assert(clock.cpu_diff_seconds(10, 9) == 1, "cpu diff should stay arithmetic and source-agnostic")
-  end)
+  local ports = gameplay_loop_ports.resolve({
+    clock = {
+      wall_now_seconds = function() return 77 end,
+      wall_diff_seconds = function() return 0.6 end,
+      cpu_now_seconds = function() return 3.5 end,
+      cpu_diff_seconds = function(a, b) return a - b end,
+    },
+  })
+  local clock = ports.clock
+  assert(clock.wall_now_seconds() == 77, "wall clock should use injected wall source")
+  assert(clock.wall_diff_seconds(10, 9) == 0.6, "wall diff should use injected wall semantics")
+  assert(clock.cpu_now_seconds() == 3.5, "cpu clock should use injected cpu source")
+  assert(clock.cpu_diff_seconds(10, 9) == 1, "cpu diff should stay arithmetic and source-agnostic")
 end
 
 local function _test_choice_auto_policy_consistent_between_wait_and_timeout()

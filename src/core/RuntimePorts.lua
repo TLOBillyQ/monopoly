@@ -48,6 +48,46 @@ local function _default_emit_event(event_name, payload)
   return ok
 end
 
+local function _default_wall_now_seconds()
+  if GameAPI and type(GameAPI.get_timestamp) == "function" then
+    local ok, ts = pcall(GameAPI.get_timestamp)
+    if ok and type(ts) == "number" then
+      return ts
+    end
+  end
+  return 0
+end
+
+local function _default_wall_diff_seconds(timestamp_1, timestamp_2)
+  if GameAPI
+      and type(GameAPI.get_timestamp_diff) == "function"
+      and type(timestamp_1) == "number"
+      and type(timestamp_2) == "number" then
+    local ok, diff = pcall(GameAPI.get_timestamp_diff, timestamp_1, timestamp_2)
+    if ok and type(diff) == "number" then
+      return diff
+    end
+  end
+  if type(timestamp_1) == "number" and type(timestamp_2) == "number" then
+    return timestamp_1 - timestamp_2
+  end
+  return 0
+end
+
+local function _default_cpu_now_seconds()
+  if os and type(os.clock) == "function" then
+    return os.clock()
+  end
+  return 0
+end
+
+local function _default_cpu_diff_seconds(timestamp_1, timestamp_2)
+  if type(timestamp_1) == "number" and type(timestamp_2) == "number" then
+    return timestamp_1 - timestamp_2
+  end
+  return 0
+end
+
 local function _resolve_port(name, fallback)
   if configured and configured[name] ~= nil then
     return configured[name]
@@ -82,6 +122,26 @@ end
 function runtime_ports.emit_event(event_name, payload)
   local emitter = _resolve_port("emit_event", _default_emit_event)
   return emitter(event_name, payload)
+end
+
+function runtime_ports.wall_now_seconds()
+  local fn = _resolve_port("wall_now_seconds", _default_wall_now_seconds)
+  return fn()
+end
+
+function runtime_ports.wall_diff_seconds(timestamp_1, timestamp_2)
+  local fn = _resolve_port("wall_diff_seconds", _default_wall_diff_seconds)
+  return fn(timestamp_1, timestamp_2)
+end
+
+function runtime_ports.cpu_now_seconds()
+  local fn = _resolve_port("cpu_now_seconds", _default_cpu_now_seconds)
+  return fn()
+end
+
+function runtime_ports.cpu_diff_seconds(timestamp_1, timestamp_2)
+  local fn = _resolve_port("cpu_diff_seconds", _default_cpu_diff_seconds)
+  return fn(timestamp_1, timestamp_2)
 end
 
 function runtime_ports.reset_for_tests()

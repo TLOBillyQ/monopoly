@@ -10,7 +10,7 @@ local runtime_context = {}
 
 local current_context = nil
 
-local function _build_vehicle_helper()
+local function _build_vehicle_helper(get_roles)
   local function _safe_get_role(role_id)
     if role_id == nil then
       return nil
@@ -26,7 +26,13 @@ local function _build_vehicle_helper()
   end
 
   local function _first_valid_role()
-    local roles = all_roles
+    local roles = nil
+    if type(get_roles) == "function" then
+      roles = get_roles()
+    end
+    if roles == nil then
+      roles = all_roles
+    end
     if type(roles) == "table" then
       for _, role in ipairs(roles) do
         if role ~= nil then
@@ -247,7 +253,9 @@ function runtime_context.install_runtime_helpers(ctx, opts)
     install_globals = true
   end
   if not ctx.vehicle_helper then
-    ctx.vehicle_helper = _build_vehicle_helper()
+    ctx.vehicle_helper = _build_vehicle_helper(function()
+      return ctx.roles
+    end)
   end
   if not ctx.camera_helper then
     ctx.camera_helper = { target_role_id = 1 }

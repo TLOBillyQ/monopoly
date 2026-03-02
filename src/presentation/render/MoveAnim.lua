@@ -1,5 +1,6 @@
 local runtime_constants = require("Config.RuntimeConstants")
 local gameplay_read_port = require("src.presentation.read_model.GameplayReadPort")
+local runtime_compat = require("src.core.RuntimeCompat")
 
 local move_anim = {}
 
@@ -63,21 +64,23 @@ local function _is_vehicle_anim(anim_ctx)
 end
 
 local function _is_vehicle_move_mode(anim_ctx)
+  local vehicle = runtime_compat.get_vehicle_helper()
   return anim_ctx
     and _is_vehicle_anim(anim_ctx)
     and runtime_constants.vehicle_move_api_enabled == true
-    and vehicle_helper
-    and vehicle_helper.forward_eca_event_move
+    and vehicle
+    and vehicle.forward_eca_event_move
     and true
     or false
 end
 
 local function _is_vehicle_jump_mode(anim_ctx)
+  local vehicle = runtime_compat.get_vehicle_helper()
   return anim_ctx
     and _is_vehicle_anim(anim_ctx)
     and runtime_constants.vehicle_move_api_enabled ~= true
-    and vehicle_helper
-    and vehicle_helper.forward_eca_event_set_position
+    and vehicle
+    and vehicle.forward_eca_event_set_position
     and true
     or false
 end
@@ -108,13 +111,15 @@ function move_anim.one_step(scene, player_id, from_index, to_index, anim_ctx)
     end)
   end
   if _is_vehicle_jump_mode(anim_ctx) then
+    local vehicle = runtime_compat.get_vehicle_helper()
     local end_tile = scene.tiles[to_index]
     local target_pos = end_tile.get_position()
-    vehicle_helper.forward_eca_event_set_position(player_id, target_pos)
+    vehicle.forward_eca_event_set_position(player_id, target_pos)
     return time
   end
   if _is_vehicle_move_mode(anim_ctx) then
-    vehicle_helper.forward_eca_event_move(player_id, step_dir, time)
+    local vehicle = runtime_compat.get_vehicle_helper()
+    vehicle.forward_eca_event_move(player_id, step_dir, time)
     return time
   end
   local unit = scene.units_by_player_id[player_id]
@@ -170,13 +175,14 @@ end
 
 local function _consume_enter_delay(anim_ctx, player_id)
   local vehicle_id = anim_ctx and gameplay_read_port.resolve_vehicle_seat_id(anim_ctx.vehicle_id) or nil
+  local vehicle = runtime_compat.get_vehicle_helper()
   if vehicle_id == nil then
     return 0
   end
-  if not (vehicle_helper and vehicle_helper.consume_enter_delay) then
+  if not (vehicle and vehicle.consume_enter_delay) then
     return 0
   end
-  return vehicle_helper.consume_enter_delay(player_id, vehicle_id) or 0
+  return vehicle.consume_enter_delay(player_id, vehicle_id) or 0
 end
 
 function move_anim.play_sequence(board_scene, anim_ctx)

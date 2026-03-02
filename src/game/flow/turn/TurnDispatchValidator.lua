@@ -1,24 +1,8 @@
 local logger = require("src.core.Logger")
 local item_slot_data = require("src.game.flow.turn.ItemSlotData")
+local turn_action_gate = require("src.game.flow.turn.TurnActionGate")
 
 local validator = {}
-
-local input_blocked_types = {
-  ui_button = true,
-  choice_pick = true,
-  choice_select = true,
-  choice_cancel = true,
-  market_confirm = true,
-  market_select = true,
-  popup_confirm = true,
-}
-
-local function _normalize_action_type(action_or_type)
-  if type(action_or_type) == "table" then
-    return action_or_type.type
-  end
-  return action_or_type
-end
 
 local function _is_turn_bound_ui_button(action_id)
   if action_id == "next" then
@@ -43,42 +27,6 @@ local function _resolve_choice_owner_role_id(game, choice)
   return current and current.id or nil
 end
 
-local function _resolve_input_blocked(ui_state_or_flag)
-  if type(ui_state_or_flag) == "boolean" then
-    return ui_state_or_flag
-  end
-  return ui_state_or_flag and ui_state_or_flag.input_blocked == true or false
-end
-
-local function _resolve_gate_state(gate_state_or_flag)
-  if type(gate_state_or_flag) == "boolean" then
-    return {
-      input_blocked = gate_state_or_flag,
-      choice_active = false,
-      market_active = false,
-      popup_active = false,
-      detained_wait_active = false,
-    }
-  end
-  if type(gate_state_or_flag) ~= "table" then
-    return {
-      input_blocked = false,
-      choice_active = false,
-      market_active = false,
-      popup_active = false,
-      detained_wait_active = false,
-    }
-  end
-  return {
-    input_blocked = _resolve_input_blocked(gate_state_or_flag),
-    choice_active = gate_state_or_flag.choice_active == true,
-    market_active = gate_state_or_flag.market_active == true,
-    popup_active = gate_state_or_flag.popup_active == true,
-    detained_wait_active = gate_state_or_flag.detained_wait_active == true,
-    phase = gate_state_or_flag.phase,
-  }
-end
-
 local function _resolve_item_slot_source(item_slot_source)
   if type(item_slot_source) == "table" and type(item_slot_source.resolve_slot_action) == "function" then
     return item_slot_source
@@ -94,75 +42,26 @@ local function _resolve_item_slot_id(source, actor_role_id, slot_id)
 end
 
 function validator.resolve_gate_state(state, ui_sync_ports)
-  local ui_state = nil
-  if ui_sync_ports and type(ui_sync_ports.get_ui_state) == "function" then
-    ui_state = ui_sync_ports.get_ui_state(state)
+  local gate = nil
+  if ui_sync_ports and type(ui_sync_ports.resolve_ui_gate) == "function" then
+    gate = ui_sync_ports.resolve_ui_gate(state)
   end
-  if not ui_state and type(state) == "table" and state.ui then
-    ui_state = state.ui
-  end
-
-  local input_blocked = _resolve_input_blocked(ui_state)
-  if ui_sync_ports and type(ui_sync_ports.is_input_blocked) == "function" then
-    input_blocked = ui_sync_ports.is_input_blocked(state) == true
-  end
-
-  local choice_active = ui_state and ui_state.choice_active == true or false
-  local market_active = ui_state and ui_state.market_active == true or false
-  local popup_active = ui_state and ui_state.popup_active == true or false
-  if ui_sync_ports and type(ui_sync_ports.is_choice_active) == "function" then
-    choice_active = ui_sync_ports.is_choice_active(state) == true
-  end
-  if ui_sync_ports and type(ui_sync_ports.is_market_active) == "function" then
-    market_active = ui_sync_ports.is_market_active(state) == true
-  end
-  if ui_sync_ports and type(ui_sync_ports.is_popup_active) == "function" then
-    popup_active = ui_sync_ports.is_popup_active(state) == true
-  end
+  gate = turn_action_gate.resolve_gate_state(gate)
 
   local game = type(state) == "table" and state.game or nil
   local turn = game and game.turn or nil
   return {
-    input_blocked = input_blocked,
-    choice_active = choice_active,
-    market_active = market_active,
-    popup_active = popup_active,
+    input_blocked = gate.input_blocked == true,
+    choice_active = gate.choice_active == true,
+    market_active = gate.market_active == true,
+    popup_active = gate.popup_active == true,
     phase = turn and turn.phase or nil,
     detained_wait_active = turn and turn.detained_wait_active == true or false,
   }
 end
 
 function validator.should_block_action(gate_state_or_flag, action_or_type)
-  local gate_state = _resolve_gate_state(gate_state_or_flag)
-  local action_type = _normalize_action_type(action_or_type)
-  if not action_type then
-    return false
-  end
-  if action_type == "popup_confirm" then
-    return false
-  end
-  if action_type == "ui_button"
-      and type(action_or_type) == "table"
-      and action_or_type.id == "auto" then
-    return false
-  end
-
-  if action_type == "ui_button"
-      and type(action_or_type) == "table"
-      and action_or_type.id == "next"
-      and (
-        gate_state.choice_active
-        or gate_state.market_active
-        or gate_state.popup_active
-        or gate_state.detained_wait_active
-      ) then
-    return true
-  end
-
-  if not gate_state.input_blocked then
-    return false
-  end
-  return input_blocked_types[action_type] == true
+  return turn_action_gate.should_block_action(gate_state_or_flag, action_or_type)
 end
 
 function validator.validate_actor_role(game, action)

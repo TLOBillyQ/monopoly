@@ -11,6 +11,7 @@ local secondary_confirm_nodes = require("src.presentation.canvas.secondary_confi
 local market_ui = require("src.presentation.shared.MarketLayout")
 local map_cfg = require("Config.Map")
 local ui_events = require("src.presentation.shared.UIEvents")
+local runtime_compat = require("src.core.RuntimeCompat")
 
 local M = {}
 
@@ -89,7 +90,7 @@ function M.install(state, current_game_ref, opts)
     end)
 
     if ui_events.set_roles then
-      ui_events.set_roles(all_roles)
+      ui_events.set_roles(runtime_compat.get_roles())
     end
 
     local required_nodes = _required_click_nodes({
