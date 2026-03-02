@@ -167,7 +167,9 @@
 
 - `部分完成`：步骤 3（统一适配层宿主访问端口）
   - 已迁移关键路径：`src/presentation/ui/UIPanel.lua`、`src/presentation/ui/PopupRenderer.lua`、`src/presentation/api/UIEventHandlers.lua` 改为通过 `RuntimePorts.resolve_role` 读取角色。
-  - 未完成范围：`src/presentation/render/*` 等其余宿主 API 直连点仍待后续分批迁移。
+  - 已新增迁移：`src/presentation/interaction/ui_intent_dispatcher/ViewCommandDispatcher.lua`、`src/presentation/render/BoardScene.lua`、`src/presentation/render/board_runtime/player_units.lua`、`src/presentation/render/status3d_service/scene.lua`、`src/presentation/render/status3d_service/status.lua`。
+  - 迁移说明：`status3d` 在优先走 `RuntimePorts` 的同时，保留受控 `GameAPI.get_role` 回退用于兼容测试桩与观察者角色对象差异。
+  - 未完成范围：`src/presentation/render/*` 仍存在其他宿主 API 直连点（例如 `GameAPI.create_unit_*`、`SetTimeOut`），待后续分批迁移。
 
 - `未开始`：步骤 4（继续细化 turn 用例编排职责）
   - 本轮未触及 `GameplayLoopTickFlow.lua` 的进一步职责拆分。
@@ -175,4 +177,9 @@
 - `部分完成`：步骤 5（同步更新命名与规则语义）
   - 已完成：`tests/suites/runtime_compat_contract.lua` -> `tests/suites/runtime_ports_contract.lua`，并同步 `tests/regression.lua` 注册入口。
   - 已完成：`tests/internal/dep_rules.lua` 清理 `MonopolyEvents compatibility bridge` 历史术语。
-  - 未完成：`dep_rules.lua` 中关于 `RuntimeCompat` 的描述仍保留，后续可继续去兼容化命名。
+  - 已新增：`dep_rules.lua` 中 RuntimeCompat 规则描述调整为“retired runtime bridge path”，降低历史兼容语义噪音。
+
+本次增量验证（2026-03-02）：
+
+- `lua tests/regression.lua` -> `All regression checks passed (209)`（含 `tick ok`、`forbidden_globals ok`）
+- `lua tests/internal/dep_rules.lua` -> `dep_rules ok`

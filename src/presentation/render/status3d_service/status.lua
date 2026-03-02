@@ -1,7 +1,22 @@
 local specs = require("src.presentation.render.status3d_service.specs")
 local scene = require("src.presentation.render.status3d_service.scene")
+local runtime_ports = require("src.core.RuntimePorts")
 
 local M = {}
+
+local function _resolve_role(player_id)
+  local role = runtime_ports.resolve_role(player_id)
+  if role ~= nil and role.set_label_text ~= nil then
+    return role
+  end
+  if GameAPI and type(GameAPI.get_role) == "function" then
+    local ok, fallback = pcall(GameAPI.get_role, player_id)
+    if ok and fallback ~= nil then
+      return fallback
+    end
+  end
+  return nil
+end
 
 function M.resolve_player_status_key(game, player)
   if player == nil or player.eliminated == true then
@@ -51,8 +66,8 @@ function M.sync_layer_status(cache, player, status_key)
     if specs.text_statuses[status_key] then
       local stay_turns = player.status and player.status.stay_turns or 0
       local text_node = cache.text_nodes[player_id] and cache.text_nodes[player_id][status_key]
-      if stay_turns > 0 and text_node and GameAPI and GameAPI.get_role then
-        local role = GameAPI.get_role(player_id)
+      if stay_turns > 0 and text_node then
+        local role = _resolve_role(player_id)
         if role and role.set_label_text then
           local text = "当前回合无法行动\n剩余停留回合数：" .. tostring(stay_turns)
           pcall(role.set_label_text, text_node, text)
@@ -71,8 +86,8 @@ function M.sync_layer_status(cache, player, status_key)
   if specs.text_statuses[status_key] then
     local stay_turns = player.status and player.status.stay_turns or 0
     local text_node = cache.text_nodes[player_id] and cache.text_nodes[player_id][status_key]
-    if stay_turns > 0 and text_node and GameAPI and GameAPI.get_role then
-      local role = GameAPI.get_role(player_id)
+    if stay_turns > 0 and text_node then
+      local role = _resolve_role(player_id)
       if role and role.set_label_text then
         local text = "当前回合无法行动\n剩余停留回合数：" .. tostring(stay_turns)
         pcall(role.set_label_text, text_node, text)

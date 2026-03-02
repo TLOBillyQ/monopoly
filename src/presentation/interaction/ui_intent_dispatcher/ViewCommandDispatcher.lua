@@ -8,20 +8,6 @@ local runtime_ports = require("src.core.RuntimePorts")
 
 local view_command_dispatcher = {}
 
-local function _resolve_role_by_game_api(role_id)
-  if role_id == nil then
-    return nil
-  end
-  if not (GameAPI and type(GameAPI.get_role) == "function") then
-    return nil
-  end
-  local ok, role = pcall(GameAPI.get_role, role_id)
-  if not ok then
-    return nil
-  end
-  return role
-end
-
 local function _resolve_role_by_id(role_id)
   if role_id == nil then
     return runtime.get_client_role()
@@ -34,9 +20,9 @@ local function _resolve_role_by_id(role_id)
       end
     end
   end
-  local role_from_game_api = _resolve_role_by_game_api(role_id)
-  if role_from_game_api ~= nil then
-    return role_from_game_api
+  local resolved = runtime_ports.resolve_role(role_id)
+  if resolved ~= nil then
+    return resolved
   end
   return {
     get_roleid = function()

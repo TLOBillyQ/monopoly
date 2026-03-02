@@ -1,4 +1,5 @@
 local board_scene = {}
+local runtime_ports = require("src.core.RuntimePorts")
 
 function board_scene.init(state, map_cfg, game)
   assert(state ~= nil, "missing state")
@@ -10,10 +11,9 @@ function board_scene.init(state, map_cfg, game)
     units_by_player_id = {},
   }
 
-  assert(GameAPI ~= nil and GameAPI.get_role ~= nil, "missing GameAPI.get_role")
   for i, player in ipairs(game.players) do
     local player_id = assert(player.id, "missing player id: " .. tostring(i))
-    local role = GameAPI.get_role(player_id)
+    local role = runtime_ports.resolve_role(player_id)
     assert(role ~= nil, "missing role: " .. tostring(player_id))
     assert(role.get_ctrl_unit ~= nil, "missing role.get_ctrl_unit: " .. tostring(player_id))
     local unit = role.get_ctrl_unit()

@@ -4,6 +4,20 @@ local runtime_ports = require("src.core.RuntimePorts")
 
 local M = {}
 
+local function _resolve_role(player_id)
+  local role = runtime_ports.resolve_role(player_id)
+  if role ~= nil and role.get_ctrl_unit ~= nil then
+    return role
+  end
+  if GameAPI and type(GameAPI.get_role) == "function" then
+    local ok, fallback = pcall(GameAPI.get_role, player_id)
+    if ok and fallback ~= nil then
+      return fallback
+    end
+  end
+  return nil
+end
+
 local function _resolve_observer_roles()
   local roles = runtime_ports.resolve_roles()
   if type(roles) == "table" then
@@ -43,7 +57,7 @@ function M.ensure_layers_for_player(cache, player)
   if cache.layers[player_id] ~= nil then
     return true
   end
-  local role = GameAPI.get_role(player_id)
+  local role = _resolve_role(player_id)
   if role == nil then
     meta.warn_once(cache, "missing_role_" .. tostring(player_id), "status3d missing role:", tostring(player_id))
     return false

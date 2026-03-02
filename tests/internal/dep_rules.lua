@@ -45,7 +45,7 @@ local rules = {
       "require%(\"src%.core%.RuntimeCompat\"%)",
       "require%('src%.core%.RuntimeCompat'%)",
     },
-    description = "game core must not depend on RuntimeCompat; use RuntimePorts/context-injected ports",
+    description = "game core must not depend on retired runtime bridge path src.core.RuntimeCompat; use RuntimePorts/context-injected ports",
   },
   {
     root = "src/app",
@@ -53,7 +53,7 @@ local rules = {
       "require%(\"src%.core%.RuntimeCompat\"%)",
       "require%('src%.core%.RuntimeCompat'%)",
     },
-    description = "app layer must not depend on RuntimeCompat; use RuntimePorts/context",
+    description = "app layer must not depend on retired runtime bridge path src.core.RuntimeCompat; use RuntimePorts/context",
   },
   {
     root = "src/presentation",
@@ -61,7 +61,7 @@ local rules = {
       "require%(\"src%.core%.RuntimeCompat\"%)",
       "require%('src%.core%.RuntimeCompat'%)",
     },
-    description = "presentation layer must not depend on RuntimeCompat; use RuntimePorts/context",
+    description = "presentation layer must not depend on retired runtime bridge path src.core.RuntimeCompat; use RuntimePorts/context",
   },
   {
     root = "tests",
@@ -69,7 +69,7 @@ local rules = {
       "require%(\"src%.core%.RuntimeCompat\"%)",
       "require%('src%.core%.RuntimeCompat'%)",
     },
-    description = "tests must not depend on RuntimeCompat; validate RuntimePorts/RuntimeContext contracts directly",
+    description = "tests must not depend on retired runtime bridge path src.core.RuntimeCompat; validate RuntimePorts/RuntimeContext contracts directly",
   },
   {
     root = "src/game/core",

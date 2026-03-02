@@ -17,13 +17,10 @@ end
 
 local function _resolve_roles_from_players(players)
   local roles = {}
-  if not (GameAPI and GameAPI.get_role) then
-    return roles
-  end
   for _, player in ipairs(players or {}) do
     if player and player.id ~= nil then
-      local ok, role = pcall(GameAPI.get_role, player.id)
-      if ok and role ~= nil then
+      local role = runtime_ports.resolve_role(player.id)
+      if role ~= nil then
         roles[#roles + 1] = role
       end
     end
