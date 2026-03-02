@@ -1,6 +1,9 @@
 local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
 local turn_anim = require("src.game.flow.turn.TurnAnim")
 local gameplay_loop_runtime = require("src.game.flow.turn.GameplayLoopRuntime")
+local turn_timer_policy = require("src.game.flow.turn.TurnTimerPolicy")
+local turn_role_control_policy = require("src.game.flow.turn.TurnRoleControlPolicy")
+local turn_camera_policy = require("src.game.flow.turn.TurnCameraPolicy")
 local auto_context = require("src.game.flow.turn.AutoContext")
 
 local tick_flow = {}
@@ -36,7 +39,7 @@ local function _step_tick_timeouts(game, state, dt, ports, dispatch_action_with_
   local ui_sync_ports = ports.ui_sync
   ui_sync_ports.step_choice_timeout(game, state, dt)
   ui_sync_ports.step_modal_timeout(game, state, dt)
-  gameplay_loop_runtime.update_action_button_timer({
+  turn_timer_policy.update_action_button_timer({
     game = game,
     state = state,
     dt = dt,
@@ -49,7 +52,7 @@ local function _step_tick_timeouts(game, state, dt, ports, dispatch_action_with_
       }, ports)
     end,
   })
-  gameplay_loop_runtime.update_detained_wait_timer(game, state, dt, turn_dispatch.step_turn)
+  turn_timer_policy.update_detained_wait_timer(game, state, dt, turn_dispatch.step_turn)
 end
 
 local function _sync_tick_phase(game, state, ports, input_blocked_changed)
@@ -70,7 +73,7 @@ local function _refresh_tick_from_dirty(game, state, ports, input_blocked_change
 
   local dirty = game:consume_dirty()
   local ui_refreshed = ui_sync_ports.refresh_from_dirty(game, state, dirty)
-  gameplay_loop_runtime.sync_turn_camera_follow(game, state, ports, ui_refreshed)
+  turn_camera_policy.sync_follow(game, state, ports, ui_refreshed)
   anim_ports.sync_status_3d(game, state, dirty)
 
   if ui_sync_ports.get_ui_state and ui_sync_ports.is_input_blocked then
@@ -94,7 +97,7 @@ function tick_flow.tick(game, state, dt, ports, deps)
 
   local phase = game.turn.phase
   local input_blocked_changed = gameplay_loop_runtime.sync_input_blocked(state, phase, ports)
-  gameplay_loop_runtime.sync_role_control_lock(game, state, ports)
+  turn_role_control_policy.sync(game, state, ports)
 
   deps.step_auto_runner(game, state, dt, auto_context.build_tick(game))
   _step_tick_timeouts(game, state, dt, ports, deps.dispatch_action_with_close_choice)
