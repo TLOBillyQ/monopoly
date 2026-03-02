@@ -37,6 +37,12 @@ function M.install(opts)
       end
       return role
     end,
+    resolve_roles = function()
+      if runtime_ctx and type(runtime_ctx.roles) == "table" then
+        return runtime_ctx.roles
+      end
+      return {}
+    end,
     mark_role_lose = function(role)
       if role and role.lose then
         role.lose()
@@ -44,6 +50,10 @@ function M.install(opts)
     end,
     resolve_vehicle_helper = function()
       local key = "vehicle" .. "_helper"
+      return runtime_ctx and runtime_ctx[key] or nil
+    end,
+    resolve_camera_helper = function()
+      local key = "camera" .. "_helper"
       return runtime_ctx and runtime_ctx[key] or nil
     end,
     wall_now_seconds = function()

@@ -8,22 +8,16 @@ local gameplay_rules = require("Config.GameplayRules")
 local test_profile_bootstrap = require("src.app.testing.TestProfileBootstrap")
 local logger = require("src.core.Logger")
 local runtime_state = require("src.core.RuntimeState")
-local runtime_compat = require("src.core.RuntimeCompat")
+local runtime_ports = require("src.core.RuntimePorts")
 
 local max_player_count = 4
 
 local M = {}
 
 local function _resolve_roles()
-  local roles = runtime_compat.get_roles()
+  local roles = runtime_ports.resolve_roles()
   if type(roles) == "table" and #roles > 0 then
     return roles
-  end
-  if GameAPI and GameAPI.get_all_valid_roles then
-    local ok, roles = pcall(GameAPI.get_all_valid_roles)
-    if ok and type(roles) == "table" then
-      return roles
-    end
   end
   return {}
 end

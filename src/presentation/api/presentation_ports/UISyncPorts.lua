@@ -1,8 +1,8 @@
 local canvas_store = require("src.presentation.canvas_runtime.CanvasStore")
 local runtime_constants = require("Config.RuntimeConstants")
 local runtime_event_bridge = require("src.core.RuntimeEventBridge")
+local runtime_ports = require("src.core.RuntimePorts")
 local turn_ui_sync_shared = require("src.core.TurnUISyncShared")
-local runtime_compat = require("src.core.RuntimeCompat")
 
 local ui_sync_ports = {}
 
@@ -46,7 +46,7 @@ function ui_sync_ports.build(common)
       if player_id == nil then
         return false
       end
-      local camera = runtime_compat.get_camera_helper()
+      local camera = runtime_ports.resolve_camera_helper()
       if camera then
         camera.target_role_id = player_id
       end

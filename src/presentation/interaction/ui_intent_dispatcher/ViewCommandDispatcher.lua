@@ -4,7 +4,7 @@ local ui_view = require("src.presentation.api.UIViewService")
 local canvas = require("src.presentation.interaction.UICanvasCoordinator")
 local ui_events = require("src.presentation.shared.UIEvents")
 local ui_event_state = require("src.presentation.interaction.UIEventState")
-local runtime_compat = require("src.core.RuntimeCompat")
+local runtime_ports = require("src.core.RuntimePorts")
 
 local view_command_dispatcher = {}
 
@@ -26,7 +26,7 @@ local function _resolve_role_by_id(role_id)
   if role_id == nil then
     return runtime.get_client_role()
   end
-  local roles = runtime_compat.get_roles()
+  local roles = runtime_ports.resolve_roles()
   if type(roles) == "table" then
     for _, role in ipairs(roles) do
       if runtime.resolve_role_id(role) == role_id then

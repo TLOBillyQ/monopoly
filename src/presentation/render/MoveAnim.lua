@@ -1,6 +1,6 @@
 local runtime_constants = require("Config.RuntimeConstants")
 local gameplay_read_port = require("src.presentation.read_model.GameplayReadPort")
-local runtime_compat = require("src.core.RuntimeCompat")
+local runtime_ports = require("src.core.RuntimePorts")
 
 local move_anim = {}
 
@@ -64,7 +64,7 @@ local function _is_vehicle_anim(anim_ctx)
 end
 
 local function _is_vehicle_move_mode(anim_ctx)
-  local vehicle = runtime_compat.get_vehicle_helper()
+  local vehicle = runtime_ports.resolve_vehicle_helper()
   return anim_ctx
     and _is_vehicle_anim(anim_ctx)
     and runtime_constants.vehicle_move_api_enabled == true
@@ -75,7 +75,7 @@ local function _is_vehicle_move_mode(anim_ctx)
 end
 
 local function _is_vehicle_jump_mode(anim_ctx)
-  local vehicle = runtime_compat.get_vehicle_helper()
+  local vehicle = runtime_ports.resolve_vehicle_helper()
   return anim_ctx
     and _is_vehicle_anim(anim_ctx)
     and runtime_constants.vehicle_move_api_enabled ~= true
@@ -111,14 +111,14 @@ function move_anim.one_step(scene, player_id, from_index, to_index, anim_ctx)
     end)
   end
   if _is_vehicle_jump_mode(anim_ctx) then
-    local vehicle = runtime_compat.get_vehicle_helper()
+    local vehicle = runtime_ports.resolve_vehicle_helper()
     local end_tile = scene.tiles[to_index]
     local target_pos = end_tile.get_position()
     vehicle.forward_eca_event_set_position(player_id, target_pos)
     return time
   end
   if _is_vehicle_move_mode(anim_ctx) then
-    local vehicle = runtime_compat.get_vehicle_helper()
+    local vehicle = runtime_ports.resolve_vehicle_helper()
     vehicle.forward_eca_event_move(player_id, step_dir, time)
     return time
   end
@@ -175,7 +175,7 @@ end
 
 local function _consume_enter_delay(anim_ctx, player_id)
   local vehicle_id = anim_ctx and gameplay_read_port.resolve_vehicle_seat_id(anim_ctx.vehicle_id) or nil
-  local vehicle = runtime_compat.get_vehicle_helper()
+  local vehicle = runtime_ports.resolve_vehicle_helper()
   if vehicle_id == nil then
     return 0
   end

@@ -41,6 +41,29 @@ local function _test_runtime_compat_strict_context_first_blocks_global_fallback(
   runtime_compat.reset_for_tests()
 end
 
+local function _test_runtime_compat_default_strict_context_first_blocks_fallback_on_context_hit()
+  runtime_compat.reset_for_tests()
+  _with_patches({
+    { target = runtime_context, key = "current", value = function()
+      return {}
+    end },
+    { key = "all_roles", value = { { id = 1 } } },
+    { key = "vehicle_helper", value = { test = true } },
+    { key = "camera_helper", value = { test = true } },
+  }, function()
+    _assert_eq(runtime_compat.get_roles(), nil, "default strict context-first should block roles fallback when context exists")
+    _assert_eq(runtime_compat.get_vehicle_helper(), nil,
+      "default strict context-first should block vehicle fallback when context exists")
+    _assert_eq(runtime_compat.get_camera_helper(), nil,
+      "default strict context-first should block camera fallback when context exists")
+    local hits = runtime_compat.get_fallback_hits()
+    _assert_eq(hits.roles, 0, "roles fallback count should remain zero under default strict mode")
+    _assert_eq(hits.vehicle_helper, 0, "vehicle fallback count should remain zero under default strict mode")
+    _assert_eq(hits.camera_helper, 0, "camera fallback count should remain zero under default strict mode")
+  end)
+  runtime_compat.reset_for_tests()
+end
+
 local function _test_runtime_compat_context_hit_does_not_increment_fallback_hits()
   runtime_compat.reset_for_tests()
   _with_patches({
@@ -80,6 +103,10 @@ return {
     {
       name = "runtime_compat_context_hit_does_not_increment_fallback_hits",
       run = _test_runtime_compat_context_hit_does_not_increment_fallback_hits
+    },
+    {
+      name = "runtime_compat_default_strict_context_first_blocks_fallback_on_context_hit",
+      run = _test_runtime_compat_default_strict_context_first_blocks_fallback_on_context_hit
     },
   },
 }

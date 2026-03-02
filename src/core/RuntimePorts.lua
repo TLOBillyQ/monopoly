@@ -32,6 +32,26 @@ local function _default_resolve_role(player_id)
   return role
 end
 
+local function _default_resolve_roles()
+  local ctx = runtime_context.current()
+  if ctx and type(ctx.roles) == "table" then
+    return ctx.roles
+  end
+  if type(all_roles) == "table" then
+    return all_roles
+  end
+  if type(ALLROLES) == "table" then
+    return ALLROLES
+  end
+  if GameAPI and type(GameAPI.get_all_valid_roles) == "function" then
+    local ok, roles = pcall(GameAPI.get_all_valid_roles)
+    if ok and type(roles) == "table" then
+      return roles
+    end
+  end
+  return {}
+end
+
 local function _default_mark_role_lose(role)
   if role and role.lose then
     role.lose()
@@ -44,6 +64,14 @@ local function _default_resolve_vehicle_helper()
     return ctx.vehicle_helper
   end
   return vehicle_helper
+end
+
+local function _default_resolve_camera_helper()
+  local ctx = runtime_context.current()
+  if ctx and type(ctx.camera_helper) == "table" then
+    return ctx.camera_helper
+  end
+  return camera_helper
 end
 
 local function _default_emit_event(event_name, payload)
@@ -123,6 +151,11 @@ function runtime_ports.resolve_role(player_id)
   return resolver(player_id)
 end
 
+function runtime_ports.resolve_roles()
+  local resolver = _resolve_port("resolve_roles", _default_resolve_roles)
+  return resolver()
+end
+
 function runtime_ports.mark_role_lose(role)
   local marker = _resolve_port("mark_role_lose", _default_mark_role_lose)
   return marker(role)
@@ -130,6 +163,11 @@ end
 
 function runtime_ports.resolve_vehicle_helper()
   local resolver = _resolve_port("resolve_vehicle_helper", _default_resolve_vehicle_helper)
+  return resolver()
+end
+
+function runtime_ports.resolve_camera_helper()
+  local resolver = _resolve_port("resolve_camera_helper", _default_resolve_camera_helper)
   return resolver()
 end
 

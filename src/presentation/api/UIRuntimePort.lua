@@ -1,5 +1,5 @@
 local ui_aliases = require("src.presentation.shared.UIAliases")
-local runtime_compat = require("src.core.RuntimeCompat")
+local runtime_ports = require("src.core.RuntimePorts")
 
 local runtime_port = {}
 
@@ -48,7 +48,7 @@ end
 
 function runtime_port.for_each_role_or_global(fn)
   assert(type(fn) == "function", "missing fn")
-  local roles = runtime_compat.get_roles()
+  local roles = runtime_ports.resolve_roles()
   if type(roles) == "table" and #roles > 0 then
     for _, role in ipairs(roles) do
       runtime_port.with_client_role(role, function()

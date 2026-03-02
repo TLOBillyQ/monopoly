@@ -1,17 +1,11 @@
 local meta = require("src.presentation.render.status3d_service.meta")
 local specs = require("src.presentation.render.status3d_service.specs")
-local runtime_compat = require("src.core.RuntimeCompat")
+local runtime_ports = require("src.core.RuntimePorts")
 
 local M = {}
 
 local function _resolve_observer_roles()
-  if GameAPI and GameAPI.get_all_valid_roles then
-    local ok, roles = pcall(GameAPI.get_all_valid_roles)
-    if ok and type(roles) == "table" then
-      return roles
-    end
-  end
-  local roles = runtime_compat.get_roles()
+  local roles = runtime_ports.resolve_roles()
   if type(roles) == "table" then
     return roles
   end

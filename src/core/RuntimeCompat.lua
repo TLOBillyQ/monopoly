@@ -1,8 +1,11 @@
 local runtime_context = require("src.core.RuntimeContext")
 
+-- DEPRECATED: RuntimeCompat is retained as a controlled compatibility bridge.
+-- Business modules should use RuntimePorts/context-resolved helpers instead.
+-- Keep direct RuntimeCompat usage only in compatibility contract tests.
 local runtime_compat = {}
 local state = {
-  strict_context_first = false,
+  strict_context_first = true,
   fallback_hits = {
     roles = 0,
     vehicle_helper = 0,
@@ -80,7 +83,7 @@ function runtime_compat.configure(opts)
 end
 
 function runtime_compat.reset_for_tests()
-  state.strict_context_first = false
+  state.strict_context_first = true
   state.fallback_hits.roles = 0
   state.fallback_hits.vehicle_helper = 0
   state.fallback_hits.camera_helper = 0

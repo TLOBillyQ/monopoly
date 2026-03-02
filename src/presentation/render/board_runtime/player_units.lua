@@ -1,5 +1,5 @@
 local M = {}
-local runtime_compat = require("src.core.RuntimeCompat")
+local runtime_ports = require("src.core.RuntimePorts")
 
 local function _resolve_player_id(player, i)
   return assert(player.id, "missing player id: " .. tostring(i))
@@ -52,7 +52,7 @@ function M.ensure_player_units(state, players, log_once, build_log_prefix)
     return
   end
 
-  local roles = runtime_compat.get_roles()
+  local roles = runtime_ports.resolve_roles()
   if type(roles) ~= "table" or #roles == 0 then
     roles = _resolve_roles_from_players(players)
   end

@@ -105,3 +105,28 @@ R10 不是表面整理，而是完成了一轮可验证的架构收敛：
 - `lua tests/regression.lua` -> `All regression checks passed (207)`（含 `tick ok`、`forbidden_globals ok`）
 
 补充执行注意事项：`tests/suites/gameplay_core.lua` 依赖回归入口提供 package.path，直接单跑会出现 `module 'gameplay_registry' not found`；因此该套件应通过 `tests/regression.lua` 统一执行。
+
+---
+
+## 9) R11 执行结果更新（2026-03-02）
+
+本次按新版 `.agents/plan.md` 完整执行 R11（M43-M45），并完成全量验收。
+
+### 9.1 关键落地
+
+- M43（roles 端口化）：新增 `RuntimePorts.resolve_roles()`，并将 `UIRuntimePort` / `UIBootstrap` / `GameStartup` / `player_units` / `scene` / `ViewCommandDispatcher` 从 `RuntimeCompat` 切换到 `RuntimePorts`。
+- M44（vehicle/camera 端口化）：新增 `RuntimePorts.resolve_camera_helper()`；`MoveAnim` / `placement` / `UISyncPorts` 改为 `RuntimePorts` 获取 helper。
+- M45（守护与收口）：`dep_rules` 新增 app/presentation 禁止依赖 `RuntimeCompat`；增加 tests 最小白名单守护（仅 `runtime_compat_contract`）；`RuntimeCompat` 标记 deprecated 且默认 `strict_context_first=true`；契约测试新增“默认 strict”断言。
+
+### 9.2 执行中发现与修正
+
+- 首轮替换后 `presentation_ui` 出现 2 个回归失败，原因是 `resolve_roles()` 初版没有保留 `all_roles/ALLROLES` fallback；补回后恢复通过。
+- 首轮在 `RuntimeInstall` 直接 `require RuntimeCompat` 配置 strict 被 `dep_rules` 拦截；最终改为 `RuntimeCompat` 默认 strict，保持 app 层零依赖。
+
+### 9.3 最终证据
+
+- `lua tests/internal/dep_rules.lua` -> `dep_rules ok`
+- `lua tests/regression.lua` -> `All regression checks passed (208)`
+- 同次输出包含：`tick ok`、`forbidden_globals ok`
+
+结论：R11 已把 RuntimeCompat 从业务路径收敛到“契约测试/应急兼容专用”，兼容桥进入可删除前状态，且守护规则可持续阻止回退。
