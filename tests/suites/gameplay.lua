@@ -28,6 +28,10 @@ local runtime_event_bridge = require("src.core.RuntimeEventBridge")
 local dispatch_validator = require("src.game.flow.turn.TurnDispatchValidator")
 local tick_ui_sync = require("src.game.flow.turn.TickUISync")
 local choice_auto_policy = require("src.game.flow.turn.TurnChoiceAutoPolicy")
+local turn_timer_policy = require("src.game.flow.turn.TurnTimerPolicy")
+local turn_role_control_policy = require("src.game.flow.turn.TurnRoleControlPolicy")
+local turn_camera_policy = require("src.game.flow.turn.TurnCameraPolicy")
+local gameplay_loop_runtime = require("src.game.flow.turn.GameplayLoopRuntime")
 local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
 local game_startup = require("src.app.bootstrap.GameStartup")
 local game_startup_event_bridge = require("src.app.bootstrap.GameStartupEventBridge")
@@ -1212,6 +1216,7 @@ local function _test_tick_headless_ports_cover_anim_phases()
   state.wait_move_anim = true
   state.wait_action_anim = true
   local dispatched = {}
+  local sequence = {}
   g.dispatch_action = function(_, action)
     dispatched[#dispatched + 1] = action
   end
@@ -1226,25 +1231,37 @@ local function _test_tick_headless_ports_cover_anim_phases()
   state.gameplay_loop_ports = _build_test_ports({
     play_move_anim = function(_, anim_ctx)
       calls.move_anim = calls.move_anim + 1
+      sequence[#sequence + 1] = "play_move_anim"
       assert(anim_ctx and anim_ctx.seq == 101, "move anim ctx should be injected")
       return 0
     end,
     play_action_anim = function(_, anim_ctx)
       calls.action_anim = calls.action_anim + 1
+      sequence[#sequence + 1] = "play_action_anim"
       assert(anim_ctx and anim_ctx.seq == 201, "action anim ctx should be injected")
       return 0
     end,
-    step_choice_timeout = function() end,
-    step_modal_timeout = function() end,
+    step_choice_timeout = function()
+      sequence[#sequence + 1] = "step_choice_timeout"
+    end,
+    step_modal_timeout = function()
+      sequence[#sequence + 1] = "step_modal_timeout"
+    end,
     update_countdown = function()
       calls.countdown = calls.countdown + 1
+      sequence[#sequence + 1] = "update_countdown"
     end,
     refresh_from_dirty = function()
       calls.refresh = calls.refresh + 1
+      sequence[#sequence + 1] = "refresh_from_dirty"
       return false
     end,
-    sync_debug_log = function() end,
-    log_status = function() end,
+    sync_debug_log = function()
+      sequence[#sequence + 1] = "sync_debug_log"
+    end,
+    log_status = function()
+      sequence[#sequence + 1] = "log_status"
+    end,
     close_choice_modal = function() end,
     open_choice_modal = function() end,
     apply_input_lock = function() end,
@@ -1255,20 +1272,80 @@ local function _test_tick_headless_ports_cover_anim_phases()
 
   g.turn.phase = "wait_move_anim"
   g.turn.move_anim = { seq = 101 }
-  gameplay_loop.tick(g, state, 0.1)
+  support.with_patches({
+    { target = gameplay_loop, key = "step_auto_runner", value = function()
+      sequence[#sequence + 1] = "step_auto_runner"
+    end },
+    { target = gameplay_loop_runtime, key = "sync_input_blocked", value = function()
+      sequence[#sequence + 1] = "sync_input_blocked"
+      return false
+    end },
+    { target = gameplay_loop_runtime, key = "sync_phase_flags", value = function()
+      sequence[#sequence + 1] = "sync_phase_flags"
+    end },
+    { target = turn_role_control_policy, key = "sync", value = function()
+      sequence[#sequence + 1] = "sync_role_control"
+    end },
+    { target = turn_timer_policy, key = "update_action_button_timer", value = function()
+      sequence[#sequence + 1] = "update_action_button_timer"
+    end },
+    { target = turn_timer_policy, key = "update_detained_wait_timer", value = function()
+      sequence[#sequence + 1] = "update_detained_wait_timer"
+    end },
+    { target = turn_camera_policy, key = "sync_follow", value = function()
+      sequence[#sequence + 1] = "sync_follow"
+    end },
+  }, function()
+    gameplay_loop.tick(g, state, 0.1)
+  end)
   assert(calls.move_anim == 1, "headless move anim should use injected port")
   assert(dispatched[1] and dispatched[1].type == "move_anim_done", "move anim should dispatch move_anim_done")
   assert(dispatched[1] and dispatched[1].seq == 101, "move anim seq should be forwarded")
 
   g.turn.phase = "wait_action_anim"
   g.turn.action_anim = { seq = 201 }
-  gameplay_loop.tick(g, state, 0.1)
+  support.with_patches({
+    { target = gameplay_loop, key = "step_auto_runner", value = function()
+      sequence[#sequence + 1] = "step_auto_runner"
+    end },
+  }, function()
+    gameplay_loop.tick(g, state, 0.1)
+  end)
   assert(calls.action_anim == 1, "headless action anim should use injected port")
   assert(dispatched[2] and dispatched[2].type == "action_anim_done", "action anim should dispatch action_anim_done")
   assert(dispatched[2] and dispatched[2].seq == 201, "action anim seq should be forwarded")
 
   assert(calls.countdown >= 2, "countdown should still step under custom ports")
   assert(calls.refresh >= 2, "refresh_from_dirty should still be called under custom ports")
+
+  local expected_order = {
+    "sync_input_blocked",
+    "sync_role_control",
+    "step_auto_runner",
+    "step_choice_timeout",
+    "step_modal_timeout",
+    "update_action_button_timer",
+    "update_detained_wait_timer",
+    "sync_input_blocked",
+    "play_move_anim",
+    "sync_phase_flags",
+    "update_countdown",
+    "refresh_from_dirty",
+    "sync_follow",
+    "sync_debug_log",
+  }
+  local search_start = 1
+  for _, name in ipairs(expected_order) do
+    local matched = nil
+    for i = search_start, #sequence do
+      if sequence[i] == name then
+        matched = i
+        break
+      end
+    end
+    assert(matched ~= nil, "missing expected tick order step: " .. tostring(name))
+    search_start = matched + 1
+  end
 end
 
 local function _test_action_button_timeout_auto_advances()

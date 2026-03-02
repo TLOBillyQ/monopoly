@@ -171,8 +171,10 @@
   - 收口结果：新增 `src/presentation/api/HostRuntimePort.lua`，将 `render/api/interaction` 的宿主调用统一收敛到端口层；`status3d` 保留受控 `resolve_game_role` 回退以兼容测试桩与观察者角色对象差异。
   - 证据：`rg "\\b(GameAPI|GlobalAPI|SetTimeOut|RegisterCustomEvent|TriggerCustomEvent)\\b" src/presentation -n` 仅命中 `HostRuntimePort.lua`（另有一处 `Status3DService` 告警文案字符串命中）。
 
-- `未开始`：步骤 4（继续细化 turn 用例编排职责）
-  - 本轮未触及 `GameplayLoopTickFlow.lua` 的进一步职责拆分。
+- `已完成`：步骤 4（继续细化 turn 用例编排职责）
+  - 已完成职责拆分：新增 `src/game/flow/turn/GameplayLoopTickSteps.lua`，承载 timeout/phase/dirty 三类驱动细节。
+  - 已完成壳层收口：`src/game/flow/turn/GameplayLoopTickFlow.lua` 仅保留编排顺序与依赖注入，复杂分支下沉到步骤模块。
+  - 已完成时序验证：在 `tests/suites/gameplay.lua` 的 `_test_tick_headless_ports_cover_anim_phases` 增强执行顺序断言，锁定 `sync_input_blocked -> role_control -> auto_runner -> timeout -> phase -> dirty_refresh` 契约。
 
 - `已完成`：步骤 5（同步更新命名与规则语义）
   - 已完成：`tests/suites/runtime_compat_contract.lua` -> `tests/suites/runtime_ports_contract.lua`，并同步 `tests/regression.lua` 注册入口。
@@ -183,3 +185,4 @@
 
 - `lua tests/regression.lua` -> `All regression checks passed (209)`（含 `tick ok`、`forbidden_globals ok`）
 - `lua tests/internal/dep_rules.lua` -> `dep_rules ok`
+- `rg "GameplayLoopTickFlow" tests/suites -n` -> 当前无直连字符串命中（时序验证由 loop suite 行为断言覆盖）
