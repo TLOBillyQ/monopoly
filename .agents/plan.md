@@ -1,190 +1,165 @@
-# R15 Legacy 收口与 RuntimePorts 拆分执行计划
+# R16 代码膨胀收敛执行计划（RuntimePorts 首轮拆分）
 
-本可执行计划是活文档。实施过程中必须持续更新"进度"、"意外与发现"、"决策日志"、"结果与复盘"。
+本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
-本文件遵循 `.agents/harness/PLANS.md` 维护，任何执行或范围调整都必须先同步更新本文件，再继续实施。
-
+本文件遵循 `.agents/harness/PLANS.md` 维护，任何执行和范围调整都必须先更新本文件，再继续实施。
 
 ## 目的 / 全局视角
 
-这轮工作的目标是把“阶段性兼容”继续压缩成“最小可控入口”，并把 `RuntimePorts` 从“多职责聚合点”拆回“清晰边界接口”。对用户可见的结果是：游戏行为不变、回归测试持续全绿，但内部调用路径更短、更稳定，后续退役 legacy 代码时不再需要大范围联动改动。
+这轮工作的目标是把最近两天最突出的膨胀热点 `src/core/RuntimePorts.lua` 做一次可回归验证的收缩拆分，在不改变业务行为的前提下，把“策略管理”和“默认端口实现”从单文件拆开。用户可见结果是游戏行为和测试结果不变；维护者可见结果是热点文件体积下降、职责更聚焦、后续修改冲突减少。
 
-本轮完成后，应能通过检索看到 legacy 入口进一步减少，通过契约测试证明 `RuntimePorts` 仍满足现有调用方，通过全量回归证明功能无回归。也就是说，用户看不到行为变化，但维护者可以更快定位问题、更安全地删除兼容代码。
+本轮改完后，应该能观察到三个事实：一是 `RuntimePorts.lua` 行数下降；二是 `runtime_ports_contract` 与全量回归仍通过；三是研究文档补充了“已执行收缩动作 + 可量化结果”，而不是停留在建议。
 
 ## 进度
 
-- [x] (2026-03-02 10:45 +08:00) 重新建立本轮计划文档骨架，并对齐 `.agents/harness/PLANS.md` 必需章节。
-- [x] (2026-03-02 21:02 +08:00) 盘点并分类 `context_policy`、`enable_legacy_helper_fallback`、`set_legacy_fallback_policy(` 的现存调用点，形成“保留/迁移/删除”清单（见“产物与备注”）。
-- [x] (2026-03-02 21:04 +08:00) 在 `src/app/bootstrap/RuntimeInstall.lua` 收口 legacy 入口：改为单点 `runtime_ports.install_context_policy(...)` 安装策略。
-- [x] (2026-03-02 21:05 +08:00) 在 `src/core/RuntimePorts.lua` 完成职责拆分：新增上下文策略安装入口并将策略解析从默认端口实现中抽离。
-- [x] (2026-03-02 21:06 +08:00) 同步更新并补强 `tests/suites/runtime_ports_contract.lua`，新增策略安装入口契约覆盖。
-- [x] (2026-03-02 21:07 +08:00) 复核 `tests/internal/dep_rules.lua` 治理效果：规则已覆盖 legacy 策略扩散场景，本轮无需新增规则。
-- [x] (2026-03-02 21:09 +08:00) 执行回归与检索验收，记录证据到“产物与备注”。
-- [x] (2026-03-02 21:13 +08:00) 提交代码并回填“结果与复盘”与文档更新记录。
+- [x] (2026-03-02 22:18 +08:00) 读取 `.agents/harness/PLANS.md` 与当前 `plan/research`，确认本轮范围与验收标准。
+- [x] (2026-03-02 22:20 +08:00) 重写本计划为 R16 活文档，补齐必需章节并写入可执行命令。
+- [x] (2026-03-02 22:24 +08:00) 拆分 `src/core/RuntimePorts.lua`：新增 `ContextPolicy.lua` 与 `DefaultPorts.lua`，保持对外接口签名不变。
+- [x] (2026-03-02 22:25 +08:00) 运行契约测试、依赖规则与全量回归，记录输出证据。
+- [x] (2026-03-02 22:27 +08:00) 更新 `.agents/research.md`：补充“执行后结果”和收缩效果。
+- [x] (2026-03-02 22:28 +08:00) 回填本计划“结果与复盘”与文档更新记录。
 
 ## 意外与发现
 
-- 观察：上一轮清理后，`forward_eca_event_*` 与全局 legacy 开关已清零，但 policy 型 legacy 入口仍集中在 Runtime 安装与端口层，说明“语义兼容”已从 API 层转移到策略层。
-  证据：`rg "context_policy|enable_legacy_helper_fallback|set_legacy_fallback_policy\\(" src tests -n` 仍有命中。
+- 观察：目前计划文件仍停留在 R15 的完成态，和用户当前“以降膨胀为目标并执行”需求不匹配。
+  证据：`.agents/plan.md` 标题与进度均指向 R15，且条目已全完成。
 
-- 观察：`.agents/plan.md` 在本次改写前处于缺失状态，属于流程风险点（执行无法继续追踪）。
-  证据：`Test-Path .agents/plan.md` 返回 `False`。
+- 观察：最近两天净增最高文件与高频碰撞文件重叠在 `RuntimePorts.lua`，优先拆它能用最小范围验证“降膨胀”策略。
+  证据：`.agents/research.md` 的 Top 文件统计与触达频次统计均将其排在首位。
 
-- 观察：`runtime_ports_contract` 不能直接使用 `lua tests/suites/runtime_ports_contract.lua` 运行，需要先补充 `package.path` 并通过 `TestHarness` 加载 suite。
-  证据：直接运行时报错 `module 'TestSupport' not found`，改用 `lua -e "package.path=...; require('TestHarness').run_all({require('runtime_ports_contract')})"` 后通过。
+- 观察：`RuntimePorts.lua` 在拆分后从 299 行降到 119 行，单文件热区显著收缩。
+  证据：`wc -l src/core/RuntimePorts.lua` 输出从 `299` 变为 `119`。
 
-- 观察：全量回归通过数从“约 210”提升到 213，主要由近期 suite 增量导致；本轮新增 1 个 `runtime_ports_contract` 用例属于预期增长。
-  证据：`lua tests/regression.lua` 输出 `All regression checks passed (213)`。
+- 观察：拆分后契约测试与全量回归均通过，说明本轮收缩未改变可观察行为。
+  证据：`runtime_ports_contract` 输出 `All regression checks passed (7)`；`lua tests/regression.lua` 输出 `All regression checks passed (213)`。
 
 ## 决策日志
 
-- 决策：本轮先做“收口 + 拆分 + 防护折叠”的小步闭环，不直接一次性删除全部 legacy policy 分支。
-  理由：当前回归面较大，先把入口集中和职责拆干净，再做最终退役，风险更低且更易验证。
+- 决策：本轮只做一轮“热点单文件拆分”，不并行改多个模块。
+  理由：用户要求“可执行并更新研究文档”，先交付一轮完整闭环（改动-验证-回填）比大范围改造更稳。
   日期/作者：2026-03-02 / Codex
 
-- 决策：把规则治理（`dep_rules`）与实现改动同批推进，而不是最后补。
-  理由：治理规则晚于实现落地会出现短窗口回退风险；同批推进可把“禁止扩散”前置为默认行为。
+- 决策：保持 `RuntimePorts` 对外函数签名完全不变，拆分仅发生在内部实现。
+  理由：能显著降低回归风险，避免牵一发而动全身。
   日期/作者：2026-03-02 / Codex
 
-- 决策：在 `RuntimePorts` 新增 `install_context_policy`，并让 `RuntimeInstall` 只调用该入口，不再直接拼装 legacy fallback 表。
-  理由：把“策略解析”与“端口默认实现”解耦后，后续退役 legacy 只需替换策略入口，避免安装层和端口层重复分支。
+- 决策：将默认实现函数集中到 `DefaultPorts.build(...)` 返回表，不在 `RuntimePorts` 里保留任何默认实现细节。
+  理由：把热点文件定位为“端口入口层”，避免再次因默认实现增长而膨胀。
   日期/作者：2026-03-02 / Codex
 
 ## 结果与复盘
 
-本轮改动已完成“收口 + 拆分 + 验证”闭环。`RuntimeInstall` 从“本地拼装 legacy policy”改为“单点安装上下文策略”，`RuntimePorts` 新增 `install_context_policy` 与 `context_policy` 可观测接口，把策略解析独立出来，默认端口函数继续保持签名不变。`runtime_ports_contract` 新增策略安装契约测试，`dep_rules` 与全量回归均通过。
+本轮已完成一次可验证的降膨胀收缩。具体做法是把 `RuntimePorts.lua` 的策略与默认行为拆到 `src/core/runtime_ports/ContextPolicy.lua` 和 `src/core/runtime_ports/DefaultPorts.lua`，主文件仅保留状态与端口路由。`RuntimePorts.lua` 行数从 299 降到 119，单文件阅读和碰撞面明显下降。
 
-全部计划项已完成并提交。风险变化方面，legacy 策略入口已从分散调用压缩为单点调用，回归通过说明行为未变；剩余风险是 `set_legacy_fallback_policy` 仍被测试支持代码使用，需在最终退役阶段评估是否收敛到测试专用 API。
+验证方面，`runtime_ports_contract`、`dep_rules`、`regression` 全部通过，说明拆分没有改变既有行为，也未破坏依赖规则。当前仍未处理的膨胀点是 `HostRuntimePort.lua` 与 `ViewCommandDispatcher.lua`，它们应作为下一轮压缩对象。
+
+下一轮建议优先做 `HostRuntimePort` 的角色解析职责外提，再处理 `ViewCommandDispatcher` 中 intent 分发与角色解析耦合问题，继续保持“单热点、可回归”的节奏。
 
 ## 背景与导读
 
-本仓库是 Lua 项目，运行时入口与核心逻辑分层组织。这里的 “legacy” 指为了兼容历史调用保留的策略或路径；“收口”指把多个分散入口合并成单点入口，减少扩散；“RuntimePorts” 指运行时对外提供的端口接口层，理想状态只表达能力契约，不混入策略决策或历史兼容细节。
+`RuntimePorts` 是运行时端口层，对项目多个模块提供调度、角色解析、事件发射和计时能力。这里的“端口”指跨边界调用时的稳定接口；“默认实现”指端口在未注入 mock 或替代实现时使用的具体执行逻辑；“上下文策略”指 strict/legacy 等兼容行为开关。
 
-本轮主要关注以下文件：
+当前问题不是功能错误，而是单文件过度承载多类职责：一方面管理策略状态（例如 legacy fallback）；另一方面实现大量默认能力函数（例如 resolve_role、emit_event、clock）。这种混合会导致文件持续膨胀、改动碰撞集中、评审成本上升。
 
-`src/app/bootstrap/RuntimeInstall.lua` 负责运行时装配与策略注入，当前仍可能承接部分 legacy policy 决策。
+本轮涉及的核心文件如下：
 
-`src/core/RuntimePorts.lua` 是端口层核心文件，当前职责可能混合“接口定义、默认实现选择、兼容兜底逻辑”。
+`src/core/RuntimePorts.lua`：现有热点文件，需收缩。
 
-`tests/suites/runtime_ports_contract.lua` 用于验证端口契约与关键行为，是拆分后的核心保护网。
+`src/core/runtime_ports/ContextPolicy.lua`（新增）：负责策略合法性与 fallback 归一化。
 
-`tests/internal/dep_rules.lua` 用于限制依赖方向与禁用路径扩散，是防止 legacy 回流的治理边界。
+`src/core/runtime_ports/DefaultPorts.lua`（新增）：负责默认端口函数集合。
 
-`.agents/research.md` 记录这两天清理结果与当前卡点，本计划直接落实其中“继续收口 legacy 入口，并推进 RuntimePorts 职责拆分，逐步把阶段性防护代码折叠掉”这一目标。
+`tests/suites/runtime_ports_contract.lua`：验证端口契约未回归。
 
-## 里程碑
-
-里程碑 1 聚焦“看清现状并锁定边界”。完成标准是得到一份可执行的 legacy 调用清单，并明确哪些入口必须保留到下一阶段，哪些可以立即迁移。验证方式是检索命中可解释且无未知调用点。
-
-里程碑 2 聚焦“RuntimeInstall 收口”。完成标准是 legacy policy 只有一个装配入口，调用方不再直接拼装 fallback 细节。验证方式是契约测试通过，且检索结果显示策略配置集中化。
-
-里程碑 3 聚焦“RuntimePorts 拆分与防护折叠”。完成标准是 `RuntimePorts` 仅保留端口职责，兼容语义转移到适配层或显式策略模块，阶段性防护代码减少且仍可观测。验证方式是回归全绿、dep_rules 全绿、legacy 命中下降。
-
-里程碑 4 聚焦“提交与复盘”。完成标准是提交包含代码、测试、文档更新，复盘明确下一次最终退役的前置条件与剩余阻塞。
+`.agents/research.md`：补充执行后结果和量化指标。
 
 ## 工作计划
 
-先做静态清点，再做最小改动闭环。第一步在 `src/` 与 `tests/` 内检索所有 legacy policy 相关符号，逐个归类为“短期保留（有业务依赖）”或“立即迁移（仅历史冗余）”。归类结果直接写入本计划“产物与备注”，避免执行中丢上下文。
+先拆分，再验证，再回写文档。拆分阶段把 `RuntimePorts.lua` 内与策略相关的纯函数迁移到 `ContextPolicy.lua`，把默认端口实现函数迁移到 `DefaultPorts.lua`，`RuntimePorts.lua` 仅保留状态、注入、路由与对外 API。迁移时保持所有对外函数名和参数不变，避免调用方改动。
 
-第二步改 `RuntimeInstall.lua`。目标不是新增能力，而是把 legacy 策略注入统一到单一函数或单一配置对象，调用者只表达“是否允许兼容策略”，不直接触达兼容细节。这样可以把后续退役变为替换单点实现，而不是全仓搜索替换。
+随后运行三组验证：第一组是 `runtime_ports_contract`，确认端口行为一致；第二组是 `dep_rules`，确认依赖关系未破坏；第三组是 `regression`，确认整体行为不变。若失败，优先修正拆分引入的问题，不额外扩展范围。
 
-第三步改 `RuntimePorts.lua`。把“端口契约”和“策略/兼容选择”拆开：端口层保留稳定函数签名，策略分支迁移到独立策略模块或安装阶段装配逻辑。若存在阶段性防护分支，优先折叠重复判断，保留最小必要断言，并在注释中说明退役条件。
-
-第四步补测试与规则。`runtime_ports_contract.lua` 需要覆盖 strict 与受控 legacy 两类路径，保证行为一致；`dep_rules.lua` 需要新增或收紧规则，防止新模块绕过集中入口直接引用 legacy 开关。
-
-最后执行全量验证并提交。若任何验证失败，先在本计划“意外与发现”记录症状与证据，再决定是回滚单步还是补丁修复，确保计划始终可从当前状态重启。
+最后更新研究文档，新增“R16 执行结果”段落，写清本轮实际减了什么、还剩什么膨胀风险，以及下一步压缩对象。
 
 ## 具体步骤
 
-所有命令在仓库根目录 `c:\Users\Lzx_8\Desktop\dev\repo\monopoly` 执行。
+所有命令在仓库根目录 `/Users/billyq/Dev/Github/Lua/monopoly` 执行。
 
-1. 建立 legacy 调用基线，保存命中结果。
+1. 记录改动前体量基线。
 
-    rg "context_policy|enable_legacy_helper_fallback|set_legacy_fallback_policy\\(" src tests -n
+    wc -l src/core/RuntimePorts.lua
 
-    预期：仍有少量命中，且主要集中在 Runtime 安装与端口相关模块。
+    预期：输出约 299 行（当前热点状态）。
 
-2. 执行 RuntimeInstall 收口改动后，复查命中分布。
+2. 执行拆分改动（新增模块 + 收缩 RuntimePorts）。
 
-    rg "context_policy|enable_legacy_helper_fallback|set_legacy_fallback_policy\\(" src tests -n
+    # 通过编辑器或补丁修改：
+    # - 新增 src/core/runtime_ports/ContextPolicy.lua
+    # - 新增 src/core/runtime_ports/DefaultPorts.lua
+    # - 修改 src/core/RuntimePorts.lua
 
-    预期：命中总量不增加，分布更集中，新增调用点为 0。
+    预期：`RuntimePorts.lua` 体积明显下降，模块职责更清晰。
 
-3. 执行 RuntimePorts 拆分后，运行契约与规则测试。
+3. 运行契约与规则测试。
 
     lua -e "package.path = package.path .. ';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; local harness = require('TestHarness'); harness.run_all({ require('runtime_ports_contract') })"
     lua tests/internal/dep_rules.lua
 
-    预期：`runtime_ports_contract` 与 `dep_rules` 全部通过，无新增违规依赖。
+    预期：均通过，无新增违规。
 
-4. 运行全量回归确认业务行为不变。
+4. 运行全量回归。
 
     lua tests/regression.lua
 
-    预期：全量回归通过（当前基线约 210 项，若数量变化需在“意外与发现”解释原因）。
+    预期：全部通过（数量若变化需解释）。
 
-5. 提交并回填文档。
+5. 更新研究文档和计划回填。
 
-    git status --short
-    git add -A
-    git commit -m "refactor runtime legacy entry contraction and RuntimePorts split"
+    # 编辑 .agents/research.md 与 .agents/plan.md
 
-    预期：提交仅包含本轮计划内文件与必要测试更新。
+    预期：研究文档包含“执行后结果”，计划四大活文档章节均为最新状态。
 
 ## 验证与验收
 
-验收以“行为不变 + 边界更清晰 + 扩散被阻断”为准。行为不变由 `lua tests/regression.lua` 证明；边界更清晰由 legacy 检索命中集中化和 `runtime_ports_contract` 通过共同证明；扩散被阻断由 `lua tests/internal/dep_rules.lua` 证明。
-
-如果出现“测试通过但命中扩散”的情况，视为未验收，因为这说明治理目标失败。只有当三类证据同时成立，才允许进入下一轮最终退役计划。
+验收标准是“收缩可量化 + 行为可证明不变”。收缩可量化由 `wc -l` 对比证明；行为不变由 `runtime_ports_contract`、`dep_rules`、`regression` 三组测试共同证明。三项任一失败都视为本轮未完成。
 
 ## 可重复性与恢复
 
-本计划采用增量小步策略，每一步都可独立重复执行。检索命令与测试命令可重复运行且不会污染仓库状态。
-
-若改动后测试失败，先保留现场并记录到“意外与发现”，再按最小粒度修复。禁止跨模块大回滚；优先回滚最近单文件改动以恢复可测状态。若提交后发现问题，使用新提交修复，不改写历史，确保追踪链完整。
+本计划步骤可重复执行。若拆分后测试失败，先保留现场并记录到“意外与发现”，再按最小修复原则处理。禁止用破坏性命令回滚工作树。若需要撤销本轮改动，使用新的反向提交而不是改写历史。
 
 ## 产物与备注
 
-以下内容在执行后补充真实输出片段，作为“确实生效”的证据：
+执行后在此补充关键证据片段：
 
-    legacy 调用分类清单（改动后）：
-      - 保留：tests/suites/runtime_ports_contract.lua（显式 legacy 契约用例）
-      - 保留：tests/TestSupport.lua（测试基座兼容开关）
-      - 迁移：src/app/bootstrap/RuntimeInstall.lua（由 set_legacy_fallback_policy 迁移到 install_context_policy）
-      - 保留：src/core/RuntimePorts.lua（提供集中策略入口 + 兼容查询 API）
-      - 删除：本轮无可直接删除入口，待最终退役阶段处理测试基座兼容接口
+    拆分后体量：
+      - 改动前：299  src/core/RuntimePorts.lua
+      - 改动后：119  src/core/RuntimePorts.lua
 
-    runtime_ports_contract 通过输出：
+    runtime_ports_contract：
       .......
       All regression checks passed (7)
 
-    dep_rules 通过输出：
+    dep_rules：
       dep_rules ok
 
-    regression 通过输出：
+    regression：
+      .....................................................................................................................................................................................................................
       All regression checks passed (213)
       dep_rules ok
       tick ok
       forbidden_globals ok
 
-    最终提交哈希与变更摘要：
-      - e422ca1 refactor runtime legacy entry contraction and RuntimePorts split
-      - 涉及文件：.agents/plan.md、.agents/research.md、RuntimeInstall、RuntimePorts、runtime_ports_contract
-
 ## 接口与依赖
 
-本轮不引入新外部依赖，继续使用 Lua 现有测试与检索工具链。关键接口约束如下：
+本轮不引入外部依赖。接口约束如下：
 
-`src/core/RuntimePorts.lua` 对外暴露的端口函数签名必须保持向后兼容，调用方不应因为本轮拆分而修改业务参数结构。
+`src/core/RuntimePorts.lua` 对外公开函数名必须保持不变：`configure/install_context_policy/set_legacy_fallback_policy/context_policy/legacy_fallback_policy/rng_next_int/schedule/resolve_role/resolve_roles/mark_role_lose/resolve_vehicle_helper/resolve_camera_helper/emit_event/wall_now_seconds/wall_diff_seconds/cpu_now_seconds/cpu_diff_seconds/reset_for_tests`。
 
-`src/app/bootstrap/RuntimeInstall.lua` 负责策略装配，legacy policy 只允许通过该层受控进入，其他模块不得新增直接开关调用。
+`ContextPolicy.lua` 只处理策略归一化与合法性判断，不依赖 `GameAPI`。
 
-`tests/suites/runtime_ports_contract.lua` 必须覆盖 strict 与受控 legacy 路径，确保同一输入下业务可观察结果一致。
-
-`tests/internal/dep_rules.lua` 必须把 legacy 触达限制在白名单模块，作为最终退役前的强约束。
+`DefaultPorts.lua` 只实现默认端口行为，通过注入函数读取策略状态，不直接持有策略全局状态。
 
 ## 文档更新记录
 
-2026-03-02（本次）：重建缺失的 `.agents/plan.md`，将研究结论中的下一步目标落成可执行计划，新增里程碑、验证命令、风险恢复与活文档章节，目的是让后续执行可以无外部上下文直接推进。
-2026-03-02（执行回填）：完成 R15 代码实施与验证，更新进度为已执行状态，补充契约测试运行方式、回归证据、legacy 调用分类和决策日志，确保文档可从当前快照直接重启执行。
-2026-03-02（提交回填）：记录最终提交哈希与变更摘要，并将进度与复盘状态更新为“全部完成”，避免执行状态与仓库实际状态不一致。
+2026-03-02（本次）：将计划从 R15 切换到 R16，目标改为“执行一次可验证的降膨胀拆分”，并补齐本轮验收标准与步骤。改动原因是用户明确要求“制定可执行计划并执行后更新研究文档”。
+2026-03-02（执行回填）：完成 `RuntimePorts` 首轮拆分与验证，新增 `src/core/runtime_ports/ContextPolicy.lua`、`src/core/runtime_ports/DefaultPorts.lua`，并将证据回填到计划。改动原因是把“建议”转成“已执行结果”，满足本轮交付目标。

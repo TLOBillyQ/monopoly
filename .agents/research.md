@@ -1,226 +1,167 @@
-# Monopoly 代码库近期变更研究（2026-03-02）
+# src/ 最近两天提交研究：代码膨胀视角（2026-03-02）
 
-本文件是调研结论，不是执行计划。执行细节见 `.agents/plan.md`。
+本文件是研究结论，不是执行计划。执行安排见 `.agents/plan.md`。
 
-更新时间：2026-03-02（R15 执行后）
-审查范围：最近两天（约48小时）src/ 目录变更
-审查方法：Git 历史分析 + CLOC 代码统计
-
----
-
-## 1. 执行摘要
-
-最近两天代码库经历大规模架构重构，主要成果：
-
-1. **运行时边界收紧**：完成 R5-R14 多轮重构，RuntimeCompat 桥接层已退役，legacy 策略进入受控阶段。
-2. **事件接口统一**：载具事件接口统一到 `emit_vehicle_*`，`forward_eca_event_*` 已清零。
-3. **读写模型拆分**：完成读模型分离和 UI 意图分发层重构，模块职责更清晰。
-
-结论：代码库正从"双轨兼容"向"严格分层 + 受控降级"演进，代码总量增长约 7%，但架构清晰度显著提升。
+审查范围：
+- 时间：最近两天（`git log --since='2 days ago'`）
+- 路径：`src/`
+- 方法：`git log --numstat` 聚合 + 提交级别净增分析 + 当前文件体量交叉检查
 
 ---
 
-## 1.1 对“代码量膨胀”的回应（反思与辩护）
+## 1. 总结结论
 
-这个指责成立一半：从净行数看，`src/` 近期确实是增长而不是下降，我接受这个事实，也接受这会带来阅读与维护成本。
-
-我的反思是：这轮清理优先目标是“先让边界可验证，再谈体量压降”。因此我采用了并行迁移、契约补强、规则治理三件套。它会在阶段内增加一些代码（端口策略、契约断言、治理规则），短期看像膨胀。
-
-我的辩护是：这次增长主要是“风险显性化代码”，不是“功能重复代码”。证据是三条：
-1. 历史兼容入口已真实退役：`set_legacy_global_fallback_enabled` 与 `forward_eca_event_*` 检索清零。
-2. 风险从“靠人记忆”变成“靠规则阻断”：`dep_rules` 已对 legacy 扩散做硬约束。
-3. 行为稳定性未退化：全量回归和依赖规则持续全绿。
-
-我仍承认：如果后续只做治理加法，不做结构减法，就会形成新的“治理性膨胀”。所以这份辩护必须绑定后续动作：继续收口 legacy 入口，并推进 RuntimePorts 职责拆分，逐步把阶段性防护代码折叠掉。
+1. 最近两天 `src/` 共 **38 个提交**，总计 **+5585 / -4334，净增 +1251 行**，存在明显体量上升。
+2. 这轮增长主要集中在 `src/core` 与 `src/presentation`，但同时伴随大量替换/迁移删除，不是纯堆叠式增长。
+3. “代码膨胀”风险点已出现，最突出的是跨层端口与运行时装配相关文件（`RuntimePorts.lua`、`HostRuntimePort.lua`、`ViewCommandDispatcher.lua`）。
+4. `src/game` 目录整体净减少（-89），说明核心玩法逻辑并未同步膨胀，增长更多来自边界治理与接口显式化。
 
 ---
 
-## 2. 代码量变化统计
+## 2. 量化统计（最近两天）
 
-### 总体变化
+### 2.1 全量变更
 
-| 指标 | 起始值 | 当前值 | 净变化 | 变化率 |
-|------|--------|--------|--------|--------|
-| **文件数** | 218 | 246 | +28 | +12.8% |
-| **代码行数** | 15,691 | 16,742 | +1,051 | +6.7% |
-| **空行数** | 1,937 | 2,114 | +177 | +9.1% |
-| **注释行数** | 63 | 67 | +4 | +6.3% |
+| 指标 | 数值 |
+|---|---:|
+| 提交数（仅 `src/`） | 38 |
+| 新增行 | 5585 |
+| 删除行 | 4334 |
+| 净增长 | **+1251** |
 
-### 增删行数汇总
+### 2.2 按日期分布
 
-| 指标 | 数量 |
-|------|------|
-| 新增代码行 | 5,613 |
-| 删除代码行 | 4,381 |
-| **净变化** | **+1,232** |
+| 日期 | 新增 | 删除 | 净增长 |
+|---|---:|---:|---:|
+| 2026-02-28 | 402 | 90 | +312 |
+| 2026-03-01 | 2860 | 2563 | +297 |
+| 2026-03-02 | 2323 | 1681 | +642 |
 
-> 注：CLOC 统计与 git diff 统计略有差异，前者统计有效代码行，后者包含空行和注释变更。
+观察：3/2 出现第二波增长高峰，且净增高于 3/1。
 
----
+### 2.3 按目录聚合（`src/一级/二级`）
 
-## 3. 主要变更分析
-
-### 3.1 架构收敛（最大变更集）
-
-| 提交 | 说明 | 变更行数 | 影响 |
-|------|------|----------|------|
-| `df73efa3` | execute architecture convergence plan | +753 / -1,073 | 核心架构整合 |
-| `410b9e9a` | refactor runtime boundaries and remove core runtime proxies | +413 / -61 | 移除运行时代理层 |
-| `4117055b` | complete R8/R9 boundary hardening and contracts | +678 / -354 | 边界硬化与契约 |
-| `27e7916b` | execute R5 clean-architecture plan | +577 / -495 | 干净架构落地 |
-
-**关键成果**：
-- RuntimeCompat 桥接层已删除（`5a24f5ed` 移除 100 行）
-- 旧兼容开关 API 已退役（`set_legacy_global_fallback_enabled` 等）
-- `forward_eca_event_*` 别名已清零
-
-### 3.2 模型层拆分
-
-| 提交 | 说明 | 变更行数 |
-|------|------|----------|
-| `35fd46d0` | split read model and refactor UI intent dispatch | +673 / -562 |
-| `bc2e0f81` | Refactor land rules and introduce rent resolver | +441 / -394 |
-| `ea68a86c` | refactor reduce duplicated semantics in milestones m16-m18 | +132 / -166 |
-
-**关键成果**：
-- 读模型与写模型分离
-- 土地规则与租金解析器解耦
-- M16-M18 里程碑语义去重
-
-### 3.3 回合与 Tick 流程
-
-| 提交 | 说明 | 变更行数 |
-|------|------|----------|
-| `4973e2e5` | split tick runtime policies | +162 / -140 |
-| `66eb297a` | finish step3 and plan step4 gameplay loop split | +165 / -57 |
-| `afa02c79` | complete step4 tick flow split and docs backfill | +94 / -88 |
-
-**关键成果**：
-- Tick 运行时策略拆分
-- 游戏循环分阶段落地
-
-### 3.4 功能性改进
-
-| 提交 | 说明 | 变更行数 |
-|------|------|----------|
-| `492055dd` | 骰子等待 0.9s + 通用二级确认拦截 | +189 / -1 |
-| `d939f70a` | update item slot highlight reset logic and test | +33 / -8 |
-| `b1a46d7d` | guard TriggerCustomEvent and add degradation tests | +142 / -29 |
+| 目录 | 新增 | 删除 | 净增长 |
+|---|---:|---:|---:|
+| `src/core` | 905 | 186 | **+719** |
+| `src/presentation` | 2853 | 2284 | **+569** |
+| `src/app` | 175 | 123 | +52 |
+| `src/game` | 1652 | 1741 | **-89** |
 
 ---
 
-## 4. 架构演进评估
+## 3. 膨胀热点
 
-### 4.1 当前架构状态
+### 3.1 净增长 Top 文件（最近两天）
 
-```
-┌─────────────────────────────────────────┐
-│  Presentation (UI / Render / Input)     │
-├─────────────────────────────────────────┤
-│  Runtime Ports (统一接口层)              │
-├─────────────────────────────────────────┤
-│  Core Domain (Game Logic / Rules)       │
-└─────────────────────────────────────────┘
-```
+| 文件 | 新增 | 删除 | 净增长 |
+|---|---:|---:|---:|
+| `src/core/RuntimePorts.lua` | 345 | 46 | **+299** |
+| `src/game/core/runtime/Agent.lua` | 181 | 9 | +172 |
+| `src/presentation/api/HostRuntimePort.lua` | 138 | 2 | +136 |
+| `src/presentation/render/ActionAnimOverlayRuntime.lua` | 146 | 15 | +131 |
+| `src/presentation/api/presentation_ports/UISyncPorts.lua` | 124 | 5 | +119 |
+| `src/game/flow/turn/TickChoiceTimeout.lua` | 115 | 0 | +115 |
+| `src/presentation/interaction/ui_intent_dispatcher/PreConfirmFlow.lua` | 110 | 0 | +110 |
+| `src/game/systems/land/LandRentResolver.lua` | 133 | 25 | +108 |
+| `src/game/flow/turn/GameplayLoopUISyncDefaults.lua` | 108 | 0 | +108 |
+| `src/core/ChoiceRoutePolicy.lua` | 100 | 0 | +100 |
 
-- **边界清晰度**：✅ 运行时边界已通过端口收敛
-- **兼容层状态**：⚠️ 受控 legacy 策略仍在役，但不可滥用
-- **事件链**：✅ 统一到 `emit_vehicle_*` 命名体系
+### 3.2 频繁改动文件（提交触达次数 Top）
 
-### 4.2 技术债务变化
+| 文件 | 触达提交数 |
+|---|---:|
+| `src/core/RuntimePorts.lua` | 8 |
+| `src/app/bootstrap/RuntimeInstall.lua` | 8 |
+| `src/presentation/render/MoveAnim.lua` | 6 |
+| `src/presentation/render/board_runtime/placement.lua` | 6 |
+| `src/presentation/api/PresentationPorts.lua` | 6 |
+| `src/core/RuntimeContext.lua` | 5 |
+| `src/presentation/interaction/UIIntentDispatcher.lua` | 5 |
 
-| 债务项 | 状态 | 说明 |
-|--------|------|------|
-| RuntimeCompat 桥接 | ✅ 已清理 | 完全退役 |
-| forward_eca_event 别名 | ✅ 已清理 | 检索清零 |
-| 旧兼容开关 API | ✅ 已清理 | 无调用入口 |
-| legacy 策略入口 | ⚠️ 受控 | 已收口到 `RuntimeInstall -> RuntimePorts.install_context_policy` 单点 |
-| RuntimePorts 职责 | ✅ 已拆分 | 策略安装与默认端口实现已分离，契约保持兼容 |
-
----
-
-## 5. 验证状态
-
-### 回归测试结果
-
-- `lua tests/regression.lua`: ✅ All regression checks passed (213)
-- `runtime_ports_contract`（harness 单套件）: ✅ All regression checks passed (7)
-- `lua tests/internal/dep_rules.lua`: ✅ dep_rules ok
-- Tick 测试: ✅ tick ok
-- 全局禁用检查: ✅ forbidden_globals ok
-
-### 代码检索验证
-
-| 检索项 | 结果 | 说明 |
-|--------|------|------|
-| `set_legacy_global_fallback_enabled` | 0 matches | ✅ 已清理 |
-| `forward_eca_event_` | 0 matches | ✅ 已清理 |
-| `context_policy.*legacy` | 少量匹配 | ⚠️ 受控使用 |
-| `enable_legacy_helper_fallback` | 少量匹配 | ⚠️ 受控使用 |
+判断：`RuntimePorts`、`RuntimeInstall`、`PresentationPorts` 既“长得快”又“改得勤”，是当前最需要防膨胀治理的核心文件。
 
 ---
 
-## 6. 下一阶段建议
+## 4. 对“代码膨胀”的判断
 
-### P1：legacy 策略最终退役（高优先级）
+### 4.1 属于“必要显式化”的增长
 
-1. **清单化 legacy 使用场景**
-   - 盘点所有 `context_policy = "legacy"` 的实际调用点
-   - 建立使用审批机制，禁止新增入口
+- 边界契约显式化：大量端口/策略代码从隐式耦合转为显式接口。
+- 兼容层退役成本：迁移期会并存“新接口 + 过渡适配”，短期净增正常。
+- 结构替换明显：多次大提交同时出现高新增和高删除（如 `35fd46d0`、`bc2e0f81`），不是单向堆积。
 
-2. **helper fallback 退役路径**
-   - 将 `tests/TestSupport.lua` 中的 `set_legacy_fallback_policy` 迁移到更窄的测试专用 API
-   - 确认业务代码不再需要 helper fallback 再做删除
+### 4.2 属于“真实膨胀风险”的增长
 
-### P2：RuntimePorts 收尾清理（中优先级）
+- 运行时装配中心化过度：`RuntimePorts.lua` 已达到 299 行，接近“策略分发 + 装配 + 默认实现”多职责混合。
+- presentation 端口碎片多：`HostRuntimePort.lua`、`PresentationPorts.lua`、`UISyncPorts.lua` 同时扩张，存在职责重叠概率。
+- 高频改动集中在少数大文件：会拉高冲突率、回归成本和阅读门槛。
 
-1. **策略配置收尾**
-   - 评估 `set_legacy_fallback_policy` 是否可降级为 `tests` 专用接口
-   - 确保 `install_context_policy` 成为唯一生产入口
+---
 
-2. **兼容语义持续外移**
-   - 继续压缩 legacy fallback 使用点
-   - 保持核心端口契约稳定
+## 5. 关键提交（净增长视角）
 
-### P3：测试与文档（持续）
+| 提交 | 主题 | 新增/删除 | 净增 |
+|---|---|---:|---:|
+| `410b9e9a` | runtime boundaries / remove proxies | 413 / 61 | **+352** |
+| `4117055b` | R8/R9 boundary hardening | 678 / 354 | **+324** |
+| `492055dd` | 二级确认与等待流程 | 189 / 1 | +188 |
+| `b1a46d7d` | runtime guard + tests | 142 / 29 | +113 |
+| `35fd46d0` | read model split / ui dispatch | 673 / 562 | +111 |
 
-1. **维持放行纪律**
-   - 每批改动必须通过全量回归
-   - 契约测试覆盖率不下降
+备注：这些提交多数是架构阶段性重构，不能简单按“净增高=坏”判定，但应在阶段结束后立刻做收口压缩。
 
-2. **文档同步**
-   - 架构变更同步更新 ADR
-   - 模块职责说明更新 README
+---
+
+## 6. 建议动作（围绕膨胀收敛）
+
+1. 对 `RuntimePorts.lua` 做二次拆分：
+   - 目标拆为 `PolicyInstall`、`DefaultPorts`、`LegacyFallbackPolicy`（或等价边界）。
+2. 对 presentation 端口做“单一职责盘点”：
+   - 明确 `HostRuntimePort` 与 `PresentationPorts` 的边界，避免重复导出/透传。
+3. 增加轻量体量守卫：
+   - 对关键文件设软阈值（如 260 行）并在 PR 里提示“需解释增长理由”。
+4. 以“净增 Top 文件”为对象做一次专门压缩迭代：
+   - 优先：`RuntimePorts.lua`、`HostRuntimePort.lua`、`ViewCommandDispatcher.lua`。
 
 ---
 
 ## 7. 结论
 
-最近两天的变更代表了代码库从"兼容双轨"到"严格分层"的关键转折。虽然代码总量增长约 7%，但：
-
-- 架构清晰度显著提升
-- 运行时边界更加明确
-- 技术债务有效收敛
-
-**核心判断**：当前处于架构收敛的收获期，低风险高收益的清理已基本完成。下一步应在风险可控前提下继续压缩 legacy 入口，避免再次扩张兼容语义。
-
-完成条件：
-- 业务行为不变（回归全绿）
-- strict 路径覆盖完整
-- legacy 策略入口持续收敛且可追踪
+最近两天 `src/` 的确发生了可观净增长（+1251 行），但主因是架构边界显式化与迁移成本，不是单纯业务重复堆砌。  
+真正的风险不在“是否增长”，而在“增长是否继续集中在少数跨层大文件”。当前应从“继续加法”切换到“收口拆分”，否则会在下一轮演进中转化为维护性债务。
 
 ---
 
-## 8. R15 执行结果（2026-03-02）
+## 8. R16 执行结果（已落地）
 
-本轮已完成“legacy 收口 + RuntimePorts 拆分 + 契约补强”。核心变化：
+本轮已按“降低代码膨胀”目标执行一轮可验证收缩，聚焦 `RuntimePorts` 热点文件。
 
-1. `src/app/bootstrap/RuntimeInstall.lua` 不再直接拼装 legacy fallback 表，统一改为调用 `runtime_ports.install_context_policy(...)`。
-2. `src/core/RuntimePorts.lua` 新增 `install_context_policy` 与 `context_policy`，将策略解析集中在端口层单点接口。
-3. `tests/suites/runtime_ports_contract.lua` 新增策略安装入口契约测试，覆盖 strict/legacy 策略状态与 fallback 行为。
+### 8.1 已执行改动
 
-验证证据：
+- 新增 `src/core/runtime_ports/ContextPolicy.lua`，承接策略合法性与 legacy fallback 归一化。
+- 新增 `src/core/runtime_ports/DefaultPorts.lua`，承接默认端口实现函数集合。
+- 收缩 `src/core/RuntimePorts.lua` 为“状态 + 路由”薄层，保持对外函数签名不变。
 
-- `lua -e "package.path = ...; require('TestHarness').run_all({require('runtime_ports_contract')})"` -> `All regression checks passed (7)`
-- `lua tests/internal/dep_rules.lua` -> `dep_rules ok`
-- `lua tests/regression.lua` -> `All regression checks passed (213)`
+### 8.2 收缩效果（量化）
+
+| 文件 | 改动前 | 改动后 | 变化 |
+|---|---:|---:|---:|
+| `src/core/RuntimePorts.lua` | 299 行 | 119 行 | **-180 行（-60.2%）** |
+
+说明：总代码行并未追求“绝对减少”，而是把单热点文件的多职责膨胀拆散到边界明确的子模块，降低碰撞密度与维护复杂度。
+
+### 8.3 验证结果
+
+- `runtime_ports_contract`：`All regression checks passed (7)`
+- `lua tests/internal/dep_rules.lua`：`dep_rules ok`
+- `lua tests/regression.lua`：`All regression checks passed (213)`，且 `tick ok`、`forbidden_globals ok`
+
+结论：本轮收缩在不改变可观察行为的前提下完成，且未破坏现有依赖治理。
+
+### 8.4 剩余膨胀风险
+
+- `src/presentation/api/HostRuntimePort.lua`：适配职责与 fallback 协调仍混合。
+- `src/presentation/interaction/ui_intent_dispatcher/ViewCommandDispatcher.lua`：intent 分发与角色解析耦合仍在。
+
+下一轮应继续按“单热点拆分 + 契约回归验证”模式推进，避免再次形成大文件集中碰撞。
