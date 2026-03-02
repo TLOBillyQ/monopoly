@@ -2,7 +2,7 @@
 
 本文件是调研结论，不是执行计划。执行细节见 `.agents/plan.md`。
 
-更新时间：2026-03-02
+更新时间：2026-03-02（R15 执行后）
 审查范围：最近两天（约48小时）src/ 目录变更
 审查方法：Git 历史分析 + CLOC 代码统计
 
@@ -134,8 +134,8 @@
 | RuntimeCompat 桥接 | ✅ 已清理 | 完全退役 |
 | forward_eca_event 别名 | ✅ 已清理 | 检索清零 |
 | 旧兼容开关 API | ✅ 已清理 | 无调用入口 |
-| legacy 策略入口 | ⚠️ 受控 | `context_policy` / `enable_legacy_helper_fallback` 仍在 |
-| RuntimePorts 职责 | ⚠️ 待拆分 | 仍承担策略+实现+兼容多重职责 |
+| legacy 策略入口 | ⚠️ 受控 | 已收口到 `RuntimeInstall -> RuntimePorts.install_context_policy` 单点 |
+| RuntimePorts 职责 | ✅ 已拆分 | 策略安装与默认端口实现已分离，契约保持兼容 |
 
 ---
 
@@ -143,7 +143,8 @@
 
 ### 回归测试结果
 
-- `lua tests/regression.lua`: ✅ All regression checks passed (210)
+- `lua tests/regression.lua`: ✅ All regression checks passed (213)
+- `runtime_ports_contract`（harness 单套件）: ✅ All regression checks passed (7)
 - `lua tests/internal/dep_rules.lua`: ✅ dep_rules ok
 - Tick 测试: ✅ tick ok
 - 全局禁用检查: ✅ forbidden_globals ok
@@ -161,25 +162,25 @@
 
 ## 6. 下一阶段建议
 
-### P1：legacy 策略收口（高优先级）
+### P1：legacy 策略最终退役（高优先级）
 
 1. **清单化 legacy 使用场景**
    - 盘点所有 `context_policy = "legacy"` 的实际调用点
    - 建立使用审批机制，禁止新增入口
 
-2. **helper fallback 治理**
-   - 对 `enable_legacy_helper_fallback` 增加调用审计
-   - 逐步替换为显式策略注入
+2. **helper fallback 退役路径**
+   - 将 `tests/TestSupport.lua` 中的 `set_legacy_fallback_policy` 迁移到更窄的测试专用 API
+   - 确认业务代码不再需要 helper fallback 再做删除
 
-### P2：RuntimePorts 职责拆分（中优先级）
+### P2：RuntimePorts 收尾清理（中优先级）
 
-1. **策略配置与实现分离**
-   - 将策略配置抽取到独立模块
-   - 默认实现通过依赖注入提供
+1. **策略配置收尾**
+   - 评估 `set_legacy_fallback_policy` 是否可降级为 `tests` 专用接口
+   - 确保 `install_context_policy` 成为唯一生产入口
 
-2. **兼容语义外移**
-   - legacy 兼容逻辑下沉到适配器层
-   - 核心端口保持纯粹契约
+2. **兼容语义持续外移**
+   - 继续压缩 legacy fallback 使用点
+   - 保持核心端口契约稳定
 
 ### P3：测试与文档（持续）
 
@@ -207,3 +208,19 @@
 - 业务行为不变（回归全绿）
 - strict 路径覆盖完整
 - legacy 策略入口持续收敛且可追踪
+
+---
+
+## 8. R15 执行结果（2026-03-02）
+
+本轮已完成“legacy 收口 + RuntimePorts 拆分 + 契约补强”。核心变化：
+
+1. `src/app/bootstrap/RuntimeInstall.lua` 不再直接拼装 legacy fallback 表，统一改为调用 `runtime_ports.install_context_policy(...)`。
+2. `src/core/RuntimePorts.lua` 新增 `install_context_policy` 与 `context_policy`，将策略解析集中在端口层单点接口。
+3. `tests/suites/runtime_ports_contract.lua` 新增策略安装入口契约测试，覆盖 strict/legacy 策略状态与 fallback 行为。
+
+验证证据：
+
+- `lua -e "package.path = ...; require('TestHarness').run_all({require('runtime_ports_contract')})"` -> `All regression checks passed (7)`
+- `lua tests/internal/dep_rules.lua` -> `dep_rules ok`
+- `lua tests/regression.lua` -> `All regression checks passed (213)`

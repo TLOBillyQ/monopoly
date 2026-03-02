@@ -14,12 +14,12 @@
 ## 进度
 
 - [x] (2026-03-02 10:45 +08:00) 重新建立本轮计划文档骨架，并对齐 `.agents/harness/PLANS.md` 必需章节。
-- [ ] 盘点并分类 `context_policy`、`enable_legacy_helper_fallback`、`set_legacy_fallback_policy(` 的现存调用点，形成“保留/迁移/删除”清单。
-- [ ] 在 `src/app/bootstrap/RuntimeInstall.lua` 收口 legacy 入口：统一入口函数，移除分散策略分支，保留单点可观测开关。
-- [ ] 在 `src/core/RuntimePorts.lua` 完成职责拆分：策略解析与端口实现分离，兼容语义下沉至适配层。
-- [ ] 同步更新并补强 `tests/suites/runtime_ports_contract.lua`，确保 strict 路径与 legacy 受控路径都可验证。
-- [ ] 更新 `tests/internal/dep_rules.lua`，阻止新增 legacy 入口扩散（只允许白名单模块触达）。
-- [ ] 执行回归与检索验收，记录证据到“产物与备注”。
+- [x] (2026-03-02 21:02 +08:00) 盘点并分类 `context_policy`、`enable_legacy_helper_fallback`、`set_legacy_fallback_policy(` 的现存调用点，形成“保留/迁移/删除”清单（见“产物与备注”）。
+- [x] (2026-03-02 21:04 +08:00) 在 `src/app/bootstrap/RuntimeInstall.lua` 收口 legacy 入口：改为单点 `runtime_ports.install_context_policy(...)` 安装策略。
+- [x] (2026-03-02 21:05 +08:00) 在 `src/core/RuntimePorts.lua` 完成职责拆分：新增上下文策略安装入口并将策略解析从默认端口实现中抽离。
+- [x] (2026-03-02 21:06 +08:00) 同步更新并补强 `tests/suites/runtime_ports_contract.lua`，新增策略安装入口契约覆盖。
+- [x] (2026-03-02 21:07 +08:00) 复核 `tests/internal/dep_rules.lua` 治理效果：规则已覆盖 legacy 策略扩散场景，本轮无需新增规则。
+- [x] (2026-03-02 21:09 +08:00) 执行回归与检索验收，记录证据到“产物与备注”。
 - [ ] 提交代码并回填“结果与复盘”与文档更新记录。
 
 ## 意外与发现
@@ -29,6 +29,12 @@
 
 - 观察：`.agents/plan.md` 在本次改写前处于缺失状态，属于流程风险点（执行无法继续追踪）。
   证据：`Test-Path .agents/plan.md` 返回 `False`。
+
+- 观察：`runtime_ports_contract` 不能直接使用 `lua tests/suites/runtime_ports_contract.lua` 运行，需要先补充 `package.path` 并通过 `TestHarness` 加载 suite。
+  证据：直接运行时报错 `module 'TestSupport' not found`，改用 `lua -e "package.path=...; require('TestHarness').run_all({require('runtime_ports_contract')})"` 后通过。
+
+- 观察：全量回归通过数从“约 210”提升到 213，主要由近期 suite 增量导致；本轮新增 1 个 `runtime_ports_contract` 用例属于预期增长。
+  证据：`lua tests/regression.lua` 输出 `All regression checks passed (213)`。
 
 ## 决策日志
 
@@ -40,9 +46,15 @@
   理由：治理规则晚于实现落地会出现短窗口回退风险；同批推进可把“禁止扩散”前置为默认行为。
   日期/作者：2026-03-02 / Codex
 
+- 决策：在 `RuntimePorts` 新增 `install_context_policy`，并让 `RuntimeInstall` 只调用该入口，不再直接拼装 legacy fallback 表。
+  理由：把“策略解析”与“端口默认实现”解耦后，后续退役 legacy 只需替换策略入口，避免安装层和端口层重复分支。
+  日期/作者：2026-03-02 / Codex
+
 ## 结果与复盘
 
-当前处于计划建立阶段，尚未执行代码改动。本节在每个里程碑完成后更新“完成内容、未完成项、风险变化、是否达到目的”。最终完成标准是：功能行为不变、strict 路径覆盖完整、legacy 入口降到约定白名单且具备可观测退役窗口。
+本轮改动已完成“收口 + 拆分 + 验证”闭环。`RuntimeInstall` 从“本地拼装 legacy policy”改为“单点安装上下文策略”，`RuntimePorts` 新增 `install_context_policy` 与 `context_policy` 可观测接口，把策略解析独立出来，默认端口函数继续保持签名不变。`runtime_ports_contract` 新增策略安装契约测试，`dep_rules` 与全量回归均通过。
+
+未完成项仅剩“提交并记录哈希”。风险变化方面，legacy 策略入口已从分散调用压缩为单点调用，回归通过说明行为未变；剩余风险是 `set_legacy_fallback_policy` 仍被测试支持代码使用，需在最终退役阶段评估是否收敛到测试专用 API。
 
 ## 背景与导读
 
@@ -100,7 +112,7 @@
 
 3. 执行 RuntimePorts 拆分后，运行契约与规则测试。
 
-    lua tests/suites/runtime_ports_contract.lua
+    lua -e "package.path = package.path .. ';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; local harness = require('TestHarness'); harness.run_all({ require('runtime_ports_contract') })"
     lua tests/internal/dep_rules.lua
 
     预期：`runtime_ports_contract` 与 `dep_rules` 全部通过，无新增违规依赖。
@@ -135,11 +147,28 @@
 
 以下内容在执行后补充真实输出片段，作为“确实生效”的证据：
 
-    [待补] legacy 检索命中摘要（改动前/后对比）
-    [待补] runtime_ports_contract 通过输出关键行
-    [待补] dep_rules 通过输出关键行
-    [待补] regression 通过输出关键行
-    [待补] 最终提交哈希与变更摘要
+    legacy 调用分类清单（改动后）：
+      - 保留：tests/suites/runtime_ports_contract.lua（显式 legacy 契约用例）
+      - 保留：tests/TestSupport.lua（测试基座兼容开关）
+      - 迁移：src/app/bootstrap/RuntimeInstall.lua（由 set_legacy_fallback_policy 迁移到 install_context_policy）
+      - 保留：src/core/RuntimePorts.lua（提供集中策略入口 + 兼容查询 API）
+      - 删除：本轮无可直接删除入口，待最终退役阶段处理测试基座兼容接口
+
+    runtime_ports_contract 通过输出：
+      .......
+      All regression checks passed (7)
+
+    dep_rules 通过输出：
+      dep_rules ok
+
+    regression 通过输出：
+      All regression checks passed (213)
+      dep_rules ok
+      tick ok
+      forbidden_globals ok
+
+    最终提交哈希与变更摘要：
+      [待提交]
 
 ## 接口与依赖
 
@@ -156,3 +185,4 @@
 ## 文档更新记录
 
 2026-03-02（本次）：重建缺失的 `.agents/plan.md`，将研究结论中的下一步目标落成可执行计划，新增里程碑、验证命令、风险恢复与活文档章节，目的是让后续执行可以无外部上下文直接推进。
+2026-03-02（执行回填）：完成 R15 代码实施与验证，更新进度为已执行状态，补充契约测试运行方式、回归证据、legacy 调用分类和决策日志，确保文档可从当前快照直接重启执行。

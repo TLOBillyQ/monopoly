@@ -79,6 +79,30 @@ local function _test_runtime_ports_legacy_fallback_is_explicit()
   _reset_runtime_contract_state()
 end
 
+local function _test_runtime_ports_install_context_policy_controls_legacy_fallback()
+  _reset_runtime_contract_state()
+  runtime_ports.install_context_policy("strict", {
+    enable_legacy_helper_fallback = true,
+  })
+  local strict_policy = runtime_ports.legacy_fallback_policy()
+  _assert_eq(runtime_ports.context_policy(), "strict", "strict policy should be recorded")
+  _assert_eq(strict_policy.roles, false, "strict policy should disable roles fallback")
+  _assert_eq(strict_policy.role, false, "strict policy should disable role fallback")
+  _assert_eq(strict_policy.vehicle, false, "strict policy should disable vehicle fallback")
+  _assert_eq(strict_policy.camera, false, "strict policy should disable camera fallback")
+
+  runtime_ports.install_context_policy("legacy", {
+    enable_legacy_helper_fallback = true,
+  })
+  local legacy_policy = runtime_ports.legacy_fallback_policy()
+  _assert_eq(runtime_ports.context_policy(), "legacy", "legacy policy should be recorded")
+  _assert_eq(legacy_policy.roles, true, "legacy policy should enable roles fallback")
+  _assert_eq(legacy_policy.role, true, "legacy policy should enable role fallback")
+  _assert_eq(legacy_policy.vehicle, true, "legacy policy should enable vehicle fallback")
+  _assert_eq(legacy_policy.camera, true, "legacy policy should enable camera fallback")
+  _reset_runtime_contract_state()
+end
+
 local function _test_runtime_install_strict_rejects_missing_context_install()
   _reset_runtime_contract_state()
   local ok, err = pcall(function()
@@ -164,6 +188,10 @@ return {
     {
       name = "runtime_ports_legacy_fallback_is_explicit",
       run = _test_runtime_ports_legacy_fallback_is_explicit,
+    },
+    {
+      name = "runtime_ports_install_context_policy_controls_legacy_fallback",
+      run = _test_runtime_ports_install_context_policy_controls_legacy_fallback,
     },
     {
       name = "runtime_install_strict_rejects_missing_context_install",
