@@ -343,13 +343,6 @@ local function _scan_presentation_system_requires()
   return nil
 end
 
-local legacy_policy_usage_allowlist = {
-  ["tests/suites/runtime_ports_contract.lua"] = {
-    allow_context_policy_legacy = true,
-    allow_helper_opt_in = true,
-  },
-}
-
 local function _scan_legacy_policy_usages()
   local roots = { "src", "tests" }
   for _, root in ipairs(roots) do
@@ -363,7 +356,6 @@ local function _scan_legacy_policy_usages()
         local normalized = _normalize_path(path)
         local relpath = normalized:match(".*(src/.+)") or normalized:match(".*(tests/.+)") or normalized
         if not relpath:match("tests/internal/dep_rules.lua$") then
-          local allow = legacy_policy_usage_allowlist[relpath] or {}
           local file = io.open(path, "r")
           if not file then
             return nil, "cannot open: " .. tostring(path)
@@ -373,28 +365,24 @@ local function _scan_legacy_policy_usages()
             lineno = lineno + 1
             if line:find("context_policy%s*=%s*\"legacy\"")
               or line:find("context_policy%s*=%s*'legacy'") then
-              if not allow.allow_context_policy_legacy then
-                file:close()
-                return {
-                  path = relpath,
-                  line = lineno,
-                  token = "context_policy = legacy",
-                  text = line,
-                  description = "legacy context_policy usage must be isolated to explicit contract tests",
-                }
-              end
+              file:close()
+              return {
+                path = relpath,
+                line = lineno,
+                token = "context_policy = legacy",
+                text = line,
+                description = "legacy context_policy is retired",
+              }
             end
             if line:find("enable_legacy_helper_fallback%s*=%s*true") then
-              if not allow.allow_helper_opt_in then
-                file:close()
-                return {
-                  path = relpath,
-                  line = lineno,
-                  token = "enable_legacy_helper_fallback = true",
-                  text = line,
-                  description = "legacy helper opt-in must be isolated to explicit contract tests",
-                }
-              end
+              file:close()
+              return {
+                path = relpath,
+                line = lineno,
+                token = "enable_legacy_helper_fallback = true",
+                text = line,
+                description = "legacy helper fallback opt-in is retired",
+              }
             end
           end
           file:close()

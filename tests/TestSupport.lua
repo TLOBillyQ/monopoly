@@ -24,7 +24,7 @@ local map_cfg = require("Config.Map")
 local tiles_cfg = require("Config.Generated.Tiles")
 local number_utils = require("src.core.NumberUtils")
 local tile = require("src.game.systems.board.Tile")
-local runtime_ports = require("src.core.RuntimePorts")
+local runtime_context = require("src.core.RuntimeContext")
 
 if not math.tofixed then
   function math.tofixed(value)
@@ -50,18 +50,45 @@ local function assert_eq(a, b, msg)
   end
 end
 
-local function with_patches(patches, fn)
+local function _refresh_runtime_context_for_tests()
+  local ctx = runtime_context.new({
+    GameAPI = GameAPI,
+    LuaAPI = LuaAPI,
+  })
+  if type(all_roles) == "table" then
+    ctx.roles = all_roles
+  elseif type(ALLROLES) == "table" then
+    ctx.roles = ALLROLES
+  end
+  if type(vehicle_helper) == "table" then
+    ctx.vehicle_helper = vehicle_helper
+  end
+  if type(camera_helper) == "table" then
+    ctx.camera_helper = camera_helper
+  end
+  runtime_context.install_runtime_helpers(ctx, { install_globals = false })
+  runtime_context.set_current(ctx)
+end
+
+local function with_patches(patches, fn, opts)
+  local patch_opts = opts or {}
   local originals = {}
   for i, patch in ipairs(patches) do
     local target = patch.target or _G
     originals[i] = { target = target, key = patch.key, value = target[patch.key] }
     target[patch.key] = patch.value
   end
+  if not patch_opts.skip_runtime_context_refresh then
+    _refresh_runtime_context_for_tests()
+  end
   local handler = debug and debug.traceback or function(err) return err end
   local ok, err = xpcall(fn, handler)
   for i = #originals, 1, -1 do
     local patch = originals[i]
     patch.target[patch.key] = patch.value
+  end
+  if not patch_opts.skip_runtime_context_refresh then
+    _refresh_runtime_context_for_tests()
   end
   if not ok then
     error(err)
@@ -93,12 +120,7 @@ if not GameAPI.random_int then
 end
 
 TriggerCustomEvent = TriggerCustomEvent or function() end
-runtime_ports.set_legacy_fallback_policy({
-  roles = true,
-  role = true,
-  vehicle = true,
-  camera = true,
-})
+_refresh_runtime_context_for_tests()
 
 local function build_ui_port(overrides)
   local ui_view = require("src.presentation.api.UIViewService")

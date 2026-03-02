@@ -7,11 +7,13 @@ local M = {}
 function M.install(opts)
   opts = opts or {}
   local install_globals = opts.install_globals == true
-  local context_policy = opts.context_policy or "strict"
-  local skip_context_install = opts.skip_context_install == true
-  if skip_context_install and context_policy ~= "legacy" then
-    error("runtime context is required when context_policy=strict")
+  if opts.context_policy ~= nil then
+    error("context_policy option removed; runtime install is strict-only")
   end
+  if opts.enable_legacy_helper_fallback ~= nil then
+    error("enable_legacy_helper_fallback option removed; runtime install is strict-only")
+  end
+  local skip_context_install = opts.skip_context_install == true
 
   local runtime_ctx = nil
   if not skip_context_install then
@@ -27,10 +29,6 @@ function M.install(opts)
     runtime_context.set_current(nil)
   end
 
-  -- Keep runtime legacy behavior behind a single policy installation entry.
-  runtime_ports.install_context_policy(context_policy, {
-    enable_legacy_helper_fallback = opts.enable_legacy_helper_fallback == true,
-  })
   runtime_ports.configure(runtime_port_defaults.build())
   require "src.game.core.runtime.Bankruptcy"
   require "src.game.core.runtime.Agent"

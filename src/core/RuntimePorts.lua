@@ -1,16 +1,10 @@
 local runtime_ports = {}
 
 local runtime_context = require("src.core.RuntimeContext")
-local context_policy = require("src.core.runtime_ports.ContextPolicy")
 local default_ports_module = require("src.core.runtime_ports.DefaultPorts")
 
 local configured = nil
-local active_context_policy = "strict"
-local legacy_fallback_policy = context_policy.normalize_legacy_fallback_policy()
-
-local defaults = default_ports_module.build(runtime_context, function()
-  return legacy_fallback_policy
-end)
+local defaults = default_ports_module.build(runtime_context)
 
 local function _resolve_port(name)
   if configured and configured[name] ~= nil then
@@ -21,33 +15,6 @@ end
 
 function runtime_ports.configure(ports)
   configured = ports or nil
-end
-
-function runtime_ports.install_context_policy(policy, opts)
-  local next_policy = policy or "strict"
-  if not context_policy.is_valid(next_policy) then
-    error("unknown context policy: " .. tostring(next_policy))
-  end
-  local next_opts = opts or {}
-  active_context_policy = next_policy
-  legacy_fallback_policy = context_policy.for_context(next_policy, next_opts.enable_legacy_helper_fallback)
-end
-
-function runtime_ports.set_legacy_fallback_policy(policy)
-  legacy_fallback_policy = context_policy.normalize_legacy_fallback_policy(policy)
-end
-
-function runtime_ports.context_policy()
-  return active_context_policy
-end
-
-function runtime_ports.legacy_fallback_policy()
-  return {
-    roles = legacy_fallback_policy.roles,
-    role = legacy_fallback_policy.role,
-    vehicle = legacy_fallback_policy.vehicle,
-    camera = legacy_fallback_policy.camera,
-  }
 end
 
 function runtime_ports.rng_next_int(min, max)
@@ -112,8 +79,6 @@ end
 
 function runtime_ports.reset_for_tests()
   configured = nil
-  active_context_policy = "strict"
-  legacy_fallback_policy = context_policy.normalize_legacy_fallback_policy()
 end
 
 return runtime_ports

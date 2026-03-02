@@ -13,23 +13,7 @@ local function _try_get_role_id(role)
   return role.id
 end
 
-local function _resolve_roles_from_legacy_globals()
-  if type(all_roles) == "table" then
-    return all_roles
-  end
-  if type(ALLROLES) == "table" then
-    return ALLROLES
-  end
-  if GameAPI and type(GameAPI.get_all_valid_roles) == "function" then
-    local ok, roles = pcall(GameAPI.get_all_valid_roles)
-    if ok and type(roles) == "table" then
-      return roles
-    end
-  end
-  return {}
-end
-
-function default_ports.build(runtime_context, get_legacy_fallback_policy)
+function default_ports.build(runtime_context)
   local defaults = {}
 
   function defaults.rng_next_int(min, max)
@@ -52,9 +36,11 @@ function default_ports.build(runtime_context, get_legacy_fallback_policy)
     if ctx and type(ctx.roles) == "table" then
       return ctx.roles
     end
-    local policy = get_legacy_fallback_policy()
-    if policy.roles then
-      return _resolve_roles_from_legacy_globals()
+    if GameAPI and type(GameAPI.get_all_valid_roles) == "function" then
+      local ok, roles = pcall(GameAPI.get_all_valid_roles)
+      if ok and type(roles) == "table" then
+        return roles
+      end
     end
     return {}
   end
@@ -71,8 +57,7 @@ function default_ports.build(runtime_context, get_legacy_fallback_policy)
         end
       end
     end
-    local policy = get_legacy_fallback_policy()
-    if policy.role and GameAPI and type(GameAPI.get_role) == "function" then
+    if GameAPI and type(GameAPI.get_role) == "function" then
       local ok, role = pcall(GameAPI.get_role, player_id)
       if ok then
         return role
@@ -92,11 +77,7 @@ function default_ports.build(runtime_context, get_legacy_fallback_policy)
     if ctx and type(ctx.vehicle_helper) == "table" then
       return ctx.vehicle_helper
     end
-    local policy = get_legacy_fallback_policy()
-    if not policy.vehicle then
-      return nil
-    end
-    return vehicle_helper
+    return nil
   end
 
   function defaults.resolve_camera_helper()
@@ -104,11 +85,7 @@ function default_ports.build(runtime_context, get_legacy_fallback_policy)
     if ctx and type(ctx.camera_helper) == "table" then
       return ctx.camera_helper
     end
-    local policy = get_legacy_fallback_policy()
-    if not policy.camera then
-      return nil
-    end
-    return camera_helper
+    return nil
   end
 
   function defaults.emit_event(event_name, payload)
