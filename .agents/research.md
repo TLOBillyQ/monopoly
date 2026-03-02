@@ -1,197 +1,152 @@
-# Monopoly 深度研究重写（基于 R10 执行结果，Clean Architecture 视角）
+# Monopoly 架构研究（当前评估与后续方向）
 
 技能使用：`clean-architecture-reviewer`
 
-## 1) 研究目标与输入
+## 1) 研究范围与证据
 
-本次重写以 `.agents/plan.md` 的 **R10（M40-M42）实际执行结果** 为输入，关注两点：
+本次评估聚焦当前代码库的分层、依赖方向与边界穿越方式，抽样范围覆盖：
 
-1. R10 是否把“兼容债务”从可观测推进到可退役阶段。
-2. 结构收敛后，下一阶段应优先优化哪些复杂度热点。
+- 启动与装配：`src/app/bootstrap/*`、`src/app/init.lua`
+- 核心策略：`src/game/core/*`、`src/game/runtime/*`
+- 用例编排：`src/game/flow/turn/*`
+- 适配层：`src/presentation/*`
+- 规则守护与契约：`tests/internal/dep_rules.lua`、`tests/suites/*contract*.lua`
 
----
-
-## 2) 执行事实与证据基线
-
-本轮已完成并验证：
-
-- `lua tests/internal/dep_rules.lua` -> `dep_rules ok`
-- `lua tests/regression.lua` -> `All regression checks passed (207)`
-
-R10 关键落地点：
-
-- M40：`StatusOps` 不再依赖 `RuntimeCompat`，改为依赖 `RuntimePorts.resolve_vehicle_helper()`；`RuntimeInstall` 注入 vehicle helper port。
-- M41：`RuntimeContext.install_runtime_helpers()` 默认 `install_globals=false`；`RuntimeInstall.install(opts)` 显式控制兼容模式。
-- M42：新增 `src/game/flow/turn/GameplayLoopTickFlow.lua`，从 `GameplayLoop.lua` 迁移 tick 编排热点逻辑，对外 API 保持不变。
-
----
-
-## 3) Clean Architecture 体检结论
-
-### 3.1 Dependency Rule
-
-- 正向改进：`src/game/core/runtime/player_state/StatusOps.lua` 已移除对 `src.core.RuntimeCompat` 的依赖。
-- 新守护：`tests/internal/dep_rules.lua` 新增 rule，禁止 `src/game/core` 再次 require `RuntimeCompat`。
-
-结论：内层策略对外层兼容桥的反向依赖已实质消除，依赖方向更符合同心圆。
-
-### 3.2 Boundary Crossing
-
-- 运行时 vehicle 能力由 `RuntimeInstall -> RuntimePorts.configure` 注入。
-- core 只消费 `RuntimePorts` 抽象，不感知 compat/global 细节。
-
-结论：边界穿越点更集中，可替换性增强。
-
-### 3.3 Details Deferred
-
-- legacy globals 写入由默认行为改为显式开关。
-- 常规路径默认不写 `all_roles/vehicle_helper/camera_helper`，仅兼容模式可显式开启。
-
-结论：默认行为已切到 context-first，兼容路径成为受控细节。
-
----
-
-## 4) 热点复杂度复盘（R10 后）
-
-- `GameplayLoop.lua`：保留 API 与装配职责。
-- `GameplayLoopTickFlow.lua`：承接 tick 编排（phase sync/timeout/dirty refresh）。
-- `GameplayLoopRuntime.lua`：继续承载行为工具层。
-
-结论：R10 的拆分方式是“语义不变、职责迁移”，降低主文件认知负担且不扩大行为回归面。
-
----
-
-## 5) 架构状态判断
-
-**当前已达到“兼容退役最小闭环”。**
-
-- 规则层：dep_rules 守护升级并通过。
-- 行为层：全量回归 207 全绿。
-- 结构层：反向依赖消除、默认行为收紧、热点继续瘦身。
-
-仍需关注的残余风险：
-
-- `RuntimeCompat` 仍在 app/presentation 若干模块中使用，短期可控，但中长期仍建议继续减面。
-- `GameplayLoopRuntime.lua` 仍偏厚，后续可按“锁控制/计时器/相机同步”再分层。
-
----
-
-## 6) 下一阶段建议（R11 候选）
-
-1. 将 `RuntimeInstall.install(opts)` 的兼容开关接入明确环境配置，并补一组启动路径测试（兼容开/关）。
-2. 继续拆 `GameplayLoopRuntime.lua`，优先抽离 role control lock 与 action/detained timer 纯策略段。
-3. 对 presentation 层 `RuntimeCompat` 使用点建立分批替换清单（按 `roles/vehicle/camera` 三类端口化）。
-
----
-
-## 7) 最终结论
-
-R10 不是表面整理，而是完成了一轮可验证的架构收敛：
-
-- 依赖方向更正确；
-- 边界更可控；
-- 默认行为更安全；
-- 回归与守护规则保持全绿。
-
-这为后续继续退役 compat 与进一步降低 turn 复杂度提供了稳定基线。
-
----
-
-## 8) 本次复验更新（2026-03-02）
-
-本次按执行请求重新复验：
+验证基线：
 
 - `lua tests/internal/dep_rules.lua` -> `dep_rules ok`
-- `lua tests/regression.lua` -> `All regression checks passed (207)`（含 `tick ok`、`forbidden_globals ok`）
-
-补充执行注意事项：`tests/suites/gameplay_core.lua` 依赖回归入口提供 package.path，直接单跑会出现 `module 'gameplay_registry' not found`；因此该套件应通过 `tests/regression.lua` 统一执行。
+- `lua tests/regression.lua` -> `All regression checks passed (208)`（含 `tick ok`、`forbidden_globals ok`）
 
 ---
 
-## 9) R11 执行结果更新（2026-03-02）
+## 2) 系统策略与关键用例
 
-本次按新版 `.agents/plan.md` 完整执行 R11（M43-M45），并完成全量验收。
+企业级规则（Entities / Enterprise Rules）：
 
-### 9.1 关键落地
+- 玩家资产/状态与胜负：`src/game/core/player/*`、`src/game/core/runtime/player_state/*`、`src/game/core/runtime/GameVictory.lua`
+- 棋盘/地块/租金计算：`src/game/systems/board/*`、`src/game/systems/land/*`
 
-- M43（roles 端口化）：新增 `RuntimePorts.resolve_roles()`，并将 `UIRuntimePort` / `UIBootstrap` / `GameStartup` / `player_units` / `scene` / `ViewCommandDispatcher` 从 `RuntimeCompat` 切换到 `RuntimePorts`。
-- M44（vehicle/camera 端口化）：新增 `RuntimePorts.resolve_camera_helper()`；`MoveAnim` / `placement` / `UISyncPorts` 改为 `RuntimePorts` 获取 helper。
-- M45（守护与收口）：`dep_rules` 新增 app/presentation 禁止依赖 `RuntimeCompat`；增加 tests 最小白名单守护（仅 `runtime_compat_contract`）；`RuntimeCompat` 标记 deprecated 且默认 `strict_context_first=true`；契约测试新增“默认 strict”断言。
+应用级规则（Use Cases / Application Rules）：
 
-### 9.2 执行中发现与修正
-
-- 首轮替换后 `presentation_ui` 出现 2 个回归失败，原因是 `resolve_roles()` 初版没有保留 `all_roles/ALLROLES` fallback；补回后恢复通过。
-- 首轮在 `RuntimeInstall` 直接 `require RuntimeCompat` 配置 strict 被 `dep_rules` 拦截；最终改为 `RuntimeCompat` 默认 strict，保持 app 层零依赖。
-
-### 9.3 最终证据
-
-- `lua tests/internal/dep_rules.lua` -> `dep_rules ok`
-- `lua tests/regression.lua` -> `All regression checks passed (208)`
-- 同次输出包含：`tick ok`、`forbidden_globals ok`
-
-结论：R11 已把 RuntimeCompat 从业务路径收敛到“契约测试/应急兼容专用”，兼容桥进入可删除前状态，且守护规则可持续阻止回退。
+- 回合推进与动作分发：`src/game/runtime/TurnEngine.lua`、`src/game/flow/turn/TurnDispatch.lua`
+- Tick 编排：`src/game/flow/turn/GameplayLoop.lua`、`GameplayLoopTickFlow.lua`
+- 自动行为与超时策略：`AutoRunner.lua`、`TurnTimerPolicy.lua`、`TurnRoleControlPolicy.lua`、`TurnCameraPolicy.lua`
 
 ---
 
-## 10) 后续两轮里程碑判断（R12-R13）
+## 3) 分层与边界映射
 
-基于 R11 收口结果，后续两轮建议如下：
+分层映射（由内向外）：
 
-### R12：优先降低 turn 复杂度（达标概率：高）
+- `Entities`：`src/game/core/player`、`src/game/systems/*` 中纯规则模块
+- `Use Cases`：`src/game/core/runtime`、`src/game/runtime`、`src/game/flow/turn`
+- `Interface Adapters`：`src/presentation/api`、`src/presentation/interaction`、`src/presentation/render`
+- `Frameworks & Drivers`：`GameAPI`/`GlobalAPI`/`SetTimeOut`/`RegisterTriggerEvent` 等运行时宿主 API
 
-- 目标：继续降低 `GameplayLoopRuntime.lua` 认知负担，不改变对外 API 与时序语义。
-- 建议里程碑：
-  1. M46 抽离 action/detained timer 纯策略段；
-  2. M47 抽离 role lock/camera follow 策略段；
-  3. M48 补齐 `gameplay_loop` / `gameplay_runtime` 覆盖并完成回归验收。
+边界穿越现状：
 
-判断：R10 已完成 `GameplayLoopTickFlow` 拆分，R11 未再扩大 turn 语义面，当前具备继续“同语义拆分”的稳定基线。
-
-### R13：执行 compat 物理退役（达标概率：中高）
-
-- 目标：将 `RuntimeCompat` 从“可删除前状态”推进到“可物理删除并守护稳定”。
-- 建议里程碑：
-  1. M49 清理 compat 残留路径并评估删除 `RuntimeCompat.lua`；
-  2. M50 重构对应契约/回归覆盖，保留必要迁移说明；
-  3. M51 升级 dep_rules 与回归守护，阻止任何 compat 回退。
-
-判断：R11 已实现业务零依赖与规则守护，R13 的核心风险不在代码替换，而在测试契约重构与回退路径定义，属于可控风险。
-
-### 执行工作流（每轮统一）
-
-1. 基于研究文档确定下一轮里程碑与风险；
-2. 在可执行计划文档拆分里程碑（范围/改动点/验证口径）；
-3. 完整执行全部里程碑并完成局部 + 全量验证；
-4. 更新研究文档记录落地事实、证据与偏差；
-5. 提交（里程碑提交 + 轮次收口提交）。
+- 正向：`src/app/bootstrap/GameRuntimeBootstrap.lua` 通过 `PresentationPorts.build()` 注入 `gameplay_loop_ports`。
+- 正向：`src/core/RuntimePorts.lua` 作为核心对宿主能力的统一端口。
+- 残余：`RuntimePorts` 与 `RuntimeContext` 仍保留全局变量 fallback（`all_roles` / `vehicle_helper` / `camera_helper`），并支持可选全局写回。
 
 ---
 
-## 11) R12-R13 执行结果更新（2026-03-02）
+## 4) 架构结论
 
-本次按“执行工作流”完成了 `.agents/plan.md` 中 R12-R13 全部里程碑（M46-M51），并完成全量验收。
+当前代码库已具备清晰的“核心规则 -> 用例编排 -> 表现适配”主干，且依赖规则守护与回归基线稳定。  
+但运行时能力边界仍有“上下文注入 + 全局 fallback”双轨，导致内层行为在特定场景下仍受外部隐式状态影响。  
+整体属于“方向正确、边界尚未完全收口”的阶段。
 
-### 11.1 R12（M46-M48）落地结果
+---
 
-- M46：新增 `src/game/flow/turn/TurnTimerPolicy.lua`，将 action button / detained wait 计时器从 `GameplayLoopRuntime.lua` 抽离。
-- M47：新增 `TurnRoleControlPolicy.lua` 与 `TurnCameraPolicy.lua`，将 role control lock 与 camera follow 从 `GameplayLoopRuntime.lua` 抽离到策略模块。
-- M48：复用 `gameplay.loop` 既有关键断言（action timeout、popup timeout、camera follow、dispatch gate）完成语义回归验证。
+## 5) 主要问题（P0-P3）
 
-结果：`GameplayLoopRuntime.lua` 已降为轻量编排（输入锁、phase flags、runtime ui port），tick 语义无回归。
+- `P0`：未发现会立即破坏核心业务正确性的依赖反向错误。
 
-### 11.2 R13（M49-M51）落地结果
+- `P1`：运行时端口存在隐式全局回退，边界不完全封闭。
+  - 位置：`src/core/RuntimePorts.lua`、`src/core/RuntimeContext.lua`
+  - 现象：`resolve_roles/resolve_vehicle_helper/resolve_camera_helper` 在缺少 context 时回退到全局变量或 `GameAPI`。
+  - 风险：同一用例在不同启动路径下可能出现不同行为，问题定位困难。
 
-- M49：完成 compat 残留扫描，确认业务代码无 compat 依赖，仅剩测试契约迁移点与规则文本。
-- M50：`tests/suites/runtime_compat_contract.lua` 迁移为 `RuntimePorts/RuntimeContext` 契约（suite 名：`runtime_ports_contract`），不再 `require("src.core.RuntimeCompat")`。
-- M51：删除 `src/core/RuntimeCompat.lua`；`tests/internal/dep_rules.lua` 移除 tests 白名单扫描，改为 tests 侧统一硬禁 compat 依赖。
+- `P1`：运行时上下文与端口配置为全局单例，可并发性与可组合性受限。
+  - 位置：`runtime_context.set_current/current`、`runtime_ports.configure`
+  - 风险：多实例运行、并行测试、热重载场景容易产生状态污染。
 
-结果：compat 完成物理退役，守护从“白名单治理”升级为“统一规则治理”。
+- `P2`：适配层仍有较多直接宿主 API 访问，未完全经由统一端口。
+  - 位置示例：`src/presentation/ui/UIPanel.lua`、`src/presentation/ui/PopupRenderer.lua`、`src/presentation/api/UIEventHandlers.lua`
+  - 风险：替换渲染宿主或做离线回放测试时，mock 面过大。
 
-### 11.3 最终证据
+- `P2`：契约命名与语义尚未完全去“兼容化”。
+  - 位置：`tests/suites/runtime_compat_contract.lua`（suite 名虽已迁移为 `runtime_ports_contract`，文件名仍含 compat）
+  - 风险：团队心智仍默认“兼容桥长期存在”，影响后续治理决策。
 
-- `lua tests/internal/dep_rules.lua` -> `dep_rules ok`
-- `lua tests/regression.lua` -> `All regression checks passed (208)`
-- 同次输出包含：`tick ok`、`forbidden_globals ok`
-- `rg "RuntimeCompat" -n src tests` -> 无 active require 命中（仅 dep_rules 规则文本保留）
+- `P3`：守护规则描述存在历史术语残留。
+  - 位置：`tests/internal/dep_rules.lua` 的若干 description 仍提及 `RuntimeCompat` 表述。
+  - 风险：规则意图与当前实现不完全对齐，增加维护噪音。
 
-结论：R12-R13 目标均达成，且行为回归与依赖守护保持稳定。
+---
+
+## 6) 重构方案（最小可落地步骤）
+
+1. 收口运行时能力入口（context-first 单轨）
+- 改动范围：`src/core/RuntimePorts.lua`、`src/core/RuntimeContext.lua`、`src/app/bootstrap/RuntimeInstall.lua`
+- 做法：将全局 fallback 下沉到单独 `LegacyRuntimeAdapter`；`RuntimePorts` 默认只读 context，非 legacy 模式不触达全局。
+- 预期收益：边界行为确定性提升，依赖方向更清晰。
+- 回归风险：历史启动路径若未注入 context 可能暴露空指针，需配套启动契约测试。
+
+2. 去全局单例化（引入作用域容器）
+- 改动范围：`src/core/RuntimeContext.lua`、`src/core/RuntimePorts.lua`、`src/app/bootstrap/*`
+- 做法：把 `current/configured` 改为与 game/state 绑定的 scoped container（显式传入/挂载）。
+- 预期收益：支持多实例与并发测试，减少状态串扰。
+- 回归风险：调用链参数会增加，短期重构面较大。
+
+3. 统一适配层宿主访问端口
+- 改动范围：`src/presentation/ui/*`、`src/presentation/api/*`、`src/presentation/render/*`
+- 做法：新增并推广 `RoleReadPort/TimerPort/ScenePort`，替代散落的 `GameAPI/SetTimeOut/GlobalAPI` 直接调用。
+- 预期收益：适配层可替换性和可测试性提升，mock 粒度统一。
+- 回归风险：UI 行为时序敏感，需要分批迁移并回归验证。
+
+4. 继续细化 turn 用例编排职责
+- 改动范围：`src/game/flow/turn/GameplayLoopTickFlow.lua` 及策略模块
+- 做法：保持语义不变前提下，继续把“phase 驱动、timeout 驱动、dirty 刷新驱动”拆成更窄的用例函数。
+- 预期收益：单点复杂度下降，回归定位更快。
+- 回归风险：tick 顺序敏感，需严格保持调用顺序契约。
+
+5. 同步更新命名与规则语义
+- 改动范围：`tests/suites/runtime_compat_contract.lua`（重命名）、`tests/internal/dep_rules.lua`（描述文本）
+- 做法：将“compat”语义从文件名和规则描述中彻底移除。
+- 预期收益：团队认知与当前架构一致，减少历史债务心智残留。
+- 回归风险：低，主要是测试注册路径与文案同步。
+
+---
+
+## 7) 测试建议
+
+- 用例级测试（必须）：
+  - 锁定 `gameplay_loop.tick` 的时序契约：auto runner、timeout、phase sync、dirty refresh 的先后关系与触发条件。
+  - 继续覆盖 action timeout、popup timeout、camera follow、dispatch gate 的组合场景。
+
+- 边界契约测试（必须）：
+  - 为 `RuntimeInstall` 增加“严格 context 模式”契约：未注入 context 时显式失败或受控降级，不允许隐式全局取值。
+  - 为 `PresentationPorts` 增加契约：关键 UI 行为只通过端口访问宿主能力。
+
+- 架构守护测试（建议）：
+  - 在 `dep_rules` 增加规则：`src/core` 除 `LegacyRuntimeAdapter` 外不得读写 `all_roles/ALLROLES/vehicle_helper/camera_helper`。
+  - 增加“启动路径矩阵”回归：正式模式、legacy 模式、测试模式三套入口都可稳定启动。
+
+---
+
+## 8) 权衡说明
+
+短期成本：
+
+- 运行时端口与上下文改为作用域化后，函数签名和装配代码会变长，重构面广。
+- UI 适配层端口化迁移会带来阶段性重复代码和双轨维护。
+
+长期收益：
+
+- 核心用例对宿主细节的耦合进一步降低，行为可预测性显著提升。
+- 依赖规则更容易长期守住，回归定位和新人上手成本下降。
+- 支持多实例、并行测试、离线模拟等后续能力演进。
+
+总体建议：优先做“边界收口 + 单例去除”两步，再推进表现层全面端口化；这是当前收益/风险比最高的演进路径。
