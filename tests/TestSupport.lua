@@ -93,7 +93,12 @@ if not GameAPI.random_int then
 end
 
 TriggerCustomEvent = TriggerCustomEvent or function() end
-runtime_ports.set_legacy_global_fallback_enabled(true)
+runtime_ports.set_legacy_fallback_policy({
+  roles = true,
+  role = true,
+  vehicle = true,
+  camera = true,
+})
 
 local function build_ui_port(overrides)
   local ui_view = require("src.presentation.api.UIViewService")
