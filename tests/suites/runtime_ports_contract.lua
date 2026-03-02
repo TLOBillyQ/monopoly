@@ -53,7 +53,12 @@ end
 
 local function _test_runtime_ports_legacy_fallback_is_explicit()
   _reset_runtime_contract_state()
-  runtime_ports.set_legacy_global_fallback_enabled(true)
+  runtime_ports.set_legacy_fallback_policy({
+    roles = true,
+    role = true,
+    vehicle = true,
+    camera = true,
+  })
   _with_patches({
     { key = "all_roles", value = { { id = 3 } } },
     { key = "vehicle_helper", value = { id = "vehicle_global" } },
@@ -62,6 +67,11 @@ local function _test_runtime_ports_legacy_fallback_is_explicit()
     local roles = runtime_ports.resolve_roles()
     local vehicle = runtime_ports.resolve_vehicle_helper()
     local camera = runtime_ports.resolve_camera_helper()
+    local policy = runtime_ports.legacy_fallback_policy()
+    _assert_eq(policy.roles, true, "legacy policy should enable roles fallback")
+    _assert_eq(policy.role, true, "legacy policy should enable role fallback")
+    _assert_eq(policy.vehicle, true, "legacy policy should enable vehicle helper fallback")
+    _assert_eq(policy.camera, true, "legacy policy should enable camera helper fallback")
     _assert_eq(roles[1].id, 3, "legacy policy should read global roles fallback")
     _assert_eq(vehicle.id, "vehicle_global", "legacy policy should read global vehicle helper")
     _assert_eq(camera.id, "camera_global", "legacy policy should read global camera helper")
@@ -83,7 +93,7 @@ local function _test_runtime_install_strict_rejects_missing_context_install()
   _reset_runtime_contract_state()
 end
 
-local function _test_runtime_install_legacy_allows_controlled_degrade()
+local function _test_runtime_install_legacy_defaults_to_role_only_fallback()
   _reset_runtime_contract_state()
   _with_patches({
     { key = "all_roles", value = { { id = 4 } } },
@@ -96,14 +106,48 @@ local function _test_runtime_install_legacy_allows_controlled_degrade()
       context_policy = "legacy",
       skip_context_install = true,
     })
+    local policy = runtime_ports.legacy_fallback_policy()
     local roles = runtime_ports.resolve_roles()
     local vehicle = runtime_ports.resolve_vehicle_helper()
     local camera = runtime_ports.resolve_camera_helper()
     _assert_eq(runtime_ports.legacy_global_fallback_enabled(), true,
       "legacy install should enable explicit global fallback mode")
+    _assert_eq(policy.roles, true, "legacy install should enable roles fallback by default")
+    _assert_eq(policy.role, true, "legacy install should enable role fallback by default")
+    _assert_eq(policy.vehicle, false, "legacy install should disable vehicle helper fallback by default")
+    _assert_eq(policy.camera, false, "legacy install should disable camera helper fallback by default")
     _assert_eq(roles[1].id, 4, "legacy install should keep controlled roles fallback")
-    _assert_eq(vehicle.id, "vehicle_global", "legacy install should keep controlled vehicle fallback")
-    _assert_eq(camera.id, "camera_global", "legacy install should keep controlled camera fallback")
+    _assert_eq(vehicle, nil, "legacy install should not enable vehicle helper fallback by default")
+    _assert_eq(camera, nil, "legacy install should not enable camera helper fallback by default")
+  end)
+  _reset_runtime_contract_state()
+end
+
+local function _test_runtime_install_legacy_allows_helper_fallback_opt_in()
+  _reset_runtime_contract_state()
+  _with_patches({
+    { key = "all_roles", value = { { id = 5 } } },
+    { key = "vehicle_helper", value = { id = "vehicle_global" } },
+    { key = "camera_helper", value = { id = "camera_global" } },
+    { key = "GameAPI", value = { random_int = function(min) return min end } },
+    { key = "SetTimeOut", value = function(_, fn) if fn then fn() end end },
+  }, function()
+    runtime_install.install({
+      context_policy = "legacy",
+      skip_context_install = true,
+      enable_legacy_helper_fallback = true,
+    })
+    local policy = runtime_ports.legacy_fallback_policy()
+    local roles = runtime_ports.resolve_roles()
+    local vehicle = runtime_ports.resolve_vehicle_helper()
+    local camera = runtime_ports.resolve_camera_helper()
+    _assert_eq(policy.roles, true, "legacy opt-in should keep roles fallback enabled")
+    _assert_eq(policy.role, true, "legacy opt-in should keep role fallback enabled")
+    _assert_eq(policy.vehicle, true, "legacy opt-in should enable vehicle helper fallback")
+    _assert_eq(policy.camera, true, "legacy opt-in should enable camera helper fallback")
+    _assert_eq(roles[1].id, 5, "legacy opt-in should keep controlled roles fallback")
+    _assert_eq(vehicle.id, "vehicle_global", "legacy opt-in should enable vehicle helper fallback")
+    _assert_eq(camera.id, "camera_global", "legacy opt-in should enable camera helper fallback")
   end)
   _reset_runtime_contract_state()
 end
@@ -128,8 +172,12 @@ return {
       run = _test_runtime_install_strict_rejects_missing_context_install,
     },
     {
-      name = "runtime_install_legacy_allows_controlled_degrade",
-      run = _test_runtime_install_legacy_allows_controlled_degrade,
+      name = "runtime_install_legacy_defaults_to_role_only_fallback",
+      run = _test_runtime_install_legacy_defaults_to_role_only_fallback,
+    },
+    {
+      name = "runtime_install_legacy_allows_helper_fallback_opt_in",
+      run = _test_runtime_install_legacy_allows_helper_fallback_opt_in,
     },
   },
 }

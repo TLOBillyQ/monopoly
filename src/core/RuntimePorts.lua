@@ -2,7 +2,29 @@ local runtime_ports = {}
 local runtime_context = require("src.core.RuntimeContext")
 
 local configured = nil
-local legacy_global_fallback_enabled = false
+local legacy_fallback_policy = {
+  roles = false,
+  role = false,
+  vehicle = false,
+  camera = false,
+}
+
+local function _normalized_legacy_fallback_policy(policy)
+  local next_policy = policy or {}
+  return {
+    roles = next_policy.roles == true,
+    role = next_policy.role == true,
+    vehicle = next_policy.vehicle == true,
+    camera = next_policy.camera == true,
+  }
+end
+
+local function _is_any_legacy_fallback_enabled()
+  return legacy_fallback_policy.roles
+    or legacy_fallback_policy.role
+    or legacy_fallback_policy.vehicle
+    or legacy_fallback_policy.camera
+end
 
 local function _default_rng_next_int(min, max)
   assert(min ~= nil and max ~= nil, "rng.next_int requires min/max")
@@ -53,7 +75,7 @@ local function _default_resolve_roles()
   if ctx and type(ctx.roles) == "table" then
     return ctx.roles
   end
-  if legacy_global_fallback_enabled then
+  if legacy_fallback_policy.roles then
     return _resolve_roles_from_legacy_globals()
   end
   return {}
@@ -71,7 +93,7 @@ local function _default_resolve_role(player_id)
       end
     end
   end
-  if legacy_global_fallback_enabled and GameAPI and type(GameAPI.get_role) == "function" then
+  if legacy_fallback_policy.role and GameAPI and type(GameAPI.get_role) == "function" then
     local ok, role = pcall(GameAPI.get_role, player_id)
     if ok then
       return role
@@ -91,7 +113,7 @@ local function _default_resolve_vehicle_helper()
   if ctx and type(ctx.vehicle_helper) == "table" then
     return ctx.vehicle_helper
   end
-  if not legacy_global_fallback_enabled then
+  if not legacy_fallback_policy.vehicle then
     return nil
   end
   return vehicle_helper
@@ -102,7 +124,7 @@ local function _default_resolve_camera_helper()
   if ctx and type(ctx.camera_helper) == "table" then
     return ctx.camera_helper
   end
-  if not legacy_global_fallback_enabled then
+  if not legacy_fallback_policy.camera then
     return nil
   end
   return camera_helper
@@ -171,11 +193,33 @@ function runtime_ports.configure(ports)
 end
 
 function runtime_ports.set_legacy_global_fallback_enabled(enabled)
-  legacy_global_fallback_enabled = enabled == true
+  if enabled == true then
+    runtime_ports.set_legacy_fallback_policy({
+      roles = true,
+      role = true,
+      vehicle = true,
+      camera = true,
+    })
+    return
+  end
+  runtime_ports.set_legacy_fallback_policy()
 end
 
 function runtime_ports.legacy_global_fallback_enabled()
-  return legacy_global_fallback_enabled == true
+  return _is_any_legacy_fallback_enabled()
+end
+
+function runtime_ports.set_legacy_fallback_policy(policy)
+  legacy_fallback_policy = _normalized_legacy_fallback_policy(policy)
+end
+
+function runtime_ports.legacy_fallback_policy()
+  return {
+    roles = legacy_fallback_policy.roles,
+    role = legacy_fallback_policy.role,
+    vehicle = legacy_fallback_policy.vehicle,
+    camera = legacy_fallback_policy.camera,
+  }
 end
 
 function runtime_ports.rng_next_int(min, max)
@@ -240,7 +284,7 @@ end
 
 function runtime_ports.reset_for_tests()
   configured = nil
-  legacy_global_fallback_enabled = false
+  legacy_fallback_policy = _normalized_legacy_fallback_policy()
 end
 
 return runtime_ports

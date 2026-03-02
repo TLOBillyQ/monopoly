@@ -7,6 +7,8 @@ function M.install(opts)
   opts = opts or {}
   local install_globals = opts.install_globals == true
   local context_policy = opts.context_policy or "strict"
+  -- Opt-in to keep legacy helper fallback during migration.
+  local enable_legacy_helper_fallback = opts.enable_legacy_helper_fallback == true
   local skip_context_install = opts.skip_context_install == true
   if context_policy ~= "strict" and context_policy ~= "legacy" then
     error("unknown context policy: " .. tostring(context_policy))
@@ -29,7 +31,16 @@ function M.install(opts)
     runtime_context.set_current(nil)
   end
 
-  runtime_ports.set_legacy_global_fallback_enabled(context_policy == "legacy")
+  if context_policy == "legacy" then
+    runtime_ports.set_legacy_fallback_policy({
+      roles = true,
+      role = true,
+      vehicle = enable_legacy_helper_fallback,
+      camera = enable_legacy_helper_fallback,
+    })
+  else
+    runtime_ports.set_legacy_fallback_policy()
+  end
   runtime_ports.configure({
     rng_next_int = function(min, max)
       assert(GameAPI and GameAPI.random_int, "missing GameAPI.random_int")

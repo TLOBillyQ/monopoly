@@ -1,4 +1,4 @@
-# Monopoly 兼容层 P1 清理可执行计划（格式重写版）
+# Monopoly 兼容层 P2 收敛可执行计划（legacy fallback 能力面限缩）
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
@@ -7,104 +7,118 @@
 ## 目的 / 全局视角
 
 
-本计划面向兼容层收敛，核心目标是减少重复角色解析路径、降低载具事件接口命名歧义、清理注释层历史术语噪音，并保证运行时语义不变。用户可观察到的结果是：状态 3D 模块只保留一个角色解析入口，载具事件调用点使用更直观的 `emit_vehicle_*` 语义名，同时旧接口仍可兼容。计划是否生效以回归测试持续通过和代码搜索证据为准。
+本轮工作的目标是把 runtime 的 legacy 兜底从“整包放开”收敛到“最小必要能力”，避免外层全局对象继续渗透到核心运行路径。对用户可见的结果是：默认启动与 strict 策略行为不变，legacy 仍可用于受控降级，但默认不再自动开放 vehicle/camera helper 的全局兜底。它是否生效通过契约测试与回归测试共同证明。
 
 ## 进度
 
 
-- [x] (2026-03-02T07:15Z) 完成基线核查，确认角色解析双轨、事件转发调用面与注释噪音分布。
-- [x] (2026-03-02T07:26Z) 完成 P1.1：新增 `HostRuntimePort.resolve_role_with(player_id, predicate)`，并迁移 `status3d_service/scene.lua`、`status.lua` 到统一入口。
-- [x] (2026-03-02T07:27Z) 完成 P1.2：在 `RuntimeContext` 引入 `emit_vehicle_*`，保留 `forward_eca_event_*` 兼容别名，迁移核心调用点为“优先新名、回退旧名”。
-- [x] (2026-03-02T07:28Z) 完成 P1.3：清理 tests/docs 注释层 legacy/compat 术语，不改行为逻辑。
-- [x] (2026-03-02T07:29Z) 完成收口验收与文档回填，回归保持全绿。
-- [x] (2026-03-02T08:11Z) 按 PLANS.md 格式要求重写本计划文档结构与叙述方式。
+- [x] (2026-03-02T16:32:07+08:00) 完成 P2 范围定义与基线核查，确认 `RuntimeInstall` 与 `RuntimePorts` 仍以单一 legacy 总开关控制所有 fallback。
+- [x] (2026-03-02T16:34:51+08:00) 新增 `set_legacy_fallback_policy` / `legacy_fallback_policy`，并将 `set_legacy_global_fallback_enabled` 降级为兼容封装。
+- [x] (2026-03-02T16:35:26+08:00) 在 `RuntimeInstall.install` 落地 legacy 默认收敛策略：仅角色相关 fallback 开启，helper 需显式 opt-in（`enable_legacy_helper_fallback`）。
+- [x] (2026-03-02T16:36:18+08:00) 完成 `runtime_ports_contract` 改造，拆分为“默认收敛”与“显式放开”两组断言。
+- [x] (2026-03-02T16:38:21+08:00) 完成回归与依赖规则验收，更新证据、发现、决策与复盘。
 
 ## 意外与发现
 
 
-实施中确认 `HostRuntimePort.resolve_role` 本身已经做了从 `runtime_ports.resolve_role` 到 `resolve_game_role` 的回退，但 `status3d` 的 `scene.lua` 与 `status.lua` 仍各自手写第二次回退，导致职责重复。对应证据来自 `src/presentation/api/HostRuntimePort.lua:33-57`、`src/presentation/render/status3d_service/scene.lua:8-12`、`src/presentation/render/status3d_service/status.lua:7-11` 的实现对比。
+当前发现 `tests/TestSupport.lua` 在加载时直接调用 `runtime_ports.set_legacy_global_fallback_enabled(true)`，这意味着部分测试环境天然处于“legacy 全开”状态。该行为会影响 P2 验证颗粒度，因此本轮在 `runtime_ports_contract` 中继续通过 `reset_for_tests()` 进行隔离断言，避免被全局初始化污染。
 
-实施中还确认 `forward_eca_event_*` 已跨 `core/game/presentation` 多层调用，不能硬切接口名，否则会直接影响运行时注入和测试桩。因此迁移时必须采用并行兼容路径，即调用方优先使用 `emit_vehicle_*`，若仅提供旧字段则回退到 `forward_eca_event_*`。对应证据来自 `src/game/core/runtime/player_state/StatusOps.lua`、`src/presentation/render/MoveAnim.lua`、`src/presentation/render/board_runtime/placement.lua` 的迁移后代码。
+实施中出现一次依赖规则失败：`RuntimeInstall.lua` 中策略字段名使用了 `vehicle_helper/camera_helper`，触发 app 层禁读 legacy 全局的静态匹配。修复方式是把策略字段改为中性命名 `vehicle/camera`，并在 `RuntimePorts` 内部映射，不再在 app 层出现 helper 全局词面。
 
 ## 决策日志
 
 
-决策一：先做角色解析统一，再做事件命名迁移，最后做注释清理。理由是第一步改动面最小且收益直接，第二步跨层影响大需在稳定解析链后推进，第三步是低风险扫尾任务。日期/作者：2026-03-02 / Codex GPT-5.3-Codex。
+决策一是本轮不删除 `set_legacy_global_fallback_enabled`，只把它降级为兼容入口。理由是仓库已有调用面和测试依赖该接口，直接删除会扩大改动面并提高回归风险。日期/作者：2026-03-02 / Codex GPT-5。
 
-决策二：保留 `forward_eca_event_*` 作为 `emit_vehicle_*` 的兼容别名，不在本批次删除。理由是当前仓库仍有测试桩和注入路径依赖旧字段，先完成行为兼容再规划退役窗口风险更低。日期/作者：2026-03-02 / Codex GPT-5.3-Codex。
+决策二是把“能力面收敛”落在 `RuntimeInstall` 默认策略，而不是强行修改所有调用点。理由是 `RuntimeInstall` 是集中入口，改动可控且更符合“先收口入口，再收口调用面”的演进顺序。日期/作者：2026-03-02 / Codex GPT-5。
+
+决策三是将分项策略键命名定为 `roles`、`role`、`vehicle`、`camera`，不使用 `*_helper`。理由是规避 app 层依赖规则静态匹配误报，同时保持语义清晰。日期/作者：2026-03-02 / Codex GPT-5。
 
 ## 结果与复盘
 
 
-P1 已完成，功能行为保持稳定，回归结果未退化。角色解析链路已收敛到 `resolve_role_with`，status3d 不再直接调用 `resolve_game_role`。载具事件接口已完成语义化命名引入并保留兼容路径，达到“新名可用、旧名不断”的迁移目标。
+P2 已完成并通过回归。`RuntimePorts` 已具备分项 legacy fallback 策略接口，旧开关保留为兼容封装；`RuntimeInstall` 在 legacy 模式下默认仅保留角色相关 fallback，helper fallback 改为显式 opt-in。`runtime_ports_contract` 已拆分并验证默认收敛与显式放开两条路径。
 
-剩余技术债是仓库内仍有部分测试和历史调用习惯围绕 `forward_eca_event_*` 编写，后续可在单独批次逐步迁移并最终评估是否移除别名。该后续工作不影响本批次交付正确性。
+与原计划相比唯一偏差是策略字段命名从草案里的 `vehicle_helper/camera_helper` 调整为 `vehicle/camera`。该调整不改变行为目标，但避免了 dep_rules 误报并降低后续维护噪音。
 
 ## 背景与导读
 
 
-本计划涉及的关键路径包含四块。第一块是表现层宿主端口 `src/presentation/api/HostRuntimePort.lua`，它负责角色解析与运行时 API 封装。第二块是状态 3D 逻辑 `src/presentation/render/status3d_service/scene.lua` 与 `status.lua`，它们依赖角色能力（如 `get_ctrl_unit`、`set_label_text`）驱动渲染。第三块是载具事件发射链路 `src/core/RuntimeContext.lua` 及调用点 `StatusOps.lua`、`MoveAnim.lua`、`placement.lua`。第四块是文案层文件 `tests/suites/runtime_ports_contract.lua` 与 `docs/architecture/presentation_canvas_first.md`。
+`src/app/bootstrap/RuntimeInstall.lua` 是 runtime 端口安装入口，负责根据 `context_policy` 决定 strict 或 legacy。`src/core/RuntimePorts.lua` 是运行时端口实现，当前用一个布尔开关统一控制角色、载具 helper、相机 helper 等多个 fallback 路径。`tests/suites/runtime_ports_contract.lua` 是该行为的契约测试，已经覆盖 strict 与 legacy 两种策略。`tests/TestSupport.lua` 是很多回归套件的共享引导文件，会修改全局环境并打开 legacy 兜底。
 
-文中“谓词”是用于能力校验的布尔函数，用来表达“角色对象是否具备当前调用所需方法”。统一入口通过谓词把能力判断内聚，避免各模块重复写 fallback 分支。
+这里的“能力面”指的是 legacy 模式允许回退到哪些全局数据源。当前能力面过宽，会让调用方在没有 runtime context 时仍悄悄拿到 helper，从而弱化分层边界。P2 的核心就是把这部分从“默认全开”改为“默认最小化 + 显式放开”。
 
 ## 里程碑
 
 
-里程碑 M1 是角色解析统一。目标是让 status3d 只通过一个入口拿角色对象并做能力判断。完成标准是 `status3d_service` 目录中不再出现直接 `resolve_game_role` 调用，且回归通过。
+里程碑 M1 是在 `RuntimePorts` 中引入分项策略，完成后系统将具备区分不同 fallback 能力的基础设施。该里程碑完成时应能在不破坏旧接口的前提下，分别控制 role/roles 与 helper 的 fallback 行为。验证命令是回归测试加针对 `RuntimePorts` 的契约测试，预期为全绿。
 
-里程碑 M2 是事件命名迁移。目标是建立 `emit_vehicle_*` 语义名并保留旧名别名，随后迁移核心调用点以降低命名歧义。完成标准是 `RuntimeContext` 同时具备新旧接口映射，调用方优先新名并保持兼容，且回归通过。
+里程碑 M2 是在 `RuntimeInstall` 落地新默认值并开放显式 opt-in，完成后 legacy 安装默认不再给 helper 走全局兜底，但需要时可以通过参数恢复旧行为。该里程碑完成时应看到契约测试明确区分“默认收敛”和“显式放开”两种路径。
 
-里程碑 M3 是注释噪音清理。目标是统一 tests/docs 的术语，避免把“可控降级策略”误写成“遗留模式默认行为”。完成标准是关键 legacy/compat 噪音词在目标范围内清理完成，且回归通过。
+里程碑 M3 是测试与文档收口，完成后 `runtime_ports_contract` 具备完整行为证据，`plan.md` 的进度、发现、决策、复盘全部回填，形成可从零复现的交付记录。
 
 ## 工作计划
 
 
-实施顺序采用先内聚、后迁移、再清理的策略。首先在 `HostRuntimePort` 新增谓词化解析函数，并让 `resolve_role` 复用该新函数。随后改写 `status3d` 两处 `_resolve_role`，删除本地二次 fallback。接着在 `RuntimeContext` 增加 `emit_vehicle_*` 并让 `forward_eca_event_*` 转调到新函数，再迁移三个核心调用点到“新名优先、旧名回退”。最后修改 tests/docs 注释文案并执行回归收口。
+第一步在 `src/core/RuntimePorts.lua` 增加一个分项策略配置函数 `set_legacy_fallback_policy(policy)`，其中 `policy` 覆盖 `roles`、`role`、`vehicle`、`camera` 四个布尔位，并提供 `legacy_fallback_policy()` 读取函数用于测试断言。旧函数 `set_legacy_global_fallback_enabled` 保留，但内部转成“全开/全关策略”，作为兼容封装。
+
+第二步修改 `src/app/bootstrap/RuntimeInstall.lua`，把 legacy 安装时写入 `RuntimePorts` 的策略改为默认只开启角色相关 fallback。为了保持可恢复性，新增一个安装参数用于显式放开 helper fallback；参数名和默认值要在同一文件注释写清楚，避免调用方误判。
+
+第三步更新 `tests/suites/runtime_ports_contract.lua`。原有“legacy install should keep controlled vehicle/camera fallback”这一类断言要拆成两个测试：一个证明默认 legacy 已收敛，不再读取 helper 全局对象；另一个证明显式 opt-in 后 helper fallback 仍可用。测试仍应覆盖 strict 路径不读全局、context 优先于全局这两条核心契约。
+
+第四步在必要时最小调整 `tests/TestSupport.lua` 的初始化策略，确保它不会掩盖新契约。若该文件仍需全开 legacy 以支撑旧测试，应在计划执行记录里明确写出原因，并在 `runtime_ports_contract` 中通过 reset 保证断言独立。
 
 ## 具体步骤
 
 
-所有命令均在仓库根目录 `C:\Users\Lzx_8\Desktop\dev\repo\monopoly` 执行。
+所有命令均在仓库根目录 `C:\Users\Lzx_8\Desktop\dev\repo\monopoly` 执行。每完成一步都要先更新“进度”再继续下一步。
 
-先跑基线与收口测试：
+先建立基线并确认当前契约：
 
-    lua tests/internal/dep_rules.lua
+    lua tests/regression.lua
+    rg "set_legacy_global_fallback_enabled|legacy_global_fallback_enabled|context_policy" src tests -n
+
+实现 `RuntimePorts` 分项策略后，执行定向核查：
+
+    rg "set_legacy_fallback_policy|legacy_fallback_policy" src/core/RuntimePorts.lua -n
     lua tests/regression.lua
 
-验证角色解析收敛：
+实现 `RuntimeInstall` 默认收敛后，执行行为核查：
 
-    rg "resolve_game_role\\(" src/presentation/render/status3d_service -n
+    rg "context_policy|legacy" src/app/bootstrap/RuntimeInstall.lua -n
+    lua tests/regression.lua
 
-验证事件接口迁移状态：
+完成测试改造后，执行最终验收：
 
-    rg "forward_eca_event_|emit_vehicle_" src -n
-
-验证注释噪音清理状态：
-
-    rg "legacy mode|compatibility wrappers|legacy bridge" tests docs -n -i
+    lua tests/regression.lua
+    lua tests/internal/dep_rules.lua
+    rg "legacy install should|strict mode should" tests/suites/runtime_ports_contract.lua -n
 
 ## 验证与验收
 
 
-验收以行为证据为准而不是结构描述。第一，`lua tests/regression.lua` 与 `lua tests/internal/dep_rules.lua` 必须通过。第二，`status3d_service` 中不得再出现 `resolve_game_role` 直接调用。第三，`RuntimeContext` 中新旧命名必须并存且旧名为别名转调，新调用点可优先使用新名。第四，目标 tests/docs 中 legacy/compat 噪音词应清理完成。
+验收以行为为准。第一，`lua tests/regression.lua` 必须通过，且不能新增 flaky 失败。第二，`runtime_ports_contract` 需要同时证明三件事：strict 不读全局 helper、legacy 默认只保留角色相关 fallback、legacy 显式 opt-in 才允许 helper fallback。第三，`lua tests/internal/dep_rules.lua` 需继续通过，证明本轮未破坏依赖规则。第四，代码搜索结果应能看到新策略接口已落地且旧开关仍存在兼容入口。
 
 ## 可重复性与恢复
 
 
-本计划可重复执行，不包含破坏性迁移命令。若某一步失败，应仅回退该步触及文件后重跑两条测试命令，不进行跨步骤整体回退。由于本方案保留旧接口别名，出现局部迁移未完成时仍可保持主流程可运行，这一兼容策略是恢复路径的一部分。
+本计划采用增量替换，所有步骤可重复执行。若某一步失败，先回退该步触及文件，再重新执行本节对应命令，不做跨步骤整包回滚。若改造 `RuntimeInstall` 后出现回归，可临时把安装参数设为显式放开 helper fallback 以恢复旧行为，再定位差异。严禁使用破坏性 git 命令，恢复只通过文件级编辑与测试验证完成。
 
 ## 产物与备注
 
 
+实施后在本节保留最短证据片段，至少包含一次回归通过输出、一条契约搜索输出、以及新旧接口并存的代码搜索输出。示例格式如下：
+
+    [evidence] lua tests/regression.lua -> All regression checks passed (210), dep_rules ok, tick ok, forbidden_globals ok
     [evidence] lua tests/internal/dep_rules.lua -> dep_rules ok
-    [evidence] lua tests/regression.lua -> All regression checks passed (209), dep_rules ok, tick ok, forbidden_globals ok
-    [evidence] rg "resolve_game_role\\(" src/presentation/render/status3d_service -n -> No matches found
-    [evidence] rg "forward_eca_event_|emit_vehicle_" src -n -> RuntimeContext 同时存在 emit_vehicle_* 与 forward_eca_event_*，调用点已迁移为新名优先
-    [evidence] rg "legacy mode|compatibility wrappers|legacy bridge" tests docs -n -i -> No matches found
+    [evidence] rg "set_legacy_fallback_policy|legacy_fallback_policy\\(" src/core/RuntimePorts.lua -n -> 197,205,212,216,287
+    [evidence] rg "enable_legacy_helper_fallback|set_legacy_fallback_policy" src/app/bootstrap/RuntimeInstall.lua -n -> 11,35,38,39,42
+    [evidence] rg "runtime_install_legacy_defaults_to_role_only_fallback|runtime_install_legacy_allows_helper_fallback_opt_in" tests/suites/runtime_ports_contract.lua -n -> 96,126,175,179
 
 ## 接口与依赖
 
 
-本计划保留 `RuntimePorts` 的既有契约，不删除 `set_legacy_global_fallback_enabled`，不移除 `RuntimeEventBridge`、`MonopolyEvents`、`UIAliases`。本批次新增能力只落在 `HostRuntimePort.resolve_role_with` 与 `RuntimeContext.emit_vehicle_*`，并通过兼容别名维持旧调用稳定。测试依赖仍使用 `lua tests/regression.lua` 和 `lua tests/internal/dep_rules.lua` 两个既有入口。
+本轮只允许改动 `RuntimeInstall`、`RuntimePorts` 与对应契约测试，不调整业务 use case 与事件桥接链。新增接口应至少包含一个分项策略写入口和一个读入口，便于测试和故障排查。兼容层接口 `set_legacy_global_fallback_enabled` 必须保留，并保证现有调用在不传新参数时不会崩溃。测试入口继续使用 `lua tests/regression.lua` 与 `lua tests/internal/dep_rules.lua`，不新增外部依赖。
 
-本次修订说明（2026-03-02）：按用户“计划按格式重写”要求，重写 `.agents/plan.md` 为严格对齐 `./.agents/harness/PLANS.md` 的结构化版本，保留已执行事实与验收证据，并将非进度章节统一为散文叙述以符合格式规范。
+本次修订说明（2026-03-02）：按“写新一轮可执行计划到 .agents/plan.md”要求，将已完成的 P1 复盘计划替换为 P2 执行计划，聚焦 runtime legacy fallback 能力面限缩，并补充可验证里程碑、命令与回退策略。
+本次修订说明（2026-03-02 16:38+08:00）：P2 已执行完成，回填进度与证据；记录了 dep_rules 误报与字段重命名决策；同步更新复盘结论为“已交付并全量验收通过”。
