@@ -20,7 +20,7 @@
 - [x] (2026-03-02 21:06 +08:00) 同步更新并补强 `tests/suites/runtime_ports_contract.lua`，新增策略安装入口契约覆盖。
 - [x] (2026-03-02 21:07 +08:00) 复核 `tests/internal/dep_rules.lua` 治理效果：规则已覆盖 legacy 策略扩散场景，本轮无需新增规则。
 - [x] (2026-03-02 21:09 +08:00) 执行回归与检索验收，记录证据到“产物与备注”。
-- [ ] 提交代码并回填“结果与复盘”与文档更新记录。
+- [x] (2026-03-02 21:13 +08:00) 提交代码并回填“结果与复盘”与文档更新记录。
 
 ## 意外与发现
 
@@ -54,7 +54,7 @@
 
 本轮改动已完成“收口 + 拆分 + 验证”闭环。`RuntimeInstall` 从“本地拼装 legacy policy”改为“单点安装上下文策略”，`RuntimePorts` 新增 `install_context_policy` 与 `context_policy` 可观测接口，把策略解析独立出来，默认端口函数继续保持签名不变。`runtime_ports_contract` 新增策略安装契约测试，`dep_rules` 与全量回归均通过。
 
-未完成项仅剩“提交并记录哈希”。风险变化方面，legacy 策略入口已从分散调用压缩为单点调用，回归通过说明行为未变；剩余风险是 `set_legacy_fallback_policy` 仍被测试支持代码使用，需在最终退役阶段评估是否收敛到测试专用 API。
+全部计划项已完成并提交。风险变化方面，legacy 策略入口已从分散调用压缩为单点调用，回归通过说明行为未变；剩余风险是 `set_legacy_fallback_policy` 仍被测试支持代码使用，需在最终退役阶段评估是否收敛到测试专用 API。
 
 ## 背景与导读
 
@@ -168,7 +168,8 @@
       forbidden_globals ok
 
     最终提交哈希与变更摘要：
-      [待提交]
+      - e422ca1 refactor runtime legacy entry contraction and RuntimePorts split
+      - 涉及文件：.agents/plan.md、.agents/research.md、RuntimeInstall、RuntimePorts、runtime_ports_contract
 
 ## 接口与依赖
 
@@ -186,3 +187,4 @@
 
 2026-03-02（本次）：重建缺失的 `.agents/plan.md`，将研究结论中的下一步目标落成可执行计划，新增里程碑、验证命令、风险恢复与活文档章节，目的是让后续执行可以无外部上下文直接推进。
 2026-03-02（执行回填）：完成 R15 代码实施与验证，更新进度为已执行状态，补充契约测试运行方式、回归证据、legacy 调用分类和决策日志，确保文档可从当前快照直接重启执行。
+2026-03-02（提交回填）：记录最终提交哈希与变更摘要，并将进度与复盘状态更新为“全部完成”，避免执行状态与仓库实际状态不一致。
