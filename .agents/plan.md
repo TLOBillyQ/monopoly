@@ -1,207 +1,179 @@
-# R17 代码膨胀收敛执行计划（热点去中心化交易）
+# R18 运行时沙盒限制疑点收敛执行计划
 
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
-本文件遵循 `.agents/harness/PLANS.md` 维护，任何执行和范围调整都必须先更新本文件，再继续实施。
+本文件遵循 `.agents/harness/PLANS.md` 维护，实施者在修改代码前后都必须先回填本文件，再继续推进。
 
 ## 目的 / 全局视角
 
 
-本轮目标是把“代码膨胀风险”从单点问题变成可控的工程流程问题。研究结论显示，最近两天 `src/` 净增 +1269，风险集中在 `core/presentation` 边界层，且热点文件改动频次高。用户可见收益是：功能行为不变，但后续同类需求改动时冲突更少、评审更快、回归风险更低。
+本轮目标是把已确认的运行时沙盒疑点收敛到“可发布、可验证、可回归”的状态。用户可见收益是两点：第一，发布环境不再因为被裁剪 API（`os/debug/rawget/type=="number"` 相关）触发潜在崩溃或行为分叉；第二，核心回合与提示文本在 Eggy 沙盒的数值语义下保持稳定，不再依赖“字符串与数字隐式拼接”。
 
-本计划把“交易”定义为一组有约束的工程交换：用少量模块新增，换取热点文件职责收敛与碰撞面下降。完成后应观察到三类证据：热点文件职责收敛、关键回归测试通过、研究文档与计划文档可复算。
+改动完成后，验证者应能直接观察到：`src/` 扫描不再命中本计划定义的禁用模式；定向回归与全量回归通过；`Await.seconds` 在 `os=nil` 条件下不报错；镜头跟随在“当前玩家无效时寻找下一位玩家”的分支上不再依赖 `type(...) == "number"`。
 
 ## 进度
 
 
-- [x] (2026-03-02 23:18 +08:00) 读取 `.agents/harness/PLANS.md`、`.agents/research.md` 与现有 `.agents/plan.md`，确认本轮目标从 R16 单点拆分升级为多热点去中心化。
-- [x] (2026-03-02 23:20 +08:00) 建立 R17 计划骨架并写入本文件，补齐强制章节、里程碑、验收与恢复策略。
-- [x] (2026-03-02 23:21 +08:00) 记录实施前基线并固化到“产物与备注”：热点文件行数已落盘。
-- [x] (2026-03-02 23:25 +08:00) 完成里程碑 1：拆分 `HostRuntimePort` 与 `UISyncPorts`，新增 host_runtime 与 ui_sync 子模块承接职责。
-- [x] (2026-03-02 23:26 +08:00) 完成里程碑 2：拆分 `ViewCommandDispatcher` 角色上下文与 `RuntimeInstall` 默认端口配置。
-- [x] (2026-03-02 23:35 +08:00) 完成里程碑 3：补齐回归测试与文档闭环。`dep_rules` 与 `regression` 全部通过（213 checks），验证行为未变。
+- [x] (2026-03-03 20:41 +08:00) 重读 `.agents/harness/PLANS.md` 与现有 `.agents/plan.md`，确认格式与活文档要求。
+- [x] (2026-03-03 20:42 +08:00) 基于最新工作树重扫疑点并固化证据：`os.clock`、`type~=number`、`rawget`、`coroutine`、高置信隐式拼接。
+- [x] (2026-03-03 20:43 +08:00) 生成并写入 R18 可执行计划骨架，明确里程碑、边界、验收与恢复策略。
+- [ ] 里程碑 1：移除会在沙盒裁剪下直接失败的硬依赖（`Await.seconds`、`rawget`、`type~=number`）。
+- [ ] 里程碑 2：修复运行时高优先级隐式数值拼接点，优先覆盖回合、移动、地块、道具、黑市主链路。
+- [ ] 里程碑 3：把禁用模式加入静态守卫（`tests/internal/forbidden_globals.lua`），并补齐对应回归。
+- [ ] 里程碑 4：执行定向与全量验收，整理结果与复盘，关闭 R18。
 
 ## 意外与发现
 
 
-- 观察：当前 `plan.md` 仍是 R16“已完成态”，与最新研究结论中的风险中心（多热点并发增长）不一致。
-  证据：旧计划聚焦 `RuntimePorts.lua` 首轮拆分，研究文件已将风险描述升级为 `RuntimeInstall`、`HostRuntimePort`、`ViewCommandDispatcher` 等热点簇。
+- 观察：`src/game/runtime_coroutine/Await.lua` 的 `await.seconds` 仍使用 `opts.now_fn or os.clock`，在沙盒 `os=nil` 时会直接抛错。
+  证据：本地执行 `lua -e "local old_os=os; os=nil; local await=require('src.game.runtime_coroutine.Await'); local s={_seconds_wait={}}; local ok,err=pcall(function() await.seconds(s,1,{}) end); print(ok,err); os=old_os"`，返回 `false` 与 `attempt to index global 'os' (a nil value)`。
 
-- 观察：热点文件中既有“高净增文件”也有“高频触达文件”，二者重叠不完全，说明单看行数不足以指导治理。
-  证据：`RuntimePorts.lua` 触达 9 次但净增 +119；`HostRuntimePort.lua` 净增 +136 且仍在接口边界层。
+- 观察：`src/game/flow/turn/TurnCameraPolicy.lua` 仍使用 `type(current_index) ~= "number"`，与项目“数值统一走 NumberUtils”约束冲突，也会影响 Eggy `integer/fixed` 语义下的兼容。
+  证据：命中行 `TurnCameraPolicy.lua:18`。
 
-- 观察：当前终端环境缺少 Lua 运行时，测试命令无法执行。
-  证据：执行 `lua tests/internal/dep_rules.lua` 和 `lua tests/regression.lua` 均返回 `zsh:1: command not found: lua`。
+- 观察：高置信“可能触发隐式数值拼接”的命中共 42 行，分布于 21 文件，但其中有一部分是已 `tostring` 的安全构造或字符串变量拼接，需要分层清洗。
+  证据：扫描统计 `high_confidence_numeric_concat_lines=42`，主要集中在 `land/items/movement/market` 与 `Config/Maps/DefaultMap.lua`。
 
-- 观察：通过 Homebrew 安装 Lua 5.4.8 后，测试顺利执行并全部通过。
-  证据：`dep_rules ok`；`All regression checks passed (213)`；`tick ok`；`forbidden_globals ok`。
+- 观察：`lua_env.md` 与现状存在文档/实现差异，`src/` 里仍可见 `rawget` 与 `os.clock` 依赖点，且回合引擎依赖 `coroutine.*`。
+  证据：`init.lua:14`、`CompositionRoot.lua:92`、`Await.lua:170`、`Scheduler.lua/TurnScript.lua`。
 
 ## 决策日志
 
 
-- 决策：R17 采用“热点去中心化交易”而不是继续只做单文件缩行。
-  理由：研究结论显示风险已从单点膨胀转为热点簇并发增长，治理目标应从“行数下降”升级为“改动集中度下降 + 职责边界清晰”。
-  日期/作者：2026-03-02 / Codex
+- 决策：R18 采用“先消除硬失败，再消除语义风险，最后补静态守卫”的顺序，不一次性全仓替换。
+  理由：`Await.seconds` 与 `type~=number` 属于发布环境风险最高路径，先收敛可立即降低线上不确定性。
+  日期/作者：2026-03-03 / Codex
 
-- 决策：本轮优先改 `presentation` 与 `app bootstrap` 边界，再触达 `core` 中枢文件。
-  理由：`RuntimePorts` 已在 R16 做过首轮收缩，继续优先处理 `HostRuntimePort`、`PresentationPorts`、`ViewCommandDispatcher` 能更快降低跨层耦合。
-  日期/作者：2026-03-02 / Codex
+- 决策：对数值文本输出采用“金额/步数/回合等业务数值优先 `NumberUtils.format_integer_part`，标识类值（id/index）用 `tostring`”的双轨策略。
+  理由：满足 `lua_env` 无隐式转换约束，同时避免把标识符误格式化为金额语义。
+  日期/作者：2026-03-03 / Codex
 
-- 决策：在测试环境缺失时先完成结构性拆分并记录阻塞证据，不做未经验证的语义扩展。
-  理由：用户要求执行计划；先完成低风险职责拆分并保留可回归入口，待环境补齐后再完成验收闭环。
-  日期/作者：2026-03-02 / Codex
+- 决策：`coroutine` 相关暂不迁移，纳入“文档对齐 + 启动前置检查”而非架构替换。
+  理由：当前回合引擎核心即协程模型，迁移成本高且超出本轮“沙盒疑点收敛”范围。
+  日期/作者：2026-03-03 / Codex
+
+- 决策：在 `tests/internal/forbidden_globals.lua` 扩展规则，直接守卫 `rawget`、`type==/~=number`、`os.clock`、`debug.getupvalue`、`debug.traceback` 在 `src/` 的出现。
+  理由：把本轮问题固化为可执行门禁，避免回归。
+  日期/作者：2026-03-03 / Codex
 
 ## 结果与复盘
 
 
-本轮 R17 “热点去中心化交易”已全部完成。三个里程碑均达成：
-
-1. **里程碑 1**（presentation 端口去重）：`HostRuntimePort` 从 136 行降至 80 行，`UISyncPorts` 从 119 行降至 44 行。职责分别迁移到 `host_runtime/` 与 `ui_sync/` 子模块。
-
-2. **里程碑 2**（分发与装配解耦）：`ViewCommandDispatcher` 从 90 行降至 67 行，`RuntimeInstall` 从 91 行降至 41 行。角色解析与默认端口配置分别迁移到 `RoleContext.lua` 与 `RuntimePortDefaults.lua`。
-
-3. **里程碑 3**（证据固化）：安装 Lua 5.4.8 后，`dep_rules` 与 `regression`（213 checks）全部通过，验证行为未变。
-
-**量化结果**：4 个热点文件共减少 204 行（-43.8%），新增 8 个职责聚焦的小模块共 331 行。热点文件从”多职责混杂”转变为”薄入口 + 子模块承接”架构，后续改动碰撞面显著下降。
-
-**风险收敛结论**：本轮把代码膨胀风险从”单文件绝对行数”升级为”改动集中度治理”，通过新增模块分散热点，验证后再提交，形成可重复的交易模式。
+本计划刚建立，代码尚未实施。当前状态是“疑点已确认、边界已拍板、执行路径可直接落地”。里程碑完成后，本节必须更新为最终结果，明确“完成项 / 遗留项 / 经验教训”，并对照“目的 / 全局视角”逐条复核。
 
 ## 背景与导读
 
 
-本仓库当前的“代码膨胀”不是指业务规则无限增加，而是指边界层与装配层持续吸收职责，导致少数文件成为高频碰撞点。这里的“边界层”是连接核心逻辑与表现层/框架层的适配接口；“去中心化”是把一个文件里的多类职责拆到更小、更稳定的模块，减少每次需求都改同一文件。
+本任务只处理运行时相关的 `src/` 与 `Config/`，目标不是重构玩法，而是让代码在 Eggy 沙盒限制下行为可预期。这里的“沙盒限制”指 `docs/eggy/lua_env.md` 里声明的环境约束，核心包括库裁剪、数值语义差异、以及字符串与数字不能隐式拼接。
 
-本轮直接相关文件如下。`src/presentation/api/HostRuntimePort.lua` 负责宿主运行时接口；`src/presentation/api/presentation_ports/UISyncPorts.lua` 负责 UI 同步端口；`src/presentation/interaction/ui_intent_dispatcher/ViewCommandDispatcher.lua` 负责意图分发；`src/app/bootstrap/RuntimeInstall.lua` 负责启动装配。它们都处于高频改动路径。
+关键入口分三组。第一组是回合协程与等待逻辑：`src/game/runtime_coroutine/Await.lua`、`Scheduler.lua`、`TurnScript.lua`。第二组是回合到表现层的关键路径：`src/game/flow/turn/TurnCameraPolicy.lua`、`src/game/flow/turn/TurnRoll.lua`、`src/game/systems/movement/Movement.lua`。第三组是文本构造密集区：`src/game/systems/land/*`、`src/game/systems/items/*`、`src/game/systems/market/*` 与 `Config/Maps/DefaultMap.lua`。
 
-本计划不引入外部依赖，不改变玩法规则，不修改公开行为语义。所有改动都以“内部职责重分配 + 契约测试兜底”为前提。
+本计划把疑点分为三类。A 类是可直接导致发布环境错误的硬依赖（例如 `os.clock` 未守卫、`rawget`）；B 类是数值语义风险（`type~=number`、隐式拼接）；C 类是文档与实现不一致（`coroutine` 依赖与 `lua_env` 描述差异）。R18 只承诺完成 A+B，并把 C 变成可追踪动作。
 
 ## 里程碑
 
 
-里程碑 1（presentation 端口去重）聚焦 `HostRuntimePort` 与 `UISyncPorts`。目标是把重复透传与职责重叠收敛为明确边界，减少后续同一需求需要同时改多个端口文件的概率。验收方式是相关回归测试通过，并且端口文件变成薄入口。
+里程碑 1 只处理“硬失败点”。范围是 `Await.seconds`、`TurnCameraPolicy`、`init.lua`、`CompositionRoot.lua`。完成标准是：`src/` 不再出现 `rawget(`；`TurnCameraPolicy` 不再使用 `type(... ) ~= "number"`；`Await.seconds` 在 `os=nil` 下可安全返回，不抛异常。
 
-里程碑 2（分发与装配解耦）聚焦 `ViewCommandDispatcher` 与 `RuntimeInstall`。目标是把“意图解释”“角色解析”“装配 wiring”分开，让交互改动不再频繁触达启动装配。验收方式是 UI 交互回归通过，且装配文件仅保留依赖连接逻辑。
+里程碑 2 处理“高优先级隐式数值拼接”。范围锁定 gameplay 主链路与默认地图构造，不做全仓“机械替换”。完成标准是：本计划列出的目标文件完成显式转换；关键路径回归通过；不引入新的 `tonumber` 或 `type==number`。
 
-里程碑 3（证据固化与文档闭环）聚焦测试证据、统计复算与文档回填。目标是把本轮交易结果固化为可重复流程。验收方式是 `research` 与 `plan` 同步更新且证据片段可复算。
+里程碑 3 处理“守卫与证据”。范围是 `tests/internal/forbidden_globals.lua` 与相关回归入口。完成标准是：新增规则生效，触发时能给出明确替代建议；常规回归全绿。
+
+里程碑 4 进行“闭环验收与文档回填”。范围是测试执行、证据摘录、计划更新。完成标准是：`进度/决策/结果` 完整同步，计划可被新人单独执行。
 
 ## 工作计划
 
 
-实施顺序为“先边界去重，再分发解耦，最后证据固化”。第一步在 `presentation` 端口层明确职责切面：入口文件负责对外 API，内部能力由小模块承接。第二步在 `interaction/bootstrap` 层分离解释逻辑和装配逻辑，确保热点文件不继续吸收业务判断。
+第一步会在 `src/game/runtime_coroutine/Await.lua` 去掉对 `os.clock` 的直接依赖。实现方式是把 `await.seconds` 改为“优先使用 `opts.now_fn`；不存在则使用安全降级路径并立即完成等待”。这样可以在沙盒不提供 `os` 时保持可运行，并避免死等。
 
-实现过程中保持外部调用入口与函数签名兼容，避免大面积调用方修改。每完成一个里程碑立即跑测试并回填文档，禁止全部改完后一次性验证。
+第二步会在 `src/game/flow/turn/TurnCameraPolicy.lua` 引入 `NumberUtils`，把 `type(current_index) ~= "number"` 改为 `NumberUtils.to_integer(current_index)` 判定，确保 `integer/fixed/number` 都可进入同一逻辑分支。该变更直接影响“当前玩家无效时寻找下一位玩家”的兜底路径。
+
+第三步会移除 `rawget` 依赖。`src/app/init.lua` 用 `(_G and _G.STARTUP_TEST_PROFILE)` 读取启动 profile，并保留默认值兜底。`src/game/core/runtime/CompositionRoot.lua` 用显式字段与函数类型判断替代 `rawget(game_or_class, ...)`。
+
+第四步会修复里程碑 2 的隐式拼接目标文件。预期修改文件包括 `Config/Maps/DefaultMap.lua`、`TurnRoll.lua`、`LocationOps.lua`、`ItemHandlers.lua`、`ItemPostEffects.lua`、`ItemRoadblock.lua`、`LandRules.lua`、`BaseLandEffects.lua`、`Choice.lua`、`Purchase.lua`、`Movement.lua`、`ItemDemolish.lua`、`ActionAnimTipText.lua`。所有业务数值文本改为 `NumberUtils.format_integer_part(...)` 或 `tostring(...)` 的显式转换。
+
+第五步会把规则固化到 `tests/internal/forbidden_globals.lua`，新增对 `rawget`、`type==/~=number`、`os.clock`、`debug.getupvalue`、`debug.traceback` 的检测，并在 `replacement` 字段给出统一替代方向（`NumberUtils`、运行时端口、`traceback` 等）。
 
 ## 具体步骤
 
 
-所有命令在仓库根目录 `/Users/gangan/Dev/repo/monopoly` 执行。
+所有命令在仓库根目录 `C:\Users\Lzx_8\Desktop\dev\repo\monopoly` 执行。
 
-1. 记录实施前基线，写入“产物与备注”。
+先记录实施前快照，确保后续可对比。
 
-    wc -l src/core/RuntimePorts.lua src/app/bootstrap/RuntimeInstall.lua src/presentation/api/HostRuntimePort.lua src/presentation/api/PresentationPorts.lua src/presentation/api/presentation_ports/UISyncPorts.lua src/presentation/interaction/ui_intent_dispatcher/ViewCommandDispatcher.lua
+    git status --short
+    lua -e "local old_os=os; os=nil; local await=require('src.game.runtime_coroutine.Await'); local s={_seconds_wait={}}; local ok,err=pcall(function() await.seconds(s,1,{}) end); print('await.seconds pre=',ok,err); os=old_os"
 
-2. 实施里程碑 1：端口去重。
+按里程碑 1 修改并做定向检查。
 
-    # 编辑文件：
-    # - src/presentation/api/HostRuntimePort.lua
-    # - src/presentation/api/presentation_ports/UISyncPorts.lua
-    # - 新增 src/presentation/api/host_runtime/*
-    # - 新增 src/presentation/api/presentation_ports/ui_sync/*
+    lua tests/internal/forbidden_globals.lua
+    lua -e "local old_os=os; os=nil; local await=require('src.game.runtime_coroutine.Await'); local s={_seconds_wait={}}; local ok,err=pcall(function() await.seconds(s,1,{}) end); print('await.seconds post=',ok,err); os=old_os"
 
-3. 跑第一轮验证。
+按里程碑 2 修改后跑主链路回归。
 
-    lua tests/internal/dep_rules.lua
+    lua -e "package.path='?.lua;'..package.path; local _=require('tests.suites.test_profiles'); print('test_profiles load ok')"
     lua tests/regression.lua
 
-4. 实施里程碑 2：分发与装配解耦。
+完成里程碑 3 后再次执行静态门禁，确认新规则不过度误伤。
 
-    # 编辑文件：
-    # - src/presentation/interaction/ui_intent_dispatcher/ViewCommandDispatcher.lua
-    # - src/app/bootstrap/RuntimeInstall.lua
-    # - 新增 src/presentation/interaction/ui_intent_dispatcher/RoleContext.lua
-    # - 新增 src/app/bootstrap/runtime_install/RuntimePortDefaults.lua
+    lua tests/internal/forbidden_globals.lua
 
-5. 跑第二轮验证。
+最后整理变更并回填计划文档。
 
-    lua tests/internal/dep_rules.lua
-    lua tests/regression.lua
-
-6. 回填文档并完成闭环。
-
-    # 编辑文件：
-    # - .agents/research.md
-    # - .agents/plan.md
+    git diff -- .agents/plan.md src tests docs
+    git status --short
 
 ## 验证与验收
 
 
-验收采用双轨标准。第一轨是行为不变：运行 `lua tests/internal/dep_rules.lua` 与 `lua tests/regression.lua`，预期全部通过。第二轨是结构收敛：热点文件职责重叠减少，且高频文件不再承担多类职责。
+验收分为“行为”和“约束”两条线。行为线要求回归通过，至少包含 `lua tests/regression.lua` 全量运行成功；约束线要求 `lua tests/internal/forbidden_globals.lua` 不再命中本轮新增禁用模式。
 
-双轨验收均已完成：行为不变轨通过 `dep_rules` 与 `regression`（213 checks）验证；结构收敛轨通过热点文件行数对比与新增模块清单验证。
+对 `Await.seconds` 的专项验收必须包含 `os=nil` 场景。变更前脚本输出应出现 `attempt to index global 'os'`；变更后脚本输出必须是 `ok=true` 或等价的非异常结果。
+
+对镜头兜底逻辑的专项验收必须覆盖“当前位玩家无效，需寻找下一位可跟随玩家”的路径。最低标准是对应单测通过；如果已有可复现场景，再补一次默认部署实测，确认镜头仍跟随当前回合玩家。
 
 ## 可重复性与恢复
 
 
-本计划按里程碑增量执行，可重复运行。每个里程碑完成后都要先记录现场，再进入下一步，避免失败时回退范围过大。若某里程碑失败，恢复策略是只撤销该里程碑变更并保留已验证里程碑，不做破坏性历史改写。
+本计划按里程碑增量执行，每个里程碑都可以独立提交和回滚。若里程碑 2 出现回归，优先保留里程碑 1 与里程碑 3，临时回退仅数值拼接改动，再逐文件二分定位问题。禁止使用破坏性历史命令，恢复方式以普通反向提交为准。
+
+若新增静态规则出现误报，先在计划的“决策日志”记录误报模式，再在规则里做白名单或更精确正则，避免直接删除守卫。
 
 ## 产物与备注
 
 
-实施前基线（2026-03-02）：
+实施前扫描证据（2026-03-03）：
 
-    wc -l:
-      119 src/core/RuntimePorts.lua
-       91 src/app/bootstrap/RuntimeInstall.lua
-      136 src/presentation/api/HostRuntimePort.lua
-       22 src/presentation/api/PresentationPorts.lua
-      119 src/presentation/api/presentation_ports/UISyncPorts.lua
-       90 src/presentation/interaction/ui_intent_dispatcher/ViewCommandDispatcher.lua
-      577 total
+    os.clock 命中:
+      src/app/bootstrap/runtime_install/RuntimePortDefaults.lua:45
+      src/core/runtime_ports/DefaultPorts.lua:142
+      src/game/runtime_coroutine/Await.lua:170
 
-实施后（里程碑 1/2）：
+    type~=number 命中:
+      src/game/flow/turn/TurnCameraPolicy.lua:18
 
-    热点文件行数：
-       80 src/presentation/api/HostRuntimePort.lua
-       44 src/presentation/api/presentation_ports/UISyncPorts.lua
-       67 src/presentation/interaction/ui_intent_dispatcher/ViewCommandDispatcher.lua
-       41 src/app/bootstrap/RuntimeInstall.lua
+    rawget 命中:
+      src/app/init.lua:14
+      src/game/core/runtime/CompositionRoot.lua:92
 
-    新增承接模块：
-       51 src/presentation/api/host_runtime/RoleResolver.lua
-       33 src/presentation/api/host_runtime/UnitLifecycle.lua
-       26 src/presentation/api/host_runtime/SceneUI.lua
-       42 src/presentation/api/presentation_ports/ui_sync/UIModelSync.lua
-       30 src/presentation/api/presentation_ports/ui_sync/CameraSync.lua
-       62 src/presentation/api/presentation_ports/ui_sync/UIGateSync.lua
-       29 src/presentation/interaction/ui_intent_dispatcher/RoleContext.lua
-       58 src/app/bootstrap/runtime_install/RuntimePortDefaults.lua
+    高置信隐式拼接命中:
+      high_confidence_numeric_concat_lines=42
 
-    测试验证（里程碑 3 完成后）：
-
-    lua tests/internal/dep_rules.lua:
-      dep_rules ok
-
-    lua tests/regression.lua:
-      All regression checks passed (213)
-      dep_rules ok
-      tick ok
-      forbidden_globals ok
+`lua_env.md` 关键约束摘录（用于本计划对照）：移除 `io/os/package/debug`，不支持字符串与数字隐式转换。
 
 ## 接口与依赖
 
 
-本轮不新增第三方依赖。接口约束如下：`HostRuntimePort` 负责宿主桥接，不承载 UI 同步策略；`UISyncPorts` 负责 UI 同步端口入口，不承载具体实现细节；`RuntimeInstall` 负责依赖装配，不承载默认端口实现细节；`ViewCommandDispatcher` 负责命令分发，不承载角色解析策略细节。
+本轮不新增第三方依赖，只依赖现有 `NumberUtils`、回归测试框架和 Lua 运行环境。实施后应满足以下接口约束。
 
-若出现接口职责冲突，优先新增小模块承接而不是回填到现有热点文件。
+`src/game/runtime_coroutine/Await.lua` 中 `await.seconds(session, sec, opts)` 继续保持原函数签名，不引入调用方破坏性改动；仅调整内部默认计时来源和降级行为。
+
+`src/game/flow/turn/TurnCameraPolicy.lua` 中 `sync_follow(game, state, ports, ui_refreshed)` 对外行为不变，仍由当前回合玩家驱动跟随；内部类型判定改用 `NumberUtils`。
+
+`tests/internal/forbidden_globals.lua` 的输出格式保持兼容，新增规则也必须按 `forbidden_globals: path:line uses ...` 的可读形式报错，便于 CI 与本地定位。
 
 ## 文档更新记录
 
 
-2026-03-02（R16）：完成 `RuntimePorts` 首轮拆分与验证，形成单热点收缩闭环。
-
-2026-03-02（R17 计划重建）：依据重新调研结论将计划升级为“热点去中心化交易”，把目标从单文件收缩扩展到 `presentation/interaction/bootstrap` 多热点协同收敛，并重写里程碑、步骤、验收与恢复策略。改动原因是研究已确认风险由单点膨胀演化为多热点并发增长。
-
-2026-03-02（R17 执行回填）：完成里程碑 1 与里程碑 2 的结构拆分，新增 8 个承接模块并收缩 4 个热点文件；测试阶段因缺少 `lua` 命令受阻，已记录证据并保留里程碑 3 待完成状态。改动原因是先完成低风险职责去中心化，再等待运行环境补齐后闭环验证。
-
-2026-03-02（R17 最终完成）：安装 Lua 5.4.8 后完成里程碑 3，回归测试全部通过（213 checks），更新进度、结果与复盘、产物与备注、验证与验收等章节，标记 R17 完整闭环。改动原因是交付可验证的代码膨胀收敛交易，形成可重复的工程模式。
+2026-03-03（R18 创建）：基于最新代码库重扫，确认本轮疑点仍存在（`os.clock`、`type~=number`、`rawget`、高置信隐式拼接 42 行），并将旧的“代码膨胀收敛”计划替换为“沙盒限制疑点收敛”可执行计划。改动原因是当前用户目标已切换为运行时沙盒风险治理，旧计划不再对应现阶段任务。
