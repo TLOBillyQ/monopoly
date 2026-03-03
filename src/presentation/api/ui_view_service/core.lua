@@ -88,8 +88,6 @@ local function build_choice_screens()
       root = target_choice_nodes.canvas,
       title = target_choice_nodes.title,
       body = target_choice_nodes.body,
-      option_buttons = target_choice_nodes.slots,
-      under_button = target_choice_nodes.under,
     },
     remote = {
       key = "remote",
@@ -97,7 +95,6 @@ local function build_choice_screens()
       title = remote_choice_nodes.title,
       body = remote_choice_nodes.body,
       option_buttons = remote_choice_nodes.options,
-      cancel = remote_choice_nodes.cancel,
     },
     secondary_confirm = {
       key = "secondary_confirm",

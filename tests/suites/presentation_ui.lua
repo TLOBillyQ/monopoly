@@ -114,10 +114,9 @@ local function _build_choice_modal_state()
     "玩家选择屏", "玩家选择_标题",
     "玩家选择_槽位1", "玩家选择_槽位2", "玩家选择_槽位3", "玩家选择_槽位4",
     "位置选择屏", "位置_副标题", "位置_放置文本",
-    "位置_前1", "位置_前2", "位置_前3", "位置_后1", "位置_后2", "位置_后3", "位置_脚下",
     "遥控骰子屏", "遥控骰子_标题", "遥控骰子_正文",
     "遥控骰子_选项_01", "遥控骰子_选项_02", "遥控骰子_选项_03",
-    "遥控骰子_选项_04", "遥控骰子_选项_05", "遥控骰子_选项_06", "遥控骰子_取消",
+    "遥控骰子_选项_04", "遥控骰子_选项_05", "遥控骰子_选项_06",
     "通用二次确认屏", "通用二次确认_标题", "通用二次确认_文本", "通用二次确认_确定按钮", "通用二次确认_取消",
     "卡牌展示屏", "卡牌展示_标题", "卡牌展示_图片",
     "黑市屏", "黑市_购买按钮", "黑市_关闭", "黑市_售价", "黑市_选中卡牌",
@@ -1550,8 +1549,8 @@ local function _test_apply_input_lock_keeps_auto_controls_enabled()
       auto_control_nodes = { "始终显示_托管按钮", "始终显示_文本" },
       choice_screens = {
         player = { option_buttons = {} },
-        target = { option_buttons = {}, under_button = "位置_脚下" },
-        remote = { option_buttons = {}, cancel = "遥控骰子_取消" },
+        target = {},
+        remote = { option_buttons = {} },
         secondary_confirm = { body = "通用二次确认_文本", cancel = "通用二次确认_取消", confirm = "通用二次确认_确定按钮" },
       },
       set_touch_enabled = function(_, name, enabled)
@@ -1597,8 +1596,8 @@ local function _test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapp
       auto_control_nodes = { "始终显示_托管按钮", "始终显示_文本" },
       choice_screens = {
         player = { option_buttons = {} },
-        target = { option_buttons = {}, under_button = "位置_脚下" },
-        remote = { option_buttons = {}, cancel = "遥控骰子_取消" },
+        target = {},
+        remote = { option_buttons = {} },
         secondary_confirm = { body = "通用二次确认_文本", cancel = "通用二次确认_取消", confirm = "通用二次确认_确定按钮" },
       },
       set_touch_enabled = function(_, name, enabled)
@@ -2180,7 +2179,7 @@ local function _test_ui_event_router_player_target_click_direct_submit()
         { id = 202, label = "后2" },
       },
     }
-    node_map["位置_后1"]._listener_cb({})
+    -- target_choice 现在是事件驱动，不再通过 UI 点击触发
   end)
 
   _assert_eq(captured[1] and captured[1].type, "choice_select", "player click should dispatch choice_select")

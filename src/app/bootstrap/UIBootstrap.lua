@@ -21,15 +21,10 @@ local function _required_click_nodes(opts)
     always_show_nodes.auto_button,
     secondary_confirm_nodes.confirm,
     secondary_confirm_nodes.cancel,
-    remote_choice_nodes.cancel,
   }
   for _, name in ipairs(player_choice_nodes.slots) do
     required[#required + 1] = name
   end
-  for _, name in ipairs(target_choice_nodes.slots) do
-    required[#required + 1] = name
-  end
-  required[#required + 1] = target_choice_nodes.under
   for _, name in ipairs(remote_choice_nodes.options) do
     required[#required + 1] = name
   end
