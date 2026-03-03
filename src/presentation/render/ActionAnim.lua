@@ -1,4 +1,4 @@
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local number_utils = require("src.core.NumberUtils")
 
 local runtime = require("src.presentation.api.UIRuntimePort")
@@ -14,6 +14,7 @@ local durations = {
   monster = 1.2,
 }
 local roll_spin_seconds = 1.0
+local roll_face_hold_seconds = 1.0
 
 local function _show_tip(text, duration)
   host_runtime.show_tips(text, duration)
@@ -24,11 +25,11 @@ local function _register_default_handlers()
     return
   end
   registry.register("roll", function(state, anim, duration, opts)
-    handlers.play_roll_dice_screen(state, anim, roll_spin_seconds, opts.hold_seconds or 0.5, {
+    handlers.play_roll_dice_screen(state, anim, roll_spin_seconds, roll_face_hold_seconds, {
       runtime = runtime,
       dice_screen_nodes = dice_nodes,
     })
-    return roll_spin_seconds + (opts.hold_seconds or 0.5)
+    return roll_spin_seconds + roll_face_hold_seconds
   end)
   registry.register("roadblock", function(state, anim, duration, opts)
     handlers.play_overlay(state, anim, duration, opts)
@@ -79,7 +80,7 @@ function action_anim.play(state, anim)
   if handler then
     return handler(state, anim, duration, {
       show_tip = _show_tip,
-      hold_seconds = 0.5,
+      hold_seconds = roll_face_hold_seconds,
       clear_overlay = action_anim.clear_overlay,
     })
   end

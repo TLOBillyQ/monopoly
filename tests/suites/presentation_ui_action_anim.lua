@@ -122,7 +122,7 @@ local function _test_action_anim_roll_screen_two_stage_timeline()
       total = 6,
     })
 
-    assert(total_duration == 1.5, "roll action duration should use 1.0s spin + hold")
+    assert(total_duration == 2.0, "roll action duration should use 1.0s spin + 1.0s hold")
     assert(nodes["骰子屏"].visible == true, "dice screen should be visible at start")
     assert(nodes["骰子_旋转中"].visible == true, "spin node should be visible at start")
     for i = 1, 6 do
@@ -136,7 +136,11 @@ local function _test_action_anim_roll_screen_two_stage_timeline()
       assert(nodes["骰子_点数" .. i].visible == false, "other faces should remain hidden")
     end
 
-    run_timers_until(1.5)
+    run_timers_until(1.6)
+    assert(nodes["骰子屏"].visible == true, "dice screen should stay visible during hold")
+    assert(nodes["骰子_点数1"].visible == true, "face should remain visible during hold")
+
+    run_timers_until(2.0)
     assert(nodes["骰子屏"].visible == false, "dice screen should hide after hold")
     for i = 1, 6 do
       assert(nodes["骰子_点数" .. i].visible == false, "all faces should hide after hold")
