@@ -96,7 +96,19 @@ function number_utils.to_integer(value)
     return nil
   end
   if number_utils.is_numeric(value) then
-    return _to_integer_safe(value)
+    local parsed = _to_integer_safe(value)
+    if parsed ~= nil then
+      return parsed
+    end
+  end
+  if value ~= nil then
+    local ok, as_text = pcall(tostring, value)
+    if ok and type(as_text) == "string" then
+      local parsed = _parse_integer_string(as_text)
+      if parsed ~= nil then
+        return parsed
+      end
+    end
   end
   return nil
 end

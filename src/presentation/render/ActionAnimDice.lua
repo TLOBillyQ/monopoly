@@ -1,6 +1,7 @@
 local runtime_constants = require("src.core.config.RuntimeConstants")
 local ui_events = require("src.presentation.shared.UIEvents")
 local number_utils = require("src.core.NumberUtils")
+local logger = require("src.core.Logger")
 local host_runtime = require("src.presentation.api.HostRuntimePort")
 
 local dice = {}
@@ -33,6 +34,19 @@ function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
   duration = duration or 0
   hold_seconds = hold_seconds or 0
   local face = _resolve_roll_face(anim)
+  if not face then
+    local rolls = anim and anim.rolls or nil
+    local first = type(rolls) == "table" and rolls[1] or nil
+    logger.warn(
+      "[ActionAnimDice]",
+      "invalid roll face, fallback=1",
+      "first_type=" .. tostring(type(first)),
+      "first_value=" .. tostring(first),
+      "total_type=" .. tostring(type(anim and anim.total)),
+      "total_value=" .. tostring(anim and anim.total)
+    )
+    face = 1
+  end
   local show_event = ui_events.show[dice_nodes.canvas]
   if show_event then
     ui_events.send_to_all(show_event, {})

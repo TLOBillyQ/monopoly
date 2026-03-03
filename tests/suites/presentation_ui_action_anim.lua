@@ -148,10 +148,89 @@ local function _test_action_anim_roll_screen_two_stage_timeline()
   end)
 end
 
+local function _test_action_anim_roll_screen_fallback_face_when_invalid()
+  local state = _build_state()
+  local nodes = {}
+  local node_names = {
+    "骰子屏",
+    "骰子_旋转中",
+    "骰子_点数1",
+    "骰子_点数2",
+    "骰子_点数3",
+    "骰子_点数4",
+    "骰子_点数5",
+    "骰子_点数6",
+  }
+  for _, name in ipairs(node_names) do
+    nodes[name] = { visible = false, name = name }
+  end
+
+  local timers = {}
+  local function run_timers_until(limit)
+    table.sort(timers, function(a, b)
+      return a.delay < b.delay
+    end)
+    for _, entry in ipairs(timers) do
+      if not entry.done and entry.delay <= limit then
+        entry.done = true
+        entry.cb()
+      end
+    end
+  end
+
+  _with_patches({
+    {
+      key = "SetTimeOut",
+      value = function(delay, cb)
+        timers[#timers + 1] = {
+          delay = delay,
+          cb = cb,
+          done = false,
+        }
+      end,
+    },
+    {
+      target = runtime_port,
+      key = "for_each_role_or_global",
+      value = function(fn)
+        fn(nil)
+      end,
+    },
+    {
+      target = runtime_port,
+      key = "query_node",
+      value = function(name)
+        return assert(nodes[name], "missing test node: " .. tostring(name))
+      end,
+    },
+  }, function()
+    action_anim.play(state, {
+      kind = "roll",
+      duration = 3.0,
+      rolls = {
+        setmetatable({}, {
+          __tostring = function()
+            return "bad"
+          end,
+        }),
+      },
+      total = "bad",
+    })
+
+    run_timers_until(1.0)
+    assert(nodes["骰子_旋转中"].visible == false, "spin node should hide at 1.0s")
+    assert(nodes["骰子_点数1"].visible == true, "fallback face should show 1 when parsed face is invalid")
+    for i = 2, 6 do
+      assert(nodes["骰子_点数" .. i].visible == false, "other faces should remain hidden on fallback")
+    end
+  end)
+end
+
 return {
   name = "presentation_ui_action_anim",
   tests = {
     { name = "action_anim_overlay_handler_returns_duration", run = _test_action_anim_overlay_handler_returns_duration },
     { name = "action_anim_roll_screen_two_stage_timeline", run = _test_action_anim_roll_screen_two_stage_timeline },
+    { name = "action_anim_roll_screen_fallback_face_when_invalid", run = _test_action_anim_roll_screen_fallback_face_when_invalid },
   },
 }
