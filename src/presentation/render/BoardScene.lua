@@ -1,5 +1,6 @@
 local board_scene = {}
 local runtime_ports = require("src.core.RuntimePorts")
+local board_scene_debug_probe = require("src.presentation.render.BoardSceneDebugProbe")
 
 function board_scene.init(state, map_cfg, game)
   assert(state ~= nil, "missing state")
@@ -50,6 +51,9 @@ function board_scene.init(state, map_cfg, game)
   assert(scene.ground ~= nil, "missing ground unit")
   assert(scene.ground.set_model_visible ~= nil, "missing ground.set_model_visible")
   scene.ground.set_model_visible(false)
+
+  -- Temporary probe for validating scene unit lookup / type detection.
+  board_scene_debug_probe.probe_named_unit("角色形象-海绵宝宝")
 
   state.board_scene = scene
   return scene

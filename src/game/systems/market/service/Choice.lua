@@ -1,5 +1,6 @@
 local context = require("src.game.systems.market.service.Context")
 local eligibility = require("src.game.systems.market.service.Eligibility")
+local number_utils = require("src.core.NumberUtils")
 
 local choice = {}
 
@@ -12,7 +13,7 @@ function choice.build(player, game)
     local name = context.entry_name(entry)
     local price = context.entry_price(entry)
     local currency = context.entry_currency(entry)
-    local label = name .. " - " .. price .. " " .. currency
+    local label = name .. " - " .. number_utils.format_integer_part(price) .. " " .. currency
     body_lines[#body_lines + 1] = label
     options[#options + 1] = { id = entry.product_id, label = label, can_buy = slot.can_buy }
   end

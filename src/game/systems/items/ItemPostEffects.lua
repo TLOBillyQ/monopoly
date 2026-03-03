@@ -5,6 +5,7 @@ local inventory = require("src.game.systems.items.ItemInventory")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local bankruptcy = require("src.game.core.runtime.Bankruptcy")
 local action_anim_port = require("src.core.ActionAnimPort")
+local number_utils = require("src.core.NumberUtils")
 
 local item_effects = {}
 local item_ids = gameplay_rules.item_ids
@@ -46,7 +47,7 @@ local target_effects = {
       end
       game:set_player_status(target, "move_dir", nil)
       game:set_player_status(target, "stay_turns", constants.mountain_stay_turns)
-      logger.event(target.name .. " 进入深山，停留 " .. target.status.stay_turns .. " 回合")
+      logger.event(target.name .. " 进入深山，停留 " .. number_utils.format_integer_part(target.status.stay_turns) .. " 回合")
       logger.event(user.name .. " 使用流放卡，将 " .. target.name .. " 送往深山")
       return true
     end,
@@ -65,7 +66,7 @@ local target_effects = {
       end
       local fee = math.floor(game:player_balance(target, "金币") * 0.5)
       game:deduct_player_cash(target, fee)
-      logger.event(user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. fee .. " 税金")
+      logger.event(user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. number_utils.format_integer_part(fee) .. " 税金")
       if game:player_balance(target, "金币") <= 0 then
         bankruptcy.eliminate(game, target, { reason = target.name .. " 支付查税费用后破产" })
       end

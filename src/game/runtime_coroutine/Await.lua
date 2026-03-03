@@ -1,5 +1,6 @@
 local turn_decision = require("src.game.flow.turn.TurnDecision")
 local validator = require("src.game.flow.turn.TurnDispatchValidator")
+local number_utils = require("src.core.NumberUtils")
 
 local await = {}
 
@@ -167,8 +168,16 @@ function await.seconds(session, sec, opts)
   end
   opts = opts or {}
   local key = opts.key or "__default__"
-  local now_fn = opts.now_fn or os.clock
-  local now = now_fn()
+  local now_fn = opts.now_fn
+  if type(now_fn) ~= "function" then
+    -- Sandbox runtime may not provide os.clock; no timer source means skip waiting.
+    return { done = true }
+  end
+  local ok, now_or_err = pcall(now_fn)
+  if not ok or not number_utils.is_numeric(now_or_err) then
+    return { done = true }
+  end
+  local now = now_or_err
   local started = session._seconds_wait[key]
   if started == nil then
     session._seconds_wait[key] = now

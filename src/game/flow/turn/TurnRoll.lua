@@ -1,5 +1,6 @@
 local logger = require("src.core.Logger")
 local item_phase = require("src.game.systems.items.ItemPhase")
+local number_utils = require("src.core.NumberUtils")
 
 local function _roll_dice(count, override_values, rng)
   local results = {}
@@ -41,7 +42,7 @@ local function _phase_roll(turn_mgr, args)
     if player.status.pending_dice_multiplier and player.status.pending_dice_multiplier > 1 then
       total = total * player.status.pending_dice_multiplier
     end
-    logger.event(player.name .. " 投骰: [" .. table.concat(rolls, ",") .. "] => " .. total)
+    logger.event(player.name .. " 投骰: [" .. table.concat(rolls, ",") .. "] => " .. number_utils.format_integer_part(total))
     game.last_turn.rolls = rolls
     game.last_turn.total = total
     game.last_turn.raw_total = raw_total

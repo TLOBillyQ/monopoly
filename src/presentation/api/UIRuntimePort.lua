@@ -4,8 +4,8 @@ local runtime_ports = require("src.core.RuntimePorts")
 local runtime_port = {}
 
 local function _traceback(err)
-  if debug and debug.traceback then
-    return debug.traceback(err)
+  if type(traceback) == "function" then
+    return traceback(err)
   end
   return err
 end

@@ -68,6 +68,18 @@ local function _build_initial_turn()
   }
 end
 
+local function _is_class_like(value)
+  if type(value) ~= "table" then
+    return false
+  end
+  local meta = getmetatable(value)
+  local is_instance = type(meta) == "table" and type(meta.__newindex) == "function"
+  if is_instance then
+    return false
+  end
+  return value.__name ~= nil and type(value.new) == "function"
+end
+
 function composition_root.assemble(opts, game_or_class)
   assert(opts ~= nil, "missing assemble opts")
 
@@ -89,7 +101,7 @@ function composition_root.assemble(opts, game_or_class)
   local registries = bootstrap.create_registries()
   local phases = phase_registry.build_default_phases()
   local game = game_or_class
-  if type(game_or_class) == "table" and rawget(game_or_class, "__name") and rawget(game_or_class, "new") then
+  if _is_class_like(game_or_class) then
     game = game_or_class:new({ __skip_assemble = true })
   end
   assert(game, "CompositionRoot.Assemble requires game instance or class")

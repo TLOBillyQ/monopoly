@@ -4,6 +4,7 @@ local board_utils = require("src.game.systems.land.LandBoardUtils")
 local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local action_anim_port = require("src.core.ActionAnimPort")
+local number_utils = require("src.core.NumberUtils")
 
 local demolish = {}
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
@@ -39,7 +40,7 @@ local function _send_players_to_hospital(game, idx)
       game:update_player_position(target, hospital_index)
       game:set_player_status(target, "move_dir", nil)
       game:set_player_status(target, "stay_turns", constants.hospital_stay_turns)
-      logger.event(target.name .. " 被炸伤送往医院，需停留 " .. constants.hospital_stay_turns .. " 回合")
+      logger.event(target.name .. " 被炸伤送往医院，需停留 " .. number_utils.format_integer_part(constants.hospital_stay_turns) .. " 回合")
       count = count + 1
     end
   end
@@ -84,7 +85,7 @@ function demolish.apply(game, player, idx, opts)
        msg = msg .. "，建筑被摧毁"
     end
     if hit > 0 then
-      msg = msg .. "，" .. hit .. " 名玩家送医"
+      msg = msg .. "，" .. number_utils.format_integer_part(hit) .. " 名玩家送医"
     end
   else
     msg = player.name .. " 释放怪兽拆毁 " .. tile.name .. " 的建筑"
@@ -125,7 +126,7 @@ function demolish.use(game, player, distance, consume_fn, opts)
         if tile.type == "land" then
           local st = tile_state(game, tile)
           if st.owner_id and st.owner_id ~= player.id and st.level > 0 then
-            table.insert(body_lines, "#" .. idx .. " " .. tile.name)
+            table.insert(body_lines, "#" .. tostring(idx) .. " " .. tile.name)
             table.insert(options, { id = idx, label = tile.name })
           end
         end

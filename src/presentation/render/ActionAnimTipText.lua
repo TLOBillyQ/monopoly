@@ -33,7 +33,7 @@ function tip_text.build(state, anim)
   if kind == "roll" then
     local rolls = anim.rolls and table.concat(anim.rolls, ",") or "?"
     local total = anim.total or "?"
-    return "投骰动画：" .. rolls .. " => " .. total
+    return "投骰动画：" .. rolls .. " => " .. tostring(total)
   end
   if kind == "roadblock" then
     return "路障动画：放置在 " .. _resolve_tile_name(state, anim.tile_index)

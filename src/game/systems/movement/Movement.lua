@@ -67,7 +67,7 @@ local function _check_market(board, current, step, steps, abs_steps, facing, bra
   _emit_event(monopoly_event.movement.market_interrupt, {
     player = player,
     remaining_steps = remaining,
-    text = player.name .. " 经过黑市，剩余 " .. remaining .. " 步",
+    text = player.name .. " 经过黑市，剩余 " .. number_utils.format_integer_part(remaining) .. " 步",
     prompt_text = _build_other_action_prompt_text(),
   })
   return {

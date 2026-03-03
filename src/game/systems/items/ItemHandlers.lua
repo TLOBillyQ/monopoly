@@ -152,7 +152,7 @@ function handlers.handle_remote_dice(game, player, item_id, context)
       assert(inventory.consume(inner_player, inner_item_id) == true, "consume remote dice failed")
       local ok = remote_dice.apply(inner_game, inner_player, dice_count, value)
       if ok and target_tile then
-        logger.event(inner_player.name .. " AI 设定遥控骰子前往 " .. target_tile.name .. " 点数 " .. value)
+        logger.event(inner_player.name .. " AI 设定遥控骰子前往 " .. target_tile.name .. " 点数 " .. number_utils.format_integer_part(value))
       end
       return ok
     end,
@@ -161,7 +161,7 @@ function handlers.handle_remote_dice(game, player, item_id, context)
       local body_lines = {}
       for _, value in ipairs(candidates) do
         table.insert(options, { id = value, label = tostring(value) })
-        table.insert(body_lines, "点数 " .. value)
+        table.insert(body_lines, "点数 " .. number_utils.format_integer_part(value))
       end
       return {
         kind = "remote_dice_value",

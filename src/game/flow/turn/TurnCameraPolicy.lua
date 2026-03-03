@@ -1,3 +1,5 @@
+local number_utils = require("src.core.NumberUtils")
+
 local turn_camera_policy = {}
 
 local function _resolve_follow_player_id(game)
@@ -10,12 +12,12 @@ local function _resolve_follow_player_id(game)
   if count <= 0 then
     return nil
   end
-  local current_index = turn.current_player_index
+  local current_index = number_utils.to_integer(turn.current_player_index)
   local current = current_index and players[current_index] or nil
   if current and current.id ~= nil and current.eliminated ~= true then
     return current.id
   end
-  if type(current_index) ~= "number" then
+  if current_index == nil then
     return nil
   end
   for offset = 1, count do

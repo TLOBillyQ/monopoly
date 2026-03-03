@@ -4,7 +4,7 @@ local coord_by_id = {}
 local id_by_coord = {}
 for _, t in ipairs(tiles_cfg) do
   coord_by_id[t.id] = { row = t.row, col = t.col }
-  id_by_coord[t.row .. "," .. t.col] = t.id
+  id_by_coord[tostring(t.row) .. "," .. tostring(t.col)] = t.id
 end
 
 local function _direction(from_id, to_id)
@@ -26,7 +26,7 @@ local function _direction(from_id, to_id)
 end
 
 local function _id_at(coord)
-  local id = id_by_coord[coord[1] .. "," .. coord[2]]
+  local id = id_by_coord[tostring(coord[1]) .. "," .. tostring(coord[2])]
   assert(id, "missing tile at (" .. tostring(coord[1]) .. "," .. tostring(coord[2]) .. ")")
   return id
 end

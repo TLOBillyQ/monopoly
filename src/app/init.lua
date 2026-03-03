@@ -11,7 +11,8 @@ logger.configure_game_time()
 local current_game_ref = { nil }
 
 local function _resolve_startup_profile_name()
-  local profile = rawget(_G, "STARTUP_TEST_PROFILE")
+  local globals = _G
+  local profile = globals and globals.STARTUP_TEST_PROFILE or nil
   if type(profile) == "string" and profile ~= "" then
     return profile
   end

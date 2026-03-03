@@ -8,6 +8,7 @@ local pricing = require("src.game.systems.land.LandPricing")
 local board_utils = require("src.game.systems.land.LandBoardUtils")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 local action_anim_port = require("src.core.ActionAnimPort")
+local number_utils = require("src.core.NumberUtils")
 
 local tile_state = tile.get_state
 local item_ids = gameplay_rules.item_ids
@@ -49,7 +50,7 @@ local function _apply_buy(ctx)
   ctx.game:deduct_player_cash(player, t.price)
   ctx.game:set_tile_owner(t, player.id)
   ctx.game:set_player_property(player, t.id, true)
-  logger.event(player.name .. " 购买 " .. t.name .. " 花费 " .. t.price)
+  logger.event(player.name .. " 购买 " .. t.name .. " 花费 " .. number_utils.format_integer_part(t.price))
 end
 
 local function _can_upgrade(ctx)
@@ -88,7 +89,7 @@ local function _apply_upgrade(ctx)
       level = new_level,
     })
   end
-  logger.event(player.name .. " 为 " .. t.name .. " 加盖，花费 " .. cost)
+  logger.event(player.name .. " 为 " .. t.name .. " 加盖，花费 " .. number_utils.format_integer_part(cost))
   if tile_index then
     action_anim_port.queue(ctx.game, {
       kind = "upgrade_land",

@@ -100,7 +100,7 @@ function purchase.execute(game, player, product_id, opts)
       entry = entry,
       price = price,
       currency = currency,
-      text = player.name .. " 在黑市购买 " .. context.entry_name(entry) .. " 花费 " .. price .. " " .. currency,
+      text = player.name .. " 在黑市购买 " .. context.entry_name(entry) .. " 花费 " .. number_utils.format_integer_part(price) .. " " .. currency,
     })
     return true
   end
@@ -146,7 +146,7 @@ function purchase.execute(game, player, product_id, opts)
     entry = entry,
     price = price,
     currency = currency,
-    text = player.name .. " 在黑市购买座驾 " .. context.entry_name(entry) .. " 花费 " .. price .. " " .. currency,
+    text = player.name .. " 在黑市购买座驾 " .. context.entry_name(entry) .. " 花费 " .. number_utils.format_integer_part(price) .. " " .. currency,
   })
   return true
 end

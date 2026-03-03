@@ -3,6 +3,11 @@
 
 local forbidden = {
   { pattern = "%f[%w]tonumber%s*%(", name = "tonumber", replacement = "NumberUtils.to_integer()" },
+  { pattern = "%f[%w_]rawget%s*%(", name = "rawget", replacement = "field access with nil-guard (_G and _G.key)" },
+  { pattern = "%f[%w_]os%s*%.%s*clock%s*%(", name = "os.clock", replacement = "runtime port clock or injected now_fn" },
+  { pattern = "%f[%w_]debug%s*%.%s*traceback%s*%(", name = "debug.traceback", replacement = "traceback() global" },
+  { pattern = "type%s*%b()%s*==%s*[\"']number[\"']", name = "type(...) == \"number\"", replacement = "NumberUtils.is_numeric()/to_integer()" },
+  { pattern = "type%s*%b()%s*~=%s*[\"']number[\"']", name = "type(...) ~= \"number\"", replacement = "NumberUtils.is_numeric()/to_integer()" },
 }
 
 local function _is_windows()

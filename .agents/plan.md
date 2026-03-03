@@ -18,10 +18,10 @@
 - [x] (2026-03-03 20:41 +08:00) 重读 `.agents/harness/PLANS.md` 与现有 `.agents/plan.md`，确认格式与活文档要求。
 - [x] (2026-03-03 20:42 +08:00) 基于最新工作树重扫疑点并固化证据：`os.clock`、`type~=number`、`rawget`、`coroutine`、高置信隐式拼接。
 - [x] (2026-03-03 20:43 +08:00) 生成并写入 R18 可执行计划骨架，明确里程碑、边界、验收与恢复策略。
-- [ ] 里程碑 1：移除会在沙盒裁剪下直接失败的硬依赖（`Await.seconds`、`rawget`、`type~=number`）。
-- [ ] 里程碑 2：修复运行时高优先级隐式数值拼接点，优先覆盖回合、移动、地块、道具、黑市主链路。
-- [ ] 里程碑 3：把禁用模式加入静态守卫（`tests/internal/forbidden_globals.lua`），并补齐对应回归。
-- [ ] 里程碑 4：执行定向与全量验收，整理结果与复盘，关闭 R18。
+- [x] (2026-03-03 20:46 +08:00) 完成里程碑 1：修复 `Await.seconds`、`TurnCameraPolicy`、`init.lua`、`CompositionRoot.lua` 的沙盒兼容问题。
+- [x] (2026-03-03 20:49 +08:00) 完成里程碑 2：落地高优先级数值拼接显式转换，主链路目标文件全部改完。
+- [x] (2026-03-03 20:50 +08:00) 完成里程碑 3：扩展 `forbidden_globals` 规则并通过静态门禁。
+- [x] (2026-03-03 20:52 +08:00) 完成里程碑 4：通过定向验证与 `tests/regression.lua` 全量回归（231 checks）。
 
 ## 意外与发现
 
@@ -38,6 +38,12 @@
 - 观察：`lua_env.md` 与现状存在文档/实现差异，`src/` 里仍可见 `rawget` 与 `os.clock` 依赖点，且回合引擎依赖 `coroutine.*`。
   证据：`init.lua:14`、`CompositionRoot.lua:92`、`Await.lua:170`、`Scheduler.lua/TurnScript.lua`。
 
+- 观察：`CompositionRoot` 去掉 `rawget` 后，直接用字段访问会把“实例”误判为“类”，导致回归大面积失败。
+  证据：首次回归出现 `attempt to index field 'turn' (a nil value)` 等 111 个失败；修复类/实例判定后恢复通过。
+
+- 观察：`RuntimeEventBridge` 的 `debug.getupvalue` 预检查在现有测试契约中仍有价值，不能机械移除。
+  证据：`presentation_ui` 用例要求“wrapped TriggerCustomEvent”不应被调用；恢复 guarded 预检查后该断言恢复通过。
+
 ## 决策日志
 
 
@@ -53,14 +59,22 @@
   理由：当前回合引擎核心即协程模型，迁移成本高且超出本轮“沙盒疑点收敛”范围。
   日期/作者：2026-03-03 / Codex
 
-- 决策：在 `tests/internal/forbidden_globals.lua` 扩展规则，直接守卫 `rawget`、`type==/~=number`、`os.clock`、`debug.getupvalue`、`debug.traceback` 在 `src/` 的出现。
+- 决策：在 `tests/internal/forbidden_globals.lua` 扩展规则，守卫 `rawget`、`type==/~=number`、`os.clock`、`debug.traceback` 在 `src/` 的出现。
   理由：把本轮问题固化为可执行门禁，避免回归。
+  日期/作者：2026-03-03 / Codex
+
+- 决策：保留 `RuntimeEventBridge` 中“带 guard 的 `debug.getupvalue` 预检查”，不纳入本轮禁用项。
+  理由：该检查承担“wrapped TriggerCustomEvent 降级避让”契约，且已对 `debug` 缺失做守卫，不会在沙盒中硬失败。
   日期/作者：2026-03-03 / Codex
 
 ## 结果与复盘
 
 
-本计划刚建立，代码尚未实施。当前状态是“疑点已确认、边界已拍板、执行路径可直接落地”。里程碑完成后，本节必须更新为最终结果，明确“完成项 / 遗留项 / 经验教训”，并对照“目的 / 全局视角”逐条复核。
+R18 已完成。A 类与 B 类目标全部落地，C 类（`coroutine` 文档对齐）保持追踪但不在本轮改动范围。
+
+完成结果如下：`Await.seconds` 不再依赖 `os.clock`；`TurnCameraPolicy` 改为 `NumberUtils.to_integer`；`rawget` 在 `src/` 清零；高优先级数值拼接点已在主链路完成显式转换；`forbidden_globals` 新规则生效并通过。定向命令与全量回归均已通过，回归输出为 `All regression checks passed (231)`。
+
+本轮经验教训是：替换 `rawget` 时必须保留“类/实例判定”的原始语义，否则会触发隐蔽的大面积行为回退；此外，`debug` 相关逻辑应区分“硬依赖”与“有守卫的降级检查”。
 
 ## 背景与导读
 
@@ -93,7 +107,7 @@
 
 第四步会修复里程碑 2 的隐式拼接目标文件。预期修改文件包括 `Config/Maps/DefaultMap.lua`、`TurnRoll.lua`、`LocationOps.lua`、`ItemHandlers.lua`、`ItemPostEffects.lua`、`ItemRoadblock.lua`、`LandRules.lua`、`BaseLandEffects.lua`、`Choice.lua`、`Purchase.lua`、`Movement.lua`、`ItemDemolish.lua`、`ActionAnimTipText.lua`。所有业务数值文本改为 `NumberUtils.format_integer_part(...)` 或 `tostring(...)` 的显式转换。
 
-第五步会把规则固化到 `tests/internal/forbidden_globals.lua`，新增对 `rawget`、`type==/~=number`、`os.clock`、`debug.getupvalue`、`debug.traceback` 的检测，并在 `replacement` 字段给出统一替代方向（`NumberUtils`、运行时端口、`traceback` 等）。
+第五步会把规则固化到 `tests/internal/forbidden_globals.lua`，新增对 `rawget`、`type==/~=number`、`os.clock`、`debug.traceback` 的检测，并在 `replacement` 字段给出统一替代方向（`NumberUtils`、运行时端口、`traceback` 等）。
 
 ## 具体步骤
 
@@ -162,6 +176,20 @@
 
 `lua_env.md` 关键约束摘录（用于本计划对照）：移除 `io/os/package/debug`，不支持字符串与数字隐式转换。
 
+实施后验收证据（2026-03-03）：
+
+    lua tests/internal/forbidden_globals.lua
+      forbidden_globals ok
+
+    lua -e "... os=nil ... await.seconds ..."
+      await.seconds os=nil ok= true type= table
+
+    lua tests/regression.lua
+      All regression checks passed (231)
+      dep_rules ok
+      tick ok
+      forbidden_globals ok
+
 ## 接口与依赖
 
 
@@ -177,3 +205,5 @@
 
 
 2026-03-03（R18 创建）：基于最新代码库重扫，确认本轮疑点仍存在（`os.clock`、`type~=number`、`rawget`、高置信隐式拼接 42 行），并将旧的“代码膨胀收敛”计划替换为“沙盒限制疑点收敛”可执行计划。改动原因是当前用户目标已切换为运行时沙盒风险治理，旧计划不再对应现阶段任务。
+
+2026-03-03（R18 完成）：完成全部 4 个里程碑并通过回归。过程中修正了 `CompositionRoot` 的类/实例判定回退问题，并保留了 `RuntimeEventBridge` 的 guarded `debug.getupvalue` 预检查以满足既有契约。改动原因是保证“去除硬依赖”不破坏现有行为，并用测试闭环确认收敛效果。

@@ -139,8 +139,11 @@ function default_ports.build(runtime_context)
   end
 
   function defaults.cpu_now_seconds()
-    if os and type(os.clock) == "function" then
-      return os.clock()
+    if GameAPI and type(GameAPI.get_timestamp) == "function" then
+      local ok, ts = pcall(GameAPI.get_timestamp)
+      if ok and number_utils.is_numeric(ts) then
+        return ts
+      end
     end
     return 0
   end

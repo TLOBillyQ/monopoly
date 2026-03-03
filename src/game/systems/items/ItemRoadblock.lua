@@ -2,6 +2,7 @@ local logger = require("src.core.Logger")
 local tile = require("src.game.systems.board.Tile")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local action_anim_port = require("src.core.ActionAnimPort")
+local number_utils = require("src.core.NumberUtils")
 local roadblock = {}
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
 
@@ -90,7 +91,7 @@ local function _format_label(cand)
   if cand.dir == "forward" then
     dir_label = "前方"
   end
-  return dir_label .. cand.step .. "格：" .. cand.tile.name .. " (" .. cand.tile.type .. ")"
+  return dir_label .. number_utils.format_integer_part(cand.step) .. "格：" .. cand.tile.name .. " (" .. cand.tile.type .. ")"
 end
 
 function roadblock.candidates(game, player, distance)

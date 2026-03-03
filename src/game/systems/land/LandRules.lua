@@ -3,6 +3,7 @@ local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local inventory = require("src.game.systems.items.ItemInventory")
 local rent_resolver = require("src.game.systems.land.LandRentResolver")
+local number_utils = require("src.core.NumberUtils")
 
 local land_rules = {}
 local item_ids = gameplay_rules.item_ids
@@ -67,7 +68,7 @@ function land_rules.execute_strong_card(game, player_id, tile_id)
     owner = owner,
     tile = tile,
     amount = total_value,
-    text = player.name .. " 使用强征卡，支付 " .. total_value .. " 强制购入 " .. tile.name,
+    text = player.name .. " 使用强征卡，支付 " .. number_utils.format_integer_part(total_value) .. " 强制购入 " .. tile.name,
   })
 end
 
@@ -111,7 +112,7 @@ function land_rules.execute_pay_rent(game, player_id, tile_id)
     owner = owner,
     tile = tile,
     amount = rent,
-    text = player.name .. " 向 " .. owner.name .. " 支付租金 " .. rent,
+    text = player.name .. " 向 " .. owner.name .. " 支付租金 " .. number_utils.format_integer_part(rent),
   })
 
   if game:player_balance(player, "金币") >= rent then
@@ -123,7 +124,7 @@ function land_rules.execute_pay_rent(game, player_id, tile_id)
   local paid = game:player_balance(player, "金币")
   game:add_player_cash(owner, paid)
   game:set_player_cash(player, 0)
-  local reason = player.name .. " 资金不足，支付(" .. owner.name .. ") " .. paid .. " 后破产"
+  local reason = player.name .. " 资金不足，支付(" .. owner.name .. ") " .. number_utils.format_integer_part(paid) .. " 后破产"
   result.event = "rent_bankrupt"
   result.payload.amount = paid
   result.payload.text = reason
@@ -150,7 +151,7 @@ function land_rules.execute_pay_tax(game, player_id)
   return _build_land_event("tax_paid", {
     player = player,
     amount = fee,
-    text = player.name .. " 在税务局支付税金 " .. fee,
+    text = player.name .. " 在税务局支付税金 " .. number_utils.format_integer_part(fee),
   }, {
     bankrupt_reason = player.name .. " 支付税金后破产",
   })
