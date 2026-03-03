@@ -4,8 +4,7 @@
     将项目文件以软链方式部署到目标目录
 .DESCRIPTION
     维护固定受控路径的链接关系：
-    Config/、src/、vendor/、main.lua、Data/UIManagerNodes.lua、Data/Prefab.lua、
-    DebugTools.lua、EggyAPI.lua、eggy.json。
+    Config/、src/、vendor/、main.lua、Data/UIManagerNodes.lua、Data/Prefab.lua。
     当目标已有冲突文件/目录时，先自动备份到 .deploy_backup/<时间戳>/ 再替换为链接。
     Windows 下目录和文件均仅使用 SymbolicLink。
 .PARAMETER TargetPath
@@ -213,9 +212,6 @@ $Mappings = @(
     @{ Relative = "src"; IsDirectory = $true },
     @{ Relative = "vendor"; IsDirectory = $true },
     @{ Relative = "main.lua"; IsDirectory = $false },
-    @{ Relative = "DebugTools.lua"; IsDirectory = $false },
-    @{ Relative = "EggyAPI.lua"; IsDirectory = $false },
-    @{ Relative = "eggy.json"; IsDirectory = $false },
     @{ Relative = "Data/UIManagerNodes.lua"; IsDirectory = $false },
     @{ Relative = "Data/Prefab.lua"; IsDirectory = $false }
 )
