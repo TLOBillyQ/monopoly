@@ -1,0 +1,12 @@
+{
+    "projectName": "monopoly_1", 
+    "projectID": "69a642d65050765514261e19", 
+    "serverPort": 16760, 
+    "syncEnabled": true, 
+    "excludePatterns": [
+        ".vscode", 
+        ".git", 
+        "EggyAPI.lua"
+    ], 
+    "version": "1.0.0"
+}
