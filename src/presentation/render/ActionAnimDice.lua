@@ -1,11 +1,8 @@
-local runtime_constants = require("src.core.config.RuntimeConstants")
 local ui_events = require("src.presentation.shared.UIEvents")
 local number_utils = require("src.core.NumberUtils")
-local logger = require("src.core.Logger")
 local host_runtime = require("src.presentation.api.HostRuntimePort")
 
 local dice = {}
-local spin_steps = 12
 
 local function _resolve_face_value(value)
   local face = number_utils.to_integer(value)
@@ -35,22 +32,13 @@ function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
   hold_seconds = hold_seconds or 0
   local face = _resolve_roll_face(anim)
   if not face then
-    local rolls = anim and anim.rolls or nil
-    local first = type(rolls) == "table" and rolls[1] or nil
-    logger.warn(
-      "[ActionAnimDice]",
-      "invalid roll face, fallback=1",
-      "first_type=" .. tostring(type(first)),
-      "first_value=" .. tostring(first),
-      "total_type=" .. tostring(type(anim and anim.total)),
-      "total_value=" .. tostring(anim and anim.total)
-    )
     face = 1
   end
   local show_event = ui_events.show[dice_nodes.canvas]
   if show_event then
     ui_events.send_to_all(show_event, {})
   end
+  ui_events.send_to_all("重置骰子旋转", {})
   ui_events.send_to_all("旋转骰子", {})
   runtime.for_each_role_or_global(function()
     local nodes = {
@@ -68,23 +56,8 @@ function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
       node.visible = false
     end
 
-    if duration and duration > 0 then
-      local step_time = duration / spin_steps
-      pcall(function()
-        nodes.spin.rotation = runtime_constants.q_zero
-      end)
-      for i = 1, spin_steps do
-        local delay = step_time * (i - 1)
-        local angle = 720 * i / spin_steps
-        host_runtime.schedule(delay, function()
-          pcall(function()
-            nodes.spin.rotation = math.Quaternion(0.0, 0.0, angle)
-          end)
-        end)
-      end
-    end
-
     host_runtime.schedule(duration, function()
+      ui_events.send_to_all("重置骰子旋转", {})
       nodes.spin.visible = false
       if face then
         for index, node in ipairs(nodes.faces or {}) do
