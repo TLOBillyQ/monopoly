@@ -10,6 +10,17 @@ logger.configure_game_time()
 -- current_game_ref[1] 由 UIBootstrap 在 GAME_INIT 后赋值
 local current_game_ref = { nil }
 
+local function _resolve_log_mode()
+  local globals = _G
+  local mode = globals and globals.STARTUP_LOG_MODE or nil
+  if type(mode) == "string" and mode ~= "" then
+    return mode
+  end
+  return "dev"
+end
+
+logger.set_mode(_resolve_log_mode())
+
 local function _resolve_startup_profile_name()
   local globals = _G
   local profile = globals and globals.STARTUP_TEST_PROFILE or nil

@@ -1,5 +1,3 @@
-local logger = require("src.core.Logger")
-
 local M = {}
 
 local UNIT_TYPE_NAMES = {
@@ -13,13 +11,13 @@ local UNIT_TYPE_NAMES = {
 
 function M.probe_named_unit(unit_name)
   if type(unit_name) ~= "string" or unit_name == "" then
-    logger.warn("[BoardSceneProbe]", "invalid unit name")
+    print("[BoardSceneProbe] invalid unit name")
     return
   end
 
   local unit = LuaAPI.query_unit(unit_name)
   if unit == nil then
-    logger.warn("[BoardSceneProbe]", "target=", unit_name, "not found")
+    print("[BoardSceneProbe] target=", unit_name, "not found")
     return
   end
 
@@ -30,7 +28,7 @@ function M.probe_named_unit(unit_name)
   end
   local unit_type_name = UNIT_TYPE_NAMES[unit_type] or "UNKNOWN"
 
-  logger.warn(
+  print(
     "[BoardSceneProbe]",
     "target=",
     unit_name,
