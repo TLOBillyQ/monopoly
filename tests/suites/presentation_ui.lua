@@ -3524,6 +3524,133 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
   _assert_eq(follow_events, 0, "degraded follow event path should avoid wrapped TriggerCustomEvent call")
 end
 
+local function _test_ui_sync_defers_choice_modal_during_wait_action_anim()
+  local ui_view_service = require("src.presentation.api.UIViewService")
+  local ui_model = require("src.presentation.state.UIModel")
+  local ui_model_sync = require("src.presentation.api.presentation_ports.ui_sync.UIModelSync")
+  local opened = 0
+  local game = {
+    turn = {
+      phase = "wait_action_anim",
+      current_player_index = 1,
+      turn_count = 1,
+      pending_choice = {
+        id = 7,
+        kind = "market_buy",
+        title = "黑市",
+        body_lines = { "A" },
+        options = { { id = 1, label = "A" } },
+        allow_cancel = true,
+        cancel_label = "取消",
+      },
+    },
+    players = {
+      [1] = { id = 1, name = "P1", cash = 0, inventory = { items = {} }, eliminated = false },
+    },
+  }
+  local state = {
+    ui = ui_view_service.build_ui_state(),
+    ui_refs = { ["Empty"] = "EMPTY" },
+    ui_dirty = true,
+    ui_model = nil,
+  }
+  _with_patches({
+    { target = ui_view_service, key = "render", value = function() end },
+    { target = ui_view_service, key = "open_choice_modal", value = function()
+      opened = opened + 1
+    end },
+    { target = ui_model, key = "build", value = function()
+      return {
+        panel = { turn_label = "" },
+        board = {},
+        choice = { id = 7, kind = "market_buy", options = { { id = 1, label = "A" } }, allow_cancel = true },
+        market = { choice_id = 7, options = { { id = 1, label = "A" } }, allow_cancel = true },
+      }
+    end },
+    { target = ui_model, key = "update", value = function()
+      return {
+        panel = { turn_label = "" },
+        board = {},
+        choice = { id = 7, kind = "market_buy", options = { { id = 1, label = "A" } }, allow_cancel = true },
+        market = { choice_id = 7, options = { { id = 1, label = "A" } }, allow_cancel = true },
+      }
+    end },
+  }, function()
+    ui_model_sync.refresh_from_dirty(game, state, { any = true, turn = true }, {
+      log_once = function() end,
+      build_log_prefix = function() return "[test]" end,
+    })
+  end)
+  _assert_eq(opened, 0, "wait_action_anim should defer opening choice modal")
+end
+
+local function _test_ui_sync_opens_choice_modal_after_wait_action_anim()
+  local ui_view_service = require("src.presentation.api.UIViewService")
+  local ui_model = require("src.presentation.state.UIModel")
+  local ui_model_sync = require("src.presentation.api.presentation_ports.ui_sync.UIModelSync")
+  local opened = 0
+  local game = {
+    turn = {
+      phase = "wait_action_anim",
+      current_player_index = 1,
+      turn_count = 1,
+      pending_choice = {
+        id = 8,
+        kind = "market_buy",
+        title = "黑市",
+        body_lines = { "A" },
+        options = { { id = 1, label = "A" } },
+        allow_cancel = true,
+        cancel_label = "取消",
+      },
+    },
+    players = {
+      [1] = { id = 1, name = "P1", cash = 0, inventory = { items = {} }, eliminated = false },
+    },
+  }
+  local state = {
+    ui = ui_view_service.build_ui_state(),
+    ui_refs = { ["Empty"] = "EMPTY" },
+    ui_dirty = true,
+    ui_model = nil,
+  }
+  _with_patches({
+    { target = ui_view_service, key = "render", value = function() end },
+    { target = ui_view_service, key = "open_choice_modal", value = function()
+      opened = opened + 1
+    end },
+    { target = ui_model, key = "build", value = function()
+      return {
+        panel = { turn_label = "" },
+        board = {},
+        choice = { id = 8, kind = "market_buy", options = { { id = 1, label = "A" } }, allow_cancel = true },
+        market = { choice_id = 8, options = { { id = 1, label = "A" } }, allow_cancel = true },
+      }
+    end },
+    { target = ui_model, key = "update", value = function()
+      return {
+        panel = { turn_label = "" },
+        board = {},
+        choice = { id = 8, kind = "market_buy", options = { { id = 1, label = "A" } }, allow_cancel = true },
+        market = { choice_id = 8, options = { { id = 1, label = "A" } }, allow_cancel = true },
+      }
+    end },
+  }, function()
+    ui_model_sync.refresh_from_dirty(game, state, { any = true, turn = true }, {
+      log_once = function() end,
+      build_log_prefix = function() return "[test]" end,
+    })
+    _assert_eq(opened, 0, "choice modal should remain deferred during wait_action_anim")
+    game.turn.phase = "wait_choice"
+    state.ui_dirty = true
+    ui_model_sync.refresh_from_dirty(game, state, { any = true, turn = true }, {
+      log_once = function() end,
+      build_log_prefix = function() return "[test]" end,
+    })
+  end)
+  _assert_eq(opened, 1, "choice modal should open once after leaving wait_action_anim")
+end
+
 local function _test_panel_avatar_uses_keep_size_path()
   local presenter = require("src.presentation.ui.UIPanelPresenter")
   local keep_size_calls = 0
@@ -3657,6 +3784,8 @@ return {
   _test_turn_effects_other_prompt_fallback_text,
   _test_tick_ui_sync_turn_switch_still_follows,
   _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailable,
+  _test_ui_sync_defers_choice_modal_during_wait_action_anim,
+  _test_ui_sync_opens_choice_modal_after_wait_action_anim,
   _test_panel_avatar_uses_keep_size_path,
   _test_item_slot_refresh_resets_highlight_without_client_role,
 }

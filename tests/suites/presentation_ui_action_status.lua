@@ -1,3 +1,3 @@
 local registry = require("presentation_ui_registry")
 
-return registry.slice("presentation_ui.action_status", 54, 77)
+return registry.slice("presentation_ui.action_status", 54, 79)
