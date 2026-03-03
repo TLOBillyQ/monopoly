@@ -13,7 +13,7 @@ local durations = {
   missile = 1.2,
   monster = 1.2,
 }
-local roll_spin_seconds = 0.9
+local roll_spin_seconds = 1.0
 
 local function _show_tip(text, duration)
   host_runtime.show_tips(text, duration)
