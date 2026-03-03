@@ -445,7 +445,7 @@ def main():
             "price": parse_int(value_by_headers(row, col_map, ["支付价格"])),
             "limit": parse_int(value_by_headers(row, col_map, ["全局限量"])),
         }
-        if order == -1:
+        if order == -1 or kind == "skin":
             record["market_enabled"] = False
         market.append(record)
 
