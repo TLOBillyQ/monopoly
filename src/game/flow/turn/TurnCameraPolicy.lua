@@ -1,5 +1,33 @@
 local turn_camera_policy = {}
 
+local function _resolve_follow_player_id(game)
+  local turn = game and game.turn or nil
+  local players = game and game.players or nil
+  if not (turn and type(players) == "table") then
+    return nil
+  end
+  local count = #players
+  if count <= 0 then
+    return nil
+  end
+  local current_index = turn.current_player_index
+  local current = current_index and players[current_index] or nil
+  if current and current.id ~= nil and current.eliminated ~= true then
+    return current.id
+  end
+  if type(current_index) ~= "number" then
+    return nil
+  end
+  for offset = 1, count do
+    local idx = ((current_index - 1 + offset) % count) + 1
+    local candidate = players[idx]
+    if candidate and candidate.id ~= nil and candidate.eliminated ~= true then
+      return candidate.id
+    end
+  end
+  return nil
+end
+
 function turn_camera_policy.sync_follow(game, state, ports, ui_refreshed)
   if ui_refreshed ~= true then
     return
@@ -10,10 +38,7 @@ function turn_camera_policy.sync_follow(game, state, ports, ui_refreshed)
     return
   end
 
-  local turn = game and game.turn or nil
-  local current_index = turn and turn.current_player_index or nil
-  local current = current_index and game and game.players and game.players[current_index] or nil
-  local current_id = current and current.id or nil
+  local current_id = _resolve_follow_player_id(game)
   if current_id == nil then
     return
   end

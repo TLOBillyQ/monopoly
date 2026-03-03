@@ -1,5 +1,14 @@
 local profiles = {
-  default = {},
+  default = {
+    bootstrap = {
+      players = {
+        [1] = { position_tile_id = 35 },
+        [2] = { position_tile_id = 39 },
+        [3] = { position_tile_id = 44 },
+        [4] = { position_tile_id = 40 },
+      },
+    },
+  },
   scenario_bankruptcy = {
     bootstrap = {
       players = {
@@ -13,6 +22,14 @@ local profiles = {
         [2] = {
           cash = 120000,
           position_tile_id = 39,
+        },
+        [3] = {
+          cash = 100000,
+          position_tile_id = 44,
+        },
+        [4] = {
+          cash = 100000,
+          position_tile_id = 40,
         },
       },
       tiles = {
@@ -45,6 +62,14 @@ local profiles = {
           cash = 60000,
           position_tile_id = 39,
         },
+        [3] = {
+          cash = 60000,
+          position_tile_id = 44,
+        },
+        [4] = {
+          cash = 60000,
+          position_tile_id = 40,
+        },
       },
     },
   },
@@ -70,6 +95,14 @@ local profiles = {
           cash = 80000,
           position_tile_id = 40,
         },
+        [3] = {
+          cash = 80000,
+          position_tile_id = 38,
+        },
+        [4] = {
+          cash = 80000,
+          position_tile_id = 37,
+        },
       },
     },
   },
@@ -89,6 +122,14 @@ local profiles = {
         [2] = {
           cash = 120000,
           position_tile_id = 44,
+        },
+        [3] = {
+          cash = 120000,
+          position_tile_id = 38,
+        },
+        [4] = {
+          cash = 120000,
+          position_tile_id = 37,
         },
       },
     },
@@ -110,6 +151,14 @@ local profiles = {
         [2] = {
           cash = 100000,
           position_tile_id = 37,
+        },
+        [3] = {
+          cash = 100000,
+          position_tile_id = 35,
+        },
+        [4] = {
+          cash = 100000,
+          position_tile_id = 39,
         },
       },
     },

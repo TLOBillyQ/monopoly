@@ -24,8 +24,8 @@ end
 
 local function _new_game()
   return app:new({
-    players = { "P1", "P2" },
-    ai = { [2] = true },
+    players = { "P1", "P2", "P3", "P4" },
+    ai = { [2] = true, [3] = true, [4] = true },
     auto_all = false,
     map = map_cfg,
     tiles = tiles_cfg,

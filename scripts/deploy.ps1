@@ -10,16 +10,21 @@
     目标目录的绝对路径
 .PARAMETER IncludeVendor
     是否额外拷贝 vendor/ 目录（默认不拷贝）
+.PARAMETER StartupProfile
+    启动时注入的测试 profile 名（写入 main.lua 的 STARTUP_TEST_PROFILE）
 .EXAMPLE
     pwsh -File .\deploy.ps1 -TargetPath "C:\Target\Project"
 .EXAMPLE
     pwsh -File .\deploy.ps1 -TargetPath "C:\Target\Project" -IncludeVendor
+.EXAMPLE
+    pwsh -File .\deploy.ps1 -StartupProfile "items_move_control"
 #>
 
 param(
     [Parameter(Mandatory=$false, HelpMessage="请输入目标目录的路径")]
     [string]$TargetPath,
-    [switch]$IncludeVendor
+    [switch]$IncludeVendor,
+    [string]$StartupProfile
 )
 
 function Test-Pwsh7 {
@@ -39,6 +44,29 @@ if (-not (Test-Pwsh7)) {
 
 # 获取脚本所在目录的上一级目录（项目根目录）
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
+$SourceMainLuaPath = Join-Path $ProjectRoot "main.lua"
+
+function Escape-LuaStringDoubleQuoted {
+    param([string]$Text)
+    if ($null -eq $Text) { return "" }
+    return $Text.Replace('\', '\\').Replace('"', '\"')
+}
+
+function Write-MainLuaForProfile {
+    param(
+        [string]$SourceMainLua,
+        [string]$DestMainLua,
+        [string]$ProfileName
+    )
+    $sourceText = Get-Content -Path $SourceMainLua -Raw
+    if ([string]::IsNullOrWhiteSpace($ProfileName)) {
+        Set-Content -Path $DestMainLua -Value $sourceText -NoNewline
+        return
+    }
+    $escaped = Escape-LuaStringDoubleQuoted -Text $ProfileName
+    $prefix = "STARTUP_TEST_PROFILE = `"$escaped`"" + [Environment]::NewLine
+    Set-Content -Path $DestMainLua -Value ($prefix + $sourceText) -NoNewline
+}
 
 # 未传入时按平台选择默认路径
 $TargetPaths = @()
@@ -78,6 +106,11 @@ Write-Host "开始部署项目文件" -ForegroundColor Cyan
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host "项目根目录: $ProjectRoot" -ForegroundColor Yellow
 Write-Host "目标目录数量: $($TargetPaths.Count)" -ForegroundColor Yellow
+if ([string]::IsNullOrWhiteSpace($StartupProfile)) {
+    Write-Host "启动 Profile: default (未注入 STARTUP_TEST_PROFILE)" -ForegroundColor Yellow
+} else {
+    Write-Host "启动 Profile: $StartupProfile" -ForegroundColor Yellow
+}
 foreach ($target in $TargetPaths) {
     Write-Host "  - $target" -ForegroundColor Yellow
 }
@@ -154,7 +187,11 @@ foreach ($TargetPath in $TargetPaths) {
                 if (-not (Test-Path $fileDestDir)) {
                     New-Item -ItemType Directory -Path $fileDestDir -Force | Out-Null
                 }
-                Copy-Item -LiteralPath $sourcePath -Destination $fileDestPath -Force
+                if ($file.Source -eq "main.lua") {
+                    Write-MainLuaForProfile -SourceMainLua $sourcePath -DestMainLua $fileDestPath -ProfileName $StartupProfile
+                } else {
+                    Copy-Item -LiteralPath $sourcePath -Destination $fileDestPath -Force
+                }
                 Write-Host "✓ $($file.Source) 拷贝成功" -ForegroundColor Green
             } catch {
                 Write-Host "✗ $($file.Source) 拷贝失败: $_" -ForegroundColor Red

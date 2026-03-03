@@ -36,6 +36,7 @@ local gameplay_loop_runtime = require("src.game.flow.turn.GameplayLoopRuntime")
 local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
 local game_startup = require("src.app.bootstrap.GameStartup")
 local game_startup_event_bridge = require("src.app.bootstrap.GameStartupEventBridge")
+local test_profile_bootstrap = require("src.app.testing.TestProfileBootstrap")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 
 local function _mock_lua_api(send_custom_event)
@@ -1728,6 +1729,35 @@ local function _test_gameplay_loop_refresh_drives_camera_follow_via_port()
   assert(followed_player_id == g.players[2].id, "camera follow should be driven by use-case loop with current player id")
 end
 
+local function _test_gameplay_loop_camera_follow_skips_eliminated_current_player()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local followed_player_id = nil
+  g.turn.current_player_index = 1
+  g.players[1].eliminated = true
+  g.players[2].eliminated = false
+  g.dirty.any = true
+  g.dirty.ui = true
+
+  state.gameplay_loop_ports = _build_test_ports({
+    refresh_from_dirty = function()
+      return true
+    end,
+    follow_camera = function(_, player_id)
+      followed_player_id = player_id
+      return true
+    end,
+    update_countdown = function() end,
+    sync_status_3d = function() end,
+    sync_debug_log = function() end,
+  })
+
+  gameplay_loop.tick(g, state, 0.1)
+
+  assert(followed_player_id == g.players[2].id,
+    "camera follow should move to next alive player when current player is eliminated")
+end
+
 local function _test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics()
   support.with_patches({
     { key = "GameAPI", value = {} },
@@ -1908,6 +1938,7 @@ return {
   _test_turn_dispatch_uses_clock_ports_without_game_api,
   _test_gameplay_loop_set_game_uses_runtime_ui_port_dto,
   _test_gameplay_loop_refresh_drives_camera_follow_via_port,
+  _test_gameplay_loop_camera_follow_skips_eliminated_current_player,
   _test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics,
   _test_choice_auto_policy_consistent_between_wait_and_timeout,
   _test_popup_countdown_uses_effective_modal_timeout,
