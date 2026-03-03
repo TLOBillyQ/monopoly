@@ -4,10 +4,24 @@ local item_phase_ask_flow = require("src.presentation.interaction.ui_intent_disp
 
 local game_action_dispatcher = {}
 
+local function _is_item_slot_click(intent)
+  if not intent or intent.type ~= "ui_button" then
+    return false
+  end
+  if type(intent.id) ~= "string" then
+    return false
+  end
+  return string.match(intent.id, "^item_slot_%d+$") ~= nil
+end
+
 function game_action_dispatcher.dispatch(state, game, intent, opts, action_port, turn_action_helpers)
   local intent_type = intent and intent.type
   if not intent_type then
     return false
+  end
+
+  if state._suppress_item_slot_highlight_until_pick == true and _is_item_slot_click(intent) then
+    state._suppress_item_slot_highlight_until_pick = nil
   end
 
   if item_phase_ask_flow.dispatch(state, game, intent, opts, action_port) then

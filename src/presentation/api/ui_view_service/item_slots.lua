@@ -100,15 +100,18 @@ function M.refresh_item_slots(state, ui_model, opts)
     _set_outline_touch_enabled(ui, outline_name, can_pick)
   end
 
-  _emit_global_reset_animation()
-  for index, can_pick in ipairs(slot_pickable) do
-    if not can_pick then
-      _reset_slot_animation(index)
+  local suppress_slot_highlight_anim = state._suppress_item_slot_highlight_until_pick == true
+  if not suppress_slot_highlight_anim then
+    _emit_global_reset_animation()
+    for index, can_pick in ipairs(slot_pickable) do
+      if not can_pick then
+        _reset_slot_animation(index)
+      end
     end
-  end
-  for index, can_pick in ipairs(slot_pickable) do
-    if can_pick then
-      _emit_slot_animation(index, "高亮道具槽位牌")
+    for index, can_pick in ipairs(slot_pickable) do
+      if can_pick then
+        _emit_slot_animation(index, "高亮道具槽位牌")
+      end
     end
   end
 
