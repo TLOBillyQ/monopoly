@@ -1,50 +1,18 @@
 local profiles = {
-  default = {
-    map_module = "Config.Maps.DefaultMap",
-  },
-  ui_quick_all = {
-    map_module = "Config.Maps.UIQuickAll",
-    bootstrap = {
-      players = {
-        [1] = {
-          cash = 60000,
-          balances = {
-            ["金豆"] = 200,
-            ["乐园币"] = 300,
-          },
-          items = { 2002, 2004, 2007, 2008, 2003 },
-        },
-        [2] = {
-          cash = 80000,
-        },
-      },
-    },
-  },
-  ui_quick_choice = {
-    map_module = "Config.Maps.UIQuickChoice",
-    bootstrap = {
-      players = {
-        [1] = {
-          cash = 50000,
-          balances = {
-            ["金豆"] = 150,
-            ["乐园币"] = 200,
-          },
-          items = { 2002, 2004, 2007, 2008 },
-        },
-      },
-    },
-  },
-  ui_quick_bankruptcy = {
-    map_module = "Config.Maps.UIQuickBankruptcy",
+  default = {},
+  scenario_bankruptcy = {
     bootstrap = {
       players = {
         [1] = {
           cash = 3000,
-          items = { 2002 },
+          position_tile_id = 35,
+          item_counts = {
+            [2002] = 1,
+          },
         },
         [2] = {
           cash = 120000,
+          position_tile_id = 39,
         },
       },
       tiles = {
@@ -55,43 +23,93 @@ local profiles = {
       },
     },
   },
-  ui_quick_status3d = {
-    map_module = "Config.Maps.UIQuickAll",
+  items_move_control = {
     bootstrap = {
       players = {
         [1] = {
           cash = 60000,
-          items = { 2004, 2015, 2017, 2018, 2019 },
+          balances = {
+            ["金豆"] = 200,
+            ["乐园币"] = 300,
+          },
+          position_tile_id = 35,
+          item_counts = {
+            [2002] = 1,
+            [2003] = 1,
+            [2004] = 1,
+            [2005] = 1,
+            [2006] = 1,
+          },
         },
         [2] = {
           cash = 60000,
-          items = { 2004, 2015, 2017, 2018, 2019 },
+          position_tile_id = 39,
         },
       },
     },
   },
-  ui_quick_all_items = {
-    map_module = "Config.Maps.UIQuickAll",
+  items_economy_tax = {
     bootstrap = {
       players = {
         [1] = {
           cash = 200000,
           balances = {
-            ["金豆"] = 500,
-            ["乐园币"] = 500,
+            ["金豆"] = 100,
+            ["乐园币"] = 100,
           },
-          inventory_slots = 19,
-          items = {
-            2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
-            2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019,
+          position_tile_id = 44,
+          item_counts = {
+            [2001] = 1,
+            [2009] = 1,
+            [2010] = 1,
+            [2011] = 1,
+            [2014] = 1,
           },
         },
         [2] = {
-          cash = 200000,
-          balances = {
-            ["金豆"] = 500,
-            ["乐园币"] = 500,
+          cash = 80000,
+          position_tile_id = 40,
+        },
+      },
+    },
+  },
+  items_target_disrupt = {
+    bootstrap = {
+      players = {
+        [1] = {
+          cash = 120000,
+          position_tile_id = 40,
+          item_counts = {
+            [2007] = 1,
+            [2008] = 1,
+            [2012] = 1,
+            [2013] = 1,
           },
+        },
+        [2] = {
+          cash = 120000,
+          position_tile_id = 44,
+        },
+      },
+    },
+  },
+  items_deity_status = {
+    bootstrap = {
+      players = {
+        [1] = {
+          cash = 100000,
+          position_tile_id = 38,
+          item_counts = {
+            [2015] = 1,
+            [2016] = 1,
+            [2017] = 1,
+            [2018] = 1,
+            [2019] = 1,
+          },
+        },
+        [2] = {
+          cash = 100000,
+          position_tile_id = 37,
         },
       },
     },

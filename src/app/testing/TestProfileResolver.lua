@@ -1,6 +1,7 @@
 local test_profiles = require("src.app.testing.config.TestProfiles")
 
 local resolver = {}
+local default_map_module = "Config.Maps.DefaultMap"
 
 local function _resolve_name(profile_name)
   if profile_name == nil or profile_name == "" then
@@ -19,10 +20,9 @@ function resolver.resolve_profile(profile_name)
 end
 
 function resolver.resolve_map(profile_name)
-  local profile = resolver.resolve_profile(profile_name)
-  local module_name = profile.map_module or "Config.Maps.DefaultMap"
-  local ok, map_or_err = pcall(require, module_name)
-  assert(ok, "failed to require map module for profile " .. tostring(profile_name) .. ": " .. tostring(map_or_err))
+  resolver.resolve_profile(profile_name)
+  local ok, map_or_err = pcall(require, default_map_module)
+  assert(ok, "failed to require default map module for profile " .. tostring(profile_name) .. ": " .. tostring(map_or_err))
   return map_or_err
 end
 
