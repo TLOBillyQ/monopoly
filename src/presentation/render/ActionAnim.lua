@@ -39,6 +39,11 @@ local function _register_default_handlers()
     handlers.play_overlay(state, anim, duration, opts)
     return duration
   end)
+  registry.register("upgrade_land", function(state, anim, duration, opts)
+    -- upgrade_land visual is driven by board building anchors via on_tile_upgraded.
+    -- Keep wait_action_anim timing but do not spawn extra overlay on tile anchor.
+    return duration
+  end)
   registry.register("missile", function(state, anim, duration, opts)
     handlers.play_missile(state, anim, duration, opts)
     return duration

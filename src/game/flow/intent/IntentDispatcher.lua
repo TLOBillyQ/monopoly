@@ -46,7 +46,7 @@ function intent_dispatcher.push_popup(game, payload, opts)
   opts = opts or {}
   local ui_port = assert(game.ui_port, "missing ui_port")
   assert(ui_port.push_popup ~= nil, "missing ui_port.push_popup")
-  ui_port:push_popup(payload)
+  ui_port:push_popup(payload, opts)
   local event_name = monopoly_event.resolve_intent("push_popup")
   emit(event_name, { payload = payload })
   return true
@@ -65,7 +65,8 @@ function intent_dispatcher.dispatch(game, payload, opts)
   end
 
   if intent.kind == "push_popup" and intent.payload then
-    return intent_dispatcher.push_popup(game, intent.payload, opts)
+    local popup_opts = intent.popup_opts or intent.opts or nil
+    return intent_dispatcher.push_popup(game, intent.payload, popup_opts)
   end
 
   return nil

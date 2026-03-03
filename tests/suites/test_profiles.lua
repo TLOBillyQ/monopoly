@@ -193,6 +193,26 @@ local function _test_scenario_bankruptcy_applies_tile_override()
   assert(game.players[1].cash == 3000, "p1 cash should match scenario_bankruptcy")
 end
 
+local function _test_scenario_upgrade_building_render_applies_bootstrap()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "scenario_upgrade_building_render")
+
+  local p1_expected = game.board:index_of_tile_id(35)
+  assert(p1_expected ~= nil, "start tile id should exist in board path")
+  assert(game.players[1].position == p1_expected, "p1 position should match scenario_upgrade_building_render")
+
+  local tile = game.board:get_tile_by_id(1)
+  assert(tile ~= nil, "tile 1 should exist")
+  local state = tile_state(game, tile)
+  assert(state.owner_id == game.players[1].id, "tile 1 owner should be player1")
+  assert(state.level == 0, "tile 1 level should be 0")
+  assert(game.players[1].properties[1] == true, "player1 should own tile 1")
+
+  _assert_inventory_counts(game.players[1], {
+    [2002] = 1,
+  })
+end
+
 return {
   name = "test_profiles",
   tests = {
@@ -208,5 +228,9 @@ return {
     { name = "all_item_group_profiles_cover_all_items_once", run = _test_all_item_group_profiles_cover_all_items_once },
     { name = "all_item_group_profiles_respect_max_5_items_per_player", run = _test_all_item_group_profiles_respect_max_5_items_per_player },
     { name = "scenario_bankruptcy_applies_tile_override", run = _test_scenario_bankruptcy_applies_tile_override },
+    {
+      name = "scenario_upgrade_building_render_applies_bootstrap",
+      run = _test_scenario_upgrade_building_render_applies_bootstrap,
+    },
   },
 }

@@ -193,7 +193,10 @@ def table_from_sheet(path):
 def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     root = os.path.abspath(os.path.join(script_dir, os.pardir))
-    design_dir = os.path.join(root, "design")
+    design_dir = os.path.join(root, "docs", "design")
+    if not os.path.isdir(design_dir):
+        # Backward compatibility: older repos may place xlsx files under root/design.
+        design_dir = os.path.join(root, "design")
     config_dir = os.path.join(root, "Config", "Generated")
     os.makedirs(config_dir, exist_ok=True)
 
@@ -204,6 +207,7 @@ def main():
     constants_path = os.path.join(design_dir, "蛋仔--大富翁--常量表.xlsx")
     market_path = os.path.join(design_dir, "蛋仔--大富翁--黑市表.xlsx")
     vehicles_path = os.path.join(design_dir, "蛋仔--大富翁--座驾表.xlsx")
+    skins_path = os.path.join(design_dir, "蛋仔--大富翁--皮肤表.xlsx")
 
     # Tiles
     type_map = {
@@ -372,6 +376,27 @@ def main():
         "vehicles",
         vehicles,
         ["id", "name", "tier", "dice_count", "indestructible"],
+    )
+
+    # Skins
+    col_map, rows = table_from_sheet(skins_path)
+    skins = []
+    for row in rows:
+        skin_id = parse_int(row.get(col_map.get("皮肤id")))
+        if not skin_id:
+            continue
+        skins.append(
+            {
+                "id": skin_id,
+                "name": row.get(col_map.get("皮肤名称")) or "",
+            }
+        )
+
+    write_lua_table(
+        os.path.join(config_dir, "Skins.lua"),
+        "skins",
+        skins,
+        ["id", "name"],
     )
 
     # Market

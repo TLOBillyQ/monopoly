@@ -80,6 +80,8 @@ function M.refresh_item_slots(state, ui_model, opts)
     and choice_owner_id == display_player_id
   local option_id_set = _build_option_id_set(ui_model and ui_model.choice or nil)
   local slot_pickable = {}
+  local choice_kind = ui_model and ui_model.choice and ui_model.choice.kind or nil
+  local suppress_flag = state._suppress_item_slot_highlight_until_pick == true
 
   for index, slot_name in ipairs(slots) do
     local item_id = items[index]
@@ -100,7 +102,8 @@ function M.refresh_item_slots(state, ui_model, opts)
     _set_outline_touch_enabled(ui, outline_name, can_pick)
   end
 
-  local suppress_slot_highlight_anim = state._suppress_item_slot_highlight_until_pick == true
+  local suppress_slot_highlight_anim = suppress_flag
+    and choice_kind == "item_phase_choice"
   if not suppress_slot_highlight_anim then
     _emit_global_reset_animation()
     for index, can_pick in ipairs(slot_pickable) do

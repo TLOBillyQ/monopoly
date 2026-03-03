@@ -8,7 +8,7 @@ function handlers.play_roll_dice_screen(state, anim, duration, hold_seconds, opt
 end
 
 function handlers.play_overlay(state, anim, duration, opts)
-  units.play_overlay(state, anim, opts)
+  units.play_overlay(state, anim, duration, opts)
 end
 
 function handlers.play_missile(state, anim, duration, opts)

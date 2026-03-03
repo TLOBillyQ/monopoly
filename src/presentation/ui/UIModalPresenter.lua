@@ -79,6 +79,7 @@ function modal_presenter.open_choice_modal(state, choice, market)
     return
   end
 
+  state._suppress_item_slot_highlight_until_pick = nil
   choice_openers.open_choice_modal(state, choice, market)
 end
 
@@ -108,9 +109,21 @@ function modal_presenter.close_choice_modal(state)
   state.ui_dirty = true
 end
 
-function modal_presenter.push_popup(state, payload)
+function modal_presenter.push_popup(state, payload, opts)
   assert(payload ~= nil, "missing popup payload")
+  opts = opts or {}
   local ui = state.ui
+  if opts.policy == "defer" and ui.popup_active then
+    local queue = ui.popup_queue
+    if type(queue) ~= "table" then
+      queue = {}
+      ui.popup_queue = queue
+    end
+    queue[#queue + 1] = payload
+    canvas_store.mark_dirty(state, "popup")
+    state.ui_dirty = true
+    return true
+  end
   ui.popup_return_canvas = canvas.resolve_popup_return_canvas(ui)
   popup_presenter.show(state, payload)
   modal_state.open_popup(state, payload)
@@ -130,6 +143,16 @@ function modal_presenter.close_popup(state)
   modal_state.close_popup(state)
   ui.popup_kind = nil
   canvas_store.mark_dirty(state, "popup")
+  local queue = ui.popup_queue
+  if type(queue) == "table" and #queue > 0 then
+    local next_payload = table.remove(queue, 1)
+    ui.popup_return_canvas = canvas.resolve_popup_return_canvas(ui)
+    popup_presenter.show(state, next_payload)
+    modal_state.open_popup(state, next_payload)
+    canvas_store.mark_dirty(state, "popup")
+    state.ui_dirty = true
+    return
+  end
   local target = ui.popup_return_canvas
   ui.popup_return_canvas = nil
   local next_canvas = canvas.resolve_canvas_after_popup(ui, target)

@@ -38,7 +38,7 @@ if (-not (Test-Pwsh7)) {
     $version = $PSVersionTable.PSVersion.ToString()
     Write-Host "✗ 部署脚本要求在 PowerShell 7+ (pwsh) 环境运行。" -ForegroundColor Red
     Write-Host "  当前环境: PSEdition=$edition Version=$version" -ForegroundColor Yellow
-    Write-Host "  请使用: pwsh -File .\scripts\deploy.ps1 [-TargetPath PATH] [-IncludeVendor]" -ForegroundColor Yellow
+    Write-Host "  请使用: pwsh -File .\scripts\deploy.ps1 [-TargetPath PATH] [-IncludeVendor] [-StartupProfile NAME]" -ForegroundColor Yellow
     exit 1
 }
 

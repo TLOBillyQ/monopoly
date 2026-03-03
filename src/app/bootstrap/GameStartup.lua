@@ -136,8 +136,8 @@ function M.build_state(get_current_game, opts)
 
   runtime_state.ensure_all(state)
 
-  state.push_popup = function(_, payload)
-    local ok = ui_view.push_popup(state, payload)
+  state.push_popup = function(_, payload, opts)
+    local ok = ui_view.push_popup(state, payload, opts)
     if state.ui then
       local current_game = get_current_game()
       if ok and current_game and current_game.turn then

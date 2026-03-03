@@ -62,6 +62,7 @@ M.executors = {
         kind = "chance_card",
         image_ref = card.id,
         auto_close_seconds = popup_show_seconds,
+        popup_opts = { policy = "defer" },
       })
       landing_presenter.queue_action_anim(ctx.game, {
         kind = "chance",

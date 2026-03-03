@@ -1,13 +1,6 @@
 local profiles = {
   default = {
-    bootstrap = {
-      players = {
-        [1] = { position_tile_id = 35 },
-        [2] = { position_tile_id = 39 },
-        [3] = { position_tile_id = 44 },
-        [4] = { position_tile_id = 40 },
-      },
-    },
+    bootstrap = {},
   },
   scenario_bankruptcy = {
     bootstrap = {
@@ -36,6 +29,37 @@ local profiles = {
         [1] = {
           owner_player_index = 2,
           level = 3,
+        },
+      },
+    },
+  },
+  scenario_upgrade_building_render = {
+    bootstrap = {
+      players = {
+        [1] = {
+          cash = 200000,
+          position_tile_id = 35,
+          item_counts = {
+            [2002] = 1,
+          },
+        },
+        [2] = {
+          cash = 100000,
+          position_tile_id = 39,
+        },
+        [3] = {
+          cash = 100000,
+          position_tile_id = 44,
+        },
+        [4] = {
+          cash = 100000,
+          position_tile_id = 40,
+        },
+      },
+      tiles = {
+        [1] = {
+          owner_player_index = 1,
+          level = 0,
         },
       },
     },

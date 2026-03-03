@@ -12,7 +12,7 @@ function overlay.clear_overlay(state, kind, tile_index)
   runtime.clear_overlay(assert(state.board_scene, "missing board_scene"), kind, tile_index)
 end
 
-function overlay.play_overlay(state, anim, opts)
+function overlay.play_overlay(state, anim, duration, opts)
   local kind = anim.kind
   local tile_index = assert(anim.tile_index, "missing tile_index")
   local overlay_kind = kind

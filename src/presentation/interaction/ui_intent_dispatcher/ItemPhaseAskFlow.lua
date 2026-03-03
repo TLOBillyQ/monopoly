@@ -10,6 +10,7 @@ function item_phase_ask_flow.dispatch(state, game, intent, opts, action_port)
   if intent_type == "choice_select" then
     state._item_phase_ask_active = nil
     state._item_phase_confirmed = true
+    state._suppress_item_slot_highlight_until_pick = nil
     ui_view.close_choice_modal(state)
     return true
   end

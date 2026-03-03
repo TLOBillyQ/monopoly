@@ -2434,6 +2434,41 @@ local function _test_item_slot_intents_include_outline_nodes()
   _assert_eq(intent and intent.id, "item_slot_1", "outline click should map to slot action")
 end
 
+local function _test_item_phase_ask_confirm_clears_highlight_suppress()
+  local item_phase_ask_flow = require("src.presentation.interaction.ui_intent_dispatcher.ItemPhaseAskFlow")
+  local closed = 0
+  local state = {
+    _item_phase_ask_active = true,
+    _item_phase_confirmed = nil,
+    _suppress_item_slot_highlight_until_pick = true,
+    ui = ui_view.build_ui_state(),
+  }
+
+  local handled = false
+  _with_patches({
+    {
+      target = ui_view,
+      key = "close_choice_modal",
+      value = function()
+        closed = closed + 1
+      end,
+    },
+  }, function()
+    handled = item_phase_ask_flow.dispatch(state, {}, { type = "choice_select" }, {}, {
+      dispatch_action = function()
+        error("choice_select on item_phase_ask should not dispatch action directly")
+      end,
+    })
+  end)
+
+  _assert_eq(handled, true, "item_phase_ask choice_select should be handled")
+  _assert_eq(state._item_phase_ask_active, nil, "item_phase_ask_active should clear after confirm")
+  _assert_eq(state._item_phase_confirmed, true, "item_phase_confirmed should become true after confirm")
+  _assert_eq(state._suppress_item_slot_highlight_until_pick, nil,
+    "highlight suppression should clear after item_phase ask confirm")
+  _assert_eq(closed, 1, "item_phase ask confirm should close modal once")
+end
+
 local function _test_item_slot_refresh_resets_highlight_without_client_role()
   local ui_events = require("src.presentation.shared.UIEvents")
   local events = {}
@@ -2540,12 +2575,20 @@ local function _test_item_slot_refresh_resets_highlight_without_client_role()
       allow_interact = true,
     })
 
+    state._suppress_item_slot_highlight_until_pick = true
+    phase = "suppressed_item_phase"
+    ui_view.refresh_item_slots(state, pre_action_model, {
+      display_player_id = 1,
+      allow_interact = true,
+    })
+
     phase = "remote_choice"
     ui_view.refresh_item_slots(state, remote_choice_model, {
       display_player_id = 1,
       allow_interact = true,
     })
 
+    state._suppress_item_slot_highlight_until_pick = nil
     phase = "pre_move"
     ui_view.refresh_item_slots(state, pre_move_model, {
       display_player_id = 1,
@@ -2555,6 +2598,10 @@ local function _test_item_slot_refresh_resets_highlight_without_client_role()
 
   _assert_eq(_has_event("pre_action", "高亮道具槽位牌1"), true, "pre_action should highlight remote dice slot")
   _assert_eq(_has_event("pre_action", "重置高亮"), true, "pre_action should issue global reset before highlighting")
+  _assert_eq(_has_event("suppressed_item_phase", "重置高亮"), false,
+    "item_phase should suppress highlight animation while waiting for a pick")
+  _assert_eq(_has_event("suppressed_item_phase", "高亮道具槽位牌1"), false,
+    "item_phase suppression should block per-slot highlight events")
   _assert_eq(_has_event("remote_choice", "重置高亮"), true, "remote choice should issue global reset before slot reorder")
   _assert_eq(_has_event("remote_choice", "重置高亮道具槽位牌1"), true, "remote choice should reset slot1 highlight without client role")
   _assert_eq(_has_event("pre_move", "重置高亮"), true, "pre_move should issue global reset before highlighting playable slots")
@@ -3397,7 +3444,7 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
   assert(follow_events >= 1, "turn switch should trigger follow event")
   _assert_eq(follow_event_name, "follow_camera", "turn switch should emit follow_camera event")
   assert(type(follow_event_payload) == "table", "turn switch follow event should include payload table")
-  _assert_eq(follow_event_payload.target_role_id, 2, "turn switch follow event should carry current player id")
+  _assert_eq(follow_event_payload.target_role_id, nil, "turn switch follow event should not carry target_role_id payload")
 end
 
 local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailable()
@@ -3651,6 +3698,104 @@ local function _test_ui_sync_opens_choice_modal_after_wait_action_anim()
   _assert_eq(opened, 1, "choice modal should open once after leaving wait_action_anim")
 end
 
+local function _test_ui_sync_defers_choice_modal_during_wait_move_anim()
+  local ui_view_service = require("src.presentation.api.UIViewService")
+  local ui_model = require("src.presentation.state.UIModel")
+  local ui_model_sync = require("src.presentation.api.presentation_ports.ui_sync.UIModelSync")
+  local opened = 0
+  local game = {
+    turn = {
+      phase = "wait_move_anim",
+      current_player_index = 1,
+      turn_count = 1,
+      pending_choice = {
+        id = 9,
+        kind = "market_buy",
+        title = "黑市",
+        body_lines = { "A" },
+        options = { { id = 1, label = "A" } },
+        allow_cancel = true,
+        cancel_label = "取消",
+      },
+    },
+    players = {
+      [1] = { id = 1, name = "P1", cash = 0, inventory = { items = {} }, eliminated = false },
+    },
+  }
+  local state = {
+    ui = ui_view_service.build_ui_state(),
+    ui_refs = { ["Empty"] = "EMPTY" },
+    ui_dirty = true,
+    ui_model = nil,
+  }
+  _with_patches({
+    { target = ui_view_service, key = "render", value = function() end },
+    { target = ui_view_service, key = "open_choice_modal", value = function()
+      opened = opened + 1
+    end },
+    { target = ui_model, key = "build", value = function()
+      return {
+        panel = { turn_label = "" },
+        board = {},
+        choice = { id = 9, kind = "market_buy", options = { { id = 1, label = "A" } }, allow_cancel = true },
+        market = { choice_id = 9, options = { { id = 1, label = "A" } }, allow_cancel = true },
+      }
+    end },
+    { target = ui_model, key = "update", value = function()
+      return {
+        panel = { turn_label = "" },
+        board = {},
+        choice = { id = 9, kind = "market_buy", options = { { id = 1, label = "A" } }, allow_cancel = true },
+        market = { choice_id = 9, options = { { id = 1, label = "A" } }, allow_cancel = true },
+      }
+    end },
+  }, function()
+    ui_model_sync.refresh_from_dirty(game, state, { any = true, turn = true }, {
+      log_once = function() end,
+      build_log_prefix = function() return "[test]" end,
+    })
+  end)
+  _assert_eq(opened, 0, "wait_move_anim should defer opening choice modal")
+end
+
+local function _test_popup_defer_policy_queues_and_replays_in_order()
+  local modal_presenter = require("src.presentation.ui.UIModalPresenter")
+  local popup_presenter = require("src.presentation.canvas.popup.presenter")
+  local canvas = require("src.presentation.interaction.UICanvasCoordinator")
+  local state = {
+    ui = ui_view.build_ui_state(),
+    ui_dirty = false,
+  }
+  local shown = {}
+  local hide_calls = 0
+  _with_patches({
+    { target = popup_presenter, key = "show", value = function(_, payload)
+      shown[#shown + 1] = payload and payload.title or ""
+    end },
+    { target = popup_presenter, key = "hide", value = function()
+      hide_calls = hide_calls + 1
+    end },
+    { target = popup_presenter, key = "switch_canvas", value = function() end },
+    { target = canvas, key = "resolve_popup_return_canvas", value = function()
+      return canvas.CANVAS_BASE
+    end },
+    { target = canvas, key = "resolve_canvas_after_popup", value = function()
+      return canvas.CANVAS_BASE
+    end },
+  }, function()
+    modal_presenter.push_popup(state, { title = "A", body = "A" })
+    modal_presenter.push_popup(state, { title = "B", body = "B" }, { policy = "defer" })
+    _assert_eq(#shown, 1, "defer popup should not replace active popup immediately")
+    _assert_eq(state.ui.popup_queue and #state.ui.popup_queue or 0, 1, "defer popup should be queued")
+    modal_presenter.close_popup(state)
+  end)
+
+  _assert_eq(hide_calls, 1, "close should hide current popup once")
+  _assert_eq(#shown, 2, "queued popup should be shown after close")
+  _assert_eq(shown[1], "A", "first popup title should be A")
+  _assert_eq(shown[2], "B", "queued popup title should be B")
+end
+
 local function _test_panel_avatar_uses_keep_size_path()
   local presenter = require("src.presentation.ui.UIPanelPresenter")
   local keep_size_calls = 0
@@ -3772,6 +3917,7 @@ return {
   _test_item_slot_uses_keep_size_path,
   _test_item_slot_refresh_shows_only_playable_outlines,
   _test_item_slot_intents_include_outline_nodes,
+  _test_item_phase_ask_confirm_clears_highlight_suppress,
   _test_tick_skips_anim_when_no_anim,
   _test_action_anim_queue_consumes_in_order,
   _test_action_anim_default_duration,
@@ -3786,6 +3932,8 @@ return {
   _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailable,
   _test_ui_sync_defers_choice_modal_during_wait_action_anim,
   _test_ui_sync_opens_choice_modal_after_wait_action_anim,
+  _test_ui_sync_defers_choice_modal_during_wait_move_anim,
+  _test_popup_defer_policy_queues_and_replays_in_order,
   _test_panel_avatar_uses_keep_size_path,
   _test_item_slot_refresh_resets_highlight_without_client_role,
 }

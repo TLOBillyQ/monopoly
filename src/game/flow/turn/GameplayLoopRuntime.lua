@@ -52,15 +52,22 @@ function runtime.build_ui_runtime_port(state)
     wait_action_anim = state.wait_action_anim == true,
     state = state,
   }
-  port.push_popup = function(_, payload)
+  port.push_popup = function(_, payload, opts)
     if type(state.push_popup) == "function" then
-      return state:push_popup(payload)
+      return state:push_popup(payload, opts)
     end
     return false
   end
   port.on_tile_owner_changed = function(_, tile_id, owner_id)
     if type(state.on_tile_owner_changed) == "function" then
       state:on_tile_owner_changed(tile_id, owner_id)
+      return true
+    end
+    return false
+  end
+  port.on_tile_upgraded = function(_, tile_id, level)
+    if type(state.on_tile_upgraded) == "function" then
+      state:on_tile_upgraded(tile_id, level)
       return true
     end
     return false

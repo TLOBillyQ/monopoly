@@ -12,6 +12,7 @@ local turn_land = require("src.game.flow.turn.TurnLand")
 local chance_cfg = require("Config.Generated.ChanceCards")
 local item_inventory = require("src.game.systems.items.ItemInventory")
 local gameplay_rules = require("src.core.config.GameplayRules")
+local monopoly_event = require("src.core.events.MonopolyEvents")
 
 local function _test_land_on_start_reward()
   local g = _new_game()
@@ -219,6 +220,75 @@ local function _test_chance_landing_pushes_popup()
   assert(popups[1].auto_close_seconds == gameplay_rules.action_anim_default_seconds, "chance popup auto close mismatch")
 end
 
+local function _test_upgrade_land_emits_tile_upgraded_event()
+  local g = _new_game()
+  local p = g:current_player()
+  local idx, tile_ref = _first_land_tile(g.board)
+  g:update_player_position(p, idx)
+  g:set_tile_owner(tile_ref, p.id)
+  g:set_player_property(p, tile_ref.id, true)
+  g:set_tile_level(tile_ref, 0)
+  g:set_player_cash(p, 200000)
+
+  local captured_kind = nil
+  local captured_payload = nil
+  _with_patches({
+    { target = monopoly_event, key = "emit", value = function(kind, payload)
+      captured_kind = kind
+      captured_payload = payload
+    end },
+  }, function()
+    local res = _resolve_landing(g, p, tile_ref, {})
+    assert(res and res.waiting, "upgrade path should open landing optional choice")
+    local pending = _get_choice(g)
+    assert(pending and pending.kind == "landing_optional_effect", "pending optional choice expected")
+    local choice_resolver = support.choice_resolver
+    choice_resolver.resolve(g, pending, { option_id = "upgrade_land" })
+  end)
+
+  assert(_tile_state(g, tile_ref).level == 1, "upgrade should raise land level to 1")
+  assert(captured_kind == monopoly_event.land.tile_upgraded, "upgrade should emit tile_upgraded event")
+  assert(captured_payload and captured_payload.tile_id == tile_ref.id, "event payload tile_id mismatch")
+  assert(captured_payload and captured_payload.level == 1, "event payload level mismatch")
+end
+
+local function _test_upgrade_land_prefers_direct_ui_notify_before_event_bridge()
+  local g = _new_game()
+  local direct_calls = 0
+  g.ui_port = _build_ui_port({
+    on_tile_upgraded = function(_, tile_id, level)
+      direct_calls = direct_calls + 1
+      assert(tile_id ~= nil and level ~= nil, "direct tile upgraded callback should receive payload")
+      return true
+    end,
+  })
+  local p = g:current_player()
+  local idx, tile_ref = _first_land_tile(g.board)
+  g:update_player_position(p, idx)
+  g:set_tile_owner(tile_ref, p.id)
+  g:set_player_property(p, tile_ref.id, true)
+  g:set_tile_level(tile_ref, 0)
+  g:set_player_cash(p, 200000)
+
+  local emitted = false
+  _with_patches({
+    { target = monopoly_event, key = "emit", value = function()
+      emitted = true
+      return true
+    end },
+  }, function()
+    local res = _resolve_landing(g, p, tile_ref, {})
+    assert(res and res.waiting, "upgrade path should open landing optional choice")
+    local pending = _get_choice(g)
+    assert(pending and pending.kind == "landing_optional_effect", "pending optional choice expected")
+    local choice_resolver = support.choice_resolver
+    choice_resolver.resolve(g, pending, { option_id = "upgrade_land" })
+  end)
+
+  assert(direct_calls == 1, "upgrade should notify ui runtime directly once")
+  assert(emitted == false, "direct ui notify should skip event bridge fallback")
+end
+
 return {
   name = "landing",
   tests = {
@@ -233,5 +303,10 @@ return {
     { name = "item_landing_pushes_popup_on_success", run = _test_item_landing_pushes_popup_on_success },
     { name = "item_landing_full_inventory_no_duplicate_success_popup", run = _test_item_landing_full_inventory_no_duplicate_success_popup },
     { name = "chance_landing_pushes_popup", run = _test_chance_landing_pushes_popup },
+    { name = "upgrade_land_emits_tile_upgraded_event", run = _test_upgrade_land_emits_tile_upgraded_event },
+    {
+      name = "upgrade_land_prefers_direct_ui_notify_before_event_bridge",
+      run = _test_upgrade_land_prefers_direct_ui_notify_before_event_bridge,
+    },
   },
 }

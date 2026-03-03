@@ -1,5 +1,6 @@
 local action_anim = require("src.presentation.render.ActionAnim")
 local runtime_port = require("src.presentation.api.UIRuntimePort")
+local handlers = require("src.presentation.render.ActionAnimHandlers")
 
 if not math.Vector3 then
   function math.Vector3(x, y, z)
@@ -226,10 +227,34 @@ local function _test_action_anim_roll_screen_fallback_face_when_invalid()
   end)
 end
 
+local function _test_action_anim_upgrade_land_does_not_call_overlay_handler()
+  local state = _build_state()
+  local called = 0
+  _with_patches({
+    {
+      target = handlers,
+      key = "play_overlay",
+      value = function(_, anim, duration)
+        called = called + 1
+      end,
+    },
+  }, function()
+    local out_duration = action_anim.play(state, {
+      kind = "upgrade_land",
+      tile_index = 1,
+      level = 1,
+      duration = 0.6,
+    })
+    assert(out_duration == 0.6, "upgrade_land should keep configured duration")
+    assert(called == 0, "upgrade_land should not call overlay handler")
+  end)
+end
+
 return {
   name = "presentation_ui_action_anim",
   tests = {
     { name = "action_anim_overlay_handler_returns_duration", run = _test_action_anim_overlay_handler_returns_duration },
+    { name = "action_anim_upgrade_land_does_not_call_overlay_handler", run = _test_action_anim_upgrade_land_does_not_call_overlay_handler },
     { name = "action_anim_roll_screen_two_stage_timeline", run = _test_action_anim_roll_screen_two_stage_timeline },
     { name = "action_anim_roll_screen_fallback_face_when_invalid", run = _test_action_anim_roll_screen_fallback_face_when_invalid },
   },

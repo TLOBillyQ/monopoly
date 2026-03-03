@@ -31,7 +31,7 @@ function ui_model_sync.refresh_from_dirty(game, state, dirty, common)
       ui_view.render(state, next_model, common.log_once, common.build_log_prefix)
       ui_refreshed = true
       local phase = game and game.turn and game.turn.phase or nil
-      if next_model.choice and phase ~= "wait_action_anim" then
+      if next_model.choice and phase ~= "wait_action_anim" and phase ~= "wait_move_anim" then
         ui_view.open_choice_modal(state, next_model.choice, next_model.market)
       end
     end

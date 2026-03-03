@@ -17,6 +17,7 @@ function landing_presenter.push_popup(game, title, body, opts)
       image_ref = opts.image_ref,
       auto_close_seconds = opts.auto_close_seconds,
     },
+    popup_opts = opts.popup_opts,
   })
   return true
 end

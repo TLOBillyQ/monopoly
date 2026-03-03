@@ -95,8 +95,8 @@ function service.close_choice_modal(state_ctx)
   modal_presenter.close_choice_modal(state_ctx)
 end
 
-function service.push_popup(state_ctx, payload)
-  return modal_presenter.push_popup(state_ctx, payload)
+function service.push_popup(state_ctx, payload, opts)
+  return modal_presenter.push_popup(state_ctx, payload, opts)
 end
 
 function service.close_popup(state_ctx)

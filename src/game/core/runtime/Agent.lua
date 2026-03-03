@@ -4,6 +4,11 @@ local demolish = require("src.game.systems.items.ItemDemolish")
 local pricing = require("src.game.systems.land.LandPricing")
 local gameplay_rules = require("src.core.config.GameplayRules")
 
+-- Runtime sandbox contract (docs/eggy/lua_env.md):
+-- 1) Release sandbox removes debug/io/os/package.
+-- 2) Do not make runtime logic depend on developer-mode-only APIs.
+-- 3) Any engine bridge should degrade via pcall-based fallback instead of debug introspection.
+
 local agent = {}
 local item_ids = gameplay_rules.item_ids
 local tile_state = tile.get_state

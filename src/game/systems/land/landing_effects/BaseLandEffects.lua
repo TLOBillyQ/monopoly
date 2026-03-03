@@ -15,6 +15,18 @@ local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
 
 local M = {}
 
+local function _notify_tile_upgraded_direct(game, tile_id, level)
+  local ui_port = game and game.ui_port or nil
+  if not (ui_port and type(ui_port.on_tile_upgraded) == "function") then
+    return false
+  end
+  local ok, handled = pcall(ui_port.on_tile_upgraded, ui_port, tile_id, level)
+  if not ok then
+    return false
+  end
+  return handled == true
+end
+
 local function _can_buy(ctx)
   local t = ctx.tile
   assert(t ~= nil, "missing tile")
@@ -55,6 +67,7 @@ local function _apply_upgrade(ctx)
   local t = ctx.tile
   local player = ctx.player
   local st = land_actions.safe_tile_state(ctx.game, t)
+  local old_level = st.level or 0
   local cost = pricing.upgrade_cost(t, st.level or 0)
   if ctx.game:player_balance(player, "金币") < cost then
     return {
@@ -65,19 +78,23 @@ local function _apply_upgrade(ctx)
     }
   end
   ctx.game:deduct_player_cash(player, cost)
-  local new_level = (st.level or 0) + 1
+  local new_level = old_level + 1
   ctx.game:set_tile_level(t, new_level)
-  monopoly_event.emit(monopoly_event.land.tile_upgraded, {
-    tile_id = t.id,
-    level = new_level,
-  })
-  logger.event(player.name .. " 为 " .. t.name .. " 加盖，花费 " .. cost)
   local tile_index = ctx.game.board:index_of_tile_id(t.id)
+  local direct_notified = _notify_tile_upgraded_direct(ctx.game, t.id, new_level)
+  if not direct_notified then
+    monopoly_event.emit(monopoly_event.land.tile_upgraded, {
+      tile_id = t.id,
+      level = new_level,
+    })
+  end
+  logger.event(player.name .. " 为 " .. t.name .. " 加盖，花费 " .. cost)
   if tile_index then
     action_anim_port.queue(ctx.game, {
       kind = "upgrade_land",
       player_id = player.id,
       tile_index = tile_index,
+      level = new_level,
       duration = action_anim_duration,
     })
   end
