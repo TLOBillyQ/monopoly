@@ -1,8 +1,9 @@
-
+﻿
 <#
 .SYNOPSIS
     将项目文件部署到目标目录
 .DESCRIPTION
+    该脚本要求在 PowerShell 7 (pwsh) 环境执行。
     默认拷贝 Config/、src/ 目录以及 Data/UIManagerNodes.lua、Data/Prefab.lua 和 main.lua 到目标目录。
     如需额外拷贝 vendor/，请传入 -IncludeVendor 参数。
 .PARAMETER TargetPath
@@ -10,9 +11,9 @@
 .PARAMETER IncludeVendor
     是否额外拷贝 vendor/ 目录（默认不拷贝）
 .EXAMPLE
-    .\deploy.ps1 -TargetPath "C:\Target\Project"
+    pwsh -File .\deploy.ps1 -TargetPath "C:\Target\Project"
 .EXAMPLE
-    .\deploy.ps1 -TargetPath "C:\Target\Project" -IncludeVendor
+    pwsh -File .\deploy.ps1 -TargetPath "C:\Target\Project" -IncludeVendor
 #>
 
 param(
@@ -20,6 +21,21 @@ param(
     [string]$TargetPath,
     [switch]$IncludeVendor
 )
+
+function Test-Pwsh7 {
+    $edition = $PSVersionTable.PSEdition
+    $major = $PSVersionTable.PSVersion.Major
+    return ($edition -eq "Core" -and $major -ge 7)
+}
+
+if (-not (Test-Pwsh7)) {
+    $edition = $PSVersionTable.PSEdition
+    $version = $PSVersionTable.PSVersion.ToString()
+    Write-Host "✗ 部署脚本要求在 PowerShell 7+ (pwsh) 环境运行。" -ForegroundColor Red
+    Write-Host "  当前环境: PSEdition=$edition Version=$version" -ForegroundColor Yellow
+    Write-Host "  请使用: pwsh -File .\scripts\deploy.ps1 [-TargetPath PATH] [-IncludeVendor]" -ForegroundColor Yellow
+    exit 1
+}
 
 # 获取脚本所在目录的上一级目录（项目根目录）
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
@@ -155,3 +171,4 @@ foreach ($TargetPath in $TargetPaths) {
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host "部署完成！" -ForegroundColor Green
 Write-Host "======================================" -ForegroundColor Cyan
+
