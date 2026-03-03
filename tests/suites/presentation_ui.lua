@@ -3284,6 +3284,8 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
   local board_view_mod = require("src.presentation.render.BoardRuntime")
   local helper = { target_role_id = nil }
   local follow_events = 0
+  local follow_event_name = nil
+  local follow_event_payload = nil
   local game_api = GameAPI or {}
   local patches = {
     { target = main_view, key = "refresh_panel", value = function() end },
@@ -3323,7 +3325,11 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
     { target = game_api, key = "get_role", value = function() return {} end },
     { key = "Enums", value = { CameraBindMode = { TRACK = 0 } } },
     { key = "camera_helper", value = helper },
-    { key = "TriggerCustomEvent", value = function() follow_events = follow_events + 1 end },
+    { key = "TriggerCustomEvent", value = function(event_name, payload)
+      follow_events = follow_events + 1
+      follow_event_name = event_name
+      follow_event_payload = payload
+    end },
   }
   local game = {
     finished = false,
@@ -3389,6 +3395,9 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
 
   _assert_eq(helper.target_role_id, 2, "turn switch should follow current player")
   assert(follow_events >= 1, "turn switch should trigger follow event")
+  _assert_eq(follow_event_name, "follow_camera", "turn switch should emit follow_camera event")
+  assert(type(follow_event_payload) == "table", "turn switch follow event should include payload table")
+  _assert_eq(follow_event_payload.target_role_id, 2, "turn switch follow event should carry current player id")
 end
 
 local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailable()

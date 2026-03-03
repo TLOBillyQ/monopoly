@@ -1,6 +1,7 @@
 local runtime_constants = require("src.core.config.RuntimeConstants")
 local runtime_event_bridge = require("src.core.RuntimeEventBridge")
 local runtime_ports = require("src.core.RuntimePorts")
+local logger = require("src.core.Logger")
 
 local camera_sync = {}
 
@@ -17,9 +18,16 @@ function camera_sync.follow_camera(player_id)
       and runtime_constants.eca_event
       and runtime_constants.eca_event.camera
       and runtime_constants.eca_event.camera.follow then
+    local event_name = runtime_constants.eca_event.camera.follow
+    logger.info(
+      "[CameraSync]",
+      "follow_camera",
+      "target_role_id=" .. tostring(player_id),
+      "event=" .. tostring(event_name)
+    )
     runtime_event_bridge.emit_custom_event(
-      runtime_constants.eca_event.camera.follow,
-      {},
+      event_name,
+      { target_role_id = player_id },
       { feature_key = "camera.follow" }
     )
     return true
