@@ -19,6 +19,11 @@ local function _resolve_roles()
   if type(roles) == "table" and #roles > 0 then
     return roles
   end
+  local retried = runtime_ports.resolve_roles()
+  if type(retried) == "table" and #retried > 0 then
+    logger.info("[Eggy]", "角色列表二次拉取成功，角色数量:", tostring(#retried))
+    return retried
+  end
   return {}
 end
 

@@ -1800,6 +1800,44 @@ local function _test_dispatch_gate_blocks_next_when_choice_active()
   assert(should_block_choice == false, "choice active should not block choice confirm")
 end
 
+local function _test_game_startup_role_roster_retries_before_debug_players_fallback()
+  local state = nil
+  local resolve_calls = 0
+  local created_opts = nil
+  local runtime_ports = require("src.core.RuntimePorts")
+  support.with_patches({
+    { target = runtime_ports, key = "resolve_roles", value = function()
+      resolve_calls = resolve_calls + 1
+      if resolve_calls == 1 then
+        return {}
+      end
+      return {
+        {
+          get_roleid = function() return 101 end,
+          get_name = function() return "Role101" end,
+        },
+      }
+    end },
+    { target = app, key = "new", value = function(_, opts)
+      created_opts = opts
+      return {}
+    end },
+    { target = test_profile_bootstrap, key = "apply", value = function() end },
+  }, function()
+    state = game_startup.build_state(function()
+      return nil
+    end)
+    state.game_factory()
+  end)
+
+  assert(type(created_opts) == "table", "game startup should create game options")
+  assert(type(created_opts.role_roster) == "table" and #created_opts.role_roster == 1,
+    "game startup should use role_roster after retry")
+  assert(created_opts.role_roster[1].role_id == 101, "role_roster should include retried role id")
+  assert(created_opts.role_roster[1].name == "Role101", "role_roster should include retried role name")
+  assert(created_opts.players == nil, "game startup should not fallback to debug players when retry succeeds")
+end
+
 return {
   _test_mandatory_payment_causes_bankruptcy,
   _test_bankruptcy_resets_owned_tiles,
@@ -1844,5 +1882,6 @@ return {
   _test_choice_auto_policy_consistent_between_wait_and_timeout,
   _test_popup_countdown_uses_effective_modal_timeout,
   _test_dispatch_gate_blocks_next_when_choice_active,
+  _test_game_startup_role_roster_retries_before_debug_players_fallback,
 }
 

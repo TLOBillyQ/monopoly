@@ -142,6 +142,29 @@ local function _test_runtime_install_builds_context_and_ports()
   _reset_runtime_contract_state()
 end
 
+local function _test_runtime_ports_resolve_roles_refreshes_empty_context_from_game_api()
+  _reset_runtime_contract_state()
+  local ctx = runtime_context.new({})
+  ctx.roles = {}
+  runtime_context.set_current(ctx)
+  _with_patches({
+    {
+      key = "GameAPI",
+      value = {
+        get_all_valid_roles = function()
+          return { { id = 9 } }
+        end,
+      },
+    },
+  }, function()
+    local roles = runtime_ports.resolve_roles()
+    _assert_eq(#roles, 1, "resolve_roles should refresh empty context roles from GameAPI")
+    _assert_eq(roles[1].id, 9, "resolve_roles should return refreshed role id")
+    _assert_eq(ctx.roles[1].id, 9, "resolve_roles should write refreshed roles back into context")
+  end, { skip_runtime_context_refresh = true })
+  _reset_runtime_contract_state()
+end
+
 local function _test_runtime_ports_resolve_role_uses_zero_arity_get_roleid_and_id_fallback()
   _reset_runtime_contract_state()
   local role_id_call_count = 0
@@ -183,6 +206,10 @@ return {
     {
       name = "runtime_ports_resolve_roles_prefers_context_over_globals",
       run = _test_runtime_ports_resolve_roles_prefers_context_over_globals,
+    },
+    {
+      name = "runtime_ports_resolve_roles_refreshes_empty_context_from_game_api",
+      run = _test_runtime_ports_resolve_roles_refreshes_empty_context_from_game_api,
     },
     {
       name = "runtime_ports_legacy_apis_are_removed",

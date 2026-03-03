@@ -16,6 +16,16 @@ end
 function default_ports.build(runtime_context)
   local defaults = {}
 
+  local function _query_game_roles()
+    if GameAPI and type(GameAPI.get_all_valid_roles) == "function" then
+      local ok, roles = pcall(GameAPI.get_all_valid_roles)
+      if ok and type(roles) == "table" then
+        return roles
+      end
+    end
+    return {}
+  end
+
   function defaults.rng_next_int(min, max)
     assert(min ~= nil and max ~= nil, "rng.next_int requires min/max")
     assert(GameAPI and GameAPI.random_int, "missing GameAPI.random_int")
@@ -34,15 +44,17 @@ function default_ports.build(runtime_context)
   function defaults.resolve_roles()
     local ctx = runtime_context.current()
     if ctx and type(ctx.roles) == "table" then
+      if #ctx.roles > 0 then
+        return ctx.roles
+      end
+      local refreshed = _query_game_roles()
+      if #refreshed > 0 then
+        ctx.roles = refreshed
+        return refreshed
+      end
       return ctx.roles
     end
-    if GameAPI and type(GameAPI.get_all_valid_roles) == "function" then
-      local ok, roles = pcall(GameAPI.get_all_valid_roles)
-      if ok and type(roles) == "table" then
-        return roles
-      end
-    end
-    return {}
+    return _query_game_roles()
   end
 
   function defaults.resolve_role(player_id)
