@@ -13,8 +13,7 @@ function renderer.open_market_panel(state, choice, choice_id, market)
     cancel_label = choice.cancel_label,
     selected_option_id = state.pending_choice_selected_option_id,
   }
-  market_view.refresh_market(state, market_payload)
-  ui.market_active = true
+  ui.market_active = market_view.refresh_market(state, market_payload) == true
 end
 
 function renderer.close_market_panel(state)

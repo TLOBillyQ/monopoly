@@ -190,6 +190,30 @@ def table_from_sheet(path):
     return col_map, rows[2:]
 
 
+def value_by_headers(row, col_map, headers):
+    for header in headers:
+        col = col_map.get(header)
+        if col is None:
+            continue
+        value = row.get(col)
+        if value is not None and str(value).strip() != "":
+            return value
+    return None
+
+
+def infer_market_kind(page, product_id):
+    if page == "座驾商店":
+        return "vehicle"
+    if page == "皮肤商店":
+        return "skin"
+    if product_id is not None:
+        if product_id >= 5000:
+            return "skin"
+        if product_id >= 4000:
+            return "vehicle"
+    return "item"
+
+
 def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     root = os.path.abspath(os.path.join(script_dir, os.pardir))
@@ -379,6 +403,8 @@ def main():
     )
 
     # Skins
+    if not os.path.exists(skins_path):
+        raise FileNotFoundError("missing required design file: %s" % skins_path)
     col_map, rows = table_from_sheet(skins_path)
     skins = []
     for row in rows:
@@ -403,32 +429,31 @@ def main():
     col_map, rows = table_from_sheet(market_path)
     market = []
     for row in rows:
-        order = parse_int(row.get(col_map.get("排序")))
-        pid = parse_int(row.get(col_map.get("商品id")))
+        order = parse_int(value_by_headers(row, col_map, ["排序", "表头排序值"]))
+        pid = parse_int(value_by_headers(row, col_map, ["商品id", "商品ID"]))
         if not pid:
             continue
-        page = row.get(col_map.get("分页")) or ""
-        kind = "item"
-        if page == "座驾商店" or (pid and pid >= 4000):
-            kind = "vehicle"
-        market.append(
-            {
-                "order": order,
-                "product_id": pid,
-                "name": row.get(col_map.get("商品名称")) or "",
-                "page": page,
-                "kind": kind,
-                "currency": row.get(col_map.get("支付类型")) or "",
-                "price": parse_int(row.get(col_map.get("支付价格"))),
-                "limit": parse_int(row.get(col_map.get("全局限量"))),
-            }
-        )
+        page = value_by_headers(row, col_map, ["分页"]) or ""
+        kind = infer_market_kind(page, pid)
+        record = {
+            "order": order,
+            "product_id": pid,
+            "name": value_by_headers(row, col_map, ["商品名称"]) or "",
+            "page": page,
+            "kind": kind,
+            "currency": value_by_headers(row, col_map, ["支付类型"]) or "",
+            "price": parse_int(value_by_headers(row, col_map, ["支付价格"])),
+            "limit": parse_int(value_by_headers(row, col_map, ["全局限量"])),
+        }
+        if order == -1:
+            record["market_enabled"] = False
+        market.append(record)
 
     write_lua_table(
         os.path.join(config_dir, "Market.lua"),
         "market",
         market,
-        ["order", "product_id", "name", "page", "kind", "currency", "price", "limit"],
+        ["order", "product_id", "name", "page", "kind", "currency", "price", "limit", "market_enabled"],
     )
 
     # Chance cards

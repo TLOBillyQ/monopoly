@@ -1,5 +1,6 @@
 local support = require("TestSupport")
 local _new_game = support.new_game
+local market_cfg = require("Config.Generated.Market")
 
 local function _contains_product(list, product_id)
   for _, entry in ipairs(list) do
@@ -17,6 +18,16 @@ local function _contains_option(options, product_id)
     end
   end
   return false
+end
+
+local function _reload_market_service()
+  package.loaded["src.game.systems.market.MarketService"] = nil
+  package.loaded["src.game.systems.market.service.Context"] = nil
+  package.loaded["src.game.systems.market.service.Eligibility"] = nil
+  package.loaded["src.game.systems.market.service.Purchase"] = nil
+  package.loaded["src.game.systems.market.service.Auto"] = nil
+  package.loaded["src.game.systems.market.service.Choice"] = nil
+  return require("src.game.systems.market.MarketService")
 end
 
 local function _test_ai_skips_auto_buy_at_market()
@@ -50,7 +61,6 @@ end
 
 local function _test_market_global_limit()
   local market_service = require("src.game.systems.market.MarketService")
-  local market_cfg = require("Config.Generated.Market")
   local g = _new_game()
   local p = g:current_player()
   local entry = nil
@@ -78,6 +88,47 @@ local function _test_market_global_limit()
     for _, option in ipairs(spec.options) do
       assert(option.id ~= entry.product_id, "sold out item should be excluded from choice")
     end
+  end
+end
+
+local function _test_skin_entry_can_buy_but_no_effect()
+  local injected = {
+    order = -1,
+    product_id = 5999,
+    name = "测试皮肤",
+    page = "皮肤商店",
+    kind = "skin",
+    currency = "金币",
+    price = 1,
+    limit = 1,
+    market_enabled = true,
+  }
+  market_cfg[#market_cfg + 1] = injected
+  local ok, err = pcall(function()
+    local market_service = _reload_market_service()
+    local g = _new_game()
+    local p = g:current_player()
+    g:set_player_cash(p, 999999)
+
+    local list = market_service.query.list_available(p, g)
+    assert(_contains_product(list, injected.product_id), "skin entry should be available when market_enabled=true")
+
+    local before_count = p.inventory:count()
+    local before_balance = g:player_balance(p, "金币")
+    local before_seat_id = p.seat_id
+    local before_limit = g.market_limits[injected.product_id]
+    local res = market_service.purchase.execute(g, p, injected.product_id, nil)
+    local purchase_ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
+    assert(purchase_ok == true, "skin entry purchase should succeed as placeholder flow")
+    assert(g:player_balance(p, "金币") == before_balance - (injected.price or 0), "balance should be charged for skin purchase")
+    assert(g.market_limits[injected.product_id] == before_limit - 1, "skin purchase should consume global limit")
+    assert(p.inventory:count() == before_count, "skin purchase should not change inventory")
+    assert(p.seat_id == before_seat_id, "skin purchase should not change seat")
+  end)
+  market_cfg[#market_cfg] = nil
+  _reload_market_service()
+  if not ok then
+    error(err)
   end
 end
 
@@ -158,6 +209,7 @@ return {
     { name = "market_global_limit", run = _test_market_global_limit },
     { name = "market_disabled_products_hidden", run = _test_market_disabled_products_hidden },
     { name = "buy_disabled_market_product_rejected", run = _test_buy_disabled_market_product_rejected },
+    { name = "skin_entry_can_buy_but_no_effect", run = _test_skin_entry_can_buy_but_no_effect },
     { name = "market_vehicle_hidden_when_feature_disabled", run = _test_market_vehicle_hidden_when_feature_disabled },
     { name = "buy_vehicle_rejected_when_feature_disabled", run = _test_buy_vehicle_rejected_when_feature_disabled },
   },

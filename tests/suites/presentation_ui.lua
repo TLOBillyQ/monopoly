@@ -2434,6 +2434,75 @@ local function _test_item_slot_intents_include_outline_nodes()
   _assert_eq(intent and intent.id, "item_slot_1", "outline click should map to slot action")
 end
 
+local function _test_market_view_hides_market_disabled_entries()
+  local hidden_entry = nil
+  local visible_entry = nil
+  for _, entry in ipairs(market_cfg) do
+    if hidden_entry == nil and entry.market_enabled == false then
+      hidden_entry = entry
+    elseif visible_entry == nil and entry.market_enabled ~= false then
+      visible_entry = entry
+    end
+    if hidden_entry and visible_entry then
+      break
+    end
+  end
+  assert(hidden_entry ~= nil, "missing market disabled entry for presentation test")
+  assert(visible_entry ~= nil, "missing market visible entry for presentation test")
+
+  local labels = {}
+  local visible = {}
+  local state = {
+    ui_refs = {
+      ["Empty"] = 9001,
+      ["lv1"] = 9002,
+      ["lv2"] = 9003,
+      ["lv3"] = 9004,
+      [tostring(hidden_entry.product_id)] = 9005,
+      [tostring(visible_entry.product_id)] = 9006,
+    },
+    ui = {
+      market_active = false,
+      set_label = function(_, name, text)
+        labels[name] = text
+      end,
+      set_visible = function(_, name, flag)
+        visible[name] = flag == true
+      end,
+      set_touch_enabled = function() end,
+      query_node = function()
+        return {}
+      end,
+    },
+  }
+
+  local opened = market_view.refresh_market(state, {
+    choice_id = 7,
+    options = {
+      { id = hidden_entry.product_id, label = hidden_entry.name, can_buy = false },
+      { id = visible_entry.product_id, label = visible_entry.name, can_buy = true },
+    },
+    allow_cancel = true,
+    selected_option_id = hidden_entry.product_id,
+  })
+
+  _assert_eq(opened, true, "market panel should open when at least one visible option exists")
+  _assert_eq(labels[market_layout.item_labels[1]], visible_entry.name, "first rendered market option should skip disabled entry")
+  _assert_eq(visible[market_layout.item_labels[2]], false, "second slot should remain hidden after filtering")
+
+  local reopened = market_view.refresh_market(state, {
+    choice_id = 8,
+    options = {
+      { id = hidden_entry.product_id, label = hidden_entry.name, can_buy = false },
+    },
+    allow_cancel = true,
+    selected_option_id = hidden_entry.product_id,
+  })
+
+  _assert_eq(reopened, false, "market panel should close when all options are disabled")
+  _assert_eq(state.ui.market_active, false, "market panel should be inactive after filtering all options")
+end
+
 local function _test_item_phase_ask_confirm_clears_highlight_suppress()
   local item_phase_ask_flow = require("src.presentation.interaction.ui_intent_dispatcher.ItemPhaseAskFlow")
   local closed = 0
@@ -3914,6 +3983,7 @@ return {
   _test_ui_event_router_action_log_toggle_uses_role_context,
   _test_market_selection_updates_icon_without_resize,
   _test_market_close_resets_icon_without_resize,
+  _test_market_view_hides_market_disabled_entries,
   _test_item_slot_uses_keep_size_path,
   _test_item_slot_refresh_shows_only_playable_outlines,
   _test_item_slot_intents_include_outline_nodes,

@@ -105,50 +105,82 @@ function purchase.execute(game, player, product_id, opts)
     return true
   end
 
-  if player.seat_id and not opts.skip_vehicle_prompt then
-    local current_name = context.vehicle_name(player.seat_id)
-    local next_name = context.entry_name(entry)
-    return {
-      ok = false,
-      intent = {
-        kind = "need_choice",
-        choice_spec = land_choice_specs.build_use_skip(
-          "market_vehicle_replace",
-          "是否更换座驾",
-          {
-            "当前座驾：" .. current_name,
-            "新座驾：" .. next_name,
-            "价格：" .. tostring(price) .. " " .. currency,
-          },
-          { player_id = player.id, product_id = entry.product_id },
-          { use = "更换", skip = "算了" }
-        ),
-      },
-    }
-  end
+  if entry.kind == "vehicle" then
+    if player.seat_id and not opts.skip_vehicle_prompt then
+      local current_name = context.vehicle_name(player.seat_id)
+      local next_name = context.entry_name(entry)
+      return {
+        ok = false,
+        intent = {
+          kind = "need_choice",
+          choice_spec = land_choice_specs.build_use_skip(
+            "market_vehicle_replace",
+            "是否更换座驾",
+            {
+              "当前座驾：" .. current_name,
+              "新座驾：" .. next_name,
+              "价格：" .. tostring(price) .. " " .. currency,
+            },
+            { player_id = player.id, product_id = entry.product_id },
+            { use = "更换", skip = "算了" }
+          ),
+        },
+      }
+    end
 
-  if not context.try_charge_player(game, player, currency, price) then
-    _emit_event(monopoly_event.market.buy_failed, {
+    if not context.try_charge_player(game, player, currency, price) then
+      _emit_event(monopoly_event.market.buy_failed, {
+        player = player,
+        entry = entry,
+        reason = "charge_failed",
+        popup = { title = "黑市", body = player.name .. " 支付失败" },
+      })
+      return { ok = false }
+    end
+
+    assert(game ~= nil, "missing game")
+    assert(game.set_player_seat ~= nil, "missing game.SetPlayerSeat")
+    game:set_player_seat(player, product_id)
+    context.consume_global_limit(game, product_id)
+    _emit_event(monopoly_event.market.bought_vehicle, {
       player = player,
       entry = entry,
-      reason = "charge_failed",
-      popup = { title = "黑市", body = player.name .. " 支付失败" },
+      price = price,
+      currency = currency,
+      text = player.name .. " 在黑市购买座驾 " .. context.entry_name(entry) .. " 花费 " .. number_utils.format_integer_part(price) .. " " .. currency,
     })
-    return { ok = false }
+    return true
   end
 
-  assert(game ~= nil, "missing game")
-  assert(game.set_player_seat ~= nil, "missing game.SetPlayerSeat")
-  game:set_player_seat(player, product_id)
-  context.consume_global_limit(game, product_id)
-  _emit_event(monopoly_event.market.bought_vehicle, {
+  if entry.kind == "skin" then
+    if not context.try_charge_player(game, player, currency, price) then
+      _emit_event(monopoly_event.market.buy_failed, {
+        player = player,
+        entry = entry,
+        reason = "charge_failed",
+        popup = { title = "黑市", body = player.name .. " 支付失败" },
+      })
+      return { ok = false }
+    end
+
+    context.consume_global_limit(game, product_id)
+    _emit_event(monopoly_event.market.bought_item, {
+      player = player,
+      entry = entry,
+      price = price,
+      currency = currency,
+      text = player.name .. " 在黑市购买皮肤（占位） " .. context.entry_name(entry) .. " 花费 " .. number_utils.format_integer_part(price) .. " " .. currency,
+    })
+    return true
+  end
+
+  _emit_event(monopoly_event.market.buy_failed, {
     player = player,
     entry = entry,
-    price = price,
-    currency = currency,
-    text = player.name .. " 在黑市购买座驾 " .. context.entry_name(entry) .. " 花费 " .. number_utils.format_integer_part(price) .. " " .. currency,
+    reason = "unsupported_kind",
+    popup = { title = "黑市", body = player.name .. " 该商品类型暂不支持购买" },
   })
-  return true
+  return { ok = false }
 end
 
 return purchase

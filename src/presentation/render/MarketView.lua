@@ -146,6 +146,24 @@ end
 function market_view.refresh_market(state, market)
   local ui = state.ui
   assert(market ~= nil and market.options ~= nil and ui ~= nil, "missing market data/ui")
+
+  local options = {}
+  for _, opt in ipairs(market.options) do
+    local opt_id = opt and (opt.id or opt) or nil
+    local entry = opt_id and market_by_id[opt_id] or nil
+    if entry == nil or entry.market_enabled ~= false then
+      options[#options + 1] = opt
+    end
+  end
+
+  if #options == 0 then
+    ui:set_visible(market_layout.container, false)
+    ui.market_active = false
+    modal_state.close_choice(state)
+    ui:set_label(market_layout.price_label, "")
+    return false
+  end
+
   ui:set_visible(market_layout.container, true)
   ui.market_active = true
 
@@ -157,7 +175,7 @@ function market_view.refresh_market(state, market)
   local max_slots = math.max(#buttons, #labels, #frames)
   local first_buyable = nil
   for idx = 1, max_slots do
-    local opt = market.options[idx]
+    local opt = options[idx]
     local button = buttons[idx]
     local label = labels[idx]
     local frame = frames[idx]
