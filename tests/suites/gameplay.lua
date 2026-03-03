@@ -24,6 +24,7 @@ local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local mine_effect = require("src.game.systems.effects.MineEffect")
 local runtime_context = require("src.core.RuntimeContext")
+local runtime_ports = require("src.core.RuntimePorts")
 local runtime_event_bridge = require("src.core.RuntimeEventBridge")
 local dispatch_validator = require("src.game.flow.turn.TurnDispatchValidator")
 local tick_ui_sync = require("src.game.flow.turn.TickUISync")
@@ -295,6 +296,34 @@ local function _test_bankruptcy_notifier_reads_grouped_ports()
   assert(calls[1].player_id == p1.id, "notifier should receive eliminated player")
   assert(type(calls[1].owned_tile_ids) == "table", "notifier should receive owned_tile_ids list")
   assert(calls[1].owned_tile_ids[1] == tile_ref.id, "notifier should receive cleared tile id")
+end
+
+local function _test_bankruptcy_calls_role_life_die_before_lose()
+  local g = _new_game()
+  local p1 = g.players[1]
+  local call_order = {}
+  local role = {
+    die = function()
+      table.insert(call_order, "die")
+    end,
+    lose = function()
+      table.insert(call_order, "lose")
+    end,
+  }
+  support.with_patches({
+    { target = runtime_ports, key = "resolve_role", value = function(player_id)
+      if player_id == p1.id then
+        return role
+      end
+      return nil
+    end },
+  }, function()
+    bankruptcy.eliminate(g, p1)
+  end)
+
+  assert(#call_order == 2, "bankruptcy should call role die and lose")
+  assert(call_order[1] == "die", "bankruptcy should call role die before lose")
+  assert(call_order[2] == "lose", "bankruptcy should call role lose")
 end
 
 local function _test_chance_pay_others_stops_after_bankruptcy()
@@ -1842,6 +1871,7 @@ return {
   _test_mandatory_payment_causes_bankruptcy,
   _test_bankruptcy_resets_owned_tiles,
   _test_bankruptcy_notifier_reads_grouped_ports,
+  _test_bankruptcy_calls_role_life_die_before_lose,
   _test_chance_pay_others_stops_after_bankruptcy,
   _test_set_tile_owner_without_ui_port_does_not_crash,
   _test_tile_owner_notifier_receives_owner_changes,

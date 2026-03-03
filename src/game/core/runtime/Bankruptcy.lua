@@ -5,6 +5,40 @@ local inventory = require("src.game.systems.items.ItemInventory")
 local bankruptcy = {}
 local warned_missing_tiles_cleared_callback = false
 
+local function _try_call_life_die(role)
+  if not role then
+    return false
+  end
+  if type(role.die) == "function" then
+    local ok = pcall(role.die, role, nil)
+    if ok then
+      return true
+    end
+    ok = pcall(role.die, nil)
+    if ok then
+      return true
+    end
+  end
+  if type(role.get_component) == "function" then
+    local ok, life_comp = pcall(role.get_component, role, "LifeComp")
+    if ok and life_comp and type(life_comp.die) == "function" then
+      local die_ok = pcall(life_comp.die, life_comp, role)
+      if die_ok then
+        return true
+      end
+      die_ok = pcall(life_comp.die, role)
+      if die_ok then
+        return true
+      end
+      die_ok = pcall(life_comp.die, nil)
+      if die_ok then
+        return true
+      end
+    end
+  end
+  return false
+end
+
 local function _resolve_bankruptcy_text(player, opts)
   if opts and opts.reason and opts.reason ~= "" then
     return opts.reason
@@ -89,6 +123,7 @@ function bankruptcy.eliminate(game, player, opts)
   _push_bankruptcy_popup(game, player, opts)
 
   local role = runtime_ports.resolve_role(player.id)
+  _try_call_life_die(role)
   runtime_ports.mark_role_lose(role)
 
   if #owned_tile_ids > 0 then

@@ -172,7 +172,6 @@ function panel_presenter.refresh(state, ui_model, deps)
     ui:set_label(base_nodes.countdown, panel.turn_label)
     if panel.no_action_visible == true then
       ui:set_visible(base_nodes.action_hint, true)
-      ui:set_label(base_nodes.action_hint, panel.no_action_text or "")
     end
     ui:set_touch_enabled(base_nodes.action_button, base_visible)
     refresh_item_slots(state, ui_model, {
