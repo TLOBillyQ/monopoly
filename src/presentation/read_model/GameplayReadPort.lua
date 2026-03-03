@@ -1,12 +1,14 @@
 local feature_toggles = require("src.core.config.FeatureToggles")
+local number_utils = require("src.core.NumberUtils")
 
 local gameplay_read_port = {}
 
 local function _normalize_level(level)
-  if type(level) ~= "number" or level < 0 then
+  local as_int = number_utils.to_integer(level)
+  if as_int == nil or as_int < 0 then
     return 0
   end
-  return level
+  return as_int
 end
 
 local function _purchase_price(tile)
@@ -14,7 +16,7 @@ local function _purchase_price(tile)
     return 0
   end
   local price = tile.price
-  if type(price) ~= "number" then
+  if not number_utils.is_numeric(price) then
     return 0
   end
   return price

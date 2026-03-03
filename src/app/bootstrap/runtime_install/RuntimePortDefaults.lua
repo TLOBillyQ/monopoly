@@ -1,4 +1,5 @@
 local runtime_port_defaults = {}
+local number_utils = require("src.core.NumberUtils")
 
 function runtime_port_defaults.build()
   return {
@@ -19,7 +20,7 @@ function runtime_port_defaults.build()
     wall_now_seconds = function()
       if GameAPI and type(GameAPI.get_timestamp) == "function" then
         local ok, ts = pcall(GameAPI.get_timestamp)
-        if ok and type(ts) == "number" then
+        if ok and number_utils.is_numeric(ts) then
           return ts
         end
       end
@@ -28,14 +29,14 @@ function runtime_port_defaults.build()
     wall_diff_seconds = function(timestamp_1, timestamp_2)
       if GameAPI
           and type(GameAPI.get_timestamp_diff) == "function"
-          and type(timestamp_1) == "number"
-          and type(timestamp_2) == "number" then
+          and number_utils.is_numeric(timestamp_1)
+          and number_utils.is_numeric(timestamp_2) then
         local ok, diff = pcall(GameAPI.get_timestamp_diff, timestamp_1, timestamp_2)
-        if ok and type(diff) == "number" then
+        if ok and number_utils.is_numeric(diff) then
           return diff
         end
       end
-      if type(timestamp_1) == "number" and type(timestamp_2) == "number" then
+      if number_utils.is_numeric(timestamp_1) and number_utils.is_numeric(timestamp_2) then
         return timestamp_1 - timestamp_2
       end
       return 0
@@ -47,7 +48,7 @@ function runtime_port_defaults.build()
       return 0
     end,
     cpu_diff_seconds = function(timestamp_1, timestamp_2)
-      if type(timestamp_1) == "number" and type(timestamp_2) == "number" then
+      if number_utils.is_numeric(timestamp_1) and number_utils.is_numeric(timestamp_2) then
         return timestamp_1 - timestamp_2
       end
       return 0

@@ -2,6 +2,7 @@ local board_slice = require("src.presentation.state.ui_model.BoardSlice")
 local item_slice = require("src.presentation.state.ui_model.ItemSlice")
 local choice_slice = require("src.presentation.state.ui_model.ChoiceSlice")
 local panel_slice = require("src.presentation.state.ui_model.PanelSlice")
+local number_utils = require("src.core.NumberUtils")
 
 local ui_model = {}
 
@@ -13,10 +14,10 @@ local function _resolve_current_player(game)
   local turn = game.turn
   local players = game.players
   assert(turn ~= nil and players ~= nil, "missing turn or players")
-  local idx = turn.current_player_index
-  if type(idx) ~= "number" then
+  local idx = number_utils.to_integer(turn.current_player_index)
+  if idx == nil then
     return nil, turn,
-      string.format("invalid current player index: index=%s, player_count=%d", tostring(idx), #players)
+      string.format("invalid current player index: index=%s, player_count=%d", tostring(turn.current_player_index), #players)
   end
   local current = players[idx]
   if current == nil then

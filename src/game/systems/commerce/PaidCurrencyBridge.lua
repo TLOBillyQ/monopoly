@@ -1,5 +1,6 @@
 local paid_goods_cfg = require("src.game.systems.commerce.config.RuntimePaidGoods")
 local logger = require("src.core.Logger")
+local number_utils = require("src.core.NumberUtils")
 
 local bridge = {}
 
@@ -61,7 +62,7 @@ end
 
 local function _resolve_currency_entry(goods_lookup, currency, cfg_entry)
   local unit_value = cfg_entry and cfg_entry.unit_value or 1
-  if type(unit_value) ~= "number" or unit_value <= 0 then
+  if not number_utils.is_numeric(unit_value) or unit_value <= 0 then
     logger.warn("paid goods invalid unit_value:", tostring(currency), tostring(unit_value))
     return nil
   end
@@ -181,7 +182,7 @@ function bridge.sync_player_currency(game, player, currency)
     return false
   end
   local ok, count = pcall(role.get_commodity_count, resolved.commodity_id)
-  if not ok or type(count) ~= "number" then
+  if not ok or not number_utils.is_numeric(count) then
     return false
   end
   local balance = count * resolved.unit_value
@@ -228,7 +229,7 @@ function bridge.consume_currency(game, player, currency, amount)
   end
 
   local ok_count, has_count = pcall(role.get_commodity_count, resolved.commodity_id)
-  if not ok_count or type(has_count) ~= "number" or has_count < need_count then
+  if not ok_count or not number_utils.is_numeric(has_count) or has_count < need_count then
     bridge.sync_player_currency(game, player, currency)
     return false
   end

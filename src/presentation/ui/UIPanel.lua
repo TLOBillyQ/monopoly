@@ -6,7 +6,7 @@ local runtime_ports = require("src.core.RuntimePorts")
 local panel = {}
 
 local function _normalize_display_amount(value)
-  if type(value) ~= "number" then
+  if not number_utils.is_numeric(value) then
     return value
   end
   if value < 0 then

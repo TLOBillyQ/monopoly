@@ -4,16 +4,19 @@ local agent = require("src.game.core.runtime.Agent")
 local land_choice_specs = require("src.game.systems.land.LandChoiceSpecs")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 local context = require("src.game.systems.market.service.Context")
+local number_utils = require("src.core.NumberUtils")
 
 local purchase = {}
 local _emit_event = monopoly_event.emit
 
 function purchase.execute(game, player, product_id, opts)
   opts = opts or {}
-  if type(product_id) ~= "number" or product_id <= 0 then
+  local resolved_product_id = number_utils.to_integer(product_id)
+  if resolved_product_id == nil or resolved_product_id <= 0 then
     logger.warn("invalid market product id:", tostring(product_id))
     return false
   end
+  product_id = resolved_product_id
 
   local entry = context.entry_by_id(product_id)
   assert(entry ~= nil, "missing market entry: " .. tostring(product_id))
