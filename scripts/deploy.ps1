@@ -213,6 +213,9 @@ $Mappings = @(
     @{ Relative = "src"; IsDirectory = $true },
     @{ Relative = "vendor"; IsDirectory = $true },
     @{ Relative = "main.lua"; IsDirectory = $false },
+    @{ Relative = "DebugTools.lua"; IsDirectory = $false },
+    @{ Relative = "EggyAPI.lua"; IsDirectory = $false },
+    @{ Relative = "eggy.json"; IsDirectory = $false },
     @{ Relative = "Data/UIManagerNodes.lua"; IsDirectory = $false },
     @{ Relative = "Data/Prefab.lua"; IsDirectory = $false }
 )
