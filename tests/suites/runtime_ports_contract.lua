@@ -142,6 +142,37 @@ local function _test_runtime_install_builds_context_and_ports()
   _reset_runtime_contract_state()
 end
 
+local function _test_runtime_ports_resolve_role_uses_zero_arity_get_roleid_and_id_fallback()
+  _reset_runtime_contract_state()
+  local role_id_call_count = 0
+  local role_with_strict_getter = {
+    id = 11,
+    get_roleid = function(arg)
+      role_id_call_count = role_id_call_count + 1
+      assert(arg == nil, "get_roleid should be called without args")
+      return 7
+    end,
+  }
+  local role_with_failing_getter = {
+    id = 8,
+    get_roleid = function()
+      error("get_roleid failure")
+    end,
+  }
+
+  local ctx = runtime_context.new({})
+  ctx.roles = { role_with_strict_getter, role_with_failing_getter }
+  runtime_context.set_current(ctx)
+
+  local resolved_by_getter = runtime_ports.resolve_role(7)
+  _assert_eq(resolved_by_getter, role_with_strict_getter, "resolve_role should match get_roleid result")
+  _assert_eq(role_id_call_count, 1, "get_roleid should be called exactly once for resolved role")
+
+  local resolved_by_fallback = runtime_ports.resolve_role(8)
+  _assert_eq(resolved_by_fallback, role_with_failing_getter, "resolve_role should fall back to role.id when get_roleid fails")
+  _reset_runtime_contract_state()
+end
+
 return {
   name = "runtime_ports_contract",
   tests = {
@@ -168,6 +199,10 @@ return {
     {
       name = "runtime_install_builds_context_and_ports",
       run = _test_runtime_install_builds_context_and_ports,
+    },
+    {
+      name = "runtime_ports_resolve_role_uses_zero_arity_get_roleid_and_id_fallback",
+      run = _test_runtime_ports_resolve_role_uses_zero_arity_get_roleid_and_id_fallback,
     },
   },
 }

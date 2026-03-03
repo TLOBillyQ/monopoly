@@ -5,7 +5,7 @@ local function _try_get_role_id(role)
     return nil
   end
   if type(role.get_roleid) == "function" then
-    local ok, role_id = pcall(role.get_roleid, role)
+    local ok, role_id = pcall(role.get_roleid)
     if ok then
       return role_id
     end
