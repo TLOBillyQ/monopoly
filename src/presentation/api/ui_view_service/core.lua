@@ -12,19 +12,37 @@ local function query_node(name)
   return runtime.query_node(name)
 end
 
+local function mutate_node(name, mutator)
+  assert(name ~= nil, "missing ui node name")
+  assert(type(mutator) == "function", "missing node mutator")
+  local active_role = runtime.get_client_role and runtime.get_client_role() or nil
+  if active_role ~= nil then
+    local node = query_node(name)
+    mutator(node)
+    return
+  end
+  runtime.for_each_role_or_global(function()
+    local node = query_node(name)
+    mutator(node)
+  end)
+end
+
 local function set_text(_, name, text)
-  local node = query_node(name)
-  node.text = text or ""
+  mutate_node(name, function(node)
+    node.text = text or ""
+  end)
 end
 
 local function set_visible(_, name, visible)
-  local node = query_node(name)
-  node.visible = visible == true
+  mutate_node(name, function(node)
+    node.visible = visible == true
+  end)
 end
 
 local function set_touch_enabled(_, name, enabled)
-  local node = query_node(name)
-  node.disabled = not enabled
+  mutate_node(name, function(node)
+    node.disabled = not enabled
+  end)
 end
 
 local function set_debug_log(_, text)
@@ -41,10 +59,20 @@ end
 local function set_item_slot_image(slot_name, image_key)
   assert(slot_name ~= nil, "missing slot name")
   assert(image_key ~= nil, "missing image key for slot: " .. tostring(slot_name))
-  local nodes = runtime.query_nodes(slot_name)
-  for _, node in ipairs(nodes) do
-    runtime.set_node_texture_keep_size(node, image_key)
+  local active_role = runtime.get_client_role and runtime.get_client_role() or nil
+  local function apply()
+    local nodes = runtime.query_nodes(slot_name)
+    for _, node in ipairs(nodes) do
+      runtime.set_node_texture_keep_size(node, image_key)
+    end
   end
+  if active_role ~= nil then
+    apply()
+    return
+  end
+  runtime.for_each_role_or_global(function()
+    apply()
+  end)
 end
 
 local function build_choice_screens()
