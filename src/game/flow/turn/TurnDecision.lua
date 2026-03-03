@@ -1,6 +1,6 @@
 local logger = require("src.core.Logger")
 local inventory = require("src.game.systems.items.ItemInventory")
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local number_utils = require("src.core.NumberUtils")
 local choice_auto_policy = require("src.game.flow.turn.TurnChoiceAutoPolicy")
 

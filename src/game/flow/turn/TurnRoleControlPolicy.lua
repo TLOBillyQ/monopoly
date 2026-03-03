@@ -1,4 +1,4 @@
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local runtime_state = require("src.core.RuntimeState")
 
 local turn_role_control_policy = {}

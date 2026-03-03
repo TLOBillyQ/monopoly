@@ -1,4 +1,4 @@
-local runtime_constants = require("Config.RuntimeConstants")
+local runtime_constants = require("src.core.config.RuntimeConstants")
 local ui_events = require("src.presentation.shared.UIEvents")
 local number_utils = require("src.core.NumberUtils")
 local host_runtime = require("src.presentation.api.HostRuntimePort")

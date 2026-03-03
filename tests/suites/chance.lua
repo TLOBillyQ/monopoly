@@ -11,7 +11,7 @@ local _with_patches = support.with_patches
 local _assert_eq = support.assert_eq
 local chance_effects = support.chance_effects
 local _build_ui_port = support.build_ui_port
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 
 local function _test_chance_is_mandatory_effect_entrypoint()
   local g = _new_game()
@@ -121,6 +121,24 @@ local function _test_chance_set_vehicle_works_when_feature_enabled()
   assert(p.seat_id == 4001, "set_vehicle should take effect when feature enabled")
 end
 
+local function _test_chance_set_vehicle_invalid_id_ignored_when_feature_enabled()
+  local g = _new_game()
+  local p = g:current_player()
+
+  _with_patches({
+    { target = gameplay_rules, key = "vehicle_enabled", value = true },
+  }, function()
+    chance_effects.resolve(g, p, {
+      effect = "set_vehicle",
+      target = "self",
+      negative = false,
+      vehicle_id = 4999,
+    }, {})
+  end)
+
+  assert(p.seat_id == nil, "invalid vehicle id should be ignored safely")
+end
+
 return {
   name = "chance",
   tests = {
@@ -131,5 +149,6 @@ return {
     { name = "chance_forced_move_queues_move_effect_anim", run = _test_chance_forced_move_queues_move_effect_anim },
     { name = "chance_set_vehicle_ignored_when_feature_disabled", run = _test_chance_set_vehicle_ignored_when_feature_disabled },
     { name = "chance_set_vehicle_works_when_feature_enabled", run = _test_chance_set_vehicle_works_when_feature_enabled },
+    { name = "chance_set_vehicle_invalid_id_ignored_when_feature_enabled", run = _test_chance_set_vehicle_invalid_id_ignored_when_feature_enabled },
   },
 }

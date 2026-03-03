@@ -1,7 +1,7 @@
 local logger = require("src.core.Logger")
 local inventory = require("src.game.systems.items.ItemInventory")
 local land_choice_specs = require("src.game.systems.land.LandChoiceSpecs")
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local action_anim_port = require("src.core.ActionAnimPort")
 
 local steal = {}

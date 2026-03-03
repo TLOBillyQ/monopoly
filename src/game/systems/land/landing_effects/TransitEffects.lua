@@ -1,5 +1,5 @@
 local logger = require("src.core.Logger")
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local constants = require("Config.Generated.Constants")
 local inventory = require("src.game.systems.items.ItemInventory")
 local landing_presenter = require("src.game.systems.land.LandingPresenter")

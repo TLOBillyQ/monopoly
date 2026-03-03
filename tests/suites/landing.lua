@@ -11,7 +11,7 @@ local _with_patches = support.with_patches
 local turn_land = require("src.game.flow.turn.TurnLand")
 local chance_cfg = require("Config.Generated.ChanceCards")
 local item_inventory = require("src.game.systems.items.ItemInventory")
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 
 local function _test_land_on_start_reward()
   local g = _new_game()

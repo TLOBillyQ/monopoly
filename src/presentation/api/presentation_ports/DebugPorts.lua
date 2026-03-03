@@ -1,4 +1,4 @@
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local logger = require("src.core.Logger")
 local ui_event_state = require("src.presentation.interaction.UIEventState")
 

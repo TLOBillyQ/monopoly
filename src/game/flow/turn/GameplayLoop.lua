@@ -1,6 +1,6 @@
 local agent = require("src.game.core.runtime.Agent")
 local items_cfg = require("Config.Generated.Items")
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local logger = require("src.core.Logger")
 local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
 local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")

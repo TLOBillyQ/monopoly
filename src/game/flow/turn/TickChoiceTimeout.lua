@@ -1,5 +1,5 @@
 local constants = require("Config.Generated.Constants")
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local number_utils = require("src.core.NumberUtils")
 
 local tick_choice_timeout = {}

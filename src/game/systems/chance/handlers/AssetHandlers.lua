@@ -6,7 +6,7 @@ function asset_handlers.register(handlers, common)
   local tile_state = deps.tile_state
   local monopoly_event = deps.monopoly_event
   local vehicle_feature = deps.vehicle_feature
-  local vehicle_name_by_id = deps.vehicle_name_by_id
+  local vehicle_catalog = deps.vehicle_catalog
   local number_utils = deps.number_utils
 
   handlers.set_vehicle = function(game, player, card)
@@ -14,7 +14,7 @@ function asset_handlers.register(handlers, common)
       return
     end
     game:set_player_seat(player, card.vehicle_id)
-    local vehicle_name = vehicle_name_by_id[card.vehicle_id] or tostring(card.vehicle_id)
+    local vehicle_name = vehicle_catalog.name_of(card.vehicle_id)
     common.emit_event(monopoly_event.chance.applied, {
       player = player,
       card = card,

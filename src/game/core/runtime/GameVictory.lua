@@ -1,6 +1,6 @@
 local tile = require("src.game.systems.board.Tile")
 local pricing = require("src.game.systems.land.LandPricing")
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 
 local game_victory = {}

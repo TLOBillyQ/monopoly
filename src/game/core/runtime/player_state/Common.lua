@@ -1,15 +1,10 @@
 local constants = require("Config.Generated.Constants")
-local vehicles_cfg = require("Config.Generated.Vehicles")
+local vehicle_catalog = require("src.core.config.VehicleCatalog")
 
 local common = {}
 
-local vehicle_by_id = {}
-for _, cfg in ipairs(vehicles_cfg) do
-  vehicle_by_id[cfg.id] = cfg
-end
-
 common.constants = constants
-common.vehicle_by_id = vehicle_by_id
+common.vehicle_catalog = vehicle_catalog
 common.default_vehicle_cfg = {
   id = 0,
   name = "",

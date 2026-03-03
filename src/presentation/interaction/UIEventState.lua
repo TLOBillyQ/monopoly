@@ -1,4 +1,4 @@
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local runtime = require("src.presentation.api.UIRuntimePort")
 
 local ui_event_state = {}

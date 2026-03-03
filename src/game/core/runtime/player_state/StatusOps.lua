@@ -1,6 +1,7 @@
 local common = require("src.game.core.runtime.player_state.Common")
 local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
 local runtime_ports = require("src.core.RuntimePorts")
+local logger = require("src.core.Logger")
 
 local status_ops = {}
 
@@ -16,6 +17,10 @@ function status_ops.set_player_seat(self, player, seat_id)
     player.seat_id = nil
     common.mark_players(self)
     return
+  end
+  if seat_id ~= nil and not common.vehicle_catalog.has(seat_id) then
+    logger.warn("[Eggy]", "ignore unknown vehicle seat_id", tostring(seat_id), "for player", tostring(player and player.id))
+    seat_id = nil
   end
 
   local old_seat_id = player.seat_id

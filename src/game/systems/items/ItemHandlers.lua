@@ -6,7 +6,7 @@ local number_utils = require("src.core.NumberUtils")
 local roadblock = require("src.game.systems.items.ItemRoadblock")
 local remote_dice = require("src.game.systems.items.ItemRemoteDice")
 local demolish = require("src.game.systems.items.ItemDemolish")
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local action_anim_port = require("src.core.ActionAnimPort")
 
 local handlers = {}

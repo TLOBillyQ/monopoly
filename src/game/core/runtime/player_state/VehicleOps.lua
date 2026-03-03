@@ -6,9 +6,11 @@ local vehicle_ops = {}
 function vehicle_ops.player_vehicle_cfg(_self, player)
   local seat_id = vehicle_feature.resolve_seat_id(player.seat_id)
   if seat_id then
-    local cfg = common.vehicle_by_id[seat_id]
-    assert(cfg ~= nil, "missing vehicle cfg: " .. tostring(seat_id))
-    return cfg
+    local cfg = common.vehicle_catalog.find(seat_id)
+    if cfg ~= nil then
+      return cfg
+    end
+    return common.default_vehicle_cfg
   end
   return common.default_vehicle_cfg
 end

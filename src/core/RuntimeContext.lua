@@ -1,4 +1,4 @@
-local runtime_constants = require("Config.RuntimeConstants")
+local runtime_constants = require("src.core.config.RuntimeConstants")
 local runtime_event_bridge = require("src.core.RuntimeEventBridge")
 local logger = require("src.core.Logger")
 local runtime_env_bindings = require("src.core.RuntimeEnvBindings")

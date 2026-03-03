@@ -3,7 +3,7 @@
 
 ## 目的
 
-描述 `Config/` 层的结构与各配置文件的数据模型，帮助开发者理解游戏数据如何驱动运行时行为。
+描述内容配置（`Config/`）与运行时策略配置（`src/*/config`）的结构，帮助开发者理解游戏数据如何驱动运行时行为。
 
 
 ## 配置层结构
@@ -21,13 +21,14 @@ Config/
 ├── Maps/                 — 地图配置
 │   ├── DefaultMap.lua    — 默认 10×10 棋盘
 │   └── RingMapBuilder.lua — 地图构建器
-├── GameplayRules.lua     — 游戏规则与调试开关
-├── RuntimeConstants.lua  — 运动向量、速度、FPS
-├── LandingEffects.lua    — 13 种着陆效果定义
-├── RuntimePaidGoods.lua  — 付费商品配置
-├── RuntimeRefs.lua       — 运行时引用
-├── Map.lua               — 地图基础配置
-└── TestProfiles.lua      — 测试场景预设
+└── RuntimeRefs.lua       — 运行时引用（资源映射）
+
+src/
+├── core/config/GameplayRules.lua                     — 游戏规则与调试开关
+├── game/systems/land/config/LandingEffects.lua       — 13 种着陆效果定义
+├── game/systems/commerce/config/RuntimePaidGoods.lua — 付费商品配置
+├── app/testing/config/TestProfiles.lua               — 测试场景预设
+└── core/config/RuntimeConstants.lua                  — 运动向量、速度、FPS
 ```
 
 

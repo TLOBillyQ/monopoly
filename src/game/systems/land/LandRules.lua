@@ -1,6 +1,6 @@
 local board_utils = require("src.game.systems.land.LandBoardUtils")
 local constants = require("Config.Generated.Constants")
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local inventory = require("src.game.systems.items.ItemInventory")
 local rent_resolver = require("src.game.systems.land.LandRentResolver")
 

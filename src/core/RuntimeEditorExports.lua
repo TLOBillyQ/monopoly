@@ -1,5 +1,6 @@
-local runtime_constants = require("Config.RuntimeConstants")
+local runtime_constants = require("src.core.config.RuntimeConstants")
 local logger = require("src.core.Logger")
+local vehicle_catalog = require("src.core.config.VehicleCatalog")
 
 local runtime_editor_exports = {}
 
@@ -35,7 +36,8 @@ local function _install_vehicle_exports(vehicle_helper)
   ---@desc 获取刷载具的ID
   ---@return integer
   function get_spawn_vehicle_id()
-    return vehicle_helper.vehicle_id or 4012
+    local first = vehicle_catalog.list()[1]
+    return vehicle_helper.vehicle_id or (first and first.id) or 0
   end
 
   ---@export

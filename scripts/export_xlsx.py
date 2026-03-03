@@ -506,7 +506,6 @@ def main():
         "初始金豆": "starting_jindou",
         "初始乐园币": "starting_leyuanbi",
         "初始骰子数": "default_dice_count",
-        "有座驾时骰子数": "dice_with_vehicle",
         "操作倒计时（秒）": "action_timeout_seconds",
     }
     for row in rows:
@@ -527,7 +526,6 @@ def main():
             "starting_jindou",
             "starting_leyuanbi",
             "default_dice_count",
-            "dice_with_vehicle",
             "action_timeout_seconds",
             "pass_start_bonus",
             "hospital_fee",

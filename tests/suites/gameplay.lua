@@ -21,7 +21,7 @@ local constants = support.constants
 local bankruptcy = support.bankruptcy
 local turn_move = support.turn_move
 local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local mine_effect = require("src.game.systems.effects.MineEffect")
 local runtime_context = require("src.core.RuntimeContext")
 local runtime_event_bridge = require("src.core.RuntimeEventBridge")
@@ -872,7 +872,7 @@ end
 local function _test_autorunner_runs_to_end()
   local auto_runner = require("src.game.flow.turn.AutoRunner")
   local agent = require("src.game.core.runtime.Agent")
-  local gameplay_rules = require("Config.GameplayRules")
+  local gameplay_rules = require("src.core.config.GameplayRules")
   local land = require("src.game.systems.land.LandingEffectExecutors")
   local land_actions = require("src.game.systems.land.LandActions")
   local item_inventory = require("src.game.systems.items.ItemInventory")

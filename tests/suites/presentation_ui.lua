@@ -31,8 +31,8 @@ local ui_choice_route_policy = require("src.presentation.interaction.UIChoiceRou
 local logger = require("src.core.Logger")
 local runtime_event_bridge = require("src.core.RuntimeEventBridge")
 local market_cfg = require("Config.Generated.Market")
-local runtime_constants = require("Config.RuntimeConstants")
-local gameplay_rules = require("Config.GameplayRules")
+local runtime_constants = require("src.core.config.RuntimeConstants")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local vec3 = require("fixtures.vec3")
 
 local function _build_popup_view_state(refs, card_node)
@@ -2185,9 +2185,7 @@ local function _test_ui_event_router_player_target_click_direct_submit()
   _assert_eq(captured[1] and captured[1].type, "choice_select", "player click should dispatch choice_select")
   _assert_eq(captured[1] and captured[1].choice_id, 10, "player click should keep choice id")
   _assert_eq(captured[1] and captured[1].option_id, 22, "player click should submit clicked option")
-  _assert_eq(captured[2] and captured[2].type, "choice_select", "target click should dispatch choice_select")
-  _assert_eq(captured[2] and captured[2].choice_id, 20, "target click should keep choice id")
-  _assert_eq(captured[2] and captured[2].option_id, 201, "target click should submit clicked option")
+  _assert_eq(captured[2], nil, "target choice should not dispatch from legacy UI slot click path")
 end
 
 local function _test_ui_event_router_action_log_toggle_uses_role_context()

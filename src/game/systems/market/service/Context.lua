@@ -1,19 +1,14 @@
 local market_cfg = require("Config.Generated.Market")
 local items_cfg = require("Config.Generated.Items")
-local vehicles_cfg = require("Config.Generated.Vehicles")
 local paid_currency_bridge = require("src.game.systems.commerce.PaidCurrencyBridge")
 local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
+local vehicle_catalog = require("src.core.config.VehicleCatalog")
 
 local context = {}
 
 local items_by_id = {}
 for _, cfg in ipairs(items_cfg) do
   items_by_id[cfg.id] = cfg
-end
-
-local vehicles_by_id = {}
-for _, cfg in ipairs(vehicles_cfg) do
-  vehicles_by_id[cfg.id] = cfg
 end
 
 local entries_by_id = {}
@@ -31,7 +26,7 @@ end
 
 function context.entry_name(entry)
   if entry.kind == "vehicle" then
-    local cfg = vehicles_by_id[entry.product_id]
+    local cfg = vehicle_catalog.find(entry.product_id)
     if cfg then
       return cfg.name
     end
@@ -52,7 +47,7 @@ end
 
 function context.vehicle_name(seat_id)
   if seat_id then
-    local cfg = vehicles_by_id[seat_id]
+    local cfg = vehicle_catalog.find(seat_id)
     if cfg then
       return cfg.name
     end

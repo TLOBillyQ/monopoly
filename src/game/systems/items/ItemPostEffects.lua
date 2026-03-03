@@ -2,7 +2,7 @@ local logger = require("src.core.Logger")
 local constants = require("Config.Generated.Constants")
 local board_utils = require("src.game.systems.land.LandBoardUtils")
 local inventory = require("src.game.systems.items.ItemInventory")
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local bankruptcy = require("src.game.core.runtime.Bankruptcy")
 local action_anim_port = require("src.core.ActionAnimPort")
 

@@ -118,4 +118,24 @@ function M.resolve(profile_name)
   return _deep_copy(profiles[profile_name] or profiles.default)
 end
 
+function M.has(profile_name)
+  return type(profile_name) == "string" and profiles[profile_name] ~= nil
+end
+
+function M.get(profile_name)
+  if not M.has(profile_name) then
+    return nil
+  end
+  return _deep_copy(profiles[profile_name])
+end
+
+function M.names()
+  local out = {}
+  for name in pairs(profiles) do
+    out[#out + 1] = name
+  end
+  table.sort(out)
+  return out
+end
+
 return M

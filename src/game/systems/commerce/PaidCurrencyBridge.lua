@@ -1,4 +1,4 @@
-local paid_goods_cfg = require("Config.RuntimePaidGoods")
+local paid_goods_cfg = require("src.game.systems.commerce.config.RuntimePaidGoods")
 local logger = require("src.core.Logger")
 
 local bridge = {}

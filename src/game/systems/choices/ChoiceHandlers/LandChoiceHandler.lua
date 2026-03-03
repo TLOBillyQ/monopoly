@@ -1,6 +1,6 @@
 local land_choice_specs = require("src.game.systems.land.LandChoiceSpecs")
 local inventory = require("src.game.systems.items.ItemInventory")
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
 
 local land_choice_handler = {}

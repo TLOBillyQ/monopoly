@@ -1,11 +1,13 @@
 local runtime_context = require("src.core.RuntimeContext")
 local runtime_ports = require("src.core.RuntimePorts")
 local runtime_port_defaults = require("src.app.bootstrap.runtime_install.RuntimePortDefaults")
+local config_sanity = require("src.core.config.ConfigSanity")
 
 local M = {}
 
 function M.install(opts)
   opts = opts or {}
+  config_sanity.validate()
   local install_globals = opts.install_globals == true
   if opts.context_policy ~= nil then
     error("context_policy option removed; runtime install is strict-only")

@@ -9,9 +9,9 @@ local target_choice_nodes = require("src.presentation.canvas.target_choice.nodes
 local remote_choice_nodes = require("src.presentation.canvas.remote_choice.nodes")
 local secondary_confirm_nodes = require("src.presentation.canvas.secondary_confirm.nodes")
 local market_ui = require("src.presentation.shared.MarketLayout")
-local map_cfg = require("Config.Map")
 local ui_events = require("src.presentation.shared.UIEvents")
 local runtime_ports = require("src.core.RuntimePorts")
+local role_globals = require("src.core.UIRoleGlobals")
 
 local M = {}
 
@@ -71,12 +71,8 @@ end
 function M.install(state, current_game_ref, opts)
   opts = opts or {}
   RegisterTriggerEvent({ EVENT.GAME_INIT }, function()
-    -- UIManager modules cache ALLROLES during require; ensure it is never nil.
-    local roles = runtime_ports.resolve_roles()
-    if type(roles) ~= "table" then
-      roles = {}
-    end
-    ALLROLES = roles
+    -- UIManager modules cache role globals during require.
+    local roles = role_globals.install(runtime_ports.resolve_roles())
     require "vendor.third_party.UIManager.Utils"
     local ui_manager_nodes = require("Data.UIManagerNodes")
     UIManager.Builder:new(ui_manager_nodes)
@@ -103,7 +99,8 @@ function M.install(state, current_game_ref, opts)
     end
 
     ui_events.send_to_all(ui_events.show["加载屏"], {})
-    board_scene.init(state, map_cfg, current_game)
+    local board_map = current_game and current_game.board and current_game.board.map or nil
+    board_scene.init(state, board_map, current_game)
     ui_view.init_ui_assets(state)
     ui_view.capture_player_colors(state, current_game)
 

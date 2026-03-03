@@ -1,4 +1,4 @@
-local landing_defs = require("Config.LandingEffects")
+local landing_defs = require("src.game.systems.land.config.LandingEffects")
 local effect_pipeline = require("src.game.systems.effects.EffectPipeline")
 local effect_runner = require("src.game.systems.effects.EffectRunner")
 

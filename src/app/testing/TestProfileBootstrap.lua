@@ -1,16 +1,7 @@
-local gameplay_rules = require("Config.GameplayRules")
-local test_profiles = require("Config.TestProfiles")
+local test_profile_resolver = require("src.app.testing.TestProfileResolver")
 local inventory = require("src.game.systems.items.ItemInventory")
 
 local bootstrap = {}
-
-local function _resolve_profile_name(opts)
-  local candidate = opts and opts.profile_name or gameplay_rules.test_profile
-  if type(candidate) ~= "string" or candidate == "" then
-    return "default"
-  end
-  return candidate
-end
 
 local function _apply_player_bootstrap(game, players)
   if type(players) ~= "table" then
@@ -67,16 +58,10 @@ local function _apply_tile_bootstrap(game, tiles)
   end
 end
 
-function bootstrap.apply(game, opts)
+function bootstrap.apply(game, profile_name)
   assert(game ~= nil, "missing game")
 
-  local profile_name = _resolve_profile_name(opts)
-  if profile_name == "default" then
-    return
-  end
-
-  local profile = test_profiles.resolve(profile_name)
-  local cfg = profile.bootstrap
+  local cfg = test_profile_resolver.resolve_bootstrap(profile_name)
   if type(cfg) ~= "table" then
     return
   end

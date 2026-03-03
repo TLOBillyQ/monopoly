@@ -1,5 +1,5 @@
 local logger = require("src.core.Logger")
-local runtime_constants = require("Config.RuntimeConstants")
+local runtime_constants = require("src.core.config.RuntimeConstants")
 local host_runtime = require("src.presentation.api.HostRuntimePort")
 
 local runtime = {}

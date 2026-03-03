@@ -1,5 +1,5 @@
 local constants = require("Config.Generated.Constants")
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
 local number_utils = require("src.core.NumberUtils")
 local choice_auto_policy = require("src.game.flow.turn.TurnChoiceAutoPolicy")

@@ -3,7 +3,6 @@ local constants = {
   starting_jindou = 0,
   starting_leyuanbi = 0,
   default_dice_count = 1,
-  dice_with_vehicle = 2,
   action_timeout_seconds = 15,
   pass_start_bonus = 2000,
   hospital_fee = 5000,

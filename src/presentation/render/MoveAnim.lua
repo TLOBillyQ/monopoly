@@ -1,4 +1,4 @@
-local runtime_constants = require("Config.RuntimeConstants")
+local runtime_constants = require("src.core.config.RuntimeConstants")
 local gameplay_read_port = require("src.presentation.read_model.GameplayReadPort")
 local runtime_ports = require("src.core.RuntimePorts")
 

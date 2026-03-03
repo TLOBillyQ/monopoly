@@ -26,6 +26,7 @@ local suites = {
   require("landing"),
   require("market"),
   require("paid_currency"),
+  require("config_sanity"),
 
   -- runtime: gameplay flow
   require("gameplay_core"),

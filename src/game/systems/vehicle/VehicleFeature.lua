@@ -1,9 +1,9 @@
-local gameplay_rules = require("Config.GameplayRules")
+local feature_toggles = require("src.core.config.FeatureToggles")
 
 local vehicle_feature = {}
 
 function vehicle_feature.is_enabled()
-  return gameplay_rules.vehicle_enabled == true
+  return feature_toggles.is_vehicle_enabled()
 end
 
 function vehicle_feature.resolve_seat_id(seat_id)

@@ -29,7 +29,7 @@ graph TD
     style Cfg fill:#f3e5f5
 ```
 
-**注意**：展示层不直接 require 游戏系统模块，而是通过端口接口（PresentationPorts）间接访问游戏状态。
+**注意**：展示层不直接 require 游戏系统模块，而是通过端口接口（PresentationPorts）间接访问游戏状态。当前仓库中，内容数据主要位于 `Config/`，而部分运行时策略配置已迁移到 `src/*/config`。
 
 
 ## dep_rules 强制规则

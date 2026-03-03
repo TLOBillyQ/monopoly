@@ -3,15 +3,10 @@ local modal_state = require("src.presentation.interaction.UIModalStateCoordinato
 local runtime = require("src.presentation.api.UIRuntimePort")
 local items_cfg = require("Config.Generated.Items")
 local market_cfg = require("Config.Generated.Market")
-local vehicles_cfg = require("Config.Generated.Vehicles")
 local number_utils = require("src.core.NumberUtils")
+local vehicle_catalog = require("src.core.config.VehicleCatalog")
 
 local market_view = {}
-
-local vehicles_by_id = {}
-for _, cfg in ipairs(vehicles_cfg) do
-  vehicles_by_id[cfg.id] = cfg
-end
 
 local items_by_id = {}
 for _, cfg in ipairs(items_cfg) do
@@ -27,7 +22,7 @@ local function _resolve_market_entry(product_id)
   local entry = market_by_id[product_id]
   local cfg = nil
   if entry and entry.kind == "vehicle" then
-    cfg = vehicles_by_id[product_id]
+    cfg = vehicle_catalog.find(product_id)
   else
     cfg = items_by_id[product_id]
   end

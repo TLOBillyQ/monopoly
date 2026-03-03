@@ -1,6 +1,6 @@
 local logger = require("src.core.Logger")
 local tile = require("src.game.systems.board.Tile")
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local action_anim_port = require("src.core.ActionAnimPort")
 local roadblock = {}
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0

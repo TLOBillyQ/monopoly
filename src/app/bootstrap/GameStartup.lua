@@ -2,10 +2,10 @@ local auto_runner = require("src.game.flow.turn.AutoRunner")
 local board_view = require("src.presentation.render.BoardRuntime")
 local game = require("src.game.core.runtime.Game")
 local ui_view = require("src.presentation.api.UIViewService")
-local map_cfg = require("Config.Map")
 local tiles_cfg = require("Config.Generated.Tiles")
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local test_profile_bootstrap = require("src.app.testing.TestProfileBootstrap")
+local test_profile_resolver = require("src.app.testing.TestProfileResolver")
 local logger = require("src.core.Logger")
 local runtime_state = require("src.core.RuntimeState")
 local runtime_ports = require("src.core.RuntimePorts")
@@ -71,7 +71,10 @@ local function _build_non_p1_ai_map(player_count)
 end
 
 -- state 中保存当前 game 的引用，由 UIBootstrap 在 GAME_INIT 之后赋值
-function M.build_state(get_current_game)
+function M.build_state(get_current_game, opts)
+  opts = opts or {}
+  local profile_name = opts.profile_name
+  local map_cfg = test_profile_resolver.resolve_map(profile_name)
   local ui = ui_view.build_ui_state()
   local state = {
     ui = ui,
@@ -107,7 +110,7 @@ function M.build_state(get_current_game)
           tiles = tiles_cfg,
         })
       end
-      test_profile_bootstrap.apply(created_game)
+      test_profile_bootstrap.apply(created_game, profile_name)
       return created_game
     end,
     auto_runner = auto_runner:new({ interval = ui.auto_interval }),

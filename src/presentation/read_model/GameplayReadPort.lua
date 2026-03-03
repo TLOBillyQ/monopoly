@@ -1,4 +1,4 @@
-local gameplay_rules = require("Config.GameplayRules")
+local feature_toggles = require("src.core.config.FeatureToggles")
 
 local gameplay_read_port = {}
 
@@ -21,7 +21,7 @@ local function _purchase_price(tile)
 end
 
 function gameplay_read_port.resolve_vehicle_seat_id(seat_id)
-  if gameplay_rules.vehicle_enabled ~= true then
+  if not feature_toggles.is_vehicle_enabled() then
     return nil
   end
   return seat_id

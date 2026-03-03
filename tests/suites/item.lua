@@ -10,7 +10,7 @@ local _tile_state = support.tile_state
 local _assert_eq = support.assert_eq
 local executor = support.executor
 local choice_resolver = support.choice_resolver
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local item_phase = require("src.game.systems.items.ItemPhase")
 
 local function _test_monster_card()

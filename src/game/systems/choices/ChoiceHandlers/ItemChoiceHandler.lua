@@ -5,7 +5,7 @@ local roadblock = require("src.game.systems.items.ItemRoadblock")
 local logger = require("src.core.Logger")
 local remote_dice = require("src.game.systems.items.ItemRemoteDice")
 local item_phase = require("src.game.systems.items.ItemPhase")
-local gameplay_rules = require("Config.GameplayRules")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local number_utils = require("src.core.NumberUtils")
 local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
 

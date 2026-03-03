@@ -3,21 +3,16 @@ local tile = require("src.game.systems.board.Tile")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 local movement = require("src.game.systems.movement.Movement")
 local bankruptcy = require("src.game.core.runtime.Bankruptcy")
-local gameplay_rules = require("Config.GameplayRules")
-local vehicles_cfg = require("Config.Generated.Vehicles")
+local gameplay_rules = require("src.core.config.GameplayRules")
 local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
 local number_utils = require("src.core.NumberUtils")
 local action_anim_port = require("src.core.ActionAnimPort")
+local vehicle_catalog = require("src.core.config.VehicleCatalog")
 
 local common = {}
 
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
 local tile_state = tile.get_state
-local vehicle_name_by_id = {}
-for _, cfg in ipairs(vehicles_cfg) do
-  vehicle_name_by_id[cfg.id] = cfg.name
-end
-
 function common.emit_event(kind, payload)
   monopoly_event.emit(kind, payload or {})
 end
@@ -102,7 +97,7 @@ function common.dependencies()
     tile_state = tile_state,
     monopoly_event = monopoly_event,
     vehicle_feature = vehicle_feature,
-    vehicle_name_by_id = vehicle_name_by_id,
+    vehicle_catalog = vehicle_catalog,
     number_utils = number_utils,
   }
 end
