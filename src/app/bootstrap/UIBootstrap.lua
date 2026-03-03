@@ -76,6 +76,12 @@ end
 function M.install(state, current_game_ref, opts)
   opts = opts or {}
   RegisterTriggerEvent({ EVENT.GAME_INIT }, function()
+    -- UIManager modules cache ALLROLES during require; ensure it is never nil.
+    local roles = runtime_ports.resolve_roles()
+    if type(roles) ~= "table" then
+      roles = {}
+    end
+    ALLROLES = roles
     require "vendor.third_party.UIManager.Utils"
     local ui_manager_nodes = require("Data.UIManagerNodes")
     UIManager.Builder:new(ui_manager_nodes)
