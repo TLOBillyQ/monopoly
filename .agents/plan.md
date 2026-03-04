@@ -1,329 +1,196 @@
-# Role 身份与作用域统一治理计划（UIManager / 回合动作 / 场景事件）
+# UIManagerNodes 新节点接入执行计划（黑市分页分类 + 位置槽位）
 
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
-本文件必须遵循 `.agents/harness/PLANS.md` 维护；任何实施或讨论都要先对照该规范检查章节完整性与可验证性。
+本文件必须遵循 `.agents/harness/PLANS.md` 维护；任何实施、讨论、或中途改线都要先对照该规范，确保章节完整、命令可执行、验收可观察。
 
 ## 目的 / 全局视角
 
 
-这项工作解决的是“同一玩家身份在不同层被不同方式解释”的长期稳定性问题。当前项目里同时存在 `player_id`、`role_id`、`actor_role_id` 三种近义字段，并且来源有 `data.role`、`UIManager.client_role`、`ui_model.current_player_id`、`choice.meta.player_id`。这会导致两个用户可见风险：一是输入动作被错误拒绝或错误放行，二是 UI 在多客户端下出现串屏或错屏。
+这项工作要把新版 `Data/UIManagerNodes.lua` 里新增但尚未接入的 26 个节点真正接入业务链路，避免玩家点击后只看到“UI 节点未适配”。
 
-改动完成后，用户能稳定获得三件事：任何可交互动作都有明确操作者，非操作者无法越权提交动作，UI 只在目标客户端可见且不会污染其他客户端。验证方式不是“看代码像是对的”，而是通过自动化测试和实机日志证明：`actor_role_id` 全链路完整、校验一致、作用域无泄漏。
+改动完成后，用户可以在黑市界面点击“上一页/下一页/分类按钮”切换可购买项，并且在位置选择界面直接点击 7 个槽位完成目标选择。可见成功标准是：按钮点击能触发正确意图、列表与选项状态按预期切换、确认动作通过 `ChoiceResolver._option_exists` 校验、回归测试全绿。
 
 ## 进度
 
 
-- [x] (2026-03-04 12:20+08:00) 已完成：阅读 `.agents/harness/PLANS.md`，确认计划结构与写作约束。
-- [x] (2026-03-04 12:24+08:00) 已完成：阅读 `.agents/research.md` 与相关源码，提炼统一方案边界。
-- [x] (2026-03-04 12:30+08:00) 已完成：产出本可执行计划初稿并写入 `.agents/plan.md`。
-- [x] (2026-03-04 13:05+08:00) 已完成：里程碑 1（身份契约收敛）代码落地（`TurnDispatchValidator`、`ItemSlice`、相关测试语义）。
-- [x] (2026-03-04 13:08+08:00) 已完成：里程碑 1 验收测试通过（`presentation_ui_model_dispatch`、`presentation_ui`）。
-- [x] (2026-03-04 13:18+08:00) 已完成：根据里程碑 1 经验拆分里程碑 2 为 2A/2B/2C，并补齐分段验收命令（仅计划更新，未执行实现）。
-- [x] (2026-03-04 13:43+08:00) 已完成：里程碑 2A（actor 注入白名单盘点）并确认白名单覆盖 `toggle_action_log/choice_select/choice_cancel/market_confirm/ui_button(next|auto|item_slot_*)`。
-- [x] (2026-03-04 13:49+08:00) 已完成：里程碑 2B（事件路由补齐 actor）实现（`CanvasEventRouter`、`LocalActorResolver`）并通过交互测试。
-- [x] (2026-03-04 13:52+08:00) 已完成：里程碑 2C（拒绝路径与提示统一）实现，缺失 actor 统一拒绝日志关键字为 `ui intent rejected: missing actor_role_id`。
-- [x] (2026-03-04 14:03+08:00) 已完成：里程碑 3（role 解析入口收敛）实现（`PaidCurrencyBridge` 改走 `runtime_ports.resolve_role`）并通过付费货币测试。
-- [x] (2026-03-04 14:17+08:00) 已完成：里程碑 4（UI 作用域防污染）实现（高风险模块统一作用域约定）并补充防泄漏测试点。
-- [x] (2026-03-04 14:25+08:00) 已完成：里程碑 5（测试与回归验收）执行并记录证据（含全量回归）。
+- [x] (2026-03-04 17:30+08:00) 已完成：阅读 `.agents/harness/PLANS.md`，确认可执行计划格式与必备章节。
+- [x] (2026-03-04 17:33+08:00) 已完成：阅读 `.agents/research.md`，提炼“黑市新增 5 节点 + 位置新增 21 节点”的接入边界。
+- [x] (2026-03-04 17:40+08:00) 已完成：重写 `.agents/plan.md` 为本主题执行计划。
+- [ ] 未开始：里程碑 1（黑市节点建模与意图定义）。
+- [ ] 未开始：里程碑 2（黑市后端分页/分类 choice 契约扩展）。
+- [ ] 未开始：里程碑 3（位置槽位节点接入与双路径兼容）。
+- [ ] 未开始：里程碑 4（端到端验证、回归与收尾）。
 
 ## 意外与发现
 
 
-- 观察：仓库当前已有 `actor_role_id` 强校验，但“身份注入”与“身份来源”仍是分散实现。
-  证据：`src/game/flow/turn/TurnDispatchValidator.lua` 强制校验 `next/item_slot/choice`，同时 `src/presentation/canvas_runtime/LocalActorResolver.lua` 是注入入口。
+- 观察：新增黑市按钮当前不会进入业务路由，而是触发兜底“UI 节点未适配”提示。
+  证据：研究文档第 3.2 节已确认 `黑市-` 前缀节点无代码引用，且 `UIEventBindings.register_missing_button_tip` 存在未路由按钮兜底逻辑。
 
-- 观察：`UIManager` 文档已明确 click 回调提供 `data.role`，这应成为输入身份的一号来源，而不是可选来源。
-  证据：`docs/eggy/ui_manager_lib.md` 的 `listen("CLICK", function(data) ...)` 示例中明确写出 `data.role`。
-
-- 观察：少量业务模块仍直接走 `GameAPI.get_role`，绕过统一 resolver，未来容易出现同一身份在不同模块不一致。
-  证据：`src/game/systems/commerce/PaidCurrencyBridge.lua`。
-
-- 观察：里程碑 1 中 `choice.meta.player_id` 存在字符串形态输入（如 `"1"`），若不归一会让 owner 判断语义漂移。
-  证据：`tests/suites/presentation_ui.lua` 已将 choice owner 用例改为字符串并通过，`item_choice_owner_id` 与 `choice actor check` 均按数值 role id 工作。
-
-- 观察：`presentation_ui_registry` 以固定索引切片聚合测试，若在中间插入新测试会改变既有套件语义。
-  证据：`tests/suites/presentation_ui_interaction.lua` 需显式追加 92-94 索引测试，避免影响 28-37 既有切片。
-
-- 观察：`presentation_ui` 用固定索引供切片套件复用，里程碑 4 的新增测试若插入中段会破坏 `action_status`/`interaction` 套件边界。
-  证据：新增防泄漏测试最终放到 `presentation_ui` 尾部，并在 `presentation_ui_action_status.lua` 通过 95-98 索引显式挂载。
+- 观察：`choice_select` 受 `ChoiceResolver._option_exists` 强校验约束，前端假分页会直接失效。
+  证据：研究文档第 4 节指出当前 `market/service/Choice.lua` 只构造最多 10 条可见项，若不扩展后端 choice 结构，切页后确认会因 `option_id` 不在 `pending_choice.options` 而失败。
 
 ## 决策日志
 
 
-- 决策：将统一工作的主线定义为“先统一身份契约，再统一入口，再清理旁路”，不做一次性大爆炸重构。
-  理由：当前代码已具备局部正确性（如回合校验），增量收敛风险更低且便于回归定位。
+- 决策：黑市分页/分类采用“后端驱动 choice 状态，前端只渲染与分发意图”的路线，不做前端本地假分页。
+  理由：必须保持 `ChoiceResolver._option_exists` 契约成立，避免确认购买时出现 option 越界。
   日期/作者：2026-03-04 / Codex
 
-- 决策：`actor_role_id` 作为所有交互动作的唯一操作者字段，继续保留并扩大覆盖，不新增并行字段。
-  理由：该字段已在 `TurnDispatch` 与测试中成为事实标准，顺势扩展成本最低。
+- 决策：位置选择新增槽位接入采用“保留旧路径 + 增量接入新槽位”的双路径策略。
+  理由：可降低回归风险，避免一次性硬切导致现有 3D 场景点击选目标退化。
   日期/作者：2026-03-04 / Codex
 
-- 决策：`data.role -> UIManager.client_role -> ui_model.current_player_id` 作为统一 actor 解析优先级，最后一项仅作容错。
-  理由：与 UIManager 文档能力一致，同时能避免极端情况下回合卡死。
-  日期/作者：2026-03-04 / Codex
-
-- 决策：禁止在业务层新增直接 `GameAPI.get_role` 调用；通过 `runtime_ports`/`host_runtime` 统一入口访问 role。
-  理由：避免身份解释分叉，提升可测试性与替换能力。
-  日期/作者：2026-03-04 / Codex
-
-- 决策：里程碑 1 将 `choice.meta.player_id` 明确视为 owner role id，并在 `ItemSlice` 与 `TurnDispatchValidator` 统一做 `NumberUtils.to_integer` 归一。
-  理由：契约表达需要稳定数值语义，且不改变既有业务行为。
-  日期/作者：2026-03-04 / Codex
-
-- 决策：回合权限日志字段统一使用 `actor_role_id/current_role_id/owner_role_id` 命名，不再使用泛化 `actor/current`。
-  理由：日志应可直接映射到契约字段，降低排障歧义。
-  日期/作者：2026-03-04 / Codex
-
-- 决策：将里程碑 2 拆分为 2A（白名单盘点）、2B（actor 注入补齐）、2C（拒绝路径统一），并要求每段独立验收。
-  理由：里程碑 1 证明“先收敛语义再改行为”能显著降低回归风险；里程碑 2 涉及多 intent，多段验收更易定位问题。
-  日期/作者：2026-03-04 / Codex
-
-- 决策：里程碑 2 新增路由层用例采用“追加到 `presentation_ui` 尾部 + `presentation_ui_interaction` 显式挂载”策略，不改历史切片索引。
-  理由：保持现有测试套件边界稳定，减少因索引漂移造成的隐式回归。
-  日期/作者：2026-03-04 / Codex
-
-- 决策：里程碑 3 在业务层禁止新增 `GameAPI.get_role` 旁路，`PaidCurrencyBridge` 统一改为 `runtime_ports.resolve_role(player.id)`。
-  理由：满足 role 解析入口收敛目标，且与现有 runtime 合约一致。
-  日期/作者：2026-03-04 / Codex
-
-- 决策：里程碑 4 将高风险模块中的作用域切换统一为 `for_each_role_or_global + with_client_role`，并保留函数末尾 `set_client_role(nil)` 作为最终保险。
-  理由：既提升作用域切换可读性，也确保测试桩/异常路径下不遗留 client_role 污染。
+- 决策：分类文案“坐骑商店”只做显示层映射，业务枚举继续沿用 `vehicle`。
+  理由：研究已确认业务内部命名稳定为 `vehicle`，改枚举会扩大影响面且无用户价值。
   日期/作者：2026-03-04 / Codex
 
 ## 结果与复盘
 
 
-当前状态是“里程碑 1-5 全部完成”。
+当前为计划阶段，尚未开始代码实施。
 
-里程碑 3 完成项：`src/game/systems/commerce/PaidCurrencyBridge.lua` 去除 `GameAPI.get_role` 旁路，改走 `runtime_ports.resolve_role`；`tests/suites/paid_currency.lua` 同步 runtime ports 测试桩。验证结果：`paid_currency`（6）通过，且 `git grep -n "GameAPI.get_role" src` 未引入新的业务层旁路。
-
-里程碑 4 完成项：`UITurnEffects`、`PopupRenderer`、`MarketModalRenderer`、`DebugPorts` 的作用域切换收敛到 `with_client_role/for_each_role_or_global` 约定，并在高风险路径补充 client_role 复位测试（95-98）。验证结果：`presentation_ui_action_status + presentation_player_colors`（46）通过。
-
-里程碑 5 完成项：完成增量与全量回归闭环，覆盖事件绑定、交互、runtime contract、付费货币、作用域与全量回归。验证结果：`presentation_ui_event_bindings + presentation_ui_interaction`（18）、`runtime_ports_contract`（8）、`paid_currency`（6）、`lua tests/regression.lua`（256）全部通过。当前无遗留阻塞项。
+本计划预期在四个里程碑后交付：黑市新增按钮全部可用、位置槽位可直接点选、回归测试全绿、并保留兼容路径。每个里程碑完成后都要回填本节：已完成内容、剩余风险、与“目的 / 全局视角”的对照结论。
 
 ## 背景与导读
 
 
-本任务跨越四个层次。第一层是“身份对象”，也就是引擎 `role`（有 `get_roleid/get_ctrl_unit/send_ui_custom_event` 等能力）。第二层是“身份主键”，也就是数值 id（`role_id` / `player.id` / `actor_role_id`）。第三层是“输入意图”，也就是 UI 点击最终被派发的 action。第四层是“作用域控制”，也就是 `UIManager.client_role` 决定 UI 变更影响哪位玩家。
+本任务涉及三个层次。第一层是节点映射层：把 `UIManagerNodes` 名称映射成可访问节点字段。第二层是交互意图层：把点击事件转成 `market_page_next`、`market_tab_select`、`choice_select` 等可处理意图。第三层是业务 choice 层：保证前端展示与后端 `pending_choice.options` 一致，确认时不会被校验拒绝。
 
-相关模块关系如下：`CanvasEventRouter` 负责把点击事件变成 intent 并补齐 actor；`UIIntentDispatcher` 把 intent 送到 turn dispatch；`TurnDispatchValidator` 在业务边界强校验 actor；`UIRuntimePort` 负责 `client_role` 生命周期；`UIEvents` 负责向 role 定向或广播 UI 事件；`runtime_ports` 与 `host_runtime` 提供 role 解析统一入口。
+关键文件与职责如下。
 
-关键文件导读（必须先读）：
+- `Data/UIManagerNodes.lua`：新版节点清单来源，包含本次新增 26 节点。
+- `src/presentation/shared/MarketLayout.lua`：黑市节点命名与布局抽象。
+- `src/presentation/canvas/market/nodes.lua`：黑市画布节点绑定入口。
+- `src/presentation/canvas/market/intents.lua`：黑市意图定义与参数组织。
+- `src/presentation/render/MarketView.lua`：黑市视图渲染。
+- `src/presentation/ui/MarketModalRenderer.lua`：黑市弹层 UI 更新。
+- `src/presentation/canvas/target_choice/nodes.lua`：位置选择节点模型。
+- `src/presentation/ui/choice_screen_service/openers.lua`：位置选择界面打开与 option 映射。
+- `src/presentation/interaction/UIEventBindings.lua`：按钮事件绑定与未适配兜底提示。
+- `src/game/systems/market/service/Choice.lua`：黑市 choice 组装（当前仅 10 条可见项）。
+- `src/game/systems/choices/ChoiceResolver.lua`：`choice_select` 合法性校验（`_option_exists`）。
+- `src/game/systems/choices/ChoiceHandlers/MarketChoiceHandler.lua`：黑市 choice 处理。
 
-- `docs/eggy/ui_manager_lib.md`
-- `src/presentation/canvas_runtime/CanvasEventRouter.lua`
-- `src/presentation/canvas_runtime/LocalActorResolver.lua`
-- `src/presentation/interaction/UIIntentDispatcher.lua`
-- `src/game/flow/turn/TurnDispatch.lua`
-- `src/game/flow/turn/TurnDispatchValidator.lua`
-- `src/presentation/api/UIRuntimePort.lua`
-- `src/presentation/shared/UIEvents.lua`
-- `src/game/systems/commerce/PaidCurrencyBridge.lua`
-- `tests/suites/presentation_ui_event_bindings.lua`
-- `tests/suites/presentation_ui.lua`
-- `tests/suites/runtime_ports_contract.lua`
+术语说明（面向新手）：
+
+- “choice” 是给玩家的一次可选动作集合，玩家最终提交 `choice_select(option_id)`。
+- “option_id 校验” 是在提交选择时检查该 id 是否确实在当前待选列表里，防止非法提交。
+- “双路径兼容” 指新旧两套交互暂时并存，先保证可用，再按测试结果逐步收敛。
 
 ## 里程碑
 
 
-### 里程碑 1：身份契约收敛（命名与字段）
+### 里程碑 1：黑市节点建模与意图定义
 
+先把新增黑市 5 个按钮接到前端节点层与意图层，但先不改业务行为。完成后，点击这 5 个按钮不再走“未适配提示”，而是进入明确 intent 路由。
 
-这个里程碑的目标是把“谁在操作”这个问题在代码语义上统一成一个字段：`actor_role_id`。完成后，阅读任意 UI 动作链路时，不再需要猜测 `player_id/role_id` 是否混用。
+本里程碑修改 `MarketLayout.lua`、`canvas/market/nodes.lua`、`market/intents.lua`，新增字段 `page_prev/page_next/tab_item/tab_skin/tab_vehicle` 与对应 intent（`market_page_prev`、`market_page_next`、`market_tab_select(tab)`）。
 
-实施内容包括：统一注释与局部变量命名；把 choice owner 的语义固定为 `choice.meta.player_id`（表示 owner role id）；在必要处增加轻量断言与日志语义校正。该里程碑不改业务逻辑，只改契约表达与可读性。
+验收标准是：事件绑定日志可见新意图进入分发层，且不会误影响 `黑市_购买按钮` 与 `黑市_关闭` 现有行为。
 
-验收时运行现有 UI 与 turn 测试，行为不变但日志语义更一致。
+### 里程碑 2：黑市后端分页/分类 choice 契约扩展
 
-### 里程碑 2：actor 注入入口统一（输入链路）
+在业务层补齐分页与分类状态，让黑市列表切换由后端 choice 驱动而非前端假渲染。完成后，分页/分类后的可见商品与 `pending_choice.options` 保持一致，确认购买可通过 `_option_exists`。
 
+本里程碑改 `market/service/Choice.lua`、`MarketChoiceHandler.lua`（如需）、以及 intent 到 turn action 的路由处理，新增或扩展 `active_tab/page_index/page_count/options` 字段。必须提供缺省回退：如果新字段缺失，前端继续按当前 10 项行为运行。
 
-这个里程碑把 actor 注入彻底收敛到 `CanvasEventRouter + LocalActorResolver`。完成后，所有需要身份的 intent 都通过同一优先级补齐 `actor_role_id`，并在失败时统一拒绝与提示。
+验收标准是：分页切换后点击购买可成功提交，且非法页码、非法分类输入会被安全处理（不崩溃、不越权）。
 
-结合里程碑 1 的经验，这个里程碑拆为三个可独立验收的小段，避免“一次性改完才知道哪类 intent 漏补 actor”。
+### 里程碑 3：位置槽位节点接入与双路径兼容
 
-里程碑 2A 聚焦“白名单是否完整”。只做盘点与测试对齐，不改分发逻辑。需要明确 `_requires_event_actor(intent)` 必须覆盖 `toggle_action_log`、`choice_select`、`choice_cancel`、`market_confirm`、`ui_button(next|auto|item_slot_*)`，并把每个类型映射到现有 route spec 与测试用例。验收命令使用：
+把 7 个槽位（按钮/文本/投影）接入 `target_choice`，并保持旧路径（场景点选）可继续工作。完成后，玩家可在“位置选择屏”直接点槽位进入锁定态，确认后产生正确 `choice_select`。
 
-    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({require('presentation_ui_event_bindings')})"
+本里程碑改 `target_choice/nodes.lua`、`choice_screen_service/openers.lua`，以及 `ui_view_service/core.lua`（`build_choice_screens`）把槽位按钮纳入 `option_buttons`。渲染映射要处理“option 少于 7”的空槽位状态（禁用/隐藏/占位文案）。
 
-通过标准是：事件绑定测试绿灯，且不存在“intent 在路由中可触发但不在 actor 白名单”的缺口记录。
+验收标准是：槽位点击、确认、取消的状态流与旧路径一致，取消后可回到未锁定状态。
 
-里程碑 2B 聚焦“事件路由补齐 actor”。仅修改 `CanvasEventRouter` 与 `LocalActorResolver` 协作逻辑，确保白名单内 intent 在进入 `UIIntentDispatcher` 前都尝试注入 `actor_role_id`，并保持 `data.role -> client_role -> current_player_id` 解析顺序不变。验收命令使用：
+### 里程碑 4：端到端验证、回归与收尾
 
-    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({require('presentation_ui_event_bindings'), require('presentation_ui_interaction')})"
+在本里程碑集中完成自动化验证与日志证据收集，并清理遗留兜底路径。完成后，本任务能被“新人仅靠本计划”复现验证。
 
-通过标准是：白名单内 intent 在正常输入下都有 actor，既有交互行为不回退。
+本里程碑更新测试与计划活文档章节，记录关键输出证据、失败修复与最终结论。
 
-里程碑 2C 聚焦“失败路径一致性”。统一缺失 actor 时的提示文本、日志关键字和拒绝出口，确保不同 intent 的缺失处理一致，避免部分路径静默失败。验收命令与 2B 相同，并额外检查日志关键字：
-
-    rg "ui intent rejected: missing event role|missing actor_role_id" <日志文件路径>
-
-验收时需要新增或更新测试，证明每类 intent 都能得到正确 actor，且缺失时会被拒绝。
-
-### 里程碑 3：role 解析入口收敛（去旁路）
-
-
-这个里程碑解决“同类模块用不同入口取 role”问题。完成后，业务层默认通过 `runtime_ports.resolve_role(s)` 或 `host_runtime.resolve_role(_with)` 获取 role，而不是散落 `GameAPI.get_role`。
-
-实施内容首选 `PaidCurrencyBridge`，把直接 `GameAPI.get_role` 改为统一入口；同时保持原能力行为不变（购买、消耗、同步余额）。如果某模块必须保留底层调用，需在决策日志记录原因。
-
-验收时通过原有付费/货币测试，并检查不存在新增旁路调用。
-
-### 里程碑 4：UI 作用域防污染（client_role 生命周期）
-
-
-这个里程碑确保 `UIManager.client_role` 只在受控范围生效，并且总能复位。完成后，多角色渲染不会串客户端。
-
-实施内容包括：把散落的作用域切换收敛为 `with_client_role` / `for_each_role_or_global` 约定；高风险模块（`UIPanelPresenter`、`UITurnEffects`、`PopupRenderer`、`MarketModalRenderer`、`DebugPorts`）补充防泄漏测试点。
-
-验收时验证：每次渲染后 `UIManager.client_role == nil`，并保持原有可见性行为。
-
-### 里程碑 5：测试矩阵与回归闭环
-
-
-这个里程碑产出可证明“真的工作”的证据。完成后，能用自动化结果回答“身份是否统一、越权是否被阻止、作用域是否泄漏、旁路是否消除”。
-
-实施内容包括：扩展 `presentation_ui_event_bindings`、`presentation_ui`、`runtime_ports_contract`，必要时增加新套件；执行回归并记录关键输出。
-
-验收以行为为准：测试通过、关键日志符合预期、实机交互与权限边界一致。
+验收标准是：最小验收场景全部通过，`lua tests/regression.lua` 全绿，且无新增“UI 节点未适配”噪声。
 
 ## 工作计划
 
 
-整体顺序采用“契约 -> 入口 -> 旁路 -> 作用域 -> 验证”的增量路线。先做里程碑 1 是为了让后续改动都在统一语言下进行，避免改完后仍难以审查。再做里程碑 2 是因为它直接决定用户交互是否能进入正确业务分支。里程碑 3 处理结构性债务，避免新旧入口长期并存。里程碑 4 做稳定性加固，防止多客户端串屏。最后里程碑 5 形成证据闭环。
+执行顺序遵循“先接线、再补契约、再扩入口、最后回归”。先做里程碑 1 可以快速消除未路由状态并建立可观测意图；随后做里程碑 2 把业务契约补齐，确保点击能真正成交；再做里程碑 3 扩展位置槽位并保留旧路径，降低风险；最后在里程碑 4 做集中回归与证据沉淀。
 
-建议每个里程碑单独提交，提交信息需包含里程碑编号和用户可见影响，便于回滚与审计。
+编辑策略采用小步提交。每完成一个里程碑就运行对应测试，若失败只在当前里程碑范围修复，不跨里程碑混改。所有新增字段都提供缺省兼容，避免一次性升级导致旧数据无法渲染。
 
 ## 具体步骤
 
 
-所有命令在仓库根目录执行：`C:\Users\Lzx_8\Desktop\dev\repo\monopoly`。
+所有命令均在仓库根目录执行：`/Users/gangan/Dev/repo/monopoly`。
 
-1. 建立基线并确认工作树状态：
+1. 建立基线并确认工作树：
 
     git status --short
+    rg -n "黑市-|位置-槽位|register_missing_button_tip" src Data/UIManagerNodes.lua
 
-2. 执行里程碑 1 后，先跑最小相关测试：
-
-    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({require('presentation_ui_model_dispatch')})"
-
-3. 执行里程碑 2A 后，运行事件绑定测试，确认 actor 白名单与路由覆盖一致：
+2. 里程碑 1 实施后，验证黑市新按钮是否进入 intent：
 
     lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({require('presentation_ui_event_bindings')})"
 
-4. 执行里程碑 2B 后，运行事件绑定与 UI 交互测试：
+3. 里程碑 2 实施后，验证黑市分页/分类与购买链路：
 
-    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({require('presentation_ui_event_bindings'), require('presentation_ui_interaction')})"
+    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({require('market'), require('presentation_ui_interaction')})"
 
-5. 执行里程碑 2C 后，检查缺失 actor 的拒绝日志关键字是否统一：
+4. 里程碑 3 实施后，验证位置槽位点选与锁定/取消语义：
 
-    rg "ui intent rejected: missing event role|missing actor_role_id" <日志文件路径>
+    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({require('presentation_ui_interaction'), require('presentation_ui')})"
 
-6. 执行里程碑 3 后，检查是否仍有新增旁路 `GameAPI.get_role`（允许 adapter 层保留）：
-
-    git grep -n "GameAPI.get_role" src
-
-7. 执行里程碑 4 后，运行作用域与渲染相关测试：
-
-    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({require('presentation_ui_action_status'), require('presentation_player_colors')})"
-
-8. 执行里程碑 5 后，跑全量回归：
+5. 里程碑 4 收尾回归：
 
     lua tests/regression.lua
 
-9. 在实机日志中验证 actor 与权限边界（日志路径按本地环境填写）：
+6. 检查是否仍出现未适配噪声日志（按本地日志路径替换）：
 
-    rg "actor_role_id|missing actor_role_id|blocked by actor check|ui intent rejected" <日志文件路径>
+    rg "UI 节点未适配|未适配|market_page_|market_tab_select|位置-槽位" <日志文件路径>
 
 ## 验证与验收
 
 
-验收必须覆盖四类行为。
+必须同时满足以下行为验收。
 
-第一类是身份完整性：任意可推进动作都带 `actor_role_id`，缺失时被拒绝并有统一提示。第二类是权限边界：非当前回合玩家无法触发 `next/item_slot_*`，非 owner 无法提交 `choice_select/cancel`。第三类是作用域正确性：多角色渲染后 `UIManager.client_role` 复位为 `nil`，并且 UI 不串屏。第四类是入口一致性：业务层不新增绕过 resolver 的 role 获取路径。
+黑市验收：点击“分类/翻页”会切换列表；点击当前可见项后确认购买成功；提交的 `option_id` 必须来自当前 `pending_choice.options`。位置验收：点击任一有效槽位进入锁定态，确认后提交正确 `choice_select`，取消后解锁且状态恢复。兼容验收：旧路径（场景点选目标）不退化，黑市原有购买/关闭不退化。回归验收：`lua tests/regression.lua` 全绿。
 
-自动化结果以 `lua tests/regression.lua` 为准；若仓库存在与本任务无关的既有失败，必须在“意外与发现”记录失败项名称与证据，不得忽略。
+若出现失败，必须记录“失败用例名 + 触发输入 + 日志关键字 + 修复后结果”，并回填到“意外与发现”和“结果与复盘”。
 
 ## 可重复性与恢复
 
 
-本计划按里程碑增量推进，可重复执行。若中途失败，优先回退到“上一个通过测试的里程碑提交”，然后仅重做当前里程碑，不跨里程碑混修。
+本计划可重复执行。节点映射和意图扩展采用增量方式，不依赖一次性迁移。
 
-禁止使用破坏性命令（如 `git reset --hard`）清理。需要恢复时采用可审计方式：
+若中途失败，按“最近一个测试通过点”恢复：优先 `git restore --source=<commit> -- <file>` 定点恢复单文件，或 `git revert <commit>` 回退单次提交；禁止使用 `git reset --hard` 之类不可审计的破坏性命令。
 
-- 回退单个提交：`git revert <commit>`
-- 或在当前分支追加修复提交
-
-每次重试都要重新执行该里程碑测试与一轮最小回归。
+重试时只重做当前里程碑，并重复该里程碑测试与一次最小回归，确认无连带回归再进入下一里程碑。
 
 ## 产物与备注
 
 
-实施完成后，本计划应附带以下证据片段（缩进块，保持精简）：
+本任务预期产物包括：黑市新增节点映射代码、分页/分类 choice 契约字段、位置槽位节点接入代码、对应测试补充与回归记录。
 
-    All regression checks passed (13)
-    All regression checks passed (97)
-    All regression checks passed (18)
-    All regression checks passed (8)
-    All regression checks passed (6)
-    All regression checks passed (46)
-    All regression checks passed (256)
+证据保留格式使用短输出片段，不贴大段日志。示例：
 
-以及关键行为日志示例：
-
-    ui intent ... actor_role_id=1
-    ui intent rejected: missing actor_role_id ui_button next
-    ui_button blocked by actor check: next actor_role_id=2 current_role_id=1
-    choice action blocked by actor check: choice_select actor_role_id=2 owner_role_id=1
-
-如果出现失败，记录首条有效错误与定位结论，不粘贴整段噪声日志。
+    [PASS] presentation_ui_event_bindings
+    [PASS] market
+    [PASS] presentation_ui_interaction
+    [PASS] regression (all)
 
 ## 接口与依赖
 
 
-本计划实施后，以下接口语义必须成立。
+本任务必须保持以下接口约束稳定。
 
-在 `src/presentation/canvas_runtime/LocalActorResolver.lua` 中：
+- `ChoiceResolver._option_exists` 的语义不变：仅允许当前 `pending_choice.options` 内的 `option_id`。
+- 黑市新 intent 命名固定为 `market_page_prev`、`market_page_next`、`market_tab_select`，并在分发层显式处理。
+- `market_tab_select` 的业务参数使用稳定枚举：`item`、`skin`、`vehicle`。
+- `target_choice` 槽位接口固定为三个数组字段：`slot_buttons[1..7]`、`slot_labels[1..7]`、`slot_projections[1..7]`。
+- 缺省兼容必须存在：当新字段缺失时，回退旧行为，不导致 UI 打开失败。
 
-    resolve_from_event(state, data) -> integer|nil
-
-解析优先级固定为 `data.role`、`runtime.get_client_role()`、`state.ui_model.current_player_id`，并使用 `NumberUtils.to_integer` 做数值归一。
-
-在 `src/presentation/canvas_runtime/CanvasEventRouter.lua` 中：
-
-    _requires_event_actor(intent) -> boolean
-
-必须覆盖 `toggle_action_log`、`choice_select`、`choice_cancel`、`market_confirm`、`ui_button(next|auto|item_slot_*)`。
-
-在 `src/game/flow/turn/TurnDispatchValidator.lua` 中：
-
-    validate_actor_role(game, action) -> boolean
-    validate_choice_actor(game, action, choice) -> boolean
-
-继续作为最终安全边界，不可降级为“缺失 actor 自动放行”。
-
-在 role 解析入口上：
-
-- 核心业务优先使用 `runtime_ports.resolve_role(player_id)`。
-- 表现层/场景层优先使用 `host_runtime.resolve_role(_with)`。
-- 新增业务代码不得直接引入 `GameAPI.get_role`（adapter 层例外）。
-
-## 假设与默认值
-
-
-默认假设本仓库继续采用“角色驱动初始化”为主路径，即 `player.id` 与 `role_id` 一致；调试回退路径可保留，但必须不破坏 actor 校验。
-
-默认假设 `UIManager` click 事件继续提供 `data.role`；若未来引擎变更，需先在 `LocalActorResolver` 兼容后再改业务层。
-
-默认假设测试运行环境可执行 `lua` 命令；若本地工具链差异导致命令不同，必须在本计划“具体步骤”中回填实际命令。
-
-## 文档更新记录
-
-
-- 2026-03-04 / Codex：将 `.agents/plan.md` 从“位置选择屏”历史计划切换为“role 统一治理”可执行计划，原因是用户要求根据 `.agents/research.md` 交付新计划，并且该文件需始终服务当前任务目标。
-- 2026-03-04 / Codex：回填里程碑 1 实施结果，更新进度/发现/决策/复盘，并替换产物证据为本次真实测试输出，原因是计划必须作为可重启实施依据持续保持与当前代码一致。
-- 2026-03-04 / Codex：根据里程碑 1 实施经验拆分里程碑 2 为 2A/2B/2C，并同步“进度”“具体步骤”“决策日志”，原因是降低多 intent 同改导致的定位成本；本次仅更新计划，不执行代码实现。
-- 2026-03-04 / Codex：执行里程碑 2（2A/2B/2C），实现 actor 注入白名单扩展、resolver 三段优先级、缺失 actor 统一拒绝日志，并新增路由层回归测试；原因是用户要求在提交里程碑 1 后继续推进里程碑 2。
-- 2026-03-04 / Codex：执行里程碑 3/4/5，完成 role 解析入口收敛、client_role 作用域防污染与全量回归闭环，并回填所有活文档章节；原因是用户要求“执行剩余所有进度”。
+文末变更说明（2026-03-04 17:40+08:00）：本次将 `.agents/plan.md` 从“Role 身份治理”主题整体替换为“UIManagerNodes 新节点接入”主题，原因是用户当前需求要求依据 `.agents/research.md` 交付可执行计划；旧计划与当前任务目标不一致，继续沿用会误导实施范围与验收标准。
