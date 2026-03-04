@@ -1,209 +1,316 @@
-# R18 运行时沙盒限制疑点收敛执行计划
+# 位置选择屏接入场景准星射线点选
 
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
-本文件遵循 `.agents/harness/PLANS.md` 维护，实施者在修改代码前后都必须先回填本文件，再继续推进。
+本文件必须遵循 `.agents/harness/PLANS.md` 维护；任何实施或讨论都要先对照该规范检查章节完整性与可验证性。
 
 ## 目的 / 全局视角
 
 
-本轮目标是把已确认的运行时沙盒疑点收敛到“可发布、可验证、可回归”的状态。用户可见收益是两点：第一，发布环境不再因为被裁剪 API（`os/debug/rawget/type=="number"` 相关）触发潜在崩溃或行为分叉；第二，核心回合与提示文本在 Eggy 沙盒的数值语义下保持稳定，不再依赖“字符串与数字隐式拼接”。
+这项改动要让玩家在 `roadblock_target` / `demolish_target` 的位置选择阶段，先通过准星射线看到“预览目标”，再通过场景点击把目标“锁定”，最后点击 `位置_确认按钮` 才提交；若锁定后发现选错，可点击 `位置_取消按钮` 解锁并回到 hover 重选。用户可见收益是防误选：鼠标移动或镜头变化不会在确认瞬间篡改最终目标，同时允许安全重选。
 
-改动完成后，验证者应能直接观察到：`src/` 扫描不再命中本计划定义的禁用模式；定向回归与全量回归通过；`Await.seconds` 在 `os=nil` 条件下不报错；镜头跟随在“当前玩家无效时寻找下一位玩家”的分支上不再依赖 `type(...) == "number"`。
+改动完成后，玩家能看到每个候选地块上方生成 `可选择地块` 标记，`选择地块箭头` 跟随当前预览；点击候选后进入锁定态，确认与取消按钮变为可用；点击取消会解锁并恢复射线预览，点击确认会提交锁定值。是否生效通过自动化测试和实机场景日志共同验证。
 
 ## 进度
 
 
-- [x] (2026-03-03 20:41 +08:00) 重读 `.agents/harness/PLANS.md` 与现有 `.agents/plan.md`，确认格式与活文档要求。
-- [x] (2026-03-03 20:42 +08:00) 基于最新工作树重扫疑点并固化证据：`os.clock`、`type~=number`、`rawget`、`coroutine`、高置信隐式拼接。
-- [x] (2026-03-03 20:43 +08:00) 生成并写入 R18 可执行计划骨架，明确里程碑、边界、验收与恢复策略。
-- [x] (2026-03-03 20:46 +08:00) 完成里程碑 1：修复 `Await.seconds`、`TurnCameraPolicy`、`init.lua`、`CompositionRoot.lua` 的沙盒兼容问题。
-- [x] (2026-03-03 20:49 +08:00) 完成里程碑 2：落地高优先级数值拼接显式转换，主链路目标文件全部改完。
-- [x] (2026-03-03 20:50 +08:00) 完成里程碑 3：扩展 `forbidden_globals` 规则并通过静态门禁。
-- [x] (2026-03-03 20:52 +08:00) 完成里程碑 4：通过定向验证与 `tests/regression.lua` 全量回归（231 checks）。
+- [x] (2026-03-04 02:05Z) [M0 计划文档规范化] 读取 `.agents/harness/PLANS.md`，提取可执行计划硬性结构要求与写作约束。
+- [x] (2026-03-04 02:10Z) [M0 计划文档规范化] 读取 `PLAN.md`，整理目标、接口变更、测试与验收信息。
+- [x] (2026-03-04 02:20Z) [M0 计划文档规范化] 重写并写入 `.agents/plan.md`，补齐活文档必需章节与可执行步骤。
+- [x] (2026-03-04 02:21Z) [M0 计划文档规范化] 删除旧文件 `PLAN.md`，避免双计划入口并存。
+- [x] (2026-03-04 02:21Z) [M0 计划文档规范化] 读取 `Data/UIManagerNodes.lua`，确认 `位置_取消按钮` 已存在于 `位置选择屏`，后续计划改为用它执行 unlock。
+- [ ] (2026-03-04 10:21+08:00) [M1 端口与契约铺设] 已完成：无。剩余：`step_target_selection` 端口定义、默认 no-op、tick 接线、`target` screen 的 `confirm/cancel` 节点映射、confirm/unlock intent 绑定、UI bootstrap 点击节点注册。
+- [ ] (2026-03-04 10:10+08:00) [M2 射线封装与场景点选锁定] 已完成：无。剩余：`host_runtime/Raycast.lua`、`HostRuntimePort` 封装暴露、场景点选回调、`GameplayRules` 射线参数与 override hook。
+- [ ] (2026-03-04 10:21+08:00) [M3 TargetChoiceEffects 运行时行为] 已完成：无。剩余：`enter/step/on_scene_pick/on_unlock/leave`、候选标记 `+1.6`、箭头跟随、锁定后暂停射线、取消解锁后恢复射线、离场清理。
+- [ ] (2026-03-04 10:21+08:00) [M4 自动化测试与回归验收] 已完成：无。剩余：10 个 `presentation_ui` 用例（含 cancel-unlock）、日志断言补充、实机验收记录与失败场景回归证明。
 
 ## 意外与发现
 
 
-- 观察：`src/game/runtime_coroutine/Await.lua` 的 `await.seconds` 仍使用 `opts.now_fn or os.clock`，在沙盒 `os=nil` 时会直接抛错。
-  证据：本地执行 `lua -e "local old_os=os; os=nil; local await=require('src.game.runtime_coroutine.Await'); local s={_seconds_wait={}}; local ok,err=pcall(function() await.seconds(s,1,{}) end); print(ok,err); os=old_os"`，返回 `false` 与 `attempt to index global 'os' (a nil value)`。
+- 观察：原 `PLAN.md` 信息充足，但不满足 `.agents/harness/PLANS.md` 对活文档章节的强制要求。
+  证据：原文缺少“进度 / 意外与发现 / 决策日志 / 结果与复盘”四个维护型章节。
 
-- 观察：`src/game/flow/turn/TurnCameraPolicy.lua` 仍使用 `type(current_index) ~= "number"`，与项目“数值统一走 NumberUtils”约束冲突，也会影响 Eggy `integer/fixed` 语义下的兼容。
-  证据：命中行 `TurnCameraPolicy.lua:18`。
+- 观察：原文中的路径大量使用绝对 Windows 路径，不适合作为当前仓库新手执行指引。
+  证据：当前工作树位于 `/Users/gangan/.codex/worktrees/08ad/monopoly`，计划应统一为仓库相对路径。
 
-- 观察：高置信“可能触发隐式数值拼接”的命中共 42 行，分布于 21 文件，但其中有一部分是已 `tostring` 的安全构造或字符串变量拼接，需要分层清洗。
-  证据：扫描统计 `high_confidence_numeric_concat_lines=42`，主要集中在 `land/items/movement/market` 与 `Config/Maps/DefaultMap.lua`。
-
-- 观察：`lua_env.md` 与现状存在文档/实现差异，`src/` 里仍可见 `rawget` 与 `os.clock` 依赖点，且回合引擎依赖 `coroutine.*`。
-  证据：`init.lua:14`、`CompositionRoot.lua:92`、`Await.lua:170`、`Scheduler.lua/TurnScript.lua`。
-
-- 观察：`CompositionRoot` 去掉 `rawget` 后，直接用字段访问会把“实例”误判为“类”，导致回归大面积失败。
-  证据：首次回归出现 `attempt to index field 'turn' (a nil value)` 等 111 个失败；修复类/实例判定后恢复通过。
-
-- 观察：`RuntimeEventBridge` 的 `debug.getupvalue` 预检查在现有测试契约中仍有价值，不能机械移除。
-  证据：`presentation_ui` 用例要求“wrapped TriggerCustomEvent”不应被调用；恢复 guarded 预检查后该断言恢复通过。
+- 观察：`Data/UIManagerNodes.lua` 已包含 `位置_取消按钮`（`EButton`），可直接作为 unlock 输入，不需要新增 UI 资源节点。
+  证据：`Data/UIManagerNodes.lua` 中存在条目 `{"位置_取消按钮", "EButton"}`。
 
 ## 决策日志
 
 
-- 决策：R18 采用“先消除硬失败，再消除语义风险，最后补静态守卫”的顺序，不一次性全仓替换。
-  理由：`Await.seconds` 与 `type~=number` 属于发布环境风险最高路径，先收敛可立即降低线上不确定性。
-  日期/作者：2026-03-03 / Codex
+- 决策：将原计划重构为单一可执行计划文档，文件位置固定在 `.agents/plan.md`。
+  理由：仓库约束要求该文件始终符合规范，分散在多个计划文件会导致实施入口不唯一。
+  日期/作者：2026-03-04 / Codex
 
-- 决策：对数值文本输出采用“金额/步数/回合等业务数值优先 `NumberUtils.format_integer_part`，标识类值（id/index）用 `tostring`”的双轨策略。
-  理由：满足 `lua_env` 无隐式转换约束，同时避免把标识符误格式化为金额语义。
-  日期/作者：2026-03-03 / Codex
+- 决策：保留“射线仅预览、场景点选锁定、确认按钮提交锁定值”的交互主线，不改业务意图。
+  理由：这是用户已确认的核心行为约束，也是防误选问题的关键。
+  日期/作者：2026-03-04 / Codex
 
-- 决策：`coroutine` 相关暂不迁移，纳入“文档对齐 + 启动前置检查”而非架构替换。
-  理由：当前回合引擎核心即协程模型，迁移成本高且超出本轮“沙盒疑点收敛”范围。
-  日期/作者：2026-03-03 / Codex
+- 决策：数值解析规则写入执行细则，新增实现一律使用 `NumberUtils`，禁止 `tonumber` 与 `type(x)=="number"`。
+  理由：仓库 AGENTS 约束已明确此规则，必须前置到计划里避免实施偏差。
+  日期/作者：2026-03-04 / Codex
 
-- 决策：在 `tests/internal/forbidden_globals.lua` 扩展规则，守卫 `rawget`、`type==/~=number`、`os.clock`、`debug.traceback` 在 `src/` 的出现。
-  理由：把本轮问题固化为可执行门禁，避免回归。
-  日期/作者：2026-03-03 / Codex
-
-- 决策：保留 `RuntimeEventBridge` 中“带 guard 的 `debug.getupvalue` 预检查”，不纳入本轮禁用项。
-  理由：该检查承担“wrapped TriggerCustomEvent 降级避让”契约，且已对 `debug` 缺失做守卫，不会在沙盒中硬失败。
-  日期/作者：2026-03-03 / Codex
+- 决策：将 `位置_取消按钮` 定义为“解锁重选”而非“关闭面板”，仅在已锁定时生效。
+  理由：用户明确要求“用取消按钮 unlock”；把取消语义绑定到解锁可覆盖“选错重选”核心用例，同时保持面板停留在当前选择流程。
+  日期/作者：2026-03-04 / Codex
 
 ## 结果与复盘
 
 
-R18 已完成。A 类与 B 类目标全部落地，C 类（`coroutine` 文档对齐）保持追踪但不在本轮改动范围。
+本次交付完成了“计划文档规范化”与“旧计划文件退役”，尚未执行代码实现。结果是下一位实施者可只读 `.agents/plan.md` 就理解目标、范围、接口、步骤和验证方式。
 
-完成结果如下：`Await.seconds` 不再依赖 `os.clock`；`TurnCameraPolicy` 改为 `NumberUtils.to_integer`；`rawget` 在 `src/` 清零；高优先级数值拼接点已在主链路完成显式转换；`forbidden_globals` 新规则生效并通过。定向命令与全量回归均已通过，回归输出为 `All regression checks passed (231)`。
-
-本轮经验教训是：替换 `rawget` 时必须保留“类/实例判定”的原始语义，否则会触发隐蔽的大面积行为回退；此外，`debug` 相关逻辑应区分“硬依赖”与“有守卫的降级检查”。
+仍未完成的部分是代码改造与测试落地；进入实施阶段后必须持续更新本节，记录每个里程碑是否达成了可观察行为。
 
 ## 背景与导读
 
 
-本任务只处理运行时相关的 `src/` 与 `Config/`，目标不是重构玩法，而是让代码在 Eggy 沙盒限制下行为可预期。这里的“沙盒限制”指 `docs/eggy/lua_env.md` 里声明的环境约束，核心包括库裁剪、数值语义差异、以及字符串与数字不能隐式拼接。
+本任务涉及“回合流程层、UI 同步层、运行时 Host 封装层、场景渲染层、目标选择 UI 事件层、测试层”六个区域。它们关系如下：
 
-关键入口分三组。第一组是回合协程与等待逻辑：`src/game/runtime_coroutine/Await.lua`、`Scheduler.lua`、`TurnScript.lua`。第二组是回合到表现层的关键路径：`src/game/flow/turn/TurnCameraPolicy.lua`、`src/game/flow/turn/TurnRoll.lua`、`src/game/systems/movement/Movement.lua`。第三组是文本构造密集区：`src/game/systems/land/*`、`src/game/systems/items/*`、`src/game/systems/market/*` 与 `Config/Maps/DefaultMap.lua`。
+回合流程每帧调用 `ui_sync` 端口；`ui_sync` 再驱动目标选择运行时逻辑；运行时逻辑通过 HostRuntimePort 获取射线命中与场景点击；渲染层负责候选标记和箭头显隐；UI 层负责确认/取消按钮与意图分发；测试层验证“预览、锁定、解锁、提交、清理”链路。
 
-本计划把疑点分为三类。A 类是可直接导致发布环境错误的硬依赖（例如 `os.clock` 未守卫、`rawget`）；B 类是数值语义风险（`type~=number`、隐式拼接）；C 类是文档与实现不一致（`coroutine` 依赖与 `lua_env` 描述差异）。R18 只承诺完成 A+B，并把 C 变成可追踪动作。
+关键术语定义：
+
+“预览（hover）”指准星射线命中候选地块后，仅更新视觉指示，不写最终提交值。
+
+“锁定（lock）”指玩家在场景里点击候选地块后，记录 `locked_option_id`；此后暂停射线驱动，避免目标漂移。
+
+“解锁（unlock）”指点击 `位置_取消按钮` 后清空 `locked_option_id`，恢复射线预览，允许重新 hover 与重新点选锁定。
+
+“提交（confirm submit）”指点击 `位置_确认按钮` 后发送 `choice_select`，其 `option_id` 必须来自 `locked_option_id`。
+
+候选数据来源是 `pending choice options`；数值转换统一使用 `NumberUtils`。
 
 ## 里程碑
 
 
-里程碑 1 只处理“硬失败点”。范围是 `Await.seconds`、`TurnCameraPolicy`、`init.lua`、`CompositionRoot.lua`。完成标准是：`src/` 不再出现 `rawget(`；`TurnCameraPolicy` 不再使用 `type(... ) ~= "number"`；`Await.seconds` 在 `os=nil` 下可安全返回，不抛异常。
+### 里程碑 1：端口与契约铺设
 
-里程碑 2 处理“高优先级隐式数值拼接”。范围锁定 gameplay 主链路与默认地图构造，不做全仓“机械替换”。完成标准是：本计划列出的目标文件完成显式转换；关键路径回归通过；不引入新的 `tonumber` 或 `type==number`。
 
-里程碑 3 处理“守卫与证据”。范围是 `tests/internal/forbidden_globals.lua` 与相关回归入口。完成标准是：新增规则生效，触发时能给出明确替代建议；常规回归全绿。
+范围是打通每帧调用入口和 UI 契约，不引入复杂渲染逻辑。完成后系统具备 `step_target_selection` 调用链，`target` screen 拥有 `confirm = "位置_确认按钮"` 与 `cancel = "位置_取消按钮"` 并能分别触发确认与解锁意图。
 
-里程碑 4 进行“闭环验收与文档回填”。范围是测试执行、证据摘录、计划更新。完成标准是：`进度/决策/结果` 完整同步，计划可被新人单独执行。
+工作内容：
+
+- 在 `src/game/flow/turn/GameplayLoopPorts.lua` 增加 `ui_sync.step_target_selection(game, state, dt)` 端口定义。
+- 在 `src/game/flow/turn/GameplayLoopUISyncDefaults.lua` 增加同名 no-op 默认实现。
+- 在 `src/game/flow/turn/GameplayLoopTickSteps.lua` 每 tick 调用该端口。
+- 在 `src/presentation/api/presentation_ports/UISyncPorts.lua` 实现转发入口。
+- 在 `src/presentation/canvas/target_choice/nodes.lua` 为 `target` screen 增加确认/取消按钮映射。
+- 在 `src/presentation/canvas/target_choice/intents.lua` 绑定 `位置_确认按钮` 到确认 intent，并绑定 `位置_取消按钮` 到 unlock intent。
+- 在 `src/presentation/api/ui_view_service/core.lua` 增加按钮状态同步：未锁定时禁用确认并禁用（或隐藏）取消，已锁定时启用确认与取消。
+- 在 `src/app/bootstrap/UIBootstrap.lua` 补齐 `位置_确认按钮` 与 `位置_取消按钮` 的 required click nodes。
+
+验收：运行相关 UI 测试后，确认/取消按钮都可触发对应意图、按钮状态与锁定状态一致、tick 链路无报错，且旧调用方不受影响。
+
+### 里程碑 2：射线封装与场景点选锁定
+
+
+范围是封装 HostRuntime 射线入口和场景点选输入，确保业务层不直连底层 `GameAPI`。完成后可通过统一接口取得命中单位并接收点选锁定事件。
+
+工作内容：
+
+- 新建 `src/presentation/api/host_runtime/Raycast.lua`，提供：
+  - `build_camera_ray(role, cfg)`
+  - `pick_first_hit_unit(start_pos, end_pos, cfg)`
+  - `get_unit_id(unit)`
+  - `resolve_hit_position(...)`
+- 在 `src/presentation/api/HostRuntimePort.lua` 暴露上述能力与场景点选注册接口。
+- 在配置 `src/core/config/GameplayRules.lua` 增加 target-pick 射线参数：`eye_offset_y`、`ray_distance`、`nearest_tile_max_distance` 及 override hook。
+
+验收：模拟或实机调用时，业务层仅依赖 HostRuntimePort 即可获得命中信息；底层 API 缺失时不中断流程并打 warn_once 日志。
+
+### 里程碑 3：TargetChoiceEffects 运行时行为落地
+
+
+范围是实现“进入/逐帧/点选锁定/取消解锁/退出”全流程。完成后玩家可看到候选标记与箭头，点选后可确认提交且不被后续射线改写；若选错可取消解锁并重选。
+
+工作内容：
+
+- 新建 `src/presentation/render/TargetChoiceEffects.lua`，实现 `enter`、`step`、`on_scene_pick`、`on_unlock`、`leave`。
+- `enter`：
+  - 仅对 `roadblock_target` / `demolish_target` 生效。
+  - 用 `NumberUtils` 解析候选 option，初始化 `hover_option_id` 与 `locked_option_id`。
+  - 按候选数量生成 `可选择地块` 标记，位置为候选 tile 的 `y + 1.6`。
+  - `选择地块箭头` 保持单实例并对准当前预览。
+  - 未锁定前禁用 `位置_确认按钮`。
+- `step`：
+  - 未锁定时执行射线命中更新 hover；锁定后暂停射线，仅维持展示。
+  - 命中优先按 `unit_id -> tile_index`，失败后按命中点最近候选匹配（阈值限制）。
+- `on_scene_pick`：
+  - 只接受 owner role。
+  - 命中候选后写入 `locked_option_id`，同步 `pending_choice_selected_option_id`，启用确认按钮。
+- `on_unlock`：
+  - 由 `位置_取消按钮` 触发，仅在 `locked_option_id ~= nil` 时生效。
+  - 清空 `locked_option_id`，禁用确认按钮，恢复射线更新；`pending_choice_selected_option_id` 保留最后一次锁定值，但未重新锁定前不得提交。
+  - 同步 UI：取消按钮恢复未锁定态（禁用或隐藏）。
+- `leave`：
+  - 清理生成的候选标记，隐藏箭头，注销点选回调。
+
+验收：实机场景中可观察预览变化、锁定后暂停射线、取消后恢复射线并允许重锁定、确认提交锁定值、退出后无残留单位。
+
+### 里程碑 4：自动化测试与回归验证
+
+
+范围是补齐最小完备测试矩阵，证明行为正确且可回归。完成后应有可重复执行的测试证据。
+
+工作内容：在 `tests/suites/presentation_ui.lua` 新增或更新以下测试：
+
+- `target_confirm_dispatches_selected_option`
+- `target_pick_tick_updates_selection_on_hit_change`
+- `target_pick_tick_ignores_non_candidate`
+- `target_pick_scene_click_locks_target_and_pauses_raycast`
+- `target_pick_confirm_requires_lock`
+- `target_pick_cancel_unlocks_and_resumes_raycast`
+- `target_pick_cancel_noop_when_unlocked`
+- `target_pick_leave_hides_scene_units`
+- `target_pick_enter_spawns_candidate_markers_at_height_1_6`
+- `target_pick_degrades_without_raycast_api`
+
+验收：测试稳定通过，且至少一个场景能在改动前失败、改动后通过，证明不是“只改结构不改行为”。
 
 ## 工作计划
 
 
-第一步会在 `src/game/runtime_coroutine/Await.lua` 去掉对 `os.clock` 的直接依赖。实现方式是把 `await.seconds` 改为“优先使用 `opts.now_fn`；不存在则使用安全降级路径并立即完成等待”。这样可以在沙盒不提供 `os` 时保持可运行，并避免死等。
+实施顺序采用“先接口、后行为、再测试”的增量策略，避免一次性大改难以定位问题。
 
-第二步会在 `src/game/flow/turn/TurnCameraPolicy.lua` 引入 `NumberUtils`，把 `type(current_index) ~= "number"` 改为 `NumberUtils.to_integer(current_index)` 判定，确保 `integer/fixed/number` 都可进入同一逻辑分支。该变更直接影响“当前玩家无效时寻找下一位玩家”的兜底路径。
+第一步先完成端口、节点、意图的最小联通，这一步保证每帧驱动入口存在且不破坏现有流程，并把 `位置_取消按钮` 纳入 unlock 输入。第二步封装射线与点选事件，让后续运行时逻辑依赖稳定接口而不是底层 API 细节。第三步实现 `TargetChoiceEffects` 并接入 UI 打开/关闭生命周期，确保场景单位管理、锁定/解锁状态切换规则完整。最后补齐测试与日志，形成可回归证据链。
 
-第三步会移除 `rawget` 依赖。`src/app/init.lua` 用 `(_G and _G.STARTUP_TEST_PROFILE)` 读取启动 profile，并保留默认值兜底。`src/game/core/runtime/CompositionRoot.lua` 用显式字段与函数类型判断替代 `rawget(game_or_class, ...)`。
+涉及文件清单（仓库相对路径）：
 
-第四步会修复里程碑 2 的隐式拼接目标文件。预期修改文件包括 `Config/Maps/DefaultMap.lua`、`TurnRoll.lua`、`LocationOps.lua`、`ItemHandlers.lua`、`ItemPostEffects.lua`、`ItemRoadblock.lua`、`LandRules.lua`、`BaseLandEffects.lua`、`Choice.lua`、`Purchase.lua`、`Movement.lua`、`ItemDemolish.lua`、`ActionAnimTipText.lua`。所有业务数值文本改为 `NumberUtils.format_integer_part(...)` 或 `tostring(...)` 的显式转换。
-
-第五步会把规则固化到 `tests/internal/forbidden_globals.lua`，新增对 `rawget`、`type==/~=number`、`os.clock`、`debug.traceback` 的检测，并在 `replacement` 字段给出统一替代方向（`NumberUtils`、运行时端口、`traceback` 等）。
+- `src/game/flow/turn/GameplayLoopPorts.lua`
+- `src/game/flow/turn/GameplayLoopUISyncDefaults.lua`
+- `src/game/flow/turn/GameplayLoopTickSteps.lua`
+- `src/presentation/api/presentation_ports/UISyncPorts.lua`
+- `src/presentation/api/HostRuntimePort.lua`
+- `src/presentation/api/host_runtime/Raycast.lua`（新增）
+- `src/presentation/render/TargetChoiceEffects.lua`（新增）
+- `src/presentation/render/BoardScene.lua`
+- `src/presentation/ui/UIModalPresenter.lua`
+- `src/presentation/canvas/target_choice/nodes.lua`
+- `src/presentation/canvas/target_choice/intents.lua`
+- `src/presentation/api/ui_view_service/core.lua`
+- `src/app/bootstrap/UIBootstrap.lua`
+- `src/core/config/GameplayRules.lua`
+- `tests/suites/presentation_ui.lua`
+- `Data/UIManagerNodes.lua`（已存在 `位置_取消按钮`，本任务用作节点来源校验）
 
 ## 具体步骤
 
 
-所有命令在仓库根目录 `C:\Users\Lzx_8\Desktop\dev\repo\monopoly` 执行。
+所有命令都在仓库根目录执行：`/Users/gangan/.codex/worktrees/08ad/monopoly`。
 
-先记录实施前快照，确保后续可对比。
+1. 建立工作基线，确认仅有预期计划文件变动：
 
     git status --short
-    lua -e "local old_os=os; os=nil; local await=require('src.game.runtime_coroutine.Await'); local s={_seconds_wait={}}; local ok,err=pcall(function() await.seconds(s,1,{}) end); print('await.seconds pre=',ok,err); os=old_os"
 
-按里程碑 1 修改并做定向检查。
+2. 先做端口与 tick 链路改造，再跑快速语法检查（若仓库已有脚本则用仓库脚本）：
 
-    lua tests/internal/forbidden_globals.lua
-    lua -e "local old_os=os; os=nil; local await=require('src.game.runtime_coroutine.Await'); local s={_seconds_wait={}}; local ok,err=pcall(function() await.seconds(s,1,{}) end); print('await.seconds post=',ok,err); os=old_os"
+    rg "step_target_selection" src
 
-按里程碑 2 修改后跑主链路回归。
+3. 实现 HostRuntime 射线封装后，用搜索确认业务层不直接调用底层 raycast：
 
-    lua -e "package.path='?.lua;'..package.path; local _=require('tests.suites.test_profiles'); print('test_profiles load ok')"
-    lua tests/regression.lua
+    rg "raycast_unit|get_obstacle_by_raycast|get_first_customtriggerspace_in_raycast" src/presentation
 
-完成里程碑 3 后再次执行静态门禁，确认新规则不过度误伤。
+4. 实现 `TargetChoiceEffects` 并接入 modal 生命周期后，检查关键函数与解锁状态字段已落位：
 
-    lua tests/internal/forbidden_globals.lua
+    rg "TargetChoiceEffects|locked_option_id|hover_option_id|on_unlock|位置_取消按钮" src
 
-最后整理变更并回填计划文档。
+5. 更新测试并执行：
 
-    git diff -- .agents/plan.md src tests docs
-    git status --short
+    lua tests/run.lua presentation_ui
+
+   若仓库使用其他测试入口，改为等价命令并记录实际命令。
+
+6. 实机验收时开启日志过滤观察：
+
+    rg "\[TargetPick\]" <运行日志文件路径>
+
+   日志文件路径按本地运行环境填写并回写到本节，保证下一位执行者可复现。
 
 ## 验证与验收
 
 
-验收分为“行为”和“约束”两条线。行为线要求回归通过，至少包含 `lua tests/regression.lua` 全量运行成功；约束线要求 `lua tests/internal/forbidden_globals.lua` 不再命中本轮新增禁用模式。
+自动化验收标准：
 
-对 `Await.seconds` 的专项验收必须包含 `os=nil` 场景。变更前脚本输出应出现 `attempt to index global 'os'`；变更后脚本输出必须是 `ok=true` 或等价的非异常结果。
+运行 UI 测试套件后，新增测试全部通过；其中 `target_pick_confirm_requires_lock` 必须证明“未锁定不提交、锁定后才提交”，`target_pick_cancel_unlocks_and_resumes_raycast` 必须证明“取消后恢复 hover，且重新锁定后才能提交”。
 
-对镜头兜底逻辑的专项验收必须覆盖“当前位玩家无效，需寻找下一位可跟随玩家”的路径。最低标准是对应单测通过；如果已有可复现场景，再补一次默认部署实测，确认镜头仍跟随当前回合玩家。
+行为验收标准（手工）：
+
+1. 进入目标选择后，候选数量与 `可选择地块` 标记数量一致，且都在 `y + 1.6`。
+2. 准星扫过候选时只改变预览箭头，不直接改最终提交值。
+3. 场景点击候选后进入锁定态，确认按钮可点，射线暂停。
+4. 锁定后点击 `位置_取消按钮` 会解锁并恢复射线预览；此时确认按钮不可提交。
+5. 解锁后重新场景点选可再次锁定；点击确认提交的 `option_id` 等于最新锁定值。
+6. 关闭选择界面后标记和箭头都清理，无残留与旧回调。
+7. 射线接口异常时流程不崩溃，并输出一次告警日志。
 
 ## 可重复性与恢复
 
 
-本计划按里程碑增量执行，每个里程碑都可以独立提交和回滚。若里程碑 2 出现回归，优先保留里程碑 1 与里程碑 3，临时回退仅数值拼接改动，再逐文件二分定位问题。禁止使用破坏性历史命令，恢复方式以普通反向提交为准。
+本计划步骤是可重复执行的：重复进入选择界面不会累积旧标记，重复执行“锁定 -> 取消解锁 -> 重锁定”不会残留旧锁定态，`leave` 必须保证清理。
 
-若新增静态规则出现误报，先在计划的“决策日志”记录误报模式，再在规则里做白名单或更精确正则，避免直接删除守卫。
+若实施中出现回归，按以下顺序恢复：
+
+1. 保留当前改动，先用测试定位是“端口链路、射线封装、运行时状态、UI 意图”哪一层失败。
+2. 临时禁用 `TargetChoiceEffects.step` 调用验证是否为新增逻辑导致。
+3. 若确认是射线 API 兼容问题，保留 wrapper 接口，回退 wrapper 内部实现到降级路径，不回退业务层调用点。
+
+禁止使用破坏性命令清理工作树；所有回退通过可审计的提交或明确 patch 完成。
 
 ## 产物与备注
 
 
-实施前扫描证据（2026-03-03）：
+预期关键日志片段（示例）应包含：
 
-    os.clock 命中:
-      src/app/bootstrap/runtime_install/RuntimePortDefaults.lua:45
-      src/core/runtime_ports/DefaultPorts.lua:142
-      src/game/runtime_coroutine/Await.lua:170
+    [TargetPick] enter choice_id=... owner_id=... options=...
+    [TargetPick] spawn_candidate_markers count=3 height_offset=1.6
+    [TargetPick] hover_changed old=101 new=103 source=raycast tile_index=103
+    [TargetPick] lock_target option_id=103 role_id=1
+    [TargetPick] raycast_paused_by_lock locked_option_id=103
+    [TargetPick] unlock_by_cancel old_locked_option_id=103
+    [TargetPick] raycast_resumed_by_unlock hover_option_id=102
+    [TargetPick] confirm_submit choice_id=... option_id=103 locked=true
+    [TargetPick] leave reason=modal_closed
 
-    type~=number 命中:
-      src/game/flow/turn/TurnCameraPolicy.lua:18
-
-    rawget 命中:
-      src/app/init.lua:14
-      src/game/core/runtime/CompositionRoot.lua:92
-
-    高置信隐式拼接命中:
-      high_confidence_numeric_concat_lines=42
-
-`lua_env.md` 关键约束摘录（用于本计划对照）：移除 `io/os/package/debug`，不支持字符串与数字隐式转换。
-
-实施后验收证据（2026-03-03）：
-
-    lua tests/internal/forbidden_globals.lua
-      forbidden_globals ok
-
-    lua -e "... os=nil ... await.seconds ..."
-      await.seconds os=nil ok= true type= table
-
-    lua tests/regression.lua
-      All regression checks passed (231)
-      dep_rules ok
-      tick ok
-      forbidden_globals ok
+如日志量过大，只保留状态变化与异常首次日志，避免每帧刷屏。
 
 ## 接口与依赖
 
 
-本轮不新增第三方依赖，只依赖现有 `NumberUtils`、回归测试框架和 Lua 运行环境。实施后应满足以下接口约束。
+必须使用并遵守以下接口与依赖约束：
 
-`src/game/runtime_coroutine/Await.lua` 中 `await.seconds(session, sec, opts)` 继续保持原函数签名，不引入调用方破坏性改动；仅调整内部默认计时来源和降级行为。
+- UI 同步端口：`ui_sync.step_target_selection(game, state, dt)`
+- 运行时射线封装：`HostRuntimePort -> host_runtime/Raycast.lua`
+- 目标选择运行时模块：`TargetChoiceEffects.enter/step/on_scene_pick/on_unlock/leave`
+- 目标选择 UI 节点：`target.confirm = "位置_确认按钮"`，`target.cancel = "位置_取消按钮"`，取消事件语义固定为 unlock（不关闭选择屏）
+- 数值转换工具：`NumberUtils`（禁止新增 `tonumber` 与 `type(x)=="number"`）
 
-`src/game/flow/turn/TurnCameraPolicy.lua` 中 `sync_follow(game, state, ports, ui_refreshed)` 对外行为不变，仍由当前回合玩家驱动跟随；内部类型判定改用 `NumberUtils`。
+建议保留的核心数据字段：
 
-`tests/internal/forbidden_globals.lua` 的输出格式保持兼容，新增规则也必须按 `forbidden_globals: path:line uses ...` 的可读形式报错，便于 CI 与本地定位。
+- `hover_option_id`
+- `locked_option_id`
+- `pending_choice_selected_option_id`
+- `target_pick_raycast_override`
+
+这些字段在里程碑结束时必须可追踪、可测试，并在日志中可定位状态变化。
+
+## 假设与默认值
+
+
+- 地图中存在模板单位 `可选择地块` 与 `选择地块箭头`。
+- `Data/UIManagerNodes.lua` 中存在 `位置_取消按钮`，并可在 `位置选择屏` 被 `nodes.lua` 正确映射。
+- 候选地块索引可通过场景 tile 数据反查。
+- 射线默认参数：
+  - `eye_offset_y = 1.2`
+  - `ray_distance = 120.0`
+  - `nearest_tile_max_distance = 4.0`
+- 仅 `roadblock_target` / `demolish_target` 启用该机制。
+
+若任一假设不成立，先在“意外与发现”记录证据，再在“决策日志”记录替代策略。
 
 ## 文档更新记录
 
 
-2026-03-03（R18 创建）：基于最新代码库重扫，确认本轮疑点仍存在（`os.clock`、`type~=number`、`rawget`、高置信隐式拼接 42 行），并将旧的“代码膨胀收敛”计划替换为“沙盒限制疑点收敛”可执行计划。改动原因是当前用户目标已切换为运行时沙盒风险治理，旧计划不再对应现阶段任务。
-
-2026-03-03（R18 完成）：完成全部 4 个里程碑并通过回归。过程中修正了 `CompositionRoot` 的类/实例判定回退问题，并保留了 `RuntimeEventBridge` 的 guarded `debug.getupvalue` 预检查以满足既有契约。改动原因是保证“去除硬依赖”不破坏现有行为，并用测试闭环确认收敛效果。
+- 2026-03-04 / Codex：将 `PLAN.md` 重构并迁移为 `.agents/plan.md` 的可执行计划版本，原因是满足 `.agents/harness/PLANS.md` 的强制结构、活文档维护要求与新手可执行标准；随后删除旧 `PLAN.md` 以消除双计划入口。
+- 2026-03-04 / Codex：根据用户新增的 `位置_取消按钮`，将流程更新为“lock 后可 cancel 解锁回到 hover”，并同步调整了里程碑、UI 契约、测试矩阵、验收标准与日志样例，原因是覆盖“选错后重新选择”用例且保持防误选语义。
