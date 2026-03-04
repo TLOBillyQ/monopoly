@@ -40,6 +40,9 @@ function renderer.open_market_panel(state, choice, choice_id, market)
     allow_cancel = choice.allow_cancel,
     cancel_label = choice.cancel_label,
     selected_option_id = state.pending_choice_selected_option_id,
+    active_tab = choice.active_tab or (choice.meta and choice.meta.active_tab) or nil,
+    page_index = choice.page_index or (choice.meta and choice.meta.page_index) or nil,
+    page_count = choice.page_count or (choice.meta and choice.meta.page_count) or nil,
   }
   ui.market_active = market_view.refresh_market(state, market_payload) == true
 end

@@ -4,6 +4,7 @@ local item_slot_data = require("src.game.flow.turn.ItemSlotData")
 local validator = require("src.game.flow.turn.TurnDispatchValidator")
 local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
 local runtime_state = require("src.core.RuntimeState")
+local market_service = require("src.game.systems.market.MarketService")
 
 local turn_dispatch = {}
 
@@ -95,7 +96,10 @@ local function _dispatch_action(game, state, action, opts, dispatch_ctx)
   end
   if action.type == "ui_button"
       or action.type == "choice_select"
-      or action.type == "choice_cancel" then
+      or action.type == "choice_cancel"
+      or action.type == "market_page_prev"
+      or action.type == "market_page_next"
+      or action.type == "market_tab_select" then
     state.ui_dirty = true
   end
   if action.type == "ui_button" then
@@ -160,6 +164,18 @@ local function _dispatch_action(game, state, action, opts, dispatch_ctx)
       turn_dispatch.clear_choice(state, opts)
     end
     return { status = "applied" }
+  elseif action.type == "market_page_prev" or action.type == "market_page_next" or action.type == "market_tab_select" then
+    local choice = state.pending_choice
+    if not choice or choice.kind ~= "market_buy" then
+      return { status = "rejected" }
+    end
+    if not validator.validate_choice_action(game, action, choice) then
+      return { status = "rejected" }
+    end
+    if market_service.choice.apply_navigation(game, choice, action) then
+      return { status = "applied" }
+    end
+    return { status = "rejected" }
   end
   return { status = "rejected" }
 end

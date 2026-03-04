@@ -7,6 +7,7 @@ local number_utils = require("src.core.NumberUtils")
 local vehicle_catalog = require("src.core.config.VehicleCatalog")
 
 local market_view = {}
+local VEHICLE_TAB_ENABLED = false
 
 local items_by_id = {}
 for _, cfg in ipairs(items_cfg) do
@@ -117,6 +118,49 @@ local function _set_market_slot_visible(ui, refs, slot, opt)
   return opt_id
 end
 
+local function _set_control_visible(ui, name, visible, enabled)
+  if not name then
+    return
+  end
+  ui:set_visible(name, visible == true)
+  ui:set_touch_enabled(name, enabled == true)
+end
+
+local function _resolve_market_tab(market)
+  local tab = market and market.active_tab or nil
+  if tab == "item" or tab == "skin" or tab == "vehicle" then
+    return tab
+  end
+  return "item"
+end
+
+local function _resolve_market_page_index(market)
+  local page_index = number_utils.to_integer(market and market.page_index) or 1
+  if page_index < 1 then
+    return 1
+  end
+  return page_index
+end
+
+local function _resolve_market_page_count(market)
+  local page_count = number_utils.to_integer(market and market.page_count) or 1
+  if page_count < 1 then
+    return 1
+  end
+  return page_count
+end
+
+local function _refresh_market_controls(ui, market)
+  local active_tab = _resolve_market_tab(market)
+  local page_index = _resolve_market_page_index(market)
+  local page_count = _resolve_market_page_count(market)
+  _set_control_visible(ui, market_layout.page_prev, true, page_index > 1)
+  _set_control_visible(ui, market_layout.page_next, true, page_index < page_count)
+  _set_control_visible(ui, market_layout.tab_item, true, active_tab ~= "item")
+  _set_control_visible(ui, market_layout.tab_skin, true, active_tab ~= "skin")
+  _set_control_visible(ui, market_layout.tab_vehicle, true, VEHICLE_TAB_ENABLED and active_tab ~= "vehicle")
+end
+
 function market_view.refresh_market_selection(state, option_id)
   local ui = state.ui
   assert(ui ~= nil, "missing market ui")
@@ -193,6 +237,7 @@ function market_view.refresh_market(state, market)
   end
 
   ui:set_touch_enabled(market_layout.selected_card, false)
+  _refresh_market_controls(ui, market)
 
   ui:set_visible(market_layout.confirm_button, true)
   ui:set_touch_enabled(market_layout.confirm_button, true)
@@ -223,6 +268,11 @@ function market_view.close_market_panel(state)
     ui:set_touch_enabled(name, false)
   end
   ui:set_touch_enabled(market_layout.selected_card, false)
+  _set_control_visible(ui, market_layout.page_prev, false, false)
+  _set_control_visible(ui, market_layout.page_next, false, false)
+  _set_control_visible(ui, market_layout.tab_item, false, false)
+  _set_control_visible(ui, market_layout.tab_skin, false, false)
+  _set_control_visible(ui, market_layout.tab_vehicle, false, false)
   local empty_key = _resolve_ref_key(state.ui_refs, market_layout.empty_ref_key)
   local node = ui.query_node(market_layout.selected_card)
   runtime.set_node_texture_keep_size(node, empty_key)

@@ -14,12 +14,16 @@ function choice_slice.build_choice_and_market(game, env, ui_state)
   end
   local market = nil
   if choice and choice.kind == "market_buy" then
+    local meta = choice.meta or {}
     market = {
       choice_id = choice.id,
       options = choice.options,
       allow_cancel = choice.allow_cancel,
       cancel_label = choice.cancel_label,
       selected_option_id = ui_state and ui_state.pending_choice_selected_option_id or nil,
+      active_tab = choice.active_tab or meta.active_tab,
+      page_index = choice.page_index or meta.page_index,
+      page_count = choice.page_count or meta.page_count,
     }
   end
   return choice, market

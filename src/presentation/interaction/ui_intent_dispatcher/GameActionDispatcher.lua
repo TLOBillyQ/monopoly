@@ -80,6 +80,33 @@ function game_action_dispatcher.dispatch(state, game, intent, opts, action_port,
     return true
   end
 
+  if intent_type == "market_page_prev" or intent_type == "market_page_next" then
+    if not intent.choice_id then
+      logger.warn(intent_type .. " missing choice_id")
+      return true
+    end
+    action_port.dispatch_action(game, state, {
+      type = intent_type,
+      choice_id = intent.choice_id,
+      actor_role_id = intent.actor_role_id,
+    }, opts)
+    return true
+  end
+
+  if intent_type == "market_tab_select" then
+    if not intent.choice_id or not intent.tab then
+      logger.warn("market_tab_select missing payload:", tostring(intent.choice_id), tostring(intent.tab))
+      return true
+    end
+    action_port.dispatch_action(game, state, {
+      type = "market_tab_select",
+      choice_id = intent.choice_id,
+      tab = intent.tab,
+      actor_role_id = intent.actor_role_id,
+    }, opts)
+    return true
+  end
+
   return false
 end
 

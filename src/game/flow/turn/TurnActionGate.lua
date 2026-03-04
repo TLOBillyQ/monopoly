@@ -7,6 +7,9 @@ local input_blocked_types = {
   choice_cancel = true,
   market_confirm = true,
   market_select = true,
+  market_page_prev = true,
+  market_page_next = true,
+  market_tab_select = true,
   popup_confirm = true,
 }
 
