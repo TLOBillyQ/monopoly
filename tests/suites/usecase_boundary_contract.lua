@@ -57,6 +57,17 @@ local function _test_turn_action_port_normalize_auto_intent_contract()
   end)
 end
 
+local function _test_turn_action_port_normalize_auto_intent_rejects_missing_actor()
+  local state = {}
+  local intent = { type = "ui_button", id = "auto" }
+  _with_patches({
+    { key = "UIManager", value = { client_role = nil } },
+  }, function()
+    local out = turn_action_port.normalize_auto_intent(state, intent)
+    _assert_eq(out, nil, "normalize should reject auto intent without actor context")
+  end)
+end
+
 local function _test_gameplay_loop_clock_contract_split_sources()
   runtime_ports.reset_for_tests()
   local default_ports = gameplay_loop_ports.resolve(nil)
@@ -102,6 +113,7 @@ return {
     { name = "turn_action_port_resolve_defaults", run = _test_turn_action_port_resolve_defaults },
     { name = "turn_action_port_override_precedence", run = _test_turn_action_port_override_precedence },
     { name = "turn_action_port_normalize_auto_intent_contract", run = _test_turn_action_port_normalize_auto_intent_contract },
+    { name = "turn_action_port_normalize_auto_intent_rejects_missing_actor", run = _test_turn_action_port_normalize_auto_intent_rejects_missing_actor },
     { name = "gameplay_loop_clock_contract_split_sources", run = _test_gameplay_loop_clock_contract_split_sources },
   },
 }

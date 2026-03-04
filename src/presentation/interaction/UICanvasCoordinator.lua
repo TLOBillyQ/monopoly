@@ -48,8 +48,8 @@ function coordinator.switch(ui, target)
   assert(ui ~= nil, "missing ui")
   local target_name = target or coordinator.CANVAS_BASE
   local debug_by_role = ui.debug_visible_by_role
-  local keep_debug = ui.debug_visible == true
-  if keep_debug ~= true and type(debug_by_role) == "table" then
+  local keep_debug = false
+  if type(debug_by_role) == "table" then
     for _, enabled in pairs(debug_by_role) do
       if enabled == true then
         keep_debug = true

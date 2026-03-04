@@ -3,6 +3,8 @@ local ui_event_bindings = require("src.presentation.interaction.UIEventBindings"
 local ui_intent_dispatcher = require("src.presentation.interaction.UIIntentDispatcher")
 local canvas_registry = require("src.presentation.canvas_runtime.CanvasRegistry")
 local local_actor_resolver = require("src.presentation.canvas_runtime.LocalActorResolver")
+local host_runtime = require("src.presentation.api.HostRuntimePort")
+local logger = require("src.core.Logger")
 
 local router = {}
 
@@ -32,9 +34,33 @@ function router.bind(state, resolve_game)
     end,
   }
 
+  local function _requires_event_actor(intent)
+    if type(intent) ~= "table" then
+      return false
+    end
+    if intent.type == "toggle_action_log" then
+      return true
+    end
+    return intent.type == "ui_button" and intent.id == "auto"
+  end
+
+  local function _try_attach_event_actor(intent, data)
+    if not _requires_event_actor(intent) or intent.actor_role_id ~= nil then
+      return true
+    end
+    local actor_role_id = local_actor_resolver.resolve_from_event(state, data)
+    if actor_role_id == nil then
+      host_runtime.show_tips("当前操作缺少玩家上下文，已忽略", 2.0)
+      logger.warn("ui intent rejected: missing event role", tostring(intent.type), tostring(intent.id))
+      return false
+    end
+    intent.actor_role_id = actor_role_id
+    return true
+  end
+
   local function dispatch_intent(intent, data)
-    if intent and intent.actor_role_id == nil then
-      intent.actor_role_id = local_actor_resolver.resolve_from_event(state, data)
+    if not _try_attach_event_actor(intent, data) then
+      return
     end
     ui_intent_dispatcher.dispatch(state, resolve_game(), intent, dispatch_opts)
   end

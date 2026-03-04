@@ -19,10 +19,10 @@
 - [x] (2026-03-04 10:18 +08:00) 复核 `docs/eggy/ui_manager_lib.md` 并对照实现确认关键约束：`UIManager.client_role=nil` 会写全体玩家。
 - [x] (2026-03-04 10:23 +08:00) 完成根因复现脚本：验证 `LocalActorResolver` 缓存回退可导致 actor_role_id 漂移。
 - [x] (2026-03-04 10:25 +08:00) 生成并写入 R19 可执行计划，补齐活文档必需章节。
-- [ ] 里程碑 1：收敛 actor 解析为“严格事件角色”，移除运行时缓存回退。
-- [ ] 里程碑 2：重构始终显示屏交互可用性判定，确保全程可用且仅本地角色可操作。
-- [ ] 里程碑 3：重构调试屏为按角色隔离状态，默认关闭，移除全局状态混用。
-- [ ] 里程碑 4：收敛运行态 Canvas 切换到按角色路径，完成回归与文档回填。
+- [x] (2026-03-04 11:06 +08:00) 里程碑 1 完成：`LocalActorResolver` 删除缓存回退；`CanvasEventRouter` 对 `toggle_action_log/auto` 缺失事件角色严格拒绝并提示。
+- [x] (2026-03-04 11:14 +08:00) 里程碑 2 完成：`UIPanelPresenter` 去除快照式本地角色依赖；`UIInputLockPolicy` 在锁定/解锁两态都刷新托管与日志按钮触控。
+- [x] (2026-03-04 11:24 +08:00) 里程碑 3 完成：调试状态收敛为按角色模型；`resolve_debug_enabled(state, role_id)` 严格要求角色上下文；`DebugPorts` 按角色同步日志。
+- [x] (2026-03-04 11:31 +08:00) 里程碑 4 完成：`MarketModalRenderer` 与 `UIModalPresenter` 运行态切屏改为按角色路径；测试与文档完成回填。
 
 ## 意外与发现
 
@@ -38,6 +38,9 @@
 
 - 观察：运行态仍存在 `canvas.switch(ui, ...)` 全局路径，可能覆盖按角色显示策略。
   证据：`src/presentation/ui/MarketModalRenderer.lua:8`、`src/presentation/ui/UIModalPresenter.lua:76,107`。
+
+- 观察：黑市 `skin` 商品购买流程已经实现，但可购过滤层把 `skin` 直接排除，导致“可买但占位无效果”场景不可达。
+  证据：`src/game/systems/market/service/Eligibility.lua`（修复前存在 `if entry.kind == "skin" then return false end`），并触发 `tests/suites/market.lua::skin_entry_can_buy_but_no_effect` 失败。
 
 ## 决策日志
 
@@ -58,10 +61,18 @@
   理由：与 UIManager 作用域模型一致，减少隐式全局副作用。
   日期/作者：2026-03-04 / Codex
 
+- 决策：托管按钮触控在按角色渲染时对所有玩家角色保持可点击，不再限制“仅当前本地快照角色”。
+  理由：当前交互语义以“事件触发者 role”判定最终 action 归属；UI 层保持可点可避免输入锁/上下文切换残留造成“按钮失活”。
+  日期/作者：2026-03-04 / Codex
+
+- 决策：一并修复黑市 `skin` 过滤逻辑，使其与购买分支保持一致。
+  理由：这是本轮回归门禁中的真实行为缺陷，若不修复会阻断全量回归验收。
+  日期/作者：2026-03-04 / Codex
+
 ## 结果与复盘
 
 
-本计划刚完成设计与落盘，尚未进入代码实施阶段，因此当前没有“功能已交付”的结论。下一次更新本节时，需要对照“目的 / 全局视角”逐条复盘：始终显示屏是否全程可用、调试屏是否按玩家隔离、是否仍存在全局路径串扰。
+本计划已完整实施并通过回归。对照目标复盘如下：第一，始终显示屏按钮在输入锁等运行阶段保持可点击，且 `auto`/`toggle_action_log` 缺失事件角色会被拒绝，不再误落到历史角色。第二，调试屏默认关闭，状态按角色独立存储与同步，A/B 玩家互不干扰。第三，运行态 market/modal 走按角色切屏路径，减少全局 `client_role=nil` 写入串扰。第四，全量回归 `lua tests/regression.lua` 与静态门禁 `lua tests/internal/forbidden_globals.lua` 均通过。
 
 ## 背景与导读
 
@@ -115,6 +126,7 @@
 如果全量回归耗时较长，先执行最小相关套件（实现阶段按 TestHarness 入口临时脚本组织），再回到全量回归。
 
     lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua'; local h=require('TestHarness'); h.run_all({require('presentation_ui_event_bindings'), require('usecase_boundary_contract')})"
+    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua'; local h=require('TestHarness'); h.run_all({require('presentation_ui_event_bindings'), require('usecase_boundary_contract'), require('presentation_ui'), require('market')})"
 
 实施里程碑 3 与 4 后执行全量回归与静态门禁。
 
@@ -165,6 +177,17 @@
     3) debug 默认关闭；按角色切换互不影响。
     4) 输入锁期间始终显示屏的托管/日志按钮仍可点击。
 
+实施后验证证据（命令与结果）：
+
+    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua'; local h=require('TestHarness'); h.run_all({require('presentation_ui_event_bindings'), require('usecase_boundary_contract'), require('presentation_ui'), require('market')})"
+    # 结果：All regression checks passed (105)
+
+    lua tests/regression.lua
+    # 结果：All regression checks passed (235)
+
+    lua tests/internal/forbidden_globals.lua
+    # 结果：forbidden_globals ok
+
 ## 接口与依赖
 
 
@@ -184,3 +207,5 @@
 2026-03-04（R19 创建）：基于当前代码与 `docs/eggy/ui_manager_lib.md` 重新定位“始终显示屏/调试屏”本地玩家作用域问题，确认根因是 actor 缓存回退、debug 全局与按角色状态混用、运行态全局切屏路径并存。新建本计划用于指导分层迁移与回归验收。
 
 2026-03-04（R19 覆盖写入）：按用户要求将本轮方案正式写入 `.agents/plan.md`，并按 `.agents/harness/PLANS.md` 补齐活文档必需章节、执行步骤、验收标准与更新记录。改动原因是把会话内达成的设计决策转化为可直接实施的仓库内执行文档。
+
+2026-03-04（R19 实施完成）：按里程碑完成代码改造与测试更新，落地严格事件角色解析、按角色调试状态、按角色运行态切屏与触控可用性修复；执行定向回归 + 全量回归 + forbidden_globals 全部通过。实施中额外修复了黑市 `skin` 可购过滤缺陷以满足回归门禁。

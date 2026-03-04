@@ -1,11 +1,25 @@
 local market_view = require("src.presentation.render.MarketView")
 local canvas = require("src.presentation.interaction.UICanvasCoordinator")
+local runtime = require("src.presentation.api.UIRuntimePort")
+local role_context = require("src.presentation.state.UIRoleContext")
 
 local renderer = {}
 
 function renderer.open_market_panel(state, choice, choice_id, market)
   local ui = state.ui
-  canvas.switch(ui, canvas.CANVAS_MARKET)
+  runtime.for_each_role_or_global(function(role)
+    local ctx = role_context.resolve(role, state.ui_model, { runtime = runtime })
+    local target = canvas.CANVAS_BASE
+    if ctx.can_operate == true then
+      target = canvas.CANVAS_MARKET
+    end
+    if role then
+      canvas.switch_for_role(ui, target, role)
+    else
+      canvas.switch(ui, target)
+    end
+  end)
+  runtime.set_client_role(nil)
   local market_payload = market or {
     choice_id = choice_id,
     options = choice.options,

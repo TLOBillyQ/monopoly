@@ -36,10 +36,13 @@ function turn_action_port.normalize_auto_intent(state, intent)
   for k, v in pairs(intent) do
     action[k] = v
   end
+  if action.actor_role_id ~= nil then
+    return action
+  end
   local local_role_id = local_actor_resolver.resolve_local(state)
   if local_role_id ~= nil then
     action.actor_role_id = local_role_id
-  elseif action.actor_role_id == nil then
+  else
     logger.warn("auto intent missing actor_role_id")
     return nil
   end

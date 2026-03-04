@@ -25,6 +25,7 @@ function input_lock_policy.apply(state, deps)
 
   -- 未锁定：仅维护调试开关触控，不干预其他路径。
   if not ui.input_blocked then
+    ui_touch_policy.set_auto_controls_touch(ui, true)
     ui_touch_policy.set_action_log_toggle_touch(ui, true)
     return
   end
