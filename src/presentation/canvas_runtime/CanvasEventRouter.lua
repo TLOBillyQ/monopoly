@@ -8,6 +8,13 @@ local logger = require("src.core.Logger")
 
 local router = {}
 
+local function _is_actor_bound_ui_button(action_id)
+  if action_id == "next" or action_id == "auto" then
+    return true
+  end
+  return type(action_id) == "string" and string.match(action_id, "^item_slot_(%d+)$") ~= nil
+end
+
 function router.unbind(state)
   if not state then
     return
@@ -38,10 +45,13 @@ function router.bind(state, resolve_game)
     if type(intent) ~= "table" then
       return false
     end
-    if intent.type == "toggle_action_log" then
+    if intent.type == "toggle_action_log"
+        or intent.type == "choice_select"
+        or intent.type == "choice_cancel"
+        or intent.type == "market_confirm" then
       return true
     end
-    return intent.type == "ui_button" and intent.id == "auto"
+    return intent.type == "ui_button" and _is_actor_bound_ui_button(intent.id)
   end
 
   local function _try_attach_event_actor(intent, data)
@@ -51,7 +61,7 @@ function router.bind(state, resolve_game)
     local actor_role_id = local_actor_resolver.resolve_from_event(state, data)
     if actor_role_id == nil then
       host_runtime.show_tips("当前操作缺少玩家上下文，已忽略", 2.0)
-      logger.warn("ui intent rejected: missing event role", tostring(intent.type), tostring(intent.id))
+      logger.warn("ui intent rejected: missing actor_role_id", tostring(intent.type), tostring(intent.id))
       return false
     end
     intent.actor_role_id = actor_role_id

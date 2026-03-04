@@ -21,9 +21,9 @@
 - [x] (2026-03-04 13:05+08:00) 已完成：里程碑 1（身份契约收敛）代码落地（`TurnDispatchValidator`、`ItemSlice`、相关测试语义）。
 - [x] (2026-03-04 13:08+08:00) 已完成：里程碑 1 验收测试通过（`presentation_ui_model_dispatch`、`presentation_ui`）。
 - [x] (2026-03-04 13:18+08:00) 已完成：根据里程碑 1 经验拆分里程碑 2 为 2A/2B/2C，并补齐分段验收命令（仅计划更新，未执行实现）。
-- [ ] 待完成：里程碑 2A（actor 注入白名单盘点）实施与提交。
-- [ ] 待完成：里程碑 2B（事件路由补齐 actor）实施与提交。
-- [ ] 待完成：里程碑 2C（拒绝路径与提示统一）实施与提交。
+- [x] (2026-03-04 13:43+08:00) 已完成：里程碑 2A（actor 注入白名单盘点）并确认白名单覆盖 `toggle_action_log/choice_select/choice_cancel/market_confirm/ui_button(next|auto|item_slot_*)`。
+- [x] (2026-03-04 13:49+08:00) 已完成：里程碑 2B（事件路由补齐 actor）实现（`CanvasEventRouter`、`LocalActorResolver`）并通过交互测试。
+- [x] (2026-03-04 13:52+08:00) 已完成：里程碑 2C（拒绝路径与提示统一）实现，缺失 actor 统一拒绝日志关键字为 `ui intent rejected: missing actor_role_id`。
 - [ ] 待完成：里程碑 3（role 解析入口收敛）实施与提交。
 - [ ] 待完成：里程碑 4（UI 作用域防污染）实施与提交。
 - [ ] 待完成：里程碑 5（测试与回归验收）实施与记录。
@@ -42,6 +42,9 @@
 
 - 观察：里程碑 1 中 `choice.meta.player_id` 存在字符串形态输入（如 `"1"`），若不归一会让 owner 判断语义漂移。
   证据：`tests/suites/presentation_ui.lua` 已将 choice owner 用例改为字符串并通过，`item_choice_owner_id` 与 `choice actor check` 均按数值 role id 工作。
+
+- 观察：`presentation_ui_registry` 以固定索引切片聚合测试，若在中间插入新测试会改变既有套件语义。
+  证据：`tests/suites/presentation_ui_interaction.lua` 需显式追加 92-94 索引测试，避免影响 28-37 既有切片。
 
 ## 决策日志
 
@@ -74,12 +77,16 @@
   理由：里程碑 1 证明“先收敛语义再改行为”能显著降低回归风险；里程碑 2 涉及多 intent，多段验收更易定位问题。
   日期/作者：2026-03-04 / Codex
 
+- 决策：里程碑 2 新增路由层用例采用“追加到 `presentation_ui` 尾部 + `presentation_ui_interaction` 显式挂载”策略，不改历史切片索引。
+  理由：保持现有测试套件边界稳定，减少因索引漂移造成的隐式回归。
+  日期/作者：2026-03-04 / Codex
+
 ## 结果与复盘
 
 
-当前状态是“里程碑 1 已完成，里程碑 2-5 未开始”。
+当前状态是“里程碑 1、里程碑 2（含 2A/2B/2C）已完成，里程碑 3-5 未开始”。
 
-里程碑 1 完成项：身份校验与 UI model owner 解析统一到 `actor_role_id/owner_role_id` 语义，`choice.meta.player_id` 完成数值归一，日志字段命名完成收敛。验证结果：`presentation_ui_model_dispatch`（13）与 `presentation_ui`（97）均通过。遗留项：actor 注入入口、role 解析旁路、client_role 生命周期与全量回归闭环仍待后续里程碑处理。
+里程碑 2 完成项：`CanvasEventRouter` 的 actor 白名单覆盖到 `toggle_action_log/choice_select/choice_cancel/market_confirm/ui_button(next|auto|item_slot_*)`；`LocalActorResolver` 解析顺序落实为 `data.role -> client_role -> current_player_id`；缺失 actor 的拒绝日志统一为 `ui intent rejected: missing actor_role_id`。验证结果：`presentation_ui_event_bindings + presentation_ui_interaction` 联跑通过（18）。遗留项：role 解析旁路、client_role 生命周期与全量回归闭环仍待后续里程碑处理。
 
 ## 背景与导读
 
@@ -243,10 +250,12 @@
 
     All regression checks passed (13)
     All regression checks passed (97)
+    All regression checks passed (18)
 
 以及关键行为日志示例：
 
     ui intent ... actor_role_id=1
+    ui intent rejected: missing actor_role_id ui_button next
     ui_button blocked by actor check: next actor_role_id=2 current_role_id=1
     choice action blocked by actor check: choice_select actor_role_id=2 owner_role_id=1
 
@@ -297,3 +306,4 @@
 - 2026-03-04 / Codex：将 `.agents/plan.md` 从“位置选择屏”历史计划切换为“role 统一治理”可执行计划，原因是用户要求根据 `.agents/research.md` 交付新计划，并且该文件需始终服务当前任务目标。
 - 2026-03-04 / Codex：回填里程碑 1 实施结果，更新进度/发现/决策/复盘，并替换产物证据为本次真实测试输出，原因是计划必须作为可重启实施依据持续保持与当前代码一致。
 - 2026-03-04 / Codex：根据里程碑 1 实施经验拆分里程碑 2 为 2A/2B/2C，并同步“进度”“具体步骤”“决策日志”，原因是降低多 intent 同改导致的定位成本；本次仅更新计划，不执行代码实现。
+- 2026-03-04 / Codex：执行里程碑 2（2A/2B/2C），实现 actor 注入白名单扩展、resolver 三段优先级、缺失 actor 统一拒绝日志，并新增路由层回归测试；原因是用户要求在提交里程碑 1 后继续推进里程碑 2。

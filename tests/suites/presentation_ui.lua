@@ -192,7 +192,7 @@ local function _build_target_pick_env()
   end
 
   state.game = game
-  state.ui_model = { choice = choice }
+  state.ui_model = { choice = choice, current_player_id = 1 }
   state.ui.choice_active = true
   state.ui.active_choice_screen_key = "target"
   state.board_scene = {
@@ -2440,6 +2440,7 @@ local function _test_ui_event_router_player_target_click_direct_submit()
     },
     ui = ui_view.build_ui_state(),
     ui_model = {
+      current_player_id = 1,
       choice = {
         id = 10,
         kind = "item_target_player",
@@ -2486,6 +2487,7 @@ local function _test_ui_event_router_player_target_click_direct_submit()
   _assert_eq(captured[1] and captured[1].type, "choice_select", "player click should dispatch choice_select")
   _assert_eq(captured[1] and captured[1].choice_id, 10, "player click should keep choice id")
   _assert_eq(captured[1] and captured[1].option_id, 22, "player click should submit clicked option")
+  _assert_eq(captured[1] and captured[1].actor_role_id, 1, "player click should inject fallback actor_role_id")
   _assert_eq(captured[2], nil, "target choice should not dispatch from legacy UI slot click path")
 end
 
@@ -2604,6 +2606,206 @@ local function _test_ui_event_router_rejects_action_log_without_role()
   end)
 
   _assert_eq(show_tip_calls, 1, "missing role click should show tip once")
+end
+
+local function _test_ui_event_router_injects_actor_for_next_with_current_player_fallback()
+  local base_nodes = require("src.presentation.canvas.base.nodes")
+
+  local function new_node()
+    local node = {}
+    function node:listen(_, cb)
+      self._listener_cb = cb
+      return {
+        destroy = function()
+          self._listener_cb = nil
+        end,
+      }
+    end
+    return node
+  end
+
+  local captured = {}
+  local show_tip_calls = 0
+  local node_map = {
+    [base_nodes.action_button] = new_node(),
+  }
+
+  _with_patches({
+    { key = "all_roles", value = nil },
+    { key = "GlobalAPI", value = { show_tips = function()
+      show_tip_calls = show_tip_calls + 1
+    end } },
+    { key = "UIManager", value = {
+      EVENT = { CLICK = "click" },
+      query_nodes_by_name = function(name)
+        local node = node_map[name] or new_node()
+        node_map[name] = node
+        return { node }
+      end,
+      client_role = nil,
+    } },
+  }, function()
+    local state = {
+      turn_action_port = {
+        dispatch_action = function(_, _, action)
+          captured[#captured + 1] = action
+        end,
+        should_block_action = function()
+          return false
+        end,
+      },
+      ui = ui_view.build_ui_state(),
+      ui_model = {
+        current_player_id = "2",
+      },
+    }
+    canvas_event_router.bind(state, function()
+      return {}
+    end)
+    node_map[base_nodes.action_button]._listener_cb({})
+  end)
+
+  _assert_eq(show_tip_calls, 0, "next click with current_player fallback should not show tip")
+  _assert_eq(captured[1] and captured[1].type, "ui_button", "next click should dispatch ui_button")
+  _assert_eq(captured[1] and captured[1].id, "next", "next click should keep action id")
+  _assert_eq(captured[1] and captured[1].actor_role_id, 2, "next click should inject normalized actor_role_id")
+end
+
+local function _test_ui_event_router_injects_actor_for_market_confirm_and_cancel()
+  local market_nodes = require("src.presentation.canvas.market.nodes")
+
+  local function new_node()
+    local node = {}
+    function node:listen(_, cb)
+      self._listener_cb = cb
+      return {
+        destroy = function()
+          self._listener_cb = nil
+        end,
+      }
+    end
+    return node
+  end
+
+  local captured = {}
+  local node_map = {
+    [market_nodes.confirm] = new_node(),
+    [market_nodes.close] = new_node(),
+  }
+
+  _with_patches({
+    { key = "all_roles", value = nil },
+    { key = "GlobalAPI", value = { show_tips = function() end } },
+    { key = "UIManager", value = {
+      EVENT = { CLICK = "click" },
+      query_nodes_by_name = function(name)
+        local node = node_map[name] or new_node()
+        node_map[name] = node
+        return { node }
+      end,
+      client_role = nil,
+    } },
+  }, function()
+    local state = {
+      turn_action_port = {
+        dispatch_action = function(_, _, action)
+          captured[#captured + 1] = action
+        end,
+        should_block_action = function()
+          return false
+        end,
+      },
+      ui = ui_view.build_ui_state(),
+      ui_model = {
+        current_player_id = "3",
+        choice = {
+          id = 12,
+          kind = "market_buy",
+          allow_cancel = true,
+          options = { { id = 34, label = "X" } },
+        },
+        market = {
+          choice_id = 12,
+          options = { { id = 34, label = "X" } },
+        },
+      },
+      pending_choice_selected_option_id = 34,
+    }
+    canvas_event_router.bind(state, function()
+      return {}
+    end)
+    node_map[market_nodes.confirm]._listener_cb({})
+    node_map[market_nodes.close]._listener_cb({})
+  end)
+
+  _assert_eq(captured[1] and captured[1].type, "choice_select", "market_confirm should dispatch choice_select")
+  _assert_eq(captured[1] and captured[1].choice_id, 12, "market_confirm should keep choice id")
+  _assert_eq(captured[1] and captured[1].option_id, 34, "market_confirm should keep option id")
+  _assert_eq(captured[1] and captured[1].actor_role_id, 3, "market_confirm should inject actor_role_id")
+  _assert_eq(captured[2] and captured[2].type, "choice_cancel", "market_close should dispatch choice_cancel")
+  _assert_eq(captured[2] and captured[2].choice_id, 12, "market_close should keep choice id")
+  _assert_eq(captured[2] and captured[2].actor_role_id, 3, "market_close should inject actor_role_id")
+end
+
+local function _test_ui_event_router_rejects_next_without_actor_context()
+  local base_nodes = require("src.presentation.canvas.base.nodes")
+
+  local function new_node()
+    local node = {}
+    function node:listen(_, cb)
+      self._listener_cb = cb
+      return {
+        destroy = function()
+          self._listener_cb = nil
+        end,
+      }
+    end
+    return node
+  end
+
+  local captured = {}
+  local show_tip_calls = 0
+  local node_map = {
+    [base_nodes.action_button] = new_node(),
+  }
+
+  _with_patches({
+    { key = "all_roles", value = nil },
+    { key = "GlobalAPI", value = { show_tips = function()
+      show_tip_calls = show_tip_calls + 1
+    end } },
+    { key = "UIManager", value = {
+      EVENT = { CLICK = "click" },
+      query_nodes_by_name = function(name)
+        local node = node_map[name] or new_node()
+        node_map[name] = node
+        return { node }
+      end,
+      client_role = nil,
+    } },
+  }, function()
+    local state = {
+      turn_action_port = {
+        dispatch_action = function(_, _, action)
+          captured[#captured + 1] = action
+        end,
+        should_block_action = function()
+          return false
+        end,
+      },
+      ui = ui_view.build_ui_state(),
+      ui_model = {
+        current_player_id = nil,
+      },
+    }
+    canvas_event_router.bind(state, function()
+      return {}
+    end)
+    node_map[base_nodes.action_button]._listener_cb({})
+  end)
+
+  _assert_eq(captured[1], nil, "next click without actor context should be rejected")
+  _assert_eq(show_tip_calls, 1, "next click without actor context should show tip once")
 end
 
 local function _test_market_selection_updates_icon_without_resize()
@@ -4547,4 +4749,7 @@ return {
   _test_target_pick_leave_hides_scene_units,
   _test_target_pick_enter_spawns_candidate_markers_at_height_1_6,
   _test_target_pick_degrades_without_raycast_api,
+  _test_ui_event_router_injects_actor_for_next_with_current_player_fallback,
+  _test_ui_event_router_injects_actor_for_market_confirm_and_cancel,
+  _test_ui_event_router_rejects_next_without_actor_context,
 }
