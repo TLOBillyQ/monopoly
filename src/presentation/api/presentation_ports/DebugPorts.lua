@@ -5,6 +5,18 @@ local runtime = require("src.presentation.api.UIRuntimePort")
 
 local debug_ports = {}
 
+local function _with_client_role(role, fn)
+  if type(runtime.with_client_role) == "function" then
+    return runtime.with_client_role(role, fn)
+  end
+  runtime.set_client_role(role)
+  local ok, err = pcall(fn)
+  runtime.set_client_role(nil)
+  if not ok then
+    error(err)
+  end
+end
+
 function debug_ports.build(common)
   return {
     log_status = function(view)
@@ -19,24 +31,26 @@ function debug_ports.build(common)
         if role_id == nil then
           return
         end
-        local debug_enabled = ui_event_state.resolve_debug_enabled(state, role_id)
-        if state._debug_log_enabled_by_role[role_id] ~= debug_enabled then
-          state._debug_log_enabled_by_role[role_id] = debug_enabled
-          ui_view.set_debug_visible_for_role(state, role, debug_enabled)
+        _with_client_role(role, function()
+          local debug_enabled = ui_event_state.resolve_debug_enabled(state, role_id)
+          if state._debug_log_enabled_by_role[role_id] ~= debug_enabled then
+            state._debug_log_enabled_by_role[role_id] = debug_enabled
+            ui_view.set_debug_visible_for_role(state, role, debug_enabled)
+            if debug_enabled then
+              state._debug_log_seq_by_role[role_id] = nil
+            else
+              ui_view.set_debug_log_for_role(state, role, "")
+            end
+          end
           if debug_enabled then
-            state._debug_log_seq_by_role[role_id] = nil
-          else
-            ui_view.set_debug_log_for_role(state, role, "")
+            local seq = logger.get_seq()
+            if seq ~= state._debug_log_seq_by_role[role_id] then
+              state._debug_log_seq_by_role[role_id] = seq
+              local max_lines = gameplay_rules.debug_log_max_lines or 50
+              ui_view.set_debug_log_for_role(state, role, logger.get_text_by_level("event", max_lines))
+            end
           end
-        end
-        if debug_enabled then
-          local seq = logger.get_seq()
-          if seq ~= state._debug_log_seq_by_role[role_id] then
-            state._debug_log_seq_by_role[role_id] = seq
-            local max_lines = gameplay_rules.debug_log_max_lines or 50
-            ui_view.set_debug_log_for_role(state, role, logger.get_text_by_level("event", max_lines))
-          end
-        end
+        end)
       end)
       runtime.set_client_role(nil)
     end,

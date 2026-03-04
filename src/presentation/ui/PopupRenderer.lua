@@ -6,6 +6,18 @@ local canvas = require("src.presentation.interaction.UICanvasCoordinator")
 local renderer = {}
 local _apply_node_image
 
+local function _with_client_role(role, fn)
+  if type(runtime.with_client_role) == "function" then
+    return runtime.with_client_role(role, fn)
+  end
+  runtime.set_client_role(role)
+  local ok, err = pcall(fn)
+  runtime.set_client_role(nil)
+  if not ok then
+    error(err)
+  end
+end
+
 local function _resolve_popup_image_key(state, payload)
   if not payload then
     return nil
@@ -133,12 +145,14 @@ end
 function renderer.switch_popup_canvas(state, kind, target_canvas, fallback_canvas)
   local ui = state.ui
   runtime.for_each_role_or_global(function(role)
-    local ctx = require("src.presentation.state.UIRoleContext").resolve(role, state.ui_model, { runtime = runtime })
-    if _should_show_modal_for_ctx(ctx, kind) then
-      _switch_canvas_for_role(ui, role, target_canvas)
-    else
-      _switch_canvas_for_role(ui, role, fallback_canvas or canvas.CANVAS_BASE)
-    end
+    _with_client_role(role, function()
+      local ctx = require("src.presentation.state.UIRoleContext").resolve(role, state.ui_model, { runtime = runtime })
+      if _should_show_modal_for_ctx(ctx, kind) then
+        _switch_canvas_for_role(ui, role, target_canvas)
+      else
+        _switch_canvas_for_role(ui, role, fallback_canvas or canvas.CANVAS_BASE)
+      end
+    end)
   end)
   runtime.set_client_role(nil)
 end

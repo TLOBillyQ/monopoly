@@ -5,19 +5,33 @@ local role_context = require("src.presentation.state.UIRoleContext")
 
 local renderer = {}
 
+local function _with_client_role(role, fn)
+  if type(runtime.with_client_role) == "function" then
+    return runtime.with_client_role(role, fn)
+  end
+  runtime.set_client_role(role)
+  local ok, err = pcall(fn)
+  runtime.set_client_role(nil)
+  if not ok then
+    error(err)
+  end
+end
+
 function renderer.open_market_panel(state, choice, choice_id, market)
   local ui = state.ui
   runtime.for_each_role_or_global(function(role)
-    local ctx = role_context.resolve(role, state.ui_model, { runtime = runtime })
-    local target = canvas.CANVAS_BASE
-    if ctx.can_operate == true then
-      target = canvas.CANVAS_MARKET
-    end
-    if role then
-      canvas.switch_for_role(ui, target, role)
-    else
-      canvas.switch(ui, target)
-    end
+    _with_client_role(role, function()
+      local ctx = role_context.resolve(role, state.ui_model, { runtime = runtime })
+      local target = canvas.CANVAS_BASE
+      if ctx.can_operate == true then
+        target = canvas.CANVAS_MARKET
+      end
+      if role then
+        canvas.switch_for_role(ui, target, role)
+      else
+        canvas.switch(ui, target)
+      end
+    end)
   end)
   runtime.set_client_role(nil)
   local market_payload = market or {

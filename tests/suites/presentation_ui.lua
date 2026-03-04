@@ -25,6 +25,9 @@ local action_anim = require("src.presentation.render.ActionAnim")
 local move_anim = require("src.presentation.render.MoveAnim")
 local turn_engine_cls = require("src.game.runtime.TurnEngine")
 local turn_effects = require("src.presentation.ui.UITurnEffects")
+local popup_renderer = require("src.presentation.ui.PopupRenderer")
+local market_modal_renderer = require("src.presentation.ui.MarketModalRenderer")
+local debug_ports_module = require("src.presentation.api.presentation_ports.DebugPorts")
 local role_control_lock_policy = require("src.presentation.interaction.UIRoleControlLockPolicy")
 local ui_touch_policy = require("src.presentation.interaction.UITouchPolicy")
 local ui_choice_route_policy = require("src.presentation.interaction.UIChoiceRoutePolicy")
@@ -4122,6 +4125,42 @@ local function _test_turn_effects_other_prompt_fallback_text()
   end)
 end
 
+local function _test_turn_effects_sync_restores_client_role_nil()
+  local env = _build_turn_effect_runtime_env({ 1, 2 })
+  local manager = { client_role = { marker = "seed" } }
+  local state = {}
+  local ui_model = {
+    current_player_id = 1,
+    current_player_name = "P1",
+    board = {
+      phase = "start",
+      players = { { id = 1 }, { id = 2 } },
+    },
+  }
+
+  _with_patches({
+    { key = "UIManager", value = manager },
+    { target = runtime_port, key = "set_client_role", value = env.set_client_role },
+    { target = runtime_port, key = "for_each_role_or_global", value = env.for_each_role_or_global },
+    { target = runtime_port, key = "query_node", value = env.query_node },
+    { target = runtime_port, key = "with_client_role", value = function(role, fn)
+      local prev = manager.client_role
+      manager.client_role = role
+      env.set_client_role(role)
+      local ok, err = pcall(fn)
+      env.set_client_role(prev)
+      manager.client_role = prev
+      if not ok then
+        error(err)
+      end
+    end },
+  }, function()
+    turn_effects.sync(state, ui_model)
+  end)
+
+  _assert_eq(manager.client_role, nil, "turn_effects.sync should restore client_role to nil")
+end
+
 local function _test_tick_ui_sync_turn_switch_still_follows()
   local dirty_tracker = require("src.core.DirtyTracker")
   local main_view = require("src.presentation.api.UIViewService")
@@ -4594,9 +4633,146 @@ local function _test_popup_defer_policy_queues_and_replays_in_order()
   _assert_eq(shown[2], "B", "queued popup title should be B")
 end
 
+local function _test_popup_renderer_switch_popup_canvas_restores_client_role_nil()
+  local canvas = require("src.presentation.interaction.UICanvasCoordinator")
+  local role_ctx = require("src.presentation.state.UIRoleContext")
+  local manager = { client_role = { stale = true } }
+  local role1 = { id = 1, get_roleid = function() return 1 end }
+  local role2 = { id = 2, get_roleid = function() return 2 end }
+
+  _with_patches({
+    { key = "UIManager", value = manager },
+    { target = runtime_port, key = "for_each_role_or_global", value = function(fn)
+      fn(role1)
+      fn(role2)
+    end },
+    { target = runtime_port, key = "set_client_role", value = function(role)
+      manager.client_role = role
+    end },
+    { target = runtime_port, key = "with_client_role", value = function(role, fn)
+      local prev = manager.client_role
+      manager.client_role = role
+      local ok, err = pcall(fn)
+      manager.client_role = prev
+      if not ok then
+        error(err)
+      end
+    end },
+    { target = role_ctx, key = "resolve", value = function(role)
+      return { can_operate = role == role1 }
+    end },
+    { target = canvas, key = "switch_for_role", value = function() end },
+    { target = canvas, key = "switch", value = function() end },
+  }, function()
+    popup_renderer.switch_popup_canvas({
+      ui = {},
+      ui_model = {},
+    }, "card", canvas.CANVAS_POPUP, canvas.CANVAS_BASE)
+  end)
+
+  _assert_eq(manager.client_role, nil, "popup renderer should restore client_role to nil")
+end
+
+local function _test_market_modal_renderer_open_restores_client_role_nil()
+  local canvas = require("src.presentation.interaction.UICanvasCoordinator")
+  local role_ctx = require("src.presentation.state.UIRoleContext")
+  local manager = { client_role = { stale = true } }
+  local role1 = { id = 1, get_roleid = function() return 1 end }
+  local role2 = { id = 2, get_roleid = function() return 2 end }
+
+  _with_patches({
+    { key = "UIManager", value = manager },
+    { target = runtime_port, key = "for_each_role_or_global", value = function(fn)
+      fn(role1)
+      fn(role2)
+    end },
+    { target = runtime_port, key = "set_client_role", value = function(role)
+      manager.client_role = role
+    end },
+    { target = runtime_port, key = "with_client_role", value = function(role, fn)
+      local prev = manager.client_role
+      manager.client_role = role
+      local ok, err = pcall(fn)
+      manager.client_role = prev
+      if not ok then
+        error(err)
+      end
+    end },
+    { target = role_ctx, key = "resolve", value = function(role)
+      return { can_operate = role == role1 }
+    end },
+    { target = canvas, key = "switch_for_role", value = function() end },
+    { target = canvas, key = "switch", value = function() end },
+    { target = market_view, key = "refresh_market", value = function() return true end },
+  }, function()
+    local state = {
+      ui = {},
+      ui_model = {},
+      pending_choice_selected_option_id = nil,
+    }
+    local choice = {
+      options = { { id = 1 } },
+      allow_cancel = true,
+      cancel_label = "取消",
+    }
+    market_modal_renderer.open_market_panel(state, choice, 10, nil)
+  end)
+
+  _assert_eq(manager.client_role, nil, "market modal renderer should restore client_role to nil")
+end
+
+local function _test_debug_ports_sync_restores_client_role_nil()
+  local ui_event_state = require("src.presentation.interaction.UIEventState")
+  local ui_view_service = require("src.presentation.api.UIViewService")
+  local manager = { client_role = { stale = true } }
+  local role1 = { id = 1, get_roleid = function() return 1 end }
+  local role2 = { id = 2, get_roleid = function() return 2 end }
+  local ports = debug_ports_module.build({
+    log_status = function() end,
+  })
+
+  _with_patches({
+    { key = "UIManager", value = manager },
+    { target = runtime_port, key = "for_each_role_or_global", value = function(fn)
+      fn(role1)
+      fn(role2)
+    end },
+    { target = runtime_port, key = "set_client_role", value = function(role)
+      manager.client_role = role
+    end },
+    { target = runtime_port, key = "with_client_role", value = function(role, fn)
+      local prev = manager.client_role
+      manager.client_role = role
+      local ok, err = pcall(fn)
+      manager.client_role = prev
+      if not ok then
+        error(err)
+      end
+    end },
+    { target = runtime_port, key = "resolve_role_id", value = function(role)
+      return role and role.id or nil
+    end },
+    { target = ui_event_state, key = "resolve_debug_enabled", value = function(_, role_id)
+      return role_id == 1
+    end },
+    { target = ui_view_service, key = "set_debug_visible_for_role", value = function() end },
+    { target = ui_view_service, key = "set_debug_log_for_role", value = function() end },
+  }, function()
+    local state = {
+      ui = ui_view.build_ui_state(),
+      _debug_log_enabled_by_role = {},
+      _debug_log_seq_by_role = {},
+    }
+    ports.sync_debug_log(state)
+  end)
+
+  _assert_eq(manager.client_role, nil, "debug ports sync should restore client_role to nil")
+end
+
 local function _test_panel_avatar_uses_keep_size_path()
   local presenter = require("src.presentation.ui.UIPanelPresenter")
   local keep_size_calls = 0
+  local client_role = { stale = true }
   local state = {
     ui_refs = { ["Empty"] = "EMPTY_AVATAR" },
     ui = {
@@ -4633,7 +4809,9 @@ local function _test_panel_avatar_uses_keep_size_path()
     },
   }
   local runtime = {
-    set_client_role = function() end,
+    set_client_role = function(role)
+      client_role = role
+    end,
     resolve_role_id = function() return nil end,
     for_each_role_or_global = function(fn)
       fn(nil)
@@ -4649,6 +4827,7 @@ local function _test_panel_avatar_uses_keep_size_path()
   })
 
   _assert_eq(keep_size_calls, 4, "panel avatar should use keep-size path")
+  _assert_eq(client_role, nil, "panel presenter should restore client_role to nil")
 end
 
 return {
@@ -4752,4 +4931,8 @@ return {
   _test_ui_event_router_injects_actor_for_next_with_current_player_fallback,
   _test_ui_event_router_injects_actor_for_market_confirm_and_cancel,
   _test_ui_event_router_rejects_next_without_actor_context,
+  _test_turn_effects_sync_restores_client_role_nil,
+  _test_popup_renderer_switch_popup_canvas_restores_client_role_nil,
+  _test_market_modal_renderer_open_restores_client_role_nil,
+  _test_debug_ports_sync_restores_client_role_nil,
 }

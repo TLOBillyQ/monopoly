@@ -3,6 +3,18 @@ local base_nodes = require("src.presentation.canvas.base.nodes")
 
 local turn_effects = {}
 
+local function _with_client_role(role, fn)
+  if type(runtime.with_client_role) == "function" then
+    return runtime.with_client_role(role, fn)
+  end
+  runtime.set_client_role(role)
+  local ok, err = pcall(fn)
+  runtime.set_client_role(nil)
+  if not ok then
+    error(err)
+  end
+end
+
 local function _resolve_current_player_index(ui_model)
   local board = ui_model and ui_model.board or nil
   local players = board and board.players or nil
@@ -33,10 +45,10 @@ local function _set_highlight_visible(index)
 end
 
 local function _sync_current_turn_highlight(_, ui_model)
-  runtime.set_client_role(nil)
-  local current_index = _resolve_current_player_index(ui_model)
-  _set_highlight_visible(current_index)
-  runtime.set_client_role(nil)
+  _with_client_role(nil, function()
+    local current_index = _resolve_current_player_index(ui_model)
+    _set_highlight_visible(current_index)
+  end)
 end
 
 local function _get_role_id(role)
@@ -73,11 +85,11 @@ local function _sync_local_turn_prompt(_, ui_model)
   local can_show = _is_pre_action_phase(phase)
   runtime.for_each_role_or_global(function(role)
     local role_id = _get_role_id(role)
-    runtime.set_client_role(role)
-    local nodes = _get_prompt_nodes()
-    local show = role_id ~= nil and current_player_id ~= nil and role_id == current_player_id and can_show
-    _set_prompt_visible(nodes, show)
-    runtime.set_client_role(nil)
+    _with_client_role(role, function()
+      local nodes = _get_prompt_nodes()
+      local show = role_id ~= nil and current_player_id ~= nil and role_id == current_player_id and can_show
+      _set_prompt_visible(nodes, show)
+    end)
   end)
 end
 
@@ -86,13 +98,13 @@ local function _get_other_action_prompt_label_node()
 end
 
 local function _set_other_action_prompt(role, text, visible)
-  runtime.set_client_role(role)
-  local node = _get_other_action_prompt_label_node()
-  if node then
-    node.text = text or ""
-    node.visible = visible == true
-  end
-  runtime.set_client_role(nil)
+  _with_client_role(role, function()
+    local node = _get_other_action_prompt_label_node()
+    if node then
+      node.text = text or ""
+      node.visible = visible == true
+    end
+  end)
 end
 
 local function _resolve_other_action_prompt_text(ui_model)
@@ -121,6 +133,7 @@ function turn_effects.sync(state, ui_model)
   _sync_current_turn_highlight(state, ui_model)
   _sync_local_turn_prompt(state, ui_model)
   _sync_other_player_action_prompt(state, ui_model)
+  runtime.set_client_role(nil)
 end
 
 return turn_effects
