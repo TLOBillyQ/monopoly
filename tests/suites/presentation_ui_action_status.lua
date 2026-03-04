@@ -19,5 +19,17 @@ suite.tests[#suite.tests + 1] = {
   name = "_test_debug_ports_sync_restores_client_role_nil",
   run = assert(all[98], "missing presentation_ui test at index 98"),
 }
+suite.tests[#suite.tests + 1] = {
+  name = "_test_status3d_hospital_visible_when_detained_turn_even_if_stay_turns_zero",
+  run = assert(all[105], "missing presentation_ui test at index 105"),
+}
+suite.tests[#suite.tests + 1] = {
+  name = "_test_status3d_mountain_visible_when_detained_turn_even_if_stay_turns_zero",
+  run = assert(all[106], "missing presentation_ui test at index 106"),
+}
+suite.tests[#suite.tests + 1] = {
+  name = "_test_status3d_hospital_mountain_not_visible_when_not_detained_and_stay_turns_zero",
+  run = assert(all[107], "missing presentation_ui test at index 107"),
+}
 
 return suite

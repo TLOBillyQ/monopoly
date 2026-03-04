@@ -242,6 +242,32 @@ local function _test_scenario_market_staging_reaches_market_with_remote_dice_and
     "p1 should reach market from Wuhan Road using remote dice plus multiplier after bootstrap")
 end
 
+local function _test_scenario_hospital_staging_is_before_hospital_with_remote_dice()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "scenario_hospital_staging")
+
+  local p1_pos = game.players[1].position
+  local hospital_idx = game.board:index_of_tile_id(36)
+  assert(hospital_idx ~= nil, "hospital tile should exist in board path")
+  assert(p1_pos + 1 == hospital_idx, "p1 should start one step before hospital")
+  _assert_inventory_counts(game.players[1], {
+    [2002] = 1,
+  })
+end
+
+local function _test_scenario_mountain_staging_is_before_mountain_with_remote_dice()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "scenario_mountain_staging")
+
+  local p1_pos = game.players[1].position
+  local mountain_idx = game.board:index_of_tile_id(37)
+  assert(mountain_idx ~= nil, "mountain tile should exist in board path")
+  assert(p1_pos + 1 == mountain_idx, "p1 should start one step before mountain")
+  _assert_inventory_counts(game.players[1], {
+    [2002] = 1,
+  })
+end
+
 return {
   name = "test_profiles",
   tests = {
@@ -272,6 +298,14 @@ return {
     {
       name = "scenario_market_staging_reaches_market_with_remote_dice_and_multiplier",
       run = _test_scenario_market_staging_reaches_market_with_remote_dice_and_multiplier,
+    },
+    {
+      name = "scenario_hospital_staging_is_before_hospital_with_remote_dice",
+      run = _test_scenario_hospital_staging_is_before_hospital_with_remote_dice,
+    },
+    {
+      name = "scenario_mountain_staging_is_before_mountain_with_remote_dice",
+      run = _test_scenario_mountain_staging_is_before_mountain_with_remote_dice,
     },
   },
 }

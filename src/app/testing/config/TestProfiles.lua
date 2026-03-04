@@ -86,6 +86,56 @@ local profiles = {
       },
     },
   },
+  scenario_hospital_staging = {
+    bootstrap = {
+      players = {
+        [1] = {
+          cash = 100000,
+          position_tile_id = 6,
+          item_counts = {
+            [2002] = 1,
+          },
+        },
+        [2] = {
+          cash = 100000,
+          position_tile_id = 35,
+        },
+        [3] = {
+          cash = 100000,
+          position_tile_id = 44,
+        },
+        [4] = {
+          cash = 100000,
+          position_tile_id = 40,
+        },
+      },
+    },
+  },
+  scenario_mountain_staging = {
+    bootstrap = {
+      players = {
+        [1] = {
+          cash = 100000,
+          position_tile_id = 12,
+          item_counts = {
+            [2002] = 1,
+          },
+        },
+        [2] = {
+          cash = 100000,
+          position_tile_id = 35,
+        },
+        [3] = {
+          cash = 100000,
+          position_tile_id = 44,
+        },
+        [4] = {
+          cash = 100000,
+          position_tile_id = 40,
+        },
+      },
+    },
+  },
   items_move_control = {
     bootstrap = {
       players = {

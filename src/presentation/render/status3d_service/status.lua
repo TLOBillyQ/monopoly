@@ -10,13 +10,35 @@ local function _resolve_role(player_id)
   end)
 end
 
+local function _is_player_detained_this_turn(game, player)
+  if game == nil or player == nil then
+    return false
+  end
+  local turn = game.turn
+  if not (turn and (turn.detained_wait_active == true or turn.phase == "detained_wait")) then
+    return false
+  end
+  local last_turn = game.last_turn
+  if not last_turn then
+    return false
+  end
+  if last_turn.player_id ~= player.id then
+    return false
+  end
+  if last_turn.skipped ~= true then
+    return false
+  end
+  return last_turn.stay_turns ~= nil
+end
+
 function M.resolve_player_status_key(game, player)
   if player == nil or player.eliminated == true then
     return nil
   end
   local status = player.status or {}
   local stay_turns = status.stay_turns or 0
-  if stay_turns > 0 and game.board and game.board.get_tile then
+  local detained_this_turn = _is_player_detained_this_turn(game, player)
+  if (stay_turns > 0 or detained_this_turn) and game.board and game.board.get_tile then
     local tile = game.board:get_tile(player.position)
     local tile_type = tile and tile.type or nil
     if tile_type == "hospital" then

@@ -122,6 +122,7 @@ local function _set_bankruptcy_avatar_image(state, payload)
   local avatar_node = ui.query_node(screen.avatar)
   local refs = state and state.ui_refs or nil
   local empty_key = refs and refs["Empty"] or nil
+  -- Avatar policy: keep base panel and bankruptcy popup on the same native-size path.
   _apply_node_image(ui, screen.avatar, avatar_node, _resolve_bankruptcy_avatar_key(payload), empty_key, function(node, key)
     runtime.set_node_texture_native_size(node, key)
   end, true)

@@ -3898,6 +3898,7 @@ local function _build_status3d_game(opts)
         return { type = "start" }
       end,
     },
+    turn = opts.turn,
     last_turn = opts.last_turn,
   }
 end
@@ -3972,6 +3973,144 @@ local function _test_status3d_roadblock_only_current_turn()
     ui_status_3d_layer.sync(game, state, { any = true, turn = true })
     _assert_eq(env.layer_visibility[roadblock_layer][1], false, "roadblock should hide after trigger turn")
   end)
+end
+
+local function _test_status3d_hospital_visible_when_detained_turn_even_if_stay_turns_zero()
+  local env = _build_status3d_test_env()
+  local state = {}
+  local game = _build_status3d_game({
+    tile_type = "hospital",
+    player_status_1 = {
+      stay_turns = 0,
+      deity = { type = "poor", remaining = 5 },
+    },
+    turn = {
+      phase = "detained_wait",
+      detained_wait_active = true,
+    },
+    last_turn = {
+      player_id = 1,
+      skipped = true,
+      stay_turns = 0,
+      note = "被扣留",
+    },
+  })
+  local prefab = require("Data.Prefab")
+  local hospital_layout = prefab.scene_eui["医院状态"]
+  local poor_layout = prefab.scene_eui["穷神状态"]
+  _with_patches({
+    { key = "GameAPI", value = env.game_api },
+    { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
+  }, function()
+    ui_status_3d_layer.sync(game, state, { any = true, players = true, turn = true })
+  end)
+
+  local hospital_layer = "layer_1_" .. tostring(hospital_layout)
+  local poor_layer = "layer_1_" .. tostring(poor_layout)
+  _assert_eq(env.layer_visibility[hospital_layer][1], true,
+    "hospital layer should stay visible during detained turn when stay_turns is zero")
+  _assert_eq(env.layer_visibility[poor_layer][1], false,
+    "deity layer should be hidden when hospital detained status is active")
+end
+
+local function _test_status3d_mountain_visible_when_detained_turn_even_if_stay_turns_zero()
+  local env = _build_status3d_test_env()
+  local state = {}
+  local game = _build_status3d_game({
+    tile_type = "mountain",
+    player_status_1 = {
+      stay_turns = 0,
+      deity = { type = "rich", remaining = 5 },
+    },
+    turn = {
+      phase = "detained_wait",
+      detained_wait_active = true,
+    },
+    last_turn = {
+      player_id = 1,
+      skipped = true,
+      stay_turns = 0,
+      note = "被扣留",
+    },
+  })
+  local prefab = require("Data.Prefab")
+  local mountain_layout = prefab.scene_eui["深山状态"]
+  local rich_layout = prefab.scene_eui["财神状态"]
+  _with_patches({
+    { key = "GameAPI", value = env.game_api },
+    { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
+  }, function()
+    ui_status_3d_layer.sync(game, state, { any = true, players = true, turn = true })
+  end)
+
+  local mountain_layer = "layer_1_" .. tostring(mountain_layout)
+  local rich_layer = "layer_1_" .. tostring(rich_layout)
+  _assert_eq(env.layer_visibility[mountain_layer][1], true,
+    "mountain layer should stay visible during detained turn when stay_turns is zero")
+  _assert_eq(env.layer_visibility[rich_layer][1], false,
+    "deity layer should be hidden when mountain detained status is active")
+end
+
+local function _test_status3d_hospital_mountain_not_visible_when_not_detained_and_stay_turns_zero()
+  local prefab = require("Data.Prefab")
+  local hospital_layout = prefab.scene_eui["医院状态"]
+  local mountain_layout = prefab.scene_eui["深山状态"]
+  local poor_layout = prefab.scene_eui["穷神状态"]
+  local rich_layout = prefab.scene_eui["财神状态"]
+
+  local hospital_env = _build_status3d_test_env()
+  local hospital_state = {}
+  local hospital_game = _build_status3d_game({
+    tile_type = "hospital",
+    player_status_1 = {
+      stay_turns = 0,
+      deity = { type = "poor", remaining = 5 },
+    },
+    turn = {
+      phase = "start",
+      detained_wait_active = false,
+    },
+  })
+  _with_patches({
+    { key = "GameAPI", value = hospital_env.game_api },
+    { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
+  }, function()
+    ui_status_3d_layer.sync(hospital_game, hospital_state, { any = true, players = true, turn = true })
+  end)
+
+  local hospital_layer = "layer_1_" .. tostring(hospital_layout)
+  local poor_layer = "layer_1_" .. tostring(poor_layout)
+  _assert_eq(hospital_env.layer_visibility[hospital_layer][1], false,
+    "hospital layer should stay hidden when stay_turns is zero and turn is not detained")
+  _assert_eq(hospital_env.layer_visibility[poor_layer][1], true,
+    "deity layer should be visible when hospital detained status is inactive")
+
+  local mountain_env = _build_status3d_test_env()
+  local mountain_state = {}
+  local mountain_game = _build_status3d_game({
+    tile_type = "mountain",
+    player_status_1 = {
+      stay_turns = 0,
+      deity = { type = "rich", remaining = 5 },
+    },
+    turn = {
+      phase = "start",
+      detained_wait_active = false,
+    },
+  })
+  _with_patches({
+    { key = "GameAPI", value = mountain_env.game_api },
+    { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
+  }, function()
+    ui_status_3d_layer.sync(mountain_game, mountain_state, { any = true, players = true, turn = true })
+  end)
+
+  local mountain_layer = "layer_1_" .. tostring(mountain_layout)
+  local rich_layer = "layer_1_" .. tostring(rich_layout)
+  _assert_eq(mountain_env.layer_visibility[mountain_layer][1], false,
+    "mountain layer should stay hidden when stay_turns is zero and turn is not detained")
+  _assert_eq(mountain_env.layer_visibility[rich_layer][1], true,
+    "deity layer should be visible when mountain detained status is inactive")
 end
 
 local function _test_status3d_reset_destroy_layers()
@@ -4762,9 +4901,9 @@ local function _test_debug_ports_sync_restores_client_role_nil()
   _assert_eq(manager.client_role, nil, "debug ports sync should restore client_role to nil")
 end
 
-local function _test_panel_avatar_uses_keep_size_path()
+local function _test_panel_avatar_uses_native_size_path()
   local presenter = require("src.presentation.ui.UIPanelPresenter")
-  local keep_size_calls = 0
+  local native_size_calls = 0
   local client_role = { stale = true }
   local state = {
     ui_refs = { ["Empty"] = "EMPTY_AVATAR" },
@@ -4809,8 +4948,8 @@ local function _test_panel_avatar_uses_keep_size_path()
     for_each_role_or_global = function(fn)
       fn(nil)
     end,
-    set_node_texture_keep_size = function()
-      keep_size_calls = keep_size_calls + 1
+    set_node_texture_native_size = function()
+      native_size_calls = native_size_calls + 1
     end,
   }
 
@@ -4819,7 +4958,7 @@ local function _test_panel_avatar_uses_keep_size_path()
     refresh_item_slots = function() end,
   })
 
-  _assert_eq(keep_size_calls, 4, "panel avatar should use keep-size path")
+  _assert_eq(native_size_calls, 4, "panel avatar should use native-size path")
   _assert_eq(client_role, nil, "panel presenter should restore client_role to nil")
 end
 
@@ -4909,7 +5048,7 @@ return {
   _test_ui_sync_opens_choice_modal_after_wait_action_anim,
   _test_ui_sync_defers_choice_modal_during_wait_move_anim,
   _test_popup_defer_policy_queues_and_replays_in_order,
-  _test_panel_avatar_uses_keep_size_path,
+  _test_panel_avatar_uses_native_size_path,
   _test_item_slot_refresh_resets_highlight_without_client_role,
   _test_target_confirm_dispatches_selected_option,
   _test_target_pick_tick_updates_selection_on_hit_change,
@@ -4928,4 +5067,7 @@ return {
   _test_popup_renderer_switch_popup_canvas_restores_client_role_nil,
   _test_market_modal_renderer_open_restores_client_role_nil,
   _test_debug_ports_sync_restores_client_role_nil,
+  _test_status3d_hospital_visible_when_detained_turn_even_if_stay_turns_zero,
+  _test_status3d_mountain_visible_when_detained_turn_even_if_stay_turns_zero,
+  _test_status3d_hospital_mountain_not_visible_when_not_detained_and_stay_turns_zero,
 }
