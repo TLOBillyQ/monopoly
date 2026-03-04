@@ -5,6 +5,7 @@ local validator = require("src.game.flow.turn.TurnDispatchValidator")
 local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
 local runtime_state = require("src.core.RuntimeState")
 local market_service = require("src.game.systems.market.MarketService")
+local role_id_utils = require("src.core.RoleId")
 
 local turn_dispatch = {}
 
@@ -12,7 +13,7 @@ local next_turn_cooldown = 0.4
 
 local function _resolve_actor_player(game, action)
   assert(game ~= nil and game.players ~= nil, "missing game.players")
-  local actor_role_id = action and action.actor_role_id or nil
+  local actor_role_id = role_id_utils.normalize(action and action.actor_role_id or nil)
   if actor_role_id == nil then
     logger.warn("ui_button missing actor_role_id:", tostring(action and action.id))
     return nil
@@ -20,6 +21,9 @@ local function _resolve_actor_player(game, action)
   local player = game:find_player_by_id(actor_role_id)
   if not player then
     logger.warn("ui_button actor_role_id not mapped:", tostring(action and action.id), tostring(actor_role_id))
+    if action and action.id == "auto" then
+      print("[AutoProbe][TurnDispatch] actor not mapped:", tostring(actor_role_id))
+    end
     return nil
   end
   return player
@@ -106,9 +110,16 @@ local function _dispatch_action(game, state, action, opts, dispatch_ctx)
     if action.id == "auto" then
       local player = _resolve_actor_player(game, action)
       if not player then
+        print("[AutoProbe][TurnDispatch] auto rejected: actor unresolved")
         return { status = "rejected" }
       end
+      local before = player.auto == true
       player.auto = not (player.auto == true)
+      print(
+        "[AutoProbe][TurnDispatch] auto toggled:",
+        "before=" .. tostring(before),
+        "after=" .. tostring(player.auto == true)
+      )
       return { status = "applied" }
     end
 

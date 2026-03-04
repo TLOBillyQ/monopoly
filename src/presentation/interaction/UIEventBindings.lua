@@ -30,6 +30,9 @@ function bindings.register_node_click(cache, name, callback, registered, listene
     local ok, result = pcall(runtime.query_nodes, name)
     if not ok then
       _show_missing_button_tip(name)
+      if name == always_show_nodes.auto_button then
+        print("[AutoProbe][Binding] auto button register failed: query_nodes error")
+      end
       if name == always_show_nodes.action_log_button then
         logger.info("[调试屏] 行动日志按钮注册失败: query_nodes异常")
       end
@@ -40,6 +43,9 @@ function bindings.register_node_click(cache, name, callback, registered, listene
   end
   if not nodes or not nodes[1] then
     _show_missing_button_tip(name)
+    if name == always_show_nodes.auto_button then
+      print("[AutoProbe][Binding] auto button register failed: missing node")
+    end
     if name == always_show_nodes.action_log_button then
       logger.info("[调试屏] 行动日志按钮注册失败: 未找到节点")
     end

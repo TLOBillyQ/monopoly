@@ -3,6 +3,7 @@ local player_colors = require("src.presentation.shared.PlayerColors")
 local base_nodes = require("src.presentation.canvas.base.nodes")
 local always_show_nodes = require("src.presentation.canvas.always_show.nodes")
 local ui_touch_policy = require("src.presentation.interaction.UITouchPolicy")
+local role_id_utils = require("src.core.RoleId")
 
 local panel_presenter = {}
 
@@ -19,7 +20,7 @@ function panel_presenter.apply_base_non_player_visibility(ui, visible)
   end
 end
 
-function panel_presenter.render_auto_controls_for_role(ui, ctx, ui_model)
+function panel_presenter.render_auto_controls_for_role(state, ui, ctx, ui_model)
   assert(ui ~= nil, "missing ui")
   local controls = ui.auto_control_nodes or { always_show_nodes.auto_button, always_show_nodes.auto_label }
   local auto_enabled = ctx and ctx.is_player_role == true or false
@@ -82,7 +83,7 @@ local function _resolve_auto_effect_visible(ui_model, ctx)
     return false
   end
   local auto_by_player = ui_model.auto_enabled_by_player or {}
-  return auto_by_player[role_id] == true
+  return role_id_utils.read(auto_by_player, role_id) == true
 end
 
 local function _set_player_avatar(ui, runtime, avatar_name, image_key)
@@ -156,7 +157,9 @@ function panel_presenter.refresh(state, ui_model, deps)
     local base_visible = panel_presenter.is_base_non_player_visible(ui, ctx)
     panel_presenter.apply_base_non_player_visibility(ui, base_visible)
     _force_item_slots_visible_for_player(ui, ctx)
-    ui:set_visible(always_show_nodes.auto_effect, _resolve_auto_effect_visible(ui_model, ctx))
+    local auto_effect_visible = _resolve_auto_effect_visible(ui_model, ctx)
+    ui:set_visible(always_show_nodes.auto_effect, auto_effect_visible)
+    ui:set_touch_enabled(always_show_nodes.auto_effect, false)
 
     ui:set_visible(base_nodes.countdown, true)
     ui:set_label(base_nodes.countdown, panel.turn_label)
@@ -169,7 +172,7 @@ function panel_presenter.refresh(state, ui_model, deps)
       display_player_id = ctx.display_player_id,
       allow_interact = base_visible,
     })
-    panel_presenter.render_auto_controls_for_role(ui, ctx, ui_model)
+    panel_presenter.render_auto_controls_for_role(state, ui, ctx, ui_model)
 
     for i = 1, 4 do
       _apply_player_colors(role, runtime, players[i], i)
@@ -177,10 +180,10 @@ function panel_presenter.refresh(state, ui_model, deps)
   end)
   runtime.set_client_role(nil)
 
-  local current_player_id = ui_model.current_player_id
+  local current_player_id = role_id_utils.normalize(ui_model.current_player_id)
   local by_role = ui.item_slot_item_ids_by_role
-  if current_player_id and by_role and by_role[current_player_id] then
-    ui.item_slot_item_ids = by_role[current_player_id]
+  if current_player_id and by_role and role_id_utils.read(by_role, current_player_id) then
+    ui.item_slot_item_ids = role_id_utils.read(by_role, current_player_id)
   else
     ui.item_slot_item_ids = {}
   end
