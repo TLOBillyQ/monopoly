@@ -217,19 +217,28 @@ local function _test_scenario_market_staging_applies_player_position()
   local game = _new_game()
   test_profile_bootstrap.apply(game, "scenario_market_staging")
 
-  local p1_expected = game.board:index_of_tile_id(34)
-  assert(p1_expected ~= nil, "tile 34 should exist in board path")
+  local p1_expected = game.board:index_of_tile_id(30)
+  assert(p1_expected ~= nil, "tile 30 should exist in board path")
   assert(game.players[1].position == p1_expected, "p1 position should match scenario_market_staging")
 end
 
-local function _test_scenario_market_staging_is_one_step_before_market()
+local function _test_scenario_market_staging_grants_remote_dice()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "scenario_market_staging")
+
+  _assert_inventory_counts(game.players[1], {
+    [2002] = 1,
+  })
+end
+
+local function _test_scenario_market_staging_reaches_market_with_remote_dice_5()
   local game = _new_game()
   test_profile_bootstrap.apply(game, "scenario_market_staging")
 
   local market_index = game.board:index_of_tile_id(map_cfg.market_id)
   assert(market_index ~= nil, "market tile id should exist in board path")
-  assert(game.players[1].position + 1 == market_index,
-    "p1 should be one step before market after scenario_market_staging bootstrap")
+  assert(game.players[1].position + 5 == market_index,
+    "p1 should reach market with remote dice value 5 after scenario_market_staging bootstrap")
 end
 
 return {
@@ -256,8 +265,12 @@ return {
       run = _test_scenario_market_staging_applies_player_position,
     },
     {
-      name = "scenario_market_staging_is_one_step_before_market",
-      run = _test_scenario_market_staging_is_one_step_before_market,
+      name = "scenario_market_staging_grants_remote_dice",
+      run = _test_scenario_market_staging_grants_remote_dice,
+    },
+    {
+      name = "scenario_market_staging_reaches_market_with_remote_dice_5",
+      run = _test_scenario_market_staging_reaches_market_with_remote_dice_5,
     },
   },
 }

@@ -68,7 +68,10 @@ local profiles = {
     bootstrap = {
       players = {
         [1] = {
-          position_tile_id = 34,
+          position_tile_id = 30,
+          item_counts = {
+            [2002] = 1,
+          },
         },
         [2] = {
           position_tile_id = 35,
