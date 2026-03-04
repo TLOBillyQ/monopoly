@@ -12,19 +12,25 @@
     是否额外拷贝 vendor/ 目录（默认不拷贝）
 .PARAMETER StartupProfile
     启动时注入的测试 profile 名（写入 main.lua 的 STARTUP_TEST_PROFILE）
+.PARAMETER Mode
+    部署模式：dev 或 release（默认 dev）。release 模式会注入 RELEASE_BUILD=true，且禁止 StartupProfile。
 .EXAMPLE
     pwsh -File .\deploy.ps1 -TargetPath "C:\Target\Project"
 .EXAMPLE
     pwsh -File .\deploy.ps1 -TargetPath "C:\Target\Project" -IncludeVendor
 .EXAMPLE
     pwsh -File .\deploy.ps1 -StartupProfile "items_move_control"
+.EXAMPLE
+    pwsh -File .\deploy.ps1 -Mode release
 #>
 
 param(
     [Parameter(Mandatory=$false, HelpMessage="请输入目标目录的路径")]
     [string]$TargetPath,
     [switch]$IncludeVendor,
-    [string]$StartupProfile
+    [string]$StartupProfile,
+    [ValidateSet("dev", "release")]
+    [string]$Mode = "dev"
 )
 
 function Test-Pwsh7 {
@@ -38,7 +44,7 @@ if (-not (Test-Pwsh7)) {
     $version = $PSVersionTable.PSVersion.ToString()
     Write-Host "✗ 部署脚本要求在 PowerShell 7+ (pwsh) 环境运行。" -ForegroundColor Red
     Write-Host "  当前环境: PSEdition=$edition Version=$version" -ForegroundColor Yellow
-    Write-Host "  请使用: pwsh -File .\scripts\deploy.ps1 [-TargetPath PATH] [-IncludeVendor] [-StartupProfile NAME]" -ForegroundColor Yellow
+    Write-Host "  请使用: pwsh -File .\scripts\deploy.ps1 [-TargetPath PATH] [-IncludeVendor] [-StartupProfile NAME] [-Mode dev|release]" -ForegroundColor Yellow
     exit 1
 }
 
@@ -52,20 +58,33 @@ function Escape-LuaStringDoubleQuoted {
     return $Text.Replace('\', '\\').Replace('"', '\"')
 }
 
-function Write-MainLuaForProfile {
+function Write-MainLuaForStartupPolicy {
     param(
         [string]$SourceMainLua,
         [string]$DestMainLua,
-        [string]$ProfileName
+        [string]$ProfileName,
+        [string]$DeployMode
     )
     $sourceText = Get-Content -Path $SourceMainLua -Raw
-    if ([string]::IsNullOrWhiteSpace($ProfileName)) {
-        Set-Content -Path $DestMainLua -Value $sourceText -NoNewline
-        return
+    $prefixes = @()
+    if ($DeployMode -eq "release") {
+        $prefixes += "RELEASE_BUILD = true"
     }
-    $escaped = Escape-LuaStringDoubleQuoted -Text $ProfileName
-    $prefix = "STARTUP_TEST_PROFILE = `"$escaped`"" + [Environment]::NewLine
+    if ([string]::IsNullOrWhiteSpace($ProfileName) -eq $false) {
+        $escaped = Escape-LuaStringDoubleQuoted -Text $ProfileName
+        $prefixes += "STARTUP_TEST_PROFILE = `"$escaped`""
+    }
+    if ($prefixes.Count -eq 0) {
+      Set-Content -Path $DestMainLua -Value $sourceText -NoNewline
+      return
+    }
+    $prefix = ($prefixes -join [Environment]::NewLine) + [Environment]::NewLine
     Set-Content -Path $DestMainLua -Value ($prefix + $sourceText) -NoNewline
+}
+
+if ($Mode -eq "release" -and [string]::IsNullOrWhiteSpace($StartupProfile) -eq $false) {
+    Write-Host "✗ release 模式禁止 -StartupProfile，请改为默认 profile 启动。" -ForegroundColor Red
+    exit 1
 }
 
 # 未传入时按平台选择默认路径
@@ -105,8 +124,11 @@ Write-Host "======================================" -ForegroundColor Cyan
 Write-Host "开始部署项目文件" -ForegroundColor Cyan
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host "项目根目录: $ProjectRoot" -ForegroundColor Yellow
+Write-Host "部署模式: $Mode" -ForegroundColor Yellow
 Write-Host "目标目录数量: $($TargetPaths.Count)" -ForegroundColor Yellow
-if ([string]::IsNullOrWhiteSpace($StartupProfile)) {
+if ($Mode -eq "release") {
+    Write-Host "启动 Profile: default (release 模式固定，不注入 STARTUP_TEST_PROFILE)" -ForegroundColor Yellow
+} elseif ([string]::IsNullOrWhiteSpace($StartupProfile)) {
     Write-Host "启动 Profile: default (未注入 STARTUP_TEST_PROFILE)" -ForegroundColor Yellow
 } else {
     Write-Host "启动 Profile: $StartupProfile" -ForegroundColor Yellow
@@ -188,7 +210,7 @@ foreach ($TargetPath in $TargetPaths) {
                     New-Item -ItemType Directory -Path $fileDestDir -Force | Out-Null
                 }
                 if ($file.Source -eq "main.lua") {
-                    Write-MainLuaForProfile -SourceMainLua $sourcePath -DestMainLua $fileDestPath -ProfileName $StartupProfile
+                    Write-MainLuaForStartupPolicy -SourceMainLua $sourcePath -DestMainLua $fileDestPath -ProfileName $StartupProfile -DeployMode $Mode
                 } else {
                     Copy-Item -LiteralPath $sourcePath -Destination $fileDestPath -Force
                 }

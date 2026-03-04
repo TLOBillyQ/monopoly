@@ -65,8 +65,12 @@ local function _build_role_roster(max_players)
   return roster
 end
 
-local function _build_non_p1_ai_map(player_count)
-  if gameplay_rules.test_force_non_p1_ai ~= true then
+local function _build_non_p1_ai_map(player_count, force_enabled)
+  local enabled = gameplay_rules.test_force_non_p1_ai == true
+  if force_enabled ~= nil then
+    enabled = force_enabled == true
+  end
+  if not enabled then
     return nil
   end
   local ai = {}
@@ -80,6 +84,9 @@ end
 function M.build_state(get_current_game, opts)
   opts = opts or {}
   local profile_name = opts.profile_name
+  local release_mode = opts.release_mode == true
+  local force_non_p1_ai = opts.force_non_p1_ai
+  local fail_fast_when_roles_empty = opts.fail_fast_when_roles_empty == true
   local map_cfg = test_profile_resolver.resolve_map(profile_name)
   local ui = ui_view.build_ui_state()
   local state = {
@@ -93,7 +100,7 @@ function M.build_state(get_current_game, opts)
     wait_action_anim = true,
     game_factory = function()
       local role_roster = _build_role_roster(max_player_count)
-      local forced_ai = _build_non_p1_ai_map(#role_roster)
+      local forced_ai = _build_non_p1_ai_map(#role_roster, force_non_p1_ai)
       local created_game = nil
       if #role_roster > 0 then
         logger.info("[Eggy]", "使用角色驱动初始化，角色数量:", tostring(#role_roster))
@@ -105,9 +112,12 @@ function M.build_state(get_current_game, opts)
           tiles = tiles_cfg,
         })
       else
+        if release_mode or fail_fast_when_roles_empty then
+          error("[Eggy] release startup failed: role roster is empty")
+        end
         logger.warn("[Eggy]", "角色列表为空，回退调试玩家初始化")
         local player_names = { "玩家1", "AI2", "AI3", "AI4" }
-        local fallback_ai = _build_non_p1_ai_map(#player_names) or { [2] = true, [3] = true, [4] = true }
+        local fallback_ai = _build_non_p1_ai_map(#player_names, force_non_p1_ai) or { [2] = true, [3] = true, [4] = true }
         created_game = game:new({
           players = player_names,
           ai = fallback_ai,

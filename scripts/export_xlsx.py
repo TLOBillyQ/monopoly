@@ -3,6 +3,7 @@ import os
 import sys
 import zipfile
 import xml.etree.ElementTree as ET
+import argparse
 
 NS_MAIN = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 NS_REL_DOC = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -214,7 +215,15 @@ def infer_market_kind(page, product_id):
     return "item"
 
 
-def main():
+def parse_args(argv):
+    parser = argparse.ArgumentParser(description="Export design xlsx files to generated lua config.")
+    parser.add_argument("--mode", choices=["dev", "release"], default="dev", help="export mode")
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    args = parse_args(argv or [])
+    release_mode = args.mode == "release"
     script_dir = os.path.dirname(os.path.abspath(__file__))
     root = os.path.abspath(os.path.join(script_dir, os.pardir))
     design_dir = os.path.join(root, "docs", "design")
@@ -381,19 +390,20 @@ def main():
     # Vehicles
     col_map, rows = table_from_sheet(vehicles_path)
     vehicles = []
-    for row in rows:
-        vid = parse_int(row.get(col_map.get("座驾id")))
-        if not vid:
-            continue
-        vehicles.append(
-            {
-                "id": vid,
-                "name": row.get(col_map.get("座驾名称")) or "",
-                "tier": parse_int(row.get(col_map.get("座驾等级"))),
-                "dice_count": parse_int(row.get(col_map.get("骰子数"))),
-                "indestructible": parse_bool(row.get(col_map.get("是否不可摧毁（免疫导弹、台风等效果）"))),
-            }
-        )
+    if not release_mode:
+        for row in rows:
+            vid = parse_int(row.get(col_map.get("座驾id")))
+            if not vid:
+                continue
+            vehicles.append(
+                {
+                    "id": vid,
+                    "name": row.get(col_map.get("座驾名称")) or "",
+                    "tier": parse_int(row.get(col_map.get("座驾等级"))),
+                    "dice_count": parse_int(row.get(col_map.get("骰子数"))),
+                    "indestructible": parse_bool(row.get(col_map.get("是否不可摧毁（免疫导弹、台风等效果）"))),
+                }
+            )
 
     write_lua_table(
         os.path.join(config_dir, "Vehicles.lua"),
@@ -435,6 +445,8 @@ def main():
             continue
         page = value_by_headers(row, col_map, ["分页"]) or ""
         kind = infer_market_kind(page, pid)
+        if release_mode and kind == "vehicle":
+            continue
         record = {
             "order": order,
             "product_id": pid,
@@ -487,6 +499,8 @@ def main():
         target_raw = row.get(col_map.get("事件目标")) or ""
         effect_raw = row.get(col_map.get("事件类型")) or ""
         effect = effect_map.get(effect_raw, "")
+        if release_mode and effect == "set_vehicle":
+            continue
         param = row.get(col_map.get("事件参数"))
 
         record = {
@@ -591,4 +605,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))
