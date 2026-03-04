@@ -1,4 +1,5 @@
 local logger = require("src.core.Logger")
+local role_id_utils = require("src.core.RoleId")
 
 local lock_policy = {}
 
@@ -46,13 +47,17 @@ local function _remove_lock(unit, buff_id)
 end
 
 local function _sync_role_lock(lock_state, role_id, unit, buff_id)
-  local entry = lock_state.by_role[role_id] or {}
+  local normalized_role_id = role_id_utils.normalize(role_id)
+  if normalized_role_id == nil then
+    return
+  end
+  local entry = role_id_utils.read(lock_state.by_role, normalized_role_id) or {}
   if entry.unit and entry.unit ~= unit and entry.owned then
     _remove_lock(entry.unit, buff_id)
   end
 
   if not unit then
-    lock_state.by_role[role_id] = nil
+    role_id_utils.write(lock_state.by_role, normalized_role_id, nil)
     return
   end
 
@@ -64,7 +69,7 @@ local function _sync_role_lock(lock_state, role_id, unit, buff_id)
     entry.owned = entry.owned == true
   end
   entry.unit = unit
-  lock_state.by_role[role_id] = entry
+  role_id_utils.write(lock_state.by_role, normalized_role_id, entry)
 end
 
 local function _release_all(lock_state, buff_id)
@@ -99,11 +104,14 @@ function lock_policy.sync(state, enabled, deps)
       _warn_once(lock_state, "missing_roles", "role_control_lock missing role list")
       return
     end
-    local role_id = runtime.resolve_role_id(role) or tostring(role)
+    local role_id = role_id_utils.normalize(runtime.resolve_role_id(role) or tostring(role))
+    if role_id == nil then
+      return
+    end
     seen_roles[role_id] = true
 
     local unit = role.get_ctrl_unit and role.get_ctrl_unit() or nil
-    if exempt_by_role[role_id] == true then
+    if role_id_utils.read(exempt_by_role, role_id) == true then
       _sync_role_lock(lock_state, role_id, nil, buff_id)
       return
     end

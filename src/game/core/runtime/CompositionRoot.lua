@@ -8,6 +8,7 @@ local bootstrap = require("src.game.core.runtime.Bootstrap")
 local game_factory = require("src.game.core.runtime.GameFactory")
 local phase_registry = require("src.game.runtime.PhaseRegistry")
 local number_utils = require("src.core.NumberUtils")
+local role_id_utils = require("src.core.RoleId")
 
 local composition_root = {}
 
@@ -17,7 +18,10 @@ local function _build_player_by_id(players)
   local out = {}
   for _, p in ipairs(players or {}) do
     if p and p.id ~= nil then
-      out[p.id] = p
+      local player_id = role_id_utils.normalize(p.id)
+      if player_id ~= nil then
+        out[player_id] = p
+      end
     end
   end
   return out

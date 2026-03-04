@@ -1910,6 +1910,19 @@ local function _test_game_startup_role_roster_retries_before_debug_players_fallb
   assert(created_opts.players == nil, "game startup should not fallback to debug players when retry succeeds")
 end
 
+local function _test_find_player_by_id_accepts_mixed_representation()
+  local g = _new_game()
+  local p1 = g.players[1]
+  p1.id = "1"
+  g.player_by_id = { ["1"] = p1 }
+
+  local by_int = g:find_player_by_id(1)
+  local by_string = g:find_player_by_id("1")
+
+  assert(by_int == p1, "find_player_by_id should match integer input to string player id")
+  assert(by_string == p1, "find_player_by_id should match string input to string player id")
+end
+
 return {
   _test_mandatory_payment_causes_bankruptcy,
   _test_bankruptcy_resets_owned_tiles,
@@ -1957,5 +1970,6 @@ return {
   _test_popup_countdown_uses_effective_modal_timeout,
   _test_dispatch_gate_blocks_next_when_choice_active,
   _test_game_startup_role_roster_retries_before_debug_players_fallback,
+  _test_find_player_by_id_accepts_mixed_representation,
 }
 

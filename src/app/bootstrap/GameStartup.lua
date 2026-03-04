@@ -9,6 +9,7 @@ local test_profile_resolver = require("src.app.testing.TestProfileResolver")
 local logger = require("src.core.Logger")
 local runtime_state = require("src.core.RuntimeState")
 local runtime_ports = require("src.core.RuntimePorts")
+local role_id_utils = require("src.core.RoleId")
 
 local max_player_count = 4
 
@@ -35,7 +36,7 @@ local function _build_role_roster(max_players)
     if role and role.get_roleid then
       local ok, id = pcall(role.get_roleid)
       if ok and id ~= nil then
-        role_id = id
+        role_id = role_id_utils.normalize(id)
       end
     end
     if role_id ~= nil then

@@ -1,4 +1,5 @@
 local number_utils = require("src.core.NumberUtils")
+local role_id_utils = require("src.core.RoleId")
 
 local item_slice = {}
 
@@ -36,9 +37,9 @@ end
 function item_slice.build_item_slots_by_player(players, slot_count)
   local out = {}
   for _, player in ipairs(players or {}) do
-    local player_id = player and player.id
+    local player_id = role_id_utils.normalize(player and player.id or nil)
     if player_id then
-      out[player_id] = item_slice.build_item_slots_for_player(player, slot_count)
+      role_id_utils.write(out, player_id, item_slice.build_item_slots_for_player(player, slot_count))
     end
   end
   return out
@@ -47,16 +48,16 @@ end
 function item_slice.build_auto_enabled_by_player(players)
   local out = {}
   for _, player in ipairs(players or {}) do
-    local player_id = player and player.id
+    local player_id = role_id_utils.normalize(player and player.id or nil)
     if player_id then
-      out[player_id] = player.auto == true
+      role_id_utils.write(out, player_id, player.auto == true)
     end
   end
   return out
 end
 
 function item_slice.resolve_item_choice_owner_id(game, choice, current_player_id)
-  local owner_role_id = number_utils.to_integer(current_player_id)
+  local owner_role_id = role_id_utils.normalize(current_player_id)
   local pending = game and game.turn and game.turn.pending_choice or nil
   if pending and pending.meta and pending.meta.player_id then
     owner_role_id = number_utils.to_integer(pending.meta.player_id)

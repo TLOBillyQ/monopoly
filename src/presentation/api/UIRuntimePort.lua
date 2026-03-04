@@ -1,5 +1,6 @@
 local ui_aliases = require("src.presentation.shared.UIAliases")
 local runtime_ports = require("src.core.RuntimePorts")
+local role_id_utils = require("src.core.RoleId")
 
 local runtime_port = {}
 
@@ -27,11 +28,11 @@ function runtime_port.resolve_role_id(role)
   if not role or not role.get_roleid then
     return nil
   end
-  local ok, role_id = pcall(role.get_roleid)
+  local ok, raw_role_id = pcall(role.get_roleid)
   if not ok then
     return nil
   end
-  return role_id
+  return role_id_utils.normalize(raw_role_id)
 end
 
 function runtime_port.with_client_role(role, fn)

@@ -23,12 +23,19 @@ function touch_policy.set_auto_controls_touch(ui, auto_enabled, controls)
     return
   end
   controls = controls or ui.auto_control_nodes or { always_show_nodes.auto_button, always_show_nodes.auto_label }
+  local auto_effect_seen = false
   for _, name in ipairs(controls) do
     if name == always_show_nodes.auto_button then
       ui:set_touch_enabled(name, auto_enabled == true)
     else
       ui:set_touch_enabled(name, false)
     end
+    if name == always_show_nodes.auto_effect then
+      auto_effect_seen = true
+    end
+  end
+  if not auto_effect_seen then
+    ui:set_touch_enabled(always_show_nodes.auto_effect, false)
   end
 end
 

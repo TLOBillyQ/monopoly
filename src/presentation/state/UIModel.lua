@@ -3,6 +3,7 @@ local item_slice = require("src.presentation.state.ui_model.ItemSlice")
 local choice_slice = require("src.presentation.state.ui_model.ChoiceSlice")
 local panel_slice = require("src.presentation.state.ui_model.PanelSlice")
 local number_utils = require("src.core.NumberUtils")
+local role_id_utils = require("src.core.RoleId")
 
 local ui_model = {}
 
@@ -43,7 +44,8 @@ local function _resolve_current_player_meta(current)
   if current == nil then
     return FALLBACK_CURRENT_PLAYER_NAME, FALLBACK_CURRENT_PLAYER_CASH, FALLBACK_CURRENT_PLAYER_ID
   end
-  return current.name or FALLBACK_CURRENT_PLAYER_NAME, current.cash or FALLBACK_CURRENT_PLAYER_CASH, current.id
+  return current.name or FALLBACK_CURRENT_PLAYER_NAME, current.cash or FALLBACK_CURRENT_PLAYER_CASH,
+    role_id_utils.normalize(current.id)
 end
 
 local function _fill_meta(model, env, current, turn)
@@ -69,7 +71,7 @@ function ui_model.build(game, env)
   local slot_count = item_slice.resolve_slot_count(ui_runtime)
   local item_slots_by_player = item_slice.build_item_slots_by_player(game.players, slot_count)
   local auto_enabled_by_player = item_slice.build_auto_enabled_by_player(game.players)
-  local item_slots = item_slots_by_player[current_player_id]
+  local item_slots = role_id_utils.read(item_slots_by_player, current_player_id)
   if not item_slots then
     item_slots = item_slice.build_item_slots_for_player(current, slot_count)
   end
@@ -136,7 +138,7 @@ function ui_model.update(prev, game, env, dirty)
     local slot_count = item_slice.resolve_slot_count(ui_runtime)
     local by_player = item_slice.build_item_slots_by_player(game.players, slot_count)
     model.item_slots_by_player = by_player
-    model.item_slots = by_player[current_player_id] or item_slice.build_item_slots_for_player(current, slot_count)
+    model.item_slots = role_id_utils.read(by_player, current_player_id) or item_slice.build_item_slots_for_player(current, slot_count)
   end
 
   if dirty.turn or dirty.market or ui_dirty then

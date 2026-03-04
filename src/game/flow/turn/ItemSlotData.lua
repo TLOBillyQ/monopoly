@@ -1,4 +1,5 @@
 local number_utils = require("src.core.NumberUtils")
+local role_id_utils = require("src.core.RoleId")
 
 local item_slot_data = {}
 
@@ -24,7 +25,7 @@ function item_slot_data.from_ui_state(ui_state)
         return nil
       end
       if actor_role_id and type(state.item_slot_item_ids_by_role) == "table" then
-        local item_ids = state.item_slot_item_ids_by_role[actor_role_id]
+        local item_ids = role_id_utils.read(state.item_slot_item_ids_by_role, actor_role_id)
         if item_ids then
           return item_ids
         end
@@ -38,7 +39,7 @@ function item_slot_data.from_ui_state(ui_state)
       end
       local item_ids = nil
       if actor_role_id and type(state and state.item_slot_item_ids_by_role) == "table" then
-        item_ids = state.item_slot_item_ids_by_role[actor_role_id]
+        item_ids = role_id_utils.read(state.item_slot_item_ids_by_role, actor_role_id)
       end
       if not item_ids then
         item_ids = state and state.item_slot_item_ids or nil

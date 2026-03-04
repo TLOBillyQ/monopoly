@@ -1,5 +1,6 @@
 local move_anim = require("src.presentation.render.MoveAnim")
 local runtime_state = require("src.core.RuntimeState")
+local role_id_utils = require("src.core.RoleId")
 
 local anim_ports = {}
 
@@ -20,7 +21,7 @@ end
 
 local function _update_role_control_lock_exempt(state, enabled, meta)
   local turn_runtime = runtime_state.ensure_turn_runtime(state)
-  local role_id = meta and meta.player_id or nil
+  local role_id = role_id_utils.normalize(meta and meta.player_id or nil)
   if role_id == nil then
     _apply_role_control_lock(state, turn_runtime.role_control_lock_active == true)
     return
@@ -38,7 +39,7 @@ local function _update_role_control_lock_exempt(state, enabled, meta)
     state.role_control_lock_exempt_by_role = exempt_by_role
   end
 
-  local current = counts[role_id] or 0
+  local current = role_id_utils.read(counts, role_id) or 0
   if enabled == true then
     current = math.max(0, current - 1)
   else
@@ -46,11 +47,11 @@ local function _update_role_control_lock_exempt(state, enabled, meta)
   end
 
   if current <= 0 then
-    counts[role_id] = nil
-    exempt_by_role[role_id] = nil
+    role_id_utils.write(counts, role_id, nil)
+    role_id_utils.write(exempt_by_role, role_id, nil)
   else
-    counts[role_id] = current
-    exempt_by_role[role_id] = true
+    role_id_utils.write(counts, role_id, current)
+    role_id_utils.write(exempt_by_role, role_id, true)
   end
 
   _apply_role_control_lock(state, turn_runtime.role_control_lock_active == true)

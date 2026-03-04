@@ -2,6 +2,7 @@ local logger = require("src.core.Logger")
 local number_utils = require("src.core.NumberUtils")
 local item_slot_data = require("src.game.flow.turn.ItemSlotData")
 local turn_action_gate = require("src.game.flow.turn.TurnActionGate")
+local role_id_utils = require("src.core.RoleId")
 
 local validator = {}
 
@@ -69,8 +70,8 @@ function validator.validate_actor_role(game, action)
   assert(game ~= nil and game.turn ~= nil, "missing game.turn")
   local current_index = game.turn.current_player_index
   local current_player = current_index and game.players and game.players[current_index] or nil
-  local current_role_id = current_player and number_utils.to_integer(current_player.id) or nil
-  local actor_role_id = action.actor_role_id
+  local current_role_id = role_id_utils.normalize(current_player and current_player.id or nil)
+  local actor_role_id = role_id_utils.normalize(action.actor_role_id)
   if actor_role_id == nil then
     logger.warn("ui_button missing actor_role_id:", tostring(action.id))
     return false
@@ -79,7 +80,7 @@ function validator.validate_actor_role(game, action)
     logger.warn("ui_button missing current_role_id:", tostring(action.id))
     return false
   end
-  if actor_role_id ~= current_role_id then
+  if not role_id_utils.equals(actor_role_id, current_role_id) then
     logger.warn(
       "ui_button blocked by actor check:",
       tostring(action.id),
@@ -92,13 +93,13 @@ function validator.validate_actor_role(game, action)
 end
 
 function validator.validate_choice_actor(game, action, choice)
-  local actor_role_id = action and action.actor_role_id or nil
+  local actor_role_id = role_id_utils.normalize(action and action.actor_role_id or nil)
   if actor_role_id == nil then
     logger.warn("choice action missing actor_role_id:", tostring(action and action.type))
     return false
   end
   local owner_role_id = _resolve_choice_owner_role_id(game, choice)
-  if owner_role_id ~= nil and actor_role_id ~= owner_role_id then
+  if owner_role_id ~= nil and not role_id_utils.equals(actor_role_id, owner_role_id) then
     logger.warn(
       "choice action blocked by actor check:",
       tostring(action and action.type),

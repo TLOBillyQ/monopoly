@@ -1,4 +1,5 @@
 local runtime = require("src.presentation.api.UIRuntimePort")
+local role_id_utils = require("src.core.RoleId")
 
 local M = {}
 
@@ -34,7 +35,7 @@ function M.set_debug_visible_for_role(state, role, visible)
   if not ui or not ui.set_debug_visible then
     return false
   end
-  local role_id = runtime.resolve_role_id(role)
+  local role_id = role_id_utils.normalize(runtime.resolve_role_id(role))
   if role_id == nil then
     return false
   end
@@ -43,8 +44,8 @@ function M.set_debug_visible_for_role(state, role, visible)
     ui:set_debug_visible(resolved)
   end)
   _ensure_debug_tables(ui)
-  ui.debug_visible_by_role[role_id] = resolved
-  ui.debug_log_enabled_by_role[role_id] = resolved
+  role_id_utils.write(ui.debug_visible_by_role, role_id, resolved)
+  role_id_utils.write(ui.debug_log_enabled_by_role, role_id, resolved)
   return true
 end
 

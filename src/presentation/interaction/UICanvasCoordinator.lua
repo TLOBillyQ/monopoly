@@ -10,6 +10,7 @@ local market_nodes = require("src.presentation.canvas.market.nodes")
 local popup_nodes = require("src.presentation.canvas.popup.nodes")
 local bankruptcy_nodes = require("src.presentation.canvas.bankruptcy.nodes")
 local debug_nodes = require("src.presentation.canvas.debug.nodes")
+local role_id_utils = require("src.core.RoleId")
 
 local coordinator = {}
 
@@ -89,11 +90,11 @@ function coordinator.switch_for_role(ui, target, role)
   assert(ui ~= nil, "missing ui")
   assert(role ~= nil, "missing role")
   local target_name = target or coordinator.CANVAS_BASE
-  local role_id = runtime.resolve_role_id(role) or tostring(role)
+  local role_id = role_id_utils.normalize(runtime.resolve_role_id(role) or tostring(role))
   local debug_by_role = ui.debug_visible_by_role
   local keep_debug = false
   if type(debug_by_role) == "table" then
-    keep_debug = debug_by_role[role_id] == true
+    keep_debug = role_id_utils.read(debug_by_role, role_id) == true
   end
   for _, name in ipairs(ui_events.canvas_names) do
     local keep_debug_canvas = name == coordinator.CANVAS_DEBUG and keep_debug

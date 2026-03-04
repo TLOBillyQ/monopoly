@@ -1,4 +1,5 @@
 local runtime = require("src.presentation.api.UIRuntimePort")
+local role_id_utils = require("src.core.RoleId")
 
 local ui_event_state = {}
 
@@ -19,11 +20,13 @@ function ui_event_state.resolve_debug_enabled(state, role_id)
     local role = runtime.get_client_role()
     role_id = runtime.resolve_role_id(role)
   end
+  role_id = role_id_utils.normalize(role_id)
   if role_id == nil then
     return false
   end
-  if ui and type(ui.debug_log_enabled_by_role) == "table" then
-    return ui.debug_log_enabled_by_role[role_id] == true
+  local by_role = ui and ui.debug_log_enabled_by_role or nil
+  if type(by_role) == "table" then
+    return role_id_utils.read(by_role, role_id) == true
   end
   return false
 end

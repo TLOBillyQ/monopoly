@@ -2,6 +2,7 @@ local logger = require("src.core.Logger")
 local bankruptcy = require("src.game.core.runtime.Bankruptcy")
 local common = require("src.game.core.runtime.player_state.Common")
 local number_utils = require("src.core.NumberUtils")
+local role_id_utils = require("src.core.RoleId")
 
 local location_ops = {}
 
@@ -63,16 +64,27 @@ function location_ops.find_player_by_id(self, player_id)
   if player_id == nil then
     return nil
   end
+  local normalized_id = role_id_utils.normalize(player_id)
   local by_id = self.player_by_id
   if type(by_id) == "table" then
     local cached = by_id[player_id]
+    if not cached and normalized_id ~= nil then
+      cached = by_id[normalized_id] or by_id[tostring(normalized_id)]
+    end
     if cached then
+      if normalized_id ~= nil then
+        by_id[normalized_id] = cached
+      end
+      by_id[player_id] = cached
       return cached
     end
   end
   for _, player in ipairs(self.players or {}) do
-    if player and player.id == player_id then
+    if player and role_id_utils.equals(player.id, normalized_id) then
       if type(by_id) == "table" then
+        if normalized_id ~= nil then
+          by_id[normalized_id] = player
+        end
         by_id[player_id] = player
       end
       return player

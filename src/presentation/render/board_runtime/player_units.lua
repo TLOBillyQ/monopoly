@@ -1,18 +1,19 @@
 local M = {}
 local runtime_ports = require("src.core.RuntimePorts")
+local role_id_utils = require("src.core.RoleId")
 
 local function _resolve_player_id(player, i)
-  return assert(player.id, "missing player id: " .. tostring(i))
+  return assert(role_id_utils.normalize(player.id), "missing player id: " .. tostring(i))
 end
 
 local function _resolve_role_id(role, fallback)
   if role and role.get_roleid then
     local ok, role_id = pcall(role.get_roleid)
     if ok and role_id ~= nil then
-      return role_id
+      return role_id_utils.normalize(role_id)
     end
   end
-  return fallback
+  return role_id_utils.normalize(fallback)
 end
 
 local function _resolve_roles_from_players(players)

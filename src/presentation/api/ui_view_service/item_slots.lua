@@ -3,6 +3,7 @@ local runtime = require("src.presentation.api.UIRuntimePort")
 local ui_events = require("src.presentation.shared.UIEvents")
 local runtime_ports = require("src.core.RuntimePorts")
 local gameplay_rules = require("src.core.config.GameplayRules")
+local role_id_utils = require("src.core.RoleId")
 
 local M = {}
 
@@ -118,19 +119,19 @@ function M.refresh_item_slots(state, ui_model, opts)
   local slots = ui.item_slots
   local outlines = ui.card_outlines or {}
   local item_ids = {}
-  local role_id = opts.role_id
-  local display_player_id = opts.display_player_id or ui_model.current_player_id
+  local role_id = role_id_utils.normalize(opts.role_id)
+  local display_player_id = role_id_utils.normalize(opts.display_player_id or ui_model.current_player_id)
   local allow_interact = opts.allow_interact ~= false
   local by_player = ui_model.item_slots_by_player_id or ui_model.item_slots_by_player or {}
-  local items = by_player[display_player_id] or ui_model.item_slots or {}
+  local items = role_id_utils.read(by_player, display_player_id) or ui_model.item_slots or {}
   local allow_use = ui_model and ui_model.choice and ui_model.choice.kind == "item_phase_choice"
-  local choice_owner_id = ui_model and ui_model.item_choice_owner_id or ui_model.current_player_id
+  local choice_owner_id = role_id_utils.normalize(ui_model and ui_model.item_choice_owner_id or ui_model.current_player_id)
   local refs = state.ui_refs
   local empty_key = refs["Empty"]
   local allow_slot_click = allow_use == true
     and allow_interact == true
     and display_player_id ~= nil
-    and choice_owner_id == display_player_id
+    and role_id_utils.equals(choice_owner_id, display_player_id)
   local option_id_set = _build_option_id_set(ui_model and ui_model.choice or nil)
   local slot_pickable = {}
   local choice_kind = ui_model and ui_model.choice and ui_model.choice.kind or nil
@@ -209,7 +210,7 @@ function M.refresh_item_slots(state, ui_model, opts)
     if type(ui.item_slot_item_ids_by_role) ~= "table" then
       ui.item_slot_item_ids_by_role = {}
     end
-    ui.item_slot_item_ids_by_role[role_id] = item_ids
+    role_id_utils.write(ui.item_slot_item_ids_by_role, role_id, item_ids)
   end
   ui.item_slot_item_ids = item_ids
 end

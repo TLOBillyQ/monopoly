@@ -1,5 +1,6 @@
 local runtime = require("src.presentation.api.UIRuntimePort")
 local base_nodes = require("src.presentation.canvas.base.nodes")
+local role_id_utils = require("src.core.RoleId")
 
 local turn_effects = {}
 
@@ -18,12 +19,12 @@ end
 local function _resolve_current_player_index(ui_model)
   local board = ui_model and ui_model.board or nil
   local players = board and board.players or nil
-  local current_id = ui_model and ui_model.current_player_id or nil
+  local current_id = role_id_utils.normalize(ui_model and ui_model.current_player_id or nil)
   if not (players and current_id) then
     return nil
   end
   for index, player in ipairs(players) do
-    if player and player.id == current_id then
+    if player and role_id_utils.equals(player.id, current_id) then
       return index
     end
   end
@@ -52,14 +53,7 @@ local function _sync_current_turn_highlight(_, ui_model)
 end
 
 local function _get_role_id(role)
-  if not role or not role.get_roleid then
-    return nil
-  end
-  local ok, role_id = pcall(role.get_roleid)
-  if ok then
-    return role_id
-  end
-  return nil
+  return role_id_utils.normalize(runtime.resolve_role_id(role))
 end
 
 local function _get_prompt_nodes()
@@ -81,13 +75,13 @@ end
 local function _sync_local_turn_prompt(_, ui_model)
   local board = ui_model and ui_model.board or nil
   local phase = board and board.phase or nil
-  local current_player_id = ui_model and ui_model.current_player_id or nil
+  local current_player_id = role_id_utils.normalize(ui_model and ui_model.current_player_id or nil)
   local can_show = _is_pre_action_phase(phase)
   runtime.for_each_role_or_global(function(role)
     local role_id = _get_role_id(role)
     _with_client_role(role, function()
       local nodes = _get_prompt_nodes()
-      local show = role_id ~= nil and current_player_id ~= nil and role_id == current_player_id and can_show
+      local show = role_id ~= nil and current_player_id ~= nil and role_id_utils.equals(role_id, current_player_id) and can_show
       _set_prompt_visible(nodes, show)
     end)
   end)
@@ -116,11 +110,13 @@ local function _resolve_other_action_prompt_text(ui_model)
 end
 
 local function _sync_other_player_action_prompt(_, ui_model)
-  local current_player_id = ui_model and ui_model.current_player_id or nil
+  local current_player_id = role_id_utils.normalize(ui_model and ui_model.current_player_id or nil)
   local prompt_text = _resolve_other_action_prompt_text(ui_model)
   runtime.for_each_role_or_global(function(role)
     local role_id = _get_role_id(role)
-    local show = role_id ~= nil and current_player_id ~= nil and role_id ~= current_player_id
+    local show = role_id ~= nil
+      and current_player_id ~= nil
+      and not role_id_utils.equals(role_id, current_player_id)
     if show then
       _set_other_action_prompt(role, prompt_text, true)
     else

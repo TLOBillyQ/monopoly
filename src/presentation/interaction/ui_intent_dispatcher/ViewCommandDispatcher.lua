@@ -6,6 +6,7 @@ local ui_events = require("src.presentation.shared.UIEvents")
 local ui_event_state = require("src.presentation.interaction.UIEventState")
 local role_context = require("src.presentation.interaction.ui_intent_dispatcher.RoleContext")
 local target_choice_effects = require("src.presentation.render.TargetChoiceEffects")
+local role_id_utils = require("src.core.RoleId")
 
 local view_command_dispatcher = {}
 
@@ -21,11 +22,12 @@ function view_command_dispatcher.dispatch(state, intent)
       return true
     end
     local actor_role_id = intent.actor_role_id
+    actor_role_id = role_id_utils.normalize(actor_role_id)
     if actor_role_id == nil then
       logger.warn("toggle_action_log missing actor_role_id")
       return true
     end
-    local active_role = role_context.resolve_by_id(intent.actor_role_id)
+    local active_role = role_context.resolve_by_id(actor_role_id)
     local next_enabled = not ui_event_state.resolve_debug_enabled(state, actor_role_id)
     ui_view.set_debug_visible_for_role(state, active_role, next_enabled)
     if next_enabled and type(active_role.send_ui_custom_event) ~= "function" then

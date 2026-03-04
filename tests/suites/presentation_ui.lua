@@ -1563,6 +1563,10 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
       [1] = { 2001 },
       [2] = { 2002 },
     },
+    auto_enabled_by_player = {
+      [1] = false,
+      [2] = true,
+    },
     item_slots = { 2001 },
     current_player_id = 1,
     item_choice_owner_id = 1,
@@ -1591,12 +1595,16 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
   assert(touch_logs[2] and touch_logs[2]["始终显示_托管按钮"] == true, "player role auto button should stay enabled")
   assert(touch_logs[1] and touch_logs[1]["始终显示_文本"] == false, "role1 auto label should stay non-clickable")
   assert(touch_logs[2] and touch_logs[2]["始终显示_文本"] == false, "role2 auto label should stay non-clickable")
+  assert(touch_logs[1] and touch_logs[1]["始终显示_托管按钮特效"] == false, "role1 auto effect should stay non-clickable")
+  assert(touch_logs[2] and touch_logs[2]["始终显示_托管按钮特效"] == false, "role2 auto effect should stay non-clickable")
   assert(label_logs[1] and label_logs[1]["始终显示_文本"] == "自动：关", "role1 auto label should show status")
   assert(label_logs[2] and label_logs[2]["始终显示_文本"] == "自动：开", "role2 auto label should show status")
   assert(visible_logs[2] and visible_logs[2]["基础_倒计时"] == true, "non-current role countdown should be visible")
   assert(visible_logs[2] and visible_logs[2]["基础_道具槽位1"] == true, "non-current role slot should be visible")
   assert(visible_logs[2] and visible_logs[2]["始终显示_托管按钮"] == true, "auto button should stay visible")
   assert(visible_logs[2] and visible_logs[2]["始终显示_文本"] == true, "auto label should stay visible")
+  assert(visible_logs[1] and visible_logs[1]["始终显示_托管按钮特效"] == false, "role1 auto effect should hide when auto off")
+  assert(visible_logs[2] and visible_logs[2]["始终显示_托管按钮特效"] == true, "role2 auto effect should show when auto on")
   assert(state.ui.item_slot_item_ids_by_role[1] and state.ui.item_slot_item_ids_by_role[1][1] == 2001, "role1 slot map expected")
   assert(state.ui.item_slot_item_ids_by_role[2] and state.ui.item_slot_item_ids_by_role[2][1] == 2002, "role2 slot map expected")
 end
@@ -1800,10 +1808,12 @@ local function _test_ui_touch_policy_auto_controls_touch()
   ui_touch_policy.set_auto_controls_touch(ui, true)
   _assert_eq(touch["始终显示_托管按钮"], true, "auto button should be clickable when enabled")
   _assert_eq(touch["始终显示_文本"], false, "auto label should stay non-clickable")
+  _assert_eq(touch["始终显示_托管按钮特效"], false, "auto effect should stay non-clickable")
 
   ui_touch_policy.set_auto_controls_touch(ui, false)
   _assert_eq(touch["始终显示_托管按钮"], false, "auto button should be non-clickable when disabled")
   _assert_eq(touch["始终显示_文本"], false, "auto label should stay non-clickable when disabled")
+  _assert_eq(touch["始终显示_托管按钮特效"], false, "auto effect should stay non-clickable when disabled")
 end
 
 local function _test_ui_touch_policy_runtime_nodes_touch_enabled()
@@ -2675,16 +2685,19 @@ local function _test_ui_event_router_auto_uses_cached_local_role_instead_of_curr
     return node
   end
 
-  local captured = {}
   local show_tip_calls = 0
   local node_map = {
     [always_show_nodes.auto_button] = new_node(),
   }
+  local game = _new_game()
   local local_role = {
     get_roleid = function()
-      return "101"
+      return "2"
     end,
   }
+  local before_player1 = game.players[1].auto == true
+  local before_player2 = game.players[2].auto == true
+  local after_first_click_player2 = nil
 
   _with_patches({
     { key = "all_roles", value = nil },
@@ -2703,8 +2716,8 @@ local function _test_ui_event_router_auto_uses_cached_local_role_instead_of_curr
   }, function()
     local state = {
       turn_action_port = {
-        dispatch_action = function(_, _, action)
-          captured[#captured + 1] = action
+        dispatch_action = function(game_ctx, state_ctx, action, opts)
+          return turn_dispatch.dispatch_action(game_ctx, state_ctx, action, opts)
         end,
         should_block_action = function()
           return false
@@ -2712,18 +2725,21 @@ local function _test_ui_event_router_auto_uses_cached_local_role_instead_of_curr
       },
       ui = ui_view.build_ui_state(),
       ui_model = {
-        current_player_id = 2,
+        current_player_id = 1,
       },
     }
     canvas_event_router.bind(state, function()
-      return {}
+      return game
     end)
     node_map[always_show_nodes.auto_button]._listener_cb({ role = local_role })
+    after_first_click_player2 = game.players[2].auto == true
+    state.ui_model.current_player_id = 1
     node_map[always_show_nodes.auto_button]._listener_cb({})
   end)
 
-  _assert_eq(captured[1] and captured[1].actor_role_id, 101, "auto first click should use local role")
-  _assert_eq(captured[2] and captured[2].actor_role_id, 101, "auto second click should use cached local role")
+  _assert_eq(game.players[1].auto == true, before_player1, "auto clicks should not toggle current player state")
+  _assert_eq(after_first_click_player2, not before_player2, "auto first click should toggle local player state")
+  _assert_eq(game.players[2].auto == true, before_player2, "auto second click should toggle cached local role back")
   _assert_eq(show_tip_calls, 0, "auto cached local role should avoid missing context tip")
 end
 
