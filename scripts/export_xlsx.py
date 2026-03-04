@@ -218,6 +218,7 @@ def infer_market_kind(page, product_id):
 def parse_args(argv):
     parser = argparse.ArgumentParser(description="Export design xlsx files to generated lua config.")
     parser.add_argument("--mode", choices=["dev", "release"], default="dev", help="export mode")
+    parser.add_argument("--output-dir", default=None, help="override generated lua output directory")
     return parser.parse_args(argv)
 
 
@@ -230,7 +231,8 @@ def main(argv=None):
     if not os.path.isdir(design_dir):
         # Backward compatibility: older repos may place xlsx files under root/design.
         design_dir = os.path.join(root, "design")
-    config_dir = os.path.join(root, "Config", "Generated")
+    config_dir = args.output_dir or os.path.join(root, "Config", "Generated")
+    config_dir = os.path.abspath(config_dir)
     os.makedirs(config_dir, exist_ok=True)
 
     tiles_path = os.path.join(design_dir, "蛋仔--大富翁--地块表.xlsx")

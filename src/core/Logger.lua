@@ -33,6 +33,8 @@ local function _format_timestamp(timestamp)
   return logger.time_formatter(timestamp)
 end
 
+local _format_entry
+
 local function _push(level, ...)
   if level == "info" then
     local limit = logger.info_per_turn_limit
@@ -83,6 +85,12 @@ local function _push(level, ...)
   end
   if logger.ui_sink then
     logger.ui_sink(entry)
+  end
+  if type(print) == "function" then
+    local ok = pcall(print, _format_entry(entry))
+    if not ok then
+      -- ignore print failures in sandbox/runtime
+    end
   end
 end
 
@@ -160,7 +168,7 @@ function logger.get_seq()
   return logger.seq
 end
 
-local function _format_entry(entry)
+function _format_entry(entry)
   local time_text = entry.time_text or ""
   local level = entry.level or ""
   local text = entry.text or ""

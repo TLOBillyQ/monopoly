@@ -34,6 +34,7 @@ local suites = {
   require("gameplay_runtime"),
   require("gameplay_coroutine"),
   require("gameplay_loop"),
+  require("runtime_bootstrap"),
 
   -- presentation: UI layer
   require("presentation_ui_timing_anim"),

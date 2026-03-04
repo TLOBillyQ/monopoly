@@ -224,6 +224,22 @@ foreach ($TargetPath in $TargetPaths) {
         }
     }
 
+    if ($Mode -eq "release") {
+        $targetGeneratedDir = Join-Path $TargetPath "Config/Generated"
+        Write-Host "正在导出 release 配置到目标目录..." -ForegroundColor Cyan
+        Write-Host "  目: $targetGeneratedDir" -ForegroundColor Gray
+        try {
+            python (Join-Path $ProjectRoot "scripts/export_xlsx.py") --mode release --output-dir $targetGeneratedDir
+            if ($LASTEXITCODE -ne 0) {
+                throw "export_xlsx.py failed with exit code $LASTEXITCODE"
+            }
+            Write-Host "✓ release 配置导出成功" -ForegroundColor Green
+        } catch {
+            Write-Host "✗ release 配置导出失败: $_" -ForegroundColor Red
+            exit 1
+        }
+    }
+
     Write-Host ""
 }
 
