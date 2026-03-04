@@ -2,7 +2,6 @@ local logger = {
   entries = {},
   max_entries = 200,
   seq = 0,
-  mode = "dev",
   info_per_turn_limit = nil,
   info_turn_provider = nil,
   info_turn = nil,
@@ -35,11 +34,6 @@ local function _format_timestamp(timestamp)
 end
 
 local function _push(level, ...)
-  local mode = logger.mode or "dev"
-  if mode == "release" and level ~= "event" then
-    return
-  end
-
   if level == "info" then
     local limit = logger.info_per_turn_limit
     local provider = logger.info_turn_provider
@@ -73,7 +67,6 @@ local function _push(level, ...)
       global_api.show_tips(text, 2.0)
     end
   end
-
   local timestamp = _get_timestamp()
   local time_text = _format_timestamp(timestamp)
   logger.seq = logger.seq + 1
@@ -88,33 +81,9 @@ local function _push(level, ...)
   if #logger.entries > logger.max_entries then
     table.remove(logger.entries, 1)
   end
-  if mode == "dev" then
-    if time_text ~= "" then
-      print(time_text .. " [" .. level .. "] " .. text)
-    else
-      print("[" .. level .. "] " .. text)
-    end
-  end
   if logger.ui_sink then
     logger.ui_sink(entry)
   end
-end
-
-function logger.set_mode(mode)
-  if type(mode) ~= "string" then
-    logger.mode = "dev"
-    return
-  end
-  local normalized = string.lower(mode)
-  if normalized ~= "dev" and normalized ~= "release" then
-    logger.mode = "dev"
-    return
-  end
-  logger.mode = normalized
-end
-
-function logger.get_mode()
-  return logger.mode
 end
 
 function logger.set_timestamp_provider(provider)

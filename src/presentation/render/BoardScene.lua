@@ -1,6 +1,5 @@
 local board_scene = {}
 local runtime_ports = require("src.core.RuntimePorts")
-local board_scene_debug_probe = require("src.presentation.render.BoardSceneDebugProbe")
 
 function board_scene.init(state, map_cfg, game)
   assert(state ~= nil, "missing state")
@@ -83,12 +82,6 @@ function board_scene.init(state, map_cfg, game)
   assert(scene.ground ~= nil, "missing ground unit")
   assert(scene.ground.set_model_visible ~= nil, "missing ground.set_model_visible")
   scene.ground.set_model_visible(false)
-
-  -- Probe + startup model apply for skin-feature functional testing.
-  board_scene_debug_probe.probe_named_unit("角色形象-海绵宝宝")
-  board_scene_debug_probe.apply_startup_player_models(scene.units_by_player_id, {
-    source_unit_name = "角色形象-海绵宝宝",
-  })
 
   state.board_scene = scene
   return scene
