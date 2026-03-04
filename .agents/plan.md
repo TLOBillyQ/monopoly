@@ -1,4 +1,4 @@
-# R18 运行时沙盒限制疑点收敛执行计划
+# R19 始终显示屏与调试屏本地玩家作用域重构可执行计划
 
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
@@ -8,202 +8,204 @@
 ## 目的 / 全局视角
 
 
-本轮目标是把已确认的运行时沙盒疑点收敛到“可发布、可验证、可回归”的状态。用户可见收益是两点：第一，发布环境不再因为被裁剪 API（`os/debug/rawget/type=="number"` 相关）触发潜在崩溃或行为分叉；第二，核心回合与提示文本在 Eggy 沙盒的数值语义下保持稳定，不再依赖“字符串与数字隐式拼接”。
+本轮工作的目标是修复并重构“始终显示屏”和“调试屏”的角色作用域，让它们在游戏运行期间始终可用，并且所有交互与显示目标始终严格绑定到客户端本地玩家（事件触发者），不再被“当前回合玩家”“全局 UI 写入”或历史缓存污染。
 
-改动完成后，验证者应能直接观察到：`src/` 扫描不再命中本计划定义的禁用模式；定向回归与全量回归通过；`Await.seconds` 在 `os=nil` 条件下不报错；镜头跟随在“当前玩家无效时寻找下一位玩家”的分支上不再依赖 `type(...) == "number"`。
+用户可见结果是：托管按钮与行动日志按钮在运行中任何阶段都能稳定点击；点击后只影响点击者本人，不会串到其他玩家；调试屏默认关闭，谁点谁开，互不干扰。验收时可通过回归测试与手动场景观察到该行为稳定成立。
 
 ## 进度
 
 
-- [x] (2026-03-03 20:41 +08:00) 重读 `.agents/harness/PLANS.md` 与现有 `.agents/plan.md`，确认格式与活文档要求。
-- [x] (2026-03-03 20:42 +08:00) 基于最新工作树重扫疑点并固化证据：`os.clock`、`type~=number`、`rawget`、`coroutine`、高置信隐式拼接。
-- [x] (2026-03-03 20:43 +08:00) 生成并写入 R18 可执行计划骨架，明确里程碑、边界、验收与恢复策略。
-- [x] (2026-03-03 20:46 +08:00) 完成里程碑 1：修复 `Await.seconds`、`TurnCameraPolicy`、`init.lua`、`CompositionRoot.lua` 的沙盒兼容问题。
-- [x] (2026-03-03 20:49 +08:00) 完成里程碑 2：落地高优先级数值拼接显式转换，主链路目标文件全部改完。
-- [x] (2026-03-03 20:50 +08:00) 完成里程碑 3：扩展 `forbidden_globals` 规则并通过静态门禁。
-- [x] (2026-03-03 20:52 +08:00) 完成里程碑 4：通过定向验证与 `tests/regression.lua` 全量回归（231 checks）。
+- [x] (2026-03-04 10:06 +08:00) 完成首轮只读排查，定位“始终显示屏/调试屏/actor 解析/Canvas 切换”主链路文件。
+- [x] (2026-03-04 10:18 +08:00) 复核 `docs/eggy/ui_manager_lib.md` 并对照实现确认关键约束：`UIManager.client_role=nil` 会写全体玩家。
+- [x] (2026-03-04 10:23 +08:00) 完成根因复现脚本：验证 `LocalActorResolver` 缓存回退可导致 actor_role_id 漂移。
+- [x] (2026-03-04 10:25 +08:00) 生成并写入 R19 可执行计划，补齐活文档必需章节。
+- [x] (2026-03-04 11:06 +08:00) 里程碑 1 完成：`LocalActorResolver` 删除缓存回退；`CanvasEventRouter` 对 `toggle_action_log/auto` 缺失事件角色严格拒绝并提示。
+- [x] (2026-03-04 11:14 +08:00) 里程碑 2 完成：`UIPanelPresenter` 去除快照式本地角色依赖；`UIInputLockPolicy` 在锁定/解锁两态都刷新托管与日志按钮触控。
+- [x] (2026-03-04 11:24 +08:00) 里程碑 3 完成：调试状态收敛为按角色模型；`resolve_debug_enabled(state, role_id)` 严格要求角色上下文；`DebugPorts` 按角色同步日志。
+- [x] (2026-03-04 11:31 +08:00) 里程碑 4 完成：`MarketModalRenderer` 与 `UIModalPresenter` 运行态切屏改为按角色路径；测试与文档完成回填。
 
 ## 意外与发现
 
 
-- 观察：`src/game/runtime_coroutine/Await.lua` 的 `await.seconds` 仍使用 `opts.now_fn or os.clock`，在沙盒 `os=nil` 时会直接抛错。
-  证据：本地执行 `lua -e "local old_os=os; os=nil; local await=require('src.game.runtime_coroutine.Await'); local s={_seconds_wait={}}; local ok,err=pcall(function() await.seconds(s,1,{}) end); print(ok,err); os=old_os"`，返回 `false` 与 `attempt to index global 'os' (a nil value)`。
+- 观察：`ui_manager_lib.md` 明确规定 `UIManager.client_role=nil` 时对所有玩家生效，因此任何“无角色上下文的 UI 写入”都会天然有串扰风险。
+  证据：`docs/eggy/ui_manager_lib.md:13` 与 `docs/eggy/ui_manager_lib.md:47-53`。
 
-- 观察：`src/game/flow/turn/TurnCameraPolicy.lua` 仍使用 `type(current_index) ~= "number"`，与项目“数值统一走 NumberUtils”约束冲突，也会影响 Eggy `integer/fixed` 语义下的兼容。
-  证据：命中行 `TurnCameraPolicy.lua:18`。
+- 观察：`LocalActorResolver` 在无法从事件解析角色时会回退到 `state.ui.local_actor_role_id`，存在跨事件污染风险。
+  证据：`src/presentation/canvas_runtime/LocalActorResolver.lua:29-33`，以及复现脚本输出 `intent_actor=2 normalized_actor=1`。
 
-- 观察：高置信“可能触发隐式数值拼接”的命中共 42 行，分布于 21 文件，但其中有一部分是已 `tostring` 的安全构造或字符串变量拼接，需要分层清洗。
-  证据：扫描统计 `high_confidence_numeric_concat_lines=42`，主要集中在 `land/items/movement/market` 与 `Config/Maps/DefaultMap.lua`。
+- 观察：调试开关当前是“全局字段 + 按角色字段”并行维护，`resolve_debug_enabled` 在无角色上下文时会回退全局规则，无法保证“永远本地玩家”。
+  证据：`src/presentation/interaction/UIEventState.lua:17-31` 与 `src/presentation/api/ui_view_service/state.lua:63-66`。
 
-- 观察：`lua_env.md` 与现状存在文档/实现差异，`src/` 里仍可见 `rawget` 与 `os.clock` 依赖点，且回合引擎依赖 `coroutine.*`。
-  证据：`init.lua:14`、`CompositionRoot.lua:92`、`Await.lua:170`、`Scheduler.lua/TurnScript.lua`。
+- 观察：运行态仍存在 `canvas.switch(ui, ...)` 全局路径，可能覆盖按角色显示策略。
+  证据：`src/presentation/ui/MarketModalRenderer.lua:8`、`src/presentation/ui/UIModalPresenter.lua:76,107`。
 
-- 观察：`CompositionRoot` 去掉 `rawget` 后，直接用字段访问会把“实例”误判为“类”，导致回归大面积失败。
-  证据：首次回归出现 `attempt to index field 'turn' (a nil value)` 等 111 个失败；修复类/实例判定后恢复通过。
-
-- 观察：`RuntimeEventBridge` 的 `debug.getupvalue` 预检查在现有测试契约中仍有价值，不能机械移除。
-  证据：`presentation_ui` 用例要求“wrapped TriggerCustomEvent”不应被调用；恢复 guarded 预检查后该断言恢复通过。
+- 观察：黑市 `skin` 商品购买流程已经实现，但可购过滤层把 `skin` 直接排除，导致“可买但占位无效果”场景不可达。
+  证据：`src/game/systems/market/service/Eligibility.lua`（修复前存在 `if entry.kind == "skin" then return false end`），并触发 `tests/suites/market.lua::skin_entry_can_buy_but_no_effect` 失败。
 
 ## 决策日志
 
 
-- 决策：R18 采用“先消除硬失败，再消除语义风险，最后补静态守卫”的顺序，不一次性全仓替换。
-  理由：`Await.seconds` 与 `type~=number` 属于发布环境风险最高路径，先收敛可立即降低线上不确定性。
-  日期/作者：2026-03-03 / Codex
+- 决策：采用“分层迁移”而不是一次性全量替换。
+  理由：该链路跨 UI 事件、状态模型、Canvas 切换与 gameplay tick，同步重写风险高；分层迁移更容易保回归稳定。
+  日期/作者：2026-03-04 / Codex
 
-- 决策：对数值文本输出采用“金额/步数/回合等业务数值优先 `NumberUtils.format_integer_part`，标识类值（id/index）用 `tostring`”的双轨策略。
-  理由：满足 `lua_env` 无隐式转换约束，同时避免把标识符误格式化为金额语义。
-  日期/作者：2026-03-03 / Codex
+- 决策：调试屏默认关闭，且仅按角色存储可见状态。
+  理由：满足“谁点谁开”，避免全局默认态导致的误显示与串扰。
+  日期/作者：2026-03-04 / Codex
 
-- 决策：`coroutine` 相关暂不迁移，纳入“文档对齐 + 启动前置检查”而非架构替换。
-  理由：当前回合引擎核心即协程模型，迁移成本高且超出本轮“沙盒疑点收敛”范围。
-  日期/作者：2026-03-03 / Codex
+- 决策：缺失 `role` 或 `role->player` 映射失败时严格拒绝交互，不做缓存回退。
+  理由：用户目标是“目标总是客户端本地玩家”，可错过一次点击，但不能误操作他人。
+  日期/作者：2026-03-04 / Codex
 
-- 决策：在 `tests/internal/forbidden_globals.lua` 扩展规则，守卫 `rawget`、`type==/~=number`、`os.clock`、`debug.traceback` 在 `src/` 的出现。
-  理由：把本轮问题固化为可执行门禁，避免回归。
-  日期/作者：2026-03-03 / Codex
+- 决策：除启动阶段外，运行态 UI 行为禁止使用“无角色上下文的全局可见性写入”控制调试屏。
+  理由：与 UIManager 作用域模型一致，减少隐式全局副作用。
+  日期/作者：2026-03-04 / Codex
 
-- 决策：保留 `RuntimeEventBridge` 中“带 guard 的 `debug.getupvalue` 预检查”，不纳入本轮禁用项。
-  理由：该检查承担“wrapped TriggerCustomEvent 降级避让”契约，且已对 `debug` 缺失做守卫，不会在沙盒中硬失败。
-  日期/作者：2026-03-03 / Codex
+- 决策：托管按钮触控在按角色渲染时对所有玩家角色保持可点击，不再限制“仅当前本地快照角色”。
+  理由：当前交互语义以“事件触发者 role”判定最终 action 归属；UI 层保持可点可避免输入锁/上下文切换残留造成“按钮失活”。
+  日期/作者：2026-03-04 / Codex
+
+- 决策：一并修复黑市 `skin` 过滤逻辑，使其与购买分支保持一致。
+  理由：这是本轮回归门禁中的真实行为缺陷，若不修复会阻断全量回归验收。
+  日期/作者：2026-03-04 / Codex
 
 ## 结果与复盘
 
 
-R18 已完成。A 类与 B 类目标全部落地，C 类（`coroutine` 文档对齐）保持追踪但不在本轮改动范围。
-
-完成结果如下：`Await.seconds` 不再依赖 `os.clock`；`TurnCameraPolicy` 改为 `NumberUtils.to_integer`；`rawget` 在 `src/` 清零；高优先级数值拼接点已在主链路完成显式转换；`forbidden_globals` 新规则生效并通过。定向命令与全量回归均已通过，回归输出为 `All regression checks passed (231)`。
-
-本轮经验教训是：替换 `rawget` 时必须保留“类/实例判定”的原始语义，否则会触发隐蔽的大面积行为回退；此外，`debug` 相关逻辑应区分“硬依赖”与“有守卫的降级检查”。
+本计划已完整实施并通过回归。对照目标复盘如下：第一，始终显示屏按钮在输入锁等运行阶段保持可点击，且 `auto`/`toggle_action_log` 缺失事件角色会被拒绝，不再误落到历史角色。第二，调试屏默认关闭，状态按角色独立存储与同步，A/B 玩家互不干扰。第三，运行态 market/modal 走按角色切屏路径，减少全局 `client_role=nil` 写入串扰。第四，全量回归 `lua tests/regression.lua` 与静态门禁 `lua tests/internal/forbidden_globals.lua` 均通过。
 
 ## 背景与导读
 
 
-本任务只处理运行时相关的 `src/` 与 `Config/`，目标不是重构玩法，而是让代码在 Eggy 沙盒限制下行为可预期。这里的“沙盒限制”指 `docs/eggy/lua_env.md` 里声明的环境约束，核心包括库裁剪、数值语义差异、以及字符串与数字不能隐式拼接。
+本任务涉及的核心概念是“角色作用域”。在本仓库里，角色作用域由 `UIManager.client_role` 决定：设置某个角色后，UI 节点属性写入只影响该角色；设为 `nil` 则影响所有角色。这个机制由 `vendor/third_party/UIManager` 实现，项目侧通过 `src/presentation/api/UIRuntimePort.lua` 包装调用。
 
-关键入口分三组。第一组是回合协程与等待逻辑：`src/game/runtime_coroutine/Await.lua`、`Scheduler.lua`、`TurnScript.lua`。第二组是回合到表现层的关键路径：`src/game/flow/turn/TurnCameraPolicy.lua`、`src/game/flow/turn/TurnRoll.lua`、`src/game/systems/movement/Movement.lua`。第三组是文本构造密集区：`src/game/systems/land/*`、`src/game/systems/items/*`、`src/game/systems/market/*` 与 `Config/Maps/DefaultMap.lua`。
+“始终显示屏”节点定义在 `src/presentation/canvas/always_show/nodes.lua`，包含托管按钮与行动日志按钮；“调试屏”节点定义在 `src/presentation/canvas/debug/nodes.lua`。两者的点击事件由 `src/presentation/canvas_runtime/CanvasEventRouter.lua` 统一注册，再通过 `src/presentation/interaction/UIIntentDispatcher.lua` 分发到视图命令或游戏动作。
 
-本计划把疑点分为三类。A 类是可直接导致发布环境错误的硬依赖（例如 `os.clock` 未守卫、`rawget`）；B 类是数值语义风险（`type~=number`、隐式拼接）；C 类是文档与实现不一致（`coroutine` 依赖与 `lua_env` 描述差异）。R18 只承诺完成 A+B，并把 C 变成可追踪动作。
+当前风险分三层。第一层是 actor 解析层：`LocalActorResolver` 允许缓存回退。第二层是状态层：调试可见状态同时存在全局与按角色字段。第三层是渲染/切屏层：运行态仍混入全局 `canvas.switch`。这三层叠加后，容易出现“看起来本地操作，实际影响全体或错误玩家”的现象。
 
 ## 里程碑
 
 
-里程碑 1 只处理“硬失败点”。范围是 `Await.seconds`、`TurnCameraPolicy`、`init.lua`、`CompositionRoot.lua`。完成标准是：`src/` 不再出现 `rawget(`；`TurnCameraPolicy` 不再使用 `type(... ) ~= "number"`；`Await.seconds` 在 `os=nil` 下可安全返回，不抛异常。
+里程碑 1 的范围是 actor 解析收敛。完成标准是：`toggle_action_log` 与 `auto` 相关 intent 在进入 dispatcher 前必须拿到事件角色；拿不到就拒绝，不再读取历史缓存，不再用 current player 兜底。这个里程碑完成后，交互目标不会再跨事件漂移。
 
-里程碑 2 处理“高优先级隐式数值拼接”。范围锁定 gameplay 主链路与默认地图构造，不做全仓“机械替换”。完成标准是：本计划列出的目标文件完成显式转换；关键路径回归通过；不引入新的 `tonumber` 或 `type==number`。
+里程碑 2 的范围是始终显示屏可用性重构。完成标准是：托管按钮与行动日志按钮在输入锁、动画等待与弹窗期间仍可点击；但点击权限仍受“是否本地玩家角色”约束。这个里程碑完成后，用户感知是“按钮一直能用，但只对自己生效”。
 
-里程碑 3 处理“守卫与证据”。范围是 `tests/internal/forbidden_globals.lua` 与相关回归入口。完成标准是：新增规则生效，触发时能给出明确替代建议；常规回归全绿。
+里程碑 3 的范围是调试状态模型重构。完成标准是：调试开关默认关闭；只存在按角色状态，不再依赖全局 `debug_visible` / `debug_log_enabled_override`；tick 同步按角色执行。这个里程碑完成后，不同玩家调试屏互不影响。
 
-里程碑 4 进行“闭环验收与文档回填”。范围是测试执行、证据摘录、计划更新。完成标准是：`进度/决策/结果` 完整同步，计划可被新人单独执行。
+里程碑 4 的范围是运行态 Canvas 路径收敛与验收。完成标准是：运行态 modal/popup/market 切屏统一走 `switch_for_role`；全量回归通过；计划文档四个活文档章节更新齐全并附验证证据。
 
 ## 工作计划
 
 
-第一步会在 `src/game/runtime_coroutine/Await.lua` 去掉对 `os.clock` 的直接依赖。实现方式是把 `await.seconds` 改为“优先使用 `opts.now_fn`；不存在则使用安全降级路径并立即完成等待”。这样可以在沙盒不提供 `os` 时保持可运行，并避免死等。
+第一步会修改 `src/presentation/canvas_runtime/LocalActorResolver.lua` 与 `src/presentation/canvas_runtime/CanvasEventRouter.lua`。`resolve_from_event` 仅接受 `data.role` 或当前监听回调上下文中的 `UIManager.client_role`，删除 `state.ui.local_actor_role_id` 回退。`CanvasEventRouter` 在分发 intent 前执行严格校验，校验失败时通过 `HostRuntimePort.show_tips` 提示并中止分发。
 
-第二步会在 `src/game/flow/turn/TurnCameraPolicy.lua` 引入 `NumberUtils`，把 `type(current_index) ~= "number"` 改为 `NumberUtils.to_integer(current_index)` 判定，确保 `integer/fixed/number` 都可进入同一逻辑分支。该变更直接影响“当前玩家无效时寻找下一位玩家”的兜底路径。
+第二步会修改 `src/presentation/interaction/ui_intent_dispatcher/TurnActionPort.lua`。`normalize_auto_intent` 改为“只补齐，不覆盖”：若已有 `intent.actor_role_id`，原样保留；若缺失则尝试严格解析；仍缺失则返回 `nil` 并由上层终止动作。同步更新 `tests/suites/usecase_boundary_contract.lua` 合约断言。
 
-第三步会移除 `rawget` 依赖。`src/app/init.lua` 用 `(_G and _G.STARTUP_TEST_PROFILE)` 读取启动 profile，并保留默认值兜底。`src/game/core/runtime/CompositionRoot.lua` 用显式字段与函数类型判断替代 `rawget(game_or_class, ...)`。
+第三步会改造始终显示屏触控链路，主要在 `src/presentation/ui/UIPanelPresenter.lua` 与 `src/presentation/interaction/UIInputLockPolicy.lua`。托管按钮的触控可用性不再取决于单次快照式 `runtime.get_client_role()`，而是显式依据当前遍历 role 的上下文；输入锁开关切换时都要重刷 `auto` 与 `action_log` 按钮触控，避免状态残留。
 
-第四步会修复里程碑 2 的隐式拼接目标文件。预期修改文件包括 `Config/Maps/DefaultMap.lua`、`TurnRoll.lua`、`LocationOps.lua`、`ItemHandlers.lua`、`ItemPostEffects.lua`、`ItemRoadblock.lua`、`LandRules.lua`、`BaseLandEffects.lua`、`Choice.lua`、`Purchase.lua`、`Movement.lua`、`ItemDemolish.lua`、`ActionAnimTipText.lua`。所有业务数值文本改为 `NumberUtils.format_integer_part(...)` 或 `tostring(...)` 的显式转换。
+第四步会重构调试状态模型，修改 `src/presentation/api/ui_view_service/state.lua`、`src/presentation/interaction/UIEventState.lua`、`src/presentation/api/ui_view_service/debug.lua`、`src/presentation/api/presentation_ports/DebugPorts.lua`、`src/presentation/interaction/ui_intent_dispatcher/ViewCommandDispatcher.lua`。目标是保留唯一事实源 `ui.debug_visible_by_role`（命名可在实现时统一），移除全局 debug 可见字段在运行态决策中的参与。
 
-第五步会把规则固化到 `tests/internal/forbidden_globals.lua`，新增对 `rawget`、`type==/~=number`、`os.clock`、`debug.traceback` 的检测，并在 `replacement` 字段给出统一替代方向（`NumberUtils`、运行时端口、`traceback` 等）。
+第五步会收敛运行态切屏路径，修改 `src/presentation/ui/MarketModalRenderer.lua` 与 `src/presentation/ui/UIModalPresenter.lua`，把 `canvas.switch(ui, ...)` 运行态调用改为按角色循环 `canvas.switch_for_role(...)`。启动阶段（`UIBootstrap`）保留全局 show 行为。
+
+第六步会补全与调整测试，重点在 `tests/suites/presentation_ui.lua`、`tests/suites/presentation_ui_event_bindings.lua`、`tests/suites/usecase_boundary_contract.lua`。新增“缺失 role 严格拒绝”“debug 默认关闭”“A 玩家开 debug 不影响 B 玩家”“auto intent 不覆盖 actor”等断言，删除与新策略冲突的旧断言。
 
 ## 具体步骤
 
 
-所有命令在仓库根目录 `C:\Users\Lzx_8\Desktop\dev\repo\monopoly` 执行。
+所有命令在仓库根目录 `/Users/gangan/Dev/repo/monopoly` 执行。
 
-先记录实施前快照，确保后续可对比。
+先记录实施前快照并确认计划文件已更新。
 
     git status --short
-    lua -e "local old_os=os; os=nil; local await=require('src.game.runtime_coroutine.Await'); local s={_seconds_wait={}}; local ok,err=pcall(function() await.seconds(s,1,{}) end); print('await.seconds pre=',ok,err); os=old_os"
+    sed -n '1,220p' .agents/plan.md
 
-按里程碑 1 修改并做定向检查。
+实施里程碑 1 与 2 后，先跑定向测试，避免把问题扩散到全量回归阶段。
 
-    lua tests/internal/forbidden_globals.lua
-    lua -e "local old_os=os; os=nil; local await=require('src.game.runtime_coroutine.Await'); local s={_seconds_wait={}}; local ok,err=pcall(function() await.seconds(s,1,{}) end); print('await.seconds post=',ok,err); os=old_os"
-
-按里程碑 2 修改后跑主链路回归。
-
-    lua -e "package.path='?.lua;'..package.path; local _=require('tests.suites.test_profiles'); print('test_profiles load ok')"
     lua tests/regression.lua
 
-完成里程碑 3 后再次执行静态门禁，确认新规则不过度误伤。
+如果全量回归耗时较长，先执行最小相关套件（实现阶段按 TestHarness 入口临时脚本组织），再回到全量回归。
 
+    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua'; local h=require('TestHarness'); h.run_all({require('presentation_ui_event_bindings'), require('usecase_boundary_contract')})"
+    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua'; local h=require('TestHarness'); h.run_all({require('presentation_ui_event_bindings'), require('usecase_boundary_contract'), require('presentation_ui'), require('market')})"
+
+实施里程碑 3 与 4 后执行全量回归与静态门禁。
+
+    lua tests/regression.lua
     lua tests/internal/forbidden_globals.lua
 
-最后整理变更并回填计划文档。
+最后整理差异并回填计划文档证据。
 
-    git diff -- .agents/plan.md src tests docs
+    git diff -- .agents/plan.md src tests
     git status --short
 
 ## 验证与验收
 
 
-验收分为“行为”和“约束”两条线。行为线要求回归通过，至少包含 `lua tests/regression.lua` 全量运行成功；约束线要求 `lua tests/internal/forbidden_globals.lua` 不再命中本轮新增禁用模式。
+验收以“行为正确”优先于“代码结构变化”。
 
-对 `Await.seconds` 的专项验收必须包含 `os=nil` 场景。变更前脚本输出应出现 `attempt to index global 'os'`；变更后脚本输出必须是 `ok=true` 或等价的非异常结果。
+首先验证始终显示屏可用性：在输入锁、移动动画等待、动作动画等待、弹窗期间，托管按钮与行动日志按钮都可以点击，且点击方是本地玩家时行为生效，非本地玩家不生效。
 
-对镜头兜底逻辑的专项验收必须覆盖“当前位玩家无效，需寻找下一位可跟随玩家”的路径。最低标准是对应单测通过；如果已有可复现场景，再补一次默认部署实测，确认镜头仍跟随当前回合玩家。
+其次验证目标隔离：两个玩家同时在线时，A 点击行动日志只改变 A 的调试屏，B 的调试屏与日志开关状态不变化；B 点击同理。这个验收必须包含“同一回合内连续切换”“跨回合切换”两个场景。
+
+再次验证严格拒绝策略：人为构造缺失 `role` 的 click data，事件必须被拒绝并出现提示，不得触发任何 gameplay action 或调试状态变化。
+
+最后跑 `lua tests/regression.lua`，预期输出 `All regression checks passed (...)`；并运行 `lua tests/internal/forbidden_globals.lua`，预期 `forbidden_globals ok`。
 
 ## 可重复性与恢复
 
 
-本计划按里程碑增量执行，每个里程碑都可以独立提交和回滚。若里程碑 2 出现回归，优先保留里程碑 1 与里程碑 3，临时回退仅数值拼接改动，再逐文件二分定位问题。禁止使用破坏性历史命令，恢复方式以普通反向提交为准。
+本计划按里程碑增量推进，每个里程碑可独立提交。若中途失败，优先回退当前里程碑涉及文件，不回退已通过验收的前置里程碑。恢复方式使用普通反向提交或手工逆向 patch，不使用破坏性历史命令。
 
-若新增静态规则出现误报，先在计划的“决策日志”记录误报模式，再在规则里做白名单或更精确正则，避免直接删除守卫。
+如果回归显示“调试状态读取路径”与旧测试夹层冲突，先保留一版兼容读路径（只读镜像，不参与写入决策），待所有调用点迁移完成后再移除兼容层。这样可以避免一次性切断导致的连锁失败。
 
 ## 产物与备注
 
 
-实施前扫描证据（2026-03-03）：
+实施前关键证据：
 
-    os.clock 命中:
-      src/app/bootstrap/runtime_install/RuntimePortDefaults.lua:45
-      src/core/runtime_ports/DefaultPorts.lua:142
-      src/game/runtime_coroutine/Await.lua:170
+    docs/eggy/ui_manager_lib.md:13
+    docs/eggy/ui_manager_lib.md:47-53
+    src/presentation/canvas_runtime/LocalActorResolver.lua:29-33
+    src/presentation/interaction/UIEventState.lua:17-31
+    src/presentation/ui/MarketModalRenderer.lua:8
+    src/presentation/ui/UIModalPresenter.lua:76,107
 
-    type~=number 命中:
-      src/game/flow/turn/TurnCameraPolicy.lua:18
+实施后应新增或更新的关键测试行为：
 
-    rawget 命中:
-      src/app/init.lua:14
-      src/game/core/runtime/CompositionRoot.lua:92
+    1) 缺失 role 的 toggle_action_log 不再回退缓存角色，直接拒绝。
+    2) auto intent 保留已有 actor_role_id，不被 resolver 覆盖。
+    3) debug 默认关闭；按角色切换互不影响。
+    4) 输入锁期间始终显示屏的托管/日志按钮仍可点击。
 
-    高置信隐式拼接命中:
-      high_confidence_numeric_concat_lines=42
+实施后验证证据（命令与结果）：
 
-`lua_env.md` 关键约束摘录（用于本计划对照）：移除 `io/os/package/debug`，不支持字符串与数字隐式转换。
-
-实施后验收证据（2026-03-03）：
-
-    lua tests/internal/forbidden_globals.lua
-      forbidden_globals ok
-
-    lua -e "... os=nil ... await.seconds ..."
-      await.seconds os=nil ok= true type= table
+    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua'; local h=require('TestHarness'); h.run_all({require('presentation_ui_event_bindings'), require('usecase_boundary_contract'), require('presentation_ui'), require('market')})"
+    # 结果：All regression checks passed (105)
 
     lua tests/regression.lua
-      All regression checks passed (231)
-      dep_rules ok
-      tick ok
-      forbidden_globals ok
+    # 结果：All regression checks passed (235)
+
+    lua tests/internal/forbidden_globals.lua
+    # 结果：forbidden_globals ok
 
 ## 接口与依赖
 
 
-本轮不新增第三方依赖，只依赖现有 `NumberUtils`、回归测试框架和 Lua 运行环境。实施后应满足以下接口约束。
+本轮不引入第三方依赖。依赖仅包括现有 `UIManager`、`UIRuntimePort`、`UIViewService`、`DebugPorts` 与测试框架。
 
-`src/game/runtime_coroutine/Await.lua` 中 `await.seconds(session, sec, opts)` 继续保持原函数签名，不引入调用方破坏性改动；仅调整内部默认计时来源和降级行为。
+`src/presentation/interaction/UIEventState.lua` 的 `resolve_debug_enabled` 需要升级为显式角色参数接口，例如 `resolve_debug_enabled(state, role_id)`。实现完成后，不允许无角色上下文返回“开启”状态。
 
-`src/game/flow/turn/TurnCameraPolicy.lua` 中 `sync_follow(game, state, ports, ui_refreshed)` 对外行为不变，仍由当前回合玩家驱动跟随；内部类型判定改用 `NumberUtils`。
+`src/presentation/api/ui_view_service/debug.lua` 需要新增按角色写接口（示例命名：`set_debug_visible_for_role(state, role, visible)`），并把旧的全局可见性写路径降级为仅启动兼容，不参与运行态控制。
 
-`tests/internal/forbidden_globals.lua` 的输出格式保持兼容，新增规则也必须按 `forbidden_globals: path:line uses ...` 的可读形式报错，便于 CI 与本地定位。
+`src/presentation/canvas_runtime/LocalActorResolver.lua` 需要改为无缓存副作用设计，不再写入或读取 `state.ui.local_actor_role_id`。
+
+`src/presentation/interaction/ui_intent_dispatcher/TurnActionPort.lua` 的 `normalize_auto_intent(state, intent)` 需保持原签名，但语义改为“已有 actor 不覆盖，缺失 actor 严格解析，失败返回 nil”。
 
 ## 文档更新记录
 
 
-2026-03-03（R18 创建）：基于最新代码库重扫，确认本轮疑点仍存在（`os.clock`、`type~=number`、`rawget`、高置信隐式拼接 42 行），并将旧的“代码膨胀收敛”计划替换为“沙盒限制疑点收敛”可执行计划。改动原因是当前用户目标已切换为运行时沙盒风险治理，旧计划不再对应现阶段任务。
+2026-03-04（R19 创建）：基于当前代码与 `docs/eggy/ui_manager_lib.md` 重新定位“始终显示屏/调试屏”本地玩家作用域问题，确认根因是 actor 缓存回退、debug 全局与按角色状态混用、运行态全局切屏路径并存。新建本计划用于指导分层迁移与回归验收。
 
-2026-03-03（R18 完成）：完成全部 4 个里程碑并通过回归。过程中修正了 `CompositionRoot` 的类/实例判定回退问题，并保留了 `RuntimeEventBridge` 的 guarded `debug.getupvalue` 预检查以满足既有契约。改动原因是保证“去除硬依赖”不破坏现有行为，并用测试闭环确认收敛效果。
+2026-03-04（R19 覆盖写入）：按用户要求将本轮方案正式写入 `.agents/plan.md`，并按 `.agents/harness/PLANS.md` 补齐活文档必需章节、执行步骤、验收标准与更新记录。改动原因是把会话内达成的设计决策转化为可直接实施的仓库内执行文档。
+
+2026-03-04（R19 实施完成）：按里程碑完成代码改造与测试更新，落地严格事件角色解析、按角色调试状态、按角色运行态切屏与触控可用性修复；执行定向回归 + 全量回归 + forbidden_globals 全部通过。实施中额外修复了黑市 `skin` 可购过滤缺陷以满足回归门禁。

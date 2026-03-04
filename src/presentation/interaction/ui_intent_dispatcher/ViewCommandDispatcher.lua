@@ -19,35 +19,26 @@ function view_command_dispatcher.dispatch(state, intent)
     if not ui then
       return true
     end
+    local actor_role_id = intent.actor_role_id
+    if actor_role_id == nil then
+      logger.warn("toggle_action_log missing actor_role_id")
+      return true
+    end
     local active_role = role_context.resolve_by_id(intent.actor_role_id)
-    runtime.with_client_role(active_role, function()
-      ui.debug_log_enabled_override = nil
-      local next_enabled = not ui_event_state.resolve_debug_enabled(state)
-      ui_view.set_debug_visible(state, next_enabled)
-      if active_role == nil then
-        return
+    local next_enabled = not ui_event_state.resolve_debug_enabled(state, actor_role_id)
+    ui_view.set_debug_visible_for_role(state, active_role, next_enabled)
+    if next_enabled and type(active_role.send_ui_custom_event) ~= "function" then
+      logger.warn("toggle_action_log missing role event channel:", tostring(actor_role_id))
+    end
+    if next_enabled then
+      canvas.switch_for_role(ui, canvas.CANVAS_DEBUG, active_role)
+    else
+      local hide_event = ui_events.hide[canvas.CANVAS_DEBUG]
+      if hide_event then
+        ui_events.send_to_role(active_role, hide_event, {})
       end
-      local role_id = runtime.resolve_role_id(active_role) or tostring(active_role)
-      if type(ui.debug_visible_by_role) ~= "table" then
-        ui.debug_visible_by_role = {}
-      end
-      if type(ui.debug_log_enabled_by_role) ~= "table" then
-        ui.debug_log_enabled_by_role = {}
-      end
-      ui.debug_visible_by_role[role_id] = next_enabled
-      ui.debug_log_enabled_by_role[role_id] = next_enabled
-      if next_enabled and type(active_role.send_ui_custom_event) ~= "function" then
-        logger.warn("toggle_action_log missing role event channel:", tostring(role_id))
-      end
-      if next_enabled then
-        canvas.switch_for_role(ui, canvas.CANVAS_DEBUG, active_role)
-      else
-        local hide_event = ui_events.hide[canvas.CANVAS_DEBUG]
-        if hide_event then
-          ui_events.send_to_role(active_role, hide_event, {})
-        end
-      end
-    end)
+    end
+    runtime.set_client_role(nil)
     return true
   end
 

@@ -19,15 +19,10 @@ function panel_presenter.apply_base_non_player_visibility(ui, visible)
   end
 end
 
-function panel_presenter.render_auto_controls_for_role(ui, ctx, ui_model, local_role_id)
+function panel_presenter.render_auto_controls_for_role(ui, ctx, ui_model)
   assert(ui ~= nil, "missing ui")
   local controls = ui.auto_control_nodes or { always_show_nodes.auto_button, always_show_nodes.auto_label }
-  local auto_enabled = false
-  if local_role_id ~= nil then
-    auto_enabled = ctx ~= nil and ctx.role_id == local_role_id
-  else
-    auto_enabled = ctx and ctx.is_player_role == true or false
-  end
+  local auto_enabled = ctx and ctx.is_player_role == true or false
   local panel = ui_model and ui_model.panel or nil
   local labels_by_player = panel and panel.auto_label_by_player or nil
   local display_player_id = ctx and ctx.display_player_id or nil
@@ -136,11 +131,6 @@ function panel_presenter.refresh(state, ui_model, deps)
   local ui = state.ui
   local panel = ui_model.panel
   local players = ui_model.board and ui_model.board.players or {}
-  local local_role_id = nil
-  if runtime.get_client_role and runtime.resolve_role_id then
-    local local_role = runtime.get_client_role()
-    local_role_id = runtime.resolve_role_id(local_role)
-  end
 
   runtime.set_client_role(nil)
   local player_rows = panel.player_rows or {}
@@ -179,7 +169,7 @@ function panel_presenter.refresh(state, ui_model, deps)
       display_player_id = ctx.display_player_id,
       allow_interact = base_visible,
     })
-    panel_presenter.render_auto_controls_for_role(ui, ctx, ui_model, local_role_id)
+    panel_presenter.render_auto_controls_for_role(ui, ctx, ui_model)
 
     for i = 1, 4 do
       _apply_player_colors(role, runtime, players[i], i)

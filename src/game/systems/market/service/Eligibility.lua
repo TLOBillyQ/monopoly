@@ -10,9 +10,6 @@ function eligibility.can_buy_entry(game, player, entry)
   if not context.entry_market_enabled(entry) then
     return false
   end
-  if entry.kind == "skin" then
-    return false
-  end
   if entry.kind == "item" and inventory.is_full(player) then
     return false
   end

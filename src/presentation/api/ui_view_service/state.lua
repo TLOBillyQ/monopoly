@@ -53,16 +53,13 @@ function M.build_ui_state()
   }
   local ui_state = {
     canvas_state = canvas_state,
-    local_actor_role_id = nil,
     auto_play = false,
     auto_interval = 0.1,
     input_blocked = false,
     role_control_lock = { by_role = {}, warn_once = {} },
     role_control_lock_exempt_by_role = {},
     role_control_lock_exempt_count_by_role = {},
-    debug_visible = false,
     debug_visible_by_role = {},
-    debug_log_enabled_override = nil,
     debug_log_enabled_by_role = {},
     item_slots = canvas_state.base.item_slots,
     card_outlines = canvas_state.base.card_outlines,

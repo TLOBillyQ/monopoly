@@ -73,7 +73,7 @@ function modal_presenter.open_choice_modal(state, choice, market)
       modal_presenter.close_choice_modal(state)
     else
       modal_state.close_choice(state)
-      canvas.switch(state.ui, canvas.CANVAS_BASE)
+      choice_common.switch_modal_canvas(state, canvas.CANVAS_BASE)
       canvas_store.mark_dirty(state, "choice")
     end
     return
@@ -104,7 +104,7 @@ function modal_presenter.close_choice_modal(state)
   if ui.popup_active then
     popup_presenter.switch_canvas(state, ui.popup_kind or "card", canvas.CANVAS_POPUP, canvas.CANVAS_BASE)
   else
-    canvas.switch(ui, canvas.CANVAS_BASE)
+    choice_common.switch_modal_canvas(state, canvas.CANVAS_BASE)
   end
   state.ui_dirty = true
 end

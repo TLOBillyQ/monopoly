@@ -1079,8 +1079,6 @@ local function _test_ui_intent_dispatcher_toggle_action_log_uses_actor_role_cont
       return 101
     end,
   }
-  local visible_calls = {}
-
   _with_patches({
     { key = "all_roles", value = { role } },
     { key = "UIManager", value = {
@@ -1090,16 +1088,6 @@ local function _test_ui_intent_dispatcher_toggle_action_log_uses_actor_role_cont
       end,
     } },
     { target = gameplay_rules, key = "debug_log_enabled", value = false },
-    { target = ui_view, key = "set_debug_visible", value = function(ctx, visible)
-      visible_calls[#visible_calls + 1] = visible
-      ctx.ui.debug_visible = visible == true
-      local active = UIManager and UIManager.client_role or nil
-      if active and active.get_roleid then
-        local role_id = active.get_roleid()
-        ctx.ui.debug_visible_by_role[role_id] = visible == true
-        ctx.ui.debug_log_enabled_by_role[role_id] = visible == true
-      end
-    end },
   }, function()
     ui_intent_dispatcher.dispatch(state, game, {
       type = "toggle_action_log",
@@ -1115,13 +1103,9 @@ local function _test_ui_intent_dispatcher_toggle_action_log_uses_actor_role_cont
     _assert_eq(state.ui.debug_visible_by_role[101], false, "toggle_action_log second click should disable action_log")
     _assert_eq(UIManager.client_role, nil, "toggle_action_log second click should restore client role")
   end)
-
-  _assert_eq(visible_calls[1], true, "first toggle_action_log should enable action_log")
-  _assert_eq(visible_calls[2], false, "second toggle_action_log should disable action_log")
 end
 
 local function _test_ui_intent_dispatcher_toggle_action_log_ignores_block_without_game()
-  local visible_calls = {}
   local dispatch_calls = 0
   local state = {
     ui = ui_view.build_ui_state(),
@@ -1149,15 +1133,6 @@ local function _test_ui_intent_dispatcher_toggle_action_log_ignores_block_withou
       end,
     } },
     { target = gameplay_rules, key = "debug_log_enabled", value = false },
-    { target = ui_view, key = "set_debug_visible", value = function(ctx, visible)
-      visible_calls[#visible_calls + 1] = visible
-      ctx.ui.debug_visible = visible == true
-      local active = UIManager and UIManager.client_role or nil
-      if active and active.get_roleid then
-        local role_id = active.get_roleid()
-        ctx.ui.debug_visible_by_role[role_id] = visible == true
-      end
-    end },
   }, function()
     ui_intent_dispatcher.dispatch(state, nil, {
       type = "toggle_action_log",
@@ -1167,7 +1142,6 @@ local function _test_ui_intent_dispatcher_toggle_action_log_ignores_block_withou
 
   _assert_eq(dispatch_calls, 0, "toggle_action_log should not dispatch gameplay action")
   _assert_eq(state.ui.debug_visible_by_role[101], true, "toggle_action_log should bypass block without game")
-  _assert_eq(visible_calls[1], true, "toggle_action_log should still toggle visible state")
 end
 
 local function _test_ui_intent_dispatcher_toggle_action_log_resolves_role_via_game_api()
@@ -1243,7 +1217,7 @@ local function _test_ui_intent_dispatcher_toggle_action_log_warns_when_role_even
   _assert_eq(warn_count, 1, "toggle_action_log should warn once when role cannot send ui event")
 end
 
-local function _test_ui_intent_dispatcher_auto_button_forces_local_role_id()
+local function _test_ui_intent_dispatcher_auto_button_keeps_intent_actor_role_id()
   local captured = nil
   local state = {
     turn_action_port = {
@@ -1277,7 +1251,7 @@ local function _test_ui_intent_dispatcher_auto_button_forces_local_role_id()
     }, {})
   end)
 
-  _assert_eq(captured and captured.actor_role_id, 1, "auto dispatch should force local role id")
+  _assert_eq(captured and captured.actor_role_id, 2, "auto dispatch should keep explicit actor role id")
 end
 
 local function _test_ui_intent_dispatcher_auto_button_falls_back_to_intent_actor_when_local_missing()
@@ -1312,7 +1286,38 @@ local function _test_ui_intent_dispatcher_auto_button_falls_back_to_intent_actor
   _assert_eq(captured and captured.actor_role_id, 2, "auto dispatch should fallback to intent actor when local role missing")
 end
 
-local function _test_ui_intent_dispatcher_auto_button_toggles_local_role_during_other_turn()
+local function _test_ui_intent_dispatcher_auto_button_rejects_when_actor_missing()
+  local captured = nil
+  local state = {
+    turn_action_port = {
+      dispatch_action = function(_, _, action)
+        captured = action
+      end,
+      should_block_action = function()
+        return false
+      end,
+    },
+    ui = {
+      input_blocked = false,
+      item_slot_item_ids = {},
+      item_slot_item_ids_by_role = {},
+    },
+  }
+  local game = {}
+
+  _with_patches({
+    { key = "UIManager", value = { client_role = nil } },
+  }, function()
+    ui_intent_dispatcher.dispatch(state, game, {
+      type = "ui_button",
+      id = "auto",
+    }, {})
+  end)
+
+  _assert_eq(captured, nil, "auto dispatch should be rejected when actor role is missing")
+end
+
+local function _test_ui_intent_dispatcher_auto_button_honors_intent_actor_during_other_turn()
   local g = _new_game()
   g.turn.current_player_index = 1
   local state = {
@@ -1348,8 +1353,8 @@ local function _test_ui_intent_dispatcher_auto_button_toggles_local_role_during_
     }, {})
   end)
 
-  _assert_eq(g.players[1].auto, before_1, "other-turn auto click should not change current player auto")
-  _assert_eq(g.players[2].auto, not before_2, "other-turn auto click should toggle local role auto")
+  _assert_eq(g.players[1].auto, not before_1, "auto click should toggle explicit actor role auto state")
+  _assert_eq(g.players[2].auto, before_2, "auto click should not be rewritten to local role")
 end
 
 local function _test_ui_view_render_by_role_slots_are_isolated()
@@ -1491,7 +1496,7 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
   assert(touch_logs[1] and touch_logs[1]["基础_行动按钮"] == true, "current role action button should be enabled")
   assert(touch_logs[2] and touch_logs[2]["基础_行动按钮"] == false, "non-current role action button should be disabled")
   assert(touch_logs[1] and touch_logs[1]["始终显示_托管按钮"] == true, "role1 auto button should be enabled")
-  assert(touch_logs[2] and touch_logs[2]["始终显示_托管按钮"] == false, "non-local role auto button should be disabled")
+  assert(touch_logs[2] and touch_logs[2]["始终显示_托管按钮"] == true, "player role auto button should stay enabled")
   assert(touch_logs[1] and touch_logs[1]["始终显示_文本"] == false, "role1 auto label should stay non-clickable")
   assert(touch_logs[2] and touch_logs[2]["始终显示_文本"] == false, "role2 auto label should stay non-clickable")
   assert(label_logs[1] and label_logs[1]["始终显示_文本"] == "自动：关", "role1 auto label should show status")
@@ -2242,7 +2247,7 @@ local function _test_ui_event_router_action_log_toggle_uses_role_context()
     local role_id = role.get_roleid()
     _assert_eq(state.ui.debug_visible_by_role[role_id], nil, "action_log role flag should start nil")
     assert(type(node_map["始终显示_行动日志图标"]._listener_cb) == "function", "action_log button should bind click listener")
-    local before = require("src.presentation.interaction.UIEventState").resolve_debug_enabled(state)
+    local before = require("src.presentation.interaction.UIEventState").resolve_debug_enabled(state, role_id)
     node_map["始终显示_行动日志图标"]._listener_cb({ role = role })
     local first_value = state.ui.debug_visible_by_role[role_id]
     _assert_eq(first_value, not before, "action_log toggle should invert role visibility")
@@ -2253,6 +2258,56 @@ local function _test_ui_event_router_action_log_toggle_uses_role_context()
     assert(second_value ~= first_value, "action_log toggle should flip role visibility after second click")
     _assert_eq(UIManager.client_role, nil, "action_log toggle should restore client role after second click")
   end)
+end
+
+local function _test_ui_event_router_rejects_action_log_without_role()
+  local function new_node()
+    local node = {}
+    function node:listen(_, cb)
+      self._listener_cb = cb
+      return {
+        destroy = function()
+          self._listener_cb = nil
+        end,
+      }
+    end
+    return node
+  end
+
+  local show_tip_calls = 0
+  local node_map = {
+    ["始终显示_行动日志图标"] = new_node(),
+  }
+
+  _with_patches({
+    { key = "all_roles", value = nil },
+    { key = "GlobalAPI", value = { show_tips = function()
+      show_tip_calls = show_tip_calls + 1
+    end } },
+    { key = "UIManager", value = {
+      EVENT = { CLICK = "click" },
+      query_nodes_by_name = function(name)
+        local node = node_map[name] or new_node()
+        node_map[name] = node
+        return { node }
+      end,
+      client_role = nil,
+    } },
+  }, function()
+    local state = {
+      ui = ui_view.build_ui_state(),
+      ui_model = { choice = nil },
+      pending_choice_selected_option_id = nil,
+      choice_visible_option_ids = nil,
+    }
+    canvas_event_router.bind(state, function()
+      return {}
+    end)
+    node_map["始终显示_行动日志图标"]._listener_cb({})
+    _assert_eq(state.ui.debug_visible_by_role[101], nil, "missing role click should not mutate role debug state")
+  end)
+
+  _assert_eq(show_tip_calls, 1, "missing role click should show tip once")
 end
 
 local function _test_market_selection_updates_icon_without_resize()
@@ -4132,9 +4187,10 @@ return {
   _test_ui_intent_dispatcher_toggle_action_log_ignores_block_without_game,
   _test_ui_intent_dispatcher_toggle_action_log_resolves_role_via_game_api,
   _test_ui_intent_dispatcher_toggle_action_log_warns_when_role_event_channel_missing,
-  _test_ui_intent_dispatcher_auto_button_forces_local_role_id,
+  _test_ui_intent_dispatcher_auto_button_keeps_intent_actor_role_id,
   _test_ui_intent_dispatcher_auto_button_falls_back_to_intent_actor_when_local_missing,
-  _test_ui_intent_dispatcher_auto_button_toggles_local_role_during_other_turn,
+  _test_ui_intent_dispatcher_auto_button_rejects_when_actor_missing,
+  _test_ui_intent_dispatcher_auto_button_honors_intent_actor_during_other_turn,
   _test_ui_view_render_by_role_slots_are_isolated,
   _test_ui_events_send_without_roles_no_crash,
   _test_ui_nodes_validate_reports_missing,
@@ -4157,6 +4213,7 @@ return {
   _test_choice_route_policy_prefers_explicit_route_metadata,
   _test_ui_event_router_player_target_click_direct_submit,
   _test_ui_event_router_action_log_toggle_uses_role_context,
+  _test_ui_event_router_rejects_action_log_without_role,
   _test_market_selection_updates_icon_without_resize,
   _test_market_close_resets_icon_without_resize,
   _test_market_view_hides_market_disabled_entries,

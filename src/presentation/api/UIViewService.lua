@@ -71,6 +71,14 @@ function service.set_debug_visible(state_ctx, visible)
   debug.set_debug_visible(state_ctx, visible)
 end
 
+function service.set_debug_visible_for_role(state_ctx, role, visible)
+  return debug.set_debug_visible_for_role(state_ctx, role, visible)
+end
+
+function service.set_debug_log_for_role(state_ctx, role, text)
+  debug.set_debug_log_for_role(state_ctx, role, text)
+end
+
 function service.select_market_option(state_ctx, option_id)
   if not option_id then
     logger.warn("select_market_option missing option_id")

@@ -101,6 +101,7 @@ local function _test_skin_entry_can_buy_but_no_effect()
     currency = "金币",
     price = 1,
     limit = 1,
+    enabled = true,
     market_enabled = true,
   }
   market_cfg[#market_cfg + 1] = injected
