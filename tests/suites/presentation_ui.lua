@@ -2601,6 +2601,148 @@ local function _test_ui_event_router_rejects_action_log_without_role()
   _assert_eq(show_tip_calls, 1, "missing role click should show tip once")
 end
 
+local function _test_ui_event_router_action_log_uses_cached_local_role_when_event_role_missing()
+  local function new_node()
+    local node = {}
+    function node:listen(_, cb)
+      self._listener_cb = cb
+      return {
+        destroy = function()
+          self._listener_cb = nil
+        end,
+      }
+    end
+    return node
+  end
+
+  local show_tip_calls = 0
+  local node_map = {
+    ["始终显示_行动日志图标"] = new_node(),
+  }
+  local local_role = {
+    get_roleid = function()
+      return "101"
+    end,
+  }
+
+  _with_patches({
+    { key = "all_roles", value = nil },
+    { key = "GlobalAPI", value = { show_tips = function()
+      show_tip_calls = show_tip_calls + 1
+    end } },
+    { key = "UIManager", value = {
+      EVENT = { CLICK = "click" },
+      query_nodes_by_name = function(name)
+        local node = node_map[name] or new_node()
+        node_map[name] = node
+        return { node }
+      end,
+      client_role = nil,
+    } },
+  }, function()
+    local state = {
+      ui = ui_view.build_ui_state(),
+      ui_model = {
+        current_player_id = 2,
+      },
+    }
+    canvas_event_router.bind(state, function()
+      return {}
+    end)
+    node_map["始终显示_行动日志图标"]._listener_cb({ role = local_role })
+    _assert_eq(state.ui.debug_visible_by_role[101], true, "first click should enable local debug")
+    node_map["始终显示_行动日志图标"]._listener_cb({})
+    _assert_eq(state.ui.debug_visible_by_role[101], false, "second click without role should use cached local role")
+    _assert_eq(state.ui.debug_visible_by_role[2], nil, "action_log should not fall back to current_player_id")
+  end)
+
+  _assert_eq(show_tip_calls, 0, "cached local role should avoid missing context tip")
+end
+
+local function _test_ui_event_router_auto_uses_cached_local_role_instead_of_current_player()
+  local always_show_nodes = require("src.presentation.canvas.always_show.nodes")
+
+  local function new_node()
+    local node = {}
+    function node:listen(_, cb)
+      self._listener_cb = cb
+      return {
+        destroy = function()
+          self._listener_cb = nil
+        end,
+      }
+    end
+    return node
+  end
+
+  local captured = {}
+  local show_tip_calls = 0
+  local node_map = {
+    [always_show_nodes.auto_button] = new_node(),
+  }
+  local local_role = {
+    get_roleid = function()
+      return "101"
+    end,
+  }
+
+  _with_patches({
+    { key = "all_roles", value = nil },
+    { key = "GlobalAPI", value = { show_tips = function()
+      show_tip_calls = show_tip_calls + 1
+    end } },
+    { key = "UIManager", value = {
+      EVENT = { CLICK = "click" },
+      query_nodes_by_name = function(name)
+        local node = node_map[name] or new_node()
+        node_map[name] = node
+        return { node }
+      end,
+      client_role = nil,
+    } },
+  }, function()
+    local state = {
+      turn_action_port = {
+        dispatch_action = function(_, _, action)
+          captured[#captured + 1] = action
+        end,
+        should_block_action = function()
+          return false
+        end,
+      },
+      ui = ui_view.build_ui_state(),
+      ui_model = {
+        current_player_id = 2,
+      },
+    }
+    canvas_event_router.bind(state, function()
+      return {}
+    end)
+    node_map[always_show_nodes.auto_button]._listener_cb({ role = local_role })
+    node_map[always_show_nodes.auto_button]._listener_cb({})
+  end)
+
+  _assert_eq(captured[1] and captured[1].actor_role_id, 101, "auto first click should use local role")
+  _assert_eq(captured[2] and captured[2].actor_role_id, 101, "auto second click should use cached local role")
+  _assert_eq(show_tip_calls, 0, "auto cached local role should avoid missing context tip")
+end
+
+local function _test_ui_event_state_resolve_debug_enabled_supports_mixed_role_id_keys()
+  local state = {
+    ui = {
+      debug_log_enabled_by_role = {
+        ["1"] = true,
+      },
+    },
+  }
+
+  local enabled_by_int = require("src.presentation.interaction.UIEventState").resolve_debug_enabled(state, 1)
+  local enabled_by_string = require("src.presentation.interaction.UIEventState").resolve_debug_enabled(state, "1")
+
+  _assert_eq(enabled_by_int, true, "debug_enabled should read string key by int role_id")
+  _assert_eq(enabled_by_string, true, "debug_enabled should read string key by string role_id")
+end
+
 local function _test_ui_event_router_injects_actor_for_next_with_current_player_fallback()
   local base_nodes = require("src.presentation.canvas.base.nodes")
 
@@ -3047,6 +3189,175 @@ local function _test_market_view_hides_market_disabled_entries()
 
   _assert_eq(reopened, false, "market panel should close when all options are disabled")
   _assert_eq(state.ui.market_active, false, "market panel should be inactive after filtering all options")
+end
+
+local function _test_market_view_unbuyable_option_is_clickable()
+  local entry = assert(market_cfg[1], "missing market cfg entry")
+  local touch = {}
+  local state = {
+    ui_refs = {
+      ["Empty"] = 9001,
+      ["lv1"] = 9002,
+      ["lv2"] = 9003,
+      ["lv3"] = 9004,
+      [tostring(entry.product_id)] = 9005,
+    },
+    ui = {
+      market_active = false,
+      set_label = function() end,
+      set_visible = function() end,
+      set_touch_enabled = function(_, name, flag)
+        touch[name] = flag == true
+      end,
+      query_node = function()
+        return {}
+      end,
+    },
+  }
+
+  local opened = market_view.refresh_market(state, {
+    choice_id = 10,
+    options = {
+      { id = entry.product_id, label = entry.name, can_buy = false },
+    },
+    allow_cancel = true,
+    selected_option_id = entry.product_id,
+  })
+
+  _assert_eq(opened, true, "market panel should open with unbuyable options")
+  _assert_eq(touch[market_layout.item_buttons[1]], true, "unbuyable option button should still be clickable")
+end
+
+local function _test_market_view_page_arrows_visibility_follows_page_count()
+  local entry = assert(market_cfg[1], "missing market cfg entry")
+  local visible = {}
+  local touch = {}
+  local state = {
+    ui_refs = {
+      ["Empty"] = 9101,
+      ["lv1"] = 9102,
+      ["lv2"] = 9103,
+      ["lv3"] = 9104,
+      [tostring(entry.product_id)] = 9105,
+    },
+    ui = {
+      market_active = false,
+      set_label = function() end,
+      set_visible = function(_, name, flag)
+        visible[name] = flag == true
+      end,
+      set_touch_enabled = function(_, name, flag)
+        touch[name] = flag == true
+      end,
+      query_node = function()
+        return {}
+      end,
+    },
+  }
+
+  market_view.refresh_market(state, {
+    choice_id = 11,
+    options = {
+      { id = entry.product_id, label = entry.name, can_buy = true },
+    },
+    allow_cancel = true,
+    selected_option_id = entry.product_id,
+    page_index = 1,
+    page_count = 1,
+  })
+
+  _assert_eq(visible[market_layout.page_prev], false, "page_prev should be hidden when only one page")
+  _assert_eq(visible[market_layout.page_next], false, "page_next should be hidden when only one page")
+
+  market_view.refresh_market(state, {
+    choice_id = 12,
+    options = {
+      { id = entry.product_id, label = entry.name, can_buy = true },
+    },
+    allow_cancel = true,
+    selected_option_id = entry.product_id,
+    page_index = 1,
+    page_count = 2,
+  })
+
+  _assert_eq(visible[market_layout.page_prev], true, "page_prev should be visible when multiple pages")
+  _assert_eq(visible[market_layout.page_next], true, "page_next should be visible when multiple pages")
+  _assert_eq(touch[market_layout.page_prev], false, "page_prev should be disabled on first page")
+  _assert_eq(touch[market_layout.page_next], true, "page_next should be enabled when next page exists")
+end
+
+local function _test_ui_event_router_market_cancel_button_dispatches_choice_cancel()
+  local market_nodes = require("src.presentation.canvas.market.nodes")
+
+  local function new_node()
+    local node = {}
+    function node:listen(_, cb)
+      self._listener_cb = cb
+      return {
+        destroy = function()
+          self._listener_cb = nil
+        end,
+      }
+    end
+    return node
+  end
+
+  local captured = {}
+  local show_tip_calls = 0
+  local node_map = {
+    [market_nodes.cancel] = new_node(),
+  }
+
+  _with_patches({
+    { key = "all_roles", value = nil },
+    { key = "GlobalAPI", value = { show_tips = function()
+      show_tip_calls = show_tip_calls + 1
+    end } },
+    { key = "UIManager", value = {
+      EVENT = { CLICK = "click" },
+      query_nodes_by_name = function(name)
+        local node = node_map[name] or new_node()
+        node_map[name] = node
+        return { node }
+      end,
+      client_role = nil,
+    } },
+  }, function()
+    local state = {
+      turn_action_port = {
+        dispatch_action = function(_, _, action)
+          captured[#captured + 1] = action
+        end,
+        should_block_action = function()
+          return false
+        end,
+      },
+      ui = ui_view.build_ui_state(),
+      ui_model = {
+        current_player_id = "3",
+        choice = {
+          id = 12,
+          kind = "market_buy",
+          allow_cancel = true,
+          options = { { id = 34, label = "X" } },
+        },
+        market = {
+          choice_id = 12,
+          options = { { id = 34, label = "X" } },
+        },
+      },
+      pending_choice_selected_option_id = 34,
+    }
+    canvas_event_router.bind(state, function()
+      return {}
+    end)
+    node_map[market_nodes.cancel]._listener_cb({})
+  end)
+
+  _assert_eq(captured[1] and captured[1].type, "choice_cancel", "market_cancel button should dispatch choice_cancel")
+  _assert_eq(captured[1] and captured[1].choice_id, 12, "market_cancel should keep choice id")
+  _assert_eq(captured[1] and captured[1].actor_role_id, 3, "market_cancel should inject actor_role_id")
+  _assert_eq(show_tip_calls, 0, "market_cancel should not show unadapted tip")
 end
 
 local function _test_item_phase_ask_confirm_clears_highlight_suppress()
@@ -5070,4 +5381,10 @@ return {
   _test_status3d_hospital_visible_when_detained_turn_even_if_stay_turns_zero,
   _test_status3d_mountain_visible_when_detained_turn_even_if_stay_turns_zero,
   _test_status3d_hospital_mountain_not_visible_when_not_detained_and_stay_turns_zero,
+  _test_ui_event_router_action_log_uses_cached_local_role_when_event_role_missing,
+  _test_ui_event_router_auto_uses_cached_local_role_instead_of_current_player,
+  _test_ui_event_state_resolve_debug_enabled_supports_mixed_role_id_keys,
+  _test_market_view_unbuyable_option_is_clickable,
+  _test_market_view_page_arrows_visibility_follows_page_count,
+  _test_ui_event_router_market_cancel_button_dispatches_choice_cancel,
 }

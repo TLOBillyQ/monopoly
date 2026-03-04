@@ -35,6 +35,10 @@ function intents.build_items(state)
 end
 
 function intents.build_controls(state)
+  local function _build_cancel_intent()
+    return ui_event_intents.choice_cancel_intent(state, "market_close")
+  end
+
   local specs = {
     {
       name = nodes.confirm,
@@ -50,10 +54,12 @@ function intents.build_controls(state)
       end,
     },
     {
+      name = nodes.cancel,
+      build_intent = _build_cancel_intent,
+    },
+    {
       name = nodes.close,
-      build_intent = function()
-        return ui_event_intents.choice_cancel_intent(state, "market_close")
-      end,
+      build_intent = _build_cancel_intent,
     },
     {
       name = nodes.page_prev,

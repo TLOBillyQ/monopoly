@@ -2,6 +2,7 @@ local market_layout = {
   container = "黑市屏",
   confirm_button = "黑市_购买按钮",
   cancel_button = "黑市_关闭",
+  cancel_button_alt = "黑市_取消按钮",
   page_prev = "黑市-上一页箭头",
   page_next = "黑市-下一页箭头",
   tab_item = "黑市-道具商店按钮",
@@ -16,6 +17,11 @@ local market_layout = {
   icon_placeholder = "黑市_选中卡牌",
   rarity_ref_keys = { [1] = "lv1", [2] = "lv2", [3] = "lv3" },
   empty_ref_key = "Empty",
+}
+
+market_layout.cancel_buttons = {
+  market_layout.cancel_button,
+  market_layout.cancel_button_alt,
 }
 
 for i = 1, 10 do

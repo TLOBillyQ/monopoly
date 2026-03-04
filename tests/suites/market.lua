@@ -85,9 +85,14 @@ local function _test_market_global_limit()
 
   local spec = market_service.choice.build(p, g)
   if spec and spec.options then
+    local found = false
     for _, option in ipairs(spec.options) do
-      assert(option.id ~= entry.product_id, "sold out item should be excluded from choice")
+      if option.id == entry.product_id then
+        found = true
+        assert(option.can_buy == false, "sold out item should remain visible but not buyable in choice")
+      end
     end
+    assert(found == true, "sold out item should remain visible in choice for explicit feedback")
   end
 end
 
@@ -202,6 +207,61 @@ local function _test_buy_vehicle_rejected_when_feature_disabled()
   assert(p.seat_id == before_seat_id, "seat should not change when vehicle buy is rejected")
 end
 
+local function _test_market_tab_all_unbuyable_still_builds_market_choice()
+  local market_service = require("src.game.systems.market.MarketService")
+  local g = _new_game()
+  local p = g:current_player()
+
+  g:set_player_balance(p, "金豆", 0)
+  g:set_player_balance(p, "乐园币", 0)
+  g:set_player_cash(p, 0)
+
+  local spec = market_service.choice.build(p, g, { active_tab = "skin" })
+  assert(type(spec) == "table" and spec.kind == "market_buy",
+    "skin tab should still build market_buy choice when all options are unbuyable")
+  assert(type(spec.options) == "table" and #spec.options > 0, "skin tab should keep visible options")
+  for _, option in ipairs(spec.options) do
+    assert(option.can_buy == false, "all skin options should be marked unbuyable in this setup")
+  end
+end
+
+local function _test_market_tab_select_navigation_applies_with_unbuyable_tab()
+  local market_service = require("src.game.systems.market.MarketService")
+  local g = _new_game()
+  local p = g:current_player()
+
+  g:set_player_balance(p, "金豆", 0)
+  g:set_player_balance(p, "乐园币", 0)
+  g:set_player_cash(p, 0)
+
+  local spec = market_service.choice.build(p, g, { active_tab = "item" })
+  assert(type(spec) == "table" and spec.kind == "market_buy", "initial market choice should be built")
+
+  local pending_choice = {
+    id = 999,
+    kind = spec.kind,
+    title = spec.title,
+    body_lines = spec.body_lines,
+    options = spec.options,
+    allow_cancel = spec.allow_cancel,
+    cancel_label = spec.cancel_label,
+    active_tab = spec.active_tab,
+    page_index = spec.page_index,
+    page_count = spec.page_count,
+    meta = spec.meta,
+  }
+
+  local applied = market_service.choice.apply_navigation(g, pending_choice, {
+    type = "market_tab_select",
+    tab = "skin",
+  })
+
+  assert(applied == true, "market_tab_select should apply on unbuyable skin tab")
+  assert(pending_choice.active_tab == "skin", "navigation should switch active tab to skin")
+  assert(type(pending_choice.options) == "table" and #pending_choice.options > 0,
+    "navigation should keep visible options on skin tab")
+end
+
 return {
   name = "market",
   tests = {
@@ -213,5 +273,13 @@ return {
     { name = "skin_entry_can_buy_but_no_effect", run = _test_skin_entry_can_buy_but_no_effect },
     { name = "market_vehicle_hidden_when_feature_disabled", run = _test_market_vehicle_hidden_when_feature_disabled },
     { name = "buy_vehicle_rejected_when_feature_disabled", run = _test_buy_vehicle_rejected_when_feature_disabled },
+    {
+      name = "market_tab_all_unbuyable_still_builds_market_choice",
+      run = _test_market_tab_all_unbuyable_still_builds_market_choice,
+    },
+    {
+      name = "market_tab_select_navigation_applies_with_unbuyable_tab",
+      run = _test_market_tab_select_navigation_applies_with_unbuyable_tab,
+    },
   },
 }

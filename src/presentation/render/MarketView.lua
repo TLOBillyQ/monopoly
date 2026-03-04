@@ -103,7 +103,7 @@ local function _set_market_slot_visible(ui, refs, slot, opt)
   ui:set_visible(slot.label, true)
   ui:set_touch_enabled(slot.label, false)
   ui:set_visible(slot.button, true)
-  ui:set_touch_enabled(slot.button, opt.can_buy == true)
+  ui:set_touch_enabled(slot.button, true)
   ui:set_visible(slot.frame, true)
   ui:set_touch_enabled(slot.frame, false)
   local level = _resolve_market_level(cfg)
@@ -124,6 +124,17 @@ local function _set_control_visible(ui, name, visible, enabled)
   end
   ui:set_visible(name, visible == true)
   ui:set_touch_enabled(name, enabled == true)
+end
+
+local function _set_cancel_controls(ui, visible, enabled)
+  local names = market_layout.cancel_buttons
+  if type(names) == "table" and #names > 0 then
+    for _, name in ipairs(names) do
+      _set_control_visible(ui, name, visible, enabled)
+    end
+    return
+  end
+  _set_control_visible(ui, market_layout.cancel_button, visible, enabled)
 end
 
 local function _resolve_market_tab(market)
@@ -154,8 +165,9 @@ local function _refresh_market_controls(ui, market)
   local active_tab = _resolve_market_tab(market)
   local page_index = _resolve_market_page_index(market)
   local page_count = _resolve_market_page_count(market)
-  _set_control_visible(ui, market_layout.page_prev, true, page_index > 1)
-  _set_control_visible(ui, market_layout.page_next, true, page_index < page_count)
+  local paging_visible = page_count > 1
+  _set_control_visible(ui, market_layout.page_prev, paging_visible, paging_visible and page_index > 1)
+  _set_control_visible(ui, market_layout.page_next, paging_visible, paging_visible and page_index < page_count)
   _set_control_visible(ui, market_layout.tab_item, true, active_tab ~= "item")
   _set_control_visible(ui, market_layout.tab_skin, true, active_tab ~= "skin")
   _set_control_visible(ui, market_layout.tab_vehicle, true, VEHICLE_TAB_ENABLED and active_tab ~= "vehicle")
@@ -242,8 +254,7 @@ function market_view.refresh_market(state, market)
   ui:set_visible(market_layout.confirm_button, true)
   ui:set_touch_enabled(market_layout.confirm_button, true)
   local show_cancel = market.allow_cancel
-  ui:set_visible(market_layout.cancel_button, show_cancel)
-  ui:set_touch_enabled(market_layout.cancel_button, show_cancel)
+  _set_cancel_controls(ui, show_cancel, show_cancel)
 
   local selected = market.selected_option_id
   if selected == nil or (first_buyable ~= nil and selected ~= first_buyable) then
@@ -273,6 +284,7 @@ function market_view.close_market_panel(state)
   _set_control_visible(ui, market_layout.tab_item, false, false)
   _set_control_visible(ui, market_layout.tab_skin, false, false)
   _set_control_visible(ui, market_layout.tab_vehicle, false, false)
+  _set_cancel_controls(ui, false, false)
   local empty_key = _resolve_ref_key(state.ui_refs, market_layout.empty_ref_key)
   local node = ui.query_node(market_layout.selected_card)
   runtime.set_node_texture_keep_size(node, empty_key)

@@ -48,7 +48,9 @@ local function _build_tab_entries(player, game, active_tab)
   local buyable = {}
   local unbuyable = {}
   for _, entry in ipairs(eligibility.sorted_entries()) do
-    if entry.kind == active_tab then
+    if entry.kind == active_tab
+        and context.entry_vehicle_enabled(entry)
+        and context.entry_market_enabled(entry) then
       if eligibility.can_buy_entry(game, player, entry) then
         buyable[#buyable + 1] = entry
       else
@@ -110,15 +112,15 @@ end
 function choice.build(player, game, state)
   state = state or {}
   local active_tab = _normalize_tab(state.active_tab)
-  local visible, buyable = _build_tab_entries(player, game, active_tab)
+  local visible = _build_tab_entries(player, game, active_tab)
   local page_count = _resolve_page_count(#visible, PAGE_SIZE)
   local page_index = _clamp_page(state.page_index, page_count)
   local body_lines, options = _build_options_for_page(visible, page_index, PAGE_SIZE)
 
-  if #buyable == 0 then
+  if #visible == 0 then
     return nil, {
       kind = "push_popup",
-      payload = { title = "黑市", body = player.name .. " 暂无可购买商品" },
+      payload = { title = "黑市", body = player.name .. " 暂无可展示商品" },
     }
   end
 

@@ -31,5 +31,17 @@ suite.tests[#suite.tests + 1] = {
   name = "_test_status3d_hospital_mountain_not_visible_when_not_detained_and_stay_turns_zero",
   run = assert(all[107], "missing presentation_ui test at index 107"),
 }
+suite.tests[#suite.tests + 1] = {
+  name = "_test_market_view_unbuyable_option_is_clickable",
+  run = assert(all[108], "missing presentation_ui test at index 108"),
+}
+suite.tests[#suite.tests + 1] = {
+  name = "_test_market_view_page_arrows_visibility_follows_page_count",
+  run = assert(all[109], "missing presentation_ui test at index 109"),
+}
+suite.tests[#suite.tests + 1] = {
+  name = "_test_ui_event_router_market_cancel_button_dispatches_choice_cancel",
+  run = assert(all[110], "missing presentation_ui test at index 110"),
+}
 
 return suite
