@@ -2069,6 +2069,16 @@ end
 
 local function _test_choice_modal_routes_to_new_screens()
   local state, nodes, query_nodes = _build_choice_modal_state()
+  state.game = {
+    board = {
+      get_tile_by_id = function(_, tile_id)
+        if tile_id == 1001 then
+          return { name = "彩虹大道" }
+        end
+        return nil
+      end,
+    },
+  }
 
   _with_patches({
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
@@ -2128,11 +2138,12 @@ local function _test_choice_modal_routes_to_new_screens()
       },
       allow_cancel = true,
       cancel_label = "跳过",
+      meta = { tile_id = 1001 },
     })
     _assert_eq(state.ui.active_choice_screen_key, "secondary_confirm", "buy_land optional should route to building screen")
     _assert_eq(nodes["通用二次确认屏"].visible, true, "building screen should be visible")
-    _assert_eq(nodes["通用二次确认_标题"].text, "购买地块", "building title should follow option semantic")
-    _assert_eq(nodes["通用二次确认_文本"].text, "", "building body should sync from choice body")
+    _assert_eq(nodes["通用二次确认_标题"].text, "买地", "building title should be short for kids")
+    _assert_eq(nodes["通用二次确认_文本"].text, "地块：彩虹大道。要买吗？", "building body should include tile and action")
     _assert_eq(nodes["通用二次确认_确定按钮"].text, "", "building confirm text should be empty")
     _assert_eq(nodes["通用二次确认_取消"].text, "", "building cancel text should be empty")
 
@@ -2143,14 +2154,16 @@ local function _test_choice_modal_routes_to_new_screens()
       body = "",
       options = {
         { id = 2001, label = "路障卡" },
+        { id = 2002, label = "遥控骰子卡" },
       },
       allow_cancel = true,
       cancel_label = "结束阶段",
+      meta = { phase = "pre_action" },
     })
     _assert_eq(state.ui.active_choice_screen_key, "secondary_confirm", "item_phase_choice should first ask via secondary confirm")
     _assert_eq(nodes["通用二次确认屏"].visible, true, "secondary confirm should be visible for item phase ask")
-    _assert_eq(nodes["通用二次确认_标题"].text, "行动前：使用道具？", "item phase ask title")
-    _assert_eq(nodes["通用二次确认_文本"].text, "是否使用道具？", "item phase ask body")
+    _assert_eq(nodes["通用二次确认_标题"].text, "行动前", "item phase ask title should be short phase text")
+    _assert_eq(nodes["通用二次确认_文本"].text, "可用道具：路障卡、遥控骰子卡", "item phase ask body should include all cards")
     _assert_eq(nodes["通用二次确认_确定按钮"].disabled, false, "confirm button must be touchable for item phase ask")
     _assert_eq(nodes["位置选择屏"].visible, false, "target screen should stay hidden for item phase")
     _assert_eq(nodes["遥控骰子屏"].visible, false, "remote screen should stay hidden for item phase")
@@ -2609,6 +2622,77 @@ local function _test_ui_event_router_rejects_action_log_without_role()
   end)
 
   _assert_eq(show_tip_calls, 1, "missing role click should show tip once")
+end
+
+local function _test_secondary_confirm_copy_item_phase_selected_option()
+  local common = require("src.presentation.ui.choice_screen_service.common")
+  local choice = {
+    kind = "item_phase_choice",
+    title = "行动前：使用道具？",
+    options = {
+      { id = 2001, label = "路障卡" },
+      { id = 2002, label = "遥控骰子卡" },
+    },
+    meta = { phase = "pre_action" },
+  }
+  local title = common.resolve_secondary_confirm_title(choice, nil, "base_inline", 2002)
+  local body = common.resolve_secondary_confirm_body(choice, nil, "base_inline", 2002, "遥控骰子卡")
+  _assert_eq(title, "行动前", "selected item_phase title should keep short phase label")
+  _assert_eq(body, "将使用：遥控骰子卡", "selected item_phase body should show chosen card")
+end
+
+local function _test_secondary_confirm_copy_land_actions()
+  local common = require("src.presentation.ui.choice_screen_service.common")
+  local choice = {
+    kind = "landing_optional_effect",
+    options = { { id = "buy_land", label = "购买地块" } },
+    meta = { tile_id = 77 },
+  }
+  local game = {
+    board = {
+      get_tile_by_id = function(_, tile_id)
+        if tile_id == 77 then
+          return { name = "星光街" }
+        end
+        return nil
+      end,
+    },
+  }
+  _assert_eq(
+    common.resolve_secondary_confirm_title(choice, game, "secondary_confirm", "buy_land"),
+    "买地",
+    "buy land title should be short"
+  )
+  _assert_eq(
+    common.resolve_secondary_confirm_body(choice, game, "secondary_confirm", "buy_land", "购买地块"),
+    "地块：星光街。要买吗？",
+    "buy land body should include tile and action"
+  )
+  _assert_eq(
+    common.resolve_secondary_confirm_title(choice, game, "secondary_confirm", "upgrade_land"),
+    "加盖",
+    "upgrade title should be short"
+  )
+  _assert_eq(
+    common.resolve_secondary_confirm_body(choice, game, "secondary_confirm", "upgrade_land", "加盖建筑"),
+    "地块：星光街。要加盖吗？",
+    "upgrade body should include tile and action"
+  )
+end
+
+local function _test_secondary_confirm_copy_generic_pre_confirm()
+  local common = require("src.presentation.ui.choice_screen_service.common")
+  local choice = {
+    kind = "remote_dice_value",
+    title = "遥控骰子",
+    options = {
+      { id = 3, label = "点数3" },
+    },
+  }
+  local title = common.resolve_secondary_confirm_title(choice, nil, "remote", 3)
+  local body = common.resolve_secondary_confirm_body(choice, nil, "remote", 3, "点数3")
+  _assert_eq(title, "请确认", "generic pre-confirm title should be brief")
+  _assert_eq(body, "你选的是：点数3", "generic pre-confirm body should show selected option")
 end
 
 local function _test_ui_event_router_action_log_uses_cached_local_role_when_event_role_missing()
@@ -5346,6 +5430,9 @@ return {
   _test_bankruptcy_popup_avatar_uses_native_size_path,
   _test_popup_timeout_closes_even_when_input_blocked,
   _test_choice_modal_routes_to_new_screens,
+  _test_secondary_confirm_copy_item_phase_selected_option,
+  _test_secondary_confirm_copy_land_actions,
+  _test_secondary_confirm_copy_generic_pre_confirm,
   _test_choice_route_policy_prefers_explicit_route_metadata,
   _test_ui_event_router_player_target_click_direct_submit,
   _test_ui_event_router_action_log_toggle_uses_role_context,

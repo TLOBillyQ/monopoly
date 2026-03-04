@@ -69,16 +69,16 @@ function pre_confirm_flow.enter(state, intent)
   if intent.type == "choice_select" then
     option_id = intent.option_id
     option_label = choice_common.resolve_option_label_by_id(choice, option_id) or tostring(option_id)
-    title = choice_common.resolve_pre_confirm_title(choice, source_screen)
-    body = choice_common.resolve_pre_confirm_body(option_label)
+    title = choice_common.resolve_secondary_confirm_title(choice, state.game, source_screen, option_id)
+    body = choice_common.resolve_secondary_confirm_body(choice, state.game, source_screen, option_id, option_label)
   elseif intent.type == "ui_button" then
     source_screen = "base_inline"
     option_id, option_label = _resolve_item_slot_option(state, intent)
     if not option_id then
       return false
     end
-    title = "使用道具"
-    body = "确认使用 " .. (option_label or tostring(option_id)) .. "？"
+    title = choice_common.resolve_secondary_confirm_title(choice, state.game, source_screen, option_id)
+    body = choice_common.resolve_secondary_confirm_body(choice, state.game, source_screen, option_id, option_label)
   else
     return false
   end

@@ -91,16 +91,7 @@ end
 
 function M.resolve_choice_title(choice, screen_key, selected_option_id)
   if screen_key == "secondary_confirm" then
-    if selected_option_id == "buy_land" then
-      return "购买地块"
-    end
-    if selected_option_id == "upgrade_land" then
-      return "加盖建筑"
-    end
-    if choice and choice.title and choice.title ~= "" then
-      return choice.title
-    end
-    return "地产操作"
+    return M.resolve_secondary_confirm_title(choice, nil, screen_key, selected_option_id)
   end
   if choice and choice.title then
     return choice.title
@@ -108,34 +99,127 @@ function M.resolve_choice_title(choice, screen_key, selected_option_id)
   return "请选择"
 end
 
-local function _resolve_confirm_action_label(selected_option_id)
-  if selected_option_id == "buy_land" then
-    return "购买"
+local function _resolve_item_phase_short_title(choice, game)
+  local phase = choice and choice.meta and choice.meta.phase or nil
+  if not phase and game and game.turn then
+    phase = game.turn.item_phase_active
   end
-  if selected_option_id == "upgrade_land" then
-    return "加盖"
+  if phase == "pre_action" then
+    return "行动前"
+  end
+  if phase == "pre_move" then
+    return "投骰后"
+  end
+  if phase == "post_action" then
+    return "行动后"
+  end
+  local title = choice and choice.title or ""
+  if string.find(title, "行动前", 1, true) then
+    return "行动前"
+  end
+  if string.find(title, "投骰后", 1, true) then
+    return "投骰后"
+  end
+  if string.find(title, "行动后", 1, true) then
+    return "行动后"
+  end
+  return "本回合"
+end
+
+local function _collect_option_labels(choice)
+  local labels = {}
+  local options = choice and choice.options or nil
+  if type(options) ~= "table" then
+    return labels
+  end
+  for _, opt in ipairs(options) do
+    local label = M.resolve_option_label(opt)
+    if label and label ~= "" then
+      labels[#labels + 1] = label
+    end
+  end
+  return labels
+end
+
+local function _resolve_tile_name(choice, game)
+  local tile_id = choice and choice.meta and choice.meta.tile_id or nil
+  if not tile_id then
+    return nil
+  end
+  if not game or not game.board or not game.board.get_tile_by_id then
+    return nil
+  end
+  local tile = game.board:get_tile_by_id(tile_id)
+  if tile and tile.name and tile.name ~= "" then
+    return tile.name
   end
   return nil
 end
 
+function M.resolve_secondary_confirm_title(choice, game, source_screen, option_id)
+  if option_id == "buy_land" then
+    return "买地"
+  end
+  if option_id == "upgrade_land" then
+    return "加盖"
+  end
+  if choice and choice.kind == "item_phase_choice" then
+    return _resolve_item_phase_short_title(choice, game)
+  end
+  return "请确认"
+end
+
+function M.resolve_secondary_confirm_body(choice, game, source_screen, option_id, option_label)
+  if not choice then
+    if option_label and option_label ~= "" then
+      return "你选的是：" .. tostring(option_label)
+    end
+    return "请再确认一次"
+  end
+
+  if choice.kind == "item_phase_choice" then
+    local label = option_label
+    if (not label or label == "") and option_id and option_id ~= "__item_phase_ask__" then
+      label = M.resolve_option_label_by_id(choice, option_id)
+    end
+    if label and label ~= "" and option_id and option_id ~= "__item_phase_ask__" then
+      return "将使用：" .. tostring(label)
+    end
+    local labels = _collect_option_labels(choice)
+    if #labels > 0 then
+      return "可用道具：" .. table.concat(labels, "、")
+    end
+    return "请再确认一次"
+  end
+
+  if option_id == "buy_land" then
+    local tile_name = _resolve_tile_name(choice, game)
+    if tile_name then
+      return "地块：" .. tile_name .. "。要买吗？"
+    end
+    return "请再确认一次"
+  end
+  if option_id == "upgrade_land" then
+    local tile_name = _resolve_tile_name(choice, game)
+    if tile_name then
+      return "地块：" .. tile_name .. "。要加盖吗？"
+    end
+    return "请再确认一次"
+  end
+
+  if option_label and option_label ~= "" then
+    return "你选的是：" .. tostring(option_label)
+  end
+  local fallback = option_id and M.resolve_option_label_by_id(choice, option_id) or nil
+  if fallback and fallback ~= "" then
+    return "你选的是：" .. tostring(fallback)
+  end
+  return "请再确认一次"
+end
+
 function M.build_secondary_confirm_body(choice, game, selected_option_id)
-  if not choice or not route_policy.is_secondary_confirm_choice(choice) then
-    return choice and choice.body or ""
-  end
-  local action_label = _resolve_confirm_action_label(selected_option_id)
-  if not action_label then
-    return choice.body or ""
-  end
-  local meta = choice.meta or {}
-  local tile_id = meta.tile_id
-  if not tile_id or not game or not game.board or not game.board.get_tile_by_id then
-    return choice.body or ""
-  end
-  local tile = game.board:get_tile_by_id(tile_id)
-  if not tile or not tile.name then
-    return choice.body or ""
-  end
-  return action_label .. " " .. tile.name .. "？"
+  local option_label = M.resolve_option_label_by_id(choice, selected_option_id)
+  return M.resolve_secondary_confirm_body(choice, game, "secondary_confirm", selected_option_id, option_label)
 end
 
 function M.resolve_option_label_by_id(choice, option_id)
@@ -156,20 +240,17 @@ function M.resolve_option_label_by_id(choice, option_id)
 end
 
 function M.resolve_pre_confirm_title(choice, source_screen)
-  if source_screen == "base_inline" or source_screen == nil then
-    return "使用道具"
-  end
-  if choice and choice.title and choice.title ~= "" then
-    return choice.title
-  end
-  return "请确认"
+  return M.resolve_secondary_confirm_title(choice, nil, source_screen, nil)
 end
 
-function M.resolve_pre_confirm_body(option_label)
-  if not option_label or option_label == "" then
-    return "确认选择？"
+function M.resolve_pre_confirm_body(option_label, choice, game, source_screen, option_id)
+  if choice then
+    return M.resolve_secondary_confirm_body(choice, game, source_screen, option_id, option_label)
   end
-  return "确认选择 " .. tostring(option_label) .. "？"
+  if not option_label or option_label == "" then
+    return "请再确认一次"
+  end
+  return "你选的是：" .. tostring(option_label)
 end
 
 function M.switch_modal_canvas(state, target_canvas)

@@ -25,7 +25,17 @@ function modal_presenter.select_choice_option(state, option_id)
   local screen = ui.choice_screens and ui.choice_screens.secondary_confirm or nil
   local choice = state.ui_model and state.ui_model.choice or nil
   if screen and screen.title then
-    ui:set_label(screen.title, choice_common.resolve_choice_title(choice, "secondary_confirm", option_id))
+    ui:set_label(screen.title, choice_common.resolve_secondary_confirm_title(choice, state.game, "secondary_confirm", option_id))
+  end
+  if screen and screen.body then
+    local option_label = choice_common.resolve_option_label_by_id(choice, option_id)
+    ui:set_label(screen.body, choice_common.resolve_secondary_confirm_body(
+      choice,
+      state.game,
+      "secondary_confirm",
+      option_id,
+      option_label
+    ))
   end
 end
 
@@ -64,8 +74,9 @@ function modal_presenter.open_choice_modal(state, choice, market)
     if choice and choice.kind == "item_phase_choice" and not state._item_phase_confirmed then
       state._item_phase_ask_active = true
       state._suppress_item_slot_highlight_until_pick = true
-      local title = choice.title or "使用道具？"
-      choice_openers.open_pre_confirm_screen(state, choice, "__item_phase_ask__", title, "是否使用道具？")
+      local title = choice_common.resolve_secondary_confirm_title(choice, state.game, "base_inline", nil)
+      local body = choice_common.resolve_secondary_confirm_body(choice, state.game, "base_inline", nil, nil)
+      choice_openers.open_pre_confirm_screen(state, choice, "__item_phase_ask__", title, body)
       return
     end
     if not (choice and choice.kind == "item_phase_choice") then

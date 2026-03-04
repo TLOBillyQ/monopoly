@@ -163,10 +163,17 @@ function M.open_secondary_confirm_screen(state, choice, choice_id)
 
   local first_option = choice.options and choice.options[1] or nil
   local selected = common.resolve_option_id(first_option)
-  local title = common.resolve_choice_title(choice, "secondary_confirm", selected)
+  local option_label = common.resolve_option_label_by_id(choice, selected)
+  local title = common.resolve_secondary_confirm_title(choice, state.game, "secondary_confirm", selected)
   ui:set_label(screen.title, title)
   if screen.body then
-    ui:set_label(screen.body, common.build_secondary_confirm_body(choice, state.game, selected))
+    ui:set_label(screen.body, common.resolve_secondary_confirm_body(
+      choice,
+      state.game,
+      "secondary_confirm",
+      selected,
+      option_label
+    ))
   end
 
   ui:set_button(screen.confirm, "")
