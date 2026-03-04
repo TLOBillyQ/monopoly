@@ -4130,7 +4130,10 @@ local function _test_turn_effects_sync_restores_client_role_nil()
 
   _with_patches({
     { key = "UIManager", value = manager },
-    { target = runtime_port, key = "set_client_role", value = env.set_client_role },
+    { target = runtime_port, key = "set_client_role", value = function(role)
+      env.set_client_role(role)
+      manager.client_role = role
+    end },
     { target = runtime_port, key = "for_each_role_or_global", value = env.for_each_role_or_global },
     { target = runtime_port, key = "query_node", value = env.query_node },
     { target = runtime_port, key = "with_client_role", value = function(role, fn)

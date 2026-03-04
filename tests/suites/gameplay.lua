@@ -118,6 +118,19 @@ local function _build_test_ports(overrides)
         local ui = state and state.ui or nil
         return ui and ui.popup_owner_index or nil
       end,
+      resolve_ui_gate = overrides.resolve_ui_gate or function(state)
+        local ui = state and state.ui or nil
+        local popup = ui and ui.popup_payload or nil
+        return {
+          input_blocked = ui and ui.input_blocked == true or false,
+          choice_active = ui and ui.choice_active == true or false,
+          market_active = ui and ui.market_active == true or false,
+          popup_active = ui and ui.popup_active == true or false,
+          popup_seq = ui and ui.popup_seq or nil,
+          popup_auto_close_seconds = popup and popup.auto_close_seconds or nil,
+          popup_owner_index = ui and ui.popup_owner_index or nil,
+        }
+      end,
       set_input_blocked = overrides.set_input_blocked or function(state, blocked)
         local ui = state and state.ui or nil
         if not ui then
