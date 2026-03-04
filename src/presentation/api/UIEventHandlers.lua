@@ -4,6 +4,16 @@ local host_runtime = require("src.presentation.api.HostRuntimePort")
 
 local event_handlers = {}
 local context = { installed = false, logger = nil, state = nil }
+local MARKET_BUY_FAILED_MIN_TIP_SECONDS = 1.0
+
+local function _resolve_market_buy_failed_tip(event_data)
+  local popup = event_data and event_data.popup or nil
+  local body = popup and popup.body or nil
+  if type(body) == "string" and body ~= "" then
+    return body
+  end
+  return "黑市购买失败"
+end
 
 local function _apply_game_result_panels(event_data)
   local state = context.state
@@ -127,6 +137,7 @@ function event_handlers.install(_, logger, state)
 
   host_runtime.register_custom_event(monopoly_event.market.buy_failed, function(_, _, data)
     local event_data = _event_data(data)
+    host_runtime.show_tips(_resolve_market_buy_failed_tip(event_data), MARKET_BUY_FAILED_MIN_TIP_SECONDS)
     local popup = event_data and event_data.popup or nil
     local ctx = context.state
     if popup and ctx and ctx.push_popup then

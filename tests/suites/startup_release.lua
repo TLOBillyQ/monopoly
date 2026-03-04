@@ -51,7 +51,7 @@ local function _test_release_qa_rejects_non_whitelisted_profile()
   with_patches({
     { key = "RELEASE_BUILD", value = true },
     { key = "RELEASE_ALLOW_TEST_PROFILE", value = true },
-    { key = "STARTUP_TEST_PROFILE", value = "scenario_hospital_staging" },
+    { key = "STARTUP_TEST_PROFILE", value = "unknown_profile_for_release_qa" },
   }, function()
     local ok, err = pcall(startup_policy.resolve, _G)
     assert(ok == false, "release-qa should reject non-whitelisted profile")
