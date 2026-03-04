@@ -58,6 +58,14 @@ function view_command_dispatcher.dispatch(state, intent)
     return true
   end
 
+  if intent_type == "target_lock" then
+    target_choice_effects.on_scene_pick(state, intent.option_id, intent.actor_role_id, {
+      option_id = intent.option_id,
+      actor_role_id = intent.actor_role_id,
+    })
+    return true
+  end
+
   return false
 end
 

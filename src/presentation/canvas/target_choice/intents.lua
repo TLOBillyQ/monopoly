@@ -5,7 +5,7 @@ local nodes = require("src.presentation.canvas.target_choice.nodes")
 local intents = {}
 
 function intents.build(state)
-  return {
+  local specs = {
     {
       name = nodes.confirm,
       build_intent = function()
@@ -28,6 +28,25 @@ function intents.build(state)
       end,
     },
   }
+  for index, name in ipairs(nodes.slot_buttons or {}) do
+    specs[#specs + 1] = {
+      name = name,
+      build_intent = function()
+        local choice = state.ui_model and state.ui_model.choice or nil
+        if not choice then
+          logger.warn("target_lock without choice")
+          return nil
+        end
+        local option_id = ui_event_intents.resolve_option_id(choice, { index = index }, state)
+        if not option_id then
+          logger.warn("target_lock missing option:", tostring(index))
+          return nil
+        end
+        return { type = "target_lock", option_id = option_id }
+      end,
+    }
+  end
+  return specs
 end
 
 return intents

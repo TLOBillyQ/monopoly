@@ -95,35 +95,43 @@ function M.open_target_screen(state, choice, choice_id)
   ui:set_label(screen.title, choice.title or "请选择")
   ui:set_label(screen.body, choice.body or "")
 
-  local non_under = {}
-  local under = nil
+  local ordered_options = {}
+  local under_option = nil
   for _, option in ipairs(choice.options or {}) do
-    if common.is_under_option(option) and under == nil then
-      under = option
+    if common.is_under_option(option) and under_option == nil then
+      under_option = option
     else
-      non_under[#non_under + 1] = option
+      ordered_options[#ordered_options + 1] = option
     end
+  end
+  if under_option ~= nil then
+    ordered_options[#ordered_options + 1] = under_option
   end
 
   local option_ids = {}
   local selected = nil
-  local flat_index = 0
-  for _, name in ipairs(screen.option_buttons or {}) do
-    flat_index = flat_index + 1
-    local option = non_under[flat_index]
+  for index, name in ipairs(screen.option_buttons or {}) do
+    local option = ordered_options[index]
     local option_id = common.set_option_node(ui, name, option)
-    option_ids[flat_index] = option_id
+    option_ids[index] = option_id
+    local label_node = screen.slot_labels and screen.slot_labels[index] or nil
+    local projection_node = screen.slot_projections and screen.slot_projections[index] or nil
+    if label_node then
+      if option then
+        ui:set_label(label_node, common.resolve_option_label(option))
+        ui:set_visible(label_node, true)
+      else
+        ui:set_label(label_node, "")
+        ui:set_visible(label_node, false)
+      end
+      ui:set_touch_enabled(label_node, false)
+    end
+    if projection_node then
+      ui:set_visible(projection_node, option ~= nil)
+      ui:set_touch_enabled(projection_node, false)
+    end
     if not selected and option_id ~= nil then
       selected = option_id
-    end
-  end
-
-  if screen.under_button then
-    flat_index = flat_index + 1
-    local under_id = common.set_option_node(ui, screen.under_button, under)
-    option_ids[flat_index] = under_id
-    if not selected and under_id ~= nil then
-      selected = under_id
     end
   end
 
