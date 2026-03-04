@@ -43,6 +43,7 @@ local suites = {
   require("presentation_ui_action_anim"),
   require("presentation_ui_event_bindings"),
   require("presentation_player_colors"),
+  require("presentation_board_scene_debug_probe"),
   require("read_model_contract"),
   require("usecase_boundary_contract"),
   require("cross_module_contract"),

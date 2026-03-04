@@ -84,8 +84,11 @@ function board_scene.init(state, map_cfg, game)
   assert(scene.ground.set_model_visible ~= nil, "missing ground.set_model_visible")
   scene.ground.set_model_visible(false)
 
-  -- Temporary probe for validating scene unit lookup / type detection.
+  -- Probe + startup model apply for skin-feature functional testing.
   board_scene_debug_probe.probe_named_unit("角色形象-海绵宝宝")
+  board_scene_debug_probe.apply_startup_player_models(scene.units_by_player_id, {
+    source_unit_name = "角色形象-海绵宝宝",
+  })
 
   state.board_scene = scene
   return scene
