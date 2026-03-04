@@ -1,6 +1,7 @@
 local paid_goods_cfg = require("src.game.systems.commerce.config.RuntimePaidGoods")
 local logger = require("src.core.Logger")
 local number_utils = require("src.core.NumberUtils")
+local runtime_ports = require("src.core.RuntimePorts")
 
 local bridge = {}
 
@@ -103,13 +104,10 @@ local function _resolve_goods_mapping(ctx)
 end
 
 local function _resolve_role(player)
-  if not (GameAPI and GameAPI.get_role) then
-    return nil
-  end
   if not player or not player.id then
     return nil
   end
-  local ok, role = pcall(GameAPI.get_role, player.id)
+  local ok, role = pcall(runtime_ports.resolve_role, player.id)
   if not ok then
     return nil
   end

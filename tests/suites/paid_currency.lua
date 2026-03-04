@@ -1,6 +1,7 @@
 local support = require("TestSupport")
 local _new_game = support.new_game
 local _with_patches = support.with_patches
+local runtime_ports = require("src.core.RuntimePorts")
 
 local function _reload_bridge()
   package.loaded["src.game.systems.commerce.PaidCurrencyBridge"] = nil
@@ -74,10 +75,14 @@ local function _build_fake_env(game, opts)
         get_goods_list = function()
           return goods_list
         end,
-        get_role = function(role_id)
-          return role_by_player_id[role_id]
-        end,
       },
+    },
+    {
+      target = runtime_ports,
+      key = "resolve_role",
+      value = function(role_id)
+        return role_by_player_id[role_id]
+      end,
     },
     { key = "EVENT", value = { SPEC_ROLE_PURCHASE_GOODS = "SPEC_ROLE_PURCHASE_GOODS" } },
     {
@@ -208,10 +213,10 @@ local function _test_bridge_isolates_context_between_games()
           { name = "乐园币", goods_id = "goods_leyuanbi", commodity_infos = { { 9002, 1 } } },
         }
       end,
-      get_role = function(role_id)
-        return roles[role_id]
-      end,
     } },
+    { target = runtime_ports, key = "resolve_role", value = function(role_id)
+      return roles[role_id]
+    end },
     { key = "EVENT", value = { SPEC_ROLE_PURCHASE_GOODS = "SPEC_ROLE_PURCHASE_GOODS" } },
     { key = "RegisterTriggerEvent", value = function() end },
   }, function()
