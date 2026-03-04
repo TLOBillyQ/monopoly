@@ -10,6 +10,18 @@ local function _is_cancel(action)
   return action ~= nil and action.type == "choice_cancel"
 end
 
+local function _first_option_id(choice)
+  local options = choice and choice.options or nil
+  if type(options) ~= "table" or #options == 0 then
+    return nil
+  end
+  local first = options[1]
+  if type(first) == "table" then
+    return first.id
+  end
+  return first
+end
+
 local function _clear_choice(game)
   game.turn.pending_choice = nil
   game.dirty.turn = true
@@ -116,6 +128,18 @@ function choice_resolver.resolve(game, choice, action)
   assert(game ~= nil, "missing game")
   assert(choice ~= nil, "missing choice")
   assert(action ~= nil, "missing action")
+
+  if _is_cancel(action) and choice and choice.meta and choice.meta.item_preconsumed == true then
+    local fallback_option = _first_option_id(choice)
+    if fallback_option ~= nil then
+      action = {
+        type = "choice_select",
+        choice_id = choice.id,
+        option_id = fallback_option,
+        actor_role_id = action and action.actor_role_id or nil,
+      }
+    end
+  end
 
   if _is_cancel(action) then
     if choice.kind == "item_phase_choice" then

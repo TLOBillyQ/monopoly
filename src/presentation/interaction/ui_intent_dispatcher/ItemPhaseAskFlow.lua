@@ -11,6 +11,8 @@ function item_phase_ask_flow.dispatch(state, game, intent, opts, action_port)
     state._item_phase_ask_active = nil
     state._item_phase_confirmed = true
     state._suppress_item_slot_highlight_until_pick = nil
+    local choice = state.ui_model and state.ui_model.choice or nil
+    state._skip_item_slot_highlight_replay_choice_id = choice and choice.id or nil
     ui_view.close_choice_modal(state)
     return true
   end
@@ -18,6 +20,7 @@ function item_phase_ask_flow.dispatch(state, game, intent, opts, action_port)
     state._item_phase_ask_active = nil
     state._item_phase_confirmed = nil
     state._suppress_item_slot_highlight_until_pick = nil
+    state._skip_item_slot_highlight_replay_choice_id = nil
     ui_view.close_choice_modal(state)
     local choice = state.ui_model and state.ui_model.choice or nil
     if choice and choice.id then

@@ -1,6 +1,8 @@
 local core = require("src.presentation.api.ui_view_service.core")
 local runtime = require("src.presentation.api.UIRuntimePort")
 local ui_events = require("src.presentation.shared.UIEvents")
+local runtime_ports = require("src.core.RuntimePorts")
+local gameplay_rules = require("src.core.config.GameplayRules")
 
 local M = {}
 
@@ -57,6 +59,57 @@ local function _reset_slot_animation(index)
   _emit_slot_animation(index, "重置高亮道具槽位牌")
 end
 
+local function _build_pickable_signature(slot_pickable)
+  local out = {}
+  for index, can_pick in ipairs(slot_pickable) do
+    if can_pick then
+      out[#out + 1] = tostring(index)
+    end
+  end
+  return table.concat(out, ",")
+end
+
+local function _resolve_gate_key(choice_id, role_id, display_player_id)
+  return table.concat({
+    tostring(choice_id or "none"),
+    tostring(role_id or "global"),
+    tostring(display_player_id or "none"),
+  }, "|")
+end
+
+local function _ensure_gate_store(state)
+  local gate = state._item_slot_highlight_gate
+  if type(gate) ~= "table" then
+    gate = {}
+    state._item_slot_highlight_gate = gate
+  end
+  return gate
+end
+
+local function _emit_pickable_slot_animation(slot_pickable)
+  _emit_global_reset_animation()
+  for index, can_pick in ipairs(slot_pickable) do
+    if not can_pick then
+      _reset_slot_animation(index)
+    end
+  end
+  for index, can_pick in ipairs(slot_pickable) do
+    if can_pick then
+      _emit_slot_animation(index, "高亮道具槽位牌")
+    end
+  end
+end
+
+local function _apply_outline_state(ui, outlines, slot_pickable, visible_enabled)
+  local enabled = visible_enabled == true
+  for index, outline_name in ipairs(outlines) do
+    local can_pick = slot_pickable[index] == true
+    local visible = enabled and can_pick
+    _set_outline_visible(ui, outline_name, visible)
+    _set_outline_touch_enabled(ui, outline_name, visible)
+  end
+end
+
 function M.refresh_item_slots(state, ui_model, opts)
   local ui = state.ui
   assert(ui ~= nil and ui.item_slots ~= nil, "missing ui item slots")
@@ -81,6 +134,7 @@ function M.refresh_item_slots(state, ui_model, opts)
   local option_id_set = _build_option_id_set(ui_model and ui_model.choice or nil)
   local slot_pickable = {}
   local choice_kind = ui_model and ui_model.choice and ui_model.choice.kind or nil
+  local choice_id = ui_model and ui_model.choice and ui_model.choice.id or nil
   local suppress_flag = state._suppress_item_slot_highlight_until_pick == true
 
   for index, slot_name in ipairs(slots) do
@@ -98,24 +152,57 @@ function M.refresh_item_slots(state, ui_model, opts)
       ui:set_touch_enabled(slot_name, false)
     end
     slot_pickable[index] = can_pick
-    _set_outline_visible(ui, outline_name, can_pick)
-    _set_outline_touch_enabled(ui, outline_name, can_pick)
   end
 
+  local is_item_phase_ask = choice_kind == "item_phase_choice" and state._item_phase_ask_active == true
+  local gate_store = _ensure_gate_store(state)
+  local gate_key = _resolve_gate_key(choice_id, role_id, display_player_id)
+
+  if is_item_phase_ask then
+    local signature = _build_pickable_signature(slot_pickable)
+    local gate = gate_store[gate_key]
+    local needs_replay = gate == nil
+      or gate.slot_signature ~= signature
+      or gate.choice_id ~= choice_id
+
+    if needs_replay then
+      local token = (gate and gate.timer_token or 0) + 1
+      gate = {
+        choice_id = choice_id,
+        slot_signature = signature,
+        timer_token = token,
+        ready = false,
+      }
+      gate_store[gate_key] = gate
+      _emit_pickable_slot_animation(slot_pickable)
+
+      local delay_seconds = gameplay_rules.item_slot_highlight_anim_delay_seconds or 0.35
+      runtime_ports.schedule(delay_seconds, function()
+        local current_gate = state and state._item_slot_highlight_gate and state._item_slot_highlight_gate[gate_key] or nil
+        if current_gate and current_gate.timer_token == token then
+          current_gate.ready = true
+          state.ui_dirty = true
+        end
+      end)
+    end
+
+    _apply_outline_state(ui, outlines, slot_pickable, gate.ready == true)
+  else
+    gate_store[gate_key] = nil
+
   local suppress_slot_highlight_anim = suppress_flag
-    and choice_kind == "item_phase_choice"
-  if not suppress_slot_highlight_anim then
-    _emit_global_reset_animation()
-    for index, can_pick in ipairs(slot_pickable) do
-      if not can_pick then
-        _reset_slot_animation(index)
-      end
+      and choice_kind == "item_phase_choice"
+    local skip_replay_for_confirmed_item_phase = choice_kind == "item_phase_choice"
+      and state._skip_item_slot_highlight_replay_choice_id ~= nil
+      and tostring(state._skip_item_slot_highlight_replay_choice_id) == tostring(choice_id)
+    if not suppress_slot_highlight_anim and not skip_replay_for_confirmed_item_phase then
+      _emit_pickable_slot_animation(slot_pickable)
     end
-    for index, can_pick in ipairs(slot_pickable) do
-      if can_pick then
-        _emit_slot_animation(index, "高亮道具槽位牌")
-      end
+    if not (choice_kind == "item_phase_choice"
+      and tostring(state._skip_item_slot_highlight_replay_choice_id) == tostring(choice_id)) then
+      state._skip_item_slot_highlight_replay_choice_id = nil
     end
+    _apply_outline_state(ui, outlines, slot_pickable, true)
   end
 
   if role_id ~= nil then

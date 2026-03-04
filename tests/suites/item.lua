@@ -182,6 +182,59 @@ local function _test_item_executor_keeps_specific_anim_without_fallback()
   )
 end
 
+local function _test_item_phase_select_remote_dice_consumes_immediately_and_locks_followup()
+  local g = _new_game()
+  local p = g:current_player()
+  p.inventory:add({ id = gameplay_rules.item_ids.remote_dice })
+
+  local spec = assert(item_phase.build_choice_spec(g, p, "pre_action"), "item_phase should open when remote dice exists")
+  local pending = _open_choice(g, spec)
+  local before_count = support.inventory.count(p)
+  _assert_eq(before_count, 1, "precondition inventory count")
+
+  local res = choice_resolver.resolve(g, pending, {
+    type = "choice_select",
+    choice_id = pending.id,
+    option_id = gameplay_rules.item_ids.remote_dice,
+    actor_role_id = p.id,
+  })
+  assert(res and res.stay == true, "selecting remote dice should open follow-up choice")
+
+  local after_pending = _get_choice(g)
+  assert(after_pending and after_pending.kind == "remote_dice_value", "follow-up choice kind should be remote_dice_value")
+  _assert_eq(support.inventory.count(p), 0, "slot item should be consumed immediately after slot select")
+  _assert_eq(after_pending.allow_cancel, false, "follow-up choice should not allow cancel after consume")
+  assert(after_pending.meta and after_pending.meta.item_preconsumed == true, "follow-up choice should mark preconsumed")
+end
+
+local function _test_preconsumed_followup_cancel_falls_back_to_first_option()
+  local g = _new_game()
+  local p = g:current_player()
+  g.turn.item_phase_active = "pre_action"
+  local pending = _open_choice(g, {
+    kind = "remote_dice_value",
+    title = "遥控骰子：选择点数",
+    options = { { id = 4, label = "4" }, { id = 2, label = "2" } },
+    allow_cancel = false,
+    meta = {
+      player_id = p.id,
+      item_id = gameplay_rules.item_ids.remote_dice,
+      dice_count = 1,
+      item_preconsumed = true,
+    },
+  })
+
+  local res = choice_resolver.resolve(g, pending, {
+    type = "choice_cancel",
+    choice_id = pending.id,
+    actor_role_id = p.id,
+  })
+  _assert_eq(res and res.stay, false, "preconsumed follow-up should resolve instead of staying")
+  _assert_eq(g.turn.pending_choice, nil, "preconsumed follow-up cancel should not keep choice")
+  assert(p.status.pending_remote_dice and p.status.pending_remote_dice.values, "remote dice value should still be applied")
+  _assert_eq(p.status.pending_remote_dice.values[1], 4, "cancel should fallback to first option value")
+end
+
 return {
   name = "item",
   tests = {
@@ -194,5 +247,13 @@ return {
     { name = "target_item_manual_direct_exec_and_duration", run = _test_target_item_manual_direct_exec_and_duration },
     { name = "item_executor_fallback_item_use_anim", run = _test_item_executor_fallback_item_use_anim },
     { name = "item_executor_keeps_specific_anim_without_fallback", run = _test_item_executor_keeps_specific_anim_without_fallback },
+    {
+      name = "item_phase_select_remote_dice_consumes_immediately_and_locks_followup",
+      run = _test_item_phase_select_remote_dice_consumes_immediately_and_locks_followup,
+    },
+    {
+      name = "preconsumed_followup_cancel_falls_back_to_first_option",
+      run = _test_preconsumed_followup_cancel_falls_back_to_first_option,
+    },
   },
 }

@@ -30,6 +30,17 @@ local function _pick_first_choice_option(choice)
 end
 
 local function _build_auto_or_fallback_action(game, choice, allow_first_option_fallback)
+  if choice and choice.meta and choice.meta.item_preconsumed == true then
+    local option_id = _pick_first_choice_option(choice)
+    if option_id == nil then
+      return nil
+    end
+    return {
+      type = "choice_select",
+      choice_id = choice.id,
+      option_id = option_id,
+    }
+  end
   local auto_action = agent.auto_action_for_choice(game, choice)
   if auto_action then
     return auto_action

@@ -24,6 +24,13 @@ function item_choice_handler.build(helpers)
     return finish_choice(game, false)
   end
 
+  local function _consume_if_needed(player, item_id, already_consumed)
+    if not item_id or already_consumed == true then
+      return
+    end
+    assert(inventory.consume(player, item_id) == true, "consume committed item failed: " .. tostring(item_id))
+  end
+
   local function _open_steal_item_choice(game, stealer, target)
     local lines = {}
     local options = {}
@@ -64,9 +71,7 @@ function item_choice_handler.build(helpers)
     local meta = choice.meta
     local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
     assert(idx ~= nil, "missing demolish index")
-    if meta.item_id then
-      inventory.consume(player, meta.item_id)
-    end
+    _consume_if_needed(player, meta.item_id, meta.item_preconsumed)
     local res = demolish.apply(game, player, idx, {
       injure = meta.injure,
       title = meta.title
@@ -84,9 +89,7 @@ function item_choice_handler.build(helpers)
     local meta = choice.meta
     local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
     assert(idx ~= nil, "missing roadblock index")
-    if meta.item_id then
-      inventory.consume(player, meta.item_id)
-    end
+    _consume_if_needed(player, meta.item_id, meta.item_preconsumed)
     local res = roadblock.apply(game, player, idx)
     if res then
       intent_dispatcher.dispatch(game, res)
@@ -155,7 +158,10 @@ function item_choice_handler.build(helpers)
     local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
     local item_id = assert(meta.item_id, "missing item_id")
     assert(target_id ~= nil, "missing target_id")
-    local res = use_item(game, player, item_id, { target_id = target_id })
+    local res = use_item(game, player, item_id, {
+      target_id = target_id,
+      item_preconsumed = meta.item_preconsumed == true,
+    })
     assert(res ~= nil, "missing use_item result")
     if res.waiting then return { stay = true } end
     return _finish_and_clear(game)
@@ -170,9 +176,7 @@ function item_choice_handler.build(helpers)
     local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
     assert(value ~= nil, "missing dice value")
     local dice_count = meta.dice_count or game:player_dice_count(player)
-    if meta.item_id then
-      inventory.consume(player, meta.item_id)
-    end
+    _consume_if_needed(player, meta.item_id, meta.item_preconsumed)
     remote_dice.apply(game, player, dice_count, value)
     return _finish_and_clear(game)
   end
@@ -190,7 +194,18 @@ function item_choice_handler.build(helpers)
 
     local res = use_item(game, player, item_id)
     if type(res) == "table" and res.waiting then
-      intent_dispatcher.dispatch(game, res.intent or {})
+      assert(inventory.consume(player, item_id) == true, "consume committed item failed: " .. tostring(item_id))
+      local intent = res.intent or {}
+      local choice_spec = intent.choice_spec
+      if type(choice_spec) == "table" then
+        choice_spec.allow_cancel = false
+        choice_spec.cancel_label = nil
+        choice_spec.meta = choice_spec.meta or {}
+        choice_spec.meta.item_preconsumed = true
+        choice_spec.meta.item_id = choice_spec.meta.item_id or item_id
+        choice_spec.meta.player_id = choice_spec.meta.player_id or player.id
+      end
+      intent_dispatcher.dispatch(game, intent)
       return { stay = true }
     end
     finish_item_phase(game, phase)

@@ -2510,6 +2510,9 @@ local function _test_item_phase_ask_confirm_clears_highlight_suppress()
     _item_phase_ask_active = true,
     _item_phase_confirmed = nil,
     _suppress_item_slot_highlight_until_pick = true,
+    ui_model = {
+      choice = { id = 66, kind = "item_phase_choice" },
+    },
     ui = ui_view.build_ui_state(),
   }
 
@@ -2535,7 +2538,180 @@ local function _test_item_phase_ask_confirm_clears_highlight_suppress()
   _assert_eq(state._item_phase_confirmed, true, "item_phase_confirmed should become true after confirm")
   _assert_eq(state._suppress_item_slot_highlight_until_pick, nil,
     "highlight suppression should clear after item_phase ask confirm")
+  _assert_eq(state._skip_item_slot_highlight_replay_choice_id, 66,
+    "item_phase ask confirm should skip highlight replay before slot click")
   _assert_eq(closed, 1, "item_phase ask confirm should close modal once")
+end
+
+local function _test_item_phase_confirmed_skips_replay_before_slot_click()
+  local ui_events = require("src.presentation.shared.UIEvents")
+  local events = {}
+  local state = {
+    _item_phase_ask_active = nil,
+    _item_phase_confirmed = true,
+    _skip_item_slot_highlight_replay_choice_id = 77,
+    ui_refs = {
+      ["Empty"] = "EMPTY",
+      ["2002"] = "ICON2002",
+    },
+    ui = {
+      item_slots = { "基础_道具槽位1" },
+      card_outlines = { "基础_可出牌外框1" },
+      set_touch_enabled = function() end,
+      set_visible = function() end,
+    },
+  }
+  local ui_model = {
+    current_player_id = 1,
+    item_choice_owner_id = 1,
+    item_slots_by_player = { [1] = { 2002 } },
+    choice = {
+      id = 77,
+      kind = "item_phase_choice",
+      options = { { id = 2002 } },
+    },
+  }
+
+  _with_patches({
+    {
+      key = "UIManager",
+      value = {
+        client_role = nil,
+        query_nodes_by_name = function()
+          return { { set_texture_keep_size = function() end } }
+        end,
+      },
+    },
+    {
+      target = ui_events,
+      key = "send_to_all",
+      value = function(event_name)
+        events[#events + 1] = event_name
+      end,
+    },
+    {
+      target = ui_events,
+      key = "send_to_role",
+      value = function(_, event_name)
+        events[#events + 1] = event_name
+      end,
+    },
+  }, function()
+    ui_view.refresh_item_slots(state, ui_model, {
+      display_player_id = 1,
+      allow_interact = true,
+    })
+  end)
+
+  _assert_eq(_has_event(events, "高亮道具槽位牌1"), false,
+    "confirmed item phase should not replay slot highlight before click")
+  _assert_eq(_has_event(events, "重置高亮"), false,
+    "confirmed item phase should not replay global highlight reset before click")
+  _assert_eq(state._skip_item_slot_highlight_replay_choice_id, 77,
+    "skip replay flag should remain until slot click")
+end
+
+local function _test_item_slot_refresh_item_phase_ask_replays_highlight_then_reveals_outlines()
+  local ui_events = require("src.presentation.shared.UIEvents")
+  local events = {}
+  local visible_state = {}
+  local timers = {}
+
+  local state = {
+    _item_phase_ask_active = true,
+    ui_refs = {
+      ["Empty"] = "EMPTY",
+      ["2002"] = "ICON2002",
+      ["2003"] = "ICON2003",
+    },
+    ui = {
+      item_slots = { "基础_道具槽位1", "基础_道具槽位2", "基础_道具槽位3" },
+      card_outlines = { "基础_可出牌外框1", "基础_可出牌外框2", "基础_可出牌外框3" },
+      set_touch_enabled = function() end,
+      set_visible = function(_, name, visible)
+        visible_state[name] = visible == true
+      end,
+    },
+  }
+
+  local ui_model = {
+    current_player_id = 1,
+    item_choice_owner_id = 1,
+    item_slots_by_player = {
+      [1] = { 2002, nil, 2003 },
+    },
+    choice = {
+      id = 99,
+      kind = "item_phase_choice",
+      options = { { id = 2002 }, { id = 2003 } },
+    },
+  }
+
+  local function _count_event(event_name)
+    local count = 0
+    for _, value in ipairs(events) do
+      if value == event_name then
+        count = count + 1
+      end
+    end
+    return count
+  end
+
+  _with_patches({
+    {
+      key = "UIManager",
+      value = {
+        client_role = nil,
+        query_nodes_by_name = function()
+          return { { set_texture_keep_size = function() end } }
+        end,
+      },
+    },
+    {
+      target = ui_events,
+      key = "send_to_all",
+      value = function(event_name)
+        events[#events + 1] = event_name
+      end,
+    },
+    {
+      target = ui_events,
+      key = "send_to_role",
+      value = function(_, event_name)
+        events[#events + 1] = event_name
+      end,
+    },
+    {
+      key = "SetTimeOut",
+      value = function(_, cb)
+        timers[#timers + 1] = cb
+      end,
+    },
+  }, function()
+    ui_view.refresh_item_slots(state, ui_model, {
+      display_player_id = 1,
+      allow_interact = true,
+    })
+
+    _assert_eq(_count_event("高亮道具槽位牌1"), 1, "item_phase_ask should emit highlight for slot1 once")
+    _assert_eq(_count_event("高亮道具槽位牌3"), 1, "item_phase_ask should emit highlight for slot3 once")
+    _assert_eq(_count_event("重置高亮"), 1, "item_phase_ask should emit global reset once")
+    _assert_eq(visible_state["基础_可出牌外框1"], false, "outline1 should stay hidden before delay")
+    _assert_eq(visible_state["基础_可出牌外框3"], false, "outline3 should stay hidden before delay")
+    _assert_eq(#timers, 1, "item_phase_ask should schedule exactly one reveal timer")
+
+    timers[1]()
+    ui_view.refresh_item_slots(state, ui_model, {
+      display_player_id = 1,
+      allow_interact = true,
+    })
+
+    _assert_eq(_count_event("高亮道具槽位牌1"), 1, "highlight should not replay every refresh")
+    _assert_eq(_count_event("高亮道具槽位牌3"), 1, "highlight should not replay every refresh")
+    _assert_eq(visible_state["基础_可出牌外框1"], true, "outline1 should show after delay")
+    _assert_eq(visible_state["基础_可出牌外框3"], true, "outline3 should show after delay")
+    _assert_eq(visible_state["基础_可出牌外框2"], false, "non-pickable outline should stay hidden")
+  end)
 end
 
 local function _test_item_slot_refresh_resets_highlight_without_client_role()
@@ -3988,6 +4164,8 @@ return {
   _test_item_slot_refresh_shows_only_playable_outlines,
   _test_item_slot_intents_include_outline_nodes,
   _test_item_phase_ask_confirm_clears_highlight_suppress,
+  _test_item_phase_confirmed_skips_replay_before_slot_click,
+  _test_item_slot_refresh_item_phase_ask_replays_highlight_then_reveals_outlines,
   _test_tick_skips_anim_when_no_anim,
   _test_action_anim_queue_consumes_in_order,
   _test_action_anim_default_duration,

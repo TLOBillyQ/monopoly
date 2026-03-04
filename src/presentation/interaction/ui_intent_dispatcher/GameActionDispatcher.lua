@@ -23,6 +23,9 @@ function game_action_dispatcher.dispatch(state, game, intent, opts, action_port,
   if state._suppress_item_slot_highlight_until_pick == true and _is_item_slot_click(intent) then
     state._suppress_item_slot_highlight_until_pick = nil
   end
+  if _is_item_slot_click(intent) then
+    state._skip_item_slot_highlight_replay_choice_id = nil
+  end
 
   if item_phase_ask_flow.dispatch(state, game, intent, opts, action_port) then
     return true
