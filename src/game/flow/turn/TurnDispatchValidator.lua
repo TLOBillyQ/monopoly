@@ -1,4 +1,5 @@
 local logger = require("src.core.Logger")
+local number_utils = require("src.core.NumberUtils")
 local item_slot_data = require("src.game.flow.turn.ItemSlotData")
 local turn_action_gate = require("src.game.flow.turn.TurnActionGate")
 
@@ -15,16 +16,13 @@ local function _is_turn_bound_ui_button(action_id)
 end
 
 local function _resolve_choice_owner_role_id(game, choice)
-  if not (choice and choice.meta and choice.meta.player_id) then
-    local current = game:current_player()
-    return current and current.id or nil
+  local meta = choice and choice.meta or nil
+  local owner_role_id = meta and number_utils.to_integer(meta.player_id) or nil
+  if owner_role_id ~= nil then
+    return owner_role_id
   end
-  local owner = game:find_player_by_id(choice.meta.player_id)
-  if owner then
-    return owner.id
-  end
-  local current = game:current_player()
-  return current and current.id or nil
+  local current = game and game.current_player and game:current_player() or nil
+  return current and number_utils.to_integer(current.id) or nil
 end
 
 local function _resolve_item_slot_source(item_slot_source)
@@ -71,22 +69,22 @@ function validator.validate_actor_role(game, action)
   assert(game ~= nil and game.turn ~= nil, "missing game.turn")
   local current_index = game.turn.current_player_index
   local current_player = current_index and game.players and game.players[current_index] or nil
-  local current_id = current_player and current_player.id or nil
+  local current_role_id = current_player and number_utils.to_integer(current_player.id) or nil
   local actor_role_id = action.actor_role_id
   if actor_role_id == nil then
     logger.warn("ui_button missing actor_role_id:", tostring(action.id))
     return false
   end
-  if current_id == nil then
-    logger.warn("ui_button missing current player id:", tostring(action.id))
+  if current_role_id == nil then
+    logger.warn("ui_button missing current_role_id:", tostring(action.id))
     return false
   end
-  if actor_role_id ~= current_id then
+  if actor_role_id ~= current_role_id then
     logger.warn(
       "ui_button blocked by actor check:",
       tostring(action.id),
-      "actor=" .. tostring(actor_role_id),
-      "current=" .. tostring(current_id)
+      "actor_role_id=" .. tostring(actor_role_id),
+      "current_role_id=" .. tostring(current_role_id)
     )
     return false
   end
@@ -99,13 +97,13 @@ function validator.validate_choice_actor(game, action, choice)
     logger.warn("choice action missing actor_role_id:", tostring(action and action.type))
     return false
   end
-  local expected = _resolve_choice_owner_role_id(game, choice)
-  if expected ~= nil and actor_role_id ~= expected then
+  local owner_role_id = _resolve_choice_owner_role_id(game, choice)
+  if owner_role_id ~= nil and actor_role_id ~= owner_role_id then
     logger.warn(
       "choice action blocked by actor check:",
       tostring(action and action.type),
-      "actor=" .. tostring(actor_role_id),
-      "expected=" .. tostring(expected)
+      "actor_role_id=" .. tostring(actor_role_id),
+      "owner_role_id=" .. tostring(owner_role_id)
     )
     return false
   end

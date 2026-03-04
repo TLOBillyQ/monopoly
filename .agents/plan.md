@@ -18,8 +18,12 @@
 - [x] (2026-03-04 12:20+08:00) 已完成：阅读 `.agents/harness/PLANS.md`，确认计划结构与写作约束。
 - [x] (2026-03-04 12:24+08:00) 已完成：阅读 `.agents/research.md` 与相关源码，提炼统一方案边界。
 - [x] (2026-03-04 12:30+08:00) 已完成：产出本可执行计划初稿并写入 `.agents/plan.md`。
-- [ ] 待完成：里程碑 1（身份契约收敛）实施与提交。
-- [ ] 待完成：里程碑 2（actor 注入与输入链路统一）实施与提交。
+- [x] (2026-03-04 13:05+08:00) 已完成：里程碑 1（身份契约收敛）代码落地（`TurnDispatchValidator`、`ItemSlice`、相关测试语义）。
+- [x] (2026-03-04 13:08+08:00) 已完成：里程碑 1 验收测试通过（`presentation_ui_model_dispatch`、`presentation_ui`）。
+- [x] (2026-03-04 13:18+08:00) 已完成：根据里程碑 1 经验拆分里程碑 2 为 2A/2B/2C，并补齐分段验收命令（仅计划更新，未执行实现）。
+- [ ] 待完成：里程碑 2A（actor 注入白名单盘点）实施与提交。
+- [ ] 待完成：里程碑 2B（事件路由补齐 actor）实施与提交。
+- [ ] 待完成：里程碑 2C（拒绝路径与提示统一）实施与提交。
 - [ ] 待完成：里程碑 3（role 解析入口收敛）实施与提交。
 - [ ] 待完成：里程碑 4（UI 作用域防污染）实施与提交。
 - [ ] 待完成：里程碑 5（测试与回归验收）实施与记录。
@@ -35,6 +39,9 @@
 
 - 观察：少量业务模块仍直接走 `GameAPI.get_role`，绕过统一 resolver，未来容易出现同一身份在不同模块不一致。
   证据：`src/game/systems/commerce/PaidCurrencyBridge.lua`。
+
+- 观察：里程碑 1 中 `choice.meta.player_id` 存在字符串形态输入（如 `"1"`），若不归一会让 owner 判断语义漂移。
+  证据：`tests/suites/presentation_ui.lua` 已将 choice owner 用例改为字符串并通过，`item_choice_owner_id` 与 `choice actor check` 均按数值 role id 工作。
 
 ## 决策日志
 
@@ -55,12 +62,24 @@
   理由：避免身份解释分叉，提升可测试性与替换能力。
   日期/作者：2026-03-04 / Codex
 
+- 决策：里程碑 1 将 `choice.meta.player_id` 明确视为 owner role id，并在 `ItemSlice` 与 `TurnDispatchValidator` 统一做 `NumberUtils.to_integer` 归一。
+  理由：契约表达需要稳定数值语义，且不改变既有业务行为。
+  日期/作者：2026-03-04 / Codex
+
+- 决策：回合权限日志字段统一使用 `actor_role_id/current_role_id/owner_role_id` 命名，不再使用泛化 `actor/current`。
+  理由：日志应可直接映射到契约字段，降低排障歧义。
+  日期/作者：2026-03-04 / Codex
+
+- 决策：将里程碑 2 拆分为 2A（白名单盘点）、2B（actor 注入补齐）、2C（拒绝路径统一），并要求每段独立验收。
+  理由：里程碑 1 证明“先收敛语义再改行为”能显著降低回归风险；里程碑 2 涉及多 intent，多段验收更易定位问题。
+  日期/作者：2026-03-04 / Codex
+
 ## 结果与复盘
 
 
-当前状态是“计划已就绪，实施未开始”。
+当前状态是“里程碑 1 已完成，里程碑 2-5 未开始”。
 
-对照目标，本计划已经明确了用户可见成功标准、实施顺序、文件落点、测试指令与回退方案。实施完成后，本节必须回填：完成项、遗留项、偏差原因、后续建议。
+里程碑 1 完成项：身份校验与 UI model owner 解析统一到 `actor_role_id/owner_role_id` 语义，`choice.meta.player_id` 完成数值归一，日志字段命名完成收敛。验证结果：`presentation_ui_model_dispatch`（13）与 `presentation_ui`（97）均通过。遗留项：actor 注入入口、role 解析旁路、client_role 生命周期与全量回归闭环仍待后续里程碑处理。
 
 ## 背景与导读
 
@@ -101,7 +120,23 @@
 
 这个里程碑把 actor 注入彻底收敛到 `CanvasEventRouter + LocalActorResolver`。完成后，所有需要身份的 intent 都通过同一优先级补齐 `actor_role_id`，并在失败时统一拒绝与提示。
 
-实施内容包括：核对并补齐“需要 actor”的 intent 白名单；确保 `choice_select/choice_cancel/market_confirm/ui_button(next|auto|item_slot_*)/toggle_action_log` 全覆盖；保留 `data.role -> client_role -> current_player_id` 解析顺序。
+结合里程碑 1 的经验，这个里程碑拆为三个可独立验收的小段，避免“一次性改完才知道哪类 intent 漏补 actor”。
+
+里程碑 2A 聚焦“白名单是否完整”。只做盘点与测试对齐，不改分发逻辑。需要明确 `_requires_event_actor(intent)` 必须覆盖 `toggle_action_log`、`choice_select`、`choice_cancel`、`market_confirm`、`ui_button(next|auto|item_slot_*)`，并把每个类型映射到现有 route spec 与测试用例。验收命令使用：
+
+    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({require('presentation_ui_event_bindings')})"
+
+通过标准是：事件绑定测试绿灯，且不存在“intent 在路由中可触发但不在 actor 白名单”的缺口记录。
+
+里程碑 2B 聚焦“事件路由补齐 actor”。仅修改 `CanvasEventRouter` 与 `LocalActorResolver` 协作逻辑，确保白名单内 intent 在进入 `UIIntentDispatcher` 前都尝试注入 `actor_role_id`，并保持 `data.role -> client_role -> current_player_id` 解析顺序不变。验收命令使用：
+
+    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({require('presentation_ui_event_bindings'), require('presentation_ui_interaction')})"
+
+通过标准是：白名单内 intent 在正常输入下都有 actor，既有交互行为不回退。
+
+里程碑 2C 聚焦“失败路径一致性”。统一缺失 actor 时的提示文本、日志关键字和拒绝出口，确保不同 intent 的缺失处理一致，避免部分路径静默失败。验收命令与 2B 相同，并额外检查日志关键字：
+
+    rg "ui intent rejected: missing event role|missing actor_role_id" <日志文件路径>
 
 验收时需要新增或更新测试，证明每类 intent 都能得到正确 actor，且缺失时会被拒绝。
 
@@ -152,23 +187,31 @@
 
     lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({require('presentation_ui_model_dispatch')})"
 
-3. 执行里程碑 2 后，运行事件绑定与 UI 交互测试：
+3. 执行里程碑 2A 后，运行事件绑定测试，确认 actor 白名单与路由覆盖一致：
+
+    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({require('presentation_ui_event_bindings')})"
+
+4. 执行里程碑 2B 后，运行事件绑定与 UI 交互测试：
 
     lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({require('presentation_ui_event_bindings'), require('presentation_ui_interaction')})"
 
-4. 执行里程碑 3 后，检查是否仍有新增旁路 `GameAPI.get_role`（允许 adapter 层保留）：
+5. 执行里程碑 2C 后，检查缺失 actor 的拒绝日志关键字是否统一：
+
+    rg "ui intent rejected: missing event role|missing actor_role_id" <日志文件路径>
+
+6. 执行里程碑 3 后，检查是否仍有新增旁路 `GameAPI.get_role`（允许 adapter 层保留）：
 
     git grep -n "GameAPI.get_role" src
 
-5. 执行里程碑 4 后，运行作用域与渲染相关测试：
+7. 执行里程碑 4 后，运行作用域与渲染相关测试：
 
     lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({require('presentation_ui_action_status'), require('presentation_player_colors')})"
 
-6. 执行里程碑 5 后，跑全量回归：
+8. 执行里程碑 5 后，跑全量回归：
 
     lua tests/regression.lua
 
-7. 在实机日志中验证 actor 与权限边界（日志路径按本地环境填写）：
+9. 在实机日志中验证 actor 与权限边界（日志路径按本地环境填写）：
 
     rg "actor_role_id|missing actor_role_id|blocked by actor check|ui intent rejected" <日志文件路径>
 
@@ -198,15 +241,14 @@
 
 实施完成后，本计划应附带以下证据片段（缩进块，保持精简）：
 
-    [PASS] presentation_ui.event_bindings ...
-    [PASS] presentation_ui.interaction ...
-    [PASS] runtime_ports_contract ...
-    All regression checks passed (N)
+    All regression checks passed (13)
+    All regression checks passed (97)
 
 以及关键行为日志示例：
 
     ui intent ... actor_role_id=1
-    ui_button blocked by actor check: next actor=2 current=1
+    ui_button blocked by actor check: next actor_role_id=2 current_role_id=1
+    choice action blocked by actor check: choice_select actor_role_id=2 owner_role_id=1
 
 如果出现失败，记录首条有效错误与定位结论，不粘贴整段噪声日志。
 
@@ -253,3 +295,5 @@
 
 
 - 2026-03-04 / Codex：将 `.agents/plan.md` 从“位置选择屏”历史计划切换为“role 统一治理”可执行计划，原因是用户要求根据 `.agents/research.md` 交付新计划，并且该文件需始终服务当前任务目标。
+- 2026-03-04 / Codex：回填里程碑 1 实施结果，更新进度/发现/决策/复盘，并替换产物证据为本次真实测试输出，原因是计划必须作为可重启实施依据持续保持与当前代码一致。
+- 2026-03-04 / Codex：根据里程碑 1 实施经验拆分里程碑 2 为 2A/2B/2C，并同步“进度”“具体步骤”“决策日志”，原因是降低多 intent 同改导致的定位成本；本次仅更新计划，不执行代码实现。

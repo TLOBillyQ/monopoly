@@ -851,7 +851,7 @@ local function _test_ui_model_player_slot_map_and_choice_owner()
     options = { { id = 2002, label = "用道具" } },
     allow_cancel = true,
     cancel_label = "取消",
-    meta = { player_id = 2 },
+    meta = { player_id = "2" },
   }
 
   local model = ui_model.build(g, {
@@ -862,7 +862,7 @@ local function _test_ui_model_player_slot_map_and_choice_owner()
   })
 
   assert(model.current_player_id == 1, "current_player_id expected")
-  assert(model.item_choice_owner_id == 2, "item_choice_owner_id expected")
+  assert(model.item_choice_owner_id == 2, "item_choice_owner_id should normalize choice owner role id")
   assert(model.item_slots and model.item_slots[1] == 2001, "current player slot expected")
   assert(model.item_slots_by_player and model.item_slots_by_player[1][1] == 2001, "player1 slot map expected")
   assert(model.item_slots_by_player and model.item_slots_by_player[2][1] == 2002, "player2 slot map expected")
@@ -997,7 +997,7 @@ local function _test_turn_dispatch_rejects_choice_non_owner()
     kind = "market_buy",
     options = { { id = 1, label = "X" } },
     allow_cancel = true,
-    meta = { player_id = 1 },
+    meta = { player_id = "1" },
   }
   state.pending_choice = g.turn.pending_choice
 

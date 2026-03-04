@@ -1,3 +1,5 @@
+local number_utils = require("src.core.NumberUtils")
+
 local item_slice = {}
 
 function item_slice.resolve_slot_count(ui_runtime)
@@ -54,16 +56,16 @@ function item_slice.build_auto_enabled_by_player(players)
 end
 
 function item_slice.resolve_item_choice_owner_id(game, choice, current_player_id)
-  local owner_id = current_player_id
+  local owner_role_id = number_utils.to_integer(current_player_id)
   local pending = game and game.turn and game.turn.pending_choice or nil
   if pending and pending.meta and pending.meta.player_id then
-    owner_id = pending.meta.player_id
-    return owner_id
+    owner_role_id = number_utils.to_integer(pending.meta.player_id)
+    return owner_role_id
   end
   if choice and choice.meta and choice.meta.player_id then
-    owner_id = choice.meta.player_id
+    owner_role_id = number_utils.to_integer(choice.meta.player_id)
   end
-  return owner_id
+  return owner_role_id
 end
 
 return item_slice
