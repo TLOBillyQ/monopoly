@@ -2242,9 +2242,9 @@ local function _test_target_pick_tick_updates_selection_on_hit_change()
     target_choice_effects.enter(env.state, env.choice)
     runtime.set_hit(env.tile_unit_ids[102], env.tile_positions[102])
     target_choice_effects.step(env.game, env.state, 0.1)
-    _assert_eq(env.state.target_choice_runtime.hover_option_id, 102, "hover should follow ray hit")
+    _assert_eq(env.state.target_choice_runtime.hover_option_id, nil, "hover should wait for external pick")
     _assert_eq(env.state.pending_choice_selected_option_id, nil, "hover should not lock selected option")
-    assert(env.arrow.last_position ~= nil, "arrow should move with hover")
+    _assert_eq(env.arrow.visible, false, "arrow should stay hidden before lock")
   end)
 end
 
@@ -2254,7 +2254,7 @@ local function _test_target_pick_tick_ignores_non_candidate()
     target_choice_effects.enter(env.state, env.choice)
     runtime.set_hit(9999, vec3.with_sub_length(999, 0, 0))
     target_choice_effects.step(env.game, env.state, 0.1)
-    _assert_eq(env.state.target_choice_runtime.hover_option_id, 101, "non-candidate hit should be ignored")
+    _assert_eq(env.state.target_choice_runtime.hover_option_id, nil, "non-candidate ray hit should be ignored")
   end)
 end
 
@@ -2262,14 +2262,12 @@ local function _test_target_pick_scene_click_locks_target_and_pauses_raycast()
   local env = _build_target_pick_env()
   _with_target_pick_runtime(env, function(runtime)
     target_choice_effects.enter(env.state, env.choice)
-    runtime.set_hit(env.tile_unit_ids[103], env.tile_positions[103])
-    target_choice_effects.step(env.game, env.state, 0.1)
     target_choice_effects.on_scene_pick(env.state, 103, 1, {})
     runtime.set_hit(env.tile_unit_ids[102], env.tile_positions[102])
     target_choice_effects.step(env.game, env.state, 0.1)
     _assert_eq(env.state.target_choice_runtime.locked_option_id, 103, "scene pick should lock option")
     _assert_eq(env.state.pending_choice_selected_option_id, 103, "locked option should sync selected option")
-    _assert_eq(env.state.target_choice_runtime.hover_option_id, 103, "locked state should pause hover update")
+    _assert_eq(env.state.target_choice_runtime.hover_option_id, 103, "locked option should drive hover")
   end)
 end
 
@@ -2301,7 +2299,7 @@ local function _test_target_pick_cancel_unlocks_and_resumes_raycast()
     _assert_eq(env.state.target_choice_runtime.locked_option_id, nil, "cancel should clear lock")
     runtime.set_hit(env.tile_unit_ids[102], env.tile_positions[102])
     target_choice_effects.step(env.game, env.state, 0.1)
-    _assert_eq(env.state.target_choice_runtime.hover_option_id, 102, "unlock should resume raycast hover")
+    _assert_eq(env.state.target_choice_runtime.hover_option_id, nil, "unlock should wait for next external pick")
   end)
 end
 
@@ -2324,9 +2322,7 @@ local function _test_target_pick_leave_hides_scene_units()
     target_choice_effects.enter(env.state, env.choice)
     target_choice_effects.leave(env.state, "test")
     _assert_eq(env.arrow.visible, false, "leave should hide arrow")
-    for _, marker in ipairs(runtime.created_markers) do
-      assert(marker._destroyed == true, "leave should destroy spawned markers")
-    end
+    _assert_eq(#runtime.created_markers, 0, "leave should not depend on spawned markers")
   end)
 end
 
@@ -2336,13 +2332,7 @@ local function _test_target_pick_enter_spawns_candidate_markers_at_height_1_6()
   gameplay_rules.target_pick.marker_height_offset = 1.6
   _with_target_pick_runtime(env, function(runtime)
     target_choice_effects.enter(env.state, env.choice)
-    _assert_eq(#runtime.created_markers, 3, "enter should spawn one marker per candidate")
-    for _, marker in ipairs(runtime.created_markers) do
-      local marker_y = marker._position.y
-      local option_id = env.state.target_choice_runtime.marker_option_by_unit_id[marker._unit_id]
-      local tile_y = env.tile_positions[option_id].y
-      _assert_eq(marker_y, tile_y + 1.6, "marker height offset should be 1.6")
-    end
+    _assert_eq(#runtime.created_markers, 0, "enter should wait external event and skip marker spawn")
   end)
   gameplay_rules.target_pick.marker_height_offset = old_height
 end
