@@ -17,6 +17,13 @@ local gameplay_rules = {
   turn_limit = 1000,
 
   item_phase_queue = { "pre_action", "pre_move", "post_action" },
+  target_pick = {
+    eye_offset_y = 1.5,
+    ray_distance = 24.0,
+    nearest_tile_max_distance = 1.8,
+    marker_height_offset = 1.6,
+    arrow_height_offset = 1.6,
+  },
 
   reconnect = {
     freeze_on_disconnect = true,

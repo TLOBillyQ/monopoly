@@ -1,6 +1,7 @@
 local modal_state = require("src.presentation.interaction.UIModalStateCoordinator")
 local canvas = require("src.presentation.interaction.UICanvasCoordinator")
 local common = require("src.presentation.ui.choice_screen_service.common")
+local core = require("src.presentation.api.ui_view_service.core")
 local logger = require("src.core.Logger")
 
 local M = {}
@@ -129,12 +130,18 @@ function M.open_target_screen(state, choice, choice_id)
   if screen.confirm then
     ui:set_button(screen.confirm, "确定")
     ui:set_visible(screen.confirm, true)
-    ui:set_touch_enabled(screen.confirm, true)
+    ui:set_touch_enabled(screen.confirm, false)
+  end
+  if screen.cancel then
+    ui:set_button(screen.cancel, choice.cancel_label or "取消")
+    ui:set_visible(screen.cancel, true)
+    ui:set_touch_enabled(screen.cancel, false)
   end
 
   ui.choice_active = true
   ui.active_choice_screen_key = "target"
   modal_state.open_choice(state, choice_id, option_ids, selected)
+  core.sync_target_choice_buttons(state, false)
 end
 
 function M.open_secondary_confirm_screen(state, choice, choice_id)

@@ -40,7 +40,7 @@ function pre_confirm_flow.needs_pre_confirm(state, intent)
 
   if intent_type == "choice_select" then
     local screen_key = ui.active_choice_screen_key
-    if screen_key == "secondary_confirm" or screen_key == "market" then
+    if screen_key == "secondary_confirm" or screen_key == "market" or screen_key == "target" then
       return false
     end
     return screen_key ~= nil

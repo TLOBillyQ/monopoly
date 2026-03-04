@@ -10,6 +10,11 @@ function board_scene.init(state, map_cfg, game)
   local scene = {
     building_unit_groups = {},
     units_by_player_id = {},
+    target_pick = {
+      tile_index_by_unit_id = {},
+      marker_unit_id = nil,
+      arrow_unit = nil,
+    },
   }
 
   for i, player in ipairs(game.players) do
@@ -37,13 +42,40 @@ function board_scene.init(state, map_cfg, game)
   scene.buildings = LuaAPI.query_units(building_names)
   scene.building_txt = {}
   for i = 1, #tile_ids do
-    scene.tiles[i].set_physics_active(false)
+    local tile = scene.tiles[i]
+    tile.set_physics_active(false)
+    if LuaAPI and type(LuaAPI.get_unit_id) == "function" then
+      local ok_id, tile_unit_id = pcall(LuaAPI.get_unit_id, tile)
+      if ok_id and tile_unit_id ~= nil then
+        scene.target_pick.tile_index_by_unit_id[tile_unit_id] = i
+      end
+    end
     local b = scene.buildings[i]
     if b ~= nil then
       b.set_physics_active(false)
       local txt = b.get_child_by_name("txt")
       scene.building_txt[i] = txt
       txt.set_billboard_text("  ")
+    end
+  end
+
+  if LuaAPI and type(LuaAPI.query_unit) == "function" then
+    local marker = LuaAPI.query_unit("可选择地块")
+    if marker ~= nil and type(LuaAPI.get_unit_id) == "function" then
+      local ok_marker_id, marker_unit_id = pcall(LuaAPI.get_unit_id, marker)
+      if ok_marker_id then
+        scene.target_pick.marker_unit_id = marker_unit_id
+      end
+      if type(marker.set_model_visible) == "function" then
+        marker.set_model_visible(false)
+      end
+    end
+    local arrow = LuaAPI.query_unit("选择地块箭头")
+    if arrow ~= nil then
+      scene.target_pick.arrow_unit = arrow
+      if type(arrow.set_model_visible) == "function" then
+        arrow.set_model_visible(false)
+      end
     end
   end
 

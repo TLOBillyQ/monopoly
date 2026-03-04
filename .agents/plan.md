@@ -20,10 +20,10 @@
 - [x] (2026-03-04 02:20Z) [M0 计划文档规范化] 重写并写入 `.agents/plan.md`，补齐活文档必需章节与可执行步骤。
 - [x] (2026-03-04 02:21Z) [M0 计划文档规范化] 删除旧文件 `PLAN.md`，避免双计划入口并存。
 - [x] (2026-03-04 02:21Z) [M0 计划文档规范化] 读取 `Data/UIManagerNodes.lua`，确认 `位置_取消按钮` 已存在于 `位置选择屏`，后续计划改为用它执行 unlock。
-- [ ] (2026-03-04 10:21+08:00) [M1 端口与契约铺设] 已完成：无。剩余：`step_target_selection` 端口定义、默认 no-op、tick 接线、`target` screen 的 `confirm/cancel` 节点映射、confirm/unlock intent 绑定、UI bootstrap 点击节点注册。
-- [ ] (2026-03-04 10:10+08:00) [M2 射线封装与场景点选锁定] 已完成：无。剩余：`host_runtime/Raycast.lua`、`HostRuntimePort` 封装暴露、场景点选回调、`GameplayRules` 射线参数与 override hook。
-- [ ] (2026-03-04 10:21+08:00) [M3 TargetChoiceEffects 运行时行为] 已完成：无。剩余：`enter/step/on_scene_pick/on_unlock/leave`、候选标记 `+1.6`、箭头跟随、锁定后暂停射线、取消解锁后恢复射线、离场清理。
-- [ ] (2026-03-04 10:21+08:00) [M4 自动化测试与回归验收] 已完成：无。剩余：10 个 `presentation_ui` 用例（含 cancel-unlock）、日志断言补充、实机验收记录与失败场景回归证明。
+- [x] (2026-03-04 11:20+08:00) [M1 端口与契约铺设] 已完成：`step_target_selection` 端口定义、默认 no-op、tick 接线、`target` screen 的 `confirm/cancel` 节点映射、confirm/unlock intent 绑定、UI bootstrap 点击节点注册。
+- [x] (2026-03-04 11:26+08:00) [M2 射线封装与场景点选锁定] 已完成：`host_runtime/Raycast.lua`、`HostRuntimePort` 射线与场景点选监听接口、`GameplayRules.target_pick` 参数落地。
+- [x] (2026-03-04 11:34+08:00) [M3 TargetChoiceEffects 运行时行为] 已完成：`enter/step/on_scene_pick/on_unlock/leave`、候选标记 `+1.6`、箭头跟随、锁定后暂停射线、取消解锁后恢复射线、离场清理。
+- [x] (2026-03-04 11:45+08:00) [M4 自动化测试与回归验收] 已完成：10 个 `presentation_ui` 用例（含 cancel-unlock）已补齐并通过；`presentation_ui.action_status` 子套件全绿。剩余：全链路实机验收记录（待业务环境执行）。
 
 ## 意外与发现
 
@@ -36,6 +36,9 @@
 
 - 观察：`Data/UIManagerNodes.lua` 已包含 `位置_取消按钮`（`EButton`），可直接作为 unlock 输入，不需要新增 UI 资源节点。
   证据：`Data/UIManagerNodes.lua` 中存在条目 `{"位置_取消按钮", "EButton"}`。
+
+- 观察：当前仓库全量回归存在既有失败 `market.skin_entry_can_buy_but_no_effect`，与本次 target-pick 改动无关，但会阻断“全量绿灯”。
+  证据：`lua tests/regression.lua` 输出 `Regression failed (1/244)`，唯一失败项为 `tests/suites/market.lua:131`。
 
 ## 决策日志
 
@@ -56,12 +59,20 @@
   理由：用户明确要求“用取消按钮 unlock”；把取消语义绑定到解锁可覆盖“选错重选”核心用例，同时保持面板停留在当前选择流程。
   日期/作者：2026-03-04 / Codex
 
+- 决策：`target` 屏确认提交不再经过 pre-confirm 二次确认拦截，改为“锁定后直接提交 `choice_select`”。
+  理由：目标选择屏已提供显式锁定态和确认按钮，再次弹二次确认会破坏既定交互链路并增加操作成本。
+  日期/作者：2026-03-04 / Codex
+
+- 决策：场景点选入口先在 `HostRuntimePort` 以监听器协议暴露（`register/unregister/emit_target_pick`），底层引擎事件后续按同协议接入。
+  理由：先稳定业务层契约与可测性，避免在未确认底层事件细节前把业务逻辑绑死到某个 API 形态。
+  日期/作者：2026-03-04 / Codex
+
 ## 结果与复盘
 
 
-本次交付完成了“计划文档规范化”与“旧计划文件退役”，尚未执行代码实现。结果是下一位实施者可只读 `.agents/plan.md` 就理解目标、范围、接口、步骤和验证方式。
+本次交付已完成 M1-M4：端口链路、射线封装、TargetChoiceEffects 运行时、10 个目标选择测试均已落地。可观察结果是 target 选择流程具备“hover 预览 -> 场景点选锁定 -> 确认提交 -> 取消解锁重选”的闭环，并在 `presentation_ui.action_status` 回归中通过验证。
 
-仍未完成的部分是代码改造与测试落地；进入实施阶段后必须持续更新本节，记录每个里程碑是否达成了可观察行为。
+当前唯一未闭环项是业务环境实机验收记录与仓库既有 market 用例失败清理。后者是本次改动前已存在问题：`tests/suites/market.lua:131` 的 `skin_entry_can_buy_but_no_effect` 仍失败，需独立任务处理。
 
 ## 背景与导读
 
@@ -218,7 +229,8 @@
 
 5. 更新测试并执行：
 
-    lua tests/run.lua presentation_ui
+    lua -e 'package.path=package.path..";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua"; require("TestHarness").run_all({require("presentation_ui_action_status")})'
+    lua tests/regression.lua
 
    若仓库使用其他测试入口，改为等价命令并记录实际命令。
 
@@ -302,9 +314,9 @@
 - `Data/UIManagerNodes.lua` 中存在 `位置_取消按钮`，并可在 `位置选择屏` 被 `nodes.lua` 正确映射。
 - 候选地块索引可通过场景 tile 数据反查。
 - 射线默认参数：
-  - `eye_offset_y = 1.2`
-  - `ray_distance = 120.0`
-  - `nearest_tile_max_distance = 4.0`
+  - `eye_offset_y = 1.5`
+  - `ray_distance = 24.0`
+  - `nearest_tile_max_distance = 1.8`
 - 仅 `roadblock_target` / `demolish_target` 启用该机制。
 
 若任一假设不成立，先在“意外与发现”记录证据，再在“决策日志”记录替代策略。
@@ -314,3 +326,4 @@
 
 - 2026-03-04 / Codex：将 `PLAN.md` 重构并迁移为 `.agents/plan.md` 的可执行计划版本，原因是满足 `.agents/harness/PLANS.md` 的强制结构、活文档维护要求与新手可执行标准；随后删除旧 `PLAN.md` 以消除双计划入口。
 - 2026-03-04 / Codex：根据用户新增的 `位置_取消按钮`，将流程更新为“lock 后可 cancel 解锁回到 hover”，并同步调整了里程碑、UI 契约、测试矩阵、验收标准与日志样例，原因是覆盖“选错后重新选择”用例且保持防误选语义。
+- 2026-03-04 / Codex：完成实现回填：更新进度为 M1-M4 已完成，补充“全量回归剩余 market 既有失败”的事实证据，修正默认射线参数到实际代码值，并记录“target confirm 直提交流程 + HostRuntime 场景点选监听协议”的设计决策，原因是让计划文档与当前代码状态一致且可追溯。

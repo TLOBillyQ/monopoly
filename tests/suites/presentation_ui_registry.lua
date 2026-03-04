@@ -56,7 +56,7 @@ local names = {
   "_test_popup_visible_for_all_roles_when_allowed_kind",                      -- 51
   "_test_bankruptcy_popup_visible_for_all_roles",                             -- 52
   "_test_bankruptcy_popup_avatar_uses_native_size_path",                      -- 53
-  -- action_status: 54-81
+  -- action_status: 54-91
   "_test_popup_timeout_closes_even_when_input_blocked",                       -- 54
   "_test_choice_modal_routes_to_new_screens",                                 -- 55
   "_test_choice_route_policy_prefers_explicit_route_metadata",                -- 56
@@ -85,6 +85,16 @@ local names = {
   "_test_popup_defer_policy_queues_and_replays_in_order",                     -- 79
   "_test_panel_avatar_uses_keep_size_path",                                   -- 80
   "_test_item_slot_refresh_resets_highlight_without_client_role",             -- 81
+  "_test_target_confirm_dispatches_selected_option",                          -- 82
+  "_test_target_pick_tick_updates_selection_on_hit_change",                   -- 83
+  "_test_target_pick_tick_ignores_non_candidate",                             -- 84
+  "_test_target_pick_scene_click_locks_target_and_pauses_raycast",            -- 85
+  "_test_target_pick_confirm_requires_lock",                                  -- 86
+  "_test_target_pick_cancel_unlocks_and_resumes_raycast",                     -- 87
+  "_test_target_pick_cancel_noop_when_unlocked",                              -- 88
+  "_test_target_pick_leave_hides_scene_units",                                -- 89
+  "_test_target_pick_enter_spawns_candidate_markers_at_height_1_6",           -- 90
+  "_test_target_pick_degrades_without_raycast_api",                           -- 91
 }
 
 local function slice(suite_name, first_index, last_index)

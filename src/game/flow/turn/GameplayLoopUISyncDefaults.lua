@@ -11,6 +11,7 @@ function M.build_base_ui_sync_ports(load_tick_timeout, load_tick_ui_sync)
       local tick_timeout = load_tick_timeout()
       tick_timeout.step_default_modal(game, state, dt)
     end,
+    step_target_selection = function() end,
     update_countdown = function(game, state)
       local tick_ui_sync = load_tick_ui_sync()
       tick_ui_sync.update_countdown(game, state)

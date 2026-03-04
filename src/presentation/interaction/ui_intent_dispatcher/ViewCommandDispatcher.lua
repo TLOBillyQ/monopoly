@@ -5,6 +5,7 @@ local canvas = require("src.presentation.interaction.UICanvasCoordinator")
 local ui_events = require("src.presentation.shared.UIEvents")
 local ui_event_state = require("src.presentation.interaction.UIEventState")
 local role_context = require("src.presentation.interaction.ui_intent_dispatcher.RoleContext")
+local target_choice_effects = require("src.presentation.render.TargetChoiceEffects")
 
 local view_command_dispatcher = {}
 
@@ -58,6 +59,11 @@ function view_command_dispatcher.dispatch(state, intent)
 
   if intent_type == "popup_confirm" then
     ui_view.close_popup(state)
+    return true
+  end
+
+  if intent_type == "target_unlock" then
+    target_choice_effects.on_unlock(state)
     return true
   end
 

@@ -1,12 +1,16 @@
 local ui_model_sync = require("src.presentation.api.presentation_ports.ui_sync.UIModelSync")
 local camera_sync = require("src.presentation.api.presentation_ports.ui_sync.CameraSync")
 local ui_gate_sync = require("src.presentation.api.presentation_ports.ui_sync.UIGateSync")
+local target_choice_effects = require("src.presentation.render.TargetChoiceEffects")
 
 local ui_sync_ports = {}
 
 function ui_sync_ports.build(common)
   return {
     apply_input_lock = ui_model_sync.apply_input_lock,
+    step_target_selection = function(game, state, dt)
+      return target_choice_effects.step(game, state, dt)
+    end,
     build_model = ui_model_sync.build_model,
     refresh_from_dirty = function(game, state, dirty)
       return ui_model_sync.refresh_from_dirty(game, state, dirty, common)
