@@ -12,8 +12,10 @@
     是否额外拷贝 vendor/ 目录（默认不拷贝）
 .PARAMETER StartupProfile
     启动时注入的测试 profile 名（写入 main.lua 的 STARTUP_TEST_PROFILE）
+.PARAMETER AllowReleaseTestProfile
+    release 模式下允许注入 STARTUP_TEST_PROFILE（会额外写入 RELEASE_ALLOW_TEST_PROFILE=true）
 .PARAMETER Mode
-    部署模式：dev 或 release（默认 dev）。release 模式会注入 RELEASE_BUILD=true，且禁止 StartupProfile。
+    部署模式：dev 或 release（默认 dev）。release 模式会注入 RELEASE_BUILD=true。
 .EXAMPLE
     pwsh -File .\deploy.ps1 -TargetPath "C:\Target\Project"
 .EXAMPLE
@@ -22,6 +24,8 @@
     pwsh -File .\deploy.ps1 -StartupProfile "items_move_control"
 .EXAMPLE
     pwsh -File .\deploy.ps1 -Mode release
+.EXAMPLE
+    pwsh -File .\deploy.ps1 -Mode release -AllowReleaseTestProfile -StartupProfile "items_target_disrupt"
 #>
 
 param(
@@ -29,6 +33,7 @@ param(
     [string]$TargetPath,
     [switch]$IncludeVendor,
     [string]$StartupProfile,
+    [switch]$AllowReleaseTestProfile,
     [ValidateSet("dev", "release")]
     [string]$Mode = "dev"
 )
@@ -44,7 +49,7 @@ if (-not (Test-Pwsh7)) {
     $version = $PSVersionTable.PSVersion.ToString()
     Write-Host "✗ 部署脚本要求在 PowerShell 7+ (pwsh) 环境运行。" -ForegroundColor Red
     Write-Host "  当前环境: PSEdition=$edition Version=$version" -ForegroundColor Yellow
-    Write-Host "  请使用: pwsh -File .\scripts\deploy.ps1 [-TargetPath PATH] [-IncludeVendor] [-StartupProfile NAME] [-Mode dev|release]" -ForegroundColor Yellow
+    Write-Host "  请使用: pwsh -File .\scripts\deploy.ps1 [-TargetPath PATH] [-IncludeVendor] [-StartupProfile NAME] [-AllowReleaseTestProfile] [-Mode dev|release]" -ForegroundColor Yellow
     exit 1
 }
 
@@ -63,12 +68,16 @@ function Write-MainLuaForStartupPolicy {
         [string]$SourceMainLua,
         [string]$DestMainLua,
         [string]$ProfileName,
-        [string]$DeployMode
+        [string]$DeployMode,
+        [bool]$AllowReleaseProfileOverride
     )
     $sourceText = Get-Content -Path $SourceMainLua -Raw
     $prefixes = @()
     if ($DeployMode -eq "release") {
         $prefixes += "RELEASE_BUILD = true"
+        if ($AllowReleaseProfileOverride) {
+            $prefixes += "RELEASE_ALLOW_TEST_PROFILE = true"
+        }
     }
     if ([string]::IsNullOrWhiteSpace($ProfileName) -eq $false) {
         $escaped = Escape-LuaStringDoubleQuoted -Text $ProfileName
@@ -82,8 +91,13 @@ function Write-MainLuaForStartupPolicy {
     Set-Content -Path $DestMainLua -Value ($prefix + $sourceText) -NoNewline
 }
 
-if ($Mode -eq "release" -and [string]::IsNullOrWhiteSpace($StartupProfile) -eq $false) {
-    Write-Host "✗ release 模式禁止 -StartupProfile，请改为默认 profile 启动。" -ForegroundColor Red
+if ($Mode -eq "release" -and [string]::IsNullOrWhiteSpace($StartupProfile) -eq $false -and -not $AllowReleaseTestProfile) {
+    Write-Host "✗ release 模式如需 -StartupProfile，必须同时传入 -AllowReleaseTestProfile。" -ForegroundColor Red
+    exit 1
+}
+
+if ($Mode -eq "dev" -and $AllowReleaseTestProfile) {
+    Write-Host "✗ -AllowReleaseTestProfile 仅支持与 -Mode release 搭配使用。" -ForegroundColor Red
     exit 1
 }
 
@@ -126,8 +140,12 @@ Write-Host "======================================" -ForegroundColor Cyan
 Write-Host "项目根目录: $ProjectRoot" -ForegroundColor Yellow
 Write-Host "部署模式: $Mode" -ForegroundColor Yellow
 Write-Host "目标目录数量: $($TargetPaths.Count)" -ForegroundColor Yellow
-if ($Mode -eq "release") {
-    Write-Host "启动 Profile: default (release 模式固定，不注入 STARTUP_TEST_PROFILE)" -ForegroundColor Yellow
+if ($Mode -eq "release" -and -not $AllowReleaseTestProfile) {
+    Write-Host "启动 Profile: default (release-prod 固定，不注入 STARTUP_TEST_PROFILE)" -ForegroundColor Yellow
+} elseif ($Mode -eq "release" -and $AllowReleaseTestProfile -and [string]::IsNullOrWhiteSpace($StartupProfile)) {
+    Write-Host "启动 Profile: default (release-qa 已启用覆盖，但未传 StartupProfile)" -ForegroundColor Yellow
+} elseif ($Mode -eq "release" -and $AllowReleaseTestProfile) {
+    Write-Host "启动 Profile: $StartupProfile (release-qa 覆盖已启用)" -ForegroundColor Yellow
 } elseif ([string]::IsNullOrWhiteSpace($StartupProfile)) {
     Write-Host "启动 Profile: default (未注入 STARTUP_TEST_PROFILE)" -ForegroundColor Yellow
 } else {
@@ -210,7 +228,7 @@ foreach ($TargetPath in $TargetPaths) {
                     New-Item -ItemType Directory -Path $fileDestDir -Force | Out-Null
                 }
                 if ($file.Source -eq "main.lua") {
-                    Write-MainLuaForStartupPolicy -SourceMainLua $sourcePath -DestMainLua $fileDestPath -ProfileName $StartupProfile -DeployMode $Mode
+                    Write-MainLuaForStartupPolicy -SourceMainLua $sourcePath -DestMainLua $fileDestPath -ProfileName $StartupProfile -DeployMode $Mode -AllowReleaseProfileOverride $AllowReleaseTestProfile
                 } else {
                     Copy-Item -LiteralPath $sourcePath -Destination $fileDestPath -Force
                 }

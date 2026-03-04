@@ -13,6 +13,13 @@ logger.configure_game_time()
 local current_game_ref = { nil }
 
 local startup = startup_policy.resolve(_G)
+logger.info(
+  "[Eggy]",
+  "startup policy:",
+  "release_mode=" .. tostring(startup.release_mode),
+  "release_allow_test_profile=" .. tostring(startup.release_allow_test_profile),
+  "resolved_profile=" .. tostring(startup.profile_name)
+)
 if startup.release_mode then
   gameplay_rules.debug_log_enabled = false
 end

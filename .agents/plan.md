@@ -1,240 +1,184 @@
-# UIManagerNodes 新节点接入执行计划（黑市分页分类 + 位置槽位）
+# release 受控启用 test_profile 的可执行计划
 
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
-本文件必须遵循 `.agents/harness/PLANS.md` 维护；任何实施、讨论、或中途改线都要先对照该规范，确保章节完整、命令可执行、验收可观察。
+本文件必须遵循 `.agents/harness/PLANS.md` 维护，实施与讨论都要以该规范为准。本文已经内嵌当前仓库完成这项工作所需的背景，不依赖外部上下文。
 
 ## 目的 / 全局视角
 
 
-这项工作要把新版 `Data/UIManagerNodes.lua` 里新增但尚未接入的 26 个节点真正接入业务链路，避免玩家点击后只看到“UI 节点未适配”。
+当前 `release` 模式被设计为强制 `default`，这保证了线上安全，但会阻断验收阶段对 `scenario_* / items_*` 的快速复测。目标是在不破坏发布安全边界（载具仍剔除、release 数据仍受约束）的前提下，增加一条“受控 release 测试通道”：只有显式开启、且 profile 在白名单中时，release 才允许按指定 test_profile 启动。
 
-改动完成后，用户可以在黑市界面点击“上一页/下一页/分类按钮”切换可购买项，并且在位置选择界面直接点击 7 个槽位完成目标选择。可见成功标准是：按钮点击能触发正确意图、列表与选项状态按预期切换、确认动作通过 `ChoiceResolver._option_exists` 校验、回归测试全绿。
+改动完成后，用户可以用部署参数快速切到指定 profile 进行 release 环境验收；而正式发布路径保持不变，仍默认 `default` 且忽略 profile 注入。可见成功标准是：同一份代码在 `release-prod` 与 `release-qa` 两种启动方式下表现不同且可预测，相关自动化测试可证明该差异。
 
 ## 进度
 
 
-- [x] (2026-03-04 17:30+08:00) P0 深度理解：阅读 `.agents/harness/PLANS.md`，确认可执行计划硬性规范与活文档要求。
-- [x] (2026-03-04 17:33+08:00) P0 深度理解：阅读 `.agents/research.md`，确认“黑市 5 节点 + 位置 21 节点”的功能边界与约束。
-- [x] (2026-03-04 17:40+08:00) P0 计划初始化：完成本计划首版重写并对齐研究结论。
-- [x] (2026-03-04 17:55+08:00) P0 里程碑拆分：将 M1-M4 细化为可勾选子任务与验收门槛，便于按步推进和中途接力。
-- [x] (2026-03-04 18:04+08:00) M1-1 黑市节点模型扩展：`MarketLayout.lua` 与 `canvas/market/nodes.lua` 已增加分页/分类节点字段。
-- [x] (2026-03-04 18:05+08:00) M1-2 黑市意图扩展：`market/intents.lua` 已增加 `market_page_prev` / `market_page_next` / `market_tab_select`。
-- [x] (2026-03-04 18:07+08:00) M1-3 黑市事件路由接线：分发层已接入新 intent，并通过路由注册覆盖 5 个新增按钮。
-- [x] (2026-03-04 18:08+08:00) M1-GATE 验收门槛：执行 `presentation_ui_event_bindings` 套件通过，既有购买/关闭行为未退化。
-- [x] (2026-03-04 18:09+08:00) M2-1 choice 状态建模：market choice 已增加 `active_tab`、`page_index`、`page_count` 与当前页 `options`。
-- [x] (2026-03-04 18:10+08:00) M2-2 翻页/分类处理：`TurnDispatch` + `market/service/Choice.lua` 已接入后端重建逻辑。
-- [x] (2026-03-04 18:10+08:00) M2-3 兼容回退：`MarketView` 与 `ChoiceSlice` 已对缺省字段提供回退行为（默认 `item` / 第 1 页 / 单页）。
-- [x] (2026-03-04 18:11+08:00) M2-GATE 验收门槛：执行 `market` + `presentation_ui_interaction` 套件通过，确认路径仍受 `_option_exists` 约束。
-- [x] (2026-03-04 18:12+08:00) M3-1 位置槽位节点建模：`target_choice/nodes.lua` 已增加 `slot_buttons/labels/projections[1..7]`。
-- [x] (2026-03-04 18:12+08:00) M3-2 槽位映射渲染：`choice_screen_service/openers.lua` 已实现 option->槽位映射与空槽位隐藏/禁用。
-- [x] (2026-03-04 18:13+08:00) M3-3 双路径兼容：新增 `target_lock` 意图接入同一锁定/确认/取消状态机，场景点选路径保留。
-- [x] (2026-03-04 18:13+08:00) M3-GATE 验收门槛：`presentation_ui_interaction` + `presentation_ui` 套件通过，槽位与旧路径行为一致。
-- [x] (2026-03-04 18:13+08:00) M4-1 定向测试：按里程碑执行 `presentation_ui_event_bindings`、`market`、`presentation_ui_interaction` 套件全部通过。
-- [x] (2026-03-04 18:14+08:00) M4-2 全量回归：`lua tests/regression.lua` 通过（252/252）。
-- [x] (2026-03-04 18:14+08:00) M4-3 收尾清理：已完成活文档回填与证据记录。
-- [x] (2026-03-04 18:14+08:00) M4-GATE 交付门槛：最小验收场景全通过，可按本文档复现。
+- [x] (2026-03-04 23:08+08:00) 完成现状核查：确认 `scripts/deploy.ps1` 在 release 下禁止 `-StartupProfile`，`src/app/bootstrap/StartupPolicy.lua` 在 release 下强制 `profile_name="default"`。
+- [x] (2026-03-04 23:10+08:00) 完成约束确认：保留 release 现有安全策略（载具剔除、角色为空 fail fast、debug_log 关闭）。
+- [x] (2026-03-04 23:13+08:00) 新增受控开关：`StartupPolicy` 已支持 `RELEASE_ALLOW_TEST_PROFILE`，仅在其为真时读取 `STARTUP_TEST_PROFILE`。
+- [x] (2026-03-04 23:13+08:00) 新增白名单：已新增 `src/app/testing/config/ReleaseProfileWhitelist.lua` 并接入校验，白名单外 profile 直接 fail fast。
+- [x] (2026-03-04 23:14+08:00) 扩展部署脚本参数：已支持 `-Mode release -AllowReleaseTestProfile -StartupProfile <name>`，非法组合会立即失败。
+- [x] (2026-03-04 23:14+08:00) 更新/新增测试：`tests/suites/startup_release.lua` 已覆盖 release-prod / release-qa / 白名单拦截 / 无 profile 回退。
+- [x] (2026-03-04 23:15+08:00) 回归验证与部署验证：`startup_release` 定向和 `lua tests/regression.lua` 全通过，并完成 release-prod/release-qa 冒烟部署。
+- [x] (2026-03-04 23:15+08:00) 完成结果回填：已补齐本文件活文档章节与操作口径。
 
 ## 意外与发现
 
 
-- 观察：新增黑市按钮当前不会进入业务路由，而是触发兜底“UI 节点未适配”提示。
-  证据：研究文档第 3.2 节已确认 `黑市-` 前缀节点无代码引用，且 `UIEventBindings.register_missing_button_tip` 存在未路由按钮兜底逻辑。
+- 观察：仓库已经存在 `tests/suites/startup_release.lua`，且当前断言是“release 必须忽略 profile 覆盖”。
+  证据：`startup_policy_release_ignores_profile_override` 用例断言 `policy.profile_name == "default"`。
 
-- 观察：`choice_select` 受 `ChoiceResolver._option_exists` 强校验约束，前端假分页会直接失效。
-  证据：研究文档第 4 节指出当前 `market/service/Choice.lua` 只构造最多 10 条可见项，若不扩展后端 choice 结构，切页后确认会因 `option_id` 不在 `pending_choice.options` 而失败。
+- 观察：release 部署已支持“把 release 导表结果写入目标目录”，所以新增 release-qa 只需改启动注入与策略，不需要改导表流程。
+  证据：`scripts/deploy.ps1` 在 release 分支执行 `python scripts/export_xlsx.py --mode release --output-dir <target>/Config/Generated`。
 
-- 观察：黑市分页/分类接入后，必须把新 intent 加入事件角色注入名单，否则多人模式会因缺失 `actor_role_id` 被拒绝。
-  证据：`CanvasEventRouter` 已将 `market_page_prev` / `market_page_next` / `market_tab_select` 纳入 `_requires_event_actor`，且定向套件通过。
-
-- 观察：位置槽位点击若直接发 `choice_select` 会绕过“先锁定再确认”的既有语义，导致状态机不一致。
-  证据：最终采用 `target_lock` 视图命令并复用 `TargetChoiceEffects.on_scene_pick`，`presentation_ui` 套件 117 项通过。
+- 观察：release-qa 部署时目标 `main.lua` 已按预期写入三行前缀（`RELEASE_BUILD`、`RELEASE_ALLOW_TEST_PROFILE`、`STARTUP_TEST_PROFILE`），release-prod 仅写 `RELEASE_BUILD`。
+  证据：`C:/Users/Lzx_8/Desktop/dev/LuaSource_monopoly_smoke_prod/main.lua` 与 `..._qa/main.lua` 冒烟检查输出。
 
 ## 决策日志
 
 
-- 决策：黑市分页/分类采用“后端驱动 choice 状态，前端只渲染与分发意图”的路线，不做前端本地假分页。
-  理由：必须保持 `ChoiceResolver._option_exists` 契约成立，避免确认购买时出现 option 越界。
+- 决策：采用双通道语义，分别定义 `release-prod`（默认）与 `release-qa`（显式开启）两种启动策略，而不是放宽所有 release 行为。
+  理由：这样可以保持线上安全默认值，同时给测试提供受控入口，减少误操作风险。
   日期/作者：2026-03-04 / Codex
 
-- 决策：位置选择新增槽位接入采用“保留旧路径 + 增量接入新槽位”的双路径策略。
-  理由：可降低回归风险，避免一次性硬切导致现有 3D 场景点击选目标退化。
+- 决策：release-qa 必须通过“开关 + 白名单”双重约束；任何一层不满足都回退或失败，不做隐式容错。
+  理由：仅靠参数开关无法防止误填 profile；白名单可把风险收敛到已验证场景。
   日期/作者：2026-03-04 / Codex
 
-- 决策：分类文案“坐骑商店”只做显示层映射，业务枚举继续沿用 `vehicle`。
-  理由：研究已确认业务内部命名稳定为 `vehicle`，改枚举会扩大影响面且无用户价值。
-  日期/作者：2026-03-04 / Codex
-
-- 决策：黑市翻页/分类 action 采用独立 action type（`market_page_prev` / `market_page_next` / `market_tab_select`）并在 `TurnDispatch` 内直接重建 pending choice。
-  理由：这样可复用 `validate_choice_action` 的 actor/choice_id 校验，同时避免把非购买动作伪装成 `choice_select` 破坏 `_option_exists` 语义。
-  日期/作者：2026-03-04 / Codex
-
-- 决策：位置槽位点击新增 `target_lock` 视图命令，而非新增 game action。
-  理由：槽位点击本质是 UI 锁定行为，不应直接提交回合动作；复用既有 `TargetChoiceEffects` 可保持与场景点选同一状态机。
-  日期/作者：2026-03-04 / Codex
-
-- 决策：坐骑商店（`vehicle` tab）暂时禁用，前端按钮保留显示但不可点击，后端收到 `vehicle` 也回退到 `item`。
-  理由：当前产品需求要求阶段性下线该入口，同时保持后续恢复时最小改动；三层兜底可避免旧事件或异常输入触发无效流程。
+- 决策：保留现有 release 数据约束（vehicle 内容剔除）不变，release-qa 只改变“启动 profile 选择”，不改变“发布数据边界”。
+  理由：用户已明确发布版不出现载具；该边界属于高优先级，不应被测试便利性冲掉。
   日期/作者：2026-03-04 / Codex
 
 ## 结果与复盘
 
 
-本次实施已完成四个里程碑，核心结果如下：黑市新增 5 个按钮已接入意图分发和后端重建；黑市分页/分类由后端 choice 驱动并保持 `_option_exists` 契约；位置选择屏已支持 7 槽位点击锁定，并与原场景点选共用同一确认/取消状态机；回归测试全绿。
+本计划已落地，结果符合目标：release-prod 继续固定 `default`，release-qa 在显式开关下可使用白名单 profile。关键行为均有自动化保护，且全量回归通过（279 项）。部署脚本也已验证三种关键场景：release-prod 成功、release-qa 成功、release 误传 profile 被拒绝。
 
-已完成内容与“目的 / 全局视角”对照结论：玩家现在可在黑市执行上一页/下一页/分类切换，且确认动作始终提交当前页真实 `pending_choice.options`；玩家可在位置选择屏直接点击槽位完成锁定并确认，取消后可恢复未锁定状态。两项用户可见目标都已达成。
-
-剩余风险：当前验证以自动化套件为主，仍建议后续在真实客户端场景补做一次多人联机点击烟测，重点关注 tab 切换后按钮高亮视觉是否满足 UI 设计预期。
+本次没有改变 release 数据边界；vehicle 相关 release 约束仍由原有导表与 `ConfigSanity` 兜底。剩余工作只是在后续需求变化时维护白名单集合，不涉及架构性风险。
 
 ## 背景与导读
 
 
-本任务涉及三个层次。第一层是节点映射层：把 `UIManagerNodes` 名称映射成可访问节点字段。第二层是交互意图层：把点击事件转成 `market_page_next`、`market_tab_select`、`choice_select` 等可处理意图。第三层是业务 choice 层：保证前端展示与后端 `pending_choice.options` 一致，确认时不会被校验拒绝。
+本任务涉及四个关键区域。第一是启动策略层，它读取全局变量并决定实际使用哪个 profile；对应文件是 `src/app/bootstrap/StartupPolicy.lua`。第二是部署注入层，它把部署参数转为 `main.lua` 顶部全局变量；对应文件是 `scripts/deploy.ps1`。第三是启动执行层，它根据策略结果创建 `game` 并在 release 下保持 fail fast；对应文件是 `src/app/init.lua` 和 `src/app/bootstrap/GameStartup.lua`。第四是测试层，它验证策略行为是否符合预期；对应文件是 `tests/suites/startup_release.lua` 与 `tests/regression.lua`。
 
-关键文件与职责如下。
+术语说明：
 
-- `Data/UIManagerNodes.lua`：新版节点清单来源，包含本次新增 26 节点。
-- `src/presentation/shared/MarketLayout.lua`：黑市节点命名与布局抽象。
-- `src/presentation/canvas/market/nodes.lua`：黑市画布节点绑定入口。
-- `src/presentation/canvas/market/intents.lua`：黑市意图定义与参数组织。
-- `src/presentation/render/MarketView.lua`：黑市视图渲染。
-- `src/presentation/ui/MarketModalRenderer.lua`：黑市弹层 UI 更新。
-- `src/presentation/canvas/target_choice/nodes.lua`：位置选择节点模型。
-- `src/presentation/ui/choice_screen_service/openers.lua`：位置选择界面打开与 option 映射。
-- `src/presentation/interaction/UIEventBindings.lua`：按钮事件绑定与未适配兜底提示。
-- `src/game/systems/market/service/Choice.lua`：黑市 choice 组装（当前仅 10 条可见项）。
-- `src/game/systems/choices/ChoiceResolver.lua`：`choice_select` 合法性校验（`_option_exists`）。
-- `src/game/systems/choices/ChoiceHandlers/MarketChoiceHandler.lua`：黑市 choice 处理。
+“release-prod”是正式发布路径，表示 `RELEASE_BUILD=true` 且未开启测试覆盖能力。该路径必须固定 `default` profile。
 
-术语说明（面向新手）：
+“release-qa”是受控测试路径，表示仍是 release 数据与规则，但允许通过显式开关选择白名单内 profile。
 
-- “choice” 是给玩家的一次可选动作集合，玩家最终提交 `choice_select(option_id)`。
-- “option_id 校验” 是在提交选择时检查该 id 是否确实在当前待选列表里，防止非法提交。
-- “双路径兼容” 指新旧两套交互暂时并存，先保证可用，再按测试结果逐步收敛。
+“白名单”是允许在 release-qa 使用的 profile 名称集合，集合外 profile 在启动前就被拒绝。
 
 ## 里程碑
 
 
-### 里程碑 1：黑市节点建模与意图定义
+第一里程碑聚焦启动策略本身。完成后仓库应能表达“release-prod 固定 default，release-qa 可选白名单 profile”的规则，并在非法 profile 时给出明确错误。这个里程碑的成功证明是：纯 Lua 单测即可覆盖策略分支，不依赖真实部署。
 
-先把新增黑市 5 个按钮接到前端节点层与意图层，但先不改业务行为。完成后，点击这 5 个按钮不再走“未适配提示”，而是进入明确 intent 路由。
+第二里程碑聚焦部署入口。完成后使用者能通过脚本参数显式进入 release-qa，且错误参数组合会被脚本直接拒绝，不会把错误配置带到运行时。这个里程碑的成功证明是：部署脚本在三种组合下输出符合预期（prod、qa、非法）。
 
-本里程碑修改 `MarketLayout.lua`、`canvas/market/nodes.lua`、`market/intents.lua`，新增字段 `page_prev/page_next/tab_item/tab_skin/tab_vehicle` 与对应 intent（`market_page_prev`、`market_page_next`、`market_tab_select(tab)`）。
-
-验收标准是：事件绑定日志可见新意图进入分发层，且不会误影响 `黑市_购买按钮` 与 `黑市_关闭` 现有行为。
-
-推进拆分：先改节点模型（M1-1），再补 intent 常量与参数（M1-2），最后做事件接线与兜底清理（M1-3）。达到 M1-GATE 后再进入下一里程碑。
-
-### 里程碑 2：黑市后端分页/分类 choice 契约扩展
-
-在业务层补齐分页与分类状态，让黑市列表切换由后端 choice 驱动而非前端假渲染。完成后，分页/分类后的可见商品与 `pending_choice.options` 保持一致，确认购买可通过 `_option_exists`。
-
-本里程碑改 `market/service/Choice.lua`、`MarketChoiceHandler.lua`（如需）、以及 intent 到 turn action 的路由处理，新增或扩展 `active_tab/page_index/page_count/options` 字段。必须提供缺省回退：如果新字段缺失，前端继续按当前 10 项行为运行。
-
-验收标准是：分页切换后点击购买可成功提交，且非法页码、非法分类输入会被安全处理（不崩溃、不越权）。
-
-推进拆分：先定义 choice 状态结构（M2-1），再连接翻页/分类处理（M2-2），最后补缺省回退（M2-3）。达到 M2-GATE 前不进入槽位接入。
-
-### 里程碑 3：位置槽位节点接入与双路径兼容
-
-把 7 个槽位（按钮/文本/投影）接入 `target_choice`，并保持旧路径（场景点选）可继续工作。完成后，玩家可在“位置选择屏”直接点槽位进入锁定态，确认后产生正确 `choice_select`。
-
-本里程碑改 `target_choice/nodes.lua`、`choice_screen_service/openers.lua`，以及 `ui_view_service/core.lua`（`build_choice_screens`）把槽位按钮纳入 `option_buttons`。渲染映射要处理“option 少于 7”的空槽位状态（禁用/隐藏/占位文案）。
-
-验收标准是：槽位点击、确认、取消的状态流与旧路径一致，取消后可回到未锁定状态。
-
-推进拆分：先建 7 槽位节点数组（M3-1），再做渲染与禁用态映射（M3-2），最后联通状态机并验证双路径（M3-3）。
-
-### 里程碑 4：端到端验证、回归与收尾
-
-在本里程碑集中完成自动化验证与日志证据收集，并清理遗留兜底路径。完成后，本任务能被“新人仅靠本计划”复现验证。
-
-本里程碑更新测试与计划活文档章节，记录关键输出证据、失败修复与最终结论。
-
-验收标准是：最小验收场景全部通过，`lua tests/regression.lua` 全绿，且无新增“UI 节点未适配”噪声。
-
-推进拆分：按“定向测试 -> 全量回归 -> 收尾清理”执行（M4-1/M4-2/M4-3），每一步都补充证据到本文档。
+第三里程碑聚焦回归与操作手册。完成后要给出可复制的命令序列，能够让任何新手在本机完成一次 release-prod 和一次 release-qa 启动验证，并确认 release 约束（例如 vehicle 剔除）没有回归。
 
 ## 工作计划
 
 
-执行顺序遵循“先接线、再补契约、再扩入口、最后回归”。先做里程碑 1 可以快速消除未路由状态并建立可观测意图；随后做里程碑 2 把业务契约补齐，确保点击能真正成交；再做里程碑 3 扩展位置槽位并保留旧路径，降低风险；最后在里程碑 4 做集中回归与证据沉淀。
+实施顺序按“策略 -> 脚本 -> 测试 -> 验证”推进。先修改 `StartupPolicy`，因为它定义系统真正规则；随后修改 `deploy.ps1`，把规则转成可操作参数；然后更新 `startup_release` 套件，确保策略与脚本约束都有自动化保护；最后跑回归并执行发布部署冒烟。整个过程保持小步提交，每步都要给出可观察证据。
 
-编辑策略采用小步提交。每完成一个里程碑就运行对应测试，若失败只在当前里程碑范围修复，不跨里程碑混改。所有新增字段都提供缺省兼容，避免一次性升级导致旧数据无法渲染。
+白名单建议放在 `src/app/testing/config/ReleaseProfileWhitelist.lua`，由 `StartupPolicy` 读取。这样白名单与 test profile 配置目录同层，后续维护者更容易发现和更新。
 
 ## 具体步骤
 
 
-所有命令均在仓库根目录执行：`/Users/gangan/Dev/repo/monopoly`。
+以下命令在仓库根目录 `C:/Users/Lzx_8/Desktop/dev/repo/monopoly` 执行。每完成一步就更新“进度”并记录关键输出。
 
-1. 建立基线并确认工作树：
+1. 新增白名单并接入策略。
 
-    git status --short
-    rg -n "黑市-|位置-槽位|register_missing_button_tip" src Data/UIManagerNodes.lua
+    编辑 `src/app/testing/config/ReleaseProfileWhitelist.lua`，定义允许的 profile 名称集合（建议至少包含 `default`、`scenario_bankruptcy`、`items_move_control`、`items_economy_tax`、`items_target_disrupt`、`items_deity_status`）。
 
-2. 里程碑 1 实施后，验证黑市新按钮是否进入 intent：
+    编辑 `src/app/bootstrap/StartupPolicy.lua`，新增 `RELEASE_ALLOW_TEST_PROFILE` 读取逻辑：
+    - release 且未开启开关 -> `profile_name` 固定 `default`
+    - release 且开启开关 -> 校验 `STARTUP_TEST_PROFILE` 在白名单内
+    - 不在白名单 -> `error("[Eggy] release startup profile not allowed: <name>")`
 
-    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({require('presentation_ui_event_bindings')})"
+2. 扩展部署脚本参数。
 
-3. 里程碑 2 实施后，验证黑市分页/分类与购买链路：
+    编辑 `scripts/deploy.ps1`，增加布尔参数 `-AllowReleaseTestProfile`。约束如下：
+    - `-Mode release` 且未给 `-AllowReleaseTestProfile`：禁止 `-StartupProfile`（保持现状）
+    - `-Mode release` 且给了 `-AllowReleaseTestProfile`：允许 `-StartupProfile`，并在写 `main.lua` 时注入 `RELEASE_ALLOW_TEST_PROFILE=true`
+    - `-Mode dev`：忽略 `-AllowReleaseTestProfile`，维持现有 dev 行为
 
-    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({require('market'), require('presentation_ui_interaction')})"
+3. 更新测试。
 
-4. 里程碑 3 实施后，验证位置槽位点选与锁定/取消语义：
+    编辑 `tests/suites/startup_release.lua`：
+    - 保留并重命名现有用例为 `release_prod_forces_default_profile`
+    - 新增 `release_qa_accepts_whitelisted_profile`
+    - 新增 `release_qa_rejects_non_whitelisted_profile`
+    - 保留 `fail_fast_when_roles_empty` 的 release 断言
 
-    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({require('presentation_ui_interaction'), require('presentation_ui')})"
+    如需要，给部署脚本增加最小参数校验测试（若仓库无现成 powershell harness，则在计划实现阶段至少记录一次手工命令证据）。
 
-5. 里程碑 4 收尾回归：
+4. 执行验证。
 
-    lua tests/regression.lua
+    运行：
 
-6. 检查是否仍出现未适配噪声日志（按本地日志路径替换）：
+        lua tests/regression.lua
 
-    rg "UI 节点未适配|未适配|market_page_|market_tab_select|位置-槽位" <日志文件路径>
+    运行 release-prod 部署：
+
+        ./scripts/deploy.ps1 -Mode release
+
+    运行 release-qa 部署（示例）：
+
+        ./scripts/deploy.ps1 -Mode release -AllowReleaseTestProfile -StartupProfile items_target_disrupt
+
+    在目标目录检查 `main.lua` 顶部注入是否符合预期，且程序启动时日志能打印最终 `resolved_profile`。
 
 ## 验证与验收
 
 
-必须同时满足以下行为验收。
+验收按行为定义而非按代码定义。
 
-黑市验收：点击“分类/翻页”会切换列表；点击当前可见项后确认购买成功；提交的 `option_id` 必须来自当前 `pending_choice.options`。位置验收：点击任一有效槽位进入锁定态，确认后提交正确 `choice_select`，取消后解锁且状态恢复。兼容验收：旧路径（场景点选目标）不退化，黑市原有购买/关闭不退化。回归验收：`lua tests/regression.lua` 全绿。
+第一，release-prod 启动时，即便外部误注入 `STARTUP_TEST_PROFILE`，最终仍必须是 `default`。这可以通过 `startup_release` 单测与启动日志双重验证。
 
-若出现失败，必须记录“失败用例名 + 触发输入 + 日志关键字 + 修复后结果”，并回填到“意外与发现”和“结果与复盘”。
+第二，release-qa 启动时，白名单内 profile 能生效，且白名单外 profile 会在启动前失败并给出明确错误文本。
+
+第三，release 数据边界不变：`ConfigSanity` 对 vehicle 的 release 约束仍可通过，`lua tests/regression.lua` 全绿。
+
+推荐验收口径：
+
+    运行 `lua tests/regression.lua`，预期全部通过。
+    运行 `./scripts/deploy.ps1 -Mode release`，预期成功且显示“启动 Profile: default”。
+    运行 `./scripts/deploy.ps1 -Mode release -AllowReleaseTestProfile -StartupProfile items_target_disrupt`，预期成功并在目标 `main.lua` 看见 `RELEASE_ALLOW_TEST_PROFILE = true` 与 `STARTUP_TEST_PROFILE = "items_target_disrupt"`。
 
 ## 可重复性与恢复
 
 
-本计划可重复执行。节点映射和意图扩展采用增量方式，不依赖一次性迁移。
+本计划可重复执行。白名单和策略修改是幂等文本改动，重复运行测试与部署不会产生不可逆状态。
 
-若中途失败，按“最近一个测试通过点”恢复：优先 `git restore --source=<commit> -- <file>` 定点恢复单文件，或 `git revert <commit>` 回退单次提交；禁止使用 `git reset --hard` 之类不可审计的破坏性命令。
-
-重试时只重做当前里程碑，并重复该里程碑测试与一次最小回归，确认无连带回归再进入下一里程碑。
+如果某一步失败，优先按文件粒度回退并重试，不使用破坏性命令。建议流程是：修复当前里程碑问题后重跑该里程碑验证，再跑一次全量回归。部署失败时只重试部署脚本，不需要清理仓库状态。
 
 ## 产物与备注
 
 
-本任务预期产物包括：黑市新增节点映射代码、分页/分类 choice 契约字段、位置槽位节点接入代码、对应测试补充与回归记录。
+交付产物应包含：策略代码、白名单配置、部署脚本参数扩展、启动策略测试更新、以及一次 release-prod 与 release-qa 的命令输出证据。
 
-证据保留格式使用短输出片段，不贴大段日志。示例：
+输出证据建议保留短片段，例如：
 
-    [PASS] presentation_ui_event_bindings (5)
-    [PASS] market + presentation_ui_interaction (21)
-    [PASS] presentation_ui_interaction + presentation_ui (117)
-    [PASS] regression (252)
+    启动 Profile: default (release 模式固定)
+    启动 Profile: items_target_disrupt (release-qa 白名单允许)
+    [error] [Eggy] release startup profile not allowed: <name>
 
 ## 接口与依赖
 
 
-本任务必须保持以下接口约束稳定。
+本计划依赖以下稳定接口：
 
-- `ChoiceResolver._option_exists` 的语义不变：仅允许当前 `pending_choice.options` 内的 `option_id`。
-- 黑市新 intent 命名固定为 `market_page_prev`、`market_page_next`、`market_tab_select`，并在分发层显式处理。
-- `market_tab_select` 的业务参数使用稳定枚举：`item`、`skin`、`vehicle`。
-- `target_choice` 槽位接口固定为三个数组字段：`slot_buttons[1..7]`、`slot_labels[1..7]`、`slot_projections[1..7]`。
-- 缺省兼容必须存在：当新字段缺失时，回退旧行为，不导致 UI 打开失败。
+`src.app.bootstrap.StartupPolicy.resolve(globals)` 继续返回结构体，至少包含 `release_mode`、`profile_name`、`force_non_p1_ai`、`fail_fast_when_roles_empty`。如新增字段（例如 `release_allow_test_profile`），必须保持对现有调用方向后兼容。
 
-文末变更说明（2026-03-04 17:40+08:00）：本次将 `.agents/plan.md` 从“Role 身份治理”主题整体替换为“UIManagerNodes 新节点接入”主题，原因是用户当前需求要求依据 `.agents/research.md` 交付可执行计划；旧计划与当前任务目标不一致，继续沿用会误导实施范围与验收标准。
-文末变更说明（2026-03-04 17:55+08:00）：本次基于“深度理解，拆分里程碑进度”要求，将“进度”章节从粗粒度里程碑状态改为 M1-M4 子任务清单与 Gate 门槛，并在每个里程碑追加推进拆分顺序；原因是原版本无法表达执行先后和中途可交接状态，不利于持续推进与复盘。
-文末变更说明（2026-03-04 18:14+08:00）：本次完成“执行全部计划”落地：实现黑市分页/分类后端驱动、事件路由与兼容回退，实现位置 7 槽位映射与 `target_lock` 交互，并补齐定向与全量回归证据；原因是用户要求按计划端到端交付可运行结果而非仅维护计划文本。
-文末变更说明（2026-03-04 18:20+08:00）：本次按新需求修订“坐骑商店暂时禁用”：在 `MarketView` 禁用按钮触控、在 `market/intents.lua` 拦截 `tab_vehicle` 意图、在 `market/service/Choice.lua` 将 `vehicle` 选择回退到 `item`；原因是需要在不破坏主流程的前提下临时关闭该入口。
+部署脚本继续通过改写目标 `main.lua` 注入全局变量，不改动 `main.lua` 业务入口结构。
+
+`tests/suites/startup_release.lua` 继续作为策略真值测试入口，并由 `tests/regression.lua` 收录，保证每次回归自动覆盖。
+
+文末变更说明（2026-03-04 23:12+08:00）：本次将 `.agents/plan.md` 从“UIManagerNodes 节点接入”主题切换为“release 受控启用 test_profile”主题。原因是当前用户任务已经转为发布链路与启动策略治理，旧计划目标与当前交付目标不一致，会误导后续实施。
+文末变更说明（2026-03-04 23:15+08:00）：本次完成计划落地并回填活文档：实现 `RELEASE_ALLOW_TEST_PROFILE` 与 release profile 白名单、扩展部署脚本参数、补齐启动策略测试并通过全量回归与发布冒烟。原因是用户要求“执行此版计划”，需将方案转为可运行行为并保留验证证据。
