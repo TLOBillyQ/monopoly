@@ -24,9 +24,9 @@
 - [x] (2026-03-04 13:43+08:00) 已完成：里程碑 2A（actor 注入白名单盘点）并确认白名单覆盖 `toggle_action_log/choice_select/choice_cancel/market_confirm/ui_button(next|auto|item_slot_*)`。
 - [x] (2026-03-04 13:49+08:00) 已完成：里程碑 2B（事件路由补齐 actor）实现（`CanvasEventRouter`、`LocalActorResolver`）并通过交互测试。
 - [x] (2026-03-04 13:52+08:00) 已完成：里程碑 2C（拒绝路径与提示统一）实现，缺失 actor 统一拒绝日志关键字为 `ui intent rejected: missing actor_role_id`。
-- [ ] 待完成：里程碑 3（role 解析入口收敛）实施与提交。
-- [ ] 待完成：里程碑 4（UI 作用域防污染）实施与提交。
-- [ ] 待完成：里程碑 5（测试与回归验收）实施与记录。
+- [x] (2026-03-04 14:03+08:00) 已完成：里程碑 3（role 解析入口收敛）实现（`PaidCurrencyBridge` 改走 `runtime_ports.resolve_role`）并通过付费货币测试。
+- [x] (2026-03-04 14:17+08:00) 已完成：里程碑 4（UI 作用域防污染）实现（高风险模块统一作用域约定）并补充防泄漏测试点。
+- [x] (2026-03-04 14:25+08:00) 已完成：里程碑 5（测试与回归验收）执行并记录证据（含全量回归）。
 
 ## 意外与发现
 
@@ -45,6 +45,9 @@
 
 - 观察：`presentation_ui_registry` 以固定索引切片聚合测试，若在中间插入新测试会改变既有套件语义。
   证据：`tests/suites/presentation_ui_interaction.lua` 需显式追加 92-94 索引测试，避免影响 28-37 既有切片。
+
+- 观察：`presentation_ui` 用固定索引供切片套件复用，里程碑 4 的新增测试若插入中段会破坏 `action_status`/`interaction` 套件边界。
+  证据：新增防泄漏测试最终放到 `presentation_ui` 尾部，并在 `presentation_ui_action_status.lua` 通过 95-98 索引显式挂载。
 
 ## 决策日志
 
@@ -81,12 +84,24 @@
   理由：保持现有测试套件边界稳定，减少因索引漂移造成的隐式回归。
   日期/作者：2026-03-04 / Codex
 
+- 决策：里程碑 3 在业务层禁止新增 `GameAPI.get_role` 旁路，`PaidCurrencyBridge` 统一改为 `runtime_ports.resolve_role(player.id)`。
+  理由：满足 role 解析入口收敛目标，且与现有 runtime 合约一致。
+  日期/作者：2026-03-04 / Codex
+
+- 决策：里程碑 4 将高风险模块中的作用域切换统一为 `for_each_role_or_global + with_client_role`，并保留函数末尾 `set_client_role(nil)` 作为最终保险。
+  理由：既提升作用域切换可读性，也确保测试桩/异常路径下不遗留 client_role 污染。
+  日期/作者：2026-03-04 / Codex
+
 ## 结果与复盘
 
 
-当前状态是“里程碑 1、里程碑 2（含 2A/2B/2C）已完成，里程碑 3-5 未开始”。
+当前状态是“里程碑 1-5 全部完成”。
 
-里程碑 2 完成项：`CanvasEventRouter` 的 actor 白名单覆盖到 `toggle_action_log/choice_select/choice_cancel/market_confirm/ui_button(next|auto|item_slot_*)`；`LocalActorResolver` 解析顺序落实为 `data.role -> client_role -> current_player_id`；缺失 actor 的拒绝日志统一为 `ui intent rejected: missing actor_role_id`。验证结果：`presentation_ui_event_bindings + presentation_ui_interaction` 联跑通过（18）。遗留项：role 解析旁路、client_role 生命周期与全量回归闭环仍待后续里程碑处理。
+里程碑 3 完成项：`src/game/systems/commerce/PaidCurrencyBridge.lua` 去除 `GameAPI.get_role` 旁路，改走 `runtime_ports.resolve_role`；`tests/suites/paid_currency.lua` 同步 runtime ports 测试桩。验证结果：`paid_currency`（6）通过，且 `git grep -n "GameAPI.get_role" src` 未引入新的业务层旁路。
+
+里程碑 4 完成项：`UITurnEffects`、`PopupRenderer`、`MarketModalRenderer`、`DebugPorts` 的作用域切换收敛到 `with_client_role/for_each_role_or_global` 约定，并在高风险路径补充 client_role 复位测试（95-98）。验证结果：`presentation_ui_action_status + presentation_player_colors`（46）通过。
+
+里程碑 5 完成项：完成增量与全量回归闭环，覆盖事件绑定、交互、runtime contract、付费货币、作用域与全量回归。验证结果：`presentation_ui_event_bindings + presentation_ui_interaction`（18）、`runtime_ports_contract`（8）、`paid_currency`（6）、`lua tests/regression.lua`（256）全部通过。当前无遗留阻塞项。
 
 ## 背景与导读
 
@@ -251,6 +266,10 @@
     All regression checks passed (13)
     All regression checks passed (97)
     All regression checks passed (18)
+    All regression checks passed (8)
+    All regression checks passed (6)
+    All regression checks passed (46)
+    All regression checks passed (256)
 
 以及关键行为日志示例：
 
@@ -307,3 +326,4 @@
 - 2026-03-04 / Codex：回填里程碑 1 实施结果，更新进度/发现/决策/复盘，并替换产物证据为本次真实测试输出，原因是计划必须作为可重启实施依据持续保持与当前代码一致。
 - 2026-03-04 / Codex：根据里程碑 1 实施经验拆分里程碑 2 为 2A/2B/2C，并同步“进度”“具体步骤”“决策日志”，原因是降低多 intent 同改导致的定位成本；本次仅更新计划，不执行代码实现。
 - 2026-03-04 / Codex：执行里程碑 2（2A/2B/2C），实现 actor 注入白名单扩展、resolver 三段优先级、缺失 actor 统一拒绝日志，并新增路由层回归测试；原因是用户要求在提交里程碑 1 后继续推进里程碑 2。
+- 2026-03-04 / Codex：执行里程碑 3/4/5，完成 role 解析入口收敛、client_role 作用域防污染与全量回归闭环，并回填所有活文档章节；原因是用户要求“执行剩余所有进度”。
