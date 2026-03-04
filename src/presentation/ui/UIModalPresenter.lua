@@ -6,6 +6,7 @@ local market_presenter = require("src.presentation.canvas.market.presenter")
 local canvas = require("src.presentation.interaction.UICanvasCoordinator")
 local canvas_store = require("src.presentation.canvas_runtime.CanvasStore")
 local logger = require("src.core.Logger")
+local target_choice_effects = require("src.presentation.render.TargetChoiceEffects")
 
 local modal_presenter = {}
 
@@ -46,6 +47,7 @@ function modal_presenter.open_choice_modal(state, choice, market)
 
   local screen_key = choice_common.resolve_screen_key(choice)
   if screen_key == "market" then
+    target_choice_effects.leave(state, "open_market")
     canvas_store.mark_dirty(state, "market")
     market_presenter.open(state, choice, choice_id, market)
     return
@@ -58,6 +60,7 @@ function modal_presenter.open_choice_modal(state, choice, market)
   end
 
   if screen_key == "base_inline" then
+    target_choice_effects.leave(state, "open_base_inline")
     if choice and choice.kind == "item_phase_choice" and not state._item_phase_confirmed then
       state._item_phase_ask_active = true
       state._suppress_item_slot_highlight_until_pick = true
@@ -81,9 +84,15 @@ function modal_presenter.open_choice_modal(state, choice, market)
 
   state._suppress_item_slot_highlight_until_pick = nil
   choice_openers.open_choice_modal(state, choice, market)
+  if screen_key == "target" then
+    target_choice_effects.enter(state, choice)
+  else
+    target_choice_effects.leave(state, "open_non_target")
+  end
 end
 
 function modal_presenter.close_choice_modal(state)
+  target_choice_effects.leave(state, "close_choice_modal")
   local ui = state.ui
   if ui.choice_active then
     local key = ui.active_choice_screen_key

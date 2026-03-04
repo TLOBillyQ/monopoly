@@ -45,6 +45,26 @@ local function set_touch_enabled(_, name, enabled)
   end)
 end
 
+local function sync_target_choice_buttons(state, locked)
+  local ui = state and state.ui or nil
+  if not ui then
+    return
+  end
+  local screen = ui.choice_screens and ui.choice_screens.target or nil
+  if not screen then
+    return
+  end
+  local active = ui.choice_active == true and ui.active_choice_screen_key == "target"
+  if screen.confirm then
+    ui:set_visible(screen.confirm, active)
+    ui:set_touch_enabled(screen.confirm, active and locked == true)
+  end
+  if screen.cancel then
+    ui:set_visible(screen.cancel, active)
+    ui:set_touch_enabled(screen.cancel, active and locked == true)
+  end
+end
+
 local function set_debug_log(_, text)
   set_text(nil, always_show_contract.action_log.label, text)
 end
@@ -88,6 +108,8 @@ local function build_choice_screens()
       root = target_choice_nodes.canvas,
       title = target_choice_nodes.title,
       body = target_choice_nodes.body,
+      confirm = target_choice_nodes.confirm,
+      cancel = target_choice_nodes.cancel,
     },
     remote = {
       key = "remote",
@@ -115,5 +137,6 @@ M.set_debug_log = set_debug_log
 M.set_debug_visible = set_debug_visible
 M.set_item_slot_image = set_item_slot_image
 M.build_choice_screens = build_choice_screens
+M.sync_target_choice_buttons = sync_target_choice_buttons
 
 return M

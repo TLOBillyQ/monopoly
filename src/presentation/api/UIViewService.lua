@@ -95,6 +95,10 @@ function service.select_choice_option(state_ctx, option_id)
   modal_presenter.select_choice_option(state_ctx, option_id)
 end
 
+function service.sync_target_choice_buttons(state_ctx, locked)
+  core.sync_target_choice_buttons(state_ctx, locked)
+end
+
 function service.open_choice_modal(state_ctx, choice, market)
   modal_presenter.open_choice_modal(state_ctx, choice, market)
 end

@@ -33,6 +33,8 @@ local runtime_event_bridge = require("src.core.RuntimeEventBridge")
 local market_cfg = require("Config.Generated.Market")
 local runtime_constants = require("src.core.config.RuntimeConstants")
 local gameplay_rules = require("src.core.config.GameplayRules")
+local host_runtime = require("src.presentation.api.HostRuntimePort")
+local target_choice_effects = require("src.presentation.render.TargetChoiceEffects")
 local vec3 = require("fixtures.vec3")
 
 local function _build_popup_view_state(refs, card_node)
@@ -134,6 +136,93 @@ local function _build_choice_modal_state()
     return { node }
   end
   return state, nodes, query_nodes_by_name
+end
+
+local function _build_target_pick_env()
+  local state, nodes, query_nodes = _build_choice_modal_state()
+  local choice = {
+    id = 99,
+    kind = "roadblock_target",
+    title = "选位置",
+    body = "body",
+    options = {
+      { id = 101, label = "A" },
+      { id = 102, label = "B" },
+      { id = 103, label = "C" },
+    },
+    allow_cancel = true,
+    meta = { player_id = 1 },
+  }
+  local game = {
+    turn = { pending_choice = choice },
+    current_player = function()
+      return { id = 1 }
+    end,
+  }
+
+  local tile_positions = {
+    [101] = vec3.with_sub_length(10, 0, 0),
+    [102] = vec3.with_sub_length(20, 0, 0),
+    [103] = vec3.with_sub_length(30, 0, 0),
+  }
+  local tile_unit_ids = {
+    [101] = 1101,
+    [102] = 1102,
+    [103] = 1103,
+  }
+  local tiles = {}
+  local tile_index_by_unit_id = {}
+  for option_id, pos in pairs(tile_positions) do
+    tiles[option_id] = {
+      get_position = function()
+        return pos
+      end,
+    }
+    tile_index_by_unit_id[tile_unit_ids[option_id]] = option_id
+  end
+  local arrow = {
+    visible = false,
+    last_position = nil,
+  }
+  arrow.set_model_visible = function(visible)
+    arrow.visible = visible == true
+  end
+  arrow.set_position = function(pos)
+    arrow.last_position = pos
+  end
+
+  state.game = game
+  state.ui_model = { choice = choice }
+  state.ui.choice_active = true
+  state.ui.active_choice_screen_key = "target"
+  state.board_scene = {
+    tiles = tiles,
+    target_pick = {
+      marker_unit_id = 9001,
+      tile_index_by_unit_id = tile_index_by_unit_id,
+      arrow_unit = arrow,
+    },
+  }
+  state.turn_action_port = {
+    dispatched = {},
+    dispatch_action = function(_, _, action)
+      state.turn_action_port.dispatched[#state.turn_action_port.dispatched + 1] = action
+    end,
+    should_block_action = function()
+      return false
+    end,
+  }
+
+  return {
+    state = state,
+    nodes = nodes,
+    query_nodes = query_nodes,
+    choice = choice,
+    game = game,
+    tile_positions = tile_positions,
+    tile_unit_ids = tile_unit_ids,
+    arrow = arrow,
+  }
 end
 
 local function _test_move_anim_callback_and_delay()
@@ -2066,6 +2155,213 @@ local function _test_choice_modal_routes_to_new_screens()
     })
     _assert_eq(state.ui.active_choice_screen_key, nil, "non-building optional should not open dedicated screen")
     _assert_eq(nodes["位置选择屏"].visible, false, "target screen should stay hidden for base_inline route")
+  end)
+end
+
+local function _with_target_pick_runtime(env, fn)
+  local marker_seq = 0
+  local created_markers = {}
+  local current_hit = nil
+  local owner_role = {
+    get_ctrl_unit = function()
+      return {
+        get_position = function()
+          return vec3.with_sub_length(0, 0, 0)
+        end,
+      }
+    end,
+  }
+  _with_patches({
+    { key = "UIManager", value = { query_nodes_by_name = env.query_nodes, EVENT = { CLICK = "CLICK" } } },
+    { key = "all_roles", value = nil },
+    { target = host_runtime, key = "resolve_role", value = function()
+      return owner_role
+    end },
+    { target = host_runtime, key = "build_camera_ray", value = function()
+      return { start_pos = vec3.with_sub_length(0, 1, 0), end_pos = vec3.with_sub_length(0, 1, 20) }
+    end },
+    { target = host_runtime, key = "pick_first_hit_unit", value = function()
+      return current_hit
+    end },
+    { target = host_runtime, key = "create_unit_with_scale", value = function(_, pos)
+      marker_seq = marker_seq + 1
+      local marker = {
+        _unit_id = 3000 + marker_seq,
+        _position = pos,
+      }
+      created_markers[#created_markers + 1] = marker
+      return marker
+    end },
+    { target = host_runtime, key = "destroy_unit", value = function(marker)
+      marker._destroyed = true
+    end },
+    { target = host_runtime, key = "get_unit_id", value = function(unit)
+      return unit and unit._unit_id or nil
+    end },
+    { target = host_runtime, key = "resolve_hit_position", value = function(hit)
+      return hit and hit.hit_pos or nil
+    end },
+  }, function()
+    fn({
+      set_hit = function(unit_id, hit_pos)
+        if unit_id == nil then
+          current_hit = nil
+          return
+        end
+        current_hit = {
+          unit = { _unit_id = unit_id },
+          hit = { hit_pos = hit_pos },
+        }
+      end,
+      created_markers = created_markers,
+    })
+  end)
+end
+
+local function _test_target_confirm_dispatches_selected_option()
+  local env = _build_target_pick_env()
+  _with_target_pick_runtime(env, function()
+    canvas_event_router.bind(env.state, function()
+      return env.game
+    end)
+    target_choice_effects.enter(env.state, env.choice)
+    target_choice_effects.on_scene_pick(env.state, 102, 1, {})
+    env.nodes["位置_确认按钮"]._listener_cb({})
+    _assert_eq(#env.state.turn_action_port.dispatched, 1, "confirm should dispatch one action")
+    _assert_eq(env.state.turn_action_port.dispatched[1].type, "choice_select", "confirm should dispatch choice_select")
+    _assert_eq(env.state.turn_action_port.dispatched[1].option_id, 102, "confirm should dispatch locked option")
+  end)
+end
+
+local function _test_target_pick_tick_updates_selection_on_hit_change()
+  local env = _build_target_pick_env()
+  _with_target_pick_runtime(env, function(runtime)
+    target_choice_effects.enter(env.state, env.choice)
+    runtime.set_hit(env.tile_unit_ids[102], env.tile_positions[102])
+    target_choice_effects.step(env.game, env.state, 0.1)
+    _assert_eq(env.state.target_choice_runtime.hover_option_id, 102, "hover should follow ray hit")
+    _assert_eq(env.state.pending_choice_selected_option_id, nil, "hover should not lock selected option")
+    assert(env.arrow.last_position ~= nil, "arrow should move with hover")
+  end)
+end
+
+local function _test_target_pick_tick_ignores_non_candidate()
+  local env = _build_target_pick_env()
+  _with_target_pick_runtime(env, function(runtime)
+    target_choice_effects.enter(env.state, env.choice)
+    runtime.set_hit(9999, vec3.with_sub_length(999, 0, 0))
+    target_choice_effects.step(env.game, env.state, 0.1)
+    _assert_eq(env.state.target_choice_runtime.hover_option_id, 101, "non-candidate hit should be ignored")
+  end)
+end
+
+local function _test_target_pick_scene_click_locks_target_and_pauses_raycast()
+  local env = _build_target_pick_env()
+  _with_target_pick_runtime(env, function(runtime)
+    target_choice_effects.enter(env.state, env.choice)
+    runtime.set_hit(env.tile_unit_ids[103], env.tile_positions[103])
+    target_choice_effects.step(env.game, env.state, 0.1)
+    target_choice_effects.on_scene_pick(env.state, 103, 1, {})
+    runtime.set_hit(env.tile_unit_ids[102], env.tile_positions[102])
+    target_choice_effects.step(env.game, env.state, 0.1)
+    _assert_eq(env.state.target_choice_runtime.locked_option_id, 103, "scene pick should lock option")
+    _assert_eq(env.state.pending_choice_selected_option_id, 103, "locked option should sync selected option")
+    _assert_eq(env.state.target_choice_runtime.hover_option_id, 103, "locked state should pause hover update")
+  end)
+end
+
+local function _test_target_pick_confirm_requires_lock()
+  local env = _build_target_pick_env()
+  _with_target_pick_runtime(env, function()
+    canvas_event_router.bind(env.state, function()
+      return env.game
+    end)
+    target_choice_effects.enter(env.state, env.choice)
+    env.nodes["位置_确认按钮"]._listener_cb({})
+    _assert_eq(#env.state.turn_action_port.dispatched, 0, "confirm should not dispatch without lock")
+    target_choice_effects.on_scene_pick(env.state, 101, 1, {})
+    env.nodes["位置_确认按钮"]._listener_cb({})
+    _assert_eq(#env.state.turn_action_port.dispatched, 1, "confirm should dispatch after lock")
+    _assert_eq(env.state.turn_action_port.dispatched[1].option_id, 101, "confirm should use locked option")
+  end)
+end
+
+local function _test_target_pick_cancel_unlocks_and_resumes_raycast()
+  local env = _build_target_pick_env()
+  _with_target_pick_runtime(env, function(runtime)
+    canvas_event_router.bind(env.state, function()
+      return env.game
+    end)
+    target_choice_effects.enter(env.state, env.choice)
+    target_choice_effects.on_scene_pick(env.state, 103, 1, {})
+    env.nodes["位置_取消按钮"]._listener_cb({})
+    _assert_eq(env.state.target_choice_runtime.locked_option_id, nil, "cancel should clear lock")
+    runtime.set_hit(env.tile_unit_ids[102], env.tile_positions[102])
+    target_choice_effects.step(env.game, env.state, 0.1)
+    _assert_eq(env.state.target_choice_runtime.hover_option_id, 102, "unlock should resume raycast hover")
+  end)
+end
+
+local function _test_target_pick_cancel_noop_when_unlocked()
+  local env = _build_target_pick_env()
+  _with_target_pick_runtime(env, function()
+    canvas_event_router.bind(env.state, function()
+      return env.game
+    end)
+    target_choice_effects.enter(env.state, env.choice)
+    env.nodes["位置_取消按钮"]._listener_cb({})
+    _assert_eq(env.state.target_choice_runtime.locked_option_id, nil, "cancel should stay noop when unlocked")
+    _assert_eq(#env.state.turn_action_port.dispatched, 0, "cancel should not dispatch game action")
+  end)
+end
+
+local function _test_target_pick_leave_hides_scene_units()
+  local env = _build_target_pick_env()
+  _with_target_pick_runtime(env, function(runtime)
+    target_choice_effects.enter(env.state, env.choice)
+    target_choice_effects.leave(env.state, "test")
+    _assert_eq(env.arrow.visible, false, "leave should hide arrow")
+    for _, marker in ipairs(runtime.created_markers) do
+      assert(marker._destroyed == true, "leave should destroy spawned markers")
+    end
+  end)
+end
+
+local function _test_target_pick_enter_spawns_candidate_markers_at_height_1_6()
+  local env = _build_target_pick_env()
+  local old_height = gameplay_rules.target_pick.marker_height_offset
+  gameplay_rules.target_pick.marker_height_offset = 1.6
+  _with_target_pick_runtime(env, function(runtime)
+    target_choice_effects.enter(env.state, env.choice)
+    _assert_eq(#runtime.created_markers, 3, "enter should spawn one marker per candidate")
+    for _, marker in ipairs(runtime.created_markers) do
+      local marker_y = marker._position.y
+      local option_id = env.state.target_choice_runtime.marker_option_by_unit_id[marker._unit_id]
+      local tile_y = env.tile_positions[option_id].y
+      _assert_eq(marker_y, tile_y + 1.6, "marker height offset should be 1.6")
+    end
+  end)
+  gameplay_rules.target_pick.marker_height_offset = old_height
+end
+
+local function _test_target_pick_degrades_without_raycast_api()
+  local env = _build_target_pick_env()
+  _with_target_pick_runtime(env, function()
+    canvas_event_router.bind(env.state, function()
+      return env.game
+    end)
+    _with_patches({
+      { target = host_runtime, key = "build_camera_ray", value = function()
+        return nil, "missing"
+      end },
+    }, function()
+      target_choice_effects.enter(env.state, env.choice)
+      target_choice_effects.step(env.game, env.state, 0.1)
+      target_choice_effects.on_scene_pick(env.state, 102, 1, {})
+      env.nodes["位置_确认按钮"]._listener_cb({})
+      _assert_eq(#env.state.turn_action_port.dispatched, 1, "confirm should still work when raycast unavailable")
+      _assert_eq(env.state.turn_action_port.dispatched[1].option_id, 102, "confirm should use locked option")
+    end)
   end)
 end
 
@@ -4241,4 +4537,14 @@ return {
   _test_popup_defer_policy_queues_and_replays_in_order,
   _test_panel_avatar_uses_keep_size_path,
   _test_item_slot_refresh_resets_highlight_without_client_role,
+  _test_target_confirm_dispatches_selected_option,
+  _test_target_pick_tick_updates_selection_on_hit_change,
+  _test_target_pick_tick_ignores_non_candidate,
+  _test_target_pick_scene_click_locks_target_and_pauses_raycast,
+  _test_target_pick_confirm_requires_lock,
+  _test_target_pick_cancel_unlocks_and_resumes_raycast,
+  _test_target_pick_cancel_noop_when_unlocked,
+  _test_target_pick_leave_hides_scene_units,
+  _test_target_pick_enter_spawns_candidate_markers_at_height_1_6,
+  _test_target_pick_degrades_without_raycast_api,
 }

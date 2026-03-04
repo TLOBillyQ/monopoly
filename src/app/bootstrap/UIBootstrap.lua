@@ -19,6 +19,8 @@ local function _required_click_nodes(opts)
   local required = {
     base_nodes.action_button,
     always_show_nodes.auto_button,
+    target_choice_nodes.confirm,
+    target_choice_nodes.cancel,
     secondary_confirm_nodes.confirm,
     secondary_confirm_nodes.cancel,
   }

@@ -3,8 +3,11 @@ local runtime_event_bridge = require("src.core.RuntimeEventBridge")
 local role_resolver = require("src.presentation.api.host_runtime.RoleResolver")
 local unit_lifecycle = require("src.presentation.api.host_runtime.UnitLifecycle")
 local scene_ui = require("src.presentation.api.host_runtime.SceneUI")
+local raycast = require("src.presentation.api.host_runtime.Raycast")
 
 local host_runtime_port = {}
+local target_pick_listener_seq = 0
+local target_pick_listeners = {}
 
 function host_runtime_port.schedule(delay, fn)
   return runtime_ports.schedule(delay or 0, fn)
@@ -75,6 +78,46 @@ end
 
 function host_runtime_port.has_scene_ui_support()
   return scene_ui.has_scene_ui_support()
+end
+
+function host_runtime_port.build_camera_ray(role, cfg)
+  return raycast.build_camera_ray(role, cfg)
+end
+
+function host_runtime_port.pick_first_hit_unit(start_pos, end_pos, cfg)
+  return raycast.pick_first_hit_unit(start_pos, end_pos, cfg)
+end
+
+function host_runtime_port.get_unit_id(unit)
+  return raycast.get_unit_id(unit)
+end
+
+function host_runtime_port.resolve_hit_position(hit)
+  return raycast.resolve_hit_position(hit)
+end
+
+function host_runtime_port.register_target_pick_listener(handler)
+  if type(handler) ~= "function" then
+    return nil
+  end
+  target_pick_listener_seq = target_pick_listener_seq + 1
+  local token = target_pick_listener_seq
+  target_pick_listeners[token] = handler
+  return token
+end
+
+function host_runtime_port.unregister_target_pick_listener(token)
+  if token == nil then
+    return false
+  end
+  target_pick_listeners[token] = nil
+  return true
+end
+
+function host_runtime_port.emit_target_pick(payload)
+  for _, listener in pairs(target_pick_listeners) do
+    listener(payload)
+  end
 end
 
 return host_runtime_port

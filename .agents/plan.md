@@ -1,211 +1,329 @@
-# R19 始终显示屏与调试屏本地玩家作用域重构可执行计划
+# 位置选择屏接入场景准星射线点选
 
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
-本文件遵循 `.agents/harness/PLANS.md` 维护，实施者在修改代码前后都必须先回填本文件，再继续推进。
+本文件必须遵循 `.agents/harness/PLANS.md` 维护；任何实施或讨论都要先对照该规范检查章节完整性与可验证性。
 
 ## 目的 / 全局视角
 
 
-本轮工作的目标是修复并重构“始终显示屏”和“调试屏”的角色作用域，让它们在游戏运行期间始终可用，并且所有交互与显示目标始终严格绑定到客户端本地玩家（事件触发者），不再被“当前回合玩家”“全局 UI 写入”或历史缓存污染。
+这项改动要让玩家在 `roadblock_target` / `demolish_target` 的位置选择阶段，先通过准星射线看到“预览目标”，再通过场景点击把目标“锁定”，最后点击 `位置_确认按钮` 才提交；若锁定后发现选错，可点击 `位置_取消按钮` 解锁并回到 hover 重选。用户可见收益是防误选：鼠标移动或镜头变化不会在确认瞬间篡改最终目标，同时允许安全重选。
 
-用户可见结果是：托管按钮与行动日志按钮在运行中任何阶段都能稳定点击；点击后只影响点击者本人，不会串到其他玩家；调试屏默认关闭，谁点谁开，互不干扰。验收时可通过回归测试与手动场景观察到该行为稳定成立。
+改动完成后，玩家能看到每个候选地块上方生成 `可选择地块` 标记，`选择地块箭头` 跟随当前预览；点击候选后进入锁定态，确认与取消按钮变为可用；点击取消会解锁并恢复射线预览，点击确认会提交锁定值。是否生效通过自动化测试和实机场景日志共同验证。
 
 ## 进度
 
 
-- [x] (2026-03-04 10:06 +08:00) 完成首轮只读排查，定位“始终显示屏/调试屏/actor 解析/Canvas 切换”主链路文件。
-- [x] (2026-03-04 10:18 +08:00) 复核 `docs/eggy/ui_manager_lib.md` 并对照实现确认关键约束：`UIManager.client_role=nil` 会写全体玩家。
-- [x] (2026-03-04 10:23 +08:00) 完成根因复现脚本：验证 `LocalActorResolver` 缓存回退可导致 actor_role_id 漂移。
-- [x] (2026-03-04 10:25 +08:00) 生成并写入 R19 可执行计划，补齐活文档必需章节。
-- [x] (2026-03-04 11:06 +08:00) 里程碑 1 完成：`LocalActorResolver` 删除缓存回退；`CanvasEventRouter` 对 `toggle_action_log/auto` 缺失事件角色严格拒绝并提示。
-- [x] (2026-03-04 11:14 +08:00) 里程碑 2 完成：`UIPanelPresenter` 去除快照式本地角色依赖；`UIInputLockPolicy` 在锁定/解锁两态都刷新托管与日志按钮触控。
-- [x] (2026-03-04 11:24 +08:00) 里程碑 3 完成：调试状态收敛为按角色模型；`resolve_debug_enabled(state, role_id)` 严格要求角色上下文；`DebugPorts` 按角色同步日志。
-- [x] (2026-03-04 11:31 +08:00) 里程碑 4 完成：`MarketModalRenderer` 与 `UIModalPresenter` 运行态切屏改为按角色路径；测试与文档完成回填。
+- [x] (2026-03-04 02:05Z) [M0 计划文档规范化] 读取 `.agents/harness/PLANS.md`，提取可执行计划硬性结构要求与写作约束。
+- [x] (2026-03-04 02:10Z) [M0 计划文档规范化] 读取 `PLAN.md`，整理目标、接口变更、测试与验收信息。
+- [x] (2026-03-04 02:20Z) [M0 计划文档规范化] 重写并写入 `.agents/plan.md`，补齐活文档必需章节与可执行步骤。
+- [x] (2026-03-04 02:21Z) [M0 计划文档规范化] 删除旧文件 `PLAN.md`，避免双计划入口并存。
+- [x] (2026-03-04 02:21Z) [M0 计划文档规范化] 读取 `Data/UIManagerNodes.lua`，确认 `位置_取消按钮` 已存在于 `位置选择屏`，后续计划改为用它执行 unlock。
+- [x] (2026-03-04 11:20+08:00) [M1 端口与契约铺设] 已完成：`step_target_selection` 端口定义、默认 no-op、tick 接线、`target` screen 的 `confirm/cancel` 节点映射、confirm/unlock intent 绑定、UI bootstrap 点击节点注册。
+- [x] (2026-03-04 11:26+08:00) [M2 射线封装与场景点选锁定] 已完成：`host_runtime/Raycast.lua`、`HostRuntimePort` 射线与场景点选监听接口、`GameplayRules.target_pick` 参数落地。
+- [x] (2026-03-04 11:34+08:00) [M3 TargetChoiceEffects 运行时行为] 已完成：`enter/step/on_scene_pick/on_unlock/leave`、候选标记 `+1.6`、箭头跟随、锁定后暂停射线、取消解锁后恢复射线、离场清理。
+- [x] (2026-03-04 11:45+08:00) [M4 自动化测试与回归验收] 已完成：10 个 `presentation_ui` 用例（含 cancel-unlock）已补齐并通过；`presentation_ui.action_status` 子套件全绿。剩余：全链路实机验收记录（待业务环境执行）。
 
 ## 意外与发现
 
 
-- 观察：`ui_manager_lib.md` 明确规定 `UIManager.client_role=nil` 时对所有玩家生效，因此任何“无角色上下文的 UI 写入”都会天然有串扰风险。
-  证据：`docs/eggy/ui_manager_lib.md:13` 与 `docs/eggy/ui_manager_lib.md:47-53`。
+- 观察：原 `PLAN.md` 信息充足，但不满足 `.agents/harness/PLANS.md` 对活文档章节的强制要求。
+  证据：原文缺少“进度 / 意外与发现 / 决策日志 / 结果与复盘”四个维护型章节。
 
-- 观察：`LocalActorResolver` 在无法从事件解析角色时会回退到 `state.ui.local_actor_role_id`，存在跨事件污染风险。
-  证据：`src/presentation/canvas_runtime/LocalActorResolver.lua:29-33`，以及复现脚本输出 `intent_actor=2 normalized_actor=1`。
+- 观察：原文中的路径大量使用绝对 Windows 路径，不适合作为当前仓库新手执行指引。
+  证据：当前工作树位于 `/Users/gangan/.codex/worktrees/08ad/monopoly`，计划应统一为仓库相对路径。
 
-- 观察：调试开关当前是“全局字段 + 按角色字段”并行维护，`resolve_debug_enabled` 在无角色上下文时会回退全局规则，无法保证“永远本地玩家”。
-  证据：`src/presentation/interaction/UIEventState.lua:17-31` 与 `src/presentation/api/ui_view_service/state.lua:63-66`。
+- 观察：`Data/UIManagerNodes.lua` 已包含 `位置_取消按钮`（`EButton`），可直接作为 unlock 输入，不需要新增 UI 资源节点。
+  证据：`Data/UIManagerNodes.lua` 中存在条目 `{"位置_取消按钮", "EButton"}`。
 
-- 观察：运行态仍存在 `canvas.switch(ui, ...)` 全局路径，可能覆盖按角色显示策略。
-  证据：`src/presentation/ui/MarketModalRenderer.lua:8`、`src/presentation/ui/UIModalPresenter.lua:76,107`。
-
-- 观察：黑市 `skin` 商品购买流程已经实现，但可购过滤层把 `skin` 直接排除，导致“可买但占位无效果”场景不可达。
-  证据：`src/game/systems/market/service/Eligibility.lua`（修复前存在 `if entry.kind == "skin" then return false end`），并触发 `tests/suites/market.lua::skin_entry_can_buy_but_no_effect` 失败。
+- 观察：当前仓库全量回归存在既有失败 `market.skin_entry_can_buy_but_no_effect`，与本次 target-pick 改动无关，但会阻断“全量绿灯”。
+  证据：`lua tests/regression.lua` 输出 `Regression failed (1/244)`，唯一失败项为 `tests/suites/market.lua:131`。
 
 ## 决策日志
 
 
-- 决策：采用“分层迁移”而不是一次性全量替换。
-  理由：该链路跨 UI 事件、状态模型、Canvas 切换与 gameplay tick，同步重写风险高；分层迁移更容易保回归稳定。
+- 决策：将原计划重构为单一可执行计划文档，文件位置固定在 `.agents/plan.md`。
+  理由：仓库约束要求该文件始终符合规范，分散在多个计划文件会导致实施入口不唯一。
   日期/作者：2026-03-04 / Codex
 
-- 决策：调试屏默认关闭，且仅按角色存储可见状态。
-  理由：满足“谁点谁开”，避免全局默认态导致的误显示与串扰。
+- 决策：保留“射线仅预览、场景点选锁定、确认按钮提交锁定值”的交互主线，不改业务意图。
+  理由：这是用户已确认的核心行为约束，也是防误选问题的关键。
   日期/作者：2026-03-04 / Codex
 
-- 决策：缺失 `role` 或 `role->player` 映射失败时严格拒绝交互，不做缓存回退。
-  理由：用户目标是“目标总是客户端本地玩家”，可错过一次点击，但不能误操作他人。
+- 决策：数值解析规则写入执行细则，新增实现一律使用 `NumberUtils`，禁止 `tonumber` 与 `type(x)=="number"`。
+  理由：仓库 AGENTS 约束已明确此规则，必须前置到计划里避免实施偏差。
   日期/作者：2026-03-04 / Codex
 
-- 决策：除启动阶段外，运行态 UI 行为禁止使用“无角色上下文的全局可见性写入”控制调试屏。
-  理由：与 UIManager 作用域模型一致，减少隐式全局副作用。
+- 决策：将 `位置_取消按钮` 定义为“解锁重选”而非“关闭面板”，仅在已锁定时生效。
+  理由：用户明确要求“用取消按钮 unlock”；把取消语义绑定到解锁可覆盖“选错重选”核心用例，同时保持面板停留在当前选择流程。
   日期/作者：2026-03-04 / Codex
 
-- 决策：托管按钮触控在按角色渲染时对所有玩家角色保持可点击，不再限制“仅当前本地快照角色”。
-  理由：当前交互语义以“事件触发者 role”判定最终 action 归属；UI 层保持可点可避免输入锁/上下文切换残留造成“按钮失活”。
+- 决策：`target` 屏确认提交不再经过 pre-confirm 二次确认拦截，改为“锁定后直接提交 `choice_select`”。
+  理由：目标选择屏已提供显式锁定态和确认按钮，再次弹二次确认会破坏既定交互链路并增加操作成本。
   日期/作者：2026-03-04 / Codex
 
-- 决策：一并修复黑市 `skin` 过滤逻辑，使其与购买分支保持一致。
-  理由：这是本轮回归门禁中的真实行为缺陷，若不修复会阻断全量回归验收。
+- 决策：场景点选入口先在 `HostRuntimePort` 以监听器协议暴露（`register/unregister/emit_target_pick`），底层引擎事件后续按同协议接入。
+  理由：先稳定业务层契约与可测性，避免在未确认底层事件细节前把业务逻辑绑死到某个 API 形态。
   日期/作者：2026-03-04 / Codex
 
 ## 结果与复盘
 
 
-本计划已完整实施并通过回归。对照目标复盘如下：第一，始终显示屏按钮在输入锁等运行阶段保持可点击，且 `auto`/`toggle_action_log` 缺失事件角色会被拒绝，不再误落到历史角色。第二，调试屏默认关闭，状态按角色独立存储与同步，A/B 玩家互不干扰。第三，运行态 market/modal 走按角色切屏路径，减少全局 `client_role=nil` 写入串扰。第四，全量回归 `lua tests/regression.lua` 与静态门禁 `lua tests/internal/forbidden_globals.lua` 均通过。
+本次交付已完成 M1-M4：端口链路、射线封装、TargetChoiceEffects 运行时、10 个目标选择测试均已落地。可观察结果是 target 选择流程具备“hover 预览 -> 场景点选锁定 -> 确认提交 -> 取消解锁重选”的闭环，并在 `presentation_ui.action_status` 回归中通过验证。
+
+当前唯一未闭环项是业务环境实机验收记录与仓库既有 market 用例失败清理。后者是本次改动前已存在问题：`tests/suites/market.lua:131` 的 `skin_entry_can_buy_but_no_effect` 仍失败，需独立任务处理。
 
 ## 背景与导读
 
 
-本任务涉及的核心概念是“角色作用域”。在本仓库里，角色作用域由 `UIManager.client_role` 决定：设置某个角色后，UI 节点属性写入只影响该角色；设为 `nil` 则影响所有角色。这个机制由 `vendor/third_party/UIManager` 实现，项目侧通过 `src/presentation/api/UIRuntimePort.lua` 包装调用。
+本任务涉及“回合流程层、UI 同步层、运行时 Host 封装层、场景渲染层、目标选择 UI 事件层、测试层”六个区域。它们关系如下：
 
-“始终显示屏”节点定义在 `src/presentation/canvas/always_show/nodes.lua`，包含托管按钮与行动日志按钮；“调试屏”节点定义在 `src/presentation/canvas/debug/nodes.lua`。两者的点击事件由 `src/presentation/canvas_runtime/CanvasEventRouter.lua` 统一注册，再通过 `src/presentation/interaction/UIIntentDispatcher.lua` 分发到视图命令或游戏动作。
+回合流程每帧调用 `ui_sync` 端口；`ui_sync` 再驱动目标选择运行时逻辑；运行时逻辑通过 HostRuntimePort 获取射线命中与场景点击；渲染层负责候选标记和箭头显隐；UI 层负责确认/取消按钮与意图分发；测试层验证“预览、锁定、解锁、提交、清理”链路。
 
-当前风险分三层。第一层是 actor 解析层：`LocalActorResolver` 允许缓存回退。第二层是状态层：调试可见状态同时存在全局与按角色字段。第三层是渲染/切屏层：运行态仍混入全局 `canvas.switch`。这三层叠加后，容易出现“看起来本地操作，实际影响全体或错误玩家”的现象。
+关键术语定义：
+
+“预览（hover）”指准星射线命中候选地块后，仅更新视觉指示，不写最终提交值。
+
+“锁定（lock）”指玩家在场景里点击候选地块后，记录 `locked_option_id`；此后暂停射线驱动，避免目标漂移。
+
+“解锁（unlock）”指点击 `位置_取消按钮` 后清空 `locked_option_id`，恢复射线预览，允许重新 hover 与重新点选锁定。
+
+“提交（confirm submit）”指点击 `位置_确认按钮` 后发送 `choice_select`，其 `option_id` 必须来自 `locked_option_id`。
+
+候选数据来源是 `pending choice options`；数值转换统一使用 `NumberUtils`。
 
 ## 里程碑
 
 
-里程碑 1 的范围是 actor 解析收敛。完成标准是：`toggle_action_log` 与 `auto` 相关 intent 在进入 dispatcher 前必须拿到事件角色；拿不到就拒绝，不再读取历史缓存，不再用 current player 兜底。这个里程碑完成后，交互目标不会再跨事件漂移。
+### 里程碑 1：端口与契约铺设
 
-里程碑 2 的范围是始终显示屏可用性重构。完成标准是：托管按钮与行动日志按钮在输入锁、动画等待与弹窗期间仍可点击；但点击权限仍受“是否本地玩家角色”约束。这个里程碑完成后，用户感知是“按钮一直能用，但只对自己生效”。
 
-里程碑 3 的范围是调试状态模型重构。完成标准是：调试开关默认关闭；只存在按角色状态，不再依赖全局 `debug_visible` / `debug_log_enabled_override`；tick 同步按角色执行。这个里程碑完成后，不同玩家调试屏互不影响。
+范围是打通每帧调用入口和 UI 契约，不引入复杂渲染逻辑。完成后系统具备 `step_target_selection` 调用链，`target` screen 拥有 `confirm = "位置_确认按钮"` 与 `cancel = "位置_取消按钮"` 并能分别触发确认与解锁意图。
 
-里程碑 4 的范围是运行态 Canvas 路径收敛与验收。完成标准是：运行态 modal/popup/market 切屏统一走 `switch_for_role`；全量回归通过；计划文档四个活文档章节更新齐全并附验证证据。
+工作内容：
+
+- 在 `src/game/flow/turn/GameplayLoopPorts.lua` 增加 `ui_sync.step_target_selection(game, state, dt)` 端口定义。
+- 在 `src/game/flow/turn/GameplayLoopUISyncDefaults.lua` 增加同名 no-op 默认实现。
+- 在 `src/game/flow/turn/GameplayLoopTickSteps.lua` 每 tick 调用该端口。
+- 在 `src/presentation/api/presentation_ports/UISyncPorts.lua` 实现转发入口。
+- 在 `src/presentation/canvas/target_choice/nodes.lua` 为 `target` screen 增加确认/取消按钮映射。
+- 在 `src/presentation/canvas/target_choice/intents.lua` 绑定 `位置_确认按钮` 到确认 intent，并绑定 `位置_取消按钮` 到 unlock intent。
+- 在 `src/presentation/api/ui_view_service/core.lua` 增加按钮状态同步：未锁定时禁用确认并禁用（或隐藏）取消，已锁定时启用确认与取消。
+- 在 `src/app/bootstrap/UIBootstrap.lua` 补齐 `位置_确认按钮` 与 `位置_取消按钮` 的 required click nodes。
+
+验收：运行相关 UI 测试后，确认/取消按钮都可触发对应意图、按钮状态与锁定状态一致、tick 链路无报错，且旧调用方不受影响。
+
+### 里程碑 2：射线封装与场景点选锁定
+
+
+范围是封装 HostRuntime 射线入口和场景点选输入，确保业务层不直连底层 `GameAPI`。完成后可通过统一接口取得命中单位并接收点选锁定事件。
+
+工作内容：
+
+- 新建 `src/presentation/api/host_runtime/Raycast.lua`，提供：
+  - `build_camera_ray(role, cfg)`
+  - `pick_first_hit_unit(start_pos, end_pos, cfg)`
+  - `get_unit_id(unit)`
+  - `resolve_hit_position(...)`
+- 在 `src/presentation/api/HostRuntimePort.lua` 暴露上述能力与场景点选注册接口。
+- 在配置 `src/core/config/GameplayRules.lua` 增加 target-pick 射线参数：`eye_offset_y`、`ray_distance`、`nearest_tile_max_distance` 及 override hook。
+
+验收：模拟或实机调用时，业务层仅依赖 HostRuntimePort 即可获得命中信息；底层 API 缺失时不中断流程并打 warn_once 日志。
+
+### 里程碑 3：TargetChoiceEffects 运行时行为落地
+
+
+范围是实现“进入/逐帧/点选锁定/取消解锁/退出”全流程。完成后玩家可看到候选标记与箭头，点选后可确认提交且不被后续射线改写；若选错可取消解锁并重选。
+
+工作内容：
+
+- 新建 `src/presentation/render/TargetChoiceEffects.lua`，实现 `enter`、`step`、`on_scene_pick`、`on_unlock`、`leave`。
+- `enter`：
+  - 仅对 `roadblock_target` / `demolish_target` 生效。
+  - 用 `NumberUtils` 解析候选 option，初始化 `hover_option_id` 与 `locked_option_id`。
+  - 按候选数量生成 `可选择地块` 标记，位置为候选 tile 的 `y + 1.6`。
+  - `选择地块箭头` 保持单实例并对准当前预览。
+  - 未锁定前禁用 `位置_确认按钮`。
+- `step`：
+  - 未锁定时执行射线命中更新 hover；锁定后暂停射线，仅维持展示。
+  - 命中优先按 `unit_id -> tile_index`，失败后按命中点最近候选匹配（阈值限制）。
+- `on_scene_pick`：
+  - 只接受 owner role。
+  - 命中候选后写入 `locked_option_id`，同步 `pending_choice_selected_option_id`，启用确认按钮。
+- `on_unlock`：
+  - 由 `位置_取消按钮` 触发，仅在 `locked_option_id ~= nil` 时生效。
+  - 清空 `locked_option_id`，禁用确认按钮，恢复射线更新；`pending_choice_selected_option_id` 保留最后一次锁定值，但未重新锁定前不得提交。
+  - 同步 UI：取消按钮恢复未锁定态（禁用或隐藏）。
+- `leave`：
+  - 清理生成的候选标记，隐藏箭头，注销点选回调。
+
+验收：实机场景中可观察预览变化、锁定后暂停射线、取消后恢复射线并允许重锁定、确认提交锁定值、退出后无残留单位。
+
+### 里程碑 4：自动化测试与回归验证
+
+
+范围是补齐最小完备测试矩阵，证明行为正确且可回归。完成后应有可重复执行的测试证据。
+
+工作内容：在 `tests/suites/presentation_ui.lua` 新增或更新以下测试：
+
+- `target_confirm_dispatches_selected_option`
+- `target_pick_tick_updates_selection_on_hit_change`
+- `target_pick_tick_ignores_non_candidate`
+- `target_pick_scene_click_locks_target_and_pauses_raycast`
+- `target_pick_confirm_requires_lock`
+- `target_pick_cancel_unlocks_and_resumes_raycast`
+- `target_pick_cancel_noop_when_unlocked`
+- `target_pick_leave_hides_scene_units`
+- `target_pick_enter_spawns_candidate_markers_at_height_1_6`
+- `target_pick_degrades_without_raycast_api`
+
+验收：测试稳定通过，且至少一个场景能在改动前失败、改动后通过，证明不是“只改结构不改行为”。
 
 ## 工作计划
 
 
-第一步会修改 `src/presentation/canvas_runtime/LocalActorResolver.lua` 与 `src/presentation/canvas_runtime/CanvasEventRouter.lua`。`resolve_from_event` 仅接受 `data.role` 或当前监听回调上下文中的 `UIManager.client_role`，删除 `state.ui.local_actor_role_id` 回退。`CanvasEventRouter` 在分发 intent 前执行严格校验，校验失败时通过 `HostRuntimePort.show_tips` 提示并中止分发。
+实施顺序采用“先接口、后行为、再测试”的增量策略，避免一次性大改难以定位问题。
 
-第二步会修改 `src/presentation/interaction/ui_intent_dispatcher/TurnActionPort.lua`。`normalize_auto_intent` 改为“只补齐，不覆盖”：若已有 `intent.actor_role_id`，原样保留；若缺失则尝试严格解析；仍缺失则返回 `nil` 并由上层终止动作。同步更新 `tests/suites/usecase_boundary_contract.lua` 合约断言。
+第一步先完成端口、节点、意图的最小联通，这一步保证每帧驱动入口存在且不破坏现有流程，并把 `位置_取消按钮` 纳入 unlock 输入。第二步封装射线与点选事件，让后续运行时逻辑依赖稳定接口而不是底层 API 细节。第三步实现 `TargetChoiceEffects` 并接入 UI 打开/关闭生命周期，确保场景单位管理、锁定/解锁状态切换规则完整。最后补齐测试与日志，形成可回归证据链。
 
-第三步会改造始终显示屏触控链路，主要在 `src/presentation/ui/UIPanelPresenter.lua` 与 `src/presentation/interaction/UIInputLockPolicy.lua`。托管按钮的触控可用性不再取决于单次快照式 `runtime.get_client_role()`，而是显式依据当前遍历 role 的上下文；输入锁开关切换时都要重刷 `auto` 与 `action_log` 按钮触控，避免状态残留。
+涉及文件清单（仓库相对路径）：
 
-第四步会重构调试状态模型，修改 `src/presentation/api/ui_view_service/state.lua`、`src/presentation/interaction/UIEventState.lua`、`src/presentation/api/ui_view_service/debug.lua`、`src/presentation/api/presentation_ports/DebugPorts.lua`、`src/presentation/interaction/ui_intent_dispatcher/ViewCommandDispatcher.lua`。目标是保留唯一事实源 `ui.debug_visible_by_role`（命名可在实现时统一），移除全局 debug 可见字段在运行态决策中的参与。
-
-第五步会收敛运行态切屏路径，修改 `src/presentation/ui/MarketModalRenderer.lua` 与 `src/presentation/ui/UIModalPresenter.lua`，把 `canvas.switch(ui, ...)` 运行态调用改为按角色循环 `canvas.switch_for_role(...)`。启动阶段（`UIBootstrap`）保留全局 show 行为。
-
-第六步会补全与调整测试，重点在 `tests/suites/presentation_ui.lua`、`tests/suites/presentation_ui_event_bindings.lua`、`tests/suites/usecase_boundary_contract.lua`。新增“缺失 role 严格拒绝”“debug 默认关闭”“A 玩家开 debug 不影响 B 玩家”“auto intent 不覆盖 actor”等断言，删除与新策略冲突的旧断言。
+- `src/game/flow/turn/GameplayLoopPorts.lua`
+- `src/game/flow/turn/GameplayLoopUISyncDefaults.lua`
+- `src/game/flow/turn/GameplayLoopTickSteps.lua`
+- `src/presentation/api/presentation_ports/UISyncPorts.lua`
+- `src/presentation/api/HostRuntimePort.lua`
+- `src/presentation/api/host_runtime/Raycast.lua`（新增）
+- `src/presentation/render/TargetChoiceEffects.lua`（新增）
+- `src/presentation/render/BoardScene.lua`
+- `src/presentation/ui/UIModalPresenter.lua`
+- `src/presentation/canvas/target_choice/nodes.lua`
+- `src/presentation/canvas/target_choice/intents.lua`
+- `src/presentation/api/ui_view_service/core.lua`
+- `src/app/bootstrap/UIBootstrap.lua`
+- `src/core/config/GameplayRules.lua`
+- `tests/suites/presentation_ui.lua`
+- `Data/UIManagerNodes.lua`（已存在 `位置_取消按钮`，本任务用作节点来源校验）
 
 ## 具体步骤
 
 
-所有命令在仓库根目录 `/Users/gangan/Dev/repo/monopoly` 执行。
+所有命令都在仓库根目录执行：`/Users/gangan/.codex/worktrees/08ad/monopoly`。
 
-先记录实施前快照并确认计划文件已更新。
+1. 建立工作基线，确认仅有预期计划文件变动：
 
     git status --short
-    sed -n '1,220p' .agents/plan.md
 
-实施里程碑 1 与 2 后，先跑定向测试，避免把问题扩散到全量回归阶段。
+2. 先做端口与 tick 链路改造，再跑快速语法检查（若仓库已有脚本则用仓库脚本）：
 
+    rg "step_target_selection" src
+
+3. 实现 HostRuntime 射线封装后，用搜索确认业务层不直接调用底层 raycast：
+
+    rg "raycast_unit|get_obstacle_by_raycast|get_first_customtriggerspace_in_raycast" src/presentation
+
+4. 实现 `TargetChoiceEffects` 并接入 modal 生命周期后，检查关键函数与解锁状态字段已落位：
+
+    rg "TargetChoiceEffects|locked_option_id|hover_option_id|on_unlock|位置_取消按钮" src
+
+5. 更新测试并执行：
+
+    lua -e 'package.path=package.path..";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua"; require("TestHarness").run_all({require("presentation_ui_action_status")})'
     lua tests/regression.lua
 
-如果全量回归耗时较长，先执行最小相关套件（实现阶段按 TestHarness 入口临时脚本组织），再回到全量回归。
+   若仓库使用其他测试入口，改为等价命令并记录实际命令。
 
-    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua'; local h=require('TestHarness'); h.run_all({require('presentation_ui_event_bindings'), require('usecase_boundary_contract')})"
-    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua'; local h=require('TestHarness'); h.run_all({require('presentation_ui_event_bindings'), require('usecase_boundary_contract'), require('presentation_ui'), require('market')})"
+6. 实机验收时开启日志过滤观察：
 
-实施里程碑 3 与 4 后执行全量回归与静态门禁。
+    rg "\[TargetPick\]" <运行日志文件路径>
 
-    lua tests/regression.lua
-    lua tests/internal/forbidden_globals.lua
-
-最后整理差异并回填计划文档证据。
-
-    git diff -- .agents/plan.md src tests
-    git status --short
+   日志文件路径按本地运行环境填写并回写到本节，保证下一位执行者可复现。
 
 ## 验证与验收
 
 
-验收以“行为正确”优先于“代码结构变化”。
+自动化验收标准：
 
-首先验证始终显示屏可用性：在输入锁、移动动画等待、动作动画等待、弹窗期间，托管按钮与行动日志按钮都可以点击，且点击方是本地玩家时行为生效，非本地玩家不生效。
+运行 UI 测试套件后，新增测试全部通过；其中 `target_pick_confirm_requires_lock` 必须证明“未锁定不提交、锁定后才提交”，`target_pick_cancel_unlocks_and_resumes_raycast` 必须证明“取消后恢复 hover，且重新锁定后才能提交”。
 
-其次验证目标隔离：两个玩家同时在线时，A 点击行动日志只改变 A 的调试屏，B 的调试屏与日志开关状态不变化；B 点击同理。这个验收必须包含“同一回合内连续切换”“跨回合切换”两个场景。
+行为验收标准（手工）：
 
-再次验证严格拒绝策略：人为构造缺失 `role` 的 click data，事件必须被拒绝并出现提示，不得触发任何 gameplay action 或调试状态变化。
-
-最后跑 `lua tests/regression.lua`，预期输出 `All regression checks passed (...)`；并运行 `lua tests/internal/forbidden_globals.lua`，预期 `forbidden_globals ok`。
+1. 进入目标选择后，候选数量与 `可选择地块` 标记数量一致，且都在 `y + 1.6`。
+2. 准星扫过候选时只改变预览箭头，不直接改最终提交值。
+3. 场景点击候选后进入锁定态，确认按钮可点，射线暂停。
+4. 锁定后点击 `位置_取消按钮` 会解锁并恢复射线预览；此时确认按钮不可提交。
+5. 解锁后重新场景点选可再次锁定；点击确认提交的 `option_id` 等于最新锁定值。
+6. 关闭选择界面后标记和箭头都清理，无残留与旧回调。
+7. 射线接口异常时流程不崩溃，并输出一次告警日志。
 
 ## 可重复性与恢复
 
 
-本计划按里程碑增量推进，每个里程碑可独立提交。若中途失败，优先回退当前里程碑涉及文件，不回退已通过验收的前置里程碑。恢复方式使用普通反向提交或手工逆向 patch，不使用破坏性历史命令。
+本计划步骤是可重复执行的：重复进入选择界面不会累积旧标记，重复执行“锁定 -> 取消解锁 -> 重锁定”不会残留旧锁定态，`leave` 必须保证清理。
 
-如果回归显示“调试状态读取路径”与旧测试夹层冲突，先保留一版兼容读路径（只读镜像，不参与写入决策），待所有调用点迁移完成后再移除兼容层。这样可以避免一次性切断导致的连锁失败。
+若实施中出现回归，按以下顺序恢复：
+
+1. 保留当前改动，先用测试定位是“端口链路、射线封装、运行时状态、UI 意图”哪一层失败。
+2. 临时禁用 `TargetChoiceEffects.step` 调用验证是否为新增逻辑导致。
+3. 若确认是射线 API 兼容问题，保留 wrapper 接口，回退 wrapper 内部实现到降级路径，不回退业务层调用点。
+
+禁止使用破坏性命令清理工作树；所有回退通过可审计的提交或明确 patch 完成。
 
 ## 产物与备注
 
 
-实施前关键证据：
+预期关键日志片段（示例）应包含：
 
-    docs/eggy/ui_manager_lib.md:13
-    docs/eggy/ui_manager_lib.md:47-53
-    src/presentation/canvas_runtime/LocalActorResolver.lua:29-33
-    src/presentation/interaction/UIEventState.lua:17-31
-    src/presentation/ui/MarketModalRenderer.lua:8
-    src/presentation/ui/UIModalPresenter.lua:76,107
+    [TargetPick] enter choice_id=... owner_id=... options=...
+    [TargetPick] spawn_candidate_markers count=3 height_offset=1.6
+    [TargetPick] hover_changed old=101 new=103 source=raycast tile_index=103
+    [TargetPick] lock_target option_id=103 role_id=1
+    [TargetPick] raycast_paused_by_lock locked_option_id=103
+    [TargetPick] unlock_by_cancel old_locked_option_id=103
+    [TargetPick] raycast_resumed_by_unlock hover_option_id=102
+    [TargetPick] confirm_submit choice_id=... option_id=103 locked=true
+    [TargetPick] leave reason=modal_closed
 
-实施后应新增或更新的关键测试行为：
-
-    1) 缺失 role 的 toggle_action_log 不再回退缓存角色，直接拒绝。
-    2) auto intent 保留已有 actor_role_id，不被 resolver 覆盖。
-    3) debug 默认关闭；按角色切换互不影响。
-    4) 输入锁期间始终显示屏的托管/日志按钮仍可点击。
-
-实施后验证证据（命令与结果）：
-
-    lua -e "package.path=package.path..';./tests/?.lua;./tests/suites/?.lua'; local h=require('TestHarness'); h.run_all({require('presentation_ui_event_bindings'), require('usecase_boundary_contract'), require('presentation_ui'), require('market')})"
-    # 结果：All regression checks passed (105)
-
-    lua tests/regression.lua
-    # 结果：All regression checks passed (235)
-
-    lua tests/internal/forbidden_globals.lua
-    # 结果：forbidden_globals ok
+如日志量过大，只保留状态变化与异常首次日志，避免每帧刷屏。
 
 ## 接口与依赖
 
 
-本轮不引入第三方依赖。依赖仅包括现有 `UIManager`、`UIRuntimePort`、`UIViewService`、`DebugPorts` 与测试框架。
+必须使用并遵守以下接口与依赖约束：
 
-`src/presentation/interaction/UIEventState.lua` 的 `resolve_debug_enabled` 需要升级为显式角色参数接口，例如 `resolve_debug_enabled(state, role_id)`。实现完成后，不允许无角色上下文返回“开启”状态。
+- UI 同步端口：`ui_sync.step_target_selection(game, state, dt)`
+- 运行时射线封装：`HostRuntimePort -> host_runtime/Raycast.lua`
+- 目标选择运行时模块：`TargetChoiceEffects.enter/step/on_scene_pick/on_unlock/leave`
+- 目标选择 UI 节点：`target.confirm = "位置_确认按钮"`，`target.cancel = "位置_取消按钮"`，取消事件语义固定为 unlock（不关闭选择屏）
+- 数值转换工具：`NumberUtils`（禁止新增 `tonumber` 与 `type(x)=="number"`）
 
-`src/presentation/api/ui_view_service/debug.lua` 需要新增按角色写接口（示例命名：`set_debug_visible_for_role(state, role, visible)`），并把旧的全局可见性写路径降级为仅启动兼容，不参与运行态控制。
+建议保留的核心数据字段：
 
-`src/presentation/canvas_runtime/LocalActorResolver.lua` 需要改为无缓存副作用设计，不再写入或读取 `state.ui.local_actor_role_id`。
+- `hover_option_id`
+- `locked_option_id`
+- `pending_choice_selected_option_id`
+- `target_pick_raycast_override`
 
-`src/presentation/interaction/ui_intent_dispatcher/TurnActionPort.lua` 的 `normalize_auto_intent(state, intent)` 需保持原签名，但语义改为“已有 actor 不覆盖，缺失 actor 严格解析，失败返回 nil”。
+这些字段在里程碑结束时必须可追踪、可测试，并在日志中可定位状态变化。
+
+## 假设与默认值
+
+
+- 地图中存在模板单位 `可选择地块` 与 `选择地块箭头`。
+- `Data/UIManagerNodes.lua` 中存在 `位置_取消按钮`，并可在 `位置选择屏` 被 `nodes.lua` 正确映射。
+- 候选地块索引可通过场景 tile 数据反查。
+- 射线默认参数：
+  - `eye_offset_y = 1.5`
+  - `ray_distance = 24.0`
+  - `nearest_tile_max_distance = 1.8`
+- 仅 `roadblock_target` / `demolish_target` 启用该机制。
+
+若任一假设不成立，先在“意外与发现”记录证据，再在“决策日志”记录替代策略。
 
 ## 文档更新记录
 
 
-2026-03-04（R19 创建）：基于当前代码与 `docs/eggy/ui_manager_lib.md` 重新定位“始终显示屏/调试屏”本地玩家作用域问题，确认根因是 actor 缓存回退、debug 全局与按角色状态混用、运行态全局切屏路径并存。新建本计划用于指导分层迁移与回归验收。
-
-2026-03-04（R19 覆盖写入）：按用户要求将本轮方案正式写入 `.agents/plan.md`，并按 `.agents/harness/PLANS.md` 补齐活文档必需章节、执行步骤、验收标准与更新记录。改动原因是把会话内达成的设计决策转化为可直接实施的仓库内执行文档。
-
-2026-03-04（R19 实施完成）：按里程碑完成代码改造与测试更新，落地严格事件角色解析、按角色调试状态、按角色运行态切屏与触控可用性修复；执行定向回归 + 全量回归 + forbidden_globals 全部通过。实施中额外修复了黑市 `skin` 可购过滤缺陷以满足回归门禁。
+- 2026-03-04 / Codex：将 `PLAN.md` 重构并迁移为 `.agents/plan.md` 的可执行计划版本，原因是满足 `.agents/harness/PLANS.md` 的强制结构、活文档维护要求与新手可执行标准；随后删除旧 `PLAN.md` 以消除双计划入口。
+- 2026-03-04 / Codex：根据用户新增的 `位置_取消按钮`，将流程更新为“lock 后可 cancel 解锁回到 hover”，并同步调整了里程碑、UI 契约、测试矩阵、验收标准与日志样例，原因是覆盖“选错后重新选择”用例且保持防误选语义。
+- 2026-03-04 / Codex：完成实现回填：更新进度为 M1-M4 已完成，补充“全量回归剩余 market 既有失败”的事实证据，修正默认射线参数到实际代码值，并记录“target confirm 直提交流程 + HostRuntime 场景点选监听协议”的设计决策，原因是让计划文档与当前代码状态一致且可追溯。
