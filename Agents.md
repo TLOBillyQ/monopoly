@@ -1,2 +1,4 @@
-`.agents/plan.md`始终要符合`.agents/harness/PLANS.md`的规范要求。
-数值按lua_env：禁tonumber/type=="number"，统一NumberUtils。
+- `.agents/plan.md`始终要符合`.agents/harness/PLANS.md`的规范要求。
+- `lua_env.md` 数值按lua_env：禁tonumber/type=="number"，统一NumberUtils。
+- `ui_manager_lib.md` 
+- `eggy_lua_agent_memory.md` 
