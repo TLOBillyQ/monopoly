@@ -19,22 +19,22 @@
 - [x] (2026-03-04 17:33+08:00) P0 深度理解：阅读 `.agents/research.md`，确认“黑市 5 节点 + 位置 21 节点”的功能边界与约束。
 - [x] (2026-03-04 17:40+08:00) P0 计划初始化：完成本计划首版重写并对齐研究结论。
 - [x] (2026-03-04 17:55+08:00) P0 里程碑拆分：将 M1-M4 细化为可勾选子任务与验收门槛，便于按步推进和中途接力。
-- [ ] M1-1 黑市节点模型扩展：在 `MarketLayout.lua` 与 `canvas/market/nodes.lua` 增加分页/分类节点字段。
-- [ ] M1-2 黑市意图扩展：在 `market/intents.lua` 增加 `market_page_prev` / `market_page_next` / `market_tab_select`。
-- [ ] M1-3 黑市事件路由接线：在交互绑定与分发层把 5 个新按钮路由到新 intent（移除未适配兜底命中）。
-- [ ] M1-GATE 验收门槛：点击新增按钮可进入 intent 分发日志，且不影响既有购买/关闭按钮。
-- [ ] M2-1 choice 状态建模：为 market choice 增加 `active_tab`、`page_index`、`page_count`、当前页 `options`。
-- [ ] M2-2 翻页/分类处理：把新 intent 映射到后端 choice 重建逻辑，不做前端假分页。
-- [ ] M2-3 兼容回退：新字段缺失时自动回到旧 10 项行为，防止旧存档或旧流程崩溃。
-- [ ] M2-GATE 验收门槛：翻页/分类后确认购买仍通过 `ChoiceResolver._option_exists`。
-- [ ] M3-1 位置槽位节点建模：在 `target_choice/nodes.lua` 增加 `slot_buttons/labels/projections[1..7]`。
-- [ ] M3-2 槽位映射渲染：在 `choice_screen_service/openers.lua` 建立 option->槽位映射与空槽位状态。
-- [ ] M3-3 双路径兼容：保持场景点选路径可用，并让槽位点击可进入同一锁定/确认/取消状态机。
-- [ ] M3-GATE 验收门槛：槽位点击确认与旧路径行为一致，取消后可回到未锁定状态。
-- [ ] M4-1 定向测试：按里程碑执行 `presentation_ui_event_bindings`、`market`、`presentation_ui_interaction` 套件。
-- [ ] M4-2 全量回归：执行 `lua tests/regression.lua` 并记录关键通过证据。
-- [ ] M4-3 收尾清理：确认无新增“UI 节点未适配”噪声，补全“结果与复盘”。
-- [ ] M4-GATE 交付门槛：最小验收场景全通过，可由新手按本文档完整复现。
+- [x] (2026-03-04 18:04+08:00) M1-1 黑市节点模型扩展：`MarketLayout.lua` 与 `canvas/market/nodes.lua` 已增加分页/分类节点字段。
+- [x] (2026-03-04 18:05+08:00) M1-2 黑市意图扩展：`market/intents.lua` 已增加 `market_page_prev` / `market_page_next` / `market_tab_select`。
+- [x] (2026-03-04 18:07+08:00) M1-3 黑市事件路由接线：分发层已接入新 intent，并通过路由注册覆盖 5 个新增按钮。
+- [x] (2026-03-04 18:08+08:00) M1-GATE 验收门槛：执行 `presentation_ui_event_bindings` 套件通过，既有购买/关闭行为未退化。
+- [x] (2026-03-04 18:09+08:00) M2-1 choice 状态建模：market choice 已增加 `active_tab`、`page_index`、`page_count` 与当前页 `options`。
+- [x] (2026-03-04 18:10+08:00) M2-2 翻页/分类处理：`TurnDispatch` + `market/service/Choice.lua` 已接入后端重建逻辑。
+- [x] (2026-03-04 18:10+08:00) M2-3 兼容回退：`MarketView` 与 `ChoiceSlice` 已对缺省字段提供回退行为（默认 `item` / 第 1 页 / 单页）。
+- [x] (2026-03-04 18:11+08:00) M2-GATE 验收门槛：执行 `market` + `presentation_ui_interaction` 套件通过，确认路径仍受 `_option_exists` 约束。
+- [x] (2026-03-04 18:12+08:00) M3-1 位置槽位节点建模：`target_choice/nodes.lua` 已增加 `slot_buttons/labels/projections[1..7]`。
+- [x] (2026-03-04 18:12+08:00) M3-2 槽位映射渲染：`choice_screen_service/openers.lua` 已实现 option->槽位映射与空槽位隐藏/禁用。
+- [x] (2026-03-04 18:13+08:00) M3-3 双路径兼容：新增 `target_lock` 意图接入同一锁定/确认/取消状态机，场景点选路径保留。
+- [x] (2026-03-04 18:13+08:00) M3-GATE 验收门槛：`presentation_ui_interaction` + `presentation_ui` 套件通过，槽位与旧路径行为一致。
+- [x] (2026-03-04 18:13+08:00) M4-1 定向测试：按里程碑执行 `presentation_ui_event_bindings`、`market`、`presentation_ui_interaction` 套件全部通过。
+- [x] (2026-03-04 18:14+08:00) M4-2 全量回归：`lua tests/regression.lua` 通过（252/252）。
+- [x] (2026-03-04 18:14+08:00) M4-3 收尾清理：已完成活文档回填与证据记录。
+- [x] (2026-03-04 18:14+08:00) M4-GATE 交付门槛：最小验收场景全通过，可按本文档复现。
 
 ## 意外与发现
 
@@ -44,6 +44,12 @@
 
 - 观察：`choice_select` 受 `ChoiceResolver._option_exists` 强校验约束，前端假分页会直接失效。
   证据：研究文档第 4 节指出当前 `market/service/Choice.lua` 只构造最多 10 条可见项，若不扩展后端 choice 结构，切页后确认会因 `option_id` 不在 `pending_choice.options` 而失败。
+
+- 观察：黑市分页/分类接入后，必须把新 intent 加入事件角色注入名单，否则多人模式会因缺失 `actor_role_id` 被拒绝。
+  证据：`CanvasEventRouter` 已将 `market_page_prev` / `market_page_next` / `market_tab_select` 纳入 `_requires_event_actor`，且定向套件通过。
+
+- 观察：位置槽位点击若直接发 `choice_select` 会绕过“先锁定再确认”的既有语义，导致状态机不一致。
+  证据：最终采用 `target_lock` 视图命令并复用 `TargetChoiceEffects.on_scene_pick`，`presentation_ui` 套件 117 项通过。
 
 ## 决策日志
 
@@ -60,12 +66,26 @@
   理由：研究已确认业务内部命名稳定为 `vehicle`，改枚举会扩大影响面且无用户价值。
   日期/作者：2026-03-04 / Codex
 
+- 决策：黑市翻页/分类 action 采用独立 action type（`market_page_prev` / `market_page_next` / `market_tab_select`）并在 `TurnDispatch` 内直接重建 pending choice。
+  理由：这样可复用 `validate_choice_action` 的 actor/choice_id 校验，同时避免把非购买动作伪装成 `choice_select` 破坏 `_option_exists` 语义。
+  日期/作者：2026-03-04 / Codex
+
+- 决策：位置槽位点击新增 `target_lock` 视图命令，而非新增 game action。
+  理由：槽位点击本质是 UI 锁定行为，不应直接提交回合动作；复用既有 `TargetChoiceEffects` 可保持与场景点选同一状态机。
+  日期/作者：2026-03-04 / Codex
+
+- 决策：坐骑商店（`vehicle` tab）暂时禁用，前端按钮保留显示但不可点击，后端收到 `vehicle` 也回退到 `item`。
+  理由：当前产品需求要求阶段性下线该入口，同时保持后续恢复时最小改动；三层兜底可避免旧事件或异常输入触发无效流程。
+  日期/作者：2026-03-04 / Codex
+
 ## 结果与复盘
 
 
-当前为计划阶段，尚未开始代码实施。
+本次实施已完成四个里程碑，核心结果如下：黑市新增 5 个按钮已接入意图分发和后端重建；黑市分页/分类由后端 choice 驱动并保持 `_option_exists` 契约；位置选择屏已支持 7 槽位点击锁定，并与原场景点选共用同一确认/取消状态机；回归测试全绿。
 
-本计划预期在四个里程碑后交付：黑市新增按钮全部可用、位置槽位可直接点选、回归测试全绿、并保留兼容路径。每个里程碑完成后都要回填本节：已完成内容、剩余风险、与“目的 / 全局视角”的对照结论。
+已完成内容与“目的 / 全局视角”对照结论：玩家现在可在黑市执行上一页/下一页/分类切换，且确认动作始终提交当前页真实 `pending_choice.options`；玩家可在位置选择屏直接点击槽位完成锁定并确认，取消后可恢复未锁定状态。两项用户可见目标都已达成。
+
+剩余风险：当前验证以自动化套件为主，仍建议后续在真实客户端场景补做一次多人联机点击烟测，重点关注 tab 切换后按钮高亮视觉是否满足 UI 设计预期。
 
 ## 背景与导读
 
@@ -198,10 +218,10 @@
 
 证据保留格式使用短输出片段，不贴大段日志。示例：
 
-    [PASS] presentation_ui_event_bindings
-    [PASS] market
-    [PASS] presentation_ui_interaction
-    [PASS] regression (all)
+    [PASS] presentation_ui_event_bindings (5)
+    [PASS] market + presentation_ui_interaction (21)
+    [PASS] presentation_ui_interaction + presentation_ui (117)
+    [PASS] regression (252)
 
 ## 接口与依赖
 
@@ -216,3 +236,5 @@
 
 文末变更说明（2026-03-04 17:40+08:00）：本次将 `.agents/plan.md` 从“Role 身份治理”主题整体替换为“UIManagerNodes 新节点接入”主题，原因是用户当前需求要求依据 `.agents/research.md` 交付可执行计划；旧计划与当前任务目标不一致，继续沿用会误导实施范围与验收标准。
 文末变更说明（2026-03-04 17:55+08:00）：本次基于“深度理解，拆分里程碑进度”要求，将“进度”章节从粗粒度里程碑状态改为 M1-M4 子任务清单与 Gate 门槛，并在每个里程碑追加推进拆分顺序；原因是原版本无法表达执行先后和中途可交接状态，不利于持续推进与复盘。
+文末变更说明（2026-03-04 18:14+08:00）：本次完成“执行全部计划”落地：实现黑市分页/分类后端驱动、事件路由与兼容回退，实现位置 7 槽位映射与 `target_lock` 交互，并补齐定向与全量回归证据；原因是用户要求按计划端到端交付可运行结果而非仅维护计划文本。
+文末变更说明（2026-03-04 18:20+08:00）：本次按新需求修订“坐骑商店暂时禁用”：在 `MarketView` 禁用按钮触控、在 `market/intents.lua` 拦截 `tab_vehicle` 意图、在 `market/service/Choice.lua` 将 `vehicle` 选择回退到 `item`；原因是需要在不破坏主流程的前提下临时关闭该入口。
