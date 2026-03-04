@@ -64,6 +64,24 @@ local profiles = {
       },
     },
   },
+  scenario_market_staging = {
+    bootstrap = {
+      players = {
+        [1] = {
+          position_tile_id = 34,
+        },
+        [2] = {
+          position_tile_id = 35,
+        },
+        [3] = {
+          position_tile_id = 44,
+        },
+        [4] = {
+          position_tile_id = 40,
+        },
+      },
+    },
+  },
   items_move_control = {
     bootstrap = {
       players = {

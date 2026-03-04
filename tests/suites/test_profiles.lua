@@ -213,6 +213,25 @@ local function _test_scenario_upgrade_building_render_applies_bootstrap()
   })
 end
 
+local function _test_scenario_market_staging_applies_player_position()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "scenario_market_staging")
+
+  local p1_expected = game.board:index_of_tile_id(34)
+  assert(p1_expected ~= nil, "tile 34 should exist in board path")
+  assert(game.players[1].position == p1_expected, "p1 position should match scenario_market_staging")
+end
+
+local function _test_scenario_market_staging_is_one_step_before_market()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "scenario_market_staging")
+
+  local market_index = game.board:index_of_tile_id(map_cfg.market_id)
+  assert(market_index ~= nil, "market tile id should exist in board path")
+  assert(game.players[1].position + 1 == market_index,
+    "p1 should be one step before market after scenario_market_staging bootstrap")
+end
+
 return {
   name = "test_profiles",
   tests = {
@@ -231,6 +250,14 @@ return {
     {
       name = "scenario_upgrade_building_render_applies_bootstrap",
       run = _test_scenario_upgrade_building_render_applies_bootstrap,
+    },
+    {
+      name = "scenario_market_staging_applies_player_position",
+      run = _test_scenario_market_staging_applies_player_position,
+    },
+    {
+      name = "scenario_market_staging_is_one_step_before_market",
+      run = _test_scenario_market_staging_is_one_step_before_market,
     },
   },
 }
