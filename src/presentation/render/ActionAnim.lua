@@ -44,6 +44,9 @@ local function _register_default_handlers()
     -- Keep wait_action_anim timing but do not spawn extra overlay on tile anchor.
     return duration
   end)
+  registry.register("cash_receive", function(state, anim, duration, opts)
+    return duration
+  end)
   registry.register("missile", function(state, anim, duration, opts)
     handlers.play_missile(state, anim, duration, opts)
     return duration

@@ -148,13 +148,15 @@ function land_rules.execute_pay_tax(game, player_id)
   if cash < fee then fee = cash end
 
   game:deduct_player_cash(player, fee)
-  return _build_land_event("tax_paid", {
+  local result = _build_land_event("tax_paid", {
     player = player,
     amount = fee,
     text = player.name .. " 在税务局支付税金 " .. number_utils.format_integer_part(fee),
-  }, {
-    bankrupt_reason = player.name .. " 支付税金后破产",
   })
+  if game:player_balance(player, "金币") <= 0 then
+    result.bankrupt_reason = player.name .. " 支付税金后破产"
+  end
+  return result
 end
 
 return land_rules

@@ -254,6 +254,28 @@ local function _register_purchase_event(ctx, role_id)
       return
     end
     _sync_all_managed_currencies(ctx, game, player)
+
+    local pending = game.turn and game.turn.pending_choice or nil
+    local meta = pending and pending.meta or nil
+    if not (pending and pending.kind == "market_buy" and meta and meta.await_paid_topup == true) then
+      return
+    end
+    local pending_player_id = number_utils.to_integer(meta.player_id)
+    if pending_player_id ~= player.id then
+      return
+    end
+    local option_id = number_utils.to_integer(meta.await_paid_topup_option_id)
+    if option_id == nil or pending.id == nil then
+      return
+    end
+    meta.await_paid_topup = nil
+    meta.await_paid_topup_option_id = nil
+    game:dispatch_action({
+      type = "choice_select",
+      choice_id = pending.id,
+      option_id = option_id,
+      actor_role_id = player.id,
+    })
   end)
   ctx.registered_role_ids[role_id] = true
 end
@@ -337,14 +359,23 @@ function bridge.open_purchase_panel(game, player, currency)
   local ctx = _resolve_context(game)
   local resolved = ctx.resolved_by_currency[currency]
   if not resolved then
+    logger.warn("open purchase panel failed: unresolved currency mapping", tostring(currency))
     return false
   end
   local role = _resolve_role(player)
   if not role or not role.show_goods_purchase_panel then
+    logger.warn("open purchase panel failed: role api missing show_goods_purchase_panel", tostring(currency))
     return false
   end
   local show_time = paid_goods_cfg.panel_show_time or 10.0
   local ok = pcall(role.show_goods_purchase_panel, resolved.goods_id, show_time)
+  if not ok then
+    logger.warn(
+      "open purchase panel failed: call error",
+      "currency=" .. tostring(currency),
+      "goods_id=" .. tostring(resolved.goods_id)
+    )
+  end
   return ok
 end
 

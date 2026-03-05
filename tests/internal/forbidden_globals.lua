@@ -1,4 +1,4 @@
--- Scans src/ for forbidden globals that are unavailable in the game runtime sandbox.
+-- Scans src/tests/scripts for forbidden globals that are unavailable in the game runtime sandbox.
 -- Run as part of regression: dofile("tests/internal/forbidden_globals.lua")
 
 local forbidden = {
@@ -44,9 +44,20 @@ local function _collect_lua_files(root)
   return files
 end
 
-local files, err = _collect_lua_files("src")
-if not files then
-  io.stderr:write("forbidden_globals error: ", err, "\n")
+local scan_roots = { "src", "tests", "scripts" }
+local files = {}
+for _, root in ipairs(scan_roots) do
+  local root_files, err = _collect_lua_files(root)
+  if root_files then
+    for _, path in ipairs(root_files) do
+      files[#files + 1] = path
+    end
+  else
+    io.stderr:write("forbidden_globals warn: ", err, "\n")
+  end
+end
+if #files == 0 then
+  io.stderr:write("forbidden_globals error: no lua files found in scan roots\n")
   os.exit(1)
 end
 

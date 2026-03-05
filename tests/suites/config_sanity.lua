@@ -4,6 +4,7 @@ local config_sanity = require("src.core.config.ConfigSanity")
 local vehicle_catalog = require("src.core.config.VehicleCatalog")
 local market_cfg = require("Config.Generated.Market")
 local chance_cfg = require("Config.Generated.ChanceCards")
+local tiles_cfg = require("Config.Generated.Tiles")
 
 local function _test_config_sanity_validate_passes_current_generated_data()
   config_sanity.reset_for_tests()
@@ -102,6 +103,22 @@ local function _test_config_sanity_release_fails_when_set_vehicle_card_exists()
   end)
 end
 
+local function _test_chance_forced_move_destinations_match_card_semantics()
+  local tile_type_by_id = {}
+  for _, tile in ipairs(tiles_cfg) do
+    tile_type_by_id[tile.id] = tile.type
+  end
+  local by_id = {}
+  for _, card in ipairs(chance_cfg) do
+    by_id[card.id] = card
+  end
+
+  assert(by_id[3031] and by_id[3031].destination_tile_id, "card 3031 should exist")
+  assert(by_id[3033] and by_id[3033].destination_tile_id, "card 3033 should exist")
+  assert(tile_type_by_id[by_id[3031].destination_tile_id] == "hospital", "card 3031 should land on hospital tile")
+  assert(tile_type_by_id[by_id[3033].destination_tile_id] == "tax", "card 3033 should land on tax tile")
+end
+
 return {
   name = "config_sanity",
   tests = {
@@ -114,6 +131,10 @@ return {
     {
       name = "config_sanity_release_fails_when_set_vehicle_card_exists",
       run = _test_config_sanity_release_fails_when_set_vehicle_card_exists,
+    },
+    {
+      name = "chance_forced_move_destinations_match_card_semantics",
+      run = _test_chance_forced_move_destinations_match_card_semantics,
     },
   },
 }

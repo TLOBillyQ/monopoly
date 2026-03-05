@@ -38,6 +38,7 @@ local game_startup = require("src.app.bootstrap.GameStartup")
 local game_startup_event_bridge = require("src.app.bootstrap.GameStartupEventBridge")
 local test_profile_bootstrap = require("src.app.testing.TestProfileBootstrap")
 local monopoly_event = require("src.core.events.MonopolyEvents")
+local number_utils = require("src.core.NumberUtils")
 
 local function _mock_lua_api(send_custom_event)
   return {
@@ -165,9 +166,6 @@ local function _build_test_ports(overrides)
         return (timestamp_1 or 0) - (timestamp_2 or 0)
       end,
       cpu_now_seconds = overrides.cpu_now_seconds or function()
-        if os and type(os.clock) == "function" then
-          return os.clock()
-        end
         return 0
       end,
       cpu_diff_seconds = overrides.cpu_diff_seconds or function(timestamp_1, timestamp_2)
@@ -1186,7 +1184,7 @@ local function _test_complex_consecutive_turn_settlement()
   assert(p1, "玩家1应该存在")
 
   if p1.position == hospital_idx then
-    assert(type(p1.status.stay_turns) == "number", "医院应设置 stay_turns")
+    assert(number_utils.is_numeric(p1.status.stay_turns), "医院应设置 stay_turns")
   end
 
   assert(true, "复杂连续结算完成")
@@ -2011,4 +2009,3 @@ return {
   _test_find_player_by_id_accepts_mixed_representation,
   _test_runtime_context_change_skin_exports_and_event,
 }
-

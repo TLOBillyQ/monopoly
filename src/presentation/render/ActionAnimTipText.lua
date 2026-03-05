@@ -76,6 +76,11 @@ function tip_text.build(state, anim)
     local skin = anim.skin_name or anim.skin_id or "?"
     return "换肤动画：" .. player_name .. " -> " .. tostring(skin)
   end
+  if kind == "cash_receive" then
+    local player_name = _resolve_player_name(state, anim.player_id)
+    local amount = anim.amount or "?"
+    return "收钱动画：" .. player_name .. " +" .. tostring(amount)
+  end
   return "动作动画"
 end
 

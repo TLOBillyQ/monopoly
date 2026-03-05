@@ -122,6 +122,21 @@ local function _test_rent_owner_missing_skips_payment()
   _assert_eq(tenant.cash, before2, "rent skipped when owner missing")
 end
 
+local function _test_tax_only_bankrupts_when_balance_depleted()
+  local g = _new_game()
+  local p = g.players[1]
+  g:set_player_cash(p, 10000)
+  local ok = land_actions.execute_pay_tax(g, p.id)
+  assert(ok == true, "tax should execute")
+  assert(p.eliminated == false, "player with remaining cash should not be eliminated by tax")
+  assert(g:player_balance(p, "金币") > 0, "cash should remain positive after tax")
+
+  g:set_player_cash(p, 0)
+  ok = land_actions.execute_pay_tax(g, p.id)
+  assert(ok == true, "tax should execute on depleted balance")
+  assert(p.eliminated == true, "player should be eliminated only when tax depletes balance")
+end
+
 return {
   name = "land",
   tests = {
@@ -129,5 +144,6 @@ return {
     { name = "land_rent_contiguous_sum", run = _test_land_rent_contiguous_sum },
     { name = "land_rent_graph_adjacency_breaks_path_neighbors", run = _test_land_rent_graph_adjacency_breaks_path_neighbors },
     { name = "rent_owner_missing_skips_payment", run = _test_rent_owner_missing_skips_payment },
+    { name = "tax_only_bankrupts_when_balance_depleted", run = _test_tax_only_bankrupts_when_balance_depleted },
   },
 }

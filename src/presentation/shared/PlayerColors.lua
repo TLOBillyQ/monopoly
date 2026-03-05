@@ -2,16 +2,16 @@ local player_colors = {}
 
 local default_color = 0xcfcfcf
 local index_colors = {
-  [1] = 0x4fc3f7,
-  [2] = 0x81c784,
-  [3] = 0xffb74d,
-  [4] = 0xe57373,
+  [1] = 0xe57373,
+  [2] = 0xffeb3b,
+  [3] = 0x4fc3f7,
+  [4] = 0xba68c8,
 }
 local owner_colors = {
-  [1] = 0x4fc3f7,
-  [2] = 0x81c784,
-  [3] = 0xffb74d,
-  [4] = 0xe57373,
+  [1] = 0xe57373,
+  [2] = 0xffeb3b,
+  [3] = 0x4fc3f7,
+  [4] = 0xba68c8,
 }
 
 function player_colors.set_owner_colors(colors_by_owner_id)

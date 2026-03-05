@@ -84,7 +84,12 @@ function purchase.execute(game, player, product_id, opts)
       reason = "insufficient_balance",
       popup = { title = "黑市", body = body },
     })
-    return { ok = false }
+    return {
+      ok = false,
+      reason = "insufficient_balance",
+      wait_paid_topup = opened_panel == true and context.is_paid_currency(currency),
+      option_id = product_id,
+    }
   end
 
   if entry.kind == "item" then
@@ -116,7 +121,12 @@ function purchase.execute(game, player, product_id, opts)
       currency = currency,
       text = player.name .. " 在黑市购买 " .. context.entry_name(entry) .. " 花费 " .. number_utils.format_integer_part(price) .. " " .. currency,
     })
-    return true
+    return {
+      ok = true,
+      kind = "item",
+      product_id = product_id,
+      inventory_full_after = inventory.is_full(player),
+    }
   end
 
   if entry.kind == "vehicle" then
@@ -211,4 +221,3 @@ function purchase.execute(game, player, product_id, opts)
 end
 
 return purchase
-

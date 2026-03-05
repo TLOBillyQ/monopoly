@@ -34,6 +34,12 @@ local function _reload_market_service()
   return require("src.game.systems.market.MarketService")
 end
 
+local function _reset_market_choice_runtime_modules()
+  package.loaded["src.game.systems.choices.ChoiceHandlers.MarketChoiceHandler"] = nil
+  package.loaded["src.game.systems.choices.ChoiceRegistry"] = nil
+  package.loaded["src.game.systems.choices.ChoiceResolver"] = nil
+end
+
 local function _test_ai_skips_auto_buy_at_market()
   local market_service = require("src.game.systems.market.MarketService")
   local g = _new_game()
@@ -391,6 +397,73 @@ local function _test_market_buy_failed_resolves_and_clears_pending_choice()
   assert(result and result.stay == false, "market buy failed should resolve without stay")
 end
 
+local function _test_market_item_buy_keeps_choice_open_until_inventory_full()
+  _reset_market_choice_runtime_modules()
+  _reload_market_service()
+  local g = _new_game()
+  local p = g:current_player()
+  g:set_player_cash(p, 999999)
+  local choice = {
+    id = 809,
+    kind = "market_buy",
+    options = { { id = 2003, label = "测试商品" } },
+    active_tab = "item",
+    page_index = 1,
+    meta = { player_id = p.id, active_tab = "item", page_index = 1, page_count = 1 },
+  }
+  g.turn.pending_choice = choice
+
+  local result = choice_resolver.resolve(g, choice, {
+    type = "choice_select",
+    choice_id = choice.id,
+    option_id = 2003,
+    actor_role_id = p.id,
+  })
+
+  assert(result and result.stay == true, "successful item purchase should keep market choice open")
+  assert(g.turn.pending_choice ~= nil and g.turn.pending_choice.kind == "market_buy",
+    "pending market choice should remain")
+end
+
+local function _test_market_wait_paid_topup_keeps_choice_open_and_marks_meta()
+  _reset_market_choice_runtime_modules()
+  _reload_market_service()
+  local g = _new_game()
+  local p = g:current_player()
+  local choice = {
+    id = 810,
+    kind = "market_buy",
+    options = { { id = 2009, label = "测试商品" } },
+    active_tab = "item",
+    page_index = 1,
+    meta = { player_id = p.id, active_tab = "item", page_index = 1, page_count = 1 },
+  }
+  g.turn.pending_choice = choice
+
+  local result = nil
+  support.with_patches({
+    {
+      target = require("src.game.systems.market.MarketService").purchase,
+      key = "execute",
+      value = function(_, _, product_id)
+        return { ok = false, wait_paid_topup = true, option_id = product_id }
+      end,
+    },
+  }, function()
+    result = choice_resolver.resolve(g, choice, {
+      type = "choice_select",
+      choice_id = choice.id,
+      option_id = 2009,
+      actor_role_id = p.id,
+    })
+  end)
+
+  assert(result and result.stay == true, "wait topup should keep waiting")
+  assert(g.turn.pending_choice == choice, "pending choice should remain")
+  assert(choice.meta.await_paid_topup == true, "choice meta should mark awaiting topup")
+  assert(choice.meta.await_paid_topup_option_id == 2009, "choice meta should keep retry option id")
+end
+
 return {
   name = "market",
   tests = {
@@ -417,6 +490,14 @@ return {
     {
       name = "market_buy_failed_resolves_and_clears_pending_choice",
       run = _test_market_buy_failed_resolves_and_clears_pending_choice,
+    },
+    {
+      name = "market_item_buy_keeps_choice_open_until_inventory_full",
+      run = _test_market_item_buy_keeps_choice_open_until_inventory_full,
+    },
+    {
+      name = "market_wait_paid_topup_keeps_choice_open_and_marks_meta",
+      run = _test_market_wait_paid_topup_keeps_choice_open_and_marks_meta,
     },
   },
 }

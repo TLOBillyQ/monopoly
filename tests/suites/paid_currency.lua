@@ -145,8 +145,8 @@ local function _test_market_buy_managed_currency_consumes_commodity()
     local bridge = _reload_bridge()
     local market = _reload_market()
     bridge.setup_for_game(game)
-    local ok = market.purchase.execute(game, p, 2009, nil)
-    assert(ok == true, "managed currency purchase should succeed")
+    local result = market.purchase.execute(game, p, 2009, nil)
+    assert(type(result) == "table" and result.ok == true, "managed currency purchase should succeed")
     assert(#env.consume_calls == 1, "managed currency purchase should consume commodity")
     assert(env.consume_calls[1].count == 5, "consume count should match item price")
     assert(game:player_balance(p, "金豆") == 5, "jindou balance should be reduced after purchase")
@@ -183,6 +183,42 @@ local function _test_purchase_event_syncs_balance()
     cb(nil, nil, { role = role, goods_id = "goods_jindou" })
     assert(game:player_balance(p, "金豆") == 9, "purchase event should refresh jindou balance")
   end)
+end
+
+local function _test_purchase_event_auto_retries_pending_market_choice()
+  local game = _new_game()
+  local p = game.players[1]
+  local env = _build_fake_env(game, { jindou_count = 2 })
+  local dispatched = {}
+  game.turn.pending_choice = {
+    id = 77,
+    kind = "market_buy",
+    meta = {
+      player_id = p.id,
+      await_paid_topup = true,
+      await_paid_topup_option_id = 2009,
+    },
+  }
+  local old_dispatch_action = game.dispatch_action
+  game.dispatch_action = function(_, action)
+    dispatched[#dispatched + 1] = action
+  end
+  _with_patches(env.patch_list, function()
+    local bridge = _reload_bridge()
+    bridge.setup_for_game(game)
+    local role = env.role_by_player_id[p.id]
+    role.commodity_count[env.jindou_commodity] = 9
+    local cb = env.handlers[p.id]
+    assert(type(cb) == "function", "purchase callback should be registered")
+    cb(nil, nil, { role = role, goods_id = "goods_jindou" })
+  end)
+  game.dispatch_action = old_dispatch_action
+
+  assert(#dispatched == 1, "purchase callback should auto dispatch one retry action")
+  assert(dispatched[1].type == "choice_select", "retry action type should be choice_select")
+  assert(dispatched[1].choice_id == 77, "retry action should target pending choice id")
+  assert(dispatched[1].option_id == 2009, "retry action should target pending option")
+  assert(dispatched[1].actor_role_id == p.id, "retry action actor should be pending player")
 end
 
 local function _test_bridge_isolates_context_between_games()
@@ -394,6 +430,7 @@ return {
     { name = "market_buy_managed_currency_consumes_commodity", run = _test_market_buy_managed_currency_consumes_commodity },
     { name = "market_insufficient_managed_currency_opens_panel", run = _test_market_insufficient_managed_currency_opens_panel },
     { name = "purchase_event_syncs_balance", run = _test_purchase_event_syncs_balance },
+    { name = "purchase_event_auto_retries_pending_market_choice", run = _test_purchase_event_auto_retries_pending_market_choice },
     { name = "bridge_isolates_context_between_games", run = _test_bridge_isolates_context_between_games },
     { name = "bridge_setup_works_when_sandbox_blocks_mode_metatable", run = _test_bridge_setup_works_when_sandbox_blocks_mode_metatable },
     { name = "missing_goods_mapping_warns_with_context", run = _test_missing_goods_mapping_warns_with_context },
