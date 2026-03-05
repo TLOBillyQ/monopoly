@@ -5,6 +5,8 @@ local land_choice_specs = require("src.game.systems.land.LandChoiceSpecs")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 local context = require("src.game.systems.market.service.Context")
 local number_utils = require("src.core.NumberUtils")
+local runtime_ports = require("src.core.RuntimePorts")
+local action_anim_port = require("src.core.ActionAnimPort")
 
 local purchase = {}
 local _emit_event = monopoly_event.emit
@@ -164,6 +166,19 @@ function purchase.execute(game, player, product_id, opts)
     end
 
     context.consume_global_limit(game, product_id)
+
+    local change_skin_helper = runtime_ports.resolve_change_skin_helper()
+    if change_skin_helper and type(change_skin_helper.emit_change_skin) == "function" then
+      change_skin_helper.emit_change_skin(player.id, entry.product_id)
+    end
+    action_anim_port.queue(game, {
+      kind = "change_skin",
+      player_id = player.id,
+      skin_id = entry.product_id,
+      skin_name = context.entry_name(entry),
+      duration = 1.0,
+    })
+
     _emit_event(monopoly_event.market.bought_item, {
       player = player,
       entry = entry,

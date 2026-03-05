@@ -49,6 +49,9 @@ local runtime_constants = {
     camera = {
       follow = "follow_camera",
     },
+    skin = {
+      change = "change_skin",
+    },
   },
 }
 

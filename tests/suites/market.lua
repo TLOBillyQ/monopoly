@@ -1,6 +1,7 @@
 local support = require("TestSupport")
 local _new_game = support.new_game
 local market_cfg = require("Config.Generated.Market")
+local runtime_ports = require("src.core.RuntimePorts")
 
 local function _contains_product(list, product_id)
   for _, entry in ipairs(list) do
@@ -115,6 +116,10 @@ local function _test_skin_entry_can_buy_but_no_effect()
     local g = _new_game()
     local p = g:current_player()
     g:set_player_cash(p, 999999)
+    g.ui_port.wait_action_anim = true
+
+    local change_skin_role_id = nil
+    local change_skin_id = nil
 
     local list = market_service.query.list_available(p, g)
     assert(_contains_product(list, injected.product_id), "skin entry should be available when market_enabled=true")
@@ -123,13 +128,32 @@ local function _test_skin_entry_can_buy_but_no_effect()
     local before_balance = g:player_balance(p, "金币")
     local before_seat_id = p.seat_id
     local before_limit = g.market_limits[injected.product_id]
-    local res = market_service.purchase.execute(g, p, injected.product_id, nil)
+    local res = nil
+    support.with_patches({
+      { target = runtime_ports, key = "resolve_change_skin_helper", value = function()
+        return {
+          emit_change_skin = function(role_id, skin_id)
+            change_skin_role_id = role_id
+            change_skin_id = skin_id
+            return true
+          end,
+        }
+      end },
+    }, function()
+      res = market_service.purchase.execute(g, p, injected.product_id, nil)
+    end)
     local purchase_ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
     assert(purchase_ok == true, "skin entry purchase should succeed as placeholder flow")
     assert(g:player_balance(p, "金币") == before_balance - (injected.price or 0), "balance should be charged for skin purchase")
     assert(g.market_limits[injected.product_id] == before_limit - 1, "skin purchase should consume global limit")
     assert(p.inventory:count() == before_count, "skin purchase should not change inventory")
     assert(p.seat_id == before_seat_id, "skin purchase should not change seat")
+    assert(change_skin_role_id == p.id, "skin purchase should emit change_skin for buyer role id")
+    assert(change_skin_id == injected.product_id, "skin purchase should emit change_skin with product id")
+    assert(g.turn.action_anim and g.turn.action_anim.kind == "change_skin",
+      "skin purchase should queue change_skin action anim when wait_action_anim enabled")
+    assert(g.turn.action_anim and g.turn.action_anim.duration == 1.0,
+      "change_skin action anim should wait for 1 second")
   end)
   market_cfg[#market_cfg] = nil
   _reload_market_service()

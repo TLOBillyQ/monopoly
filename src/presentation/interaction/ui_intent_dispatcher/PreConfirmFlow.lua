@@ -2,8 +2,17 @@ local choice_openers = require("src.presentation.ui.choice_screen_service.opener
 local choice_common = require("src.presentation.ui.choice_screen_service.common")
 local number_utils = require("src.core.NumberUtils")
 local ui_view = require("src.presentation.api.UIViewService")
+local market_cfg = require("Config.Generated.Market")
 
 local pre_confirm_flow = {}
+
+local market_kind_by_product_id = {}
+for _, entry in ipairs(market_cfg or {}) do
+  local product_id = number_utils.to_integer(entry and entry.product_id)
+  if product_id ~= nil then
+    market_kind_by_product_id[product_id] = entry.kind
+  end
+end
 
 local function _parse_item_slot_index(intent)
   if intent.type ~= "ui_button" or not intent.id then
@@ -31,6 +40,27 @@ local function _resolve_item_slot_option(state, intent)
   return item_id, label
 end
 
+local function _resolve_market_skin_option(state, intent)
+  if intent.type ~= "market_confirm" then
+    return nil, nil
+  end
+  local choice = state.ui_model and state.ui_model.choice or nil
+  if not (choice and choice.kind == "market_buy") then
+    return nil, nil
+  end
+  local product_id = number_utils.to_integer(intent.option_id)
+  if product_id == nil or market_kind_by_product_id[product_id] ~= "skin" then
+    return nil, nil
+  end
+  local option_id = intent.option_id
+  local label = choice_common.resolve_option_label_by_id(choice, option_id)
+  if label == nil then
+    option_id = product_id
+    label = choice_common.resolve_option_label_by_id(choice, option_id)
+  end
+  return option_id, label
+end
+
 function pre_confirm_flow.needs_pre_confirm(state, intent)
   local intent_type = intent.type
   local ui = state.ui
@@ -49,6 +79,10 @@ function pre_confirm_flow.needs_pre_confirm(state, intent)
   if intent_type == "ui_button" and _parse_item_slot_index(intent) then
     local choice = state.ui_model and state.ui_model.choice or nil
     return choice ~= nil and choice.kind == "item_phase_choice"
+  end
+  if intent_type == "market_confirm" then
+    local option_id = _resolve_market_skin_option(state, intent)
+    return option_id ~= nil
   end
 
   return false
@@ -69,6 +103,14 @@ function pre_confirm_flow.enter(state, intent)
   if intent.type == "choice_select" then
     option_id = intent.option_id
     option_label = choice_common.resolve_option_label_by_id(choice, option_id) or tostring(option_id)
+    title = choice_common.resolve_secondary_confirm_title(choice, state.game, source_screen, option_id)
+    body = choice_common.resolve_secondary_confirm_body(choice, state.game, source_screen, option_id, option_label)
+  elseif intent.type == "market_confirm" then
+    source_screen = "market"
+    option_id, option_label = _resolve_market_skin_option(state, intent)
+    if not option_id then
+      return false
+    end
     title = choice_common.resolve_secondary_confirm_title(choice, state.game, source_screen, option_id)
     body = choice_common.resolve_secondary_confirm_body(choice, state.game, source_screen, option_id, option_label)
   elseif intent.type == "ui_button" then

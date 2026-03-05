@@ -62,6 +62,7 @@ local function _with_runtime_context_globals(fn)
     { key = "TriggerCustomEvent", value = nil },
     { key = "vehicle_helper", value = nil },
     { key = "camera_helper", value = nil },
+    { key = "change_skin_helper", value = nil },
     { key = "all_roles", value = nil },
     { key = "ALLROLES", value = nil },
     { key = "get_vehicle_player", value = nil },
@@ -72,6 +73,8 @@ local function _with_runtime_context_globals(fn)
     { key = "get_vehicle_set_position_y", value = nil },
     { key = "get_vehicle_set_position_z", value = nil },
     { key = "get_camera_target", value = nil },
+    { key = "get_skin_id", value = nil },
+    { key = "get_change_skin_role", value = nil },
   }, fn)
 end
 
@@ -1910,6 +1913,41 @@ local function _test_game_startup_role_roster_retries_before_debug_players_fallb
   assert(created_opts.players == nil, "game startup should not fallback to debug players when retry succeeds")
 end
 
+local function _test_runtime_context_change_skin_exports_and_event()
+  _with_runtime_context_globals(function()
+    local emitted_event = nil
+    local role1 = { id = 1, name = "role1" }
+    local ctx = runtime_context.new({
+      GameAPI = {
+        get_role = function(role_id)
+          if role_id == 1 then
+            return role1
+          end
+          return nil
+        end,
+        get_all_valid_roles = function()
+          return {}
+        end,
+      },
+      LuaAPI = _mock_lua_api(function(event_name)
+        emitted_event = event_name
+      end),
+    })
+    runtime_event_bridge._reset_for_tests()
+    runtime_context.install_globals(ctx)
+
+    assert(type(get_skin_id) == "function", "runtime exports should expose get_skin_id")
+    assert(type(get_change_skin_role) == "function", "runtime exports should expose get_change_skin_role")
+
+    local ok = ctx.change_skin_helper.emit_change_skin(1, 5001)
+    assert(ok == true, "change_skin_helper should emit change skin event")
+    assert(emitted_event == "change_skin", "change_skin_helper should emit change_skin event name")
+    assert(get_skin_id() == 5001, "get_skin_id should return helper skin id")
+    assert(get_change_skin_role() == role1, "get_change_skin_role should return helper role")
+    runtime_event_bridge._reset_for_tests()
+  end)
+end
+
 local function _test_find_player_by_id_accepts_mixed_representation()
   local g = _new_game()
   local p1 = g.players[1]
@@ -1971,5 +2009,6 @@ return {
   _test_dispatch_gate_blocks_next_when_choice_active,
   _test_game_startup_role_roster_retries_before_debug_players_fallback,
   _test_find_player_by_id_accepts_mixed_representation,
+  _test_runtime_context_change_skin_exports_and_event,
 }
 

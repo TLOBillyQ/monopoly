@@ -16,6 +16,7 @@ local paid_currency_bridge = require("src.game.systems.commerce.PaidCurrencyBrid
 local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
 local runtime_port = require("src.presentation.api.UIRuntimePort")
 local ui_intent_dispatcher = require("src.presentation.interaction.UIIntentDispatcher")
+local choice_openers = require("src.presentation.ui.choice_screen_service.openers")
 local market_view = require("src.presentation.render.MarketView")
 local market_layout = require("src.presentation.shared.MarketLayout")
 local canvas_event_router = require("src.presentation.canvas_runtime.CanvasEventRouter")
@@ -1814,6 +1815,161 @@ local function _test_ui_touch_policy_auto_controls_touch()
   _assert_eq(touch["始终显示_托管按钮"], false, "auto button should be non-clickable when disabled")
   _assert_eq(touch["始终显示_文本"], false, "auto label should stay non-clickable when disabled")
   _assert_eq(touch["始终显示_托管按钮特效"], false, "auto effect should stay non-clickable when disabled")
+end
+
+local function _test_ui_intent_dispatcher_market_confirm_skin_opens_pre_confirm_then_dispatches()
+  local opened_pre_confirm = nil
+  local dispatched = {}
+  local state = {
+    turn_action_port = {
+      dispatch_action = function(_, _, action)
+        dispatched[#dispatched + 1] = action
+      end,
+      should_block_action = function()
+        return false
+      end,
+    },
+    ui_model = {
+      choice = {
+        id = 12,
+        kind = "market_buy",
+        options = {
+          { id = 5001, label = "海绵宝宝皮肤" },
+        },
+      },
+    },
+    ui = {
+      input_blocked = false,
+      item_slot_item_ids = {},
+      item_slot_item_ids_by_role = {},
+      active_choice_screen_key = "market",
+    },
+    game = {},
+  }
+  local game = {}
+
+  _with_patches({
+    { target = choice_openers, key = "open_pre_confirm_screen", value = function(_, _, option_id, title, body)
+      opened_pre_confirm = {
+        option_id = option_id,
+        title = title,
+        body = body,
+      }
+    end },
+  }, function()
+    ui_intent_dispatcher.dispatch(state, game, {
+      type = "market_confirm",
+      choice_id = 12,
+      option_id = 5001,
+    }, {})
+    _assert_eq(#dispatched, 0, "skin market_confirm should wait for secondary confirm before dispatch")
+    _assert_eq(opened_pre_confirm and opened_pre_confirm.option_id, 5001,
+      "skin market_confirm should open pre confirm with selected skin option")
+
+    ui_intent_dispatcher.dispatch(state, game, {
+      type = "choice_select",
+      choice_id = 12,
+      option_id = 5001,
+    }, {})
+  end)
+
+  _assert_eq(#dispatched, 1, "pre-confirm choice_select should dispatch exactly once")
+  _assert_eq(dispatched[1] and dispatched[1].type, "choice_select", "pre-confirm should dispatch choice_select")
+  _assert_eq(dispatched[1] and dispatched[1].choice_id, 12, "pre-confirm should keep market choice id")
+  _assert_eq(dispatched[1] and dispatched[1].option_id, 5001, "pre-confirm should keep selected skin option id")
+end
+
+local function _test_ui_intent_dispatcher_market_confirm_skin_cancel_restores_market()
+  local opened_pre_confirm = 0
+  local reopened_choice = nil
+  local state = {
+    turn_action_port = {
+      dispatch_action = function() end,
+      should_block_action = function()
+        return false
+      end,
+    },
+    ui_model = {
+      choice = {
+        id = 12,
+        kind = "market_buy",
+        options = {
+          { id = 5001, label = "海绵宝宝皮肤" },
+        },
+      },
+    },
+    ui = {
+      input_blocked = false,
+      item_slot_item_ids = {},
+      item_slot_item_ids_by_role = {},
+      active_choice_screen_key = "market",
+    },
+    game = {},
+  }
+  local game = {}
+
+  _with_patches({
+    { target = choice_openers, key = "open_pre_confirm_screen", value = function()
+      opened_pre_confirm = opened_pre_confirm + 1
+    end },
+    { target = ui_view, key = "open_choice_modal", value = function(_, choice)
+      reopened_choice = choice
+    end },
+  }, function()
+    ui_intent_dispatcher.dispatch(state, game, {
+      type = "market_confirm",
+      choice_id = 12,
+      option_id = 5001,
+    }, {})
+    ui_intent_dispatcher.dispatch(state, game, {
+      type = "choice_cancel",
+      choice_id = 12,
+    }, {})
+  end)
+
+  _assert_eq(opened_pre_confirm, 1, "skin market_confirm should enter pre-confirm once")
+  _assert_eq(reopened_choice and reopened_choice.kind, "market_buy", "pre-confirm cancel should reopen market choice")
+end
+
+local function _test_ui_intent_dispatcher_market_confirm_non_skin_still_direct_dispatch()
+  local captured = nil
+  local state = {
+    turn_action_port = {
+      dispatch_action = function(_, _, action)
+        captured = action
+      end,
+      should_block_action = function()
+        return false
+      end,
+    },
+    ui_model = {
+      choice = {
+        id = 12,
+        kind = "market_buy",
+        options = {
+          { id = 2001, label = "路障卡" },
+        },
+      },
+    },
+    ui = {
+      input_blocked = false,
+      item_slot_item_ids = {},
+      item_slot_item_ids_by_role = {},
+    },
+  }
+  local game = {}
+
+  _with_patches({}, function()
+    ui_intent_dispatcher.dispatch(state, game, {
+      type = "market_confirm",
+      choice_id = 12,
+      option_id = 2001,
+    }, {})
+  end)
+
+  _assert_eq(captured and captured.type, "choice_select", "non-skin market_confirm should dispatch choice_select directly")
+  _assert_eq(captured and captured.choice_id, 12, "non-skin market_confirm should keep choice id")
+  _assert_eq(captured and captured.option_id, 2001, "non-skin market_confirm should keep option id")
 end
 
 local function _test_ui_touch_policy_runtime_nodes_touch_enabled()
@@ -5401,6 +5557,9 @@ return {
   _test_turn_dispatch_auto_rejects_unmapped_role,
   _test_turn_dispatch_item_slot_uses_actor_slot_map,
   _test_ui_intent_dispatcher_market_confirm_routes_choice_select,
+  _test_ui_intent_dispatcher_market_confirm_skin_opens_pre_confirm_then_dispatches,
+  _test_ui_intent_dispatcher_market_confirm_skin_cancel_restores_market,
+  _test_ui_intent_dispatcher_market_confirm_non_skin_still_direct_dispatch,
   _test_ui_intent_dispatcher_market_select_updates_ui_only,
   _test_ui_intent_dispatcher_popup_confirm_closes_popup,
   _test_ui_intent_dispatcher_toggle_action_log_uses_actor_role_context,

@@ -101,6 +101,14 @@ function default_ports.build(runtime_context)
     return nil
   end
 
+  function defaults.resolve_change_skin_helper()
+    local ctx = runtime_context.current()
+    if ctx and type(ctx.change_skin_helper) == "table" then
+      return ctx.change_skin_helper
+    end
+    return nil
+  end
+
   function defaults.emit_event(event_name, payload)
     if event_name == nil then
       return false

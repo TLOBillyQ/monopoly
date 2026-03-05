@@ -17,14 +17,17 @@ local function _test_runtime_ports_strict_mode_requires_context()
     { key = "all_roles", value = { { id = 1 } } },
     { key = "vehicle_helper", value = { id = "vehicle_global" } },
     { key = "camera_helper", value = { id = "camera_global" } },
+    { key = "change_skin_helper", value = { id = "change_skin_global" } },
   }, function()
     local roles = runtime_ports.resolve_roles()
     local vehicle = runtime_ports.resolve_vehicle_helper()
     local camera = runtime_ports.resolve_camera_helper()
+    local change_skin = runtime_ports.resolve_change_skin_helper()
     _assert_eq(type(roles), "table", "strict mode should always return a table")
     _assert_eq(#roles, 0, "strict mode should not read global roles")
     _assert_eq(vehicle, nil, "strict mode should not read global vehicle helper")
     _assert_eq(camera, nil, "strict mode should not read global camera helper")
+    _assert_eq(change_skin, nil, "strict mode should not read global change_skin helper")
   end, { skip_runtime_context_refresh = true })
   _reset_runtime_contract_state()
 end
@@ -35,18 +38,22 @@ local function _test_runtime_ports_resolve_roles_prefers_context_over_globals()
   ctx.roles = { { id = 2 } }
   ctx.vehicle_helper = { id = "vehicle_ctx" }
   ctx.camera_helper = { id = "camera_ctx" }
+  ctx.change_skin_helper = { id = "change_skin_ctx" }
   runtime_context.set_current(ctx)
   _with_patches({
     { key = "all_roles", value = { { id = 1 } } },
     { key = "vehicle_helper", value = { id = "vehicle_global" } },
     { key = "camera_helper", value = { id = "camera_global" } },
+    { key = "change_skin_helper", value = { id = "change_skin_global" } },
   }, function()
     local roles = runtime_ports.resolve_roles()
     local vehicle = runtime_ports.resolve_vehicle_helper()
     local camera = runtime_ports.resolve_camera_helper()
+    local change_skin = runtime_ports.resolve_change_skin_helper()
     _assert_eq(roles[1].id, 2, "runtime ports should use context roles")
     _assert_eq(vehicle.id, "vehicle_ctx", "runtime ports should use context vehicle helper")
     _assert_eq(camera.id, "camera_ctx", "runtime ports should use context camera helper")
+    _assert_eq(change_skin.id, "change_skin_ctx", "runtime ports should use context change_skin helper")
   end, { skip_runtime_context_refresh = true })
   _reset_runtime_contract_state()
 end
@@ -134,10 +141,12 @@ local function _test_runtime_install_builds_context_and_ports()
     local roles = runtime_ports.resolve_roles()
     local vehicle = runtime_ports.resolve_vehicle_helper()
     local camera = runtime_ports.resolve_camera_helper()
+    local change_skin = runtime_ports.resolve_change_skin_helper()
     assert(ctx ~= nil, "runtime_install should set runtime context")
     _assert_eq(roles[1].id, 4, "runtime_install should resolve roles from runtime context")
     assert(vehicle ~= nil, "runtime_install should provide vehicle helper from runtime context")
     assert(camera ~= nil, "runtime_install should provide camera helper from runtime context")
+    assert(change_skin ~= nil, "runtime_install should provide change skin helper from runtime context")
   end)
   _reset_runtime_contract_state()
 end

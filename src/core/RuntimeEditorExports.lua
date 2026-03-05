@@ -1,6 +1,7 @@
 local runtime_constants = require("src.core.config.RuntimeConstants")
 local logger = require("src.core.Logger")
 local vehicle_catalog = require("src.core.config.VehicleCatalog")
+local number_utils = require("src.core.NumberUtils")
 
 local runtime_editor_exports = {}
 
@@ -82,12 +83,41 @@ local function _install_camera_exports(camera_helper)
   end
 end
 
+local function _install_change_skin_exports(change_skin_helper)
+  ---@export
+  ---@desc 获取换肤皮肤ID
+  ---@return integer
+  function get_skin_id()
+    return number_utils.to_integer(change_skin_helper.skin_id) or 0
+  end
+
+  ---@export
+  ---@desc 获取换肤目标玩家
+  ---@return Role
+  function get_change_skin_role()
+    local role_id = number_utils.to_integer(change_skin_helper.target_role_id)
+    if role_id == nil then
+      return nil
+    end
+    if not (GameAPI and GameAPI.get_role) then
+      return nil
+    end
+    local ok, role = pcall(GameAPI.get_role, role_id)
+    if not ok then
+      return nil
+    end
+    return role
+  end
+end
+
 function runtime_editor_exports.install(ctx)
   assert(ctx ~= nil, "missing runtime context")
   assert(ctx.vehicle_helper ~= nil, "missing context.vehicle_helper")
   assert(ctx.camera_helper ~= nil, "missing context.camera_helper")
+  assert(ctx.change_skin_helper ~= nil, "missing context.change_skin_helper")
   _install_vehicle_exports(ctx.vehicle_helper)
   _install_camera_exports(ctx.camera_helper)
+  _install_change_skin_exports(ctx.change_skin_helper)
 end
 
 return runtime_editor_exports
