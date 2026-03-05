@@ -222,24 +222,21 @@ local function _test_scenario_market_staging_applies_player_position()
   assert(game.players[1].position == p1_expected, "p1 position should match scenario_market_staging")
 end
 
-local function _test_scenario_market_staging_grants_remote_dice()
+local function _test_scenario_market_staging_has_no_startup_items()
   local game = _new_game()
   test_profile_bootstrap.apply(game, "scenario_market_staging")
 
-  _assert_inventory_counts(game.players[1], {
-    [2002] = 1,
-    [2003] = 1,
-  })
+  _assert_inventory_counts(game.players[1], {})
 end
 
-local function _test_scenario_market_staging_reaches_market_with_remote_dice_and_multiplier()
+local function _test_scenario_market_staging_is_eight_steps_before_market()
   local game = _new_game()
   test_profile_bootstrap.apply(game, "scenario_market_staging")
 
   local market_index = game.board:index_of_tile_id(map_cfg.market_id)
   assert(market_index ~= nil, "market tile id should exist in board path")
   assert(game.players[1].position + 8 == market_index,
-    "p1 should reach market from Wuhan Road using remote dice plus multiplier after bootstrap")
+    "p1 should start eight steps before market after bootstrap")
 end
 
 local function _test_scenario_hospital_staging_is_before_hospital_with_remote_dice()
@@ -292,12 +289,12 @@ return {
       run = _test_scenario_market_staging_applies_player_position,
     },
     {
-      name = "scenario_market_staging_grants_remote_dice",
-      run = _test_scenario_market_staging_grants_remote_dice,
+      name = "scenario_market_staging_has_no_startup_items",
+      run = _test_scenario_market_staging_has_no_startup_items,
     },
     {
-      name = "scenario_market_staging_reaches_market_with_remote_dice_and_multiplier",
-      run = _test_scenario_market_staging_reaches_market_with_remote_dice_and_multiplier,
+      name = "scenario_market_staging_is_eight_steps_before_market",
+      run = _test_scenario_market_staging_is_eight_steps_before_market,
     },
     {
       name = "scenario_hospital_staging_is_before_hospital_with_remote_dice",
