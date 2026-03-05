@@ -15,7 +15,7 @@ local logger = {
   tip_queue = {},
   tip_active = false,
   tip_epoch = 0,
-  tip_trace_enabled = false,
+  tip_trace_enabled = true,
 }
 local number_utils = require("src.core.NumberUtils")
 
@@ -69,6 +69,20 @@ local function _tip_trace_vector_hint(value)
   return "x=" .. _tip_trace_preview(x) .. ",y=" .. _tip_trace_preview(y) .. ",z=" .. _tip_trace_preview(z)
 end
 
+local function _looks_like_vector_text(text)
+  if type(text) ~= "string" then
+    return false
+  end
+  if string.find(text, "Vector3", 1, true) ~= nil then
+    return true
+  end
+  if string.find(text, "x=", 1, true) and string.find(text, "y=", 1, true) and string.find(text, "z=", 1, true) then
+    return true
+  end
+  local x, y, z = string.match(text, "^%s*[%(%[]?%s*(-?%d+%.?%d*)%s*,%s*(-?%d+%.?%d*)%s*,%s*(-?%d+%.?%d*)%s*[%)%]]?%s*$")
+  return x ~= nil and y ~= nil and z ~= nil
+end
+
 local function _tip_trace_origin()
   if not (debug and type(debug.getinfo) == "function") then
     return "debug_unavailable"
@@ -93,7 +107,10 @@ end
 local function _trace_tip_enqueue(raw_text, duration, queue_len, source, tip_id)
   local text_type = type(raw_text)
   local vector_hint = _tip_trace_vector_hint(raw_text)
-  local should_trace = text_type ~= "string" or logger.tip_trace_enabled == true
+  local preview = _tip_trace_preview(raw_text)
+  local should_trace = text_type ~= "string"
+    or logger.tip_trace_enabled == true
+    or _looks_like_vector_text(preview)
   if not should_trace then
     return
   end
@@ -105,12 +122,33 @@ local function _trace_tip_enqueue(raw_text, duration, queue_len, source, tip_id)
     "duration=" .. tostring(duration),
     "queue_len=" .. tostring(queue_len),
     "origin=" .. _tip_trace_origin(),
-    "preview=" .. _tip_trace_preview(raw_text),
+    "preview=" .. preview,
   }
   if vector_hint ~= nil then
     parts[#parts + 1] = "vector_hint=" .. vector_hint
   end
   local line = table.concat(parts, " ")
+  if type(print) == "function" then
+    pcall(print, line)
+  end
+end
+
+local function _trace_tip_dispatch(tip, duration)
+  if type(tip) ~= "table" then
+    return
+  end
+  local preview = _tip_trace_preview(tip.text)
+  local should_trace = logger.tip_trace_enabled == true or _looks_like_vector_text(preview)
+  if not should_trace then
+    return
+  end
+  local line = table.concat({
+    "[TipTrace][Dispatch]",
+    "id=" .. tostring(tip.tip_id),
+    "source=" .. tostring(tip.source or "unknown"),
+    "duration=" .. tostring(duration),
+    "preview=" .. preview,
+  }, " ")
   if type(print) == "function" then
     pcall(print, line)
   end
@@ -185,6 +223,7 @@ local function _dispatch_next_tip()
   logger.tip_active = true
   local current_epoch = logger.tip_epoch
   local duration = _normalize_tip_duration(tip.duration, 2.0)
+  _trace_tip_dispatch(tip, duration)
   _show_tip_immediately(tip.text, duration)
 
   local function _release()
