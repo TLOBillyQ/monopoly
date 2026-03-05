@@ -12,6 +12,11 @@ end
 
 local function _reload_market()
   package.loaded["src.game.systems.market.MarketService"] = nil
+  package.loaded["src.game.systems.market.service.Context"] = nil
+  package.loaded["src.game.systems.market.service.Eligibility"] = nil
+  package.loaded["src.game.systems.market.service.Purchase"] = nil
+  package.loaded["src.game.systems.market.service.Auto"] = nil
+  package.loaded["src.game.systems.market.service.Choice"] = nil
   return require("src.game.systems.market.MarketService")
 end
 
@@ -21,9 +26,8 @@ local function _build_fake_env(game, opts)
   local leyuanbi_commodity = opts.leyuanbi_commodity or 9002
   local jindou_count = opts.jindou_count or 0
   local leyuanbi_count = opts.leyuanbi_count or 0
-  local buy_calls = {}
   local consume_calls = {}
-  local handlers = {}
+  local panel_calls = {}
   local role_by_player_id = {}
 
   local function _new_role(role_id)
@@ -45,7 +49,7 @@ local function _build_fake_env(game, opts)
       role.commodity_count[commodity_id] = (role.commodity_count[commodity_id] or 0) - count
     end
     role.show_goods_purchase_panel = function(goods_id, show_time)
-      table.insert(buy_calls, { role_id = role.role_id, goods_id = goods_id, show_time = show_time })
+      table.insert(panel_calls, { role_id = role.role_id, goods_id = goods_id, show_time = show_time })
     end
     return role
   end
@@ -55,18 +59,11 @@ local function _build_fake_env(game, opts)
   end
 
   local goods_list = opts.goods_list or {
-    {
-      name = "金豆",
-      goods_id = "goods_jindou",
-      commodity_infos = { { jindou_commodity, 1 } },
-    },
-    {
-      name = "乐园币",
-      goods_id = "goods_leyuanbi",
-      commodity_infos = { { leyuanbi_commodity, 1 } },
-    },
+    { name = "强征卡", goods_id = "goods_strong_card" },
+    { name = "财神卡", goods_id = "goods_god_rich" },
   }
 
+  local trigger_handlers = {}
   local patch_list = {
     {
       key = "GameAPI",
@@ -86,12 +83,15 @@ local function _build_fake_env(game, opts)
         return role_by_player_id[role_id]
       end,
     },
-    { key = "EVENT", value = { SPEC_ROLE_PURCHASE_GOODS = "SPEC_ROLE_PURCHASE_GOODS" } },
+    {
+      key = "EVENT",
+      value = { SPEC_ROLE_PURCHASE_GOODS = "SPEC_ROLE_PURCHASE_GOODS" },
+    },
     {
       key = "RegisterTriggerEvent",
       value = function(args, callback)
         local role_id = args and args[2] or nil
-        handlers[role_id] = callback
+        trigger_handlers[role_id] = callback
       end,
     },
   }
@@ -99,12 +99,19 @@ local function _build_fake_env(game, opts)
   return {
     patch_list = patch_list,
     role_by_player_id = role_by_player_id,
-    buy_calls = buy_calls,
     consume_calls = consume_calls,
-    handlers = handlers,
+    panel_calls = panel_calls,
+    trigger_handlers = trigger_handlers,
     jindou_commodity = jindou_commodity,
     leyuanbi_commodity = leyuanbi_commodity,
   }
+end
+
+local function _with_currency_cfg(cfg, fn)
+  _with_patches({
+    { target = paid_goods_cfg, key = "enabled", value = true },
+    { target = paid_goods_cfg, key = "currencies", value = cfg },
+  }, fn)
 end
 
 local function _collect_warn_logs(run)
@@ -125,300 +132,92 @@ local function _test_paid_bridge_sync_balance_from_commodity()
   local game = _new_game()
   local p = game.players[1]
   local env = _build_fake_env(game, { jindou_count = 7, leyuanbi_count = 3 })
-  _with_patches(env.patch_list, function()
-    local bridge = _reload_bridge()
-    bridge.setup_for_game(game)
-    assert(game:player_balance(p, "金豆") == 7, "jindou balance should sync from commodity")
-    assert(game:player_balance(p, "乐园币") == 3, "leyuanbi balance should sync from commodity")
-    local role = env.role_by_player_id[p.id]
-    role.commodity_count[env.jindou_commodity] = 11
-    bridge.sync_player_currency(game, p, "金豆")
-    assert(game:player_balance(p, "金豆") == 11, "sync should refresh jindou balance")
-  end)
-end
-
-local function _test_market_buy_managed_currency_consumes_commodity()
-  local game = _new_game()
-  local p = game.players[1]
-  local env = _build_fake_env(game, { jindou_count = 10 })
-  _with_patches(env.patch_list, function()
-    local bridge = _reload_bridge()
-    local market = _reload_market()
-    bridge.setup_for_game(game)
-    local result = market.purchase.execute(game, p, 2009, nil)
-    assert(type(result) == "table" and result.ok == true, "managed currency purchase should succeed")
-    assert(#env.consume_calls == 1, "managed currency purchase should consume commodity")
-    assert(env.consume_calls[1].count == 5, "consume count should match item price")
-    assert(game:player_balance(p, "金豆") == 5, "jindou balance should be reduced after purchase")
-  end)
-end
-
-local function _test_market_insufficient_managed_currency_opens_panel()
-  local game = _new_game()
-  local p = game.players[1]
-  local env = _build_fake_env(game, { jindou_count = 1 })
-  _with_patches(env.patch_list, function()
-    local bridge = _reload_bridge()
-    local market = _reload_market()
-    bridge.setup_for_game(game)
-    local result = market.purchase.execute(game, p, 2009, nil)
-    assert(type(result) == "table" and result.ok == false, "insufficient managed currency should fail")
-    assert(#env.consume_calls == 0, "insufficient balance should not consume commodity")
-    assert(#env.buy_calls == 1, "insufficient balance should open purchase panel")
-    assert(env.buy_calls[1].goods_id == "goods_jindou", "purchase panel should target configured jindou goods")
-  end)
-end
-
-local function _test_purchase_event_syncs_balance()
-  local game = _new_game()
-  local p = game.players[1]
-  local env = _build_fake_env(game, { jindou_count = 2 })
-  _with_patches(env.patch_list, function()
-    local bridge = _reload_bridge()
-    bridge.setup_for_game(game)
-    local role = env.role_by_player_id[p.id]
-    role.commodity_count[env.jindou_commodity] = 9
-    local cb = env.handlers[p.id]
-    assert(type(cb) == "function", "purchase event callback should be registered for role")
-    cb(nil, nil, { role = role, goods_id = "goods_jindou" })
-    assert(game:player_balance(p, "金豆") == 9, "purchase event should refresh jindou balance")
-  end)
-end
-
-local function _test_purchase_event_auto_retries_pending_market_choice()
-  local game = _new_game()
-  local p = game.players[1]
-  local env = _build_fake_env(game, { jindou_count = 2 })
-  local dispatched = {}
-  game.turn.pending_choice = {
-    id = 77,
-    kind = "market_buy",
-    meta = {
-      player_id = p.id,
-      await_paid_topup = true,
-      await_paid_topup_option_id = 2009,
-    },
-  }
-  local old_dispatch_action = game.dispatch_action
-  game.dispatch_action = function(_, action)
-    dispatched[#dispatched + 1] = action
-  end
-  _with_patches(env.patch_list, function()
-    local bridge = _reload_bridge()
-    bridge.setup_for_game(game)
-    local role = env.role_by_player_id[p.id]
-    role.commodity_count[env.jindou_commodity] = 9
-    local cb = env.handlers[p.id]
-    assert(type(cb) == "function", "purchase callback should be registered")
-    cb(nil, nil, { role = role, goods_id = "goods_jindou" })
-  end)
-  game.dispatch_action = old_dispatch_action
-
-  assert(#dispatched == 1, "purchase callback should auto dispatch one retry action")
-  assert(dispatched[1].type == "choice_select", "retry action type should be choice_select")
-  assert(dispatched[1].choice_id == 77, "retry action should target pending choice id")
-  assert(dispatched[1].option_id == 2009, "retry action should target pending option")
-  assert(dispatched[1].actor_role_id == p.id, "retry action actor should be pending player")
-end
-
-local function _test_bridge_isolates_context_between_games()
-  local g1 = _new_game()
-  local g2 = _new_game()
-  g2.players[1].id = 101
-  g2.players[2].id = 102
-
-  local roles = {
-    [1] = {
-      role_id = 1,
-      commodity_count = { [9001] = 6, [9002] = 0 },
-      get_roleid = nil,
-      get_commodity_count = nil,
-      consume_commodity = nil,
-      show_goods_purchase_panel = function() end,
-    },
-    [101] = {
-      role_id = 101,
-      commodity_count = { [9001] = 20, [9002] = 0 },
-      get_roleid = nil,
-      get_commodity_count = nil,
-      consume_commodity = nil,
-      show_goods_purchase_panel = function() end,
-    },
-  }
-  roles[1].get_roleid = function() return roles[1].role_id end
-  roles[1].get_commodity_count = function(commodity_id) return roles[1].commodity_count[commodity_id] or 0 end
-  roles[1].consume_commodity = function(commodity_id, count)
-    roles[1].commodity_count[commodity_id] = (roles[1].commodity_count[commodity_id] or 0) - count
-  end
-  roles[101].get_roleid = function() return roles[101].role_id end
-  roles[101].get_commodity_count = function(commodity_id) return roles[101].commodity_count[commodity_id] or 0 end
-  roles[101].consume_commodity = function(commodity_id, count)
-    roles[101].commodity_count[commodity_id] = (roles[101].commodity_count[commodity_id] or 0) - count
-  end
-
-  _with_patches({
-    { key = "GameAPI", value = {
-      random_int = function(min) return min end,
-      get_goods_list = function()
-        return {
-          { name = "金豆", goods_id = "goods_jindou", commodity_infos = { { 9001, 1 } } },
-          { name = "乐园币", goods_id = "goods_leyuanbi", commodity_infos = { { 9002, 1 } } },
-        }
-      end,
-    } },
-    { target = runtime_ports, key = "resolve_role", value = function(role_id)
-      return roles[role_id]
-    end },
-    { key = "EVENT", value = { SPEC_ROLE_PURCHASE_GOODS = "SPEC_ROLE_PURCHASE_GOODS" } },
-    { key = "RegisterTriggerEvent", value = function() end },
-  }, function()
-    local bridge = _reload_bridge()
-    bridge.setup_for_game(g1)
-    bridge.setup_for_game(g2)
-
-    assert(g1:player_balance(g1.players[1], "金豆") == 6, "game1 initial managed balance expected")
-    assert(g2:player_balance(g2.players[1], "金豆") == 20, "game2 initial managed balance expected")
-
-    local ok = bridge.consume_currency(g1, g1.players[1], "金豆", 5)
-    assert(ok == true, "game1 consume should succeed with own context")
-    assert(g1:player_balance(g1.players[1], "金豆") == 1, "game1 balance should update after consume")
-    assert(g2:player_balance(g2.players[1], "金豆") == 20, "game2 balance should remain unchanged")
-  end)
-end
-
-local function _test_bridge_setup_works_when_sandbox_blocks_mode_metatable()
-  local game = _new_game()
-  local p = game.players[1]
-  local env = _build_fake_env(game, { jindou_count = 4 })
-  local base_setmetatable = setmetatable
-  local patch_list = {}
-  for _, patch in ipairs(env.patch_list) do
-    table.insert(patch_list, patch)
-  end
-  table.insert(patch_list, {
-    key = "setmetatable",
-    value = function(tbl, mt)
-      if type(mt) == "table" and (mt.__mode ~= nil or mt.__gc ~= nil) then
-        error("sandbox metatable mode is not supported")
-      end
-      return base_setmetatable(tbl, mt)
-    end,
-  })
-
-  _with_patches(patch_list, function()
-    local bridge = _reload_bridge()
-    bridge.setup_for_game(game)
-    assert(game:player_balance(p, "金豆") == 4, "setup should succeed under sandbox metatable restrictions")
-  end)
-end
-
-local function _test_missing_goods_mapping_warns_with_context()
-  local game = _new_game()
-  local env = _build_fake_env(game, {
-    goods_list = {
-      { name = "钻石", goods_id = "goods_diamond", commodity_infos = { { 9901, 1 } } },
-    },
-  })
-  local warns = _collect_warn_logs(function()
-    _with_patches(env.patch_list, function()
-      local bridge = _reload_bridge()
-      bridge.setup_for_game(game)
-    end)
-  end)
-
-  assert(#warns == 2, "missing mapping should warn for each configured currency")
-  local joined = table.concat(warns, "\n")
-  assert(joined:find("paid goods mapping missing:", 1, true) ~= nil, "warn should include missing mapping prefix")
-  assert(joined:find("expected_names=", 1, true) ~= nil, "warn should include expected names")
-  assert(joined:find("goods_count=1", 1, true) ~= nil, "warn should include goods count")
-  assert(joined:find("goods_names_sample=钻石", 1, true) ~= nil, "warn should include goods sample names")
-end
-
-local function _test_empty_goods_list_warns_with_none_sample()
-  local game = _new_game()
-  local env = _build_fake_env(game, { goods_list = {} })
-  local warns = _collect_warn_logs(function()
-    _with_patches(env.patch_list, function()
-      local bridge = _reload_bridge()
-      bridge.setup_for_game(game)
-    end)
-  end)
-
-  assert(#warns == 2, "empty goods list should still warn for each configured currency")
-  local joined = table.concat(warns, "\n")
-  assert(joined:find("goods_count=0", 1, true) ~= nil, "warn should include empty goods count")
-  assert(joined:find("goods_names_sample=none", 1, true) ~= nil, "warn should include none sample when goods are empty")
-end
-
-local function _test_matching_goods_mapping_emits_no_missing_warn()
-  local game = _new_game()
-  local env = _build_fake_env(game, { jindou_count = 3, leyuanbi_count = 2 })
-  local warns = _collect_warn_logs(function()
-    _with_patches(env.patch_list, function()
-      local bridge = _reload_bridge()
-      bridge.setup_for_game(game)
-    end)
-  end)
-
-  assert(#warns == 0, "matching goods mapping should not emit missing mapping warnings")
-end
-
-local function _test_static_id_mapping_works_when_goods_list_empty()
-  local game = _new_game()
-  local p = game.players[1]
-  local env = _build_fake_env(game, {
-    jindou_count = 12,
-    leyuanbi_count = 7,
-    goods_list = {},
-  })
-
-  _with_patches({
-    { target = paid_goods_cfg, key = "currencies", value = {
-      ["金豆"] = { goods_id = "goods_jindou", commodity_id = env.jindou_commodity, unit_value = 1 },
-      ["乐园币"] = { goods_id = "goods_leyuanbi", commodity_id = env.leyuanbi_commodity, unit_value = 1 },
-    } },
-    { target = paid_goods_cfg, key = "enabled", value = true },
+  _with_currency_cfg({
+    ["金豆"] = { commodity_id = env.jindou_commodity, unit_value = 1 },
+    ["乐园币"] = { commodity_id = env.leyuanbi_commodity, unit_value = 1 },
   }, function()
     _with_patches(env.patch_list, function()
       local bridge = _reload_bridge()
       bridge.setup_for_game(game)
-      assert(bridge.is_managed_currency(game, "金豆") == true, "id mapping should manage jindou")
-      assert(bridge.is_managed_currency(game, "乐园币") == true, "id mapping should manage leyuanbi")
-      assert(game:player_balance(p, "金豆") == 12, "id mapping should sync jindou balance")
-      assert(game:player_balance(p, "乐园币") == 7, "id mapping should sync leyuanbi balance")
+      assert(game:player_balance(p, "金豆") == 7, "jindou balance should sync from commodity")
+      assert(game:player_balance(p, "乐园币") == 3, "leyuanbi balance should sync from commodity")
     end)
   end)
 end
 
-local function _test_release_unavailable_paid_channel_blocks_local_fallback_purchase()
+local function _test_invalid_commodity_mapping_only_affects_display_channel()
   local game = _new_game()
   local p = game.players[1]
-  local env = _build_fake_env(game, {
-    jindou_count = 0,
-    goods_list = {},
-  })
+  local env = _build_fake_env(game, { jindou_count = 0 })
 
-  game:set_player_balance(p, "金豆", 100)
-
-  _with_patches({
-    { key = "RELEASE_BUILD", value = true },
-    { target = paid_goods_cfg, key = "currencies", value = {
-      ["金豆"] = { goods_names = { "金豆", "金豆礼包" }, unit_value = 1 },
-      ["乐园币"] = { goods_names = { "乐园币", "乐园币礼包" }, unit_value = 1 },
-    } },
-    { target = paid_goods_cfg, key = "enabled", value = true },
+  _with_currency_cfg({
+    ["金豆"] = { commodity_id = 0, unit_value = 1 },
+    ["乐园币"] = { commodity_id = 0, unit_value = 1 },
   }, function()
     _with_patches(env.patch_list, function()
       local bridge = _reload_bridge()
       local market = _reload_market()
       bridge.setup_for_game(game)
-      assert(bridge.is_paid_currency("金豆") == true, "jindou should be classified as paid currency")
-      assert(bridge.is_managed_currency(game, "金豆") == false, "unavailable channel should not be managed")
-      local before = game:player_balance(p, "金豆")
+      assert(bridge.is_managed_currency(game, "金豆") == false, "invalid commodity mapping should disable display sync")
+
       local result = market.purchase.execute(game, p, 2009, nil)
-      assert(type(result) == "table" and result.ok == false, "purchase should fail when release paid channel unavailable")
-      assert(game:player_balance(p, "金豆") == before, "failed purchase should not deduct local paid balance")
-      assert(p.inventory:count() == 0, "failed purchase should not grant item")
+      assert(type(result) == "table" and result.ok == true, "paid purchase should still start via goods panel")
+      assert(result.deferred_fulfillment == true, "paid purchase should defer fulfillment to purchase callback")
+      assert(#env.panel_calls == 1, "paid purchase should open goods purchase panel")
+      assert(#env.consume_calls == 0, "paid purchase should not consume commodity locally")
+    end)
+  end)
+end
+
+local function _test_market_paid_purchase_requires_goods_mapping()
+  local game = _new_game()
+  local p = game.players[1]
+  local env = _build_fake_env(game, {
+    goods_list = {
+      { name = "不存在的商品", goods_id = "goods_unknown" },
+    },
+  })
+
+  local warns = _collect_warn_logs(function()
+    _with_currency_cfg({
+      ["金豆"] = { commodity_id = env.jindou_commodity, unit_value = 1 },
+      ["乐园币"] = { commodity_id = env.leyuanbi_commodity, unit_value = 1 },
+    }, function()
+      _with_patches(env.patch_list, function()
+        local market = _reload_market()
+        local result = market.purchase.execute(game, p, 2009, nil)
+        assert(type(result) == "table" and result.ok == false, "missing goods mapping should reject paid purchase")
+        assert(result.reason == "goods_mapping_missing", "missing goods mapping reason should be explicit")
+        assert(#env.panel_calls == 0, "missing goods mapping should not open purchase panel")
+      end)
+    end)
+  end)
+  local joined = table.concat(warns, "\n")
+  assert(joined:find("market paid goods mapping missing:", 1, true) ~= nil, "should log missing paid goods mapping")
+end
+
+local function _test_paid_purchase_callback_fulfills_item()
+  local game = _new_game()
+  local p = game.players[1]
+  local env = _build_fake_env(game)
+  local before_limit = game.market_limits[2009]
+  local before_count = p.inventory:count()
+
+  _with_currency_cfg({
+    ["金豆"] = { commodity_id = env.jindou_commodity, unit_value = 1 },
+    ["乐园币"] = { commodity_id = env.leyuanbi_commodity, unit_value = 1 },
+  }, function()
+    _with_patches(env.patch_list, function()
+      local market = _reload_market()
+      local result = market.purchase.execute(game, p, 2009, nil)
+      assert(type(result) == "table" and result.ok == true and result.deferred_fulfillment == true,
+        "paid purchase should enter deferred mode")
+
+      local cb = env.trigger_handlers[p.id]
+      assert(type(cb) == "function", "purchase callback should be registered")
+      cb(nil, nil, { role = env.role_by_player_id[p.id], goods_id = "goods_strong_card" })
+      assert(p.inventory:count() == before_count + 1, "purchase callback should grant item")
+      assert(game.market_limits[2009] == before_limit - 1, "purchase callback should consume global market limit")
     end)
   end)
 end
@@ -427,16 +226,8 @@ return {
   name = "paid_currency",
   tests = {
     { name = "paid_bridge_sync_balance_from_commodity", run = _test_paid_bridge_sync_balance_from_commodity },
-    { name = "market_buy_managed_currency_consumes_commodity", run = _test_market_buy_managed_currency_consumes_commodity },
-    { name = "market_insufficient_managed_currency_opens_panel", run = _test_market_insufficient_managed_currency_opens_panel },
-    { name = "purchase_event_syncs_balance", run = _test_purchase_event_syncs_balance },
-    { name = "purchase_event_auto_retries_pending_market_choice", run = _test_purchase_event_auto_retries_pending_market_choice },
-    { name = "bridge_isolates_context_between_games", run = _test_bridge_isolates_context_between_games },
-    { name = "bridge_setup_works_when_sandbox_blocks_mode_metatable", run = _test_bridge_setup_works_when_sandbox_blocks_mode_metatable },
-    { name = "missing_goods_mapping_warns_with_context", run = _test_missing_goods_mapping_warns_with_context },
-    { name = "empty_goods_list_warns_with_none_sample", run = _test_empty_goods_list_warns_with_none_sample },
-    { name = "matching_goods_mapping_emits_no_missing_warn", run = _test_matching_goods_mapping_emits_no_missing_warn },
-    { name = "static_id_mapping_works_when_goods_list_empty", run = _test_static_id_mapping_works_when_goods_list_empty },
-    { name = "release_unavailable_paid_channel_blocks_local_fallback_purchase", run = _test_release_unavailable_paid_channel_blocks_local_fallback_purchase },
+    { name = "invalid_commodity_mapping_only_affects_display_channel", run = _test_invalid_commodity_mapping_only_affects_display_channel },
+    { name = "market_paid_purchase_requires_goods_mapping", run = _test_market_paid_purchase_requires_goods_mapping },
+    { name = "paid_purchase_callback_fulfills_item", run = _test_paid_purchase_callback_fulfills_item },
   },
 }

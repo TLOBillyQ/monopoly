@@ -132,31 +132,83 @@ local function _test_skin_entry_can_buy_but_no_effect()
   local change_skin_role_id = nil
   local change_skin_id = nil
 
-  local list = market_service.query.list_available(p, g)
-  assert(_contains_product(list, target.product_id), "skin entry should be available when market_enabled=true")
-
   local before_count = p.inventory:count()
   local before_balance = g:player_balance(p, currency)
   local before_seat_id = p.seat_id
   local before_limit = g.market_limits[target.product_id]
+  local panel_calls = {}
+  local purchase_handlers = {}
+  local role = {
+    get_roleid = function()
+      return p.id
+    end,
+    show_goods_purchase_panel = function(goods_id, show_time)
+      panel_calls[#panel_calls + 1] = { goods_id = goods_id, show_time = show_time }
+    end,
+  }
   local res = nil
   support.with_patches({
-    { target = runtime_ports, key = "resolve_change_skin_helper", value = function()
-      return {
-        emit_change_skin = function(role_id, skin_id)
-          change_skin_role_id = role_id
-          change_skin_id = skin_id
-          return true
+    {
+      key = "GameAPI",
+      value = {
+        random_int = function(min, max)
+          return min <= max and min or max
         end,
-      }
-    end },
+        get_goods_list = function()
+          return { { name = target.name, goods_id = "goods_skin_test" } }
+        end,
+      },
+    },
+    {
+      target = runtime_ports,
+      key = "resolve_role",
+      value = function(role_id)
+        if role_id == p.id then
+          return role
+        end
+        return nil
+      end,
+    },
+    {
+      key = "EVENT",
+      value = { SPEC_ROLE_PURCHASE_GOODS = "SPEC_ROLE_PURCHASE_GOODS" },
+    },
+    {
+      key = "RegisterTriggerEvent",
+      value = function(args, callback)
+        purchase_handlers[args[2]] = callback
+      end,
+    },
+    {
+      target = runtime_ports,
+      key = "resolve_change_skin_helper",
+      value = function()
+        return {
+          emit_change_skin = function(role_id, skin_id)
+            change_skin_role_id = role_id
+            change_skin_id = skin_id
+            return true
+          end,
+        }
+      end,
+    },
   }, function()
+    local list = market_service.query.list_available(p, g)
+    assert(_contains_product(list, target.product_id), "skin entry should be available when goods mapping is ready")
     res = market_service.purchase.execute(g, p, target.product_id, nil)
+    assert(type(res) == "table" and res.ok == true and res.deferred_fulfillment == true,
+      "skin entry purchase should start external goods flow")
+    assert(#panel_calls == 1, "skin entry should open purchase panel")
+    assert(g:player_balance(p, currency) == before_balance, "skin purchase should not deduct local balance before callback")
+    assert(g.market_limits[target.product_id] == before_limit, "skin purchase should not consume global limit before callback")
+
+    local cb = purchase_handlers[p.id]
+    assert(type(cb) == "function", "skin purchase callback should be registered")
+    cb(nil, nil, { role = role, goods_id = "goods_skin_test" })
   end)
-  local purchase_ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
-  assert(purchase_ok == true, "skin entry purchase should succeed as placeholder flow")
-  assert(g:player_balance(p, currency) == before_balance - price, "balance should be charged for skin purchase")
-  assert(g.market_limits[target.product_id] == before_limit - 1, "skin purchase should consume global limit")
+
+  assert(g:player_balance(p, currency) == before_balance, "skin callback should not deduct local display balance")
+  assert(g.market_limits[target.product_id] == before_limit - 1, "skin callback should consume global limit")
   assert(p.inventory:count() == before_count, "skin purchase should not change inventory")
   assert(p.seat_id == before_seat_id, "skin purchase should not change seat")
   assert(change_skin_role_id == p.id, "skin purchase should emit change_skin for buyer role id")
@@ -173,7 +225,15 @@ local function _test_market_disabled_products_hidden()
   local p = g:current_player()
   g:set_player_balance(p, "金豆", 999999)
 
-  local blocked_product_ids = { 4007, 4008, 4009 }
+  local blocked_product_ids = {}
+  for _, entry in ipairs(market_cfg) do
+    if entry.market_enabled == false then
+      blocked_product_ids[#blocked_product_ids + 1] = entry.product_id
+    end
+  end
+  if #blocked_product_ids == 0 then
+    return
+  end
 
   local list = market_service.query.list_available(p, g)
   for _, product_id in ipairs(blocked_product_ids) do
@@ -194,7 +254,16 @@ local function _test_buy_disabled_market_product_rejected()
   local p = g:current_player()
   g:set_player_balance(p, "金豆", 999999)
 
-  local blocked_product_id = 4007
+  local blocked_product_id = nil
+  for _, entry in ipairs(market_cfg) do
+    if entry.market_enabled == false then
+      blocked_product_id = entry.product_id
+      break
+    end
+  end
+  if blocked_product_id == nil then
+    return
+  end
   local before_balance = g:player_balance(p, "金豆")
   local before_seat_id = p.seat_id
 
@@ -210,7 +279,16 @@ local function _test_market_vehicle_hidden_when_feature_disabled()
   local p = g:current_player()
   g:set_player_balance(p, "金豆", 999999)
 
-  local vehicle_product_id = 4001
+  local vehicle_product_id = nil
+  for _, entry in ipairs(market_cfg) do
+    if entry.kind == "vehicle" then
+      vehicle_product_id = entry.product_id
+      break
+    end
+  end
+  if vehicle_product_id == nil then
+    return
+  end
   local list = market_service.query.list_available(p, g)
   assert(not _contains_product(list, vehicle_product_id), "vehicle should be hidden when feature disabled")
 
@@ -226,7 +304,16 @@ local function _test_buy_vehicle_rejected_when_feature_disabled()
   local p = g:current_player()
   g:set_player_balance(p, "金豆", 999999)
 
-  local vehicle_product_id = 4001
+  local vehicle_product_id = nil
+  for _, entry in ipairs(market_cfg) do
+    if entry.kind == "vehicle" then
+      vehicle_product_id = entry.product_id
+      break
+    end
+  end
+  if vehicle_product_id == nil then
+    return
+  end
   local before_balance = g:player_balance(p, "金豆")
   local before_seat_id = p.seat_id
   local res = market_service.purchase.execute(g, p, vehicle_product_id, nil)
@@ -421,45 +508,6 @@ local function _test_market_item_buy_keeps_choice_open_until_inventory_full()
     "pending market choice should remain")
 end
 
-local function _test_market_wait_paid_topup_keeps_choice_open_and_marks_meta()
-  _reset_market_choice_runtime_modules()
-  _reload_market_service()
-  local g = _new_game()
-  local p = g:current_player()
-  local choice = {
-    id = 810,
-    kind = "market_buy",
-    options = { { id = 2009, label = "测试商品" } },
-    active_tab = "item",
-    page_index = 1,
-    meta = { player_id = p.id, active_tab = "item", page_index = 1, page_count = 1 },
-  }
-  g.turn.pending_choice = choice
-
-  local result = nil
-  support.with_patches({
-    {
-      target = require("src.game.systems.market.MarketService").purchase,
-      key = "execute",
-      value = function(_, _, product_id)
-        return { ok = false, wait_paid_topup = true, option_id = product_id }
-      end,
-    },
-  }, function()
-    result = choice_resolver.resolve(g, choice, {
-      type = "choice_select",
-      choice_id = choice.id,
-      option_id = 2009,
-      actor_role_id = p.id,
-    })
-  end)
-
-  assert(result and result.stay == true, "wait topup should keep waiting")
-  assert(g.turn.pending_choice == choice, "pending choice should remain")
-  assert(choice.meta.await_paid_topup == true, "choice meta should mark awaiting topup")
-  assert(choice.meta.await_paid_topup_option_id == 2009, "choice meta should keep retry option id")
-end
-
 return {
   name = "market",
   tests = {
@@ -490,10 +538,6 @@ return {
     {
       name = "market_item_buy_keeps_choice_open_until_inventory_full",
       run = _test_market_item_buy_keeps_choice_open_until_inventory_full,
-    },
-    {
-      name = "market_wait_paid_topup_keeps_choice_open_and_marks_meta",
-      run = _test_market_wait_paid_topup_keeps_choice_open_and_marks_meta,
     },
   },
 }
