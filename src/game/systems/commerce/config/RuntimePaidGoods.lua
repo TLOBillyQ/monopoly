@@ -1,13 +1,16 @@
 local paid_goods = {
   enabled = true,
-  panel_show_time = 10.0,
+  -- 货币配置仅用于展示同步（get_commodity_count -> 玩家余额显示）。
+  -- 黑市真实购买链路走 show_goods_purchase_panel + SPEC_ROLE_PURCHASE_GOODS。
   currencies = {
     ["金豆"] = {
-      goods_names = { "金豆", "金豆礼包" },
+      -- TODO: 填写线上金豆 commodity_id
+      commodity_id = 0,
       unit_value = 1,
     },
     ["乐园币"] = {
-      goods_names = { "乐园币", "乐园币礼包" },
+      -- TODO: 填写线上乐园币 commodity_id
+      commodity_id = 0,
       unit_value = 1,
     },
   },

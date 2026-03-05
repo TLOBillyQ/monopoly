@@ -1,5 +1,6 @@
 local inventory = require("src.game.systems.items.ItemInventory")
 local context = require("src.game.systems.market.service.Context")
+local purchase = require("src.game.systems.market.service.Purchase")
 
 local eligibility = {}
 
@@ -19,10 +20,9 @@ function eligibility.can_buy_entry(game, player, entry)
   end
   local price = context.entry_price(entry)
   local currency = context.entry_currency(entry)
-  if context.is_paid_currency(currency)
-      and context.should_enforce_paid_channel()
-      and not context.is_paid_channel_ready(game, currency) then
-    return false
+  if context.is_paid_currency(currency) then
+    local ok = purchase.can_start_external_purchase(game, player, entry)
+    return ok == true
   end
   context.sync_managed_balance(game, player, currency)
   return game:player_balance(player, currency) >= price

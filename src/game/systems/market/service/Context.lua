@@ -96,39 +96,12 @@ function context.is_paid_currency(currency)
   return paid_currency_bridge.is_paid_currency(currency)
 end
 
-function context.is_paid_channel_ready(game, currency)
-  return paid_currency_bridge.is_currency_channel_ready(game, currency)
-end
-
-function context.should_enforce_paid_channel()
-  return paid_currency_bridge.is_channel_enforced()
-end
-
-function context.unavailable_paid_reason(game, currency)
-  return paid_currency_bridge.unavailable_reason(game, currency)
-end
-
 function context.try_charge_player(game, player, currency, price)
-  if context.is_paid_currency(currency)
-      and context.should_enforce_paid_channel()
-      and not context.is_paid_channel_ready(game, currency) then
-    return false
-  end
   if paid_currency_bridge.is_managed_currency(game, currency) then
     return paid_currency_bridge.consume_currency(game, player, currency, price)
   end
   game:deduct_player_balance(player, currency, price)
   return true
-end
-
-function context.open_purchase_panel_if_needed(game, player, currency)
-  if context.should_enforce_paid_channel() and not context.is_paid_channel_ready(game, currency) then
-    return false
-  end
-  if not paid_currency_bridge.is_managed_currency(game, currency) then
-    return false
-  end
-  return paid_currency_bridge.open_purchase_panel(game, player, currency)
 end
 
 function context.consume_global_limit(game, product_id)

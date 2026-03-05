@@ -23,13 +23,7 @@ function market_choice_handler.build(helpers)
     local entry = market_context.entry_by_id(product_id)
     assert(entry ~= nil, "missing market entry: " .. tostring(product_id))
     local res = market_service.purchase.execute(game, player, product_id, nil)
-    if type(res) == "table" and res.wait_paid_topup == true then
-      choice.meta = choice.meta or {}
-      choice.meta.await_paid_topup = true
-      choice.meta.await_paid_topup_option_id = product_id
-      return { stay = true }
-    end
-    if entry.kind == "item" and type(res) == "table" and res.ok == true then
+    if entry.kind == "item" and type(res) == "table" and res.ok == true and res.fulfilled_now == true then
       if res.inventory_full_after == true then
         intent_dispatcher.dispatch(game, {
           kind = "push_popup",
