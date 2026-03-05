@@ -106,8 +106,8 @@ $TargetPaths = @()
 if (-not $TargetPath) {
     if ($IsWindows) {
         $TargetPaths = @(
-            "C:\\Users\\Lzx_8\\Desktop\\dev\\LuaSource_monopoly",
-            "C:\\Users\\Lzx_8\\Desktop\\dev\\LuaSource_monopoly_1"
+            "C:\\Users\\Lzx_8\\Desktop\\dev\\LuaSource_大富翁-开发",
+            "C:\\Users\\Lzx_8\\Desktop\\dev\\LuaSource_大富翁-发布"
         )
     } elseif ($IsMacOS) {
         $TargetPaths = @("/Users/billyq/Documents/eggy/LuaSource_monopoly")
