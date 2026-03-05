@@ -2,6 +2,9 @@ local support = require("TestSupport")
 local _new_game = support.new_game
 local market_cfg = require("Config.Generated.Market")
 local runtime_ports = require("src.core.RuntimePorts")
+local monopoly_event = require("src.core.events.MonopolyEvents")
+local runtime_event_bridge = require("src.core.RuntimeEventBridge")
+local choice_resolver = require("src.game.systems.choices.ChoiceResolver")
 
 local function _contains_product(list, product_id)
   for _, entry in ipairs(list) do
@@ -286,6 +289,108 @@ local function _test_market_tab_select_navigation_applies_with_unbuyable_tab()
     "navigation should keep visible options on skin tab")
 end
 
+local function _test_market_tab_select_empty_tab_keeps_choice_and_emits_buy_failed_tip_event()
+  local market_service = require("src.game.systems.market.MarketService")
+  local g = _new_game()
+  local p = g:current_player()
+
+  local skin_entries = {}
+  for _, entry in ipairs(market_cfg) do
+    if entry.kind == "skin" then
+      skin_entries[#skin_entries + 1] = {
+        entry = entry,
+        market_enabled = entry.market_enabled,
+      }
+      entry.market_enabled = false
+    end
+  end
+  assert(#skin_entries > 0, "test requires at least one skin market entry")
+
+  local emitted = {}
+  local ok, err = pcall(function()
+    local spec = market_service.choice.build(p, g, { active_tab = "item" })
+    assert(type(spec) == "table" and spec.kind == "market_buy", "initial market choice should be built")
+
+    local pending_choice = {
+      id = 1001,
+      kind = spec.kind,
+      title = spec.title,
+      body_lines = spec.body_lines,
+      options = spec.options,
+      allow_cancel = spec.allow_cancel,
+      cancel_label = spec.cancel_label,
+      active_tab = spec.active_tab,
+      page_index = spec.page_index,
+      page_count = spec.page_count,
+      meta = spec.meta,
+    }
+
+    support.with_patches({
+      {
+        target = runtime_event_bridge,
+        key = "emit_custom_event",
+        value = function(kind, payload)
+          emitted[#emitted + 1] = { kind = kind, payload = payload }
+        end,
+      },
+    }, function()
+      local applied = market_service.choice.apply_navigation(g, pending_choice, {
+        type = "market_tab_select",
+        tab = "skin",
+      })
+      assert(applied == true, "empty target tab should still apply navigation")
+      assert(pending_choice.active_tab == "skin", "empty target tab should still switch active tab")
+      assert(type(pending_choice.options) == "table" and #pending_choice.options == 0,
+        "empty target tab should refresh options to empty list")
+    end)
+  end)
+
+  for _, snapshot in ipairs(skin_entries) do
+    snapshot.entry.market_enabled = snapshot.market_enabled
+  end
+
+  if not ok then
+    error(err)
+  end
+  assert(#emitted >= 1, "empty tab navigation should emit feedback event")
+  local last = emitted[#emitted]
+  assert(last.kind == monopoly_event.market.buy_failed, "empty tab feedback should reuse market buy_failed event")
+  assert(last.payload and last.payload.reason == "empty_tab", "empty tab feedback reason should be empty_tab")
+end
+
+local function _test_market_buy_failed_resolves_and_clears_pending_choice()
+  local g = _new_game()
+  local p = g:current_player()
+  local choice = {
+    id = 808,
+    kind = "market_buy",
+    options = { { id = 2001, label = "测试商品" } },
+    meta = { player_id = p.id },
+  }
+  g.turn.pending_choice = choice
+
+  local result = nil
+  support.with_patches({
+    {
+      target = require("src.game.systems.market.MarketService").purchase,
+      key = "execute",
+      value = function()
+        return { ok = false }
+      end,
+    },
+  }, function()
+    result = choice_resolver.resolve(g, choice, {
+      type = "choice_select",
+      choice_id = choice.id,
+      option_id = 2001,
+      actor_role_id = p.id,
+    })
+  end)
+
+  assert(g.turn.pending_choice == nil, "market buy failed should clear pending choice")
+  assert(result and result.stay == false, "market buy failed should resolve without stay")
+end
+
 return {
   name = "market",
   tests = {
@@ -304,6 +409,14 @@ return {
     {
       name = "market_tab_select_navigation_applies_with_unbuyable_tab",
       run = _test_market_tab_select_navigation_applies_with_unbuyable_tab,
+    },
+    {
+      name = "market_tab_select_empty_tab_keeps_choice_and_emits_buy_failed_tip_event",
+      run = _test_market_tab_select_empty_tab_keeps_choice_and_emits_buy_failed_tip_event,
+    },
+    {
+      name = "market_buy_failed_resolves_and_clears_pending_choice",
+      run = _test_market_buy_failed_resolves_and_clears_pending_choice,
     },
   },
 }

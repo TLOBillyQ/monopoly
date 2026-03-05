@@ -48,14 +48,15 @@ function modal_presenter.open_choice_modal(state, choice, market)
     logger.warn("open_choice_modal missing choice id")
     return
   end
+  local screen_key = choice_common.resolve_screen_key(choice)
   local choice_id = choice.id
-  if state.pending_choice_id == choice_id
+  if screen_key ~= "market"
+      and state.pending_choice_id == choice_id
       and (state.ui.choice_active or state.ui.market_active) then
     return
   end
   state.ui_dirty = true
 
-  local screen_key = choice_common.resolve_screen_key(choice)
   if screen_key == "market" then
     target_choice_effects.leave(state, "open_market")
     canvas_store.mark_dirty(state, "market")

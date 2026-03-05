@@ -1,6 +1,8 @@
 local context = require("src.game.systems.market.service.Context")
 local eligibility = require("src.game.systems.market.service.Eligibility")
 local number_utils = require("src.core.NumberUtils")
+local monopoly_event = require("src.core.events.MonopolyEvents")
+local logger = require("src.core.Logger")
 
 local choice = {}
 local PAGE_SIZE = 10
@@ -9,6 +11,7 @@ local TAB_SKIN = "skin"
 local TAB_VEHICLE = "vehicle"
 local VEHICLE_TAB_ENABLED = false
 local TABS = { TAB_ITEM, TAB_SKIN, TAB_VEHICLE }
+local _emit_event = monopoly_event.emit
 
 local function _contains(list, value)
   for _, v in ipairs(list) do
@@ -112,17 +115,20 @@ end
 function choice.build(player, game, state)
   state = state or {}
   local active_tab = _normalize_tab(state.active_tab)
-  local visible = _build_tab_entries(player, game, active_tab)
+  local visible, buyable = _build_tab_entries(player, game, active_tab)
   local page_count = _resolve_page_count(#visible, PAGE_SIZE)
   local page_index = _clamp_page(state.page_index, page_count)
   local body_lines, options = _build_options_for_page(visible, page_index, PAGE_SIZE)
-
-  if #visible == 0 then
-    return nil, {
-      kind = "push_popup",
-      payload = { title = "黑市", body = player.name .. " 暂无可展示商品" },
-    }
-  end
+  logger.warn(
+    "[MarketDebug] choice_build",
+    "player_id=" .. tostring(player and player.id),
+    "active_tab=" .. tostring(active_tab),
+    "visible_count=" .. tostring(#visible),
+    "buyable_count=" .. tostring(#buyable),
+    "page_index=" .. tostring(page_index),
+    "page_count=" .. tostring(page_count),
+    "options_count=" .. tostring(#options)
+  )
 
   return {
     kind = "market_buy",
@@ -145,15 +151,18 @@ end
 
 function choice.apply_navigation(game, pending_choice, action)
   if not game or not pending_choice or pending_choice.kind ~= "market_buy" then
+    logger.warn("[MarketDebug] apply_navigation rejected: invalid pending_choice")
     return false
   end
   local meta = pending_choice.meta or {}
   local player_id = number_utils.to_integer(meta.player_id)
   if not player_id then
+    logger.warn("[MarketDebug] apply_navigation rejected: invalid meta.player_id")
     return false
   end
   local player = game:find_player_by_id(player_id)
   if not player then
+    logger.warn("[MarketDebug] apply_navigation rejected: player not found", tostring(player_id))
     return false
   end
   local active_tab = _normalize_tab(meta.active_tab)
@@ -166,12 +175,32 @@ function choice.apply_navigation(game, pending_choice, action)
   elseif action.type == "market_page_next" then
     page_index = page_index + 1
   end
+  logger.warn(
+    "[MarketDebug] apply_navigation begin",
+    "action_type=" .. tostring(action.type),
+    "requested_tab=" .. tostring(action.tab),
+    "resolved_tab=" .. tostring(active_tab),
+    "requested_page=" .. tostring(page_index)
+  )
   local spec = choice.build(player, game, {
     active_tab = active_tab,
     page_index = page_index,
   })
   if not spec then
+    logger.warn("[MarketDebug] apply_navigation rejected: build returned nil")
     return false
+  end
+  if #spec.options == 0 then
+    logger.warn(
+      "[MarketDebug] apply_navigation empty_options",
+      "player_id=" .. tostring(player.id),
+      "active_tab=" .. tostring(spec.active_tab)
+    )
+    _emit_event(monopoly_event.market.buy_failed, {
+      player = player,
+      reason = "empty_tab",
+      popup = { title = "黑市", body = "当前页签暂无可购买项" },
+    })
   end
   pending_choice.title = spec.title
   pending_choice.body_lines = spec.body_lines
@@ -183,6 +212,13 @@ function choice.apply_navigation(game, pending_choice, action)
   pending_choice.page_count = spec.page_count
   pending_choice.meta = spec.meta
   _mark_choice_dirty(game)
+  logger.warn(
+    "[MarketDebug] apply_navigation done",
+    "active_tab=" .. tostring(pending_choice.active_tab),
+    "page_index=" .. tostring(pending_choice.page_index),
+    "page_count=" .. tostring(pending_choice.page_count),
+    "options_count=" .. tostring(pending_choice.options and #pending_choice.options or 0)
+  )
   return true
 end
 

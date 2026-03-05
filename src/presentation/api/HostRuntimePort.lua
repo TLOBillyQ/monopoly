@@ -1,5 +1,6 @@
 local runtime_ports = require("src.core.RuntimePorts")
 local runtime_event_bridge = require("src.core.RuntimeEventBridge")
+local logger = require("src.core.Logger")
 local role_resolver = require("src.presentation.api.host_runtime.RoleResolver")
 local unit_lifecycle = require("src.presentation.api.host_runtime.UnitLifecycle")
 local scene_ui = require("src.presentation.api.host_runtime.SceneUI")
@@ -14,11 +15,7 @@ function host_runtime_port.schedule(delay, fn)
 end
 
 function host_runtime_port.show_tips(text, duration)
-  if GlobalAPI and type(GlobalAPI.show_tips) == "function" then
-    GlobalAPI.show_tips(text, duration)
-    return true
-  end
-  return false
+  return logger.show_tip(text, duration)
 end
 
 function host_runtime_port.register_custom_event(event_name, handler)

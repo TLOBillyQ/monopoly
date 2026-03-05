@@ -23,7 +23,10 @@ function market_choice_handler.build(helpers)
     if type(res) == "table" then
       local intent = res.intent or {}
       intent_dispatcher.dispatch(game, intent)
-      return { stay = intent.kind == "need_choice" }
+      if intent.kind == "need_choice" then
+        return { stay = true }
+      end
+      return finish_choice(game, false)
     end
     return finish_choice(game, false)
   end

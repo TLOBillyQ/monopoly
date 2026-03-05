@@ -9,10 +9,9 @@ local function _load_fresh_handlers()
   return require("src.presentation.api.UIEventHandlers")
 end
 
-local function _test_market_buy_failed_shows_tip_for_at_least_one_second_and_pushes_popup()
+local function _test_market_buy_failed_shows_tip_for_three_seconds_without_popup()
   local handlers = {}
   local tips = {}
-  local popups = {}
 
   _with_patches({
     {
@@ -33,12 +32,7 @@ local function _test_market_buy_failed_shows_tip_for_at_least_one_second_and_pus
     },
   }, function()
     local event_handlers = _load_fresh_handlers()
-    local state = {
-      push_popup = function(_, payload)
-        popups[#popups + 1] = payload
-      end,
-    }
-    event_handlers.install(nil, nil, state)
+    event_handlers.install(nil, nil, {})
     local handler = handlers[monopoly_event.market.buy_failed]
     assert(type(handler) == "function", "buy_failed handler should be registered")
     handler(nil, nil, {
@@ -52,9 +46,7 @@ local function _test_market_buy_failed_shows_tip_for_at_least_one_second_and_pus
   assert(#tips == 1, "buy_failed should emit exactly one tip")
   assert(tips[1].text == "余额不足", "tip text should use popup body when available")
   assert(number_utils.is_numeric(tips[1].duration), "tip duration should be numeric")
-  assert(tips[1].duration >= 1.0, "tip duration should be at least 1 second")
-  assert(#popups == 1, "buy_failed should still push popup")
-  assert(popups[1].body == "余额不足", "popup body should stay unchanged")
+  assert(tips[1].duration == 3.0, "tip duration should be exactly 3 seconds")
 end
 
 local function _test_market_buy_failed_without_popup_body_uses_fallback_tip()
@@ -91,15 +83,15 @@ local function _test_market_buy_failed_without_popup_body_uses_fallback_tip()
   assert(#tips == 1, "fallback buy_failed should still emit tip")
   assert(tips[1].text == "黑市购买失败", "fallback tip should use default text")
   assert(number_utils.is_numeric(tips[1].duration), "fallback duration should be numeric")
-  assert(tips[1].duration >= 1.0, "fallback tip duration should be at least 1 second")
+  assert(tips[1].duration == 3.0, "fallback tip duration should be exactly 3 seconds")
 end
 
 return {
   name = "presentation_ui.event_handlers",
   tests = {
     {
-      name = "market_buy_failed_shows_tip_for_at_least_one_second_and_pushes_popup",
-      run = _test_market_buy_failed_shows_tip_for_at_least_one_second_and_pushes_popup,
+      name = "market_buy_failed_shows_tip_for_three_seconds_without_popup",
+      run = _test_market_buy_failed_shows_tip_for_three_seconds_without_popup,
     },
     {
       name = "market_buy_failed_without_popup_body_uses_fallback_tip",

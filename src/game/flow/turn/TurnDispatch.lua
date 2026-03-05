@@ -176,16 +176,39 @@ local function _dispatch_action(game, state, action, opts, dispatch_ctx)
     end
     return { status = "applied" }
   elseif action.type == "market_page_prev" or action.type == "market_page_next" or action.type == "market_tab_select" then
-    local choice = state.pending_choice
+    local turn_choice = game and game.turn and game.turn.pending_choice or nil
+    local choice = turn_choice or state.pending_choice
+    logger.warn(
+      "[MarketDebug] dispatch_market_nav received",
+      "action_type=" .. tostring(action.type),
+      "choice_id=" .. tostring(action.choice_id),
+      "tab=" .. tostring(action.tab),
+      "pending_choice_id=" .. tostring(choice and choice.id),
+      "pending_kind=" .. tostring(choice and choice.kind),
+      "choice_source=" .. tostring(turn_choice and "game.turn.pending_choice" or "state.pending_choice")
+    )
     if not choice or choice.kind ~= "market_buy" then
+      logger.warn("[MarketDebug] dispatch_market_nav rejected: pending_choice missing or kind not market_buy")
       return { status = "rejected" }
     end
     if not validator.validate_choice_action(game, action, choice) then
+      logger.warn("[MarketDebug] dispatch_market_nav rejected: validate_choice_action failed")
       return { status = "rejected" }
     end
     if market_service.choice.apply_navigation(game, choice, action) then
+      state.pending_choice = choice
+      state.pending_choice_id = choice.id
+      state.pending_choice_elapsed = 0
+      logger.warn(
+        "[MarketDebug] dispatch_market_nav applied",
+        "active_tab=" .. tostring(choice.active_tab),
+        "page_index=" .. tostring(choice.page_index),
+        "page_count=" .. tostring(choice.page_count),
+        "options_count=" .. tostring(choice.options and #choice.options or 0)
+      )
       return { status = "applied" }
     end
+    logger.warn("[MarketDebug] dispatch_market_nav rejected: apply_navigation failed")
     return { status = "rejected" }
   end
   return { status = "rejected" }

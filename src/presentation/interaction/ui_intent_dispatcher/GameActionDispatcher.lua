@@ -85,6 +85,12 @@ function game_action_dispatcher.dispatch(state, game, intent, opts, action_port,
       logger.warn(intent_type .. " missing choice_id")
       return true
     end
+    logger.warn(
+      "[MarketDebug] action_dispatch",
+      "intent_type=" .. tostring(intent_type),
+      "choice_id=" .. tostring(intent.choice_id),
+      "actor_role_id=" .. tostring(intent.actor_role_id)
+    )
     action_port.dispatch_action(game, state, {
       type = intent_type,
       choice_id = intent.choice_id,
@@ -98,6 +104,13 @@ function game_action_dispatcher.dispatch(state, game, intent, opts, action_port,
       logger.warn("market_tab_select missing payload:", tostring(intent.choice_id), tostring(intent.tab))
       return true
     end
+    logger.warn(
+      "[MarketDebug] action_dispatch",
+      "intent_type=market_tab_select",
+      "choice_id=" .. tostring(intent.choice_id),
+      "tab=" .. tostring(intent.tab),
+      "actor_role_id=" .. tostring(intent.actor_role_id)
+    )
     action_port.dispatch_action(game, state, {
       type = "market_tab_select",
       choice_id = intent.choice_id,

@@ -3443,8 +3443,11 @@ local function _test_market_view_hides_market_disabled_entries()
     selected_option_id = hidden_entry.product_id,
   })
 
-  _assert_eq(reopened, false, "market panel should close when all options are disabled")
-  _assert_eq(state.ui.market_active, false, "market panel should be inactive after filtering all options")
+  _assert_eq(reopened, true, "market panel should stay open when all options are filtered out")
+  _assert_eq(state.ui.market_active, true, "market panel should remain active on empty filtered tab")
+  _assert_eq(visible[market_layout.item_labels[1]], false, "empty filtered tab should hide first slot label")
+  _assert_eq(visible[market_layout.item_buttons[1]], false, "empty filtered tab should hide first slot button")
+  _assert_eq(state.pending_choice_selected_option_id, nil, "empty filtered tab should clear selected option")
 end
 
 local function _test_market_view_unbuyable_option_is_clickable()
@@ -3482,6 +3485,59 @@ local function _test_market_view_unbuyable_option_is_clickable()
 
   _assert_eq(opened, true, "market panel should open with unbuyable options")
   _assert_eq(touch[market_layout.item_buttons[1]], true, "unbuyable option button should still be clickable")
+end
+
+local function _test_market_view_invalid_selected_option_falls_back_to_current_visible_option()
+  local entry_a = nil
+  local entry_b = nil
+  for _, entry in ipairs(market_cfg) do
+    if entry.market_enabled ~= false then
+      if entry_a == nil then
+        entry_a = entry
+      elseif entry_b == nil and entry.product_id ~= entry_a.product_id then
+        entry_b = entry
+      end
+    end
+    if entry_a and entry_b then
+      break
+    end
+  end
+  assert(entry_a ~= nil and entry_b ~= nil, "missing visible market entries for selected fallback test")
+
+  local state = {
+    ui_refs = {
+      ["Empty"] = 9201,
+      ["lv1"] = 9202,
+      ["lv2"] = 9203,
+      ["lv3"] = 9204,
+      [tostring(entry_a.product_id)] = 9205,
+      [tostring(entry_b.product_id)] = 9206,
+    },
+    pending_choice_selected_option_id = nil,
+    ui = {
+      market_active = false,
+      set_label = function() end,
+      set_visible = function() end,
+      set_touch_enabled = function() end,
+      query_node = function()
+        return {}
+      end,
+    },
+  }
+
+  local opened = market_view.refresh_market(state, {
+    choice_id = 13,
+    options = {
+      { id = entry_a.product_id, label = entry_a.name, can_buy = true },
+      { id = entry_b.product_id, label = entry_b.name, can_buy = true },
+    },
+    allow_cancel = true,
+    selected_option_id = 999999,
+  })
+
+  _assert_eq(opened, true, "market panel should open")
+  _assert_eq(state.pending_choice_selected_option_id, entry_a.product_id,
+    "invalid selected option should fallback to first visible buyable option")
 end
 
 local function _test_market_view_page_arrows_visibility_follows_page_count()
@@ -3540,6 +3596,53 @@ local function _test_market_view_page_arrows_visibility_follows_page_count()
   _assert_eq(visible[market_layout.page_next], true, "page_next should be visible when multiple pages")
   _assert_eq(touch[market_layout.page_prev], false, "page_prev should be disabled on first page")
   _assert_eq(touch[market_layout.page_next], true, "page_next should be enabled when next page exists")
+end
+
+local function _test_modal_presenter_market_same_choice_id_still_refreshes_market_panel()
+  local modal_presenter = require("src.presentation.ui.UIModalPresenter")
+  local market_presenter = require("src.presentation.canvas.market.presenter")
+  local target_choice_effects_local = require("src.presentation.render.TargetChoiceEffects")
+  local canvas_store = require("src.presentation.canvas_runtime.CanvasStore")
+
+  local opened = 0
+  local state = {
+    pending_choice_id = 21,
+    ui_dirty = false,
+    ui = ui_view.build_ui_state(),
+  }
+  state.ui.market_active = true
+  state.ui.choice_active = false
+  local choice = {
+    id = 21,
+    kind = "market_buy",
+    title = "黑市",
+    options = {
+      { id = 2001, label = "A", can_buy = true },
+    },
+    allow_cancel = true,
+    cancel_label = "取消",
+  }
+  local market = {
+    choice_id = 21,
+    options = choice.options,
+    allow_cancel = true,
+    selected_option_id = 2001,
+    active_tab = "skin",
+    page_index = 1,
+    page_count = 1,
+  }
+
+  _with_patches({
+    { target = market_presenter, key = "open", value = function()
+      opened = opened + 1
+    end },
+    { target = target_choice_effects_local, key = "leave", value = function() end },
+    { target = canvas_store, key = "mark_dirty", value = function() end },
+  }, function()
+    modal_presenter.open_choice_modal(state, choice, market)
+  end)
+
+  _assert_eq(opened, 1, "market choice with same id should still refresh market presenter")
 end
 
 local function _test_ui_event_router_market_cancel_button_dispatches_choice_cancel()
@@ -5599,6 +5702,7 @@ return {
   _test_market_selection_updates_icon_without_resize,
   _test_market_close_resets_icon_without_resize,
   _test_market_view_hides_market_disabled_entries,
+  _test_market_view_invalid_selected_option_falls_back_to_current_visible_option,
   _test_item_slot_uses_keep_size_path,
   _test_item_slot_refresh_shows_only_playable_outlines,
   _test_item_slot_intents_include_outline_nodes,
@@ -5648,5 +5752,6 @@ return {
   _test_ui_event_state_resolve_debug_enabled_supports_mixed_role_id_keys,
   _test_market_view_unbuyable_option_is_clickable,
   _test_market_view_page_arrows_visibility_follows_page_count,
+  _test_modal_presenter_market_same_choice_id_still_refreshes_market_panel,
   _test_ui_event_router_market_cancel_button_dispatches_choice_cancel,
 }

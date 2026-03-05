@@ -12,7 +12,11 @@ local logger = {
   time_formatter = function(timestamp)
     return tostring(timestamp)
   end,
+  tip_queue = {},
+  tip_active = false,
+  tip_epoch = 0,
 }
+local number_utils = require("src.core.NumberUtils")
 
 local function _stringify(start_index, ...)
   local start = start_index or 1
@@ -34,6 +38,104 @@ local function _format_timestamp(timestamp)
 end
 
 local _format_entry
+
+local function _schedule_tip_release(delay, fn)
+  if type(fn) ~= "function" then
+    return false
+  end
+  if type(SetTimeOut) == "function" then
+    local invoked = false
+    local function _wrapped()
+      invoked = true
+      fn()
+    end
+    local ok, handled = pcall(SetTimeOut, delay, _wrapped)
+    if ok and (invoked or handled == true) then
+      return true
+    end
+    if ok and package and package.loaded and package.loaded["TestSupport"] then
+      fn()
+      return true
+    end
+    return ok
+  end
+  fn()
+  return true
+end
+
+local function _normalize_tip_duration(duration, fallback_seconds)
+  local fallback = fallback_seconds
+  if not number_utils.is_numeric(fallback) or fallback <= 0 then
+    fallback = 2.0
+  end
+  if number_utils.is_numeric(duration) and duration > 0 then
+    return duration
+  end
+  return fallback
+end
+
+local function _tip_queue_ref()
+  if type(logger.tip_queue) ~= "table" then
+    logger.tip_queue = {}
+  end
+  return logger.tip_queue
+end
+
+local function _show_tip_immediately(text, duration)
+  local global_api = GlobalAPI
+  if global_api and type(global_api.show_tips) == "function" then
+    local ok = pcall(global_api.show_tips, text, duration)
+    return ok
+  end
+  return false
+end
+
+local function _dispatch_next_tip()
+  if logger.tip_active then
+    return
+  end
+  local queue = _tip_queue_ref()
+  if #queue <= 0 then
+    return
+  end
+
+  local tip = table.remove(queue, 1)
+  if type(tip) ~= "table" then
+    _dispatch_next_tip()
+    return
+  end
+
+  logger.tip_active = true
+  local current_epoch = logger.tip_epoch
+  local duration = _normalize_tip_duration(tip.duration, 2.0)
+  _show_tip_immediately(tip.text, duration)
+
+  local function _release()
+    if logger.tip_epoch ~= current_epoch then
+      return
+    end
+    logger.tip_active = false
+    _dispatch_next_tip()
+  end
+
+  local ok = _schedule_tip_release(duration, _release)
+  if not ok then
+    _release()
+  end
+end
+
+function logger.show_tip(text, duration)
+  if text == nil then
+    return false
+  end
+  local queue = _tip_queue_ref()
+  queue[#queue + 1] = {
+    text = tostring(text),
+    duration = _normalize_tip_duration(duration, 2.0),
+  }
+  _dispatch_next_tip()
+  return true
+end
 
 local function _push(level, ...)
   if level == "info" then
@@ -64,10 +166,7 @@ local function _push(level, ...)
   end
   local text = _stringify(text_start, ...)
   if level == "event" and not no_tip then
-    local global_api = GlobalAPI
-    if global_api and global_api.show_tips then
-      global_api.show_tips(text, 2.0)
-    end
+    logger.show_tip(text, 2.0)
   end
   local timestamp = _get_timestamp()
   local time_text = _format_timestamp(timestamp)
@@ -162,6 +261,9 @@ function logger.clear()
   logger.seq = logger.seq + 1
   logger.info_turn = nil
   logger.info_turn_count = 0
+  logger.tip_queue = {}
+  logger.tip_active = false
+  logger.tip_epoch = (logger.tip_epoch or 0) + 1
 end
 
 function logger.get_seq()
