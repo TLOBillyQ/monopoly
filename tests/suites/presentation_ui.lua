@@ -838,6 +838,7 @@ local function _test_ui_panel_clamps_negative_assets_to_zero()
 
   local row = statuses and statuses[1] or nil
   assert(row ~= nil, "panel row should exist")
+  _assert_eq(row.cash_value, 0, "negative cash_value should normalize as zero")
   _assert_eq(row.cash, "现金: 0", "negative cash should render as zero")
   _assert_eq(row.total_assets, "总资产: 0", "negative total assets should render as zero")
 end
@@ -5632,6 +5633,213 @@ local function _test_panel_avatar_uses_native_size_path()
   _assert_eq(client_role, nil, "panel presenter should restore client_role to nil")
 end
 
+local function _new_cash_delta_presenter_env(opts)
+  opts = opts or {}
+  local presenter = require("src.presentation.ui.UIPanelPresenter")
+  local number_utils = require("src.core.NumberUtils")
+  local state = {
+    ui_refs = { ["Empty"] = "EMPTY_AVATAR" },
+    ui = {
+      item_slots = {},
+      base_hidden_nodes = {},
+      base_hidden_labels = {},
+      auto_control_nodes = { "始终显示_托管按钮", "始终显示_文本" },
+      item_slot_item_ids_by_role = {},
+      labels = {},
+      visible = {},
+      set_label = function(self, name, text)
+        if opts.missing_delta_node and string.match(name, "^基础%-玩家%d消耗金币显示$") then
+          error("missing node")
+        end
+        self.labels[name] = text
+      end,
+      set_visible = function(self, name, value)
+        if opts.missing_delta_node and string.match(name, "^基础%-玩家%d消耗金币显示$") then
+          error("missing node")
+        end
+        self.visible[name] = value
+      end,
+      set_touch_enabled = function() end,
+      query_node = function()
+        return {}
+      end,
+    },
+  }
+  local ui_model = {
+    current_player_id = 1,
+    auto_enabled_by_player = { [1] = false },
+    board = { players = {} },
+    item_slots_by_player = {},
+    panel = {
+      turn_label = "倒计时:0",
+      auto_label = "自动：关",
+      auto_label_by_player = { [1] = "自动：关" },
+      no_action_visible = false,
+      no_action_text = "",
+      player_rows = {
+        { name = "P1", avatar = nil, cash_value = 0, cash = "现金: 0", land_count = "", total_assets = "" },
+        { name = "P2", avatar = nil, cash_value = nil, cash = "", land_count = "", total_assets = "" },
+        { name = "P3", avatar = nil, cash_value = nil, cash = "", land_count = "", total_assets = "" },
+        { name = "P4", avatar = nil, cash_value = nil, cash = "", land_count = "", total_assets = "" },
+      },
+    },
+  }
+  local runtime = {
+    set_client_role = function() end,
+    resolve_role_id = function() return nil end,
+    for_each_role_or_global = function(fn)
+      fn(nil)
+    end,
+    query_node = function()
+      return {}
+    end,
+    set_node_texture_native_size = function() end,
+  }
+  local function set_cash(index, value)
+    local row = ui_model.panel.player_rows[index]
+    row.cash_value = value
+    if value == nil then
+      row.cash = ""
+    else
+      row.cash = "现金: " .. number_utils.format_integer_part(value)
+    end
+  end
+  local function refresh()
+    presenter.refresh(state, ui_model, {
+      runtime = runtime,
+      refresh_item_slots = function() end,
+    })
+  end
+  return {
+    state = state,
+    ui_model = ui_model,
+    refresh = refresh,
+    set_cash = set_cash,
+  }
+end
+
+local function _test_panel_cash_delta_shows_negative_and_auto_hides()
+  local runtime_ports = require("src.core.RuntimePorts")
+  local gameplay_rules = require("src.core.config.GameplayRules")
+  local env = _new_cash_delta_presenter_env()
+  local scheduled = {}
+
+  _with_patches({
+    { target = runtime_ports, key = "schedule", value = function(delay, cb)
+      scheduled[#scheduled + 1] = { delay = delay, cb = cb }
+    end },
+  }, function()
+    env.set_cash(1, 100)
+    env.refresh()
+    env.set_cash(1, 80)
+    env.refresh()
+  end)
+
+  _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "-20", "cash delta should render negative text")
+  _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], true, "cash delta label should be visible")
+  _assert_eq(#scheduled, 1, "cash delta should schedule hide once")
+  _assert_eq(scheduled[1].delay, gameplay_rules.action_anim_default_seconds, "cash delta hide duration should follow gameplay rule")
+  scheduled[1].cb()
+  _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "", "cash delta label should clear after timeout")
+  _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], false, "cash delta label should hide after timeout")
+end
+
+local function _test_panel_cash_delta_shows_positive_and_auto_hides()
+  local runtime_ports = require("src.core.RuntimePorts")
+  local env = _new_cash_delta_presenter_env()
+  local scheduled = {}
+
+  _with_patches({
+    { target = runtime_ports, key = "schedule", value = function(delay, cb)
+      scheduled[#scheduled + 1] = { delay = delay, cb = cb }
+    end },
+  }, function()
+    env.set_cash(1, 80)
+    env.refresh()
+    env.set_cash(1, 120)
+    env.refresh()
+  end)
+
+  _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "+40", "cash delta should render positive text")
+  _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], true, "cash delta label should be visible")
+  _assert_eq(#scheduled, 1, "cash delta should schedule hide once")
+  scheduled[1].cb()
+  _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "", "cash delta label should clear after timeout")
+  _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], false, "cash delta label should hide after timeout")
+end
+
+local function _test_panel_cash_delta_keeps_latest_when_changes_are_continuous()
+  local runtime_ports = require("src.core.RuntimePorts")
+  local env = _new_cash_delta_presenter_env()
+  local scheduled = {}
+
+  _with_patches({
+    { target = runtime_ports, key = "schedule", value = function(delay, cb)
+      scheduled[#scheduled + 1] = { delay = delay, cb = cb }
+    end },
+  }, function()
+    env.set_cash(1, 100)
+    env.refresh()
+    env.set_cash(1, 80)
+    env.refresh()
+    env.set_cash(1, 120)
+    env.refresh()
+  end)
+
+  _assert_eq(#scheduled, 2, "continuous changes should schedule two hides")
+  _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "+40", "latest cash delta text should win")
+  _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], true, "latest cash delta should stay visible")
+  scheduled[1].cb()
+  _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "+40", "old timer should not clear latest delta")
+  _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], true, "old timer should not hide latest delta")
+  scheduled[2].cb()
+  _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "", "latest timer should clear latest delta")
+  _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], false, "latest timer should hide latest delta")
+end
+
+local function _test_panel_cash_delta_hides_when_value_unchanged()
+  local runtime_ports = require("src.core.RuntimePorts")
+  local env = _new_cash_delta_presenter_env()
+  local scheduled = {}
+
+  _with_patches({
+    { target = runtime_ports, key = "schedule", value = function(delay, cb)
+      scheduled[#scheduled + 1] = { delay = delay, cb = cb }
+    end },
+  }, function()
+    env.set_cash(1, 100)
+    env.refresh()
+    env.set_cash(1, 100)
+    env.refresh()
+  end)
+
+  _assert_eq(#scheduled, 0, "unchanged cash should not schedule hide")
+  _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "", "unchanged cash should keep delta label empty")
+  _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], false, "unchanged cash should keep delta label hidden")
+end
+
+local function _test_panel_cash_delta_missing_node_is_safe()
+  local runtime_ports = require("src.core.RuntimePorts")
+  local env = _new_cash_delta_presenter_env({ missing_delta_node = true })
+  local scheduled = {}
+  local ok, err = pcall(function()
+    _with_patches({
+      { target = runtime_ports, key = "schedule", value = function(delay, cb)
+        scheduled[#scheduled + 1] = { delay = delay, cb = cb }
+      end },
+    }, function()
+      env.set_cash(1, 100)
+      env.refresh()
+      env.set_cash(1, 80)
+      env.refresh()
+    end)
+  end)
+
+  assert(ok, "missing cash delta node should not crash: " .. tostring(err))
+  _assert_eq(#scheduled, 0, "missing cash delta node should skip hide scheduling")
+  _assert_eq(env.state.ui.labels["基础_玩家1现金"], "现金: 80", "base cash label should still update")
+end
+
 return {
   _test_move_anim_callback_and_delay,
   _test_popup_timeout_auto_confirm,
@@ -5726,6 +5934,11 @@ return {
   _test_ui_sync_defers_choice_modal_during_wait_move_anim,
   _test_popup_defer_policy_queues_and_replays_in_order,
   _test_panel_avatar_uses_native_size_path,
+  _test_panel_cash_delta_shows_negative_and_auto_hides,
+  _test_panel_cash_delta_shows_positive_and_auto_hides,
+  _test_panel_cash_delta_keeps_latest_when_changes_are_continuous,
+  _test_panel_cash_delta_hides_when_value_unchanged,
+  _test_panel_cash_delta_missing_node_is_safe,
   _test_item_slot_refresh_resets_highlight_without_client_role,
   _test_target_confirm_dispatches_selected_option,
   _test_target_pick_tick_updates_selection_on_hit_change,

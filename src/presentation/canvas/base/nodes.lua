@@ -8,6 +8,7 @@ local nodes = {
   other_player_hint = "基础_其他玩家行动提示",
   player_name = "基础_玩家%s名字",
   player_cash = "基础_玩家%s现金",
+  player_cash_delta = "基础-玩家%s消耗金币显示",
   player_land_count = "基础_玩家%s地块数量",
   player_total_assets = "基础_玩家%s总资产",
   player_avatar = "基础_玩家%s头像",

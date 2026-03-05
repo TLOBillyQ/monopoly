@@ -4,8 +4,27 @@ local base_nodes = require("src.presentation.canvas.base.nodes")
 local always_show_nodes = require("src.presentation.canvas.always_show.nodes")
 local ui_touch_policy = require("src.presentation.interaction.UITouchPolicy")
 local role_id_utils = require("src.core.RoleId")
+local runtime_ports = require("src.core.RuntimePorts")
+local gameplay_rules = require("src.core.config.GameplayRules")
+local number_utils = require("src.core.NumberUtils")
 
 local panel_presenter = {}
+
+local function _set_label_safe(ui, name, value)
+  if not ui or not ui.set_label then
+    return false
+  end
+  local ok = pcall(ui.set_label, ui, name, value)
+  return ok
+end
+
+local function _set_visible_safe(ui, name, visible)
+  if not ui or not ui.set_visible then
+    return false
+  end
+  local ok = pcall(ui.set_visible, ui, name, visible)
+  return ok
+end
 
 function panel_presenter.apply_base_non_player_visibility(ui, visible)
   assert(ui ~= nil, "missing ui")
@@ -94,6 +113,86 @@ local function _set_player_avatar(ui, runtime, avatar_name, image_key)
   runtime.set_node_texture_native_size(avatar_node, image_key)
 end
 
+local function _resolve_cash_value(row)
+  if not row then
+    return nil
+  end
+  local normalized = number_utils.to_integer(row.cash_value)
+  if normalized == nil then
+    return nil
+  end
+  return normalized
+end
+
+local function _ensure_cash_delta_state(ui)
+  if type(ui.player_cash_value_cache_by_index) ~= "table" then
+    ui.player_cash_value_cache_by_index = {}
+  end
+  if type(ui.player_cash_delta_hide_token_by_index) ~= "table" then
+    ui.player_cash_delta_hide_token_by_index = {}
+  end
+end
+
+local function _clear_cash_delta_label(ui, index)
+  local label_name = string.format(base_nodes.player_cash_delta, index)
+  _set_label_safe(ui, label_name, "")
+  _set_visible_safe(ui, label_name, false)
+end
+
+local function _show_cash_delta_label(ui, index, text)
+  local label_name = string.format(base_nodes.player_cash_delta, index)
+  local ok = _set_label_safe(ui, label_name, text)
+  if ok then
+    _set_visible_safe(ui, label_name, true)
+  end
+  return ok
+end
+
+local function _schedule_hide_cash_delta(ui, index)
+  local token = (ui.player_cash_delta_hide_token_by_index[index] or 0) + 1
+  ui.player_cash_delta_hide_token_by_index[index] = token
+  runtime_ports.schedule(gameplay_rules.action_anim_default_seconds or 1.0, function()
+    if not ui.player_cash_delta_hide_token_by_index then
+      return
+    end
+    if ui.player_cash_delta_hide_token_by_index[index] ~= token then
+      return
+    end
+    _clear_cash_delta_label(ui, index)
+  end)
+end
+
+local function _refresh_cash_delta_label(ui, index, row)
+  local cash_value = _resolve_cash_value(row)
+  local prev_cash_value = ui.player_cash_value_cache_by_index[index]
+  if cash_value == nil then
+    _clear_cash_delta_label(ui, index)
+    ui.player_cash_value_cache_by_index[index] = nil
+    return
+  end
+  if prev_cash_value == nil then
+    _clear_cash_delta_label(ui, index)
+    ui.player_cash_value_cache_by_index[index] = cash_value
+    return
+  end
+  local delta = cash_value - prev_cash_value
+  ui.player_cash_value_cache_by_index[index] = cash_value
+  if delta == 0 then
+    _clear_cash_delta_label(ui, index)
+    return
+  end
+  local sign = "+"
+  if delta < 0 then
+    sign = "-"
+    delta = -delta
+  end
+  local text = sign .. number_utils.format_integer_part(delta)
+  local shown = _show_cash_delta_label(ui, index, text)
+  if shown then
+    _schedule_hide_cash_delta(ui, index)
+  end
+end
+
 local function _apply_player_colors(role, runtime, player, index)
   if not role then
     return
@@ -113,12 +212,15 @@ local function _apply_player_colors(role, runtime, player, index)
     local label_names = {
       string.format(base_nodes.player_name, index),
       string.format(base_nodes.player_cash, index),
+      string.format(base_nodes.player_cash_delta, index),
       string.format(base_nodes.player_land_count, index),
       string.format(base_nodes.player_total_assets, index),
     }
     for _, name in ipairs(label_names) do
-      local label_node = runtime.query_node(name)
-      pcall(set_label_color, role, label_node, color, 0)
+      local ok, label_node = pcall(runtime.query_node, name)
+      if ok then
+        pcall(set_label_color, role, label_node, color, 0)
+      end
     end
   end
 end
@@ -137,6 +239,7 @@ function panel_presenter.refresh(state, ui_model, deps)
   local player_rows = panel.player_rows or {}
   local refs = state.ui_refs or {}
   local empty_avatar_key = refs["Empty"]
+  _ensure_cash_delta_state(ui)
   for i = 1, 4 do
     local row = player_rows[i]
     assert(row ~= nil, "missing player row: " .. tostring(i))
@@ -144,6 +247,7 @@ function panel_presenter.refresh(state, ui_model, deps)
     ui:set_label(string.format(base_nodes.player_cash, i), row.cash)
     ui:set_label(string.format(base_nodes.player_land_count, i), row.land_count)
     ui:set_label(string.format(base_nodes.player_total_assets, i), row.total_assets)
+    _refresh_cash_delta_label(ui, i, row)
     local avatar_key = _resolve_avatar_key(row, empty_avatar_key)
     _set_player_avatar(ui, runtime, string.format(base_nodes.player_avatar, i), avatar_key)
   end
