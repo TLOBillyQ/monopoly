@@ -91,6 +91,26 @@ function Write-MainLuaForStartupPolicy {
     Set-Content -Path $DestMainLua -Value ($prefix + $sourceText) -NoNewline
 }
 
+function Export-GeneratedConfig {
+    param(
+        [string]$ModeName,
+        [string]$OutputDir,
+        [string]$Label
+    )
+    Write-Host "正在导出 $ModeName 配置到$Label..." -ForegroundColor Cyan
+    Write-Host "  目: $OutputDir" -ForegroundColor Gray
+    try {
+        python (Join-Path $ProjectRoot "scripts/export_xlsx.py") --mode $ModeName --output-dir $OutputDir
+        if ($LASTEXITCODE -ne 0) {
+            throw "export_xlsx.py failed with exit code $LASTEXITCODE"
+        }
+        Write-Host "✓ $ModeName 配置导出成功（$Label）" -ForegroundColor Green
+    } catch {
+        Write-Host "✗ $ModeName 配置导出失败（$Label）: $_" -ForegroundColor Red
+        exit 1
+    }
+}
+
 if ($Mode -eq "release" -and [string]::IsNullOrWhiteSpace($StartupProfile) -eq $false -and -not $AllowReleaseTestProfile) {
     Write-Host "✗ release 模式如需 -StartupProfile，必须同时传入 -AllowReleaseTestProfile。" -ForegroundColor Red
     exit 1
@@ -155,6 +175,12 @@ foreach ($target in $TargetPaths) {
     Write-Host "  - $target" -ForegroundColor Yellow
 }
 Write-Host ""
+
+if ($Mode -eq "release") {
+    $repoGeneratedDir = Join-Path $ProjectRoot "Config/Generated"
+    Export-GeneratedConfig -ModeName "release" -OutputDir $repoGeneratedDir -Label "仓库"
+    Write-Host ""
+}
 
 # 定义要拷贝的目录列表（vendor 默认不拷贝）
 $Directories = @("Config", "src")
@@ -239,22 +265,6 @@ foreach ($TargetPath in $TargetPaths) {
             }
         } else {
             Write-Host "⚠ 源文件不存在: $sourcePath" -ForegroundColor Yellow
-        }
-    }
-
-    if ($Mode -eq "release") {
-        $targetGeneratedDir = Join-Path $TargetPath "Config/Generated"
-        Write-Host "正在导出 release 配置到目标目录..." -ForegroundColor Cyan
-        Write-Host "  目: $targetGeneratedDir" -ForegroundColor Gray
-        try {
-            python (Join-Path $ProjectRoot "scripts/export_xlsx.py") --mode release --output-dir $targetGeneratedDir
-            if ($LASTEXITCODE -ne 0) {
-                throw "export_xlsx.py failed with exit code $LASTEXITCODE"
-            }
-            Write-Host "✓ release 配置导出成功" -ForegroundColor Green
-        } catch {
-            Write-Host "✗ release 配置导出失败: $_" -ForegroundColor Red
-            exit 1
         }
     }
 
