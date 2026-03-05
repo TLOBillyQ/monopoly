@@ -19,6 +19,11 @@ function eligibility.can_buy_entry(game, player, entry)
   end
   local price = context.entry_price(entry)
   local currency = context.entry_currency(entry)
+  if context.is_paid_currency(currency)
+      and context.should_enforce_paid_channel()
+      and not context.is_paid_channel_ready(game, currency) then
+    return false
+  end
   context.sync_managed_balance(game, player, currency)
   return game:player_balance(player, currency) >= price
 end

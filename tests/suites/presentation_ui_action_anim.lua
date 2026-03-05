@@ -1,6 +1,7 @@
 local action_anim = require("src.presentation.render.ActionAnim")
 local runtime_port = require("src.presentation.api.UIRuntimePort")
 local handlers = require("src.presentation.render.ActionAnimHandlers")
+local host_runtime = require("src.presentation.api.HostRuntimePort")
 
 if not math.Vector3 then
   function math.Vector3(x, y, z)
@@ -58,6 +59,40 @@ local function _test_action_anim_overlay_handler_returns_duration()
   local state = _build_state()
   local duration = action_anim.play(state, { kind = "roadblock", tile_index = 1, duration = 0.2 })
   assert(duration == 0.2, "roadblock duration should be used")
+end
+
+local function _test_action_anim_roadblock_overlay_uses_4x_scale()
+  local state = _build_state()
+  local unit_calls = 0
+  local group_calls = 0
+  local captured_scale = nil
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "create_unit_with_scale",
+      value = function(_, _, _, scale)
+        unit_calls = unit_calls + 1
+        captured_scale = scale
+        return { _unit_id = 1 }
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "create_unit_group",
+      value = function()
+        group_calls = group_calls + 1
+        return { _group_id = 1 }
+      end,
+    },
+  }, function()
+    action_anim.play(state, { kind = "roadblock", tile_index = 1, duration = 0.2 })
+  end)
+
+  assert(unit_calls == 1, "roadblock should spawn via unit path")
+  assert(group_calls == 0, "roadblock should not spawn via group path")
+  assert(captured_scale ~= nil, "roadblock should pass explicit scale")
+  assert(captured_scale.x == 4.0 and captured_scale.y == 4.0 and captured_scale.z == 4.0, "roadblock should use 4x scale")
 end
 
 local function _test_action_anim_roll_screen_two_stage_timeline()
@@ -254,6 +289,7 @@ return {
   name = "presentation_ui_action_anim",
   tests = {
     { name = "action_anim_overlay_handler_returns_duration", run = _test_action_anim_overlay_handler_returns_duration },
+    { name = "action_anim_roadblock_overlay_uses_4x_scale", run = _test_action_anim_roadblock_overlay_uses_4x_scale },
     { name = "action_anim_upgrade_land_does_not_call_overlay_handler", run = _test_action_anim_upgrade_land_does_not_call_overlay_handler },
     { name = "action_anim_roll_screen_two_stage_timeline", run = _test_action_anim_roll_screen_two_stage_timeline },
     { name = "action_anim_roll_screen_fallback_face_when_invalid", run = _test_action_anim_roll_screen_fallback_face_when_invalid },

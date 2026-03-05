@@ -2,6 +2,8 @@ local support = require("TestSupport")
 local _new_game = support.new_game
 local _with_patches = support.with_patches
 local runtime_ports = require("src.core.RuntimePorts")
+local logger = require("src.core.Logger")
+local paid_goods_cfg = require("src.game.systems.commerce.config.RuntimePaidGoods")
 
 local function _reload_bridge()
   package.loaded["src.game.systems.commerce.PaidCurrencyBridge"] = nil
@@ -52,7 +54,7 @@ local function _build_fake_env(game, opts)
     role_by_player_id[player.id] = _new_role(player.id)
   end
 
-  local goods_list = {
+  local goods_list = opts.goods_list or {
     {
       name = "金豆",
       goods_id = "goods_jindou",
@@ -103,6 +105,20 @@ local function _build_fake_env(game, opts)
     jindou_commodity = jindou_commodity,
     leyuanbi_commodity = leyuanbi_commodity,
   }
+end
+
+local function _collect_warn_logs(run)
+  local warns = {}
+  _with_patches({
+    {
+      target = logger,
+      key = "warn",
+      value = function(...)
+        warns[#warns + 1] = table.concat({ ... }, " ")
+      end,
+    },
+  }, run)
+  return warns
 end
 
 local function _test_paid_bridge_sync_balance_from_commodity()
@@ -260,6 +276,117 @@ local function _test_bridge_setup_works_when_sandbox_blocks_mode_metatable()
   end)
 end
 
+local function _test_missing_goods_mapping_warns_with_context()
+  local game = _new_game()
+  local env = _build_fake_env(game, {
+    goods_list = {
+      { name = "钻石", goods_id = "goods_diamond", commodity_infos = { { 9901, 1 } } },
+    },
+  })
+  local warns = _collect_warn_logs(function()
+    _with_patches(env.patch_list, function()
+      local bridge = _reload_bridge()
+      bridge.setup_for_game(game)
+    end)
+  end)
+
+  assert(#warns == 2, "missing mapping should warn for each configured currency")
+  local joined = table.concat(warns, "\n")
+  assert(joined:find("paid goods mapping missing:", 1, true) ~= nil, "warn should include missing mapping prefix")
+  assert(joined:find("expected_names=", 1, true) ~= nil, "warn should include expected names")
+  assert(joined:find("goods_count=1", 1, true) ~= nil, "warn should include goods count")
+  assert(joined:find("goods_names_sample=钻石", 1, true) ~= nil, "warn should include goods sample names")
+end
+
+local function _test_empty_goods_list_warns_with_none_sample()
+  local game = _new_game()
+  local env = _build_fake_env(game, { goods_list = {} })
+  local warns = _collect_warn_logs(function()
+    _with_patches(env.patch_list, function()
+      local bridge = _reload_bridge()
+      bridge.setup_for_game(game)
+    end)
+  end)
+
+  assert(#warns == 2, "empty goods list should still warn for each configured currency")
+  local joined = table.concat(warns, "\n")
+  assert(joined:find("goods_count=0", 1, true) ~= nil, "warn should include empty goods count")
+  assert(joined:find("goods_names_sample=none", 1, true) ~= nil, "warn should include none sample when goods are empty")
+end
+
+local function _test_matching_goods_mapping_emits_no_missing_warn()
+  local game = _new_game()
+  local env = _build_fake_env(game, { jindou_count = 3, leyuanbi_count = 2 })
+  local warns = _collect_warn_logs(function()
+    _with_patches(env.patch_list, function()
+      local bridge = _reload_bridge()
+      bridge.setup_for_game(game)
+    end)
+  end)
+
+  assert(#warns == 0, "matching goods mapping should not emit missing mapping warnings")
+end
+
+local function _test_static_id_mapping_works_when_goods_list_empty()
+  local game = _new_game()
+  local p = game.players[1]
+  local env = _build_fake_env(game, {
+    jindou_count = 12,
+    leyuanbi_count = 7,
+    goods_list = {},
+  })
+
+  _with_patches({
+    { target = paid_goods_cfg, key = "currencies", value = {
+      ["金豆"] = { goods_id = "goods_jindou", commodity_id = env.jindou_commodity, unit_value = 1 },
+      ["乐园币"] = { goods_id = "goods_leyuanbi", commodity_id = env.leyuanbi_commodity, unit_value = 1 },
+    } },
+    { target = paid_goods_cfg, key = "enabled", value = true },
+  }, function()
+    _with_patches(env.patch_list, function()
+      local bridge = _reload_bridge()
+      bridge.setup_for_game(game)
+      assert(bridge.is_managed_currency(game, "金豆") == true, "id mapping should manage jindou")
+      assert(bridge.is_managed_currency(game, "乐园币") == true, "id mapping should manage leyuanbi")
+      assert(game:player_balance(p, "金豆") == 12, "id mapping should sync jindou balance")
+      assert(game:player_balance(p, "乐园币") == 7, "id mapping should sync leyuanbi balance")
+    end)
+  end)
+end
+
+local function _test_release_unavailable_paid_channel_blocks_local_fallback_purchase()
+  local game = _new_game()
+  local p = game.players[1]
+  local env = _build_fake_env(game, {
+    jindou_count = 0,
+    goods_list = {},
+  })
+
+  game:set_player_balance(p, "金豆", 100)
+
+  _with_patches({
+    { key = "RELEASE_BUILD", value = true },
+    { target = paid_goods_cfg, key = "currencies", value = {
+      ["金豆"] = { goods_names = { "金豆", "金豆礼包" }, unit_value = 1 },
+      ["乐园币"] = { goods_names = { "乐园币", "乐园币礼包" }, unit_value = 1 },
+    } },
+    { target = paid_goods_cfg, key = "enabled", value = true },
+  }, function()
+    _with_patches(env.patch_list, function()
+      local bridge = _reload_bridge()
+      local market = _reload_market()
+      bridge.setup_for_game(game)
+      assert(bridge.is_paid_currency("金豆") == true, "jindou should be classified as paid currency")
+      assert(bridge.is_managed_currency(game, "金豆") == false, "unavailable channel should not be managed")
+      local before = game:player_balance(p, "金豆")
+      local result = market.purchase.execute(game, p, 2009, nil)
+      assert(type(result) == "table" and result.ok == false, "purchase should fail when release paid channel unavailable")
+      assert(game:player_balance(p, "金豆") == before, "failed purchase should not deduct local paid balance")
+      assert(p.inventory:count() == 0, "failed purchase should not grant item")
+    end)
+  end)
+end
+
 return {
   name = "paid_currency",
   tests = {
@@ -269,5 +396,10 @@ return {
     { name = "purchase_event_syncs_balance", run = _test_purchase_event_syncs_balance },
     { name = "bridge_isolates_context_between_games", run = _test_bridge_isolates_context_between_games },
     { name = "bridge_setup_works_when_sandbox_blocks_mode_metatable", run = _test_bridge_setup_works_when_sandbox_blocks_mode_metatable },
+    { name = "missing_goods_mapping_warns_with_context", run = _test_missing_goods_mapping_warns_with_context },
+    { name = "empty_goods_list_warns_with_none_sample", run = _test_empty_goods_list_warns_with_none_sample },
+    { name = "matching_goods_mapping_emits_no_missing_warn", run = _test_matching_goods_mapping_emits_no_missing_warn },
+    { name = "static_id_mapping_works_when_goods_list_empty", run = _test_static_id_mapping_works_when_goods_list_empty },
+    { name = "release_unavailable_paid_channel_blocks_local_fallback_purchase", run = _test_release_unavailable_paid_channel_blocks_local_fallback_purchase },
   },
 }

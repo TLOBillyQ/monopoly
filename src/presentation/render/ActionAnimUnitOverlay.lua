@@ -4,6 +4,12 @@ local compute = require("src.presentation.render.ActionAnimOverlayCompute")
 local runtime = require("src.presentation.render.ActionAnimOverlayRuntime")
 
 local overlay = {}
+local roadblock_scale = (function()
+  if math and math.Vector3 then
+    return math.Vector3(4.0, 4.0, 4.0)
+  end
+  return { x = 4.0, y = 4.0, z = 4.0 }
+end)()
 
 function overlay.clear_overlay(state, kind, tile_index)
   assert(state ~= nil, "missing state")
@@ -17,10 +23,16 @@ function overlay.play_overlay(state, anim, duration, opts)
   local tile_index = assert(anim.tile_index, "missing tile_index")
   local overlay_kind = kind
   if kind == "roadblock" then
-    local group_id = prefab.group["路障"]
     local unit_id = prefab.unit and prefab.unit["路障"] or nil
-    runtime.spawn_overlay(assert(state.board_scene, "missing board_scene"), overlay_kind, tile_index, group_id, unit_id,
-      compute.overlay_pos_for_tile(state, tile_index))
+    runtime.spawn_overlay(
+      assert(state.board_scene, "missing board_scene"),
+      overlay_kind,
+      tile_index,
+      nil,
+      unit_id,
+      compute.overlay_pos_for_tile(state, tile_index),
+      roadblock_scale
+    )
     return
   end
   if kind == "mine" then

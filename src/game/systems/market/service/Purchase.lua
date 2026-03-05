@@ -56,6 +56,18 @@ function purchase.execute(game, player, product_id, opts)
 
   local price = context.entry_price(entry)
   local currency = context.entry_currency(entry)
+  if context.is_paid_currency(currency)
+      and context.should_enforce_paid_channel()
+      and not context.is_paid_channel_ready(game, currency) then
+    local reason = context.unavailable_paid_reason(game, currency) or "paid_channel_unavailable"
+    _emit_event(monopoly_event.market.buy_failed, {
+      player = player,
+      entry = entry,
+      reason = reason,
+      popup = { title = "黑市", body = player.name .. " 付费通道不可用，暂时无法购买" },
+    })
+    return { ok = false }
+  end
   context.sync_managed_balance(game, player, currency)
   if game:player_balance(player, currency) < price then
     local opened_panel = false

@@ -27,10 +27,15 @@ local function _spawn_unit_group(group_id, pos)
   return host_runtime.create_unit_group(group_id, pos, runtime_constants.q_zero)
 end
 
-local function _spawn_unit(unit_id, pos)
+local function _spawn_unit(unit_id, pos, scale)
   assert(unit_id ~= nil, "missing unit_id")
   assert(pos ~= nil, "missing pos")
-  return host_runtime.create_unit_with_scale(unit_id, pos, runtime_constants.q_zero, runtime_constants.v3_one)
+  return host_runtime.create_unit_with_scale(
+    unit_id,
+    pos,
+    runtime_constants.q_zero,
+    scale or runtime_constants.v3_one
+  )
 end
 
 local function _destroy_unit(entry)
@@ -61,7 +66,7 @@ function runtime.clear_overlay(scene, kind, tile_index)
   bucket[tile_index] = nil
 end
 
-function runtime.spawn_overlay(scene, kind, tile_index, group_id, unit_id, pos)
+function runtime.spawn_overlay(scene, kind, tile_index, group_id, unit_id, pos, scale)
   assert(scene ~= nil, "missing board_scene")
   assert(kind ~= nil, "missing kind")
   assert(tile_index ~= nil, "missing tile_index")
@@ -87,7 +92,7 @@ function runtime.spawn_overlay(scene, kind, tile_index, group_id, unit_id, pos)
     return false
   end
   if unit_id then
-    local handle = _spawn_unit(unit_id, pos)
+    local handle = _spawn_unit(unit_id, pos, scale)
     if handle then
       bucket[tile_index] = { kind = "unit", handle = handle }
       return true

@@ -6,14 +6,42 @@ local runtime_ports = require("src.core.RuntimePorts")
 local bridge = {}
 
 local game_context_field = "__paid_currency_bridge_ctx"
+local goods_name_sample_limit = 8
 
 local function _new_context(game)
   return {
     game = game,
     resolved_by_currency = {},
+    status_by_currency = {},
     player_id_by_role_id = {},
     registered_role_ids = {},
+    mapping_warned_by_currency = {},
   }
+end
+
+local function _read_truthy_flag(raw)
+  if raw == true then
+    return true
+  end
+  if raw == 1 then
+    return true
+  end
+  if raw == "1" then
+    return true
+  end
+  if raw == "true" then
+    return true
+  end
+  if raw == "TRUE" then
+    return true
+  end
+  return false
+end
+
+local function _is_release_build()
+  local globals = _G
+  local raw = globals and globals.RELEASE_BUILD or nil
+  return _read_truthy_flag(raw)
 end
 
 local function _resolve_context(game)
@@ -61,11 +89,80 @@ local function _resolve_goods_names(cfg_entry)
   return names
 end
 
-local function _resolve_currency_entry(goods_lookup, currency, cfg_entry)
+local function _sample_goods_names(goods_list)
+  local out = {}
+  for _, goods in ipairs(goods_list or {}) do
+    local name = goods and goods.name or nil
+    if name and name ~= "" then
+      out[#out + 1] = tostring(name)
+      if #out >= goods_name_sample_limit then
+        break
+      end
+    end
+  end
+  if #out == 0 then
+    return "none"
+  end
+  return table.concat(out, ",")
+end
+
+local function _warn_mapping_missing_once(ctx, currency, reason, cfg_entry, goods_count, sample_names)
+  local warned = ctx.mapping_warned_by_currency or {}
+  ctx.mapping_warned_by_currency = warned
+  if warned[currency] then
+    return
+  end
+  warned[currency] = true
+  local expected_names = table.concat(_resolve_goods_names(cfg_entry), ",")
+  if expected_names == "" then
+    expected_names = "none"
+  end
+  logger.warn(
+    "paid goods mapping missing:",
+    tostring(currency),
+    "reason=" .. tostring(reason or "mapping_missing"),
+    "expected_names=" .. expected_names,
+    "goods_count=" .. tostring(goods_count),
+    "goods_names_sample=" .. tostring(sample_names)
+  )
+end
+
+local function _build_resolved_entry(goods_id, commodity_id, unit_value, source, goods_name)
+  return {
+    goods_id = goods_id,
+    commodity_id = commodity_id,
+    unit_value = unit_value,
+    source = source,
+    goods_name = goods_name,
+  }
+end
+
+local function _resolve_currency_entry_by_ids(currency, cfg_entry, unit_value)
+  local goods_id = cfg_entry and cfg_entry.goods_id or nil
+  local commodity_id = cfg_entry and cfg_entry.commodity_id or nil
+  if goods_id == nil and commodity_id == nil then
+    return nil
+  end
+  local resolved_commodity_id = number_utils.to_integer(commodity_id)
+  if not goods_id or goods_id == "" or not resolved_commodity_id or resolved_commodity_id <= 0 then
+    return false, "invalid_static_ids"
+  end
+  return _build_resolved_entry(goods_id, resolved_commodity_id, unit_value, "id", nil), nil
+end
+
+local function _resolve_currency_entry(ctx, goods_lookup, currency, cfg_entry, goods_count, sample_names)
   local unit_value = cfg_entry and cfg_entry.unit_value or 1
   if not number_utils.is_numeric(unit_value) or unit_value <= 0 then
     logger.warn("paid goods invalid unit_value:", tostring(currency), tostring(unit_value))
     return nil
+  end
+
+  local by_ids, by_ids_err = _resolve_currency_entry_by_ids(currency, cfg_entry, unit_value)
+  if by_ids then
+    return by_ids, nil
+  end
+  if by_ids == false then
+    return nil, by_ids_err
   end
 
   for _, name in ipairs(_resolve_goods_names(cfg_entry)) do
@@ -74,31 +171,47 @@ local function _resolve_currency_entry(goods_lookup, currency, cfg_entry)
     local first = commodity_infos and commodity_infos[1] or nil
     local commodity_id = first and first[1] or nil
     if goods and goods.goods_id and commodity_id then
-      return {
-        goods_id = goods.goods_id,
-        commodity_id = commodity_id,
-        unit_value = unit_value,
-        goods_name = name,
-      }
+      local resolved_commodity_id = number_utils.to_integer(commodity_id)
+      if resolved_commodity_id and resolved_commodity_id > 0 then
+        return _build_resolved_entry(goods.goods_id, resolved_commodity_id, unit_value, "name", name), nil
+      end
     end
   end
 
-  logger.warn("paid goods mapping missing:", tostring(currency))
-  return nil
+  return nil, "name_mapping_not_found"
 end
 
 local function _resolve_goods_mapping(ctx)
   ctx.resolved_by_currency = {}
+  ctx.status_by_currency = {}
+  ctx.mapping_warned_by_currency = {}
   if paid_goods_cfg.enabled ~= true then
     return
   end
 
-  local goods_lookup = _goods_by_name(_list_goods())
+  local goods_list = _list_goods()
+  local goods_lookup = _goods_by_name(goods_list)
+  local goods_count = #goods_list
+  local sample_names = _sample_goods_names(goods_list)
   local currencies = paid_goods_cfg.currencies or {}
   for currency, cfg_entry in pairs(currencies) do
-    local resolved = _resolve_currency_entry(goods_lookup, currency, cfg_entry)
+    local resolved, reason = _resolve_currency_entry(ctx, goods_lookup, currency, cfg_entry, goods_count, sample_names)
     if resolved then
       ctx.resolved_by_currency[currency] = resolved
+      ctx.status_by_currency[currency] = {
+        state = "ready",
+        source = resolved.source,
+      }
+    else
+      local expected_names = table.concat(_resolve_goods_names(cfg_entry), ",")
+      if expected_names == "" then
+        expected_names = "none"
+      end
+      ctx.status_by_currency[currency] = {
+        state = "unavailable",
+        reason = reason or "mapping_missing",
+      }
+      _warn_mapping_missing_once(ctx, currency, reason or "mapping_missing", cfg_entry, goods_count, sample_names)
     end
   end
 end
@@ -167,6 +280,38 @@ function bridge.is_managed_currency(game, currency)
   end
   local ctx = _resolve_context(game)
   return ctx.resolved_by_currency[currency] ~= nil
+end
+
+function bridge.is_paid_currency(currency)
+  if paid_goods_cfg.enabled ~= true then
+    return false
+  end
+  local key = currency and tostring(currency) or nil
+  if not key then
+    return false
+  end
+  local currencies = paid_goods_cfg.currencies or {}
+  return currencies[key] ~= nil
+end
+
+function bridge.is_channel_enforced()
+  return _is_release_build()
+end
+
+function bridge.is_currency_channel_ready(game, currency)
+  if not bridge.is_paid_currency(currency) then
+    return true
+  end
+  return bridge.is_managed_currency(game, currency)
+end
+
+function bridge.unavailable_reason(game, currency)
+  local ctx = _resolve_context(game)
+  local status = ctx.status_by_currency and ctx.status_by_currency[currency] or nil
+  if status and status.state == "unavailable" then
+    return status.reason or "mapping_missing"
+  end
+  return nil
 end
 
 function bridge.sync_player_currency(game, player, currency)
