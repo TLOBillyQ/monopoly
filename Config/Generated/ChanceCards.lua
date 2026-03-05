@@ -12,9 +12,6 @@ local chance_cards = {
   { id = 3011, description = "股灾降临，每人损失20%金币。", weight = 400, negative = true, target = "all", effect = "percent_pay_cash", percent = 20 },
   { id = 3012, description = "破财消灾，你给每个其他玩家3000金币。", weight = 300, negative = true, target = "self", effect = "pay_others", amount = 3000 },
   { id = 3013, description = "今天是你的生日，每个其他玩家给你3000金币。", weight = 300, negative = false, target = "self", effect = "collect_from_others", amount = 3000 },
-  { id = 3014, description = "爸爸爱你，送给你一副滑板", weight = 200, negative = false, target = "self", effect = "set_vehicle", vehicle_id = 4001 },
-  { id = 3015, description = "爷爷爱你，送给你一辆三轮车", weight = 200, negative = false, target = "self", effect = "set_vehicle", vehicle_id = 4002 },
-  { id = 3016, description = "奶奶爱你，送给你一辆电动车", weight = 200, negative = false, target = "self", effect = "set_vehicle", vehicle_id = 4003 },
   { id = 3017, description = "台风过境，摧毁本回合你经过地块上的所有建筑", weight = 200, negative = false, target = "path", effect = "destroy_buildings_on_path" },
   { id = 3018, description = "强制征地，本回合你经过的所有地块恢复初始状态", weight = 200, negative = false, target = "path", effect = "reset_tiles_on_path" },
   { id = 3019, description = "前方有蛇出没，你后跳一格", weight = 300, negative = false, target = "self", effect = "move_backward", steps = 1 },
@@ -29,13 +26,10 @@ local chance_cards = {
   { id = 3028, description = "小偷光临，你随机丢失1张道具卡", weight = 200, negative = true, target = "self", effect = "discard_items", count = 1 },
   { id = 3029, description = "强盗来袭，你丢失所有道具卡", weight = 200, negative = true, target = "self", effect = "discard_items", count = 0 },
   { id = 3030, description = "你遭遇火灾，随机丢失1张地块持有证", weight = 200, negative = true, target = "self", effect = "discard_properties", count = 1 },
-  { id = 3031, description = "你突然晕倒了，被送入医院。", weight = 200, negative = true, target = "self", effect = "forced_move", destination_tile_id = 36 },
+  { id = 3031, description = "你突然晕倒了，被送入医院。", weight = 200, negative = true, target = "self", effect = "forced_move", destination_tile_id = 38 },
   { id = 3032, description = "你迷路走进了深山。", weight = 200, negative = true, target = "self", effect = "forced_move", destination_tile_id = 37 },
-  { id = 3033, description = "你收到税务通知，立刻赶往税务局交代问题。", weight = 200, negative = true, target = "self", effect = "forced_move", destination_tile_id = 38 },
+  { id = 3033, description = "你收到税务通知，立刻赶往税务局交代问题。", weight = 200, negative = true, target = "self", effect = "forced_move", destination_tile_id = 36 },
   { id = 3034, description = "你发现密道，到达黑市。", weight = 200, negative = false, target = "self", effect = "forced_move", destination_tile_id = 39 },
-  { id = 3035, description = "妈妈爱你，送给你一辆路虎", weight = 100, negative = false, target = "self", effect = "set_vehicle", vehicle_id = 4004 },
-  { id = 3036, description = "姐姐爱你，送给你一辆哈雷摩托", weight = 100, negative = false, target = "self", effect = "set_vehicle", vehicle_id = 4005 },
-  { id = 3037, description = "干爹爱你，送给你一辆法拉利", weight = 100, negative = false, target = "self", effect = "set_vehicle", vehicle_id = 4006 },
 }
 
 return chance_cards

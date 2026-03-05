@@ -39,11 +39,11 @@ local tiles = {
   { id = 38, name = "税务局", type = "tax", row = 1, col = 9, build_row = 1, build_col = 10, price = 0, upgrade_costs = { 0, 0, 0 }, rents = { 0, 0, 0, 0 } },
   { id = 39, name = "黑市", type = "market", row = 5, col = 5, price = 0, upgrade_costs = { 0, 0, 0 }, rents = { 0, 0, 0, 0 } },
   { id = 40, name = "机会卡", type = "chance", row = 5, col = 1, price = 0, upgrade_costs = { 0, 0, 0 }, rents = { 0, 0, 0, 0 } },
-  { id = 41, name = "机会卡", type = "chance", row = 1, col = 5, price = 0, upgrade_costs = { 0, 0, 0 }, rents = { 0, 0, 0, 0 } },
-  { id = 42, name = "机会卡", type = "chance", row = 9, col = 5, price = 0, upgrade_costs = { 0, 0, 0 }, rents = { 0, 0, 0, 0 } },
+  { id = 41, name = "道具卡", type = "item", row = 1, col = 5, price = 0, upgrade_costs = { 0, 0, 0 }, rents = { 0, 0, 0, 0 } },
+  { id = 42, name = "道具卡", type = "item", row = 9, col = 5, price = 0, upgrade_costs = { 0, 0, 0 }, rents = { 0, 0, 0, 0 } },
   { id = 43, name = "机会卡", type = "chance", row = 5, col = 9, price = 0, upgrade_costs = { 0, 0, 0 }, rents = { 0, 0, 0, 0 } },
   { id = 44, name = "道具卡", type = "item", row = 5, col = 6, price = 0, upgrade_costs = { 0, 0, 0 }, rents = { 0, 0, 0, 0 } },
-  { id = 45, name = "道具卡", type = "item", row = 8, col = 5, price = 0, upgrade_costs = { 0, 0, 0 }, rents = { 0, 0, 0, 0 } },
+  { id = 45, name = "机会卡", type = "chance", row = 8, col = 5, price = 0, upgrade_costs = { 0, 0, 0 }, rents = { 0, 0, 0, 0 } },
 }
 
 return tiles
