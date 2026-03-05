@@ -1,6 +1,5 @@
 local gameplay_rules = require("src.core.config.GameplayRules")
 local number_utils = require("src.core.NumberUtils")
-local logger = require("src.core.Logger")
 
 local runtime = require("src.presentation.api.UIRuntimePort")
 local host_runtime = require("src.presentation.api.HostRuntimePort")
@@ -18,9 +17,6 @@ local roll_spin_seconds = 1.0
 local roll_face_hold_seconds = 1.0
 
 local function _show_tip(text, duration)
-  if type(text) ~= "string" then
-    logger.warn("[TipTrace][Callsite]", "module=ActionAnim", "text_type=" .. tostring(type(text)), "text=" .. tostring(text))
-  end
   host_runtime.show_tips(text, duration)
 end
 

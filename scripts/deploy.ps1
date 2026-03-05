@@ -16,8 +16,6 @@
     release 模式下允许注入 STARTUP_TEST_PROFILE（会额外写入 RELEASE_ALLOW_TEST_PROFILE=true）
 .PARAMETER Mode
     部署模式：dev 或 release（默认 dev）。release 模式会注入 RELEASE_BUILD=true。
-.PARAMETER MuteLuaTips
-    注入 EGGY_MUTE_LUA_TIPS=true，静音 Lua 侧 show_tips（用于二分定位引擎侧气泡）。
 .EXAMPLE
     pwsh -File .\deploy.ps1 -TargetPath "C:\Target\Project"
 .EXAMPLE
@@ -28,8 +26,6 @@
     pwsh -File .\deploy.ps1 -Mode release
 .EXAMPLE
     pwsh -File .\deploy.ps1 -Mode release -AllowReleaseTestProfile -StartupProfile "items_target_disrupt"
-.EXAMPLE
-    pwsh -File .\deploy.ps1 -Mode release -AllowReleaseTestProfile -StartupProfile "items_move_control" -MuteLuaTips
 #>
 
 param(
@@ -38,7 +34,6 @@ param(
     [switch]$IncludeVendor,
     [string]$StartupProfile,
     [switch]$AllowReleaseTestProfile,
-    [switch]$MuteLuaTips,
     [ValidateSet("dev", "release")]
     [string]$Mode = "dev"
 )
@@ -54,7 +49,7 @@ if (-not (Test-Pwsh7)) {
     $version = $PSVersionTable.PSVersion.ToString()
     Write-Host "✗ 部署脚本要求在 PowerShell 7+ (pwsh) 环境运行。" -ForegroundColor Red
     Write-Host "  当前环境: PSEdition=$edition Version=$version" -ForegroundColor Yellow
-    Write-Host "  请使用: pwsh -File .\scripts\deploy.ps1 [-TargetPath PATH] [-IncludeVendor] [-StartupProfile NAME] [-AllowReleaseTestProfile] [-MuteLuaTips] [-Mode dev|release]" -ForegroundColor Yellow
+    Write-Host "  请使用: pwsh -File .\scripts\deploy.ps1 [-TargetPath PATH] [-IncludeVendor] [-StartupProfile NAME] [-AllowReleaseTestProfile] [-Mode dev|release]" -ForegroundColor Yellow
     exit 1
 }
 
@@ -74,8 +69,7 @@ function Write-MainLuaForStartupPolicy {
         [string]$DestMainLua,
         [string]$ProfileName,
         [string]$DeployMode,
-        [bool]$AllowReleaseProfileOverride,
-        [bool]$MuteTips
+        [bool]$AllowReleaseProfileOverride
     )
     $sourceText = Get-Content -Path $SourceMainLua -Raw
     $prefixes = @()
@@ -88,9 +82,6 @@ function Write-MainLuaForStartupPolicy {
     if ([string]::IsNullOrWhiteSpace($ProfileName) -eq $false) {
         $escaped = Escape-LuaStringDoubleQuoted -Text $ProfileName
         $prefixes += "STARTUP_TEST_PROFILE = `"$escaped`""
-    }
-    if ($MuteTips) {
-        $prefixes += "EGGY_MUTE_LUA_TIPS = true"
     }
     if ($prefixes.Count -eq 0) {
       Set-Content -Path $DestMainLua -Value $sourceText -NoNewline
@@ -159,9 +150,6 @@ if ($Mode -eq "release" -and -not $AllowReleaseTestProfile) {
     Write-Host "启动 Profile: default (未注入 STARTUP_TEST_PROFILE)" -ForegroundColor Yellow
 } else {
     Write-Host "启动 Profile: $StartupProfile" -ForegroundColor Yellow
-}
-if ($MuteLuaTips) {
-    Write-Host "Lua Tips: muted (EGGY_MUTE_LUA_TIPS=true)" -ForegroundColor Yellow
 }
 foreach ($target in $TargetPaths) {
     Write-Host "  - $target" -ForegroundColor Yellow
@@ -240,7 +228,7 @@ foreach ($TargetPath in $TargetPaths) {
                     New-Item -ItemType Directory -Path $fileDestDir -Force | Out-Null
                 }
                 if ($file.Source -eq "main.lua") {
-                    Write-MainLuaForStartupPolicy -SourceMainLua $sourcePath -DestMainLua $fileDestPath -ProfileName $StartupProfile -DeployMode $Mode -AllowReleaseProfileOverride $AllowReleaseTestProfile -MuteTips $MuteLuaTips
+                    Write-MainLuaForStartupPolicy -SourceMainLua $sourcePath -DestMainLua $fileDestPath -ProfileName $StartupProfile -DeployMode $Mode -AllowReleaseProfileOverride $AllowReleaseTestProfile
                 } else {
                     Copy-Item -LiteralPath $sourcePath -Destination $fileDestPath -Force
                 }

@@ -15,7 +15,7 @@ function host_runtime_port.schedule(delay, fn)
 end
 
 function host_runtime_port.show_tips(text, duration)
-  return logger.show_tip(text, duration, { source = "host_runtime.show_tips" })
+  return logger.show_tip(text, duration)
 end
 
 function host_runtime_port.register_custom_event(event_name, handler)

@@ -14,9 +14,6 @@ local function _show_missing_button_tip(name)
     return
   end
   missing_button_tips[name] = true
-  if type(name) ~= "string" then
-    logger.warn("[TipTrace][Callsite]", "module=UIEventBindings", "text_type=" .. tostring(type(name)), "text=" .. tostring(name))
-  end
   host_runtime.show_tips("UI 节点未适配: " .. tostring(name), 2.0)
 end
 

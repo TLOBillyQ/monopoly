@@ -15,11 +15,8 @@ local logger = {
   tip_queue = {},
   tip_active = false,
   tip_epoch = 0,
-  tip_trace_enabled = true,
 }
 local number_utils = require("src.core.NumberUtils")
-
-local TIP_TRACE_MAX_PREVIEW_LEN = 160
 
 local function _stringify(start_index, ...)
   local start = start_index or 1
@@ -41,118 +38,6 @@ local function _format_timestamp(timestamp)
 end
 
 local _format_entry
-
-local function _tip_trace_preview(value)
-  local ok, text = pcall(tostring, value)
-  if not ok then
-    return "<tostring_failed>"
-  end
-  if text == nil then
-    return "<nil>"
-  end
-  if #text > TIP_TRACE_MAX_PREVIEW_LEN then
-    return string.sub(text, 1, TIP_TRACE_MAX_PREVIEW_LEN) .. "..."
-  end
-  return text
-end
-
-local function _tip_trace_vector_hint(value)
-  if type(value) ~= "table" then
-    return nil
-  end
-  local x = value.x or value[1]
-  local y = value.y or value[2]
-  local z = value.z or value[3]
-  if x == nil and y == nil and z == nil then
-    return nil
-  end
-  return "x=" .. _tip_trace_preview(x) .. ",y=" .. _tip_trace_preview(y) .. ",z=" .. _tip_trace_preview(z)
-end
-
-local function _looks_like_vector_text(text)
-  if type(text) ~= "string" then
-    return false
-  end
-  if string.find(text, "Vector3", 1, true) ~= nil then
-    return true
-  end
-  if string.find(text, "x=", 1, true) and string.find(text, "y=", 1, true) and string.find(text, "z=", 1, true) then
-    return true
-  end
-  local x, y, z = string.match(text, "^%s*[%(%[]?%s*(-?%d+%.?%d*)%s*,%s*(-?%d+%.?%d*)%s*,%s*(-?%d+%.?%d*)%s*[%)%]]?%s*$")
-  return x ~= nil and y ~= nil and z ~= nil
-end
-
-local function _tip_trace_origin()
-  if not (debug and type(debug.getinfo) == "function") then
-    return "debug_unavailable"
-  end
-  for level = 3, 16 do
-    local info = debug.getinfo(level, "nSl")
-    if not info then
-      break
-    end
-    local src = info.short_src or info.source or ""
-    local in_logger = string.find(src, "src/core/Logger.lua", 1, true) ~= nil
-    local in_host_runtime = string.find(src, "src/presentation/api/HostRuntimePort.lua", 1, true) ~= nil
-    if src ~= "" and src ~= "=[C]" and not in_logger and not in_host_runtime then
-      local line = info.currentline or 0
-      local fn_name = info.name or "anonymous"
-      return tostring(src) .. ":" .. tostring(line) .. ":" .. tostring(fn_name)
-    end
-  end
-  return "origin_unresolved"
-end
-
-local function _trace_tip_enqueue(raw_text, duration, queue_len, source, tip_id)
-  local text_type = type(raw_text)
-  local vector_hint = _tip_trace_vector_hint(raw_text)
-  local preview = _tip_trace_preview(raw_text)
-  local should_trace = text_type ~= "string"
-    or logger.tip_trace_enabled == true
-    or _looks_like_vector_text(preview)
-  if not should_trace then
-    return
-  end
-  local parts = {
-    "[TipTrace][Enqueue]",
-    "id=" .. tostring(tip_id),
-    "source=" .. tostring(source or "unknown"),
-    "text_type=" .. tostring(text_type),
-    "duration=" .. tostring(duration),
-    "queue_len=" .. tostring(queue_len),
-    "origin=" .. _tip_trace_origin(),
-    "preview=" .. preview,
-  }
-  if vector_hint ~= nil then
-    parts[#parts + 1] = "vector_hint=" .. vector_hint
-  end
-  local line = table.concat(parts, " ")
-  if type(print) == "function" then
-    pcall(print, line)
-  end
-end
-
-local function _trace_tip_dispatch(tip, duration)
-  if type(tip) ~= "table" then
-    return
-  end
-  local preview = _tip_trace_preview(tip.text)
-  local should_trace = logger.tip_trace_enabled == true or _looks_like_vector_text(preview)
-  if not should_trace then
-    return
-  end
-  local line = table.concat({
-    "[TipTrace][Dispatch]",
-    "id=" .. tostring(tip.tip_id),
-    "source=" .. tostring(tip.source or "unknown"),
-    "duration=" .. tostring(duration),
-    "preview=" .. preview,
-  }, " ")
-  if type(print) == "function" then
-    pcall(print, line)
-  end
-end
 
 local function _schedule_tip_release(delay, fn)
   if type(fn) ~= "function" then
@@ -196,17 +81,6 @@ local function _tip_queue_ref()
   return logger.tip_queue
 end
 
-local function _is_lua_tip_muted()
-  if logger.tip_muted == true then
-    return true
-  end
-  local globals = _G
-  if type(globals) ~= "table" then
-    return false
-  end
-  return globals.EGGY_MUTE_LUA_TIPS == true
-end
-
 local function _show_tip_immediately(text, duration)
   local global_api = GlobalAPI
   if global_api and type(global_api.show_tips) == "function" then
@@ -234,7 +108,6 @@ local function _dispatch_next_tip()
   logger.tip_active = true
   local current_epoch = logger.tip_epoch
   local duration = _normalize_tip_duration(tip.duration, 2.0)
-  _trace_tip_dispatch(tip, duration)
   _show_tip_immediately(tip.text, duration)
 
   local function _release()
@@ -251,38 +124,15 @@ local function _dispatch_next_tip()
   end
 end
 
-function logger.show_tip(text, duration, meta)
+function logger.show_tip(text, duration)
   if text == nil then
     return false
   end
-  if _is_lua_tip_muted() then
-    local source = type(meta) == "table" and meta.source or nil
-    if logger.tip_trace_enabled == true then
-      local line = table.concat({
-        "[TipTrace][Muted]",
-        "source=" .. tostring(source or "unknown"),
-        "duration=" .. tostring(duration),
-        "preview=" .. _tip_trace_preview(text),
-      }, " ")
-      if type(print) == "function" then
-        pcall(print, line)
-      end
-    end
-    return true
-  end
-  local source = type(meta) == "table" and meta.source or nil
   local queue = _tip_queue_ref()
-  local tip_id = (logger.tip_seq or 0) + 1
-  logger.tip_seq = tip_id
-  local normalized_duration = _normalize_tip_duration(duration, 2.0)
   queue[#queue + 1] = {
     text = tostring(text),
-    duration = normalized_duration,
-    source = source,
-    raw_text = text,
-    tip_id = tip_id,
+    duration = _normalize_tip_duration(duration, 2.0),
   }
-  _trace_tip_enqueue(text, normalized_duration, #queue, source, tip_id)
   _dispatch_next_tip()
   return true
 end
@@ -316,7 +166,7 @@ local function _push(level, ...)
   end
   local text = _stringify(text_start, ...)
   if level == "event" and not no_tip then
-    logger.show_tip(text, 2.0, { source = "logger.event" })
+    logger.show_tip(text, 2.0)
   end
   local timestamp = _get_timestamp()
   local time_text = _format_timestamp(timestamp)
@@ -390,10 +240,6 @@ function logger.set_ui_sink(sink)
   logger.ui_sink = sink
 end
 
-function logger.set_tip_muted(enabled)
-  logger.tip_muted = enabled == true
-end
-
 function logger.info(...)
   _push("info", ...)
 end
@@ -418,7 +264,6 @@ function logger.clear()
   logger.tip_queue = {}
   logger.tip_active = false
   logger.tip_epoch = (logger.tip_epoch or 0) + 1
-  logger.tip_seq = 0
 end
 
 function logger.get_seq()
