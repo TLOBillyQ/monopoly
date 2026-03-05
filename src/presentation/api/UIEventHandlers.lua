@@ -1,6 +1,7 @@
 local monopoly_event = require("src.core.events.MonopolyEvents")
 local runtime_ports = require("src.core.RuntimePorts")
 local host_runtime = require("src.presentation.api.HostRuntimePort")
+local core_logger = require("src.core.Logger")
 
 local event_handlers = {}
 local context = { installed = false, logger = nil, state = nil }
@@ -138,6 +139,9 @@ function event_handlers.install(_, logger, state)
   host_runtime.register_custom_event(monopoly_event.market.buy_failed, function(_, _, data)
     local event_data = _event_data(data)
     local tip_text = _resolve_market_buy_failed_tip(event_data)
+    if type(tip_text) ~= "string" then
+      core_logger.warn("[TipTrace][Callsite]", "module=UIEventHandlers", "text_type=" .. tostring(type(tip_text)), "text=" .. tostring(tip_text))
+    end
     host_runtime.show_tips(tip_text, MARKET_BUY_FAILED_MIN_TIP_SECONDS)
   end)
 

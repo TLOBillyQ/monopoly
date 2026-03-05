@@ -8,6 +8,13 @@ local logger = require("src.core.Logger")
 
 local router = {}
 
+local function _show_tip(text, duration)
+  if type(text) ~= "string" then
+    logger.warn("[TipTrace][Callsite]", "module=CanvasEventRouter", "text_type=" .. tostring(type(text)), "text=" .. tostring(text))
+  end
+  host_runtime.show_tips(text, duration)
+end
+
 local function _is_actor_bound_ui_button(action_id)
   if action_id == "next" or action_id == "auto" then
     return true
@@ -69,7 +76,7 @@ function router.bind(state, resolve_game)
       trace_auto = false,
     })
     if actor_role_id == nil then
-      host_runtime.show_tips("当前操作缺少玩家上下文，已忽略", 2.0)
+      _show_tip("当前操作缺少玩家上下文，已忽略", 2.0)
       logger.warn("ui intent rejected: missing actor_role_id", tostring(intent.type), tostring(intent.id))
       if intent.type == "ui_button" and intent.id == "auto" then
         print("[AutoProbe][Router] rejected: missing actor context")
