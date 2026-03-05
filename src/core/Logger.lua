@@ -196,6 +196,17 @@ local function _tip_queue_ref()
   return logger.tip_queue
 end
 
+local function _is_lua_tip_muted()
+  if logger.tip_muted == true then
+    return true
+  end
+  local globals = _G
+  if type(globals) ~= "table" then
+    return false
+  end
+  return globals.EGGY_MUTE_LUA_TIPS == true
+end
+
 local function _show_tip_immediately(text, duration)
   local global_api = GlobalAPI
   if global_api and type(global_api.show_tips) == "function" then
@@ -243,6 +254,21 @@ end
 function logger.show_tip(text, duration, meta)
   if text == nil then
     return false
+  end
+  if _is_lua_tip_muted() then
+    local source = type(meta) == "table" and meta.source or nil
+    if logger.tip_trace_enabled == true then
+      local line = table.concat({
+        "[TipTrace][Muted]",
+        "source=" .. tostring(source or "unknown"),
+        "duration=" .. tostring(duration),
+        "preview=" .. _tip_trace_preview(text),
+      }, " ")
+      if type(print) == "function" then
+        pcall(print, line)
+      end
+    end
+    return true
   end
   local source = type(meta) == "table" and meta.source or nil
   local queue = _tip_queue_ref()
@@ -362,6 +388,10 @@ end
 
 function logger.set_ui_sink(sink)
   logger.ui_sink = sink
+end
+
+function logger.set_tip_muted(enabled)
+  logger.tip_muted = enabled == true
 end
 
 function logger.info(...)

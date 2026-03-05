@@ -104,6 +104,30 @@ local function _test_logger_event_tip_defers_until_current_tip_finishes()
   logger.clear()
 end
 
+local function _test_logger_show_tip_respects_global_mute_switch()
+  local shown = {}
+  logger.clear()
+  _with_patches({
+    {
+      key = "GlobalAPI",
+      value = {
+        show_tips = function(text, duration)
+          shown[#shown + 1] = { text = text, duration = duration }
+        end,
+      },
+    },
+    {
+      key = "EGGY_MUTE_LUA_TIPS",
+      value = true,
+    },
+  }, function()
+    local ok = logger.show_tip("should_be_muted", 2.0, { source = "test" })
+    _assert_eq(ok, true, "show_tip should keep success semantics when muted")
+  end)
+  _assert_eq(#shown, 0, "muted Lua tips should not call GlobalAPI.show_tips")
+  logger.clear()
+end
+
 return {
   name = "misc",
   tests = {
@@ -112,5 +136,6 @@ return {
     { name = "number_utils_to_integer_fallback_rejects_non_integer_text", run = _test_number_utils_to_integer_fallback_rejects_non_integer_text },
     { name = "logger_show_tip_uses_fifo_queue_without_override", run = _test_logger_show_tip_uses_fifo_queue_without_override },
     { name = "logger_event_tip_defers_until_current_tip_finishes", run = _test_logger_event_tip_defers_until_current_tip_finishes },
+    { name = "logger_show_tip_respects_global_mute_switch", run = _test_logger_show_tip_respects_global_mute_switch },
   },
 }
