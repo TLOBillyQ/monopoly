@@ -840,6 +840,7 @@ local function _test_ui_panel_clamps_negative_assets_to_zero()
   assert(row ~= nil, "panel row should exist")
   _assert_eq(row.cash_value, 0, "negative cash_value should normalize as zero")
   _assert_eq(row.cash, "现金: 0", "negative cash should render as zero")
+  _assert_eq(row.total_assets_value, 0, "negative total_assets_value should normalize as zero")
   _assert_eq(row.total_assets, "总资产: 0", "negative total assets should render as zero")
 end
 
@@ -5677,10 +5678,10 @@ local function _new_cash_delta_presenter_env(opts)
       no_action_visible = false,
       no_action_text = "",
       player_rows = {
-        { name = "P1", avatar = nil, cash_value = 0, cash = "现金: 0", land_count = "", total_assets = "" },
-        { name = "P2", avatar = nil, cash_value = nil, cash = "", land_count = "", total_assets = "" },
-        { name = "P3", avatar = nil, cash_value = nil, cash = "", land_count = "", total_assets = "" },
-        { name = "P4", avatar = nil, cash_value = nil, cash = "", land_count = "", total_assets = "" },
+        { name = "P1", avatar = nil, eliminated = false, cash_value = 0, total_assets_value = 0, cash = "现金: 0", land_count = "", total_assets = "总资产: 0" },
+        { name = "P2", avatar = nil, eliminated = false, cash_value = nil, total_assets_value = nil, cash = "", land_count = "", total_assets = "" },
+        { name = "P3", avatar = nil, eliminated = false, cash_value = nil, total_assets_value = nil, cash = "", land_count = "", total_assets = "" },
+        { name = "P4", avatar = nil, eliminated = false, cash_value = nil, total_assets_value = nil, cash = "", land_count = "", total_assets = "" },
       },
     },
   }
@@ -5704,6 +5705,19 @@ local function _new_cash_delta_presenter_env(opts)
       row.cash = "现金: " .. number_utils.format_integer_part(value)
     end
   end
+  local function set_total_assets(index, value)
+    local row = ui_model.panel.player_rows[index]
+    row.total_assets_value = value
+    if value == nil then
+      row.total_assets = ""
+    else
+      row.total_assets = "总资产: " .. number_utils.format_integer_part(value)
+    end
+  end
+  local function set_eliminated(index, value)
+    local row = ui_model.panel.player_rows[index]
+    row.eliminated = value == true
+  end
   local function refresh()
     presenter.refresh(state, ui_model, {
       runtime = runtime,
@@ -5715,6 +5729,8 @@ local function _new_cash_delta_presenter_env(opts)
     ui_model = ui_model,
     refresh = refresh,
     set_cash = set_cash,
+    set_total_assets = set_total_assets,
+    set_eliminated = set_eliminated,
   }
 end
 
@@ -5840,6 +5856,37 @@ local function _test_panel_cash_delta_missing_node_is_safe()
   _assert_eq(env.state.ui.labels["基础_玩家1现金"], "现金: 80", "base cash label should still update")
 end
 
+local function _test_panel_crown_shows_for_top_total_assets_and_ties()
+  local env = _new_cash_delta_presenter_env()
+  env.set_total_assets(1, 100)
+  env.set_total_assets(2, 120)
+  env.set_total_assets(3, 120)
+  env.set_total_assets(4, 80)
+
+  env.refresh()
+
+  _assert_eq(env.state.ui.visible["基础_玩家1皇冠"], false, "player1 crown should hide when not top")
+  _assert_eq(env.state.ui.visible["基础_玩家2皇冠"], true, "player2 crown should show when tied top")
+  _assert_eq(env.state.ui.visible["基础_玩家3皇冠"], true, "player3 crown should show when tied top")
+  _assert_eq(env.state.ui.visible["基础_玩家4皇冠"], false, "player4 crown should hide when not top")
+end
+
+local function _test_panel_crown_excludes_eliminated_players()
+  local env = _new_cash_delta_presenter_env()
+  env.set_total_assets(1, 80)
+  env.set_total_assets(2, 200)
+  env.set_total_assets(3, 100)
+  env.set_total_assets(4, 60)
+  env.set_eliminated(2, true)
+
+  env.refresh()
+
+  _assert_eq(env.state.ui.visible["基础_玩家1皇冠"], false, "player1 crown should hide when not top among active players")
+  _assert_eq(env.state.ui.visible["基础_玩家2皇冠"], false, "eliminated player crown should hide")
+  _assert_eq(env.state.ui.visible["基础_玩家3皇冠"], true, "active top player crown should show")
+  _assert_eq(env.state.ui.visible["基础_玩家4皇冠"], false, "player4 crown should hide")
+end
+
 return {
   _test_move_anim_callback_and_delay,
   _test_popup_timeout_auto_confirm,
@@ -5939,6 +5986,8 @@ return {
   _test_panel_cash_delta_keeps_latest_when_changes_are_continuous,
   _test_panel_cash_delta_hides_when_value_unchanged,
   _test_panel_cash_delta_missing_node_is_safe,
+  _test_panel_crown_shows_for_top_total_assets_and_ties,
+  _test_panel_crown_excludes_eliminated_players,
   _test_item_slot_refresh_resets_highlight_without_client_role,
   _test_target_confirm_dispatches_selected_option,
   _test_target_pick_tick_updates_selection_on_hit_change,

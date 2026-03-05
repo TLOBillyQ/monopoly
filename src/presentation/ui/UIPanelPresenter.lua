@@ -124,6 +124,17 @@ local function _resolve_cash_value(row)
   return normalized
 end
 
+local function _resolve_total_assets_value(row)
+  if not row then
+    return nil
+  end
+  local normalized = number_utils.to_integer(row.total_assets_value)
+  if normalized == nil then
+    return nil
+  end
+  return normalized
+end
+
 local function _ensure_cash_delta_state(ui)
   if type(ui.player_cash_value_cache_by_index) ~= "table" then
     ui.player_cash_value_cache_by_index = {}
@@ -193,6 +204,35 @@ local function _refresh_cash_delta_label(ui, index, row)
   end
 end
 
+local function _refresh_player_crowns(ui, player_rows)
+  local top_total_assets = nil
+  local crown_visible_by_index = {}
+  for i = 1, 4 do
+    local row = player_rows[i]
+    local total_assets_value = _resolve_total_assets_value(row)
+    local eligible = row and row.eliminated ~= true and total_assets_value ~= nil
+    if eligible then
+      if top_total_assets == nil or total_assets_value > top_total_assets then
+        top_total_assets = total_assets_value
+      end
+    end
+  end
+
+  for i = 1, 4 do
+    local row = player_rows[i]
+    local total_assets_value = _resolve_total_assets_value(row)
+    local visible = false
+    if row and row.eliminated ~= true and top_total_assets ~= nil and total_assets_value ~= nil then
+      visible = total_assets_value == top_total_assets
+    end
+    crown_visible_by_index[i] = visible
+  end
+
+  for i = 1, 4 do
+    _set_visible_safe(ui, string.format(base_nodes.player_crown, i), crown_visible_by_index[i] == true)
+  end
+end
+
 local function _apply_player_colors(role, runtime, player, index)
   if not role then
     return
@@ -251,6 +291,7 @@ function panel_presenter.refresh(state, ui_model, deps)
     local avatar_key = _resolve_avatar_key(row, empty_avatar_key)
     _set_player_avatar(ui, runtime, string.format(base_nodes.player_avatar, i), avatar_key)
   end
+  _refresh_player_crowns(ui, player_rows)
 
   if type(ui.item_slot_item_ids_by_role) ~= "table" then
     ui.item_slot_item_ids_by_role = {}

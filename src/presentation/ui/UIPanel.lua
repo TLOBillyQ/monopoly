@@ -26,6 +26,17 @@ local function _normalize_cash_value(value)
   return normalized
 end
 
+local function _normalize_total_assets_value(value)
+  local normalized = number_utils.to_integer(value)
+  if normalized == nil then
+    return 0
+  end
+  if normalized < 0 then
+    return 0
+  end
+  return normalized
+end
+
 local function _resolve_role(player)
   if not player or player.id == nil then
     return nil
@@ -95,13 +106,24 @@ function panel.build_player_statuses(game, game_obj, max_players)
       out[i] = {
         name = profile.name,
         avatar = profile.avatar,
+        eliminated = player.eliminated == true,
         cash_value = cash,
+        total_assets_value = _normalize_total_assets_value(total),
         cash = "现金: " .. number_utils.format_integer_part(_normalize_display_amount(cash)),
         land_count = "地块: " .. number_utils.format_integer_part(land_count),
         total_assets = "总资产: " .. number_utils.format_integer_part(_normalize_display_amount(total)),
       }
     else
-      out[i] = { name = "", avatar = nil, cash_value = nil, cash = "", land_count = "", total_assets = "" }
+      out[i] = {
+        name = "",
+        avatar = nil,
+        eliminated = false,
+        cash_value = nil,
+        total_assets_value = nil,
+        cash = "",
+        land_count = "",
+        total_assets = "",
+      }
     end
   end
   return out

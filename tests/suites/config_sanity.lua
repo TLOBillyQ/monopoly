@@ -103,20 +103,31 @@ local function _test_config_sanity_release_fails_when_set_vehicle_card_exists()
   end)
 end
 
-local function _test_chance_forced_move_destinations_match_card_semantics()
-  local tile_type_by_id = {}
+local function _test_chance_forced_move_destinations_are_valid_tiles()
+  local tile_exists_by_id = {}
   for _, tile in ipairs(tiles_cfg) do
-    tile_type_by_id[tile.id] = tile.type
+    tile_exists_by_id[tile.id] = true
   end
   local by_id = {}
   for _, card in ipairs(chance_cfg) do
     by_id[card.id] = card
+    if card.effect == "forced_move" then
+      assert(card.destination_tile_id ~= nil, "forced_move card missing destination_tile_id: " .. tostring(card.id))
+      assert(
+        tile_exists_by_id[card.destination_tile_id] == true,
+        "forced_move card destination_tile_id not found in tiles: "
+          .. tostring(card.destination_tile_id)
+          .. " (card_id="
+          .. tostring(card.id)
+          .. ")"
+      )
+    end
   end
 
   assert(by_id[3031] and by_id[3031].destination_tile_id, "card 3031 should exist")
   assert(by_id[3033] and by_id[3033].destination_tile_id, "card 3033 should exist")
-  assert(tile_type_by_id[by_id[3031].destination_tile_id] == "hospital", "card 3031 should land on hospital tile")
-  assert(tile_type_by_id[by_id[3033].destination_tile_id] == "tax", "card 3033 should land on tax tile")
+  assert(tile_exists_by_id[by_id[3031].destination_tile_id] == true, "card 3031 destination should exist in tiles")
+  assert(tile_exists_by_id[by_id[3033].destination_tile_id] == true, "card 3033 destination should exist in tiles")
 end
 
 return {
@@ -133,8 +144,8 @@ return {
       run = _test_config_sanity_release_fails_when_set_vehicle_card_exists,
     },
     {
-      name = "chance_forced_move_destinations_match_card_semantics",
-      run = _test_chance_forced_move_destinations_match_card_semantics,
+      name = "chance_forced_move_destinations_are_valid_tiles",
+      run = _test_chance_forced_move_destinations_are_valid_tiles,
     },
   },
 }

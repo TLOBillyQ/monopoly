@@ -11,6 +11,7 @@ local nodes = {
   player_cash_delta = "基础-玩家%s消耗金币显示",
   player_land_count = "基础_玩家%s地块数量",
   player_total_assets = "基础_玩家%s总资产",
+  player_crown = "基础_玩家%s皇冠",
   player_avatar = "基础_玩家%s头像",
   player_color = "基础_玩家%s底板颜色",
   item_slots = {

@@ -1,4 +1,9 @@
 local player_colors = require("src.presentation.shared.PlayerColors")
+local assets = require("src.presentation.api.ui_view_service.assets")
+local runtime = require("src.presentation.api.UIRuntimePort")
+local base_nodes = require("src.presentation.canvas.base.nodes")
+local support = require("TestSupport")
+local _with_patches = support.with_patches
 
 local function _assert_eq(actual, expected, msg)
   assert(actual == expected, (msg or "") .. " expected=" .. tostring(expected) .. " actual=" .. tostring(actual))
@@ -39,6 +44,88 @@ local function _test_remap_by_index_nil_safe()
   _assert_eq(player_colors.resolve_owner_color(1), 0xcfcfcf, "empty remap returns default")
 end
 
+local function _test_capture_player_colors_prefers_base_panel_colors()
+  local captured = nil
+  local fallback_calls = 0
+  local sampled = {
+    [1] = 0xaa1100,
+    [2] = 0x00aa11,
+    [3] = 0x0011aa,
+    [4] = 0xaa00aa,
+  }
+
+  _with_patches({
+    { target = runtime, key = "with_client_role", value = function(_, fn) fn() end },
+    { target = runtime, key = "set_client_role", value = function() end },
+    { target = runtime, key = "query_node", value = function(name)
+      for index = 1, 4 do
+        if name == string.format(base_nodes.player_color, index) then
+          return { image_color = sampled[index] }
+        end
+      end
+      error("unexpected node: " .. tostring(name))
+    end },
+    { target = player_colors, key = "set_owner_colors", value = function(colors)
+      captured = colors
+    end },
+    { target = player_colors, key = "remap_by_index", value = function()
+      fallback_calls = fallback_calls + 1
+    end },
+  }, function()
+    assets.capture_player_colors({}, {
+      players = {
+        { id = "p1" },
+        { id = "p2" },
+        { id = "p3" },
+        { id = "p4" },
+      },
+    })
+  end)
+
+  assert(captured ~= nil, "capture should set owner colors from base panel")
+  _assert_eq(captured["p1"], sampled[1], "p1 should use base panel color #1")
+  _assert_eq(captured["p2"], sampled[2], "p2 should use base panel color #2")
+  _assert_eq(captured["p3"], sampled[3], "p3 should use base panel color #3")
+  _assert_eq(captured["p4"], sampled[4], "p4 should use base panel color #4")
+  _assert_eq(fallback_calls, 0, "capture should not fallback when sampled colors are valid")
+end
+
+local function _test_capture_player_colors_fallbacks_on_invalid_sample()
+  local captured = nil
+  local fallback_calls = 0
+
+  _with_patches({
+    { target = runtime, key = "with_client_role", value = function(_, fn) fn() end },
+    { target = runtime, key = "set_client_role", value = function() end },
+    { target = runtime, key = "query_node", value = function(name)
+      for index = 1, 4 do
+        if name == string.format(base_nodes.player_color, index) then
+          return { image_color = 0xffffff }
+        end
+      end
+      error("unexpected node: " .. tostring(name))
+    end },
+    { target = player_colors, key = "set_owner_colors", value = function(colors)
+      captured = colors
+    end },
+    { target = player_colors, key = "remap_by_index", value = function()
+      fallback_calls = fallback_calls + 1
+    end },
+  }, function()
+    assets.capture_player_colors({}, {
+      players = {
+        { id = "p1" },
+        { id = "p2" },
+        { id = "p3" },
+        { id = "p4" },
+      },
+    })
+  end)
+
+  _assert_eq(captured, nil, "invalid sampled colors should not be used as source")
+  _assert_eq(fallback_calls, 1, "invalid sampled colors should fallback to remap_by_index")
+end
+
 return {
   name = "presentation_player_colors",
   tests = {
@@ -46,5 +133,7 @@ return {
     { name = "remap_by_index_role_ids", run = _test_remap_by_index_role_ids },
     { name = "remap_by_index_caps_at_4", run = _test_remap_by_index_caps_at_4 },
     { name = "remap_by_index_nil_safe", run = _test_remap_by_index_nil_safe },
+    { name = "capture_player_colors_prefers_base_panel_colors", run = _test_capture_player_colors_prefers_base_panel_colors },
+    { name = "capture_player_colors_fallbacks_on_invalid_sample", run = _test_capture_player_colors_fallbacks_on_invalid_sample },
   },
 }
