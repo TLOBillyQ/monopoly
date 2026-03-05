@@ -1,4 +1,6 @@
 local runtime_env_bindings = {}
+local global_tip_trace_installed = false
+local global_tip_trace_raw_show_tips = nil
 
 local function _tip_trace_preview(value)
   local ok, text = pcall(tostring, value)
@@ -36,6 +38,9 @@ local function _tip_trace_origin()
 end
 
 local function _install_global_tip_trace()
+  if global_tip_trace_installed == true then
+    return
+  end
   if type(GlobalAPI) ~= "table" then
     return
   end
@@ -43,12 +48,8 @@ local function _install_global_tip_trace()
   if type(show_tips) ~= "function" then
     return
   end
-  if GlobalAPI.__eggy_tip_trace_wrapped == true then
-    return
-  end
-  GlobalAPI.__eggy_tip_trace_raw_show_tips = show_tips
-  GlobalAPI.__eggy_tip_trace_wrapped = true
-  GlobalAPI.show_tips = function(content, duration)
+  global_tip_trace_raw_show_tips = show_tips
+  local wrapped = function(content, duration)
     local line = table.concat({
       "[TipTrace][GlobalAPI]",
       "text_type=" .. tostring(type(content)),
@@ -59,8 +60,18 @@ local function _install_global_tip_trace()
     if type(print) == "function" then
       pcall(print, line)
     end
-    return GlobalAPI.__eggy_tip_trace_raw_show_tips(content, duration)
+    return global_tip_trace_raw_show_tips(content, duration)
   end
+  local ok, err = pcall(function()
+    GlobalAPI.show_tips = wrapped
+  end)
+  if not ok then
+    if type(print) == "function" then
+      pcall(print, "[TipTrace][GlobalAPI] install skipped: " .. tostring(err))
+    end
+    return
+  end
+  global_tip_trace_installed = true
 end
 
 local function _install_lua_api(lua_api)
