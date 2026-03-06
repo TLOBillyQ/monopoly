@@ -15,6 +15,8 @@ local logger = {
   tip_queue = {},
   tip_active = false,
   tip_epoch = 0,
+  tip_presenter = nil,
+  scheduler = nil,
 }
 local number_utils = require("src.core.NumberUtils")
 
@@ -43,13 +45,13 @@ local function _schedule_tip_release(delay, fn)
   if type(fn) ~= "function" then
     return false
   end
-  if type(SetTimeOut) == "function" then
+  if type(logger.scheduler) == "function" then
     local invoked = false
     local function _wrapped()
       invoked = true
       fn()
     end
-    local ok, handled = pcall(SetTimeOut, delay, _wrapped)
+    local ok, handled = pcall(logger.scheduler, delay, _wrapped)
     if ok and (invoked or handled == true) then
       return true
     end
@@ -82,9 +84,8 @@ local function _tip_queue_ref()
 end
 
 local function _show_tip_immediately(text, duration)
-  local global_api = GlobalAPI
-  if global_api and type(global_api.show_tips) == "function" then
-    local ok = pcall(global_api.show_tips, text, duration)
+  if type(logger.tip_presenter) == "function" then
+    local ok = pcall(logger.tip_presenter, text, duration)
     return ok
   end
   return false
@@ -201,9 +202,41 @@ function logger.set_time_formatter(formatter)
   logger.time_formatter = formatter
 end
 
-function logger.configure_game_time()
-  local game_api = GameAPI
-  assert(game_api ~= nil, "missing GameAPI")
+function logger.reset_time_runtime()
+  logger.set_timestamp_provider(function()
+    return 0
+  end)
+  logger.set_time_formatter(function(timestamp)
+    return tostring(timestamp)
+  end)
+end
+
+function logger.set_tip_presenter(presenter)
+  logger.tip_presenter = presenter
+end
+
+function logger.set_scheduler(scheduler)
+  logger.scheduler = scheduler
+end
+
+function logger.configure_host_runtime(opts)
+  opts = opts or {}
+  logger.set_tip_presenter(opts.tip_presenter)
+  logger.set_scheduler(opts.scheduler)
+  local game_api = opts.game_api
+  if game_api ~= nil
+      and type(game_api.get_timestamp) == "function"
+      and type(game_api.get_hour) == "function"
+      and type(game_api.get_minute) == "function"
+      and type(game_api.get_second) == "function" then
+    logger.configure_game_time(opts.game_api)
+  else
+    logger.reset_time_runtime()
+  end
+end
+
+function logger.configure_game_time(game_api)
+  assert(game_api ~= nil, "missing game api")
   logger.set_timestamp_provider(function()
     return game_api.get_timestamp()
   end)

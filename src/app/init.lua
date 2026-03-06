@@ -7,7 +7,25 @@ local ui_bootstrap = require("src.app.bootstrap.UIBootstrap")
 local startup_policy = require("src.app.bootstrap.StartupPolicy")
 local gameplay_rules = require("src.core.config.GameplayRules")
 
-logger.configure_game_time()
+logger.configure_host_runtime({
+  game_api = GameAPI,
+  tip_presenter = function(text, duration)
+    if GlobalAPI and type(GlobalAPI.show_tips) == "function" then
+      return GlobalAPI.show_tips(text, duration)
+    end
+    return false
+  end,
+  scheduler = function(delay, fn)
+    if type(SetTimeOut) == "function" then
+      return SetTimeOut(delay, fn)
+    end
+    if fn then
+      fn()
+      return true
+    end
+    return false
+  end,
+})
 
 -- current_game_ref[1] 由 UIBootstrap 在 GAME_INIT 后赋值
 local current_game_ref = { nil }

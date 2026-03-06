@@ -196,7 +196,7 @@ local growth_budget_rules = {
       "%f[%w_]RegisterCustomEvent%f[^%w_]",
     },
     budget = {
-      ["src/core/Logger.lua"] = 5,
+      ["src/core/Logger.lua"] = 0,
       ["src/core/RuntimeContext.lua"] = 7,
       ["src/core/RuntimeEditorExports.lua"] = 6,
       ["src/core/RuntimeEnvBindings.lua"] = 8,

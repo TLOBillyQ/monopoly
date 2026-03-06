@@ -2,6 +2,7 @@
 local M = {}
 
 local app = require("src.game.core.runtime.Game")
+local logger = require("src.core.Logger")
 local movement = require("src.game.systems.movement.Movement")
 local turn_move = require("src.game.flow.turn.TurnMove")
 local inventory = require("src.game.systems.items.ItemInventory")
@@ -68,6 +69,25 @@ local function _refresh_runtime_context_for_tests()
   end
   runtime_context.install_runtime_helpers(ctx, { install_globals = false })
   runtime_context.set_current(ctx)
+  logger.configure_host_runtime({
+    game_api = GameAPI,
+    tip_presenter = function(text, duration)
+      if GlobalAPI and type(GlobalAPI.show_tips) == "function" then
+        return GlobalAPI.show_tips(text, duration)
+      end
+      return false
+    end,
+    scheduler = function(delay, fn)
+      if type(SetTimeOut) == "function" then
+        return SetTimeOut(delay, fn)
+      end
+      if fn then
+        fn()
+        return true
+      end
+      return false
+    end,
+  })
 end
 
 local function with_patches(patches, fn, opts)

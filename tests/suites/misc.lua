@@ -1,7 +1,6 @@
 local support = require("TestSupport")
 local _assert_eq = support.assert_eq
 local number_utils = support.number_utils
-local _with_patches = support.with_patches
 local logger = require("src.core.Logger")
 
 local function _test_number_utils_to_integer()
@@ -33,23 +32,14 @@ local function _test_logger_show_tip_uses_fifo_queue_without_override()
   local timers = {}
 
   logger.clear()
-  _with_patches({
-    {
-      key = "GlobalAPI",
-      value = {
-        show_tips = function(text, duration)
-          shown[#shown + 1] = { text = text, duration = duration }
-        end,
-      },
-    },
-    {
-      key = "SetTimeOut",
-      value = function(delay, fn)
-        timers[#timers + 1] = { delay = delay, fn = fn }
-        return true
-      end,
-    },
-  }, function()
+  logger.set_tip_presenter(function(text, duration)
+    shown[#shown + 1] = { text = text, duration = duration }
+  end)
+  logger.set_scheduler(function(delay, fn)
+    timers[#timers + 1] = { delay = delay, fn = fn }
+    return true
+  end)
+  local ok, err = pcall(function()
     logger.show_tip("A", 3.0)
     logger.show_tip("B", 2.0)
 
@@ -65,7 +55,12 @@ local function _test_logger_show_tip_uses_fifo_queue_without_override()
     _assert_eq(#timers, 2, "second tip should schedule another release timer")
     _assert_eq(timers[2].delay, 2.0, "second tip release timer should match duration")
   end)
+  logger.set_tip_presenter(nil)
+  logger.set_scheduler(nil)
   logger.clear()
+  if not ok then
+    error(err)
+  end
 end
 
 local function _test_logger_event_tip_defers_until_current_tip_finishes()
@@ -73,23 +68,14 @@ local function _test_logger_event_tip_defers_until_current_tip_finishes()
   local timers = {}
 
   logger.clear()
-  _with_patches({
-    {
-      key = "GlobalAPI",
-      value = {
-        show_tips = function(text, duration)
-          shown[#shown + 1] = { text = text, duration = duration }
-        end,
-      },
-    },
-    {
-      key = "SetTimeOut",
-      value = function(delay, fn)
-        timers[#timers + 1] = { delay = delay, fn = fn }
-        return true
-      end,
-    },
-  }, function()
+  logger.set_tip_presenter(function(text, duration)
+    shown[#shown + 1] = { text = text, duration = duration }
+  end)
+  logger.set_scheduler(function(delay, fn)
+    timers[#timers + 1] = { delay = delay, fn = fn }
+    return true
+  end)
+  local ok, err = pcall(function()
     logger.show_tip("market_failed", 3.0)
     logger.event("log event message")
 
@@ -101,29 +87,84 @@ local function _test_logger_event_tip_defers_until_current_tip_finishes()
     _assert_eq(#shown, 2, "log event tip should show after market tip")
     _assert_eq(shown[2].text, "log event message", "second tip should be log event")
   end)
+  logger.set_tip_presenter(nil)
+  logger.set_scheduler(nil)
   logger.clear()
+  if not ok then
+    error(err)
+  end
 end
 
 local function _test_logger_event_no_tips_stays_in_event_feed_without_showing_tip()
   local shown = {}
 
   logger.clear()
-  _with_patches({
-    {
-      key = "GlobalAPI",
-      value = {
-        show_tips = function(text, duration)
-          shown[#shown + 1] = { text = text, duration = duration }
-        end,
-      },
-    },
-  }, function()
+  logger.set_tip_presenter(function(text, duration)
+    shown[#shown + 1] = { text = text, duration = duration }
+  end)
+  local ok, err = pcall(function()
     logger.event_no_tips("phase event message")
     local text = logger.get_text_by_level("event")
     assert(string.find(text, "phase event message", 1, true) ~= nil, "event_no_tips should still enter event feed")
     _assert_eq(#shown, 0, "event_no_tips should not trigger tips")
   end)
+  logger.set_tip_presenter(nil)
   logger.clear()
+  if not ok then
+    error(err)
+  end
+end
+
+local function _test_logger_configure_host_runtime_uses_injected_hooks()
+  local shown = {}
+  local timers = {}
+
+  logger.clear()
+  logger.configure_host_runtime({
+    game_api = {
+      get_timestamp = function()
+        return 65
+      end,
+      get_hour = function()
+        return 1
+      end,
+      get_minute = function()
+        return 2
+      end,
+      get_second = function()
+        return 3
+      end,
+    },
+    tip_presenter = function(text, duration)
+      shown[#shown + 1] = { text = text, duration = duration }
+    end,
+    scheduler = function(delay, fn)
+      timers[#timers + 1] = { delay = delay, fn = fn }
+      return true
+    end,
+  })
+
+  local ok, err = pcall(function()
+    logger.event("host runtime injected")
+    local text = logger.get_text_by_level("event")
+    assert(string.find(text, "01:02:03", 1, true) ~= nil, "logger should use injected game clock formatter")
+    _assert_eq(#shown, 1, "logger should use injected tip presenter")
+    _assert_eq(shown[1].text, "host runtime injected", "injected tip presenter should receive event text")
+    _assert_eq(#timers, 1, "logger should use injected scheduler for tip release")
+  end)
+
+  logger.set_tip_presenter(nil)
+  logger.set_scheduler(nil)
+  logger.set_timestamp_provider(function()
+    return 0
+  end)
+  logger.set_time_formatter(function(timestamp)
+    return tostring(timestamp)
+  end)
+  logger.clear()
+  if not ok then
+    error(err)
+  end
 end
 
 return {
@@ -135,5 +176,6 @@ return {
     { name = "logger_show_tip_uses_fifo_queue_without_override", run = _test_logger_show_tip_uses_fifo_queue_without_override },
     { name = "logger_event_tip_defers_until_current_tip_finishes", run = _test_logger_event_tip_defers_until_current_tip_finishes },
     { name = "logger_event_no_tips_stays_in_event_feed_without_showing_tip", run = _test_logger_event_no_tips_stays_in_event_feed_without_showing_tip },
+    { name = "logger_configure_host_runtime_uses_injected_hooks", run = _test_logger_configure_host_runtime_uses_injected_hooks },
   },
 }
