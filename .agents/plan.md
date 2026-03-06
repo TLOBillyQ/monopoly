@@ -15,7 +15,8 @@
 - [x] (2026-03-07 12:18 +0800) 已完成里程碑 1 的第一刀：把 Eggy 宿主支付实现搬到 `src/app/bootstrap/payment/EggyPaidPurchaseGateway.lua`，`src/game/systems/market/service/PaidPurchaseGateway.lua` 现只保留薄代理；同时 `tests/internal/dep_rules.lua` 新增守护，禁止 `src/game/systems/market/service` 再直接触碰 `GameAPI`、`RegisterTriggerEvent`、`EVENT`。定向 `market`、`paid_currency`、全量回归均继续通过。
 - [x] (2026-03-07 12:31 +0800) 已完成里程碑 1 的第二刀：新增 `src/game/systems/market/ports/PaidPurchasePort.lua`，`Purchase.lua` 现改为只依赖 market 内层支付端口；`RuntimePorts` 与 `src/app/bootstrap/runtime_install/RuntimePortDefaults.lua` 也已接入 `resolve_market_paid_gateway()` 默认装配。当前仍保留 port 内部对 Eggy adapter 的测试环境 fallback，但 `Purchase` / `MarketService` 已不再直接 require 外层实现。
 - [x] (2026-03-07 12:46 +0800) 已完成里程碑 2：新增 `src/game/flow/ports/LegacyOutputMirror.lua`，`UseCaseOutputPort.lua` 现只维护 `ui_runtime` 语义，默认 `build_base_output_ports()` 再通过 legacy mirror 把旧字段桥接回 `state`；已补 `usecase_boundary_contract` 验证“纯 runtime output 不写 legacy state，默认 base output 仍保留桥接行为”。
-- [ ] 下一步进入里程碑 3：把 choice 显式字段集中成单一 contract helper。
+- [x] (2026-03-07 13:02 +0800) 已完成里程碑 3 的第一刀：新增 `src/core/ChoiceContract.lua`，把 `route_key`、`requires_confirm`、`owner_role_id`、`confirm_*`、item-slot、target-picker、market 分页等稳定字段集中成单一清单；`IntentDispatcher.lua`、`UIChoice.lua`、`TurnDispatchValidator.lua`、`TargetChoiceEffects.lua`、`ItemSlice.lua` 已改接 contract helper，`usecase_boundary_contract` 已补“显式字段单点复制”契约。
+- [ ] 下一步进入里程碑 4：在 actor ownership 路径上删除 `meta.player_id` fallback。
 - [ ] 里程碑 2 将拆分 `src/game/flow/ports/UseCaseOutputPort.lua`，把 legacy state 镜像从用例端口中移出去。
 - [ ] 里程碑 3 将整理 choice 稳定协议，把当前散落的显式字段收敛成单一 contract helper，并补透传契约测试。
 - [ ] 里程碑 4 将把 `owner_role_id` 变成强约束字段，删除 `meta.player_id` 在 actor ownership 路径上的 fallback。
@@ -62,6 +63,10 @@
 - 决策：choice 系统的下一步是做 contract helper，而不是发明复杂类型框架。
   理由：当前 Lua 代码库已经有稳定显式字段，只差集中声明与透传验证。引入过重抽象会增加复杂度，却不一定增加稳定性。
   日期/作者：2026-03-07 / Codex
+- 决策：choice contract 先放在 `src/core/ChoiceContract.lua`，而不是放在 presentation 或 market 子目录。
+  理由：这组字段已经同时被用例层、校验层和 presentation 消费，属于跨玩法的稳定协议；放在 `src/core` 更符合“内层定义边界，外层消费边界”的方向。
+  日期/作者：2026-03-07 / Codex
+
 
 - 决策：`owner_role_id` 的 fallback 删除必须排在 choice contract helper 之后。
   理由：只有先把“哪些 choice 必须显式声明 ownership”写成契约，删 fallback 才不会变成碰运气的清理。
@@ -119,7 +124,7 @@
 
 执行时先覆盖已经成熟的稳定字段，不要急着把所有 `meta` 内容都抽出来。只要能把当前已经显式化的协议收束进一份 contract，就已经能显著减少未来漂移风险。随后补一组 choice 生命周期契约测试，验证 builder → `IntentDispatcher` → `pending_choice` → `UIChoice` / `ChoiceSlice` 的字段透传链路。
 
-验收标准是：choice 协议的显式字段在代码中有单一清单；至少一条透传契约测试覆盖 `owner_role_id`、`confirm_*`、target-picker 字段和 market page 字段；全量回归继续通过；presentation 不需要新增新的 `kind/meta` fallback 才能工作。
+这个里程碑当前已完成第一刀，并已经满足计划的主要验收点：choice 协议的显式字段现在有单一清单，位置在 `src/core/ChoiceContract.lua`；`IntentDispatcher` 与 `UIChoice` 不再各自维护一份手写字段列表；`TurnDispatchValidator`、`TargetChoiceEffects`、`ItemSlice` 也已开始共用同一套读取逻辑；`usecase_boundary_contract`、`architecture_guard_contract` 与全量回归继续通过。后续如果要继续深化这一里程碑，只剩把更多读取点迁到 contract helper，并为 ownership 严格化让路。
 
 ## 里程碑 4：把 `owner_role_id` 变成强约束，删除 ownership fallback
 
@@ -283,6 +288,7 @@
     最新全量回归：All regression checks passed (376)
     里程碑 1 当前状态：已完成
     里程碑 2 当前状态：已完成
+    里程碑 3 当前状态：已完成第一刀并可继续收口
 
 这份计划默认假设执行者工作在本机仓库根目录，并且能运行 Lua 测试命令。如果运行环境临时缺少测试依赖，必须先恢复到能跑统一回归的状态，再推进任何架构改动。因为对这份计划来说，验证不是收尾动作，而是每一步是否成立的定义本身。
 

@@ -4,11 +4,12 @@ local gameplay_rules = require("src.core.config.GameplayRules")
 local modal_state = require("src.presentation.interaction.UIModalStateCoordinator")
 local host_runtime = require("src.presentation.api.HostRuntimePort")
 local ui_core = require("src.presentation.api.ui_view_service.core")
+local choice_contract = require("src.core.ChoiceContract")
 
 local target_choice_effects = {}
 
 local function _is_target_choice(choice)
-  return choice ~= nil and choice.route_key == "target" and choice.uses_target_picker == true
+  return choice ~= nil and choice.route_key == "target" and choice_contract.uses_target_picker(choice)
 end
 
 local function _resolve_option_id(option)

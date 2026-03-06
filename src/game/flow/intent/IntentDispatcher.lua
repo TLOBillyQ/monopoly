@@ -1,4 +1,5 @@
 local monopoly_event = require("src.core.events.MonopolyEvents")
+local choice_contract = require("src.core.ChoiceContract")
 local choice_route_policy = require("src.core.ChoiceRoutePolicy")
 
 local intent_dispatcher = {}
@@ -42,17 +43,10 @@ function intent_dispatcher.open_choice(game, choice_spec, opts)
     meta = choice_spec.meta,
     route_key = route_key,
     requires_confirm = requires_confirm == true,
-    owner_role_id = choice_spec.owner_role_id,
-    confirm_title = choice_spec.confirm_title,
-    confirm_body = choice_spec.confirm_body,
-    uses_item_slots = choice_spec.uses_item_slots == true,
-    pre_confirm_before_slot_pick = choice_spec.pre_confirm_before_slot_pick == true,
-    uses_target_picker = choice_spec.uses_target_picker == true,
-    target_picker_owner_role_id = choice_spec.target_picker_owner_role_id,
-    active_tab = choice_spec.active_tab,
-    page_index = choice_spec.page_index,
-    page_count = choice_spec.page_count,
   }
+  choice_contract.copy_explicit_fields(choice_spec, entry)
+  entry.route_key = route_key
+  entry.requires_confirm = requires_confirm == true
   game.turn.pending_choice = entry
   game.dirty.turn = true
   game.dirty.any = true

@@ -3,6 +3,7 @@ local number_utils = require("src.core.NumberUtils")
 local item_slot_data = require("src.game.flow.turn.ItemSlotData")
 local turn_action_gate = require("src.game.flow.turn.TurnActionGate")
 local role_id_utils = require("src.core.RoleId")
+local choice_contract = require("src.core.ChoiceContract")
 
 local validator = {}
 
@@ -17,12 +18,7 @@ local function _is_turn_bound_ui_button(action_id)
 end
 
 local function _resolve_choice_owner_role_id(game, choice)
-  local owner_role_id = choice and number_utils.to_integer(choice.owner_role_id) or nil
-  if owner_role_id ~= nil then
-    return owner_role_id
-  end
-  local meta = choice and choice.meta or nil
-  owner_role_id = meta and number_utils.to_integer(meta.player_id) or nil
+  local owner_role_id = choice_contract.resolve_owner_role_id(choice)
   if owner_role_id ~= nil then
     return owner_role_id
   end

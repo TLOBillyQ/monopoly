@@ -1,5 +1,6 @@
 local number_utils = require("src.core.NumberUtils")
 local role_id_utils = require("src.core.RoleId")
+local choice_contract = require("src.core.ChoiceContract")
 
 local item_slice = {}
 
@@ -59,12 +60,13 @@ end
 function item_slice.resolve_item_choice_owner_id(game, choice, current_player_id)
   local owner_role_id = role_id_utils.normalize(current_player_id)
   local pending = game and game.turn and game.turn.pending_choice or nil
-  if pending and pending.owner_role_id ~= nil then
-    owner_role_id = number_utils.to_integer(pending.owner_role_id)
-    return owner_role_id
+  local pending_owner_role_id = choice_contract.resolve_owner_role_id(pending)
+  if pending_owner_role_id ~= nil then
+    return pending_owner_role_id
   end
-  if choice and choice.owner_role_id ~= nil then
-    owner_role_id = number_utils.to_integer(choice.owner_role_id)
+  local choice_owner_role_id = choice_contract.resolve_owner_role_id(choice)
+  if choice_owner_role_id ~= nil then
+    owner_role_id = choice_owner_role_id
   end
   return owner_role_id
 end

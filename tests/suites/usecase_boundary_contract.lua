@@ -109,6 +109,30 @@ local function _test_gameplay_loop_clock_contract_split_sources()
   runtime_ports.reset_for_tests()
 end
 
+local function _test_choice_contract_copies_explicit_fields_once()
+  local choice_contract = require("src.core.ChoiceContract")
+  local source = {
+    route_key = "target",
+    requires_confirm = true,
+    owner_role_id = 8,
+    confirm_title = "请确认",
+    confirm_body = "你选的是：A",
+    uses_item_slots = false,
+    pre_confirm_before_slot_pick = false,
+    uses_target_picker = true,
+    target_picker_owner_role_id = 9,
+    active_tab = "skin",
+    page_index = 2,
+    page_count = 3,
+  }
+  local target = {}
+  choice_contract.copy_explicit_fields(source, target)
+  _assert_eq(target.route_key, "target", "contract should copy route_key")
+  _assert_eq(target.owner_role_id, 8, "contract should copy owner_role_id")
+  _assert_eq(target.target_picker_owner_role_id, 9, "contract should copy target picker owner")
+  _assert_eq(target.page_count, 3, "contract should copy market paging fields")
+end
+
 local function _test_use_case_output_port_runtime_variant_stays_off_legacy_state()
   local use_case_output_port = require("src.game.flow.ports.UseCaseOutputPort")
   local output = use_case_output_port.build_runtime_output_ports()
