@@ -1,12 +1,18 @@
 # Monopoly 代码库架构审查
 
-本次审查基于 Clean Architecture 视角，重点检查依赖方向、用例边界、端口适配器设计，以及宿主运行时与 UI 细节是否渗透进核心业务。结论是：仓库已经具备清晰的分层意图，也有依赖规则测试作为护栏，但当前仍未完全满足 Clean Architecture 的核心约束。最大的风险不是“目录没有分层”，而是“用例语义和宿主细节仍然穿透边界”，导致 `game/core`、`game/flow`、`app/bootstrap`、`presentation` 之间存在多处职责混杂。
+> **评注**: 标题过于笼统，建议改为《Monopoly 代码库 Clean Architecture 审查报告》以明确审查方法论。
+
+本次审查基于 Clean Architecture 视角，重点检查依赖方向、用例边界、端口适配器设计，以及宿主运行时与 UI 细节是否渗透进核心业务。结论是：仓库已经具备清晰的分层意图，也有依赖规则测试作为护栏，但当前仍未完全满足 Clean Architecture 的核心约束。最大的风险不是”目录没有分层”，而是”用例语义和宿主细节仍然穿透边界”，导致 `game/core`、`game/flow`、`app/bootstrap`、`presentation` 之间存在多处职责混杂。
+
+> **评注**: 这段摘要写得很好，抓住了核心矛盾——“目录分层”≠”边界清晰”。建议补充一句：当前架构属于”分层骨架正确，但语义泄漏严重”的中间状态。
 
 ## 架构结论
 
-当前架构已经出现明显的“圈层轮廓”：`game/core` 持有核心状态，`game/flow` 编排回合流程，`presentation` 负责 UI 与渲染，`app/bootstrap` 负责启动装配。  
-但它还没有真正做到“依赖只朝内层流动、外层只是细节”：宿主运行时 API 仍然停留在 `src/core` 与部分业务模块里，用例层仍直接操纵 UI 状态和模态框，`presentation` 也承接了不少应用级决策。  
-因此，这套架构可以继续演进，而不建议推倒重来；优先目标应是把最关键的边界从“共享可变 state + 约定字段”收敛成“稳定端口 + DTO/事件输出”。
+当前架构已经出现明显的”圈层轮廓”：`game/core` 持有核心状态，`game/flow` 编排回合流程，`presentation` 负责 UI 与渲染，`app/bootstrap` 负责启动装配。
+但它还没有真正做到”依赖只朝内层流动、外层只是细节”：宿主运行时 API 仍然停留在 `src/core` 与部分业务模块里，用例层仍直接操纵 UI 状态和模态框，`presentation` 也承接了不少应用级决策。
+因此，这套架构可以继续演进，而不建议推倒重来；优先目标应是把最关键的边界从”共享可变 state + 约定字段”收敛成”稳定端口 + DTO/事件输出”。
+
+> **评注**: “继续演进而非推倒重来”的判断很务实。但建议增加一个前提条件：必须先补齐契约测试，否则重构风险不可控。没有测试防护的演进式重构很容易陷入”改一点、坏一片”的困境。
 
 ## 当前分层映射
 
@@ -23,6 +29,8 @@
 
 这里承载玩家、棋盘、资产、道具、效果、机会卡、地块规则等核心业务概念。整体上，这一层已经与 UI 目录物理隔离，且 `tests/internal/dep_rules.lua` 也在主动保护部分依赖方向。
 
+> **评注**: 目录结构符合 Clean Architecture 的 Entities 层定义，但有一个疑问：`GameStatePlayers/Tiles/Turn` 看起来更像是应用层状态而非纯领域实体。建议澄清它们与 `Game` 实体的关系——如果它们只是 Game 的聚合子对象，应作为内部模块而非独立文件存在。当前扁平化结构可能导致实体层膨胀。
+
 ### 2. Use Cases / Application Rules
 
 - `src/game/runtime/TurnEngine.lua`
@@ -34,6 +42,9 @@
 - `src/game/flow/intent/IntentDispatcher.lua`
 
 这里是回合推进、输入分发、等待动画、超时、托管、选择分支、市场导航等应用规则最集中的区域，也是当前边界最容易塌陷的地方。
+
+> **评注**: "最容易塌陷"的表述准确。但这里有一个结构性问题被忽略了：`game/runtime` 与 `game/flow` 的区分标准是什么？从文件命名看两者都用例相关，但目录上被拆分了。建议明确分层原则：> - `runtime` = 跨回合的生命周期管理（引擎、注册表）> - `flow` = 单回合内的状态机推进
+> 如果无法清晰区分，考虑合并为 `game/usecases` 以减少认知负担。
 
 ### 3. Interface Adapters
 
@@ -49,6 +60,11 @@
 - 真正的 adapter：`api/host_runtime`、`render/*`、`UIViewService`、`HostRuntimePort`
 - 已经吞下应用规则的模块：`interaction/*`、`choice_screen_service/*`、`TargetChoiceEffects.lua`、`UIModalPresenter.lua`
 
+> **评注**: 这里识别出了关键的"语义泄漏"问题。但我想进一步追问：`GameplayReadPort.lua` 放在 `read_model` 子目录下，是否暗示团队已经意识到 CQRS 的需求？如果是，建议明确区分：
+> - Command 路径（写入）应通过 Input Port 进入用例层
+> - Query 路径（读取）可直接从 Repository/DAO 到 ReadModel
+> 目前的结构看起来 ReadPort 仍然混杂在 presentation 中，可能混淆了读取模型与展示模型的职责。
+
 ### 4. Frameworks & Drivers / Composition Root
 
 - `src/app/init.lua`
@@ -63,9 +79,13 @@
 入口集中在 `src/app/init.lua`，启动顺序明确：`RuntimeInstall -> GameStartup -> EventBridge -> UIBootstrap -> GameRuntimeBootstrap`。  
 问题在于：组合根虽然存在，但并不纯，部分宿主细节和 UI 协调代码仍散落到 `src/core` 与 `src/app/bootstrap` 中。
 
+> **评注**: 启动顺序看起来合理，但 `RuntimeContext` 放在 `src/core` 是一个关键错误。按 Clean Architecture，`core` 应该是最内层、最稳定的领域核心，而 RuntimeContext 显然依赖外层宿主环境。建议将 `RuntimeContext` 迁移到 `src/app/context` 或 `src/infrastructure/context`，以符合"向内依赖"原则。目前的目录结构会误导新开发者认为 `core` 是"框架核心"而非"领域核心"。
+
 ## 主要问题（P0-P3）
 
-### P0: 宿主运行时细节仍停留在“内层”模块，Dependency Rule 被破坏
+### P0: 宿主运行时细节仍停留在”内层”模块，Dependency Rule 被破坏
+
+> **评注**: P0 定级合理，这是 Clean Architecture 的底线问题。但建议增加一个量化指标：统计 `src/core` 中直接依赖宿主 API 的行数/比例，作为技术债务的可视化指标。
 
 最严重的问题是，`src/core` 并不只是稳定策略层，而是混入了对宿主运行时的直接访问。
 
@@ -79,8 +99,14 @@
   - 直接依赖 `GameAPI.get_role`
   - 直接依赖 `GameAPI.get_all_valid_roles`
   - 直接安装 `vehicle_helper/camera_helper/all_roles` 这类运行时辅助对象
+
+> **评注**: `RuntimeContext` 中的 helper 安装是典型的时间耦合反模式。如果 helper 必须在特定时机初始化，应显式声明生命周期阶段（如 `onPreInit`、`onPostInit`），而非在 Context 构造函数中隐式完成。
+
 - `src/core/runtime_ports/DefaultPorts.lua`
   - 默认端口直接依赖 `GameAPI`、`SetTimeOut`、`TriggerCustomEvent`
+
+> **评注**: "默认端口"本身不是问题（适配器模式允许有默认实现），但问题在于它位于 `src/core` 目录。建议将 `DefaultPorts.lua` 重命名为 `EggyRuntimePorts.lua` 并迁移到 `src/infrastructure/egg_runtime/` 或 `src/adapters/runtime/egg/`，使其物理位置符合架构意图。
+
 - `src/game/systems/market/service/Purchase.lua`
   - `_build_goods_mappings()` 直接调用 `GameAPI.get_goods_list`
   - `_register_purchase_event_for_role()` 直接调用 `RegisterTriggerEvent`
@@ -91,7 +117,11 @@
 - 测试虽然能跑通，但大量默认实现天然绑定 Eggy runtime，替换宿主或做纯业务回归时成本很高。
 - “port” 只是把调用包了一层，并没有把 runtime 细节真正赶到外圈。
 
+> **评注**: 第三点最致命——“虚假抽象”。当前代码看似用了 Port/Adapter 模式，实际上只是加了一层 indirection，依赖方向仍是从内向外（`core` -> `GameAPI`）。真正的 Clean Architecture 要求外层实现内层定义的接口，依赖方向应是 `infrastructure` -> `core`（向内依赖）。
+
 ### P1: 用例层直接操纵 UI 状态与模态框，边界对象不稳定
+
+> **评注**: 这是经典的"用例层知道太多"反模式。Clean Architecture 中，用例层应该通过 Output Port 输出"意图"，而非直接操作 UI 状态。
 
 当前 `game/flow` 不只是表达用例意图，还直接改 UI 相关的共享 state，并显式打开/关闭 modal。
 
@@ -116,7 +146,9 @@
 
 ### P1: `game.ui_port` 形成反向渗透，内层对象知道外层 adapter 的挂载方式
 
-这是另一个关键的边界问题。内层模块不该知道“UI port 挂在 game.ui_port 上，并且有哪些字段/方法”。
+> **评注**: 术语建议：”反向渗透”不如用”向内依赖”（Inward Dependency）或”依赖倒置违规”（DIP Violation）更精确。核心问题是：外层对象图的结构泄漏到了内层。
+
+这是另一个关键的边界问题。内层模块不该知道”UI port 挂在 game.ui_port 上，并且有哪些字段/方法”。
 
 证据：
 
@@ -136,6 +168,8 @@
 - 一旦 `ui_port` 的结构变化，影响面会横跨多个业务模块。
 
 ### P1: `presentation` 层已经承接了不少应用规则，而不只是输入/输出适配
+
+> **评注**: 这是 MVC 遗留问题的典型表现。如果项目早期是基于 MVC 模式开发的，这种泄漏几乎是必然结果——Controller 倾向于积累业务逻辑。建议明确区分：MVVM/MVP 才是 Clean Architecture 的友好模式，presentation 层应该只包含 ViewModel 和 View。
 
 `presentation` 在 import 方向上基本守住了边界，但语义边界已经开始泄漏。
 
@@ -162,9 +196,11 @@
 - `choice.kind/meta` 已经成为横跨用例层与 UI 层的隐式协议。
 - 这种协议不稳定，后续新增 choice 类型时容易继续把业务分支堆进 UI。
 
-### P1: `app/bootstrap` 是“半组合根”，但仍承载 UI-specific 协调逻辑
+### P1: `app/bootstrap` 是”半组合根”，但仍承载 UI-specific 协调逻辑
 
-按 Clean Architecture，组合根可以依赖外层细节；问题不在“组合根依赖 presentation”，而在于它开始承载本该属于 adapter 自己的逻辑。
+> **评注**: “半组合根”的表述很形象。组合根（Composition Root）应该是纯装配代码（Pure DI），不应该包含任何业务决策逻辑。
+
+按 Clean Architecture，组合根可以依赖外层细节；问题不在”组合根依赖 presentation”，而在于它开始承载本该属于 adapter 自己的逻辑。
 
 证据：
 
@@ -190,7 +226,9 @@
 
 ### P1: 市场购买链路跨越 domain、外部支付、回调兑现、UI 刷新，职责过载
 
-`src/game/systems/market/service/Purchase.lua` 是当前最明显的“边界塌陷点”。
+> **评注**: 这是典型的”事务脚本”（Transaction Script）模式在领域模型中的滥用。购买逻辑涉及支付（外部系统）、库存（领域）、UI 刷新（展示）三个关注点，应该拆分为：领域服务（PurchaseDomainService）、支付适配器（PaymentGateway）、事件处理器（PaymentCallbackHandler）。
+
+`src/game/systems/market/service/Purchase.lua` 是当前最明显的”边界塌陷点”。
 
 证据：
 
@@ -205,7 +243,11 @@
 - 一个模块同时承担 domain service、runtime adapter、event bridge、presentation refresh 协调。
 - 这是后续最适合切第一刀的高收益边界，因为它高度耦合、变化频繁、验证困难。
 
-### P2: 依赖规则测试已经有价值，但主要保护“静态 import”，没有保护“语义边界”
+### P2: 依赖规则测试已经有价值，但主要保护”静态 import”，没有保护”语义边界”
+
+> **评注**: 静态 import 检查（如 `presentation` 不能 `require(“src.game.*”)`）只是第一道防线，真正的架构守护需要语义级检查。建议引入架构契约测试（Architectural Contract Tests），验证：
+> - 用例层不直接修改 UI 状态（通过拦截 `state.ui_*` 的写入）
+> - 领域层不调用外部 API（通过禁止 `GameAPI` 符号）
 
 现有测试体系是优点，但仍偏迁移治理，不足以阻止架构继续滑坡。
 
@@ -228,26 +270,39 @@
 
 ### P3: 分层命名和实际职责存在偏差，可读性成本偏高
 
+> **评注**: P3 定级偏低，我认为这是 P1 级别的问题。命名是架构沟通的首要工具，`src/core` 的误命名会系统性地误导每个新加入的开发者。
+
 典型例子：
 
-- `src/core` 名字看起来像“最内层核心”，实际上混有 runtime 适配细节
-- `src/presentation` 名字看起来像“纯视图适配层”，实际上包含了一部分应用级流程
-- `src/app/bootstrap` 名字看起来像“纯启动装配”，实际上承载了生命周期和 UI 事件桥接
+- `src/core` 名字看起来像”最内层核心”，实际上混有 runtime 适配细节
+- `src/presentation` 名字看起来像”纯视图适配层”，实际上包含了一部分应用级流程
+- `src/app/bootstrap` 名字看起来像”纯启动装配”，实际上承载了生命周期和 UI 事件桥接
 
 这不会直接导致 bug，但会持续抬高新成员理解成本，也让架构治理规则更难写清楚。
+
+> **评注**: 建议的目录重命名方案：
+> - `src/core` → `src/domain` 或 `src/entities`
+> - `src/presentation` → `src/adapters/ui` 或 `src/infrastructure/ui`
+> - `src/app/bootstrap` → `src/composition` 或保持现状但拆分出 `src/lifecycle`
 
 ## 正向观察
 
 - 依赖规则测试是明显资产，说明团队已经在主动治理架构，而不是完全失控。
 - `RuntimePorts`、`GameplayLoopPorts`、`PresentationPorts` 的方向是正确的，说明边界反转意识已经存在。
-- `src/game/core`、`src/game/runtime`、`src/game/flow`、`src/game/systems` 的目录分工，已经能看出“实体 / 用例编排 / 子域规则”的基础轮廓。
+- `src/game/core`、`src/game/runtime`、`src/game/flow`、`src/game/systems` 的目录分工，已经能看出”实体 / 用例编排 / 子域规则”的基础轮廓。
 - 全量回归当前可通过，说明这套结构虽然不够干净，但仍具备稳定演进的工程基础。
+
+> **评注**: 这四点观察客观且建设性。但建议补充一个”时间维度”的观察：当前架构债务是否随时间恶化？如果新代码继续违反边界，需要更激进的治理措施（如代码门禁）；如果只是历史遗留，可以渐进式修复。
 
 ## 最小可落地重构方案
 
-以下方案按“最小切口、最大收益、可渐进迁移”排序，不建议一次性全量重构。
+以下方案按”最小切口、最大收益、可渐进迁移”排序，不建议一次性全量重构。
 
-### 步骤 1：先把“用例输出协议”定义清楚，停止直接写 UI state
+> **评注**: “不建议一次性全量重构”是明智的。但建议补充一个关键前提：**必须建立架构守护测试（Architecture Fitness Functions）**，防止重构过程中新代码继续违反边界。没有护栏的渐进式重构往往演变为”新旧混杂、债务翻倍”。
+
+### 步骤 1：先把”用例输出协议”定义清楚，停止直接写 UI state
+
+> **评注**: 步骤 1 是正确且优先的。但建议明确协议的序列化格式——是 Lua 表结构？还是事件对象（如 `ChoiceRequestedEvent`）？建议采用事件驱动的方式，这样后续可以支持事件溯源（Event Sourcing）或审计日志。
 
 做法：
 
@@ -278,6 +333,8 @@
 
 ### 步骤 2：移除 `game.ui_port` 反向挂载，改为显式 output port / event sink
 
+> **评注**: 步骤 2 本质上是"依赖注入容器"的设计问题。`game.ui_port` 是全局状态的一种形式，违反了"显式优于隐式"原则。建议在 `game` 对象创建时，通过构造函数注入 `outputPort`，而非运行时动态挂载。
+
 做法：
 
 - 用 `game.output_port` 或 `usecase_output_port` 替换 `game.ui_port`
@@ -307,6 +364,12 @@
 
 ### 步骤 3：把 runtime 默认实现从 `src/core` 外迁，保留 `core` 只定义抽象与纯逻辑
 
+> **评注**: 步骤 3 涉及物理目录迁移，风险最高（可能影响 import 路径）。建议：
+> 1. 先复制文件到新目录，保持旧文件为转发代理（facade）
+> 2. 逐模块迁移调用方
+> 3. 最后删除旧文件
+> 同时，建议配套建立 "架构决策记录"（ADR），解释为什么 `core` 必须纯净。
+
 做法：
 
 - `src/core/Logger.lua` 只保留日志聚合与 sink 接口，不直接触达 `GameAPI/GlobalAPI/SetTimeOut`
@@ -330,6 +393,8 @@
 - 中等。因为 runtime helper 初始化覆盖面很广，但路径相对集中。
 
 ### 步骤 4：单独拆出 Market 外部支付 adapter
+
+> **评注**: 支付是"外部系统"的典型代表，最适合作为端口优先拆分。但需要注意：支付回调通常是异步的，需要设计一个" saga / 流程管理器"（Process Manager）来处理"支付中"的悬挂状态，防止重复发货或丢单。
 
 做法：
 
@@ -355,6 +420,8 @@
 - 中等。支付链路复杂，但模块集中、切口清晰。
 
 ### 步骤 5：把 `presentation` 中的应用规则往内收，只保留 ViewModel 解释与渲染
+
+> **评注**: 步骤 5 是最容易被低估的，因为"ViewModel"的定义很模糊。建议明确 ViewModel 的生成位置：是用例层输出 ViewModel 给 presentation，还是用例层输出 DTO，由 presentation 转换为 ViewModel？前者更干净（presentation 纯展示），后者更灵活（UI 可根据平台调整）。团队需要做出一致决策。
 
 做法：
 
@@ -382,7 +449,9 @@
 
 ## 测试建议
 
-至少补齐以下两类测试：
+> **评注**: 测试建议章节很务实。建议补充第 4 类测试：集成契约测试（Integration Contract Tests），验证适配器与真实外部系统（Eggy runtime、支付平台）的契约是否仍然有效。这类测试不需要频繁运行，但在升级外部 SDK 时必须执行。
+
+至少补齐以下三类测试：
 
 ### 1. 用例级测试
 
@@ -407,7 +476,11 @@
 - 禁止 `presentation` 直接 `require("Config.Generated.Market")` 这类业务配置，除非在专门 read-model adapter 中
 - 禁止 `app/bootstrap` 直接构建 `presentation.state.UIModel` 或直接调用 `UIViewService.open_choice_modal`
 
+> **评注**: 这四条规则清晰可执行。建议补充自动化检查工具（如 Lua 的静态分析器或简单的 grep 脚本），在 CI 中强制执行。没有自动化的规则只是建议，不是约束。
+
 ## 权衡说明
+
+> **评注**: 权衡说明章节是这份报告的最大亮点——诚实面对技术债务的"利息"。建议补充一个量化维度：预计每个步骤的人日投入和可交付的"架构健康度"指标（如边界违规点数量）。
 
 短期成本：
 
@@ -422,7 +495,9 @@
 - 自动化测试可以更多停留在用例层，不必总是构造完整 UI/runtime 环境
 - 架构治理规则会更容易写成清晰、可持续执行的静态约束
 
-结论上，这套架构适合“增量隔离”，不适合“大爆破重写”。优先切 `GameplayLoop` 输出协议、`game.ui_port`、`Purchase.lua`、`src/core` runtime 默认实现，收益最高。
+结论上，这套架构适合”增量隔离”，不适合”大爆破重写”。优先切 `GameplayLoop` 输出协议、`game.ui_port`、`Purchase.lua`、`src/core` runtime 默认实现，收益最高。
+
+> **评注**: 最终结论精准。但”增量隔离”需要严格的纪律性——每个 PR 必须明确说明它是在”还债”还是在”借债”。建议建立”架构债务看板”，追踪每个违规点的修复状态。否则五年后，这份报告会和无数架构文档一样，成为”知道但不做”的历史遗迹。
 
 ## 本次审查的验证依据
 
@@ -456,4 +531,22 @@
 说明：
 
 - 当前架构在工程上是稳定可运行的。
-- 审查提出的问题主要是“边界质量”和“未来演进成本”，不是“代码现在已经不可用”。
+- 审查提出的问题主要是”边界质量”和”未来演进成本”，不是”代码现在已经不可用”。
+
+---
+
+## 评注总结
+
+> **整体评价**: 这是一份高质量的架构审查报告，体现了对 Clean Architecture 的深刻理解。报告的价值不仅在于指出问题，更在于：
+> 1. **优先级清晰**（P0-P3 分级）
+> 2. **可落地性强**（5 个渐进式步骤）
+> 3. **风险诚实**（权衡说明章节）
+> 4. **基于证据**（验证依据和回归测试）
+>
+> **主要建议加强的方面**:
+> 1. **量化指标**: 补充边界违规的数量、趋势图，让技术债务可度量
+> 2. **自动化门禁**: 静态规则必须配套 CI 检查，否则只是”纸面约束”
+> 3. **命名重构**: `src/core` 的误命名是 P1 级别问题，不应降级为 P3
+> 4. **治理机制**: 建立”架构债务看板”和 ADR 文档，确保报告成果不被遗忘
+>
+> **最终评分**: 8/10。报告本身优秀，但落地执行将是真正的考验。
