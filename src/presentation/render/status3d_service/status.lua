@@ -15,7 +15,12 @@ local function _is_player_detained_this_turn(game, player)
     return false
   end
   local turn = game.turn
-  if not (turn and (turn.detained_wait_active == true or turn.phase == "detained_wait")) then
+  if not turn then
+    return false
+  end
+  local notice_active = turn.no_action_notice_active == true
+  local detained_active = turn.detained_wait_active == true or turn.phase == "detained_wait"
+  if not (notice_active or detained_active) then
     return false
   end
   local last_turn = game.last_turn
@@ -26,6 +31,9 @@ local function _is_player_detained_this_turn(game, player)
     return false
   end
   if last_turn.skipped ~= true then
+    return false
+  end
+  if notice_active and turn.no_action_notice_player_id ~= player.id then
     return false
   end
   return last_turn.stay_turns ~= nil

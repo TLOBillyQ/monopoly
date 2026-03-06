@@ -1,9 +1,19 @@
 local logger = require("src.core.Logger")
 local item_phase = require("src.game.systems.items.ItemPhase")
 
+local function _clear_no_action_notice(turn)
+  if not turn then
+    return
+  end
+  turn.no_action_notice_active = false
+  turn.no_action_notice_player_id = nil
+  turn.no_action_notice_text = nil
+end
+
 local function _phase_start(turn_mgr)
   local player = turn_mgr.game:current_player()
   local turn = turn_mgr.game.turn
+  _clear_no_action_notice(turn)
   local tc = turn_mgr.game.turn.turn_count
   local current_index = turn_mgr.game.turn.current_player_index
   logger.info(
@@ -38,10 +48,13 @@ local function _phase_start(turn_mgr)
     turn_mgr.game.last_turn.note = "被扣留"
     turn_mgr.game.last_turn.skipped = true
     turn_mgr.game.last_turn.stay_turns = player.status.stay_turns
-    turn.detained_wait_active = true
+    turn.detained_wait_active = false
     turn.detained_wait_elapsed = 0
-    turn.detained_wait_seconds = 5
-    return "detained_wait", { player = player }
+    turn.detained_wait_seconds = 0
+    turn.no_action_notice_active = true
+    turn.no_action_notice_player_id = player.id
+    turn.no_action_notice_text = "本回合无法行动"
+    return "end_turn", { player = player }
   end
 
   local phase_res = item_phase.run(turn_mgr, "pre_action", {

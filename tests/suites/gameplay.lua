@@ -1844,6 +1844,25 @@ local function _test_owner_mine_does_not_trigger_until_owner_leaves_tile()
   assert(g.board:has_mine(mine_index) == false, "mine should clear after detonation")
 end
 
+local function _test_detained_turn_skips_immediately_without_wait_state()
+  local g = _new_game()
+  local p1 = g.players[1]
+
+  g:set_player_status(p1, "stay_turns", 1)
+
+  g:advance_turn()
+
+  assert(g.turn.current_player_index == 2, "detained player turn should advance immediately to next player")
+  assert((p1.status.stay_turns or 0) == 0, "detained player stay_turns should be decremented")
+  assert(g.last_turn and g.last_turn.player_id == p1.id, "last_turn should record skipped player")
+  assert(g.last_turn and g.last_turn.skipped == true, "last_turn should mark detained turn as skipped")
+  assert(g.last_turn and g.last_turn.stay_turns == 0, "last_turn should keep post-decrement stay_turns for UI projection")
+  assert(g.turn.phase ~= "detained_wait", "detained turn should not enter detained_wait")
+  assert(g.turn.detained_wait_active == false, "detained wait flag should stay disabled")
+  assert(g.turn.no_action_notice_active == true, "auto-skip should still expose a non-blocking notice")
+  assert(g.turn.no_action_notice_player_id == p1.id, "notice should belong to skipped player")
+end
+
 return {
   _test_mandatory_payment_causes_bankruptcy,
   _test_bankruptcy_resets_owned_tiles,
@@ -1862,6 +1881,7 @@ return {
   _test_autorunner_runs_to_end,
   _test_complex_consecutive_turn_settlement,
   _test_complex_market_interrupt_with_rent,
+  _test_detained_turn_skips_immediately_without_wait_state,
   _test_tick_headless_ports_cover_anim_phases,
   _test_action_button_timeout_auto_advances,
   _test_action_button_timeout_blocked_when_input_locked,

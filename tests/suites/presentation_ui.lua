@@ -4525,7 +4525,7 @@ local function _test_status3d_roadblock_only_current_turn()
   end)
 end
 
-local function _test_status3d_hospital_visible_when_detained_turn_even_if_stay_turns_zero()
+local function _test_status3d_hospital_visible_when_no_action_notice_even_if_stay_turns_zero()
   local env = _build_status3d_test_env()
   local state = {}
   local game = _build_status3d_game({
@@ -4535,8 +4535,11 @@ local function _test_status3d_hospital_visible_when_detained_turn_even_if_stay_t
       deity = { type = "poor", remaining = 5 },
     },
     turn = {
-      phase = "detained_wait",
-      detained_wait_active = true,
+      phase = "end_turn",
+      detained_wait_active = false,
+      no_action_notice_active = true,
+      no_action_notice_player_id = 1,
+      no_action_notice_text = "本回合无法行动",
     },
     last_turn = {
       player_id = 1,
@@ -4558,12 +4561,12 @@ local function _test_status3d_hospital_visible_when_detained_turn_even_if_stay_t
   local hospital_layer = "layer_1_" .. tostring(hospital_layout)
   local poor_layer = "layer_1_" .. tostring(poor_layout)
   _assert_eq(env.layer_visibility[hospital_layer][1], true,
-    "hospital layer should stay visible during detained turn when stay_turns is zero")
+    "hospital layer should stay visible during no-action notice when stay_turns is zero")
   _assert_eq(env.layer_visibility[poor_layer][1], false,
-    "deity layer should be hidden when hospital detained status is active")
+    "deity layer should be hidden when hospital no-action notice is active")
 end
 
-local function _test_status3d_mountain_visible_when_detained_turn_even_if_stay_turns_zero()
+local function _test_status3d_mountain_visible_when_no_action_notice_even_if_stay_turns_zero()
   local env = _build_status3d_test_env()
   local state = {}
   local game = _build_status3d_game({
@@ -4573,8 +4576,11 @@ local function _test_status3d_mountain_visible_when_detained_turn_even_if_stay_t
       deity = { type = "rich", remaining = 5 },
     },
     turn = {
-      phase = "detained_wait",
-      detained_wait_active = true,
+      phase = "end_turn",
+      detained_wait_active = false,
+      no_action_notice_active = true,
+      no_action_notice_player_id = 1,
+      no_action_notice_text = "本回合无法行动",
     },
     last_turn = {
       player_id = 1,
@@ -4596,9 +4602,9 @@ local function _test_status3d_mountain_visible_when_detained_turn_even_if_stay_t
   local mountain_layer = "layer_1_" .. tostring(mountain_layout)
   local rich_layer = "layer_1_" .. tostring(rich_layout)
   _assert_eq(env.layer_visibility[mountain_layer][1], true,
-    "mountain layer should stay visible during detained turn when stay_turns is zero")
+    "mountain layer should stay visible during no-action notice when stay_turns is zero")
   _assert_eq(env.layer_visibility[rich_layer][1], false,
-    "deity layer should be hidden when mountain detained status is active")
+    "deity layer should be hidden when mountain no-action notice is active")
 end
 
 local function _test_status3d_hospital_mountain_not_visible_when_not_detained_and_stay_turns_zero()
@@ -5880,8 +5886,8 @@ return {
   _test_popup_renderer_switch_popup_canvas_restores_client_role_nil,
   _test_market_modal_renderer_open_restores_client_role_nil,
   _test_debug_ports_sync_restores_client_role_nil,
-  _test_status3d_hospital_visible_when_detained_turn_even_if_stay_turns_zero,
-  _test_status3d_mountain_visible_when_detained_turn_even_if_stay_turns_zero,
+  _test_status3d_hospital_visible_when_no_action_notice_even_if_stay_turns_zero,
+  _test_status3d_mountain_visible_when_no_action_notice_even_if_stay_turns_zero,
   _test_status3d_hospital_mountain_not_visible_when_not_detained_and_stay_turns_zero,
   _test_ui_event_router_action_log_uses_cached_local_role_when_event_role_missing,
   _test_ui_event_router_auto_uses_cached_local_role_instead_of_current_player,
