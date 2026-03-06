@@ -56,6 +56,9 @@ function runtime_port_defaults.build()
       end
       return 0
     end,
+    resolve_market_paid_gateway = function()
+      return require("src.app.bootstrap.payment.EggyPaidPurchaseGateway")
+    end,
   }
 end
 

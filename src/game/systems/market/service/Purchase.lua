@@ -4,7 +4,7 @@ local market_feedback = require("src.game.systems.market.service.Feedback")
 local purchase_policy = require("src.game.systems.market.service.PurchasePolicy")
 local local_purchase = require("src.game.systems.market.service.LocalPurchase")
 local paid_fulfillment = require("src.game.systems.market.service.PaidFulfillment")
-local paid_purchase_gateway = require("src.game.systems.market.service.PaidPurchaseGateway")
+local paid_purchase_gateway = require("src.game.systems.market.ports.PaidPurchasePort")
 local number_utils = require("src.core.NumberUtils")
 
 local purchase = {}

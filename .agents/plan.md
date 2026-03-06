@@ -13,7 +13,8 @@
 - [x] (2026-03-07 11:58 +0800) 已按最新代码重写 `.agents/research.md`，确认当前主体迁移已完成，剩余工作集中在四类收尾问题：付费适配器外迁、output port 去镜像、choice 协议 contract 化、`owner_role_id` 强约束化。
 - [x] (2026-03-07 12:02 +0800) 已重读 `.agents/harness/PLANS.md`、现有 `.agents/plan.md`、`docs/architecture/boundaries.md`、`tests/internal/dep_rules.lua` 和关键边界代码，确认当前统一回归入口仍是 `lua tests/regression.lua`，最新全量输出为 `All regression checks passed (376)`。
 - [x] (2026-03-07 12:18 +0800) 已完成里程碑 1 的第一刀：把 Eggy 宿主支付实现搬到 `src/app/bootstrap/payment/EggyPaidPurchaseGateway.lua`，`src/game/systems/market/service/PaidPurchaseGateway.lua` 现只保留薄代理；同时 `tests/internal/dep_rules.lua` 新增守护，禁止 `src/game/systems/market/service` 再直接触碰 `GameAPI`、`RegisterTriggerEvent`、`EVENT`。定向 `market`、`paid_currency`、全量回归均继续通过。
-- [ ] 下一步继续里程碑 1 的第二刀：把当前薄代理进一步替换成真正的支付端口，让 `Purchase.lua` / `MarketService` 只依赖端口而不直接 require 外层 Eggy adapter。
+- [x] (2026-03-07 12:31 +0800) 已完成里程碑 1 的第二刀：新增 `src/game/systems/market/ports/PaidPurchasePort.lua`，`Purchase.lua` 现改为只依赖 market 内层支付端口；`RuntimePorts` 与 `src/app/bootstrap/runtime_install/RuntimePortDefaults.lua` 也已接入 `resolve_market_paid_gateway()` 默认装配。当前仍保留 port 内部对 Eggy adapter 的测试环境 fallback，但 `Purchase` / `MarketService` 已不再直接 require 外层实现。
+- [ ] 下一步进入里程碑 2：把 `UseCaseOutputPort.lua` 里的 legacy UI 状态镜像拆到单独 adapter。
 - [ ] 里程碑 2 将拆分 `src/game/flow/ports/UseCaseOutputPort.lua`，把 legacy state 镜像从用例端口中移出去。
 - [ ] 里程碑 3 将整理 choice 稳定协议，把当前散落的显式字段收敛成单一 contract helper，并补透传契约测试。
 - [ ] 里程碑 4 将把 `owner_role_id` 变成强约束字段，删除 `meta.player_id` 在 actor ownership 路径上的 fallback。
@@ -42,6 +43,10 @@
   日期/作者：2026-03-07 / Codex
 - 决策：里程碑 1 先采用“外层搬家 + 静态守护上锁”的两段式推进，而不是一次性同时完成端口反转。
   理由：先把宿主 API 从 `src/game/systems/market/service` 物理挪出，并用 `dep_rules` 锁死回流，可以在零行为变化下先拿到一个稳定检查点；随后再把薄代理替换为真正的内层端口，风险更低，也更容易回滚。
+  日期/作者：2026-03-07 / Codex
+
+- 决策：市场支付端口暂时允许在 `PaidPurchasePort.lua` 内部保留一个 Eggy adapter fallback，用于未走 `RuntimeInstall` 的测试环境。
+  理由：当前大量单元/定向测试直接 require 市场服务而不走完整 bootstrap；若在同一刀里强制所有测试先安装 runtime port，会把“端口反转”和“测试环境迁移”混成一次高风险改动。先让 `Purchase` 只依赖端口，再在后续阶段逐步删除 fallback，更稳。
   日期/作者：2026-03-07 / Codex
 
 
@@ -89,7 +94,7 @@
 
 第二刀仍然待做：把当前薄代理再替换成真正的支付端口，让 `Purchase.lua` 与 `MarketService` 只依赖端口，不再直接 require 外层 Eggy adapter。这里不追求一次性发明复杂端口框架，最小可行方案是定义 market 内层支付端口，再由 bootstrap/runtime 安装 Eggy 实现。随后补 fake gateway 契约测试，证明 use case 层只靠端口也能跑购买流程。
 
-当前这一里程碑的阶段性验收已经成立：`src/game/systems/market/service` 中不再直接调用 `GameAPI`、`RegisterTriggerEvent` 或 `EVENT`；`lua tests/internal/dep_rules.lua` 通过；`market` suite 继续通过；`paid_currency` suite 通过；全量回归继续通过。整个里程碑的最终验收，要等第二刀把薄代理升级为真正的支付端口后才算完全完成。
+当前这一里程碑已经完成。`src/game/systems/market/service` 中不再直接调用 `GameAPI`、`RegisterTriggerEvent` 或 `EVENT`；`Purchase.lua` 已改为依赖 `src/game/systems/market/ports/PaidPurchasePort.lua` 这条内层端口；`RuntimePorts` 与 bootstrap 默认装配已提供 `resolve_market_paid_gateway()`；`market`、`paid_currency`、全量回归都继续通过。当前唯一保留的妥协，是支付端口内部仍为非 runtime-install 测试环境保留了一个 Eggy adapter fallback，但这已经不再把外层实现泄漏给 `Purchase` / `MarketService`。
 
 ## 里程碑 2：把 `UseCaseOutputPort` 拆成纯端口与 legacy 镜像 adapter
 
@@ -269,6 +274,7 @@
     最新 paid_currency 定向回归：All regression checks passed (4)
     最新 presentation_ui 定向回归：All regression checks passed (135)
     最新全量回归：All regression checks passed (376)
+    里程碑 1 当前状态：已完成
 
 这份计划默认假设执行者工作在本机仓库根目录，并且能运行 Lua 测试命令。如果运行环境临时缺少测试依赖，必须先恢复到能跑统一回归的状态，再推进任何架构改动。因为对这份计划来说，验证不是收尾动作，而是每一步是否成立的定义本身。
 

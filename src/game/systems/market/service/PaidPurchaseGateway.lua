@@ -1,1 +1,1 @@
-return require("src.app.bootstrap.payment.EggyPaidPurchaseGateway")
+return require("src.game.systems.market.ports.PaidPurchasePort")
