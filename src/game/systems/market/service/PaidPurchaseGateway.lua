@@ -1,5 +1,4 @@
 local logger = require("src.core.Logger")
-local context = require("src.game.systems.market.service.Context")
 local number_utils = require("src.core.NumberUtils")
 local runtime_ports = require("src.core.RuntimePorts")
 
@@ -7,6 +6,10 @@ local gateway = {}
 
 local runtime_field = "__market_paid_runtime"
 local panel_show_seconds = 10.0
+
+local function _context()
+  return require("src.game.systems.market.service.Context")
+end
 
 local function _new_runtime()
   return {
@@ -97,9 +100,10 @@ local function _build_goods_mappings(game)
     end
   end
 
-  for _, entry in ipairs(context.entries()) do
-    local currency = context.entry_currency(entry)
-    if context.is_paid_currency(currency) then
+  local context_service = _context()
+  for _, entry in ipairs(context_service.entries()) do
+    local currency = context_service.entry_currency(entry)
+    if context_service.is_paid_currency(currency) then
       local market_name = entry and entry.name or nil
       local goods = market_name and goods_by_name[market_name] or nil
       local goods_id = goods and goods.goods_id or nil
@@ -207,7 +211,7 @@ local function _register_purchase_event_for_role(game, player)
       logger.warn("market paid callback ignored: player missing", "player_id=" .. tostring(pending.player_id))
       return
     end
-    local entry = context.entry_by_id(pending.product_id)
+  local entry = _context().entry_by_id(pending.product_id)
     if not entry then
       logger.warn("market paid callback ignored: market entry missing", "product_id=" .. tostring(pending.product_id))
       return
