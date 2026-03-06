@@ -3096,6 +3096,7 @@ end
 
 local function _test_market_close_resets_icon_without_resize()
   local reset_calls = 0
+  local visible = {}
   local selected_node = {
     reset_size = function()
       reset_calls = reset_calls + 1
@@ -3109,7 +3110,9 @@ local function _test_market_close_resets_icon_without_resize()
     },
     ui = {
       market_active = true,
-      set_visible = function() end,
+      set_visible = function(_, name, value)
+        visible[name] = value == true
+      end,
       set_label = function() end,
       set_touch_enabled = function() end,
       query_node = function(name)
@@ -3126,6 +3129,232 @@ local function _test_market_close_resets_icon_without_resize()
   _assert_eq(state.pending_choice_selected_option_id, nil, "selected market option should clear")
   _assert_eq(selected_node.image_texture, 4321, "market selected icon should reset to empty key")
   _assert_eq(reset_calls, 0, "market close should not call reset_size")
+  for _, name in ipairs(market_layout.item_selection_frames) do
+    _assert_eq(visible[name], false, "market close should hide selection frame")
+  end
+end
+
+local function _test_market_view_default_selection_shows_matching_selection_frame()
+  local entry_a = assert(market_cfg[1], "missing market cfg entry a")
+  local entry_b = assert(market_cfg[2], "missing market cfg entry b")
+  local visible = {}
+  local state = {
+    ui_refs = {
+      ["Empty"] = 9301,
+      ["lv1"] = 9302,
+      ["lv2"] = 9303,
+      ["lv3"] = 9304,
+      [tostring(entry_a.product_id)] = 9305,
+      [tostring(entry_b.product_id)] = 9306,
+    },
+    ui = {
+      market_active = false,
+      set_label = function() end,
+      set_visible = function(_, name, flag)
+        visible[name] = flag == true
+      end,
+      set_touch_enabled = function() end,
+      query_node = function()
+        return {}
+      end,
+    },
+  }
+
+  local opened = market_view.refresh_market(state, {
+    choice_id = 21,
+    options = {
+      { id = entry_a.product_id, label = entry_a.name, can_buy = true },
+      { id = entry_b.product_id, label = entry_b.name, can_buy = true },
+    },
+    allow_cancel = true,
+    selected_option_id = entry_b.product_id,
+  })
+
+  _assert_eq(opened, true, "market panel should open")
+  _assert_eq(state.pending_choice_selected_option_id, entry_a.product_id,
+    "market should still prefer first visible buyable option by default")
+  _assert_eq(visible[market_layout.item_selection_frames[1]], true,
+    "first selection frame should match default selected option")
+  _assert_eq(visible[market_layout.item_selection_frames[2]], false,
+    "non-selected frame should stay hidden")
+end
+
+local function _test_market_select_switches_selection_frame()
+  local entry_a = assert(market_cfg[1], "missing market cfg entry a")
+  local entry_b = assert(market_cfg[2], "missing market cfg entry b")
+  local visible = {}
+  local state = {
+    ui_refs = {
+      ["Empty"] = 9401,
+      ["lv1"] = 9402,
+      ["lv2"] = 9403,
+      ["lv3"] = 9404,
+      [tostring(entry_a.product_id)] = 9405,
+      [tostring(entry_b.product_id)] = 9406,
+    },
+    ui = {
+      market_active = false,
+      set_label = function() end,
+      set_visible = function(_, name, flag)
+        visible[name] = flag == true
+      end,
+      set_touch_enabled = function() end,
+      query_node = function()
+        return {}
+      end,
+    },
+  }
+
+  market_view.refresh_market(state, {
+    choice_id = 22,
+    options = {
+      { id = entry_a.product_id, label = entry_a.name, can_buy = true },
+      { id = entry_b.product_id, label = entry_b.name, can_buy = true },
+    },
+    allow_cancel = true,
+    selected_option_id = entry_a.product_id,
+  })
+
+  market_view.select_market_option(state, entry_b.product_id)
+
+  _assert_eq(state.pending_choice_selected_option_id, entry_b.product_id, "market select should update selected option")
+  _assert_eq(visible[market_layout.item_selection_frames[1]], false,
+    "old selection frame should hide after reselection")
+  _assert_eq(visible[market_layout.item_selection_frames[2]], true,
+    "new selection frame should show after reselection")
+end
+
+local function _test_market_view_empty_filtered_tab_hides_selection_frames()
+  local visible_entry = assert(market_cfg[1], "missing market cfg entry")
+  local hidden_entry = {
+    product_id = 999101,
+    name = "隐藏测试商品2",
+    market_enabled = false,
+    currency = visible_entry.currency,
+    price = visible_entry.price,
+  }
+
+  local visible = {}
+  local state = {
+    ui_refs = {
+      ["Empty"] = 9501,
+      ["lv1"] = 9502,
+      ["lv2"] = 9503,
+      ["lv3"] = 9504,
+      [tostring(visible_entry.product_id)] = 9505,
+      [tostring(hidden_entry.product_id)] = 9506,
+    },
+    ui = {
+      market_active = false,
+      set_label = function() end,
+      set_visible = function(_, name, flag)
+        visible[name] = flag == true
+      end,
+      set_touch_enabled = function() end,
+      query_node = function()
+        return {}
+      end,
+    },
+  }
+
+  local market_cfg_size = #market_cfg
+  local old_market_view = package.loaded["src.presentation.render.MarketView"]
+  market_cfg[market_cfg_size + 1] = hidden_entry
+  package.loaded["src.presentation.render.MarketView"] = nil
+
+  local ok, err = xpcall(function()
+    local test_market_view = require("src.presentation.render.MarketView")
+
+    test_market_view.refresh_market(state, {
+      choice_id = 23,
+      options = {
+        { id = visible_entry.product_id, label = visible_entry.name, can_buy = true },
+      },
+      allow_cancel = true,
+      selected_option_id = visible_entry.product_id,
+    })
+
+    local reopened = test_market_view.refresh_market(state, {
+      choice_id = 24,
+      options = {
+        { id = hidden_entry.product_id, label = hidden_entry.name, can_buy = false },
+      },
+      allow_cancel = true,
+      selected_option_id = hidden_entry.product_id,
+    })
+
+    _assert_eq(reopened, true, "market panel should stay open when filtered tab is empty")
+    _assert_eq(state.pending_choice_selected_option_id, nil, "empty filtered tab should clear selected option")
+    for _, name in ipairs(market_layout.item_selection_frames) do
+      _assert_eq(visible[name], false, "empty filtered tab should hide all selection frames")
+    end
+  end, debug.traceback or function(e) return e end)
+
+  market_cfg[market_cfg_size + 1] = nil
+  package.loaded["src.presentation.render.MarketView"] = nil
+  package.loaded["src.presentation.render.MarketView"] = old_market_view
+  if not ok then
+    error(err)
+  end
+end
+
+local function _test_market_view_refresh_retargets_selection_frame_on_page_change()
+  local entry_a = assert(market_cfg[1], "missing market cfg entry a")
+  local entry_b = assert(market_cfg[2], "missing market cfg entry b")
+  local visible = {}
+  local state = {
+    ui_refs = {
+      ["Empty"] = 9601,
+      ["lv1"] = 9602,
+      ["lv2"] = 9603,
+      ["lv3"] = 9604,
+      [tostring(entry_a.product_id)] = 9605,
+      [tostring(entry_b.product_id)] = 9606,
+    },
+    ui = {
+      market_active = false,
+      set_label = function() end,
+      set_visible = function(_, name, flag)
+        visible[name] = flag == true
+      end,
+      set_touch_enabled = function() end,
+      query_node = function()
+        return {}
+      end,
+    },
+  }
+
+  market_view.refresh_market(state, {
+    choice_id = 25,
+    options = {
+      { id = entry_a.product_id, label = entry_a.name, can_buy = true },
+    },
+    allow_cancel = true,
+    selected_option_id = entry_a.product_id,
+    page_index = 1,
+    page_count = 2,
+  })
+
+  local reopened = market_view.refresh_market(state, {
+    choice_id = 25,
+    options = {
+      { id = entry_b.product_id, label = entry_b.name, can_buy = true },
+    },
+    allow_cancel = true,
+    selected_option_id = entry_b.product_id,
+    page_index = 2,
+    page_count = 2,
+  })
+
+  _assert_eq(reopened, true, "market panel should refresh on page change")
+  _assert_eq(state.pending_choice_selected_option_id, entry_b.product_id,
+    "page change should retarget selected option to current visible page")
+  _assert_eq(visible[market_layout.item_selection_frames[1]], true,
+    "current page selected option should show selection frame")
+  for index = 2, #market_layout.item_selection_frames do
+    _assert_eq(visible[market_layout.item_selection_frames[index]], false,
+      "non-current page frames should remain hidden after refresh")
+  end
 end
 
 local function _test_item_slot_uses_keep_size_path()
@@ -5943,4 +6172,8 @@ return {
   _test_market_view_page_arrows_visibility_follows_page_count,
   _test_modal_presenter_market_same_choice_id_still_refreshes_market_panel,
   _test_ui_event_router_market_cancel_button_dispatches_choice_cancel,
+  _test_market_view_default_selection_shows_matching_selection_frame,
+  _test_market_select_switches_selection_frame,
+  _test_market_view_empty_filtered_tab_hides_selection_frames,
+  _test_market_view_refresh_retargets_selection_frame_on_page_change,
 }

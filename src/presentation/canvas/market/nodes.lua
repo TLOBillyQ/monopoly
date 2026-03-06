@@ -13,6 +13,7 @@ local nodes = {
   item_buttons = {},
   item_labels = {},
   item_frames = {},
+  item_selection_frames = {},
 }
 
 for i = 1, 10 do
@@ -20,6 +21,7 @@ for i = 1, 10 do
   nodes.item_buttons[i] = "黑市_购买项" .. idx
   nodes.item_labels[i] = "黑市_道具名称" .. idx
   nodes.item_frames[i] = "黑市_底框" .. idx
+  nodes.item_selection_frames[i] = "黑市-选中边框" .. idx
 end
 
 return nodes

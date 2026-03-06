@@ -96,6 +96,31 @@ local function _set_market_slot_hidden(ui, button, label, frame)
   ui:set_touch_enabled(frame, false)
 end
 
+local function _clear_market_selection_frames(ui)
+  local selection_frames = market_layout.item_selection_frames or {}
+  for _, name in ipairs(selection_frames) do
+    ui:set_visible(name, false)
+    ui:set_touch_enabled(name, false)
+  end
+end
+
+local function _refresh_market_selection_frames(ui, option_ids, option_id)
+  _clear_market_selection_frames(ui)
+  if option_id == nil then
+    return
+  end
+  for index, visible_option_id in pairs(option_ids or {}) do
+    if visible_option_id == option_id then
+      local name = market_layout.item_selection_frames and market_layout.item_selection_frames[index] or nil
+      if name then
+        ui:set_visible(name, true)
+        ui:set_touch_enabled(name, false)
+      end
+      return
+    end
+  end
+end
+
 local function _set_market_slot_visible(ui, refs, slot, opt)
   local opt_id = opt.id or opt
   local entry, cfg = _resolve_market_entry(opt_id)
@@ -209,6 +234,7 @@ end
 
 function market_view.select_market_option(state, option_id)
   modal_state.select_market_option(state, option_id)
+  _refresh_market_selection_frames(state.ui, state.choice_visible_option_ids, option_id)
   market_view.refresh_market_selection(state, option_id)
 end
 
@@ -261,6 +287,7 @@ function market_view.refresh_market(state, market)
     end
 
     ui:set_label(market_layout.price_label, "")
+    _clear_market_selection_frames(ui)
     local empty_key = _resolve_ref_key(state.ui_refs, market_layout.empty_ref_key)
     if empty_key ~= nil then
       local node = ui.query_node(market_layout.selected_card)
@@ -305,6 +332,7 @@ function market_view.refresh_market(state, market)
   end
 
   ui:set_touch_enabled(market_layout.selected_card, false)
+  _clear_market_selection_frames(ui)
   _refresh_market_controls(ui, market)
 
   ui:set_visible(market_layout.confirm_button, true)
@@ -344,6 +372,7 @@ function market_view.close_market_panel(state)
   for _, name in ipairs(market_layout.item_frames) do
     ui:set_touch_enabled(name, false)
   end
+  _clear_market_selection_frames(ui)
   ui:set_touch_enabled(market_layout.selected_card, false)
   _set_control_visible(ui, market_layout.page_prev, false, false)
   _set_control_visible(ui, market_layout.page_next, false, false)
