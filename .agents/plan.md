@@ -29,6 +29,7 @@
 - [x] (2026-03-07 02:10 +0800) 已完成阶段5第三刀的第二小片：`presentation_ui` 里的手工 `item_phase_choice` 测试数据已补齐显式 flag 与确认文案，`choice_screen_service.common` 已移除 `item_phase_choice` 的 `kind`-fallback 与旧确认文案推导，只保留显式字段路径。
 - [x] (2026-03-07 02:18 +0800) 已完成阶段5第三刀的第三小片：`presentation_ui` 里的手工 `tax_card_prompt`、`landing_optional_effect` choice 也已补齐 `confirm_*` 字段，`choice_screen_service.common` 不再为 tax 和 buy/upgrade land 推导默认确认文案，确认 UI 全部优先消费用例层显式输出。
 - [x] (2026-03-07 02:27 +0800) 已完成阶段5第四刀的第一小片：`LandChoiceSpecs.tax_prompt()` 与 `EffectPipeline` 生成的纯 buy/upgrade land optional choice 已显式输出 `route_key=\"secondary_confirm\"` 与 `requires_confirm=true`；`ChoiceRoutePolicy` 已移除对 `tax_card_prompt` 和 `buy_land/upgrade_land` 的 secondary-confirm 推断，presentation route 开始只消费用例层声明。
+- [x] (2026-03-07 02:36 +0800) 已完成阶段5第四刀的第二小片：`ItemHandlers`、`ItemDemolish`、`market/service/Choice` 已分别为 `item_target_player`、`remote_dice_value`、`roadblock_target`、`demolish_target`、`market_buy` 显式输出 `route_key`；`ChoiceRoutePolicy` 已移除这些 kind 的默认 route 推断，`remote/player/target/market` 路由开始统一由 use-case 输出声明。
 - [ ] 阶段6：在边界稳定后整理目录语义和命名，避免目录改动与行为改动叠加。
 
 ## 意外与发现
@@ -89,6 +90,9 @@
 
 - 观察：secondary-confirm 路由推断和确认文案推断是同一类问题的两半，如果只前移文案而保留 route 推断，presentation 仍然在暗中持有“哪些 choice 应该走二次确认”的业务知识。
   证据：`ChoiceRoutePolicy` 在本轮前仍根据 `tax_card_prompt` 和 `landing_optional_effect + buy_land/upgrade_land` 推断 `secondary_confirm`；让 builder 显式输出 `route_key/requires_confirm` 后，删掉这些推断分支，`item/land/presentation_ui/gameplay` 定向回归与全量回归都继续通过。
+
+- 观察：当 `secondary_confirm` 已经显式化后，`ChoiceRoutePolicy` 里剩余的 `remote/player/target/market` kind 推断也不再有结构性理由继续存在，因为这些选择同样都来自稳定 builder，而不是临时拼接。
+  证据：本轮为 `ItemHandlers`、`ItemDemolish`、market choice builder 补上 `route_key` 后，删除 policy 对 `remote_dice_value`、`item_target_player`、`roadblock_target`、`demolish_target`、`market_buy` 的 route 推断，`item/land/presentation_ui/gameplay/market` 定向回归与全量回归都继续通过。
 
 ## 决策日志
 
@@ -162,6 +166,10 @@
 
 - 决策：阶段5第四刀先处理 secondary-confirm 路由显式化，而不是先去碰 `ChoiceRoutePolicy` 里其它 route fallback。
   理由：`secondary_confirm` 是阶段5当前最典型的 presentation 应用规则泄漏点，而且 tax 与 landing optional 的生产 builder 已经非常接近显式声明，改动最小、收益最高。先收这条路由语义，比同时重做 remote/player/target 的 route 判定更稳。
+  日期/作者：2026-03-07 / Codex
+
+- 决策：阶段5第四刀第二小片继续把 `remote/player/target/market` 路由也改成 builder 显式输出，而不是在 `ChoiceRoutePolicy` 中保留“这些只是 harmless 默认值”的例外。
+  理由：这些 route 同样属于 presentation 适配知识，只是之前看起来更“无害”。既然相关 choice 都由稳定 builder 生成，继续依赖 kind 推断只会让 route 语义继续分散在 policy 中，不利于把 presentation 压成纯消费层。
   日期/作者：2026-03-07 / Codex
 
 ## 结果与复盘
@@ -390,3 +398,5 @@
 2026-03-07 / Codex：本次更新把计划推进到“阶段4五刀 + 阶段5第一刀已启动”的真实状态，补记了 `Feedback.lua` 的职责收口、market choice option 显式确认语义，以及对应的 `market/presentation_ui` 验证结果。这样下一位执行者可以直接继续决定：是再瘦一层 `Purchase.lua`，还是沿着 `PreConfirmFlow` 把更多 presentation 业务判断改成消费用例输出。
 
 2026-03-07 / Codex：本次更新把计划推进到“阶段5第二刀已完成”的真实状态，补记了 `confirm_title/confirm_body` 这条轻量协议，以及 `ItemPhase`、`LandChoiceSpecs.tax_prompt`、`EffectPipeline`、market skin option 已前移确认文案的事实；验证结果已同步更新为最新的定向回归 `179` 和全量回归 `375`。
+
+2026-03-07 / Codex：本次更新把计划推进到“阶段5第四刀第二小片已完成”的真实状态，补记了 `remote/player/target/market` 路由显式化，以及 `ChoiceRoutePolicy` 对这些 kind 的默认 route 推断已被删掉。这样下一位执行者可以继续收剩余 fallback，而不必重新判断哪些 route 仍靠 policy 猜。

@@ -131,6 +131,7 @@ function handlers.handle_target_player_item(game, player, item_id, context)
       end
       return {
         kind = "item_target_player",
+        route_key = "player",
         title = inventory.item_name(inner_item_id) .. "：选择目标玩家",
         body_lines = body_lines,
         options = options,
@@ -167,6 +168,7 @@ function handlers.handle_remote_dice(game, player, item_id, context)
       end
       return {
         kind = "remote_dice_value",
+        route_key = "remote",
         title = "遥控骰子：选择点数",
         body_lines = body_lines,
         options = options,
@@ -206,6 +208,7 @@ function handlers.handle_roadblock(game, player, item_id, context)
       end
       return {
         kind = "roadblock_target",
+        route_key = "target",
         title = "路障卡：选择位置",
         body_lines = body_lines,
         options = options,

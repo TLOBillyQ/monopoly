@@ -458,6 +458,7 @@ local function _test_intent_dispatcher_sets_choice_route_metadata()
   local g = _new_game()
   local choice_spec = {
     kind = "remote_dice_value",
+    route_key = "remote",
     title = "遥控骰子",
     body_lines = { "选择点数" },
     options = { { id = 1, label = "1" }, { id = 2, label = "2" } },
@@ -479,6 +480,7 @@ local function _test_intent_dispatcher_sets_choice_route_metadata()
 
   local inline_entry = intent_dispatcher.open_choice(g, {
     kind = "item_phase_choice",
+    route_key = "base_inline",
     title = "行动前：使用道具？",
     options = { { id = 2001, label = "路障卡" } },
   }, {})
@@ -507,6 +509,7 @@ local function _test_intent_dispatcher_logs_waiting_choice_event()
   logger.clear()
   intent_dispatcher.open_choice(g, {
     kind = "remote_dice_value",
+    route_key = "remote",
     title = "遥控骰子",
     body_lines = { "选择点数" },
     options = { { id = 1, label = "1" } },
@@ -854,7 +857,7 @@ local function _test_game_startup_build_state_is_pure_and_bridge_installs_events
     assert(type(events[monopoly_event.intent.need_choice]) == "function", "bridge should register need_choice")
 
     local opened = nil
-    local choice_payload = { id = 11, kind = "item_target_player", options = { { id = 1, label = "A" } } }
+    local choice_payload = { id = 11, kind = "item_target_player", route_key = "player", options = { { id = 1, label = "A" } } }
     current_game = {
       turn = { pending_choice = choice_payload },
       winner = nil,
@@ -1776,6 +1779,7 @@ local function _test_afk_auto_host_market_tab_input_resets_timer()
   local choice = {
     id = 12,
     kind = "market_buy",
+    route_key = "market",
     options = { { id = 2003, label = "骰子加倍卡" } },
     active_tab = "item",
     page_index = 1,
@@ -2126,6 +2130,7 @@ local function _test_choice_auto_policy_wait_and_timeout_both_cancel_market_buy(
   local choice = {
     id = 1001,
     kind = "market_buy",
+    route_key = "market",
     allow_cancel = true,
     meta = { player_id = auto_player.id, active_tab = "item", page_index = 1, page_count = 1 },
     options = { { id = "buy", label = "购买" } },
@@ -2157,6 +2162,7 @@ local function _test_choice_auto_policy_timeout_keeps_non_cancelable_choice_fall
   local choice = {
     id = 1002,
     kind = "remote_dice_value",
+    route_key = "remote",
     allow_cancel = false,
     meta = {
       player_id = auto_player.id,
@@ -2206,6 +2212,7 @@ local function _test_market_countdown_uses_double_action_timeout()
   state.pending_choice = {
     id = 2001,
     kind = "market_buy",
+    route_key = "market",
     meta = { player_id = g:current_player().id },
   }
   state.pending_choice_elapsed = 12.2

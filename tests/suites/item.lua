@@ -397,6 +397,7 @@ local function _test_preconsumed_followup_cancel_falls_back_to_first_option()
   g.turn.item_phase_active = "pre_action"
   local pending = _open_choice(g, {
     kind = "remote_dice_value",
+    route_key = "remote",
     title = "遥控骰子：选择点数",
     options = { { id = 4, label = "4" }, { id = 2, label = "2" } },
     allow_cancel = false,
@@ -517,6 +518,7 @@ local function _test_remote_dice_followup_pushes_item_card_popup()
   p.inventory:add({ id = gameplay_rules.item_ids.remote_dice })
   local pending = _open_choice(g, {
     kind = "remote_dice_value",
+    route_key = "remote",
     title = "遥控骰子：选择点数",
     options = { { id = 4, label = "4" } },
     allow_cancel = false,

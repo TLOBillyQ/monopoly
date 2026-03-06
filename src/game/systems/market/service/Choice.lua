@@ -156,6 +156,7 @@ function choice.build(player, game, state)
   local body_lines, options = _build_options_for_page(visible, page_index, PAGE_SIZE)
   return {
     kind = "market_buy",
+    route_key = "market",
     title = "黑市",
     body_lines = body_lines,
     options = options,

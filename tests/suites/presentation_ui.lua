@@ -156,6 +156,7 @@ local function _build_target_pick_env()
   local choice = {
     id = 99,
     kind = "roadblock_target",
+    route_key = "target",
     title = "选位置",
     body = "body",
     options = {
@@ -439,6 +440,7 @@ local function _test_invalid_choice_option_rejected()
   local g = _new_game()
   local choice = _open_choice(g, {
     kind = "market_buy",
+    route_key = "market",
     options = { { id = 1, label = "X" } },
     meta = { player_id = g:current_player().id },
   })
@@ -752,6 +754,7 @@ local function _test_turn_dispatch_rejects_choice_non_owner()
   g.turn.pending_choice = {
     id = 9,
     kind = "market_buy",
+    route_key = "market",
     options = { { id = 1, label = "X" } },
     allow_cancel = true,
     meta = { player_id = "1" },
@@ -1633,6 +1636,7 @@ local function _test_ui_intent_dispatcher_market_confirm_skin_opens_pre_confirm_
       choice = {
         id = 12,
         kind = "market_buy",
+        route_key = "market",
         options = {
           { id = 5001, label = "海绵宝宝皮肤", requires_pre_confirm = true, pre_confirm_kind = "market_skin_purchase" },
         },
@@ -1693,6 +1697,7 @@ local function _test_ui_intent_dispatcher_market_confirm_skin_cancel_restores_ma
       choice = {
         id = 12,
         kind = "market_buy",
+        route_key = "market",
         options = {
           { id = 5001, label = "海绵宝宝皮肤", requires_pre_confirm = true, pre_confirm_kind = "market_skin_purchase" },
         },
@@ -1746,6 +1751,7 @@ local function _test_ui_intent_dispatcher_market_confirm_non_skin_still_direct_d
       choice = {
         id = 12,
         kind = "market_buy",
+        route_key = "market",
         options = {
           { id = 2001, label = "路障卡" },
         },
@@ -1787,6 +1793,7 @@ local function _test_ui_intent_dispatcher_market_confirm_without_pre_confirm_fla
       choice = {
         id = 12,
         kind = "market_buy",
+        route_key = "market",
         options = {
           { id = 5001, label = "海绵宝宝皮肤" },
         },
@@ -2088,6 +2095,7 @@ local function _test_choice_modal_routes_to_new_screens()
     ui_view.open_choice_modal(state, {
       id = 1,
       kind = "item_target_player",
+      route_key = "player",
       title = "选人",
       body = "body",
       options = {
@@ -2102,6 +2110,7 @@ local function _test_choice_modal_routes_to_new_screens()
     ui_view.open_choice_modal(state, {
       id = 2,
       kind = "roadblock_target",
+      route_key = "target",
       title = "选位置",
       body = "body",
       options = {
@@ -2116,6 +2125,7 @@ local function _test_choice_modal_routes_to_new_screens()
     ui_view.open_choice_modal(state, {
       id = 3,
       kind = "remote_dice_value",
+      route_key = "remote",
       title = "遥控骰子",
       body = "body",
       options = {
@@ -2219,6 +2229,7 @@ local function _test_target_screen_uses_labels_only_and_keeps_projection_unmanag
   local choice = {
     id = 88,
     kind = "roadblock_target",
+    route_key = "target",
     title = "路障卡：选择位置",
     body = "body",
     options = {
@@ -2272,6 +2283,7 @@ local function _test_target_screen_hides_unused_slots_when_unique_options_less_t
   local choice = {
     id = 89,
     kind = "roadblock_target",
+    route_key = "target",
     title = "路障卡：选择位置",
     body = "body",
     options = {
@@ -2524,7 +2536,7 @@ local function _test_choice_route_policy_prefers_explicit_route_metadata()
     },
     {
       label = "legacy fallback",
-      choice = { kind = "remote_dice_value" },
+      choice = { kind = "remote_dice_value", route_key = "remote" },
       route = "remote",
       confirm = false,
     },
@@ -2587,6 +2599,7 @@ local function _test_ui_event_router_player_target_click_direct_submit()
       choice = {
         id = 10,
         kind = "item_target_player",
+        route_key = "player",
         allow_cancel = true,
         options = {
           { id = 11, label = "玩家A" },
@@ -2615,6 +2628,7 @@ local function _test_ui_event_router_player_target_click_direct_submit()
     state.ui_model.choice = {
       id = 20,
       kind = "roadblock_target",
+      route_key = "target",
       allow_cancel = true,
       options = {
         { id = 101, label = "前1" },
@@ -3111,6 +3125,7 @@ local function _test_ui_event_router_injects_actor_for_market_confirm_and_cancel
         choice = {
           id = 12,
           kind = "market_buy",
+          route_key = "market",
           allow_cancel = true,
           options = { { id = 34, label = "X" } },
         },
@@ -3910,6 +3925,7 @@ local function _test_modal_presenter_market_same_choice_id_still_refreshes_marke
   local choice = {
     id = 21,
     kind = "market_buy",
+    route_key = "market",
     title = "黑市",
     options = {
       { id = 2001, label = "A", can_buy = true },
@@ -4290,6 +4306,7 @@ local function _test_item_slot_refresh_resets_highlight_without_client_role()
     },
     choice = {
       kind = "remote_dice_value",
+      route_key = "remote",
       options = { { id = 1 }, { id = 2 } },
     },
   }
@@ -5525,14 +5542,15 @@ local function _test_ui_sync_defers_choice_modal_during_wait_action_anim()
   local ui_model_sync = require("src.presentation.api.presentation_ports.ui_sync.UIModelSync")
   local opened = 0
   local game = {
-    turn = {
-      phase = "wait_action_anim",
-      current_player_index = 1,
-      turn_count = 1,
-      pending_choice = {
-        id = 7,
-        kind = "market_buy",
-        title = "黑市",
+      turn = {
+        phase = "wait_action_anim",
+        current_player_index = 1,
+        turn_count = 1,
+        pending_choice = {
+          id = 7,
+          kind = "market_buy",
+          route_key = "market",
+          title = "黑市",
         body_lines = { "A" },
         options = { { id = 1, label = "A" } },
         allow_cancel = true,
@@ -5558,7 +5576,7 @@ local function _test_ui_sync_defers_choice_modal_during_wait_action_anim()
       return {
         panel = { turn_label = "" },
         board = {},
-        choice = { id = 7, kind = "market_buy", options = { { id = 1, label = "A" } }, allow_cancel = true },
+        choice = { id = 7, kind = "market_buy", route_key = "market", options = { { id = 1, label = "A" } }, allow_cancel = true },
         market = { choice_id = 7, options = { { id = 1, label = "A" } }, allow_cancel = true },
       }
     end },
@@ -5566,7 +5584,7 @@ local function _test_ui_sync_defers_choice_modal_during_wait_action_anim()
       return {
         panel = { turn_label = "" },
         board = {},
-        choice = { id = 7, kind = "market_buy", options = { { id = 1, label = "A" } }, allow_cancel = true },
+        choice = { id = 7, kind = "market_buy", route_key = "market", options = { { id = 1, label = "A" } }, allow_cancel = true },
         market = { choice_id = 7, options = { { id = 1, label = "A" } }, allow_cancel = true },
       }
     end },
@@ -5589,10 +5607,11 @@ local function _test_ui_sync_opens_choice_modal_after_wait_action_anim()
       phase = "wait_action_anim",
       current_player_index = 1,
       turn_count = 1,
-      pending_choice = {
-        id = 8,
-        kind = "market_buy",
-        title = "黑市",
+        pending_choice = {
+          id = 8,
+          kind = "market_buy",
+          route_key = "market",
+          title = "黑市",
         body_lines = { "A" },
         options = { { id = 1, label = "A" } },
         allow_cancel = true,
@@ -5618,7 +5637,7 @@ local function _test_ui_sync_opens_choice_modal_after_wait_action_anim()
       return {
         panel = { turn_label = "" },
         board = {},
-        choice = { id = 8, kind = "market_buy", options = { { id = 1, label = "A" } }, allow_cancel = true },
+        choice = { id = 8, kind = "market_buy", route_key = "market", options = { { id = 1, label = "A" } }, allow_cancel = true },
         market = { choice_id = 8, options = { { id = 1, label = "A" } }, allow_cancel = true },
       }
     end },
@@ -5626,7 +5645,7 @@ local function _test_ui_sync_opens_choice_modal_after_wait_action_anim()
       return {
         panel = { turn_label = "" },
         board = {},
-        choice = { id = 8, kind = "market_buy", options = { { id = 1, label = "A" } }, allow_cancel = true },
+        choice = { id = 8, kind = "market_buy", route_key = "market", options = { { id = 1, label = "A" } }, allow_cancel = true },
         market = { choice_id = 8, options = { { id = 1, label = "A" } }, allow_cancel = true },
       }
     end },
@@ -5656,10 +5675,11 @@ local function _test_ui_sync_defers_choice_modal_during_wait_move_anim()
       phase = "wait_move_anim",
       current_player_index = 1,
       turn_count = 1,
-      pending_choice = {
-        id = 9,
-        kind = "market_buy",
-        title = "黑市",
+        pending_choice = {
+          id = 9,
+          kind = "market_buy",
+          route_key = "market",
+          title = "黑市",
         body_lines = { "A" },
         options = { { id = 1, label = "A" } },
         allow_cancel = true,
@@ -5685,7 +5705,7 @@ local function _test_ui_sync_defers_choice_modal_during_wait_move_anim()
       return {
         panel = { turn_label = "" },
         board = {},
-        choice = { id = 9, kind = "market_buy", options = { { id = 1, label = "A" } }, allow_cancel = true },
+        choice = { id = 9, kind = "market_buy", route_key = "market", options = { { id = 1, label = "A" } }, allow_cancel = true },
         market = { choice_id = 9, options = { { id = 1, label = "A" } }, allow_cancel = true },
       }
     end },
@@ -5693,7 +5713,7 @@ local function _test_ui_sync_defers_choice_modal_during_wait_move_anim()
       return {
         panel = { turn_label = "" },
         board = {},
-        choice = { id = 9, kind = "market_buy", options = { { id = 1, label = "A" } }, allow_cancel = true },
+        choice = { id = 9, kind = "market_buy", route_key = "market", options = { { id = 1, label = "A" } }, allow_cancel = true },
         market = { choice_id = 9, options = { { id = 1, label = "A" } }, allow_cancel = true },
       }
     end },

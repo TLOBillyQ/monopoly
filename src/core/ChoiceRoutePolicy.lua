@@ -36,18 +36,6 @@ function policy.resolve(choice)
   if kind == "item_phase_choice" then
     return "base_inline"
   end
-  if kind == "market_buy" then
-    return "market"
-  end
-  if kind == "remote_dice_value" then
-    return "remote"
-  end
-  if kind == "item_target_player" then
-    return "player"
-  end
-  if kind == "roadblock_target" or kind == "demolish_target" then
-    return "target"
-  end
   logger.warn("choice route fallback to base_inline:", tostring(kind))
   return "base_inline"
 end

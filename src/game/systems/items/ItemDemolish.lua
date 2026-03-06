@@ -149,6 +149,7 @@ function demolish.use(game, player, distance, consume_fn, opts)
           kind = "need_choice",
           choice_spec = {
             kind = "demolish_target",
+            route_key = "target",
             title = title .. "：选择目标格子",
             body_lines = body_lines,
             options = options,
