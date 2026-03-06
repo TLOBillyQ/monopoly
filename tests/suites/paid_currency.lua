@@ -68,6 +68,13 @@ local function _build_fake_env(game, opts)
       end,
     },
     {
+      target = runtime_ports,
+      key = "resolve_market_paid_gateway",
+      value = function()
+        return require("src.app.bootstrap.payment.EggyPaidPurchaseGateway")
+      end,
+    },
+    {
       key = "EVENT",
       value = { SPEC_ROLE_PURCHASE_GOODS = "SPEC_ROLE_PURCHASE_GOODS" },
     },

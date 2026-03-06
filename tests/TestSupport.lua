@@ -26,6 +26,7 @@ local tiles_cfg = require("Config.Generated.Tiles")
 local number_utils = require("src.core.NumberUtils")
 local tile = require("src.game.systems.board.Tile")
 local runtime_context = require("src.core.RuntimeContext")
+local runtime_ports = require("src.core.RuntimePorts")
 
 if not math.tofixed then
   function math.tofixed(value)
@@ -89,6 +90,11 @@ local function _refresh_runtime_context_for_tests()
   end
   runtime_context.install_runtime_helpers(ctx, { install_globals = false })
   runtime_context.set_current(ctx)
+  runtime_ports.configure({
+    resolve_market_paid_gateway = function()
+      return require("src.app.bootstrap.payment.EggyPaidPurchaseGateway")
+    end,
+  })
   logger.configure_host_runtime({
     game_api = GameAPI,
     tip_presenter = function(text, duration)

@@ -148,6 +148,15 @@ local rules = {
     description = "market service layer must not call host purchase globals directly; move Eggy payment details to outer adapters",
   },
   {
+    root = "src/presentation/api/presentation_ports",
+    forbidden_patterns = {
+      "game%.ui_port",
+      "ui_port%.get_board_scene",
+      "ui_port%.board_scene",
+    },
+    description = "presentation ports must consume narrow board_scene_port instead of retired ui_port fallbacks",
+  },
+  {
     root = "src/app",
     forbidden_patterns = {
       "%f[%w_]all_roles%f[^%w_]",

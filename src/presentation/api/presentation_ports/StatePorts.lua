@@ -16,13 +16,6 @@ function state_ports.build()
       local scene = nil
       if board_scene_port and type(board_scene_port.get_board_scene) == "function" then
         scene = board_scene_port:get_board_scene()
-      else
-        local ui_port = game and game.ui_port or nil
-        if ui_port and type(ui_port.get_board_scene) == "function" then
-          scene = ui_port:get_board_scene()
-        else
-          scene = ui_port and ui_port.board_scene or nil
-        end
       end
       if not scene or not scene.building_unit_groups or not scene.tiles then
         return

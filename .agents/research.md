@@ -20,7 +20,7 @@
 - `src/core` 对 `GameAPI` / `GlobalAPI` / `SetTimeOut` / `RegisterTriggerEvent` / `RegisterCustomEvent` 的**直接全局触点为 0**。
 - `src/game/flow` 对 `state.ui_*` 的**直接写入为 0**。
 - `src/presentation` 中基于 `choice.kind` / `choice.meta` / `pending_choice.kind` / `pending_choice.meta` 的**核心业务推断匹配为 0**。
-- 全仓库对退役 `game.ui_port` 的命中只剩 **1 处兼容 fallback**：`src/presentation/api/presentation_ports/StatePorts.lua`。
+- 全仓库对退役 `game.ui_port` 的行为级兼容回退已清零；presentation ports 现只消费窄化的 `board_scene_port`。
 - 默认回归入口 `lua tests/regression.lua`、定向 `market` suite、定向 `presentation_ui` suite 与 `dep_rules` 当前都能证明边界已锁住。
 
 ---
@@ -128,18 +128,7 @@
 
 如果按 Clean Architecture 最核心的标准判断：**当前核心业务已经不再被 UI、宿主 API 或支付面板直接控制**。
 
-### P1-1：市场支付端口内部仍保留测试环境 fallback
-
-关键文件：
-
-- `src/game/systems/market/ports/PaidPurchasePort.lua`
-- `src/app/bootstrap/payment/EggyPaidPurchaseGateway.lua`
-
-市场支付链路已经完成了最关键的依赖反转：`Purchase.lua` 与 `MarketService` 不再直接 require 外层 Eggy adapter，service 目录也不再直接调用 `GameAPI`、`RegisterTriggerEvent`、`EVENT`。当前剩下的妥协，是 `PaidPurchasePort.lua` 为未走 `RuntimeInstall` 的测试环境保留了一个 Eggy adapter fallback。
-
-这已经不是 P0 的依赖方向错误，而是为了兼容现有测试装配留下的 P1 级过渡桥。后续如果继续打磨纯度，最合理的方向是把这个 fallback 再挪到测试装配层，而不是留在端口模块内部。
-
-### P1-2：`src/core` 仍承载部分运行时适配细节，目录语义没有完全收口
+### P1：`src/core` 仍承载部分运行时适配细节，目录语义没有完全收口
 
 关键文件：
 
@@ -227,9 +216,9 @@
 证据：
 
 - `src/game` 层扫描下，退役 `game.ui_port` 命中已清零
-- 当前只剩 `src/presentation/api/presentation_ports/StatePorts.lua` 的兼容 fallback
+- `src/presentation/api/presentation_ports/StatePorts.lua` 已删除对 `game.ui_port` / `ui_port.board_scene` 的兼容回退
 
-现在 `game.ui_port` 已不再构成行为边界或兼容阻塞。即使仍存在极少量文档层面的历史痕迹，这个阶段在行为与依赖规则上都已经可以视为完成。
+现在 `game.ui_port` 已不再构成行为边界或兼容阻塞，这个阶段在行为与依赖规则上都已经彻底完成。
 
 ### 阶段 3：runtime 适配器外迁 —— 依赖方向已完成，目录语义仍可继续优化
 
@@ -285,12 +274,12 @@
 
 ## 4. 重构方案（按最小剩余工作排序）
 
-### 步骤 1：把市场支付端口 fallback 继续外推到测试装配层
+### 步骤 1：把 `src/core` 中仍带 runtime/infrastructure 语义的模块继续外迁
 
-**影响范围**: 小到中  
-**关键文件**: `src/game/systems/market/ports/PaidPurchasePort.lua`、支付相关测试装配  
-**预期收益**: 让市场支付端口本身完全不再直接知道 Eggy adapter 路径  
-**回归风险**: 中；主要在测试环境初始化，而不是玩法行为
+**影响范围**: 中  
+**关键文件**: `src/core/RuntimeContext.lua`、`src/core/RuntimeEventBridge.lua`、`src/core/runtime_ports/DefaultPorts.lua`、`src/core/RuntimePorts.lua`、`src/core/RuntimeState.lua`  
+**预期收益**: 让 `src/core` 目录语义进一步收口为稳定策略层  
+**回归风险**: 中；主要是 require 路径与装配测试同步
 
 ### 步骤 2：把 `RuntimeContext` / `RuntimeEventBridge` / `DefaultPorts` 从 `src/core` 迁到更外层的 runtime/infrastructure 目录
 
@@ -365,7 +354,7 @@
 
 - `src/core` 会真正变成稳定内核，目录语义更符合 Clean Architecture，也更便于新人阅读。
 - choice 边界会从“靠经验维持”变成“靠协议和测试维持”，后续新增交互的成本明显下降。
-- 删除最后一条 `game.ui_port` 兼容桥后，这条退役边界就能彻底从代码库语义中消失，不再误导后续开发。
+- `game.ui_port` 的最后一条兼容桥已经删除，这条退役边界现在只需要由守护测试持续防回流。
 
 ### 总体判断
 
@@ -377,4 +366,4 @@
 
 从 Clean Architecture 视角看，Monopoly 代码库已经跨过了最难的阶段：核心业务不再被宿主 API、UI 共享状态或 market 细节直接牵制，依赖规则总体成立，用例层与展示层边界也已经由显式协议维持。
 
-剩下的问题是真实但有限的：一条 `game.ui_port` 兼容回退、几块 runtime-like 模块仍停在 `src/core`、以及少量目录命名还没有完全“scream business”。这些问题值得继续修，但它们已经属于**收尾质量问题**，不再是**架构方向问题**。
+剩下的问题是真实但有限的：几块 runtime-like 模块仍停在 `src/core`，以及少量目录命名还没有完全“scream business”。这些问题值得继续修，但它们已经属于**收尾质量问题**，不再是**架构方向问题**。
