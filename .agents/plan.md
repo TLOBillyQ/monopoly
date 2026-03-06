@@ -1,232 +1,183 @@
-# 开发反馈全量修复可执行计划（基于 `.agents/research.md`）
+# 基于 `.agents/research.md` 的研究交付可执行计划
 
-本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
+本可执行计划是活文档。实施过程中必须持续更新“进度”“意外与发现”“决策日志”“结果与复盘”。
 
-本文件必须遵循 `.agents/harness/PLANS.md` 维护，实施与讨论都要以该规范为准。本文已经内嵌当前仓库完成这项工作所需的背景，不依赖外部上下文。
+本文件必须遵循 `.agents/harness/PLANS.md` 维护，讨论、实施、暂停和重启都以该规范为准。本文已内嵌当前仓库完成这轮研究交付所需的背景，不依赖聊天历史。
 
 ## 目的 / 全局视角
 
-当前仓库已经有较完整的大富翁主流程与回归测试，但 `.agents/research.md` 汇总的 21 条反馈仍存在真实缺陷、配置错误、流程割裂和体验问题。目标是把这些反馈按可验证行为全部落地修复，并保证回归不倒退。改动完成后，玩家能够在完整对局中稳定经历正确的税务、黑市、道具、破产和 UI 流程，不再出现“无条件破产”“商城购买后卡住”“出局玩家仍需操作”等错误行为。
+`.agents/research.md` 当前定义了 8 条待交付项，范围集中在地雷、黑市遮挡、租地道具提示、骰子转向、道具广播和“无法行动”回合处理。用户需要的不是一份泛泛的问题清单，而是一份能让新接手的人从零把这 8 条逐项修完、逐项验证的执行文档。
 
-本计划不是“改代码清单”，而是“可被新手从零执行并验证”的完整实施说明。每个修复都必须对应可观察行为，必须有测试或复现场景证明，且全量回归要通过。
+这轮交付完成后，玩家在完整对局中应看到这些可观察变化：地雷不会炸到埋设者自己；黑市关闭按钮在行动日志与托管开关存在时仍可点击；强征卡和免费卡只在满足条件时才弹确认；移动不会从起点就错误掉头；其他玩家出牌时全员都能看到是什么牌；被扣留或其他“本回合无法行动”的场景会自动跳过，不再要求玩家额外交互；地雷卡可在行动前使用，能与清障/路障策略联动。验收不以“改了哪些文件”为准，而以这些行为可以被测试和手工复现为准。
 
 ## 进度
 
-- [x] (2026-03-05 18:34+08:00) 已完成输入梳理：读取 `.agents/research.md`、`.agents/harness/PLANS.md`、`docs/eggy/*.md`，确认计划约束与反馈范围。
-- [x] (2026-03-05 18:35+08:00) 已完成计划重建：将 `.agents/plan.md` 切换为“开发反馈全量修复”主题并覆盖旧 release 主题。
-- [x] (2026-03-05 18:52+08:00) 波次 0 / SA-1：已把 20 项反馈映射到现有 suite 断言，并新增/更新 `land/config_sanity/market/paid_currency` 定向用例。
-- [x] (2026-03-05 18:52+08:00) 波次 0 / SA-2：`tests/internal/forbidden_globals.lua` 已扩展到 `src + tests + scripts`；并清理新暴露的 `os.clock` 与 `type=="number"` 违规。
-- [x] (2026-03-05 18:52+08:00) 波次 0 / SA-3：支付宿主契约桩与失败路径已在 `tests/suites/paid_currency.lua` 固化，覆盖 panel 打开、回流同步、自动重试。
-- [ ] 波次 0 / SA-4：外部商品映射核对记录（goods_id、币种、回调语义）写入文档证据；与代码任务并行，不阻塞非付费支线。
-- [x] (2026-03-05 18:52+08:00) 波次 1A / SA-5：税务破产判定与机会卡目的地互换已修复，`land/config_sanity` 已通过回归。
-- [x] (2026-03-05 18:52+08:00) 波次 1A / SA-6：出局玩家回合跳过链路通过 `gameplay/regression` 验证，未再出现倒计时阻塞。
-- [x] (2026-03-05 18:52+08:00) 波次 1A / SA-7：路障动画与状态推进链路通过 `presentation_ui + gameplay` 套件验证。
-- [x] (2026-03-05 18:52+08:00) 波次 1B / SA-8：黑市分页链路（choice/view/intent）已稳定，通过 `market + presentation_ui` 断言。
-- [x] (2026-03-05 18:52+08:00) 波次 1B / SA-9：黑市 landing 收口链路在回归长局中验证通过，无“额外点骰子结束回合”阻塞。
-- [x] (2026-03-05 18:52+08:00) 波次 1B / SA-10：官方充值回流自动重试购买已实现，等待充值态保持 choice 并回流后自动触发购买。
-- [x] (2026-03-05 18:52+08:00) 波次 1C / SA-11：二次确认可见性隔离经现有 `presentation_ui` 用例验证（仅当前操作玩家可见）。
-- [x] (2026-03-05 18:52+08:00) 波次 1C / SA-12：单道具确认后自动触发使用，多道具流程保持不变。
-- [x] (2026-03-05 18:52+08:00) 波次 2A / SA-13：颜色一致性与头像降级渲染已回归通过；皇冠链路保持现有实现并通过 UI 套件。
-- [ ] 波次 2A / SA-14：手机端道具外框与称号位置需引擎实机多分辨率手工走查。
-- [x] (2026-03-05 18:52+08:00) 波次 2B / SA-15：黑市座驾页签已收敛（配置层 `market_enabled=false` + 过滤链路稳定）。
-- [x] (2026-03-05 18:52+08:00) 波次 2B / SA-16：连续购买规则已落地（单次一张、买完不关、满背包自动提示退出）。
-- [x] (2026-03-05 18:52+08:00) 波次 2C / SA-18：展示时长基线已统一提升（`action_anim_default_seconds=2.0`，并同步 popup 超时口径）。
-- [x] (2026-03-05 18:52+08:00) 波次 2C / SA-19：`cash_receive` 动画链路已接入 `CashHandlers + ActionAnim + TipText`。
-- [ ] 波次 2C / SA-20：破产页额外 +2s 的专属时长策略未单独下发（现随全局 popup 时长基线提升）。
-- [x] (2026-03-05 18:52+08:00) 波次 3 / SA-21：目标套件回归已完成并修复失败项。
-- [x] (2026-03-05 18:52+08:00) 波次 3 / SA-22：`lua tests/regression.lua` 全量通过（296 checks）。
-- [ ] 波次 3 / SA-23：手工 UI 走查矩阵（多玩家可见性/支付回流/移动端）待实机补录。
-- [x] (2026-03-05 18:52+08:00) 波次 3 / SA-24：已回填活文档章节并完成阶段封板，遗留项转入明确待办。
+- [x] (2026-03-06 14:18+08:00) 已重读 `.agents/research.md`、`.agents/harness/PLANS.md` 和旧 `.agents/plan.md`，确认旧计划属于上一轮 20 项修复，已不适用于本轮 8 项研究交付。
+- [x] (2026-03-06 14:27+08:00) 已完成问题映射：地雷对应 `src/game/systems/items/ItemPostEffects.lua` 与 `src/game/systems/effects/MineEffect.lua`；强征/免费卡对应 `src/game/systems/land/landing_effects/BaseLandEffects.lua` 与 `src/game/systems/land/LandRules.lua`；转向问题对应 `src/game/systems/board/Board.lua`。
+- [x] (2026-03-06 14:31+08:00) 已确认 UI 与回合主链落点：黑市遮挡集中在 `src/presentation/*`，无法行动跳过集中在 `src/game/flow/turn/TurnStart.lua`、`src/game/flow/turn/TurnTimerPolicy.lua` 与相关 presentation 状态投影。
+- [ ] 波次 0：为 8 条研究项补齐“复现即失败”的自动化测试或最小复现场景，优先覆盖地雷自伤、强征/免费卡误触、转向掉头、无法行动自动跳过。
+- [ ] 波次 1：完成规则层修复，处理 BUG-01、BUG-04、BUG-05、BUG-07、BUG-08 和 OPT-01。
+- [ ] 波次 2：完成表现层修复，处理 BUG-02 与 BUG-06，并补齐多角色可见性、画布层级与点击链路验证。
+- [ ] 波次 3：跑目标套件和全量回归，回填证据、风险和剩余人工走查项。
 
 ## 意外与发现
 
-- 观察：`research.md` 中“黑市翻页缺失”与现状不完全一致，仓库已有分页字段与翻页 intent，问题更可能出在链路一致性而不是纯缺功能。
-  证据：`src/game/systems/market/service/Choice.lua` 已有 `page_index/page_count`；`src/presentation/render/MarketView.lua` 已有前后页按钮控制。
+- 观察：当前 `.agents/research.md` 只有 8 条研究结论，但旧 `.agents/plan.md` 仍是上一轮“20 项反馈已完成”的封板文档，直接继续维护会误导实施顺序和验收口径。
+  证据：旧计划正文大量引用“20 项反馈”“296 checks 全绿”等上一轮结论，且进度几乎全部打勾。
 
-- 观察：税务局破产 BUG 是确认的代码缺陷，不是配置问题。
-  证据：`src/game/systems/land/LandRules.lua` 的 `execute_pay_tax` 无条件写入 `bankrupt_reason`，而 `src/game/systems/land/LandEvents.lua` 只要收到该字段就执行破产。
+- 观察：地雷当前通过 `src/game/systems/items/ItemPostEffects.lua` 的 `_handle_place_mine_here` 直接埋在 `player.position`，而触发在 `src/game/systems/effects/MineEffect.lua` 与 `src/game/systems/land/landing_effects/SpecialTileEffects.lua`。
+  证据：`place_mine_here` 直接执行 `game.board:place_mine(player.position)`；地雷命中由 `board:has_mine(position)` 驱动。
 
-- 观察：机会卡医院/税务局跳转错误是确认的数据互换。
-  证据：`Config/Generated/ChanceCards.lua` 中 3031/3033 目的地与 `Config/Generated/Tiles.lua` 的 tile 类型不匹配。
+- 观察：租地提示链当前只判断“有没有卡”和“钱够不够强征”，没有先判断当前地块是否允许强征或免费。
+  证据：`src/game/systems/land/landing_effects/BaseLandEffects.lua` 的 `_apply_pay_rent` 在发现 `strong_idx` 或 `free_idx` 后直接进入 prompt/使用分支，研究项指出“自己地块上不该弹确认”。
 
-- 观察：支付链路与宿主 API 强耦合，若不先固化契约会出现“本地绿、线上红”的假通过。
-  证据：`PaidCurrencyBridge` 依赖 `role.show_goods_purchase_panel`、`GameAPI.get_goods_list` 与 `EVENT.SPEC_ROLE_PURCHASE_GOODS`。
+- 观察：棋盘朝向问题不是 UI 动画问题，而是规则层路径推进问题；`src/game/systems/board/Board.lua` 同时负责按 facing 精确推进和黑市出口转向。
+  证据：`step_forward_by_facing` 在入口点、黑市出口和普通邻接三段逻辑里都计算 `next_id` 和 `step_dir`。
 
-- 观察：当前 `tests/internal/forbidden_globals.lua` 只扫描 `src`，无法兜住测试与脚本目录中的数值 API 违规。
-  证据：脚本里 `_collect_lua_files("src")` 为硬编码。
-
-- 观察：直接执行 `lua tests/suites/*.lua` 不会运行断言，仅会返回 suite table，必须通过 `TestHarness` 或 `tests/regression.lua` 驱动。
-  证据：单独执行无失败输出；切换到 `TestHarness.run_all({require("<suite>")})` 后可稳定复现失败项。
-
-- 观察：`market` 套件存在模块缓存耦合，`MarketChoiceHandler` 会捕获旧 `MarketService` 实例，导致 patch 命中漂移。
-  证据：同一 patch 在独立脚本可生效，但在整套运行失败；增加 choice 运行时模块重载后恢复一致。
-
-- 观察：守门扩展后立即暴露历史违规（`os.clock`、`type=="number"`），说明先扩扫描再清理是必要顺序。
-  证据：`forbidden_globals` 首次扩展时报 `tests/suites/gameplay.lua` 两处违规，修复后输出 `forbidden_globals ok`。
+- 观察：当前日志系统 `src/core/Logger.lua` 会出 tip，但“其他玩家使用了什么牌”是否能全员看到，仍取决于 presentation 是否把道具展示做成全角色可见的 popup 或全局提示。
+  证据：`logger.event` 只调用 `GlobalAPI.show_tips`；而可被全员看到的卡牌展示目前由 `PopupRenderer` 处理 `chance_card`、`item_card`、`bankruptcy`。
 
 ## 决策日志
 
-- 决策：本次按 `.agents/research.md` 全量 20 项执行，不裁剪到 P0/P1。
-  理由：用户明确要求“用 research 写新 plan”，计划必须完整覆盖研究结论而不是局部摘录。
-  日期/作者：2026-03-05 / Codex
+- 决策：本轮 `.agents/plan.md` 完全按 `.agents/research.md` 当前 8 条结论重建，不继承旧计划里的“已完成”状态。
+  理由：旧计划目标和研究范围已经变更，继续局部修补会让“本轮待交付项”与“历史封板状态”混在一起，失去活文档价值。
+  日期/作者：2026-03-06 / Codex
 
-- 决策：已实现或疑似已实现项一律“先验真再修补”，先补复现用例再改逻辑。
-  理由：避免对现有可用链路重复改造，降低回归风险。
-  日期/作者：2026-03-05 / Codex
+- 决策：先补复现入口，再修规则，再修表现，最后统一回归。
+  理由：BUG-01、BUG-04、BUG-05、BUG-07、BUG-08 都是规则层问题，若没有先固化复现，后续表现层改动会掩盖真实回归面。
+  日期/作者：2026-03-06 / Codex
 
-- 决策：官方商城充值完成后采用“自动重试并完成购买，成功后关闭黑市”。
-  理由：这是当前产品偏好，且能直接消除“买完不关”的核心体感问题。
-  日期/作者：2026-03-05 / Codex
-
-- 决策：`OPT-06` 采用“一次只能买一张，买完不自动关闭，手牌满 5 张自动退出黑市并提示”。
-  理由：这是用户给定目标，复杂度远低于购物车式多选，且能满足操作效率诉求。
-  日期/作者：2026-03-05 / Codex
-
-- 决策：测试执行统一走 `tests/regression.lua` 或 `TestHarness`，不再用 `lua tests/suites/*.lua` 作为验收依据。
-  理由：suite 文件只导出测试定义，直接执行会误判“通过”。
-  日期/作者：2026-03-05 / Codex
-
-- 决策：`OPT-01` 时间基线采用“双参数对齐”（`action_anim_default_seconds` 与 `popup_auto_close_seconds` 同步到 2.0）。
-  理由：卡牌展示与弹窗口径一致可避免动画/弹窗时长分裂导致的体验与断言漂移。
-  日期/作者：2026-03-05 / Codex
+- 决策：OPT-01 与 BUG-01 一并处理，统一放在“道具/地雷”支线收口。
+  理由：两项都落在地雷使用时机和地雷命中语义上，拆开做容易在 Item timing、路径推进和测试夹具上重复返工。
+  日期/作者：2026-03-06 / Codex
 
 ## 结果与复盘
 
-当前阶段已完成核心代码落地与自动化回归收敛：税务破产判定、机会卡目的地、黑市连续购买与充值回流、单道具确认自动使用、收钱动画、展示时长与颜色统一、守门扫描扩展等改动均已入库，并通过 `lua tests/regression.lua`（296 checks）和 `forbidden_globals ok` 验证。阶段遗留为三项：`SA-4` 外部商品映射文档证据、`SA-14`/`SA-23` 的移动端与多分辨率实机走查、`SA-20` 破产页专属 +2s 策略是否独立于全局 popup 时长。经验教训是：该仓库强依赖模块缓存和宿主接口，必须坚持“先可重复测试入口、再修逻辑、最后全量回归”。
+当前阶段仅完成计划重建和代码落点核对，尚未开始实施修复。最大收益是把本轮工作从上一轮的“完成态文档”中剥离出来，恢复为可推进、可暂停、可重启的执行文档。接下来真正的交付风险主要有三类：一是朝向/掉头问题可能牵涉分支与黑市出口共用逻辑；二是道具广播涉及全员可见性，不能只补日志文本；三是黑市遮挡问题可能需要实机确认节点层级，而不仅是单测模拟。
 
 ## 背景与导读
 
-本计划涉及五个核心子系统。第一是回合与落地效果链，主要位于 `src/game/flow/turn/` 与 `src/game/systems/land/`，决定税务、黑市、医院、深山、破产等状态推进。第二是黑市与支付链，位于 `src/game/systems/market/` 与 `src/game/systems/commerce/`，覆盖商品可见性、翻页、购买执行和官方充值回流。第三是交互分发与 UI 画布链，位于 `src/presentation/interaction/`、`src/presentation/ui/`、`src/presentation/render/`，负责多角色可见性、二次确认、头像渲染、目标选择等体验细节。第四是配置层，位于 `Config/Generated/` 与 `src/core/config/`，承载机会卡跳转、颜色、展示时长等参数。第五是测试层，位于 `tests/suites/` 与 `tests/internal/`，承担复现、回归和规则守门。
+这轮工作主要跨三块区域。第一块是规则层，负责玩家状态、地块结算和精确移动，核心文件在 `src/game/systems/` 与 `src/game/flow/turn/`。其中 `src/game/systems/items/ItemPostEffects.lua` 处理行动前后道具的立即效果，`src/game/systems/effects/MineEffect.lua` 处理地雷命中结果，`src/game/systems/land/landing_effects/BaseLandEffects.lua` 处理落到别人地块、税务局等结算，`src/game/systems/board/Board.lua` 负责按朝向推进一步，`src/game/flow/turn/TurnStart.lua` 和 `src/game/flow/turn/TurnTimerPolicy.lua` 负责回合开始和“被扣留等待”收口。
 
-术语说明：
+第二块是表现层，负责黑市、行动日志、全局弹窗和多角色可见性，主要在 `src/presentation/`。`src/presentation/render/MarketView.lua` 负责黑市面板刷新和关闭，`src/presentation/interaction/UIEventBindings.lua` 与 `src/presentation/interaction/UITouchPolicy.lua` 负责始终显示区按钮注册和触控开关，`src/presentation/ui/PopupRenderer.lua` 负责“机会卡/道具卡/破产”展示。
 
-“等待态”指 `turn.phase` 进入 `wait_choice`、`wait_move_anim`、`wait_action_anim` 或 `detained_wait`，回合推进被显式阻塞，直到收到动作或动画完成信号。
+第三块是测试层，位于 `tests/suites/`。`tests/suites/item.lua` 适合覆盖地雷卡与行动前后道具时机，`tests/suites/gameplay.lua` 适合覆盖移动、转向和回合推进，`tests/suites/landing.lua` 适合覆盖落地结算与 popup，`tests/suites/presentation_ui.lua` 适合覆盖黑市按钮、画布层级、popup 可见性与关闭链路。全量回归入口是 `tests/regression.lua`。
 
-“回流”指官方支付面板完成后，宿主通过 `EVENT.SPEC_ROLE_PURCHASE_GOODS` 事件把结果同步回游戏逻辑。
-
-“活文档章节”指“进度”“意外与发现”“决策日志”“结果与复盘”四个必须长期维护的章节，不能在收尾时一次性补写。
+术语说明如下。“误触”不是 UI 点击误触，而是系统在不满足使用条件时仍然弹出“是否使用”确认。“掉头”指玩家沿棋盘移动时，行进方向在不该发生转弯的位置被错误改成反方向。“无法行动”指玩家因住院、深山、扣留或其他状态，本回合应该直接结束，而不是继续等待按钮或倒计时。“广播”在本计划中指所有玩家都能看到这次出牌的名称与展示，不只是本地行动玩家收到一条日志。
 
 ## 里程碑
 
-里程碑一聚焦“可验证基础设施”。完成后，仓库应具备每条反馈的复现入口与测试映射，且数值 API 违规守门覆盖 `src + tests + scripts`。支付链必须有宿主能力模拟桩，能够稳定重现“API 缺失、调用失败、回调乱序/错 role”场景。这个里程碑的验收是：复现矩阵完整，基础套件可稳定运行，后续修复不再依赖口头描述。
+里程碑一是“建立可信复现”。完成后，每条研究项至少有一个稳定入口可以证明问题存在或行为未被覆盖。这里不要求一次修好全部问题，但要求后续每个修复都能绑定到对应测试。验收方式是在仓库根目录运行目标套件，新增测试在改动前失败、改动后通过。
 
-里程碑二聚焦“核心逻辑止血”。完成后，P0/P1 项必须全部可观察修复：税务不再误破产、机会卡跳转正确、出局玩家无多余交互、黑市分页链路一致、充值后购买闭环、路障动画与状态同步、单道具自动使用、二次确认只对当前玩家可见。这个里程碑的验收是：对应测试项变更前失败、变更后通过，并能在最小手工复现场景中看到行为变化。
+里程碑二是“收敛规则层”。完成后，地雷、自伤、强征/免费卡误提示、骰子转向和无法行动自动跳过都必须在逻辑层收口，不依赖 UI 特判。验收方式是 `tests/suites/item.lua`、`tests/suites/gameplay.lua`、`tests/suites/landing.lua` 的相关断言通过，并在最小手工局里复现出正确行为。
 
-里程碑三聚焦“体验一致性与增强”。完成后，P2/P3 项全部落地：皇冠显示、头像降级渲染、颜色一致、破产展示时长、收钱动效与音效、称号上移、黑市连续购买、去掉座驾分页。这个里程碑的验收是：UI 相关场景在桌面和移动分辨率都可复现预期，不引入脚本崩溃或画布错乱。
+里程碑三是“收敛表现层”。完成后，黑市关闭按钮可点，道具使用会向全员展示，且不破坏现有 popup/choice/market 的模态切换。验收方式是 `tests/suites/presentation_ui.lua` 通过，并在实际 UI 中验证关闭按钮不再被始终显示区覆盖。
 
-里程碑四聚焦“全局回归与交付封板”。完成后，`lua tests/regression.lua` 必须全绿，手工矩阵记录完整，`.agents/plan.md` 的活文档章节全部回填，任何新手只看本文件即可重复执行。
+里程碑四是“封板与回填”。完成后，`lua tests/regression.lua` 全绿，本文件四个活文档章节已补齐，剩余必须手工验证的事项被明确记录，不留口头约定。
 
 ## 工作计划
 
-实施顺序按“先守门、后修复、再增强、最后回归”推进。首先在测试层把复现和守门补齐，确保每项反馈都能被自动化或脚本化触发。然后优先处理影响胜负和流程阻断的 P0/P1 问题，其中支付链任务拆为“契约固化”和“产品闭环”两段，避免宿主不确定性直接污染业务修复。黑市相关改动集中管理，严格按“分页一致性 -> landing 收口 -> 充值回流 -> 连续购买”的顺序推进，防止多个任务互相覆盖状态机。随后处理 P2/P3 体验项，并把所有时间相关改动统一放在展示时长基线调整之后，避免断言漂移。最后做全量回归和手工走查，边跑边回填活文档证据。
+实施顺序按依赖收敛。先在测试层把本轮研究项映射清楚。地雷支线先补两类测试：一类覆盖“埋雷后自己下一回合不会因原地命中而自伤”，另一类覆盖“地雷卡允许在行动前使用，且不会破坏既有行动后使用流程”。这些测试优先放在 `tests/suites/item.lua` 和 `tests/suites/gameplay.lua`，因为前者便于直接调用道具效果，后者便于驱动完整移动与落地。
 
-并行策略采用按依赖波次分组。波次 0 可并行执行复现矩阵、守门扩展和宿主契约桩。波次 1 将逻辑修复分为“土地/回合链”“UI 可见性链”“市场分页链”三条并行支线。波次 2 在前序稳定后再并行推体验项。最终把所有分支合并到统一回归波次，完成收敛。
+然后处理租地与税务相关提示。`src/game/systems/land/landing_effects/BaseLandEffects.lua` 需要在弹出 `rent_prompt` 前先确认地块确实属于他人、玩家确实需要支付租金、强征卡当前可合法使用、免费卡当前有意义；`src/game/systems/land/LandRules.lua` 只保留执行规则，不承担“是否应该出现 prompt”的猜测。这里的目标是把“是否可提示”与“提示后怎么执行”拆开，避免自己地块或无效场景继续弹框。
+
+移动转向问题集中改 `src/game/systems/board/Board.lua`。本文件当前把普通推进、黑市出口和入口分支都放在同一个 `step_forward_by_facing` 中，因此修复必须同时考虑 BUG-05 的“起步就掉头”与 BUG-08 的“频繁掉头原因不明”。处理方式是先用测试把“何时允许改变 facing”固定下来，再把“起步沿当前 facing 继续前进”和“遇到真正转弯节点时再更新 step_dir”拆成明确分支，防止用兜底邻居选择把朝向悄悄改坏。
+
+回合跳过问题在 `src/game/flow/turn/TurnStart.lua`、`src/game/flow/turn/TurnTimerPolicy.lua` 和 presentation 面板投影之间收口。现在 `TurnStart` 对 `stay_turns > 0` 会进入 `detained_wait` 并等待 5 秒。研究项要求“无法行动时应直接跳过当前回合”，因此要把“用于表现展示的短暂停留”和“等待玩家操作”区分开：规则层应立即进入下一阶段或结束回合，展示层只能被动显示提示，不能阻塞推进。
+
+表现层最后处理。黑市遮挡需要核对 `src/presentation/render/MarketView.lua`、`src/presentation/interaction/UIEventBindings.lua`、`src/presentation/interaction/UITouchPolicy.lua` 和始终显示区节点契约，目标是确保黑市激活时，行动日志与托管开关不会抢占黑市关闭按钮的点击。道具广播则在 `src/presentation/ui/PopupRenderer.lua` 和道具使用链路之间接桥，统一把“玩家使用了什么牌”变成全员可见的 `item_card` 或等价展示，而不是只写进行动日志。
 
 ## 具体步骤
 
-以下命令默认在仓库根目录 `/Users/billyq/Dev/Github/Lua/monopoly` 执行。每完成一步就更新“进度”并写入对应证据。
+以下命令默认在仓库根目录 `/Users/billyq/Dev/Github/Lua/monopoly` 执行。每完成一批改动，就回填“进度”和对应证据。
 
-步骤一，建立复现矩阵和守门。
+步骤一，固化本轮研究项的测试入口。
 
     rg -n "BUG-|OPT-" .agents/research.md
-    lua tests/internal/forbidden_globals.lua
+    lua tests/suites/item.lua
+    lua tests/suites/gameplay.lua
+    lua tests/suites/landing.lua
+    lua tests/suites/presentation_ui.lua
 
-预期先得到反馈项列表，再扩展 `forbidden_globals` 扫描范围到 `src + tests + scripts`。扩展后重跑，预期输出 `forbidden_globals ok`。
+预期先确认本轮只有 8 条研究项，再识别哪些问题已有测试覆盖、哪些仍需补用例。若直接执行 suite 只是导出 table，则改用 `lua tests/regression.lua` 或 `TestHarness` 驱动新增断言。
 
-步骤二，固化支付宿主契约并补桩。
+步骤二，修复地雷支线。
 
-    lua tests/suites/paid_currency.lua
+    lua tests/suites/item.lua
+    lua tests/suites/gameplay.lua
 
-先让支付链新增失败路径用例落地，再修复桩与桥接逻辑，直到用例稳定通过。必须覆盖 `show_goods_purchase_panel` 缺失、`get_goods_list` 空返回、回调错 role、重复回调。
+先新增失败用例，再修改 `src/game/systems/items/ItemPostEffects.lua`、`src/game/systems/effects/MineEffect.lua`、必要时补 `src/game/systems/items/ItemPhase.lua` 或道具配置，使地雷既不会自伤，又支持研究要求的行动前使用。预期结果是：埋雷玩家留在原地或进入下一回合时不被自己刚埋的雷命中；行动前也能正常释放地雷卡。
 
-步骤三，完成 P0 双修复。
+步骤三，修复租地卡提示误触。
 
-    lua tests/suites/land.lua
-    lua tests/suites/config_sanity.lua
+    lua tests/suites/landing.lua
+    lua tests/suites/gameplay.lua
 
-修改税务破产判定和机会卡目的地后，预期相关断言通过，且不影响其他土地逻辑。
+修改 `src/game/systems/land/landing_effects/BaseLandEffects.lua`，必要时补充 `src/game/systems/land/LandChoiceSpecs.lua` 和 `src/game/systems/land/LandRules.lua` 的测试约束。预期结果是：只有踩到他人可结算地块且卡片确实有效时，才会出现“是否使用强征卡/免费卡”。
 
-步骤四，完成 P1 主链修复。
+步骤四，修复移动朝向与掉头。
 
-    lua tests/suites/market.lua
+    lua tests/suites/gameplay.lua
+
+围绕 `src/game/systems/board/Board.lua` 增加最小路径场景，覆盖直行、真正转弯、黑市出口和分支入口。预期结果是：玩家不会从起步位置就反向，只有在路径拓扑要求转弯时才改变方向。
+
+步骤五，修复“无法行动时未自动跳过”。
+
     lua tests/suites/gameplay.lua
     lua tests/suites/presentation_ui.lua
 
-按“分页一致性 -> landing 收口 -> 充值回流 -> 其余交互”顺序提交。每完成一项先跑目标套件，再跑一遍受影响联动套件。
+修改 `src/game/flow/turn/TurnStart.lua`、`src/game/flow/turn/TurnTimerPolicy.lua` 以及依赖的 UI 状态投影。预期结果是：玩家住院、深山或其他明确无行动权的状态下，回合会自动推进，不再停在等待交互的界面。
 
-步骤五，完成 P2/P3 体验与增强。
+步骤六，修复黑市遮挡和出牌广播。
 
-    lua tests/suites/presentation_ui_action_anim.lua
-    lua tests/suites/presentation_player_colors.lua
-    lua tests/suites/test_profiles.lua
+    lua tests/suites/presentation_ui.lua
+    lua tests/suites/landing.lua
 
-处理皇冠、头像、颜色、动画、弹窗、称号位置、连续购买、去掉座驾分页。每项都需最小化改动并提供可观察证据。
+先让黑市关闭按钮被稳定点击，再把道具使用的展示广播接到全员可见链路。预期结果是：黑市打开时，“黑市_关闭”始终可用；任意玩家出牌时，其他玩家也能看到明确的牌名展示。
 
-步骤六，全量回归与手工走查。
+步骤七，完成全量回归与文档封板。
 
     lua tests/regression.lua
 
-自动回归通过后，执行手工矩阵，至少包含：多玩家可见性、官方充值回流、黑市连续购买上限、移动端外框与称号位置、破产弹窗可见时长。
-
-步骤七，封板。
-
-将所有证据、风险、决策和复盘写回 `.agents/plan.md`，补齐文末变更说明，保证文档可独立重启实施。
+预期输出应包含全量通过的检查数。若某条研究项仍只能手工验证，例如 UI 节点真实层级与多分辨率点击热区，则必须把该项保留在“结果与复盘”，写清未自动化原因和手工验收步骤。
 
 ## 验证与验收
 
-验收以行为为准，不以“文件改过”为准。
+验收必须对应 `.agents/research.md` 的 8 条项，而不是抽象地说“逻辑正常”。BUG-01 的验收是：玩家埋雷后不会在自己下一次起步或原地阶段因同格地雷而送医。BUG-02 的验收是：黑市打开时，行动日志图标和托管开关存在也不影响关闭按钮点击。BUG-04 的验收是：在自己地块或其他不满足条件的地块上，不会弹出强征卡/免费卡确认。BUG-05 与 BUG-08 的验收是：移动方向只在真正转弯时变化，不会无缘无故掉头。BUG-06 的验收是：其他玩家能看到出牌名称，而不是只有当前玩家或日志知道。BUG-07 的验收是：明确无行动权时直接跳过回合。OPT-01 的验收是：地雷卡可在行动前释放，并与已有行动流程兼容。
 
-税务局场景中，余额充足玩家必须仅扣税不破产；余额耗尽玩家才破产。机会卡“送医院”与“去税务局”必须落在正确 tile。出局玩家回合必须自动跳过，不能出现倒计时或点骰子交互。黑市分页要支持翻页、越界回退和空页处理，且充值回流后可自动完成当前购买并关闭黑市。单道具确认时必须直接使用；多道具仍保留原选择流程。连续购买规则必须满足“买完不自动关闭、点关闭退出、满 5 张自动退出并提示”。
+自动化验收最少包含以下命令：
 
-UI 验收必须覆盖多角色隔离，确保二次确认只对当前玩家显示。头像渲染在 native-size 失败时必须可降级显示。皇冠、颜色、称号位置在桌面与移动分辨率下都要稳定。
-
-自动化验收命令至少包括：
-
-    lua tests/suites/land.lua
-    lua tests/suites/market.lua
-    lua tests/suites/paid_currency.lua
+    lua tests/suites/item.lua
+    lua tests/suites/gameplay.lua
+    lua tests/suites/landing.lua
     lua tests/suites/presentation_ui.lua
-    lua tests/suites/presentation_ui_action_anim.lua
     lua tests/regression.lua
 
-全量回归必须通过，且关键新增测试要满足“变更前失败、变更后通过”的证据要求。
+如果某项修复前没有测试，必须先补测试并记录“变更前失败、变更后通过”的证据。若某个 UI 层级问题只能在引擎里看见，自动化测试应至少覆盖状态、事件和触控路由，手工再补最终点击验证。
 
 ## 可重复性与恢复
 
-本计划按小步提交执行，步骤可重复。每次只推进一个反馈或一个子链路，确保失败时能定位到最小改动面。遇到回归失败时，不做破坏性回退，先通过测试输出定位失败项，再按文件粒度修复并重跑目标套件。支付链联调失败时，不阻塞非支付支线，按计划继续推进并在 `T2b` 记录外部阻塞证据。
+本计划按小步提交推进，可重复执行。每次只修一条研究项或一条紧密耦合的支线，先跑目标套件，再跑全量回归。遇到失败时不要破坏性回退，先根据新增测试或回归输出定位是哪一层出了问题，再最小化修改重跑。表现层问题如果在纯 Lua 环境无法完全证明，应保留自动化保护并补一条明确的实机复现步骤，而不是删测试或口头跳过。
+
+数值相关逻辑必须遵守仓库约束：新增代码禁止使用 `tonumber`、`type(...) == "number"` 或类似写法，统一使用 `src/core/NumberUtils.lua`。这项约束也适用于测试代码。
 
 ## 产物与备注
 
-实施完成后，产物应包含三类内容。第一类是行为修复代码和配置修复，覆盖 20 项反馈。第二类是测试产物，包括新增或更新的 suite 断言和回归脚本证据。第三类是文档产物，即本计划内四个活文档章节的完整回填。
+本轮交付的最终产物应只有三类。第一类是规则修复代码，落在道具、落地结算、朝向推进和回合跳过链路。第二类是表现修复代码，落在黑市关闭按钮触控链路和全员可见的道具展示。第三类是测试与文档产物，证明 8 条研究项被逐项验证，并把剩余人工项写清楚。
 
-建议保留以下短证据片段，作为最终复盘中的最小证明：
+建议在收尾时保留以下短证据片段，写回本文件，不要只留在终端历史里：
 
     All regression checks passed (N)
-    forbidden_globals ok
-    [MarketDebug] ... apply_navigation done ...
-    [event] ... 支付税金后破产（仅在余额耗尽场景）
+    [event] ... 在脚下埋设地雷
+    [event] ... 使用强征卡 ...
+    [MarketDebug] ... view_refresh ...
 
 ## 接口与依赖
 
-本计划实施过程中涉及的关键接口必须保持兼容。`PaidCurrencyBridge` 与 `MarketService` 的对外调用方已经分散在 game 和 presentation 两侧，新增字段优先放在 `choice.meta` 或局部返回结构，不改变现有调用参数顺序。`TurnDispatch`、`ChoiceResolver`、`UIModalPresenter` 等核心分发入口不得引入破坏性分支，任何新增状态必须可被测试覆盖。
+这轮改动涉及的稳定接口如下。规则层继续使用 `src/game/*` 现有入口，不要把 presentation 特判写回规则模块。黑市与 popup 相关显示统一通过 `src/presentation/*` 与 `ui_view`、`modal_presenter` 链路处理，不在业务逻辑里直接散落 UI 原生调用。需要给其他玩家展示出牌时，优先复用 `item_card` / popup 语义，而不是新造一套只存在于日志层的临时协议。
 
-支付回流链只允许依赖仓库已知的官方接口：`GameAPI.get_goods_list`、`Role.show_goods_purchase_panel`、`Role.get_commodity_count`、`Role.consume_commodity`、`EVENT.SPEC_ROLE_PURCHASE_GOODS`。若宿主实际行为与文档不一致，必须把差异写入“意外与发现”，并提供降级策略而非静默失败。
+`src/game/systems/board/Board.lua` 的 `step_forward_by_facing` 是本轮高风险接口，修改时必须保证它对黑市出口、分支入口和普通路径都保持一致口径。`src/game/flow/turn/TurnStart.lua` 与 `src/game/flow/turn/TurnTimerPolicy.lua` 的职责边界也要保持清楚：前者决定当前玩家是否拥有行动权，后者只负责时间驱动，不负责替用户做规则判断。
 
-数值相关判断统一使用 `src/core/NumberUtils.lua` 提供的方法，禁止在新增代码中引入 `tonumber`、`type(...) == "number"`、`type(...) ~= "number"`。这是硬约束，违规则由守门脚本拦截。
+数值判断统一使用 `src/core/NumberUtils.lua`。这是硬约束，不允许在新增代码或测试里引入 `tonumber`、`type(...) == "number"`、`type(...) ~= "number"`。
 
-### API 选择指导（依据官方 API 指引）
-
-参考文档：`https://u5-creator.s3.game.163.com/manual/pc_md/lua/lua_api_structure.html`。该文档把 API 分为“单位与对象、技能与战斗、触发与事件、UI 与交互、场景与相机、音效与特效、存档与成就、通用工具、EVENT”九类。本计划按以下规则选型：
-
-1. 先按能力域选 API，不跨域混用。单位位置/物理用 `GameAPI + Unit`；技能状态用 `Ability/AbilityComp`；UI 节点与购买面板用 `Role` UI API；相机与天空盒用 `GlobalAPI/Role` 相机 API；音效特效用 `GameAPI/GlobalAPI` 的 sound/sfx API。
-2. 对局内部模块通信优先走仓库内事件总线（`monopoly_event` + `IntentDispatcher`），不要把内部流程直接改成 `LuaAPI.global_send_custom_event`。`LuaAPI` 触发器主要用于宿主事件接入（如 `EVENT.SPEC_ROLE_PURCHASE_GOODS`）。
-3. 业务层禁止直接散落调用 UI 原生 API。presentation 层统一通过 `src/presentation/api/UIRuntimePort.lua`、`src/presentation/api/HostRuntimePort.lua`、`UIManager` 封装调用，避免多处重复处理角色隔离与降级逻辑。
-4. 涉及玩家定向行为时必须先拿 `Role` 对象再调用 `Role.*`，并明确作用域（单角色或全角色）。禁止在无角色上下文时直接假设广播生效。
-5. 相机、场景、3D 表现类 API 只放在 presentation/渲染路径，不侵入 `src/game/systems/*` 规则层；规则层只产生意图和状态，不直接驱动镜头。
-6. 音效与特效优先复用现有桥接层（如 `ActionAnimPort`、相关 render runtime），不要在业务处理函数里直接硬编码 `play_3d_sound/play_sfx_by_key`。
-7. 存档与成就 API（`Role.get/set_archive*`、`Role.*achievement*`）不用于单局临时状态；单局状态继续存放在 game runtime 与 turn state。
-8. 通用与时间工具 API 统一遵循沙盒约束：优先帧驱动与运行时端口时间，不引入 `os/io/debug` 依赖；数值判定继续执行 `NumberUtils` 统一口径。
-
-文末变更说明（2026-03-05 18:35+08:00）：本次将 `.agents/plan.md` 从“release 受控启用 test_profile”主题切换为“基于 `.agents/research.md` 的 20 项反馈全量修复”主题。原因是用户要求“用 research 写新 plan”，旧计划目标与当前任务不一致，会误导后续实施。
-文末变更说明（2026-03-05 18:39+08:00）：根据官方 API 指引链接补充“API 选择指导”到“接口与依赖”章节，明确九类 API 的选型边界与本仓库调用分层。原因是后续多 sub-agent 并行实施时需要统一 API 选型口径，减少跨层误用和接口漂移。
-文末变更说明（2026-03-05 18:52+08:00）：完成本轮全量实施回填：更新波次进度状态、补录执行期发现与决策、写入阶段复盘，并记录自动化验收结论（`tests/regression.lua` 全绿、`forbidden_globals ok`）。原因是用户要求“执行所有计划并持续推进”，需要把实施证据沉淀为可重启文档。
+文末变更说明（2026-03-06 14:33+08:00）：将 `.agents/plan.md` 从上一轮“20 项反馈全量修复”的完成态文档，重写为基于当前 `.agents/research.md` 8 条研究结论的可执行计划。原因是旧计划与当前研究范围不一致，继续沿用会误导本轮交付、进度和验收。
