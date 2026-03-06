@@ -8,7 +8,7 @@
     Windows 与 macOS 在未传 -TargetPath 时都会默认部署到“开发/发布”两个目录。
     如需额外拷贝 vendor/，请传入 -IncludeVendor 参数。
 .PARAMETER TargetPath
-    目标目录的绝对路径
+    目标目录的绝对路径。支持传入多个；如果只传入默认“开发/发布”目录中的一个，脚本会自动补齐另一个默认目录。
 .PARAMETER IncludeVendor
     是否额外拷贝 vendor/ 目录（默认不拷贝）
 .PARAMETER StartupProfile
@@ -22,6 +22,8 @@
 .EXAMPLE
     pwsh -File .\deploy.ps1 -TargetPath "C:\Target\Project" -IncludeVendor
 .EXAMPLE
+    pwsh -File .\deploy.ps1 -TargetPath "C:\Users\Lzx_8\Desktop\dev\LuaSource_大富翁-发布","C:\Users\Lzx_8\Desktop\dev\LuaSource_大富翁-开发"
+.EXAMPLE
     pwsh -File .\deploy.ps1 -StartupProfile "items_move_control"
 .EXAMPLE
     pwsh -File .\deploy.ps1 -Mode release
@@ -34,7 +36,7 @@
 
 param(
     [Parameter(Mandatory=$false, HelpMessage="请输入目标目录的路径")]
-    [string]$TargetPath,
+    [string[]]$TargetPath,
     [switch]$IncludeVendor,
     [string]$StartupProfile,
     [switch]$AllowReleaseTestProfile,
@@ -57,6 +59,60 @@ function Resolve-PythonCommand {
         }
     }
     return $null
+}
+
+function Get-DefaultTargetPaths {
+    if ($IsWindows) {
+        return @(
+            "C:\\Users\\Lzx_8\\Desktop\\dev\\LuaSource_大富翁-开发",
+            "C:\\Users\\Lzx_8\\Desktop\\dev\\LuaSource_大富翁-发布"
+        )
+    }
+    if ($IsMacOS) {
+        return @(
+            "/Users/billyq/Documents/eggy/LuaSource_大富翁-开发",
+            "/Users/billyq/Documents/eggy/LuaSource_大富翁-发布"
+        )
+    }
+    return $null
+}
+
+function Normalize-TargetPath {
+    param([string]$Path)
+    $normalized = $Path.TrimEnd("/").TrimEnd("\")
+    if (Test-Path $normalized) {
+        return (Resolve-Path $normalized).Path
+    }
+    return [System.IO.Path]::GetFullPath($normalized)
+}
+
+function Resolve-TargetPaths {
+    param([string[]]$RequestedPaths)
+
+    $defaultTargets = Get-DefaultTargetPaths
+    if (-not $RequestedPaths -or $RequestedPaths.Count -eq 0) {
+        if ($defaultTargets) {
+            return $defaultTargets
+        }
+        Write-Host "✗ 不支持的系统平台，请显式传入 -TargetPath" -ForegroundColor Red
+        exit 1
+    }
+
+    $resolved = @($RequestedPaths)
+    if ($defaultTargets -and $RequestedPaths.Count -eq 1) {
+        $normalizedRequested = Normalize-TargetPath -Path $RequestedPaths[0]
+        $normalizedDefaults = @($defaultTargets | ForEach-Object { Normalize-TargetPath -Path $_ })
+        if ($normalizedDefaults -contains $normalizedRequested) {
+            foreach ($defaultTarget in $defaultTargets) {
+                $normalizedDefault = Normalize-TargetPath -Path $defaultTarget
+                if ($normalizedDefault -ne $normalizedRequested) {
+                    $resolved += $defaultTarget
+                }
+            }
+        }
+    }
+
+    return $resolved
 }
 
 if (-not (Test-Pwsh7)) {
@@ -142,36 +198,13 @@ if ($Mode -eq "dev" -and $AllowReleaseTestProfile) {
     exit 1
 }
 
-# 未传入时按平台选择默认路径
-$TargetPaths = @()
-if (-not $TargetPath) {
-    if ($IsWindows) {
-        $TargetPaths = @(
-            "C:\\Users\\Lzx_8\\Desktop\\dev\\LuaSource_大富翁-开发",
-            "C:\\Users\\Lzx_8\\Desktop\\dev\\LuaSource_大富翁-发布"
-        )
-    } elseif ($IsMacOS) {
-        $TargetPaths = @(
-            "/Users/billyq/Documents/eggy/LuaSource_大富翁-开发",
-            "/Users/billyq/Documents/eggy/LuaSource_大富翁-发布"
-        )
-    } else {
-        Write-Host "✗ 不支持的系统平台，请显式传入 -TargetPath" -ForegroundColor Red
-        exit 1
-    }
-} else {
-    $TargetPaths = @($TargetPath)
-}
+# 未传入时按平台选择默认路径；若只传入默认开发/发布目录之一，则自动补齐另一侧目录。
+$TargetPaths = Resolve-TargetPaths -RequestedPaths $TargetPath
 
 # 规范化目标路径（移除末尾斜杠，解析完整路径，并去重）
 $normalizedTargets = @()
 foreach ($path in $TargetPaths) {
-    $normalized = $path.TrimEnd("/").TrimEnd("\")
-    if (Test-Path $normalized) {
-        $normalized = (Resolve-Path $normalized).Path
-    } else {
-        $normalized = [System.IO.Path]::GetFullPath($normalized)
-    }
+    $normalized = Normalize-TargetPath -Path $path
     if (-not ($normalizedTargets -contains $normalized)) {
         $normalizedTargets += $normalized
     }
