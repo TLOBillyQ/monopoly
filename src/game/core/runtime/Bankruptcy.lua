@@ -1,6 +1,7 @@
 local logger = require("src.core.Logger")
 local runtime_ports = require("src.core.RuntimePorts")
 local inventory = require("src.game.systems.items.ItemInventory")
+local monopoly_event = require("src.core.events.MonopolyEvents")
 
 local bankruptcy = {}
 local warned_missing_tiles_cleared_callback = false
@@ -121,6 +122,11 @@ function bankruptcy.eliminate(game, player, opts)
 
   game:set_player_eliminated(player, true)
   _push_bankruptcy_popup(game, player, opts)
+  monopoly_event.emit(monopoly_event.feedback.bankruptcy, {
+    player = player,
+    player_id = player.id,
+    reason = _resolve_bankruptcy_text(player, opts),
+  })
 
   local role = runtime_ports.resolve_role(player.id)
   _try_call_life_die(role)

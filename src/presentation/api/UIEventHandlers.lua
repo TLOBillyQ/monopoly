@@ -1,6 +1,7 @@
 local monopoly_event = require("src.core.events.MonopolyEvents")
 local runtime_ports = require("src.core.RuntimePorts")
 local host_runtime = require("src.presentation.api.HostRuntimePort")
+local board_feedback = require("src.presentation.render.BoardFeedbackService")
 
 local event_handlers = {}
 local context = { installed = false, logger = nil, state = nil }
@@ -132,6 +133,97 @@ function event_handlers.install(_, logger, state)
     local ctx = context.state
     if ok and action_anim and idx and ctx then
       action_anim.clear_overlay(ctx, "mine", idx)
+    end
+    if idx and ctx then
+      board_feedback.play_tile_cue(ctx, "mine_blast", idx, {
+        player_id = data and data.player and data.player.id or nil,
+      })
+    end
+  end)
+
+  host_runtime.register_custom_event(monopoly_event.land.rent_paid, function(_, _, data)
+    local event_data = _event_data(data)
+    local ctx = context.state
+    local owner = event_data and event_data.owner or nil
+    if ctx and owner and owner.id ~= nil then
+      board_feedback.play_player_cue(ctx, "cash_burst", owner.id, event_data)
+    end
+  end)
+
+  host_runtime.register_custom_event(monopoly_event.land.rent_bankrupt, function(_, _, data)
+    local event_data = _event_data(data)
+    local ctx = context.state
+    local owner = event_data and event_data.owner or nil
+    if ctx and owner and owner.id ~= nil then
+      board_feedback.play_player_cue(ctx, "cash_burst", owner.id, event_data)
+    end
+  end)
+
+  host_runtime.register_custom_event(monopoly_event.land.tax_paid, function(_, _, data)
+    local event_data = _event_data(data)
+    local ctx = context.state
+    local player = event_data and event_data.player or nil
+    if ctx and player and player.id ~= nil then
+      board_feedback.play_player_cue(ctx, "tax_wave", player.id, event_data)
+    end
+  end)
+
+  host_runtime.register_custom_event(monopoly_event.chance.applied, function(_, _, data)
+    local event_data = _event_data(data)
+    local ctx = context.state
+    local player = event_data and event_data.player or nil
+    local card = event_data and event_data.card or nil
+    if ctx and player and player.id ~= nil and card and card.negative == true then
+      board_feedback.play_player_cue(ctx, "generic_negative", player.id, event_data)
+    end
+  end)
+
+  host_runtime.register_custom_event(monopoly_event.feedback.turn_started, function(_, _, data)
+    local event_data = _event_data(data)
+    local ctx = context.state
+    local player_id = event_data and (event_data.player_id or (event_data.player and event_data.player.id)) or nil
+    if ctx and player_id ~= nil then
+      board_feedback.play_player_cue(ctx, "turn_started", player_id, event_data)
+    end
+  end)
+
+  host_runtime.register_custom_event(monopoly_event.feedback.status_applied, function(_, _, data)
+    local event_data = _event_data(data)
+    local ctx = context.state
+    local cue_name = event_data and event_data.cue_name or nil
+    local player_id = event_data and (event_data.player_id or (event_data.player and event_data.player.id)) or nil
+    local tile_index = event_data and event_data.tile_index or nil
+    if ctx and cue_name and tile_index ~= nil then
+      board_feedback.play_tile_cue(ctx, cue_name, tile_index, event_data)
+      return
+    end
+    if ctx and cue_name and player_id ~= nil then
+      board_feedback.play_player_cue(ctx, cue_name, player_id, event_data)
+    end
+  end)
+
+  host_runtime.register_custom_event(monopoly_event.feedback.deity_applied, function(_, _, data)
+    local event_data = _event_data(data)
+    local ctx = context.state
+    local deity_type = event_data and event_data.deity_type or nil
+    local player_id = event_data and (event_data.player_id or (event_data.player and event_data.player.id)) or nil
+    local cue_name = nil
+    if deity_type == "rich" then
+      cue_name = "rich_deity"
+    elseif deity_type == "angel" then
+      cue_name = "angel_deity"
+    end
+    if ctx and cue_name and player_id ~= nil then
+      board_feedback.play_player_cue(ctx, cue_name, player_id, event_data)
+    end
+  end)
+
+  host_runtime.register_custom_event(monopoly_event.feedback.bankruptcy, function(_, _, data)
+    local event_data = _event_data(data)
+    local ctx = context.state
+    local player_id = event_data and (event_data.player_id or (event_data.player and event_data.player.id)) or nil
+    if ctx and player_id ~= nil then
+      board_feedback.play_player_cue(ctx, "bankruptcy_slam", player_id, event_data)
     end
   end)
 

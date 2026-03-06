@@ -3,8 +3,22 @@ local bankruptcy = require("src.game.core.runtime.Bankruptcy")
 local common = require("src.game.core.runtime.player_state.Common")
 local number_utils = require("src.core.NumberUtils")
 local role_id_utils = require("src.core.RoleId")
+local monopoly_event = require("src.core.events.MonopolyEvents")
 
 local location_ops = {}
+
+local function _emit_status_feedback(self, player, status_type, cue_name)
+  local board = self and self.board or nil
+  local tile = board and board.get_tile and board:get_tile(player.position) or nil
+  monopoly_event.emit(monopoly_event.feedback.status_applied, {
+    player = player,
+    player_id = player and player.id or nil,
+    status_type = status_type,
+    cue_name = cue_name,
+    tile_id = tile and tile.id or nil,
+    tile_index = player and player.position or nil,
+  })
+end
 
 function location_ops.player_apply_hospital_effects(self, player)
   self:set_player_status(player, "stay_turns", common.constants.hospital_stay_turns)
@@ -20,6 +34,7 @@ function location_ops.player_apply_hospital_effects(self, player)
     bankruptcy.eliminate(self, player, { reason = player.name .. " 支付医药费后破产" })
     return
   end
+  _emit_status_feedback(self, player, "hospital", "hospital_shock")
   logger.event(player.name .. " 住院，需停留 " .. tostring(player.status.stay_turns) .. " 回合")
 end
 
@@ -33,6 +48,7 @@ end
 
 function location_ops.player_apply_mountain_effects(self, player)
   self:set_player_status(player, "stay_turns", common.constants.mountain_stay_turns)
+  _emit_status_feedback(self, player, "mountain", "mountain_stun")
   logger.event(player.name .. " 进入深山，停留 " .. tostring(player.status.stay_turns) .. " 回合")
 end
 

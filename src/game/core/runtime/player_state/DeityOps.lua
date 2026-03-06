@@ -1,4 +1,5 @@
 local common = require("src.game.core.runtime.player_state.Common")
+local monopoly_event = require("src.core.events.MonopolyEvents")
 
 local deity_ops = {}
 
@@ -29,6 +30,12 @@ function deity_ops.set_player_deity(self, player, name, duration)
   status.deity.type = name
   status.deity.remaining = duration or player.deity_duration_turns
   common.mark_players(self)
+  monopoly_event.emit(monopoly_event.feedback.deity_applied, {
+    player = player,
+    player_id = player and player.id or nil,
+    deity_type = name,
+    remaining = status.deity.remaining,
+  })
 end
 
 function deity_ops.tick_player_deity(self, player)

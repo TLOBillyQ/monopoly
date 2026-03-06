@@ -5,6 +5,7 @@ local runtime = require("src.presentation.api.UIRuntimePort")
 local host_runtime = require("src.presentation.api.HostRuntimePort")
 local registry = require("src.presentation.render.ActionAnimRegistry")
 local handlers = require("src.presentation.render.ActionAnimHandlers")
+local board_feedback = require("src.presentation.render.BoardFeedbackService")
 local dice_nodes = require("src.presentation.canvas.dice.nodes")
 
 local action_anim = {}
@@ -40,11 +41,17 @@ local function _register_default_handlers()
     return duration
   end)
   registry.register("upgrade_land", function(state, anim, duration, opts)
-    -- upgrade_land visual is driven by board building anchors via on_tile_upgraded.
-    -- Keep wait_action_anim timing but do not spawn extra overlay on tile anchor.
+    board_feedback.play_tile_cue(state, "upgrade_land_smoke", anim.tile_index, {
+      player_id = anim.player_id,
+      duration = duration,
+    })
     return duration
   end)
   registry.register("cash_receive", function(state, anim, duration, opts)
+    board_feedback.play_player_cue(state, "cash_burst", anim.player_id, {
+      duration = duration,
+      amount = anim.amount,
+    })
     return duration
   end)
   registry.register("missile", function(state, anim, duration, opts)

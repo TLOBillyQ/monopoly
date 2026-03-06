@@ -40,6 +40,7 @@ local test_profile_bootstrap = require("src.app.testing.TestProfileBootstrap")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 local number_utils = require("src.core.NumberUtils")
 local market_service = require("src.game.systems.market.MarketService")
+local turn_start = require("src.game.flow.turn.TurnStart")
 
 local function _mock_lua_api(send_custom_event)
   return {
@@ -2172,11 +2173,64 @@ local function _test_detained_turn_skips_immediately_without_wait_state()
   assert(g.turn.no_action_notice_player_id == p1.id, "notice should belong to skipped player")
 end
 
+local function _test_turn_start_emits_turn_started_feedback_event()
+  local g = _new_game()
+  local emitted = {}
+
+  support.with_patches({
+    {
+      target = runtime_event_bridge,
+      key = "emit_custom_event",
+      value = function(kind, payload, opts)
+        emitted[#emitted + 1] = { kind = kind, payload = payload }
+        return true
+      end,
+    },
+  }, function()
+    local next_state, args = turn_start({ game = g })
+    assert(next_state ~= nil, "turn_start should return next state")
+  end)
+
+  assert(#emitted >= 1, "turn_start should emit at least one event")
+  assert(emitted[1].kind == monopoly_event.feedback.turn_started, "turn_start should emit feedback.turn_started")
+  assert(emitted[1].payload.player_id == g:current_player().id, "turn_start should emit current player id")
+end
+
+local function _test_bankruptcy_emits_feedback_event()
+  local g = _new_game()
+  local p1 = g.players[1]
+  local emitted = {}
+
+  support.with_patches({
+    {
+      target = runtime_event_bridge,
+      key = "emit_custom_event",
+      value = function(kind, payload, opts)
+        emitted[#emitted + 1] = { kind = kind, payload = payload }
+        return true
+      end,
+    },
+  }, function()
+    bankruptcy.eliminate(g, p1, { reason = "测试破产" })
+  end)
+
+  local found = false
+  for _, entry in ipairs(emitted) do
+    if entry.kind == monopoly_event.feedback.bankruptcy then
+      found = true
+      assert(entry.payload.player_id == p1.id, "bankruptcy feedback should preserve player id")
+      assert(entry.payload.reason == "测试破产", "bankruptcy feedback should preserve reason")
+    end
+  end
+  assert(found, "bankruptcy should emit feedback.bankruptcy")
+end
+
 return {
   _test_mandatory_payment_causes_bankruptcy,
   _test_bankruptcy_resets_owned_tiles,
   _test_bankruptcy_notifier_reads_grouped_ports,
   _test_bankruptcy_calls_role_life_die_before_lose,
+  _test_bankruptcy_emits_feedback_event,
   _test_chance_pay_others_stops_after_bankruptcy,
   _test_set_tile_owner_without_ui_port_does_not_crash,
   _test_tile_owner_notifier_receives_owner_changes,
@@ -2215,6 +2269,7 @@ return {
   _test_afk_auto_host_resets_when_current_player_changes,
   _test_turn_prompt_initialized_for_first_player,
   _test_turn_prompt_emitted_on_next_player_switch,
+  _test_turn_start_emits_turn_started_feedback_event,
   _test_turn_dispatch_uses_clock_ports_without_game_api,
   _test_gameplay_loop_set_game_uses_runtime_ui_port_dto,
   _test_gameplay_loop_refresh_drives_camera_follow_via_port,

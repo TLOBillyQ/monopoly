@@ -2,6 +2,7 @@ local action_anim = require("src.presentation.render.ActionAnim")
 local runtime_port = require("src.presentation.api.UIRuntimePort")
 local handlers = require("src.presentation.render.ActionAnimHandlers")
 local host_runtime = require("src.presentation.api.HostRuntimePort")
+local board_feedback = require("src.presentation.render.BoardFeedbackService")
 
 if not math.Vector3 then
   function math.Vector3(x, y, z)
@@ -285,12 +286,136 @@ local function _test_action_anim_upgrade_land_does_not_call_overlay_handler()
   end)
 end
 
+local function _test_host_runtime_sfx_port_skips_missing_keys_and_routes_valid_calls()
+  local sfx_calls = {}
+  local sound_calls = {}
+
+  _with_patches({
+    {
+      key = "GameAPI",
+      value = {
+        play_sfx_by_key = function(sfx_key, pos, rot, scale, duration, rate, with_sound)
+          sfx_calls[#sfx_calls + 1] = {
+            sfx_key = sfx_key,
+            pos = pos,
+            duration = duration,
+          }
+          return 101
+        end,
+        play_3d_sound = function(pos, sound_id, duration, volume)
+          sound_calls[#sound_calls + 1] = {
+            pos = pos,
+            sound_id = sound_id,
+            duration = duration,
+            volume = volume,
+          }
+          return 202
+        end,
+      },
+    },
+  }, function()
+    local pos = math.Vector3(1.0, 2.0, 3.0)
+    local sfx_id = host_runtime.play_sfx_by_key("fx.valid", pos, nil, nil, 1.0, nil, false)
+    local missing_id = host_runtime.play_sfx_by_key(nil, pos, nil, nil, 1.0, nil, false)
+    local sound_id = host_runtime.play_3d_sound(pos, 301, 0.8, 1.0)
+    local missing_sound_id = host_runtime.play_3d_sound(pos, nil, 0.8, 1.0)
+    local zero_sound_id = host_runtime.play_3d_sound(pos, 0, 0.8, 1.0)
+    local string_sound_id = host_runtime.play_3d_sound(pos, "snd.valid", 0.8, 1.0)
+
+    assert(sfx_id == 101, "valid sfx call should return engine id")
+    assert(missing_id == nil, "missing sfx key should skip safely")
+    assert(sound_id == 202, "valid sound call should return engine id")
+    assert(missing_sound_id == nil, "missing sound id should skip safely")
+    assert(zero_sound_id == nil, "zero sound id should skip safely")
+    assert(string_sound_id == nil, "string sound id should skip safely")
+  end)
+
+  assert(#sfx_calls == 1, "missing sfx key should not call engine")
+  assert(sfx_calls[1].sfx_key == "fx.valid", "sfx key should route unchanged")
+  assert(#sound_calls == 1, "sound call should route once")
+  assert(sound_calls[1].sound_id == 301, "sound id should route unchanged")
+end
+
+local function _test_action_anim_upgrade_land_routes_board_feedback()
+  local state = _build_state()
+  local calls = {}
+
+  _with_patches({
+    {
+      target = board_feedback,
+      key = "play_tile_cue",
+      value = function(_, cue_name, tile_index, payload)
+        calls[#calls + 1] = {
+          cue_name = cue_name,
+          tile_index = tile_index,
+          player_id = payload and payload.player_id or nil,
+          duration = payload and payload.duration or nil,
+        }
+        return true
+      end,
+    },
+  }, function()
+    local out_duration = action_anim.play(state, {
+      kind = "upgrade_land",
+      player_id = 1,
+      tile_index = 1,
+      level = 2,
+      duration = 0.6,
+    })
+    assert(out_duration == 0.6, "upgrade_land should keep configured duration")
+  end)
+
+  assert(#calls == 1, "upgrade_land should route exactly one board feedback cue")
+  assert(calls[1].cue_name == "upgrade_land_smoke", "upgrade cue name mismatch")
+  assert(calls[1].tile_index == 1, "upgrade cue should target tile index")
+  assert(calls[1].player_id == 1, "upgrade cue should preserve player id")
+end
+
+local function _test_action_anim_cash_receive_routes_board_feedback()
+  local state = _build_state()
+  local calls = {}
+
+  _with_patches({
+    {
+      target = board_feedback,
+      key = "play_player_cue",
+      value = function(_, cue_name, player_id, payload)
+        calls[#calls + 1] = {
+          cue_name = cue_name,
+          player_id = player_id,
+          amount = payload and payload.amount or nil,
+        }
+        return true
+      end,
+    },
+  }, function()
+    local out_duration = action_anim.play(state, {
+      kind = "cash_receive",
+      player_id = 1,
+      amount = 500,
+      duration = 0.7,
+    })
+    assert(out_duration == 0.7, "cash_receive should keep configured duration")
+  end)
+
+  assert(#calls == 1, "cash_receive should route exactly one board feedback cue")
+  assert(calls[1].cue_name == "cash_burst", "cash cue name mismatch")
+  assert(calls[1].player_id == 1, "cash cue should preserve player id")
+  assert(calls[1].amount == 500, "cash cue should preserve amount")
+end
+
 return {
   name = "presentation_ui_action_anim",
   tests = {
     { name = "action_anim_overlay_handler_returns_duration", run = _test_action_anim_overlay_handler_returns_duration },
     { name = "action_anim_roadblock_overlay_uses_4x_scale", run = _test_action_anim_roadblock_overlay_uses_4x_scale },
     { name = "action_anim_upgrade_land_does_not_call_overlay_handler", run = _test_action_anim_upgrade_land_does_not_call_overlay_handler },
+    {
+      name = "host_runtime_sfx_port_skips_missing_keys_and_routes_valid_calls",
+      run = _test_host_runtime_sfx_port_skips_missing_keys_and_routes_valid_calls,
+    },
+    { name = "action_anim_upgrade_land_routes_board_feedback", run = _test_action_anim_upgrade_land_routes_board_feedback },
+    { name = "action_anim_cash_receive_routes_board_feedback", run = _test_action_anim_cash_receive_routes_board_feedback },
     { name = "action_anim_roll_screen_two_stage_timeline", run = _test_action_anim_roll_screen_two_stage_timeline },
     { name = "action_anim_roll_screen_fallback_face_when_invalid", run = _test_action_anim_roll_screen_fallback_face_when_invalid },
   },

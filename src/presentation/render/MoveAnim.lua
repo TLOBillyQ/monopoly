@@ -1,6 +1,7 @@
 local runtime_constants = require("src.core.config.RuntimeConstants")
 local gameplay_read_port = require("src.presentation.read_model.GameplayReadPort")
 local runtime_ports = require("src.core.RuntimePorts")
+local board_feedback = require("src.presentation.render.BoardFeedbackService")
 
 local move_anim = {}
 
@@ -220,9 +221,15 @@ function move_anim.play_sequence(board_scene, anim_ctx)
   end
   for _, step in ipairs(steps) do
     if step.delay <= 0 then
+      if anim_ctx and anim_ctx.state then
+        board_feedback.play_step_tile_sound(anim_ctx.state, player_id, step.to)
+      end
       move_anim.one_step(board_scene, player_id, step.from, step.to, anim_ctx)
     else
       runtime_ports.schedule(step.delay, function()
+        if anim_ctx and anim_ctx.state then
+          board_feedback.play_step_tile_sound(anim_ctx.state, player_id, step.to)
+        end
         move_anim.one_step(board_scene, player_id, step.from, step.to, anim_ctx)
       end)
     end

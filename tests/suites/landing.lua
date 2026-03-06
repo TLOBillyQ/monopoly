@@ -15,6 +15,7 @@ local item_inventory = require("src.game.systems.items.ItemInventory")
 local land_rules = require("src.game.systems.land.LandRules")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local monopoly_event = require("src.core.events.MonopolyEvents")
+local runtime_event_bridge = require("src.core.RuntimeEventBridge")
 
 local function _test_land_on_start_reward()
   local g = _new_game()
@@ -355,6 +356,60 @@ local function _test_execute_tax_free_card_pushes_item_card_popup()
   _assert_eq(popups[1].image_ref, gameplay_rules.item_ids.tax_free, "tax_free broadcast image_ref mismatch")
 end
 
+local function _test_hospital_landing_emits_status_feedback_event()
+  local g = _new_game()
+  local emitted = {}
+  local idx, tile_ref = _first_tile_by_type(g.board, "hospital")
+  local player = g.players[1]
+  g:update_player_position(player, idx)
+
+  _with_patches({
+    {
+      target = runtime_event_bridge,
+      key = "emit_custom_event",
+      value = function(kind, payload, opts)
+        emitted[#emitted + 1] = { kind = kind, payload = payload }
+        return true
+      end,
+    },
+  }, function()
+    local res = _resolve_landing(g, player, tile_ref, {})
+    assert(not res, "hospital landing should resolve synchronously")
+  end)
+
+  assert(#emitted >= 1, "hospital landing should emit at least one event")
+  _assert_eq(emitted[1].kind, monopoly_event.feedback.status_applied, "hospital should emit status feedback event")
+  _assert_eq(emitted[1].payload.cue_name, "hospital_shock", "hospital cue mismatch")
+  _assert_eq(emitted[1].payload.tile_index, idx, "hospital feedback should preserve landing index")
+end
+
+local function _test_mountain_landing_emits_status_feedback_event()
+  local g = _new_game()
+  local emitted = {}
+  local idx, tile_ref = _first_tile_by_type(g.board, "mountain")
+  local player = g.players[1]
+  g:update_player_position(player, idx)
+
+  _with_patches({
+    {
+      target = runtime_event_bridge,
+      key = "emit_custom_event",
+      value = function(kind, payload, opts)
+        emitted[#emitted + 1] = { kind = kind, payload = payload }
+        return true
+      end,
+    },
+  }, function()
+    local res = _resolve_landing(g, player, tile_ref, {})
+    assert(not res, "mountain landing should resolve synchronously")
+  end)
+
+  assert(#emitted >= 1, "mountain landing should emit at least one event")
+  _assert_eq(emitted[1].kind, monopoly_event.feedback.status_applied, "mountain should emit status feedback event")
+  _assert_eq(emitted[1].payload.cue_name, "mountain_stun", "mountain cue mismatch")
+  _assert_eq(emitted[1].payload.tile_index, idx, "mountain feedback should preserve landing index")
+end
+
 return {
   name = "landing",
   tests = {
@@ -374,6 +429,8 @@ return {
       name = "upgrade_land_prefers_direct_ui_notify_before_event_bridge",
       run = _test_upgrade_land_prefers_direct_ui_notify_before_event_bridge,
     },
+    { name = "hospital_landing_emits_status_feedback_event", run = _test_hospital_landing_emits_status_feedback_event },
+    { name = "mountain_landing_emits_status_feedback_event", run = _test_mountain_landing_emits_status_feedback_event },
     { name = "execute_strong_card_pushes_item_card_popup", run = _test_execute_strong_card_pushes_item_card_popup },
     { name = "execute_free_card_pushes_item_card_popup", run = _test_execute_free_card_pushes_item_card_popup },
     { name = "execute_tax_free_card_pushes_item_card_popup", run = _test_execute_tax_free_card_pushes_item_card_popup },

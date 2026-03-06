@@ -1,5 +1,6 @@
 local logger = require("src.core.Logger")
 local item_phase = require("src.game.systems.items.ItemPhase")
+local monopoly_event = require("src.core.events.MonopolyEvents")
 
 local function _clear_no_action_notice(turn)
   if not turn then
@@ -33,6 +34,11 @@ local function _phase_start(turn_mgr)
     move_result = nil,
     note = nil,
   }
+  monopoly_event.emit(monopoly_event.feedback.turn_started, {
+    player = player,
+    player_id = player.id,
+    turn_count = tc,
+  })
   if player.eliminated then
     turn_mgr.game.last_turn.note = "已出局，跳过"
     turn_mgr.game.last_turn.skipped = true

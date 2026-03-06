@@ -1,4 +1,4 @@
-return {
+local refs = {
     -- skin
     ["5001"] = 1625626309,
     ["5002"] = 1664857351,
@@ -69,3 +69,129 @@ return {
     ["3036"] = 1775798082,
     ["3037"] = 1622750435,
 }
+
+refs.audio = {
+    -- TODO: 按 Eggy 运行时音频资源 ID 补填；0 表示尚未配置，运行时会安全跳过。
+    item_stop_highlight = 0,
+    cash_receive = 0,
+    mountain_stun = 0,
+    hospital_shock = 0,
+    mine_blast = 0,
+    tax_wave = 0,
+    rich_deity = 0,
+    angel_deity = 0,
+    move_step_pounce = 0,
+    bankruptcy_slam = 0,
+    generic_negative = 0,
+    turn_started = 0,
+}
+
+refs.board_feedback = {
+    item_stop_highlight = {
+        effect_key = "fx.board.item_stop_highlight",
+        sound_id_ref = "item_stop_highlight",
+        scale = 1.8,
+        duration = 1.2,
+        volume = 1.0,
+        allow_missing_resource = true,
+    },
+    upgrade_land_smoke = {
+        effect_key = "fx.board.upgrade_land_smoke",
+        sound_id_ref = "cash_receive",
+        scale = 3.0,
+        duration = 1.0,
+        volume = 1.0,
+        followup_sounds = {
+            { delay = 0.6, sound_id_ref = "turn_started", duration = 1.0, volume = 1.0 },
+        },
+        allow_missing_resource = true,
+    },
+    cash_burst = {
+        effect_key = "fx.board.cash_burst",
+        sound_id_ref = "cash_receive",
+        scale = 1.6,
+        duration = 1.0,
+        volume = 1.0,
+        allow_missing_resource = true,
+    },
+    mountain_stun = {
+        effect_key = "fx.board.mountain_stun",
+        sound_id_ref = "mountain_stun",
+        scale = 1.6,
+        duration = 1.2,
+        volume = 1.0,
+        allow_missing_resource = true,
+    },
+    hospital_shock = {
+        effect_key = "fx.board.hospital_shock",
+        sound_id_ref = "hospital_shock",
+        scale = 1.8,
+        duration = 1.2,
+        volume = 1.0,
+        allow_missing_resource = true,
+    },
+    mine_blast = {
+        effect_key = "fx.board.mine_blast",
+        sound_id_ref = "mine_blast",
+        scale = 2.0,
+        duration = 1.0,
+        volume = 1.0,
+        allow_missing_resource = true,
+    },
+    tax_wave = {
+        effect_key = "fx.board.tax_wave",
+        sound_id_ref = "tax_wave",
+        scale = 1.6,
+        duration = 1.0,
+        volume = 1.0,
+        allow_missing_resource = true,
+    },
+    rich_deity = {
+        effect_key = "fx.board.rich_deity",
+        sound_id_ref = "rich_deity",
+        scale = 1.4,
+        duration = 2.0,
+        volume = 1.0,
+        bind_to_player = true,
+        socket_name = "Bip001",
+        bind_offset = "v3_one",
+        allow_missing_resource = true,
+    },
+    angel_deity = {
+        effect_key = "fx.board.angel_deity",
+        sound_id_ref = "angel_deity",
+        scale = 1.4,
+        duration = 2.0,
+        volume = 1.0,
+        bind_to_player = true,
+        socket_name = "Bip001",
+        bind_offset = "v3_one",
+        allow_missing_resource = true,
+    },
+    move_step_pounce = {
+        sound_id_ref = "move_step_pounce",
+        duration = 0.4,
+        volume = 0.9,
+        allow_missing_resource = true,
+    },
+    bankruptcy_slam = {
+        sound_id_ref = "bankruptcy_slam",
+        duration = 1.0,
+        volume = 1.0,
+        allow_missing_resource = true,
+    },
+    generic_negative = {
+        sound_id_ref = "generic_negative",
+        duration = 0.8,
+        volume = 1.0,
+        allow_missing_resource = true,
+    },
+    turn_started = {
+        sound_id_ref = "turn_started",
+        duration = 0.8,
+        volume = 1.0,
+        allow_missing_resource = true,
+    },
+}
+
+return refs

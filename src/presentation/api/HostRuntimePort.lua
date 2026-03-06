@@ -5,6 +5,7 @@ local role_resolver = require("src.presentation.api.host_runtime.RoleResolver")
 local unit_lifecycle = require("src.presentation.api.host_runtime.UnitLifecycle")
 local scene_ui = require("src.presentation.api.host_runtime.SceneUI")
 local raycast = require("src.presentation.api.host_runtime.Raycast")
+local sfx_runtime = require("src.presentation.api.host_runtime.SfxRuntime")
 
 local host_runtime_port = {}
 local target_pick_listener_seq = 0
@@ -63,6 +64,26 @@ end
 
 function host_runtime_port.destroy_unit(handle)
   return unit_lifecycle.destroy_unit(handle)
+end
+
+function host_runtime_port.play_sfx_by_key(sfx_key, pos, rot, scale, duration, rate, with_sound)
+  return sfx_runtime.play_sfx_by_key(sfx_key, pos, rot, scale, duration, rate, with_sound)
+end
+
+function host_runtime_port.play_3d_sound(pos, sound_id, duration, volume)
+  return sfx_runtime.play_3d_sound(pos, sound_id, duration, volume)
+end
+
+function host_runtime_port.bind_sfx_to_unit(sfx_id, unit, socket_name, pos, bind_type)
+  return sfx_runtime.bind_sfx_to_unit(sfx_id, unit, socket_name, pos, bind_type)
+end
+
+function host_runtime_port.destroy_sfx(sfx_id, fade_out)
+  return sfx_runtime.destroy_sfx(sfx_id, fade_out)
+end
+
+function host_runtime_port.stop_sound(sound_id)
+  return sfx_runtime.stop_sound(sound_id)
 end
 
 function host_runtime_port.set_scene_ui_visible(layer, role, visible)

@@ -4,6 +4,7 @@ local config_sanity = require("src.core.config.ConfigSanity")
 local market_cfg = require("Config.Generated.Market")
 local chance_cfg = require("Config.Generated.ChanceCards")
 local tiles_cfg = require("Config.Generated.Tiles")
+local runtime_refs = require("Config.RuntimeRefs")
 
 local function _test_config_sanity_validate_passes_current_generated_data()
   config_sanity.reset_for_tests()
@@ -70,6 +71,30 @@ local function _test_chance_forced_move_destinations_are_valid_tiles()
   assert(tile_exists_by_id[by_id[3033].destination_tile_id] == true, "card 3033 destination should exist in tiles")
 end
 
+local function _test_board_feedback_audio_refs_exist_in_runtime_refs()
+  local cues = runtime_refs.board_feedback or {}
+  local audio_refs = runtime_refs.audio or {}
+
+  for cue_name, cue in pairs(cues) do
+    local sound_id_ref = cue and cue.sound_id_ref or nil
+    if sound_id_ref ~= nil then
+      assert(audio_refs[sound_id_ref] ~= nil, "missing audio ref for cue: " .. tostring(cue_name))
+    end
+    local followup_sounds = cue and cue.followup_sounds or nil
+    if type(followup_sounds) == "table" then
+      for index, entry in ipairs(followup_sounds) do
+        local followup_ref = entry and entry.sound_id_ref or nil
+        if followup_ref ~= nil then
+          assert(
+            audio_refs[followup_ref] ~= nil,
+            "missing followup audio ref for cue: " .. tostring(cue_name) .. " index=" .. tostring(index)
+          )
+        end
+      end
+    end
+  end
+end
+
 return {
   name = "config_sanity",
   tests = {
@@ -77,6 +102,10 @@ return {
     {
       name = "chance_forced_move_destinations_are_valid_tiles",
       run = _test_chance_forced_move_destinations_are_valid_tiles,
+    },
+    {
+      name = "board_feedback_audio_refs_exist_in_runtime_refs",
+      run = _test_board_feedback_audio_refs_exist_in_runtime_refs,
     },
   },
 }

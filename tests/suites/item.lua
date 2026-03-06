@@ -14,6 +14,8 @@ local gameplay_rules = require("src.core.config.GameplayRules")
 local item_phase = require("src.game.systems.items.ItemPhase")
 local roadblock = require("src.game.systems.items.ItemRoadblock")
 local steal = require("src.game.systems.items.ItemSteal")
+local runtime_event_bridge = require("src.core.RuntimeEventBridge")
+local monopoly_event = require("src.core.events.MonopolyEvents")
 
 local function _test_monster_card()
   local g = _new_game()
@@ -543,6 +545,33 @@ local function _test_steal_success_pushes_item_card_broadcast_before_result_popu
   _assert_eq(popups[1].image_ref, gameplay_rules.item_ids.steal, "steal broadcast image_ref mismatch")
 end
 
+local function _test_rich_item_emits_deity_feedback_event()
+  local g = _new_game()
+  local p = g:current_player()
+  local emitted = {}
+
+  support.with_patches({
+    {
+      target = runtime_event_bridge,
+      key = "emit_custom_event",
+      value = function(kind, payload, opts)
+        emitted[#emitted + 1] = { kind = kind, payload = payload }
+        return true
+      end,
+    },
+  }, function()
+    p.inventory:add({ id = gameplay_rules.item_ids.rich })
+    local res = executor.use_item(g, p, gameplay_rules.item_ids.rich, { by_ai = true })
+    local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
+    _assert_eq(ok, true, "rich item use ok")
+  end)
+
+  assert(#emitted >= 1, "rich item should emit at least one event")
+  _assert_eq(emitted[1].kind, monopoly_event.feedback.deity_applied, "rich item should emit deity feedback event")
+  _assert_eq(emitted[1].payload.deity_type, "rich", "rich item should emit rich deity type")
+  _assert_eq(emitted[1].payload.player_id, p.id, "rich item should emit current player id")
+end
+
 return {
   name = "item",
   tests = {
@@ -603,6 +632,10 @@ return {
     {
       name = "steal_success_pushes_item_card_broadcast_before_result_popup",
       run = _test_steal_success_pushes_item_card_broadcast_before_result_popup,
+    },
+    {
+      name = "rich_item_emits_deity_feedback_event",
+      run = _test_rich_item_emits_deity_feedback_event,
     },
   },
 }

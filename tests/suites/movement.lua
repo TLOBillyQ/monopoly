@@ -7,6 +7,9 @@ end
 local _assert_eq = support.assert_eq
 local movement = support.movement
 local board_utils = support.board_utils
+local move_anim = require("src.presentation.render.MoveAnim")
+local board_feedback = require("src.presentation.render.BoardFeedbackService")
+local runtime_ports = require("src.core.RuntimePorts")
 
 local function _simulate_heading(board, start_index, facing, steps, backward, parity)
   local current = start_index
@@ -184,6 +187,70 @@ local function _test_resume_forward_requires_explicit_direction()
     "resume_forward should report the missing direction contract")
 end
 
+local function _test_move_anim_play_sequence_emits_step_sound_per_visited_tile()
+  local calls = {}
+  local step_calls = {}
+  local scheduled = {}
+  local board_scene = { tiles = {}, units_by_player_id = {} }
+  local state = { board_scene = board_scene }
+
+  support.with_patches({
+    {
+      target = move_anim,
+      key = "step_duration",
+      value = function()
+        return 0.1
+      end,
+    },
+    {
+      target = move_anim,
+      key = "one_step",
+      value = function(_, player_id, from_index, to_index)
+        step_calls[#step_calls + 1] = { player_id = player_id, from_index = from_index, to_index = to_index }
+        return 0.1
+      end,
+    },
+    {
+      target = board_feedback,
+      key = "play_step_tile_sound",
+      value = function(_, player_id, tile_index)
+        calls[#calls + 1] = { player_id = player_id, tile_index = tile_index }
+        return true
+      end,
+    },
+    {
+      target = runtime_ports,
+      key = "schedule",
+      value = function(delay, fn)
+        scheduled[#scheduled + 1] = { delay = delay, fn = fn }
+        return true
+      end,
+    },
+  }, function()
+    local total = move_anim.play_sequence(board_scene, {
+      state = state,
+      player_id = 1,
+      from_index = 1,
+      to_index = 4,
+      visited = { 2, 3, 4 },
+      direction = "left",
+    })
+    assert(math.abs(total - 0.3) < 0.0001, "three steps should sum patched step duration")
+    table.sort(scheduled, function(a, b)
+      return a.delay < b.delay
+    end)
+    for _, entry in ipairs(scheduled) do
+      entry.fn()
+    end
+  end)
+
+  assert(#calls == 3, "move sequence should emit one step sound per visited tile")
+  _assert_eq(calls[1].tile_index, 2, "step sound should target first visited tile")
+  _assert_eq(calls[2].tile_index, 3, "step sound should target second visited tile")
+  _assert_eq(calls[3].tile_index, 4, "step sound should target final visited tile")
+  assert(#step_calls == 3, "move sequence should still execute three steps")
+end
+
 return {
   name = "movement",
   tests = {
@@ -199,5 +266,6 @@ return {
     { name = "entry_point_even_branch_requires_matching_inbound_facing", run = _test_entry_point_even_branch_requires_matching_inbound_facing },
     { name = "market_exit_keeps_turn_parity_without_uturn", run = _test_market_exit_keeps_turn_parity_without_uturn },
     { name = "resume_forward_requires_explicit_direction", run = _test_resume_forward_requires_explicit_direction },
+    { name = "move_anim_play_sequence_emits_step_sound_per_visited_tile", run = _test_move_anim_play_sequence_emits_step_sound_per_visited_tile },
   },
 }

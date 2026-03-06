@@ -61,6 +61,7 @@ function anim_ports.build()
   return {
     play_move_anim = function(state, anim_ctx)
       if anim_ctx then
+        anim_ctx.state = anim_ctx.state or state
         local prev = anim_ctx.on_step_lock
         anim_ctx.on_step_lock = function(enabled, step_time, meta)
           if prev then

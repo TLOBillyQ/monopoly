@@ -28,6 +28,12 @@ local monopoly_events = {
   chance = {
     applied = "ch.applied",
   },
+  feedback = {
+    turn_started = "fb.turn_started",
+    status_applied = "fb.status_applied",
+    deity_applied = "fb.deity_applied",
+    bankruptcy = "fb.bankruptcy",
+  },
   game = {
     finished = "gm.finished",
   },

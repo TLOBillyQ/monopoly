@@ -1,5 +1,6 @@
 local chance_cfg = require("Config.Generated.ChanceCards")
 local market_cfg = require("Config.Generated.Market")
+local runtime_refs = require("Config.RuntimeRefs")
 local vehicle_catalog = require("src.core.config.VehicleCatalog")
 
 local config_sanity = {}
@@ -58,6 +59,42 @@ local function _validate_release_data_has_no_vehicle_content()
   end
 end
 
+local function _validate_board_feedback_audio_refs()
+  local cues = runtime_refs.board_feedback or {}
+  local audio_refs = runtime_refs.audio or {}
+  for cue_name, cue in pairs(cues) do
+    local sound_id_ref = cue and cue.sound_id_ref or nil
+    if sound_id_ref ~= nil then
+      assert(
+        audio_refs[sound_id_ref] ~= nil,
+        "board feedback cue references unknown sound_id_ref: "
+          .. tostring(sound_id_ref)
+          .. " (cue_name="
+          .. tostring(cue_name)
+          .. ")"
+      )
+    end
+    local followup_sounds = cue and cue.followup_sounds or nil
+    if type(followup_sounds) == "table" then
+      for index, entry in ipairs(followup_sounds) do
+        local followup_ref = entry and entry.sound_id_ref or nil
+        if followup_ref ~= nil then
+          assert(
+            audio_refs[followup_ref] ~= nil,
+            "board feedback followup references unknown sound_id_ref: "
+              .. tostring(followup_ref)
+              .. " (cue_name="
+              .. tostring(cue_name)
+              .. ", index="
+              .. tostring(index)
+              .. ")"
+          )
+        end
+      end
+    end
+  end
+end
+
 function config_sanity.validate()
   if validated then
     return true
@@ -65,6 +102,7 @@ function config_sanity.validate()
   _validate_release_data_has_no_vehicle_content()
   _validate_chance_vehicle_refs()
   _validate_market_vehicle_refs()
+  _validate_board_feedback_audio_refs()
   validated = true
   return true
 end
