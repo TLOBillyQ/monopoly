@@ -4,6 +4,7 @@ local ui_events = require("src.presentation.shared.UIEvents")
 local runtime_ports = require("src.core.RuntimePorts")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local role_id_utils = require("src.core.RoleId")
+local choice_common = require("src.presentation.ui.choice_screen_service.common")
 
 local M = {}
 
@@ -124,7 +125,8 @@ function M.refresh_item_slots(state, ui_model, opts)
   local allow_interact = opts.allow_interact ~= false
   local by_player = ui_model.item_slots_by_player_id or ui_model.item_slots_by_player or {}
   local items = role_id_utils.read(by_player, display_player_id) or ui_model.item_slots or {}
-  local allow_use = ui_model and ui_model.choice and ui_model.choice.kind == "item_phase_choice"
+  local choice = ui_model and ui_model.choice or nil
+  local allow_use = choice_common.uses_item_slots(choice)
   local choice_owner_id = role_id_utils.normalize(ui_model and ui_model.item_choice_owner_id or ui_model.current_player_id)
   local refs = state.ui_refs or {}
   local image_refs = refs.images or {}
@@ -133,10 +135,9 @@ function M.refresh_item_slots(state, ui_model, opts)
     and allow_interact == true
     and display_player_id ~= nil
     and role_id_utils.equals(choice_owner_id, display_player_id)
-  local option_id_set = _build_option_id_set(ui_model and ui_model.choice or nil)
+  local option_id_set = _build_option_id_set(choice)
   local slot_pickable = {}
-  local choice_kind = ui_model and ui_model.choice and ui_model.choice.kind or nil
-  local choice_id = ui_model and ui_model.choice and ui_model.choice.id or nil
+  local choice_id = choice and choice.id or nil
   local suppress_flag = state._suppress_item_slot_highlight_until_pick == true
 
   for index, slot_name in ipairs(slots) do
@@ -156,7 +157,7 @@ function M.refresh_item_slots(state, ui_model, opts)
     slot_pickable[index] = can_pick
   end
 
-  local is_item_phase_ask = choice_kind == "item_phase_choice" and state._item_phase_ask_active == true
+  local is_item_phase_ask = choice_common.requires_item_slot_pre_confirm(choice) and state._item_phase_ask_active == true
   local gate_store = _ensure_gate_store(state)
   local gate_key = _resolve_gate_key(choice_id, role_id, display_player_id)
 
@@ -193,14 +194,14 @@ function M.refresh_item_slots(state, ui_model, opts)
     gate_store[gate_key] = nil
 
   local suppress_slot_highlight_anim = suppress_flag
-      and choice_kind == "item_phase_choice"
-    local skip_replay_for_confirmed_item_phase = choice_kind == "item_phase_choice"
+      and choice_common.uses_item_slots(choice)
+    local skip_replay_for_confirmed_item_phase = choice_common.uses_item_slots(choice)
       and state._skip_item_slot_highlight_replay_choice_id ~= nil
       and tostring(state._skip_item_slot_highlight_replay_choice_id) == tostring(choice_id)
     if not suppress_slot_highlight_anim and not skip_replay_for_confirmed_item_phase then
       _emit_pickable_slot_animation(slot_pickable)
     end
-    if not (choice_kind == "item_phase_choice"
+    if not (choice_common.uses_item_slots(choice)
       and tostring(state._skip_item_slot_highlight_replay_choice_id) == tostring(choice_id)) then
       state._skip_item_slot_highlight_replay_choice_id = nil
     end

@@ -228,6 +228,9 @@ local function _test_item_phase_exposes_mine_in_pre_action()
   p.inventory:add({ id = gameplay_rules.item_ids.mine })
 
   local spec = assert(item_phase.build_choice_spec(g, p, "pre_action"), "mine should be offered in pre_action")
+  _assert_eq(spec.uses_item_slots, true, "item_phase choice should expose uses_item_slots flag")
+  _assert_eq(spec.pre_confirm_before_slot_pick, true,
+    "item_phase choice should expose pre_confirm_before_slot_pick flag")
   _assert_eq(spec.confirm_title, "行动前", "item_phase choice should expose confirm title from use-case output")
   _assert_eq(spec.confirm_body, "可用道具：地雷卡", "item_phase choice should expose confirm body from use-case output")
   local found = nil

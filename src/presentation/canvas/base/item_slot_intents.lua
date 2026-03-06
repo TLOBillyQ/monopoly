@@ -1,5 +1,6 @@
 local logger = require("src.core.Logger")
 local nodes = require("src.presentation.canvas.base.nodes")
+local choice_common = require("src.presentation.ui.choice_screen_service.common")
 
 local intents = {}
 
@@ -13,7 +14,7 @@ function intents.build(state)
       name = node_name,
       build_intent = function()
         local choice = state.ui_model and state.ui_model.choice or nil
-        if not choice or choice.kind ~= "item_phase_choice" then
+        if not choice_common.uses_item_slots(choice) then
           logger.warn("item_slot click ignored:", tostring(index))
           return nil
         end
@@ -26,7 +27,7 @@ function intents.build(state)
         name = outline_name,
         build_intent = function()
           local choice = state.ui_model and state.ui_model.choice or nil
-          if not choice or choice.kind ~= "item_phase_choice" then
+          if not choice_common.uses_item_slots(choice) then
             logger.warn("item_slot outline click ignored:", tostring(index))
             return nil
           end

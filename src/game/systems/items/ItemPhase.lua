@@ -137,6 +137,8 @@ function item_phase.build_choice_spec(game, player, phase)
   return {
     kind = "item_phase_choice",
     route_key = "base_inline",
+    uses_item_slots = true,
+    pre_confirm_before_slot_pick = true,
     title = phase_titles[phase],
     body_lines = body_lines,
     options = options,

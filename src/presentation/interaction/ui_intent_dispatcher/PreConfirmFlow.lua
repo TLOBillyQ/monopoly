@@ -66,6 +66,7 @@ end
 function pre_confirm_flow.needs_pre_confirm(state, intent)
   local intent_type = intent.type
   local ui = state.ui
+  local choice = state.ui_model and state.ui_model.choice or nil
   if not ui then
     return false
   end
@@ -79,8 +80,7 @@ function pre_confirm_flow.needs_pre_confirm(state, intent)
   end
 
   if intent_type == "ui_button" and _parse_item_slot_index(intent) then
-    local choice = state.ui_model and state.ui_model.choice or nil
-    return choice ~= nil and choice.kind == "item_phase_choice"
+    return choice_common.requires_item_slot_pre_confirm(choice)
   end
   if intent_type == "market_confirm" then
     local option_id = _resolve_market_skin_option(state, intent)

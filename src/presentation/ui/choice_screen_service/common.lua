@@ -290,6 +290,26 @@ function M.resolve_pre_confirm_body(option_label, choice, game, source_screen, o
   return "你选的是：" .. tostring(option_label)
 end
 
+function M.uses_item_slots(choice)
+  if not choice then
+    return false
+  end
+  if choice.uses_item_slots == true then
+    return true
+  end
+  return choice.kind == "item_phase_choice"
+end
+
+function M.requires_item_slot_pre_confirm(choice)
+  if not choice then
+    return false
+  end
+  if choice.pre_confirm_before_slot_pick == true then
+    return true
+  end
+  return choice.kind == "item_phase_choice"
+end
+
 function M.switch_modal_canvas(state, target_canvas)
   local ui = state.ui
   runtime.for_each_role_or_global(function(role)

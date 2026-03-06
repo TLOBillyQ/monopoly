@@ -25,6 +25,7 @@
 - [ ] 阶段4：已完成五刀。第一刀新增 `src/game/systems/market/service/PaidPurchaseGateway.lua`，承接 paid-currency 的 goods mapping、purchase panel 启动、待兑现队列和购买回调注册。第二刀把 paid callback 后的 market choice 刷新移到 `src/game/systems/market/service/Choice.lua` 的 `refresh_after_paid_callback()`。第三刀新增 `src/game/systems/market/service/Fulfillment.lua`，统一 item/vehicle/skin 的兑现副作用。第四刀新增 `src/game/systems/market/service/PurchasePolicy.lua`，把商品可买性校验和座驾替换确认 intent 组装从 `Purchase.lua` 中抽走。第五刀新增 `src/game/systems/market/service/Feedback.lua`，把 market buy_failed 事件与黑市 popup 文案出口从 `Purchase.lua`、`Choice.lua` 中抽离。剩余工作主要是观察 `Purchase.lua` 是否还值得继续拆本地金币购买结果编排，还是直接把精力转到阶段5 的 presentation 规则回收。
 - [x] (2026-03-07 01:27 +0800) 已启动阶段5第一刀：`src/game/systems/market/service/Choice.lua` 现在给 option 输出 `requires_pre_confirm/pre_confirm_kind`，`PreConfirmFlow.lua` 不再回查 `Config.Generated.Market` 判断皮肤商品，而是只消费用例层提供的 option 级确认语义；已补 `market` 与 `presentation_ui` 回归，验证“有 flag 才进二次确认，没有 flag 即使 product_id 像皮肤也直接派发”。
 - [x] (2026-03-07 01:43 +0800) 已完成阶段5第二刀：`choice_screen_service.common` 现在优先消费 `option.confirm_title/confirm_body` 与 `choice.confirm_title/confirm_body`；`ItemPhase` 已同时为 choice 本身和每个 item option 产出确认文案，`LandChoiceSpecs.tax_prompt`、`EffectPipeline` 的 landing optional choice、market skin option 也都直接产出确认文案，presentation 仅保留 fallback 兼容逻辑。
+- [x] (2026-03-07 02:02 +0800) 已完成阶段5第三刀的第一小片：`ItemPhase.build_choice_spec()` 现在额外输出 `uses_item_slots/pre_confirm_before_slot_pick`；`PreConfirmFlow`、`ItemPhaseAskFlow`、`UIModalPresenter`、`item_slots`、`item_slot_intents` 已优先消费这些显式语义，`choice.kind == "item_phase_choice"` 的散落判断被收敛到 `choice_screen_service.common` helper 中保底兼容。
 - [ ] 阶段6：在边界稳定后整理目录语义和命名，避免目录改动与行为改动叠加。
 
 ## 意外与发现
@@ -73,6 +74,9 @@
 
 - 观察：把确认文案继续留在 `choice_screen_service.common` 里按 `choice.kind/option_id` 现算，会让 presentation 同时持有“何时确认”和“确认说什么”两套应用语义；而这两套语义其实都能稳定地跟着 choice/option 一起输出。
   证据：阶段5第二刀后，`market`、`land`、`item` 测试都能直接断言 choice/option 上存在 `confirm_title/confirm_body`，而 `presentation_ui` 仍通过同样的文案断言，说明渲染结果没有变化但责任已经前移。
+
+- 观察：`item_phase_choice` 在 presentation 层的特殊处理不只是一两个入口，而是横跨 modal 打开、slot click、outline 高亮和 ask-flow 快捷分支；如果直接全删 `choice.kind` 判断，测试里构造的简化 choice 会大面积失效。
+  证据：阶段5第三刀扫描命中显示 `UIModalPresenter`、`ItemPhaseAskFlow`、`item_slots`、`item_slot_intents` 都依赖这条判断；本轮先把生产路径改成输出 `uses_item_slots/pre_confirm_before_slot_pick`，再把老判断收进 helper 做兼容，定向与全量回归仍保持通过。
 
 ## 决策日志
 
@@ -130,6 +134,10 @@
 
 - 决策：阶段5第二刀不新建“ConfirmViewModel”模块，先直接把 `confirm_title/confirm_body` 字段并入现有 choice/option 结构。
   理由：当前确认语义已经通过 `choice` 和 `option` 跨层传递，增加一层新 DTO 只会扩大改动面。先用兼容字段把 `ItemPhase`、`tax_prompt`、`landing_optional_effect`、market skin 的确认文案前移，能更快验证“presentation 只消费输出”这条方向，并保留 fallback 让旧 choice 不会一次性全坏。
+  日期/作者：2026-03-07 / Codex
+
+- 决策：阶段5第三刀先把 `item_phase_choice` 的 slot 交互语义抽成 `uses_item_slots/pre_confirm_before_slot_pick` 两个显式字段，并在 presentation 侧通过 helper 消费，而不是立刻删除所有 `choice.kind == "item_phase_choice"` fallback。
+  理由：这条语义同时影响 modal、item slot、highlight 动画和 ask-flow；先让生产 builder 稳定产出显式标记，再把消费方统一到 helper，上层责任已经前移，但测试和旧手工 choice 仍能兼容运行。这样下一刀才能更安全地继续删 fallback。
   日期/作者：2026-03-07 / Codex
 
 ## 结果与复盘

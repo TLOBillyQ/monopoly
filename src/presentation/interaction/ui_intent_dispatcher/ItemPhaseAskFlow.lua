@@ -1,4 +1,5 @@
 local ui_view = require("src.presentation.api.UIViewService")
+local choice_common = require("src.presentation.ui.choice_screen_service.common")
 
 local item_phase_ask_flow = {}
 
@@ -13,7 +14,7 @@ function item_phase_ask_flow.dispatch(state, game, intent, opts, action_port)
     state._suppress_item_slot_highlight_until_pick = nil
     local choice = state.ui_model and state.ui_model.choice or nil
     state._skip_item_slot_highlight_replay_choice_id = choice and choice.id or nil
-    if choice and choice.kind == "item_phase_choice" and type(choice.options) == "table" and #choice.options == 1 then
+    if choice_common.requires_item_slot_pre_confirm(choice) and type(choice.options) == "table" and #choice.options == 1 then
       local opt = choice.options[1]
       local opt_id = type(opt) == "table" and opt.id or opt
       if opt_id ~= nil then

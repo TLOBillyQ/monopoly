@@ -72,7 +72,7 @@ function modal_presenter.open_choice_modal(state, choice, market)
 
   if screen_key == "base_inline" then
     target_choice_effects.leave(state, "open_base_inline")
-    if choice and choice.kind == "item_phase_choice" and not state._item_phase_confirmed then
+    if choice_common.requires_item_slot_pre_confirm(choice) and not state._item_phase_confirmed then
       state._item_phase_ask_active = true
       state._suppress_item_slot_highlight_until_pick = true
       local title = choice_common.resolve_secondary_confirm_title(choice, state.game, "base_inline", nil)
@@ -80,7 +80,7 @@ function modal_presenter.open_choice_modal(state, choice, market)
       choice_openers.open_pre_confirm_screen(state, choice, "__item_phase_ask__", title, body)
       return
     end
-    if not (choice and choice.kind == "item_phase_choice") then
+    if not choice_common.uses_item_slots(choice) then
       state._suppress_item_slot_highlight_until_pick = nil
     end
     state._item_phase_confirmed = nil
