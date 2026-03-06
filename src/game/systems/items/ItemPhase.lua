@@ -102,8 +102,6 @@ function item_phase.run(turn_mgr, phase, args)
     return nil
   end
 
-  assert(game.ui_port ~= nil, "missing ui_port")
-
   local spec = item_phase.build_choice_spec(game, player, phase)
   if spec == nil then
     item_phase.finish(game, phase)
