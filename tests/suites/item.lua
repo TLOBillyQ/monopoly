@@ -13,6 +13,7 @@ local choice_resolver = support.choice_resolver
 local gameplay_rules = require("src.core.config.GameplayRules")
 local item_phase = require("src.game.systems.items.ItemPhase")
 local roadblock = require("src.game.systems.items.ItemRoadblock")
+local steal = require("src.game.systems.items.ItemSteal")
 
 local function _test_monster_card()
   local g = _new_game()
@@ -364,6 +365,111 @@ local function _test_tax_prompt_cancel_maps_to_skip_and_executes_pay_tax()
   _assert_eq(p.cash, 500, "tax prompt cancel should pay tax through skip path")
 end
 
+local function _test_simple_item_use_pushes_item_card_popup()
+  local g = _new_game()
+  local popups = {}
+  local p = g:current_player()
+  g.ui_port = support.build_ui_port({
+    push_popup = function(_, payload)
+      popups[#popups + 1] = payload
+    end,
+  })
+  p.inventory:add({ id = gameplay_rules.item_ids.tax_free })
+
+  local res = executor.use_item(g, p, gameplay_rules.item_ids.tax_free, { by_ai = true })
+  local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
+  _assert_eq(ok, true, "tax_free use ok")
+  _assert_eq(#popups, 1, "simple item use should push one broadcast popup")
+  _assert_eq(popups[1].kind, "item_card", "simple item broadcast should use item_card kind")
+  _assert_eq(popups[1].image_ref, gameplay_rules.item_ids.tax_free, "simple item broadcast image_ref mismatch")
+  assert(string.find(popups[1].body, p.name, 1, true), "simple item broadcast should include player name")
+  assert(string.find(popups[1].body, "免税卡", 1, true), "simple item broadcast should include item name")
+end
+
+local function _test_target_item_use_pushes_item_card_popup()
+  local g = _new_game()
+  local popups = {}
+  local user = g.players[1]
+  local target = g.players[2]
+  g.ui_port = support.build_ui_port({
+    push_popup = function(_, payload)
+      popups[#popups + 1] = payload
+    end,
+  })
+  g:set_player_cash(user, 1000)
+  g:set_player_cash(target, 9000)
+  user.inventory:add({ id = gameplay_rules.item_ids.share_wealth })
+
+  local res = executor.use_item(g, user, gameplay_rules.item_ids.share_wealth, {
+    by_ai = true,
+    target_id = target.id,
+  })
+  local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
+  _assert_eq(ok, true, "target item use ok")
+  _assert_eq(#popups, 1, "target item use should push one broadcast popup")
+  _assert_eq(popups[1].kind, "item_card", "target item broadcast should use item_card kind")
+  _assert_eq(popups[1].image_ref, gameplay_rules.item_ids.share_wealth, "target item broadcast image_ref mismatch")
+  assert(string.find(popups[1].body, user.name, 1, true), "target item broadcast should include player name")
+  assert(string.find(popups[1].body, "均富卡", 1, true), "target item broadcast should include item name")
+end
+
+local function _test_remote_dice_followup_pushes_item_card_popup()
+  local g = _new_game()
+  local popups = {}
+  local p = g:current_player()
+  g.ui_port = support.build_ui_port({
+    push_popup = function(_, payload)
+      popups[#popups + 1] = payload
+    end,
+  })
+  g.turn.item_phase_active = "pre_action"
+  p.inventory:add({ id = gameplay_rules.item_ids.remote_dice })
+  local pending = _open_choice(g, {
+    kind = "remote_dice_value",
+    title = "遥控骰子：选择点数",
+    options = { { id = 4, label = "4" } },
+    allow_cancel = false,
+    meta = {
+      player_id = p.id,
+      item_id = gameplay_rules.item_ids.remote_dice,
+      dice_count = 1,
+      item_preconsumed = false,
+    },
+  })
+
+  local res = choice_resolver.resolve(g, pending, {
+    type = "choice_select",
+    choice_id = pending.id,
+    option_id = 4,
+    actor_role_id = p.id,
+  })
+
+  _assert_eq(res and res.stay, false, "remote dice follow-up should resolve immediately")
+  _assert_eq(#popups, 1, "remote dice follow-up should push one broadcast popup")
+  _assert_eq(popups[1].kind, "item_card", "remote dice broadcast should use item_card kind")
+  _assert_eq(popups[1].image_ref, gameplay_rules.item_ids.remote_dice, "remote dice broadcast image_ref mismatch")
+end
+
+local function _test_steal_success_pushes_item_card_broadcast_before_result_popup()
+  local g = _new_game()
+  local popups = {}
+  local stealer = g.players[1]
+  local target = g.players[2]
+  g.ui_port = support.build_ui_port({
+    push_popup = function(_, payload)
+      popups[#popups + 1] = payload
+    end,
+  })
+  stealer.inventory:add({ id = gameplay_rules.item_ids.steal })
+  target.inventory:add({ id = gameplay_rules.item_ids.tax_free })
+
+  local res = steal.steal_item_at_index(g, stealer, target, 1)
+  _assert_eq(res and res.ok, true, "steal should succeed")
+  assert(#popups >= 1, "steal success should push at least one popup")
+  _assert_eq(popups[1].kind, "item_card", "steal should first broadcast used card")
+  _assert_eq(popups[1].image_ref, gameplay_rules.item_ids.steal, "steal broadcast image_ref mismatch")
+end
+
 return {
   name = "item",
   tests = {
@@ -396,6 +502,22 @@ return {
     {
       name = "tax_prompt_cancel_maps_to_skip_and_executes_pay_tax",
       run = _test_tax_prompt_cancel_maps_to_skip_and_executes_pay_tax,
+    },
+    {
+      name = "simple_item_use_pushes_item_card_popup",
+      run = _test_simple_item_use_pushes_item_card_popup,
+    },
+    {
+      name = "target_item_use_pushes_item_card_popup",
+      run = _test_target_item_use_pushes_item_card_popup,
+    },
+    {
+      name = "remote_dice_followup_pushes_item_card_popup",
+      run = _test_remote_dice_followup_pushes_item_card_popup,
+    },
+    {
+      name = "steal_success_pushes_item_card_broadcast_before_result_popup",
+      run = _test_steal_success_pushes_item_card_broadcast_before_result_popup,
     },
   },
 }

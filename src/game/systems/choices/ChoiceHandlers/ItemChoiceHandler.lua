@@ -8,6 +8,7 @@ local item_phase = require("src.game.systems.items.ItemPhase")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local number_utils = require("src.core.NumberUtils")
 local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
+local item_use_broadcast = require("src.game.systems.items.ItemUseBroadcast")
 
 local item_choice_handler = {}
 local item_ids = gameplay_rules.item_ids
@@ -76,6 +77,9 @@ function item_choice_handler.build(helpers)
       injure = meta.injure,
       title = meta.title
     })
+    if res then
+      item_use_broadcast.dispatch(game, player, meta.item_id)
+    end
     local intent = res.intent or {}
     intent_dispatcher.dispatch(game, intent)
     return _finish_and_clear(game)
@@ -96,6 +100,7 @@ function item_choice_handler.build(helpers)
     _consume_if_needed(player, meta.item_id, meta.item_preconsumed)
     local res = roadblock.apply(game, player, idx)
     if res then
+      item_use_broadcast.dispatch(game, player, meta.item_id)
       intent_dispatcher.dispatch(game, res)
     end
     return _finish_and_clear(game)
@@ -181,7 +186,10 @@ function item_choice_handler.build(helpers)
     assert(value ~= nil, "missing dice value")
     local dice_count = meta.dice_count or game:player_dice_count(player)
     _consume_if_needed(player, meta.item_id, meta.item_preconsumed)
-    remote_dice.apply(game, player, dice_count, value)
+    local res = remote_dice.apply(game, player, dice_count, value)
+    if res then
+      item_use_broadcast.dispatch(game, player, meta.item_id)
+    end
     return _finish_and_clear(game)
   end
 

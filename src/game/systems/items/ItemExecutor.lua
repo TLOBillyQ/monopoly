@@ -3,6 +3,7 @@ local agent = require("src.game.core.runtime.Agent")
 local inventory = require("src.game.systems.items.ItemInventory")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local action_anim_port = require("src.core.ActionAnimPort")
+local item_use_broadcast = require("src.game.systems.items.ItemUseBroadcast")
 
 local executor = {}
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
@@ -48,6 +49,14 @@ local function _with_fallback_item_anim(game, player, item_id, item_name, before
   return { ok = true, action_anim = true }
 end
 
+local function _finalize_use_item(game, player, item_id, item_name, before_seq, res)
+  local final_res = _with_fallback_item_anim(game, player, item_id, item_name, before_seq, res)
+  if _is_success_result(final_res) then
+    item_use_broadcast.dispatch(game, player, item_id)
+  end
+  return final_res
+end
+
 function executor.use_item(game, player, item_id, context)
   context = context or {}
   if type(context.by_ai) == "nil" then
@@ -62,7 +71,7 @@ function executor.use_item(game, player, item_id, context)
   local handler = item_registry.handlers[item_id]
   if handler then
     local res = handler(game, player, item_id, context)
-    return _with_fallback_item_anim(game, player, item_id, cfg.name, before_anim_seq, res)
+    return _finalize_use_item(game, player, item_id, cfg.name, before_anim_seq, res)
   end
 
   local consumed = inventory.consume(player, item_id)
@@ -70,7 +79,7 @@ function executor.use_item(game, player, item_id, context)
 
   local res = item_effects.apply_post(game, player, item_id, context)
   assert(res ~= nil, "missing item post effect result: " .. tostring(item_id))
-  return _with_fallback_item_anim(game, player, item_id, cfg.name, before_anim_seq, res)
+  return _finalize_use_item(game, player, item_id, cfg.name, before_anim_seq, res)
 end
 
 return executor
