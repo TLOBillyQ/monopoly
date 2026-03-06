@@ -8,9 +8,11 @@ local _first_land_tile = support.first_land_tile
 local _first_tile_by_type = support.first_tile_by_type
 local _tile_state = support.tile_state
 local _with_patches = support.with_patches
+local _assert_eq = support.assert_eq
 local turn_land = require("src.game.flow.turn.TurnLand")
 local chance_cfg = require("Config.Generated.ChanceCards")
 local item_inventory = require("src.game.systems.items.ItemInventory")
+local land_rules = require("src.game.systems.land.LandRules")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 
@@ -289,6 +291,70 @@ local function _test_upgrade_land_prefers_direct_ui_notify_before_event_bridge()
   assert(emitted == false, "direct ui notify should skip event bridge fallback")
 end
 
+local function _test_execute_strong_card_pushes_item_card_popup()
+  local g = _new_game()
+  local popups = {}
+  local player = g.players[1]
+  local owner = g.players[2]
+  local idx, tile_ref = _first_land_tile(g.board)
+  g.ui_port = _build_ui_port({
+    push_popup = function(_, payload)
+      popups[#popups + 1] = payload
+    end,
+  })
+  g:set_tile_owner(tile_ref, owner.id)
+  g:set_player_property(owner, tile_ref.id, true)
+  g:set_tile_level(tile_ref, 1)
+  g:set_player_cash(player, 100000)
+  player.inventory:add({ id = gameplay_rules.item_ids.strong })
+
+  local res = land_rules.execute_strong_card(g, player.id, tile_ref.id)
+
+  _assert_eq(res and res.ok, true, "strong card should execute successfully")
+  _assert_eq(#popups, 1, "strong card should push one broadcast popup")
+  _assert_eq(popups[1].kind, "item_card", "strong card broadcast should use item_card kind")
+  _assert_eq(popups[1].image_ref, gameplay_rules.item_ids.strong, "strong card broadcast image_ref mismatch")
+end
+
+local function _test_execute_free_card_pushes_item_card_popup()
+  local g = _new_game()
+  local popups = {}
+  local player = g.players[1]
+  local idx, tile_ref = _first_land_tile(g.board)
+  g.ui_port = _build_ui_port({
+    push_popup = function(_, payload)
+      popups[#popups + 1] = payload
+    end,
+  })
+  player.inventory:add({ id = gameplay_rules.item_ids.free_rent })
+
+  local res = land_rules.execute_free_card(g, player.id, tile_ref.id)
+
+  _assert_eq(res and res.ok, true, "free card should execute successfully")
+  _assert_eq(#popups, 1, "free card should push one broadcast popup")
+  _assert_eq(popups[1].kind, "item_card", "free card broadcast should use item_card kind")
+  _assert_eq(popups[1].image_ref, gameplay_rules.item_ids.free_rent, "free card broadcast image_ref mismatch")
+end
+
+local function _test_execute_tax_free_card_pushes_item_card_popup()
+  local g = _new_game()
+  local popups = {}
+  local player = g.players[1]
+  g.ui_port = _build_ui_port({
+    push_popup = function(_, payload)
+      popups[#popups + 1] = payload
+    end,
+  })
+  player.inventory:add({ id = gameplay_rules.item_ids.tax_free })
+
+  local res = land_rules.execute_tax_free_card(g, player.id)
+
+  _assert_eq(res and res.ok, true, "tax_free card should execute successfully")
+  _assert_eq(#popups, 1, "tax_free card should push one broadcast popup")
+  _assert_eq(popups[1].kind, "item_card", "tax_free broadcast should use item_card kind")
+  _assert_eq(popups[1].image_ref, gameplay_rules.item_ids.tax_free, "tax_free broadcast image_ref mismatch")
+end
+
 return {
   name = "landing",
   tests = {
@@ -308,5 +374,8 @@ return {
       name = "upgrade_land_prefers_direct_ui_notify_before_event_bridge",
       run = _test_upgrade_land_prefers_direct_ui_notify_before_event_bridge,
     },
+    { name = "execute_strong_card_pushes_item_card_popup", run = _test_execute_strong_card_pushes_item_card_popup },
+    { name = "execute_free_card_pushes_item_card_popup", run = _test_execute_free_card_pushes_item_card_popup },
+    { name = "execute_tax_free_card_pushes_item_card_popup", run = _test_execute_tax_free_card_pushes_item_card_popup },
   },
 }
