@@ -22,7 +22,7 @@
 - [x] (2026-03-06 22:49 +0800) 已补阶段1契约：`architecture_guard_contract` 新增 output-port 路由断言，`usecase_boundary_contract` 新增 output 默认桥接与 override 优先级测试；全量回归现输出 `All regression checks passed (367)`。
 - [ ] 阶段2：已完成第一刀动画门控外提：`ActionAnimPort`、`TurnRoll`、`TurnMove` 改读 `game.anim_gate_port`，`game.ui_port` 预算已从 23 收紧到 16；剩余 `push_popup` 与 `ui_port.state` 读路径仍待迁移。
 - [x] (2026-03-07 00:28 +0800) 已完成阶段3：`RuntimeGlobalAliases` 已外迁到 `src/app/bootstrap/runtime_install/`；`Logger`、`DefaultPorts`、`RuntimeEditorExports`、`RuntimeContext` 都已改成 host hook 或 runtime context env 读取；`src/core` 宿主触点预算已从 47 压到 0。
-- [ ] 阶段4：拆分 `src/game/systems/market/service/Purchase.lua`，把支付、事件桥和 UI 刷新拆回各自边界。
+- [ ] 阶段4：已完成第一刀。`src/game/systems/market/service/PaidPurchaseGateway.lua` 已承接 paid-currency 的 goods mapping、purchase panel 启动、待兑现队列和购买回调注册；`Purchase.lua` 保留本地即时兑现与 choice 刷新。下一刀再拆 `_refresh_market_choice_after_paid_callback` 和剩余 UI/choice 协调。
 - [ ] 阶段5：把 `PreConfirmFlow` 等 presentation 中的应用规则收回用例层，让 presentation 只渲染 ViewModel。
 - [ ] 阶段6：在边界稳定后整理目录语义和命名，避免目录改动与行为改动叠加。
 
@@ -54,6 +54,9 @@
 
 - 观察：一旦把运行时默认实现改成“只认 context env”，阶段3真正的回归成本主要落在测试基础设施，而不是业务代码。
   证据：`RuntimeContext`、`RuntimeGlobalAliases`、`DefaultPorts` 的生产改动完成后，实际回归失败集中在 `TestSupport` 和 `presentation_ui_action_anim` 的 patch helper；补完测试态 alias/runtime context 重建后，全量再次通过。
+
+- 观察：阶段4若想最小风险落地，应该先拆 paid-currency 的宿主购买通道，而不是先碰 market choice 刷新或本地金币购买兑现。
+  证据：把 `Purchase.lua` 的 goods mapping、purchase panel 启动、待兑现队列、trigger callback 注册移入 `PaidPurchaseGateway.lua` 后，`paid_currency`、`market` 和全量回归都保持通过，而 `_fulfill_paid_goods_purchase` 与 `_refresh_market_choice_after_paid_callback` 无需同批重写。
 
 ## 决策日志
 
@@ -89,9 +92,13 @@
   理由：这段逻辑的唯一职责就是把宿主对象安装成全局别名；继续留在 `src/core` 只会让目录语义继续失真。真实启动路径和测试都可以显式调用外层安装器，没必要保留 core 包装层。
   日期/作者：2026-03-07 / Codex
 
+- 决策：阶段4第一刀新增 `PaidPurchaseGateway.lua`，但不同时改本地即时兑现与 choice 刷新。
+  理由：宿主支付通道与回调桥是最脏的跨层细节，且能与 `_fulfill_paid_goods_purchase` 清晰切分；先拆这组职责可以显著收口 `Purchase.lua`，又不会一次性把 market 购买用例、UI 刷新和支付兑现混成大重构。
+  日期/作者：2026-03-07 / Codex
+
 ## 结果与复盘
 
-阶段0和阶段1现在都已经完成，阶段2也已经切开第一刀，阶段3则已经完整完成。当前最重要的可观察结果有四条。第一，`src/game/flow` 已经没有任何直接的 `state.ui_*` 写入；用例层现在通过 `UseCaseOutputPort` 发出 UI 失效、choice 生命周期和 modal timer 输出。第二，`game.ui_port` 的预算已经从 23 降到 16，其中 `TurnRoll`、`TurnMove`、`ActionAnimPort` 这三处动画等待门控已经改走 `game.anim_gate_port`。第三，`src/core` 已经不再直接认识 Eggy 宿主全局，相关安装器和别名逻辑都已外移或改成显式注入。第四，默认回归仍保持通过，并把这些收口一起锁住。
+阶段0和阶段1现在都已经完成，阶段2也已经切开第一刀，阶段3则已经完整完成，阶段4也完成了第一刀。当前最重要的可观察结果有五条。第一，`src/game/flow` 已经没有任何直接的 `state.ui_*` 写入；用例层现在通过 `UseCaseOutputPort` 发出 UI 失效、choice 生命周期和 modal timer 输出。第二，`game.ui_port` 的预算已经从 23 降到 16，其中 `TurnRoll`、`TurnMove`、`ActionAnimPort` 这三处动画等待门控已经改走 `game.anim_gate_port`。第三，`src/core` 已经不再直接认识 Eggy 宿主全局，相关安装器和别名逻辑都已外移或改成显式注入。第四，`Purchase.lua` 的 paid-currency 宿主购买通道已经被抽到 `PaidPurchaseGateway.lua`。第五，默认回归仍保持通过，并把这些收口一起锁住。
 
 这轮推进的经验同样直接。第一，阶段1不需要等 presentation 全部清干净才开始，先把“写入口”统一就能显著降低后续修改的耦合面。第二，守护测试必须允许内部兼容镜像存在，否则会把 `ui_runtime` 这种过渡性状态误判成旧债。第三，阶段2应该继续坚持“每次只拔一小束读路径”，因为 `push_popup`、`ui_port.state` 和 market 链路的风险明显高于动画布尔门控。第四，阶段3一旦把 `src/core` 改成显式注入，测试基础设施也必须同步升级为显式构造 runtime context，否则旧的全局 patch 习惯会反噬回归。
 
