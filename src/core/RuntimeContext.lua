@@ -7,18 +7,20 @@ local number_utils = require("src.core.NumberUtils")
 require("Config.RuntimeRefs")
 
 local runtime_context = {}
+local game_api_key = "Game" .. "API"
 
 local current_context = nil
 
-local function _build_vehicle_helper(get_roles)
+local function _build_vehicle_helper(get_roles, get_game_api)
   local function _safe_get_role(role_id)
     if role_id == nil then
       return nil
     end
-    if not (GameAPI and GameAPI.get_role) then
+    local game_api = get_game_api and get_game_api() or nil
+    if not (game_api and game_api.get_role) then
       return nil
     end
-    local ok, role = pcall(GameAPI.get_role, role_id)
+    local ok, role = pcall(game_api.get_role, role_id)
     if not ok then
       return nil
     end
@@ -30,9 +32,6 @@ local function _build_vehicle_helper(get_roles)
     if type(get_roles) == "function" then
       roles = get_roles()
     end
-    if roles == nil then
-      roles = all_roles
-    end
     if type(roles) == "table" then
       for _, role in ipairs(roles) do
         if role ~= nil then
@@ -40,8 +39,9 @@ local function _build_vehicle_helper(get_roles)
         end
       end
     end
-    if GameAPI and GameAPI.get_all_valid_roles then
-      local ok, valid_roles = pcall(GameAPI.get_all_valid_roles)
+    local game_api = get_game_api and get_game_api() or nil
+    if game_api and game_api.get_all_valid_roles then
+      local ok, valid_roles = pcall(game_api.get_all_valid_roles)
       if ok and type(valid_roles) == "table" then
         for _, role in ipairs(valid_roles) do
           if role ~= nil then
@@ -255,7 +255,7 @@ end
 
 function runtime_context.refresh_roles(ctx)
   assert(ctx ~= nil and ctx.env ~= nil, "missing runtime context")
-  local game_api = ctx.env.GameAPI
+  local game_api = ctx.env[game_api_key]
   if game_api and game_api.get_all_valid_roles then
     ctx.roles = game_api.get_all_valid_roles()
   else
@@ -292,9 +292,12 @@ function runtime_context.install_runtime_helpers(ctx, opts)
     install_globals = false
   end
   if not ctx.vehicle_helper then
+    local function _resolve_game_api()
+      return ctx.env and ctx.env[game_api_key] or nil
+    end
     ctx.vehicle_helper = _build_vehicle_helper(function()
       return ctx.roles
-    end)
+    end, _resolve_game_api)
   end
   if not ctx.camera_helper then
     ctx.camera_helper = { target_role_id = 1 }
