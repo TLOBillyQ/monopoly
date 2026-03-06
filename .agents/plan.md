@@ -22,7 +22,7 @@
 - [x] (2026-03-06 22:49 +0800) 已补阶段1契约：`architecture_guard_contract` 新增 output-port 路由断言，`usecase_boundary_contract` 新增 output 默认桥接与 override 优先级测试；全量回归现输出 `All regression checks passed (367)`。
 - [ ] 阶段2：已完成第一刀动画门控外提：`ActionAnimPort`、`TurnRoll`、`TurnMove` 改读 `game.anim_gate_port`，`game.ui_port` 预算已从 23 收紧到 16；剩余 `push_popup` 与 `ui_port.state` 读路径仍待迁移。
 - [x] (2026-03-07 00:28 +0800) 已完成阶段3：`RuntimeGlobalAliases` 已外迁到 `src/app/bootstrap/runtime_install/`；`Logger`、`DefaultPorts`、`RuntimeEditorExports`、`RuntimeContext` 都已改成 host hook 或 runtime context env 读取；`src/core` 宿主触点预算已从 47 压到 0。
-- [ ] 阶段4：已完成五刀。第一刀新增 `src/game/systems/market/service/PaidPurchaseGateway.lua`，承接 paid-currency 的 goods mapping、purchase panel 启动、待兑现队列和购买回调注册。第二刀把 paid callback 后的 market choice 刷新移到 `src/game/systems/market/service/Choice.lua` 的 `refresh_after_paid_callback()`。第三刀新增 `src/game/systems/market/service/Fulfillment.lua`，统一 item/vehicle/skin 的兑现副作用。第四刀新增 `src/game/systems/market/service/PurchasePolicy.lua`，把商品可买性校验和座驾替换确认 intent 组装从 `Purchase.lua` 中抽走。第五刀新增 `src/game/systems/market/service/Feedback.lua`，把 market buy_failed 事件与黑市 popup 文案出口从 `Purchase.lua`、`Choice.lua` 中抽离。剩余工作主要是观察 `Purchase.lua` 是否还值得继续拆本地金币购买结果编排，还是直接把精力转到阶段5 的 presentation 规则回收。
+- [ ] 阶段4：已完成六刀。第一刀新增 `src/game/systems/market/service/PaidPurchaseGateway.lua`，承接 paid-currency 的 goods mapping、purchase panel 启动、待兑现队列和购买回调注册。第二刀把 paid callback 后的 market choice 刷新移到 `src/game/systems/market/service/Choice.lua` 的 `refresh_after_paid_callback()`。第三刀新增 `src/game/systems/market/service/Fulfillment.lua`，统一 item/vehicle/skin 的兑现副作用。第四刀新增 `src/game/systems/market/service/PurchasePolicy.lua`，把商品可买性校验和座驾替换确认 intent 组装从 `Purchase.lua` 中抽走。第五刀新增 `src/game/systems/market/service/Feedback.lua`，把 market buy_failed 事件与黑市 popup 文案出口从 `Purchase.lua`、`Choice.lua` 中抽离。第六刀新增 `src/game/systems/market/service/ChoiceOutcome.lua`，把购买结果后的 choice 刷新、满包退出 popup、follow-up intent 派发和 stay/finish 决策从 `MarketChoiceHandler.lua` 中抽离。剩余工作主要是观察 `Purchase.lua` 本身是否还值得继续拆本地金币购买前后编排，还是把阶段4视为足够收口。
 - [x] (2026-03-07 01:27 +0800) 已启动阶段5第一刀：`src/game/systems/market/service/Choice.lua` 现在给 option 输出 `requires_pre_confirm/pre_confirm_kind`，`PreConfirmFlow.lua` 不再回查 `Config.Generated.Market` 判断皮肤商品，而是只消费用例层提供的 option 级确认语义；已补 `market` 与 `presentation_ui` 回归，验证“有 flag 才进二次确认，没有 flag 即使 product_id 像皮肤也直接派发”。
 - [x] (2026-03-07 01:43 +0800) 已完成阶段5第二刀：`choice_screen_service.common` 现在优先消费 `option.confirm_title/confirm_body` 与 `choice.confirm_title/confirm_body`；`ItemPhase` 已同时为 choice 本身和每个 item option 产出确认文案，`LandChoiceSpecs.tax_prompt`、`EffectPipeline` 的 landing optional choice、market skin option 也都直接产出确认文案，presentation 仅保留 fallback 兼容逻辑。
 - [x] (2026-03-07 02:02 +0800) 已完成阶段5第三刀的第一小片：`ItemPhase.build_choice_spec()` 现在额外输出 `uses_item_slots/pre_confirm_before_slot_pick`；`PreConfirmFlow`、`ItemPhaseAskFlow`、`UIModalPresenter`、`item_slots`、`item_slot_intents` 已优先消费这些显式语义，`choice.kind == "item_phase_choice"` 的散落判断被收敛到 `choice_screen_service.common` helper 中保底兼容。
@@ -73,6 +73,9 @@
 
 - 观察：`Purchase.lua` 在兑现逻辑被抽走后，剩下最明显的混合职责就变成“前置可买性校验 + 座驾替换确认 intent 组装”，它们更接近应用决策而不是购买执行。
   证据：把这些逻辑抽到 `PurchasePolicy.lua` 后，`Purchase.lua` 中与 `market_vehicle_replace`、`vehicle_disabled`、`sold_out`、`disabled` 相关的字符串与 choice spec 构造显著减少，而 `market`、`paid_currency` 与全量回归继续通过。
+
+- 观察：随着 `Purchase.lua` 本身逐步变薄，market 购买链路里下一处最明显的混合职责已经从 purchase service 转移到了 `MarketChoiceHandler.lua`，也就是“根据购买结果决定刷新 market、弹满包提示、派发 follow-up intent 还是关闭 choice”。
+  证据：在第六刀前，这些分支集中在 `MarketChoiceHandler._handle_market_buy()`；抽成 `ChoiceOutcome.resolve_purchase()` 后，`paid_currency`、`market` 和全量回归继续通过，说明这层结果协调可以独立存在而不需要继续绑在 choice handler 上。
 
 - 观察：如果 `PreConfirmFlow` 继续根据 `Config.Generated.Market` 和 `product_id` 自己判断“这是不是皮肤”，presentation 就会把业务分类知识重新缓存一份，和 use-case 输出形成双轨语义。
   证据：阶段5第一刀前，`src/presentation/interaction/ui_intent_dispatcher/PreConfirmFlow.lua` 会在模块加载时扫描 `Config.Generated.Market` 建 `market_kind_by_product_id`；改成读取 choice option 上的 `requires_pre_confirm` 后，新增回归可以证明 `option_id=5001` 但缺 flag 时会直接派发，不再被 presentation 私自拦截。
@@ -150,6 +153,10 @@
 
 - 决策：阶段4第五刀先抽 `Feedback.lua`，阶段5第一刀再让 market choice option 显式声明 `requires_pre_confirm`，而不是直接继续大拆 `PreConfirmFlow` 的所有分支。
   理由：`buy_failed` 事件出口本身仍是 `Purchase.lua`/`Choice.lua` 中重复出现的横切关注点，先抽它可以继续瘦身 market service；随后只对 market choice 的二次确认语义做一刀 option 级显式化，就能以最小改动把一个明确的 presentation 业务判断回收到用例输出，避免阶段5一开始就把 item/land/tax 等所有确认分支绑成大提交。
+  日期/作者：2026-03-07 / Codex
+
+- 决策：阶段4第六刀先抽 `ChoiceOutcome.lua`，承接 `MarketChoiceHandler` 里的购买结果协调，而不是继续把更多本地购买判断塞回 `Purchase.lua`。
+  理由：`Purchase.lua` 经过前五刀后已经基本只剩购买前后编排；反而 `MarketChoiceHandler` 还同时负责输入解码和结果后处理。把 stay/finish、choice rebuild、满包 popup、follow-up intent 派发抽成独立 service，可以继续压缩 market 事务脚本的横向职责面，而且不必重新打开 payment/fulfillment 那些已稳定的边界。
   日期/作者：2026-03-07 / Codex
 
 - 决策：阶段5第二刀不新建“ConfirmViewModel”模块，先直接把 `confirm_title/confirm_body` 字段并入现有 choice/option 结构。

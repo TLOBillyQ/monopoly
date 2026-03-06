@@ -1,5 +1,5 @@
 local market_service = require("src.game.systems.market.MarketService")
-local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
+local choice_outcome = require("src.game.systems.market.service.ChoiceOutcome")
 local number_utils = require("src.core.NumberUtils")
 local market_context = require("src.game.systems.market.service.Context")
 
@@ -8,10 +8,6 @@ local market_choice_handler = {}
 function market_choice_handler.build(helpers)
   local is_cancel = helpers.is_cancel
   local finish_choice = helpers.finish_choice
-
-  local function _refresh_market_choice(game, choice, player)
-    return market_service.choice.rebuild_pending(game, choice, player)
-  end
 
   local function _handle_market_buy(game, choice, action)
     assert(choice ~= nil and choice.kind == "market_buy", "invalid market choice")
@@ -27,31 +23,7 @@ function market_choice_handler.build(helpers)
     local entry = market_context.entry_by_id(product_id)
     assert(entry ~= nil, "missing market entry: " .. tostring(product_id))
     local res = market_service.purchase.execute(game, player, product_id, nil)
-    if type(res) == "table"
-        and res.ok == true
-        and ((entry.kind == "item" and res.fulfilled_now == true) or res.deferred_fulfillment == true) then
-      local rebuilt = _refresh_market_choice(game, choice, player)
-      if not rebuilt then
-        return finish_choice(game, false)
-      end
-      if entry.kind == "item" and res.fulfilled_now == true and res.inventory_full_after == true then
-        intent_dispatcher.dispatch(game, {
-          kind = "push_popup",
-          payload = { title = "黑市", body = "卡槽已满，自动退出黑市" },
-        })
-        return finish_choice(game, false)
-      end
-      return { stay = true }
-    end
-    if type(res) == "table" then
-      local intent = res.intent or {}
-      intent_dispatcher.dispatch(game, intent)
-      if intent.kind == "need_choice" then
-        return { stay = true }
-      end
-      return finish_choice(game, false)
-    end
-    return finish_choice(game, false)
+    return choice_outcome.resolve_purchase(game, choice, player, entry, res, finish_choice)
   end
 
   local function _handle_vehicle_replace(game, choice, action)
