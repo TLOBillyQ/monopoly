@@ -284,6 +284,35 @@ local function _test_preconsumed_followup_cancel_falls_back_to_first_option()
   _assert_eq(p.status.pending_remote_dice.values[1], 4, "cancel should fallback to first option value")
 end
 
+local function _test_tax_prompt_cancel_maps_to_skip_and_executes_pay_tax()
+  local g = _new_game()
+  local p = g:current_player()
+  g:set_player_cash(p, 1000)
+  local pending = _open_choice(g, {
+    kind = "tax_card_prompt",
+    title = "是否使用免税卡",
+    options = {
+      { id = "use", label = "使用" },
+      { id = "skip", label = "不用" },
+    },
+    allow_cancel = true,
+    cancel_label = "不用",
+    meta = {
+      player_id = p.id,
+    },
+  })
+
+  local res = choice_resolver.resolve(g, pending, {
+    type = "choice_cancel",
+    choice_id = pending.id,
+    actor_role_id = p.id,
+  })
+
+  _assert_eq(res and res.stay, false, "tax prompt cancel should resolve immediately")
+  _assert_eq(g.turn.pending_choice, nil, "tax prompt cancel should clear pending choice")
+  _assert_eq(p.cash, 500, "tax prompt cancel should pay tax through skip path")
+end
+
 return {
   name = "item",
   tests = {
@@ -309,6 +338,10 @@ return {
     {
       name = "preconsumed_followup_cancel_falls_back_to_first_option",
       run = _test_preconsumed_followup_cancel_falls_back_to_first_option,
+    },
+    {
+      name = "tax_prompt_cancel_maps_to_skip_and_executes_pay_tax",
+      run = _test_tax_prompt_cancel_maps_to_skip_and_executes_pay_tax,
     },
   },
 }

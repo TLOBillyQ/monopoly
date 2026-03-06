@@ -22,6 +22,23 @@ local function _first_option_id(choice)
   return first
 end
 
+local function _find_option_id(choice, target_option_id)
+  local options = choice and choice.options or nil
+  if type(options) ~= "table" then
+    return nil
+  end
+  for _, option in ipairs(options) do
+    local option_id = option
+    if type(option) == "table" then
+      option_id = option.id
+    end
+    if option_id == target_option_id then
+      return option_id
+    end
+  end
+  return nil
+end
+
 local function _clear_choice(game)
   game.turn.pending_choice = nil
   game.dirty.turn = true
@@ -128,6 +145,18 @@ function choice_resolver.resolve(game, choice, action)
   assert(game ~= nil, "missing game")
   assert(choice ~= nil, "missing choice")
   assert(action ~= nil, "missing action")
+
+  if _is_cancel(action) and choice.kind == "tax_card_prompt" then
+    local skip_option = _find_option_id(choice, "skip")
+    if skip_option ~= nil then
+      action = {
+        type = "choice_select",
+        choice_id = choice.id,
+        option_id = skip_option,
+        actor_role_id = action and action.actor_role_id or nil,
+      }
+    end
+  end
 
   if _is_cancel(action) and choice and choice.meta and choice.meta.item_preconsumed == true then
     local fallback_option = _first_option_id(choice)

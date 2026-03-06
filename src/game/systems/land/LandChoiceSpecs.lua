@@ -36,12 +36,15 @@ function land_choice_specs.rent_prompt(player_id, tile_id, card_kind, total_valu
 end
 
 function land_choice_specs.tax_prompt(player_id)
-  return _build_use_skip(
+  local choice = _build_use_skip(
     "tax_card_prompt",
     "是否使用免税卡",
     { "使用免税卡可免除本次税金" },
     { player_id = player_id }
   )
+  choice.allow_cancel = true
+  choice.cancel_label = "不用"
+  return choice
 end
 
 return land_choice_specs

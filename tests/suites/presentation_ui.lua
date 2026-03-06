@@ -2071,6 +2071,25 @@ local function _test_choice_modal_routes_to_new_screens()
 
     ui_view.open_choice_modal(state, {
       id = 6,
+      kind = "tax_card_prompt",
+      title = "是否使用免税卡",
+      body = "",
+      options = {
+        { id = "use", label = "使用" },
+        { id = "skip", label = "不用" },
+      },
+      allow_cancel = true,
+      cancel_label = "不用",
+    })
+    _assert_eq(state.ui.active_choice_screen_key, "secondary_confirm", "tax_card_prompt should route to secondary confirm")
+    _assert_eq(nodes["通用二次确认屏"].visible, true, "tax prompt should open secondary confirm screen")
+    _assert_eq(nodes["通用二次确认_标题"].text, "税务局", "tax prompt title should stay short")
+    _assert_eq(nodes["通用二次确认_文本"].text, "这次要用免税卡吗？", "tax prompt body should explain the choice")
+    _assert_eq(nodes["通用二次确认_取消"].visible, true, "tax prompt should show cancel as do-not-use")
+    _assert_eq(nodes["通用二次确认_取消"].disabled, false, "tax prompt cancel should stay touchable")
+
+    ui_view.open_choice_modal(state, {
+      id = 7,
       kind = "landing_optional_effect",
       title = "可选效果",
       body = "",

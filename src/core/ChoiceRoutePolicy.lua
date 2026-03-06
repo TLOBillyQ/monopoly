@@ -72,6 +72,9 @@ function policy.resolve(choice)
   if kind == "roadblock_target" or kind == "demolish_target" then
     return "target"
   end
+  if kind == "tax_card_prompt" then
+    return "secondary_confirm"
+  end
   if policy.is_secondary_confirm_choice(choice) then
     return "secondary_confirm"
   end

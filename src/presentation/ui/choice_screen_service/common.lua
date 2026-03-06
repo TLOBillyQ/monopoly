@@ -158,6 +158,9 @@ function M.resolve_secondary_confirm_title(choice, game, source_screen, option_i
   if option_id == "upgrade_land" then
     return "加盖"
   end
+  if choice and choice.kind == "tax_card_prompt" then
+    return "税务局"
+  end
   if choice and choice.kind == "item_phase_choice" then
     return _resolve_item_phase_short_title(choice, game)
   end
@@ -185,6 +188,10 @@ function M.resolve_secondary_confirm_body(choice, game, source_screen, option_id
       return "可用道具：" .. table.concat(labels, "、")
     end
     return "请再确认一次"
+  end
+
+  if choice.kind == "tax_card_prompt" then
+    return "这次要用免税卡吗？"
   end
 
   if option_id == "buy_land" then

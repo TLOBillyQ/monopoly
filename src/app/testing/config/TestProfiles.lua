@@ -82,6 +82,32 @@ local profiles = {
       },
     },
   },
+  scenario_tax_survive = {
+    bootstrap = {
+      players = {
+        [1] = {
+          cash = 100000,
+          position_tile_id = 18,
+          item_counts = {
+            [2010] = 1,
+            [2002] = 1,
+          },
+        },
+        [2] = {
+          cash = 100000,
+          position_tile_id = 35,
+        },
+        [3] = {
+          cash = 100000,
+          position_tile_id = 44,
+        },
+        [4] = {
+          cash = 100000,
+          position_tile_id = 40,
+        },
+      },
+    },
+  },
   scenario_hospital_staging = {
     bootstrap = {
       players = {
