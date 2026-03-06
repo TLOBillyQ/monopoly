@@ -105,6 +105,12 @@ function choice_auto_policy.decide(game, state, choice, ctx)
   end
 
   if mode == "tick_timeout" then
+    if choice.allow_cancel == true then
+      return {
+        type = "choice_cancel",
+        choice_id = choice.id,
+      }
+    end
     return _build_auto_or_fallback_action(game, choice, true)
   end
 

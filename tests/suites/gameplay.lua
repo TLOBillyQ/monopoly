@@ -1904,7 +1904,7 @@ local function _test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics()
   assert(clock.cpu_diff_seconds(10, 9) == 1, "cpu diff should stay arithmetic and source-agnostic")
 end
 
-local function _test_choice_auto_policy_consistent_between_wait_and_timeout()
+local function _test_choice_auto_policy_wait_and_timeout_both_cancel_market_buy()
   local g = _new_game()
   local auto_player = g.players[g.turn.current_player_index]
   auto_player.auto = true
@@ -1912,6 +1912,8 @@ local function _test_choice_auto_policy_consistent_between_wait_and_timeout()
   local choice = {
     id = 1001,
     kind = "market_buy",
+    allow_cancel = true,
+    meta = { player_id = auto_player.id, active_tab = "item", page_index = 1, page_count = 1 },
     options = { { id = "buy", label = "购买" } },
   }
 
@@ -1926,9 +1928,40 @@ local function _test_choice_auto_policy_consistent_between_wait_and_timeout()
     elapsed_seconds = state.pending_choice_elapsed,
   })
   assert(from_wait and from_timeout, "auto policy should return actions for auto actor")
-  assert(from_wait.type == from_timeout.type, "wait/timeout should resolve to same action type")
+  assert(from_wait.type == "choice_cancel", "wait_choice should keep market auto-cancel behavior")
+  assert(from_timeout.type == "choice_cancel", "tick_timeout should default to cancel when choice allows cancel")
   assert(from_wait.choice_id == from_timeout.choice_id, "wait/timeout should target same choice")
-  assert(from_wait.option_id == from_timeout.option_id, "wait/timeout should target same option")
+  assert(from_wait.option_id == nil, "wait_choice cancel should not carry option_id")
+  assert(from_timeout.option_id == nil, "timeout cancel should not carry option_id")
+end
+
+local function _test_choice_auto_policy_timeout_keeps_non_cancelable_choice_fallback()
+  local g = _new_game()
+  local auto_player = g.players[g.turn.current_player_index]
+  auto_player.auto = true
+  local state = { pending_choice_elapsed = 1.2 }
+  local choice = {
+    id = 1002,
+    kind = "remote_dice_value",
+    allow_cancel = false,
+    meta = {
+      player_id = auto_player.id,
+      item_id = gameplay_rules.item_ids.remote_dice,
+      dice_count = 1,
+      item_preconsumed = true,
+    },
+    options = { { id = 4, label = "4" } },
+  }
+
+  local from_timeout = choice_auto_policy.decide(g, state, choice, {
+    mode = "tick_timeout",
+    min_visible_seconds = 0.5,
+    elapsed_seconds = state.pending_choice_elapsed,
+  })
+
+  assert(from_timeout ~= nil, "non-cancelable timeout should still produce a fallback action")
+  assert(from_timeout.type == "choice_select", "non-cancelable timeout should keep choice_select fallback")
+  assert(from_timeout.option_id == 4, "non-cancelable timeout should fallback to the first option")
 end
 
 local function _test_popup_countdown_uses_effective_modal_timeout()
@@ -2187,7 +2220,8 @@ return {
   _test_gameplay_loop_refresh_drives_camera_follow_via_port,
   _test_gameplay_loop_camera_follow_skips_eliminated_current_player,
   _test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics,
-  _test_choice_auto_policy_consistent_between_wait_and_timeout,
+  _test_choice_auto_policy_wait_and_timeout_both_cancel_market_buy,
+  _test_choice_auto_policy_timeout_keeps_non_cancelable_choice_fallback,
   _test_popup_countdown_uses_effective_modal_timeout,
   _test_market_countdown_uses_double_action_timeout,
   _test_dispatch_gate_blocks_next_when_choice_active,
