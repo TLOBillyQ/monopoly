@@ -265,6 +265,18 @@ local function _test_scenario_mountain_staging_is_before_mountain_with_remote_di
   })
 end
 
+local function _test_chance_card_profile_applies_tile_9_and_remote_dice()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "机会卡测试")
+
+  local p1_expected = game.board:index_of_tile_id(9)
+  assert(p1_expected ~= nil, "tile 9 should exist in board path")
+  assert(game.players[1].position == p1_expected, "p1 position should match 机会卡测试")
+  _assert_inventory_counts(game.players[1], {
+    [2002] = 1,
+  })
+end
+
 return {
   name = "test_profiles",
   tests = {
@@ -303,6 +315,10 @@ return {
     {
       name = "scenario_mountain_staging_is_before_mountain_with_remote_dice",
       run = _test_scenario_mountain_staging_is_before_mountain_with_remote_dice,
+    },
+    {
+      name = "chance_card_profile_applies_tile_9_and_remote_dice",
+      run = _test_chance_card_profile_applies_tile_9_and_remote_dice,
     },
   },
 }

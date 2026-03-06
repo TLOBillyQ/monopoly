@@ -132,6 +132,27 @@ local profiles = {
       },
     },
   },
+  ["机会卡测试"] = {
+    bootstrap = {
+      players = {
+        [1] = {
+          position_tile_id = 9,
+          item_counts = {
+            [2002] = 1,
+          },
+        },
+        [2] = {
+          position_tile_id = 35,
+        },
+        [3] = {
+          position_tile_id = 44,
+        },
+        [4] = {
+          position_tile_id = 40,
+        },
+      },
+    },
+  },
   items_move_control = {
     bootstrap = {
       players = {

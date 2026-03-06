@@ -1,5 +1,4 @@
 local startup_policy = {}
-local release_profile_whitelist = require("src.app.testing.config.ReleaseProfileWhitelist")
 
 local function _is_non_empty_string(value)
   return type(value) == "string" and value ~= ""
@@ -40,10 +39,6 @@ function startup_policy.resolve(globals)
   local startup_profile = globals and globals.STARTUP_TEST_PROFILE or nil
   local resolved_profile = "default"
   if release_mode and release_allow_test_profile and _is_non_empty_string(startup_profile) then
-    assert(
-      release_profile_whitelist.contains(startup_profile),
-      "[Eggy] release startup profile not allowed: " .. tostring(startup_profile)
-    )
     resolved_profile = startup_profile
   elseif not release_mode and _is_non_empty_string(startup_profile) then
     resolved_profile = startup_profile

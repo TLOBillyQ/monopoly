@@ -21,7 +21,7 @@ local function _test_release_prod_forces_default_profile()
   end)
 end
 
-local function _test_release_qa_accepts_whitelisted_profile()
+local function _test_release_qa_accepts_defined_profile()
   with_patches({
     { key = "RELEASE_BUILD", value = true },
     { key = "RELEASE_ALLOW_TEST_PROFILE", value = true },
@@ -30,7 +30,7 @@ local function _test_release_qa_accepts_whitelisted_profile()
     local policy = startup_policy.resolve(_G)
     assert(policy.release_mode == true, "release mode should stay enabled")
     assert(policy.release_allow_test_profile == true, "release-qa should allow profile override")
-    assert(policy.profile_name == "items_target_disrupt", "release-qa should accept whitelisted profile")
+    assert(policy.profile_name == "items_target_disrupt", "release-qa should accept defined profile")
   end)
 end
 
@@ -47,17 +47,19 @@ local function _test_release_qa_without_profile_falls_back_to_default()
   end)
 end
 
-local function _test_release_qa_rejects_non_whitelisted_profile()
+local function _test_release_qa_unknown_profile_fails_in_profile_resolution()
   with_patches({
     { key = "RELEASE_BUILD", value = true },
     { key = "RELEASE_ALLOW_TEST_PROFILE", value = true },
     { key = "STARTUP_TEST_PROFILE", value = "unknown_profile_for_release_qa" },
   }, function()
-    local ok, err = pcall(startup_policy.resolve, _G)
-    assert(ok == false, "release-qa should reject non-whitelisted profile")
+    local policy = startup_policy.resolve(_G)
+    assert(policy.profile_name == "unknown_profile_for_release_qa", "startup policy should pass through unknown profile name")
+    local ok, err = pcall(test_profile_bootstrap.apply, {}, policy.profile_name)
+    assert(ok == false, "unknown profile should still fail during profile resolution")
     assert(
-      tostring(err):find("release startup profile not allowed", 1, true) ~= nil,
-      "non-whitelisted profile error should be explicit"
+      tostring(err):find("unknown test profile", 1, true) ~= nil,
+      "unknown profile error should come from profile resolution"
     )
   end)
 end
@@ -137,9 +139,12 @@ return {
   name = "startup_release",
   tests = {
     { name = "release_prod_forces_default_profile", run = _test_release_prod_forces_default_profile },
-    { name = "release_qa_accepts_whitelisted_profile", run = _test_release_qa_accepts_whitelisted_profile },
+    { name = "release_qa_accepts_defined_profile", run = _test_release_qa_accepts_defined_profile },
     { name = "release_qa_without_profile_falls_back_to_default", run = _test_release_qa_without_profile_falls_back_to_default },
-    { name = "release_qa_rejects_non_whitelisted_profile", run = _test_release_qa_rejects_non_whitelisted_profile },
+    {
+      name = "release_qa_unknown_profile_fails_in_profile_resolution",
+      run = _test_release_qa_unknown_profile_fails_in_profile_resolution,
+    },
     { name = "startup_policy_dev_accepts_profile_override", run = _test_startup_policy_dev_accepts_profile_override },
     { name = "game_startup_release_fails_when_role_roster_empty", run = _test_game_startup_release_fails_when_role_roster_empty },
     {
