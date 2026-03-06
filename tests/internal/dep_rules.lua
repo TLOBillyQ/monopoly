@@ -139,6 +139,15 @@ local rules = {
     description = "turn flow must use ui_sync.resolve_ui_gate/ui_sync ports instead of direct state.ui reads",
   },
   {
+    root = "src/game/systems/market/service",
+    forbidden_patterns = {
+      "%f[%w_]GameAPI%f[^%w_]",
+      "%f[%w_]RegisterTriggerEvent%f[^%w_]",
+      "%f[%w_]EVENT%f[^%w_]",
+    },
+    description = "market service layer must not call host purchase globals directly; move Eggy payment details to outer adapters",
+  },
+  {
     root = "src/app",
     forbidden_patterns = {
       "%f[%w_]all_roles%f[^%w_]",

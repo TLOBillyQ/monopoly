@@ -12,7 +12,8 @@
 
 - [x] (2026-03-07 11:58 +0800) 已按最新代码重写 `.agents/research.md`，确认当前主体迁移已完成，剩余工作集中在四类收尾问题：付费适配器外迁、output port 去镜像、choice 协议 contract 化、`owner_role_id` 强约束化。
 - [x] (2026-03-07 12:02 +0800) 已重读 `.agents/harness/PLANS.md`、现有 `.agents/plan.md`、`docs/architecture/boundaries.md`、`tests/internal/dep_rules.lua` 和关键边界代码，确认当前统一回归入口仍是 `lua tests/regression.lua`，最新全量输出为 `All regression checks passed (376)`。
-- [ ] 下一步先做里程碑 1：把 `src/game/systems/market/service/PaidPurchaseGateway.lua` 外迁成真正的 adapter，并给 `MarketService` / `Purchase` 留下稳定支付端口。
+- [x] (2026-03-07 12:18 +0800) 已完成里程碑 1 的第一刀：把 Eggy 宿主支付实现搬到 `src/app/bootstrap/payment/EggyPaidPurchaseGateway.lua`，`src/game/systems/market/service/PaidPurchaseGateway.lua` 现只保留薄代理；同时 `tests/internal/dep_rules.lua` 新增守护，禁止 `src/game/systems/market/service` 再直接触碰 `GameAPI`、`RegisterTriggerEvent`、`EVENT`。定向 `market`、`paid_currency`、全量回归均继续通过。
+- [ ] 下一步继续里程碑 1 的第二刀：把当前薄代理进一步替换成真正的支付端口，让 `Purchase.lua` / `MarketService` 只依赖端口而不直接 require 外层 Eggy adapter。
 - [ ] 里程碑 2 将拆分 `src/game/flow/ports/UseCaseOutputPort.lua`，把 legacy state 镜像从用例端口中移出去。
 - [ ] 里程碑 3 将整理 choice 稳定协议，把当前散落的显式字段收敛成单一 contract helper，并补透传契约测试。
 - [ ] 里程碑 4 将把 `owner_role_id` 变成强约束字段，删除 `meta.player_id` 在 actor ownership 路径上的 fallback。
@@ -39,6 +40,10 @@
 - 决策：优先把 `PaidPurchaseGateway` 外迁，而不是先改 runtime 目录名。
   理由：前者是仍然活着的 Dependency Rule 错误，后者主要是目录语义优化。Clean Architecture 下，先修依赖方向，再修命名。
   日期/作者：2026-03-07 / Codex
+- 决策：里程碑 1 先采用“外层搬家 + 静态守护上锁”的两段式推进，而不是一次性同时完成端口反转。
+  理由：先把宿主 API 从 `src/game/systems/market/service` 物理挪出，并用 `dep_rules` 锁死回流，可以在零行为变化下先拿到一个稳定检查点；随后再把薄代理替换为真正的内层端口，风险更低，也更容易回滚。
+  日期/作者：2026-03-07 / Codex
+
 
 - 决策：`UseCaseOutputPort` 的下一步不是立刻删兼容，而是拆出 legacy 镜像 adapter。
   理由：当前 presentation 和部分测试仍在消费 legacy 状态。如果直接删除镜像，会把“边界收口”和“迁移断崖”混成同一次高风险改动。
@@ -80,11 +85,11 @@
 
 这个里程碑要解决当前最明确的 Dependency Rule 错误。现在 `src/game/systems/market/service/PaidPurchaseGateway.lua` 既承担“支付端口”的名字，又直接知道 `GameAPI.get_goods_list`、`RegisterTriggerEvent`、`EVENT.SPEC_ROLE_PURCHASE_GOODS` 和角色购买面板。这意味着黑市业务服务目录仍然被 Eggy 平台细节牵着走。
 
-本里程碑的目标，是把“业务上需要一次外部付费购买”与“Eggy 平台上如何取商品列表、如何注册购买事件、如何打开购买面板”拆开。计划中的做法不是删除现有行为，而是先引入一个稳定端口，再把 Eggy 专属实现迁到更外层目录，例如 `src/app/bootstrap/payment`、`src/app/runtime/payment` 或其他能明确表达“这里是外部细节”的位置。`Purchase.lua` 与 `MarketService` 应只依赖端口，不再直接依赖宿主事件模型。
+本里程碑的目标，是把“业务上需要一次外部付费购买”与“Eggy 平台上如何取商品列表、如何注册购买事件、如何打开购买面板”拆开。这里明确采用两刀推进。第一刀已经完成：Eggy 专属实现已搬到 `src/app/bootstrap/payment/EggyPaidPurchaseGateway.lua`，原 `src/game/systems/market/service/PaidPurchaseGateway.lua` 只保留薄代理，`dep_rules` 也已禁止 market service 再直接触碰 `GameAPI`、`RegisterTriggerEvent`、`EVENT`。这一步的价值是先把最明显的宿主 API 逆流从 service 目录里清掉，并把边界守护写进仓库。
 
-执行时先保留当前 `PaidPurchaseGateway` 的公开能力与回调语义，让测试能够继续通过。第一刀只做搬家和依赖反转，不顺手改购买流程本身。第二刀再把 goods mapping、trigger event 注册、purchase panel 启动放进 Eggy adapter。第三刀用 fake gateway 补边界契约测试，证明 `MarketService` 只靠端口也能跑购买流程。
+第二刀仍然待做：把当前薄代理再替换成真正的支付端口，让 `Purchase.lua` 与 `MarketService` 只依赖端口，不再直接 require 外层 Eggy adapter。这里不追求一次性发明复杂端口框架，最小可行方案是定义 market 内层支付端口，再由 bootstrap/runtime 安装 Eggy 实现。随后补 fake gateway 契约测试，证明 use case 层只靠端口也能跑购买流程。
 
-验收标准不是“文件移动成功”，而是：`src/game/systems/market/service` 中不再直接调用 `GameAPI`、`RegisterTriggerEvent` 或 `EVENT`；`market` suite 继续通过；全量回归继续通过；如果新增一条 `dep_rules` 守护来禁止这些符号回流到 market service 目录，该守护应立即通过。
+当前这一里程碑的阶段性验收已经成立：`src/game/systems/market/service` 中不再直接调用 `GameAPI`、`RegisterTriggerEvent` 或 `EVENT`；`lua tests/internal/dep_rules.lua` 通过；`market` suite 继续通过；`paid_currency` suite 通过；全量回归继续通过。整个里程碑的最终验收，要等第二刀把薄代理升级为真正的支付端口后才算完全完成。
 
 ## 里程碑 2：把 `UseCaseOutputPort` 拆成纯端口与 legacy 镜像 adapter
 
@@ -261,6 +266,7 @@
     src/core 直接宿主触点：0（由现有研究与守护确认）
     game.ui_port 依赖点：0（由现有研究与守护确认）
     最新 market 定向回归：All regression checks passed (15)
+    最新 paid_currency 定向回归：All regression checks passed (4)
     最新 presentation_ui 定向回归：All regression checks passed (135)
     最新全量回归：All regression checks passed (376)
 
