@@ -19,6 +19,13 @@ end
 function runtime_state.ensure_ui_runtime(state)
   assert(type(state) == "table", "missing state")
   local ui_runtime = _ensure_table(state, "ui_runtime")
+  _ensure_field(ui_runtime, "ui_dirty", state.ui_dirty == true)
+  _ensure_field(ui_runtime, "ui_model", state.ui_model)
+  _ensure_field(ui_runtime, "pending_choice", state.pending_choice)
+  _ensure_field(ui_runtime, "pending_choice_elapsed", state.pending_choice_elapsed or 0)
+  _ensure_field(ui_runtime, "pending_choice_id", state.pending_choice_id)
+  _ensure_field(ui_runtime, "ui_modal_elapsed", state.ui_modal_elapsed or 0)
+  _ensure_field(ui_runtime, "ui_modal_ref", state.ui_modal_ref)
   if ui_runtime.item_name_by_id == nil then
     ui_runtime.item_name_by_id = state.item_name_by_id or {}
   end

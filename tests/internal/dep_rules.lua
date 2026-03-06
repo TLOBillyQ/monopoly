@@ -235,12 +235,7 @@ local growth_budget_rules = {
     patterns = {
       "state%.ui_[A-Za-z0-9_]+%s*=",
     },
-    budget = {
-      ["src/game/flow/turn/GameplayLoop.lua"] = 3,
-      ["src/game/flow/turn/GameplayLoopRuntime.lua"] = 1,
-      ["src/game/flow/turn/TickTimeout.lua"] = 8,
-      ["src/game/flow/turn/TurnDispatch.lua"] = 1,
-    },
+    budget = {},
   },
 }
 

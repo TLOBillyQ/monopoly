@@ -68,9 +68,8 @@ function turn_dispatch.step_turn(game)
 end
 
 function turn_dispatch.clear_choice(state, opts)
-  state.pending_choice = nil
-  state.pending_choice_elapsed = 0
-  state.pending_choice_id = nil
+  local ports = gameplay_loop_ports.resolve(state and state.gameplay_loop_ports or nil)
+  ports.output.clear_pending_choice(state)
   if opts and opts.on_close_choice then
     opts.on_close_choice(state)
   end
@@ -86,6 +85,7 @@ local function _resolve_dispatch_context(state, context)
   local item_slot_source = item_slot_data.from_ui_state(ui_state)
   return {
     ports = ports,
+    output_ports = ports.output,
     ui_sync_ports = ui_sync_ports,
     clock_ports = ports.clock,
     item_slot_source = item_slot_source,
@@ -139,7 +139,7 @@ local function _dispatch_action(game, state, action, opts, dispatch_ctx)
       or action.type == "market_page_prev"
       or action.type == "market_page_next"
       or action.type == "market_tab_select" then
-    state.ui_dirty = true
+    ctx.output_ports.invalidate_ui(state)
   end
   if action.type == "ui_button" then
     if action.id == "auto" then
@@ -195,7 +195,7 @@ local function _dispatch_action(game, state, action, opts, dispatch_ctx)
     end
     return { status = "rejected" }
   elseif action.type == "choice_select" or action.type == "choice_cancel" then
-    local choice = state.pending_choice
+    local choice = ctx.output_ports.get_pending_choice(state)
     if not validator.validate_choice_action(game, action, choice) then
       return { status = "rejected" }
     end
@@ -211,7 +211,7 @@ local function _dispatch_action(game, state, action, opts, dispatch_ctx)
     return { status = "applied" }
   elseif action.type == "market_page_prev" or action.type == "market_page_next" or action.type == "market_tab_select" then
     local turn_choice = game and game.turn and game.turn.pending_choice or nil
-    local choice = turn_choice or state.pending_choice
+    local choice = turn_choice or ctx.output_ports.get_pending_choice(state)
     if not choice or choice.kind ~= "market_buy" then
       logger.warn("[MarketDebug] dispatch_market_nav rejected: pending_choice missing or kind not market_buy")
       return { status = "rejected" }
@@ -222,9 +222,7 @@ local function _dispatch_action(game, state, action, opts, dispatch_ctx)
     end
     if market_service.choice.apply_navigation(game, choice, action) then
       _maybe_reset_afk_for_current_player(game, state, action)
-      state.pending_choice = choice
-      state.pending_choice_id = choice.id
-      state.pending_choice_elapsed = 0
+      ctx.output_ports.sync_pending_choice(state, choice)
       return { status = "applied" }
     end
     logger.warn("[MarketDebug] dispatch_market_nav rejected: apply_navigation failed")

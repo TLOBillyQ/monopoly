@@ -5,6 +5,7 @@ local number_utils = require("src.core.NumberUtils")
 local choice_auto_policy = require("src.game.flow.turn.TurnChoiceAutoPolicy")
 local tick_ui_gate = require("src.game.flow.turn.TickUIGate")
 local tick_choice_timeout = require("src.game.flow.turn.TickChoiceTimeout")
+local use_case_output_port = require("src.game.flow.ports.UseCaseOutputPort")
 
 local tick_timeout = {}
 
@@ -64,6 +65,8 @@ function tick_timeout.step_choice_timeout(game, state, dt, opts)
 end
 
 function tick_timeout.step_modal_timeout(state, dt, opts)
+  local ports = state and state.gameplay_loop_ports or nil
+  local output_ports = ports and ports.output or use_case_output_port
   local timeout = constants.action_timeout_seconds or 0
   if opts and opts.get_timeout_seconds then
     local override = opts.get_timeout_seconds(state)
@@ -72,8 +75,7 @@ function tick_timeout.step_modal_timeout(state, dt, opts)
     end
   end
   if timeout <= 0 then
-    state.ui_modal_elapsed = 0
-    state.ui_modal_ref = nil
+    output_ports.sync_modal_timer(state, {})
     return
   end
   assert(opts ~= nil, "missing opts")
@@ -81,18 +83,17 @@ function tick_timeout.step_modal_timeout(state, dt, opts)
   assert(opts.on_timeout ~= nil, "missing opts.on_timeout")
   assert(opts.get_ref ~= nil, "missing opts.get_ref")
   if not opts.is_active(state) then
-    state.ui_modal_elapsed = 0
-    state.ui_modal_ref = nil
+    output_ports.sync_modal_timer(state, {})
     return
   end
   local ref = assert(opts.get_ref(state), "missing modal ref")
-  if state.ui_modal_ref ~= ref then
-    state.ui_modal_ref = ref
-    state.ui_modal_elapsed = 0
+  if output_ports.get_modal_ref(state) ~= ref then
+    output_ports.sync_modal_timer(state, { ref = ref, elapsed_seconds = 0 })
   end
-  state.ui_modal_elapsed = state.ui_modal_elapsed + (dt or 0)
-  if state.ui_modal_elapsed >= timeout then
-    state.ui_modal_elapsed = 0
+  local next_elapsed = output_ports.get_modal_elapsed(state) + (dt or 0)
+  output_ports.sync_modal_timer(state, { ref = ref, elapsed_seconds = next_elapsed })
+  if next_elapsed >= timeout then
+    output_ports.sync_modal_timer(state, { ref = ref, elapsed_seconds = 0 })
     opts.on_timeout(state)
   end
 end

@@ -1,6 +1,7 @@
 local gameplay_loop_ports = {}
 local number_utils = require("src.core.NumberUtils")
 local ui_sync_defaults = require("src.game.flow.turn.GameplayLoopUISyncDefaults")
+local use_case_output_port = require("src.game.flow.ports.UseCaseOutputPort")
 
 local _tick_timeout = nil
 local _tick_ui_sync = nil
@@ -67,6 +68,23 @@ local port_groups = {
     "install_event_handlers",
     "on_bankruptcy_tiles_cleared",
   },
+  output = {
+    "invalidate_ui",
+    "clear_ui_dirty",
+    "is_ui_dirty",
+    "sync_ui_model",
+    "get_ui_model",
+    "sync_pending_choice",
+    "clear_pending_choice",
+    "get_pending_choice",
+    "get_pending_choice_id",
+    "get_pending_choice_elapsed",
+    "set_pending_choice_elapsed",
+    "set_pending_choice_id",
+    "sync_modal_timer",
+    "get_modal_elapsed",
+    "get_modal_ref",
+  },
 }
 
 local group_names = {
@@ -76,6 +94,7 @@ local group_names = {
   "debug",
   "clock",
   "state",
+  "output",
 }
 
 local function _base_modal_ports()
@@ -138,6 +157,10 @@ local function _base_state_ports()
   }
 end
 
+local function _base_output_ports()
+  return use_case_output_port.build_base_output_ports()
+end
+
 local function _resolve_base_ports()
   return {
     modal = _base_modal_ports(),
@@ -146,6 +169,7 @@ local function _resolve_base_ports()
     debug = _base_debug_ports(),
     clock = _base_clock_ports(),
     state = _base_state_ports(),
+    output = _base_output_ports(),
   }
 end
 

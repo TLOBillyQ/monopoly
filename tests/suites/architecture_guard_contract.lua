@@ -5,9 +5,89 @@ local _with_patches = support.with_patches
 local gameplay_loop = require("src.game.flow.turn.GameplayLoop")
 local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
 local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
+local use_case_output_port = require("src.game.flow.ports.UseCaseOutputPort")
 
-local function _build_guard_ports()
+local function _merge_group(base_group, override_group)
+  local merged = {}
+  for key, value in pairs(base_group or {}) do
+    merged[key] = value
+  end
+  for key, value in pairs(override_group or {}) do
+    merged[key] = value
+  end
+  return merged
+end
+
+local function _build_output_ports(output_log)
+  return {
+    invalidate_ui = function(state)
+      if output_log then
+        output_log[#output_log + 1] = {
+          kind = "invalidate_ui",
+          state = state,
+        }
+      end
+      return use_case_output_port.invalidate_ui(state)
+    end,
+    clear_ui_dirty = use_case_output_port.clear_ui_dirty,
+    is_ui_dirty = use_case_output_port.is_ui_dirty,
+    sync_ui_model = function(state, model)
+      if output_log then
+        output_log[#output_log + 1] = {
+          kind = "sync_ui_model",
+          state = state,
+          model = model,
+        }
+      end
+      return use_case_output_port.sync_ui_model(state, model)
+    end,
+    get_ui_model = use_case_output_port.get_ui_model,
+    sync_pending_choice = function(state, choice, opts)
+      if output_log then
+        output_log[#output_log + 1] = {
+          kind = "sync_pending_choice",
+          state = state,
+          choice = choice,
+        }
+      end
+      return use_case_output_port.sync_pending_choice(state, choice, opts)
+    end,
+    clear_pending_choice = function(state)
+      if output_log then
+        output_log[#output_log + 1] = {
+          kind = "clear_pending_choice",
+          state = state,
+        }
+      end
+      return use_case_output_port.clear_pending_choice(state)
+    end,
+    get_pending_choice = use_case_output_port.get_pending_choice,
+    get_pending_choice_id = use_case_output_port.get_pending_choice_id,
+    get_pending_choice_elapsed = use_case_output_port.get_pending_choice_elapsed,
+    set_pending_choice_elapsed = use_case_output_port.set_pending_choice_elapsed,
+    set_pending_choice_id = use_case_output_port.set_pending_choice_id,
+    sync_modal_timer = function(state, payload)
+      if output_log then
+        output_log[#output_log + 1] = {
+          kind = "sync_modal_timer",
+          state = state,
+          payload = payload,
+        }
+      end
+      return use_case_output_port.sync_modal_timer(state, payload)
+    end,
+    get_modal_elapsed = use_case_output_port.get_modal_elapsed,
+    get_modal_ref = use_case_output_port.get_modal_ref,
+  }
+end
+
+local function _build_guard_ports(output_log, overrides)
+  overrides = overrides or {}
+  local ui_sync_override = overrides.ui_sync or {}
+  local output_override = overrides.output or {}
+  local output_ports = _merge_group(_build_output_ports(output_log), output_override)
   return gameplay_loop_ports.resolve({
+    output = output_ports,
     ui_sync = {
       resolve_ui_gate = function()
         return {
@@ -17,13 +97,13 @@ local function _build_guard_ports()
           popup_active = false,
         }
       end,
-      build_model = function()
-        return nil
-      end,
       refresh_from_dirty = function()
         return false
       end,
       update_countdown = function() end,
+      build_model = ui_sync_override.build_model or function()
+        return nil
+      end,
     },
     anim = {
       reset_status_3d = function() end,
@@ -67,7 +147,7 @@ local function _record_ui_writes(state)
   local writes = {}
   setmetatable(state, {
     __newindex = function(t, key, value)
-      if string.match(tostring(key), "^ui_") then
+      if string.match(tostring(key), "^ui_") and key ~= "ui_runtime" then
         writes[#writes + 1] = key
       end
       rawset(t, key, value)
@@ -109,9 +189,10 @@ end
 local function _test_turn_dispatch_next_only_marks_ui_dirty()
   local game = support.new_game({ ai = {} })
   local current_player = game:current_player()
+  local output_log = {}
   local state = {
     game = game,
-    gameplay_loop_ports = _build_guard_ports(),
+    gameplay_loop_ports = _build_guard_ports(output_log),
     turn_runtime = {
       next_turn_locked = false,
       next_turn_last_click = nil,
@@ -144,8 +225,9 @@ local function _test_turn_dispatch_next_only_marks_ui_dirty()
   end)
 
   _assert_eq(stepped, 1, "dispatch should step turn once")
-  _assert_eq(#ui_writes, 1, "next action should only emit one ui_* write")
-  _assert_eq(ui_writes[1], "ui_dirty", "next action should only mark ui_dirty")
+  _assert_eq(#ui_writes, 0, "next action should not directly write state.ui_*")
+  _assert_eq(#output_log, 1, "next action should emit one output invalidate signal")
+  _assert_eq(output_log[1].kind, "invalidate_ui", "next action should invalidate UI through output port")
 end
 
 local function _test_turn_dispatch_choice_only_marks_ui_dirty()
@@ -160,9 +242,10 @@ local function _test_turn_dispatch_choice_only_marks_ui_dirty()
       player_id = current_player.id,
     },
   })
+  local output_log = {}
   local state = {
     game = game,
-    gameplay_loop_ports = _build_guard_ports(),
+    gameplay_loop_ports = _build_guard_ports(output_log),
     pending_choice = choice,
     pending_choice_elapsed = 0,
     pending_choice_id = choice.id,
@@ -199,8 +282,47 @@ local function _test_turn_dispatch_choice_only_marks_ui_dirty()
   end)
 
   _assert_eq(result.status, "applied", "choice selection should apply for owning player")
-  _assert_eq(#ui_writes, 1, "choice action should only emit one ui_* write")
-  _assert_eq(ui_writes[1], "ui_dirty", "choice action should only mark ui_dirty")
+  _assert_eq(#ui_writes, 0, "choice action should not directly write state.ui_*")
+  _assert_eq(#output_log, 2, "choice action should invalidate UI and clear choice through output port")
+  _assert_eq(output_log[1].kind, "invalidate_ui", "choice action should invalidate UI through output port")
+  _assert_eq(output_log[2].kind, "clear_pending_choice", "choice action should clear pending choice through output port")
+end
+
+local function _test_gameplay_loop_set_game_routes_choice_state_through_output_port()
+  local game = support.new_game()
+  local current_player = game:current_player()
+  local choice = support.open_choice(game, {
+    kind = "item_phase_choice",
+    options = {
+      { id = "cancel" },
+    },
+    meta = {
+      player_id = current_player.id,
+    },
+  })
+  local output_log = {}
+  local state = _build_loop_state()
+  state.ui = nil
+  state.gameplay_loop_ports = _build_guard_ports(output_log, {
+    ui_sync = {
+      build_model = function()
+        return {
+          choice = choice,
+          market = nil,
+        }
+      end,
+    },
+  })
+  local ui_writes = _record_ui_writes(state)
+
+  gameplay_loop.set_game(state, game)
+
+  _assert_eq(#ui_writes, 0, "set_game should not directly write state.ui_*")
+  _assert_eq(output_log[1].kind, "sync_pending_choice", "set_game should publish pending choice through output port")
+  _assert_eq(output_log[2].kind, "sync_ui_model", "set_game should publish UI model through output port")
+  _assert_eq(output_log[3].kind, "invalidate_ui", "set_game should invalidate UI through output port")
+  _assert_eq(state.pending_choice_id, choice.id, "set_game should keep pending choice legacy mirror")
+  _assert_eq(state.ui_model.choice.id, choice.id, "set_game should keep ui_model legacy mirror")
 end
 
 return {
@@ -209,5 +331,6 @@ return {
     { name = "gameplay_loop_set_game_injects_runtime_ui_port_dto", run = _test_gameplay_loop_set_game_injects_runtime_ui_port_dto },
     { name = "turn_dispatch_next_only_marks_ui_dirty", run = _test_turn_dispatch_next_only_marks_ui_dirty },
     { name = "turn_dispatch_choice_only_marks_ui_dirty", run = _test_turn_dispatch_choice_only_marks_ui_dirty },
+    { name = "gameplay_loop_set_game_routes_choice_state_through_output_port", run = _test_gameplay_loop_set_game_routes_choice_state_through_output_port },
   },
 }

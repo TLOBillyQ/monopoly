@@ -131,7 +131,7 @@ function gameplay_loop.step_afk_auto_host(game, state, dt)
     game.dirty.any = true
     game.dirty.players = true
   end
-  state.ui_dirty = true
+  ports.output.invalidate_ui(state)
   if state.auto_runner and state.auto_runner.reset_timer then
     state.auto_runner:reset_timer()
   end
@@ -187,16 +187,15 @@ local function _configure_environment(state, game, ports)
 end
 
 local function _configure_pending_choice(state, game, ports)
+  local output_ports = ports.output
   local ui_sync_ports = ports.ui_sync
   local modal_ports = ports.modal
   assert(game.pending_choice ~= nil, "missing game.pending_choice")
   local pending = game:pending_choice()
-  state.pending_choice = pending
+  output_ports.sync_pending_choice(state, pending)
   if pending then
-    state.pending_choice_elapsed = 0
-    state.pending_choice_id = pending.id
     local model = ui_sync_ports.build_model(state, game)
-    state.ui_model = model
+    output_ports.sync_ui_model(state, model)
     if model.choice then
       modal_ports.open_choice_modal(state, model.choice, model.market)
     end
@@ -207,7 +206,7 @@ local function _reset_runtime_state(state, ports)
   local ui_sync_ports = ports.ui_sync
   state.player_units = nil
   state.player_units_missing = false
-  state.ui_dirty = true
+  ports.output.invalidate_ui(state)
   state.countdown_last = nil
   state.countdown_active_last = nil
   if ui_sync_ports.set_input_blocked then

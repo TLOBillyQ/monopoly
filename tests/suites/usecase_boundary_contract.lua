@@ -107,6 +107,35 @@ local function _test_gameplay_loop_clock_contract_split_sources()
   runtime_ports.reset_for_tests()
 end
 
+local function _test_gameplay_loop_output_port_defaults_to_ui_dirty_bridge()
+  local resolved = gameplay_loop_ports.resolve(nil)
+  local state = {}
+  local changed = resolved.output.invalidate_ui(state)
+  _assert_eq(changed, true, "default output.invalidate_ui should bridge to state.ui_dirty")
+  _assert_eq(state.ui_dirty, true, "default output.invalidate_ui should mark ui_dirty")
+  local changed_again = resolved.output.invalidate_ui(state)
+  _assert_eq(changed_again, false, "default output.invalidate_ui should be idempotent when state already dirty")
+end
+
+local function _test_gameplay_loop_output_port_override_precedence()
+  local calls = 0
+  local resolved = gameplay_loop_ports.resolve({
+    output = {
+      invalidate_ui = function(state)
+        calls = calls + 1
+        state.override_called = true
+        return true
+      end,
+    },
+  })
+  local state = {}
+  local changed = resolved.output.invalidate_ui(state)
+  _assert_eq(changed, true, "override output.invalidate_ui should return override result")
+  _assert_eq(calls, 1, "override output.invalidate_ui should be called once")
+  _assert_eq(state.override_called, true, "override output.invalidate_ui should receive state")
+  _assert_eq(state.ui_dirty, nil, "override output.invalidate_ui should bypass default ui_dirty bridge")
+end
+
 return {
   name = "usecase_boundary_contract",
   tests = {
@@ -115,5 +144,7 @@ return {
     { name = "turn_action_port_normalize_auto_intent_contract", run = _test_turn_action_port_normalize_auto_intent_contract },
     { name = "turn_action_port_normalize_auto_intent_rejects_missing_actor", run = _test_turn_action_port_normalize_auto_intent_rejects_missing_actor },
     { name = "gameplay_loop_clock_contract_split_sources", run = _test_gameplay_loop_clock_contract_split_sources },
+    { name = "gameplay_loop_output_port_defaults_to_ui_dirty_bridge", run = _test_gameplay_loop_output_port_defaults_to_ui_dirty_bridge },
+    { name = "gameplay_loop_output_port_override_precedence", run = _test_gameplay_loop_output_port_override_precedence },
   },
 }
