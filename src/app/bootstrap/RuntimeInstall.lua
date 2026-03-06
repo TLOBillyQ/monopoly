@@ -1,5 +1,6 @@
 local runtime_context = require("src.core.RuntimeContext")
 local runtime_ports = require("src.core.RuntimePorts")
+local runtime_global_aliases = require("src.app.bootstrap.runtime_install.RuntimeGlobalAliases")
 local runtime_port_defaults = require("src.app.bootstrap.runtime_install.RuntimePortDefaults")
 local config_sanity = require("src.core.config.ConfigSanity")
 
@@ -25,6 +26,7 @@ function M.install(opts)
     })
     runtime_context.set_current(runtime_ctx)
     runtime_context.install_environment(runtime_ctx)
+    runtime_global_aliases.install(runtime_ctx.env)
     runtime_context.install_runtime_helpers(runtime_ctx, { install_globals = install_globals })
     runtime_context.install_editor_exports(runtime_ctx)
   else

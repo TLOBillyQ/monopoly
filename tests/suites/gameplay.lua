@@ -28,6 +28,7 @@ local runtime_context = require("src.core.RuntimeContext")
 local runtime_ports = require("src.core.RuntimePorts")
 local runtime_event_bridge = require("src.core.RuntimeEventBridge")
 local runtime_state = require("src.core.RuntimeState")
+local runtime_global_aliases = require("src.app.bootstrap.runtime_install.RuntimeGlobalAliases")
 local dispatch_validator = require("src.game.flow.turn.TurnDispatchValidator")
 local tick_ui_sync = require("src.game.flow.turn.TickUISync")
 local choice_auto_policy = require("src.game.flow.turn.TurnChoiceAutoPolicy")
@@ -88,6 +89,11 @@ local function _with_runtime_context_globals(fn)
     { key = "get_skin_id", value = nil },
     { key = "get_change_skin_role", value = nil },
   }, fn)
+end
+
+local function _install_runtime_aliases(ctx)
+  runtime_context.install_environment(ctx)
+  runtime_global_aliases.install(ctx.env)
 end
 
 local function _build_test_ports(overrides)
@@ -721,7 +727,9 @@ local function _test_runtime_context_forward_stop_skips_invalid_role()
           end
         end),
       })
-      runtime_context.install_globals(ctx)
+      _install_runtime_aliases(ctx)
+      runtime_context.install_runtime_helpers(ctx, { install_globals = true })
+      runtime_context.install_editor_exports(ctx)
       local invalid_ok = vehicle_helper.emit_vehicle_stop(2)
       local valid_ok = vehicle_helper.emit_vehicle_stop(1)
       assert(invalid_ok == false, "forward stop should reject invalid role")
@@ -779,7 +787,7 @@ local function _test_runtime_context_split_install_stages()
     })
 
     runtime_context.install_environment(ctx)
-    assert(SetTimeOut == lua_api.call_delay_time, "install_environment should bind SetTimeOut")
+    assert(SetTimeOut ~= lua_api.call_delay_time, "install_environment should stay validation-only")
     assert(type(get_vehicle_player) ~= "function", "install_environment should not export helpers")
 
     local helpers = runtime_context.install_runtime_helpers(ctx)
@@ -2303,7 +2311,9 @@ local function _test_runtime_context_change_skin_exports_and_event()
       end),
     })
     runtime_event_bridge._reset_for_tests()
-    runtime_context.install_globals(ctx)
+    _install_runtime_aliases(ctx)
+    runtime_context.install_runtime_helpers(ctx, { install_globals = true })
+    runtime_context.install_editor_exports(ctx)
 
     assert(type(get_skin_id) == "function", "runtime exports should expose get_skin_id")
     assert(type(get_change_skin_role) == "function", "runtime exports should expose get_change_skin_role")

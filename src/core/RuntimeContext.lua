@@ -1,7 +1,6 @@
 local runtime_constants = require("src.core.config.RuntimeConstants")
 local runtime_event_bridge = require("src.core.RuntimeEventBridge")
 local logger = require("src.core.Logger")
-local runtime_env_bindings = require("src.core.RuntimeEnvBindings")
 local runtime_editor_exports = require("src.core.RuntimeEditorExports")
 local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
 local number_utils = require("src.core.NumberUtils")
@@ -274,7 +273,15 @@ end
 
 function runtime_context.install_environment(ctx)
   assert(ctx ~= nil and ctx.env ~= nil, "missing runtime context")
-  runtime_env_bindings.install(ctx.env)
+  local lua_api = ctx.env.LuaAPI
+  assert(lua_api ~= nil, "missing LuaAPI")
+  assert(type(lua_api.call_delay_time) == "function", "missing LuaAPI.call_delay_time")
+  assert(type(lua_api.global_register_custom_event) == "function", "missing LuaAPI.global_register_custom_event")
+  assert(type(lua_api.global_register_trigger_event) == "function", "missing LuaAPI.global_register_trigger_event")
+  assert(type(lua_api.unit_register_custom_event) == "function", "missing LuaAPI.unit_register_custom_event")
+  assert(type(lua_api.unit_register_trigger_event) == "function", "missing LuaAPI.unit_register_trigger_event")
+  assert(type(lua_api.global_send_custom_event) == "function", "missing LuaAPI.global_send_custom_event")
+  return ctx.env
 end
 
 function runtime_context.install_runtime_helpers(ctx, opts)
