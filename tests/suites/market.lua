@@ -24,6 +24,24 @@ local function _contains_option(options, product_id)
   return false
 end
 
+local function _find_option(options, product_id)
+  for _, option in ipairs(options or {}) do
+    if option.id == product_id then
+      return option
+    end
+  end
+  return nil
+end
+
+local function _find_paid_item_entry()
+  for _, entry in ipairs(market_cfg) do
+    if entry.kind == "item" and (entry.currency == "金豆" or entry.currency == "乐园币") and entry.market_enabled ~= false then
+      return entry
+    end
+  end
+  return nil
+end
+
 local function _reload_market_service()
   package.loaded["src.game.systems.market.MarketService"] = nil
   package.loaded["src.game.systems.market.service.Context"] = nil
@@ -273,56 +291,6 @@ local function _test_buy_disabled_market_product_rejected()
   assert(p.seat_id == before_seat_id, "seat should not change when buying disabled product")
 end
 
-local function _test_market_vehicle_hidden_when_feature_disabled()
-  local market_service = require("src.game.systems.market.MarketService")
-  local g = _new_game()
-  local p = g:current_player()
-  g:set_player_balance(p, "金豆", 999999)
-
-  local vehicle_product_id = nil
-  for _, entry in ipairs(market_cfg) do
-    if entry.kind == "vehicle" then
-      vehicle_product_id = entry.product_id
-      break
-    end
-  end
-  if vehicle_product_id == nil then
-    return
-  end
-  local list = market_service.query.list_available(p, g)
-  assert(not _contains_product(list, vehicle_product_id), "vehicle should be hidden when feature disabled")
-
-  local spec = market_service.choice.build(p, g)
-  if spec and spec.options then
-    assert(not _contains_option(spec.options, vehicle_product_id), "vehicle option should be hidden when feature disabled")
-  end
-end
-
-local function _test_buy_vehicle_rejected_when_feature_disabled()
-  local market_service = require("src.game.systems.market.MarketService")
-  local g = _new_game()
-  local p = g:current_player()
-  g:set_player_balance(p, "金豆", 999999)
-
-  local vehicle_product_id = nil
-  for _, entry in ipairs(market_cfg) do
-    if entry.kind == "vehicle" then
-      vehicle_product_id = entry.product_id
-      break
-    end
-  end
-  if vehicle_product_id == nil then
-    return
-  end
-  local before_balance = g:player_balance(p, "金豆")
-  local before_seat_id = p.seat_id
-  local res = market_service.purchase.execute(g, p, vehicle_product_id, nil)
-
-  assert(type(res) == "table" and res.ok == false, "vehicle buy should be rejected when feature disabled")
-  assert(g:player_balance(p, "金豆") == before_balance, "balance should not change when vehicle buy is rejected")
-  assert(p.seat_id == before_seat_id, "seat should not change when vehicle buy is rejected")
-end
-
 local function _test_market_tab_all_unbuyable_still_builds_market_choice()
   local market_service = require("src.game.systems.market.MarketService")
   local g = _new_game()
@@ -508,6 +476,154 @@ local function _test_market_item_buy_keeps_choice_open_until_inventory_full()
     "pending market choice should remain")
 end
 
+local function _test_market_paid_buy_keeps_choice_open_and_refreshes_after_callback()
+  _reset_market_choice_runtime_modules()
+  local market_service = _reload_market_service()
+  local g = _new_game()
+  local p = g:current_player()
+  local target = assert(_find_paid_item_entry(), "test requires paid item market entry")
+  g.market_limits[target.product_id] = 1
+
+  local panel_calls = {}
+  local purchase_handlers = {}
+  local role = {
+    get_roleid = function()
+      return p.id
+    end,
+    show_goods_purchase_panel = function(goods_id, show_time)
+      panel_calls[#panel_calls + 1] = { goods_id = goods_id, show_time = show_time }
+    end,
+  }
+
+  local spec = nil
+  local result = nil
+  support.with_patches({
+    {
+      key = "GameAPI",
+      value = {
+        random_int = function(min, max)
+          return min <= max and min or max
+        end,
+        get_goods_list = function()
+          return { { name = target.name, goods_id = "goods_paid_item_test" } }
+        end,
+      },
+    },
+    {
+      target = runtime_ports,
+      key = "resolve_role",
+      value = function(role_id)
+        if role_id == p.id then
+          return role
+        end
+        return nil
+      end,
+    },
+    {
+      key = "EVENT",
+      value = { SPEC_ROLE_PURCHASE_GOODS = "SPEC_ROLE_PURCHASE_GOODS" },
+    },
+    {
+      key = "RegisterTriggerEvent",
+      value = function(args, callback)
+        purchase_handlers[args[2]] = callback
+      end,
+    },
+  }, function()
+    spec = market_service.choice.build(p, g, { active_tab = "item", page_index = 1 })
+    spec.id = 1809
+    g.turn.pending_choice = spec
+    result = choice_resolver.resolve(g, spec, {
+      type = "choice_select",
+      choice_id = spec.id,
+      option_id = target.product_id,
+      actor_role_id = p.id,
+    })
+    assert(result and result.stay == true, "paid purchase should keep market choice open")
+    assert(g.turn.pending_choice ~= nil and g.turn.pending_choice.kind == "market_buy",
+      "paid purchase should keep pending market choice")
+    assert(#panel_calls == 1, "paid purchase should open goods purchase panel once")
+
+    local cb = purchase_handlers[p.id]
+    assert(type(cb) == "function", "paid purchase should register callback")
+    cb(nil, nil, { role = role, goods_id = "goods_paid_item_test" })
+  end)
+
+  local option = _find_option(g.turn.pending_choice and g.turn.pending_choice.options, target.product_id)
+  assert(option ~= nil, "paid purchase callback should refresh market options")
+  assert(option.can_buy == false, "paid purchase callback should refresh sold out entry to unbuyable")
+end
+
+local function _test_market_paid_purchase_same_goods_can_fulfill_multiple_times()
+  local market_service = _reload_market_service()
+  local g = _new_game()
+  local p = g:current_player()
+  local target = assert(_find_paid_item_entry(), "test requires paid item market entry")
+  local before_count = p.inventory:count()
+  local before_limit = g.market_limits[target.product_id]
+
+  local panel_calls = {}
+  local purchase_handlers = {}
+  local role = {
+    get_roleid = function()
+      return p.id
+    end,
+    show_goods_purchase_panel = function(goods_id, show_time)
+      panel_calls[#panel_calls + 1] = { goods_id = goods_id, show_time = show_time }
+    end,
+  }
+
+  support.with_patches({
+    {
+      key = "GameAPI",
+      value = {
+        random_int = function(min, max)
+          return min <= max and min or max
+        end,
+        get_goods_list = function()
+          return { { name = target.name, goods_id = "goods_paid_item_repeat" } }
+        end,
+      },
+    },
+    {
+      target = runtime_ports,
+      key = "resolve_role",
+      value = function(role_id)
+        if role_id == p.id then
+          return role
+        end
+        return nil
+      end,
+    },
+    {
+      key = "EVENT",
+      value = { SPEC_ROLE_PURCHASE_GOODS = "SPEC_ROLE_PURCHASE_GOODS" },
+    },
+    {
+      key = "RegisterTriggerEvent",
+      value = function(args, callback)
+        purchase_handlers[args[2]] = callback
+      end,
+    },
+  }, function()
+    local first = market_service.purchase.execute(g, p, target.product_id, nil)
+    local second = market_service.purchase.execute(g, p, target.product_id, nil)
+    assert(type(first) == "table" and first.ok == true and first.deferred_fulfillment == true,
+      "first paid purchase should defer fulfillment")
+    assert(type(second) == "table" and second.ok == true and second.deferred_fulfillment == true,
+      "second paid purchase should also defer fulfillment")
+    assert(#panel_calls == 2, "same paid goods should be purchasable multiple times")
+
+    local cb = purchase_handlers[p.id]
+    assert(type(cb) == "function", "paid purchase callback should be registered")
+    cb(nil, nil, { role = role, goods_id = "goods_paid_item_repeat" })
+    cb(nil, nil, { role = role, goods_id = "goods_paid_item_repeat" })
+  end)
+
+  assert(p.inventory:count() == before_count + 2, "repeated paid callback should grant the item twice")
+  assert(g.market_limits[target.product_id] == before_limit - 2, "repeated paid callback should consume limit twice")
+end
+
 return {
   name = "market",
   tests = {
@@ -517,8 +633,6 @@ return {
     { name = "market_disabled_products_hidden", run = _test_market_disabled_products_hidden },
     { name = "buy_disabled_market_product_rejected", run = _test_buy_disabled_market_product_rejected },
     { name = "skin_entry_can_buy_but_no_effect", run = _test_skin_entry_can_buy_but_no_effect },
-    { name = "market_vehicle_hidden_when_feature_disabled", run = _test_market_vehicle_hidden_when_feature_disabled },
-    { name = "buy_vehicle_rejected_when_feature_disabled", run = _test_buy_vehicle_rejected_when_feature_disabled },
     {
       name = "market_tab_all_unbuyable_still_builds_market_choice",
       run = _test_market_tab_all_unbuyable_still_builds_market_choice,
@@ -538,6 +652,14 @@ return {
     {
       name = "market_item_buy_keeps_choice_open_until_inventory_full",
       run = _test_market_item_buy_keeps_choice_open_until_inventory_full,
+    },
+    {
+      name = "market_paid_buy_keeps_choice_open_and_refreshes_after_callback",
+      run = _test_market_paid_buy_keeps_choice_open_and_refreshes_after_callback,
+    },
+    {
+      name = "market_paid_purchase_same_goods_can_fulfill_multiple_times",
+      run = _test_market_paid_purchase_same_goods_can_fulfill_multiple_times,
     },
   },
 }

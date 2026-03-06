@@ -1,3 +1,3 @@
 local registry = require("presentation_ui_registry")
 
-return registry.slice("presentation_ui.popup_market", 38, 53)
+return registry.slice("presentation_ui.popup_market", 37, 52)

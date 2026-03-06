@@ -8,6 +8,15 @@ local tick_choice_timeout = require("src.game.flow.turn.TickChoiceTimeout")
 
 local tick_timeout = {}
 
+function tick_timeout.resolve_choice_timeout_seconds(game, state, choice)
+  local timeout = constants.action_timeout_seconds or 0
+  local pending_choice = choice or (game and game.turn and game.turn.pending_choice) or (state and state.pending_choice) or nil
+  if pending_choice and pending_choice.kind == "market_buy" then
+    return timeout * 2
+  end
+  return timeout
+end
+
 local function _resolve_ports(state)
   local ports = state and state.gameplay_loop_ports or nil
   if not ports then
@@ -93,8 +102,8 @@ end
 
 local default_policy = {
   choice = {
-    get_timeout_seconds = function()
-      return constants.action_timeout_seconds or 0
+    get_timeout_seconds = function(game, state)
+      return tick_timeout.resolve_choice_timeout_seconds(game, state)
     end,
     get_min_visible_seconds = function()
       return gameplay_rules.auto_choice_min_visible_seconds or 0

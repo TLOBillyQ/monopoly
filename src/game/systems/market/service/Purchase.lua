@@ -158,6 +158,38 @@ local function _resolve_goods_id(game, entry)
   return goods_id, nil
 end
 
+local function _pending_queue(rt, role_id)
+  local queue = rt.pending_by_role_id[role_id]
+  if type(queue) ~= "table" then
+    queue = {}
+    rt.pending_by_role_id[role_id] = queue
+  end
+  return queue
+end
+
+local function _push_pending(rt, role_id, pending)
+  local queue = _pending_queue(rt, role_id)
+  queue[#queue + 1] = pending
+end
+
+local function _consume_pending(rt, role_id, goods_id)
+  local queue = rt.pending_by_role_id[role_id]
+  if type(queue) ~= "table" then
+    return nil
+  end
+  local target_goods_id = tostring(goods_id)
+  for index, pending in ipairs(queue) do
+    if tostring(pending.goods_id) == target_goods_id then
+      table.remove(queue, index)
+      if #queue == 0 then
+        rt.pending_by_role_id[role_id] = nil
+      end
+      return pending
+    end
+  end
+  return nil
+end
+
 local function _emit_buy_failed(player, entry, reason, body)
   _emit_event(monopoly_event.market.buy_failed, {
     player = player,
@@ -244,6 +276,28 @@ local function _fulfill_paid_goods_purchase(game, player, entry)
   return false
 end
 
+local function _refresh_market_choice_after_paid_callback(game, player, entry)
+  local pending_choice = game and game.turn and game.turn.pending_choice or nil
+  if not pending_choice or pending_choice.kind ~= "market_buy" then
+    return
+  end
+  local meta = pending_choice.meta or {}
+  local owner_id = number_utils.to_integer(meta.player_id)
+  if owner_id ~= player.id then
+    return
+  end
+  local market_service = require("src.game.systems.market.MarketService")
+  local rebuilt = market_service.choice.rebuild_pending(game, pending_choice, player)
+  if rebuilt then
+    return
+  end
+  logger.warn(
+    "market paid callback refresh skipped:",
+    "player_id=" .. tostring(player.id),
+    "product_id=" .. tostring(entry and entry.product_id)
+  )
+end
+
 local function _on_purchase_event(game, data)
   local rt = _runtime(game)
   local role = data and data.role or nil
@@ -253,22 +307,11 @@ local function _on_purchase_event(game, data)
     return
   end
   local role_id = _resolve_role_id(nil, role)
-  local pending = role_id and rt.pending_by_role_id[role_id] or nil
+  local pending = role_id and _consume_pending(rt, role_id, goods_id) or nil
   if not pending then
     logger.warn("market paid callback ignored: pending missing", "role_id=" .. tostring(role_id), "goods_id=" .. tostring(goods_id))
     return
   end
-  if tostring(pending.goods_id) ~= tostring(goods_id) then
-    logger.warn(
-      "market paid callback ignored: goods mismatch",
-      "role_id=" .. tostring(role_id),
-      "pending_goods_id=" .. tostring(pending.goods_id),
-      "goods_id=" .. tostring(goods_id)
-    )
-    return
-  end
-
-  rt.pending_by_role_id[role_id] = nil
   local player = game:find_player_by_id(pending.player_id)
   if not player then
     logger.warn("market paid callback ignored: player missing", "player_id=" .. tostring(pending.player_id))
@@ -279,7 +322,10 @@ local function _on_purchase_event(game, data)
     logger.warn("market paid callback ignored: market entry missing", "product_id=" .. tostring(pending.product_id))
     return
   end
-  _fulfill_paid_goods_purchase(game, player, entry)
+  local ok = _fulfill_paid_goods_purchase(game, player, entry)
+  if ok then
+    _refresh_market_choice_after_paid_callback(game, player, entry)
+  end
 end
 
 local function _register_purchase_event_for_role(game, player)
@@ -359,11 +405,11 @@ local function _start_external_purchase(game, player, entry)
     return false, "role_id_missing"
   end
   local rt = _runtime(game)
-  rt.pending_by_role_id[role_id] = {
+  _push_pending(rt, role_id, {
     player_id = player.id,
     product_id = entry.product_id,
     goods_id = goods_id,
-  }
+  })
   return true, nil
 end
 

@@ -12,12 +12,12 @@ local names = {
   "_test_move_anim_wait_and_resume",                                          -- 10
   "_test_move_anim_zero_distance_safe",                                       -- 11
   "_test_move_anim_step_unlocks_and_relocks",                                 -- 12
-  "_test_move_anim_vehicle_uses_set_position_jump",                           -- 13
-  "_test_move_anim_vehicle_enter_delay_once",                                 -- 14
+  "presentation_ui_test_13",                                                  -- 13
+  "presentation_ui_test_14",                                                  -- 14
   -- model_dispatch: 15-27
-  "_test_move_anim_vehicle_move_api_enabled_uses_move_event",                 -- 15
-  "_test_board_view_vehicle_resync_uses_set_position",                        -- 16
-  "_test_board_view_vehicle_disabled_uses_unit_set_position",                 -- 17
+  "presentation_ui_test_15",                                                  -- 15
+  "presentation_ui_test_16",                                                  -- 16
+  "presentation_ui_test_17",                                                  -- 17
   "_test_ui_model_structure",                                                 -- 18
   "_test_ui_panel_clamps_negative_assets_to_zero",                            -- 19
   "_test_ui_model_player_slot_map_and_choice_owner",                          -- 20
@@ -117,3 +117,4 @@ end
 return {
   slice = slice,
 }
+

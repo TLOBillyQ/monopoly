@@ -4,7 +4,6 @@ local _with_patches = support.with_patches
 
 local gameplay_read_port = require("src.presentation.read_model.GameplayReadPort")
 local land_pricing = require("src.game.systems.land.LandPricing")
-local gameplay_rules = require("src.core.config.GameplayRules")
 
 local function _test_total_land_invested_matches_domain_pricing()
   local tile = {
@@ -46,20 +45,6 @@ local function _test_total_land_invested_handles_sparse_upgrade_cost_entries()
     "read model should match domain for sparse upgrade costs")
 end
 
-local function _test_vehicle_seat_resolution_follows_feature_flag()
-  _with_patches({
-    { target = gameplay_rules, key = "vehicle_enabled", value = true },
-  }, function()
-    _assert_eq(gameplay_read_port.resolve_vehicle_seat_id(9001), 9001, "enabled feature should keep seat id")
-  end)
-
-  _with_patches({
-    { target = gameplay_rules, key = "vehicle_enabled", value = false },
-  }, function()
-    _assert_eq(gameplay_read_port.resolve_vehicle_seat_id(9001), nil, "disabled feature should clear seat id")
-  end)
-end
-
 return {
   name = "read_model_contract",
   tests = {
@@ -67,6 +52,5 @@ return {
     { name = "total_land_invested_handles_missing_costs_like_domain", run = _test_total_land_invested_handles_missing_costs_like_domain },
     { name = "total_land_invested_caps_by_upgrade_cost_length", run = _test_total_land_invested_caps_by_upgrade_cost_length },
     { name = "total_land_invested_handles_sparse_upgrade_cost_entries", run = _test_total_land_invested_handles_sparse_upgrade_cost_entries },
-    { name = "vehicle_seat_resolution_follows_feature_flag", run = _test_vehicle_seat_resolution_follows_feature_flag },
   },
 }

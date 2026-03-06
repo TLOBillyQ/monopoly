@@ -12,6 +12,7 @@ local market_service = {
 
 market_service.query.list_available = eligibility.list_available
 market_service.choice.build = choice.build
+market_service.choice.rebuild_pending = choice.rebuild_pending
 market_service.choice.apply_navigation = choice.apply_navigation
 market_service.purchase.execute = purchase.execute
 market_service.purchase.setup_for_game = purchase.setup_for_game

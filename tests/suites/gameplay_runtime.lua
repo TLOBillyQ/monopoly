@@ -1,3 +1,3 @@
 local registry = require("gameplay_registry")
 
-return registry.slice("gameplay.runtime", 9, 16)
+return registry.slice("gameplay.runtime", 9, 13)

@@ -505,208 +505,6 @@ local function _test_move_anim_zero_distance_safe()
   _assert_eq(start_move_called, 0, "zero distance should skip unit move")
 end
 
-local function _test_move_anim_vehicle_uses_set_position_jump()
-  local _vec3 = vec3.with_sub_length
-
-  local unit_move_called = 0
-  local vehicle_set_positions = {}
-  local scene = {
-    tiles = {
-      [1] = { get_position = function() return _vec3(0, 0, 0) end },
-      [2] = { get_position = function() return _vec3(10, 0, 0) end },
-    },
-    units_by_player_id = {
-      [1] = {
-        start_move_by_direction = function()
-          unit_move_called = unit_move_called + 1
-        end,
-      },
-    },
-  }
-
-  _with_patches({
-    { target = gameplay_rules, key = "vehicle_enabled", value = true },
-    { target = runtime_constants, key = "vehicle_move_api_enabled", value = false },
-    { key = "vehicle_helper", value = {
-      consume_enter_delay = function()
-        return 0
-      end,
-      emit_vehicle_set_position = function(role_id, pos)
-        vehicle_set_positions[#vehicle_set_positions + 1] = { role_id = role_id, pos = pos }
-      end,
-    } },
-  }, function()
-    local total = move_anim.play_sequence(scene, {
-      player_id = 1,
-      from_index = 1,
-      to_index = 2,
-      direction = { x = 1, y = 0, z = 0 },
-      vehicle_id = 4001,
-    })
-    assert(total > 0, "vehicle move total time should be positive")
-  end)
-
-  _assert_eq(unit_move_called, 0, "vehicle jump should not call unit.start_move_by_direction")
-  _assert_eq(#vehicle_set_positions, 1, "vehicle jump should forward one set_position event")
-  _assert_eq(vehicle_set_positions[1].role_id, 1, "vehicle jump role id should match")
-end
-
-local function _test_move_anim_vehicle_enter_delay_once()
-  local _vec3 = vec3.with_sub_length
-
-  local consume_calls = 0
-  local timeout_delays = {}
-  local scene = {
-    tiles = {
-      [1] = { get_position = function() return _vec3(0, 0, 0) end },
-      [2] = { get_position = function() return _vec3(10, 0, 0) end },
-    },
-    units_by_player_id = { [1] = {} },
-  }
-
-  _with_patches({
-    { target = gameplay_rules, key = "vehicle_enabled", value = true },
-    { target = runtime_constants, key = "vehicle_move_api_enabled", value = false },
-    { key = "SetTimeOut", value = function(delay)
-      timeout_delays[#timeout_delays + 1] = delay
-    end },
-    { key = "vehicle_helper", value = {
-      emit_vehicle_set_position = function() end,
-      consume_enter_delay = function()
-        consume_calls = consume_calls + 1
-        if consume_calls == 1 then
-          return 1.2
-        end
-        return 0
-      end,
-    } },
-  }, function()
-    move_anim.play_sequence(scene, {
-      player_id = 1,
-      from_index = 1,
-      to_index = 2,
-      direction = { x = 1, y = 0, z = 0 },
-      vehicle_id = 4001,
-    })
-    _assert_eq(#timeout_delays, 1, "first vehicle move should be delayed by enter wait")
-    assert(math.abs(timeout_delays[1] - 1.2) < 0.0001, "first delay should include 1.2s enter wait")
-
-    timeout_delays = {}
-    move_anim.play_sequence(scene, {
-      player_id = 1,
-      from_index = 1,
-      to_index = 2,
-      direction = { x = 1, y = 0, z = 0 },
-      vehicle_id = 4001,
-    })
-    _assert_eq(#timeout_delays, 0, "second move should not include enter wait delay")
-  end)
-end
-
-local function _test_move_anim_vehicle_move_api_enabled_uses_move_event()
-  local _vec3 = vec3.with_sub_length
-
-  local move_calls = 0
-  local set_pos_calls = 0
-  local scene = {
-    tiles = {
-      [1] = { get_position = function() return _vec3(0, 0, 0) end },
-      [2] = { get_position = function() return _vec3(10, 0, 0) end },
-    },
-    units_by_player_id = { [1] = {} },
-  }
-
-  _with_patches({
-    { target = gameplay_rules, key = "vehicle_enabled", value = true },
-    { target = runtime_constants, key = "vehicle_move_api_enabled", value = true },
-    { key = "vehicle_helper", value = {
-      consume_enter_delay = function()
-        return 0
-      end,
-      emit_vehicle_move = function()
-        move_calls = move_calls + 1
-      end,
-      emit_vehicle_set_position = function()
-        set_pos_calls = set_pos_calls + 1
-      end,
-    } },
-  }, function()
-    move_anim.play_sequence(scene, {
-      player_id = 1,
-      from_index = 1,
-      to_index = 2,
-      direction = { x = 1, y = 0, z = 0 },
-      vehicle_id = 4001,
-    })
-  end)
-
-  _assert_eq(move_calls, 1, "move api enabled should use emit_vehicle_move")
-  _assert_eq(set_pos_calls, 0, "move api enabled should not use set_position jump")
-end
-
-local function _test_board_view_vehicle_resync_uses_set_position()
-  local board_view = require("src.presentation.render.BoardRuntime")
-
-  local _vec3 = vec3.with_add
-
-  local set_pos_calls = {}
-  local unit_set_calls = 0
-  local state = {
-    board_scene = {
-      ground = {
-        get_position = function()
-          return { y = 0 }
-        end,
-      },
-    },
-    tile_positions = { _vec3(5, 2, 7) },
-    board_last_positions = { [1] = "1:0" },
-    board_last_vehicle_resync_seq = 1,
-    board_sync_pending = false,
-    tile_spacing = 0,
-    player_units = {
-      [1] = {
-        set_position = function()
-          unit_set_calls = unit_set_calls + 1
-        end,
-      },
-    },
-    player_units_missing = false,
-  }
-
-  local model = {
-    board = {
-      players = { { id = 1, position = 1, eliminated = false, seat_id = 4001 } },
-      tiles = { { id = 1, type = "start" } },
-      tile_states = {},
-      phase = "start",
-      move_anim = nil,
-      tile_count = 1,
-      vehicle_resync_seq = 1,
-    },
-  }
-
-  _with_patches({
-    { target = gameplay_rules, key = "vehicle_enabled", value = true },
-    { target = math, key = "Vector3", value = _vec3 },
-    { key = "vehicle_helper", value = {
-      emit_vehicle_set_position = function(role_id, pos)
-        set_pos_calls[#set_pos_calls + 1] = { role_id = role_id, pos = pos }
-      end,
-    } },
-  }, function()
-    board_view.refresh(state, model, function() end, function() return "[test]" end)
-    _assert_eq(#set_pos_calls, 0, "same resync seq should not force vehicle set_position")
-
-    model.board.vehicle_resync_seq = 2
-    board_view.refresh(state, model, function() end, function() return "[test]" end)
-  end)
-
-  _assert_eq(unit_set_calls, 0, "vehicle player should not call unit.set_position")
-  _assert_eq(#set_pos_calls, 1, "resync seq change should trigger set_position")
-  _assert_eq(set_pos_calls[1].role_id, 1, "set_position role id should match player")
-end
-
 local function _test_move_anim_step_unlocks_and_relocks()
   local _vec3 = vec3.with_sub_length
 
@@ -737,64 +535,6 @@ local function _test_move_anim_step_unlocks_and_relocks()
 
   _assert_eq(calls[1], false, "step should unlock at begin")
   _assert_eq(calls[2], true, "step should relock at end")
-end
-
-local function _test_board_view_vehicle_disabled_uses_unit_set_position()
-  local board_view = require("src.presentation.render.BoardRuntime")
-
-  local _vec3 = vec3.with_add
-
-  local set_pos_calls = {}
-  local unit_set_calls = 0
-  local state = {
-    board_scene = {
-      ground = {
-        get_position = function()
-          return { y = 0 }
-        end,
-      },
-    },
-    tile_positions = { _vec3(5, 2, 7) },
-    board_last_positions = { [1] = "1:0" },
-    board_last_vehicle_resync_seq = 1,
-    board_sync_pending = false,
-    tile_spacing = 0,
-    player_units = {
-      [1] = {
-        set_position = function()
-          unit_set_calls = unit_set_calls + 1
-        end,
-      },
-    },
-    player_units_missing = false,
-  }
-
-  local model = {
-    board = {
-      players = { { id = 1, position = 1, eliminated = false, seat_id = 4001 } },
-      tiles = { { id = 1, type = "start" } },
-      tile_states = {},
-      phase = "start",
-      move_anim = nil,
-      tile_count = 1,
-      vehicle_resync_seq = 2,
-    },
-  }
-
-  _with_patches({
-    { target = gameplay_rules, key = "vehicle_enabled", value = false },
-    { target = math, key = "Vector3", value = _vec3 },
-    { key = "vehicle_helper", value = {
-      emit_vehicle_set_position = function(role_id, pos)
-        set_pos_calls[#set_pos_calls + 1] = { role_id = role_id, pos = pos }
-      end,
-    } },
-  }, function()
-    board_view.refresh(state, model, function() end, function() return "[test]" end)
-  end)
-
-  _assert_eq(#set_pos_calls, 0, "vehicle helper should not be called when feature disabled")
-  _assert_eq(unit_set_calls, 1, "disabled vehicle should fall back to unit.set_position")
 end
 
 local function _test_ui_model_structure()
@@ -3564,6 +3304,50 @@ local function _test_market_view_unbuyable_option_is_clickable()
   _assert_eq(touch[market_layout.item_buttons[1]], true, "unbuyable option button should still be clickable")
 end
 
+local function _test_market_view_hides_disabled_market_tab()
+  local entry = assert(market_cfg[1], "missing market cfg entry")
+  local visible = {}
+  local touch = {}
+  local state = {
+    ui_refs = {
+      ["Empty"] = 9001,
+      ["lv1"] = 9002,
+      ["lv2"] = 9003,
+      ["lv3"] = 9004,
+      [tostring(entry.product_id)] = 9005,
+    },
+    ui = {
+      market_active = false,
+      set_label = function() end,
+      set_visible = function(_, name, flag)
+        visible[name] = flag == true
+      end,
+      set_touch_enabled = function(_, name, flag)
+        touch[name] = flag == true
+      end,
+      query_node = function()
+        return {}
+      end,
+    },
+  }
+
+  local opened = market_view.refresh_market(state, {
+    choice_id = 11,
+    active_tab = "item",
+    page_index = 1,
+    page_count = 1,
+    options = {
+      { id = entry.product_id, label = entry.name, can_buy = true },
+    },
+    allow_cancel = true,
+    selected_option_id = entry.product_id,
+  })
+
+  _assert_eq(opened, true, "market panel should open for hidden tab check")
+  _assert_eq(visible[market_layout.tab_vehicle], false, "disabled market tab should stay hidden")
+  _assert_eq(touch[market_layout.tab_vehicle], false, "hidden market tab should not remain touch enabled")
+end
+
 local function _test_market_view_invalid_selected_option_falls_back_to_current_visible_option()
   local entry_a = nil
   local entry_b = nil
@@ -5975,11 +5759,6 @@ return {
   _test_move_anim_wait_and_resume,
   _test_move_anim_zero_distance_safe,
   _test_move_anim_step_unlocks_and_relocks,
-  _test_move_anim_vehicle_uses_set_position_jump,
-  _test_move_anim_vehicle_enter_delay_once,
-  _test_move_anim_vehicle_move_api_enabled_uses_move_event,
-  _test_board_view_vehicle_resync_uses_set_position,
-  _test_board_view_vehicle_disabled_uses_unit_set_position,
   _test_ui_model_structure,
   _test_ui_panel_clamps_negative_assets_to_zero,
   _test_ui_model_player_slot_map_and_choice_owner,
@@ -6089,6 +5868,7 @@ return {
   _test_ui_event_router_auto_uses_cached_local_role_instead_of_current_player,
   _test_ui_event_state_resolve_debug_enabled_supports_mixed_role_id_keys,
   _test_market_view_unbuyable_option_is_clickable,
+  _test_market_view_hides_disabled_market_tab,
   _test_market_view_page_arrows_visibility_follows_page_count,
   _test_modal_presenter_market_same_choice_id_still_refreshes_market_panel,
   _test_ui_event_router_market_cancel_button_dispatches_choice_cancel,

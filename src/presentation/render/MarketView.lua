@@ -183,7 +183,7 @@ local function _refresh_market_controls(ui, market)
   _set_control_visible(ui, market_layout.page_next, paging_visible, paging_visible and page_index < page_count)
   _set_control_visible(ui, market_layout.tab_item, true, active_tab ~= "item")
   _set_control_visible(ui, market_layout.tab_skin, true, active_tab ~= "skin")
-  _set_control_visible(ui, market_layout.tab_vehicle, true, VEHICLE_TAB_ENABLED and active_tab ~= "vehicle")
+  _set_control_visible(ui, market_layout.tab_vehicle, VEHICLE_TAB_ENABLED, VEHICLE_TAB_ENABLED and active_tab ~= "vehicle")
 end
 
 function market_view.refresh_market_selection(state, option_id)

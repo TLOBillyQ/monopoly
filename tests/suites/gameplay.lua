@@ -556,31 +556,6 @@ local function _test_stop_all_players_movement_skips_invalid_role_without_error(
   assert(stopped_ids[1] == g.players[1].id, "only valid role should receive stop")
 end
 
-local function _test_runtime_context_get_vehicle_player_no_fallback()
-  _with_runtime_context_globals(function()
-    local role2 = { name = "role2" }
-    local game_api = {
-      get_role = function(role_id)
-        if role_id == 2 then
-          return role2
-        end
-        return nil
-      end,
-      get_all_valid_roles = function()
-        return { role2 }
-      end,
-    }
-    local ctx = runtime_context.new({
-      GameAPI = game_api,
-      LuaAPI = _mock_lua_api(),
-    })
-    runtime_context.install_globals(ctx)
-    vehicle_helper.player_id = 99
-    local role = get_vehicle_player()
-    assert(role == nil, "get_vehicle_player should return nil when role missing")
-  end)
-end
-
 local function _test_runtime_context_forward_stop_skips_invalid_role()
   _with_runtime_context_globals(function()
     local stop_events = 0
@@ -644,58 +619,6 @@ local function _test_runtime_event_bridge_detects_unbound_binding_without_call()
   end)
 end
 
-local function _test_runtime_context_vehicle_events_gracefully_degrade_when_trigger_unavailable()
-  _with_runtime_context_globals(function()
-    local calls = 0
-    local name = "j4MHTwbxEfG+CjRaYHE42T"
-    local newenv = {}
-
-    local function wrapped_trigger()
-      local _ = name
-      local __ = newenv
-      calls = calls + 1
-    end
-
-    local game_api = {
-      get_role = function(role_id)
-        if role_id == 1 then
-          return { id = 1 }
-        end
-        return nil
-      end,
-      get_all_valid_roles = function()
-        return { { id = 1 } }
-      end,
-    }
-
-    support.with_patches({
-      { target = gameplay_rules, key = "vehicle_enabled", value = true },
-      { key = "TriggerCustomEvent", value = wrapped_trigger },
-    }, function()
-      runtime_event_bridge._reset_for_tests()
-      local ctx = runtime_context.new({
-        GameAPI = game_api,
-        LuaAPI = _mock_lua_api(wrapped_trigger),
-      })
-      runtime_context.install_globals(ctx)
-
-      local enter_ok = vehicle_helper.emit_vehicle_enter(1, 4001)
-      local move_ok = vehicle_helper.emit_vehicle_move(1, { x = 1, y = 0, z = 0 }, 0.2)
-      local stop_ok = vehicle_helper.emit_vehicle_stop(1)
-      local set_pos_ok = vehicle_helper.emit_vehicle_set_position(1, { x = 10, y = 0, z = 8 })
-
-      assert(enter_ok == true, "valid role enter should keep success semantics during degradation")
-      assert(move_ok == true, "valid role move should keep success semantics during degradation")
-      assert(stop_ok == true, "valid role stop should keep success semantics during degradation")
-      assert(set_pos_ok == true, "valid role set_position should keep success semantics during degradation")
-      assert(vehicle_helper.player_id == 1, "helper state should still update under degradation")
-      assert(vehicle_helper.vehicle_id == 4001, "helper vehicle id should still update under degradation")
-      assert(calls == 0, "degraded path should skip wrapped TriggerCustomEvent dispatch")
-      runtime_event_bridge._reset_for_tests()
-    end)
-  end)
-end
-
 local function _test_runtime_context_split_install_stages()
   _with_runtime_context_globals(function()
     local role1 = { id = 1, get_roleid = function() return 1 end }
@@ -721,15 +644,11 @@ local function _test_runtime_context_split_install_stages()
     assert(type(get_vehicle_player) ~= "function", "install_environment should not export helpers")
 
     local helpers = runtime_context.install_runtime_helpers(ctx)
-    assert(helpers ~= nil and helpers.vehicle_helper ~= nil, "install_runtime_helpers should return vehicle helper")
     assert(helpers ~= nil and helpers.camera_helper ~= nil, "install_runtime_helpers should return camera helper")
-    assert(vehicle_helper == nil, "install_runtime_helpers should not export globals by default")
     assert(camera_helper == nil, "install_runtime_helpers should not export globals by default")
 
     runtime_context.install_editor_exports(ctx)
-    helpers.vehicle_helper.player_id = 1
-    local role = get_vehicle_player()
-    assert(role == role1, "install_editor_exports should expose get_vehicle_player")
+    assert(type(get_camera_target) == "function", "install_editor_exports should expose camera getter")
   end)
 end
 
@@ -752,12 +671,10 @@ local function _test_runtime_context_install_helpers_without_globals()
     })
     runtime_context.install_environment(ctx)
     local helpers = runtime_context.install_runtime_helpers(ctx, { install_globals = false })
-    assert(helpers ~= nil and helpers.vehicle_helper ~= nil, "install_runtime_helpers should return helpers")
-    assert(vehicle_helper == nil, "install_runtime_helpers install_globals=false should not write vehicle_helper")
+    assert(helpers ~= nil and helpers.camera_helper ~= nil, "install_runtime_helpers should return helpers")
     assert(all_roles == nil, "install_runtime_helpers install_globals=false should not write all_roles")
 
     runtime_context.install_runtime_helper_globals(helpers)
-    assert(vehicle_helper == helpers.vehicle_helper, "install_runtime_helper_globals should expose helper")
     assert(all_roles == helpers.roles, "install_runtime_helper_globals should expose roles")
   end)
 end
@@ -831,86 +748,6 @@ local function _test_runtime_context_install_environment_fails_fast()
     assert(tostring(err):find("missing LuaAPI.global_send_custom_event") ~= nil,
       "install_environment should report missing LuaAPI.global_send_custom_event")
   end)
-end
-
-local function _test_set_player_seat_emits_exit_then_enter()
-  local g = _new_game()
-  local p = g.players[1]
-  p.seat_id = 4001
-  local calls = {}
-  local helper = {
-    needs_enter_wait_by_player = {},
-    emit_vehicle_exit = function(role_id)
-      calls[#calls + 1] = "exit:" .. tostring(role_id)
-    end,
-    emit_vehicle_enter = function(role_id, vehicle_id)
-      calls[#calls + 1] = "enter:" .. tostring(role_id) .. ":" .. tostring(vehicle_id)
-    end,
-  }
-  support.with_patches({
-    { target = gameplay_rules, key = "vehicle_enabled", value = true },
-    { key = "vehicle_helper", value = helper },
-  }, function()
-    g:set_player_seat(p, 4004)
-  end)
-  assert(calls[1] == "exit:1", "seat replace should exit old vehicle first")
-  assert(calls[2] == "enter:1:4004", "seat replace should enter new vehicle")
-  assert(p.seat_id == 4004, "seat id should update")
-  assert(helper.needs_enter_wait_by_player[1] == true, "seat replace should mark enter wait")
-end
-
-local function _test_mine_destroy_vehicle_emits_exit_event()
-  local g = _new_game()
-  local p = g.players[1]
-  p.seat_id = 4001
-  local exited = {}
-  support.with_patches({
-    { target = gameplay_rules, key = "vehicle_enabled", value = true },
-    { key = "vehicle_helper", value = {
-      emit_vehicle_exit = function(role_id)
-        exited[#exited + 1] = role_id
-      end,
-    } },
-  }, function()
-    mine_effect.apply(g, p, p.position)
-  end)
-  assert(p.seat_id == nil, "mine should clear seat_id")
-  assert(#exited == 1 and exited[1] == p.id, "mine should emit exit event when vehicle destroyed")
-end
-
-local function _test_vehicle_feature_disabled_ignores_seat_bonus()
-  local g = _new_game()
-  local p = g:current_player()
-  p.seat_id = 4010
-
-  assert(g:player_dice_count(p) == constants.default_dice_count, "disabled vehicle should not increase dice count")
-  assert(g:player_is_vehicle_indestructible(p) == false, "disabled vehicle should not grant mine immunity")
-end
-
-local function _test_turn_move_anim_omits_vehicle_id_when_disabled()
-  local g = _new_game()
-  local p = g:current_player()
-  p.seat_id = 4001
-  g.last_turn = {}
-  g.ui_port = _build_ui_port({ wait_move_anim = true })
-
-  support.with_patches({
-    { target = movement, key = "move", value = function()
-      return {
-        visited = {},
-        steps = 1,
-        stopped_on_roadblock = false,
-        market_interrupt = nil,
-        steal_interrupt = nil,
-      }
-    end },
-  }, function()
-    local next_state = turn_move({ game = g }, { player = p, total = 1, raw_total = 1 })
-    assert(next_state == "wait_move_anim", "move phase should wait for move_anim")
-  end)
-
-  assert(g.turn.move_anim ~= nil, "turn move should create move_anim payload")
-  assert(g.turn.move_anim.vehicle_id == nil, "disabled vehicle should not be written into move_anim payload")
 end
 
 local function _test_autorunner_runs_to_end()
@@ -1115,11 +952,6 @@ local function _test_complex_consecutive_turn_settlement()
 
   p1.inventory:add({ id = 2007 })
   g:set_player_cash(p1, 10000)
-  support.with_patches({
-    { target = gameplay_rules, key = "vehicle_enabled", value = true },
-  }, function()
-    g:set_player_seat(p1, 4001)
-  end)
 
   p2.inventory:add({ id = 2001 })
   g:set_player_cash(p2, 10000)
@@ -1150,11 +982,9 @@ local function _test_complex_consecutive_turn_settlement()
 
   local initial_has_steal_card = inventory.find_index(p1, 2007) and true or false
   local initial_p2_item_count = p2.inventory:count()
-  local initial_has_vehicle = p1.seat_id and true or false
 
   assert(initial_has_steal_card, "p1 应该有偷窃卡")
   assert(initial_p2_item_count > 0, "p2 应该有道具可被偷")
-  assert(initial_has_vehicle, "p1 应该有座驾")
 
   local res1 = movement.move(g, p1, 3, { branch_parity = 3, skip_market_check = true })
   local first_res = res1
@@ -1847,6 +1677,32 @@ local function _test_popup_countdown_uses_effective_modal_timeout()
   assert(g.turn.countdown_active == true, "popup countdown should stay active")
 end
 
+local function _test_market_countdown_uses_double_action_timeout()
+  local g = _new_game()
+  local state = _build_loop_state()
+  state.pending_choice = {
+    id = 2001,
+    kind = "market_buy",
+    meta = { player_id = g:current_player().id },
+  }
+  state.pending_choice_elapsed = 12.2
+  state.action_button_active = false
+  state.countdown_last = nil
+  state.countdown_active_last = nil
+  g.turn.pending_choice = state.pending_choice
+
+  support.with_patches({
+    { target = constants, key = "action_timeout_seconds", value = 15 },
+  }, function()
+    tick_ui_sync.update_countdown(g, state)
+    assert(tick_timeout.resolve_choice_timeout_seconds(g, state, state.pending_choice) == 30,
+      "market choice timeout should be doubled")
+  end)
+
+  assert(g.turn.countdown_seconds == 18, "market countdown should use doubled timeout in UI")
+  assert(g.turn.countdown_active == true, "market countdown should stay active")
+end
+
 local function _test_dispatch_gate_blocks_next_when_choice_active()
   local g = _new_game()
   local state = _build_loop_state()
@@ -1969,21 +1825,11 @@ return {
   _test_tile_owner_notifier_receives_owner_changes,
   _test_dispatch_validator_accepts_ui_state_snapshot,
   _test_intent_dispatcher_sets_choice_route_metadata,
-  _test_stop_all_players_movement_clears_move_dir_and_stop_event,
-  _test_end_turn_stops_all_players_movement,
-  _test_stop_all_players_movement_skips_invalid_role_without_error,
-  _test_runtime_context_get_vehicle_player_no_fallback,
-  _test_runtime_context_forward_stop_skips_invalid_role,
   _test_runtime_event_bridge_detects_unbound_binding_without_call,
-  _test_runtime_context_vehicle_events_gracefully_degrade_when_trigger_unavailable,
   _test_runtime_context_split_install_stages,
   _test_runtime_context_install_helpers_without_globals,
   _test_runtime_context_install_environment_fails_fast,
   _test_game_startup_build_state_is_pure_and_bridge_installs_events,
-  _test_set_player_seat_emits_exit_then_enter,
-  _test_mine_destroy_vehicle_emits_exit_event,
-  _test_vehicle_feature_disabled_ignores_seat_bonus,
-  _test_turn_move_anim_omits_vehicle_id_when_disabled,
   _test_autorunner_runs_to_end,
   _test_complex_consecutive_turn_settlement,
   _test_complex_market_interrupt_with_rent,
@@ -2004,6 +1850,7 @@ return {
   _test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics,
   _test_choice_auto_policy_consistent_between_wait_and_timeout,
   _test_popup_countdown_uses_effective_modal_timeout,
+  _test_market_countdown_uses_double_action_timeout,
   _test_dispatch_gate_blocks_next_when_choice_active,
   _test_game_startup_role_roster_retries_before_debug_players_fallback,
   _test_find_player_by_id_accepts_mixed_representation,

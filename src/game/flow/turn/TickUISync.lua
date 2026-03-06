@@ -47,7 +47,7 @@ function tick_ui_sync.log_once(state, level, key, ...)
 end
 
 function tick_ui_sync.update_countdown(game, state)
-  local timeout = constants.action_timeout_seconds or 0
+  local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state)
   local seconds = 0
   local active = false
   if game.turn and game.turn.detained_wait_active then

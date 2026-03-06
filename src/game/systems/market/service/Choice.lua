@@ -112,6 +112,29 @@ local function _mark_choice_dirty(game)
   game.dirty.any = true
 end
 
+local function _current_choice_state(pending_choice)
+  local meta = pending_choice and pending_choice.meta or {}
+  return {
+    active_tab = pending_choice and pending_choice.active_tab or meta.active_tab,
+    page_index = pending_choice and pending_choice.page_index or meta.page_index,
+  }
+end
+
+local function _apply_spec(game, pending_choice, spec)
+  assert(pending_choice ~= nil, "missing pending_choice")
+  assert(spec ~= nil, "missing spec")
+  pending_choice.title = spec.title
+  pending_choice.body_lines = spec.body_lines
+  pending_choice.options = spec.options
+  pending_choice.allow_cancel = spec.allow_cancel
+  pending_choice.cancel_label = spec.cancel_label
+  pending_choice.active_tab = spec.active_tab
+  pending_choice.page_index = spec.page_index
+  pending_choice.page_count = spec.page_count
+  pending_choice.meta = spec.meta
+  _mark_choice_dirty(game)
+end
+
 function choice.build(player, game, state)
   state = state or {}
   local active_tab = _normalize_tab(state.active_tab)
@@ -147,6 +170,24 @@ function choice.build(player, game, state)
       page_count = page_count,
     },
   }
+end
+
+function choice.rebuild_pending(game, pending_choice, player, state)
+  if not game or not pending_choice or pending_choice.kind ~= "market_buy" then
+    logger.warn("[MarketDebug] rebuild_pending rejected: invalid pending_choice")
+    return false
+  end
+  if not player then
+    logger.warn("[MarketDebug] rebuild_pending rejected: missing player")
+    return false
+  end
+  local spec = choice.build(player, game, state or _current_choice_state(pending_choice))
+  if not spec then
+    logger.warn("[MarketDebug] rebuild_pending rejected: build returned nil")
+    return false
+  end
+  _apply_spec(game, pending_choice, spec)
+  return true
 end
 
 function choice.apply_navigation(game, pending_choice, action)
@@ -202,16 +243,7 @@ function choice.apply_navigation(game, pending_choice, action)
       popup = { title = "黑市", body = "当前页签暂无可购买项" },
     })
   end
-  pending_choice.title = spec.title
-  pending_choice.body_lines = spec.body_lines
-  pending_choice.options = spec.options
-  pending_choice.allow_cancel = spec.allow_cancel
-  pending_choice.cancel_label = spec.cancel_label
-  pending_choice.active_tab = spec.active_tab
-  pending_choice.page_index = spec.page_index
-  pending_choice.page_count = spec.page_count
-  pending_choice.meta = spec.meta
-  _mark_choice_dirty(game)
+  _apply_spec(game, pending_choice, spec)
   logger.warn(
     "[MarketDebug] apply_navigation done",
     "active_tab=" .. tostring(pending_choice.active_tab),
