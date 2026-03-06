@@ -18,7 +18,11 @@
 - [x] (2026-03-06 15:33+08:00) 已通过官方页面核实 Eggy 当前可用的核心接口：`GameAPI.play_sfx_by_key(_sfx_key, _pos, _rot, _scale, _duration, _rate, _with_sound)`、`GlobalAPI.bind_sfx_to_unit(_sfx_id, _unit, _socket_name, _pos, _bind_type)`、`GlobalAPI.destroy_sfx(_sfx_id, _fade_out)`、`GameAPI.play_3d_sound(_position, _sound_key, _duration, _volume)`、`GameAPI.stop_sound(_assigned_id)`。
 - [x] (2026-03-06 15:34+08:00) 已把需求表逐条映射到现有代码触发点，覆盖 `TurnStart`、`Movement.move`、`BaseLandEffects`、`LandRules`、`SpecialTileEffects`、`MineEffect`、`ItemPostEffects`、`Bankruptcy`、`UIEventHandlers` 和 `MoveAnim`。
 - [x] (2026-03-06 15:35+08:00) 已确定本计划采用“运行时端口 + 表现配置目录 + 规则事件补点 + 表现层翻译”的实现路线，并将测试落点收口到 `tests/suites/presentation_ui_action_anim.lua`、`tests/suites/presentation_ui_event_handlers.lua`、`tests/suites/item.lua`、`tests/suites/landing.lua`、`tests/suites/gameplay.lua` 与 `tests/regression.lua`。
-- [ ] (2026-03-06 15:35+08:00) 尚未开始代码实现。下一步先做运行时端口和反馈配置目录，再补现有动画与事件链的接入点。
+- [x] (2026-03-06 15:53+08:00) 已完成第一里程碑：新增 `src/presentation/api/host_runtime/SfxRuntime.lua`、扩展 `src/presentation/api/HostRuntimePort.lua`，并落地 `src/presentation/render/BoardFeedbackCatalog.lua` 与 `src/presentation/render/BoardFeedbackService.lua`。
+- [x] (2026-03-06 15:56+08:00) 已完成第二、三里程碑的主链路：`ActionAnim.lua` 的 `upgrade_land` 与 `cash_receive` 现在会调用反馈服务，`MoveAnim.lua` 已逐格播放步进音效，`UIEventHandlers.lua` 已翻译 `land.*`、`chance.applied` 与 `feedback.*` 事件；`TurnStart.lua`、`LocationOps.lua`、`DeityOps.lua`、`Bankruptcy.lua` 已补稳定 cue 发射点。
+- [x] (2026-03-06 15:59+08:00) 已补自动化守卫：`tests/suites/presentation_ui_action_anim.lua`、`tests/suites/presentation_ui_event_handlers.lua`、`tests/suites/movement.lua`、`tests/suites/item.lua`、`tests/suites/landing.lua`、`tests/suites/gameplay.lua` 新增运行时路由与 cue 发射测试。
+- [x] (2026-03-06 16:00+08:00) 已完成自动化验收：targeted suites 两组分别通过 `All regression checks passed (27)` 与 `All regression checks passed (102)`，全量 `lua tests/regression.lua` 通过 `All regression checks passed (337)`，附带 `dep_rules ok`、`tick ok`、`forbidden_globals ok`。
+- [ ] (2026-03-06 16:00+08:00) 尚未完成编辑器实机校准。下一步是在 Eggy 中用 `STARTUP_TEST_PROFILE = "items_deity_status"` 等 profile 校准真实资源 key、缩放、时长和绑定点。
 
 ## 意外与发现
 
@@ -34,6 +38,10 @@
 
 2026-03-06 15:34+08:00：逐格前扑音效不需要新增规则事件，因为 `Movement.move` 已经返回 `visited` 路径，`MoveAnim.play_sequence` 也会逐步调度每一段移动。证据是 `src/game/flow/turn/TurnMove.lua` 把 `move_result.visited` 放进动画上下文，而 `src/presentation/render/MoveAnim.lua` 会基于 `visited` 拆出每一步。
 
+2026-03-06 15:58+08:00：纯 Lua 测试环境默认没有 `GameAPI.play_sfx_by_key`、`GameAPI.play_3d_sound` 和 `GlobalAPI.bind_sfx_to_unit`，所以“资源缺失或运行时缺口只记录日志并跳过”的降级分支在自动化里会稳定命中。证据是 `presentation_ui_action_anim` suite 里出现 `board_feedback skip play_sfx_by_key`、`board_feedback skip play_3d_sound` 等日志，但 suite 仍然通过 `All regression checks passed (27)`。
+
+2026-03-06 16:00+08:00：全量回归里继续出现大量 `market paid goods mapping missing` 和 `MarketDebug` 日志，但这批告警与本次音效特效链路无关，也没有引入新的回归失败。证据是 `lua tests/regression.lua` 最终输出 `All regression checks passed (337)`、`dep_rules ok`、`tick ok`、`forbidden_globals ok`。
+
 ## 决策日志
 
 2026-03-06 / Codex：这轮不把音效与特效 key 塞进 `Config/Generated`，而是新建 `src/presentation/render/BoardFeedbackCatalog.lua`。理由是仓库当前没有音效资源自动导出链，若放在 `Generated` 会误导后续维护者以为这些 key 来自表格导出；手写 catalog 更符合现状，也更容易在资源未齐时安全占位。
@@ -48,9 +56,17 @@
 
 2026-03-06 / Codex：资源 key 缺失时允许记录日志并跳过实际播放，不允许因为 nil key 直接中断对局。理由是这轮交付既包含代码链路也包含内容资源，计划必须支持“代码先落地、资源后补齐”的增量推进。
 
+2026-03-06 / Codex：规则层新增 cue 只放在 `TurnStart.lua`、`LocationOps.lua`、`DeityOps.lua`、`Bankruptcy.lua` 这四个稳定语义点，不把医院、深山、神明附身、破产继续塞进 `land.*` 或 `chance.applied` 的 payload 里猜。理由是这些场景本来就不是土地交易或机会卡本身的语义，单独发 `feedback.*` 更容易在 `UIEventHandlers.lua` 维持“明确场景优先于兜底”的翻译顺序。
+
+2026-03-06 / Codex：升级建筑的双音效链收口到 `BoardFeedbackCatalog.lua` 的 `followup_sounds` 配置，而不是在 `ActionAnim.lua` 手写多个散落计时器。理由是音效时序本质上属于 cue 配置；放进 catalog 后，后续调 0.6 秒还是 1.0 秒不需要再改 handler 逻辑。
+
 ## 结果与复盘
 
-截至 2026-03-06 15:35+08:00，本计划只完成了调研、路线拍板和文件级拆解，还没有开始实现。真正的风险不在 Lua 规则本身，而在资源 key 缺失、播放端口未封装以及“哪些 cue 应该走动画队列，哪些 cue 应该走自定义事件”这三个边界。下面的工作计划就是围绕这三个风险拆出来的；实施过程中如果路线改变，必须立刻回填本节与“决策日志”，不能只改代码不改文档。
+截至 2026-03-06 16:00+08:00，这份计划的代码实现与自动化验收已经完成，剩余缺口只剩编辑器实机校准。仓库现在已经具备完整的“规则 cue -> 表现翻译 -> HostRuntimePort -> Eggy API”链路：`SfxRuntime.lua` 提供安全音效特效封装，`BoardFeedbackCatalog.lua` 与 `BoardFeedbackService.lua` 统一维护 cue 配置与播放逻辑，`ActionAnim.lua`、`MoveAnim.lua` 与 `UIEventHandlers.lua` 已经接上升级烟雾、金币爆发、地雷爆炸、税务波动、财神/天使附身、回合开始、破产重击和逐格前扑音效，`TurnStart.lua`、`LocationOps.lua`、`DeityOps.lua`、`Bankruptcy.lua` 则补齐了缺失的稳定事件源。
+
+自动化结果已经证明三件事。第一，纯 Lua 环境下即使没有真实 `GameAPI.play_sfx_by_key` 或资源 key，运行时端口也只会记录“skip play_*”日志，不会把对局打断。第二，targeted suites 已经守住了动作动画、事件翻译、移动节奏和规则层 cue 发射：`All regression checks passed (27)` 与 `All regression checks passed (102)` 覆盖了新的端口路由、`cash_receive`、`upgrade_land`、`feedback.turn_started`、`feedback.status_applied`、`feedback.deity_applied`、`feedback.bankruptcy` 和逐格步进音效。第三，全量 `lua tests/regression.lua` 输出 `All regression checks passed (337)`，说明这套反馈链没有破坏原有规则、UI、状态同步和回合流转。
+
+这轮复盘里唯一还不能靠自动化收口的，是视觉与听感参数本身。`BoardFeedbackCatalog.lua` 里现在使用的是占位资源 key 和第一版时长/缩放，其中升级烟雾已经按需求固化为 `3.0` 倍缩放，升级后第二段音效当前用 `0.6` 秒延迟串联；这些参数足以守住代码路由，但是否符合策划预期，仍然必须进 Eggy 编辑器做实机观察后回填。换句话说，自动化已经证明“会播、不会崩、播在正确的时机和对象上”，最终还需要实机证明“播得对、看起来对、听起来对”。
 
 ## 背景与导读
 
@@ -206,3 +222,4 @@
 在 `src/presentation/render/MoveAnim.lua` 中，步进调度要能在每一步落点时调用 `play_step_tile_sound`，从而实现“进入每一格地块 -> 蛋仔前扑，每格 1 次”。
 
 2026-03-06 / Codex：本次改动完全重写了 `.agents/plan.md`，把旧的缺陷修复封板文档替换为音效特效交付计划。这样做是因为当前用户需求已经切换到 `.agents/research.md` 的新表，继续维护旧计划会让读者误以为工作已经完成。
+2026-03-06 / Codex：本次更新把计划从“仅完成调研”推进到“代码与自动化已完成、仅剩实机校准”，同步回填了新文件、事件补点、测试结果和未完成的编辑器验证项。这样做是为了让下一位执行者只读这份计划，就能知道当前真实状态、看到已验证证据，并直接接手最后的资源校准。
