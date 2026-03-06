@@ -128,12 +128,20 @@ function item_phase.build_choice_spec(game, player, phase)
   if #options == 0 then
     return nil
   end
+  local option_labels = {}
+  for _, option in ipairs(options) do
+    if option.label and option.label ~= "" then
+      option_labels[#option_labels + 1] = option.label
+    end
+  end
   return {
     kind = "item_phase_choice",
     route_key = "base_inline",
     title = phase_titles[phase],
     body_lines = body_lines,
     options = options,
+    confirm_title = phase_confirm_titles[phase] or "本回合",
+    confirm_body = #option_labels > 0 and ("可用道具：" .. table.concat(option_labels, "、")) or "请再确认一次",
     allow_cancel = true,
     cancel_label = "结束阶段",
     meta = { player_id = player.id, phase = phase },
