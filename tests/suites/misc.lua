@@ -104,6 +104,28 @@ local function _test_logger_event_tip_defers_until_current_tip_finishes()
   logger.clear()
 end
 
+local function _test_logger_event_no_tips_stays_in_event_feed_without_showing_tip()
+  local shown = {}
+
+  logger.clear()
+  _with_patches({
+    {
+      key = "GlobalAPI",
+      value = {
+        show_tips = function(text, duration)
+          shown[#shown + 1] = { text = text, duration = duration }
+        end,
+      },
+    },
+  }, function()
+    logger.event_no_tips("phase event message")
+    local text = logger.get_text_by_level("event")
+    assert(string.find(text, "phase event message", 1, true) ~= nil, "event_no_tips should still enter event feed")
+    _assert_eq(#shown, 0, "event_no_tips should not trigger tips")
+  end)
+  logger.clear()
+end
+
 return {
   name = "misc",
   tests = {
@@ -112,5 +134,6 @@ return {
     { name = "number_utils_to_integer_fallback_rejects_non_integer_text", run = _test_number_utils_to_integer_fallback_rejects_non_integer_text },
     { name = "logger_show_tip_uses_fifo_queue_without_override", run = _test_logger_show_tip_uses_fifo_queue_without_override },
     { name = "logger_event_tip_defers_until_current_tip_finishes", run = _test_logger_event_tip_defers_until_current_tip_finishes },
+    { name = "logger_event_no_tips_stays_in_event_feed_without_showing_tip", run = _test_logger_event_no_tips_stays_in_event_feed_without_showing_tip },
   },
 }

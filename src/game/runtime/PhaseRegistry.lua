@@ -1,11 +1,23 @@
 local item_phase = require("src.game.systems.items.ItemPhase")
 local dirty_tracker = require("src.core.DirtyTracker")
+local logger = require("src.core.Logger")
 local turn_start = require("src.game.flow.turn.TurnStart")
 local turn_roll = require("src.game.flow.turn.TurnRoll")
 local turn_move = require("src.game.flow.turn.TurnMove")
 local turn_land = require("src.game.flow.turn.TurnLand")
 
 local phase_registry = {}
+
+local function _resolve_tile_name(game, player)
+  if not (game and game.board and player and player.position) then
+    return "未知地块"
+  end
+  local tile = game.board:get_tile(player.position)
+  if not tile or not tile.name then
+    return "未知地块"
+  end
+  return tile.name
+end
 
 local function _phase_post(turn_mgr, args)
   local player = args.player or turn_mgr.game:current_player()
@@ -27,10 +39,11 @@ end
 
 local function _phase_end(turn_mgr, args)
   local player = args.player
+  local game = turn_mgr.game
+  logger.event_no_tips("回合结束：" .. tostring(player.name) .. " 停在 " .. _resolve_tile_name(game, player))
   turn_mgr.game:tick_player_deity(player)
   turn_mgr.game:clear_player_temporal_flags(player)
   turn_mgr.game:stop_all_players_movement()
-  local game = turn_mgr.game
   game.turn.market_prompt = nil
   game.turn.post_action = nil
   game.turn.item_phase = {}

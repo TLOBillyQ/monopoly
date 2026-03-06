@@ -99,7 +99,9 @@ function turn_decision.resolve_choice(game, choice, action)
 end
 
 function turn_decision.log_turn_start(game)
-  logger.info(turn_decision.build_turn_log_line(game))
+  local turn_count = game and game.turn and game.turn.turn_count or 0
+  local next_turn_count = number_utils.format_integer_part((turn_count or 0) + 1)
+  logger.event_no_tips("第" .. next_turn_count .. "回合开始：" .. turn_decision.build_turn_log_line(game))
 end
 
 return turn_decision

@@ -149,7 +149,7 @@ function strategy.auto_pre_action(game, player, phase)
 
   local clear_result = _try_use(item_ids.clear_obstacles, function()
     local found = strategy.has_obstacles_ahead(game, player, 12)
-    if found then logger.event(player.name .. " 前方发现障碍，准备使用清障卡") end
+    if found then logger.info(player.name .. " 前方发现障碍，准备使用清障卡") end
     return found
   end)
   if clear_result then return clear_result end

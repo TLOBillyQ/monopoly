@@ -4,6 +4,17 @@ local choice_route_policy = require("src.core.ChoiceRoutePolicy")
 local intent_dispatcher = {}
 local emit = monopoly_event.emit
 
+local function _build_choice_log_text(choice_spec, title, body_lines)
+  local text = "等待选择：" .. tostring(title or "请选择")
+  if type(body_lines) == "table" then
+    local first_line = body_lines[1]
+    if type(first_line) == "string" and first_line ~= "" then
+      text = text .. "：" .. first_line
+    end
+  end
+  return text
+end
+
 local function _resolve_choice_route(choice_spec)
   local route_key = choice_route_policy.resolve(choice_spec)
   local requires_confirm = choice_route_policy.requires_confirm(choice_spec)
@@ -35,6 +46,7 @@ function intent_dispatcher.open_choice(game, choice_spec, opts)
   game.turn.pending_choice = entry
   game.dirty.turn = true
   game.dirty.any = true
+  game.logger.event_no_tips(_build_choice_log_text(choice_spec, entry.title, entry.body_lines))
 
   local event_name = monopoly_event.resolve_intent("need_choice")
   emit(event_name, { choice = entry, choice_spec = choice_spec })

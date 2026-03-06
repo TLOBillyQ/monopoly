@@ -48,8 +48,14 @@ local target_effects = {
       end
       game:set_player_status(target, "move_dir", nil)
       game:set_player_status(target, "stay_turns", constants.mountain_stay_turns)
-      logger.event(target.name .. " 进入深山，停留 " .. number_utils.format_integer_part(target.status.stay_turns) .. " 回合")
-      logger.event(user.name .. " 使用流放卡，将 " .. target.name .. " 送往深山")
+      logger.event(
+        user.name
+          .. " 使用流放卡，将 "
+          .. target.name
+          .. " 送往深山，停留 "
+          .. number_utils.format_integer_part(target.status.stay_turns)
+          .. " 回合"
+      )
       return true
     end,
   },
@@ -142,7 +148,6 @@ end
 
 local function _handle_deity(game, player, cfg, context)
   game:set_player_deity(player, cfg.deity, constants.deity_duration_turns)
-  logger.event(player.name .. " 获得附身：" .. cfg.deity)
   if cfg.log then
     logger.event(player.name .. cfg.log)
   end
@@ -232,7 +237,9 @@ local function _handle_clear_obstacles_ahead(game, player, cfg, context)
       end
     end
   end)
-  logger.event(player.name .. " 清除前方障碍数：" .. cleared)
+  if cleared > 0 then
+    logger.event(player.name .. " 清除前方障碍数：" .. cleared)
+  end
   local queued = action_anim_port.queue(game, {
     kind = "clear_obstacles",
     player_id = player.id,

@@ -11,6 +11,7 @@ local _tile_state = support.tile_state
 local movement = support.movement
 local inventory = support.inventory
 local steal = support.steal
+local choice_resolver = support.choice_resolver
 local app = support.app
 local map_cfg = support.map_cfg
 local tiles_cfg = support.tiles_cfg
@@ -39,7 +40,13 @@ local game_startup_event_bridge = require("src.app.bootstrap.GameStartupEventBri
 local test_profile_bootstrap = require("src.app.testing.TestProfileBootstrap")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 local number_utils = require("src.core.NumberUtils")
+local logger = require("src.core.Logger")
 local market_service = require("src.game.systems.market.MarketService")
+local phase_registry = require("src.game.runtime.PhaseRegistry")
+local turn_decision = require("src.game.flow.turn.TurnDecision")
+local item_effects = require("src.game.systems.items.ItemPostEffects")
+local item_strategy = require("src.game.systems.items.ItemStrategy")
+local facing_policy = require("src.game.systems.board.FacingPolicy")
 local turn_start = require("src.game.flow.turn.TurnStart")
 
 local function _mock_lua_api(send_custom_event)
@@ -471,6 +478,110 @@ local function _test_intent_dispatcher_sets_choice_route_metadata()
     options = { { id = 1, label = "A" } },
   }, {})
   assert(unknown_entry.route_key == "base_inline", "unknown choice should fallback to base_inline route")
+end
+
+local function _test_turn_start_logs_phase_event_to_event_feed()
+  local g = _new_game()
+  logger.clear()
+  turn_decision.log_turn_start(g)
+  local text = logger.get_text_by_level("event")
+  assert(string.find(text, "第1回合开始：", 1, true) ~= nil, "turn start should write phase event to event feed")
+  assert(string.find(text, g.players[1].name, 1, true) ~= nil, "turn start event should mention current player")
+end
+
+local function _test_intent_dispatcher_logs_waiting_choice_event()
+  local g = _new_game()
+  logger.clear()
+  intent_dispatcher.open_choice(g, {
+    kind = "remote_dice_value",
+    title = "遥控骰子",
+    body_lines = { "选择点数" },
+    options = { { id = 1, label = "1" } },
+    allow_cancel = true,
+  }, {})
+  local text = logger.get_text_by_level("event")
+  assert(string.find(text, "等待选择：遥控骰子：选择点数", 1, true) ~= nil,
+    "open_choice should log waiting-choice phase event")
+end
+
+local function _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not()
+  local g = _new_game()
+
+  logger.clear()
+  local normal_choice = {
+    id = 10,
+    kind = "steal_prompt",
+    title = "是否使用偷窃卡",
+    options = { { id = "use", label = "使用" }, { id = "skip", label = "跳过" } },
+    allow_cancel = true,
+    meta = { player_id = g.players[1].id, target_id = g.players[2].id, queue = { g.players[2].id }, index = 1 },
+  }
+  choice_resolver.resolve(g, normal_choice, {
+    type = "choice_cancel",
+    choice_id = normal_choice.id,
+    actor_role_id = g.players[1].id,
+  })
+  local skip_text = logger.get_text_by_level("event")
+  assert(string.find(skip_text, "跳过选择：是否使用偷窃卡", 1, true) ~= nil,
+    "true cancel should log skip-choice event")
+
+  logger.clear()
+  local tax_choice = {
+    id = 11,
+    kind = "tax_card_prompt",
+    title = "是否使用免税卡",
+    options = { { id = "use", label = "使用" }, { id = "skip", label = "跳过" } },
+    allow_cancel = true,
+    meta = { player_id = g.players[1].id },
+  }
+  choice_resolver.resolve(g, tax_choice, {
+    type = "choice_cancel",
+    choice_id = tax_choice.id,
+    actor_role_id = g.players[1].id,
+  })
+  local tax_text = logger.get_text_by_level("event")
+  assert(string.find(tax_text, "跳过选择", 1, true) == nil,
+    "tax cancel fallback should not log skip-choice event")
+end
+
+local function _test_end_turn_logs_phase_event_to_event_feed()
+  local g = _new_game()
+  local phases = phase_registry.build_default_phases()
+  logger.clear()
+  phases.end_turn({ game = g, next_player = function()
+    g.turn.current_player_index = 2
+  end }, { player = g.players[1] })
+  local text = logger.get_text_by_level("event")
+  assert(string.find(text, "回合结束：" .. g.players[1].name, 1, true) ~= nil,
+    "end_turn should log phase end event")
+  assert(string.find(text, "停在", 1, true) ~= nil, "end_turn event should include landing tile")
+end
+
+local function _test_clear_obstacles_zero_does_not_log_event_noise()
+  local g = _new_game()
+  local player = g.players[1]
+  logger.clear()
+  item_effects.apply_post(g, player, gameplay_rules.item_ids.clear_obstacles, { branch_parity = 12 })
+  local text = logger.get_text_by_level("event")
+  assert(string.find(text, "清除前方障碍数：0", 1, true) == nil,
+    "clear obstacles zero result should not enter event feed")
+end
+
+local function _test_ai_obstacle_probe_does_not_enter_event_feed()
+  local g = _new_game()
+  local player = g.players[1]
+  player.auto = true
+  inventory.give(player, gameplay_rules.item_ids.clear_obstacles)
+  local current = player.position
+  local facing = facing_policy.resolve_initial_facing("fresh_forward", player)
+  local next_index = select(1, g.board:step_forward_by_facing(current, facing, 12))
+  g.board:place_roadblock(next_index)
+
+  logger.clear()
+  item_strategy.auto_pre_action(g, player, "pre_action")
+  local text = logger.get_text_by_level("event")
+  assert(string.find(text, "前方发现障碍，准备使用清障卡", 1, true) == nil,
+    "AI obstacle probe should not enter event feed")
 end
 
 local function _test_stop_all_players_movement_clears_move_dir_and_stop_event()
@@ -2236,6 +2347,12 @@ return {
   _test_tile_owner_notifier_receives_owner_changes,
   _test_dispatch_validator_accepts_ui_state_snapshot,
   _test_intent_dispatcher_sets_choice_route_metadata,
+  _test_turn_start_logs_phase_event_to_event_feed,
+  _test_intent_dispatcher_logs_waiting_choice_event,
+  _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not,
+  _test_end_turn_logs_phase_event_to_event_feed,
+  _test_clear_obstacles_zero_does_not_log_event_noise,
+  _test_ai_obstacle_probe_does_not_enter_event_feed,
   _test_runtime_event_bridge_detects_unbound_binding_without_call,
   _test_runtime_context_split_install_stages,
   _test_runtime_context_install_helpers_without_globals,

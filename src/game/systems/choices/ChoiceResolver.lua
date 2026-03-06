@@ -39,6 +39,13 @@ local function _find_option_id(choice, target_option_id)
   return nil
 end
 
+local function _choice_title(choice)
+  if choice and choice.title and choice.title ~= "" then
+    return choice.title
+  end
+  return "请选择"
+end
+
 local function _clear_choice(game)
   game.turn.pending_choice = nil
   game.dirty.turn = true
@@ -175,6 +182,7 @@ function choice_resolver.resolve(game, choice, action)
       local phase = choice.meta.phase
       _finish_item_phase(game, phase)
     end
+    logger.event_no_tips("跳过选择：" .. _choice_title(choice))
     _clear_choice(game)
     return { status = "resolved", stay = false }
   end
