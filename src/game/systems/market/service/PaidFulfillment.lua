@@ -30,8 +30,8 @@ end
 function paid_fulfillment.handle_callback(game, player, entry)
   local ok = paid_fulfillment.fulfill_entry(game, player, entry)
   if ok then
-    local choice_service = require("src.game.systems.market.service.Choice")
-    choice_service.refresh_after_paid_callback(game, player, entry)
+    local choice_session = require("src.game.systems.market.service.ChoiceSession")
+    choice_session.refresh_after_paid_callback(game, player, entry)
   end
   return ok
 end

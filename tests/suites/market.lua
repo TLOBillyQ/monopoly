@@ -49,6 +49,7 @@ local function _reload_market_service()
   package.loaded["src.game.systems.market.service.Purchase"] = nil
   package.loaded["src.game.systems.market.service.Auto"] = nil
   package.loaded["src.game.systems.market.service.Choice"] = nil
+  package.loaded["src.game.systems.market.service.ChoiceSession"] = nil
   return require("src.game.systems.market.MarketService")
 end
 
@@ -373,6 +374,37 @@ local function _test_market_tab_select_navigation_applies_with_unbuyable_tab()
     "navigation should keep visible options on skin tab")
 end
 
+local function _test_market_choice_build_is_pure_and_session_marks_dirty()
+  local market_service = require("src.game.systems.market.MarketService")
+  local g = _new_game()
+  local p = g:current_player()
+
+  g.dirty.any = false
+  g.dirty.turn = false
+  local spec = market_service.choice.build(p, g, { active_tab = "item" })
+  assert(type(spec) == "table" and spec.kind == "market_buy", "build should return market choice spec")
+  assert(g.dirty.any == false and g.dirty.turn == false, "build should stay pure and not mark dirty")
+
+  local pending_choice = {
+    id = 1000,
+    kind = spec.kind,
+    title = spec.title,
+    body_lines = spec.body_lines,
+    options = spec.options,
+    allow_cancel = spec.allow_cancel,
+    cancel_label = spec.cancel_label,
+    active_tab = spec.active_tab,
+    page_index = spec.page_index,
+    page_count = spec.page_count,
+    meta = spec.meta,
+  }
+
+  local rebuilt = market_service.choice.rebuild_pending(g, pending_choice, p, { active_tab = "skin", page_index = 1 })
+  assert(rebuilt == true, "session should rebuild pending choice")
+  assert(pending_choice.active_tab == "skin", "session rebuild should apply requested active tab")
+  assert(g.dirty.any == true and g.dirty.turn == true, "session rebuild should mark choice dirty")
+end
+
 local function _test_market_tab_select_empty_tab_keeps_choice_and_emits_buy_failed_tip_event()
   local market_service = require("src.game.systems.market.MarketService")
   local g = _new_game()
@@ -671,6 +703,10 @@ return {
     {
       name = "market_tab_select_navigation_applies_with_unbuyable_tab",
       run = _test_market_tab_select_navigation_applies_with_unbuyable_tab,
+    },
+    {
+      name = "market_choice_build_is_pure_and_session_marks_dirty",
+      run = _test_market_choice_build_is_pure_and_session_marks_dirty,
     },
     {
       name = "market_tab_select_empty_tab_keeps_choice_and_emits_buy_failed_tip_event",

@@ -1,4 +1,4 @@
-local choice_service = require("src.game.systems.market.service.Choice")
+local choice_session = require("src.game.systems.market.service.ChoiceSession")
 local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
 
 local outcome = {}
@@ -17,7 +17,7 @@ function outcome.resolve_purchase(game, choice, player, entry, result, finish_ch
   assert(type(finish_choice) == "function", "missing finish_choice")
 
   if _should_keep_market_open(entry, result) then
-    local rebuilt = choice_service.rebuild_pending(game, choice, player)
+    local rebuilt = choice_session.rebuild_pending(game, choice, player)
     if not rebuilt then
       return finish_choice(game, false)
     end

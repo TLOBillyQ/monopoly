@@ -30,6 +30,7 @@
 - [x] (2026-03-07 00:28 +0800) 已完成阶段3：`RuntimeGlobalAliases` 已外迁到 `src/app/bootstrap/runtime_install/`；`Logger`、`DefaultPorts`、`RuntimeEditorExports`、`RuntimeContext` 都已改成 host hook 或 runtime context env 读取；`src/core` 宿主触点预算已从 47 压到 0。
 - [ ] 阶段4：已完成六刀。第一刀新增 `src/game/systems/market/service/PaidPurchaseGateway.lua`，承接 paid-currency 的 goods mapping、purchase panel 启动、待兑现队列和购买回调注册。第二刀把 paid callback 后的 market choice 刷新移到 `src/game/systems/market/service/Choice.lua` 的 `refresh_after_paid_callback()`。第三刀新增 `src/game/systems/market/service/Fulfillment.lua`，统一 item/vehicle/skin 的兑现副作用。第四刀新增 `src/game/systems/market/service/PurchasePolicy.lua`，把商品可买性校验和座驾替换确认 intent 组装从 `Purchase.lua` 中抽走。第五刀新增 `src/game/systems/market/service/Feedback.lua`，把 market buy_failed 事件与黑市 popup 文案出口从 `Purchase.lua`、`Choice.lua` 中抽离。第六刀新增 `src/game/systems/market/service/ChoiceOutcome.lua`，把购买结果后的 choice 刷新、满包退出 popup、follow-up intent 派发和 stay/finish 决策从 `MarketChoiceHandler.lua` 中抽离。剩余工作主要是观察 `Purchase.lua` 本身是否还值得继续拆本地金币购买前后编排，还是把阶段4视为足够收口。
 - [x] (2026-03-07 03:07 +0800) 已把 `Purchase.execute()` 的本地金币购买分支外提到 `src/game/systems/market/service/LocalPurchase.lua`，并把 `MarketChoiceHandler` 的购买结果协调外提到 `src/game/systems/market/service/ChoiceOutcome.lua`；`Purchase.lua` 与 `MarketChoiceHandler.lua` 继续向纯编排器收缩。
+- [x] (2026-03-07 00:04 +0800) 已完成阶段4第七刀：新增 `src/game/systems/market/service/ChoiceSession.lua`，把 `rebuild_pending()`、`apply_navigation()`、`refresh_after_paid_callback()` 从 `Choice.lua` 中移走；`Choice.lua` 现只保留 market choice builder，`MarketService`、`ChoiceOutcome`、`PaidFulfillment` 已改接 session service，并新增 market 定向测试验证“build 保持纯函数，session 才负责 dirty/pending 更新”。
 - [x] (2026-03-07 01:27 +0800) 已启动阶段5第一刀：`src/game/systems/market/service/Choice.lua` 现在给 option 输出 `requires_pre_confirm/pre_confirm_kind`，`PreConfirmFlow.lua` 不再回查 `Config.Generated.Market` 判断皮肤商品，而是只消费用例层提供的 option 级确认语义；已补 `market` 与 `presentation_ui` 回归，验证“有 flag 才进二次确认，没有 flag 即使 product_id 像皮肤也直接派发”。
 - [x] (2026-03-07 01:43 +0800) 已完成阶段5第二刀：`choice_screen_service.common` 现在优先消费 `option.confirm_title/confirm_body` 与 `choice.confirm_title/confirm_body`；`ItemPhase` 已同时为 choice 本身和每个 item option 产出确认文案，`LandChoiceSpecs.tax_prompt`、`EffectPipeline` 的 landing optional choice、market skin option 也都直接产出确认文案，presentation 仅保留 fallback 兼容逻辑。
 - [x] (2026-03-07 02:02 +0800) 已完成阶段5第三刀的第一小片：`ItemPhase.build_choice_spec()` 现在额外输出 `uses_item_slots/pre_confirm_before_slot_pick`；`PreConfirmFlow`、`ItemPhaseAskFlow`、`UIModalPresenter`、`item_slots`、`item_slot_intents` 已优先消费这些显式语义，`choice.kind == "item_phase_choice"` 的散落判断被收敛到 `choice_screen_service.common` helper 中保底兼容。
@@ -62,6 +63,9 @@
 
 - 观察：测试支撑默认会给 `support.new_game()` 预装一个 `ui_port`，如果阶段2最后一刀继续在生产代码里显式清空这个字段，静态守护仍会把它算作“还在碰旧边界”。
   证据：本轮第一次全量回归在 `tests/internal/dep_rules.lua` 报 `src/game/flow/turn/GameplayLoop.lua` 仍命中 `game.ui_port`；改成让测试支撑通过 `install_ui_port = false` 显式选择旧桥后，预算恢复为 0 且全量继续通过。
+
+- 观察：`Choice.lua` 一旦同时承担 builder 与 pending-choice 更新，最容易让后续调用方继续把“输出模型构造”和“运行时状态变更”混为同一职责；但这两类行为在测试层的验证方式完全不同。
+  证据：本轮把 `rebuild_pending/apply_navigation/refresh_after_paid_callback` 移到 `ChoiceSession.lua` 后，新增的 market 定向测试可以单独证明 `build()` 不会碰 `game.dirty`，而 session 调用才会标记 `dirty.turn/dirty.any`；`market` 定向回归提升到 `All regression checks passed (15)`，全量提升到 `All regression checks passed (376)`。
 
 - 观察：阶段2最窄的突破口确实是动画等待门控，因为 `TurnRoll`、`TurnMove` 和 `ActionAnimPort` 都只需要只读布尔配置，不依赖 popup 或 choice 语义。
   证据：迁出这三处后，`tests/internal/dep_rules.lua` 中 `src/core/ActionAnimPort.lua`、`src/game/flow/turn/TurnMove.lua`、`src/game/flow/turn/TurnRoll.lua` 的 `game.ui_port` 预算均已降为 0，同时新增契约测试仍可在 `game.ui_port = nil` 时通过。
@@ -216,6 +220,10 @@
   理由：到这一步，`push_popup`、`tile owner changed`、`tile upgraded`、动画门控都已经各自有专用端口；继续保留 `ui_port` 只会把已经拆开的职责重新捆回共享对象图。`board_scene_port` 只暴露 bankruptcy 清理所需的 scene getter，更符合阶段2“按专用端口收口”的方向。
   日期/作者：2026-03-07 / Codex
 
+- 决策：阶段4下一刀优先拆 `Choice.lua` 里的 pending-choice session 更新，而不是继续追打 `Purchase.lua` 的本地金币分支。
+  理由：`Purchase.lua` 经过前几刀后已经接近纯编排器，而 `Choice.lua` 还同时承担输出模型构造、pending_choice 原地更新、tab/page 导航和 paid callback 后刷新。先把这些运行时更新移到 `ChoiceSession.lua`，能更干净地区分“纯 builder”和“状态适配器”，也为后续阶段5继续压缩 market / target choice 语义提供更稳的边界。
+  日期/作者：2026-03-07 / Codex
+
 - 决策：阶段5第三刀的第二小片优先删 `choice_screen_service.common` 中 `item_phase_choice` 的 helper fallback，而不是继续新增更多 helper 包装。
   理由：生产路径和主要消费点已经全部接上显式字段；继续保留 `kind`-fallback 只会拖慢真正的边界收口。测试数据补齐后，这条 fallback 已经没有必要继续存在。
   日期/作者：2026-03-07 / Codex
@@ -238,7 +246,7 @@
 
 ## 结果与复盘
 
-阶段0到阶段3现在都已经完成，阶段4和阶段5则进入“继续瘦身剩余业务推断”的尾段。当前最重要的可观察结果有七条。第一，`src/game/flow` 已经没有任何直接的 `state.ui_*` 写入；用例层现在通过 `UseCaseOutputPort` 发出 UI 失效、choice 生命周期和 modal timer 输出。第二，`game.ui_port` 的预算已经从 23 压到 0；动画等待改走 `anim_gate_port`，popup 改走 `popup_port`，地块升级通知改走 `tile_feedback_port`，tile owner 变更改走 `tile_owner_notifier`，board scene 读取也已收窄成 `board_scene_port`。第三，`src/core` 已经不再直接认识 Eggy 宿主全局，相关安装器和别名逻辑都已外移或改成显式注入。第四，`Purchase.lua` 的 paid-currency 宿主购买通道已经被抽到 `PaidPurchaseGateway.lua`，paid callback 后的 market choice 刷新已经移到 `Choice.lua`，item/vehicle/skin 的兑现副作用已经集中到 `Fulfillment.lua`，购买前决策已经集中到 `PurchasePolicy.lua`，失败反馈事件出口已经集中到 `Feedback.lua`。第五，market choice 现在会在 option 上显式声明 `requires_pre_confirm/pre_confirm_kind`，presentation 的 `PreConfirmFlow` 不再靠 `Config.Generated.Market` 和 `product_id` 再做一轮业务判断。第六，`ItemPhase`、`tax_prompt`、`landing_optional_effect` 和 market skin option 已经直接携带 `confirm_title/confirm_body`，`choice_screen_service.common` 只在缺字段时做兼容 fallback。第七，默认回归仍保持通过，并把这些收口一起锁住。
+阶段0到阶段3现在都已经完成，阶段4和阶段5则进入“继续瘦身剩余业务推断”的尾段。当前最重要的可观察结果有七条。第一，`src/game/flow` 已经没有任何直接的 `state.ui_*` 写入；用例层现在通过 `UseCaseOutputPort` 发出 UI 失效、choice 生命周期和 modal timer 输出。第二，`game.ui_port` 的预算已经从 23 压到 0；动画等待改走 `anim_gate_port`，popup 改走 `popup_port`，地块升级通知改走 `tile_feedback_port`，tile owner 变更改走 `tile_owner_notifier`，board scene 读取也已收窄成 `board_scene_port`。第三，`src/core` 已经不再直接认识 Eggy 宿主全局，相关安装器和别名逻辑都已外移或改成显式注入。第四，market 购买链路里，`PaidPurchaseGateway.lua`、`Fulfillment.lua`、`PurchasePolicy.lua`、`Feedback.lua`、`ChoiceOutcome.lua` 都已经落位，而 `Choice.lua` 本身也已收缩成纯 builder；pending-choice 的重建、翻页、切 tab 和 paid callback 刷新现集中到 `ChoiceSession.lua`。第五，market choice 现在会在 option 上显式声明 `requires_pre_confirm/pre_confirm_kind`，presentation 的 `PreConfirmFlow` 不再靠 `Config.Generated.Market` 和 `product_id` 再做一轮业务判断。第六，`ItemPhase`、`tax_prompt`、`landing_optional_effect` 和 market skin option 已经直接携带 `confirm_title/confirm_body`，`choice_screen_service.common` 只在缺字段时做兼容 fallback。第七，默认回归仍保持通过，并把这些收口一起锁住。
 
 这轮推进的经验同样直接。第一，阶段1不需要等 presentation 全部清干净才开始，先把“写入口”统一就能显著降低后续修改的耦合面。第二，守护测试必须允许内部兼容镜像存在，否则会把 `ui_runtime` 这种过渡性状态误判成旧债。第三，阶段2应该继续坚持“每次只拔一小束读路径”，因为 `push_popup`、`ui_port.state` 和 market 链路的风险明显高于动画布尔门控。第四，阶段3一旦把 `src/core` 改成显式注入，测试基础设施也必须同步升级为显式构造 runtime context，否则旧的全局 patch 习惯会反噬回归。
 
@@ -297,6 +305,10 @@
 这个里程碑要处理当前最典型的跨层事务脚本。`src/game/systems/market/service/Purchase.lua` 同时做商品映射、平台支付、事件注册、购买兑现和 UI 刷新，任何一个点出问题都会让测试和宿主耦合在一起。完成后，业务规则应留在 `src/game/systems/market` 下的 domain 或 service，平台支付应移到独立 gateway，UI 刷新应回到 presentation 或 output port。
 
 建议先定义 `PaymentGatewayPort`，再把平台映射与回调桥接移到外层实现，最后让用例层只接收“支付已完成”事件。不要在这个阶段顺手做 presentation 文案清理，那是阶段5的职责。
+
+这个里程碑目前已经完成七刀。除了支付 gateway、兑现、购买前策略、失败反馈、结果协调这些拆分外，最新一刀又新增了 `src/game/systems/market/service/ChoiceSession.lua`，把 market choice 的 pending-choice rebuild、导航刷新和 paid callback 后刷新从 `Choice.lua` 里拆开。现在 `Choice.lua` 只负责 `build()`，也就是纯输出模型构造；session service 则负责把 spec 落回 `pending_choice` 并标记 `dirty.turn/dirty.any`。这使得后续如果还要继续整理 `Purchase.lua`，可以只围绕购买编排本身，而不用再碰 choice builder。
+
+这个里程碑目前剩下的主要判断只有一个：是否还值得继续把 `Purchase.lua` 里本地金币购买前后的编排再往外切。如果下一位执行者发现那部分已经足够像 orchestrator，可以直接把阶段4视为“行为上已收口”，把注意力转向阶段5里剩余的 target-pick/market presentation 业务推断。
 
 ## 里程碑 5：整理 presentation 应用规则
 
@@ -408,7 +420,7 @@
 
 以及：
 
-    All regression checks passed (375)
+    All regression checks passed (376)
     dep_rules ok
     tick ok
     forbidden_globals ok
@@ -466,3 +478,5 @@
 2026-03-07 / Codex：本次更新把计划推进到“阶段5第四刀第二小片已完成”的真实状态，补记了 `remote/player/target/market` 路由显式化，以及 `ChoiceRoutePolicy` 对这些 kind 的默认 route 推断已被删掉。这样下一位执行者可以继续收剩余 fallback，而不必重新判断哪些 route 仍靠 policy 猜。
 
 2026-03-07 / Codex：本次更新把计划推进到“阶段2已完成”的真实状态，补记了 `board_scene_port` 这条最后的 runtime 窄端口、`GameStateTiles` 删除 `ui_port` fallback、测试支撑新增 `install_ui_port = false` 开关，以及 `game.ui_port` 债务预算已压到 0 的事实。这样下一位执行者可以直接转向阶段4里 `Choice.lua` 的 pending-choice updater 拆分，或阶段5里 `TargetChoiceEffects` 的显式 target-pick 语义收口，而不用再回头处理 `src/game` 对 `ui_port` 的旧耦合。
+
+2026-03-07 / Codex：本次更新把计划推进到“阶段4第七刀已完成”的真实状态，补记了 `ChoiceSession.lua` 的职责边界、`Choice.lua` 已收缩成纯 builder、最新 market 定向回归 `15` 和全量回归 `376`。这样下一位执行者可以继续判断：是把阶段4到此收尾，还是沿阶段5去清 `TargetChoiceEffects`、`ChoiceSlice`、`MarketModalRenderer` 等仍然依赖 `choice.kind/meta` 推断的 presentation 逻辑。

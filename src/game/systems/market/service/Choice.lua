@@ -1,9 +1,6 @@
 local context = require("src.game.systems.market.service.Context")
 local eligibility = require("src.game.systems.market.service.Eligibility")
-local feedback = require("src.game.systems.market.service.Feedback")
 local number_utils = require("src.core.NumberUtils")
-local monopoly_event = require("src.core.events.MonopolyEvents")
-local logger = require("src.core.Logger")
 
 local choice = {}
 local PAGE_SIZE = 10
@@ -12,7 +9,6 @@ local TAB_SKIN = "skin"
 local TAB_VEHICLE = "vehicle"
 local VEHICLE_TAB_ENABLED = false
 local TABS = { TAB_ITEM, TAB_SKIN, TAB_VEHICLE }
-local _emit_event = monopoly_event.emit
 local function _contains(list, value)
   for _, v in ipairs(list) do
     if v == value then
@@ -116,37 +112,6 @@ local function _resolve_page_count(total_count, page_size)
   return math.floor((total + size - 1) / size)
 end
 
-local function _mark_choice_dirty(game)
-  if not game or not game.dirty then
-    return
-  end
-  game.dirty.turn = true
-  game.dirty.any = true
-end
-
-local function _current_choice_state(pending_choice)
-  local meta = pending_choice and pending_choice.meta or {}
-  return {
-    active_tab = pending_choice and pending_choice.active_tab or meta.active_tab,
-    page_index = pending_choice and pending_choice.page_index or meta.page_index,
-  }
-end
-
-local function _apply_spec(game, pending_choice, spec)
-  assert(pending_choice ~= nil, "missing pending_choice")
-  assert(spec ~= nil, "missing spec")
-  pending_choice.title = spec.title
-  pending_choice.body_lines = spec.body_lines
-  pending_choice.options = spec.options
-  pending_choice.allow_cancel = spec.allow_cancel
-  pending_choice.cancel_label = spec.cancel_label
-  pending_choice.active_tab = spec.active_tab
-  pending_choice.page_index = spec.page_index
-  pending_choice.page_count = spec.page_count
-  pending_choice.meta = spec.meta
-  _mark_choice_dirty(game)
-end
-
 function choice.build(player, game, state)
   state = state or {}
   local active_tab = _normalize_tab(state.active_tab)
@@ -172,87 +137,6 @@ function choice.build(player, game, state)
       page_count = page_count,
     },
   }
-end
-
-function choice.rebuild_pending(game, pending_choice, player, state)
-  if not game or not pending_choice or pending_choice.kind ~= "market_buy" then
-    logger.warn("[MarketDebug] rebuild_pending rejected: invalid pending_choice")
-    return false
-  end
-  if not player then
-    logger.warn("[MarketDebug] rebuild_pending rejected: missing player")
-    return false
-  end
-  local spec = choice.build(player, game, state or _current_choice_state(pending_choice))
-  if not spec then
-    logger.warn("[MarketDebug] rebuild_pending rejected: build returned nil")
-    return false
-  end
-  _apply_spec(game, pending_choice, spec)
-  return true
-end
-
-function choice.apply_navigation(game, pending_choice, action)
-  if not game or not pending_choice or pending_choice.kind ~= "market_buy" then
-    logger.warn("[MarketDebug] apply_navigation rejected: invalid pending_choice")
-    return false
-  end
-  local meta = pending_choice.meta or {}
-  local player_id = number_utils.to_integer(meta.player_id)
-  if not player_id then
-    logger.warn("[MarketDebug] apply_navigation rejected: invalid meta.player_id")
-    return false
-  end
-  local player = game:find_player_by_id(player_id)
-  if not player then
-    logger.warn("[MarketDebug] apply_navigation rejected: player not found", tostring(player_id))
-    return false
-  end
-  local active_tab = _normalize_tab(meta.active_tab)
-  local page_index = _clamp_page(meta.page_index, meta.page_count)
-  if action.type == "market_tab_select" then
-    active_tab = _normalize_tab(action.tab)
-    page_index = 1
-  elseif action.type == "market_page_prev" then
-    page_index = page_index - 1
-  elseif action.type == "market_page_next" then
-    page_index = page_index + 1
-  end
-  local spec = choice.build(player, game, {
-    active_tab = active_tab,
-    page_index = page_index,
-  })
-  if not spec then
-    logger.warn("[MarketDebug] apply_navigation rejected: build returned nil")
-    return false
-  end
-  if #spec.options == 0 then
-    feedback.emit_buy_failed(player, nil, "empty_tab", "当前页签暂无可购买项")
-  end
-  _apply_spec(game, pending_choice, spec)
-  return true
-end
-
-function choice.refresh_after_paid_callback(game, player, entry)
-  local pending_choice = game and game.turn and game.turn.pending_choice or nil
-  if not pending_choice or pending_choice.kind ~= "market_buy" then
-    return false
-  end
-  local meta = pending_choice.meta or {}
-  local owner_id = number_utils.to_integer(meta.player_id)
-  if owner_id ~= (player and player.id or nil) then
-    return false
-  end
-  local rebuilt = choice.rebuild_pending(game, pending_choice, player)
-  if rebuilt then
-    return true
-  end
-  logger.warn(
-    "market paid callback refresh skipped:",
-    "player_id=" .. tostring(player and player.id or nil),
-    "product_id=" .. tostring(entry and entry.product_id)
-  )
-  return false
 end
 
 return choice
