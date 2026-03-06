@@ -20,7 +20,7 @@
 - [x] (2026-03-06 20:33 +0800) 已完成阶段0验收：`lua tests/internal/dep_rules.lua` 通过，定向守护 suite 通过，全量 `lua tests/regression.lua` 通过并输出 `All regression checks passed (364)`。
 - [x] (2026-03-06 22:46 +0800) 已完成阶段1：新增 `src/game/flow/ports/UseCaseOutputPort.lua`，把 `GameplayLoop`、`TurnDispatch`、`TickChoiceTimeout`、`TickTimeout` 的 `state.ui_* / pending_choice* / ui_model` 写入收拢到 output port，并让 `tests/internal/dep_rules.lua` 中 `src/game/flow` 的 `state.ui_*` 预算降到 0。
 - [x] (2026-03-06 22:49 +0800) 已补阶段1契约：`architecture_guard_contract` 新增 output-port 路由断言，`usecase_boundary_contract` 新增 output 默认桥接与 override 优先级测试；全量回归现输出 `All regression checks passed (367)`。
-- [ ] 阶段2：已完成第一刀动画门控外提：`ActionAnimPort`、`TurnRoll`、`TurnMove` 改读 `game.anim_gate_port`，`game.ui_port` 预算已从 23 收紧到 16；剩余 `push_popup` 与 `ui_port.state` 读路径仍待迁移。
+- [ ] 阶段2：已完成第一刀动画门控外提：`ActionAnimPort`、`TurnRoll`、`TurnMove` 改读 `game.anim_gate_port`，`game.ui_port` 预算已从 23 收紧到 16。随后又清掉了 `TurnDecision` 对 `game.ui_port.state.pending_choice_elapsed` 的反向读取，coroutine `wait_choice` 现在通过 session 显式传入 elapsed，不再借 UI runtime 读状态。当前剩余的重点读路径主要集中在 `IntentDispatcher.push_popup()`、`Bankruptcy`、`LandingPresenter`、`ItemInventory`、`ItemUseBroadcast` 等 popup/广播链路。
 - [x] (2026-03-07 00:28 +0800) 已完成阶段3：`RuntimeGlobalAliases` 已外迁到 `src/app/bootstrap/runtime_install/`；`Logger`、`DefaultPorts`、`RuntimeEditorExports`、`RuntimeContext` 都已改成 host hook 或 runtime context env 读取；`src/core` 宿主触点预算已从 47 压到 0。
 - [ ] 阶段4：已完成六刀。第一刀新增 `src/game/systems/market/service/PaidPurchaseGateway.lua`，承接 paid-currency 的 goods mapping、purchase panel 启动、待兑现队列和购买回调注册。第二刀把 paid callback 后的 market choice 刷新移到 `src/game/systems/market/service/Choice.lua` 的 `refresh_after_paid_callback()`。第三刀新增 `src/game/systems/market/service/Fulfillment.lua`，统一 item/vehicle/skin 的兑现副作用。第四刀新增 `src/game/systems/market/service/PurchasePolicy.lua`，把商品可买性校验和座驾替换确认 intent 组装从 `Purchase.lua` 中抽走。第五刀新增 `src/game/systems/market/service/Feedback.lua`，把 market buy_failed 事件与黑市 popup 文案出口从 `Purchase.lua`、`Choice.lua` 中抽离。第六刀新增 `src/game/systems/market/service/ChoiceOutcome.lua`，把购买结果后的 choice 刷新、满包退出 popup、follow-up intent 派发和 stay/finish 决策从 `MarketChoiceHandler.lua` 中抽离。剩余工作主要是观察 `Purchase.lua` 本身是否还值得继续拆本地金币购买前后编排，还是把阶段4视为足够收口。
 - [x] (2026-03-07 01:27 +0800) 已启动阶段5第一刀：`src/game/systems/market/service/Choice.lua` 现在给 option 输出 `requires_pre_confirm/pre_confirm_kind`，`PreConfirmFlow.lua` 不再回查 `Config.Generated.Market` 判断皮肤商品，而是只消费用例层提供的 option 级确认语义；已补 `market` 与 `presentation_ui` 回归，验证“有 flag 才进二次确认，没有 flag 即使 product_id 像皮肤也直接派发”。
@@ -55,6 +55,9 @@
 
 - 观察：阶段2最窄的突破口确实是动画等待门控，因为 `TurnRoll`、`TurnMove` 和 `ActionAnimPort` 都只需要只读布尔配置，不依赖 popup 或 choice 语义。
   证据：迁出这三处后，`tests/internal/dep_rules.lua` 中 `src/core/ActionAnimPort.lua`、`src/game/flow/turn/TurnMove.lua`、`src/game/flow/turn/TurnRoll.lua` 的 `game.ui_port` 预算均已降为 0，同时新增契约测试仍可在 `game.ui_port = nil` 时通过。
+
+- 观察：`TurnDecision` 里的 `ui_port.state` 回读其实比 popup 链路更适合先拔，因为它只是在 coroutine `wait_choice` 上借道 UI runtime 取 elapsed，不涉及任何渲染或广播副作用。
+  证据：把 `wait_choice` elapsed 改成由 runtime coroutine session 显式持有并传给 `TurnDecision.decide_choice_action()` 后，`TurnDecision.lua` 的 `game.ui_port/ui_port.state` 命中可以直接归零，而 `gameplay/gameplay_coroutine` 与全量回归继续通过。
 
 - 观察：阶段3把 `DefaultPorts` 改成只认 `runtime_context.current().env` 后，最容易出问题的不是业务逻辑，而是那些自己 patch 全局、却不会同步重建 runtime context 的测试 helper。
   证据：`presentation_ui_action_anim` 的本地 `_with_patches` 与 `TestSupport` 都需要补“重建 runtime context + 接线 logger/scheduler”的逻辑，回归才重新稳定。
@@ -157,6 +160,10 @@
 
 - 决策：阶段4第六刀先抽 `ChoiceOutcome.lua`，承接 `MarketChoiceHandler` 里的购买结果协调，而不是继续把更多本地购买判断塞回 `Purchase.lua`。
   理由：`Purchase.lua` 经过前五刀后已经基本只剩购买前后编排；反而 `MarketChoiceHandler` 还同时负责输入解码和结果后处理。把 stay/finish、choice rebuild、满包 popup、follow-up intent 派发抽成独立 service，可以继续压缩 market 事务脚本的横向职责面，而且不必重新打开 payment/fulfillment 那些已稳定的边界。
+  日期/作者：2026-03-07 / Codex
+
+- 决策：阶段2当前优先清 `TurnDecision` 的 `ui_port.state` 反读，而不是直接去拔 popup 链路。
+  理由：这条依赖只影响 coroutine `wait_choice` 的 elapsed 读取，改成 session 显式持有后几乎不碰渲染、副作用和旧 UI 契约；相比之下 `push_popup` 链路横跨 `IntentDispatcher`、`LandingPresenter`、`Bankruptcy`、道具广播，风险明显更高，适合放到后面单独切。
   日期/作者：2026-03-07 / Codex
 
 - 决策：阶段5第二刀不新建“ConfirmViewModel”模块，先直接把 `confirm_title/confirm_body` 字段并入现有 choice/option 结构。

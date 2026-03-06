@@ -76,12 +76,11 @@ function turn_decision.build_turn_log_line(game)
   return line
 end
 
-function turn_decision.decide_choice_action(game, choice, pending_action)
+function turn_decision.decide_choice_action(game, choice, pending_action, opts)
+  opts = opts or {}
   local min_visible = gameplay_rules.auto_choice_min_visible_seconds or 0
-  local ui_port = game and game.ui_port or nil
-  local state = ui_port and ui_port.state or ui_port
-  local elapsed = state and state.pending_choice_elapsed or 0
-  local action = choice_auto_policy.decide(game, state, choice, {
+  local elapsed = opts.elapsed_seconds or 0
+  local action = choice_auto_policy.decide(game, nil, choice, {
     mode = "wait_choice",
     pending_action = pending_action,
     min_visible_seconds = min_visible,
@@ -90,7 +89,6 @@ function turn_decision.decide_choice_action(game, choice, pending_action)
   if action then
     return action
   end
-  assert(game.ui_port ~= nil, "missing ui_port")
   return nil
 end
 

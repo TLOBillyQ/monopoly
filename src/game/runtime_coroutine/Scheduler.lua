@@ -3,9 +3,14 @@ local action_router = require("src.game.runtime_coroutine.ActionRouter")
 
 local scheduler = {}
 local SIGNAL_ACTION = "action"
+local SIGNAL_TICK = "tick"
 
 local function _is_action(signal)
   return type(signal) == "table" and signal.type == SIGNAL_ACTION
+end
+
+local function _is_tick(signal)
+  return type(signal) == "table" and signal.type == SIGNAL_TICK
 end
 
 local function _ensure_queue(session)
@@ -47,6 +52,11 @@ function scheduler.step(session, dt)
     local signal = table.remove(queue, 1)
     if _is_action(signal) then
       session:set_pending_action(signal.action)
+    elseif _is_tick(signal) then
+      local next_dt = signal.dt or 0
+      if session.wait_state == "wait_choice" then
+        session.choice_elapsed_seconds = (session.choice_elapsed_seconds or 0) + next_dt
+      end
     end
     local ok, yielded = coroutine.resume(co, signal)
     if not ok then

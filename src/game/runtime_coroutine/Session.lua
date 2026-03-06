@@ -24,6 +24,7 @@ local function _build_session(opts)
     wait_state = nil,
     current_state = "start",
     current_args = nil,
+    choice_elapsed_seconds = 0,
     _pending_action = nil,
     _seconds_wait = {},
     _take_action = opts.take_action,
@@ -72,6 +73,7 @@ local function _build_session(opts)
     self.finished = false
     self.script = nil
     self._seconds_wait = {}
+    self.choice_elapsed_seconds = 0
     self:clear_pending_action()
   end
 
@@ -82,6 +84,7 @@ local function _build_session(opts)
       wait_state = self.wait_state,
       current_state = self.current_state,
       pending_choice_id = pending_choice and pending_choice.id or nil,
+      choice_elapsed_seconds = self.choice_elapsed_seconds or 0,
     }
   end
 

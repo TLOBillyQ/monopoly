@@ -61,6 +61,7 @@ function await.choice(session, args)
   session:mark_phase("wait_choice")
   local choice = game.turn.pending_choice
   if not choice then
+    session.choice_elapsed_seconds = 0
     session:clear_pending_action()
     local next_state, next_args = _next(args)
     return {
@@ -69,7 +70,9 @@ function await.choice(session, args)
     }
   end
 
-  local action = turn_decision.decide_choice_action(game, choice, session:take_pending_action())
+  local action = turn_decision.decide_choice_action(game, choice, session:take_pending_action(), {
+    elapsed_seconds = session.choice_elapsed_seconds or 0,
+  })
   if not action then
     return { wait = true }
   end
@@ -83,6 +86,8 @@ function await.choice(session, args)
   if res and res.stay then
     return { wait = true }
   end
+
+  session.choice_elapsed_seconds = 0
 
   if game.turn.action_anim then
     return {

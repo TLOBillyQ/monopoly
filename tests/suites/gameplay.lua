@@ -2187,6 +2187,39 @@ local function _test_choice_auto_policy_timeout_keeps_non_cancelable_choice_fall
   assert(from_timeout.option_id == 4, "non-cancelable timeout should fallback to the first option")
 end
 
+local function _test_turn_decision_wait_choice_no_longer_reads_ui_port_state()
+  local g = _new_game()
+  local auto_player = g.players[g.turn.current_player_index]
+  auto_player.auto = true
+  g.ui_port = nil
+  local choice = {
+    id = 1003,
+    kind = "remote_dice_value",
+    route_key = "remote",
+    allow_cancel = false,
+    meta = {
+      player_id = auto_player.id,
+      item_id = gameplay_rules.item_ids.remote_dice,
+      dice_count = 1,
+      item_preconsumed = true,
+    },
+    options = { { id = 4, label = "4" } },
+  }
+
+  local action = nil
+  support.with_patches({
+    { target = gameplay_rules, key = "auto_choice_min_visible_seconds", value = 0 },
+  }, function()
+    action = turn_decision.decide_choice_action(g, choice, nil, {
+      elapsed_seconds = 1.2,
+    })
+  end)
+
+  assert(action ~= nil, "turn_decision should still resolve action without ui_port.state")
+  assert(action.type == "choice_select", "turn_decision should keep remote dice fallback action")
+  assert(action.option_id == 4, "turn_decision should keep explicit first-option fallback")
+end
+
 local function _test_popup_countdown_uses_effective_modal_timeout()
   local g = _new_game()
   local state = _build_loop_state()
@@ -2511,6 +2544,7 @@ return {
   _test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics,
   _test_choice_auto_policy_wait_and_timeout_both_cancel_market_buy,
   _test_choice_auto_policy_timeout_keeps_non_cancelable_choice_fallback,
+  _test_turn_decision_wait_choice_no_longer_reads_ui_port_state,
   _test_popup_countdown_uses_effective_modal_timeout,
   _test_market_countdown_uses_double_action_timeout,
   _test_dispatch_gate_blocks_next_when_choice_active,
