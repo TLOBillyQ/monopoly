@@ -2,8 +2,8 @@ local logger = require("src.core.Logger")
 local context = require("src.game.systems.market.service.Context")
 local market_feedback = require("src.game.systems.market.service.Feedback")
 local purchase_policy = require("src.game.systems.market.service.PurchasePolicy")
-local fulfillment = require("src.game.systems.market.service.Fulfillment")
 local local_purchase = require("src.game.systems.market.service.LocalPurchase")
+local paid_fulfillment = require("src.game.systems.market.service.PaidFulfillment")
 local paid_purchase_gateway = require("src.game.systems.market.service.PaidPurchaseGateway")
 local number_utils = require("src.core.NumberUtils")
 
@@ -22,38 +22,8 @@ local function _is_release_build()
   return _read_truthy_flag(raw)
 end
 
-local function _fulfill_paid_goods_purchase(game, player, entry)
-  local price = context.entry_price(entry)
-  local currency = context.entry_currency(entry)
-  local decision = purchase_policy.validate_entry(game, player, entry)
-  if not decision.ok then
-    market_feedback.emit_buy_failed(player, entry, decision.reason, decision.body)
-    return false
-  end
-
-  local result = fulfillment.apply(game, player, entry, {
-    skip_charge = true,
-    price = price,
-    currency = currency,
-    priced_text = false,
-  })
-  if result.ok then
-    return true
-  end
-  market_feedback.emit_buy_failed(player, entry, result.reason, result.body)
-  return false
-end
-
-local function _handle_paid_purchase_callback(game, player, entry)
-  local ok = _fulfill_paid_goods_purchase(game, player, entry)
-  if ok then
-    local market_choice = require("src.game.systems.market.service.Choice")
-    market_choice.refresh_after_paid_callback(game, player, entry)
-  end
-end
-
 function purchase.setup_for_game(game)
-  paid_purchase_gateway.setup_for_game(game, _handle_paid_purchase_callback)
+  paid_purchase_gateway.setup_for_game(game, paid_fulfillment.handle_callback)
 end
 
 function purchase.can_start_external_purchase(game, player, entry)
