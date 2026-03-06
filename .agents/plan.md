@@ -14,7 +14,8 @@
 - [x] (2026-03-07 12:02 +0800) 已重读 `.agents/harness/PLANS.md`、现有 `.agents/plan.md`、`docs/architecture/boundaries.md`、`tests/internal/dep_rules.lua` 和关键边界代码，确认当前统一回归入口仍是 `lua tests/regression.lua`，最新全量输出为 `All regression checks passed (376)`。
 - [x] (2026-03-07 12:18 +0800) 已完成里程碑 1 的第一刀：把 Eggy 宿主支付实现搬到 `src/app/bootstrap/payment/EggyPaidPurchaseGateway.lua`，`src/game/systems/market/service/PaidPurchaseGateway.lua` 现只保留薄代理；同时 `tests/internal/dep_rules.lua` 新增守护，禁止 `src/game/systems/market/service` 再直接触碰 `GameAPI`、`RegisterTriggerEvent`、`EVENT`。定向 `market`、`paid_currency`、全量回归均继续通过。
 - [x] (2026-03-07 12:31 +0800) 已完成里程碑 1 的第二刀：新增 `src/game/systems/market/ports/PaidPurchasePort.lua`，`Purchase.lua` 现改为只依赖 market 内层支付端口；`RuntimePorts` 与 `src/app/bootstrap/runtime_install/RuntimePortDefaults.lua` 也已接入 `resolve_market_paid_gateway()` 默认装配。当前仍保留 port 内部对 Eggy adapter 的测试环境 fallback，但 `Purchase` / `MarketService` 已不再直接 require 外层实现。
-- [ ] 下一步进入里程碑 2：把 `UseCaseOutputPort.lua` 里的 legacy UI 状态镜像拆到单独 adapter。
+- [x] (2026-03-07 12:46 +0800) 已完成里程碑 2：新增 `src/game/flow/ports/LegacyOutputMirror.lua`，`UseCaseOutputPort.lua` 现只维护 `ui_runtime` 语义，默认 `build_base_output_ports()` 再通过 legacy mirror 把旧字段桥接回 `state`；已补 `usecase_boundary_contract` 验证“纯 runtime output 不写 legacy state，默认 base output 仍保留桥接行为”。
+- [ ] 下一步进入里程碑 3：把 choice 显式字段集中成单一 contract helper。
 - [ ] 里程碑 2 将拆分 `src/game/flow/ports/UseCaseOutputPort.lua`，把 legacy state 镜像从用例端口中移出去。
 - [ ] 里程碑 3 将整理 choice 稳定协议，把当前散落的显式字段收敛成单一 contract helper，并补透传契约测试。
 - [ ] 里程碑 4 将把 `owner_role_id` 变成强约束字段，删除 `meta.player_id` 在 actor ownership 路径上的 fallback。
@@ -53,6 +54,10 @@
 - 决策：`UseCaseOutputPort` 的下一步不是立刻删兼容，而是拆出 legacy 镜像 adapter。
   理由：当前 presentation 和部分测试仍在消费 legacy 状态。如果直接删除镜像，会把“边界收口”和“迁移断崖”混成同一次高风险改动。
   日期/作者：2026-03-07 / Codex
+- 决策：`UseCaseOutputPort` 采用“双构建入口”而不是切换同一组函数的隐藏行为：`build_runtime_output_ports()` 给纯 runtime 用，`build_base_output_ports()` 给默认兼容桥接用。
+  理由：这样测试和调用者可以明确选择自己要验证的边界，不会因为同名 API 在不同环境里偷偷切换行为而让契约变模糊。
+  日期/作者：2026-03-07 / Codex
+
 
 - 决策：choice 系统的下一步是做 contract helper，而不是发明复杂类型框架。
   理由：当前 Lua 代码库已经有稳定显式字段，只差集中声明与透传验证。引入过重抽象会增加复杂度，却不一定增加稳定性。
@@ -104,7 +109,7 @@
 
 执行时不要试图一次删掉所有 legacy 状态读路径。先把镜像逻辑抽到单独模块，再让当前调用点继续消费同一个输出接口。只要行为不变，就先让 `market`、`presentation_ui` 与全量回归保持通过。后续如果要继续删 legacy 字段，只需要清理 adapter，不必再回头改 use case 层。
 
-验收标准是：`UseCaseOutputPort.lua` 不再直接 `rawset` legacy state 字段；新的 legacy adapter 或 mirror 模块承担兼容职责；现有回归仍全部通过；同时补一条契约测试，证明“用 fake output port 也能得到同样的 choice / modal / dirty 结果”。
+这个里程碑现在已经完成。`UseCaseOutputPort.lua` 已不再直接 `rawset` legacy state 字段；新的 `src/game/flow/ports/LegacyOutputMirror.lua` 承担兼容桥接；默认 `GameplayLoopPorts` 仍通过 `build_base_output_ports()` 暴露 legacy 兼容行为，而 `build_runtime_output_ports()` 则提供不写旧字段的纯 output 版本。`usecase_boundary_contract` 已新增契约，验证纯 runtime output 与默认桥接 output 的职责分离；`architecture_guard_contract` 与全量回归也继续通过。
 
 ## 里程碑 3：把 choice 稳定协议集中成单一 contract helper
 
@@ -272,9 +277,12 @@
     game.ui_port 依赖点：0（由现有研究与守护确认）
     最新 market 定向回归：All regression checks passed (15)
     最新 paid_currency 定向回归：All regression checks passed (4)
+    最新 usecase_boundary_contract：All regression checks passed (9)
+    最新 architecture_guard_contract：All regression checks passed (7)
     最新 presentation_ui 定向回归：All regression checks passed (135)
     最新全量回归：All regression checks passed (376)
     里程碑 1 当前状态：已完成
+    里程碑 2 当前状态：已完成
 
 这份计划默认假设执行者工作在本机仓库根目录，并且能运行 Lua 测试命令。如果运行环境临时缺少测试依赖，必须先恢复到能跑统一回归的状态，再推进任何架构改动。因为对这份计划来说，验证不是收尾动作，而是每一步是否成立的定义本身。
 

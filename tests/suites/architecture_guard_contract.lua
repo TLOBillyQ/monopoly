@@ -21,6 +21,7 @@ local function _merge_group(base_group, override_group)
 end
 
 local function _build_output_ports(output_log)
+  local base = use_case_output_port.build_base_output_ports()
   return {
     invalidate_ui = function(state)
       if output_log then
@@ -29,10 +30,10 @@ local function _build_output_ports(output_log)
           state = state,
         }
       end
-      return use_case_output_port.invalidate_ui(state)
+      return base.invalidate_ui(state)
     end,
-    clear_ui_dirty = use_case_output_port.clear_ui_dirty,
-    is_ui_dirty = use_case_output_port.is_ui_dirty,
+    clear_ui_dirty = base.clear_ui_dirty,
+    is_ui_dirty = base.is_ui_dirty,
     sync_ui_model = function(state, model)
       if output_log then
         output_log[#output_log + 1] = {
@@ -41,9 +42,9 @@ local function _build_output_ports(output_log)
           model = model,
         }
       end
-      return use_case_output_port.sync_ui_model(state, model)
+      return base.sync_ui_model(state, model)
     end,
-    get_ui_model = use_case_output_port.get_ui_model,
+    get_ui_model = base.get_ui_model,
     sync_pending_choice = function(state, choice, opts)
       if output_log then
         output_log[#output_log + 1] = {
@@ -52,7 +53,7 @@ local function _build_output_ports(output_log)
           choice = choice,
         }
       end
-      return use_case_output_port.sync_pending_choice(state, choice, opts)
+      return base.sync_pending_choice(state, choice, opts)
     end,
     clear_pending_choice = function(state)
       if output_log then
@@ -61,13 +62,13 @@ local function _build_output_ports(output_log)
           state = state,
         }
       end
-      return use_case_output_port.clear_pending_choice(state)
+      return base.clear_pending_choice(state)
     end,
-    get_pending_choice = use_case_output_port.get_pending_choice,
-    get_pending_choice_id = use_case_output_port.get_pending_choice_id,
-    get_pending_choice_elapsed = use_case_output_port.get_pending_choice_elapsed,
-    set_pending_choice_elapsed = use_case_output_port.set_pending_choice_elapsed,
-    set_pending_choice_id = use_case_output_port.set_pending_choice_id,
+    get_pending_choice = base.get_pending_choice,
+    get_pending_choice_id = base.get_pending_choice_id,
+    get_pending_choice_elapsed = base.get_pending_choice_elapsed,
+    set_pending_choice_elapsed = base.set_pending_choice_elapsed,
+    set_pending_choice_id = base.set_pending_choice_id,
     sync_modal_timer = function(state, payload)
       if output_log then
         output_log[#output_log + 1] = {
@@ -76,10 +77,10 @@ local function _build_output_ports(output_log)
           payload = payload,
         }
       end
-      return use_case_output_port.sync_modal_timer(state, payload)
+      return base.sync_modal_timer(state, payload)
     end,
-    get_modal_elapsed = use_case_output_port.get_modal_elapsed,
-    get_modal_ref = use_case_output_port.get_modal_ref,
+    get_modal_elapsed = base.get_modal_elapsed,
+    get_modal_ref = base.get_modal_ref,
   }
 end
 

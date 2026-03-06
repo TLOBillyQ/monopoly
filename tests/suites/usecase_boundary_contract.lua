@@ -109,6 +109,16 @@ local function _test_gameplay_loop_clock_contract_split_sources()
   runtime_ports.reset_for_tests()
 end
 
+local function _test_use_case_output_port_runtime_variant_stays_off_legacy_state()
+  local use_case_output_port = require("src.game.flow.ports.UseCaseOutputPort")
+  local output = use_case_output_port.build_runtime_output_ports()
+  local state = {}
+  local changed = output.invalidate_ui(state)
+  _assert_eq(changed, true, "runtime output.invalidate_ui should still mark ui runtime dirty")
+  _assert_eq(state.ui_dirty, nil, "runtime output.invalidate_ui should not write legacy ui_dirty bridge")
+  _assert_eq(state.ui_runtime and state.ui_runtime.ui_dirty, true, "runtime output should write ui_runtime only")
+end
+
 local function _test_gameplay_loop_output_port_defaults_to_ui_dirty_bridge()
   local resolved = gameplay_loop_ports.resolve(nil)
   local state = {}
