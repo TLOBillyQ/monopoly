@@ -2,13 +2,6 @@ local logger = require("src.core.Logger")
 
 local policy = {}
 
-local function _resolve_option_id(option)
-  if type(option) == "table" then
-    return option.id
-  end
-  return option
-end
-
 local function _resolve_explicit_route(choice)
   if not choice then
     return nil
@@ -28,24 +21,7 @@ local function _resolve_explicit_route(choice)
 end
 
 function policy.is_secondary_confirm_choice(choice)
-  if not choice then
-    return false
-  end
-  local kind = choice.kind
-  if kind ~= "landing_optional_effect" and kind ~= "land_optional_effect" then
-    return false
-  end
-  local options = choice.options or {}
-  if #options == 0 then
-    return false
-  end
-  for _, option in ipairs(options) do
-    local option_id = _resolve_option_id(option)
-    if option_id ~= "buy_land" and option_id ~= "upgrade_land" then
-      return false
-    end
-  end
-  return true
+  return _resolve_explicit_route(choice) == "secondary_confirm"
 end
 
 function policy.resolve(choice)
@@ -71,12 +47,6 @@ function policy.resolve(choice)
   end
   if kind == "roadblock_target" or kind == "demolish_target" then
     return "target"
-  end
-  if kind == "tax_card_prompt" then
-    return "secondary_confirm"
-  end
-  if policy.is_secondary_confirm_choice(choice) then
-    return "secondary_confirm"
   end
   logger.warn("choice route fallback to base_inline:", tostring(kind))
   return "base_inline"

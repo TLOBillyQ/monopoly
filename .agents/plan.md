@@ -28,6 +28,7 @@
 - [x] (2026-03-07 02:02 +0800) 已完成阶段5第三刀的第一小片：`ItemPhase.build_choice_spec()` 现在额外输出 `uses_item_slots/pre_confirm_before_slot_pick`；`PreConfirmFlow`、`ItemPhaseAskFlow`、`UIModalPresenter`、`item_slots`、`item_slot_intents` 已优先消费这些显式语义，`choice.kind == "item_phase_choice"` 的散落判断被收敛到 `choice_screen_service.common` helper 中保底兼容。
 - [x] (2026-03-07 02:10 +0800) 已完成阶段5第三刀的第二小片：`presentation_ui` 里的手工 `item_phase_choice` 测试数据已补齐显式 flag 与确认文案，`choice_screen_service.common` 已移除 `item_phase_choice` 的 `kind`-fallback 与旧确认文案推导，只保留显式字段路径。
 - [x] (2026-03-07 02:18 +0800) 已完成阶段5第三刀的第三小片：`presentation_ui` 里的手工 `tax_card_prompt`、`landing_optional_effect` choice 也已补齐 `confirm_*` 字段，`choice_screen_service.common` 不再为 tax 和 buy/upgrade land 推导默认确认文案，确认 UI 全部优先消费用例层显式输出。
+- [x] (2026-03-07 02:27 +0800) 已完成阶段5第四刀的第一小片：`LandChoiceSpecs.tax_prompt()` 与 `EffectPipeline` 生成的纯 buy/upgrade land optional choice 已显式输出 `route_key=\"secondary_confirm\"` 与 `requires_confirm=true`；`ChoiceRoutePolicy` 已移除对 `tax_card_prompt` 和 `buy_land/upgrade_land` 的 secondary-confirm 推断，presentation route 开始只消费用例层声明。
 - [ ] 阶段6：在边界稳定后整理目录语义和命名，避免目录改动与行为改动叠加。
 
 ## 意外与发现
@@ -85,6 +86,9 @@
 
 - 观察：`tax_card_prompt` 与 `landing_optional_effect` 的确认文案 fallback 也已经进入同样状态，真正依赖旧分支的同样只剩手工 choice 测试，而不是生产 builder。
   证据：`LandChoiceSpecs.tax_prompt()` 与 `EffectPipeline` 早已输出 `confirm_title/confirm_body`；本轮把 `presentation_ui` 中的手工 tax/landing choice 补齐这些字段后，删除 common 里的对应 fallback，定向回归继续通过。
+
+- 观察：secondary-confirm 路由推断和确认文案推断是同一类问题的两半，如果只前移文案而保留 route 推断，presentation 仍然在暗中持有“哪些 choice 应该走二次确认”的业务知识。
+  证据：`ChoiceRoutePolicy` 在本轮前仍根据 `tax_card_prompt` 和 `landing_optional_effect + buy_land/upgrade_land` 推断 `secondary_confirm`；让 builder 显式输出 `route_key/requires_confirm` 后，删掉这些推断分支，`item/land/presentation_ui/gameplay` 定向回归与全量回归都继续通过。
 
 ## 决策日志
 
@@ -154,6 +158,10 @@
 
 - 决策：阶段5第三刀的第三小片继续沿同一路径删除 `tax_card_prompt` 和 `buy_land/upgrade_land` 的确认文案 fallback，而不是在 common 中保留“最后几条默认文案”。
   理由：一旦确认文案还留在 presentation fallback 里，责任边界就仍旧不干净。既然生产 builder 和关键测试都能改成显式字段，就应该继续把 common 收缩成纯消费层。
+  日期/作者：2026-03-07 / Codex
+
+- 决策：阶段5第四刀先处理 secondary-confirm 路由显式化，而不是先去碰 `ChoiceRoutePolicy` 里其它 route fallback。
+  理由：`secondary_confirm` 是阶段5当前最典型的 presentation 应用规则泄漏点，而且 tax 与 landing optional 的生产 builder 已经非常接近显式声明，改动最小、收益最高。先收这条路由语义，比同时重做 remote/player/target 的 route 判定更稳。
   日期/作者：2026-03-07 / Codex
 
 ## 结果与复盘

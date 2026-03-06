@@ -450,6 +450,8 @@ end
 
 local function _test_tax_prompt_exposes_confirm_copy()
   local choice = land_choice_specs.tax_prompt(11)
+  _assert_eq(choice.route_key, "secondary_confirm", "tax prompt should expose secondary confirm route")
+  _assert_eq(choice.requires_confirm, true, "tax prompt should expose confirm requirement")
   _assert_eq(choice.confirm_title, "税务局", "tax prompt should expose confirm title from use-case output")
   _assert_eq(choice.confirm_body, "这次要用免税卡吗？", "tax prompt should expose confirm body from use-case output")
 end

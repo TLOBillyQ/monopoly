@@ -2132,6 +2132,8 @@ local function _test_choice_modal_routes_to_new_screens()
     ui_view.open_choice_modal(state, {
       id = 4,
       kind = "landing_optional_effect",
+      route_key = "secondary_confirm",
+      requires_confirm = true,
       title = "请选择",
       body = "",
       options = {
@@ -2176,6 +2178,8 @@ local function _test_choice_modal_routes_to_new_screens()
     ui_view.open_choice_modal(state, {
       id = 6,
       kind = "tax_card_prompt",
+      route_key = "secondary_confirm",
+      requires_confirm = true,
       confirm_title = "税务局",
       confirm_body = "这次要用免税卡吗？",
       title = "是否使用免税卡",
@@ -2503,6 +2507,18 @@ local function _test_choice_route_policy_prefers_explicit_route_metadata()
     {
       label = "explicit building confirm",
       choice = { kind = "item_target_player", route_key = "secondary_confirm", requires_confirm = true },
+      route = "secondary_confirm",
+      confirm = true,
+    },
+    {
+      label = "explicit tax confirm",
+      choice = { kind = "tax_card_prompt", route_key = "secondary_confirm", requires_confirm = true },
+      route = "secondary_confirm",
+      confirm = true,
+    },
+    {
+      label = "explicit landing confirm",
+      choice = { kind = "landing_optional_effect", route_key = "secondary_confirm", requires_confirm = true },
       route = "secondary_confirm",
       confirm = true,
     },

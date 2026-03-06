@@ -32,6 +32,8 @@ local function _test_ai_picks_land_purchase()
 
   local pending = g.turn.pending_choice
   assert(pending and pending.kind == "landing_optional_effect", "should have landing choice")
+  _assert_eq(pending.route_key, "secondary_confirm", "buy_land optional should expose secondary confirm route")
+  _assert_eq(pending.requires_confirm, true, "buy_land optional should expose confirm requirement")
   local first_option = pending.options and pending.options[1] or nil
   assert(first_option and first_option.confirm_title == "买地", "buy_land should expose confirm title from use-case output")
   assert(first_option and first_option.confirm_body == "地块：" .. tile_ref.name .. "。要买吗？",
