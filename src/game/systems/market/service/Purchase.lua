@@ -1,7 +1,7 @@
 local logger = require("src.core.Logger")
-local land_choice_specs = require("src.game.systems.land.LandChoiceSpecs")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 local context = require("src.game.systems.market.service.Context")
+local purchase_policy = require("src.game.systems.market.service.PurchasePolicy")
 local fulfillment = require("src.game.systems.market.service.Fulfillment")
 local paid_purchase_gateway = require("src.game.systems.market.service.PaidPurchaseGateway")
 local number_utils = require("src.core.NumberUtils")
@@ -32,21 +32,11 @@ local function _emit_buy_failed(player, entry, reason, body)
 end
 
 local function _fulfill_paid_goods_purchase(game, player, entry)
-  local product_id = entry.product_id
   local price = context.entry_price(entry)
   local currency = context.entry_currency(entry)
-
-  if not context.entry_vehicle_enabled(entry) then
-    _emit_buy_failed(player, entry, "vehicle_disabled", player.name .. " 当前对局已关闭载具功能")
-    return false
-  end
-  if not context.entry_market_enabled(entry) then
-    _emit_buy_failed(player, entry, "disabled", player.name .. " 该商品暂不可购买")
-    return false
-  end
-  local remaining = context.remaining_global_limit(game, product_id)
-  if remaining <= 0 then
-    _emit_buy_failed(player, entry, "sold_out", player.name .. " 该商品已售罄")
+  local decision = purchase_policy.validate_entry(game, player, entry)
+  if not decision.ok then
+    _emit_buy_failed(player, entry, decision.reason, decision.body)
     return false
   end
 
@@ -91,18 +81,10 @@ function purchase.execute(game, player, product_id, opts)
   local entry = context.entry_by_id(product_id)
   assert(entry ~= nil, "missing market entry: " .. tostring(product_id))
 
-  if not context.entry_vehicle_enabled(entry) then
-    _emit_buy_failed(player, entry, "vehicle_disabled", player.name .. " 当前对局已关闭载具功能")
-    return { ok = false }
-  end
-  if not context.entry_market_enabled(entry) then
-    _emit_buy_failed(player, entry, "disabled", player.name .. " 该商品暂不可购买")
-    return { ok = false }
-  end
-  local remaining = context.remaining_global_limit(game, product_id)
-  if remaining <= 0 then
-    _emit_buy_failed(player, entry, "sold_out", player.name .. " 该商品已售罄")
-    return { ok = false }
+  local decision = purchase_policy.validate_entry(game, player, entry)
+  if not decision.ok then
+    _emit_buy_failed(player, entry, decision.reason, decision.body)
+    return { ok = false, reason = decision.reason }
   end
 
   local price = context.entry_price(entry)
@@ -138,24 +120,9 @@ function purchase.execute(game, player, product_id, opts)
 
   if entry.kind == "vehicle" then
     if player.seat_id and not opts.skip_vehicle_prompt then
-      local current_name = context.vehicle_name(player.seat_id)
-      local next_name = context.entry_name(entry)
       return {
         ok = false,
-        intent = {
-          kind = "need_choice",
-          choice_spec = land_choice_specs.build_use_skip(
-            "market_vehicle_replace",
-            "是否更换座驾",
-            {
-              "当前座驾：" .. current_name,
-              "新座驾：" .. next_name,
-              "价格：" .. tostring(price) .. " " .. currency,
-            },
-            { player_id = player.id, product_id = entry.product_id },
-            { use = "更换", skip = "算了" }
-          ),
-        },
+        intent = purchase_policy.build_vehicle_replace_intent(player, entry, price, currency),
       }
     end
   end
