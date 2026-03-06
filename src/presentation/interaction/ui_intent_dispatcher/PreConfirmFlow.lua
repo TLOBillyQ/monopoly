@@ -2,17 +2,8 @@ local choice_openers = require("src.presentation.ui.choice_screen_service.opener
 local choice_common = require("src.presentation.ui.choice_screen_service.common")
 local number_utils = require("src.core.NumberUtils")
 local ui_view = require("src.presentation.api.UIViewService")
-local market_cfg = require("Config.Generated.Market")
 
 local pre_confirm_flow = {}
-
-local market_kind_by_product_id = {}
-for _, entry in ipairs(market_cfg or {}) do
-  local product_id = number_utils.to_integer(entry and entry.product_id)
-  if product_id ~= nil then
-    market_kind_by_product_id[product_id] = entry.kind
-  end
-end
 
 local function _parse_item_slot_index(intent)
   if intent.type ~= "ui_button" or not intent.id then
@@ -49,7 +40,18 @@ local function _resolve_market_skin_option(state, intent)
     return nil, nil
   end
   local product_id = number_utils.to_integer(intent.option_id)
-  if product_id == nil or market_kind_by_product_id[product_id] ~= "skin" then
+  if product_id == nil then
+    return nil, nil
+  end
+  local matched_option = nil
+  for _, option in ipairs(choice.options or {}) do
+    local option_id = number_utils.to_integer(option and option.id)
+    if option_id == product_id then
+      matched_option = option
+      break
+    end
+  end
+  if not (matched_option and matched_option.requires_pre_confirm == true) then
     return nil, nil
   end
   local option_id = intent.option_id

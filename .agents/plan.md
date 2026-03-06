@@ -22,8 +22,8 @@
 - [x] (2026-03-06 22:49 +0800) 已补阶段1契约：`architecture_guard_contract` 新增 output-port 路由断言，`usecase_boundary_contract` 新增 output 默认桥接与 override 优先级测试；全量回归现输出 `All regression checks passed (367)`。
 - [ ] 阶段2：已完成第一刀动画门控外提：`ActionAnimPort`、`TurnRoll`、`TurnMove` 改读 `game.anim_gate_port`，`game.ui_port` 预算已从 23 收紧到 16；剩余 `push_popup` 与 `ui_port.state` 读路径仍待迁移。
 - [x] (2026-03-07 00:28 +0800) 已完成阶段3：`RuntimeGlobalAliases` 已外迁到 `src/app/bootstrap/runtime_install/`；`Logger`、`DefaultPorts`、`RuntimeEditorExports`、`RuntimeContext` 都已改成 host hook 或 runtime context env 读取；`src/core` 宿主触点预算已从 47 压到 0。
-- [ ] 阶段4：已完成四刀。第一刀新增 `src/game/systems/market/service/PaidPurchaseGateway.lua`，承接 paid-currency 的 goods mapping、purchase panel 启动、待兑现队列和购买回调注册。第二刀把 paid callback 后的 market choice 刷新移到 `src/game/systems/market/service/Choice.lua` 的 `refresh_after_paid_callback()`。第三刀新增 `src/game/systems/market/service/Fulfillment.lua`，统一 item/vehicle/skin 的兑现副作用。第四刀新增 `src/game/systems/market/service/PurchasePolicy.lua`，把商品可买性校验和座驾替换确认 intent 组装从 `Purchase.lua` 中抽走。下一刀再看是否继续把 popup/失败反馈本身或本地金币购买前的确认/文案协调从执行服务中剥离。
-- [ ] 阶段5：把 `PreConfirmFlow` 等 presentation 中的应用规则收回用例层，让 presentation 只渲染 ViewModel。
+- [ ] 阶段4：已完成五刀。第一刀新增 `src/game/systems/market/service/PaidPurchaseGateway.lua`，承接 paid-currency 的 goods mapping、purchase panel 启动、待兑现队列和购买回调注册。第二刀把 paid callback 后的 market choice 刷新移到 `src/game/systems/market/service/Choice.lua` 的 `refresh_after_paid_callback()`。第三刀新增 `src/game/systems/market/service/Fulfillment.lua`，统一 item/vehicle/skin 的兑现副作用。第四刀新增 `src/game/systems/market/service/PurchasePolicy.lua`，把商品可买性校验和座驾替换确认 intent 组装从 `Purchase.lua` 中抽走。第五刀新增 `src/game/systems/market/service/Feedback.lua`，把 market buy_failed 事件与黑市 popup 文案出口从 `Purchase.lua`、`Choice.lua` 中抽离。剩余工作主要是观察 `Purchase.lua` 是否还值得继续拆本地金币购买结果编排，还是直接把精力转到阶段5 的 presentation 规则回收。
+- [x] (2026-03-07 01:27 +0800) 已启动阶段5第一刀：`src/game/systems/market/service/Choice.lua` 现在给 option 输出 `requires_pre_confirm/pre_confirm_kind`，`PreConfirmFlow.lua` 不再回查 `Config.Generated.Market` 判断皮肤商品，而是只消费用例层提供的 option 级确认语义；已补 `market` 与 `presentation_ui` 回归，验证“有 flag 才进二次确认，没有 flag 即使 product_id 像皮肤也直接派发”。
 - [ ] 阶段6：在边界稳定后整理目录语义和命名，避免目录改动与行为改动叠加。
 
 ## 意外与发现
@@ -66,6 +66,9 @@
 
 - 观察：`Purchase.lua` 在兑现逻辑被抽走后，剩下最明显的混合职责就变成“前置可买性校验 + 座驾替换确认 intent 组装”，它们更接近应用决策而不是购买执行。
   证据：把这些逻辑抽到 `PurchasePolicy.lua` 后，`Purchase.lua` 中与 `market_vehicle_replace`、`vehicle_disabled`、`sold_out`、`disabled` 相关的字符串与 choice spec 构造显著减少，而 `market`、`paid_currency` 与全量回归继续通过。
+
+- 观察：如果 `PreConfirmFlow` 继续根据 `Config.Generated.Market` 和 `product_id` 自己判断“这是不是皮肤”，presentation 就会把业务分类知识重新缓存一份，和 use-case 输出形成双轨语义。
+  证据：阶段5第一刀前，`src/presentation/interaction/ui_intent_dispatcher/PreConfirmFlow.lua` 会在模块加载时扫描 `Config.Generated.Market` 建 `market_kind_by_product_id`；改成读取 choice option 上的 `requires_pre_confirm` 后，新增回归可以证明 `option_id=5001` 但缺 flag 时会直接派发，不再被 presentation 私自拦截。
 
 ## 决策日志
 
@@ -117,9 +120,13 @@
   理由：这两类逻辑都属于“购买前的应用决策”，和宿主支付、兑现副作用、choice 刷新是不同层面的职责。先把它们移走，可以进一步把 `Purchase.lua` 压缩成单纯的 orchestration service。
   日期/作者：2026-03-07 / Codex
 
+- 决策：阶段4第五刀先抽 `Feedback.lua`，阶段5第一刀再让 market choice option 显式声明 `requires_pre_confirm`，而不是直接继续大拆 `PreConfirmFlow` 的所有分支。
+  理由：`buy_failed` 事件出口本身仍是 `Purchase.lua`/`Choice.lua` 中重复出现的横切关注点，先抽它可以继续瘦身 market service；随后只对 market choice 的二次确认语义做一刀 option 级显式化，就能以最小改动把一个明确的 presentation 业务判断回收到用例输出，避免阶段5一开始就把 item/land/tax 等所有确认分支绑成大提交。
+  日期/作者：2026-03-07 / Codex
+
 ## 结果与复盘
 
-阶段0和阶段1现在都已经完成，阶段2也已经切开第一刀，阶段3则已经完整完成，阶段4也完成了四刀。当前最重要的可观察结果有五条。第一，`src/game/flow` 已经没有任何直接的 `state.ui_*` 写入；用例层现在通过 `UseCaseOutputPort` 发出 UI 失效、choice 生命周期和 modal timer 输出。第二，`game.ui_port` 的预算已经从 23 降到 16，其中 `TurnRoll`、`TurnMove`、`ActionAnimPort` 这三处动画等待门控已经改走 `game.anim_gate_port`。第三，`src/core` 已经不再直接认识 Eggy 宿主全局，相关安装器和别名逻辑都已外移或改成显式注入。第四，`Purchase.lua` 的 paid-currency 宿主购买通道已经被抽到 `PaidPurchaseGateway.lua`，paid callback 后的 market choice 刷新已经移到 `Choice.lua`，item/vehicle/skin 的兑现副作用已经集中到 `Fulfillment.lua`，购买前决策已经集中到 `PurchasePolicy.lua`。第五，默认回归仍保持通过，并把这些收口一起锁住。
+阶段0和阶段1现在都已经完成，阶段2也已经切开第一刀，阶段3则已经完整完成，阶段4已完成五刀，阶段5 也已经开始第一刀。当前最重要的可观察结果有六条。第一，`src/game/flow` 已经没有任何直接的 `state.ui_*` 写入；用例层现在通过 `UseCaseOutputPort` 发出 UI 失效、choice 生命周期和 modal timer 输出。第二，`game.ui_port` 的预算已经从 23 降到 16，其中 `TurnRoll`、`TurnMove`、`ActionAnimPort` 这三处动画等待门控已经改走 `game.anim_gate_port`。第三，`src/core` 已经不再直接认识 Eggy 宿主全局，相关安装器和别名逻辑都已外移或改成显式注入。第四，`Purchase.lua` 的 paid-currency 宿主购买通道已经被抽到 `PaidPurchaseGateway.lua`，paid callback 后的 market choice 刷新已经移到 `Choice.lua`，item/vehicle/skin 的兑现副作用已经集中到 `Fulfillment.lua`，购买前决策已经集中到 `PurchasePolicy.lua`，失败反馈事件出口已经集中到 `Feedback.lua`。第五，market choice 现在会在 option 上显式声明 `requires_pre_confirm/pre_confirm_kind`，presentation 的 `PreConfirmFlow` 不再靠 `Config.Generated.Market` 和 `product_id` 再做一轮业务判断。第六，默认回归仍保持通过，并把这些收口一起锁住。
 
 这轮推进的经验同样直接。第一，阶段1不需要等 presentation 全部清干净才开始，先把“写入口”统一就能显著降低后续修改的耦合面。第二，守护测试必须允许内部兼容镜像存在，否则会把 `ui_runtime` 这种过渡性状态误判成旧债。第三，阶段2应该继续坚持“每次只拔一小束读路径”，因为 `push_popup`、`ui_port.state` 和 market 链路的风险明显高于动画布尔门控。第四，阶段3一旦把 `src/core` 改成显式注入，测试基础设施也必须同步升级为显式构造 runtime context，否则旧的全局 patch 习惯会反噬回归。
 
@@ -260,7 +267,7 @@
 
 ## 产物与备注
 
-阶段0与阶段1当前的关键产物如下。
+阶段0到阶段5第一刀当前的关键产物如下。
 
     tests/internal/dep_rules.lua
     tests/suites/architecture_guard_contract.lua
@@ -268,6 +275,10 @@
     tests/regression.lua
     .github/workflows/regression.yml
     src/game/flow/ports/UseCaseOutputPort.lua
+    src/game/systems/market/service/PaidPurchaseGateway.lua
+    src/game/systems/market/service/Fulfillment.lua
+    src/game/systems/market/service/PurchasePolicy.lua
+    src/game/systems/market/service/Feedback.lua
 
 当前冻结的债务基线如下。
 
@@ -285,10 +296,14 @@
 
 以及：
 
-    All regression checks passed (373)
+    All regression checks passed (374)
     dep_rules ok
     tick ok
     forbidden_globals ok
+
+以及：
+
+    All regression checks passed (150)
 
 ## 接口与依赖
 
@@ -331,3 +346,5 @@
 这样做的原因只有一个：阶段1到阶段3都需要一个稳定的出口，让用例层只描述意图，不再直接认识 UI 状态表或宿主对象图。
 
 2026-03-06 / Codex：本次更新完全重写 `.agents/plan.md`，把旧的 AFK 修复计划替换为当前“架构重构路线图与阶段0守护”活文档，并把今天已经完成的阶段0实现、验证命令、后续阶段顺序和验收标准全部写入。这样后续执行者无需聊天历史，只看本文件就能继续推进阶段1。
+
+2026-03-07 / Codex：本次更新把计划推进到“阶段4五刀 + 阶段5第一刀已启动”的真实状态，补记了 `Feedback.lua` 的职责收口、market choice option 显式确认语义，以及对应的 `market/presentation_ui` 验证结果。这样下一位执行者可以直接继续决定：是再瘦一层 `Purchase.lua`，还是沿着 `PreConfirmFlow` 把更多 presentation 业务判断改成消费用例输出。

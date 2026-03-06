@@ -1,5 +1,6 @@
 local context = require("src.game.systems.market.service.Context")
 local eligibility = require("src.game.systems.market.service.Eligibility")
+local feedback = require("src.game.systems.market.service.Feedback")
 local number_utils = require("src.core.NumberUtils")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 local logger = require("src.core.Logger")
@@ -86,7 +87,13 @@ local function _build_options_for_page(visible, page_index, page_size)
     local currency = context.entry_currency(entry)
     local label = name .. " - " .. number_utils.format_integer_part(price) .. " " .. currency
     body_lines[#body_lines + 1] = label
-    options[#options + 1] = { id = entry.product_id, label = label, can_buy = slot.can_buy }
+    options[#options + 1] = {
+      id = entry.product_id,
+      label = label,
+      can_buy = slot.can_buy,
+      requires_pre_confirm = entry.kind == "skin",
+      pre_confirm_kind = entry.kind == "skin" and "market_skin_purchase" or nil,
+    }
   end
   return body_lines, options
 end
@@ -213,11 +220,7 @@ function choice.apply_navigation(game, pending_choice, action)
     return false
   end
   if #spec.options == 0 then
-    _emit_event(monopoly_event.market.buy_failed, {
-      player = player,
-      reason = "empty_tab",
-      popup = { title = "黑市", body = "当前页签暂无可购买项" },
-    })
+    feedback.emit_buy_failed(player, nil, "empty_tab", "当前页签暂无可购买项")
   end
   _apply_spec(game, pending_choice, spec)
   return true

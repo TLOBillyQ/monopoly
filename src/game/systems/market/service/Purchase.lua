@@ -1,13 +1,12 @@
 local logger = require("src.core.Logger")
-local monopoly_event = require("src.core.events.MonopolyEvents")
 local context = require("src.game.systems.market.service.Context")
+local market_feedback = require("src.game.systems.market.service.Feedback")
 local purchase_policy = require("src.game.systems.market.service.PurchasePolicy")
 local fulfillment = require("src.game.systems.market.service.Fulfillment")
 local paid_purchase_gateway = require("src.game.systems.market.service.PaidPurchaseGateway")
 local number_utils = require("src.core.NumberUtils")
 
 local purchase = {}
-local _emit_event = monopoly_event.emit
 
 local function _read_truthy_flag(raw)
   if raw == true or raw == 1 or raw == "1" or raw == "true" or raw == "TRUE" then
@@ -22,21 +21,12 @@ local function _is_release_build()
   return _read_truthy_flag(raw)
 end
 
-local function _emit_buy_failed(player, entry, reason, body)
-  _emit_event(monopoly_event.market.buy_failed, {
-    player = player,
-    entry = entry,
-    reason = reason,
-    popup = { title = "黑市", body = body },
-  })
-end
-
 local function _fulfill_paid_goods_purchase(game, player, entry)
   local price = context.entry_price(entry)
   local currency = context.entry_currency(entry)
   local decision = purchase_policy.validate_entry(game, player, entry)
   if not decision.ok then
-    _emit_buy_failed(player, entry, decision.reason, decision.body)
+    market_feedback.emit_buy_failed(player, entry, decision.reason, decision.body)
     return false
   end
 
@@ -49,7 +39,7 @@ local function _fulfill_paid_goods_purchase(game, player, entry)
   if result.ok then
     return true
   end
-  _emit_buy_failed(player, entry, result.reason, result.body)
+  market_feedback.emit_buy_failed(player, entry, result.reason, result.body)
   return false
 end
 
@@ -83,7 +73,7 @@ function purchase.execute(game, player, product_id, opts)
 
   local decision = purchase_policy.validate_entry(game, player, entry)
   if not decision.ok then
-    _emit_buy_failed(player, entry, decision.reason, decision.body)
+    market_feedback.emit_buy_failed(player, entry, decision.reason, decision.body)
     return { ok = false, reason = decision.reason }
   end
 
@@ -101,7 +91,7 @@ function purchase.execute(game, player, product_id, opts)
           "reason=" .. tostring(reason or "unknown")
         )
       end
-      _emit_buy_failed(player, entry, reason or "paid_purchase_start_failed", player.name .. " 购买通道暂不可用")
+      market_feedback.emit_buy_failed(player, entry, reason or "paid_purchase_start_failed", player.name .. " 购买通道暂不可用")
       return { ok = false, reason = reason or "paid_purchase_start_failed" }
     end
     return {
@@ -114,7 +104,7 @@ function purchase.execute(game, player, product_id, opts)
 
   context.sync_managed_balance(game, player, currency)
   if game:player_balance(player, currency) < price then
-    _emit_buy_failed(player, entry, "insufficient_balance", player.name .. " 余额不足")
+    market_feedback.emit_buy_failed(player, entry, "insufficient_balance", player.name .. " 余额不足")
     return { ok = false, reason = "insufficient_balance", option_id = product_id }
   end
 
@@ -134,7 +124,7 @@ function purchase.execute(game, player, product_id, opts)
     priced_text = true,
   })
   if not result.ok then
-    _emit_buy_failed(player, entry, result.reason, result.body)
+    market_feedback.emit_buy_failed(player, entry, result.reason, result.body)
     return { ok = false, reason = result.reason }
   end
   return result

@@ -237,6 +237,30 @@ local function _test_skin_entry_can_buy_but_no_effect()
     "change_skin action anim should wait for 1 second")
 end
 
+local function _test_market_choice_marks_skin_options_for_pre_confirm()
+  local target = nil
+  for _, entry in ipairs(market_cfg) do
+    if entry.kind == "skin" and entry.market_enabled ~= false then
+      target = entry
+      break
+    end
+  end
+  assert(target ~= nil, "test requires at least one enabled skin market entry")
+
+  local market_service = require("src.game.systems.market.MarketService")
+  local g = _new_game()
+  local p = g:current_player()
+  g:set_player_balance(p, "金豆", 999999)
+
+  local spec = market_service.choice.build(p, g, { active_tab = "skin" })
+  assert(type(spec) == "table" and spec.kind == "market_buy", "skin tab should build market choice")
+
+  local target_option = _find_option(spec.options, target.product_id)
+  assert(target_option ~= nil, "skin tab should expose skin option")
+  assert(target_option.requires_pre_confirm == true, "skin option should request pre-confirm in presentation")
+  assert(target_option.pre_confirm_kind == "market_skin_purchase", "skin option should declare stable pre-confirm kind")
+end
+
 local function _test_market_disabled_products_hidden()
   local market_service = require("src.game.systems.market.MarketService")
   local g = _new_game()
@@ -633,6 +657,10 @@ return {
     { name = "market_disabled_products_hidden", run = _test_market_disabled_products_hidden },
     { name = "buy_disabled_market_product_rejected", run = _test_buy_disabled_market_product_rejected },
     { name = "skin_entry_can_buy_but_no_effect", run = _test_skin_entry_can_buy_but_no_effect },
+    {
+      name = "market_choice_marks_skin_options_for_pre_confirm",
+      run = _test_market_choice_marks_skin_options_for_pre_confirm,
+    },
     {
       name = "market_tab_all_unbuyable_still_builds_market_choice",
       run = _test_market_tab_all_unbuyable_still_builds_market_choice,

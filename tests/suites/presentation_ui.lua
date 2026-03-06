@@ -1630,7 +1630,7 @@ local function _test_ui_intent_dispatcher_market_confirm_skin_opens_pre_confirm_
         id = 12,
         kind = "market_buy",
         options = {
-          { id = 5001, label = "海绵宝宝皮肤" },
+          { id = 5001, label = "海绵宝宝皮肤", requires_pre_confirm = true, pre_confirm_kind = "market_skin_purchase" },
         },
       },
     },
@@ -1690,7 +1690,7 @@ local function _test_ui_intent_dispatcher_market_confirm_skin_cancel_restores_ma
         id = 12,
         kind = "market_buy",
         options = {
-          { id = 5001, label = "海绵宝宝皮肤" },
+          { id = 5001, label = "海绵宝宝皮肤", requires_pre_confirm = true, pre_confirm_kind = "market_skin_purchase" },
         },
       },
     },
@@ -1766,6 +1766,51 @@ local function _test_ui_intent_dispatcher_market_confirm_non_skin_still_direct_d
   _assert_eq(captured and captured.type, "choice_select", "non-skin market_confirm should dispatch choice_select directly")
   _assert_eq(captured and captured.choice_id, 12, "non-skin market_confirm should keep choice id")
   _assert_eq(captured and captured.option_id, 2001, "non-skin market_confirm should keep option id")
+end
+
+local function _test_ui_intent_dispatcher_market_confirm_without_pre_confirm_flag_dispatches_directly()
+  local captured = nil
+  local state = {
+    turn_action_port = {
+      dispatch_action = function(_, _, action)
+        captured = action
+      end,
+      should_block_action = function()
+        return false
+      end,
+    },
+    ui_model = {
+      choice = {
+        id = 12,
+        kind = "market_buy",
+        options = {
+          { id = 5001, label = "海绵宝宝皮肤" },
+        },
+      },
+    },
+    ui = {
+      input_blocked = false,
+      item_slot_item_ids = {},
+      item_slot_item_ids_by_role = {},
+      active_choice_screen_key = "market",
+    },
+  }
+  local game = {}
+
+  _with_patches({}, function()
+    ui_intent_dispatcher.dispatch(state, game, {
+      type = "market_confirm",
+      choice_id = 12,
+      option_id = 5001,
+    }, {})
+  end)
+
+  _assert_eq(captured and captured.type, "choice_select",
+    "market_confirm without explicit pre-confirm flag should dispatch directly")
+  _assert_eq(captured and captured.choice_id, 12,
+    "direct dispatch should keep market choice id when pre-confirm flag missing")
+  _assert_eq(captured and captured.option_id, 5001,
+    "direct dispatch should keep selected option id when pre-confirm flag missing")
 end
 
 local function _test_ui_touch_policy_runtime_nodes_touch_enabled()
@@ -6109,6 +6154,7 @@ return {
   _test_ui_intent_dispatcher_market_confirm_skin_opens_pre_confirm_then_dispatches,
   _test_ui_intent_dispatcher_market_confirm_skin_cancel_restores_market,
   _test_ui_intent_dispatcher_market_confirm_non_skin_still_direct_dispatch,
+  _test_ui_intent_dispatcher_market_confirm_without_pre_confirm_flag_dispatches_directly,
   _test_ui_intent_dispatcher_market_select_updates_ui_only,
   _test_ui_intent_dispatcher_popup_confirm_closes_popup,
   _test_ui_intent_dispatcher_toggle_action_log_uses_actor_role_context,
