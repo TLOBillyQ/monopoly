@@ -5,7 +5,14 @@ local gameplay_rules = require("src.core.config.GameplayRules")
 local item_use_broadcast = {}
 
 function item_use_broadcast.dispatch(game, player, item_id)
-  if not (game and game.ui_port and player and item_id) then
+  if not (game and player and item_id) then
+    return false
+  end
+  local popup_port = game.popup_port
+  if popup_port == nil and type(game.ensure_popup_port) == "function" then
+    popup_port = game:ensure_popup_port()
+  end
+  if popup_port == nil then
     return false
   end
   intent_dispatcher.dispatch(game, {

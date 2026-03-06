@@ -4,7 +4,14 @@ local action_anim_port = require("src.core.ActionAnimPort")
 local landing_presenter = {}
 
 function landing_presenter.push_popup(game, title, body, opts)
-  if not (game and game.ui_port) then
+  if not game then
+    return false
+  end
+  local popup_port = game.popup_port
+  if popup_port == nil and type(game.ensure_popup_port) == "function" then
+    popup_port = game:ensure_popup_port()
+  end
+  if popup_port == nil then
     return false
   end
   opts = opts or {}

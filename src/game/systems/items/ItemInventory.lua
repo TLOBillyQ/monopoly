@@ -84,7 +84,12 @@ function inventory.draw_random()
 end
 
 local function _notify_full(game, player, item_id)
-  if not game or not game.ui_port then return end
+  if not game then return end
+  local popup_port = game.popup_port
+  if popup_port == nil and type(game.ensure_popup_port) == "function" then
+    popup_port = game:ensure_popup_port()
+  end
+  if popup_port == nil then return end
   if player.is_ai or player.auto then
     return
   end

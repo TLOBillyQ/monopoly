@@ -48,11 +48,14 @@ local function _resolve_bankruptcy_text(player, opts)
 end
 
 local function _push_bankruptcy_popup(game, player, opts)
-  local ui_port = game and game.ui_port or nil
-  if not (ui_port and ui_port.push_popup) then
+  local popup_port = game and game.popup_port or nil
+  if popup_port == nil and game and type(game.ensure_popup_port) == "function" then
+    popup_port = game:ensure_popup_port()
+  end
+  if not (popup_port and popup_port.push_popup) then
     return
   end
-  ui_port:push_popup({
+  popup_port:push_popup({
     kind = "bankruptcy",
     player_id = player and player.id or nil,
     player_name = player and player.name or nil,
