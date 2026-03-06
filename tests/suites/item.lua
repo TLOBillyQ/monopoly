@@ -100,6 +100,41 @@ local function _test_item_phase_keeps_demolish_when_target_exists()
   _assert_eq(spec.options[1].id, 2008, "demolish item should be selectable when target exists")
 end
 
+local function _test_item_phase_hides_rent_cards_on_owned_land()
+  local g = _new_game()
+  local p = g:current_player()
+  local idx = 3
+  local tile_ref = g.board:get_tile(idx)
+  g:update_player_position(p, idx)
+  g:set_tile_owner(tile_ref, p.id)
+  g:set_player_property(p, tile_ref.id, true)
+  p.inventory:add({ id = gameplay_rules.item_ids.strong })
+  p.inventory:add({ id = gameplay_rules.item_ids.free_rent })
+
+  local spec = item_phase.build_choice_spec(g, p, "post_action")
+  _assert_eq(spec, nil, "owned land should not expose strong/free rent cards")
+end
+
+local function _test_item_phase_keeps_rent_cards_on_other_owned_land()
+  local g = _new_game()
+  local p = g:current_player()
+  local idx = 3
+  local tile_ref = g.board:get_tile(idx)
+  g:update_player_position(p, idx)
+  g:set_tile_owner(tile_ref, g.players[2].id)
+  g:set_player_cash(p, 100000)
+  p.inventory:add({ id = gameplay_rules.item_ids.strong })
+  p.inventory:add({ id = gameplay_rules.item_ids.free_rent })
+
+  local spec = assert(item_phase.build_choice_spec(g, p, "post_action"), "other player land should expose rent cards")
+  local found = {}
+  for _, option in ipairs(spec.options) do
+    found[option.id] = true
+  end
+  _assert_eq(found[gameplay_rules.item_ids.strong], true, "strong card should stay available on other owned land")
+  _assert_eq(found[gameplay_rules.item_ids.free_rent], true, "free rent card should stay available on other owned land")
+end
+
 local function _test_item_equalize_cash()
   local g = _new_game()
   local user = g.players[1]
@@ -337,6 +372,8 @@ return {
     { name = "demolish_card_no_target_returns_false", run = _test_demolish_card_no_target_returns_false },
     { name = "item_phase_filters_unusable_target_items", run = _test_item_phase_filters_unusable_target_items },
     { name = "item_phase_keeps_demolish_when_target_exists", run = _test_item_phase_keeps_demolish_when_target_exists },
+    { name = "item_phase_hides_rent_cards_on_owned_land", run = _test_item_phase_hides_rent_cards_on_owned_land },
+    { name = "item_phase_keeps_rent_cards_on_other_owned_land", run = _test_item_phase_keeps_rent_cards_on_other_owned_land },
     { name = "item_equalize_cash", run = _test_item_equalize_cash },
     { name = "target_item_manual_direct_exec_and_duration", run = _test_target_item_manual_direct_exec_and_duration },
     { name = "item_executor_fallback_item_use_anim", run = _test_item_executor_fallback_item_use_anim },
