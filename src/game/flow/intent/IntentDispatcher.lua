@@ -56,9 +56,13 @@ end
 function intent_dispatcher.push_popup(game, payload, opts)
   assert(payload ~= nil, "missing popup payload")
   opts = opts or {}
-  local ui_port = assert(game.ui_port, "missing ui_port")
-  assert(ui_port.push_popup ~= nil, "missing ui_port.push_popup")
-  ui_port:push_popup(payload, opts)
+  local popup_port = game and game.popup_port or nil
+  if popup_port == nil and game and type(game.ensure_popup_port) == "function" then
+    popup_port = game:ensure_popup_port()
+  end
+  assert(popup_port ~= nil, "missing popup_port")
+  assert(popup_port.push_popup ~= nil, "missing popup_port.push_popup")
+  popup_port:push_popup(payload, opts)
   local event_name = monopoly_event.resolve_intent("push_popup")
   emit(event_name, { payload = payload })
   return true
@@ -85,4 +89,3 @@ function intent_dispatcher.dispatch(game, payload, opts)
 end
 
 return intent_dispatcher
-

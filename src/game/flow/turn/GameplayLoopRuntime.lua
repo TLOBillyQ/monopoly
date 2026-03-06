@@ -81,6 +81,24 @@ function runtime.build_ui_runtime_port(state)
   return port
 end
 
+function runtime.build_popup_port(state)
+  assert(type(state) == "table", "missing state")
+  if type(state._popup_port) == "table" then
+    return state._popup_port
+  end
+
+  local port = {}
+  port.push_popup = function(_, payload, opts)
+    if type(state.push_popup) == "function" then
+      return state:push_popup(payload, opts)
+    end
+    return false
+  end
+
+  state._popup_port = port
+  return port
+end
+
 function runtime.build_anim_gate_port(state)
   assert(type(state) == "table", "missing state")
   if type(state._anim_gate_port) == "table" then

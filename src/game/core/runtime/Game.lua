@@ -43,6 +43,25 @@ local function _resolve_turn_runtime(self)
   return self.turn_engine
 end
 
+function game:ensure_popup_port()
+  local popup_port = self.popup_port
+  if type(popup_port) == "table" and type(popup_port.push_popup) == "function" then
+    return popup_port
+  end
+
+  local compat_port = {}
+  compat_port.push_popup = function(_, payload, opts)
+    local raw_port = self["ui_port"]
+    local push_popup = raw_port and raw_port["push_popup"] or nil
+    if type(push_popup) == "function" then
+      return push_popup(raw_port, payload, opts)
+    end
+    return false
+  end
+  self.popup_port = compat_port
+  return compat_port
+end
+
 function game:advance_turn()
   if self.finished then
     return

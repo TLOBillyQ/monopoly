@@ -334,6 +334,15 @@ local function new_game(opts)
     tiles = opts.tiles or tiles_cfg,
   })
   game.ui_port = build_ui_port(opts.ui_port)
+  game.popup_port = {
+    push_popup = function(_, payload, popup_opts)
+      local ui_port = game.ui_port
+      if ui_port and type(ui_port.push_popup) == "function" then
+        return ui_port:push_popup(payload, popup_opts)
+      end
+      return false
+    end,
+  }
   return game
 end
 
