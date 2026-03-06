@@ -147,6 +147,7 @@ local function _initialize_ports(state, game)
   state.gameplay_loop_ports = ports
   game.ui_port = gameplay_loop_runtime.build_ui_runtime_port(state)
   game.popup_port = gameplay_loop_runtime.build_popup_port(state)
+  game.tile_feedback_port = gameplay_loop_runtime.build_tile_feedback_port(state)
   game.anim_gate_port = gameplay_loop_runtime.build_anim_gate_port(state)
   game.gameplay_loop_ports = ports
   return ports

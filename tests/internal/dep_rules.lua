@@ -226,7 +226,7 @@ local growth_budget_rules = {
       ["src/game/systems/items/ItemPhase.lua"] = 0,
       ["src/game/systems/items/ItemUseBroadcast.lua"] = 0,
       ["src/game/systems/land/LandingPresenter.lua"] = 0,
-      ["src/game/systems/land/landing_effects/BaseLandEffects.lua"] = 1,
+      ["src/game/systems/land/landing_effects/BaseLandEffects.lua"] = 0,
     },
   },
   {

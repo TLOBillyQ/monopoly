@@ -99,6 +99,25 @@ function runtime.build_popup_port(state)
   return port
 end
 
+function runtime.build_tile_feedback_port(state)
+  assert(type(state) == "table", "missing state")
+  if type(state._tile_feedback_port) == "table" then
+    return state._tile_feedback_port
+  end
+
+  local port = {}
+  port.on_tile_upgraded = function(_, tile_id, level)
+    if type(state.on_tile_upgraded) == "function" then
+      state:on_tile_upgraded(tile_id, level)
+      return true
+    end
+    return false
+  end
+
+  state._tile_feedback_port = port
+  return port
+end
+
 function runtime.build_anim_gate_port(state)
   assert(type(state) == "table", "missing state")
   if type(state._anim_gate_port) == "table" then

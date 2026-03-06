@@ -17,11 +17,14 @@ local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
 local M = {}
 
 local function _notify_tile_upgraded_direct(game, tile_id, level)
-  local ui_port = game and game.ui_port or nil
-  if not (ui_port and type(ui_port.on_tile_upgraded) == "function") then
+  local tile_feedback_port = game and game.tile_feedback_port or nil
+  if tile_feedback_port == nil and game and type(game.ensure_tile_feedback_port) == "function" then
+    tile_feedback_port = game:ensure_tile_feedback_port()
+  end
+  if not (tile_feedback_port and type(tile_feedback_port.on_tile_upgraded) == "function") then
     return false
   end
-  local ok, handled = pcall(ui_port.on_tile_upgraded, ui_port, tile_id, level)
+  local ok, handled = pcall(tile_feedback_port.on_tile_upgraded, tile_feedback_port, tile_id, level)
   if not ok then
     return false
   end
@@ -192,4 +195,3 @@ M.executors = {
 }
 
 return M
-

@@ -20,11 +20,12 @@
 - [x] (2026-03-06 20:33 +0800) 已完成阶段0验收：`lua tests/internal/dep_rules.lua` 通过，定向守护 suite 通过，全量 `lua tests/regression.lua` 通过并输出 `All regression checks passed (364)`。
 - [x] (2026-03-06 22:46 +0800) 已完成阶段1：新增 `src/game/flow/ports/UseCaseOutputPort.lua`，把 `GameplayLoop`、`TurnDispatch`、`TickChoiceTimeout`、`TickTimeout` 的 `state.ui_* / pending_choice* / ui_model` 写入收拢到 output port，并让 `tests/internal/dep_rules.lua` 中 `src/game/flow` 的 `state.ui_*` 预算降到 0。
 - [x] (2026-03-06 22:49 +0800) 已补阶段1契约：`architecture_guard_contract` 新增 output-port 路由断言，`usecase_boundary_contract` 新增 output 默认桥接与 override 优先级测试；全量回归现输出 `All regression checks passed (367)`。
-- [ ] 阶段2：已完成第一刀动画门控外提：`ActionAnimPort`、`TurnRoll`、`TurnMove` 改读 `game.anim_gate_port`，`game.ui_port` 预算已从 23 收紧到 16。随后又清掉了 `TurnDecision` 对 `game.ui_port.state.pending_choice_elapsed` 的反向读取，并把 `IntentDispatcher`、`Bankruptcy`、`LandingPresenter`、`ItemInventory`、`ItemUseBroadcast` 这些 popup/广播链路迁到专用 `popup_port`/兼容桥。当前剩余的重点读路径主要集中在 `ItemPhase` 的 UI 前置断言，以及 `BaseLandEffects`、`GameplayLoop` 本身保留的宿主 DTO 挂载。
+- [ ] 阶段2：已完成第一刀动画门控外提：`ActionAnimPort`、`TurnRoll`、`TurnMove` 改读 `game.anim_gate_port`，`game.ui_port` 预算已从 23 收紧到 16。随后又清掉了 `TurnDecision` 对 `game.ui_port.state.pending_choice_elapsed` 的反向读取，把 `IntentDispatcher`、`Bankruptcy`、`LandingPresenter`、`ItemInventory`、`ItemUseBroadcast` 这些 popup/广播链路迁到专用 `popup_port`/兼容桥，并把 `BaseLandEffects` 的升级通知迁到 `tile_feedback_port`/兼容桥。当前剩余的重点读路径主要收敛到 `GameplayLoop` 自身保留的 runtime DTO 挂载。
 - [x] (2026-03-07 03:07 +0800) 已完成阶段2当前最窄的一刀：`TurnDecision.decide_choice_action()` 不再通过 `game.ui_port.state` 回读 `pending_choice_elapsed`；runtime coroutine session 现显式持有 `choice_elapsed_seconds`，`dep_rules` 中 `src/game/flow/turn/TurnDecision.lua` 的 `game.ui_port` 预算已降到 0。
 - [x] (2026-03-07 03:19 +0800) 已完成阶段2第二刀的 popup 链路起点收口：`GameplayLoop` 现在注入专用 `game.popup_port`，`IntentDispatcher.push_popup()` 已优先走 popup_port，旧测试与非 `set_game` 路径则通过 `Game:ensure_popup_port()` 做兼容镜像；`dep_rules` 中 `src/game/flow/intent/IntentDispatcher.lua` 的 `game.ui_port` 预算已降到 0。
 - [x] (2026-03-07 03:27 +0800) 已把 `Bankruptcy`、`LandingPresenter`、`ItemInventory`、`ItemUseBroadcast` 的 popup 发射路径切到 `popup_port`/兼容桥，`dep_rules` 中这四个文件的 `game.ui_port` 预算均已降到 0。
 - [x] (2026-03-07 03:34 +0800) 已把 `ItemPhase` 的 `game.ui_port` 断言删除并把预算收紧到 0；当前阶段2剩余的高价值 `game.ui_port` 读路径主要收敛到 `BaseLandEffects` 的 `on_tile_upgraded` 直推和 `GameplayLoop` 自身保留的 runtime DTO 安装。
+- [x] (2026-03-07 03:42 +0800) 已把 `BaseLandEffects` 的 `on_tile_upgraded` 直推改成 `tile_feedback_port`/兼容桥，`dep_rules` 中 `src/game/systems/land/landing_effects/BaseLandEffects.lua` 的 `game.ui_port` 预算已降到 0。
 - [x] (2026-03-07 00:28 +0800) 已完成阶段3：`RuntimeGlobalAliases` 已外迁到 `src/app/bootstrap/runtime_install/`；`Logger`、`DefaultPorts`、`RuntimeEditorExports`、`RuntimeContext` 都已改成 host hook 或 runtime context env 读取；`src/core` 宿主触点预算已从 47 压到 0。
 - [ ] 阶段4：已完成六刀。第一刀新增 `src/game/systems/market/service/PaidPurchaseGateway.lua`，承接 paid-currency 的 goods mapping、purchase panel 启动、待兑现队列和购买回调注册。第二刀把 paid callback 后的 market choice 刷新移到 `src/game/systems/market/service/Choice.lua` 的 `refresh_after_paid_callback()`。第三刀新增 `src/game/systems/market/service/Fulfillment.lua`，统一 item/vehicle/skin 的兑现副作用。第四刀新增 `src/game/systems/market/service/PurchasePolicy.lua`，把商品可买性校验和座驾替换确认 intent 组装从 `Purchase.lua` 中抽走。第五刀新增 `src/game/systems/market/service/Feedback.lua`，把 market buy_failed 事件与黑市 popup 文案出口从 `Purchase.lua`、`Choice.lua` 中抽离。第六刀新增 `src/game/systems/market/service/ChoiceOutcome.lua`，把购买结果后的 choice 刷新、满包退出 popup、follow-up intent 派发和 stay/finish 决策从 `MarketChoiceHandler.lua` 中抽离。剩余工作主要是观察 `Purchase.lua` 本身是否还值得继续拆本地金币购买前后编排，还是把阶段4视为足够收口。
 - [x] (2026-03-07 03:07 +0800) 已把 `Purchase.execute()` 的本地金币购买分支外提到 `src/game/systems/market/service/LocalPurchase.lua`，并把 `MarketChoiceHandler` 的购买结果协调外提到 `src/game/systems/market/service/ChoiceOutcome.lua`；`Purchase.lua` 与 `MarketChoiceHandler.lua` 继续向纯编排器收缩。
@@ -72,6 +73,9 @@
 
 - 观察：`ItemPhase` 的那条 `assert(game.ui_port ~= nil)` 并不是真正的运行时需求，而是旧架构时期留下的“人类回合一定有 UI”防御式假设；在 choice 输出已经端口化后，这条断言只会制造虚假耦合。
   证据：删除断言并把 `dep_rules` 预算收紧到 0 后，`item/gameplay/gameplay_coroutine` 定向回归与全量回归继续通过，说明 `ItemPhase` 本身并不依赖 `ui_port` 才能构建 choice。
+
+- 观察：`BaseLandEffects` 的 `on_tile_upgraded` 直推和 `popup_port` 改造是同一种单用途适配器问题，适合沿用同样的“专用端口 + 兼容桥”策略，而没必要把它强行并进更大的 state port 设计。
+  证据：给 `GameplayLoopRuntime` 增加 `tile_feedback_port`、给 `Game` 增加 `ensure_tile_feedback_port()` 后，`BaseLandEffects` 去掉 `ui_port.on_tile_upgraded` 直推，`landing/gameplay` 定向回归与全量回归都继续通过，预算也能直接收紧到 0。
 
 - 观察：阶段3把 `DefaultPorts` 改成只认 `runtime_context.current().env` 后，最容易出问题的不是业务逻辑，而是那些自己 patch 全局、却不会同步重建 runtime context 的测试 helper。
   证据：`presentation_ui_action_anim` 的本地 `_with_patches` 与 `TestSupport` 都需要补“重建 runtime context + 接线 logger/scheduler”的逻辑，回归才重新稳定。
@@ -190,6 +194,10 @@
 
 - 决策：在单用途 popup 适配器迁完后，顺手删掉 `ItemPhase` 的 `ui_port` 断言并收紧预算，而不是把它留到更晚再清。
   理由：这不是新的端口设计问题，只是一条已经失去作用的旧防御式假设。既然它不牵涉行为改动，应该尽早从预算账本里抹掉，避免后续阶段2盘点时继续把它当成真实剩余债务。
+  日期/作者：2026-03-07 / Codex
+
+- 决策：`BaseLandEffects` 的升级通知采用 `tile_feedback_port`/兼容桥，而不是直接塞进已有 `popup_port` 或临时继续走事件桥。
+  理由：升级地块通知和 popup 是不同语义，混到一个端口会让接口变脏；而直接只走事件桥又会失去当前“优先直推、失败再广播”的优化。单独的 `tile_feedback_port` 能最小成本保持原行为，同时把 `ui_port` 读依赖继续压缩。
   日期/作者：2026-03-07 / Codex
 
 - 决策：阶段5第二刀不新建“ConfirmViewModel”模块，先直接把 `confirm_title/confirm_body` 字段并入现有 choice/option 结构。

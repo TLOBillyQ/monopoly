@@ -62,6 +62,25 @@ function game:ensure_popup_port()
   return compat_port
 end
 
+function game:ensure_tile_feedback_port()
+  local tile_feedback_port = self.tile_feedback_port
+  if type(tile_feedback_port) == "table" and type(tile_feedback_port.on_tile_upgraded) == "function" then
+    return tile_feedback_port
+  end
+
+  local compat_port = {}
+  compat_port.on_tile_upgraded = function(_, tile_id, level)
+    local raw_port = self["ui_port"]
+    local on_tile_upgraded = raw_port and raw_port["on_tile_upgraded"] or nil
+    if type(on_tile_upgraded) == "function" then
+      return on_tile_upgraded(raw_port, tile_id, level) == true
+    end
+    return false
+  end
+  self.tile_feedback_port = compat_port
+  return compat_port
+end
+
 function game:advance_turn()
   if self.finished then
     return
