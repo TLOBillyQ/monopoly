@@ -179,6 +179,27 @@ local profiles = {
       },
     },
   },
+  ["机会卡倒退交叉口测试"] = {
+    bootstrap = {
+      players = {
+        [1] = {
+          position_tile_id = 42,
+          statuses = {
+            move_dir = "down",
+          },
+        },
+        [2] = {
+          position_tile_id = 35,
+        },
+        [3] = {
+          position_tile_id = 44,
+        },
+        [4] = {
+          position_tile_id = 40,
+        },
+      },
+    },
+  },
   items_move_control = {
     bootstrap = {
       players = {

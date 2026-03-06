@@ -65,6 +65,17 @@ local function _apply_item_count_bootstrap(game, player, player_cfg)
   end
 end
 
+local function _apply_player_status_bootstrap(game, player, player_cfg)
+  local statuses = player_cfg.statuses
+  if type(statuses) ~= "table" then
+    return
+  end
+  for status_key, status_value in pairs(statuses) do
+    assert(type(status_key) == "string" and status_key ~= "", "invalid status key in profile bootstrap")
+    game:set_player_status(player, status_key, status_value)
+  end
+end
+
 local function _apply_player_bootstrap(game, players)
   if type(players) ~= "table" then
     return
@@ -77,6 +88,7 @@ local function _apply_player_bootstrap(game, players)
     _apply_player_resources(game, player, player_cfg)
     _apply_player_position_bootstrap(game, player, player_cfg)
     _apply_item_count_bootstrap(game, player, player_cfg)
+    _apply_player_status_bootstrap(game, player, player_cfg)
   end
 end
 

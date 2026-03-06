@@ -277,6 +277,17 @@ local function _test_chance_card_profile_applies_tile_9_and_remote_dice()
   })
 end
 
+local function _test_chance_backward_intersection_profile_applies_tile_42()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "机会卡倒退交叉口测试")
+
+  local p1_expected = game.board:index_of_tile_id(42)
+  assert(p1_expected ~= nil, "tile 42 should exist in board path")
+  assert(game.players[1].position == p1_expected, "p1 position should match 机会卡倒退交叉口测试")
+  assert(game.players[1].status.move_dir == "down", "chance backward intersection profile should preset move_dir")
+  assert(game.players[1].inventory:count() == 0, "chance backward intersection profile should not preload startup items")
+end
+
 return {
   name = "test_profiles",
   tests = {
@@ -319,6 +330,10 @@ return {
     {
       name = "chance_card_profile_applies_tile_9_and_remote_dice",
       run = _test_chance_card_profile_applies_tile_9_and_remote_dice,
+    },
+    {
+      name = "chance_backward_intersection_profile_applies_tile_42",
+      run = _test_chance_backward_intersection_profile_applies_tile_42,
     },
   },
 }
