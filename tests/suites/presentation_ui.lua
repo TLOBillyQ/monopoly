@@ -603,6 +603,8 @@ local function _test_ui_model_player_slot_map_and_choice_owner()
   g.turn.pending_choice = {
     id = 77,
     kind = "item_phase_choice",
+    uses_item_slots = true,
+    pre_confirm_before_slot_pick = true,
     options = { { id = 2002, label = "用道具" } },
     allow_cancel = true,
     cancel_label = "取消",
@@ -799,6 +801,8 @@ local function _test_turn_dispatch_item_slot_uses_actor_slot_map()
   g.turn.pending_choice = {
     id = 66,
     kind = "item_phase_choice",
+    uses_item_slots = true,
+    pre_confirm_before_slot_pick = true,
     options = { { id = 3001, label = "用 3001" } },
     allow_cancel = true,
     cancel_label = "取消",
@@ -2147,11 +2151,15 @@ local function _test_choice_modal_routes_to_new_screens()
     ui_view.open_choice_modal(state, {
       id = 5,
       kind = "item_phase_choice",
+      uses_item_slots = true,
+      pre_confirm_before_slot_pick = true,
       title = "行动前：使用道具？",
       body = "",
+      confirm_title = "行动前",
+      confirm_body = "可用道具：路障卡、遥控骰子卡",
       options = {
-        { id = 2001, label = "路障卡" },
-        { id = 2002, label = "遥控骰子卡" },
+        { id = 2001, label = "路障卡", confirm_title = "行动前", confirm_body = "将使用：路障卡" },
+        { id = 2002, label = "遥控骰子卡", confirm_title = "行动前", confirm_body = "将使用：遥控骰子卡" },
       },
       allow_cancel = true,
       cancel_label = "结束阶段",
@@ -2504,7 +2512,7 @@ local function _test_choice_route_policy_prefers_explicit_route_metadata()
     },
     {
       label = "item phase inline",
-      choice = { kind = "item_phase_choice" },
+      choice = { kind = "item_phase_choice", uses_item_slots = true, pre_confirm_before_slot_pick = true },
       route = "base_inline",
       confirm = false,
     },
@@ -2729,11 +2737,15 @@ local function _test_secondary_confirm_copy_item_phase_selected_option()
   local common = require("src.presentation.ui.choice_screen_service.common")
   local choice = {
     kind = "item_phase_choice",
+    uses_item_slots = true,
+    pre_confirm_before_slot_pick = true,
+    confirm_title = "行动前",
     title = "行动前：使用道具？",
     options = {
-      { id = 2001, label = "路障卡" },
-      { id = 2002, label = "遥控骰子卡" },
+      { id = 2001, label = "路障卡", confirm_title = "行动前", confirm_body = "将使用：路障卡" },
+      { id = 2002, label = "遥控骰子卡", confirm_title = "行动前", confirm_body = "将使用：遥控骰子卡" },
     },
+    confirm_body = "可用道具：路障卡、遥控骰子卡",
     meta = { phase = "pre_action" },
   }
   local title = common.resolve_secondary_confirm_title(choice, nil, "base_inline", 2002)
@@ -3530,6 +3542,8 @@ local function _test_item_slot_refresh_shows_only_playable_outlines()
     item_slots_by_player = { [1] = { 2001, 2002, 2003 } },
     choice = {
       kind = "item_phase_choice",
+      uses_item_slots = true,
+      pre_confirm_before_slot_pick = true,
       options = { { id = 2001 }, { id = 2003 } },
     },
   }
@@ -3561,6 +3575,8 @@ local function _test_item_slot_intents_include_outline_nodes()
     ui_model = {
       choice = {
         kind = "item_phase_choice",
+        uses_item_slots = true,
+        pre_confirm_before_slot_pick = true,
       },
     },
   }
@@ -3985,7 +4001,7 @@ local function _test_item_phase_ask_confirm_clears_highlight_suppress()
     _item_phase_confirmed = nil,
     _suppress_item_slot_highlight_until_pick = true,
     ui_model = {
-      choice = { id = 66, kind = "item_phase_choice" },
+      choice = { id = 66, kind = "item_phase_choice", uses_item_slots = true, pre_confirm_before_slot_pick = true },
     },
     ui = ui_view.build_ui_state(),
   }
@@ -4042,6 +4058,8 @@ local function _test_item_phase_confirmed_skips_replay_before_slot_click()
     choice = {
       id = 77,
       kind = "item_phase_choice",
+      uses_item_slots = true,
+      pre_confirm_before_slot_pick = true,
       options = { { id = 2002 } },
     },
   }
@@ -4117,6 +4135,8 @@ local function _test_item_slot_refresh_item_phase_ask_replays_highlight_then_rev
     choice = {
       id = 99,
       kind = "item_phase_choice",
+      uses_item_slots = true,
+      pre_confirm_before_slot_pick = true,
       options = { { id = 2002 }, { id = 2003 } },
     },
   }
@@ -4235,6 +4255,8 @@ local function _test_item_slot_refresh_resets_highlight_without_client_role()
     },
     choice = {
       kind = "item_phase_choice",
+      uses_item_slots = true,
+      pre_confirm_before_slot_pick = true,
       options = { { id = 2002 } },
     },
   }
@@ -4259,6 +4281,8 @@ local function _test_item_slot_refresh_resets_highlight_without_client_role()
     },
     choice = {
       kind = "item_phase_choice",
+      uses_item_slots = true,
+      pre_confirm_before_slot_pick = true,
       options = { { id = 2003 } },
     },
   }

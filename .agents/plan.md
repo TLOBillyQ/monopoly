@@ -26,6 +26,7 @@
 - [x] (2026-03-07 01:27 +0800) 已启动阶段5第一刀：`src/game/systems/market/service/Choice.lua` 现在给 option 输出 `requires_pre_confirm/pre_confirm_kind`，`PreConfirmFlow.lua` 不再回查 `Config.Generated.Market` 判断皮肤商品，而是只消费用例层提供的 option 级确认语义；已补 `market` 与 `presentation_ui` 回归，验证“有 flag 才进二次确认，没有 flag 即使 product_id 像皮肤也直接派发”。
 - [x] (2026-03-07 01:43 +0800) 已完成阶段5第二刀：`choice_screen_service.common` 现在优先消费 `option.confirm_title/confirm_body` 与 `choice.confirm_title/confirm_body`；`ItemPhase` 已同时为 choice 本身和每个 item option 产出确认文案，`LandChoiceSpecs.tax_prompt`、`EffectPipeline` 的 landing optional choice、market skin option 也都直接产出确认文案，presentation 仅保留 fallback 兼容逻辑。
 - [x] (2026-03-07 02:02 +0800) 已完成阶段5第三刀的第一小片：`ItemPhase.build_choice_spec()` 现在额外输出 `uses_item_slots/pre_confirm_before_slot_pick`；`PreConfirmFlow`、`ItemPhaseAskFlow`、`UIModalPresenter`、`item_slots`、`item_slot_intents` 已优先消费这些显式语义，`choice.kind == "item_phase_choice"` 的散落判断被收敛到 `choice_screen_service.common` helper 中保底兼容。
+- [x] (2026-03-07 02:10 +0800) 已完成阶段5第三刀的第二小片：`presentation_ui` 里的手工 `item_phase_choice` 测试数据已补齐显式 flag 与确认文案，`choice_screen_service.common` 已移除 `item_phase_choice` 的 `kind`-fallback 与旧确认文案推导，只保留显式字段路径。
 - [ ] 阶段6：在边界稳定后整理目录语义和命名，避免目录改动与行为改动叠加。
 
 ## 意外与发现
@@ -77,6 +78,9 @@
 
 - 观察：`item_phase_choice` 在 presentation 层的特殊处理不只是一两个入口，而是横跨 modal 打开、slot click、outline 高亮和 ask-flow 快捷分支；如果直接全删 `choice.kind` 判断，测试里构造的简化 choice 会大面积失效。
   证据：阶段5第三刀扫描命中显示 `UIModalPresenter`、`ItemPhaseAskFlow`、`item_slots`、`item_slot_intents` 都依赖这条判断；本轮先把生产路径改成输出 `uses_item_slots/pre_confirm_before_slot_pick`，再把老判断收进 helper 做兼容，定向与全量回归仍保持通过。
+
+- 观察：一旦生产 builder 已稳定输出显式 flag，阻碍继续删 fallback 的主要来源就不再是生产代码，而是 `presentation_ui` 这类手工构造 choice 的测试数据。
+  证据：本轮实际只改了 `choice_screen_service.common` 与 `tests/suites/presentation_ui.lua`；补齐测试 choice 上的 `uses_item_slots/pre_confirm_before_slot_pick/confirm_*` 后，删除 `item_phase_choice` 的 helper fallback 仍能通过定向回归。
 
 ## 决策日志
 
@@ -138,6 +142,10 @@
 
 - 决策：阶段5第三刀先把 `item_phase_choice` 的 slot 交互语义抽成 `uses_item_slots/pre_confirm_before_slot_pick` 两个显式字段，并在 presentation 侧通过 helper 消费，而不是立刻删除所有 `choice.kind == "item_phase_choice"` fallback。
   理由：这条语义同时影响 modal、item slot、highlight 动画和 ask-flow；先让生产 builder 稳定产出显式标记，再把消费方统一到 helper，上层责任已经前移，但测试和旧手工 choice 仍能兼容运行。这样下一刀才能更安全地继续删 fallback。
+  日期/作者：2026-03-07 / Codex
+
+- 决策：阶段5第三刀的第二小片优先删 `choice_screen_service.common` 中 `item_phase_choice` 的 helper fallback，而不是继续新增更多 helper 包装。
+  理由：生产路径和主要消费点已经全部接上显式字段；继续保留 `kind`-fallback 只会拖慢真正的边界收口。测试数据补齐后，这条 fallback 已经没有必要继续存在。
   日期/作者：2026-03-07 / Codex
 
 ## 结果与复盘

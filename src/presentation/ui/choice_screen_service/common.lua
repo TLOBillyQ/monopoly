@@ -111,48 +111,6 @@ function M.resolve_choice_title(choice, screen_key, selected_option_id)
   return "请选择"
 end
 
-local function _resolve_item_phase_short_title(choice, game)
-  local phase = choice and choice.meta and choice.meta.phase or nil
-  if not phase and game and game.turn then
-    phase = game.turn.item_phase_active
-  end
-  if phase == "pre_action" then
-    return "行动前"
-  end
-  if phase == "pre_move" then
-    return "投骰后"
-  end
-  if phase == "post_action" then
-    return "行动后"
-  end
-  local title = choice and choice.title or ""
-  if string.find(title, "行动前", 1, true) then
-    return "行动前"
-  end
-  if string.find(title, "投骰后", 1, true) then
-    return "投骰后"
-  end
-  if string.find(title, "行动后", 1, true) then
-    return "行动后"
-  end
-  return "本回合"
-end
-
-local function _collect_option_labels(choice)
-  local labels = {}
-  local options = choice and choice.options or nil
-  if type(options) ~= "table" then
-    return labels
-  end
-  for _, opt in ipairs(options) do
-    local label = M.resolve_option_label(opt)
-    if label and label ~= "" then
-      labels[#labels + 1] = label
-    end
-  end
-  return labels
-end
-
 local function _resolve_tile_name(choice, game)
   local tile_id = choice and choice.meta and choice.meta.tile_id or nil
   if not tile_id then
@@ -185,9 +143,6 @@ function M.resolve_secondary_confirm_title(choice, game, source_screen, option_i
   if choice and choice.kind == "tax_card_prompt" then
     return "税务局"
   end
-  if choice and choice.kind == "item_phase_choice" then
-    return _resolve_item_phase_short_title(choice, game)
-  end
   return "请确认"
 end
 
@@ -205,21 +160,6 @@ function M.resolve_secondary_confirm_body(choice, game, source_screen, option_id
   end
   if type(choice.confirm_body) == "string" and choice.confirm_body ~= "" then
     return choice.confirm_body
-  end
-
-  if choice.kind == "item_phase_choice" then
-    local label = option_label
-    if (not label or label == "") and option_id and option_id ~= "__item_phase_ask__" then
-      label = M.resolve_option_label_by_id(choice, option_id)
-    end
-    if label and label ~= "" and option_id and option_id ~= "__item_phase_ask__" then
-      return "将使用：" .. tostring(label)
-    end
-    local labels = _collect_option_labels(choice)
-    if #labels > 0 then
-      return "可用道具：" .. table.concat(labels, "、")
-    end
-    return "请再确认一次"
   end
 
   if choice.kind == "tax_card_prompt" then
@@ -291,23 +231,11 @@ function M.resolve_pre_confirm_body(option_label, choice, game, source_screen, o
 end
 
 function M.uses_item_slots(choice)
-  if not choice then
-    return false
-  end
-  if choice.uses_item_slots == true then
-    return true
-  end
-  return choice.kind == "item_phase_choice"
+  return choice ~= nil and choice.uses_item_slots == true
 end
 
 function M.requires_item_slot_pre_confirm(choice)
-  if not choice then
-    return false
-  end
-  if choice.pre_confirm_before_slot_pick == true then
-    return true
-  end
-  return choice.kind == "item_phase_choice"
+  return choice ~= nil and choice.pre_confirm_before_slot_pick == true
 end
 
 function M.switch_modal_canvas(state, target_canvas)
