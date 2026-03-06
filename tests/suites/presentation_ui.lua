@@ -1472,6 +1472,51 @@ local function _test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapp
   assert(touch["始终显示_文本"] == false, "auto label should stay non-clickable when role mapping is missing")
 end
 
+local function _test_apply_input_lock_disables_always_show_controls_when_market_active()
+  local touch = {}
+  local state = {
+    ui_model = {
+      current_player_id = 1,
+      item_slots_by_player = {},
+      panel = {
+        auto_label = "自动：关",
+      },
+    },
+    ui = {
+      input_blocked = true,
+      market_active = true,
+      item_slots = { "基础_道具槽位1" },
+      base_hidden_nodes = { "基础_行动按钮", "基础_道具槽位1" },
+      base_hidden_labels = {},
+      auto_control_nodes = { "始终显示_托管按钮", "始终显示_文本" },
+      choice_screens = {
+        player = { option_buttons = {} },
+        target = {},
+        remote = { option_buttons = {} },
+        secondary_confirm = { body = "通用二次确认_文本", cancel = "通用二次确认_取消", confirm = "通用二次确认_确定按钮" },
+      },
+      set_touch_enabled = function(_, name, enabled)
+        touch[name] = enabled
+      end,
+      set_visible = function() end,
+      set_button = function() end,
+    },
+  }
+  local roles = {
+    { get_roleid = function() return 1 end },
+  }
+
+  _with_patches({
+    { key = "all_roles", value = roles },
+  }, function()
+    ui_view.apply_input_lock(state)
+  end)
+
+  assert(touch["始终显示_托管按钮"] == false, "auto button should yield touch priority while market is active")
+  assert(touch["始终显示_文本"] == false, "auto label should stay non-clickable while market is active")
+  assert(touch["始终显示_行动日志图标"] == false, "action log toggle should yield touch priority while market is active")
+end
+
 local function _test_ui_view_render_auto_button_keeps_local_touch_when_unmapped_role_exists()
   local main_view = require("src.presentation.api.UIViewService")
   local touch_logs = {}
@@ -5812,6 +5857,7 @@ return {
   _test_ui_nodes_validate_reports_missing,
   _test_apply_input_lock_keeps_auto_controls_enabled,
   _test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapped,
+  _test_apply_input_lock_disables_always_show_controls_when_market_active,
   _test_ui_view_render_auto_button_keeps_local_touch_when_unmapped_role_exists,
   _test_ui_touch_policy_auto_controls_touch,
   _test_ui_touch_policy_runtime_nodes_touch_enabled,

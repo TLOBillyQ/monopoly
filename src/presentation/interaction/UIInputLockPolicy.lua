@@ -18,6 +18,7 @@ function input_lock_policy.apply(state, deps)
   assert(state ~= nil and state.ui ~= nil, "missing state.ui")
   assert(deps ~= nil, "missing deps")
   local ui = state.ui
+  local allow_always_show_touch = ui.market_active ~= true
 
   if not ui.set_touch_enabled then
     return
@@ -25,8 +26,8 @@ function input_lock_policy.apply(state, deps)
 
   -- 未锁定：仅维护调试开关触控，不干预其他路径。
   if not ui.input_blocked then
-    ui_touch_policy.set_auto_controls_touch(ui, true)
-    ui_touch_policy.set_action_log_toggle_touch(ui, true)
+    ui_touch_policy.set_auto_controls_touch(ui, allow_always_show_touch)
+    ui_touch_policy.set_action_log_toggle_touch(ui, allow_always_show_touch)
     return
   end
 
@@ -53,9 +54,9 @@ function input_lock_policy.apply(state, deps)
     ui:set_touch_enabled(market_ui.cancel_button, false)
   end
 
-  -- 业务例外：托管开关与调试开关在输入锁期间仍允许切换。
-  ui_touch_policy.set_auto_controls_touch(ui, true)
-  ui_touch_policy.set_action_log_toggle_touch(ui, true)
+  -- 黑市打开时优先保证关闭与翻页热区，不让始终显示区抢触控。
+  ui_touch_policy.set_auto_controls_touch(ui, allow_always_show_touch)
+  ui_touch_policy.set_action_log_toggle_touch(ui, allow_always_show_touch)
 end
 
 return input_lock_policy
