@@ -1132,7 +1132,7 @@ local function _test_market_interrupt_resume_uses_interrupt_facing()
 
   assert(resumed and resumed.landing_tile, "resumed market move should complete")
   assert(p.position == expected_index, "market resume should follow interrupt.facing instead of stale move_dir")
-  assert(p.status.move_dir == expected_facing, "market resume should persist actual traversed edge direction")
+  assert(p.status.move_dir == expected_facing, "market resume should persist the next heading after resume")
 end
 
 local function _test_steal_interrupt_resume_uses_interrupt_facing()
@@ -1171,7 +1171,7 @@ local function _test_steal_interrupt_resume_uses_interrupt_facing()
 
   assert(resumed and resumed.landing_tile, "resumed steal move should complete")
   assert(p1.position == expected_index, "steal resume should follow interrupt.facing instead of stale move_dir")
-  assert(p1.status.move_dir == expected_facing, "steal resume should persist actual traversed edge direction")
+  assert(p1.status.move_dir == expected_facing, "steal resume should persist the next heading after resume")
 end
 
 local function _test_tick_headless_ports_cover_anim_phases()

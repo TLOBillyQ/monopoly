@@ -317,7 +317,7 @@ function board:step_backward_by_facing(current_index, facing)
   if next_id == map.start_id then
     passed_start = 1
   end
-  local step_dir = map.direction(current_id, next_id)
+  local step_dir = map.direction(next_id, current_id)
   return next_index, passed_start, step_dir
 end
 

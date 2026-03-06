@@ -176,7 +176,7 @@ function movement.move(game, player, steps, opts)
   end
 
   game:update_player_position(player, current)
-  -- move_dir stores the last traversed edge direction, not an absolute heading.
+  -- move_dir stores the heading used to continue movement from the current tile.
   game:set_player_status(player, "move_dir", facing)
 
   return {

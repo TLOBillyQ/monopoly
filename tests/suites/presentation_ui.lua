@@ -2202,6 +2202,38 @@ local function _test_target_screen_uses_labels_only_and_keeps_projection_unmanag
   end)
 end
 
+local function _test_target_screen_hides_unused_slots_when_unique_options_less_than_seven()
+  local state, nodes, query_nodes = _build_choice_modal_state()
+  local choice = {
+    id = 89,
+    kind = "roadblock_target",
+    title = "路障卡：选择位置",
+    body = "body",
+    options = {
+      { id = 101, label = "机会卡" },
+      { id = 102, label = "济南路" },
+      { id = 103, label = "南京路" },
+      { id = 104, label = "上海路" },
+      { id = 105, label = "合肥路" },
+      { id = 106, label = "郑州路" },
+    },
+    allow_cancel = true,
+    cancel_label = "放弃",
+  }
+
+  _with_patches({
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = nil },
+  }, function()
+    ui_view.open_choice_modal(state, choice)
+    _assert_eq(state.ui.active_choice_screen_key, "target", "target screen should open for unique-option roadblock choice")
+    _assert_eq(nodes["位置-槽位6按钮"].visible, true, "slot6 button should stay visible for the sixth unique option")
+    _assert_eq(nodes["位置-槽位6文本"].text, "郑州路", "slot6 label should match the last unique option")
+    _assert_eq(nodes["位置-槽位7按钮"].visible, false, "slot7 button should hide when only six unique options exist")
+    _assert_eq(nodes["位置-槽位7文本"].visible, false, "slot7 label should hide when only six unique options exist")
+  end)
+end
+
 local function _with_target_pick_runtime(env, fn)
   local marker_seq = 0
   local created_markers = {}
@@ -6102,6 +6134,7 @@ return {
   _test_popup_timeout_closes_even_when_input_blocked,
   _test_choice_modal_routes_to_new_screens,
   _test_target_screen_uses_labels_only_and_keeps_projection_unmanaged,
+  _test_target_screen_hides_unused_slots_when_unique_options_less_than_seven,
   _test_secondary_confirm_copy_item_phase_selected_option,
   _test_secondary_confirm_copy_land_actions,
   _test_secondary_confirm_copy_generic_pre_confirm,

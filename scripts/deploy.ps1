@@ -48,6 +48,17 @@ function Test-Pwsh7 {
     return ($edition -eq "Core" -and $major -ge 7)
 }
 
+function Resolve-PythonCommand {
+    $candidates = @("python", "python3")
+    foreach ($name in $candidates) {
+        $cmd = Get-Command $name -ErrorAction SilentlyContinue
+        if ($cmd) {
+            return $cmd.Source
+        }
+    }
+    return $null
+}
+
 if (-not (Test-Pwsh7)) {
     $edition = $PSVersionTable.PSEdition
     $version = $PSVersionTable.PSVersion.ToString()
@@ -60,6 +71,12 @@ if (-not (Test-Pwsh7)) {
 # 获取脚本所在目录的上一级目录（项目根目录）
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $SourceMainLuaPath = Join-Path $ProjectRoot "main.lua"
+$PythonCommand = Resolve-PythonCommand
+
+if (-not $PythonCommand) {
+    Write-Host "✗ 未找到可用的 Python 解释器（已尝试: python, python3）。" -ForegroundColor Red
+    exit 1
+}
 
 function Escape-LuaStringDoubleQuoted {
     param([string]$Text)
@@ -104,7 +121,7 @@ function Export-GeneratedConfig {
     Write-Host "正在导出 $ModeName 配置到$Label..." -ForegroundColor Cyan
     Write-Host "  目: $OutputDir" -ForegroundColor Gray
     try {
-        python (Join-Path $ProjectRoot "scripts/export_xlsx.py") --mode $ModeName --output-dir $OutputDir
+        & $PythonCommand (Join-Path $ProjectRoot "scripts/export_xlsx.py") --mode $ModeName --output-dir $OutputDir
         if ($LASTEXITCODE -ne 0) {
             throw "export_xlsx.py failed with exit code $LASTEXITCODE"
         }
