@@ -5,6 +5,8 @@ local _with_patches = support.with_patches
 local turn_action_port = require("src.presentation.interaction.ui_intent_dispatcher.TurnActionPort")
 local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
 local runtime_ports = require("src.core.RuntimePorts")
+local turn_roll = require("src.game.flow.turn.TurnRoll")
+local turn_move = require("src.game.flow.turn.TurnMove")
 
 local function _test_turn_action_port_resolve_defaults()
   local resolved = turn_action_port.resolve({}, nil)
@@ -136,6 +138,48 @@ local function _test_gameplay_loop_output_port_override_precedence()
   _assert_eq(state.ui_dirty, nil, "override output.invalidate_ui should bypass default ui_dirty bridge")
 end
 
+local function _test_turn_roll_uses_anim_gate_port_without_ui_port()
+  local game = support.new_game({ ai = {} })
+  local player = game:current_player()
+  game.ui_port = nil
+  game.anim_gate_port = {
+    wait_action_anim = true,
+    wait_move_anim = false,
+  }
+
+  local next_state, next_args = turn_roll({ game = game }, {
+    player = player,
+    rolls = { 3 },
+    raw_total = 3,
+    total = 3,
+  })
+
+  _assert_eq(next_state, "wait_action_anim", "turn_roll should use anim_gate_port when deciding action anim wait")
+  _assert_eq(next_args.next_state, "roll", "turn_roll should resume into roll after action anim")
+  _assert_eq(game.turn.action_anim.kind, "roll", "turn_roll should still queue roll animation")
+end
+
+local function _test_turn_move_uses_anim_gate_port_without_ui_port()
+  local game = support.new_game({ ai = {} })
+  local player = game:current_player()
+  game.ui_port = nil
+  game.last_turn = {}
+  game.anim_gate_port = {
+    wait_action_anim = false,
+    wait_move_anim = true,
+  }
+
+  local next_state, next_args = turn_move({ game = game }, {
+    player = player,
+    raw_total = 1,
+    total = 1,
+  })
+
+  _assert_eq(next_state, "wait_move_anim", "turn_move should use anim_gate_port when deciding move anim wait")
+  _assert_eq(next_args.next_state, "move", "turn_move should resume into move after move anim")
+  _assert_eq(game.turn.move_anim.player_id, player.id, "turn_move should still queue move animation")
+end
+
 return {
   name = "usecase_boundary_contract",
   tests = {
@@ -146,5 +190,7 @@ return {
     { name = "gameplay_loop_clock_contract_split_sources", run = _test_gameplay_loop_clock_contract_split_sources },
     { name = "gameplay_loop_output_port_defaults_to_ui_dirty_bridge", run = _test_gameplay_loop_output_port_defaults_to_ui_dirty_bridge },
     { name = "gameplay_loop_output_port_override_precedence", run = _test_gameplay_loop_output_port_override_precedence },
+    { name = "turn_roll_uses_anim_gate_port_without_ui_port", run = _test_turn_roll_uses_anim_gate_port_without_ui_port },
+    { name = "turn_move_uses_anim_gate_port_without_ui_port", run = _test_turn_move_uses_anim_gate_port_without_ui_port },
   },
 }

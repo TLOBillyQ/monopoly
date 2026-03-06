@@ -5,7 +5,9 @@ local _with_patches = support.with_patches
 local gameplay_loop = require("src.game.flow.turn.GameplayLoop")
 local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
 local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
+local turn_roll = require("src.game.flow.turn.TurnRoll")
 local use_case_output_port = require("src.game.flow.ports.UseCaseOutputPort")
+local action_anim_port = require("src.core.ActionAnimPort")
 
 local function _merge_group(base_group, override_group)
   local merged = {}
@@ -176,6 +178,9 @@ local function _test_gameplay_loop_set_game_injects_runtime_ui_port_dto()
   assert(game.ui_port.wait_move_anim == true, "runtime ui_port should expose wait_move_anim")
   assert(game.ui_port.wait_action_anim == true, "runtime ui_port should expose wait_action_anim")
   assert(game.ui_port.get_board_scene ~= nil, "runtime ui_port should expose board scene getter")
+  assert(game.anim_gate_port ~= nil, "set_game should inject anim_gate_port dto")
+  assert(game.anim_gate_port.wait_move_anim == true, "anim_gate_port should expose wait_move_anim")
+  assert(game.anim_gate_port.wait_action_anim == true, "anim_gate_port should expose wait_action_anim")
   _assert_eq(game.ui_port:get_board_scene(), state.board_scene, "runtime ui_port should read board scene from state")
 
   game.ui_port:push_popup({ kind = "test_popup" })
@@ -325,6 +330,54 @@ local function _test_gameplay_loop_set_game_routes_choice_state_through_output_p
   _assert_eq(state.ui_model.choice.id, choice.id, "set_game should keep ui_model legacy mirror")
 end
 
+local function _test_turn_roll_uses_anim_gate_port_without_ui_port()
+  local game = support.new_game({ ai = {} })
+  local player = game:current_player()
+  game.ui_port = nil
+  game.anim_gate_port = {
+    wait_action_anim = true,
+  }
+
+  local next_state, payload = turn_roll({ game = game }, {
+    player = player,
+    rolls = { 2 },
+    raw_total = 2,
+    total = 2,
+  })
+
+  _assert_eq(next_state, "wait_action_anim", "turn_roll should rely on anim_gate_port instead of ui_port")
+  _assert_eq(payload.next_state, "roll", "turn_roll should keep roll continuation payload")
+end
+
+local function _test_turn_move_uses_anim_gate_port_without_ui_port()
+  local game = support.new_game({ ai = {} })
+  local player = game:current_player()
+  game.ui_port = nil
+  game.last_turn = game.last_turn or {}
+  game.anim_gate_port = {
+    wait_move_anim = true,
+  }
+
+  local next_state, payload = support.turn_move({ game = game }, {
+    player = player,
+    total = 1,
+    raw_total = 1,
+  })
+
+  _assert_eq(next_state, "wait_move_anim", "turn_move should rely on anim_gate_port instead of ui_port")
+  _assert_eq(payload.next_state, "move", "turn_move should keep move continuation payload")
+end
+
+local function _test_action_anim_port_uses_anim_gate_port_without_ui_port()
+  local game = support.new_game({ ai = {} })
+  game.ui_port = nil
+  game.anim_gate_port = {
+    wait_action_anim = true,
+  }
+
+  _assert_eq(action_anim_port.is_enabled(game), true, "action_anim_port should read anim_gate_port")
+end
+
 return {
   name = "architecture_guard_contract",
   tests = {
@@ -332,5 +385,8 @@ return {
     { name = "turn_dispatch_next_only_marks_ui_dirty", run = _test_turn_dispatch_next_only_marks_ui_dirty },
     { name = "turn_dispatch_choice_only_marks_ui_dirty", run = _test_turn_dispatch_choice_only_marks_ui_dirty },
     { name = "gameplay_loop_set_game_routes_choice_state_through_output_port", run = _test_gameplay_loop_set_game_routes_choice_state_through_output_port },
+    { name = "turn_roll_uses_anim_gate_port_without_ui_port", run = _test_turn_roll_uses_anim_gate_port_without_ui_port },
+    { name = "turn_move_uses_anim_gate_port_without_ui_port", run = _test_turn_move_uses_anim_gate_port_without_ui_port },
+    { name = "action_anim_port_uses_anim_gate_port_without_ui_port", run = _test_action_anim_port_uses_anim_gate_port_without_ui_port },
   },
 }

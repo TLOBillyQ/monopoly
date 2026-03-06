@@ -81,4 +81,19 @@ function runtime.build_ui_runtime_port(state)
   return port
 end
 
+function runtime.build_anim_gate_port(state)
+  assert(type(state) == "table", "missing state")
+  if type(state._anim_gate_port) == "table" then
+    return state._anim_gate_port
+  end
+
+  local port = {
+    wait_move_anim = state.wait_move_anim == true,
+    wait_action_anim = state.wait_action_anim == true,
+  }
+
+  state._anim_gate_port = port
+  return port
+end
+
 return runtime

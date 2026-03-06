@@ -18,8 +18,9 @@
 - [x] (2026-03-06 20:27 +0800) 已将阶段0守护接入默认回归：`tests/regression.lua` 现在会运行 `architecture_guard_contract`。
 - [x] (2026-03-06 20:29 +0800) 已补 CI 入口：新增 `.github/workflows/regression.yml`，在 `push` 和 `pull_request` 上执行 `lua tests/regression.lua`。
 - [x] (2026-03-06 20:33 +0800) 已完成阶段0验收：`lua tests/internal/dep_rules.lua` 通过，定向守护 suite 通过，全量 `lua tests/regression.lua` 通过并输出 `All regression checks passed (364)`。
-- [ ] 阶段1：定义用例输出协议，消除 `GameplayLoop` / `TurnDispatch` 对 `state.ui_model`、`state.ui_dirty`、`pending_choice` 的直接操纵。
-- [ ] 阶段2：移除 `game.ui_port` 读路径，用显式注入的 `NotificationPort` / `AnimPort` 代替隐式挂载。
+- [x] (2026-03-06 22:46 +0800) 已完成阶段1：新增 `src/game/flow/ports/UseCaseOutputPort.lua`，把 `GameplayLoop`、`TurnDispatch`、`TickChoiceTimeout`、`TickTimeout` 的 `state.ui_* / pending_choice* / ui_model` 写入收拢到 output port，并让 `tests/internal/dep_rules.lua` 中 `src/game/flow` 的 `state.ui_*` 预算降到 0。
+- [x] (2026-03-06 22:49 +0800) 已补阶段1契约：`architecture_guard_contract` 新增 output-port 路由断言，`usecase_boundary_contract` 新增 output 默认桥接与 override 优先级测试；全量回归现输出 `All regression checks passed (367)`。
+- [ ] 阶段2：已完成第一刀动画门控外提：`ActionAnimPort`、`TurnRoll`、`TurnMove` 改读 `game.anim_gate_port`，`game.ui_port` 预算已从 23 收紧到 16；剩余 `push_popup` 与 `ui_port.state` 读路径仍待迁移。
 - [ ] 阶段3：把 `src/core` 中仍直接认识 Eggy 宿主的逻辑外迁到 `src/app/bootstrap` 或新的基础设施目录。
 - [ ] 阶段4：拆分 `src/game/systems/market/service/Purchase.lua`，把支付、事件桥和 UI 刷新拆回各自边界。
 - [ ] 阶段5：把 `PreConfirmFlow` 等 presentation 中的应用规则收回用例层，让 presentation 只渲染 ViewModel。
@@ -39,6 +40,15 @@
 - 观察：全量回归目前在本机的默认模式是 `release_trimmed`，因此阶段0验收输出是 `All regression checks passed (364)`，不是研究报告里的旧数字。
   证据：`lua tests/regression.lua` 开头打印 `[regression] mode=release_trimmed`，结尾打印 `All regression checks passed (364)`。
 
+- 观察：阶段1落地后，`src/game/flow` 里的 `state.ui_*` 直写已经清零，但为了不同时打断 presentation 和旧测试，仍需要在 `RuntimeState.ensure_ui_runtime(state)` 中保留一层镜像缓存。
+  证据：`rg -n "state\\.(ui_[A-Za-z0-9_]+|pending_choice(?:_[A-Za-z0-9_]+)?|ui_model)\\s*=" src/game/flow` 已无命中；`src/core/RuntimeState.lua` 现在会初始化 `ui_runtime.ui_dirty/ui_model/pending_choice/ui_modal_*`。
+
+- 观察：仓库内置的 `forbidden_globals` 守护会拒绝 `rawget`，即便它只是为了绕开 metatable 观测；因此兼容层读取必须退回普通字段访问。
+  证据：第一次阶段1回归在 `src/game/flow/ports/UseCaseOutputPort.lua` 上报 `forbidden_globals ... uses rawget`，改回 `state[key]` 后恢复通过。
+
+- 观察：阶段2最窄的突破口确实是动画等待门控，因为 `TurnRoll`、`TurnMove` 和 `ActionAnimPort` 都只需要只读布尔配置，不依赖 popup 或 choice 语义。
+  证据：迁出这三处后，`tests/internal/dep_rules.lua` 中 `src/core/ActionAnimPort.lua`、`src/game/flow/turn/TurnMove.lua`、`src/game/flow/turn/TurnRoll.lua` 的 `game.ui_port` 预算均已降为 0，同时新增契约测试仍可在 `game.ui_port = nil` 时通过。
+
 ## 决策日志
 
 - 决策：阶段0采用“衰减式基线”而不是“立即清零”的静态规则。
@@ -57,11 +67,19 @@
   理由：`state.ui_*` 写入最集中、最影响后续所有边界，如果不先把输出协议定下来，阶段2到阶段5都会继续围着共享状态打补丁。
   日期/作者：2026-03-06 / Codex
 
+- 决策：阶段1的 output port 采用“显式端口 + 兼容镜像”而不是一次性删除 legacy state 字段。
+  理由：`presentation`、倒计时和部分旧测试仍要读取 `state.ui_model`、`pending_choice*` 的镜像；先用 `UseCaseOutputPort` 统一写入口，再逐步缩减读取面，风险比一次性断掉共享字段低得多。
+  日期/作者：2026-03-06 / Codex
+
+- 决策：阶段2先引入 `game.anim_gate_port`，而不是继续扩 `game.ui_port` 或一次性设计完整 NotificationPort。
+  理由：`wait_action_anim / wait_move_anim` 是最纯粹的只读布尔门控，先拆这条路径可以立即压缩 `game.ui_port` 预算，又不会卷入 popup、market 和 `ui_port.state` 这类更复杂的反向读依赖。
+  日期/作者：2026-03-06 / Codex
+
 ## 结果与复盘
 
-阶段0已经完成。它没有消除所有架构债务，但已经把三类最关键的债务增长点锁住，并把锁接进了默认回归和 GitHub Actions。今天之后，新代码若想继续在 `src/core` 里直接摸 `GameAPI`、在 `src/game` 里读取更多 `game.ui_port`、或在 `src/game/flow` 里继续扩 `state.ui_*`，都会先碰到失败的自动化。
+阶段0和阶段1现在都已经完成，阶段2也已经切开第一刀。当前最重要的可观察结果有两条。第一，`src/game/flow` 已经没有任何直接的 `state.ui_*` 写入；用例层现在通过 `UseCaseOutputPort` 发出 UI 失效、choice 生命周期和 modal timer 输出。第二，`game.ui_port` 的预算已经从 23 降到 16，其中 `TurnRoll`、`TurnMove`、`ActionAnimPort` 这三处动画等待门控已经改走 `game.anim_gate_port`。
 
-阶段0的经验很直接。第一，当前仓库最适合的治理方式不是一次性“洁癖式”封禁，而是先冻结现状，再逐步压缩。第二，动态守护必须贴着已抽出的真实边界写，例如 `GameplayLoop.set_game` 注入 DTO、`TurnDispatch` 只发出 `ui_dirty` 这种粗粒度输出；写成愿景测试只会在阶段0卡住。第三，CI 接的必须是现有统一入口，否则团队很快会出现“本地过、线上不过”或反过来的漂移。
+这轮推进的经验同样直接。第一，阶段1不需要等 presentation 全部清干净才开始，先把“写入口”统一就能显著降低后续修改的耦合面。第二，守护测试必须允许内部兼容镜像存在，否则会把 `ui_runtime` 这种过渡性状态误判成旧债。第三，阶段2应该继续坚持“每次只拔一小束读路径”，因为 `push_popup`、`ui_port.state` 和 market 链路的风险明显高于动画布尔门控。
 
 ## 背景与导读
 
@@ -85,13 +103,15 @@
 
 验收标准已经成立：本地全量回归通过，`dep_rules ok` 会在默认入口里出现，GitHub Actions 会在 `push` 和 `pull_request` 上运行同样的命令。
 
-## 里程碑 1：定义用例输出协议
+## 里程碑 1：定义用例输出协议（已完成）
 
 这个里程碑完成后，用例层将不再直接认为自己拥有 UI 状态结构，而是只知道“我要发出什么输出”。这里的“输出协议”不是网络协议，而是一组稳定的 Lua 端口函数和数据结构，用来描述“请求选择”“显示弹窗”“排队动作动画”“标记 UI 失效”等意图。完成后，`GameplayLoop`、`TurnDispatch`、`TickTimeout` 应该能在没有真实 UI 状态表的情况下运行。
 
 具体从 `src/game/flow/turn/GameplayLoop.lua`、`src/game/flow/turn/TurnDispatch.lua`、`src/game/flow/turn/TickTimeout.lua` 下手。新增一个端口模块，建议路径是 `src/game/flow/ports/UseCaseOutputPort.lua`。先让 `GameplayLoopPorts` 解析出 `output` 分组，再把 `state.ui_dirty`、`state.ui_model`、`state.ui_modal_elapsed`、`state.pending_choice*` 的直接写入逐步替换为 `output` 调用。presentation 侧继续保留兼容实现，先让老路径和新端口同时工作，再移除旧写入。
 
-这个里程碑的验收不是“文件里出现了 OutputPort”，而是两件更具体的事。第一，新增的假端口测试能在没有真实 UI state 的前提下驱动一轮完整回合。第二，阶段0的 `state.ui_*` 写入基线要缩小，并在同一提交里更新 `tests/internal/dep_rules.lua` 的预算值。
+这个里程碑已经完成。实际新增的输出端口文件是 `src/game/flow/ports/UseCaseOutputPort.lua`，并且它已经接入 `GameplayLoopPorts` 的 `output` 分组。`GameplayLoop` 的初始化 choice、`TurnDispatch` 的 invalidation 与 clear choice、`TickChoiceTimeout` 的 pending choice 生命周期、`TickTimeout` 的 modal timer 都改成走 output port。为了兼容旧的 presentation 与测试，`src/core/RuntimeState.lua` 中新增了 `ui_runtime` 镜像缓存，但 `src/game/flow` 里的 `state.ui_*` 直接写入已经降到 0。
+
+这个里程碑的验收也已经成立。第一，`architecture_guard_contract` 现在不仅验证 DTO 注入，还验证 `set_game`、`choice_select`、`next` 都会通过 output port 发出输出，而不是继续直接写 `state.ui_*`。第二，`usecase_boundary_contract` 新增了 output port 默认桥接和 override 优先级测试。第三，`tests/internal/dep_rules.lua` 中 `src/game/flow` 的 `state.ui_*` 预算已被收紧到空账本，也就是任何新增直写都会立刻失败。
 
 ## 里程碑 2：移除 `game.ui_port` 隐式挂载
 
@@ -99,7 +119,9 @@
 
 实施顺序要从最窄的读路径开始。先把只读布尔判断迁出，比如 `wait_action_anim`、`wait_move_anim`，再迁 `push_popup` 这类行为端口，最后处理 `ui_port.state` 这种最危险的反向回读。每迁完一个文件，就同步缩小 `game.ui_port` 的基线预算。不要一次性替换所有使用点，否则很难定位回归。
 
-验收标准是：阶段0里 `game.ui_port` 的预算开始下降，并新增契约测试证明某个被迁出的模块在没有 `game.ui_port` 的情况下仍能运行。
+这个里程碑已经开始，但尚未完成。当前已经完成的第一刀是动画等待门控：`src/core/ActionAnimPort.lua`、`src/game/flow/turn/TurnRoll.lua`、`src/game/flow/turn/TurnMove.lua` 不再读取 `game.ui_port.wait_action_anim / wait_move_anim`，改为读取 `game.anim_gate_port`。`GameplayLoop.set_game` 现在会注入这个更窄的 DTO，新的契约测试也证明这三处在 `game.ui_port = nil` 时仍能运行。
+
+里程碑 2 剩余的高风险路径还包括 `IntentDispatcher`、`Bankruptcy`、`ItemPhase` 等处的 `push_popup`，以及 `TurnDecision` 通过 `ui_port.state` 回读 `pending_choice_elapsed`。这些是下一阶段的主目标，不应该和动画门控这条已经落地的窄路径混在同一提交里继续扩大。
 
 ## 里程碑 3：完成 runtime 适配器外迁
 
@@ -149,7 +171,7 @@
 
 预期输出最后一行是：
 
-    All regression checks passed (3)
+    All regression checks passed (7)
 
 然后跑全量回归，确认默认入口已经包含阶段0守护。
 
@@ -157,7 +179,7 @@
 
 预期输出末尾包含：
 
-    All regression checks passed (364)
+    All regression checks passed (372)
     dep_rules ok
     tick ok
     forbidden_globals ok
@@ -196,18 +218,20 @@
 
 ## 产物与备注
 
-阶段0的关键产物如下。
+阶段0与阶段1当前的关键产物如下。
 
     tests/internal/dep_rules.lua
     tests/suites/architecture_guard_contract.lua
+    tests/suites/usecase_boundary_contract.lua
     tests/regression.lua
     .github/workflows/regression.yml
+    src/game/flow/ports/UseCaseOutputPort.lua
 
 当前冻结的债务基线如下。
 
     src/core 直接宿主触点：47
-    game.ui_port 依赖点：23
-    src/game/flow 的 state.ui_* 写入：13
+    game.ui_port 依赖点：16
+    src/game/flow 的 state.ui_* 写入：0
 
 本次实际验证输出如下。
 
@@ -215,11 +239,11 @@
 
 以及：
 
-    All regression checks passed (3)
+    All regression checks passed (7)
 
 以及：
 
-    All regression checks passed (364)
+    All regression checks passed (372)
     dep_rules ok
     tick ok
     forbidden_globals ok
@@ -230,13 +254,18 @@
 
 第一类是 `tests/internal/dep_rules.lua` 中的三组预算规则。它们不是业务接口，但它们定义了当前允许存在的边界泄漏上限。以后如果代码减少了这些泄漏，预算值必须同步下降；以后如果代码想新增这些泄漏，测试必须失败。
 
-第二类是 `tests/suites/architecture_guard_contract.lua` 固定下来的运行时契约。当前至少要维持下面两条事实：
+第二类是 `tests/suites/architecture_guard_contract.lua` 固定下来的运行时契约。当前至少要维持下面三条事实：
 
     gameplay_loop.set_game(state, game)
     -- 结果：game.ui_port 是裁剪后的 DTO，而不是原始 state
 
     turn_dispatch.dispatch_action(game, state, action, opts)
-    -- 结果：关键输入路径至多写出 ui_dirty，不得继续扩写新的 state.ui_* 字段
+    -- 结果：关键输入路径通过 output port 发出 invalidate / clear choice，而不是继续扩写新的 state.ui_* 字段
+
+    turn_roll(turn_mgr, args) / turn_move(turn_mgr, args) / action_anim_port.is_enabled(game)
+    -- 结果：动画等待门控可以只依赖 game.anim_gate_port，在没有 game.ui_port 时仍能工作
+
+2026-03-06 / Codex：本次更新把计划从“阶段0完成、阶段1待做”的状态推进到“阶段1完成、阶段2第一刀已落地”的真实状态，补记了 output port、ui_runtime 兼容镜像、anim_gate_port、最新预算和最新回归输出。这样下一位执行者可以直接从 `push_popup` / `ui_port.state` 这些剩余读路径继续推进，而不用重新推断今天已经完成了什么。
 
 阶段1开始后，请按下面这个接口方向推进，不要再发明新的共享状态入口。
 

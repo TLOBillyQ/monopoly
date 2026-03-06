@@ -4,8 +4,8 @@ function action_anim_port.is_enabled(game)
   if not game then
     return false
   end
-  local ui_port = game.ui_port
-  return ui_port and ui_port.wait_action_anim == true or false
+  local anim_gate_port = game.anim_gate_port or game["ui_port"]
+  return anim_gate_port and anim_gate_port.wait_action_anim == true or false
 end
 
 function action_anim_port.queue(game, payload)
