@@ -4,6 +4,8 @@ local handlers = require("src.presentation.render.ActionAnimHandlers")
 local host_runtime = require("src.presentation.api.HostRuntimePort")
 local board_feedback = require("src.presentation.render.BoardFeedbackService")
 local runtime_refs = require("Config.RuntimeRefs")
+local gameplay_rules = require("src.core.config.GameplayRules")
+local logger = require("src.core.Logger")
 
 if not math.Vector3 then
   function math.Vector3(x, y, z)
@@ -285,6 +287,100 @@ local function _test_action_anim_upgrade_land_does_not_call_overlay_handler()
     assert(out_duration == 0.6, "upgrade_land should keep configured duration")
     assert(called == 0, "upgrade_land should not call overlay handler")
   end)
+end
+
+local function _test_action_anim_is_silent_by_default()
+  local state = _build_state()
+  local tip_calls = 0
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "show_tips",
+      value = function()
+        tip_calls = tip_calls + 1
+        return true
+      end,
+    },
+  }, function()
+    local duration = action_anim.play(state, {
+      kind = "item_use",
+      player_id = 1,
+      item_id = 2001,
+      duration = 0.6,
+    })
+    assert(duration == 0.6, "silent action anim should still return duration")
+  end)
+
+  assert(tip_calls == 0, "action anim should not emit user tips by default")
+end
+
+local function _test_action_anim_user_tip_policy_forces_tip()
+  local state = _build_state()
+  local tips = {}
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "show_tips",
+      value = function(text, duration)
+        tips[#tips + 1] = { text = text, duration = duration }
+        return true
+      end,
+    },
+  }, function()
+    action_anim.play(state, {
+      kind = "item_use",
+      player_id = 1,
+      item_id = 2001,
+      item_name = "免费卡",
+      duration = 0.6,
+      tip_policy = "user",
+    })
+  end)
+
+  assert(#tips == 1, "tip_policy=user should force exactly one tip")
+  assert(tips[1].text ~= nil and tips[1].text ~= "", "forced tip should contain text")
+end
+
+local function _test_action_anim_debug_log_uses_info_without_tip()
+  local state = _build_state()
+  local tip_calls = 0
+  local info_calls = {}
+
+  _with_patches({
+    {
+      target = gameplay_rules,
+      key = "action_anim_debug_log_enabled",
+      value = true,
+    },
+    {
+      target = host_runtime,
+      key = "show_tips",
+      value = function()
+        tip_calls = tip_calls + 1
+        return true
+      end,
+    },
+    {
+      target = logger,
+      key = "info",
+      value = function(...)
+        info_calls[#info_calls + 1] = table.concat({ ... }, " ")
+      end,
+    },
+  }, function()
+    action_anim.play(state, {
+      kind = "move_effect",
+      player_id = 1,
+      from_index = 1,
+      to_index = 1,
+      duration = 0.6,
+    })
+  end)
+
+  assert(tip_calls == 0, "debug action anim log should not consume tip channel")
+  assert(#info_calls == 1, "debug action anim log should emit one info log")
 end
 
 local function _test_host_runtime_sfx_port_skips_missing_keys_and_routes_valid_calls()
@@ -644,6 +740,9 @@ return {
     { name = "action_anim_overlay_handler_returns_duration", run = _test_action_anim_overlay_handler_returns_duration },
     { name = "action_anim_roadblock_overlay_uses_4x_scale", run = _test_action_anim_roadblock_overlay_uses_4x_scale },
     { name = "action_anim_upgrade_land_does_not_call_overlay_handler", run = _test_action_anim_upgrade_land_does_not_call_overlay_handler },
+    { name = "action_anim_is_silent_by_default", run = _test_action_anim_is_silent_by_default },
+    { name = "action_anim_user_tip_policy_forces_tip", run = _test_action_anim_user_tip_policy_forces_tip },
+    { name = "action_anim_debug_log_uses_info_without_tip", run = _test_action_anim_debug_log_uses_info_without_tip },
     {
       name = "host_runtime_sfx_port_skips_missing_keys_and_routes_valid_calls",
       run = _test_host_runtime_sfx_port_skips_missing_keys_and_routes_valid_calls,

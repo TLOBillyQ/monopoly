@@ -81,7 +81,7 @@ function tip_text.build(state, anim)
     local amount = anim.amount or "?"
     return "收钱动画：" .. player_name .. " +" .. tostring(amount)
   end
-  return "动作动画"
+  return nil
 end
 
 return tip_text

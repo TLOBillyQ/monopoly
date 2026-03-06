@@ -4431,7 +4431,7 @@ local function _test_action_anim_default_duration()
     _assert_eq(d1, gameplay_rules.action_anim_default_seconds, "default action anim duration should follow gameplay rule")
     _assert_eq(d2, 1.8, "explicit action anim duration should override")
   end)
-  _assert_eq(#durations, 2, "tip should be shown twice")
+  _assert_eq(#durations, 0, "default action anim should not consume tip queue")
 end
 
 local function _test_action_anim_no_camera_focus_side_effect()

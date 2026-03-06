@@ -1,5 +1,6 @@
 local gameplay_rules = require("src.core.config.GameplayRules")
 local number_utils = require("src.core.NumberUtils")
+local logger = require("src.core.Logger")
 
 local runtime = require("src.presentation.api.UIRuntimePort")
 local host_runtime = require("src.presentation.api.HostRuntimePort")
@@ -14,11 +15,24 @@ local durations = {
   missile = 1.2,
   monster = 1.2,
 }
+local user_tip_whitelist = {
+  change_skin = true,
+}
 local roll_spin_seconds = 1.0
 local roll_face_hold_seconds = 1.0
 
 local function _show_tip(text, duration)
   host_runtime.show_tips(text, duration)
+end
+
+local function _should_show_tip(anim)
+  if not anim or anim.kind == "roll" then
+    return false
+  end
+  if anim.tip_policy == "user" then
+    return true
+  end
+  return user_tip_whitelist[anim.kind] == true
 end
 
 local function _register_default_handlers()
@@ -88,8 +102,19 @@ function action_anim.play(state, anim)
     end
   end
 
-  if anim.kind ~= "roll" then
-    _show_tip(handlers.build_tip(state, anim), tip_duration)
+  local should_show_tip = _should_show_tip(anim)
+  local should_debug_log = gameplay_rules.action_anim_debug_log_enabled == true and anim.kind ~= "roll"
+  local tip_text = nil
+  if should_show_tip or should_debug_log then
+    tip_text = handlers.build_tip(state, anim)
+  end
+
+  if should_debug_log and tip_text ~= nil and tip_text ~= "" then
+    logger.info("[ActionAnim]", tip_text)
+  end
+
+  if should_show_tip and tip_text ~= nil and tip_text ~= "" then
+    _show_tip(tip_text, tip_duration)
   end
 
   if handler then
