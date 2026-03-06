@@ -17,8 +17,12 @@ local function _is_turn_bound_ui_button(action_id)
 end
 
 local function _resolve_choice_owner_role_id(game, choice)
+  local owner_role_id = choice and number_utils.to_integer(choice.owner_role_id) or nil
+  if owner_role_id ~= nil then
+    return owner_role_id
+  end
   local meta = choice and choice.meta or nil
-  local owner_role_id = meta and number_utils.to_integer(meta.player_id) or nil
+  owner_role_id = meta and number_utils.to_integer(meta.player_id) or nil
   if owner_role_id ~= nil then
     return owner_role_id
   end

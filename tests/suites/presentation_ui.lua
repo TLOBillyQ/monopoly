@@ -157,6 +157,9 @@ local function _build_target_pick_env()
     id = 99,
     kind = "roadblock_target",
     route_key = "target",
+    owner_role_id = 1,
+    uses_target_picker = true,
+    target_picker_owner_role_id = 1,
     title = "选位置",
     body = "body",
     options = {
@@ -441,6 +444,7 @@ local function _test_invalid_choice_option_rejected()
   local choice = _open_choice(g, {
     kind = "market_buy",
     route_key = "market",
+    owner_role_id = g:current_player().id,
     options = { { id = 1, label = "X" } },
     meta = { player_id = g:current_player().id },
   })
@@ -606,6 +610,7 @@ local function _test_ui_model_player_slot_map_and_choice_owner()
     id = 77,
     kind = "item_phase_choice",
     route_key = "base_inline",
+    owner_role_id = "2",
     uses_item_slots = true,
     pre_confirm_before_slot_pick = true,
     options = { { id = 2002, label = "用道具" } },
@@ -756,6 +761,7 @@ local function _test_turn_dispatch_rejects_choice_non_owner()
     id = 9,
     kind = "market_buy",
     route_key = "market",
+    owner_role_id = "1",
     options = { { id = 1, label = "X" } },
     allow_cancel = true,
     meta = { player_id = "1" },
@@ -2113,6 +2119,9 @@ local function _test_choice_modal_routes_to_new_screens()
       id = 2,
       kind = "roadblock_target",
       route_key = "target",
+      owner_role_id = 1,
+      uses_target_picker = true,
+      target_picker_owner_role_id = 1,
       title = "选位置",
       body = "body",
       options = {
@@ -2235,6 +2244,9 @@ local function _test_target_screen_uses_labels_only_and_keeps_projection_unmanag
     id = 88,
     kind = "roadblock_target",
     route_key = "target",
+    owner_role_id = 1,
+    uses_target_picker = true,
+    target_picker_owner_role_id = 1,
     title = "路障卡：选择位置",
     body = "body",
     options = {
@@ -2289,6 +2301,9 @@ local function _test_target_screen_hides_unused_slots_when_unique_options_less_t
     id = 89,
     kind = "roadblock_target",
     route_key = "target",
+    owner_role_id = 1,
+    uses_target_picker = true,
+    target_picker_owner_role_id = 1,
     title = "路障卡：选择位置",
     body = "body",
     options = {
@@ -2634,6 +2649,9 @@ local function _test_ui_event_router_player_target_click_direct_submit()
       id = 20,
       kind = "roadblock_target",
       route_key = "target",
+      owner_role_id = 1,
+      uses_target_picker = true,
+      target_picker_owner_role_id = 1,
       allow_cancel = true,
       options = {
         { id = 101, label = "前1" },
@@ -3914,6 +3932,71 @@ local function _test_market_view_page_arrows_visibility_follows_page_count()
   _assert_eq(visible[market_layout.page_next], true, "page_next should be visible when multiple pages")
   _assert_eq(touch[market_layout.page_prev], false, "page_prev should be disabled on first page")
   _assert_eq(touch[market_layout.page_next], true, "page_next should be enabled when next page exists")
+end
+
+local function _test_ui_model_market_payload_prefers_explicit_choice_fields()
+  local ui_model = require("src.presentation.state.UIModel")
+  local g = _new_game()
+  local current_player = g:current_player()
+  g.turn.pending_choice = {
+    id = 321,
+    kind = "market_buy",
+    route_key = "market",
+    owner_role_id = current_player.id,
+    title = "黑市",
+    options = {
+      {
+        id = 7001,
+        label = "测试皮肤",
+        can_buy = true,
+        requires_pre_confirm = true,
+        confirm_title = "请确认",
+        confirm_body = "你选的是：测试皮肤",
+      },
+    },
+    allow_cancel = true,
+    cancel_label = "不买",
+    active_tab = "skin",
+    page_index = 2,
+    page_count = 5,
+    meta = {
+      player_id = current_player.id,
+      active_tab = "item",
+      page_index = 9,
+      page_count = 9,
+    },
+  }
+
+  local model = ui_model.build(g, {
+    game = g,
+    ui_state = { ui = { item_slots = { 1, 2, 3, 4, 5 }, auto_play = false } },
+    last_turn = g.last_turn,
+    finished = g.finished,
+  })
+
+  _assert_eq(model.choice and model.choice.options[1] and model.choice.options[1].requires_pre_confirm, true,
+    "choice view should preserve explicit option pre-confirm flag")
+  _assert_eq(model.choice and model.choice.owner_role_id, current_player.id,
+    "choice view should preserve explicit owner role id")
+  _assert_eq(model.market and model.market.active_tab, "skin", "market payload should prefer explicit active_tab")
+  _assert_eq(model.market and model.market.page_index, 2, "market payload should prefer explicit page_index")
+  _assert_eq(model.market and model.market.page_count, 5, "market payload should prefer explicit page_count")
+end
+
+local function _test_target_pick_prefers_explicit_owner_role_id()
+  local env = _build_target_pick_env()
+  env.choice.target_picker_owner_role_id = 7
+  env.choice.owner_role_id = 7
+  env.choice.meta.player_id = 2
+  env.state.game.current_player = function()
+    return { id = 3 }
+  end
+
+  local entered = target_choice_effects.enter(env.state, env.choice)
+  _assert_eq(entered, true, "target picker should still enter")
+  _assert_eq(env.state.target_choice_runtime and env.state.target_choice_runtime.owner_role_id, 7,
+    "target picker should use explicit owner role id before meta/current-player fallback")
+  target_choice_effects.leave(env.state, "test_cleanup")
 end
 
 local function _test_modal_presenter_market_same_choice_id_still_refreshes_market_panel()
@@ -6339,6 +6422,7 @@ return {
   _test_target_pick_leave_hides_scene_units,
   _test_target_pick_enter_spawns_candidate_markers_at_height_1_6,
   _test_target_pick_degrades_without_raycast_api,
+  _test_target_pick_prefers_explicit_owner_role_id,
   _test_ui_event_router_injects_actor_for_next_with_current_player_fallback,
   _test_ui_event_router_injects_actor_for_market_confirm_and_cancel,
   _test_ui_event_router_rejects_next_without_actor_context,
@@ -6355,6 +6439,7 @@ return {
   _test_market_view_unbuyable_option_is_clickable,
   _test_market_view_hides_disabled_market_tab,
   _test_market_view_page_arrows_visibility_follows_page_count,
+  _test_ui_model_market_payload_prefers_explicit_choice_fields,
   _test_modal_presenter_market_same_choice_id_still_refreshes_market_panel,
   _test_ui_event_router_market_cancel_button_dispatches_choice_cancel,
   _test_market_view_default_selection_shows_matching_selection_frame,

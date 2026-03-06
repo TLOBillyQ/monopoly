@@ -352,6 +352,7 @@ local function _test_market_tab_select_navigation_applies_with_unbuyable_tab()
   local pending_choice = {
     id = 999,
     kind = spec.kind,
+    owner_role_id = spec.owner_role_id,
     title = spec.title,
     body_lines = spec.body_lines,
     options = spec.options,
@@ -388,6 +389,7 @@ local function _test_market_choice_build_is_pure_and_session_marks_dirty()
   local pending_choice = {
     id = 1000,
     kind = spec.kind,
+    owner_role_id = spec.owner_role_id,
     title = spec.title,
     body_lines = spec.body_lines,
     options = spec.options,
@@ -430,6 +432,7 @@ local function _test_market_tab_select_empty_tab_keeps_choice_and_emits_buy_fail
     local pending_choice = {
       id = 1001,
       kind = spec.kind,
+      owner_role_id = spec.owner_role_id,
       title = spec.title,
       body_lines = spec.body_lines,
       options = spec.options,
@@ -480,6 +483,8 @@ local function _test_market_buy_failed_resolves_and_clears_pending_choice()
   local choice = {
     id = 808,
     kind = "market_buy",
+    route_key = "market",
+    owner_role_id = p.id,
     options = { { id = 2001, label = "测试商品" } },
     meta = { player_id = p.id },
   }
@@ -516,9 +521,12 @@ local function _test_market_item_buy_keeps_choice_open_until_inventory_full()
   local choice = {
     id = 809,
     kind = "market_buy",
+    route_key = "market",
+    owner_role_id = p.id,
     options = { { id = 2003, label = "测试商品" } },
     active_tab = "item",
     page_index = 1,
+    page_count = 1,
     meta = { player_id = p.id, active_tab = "item", page_index = 1, page_count = 1 },
   }
   g.turn.pending_choice = choice

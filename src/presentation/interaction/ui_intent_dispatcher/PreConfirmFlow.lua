@@ -36,7 +36,7 @@ local function _resolve_market_skin_option(state, intent)
     return nil, nil
   end
   local choice = state.ui_model and state.ui_model.choice or nil
-  if not (choice and choice.kind == "market_buy") then
+  if choice_common.resolve_screen_key(choice) ~= "market" then
     return nil, nil
   end
   local product_id = number_utils.to_integer(intent.option_id)

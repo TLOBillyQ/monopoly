@@ -59,12 +59,12 @@ end
 function item_slice.resolve_item_choice_owner_id(game, choice, current_player_id)
   local owner_role_id = role_id_utils.normalize(current_player_id)
   local pending = game and game.turn and game.turn.pending_choice or nil
-  if pending and pending.meta and pending.meta.player_id then
-    owner_role_id = number_utils.to_integer(pending.meta.player_id)
+  if pending and pending.owner_role_id ~= nil then
+    owner_role_id = number_utils.to_integer(pending.owner_role_id)
     return owner_role_id
   end
-  if choice and choice.meta and choice.meta.player_id then
-    owner_role_id = number_utils.to_integer(choice.meta.player_id)
+  if choice and choice.owner_role_id ~= nil then
+    owner_role_id = number_utils.to_integer(choice.owner_role_id)
   end
   return owner_role_id
 end

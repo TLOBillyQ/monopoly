@@ -44,6 +44,7 @@ function item_choice_handler.build(helpers)
       kind = "need_choice",
       choice_spec = {
         kind = "steal_item",
+        owner_role_id = stealer.id,
         title = "选择要偷的道具",
         body_lines = lines,
         options = options,

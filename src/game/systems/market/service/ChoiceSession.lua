@@ -14,11 +14,19 @@ local function _mark_choice_dirty(game)
 end
 
 local function _current_choice_state(pending_choice)
-  local meta = pending_choice and pending_choice.meta or {}
   return {
-    active_tab = pending_choice and pending_choice.active_tab or meta.active_tab,
-    page_index = pending_choice and pending_choice.page_index or meta.page_index,
+    active_tab = pending_choice and pending_choice.active_tab or nil,
+    page_index = pending_choice and pending_choice.page_index or nil,
   }
+end
+
+local function _resolve_owner_role_id(pending_choice)
+  local owner_role_id = number_utils.to_integer(pending_choice and pending_choice.owner_role_id)
+  if owner_role_id ~= nil then
+    return owner_role_id
+  end
+  local meta = pending_choice and pending_choice.meta or nil
+  return meta and number_utils.to_integer(meta.player_id) or nil
 end
 
 local function _apply_spec(game, pending_choice, spec)
@@ -32,6 +40,7 @@ local function _apply_spec(game, pending_choice, spec)
   pending_choice.active_tab = spec.active_tab
   pending_choice.page_index = spec.page_index
   pending_choice.page_count = spec.page_count
+  pending_choice.owner_role_id = spec.owner_role_id
   pending_choice.meta = spec.meta
   _mark_choice_dirty(game)
 end
@@ -59,10 +68,9 @@ function session.apply_navigation(game, pending_choice, action)
     logger.warn("[MarketDebug] apply_navigation rejected: invalid pending_choice")
     return false
   end
-  local meta = pending_choice.meta or {}
-  local player_id = number_utils.to_integer(meta.player_id)
+  local player_id = _resolve_owner_role_id(pending_choice)
   if not player_id then
-    logger.warn("[MarketDebug] apply_navigation rejected: invalid meta.player_id")
+    logger.warn("[MarketDebug] apply_navigation rejected: invalid owner_role_id")
     return false
   end
   local player = game:find_player_by_id(player_id)
@@ -70,9 +78,9 @@ function session.apply_navigation(game, pending_choice, action)
     logger.warn("[MarketDebug] apply_navigation rejected: player not found", tostring(player_id))
     return false
   end
-  local active_tab = meta.active_tab
-  local page_index = meta.page_index
-  local page_count = meta.page_count
+  local active_tab = pending_choice.active_tab
+  local page_index = pending_choice.page_index
+  local page_count = pending_choice.page_count
   if action.type == "market_tab_select" then
     active_tab = action.tab
     page_index = 1
@@ -102,8 +110,7 @@ function session.refresh_after_paid_callback(game, player, entry)
   if not pending_choice or pending_choice.kind ~= "market_buy" then
     return false
   end
-  local meta = pending_choice.meta or {}
-  local owner_id = number_utils.to_integer(meta.player_id)
+  local owner_id = _resolve_owner_role_id(pending_choice)
   if owner_id ~= (player and player.id or nil) then
     return false
   end

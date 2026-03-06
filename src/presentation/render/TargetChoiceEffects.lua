@@ -8,8 +8,7 @@ local ui_core = require("src.presentation.api.ui_view_service.core")
 local target_choice_effects = {}
 
 local function _is_target_choice(choice)
-  local kind = choice and choice.kind or nil
-  return kind == "roadblock_target" or kind == "demolish_target"
+  return choice ~= nil and choice.route_key == "target" and choice.uses_target_picker == true
 end
 
 local function _resolve_option_id(option)
@@ -21,10 +20,13 @@ local function _resolve_option_id(option)
 end
 
 local function _resolve_choice_owner_role_id(game, choice)
-  local meta = choice and choice.meta or nil
-  local from_meta = meta and number_utils.to_integer(meta.player_id) or nil
-  if from_meta ~= nil then
-    return from_meta
+  local from_choice = choice and number_utils.to_integer(choice.target_picker_owner_role_id) or nil
+  if from_choice ~= nil then
+    return from_choice
+  end
+  local owner_role_id = choice and number_utils.to_integer(choice.owner_role_id) or nil
+  if owner_role_id ~= nil then
+    return owner_role_id
   end
   local current = game and game.current_player and game:current_player() or nil
   return current and number_utils.to_integer(current.id) or nil

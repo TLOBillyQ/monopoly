@@ -122,6 +122,7 @@ function choice.build(player, game, state)
   return {
     kind = "market_buy",
     route_key = "market",
+    owner_role_id = player.id,
     title = "黑市",
     body_lines = body_lines,
     options = options,

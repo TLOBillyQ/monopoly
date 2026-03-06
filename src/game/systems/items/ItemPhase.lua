@@ -135,6 +135,7 @@ function item_phase.build_choice_spec(game, player, phase)
   return {
     kind = "item_phase_choice",
     route_key = "base_inline",
+    owner_role_id = player.id,
     uses_item_slots = true,
     pre_confirm_before_slot_pick = true,
     title = phase_titles[phase],

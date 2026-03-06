@@ -1,5 +1,22 @@
 local choice = {}
 
+local function _copy_option_view(opt, label)
+  local view = {
+    label = label,
+    id = opt.id or opt,
+    raw = opt,
+  }
+  if type(opt) ~= "table" then
+    return view
+  end
+  view.can_buy = opt.can_buy
+  view.requires_pre_confirm = opt.requires_pre_confirm == true
+  view.pre_confirm_kind = opt.pre_confirm_kind
+  view.confirm_title = opt.confirm_title
+  view.confirm_body = opt.confirm_body
+  return view
+end
+
 local function _join_lines(lines)
   assert(lines ~= nil, "missing body lines")
   return table.concat(lines, "\n")
@@ -57,19 +74,28 @@ function choice.build_choice_view(pending, opts)
   for _, opt in ipairs(pending.options or {}) do
     local label = option_label(opt)
     assert(label ~= nil, "missing option label")
-    table.insert(options, {
-      label = label,
-      id = opt.id or opt,
-      raw = opt,
-      can_buy = opt.can_buy,
-    })
+    table.insert(options, _copy_option_view(opt, label))
   end
 
   return {
+    id = pending.id,
+    kind = pending.kind,
     title = title,
     body = body,
     options = options,
     meta = pending.meta,
+    route_key = pending.route_key,
+    requires_confirm = pending.requires_confirm == true,
+    uses_item_slots = pending.uses_item_slots == true,
+    pre_confirm_before_slot_pick = pending.pre_confirm_before_slot_pick == true,
+    uses_target_picker = pending.uses_target_picker == true,
+    target_picker_owner_role_id = pending.target_picker_owner_role_id,
+    owner_role_id = pending.owner_role_id,
+    confirm_title = pending.confirm_title,
+    confirm_body = pending.confirm_body,
+    active_tab = pending.active_tab,
+    page_index = pending.page_index,
+    page_count = pending.page_count,
     cancel_label = pending.cancel_label or "取消",
     allow_cancel = pending.allow_cancel ~= false,
   }

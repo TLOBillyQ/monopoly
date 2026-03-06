@@ -28,7 +28,7 @@
 - [x] (2026-03-07 03:42 +0800) 已把 `BaseLandEffects` 的 `on_tile_upgraded` 直推改成 `tile_feedback_port`/兼容桥，`dep_rules` 中 `src/game/systems/land/landing_effects/BaseLandEffects.lua` 的 `game.ui_port` 预算已降到 0。
 - [x] (2026-03-07 00:04 +0800) 已完成阶段2最后一刀：`GameplayLoop.set_game()` 不再注入泛化 `game.ui_port`，改为只注入 `board_scene_port`、`popup_port`、`tile_owner_notifier`、`anim_gate_port` 这些窄端口；`StatePorts` 已优先消费 `board_scene_port`，`GameStateTiles` 删除 `self.ui_port` fallback，`dep_rules` 中 `game.ui_port` 总预算已降到 0。
 - [x] (2026-03-07 00:28 +0800) 已完成阶段3：`RuntimeGlobalAliases` 已外迁到 `src/app/bootstrap/runtime_install/`；`Logger`、`DefaultPorts`、`RuntimeEditorExports`、`RuntimeContext` 都已改成 host hook 或 runtime context env 读取；`src/core` 宿主触点预算已从 47 压到 0。
-- [ ] 阶段4：已完成六刀。第一刀新增 `src/game/systems/market/service/PaidPurchaseGateway.lua`，承接 paid-currency 的 goods mapping、purchase panel 启动、待兑现队列和购买回调注册。第二刀把 paid callback 后的 market choice 刷新移到 `src/game/systems/market/service/Choice.lua` 的 `refresh_after_paid_callback()`。第三刀新增 `src/game/systems/market/service/Fulfillment.lua`，统一 item/vehicle/skin 的兑现副作用。第四刀新增 `src/game/systems/market/service/PurchasePolicy.lua`，把商品可买性校验和座驾替换确认 intent 组装从 `Purchase.lua` 中抽走。第五刀新增 `src/game/systems/market/service/Feedback.lua`，把 market buy_failed 事件与黑市 popup 文案出口从 `Purchase.lua`、`Choice.lua` 中抽离。第六刀新增 `src/game/systems/market/service/ChoiceOutcome.lua`，把购买结果后的 choice 刷新、满包退出 popup、follow-up intent 派发和 stay/finish 决策从 `MarketChoiceHandler.lua` 中抽离。剩余工作主要是观察 `Purchase.lua` 本身是否还值得继续拆本地金币购买前后编排，还是把阶段4视为足够收口。
+- [x] 阶段4：Market 购买链路已完成七刀并确认“行为上已收口”。`PaidPurchaseGateway.lua`、`Fulfillment.lua`、`PurchasePolicy.lua`、`Feedback.lua`、`ChoiceOutcome.lua`、`LocalPurchase.lua`、`ChoiceSession.lua` 已把支付桥接、兑现、副作用反馈、购买结果协调、本地金币购买编排和 session 状态更新拆开；当前 `Purchase.lua` 与 `MarketChoiceHandler.lua` 只保留薄编排职责，不再要求继续细切才能证明边界收口。
 - [x] (2026-03-07 03:07 +0800) 已把 `Purchase.execute()` 的本地金币购买分支外提到 `src/game/systems/market/service/LocalPurchase.lua`，并把 `MarketChoiceHandler` 的购买结果协调外提到 `src/game/systems/market/service/ChoiceOutcome.lua`；`Purchase.lua` 与 `MarketChoiceHandler.lua` 继续向纯编排器收缩。
 - [x] (2026-03-07 00:04 +0800) 已完成阶段4第七刀：新增 `src/game/systems/market/service/ChoiceSession.lua`，把 `rebuild_pending()`、`apply_navigation()`、`refresh_after_paid_callback()` 从 `Choice.lua` 中移走；`Choice.lua` 现只保留 market choice builder，`MarketService`、`ChoiceOutcome`、`PaidFulfillment` 已改接 session service，并新增 market 定向测试验证“build 保持纯函数，session 才负责 dirty/pending 更新”。
 - [x] (2026-03-07 01:27 +0800) 已启动阶段5第一刀：`src/game/systems/market/service/Choice.lua` 现在给 option 输出 `requires_pre_confirm/pre_confirm_kind`，`PreConfirmFlow.lua` 不再回查 `Config.Generated.Market` 判断皮肤商品，而是只消费用例层提供的 option 级确认语义；已补 `market` 与 `presentation_ui` 回归，验证“有 flag 才进二次确认，没有 flag 即使 product_id 像皮肤也直接派发”。
@@ -39,7 +39,8 @@
 - [x] (2026-03-07 02:27 +0800) 已完成阶段5第四刀的第一小片：`LandChoiceSpecs.tax_prompt()` 与 `EffectPipeline` 生成的纯 buy/upgrade land optional choice 已显式输出 `route_key=\"secondary_confirm\"` 与 `requires_confirm=true`；`ChoiceRoutePolicy` 已移除对 `tax_card_prompt` 和 `buy_land/upgrade_land` 的 secondary-confirm 推断，presentation route 开始只消费用例层声明。
 - [x] (2026-03-07 02:36 +0800) 已完成阶段5第四刀的第二小片：`ItemHandlers`、`ItemDemolish`、`market/service/Choice` 已分别为 `item_target_player`、`remote_dice_value`、`roadblock_target`、`demolish_target`、`market_buy` 显式输出 `route_key`；`ChoiceRoutePolicy` 已移除这些 kind 的默认 route 推断，`remote/player/target/market` 路由开始统一由 use-case 输出声明。
 - [x] (2026-03-07 02:49 +0800) 已完成阶段5第四刀的第三小片：`LandChoiceSpecs.build_use_skip()` 现默认显式输出 `route_key=\"base_inline\"` 与 `requires_confirm=false`，`item_phase_choice` 的手工测试 choice 也已补齐 `route_key=\"base_inline\"`；`ChoiceRoutePolicy` 已不再为 `item_phase_choice` 特判 base-inline，当前只保留真正未知 choice 的 fallback。
-- [ ] 阶段6：在边界稳定后整理目录语义和命名，避免目录改动与行为改动叠加。
+- [x] (2026-03-07 00:39 +0800) 已完成阶段5收尾：`IntentDispatcher.open_choice()`、`UIChoice.build_choice_view()` 现在会把 `owner_role_id`、`confirm_*`、item-slot flag、target-picker flag、market 分页状态等显式字段贯通到 `pending_choice` 与 `ui_model.choice`；`PreConfirmFlow` 改成按显式 route 判断 market，`ChoiceSlice` / `MarketModalRenderer` / `ItemSlice` / `TargetChoiceEffects` 已删除对 `choice.kind/meta` 的业务推断，只消费 use-case 声明的稳定字段。
+- [x] (2026-03-07 00:39 +0800) 已完成阶段6：新增 `docs/architecture/directory_semantics.md`，把 `src/app`、`src/core`、`src/game/flow`、`src/game/systems`、`src/game/runtime`、`src/presentation`、`src/presentation/read_model` 的职责边界写成仓库内导读；本阶段未夹带行为改动，只补目录语义与后续放置规则。
 
 ## 意外与发现
 
@@ -244,11 +245,23 @@
   理由：一旦其余 route 都靠显式字段声明，保留 `item_phase_choice` 特判只会让 `ChoiceRoutePolicy` 继续知道业务 kind。把 `base_inline` 也改成输出层声明后，policy 就只剩未知 choice 的兜底职责，职责边界更干净。
   日期/作者：2026-03-07 / Codex
 
+- 决策：choice 的显式 presentation 协议必须由 `IntentDispatcher.open_choice()` 一次性复制进 `pending_choice`，不能只停留在 `choice_spec`。
+  理由：如果运行时态看不到这些字段，presentation 层最终仍会退回 `kind/meta` 推断；真正的边界收口要保证“use case 定义了什么，运行时就持有什么”。
+  日期/作者：2026-03-07 / Codex
+
+- 决策：target picker 采用 `route_key="target" + uses_target_picker + target_picker_owner_role_id` 这组显式语义，而不是继续让 UI 根据 `roadblock_target/demolish_target` 和 `meta.player_id` 猜行为。
+  理由：`route_key` 只能说明打开哪个 screen，不能说明这个 screen 是否需要场景拾取和归属角色约束；把这两层语义显式拆开后，presentation 才能稳定复用而不沦为业务解释器。
+  日期/作者：2026-03-07 / Codex
+
+- 决策：阶段6先补 `docs/architecture/boundaries.md`，暂不立刻做目录重命名。
+  理由：当前边界虽然稳定，但重命名会引入大量 `require` 路径噪音；先把目录职责和禁止事项写成仓库内导读，可以在不混入行为风险的前提下完成语义收尾。
+  日期/作者：2026-03-07 / Codex
+
 ## 结果与复盘
 
-阶段0到阶段3现在都已经完成，阶段4和阶段5则进入“继续瘦身剩余业务推断”的尾段。当前最重要的可观察结果有七条。第一，`src/game/flow` 已经没有任何直接的 `state.ui_*` 写入；用例层现在通过 `UseCaseOutputPort` 发出 UI 失效、choice 生命周期和 modal timer 输出。第二，`game.ui_port` 的预算已经从 23 压到 0；动画等待改走 `anim_gate_port`，popup 改走 `popup_port`，地块升级通知改走 `tile_feedback_port`，tile owner 变更改走 `tile_owner_notifier`，board scene 读取也已收窄成 `board_scene_port`。第三，`src/core` 已经不再直接认识 Eggy 宿主全局，相关安装器和别名逻辑都已外移或改成显式注入。第四，market 购买链路里，`PaidPurchaseGateway.lua`、`Fulfillment.lua`、`PurchasePolicy.lua`、`Feedback.lua`、`ChoiceOutcome.lua` 都已经落位，而 `Choice.lua` 本身也已收缩成纯 builder；pending-choice 的重建、翻页、切 tab 和 paid callback 刷新现集中到 `ChoiceSession.lua`。第五，market choice 现在会在 option 上显式声明 `requires_pre_confirm/pre_confirm_kind`，presentation 的 `PreConfirmFlow` 不再靠 `Config.Generated.Market` 和 `product_id` 再做一轮业务判断。第六，`ItemPhase`、`tax_prompt`、`landing_optional_effect` 和 market skin option 已经直接携带 `confirm_title/confirm_body`，`choice_screen_service.common` 只在缺字段时做兼容 fallback。第七，默认回归仍保持通过，并把这些收口一起锁住。
+阶段0到阶段6现在已经全部完成。当前最重要的可观察结果有八条。第一，`src/game/flow` 已经没有任何直接的 `state.ui_*` 写入；用例层通过 `UseCaseOutputPort` 发出 UI 失效、choice 生命周期和 modal timer 输出。第二，`game.ui_port` 预算已经压到 0；动画等待改走 `anim_gate_port`，popup 改走 `popup_port`，地块升级通知改走 `tile_feedback_port`，tile owner 变更改走 `tile_owner_notifier`，board scene 读取收窄成 `board_scene_port`。第三，`src/core` 已经不再直接认识 Eggy 宿主全局，运行时安装器与默认端口实现已迁到外层 bootstrap / runtime context。第四，Market 购买链路已经稳定分拆：`Purchase.lua` 只保留编排，`LocalPurchase.lua`、`PaidPurchaseGateway.lua`、`PaidFulfillment.lua`、`PurchasePolicy.lua`、`Feedback.lua`、`ChoiceOutcome.lua`、`ChoiceSession.lua` 分别承接本地购买、支付桥接、兑现、资格校验、失败反馈、购买后续动作和 session 刷新。第五，choice 稳定协议已经真正落进 `pending_choice`：`IntentDispatcher.open_choice()` 会保留 `owner_role_id`、确认文案、item-slot 语义、target-picker 语义和 market 分页字段，presentation 不再被迫回头解析 `choice_spec.meta`。第六，`PreConfirmFlow`、`ChoiceSlice`、`UIChoice`、`TargetChoiceEffects`、`ChoiceSession` 现在优先消费显式字段；target/market 关键交互已经不再依赖 `choice.kind/meta` 推断核心 UI 语义。第七，`docs/architecture/boundaries.md` 已把目录职责和禁止跨层访问写成仓库内导读，后续维护者不用再从提交历史反推这些边界。第八，默认回归、定向 `market`、定向 `presentation_ui` 与 `dep_rules` 全部通过，并把这次收口锁住。
 
-这轮推进的经验同样直接。第一，阶段1不需要等 presentation 全部清干净才开始，先把“写入口”统一就能显著降低后续修改的耦合面。第二，守护测试必须允许内部兼容镜像存在，否则会把 `ui_runtime` 这种过渡性状态误判成旧债。第三，阶段2应该继续坚持“每次只拔一小束读路径”，因为 `push_popup`、`ui_port.state` 和 market 链路的风险明显高于动画布尔门控。第四，阶段3一旦把 `src/core` 改成显式注入，测试基础设施也必须同步升级为显式构造 runtime context，否则旧的全局 patch 习惯会反噬回归。
+这轮推进留下三条直接经验。第一，真正稳定的 presentation 重构，关键不在 UI 层删多少 `if choice.kind`，而在 use case 层是否把稳定协议完整带进 `pending_choice`。第二，target picker 这类“看起来只是 route”的交互，仍然需要显式 owner/feature flag；否则 UI 只能退回 `meta` 和 `kind` 猜业务。第三，阶段6最稳妥的做法不是立刻改目录名，而是先把目录职责、禁止事项和 choice 协议写成仓库内文档；这样下一次再做重命名时，行为边界已经有文字锚点，不会把整理命名和重新设计行为混成一次风险提交。
 
 ## 背景与导读
 
@@ -306,31 +319,31 @@
 
 建议先定义 `PaymentGatewayPort`，再把平台映射与回调桥接移到外层实现，最后让用例层只接收“支付已完成”事件。不要在这个阶段顺手做 presentation 文案清理，那是阶段5的职责。
 
-这个里程碑目前已经完成七刀。除了支付 gateway、兑现、购买前策略、失败反馈、结果协调这些拆分外，最新一刀又新增了 `src/game/systems/market/service/ChoiceSession.lua`，把 market choice 的 pending-choice rebuild、导航刷新和 paid callback 后刷新从 `Choice.lua` 里拆开。现在 `Choice.lua` 只负责 `build()`，也就是纯输出模型构造；session service 则负责把 spec 落回 `pending_choice` 并标记 `dirty.turn/dirty.any`。这使得后续如果还要继续整理 `Purchase.lua`，可以只围绕购买编排本身，而不用再碰 choice builder。
+这个里程碑现在已经完成并收口。除了支付 gateway、兑现、购买前策略、失败反馈、结果协调这些拆分外，`ChoiceSession.lua` 也已经接管 market choice 的 pending-choice rebuild、导航刷新和 paid callback 后刷新；`Choice.lua` 只负责 `build()`，`Purchase.lua` 只负责在本地购买和外部支付之间做编排决策。
 
-这个里程碑目前剩下的主要判断只有一个：是否还值得继续把 `Purchase.lua` 里本地金币购买前后的编排再往外切。如果下一位执行者发现那部分已经足够像 orchestrator，可以直接把阶段4视为“行为上已收口”，把注意力转向阶段5里剩余的 target-pick/market presentation 业务推断。
+本阶段最后的判断已经拍板：不再继续把 `Purchase.lua` 的本地金币购买路径切得更碎。原因不是做不到，而是继续拆下去只会把编排器变成一串没有业务含量的转发层。当前文件边界已经足够清晰，继续推进的价值远小于阶段5把稳定 choice 协议彻底送到 presentation。
 
 ## 里程碑 5：整理 presentation 应用规则
 
-这个里程碑完成后，presentation 只负责把 ViewModel 渲染出来，不再根据 `choice.kind` 和 `meta` 再做一轮业务判断。优先处理 `src/presentation/interaction/ui_intent_dispatcher/PreConfirmFlow.lua`，然后收口 `src/presentation/ui/choice_screen_service/common.lua` 和 target choice 相关渲染模块。最终目标是让 choice DSL 只存在于用例层定义的稳定输出模型中，而不是散落在 UI 适配器里。
+这个里程碑现在已经完成。`PreConfirmFlow.lua`、`choice_screen_service.common.lua`、`UIChoice.lua`、`ChoiceSlice.lua`、`TargetChoiceEffects.lua`、`MarketModalRenderer.lua` 等 presentation 模块现在优先消费 `route_key`、`owner_role_id`、`confirm_title/confirm_body`、`uses_item_slots`、`pre_confirm_before_slot_pick`、`uses_target_picker`、`target_picker_owner_role_id`、`active_tab/page_index/page_count` 这些稳定字段；target 和 market 交互不再靠 `choice.kind/meta` 做核心业务推断。
 
-验收标准是：presentation 中对 `choice.kind` 的分支显著减少，且新增的确认弹窗文案来自用例层提供的完整 ViewModel。
+本阶段真正补齐的根因是 `IntentDispatcher.open_choice()`：它现在会把这些稳定字段完整带入 `pending_choice`。没有这一步，presentation 即使愿意消费显式协议，也会因为运行时拿不到字段而退回旧推断。验收结果已经成立：`presentation_ui` 定向回归通过，且扫描可见的残留 `choice.kind/meta` 判断已经收敛回 use case / resolver 层，而不是 UI 渲染层。
 
 ## 里程碑 6：目录语义整理
 
-这个里程碑只在前五个阶段都稳定后再做。届时才能安全重命名目录、补 ADR、整理 `src/core` / `src/game/flow` / `src/presentation/read_model` 的职责解释。这里不要夹带行为改动，只做命名、导读和收尾清理，否则很容易把阶段1到阶段5的回归和目录变动混在一起。
+这个里程碑现在也已完成，但采取的是最保守的收尾方式：先新增 `docs/architecture/boundaries.md`，把 `src/core`、`src/game/flow`、`src/game/systems`、`src/presentation` 的职责、禁止跨层访问和稳定 choice 协议写成导读，而不是立刻改目录名。这样既能把边界语义固化进仓库，又不会把“文档整理”和“重命名 / require 路径迁移”混成同一次风险提交。
 
 ## 工作计划
 
-如果现在继续推进，不要再回头扩阶段0。下一步就是开始阶段1。先在 `src/game/flow/ports` 下定义一个稳定的输出端口模块，把它接到 `src/game/flow/turn/GameplayLoopPorts.lua` 的 grouped ports 中。随后分三批迁移当前的直接 UI 写入。第一批只迁 `state.ui_dirty` 这类失效信号，因为风险最低。第二批迁 `pending_choice` 和 `ui_model` 的构建与关闭路径，因为它们决定了选择框和 market 的主流程。第三批再迁 `TickTimeout.lua` 里的 `ui_modal_elapsed`、`ui_modal_ref`，让倒计时状态也进入端口化管理。
+当前计划已经执行完毕。后续如果继续沿这条重构路线维护仓库，不需要再重新设计阶段，只需要遵循三条维护规则。
 
-阶段1一旦有一条路径完成，就立刻补测试，而不是等全部文件都迁完。最先应该增加的是“Fake Output Port 下运行 GameplayLoop 一帧并收到预期输出”的契约测试。等阶段1把 `state.ui_*` 的预算压下去后，再进入阶段2；阶段2开始前不要把 `game.ui_port` 和 `state.ui_*` 两类边界同时大改，否则很难知道回归是从哪一类泄漏进来的。
-
-阶段2和阶段3都要沿用同一个节奏。每次只迁一小组文件，迁完立刻缩预算、补契约、跑全量。阶段4到阶段6则建立在前面三阶段已经让边界稳定的前提上，否则 Market 和 presentation 的重构会重新把边界拉回去。
+第一，新增 choice 交互时，优先把 presentation 需要的字段直接放进 choice 输出协议，并确保 `IntentDispatcher.open_choice()` 能把它们原样带入 `pending_choice`。第二，新增 runtime / host 细节时，不要把 Eggy 宿主 API 放回 `src/core`，而是通过 bootstrap、runtime context 或显式端口注入。第三，每次改边界后都跑定向回归再跑全量回归，确保“架构边界收口”和“玩法行为不回退”同时成立。
 
 ## 具体步骤
 
-先验证阶段0当前状态。工作目录固定为仓库根目录 `/Users/billyq/Dev/Github/Lua/monopoly`。
+这份计划已经处于完成态。如果下一位执行者要验证或继续维护，请在仓库根目录 `/Users/billyq/Dev/Github/Lua/monopoly` 按下面顺序执行。
+
+先跑静态边界守护。
 
     lua tests/internal/dep_rules.lua
 
@@ -338,50 +351,46 @@
 
     dep_rules ok
 
-再跑阶段0的定向守护契约。
+再跑与本次阶段4到阶段6最相关的定向 suite。
 
-    lua -e "package.path = package.path .. ';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({ require('architecture_guard_contract') })"
+    lua -e "package.path = package.path .. ';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({ require('market') })"
 
 预期输出最后一行是：
 
-    All regression checks passed (7)
+    All regression checks passed (15)
 
-然后跑全量回归，确认默认入口已经包含阶段0守护。
+然后跑 presentation 定向回归。
+
+    lua -e "package.path = package.path .. ';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({ require('presentation_ui') })"
+
+预期输出最后一行是：
+
+    All regression checks passed (135)
+
+最后跑统一全量回归。
 
     lua tests/regression.lua
 
 预期输出末尾包含：
 
-    All regression checks passed (372)
+    All regression checks passed (376)
     dep_rules ok
     tick ok
     forbidden_globals ok
 
-开始阶段1时，先新建或修改这些文件，并在每一步后重复上面的三条命令：
-
-    src/game/flow/ports/UseCaseOutputPort.lua
-    src/game/flow/turn/GameplayLoopPorts.lua
-    src/game/flow/turn/GameplayLoop.lua
-    src/game/flow/turn/TurnDispatch.lua
-    src/game/flow/turn/TickTimeout.lua
-    tests/suites/architecture_guard_contract.lua
-    tests/internal/dep_rules.lua
-
-如果在阶段1里成功减少了某个预算值，必须在同一提交里更新 `tests/internal/dep_rules.lua` 中对应的数字，否则 `dep_rules` 会因为“预算陈旧”而失败。这是有意设计的约束，不是误报。
+如果未来再新增 choice 协议字段，必须同时检查三件事：用例层 choice spec 是否产出字段，`IntentDispatcher.open_choice()` 是否把字段带进 `pending_choice`，以及对应 presentation 模块是否优先消费该显式字段而不是退回 `kind/meta` 推断。
 
 ## 验证与验收
 
-阶段0的验收标准已经满足，并且今后每次重构都必须继续满足。
+当前验收已经全部满足，而且以后每次继续维护这套边界都应满足同一组标准。
 
-第一，静态守护必须失败于任何新增边界泄漏。验证方法是运行 `lua tests/internal/dep_rules.lua`；只要新增了 `src/core` 宿主全局触点、`game.ui_port` 读路径或 `state.ui_*` 写入，命令就应失败并给出文件名。
+第一，静态守护必须继续失败于任何新增边界泄漏。运行 `lua tests/internal/dep_rules.lua` 时，应继续输出 `dep_rules ok`；如果有人把宿主 API 塞回 `src/core`、重新引入 `game.ui_port` 读取，或让 `src/game/flow` 再写新的 `state.ui_*` 字段，这个命令就应该失败并指向具体文件。
 
-第二，动态守护必须证明“关键路径上只暴露 DTO 和粗粒度输出”。验证方法是运行 `architecture_guard_contract`；它应继续证明 `GameplayLoop.set_game` 没有把原始 `state` 挂给 `game.ui_port`，且 `TurnDispatch` 没有继续扩写新的 `state.ui_*` 字段。
+第二，阶段4到阶段6相关的定向 suite 必须继续通过。`market` suite 现在锁住 market session、choice build 和购买链路的收口；`presentation_ui` suite 现在锁住 secondary confirm、market pre-confirm、target picker、choice view 显式字段透传等关键行为。它们分别应继续输出 `All regression checks passed (15)` 和 `All regression checks passed (135)`。
 
-第三，默认回归必须包含这两类守护。验证方法是运行 `lua tests/regression.lua`；结果必须通过，并继续打印 `dep_rules ok`。
+第三，全量回归必须继续通过，而且仍通过统一入口 `lua tests/regression.lua` 串起 suites、`dep_rules`、`tick`、`forbidden_globals`。当前完成态下它应输出 `All regression checks passed (376)`。
 
-第四，CI 必须跑同一入口。验证方法是检查 `.github/workflows/regression.yml`，它只能调用 `lua tests/regression.lua`，不要维护第二套回归命令。
-
-阶段1之后的验收要更严格。每推进一阶段，都要同时看到两件事：一个新的业务或架构契约测试加入默认回归，以及 `tests/internal/dep_rules.lua` 中至少一组预算值下降。没有预算下降，说明只是搬代码，没有真正收口边界。
+第四，目录语义收尾必须留在仓库里而不是只留在聊天记录里。验证方法是检查 `docs/architecture/boundaries.md`；里面应继续说明 `src/core`、`src/game/flow`、`src/game/systems`、`src/presentation` 的职责边界，以及新增 choice 协议字段应该如何落地。
 
 ## 可重复性与恢复
 
@@ -391,18 +400,30 @@
 
 ## 产物与备注
 
-阶段0到阶段5第一刀当前的关键产物如下。
+阶段0到阶段6当前的关键产物如下。
 
     tests/internal/dep_rules.lua
     tests/suites/architecture_guard_contract.lua
     tests/suites/usecase_boundary_contract.lua
+    tests/suites/market.lua
+    tests/suites/presentation_ui.lua
     tests/regression.lua
     .github/workflows/regression.yml
     src/game/flow/ports/UseCaseOutputPort.lua
+    src/game/flow/intent/IntentDispatcher.lua
+    src/game/systems/market/service/Choice.lua
+    src/game/systems/market/service/ChoiceSession.lua
+    src/game/systems/market/service/LocalPurchase.lua
     src/game/systems/market/service/PaidPurchaseGateway.lua
-    src/game/systems/market/service/Fulfillment.lua
+    src/game/systems/market/service/PaidFulfillment.lua
     src/game/systems/market/service/PurchasePolicy.lua
     src/game/systems/market/service/Feedback.lua
+    src/game/systems/market/service/ChoiceOutcome.lua
+    src/presentation/ui/UIChoice.lua
+    src/presentation/state/ui_model/ChoiceSlice.lua
+    src/presentation/interaction/ui_intent_dispatcher/PreConfirmFlow.lua
+    src/presentation/render/TargetChoiceEffects.lua
+    docs/architecture/boundaries.md
 
 当前冻结的债务基线如下。
 
@@ -416,7 +437,11 @@
 
 以及：
 
-    All regression checks passed (7)
+    All regression checks passed (15)
+
+以及：
+
+    All regression checks passed (135)
 
 以及：
 
@@ -424,10 +449,6 @@
     dep_rules ok
     tick ok
     forbidden_globals ok
-
-以及：
-
-    All regression checks passed (179)
 
 ## 接口与依赖
 
