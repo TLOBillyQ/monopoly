@@ -1,278 +1,208 @@
-# 基于 `.agents/research.md` 的研究交付可执行计划
+# 基于 `.agents/research.md` 的音效特效交付可执行计划
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”“意外与发现”“决策日志”“结果与复盘”。
 
-本文件必须遵循 `.agents/harness/PLANS.md` 维护，讨论、实施、暂停和重启都以该规范为准。本文已内嵌当前仓库完成这轮研究交付所需的背景，不依赖聊天历史。
+本文件必须遵循 `.agents/harness/PLANS.md` 维护。讨论、实施、暂停和重启都只依赖这份计划本身，不依赖聊天历史，也不要求读者先了解旧的缺陷修复文档。
 
 ## 目的 / 全局视角
 
-`.agents/research.md` 当前定义了 8 条待交付项，范围集中在地雷、黑市遮挡、租地道具提示、骰子转向、道具广播和“无法行动”回合处理。用户需要的不是一份泛泛的问题清单，而是一份能让新接手的人从零把这 8 条逐项修完、逐项验证的执行文档。
+`.agents/research.md` 现在定义了一组新的交付目标：把大富翁的落地结算、回合推进、神明附身、破产和逐格移动补成“看得见、听得到”的反馈链。用户真正关心的不是仓库里新增了几个 Lua 文件，而是这些场景发生时，玩家能立即感知到对局状态变化：停在宝箱位有亮光，升级建筑有烟雾和延迟音效，交钱有爆金币，医院、深山、地雷和税务局都能打出对应特效，财神与天使附身有角色围绕特效，逐格移动会每格播一次前扑音效，破产和回合开始也各自有稳定提示。
 
-这轮交付完成后，玩家在完整对局中应看到这些可观察变化：地雷不会炸到埋设者自己；黑市关闭按钮在行动日志与托管开关存在时仍可点击；强征卡和免费卡只在满足条件时才弹确认；移动不会从起点就错误掉头；其他玩家出牌时全员都能看到是什么牌；被扣留或其他“本回合无法行动”的场景会自动跳过，不再要求玩家额外交互；地雷卡可在行动前使用，能与清障/路障策略联动。验收不以“改了哪些文件”为准，而以这些行为可以被测试和手工复现为准。
+这轮工作完成后，可观察结果应该是这样的：在编辑器实机中，按需求表触发 12 个场景时，至少会出现一条对应的可见特效或可闻音效；在纯 Lua 测试里，规则层会发出稳定的 cue，表现层会把 cue 翻译成 `GameAPI.play_sfx_by_key`、`GameAPI.play_3d_sound`、`GlobalAPI.bind_sfx_to_unit` 或等价端口调用，并且不会因为资源 key 缺失而直接崩溃。验收不是“调用过某个 API”就算完成，而是“自动化能证明路由正确，编辑器里能证明玩家真的看到了效果”。
 
 ## 进度
 
-- [x] (2026-03-06 14:18+08:00) 已重读 `.agents/research.md`、`.agents/harness/PLANS.md` 和旧 `.agents/plan.md`，确认旧计划属于上一轮 20 项修复，已不适用于本轮 8 项研究交付。
-- [x] (2026-03-06 14:27+08:00) 已完成问题映射：地雷对应 `src/game/systems/items/ItemPostEffects.lua` 与 `src/game/systems/effects/MineEffect.lua`；强征/免费卡对应 `src/game/systems/land/landing_effects/BaseLandEffects.lua` 与 `src/game/systems/land/LandRules.lua`；转向问题对应 `src/game/systems/board/Board.lua`。
-- [x] (2026-03-06 14:31+08:00) 已确认 UI 与回合主链落点：黑市遮挡集中在 `src/presentation/*`，无法行动跳过集中在 `src/game/flow/turn/TurnStart.lua`、`src/game/flow/turn/TurnTimerPolicy.lua` 与相关 presentation 状态投影。
-- [x] (2026-03-06 14:41+08:00) 已将计划从“按波次”细化到“按研究项编号”颗粒度，补齐每条问题的目标文件、建议测试落点、验收口径和依赖顺序。
-- [x] (2026-03-06 14:49+08:00) 已将“进度”章节改为细颗粒执行清单，后续按“测试补齐 -> 规则修复 -> 表现修复 -> 回归封板”逐项更新，不再只记录粗波次。
-- [x] (2026-03-06 13:48+08:00) 已补齐执行映射并按支线落地：BUG-01/OPT-01 首选 `tests/suites/item.lua` + `tests/suites/gameplay.lua`；BUG-04 首选 `tests/suites/item.lua`；BUG-05/BUG-08/BUG-07 首选 `tests/suites/gameplay.lua`；BUG-02/BUG-06 首选 `tests/suites/presentation_ui.lua`，租地卡广播补 `tests/suites/landing.lua`。
-- [x] (2026-03-06 13:48+08:00) BUG-01 / OPT-01 已完成测试、修复与验收，提交 `2918a4e Fix mine arming and pre-action availability`。证据：`tests/suites/item.lua` 覆盖地雷卡出现在 `pre_action`；`tests/suites/gameplay.lua` 覆盖埋雷者离开前不自伤、其他玩家触发已武装地雷；目标套件通过。
-- [x] (2026-03-06 13:48+08:00) BUG-04 已完成测试、修复与验收，提交 `58e2ce1 Hide rent cards outside valid landing contexts`。证据：`tests/suites/item.lua` 覆盖自己地块隐藏强征卡/免费卡、他人地块保留提示；目标套件通过。
-- [x] (2026-03-06 13:48+08:00) BUG-05 / BUG-08 已完成测试、修复与验收，提交 `3bc36fd Ignore stale move_dir on fresh rolls`。证据：`tests/suites/movement.lua` 新增 fresh roll 忽略陈旧 `move_dir` 断言；目标套件通过。
-- [x] (2026-03-06 13:48+08:00) BUG-07 已完成测试、修复与验收，提交 `67b5342 Skip detained turns without blocking`。证据：`tests/suites/gameplay.lua` 覆盖无法行动回合立即跳过；`tests/suites/presentation_ui.lua` 覆盖自动跳过后医院/深山状态仍可投影；两套件分别通过 `41` 与 `126` 检查。
-- [x] (2026-03-06 13:48+08:00) BUG-02 已完成测试、修复与验收，提交 `1f3c98a Prioritize market close over always-show controls`。证据：`tests/suites/presentation_ui.lua` 新增黑市激活时托管按钮/行动日志让出触摸优先级断言；套件通过 `126` 检查。实机点击尚未在引擎里复核，但纯 Lua 触控路由已收口。
-- [x] (2026-03-06 13:48+08:00) BUG-06 主链已完成测试、修复与验收，提交 `ed89f99 Broadcast used items to all players`。证据：`tests/suites/item.lua` 覆盖普通道具、目标道具、后续选择型道具与偷窃成功广播；`tests/suites/presentation_ui.lua` 既有 `item_card` 全员可见断言继续通过。
-- [x] (2026-03-06 13:48+08:00) BUG-06 租地/税务旁路已补齐并提交 `8e54288 Broadcast rent and tax cards to all players`。证据：`src/game/systems/land/LandRules.lua` 已接入统一 `ItemUseBroadcast`，`tests/suites/landing.lua` 新增强征卡/免费卡/免税卡广播断言并通过 `16` 检查。
-- [ ] (2026-03-06 13:48+08:00) 全量回归已执行两次，当前仍卡在 `lua tests/regression.lua` 的单一失败：`chance.chance_move_backward_pass_intersection`（`tests/suites/chance.lua:58`）。最新结果为 `Regression failed (1/314)`；本轮目标支线相关套件均已通过，但全量未全绿。
-- [x] (2026-03-06 13:48+08:00) 文档已回填当前真实状态：已记录提交、套件结果、剩余回归风险与未做的实机项，不再保留“尚未实施修复”的过期描述。
+- [x] (2026-03-06 15:30+08:00) 已重读 `.agents/research.md` 与 `.agents/harness/PLANS.md`，确认本轮目标已经从旧的缺陷修复切换为音效特效交付，旧 `.agents/plan.md` 不再适用。
+- [x] (2026-03-06 15:31+08:00) 已完成现状摸底：`src/presentation/render/ActionAnim.lua` 只覆盖 `roll`、`roadblock`、`mine`、`upgrade_land`、`cash_receive`、`missile`、`clear_obstacles`，其中 `cash_receive` 目前是空实现。
+- [x] (2026-03-06 15:32+08:00) 已确认仓库缺口：`src/presentation/api/HostRuntimePort.lua` 还没有任何音效或特效端口；仓库也没有专门保存音效 key 或特效 key 的配置表。
+- [x] (2026-03-06 15:33+08:00) 已通过官方页面核实 Eggy 当前可用的核心接口：`GameAPI.play_sfx_by_key(_sfx_key, _pos, _rot, _scale, _duration, _rate, _with_sound)`、`GlobalAPI.bind_sfx_to_unit(_sfx_id, _unit, _socket_name, _pos, _bind_type)`、`GlobalAPI.destroy_sfx(_sfx_id, _fade_out)`、`GameAPI.play_3d_sound(_position, _sound_key, _duration, _volume)`、`GameAPI.stop_sound(_assigned_id)`。
+- [x] (2026-03-06 15:34+08:00) 已把需求表逐条映射到现有代码触发点，覆盖 `TurnStart`、`Movement.move`、`BaseLandEffects`、`LandRules`、`SpecialTileEffects`、`MineEffect`、`ItemPostEffects`、`Bankruptcy`、`UIEventHandlers` 和 `MoveAnim`。
+- [x] (2026-03-06 15:35+08:00) 已确定本计划采用“运行时端口 + 表现配置目录 + 规则事件补点 + 表现层翻译”的实现路线，并将测试落点收口到 `tests/suites/presentation_ui_action_anim.lua`、`tests/suites/presentation_ui_event_handlers.lua`、`tests/suites/item.lua`、`tests/suites/landing.lua`、`tests/suites/gameplay.lua` 与 `tests/regression.lua`。
+- [ ] (2026-03-06 15:35+08:00) 尚未开始代码实现。下一步先做运行时端口和反馈配置目录，再补现有动画与事件链的接入点。
 
 ## 意外与发现
 
-- 观察：当前 `.agents/research.md` 只有 8 条研究结论，但旧 `.agents/plan.md` 仍是上一轮“20 项反馈已完成”的封板文档，直接继续维护会误导实施顺序和验收口径。
-  证据：旧计划正文大量引用“20 项反馈”“296 checks 全绿”等上一轮结论，且进度几乎全部打勾。
+2026-03-06 15:31+08:00：当前仓库虽然有 `src/game/systems/effects/*`，但那一层处理的是落地效果选择器，不是 Eggy 的音效与特效播放系统。真正的视觉表现入口在 `src/presentation/render/ActionAnim.lua` 和 `src/presentation/api/UIEventHandlers.lua`。证据是 `EffectPipeline` 只负责 rule executor 与 choice，而 `ActionAnim` 才会调用 `HostRuntimePort` 生成 overlay 或提示。
 
-- 观察：地雷当前通过 `src/game/systems/items/ItemPostEffects.lua` 的 `_handle_place_mine_here` 直接埋在 `player.position`，而触发在 `src/game/systems/effects/MineEffect.lua` 与 `src/game/systems/land/landing_effects/SpecialTileEffects.lua`。
-  证据：`place_mine_here` 直接执行 `game.board:place_mine(player.position)`；地雷命中由 `board:has_mine(position)` 驱动。
+2026-03-06 15:31+08:00：`cash_receive` 已经是一个既有动画 kind，但现在没有任何视觉实现，意味着“购买/交钱”和“收到金币”不需要发明新语义，优先把它补成真正的金币反馈即可。证据是 `src/game/systems/chance/handlers/CashHandlers.lua` 已经在加钱时排队 `kind = "cash_receive"`，而 `src/presentation/render/ActionAnim.lua` 的 `cash_receive` handler 直接返回时长。
 
-- 观察：租地提示链当前只判断“有没有卡”和“钱够不够强征”，没有先判断当前地块是否允许强征或免费。
-  证据：`src/game/systems/land/landing_effects/BaseLandEffects.lua` 的 `_apply_pay_rent` 在发现 `strong_idx` 或 `free_idx` 后直接进入 prompt/使用分支，研究项指出“自己地块上不该弹确认”。
+2026-03-06 15:32+08:00：仓库没有任何“音效 key / 特效 key”配置，只有 `Data/Prefab.lua` 中少量 prefab 和现有 UI 动效节点。这意味着第一版必须引入一份手写 catalog，并允许 key 缺失时安全降级，否则实现会卡死在资源编号未交付。证据是全文搜索只有 `Data/Prefab.lua`、`Data/UIManagerNodes.lua` 和官方 API 文档命中了 `sfx`、`sound`。
 
-- 观察：棋盘朝向问题不是 UI 动画问题，而是规则层路径推进问题；`src/game/systems/board/Board.lua` 同时负责按 facing 精确推进和黑市出口转向。
-  证据：`step_forward_by_facing` 在入口点、黑市出口和普通邻接三段逻辑里都计算 `next_id` 和 `step_dir`。
+2026-03-06 15:33+08:00：官方页面确认了这轮必须依赖的引擎 API，但没有给出“回合开始音效”这种玩法级封装，所以仓库仍然需要自己的中间层把玩法 cue 翻译成引擎调用。证据是官方页面只列了通用接口签名，没有任何大富翁专用 helper。
 
-- 观察：当前日志系统 `src/core/Logger.lua` 会出 tip，但“其他玩家使用了什么牌”是否能全员看到，仍取决于 presentation 是否把道具展示做成全角色可见的 popup 或全局提示。
-  证据：`logger.event` 只调用 `GlobalAPI.show_tips`；而可被全员看到的卡牌展示目前由 `PopupRenderer` 处理 `chance_card`、`item_card`、`bankruptcy`。
+2026-03-06 15:34+08:00：需求表里的“玩家停下位置（光2-宝箱）”在仓库中找不到同名 tile、同名 prefab 或同名 UI 节点，因此第一版不能把场景命名写死到业务逻辑里。证据是全文搜索 `光2`、`宝箱` 没有结果，而 `Config/Generated/Tiles.lua` 只有 `chance`、`item`、`hospital`、`mountain`、`tax` 等通用 tile type。
 
-- 观察：`detained_wait_active` 在旧链路里同时承担输入阻塞、倒计时和“本回合无法行动”提示三种职责，导致 BUG-07 很难只修规则不动 UI。
-  证据：`TurnStart.lua` 会进入 `detained_wait`；`TurnTimerPolicy.lua` 用它驱动 5 秒跳过；`PanelSlice.lua` 与 `status3d_service/status.lua` 又用同一标记做表现判断。
-
-- 观察：BUG-06 的广播漏点不只在 `ItemExecutor` 主链，`LandRules.execute_strong_card`、`execute_free_card`、`execute_tax_free_card` 也会直接消费卡片并绕过通用广播。
-  证据：三条函数都直接 `inventory.consume(...)`，直到本轮补入 `ItemUseBroadcast` 前都没有任何 `push_popup` 语义。
-
-- 观察：全量回归当前唯一失败是 `chance.chance_move_backward_pass_intersection`，和本轮已修改文件没有直接交叉，但它仍阻塞“封板全绿”。
-  证据：`lua tests/regression.lua` 两次均报 `Regression failed (1/314)`，失败断言固定在 `tests/suites/chance.lua:58`。
+2026-03-06 15:34+08:00：逐格前扑音效不需要新增规则事件，因为 `Movement.move` 已经返回 `visited` 路径，`MoveAnim.play_sequence` 也会逐步调度每一段移动。证据是 `src/game/flow/turn/TurnMove.lua` 把 `move_result.visited` 放进动画上下文，而 `src/presentation/render/MoveAnim.lua` 会基于 `visited` 拆出每一步。
 
 ## 决策日志
 
-- 决策：本轮 `.agents/plan.md` 完全按 `.agents/research.md` 当前 8 条结论重建，不继承旧计划里的“已完成”状态。
-  理由：旧计划目标和研究范围已经变更，继续局部修补会让“本轮待交付项”与“历史封板状态”混在一起，失去活文档价值。
-  日期/作者：2026-03-06 / Codex
+2026-03-06 / Codex：这轮不把音效与特效 key 塞进 `Config/Generated`，而是新建 `src/presentation/render/BoardFeedbackCatalog.lua`。理由是仓库当前没有音效资源自动导出链，若放在 `Generated` 会误导后续维护者以为这些 key 来自表格导出；手写 catalog 更符合现状，也更容易在资源未齐时安全占位。
 
-- 决策：先补复现入口，再修规则，再修表现，最后统一回归。
-  理由：BUG-01、BUG-04、BUG-05、BUG-07、BUG-08 都是规则层问题，若没有先固化复现，后续表现层改动会掩盖真实回归面。
-  日期/作者：2026-03-06 / Codex
+2026-03-06 / Codex：运行时接入采用新文件 `src/presentation/api/host_runtime/SfxRuntime.lua`，并由 `src/presentation/api/HostRuntimePort.lua` 暴露统一端口。理由是现有 `HostRuntimePort` 已经承担“表现层唯一引擎入口”的职责，继续沿这个方向扩展，可以避免业务代码直接写 `GameAPI` 或 `GlobalAPI`。
 
-- 决策：OPT-01 与 BUG-01 一并处理，统一放在“道具/地雷”支线收口。
-  理由：两项都落在地雷使用时机和地雷命中语义上，拆开做容易在 Item timing、路径推进和测试夹具上重复返工。
-  日期/作者：2026-03-06 / Codex
+2026-03-06 / Codex：逐格前扑音效放在 `src/presentation/render/MoveAnim.lua` 的步进调度里，而不是在 `Movement.move` 里新增自定义事件。理由是“每格 1 次”本质上是表现层节奏，不是规则状态；复用 `visited` 可以减少事件噪声，也能天然对齐动画节拍。
 
-- 决策：计划执行单元按 5 条支线拆解，而不是继续只写“规则层/表现层”大波次。
-  理由：本轮问题量不大，但跨规则、UI、回合和广播链路；若不细化到编号级别，执行时仍要临场二次拆任务，降低可重启性。
-  日期/作者：2026-03-06 / Codex
+2026-03-06 / Codex：已有的 domain event 优先复用，只有在现有事件无法表达需求时才新增 `feedback.*` 事件。理由是 `land.tile_upgraded`、`land.rent_paid`、`land.tax_paid`、`land.mine_hit`、`chance.applied` 已经覆盖了半数以上需求；把所有东西都塞进新事件域只会让事件目录膨胀。
 
-- 决策：进度跟踪按“每个编号的测试、修复、验收”三段拆开记录，不再只维护波次级状态。
-  理由：用户要求“进度细化”，而且本轮真正影响执行效率的是每条研究项做到哪一步，而不是只知道还处在某个大波次。
-  日期/作者：2026-03-06 / Codex
+2026-03-06 / Codex：Generic 行“被窃取/交钱等负面效果 -> 被淘汰”按“没有更明确场景行时才兜底”解释。理由是需求表已经为“购买/交钱”单列了金币特效和金币音效，若再让所有交钱都播“被淘汰”会与显式场景冲突。
 
-- 决策：BUG-07 不再复用 `detained_wait_active` 作为阻塞态，而是新增 `no_action_notice_*` 作为纯展示信号。
-  理由：规则层需要立即跳过，但医院/深山等状态仍需在切到下一玩家前留一帧可见提示；拆信号比继续滥用等待态更稳。
-  日期/作者：2026-03-06 / Codex
-
-- 决策：BUG-02 只在 `market_active == true` 时收回始终显示区的可点击权限，不重写黑市关闭事件。
-  理由：研究项的核心是“关闭按钮不被抢点击”，用触控优先级收口比改事件绑定和面板层级更小、更可测。
-  日期/作者：2026-03-06 / Codex
-
-- 决策：BUG-06 统一走 `src/game/systems/items/ItemUseBroadcast.lua` 发 `kind="item_card"` 的 popup，并把 `LandRules` 里的租地/税务卡消费旁路也接进来。
-  理由：`PopupRenderer` 已经把 `item_card` 定义为全员可见；复用它能最小化改动面，同时避免每个 item handler 各自拼广播 payload。
-  日期/作者：2026-03-06 / Codex
+2026-03-06 / Codex：资源 key 缺失时允许记录日志并跳过实际播放，不允许因为 nil key 直接中断对局。理由是这轮交付既包含代码链路也包含内容资源，计划必须支持“代码先落地、资源后补齐”的增量推进。
 
 ## 结果与复盘
 
-本轮计划对应的 8 条研究项已经实质执行完毕，且已拆成 7 个逻辑提交：`2918a4e`、`58e2ce1`、`3bc36fd`、`67b5342`、`1f3c98a`、`ed89f99`、`8e54288`。规则层已收口地雷、租地卡提示、朝向、无法行动自动跳过；表现层已收口黑市触控优先级和 `item_card` 全员广播。
-
-自动化证据方面，目标套件当前结果是：`tests/suites/item.lua` 通过 `22` 检查，`tests/suites/landing.lua` 通过 `16` 检查，`tests/suites/gameplay.lua` 通过 `41` 检查，`tests/suites/presentation_ui.lua` 通过 `126` 检查。未完成项只剩两类：一是 `lua tests/regression.lua` 仍有 `chance.chance_move_backward_pass_intersection` 单点失败，因此还不能宣称全量封板；二是黑市关闭按钮还缺一次引擎内实机热区确认。
-
-当前剩余风险比计划初稿显著收窄。真正需要继续跟踪的只有两项：第一，黑市关闭按钮虽然在纯 Lua 触控路由里已不会被始终显示区抢点击，但仍建议在引擎里做一次实机热区确认；第二，机会卡倒退穿过交叉口的旧失败仍需单独处理或与用户确认是否属于本轮范围。
+截至 2026-03-06 15:35+08:00，本计划只完成了调研、路线拍板和文件级拆解，还没有开始实现。真正的风险不在 Lua 规则本身，而在资源 key 缺失、播放端口未封装以及“哪些 cue 应该走动画队列，哪些 cue 应该走自定义事件”这三个边界。下面的工作计划就是围绕这三个风险拆出来的；实施过程中如果路线改变，必须立刻回填本节与“决策日志”，不能只改代码不改文档。
 
 ## 背景与导读
 
-这轮工作主要跨三块区域。第一块是规则层，负责玩家状态、地块结算和精确移动，核心文件在 `src/game/systems/` 与 `src/game/flow/turn/`。其中 `src/game/systems/items/ItemPostEffects.lua` 处理行动前后道具的立即效果，`src/game/systems/effects/MineEffect.lua` 处理地雷命中结果，`src/game/systems/land/landing_effects/BaseLandEffects.lua` 处理落到别人地块、税务局等结算，`src/game/systems/board/Board.lua` 负责按朝向推进一步，`src/game/flow/turn/TurnStart.lua` 和 `src/game/flow/turn/TurnTimerPolicy.lua` 负责回合开始和“被扣留等待”收口。
+对这个仓库完全陌生的人，先记住四层关系。第一层是规则层。`src/game/flow/turn/TurnStart.lua`、`src/game/flow/turn/TurnRoll.lua`、`src/game/flow/turn/TurnMove.lua` 驱动一个回合怎样开始、投骰、移动和结算。`src/game/systems/land/landing_effects/BaseLandEffects.lua`、`src/game/systems/land/landing_effects/SpecialTileEffects.lua`、`src/game/systems/land/LandRules.lua` 负责买地、升级、交租、税务、医院、深山和地雷。`src/game/systems/items/ItemPostEffects.lua` 负责地雷、财神、天使、穷神等道具落地后的副作用。`src/game/core/runtime/Bankruptcy.lua` 负责破产。
 
-第二块是表现层，负责黑市、行动日志、全局弹窗和多角色可见性，主要在 `src/presentation/`。`src/presentation/render/MarketView.lua` 负责黑市面板刷新和关闭，`src/presentation/interaction/UIEventBindings.lua` 与 `src/presentation/interaction/UITouchPolicy.lua` 负责始终显示区按钮注册和触控开关，`src/presentation/ui/PopupRenderer.lua` 负责“机会卡/道具卡/破产”展示。
+第二层是规则到表现的桥。这个仓库有两条桥。第一条是动作动画队列，入口在 `src/core/ActionAnimPort.lua`，最终由 `game:queue_action_anim` 把 payload 放到 `game.turn.action_anim_queue`。第二条是自定义事件，入口在 `src/core/events/MonopolyEvents.lua`，最终由 `src/presentation/api/UIEventHandlers.lua` 注册监听。当前桥上已经存在的稳定信号包括 `land.tile_upgraded`、`land.rent_paid`、`land.tax_paid`、`land.mine_hit`、`chance.applied`、`movement.passed_start` 以及各种 popup intent。
 
-第三块是测试层，位于 `tests/suites/`。`tests/suites/item.lua` 适合覆盖地雷卡与行动前后道具时机，`tests/suites/gameplay.lua` 适合覆盖移动、转向和回合推进，`tests/suites/landing.lua` 适合覆盖落地结算与 popup，`tests/suites/presentation_ui.lua` 适合覆盖黑市按钮、画布层级、popup 可见性与关闭链路。全量回归入口是 `tests/regression.lua`。
+第三层是表现层。`src/presentation/render/ActionAnim.lua` 负责解释动作动画 kind。`src/presentation/render/ActionAnimUnitOverlay.lua` 会在地块上生成地雷、路障、导弹和清障机器人等 overlay。`src/presentation/render/MoveAnim.lua` 负责逐步移动。`src/presentation/render/status3d_service/*` 负责医院、深山、财神和天使的状态显示。`src/presentation/api/UIViewService.lua` 与 `src/presentation/ui/*` 负责 popup 和画布。`src/presentation/api/HostRuntimePort.lua` 则是表现层唯一允许碰引擎 API 的入口，但它现在还没有音效或特效相关接口。
 
-术语说明如下。“误触”不是 UI 点击误触，而是系统在不满足使用条件时仍然弹出“是否使用”确认。“掉头”指玩家沿棋盘移动时，行进方向在不该发生转弯的位置被错误改成反方向。“无法行动”指玩家因住院、深山、扣留或其他状态，本回合应该直接结束，而不是继续等待按钮或倒计时。“广播”在本计划中指所有玩家都能看到这次出牌的名称与展示，不只是本地行动玩家收到一条日志。
+第四层是测试。`tests/suites/item.lua` 适合守住道具后效和动画 kind。`tests/suites/landing.lua` 适合守住地块结算和升级广播。`tests/suites/gameplay.lua` 适合守住回合、破产和跨模块行为。`tests/suites/presentation_ui_action_anim.lua` 适合验证动画 payload 如何落到表现层。`tests/suites/presentation_ui_event_handlers.lua` 适合验证自定义事件如何翻译成表现层调用。`tests/regression.lua` 会把这些 suite 汇总成一次回归。
 
-## 里程碑
-
-里程碑一是“建立可信复现”。完成后，每条研究项至少有一个稳定入口可以证明问题存在或行为未被覆盖。这里不要求一次修好全部问题，但要求后续每个修复都能绑定到对应测试。验收方式是在仓库根目录运行目标套件，新增测试在改动前失败、改动后通过。
-
-里程碑二是“收敛规则层”。完成后，地雷、自伤、强征/免费卡误提示、骰子转向和无法行动自动跳过都必须在逻辑层收口，不依赖 UI 特判。验收方式是 `tests/suites/item.lua`、`tests/suites/gameplay.lua`、`tests/suites/landing.lua` 的相关断言通过，并在最小手工局里复现出正确行为。
-
-里程碑三是“收敛表现层”。完成后，黑市关闭按钮可点，道具使用会向全员展示，且不破坏现有 popup/choice/market 的模态切换。验收方式是 `tests/suites/presentation_ui.lua` 通过，并在实际 UI 中验证关闭按钮不再被始终显示区覆盖。
-
-里程碑四是“封板与回填”。完成后，`lua tests/regression.lua` 全绿，本文件四个活文档章节已补齐，剩余必须手工验证的事项被明确记录，不留口头约定。
+这轮还必须记住两个仓库约束。第一，数值和时长比较不能靠 `tonumber` 或 `type(x) == "number"`，要统一用 `src/core/NumberUtils.lua`。第二，Eggy 运行时要求浮点字面量写成 `1.0` 这种形式，所以新加的 scale、duration、volume 都要显式写成定点风格，不要写裸整数再期望引擎自动转换。
 
 ## 工作计划
 
-实施顺序按依赖收敛，但执行单位改成五条支线。第一条是 BUG-01 与 OPT-01 的“地雷支线”，先把地雷自伤和行动前释放一起收口。第二条是 BUG-04 的“租地道具提示支线”，只处理强征卡和免费卡的出现条件。第三条是 BUG-05 与 BUG-08 的“朝向推进支线”，统一处理掉头和转向判定。第四条是 BUG-07 的“无法行动支线”，只处理回合自动跳过与 UI 投影。第五条是 BUG-02 与 BUG-06 的“表现支线”，处理黑市关闭按钮和出牌广播。
+### 里程碑一：建立可复用的音效特效运行时端口和目录
 
-每条支线都遵守同一个顺序：先补一个能稳定失败的测试或最小复现场景，再改目标文件，再跑受影响套件，最后回填文档证据。这样即使中途停止，下一位接手者也能直接从当前支线恢复，不需要再猜“这一波到底做到哪”。
+这一步完成后，仓库里会第一次出现一个明确的“玩法 cue -> 引擎 API”接入层，后续任何音效和特效都不需要直接在规则文件里碰 `GameAPI`。要新建 `src/presentation/api/host_runtime/SfxRuntime.lua`，把 `GameAPI.play_sfx_by_key`、`GameAPI.play_3d_sound`、`GameAPI.stop_sound`、`GlobalAPI.bind_sfx_to_unit`、`GlobalAPI.destroy_sfx` 包成安全函数；然后扩展 `src/presentation/api/HostRuntimePort.lua` 暴露这些函数。并行新建 `src/presentation/render/BoardFeedbackCatalog.lua`，只保存这次需求需要的 cue 名称、资源 key、默认缩放、持续时间、音量、是否绑定玩家单位、以及缺资源时是否允许静默跳过。
 
-规则层优先于表现层，因为本轮大部分问题都不是 UI 表象，而是规则条件不准确。地雷、自伤、强征/免费卡误提示、掉头和无法行动都必须先在规则层收口，否则 presentation 层只是在掩盖症状。表现层只在规则层验证通过后再接上，避免在错误状态机上补 UI 特判。
+这一里程碑还要把资源缺口写成代码契约，而不是口头说明。`BoardFeedbackCatalog` 中每个 cue 都应该允许 key 为 nil，此时服务必须记录日志并返回 false，而不是 assert。这样即使策划晚一点才把“放置烟雾”“爆金币”“眩晕星星”“触电”“爆炸-烈焰”“格子波动”“风沙缠绕”“治愈光圈”“砸地重击”这些资源 key 补进来，测试仍然可以先验证路由和降级逻辑。
 
-黑市遮挡和出牌广播放在最后，不是因为它们不重要，而是因为它们更依赖已经稳定的 choice、popup 和 market 状态。只有当前面的回合推进与道具逻辑固定后，表现层断言才不会频繁漂移。
+这一里程碑的自动化证据应该来自 `tests/suites/presentation_ui_action_anim.lua` 与 `tests/suites/presentation_ui_event_handlers.lua`。前者新增对 runtime 端口的 stub，验证 catalog 中的 scale、duration 和 key 会被正确透传；后者验证 key 缺失时只是跳过播放并保留日志，不会抛异常。做到这一步，就说明“能不能调到 Eggy 播放接口”这个最大不确定性已经被清掉了。
 
-## 按研究项拆解
+### 里程碑二：把已有动作动画链补成真正的音效特效反馈
 
-### BUG-01 与 OPT-01：地雷自伤 + 行动前释放
+这一步完成后，现有已经会排队的动画不再只是 tip 文本，而是能带出实际效果。`src/presentation/render/ActionAnim.lua` 与 `src/presentation/render/ActionAnimHandlers.lua` 需要扩展，让 `upgrade_land`、`cash_receive`、`mine` 以及必要时新增的 `bankruptcy_hit`、`status_hit`、`deity_apply` 支持调用 `BoardFeedbackService`。可以新增 `src/presentation/render/BoardFeedbackService.lua` 作为表现层内部服务，专门负责“按 tile 中心播放 one-shot 特效”“按玩家单位绑定短时特效”“按位置播放 3D 音效”“在定时结束后销毁绑定特效”。
 
-这一支线的目标是同时解决“埋下的雷会炸到自己”和“地雷卡只能在行动后使用”两个问题。实现时先检查 `Config/Generated/Items.lua` 中地雷卡 `timing` 与 `src/game/systems/items/ItemPhase.lua` 的过滤逻辑是否一致。如果仅靠配置即可把地雷纳入 `pre_action`，优先走配置修正；如果 `manual` 在仓库中还有其他语义，再在 `ItemPhase` 或相关道具选择逻辑中为地雷卡补一个明确的行动前入口，但不要破坏现有道具阶段。
+这一里程碑里，旧的 `cash_receive` 空实现必须被补齐。购买、交租、交税和从机会卡获得金币，需求里都依赖金币表现；因此 `cash_receive` 至少要支持一个默认金币爆发特效和一个金币音效。升级建筑场景要在 `upgrade_land` 里增加“放置烟雾，缩放三倍”的视觉，并在同一个 cue 上支持“先播收到金币，延迟一秒再播回合胜利”的双音效链。延迟必须通过现有 `host_runtime.schedule` 或 `runtime_ports.schedule` 来做，而不是在业务层散落新的计时器。
 
-自伤问题优先在 `src/game/systems/items/ItemPostEffects.lua`、`src/game/systems/effects/MineEffect.lua` 和可能的移动/落地入口之间排查。需要把“埋雷当回合的落脚点”和“其他玩家经过该格触发地雷”的语义明确区分。若当前棋盘覆盖物只记录布尔值，就要在不破坏现有接口的前提下补最小必要的来源信息，例如埋设者或生效时机；但新增字段必须维持 `board:get_overlays()` 的兼容返回结构，不能把 presentation 层一起拖进大改。
+这一步还要补 `src/presentation/render/MoveAnim.lua`。当前它已经拿得到 `visited` 路径和每一步的调度时刻，所以应当在每个 step 落点时调用 `BoardFeedbackService.play_step_tile_sound(...)`，从而实现“进入每一格地块时，蛋仔前扑音效每格一次”。这是纯表现层节奏，不需要往规则层新增事件。自动化证据应当在 `tests/suites/presentation_ui_action_anim.lua` 中看到：一次多格移动会触发与 `visited` 长度一致的步进音效调用，且不会在 `from_index == to_index` 的空步上误播。
 
-测试先补在 `tests/suites/item.lua` 与 `tests/suites/gameplay.lua`。`item.lua` 负责验证地雷卡能出现在行动前道具阶段，并且使用后仍会返回现有地雷动画标记。`gameplay.lua` 负责驱动一个最小回合：玩家 A 埋雷后结束回合，再轮到玩家 A 或玩家 B 行动，分别验证“自己不会被刚埋的雷炸到”和“其他玩家经过时仍会正常触发”。验收通过后，再把 OPT-01 的行为写进本计划“结果与复盘”。
+### 里程碑三：把规则结果补成可翻译的 cue
 
-### BUG-04：强征卡 / 免费卡误触
+这一步的目标是把需求表里还没有稳定表现入口的场景补成明确 cue。优先复用已有事件：`BaseLandEffects._apply_upgrade` 已经会触发 `land.tile_upgraded`，`LandRules.execute_pay_rent` 与 `execute_pay_tax` 已经会产出 `land.rent_paid`、`land.rent_bankrupt`、`land.tax_paid`，`MineEffect.apply` 已经会发 `land.mine_hit`，`ChanceHandlers.CashHandlers` 已经会发 `chance.applied`。这些地方不要再发第二套重复事件，而是让 `UIEventHandlers` 订阅并翻译成 `BoardFeedbackService` 调用。
 
-这一支线只收口提示条件，不重写强征和免费卡的执行规则。目标文件是 `src/game/systems/land/landing_effects/BaseLandEffects.lua`，因为当前 prompt 是从 `_apply_pay_rent` 发起的。`src/game/systems/land/LandRules.lua` 保持为执行层，继续负责“已经决定使用后怎么扣钱/转移地块/免租”。
+真正需要补新 cue 的地方只有当前没有稳定事件语义的场景。`TurnStart.lua` 需要在玩家回合真正开始时发一个 `feedback.turn_started`，用于“自己的回合开始 -> 回合胜利音效”。`ItemPostEffects._handle_deity` 需要发 `feedback.deity_applied`，payload 至少包含 `player_id` 和 `deity = "rich" | "angel"`，让财神与天使能播放围绕角色的短时效果。`SpecialTileEffects` 中的医院和深山需要在效果真正生效时发 `feedback.status_applied`，用于触电和眩晕星星。`Bankruptcy.eliminate` 需要发 `feedback.bankruptcy`，让破产能够补出“砸地重击 + 回合失败”。
 
-细化口径如下。只有玩家落到他人地块、当前确实存在租金结算、强征卡支付金额可覆盖、免费卡能免除本次租金时，才允许出现相应 prompt。落在自己地块、无主地块、被深山跳租的地块、或本次无须支付租金的场景，都不应出现强征卡/免费卡确认。若强征不可用但免费卡可用，应只出现免费卡 prompt，而不是先弹强征再级联到免费卡。
+这里还要解决需求表里“负面效果”与“交钱”的优先级冲突。实现时必须遵守“更具体的场景先于通用兜底”。也就是说，`rent_paid`、`tax_paid`、`tile_upgraded` 等已经明确列在表里的事件，按各自行映射，不受“被窃取/交钱等负面效果”影响。只有像偷窃失败、查税卡命中、穷神类负面卡这类没有单独行、但显然属于负面反馈的情况，才使用统一的负面音效 cue。这个优先级要写进 catalog 或 event translation 代码里，不能靠维护者记忆。
 
-测试建议落在 `tests/suites/landing.lua` 与必要的 choice handler 定向用例。最少需要三个场景：自己地块不弹；他人地块且可强征时弹强征；强征不可用但可免租时只弹免费卡。若 `src/game/systems/choices/ChoiceHandlers/LandChoiceHandler.lua` 现有链路会在 skip 后自动切到免费卡，也要加一条断言，证明不会再从一个本不该出现的强征 prompt 兜转到免费卡 prompt。
+### 里程碑四：把需求表 12 个场景逐条落到代码和验收
 
-### BUG-05 与 BUG-08：骰子方向判断错误 + 频繁掉头
+这一里程碑完成后，`.agents/research.md` 里的每一行都会在计划里有明确的代码归属。玩家停在“光2-宝箱”这一行，由于仓库里不存在同名资源，第一版按“停在对应 tile 时在 tile 中心播光效”交付，映射到 `feedback.item_stop_highlight`；如果后续地图资源补了专用锚点，再把 catalog 的锚定策略从 tile 中心切到具名锚点，不改规则层。升级建筑继续走 `upgrade_land`。购买/交钱优先走 `rent_paid`、`tax_paid` 和 `cash_receive`。深山、医院、地雷、税务局分别走 `feedback.status_applied` 或 `land.mine_hit`。财神驾到和天使附身走 `feedback.deity_applied`。每格前扑走 `MoveAnim`。破产走 `feedback.bankruptcy`。被窃取或其他负面效果走通用负面 cue。回合开始走 `feedback.turn_started`。
 
-这条支线统一处理 `src/game/systems/board/Board.lua` 的 `step_forward_by_facing`。当前函数同时承载普通前进、入口点切换和黑市出口转向，因此细化时必须先把这三种情况拆开看，而不是直接在兜底选邻居逻辑上做热补丁。
+到这一步时，计划中的每条需求都必须能回答四个问题：谁发 cue、谁翻译 cue、用哪种引擎 API、用哪套测试守住。任何一个场景如果还回答不出这四件事，就说明它还没有真正进入可执行状态。
 
-这里的核心决策是：移动开始后，玩家应先沿当前 facing 继续前进；只有走到真正需要转弯的拓扑节点时，才允许更新 `step_dir`。这意味着“当前位置的 facing”和“下一步的方向”不能被 `_pick_any_dir` 这种兜底逻辑提前覆写。若必须兜底，也只能在 facing 不存在、地图邻接缺失或测试构造的极小地图不完整时使用，并且要优先避免反向。
+### 里程碑五：做编辑器实机验证并收口资源表
 
-测试必须覆盖四种路径：普通直行、正常拐角、黑市出口、入口点奇偶分支。建议优先补在 `tests/suites/gameplay.lua`，因为该套件已经覆盖移动与中断链路。每个用例都需要同时断言 `next_index` 和 `step_dir`，否则容易出现“位置对了但朝向错了”的假通过。对 BUG-08，要额外留一条“连续多步移动中不出现来回反向”的回归断言，而不是只测单步。
+自动化只能证明“逻辑路由正确”，不能证明“策划认可视觉和听感”。因此最后必须进 Eggy 编辑器做实机验证。建议用现有启动 profile 缩短验证路径。`src/app/bootstrap/StartupPolicy.lua` 允许在非 release 启动时读取 `STARTUP_TEST_PROFILE`，所以可以使用 `STARTUP_TEST_PROFILE = "items_deity_status"` 快速验证财神、天使、税务局和神明相关卡；需要破产时使用现成 `scenario_bankruptcy`；需要医院、深山和地雷时，直接在 profile 或调试背包里给 1 号玩家对应卡牌并把位置放到目标地块附近。
 
-### BUG-07：无法行动时未自动跳过
-
-这一支线聚焦 `src/game/flow/turn/TurnStart.lua`、`src/game/flow/turn/TurnTimerPolicy.lua`、`src/game/flow/turn/GameplayLoopTickSteps.lua` 和 presentation 的 `PanelSlice`。当前实现会把 `stay_turns > 0` 的玩家送入 `detained_wait` 并停 5 秒，这对“展示本回合无法行动”是友好的，但对“规则上应立即跳过”是不符合研究结论的。
-
-这里需要拍板的行为是：规则层立即跳过，展示层如有需要只显示短暂提示，不得阻塞 turn loop。实现时优先保证 `TurnStart` 不再把无行动权玩家停在需要 tick 等待才能结束的状态。如果 presentation 仍需要 `detained_wait_active` 来展示“本回合无法行动”，就把它视为纯展示信号，并确保不会阻塞 `step_turn` 继续推进。
-
-测试必须至少有两层。`tests/suites/gameplay.lua` 要验证无行动权玩家进入回合后能直接结束并切换到下一玩家，而不是停在 `detained_wait`。`tests/suites/presentation_ui.lua` 要验证 UI 仍能显示“本回合无法行动”提示或住院/深山状态，不会因为规则层去掉等待而丢失表现。这样才能避免“修掉等待，同时也修没了提示”的回归。
-
-### BUG-02：行动日志 / 自动开关遮挡黑市关闭按钮
-
-这条支线优先保证可点击，其次再处理真实层级。目标文件集中在 `src/presentation/render/MarketView.lua`、`src/presentation/interaction/UIEventBindings.lua`、`src/presentation/interaction/UITouchPolicy.lua`、`src/presentation/interaction/UIInputLockPolicy.lua` 和始终显示区节点契约。当前已知问题不是黑市关闭逻辑本身缺失，而是始终显示区的行动日志或托管按钮在黑市打开时仍处于可交互态，导致关闭按钮被抢点击。
-
-计划里的执行口径是双保险。第一层在纯 Lua 运行时先保证当 `ui.market_active == true` 时，冲突按钮不会拦截黑市关闭区域的输入。第二层如果引擎支持明确层级或触摸穿透设置，再补实机层级修正。这样即使最终无法在单元测试里证明 z-order，也能先保证功能正确，再把真正层级问题留给手工走查补录。
-
-测试建议在 `tests/suites/presentation_ui.lua` 追加两类断言。一类验证黑市打开后，关闭按钮点击仍发出 `choice_cancel` 且 choice_id 不丢。另一类验证市场激活状态下，行动日志和托管相关节点的 touch policy 被正确调整，不再与关闭按钮竞争。这样比只测 `close_market_panel` 更贴近研究项本身。
-
-### BUG-06：出牌广播缺失
-
-这一支线的目标不是“日志里多一行字”，而是“所有玩家都知道用了什么牌”。实现时先梳理当前出牌链。卡牌使用在规则层多由 `src/game/systems/items/ItemPostEffects.lua`、`src/game/systems/items/ItemHandlers.lua`、`src/game/systems/choices/ChoiceHandlers/ItemChoiceHandler.lua` 触发；而全员可见展示主要走 `src/presentation/ui/PopupRenderer.lua` 支持的 `item_card` 类型。
-
-本计划要求优先复用现有 popup 语义，而不是新增一套只存在于日志层的广播协议。也就是说，道具成功使用后，要有一个统一出口把“玩家名 + 道具名 + 必要图片引用”送到 popup 或等价的全员展示链路。若不同道具分散在多个 handler 中，不要每个地方各自拼 payload；应提取一个最小公共入口，避免以后继续漏广播。
-
-测试建议双层覆盖。`tests/suites/landing.lua` 或新增定向 suite 负责断言道具使用会生成正确的展示 payload。`tests/suites/presentation_ui.lua` 负责断言该展示对当前玩家和其他玩家都可见，而不是只在本地角色上触发。验收时至少要拿一个普通道具和一个目标型道具各跑一遍，防止只修了一种出牌链。
+这一里程碑的结果不是再改架构，而是收口 `BoardFeedbackCatalog` 里真正的资源 key、持续时间和缩放。需求表明确写了“放置烟雾，缩放 ×3”和“爆金币，缩放 ×3”，这两个值最终要直接固化在 catalog 中，并通过测试断言保护。验证结束后，把实机观察到的最终 key、明显偏大的缩放或过长的时长都回填到本计划的“结果与复盘”。
 
 ## 具体步骤
 
-以下命令默认在仓库根目录 `/Users/billyq/Dev/Github/Lua/monopoly` 执行。每完成一批改动，就回填“进度”和对应证据。
+以下命令默认在仓库根目录 `/Users/billyq/Dev/Github/Lua/monopoly` 执行。每做完一个里程碑，都必须回填“进度”“意外与发现”“决策日志”“结果与复盘”。
 
-步骤一，先建立一份“研究项 -> 测试 -> 目标文件”的执行记录，再开始写代码。
+先建立一个只跑目标 suite 的快速回归命令，方便每次做小步验证。
 
-    rg -n "BUG-|OPT-" .agents/research.md
-    rg -n "mine|地雷|pre_action|post_action" tests/suites/item.lua tests/suites/gameplay.lua
-    rg -n "rent_prompt|强征卡|免费卡" tests/suites/landing.lua src/game/systems/land
-    rg -n "market_close|黑市_关闭|行动日志|托管按钮" tests/suites/presentation_ui.lua src/presentation
-    rg -n "detained_wait|stay_turns|被扣留" tests/suites/gameplay.lua src/game/flow/turn
-    lua tests/suites/item.lua
-    lua tests/suites/gameplay.lua
-    lua tests/suites/landing.lua
-    lua tests/suites/presentation_ui.lua
+    lua -e 'package.path = package.path .. ";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua"; require("TestHarness").run_all({ require("presentation_ui_action_anim"), require("presentation_ui_event_handlers"), require("item"), require("landing"), require("gameplay"), require("movement") })'
 
-预期先确认本轮只有 8 条研究项，再识别哪些问题已有测试覆盖、哪些仍需补用例。输出需要回填到本文件“进度”中，写明每条研究项的首选 suite。若直接执行 suite 只是导出 table，则改用 `lua tests/regression.lua` 或 `TestHarness` 驱动新增断言。
+预期会输出一串 `.`，最后出现 `All regression checks passed (...)`。如果这里先失败，要先把失败信息抄回“意外与发现”，不要直接开始叠加新功能。
 
-步骤二，只做地雷支线，收口 BUG-01 与 OPT-01，不夹带其他规则问题。
+然后实现运行时端口与 catalog。
 
-    lua tests/suites/item.lua
-    lua tests/suites/gameplay.lua
+    rg -n "play_sfx_by_key|play_3d_sound|bind_sfx_to_unit|destroy_sfx|stop_sound" docs/eggy/api src
+    rg -n "HostRuntimePort|ActionAnim|UIEventHandlers|MoveAnim" src/presentation
 
-先新增失败用例，再修改 `src/game/systems/items/ItemPostEffects.lua`、`src/game/systems/effects/MineEffect.lua`、必要时补 `src/game/systems/items/ItemPhase.lua` 或 `Config/Generated/Items.lua`，使地雷既不会自伤，又支持研究要求的行动前使用。完成后只跑 item/gameplay 两个套件，不急着回归全量。预期结果是：埋雷玩家留在原地或进入下一回合时不被自己刚埋的雷命中；行动前也能正常释放地雷卡。
+改动后再次运行上面的 targeted suite。预期新增测试能证明 `HostRuntimePort` 已经暴露音效特效接口，且 key 缺失时不会崩溃。
 
-步骤三，只做租地提示支线，收口 BUG-04。
+接着补动作动画链与逐格音效。
 
-    lua tests/suites/landing.lua
-    lua tests/suites/gameplay.lua
+    lua -e 'package.path = package.path .. ";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua"; require("TestHarness").run_all({ require("presentation_ui_action_anim"), require("movement") })'
 
-修改 `src/game/systems/land/landing_effects/BaseLandEffects.lua`，必要时补充 `src/game/systems/land/LandChoiceSpecs.lua`、`src/game/systems/choices/ChoiceHandlers/LandChoiceHandler.lua` 和 `src/game/systems/land/LandRules.lua` 的测试约束。预期结果是：只有踩到他人可结算地块且卡片确实有效时，才会出现“是否使用强征卡/免费卡”。
+预期新增用例能证明三件事：`cash_receive` 不再是空 handler；`upgrade_land` 会触发烟雾与双音效调度；`MoveAnim` 会按 `visited` 长度逐格播“蛋仔前扑”，不会多播或漏播。
 
-步骤四，只做朝向推进支线，统一收口 BUG-05 与 BUG-08。
+然后补规则层 cue 与事件翻译。
 
-    lua tests/suites/gameplay.lua
+    lua -e 'package.path = package.path .. ";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua"; require("TestHarness").run_all({ require("presentation_ui_event_handlers"), require("item"), require("landing"), require("gameplay") })'
 
-围绕 `src/game/systems/board/Board.lua` 增加最小路径场景，覆盖直行、真正转弯、黑市出口和分支入口。每次改动后都重跑 gameplay 套件，直到 `next_index + step_dir` 两类断言同时稳定。预期结果是：玩家不会从起步位置就反向，只有在路径拓扑要求转弯时才改变方向。
+预期新增用例能证明 `TurnStart`、`ItemPostEffects`、`SpecialTileEffects`、`Bankruptcy` 和 `UIEventHandlers` 已经串通；触发医院、深山、财神、天使、税务局、破产时，都会生成稳定 cue 并翻译到正确的运行时调用。
 
-步骤五，只做“无法行动时未自动跳过”，收口 BUG-07。
-
-    lua tests/suites/gameplay.lua
-    lua tests/suites/presentation_ui.lua
-
-修改 `src/game/flow/turn/TurnStart.lua`、`src/game/flow/turn/TurnTimerPolicy.lua`、必要时补 `src/game/flow/turn/GameplayLoopTickSteps.lua` 与依赖的 UI 状态投影。预期结果是：玩家住院、深山或其他明确无行动权的状态下，回合会自动推进，不再停在等待交互的界面；同时 UI 仍能显示“本回合无法行动”。
-
-步骤六，最后处理表现支线，先 BUG-02，再 BUG-06。
-
-    lua tests/suites/presentation_ui.lua
-    lua tests/suites/landing.lua
-
-先让黑市关闭按钮被稳定点击，再把道具使用的展示广播接到全员可见链路。处理 BUG-02 时优先保证可点击，其次再看实机层级是否仍需修正。处理 BUG-06 时优先复用 `item_card` 语义，不新增分散协议。预期结果是：黑市打开时，“黑市_关闭”始终可用；任意玩家出牌时，其他玩家也能看到明确的牌名展示。
-
-步骤七，完成全量回归与文档封板。
+最后做全量回归。
 
     lua tests/regression.lua
 
-预期输出应包含全量通过的检查数。若某条研究项仍只能手工验证，例如 UI 节点真实层级与多分辨率点击热区，则必须把该项保留在“结果与复盘”，写清未自动化原因和手工验收步骤。同时把每条编号对应的最终证据回填到“进度”中，而不是只在结尾写一句“全部完成”。
+预期结果应是所有 suite 通过。如果这里出现与音效特效无关的旧失败，也必须记入“结果与复盘”，说明它与本次改动是否相关，不允许含糊地写“回归有红”。
+
+实机验证前，在编辑器启动参数或全局变量里设置测试 profile。
+
+    STARTUP_TEST_PROFILE = "items_deity_status"
+
+如果需要模拟 release 启动下仍允许 test profile，再加：
+
+    RELEASE_ALLOW_TEST_PROFILE = true
+
+然后进编辑器触发财神、天使、税务局和神明相关场景；医院、深山、地雷和破产可以切到其他现成 profile，或按本计划中的规则入口手动发牌、调位置验证。实机验证完成后，把最终观察到的资源 key、播放时长和需要修正的视觉参数写回本文件。
 
 ## 验证与验收
 
-验收必须对应 `.agents/research.md` 的 8 条项，而不是抽象地说“逻辑正常”。BUG-01 的验收是：玩家埋雷后不会在自己下一次起步或原地阶段因同格地雷而送医。BUG-02 的验收是：黑市打开时，行动日志图标和托管开关存在也不影响关闭按钮点击。BUG-04 的验收是：在自己地块或其他不满足条件的地块上，不会弹出强征卡/免费卡确认。BUG-05 与 BUG-08 的验收是：移动方向只在真正转弯时变化，不会无缘无故掉头。BUG-06 的验收是：其他玩家能看到出牌名称，而不是只有当前玩家或日志知道。BUG-07 的验收是：明确无行动权时直接跳过回合。OPT-01 的验收是：地雷卡可在行动前释放，并与已有行动流程兼容。
+验收要严格对着 `.agents/research.md` 的需求表，而不是抽象地说“音效特效正常”。升级建筑的验收是：触发 `upgrade_land` 时，先出现缩放三倍的烟雾，再在一秒内依次播“收到金币”和“回合胜利”。购买和交钱的验收是：金币相关结算触发金币爆发，并播一次“收到金币”。深山、医院、地雷、税务局的验收是：对应场景发生时，规则层发出稳定 cue，表现层能在角色或地块位置上播出对应效果，并且不会因为资源 key 缺失把整局打断。财神和天使的验收是：使用对应卡牌后，角色身上出现短时绑定特效，而不是只剩 3D 状态字。逐格前扑的验收是：移动跨过 N 格，就会播 N 次步进音效。破产与回合开始的验收是：分别播“回合失败”和“回合胜利”。
 
-自动化验收最少包含以下命令：
+自动化验收至少需要两层。第一层是 targeted suite，用来证明 cue 的路由和运行时调用正确。第二层是 `lua tests/regression.lua`，证明这套反馈链没有破坏旧的规则、UI、动画和状态同步。编辑器实机验收则用来证明资源 key、缩放、时长和绑定位置符合策划预期。只有这三层都过了，才算这份计划完成。
 
-    lua tests/suites/item.lua
-    lua tests/suites/gameplay.lua
-    lua tests/suites/landing.lua
-    lua tests/suites/presentation_ui.lua
-    lua tests/regression.lua
-
-如果某项修复前没有测试，必须先补测试并记录“变更前失败、变更后通过”的证据。若某个 UI 层级问题只能在引擎里看见，自动化测试应至少覆盖状态、事件和触控路由，手工再补最终点击验证。
+如果某个场景在纯 Lua 环境中只能证明“调用了正确端口”，但不能证明“画面真的好看”，就必须在“结果与复盘”里明确写成“自动化已守住路由，最终视觉仍依赖编辑器实机确认”。这不是缺点，而是把自动化边界说清楚。
 
 ## 可重复性与恢复
 
-本计划按小步提交推进，可重复执行。每次只修一条研究项或一条紧密耦合的支线，先跑目标套件，再跑全量回归。遇到失败时不要破坏性回退，先根据新增测试或回归输出定位是哪一层出了问题，再最小化修改重跑。表现层问题如果在纯 Lua 环境无法完全证明，应保留自动化保护并补一条明确的实机复现步骤，而不是删测试或口头跳过。
+这份计划按小步提交执行，允许反复重跑。最安全的顺序是：先写 runtime 端口与 catalog，再写表现层，再写规则层 cue，最后做实机资源校准。这样即使某个资源 key 尚未交付，代码也能靠降级逻辑和测试先落地。
 
-数值相关逻辑必须遵守仓库约束：新增代码禁止使用 `tonumber`、`type(...) == "number"` 或类似写法，统一使用 `src/core/NumberUtils.lua`。这项约束也适用于测试代码。
+如果某一步失败，优先恢复到“上一个里程碑的 targeted suite 全绿”状态，而不是用大回退覆盖未审查的改动。尤其不要在资源 key 还不确定时，把 `assert(key ~= nil)` 之类的硬约束放进业务链。对于需要短时绑定角色的特效，要保证特效 id 会在定时结束或目标被替换时清理；否则多次测试会在场景里残留脏对象。
 
 ## 产物与备注
 
-本轮交付的最终产物应只有三类。第一类是规则修复代码，落在道具、落地结算、朝向推进和回合跳过链路。第二类是表现修复代码，落在黑市关闭按钮触控链路和全员可见的道具展示。第三类是测试与文档产物，证明 8 条研究项被逐项验证，并把剩余人工项写清楚。
+这轮交付完成后，仓库里应该出现三类产物。第一类是表现运行时产物，包括新的音效特效端口、catalog 和播放服务。第二类是规则与事件产物，包括新增或补齐的 cue 发射点。第三类是测试产物，用来证明每个 cue 都能被翻译到正确的运行时调用。
 
-建议在收尾时保留以下短证据片段，写回本文件，不要只留在终端历史里：
+预期的关键终端证据长这样，不需要逐字相同，但要保留关键信号。
 
-    All regression checks passed (N)
-    [event] ... 在脚下埋设地雷
-    [event] ... 使用强征卡 ...
-    [MarketDebug] ... view_refresh ...
+    All regression checks passed (...)
+
+或者在 targeted suite 中至少要看到：
+
+    .....
+    All regression checks passed (...)
+
+如果资源 key 缺失时走降级分支，日志里应出现“跳过播放”之类的短消息，而不是 Lua traceback。
 
 ## 接口与依赖
 
-这轮改动涉及的稳定接口如下。规则层继续使用 `src/game/*` 现有入口，不要把 presentation 特判写回规则模块。黑市与 popup 相关显示统一通过 `src/presentation/*` 与 `ui_view`、`modal_presenter` 链路处理，不在业务逻辑里直接散落 UI 原生调用。需要给其他玩家展示出牌时，优先复用 `item_card` / popup 语义，而不是新造一套只存在于日志层的临时协议。
+本计划要求实现结束时，至少存在以下接口或等价接口。命名可以微调，但职责不能变。
 
-`src/game/systems/board/Board.lua` 的 `step_forward_by_facing` 是本轮高风险接口，修改时必须保证它对黑市出口、分支入口和普通路径都保持一致口径。`src/game/flow/turn/TurnStart.lua` 与 `src/game/flow/turn/TurnTimerPolicy.lua` 的职责边界也要保持清楚：前者决定当前玩家是否拥有行动权，后者只负责时间驱动，不负责替用户做规则判断。
+在 `src/presentation/api/host_runtime/SfxRuntime.lua` 中定义安全封装：
 
-数值判断统一使用 `src/core/NumberUtils.lua`。这是硬约束，不允许在新增代码或测试里引入 `tonumber`、`type(...) == "number"`、`type(...) ~= "number"`。
+    play_sfx_by_key(sfx_key, pos, rot, scale, duration, rate, with_sound) -> sfx_id | nil
+    play_3d_sound(pos, sound_key, duration, volume) -> sound_id | nil
+    bind_sfx_to_unit(sfx_id, unit, socket_name, pos, bind_type) -> boolean
+    destroy_sfx(sfx_id, fade_out) -> boolean
+    stop_sound(sound_id) -> boolean
 
-文末变更说明（2026-03-06 14:33+08:00）：将 `.agents/plan.md` 从上一轮“20 项反馈全量修复”的完成态文档，重写为基于当前 `.agents/research.md` 8 条研究结论的可执行计划。原因是旧计划与当前研究范围不一致，继续沿用会误导本轮交付、进度和验收。
-文末变更说明（2026-03-06 14:41+08:00）：将计划从“按波次说明”进一步细化为“按研究项编号拆解”，为每条问题补充目标文件、测试落点、执行顺序和验收口径。原因是用户要求“计划细化”，需要把文档提升到可直接按编号执行的颗粒度。
-文末变更说明（2026-03-06 14:49+08:00）：将“进度”章节从粗波次状态进一步细化为“每个编号的测试、修复、验收”清单，并同步补充对应决策与阶段描述。原因是用户要求“进度细化”，需要让后续执行与暂停恢复都能直接定位到具体步骤。
+在 `src/presentation/api/HostRuntimePort.lua` 中转发这些函数，使表现层只依赖 port，不直接依赖 `GameAPI` 或 `GlobalAPI`。
+
+在 `src/presentation/render/BoardFeedbackCatalog.lua` 中维护 cue 配置。最少要覆盖这些 cue 名称：`item_stop_highlight`、`upgrade_land_smoke`、`cash_burst`、`mountain_stun`、`hospital_shock`、`mine_blast`、`tax_wave`、`rich_deity`、`angel_deity`、`move_step_pounce`、`bankruptcy_slam`、`generic_negative`、`turn_started`。其中每个 cue 需要能表达位置策略、是否绑定玩家单位、缩放、持续时间、声音 key、特效 key，以及资源缺失时是否允许跳过。
+
+在 `src/presentation/render/BoardFeedbackService.lua` 中提供最小公共入口，例如：
+
+    play_tile_cue(state, cue_name, tile_index, payload) -> boolean
+    play_player_cue(state, cue_name, player_id, payload) -> boolean
+    play_sound_only(state, cue_name, payload) -> boolean
+    play_step_tile_sound(state, player_id, tile_index) -> boolean
+
+在 `src/core/events/MonopolyEvents.lua` 中，若现有事件不足以表达需求，则补充 `feedback.turn_started`、`feedback.status_applied`、`feedback.deity_applied`、`feedback.bankruptcy` 这类稳定语义事件。已有的 `land.tile_upgraded`、`land.rent_paid`、`land.tax_paid`、`land.mine_hit`、`chance.applied` 则继续复用，不新增重复事件。
+
+在 `src/presentation/api/UIEventHandlers.lua` 中，把这些事件翻译成 `BoardFeedbackService` 调用。这个翻译层必须知道“明确场景优先于通用负面兜底”的优先级，不能让同一个事件同时走两套互相冲突的 cue。
+
+在 `src/presentation/render/MoveAnim.lua` 中，步进调度要能在每一步落点时调用 `play_step_tile_sound`，从而实现“进入每一格地块 -> 蛋仔前扑，每格 1 次”。
+
+2026-03-06 / Codex：本次改动完全重写了 `.agents/plan.md`，把旧的缺陷修复封板文档替换为音效特效交付计划。这样做是因为当前用户需求已经切换到 `.agents/research.md` 的新表，继续维护旧计划会让读者误以为工作已经完成。
