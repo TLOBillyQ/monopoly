@@ -1709,6 +1709,8 @@ local function _test_afk_auto_host_enters_auto_after_timeout_in_start_phase()
 
     gameplay_loop.tick(g, state, 1.1)
     assert(g.players[1].auto == true, "player should auto host after afk timeout")
+    local text = logger.get_text_by_level("event")
+    assert(string.find(text, "P1 AFK 超时，进入托管", 1, true) ~= nil, "afk auto host should enter event feed")
     assert(state.turn_runtime.afk_elapsed_seconds == 0, "afk timer should reset after auto host")
     assert(state.turn_runtime.afk_tracking_active == false, "afk tracking should stop after auto host")
     assert(auto_runner_calls == 1, "auto runner should not dispatch next on the same tick that afk auto host triggers")
@@ -1726,6 +1728,9 @@ local function _test_afk_auto_host_enters_auto_after_timeout_in_wait_choice()
   _with_afk_timeout_only(function()
     gameplay_loop.tick(g, state, 90)
     assert(g.players[1].auto == true, "wait_choice should count toward afk auto host")
+    local text = logger.get_text_by_level("event")
+    assert(string.find(text, "P1 AFK 超时，进入托管", 1, true) ~= nil,
+      "wait_choice afk auto host should enter event feed")
   end)
 end
 

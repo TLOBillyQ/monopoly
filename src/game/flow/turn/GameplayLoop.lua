@@ -136,6 +136,7 @@ function gameplay_loop.step_afk_auto_host(game, state, dt)
     state.auto_runner:reset_timer()
   end
   _reset_afk_tracking(state, current_player.id)
+  logger.event_no_tips(tostring(current_player.name) .. " AFK 超时，进入托管")
   logger.warn("afk auto host enabled:", tostring(current_player.name), "role_id=" .. tostring(current_player.id))
   return true
 end
