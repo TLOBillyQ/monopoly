@@ -263,7 +263,7 @@ local function _read_afk_elapsed_seconds(state, actor_role_id)
 end
 
 local function _test_mandatory_payment_causes_bankruptcy()
-  local g = _new_game()
+  local g = _new_game({ install_ui_port = false })
   local p1 = g.players[1]
   local p2 = g.players[2]
 
@@ -2015,7 +2015,7 @@ local function _test_turn_dispatch_uses_clock_ports_without_game_api()
   assert(stepped == 1, "step_turn should run exactly once")
 end
 
-local function _test_gameplay_loop_set_game_uses_runtime_ui_port_dto()
+local function _test_gameplay_loop_set_game_uses_narrow_runtime_ports()
   local g = _new_game()
   local state = _build_loop_state()
   state.wait_move_anim = true
@@ -2031,17 +2031,16 @@ local function _test_gameplay_loop_set_game_uses_runtime_ui_port_dto()
 
   gameplay_loop.set_game(state, g)
 
-  assert(g.ui_port ~= state, "set_game should inject a minimal runtime ui port instead of raw state")
-  assert(g.ui_port.wait_move_anim == true, "runtime ui port should expose wait_move_anim")
-  assert(g.ui_port.wait_action_anim == true, "runtime ui port should expose wait_action_anim")
-  assert(g.ui_port:get_board_scene() == state.board_scene, "runtime ui port should expose board_scene getter")
+  assert(g.ui_port == nil, "set_game should no longer inject the catch-all runtime ui port")
+  assert(g.board_scene_port ~= state, "set_game should inject a narrow board_scene_port instead of raw state")
+  assert(g.board_scene_port:get_board_scene() == state.board_scene, "board_scene_port should expose board_scene getter")
 
-  g.ui_port:push_popup({ kind = "test_popup" })
-  assert(state._last_popup and state._last_popup.kind == "test_popup", "runtime ui port should forward popup calls")
+  g.popup_port:push_popup({ kind = "test_popup" })
+  assert(state._last_popup and state._last_popup.kind == "test_popup", "popup_port should forward popup calls")
 
-  g.ui_port:on_tile_owner_changed(11, 22)
-  assert(state._last_tile_owner and state._last_tile_owner.tile_id == 11, "runtime ui port should forward tile owner callback")
-  assert(state._last_tile_owner and state._last_tile_owner.owner_id == 22, "runtime ui port should forward owner id")
+  g.tile_owner_notifier:notify_owner_changed(11, 22)
+  assert(state._last_tile_owner and state._last_tile_owner.tile_id == 11, "tile_owner_notifier should forward tile owner callback")
+  assert(state._last_tile_owner and state._last_tile_owner.owner_id == 22, "tile_owner_notifier should forward owner id")
 end
 
 local function _test_gameplay_loop_refresh_drives_camera_follow_via_port()
@@ -2538,7 +2537,7 @@ return {
   _test_turn_prompt_emitted_on_next_player_switch,
   _test_turn_start_emits_turn_started_feedback_event,
   _test_turn_dispatch_uses_clock_ports_without_game_api,
-  _test_gameplay_loop_set_game_uses_runtime_ui_port_dto,
+  _test_gameplay_loop_set_game_uses_narrow_runtime_ports,
   _test_gameplay_loop_refresh_drives_camera_follow_via_port,
   _test_gameplay_loop_camera_follow_skips_eliminated_current_player,
   _test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics,

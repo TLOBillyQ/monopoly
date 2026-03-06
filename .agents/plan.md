@@ -20,12 +20,13 @@
 - [x] (2026-03-06 20:33 +0800) 已完成阶段0验收：`lua tests/internal/dep_rules.lua` 通过，定向守护 suite 通过，全量 `lua tests/regression.lua` 通过并输出 `All regression checks passed (364)`。
 - [x] (2026-03-06 22:46 +0800) 已完成阶段1：新增 `src/game/flow/ports/UseCaseOutputPort.lua`，把 `GameplayLoop`、`TurnDispatch`、`TickChoiceTimeout`、`TickTimeout` 的 `state.ui_* / pending_choice* / ui_model` 写入收拢到 output port，并让 `tests/internal/dep_rules.lua` 中 `src/game/flow` 的 `state.ui_*` 预算降到 0。
 - [x] (2026-03-06 22:49 +0800) 已补阶段1契约：`architecture_guard_contract` 新增 output-port 路由断言，`usecase_boundary_contract` 新增 output 默认桥接与 override 优先级测试；全量回归现输出 `All regression checks passed (367)`。
-- [ ] 阶段2：已完成第一刀动画门控外提：`ActionAnimPort`、`TurnRoll`、`TurnMove` 改读 `game.anim_gate_port`，`game.ui_port` 预算已从 23 收紧到 16。随后又清掉了 `TurnDecision` 对 `game.ui_port.state.pending_choice_elapsed` 的反向读取，把 `IntentDispatcher`、`Bankruptcy`、`LandingPresenter`、`ItemInventory`、`ItemUseBroadcast` 这些 popup/广播链路迁到专用 `popup_port`/兼容桥，并把 `BaseLandEffects` 的升级通知迁到 `tile_feedback_port`/兼容桥。当前剩余的重点读路径主要收敛到 `GameplayLoop` 自身保留的 runtime DTO 挂载。
+- [x] 阶段2：动画门控、popup 发射、tile feedback、choice elapsed 反读等 `game.ui_port` 依赖都已拆走，最后一刀已把 `GameplayLoop.set_game()` 的 catch-all runtime DTO 改成窄化的 `board_scene_port`，并删除 `GameStateTiles` 对 `ui_port` 的兜底读取；`tests/internal/dep_rules.lua` 中 `game.ui_port` 预算现已从 23 压到 0。
 - [x] (2026-03-07 03:07 +0800) 已完成阶段2当前最窄的一刀：`TurnDecision.decide_choice_action()` 不再通过 `game.ui_port.state` 回读 `pending_choice_elapsed`；runtime coroutine session 现显式持有 `choice_elapsed_seconds`，`dep_rules` 中 `src/game/flow/turn/TurnDecision.lua` 的 `game.ui_port` 预算已降到 0。
 - [x] (2026-03-07 03:19 +0800) 已完成阶段2第二刀的 popup 链路起点收口：`GameplayLoop` 现在注入专用 `game.popup_port`，`IntentDispatcher.push_popup()` 已优先走 popup_port，旧测试与非 `set_game` 路径则通过 `Game:ensure_popup_port()` 做兼容镜像；`dep_rules` 中 `src/game/flow/intent/IntentDispatcher.lua` 的 `game.ui_port` 预算已降到 0。
 - [x] (2026-03-07 03:27 +0800) 已把 `Bankruptcy`、`LandingPresenter`、`ItemInventory`、`ItemUseBroadcast` 的 popup 发射路径切到 `popup_port`/兼容桥，`dep_rules` 中这四个文件的 `game.ui_port` 预算均已降到 0。
 - [x] (2026-03-07 03:34 +0800) 已把 `ItemPhase` 的 `game.ui_port` 断言删除并把预算收紧到 0；当前阶段2剩余的高价值 `game.ui_port` 读路径主要收敛到 `BaseLandEffects` 的 `on_tile_upgraded` 直推和 `GameplayLoop` 自身保留的 runtime DTO 安装。
 - [x] (2026-03-07 03:42 +0800) 已把 `BaseLandEffects` 的 `on_tile_upgraded` 直推改成 `tile_feedback_port`/兼容桥，`dep_rules` 中 `src/game/systems/land/landing_effects/BaseLandEffects.lua` 的 `game.ui_port` 预算已降到 0。
+- [x] (2026-03-07 00:04 +0800) 已完成阶段2最后一刀：`GameplayLoop.set_game()` 不再注入泛化 `game.ui_port`，改为只注入 `board_scene_port`、`popup_port`、`tile_owner_notifier`、`anim_gate_port` 这些窄端口；`StatePorts` 已优先消费 `board_scene_port`，`GameStateTiles` 删除 `self.ui_port` fallback，`dep_rules` 中 `game.ui_port` 总预算已降到 0。
 - [x] (2026-03-07 00:28 +0800) 已完成阶段3：`RuntimeGlobalAliases` 已外迁到 `src/app/bootstrap/runtime_install/`；`Logger`、`DefaultPorts`、`RuntimeEditorExports`、`RuntimeContext` 都已改成 host hook 或 runtime context env 读取；`src/core` 宿主触点预算已从 47 压到 0。
 - [ ] 阶段4：已完成六刀。第一刀新增 `src/game/systems/market/service/PaidPurchaseGateway.lua`，承接 paid-currency 的 goods mapping、purchase panel 启动、待兑现队列和购买回调注册。第二刀把 paid callback 后的 market choice 刷新移到 `src/game/systems/market/service/Choice.lua` 的 `refresh_after_paid_callback()`。第三刀新增 `src/game/systems/market/service/Fulfillment.lua`，统一 item/vehicle/skin 的兑现副作用。第四刀新增 `src/game/systems/market/service/PurchasePolicy.lua`，把商品可买性校验和座驾替换确认 intent 组装从 `Purchase.lua` 中抽走。第五刀新增 `src/game/systems/market/service/Feedback.lua`，把 market buy_failed 事件与黑市 popup 文案出口从 `Purchase.lua`、`Choice.lua` 中抽离。第六刀新增 `src/game/systems/market/service/ChoiceOutcome.lua`，把购买结果后的 choice 刷新、满包退出 popup、follow-up intent 派发和 stay/finish 决策从 `MarketChoiceHandler.lua` 中抽离。剩余工作主要是观察 `Purchase.lua` 本身是否还值得继续拆本地金币购买前后编排，还是把阶段4视为足够收口。
 - [x] (2026-03-07 03:07 +0800) 已把 `Purchase.execute()` 的本地金币购买分支外提到 `src/game/systems/market/service/LocalPurchase.lua`，并把 `MarketChoiceHandler` 的购买结果协调外提到 `src/game/systems/market/service/ChoiceOutcome.lua`；`Purchase.lua` 与 `MarketChoiceHandler.lua` 继续向纯编排器收缩。
@@ -58,6 +59,9 @@
 
 - 观察：仓库内置的 `forbidden_globals` 守护会拒绝 `rawget`，即便它只是为了绕开 metatable 观测；因此兼容层读取必须退回普通字段访问。
   证据：第一次阶段1回归在 `src/game/flow/ports/UseCaseOutputPort.lua` 上报 `forbidden_globals ... uses rawget`，改回 `state[key]` 后恢复通过。
+
+- 观察：测试支撑默认会给 `support.new_game()` 预装一个 `ui_port`，如果阶段2最后一刀继续在生产代码里显式清空这个字段，静态守护仍会把它算作“还在碰旧边界”。
+  证据：本轮第一次全量回归在 `tests/internal/dep_rules.lua` 报 `src/game/flow/turn/GameplayLoop.lua` 仍命中 `game.ui_port`；改成让测试支撑通过 `install_ui_port = false` 显式选择旧桥后，预算恢复为 0 且全量继续通过。
 
 - 观察：阶段2最窄的突破口确实是动画等待门控，因为 `TurnRoll`、`TurnMove` 和 `ActionAnimPort` 都只需要只读布尔配置，不依赖 popup 或 choice 语义。
   证据：迁出这三处后，`tests/internal/dep_rules.lua` 中 `src/core/ActionAnimPort.lua`、`src/game/flow/turn/TurnMove.lua`、`src/game/flow/turn/TurnRoll.lua` 的 `game.ui_port` 预算均已降为 0，同时新增契约测试仍可在 `game.ui_port = nil` 时通过。
@@ -208,6 +212,10 @@
   理由：这条语义同时影响 modal、item slot、highlight 动画和 ask-flow；先让生产 builder 稳定产出显式标记，再把消费方统一到 helper，上层责任已经前移，但测试和旧手工 choice 仍能兼容运行。这样下一刀才能更安全地继续删 fallback。
   日期/作者：2026-03-07 / Codex
 
+- 决策：阶段2最后一刀选择引入 `board_scene_port`，而不是继续保留一个“裁剪后的 ui_port DTO”。
+  理由：到这一步，`push_popup`、`tile owner changed`、`tile upgraded`、动画门控都已经各自有专用端口；继续保留 `ui_port` 只会把已经拆开的职责重新捆回共享对象图。`board_scene_port` 只暴露 bankruptcy 清理所需的 scene getter，更符合阶段2“按专用端口收口”的方向。
+  日期/作者：2026-03-07 / Codex
+
 - 决策：阶段5第三刀的第二小片优先删 `choice_screen_service.common` 中 `item_phase_choice` 的 helper fallback，而不是继续新增更多 helper 包装。
   理由：生产路径和主要消费点已经全部接上显式字段；继续保留 `kind`-fallback 只会拖慢真正的边界收口。测试数据补齐后，这条 fallback 已经没有必要继续存在。
   日期/作者：2026-03-07 / Codex
@@ -230,7 +238,7 @@
 
 ## 结果与复盘
 
-阶段0和阶段1现在都已经完成，阶段2也已经切开第一刀，阶段3则已经完整完成，阶段4已完成五刀，阶段5 也已经完成前两刀。当前最重要的可观察结果有七条。第一，`src/game/flow` 已经没有任何直接的 `state.ui_*` 写入；用例层现在通过 `UseCaseOutputPort` 发出 UI 失效、choice 生命周期和 modal timer 输出。第二，`game.ui_port` 的预算已经从 23 降到 16，其中 `TurnRoll`、`TurnMove`、`ActionAnimPort` 这三处动画等待门控已经改走 `game.anim_gate_port`。第三，`src/core` 已经不再直接认识 Eggy 宿主全局，相关安装器和别名逻辑都已外移或改成显式注入。第四，`Purchase.lua` 的 paid-currency 宿主购买通道已经被抽到 `PaidPurchaseGateway.lua`，paid callback 后的 market choice 刷新已经移到 `Choice.lua`，item/vehicle/skin 的兑现副作用已经集中到 `Fulfillment.lua`，购买前决策已经集中到 `PurchasePolicy.lua`，失败反馈事件出口已经集中到 `Feedback.lua`。第五，market choice 现在会在 option 上显式声明 `requires_pre_confirm/pre_confirm_kind`，presentation 的 `PreConfirmFlow` 不再靠 `Config.Generated.Market` 和 `product_id` 再做一轮业务判断。第六，`ItemPhase`、`tax_prompt`、`landing_optional_effect` 和 market skin option 已经直接携带 `confirm_title/confirm_body`，`choice_screen_service.common` 只在缺字段时做兼容 fallback。第七，默认回归仍保持通过，并把这些收口一起锁住。
+阶段0到阶段3现在都已经完成，阶段4和阶段5则进入“继续瘦身剩余业务推断”的尾段。当前最重要的可观察结果有七条。第一，`src/game/flow` 已经没有任何直接的 `state.ui_*` 写入；用例层现在通过 `UseCaseOutputPort` 发出 UI 失效、choice 生命周期和 modal timer 输出。第二，`game.ui_port` 的预算已经从 23 压到 0；动画等待改走 `anim_gate_port`，popup 改走 `popup_port`，地块升级通知改走 `tile_feedback_port`，tile owner 变更改走 `tile_owner_notifier`，board scene 读取也已收窄成 `board_scene_port`。第三，`src/core` 已经不再直接认识 Eggy 宿主全局，相关安装器和别名逻辑都已外移或改成显式注入。第四，`Purchase.lua` 的 paid-currency 宿主购买通道已经被抽到 `PaidPurchaseGateway.lua`，paid callback 后的 market choice 刷新已经移到 `Choice.lua`，item/vehicle/skin 的兑现副作用已经集中到 `Fulfillment.lua`，购买前决策已经集中到 `PurchasePolicy.lua`，失败反馈事件出口已经集中到 `Feedback.lua`。第五，market choice 现在会在 option 上显式声明 `requires_pre_confirm/pre_confirm_kind`，presentation 的 `PreConfirmFlow` 不再靠 `Config.Generated.Market` 和 `product_id` 再做一轮业务判断。第六，`ItemPhase`、`tax_prompt`、`landing_optional_effect` 和 market skin option 已经直接携带 `confirm_title/confirm_body`，`choice_screen_service.common` 只在缺字段时做兼容 fallback。第七，默认回归仍保持通过，并把这些收口一起锁住。
 
 这轮推进的经验同样直接。第一，阶段1不需要等 presentation 全部清干净才开始，先把“写入口”统一就能显著降低后续修改的耦合面。第二，守护测试必须允许内部兼容镜像存在，否则会把 `ui_runtime` 这种过渡性状态误判成旧债。第三，阶段2应该继续坚持“每次只拔一小束读路径”，因为 `push_popup`、`ui_port.state` 和 market 链路的风险明显高于动画布尔门控。第四，阶段3一旦把 `src/core` 改成显式注入，测试基础设施也必须同步升级为显式构造 runtime context，否则旧的全局 patch 习惯会反噬回归。
 
@@ -272,9 +280,9 @@
 
 实施顺序要从最窄的读路径开始。先把只读布尔判断迁出，比如 `wait_action_anim`、`wait_move_anim`，再迁 `push_popup` 这类行为端口，最后处理 `ui_port.state` 这种最危险的反向回读。每迁完一个文件，就同步缩小 `game.ui_port` 的基线预算。不要一次性替换所有使用点，否则很难定位回归。
 
-这个里程碑已经开始，但尚未完成。当前已经完成的第一刀是动画等待门控：`src/core/ActionAnimPort.lua`、`src/game/flow/turn/TurnRoll.lua`、`src/game/flow/turn/TurnMove.lua` 不再读取 `game.ui_port.wait_action_anim / wait_move_anim`，改为读取 `game.anim_gate_port`。`GameplayLoop.set_game` 现在会注入这个更窄的 DTO，新的契约测试也证明这三处在 `game.ui_port = nil` 时仍能运行。
+这个里程碑已经完成。第一刀是动画等待门控：`src/core/ActionAnimPort.lua`、`src/game/flow/turn/TurnRoll.lua`、`src/game/flow/turn/TurnMove.lua` 已改读 `game.anim_gate_port`。第二刀到第五刀把 `IntentDispatcher`、`Bankruptcy`、`LandingPresenter`、`ItemInventory`、`ItemUseBroadcast`、`BaseLandEffects`、`TurnDecision` 等路径分别迁到 `popup_port`、`tile_feedback_port` 和显式 coroutine session 字段。最后一刀则把 `GameplayLoop.set_game()` 中残留的 catch-all `ui_port` DTO 拆掉，改成只注入 `board_scene_port`、`popup_port`、`tile_owner_notifier`、`anim_gate_port`；同时 `StatePorts` 已优先消费 `board_scene_port`，`GameStateTiles` 不再读取 `self.ui_port`。
 
-里程碑 2 剩余的高风险路径还包括 `IntentDispatcher`、`Bankruptcy`、`ItemPhase` 等处的 `push_popup`，以及 `TurnDecision` 通过 `ui_port.state` 回读 `pending_choice_elapsed`。这些是下一阶段的主目标，不应该和动画门控这条已经落地的窄路径混在同一提交里继续扩大。
+这个里程碑的验收现在也已经成立。`tests/internal/dep_rules.lua` 中 `game.ui_port` 预算已经收紧到 0；`architecture_guard_contract` 现在验证 `set_game()` 注入的是一组窄端口而不是 `ui_port` 共享 DTO；全量 `lua tests/regression.lua` 继续通过，说明旧行为没有因为边界收口而回退。
 
 ## 里程碑 3：完成 runtime 适配器外迁
 
@@ -387,7 +395,7 @@
 当前冻结的债务基线如下。
 
     src/core 直接宿主触点：0
-    game.ui_port 依赖点：16
+    game.ui_port 依赖点：0
     src/game/flow 的 state.ui_* 写入：0
 
 本次实际验证输出如下。
@@ -418,7 +426,7 @@
 第二类是 `tests/suites/architecture_guard_contract.lua` 固定下来的运行时契约。当前至少要维持下面三条事实：
 
     gameplay_loop.set_game(state, game)
-    -- 结果：game.ui_port 是裁剪后的 DTO，而不是原始 state
+    -- 结果：game.board_scene_port / game.popup_port / game.tile_owner_notifier / game.anim_gate_port 是窄 DTO，而不是共享的 game.ui_port
 
     turn_dispatch.dispatch_action(game, state, action, opts)
     -- 结果：关键输入路径通过 output port 发出 invalidate / clear choice，而不是继续扩写新的 state.ui_* 字段
@@ -456,3 +464,5 @@
 2026-03-07 / Codex：本次更新把计划推进到“阶段5第二刀已完成”的真实状态，补记了 `confirm_title/confirm_body` 这条轻量协议，以及 `ItemPhase`、`LandChoiceSpecs.tax_prompt`、`EffectPipeline`、market skin option 已前移确认文案的事实；验证结果已同步更新为最新的定向回归 `179` 和全量回归 `375`。
 
 2026-03-07 / Codex：本次更新把计划推进到“阶段5第四刀第二小片已完成”的真实状态，补记了 `remote/player/target/market` 路由显式化，以及 `ChoiceRoutePolicy` 对这些 kind 的默认 route 推断已被删掉。这样下一位执行者可以继续收剩余 fallback，而不必重新判断哪些 route 仍靠 policy 猜。
+
+2026-03-07 / Codex：本次更新把计划推进到“阶段2已完成”的真实状态，补记了 `board_scene_port` 这条最后的 runtime 窄端口、`GameStateTiles` 删除 `ui_port` fallback、测试支撑新增 `install_ui_port = false` 开关，以及 `game.ui_port` 债务预算已压到 0 的事实。这样下一位执行者可以直接转向阶段4里 `Choice.lua` 的 pending-choice updater 拆分，或阶段5里 `TargetChoiceEffects` 的显式 target-pick 语义收口，而不用再回头处理 `src/game` 对 `ui_port` 的旧耦合。

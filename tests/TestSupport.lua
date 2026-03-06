@@ -333,7 +333,9 @@ local function new_game(opts)
     map = opts.map or map_cfg,
     tiles = opts.tiles or tiles_cfg,
   })
-  game.ui_port = build_ui_port(opts.ui_port)
+  if opts.install_ui_port ~= false then
+    game.ui_port = build_ui_port(opts.ui_port)
+  end
   game.popup_port = {
     push_popup = function(_, payload, popup_opts)
       local ui_port = game.ui_port

@@ -19,11 +19,6 @@ local function _notify_tile_owner_changed(self, tile_id, owner_id)
     notifier:on_tile_owner_changed(tile_id, owner_id)
     return true
   end
-  local ui_port = self and self.ui_port or nil
-  if ui_port and type(ui_port.on_tile_owner_changed) == "function" then
-    ui_port:on_tile_owner_changed(tile_id, owner_id)
-    return true
-  end
   return false
 end
 

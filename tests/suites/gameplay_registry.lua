@@ -30,7 +30,7 @@ local names = {
   "_test_turn_prompt_initialized_for_first_player",                           -- 26
   "_test_turn_prompt_emitted_on_next_player_switch",                          -- 27
   "_test_turn_dispatch_uses_clock_ports_without_game_api",                    -- 28
-  "_test_gameplay_loop_set_game_uses_runtime_ui_port_dto",                    -- 29
+  "_test_gameplay_loop_set_game_uses_narrow_runtime_ports",                  -- 29
   "_test_gameplay_loop_refresh_drives_camera_follow_via_port",                -- 30
   "_test_gameplay_loop_camera_follow_skips_eliminated_current_player",        -- 31
   "_test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics",             -- 32

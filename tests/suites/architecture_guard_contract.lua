@@ -158,8 +158,8 @@ local function _record_ui_writes(state)
   return writes
 end
 
-local function _test_gameplay_loop_set_game_injects_runtime_ui_port_dto()
-  local game = support.new_game()
+local function _test_gameplay_loop_set_game_injects_narrow_runtime_ports()
+  local game = support.new_game({ install_ui_port = false })
   local state = _build_loop_state()
   state.wait_move_anim = true
   state.wait_action_anim = true
@@ -174,19 +174,21 @@ local function _test_gameplay_loop_set_game_injects_runtime_ui_port_dto()
 
   gameplay_loop.set_game(state, game)
 
-  assert(game.ui_port ~= state, "set_game should inject a runtime ui_port dto instead of raw state")
-  assert(game.ui_port.wait_move_anim == true, "runtime ui_port should expose wait_move_anim")
-  assert(game.ui_port.wait_action_anim == true, "runtime ui_port should expose wait_action_anim")
-  assert(game.ui_port.get_board_scene ~= nil, "runtime ui_port should expose board scene getter")
+  assert(game.ui_port == nil, "set_game should stop exporting the catch-all runtime ui_port")
+  assert(game.board_scene_port ~= nil, "set_game should inject board_scene_port dto")
+  assert(game.board_scene_port ~= state, "board_scene_port should not expose raw state")
+  assert(game.board_scene_port.get_board_scene ~= nil, "board_scene_port should expose board scene getter")
+  assert(game.popup_port ~= nil, "set_game should inject popup_port dto")
+  assert(game.tile_owner_notifier ~= nil, "set_game should inject tile_owner_notifier dto")
   assert(game.anim_gate_port ~= nil, "set_game should inject anim_gate_port dto")
   assert(game.anim_gate_port.wait_move_anim == true, "anim_gate_port should expose wait_move_anim")
   assert(game.anim_gate_port.wait_action_anim == true, "anim_gate_port should expose wait_action_anim")
-  _assert_eq(game.ui_port:get_board_scene(), state.board_scene, "runtime ui_port should read board scene from state")
+  _assert_eq(game.board_scene_port:get_board_scene(), state.board_scene, "board_scene_port should read board scene from state")
 
-  game.ui_port:push_popup({ kind = "test_popup" })
+  game.popup_port:push_popup({ kind = "test_popup" })
   _assert_eq(state.last_popup_payload.kind, "test_popup", "runtime ui_port should forward popup payload")
 
-  game.ui_port:on_tile_owner_changed(9, 3)
+  game.tile_owner_notifier:notify_owner_changed(9, 3)
   _assert_eq(state.last_tile_owner_event.tile_id, 9, "runtime ui_port should forward tile id")
   _assert_eq(state.last_tile_owner_event.owner_id, 3, "runtime ui_port should forward owner id")
 end
@@ -387,7 +389,7 @@ end
 return {
   name = "architecture_guard_contract",
   tests = {
-    { name = "gameplay_loop_set_game_injects_runtime_ui_port_dto", run = _test_gameplay_loop_set_game_injects_runtime_ui_port_dto },
+    { name = "gameplay_loop_set_game_injects_narrow_runtime_ports", run = _test_gameplay_loop_set_game_injects_narrow_runtime_ports },
     { name = "turn_dispatch_next_only_marks_ui_dirty", run = _test_turn_dispatch_next_only_marks_ui_dirty },
     { name = "turn_dispatch_choice_only_marks_ui_dirty", run = _test_turn_dispatch_choice_only_marks_ui_dirty },
     { name = "gameplay_loop_set_game_routes_choice_state_through_output_port", run = _test_gameplay_loop_set_game_routes_choice_state_through_output_port },

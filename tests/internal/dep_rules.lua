@@ -208,6 +208,7 @@ local growth_budget_rules = {
     roots = { "src/game", "src/core" },
     patterns = {
       "game%.ui_port",
+      "self%.ui_port",
       "ui_port%.wait_action_anim",
       "ui_port%.wait_move_anim",
       "ui_port:push_popup",
@@ -217,8 +218,9 @@ local growth_budget_rules = {
     budget = {
       ["src/core/ActionAnimPort.lua"] = 0,
       ["src/game/core/runtime/Bankruptcy.lua"] = 0,
+      ["src/game/core/runtime/GameStateTiles.lua"] = 0,
       ["src/game/flow/intent/IntentDispatcher.lua"] = 0,
-      ["src/game/flow/turn/GameplayLoop.lua"] = 1,
+      ["src/game/flow/turn/GameplayLoop.lua"] = 0,
       ["src/game/flow/turn/TurnDecision.lua"] = 0,
       ["src/game/flow/turn/TurnMove.lua"] = 0,
       ["src/game/flow/turn/TurnRoll.lua"] = 0,

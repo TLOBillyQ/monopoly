@@ -42,42 +42,18 @@ function runtime.sync_phase_flags(state, phase)
   board_runtime.board_last_phase = phase
 end
 
-function runtime.build_ui_runtime_port(state)
+function runtime.build_board_scene_port(state)
   assert(type(state) == "table", "missing state")
-  if type(state._ui_runtime_port) == "table" then
-    return state._ui_runtime_port
+  if type(state._board_scene_port) == "table" then
+    return state._board_scene_port
   end
 
-  local port = {
-    wait_move_anim = state.wait_move_anim == true,
-    wait_action_anim = state.wait_action_anim == true,
-    state = state,
-  }
-  port.push_popup = function(_, payload, opts)
-    if type(state.push_popup) == "function" then
-      return state:push_popup(payload, opts)
-    end
-    return false
-  end
-  port.on_tile_owner_changed = function(_, tile_id, owner_id)
-    if type(state.on_tile_owner_changed) == "function" then
-      state:on_tile_owner_changed(tile_id, owner_id)
-      return true
-    end
-    return false
-  end
-  port.on_tile_upgraded = function(_, tile_id, level)
-    if type(state.on_tile_upgraded) == "function" then
-      state:on_tile_upgraded(tile_id, level)
-      return true
-    end
-    return false
-  end
+  local port = {}
   port.get_board_scene = function()
     return state.board_scene
   end
 
-  state._ui_runtime_port = port
+  state._board_scene_port = port
   return port
 end
 
