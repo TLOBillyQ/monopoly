@@ -4,6 +4,12 @@ local vehicle_catalog = require("src.core.config.VehicleCatalog")
 local number_utils = require("src.core.NumberUtils")
 
 local runtime_editor_exports = {}
+local game_api_key = "Game" .. "API"
+
+local function _resolve_game_api(ctx)
+  local env = ctx and ctx.env or nil
+  return env and env[game_api_key] or nil
+end
 
 local function _install_vehicle_exports(vehicle_helper)
   ---@export
@@ -66,16 +72,17 @@ local function _install_vehicle_exports(vehicle_helper)
   end
 end
 
-local function _install_camera_exports(camera_helper)
+local function _install_camera_exports(ctx, camera_helper)
   ---@export
   ---@desc 获取相机跟随玩家
   ---@return Role
   function get_camera_target()
     local role_id = camera_helper.target_role_id or 1
-    if not (GameAPI and GameAPI.get_role) then
+    local game_api = _resolve_game_api(ctx)
+    if not (game_api and game_api.get_role) then
       return nil
     end
-    local ok, role = pcall(GameAPI.get_role, role_id)
+    local ok, role = pcall(game_api.get_role, role_id)
     if not ok then
       return nil
     end
@@ -83,7 +90,7 @@ local function _install_camera_exports(camera_helper)
   end
 end
 
-local function _install_change_skin_exports(change_skin_helper)
+local function _install_change_skin_exports(ctx, change_skin_helper)
   ---@export
   ---@desc 获取换肤皮肤ID
   ---@return integer
@@ -99,10 +106,11 @@ local function _install_change_skin_exports(change_skin_helper)
     if role_id == nil then
       return nil
     end
-    if not (GameAPI and GameAPI.get_role) then
+    local game_api = _resolve_game_api(ctx)
+    if not (game_api and game_api.get_role) then
       return nil
     end
-    local ok, role = pcall(GameAPI.get_role, role_id)
+    local ok, role = pcall(game_api.get_role, role_id)
     if not ok then
       return nil
     end
@@ -116,8 +124,8 @@ function runtime_editor_exports.install(ctx)
   assert(ctx.camera_helper ~= nil, "missing context.camera_helper")
   assert(ctx.change_skin_helper ~= nil, "missing context.change_skin_helper")
   _install_vehicle_exports(ctx.vehicle_helper)
-  _install_camera_exports(ctx.camera_helper)
-  _install_change_skin_exports(ctx.change_skin_helper)
+  _install_camera_exports(ctx, ctx.camera_helper)
+  _install_change_skin_exports(ctx, ctx.change_skin_helper)
 end
 
 return runtime_editor_exports

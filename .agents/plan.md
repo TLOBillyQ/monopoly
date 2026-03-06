@@ -21,7 +21,7 @@
 - [x] (2026-03-06 22:46 +0800) 已完成阶段1：新增 `src/game/flow/ports/UseCaseOutputPort.lua`，把 `GameplayLoop`、`TurnDispatch`、`TickChoiceTimeout`、`TickTimeout` 的 `state.ui_* / pending_choice* / ui_model` 写入收拢到 output port，并让 `tests/internal/dep_rules.lua` 中 `src/game/flow` 的 `state.ui_*` 预算降到 0。
 - [x] (2026-03-06 22:49 +0800) 已补阶段1契约：`architecture_guard_contract` 新增 output-port 路由断言，`usecase_boundary_contract` 新增 output 默认桥接与 override 优先级测试；全量回归现输出 `All regression checks passed (367)`。
 - [ ] 阶段2：已完成第一刀动画门控外提：`ActionAnimPort`、`TurnRoll`、`TurnMove` 改读 `game.anim_gate_port`，`game.ui_port` 预算已从 23 收紧到 16；剩余 `push_popup` 与 `ui_port.state` 读路径仍待迁移。
-- [ ] 阶段3：已完成两刀。`src/core/Logger.lua` 改成 host hook 注入，`src/core/runtime_ports/DefaultPorts.lua` 改成只从 `runtime_context.current().env` 读取宿主对象；两者预算都已降到 0。剩余 `RuntimeEnvBindings`、`RuntimeEditorExports`、`RuntimeContext` 仍待外迁。
+- [ ] 阶段3：已完成三刀。`src/core/Logger.lua` 改成 host hook 注入，`src/core/runtime_ports/DefaultPorts.lua` 与 `src/core/RuntimeEditorExports.lua` 改成只从 `runtime_context.current().env` 读取宿主对象；这三处预算都已降到 0。剩余 `RuntimeEnvBindings` 与 `RuntimeContext` 仍待外迁。
 - [ ] 阶段4：拆分 `src/game/systems/market/service/Purchase.lua`，把支付、事件桥和 UI 刷新拆回各自边界。
 - [ ] 阶段5：把 `PreConfirmFlow` 等 presentation 中的应用规则收回用例层，让 presentation 只渲染 ViewModel。
 - [ ] 阶段6：在边界稳定后整理目录语义和命名，避免目录改动与行为改动叠加。
@@ -236,7 +236,7 @@
 
 当前冻结的债务基线如下。
 
-    src/core 直接宿主触点：21
+    src/core 直接宿主触点：15
     game.ui_port 依赖点：16
     src/game/flow 的 state.ui_* 写入：0
 
@@ -272,7 +272,7 @@
     turn_roll(turn_mgr, args) / turn_move(turn_mgr, args) / action_anim_port.is_enabled(game)
     -- 结果：动画等待门控可以只依赖 game.anim_gate_port，在没有 game.ui_port 时仍能工作
 
-2026-03-06 / Codex：本次更新把计划从“阶段0完成、阶段1待做”的状态推进到“阶段1完成、阶段2第一刀已落地”的真实状态，补记了 output port、ui_runtime 兼容镜像、anim_gate_port、最新预算和最新回归输出。这样下一位执行者可以直接从 `push_popup` / `ui_port.state` 这些剩余读路径继续推进，而不用重新推断今天已经完成了什么。
+2026-03-06 / Codex：本次更新把计划从“阶段1完成、阶段2第一刀已落地”的状态继续推进到“阶段3已完成三刀”的真实状态，补记了 `Logger`、`DefaultPorts`、`RuntimeEditorExports` 的外层化方式、测试基础设施的同步改法、最新预算和最新回归输出。这样下一位执行者可以直接从 `RuntimeEnvBindings` 或 `RuntimeContext` 继续推进，而不用重新推断哪些 `src/core` 触点已经收口。
 
 阶段1开始后，请按下面这个接口方向推进，不要再发明新的共享状态入口。
 
