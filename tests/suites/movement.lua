@@ -64,6 +64,25 @@ local function _test_movement_backward_wrap()
   assert(#res.visited == 1, "visited steps")
 end
 
+local function _run_start_move_with_stale_dir(start_index, stale_dir)
+  local g = _new_game()
+  local p = g:current_player()
+  g:update_player_position(p, start_index)
+  g:set_player_status(p, "move_dir", stale_dir)
+  local res = movement.move(g, p, 2, { branch_parity = 2, skip_market_check = true })
+  return p.position, res
+end
+
+local function _test_movement_fresh_roll_ignores_stale_move_dir()
+  local start_index = 34
+  local left_end = _run_start_move_with_stale_dir(start_index, "left")
+  local right_end = _run_start_move_with_stale_dir(start_index, "right")
+  local up_end = _run_start_move_with_stale_dir(start_index, "up")
+
+  _assert_eq(left_end, right_end, "fresh roll should not inherit stale horizontal direction")
+  _assert_eq(right_end, up_end, "fresh roll should not inherit stale vertical direction")
+end
+
 return {
   name = "movement",
   tests = {
@@ -72,5 +91,6 @@ return {
     { name = "movement_examples_from_issue", run = _test_movement_examples_from_issue },
     { name = "board_indices_in_range_uses_graph_distance", run = _test_board_indices_in_range_uses_graph_distance },
     { name = "movement_backward_wrap", run = _test_movement_backward_wrap },
+    { name = "movement_fresh_roll_ignores_stale_move_dir", run = _test_movement_fresh_roll_ignores_stale_move_dir },
   },
 }

@@ -91,7 +91,7 @@ function movement.move(game, player, steps, opts)
   local steal_interrupt = nil
   local current = player.position
   local start_tile = board:get_tile(current)
-  local facing = opts.direction or player.status.move_dir
+  local facing = opts.direction
   local step_fn = board.step_forward_by_facing
   local backward = steps < 0
   if backward then
