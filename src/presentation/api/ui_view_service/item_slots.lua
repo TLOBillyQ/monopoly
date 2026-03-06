@@ -126,8 +126,9 @@ function M.refresh_item_slots(state, ui_model, opts)
   local items = role_id_utils.read(by_player, display_player_id) or ui_model.item_slots or {}
   local allow_use = ui_model and ui_model.choice and ui_model.choice.kind == "item_phase_choice"
   local choice_owner_id = role_id_utils.normalize(ui_model and ui_model.item_choice_owner_id or ui_model.current_player_id)
-  local refs = state.ui_refs
-  local empty_key = refs["Empty"]
+  local refs = state.ui_refs or {}
+  local image_refs = refs.images or {}
+  local empty_key = image_refs["Empty"]
   local allow_slot_click = allow_use == true
     and allow_interact == true
     and display_player_id ~= nil
@@ -143,7 +144,7 @@ function M.refresh_item_slots(state, ui_model, opts)
     local outline_name = outlines[index]
     local can_pick = false
     if item_id then
-      local image_key = refs[tostring(item_id)] or refs[item_id] or empty_key
+      local image_key = image_refs[tostring(item_id)] or image_refs[item_id] or empty_key
       core.set_item_slot_image(slot_name, image_key)
       can_pick = allow_slot_click and option_id_set[tostring(item_id)] == true
       ui:set_touch_enabled(slot_name, can_pick)

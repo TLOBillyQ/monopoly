@@ -214,14 +214,14 @@ end
 function market_view.refresh_market_selection(state, option_id)
   local ui = state.ui
   assert(ui ~= nil, "missing market ui")
-  local refs = state.ui_refs
-  local icon_key = _resolve_ref_key(refs, market_layout.empty_ref_key)
+  local image_refs = state.ui_refs and state.ui_refs.images or {}
+  local icon_key = _resolve_ref_key(image_refs, market_layout.empty_ref_key)
   assert(option_id ~= nil, "missing market option_id")
   local entry, cfg = _resolve_market_entry(option_id)
   local price = _resolve_market_price(entry)
   local currency = _resolve_market_currency(entry)
   local price_text = tostring(price) .. " " .. currency
-  local resolved_icon_key = _resolve_market_icon_key(refs, option_id, entry, cfg)
+  local resolved_icon_key = _resolve_market_icon_key(image_refs, option_id, entry, cfg)
   if resolved_icon_key ~= nil then
     icon_key = resolved_icon_key
   end
@@ -288,7 +288,8 @@ function market_view.refresh_market(state, market)
 
     ui:set_label(market_layout.price_label, "")
     _clear_market_selection_frames(ui)
-    local empty_key = _resolve_ref_key(state.ui_refs, market_layout.empty_ref_key)
+    local image_refs = state.ui_refs and state.ui_refs.images or {}
+    local empty_key = _resolve_ref_key(image_refs, market_layout.empty_ref_key)
     if empty_key ~= nil then
       local node = ui.query_node(market_layout.selected_card)
       runtime.set_node_texture_keep_size(node, empty_key)
@@ -306,7 +307,7 @@ function market_view.refresh_market(state, market)
   ui:set_visible(market_layout.container, true)
   ui.market_active = true
 
-  local refs = state.ui_refs
+  local refs = state.ui_refs and state.ui_refs.images or {}
   local option_ids = {}
   local buttons = market_layout.item_buttons
   local labels = market_layout.item_labels
@@ -380,7 +381,8 @@ function market_view.close_market_panel(state)
   _set_control_visible(ui, market_layout.tab_skin, false, false)
   _set_control_visible(ui, market_layout.tab_vehicle, false, false)
   _set_cancel_controls(ui, false, false)
-  local empty_key = _resolve_ref_key(state.ui_refs, market_layout.empty_ref_key)
+  local image_refs = state.ui_refs and state.ui_refs.images or {}
+  local empty_key = _resolve_ref_key(image_refs, market_layout.empty_ref_key)
   local node = ui.query_node(market_layout.selected_card)
   runtime.set_node_texture_keep_size(node, empty_key)
 end

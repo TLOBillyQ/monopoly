@@ -1,4 +1,6 @@
-local refs = {
+local refs = {}
+
+refs.images = {
     -- skin
     ["5001"] = 1625626309,
     ["5002"] = 1664857351,

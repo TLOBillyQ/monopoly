@@ -41,6 +41,12 @@ local host_runtime = require("src.presentation.api.HostRuntimePort")
 local target_choice_effects = require("src.presentation.render.TargetChoiceEffects")
 local vec3 = require("fixtures.vec3")
 
+local function _wrap_ui_refs(image_refs)
+  return {
+    images = image_refs or {},
+  }
+end
+
 local function _build_popup_view_state(refs, card_node)
   local function new_node(seed)
     local node = seed or {}
@@ -58,7 +64,7 @@ local function _build_popup_view_state(refs, card_node)
   end
   local state = {
     ui = ui_view.build_ui_state(),
-    ui_refs = refs or { ["Empty"] = "EMPTY" },
+    ui_refs = _wrap_ui_refs(refs or { ["Empty"] = "EMPTY" }),
   }
   state.ui.choice_active = false
   state.ui.market_active = false
@@ -114,7 +120,7 @@ local function _build_choice_modal_state()
     pending_choice_elapsed = 0,
     pending_choice_selected_option_id = nil,
     ui = ui_view.build_ui_state(),
-    ui_refs = { ["Empty"] = "EMPTY" },
+    ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY" }),
   }
   local names = {
     "玩家选择屏", "玩家选择_标题",
@@ -1249,11 +1255,11 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
   end
 
   local state = {
-    ui_refs = {
+    ui_refs = _wrap_ui_refs({
       ["Empty"] = "EMPTY",
       ["2001"] = "ICON2001",
       ["2002"] = "ICON2002",
-    },
+    }),
     ui = {
       item_slots = { "基础_道具槽位1", "基础_道具槽位2", "基础_道具槽位3", "基础_道具槽位4", "基础_道具槽位5" },
       base_hidden_nodes = {
@@ -1521,7 +1527,7 @@ local function _test_ui_view_render_auto_button_keeps_local_touch_when_unmapped_
   local main_view = require("src.presentation.api.UIViewService")
   local touch_logs = {}
   local state = {
-    ui_refs = { ["Empty"] = "EMPTY", ["2001"] = "ICON2001" },
+    ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY", ["2001"] = "ICON2001" }),
     ui = {
       item_slots = { "基础_道具槽位1" },
       base_hidden_nodes = { "基础_行动按钮", "基础_道具槽位1" },
@@ -3103,10 +3109,10 @@ local function _test_market_selection_updates_icon_without_resize()
   end
   local labels = {}
   local state = {
-    ui_refs = {
+    ui_refs = _wrap_ui_refs({
       ["Empty"] = 1001,
       [tostring(option_id)] = 1002,
-    },
+    }),
     ui = {
       set_label = function(_, name, text)
         labels[name] = text
@@ -3137,9 +3143,9 @@ local function _test_market_close_resets_icon_without_resize()
   local state = {
     choice_visible_option_ids = { 1, 2 },
     pending_choice_selected_option_id = 1,
-    ui_refs = {
+    ui_refs = _wrap_ui_refs({
       ["Empty"] = 4321,
-    },
+    }),
     ui = {
       market_active = true,
       set_visible = function(_, name, value)
@@ -3171,14 +3177,14 @@ local function _test_market_view_default_selection_shows_matching_selection_fram
   local entry_b = assert(market_cfg[2], "missing market cfg entry b")
   local visible = {}
   local state = {
-    ui_refs = {
+    ui_refs = _wrap_ui_refs({
       ["Empty"] = 9301,
       ["lv1"] = 9302,
       ["lv2"] = 9303,
       ["lv3"] = 9304,
       [tostring(entry_a.product_id)] = 9305,
       [tostring(entry_b.product_id)] = 9306,
-    },
+    }),
     ui = {
       market_active = false,
       set_label = function() end,
@@ -3216,14 +3222,14 @@ local function _test_market_select_switches_selection_frame()
   local entry_b = assert(market_cfg[2], "missing market cfg entry b")
   local visible = {}
   local state = {
-    ui_refs = {
+    ui_refs = _wrap_ui_refs({
       ["Empty"] = 9401,
       ["lv1"] = 9402,
       ["lv2"] = 9403,
       ["lv3"] = 9404,
       [tostring(entry_a.product_id)] = 9405,
       [tostring(entry_b.product_id)] = 9406,
-    },
+    }),
     ui = {
       market_active = false,
       set_label = function() end,
@@ -3268,14 +3274,14 @@ local function _test_market_view_empty_filtered_tab_hides_selection_frames()
 
   local visible = {}
   local state = {
-    ui_refs = {
+    ui_refs = _wrap_ui_refs({
       ["Empty"] = 9501,
       ["lv1"] = 9502,
       ["lv2"] = 9503,
       ["lv3"] = 9504,
       [tostring(visible_entry.product_id)] = 9505,
       [tostring(hidden_entry.product_id)] = 9506,
-    },
+    }),
     ui = {
       market_active = false,
       set_label = function() end,
@@ -3335,14 +3341,14 @@ local function _test_market_view_refresh_retargets_selection_frame_on_page_chang
   local entry_b = assert(market_cfg[2], "missing market cfg entry b")
   local visible = {}
   local state = {
-    ui_refs = {
+    ui_refs = _wrap_ui_refs({
       ["Empty"] = 9601,
       ["lv1"] = 9602,
       ["lv2"] = 9603,
       ["lv3"] = 9604,
       [tostring(entry_a.product_id)] = 9605,
       [tostring(entry_b.product_id)] = 9606,
-    },
+    }),
     ui = {
       market_active = false,
       set_label = function() end,
@@ -3399,10 +3405,10 @@ local function _test_item_slot_uses_keep_size_path()
     end,
   }
   local state = {
-    ui_refs = {
+    ui_refs = _wrap_ui_refs({
       ["Empty"] = "EMPTY",
       ["2001"] = "ICON2001",
-    },
+    }),
     ui = {
       item_slots = { "基础_道具槽位1" },
       set_touch_enabled = function() end,
@@ -3434,12 +3440,12 @@ local function _test_item_slot_refresh_shows_only_playable_outlines()
   local touch_state = {}
   local visible_state = {}
   local state = {
-    ui_refs = {
+    ui_refs = _wrap_ui_refs({
       ["Empty"] = "EMPTY",
       ["2001"] = "ICON2001",
       ["2002"] = "ICON2002",
       ["2003"] = "ICON2003",
-    },
+    }),
     ui = {
       item_slots = { "基础_道具槽位1", "基础_道具槽位2", "基础_道具槽位3" },
       card_outlines = { "基础_可出牌外框1", "基础_可出牌外框2", "基础_可出牌外框3" },
@@ -3523,14 +3529,14 @@ local function _test_market_view_hides_market_disabled_entries()
   local labels = {}
   local visible = {}
   local state = {
-    ui_refs = {
+    ui_refs = _wrap_ui_refs({
       ["Empty"] = 9001,
       ["lv1"] = 9002,
       ["lv2"] = 9003,
       ["lv3"] = 9004,
       [tostring(hidden_entry.product_id)] = 9005,
       [tostring(visible_entry.product_id)] = 9006,
-    },
+    }),
     ui = {
       market_active = false,
       set_label = function(_, name, text)
@@ -3596,13 +3602,13 @@ local function _test_market_view_unbuyable_option_is_clickable()
   local entry = assert(market_cfg[1], "missing market cfg entry")
   local touch = {}
   local state = {
-    ui_refs = {
+    ui_refs = _wrap_ui_refs({
       ["Empty"] = 9001,
       ["lv1"] = 9002,
       ["lv2"] = 9003,
       ["lv3"] = 9004,
       [tostring(entry.product_id)] = 9005,
-    },
+    }),
     ui = {
       market_active = false,
       set_label = function() end,
@@ -3634,13 +3640,13 @@ local function _test_market_view_hides_disabled_market_tab()
   local visible = {}
   local touch = {}
   local state = {
-    ui_refs = {
+    ui_refs = _wrap_ui_refs({
       ["Empty"] = 9001,
       ["lv1"] = 9002,
       ["lv2"] = 9003,
       ["lv3"] = 9004,
       [tostring(entry.product_id)] = 9005,
-    },
+    }),
     ui = {
       market_active = false,
       set_label = function() end,
@@ -3691,14 +3697,14 @@ local function _test_market_view_invalid_selected_option_falls_back_to_current_v
   assert(entry_a ~= nil and entry_b ~= nil, "missing visible market entries for selected fallback test")
 
   local state = {
-    ui_refs = {
+    ui_refs = _wrap_ui_refs({
       ["Empty"] = 9201,
       ["lv1"] = 9202,
       ["lv2"] = 9203,
       ["lv3"] = 9204,
       [tostring(entry_a.product_id)] = 9205,
       [tostring(entry_b.product_id)] = 9206,
-    },
+    }),
     pending_choice_selected_option_id = nil,
     ui = {
       market_active = false,
@@ -3731,13 +3737,13 @@ local function _test_market_view_page_arrows_visibility_follows_page_count()
   local visible = {}
   local touch = {}
   local state = {
-    ui_refs = {
+    ui_refs = _wrap_ui_refs({
       ["Empty"] = 9101,
       ["lv1"] = 9102,
       ["lv2"] = 9103,
       ["lv3"] = 9104,
       [tostring(entry.product_id)] = 9105,
-    },
+    }),
     ui = {
       market_active = false,
       set_label = function() end,
@@ -3952,10 +3958,10 @@ local function _test_item_phase_confirmed_skips_replay_before_slot_click()
     _item_phase_ask_active = nil,
     _item_phase_confirmed = true,
     _skip_item_slot_highlight_replay_choice_id = 77,
-    ui_refs = {
+    ui_refs = _wrap_ui_refs({
       ["Empty"] = "EMPTY",
       ["2002"] = "ICON2002",
-    },
+    }),
     ui = {
       item_slots = { "基础_道具槽位1" },
       card_outlines = { "基础_可出牌外框1" },
@@ -4021,11 +4027,11 @@ local function _test_item_slot_refresh_item_phase_ask_replays_highlight_then_rev
 
   local state = {
     _item_phase_ask_active = true,
-    ui_refs = {
+    ui_refs = _wrap_ui_refs({
       ["Empty"] = "EMPTY",
       ["2002"] = "ICON2002",
       ["2003"] = "ICON2003",
-    },
+    }),
     ui = {
       item_slots = { "基础_道具槽位1", "基础_道具槽位2", "基础_道具槽位3" },
       card_outlines = { "基础_可出牌外框1", "基础_可出牌外框2", "基础_可出牌外框3" },
@@ -4139,14 +4145,14 @@ local function _test_item_slot_refresh_resets_highlight_without_client_role()
   end
 
   local state = {
-    ui_refs = {
+    ui_refs = _wrap_ui_refs({
       ["Empty"] = "EMPTY",
       ["2002"] = "ICON2002",
       ["2003"] = "ICON2003",
       ["2004"] = "ICON2004",
       ["2007"] = "ICON2007",
       ["2008"] = "ICON2008",
-    },
+    }),
     ui = {
       item_slots = { "基础_道具槽位1", "基础_道具槽位2", "基础_道具槽位3", "基础_道具槽位4", "基础_道具槽位5" },
       card_outlines = { "基础_可出牌外框1", "基础_可出牌外框2", "基础_可出牌外框3", "基础_可出牌外框4", "基础_可出牌外框5" },
@@ -5261,7 +5267,7 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
       }
     },
     ui = ui_view.build_ui_state(),
-    ui_refs = { ["Empty"] = "EMPTY" },
+    ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY" }),
   }
 
   _with_patches(patches, function()
@@ -5385,7 +5391,7 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
       }
     },
     ui = ui_view.build_ui_state(),
-    ui_refs = { ["Empty"] = "EMPTY" },
+    ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY" }),
   }
 
   _with_patches(patches, function()
@@ -5428,7 +5434,7 @@ local function _test_ui_sync_defers_choice_modal_during_wait_action_anim()
   }
   local state = {
     ui = ui_view_service.build_ui_state(),
-    ui_refs = { ["Empty"] = "EMPTY" },
+    ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY" }),
     ui_dirty = true,
     ui_model = nil,
   }
@@ -5488,7 +5494,7 @@ local function _test_ui_sync_opens_choice_modal_after_wait_action_anim()
   }
   local state = {
     ui = ui_view_service.build_ui_state(),
-    ui_refs = { ["Empty"] = "EMPTY" },
+    ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY" }),
     ui_dirty = true,
     ui_model = nil,
   }
@@ -5555,7 +5561,7 @@ local function _test_ui_sync_defers_choice_modal_during_wait_move_anim()
   }
   local state = {
     ui = ui_view_service.build_ui_state(),
-    ui_refs = { ["Empty"] = "EMPTY" },
+    ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY" }),
     ui_dirty = true,
     ui_model = nil,
   }
@@ -5768,7 +5774,7 @@ local function _test_panel_avatar_uses_native_size_path()
   local native_size_calls = 0
   local client_role = { stale = true }
   local state = {
-    ui_refs = { ["Empty"] = "EMPTY_AVATAR" },
+    ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY_AVATAR" }),
     ui = {
       item_slots = {},
       base_hidden_nodes = {},
@@ -5829,7 +5835,7 @@ local function _new_cash_delta_presenter_env(opts)
   local presenter = require("src.presentation.ui.UIPanelPresenter")
   local number_utils = require("src.core.NumberUtils")
   local state = {
-    ui_refs = { ["Empty"] = "EMPTY_AVATAR" },
+    ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY_AVATAR" }),
     ui = {
       item_slots = {},
       base_hidden_nodes = {},

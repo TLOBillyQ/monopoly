@@ -125,7 +125,11 @@ _refresh_runtime_context_for_tests()
 local function build_ui_port(overrides)
   local ui_view = require("src.presentation.api.UIViewService")
   local ui_state = ui_view.build_ui_state()
-  local refs = { ["Empty"] = "EMPTY" }
+  local refs = {
+    images = {
+      ["Empty"] = "EMPTY",
+    },
+  }
   local port = {
     ui = ui_state,
     ui_refs = refs,

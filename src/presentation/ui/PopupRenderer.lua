@@ -30,10 +30,11 @@ local function _resolve_popup_image_key(state, payload)
     return nil
   end
   local refs = state and state.ui_refs or nil
-  if not refs then
+  local image_refs = refs and refs.images or nil
+  if not image_refs then
     return nil
   end
-  return refs[tostring(image_ref)] or refs[image_ref]
+  return image_refs[tostring(image_ref)] or image_refs[image_ref]
 end
 
 local function _set_popup_card_image(state, payload)
@@ -45,7 +46,8 @@ local function _set_popup_card_image(state, payload)
   local card_name = popup.card
   local card_node = ui.query_node(card_name)
   local refs = state and state.ui_refs or nil
-  local empty_key = refs and refs["Empty"] or nil
+  local image_refs = refs and refs.images or nil
+  local empty_key = image_refs and image_refs["Empty"] or nil
   _apply_node_image(ui, card_name, card_node, _resolve_popup_image_key(state, payload), empty_key, function(node, key)
     runtime.set_node_texture_keep_size(node, key)
   end, false)
@@ -121,7 +123,8 @@ local function _set_bankruptcy_avatar_image(state, payload)
   end
   local avatar_node = ui.query_node(screen.avatar)
   local refs = state and state.ui_refs or nil
-  local empty_key = refs and refs["Empty"] or nil
+  local image_refs = refs and refs.images or nil
+  local empty_key = image_refs and image_refs["Empty"] or nil
   -- Avatar policy: keep base panel and bankruptcy popup on the same native-size path.
   _apply_node_image(ui, screen.avatar, avatar_node, _resolve_bankruptcy_avatar_key(payload), empty_key, function(node, key)
     runtime.set_node_texture_native_size(node, key)

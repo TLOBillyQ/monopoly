@@ -9,12 +9,13 @@ local M = {}
 function M.init_ui_assets(state)
   assert(state ~= nil, "missing state")
   local refs = require("Config.RuntimeRefs")
+  local image_refs = refs.images or {}
   state.ui_refs = refs
 
   runtime.for_each_role_or_global(function()
     for index = 1, 5 do
       local ref_id = tostring(3000 + index)
-      local image_key = refs[ref_id]
+      local image_key = image_refs[ref_id]
       assert(image_key ~= nil, "missing item icon: " .. tostring(ref_id))
       core.set_item_slot_image("基础_道具槽位" .. tostring(index), image_key)
     end
