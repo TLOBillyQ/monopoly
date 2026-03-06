@@ -71,9 +71,6 @@ function router.bind(state, resolve_game)
     if actor_role_id == nil then
       host_runtime.show_tips("当前操作缺少玩家上下文，已忽略", 2.0)
       logger.warn("ui intent rejected: missing actor_role_id", tostring(intent.type), tostring(intent.id))
-      if intent.type == "ui_button" and intent.id == "auto" then
-        print("[AutoProbe][Router] rejected: missing actor context")
-      end
       return false
     end
     intent.actor_role_id = actor_role_id

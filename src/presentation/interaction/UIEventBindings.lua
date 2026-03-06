@@ -30,9 +30,6 @@ function bindings.register_node_click(cache, name, callback, registered, listene
     local ok, result = pcall(runtime.query_nodes, name)
     if not ok then
       _show_missing_button_tip(name)
-      if name == always_show_nodes.auto_button then
-        print("[AutoProbe][Binding] auto button register failed: query_nodes error")
-      end
       if name == always_show_nodes.action_log_button then
         logger.info("[调试屏] 行动日志按钮注册失败: query_nodes异常")
       end
@@ -42,18 +39,12 @@ function bindings.register_node_click(cache, name, callback, registered, listene
     cache[name] = nodes
   end
   if not nodes or not nodes[1] then
-    _show_missing_button_tip(name)
-    if name == always_show_nodes.auto_button then
-      print("[AutoProbe][Binding] auto button register failed: missing node")
+      _show_missing_button_tip(name)
+      if name == always_show_nodes.action_log_button then
+        logger.info("[调试屏] 行动日志按钮注册失败: 未找到节点")
+      end
+      return
     end
-    if name == always_show_nodes.action_log_button then
-      logger.info("[调试屏] 行动日志按钮注册失败: 未找到节点")
-    end
-    return
-  end
-  if name == always_show_nodes.action_log_button then
-    logger.info("[调试屏] 行动日志按钮注册成功", "nodes=" .. tostring(#nodes))
-  end
   registered[name] = true
   for _, node in ipairs(nodes) do
     local listener = node:listen(UIManager.EVENT.CLICK, function(data)
@@ -128,7 +119,6 @@ function bindings.enable_action_log_toggle_touch(cache, ui)
   end
 
   pcall(runtime.set_client_role, nil)
-  logger.info("[调试屏] 行动日志触控已启用", "nodes=" .. tostring(enabled_count))
 end
 
 function bindings.register_missing_button_tip(cache, registered, listeners)

@@ -12,7 +12,6 @@ local TAB_VEHICLE = "vehicle"
 local VEHICLE_TAB_ENABLED = false
 local TABS = { TAB_ITEM, TAB_SKIN, TAB_VEHICLE }
 local _emit_event = monopoly_event.emit
-
 local function _contains(list, value)
   for _, v in ipairs(list) do
     if v == value then
@@ -142,17 +141,6 @@ function choice.build(player, game, state)
   local page_count = _resolve_page_count(#visible, PAGE_SIZE)
   local page_index = _clamp_page(state.page_index, page_count)
   local body_lines, options = _build_options_for_page(visible, page_index, PAGE_SIZE)
-  logger.warn(
-    "[MarketDebug] choice_build",
-    "player_id=" .. tostring(player and player.id),
-    "active_tab=" .. tostring(active_tab),
-    "visible_count=" .. tostring(#visible),
-    "buyable_count=" .. tostring(#buyable),
-    "page_index=" .. tostring(page_index),
-    "page_count=" .. tostring(page_count),
-    "options_count=" .. tostring(#options)
-  )
-
   return {
     kind = "market_buy",
     title = "黑市",
@@ -216,13 +204,6 @@ function choice.apply_navigation(game, pending_choice, action)
   elseif action.type == "market_page_next" then
     page_index = page_index + 1
   end
-  logger.warn(
-    "[MarketDebug] apply_navigation begin",
-    "action_type=" .. tostring(action.type),
-    "requested_tab=" .. tostring(action.tab),
-    "resolved_tab=" .. tostring(active_tab),
-    "requested_page=" .. tostring(page_index)
-  )
   local spec = choice.build(player, game, {
     active_tab = active_tab,
     page_index = page_index,
@@ -232,11 +213,6 @@ function choice.apply_navigation(game, pending_choice, action)
     return false
   end
   if #spec.options == 0 then
-    logger.warn(
-      "[MarketDebug] apply_navigation empty_options",
-      "player_id=" .. tostring(player.id),
-      "active_tab=" .. tostring(spec.active_tab)
-    )
     _emit_event(monopoly_event.market.buy_failed, {
       player = player,
       reason = "empty_tab",
@@ -244,13 +220,6 @@ function choice.apply_navigation(game, pending_choice, action)
     })
   end
   _apply_spec(game, pending_choice, spec)
-  logger.warn(
-    "[MarketDebug] apply_navigation done",
-    "active_tab=" .. tostring(pending_choice.active_tab),
-    "page_index=" .. tostring(pending_choice.page_index),
-    "page_count=" .. tostring(pending_choice.page_count),
-    "options_count=" .. tostring(pending_choice.options and #pending_choice.options or 0)
-  )
   return true
 end
 

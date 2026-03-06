@@ -241,15 +241,6 @@ end
 function market_view.refresh_market(state, market)
   local ui = state.ui
   assert(market ~= nil and market.options ~= nil and ui ~= nil, "missing market data/ui")
-  logger.warn(
-    "[MarketDebug] view_refresh begin",
-    "choice_id=" .. tostring(market.choice_id),
-    "active_tab=" .. tostring(market.active_tab),
-    "page_index=" .. tostring(market.page_index),
-    "page_count=" .. tostring(market.page_count),
-    "raw_options_count=" .. tostring(#market.options)
-  )
-
   local options = {}
   for _, opt in ipairs(market.options) do
     local opt_id = opt and (opt.id or opt) or nil
@@ -258,18 +249,7 @@ function market_view.refresh_market(state, market)
       options[#options + 1] = opt
     end
   end
-  logger.warn(
-    "[MarketDebug] view_refresh filtered",
-    "choice_id=" .. tostring(market.choice_id),
-    "filtered_options_count=" .. tostring(#options)
-  )
-
   if #options == 0 then
-    logger.warn(
-      "[MarketDebug] view_refresh empty_tab",
-      "choice_id=" .. tostring(market.choice_id),
-      "active_tab=" .. tostring(market.active_tab)
-    )
     ui:set_visible(market_layout.container, true)
     ui.market_active = true
 
@@ -300,7 +280,6 @@ function market_view.refresh_market(state, market)
     local show_cancel = market.allow_cancel
     _set_cancel_controls(ui, show_cancel, show_cancel)
     modal_state.open_market(state, market.choice_id, {}, nil)
-    logger.warn("[MarketDebug] view_refresh done empty_tab")
     return true
   end
 
@@ -350,13 +329,6 @@ function market_view.refresh_market(state, market)
   end
   modal_state.open_market(state, market.choice_id, option_ids, selected)
   market_view.select_market_option(state, selected)
-  logger.warn(
-    "[MarketDebug] view_refresh done",
-    "choice_id=" .. tostring(market.choice_id),
-    "selected_option_id=" .. tostring(selected),
-    "first_buyable=" .. tostring(first_buyable),
-    "visible_slots=" .. tostring(#option_ids)
-  )
   return true
 end
 

@@ -179,7 +179,6 @@ function target_choice_effects.enter(state, choice)
     target_choice_effects.on_scene_pick(state, option_id, actor_role_id, payload)
   end)
 
-  logger.info("[TargetPick] enter", tostring(choice.id), "options", tostring(#option_ids))
   return true
 end
 
@@ -224,7 +223,6 @@ function target_choice_effects.on_scene_pick(state, option_id, actor_role_id, pa
   end
 
   if resolved_option_id == nil or runtime.option_set[resolved_option_id] ~= true then
-    logger.info("[TargetPick] pick_not_candidate", tostring(resolved_option_id))
     return false
   end
 
@@ -233,7 +231,6 @@ function target_choice_effects.on_scene_pick(state, option_id, actor_role_id, pa
   modal_state.select_choice_option(state, resolved_option_id)
   _sync_buttons(state, true)
   _move_arrow(state.board_scene, resolved_option_id)
-  logger.info("[TargetPick] lock_target", tostring(resolved_option_id), "role", tostring(parsed_role_id))
   return true
 end
 
@@ -251,7 +248,6 @@ function target_choice_effects.on_unlock(state)
   runtime.hover_option_id = nil
   _sync_buttons(state, false)
   _move_arrow(state.board_scene, nil)
-  logger.info("[TargetPick] unlock")
   return true
 end
 
@@ -268,7 +264,6 @@ function target_choice_effects.leave(state, reason)
   _move_arrow(state.board_scene, nil)
   _sync_buttons(state, false)
   state.target_choice_runtime = nil
-  logger.info("[TargetPick] leave", tostring(reason or ""))
   return true
 end
 

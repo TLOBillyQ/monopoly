@@ -9,13 +9,6 @@ local service = {}
 local warned_missing_effect_refs = {}
 local warned_missing_sound_refs = {}
 
-local function _vec3(x, y, z)
-  if math and math.Vector3 then
-    return math.Vector3(x, y, z)
-  end
-  return { x = x, y = y, z = z }
-end
-
 local function _warn(...)
   logger.warn("board_feedback", ...)
 end
@@ -48,14 +41,27 @@ local function _warn_missing_sound_ref_once(cue_name, sound_id_ref, reason)
   )
 end
 
-local function _resolve_scale(value, fallback)
-  if type(value) == "table" then
+local function _resolve_sfx_scale(value, fallback)
+  if number_utils.is_numeric(value) then
     return value
   end
-  if number_utils.is_numeric(value) then
-    return _vec3(value, value, value)
+  if type(value) == "table" then
+    local x = value.x
+    local y = value.y
+    local z = value.z
+    if number_utils.is_numeric(x) and number_utils.is_numeric(y) and number_utils.is_numeric(z) then
+      local resolved_x = x + 0
+      local resolved_y = y + 0
+      local resolved_z = z + 0
+      if resolved_x == resolved_y and resolved_x == resolved_z then
+        return resolved_x
+      end
+    end
   end
-  return fallback or runtime_constants.v3_one
+  if number_utils.is_numeric(fallback) then
+    return fallback
+  end
+  return 1.0
 end
 
 local function _resolve_cue(cue_name)
@@ -139,7 +145,7 @@ local function _play_effect(state, cue_name, cue, pos, unit, payload)
   end
 
   local duration = payload and payload.duration or cue.duration
-  local scale = _resolve_scale(payload and payload.scale or cue.scale, runtime_constants.v3_one)
+  local scale = _resolve_sfx_scale(payload and payload.scale or cue.scale, 1.0)
   local rot = payload and payload.rot or cue.rot or runtime_constants.q_zero
   local rate = payload and payload.rate or cue.rate
   local with_sound = payload and payload.with_sound or cue.with_sound

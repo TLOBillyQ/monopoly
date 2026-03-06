@@ -299,6 +299,7 @@ local function _test_host_runtime_sfx_port_skips_missing_keys_and_routes_valid_c
           sfx_calls[#sfx_calls + 1] = {
             sfx_key = sfx_key,
             pos = pos,
+            scale = scale,
             duration = duration,
           }
           return 101
@@ -316,7 +317,7 @@ local function _test_host_runtime_sfx_port_skips_missing_keys_and_routes_valid_c
     },
   }, function()
     local pos = math.Vector3(1.0, 2.0, 3.0)
-    local sfx_id = host_runtime.play_sfx_by_key(4286, pos, nil, nil, 1.0, nil, false)
+    local sfx_id = host_runtime.play_sfx_by_key(4286, pos, nil, 1.0, 1.0, nil, false)
     local missing_id = host_runtime.play_sfx_by_key(nil, pos, nil, nil, 1.0, nil, false)
     local zero_sfx_id = host_runtime.play_sfx_by_key(0, pos, nil, nil, 1.0, nil, false)
     local string_sfx_id = host_runtime.play_sfx_by_key("fx.valid", pos, nil, nil, 1.0, nil, false)
@@ -337,6 +338,7 @@ local function _test_host_runtime_sfx_port_skips_missing_keys_and_routes_valid_c
 
   assert(#sfx_calls == 1, "invalid sfx keys should not call engine")
   assert(sfx_calls[1].sfx_key == 4286, "sfx key should route unchanged as integer")
+  assert(sfx_calls[1].scale == 1.0, "direct sfx port should pass caller-provided scalar scale")
   assert(#sound_calls == 1, "sound call should route once")
   assert(sound_calls[1].sound_id == 301, "sound id should route unchanged")
 end
@@ -351,6 +353,7 @@ local function _test_board_feedback_effect_id_ref_routes_integer_sfx_key()
       value = function(sfx_key, pos, rot, scale, duration, rate, with_sound)
         effect_calls[#effect_calls + 1] = {
           sfx_key = sfx_key,
+          scale = scale,
           duration = duration,
         }
         return 501
@@ -371,6 +374,7 @@ local function _test_board_feedback_effect_id_ref_routes_integer_sfx_key()
 
   assert(#effect_calls == 1, "effect cue should call engine once")
   assert(effect_calls[1].sfx_key == runtime_refs.effects.upgrade_land_smoke, "effect id ref should resolve to integer sfx key")
+  assert(effect_calls[1].scale == 3.0, "upgrade_land_smoke should use scalar scale")
 end
 
 local function _test_board_feedback_player_effect_binding_keeps_bind_call()
@@ -390,7 +394,7 @@ local function _test_board_feedback_player_effect_binding_keeps_bind_call()
       target = host_runtime,
       key = "play_sfx_by_key",
       value = function(sfx_key, pos, rot, scale, duration, rate, with_sound)
-        effect_calls[#effect_calls + 1] = { sfx_key = sfx_key }
+        effect_calls[#effect_calls + 1] = { sfx_key = sfx_key, scale = scale }
         return 777
       end,
     },
@@ -420,8 +424,69 @@ local function _test_board_feedback_player_effect_binding_keeps_bind_call()
 
   assert(#effect_calls == 1, "player effect should call engine once")
   assert(effect_calls[1].sfx_key == runtime_refs.effects.rich_deity, "player effect should resolve configured integer sfx key")
+  assert(effect_calls[1].scale == 1.4, "player effect should use scalar scale")
   assert(#bind_calls == 1, "player effect should still bind to unit")
   assert(bind_calls[1].sfx_id == 777, "bind call should receive runtime sfx handle")
+end
+
+local function _test_board_feedback_cash_burst_routes_scalar_scale()
+  local effect_calls = {}
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "play_sfx_by_key",
+      value = function(sfx_key, pos, rot, scale, duration, rate, with_sound)
+        effect_calls[#effect_calls + 1] = { sfx_key = sfx_key, scale = scale }
+        return 888
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "play_3d_sound",
+      value = function()
+        return nil
+      end,
+    },
+  }, function()
+    local state = _build_state()
+    local played = board_feedback.play_player_cue(state, "cash_burst", 1, {})
+    assert(played == true, "cash_burst should play")
+  end)
+
+  assert(#effect_calls == 1, "cash_burst should call engine once")
+  assert(effect_calls[1].sfx_key == runtime_refs.effects.cash_burst, "cash_burst should resolve configured integer sfx key")
+  assert(effect_calls[1].scale == 1.6, "cash_burst should use scalar scale")
+end
+
+local function _test_board_feedback_bankruptcy_routes_scalar_scale()
+  local effect_calls = {}
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "play_sfx_by_key",
+      value = function(sfx_key, pos, rot, scale, duration, rate, with_sound)
+        effect_calls[#effect_calls + 1] = { sfx_key = sfx_key, scale = scale }
+        return 999
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "play_3d_sound",
+      value = function()
+        return nil
+      end,
+    },
+  }, function()
+    local state = _build_state()
+    local played = board_feedback.play_player_cue(state, "bankruptcy_slam", 1, {})
+    assert(played == true, "bankruptcy_slam should play")
+  end)
+
+  assert(#effect_calls == 1, "bankruptcy_slam should call engine once")
+  assert(effect_calls[1].sfx_key == runtime_refs.effects.bankruptcy_slam, "bankruptcy should resolve configured integer sfx key")
+  assert(effect_calls[1].scale == 1.0, "bankruptcy should fallback to scalar scale 1.0")
 end
 
 local function _test_board_feedback_unconfigured_effect_id_ref_skips_without_error()
@@ -533,6 +598,14 @@ return {
     {
       name = "board_feedback_player_effect_binding_keeps_bind_call",
       run = _test_board_feedback_player_effect_binding_keeps_bind_call,
+    },
+    {
+      name = "board_feedback_cash_burst_routes_scalar_scale",
+      run = _test_board_feedback_cash_burst_routes_scalar_scale,
+    },
+    {
+      name = "board_feedback_bankruptcy_routes_scalar_scale",
+      run = _test_board_feedback_bankruptcy_routes_scalar_scale,
     },
     {
       name = "board_feedback_unconfigured_effect_id_ref_skips_without_error",

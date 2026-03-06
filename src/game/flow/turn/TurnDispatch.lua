@@ -10,7 +10,6 @@ local role_id_utils = require("src.core.RoleId")
 local turn_dispatch = {}
 
 local next_turn_cooldown = 0.4
-
 local function _reset_afk_tracking(state, actor_role_id)
   if type(state) ~= "table" then
     return
@@ -32,7 +31,6 @@ local function _resolve_actor_player(game, action)
   if not player then
     logger.warn("ui_button actor_role_id not mapped:", tostring(action and action.id), tostring(actor_role_id))
     if action and action.id == "auto" then
-      print("[AutoProbe][TurnDispatch] actor not mapped:", tostring(actor_role_id))
     end
     return nil
   end
@@ -137,17 +135,11 @@ local function _dispatch_action(game, state, action, opts, dispatch_ctx)
     if action.id == "auto" then
       local player = _resolve_actor_player(game, action)
       if not player then
-        print("[AutoProbe][TurnDispatch] auto rejected: actor unresolved")
         return { status = "rejected" }
       end
       local before = player.auto == true
       player.auto = not (player.auto == true)
       _reset_afk_tracking(state, player.id)
-      print(
-        "[AutoProbe][TurnDispatch] auto toggled:",
-        "before=" .. tostring(before),
-        "after=" .. tostring(player.auto == true)
-      )
       return { status = "applied" }
     end
 
@@ -208,15 +200,6 @@ local function _dispatch_action(game, state, action, opts, dispatch_ctx)
   elseif action.type == "market_page_prev" or action.type == "market_page_next" or action.type == "market_tab_select" then
     local turn_choice = game and game.turn and game.turn.pending_choice or nil
     local choice = turn_choice or state.pending_choice
-    logger.warn(
-      "[MarketDebug] dispatch_market_nav received",
-      "action_type=" .. tostring(action.type),
-      "choice_id=" .. tostring(action.choice_id),
-      "tab=" .. tostring(action.tab),
-      "pending_choice_id=" .. tostring(choice and choice.id),
-      "pending_kind=" .. tostring(choice and choice.kind),
-      "choice_source=" .. tostring(turn_choice and "game.turn.pending_choice" or "state.pending_choice")
-    )
     if not choice or choice.kind ~= "market_buy" then
       logger.warn("[MarketDebug] dispatch_market_nav rejected: pending_choice missing or kind not market_buy")
       return { status = "rejected" }
@@ -230,13 +213,6 @@ local function _dispatch_action(game, state, action, opts, dispatch_ctx)
       state.pending_choice = choice
       state.pending_choice_id = choice.id
       state.pending_choice_elapsed = 0
-      logger.warn(
-        "[MarketDebug] dispatch_market_nav applied",
-        "active_tab=" .. tostring(choice.active_tab),
-        "page_index=" .. tostring(choice.page_index),
-        "page_count=" .. tostring(choice.page_count),
-        "options_count=" .. tostring(choice.options and #choice.options or 0)
-      )
       return { status = "applied" }
     end
     logger.warn("[MarketDebug] dispatch_market_nav rejected: apply_navigation failed")
