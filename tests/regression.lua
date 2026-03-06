@@ -132,6 +132,7 @@ local suites = {
   require("presentation_ui_event_bindings"),
   require("presentation_player_colors"),
   require("read_model_contract"),
+  require("architecture_guard_contract"),
   require("usecase_boundary_contract"),
   require("cross_module_contract"),
   require("ui_gate_contract"),

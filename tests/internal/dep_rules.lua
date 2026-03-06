@@ -184,6 +184,66 @@ local forbidden_files = {
   "src/game/core/runtime/MonopolyEvents.lua",
 }
 
+local growth_budget_rules = {
+  {
+    description = "src/core host runtime global touch points are frozen until stage 3 runtime extraction",
+    roots = { "src/core" },
+    patterns = {
+      "%f[%w_]GameAPI%f[^%w_]",
+      "%f[%w_]GlobalAPI%f[^%w_]",
+      "%f[%w_]SetTimeOut%f[^%w_]",
+      "%f[%w_]RegisterTriggerEvent%f[^%w_]",
+      "%f[%w_]RegisterCustomEvent%f[^%w_]",
+    },
+    budget = {
+      ["src/core/Logger.lua"] = 5,
+      ["src/core/RuntimeContext.lua"] = 7,
+      ["src/core/RuntimeEditorExports.lua"] = 6,
+      ["src/core/RuntimeEnvBindings.lua"] = 8,
+      ["src/core/runtime_ports/DefaultPorts.lua"] = 21,
+    },
+  },
+  {
+    description = "gameplay/runtime modules must not add new game.ui_port dependency points before stage 2 port extraction",
+    roots = { "src/game", "src/core" },
+    patterns = {
+      "game%.ui_port",
+      "ui_port%.wait_action_anim",
+      "ui_port%.wait_move_anim",
+      "ui_port:push_popup",
+      "ui_port%.push_popup",
+      "ui_port%.state",
+    },
+    budget = {
+      ["src/core/ActionAnimPort.lua"] = 2,
+      ["src/game/core/runtime/Bankruptcy.lua"] = 3,
+      ["src/game/flow/intent/IntentDispatcher.lua"] = 4,
+      ["src/game/flow/turn/GameplayLoop.lua"] = 1,
+      ["src/game/flow/turn/TurnDecision.lua"] = 3,
+      ["src/game/flow/turn/TurnMove.lua"] = 3,
+      ["src/game/flow/turn/TurnRoll.lua"] = 2,
+      ["src/game/systems/items/ItemInventory.lua"] = 1,
+      ["src/game/systems/items/ItemPhase.lua"] = 1,
+      ["src/game/systems/items/ItemUseBroadcast.lua"] = 1,
+      ["src/game/systems/land/LandingPresenter.lua"] = 1,
+      ["src/game/systems/land/landing_effects/BaseLandEffects.lua"] = 1,
+    },
+  },
+  {
+    description = "turn flow must not add new state.ui_* writes before stage 1 output-port extraction",
+    roots = { "src/game/flow" },
+    patterns = {
+      "state%.ui_[A-Za-z0-9_]+%s*=",
+    },
+    budget = {
+      ["src/game/flow/turn/GameplayLoop.lua"] = 3,
+      ["src/game/flow/turn/GameplayLoopRuntime.lua"] = 1,
+      ["src/game/flow/turn/TickTimeout.lua"] = 8,
+      ["src/game/flow/turn/TurnDispatch.lua"] = 1,
+    },
+  },
+}
+
 local function _is_windows()
   return package.config:sub(1, 1) == "\\"
 end
@@ -274,6 +334,11 @@ end
 
 local function _normalize_path(path)
   return tostring(path or ""):gsub("\\", "/")
+end
+
+local function _to_repo_relpath(path)
+  local normalized = _normalize_path(path)
+  return normalized:match(".*(src/.+)") or normalized:match(".*(tests/.+)") or normalized
 end
 
 local function _to_presentation_relpath(path)
@@ -393,6 +458,77 @@ local function _scan_legacy_policy_usages()
   return nil
 end
 
+local function _count_pattern_hits(line, patterns)
+  local total = 0
+  for _, pattern in ipairs(patterns or {}) do
+    local _, count = line:gsub(pattern, "")
+    total = total + count
+  end
+  return total
+end
+
+local function _scan_growth_budget_rule(rule)
+  local observed = {}
+  for _, root in ipairs(rule.roots or {}) do
+    local files, err = _collect_lua_files(root)
+    if not files then
+      if not tostring(err):find("no lua files found under", 1, true) then
+        return nil, err
+      end
+    else
+      for _, path in ipairs(files) do
+        local relpath = _to_repo_relpath(path)
+        local file = io.open(path, "r")
+        if not file then
+          return nil, "cannot open: " .. tostring(path)
+        end
+        local hits = 0
+        for line in file:lines() do
+          hits = hits + _count_pattern_hits(line, rule.patterns)
+        end
+        file:close()
+        if hits > 0 then
+          observed[relpath] = hits
+          local budget = rule.budget[relpath] or 0
+          if hits > budget then
+            return {
+              path = relpath,
+              line = 1,
+              token = "growth_budget",
+              text = "observed=" .. tostring(hits) .. " budget=" .. tostring(budget),
+              description = rule.description,
+            }
+          end
+          if budget == 0 then
+            return {
+              path = relpath,
+              line = 1,
+              token = "growth_budget",
+              text = "observed=" .. tostring(hits) .. " budget=0",
+              description = rule.description,
+            }
+          end
+        end
+      end
+    end
+  end
+
+  for relpath, budget in pairs(rule.budget or {}) do
+    local hits = observed[relpath] or 0
+    if hits ~= budget then
+      return {
+        path = relpath,
+        line = 1,
+        token = "growth_budget_stale",
+        text = "observed=" .. tostring(hits) .. " budget=" .. tostring(budget),
+        description = rule.description .. " (update budget after debt shrinks)",
+      }
+    end
+  end
+
+  return nil
+end
+
 for _, rule in ipairs(rules) do
   local hit, err = _scan_tree(rule)
   if err and not tostring(err):find("no lua files found under", 1, true) then
@@ -429,6 +565,20 @@ if legacy_usage_hit then
   io.stderr:write("rule: ", legacy_usage_hit.description, "\n")
   io.stderr:write(legacy_usage_hit.text, "\n")
   os.exit(1)
+end
+
+for _, rule in ipairs(growth_budget_rules) do
+  local hit, err = _scan_growth_budget_rule(rule)
+  if err and not tostring(err):find("no lua files found under", 1, true) then
+    io.stderr:write("dep_rules error: ", err, "\n")
+    os.exit(1)
+  end
+  if hit then
+    io.stderr:write("dep_rules violation: ", hit.path, ":", hit.line, " contains ", hit.token, "\n")
+    io.stderr:write("rule: ", hit.description, "\n")
+    io.stderr:write(hit.text, "\n")
+    os.exit(1)
+  end
 end
 
 for _, path in ipairs(forbidden_files) do
