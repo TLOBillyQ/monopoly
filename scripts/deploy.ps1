@@ -5,6 +5,7 @@
 .DESCRIPTION
     该脚本要求在 PowerShell 7 (pwsh) 环境执行。
     默认拷贝 Config/、src/ 目录以及 Data/UIManagerNodes.lua、Data/Prefab.lua 和 main.lua 到目标目录。
+    Windows 与 macOS 在未传 -TargetPath 时都会默认部署到“开发/发布”两个目录。
     如需额外拷贝 vendor/，请传入 -IncludeVendor 参数。
 .PARAMETER TargetPath
     目标目录的绝对路径
@@ -26,6 +27,9 @@
     pwsh -File .\deploy.ps1 -Mode release
 .EXAMPLE
     pwsh -File .\deploy.ps1 -Mode release -AllowReleaseTestProfile -StartupProfile "items_target_disrupt"
+# macOS 默认目录:
+#   /Users/billyq/Documents/eggy/LuaSource_大富翁-开发
+#   /Users/billyq/Documents/eggy/LuaSource_大富翁-发布
 #>
 
 param(
@@ -130,7 +134,10 @@ if (-not $TargetPath) {
             "C:\\Users\\Lzx_8\\Desktop\\dev\\LuaSource_大富翁-发布"
         )
     } elseif ($IsMacOS) {
-        $TargetPaths = @("/Users/billyq/Documents/eggy/LuaSource_monopoly")
+        $TargetPaths = @(
+            "/Users/billyq/Documents/eggy/LuaSource_大富翁-开发",
+            "/Users/billyq/Documents/eggy/LuaSource_大富翁-发布"
+        )
     } else {
         Write-Host "✗ 不支持的系统平台，请显式传入 -TargetPath" -ForegroundColor Red
         exit 1
@@ -274,4 +281,3 @@ foreach ($TargetPath in $TargetPaths) {
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host "部署完成！" -ForegroundColor Green
 Write-Host "======================================" -ForegroundColor Cyan
-
