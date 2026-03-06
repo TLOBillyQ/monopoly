@@ -144,19 +144,16 @@ end
 
 local function _test_runtime_ports_resolve_roles_refreshes_empty_context_from_game_api()
   _reset_runtime_contract_state()
-  local ctx = runtime_context.new({})
+  local ctx = runtime_context.new({
+    GameAPI = {
+      get_all_valid_roles = function()
+        return { { id = 9 } }
+      end,
+    },
+  })
   ctx.roles = {}
   runtime_context.set_current(ctx)
-  _with_patches({
-    {
-      key = "GameAPI",
-      value = {
-        get_all_valid_roles = function()
-          return { { id = 9 } }
-        end,
-      },
-    },
-  }, function()
+  _with_patches({}, function()
     local roles = runtime_ports.resolve_roles()
     _assert_eq(#roles, 1, "resolve_roles should refresh empty context roles from GameAPI")
     _assert_eq(roles[1].id, 9, "resolve_roles should return refreshed role id")

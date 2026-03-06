@@ -52,9 +52,29 @@ local function assert_eq(a, b, msg)
 end
 
 local function _refresh_runtime_context_for_tests()
+  local lua_api = {}
+  local set_timeout = SetTimeOut
+  if type(LuaAPI) == "table" then
+    for key, value in pairs(LuaAPI) do
+      lua_api[key] = value
+    end
+  end
+  if type(set_timeout) == "function" then
+    lua_api.call_delay_time = function(delay, fn)
+      return set_timeout(delay, fn)
+    end
+  elseif type(lua_api.call_delay_time) ~= "function" then
+    lua_api.call_delay_time = function(_, fn)
+      if fn then
+        fn()
+        return true
+      end
+      return false
+    end
+  end
   local ctx = runtime_context.new({
     GameAPI = GameAPI,
-    LuaAPI = LuaAPI,
+    LuaAPI = lua_api,
   })
   if type(all_roles) == "table" then
     ctx.roles = all_roles

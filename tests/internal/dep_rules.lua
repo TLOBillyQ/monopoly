@@ -200,7 +200,7 @@ local growth_budget_rules = {
       ["src/core/RuntimeContext.lua"] = 7,
       ["src/core/RuntimeEditorExports.lua"] = 6,
       ["src/core/RuntimeEnvBindings.lua"] = 8,
-      ["src/core/runtime_ports/DefaultPorts.lua"] = 21,
+      ["src/core/runtime_ports/DefaultPorts.lua"] = 0,
     },
   },
   {

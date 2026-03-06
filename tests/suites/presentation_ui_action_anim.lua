@@ -6,6 +6,7 @@ local board_feedback = require("src.presentation.render.BoardFeedbackService")
 local runtime_refs = require("Config.RuntimeRefs")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local logger = require("src.core.Logger")
+local runtime_context = require("src.core.RuntimeContext")
 
 if not math.Vector3 then
   function math.Vector3(x, y, z)
@@ -14,17 +15,57 @@ if not math.Vector3 then
 end
 
 local function _with_patches(patches, fn)
+  local function _refresh_runtime_ctx()
+    local lua_api = {}
+    if type(LuaAPI) == "table" then
+      for key, value in pairs(LuaAPI) do
+        lua_api[key] = value
+      end
+    end
+    if type(SetTimeOut) == "function" then
+      lua_api.call_delay_time = function(delay, cb)
+        return SetTimeOut(delay, cb)
+      end
+    elseif type(lua_api.call_delay_time) ~= "function" then
+      lua_api.call_delay_time = function(_, cb)
+        if cb then
+          cb()
+          return true
+        end
+        return false
+      end
+    end
+    runtime_context.set_current(runtime_context.new({
+      GameAPI = GameAPI,
+      LuaAPI = lua_api,
+    }))
+    logger.configure_host_runtime({
+      game_api = GameAPI,
+      tip_presenter = function(text, duration)
+        if GlobalAPI and type(GlobalAPI.show_tips) == "function" then
+          return GlobalAPI.show_tips(text, duration)
+        end
+        return false
+      end,
+      scheduler = function(delay, cb)
+        return lua_api.call_delay_time(delay, cb)
+      end,
+    })
+  end
+
   local originals = {}
   for i, patch in ipairs(patches) do
     local target = patch.target or _G
     originals[i] = { target = target, key = patch.key, value = target[patch.key] }
     target[patch.key] = patch.value
   end
+  _refresh_runtime_ctx()
   local ok, err = xpcall(fn, debug.traceback)
   for i = #originals, 1, -1 do
     local patch = originals[i]
     patch.target[patch.key] = patch.value
   end
+  _refresh_runtime_ctx()
   if not ok then
     error(err)
   end

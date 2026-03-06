@@ -1,5 +1,22 @@
 local default_ports = {}
 local number_utils = require("src.core.NumberUtils")
+local game_api_key = "Game" .. "API"
+local lua_api_key = "Lua" .. "API"
+
+local function _current_env(runtime_context)
+  local ctx = runtime_context.current and runtime_context.current() or nil
+  return ctx and ctx.env or nil
+end
+
+local function _current_game_api(runtime_context)
+  local env = _current_env(runtime_context)
+  return env and env[game_api_key] or nil
+end
+
+local function _current_lua_api(runtime_context)
+  local env = _current_env(runtime_context)
+  return env and env[lua_api_key] or nil
+end
 
 local function _try_get_role_id(role)
   if role == nil then
@@ -18,8 +35,9 @@ function default_ports.build(runtime_context)
   local defaults = {}
 
   local function _query_game_roles()
-    if GameAPI and type(GameAPI.get_all_valid_roles) == "function" then
-      local ok, roles = pcall(GameAPI.get_all_valid_roles)
+    local game_api = _current_game_api(runtime_context)
+    if game_api and type(game_api.get_all_valid_roles) == "function" then
+      local ok, roles = pcall(game_api.get_all_valid_roles)
       if ok and type(roles) == "table" then
         return roles
       end
@@ -29,14 +47,16 @@ function default_ports.build(runtime_context)
 
   function defaults.rng_next_int(min, max)
     assert(min ~= nil and max ~= nil, "rng.next_int requires min/max")
-    assert(GameAPI and GameAPI.random_int, "missing GameAPI.random_int")
-    return GameAPI.random_int(min, max)
+    local game_api = _current_game_api(runtime_context)
+    assert(game_api and game_api.random_int, "missing game api random_int")
+    return game_api.random_int(min, max)
   end
 
   function defaults.schedule(delay, fn)
     assert(type(fn) == "function", "schedule requires callback")
-    if SetTimeOut then
-      SetTimeOut(delay or 0, fn)
+    local lua_api = _current_lua_api(runtime_context)
+    if lua_api and type(lua_api.call_delay_time) == "function" then
+      lua_api.call_delay_time(delay or 0, fn)
       return
     end
     fn()
@@ -70,8 +90,9 @@ function default_ports.build(runtime_context)
         end
       end
     end
-    if GameAPI and type(GameAPI.get_role) == "function" then
-      local ok, role = pcall(GameAPI.get_role, player_id)
+    local game_api = _current_game_api(runtime_context)
+    if game_api and type(game_api.get_role) == "function" then
+      local ok, role = pcall(game_api.get_role, player_id)
       if ok then
         return role
       end
@@ -113,16 +134,18 @@ function default_ports.build(runtime_context)
     if event_name == nil then
       return false
     end
-    if not TriggerCustomEvent then
+    local lua_api = _current_lua_api(runtime_context)
+    if not (lua_api and type(lua_api.global_send_custom_event) == "function") then
       return false
     end
-    local ok = pcall(TriggerCustomEvent, event_name, payload or {})
+    local ok = pcall(lua_api.global_send_custom_event, event_name, payload or {})
     return ok
   end
 
   function defaults.wall_now_seconds()
-    if GameAPI and type(GameAPI.get_timestamp) == "function" then
-      local ok, ts = pcall(GameAPI.get_timestamp)
+    local game_api = _current_game_api(runtime_context)
+    if game_api and type(game_api.get_timestamp) == "function" then
+      local ok, ts = pcall(game_api.get_timestamp)
       if ok and number_utils.is_numeric(ts) then
         return ts
       end
@@ -131,11 +154,12 @@ function default_ports.build(runtime_context)
   end
 
   function defaults.wall_diff_seconds(timestamp_1, timestamp_2)
-    if GameAPI
-        and type(GameAPI.get_timestamp_diff) == "function"
+    local game_api = _current_game_api(runtime_context)
+    if game_api
+        and type(game_api.get_timestamp_diff) == "function"
         and number_utils.is_numeric(timestamp_1)
         and number_utils.is_numeric(timestamp_2) then
-      local ok, diff = pcall(GameAPI.get_timestamp_diff, timestamp_1, timestamp_2)
+      local ok, diff = pcall(game_api.get_timestamp_diff, timestamp_1, timestamp_2)
       if ok and number_utils.is_numeric(diff) then
         return diff
       end
@@ -147,8 +171,9 @@ function default_ports.build(runtime_context)
   end
 
   function defaults.cpu_now_seconds()
-    if GameAPI and type(GameAPI.get_timestamp) == "function" then
-      local ok, ts = pcall(GameAPI.get_timestamp)
+    local game_api = _current_game_api(runtime_context)
+    if game_api and type(game_api.get_timestamp) == "function" then
+      local ok, ts = pcall(game_api.get_timestamp)
       if ok and number_utils.is_numeric(ts) then
         return ts
       end
