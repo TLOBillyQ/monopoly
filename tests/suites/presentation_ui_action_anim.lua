@@ -3,6 +3,7 @@ local runtime_port = require("src.presentation.api.UIRuntimePort")
 local handlers = require("src.presentation.render.ActionAnimHandlers")
 local host_runtime = require("src.presentation.api.HostRuntimePort")
 local board_feedback = require("src.presentation.render.BoardFeedbackService")
+local runtime_refs = require("Config.RuntimeRefs")
 
 if not math.Vector3 then
   function math.Vector3(x, y, z)
@@ -315,8 +316,10 @@ local function _test_host_runtime_sfx_port_skips_missing_keys_and_routes_valid_c
     },
   }, function()
     local pos = math.Vector3(1.0, 2.0, 3.0)
-    local sfx_id = host_runtime.play_sfx_by_key("fx.valid", pos, nil, nil, 1.0, nil, false)
+    local sfx_id = host_runtime.play_sfx_by_key(4286, pos, nil, nil, 1.0, nil, false)
     local missing_id = host_runtime.play_sfx_by_key(nil, pos, nil, nil, 1.0, nil, false)
+    local zero_sfx_id = host_runtime.play_sfx_by_key(0, pos, nil, nil, 1.0, nil, false)
+    local string_sfx_id = host_runtime.play_sfx_by_key("fx.valid", pos, nil, nil, 1.0, nil, false)
     local sound_id = host_runtime.play_3d_sound(pos, 301, 0.8, 1.0)
     local missing_sound_id = host_runtime.play_3d_sound(pos, nil, 0.8, 1.0)
     local zero_sound_id = host_runtime.play_3d_sound(pos, 0, 0.8, 1.0)
@@ -324,16 +327,125 @@ local function _test_host_runtime_sfx_port_skips_missing_keys_and_routes_valid_c
 
     assert(sfx_id == 101, "valid sfx call should return engine id")
     assert(missing_id == nil, "missing sfx key should skip safely")
+    assert(zero_sfx_id == nil, "zero sfx key should skip safely")
+    assert(string_sfx_id == nil, "string sfx key should skip safely")
     assert(sound_id == 202, "valid sound call should return engine id")
     assert(missing_sound_id == nil, "missing sound id should skip safely")
     assert(zero_sound_id == nil, "zero sound id should skip safely")
     assert(string_sound_id == nil, "string sound id should skip safely")
   end)
 
-  assert(#sfx_calls == 1, "missing sfx key should not call engine")
-  assert(sfx_calls[1].sfx_key == "fx.valid", "sfx key should route unchanged")
+  assert(#sfx_calls == 1, "invalid sfx keys should not call engine")
+  assert(sfx_calls[1].sfx_key == 4286, "sfx key should route unchanged as integer")
   assert(#sound_calls == 1, "sound call should route once")
   assert(sound_calls[1].sound_id == 301, "sound id should route unchanged")
+end
+
+local function _test_board_feedback_effect_id_ref_routes_integer_sfx_key()
+  local effect_calls = {}
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "play_sfx_by_key",
+      value = function(sfx_key, pos, rot, scale, duration, rate, with_sound)
+        effect_calls[#effect_calls + 1] = {
+          sfx_key = sfx_key,
+          duration = duration,
+        }
+        return 501
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "play_3d_sound",
+      value = function()
+        return nil
+      end,
+    },
+  }, function()
+    local state = _build_state()
+    local played = board_feedback.play_tile_cue(state, "upgrade_land_smoke", 1, {})
+    assert(played == true, "configured effect cue should play")
+  end)
+
+  assert(#effect_calls == 1, "effect cue should call engine once")
+  assert(effect_calls[1].sfx_key == runtime_refs.effects.upgrade_land_smoke, "effect id ref should resolve to integer sfx key")
+end
+
+local function _test_board_feedback_player_effect_binding_keeps_bind_call()
+  local effect_calls = {}
+  local bind_calls = {}
+  local state = _build_state()
+  state.board_scene.units_by_player_id = {
+    [1] = {
+      get_position = function()
+        return math.Vector3(1.0, 2.0, 3.0)
+      end,
+    },
+  }
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "play_sfx_by_key",
+      value = function(sfx_key, pos, rot, scale, duration, rate, with_sound)
+        effect_calls[#effect_calls + 1] = { sfx_key = sfx_key }
+        return 777
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "bind_sfx_to_unit",
+      value = function(sfx_id, unit, socket_name, pos, bind_type)
+        bind_calls[#bind_calls + 1] = {
+          sfx_id = sfx_id,
+          socket_name = socket_name,
+          pos = pos,
+        }
+        return true
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "play_3d_sound",
+      value = function()
+        return nil
+      end,
+    },
+  }, function()
+    local played = board_feedback.play_player_cue(state, "rich_deity", 1, {})
+    assert(played == true, "bound player effect should play")
+  end)
+
+  assert(#effect_calls == 1, "player effect should call engine once")
+  assert(effect_calls[1].sfx_key == runtime_refs.effects.rich_deity, "player effect should resolve configured integer sfx key")
+  assert(#bind_calls == 1, "player effect should still bind to unit")
+  assert(bind_calls[1].sfx_id == 777, "bind call should receive runtime sfx handle")
+end
+
+local function _test_board_feedback_unconfigured_effect_id_ref_skips_without_error()
+  local play_calls = 0
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "play_sfx_by_key",
+      value = function()
+        play_calls = play_calls + 1
+        return 1
+      end,
+    },
+  }, function()
+    local state = _build_state()
+    local played = board_feedback.play_tile_cue(state, "upgrade_land_smoke", 1, {
+      effect_id_ref = "missing_effect_ref_for_test",
+      sound_id_ref = "missing_sound_ref_for_test",
+    })
+    assert(played == true, "followup sound scheduling may still keep cue successful")
+  end)
+
+  assert(play_calls == 0, "missing effect ref should not call engine")
 end
 
 local function _test_action_anim_upgrade_land_routes_board_feedback()
@@ -413,6 +525,18 @@ return {
     {
       name = "host_runtime_sfx_port_skips_missing_keys_and_routes_valid_calls",
       run = _test_host_runtime_sfx_port_skips_missing_keys_and_routes_valid_calls,
+    },
+    {
+      name = "board_feedback_effect_id_ref_routes_integer_sfx_key",
+      run = _test_board_feedback_effect_id_ref_routes_integer_sfx_key,
+    },
+    {
+      name = "board_feedback_player_effect_binding_keeps_bind_call",
+      run = _test_board_feedback_player_effect_binding_keeps_bind_call,
+    },
+    {
+      name = "board_feedback_unconfigured_effect_id_ref_skips_without_error",
+      run = _test_board_feedback_unconfigured_effect_id_ref_skips_without_error,
     },
     { name = "action_anim_upgrade_land_routes_board_feedback", run = _test_action_anim_upgrade_land_routes_board_feedback },
     { name = "action_anim_cash_receive_routes_board_feedback", run = _test_action_anim_cash_receive_routes_board_feedback },

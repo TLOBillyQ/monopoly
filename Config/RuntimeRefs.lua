@@ -73,32 +73,42 @@ refs.images = {
 }
 
 refs.audio = {
-    -- TODO: 按 Eggy 运行时音频资源 ID 补填；0 表示尚未配置，运行时会安全跳过。
-    item_stop_highlight = 0,
-    cash_receive = 0,
-    mountain_stun = 0,
-    hospital_shock = 0,
-    mine_blast = 0,
-    tax_wave = 0,
-    rich_deity = 0,
-    angel_deity = 0,
-    move_step_pounce = 0,
-    bankruptcy_slam = 0,
-    generic_negative = 0,
-    turn_started = 0,
+    -- 音效资源 ID 来自 .agents/research.md
+    cash_receive = 3814,
+    mountain_stun = 5112,
+    hospital_shock = 5112,
+    mine_blast = 5112,
+    tax_wave = 5112,
+    move_step_pounce = 5083,
+    bankruptcy_slam = 4232,
+    generic_negative = 5112,
+    turn_started = 4233,
+}
+
+refs.effects = {
+    -- 特效资源 ID 来自 .agents/research.md
+    item_stop_highlight = 2346,
+    upgrade_land_smoke = 4286,
+    cash_burst = 3414,
+    mountain_stun = 1973,
+    hospital_shock = 4185,
+    mine_blast = 1288,
+    tax_wave = 2165,
+    rich_deity = 4845,
+    angel_deity = 2359,
+    bankruptcy_slam = 4278,
 }
 
 refs.board_feedback = {
     item_stop_highlight = {
-        effect_key = "fx.board.item_stop_highlight",
-        sound_id_ref = "item_stop_highlight",
+        effect_id_ref = "item_stop_highlight",
         scale = 1.8,
         duration = 1.2,
         volume = 1.0,
         allow_missing_resource = true,
     },
     upgrade_land_smoke = {
-        effect_key = "fx.board.upgrade_land_smoke",
+        effect_id_ref = "upgrade_land_smoke",
         sound_id_ref = "cash_receive",
         scale = 3.0,
         duration = 1.0,
@@ -109,7 +119,7 @@ refs.board_feedback = {
         allow_missing_resource = true,
     },
     cash_burst = {
-        effect_key = "fx.board.cash_burst",
+        effect_id_ref = "cash_burst",
         sound_id_ref = "cash_receive",
         scale = 1.6,
         duration = 1.0,
@@ -117,7 +127,7 @@ refs.board_feedback = {
         allow_missing_resource = true,
     },
     mountain_stun = {
-        effect_key = "fx.board.mountain_stun",
+        effect_id_ref = "mountain_stun",
         sound_id_ref = "mountain_stun",
         scale = 1.6,
         duration = 1.2,
@@ -125,7 +135,7 @@ refs.board_feedback = {
         allow_missing_resource = true,
     },
     hospital_shock = {
-        effect_key = "fx.board.hospital_shock",
+        effect_id_ref = "hospital_shock",
         sound_id_ref = "hospital_shock",
         scale = 1.8,
         duration = 1.2,
@@ -133,7 +143,7 @@ refs.board_feedback = {
         allow_missing_resource = true,
     },
     mine_blast = {
-        effect_key = "fx.board.mine_blast",
+        effect_id_ref = "mine_blast",
         sound_id_ref = "mine_blast",
         scale = 2.0,
         duration = 1.0,
@@ -141,7 +151,7 @@ refs.board_feedback = {
         allow_missing_resource = true,
     },
     tax_wave = {
-        effect_key = "fx.board.tax_wave",
+        effect_id_ref = "tax_wave",
         sound_id_ref = "tax_wave",
         scale = 1.6,
         duration = 1.0,
@@ -149,8 +159,7 @@ refs.board_feedback = {
         allow_missing_resource = true,
     },
     rich_deity = {
-        effect_key = "fx.board.rich_deity",
-        sound_id_ref = "rich_deity",
+        effect_id_ref = "rich_deity",
         scale = 1.4,
         duration = 2.0,
         volume = 1.0,
@@ -160,8 +169,7 @@ refs.board_feedback = {
         allow_missing_resource = true,
     },
     angel_deity = {
-        effect_key = "fx.board.angel_deity",
-        sound_id_ref = "angel_deity",
+        effect_id_ref = "angel_deity",
         scale = 1.4,
         duration = 2.0,
         volume = 1.0,
@@ -177,6 +185,7 @@ refs.board_feedback = {
         allow_missing_resource = true,
     },
     bankruptcy_slam = {
+        effect_id_ref = "bankruptcy_slam",
         sound_id_ref = "bankruptcy_slam",
         duration = 1.0,
         volume = 1.0,

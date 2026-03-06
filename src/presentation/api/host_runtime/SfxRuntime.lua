@@ -3,17 +3,14 @@ local number_utils = require("src.core.NumberUtils")
 
 local sfx_runtime = {}
 
-local function _has_non_empty_text(value)
-  return type(value) == "string" and value ~= ""
-end
-
 local function _warn_skip(...)
   logger.warn("board_feedback", ...)
 end
 
 function sfx_runtime.play_sfx_by_key(sfx_key, pos, rot, scale, duration, rate, with_sound)
-  if not _has_non_empty_text(sfx_key) then
-    _warn_skip("skip play_sfx_by_key: missing sfx_key")
+  local resolved_sfx_key = number_utils.to_integer(sfx_key)
+  if resolved_sfx_key == nil or resolved_sfx_key <= 0 then
+    _warn_skip("skip play_sfx_by_key: invalid sfx_key", tostring(sfx_key))
     return nil
   end
   local game_api = GameAPI
@@ -21,9 +18,9 @@ function sfx_runtime.play_sfx_by_key(sfx_key, pos, rot, scale, duration, rate, w
     _warn_skip("skip play_sfx_by_key: missing GameAPI.play_sfx_by_key")
     return nil
   end
-  local ok, sfx_id = pcall(game_api.play_sfx_by_key, sfx_key, pos, rot, scale, duration, rate, with_sound)
+  local ok, sfx_id = pcall(game_api.play_sfx_by_key, resolved_sfx_key, pos, rot, scale, duration, rate, with_sound)
   if not ok then
-    _warn_skip("play_sfx_by_key failed:", tostring(sfx_key))
+    _warn_skip("play_sfx_by_key failed:", tostring(resolved_sfx_key))
     return nil
   end
   return sfx_id

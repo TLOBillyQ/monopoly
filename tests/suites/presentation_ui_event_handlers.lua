@@ -130,9 +130,9 @@ local function _test_turn_started_feedback_routes_to_player_cue()
   assert(calls[1].player_id == 2, "turn_started should target payload player id")
 end
 
-local function _test_turn_started_feedback_skips_unconfigured_audio_without_error()
+local function _test_turn_started_feedback_routes_configured_audio_without_error()
   local handlers = {}
-  local play_3d_sound_calls = 0
+  local play_3d_sound_calls = {}
 
   _with_patches({
     {
@@ -146,8 +146,12 @@ local function _test_turn_started_feedback_skips_unconfigured_audio_without_erro
     {
       target = host_runtime,
       key = "play_3d_sound",
-      value = function()
-        play_3d_sound_calls = play_3d_sound_calls + 1
+      value = function(pos, sound_id, duration, volume)
+        play_3d_sound_calls[#play_3d_sound_calls + 1] = {
+          sound_id = sound_id,
+          duration = duration,
+          volume = volume,
+        }
         return 123
       end,
     },
@@ -174,7 +178,8 @@ local function _test_turn_started_feedback_skips_unconfigured_audio_without_erro
     handler(nil, nil, { player_id = 2 })
   end)
 
-  assert(play_3d_sound_calls == 0, "unconfigured turn_started audio should skip without calling engine")
+  assert(#play_3d_sound_calls == 1, "configured turn_started audio should call engine once")
+  assert(play_3d_sound_calls[1].sound_id == 4233, "turn_started should resolve configured integer sound id")
 end
 
 local function _test_status_applied_feedback_prefers_tile_cue()
@@ -324,8 +329,8 @@ return {
       run = _test_turn_started_feedback_routes_to_player_cue,
     },
     {
-      name = "turn_started_feedback_skips_unconfigured_audio_without_error",
-      run = _test_turn_started_feedback_skips_unconfigured_audio_without_error,
+      name = "turn_started_feedback_routes_configured_audio_without_error",
+      run = _test_turn_started_feedback_routes_configured_audio_without_error,
     },
     {
       name = "status_applied_feedback_prefers_tile_cue",

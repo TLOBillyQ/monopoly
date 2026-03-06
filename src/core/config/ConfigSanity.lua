@@ -62,7 +62,19 @@ end
 local function _validate_board_feedback_audio_refs()
   local cues = runtime_refs.board_feedback or {}
   local audio_refs = runtime_refs.audio or {}
+  local effect_refs = runtime_refs.effects or {}
   for cue_name, cue in pairs(cues) do
+    local effect_id_ref = cue and cue.effect_id_ref or nil
+    if effect_id_ref ~= nil then
+      assert(
+        effect_refs[effect_id_ref] ~= nil,
+        "board feedback cue references unknown effect_id_ref: "
+          .. tostring(effect_id_ref)
+          .. " (cue_name="
+          .. tostring(cue_name)
+          .. ")"
+      )
+    end
     local sound_id_ref = cue and cue.sound_id_ref or nil
     if sound_id_ref ~= nil then
       assert(

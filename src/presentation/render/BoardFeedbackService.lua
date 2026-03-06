@@ -6,6 +6,7 @@ local host_runtime = require("src.presentation.api.HostRuntimePort")
 local catalog = require("src.presentation.render.BoardFeedbackCatalog")
 
 local service = {}
+local warned_missing_effect_refs = {}
 local warned_missing_sound_refs = {}
 
 local function _vec3(x, y, z)
@@ -17,6 +18,20 @@ end
 
 local function _warn(...)
   logger.warn("board_feedback", ...)
+end
+
+local function _warn_missing_effect_ref_once(cue_name, effect_id_ref, reason)
+  local key = tostring(cue_name) .. "|" .. tostring(effect_id_ref) .. "|" .. tostring(reason)
+  if warned_missing_effect_refs[key] then
+    return
+  end
+  warned_missing_effect_refs[key] = true
+  _warn(
+    "skip play_sfx_by_key:",
+    "cue_name=" .. tostring(cue_name),
+    "effect_id_ref=" .. tostring(effect_id_ref),
+    "reason=" .. tostring(reason)
+  )
 end
 
 local function _warn_missing_sound_ref_once(cue_name, sound_id_ref, reason)
@@ -106,12 +121,21 @@ local function _schedule_followup_sound(cue_name, pos, entry)
 end
 
 local function _play_effect(state, cue_name, cue, pos, unit, payload)
-  local effect_key = payload and payload.effect_key or cue.effect_key
-  if type(effect_key) ~= "string" or effect_key == "" then
-    if cue.allow_missing_resource ~= true then
-      _warn("skip cue effect with missing effect_key:", tostring(cue_name))
+  local effect_id = number_utils.to_integer(payload and payload.effect_id or nil)
+  if effect_id == nil then
+    local effect_id_ref = payload and payload.effect_id_ref or cue.effect_id_ref
+    if type(effect_id_ref) ~= "string" or effect_id_ref == "" then
+      if cue.allow_missing_resource ~= true then
+        _warn("skip cue effect with missing effect_id_ref:", tostring(cue_name))
+      end
+      return false
     end
-    return false
+    local effect_refs = runtime_refs.effects or {}
+    effect_id = number_utils.to_integer(effect_refs[effect_id_ref])
+    if effect_id == nil or effect_id <= 0 then
+      _warn_missing_effect_ref_once(cue_name, effect_id_ref, "missing_or_unconfigured")
+      return false
+    end
   end
 
   local duration = payload and payload.duration or cue.duration
@@ -119,7 +143,7 @@ local function _play_effect(state, cue_name, cue, pos, unit, payload)
   local rot = payload and payload.rot or cue.rot or runtime_constants.q_zero
   local rate = payload and payload.rate or cue.rate
   local with_sound = payload and payload.with_sound or cue.with_sound
-  local sfx_id = host_runtime.play_sfx_by_key(effect_key, pos, rot, scale, duration, rate, with_sound)
+  local sfx_id = host_runtime.play_sfx_by_key(effect_id, pos, rot, scale, duration, rate, with_sound)
   if sfx_id == nil then
     return false
   end
