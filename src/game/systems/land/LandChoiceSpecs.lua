@@ -2,8 +2,10 @@ local land_choice_specs = {}
 
 local function _build_use_skip(kind, title, body_lines, meta, labels)
   labels = labels or {}
+  local owner_role_id = meta and meta.player_id or nil
   return {
     kind = kind,
+    owner_role_id = owner_role_id,
     route_key = "base_inline",
     requires_confirm = false,
     title = title,

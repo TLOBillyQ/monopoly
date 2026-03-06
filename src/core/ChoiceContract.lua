@@ -29,12 +29,7 @@ function choice_contract.copy_explicit_fields(source, target)
 end
 
 function choice_contract.resolve_owner_role_id(choice)
-  local owner_role_id = choice and number_utils.to_integer(choice.owner_role_id) or nil
-  if owner_role_id ~= nil then
-    return owner_role_id
-  end
-  local meta = choice and choice.meta or nil
-  return meta and number_utils.to_integer(meta.player_id) or nil
+  return choice and number_utils.to_integer(choice.owner_role_id) or nil
 end
 
 function choice_contract.resolve_target_picker_owner_role_id(choice)

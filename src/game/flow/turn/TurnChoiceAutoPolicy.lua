@@ -1,12 +1,13 @@
 local agent = require("src.game.core.runtime.Agent")
 local number_utils = require("src.core.NumberUtils")
+local choice_contract = require("src.core.ChoiceContract")
 
 local choice_auto_policy = {}
 
 local function _resolve_choice_owner(game, choice)
-  local meta = choice and choice.meta or {}
-  if meta.player_id and game and game.find_player_by_id then
-    local player = game:find_player_by_id(meta.player_id)
+  local owner_role_id = choice_contract.resolve_owner_role_id(choice)
+  if owner_role_id ~= nil and game and game.find_player_by_id then
+    local player = game:find_player_by_id(owner_role_id)
     if player then
       return player
     end

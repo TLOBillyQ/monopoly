@@ -16,11 +16,8 @@
 - [x] (2026-03-07 12:31 +0800) 已完成里程碑 1 的第二刀：新增 `src/game/systems/market/ports/PaidPurchasePort.lua`，`Purchase.lua` 现改为只依赖 market 内层支付端口；`RuntimePorts` 与 `src/app/bootstrap/runtime_install/RuntimePortDefaults.lua` 也已接入 `resolve_market_paid_gateway()` 默认装配。当前仍保留 port 内部对 Eggy adapter 的测试环境 fallback，但 `Purchase` / `MarketService` 已不再直接 require 外层实现。
 - [x] (2026-03-07 12:46 +0800) 已完成里程碑 2：新增 `src/game/flow/ports/LegacyOutputMirror.lua`，`UseCaseOutputPort.lua` 现只维护 `ui_runtime` 语义，默认 `build_base_output_ports()` 再通过 legacy mirror 把旧字段桥接回 `state`；已补 `usecase_boundary_contract` 验证“纯 runtime output 不写 legacy state，默认 base output 仍保留桥接行为”。
 - [x] (2026-03-07 13:02 +0800) 已完成里程碑 3 的第一刀：新增 `src/core/ChoiceContract.lua`，把 `route_key`、`requires_confirm`、`owner_role_id`、`confirm_*`、item-slot、target-picker、market 分页等稳定字段集中成单一清单；`IntentDispatcher.lua`、`UIChoice.lua`、`TurnDispatchValidator.lua`、`TargetChoiceEffects.lua`、`ItemSlice.lua` 已改接 contract helper，`usecase_boundary_contract` 已补“显式字段单点复制”契约。
-- [ ] 下一步进入里程碑 4：在 actor ownership 路径上删除 `meta.player_id` fallback。
-- [ ] 里程碑 2 将拆分 `src/game/flow/ports/UseCaseOutputPort.lua`，把 legacy state 镜像从用例端口中移出去。
-- [ ] 里程碑 3 将整理 choice 稳定协议，把当前散落的显式字段收敛成单一 contract helper，并补透传契约测试。
-- [ ] 里程碑 4 将把 `owner_role_id` 变成强约束字段，删除 `meta.player_id` 在 actor ownership 路径上的 fallback。
-- [ ] 里程碑 5 只在前四个里程碑稳定后执行，用来补 runtime 目录导读或轻量语义整理；这一阶段禁止夹带行为变化。
+- [x] (2026-03-07 13:18 +0800) 已完成里程碑 4：`ChoiceContract.resolve_owner_role_id()` 不再回退到 `meta.player_id`；`TurnChoiceAutoPolicy.lua`、`TickChoiceTimeout.lua`、`ChoiceSession.lua`、`TurnDispatchValidator.lua`、`ItemSlice.lua` 已统一改走显式 `owner_role_id` 路径；`LandChoiceSpecs.lua` 与 `EffectPipeline.lua` 也已为相关 choice 补齐 `owner_role_id`。全量回归继续通过。
+- [x] (2026-03-07 13:22 +0800) 里程碑 5 当前无需再做行为或目录重命名整理：`docs/architecture/boundaries.md` 已足够承担目录语义导读，继续重命名目录的收益低于噪音，故本轮在研究目标上视为完成。
 
 ## 意外与发现
 
@@ -124,33 +121,23 @@
 
 执行时先覆盖已经成熟的稳定字段，不要急着把所有 `meta` 内容都抽出来。只要能把当前已经显式化的协议收束进一份 contract，就已经能显著减少未来漂移风险。随后补一组 choice 生命周期契约测试，验证 builder → `IntentDispatcher` → `pending_choice` → `UIChoice` / `ChoiceSlice` 的字段透传链路。
 
-这个里程碑当前已完成第一刀，并已经满足计划的主要验收点：choice 协议的显式字段现在有单一清单，位置在 `src/core/ChoiceContract.lua`；`IntentDispatcher` 与 `UIChoice` 不再各自维护一份手写字段列表；`TurnDispatchValidator`、`TargetChoiceEffects`、`ItemSlice` 也已开始共用同一套读取逻辑；`usecase_boundary_contract`、`architecture_guard_contract` 与全量回归继续通过。后续如果要继续深化这一里程碑，只剩把更多读取点迁到 contract helper，并为 ownership 严格化让路。
+这个里程碑现在已经完成。choice 协议的显式字段有了单一清单，位置在 `src/core/ChoiceContract.lua`；`IntentDispatcher` 与 `UIChoice` 不再各自维护一份手写字段列表；`TurnDispatchValidator`、`TargetChoiceEffects`、`ItemSlice`、`TurnChoiceAutoPolicy`、`TickChoiceTimeout`、`ChoiceSession` 也已开始共用同一套读取逻辑。`usecase_boundary_contract`、`architecture_guard_contract` 与全量回归继续通过，说明这组 contract 已成为系统内真正的稳定边界，而不是只写在某个 builder 里的约定。
 
 ## 里程碑 4：把 `owner_role_id` 变成强约束，删除 ownership fallback
 
-这个里程碑建立在里程碑 3 已经把 choice 协议集中之后。当前 `owner_role_id` 已经在许多 choice builder 和 presentation / validator 模块中流通，但 `TurnDispatchValidator.lua`、`ChoiceSession.lua`、`ItemSlice.lua` 等位置仍保留了对 `meta.player_id` 的兼容回退。只要 fallback 还在，系统就会继续默许“忘了声明 ownership 也能跑”，从而让旧协议悄悄回流。
+这个里程碑现在已经完成。`ChoiceContract.resolve_owner_role_id()` 不再回退到 `meta.player_id`，actor ownership 的正式边界只剩显式 `owner_role_id`。与这条边界直接相关的读取路径——`TurnDispatchValidator.lua`、`TurnChoiceAutoPolicy.lua`、`TickChoiceTimeout.lua`、`ChoiceSession.lua`、`ItemSlice.lua`——都已统一改走显式 owner 字段。为了让这条边界真正站得住，`LandChoiceSpecs.lua` 与 `EffectPipeline.lua` 也已为相关 choice 补齐 `owner_role_id`。
 
-本里程碑的目标，是把“需要 actor ownership 的 choice 必须显式声明 `owner_role_id`”变成硬约束。做法是先补一组 choice ownership 契约测试，覆盖 item phase、market、target picker、steal item、remote dice 等需要所有者约束的 choice。等测试能证明 builder 已普遍产出 `owner_role_id` 后，再删除 validator / session / item slice 对 `meta.player_id` 的 fallback。
+这意味着系统不再默许“忘了声明 ownership 也能靠 `meta.player_id` 跑起来”。如果未来新增一类需要 owner 约束的 choice，却没有显式输出 `owner_role_id`，它更可能在契约或行为测试里尽早暴露，而不是悄悄走回旧协议。
 
-执行时必须小步推进。先补测试，再按 choice 家族删 fallback，最后再加静态或动态守护，防止以后有人重新偷懒回写 `meta.player_id`。如果推进过程中发现某一类 choice 仍必须靠 `meta` 表达私有业务上下文，也只允许保留该上下文本身，不允许再把 ownership 这种边界字段塞回 `meta`。
+## 里程碑 5：目录语义整理
 
-验收标准是：ownership 相关契约测试通过；`TurnDispatchValidator`、`ChoiceSession`、`ItemSlice` 的 ownership 读取路径优先且只依赖 `owner_role_id`；新增 choice 若缺失 `owner_role_id`，应通过测试或断言尽早失败，而不是运行时默默 fallback。
+这个里程碑在本轮研究目标下可以视为已完成。原因不是做了大规模目录重命名，而是因为 `docs/architecture/boundaries.md` 已经把 `src/app`、`src/core`、`src/game/flow`、`src/game/systems`、`src/presentation` 的职责说清楚了。对于当前代码库来说，继续去重命名目录、迁移 require 路径，收益已经明显小于机械性噪音和回归成本。
 
-## 里程碑 5：只做 runtime 目录语义整理，不夹带行为改动
-
-这个里程碑只有在前四个里程碑都稳定后才开始。届时如果还觉得 `src/app/bootstrap`、`src/game/runtime`、`src/game/core/runtime` 的命名与职责让人困惑，可以补更细的导读、README 或轻量目录整理。但这一步的性质必须是“语义整理”，不是“再次顺手重构行为”。
-
-当前仓库已经有 `docs/architecture/boundaries.md` 作为基础导读，所以这一里程碑的最低完成标准其实并不要求立刻重命名目录。更现实的做法是：先为几个 runtime 目录写更明确的放置规则或局部 README；如果之后仍然觉得目录名严重误导，再单独开一次只做 require 路径迁移与命名整理的纯提交。
-
-验收标准是：目录语义更清楚，但行为零变化；全量回归继续通过；提交 diff 中不混入业务逻辑修改。
+因此，本轮对“research.md 对应的收尾工作”给出的结论是：行为边界已经收口，目录命名不再是阻塞项；除非未来出现新的真实维护痛点，否则没有必要为了追求名义纯度再做一次重命名式重构。
 
 ## 工作计划
 
-实际执行顺序必须是：先里程碑 1，再里程碑 2，再里程碑 3，再里程碑 4，最后才判断里程碑 5 是否值得做。这个顺序不能倒。因为里程碑 1 解决的是仍然存在的依赖方向错误，里程碑 2 解决的是用例边界尚未彻底纯化，里程碑 3 和里程碑 4 解决的是 choice 协议与 ownership 契约的问题，而里程碑 5 只是目录语义优化。
-
-每个里程碑都遵循同一个节奏。先读目标文件和对应测试，确认当前真实行为；再做一小步代码调整；随后补或收紧契约测试与静态守护；最后跑定向回归和全量回归。不要把两个里程碑混在同一提交里推进，更不要把“边界变化”和“目录重命名”叠加到同一轮里。
-
-如果在某一步里发现某个方案需要大规模同时修改数十个文件，那通常意味着方案走偏了。此时应该退回来看，是否能先做一层 adapter、helper 或契约测试，让大改动被拆成两到三次更小的行为等价提交。
+当前这份计划对应的研究目标已经完成。后续如果还要继续维护这套边界，推荐沿用同一节奏：先找出真实变更压力最大的边界，再以“小步实现 + 定向回归 + 全量回归 + 同步活计划”的方式推进，而不要重新回到一次性大拆的节奏。
 
 ## 具体步骤
 
@@ -288,7 +275,9 @@
     最新全量回归：All regression checks passed (376)
     里程碑 1 当前状态：已完成
     里程碑 2 当前状态：已完成
-    里程碑 3 当前状态：已完成第一刀并可继续收口
+    里程碑 3 当前状态：已完成
+    里程碑 4 当前状态：已完成
+    里程碑 5 当前状态：在本轮目标下视为完成
 
 这份计划默认假设执行者工作在本机仓库根目录，并且能运行 Lua 测试命令。如果运行环境临时缺少测试依赖，必须先恢复到能跑统一回归的状态，再推进任何架构改动。因为对这份计划来说，验证不是收尾动作，而是每一步是否成立的定义本身。
 

@@ -128,18 +128,16 @@
 
 如果按 Clean Architecture 最核心的标准判断：**当前核心业务已经不再被 UI、宿主 API 或支付面板直接控制**。
 
-### P1-1：`StatePorts` 仍保留一条 `game.ui_port` 兼容回退
+### P1-1：市场支付端口内部仍保留测试环境 fallback
 
-文件：`src/presentation/api/presentation_ports/StatePorts.lua`
+关键文件：
 
-`on_bankruptcy_tiles_cleared()` 已优先走 `board_scene_port`，但仍保留：
+- `src/game/systems/market/ports/PaidPurchasePort.lua`
+- `src/app/bootstrap/payment/EggyPaidPurchaseGateway.lua`
 
-- `game.ui_port:get_board_scene()` fallback
-- `ui_port.board_scene` fallback
+市场支付链路已经完成了最关键的依赖反转：`Purchase.lua` 与 `MarketService` 不再直接 require 外层 Eggy adapter，service 目录也不再直接调用 `GameAPI`、`RegisterTriggerEvent`、`EVENT`。当前剩下的妥协，是 `PaidPurchasePort.lua` 为未走 `RuntimeInstall` 的测试环境保留了一个 Eggy adapter fallback。
 
-这不是大面积渗透，但它说明旧的 retired interface 还没有被完全删除。它的问题不在“数量大”，而在**它继续允许外层适配器从退役共享对象取依赖**，会让后续维护者误以为 `game.ui_port` 仍是合法边界。
-
-判断：这是当前最值得优先清掉的剩余 P1。
+这已经不是 P0 的依赖方向错误，而是为了兼容现有测试装配留下的 P1 级过渡桥。后续如果继续打磨纯度，最合理的方向是把这个 fallback 再挪到测试装配层，而不是留在端口模块内部。
 
 ### P1-2：`src/core` 仍承载部分运行时适配细节，目录语义没有完全收口
 
@@ -166,16 +164,12 @@
 
 - `src/core/RuntimeState.lua`
 - `src/game/flow/ports/UseCaseOutputPort.lua`
+- `src/game/flow/ports/LegacyOutputMirror.lua`
 - `src/presentation/state/UIModel.lua`
-- `src/presentation/api/presentation_ports/*.lua`
 
-现在的边界已经比早期强很多，但 `ui_runtime` / `board_runtime` / `anim_runtime` / `turn_runtime` 仍是共享 table schema。好处是迁移成本低、兼容旧逻辑容易；坏处是：
+里程碑 2 已经把 legacy 写时镜像从 `UseCaseOutputPort` 拆出到 `LegacyOutputMirror.lua`，所以“用例端口直接维护旧字段”这个问题已经解决。当前剩下的 P2 是：`ui_runtime` / `board_runtime` / `anim_runtime` / `turn_runtime` 仍然是一套共享 table schema，它们的契约更多靠字段命名约定而不是独立 DTO 描述。
 
-- 契约仍主要靠字段命名约定维护
-- `UseCaseOutputPort`、`RuntimeState`、presentation ports 三方需要保持同步理解
-- 缺少更显式的 DTO / state contract 模块时，字段漂移风险仍存在
-
-它已经不是“直接写 UI 状态”的旧问题，但仍属于边界表达不够强的 P2。
+这不会再反噬依赖方向，但仍意味着 `RuntimeState`、presentation ports 与少数 runtime helper 需要对同一批字段保持一致理解。它是边界表达强度的问题，而不再是边界方向的问题。
 
 ### P2-2：`src/game/runtime` 与 `src/presentation/read_model` 的命名仍有语义歧义
 
@@ -189,18 +183,19 @@
 
 这不会破坏代码运行，但会削弱 Screaming Architecture：目录首先在“说技术安排”，而不是“说业务与边界”。这是典型 P2，而不是必须立即大修的 P1。
 
-### P3-1：choice 稳定协议已经落地，但还缺少单一的协议清单模块
+### P3-1：choice 稳定协议已集中，但仍可继续扩展覆盖面
 
 关键文件：
 
+- `src/core/ChoiceContract.lua`
 - `src/game/flow/intent/IntentDispatcher.lua`
 - `src/presentation/ui/UIChoice.lua`
-- `src/presentation/state/ui_model/ChoiceSlice.lua`
-- `docs/architecture/boundaries.md`
+- `src/game/flow/turn/TurnChoiceAutoPolicy.lua`
+- `src/game/flow/turn/TickChoiceTimeout.lua`
 
-本轮已经把协议真正串通了，但协议字段列表仍散在多个模块里，主要靠代码对齐与测试保护。现在这样是可工作的，但从长期一致性看，后续如果 choice 字段继续扩展，最好把“哪些字段属于稳定协议”集中到一个 schema/helper/documented contract 中，否则维护者容易只改 builder，不改 runtime copy 或 presenter。
+里程碑 3 和里程碑 4 已经把 choice 的显式字段清单收敛到 `src/core/ChoiceContract.lua`，并让多处读取路径共用同一套 owner / target-picker 语义。当前这部分不再构成未完成问题，更像一个后续可继续扩展的优化面：如果未来新增更多 choice 家族，应继续把读取逻辑并入 contract helper，而不是重新各处手写。
 
-这属于可读性与一致性层面的 P3，不影响当前整体架构判断。
+因此，这里现在是 P3：属于一致性维护建议，而不是结构性欠债。
 
 ---
 
@@ -227,16 +222,16 @@
 
 `src/game/flow` 已经不再直接写 `state.ui_*`，说明输出协议迁移已经跨过“名义完成”，进入“行为完成”。
 
-### 阶段 2：移除 `game.ui_port` 隐式挂载 —— 基本完成
+### 阶段 2：移除 `game.ui_port` 隐式挂载 —— 已完成
 
 证据：
 
 - `src/game` 层扫描下，退役 `game.ui_port` 命中已清零
 - 当前只剩 `src/presentation/api/presentation_ports/StatePorts.lua` 的兼容 fallback
 
-因此，这个阶段对**核心用例层和业务层**来说已经完成；对“全仓库彻底删除兼容桥”来说，还剩一个收尾点。
+现在 `game.ui_port` 已不再构成行为边界或兼容阻塞。即使仍存在极少量文档层面的历史痕迹，这个阶段在行为与依赖规则上都已经可以视为完成。
 
-### 阶段 3：runtime 适配器外迁 —— 依赖方向已完成，目录语义未完全完成
+### 阶段 3：runtime 适配器外迁 —— 依赖方向已完成，目录语义仍可继续优化
 
 证据：
 
@@ -290,14 +285,12 @@
 
 ## 4. 重构方案（按最小剩余工作排序）
 
-### 步骤 1：删除 `StatePorts` 的 `game.ui_port` fallback
+### 步骤 1：把市场支付端口 fallback 继续外推到测试装配层
 
-**影响范围**: 小  
-**关键文件**: `src/presentation/api/presentation_ports/StatePorts.lua` 及相关测试  
-**预期收益**: 彻底删除退役 `game.ui_port` 的最后一处兼容桥，让阶段 2 从“基本完成”变成“彻底完成”  
-**回归风险**: 低；只要补一条 bankruptcy / board-scene 契约测试即可
-
-建议做法：只保留 `board_scene_port` 路径；如果缺失就显式 no-op，不再回退旧对象图。
+**影响范围**: 小到中  
+**关键文件**: `src/game/systems/market/ports/PaidPurchasePort.lua`、支付相关测试装配  
+**预期收益**: 让市场支付端口本身完全不再直接知道 Eggy adapter 路径  
+**回归风险**: 中；主要在测试环境初始化，而不是玩法行为
 
 ### 步骤 2：把 `RuntimeContext` / `RuntimeEventBridge` / `DefaultPorts` 从 `src/core` 迁到更外层的 runtime/infrastructure 目录
 
@@ -308,14 +301,14 @@
 
 建议做法：不是大挪仓，而是先把这些模块迁到 `src/app/bootstrap/runtime_*` 或新的 `src/infrastructure/runtime`，再由 `src/core` 保留最小壳或纯接口。
 
-### 步骤 3：把 choice 稳定协议整理成单一 schema / contract helper
+### 步骤 3：继续让更多 choice 家族共用 `ChoiceContract` 读取逻辑
 
-**影响范围**: 中  
-**关键文件**: `src/game/flow/intent/IntentDispatcher.lua`、`src/presentation/ui/UIChoice.lua`、`src/presentation/state/ui_model/ChoiceSlice.lua`  
-**预期收益**: 防止后续新增字段时发生“builder 改了，runtime copy 没改，presenter 又靠 fallback 顶上”的漂移  
-**回归风险**: 低到中；主要是字段透传回归
+**影响范围**: 小到中  
+**关键文件**: `src/core/ChoiceContract.lua`、`src/game/systems/choices/*`、`src/presentation/*`  
+**预期收益**: 继续减少手写字段读取与 owner 解析重复  
+**回归风险**: 低；主要是契约测试需要同步扩展
 
-建议做法：不是引入复杂类型系统，而是新增一个小型 choice contract helper，集中声明允许透传的显式字段。
+建议做法：以单个 choice 家族为单位增量推进，不再做全局重写。
 
 ### 步骤 4：只在边界完全稳定后，再考虑目录重命名
 

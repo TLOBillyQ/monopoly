@@ -70,6 +70,7 @@ local function _build_optional_choice(optional, player, tile, game_ctx, opts)
 
   local choice_spec = {
     kind = opts.optional_choice_kind or "landing_optional_effect",
+    owner_role_id = player.id,
     route_key = _uses_secondary_confirm_route(optional) and "secondary_confirm" or nil,
     requires_confirm = _uses_secondary_confirm_route(optional) and true or nil,
     title = opts.optional_title,

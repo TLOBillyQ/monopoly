@@ -2,6 +2,7 @@ local choice_builder = require("src.game.systems.market.service.Choice")
 local feedback = require("src.game.systems.market.service.Feedback")
 local number_utils = require("src.core.NumberUtils")
 local logger = require("src.core.Logger")
+local choice_contract = require("src.core.ChoiceContract")
 
 local session = {}
 
@@ -21,12 +22,7 @@ local function _current_choice_state(pending_choice)
 end
 
 local function _resolve_owner_role_id(pending_choice)
-  local owner_role_id = number_utils.to_integer(pending_choice and pending_choice.owner_role_id)
-  if owner_role_id ~= nil then
-    return owner_role_id
-  end
-  local meta = pending_choice and pending_choice.meta or nil
-  return meta and number_utils.to_integer(meta.player_id) or nil
+  return choice_contract.resolve_owner_role_id(pending_choice)
 end
 
 local function _apply_spec(game, pending_choice, spec)

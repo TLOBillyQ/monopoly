@@ -2,13 +2,14 @@ local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local number_utils = require("src.core.NumberUtils")
 local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
+local choice_contract = require("src.core.ChoiceContract")
 
 local tick_choice_timeout = {}
 
 local function _resolve_choice_owner_id(game, choice)
-  local meta = choice and choice.meta or {}
-  if meta.player_id and game.find_player_by_id then
-    local player = game:find_player_by_id(meta.player_id)
+  local owner_role_id = choice_contract.resolve_owner_role_id(choice)
+  if owner_role_id ~= nil and game.find_player_by_id then
+    local player = game:find_player_by_id(owner_role_id)
     if player then
       return player.id
     end
