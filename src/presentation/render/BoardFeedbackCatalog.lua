@@ -1,5 +1,7 @@
 local runtime_refs = require("Config.RuntimeRefs")
 local runtime_constants = require("src.core.config.RuntimeConstants")
+local logger = require("src.core.Logger")
+local number_utils = require("src.core.NumberUtils")
 
 local catalog = {}
 
@@ -14,14 +16,23 @@ local function _copy_table(value)
   return out
 end
 
-local function _resolve_scale(value)
+local function _warn_invalid(cue_name, field, value, reason)
+  logger.warn("board_feedback", "invalid cue config", "cue_name=" .. tostring(cue_name), "field=" .. tostring(field), "value=" .. tostring(value), "reason=" .. tostring(reason))
+end
+
+local function _resolve_numeric_field(cue_name, field, value)
   if value == nil then
     return nil
   end
-  if type(value) == "table" then
-    return value
+  if number_utils.is_numeric(value) then
+    return value + 0
   end
-  return value
+  if type(value) == "table" then
+    _warn_invalid(cue_name, field, value, "vector_like_not_allowed")
+    return nil
+  end
+  _warn_invalid(cue_name, field, value, "non_numeric")
+  return nil
 end
 
 local function _resolve_bind_offset(value)
@@ -34,13 +45,37 @@ local function _resolve_bind_offset(value)
   return value
 end
 
-local function _resolve_cue(cue)
+local function _resolve_followup_sounds(cue_name, entries)
+  if type(entries) ~= "table" then
+    return nil
+  end
+  local out = {}
+  for _, entry in ipairs(entries) do
+    if type(entry) == "table" then
+      out[#out + 1] = {
+        sound_id_ref = entry.sound_id_ref,
+        delay = _resolve_numeric_field(cue_name, "followup_sounds.delay", entry.delay),
+        duration = _resolve_numeric_field(cue_name, "followup_sounds.duration", entry.duration),
+        volume = _resolve_numeric_field(cue_name, "followup_sounds.volume", entry.volume),
+      }
+    end
+  end
+  return out
+end
+
+local function _resolve_cue(cue_name, cue)
   local resolved = _copy_table(cue)
   if type(resolved) ~= "table" then
     return nil
   end
-  resolved.scale = _resolve_scale(resolved.scale)
+  resolved.scale = _resolve_numeric_field(cue_name, "scale", resolved.scale)
+  resolved.rate = _resolve_numeric_field(cue_name, "rate", resolved.rate)
+  resolved.duration = _resolve_numeric_field(cue_name, "duration", resolved.duration)
+  resolved.volume = _resolve_numeric_field(cue_name, "volume", resolved.volume)
+  resolved.delay = _resolve_numeric_field(cue_name, "delay", resolved.delay)
+  resolved.sound_duration = _resolve_numeric_field(cue_name, "sound_duration", resolved.sound_duration)
   resolved.bind_offset = _resolve_bind_offset(resolved.bind_offset)
+  resolved.followup_sounds = _resolve_followup_sounds(cue_name, resolved.followup_sounds)
   return resolved
 end
 
@@ -49,7 +84,7 @@ function catalog.get(cue_name)
     return nil
   end
   local cues = runtime_refs.board_feedback or {}
-  return _resolve_cue(cues[cue_name])
+  return _resolve_cue(cue_name, cues[cue_name])
 end
 
 return catalog

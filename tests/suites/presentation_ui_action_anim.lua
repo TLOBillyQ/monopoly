@@ -299,8 +299,11 @@ local function _test_host_runtime_sfx_port_skips_missing_keys_and_routes_valid_c
           sfx_calls[#sfx_calls + 1] = {
             sfx_key = sfx_key,
             pos = pos,
+            rot = rot,
             scale = scale,
             duration = duration,
+            rate = rate,
+            with_sound = with_sound,
           }
           return 101
         end,
@@ -321,6 +324,7 @@ local function _test_host_runtime_sfx_port_skips_missing_keys_and_routes_valid_c
     local missing_id = host_runtime.play_sfx_by_key(nil, pos, nil, nil, 1.0, nil, false)
     local zero_sfx_id = host_runtime.play_sfx_by_key(0, pos, nil, nil, 1.0, nil, false)
     local string_sfx_id = host_runtime.play_sfx_by_key("fx.valid", pos, nil, nil, 1.0, nil, false)
+    local vector_scale_id = host_runtime.play_sfx_by_key(4286, pos, nil, math.Vector3(1.0, 1.0, 1.0), 1.0, nil, false)
     local sound_id = host_runtime.play_3d_sound(pos, 301, 0.8, 1.0)
     local missing_sound_id = host_runtime.play_3d_sound(pos, nil, 0.8, 1.0)
     local zero_sound_id = host_runtime.play_3d_sound(pos, 0, 0.8, 1.0)
@@ -330,6 +334,7 @@ local function _test_host_runtime_sfx_port_skips_missing_keys_and_routes_valid_c
     assert(missing_id == nil, "missing sfx key should skip safely")
     assert(zero_sfx_id == nil, "zero sfx key should skip safely")
     assert(string_sfx_id == nil, "string sfx key should skip safely")
+    assert(vector_scale_id == nil, "vector scale should skip safely")
     assert(sound_id == 202, "valid sound call should return engine id")
     assert(missing_sound_id == nil, "missing sound id should skip safely")
     assert(zero_sound_id == nil, "zero sound id should skip safely")
@@ -339,6 +344,9 @@ local function _test_host_runtime_sfx_port_skips_missing_keys_and_routes_valid_c
   assert(#sfx_calls == 1, "invalid sfx keys should not call engine")
   assert(sfx_calls[1].sfx_key == 4286, "sfx key should route unchanged as integer")
   assert(sfx_calls[1].scale == 1.0, "direct sfx port should pass caller-provided scalar scale")
+  assert(sfx_calls[1].rate == 1.0, "direct sfx port should default missing rate to 1.0")
+  assert(sfx_calls[1].with_sound == false, "direct sfx port should default with_sound to false")
+  assert(sfx_calls[1].rot ~= nil, "direct sfx port should default missing rot")
   assert(#sound_calls == 1, "sound call should route once")
   assert(sound_calls[1].sound_id == 301, "sound id should route unchanged")
 end
@@ -489,6 +497,55 @@ local function _test_board_feedback_bankruptcy_routes_scalar_scale()
   assert(effect_calls[1].scale == 1.0, "bankruptcy should fallback to scalar scale 1.0")
 end
 
+local function _test_board_feedback_followup_sound_defaults_are_numeric()
+  local sound_calls = {}
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "play_sfx_by_key",
+      value = function()
+        return nil
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "schedule",
+      value = function(delay, fn)
+        sound_calls[#sound_calls + 1] = { scheduled_delay = delay }
+        fn()
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "play_3d_sound",
+      value = function(pos, sound_id, duration, volume)
+        sound_calls[#sound_calls + 1] = {
+          sound_id = sound_id,
+          duration = duration,
+          volume = volume,
+        }
+        return 303
+      end,
+    },
+  }, function()
+    local state = _build_state()
+    local played = board_feedback.play_tile_cue(state, "upgrade_land_smoke", 1, {
+      followup_sounds = {
+        { sound_id_ref = "turn_started" },
+      },
+    })
+    assert(played == true, "followup sound should count as played")
+  end)
+
+  assert(#sound_calls == 3, "followup sound path should include one main sound, one schedule, and one followup sound")
+  assert(sound_calls[1].sound_id == runtime_refs.audio.cash_receive, "main cue sound should play first")
+  assert(sound_calls[2].scheduled_delay == 0, "missing followup delay should default to zero")
+  assert(sound_calls[3].sound_id == runtime_refs.audio.turn_started, "followup sound should resolve configured integer sound id")
+  assert(sound_calls[3].duration == 1.0, "missing followup duration should default to 1.0")
+  assert(sound_calls[3].volume == 1.0, "missing followup volume should default to 1.0")
+end
+
 local function _test_board_feedback_unconfigured_effect_id_ref_skips_without_error()
   local play_calls = 0
 
@@ -610,6 +667,10 @@ return {
     {
       name = "board_feedback_unconfigured_effect_id_ref_skips_without_error",
       run = _test_board_feedback_unconfigured_effect_id_ref_skips_without_error,
+    },
+    {
+      name = "board_feedback_followup_sound_defaults_are_numeric",
+      run = _test_board_feedback_followup_sound_defaults_are_numeric,
     },
     { name = "action_anim_upgrade_land_routes_board_feedback", run = _test_action_anim_upgrade_land_routes_board_feedback },
     { name = "action_anim_cash_receive_routes_board_feedback", run = _test_action_anim_cash_receive_routes_board_feedback },

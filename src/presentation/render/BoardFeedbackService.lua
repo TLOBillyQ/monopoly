@@ -8,6 +8,12 @@ local catalog = require("src.presentation.render.BoardFeedbackCatalog")
 local service = {}
 local warned_missing_effect_refs = {}
 local warned_missing_sound_refs = {}
+local default_sfx_scale = 1.0
+local default_sfx_rate = 1.0
+local default_sfx_duration = 1.0
+local default_sound_duration = 1.0
+local default_sound_volume = 1.0
+local default_with_sound = false
 
 local function _warn(...)
   logger.warn("board_feedback", ...)
@@ -41,27 +47,33 @@ local function _warn_missing_sound_ref_once(cue_name, sound_id_ref, reason)
   )
 end
 
-local function _resolve_sfx_scale(value, fallback)
+local function _resolve_numeric(value, fallback)
   if number_utils.is_numeric(value) then
-    return value
-  end
-  if type(value) == "table" then
-    local x = value.x
-    local y = value.y
-    local z = value.z
-    if number_utils.is_numeric(x) and number_utils.is_numeric(y) and number_utils.is_numeric(z) then
-      local resolved_x = x + 0
-      local resolved_y = y + 0
-      local resolved_z = z + 0
-      if resolved_x == resolved_y and resolved_x == resolved_z then
-        return resolved_x
-      end
-    end
+    return value + 0
   end
   if number_utils.is_numeric(fallback) then
-    return fallback
+    return fallback + 0
   end
-  return 1.0
+  return nil
+end
+
+local function _warn_invalid_cue_field(cue_name, field, value, fallback)
+  _warn(
+    "invalid cue field:",
+    "cue_name=" .. tostring(cue_name),
+    "field=" .. tostring(field),
+    "value=" .. tostring(value),
+    "fallback=" .. tostring(fallback)
+  )
+end
+
+local function _resolve_sfx_scale(cue_name, value, fallback)
+  local resolved = _resolve_numeric(value, fallback)
+  if resolved ~= nil then
+    return resolved
+  end
+  _warn_invalid_cue_field(cue_name, "scale", value, default_sfx_scale)
+  return default_sfx_scale
 end
 
 local function _resolve_cue(cue_name)
@@ -112,7 +124,7 @@ local function _schedule_followup_sound(cue_name, pos, entry)
   if type(entry) ~= "table" then
     return false
   end
-  local delay = entry.delay or 0
+  local delay = _resolve_numeric(entry.delay, 0) or 0
   host_runtime.schedule(delay, function()
     local sound_id_ref = entry.sound_id_ref
     local audio_refs = runtime_refs.audio or {}
@@ -121,7 +133,7 @@ local function _schedule_followup_sound(cue_name, pos, entry)
       _warn_missing_sound_ref_once(cue_name, sound_id_ref, "missing_or_unconfigured")
       return
     end
-    host_runtime.play_3d_sound(pos, sound_id, entry.duration, entry.volume)
+    host_runtime.play_3d_sound(pos, sound_id, _resolve_numeric(entry.duration, default_sound_duration), _resolve_numeric(entry.volume, default_sound_volume))
   end)
   return true
 end
@@ -144,12 +156,20 @@ local function _play_effect(state, cue_name, cue, pos, unit, payload)
     end
   end
 
-  local duration = payload and payload.duration or cue.duration
-  local scale = _resolve_sfx_scale(payload and payload.scale or cue.scale, 1.0)
+  local duration = _resolve_numeric(payload and payload.duration or cue.duration, default_sfx_duration)
+  local scale = _resolve_sfx_scale(cue_name, payload and payload.scale or cue.scale, default_sfx_scale)
   local rot = payload and payload.rot or cue.rot or runtime_constants.q_zero
-  local rate = payload and payload.rate or cue.rate
-  local with_sound = payload and payload.with_sound or cue.with_sound
-  local sfx_id = host_runtime.play_sfx_by_key(effect_id, pos, rot, scale, duration, rate, with_sound)
+  local rate = _resolve_numeric(payload and payload.rate or cue.rate, default_sfx_rate)
+  local with_sound = payload and payload.with_sound
+  if with_sound == nil then
+    with_sound = cue.with_sound
+  end
+  if with_sound == nil then
+    with_sound = default_with_sound
+  end
+  local sfx_id = host_runtime.play_sfx_by_key(effect_id, pos, rot, scale, duration, rate, with_sound, {
+    cue_name = cue_name,
+  })
   if sfx_id == nil then
     return false
   end
@@ -193,8 +213,8 @@ local function _play_sound(cue_name, cue, pos, payload)
   if sound_id == nil then
     return false
   end
-  local duration = payload and payload.sound_duration or cue.sound_duration or cue.duration
-  local volume = payload and payload.volume or cue.volume
+  local duration = _resolve_numeric(payload and payload.sound_duration or cue.sound_duration or cue.duration, default_sound_duration)
+  local volume = _resolve_numeric(payload and payload.volume or cue.volume, default_sound_volume)
   local sound_handle = host_runtime.play_3d_sound(pos, sound_id, duration, volume)
   return sound_handle ~= nil
 end
@@ -205,7 +225,7 @@ local function _play_cue(state, cue_name, pos, unit, payload)
     return false
   end
   if pos == nil then
-    pos = _vec3(0.0, 0.0, 0.0)
+    pos = runtime_constants.v3_zero or runtime_constants.v3_one
   end
 
   local played = false
