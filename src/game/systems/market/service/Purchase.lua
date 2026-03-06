@@ -110,32 +110,11 @@ local function _fulfill_paid_goods_purchase(game, player, entry)
   return false
 end
 
-local function _refresh_market_choice_after_paid_callback(game, player, entry)
-  local pending_choice = game and game.turn and game.turn.pending_choice or nil
-  if not pending_choice or pending_choice.kind ~= "market_buy" then
-    return
-  end
-  local meta = pending_choice.meta or {}
-  local owner_id = number_utils.to_integer(meta.player_id)
-  if owner_id ~= player.id then
-    return
-  end
-  local market_service = require("src.game.systems.market.MarketService")
-  local rebuilt = market_service.choice.rebuild_pending(game, pending_choice, player)
-  if rebuilt then
-    return
-  end
-  logger.warn(
-    "market paid callback refresh skipped:",
-    "player_id=" .. tostring(player.id),
-    "product_id=" .. tostring(entry and entry.product_id)
-  )
-end
-
 local function _handle_paid_purchase_callback(game, player, entry)
   local ok = _fulfill_paid_goods_purchase(game, player, entry)
   if ok then
-    _refresh_market_choice_after_paid_callback(game, player, entry)
+    local market_choice = require("src.game.systems.market.service.Choice")
+    market_choice.refresh_after_paid_callback(game, player, entry)
   end
 end
 

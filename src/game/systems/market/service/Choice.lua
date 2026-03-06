@@ -223,4 +223,26 @@ function choice.apply_navigation(game, pending_choice, action)
   return true
 end
 
+function choice.refresh_after_paid_callback(game, player, entry)
+  local pending_choice = game and game.turn and game.turn.pending_choice or nil
+  if not pending_choice or pending_choice.kind ~= "market_buy" then
+    return false
+  end
+  local meta = pending_choice.meta or {}
+  local owner_id = number_utils.to_integer(meta.player_id)
+  if owner_id ~= (player and player.id or nil) then
+    return false
+  end
+  local rebuilt = choice.rebuild_pending(game, pending_choice, player)
+  if rebuilt then
+    return true
+  end
+  logger.warn(
+    "market paid callback refresh skipped:",
+    "player_id=" .. tostring(player and player.id or nil),
+    "product_id=" .. tostring(entry and entry.product_id)
+  )
+  return false
+end
+
 return choice
