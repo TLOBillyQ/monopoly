@@ -1,12 +1,10 @@
 local logger = require("src.core.Logger")
-local inventory = require("src.game.systems.items.ItemInventory")
 local land_choice_specs = require("src.game.systems.land.LandChoiceSpecs")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 local context = require("src.game.systems.market.service.Context")
+local fulfillment = require("src.game.systems.market.service.Fulfillment")
 local paid_purchase_gateway = require("src.game.systems.market.service.PaidPurchaseGateway")
 local number_utils = require("src.core.NumberUtils")
-local runtime_ports = require("src.core.RuntimePorts")
-local action_anim_port = require("src.core.ActionAnimPort")
 
 local purchase = {}
 local _emit_event = monopoly_event.emit
@@ -52,61 +50,16 @@ local function _fulfill_paid_goods_purchase(game, player, entry)
     return false
   end
 
-  if entry.kind == "item" then
-    if inventory.is_full(player) then
-      _emit_buy_failed(player, entry, "inventory_full", player.name .. " 卡槽已满")
-      return false
-    end
-    inventory.give(player, product_id)
-    context.consume_global_limit(game, product_id)
-    _emit_event(monopoly_event.market.bought_item, {
-      player = player,
-      entry = entry,
-      price = price,
-      currency = currency,
-      text = player.name .. " 在黑市购买 " .. context.entry_name(entry) .. " 成功",
-    })
+  local result = fulfillment.apply(game, player, entry, {
+    skip_charge = true,
+    price = price,
+    currency = currency,
+    priced_text = false,
+  })
+  if result.ok then
     return true
   end
-
-  if entry.kind == "vehicle" then
-    assert(game.set_player_seat ~= nil, "missing game.SetPlayerSeat")
-    game:set_player_seat(player, product_id)
-    context.consume_global_limit(game, product_id)
-    _emit_event(monopoly_event.market.bought_vehicle, {
-      player = player,
-      entry = entry,
-      price = price,
-      currency = currency,
-      text = player.name .. " 在黑市购买座驾 " .. context.entry_name(entry) .. " 成功",
-    })
-    return true
-  end
-
-  if entry.kind == "skin" then
-    context.consume_global_limit(game, product_id)
-    local change_skin_helper = runtime_ports.resolve_change_skin_helper()
-    if change_skin_helper and type(change_skin_helper.emit_change_skin) == "function" then
-      change_skin_helper.emit_change_skin(player.id, entry.product_id)
-    end
-    action_anim_port.queue(game, {
-      kind = "change_skin",
-      player_id = player.id,
-      skin_id = entry.product_id,
-      skin_name = context.entry_name(entry),
-      duration = 1.0,
-    })
-    _emit_event(monopoly_event.market.bought_item, {
-      player = player,
-      entry = entry,
-      price = price,
-      currency = currency,
-      text = player.name .. " 在黑市购买皮肤（占位） " .. context.entry_name(entry) .. " 成功",
-    })
-    return true
-  end
-
-  _emit_buy_failed(player, entry, "unsupported_kind", player.name .. " 该商品类型暂不支持购买")
+  _emit_buy_failed(player, entry, result.reason, result.body)
   return false
 end
 
@@ -123,9 +76,6 @@ function purchase.setup_for_game(game)
 end
 
 function purchase.can_start_external_purchase(game, player, entry)
-  if entry.kind == "item" and inventory.is_full(player) then
-    return false, "inventory_full"
-  end
   return paid_purchase_gateway.can_start(game, player, entry)
 end
 
@@ -159,10 +109,6 @@ function purchase.execute(game, player, product_id, opts)
   local currency = context.entry_currency(entry)
   if context.is_paid_currency(currency) then
     purchase.setup_for_game(game)
-    if entry.kind == "item" and inventory.is_full(player) then
-      _emit_buy_failed(player, entry, "inventory_full", player.name .. " 卡槽已满")
-      return { ok = false }
-    end
     local ok_start, reason = paid_purchase_gateway.start(game, player, entry)
     if not ok_start then
       if _is_release_build() then
@@ -190,33 +136,6 @@ function purchase.execute(game, player, product_id, opts)
     return { ok = false, reason = "insufficient_balance", option_id = product_id }
   end
 
-  if entry.kind == "item" then
-    if inventory.is_full(player) then
-      _emit_buy_failed(player, entry, "inventory_full", player.name .. " 卡槽已满")
-      return { ok = false }
-    end
-    if not context.try_charge_player(game, player, currency, price) then
-      _emit_buy_failed(player, entry, "charge_failed", player.name .. " 支付失败")
-      return { ok = false }
-    end
-    inventory.give(player, product_id)
-    context.consume_global_limit(game, product_id)
-    _emit_event(monopoly_event.market.bought_item, {
-      player = player,
-      entry = entry,
-      price = price,
-      currency = currency,
-      text = player.name .. " 在黑市购买 " .. context.entry_name(entry) .. " 花费 " .. number_utils.format_integer_part(price) .. " " .. currency,
-    })
-    return {
-      ok = true,
-      kind = "item",
-      product_id = product_id,
-      inventory_full_after = inventory.is_full(player),
-      fulfilled_now = true,
-    }
-  end
-
   if entry.kind == "vehicle" then
     if player.seat_id and not opts.skip_vehicle_prompt then
       local current_name = context.vehicle_name(player.seat_id)
@@ -239,52 +158,19 @@ function purchase.execute(game, player, product_id, opts)
         },
       }
     end
-    if not context.try_charge_player(game, player, currency, price) then
-      _emit_buy_failed(player, entry, "charge_failed", player.name .. " 支付失败")
-      return { ok = false }
-    end
-    assert(game.set_player_seat ~= nil, "missing game.SetPlayerSeat")
-    game:set_player_seat(player, product_id)
-    context.consume_global_limit(game, product_id)
-    _emit_event(monopoly_event.market.bought_vehicle, {
-      player = player,
-      entry = entry,
-      price = price,
-      currency = currency,
-      text = player.name .. " 在黑市购买座驾 " .. context.entry_name(entry) .. " 花费 " .. number_utils.format_integer_part(price) .. " " .. currency,
-    })
-    return { ok = true, fulfilled_now = true }
   end
 
-  if entry.kind == "skin" then
-    if not context.try_charge_player(game, player, currency, price) then
-      _emit_buy_failed(player, entry, "charge_failed", player.name .. " 支付失败")
-      return { ok = false }
-    end
-    context.consume_global_limit(game, product_id)
-    local change_skin_helper = runtime_ports.resolve_change_skin_helper()
-    if change_skin_helper and type(change_skin_helper.emit_change_skin) == "function" then
-      change_skin_helper.emit_change_skin(player.id, entry.product_id)
-    end
-    action_anim_port.queue(game, {
-      kind = "change_skin",
-      player_id = player.id,
-      skin_id = entry.product_id,
-      skin_name = context.entry_name(entry),
-      duration = 1.0,
-    })
-    _emit_event(monopoly_event.market.bought_item, {
-      player = player,
-      entry = entry,
-      price = price,
-      currency = currency,
-      text = player.name .. " 在黑市购买皮肤（占位） " .. context.entry_name(entry) .. " 花费 " .. number_utils.format_integer_part(price) .. " " .. currency,
-    })
-    return { ok = true, fulfilled_now = true }
+  local result = fulfillment.apply(game, player, entry, {
+    skip_charge = false,
+    price = price,
+    currency = currency,
+    priced_text = true,
+  })
+  if not result.ok then
+    _emit_buy_failed(player, entry, result.reason, result.body)
+    return { ok = false, reason = result.reason }
   end
-
-  _emit_buy_failed(player, entry, "unsupported_kind", player.name .. " 该商品类型暂不支持购买")
-  return { ok = false }
+  return result
 end
 
 return purchase

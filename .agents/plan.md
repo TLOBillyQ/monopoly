@@ -22,7 +22,7 @@
 - [x] (2026-03-06 22:49 +0800) 已补阶段1契约：`architecture_guard_contract` 新增 output-port 路由断言，`usecase_boundary_contract` 新增 output 默认桥接与 override 优先级测试；全量回归现输出 `All regression checks passed (367)`。
 - [ ] 阶段2：已完成第一刀动画门控外提：`ActionAnimPort`、`TurnRoll`、`TurnMove` 改读 `game.anim_gate_port`，`game.ui_port` 预算已从 23 收紧到 16；剩余 `push_popup` 与 `ui_port.state` 读路径仍待迁移。
 - [x] (2026-03-07 00:28 +0800) 已完成阶段3：`RuntimeGlobalAliases` 已外迁到 `src/app/bootstrap/runtime_install/`；`Logger`、`DefaultPorts`、`RuntimeEditorExports`、`RuntimeContext` 都已改成 host hook 或 runtime context env 读取；`src/core` 宿主触点预算已从 47 压到 0。
-- [ ] 阶段4：已完成两刀。第一刀新增 `src/game/systems/market/service/PaidPurchaseGateway.lua`，承接 paid-currency 的 goods mapping、purchase panel 启动、待兑现队列和购买回调注册。第二刀把 paid callback 后的 market choice 刷新移到 `src/game/systems/market/service/Choice.lua` 的 `refresh_after_paid_callback()`；`Purchase.lua` 现在主要保留购买执行规则。下一刀再看是否继续把 popup/反馈或本地金币购买的 UI 协调从执行服务中剥离。
+- [ ] 阶段4：已完成三刀。第一刀新增 `src/game/systems/market/service/PaidPurchaseGateway.lua`，承接 paid-currency 的 goods mapping、purchase panel 启动、待兑现队列和购买回调注册。第二刀把 paid callback 后的 market choice 刷新移到 `src/game/systems/market/service/Choice.lua` 的 `refresh_after_paid_callback()`。第三刀新增 `src/game/systems/market/service/Fulfillment.lua`，统一 item/vehicle/skin 的兑现副作用，`Purchase.lua` 进一步收窄为购买编排与规则分流。下一刀再看是否继续把 popup/反馈或本地金币购买前的确认/文案协调从执行服务中剥离。
 - [ ] 阶段5：把 `PreConfirmFlow` 等 presentation 中的应用规则收回用例层，让 presentation 只渲染 ViewModel。
 - [ ] 阶段6：在边界稳定后整理目录语义和命名，避免目录改动与行为改动叠加。
 
@@ -60,6 +60,9 @@
 
 - 观察：`PaidPurchaseGateway` 这种被测试频繁热重载的 adapter，不能在模块级缓存 `Context` 这类同样会被热重载的依赖，否则会出现“单条复现正常、整组回归失败”的隐蔽问题。
   证据：第一次阶段4回归里，单独复现 paid callback 能正常兑现，但 `paid_currency`/`market` 套件批量运行失败；把 gateway 改成按调用时 `require("...Context")` 后恢复通过。
+
+- 观察：`Purchase.lua` 的 item/vehicle/skin 分支在 paid callback 和本地即时购买两条路径里重复承载了同一种兑现副作用，这种重复会拖慢后续任何一侧的边界收口。
+  证据：在抽出 `Fulfillment.lua` 前，`_fulfill_paid_goods_purchase()` 与 `execute()` 的本地购买分支都各自处理 inventory、seat、skin helper、action anim、market 事件；改成复用 `Fulfillment.apply()` 后，`paid_currency`、`market` 和全量回归都保持通过。
 
 ## 决策日志
 
@@ -103,9 +106,13 @@
   理由：这个职责本质上是 market choice adapter 的重建与刷新，靠近 `Choice.rebuild_pending()` 更自然；同时它能在不改变购买兑现语义的前提下，继续减轻 `Purchase.lua` 的跨层职责密度。
   日期/作者：2026-03-07 / Codex
 
+- 决策：阶段4第三刀新增 `Fulfillment.lua`，让 paid callback 和本地即时购买共用一套兑现副作用实现。
+  理由：兑现副作用本身不关心触发来源，只关心 entry/player/game 和是否需要 charge。把它们抽成独立 service 后，`Purchase.lua` 不再需要同时维护两套 item/vehicle/skin 兑现分支，也更容易继续把前置验证与 UI 协调拆走。
+  日期/作者：2026-03-07 / Codex
+
 ## 结果与复盘
 
-阶段0和阶段1现在都已经完成，阶段2也已经切开第一刀，阶段3则已经完整完成，阶段4也完成了两刀。当前最重要的可观察结果有五条。第一，`src/game/flow` 已经没有任何直接的 `state.ui_*` 写入；用例层现在通过 `UseCaseOutputPort` 发出 UI 失效、choice 生命周期和 modal timer 输出。第二，`game.ui_port` 的预算已经从 23 降到 16，其中 `TurnRoll`、`TurnMove`、`ActionAnimPort` 这三处动画等待门控已经改走 `game.anim_gate_port`。第三，`src/core` 已经不再直接认识 Eggy 宿主全局，相关安装器和别名逻辑都已外移或改成显式注入。第四，`Purchase.lua` 的 paid-currency 宿主购买通道已经被抽到 `PaidPurchaseGateway.lua`，而 paid callback 后的 market choice 刷新也已经移到 `Choice.lua`。第五，默认回归仍保持通过，并把这些收口一起锁住。
+阶段0和阶段1现在都已经完成，阶段2也已经切开第一刀，阶段3则已经完整完成，阶段4也完成了三刀。当前最重要的可观察结果有五条。第一，`src/game/flow` 已经没有任何直接的 `state.ui_*` 写入；用例层现在通过 `UseCaseOutputPort` 发出 UI 失效、choice 生命周期和 modal timer 输出。第二，`game.ui_port` 的预算已经从 23 降到 16，其中 `TurnRoll`、`TurnMove`、`ActionAnimPort` 这三处动画等待门控已经改走 `game.anim_gate_port`。第三，`src/core` 已经不再直接认识 Eggy 宿主全局，相关安装器和别名逻辑都已外移或改成显式注入。第四，`Purchase.lua` 的 paid-currency 宿主购买通道已经被抽到 `PaidPurchaseGateway.lua`，paid callback 后的 market choice 刷新已经移到 `Choice.lua`，item/vehicle/skin 的兑现副作用已经集中到 `Fulfillment.lua`。第五，默认回归仍保持通过，并把这些收口一起锁住。
 
 这轮推进的经验同样直接。第一，阶段1不需要等 presentation 全部清干净才开始，先把“写入口”统一就能显著降低后续修改的耦合面。第二，守护测试必须允许内部兼容镜像存在，否则会把 `ui_runtime` 这种过渡性状态误判成旧债。第三，阶段2应该继续坚持“每次只拔一小束读路径”，因为 `push_popup`、`ui_port.state` 和 market 链路的风险明显高于动画布尔门控。第四，阶段3一旦把 `src/core` 改成显式注入，测试基础设施也必须同步升级为显式构造 runtime context，否则旧的全局 patch 习惯会反噬回归。
 
