@@ -27,6 +27,7 @@
 - [x] (2026-03-07 01:43 +0800) 已完成阶段5第二刀：`choice_screen_service.common` 现在优先消费 `option.confirm_title/confirm_body` 与 `choice.confirm_title/confirm_body`；`ItemPhase` 已同时为 choice 本身和每个 item option 产出确认文案，`LandChoiceSpecs.tax_prompt`、`EffectPipeline` 的 landing optional choice、market skin option 也都直接产出确认文案，presentation 仅保留 fallback 兼容逻辑。
 - [x] (2026-03-07 02:02 +0800) 已完成阶段5第三刀的第一小片：`ItemPhase.build_choice_spec()` 现在额外输出 `uses_item_slots/pre_confirm_before_slot_pick`；`PreConfirmFlow`、`ItemPhaseAskFlow`、`UIModalPresenter`、`item_slots`、`item_slot_intents` 已优先消费这些显式语义，`choice.kind == "item_phase_choice"` 的散落判断被收敛到 `choice_screen_service.common` helper 中保底兼容。
 - [x] (2026-03-07 02:10 +0800) 已完成阶段5第三刀的第二小片：`presentation_ui` 里的手工 `item_phase_choice` 测试数据已补齐显式 flag 与确认文案，`choice_screen_service.common` 已移除 `item_phase_choice` 的 `kind`-fallback 与旧确认文案推导，只保留显式字段路径。
+- [x] (2026-03-07 02:18 +0800) 已完成阶段5第三刀的第三小片：`presentation_ui` 里的手工 `tax_card_prompt`、`landing_optional_effect` choice 也已补齐 `confirm_*` 字段，`choice_screen_service.common` 不再为 tax 和 buy/upgrade land 推导默认确认文案，确认 UI 全部优先消费用例层显式输出。
 - [ ] 阶段6：在边界稳定后整理目录语义和命名，避免目录改动与行为改动叠加。
 
 ## 意外与发现
@@ -81,6 +82,9 @@
 
 - 观察：一旦生产 builder 已稳定输出显式 flag，阻碍继续删 fallback 的主要来源就不再是生产代码，而是 `presentation_ui` 这类手工构造 choice 的测试数据。
   证据：本轮实际只改了 `choice_screen_service.common` 与 `tests/suites/presentation_ui.lua`；补齐测试 choice 上的 `uses_item_slots/pre_confirm_before_slot_pick/confirm_*` 后，删除 `item_phase_choice` 的 helper fallback 仍能通过定向回归。
+
+- 观察：`tax_card_prompt` 与 `landing_optional_effect` 的确认文案 fallback 也已经进入同样状态，真正依赖旧分支的同样只剩手工 choice 测试，而不是生产 builder。
+  证据：`LandChoiceSpecs.tax_prompt()` 与 `EffectPipeline` 早已输出 `confirm_title/confirm_body`；本轮把 `presentation_ui` 中的手工 tax/landing choice 补齐这些字段后，删除 common 里的对应 fallback，定向回归继续通过。
 
 ## 决策日志
 
@@ -146,6 +150,10 @@
 
 - 决策：阶段5第三刀的第二小片优先删 `choice_screen_service.common` 中 `item_phase_choice` 的 helper fallback，而不是继续新增更多 helper 包装。
   理由：生产路径和主要消费点已经全部接上显式字段；继续保留 `kind`-fallback 只会拖慢真正的边界收口。测试数据补齐后，这条 fallback 已经没有必要继续存在。
+  日期/作者：2026-03-07 / Codex
+
+- 决策：阶段5第三刀的第三小片继续沿同一路径删除 `tax_card_prompt` 和 `buy_land/upgrade_land` 的确认文案 fallback，而不是在 common 中保留“最后几条默认文案”。
+  理由：一旦确认文案还留在 presentation fallback 里，责任边界就仍旧不干净。既然生产 builder 和关键测试都能改成显式字段，就应该继续把 common 收缩成纯消费层。
   日期/作者：2026-03-07 / Codex
 
 ## 结果与复盘

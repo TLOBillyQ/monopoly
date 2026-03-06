@@ -111,21 +111,6 @@ function M.resolve_choice_title(choice, screen_key, selected_option_id)
   return "请选择"
 end
 
-local function _resolve_tile_name(choice, game)
-  local tile_id = choice and choice.meta and choice.meta.tile_id or nil
-  if not tile_id then
-    return nil
-  end
-  if not game or not game.board or not game.board.get_tile_by_id then
-    return nil
-  end
-  local tile = game.board:get_tile_by_id(tile_id)
-  if tile and tile.name and tile.name ~= "" then
-    return tile.name
-  end
-  return nil
-end
-
 function M.resolve_secondary_confirm_title(choice, game, source_screen, option_id)
   local option = M.resolve_option_by_id(choice, option_id)
   if option and type(option.confirm_title) == "string" and option.confirm_title ~= "" then
@@ -133,15 +118,6 @@ function M.resolve_secondary_confirm_title(choice, game, source_screen, option_i
   end
   if choice and type(choice.confirm_title) == "string" and choice.confirm_title ~= "" then
     return choice.confirm_title
-  end
-  if option_id == "buy_land" then
-    return "买地"
-  end
-  if option_id == "upgrade_land" then
-    return "加盖"
-  end
-  if choice and choice.kind == "tax_card_prompt" then
-    return "税务局"
   end
   return "请确认"
 end
@@ -160,25 +136,6 @@ function M.resolve_secondary_confirm_body(choice, game, source_screen, option_id
   end
   if type(choice.confirm_body) == "string" and choice.confirm_body ~= "" then
     return choice.confirm_body
-  end
-
-  if choice.kind == "tax_card_prompt" then
-    return "这次要用免税卡吗？"
-  end
-
-  if option_id == "buy_land" then
-    local tile_name = _resolve_tile_name(choice, game)
-    if tile_name then
-      return "地块：" .. tile_name .. "。要买吗？"
-    end
-    return "请再确认一次"
-  end
-  if option_id == "upgrade_land" then
-    local tile_name = _resolve_tile_name(choice, game)
-    if tile_name then
-      return "地块：" .. tile_name .. "。要加盖吗？"
-    end
-    return "请再确认一次"
   end
 
   if option_label and option_label ~= "" then

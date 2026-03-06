@@ -89,6 +89,8 @@ local function _test_canvas_registry_builds_canvas_first_route_specs()
       choice = {
         id = 10,
         kind = "item_phase_choice",
+        uses_item_slots = true,
+        pre_confirm_before_slot_pick = true,
         options = { { id = 2001, label = "路障卡" } },
       },
     },

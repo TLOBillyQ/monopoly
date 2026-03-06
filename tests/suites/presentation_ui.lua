@@ -2135,7 +2135,7 @@ local function _test_choice_modal_routes_to_new_screens()
       title = "请选择",
       body = "",
       options = {
-        { id = "buy_land", label = "购买地块" },
+        { id = "buy_land", label = "购买地块", confirm_title = "买地", confirm_body = "地块：彩虹大道。要买吗？" },
       },
       allow_cancel = true,
       cancel_label = "跳过",
@@ -2176,6 +2176,8 @@ local function _test_choice_modal_routes_to_new_screens()
     ui_view.open_choice_modal(state, {
       id = 6,
       kind = "tax_card_prompt",
+      confirm_title = "税务局",
+      confirm_body = "这次要用免税卡吗？",
       title = "是否使用免税卡",
       body = "",
       options = {
@@ -2758,7 +2760,10 @@ local function _test_secondary_confirm_copy_land_actions()
   local common = require("src.presentation.ui.choice_screen_service.common")
   local choice = {
     kind = "landing_optional_effect",
-    options = { { id = "buy_land", label = "购买地块" } },
+    options = {
+      { id = "buy_land", label = "购买地块", confirm_title = "买地", confirm_body = "地块：星光街。要买吗？" },
+      { id = "upgrade_land", label = "加盖建筑", confirm_title = "加盖", confirm_body = "地块：星光街。要加盖吗？" },
+    },
     meta = { tile_id = 77 },
   }
   local game = {
