@@ -40,7 +40,94 @@ local function _pick_any_dir(neigh, avoid_dir)
       return dir, neigh[dir]
     end
   end
-  assert(false, "no neighbor available")
+  return nil, nil
+end
+
+local function _pick_unique_dir(neigh, avoid_dir)
+  assert(neigh ~= nil, "missing neighbors")
+  local picked_dir = nil
+  local picked_id = nil
+  for _, dir in ipairs(_sorted_dirs(neigh)) do
+    if dir ~= avoid_dir then
+      if picked_dir ~= nil then
+        return nil, nil
+      end
+      picked_dir = dir
+      picked_id = neigh[dir]
+    end
+  end
+  return picked_dir, picked_id
+end
+
+local function _resolve_forward_next_id(map, current_id, neigh, facing, parity)
+  if map.outer_next[current_id] then
+    local next_id = map.outer_next[current_id]
+    local entry = map.entry_points[current_id]
+    if entry and parity and (parity % 2 == 0) and facing then
+      local prev_id = map.outer_prev[current_id]
+      if prev_id and map.direction(prev_id, current_id) == facing then
+        next_id = entry.inner_id
+      end
+    end
+    return next_id
+  end
+
+  if current_id == map.market_id and facing and parity then
+    local exit_dir = map.turn_right[facing]
+    if parity % 2 == 1 then
+      exit_dir = map.turn_left[facing]
+    end
+    if exit_dir and neigh[exit_dir] then
+      return neigh[exit_dir]
+    end
+    if neigh[facing] then
+      return neigh[facing]
+    end
+  end
+
+  if facing and neigh[facing] then
+    return neigh[facing]
+  end
+
+  local back_dir = opposite[facing]
+  local _, next_id = _pick_unique_dir(neigh, back_dir)
+  if next_id then
+    return next_id
+  end
+
+  local _, fallback_id = _pick_any_dir(neigh, back_dir)
+  if fallback_id then
+    return fallback_id
+  end
+
+  local _, any_id = _pick_any_dir(neigh, nil)
+  return any_id
+end
+
+local function _resolve_backward_next_id(map, current_id, neigh, facing)
+  if facing then
+    local back_dir = opposite[facing]
+    if back_dir and neigh[back_dir] then
+      return neigh[back_dir]
+    end
+  end
+
+  if map.outer_prev[current_id] then
+    return map.outer_prev[current_id]
+  end
+
+  local _, next_id = _pick_unique_dir(neigh, facing)
+  if next_id then
+    return next_id
+  end
+
+  local _, fallback_id = _pick_any_dir(neigh, facing)
+  if fallback_id then
+    return fallback_id
+  end
+
+  local _, any_id = _pick_any_dir(neigh, nil)
+  return any_id
 end
 
 ---创建新棋盘实例
@@ -197,45 +284,7 @@ function board:step_forward_by_facing(current_index, facing, parity)
   assert(current_tile ~= nil, "missing current tile: " .. tostring(current_index))
   local current_id = current_tile.id
   local neigh = map.neighbors[current_id]
-
-  local next_id = nil
-
-  if map.outer_next[current_id] then
-    local entry = map.entry_points[current_id]
-    if entry and parity and (parity % 2 == 0) and facing then
-      local prev_id = map.outer_prev[current_id]
-      local required_facing = map.direction(prev_id, current_id)
-      if required_facing == facing then
-        next_id = entry.inner_id
-      end
-    end
-    if not next_id then
-      next_id = map.outer_next[current_id]
-    end
-  elseif current_id == map.market_id and facing and parity then
-    local exit_dir = map.turn_right[facing]
-    if parity % 2 == 1 then
-      exit_dir = map.turn_left[facing]
-    end
-    if exit_dir then
-      next_id = neigh[exit_dir]
-    end
-    if not next_id then
-      next_id = neigh[facing]
-    end
-  else
-    if facing and neigh[facing] then
-      next_id = neigh[facing]
-    else
-      local back_dir = opposite[facing]
-      local _, nid = _pick_any_dir(neigh, back_dir)
-      next_id = nid
-      if not next_id then
-        local _, nid2 = _pick_any_dir(neigh, nil)
-        next_id = nid2
-      end
-    end
-  end
+  local next_id = _resolve_forward_next_id(map, current_id, neigh, facing, parity)
 
   assert(next_id ~= nil, "missing next tile id from: " .. tostring(current_id))
 
@@ -245,7 +294,7 @@ function board:step_forward_by_facing(current_index, facing, parity)
   if next_id == map.start_id then
     passed_start = 1
   end
-  local step_dir = map.direction(current_id, next_id) or facing
+  local step_dir = map.direction(current_id, next_id)
   return next_index, passed_start, step_dir
 end
 
@@ -258,27 +307,7 @@ function board:step_backward_by_facing(current_index, facing)
   local current_id = current_tile.id
   local neigh = map.neighbors[current_id]
 
-  local next_id = nil
-  if facing then
-    local back_dir = opposite[facing]
-    if back_dir and neigh[back_dir] then
-      next_id = neigh[back_dir]
-    end
-  end
-
-  if not next_id and map.outer_prev[current_id] then
-    next_id = map.outer_prev[current_id]
-  end
-
-  if not next_id and facing then
-    local _, nid = _pick_any_dir(neigh, facing)
-    next_id = nid
-  end
-
-  if not next_id then
-    local _, nid = _pick_any_dir(neigh, nil)
-    next_id = nid
-  end
+  local next_id = _resolve_backward_next_id(map, current_id, neigh, facing)
 
   assert(next_id ~= nil, "missing prev tile id from: " .. tostring(current_id))
 
@@ -288,7 +317,7 @@ function board:step_backward_by_facing(current_index, facing)
   if next_id == map.start_id then
     passed_start = 1
   end
-  local step_dir = map.direction(current_id, next_id) or facing
+  local step_dir = map.direction(current_id, next_id)
   return next_index, passed_start, step_dir
 end
 

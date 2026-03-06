@@ -3,6 +3,7 @@ local tile = require("src.game.systems.board.Tile")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local action_anim_port = require("src.core.ActionAnimPort")
 local number_utils = require("src.core.NumberUtils")
+local facing_policy = require("src.game.systems.board.FacingPolicy")
 local roadblock = {}
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
 
@@ -37,11 +38,11 @@ end
 local function _forward_indices(board, player, distance)
   local list = {}
   local current = player.position
-  local facing = player.status.move_dir
+  local facing = facing_policy.resolve_initial_facing("relative_forward", player)
   for step = 1, distance do
     local next_idx, _, next_dir = board:step_forward_by_facing(current, facing, 1)
     current = next_idx
-    facing = next_dir or facing
+    facing = next_dir
     table.insert(list, { idx = current, step = step, dir = "forward" })
   end
   return list
@@ -50,11 +51,11 @@ end
 local function _backward_indices(board, player, distance)
   local list = {}
   local current = player.position
-  local facing = player.status.move_dir
+  local facing = facing_policy.resolve_initial_facing("relative_backward", player)
   for step = 1, distance do
     local prev_idx, _, prev_dir = board:step_backward_by_facing(current, facing)
     current = prev_idx
-    facing = prev_dir or facing
+    facing = prev_dir
     table.insert(list, { idx = current, step = step, dir = "backward" })
   end
   return list

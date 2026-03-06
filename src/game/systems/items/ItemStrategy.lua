@@ -8,6 +8,7 @@ local demolish = require("src.game.systems.items.ItemDemolish")
 local roadblock = require("src.game.systems.items.ItemRoadblock")
 local rent_resolver = require("src.game.systems.land.LandRentResolver")
 local board_utils = require("src.game.systems.land.LandBoardUtils")
+local facing_policy = require("src.game.systems.board.FacingPolicy")
 
 local strategy = {}
 local item_ids = gameplay_rules.item_ids
@@ -27,12 +28,12 @@ function strategy.has_obstacles_ahead(game, player, distance)
   distance = distance or 12
   local parity = distance
   local current = player.position
-  local facing = player.status.move_dir
+  local facing = facing_policy.resolve_initial_facing("fresh_forward", player)
 
   for _ = 1, distance do
     local next_index, _passed, step_dir = board:step_forward_by_facing(current, facing, parity)
     current = next_index
-    facing = step_dir or facing
+    facing = step_dir
     if board:has_roadblock(current) or board:has_mine(current) then
       return true
     end

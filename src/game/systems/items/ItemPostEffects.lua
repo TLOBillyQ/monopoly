@@ -6,6 +6,7 @@ local gameplay_rules = require("src.core.config.GameplayRules")
 local bankruptcy = require("src.game.core.runtime.Bankruptcy")
 local action_anim_port = require("src.core.ActionAnimPort")
 local number_utils = require("src.core.NumberUtils")
+local facing_policy = require("src.game.systems.board.FacingPolicy")
 
 local item_effects = {}
 local item_ids = gameplay_rules.item_ids
@@ -181,7 +182,7 @@ local function _handle_clear_obstacles_ahead(game, player, cfg, context)
   local distance = cfg.distance or 12
   assert(context ~= nil, "missing context")
   local parity = context.branch_parity or distance
-  local facing = player.status.move_dir
+  local facing = facing_policy.resolve_initial_facing("relative_forward", player, context)
   local map = assert(board.map, "missing board.map")
   local neighbors = assert(map.neighbors, "missing board.map.neighbors")
   local opposite = { up = "down", down = "up", left = "right", right = "left" }

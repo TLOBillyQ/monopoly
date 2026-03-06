@@ -3,6 +3,7 @@ local gameplay_rules = require("src.core.config.GameplayRules")
 local inventory = require("src.game.systems.items.ItemInventory")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 local number_utils = require("src.core.NumberUtils")
+local facing_policy = require("src.game.systems.board.FacingPolicy")
 
 local movement = {}
 local item_ids = gameplay_rules.item_ids
@@ -91,12 +92,22 @@ function movement.move(game, player, steps, opts)
   local steal_interrupt = nil
   local current = player.position
   local start_tile = board:get_tile(current)
-  local facing = opts.direction
   local step_fn = board.step_forward_by_facing
   local backward = steps < 0
+  local facing_mode = opts.facing_mode
   if backward then
     step_fn = board.step_backward_by_facing
   end
+  if not facing_mode then
+    if backward then
+      facing_mode = "relative_backward"
+    elseif opts.direction ~= nil then
+      facing_mode = "resume_forward"
+    else
+      facing_mode = "fresh_forward"
+    end
+  end
+  local facing = facing_policy.resolve_initial_facing(facing_mode, player, opts)
 
   local mine = board.get_mine and board:get_mine(current) or nil
   if type(mine) == "table" and mine.owner_id == player.id then
@@ -111,7 +122,7 @@ function movement.move(game, player, steps, opts)
       next_index, passed, step_dir = step_fn(board, current, facing, branch_parity)
     end
     pass_start = pass_start + passed
-    facing = step_dir or facing
+    facing = step_dir
     current = next_index
     visited[#visited + 1] = current
 
@@ -165,6 +176,7 @@ function movement.move(game, player, steps, opts)
   end
 
   game:update_player_position(player, current)
+  -- move_dir stores the last traversed edge direction, not an absolute heading.
   game:set_player_status(player, "move_dir", facing)
 
   return {

@@ -3,6 +3,7 @@ local roadblock = require("src.game.systems.items.ItemRoadblock")
 local demolish = require("src.game.systems.items.ItemDemolish")
 local pricing = require("src.game.systems.land.LandPricing")
 local gameplay_rules = require("src.core.config.GameplayRules")
+local facing_policy = require("src.game.systems.board.FacingPolicy")
 
 -- Runtime sandbox contract (docs/eggy/lua_env.md):
 -- 1) Release sandbox removes debug/io/os/package.
@@ -26,11 +27,11 @@ end
 local function _simulate_landing(game, player, steps)
   local board = game.board
   local current = player.position
-  local facing = player.status.move_dir
+  local facing = facing_policy.resolve_initial_facing("fresh_forward", player)
   for step = 1, steps do
     local next_index, _, step_dir = board:step_forward_by_facing(current, facing, steps)
     current = next_index
-    facing = step_dir or facing
+    facing = step_dir
 
     if board:has_roadblock(current) then
       break

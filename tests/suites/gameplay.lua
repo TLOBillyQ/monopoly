@@ -529,6 +529,19 @@ local function _test_end_turn_stops_all_players_movement()
   assert((g.turn.vehicle_resync_seq or 0) == before_seq + 1, "end turn should bump vehicle_resync_seq")
 end
 
+local function _test_location_transfers_clear_move_dir()
+  local g = _new_game()
+  local p = g:current_player()
+
+  g:set_player_status(p, "move_dir", "left")
+  g:player_send_to_hospital(p)
+  assert(p.status.move_dir == nil, "hospital transfer should clear move_dir")
+
+  g:set_player_status(p, "move_dir", "right")
+  g:player_send_to_mountain(p)
+  assert(p.status.move_dir == nil, "mountain transfer should clear move_dir")
+end
+
 local function _test_stop_all_players_movement_skips_invalid_role_without_error()
   local g = _new_game()
   g.players[1].seat_id = 4001
@@ -1081,6 +1094,84 @@ local function _test_complex_market_interrupt_with_rent()
 
   assert(p1, "玩家应该存在")
   assert(true, "黑市中断 + 租金支付场景完成")
+end
+
+local function _walk_expected_forward(board, start_index, facing, remaining_steps, parity)
+  local current = start_index
+  local step_dir = facing
+  for step_index = 1, remaining_steps do
+    current, _, step_dir = board:step_forward_by_facing(current, step_dir, parity)
+  end
+  return current, step_dir
+end
+
+local function _test_market_interrupt_resume_uses_interrupt_facing()
+  local g = _new_game()
+  local p = g:current_player()
+
+  g:update_player_position(p, 35)
+  local res = movement.move(g, p, 2, { branch_parity = 2 })
+  local interrupt = assert(res.market_interrupt, "expected market interrupt")
+  assert(interrupt.remaining_steps > 0, "market interrupt should leave resumable steps")
+
+  local expected_index, expected_facing = _walk_expected_forward(
+    g.board,
+    interrupt.position,
+    interrupt.facing,
+    interrupt.remaining_steps,
+    interrupt.branch_parity
+  )
+
+  g:set_player_status(p, "move_dir", "up")
+  local resumed = movement.move(g, p, interrupt.remaining_steps, {
+    branch_parity = interrupt.branch_parity,
+    direction = interrupt.facing,
+    facing_mode = "resume_forward",
+    skip_market_check = true,
+  })
+
+  assert(resumed and resumed.landing_tile, "resumed market move should complete")
+  assert(p.position == expected_index, "market resume should follow interrupt.facing instead of stale move_dir")
+  assert(p.status.move_dir == expected_facing, "market resume should persist actual traversed edge direction")
+end
+
+local function _test_steal_interrupt_resume_uses_interrupt_facing()
+  local g = _new_game()
+  local p1 = g.players[1]
+  local p2 = g.players[2]
+  local chance_idx = _first_tile_by_type(g.board, "chance")
+
+  if not inventory.find_index(p1, gameplay_rules.item_ids.steal) then
+    p1.inventory:add({ id = gameplay_rules.item_ids.steal })
+  end
+
+  g:update_player_position(p1, chance_idx - 3)
+  g:update_player_position(p2, chance_idx - 2)
+
+  local res = movement.move(g, p1, 3, { branch_parity = 3, skip_market_check = true })
+  local interrupt = assert(res.steal_interrupt, "expected steal interrupt")
+  assert(interrupt.remaining_steps > 0, "steal interrupt should leave resumable steps")
+
+  local expected_index, expected_facing = _walk_expected_forward(
+    g.board,
+    interrupt.position,
+    interrupt.facing,
+    interrupt.remaining_steps,
+    interrupt.branch_parity
+  )
+
+  g:set_player_status(p1, "move_dir", "up")
+  local resumed = movement.move(g, p1, interrupt.remaining_steps, {
+    branch_parity = interrupt.branch_parity,
+    direction = interrupt.facing,
+    facing_mode = "resume_forward",
+    skip_market_check = true,
+    skip_steal_check = true,
+  })
+
+  assert(resumed and resumed.landing_tile, "resumed steal move should complete")
+  assert(p1.position == expected_index, "steal resume should follow interrupt.facing instead of stale move_dir")
+  assert(p1.status.move_dir == expected_facing, "steal resume should persist actual traversed edge direction")
 end
 
 local function _test_tick_headless_ports_cover_anim_phases()
@@ -1878,9 +1969,15 @@ return {
   _test_runtime_context_install_helpers_without_globals,
   _test_runtime_context_install_environment_fails_fast,
   _test_game_startup_build_state_is_pure_and_bridge_installs_events,
+  _test_stop_all_players_movement_clears_move_dir_and_stop_event,
+  _test_end_turn_stops_all_players_movement,
+  _test_location_transfers_clear_move_dir,
+  _test_stop_all_players_movement_skips_invalid_role_without_error,
   _test_autorunner_runs_to_end,
   _test_complex_consecutive_turn_settlement,
   _test_complex_market_interrupt_with_rent,
+  _test_market_interrupt_resume_uses_interrupt_facing,
+  _test_steal_interrupt_resume_uses_interrupt_facing,
   _test_detained_turn_skips_immediately_without_wait_state,
   _test_tick_headless_ports_cover_anim_phases,
   _test_action_button_timeout_auto_advances,

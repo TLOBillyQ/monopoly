@@ -70,6 +70,19 @@ local function _test_chance_move_backward_queues_move_effect_anim()
   _assert_eq(g.turn.action_anim.to_index, p.position, "move_effect to_index should match player position")
 end
 
+local function _test_chance_move_backward_without_move_dir_uses_stable_fallback()
+  local g = _new_game()
+  local p = g:current_player()
+  g:update_player_position(p, g.board:index_of_tile_id(42))
+  g:set_player_status(p, "move_dir", nil)
+  local out = chance_effects.resolve(g, p, { effect = "move_backward", steps = 1, target = "self" }, {})
+  assert(out and out.move_result, "move_backward without move_dir should still return move result")
+  local visited_ids = _visited_tile_ids(g.board, out.move_result.visited)
+  _assert_eq(#visited_ids, 1, "move_backward fallback should record one visited tile")
+  _assert_eq(visited_ids[1], 3, "move_backward without move_dir should stably fallback to outer_prev")
+  _assert_eq(p.status.move_dir, "right", "move_backward fallback should persist the traversed edge direction")
+end
+
 local function _test_chance_forced_move_queues_move_effect_anim()
   local g = _new_game()
   g.ui_port = _build_ui_port({ wait_action_anim = true })
@@ -85,6 +98,7 @@ local function _test_chance_forced_move_queues_move_effect_anim()
   _assert_eq(out.board_index, idx, "forced_move board_index should match destination")
   assert(g.turn.action_anim and g.turn.action_anim.kind == "move_effect", "forced_move should queue move_effect anim")
   _assert_eq(g.turn.action_anim.to_index, idx, "forced_move anim to_index should match destination")
+  assert(p.status.move_dir == nil, "forced_move should clear stale move_dir")
 end
 
 return {
@@ -94,6 +108,7 @@ return {
     { name = "chance_move_backward_pass_market", run = _test_chance_move_backward_pass_market },
     { name = "chance_move_backward_pass_intersection", run = _test_chance_move_backward_pass_intersection },
     { name = "chance_move_backward_queues_move_effect_anim", run = _test_chance_move_backward_queues_move_effect_anim },
+    { name = "chance_move_backward_without_move_dir_uses_stable_fallback", run = _test_chance_move_backward_without_move_dir_uses_stable_fallback },
     { name = "chance_forced_move_queues_move_effect_anim", run = _test_chance_forced_move_queues_move_effect_anim },
   },
 }

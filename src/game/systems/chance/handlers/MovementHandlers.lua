@@ -3,6 +3,7 @@ local movement_handlers = {}
 function movement_handlers.register(handlers, common)
   handlers.move_backward = function(game, player, card)
     local res = common.move_steps(game, player, -(card.steps or 0), {
+      facing_mode = "relative_backward",
       skip_steal_check = true,
       skip_market_check = true,
     })
