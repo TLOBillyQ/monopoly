@@ -259,6 +259,9 @@ local function _test_market_choice_marks_skin_options_for_pre_confirm()
   assert(target_option ~= nil, "skin tab should expose skin option")
   assert(target_option.requires_pre_confirm == true, "skin option should request pre-confirm in presentation")
   assert(target_option.pre_confirm_kind == "market_skin_purchase", "skin option should declare stable pre-confirm kind")
+  assert(target_option.confirm_title == "请确认", "skin option should provide confirm title from use-case output")
+  assert(target_option.confirm_body == "你选的是：" .. target_option.label,
+    "skin option should provide confirm body from use-case output")
 end
 
 local function _test_market_disabled_products_hidden()

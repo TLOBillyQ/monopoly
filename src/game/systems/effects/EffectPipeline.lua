@@ -21,14 +21,30 @@ local function _release_list(list)
   list_pool[#list_pool + 1] = list
 end
 
+local function _build_optional_confirm_copy(effect_id, tile_name)
+  if effect_id == "buy_land" then
+    return "买地", "地块：" .. tostring(tile_name or "") .. "。要买吗？"
+  end
+  if effect_id == "upgrade_land" then
+    return "加盖", "地块：" .. tostring(tile_name or "") .. "。要加盖吗？"
+  end
+  return nil, nil
+end
+
 local function _build_optional_choice(optional, player, tile, game_ctx, opts)
   local body_lines = {}
   local options = {}
   local effect_ids = {}
   for _, eff in ipairs(optional) do
     local label = eff.label or eff.id
+    local confirm_title, confirm_body = _build_optional_confirm_copy(eff.id, tile and tile.name or nil)
     table.insert(body_lines, label)
-    table.insert(options, { id = eff.id, label = label })
+    table.insert(options, {
+      id = eff.id,
+      label = label,
+      confirm_title = confirm_title,
+      confirm_body = confirm_body,
+    })
     table.insert(effect_ids, eff.id)
   end
 

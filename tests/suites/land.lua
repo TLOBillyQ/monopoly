@@ -32,6 +32,10 @@ local function _test_ai_picks_land_purchase()
 
   local pending = g.turn.pending_choice
   assert(pending and pending.kind == "landing_optional_effect", "should have landing choice")
+  local first_option = pending.options and pending.options[1] or nil
+  assert(first_option and first_option.confirm_title == "买地", "buy_land should expose confirm title from use-case output")
+  assert(first_option and first_option.confirm_body == "地块：" .. tile_ref.name .. "。要买吗？",
+    "buy_land should expose confirm body from use-case output")
 
   local action = agent.auto_action_for_choice(g, pending)
   assert(action, "AI should return an action")

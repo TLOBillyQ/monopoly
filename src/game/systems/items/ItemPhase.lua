@@ -18,6 +18,12 @@ local phase_titles = {
   post_action = "行动后：使用道具？",
 }
 
+local phase_confirm_titles = {
+  pre_action = "行动前",
+  pre_move = "投骰后",
+  post_action = "行动后",
+}
+
 function item_phase.is_enabled(phase)
   local queue = gameplay_rules.item_phase_queue
   assert(type(queue) == "table", "invalid item_phase_queue")
@@ -36,6 +42,8 @@ local function _build_options(game, player, phase)
     local cfg = cfg_by_id[it.id]
     if cfg and strategy.can_offer_in_phase(game, player, it.id, phase) then
       table.insert(options, { id = it.id, label = cfg.name })
+      options[#options].confirm_title = phase_confirm_titles[phase] or "本回合"
+      options[#options].confirm_body = "将使用：" .. cfg.name
       local line = cfg.name
       if cfg.usage and #cfg.usage > 0 then
         line = line .. "：" .. cfg.usage

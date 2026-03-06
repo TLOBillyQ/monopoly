@@ -44,6 +44,8 @@ function land_choice_specs.tax_prompt(player_id)
   )
   choice.allow_cancel = true
   choice.cancel_label = "不用"
+  choice.confirm_title = "税务局"
+  choice.confirm_body = "这次要用免税卡吗？"
   return choice
 end
 

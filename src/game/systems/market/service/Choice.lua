@@ -86,6 +86,10 @@ local function _build_options_for_page(visible, page_index, page_size)
     local price = context.entry_price(entry)
     local currency = context.entry_currency(entry)
     local label = name .. " - " .. number_utils.format_integer_part(price) .. " " .. currency
+    local confirm_body = nil
+    if entry.kind == "skin" then
+      confirm_body = "你选的是：" .. label
+    end
     body_lines[#body_lines + 1] = label
     options[#options + 1] = {
       id = entry.product_id,
@@ -93,6 +97,8 @@ local function _build_options_for_page(visible, page_index, page_size)
       can_buy = slot.can_buy,
       requires_pre_confirm = entry.kind == "skin",
       pre_confirm_kind = entry.kind == "skin" and "market_skin_purchase" or nil,
+      confirm_title = entry.kind == "skin" and "请确认" or nil,
+      confirm_body = confirm_body,
     }
   end
   return body_lines, options

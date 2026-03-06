@@ -2796,6 +2796,27 @@ local function _test_secondary_confirm_copy_generic_pre_confirm()
   _assert_eq(body, "你选的是：点数3", "generic pre-confirm body should show selected option")
 end
 
+local function _test_secondary_confirm_prefers_usecase_confirm_copy()
+  local common = require("src.presentation.ui.choice_screen_service.common")
+  local choice = {
+    kind = "landing_optional_effect",
+    confirm_title = "不会被读取",
+    confirm_body = "不会被读取",
+    options = {
+      {
+        id = "buy_land",
+        label = "购买地块",
+        confirm_title = "买地",
+        confirm_body = "地块：星光街。要买吗？",
+      },
+    },
+  }
+  local title = common.resolve_secondary_confirm_title(choice, nil, "secondary_confirm", "buy_land")
+  local body = common.resolve_secondary_confirm_body(choice, nil, "secondary_confirm", "buy_land", "购买地块")
+  _assert_eq(title, "买地", "secondary confirm should prefer option confirm title from use-case output")
+  _assert_eq(body, "地块：星光街。要买吗？", "secondary confirm should prefer option confirm body from use-case output")
+end
+
 local function _test_ui_event_router_action_log_uses_cached_local_role_when_event_role_missing()
   local function new_node()
     local node = {}
@@ -6190,6 +6211,7 @@ return {
   _test_secondary_confirm_copy_item_phase_selected_option,
   _test_secondary_confirm_copy_land_actions,
   _test_secondary_confirm_copy_generic_pre_confirm,
+  _test_secondary_confirm_prefers_usecase_confirm_copy,
   _test_choice_route_policy_prefers_explicit_route_metadata,
   _test_ui_event_router_player_target_click_direct_submit,
   _test_ui_event_router_action_log_toggle_uses_role_context,

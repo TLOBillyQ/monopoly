@@ -63,6 +63,23 @@ function M.resolve_option_label(option)
   return tostring(option)
 end
 
+function M.resolve_option_by_id(choice, option_id)
+  if not choice or not option_id then
+    return nil
+  end
+  local options = choice.options
+  if type(options) ~= "table" then
+    return nil
+  end
+  for _, opt in ipairs(options) do
+    local id = type(opt) == "table" and opt.id or opt
+    if id == option_id then
+      return type(opt) == "table" and opt or nil
+    end
+  end
+  return nil
+end
+
 function M.is_under_option(option)
   local label = M.resolve_option_label(option)
   if not label then
@@ -152,6 +169,13 @@ local function _resolve_tile_name(choice, game)
 end
 
 function M.resolve_secondary_confirm_title(choice, game, source_screen, option_id)
+  local option = M.resolve_option_by_id(choice, option_id)
+  if option and type(option.confirm_title) == "string" and option.confirm_title ~= "" then
+    return option.confirm_title
+  end
+  if choice and type(choice.confirm_title) == "string" and choice.confirm_title ~= "" then
+    return choice.confirm_title
+  end
   if option_id == "buy_land" then
     return "买地"
   end
@@ -173,6 +197,14 @@ function M.resolve_secondary_confirm_body(choice, game, source_screen, option_id
       return "你选的是：" .. tostring(option_label)
     end
     return "请再确认一次"
+  end
+
+  local option = M.resolve_option_by_id(choice, option_id)
+  if option and type(option.confirm_body) == "string" and option.confirm_body ~= "" then
+    return option.confirm_body
+  end
+  if type(choice.confirm_body) == "string" and choice.confirm_body ~= "" then
+    return choice.confirm_body
   end
 
   if choice.kind == "item_phase_choice" then
@@ -225,6 +257,10 @@ function M.build_secondary_confirm_body(choice, game, selected_option_id)
 end
 
 function M.resolve_option_label_by_id(choice, option_id)
+  local option = M.resolve_option_by_id(choice, option_id)
+  if option then
+    return option.label
+  end
   if not choice or not option_id then
     return nil
   end
@@ -233,9 +269,8 @@ function M.resolve_option_label_by_id(choice, option_id)
     return nil
   end
   for _, opt in ipairs(options) do
-    local id = type(opt) == "table" and opt.id or opt
-    if id == option_id then
-      return type(opt) == "table" and opt.label or tostring(opt)
+    if opt == option_id then
+      return tostring(opt)
     end
   end
   return nil

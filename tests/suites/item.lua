@@ -11,6 +11,7 @@ local _assert_eq = support.assert_eq
 local executor = support.executor
 local choice_resolver = support.choice_resolver
 local gameplay_rules = require("src.core.config.GameplayRules")
+local land_choice_specs = require("src.game.systems.land.LandChoiceSpecs")
 local item_phase = require("src.game.systems.items.ItemPhase")
 local roadblock = require("src.game.systems.items.ItemRoadblock")
 local steal = require("src.game.systems.items.ItemSteal")
@@ -227,14 +228,16 @@ local function _test_item_phase_exposes_mine_in_pre_action()
   p.inventory:add({ id = gameplay_rules.item_ids.mine })
 
   local spec = assert(item_phase.build_choice_spec(g, p, "pre_action"), "mine should be offered in pre_action")
-  local found = false
+  local found = nil
   for _, option in ipairs(spec.options) do
     if option.id == gameplay_rules.item_ids.mine then
-      found = true
+      found = option
       break
     end
   end
-  _assert_eq(found, true, "pre_action choice should include mine")
+  assert(found ~= nil, "pre_action choice should include mine")
+  _assert_eq(found.confirm_title, "行动前", "item_phase option should expose confirm title from use-case output")
+  _assert_eq(found.confirm_body, "将使用：地雷卡", "item_phase option should expose confirm body from use-case output")
 end
 
 local function _test_roadblock_manual_choice_shows_seven_tiles_with_tile_names_only()
@@ -440,6 +443,12 @@ local function _test_tax_prompt_cancel_maps_to_skip_and_executes_pay_tax()
   _assert_eq(p.cash, 500, "tax prompt cancel should pay tax through skip path")
 end
 
+local function _test_tax_prompt_exposes_confirm_copy()
+  local choice = land_choice_specs.tax_prompt(11)
+  _assert_eq(choice.confirm_title, "税务局", "tax prompt should expose confirm title from use-case output")
+  _assert_eq(choice.confirm_body, "这次要用免税卡吗？", "tax prompt should expose confirm body from use-case output")
+end
+
 local function _test_simple_item_use_pushes_item_card_popup()
   local g = _new_game()
   local popups = {}
@@ -616,6 +625,10 @@ return {
     {
       name = "tax_prompt_cancel_maps_to_skip_and_executes_pay_tax",
       run = _test_tax_prompt_cancel_maps_to_skip_and_executes_pay_tax,
+    },
+    {
+      name = "tax_prompt_exposes_confirm_copy",
+      run = _test_tax_prompt_exposes_confirm_copy,
     },
     {
       name = "simple_item_use_pushes_item_card_popup",
