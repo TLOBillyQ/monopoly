@@ -1,720 +1,387 @@
-# Monopoly 代码库架构审查报告
+# Monopoly 代码库 Clean Architecture 复审报告
 
-**审查日期**: 2026-03-06
-**代码库规模**: 274 Lua 文件
-**审查方法论**: Clean Architecture + 依赖规则静态分析 + 运行时契约验证
+**审查日期**: 2026-03-07  
+**代码状态**: `bad3e168` 之后的最新工作树  
+**代码规模**: `src/` + `tests/` 共 326 个 Lua 文件  
+**审查方法**: Clean Architecture（Robert C. Martin）+ 依赖规则静态扫描 + 已有契约测试/回归入口复核
 
 ---
 
 ## 执行摘要
 
-Monopoly 代码库正处于**架构迁移的关键阶段**——它已从"完全过程式耦合"演进至"分层骨架基本成型，但语义泄漏仍需收口"的状态。这不是一个失败的架构，而是一个**需要完成迁移**的架构。
+### 架构结论
 
-**关键发现**:
+当前代码库**已经基本满足 Clean Architecture 的核心约束**：依赖方向总体朝内，use case 与 presentation 的边界已经显式化，之前最危险的 `src/core` 宿主直连、`game.ui_port` 反向依赖、presentation 通过 `choice.kind/meta` 猜业务语义这三类问题都已被大幅收口。
 
-| 维度 | 现状 | 风险等级 |
-|------|------|----------|
-| 目录结构 | 分层清晰（core/game/presentation/app） | 低 |
-| 依赖方向 | 静态 import 基本正确 | 低 |
-| 宿主耦合 | `src/core/` 仍含 6 个文件、42 处宿主 API 直接调用 | **P0** |
-| UI 渗透 | `game.ui_port` 扩散至 15 个文件，形成反向依赖 | **P1** |
-| 状态边界 | `game/flow` 直接操作 `state.ui_*` 等 UI 协调状态 | **P1** |
-| 契约测试 | 已建立 dep_rules + 5 套契约测试 | 资产 |
+这不是“还在半路”的架构了，而是**主体迁移已经完成、只剩少量边界清理与命名语义收尾**的架构。严格来说，当前主要问题已从 P0/P1 的硬违规，下降为少数兼容桥与目录语义上的 P1/P2 债务。
 
-**核心结论**: 当前架构不应推倒重来，而应**先补架构守护测试，再逐步收口三条关键边界**（use case→UI、core→runtime、market→payment）。
+### 关键现状指标
 
----
-
-## 1. 架构现状全景
-
-### 1.1 分层映射（实际 vs 理想）
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Frameworks & Drivers (外层)                                     │
-│  ├── src/app/bootstrap/          ← 组合根 + 生命周期协调          │
-│  ├── src/core/RuntimeEnvBindings ← 宿主 API 绑定（应外迁）        │
-│  └── src/presentation/api/host_runtime                          │
-├─────────────────────────────────────────────────────────────────┤
-│  Interface Adapters                                              │
-│  ├── src/presentation/api/       ← UIViewService, UIRuntimePort │
-│  ├── src/presentation/render/    ← BoardRuntime, ActionAnim     │
-│  └── src/presentation/interaction/                              │
-│      ├── UIIntentDispatcher      ← 真正的适配器                  │
-│      └── PreConfirmFlow          ← 已吞入应用规则 ⚠️             │
-├─────────────────────────────────────────────────────────────────┤
-│  Use Cases / Application Rules                                   │
-│  ├── src/game/runtime/           ← TurnEngine, PhaseRegistry    │
-│  │                                 (引擎壳，通用调度)             │
-│  └── src/game/flow/              ← GameplayLoop, TurnDispatch   │
-│                                    (业务用例，但直接写 UI state ⚠️)│
-├─────────────────────────────────────────────────────────────────┤
-│  Entities / Enterprise Rules                                     │
-│  ├── src/game/core/runtime/Game.lua  ← 聚合根                    │
-│  ├── src/game/core/player/       ← Player, Inventory            │
-│  └── src/game/systems/           ← board, land, items, chance   │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### 1.2 关键设计决策（已落实）
-
-1. **端口模式已建立**: `RuntimePorts`、`PresentationPorts`、`GameplayLoopPorts` 形成可注入边界
-2. **依赖规则已配置**: `tests/internal/dep_rules.lua` 禁止 presentation 直接 require game 层
-3. **组合根已集中**: `src/app/init.lua` 统一控制启动顺序
-4. **读取模型已拆分**: `GameplayReadPort` 隔离 presentation 对 game 状态的直接访问
-
-### 1.3 迁移未完成的关键证据
-
-**证据 A: src/core 的宿主残留**
-
-```lua
--- src/core/runtime_ports/DefaultPorts.lua (line 21, 32-33)
-assert(GameAPI.random_int, "missing GameAPI.random_int")
-...
-return GameAPI.random_int(min, max)  -- 直接依赖宿主 API
-```
-
-涉及文件（6 个，42 处匹配）:
-- `src/core/RuntimeEnvBindings.lua` - 安装全局 SetTimeOut/事件注册
-- `src/core/runtime_ports/DefaultPorts.lua` - GameAPI 默认实现
-- `src/core/RuntimeContext.lua` - 角色解析、helper 安装
-- `src/core/RuntimeEditorExports.lua` - 编辑器导出
-- `src/core/RuntimeEventBridge.lua` - 事件桥接
-- `src/core/Logger.lua` - GlobalAPI.show_tips
-
-**证据 B: game.ui_port 的广泛渗透**
-
-```lua
--- src/game/flow/turn/TurnRoll.lua
-local ui_port = assert(game.ui_port, "missing ui_port")
-...
-if ui_port.wait_action_anim then return "anim_blocking" end
-```
-
-直接使用者（15 个文件）:
-- 用例层: `GameplayLoop`, `TurnRoll`, `TurnMove`, `TurnDecision`, `IntentDispatcher`
-- 领域层: `Bankruptcy`, `GameStateTiles`
-- 子域系统: `ItemPhase`, `ItemUseBroadcast`, `ItemInventory`, `LandingPresenter`
-
-**证据 C: presentation 的应用规则累积**
-
-```lua
--- src/presentation/interaction/ui_intent_dispatcher/PreConfirmFlow.lua
-local Market = require("Config.Generated.Market")  -- 直接依赖业务配置
-...
-if choice.kind == "market_buy" then
-  -- 应用级二次确认逻辑
-end
-```
+- `src/core` 对 `GameAPI` / `GlobalAPI` / `SetTimeOut` / `RegisterTriggerEvent` / `RegisterCustomEvent` 的**直接全局触点为 0**。
+- `src/game/flow` 对 `state.ui_*` 的**直接写入为 0**。
+- `src/presentation` 中基于 `choice.kind` / `choice.meta` / `pending_choice.kind` / `pending_choice.meta` 的**核心业务推断匹配为 0**。
+- 全仓库对退役 `game.ui_port` 的命中只剩 **1 处兼容 fallback**：`src/presentation/api/presentation_ports/StatePorts.lua`。
+- 默认回归入口 `lua tests/regression.lua`、定向 `market` suite、定向 `presentation_ui` suite 与 `dep_rules` 当前都能证明边界已锁住。
 
 ---
 
-## 2. 结构性问题深度分析
+## 1. 最新分层映射
 
-### 2.1 P0: Dependency Rule 未收口（src/core 宿主耦合）
+### 1.1 `src/core`：稳定策略、小型端口与跨玩法公共契约
 
-**问题本质**: `src/core` 名义上是"最内层策略核心"，实际上承担"宿主环境适配器"职责。这导致：
+`src/core` 现在的主要职责已经从“宿主 API 集散地”收缩为“稳定基础策略层”。这里放的是数值工具、配置访问器、路由策略、事件名、角色 ID、脏标记、以及供内层复用的小型抽象。
 
-1. **内层不稳定**: 无法脱离 Eggy runtime 进行单元测试
-2. **依赖方向错误**: 内层认识外层（GameAPI），而非外层实现内层接口
-3. **虚假抽象**: RuntimePorts 只是 indirection，不是真正的依赖倒置
+代表文件：
 
-**量化数据**:
-- `src/core/` 共 21 个 Lua 文件
-- 6 个文件含宿主 API 直接调用
-- 42 处 `rg` 匹配行
+- `src/core/NumberUtils.lua`
+- `src/core/ChoiceRoutePolicy.lua`
+- `src/core/RoleId.lua`
+- `src/core/DirtyTracker.lua`
+- `src/core/events/MonopolyEvents.lua`
+- `src/core/config/*.lua`
 
-**关键违规点**:
+但这里仍保留了少量**语义上更像基础设施/运行时适配**的模块，例如：
 
-| 文件 | 违规内容 | 应迁移至 |
-|------|----------|----------|
-| RuntimeEnvBindings.lua | 安装 SetTimeOut/RegisterCustomEvent 全局 | app/bootstrap |
-| runtime_ports/DefaultPorts.lua | GameAPI 默认实现 | app/bootstrap/runtime_install |
-| RuntimeContext.lua | 角色解析、vehicle/camera helper 安装 | app/bootstrap |
-| Logger.lua | GlobalAPI.show_tips | 通过 sink 注入 |
+- `src/core/RuntimeContext.lua`
+- `src/core/RuntimeEventBridge.lua`
+- `src/core/runtime_ports/DefaultPorts.lua`
+- `src/core/RuntimeState.lua`
+- `src/core/RuntimePorts.lua`
 
-**迁移迹象（正面）**:
-- `src/app/bootstrap/runtime_install/RuntimePortDefaults.lua` 已开始外迁部分实现
-- `RuntimeInstall.lua` 启动时调用 `runtime_ports.configure(runtime_port_defaults.build())`
+因此，`src/core` 在依赖方向上已经安全，但在目录语义上仍不够“纯”。
 
-**结论**: 这是"迁移未完成"而非"未开始"，需彻底关闭 fallback 路径。
+### 1.2 `src/game/flow`：用例编排层
 
-### 2.2 P1: 用例层持有 UI 协调状态
+`src/game/flow` 现在已经是非常清晰的 Application / Use Case 层。它负责回合推进、输入分发、输出端口发射、dirty 状态协调、以及 gameplay loop 的时序编排。
 
-**问题本质**: `game/flow` 不仅编排用例，还直接管理 UI 等待状态、选择超时、模态框生命周期。
+关键变化是：它不再直接改 `state.ui_*`，而是通过输出端口和 grouped ports 与外层通信。
 
-**量化数据**:
-- `src/game/flow/` 中 `state.ui_* / state.pending_choice / state.ui_model` 共 60 处匹配
-- 分布在 9 个文件中
+代表文件：
 
-**关键代码 smell**:
+- `src/game/flow/ports/UseCaseOutputPort.lua`
+- `src/game/flow/turn/GameplayLoop.lua`
+- `src/game/flow/turn/GameplayLoopPorts.lua`
+- `src/game/flow/turn/TurnDispatch.lua`
+- `src/game/flow/intent/IntentDispatcher.lua`
 
-```lua
--- src/game/flow/turn/GameplayLoop.lua
-function M.tick(game, state, dt)
-  -- 业务逻辑与 UI 状态混杂
-  state.ui_dirty = true  -- 直接写 UI 标记
-  state.pending_choice_elapsed = (state.pending_choice_elapsed or 0) + dt
-  ...
-end
+其中 `IntentDispatcher.open_choice()` 现在是边界穿越的关键点：它把 use case 层定义的稳定 choice 协议复制进运行时 `pending_choice`，从而保证 presentation 消费的是显式 DTO，而不是回头猜业务。
 
--- src/game/flow/turn/TurnDispatch.lua
-function M.dispatch_action(game, state, action, opts)
-  state.pending_choice = nil      -- 直接清理 UI 状态
-  state.pending_choice_id = nil
-  state.ui_dirty = true
-end
-```
+### 1.3 `src/game/systems`：业务规则层
 
-**设计问题**:
-- `state` 同时是: 应用状态容器 + UI 协调容器 + 运行时容器
-- 边界对象不稳定，UI 结构变化将波及用例层
+`src/game/systems` 现在承担 Monopoly 的规则本体：地块、道具、机会卡、市场、动画请求、着陆效果等。这里已经明显更像 Enterprise Rules / 领域规则层，而不再是 UI 与宿主 API 的混合区。
 
-### 2.3 P1: game.ui_port 形成反向依赖
+代表文件：
 
-**问题本质**: 内层模块通过隐式协议访问 `game.ui_port`，违反依赖倒置原则。
+- `src/game/systems/land/*`
+- `src/game/systems/items/*`
+- `src/game/systems/chance/*`
+- `src/game/systems/market/service/*`
 
-**隐式协议内容**:
-- `game.ui_port` 必须存在
-- 必须有 `push_popup`, `wait_action_anim`, `wait_move_anim` 方法
-- 有时 `ui_port.state` 还能回指共享 state
+其中 Market 是本轮重构最典型的成功案例：
 
-**这不是端口抽象，而是共享对象图泄漏。**
+- `Choice.lua` 负责构造 market choice 输出。
+- `ChoiceSession.lua` 负责 session 刷新与 pending-choice 回写。
+- `Purchase.lua` 只保留购买编排。
+- `LocalPurchase.lua` / `PaidPurchaseGateway.lua` / `PaidFulfillment.lua` / `PurchasePolicy.lua` / `Feedback.lua` / `ChoiceOutcome.lua` 分别承接本地购买、外部支付桥接、兑现、资格校验、失败反馈、购买后续动作。
 
-**扩散范围**:
+这已经非常接近 Clean Architecture 里“用例依赖端口、细节留在外层适配器”的理想状态。
 
-```
-game.ui_port 渗透图:
-├── game/flow/turn/GameplayLoop.lua      ← 创建并挂载
-├── game/flow/turn/TurnRoll.lua          ← 读取 wait_action_anim
-├── game/flow/turn/TurnMove.lua          ← 读取 wait_move_anim
-├── game/flow/turn/TurnDecision.lua      ← 推送选择模态
-├── game/flow/intent/IntentDispatcher.lua ← 推送弹窗
-├── game/core/runtime/Bankruptcy.lua     ← 推送破产提示 ⚠️ 领域层
-├── game/core/runtime/GameStateTiles.lua ← 地块变更通知 ⚠️ 领域层
-└── game/systems/items/*.lua             ← 道具广播、库存操作
-```
+### 1.4 `src/presentation`：Interface Adapters / 展示适配层
 
-**严重性**: 已扩散至 `game/core` 和 `game/systems`，超出用例层。
+`src/presentation` 现在主要负责四件事：
 
-### 2.4 P1: presentation 承接应用规则
+1. 组装 `ui_model`
+2. 把 choice / popup / market ViewModel 渲染到具体 UI
+3. 把 UI 输入翻译成 turn action
+4. 监听外层运行时事件，驱动显示同步
 
-**问题本质**: presentation 层通过 `choice.kind/meta` 隐式协议吸收业务语义，成为"adapter + UI orchestration + 局部决策"的混合层。
+代表文件：
 
-**关键证据**:
+- `src/presentation/state/UIModel.lua`
+- `src/presentation/ui/UIChoice.lua`
+- `src/presentation/state/ui_model/ChoiceSlice.lua`
+- `src/presentation/render/TargetChoiceEffects.lua`
+- `src/presentation/interaction/ui_intent_dispatcher/PreConfirmFlow.lua`
+- `src/presentation/api/PresentationPorts.lua`
 
-```lua
--- src/presentation/interaction/ui_intent_dispatcher/PreConfirmFlow.lua
--- 58 处 choice.kind / Config.Generated.Market 相关匹配
+这一层最重要的进步是：**它已经不再把 `choice.kind` / `meta` 当成隐式 DSL 来解释业务**。现在它主要消费显式字段，例如：
 
-if choice.kind == "market_buy" or choice.kind == "item_phase_choice" then
-  -- 应用级二次确认逻辑
-  local goods = Market.goods[choice.meta.goods_id]
-  -- 生成确认文案、判断条件
-end
-```
+- `route_key`
+- `requires_confirm`
+- `confirm_title` / `confirm_body`
+- `owner_role_id`
+- `uses_item_slots`
+- `pre_confirm_before_slot_pick`
+- `uses_target_picker`
+- `target_picker_owner_role_id`
+- `active_tab` / `page_index` / `page_count`
 
-**隐含风险**:
-- `choice.kind` 成为横跨用例层与 UI 层的隐式 DSL
-- 新增 choice 类型时，容易继续在 UI 层堆积业务分支
-
-### 2.5 P1: Market 购买链路边界塌陷
-
-**问题模块**: `src/game/systems/market/service/Purchase.lua`
-
-**职责过载**:
-
-```
-Purchase.lua 同时承担:
-├── 商品映射        _build_goods_mappings()        ← domain
-├── 外部支付发起    _start_external_purchase()     ← runtime adapter
-├── 平台回调注册    _register_purchase_event_for_role() ← event bridge
-├── 购买兑现        _fulfill_paid_goods_purchase() ← domain
-└── UI 刷新协调     _refresh_market_choice_after_paid_callback() ← presentation
-```
-
-**典型 transaction script 汇聚点**，跨越 4 个架构层级。
+这意味着 presentation 已从“半个业务层”退回到了真正的 adapter。
 
 ---
 
-## 3. 正向资产识别
+## 2. 主要问题（P0-P3）
 
-### 3.1 依赖规则测试体系
+### P0：当前没有新的硬性 Dependency Rule 违规
 
-**文件**: `tests/internal/dep_rules.lua` (171 行)
+这次复审没有看到新的 P0。此前最严重的三类问题——`src/core` 宿主全局耦合、`game.ui_port` 反向渗透、presentation 业务推断——都已经不再构成系统级硬违规。
 
-**已生效规则**:
-- presentation/interaction 禁止 require src.game.*
-- game/core 禁止直接访问 GameAPI/GlobalAPI/SetTimeOut
-- game/core 禁止依赖 game/flow
-- 禁止退役模块（RuntimeCompat 等）
-- 禁止遗留全局变量（all_roles, vehicle_helper 等）
+如果按 Clean Architecture 最核心的标准判断：**当前核心业务已经不再被 UI、宿主 API 或支付面板直接控制**。
 
-### 3.2 契约测试覆盖
+### P1-1：`StatePorts` 仍保留一条 `game.ui_port` 兼容回退
 
-| 测试文件 | 验证内容 |
-|----------|----------|
-| runtime_ports_contract.lua | RuntimePorts 行为契约 |
-| usecase_boundary_contract.lua | TurnAction port、clock contract |
-| ui_gate_contract.lua | UI 门控契约 |
-| read_model_contract.lua | ReadModel 与领域计算一致性 |
-| cross_module_contract.lua | 跨模块事件、动画契约 |
+文件：`src/presentation/api/presentation_ports/StatePorts.lua`
 
-### 3.3 已建立的端口边界
+`on_bankruptcy_tiles_cleared()` 已优先走 `board_scene_port`，但仍保留：
 
-```lua
--- RuntimePorts 模式（已落实）
-local ports = {
-  rng_next_int = function(min, max) ... end,
-  schedule = function(delay, fn) ... end,
-  resolve_role = function(player_id) ... end,
-  emit_event = function(event_name, payload) ... end,
-  -- 等等
-}
+- `game.ui_port:get_board_scene()` fallback
+- `ui_port.board_scene` fallback
 
--- 使用方式（依赖注入）
-runtime_ports.configure(ports)
-```
+这不是大面积渗透，但它说明旧的 retired interface 还没有被完全删除。它的问题不在“数量大”，而在**它继续允许外层适配器从退役共享对象取依赖**，会让后续维护者误以为 `game.ui_port` 仍是合法边界。
 
-### 3.4 回归验证状态
+判断：这是当前最值得优先清掉的剩余 P1。
 
-```
-$ lua tests/regression.lua
-All regression checks passed (361)
-dep_rules ok
-tick ok
-```
+### P1-2：`src/core` 仍承载部分运行时适配细节，目录语义没有完全收口
+
+关键文件：
+
+- `src/core/RuntimeContext.lua`
+- `src/core/RuntimeEventBridge.lua`
+- `src/core/runtime_ports/DefaultPorts.lua`
+- `src/core/RuntimePorts.lua`
+- `src/core/RuntimeState.lua`
+
+这些模块已经不再直接读取宿主全局，但它们仍明显带有 Frameworks & Drivers / Interface Adapter 色彩：
+
+- `RuntimeContext` 安装 LuaAPI 能力与 helper
+- `RuntimeEventBridge` 负责自定义事件桥接
+- `DefaultPorts` 提供 runtime port 的默认实现
+- `RuntimeState` 定义共享运行时缓存形状
+
+这类代码放在 `src/core` 并不会立即破坏依赖方向，但会弱化“core 应表达稳定策略而非运行时细节”的架构信号。也就是说，它更像**命名/归属仍未完全表达业务**，而不是依赖方向再次错误。
+
+### P2-1：`RuntimeState` 仍是跨层共享表结构，边界契约隐含在字段约定里
+
+关键文件：
+
+- `src/core/RuntimeState.lua`
+- `src/game/flow/ports/UseCaseOutputPort.lua`
+- `src/presentation/state/UIModel.lua`
+- `src/presentation/api/presentation_ports/*.lua`
+
+现在的边界已经比早期强很多，但 `ui_runtime` / `board_runtime` / `anim_runtime` / `turn_runtime` 仍是共享 table schema。好处是迁移成本低、兼容旧逻辑容易；坏处是：
+
+- 契约仍主要靠字段命名约定维护
+- `UseCaseOutputPort`、`RuntimeState`、presentation ports 三方需要保持同步理解
+- 缺少更显式的 DTO / state contract 模块时，字段漂移风险仍存在
+
+它已经不是“直接写 UI 状态”的旧问题，但仍属于边界表达不够强的 P2。
+
+### P2-2：`src/game/runtime` 与 `src/presentation/read_model` 的命名仍有语义歧义
+
+关键文件：
+
+- `src/game/runtime/TurnEngine.lua`
+- `src/game/runtime/PhaseRegistry.lua`
+- `src/presentation/read_model/GameplayReadPort.lua`
+
+`src/game/runtime` 实际上更像 use case engine shell，而不是外部 runtime 适配层。`src/presentation/read_model` 目前也不是一个独立查询架构层，而是 presentation 的辅助读模型目录。
+
+这不会破坏代码运行，但会削弱 Screaming Architecture：目录首先在“说技术安排”，而不是“说业务与边界”。这是典型 P2，而不是必须立即大修的 P1。
+
+### P3-1：choice 稳定协议已经落地，但还缺少单一的协议清单模块
+
+关键文件：
+
+- `src/game/flow/intent/IntentDispatcher.lua`
+- `src/presentation/ui/UIChoice.lua`
+- `src/presentation/state/ui_model/ChoiceSlice.lua`
+- `docs/architecture/boundaries.md`
+
+本轮已经把协议真正串通了，但协议字段列表仍散在多个模块里，主要靠代码对齐与测试保护。现在这样是可工作的，但从长期一致性看，后续如果 choice 字段继续扩展，最好把“哪些字段属于稳定协议”集中到一个 schema/helper/documented contract 中，否则维护者容易只改 builder，不改 runtime copy 或 presenter。
+
+这属于可读性与一致性层面的 P3，不影响当前整体架构判断。
 
 ---
 
-## 4. 重构路线图
+## 3. 哪些重构阶段已经可视为完成
 
-### 阶段 0: 建立架构守护（必须先做）
+### 阶段 0：架构守护 —— 已完成
 
-**目标**: 防止新代码继续违反边界
+证据：
 
-**行动**:
-1. 在 `dep_rules.lua` 新增静态规则:
-   - 禁止 `src/core` 新增 GameAPI/GlobalAPI 调用
-   - 禁止 `src/game/flow` 新增 `state.ui_*` 写入
-   - 禁止 `src/game` 新增 `game.ui_port` 读取点
+- `tests/internal/dep_rules.lua`
+- `tests/suites/architecture_guard_contract.lua`
+- `tests/regression.lua`
 
-2. 新增动态契约测试:
-   - 拦截对 UI 字段的写入
-   - 验证用例层只通过 port/DTO 输出
+静态规则、动态契约和统一回归入口都已建立，而且不是“文档上完成”，而是持续运行中的完成。
 
-3. **必须**集成至 CI: 违反 dep_rules 即构建失败
+### 阶段 1：用例输出协议 —— 已完成
 
-**风险**: 低
-**收益**: 停止架构债务增长
+证据：
 
----
-
-### 阶段 1: 定义用例输出协议
-
-**目标**: 切断用例层与 UI 状态的直接耦合
-
-**行动**:
-
-```lua
--- 定义稳定输出协议（新增文件）
--- src/game/flow/ports/OutputPort.lua
-
----@class ChoiceRequestedEvent
----@field choice_id string
----@field choice_kind string
----@field options table
----@field timeout_ms number|nil
-
----@class PopupRequestedEvent
----@field popup_type string
----@field message string
----@field duration_ms number
-
--- GameplayLoop 不再直接写 state，而是输出事件
-function M.tick(game, dt)
-  -- ... 业务逻辑 ...
-  if need_choice then
-    output_port.emit(ChoiceRequestedEvent.new(...))
-  end
-end
-```
-
-**改造范围**:
+- `src/game/flow/ports/UseCaseOutputPort.lua`
+- `src/game/flow/turn/GameplayLoopPorts.lua`
 - `src/game/flow/turn/GameplayLoop.lua`
 - `src/game/flow/turn/TurnDispatch.lua`
-- `src/game/flow/turn/TickChoiceTimeout.lua`
 
-**风险**: 中（主流程路径）
-**收益**: 切断最密集的跨层共享状态
+`src/game/flow` 已经不再直接写 `state.ui_*`，说明输出协议迁移已经跨过“名义完成”，进入“行为完成”。
 
----
+### 阶段 2：移除 `game.ui_port` 隐式挂载 —— 基本完成
 
-### 阶段 2: 移除 game.ui_port 隐式挂载
+证据：
 
-**目标**: 修复 DIP 违规，内层不再知道 adapter 挂载方式
+- `src/game` 层扫描下，退役 `game.ui_port` 命中已清零
+- 当前只剩 `src/presentation/api/presentation_ports/StatePorts.lua` 的兼容 fallback
 
-**行动**:
+因此，这个阶段对**核心用例层和业务层**来说已经完成；对“全仓库彻底删除兼容桥”来说，还剩一个收尾点。
 
-```lua
--- 改造前（GameplayLoop.lua）
-game.ui_port = gameplay_loop_runtime.build_ui_runtime_port(state)
--- 各模块通过 game.ui_port.push_popup 访问
+### 阶段 3：runtime 适配器外迁 —— 依赖方向已完成，目录语义未完全完成
 
--- 改造后
--- 1. 定义 Output Port 接口（内层）
--- src/game/flow/ports/NotificationPort.lua
-local NotificationPort = {
-  notify_popup = function(payload) end,
-  notify_tile_owner_changed = function(tile_id, owner_id) end,
-  notify_action_anim = function(anim_spec) end,
-}
+证据：
 
--- 2. 用例层通过构造函数注入
-function GameplayLoop.new(notification_port)
-  return { notify = notification_port }
-end
+- `src/app/bootstrap/RuntimeInstall.lua`
+- `src/app/bootstrap/runtime_install/RuntimeGlobalAliases.lua`
+- `src/app/bootstrap/runtime_install/RuntimePortDefaults.lua`
 
--- 3. presentation 层实现接口（外层）
-local UINotificationAdapter = {
-  notify_popup = function(payload)
-    UIViewService.push_popup(payload)
-  end,
-  -- ...
-}
-```
+如果看 Dependency Rule，这个阶段已经完成，因为 `src/core` 不再直接触碰宿主全局。如果看目录语义与圈层表达，则还留有一段“runtime-like 模块仍在 core”的尾巴，因此我把它评价为：
 
-**改造范围**:
-- 15 个使用 `game.ui_port` 的文件
-- `GameplayLoopRuntime` 的端口构建逻辑
+- **依赖规则层面：完成**
+- **目录语义层面：部分完成**
 
-**风险**: 中高（动画等待、弹窗是用户可见路径）
-**收益**: 消除最严重的依赖方向错误
+### 阶段 4：Market 购买链路拆分 —— 已完成
 
----
+证据：
 
-### 阶段 3: 完成 runtime 适配器外迁
+- `src/game/systems/market/service/Purchase.lua`
+- `src/game/systems/market/service/LocalPurchase.lua`
+- `src/game/systems/market/service/PaidPurchaseGateway.lua`
+- `src/game/systems/market/service/PaidFulfillment.lua`
+- `src/game/systems/market/service/PurchasePolicy.lua`
+- `src/game/systems/market/service/Feedback.lua`
+- `src/game/systems/market/service/ChoiceOutcome.lua`
+- `src/game/systems/market/service/ChoiceSession.lua`
 
-**目标**: 让 `src/core` 回到纯策略层
+这一阶段已经达到 Clean Architecture 需要的“细节可替换、用例保留编排、适配器留在边界”的水平，没有继续拆碎 `Purchase.lua` 的必要。
 
-**行动**:
+### 阶段 5：presentation 应用规则清理 —— 已完成
 
-| 当前位置 | 目标位置 | 改造内容 |
-|----------|----------|----------|
-| core/RuntimeEnvBindings.lua | app/bootstrap/EnvBindings.lua | 全局安装逻辑 |
-| core/runtime_ports/DefaultPorts.lua | app/bootstrap/runtime_install/EggyRuntimePorts.lua | Eggy 特定实现 |
-| core/RuntimeContext.lua | app/bootstrap/RuntimeContext.lua | 角色解析、helper 安装 |
-| core/Logger.lua | core/Logger.lua + sink 注入 | 移除 GlobalAPI 直接调用 |
+证据：
 
-**Logger 改造示例**:
-
-```lua
--- 改造前
-function Logger.show_tip(message)
-  GlobalAPI.show_tips(message)  -- 直接依赖
-end
-
--- 改造后
-function Logger.new(tip_sink)
-  return {
-    show_tip = function(message)
-      tip_sink(message)  -- 通过注入的 sink
-    end
-  }
-end
-
--- 组合根注入
-local logger = Logger.new(function(msg)
-  GlobalAPI.show_tips(msg)
-end)
-```
-
-**风险**: 中（覆盖面广但路径集中）
-**收益**: 真正收口 P0
-
----
-
-### 阶段 4: 拆分 Market 购买链路
-
-**目标**: 清掉最高耦合热点
-
-**新结构**:
-
-```
-src/game/systems/market/
-├── domain/
-│   └── PurchasePolicy.lua        ← 纯业务规则（资格、扣费、兑现）
-├── ports/
-│   └── PaymentGatewayPort.lua    ← 支付端口接口
-└── service/
-    └── MarketService.lua         ← 协调购买流程（不直接调 GameAPI）
-
-src/infrastructure/payment/
-├── EggyPaymentGateway.lua        ← 支付适配器（goods 映射、面板调用）
-└── PaymentCallbackHandler.lua    ← 平台回调处理
-
-src/presentation/market/
-└── MarketChoiceRefresh.lua       ← UI 协调（监听购买完成事件）
-```
-
-**流程改造**:
-
-```lua
--- 改造前: Purchase.lua 直接调用 GameAPI.get_goods_list、RegisterTriggerEvent
-
--- 改造后
--- 1. 用例层发起购买意图
-MarketService.purchase_intent(player_id, goods_id)
-  → 验证资格
-  → 调用 PaymentGatewayPort.charge(player_id, goods_id)
-
--- 2. 适配器层执行实际支付
-EggyPaymentGateway.charge(player_id, goods_id)
-  → 映射 goods_id → platform_goods_id
-  → 调用 GameAPI.purchase_goods
-  → 注册回调
-
--- 3. 回调通过事件总线
-PaymentCallbackHandler.on_paid(callback_data)
-  → 发布 DomainEvent.PurchaseCompleted
-
--- 4. 用例层兑现
-MarketService.on_purchase_completed(event)
-  → 发放道具
-  → 通过 OutputPort 刷新 UI
-```
-
-**风险**: 中（支付链路复杂，但模块集中）
-**收益**: 支付平台可替换、可测试
-
----
-
-### 阶段 5: 整理 presentation 应用规则
-
-**目标**: presentation 层只负责 ViewModel 解释与渲染
-
-**行动**:
-
-```lua
--- 改造前（PreConfirmFlow.lua）
-if choice.kind == "market_buy" then
-  local goods = Market.goods[choice.meta.goods_id]
-  -- 计算确认文案、判断逻辑
-end
-
--- 改造后
--- 用例层输出完整的确认模型
-local ConfirmModel = {
-  title = "确认购买",
-  message = PurchasePolicy.get_confirm_message(goods_id),
-  confirm_button = "购买",
-  cancel_button = "取消"
-}
-
--- presentation 只负责渲染
-UIModalPresenter.show_confirm(ConfirmModel)
-```
-
-**改造范围**:
+- `src/game/flow/intent/IntentDispatcher.lua`
+- `src/presentation/ui/UIChoice.lua`
+- `src/presentation/state/ui_model/ChoiceSlice.lua`
 - `src/presentation/interaction/ui_intent_dispatcher/PreConfirmFlow.lua`
-- `src/presentation/ui/choice_screen_service/common.lua`
 - `src/presentation/render/TargetChoiceEffects.lua`
 
-**风险**: 中（modal/choice 交互回归）
-**收益**: 防止 `choice.kind` 继续演化成跨层 DSL
+关键不是“少了几个 if”，而是 choice 稳定协议已经跨过边界，presentation 不再需要反查业务含义。这一点已经成立，所以阶段 5 可以视为完成。
+
+### 阶段 6：目录语义整理 —— 文档化完成，激进重命名未做
+
+证据：
+
+- `docs/architecture/boundaries.md`
+
+如果“完成”的定义是把职责边界固化进仓库并指导后续开发，那么它已经完成。如果“完成”的定义是重命名目录、迁移 require 路径、把语义上的不完美全部修到极致，那么它还没有做那一步。
+
+因此，这一阶段的准确判断是：**文档与约束层面已完成，目录重命名层面被有意延后**。
 
 ---
 
-### 阶段 6: 目录语义整理（边界稳定后）
+## 4. 重构方案（按最小剩余工作排序）
 
-**待澄清命名**:
+### 步骤 1：删除 `StatePorts` 的 `game.ui_port` fallback
 
-| 当前 | 问题 | 建议 |
-|------|------|------|
-| src/core | 像"领域核心"，实际含 runtime 适配 | 外迁后保留为纯策略目录 |
-| src/game/runtime vs flow | 都像用例层，分工不明确 | 文档统一解释为 use case 层 |
-| src/presentation/read_model | 像独立 query 层，实际是小助手 | 保持或发展为 query adapter |
+**影响范围**: 小  
+**关键文件**: `src/presentation/api/presentation_ports/StatePorts.lua` 及相关测试  
+**预期收益**: 彻底删除退役 `game.ui_port` 的最后一处兼容桥，让阶段 2 从“基本完成”变成“彻底完成”  
+**回归风险**: 低；只要补一条 bankruptcy / board-scene 契约测试即可
 
-**注意**: 本阶段必须在 1-5 完成后进行，避免目录变动与逻辑变动叠加。
+建议做法：只保留 `board_scene_port` 路径；如果缺失就显式 no-op，不再回退旧对象图。
 
----
+### 步骤 2：把 `RuntimeContext` / `RuntimeEventBridge` / `DefaultPorts` 从 `src/core` 迁到更外层的 runtime/infrastructure 目录
 
-## 5. 测试策略
+**影响范围**: 中  
+**关键文件**: `src/core/RuntimeContext.lua`、`src/core/RuntimeEventBridge.lua`、`src/core/runtime_ports/DefaultPorts.lua`、`src/core/RuntimePorts.lua`、`src/app/bootstrap/*`  
+**预期收益**: 让 `src/core` 真正“只表达稳定策略”，提升目录语义与 Clean Architecture 可读性  
+**回归风险**: 中；需要同步修正 require 路径和 `runtime_ports_contract`
 
-### 5.1 三层测试体系
+建议做法：不是大挪仓，而是先把这些模块迁到 `src/app/bootstrap/runtime_*` 或新的 `src/infrastructure/runtime`，再由 `src/core` 保留最小壳或纯接口。
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 架构守护测试 (Architecture Fitness Functions)                │
-│ ├── 静态: dep_rules 扫描禁用符号和 require                   │
-│ └── 动态: 拦截 state.ui_* 写入、验证 port 输出              │
-├─────────────────────────────────────────────────────────────┤
-│ 契约测试 (Contract Tests)                                    │
-│ ├── RuntimePorts 行为契约                                    │
-│ ├── TurnAction port 规范化契约                               │
-│ └── ReadModel 计算一致性契约                                 │
-├─────────────────────────────────────────────────────────────┤
-│ 用例测试 (Use Case Tests)                                    │
-│ ├── Fake Output Port 下运行 GameplayLoop                     │
-│ └── 验证无真实 UI/runtime 时的完整回合流程                   │
-└─────────────────────────────────────────────────────────────┘
-```
+### 步骤 3：把 choice 稳定协议整理成单一 schema / contract helper
 
-### 5.2 关键测试实现
+**影响范围**: 中  
+**关键文件**: `src/game/flow/intent/IntentDispatcher.lua`、`src/presentation/ui/UIChoice.lua`、`src/presentation/state/ui_model/ChoiceSlice.lua`  
+**预期收益**: 防止后续新增字段时发生“builder 改了，runtime copy 没改，presenter 又靠 fallback 顶上”的漂移  
+**回归风险**: 低到中；主要是字段透传回归
 
-**架构守护测试示例**:
+建议做法：不是引入复杂类型系统，而是新增一个小型 choice contract helper，集中声明允许透传的显式字段。
 
-```lua
--- tests/suites/architecture_fitness.lua
-function M.test_no_new_ui_state_writes_in_flow()
-  local state = create_fake_state()
-  local mt = {
-    __newindex = function(t, k, v)
-      if k:match("^ui_") or k == "pending_choice" then
-        error("Use case layer should not write " .. k)
-      end
-      rawset(t, k, v)
-    end
-  }
-  setmetatable(state, mt)
+### 步骤 4：只在边界完全稳定后，再考虑目录重命名
 
-  -- 运行用例
-  GameplayLoop.tick(game, state, 0.016)
-end
-```
+**影响范围**: 中到大  
+**关键文件**: `src/game/runtime/*`、`src/presentation/read_model/*`、相关 require 引用  
+**预期收益**: 让目录更“会说话”  
+**回归风险**: 中；纯重命名噪音大，容易掩盖真实行为变化
 
-**集成契约测试**:
-
-```lua
--- 验证适配器与真实外部系统的契约
-function M.test_eggy_payment_gateway_contract()
-  local gateway = EggyPaymentGateway.new()
-  -- 使用沙箱环境或 mock server 验证
-  local result = gateway.charge(test_player_id, test_goods_id)
-  assert(result.transaction_id)
-  assert(result.status == "pending" or result.status == "completed")
-end
-```
+建议做法：把这一步视为“独立提交的纯语义整理”，不要与行为改动混做。
 
 ---
 
-## 6. 权衡与风险
+## 5. 测试建议
 
-### 6.1 短期成本
+### 5.1 用例级测试
 
-| 项目 | 估算 | 说明 |
-|------|------|------|
-| 架构守护测试 | 2-3 天 | 静态规则 + 动态拦截 |
-| 用例输出协议 | 5-7 天 | choice/popup/anim 事件定义与迁移 |
-| game.ui_port 移除 | 7-10 天 | 15 个文件改造，动画等待逻辑重构 |
-| runtime 外迁 | 3-5 天 | 6 个文件迁移 + Logger 改造 |
-| Market 拆分 | 5-7 天 | 支付链路重构 |
-| presentation 规则内收 | 5-7 天 | choice.kind 语义迁移 |
-| **总计** | **27-39 天** | 可分阶段并行 |
+至少继续保持两类用例回归：
 
-### 6.2 长期收益
+- `market` suite：验证 Market 购买编排、session 刷新、choice build purity、外部支付回调刷新
+- `gameplay` / `presentation_ui` 相关 suite：验证 choice 打开、二次确认、target picker、modal 生命周期、owner 约束
 
-1. **宿主可替换性**: 可脱离 Eggy runtime 进行单元测试、离线回归
-2. **UI 可替换性**: 用例层不依赖具体 UI 结构，可支持多端（PC/移动端）
-3. **支付可替换性**: 支付网关可切换至其他平台
-4. **新功能接入成本**: 规则集中在 game/flow 与 game/systems，不再散落到 UI
-5. **架构治理成本**: 清晰的依赖规则可写成 CI 自动验证
+重点不是覆盖更多 UI 细节，而是验证：**用例输出了什么，presentation 就消费什么**。
 
-### 6.3 风险缓解
+### 5.2 边界契约测试
 
-| 风险 | 缓解措施 |
-|------|----------|
-| 重构引入回归 | 每个阶段前补全契约测试；保持旧路径兼容直到新路径验证通过 |
-| 新旧路径长期并存 | 设定明确的 deprecated 时间表；代码中标记 TODO 移除版本 |
-| 支付链路重构出故障 | 保留旧 Purchase.lua 作为 fallback；灰度切换 |
-| 团队理解成本 | 编写 ADR（架构决策记录）；重构期间代码审查强化 |
+建议补强三类契约：
 
----
+1. `StatePorts` 只能通过 `board_scene_port` 获取 scene，禁止再读 `game.ui_port`
+2. choice 稳定协议字段透传契约：builder → `IntentDispatcher.open_choice()` → `pending_choice` → `UIChoice` / `ChoiceSlice`
+3. runtime 适配契约：`RuntimeContext` / `RuntimePorts` 迁移后，默认端口与 bootstrap 安装仍保持行为一致
 
-## 7. 结论与行动项
+### 5.3 现有回归入口继续保留单一真相源
 
-### 7.1 核心结论
+继续以这几个入口作为单一事实标准：
 
-Monopoly 代码库已进入**架构迁移的收尾阶段**。它具备：
-- 正确的分层骨架
-- 有效的依赖规则护栏
-- 可工作的端口模式
+- `lua tests/internal/dep_rules.lua`
+- `lua -e "package.path = package.path .. ';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({ require('market') })"`
+- `lua -e "package.path = package.path .. ';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'; require('TestHarness').run_all({ require('presentation_ui') })"`
+- `lua tests/regression.lua`
 
-但仍需完成：
-- **src/core 的宿主解耦**（P0）
-- **game.ui_port 的依赖倒置**（P1）
-- **use case 与 UI 状态的边界收口**（P1）
-
-### 7.2 立即行动项
-
-| 优先级 | 行动 | 负责人 | 验收标准 |
-|--------|------|--------|----------|
-| P0 | 将 dep_rules 集成至 CI | DevOps | 违反规则即构建失败 |
-| P0 | 新增 core 宿主 API 守护规则 | 架构 | src/core 无法新增 GameAPI 调用 |
-| P1 | 定义 Choice/Popup/Anim 输出协议 | 后端 | 协议文档 + 接口定义 |
-| P1 | 迁移 Bankruptcy 的 ui_port 使用 | 后端 | 通过 NotificationPort |
-
-### 7.3 关键原则
-
-1. **先守护，后迁移**: 没有测试护栏的渐进式重构 = 债务翻倍
-2. **小步快跑**: 每次 PR 只改一个边界点，保持回归通过
-3. **ADR 文档化**: 每个架构决策记录为 Markdown，存入 `docs/architecture/`
-4. **债务看板**: 追踪每个违规点的修复状态，防止报告被遗忘
+这是当前架构演进最有价值的资产之一，不应再分裂成多套互不一致的入口。
 
 ---
 
-## 附录 A: 代码抽样验证依据
+## 6. 权衡说明
 
-### A.1 抽样范围
+### 短期成本
 
-- `src/app/init.lua`
-- `src/app/bootstrap/*` (7 files)
-- `src/core/*` (21 files)
-- `src/game/core/*` (15 files)
-- `src/game/runtime/*` (4 files)
-- `src/game/flow/*` (33 files)
-- `src/game/systems/*` (board, items, land, market, chance, effects)
-- `src/presentation/*` (151 files)
-- `tests/internal/dep_rules.lua`
-- `tests/suites/*` (40+ test files)
+- 若继续把 runtime-like 模块迁出 `src/core`，会带来一轮 require 路径调整和契约测试修订。
+- 若把 choice 协议进一步集中声明，会多一个薄层 helper，需要维护字段清单。
+- 若彻底删除最后的兼容 fallback，少数旧测试/老路径可能需要显式补端口。
 
-### A.2 验证执行
+### 长期收益
 
-```bash
-# 依赖规则验证
-lua tests/internal/dep_rules.lua
-# 输出: dep_rules ok
+- `src/core` 会真正变成稳定内核，目录语义更符合 Clean Architecture，也更便于新人阅读。
+- choice 边界会从“靠经验维持”变成“靠协议和测试维持”，后续新增交互的成本明显下降。
+- 删除最后一条 `game.ui_port` 兼容桥后，这条退役边界就能彻底从代码库语义中消失，不再误导后续开发。
 
-# 全量回归
-lua tests/regression.lua
-# 输出: All regression checks passed (361)
+### 总体判断
 
-# 宿主 API 调用统计
-cd src/core && rg "GameAPI|GlobalAPI|SetTimeOut|RegisterTriggerEvent|RegisterCustomEvent|TriggerCustomEvent" --count
-# 输出: 42 matches across 6 files
-```
-
-### A.3 关键代码引用
-
-**引用 1**: src/core/runtime_ports/DefaultPorts.lua:21
-```lua
-assert(GameAPI.random_int, "missing GameAPI.random_int")
-```
-
-**引用 2**: src/game/flow/turn/GameplayLoop.lua (多处)
-```lua
-game.ui_port = gameplay_loop_runtime.build_ui_runtime_port(state)
-state.pending_choice = {...}
-state.ui_dirty = true
-```
-
-**引用 3**: src/game/systems/market/service/Purchase.lua
-```lua
-function _build_goods_mappings() ... GameAPI.get_goods_list ... end
-function _register_purchase_event_for_role() ... RegisterTriggerEvent ... end
-function _start_external_purchase() ... GameAPI.open_shop_panel ... end
-```
+当前最正确的策略不是重新大拆，而是**接受主体迁移已经成功，改做小步收尾**。也就是说：现在的重点已经不是“救火式架构翻修”，而是“把最后几个语义毛边修平，防止回退”。
 
 ---
 
-*报告完成*
+## 7. 最终结论
+
+从 Clean Architecture 视角看，Monopoly 代码库已经跨过了最难的阶段：核心业务不再被宿主 API、UI 共享状态或 market 细节直接牵制，依赖规则总体成立，用例层与展示层边界也已经由显式协议维持。
+
+剩下的问题是真实但有限的：一条 `game.ui_port` 兼容回退、几块 runtime-like 模块仍停在 `src/core`、以及少量目录命名还没有完全“scream business”。这些问题值得继续修，但它们已经属于**收尾质量问题**，不再是**架构方向问题**。
