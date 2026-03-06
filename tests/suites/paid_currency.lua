@@ -22,31 +22,15 @@ end
 
 local function _build_fake_env(game, opts)
   opts = opts or {}
-  local jindou_commodity = opts.jindou_commodity or 9001
-  local leyuanbi_commodity = opts.leyuanbi_commodity or 9002
-  local jindou_count = opts.jindou_count or 0
-  local leyuanbi_count = opts.leyuanbi_count or 0
-  local consume_calls = {}
   local panel_calls = {}
   local role_by_player_id = {}
 
   local function _new_role(role_id)
     local role = {
       role_id = role_id,
-      commodity_count = {
-        [jindou_commodity] = jindou_count,
-        [leyuanbi_commodity] = leyuanbi_count,
-      },
     }
     role.get_roleid = function()
       return role.role_id
-    end
-    role.get_commodity_count = function(commodity_id)
-      return role.commodity_count[commodity_id] or 0
-    end
-    role.consume_commodity = function(commodity_id, count)
-      table.insert(consume_calls, { role_id = role.role_id, commodity_id = commodity_id, count = count })
-      role.commodity_count[commodity_id] = (role.commodity_count[commodity_id] or 0) - count
     end
     role.show_goods_purchase_panel = function(goods_id, show_time)
       table.insert(panel_calls, { role_id = role.role_id, goods_id = goods_id, show_time = show_time })
@@ -99,11 +83,8 @@ local function _build_fake_env(game, opts)
   return {
     patch_list = patch_list,
     role_by_player_id = role_by_player_id,
-    consume_calls = consume_calls,
     panel_calls = panel_calls,
     trigger_handlers = trigger_handlers,
-    jindou_commodity = jindou_commodity,
-    leyuanbi_commodity = leyuanbi_commodity,
   }
 end
 
@@ -128,43 +109,47 @@ local function _collect_warn_logs(run)
   return warns
 end
 
-local function _test_paid_bridge_sync_balance_from_commodity()
+local function _test_paid_bridge_external_currency_is_not_managed_and_setup_is_silent()
   local game = _new_game()
-  local p = game.players[1]
-  local env = _build_fake_env(game, { jindou_count = 7, leyuanbi_count = 3 })
-  _with_currency_cfg({
-    ["金豆"] = { commodity_id = env.jindou_commodity, unit_value = 1 },
-    ["乐园币"] = { commodity_id = env.leyuanbi_commodity, unit_value = 1 },
-  }, function()
-    _with_patches(env.patch_list, function()
+  local warns = _collect_warn_logs(function()
+    _with_currency_cfg({
+      ["金豆"] = { source = "external" },
+      ["乐园币"] = { source = "external" },
+    }, function()
       local bridge = _reload_bridge()
       bridge.setup_for_game(game)
-      assert(game:player_balance(p, "金豆") == 7, "jindou balance should sync from commodity")
-      assert(game:player_balance(p, "乐园币") == 3, "leyuanbi balance should sync from commodity")
+      assert(bridge.is_paid_currency("金豆") == true, "jindou should remain a paid currency")
+      assert(bridge.is_paid_currency("乐园币") == true, "leyuanbi should remain a paid currency")
+      assert(bridge.is_managed_currency(game, "金豆") == false, "external jindou should not be locally managed")
+      assert(bridge.is_managed_currency(game, "乐园币") == false, "external leyuanbi should not be locally managed")
+      assert(bridge.is_currency_channel_ready(game, "金豆") == true, "external paid currency should be ready for goods flow")
+      assert(bridge.unavailable_reason(game, "金豆") == nil, "external paid currency should not expose commodity errors")
     end)
   end)
+  local joined = table.concat(warns, "\n")
+  assert(joined:find("invalid_commodity_id", 1, true) == nil, "external currency setup should not log commodity mapping errors")
+  assert(joined:find("paid channel startup unavailable", 1, true) == nil, "external currency setup should not log startup unavailable")
 end
 
-local function _test_invalid_commodity_mapping_only_affects_display_channel()
+local function _test_external_paid_currency_still_starts_goods_purchase_panel()
   local game = _new_game()
   local p = game.players[1]
-  local env = _build_fake_env(game, { jindou_count = 0 })
+  local env = _build_fake_env(game)
 
   _with_currency_cfg({
-    ["金豆"] = { commodity_id = 0, unit_value = 1 },
-    ["乐园币"] = { commodity_id = 0, unit_value = 1 },
+    ["金豆"] = { source = "external" },
+    ["乐园币"] = { source = "external" },
   }, function()
     _with_patches(env.patch_list, function()
       local bridge = _reload_bridge()
       local market = _reload_market()
       bridge.setup_for_game(game)
-      assert(bridge.is_managed_currency(game, "金豆") == false, "invalid commodity mapping should disable display sync")
+      assert(bridge.is_managed_currency(game, "金豆") == false, "external paid currency should not enable display sync")
 
       local result = market.purchase.execute(game, p, 2009, nil)
       assert(type(result) == "table" and result.ok == true, "paid purchase should still start via goods panel")
       assert(result.deferred_fulfillment == true, "paid purchase should defer fulfillment to purchase callback")
       assert(#env.panel_calls == 1, "paid purchase should open goods purchase panel")
-      assert(#env.consume_calls == 0, "paid purchase should not consume commodity locally")
     end)
   end)
 end
@@ -180,8 +165,8 @@ local function _test_market_paid_purchase_requires_goods_mapping()
 
   local warns = _collect_warn_logs(function()
     _with_currency_cfg({
-      ["金豆"] = { commodity_id = env.jindou_commodity, unit_value = 1 },
-      ["乐园币"] = { commodity_id = env.leyuanbi_commodity, unit_value = 1 },
+      ["金豆"] = { source = "external" },
+      ["乐园币"] = { source = "external" },
     }, function()
       _with_patches(env.patch_list, function()
         local market = _reload_market()
@@ -204,8 +189,8 @@ local function _test_paid_purchase_callback_fulfills_item()
   local before_count = p.inventory:count()
 
   _with_currency_cfg({
-    ["金豆"] = { commodity_id = env.jindou_commodity, unit_value = 1 },
-    ["乐园币"] = { commodity_id = env.leyuanbi_commodity, unit_value = 1 },
+    ["金豆"] = { source = "external" },
+    ["乐园币"] = { source = "external" },
   }, function()
     _with_patches(env.patch_list, function()
       local market = _reload_market()
@@ -225,8 +210,14 @@ end
 return {
   name = "paid_currency",
   tests = {
-    { name = "paid_bridge_sync_balance_from_commodity", run = _test_paid_bridge_sync_balance_from_commodity },
-    { name = "invalid_commodity_mapping_only_affects_display_channel", run = _test_invalid_commodity_mapping_only_affects_display_channel },
+    {
+      name = "paid_bridge_external_currency_is_not_managed_and_setup_is_silent",
+      run = _test_paid_bridge_external_currency_is_not_managed_and_setup_is_silent,
+    },
+    {
+      name = "external_paid_currency_still_starts_goods_purchase_panel",
+      run = _test_external_paid_currency_still_starts_goods_purchase_panel,
+    },
     { name = "market_paid_purchase_requires_goods_mapping", run = _test_market_paid_purchase_requires_goods_mapping },
     { name = "paid_purchase_callback_fulfills_item", run = _test_paid_purchase_callback_fulfills_item },
   },
