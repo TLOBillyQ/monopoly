@@ -41,6 +41,17 @@ local names = {
   "_test_game_startup_role_roster_retries_before_debug_players_fallback",     -- 37
   "_test_find_player_by_id_accepts_mixed_representation",                     -- 38
   "_test_runtime_context_change_skin_exports_and_event",                      -- 39
+  "_test_afk_auto_host_enters_auto_after_timeout_in_start_phase",             -- 40
+  "_test_afk_auto_host_enters_auto_after_timeout_in_wait_choice",             -- 41
+  "_test_afk_auto_host_next_input_resets_timer",                              -- 42
+  "_test_afk_auto_host_market_tab_input_resets_timer",                        -- 43
+  "_test_afk_auto_host_does_not_accumulate_when_input_locked",                -- 44
+  "_test_afk_auto_host_does_not_accumulate_when_popup_active",                -- 45
+  "_test_afk_auto_host_does_not_accumulate_in_wait_action_anim",              -- 46
+  "_test_afk_auto_host_resets_when_current_player_changes",                   -- 47
+  "_test_afk_auto_host_enters_auto_after_timeout_in_action_wait_phase",       -- 48
+  "_test_afk_auto_host_timeout_next_does_not_reset_timer",                    -- 49
+  "_test_afk_auto_host_timeout_next_accumulates_across_turns",                -- 50
 }
 
 local function slice(suite_name, first_index, last_index)

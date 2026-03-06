@@ -43,11 +43,12 @@ function tick_steps.step_tick_timeouts(game, state, dt, ports, dispatch_action_w
     state = state,
     dt = dt,
     ports = ports,
-    dispatch_next = function(actor_role_id)
+    dispatch_next = function(actor_role_id, input_source)
       dispatch_action_with_close_choice(game, state, {
         type = "ui_button",
         id = "next",
         actor_role_id = actor_role_id,
+        input_source = input_source,
       }, ports)
     end,
   })

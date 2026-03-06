@@ -7,9 +7,11 @@ local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
 local gameplay_loop_runtime = require("src.game.flow.turn.GameplayLoopRuntime")
 local auto_context = require("src.game.flow.turn.AutoContext")
 local tick_flow = require("src.game.flow.turn.GameplayLoopTickFlow")
+local turn_timer_policy = require("src.game.flow.turn.TurnTimerPolicy")
 local paid_currency_bridge = require("src.game.systems.commerce.PaidCurrencyBridge")
 local market_purchase = require("src.game.systems.market.service.Purchase")
 local runtime_state = require("src.core.RuntimeState")
+local role_id_utils = require("src.core.RoleId")
 
 local gameplay_loop = {}
 
@@ -61,26 +63,32 @@ end
 
 local function _reset_afk_tracking(state, actor_role_id)
   local turn_runtime = runtime_state.ensure_turn_runtime(state)
-  turn_runtime.afk_actor_role_id = actor_role_id
+  local normalized = role_id_utils.normalize(actor_role_id)
+  if normalized ~= nil then
+    role_id_utils.write(turn_runtime.afk_elapsed_seconds_by_role, normalized, 0)
+  end
+  turn_runtime.afk_actor_role_id = normalized
   turn_runtime.afk_elapsed_seconds = 0
   turn_runtime.afk_tracking_active = false
 end
 
-local function _is_afk_trackable_phase(game, state, ui_sync_ports)
-  local phase = game and game.turn and game.turn.phase or nil
-  if phase == "start" then
-    return true
+local function _read_afk_elapsed(turn_runtime, actor_role_id)
+  return role_id_utils.read(turn_runtime.afk_elapsed_seconds_by_role, actor_role_id) or 0
+end
+
+local function _write_afk_elapsed(turn_runtime, actor_role_id, elapsed_seconds)
+  local normalized = role_id_utils.write(turn_runtime.afk_elapsed_seconds_by_role, actor_role_id, elapsed_seconds or 0)
+  if normalized ~= nil and role_id_utils.equals(turn_runtime.afk_actor_role_id, normalized) then
+    turn_runtime.afk_elapsed_seconds = elapsed_seconds or 0
   end
-  if phase ~= "wait_choice" then
-    return false
-  end
-  if ui_sync_ports and type(ui_sync_ports.is_choice_active) == "function" and ui_sync_ports.is_choice_active(state) then
-    return true
-  end
-  if ui_sync_ports and type(ui_sync_ports.is_market_active) == "function" and ui_sync_ports.is_market_active(state) then
-    return true
-  end
-  return false
+  return normalized
+end
+
+local function _sync_afk_view(turn_runtime, actor_role_id, tracking_active)
+  local normalized = role_id_utils.normalize(actor_role_id)
+  turn_runtime.afk_actor_role_id = normalized
+  turn_runtime.afk_elapsed_seconds = _read_afk_elapsed(turn_runtime, normalized)
+  turn_runtime.afk_tracking_active = tracking_active == true
 end
 
 function gameplay_loop.step_afk_auto_host(game, state, dt)
@@ -88,40 +96,31 @@ function gameplay_loop.step_afk_auto_host(game, state, dt)
   local timeout = gameplay_rules.afk_auto_host_seconds or 0
   local turn_runtime = runtime_state.ensure_turn_runtime(state)
   if not timeout or timeout <= 0 then
-    _reset_afk_tracking(state, nil)
+    _sync_afk_view(turn_runtime, nil, false)
     return false
   end
 
   local current_index = game.turn and game.turn.current_player_index or nil
   local current_player = current_index and game.players and game.players[current_index] or nil
   if not current_player or current_player.auto == true then
-    _reset_afk_tracking(state, nil)
+    _sync_afk_view(turn_runtime, nil, false)
     return false
   end
 
   local ports = _resolve_ports(state)
   local ui_sync_ports = ports.ui_sync
-  if ui_sync_ports.is_input_blocked and ui_sync_ports.is_input_blocked(state) then
-    _reset_afk_tracking(state, current_player.id)
-    return false
-  end
-  if ui_sync_ports.is_popup_active and ui_sync_ports.is_popup_active(state) then
-    _reset_afk_tracking(state, current_player.id)
-    return false
-  end
-  if not _is_afk_trackable_phase(game, state, ui_sync_ports) then
-    _reset_afk_tracking(state, current_player.id)
+  if not turn_timer_policy.is_afk_trackable_wait(game, state, ports) then
+    _sync_afk_view(turn_runtime, current_player.id, false)
     return false
   end
 
-  if turn_runtime.afk_actor_role_id ~= current_player.id then
-    turn_runtime.afk_actor_role_id = current_player.id
-    turn_runtime.afk_elapsed_seconds = 0
-  end
+  local elapsed_seconds = _read_afk_elapsed(turn_runtime, current_player.id) + (dt or 0)
+  _write_afk_elapsed(turn_runtime, current_player.id, elapsed_seconds)
+  turn_runtime.afk_actor_role_id = role_id_utils.normalize(current_player.id)
+  turn_runtime.afk_elapsed_seconds = elapsed_seconds
   turn_runtime.afk_tracking_active = true
-  turn_runtime.afk_elapsed_seconds = (turn_runtime.afk_elapsed_seconds or 0) + (dt or 0)
 
-  if turn_runtime.afk_elapsed_seconds < timeout then
+  if elapsed_seconds < timeout then
     return false
   end
 

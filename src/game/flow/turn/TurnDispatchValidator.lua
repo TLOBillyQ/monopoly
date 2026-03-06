@@ -172,6 +172,7 @@ function validator.resolve_item_slot_action(item_slot_source, state, action)
       choice_id = choice.id,
       option_id = item_id,
       actor_role_id = action.actor_role_id,
+      input_source = action.input_source,
     },
   }
 end

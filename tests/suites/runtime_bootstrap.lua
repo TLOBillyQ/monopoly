@@ -216,6 +216,43 @@ local function _test_runtime_bootstrap_ignores_coarse_wall_clock()
   _assert_close(capture.dt_values[3], 1.0 / 30.0, 0.0001, "coarse wall clock should keep fixed delta")
 end
 
+local function _test_runtime_bootstrap_preserves_fractional_wall_clock_diff_across_many_ticks()
+  local capture = { tick_callback = nil, dt_values = {} }
+  local now_values = { 200.00, 200.03, 200.06, 200.09 }
+  local now_index = 0
+  local clock = {
+    wall_now_seconds = function()
+      now_index = now_index + 1
+      return now_values[now_index] or now_values[#now_values]
+    end,
+    wall_diff_seconds = function(current, previous)
+      return current - previous
+    end,
+    cpu_now_seconds = function()
+      return 0
+    end,
+    cpu_diff_seconds = function(current, previous)
+      return current - previous
+    end,
+  }
+
+  with_patches(_common_start_patches(capture, clock), function()
+    local state = {}
+    local game_ref = { nil }
+    game_runtime_bootstrap.start(state, game_ref)
+    capture.tick_callback()
+    capture.tick_callback()
+    capture.tick_callback()
+    capture.tick_callback()
+  end)
+
+  assert(#capture.dt_values == 4, "tick callback should preserve each fractional dt sample")
+  _assert_close(capture.dt_values[1], 1.0 / 30.0, 0.0001, "first tick should fallback to fixed delta")
+  _assert_close(capture.dt_values[2], 0.03, 0.0001, "second tick should keep fractional wall diff")
+  _assert_close(capture.dt_values[3], 0.03, 0.0001, "third tick should keep fractional wall diff")
+  _assert_close(capture.dt_values[4], 0.03, 0.0001, "fourth tick should keep fractional wall diff")
+end
+
 return {
   name = "runtime_bootstrap",
   tests = {
@@ -238,6 +275,10 @@ return {
     {
       name = "runtime_bootstrap_ignores_coarse_wall_clock",
       run = _test_runtime_bootstrap_ignores_coarse_wall_clock,
+    },
+    {
+      name = "runtime_bootstrap_preserves_fractional_wall_clock_diff_across_many_ticks",
+      run = _test_runtime_bootstrap_preserves_fractional_wall_clock_diff_across_many_ticks,
     },
   },
 }

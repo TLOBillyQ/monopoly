@@ -62,6 +62,9 @@ function runtime_state.ensure_turn_runtime(state)
   _ensure_field(turn_runtime, "afk_actor_role_id", nil)
   _ensure_field(turn_runtime, "afk_elapsed_seconds", 0)
   _ensure_field(turn_runtime, "afk_tracking_active", false)
+  if type(turn_runtime.afk_elapsed_seconds_by_role) ~= "table" then
+    turn_runtime.afk_elapsed_seconds_by_role = {}
+  end
   return turn_runtime
 end
 

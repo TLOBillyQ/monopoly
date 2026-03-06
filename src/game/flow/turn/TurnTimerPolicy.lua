@@ -2,7 +2,7 @@ local constants = require("Config.Generated.Constants")
 
 local turn_timer_policy = {}
 
-local function _is_action_button_wait_active(game, state, ports)
+function turn_timer_policy.is_action_button_wait_active(game, state, ports)
   local ui_sync_ports = ports and ports.ui_sync or nil
   if not (game and state and ports) then
     return false
@@ -27,6 +27,32 @@ local function _is_action_button_wait_active(game, state, ports)
   return true
 end
 
+function turn_timer_policy.is_afk_trackable_wait(game, state, ports)
+  if not (game and state and ports) then
+    return false
+  end
+  if turn_timer_policy.is_action_button_wait_active(game, state, ports) then
+    return true
+  end
+
+  local phase = game.turn and game.turn.phase or nil
+  if phase ~= "wait_choice" then
+    return false
+  end
+
+  local ui_sync_ports = ports.ui_sync or nil
+  if not ui_sync_ports then
+    return false
+  end
+  if ui_sync_ports.is_choice_active and ui_sync_ports.is_choice_active(state) then
+    return true
+  end
+  if ui_sync_ports.is_market_active and ui_sync_ports.is_market_active(state) then
+    return true
+  end
+  return false
+end
+
 function turn_timer_policy.update_action_button_timer(ctx)
   local state = ctx and ctx.state
   if not state then
@@ -35,7 +61,7 @@ function turn_timer_policy.update_action_button_timer(ctx)
 
   local game = ctx.game
   local ports = ctx.ports
-  if not _is_action_button_wait_active(game, state, ports) then
+  if not turn_timer_policy.is_action_button_wait_active(game, state, ports) then
     state.action_button_active = false
     state.action_button_elapsed = 0
     return
@@ -62,7 +88,7 @@ function turn_timer_policy.update_action_button_timer(ctx)
     return
   end
   if ctx.dispatch_next then
-    ctx.dispatch_next(current_player.id)
+    ctx.dispatch_next(current_player.id, "timeout")
   end
 end
 

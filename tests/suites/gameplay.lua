@@ -27,6 +27,7 @@ local mine_effect = require("src.game.systems.effects.MineEffect")
 local runtime_context = require("src.core.RuntimeContext")
 local runtime_ports = require("src.core.RuntimePorts")
 local runtime_event_bridge = require("src.core.RuntimeEventBridge")
+local runtime_state = require("src.core.RuntimeState")
 local dispatch_validator = require("src.game.flow.turn.TurnDispatchValidator")
 local tick_ui_sync = require("src.game.flow.turn.TickUISync")
 local choice_auto_policy = require("src.game.flow.turn.TurnChoiceAutoPolicy")
@@ -40,6 +41,7 @@ local game_startup_event_bridge = require("src.app.bootstrap.GameStartupEventBri
 local test_profile_bootstrap = require("src.app.testing.TestProfileBootstrap")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 local number_utils = require("src.core.NumberUtils")
+local role_id_utils = require("src.core.RoleId")
 local logger = require("src.core.Logger")
 local market_service = require("src.game.systems.market.MarketService")
 local phase_registry = require("src.game.runtime.PhaseRegistry")
@@ -247,6 +249,11 @@ local function _with_afk_timeout_only(fn)
   support.with_patches({
     { target = constants, key = "action_timeout_seconds", value = 0 },
   }, fn)
+end
+
+local function _read_afk_elapsed_seconds(state, actor_role_id)
+  local turn_runtime = runtime_state.ensure_turn_runtime(state)
+  return role_id_utils.read(turn_runtime.afk_elapsed_seconds_by_role, actor_role_id) or 0
 end
 
 local function _test_mandatory_payment_causes_bankruptcy()
@@ -1851,11 +1858,93 @@ local function _test_afk_auto_host_resets_when_current_player_changes()
     gameplay_loop.tick(g, state, 50)
     assert(state.turn_runtime.afk_actor_role_id == g.players[1].id, "afk actor should bind to current player")
     assert(state.turn_runtime.afk_elapsed_seconds == 50, "first player afk time should accumulate")
+    assert(_read_afk_elapsed_seconds(state, g.players[1].id) == 50, "first player afk time should persist by role")
 
     g.turn.current_player_index = 2
     gameplay_loop.tick(g, state, 1)
     assert(state.turn_runtime.afk_actor_role_id ~= g.players[1].id, "afk actor should not stay bound to previous player")
     assert(state.turn_runtime.afk_elapsed_seconds <= 1, "new current player should not inherit previous afk time")
+    assert(_read_afk_elapsed_seconds(state, g.players[1].id) == 50, "previous player afk time should stay cached")
+  end)
+end
+
+local function _test_afk_auto_host_enters_auto_after_timeout_in_action_wait_phase()
+  local g = _new_game()
+  local state = _build_loop_state()
+  g.ui_port = _build_ui_port()
+  g.turn.current_player_index = 1
+  g.turn.phase = "roll"
+  g.turn.pending_choice = nil
+
+  _with_afk_timeout_only(function()
+    gameplay_loop.tick(g, state, 90)
+    assert(g.players[1].auto == true, "ordinary action wait phase should count toward afk auto host")
+  end)
+end
+
+local function _test_afk_auto_host_timeout_next_does_not_reset_timer()
+  local g = _new_game()
+  local state = _build_loop_state()
+  state.game = g
+  local current_player = g:current_player()
+  runtime_state.ensure_turn_runtime(state)
+  role_id_utils.write(state.turn_runtime.afk_elapsed_seconds_by_role, current_player.id, 70)
+  state.turn_runtime.afk_actor_role_id = current_player.id
+  state.turn_runtime.afk_elapsed_seconds = 70
+  state.turn_runtime.afk_tracking_active = true
+
+  local stepped = 0
+  support.with_patches({
+    { target = turn_dispatch, key = "step_turn", value = function() stepped = stepped + 1 end },
+  }, function()
+    local res = turn_dispatch.dispatch_action(g, state, {
+      type = "ui_button",
+      id = "next",
+      actor_role_id = current_player.id,
+      input_source = "timeout",
+    })
+    assert(res and res.status == "applied", "timeout next should still apply")
+  end)
+
+  assert(stepped == 1, "timeout next should advance turn")
+  assert(_read_afk_elapsed_seconds(state, current_player.id) == 70, "timeout next should keep afk timer")
+  assert(state.turn_runtime.afk_elapsed_seconds == 70, "timeout next should keep afk mirror value")
+end
+
+local function _test_afk_auto_host_timeout_next_accumulates_across_turns()
+  local g = _new_game()
+  local state = _build_loop_state()
+  g.ui_port = _build_ui_port()
+  g.turn.current_player_index = 1
+  g.turn.phase = "roll"
+  g.turn.pending_choice = nil
+  g.players[2].auto = false
+
+  support.with_patches({
+    { target = constants, key = "action_timeout_seconds", value = 15 },
+    { target = turn_dispatch, key = "step_turn", value = function()
+      local current_index = g.turn.current_player_index or 1
+      if current_index == 1 then
+        g.turn.current_player_index = 2
+      else
+        g.turn.current_player_index = 1
+      end
+      g.turn.phase = "roll"
+    end },
+  }, function()
+    for tick_index = 1, 5 do
+      g.turn.current_player_index = 1
+      g.turn.phase = "roll"
+      gameplay_loop.tick(g, state, 15)
+      assert(g.players[1].auto ~= true, "player should stay manual before cumulative afk timeout")
+      assert(_read_afk_elapsed_seconds(state, g.players[1].id) == tick_index * 15,
+        "timeout next should preserve cumulative afk time across turns")
+    end
+
+    g.turn.current_player_index = 1
+    g.turn.phase = "roll"
+    gameplay_loop.tick(g, state, 15)
+    assert(g.players[1].auto == true, "same player should enter auto after cumulative afk across turns")
   end)
 end
 
@@ -2384,6 +2473,9 @@ return {
   _test_afk_auto_host_does_not_accumulate_when_popup_active,
   _test_afk_auto_host_does_not_accumulate_in_wait_action_anim,
   _test_afk_auto_host_resets_when_current_player_changes,
+  _test_afk_auto_host_enters_auto_after_timeout_in_action_wait_phase,
+  _test_afk_auto_host_timeout_next_does_not_reset_timer,
+  _test_afk_auto_host_timeout_next_accumulates_across_turns,
   _test_turn_prompt_initialized_for_first_player,
   _test_turn_prompt_emitted_on_next_player_switch,
   _test_turn_start_emits_turn_started_feedback_event,

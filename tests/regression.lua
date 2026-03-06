@@ -118,6 +118,7 @@ local suites = {
   require("gameplay_runtime"),
   require("gameplay_coroutine"),
   require("gameplay_loop"),
+  require("gameplay_afk"),
   require("runtime_bootstrap"),
 
   -- presentation: UI layer

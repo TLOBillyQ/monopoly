@@ -15,7 +15,11 @@ local function _reset_afk_tracking(state, actor_role_id)
     return
   end
   local turn_runtime = runtime_state.ensure_turn_runtime(state)
-  turn_runtime.afk_actor_role_id = role_id_utils.normalize(actor_role_id)
+  local normalized = role_id_utils.normalize(actor_role_id)
+  if normalized ~= nil then
+    role_id_utils.write(turn_runtime.afk_elapsed_seconds_by_role, normalized, 0)
+  end
+  turn_runtime.afk_actor_role_id = normalized
   turn_runtime.afk_elapsed_seconds = 0
   turn_runtime.afk_tracking_active = false
 end
@@ -39,6 +43,9 @@ end
 
 local function _maybe_reset_afk_for_current_player(game, state, action)
   if not (game and state and action) then
+    return
+  end
+  if action.input_source == "timeout" then
     return
   end
   local actor_role_id = role_id_utils.normalize(action.actor_role_id)
@@ -118,6 +125,9 @@ end
 
 local function _dispatch_action(game, state, action, opts, dispatch_ctx)
   assert(action ~= nil, "missing action")
+  if action.input_source == nil then
+    action.input_source = "user"
+  end
   local ctx = _resolve_dispatch_context(state, dispatch_ctx)
   local gate_state = validator.resolve_gate_state(state, ctx.ui_sync_ports)
   if validator.should_block_action(gate_state, action) then
@@ -177,7 +187,9 @@ local function _dispatch_action(game, state, action, opts, dispatch_ctx)
       turn_runtime.next_turn_locked = true
       turn_runtime.next_turn_last_click = now
       turn_runtime.next_turn_lock_phase = phase
-      _reset_afk_tracking(state, action.actor_role_id)
+      if action.input_source ~= "timeout" then
+        _reset_afk_tracking(state, action.actor_role_id)
+      end
       turn_dispatch.step_turn(game)
       return { status = "applied" }
     end
