@@ -6,6 +6,7 @@ local number_utils = require("src.core.NumberUtils")
 local facing_policy = require("src.game.systems.board.FacingPolicy")
 local roadblock = {}
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
+local ui_candidate_slots = 7
 
 local function _make_candidate(board, player, idx, dir, step, seen)
   assert(idx ~= nil, "missing idx")
@@ -59,6 +60,15 @@ local function _backward_indices(board, player, distance)
     table.insert(list, { idx = current, step = step, dir = "backward" })
   end
   return list
+end
+
+local function _append_unique_ui_candidate(list, seen, board, idx, dir, step)
+  if seen[idx] then
+    return false
+  end
+  seen[idx] = true
+  list[#list + 1] = _make_ui_candidate(board, idx, dir, step)
+  return true
 end
 
 local function _priority_for_candidate(game, player, cand)
@@ -153,16 +163,27 @@ end
 function roadblock.ui_candidates(game, player, distance)
   local board = game.board
   local list = {}
-  distance = distance or 3
+  local seen = {}
+  _append_unique_ui_candidate(list, seen, board, player.position, "current", 0)
+  local max_steps = board:length() - 1
+  local forward = _forward_indices(board, player, max_steps)
+  local backward = _backward_indices(board, player, max_steps)
 
-  for _, entry in ipairs(_forward_indices(board, player, distance)) do
-    table.insert(list, _make_ui_candidate(board, entry.idx, entry.dir, entry.step))
-  end
-
-  table.insert(list, _make_ui_candidate(board, player.position, "current", 0))
-
-  for _, entry in ipairs(_backward_indices(board, player, distance)) do
-    table.insert(list, _make_ui_candidate(board, entry.idx, entry.dir, entry.step))
+  for step = 1, max_steps do
+    local forward_entry = forward[step]
+    if forward_entry then
+      _append_unique_ui_candidate(list, seen, board, forward_entry.idx, forward_entry.dir, forward_entry.step)
+      if #list >= ui_candidate_slots then
+        break
+      end
+    end
+    local backward_entry = backward[step]
+    if backward_entry then
+      _append_unique_ui_candidate(list, seen, board, backward_entry.idx, backward_entry.dir, backward_entry.step)
+      if #list >= ui_candidate_slots then
+        break
+      end
+    end
   end
 
   return list
