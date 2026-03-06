@@ -21,14 +21,24 @@ M.executors = {
   },
   mine = {
     can_apply = function(ctx)
-      local position = ctx.tile and ctx.tile.id
+      local position = ctx.player and ctx.player.position
       local board = ctx.game.board
-      return board and position and board:has_mine(position)
+      if not (board and position and board:has_mine(position)) then
+        return false
+      end
+      local mine = board:get_mine(position)
+      if type(mine) ~= "table" then
+        return true
+      end
+      if mine.armed ~= true then
+        return false
+      end
+      return true
     end,
     apply = function(ctx)
       local player = ctx.player
       local game = ctx.game
-      local position = ctx.tile.id
+      local position = player.position
       local res = mine_effect.apply(game, player, position)
       if res and res.hospitalized then
         return {

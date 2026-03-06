@@ -114,14 +114,40 @@ function board:clear_roadblock(index)
 end
 
 ---在指定位置放置地雷
-function board:place_mine(index)
+function board:place_mine(index, data)
   self.overlays.mines = self.overlays.mines or {}
-  self.overlays.mines[index] = true
+  if data == nil then
+    self.overlays.mines[index] = true
+    return
+  end
+  local mine = {}
+  for key, value in pairs(data) do
+    mine[key] = value
+  end
+  self.overlays.mines[index] = mine
 end
 
 ---检查指定位置是否有地雷
 function board:has_mine(index)
   return self.overlays.mines[index] and true or false
+end
+
+---获取指定位置的地雷数据
+function board:get_mine(index)
+  return self.overlays.mines[index]
+end
+
+---激活指定位置的地雷
+function board:arm_mine(index)
+  local mine = self.overlays.mines[index]
+  if type(mine) ~= "table" then
+    return false
+  end
+  if mine.armed == true then
+    return false
+  end
+  mine.armed = true
+  return true
 end
 
 ---清除指定位置的地雷

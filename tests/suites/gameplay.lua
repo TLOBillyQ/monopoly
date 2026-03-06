@@ -967,7 +967,7 @@ local function _test_complex_consecutive_turn_settlement()
 
   local mine_pos = g.board:get_tile(chance_idx + 2)
   if mine_pos then
-    g.board:place_mine(mine_pos.id)
+    g.board:place_mine(chance_idx + 2)
   end
 
   local chance_cfg = require("Config.Generated.ChanceCards")
@@ -1815,6 +1815,35 @@ local function _test_find_player_by_id_accepts_mixed_representation()
   assert(by_string == p1, "find_player_by_id should match string input to string player id")
 end
 
+local function _test_owner_mine_does_not_trigger_until_owner_leaves_tile()
+  local g = _new_game()
+  local p1 = g.players[1]
+  local p2 = g.players[2]
+  local mine_index = p1.position
+  local mine_tile = assert(g.board:get_tile(mine_index), "missing owner tile")
+
+  p1.inventory:add({ id = gameplay_rules.item_ids.mine })
+  local use_res = support.executor.use_item(g, p1, gameplay_rules.item_ids.mine, { by_ai = true })
+  assert(use_res ~= nil, "mine use should succeed")
+  assert(g.board:has_mine(mine_index), "mine should be placed on owner tile")
+
+  local owner_res = _resolve_landing(g, p1, mine_tile, {})
+  assert(not owner_res, "owner landing on freshly placed mine should not trigger extra landing")
+  assert((p1.status.stay_turns or 0) == 0, "owner should not be hospitalized before leaving mine tile")
+  assert(g.board:has_mine(mine_index), "mine should stay until armed mine is triggered")
+
+  local move_res = movement.move(g, p1, 1, { branch_parity = 1, skip_market_check = true })
+  assert(move_res and move_res.landing_tile, "owner should move away from mine tile")
+  local mine_state = g.board:get_mine(mine_index)
+  assert(type(mine_state) == "table" and mine_state.armed == true, "mine should arm after owner leaves tile")
+
+  g:update_player_position(p2, mine_index)
+  local trigger_res = _resolve_landing(g, p2, mine_tile, {})
+  assert(not trigger_res, "mine trigger should resolve synchronously")
+  assert((p2.status.stay_turns or 0) > 0, "other player should be hospitalized by armed mine")
+  assert(g.board:has_mine(mine_index) == false, "mine should clear after detonation")
+end
+
 return {
   _test_mandatory_payment_causes_bankruptcy,
   _test_bankruptcy_resets_owned_tiles,
@@ -1854,5 +1883,6 @@ return {
   _test_dispatch_gate_blocks_next_when_choice_active,
   _test_game_startup_role_roster_retries_before_debug_players_fallback,
   _test_find_player_by_id_accepts_mixed_representation,
+  _test_owner_mine_does_not_trigger_until_owner_leaves_tile,
   _test_runtime_context_change_skin_exports_and_event,
 }

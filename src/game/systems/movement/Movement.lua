@@ -98,6 +98,11 @@ function movement.move(game, player, steps, opts)
     step_fn = board.step_backward_by_facing
   end
 
+  local mine = board.get_mine and board:get_mine(current) or nil
+  if type(mine) == "table" and mine.owner_id == player.id then
+    board:arm_mine(current)
+  end
+
   for step = 1, abs_steps do
     local next_index, passed, step_dir
     if backward then
@@ -175,4 +180,3 @@ function movement.move(game, player, steps, opts)
 end
 
 return movement
-

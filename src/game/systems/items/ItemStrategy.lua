@@ -60,6 +60,9 @@ function strategy.can_offer_in_phase(game, player, item_id, phase)
   if not cfg then
     return false
   end
+  if item_id == item_ids.mine and phase == "pre_action" and cfg.timing == "manual" then
+    return true
+  end
   if not strategy.timing_allowed(phase, cfg.timing, false) then
     return false
   end
@@ -94,6 +97,9 @@ function strategy.auto_pre_action(game, player, phase)
   local function _can_use(item_id)
     local cfg = inventory.cfg(item_id)
     local timing = cfg.timing
+    if item_id == item_ids.mine and phase == "pre_action" and timing == "manual" then
+      return true
+    end
     return strategy.timing_allowed(phase, timing, true)
   end
 

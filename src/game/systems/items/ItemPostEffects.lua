@@ -155,7 +155,10 @@ local function _handle_log(_, player, cfg, _context)
 end
 
 local function _handle_place_mine_here(game, player, _cfg, context)
-  game.board:place_mine(player.position)
+  game.board:place_mine(player.position, {
+    owner_id = player.id,
+    armed = false,
+  })
   logger.event(player.name .. " 在脚下埋设地雷")
   local queued = action_anim_port.queue(game, {
     kind = "mine",

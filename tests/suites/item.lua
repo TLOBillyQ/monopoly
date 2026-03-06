@@ -183,6 +183,22 @@ local function _test_item_executor_keeps_specific_anim_without_fallback()
   )
 end
 
+local function _test_item_phase_exposes_mine_in_pre_action()
+  local g = _new_game()
+  local p = g:current_player()
+  p.inventory:add({ id = gameplay_rules.item_ids.mine })
+
+  local spec = assert(item_phase.build_choice_spec(g, p, "pre_action"), "mine should be offered in pre_action")
+  local found = false
+  for _, option in ipairs(spec.options) do
+    if option.id == gameplay_rules.item_ids.mine then
+      found = true
+      break
+    end
+  end
+  _assert_eq(found, true, "pre_action choice should include mine")
+end
+
 local function _test_roadblock_manual_choice_shows_seven_tiles_with_tile_names_only()
   local g = _new_game()
   local p = g:current_player()
@@ -325,6 +341,7 @@ return {
     { name = "target_item_manual_direct_exec_and_duration", run = _test_target_item_manual_direct_exec_and_duration },
     { name = "item_executor_fallback_item_use_anim", run = _test_item_executor_fallback_item_use_anim },
     { name = "item_executor_keeps_specific_anim_without_fallback", run = _test_item_executor_keeps_specific_anim_without_fallback },
+    { name = "item_phase_exposes_mine_in_pre_action", run = _test_item_phase_exposes_mine_in_pre_action },
     {
       name = "roadblock_manual_choice_shows_seven_tiles_with_tile_names_only",
       run = _test_roadblock_manual_choice_shows_seven_tiles_with_tile_names_only,
