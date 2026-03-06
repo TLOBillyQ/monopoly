@@ -39,6 +39,7 @@ local game_startup_event_bridge = require("src.app.bootstrap.GameStartupEventBri
 local test_profile_bootstrap = require("src.app.testing.TestProfileBootstrap")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 local number_utils = require("src.core.NumberUtils")
+local market_service = require("src.game.systems.market.MarketService")
 
 local function _mock_lua_api(send_custom_event)
   return {
@@ -231,6 +232,12 @@ local function _with_timestamp_stub(fn)
     { target = game_api, key = "get_timestamp_diff", value = function(a, b)
       return a - b
     end },
+  }, fn)
+end
+
+local function _with_afk_timeout_only(fn)
+  support.with_patches({
+    { target = constants, key = "action_timeout_seconds", value = 0 },
   }, fn)
 end
 
@@ -1562,6 +1569,184 @@ local function _test_auto_runner_depends_on_current_player_auto()
   end)
 end
 
+local function _test_afk_auto_host_enters_auto_after_timeout_in_start_phase()
+  local g = _new_game()
+  local state = _build_loop_state()
+  g.ui_port = _build_ui_port()
+  g.turn.current_player_index = 1
+  g.turn.phase = "start"
+  g.turn.pending_choice = nil
+
+  local auto_runner_calls = 0
+  state.auto_runner.next_action = function()
+    auto_runner_calls = auto_runner_calls + 1
+    return nil
+  end
+
+  _with_afk_timeout_only(function()
+    gameplay_loop.tick(g, state, 89)
+    assert(g.players[1].auto ~= true, "player should not auto host before afk timeout")
+    assert(state.turn_runtime.afk_elapsed_seconds == 89, "afk timer should accumulate before timeout")
+
+    gameplay_loop.tick(g, state, 1.1)
+    assert(g.players[1].auto == true, "player should auto host after afk timeout")
+    assert(state.turn_runtime.afk_elapsed_seconds == 0, "afk timer should reset after auto host")
+    assert(state.turn_runtime.afk_tracking_active == false, "afk tracking should stop after auto host")
+    assert(auto_runner_calls == 1, "auto runner should not dispatch next on the same tick that afk auto host triggers")
+  end)
+end
+
+local function _test_afk_auto_host_enters_auto_after_timeout_in_wait_choice()
+  local g = _new_game()
+  local state = _build_loop_state()
+  g.ui_port = _build_ui_port()
+  g.turn.current_player_index = 1
+  g.turn.phase = "wait_choice"
+  state.ui.choice_active = true
+
+  _with_afk_timeout_only(function()
+    gameplay_loop.tick(g, state, 90)
+    assert(g.players[1].auto == true, "wait_choice should count toward afk auto host")
+  end)
+end
+
+local function _test_afk_auto_host_next_input_resets_timer()
+  local g = _new_game()
+  local state = _build_loop_state()
+  state.game = g
+  local current_player = g:current_player()
+  state.turn_runtime.afk_actor_role_id = current_player.id
+  state.turn_runtime.afk_elapsed_seconds = 70
+  state.turn_runtime.afk_tracking_active = true
+
+  local stepped = 0
+  support.with_patches({
+    { target = turn_dispatch, key = "step_turn", value = function() stepped = stepped + 1 end },
+  }, function()
+    local res = turn_dispatch.dispatch_action(g, state, {
+      type = "ui_button",
+      id = "next",
+      actor_role_id = current_player.id,
+    })
+    assert(res and res.status == "applied", "next input should still apply")
+  end)
+
+  assert(stepped == 1, "next input should advance turn")
+  assert(state.turn_runtime.afk_elapsed_seconds == 0, "next input should reset afk timer")
+  assert(state.turn_runtime.afk_tracking_active == false, "next input should clear afk tracking")
+end
+
+local function _test_afk_auto_host_market_tab_input_resets_timer()
+  local g = _new_game()
+  local state = _build_loop_state()
+  state.game = g
+  local current_player = g:current_player()
+  local choice = {
+    id = 12,
+    kind = "market_buy",
+    options = { { id = 2003, label = "骰子加倍卡" } },
+    active_tab = "item",
+    page_index = 1,
+    page_count = 2,
+    meta = { player_id = current_player.id },
+  }
+  g.turn.pending_choice = choice
+  state.pending_choice = choice
+  state.pending_choice_id = choice.id
+  state.ui.market_active = true
+  state.turn_runtime.afk_actor_role_id = current_player.id
+  state.turn_runtime.afk_elapsed_seconds = 70
+  state.turn_runtime.afk_tracking_active = true
+
+  support.with_patches({
+    { target = market_service.choice, key = "apply_navigation", value = function()
+      return true
+    end },
+  }, function()
+    local res = turn_dispatch.dispatch_action(g, state, {
+      type = "market_tab_select",
+      choice_id = choice.id,
+      tab = "skin",
+      actor_role_id = current_player.id,
+    })
+    assert(res and res.status == "applied", "market tab input should still apply")
+  end)
+
+  assert(state.turn_runtime.afk_elapsed_seconds == 0, "market tab input should reset afk timer")
+  assert(state.turn_runtime.afk_tracking_active == false, "market tab input should clear afk tracking")
+end
+
+local function _test_afk_auto_host_does_not_accumulate_when_input_locked()
+  local g = _new_game()
+  local state = _build_loop_state()
+  g.ui_port = _build_ui_port()
+  g.turn.current_player_index = 1
+  g.turn.phase = "start"
+  state.gameplay_loop_ports = _build_test_ports({
+    is_input_blocked = function()
+      return true
+    end,
+    set_input_blocked = function()
+      return false
+    end,
+  })
+
+  _with_afk_timeout_only(function()
+    gameplay_loop.tick(g, state, 100)
+    assert(g.players[1].auto ~= true, "input blocked should prevent afk auto host")
+    assert(state.turn_runtime.afk_elapsed_seconds == 0, "input blocked should not accumulate afk timer")
+  end)
+end
+
+local function _test_afk_auto_host_does_not_accumulate_when_popup_active()
+  local g = _new_game()
+  local state = _build_loop_state()
+  g.ui_port = _build_ui_port()
+  g.turn.current_player_index = 1
+  g.turn.phase = "start"
+  state.ui.popup_active = true
+
+  _with_afk_timeout_only(function()
+    gameplay_loop.tick(g, state, 100)
+    assert(g.players[1].auto ~= true, "popup should prevent afk auto host")
+    assert(state.turn_runtime.afk_elapsed_seconds == 0, "popup should not accumulate afk timer")
+  end)
+end
+
+local function _test_afk_auto_host_does_not_accumulate_in_wait_action_anim()
+  local g = _new_game()
+  local state = _build_loop_state()
+  g.ui_port = _build_ui_port()
+  g.turn.current_player_index = 1
+  g.turn.phase = "wait_action_anim"
+
+  _with_afk_timeout_only(function()
+    gameplay_loop.tick(g, state, 100)
+    assert(g.players[1].auto ~= true, "wait_action_anim should prevent afk auto host")
+    assert(state.turn_runtime.afk_elapsed_seconds == 0, "wait_action_anim should not accumulate afk timer")
+  end)
+end
+
+local function _test_afk_auto_host_resets_when_current_player_changes()
+  local g = _new_game()
+  local state = _build_loop_state()
+  g.ui_port = _build_ui_port()
+  g.turn.current_player_index = 1
+  g.turn.phase = "start"
+  g.players[2].auto = false
+
+  _with_afk_timeout_only(function()
+    gameplay_loop.tick(g, state, 50)
+    assert(state.turn_runtime.afk_actor_role_id == g.players[1].id, "afk actor should bind to current player")
+    assert(state.turn_runtime.afk_elapsed_seconds == 50, "first player afk time should accumulate")
+
+    g.turn.current_player_index = 2
+    gameplay_loop.tick(g, state, 1)
+    assert(state.turn_runtime.afk_actor_role_id ~= g.players[1].id, "afk actor should not stay bound to previous player")
+    assert(state.turn_runtime.afk_elapsed_seconds <= 1, "new current player should not inherit previous afk time")
+  end)
+end
+
 local function _test_turn_dispatch_uses_clock_ports_without_game_api()
   local g = _new_game()
   local state = _build_loop_state()
@@ -1987,6 +2172,14 @@ return {
   _test_auto_runner_human_turn_not_auto_advanced,
   _test_auto_runner_not_advanced_when_input_blocked,
   _test_auto_runner_depends_on_current_player_auto,
+  _test_afk_auto_host_enters_auto_after_timeout_in_start_phase,
+  _test_afk_auto_host_enters_auto_after_timeout_in_wait_choice,
+  _test_afk_auto_host_next_input_resets_timer,
+  _test_afk_auto_host_market_tab_input_resets_timer,
+  _test_afk_auto_host_does_not_accumulate_when_input_locked,
+  _test_afk_auto_host_does_not_accumulate_when_popup_active,
+  _test_afk_auto_host_does_not_accumulate_in_wait_action_anim,
+  _test_afk_auto_host_resets_when_current_player_changes,
   _test_turn_prompt_initialized_for_first_player,
   _test_turn_prompt_emitted_on_next_player_switch,
   _test_turn_dispatch_uses_clock_ports_without_game_api,

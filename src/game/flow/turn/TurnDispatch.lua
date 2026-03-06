@@ -11,6 +11,16 @@ local turn_dispatch = {}
 
 local next_turn_cooldown = 0.4
 
+local function _reset_afk_tracking(state, actor_role_id)
+  if type(state) ~= "table" then
+    return
+  end
+  local turn_runtime = runtime_state.ensure_turn_runtime(state)
+  turn_runtime.afk_actor_role_id = role_id_utils.normalize(actor_role_id)
+  turn_runtime.afk_elapsed_seconds = 0
+  turn_runtime.afk_tracking_active = false
+end
+
 local function _resolve_actor_player(game, action)
   assert(game ~= nil and game.players ~= nil, "missing game.players")
   local actor_role_id = role_id_utils.normalize(action and action.actor_role_id or nil)
@@ -27,6 +37,23 @@ local function _resolve_actor_player(game, action)
     return nil
   end
   return player
+end
+
+local function _maybe_reset_afk_for_current_player(game, state, action)
+  if not (game and state and action) then
+    return
+  end
+  local actor_role_id = role_id_utils.normalize(action.actor_role_id)
+  if actor_role_id == nil then
+    return
+  end
+  local current_index = game.turn and game.turn.current_player_index or nil
+  local current_player = current_index and game.players and game.players[current_index] or nil
+  local current_role_id = role_id_utils.normalize(current_player and current_player.id or nil)
+  if current_role_id == nil or not role_id_utils.equals(actor_role_id, current_role_id) then
+    return
+  end
+  _reset_afk_tracking(state, actor_role_id)
 end
 
 function turn_dispatch.step_turn(game)
@@ -115,6 +142,7 @@ local function _dispatch_action(game, state, action, opts, dispatch_ctx)
       end
       local before = player.auto == true
       player.auto = not (player.auto == true)
+      _reset_afk_tracking(state, player.id)
       print(
         "[AutoProbe][TurnDispatch] auto toggled:",
         "before=" .. tostring(before),
@@ -157,6 +185,7 @@ local function _dispatch_action(game, state, action, opts, dispatch_ctx)
       turn_runtime.next_turn_locked = true
       turn_runtime.next_turn_last_click = now
       turn_runtime.next_turn_lock_phase = phase
+      _reset_afk_tracking(state, action.actor_role_id)
       turn_dispatch.step_turn(game)
       return { status = "applied" }
     end
@@ -170,6 +199,7 @@ local function _dispatch_action(game, state, action, opts, dispatch_ctx)
       assert(game.dispatch_action ~= nil, "missing game.dispatch_action")
       game:dispatch_action(action)
     end
+    _maybe_reset_afk_for_current_player(game, state, action)
     local pending = game and game.turn and game.turn.pending_choice or nil
     if not pending or not pending.id or pending.id ~= choice.id then
       turn_dispatch.clear_choice(state, opts)
@@ -196,6 +226,7 @@ local function _dispatch_action(game, state, action, opts, dispatch_ctx)
       return { status = "rejected" }
     end
     if market_service.choice.apply_navigation(game, choice, action) then
+      _maybe_reset_afk_for_current_player(game, state, action)
       state.pending_choice = choice
       state.pending_choice_id = choice.id
       state.pending_choice_elapsed = 0

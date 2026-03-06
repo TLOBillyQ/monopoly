@@ -59,6 +59,88 @@ local function _is_auto_popup_owner(game, state)
   return actor and agent.is_auto_player(actor) or false
 end
 
+local function _reset_afk_tracking(state, actor_role_id)
+  local turn_runtime = runtime_state.ensure_turn_runtime(state)
+  turn_runtime.afk_actor_role_id = actor_role_id
+  turn_runtime.afk_elapsed_seconds = 0
+  turn_runtime.afk_tracking_active = false
+end
+
+local function _is_afk_trackable_phase(game, state, ui_sync_ports)
+  local phase = game and game.turn and game.turn.phase or nil
+  if phase == "start" then
+    return true
+  end
+  if phase ~= "wait_choice" then
+    return false
+  end
+  if ui_sync_ports and type(ui_sync_ports.is_choice_active) == "function" and ui_sync_ports.is_choice_active(state) then
+    return true
+  end
+  if ui_sync_ports and type(ui_sync_ports.is_market_active) == "function" and ui_sync_ports.is_market_active(state) then
+    return true
+  end
+  return false
+end
+
+function gameplay_loop.step_afk_auto_host(game, state, dt)
+  assert(game ~= nil, "missing game")
+  local timeout = gameplay_rules.afk_auto_host_seconds or 0
+  local turn_runtime = runtime_state.ensure_turn_runtime(state)
+  if not timeout or timeout <= 0 then
+    _reset_afk_tracking(state, nil)
+    return false
+  end
+
+  local current_index = game.turn and game.turn.current_player_index or nil
+  local current_player = current_index and game.players and game.players[current_index] or nil
+  if not current_player or current_player.auto == true then
+    _reset_afk_tracking(state, nil)
+    return false
+  end
+
+  local ports = _resolve_ports(state)
+  local ui_sync_ports = ports.ui_sync
+  if ui_sync_ports.is_input_blocked and ui_sync_ports.is_input_blocked(state) then
+    _reset_afk_tracking(state, current_player.id)
+    return false
+  end
+  if ui_sync_ports.is_popup_active and ui_sync_ports.is_popup_active(state) then
+    _reset_afk_tracking(state, current_player.id)
+    return false
+  end
+  if not _is_afk_trackable_phase(game, state, ui_sync_ports) then
+    _reset_afk_tracking(state, current_player.id)
+    return false
+  end
+
+  if turn_runtime.afk_actor_role_id ~= current_player.id then
+    turn_runtime.afk_actor_role_id = current_player.id
+    turn_runtime.afk_elapsed_seconds = 0
+  end
+  turn_runtime.afk_tracking_active = true
+  turn_runtime.afk_elapsed_seconds = (turn_runtime.afk_elapsed_seconds or 0) + (dt or 0)
+
+  if turn_runtime.afk_elapsed_seconds < timeout then
+    return false
+  end
+
+  current_player.auto = true
+  if game.mark_players_dirty then
+    game:mark_players_dirty()
+  else
+    game.dirty.any = true
+    game.dirty.players = true
+  end
+  state.ui_dirty = true
+  if state.auto_runner and state.auto_runner.reset_timer then
+    state.auto_runner:reset_timer()
+  end
+  _reset_afk_tracking(state, current_player.id)
+  logger.warn("afk auto host enabled:", tostring(current_player.name), "role_id=" .. tostring(current_player.id))
+  return true
+end
+
 local function _initialize_ports(state, game)
   local ports = _resolve_ports(state)
   state.game = game
@@ -196,6 +278,7 @@ function gameplay_loop.tick(game, state, dt)
 
   local ports = _resolve_ports(state)
   tick_flow.tick(game, state, dt, ports, {
+    step_afk_auto_host = gameplay_loop.step_afk_auto_host,
     step_auto_runner = gameplay_loop.step_auto_runner,
     dispatch_action_with_close_choice = _dispatch_action_with_close_choice,
   })
