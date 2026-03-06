@@ -30,6 +30,7 @@
 - [x] (2026-03-07 02:18 +0800) 已完成阶段5第三刀的第三小片：`presentation_ui` 里的手工 `tax_card_prompt`、`landing_optional_effect` choice 也已补齐 `confirm_*` 字段，`choice_screen_service.common` 不再为 tax 和 buy/upgrade land 推导默认确认文案，确认 UI 全部优先消费用例层显式输出。
 - [x] (2026-03-07 02:27 +0800) 已完成阶段5第四刀的第一小片：`LandChoiceSpecs.tax_prompt()` 与 `EffectPipeline` 生成的纯 buy/upgrade land optional choice 已显式输出 `route_key=\"secondary_confirm\"` 与 `requires_confirm=true`；`ChoiceRoutePolicy` 已移除对 `tax_card_prompt` 和 `buy_land/upgrade_land` 的 secondary-confirm 推断，presentation route 开始只消费用例层声明。
 - [x] (2026-03-07 02:36 +0800) 已完成阶段5第四刀的第二小片：`ItemHandlers`、`ItemDemolish`、`market/service/Choice` 已分别为 `item_target_player`、`remote_dice_value`、`roadblock_target`、`demolish_target`、`market_buy` 显式输出 `route_key`；`ChoiceRoutePolicy` 已移除这些 kind 的默认 route 推断，`remote/player/target/market` 路由开始统一由 use-case 输出声明。
+- [x] (2026-03-07 02:49 +0800) 已完成阶段5第四刀的第三小片：`LandChoiceSpecs.build_use_skip()` 现默认显式输出 `route_key=\"base_inline\"` 与 `requires_confirm=false`，`item_phase_choice` 的手工测试 choice 也已补齐 `route_key=\"base_inline\"`；`ChoiceRoutePolicy` 已不再为 `item_phase_choice` 特判 base-inline，当前只保留真正未知 choice 的 fallback。
 - [ ] 阶段6：在边界稳定后整理目录语义和命名，避免目录改动与行为改动叠加。
 
 ## 意外与发现
@@ -93,6 +94,9 @@
 
 - 观察：当 `secondary_confirm` 已经显式化后，`ChoiceRoutePolicy` 里剩余的 `remote/player/target/market` kind 推断也不再有结构性理由继续存在，因为这些选择同样都来自稳定 builder，而不是临时拼接。
   证据：本轮为 `ItemHandlers`、`ItemDemolish`、market choice builder 补上 `route_key` 后，删除 policy 对 `remote_dice_value`、`item_target_player`、`roadblock_target`、`demolish_target`、`market_buy` 的 route 推断，`item/land/presentation_ui/gameplay/market` 定向回归与全量回归都继续通过。
+
+- 观察：在 `remote/player/target/market/secondary_confirm` 都显式化后，`ChoiceRoutePolicy` 中最后一个“看起来 harmless 的默认值”其实是 `item_phase_choice -> base_inline`；但它和 `steal_prompt` 这类 `build_use_skip()` choice 一样，本质上也只是 builder 没声明 route。
+  证据：给 `LandChoiceSpecs.build_use_skip()` 加上显式 `base_inline`，并把手工 `item_phase_choice` 测试 choice 补齐 `route_key` 后，`ChoiceRoutePolicy` 删掉 `item_phase_choice` 特判仍能通过定向与全量回归，日志里只剩 `unknown_choice_kind` 的预期 fallback。
 
 ## 决策日志
 
@@ -170,6 +174,10 @@
 
 - 决策：阶段5第四刀第二小片继续把 `remote/player/target/market` 路由也改成 builder 显式输出，而不是在 `ChoiceRoutePolicy` 中保留“这些只是 harmless 默认值”的例外。
   理由：这些 route 同样属于 presentation 适配知识，只是之前看起来更“无害”。既然相关 choice 都由稳定 builder 生成，继续依赖 kind 推断只会让 route 语义继续分散在 policy 中，不利于把 presentation 压成纯消费层。
+  日期/作者：2026-03-07 / Codex
+
+- 决策：阶段5第四刀第三小片优先把 `build_use_skip()` 和 `item_phase_choice` 的 base-inline 路由也显式化，而不是保留一个“默认 inline choice”例外。
+  理由：一旦其余 route 都靠显式字段声明，保留 `item_phase_choice` 特判只会让 `ChoiceRoutePolicy` 继续知道业务 kind。把 `base_inline` 也改成输出层声明后，policy 就只剩未知 choice 的兜底职责，职责边界更干净。
   日期/作者：2026-03-07 / Codex
 
 ## 结果与复盘

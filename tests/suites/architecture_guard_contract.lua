@@ -240,6 +240,9 @@ local function _test_turn_dispatch_choice_only_marks_ui_dirty()
   local current_player = game:current_player()
   local choice = support.open_choice(game, {
     kind = "item_phase_choice",
+    route_key = "base_inline",
+    uses_item_slots = true,
+    pre_confirm_before_slot_pick = true,
     options = {
       { id = "cancel" },
     },
@@ -298,6 +301,9 @@ local function _test_gameplay_loop_set_game_routes_choice_state_through_output_p
   local current_player = game:current_player()
   local choice = support.open_choice(game, {
     kind = "item_phase_choice",
+    route_key = "base_inline",
+    uses_item_slots = true,
+    pre_confirm_before_slot_pick = true,
     options = {
       { id = "cancel" },
     },

@@ -26,6 +26,9 @@ local function _test_turn_engine_coroutine_mode_resolves_wait_choice()
 
   local choice = support.open_choice(g, {
     kind = "item_phase_choice",
+    route_key = "base_inline",
+    uses_item_slots = true,
+    pre_confirm_before_slot_pick = true,
     title = "行动前：使用道具？",
     options = { { id = 2001, label = "路障卡" } },
     allow_cancel = true,

@@ -444,6 +444,9 @@ local function _test_dispatch_validator_accepts_ui_state_snapshot()
     pending_choice = {
       id = 1,
       kind = "item_phase_choice",
+      route_key = "base_inline",
+      uses_item_slots = true,
+      pre_confirm_before_slot_pick = true,
       options = { { id = 2001 } },
     },
   }

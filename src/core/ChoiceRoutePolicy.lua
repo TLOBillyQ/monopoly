@@ -32,11 +32,7 @@ function policy.resolve(choice)
   if not choice then
     return "base_inline"
   end
-  local kind = choice.kind
-  if kind == "item_phase_choice" then
-    return "base_inline"
-  end
-  logger.warn("choice route fallback to base_inline:", tostring(kind))
+  logger.warn("choice route fallback to base_inline:", tostring(choice.kind))
   return "base_inline"
 end
 
