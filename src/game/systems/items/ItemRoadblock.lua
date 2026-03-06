@@ -22,6 +22,18 @@ local function _make_candidate(board, player, idx, dir, step, seen)
   }
 end
 
+local function _make_ui_candidate(board, idx, dir, step)
+  local tile = board:get_tile(idx)
+  assert(tile ~= nil, "missing tile: " .. tostring(idx))
+  return {
+    idx = idx,
+    tile = tile,
+    dir = dir,
+    step = step,
+    label = tile.name,
+  }
+end
+
 local function _forward_indices(board, player, distance)
   local list = {}
   local current = player.position
@@ -94,7 +106,7 @@ local function _format_label(cand)
   return dir_label .. number_utils.format_integer_part(cand.step) .. "格：" .. cand.tile.name .. " (" .. cand.tile.type .. ")"
 end
 
-function roadblock.candidates(game, player, distance)
+function roadblock.auto_candidates(game, player, distance)
   local board = game.board
   local seen = {}
   local list = {}
@@ -131,6 +143,41 @@ function roadblock.candidates(game, player, distance)
   end
 
   return list
+end
+
+function roadblock.candidates(game, player, distance)
+  return roadblock.auto_candidates(game, player, distance)
+end
+
+function roadblock.ui_candidates(game, player, distance)
+  local board = game.board
+  local list = {}
+  distance = distance or 3
+
+  for _, entry in ipairs(_forward_indices(board, player, distance)) do
+    table.insert(list, _make_ui_candidate(board, entry.idx, entry.dir, entry.step))
+  end
+
+  table.insert(list, _make_ui_candidate(board, player.position, "current", 0))
+
+  for _, entry in ipairs(_backward_indices(board, player, distance)) do
+    table.insert(list, _make_ui_candidate(board, entry.idx, entry.dir, entry.step))
+  end
+
+  return list
+end
+
+function roadblock.is_ui_candidate(game, player, idx, distance)
+  local target_idx = number_utils.to_integer(idx)
+  if target_idx == nil then
+    return false
+  end
+  for _, cand in ipairs(roadblock.ui_candidates(game, player, distance)) do
+    if cand.idx == target_idx then
+      return true
+    end
+  end
+  return false
 end
 
 function roadblock.pick_best(candidates)

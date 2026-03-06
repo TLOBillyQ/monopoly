@@ -65,7 +65,12 @@ function strategy.can_offer_in_phase(game, player, item_id, phase)
   end
 
   if item_id == item_ids.roadblock then
-    local candidates = roadblock.candidates(game, player, 3)
+    local candidates = nil
+    if agent.is_auto_player(player) then
+      candidates = roadblock.auto_candidates(game, player, 3)
+    else
+      candidates = roadblock.ui_candidates(game, player, 3)
+    end
     return type(candidates) == "table" and #candidates > 0
   end
 

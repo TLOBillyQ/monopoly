@@ -120,6 +120,9 @@ local function _build_choice_modal_state()
     "玩家选择屏", "玩家选择_标题",
     "玩家选择_槽位1", "玩家选择_槽位2", "玩家选择_槽位3", "玩家选择_槽位4",
     "位置选择屏", "位置_副标题", "位置_放置文本",
+    "位置-槽位1按钮", "位置-槽位2按钮", "位置-槽位3按钮", "位置-槽位4按钮", "位置-槽位5按钮", "位置-槽位6按钮", "位置-槽位7按钮",
+    "位置-槽位1文本", "位置-槽位2文本", "位置-槽位3文本", "位置-槽位4文本", "位置-槽位5文本", "位置-槽位6文本", "位置-槽位7文本",
+    "位置-槽位1投影", "位置-槽位2投影", "位置-槽位3投影", "位置-槽位4投影", "位置-槽位5投影", "位置-槽位6投影", "位置-槽位7投影",
     "遥控骰子屏", "遥控骰子_标题", "遥控骰子_正文",
     "遥控骰子_选项_01", "遥控骰子_选项_02", "遥控骰子_选项_03",
     "遥控骰子_选项_04", "遥控骰子_选项_05", "遥控骰子_选项_06",
@@ -2342,6 +2345,59 @@ local function _test_choice_modal_routes_to_new_screens()
   end)
 end
 
+local function _test_target_screen_uses_labels_only_and_keeps_projection_unmanaged()
+  local state, nodes, query_nodes = _build_choice_modal_state()
+  local choice = {
+    id = 88,
+    kind = "roadblock_target",
+    title = "路障卡：选择位置",
+    body = "body",
+    options = {
+      { id = 101, label = "福州路" },
+      { id = 102, label = "台北路" },
+      { id = 103, label = "黑市" },
+      { id = 104, label = "武汉路" },
+      { id = 201, label = "南京路" },
+      { id = 202, label = "上海路" },
+      { id = 203, label = "香港路" },
+    },
+    allow_cancel = true,
+    cancel_label = "放弃",
+  }
+
+  nodes["位置-槽位1投影"].visible = true
+  nodes["位置-槽位1投影"].disabled = false
+  nodes["位置-槽位7投影"].visible = true
+  nodes["位置-槽位7投影"].disabled = false
+
+  _with_patches({
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = nil },
+  }, function()
+    ui_view.open_choice_modal(state, choice)
+    _assert_eq(state.ui.active_choice_screen_key, "target", "roadblock_target should open target screen")
+    _assert_eq(nodes["位置-槽位1按钮"].text, "", "slot1 button text should stay empty")
+    _assert_eq(nodes["位置-槽位7按钮"].text, "", "slot7 button text should stay empty")
+    _assert_eq(nodes["位置-槽位1文本"].text, "福州路", "slot1 label should show tile name")
+    _assert_eq(nodes["位置-槽位4文本"].text, "武汉路", "slot4 label should show current tile name")
+    _assert_eq(nodes["位置-槽位7文本"].text, "香港路", "slot7 label should show tile name")
+    _assert_eq(nodes["位置-槽位7按钮"].visible, true, "slot7 button should be visible when seven candidates exist")
+    _assert_eq(nodes["位置-槽位7文本"].visible, true, "slot7 label should be visible when seven candidates exist")
+    _assert_eq(nodes["位置-槽位1投影"].visible, true, "slot projection should not be managed on open")
+    _assert_eq(nodes["位置-槽位1投影"].disabled, false, "slot projection touch state should not be managed on open")
+    _assert_eq(nodes["位置-槽位7投影"].visible, true, "slot7 projection should not be managed on open")
+    _assert_eq(nodes["位置-槽位7投影"].disabled, false, "slot7 projection touch state should not be managed on open")
+
+    local common = require("src.presentation.ui.choice_screen_service.common")
+    common.hide_choice_screens(state.ui)
+
+    _assert_eq(nodes["位置-槽位1文本"].visible, false, "hide_choice_screens should hide slot label")
+    _assert_eq(nodes["位置-槽位1按钮"].disabled, true, "hide_choice_screens should disable slot button")
+    _assert_eq(nodes["位置-槽位1投影"].visible, true, "hide_choice_screens should not hide slot projection")
+    _assert_eq(nodes["位置-槽位1投影"].disabled, false, "hide_choice_screens should not disable slot projection")
+  end)
+end
+
 local function _with_target_pick_runtime(env, fn)
   local marker_seq = 0
   local created_markers = {}
@@ -3381,20 +3437,23 @@ local function _test_item_slot_intents_include_outline_nodes()
 end
 
 local function _test_market_view_hides_market_disabled_entries()
-  local hidden_entry = nil
   local visible_entry = nil
   for _, entry in ipairs(market_cfg) do
-    if hidden_entry == nil and entry.market_enabled == false then
-      hidden_entry = entry
-    elseif visible_entry == nil and entry.market_enabled ~= false then
+    if visible_entry == nil and entry.market_enabled ~= false then
       visible_entry = entry
     end
-    if hidden_entry and visible_entry then
+    if visible_entry then
       break
     end
   end
-  assert(hidden_entry ~= nil, "missing market disabled entry for presentation test")
   assert(visible_entry ~= nil, "missing market visible entry for presentation test")
+  local hidden_entry = {
+    product_id = 999001,
+    name = "隐藏测试商品",
+    market_enabled = false,
+    currency = visible_entry.currency,
+    price = visible_entry.price,
+  }
 
   local labels = {}
   local visible = {}
@@ -3422,34 +3481,50 @@ local function _test_market_view_hides_market_disabled_entries()
     },
   }
 
-  local opened = market_view.refresh_market(state, {
-    choice_id = 7,
-    options = {
-      { id = hidden_entry.product_id, label = hidden_entry.name, can_buy = false },
-      { id = visible_entry.product_id, label = visible_entry.name, can_buy = true },
-    },
-    allow_cancel = true,
-    selected_option_id = hidden_entry.product_id,
-  })
+  local market_cfg_size = #market_cfg
+  local old_market_view = package.loaded["src.presentation.render.MarketView"]
+  market_cfg[market_cfg_size + 1] = hidden_entry
+  package.loaded["src.presentation.render.MarketView"] = nil
 
-  _assert_eq(opened, true, "market panel should open when at least one visible option exists")
-  _assert_eq(labels[market_layout.item_labels[1]], visible_entry.name, "first rendered market option should skip disabled entry")
-  _assert_eq(visible[market_layout.item_labels[2]], false, "second slot should remain hidden after filtering")
+  local ok, err = xpcall(function()
+    local test_market_view = require("src.presentation.render.MarketView")
 
-  local reopened = market_view.refresh_market(state, {
-    choice_id = 8,
-    options = {
-      { id = hidden_entry.product_id, label = hidden_entry.name, can_buy = false },
-    },
-    allow_cancel = true,
-    selected_option_id = hidden_entry.product_id,
-  })
+    local opened = test_market_view.refresh_market(state, {
+      choice_id = 7,
+      options = {
+        { id = hidden_entry.product_id, label = hidden_entry.name, can_buy = false },
+        { id = visible_entry.product_id, label = visible_entry.name, can_buy = true },
+      },
+      allow_cancel = true,
+      selected_option_id = hidden_entry.product_id,
+    })
 
-  _assert_eq(reopened, true, "market panel should stay open when all options are filtered out")
-  _assert_eq(state.ui.market_active, true, "market panel should remain active on empty filtered tab")
-  _assert_eq(visible[market_layout.item_labels[1]], false, "empty filtered tab should hide first slot label")
-  _assert_eq(visible[market_layout.item_buttons[1]], false, "empty filtered tab should hide first slot button")
-  _assert_eq(state.pending_choice_selected_option_id, nil, "empty filtered tab should clear selected option")
+    _assert_eq(opened, true, "market panel should open when at least one visible option exists")
+    _assert_eq(labels[market_layout.item_labels[1]], visible_entry.name, "first rendered market option should skip disabled entry")
+    _assert_eq(visible[market_layout.item_labels[2]], false, "second slot should remain hidden after filtering")
+
+    local reopened = test_market_view.refresh_market(state, {
+      choice_id = 8,
+      options = {
+        { id = hidden_entry.product_id, label = hidden_entry.name, can_buy = false },
+      },
+      allow_cancel = true,
+      selected_option_id = hidden_entry.product_id,
+    })
+
+    _assert_eq(reopened, true, "market panel should stay open when all options are filtered out")
+    _assert_eq(state.ui.market_active, true, "market panel should remain active on empty filtered tab")
+    _assert_eq(visible[market_layout.item_labels[1]], false, "empty filtered tab should hide first slot label")
+    _assert_eq(visible[market_layout.item_buttons[1]], false, "empty filtered tab should hide first slot button")
+    _assert_eq(state.pending_choice_selected_option_id, nil, "empty filtered tab should clear selected option")
+  end, debug.traceback or function(e) return e end)
+
+  market_cfg[market_cfg_size + 1] = nil
+  package.loaded["src.presentation.render.MarketView"] = nil
+  package.loaded["src.presentation.render.MarketView"] = old_market_view
+  if not ok then
+    error(err)
+  end
 end
 
 local function _test_market_view_unbuyable_option_is_clickable()
@@ -5947,6 +6022,7 @@ return {
   _test_bankruptcy_popup_avatar_uses_native_size_path,
   _test_popup_timeout_closes_even_when_input_blocked,
   _test_choice_modal_routes_to_new_screens,
+  _test_target_screen_uses_labels_only_and_keeps_projection_unmanaged,
   _test_secondary_confirm_copy_item_phase_selected_option,
   _test_secondary_confirm_copy_land_actions,
   _test_secondary_confirm_copy_generic_pre_confirm,

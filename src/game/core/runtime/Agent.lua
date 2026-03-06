@@ -185,7 +185,7 @@ function agent.pick_target_player(game, player, item_id, options)
 end
 
 function agent.pick_roadblock_target(game, player)
-  local candidates = roadblock.candidates(game, player, 3)
+  local candidates = roadblock.auto_candidates(game, player, 3)
   if not candidates or #candidates == 0 then
     return nil
   end

@@ -35,11 +35,6 @@ function M.hide_choice_screens(ui)
       ui:set_visible(name, false)
       ui:set_touch_enabled(name, false)
     end
-    local projections = screen.slot_projections or {}
-    for _, name in ipairs(projections) do
-      ui:set_visible(name, false)
-      ui:set_touch_enabled(name, false)
-    end
     if screen.under_button then
       ui:set_visible(screen.under_button, false)
       ui:set_touch_enabled(screen.under_button, false)

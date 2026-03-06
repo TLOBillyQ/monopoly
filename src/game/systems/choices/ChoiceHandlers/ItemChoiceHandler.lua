@@ -89,6 +89,10 @@ function item_choice_handler.build(helpers)
     local meta = choice.meta
     local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
     assert(idx ~= nil, "missing roadblock index")
+    if not roadblock.is_ui_candidate(game, player, idx, 3) then
+      logger.warn(player.name .. " 选择了无效的路障位置: " .. tostring(idx))
+      return { stay = true }
+    end
     _consume_if_needed(player, meta.item_id, meta.item_preconsumed)
     local res = roadblock.apply(game, player, idx)
     if res then

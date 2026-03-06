@@ -12,6 +12,7 @@ local executor = support.executor
 local choice_resolver = support.choice_resolver
 local gameplay_rules = require("src.core.config.GameplayRules")
 local item_phase = require("src.game.systems.items.ItemPhase")
+local roadblock = require("src.game.systems.items.ItemRoadblock")
 
 local function _test_monster_card()
   local g = _new_game()
@@ -182,6 +183,54 @@ local function _test_item_executor_keeps_specific_anim_without_fallback()
   )
 end
 
+local function _test_roadblock_manual_choice_shows_seven_tiles_with_tile_names_only()
+  local g = _new_game()
+  local p = g:current_player()
+  local item_id = gameplay_rules.item_ids.roadblock
+  local expected = roadblock.ui_candidates(g, p, 3)
+  p.inventory:add({ id = item_id })
+
+  local res = executor.use_item(g, p, item_id, { by_ai = false })
+  assert(type(res) == "table" and res.waiting, "manual roadblock should open choice")
+
+  local pending = res.intent.choice_spec
+  assert(pending and pending.kind == "roadblock_target", "roadblock should open target choice")
+  _assert_eq(#pending.options, 7, "manual roadblock should expose forward3/current/back3")
+  for i, cand in ipairs(expected) do
+    _assert_eq(pending.options[i].id, cand.idx, "roadblock option should keep board index at slot " .. i)
+    _assert_eq(pending.options[i].label, cand.tile.name, "roadblock option should show tile name only at slot " .. i)
+    _assert_eq(pending.body_lines[i], cand.tile.name, "roadblock body should show tile name only at slot " .. i)
+  end
+end
+
+local function _test_roadblock_manual_choice_allows_current_tile()
+  local g = _new_game()
+  local p = g:current_player()
+  local item_id = gameplay_rules.item_ids.roadblock
+  local current_idx = p.position
+  p.inventory:add({ id = item_id })
+
+  local res = executor.use_item(g, p, item_id, { by_ai = false })
+  assert(type(res) == "table" and res.waiting, "manual roadblock should wait for target choice")
+  local pending = _open_choice(g, res.intent.choice_spec)
+  _assert_eq(pending.options[4].id, current_idx, "slot4 should target current tile")
+
+  choice_resolver.resolve(g, pending, { option_id = current_idx })
+  _assert_eq(g.board:has_roadblock(current_idx), true, "manual roadblock should allow current tile placement")
+end
+
+local function _test_roadblock_ai_uses_auto_candidates_only()
+  local g = _new_game()
+  local p = g:current_player()
+  local item_id = gameplay_rules.item_ids.roadblock
+  p.inventory:add({ id = item_id })
+
+  local res = executor.use_item(g, p, item_id, { by_ai = true })
+  local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
+  _assert_eq(ok, true, "ai roadblock should apply immediately")
+  _assert_eq(g.board:has_roadblock(p.position), false, "ai roadblock should not place on current tile")
+end
+
 local function _test_item_phase_select_remote_dice_consumes_immediately_and_locks_followup()
   local g = _new_game()
   local p = g:current_player()
@@ -247,6 +296,12 @@ return {
     { name = "target_item_manual_direct_exec_and_duration", run = _test_target_item_manual_direct_exec_and_duration },
     { name = "item_executor_fallback_item_use_anim", run = _test_item_executor_fallback_item_use_anim },
     { name = "item_executor_keeps_specific_anim_without_fallback", run = _test_item_executor_keeps_specific_anim_without_fallback },
+    {
+      name = "roadblock_manual_choice_shows_seven_tiles_with_tile_names_only",
+      run = _test_roadblock_manual_choice_shows_seven_tiles_with_tile_names_only,
+    },
+    { name = "roadblock_manual_choice_allows_current_tile", run = _test_roadblock_manual_choice_allows_current_tile },
+    { name = "roadblock_ai_uses_auto_candidates_only", run = _test_roadblock_ai_uses_auto_candidates_only },
     {
       name = "item_phase_select_remote_dice_consumes_immediately_and_locks_followup",
       run = _test_item_phase_select_remote_dice_consumes_immediately_and_locks_followup,

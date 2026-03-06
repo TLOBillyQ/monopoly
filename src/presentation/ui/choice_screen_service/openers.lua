@@ -115,7 +115,9 @@ function M.open_target_screen(state, choice, choice_id)
     local option_id = common.set_option_node(ui, name, option)
     option_ids[index] = option_id
     local label_node = screen.slot_labels and screen.slot_labels[index] or nil
-    local projection_node = screen.slot_projections and screen.slot_projections[index] or nil
+    if option then
+      ui:set_button(name, "")
+    end
     if label_node then
       if option then
         ui:set_label(label_node, common.resolve_option_label(option))
@@ -125,10 +127,6 @@ function M.open_target_screen(state, choice, choice_id)
         ui:set_visible(label_node, false)
       end
       ui:set_touch_enabled(label_node, false)
-    end
-    if projection_node then
-      ui:set_visible(projection_node, option ~= nil)
-      ui:set_touch_enabled(projection_node, false)
     end
     if not selected and option_id ~= nil then
       selected = option_id

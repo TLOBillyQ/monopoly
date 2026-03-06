@@ -179,9 +179,13 @@ function handlers.handle_remote_dice(game, player, item_id, context)
 end
 
 function handlers.handle_roadblock(game, player, item_id, context)
+  context = context or {}
   return _run_item_choice_flow(game, player, item_id, context, {
-    candidates = function(inner_game, inner_player)
-      return roadblock.candidates(inner_game, inner_player, 3)
+    candidates = function(inner_game, inner_player, _, inner_context)
+      if inner_context.by_ai then
+        return roadblock.auto_candidates(inner_game, inner_player, 3)
+      end
+      return roadblock.ui_candidates(inner_game, inner_player, 3)
     end,
     on_empty = function(_, inner_player)
       logger.warn(inner_player.name .. " 无可放置路障的位置")
