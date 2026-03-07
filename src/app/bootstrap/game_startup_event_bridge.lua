@@ -1,6 +1,7 @@
 local monopoly_event = require("src.core.events.monopoly_events")
 local ui_view = require("src.presentation.adapter.ui_view_service")
 local runtime_state = require("src.core.runtime_facade.runtime_state")
+local runtime_context = require("src.infrastructure.runtime.runtime_context")
 local choice_slice = require("src.presentation.state" .. ".ui_model.choice_slice")
 
 local M = {}
@@ -15,14 +16,17 @@ end
 function M.install(state, get_current_game)
   assert(state ~= nil, "missing state")
   assert(type(get_current_game) == "function", "missing get_current_game")
+  local runtime_ctx = runtime_context.current()
+  local lua_api = runtime_ctx and runtime_ctx.env and runtime_ctx.env.LuaAPI or nil
+  assert(lua_api and type(lua_api.global_register_custom_event) == "function", "missing LuaAPI.global_register_custom_event")
 
-  RegisterCustomEvent(monopoly_event.land.tile_upgraded, function(_, _, data)
+  lua_api.global_register_custom_event(monopoly_event.land.tile_upgraded, function(_, _, data)
     if data and data.tile_id and data.level and state.on_tile_upgraded then
       state:on_tile_upgraded(data.tile_id, data.level)
     end
   end)
 
-  RegisterCustomEvent(monopoly_event.intent.need_choice, function(_, _, data)
+  lua_api.global_register_custom_event(monopoly_event.intent.need_choice, function(_, _, data)
     local choice = data and data.choice or nil
     if not choice then
       return

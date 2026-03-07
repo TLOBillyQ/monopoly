@@ -1,7 +1,7 @@
 local runtime_ports = {}
 
-local runtime_context = require("src.core.runtime_facade.runtime_context")
-local default_ports_module = require("src.core.runtime_ports.default_ports")
+local runtime_context = require("src.infrastructure.runtime.runtime_context")
+local default_ports_module = require("src.infrastructure.runtime.default_ports")
 
 local configured = nil
 local defaults = default_ports_module.build(runtime_context)

@@ -3,7 +3,7 @@ local _new_game = support.new_game
 local market_cfg = require("Config.generated.market")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local monopoly_event = require("src.core.events.monopoly_events")
-local runtime_event_bridge = require("src.core.runtime_facade.runtime_event_bridge")
+local runtime_event_bridge = require("src.infrastructure.runtime.runtime_event_bridge")
 local choice_resolver = require("src.game.systems.choices.choice_resolver")
 
 local function _contains_product(list, product_id)

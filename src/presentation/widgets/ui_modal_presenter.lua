@@ -57,7 +57,7 @@ function modal_presenter.open_choice_modal(state, choice, market)
       and (state.ui.choice_active or state.ui.market_active) then
     return
   end
-  state.ui_dirty = true
+  runtime_state.set_ui_dirty(state, true)
 
   if screen_key == "market" then
     target_choice_effects.leave(state, "open_market")
@@ -129,7 +129,7 @@ function modal_presenter.close_choice_modal(state)
   else
     choice_common.switch_modal_canvas(state, canvas.CANVAS_BASE)
   end
-  state.ui_dirty = true
+  runtime_state.set_ui_dirty(state, true)
 end
 
 function modal_presenter.push_popup(state, payload, opts)
@@ -144,14 +144,14 @@ function modal_presenter.push_popup(state, payload, opts)
     end
     queue[#queue + 1] = payload
     canvas_store.mark_dirty(state, "popup")
-    state.ui_dirty = true
+    runtime_state.set_ui_dirty(state, true)
     return true
   end
   ui.popup_return_canvas = canvas.resolve_popup_return_canvas(ui)
   popup_presenter.show(state, payload)
   modal_state.open_popup(state, payload)
   canvas_store.mark_dirty(state, "popup")
-  state.ui_dirty = true
+  runtime_state.set_ui_dirty(state, true)
   return true
 end
 
@@ -173,14 +173,14 @@ function modal_presenter.close_popup(state)
     popup_presenter.show(state, next_payload)
     modal_state.open_popup(state, next_payload)
     canvas_store.mark_dirty(state, "popup")
-    state.ui_dirty = true
+    runtime_state.set_ui_dirty(state, true)
     return
   end
   local target = ui.popup_return_canvas
   ui.popup_return_canvas = nil
   local next_canvas = canvas.resolve_canvas_after_popup(ui, target)
   popup_presenter.switch_canvas(state, kind, next_canvas, canvas.CANVAS_BASE)
-  state.ui_dirty = true
+  runtime_state.set_ui_dirty(state, true)
 end
 
 return modal_presenter

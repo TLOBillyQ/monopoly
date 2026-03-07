@@ -15,7 +15,7 @@ local item_inventory = require("src.game.systems.items.item_inventory")
 local land_rules = require("src.game.systems.land.land_rules")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local monopoly_event = require("src.core.events.monopoly_events")
-local runtime_event_bridge = require("src.core.runtime_facade.runtime_event_bridge")
+local runtime_event_bridge = require("src.infrastructure.runtime.runtime_event_bridge")
 
 local function _install_narrow_ports(game, ui_port)
   game.ui_port = ui_port

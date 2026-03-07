@@ -6,7 +6,7 @@ local board_feedback = require("src.presentation.render.board_feedback_service")
 local runtime_refs = require("Config.runtime_refs")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local logger = require("src.core.utils.logger")
-local runtime_context = require("src.core.runtime_facade.runtime_context")
+local runtime_context = require("src.infrastructure.runtime.runtime_context")
 
 if not math.Vector3 then
   function math.Vector3(x, y, z)

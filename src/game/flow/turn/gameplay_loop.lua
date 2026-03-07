@@ -160,7 +160,6 @@ local function _initialize_ports(state, game)
   game.intent_output_port = intent_output_adapter.build()
   game.auto_play_port = auto_play_port_adapter.build()
   game.bankruptcy_port = bankruptcy_port_adapter.build()
-  game.gameplay_loop_ports = ports
   return ports
 end
 

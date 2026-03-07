@@ -1,6 +1,7 @@
 local support = require("TestSupport")
 local _new_game = support.new_game
 local _build_ui_port = support.build_ui_port
+local _bind_ui_runtime = support.bind_ui_runtime
 local _resolve_landing = support.resolve_landing
 local _resolve_landing_with_choices = support.resolve_landing_with_choices
 local _resolve_choice_first = support.resolve_choice_first
@@ -24,9 +25,9 @@ local turn_move = support.turn_move
 local turn_dispatch = require("src.game.flow.turn.turn_dispatch")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local mine_effect = require("src.game.systems.effects.mine_effect")
-local runtime_context = require("src.core.runtime_facade.runtime_context")
+local runtime_context = require("src.infrastructure.runtime.runtime_context")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local runtime_event_bridge = require("src.core.runtime_facade.runtime_event_bridge")
+local runtime_event_bridge = require("src.infrastructure.runtime.runtime_event_bridge")
 local runtime_state = require("src.core.runtime_facade.runtime_state")
 local runtime_global_aliases = require("src.app.bootstrap.runtime_install.runtime_global_aliases")
 local dispatch_validator = require("src.game.flow.turn.turn_dispatch_validator")
@@ -232,6 +233,7 @@ local function _build_loop_state()
       log_once = {},
     },
   }
+  _bind_ui_runtime(state)
   state.auto_runner:set_enabled(true)
   return state
 end
@@ -472,6 +474,7 @@ local function _test_dispatch_validator_accepts_ui_state_snapshot()
       options = { { id = 2001 } },
     },
   }
+  _bind_ui_runtime(state)
   local res = dispatch_validator.resolve_item_slot_action(ui_state, state, {
     id = "item_slot_1",
     actor_role_id = 1,
@@ -859,6 +862,7 @@ local function _test_game_startup_build_state_is_pure_and_bridge_installs_events
   local state = nil
   local current_game = nil
   support.with_patches({
+    { key = "LuaAPI", value = _mock_lua_api() },
     { key = "RegisterCustomEvent", value = function(event_name, handler)
       events[event_name] = handler
     end },
@@ -870,6 +874,13 @@ local function _test_game_startup_build_state_is_pure_and_bridge_installs_events
       end,
     } },
   }, function()
+    LuaAPI.global_register_custom_event = function(event_name, handler)
+      events[event_name] = handler
+    end
+    local runtime_ctx = runtime_context.current()
+    if runtime_ctx and runtime_ctx.env and runtime_ctx.env.LuaAPI then
+      runtime_ctx.env.LuaAPI.global_register_custom_event = LuaAPI.global_register_custom_event
+    end
     state = game_startup.build_state(function()
       return current_game
     end)
@@ -1821,6 +1832,7 @@ local function _test_afk_auto_host_market_tab_input_resets_timer()
   g.turn.pending_choice = choice
   state.pending_choice = choice
   state.pending_choice_id = choice.id
+  _bind_ui_runtime(state)
   state.ui.market_active = true
   state.turn_runtime.afk_actor_role_id = current_player.id
   state.turn_runtime.afk_elapsed_seconds = 70
@@ -2157,7 +2169,7 @@ local function _test_choice_auto_policy_wait_and_timeout_both_cancel_market_buy(
   local g = _new_game()
   local auto_player = g.players[g.turn.current_player_index]
   auto_player.auto = true
-  local state = { pending_choice_elapsed = 1.2 }
+  local state = _bind_ui_runtime({ pending_choice_elapsed = 1.2 })
   local choice = {
     id = 1001,
     kind = "market_buy",
@@ -2189,7 +2201,7 @@ local function _test_choice_auto_policy_timeout_keeps_non_cancelable_choice_fall
   local g = _new_game()
   local auto_player = g.players[g.turn.current_player_index]
   auto_player.auto = true
-  local state = { pending_choice_elapsed = 1.2 }
+  local state = _bind_ui_runtime({ pending_choice_elapsed = 1.2 })
   local choice = {
     id = 1002,
     kind = "remote_dice_value",
@@ -2255,6 +2267,7 @@ local function _test_popup_countdown_uses_effective_modal_timeout()
   state.ui.popup_payload = { auto_close_seconds = 3 }
   state.ui_modal_elapsed = 1.2
   state.pending_choice = nil
+  _bind_ui_runtime(state)
   state.action_button_active = false
   state.countdown_last = nil
   state.countdown_active_last = nil
@@ -2280,6 +2293,7 @@ local function _test_market_countdown_uses_double_action_timeout()
     meta = { player_id = g:current_player().id },
   }
   state.pending_choice_elapsed = 12.2
+  _bind_ui_runtime(state)
   state.action_button_active = false
   state.countdown_last = nil
   state.countdown_active_last = nil

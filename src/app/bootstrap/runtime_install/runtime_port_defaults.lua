@@ -9,8 +9,8 @@ function runtime_port_defaults.build()
     end,
     schedule = function(delay, fn)
       assert(type(fn) == "function", "schedule requires callback")
-      assert(SetTimeOut ~= nil, "missing SetTimeOut")
-      SetTimeOut(delay or 0, fn)
+      assert(LuaAPI and LuaAPI.call_delay_time, "missing LuaAPI.call_delay_time")
+      LuaAPI.call_delay_time(delay or 0, fn)
     end,
     mark_role_lose = function(role)
       if role and role.lose then

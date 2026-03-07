@@ -1,5 +1,6 @@
 local support = require("TestSupport")
 local _assert_eq = support.assert_eq
+local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
 
 local gameplay_loop = require("src.game.flow.turn.gameplay_loop")
@@ -271,6 +272,7 @@ local function _test_turn_dispatch_choice_only_marks_ui_dirty()
       log_once = {},
     },
   }
+  _bind_ui_runtime(state)
   local ui_writes = _record_ui_writes(state)
   local result = nil
 

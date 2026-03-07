@@ -2,6 +2,7 @@ local core = require("src.presentation.adapter.ui_view_service.core")
 local runtime = require("src.presentation.adapter.ui_runtime_port")
 local ui_events = require("src.presentation.shared.ui_events")
 local runtime_ports = require("src.core.ports.runtime_ports")
+local runtime_state = require("src.core.runtime_facade.runtime_state")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local role_id_utils = require("src.core.utils.role_id")
 local choice_common = require("src.presentation.widgets.choice_screen_service.common")
@@ -184,7 +185,7 @@ function M.refresh_item_slots(state, ui_model, opts)
         local current_gate = state and state._item_slot_highlight_gate and state._item_slot_highlight_gate[gate_key] or nil
         if current_gate and current_gate.timer_token == token then
           current_gate.ready = true
-          state.ui_dirty = true
+          runtime_state.set_ui_dirty(state, true)
         end
       end)
     end

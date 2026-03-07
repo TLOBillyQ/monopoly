@@ -6,36 +6,28 @@ local output_port = require("src.game.flow.output_adapters.use_case_output_port"
 local tick_ui_sync = require("src.game.flow.turn.tick_ui_sync")
 local validator = require("src.game.flow.turn.turn_dispatch_validator")
 
-local function _test_runtime_state_seeds_from_legacy_once_and_reads_from_ui_runtime()
-  local state = {
-    ui_dirty = true,
-    ui_model = { marker = "legacy_model" },
-    pending_choice = { id = 7, kind = "market_buy" },
-    pending_choice_id = 7,
-    pending_choice_elapsed = 1.5,
-    ui_modal_elapsed = 2.25,
-    ui_modal_ref = "popup_1",
-  }
+local function _test_runtime_state_defaults_to_runtime_only_structure()
+  local state = {}
 
   local ui_runtime = runtime_state.ensure_ui_runtime(state)
-  _assert_eq(ui_runtime.ui_dirty, true, "ensure_ui_runtime should seed ui_dirty from legacy state")
-  _assert_eq(runtime_state.get_ui_model(state).marker, "legacy_model", "get_ui_model should read seeded ui_runtime")
-  _assert_eq(runtime_state.get_pending_choice_id(state), 7, "get_pending_choice_id should read seeded id")
-  _assert_eq(runtime_state.get_pending_choice_elapsed(state), 1.5, "get_pending_choice_elapsed should read seeded elapsed")
-  _assert_eq(runtime_state.get_modal_elapsed(state), 2.25, "get_modal_elapsed should read seeded modal elapsed")
-  _assert_eq(runtime_state.get_modal_ref(state), "popup_1", "get_modal_ref should read seeded modal ref")
+  _assert_eq(ui_runtime.ui_dirty, false, "ensure_ui_runtime should default dirty flag to false")
+  _assert_eq(runtime_state.get_ui_model(state), nil, "get_ui_model should default to nil")
+  _assert_eq(runtime_state.get_pending_choice_id(state), nil, "get_pending_choice_id should default to nil")
+  _assert_eq(runtime_state.get_pending_choice_elapsed(state), 0, "get_pending_choice_elapsed should default to zero")
+  _assert_eq(runtime_state.get_modal_elapsed(state), 0, "get_modal_elapsed should default to zero")
+  _assert_eq(runtime_state.get_modal_ref(state), nil, "get_modal_ref should default to nil")
 
-  state.ui_model = { marker = "mutated_legacy" }
-  state.pending_choice = nil
-  state.pending_choice_id = nil
-  state.pending_choice_elapsed = 0
-  state.ui_modal_elapsed = 0
-  state.ui_modal_ref = nil
+  state.ui_model = { marker = "legacy_model" }
+  state.pending_choice = { id = 7, kind = "market_buy" }
+  state.pending_choice_id = 7
+  state.pending_choice_elapsed = 1.5
+  state.ui_modal_elapsed = 2.25
+  state.ui_modal_ref = "popup_1"
 
-  _assert_eq(runtime_state.get_ui_model(state).marker, "legacy_model",
-    "once seeded, ui_runtime should remain the source of truth")
-  _assert_eq(runtime_state.get_pending_choice_id(state), 7,
-    "once seeded, pending choice id should keep reading from ui_runtime")
+  _assert_eq(runtime_state.get_ui_model(state), nil,
+    "legacy root ui_model should no longer seed ui_runtime")
+  _assert_eq(runtime_state.get_pending_choice_id(state), nil,
+    "legacy root pending choice id should no longer seed ui_runtime")
 end
 
 local function _test_output_port_uses_runtime_state_accessors()
@@ -124,8 +116,8 @@ return {
   name = "ui_runtime_state_contract",
   tests = {
     {
-      name = "runtime_state_seeds_from_legacy_once_and_reads_from_ui_runtime",
-      run = _test_runtime_state_seeds_from_legacy_once_and_reads_from_ui_runtime,
+      name = "runtime_state_defaults_to_runtime_only_structure",
+      run = _test_runtime_state_defaults_to_runtime_only_structure,
     },
     {
       name = "output_port_uses_runtime_state_accessors",

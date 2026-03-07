@@ -25,7 +25,7 @@ local map_cfg = require("Config.maps.default_map")
 local tiles_cfg = require("Config.generated.tiles")
 local number_utils = require("src.core.utils.number_utils")
 local tile = require("src.game.systems.board.tile")
-local runtime_context = require("src.core.runtime_facade.runtime_context")
+local runtime_context = require("src.infrastructure.runtime.runtime_context")
 local runtime_ports = require("src.core.ports.runtime_ports")
 
 if not math.tofixed then
@@ -52,6 +52,43 @@ local function assert_eq(a, b, msg)
   end
 end
 
+local function bind_ui_runtime(state)
+  assert(type(state) == "table", "missing state")
+  local ui_runtime = state.ui_runtime
+  if type(ui_runtime) ~= "table" then
+    ui_runtime = {}
+    state.ui_runtime = ui_runtime
+  end
+  if state.ui_model ~= nil and ui_runtime.ui_model == nil then
+    ui_runtime.ui_model = state.ui_model
+  end
+  if state.pending_choice ~= nil and ui_runtime.pending_choice == nil then
+    ui_runtime.pending_choice = state.pending_choice
+  end
+  if state.pending_choice_id ~= nil and ui_runtime.pending_choice_id == nil then
+    ui_runtime.pending_choice_id = state.pending_choice_id
+  end
+  if state.pending_choice_elapsed ~= nil and ui_runtime.pending_choice_elapsed == nil then
+    ui_runtime.pending_choice_elapsed = state.pending_choice_elapsed
+  end
+  if state.ui_modal_elapsed ~= nil and ui_runtime.ui_modal_elapsed == nil then
+    ui_runtime.ui_modal_elapsed = state.ui_modal_elapsed
+  end
+  if state.ui_modal_ref ~= nil and ui_runtime.ui_modal_ref == nil then
+    ui_runtime.ui_modal_ref = state.ui_modal_ref
+  end
+  if state.choice_visible_option_ids ~= nil and ui_runtime.choice_visible_option_ids == nil then
+    ui_runtime.choice_visible_option_ids = state.choice_visible_option_ids
+  end
+  if state.pending_choice_selected_option_id ~= nil and ui_runtime.pending_choice_selected_option_id == nil then
+    ui_runtime.pending_choice_selected_option_id = state.pending_choice_selected_option_id
+  end
+  if state.ui_dirty ~= nil and ui_runtime.ui_dirty == nil then
+    ui_runtime.ui_dirty = state.ui_dirty == true
+  end
+  return state
+end
+
 local function _refresh_runtime_context_for_tests()
   local lua_api = {}
   local set_timeout = SetTimeOut
@@ -71,6 +108,16 @@ local function _refresh_runtime_context_for_tests()
         return true
       end
       return false
+    end
+  end
+  if type(lua_api.global_register_custom_event) ~= "function" and type(RegisterCustomEvent) == "function" then
+    lua_api.global_register_custom_event = function(event_name, handler)
+      return RegisterCustomEvent(event_name, handler)
+    end
+  end
+  if type(lua_api.global_send_custom_event) ~= "function" and type(TriggerCustomEvent) == "function" then
+    lua_api.global_send_custom_event = function(event_name, payload)
+      return TriggerCustomEvent(event_name, payload)
     end
   end
   local ctx = runtime_context.new({
@@ -408,6 +455,7 @@ M.map_cfg = map_cfg
 M.tiles_cfg = tiles_cfg
 M.number_utils = number_utils
 M.assert_eq = assert_eq
+M.bind_ui_runtime = bind_ui_runtime
 M.with_patches = with_patches
 M.build_ui_port = build_ui_port
 M.visited_tile_ids = visited_tile_ids

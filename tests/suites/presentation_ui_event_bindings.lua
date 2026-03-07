@@ -1,6 +1,7 @@
 local support = require("TestSupport")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
+local _bind_ui_runtime = support.bind_ui_runtime
 local bindings = require("src.presentation.interaction.ui_event_bindings")
 local logger = require("src.core.utils.logger")
 local runtime = require("src.presentation.adapter.ui_runtime_port")
@@ -95,6 +96,7 @@ local function _test_canvas_registry_builds_canvas_first_route_specs()
       },
     },
   }
+  _bind_ui_runtime(state)
 
   local specs = canvas_registry.build_route_specs(state)
   assert(_find_spec(specs, base_nodes.action_button) ~= nil, "route specs should include base action button")

@@ -1,5 +1,6 @@
 local runtime_ports = require("src.core.ports.runtime_ports")
-local runtime_event_bridge = require("src.core.runtime_facade.runtime_event_bridge")
+local runtime_event_bridge = require("src.infrastructure.runtime.runtime_event_bridge")
+local runtime_context = require("src.infrastructure.runtime.runtime_context")
 local logger = require("src.core.utils.logger")
 local role_resolver = require("src.presentation.adapter.host_runtime.role_resolver")
 local unit_lifecycle = require("src.presentation.adapter.host_runtime.unit_lifecycle")
@@ -23,10 +24,12 @@ function host_runtime_port.register_custom_event(event_name, handler)
   if type(event_name) ~= "string" or type(handler) ~= "function" then
     return false
   end
-  if type(RegisterCustomEvent) ~= "function" then
+  local runtime_ctx = runtime_context.current()
+  local lua_api = runtime_ctx and runtime_ctx.env and runtime_ctx.env.LuaAPI or nil
+  if not (lua_api and type(lua_api.global_register_custom_event) == "function") then
     return false
   end
-  RegisterCustomEvent(event_name, handler)
+  lua_api.global_register_custom_event(event_name, handler)
   return true
 end
 

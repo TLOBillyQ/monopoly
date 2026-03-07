@@ -4,6 +4,7 @@ local _build_ui_port = support.build_ui_port
 local _open_choice = support.open_choice
 local _get_choice = support.get_choice
 local _assert_eq = support.assert_eq
+local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
 local turn_anim = support.turn_anim
 local tick_timeout = support.tick_timeout
@@ -33,7 +34,7 @@ local role_control_lock_policy = require("src.presentation.interaction.ui_role_c
 local ui_touch_policy = require("src.presentation.interaction.ui_touch_policy")
 local ui_choice_route_policy = require("src.presentation.interaction.ui_choice_route_policy")
 local logger = require("src.core.utils.logger")
-local runtime_event_bridge = require("src.core.runtime_facade.runtime_event_bridge")
+local runtime_event_bridge = require("src.infrastructure.runtime.runtime_event_bridge")
 local market_cfg = require("Config.generated.market")
 local runtime_constants = require("src.core.config.runtime_constants")
 local gameplay_rules = require("src.core.config.gameplay_rules")
@@ -128,6 +129,7 @@ local function _build_choice_modal_state()
     ui = ui_view.build_ui_state(),
     ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY" }),
   }
+  _bind_ui_runtime(state)
   local names = {
     "玩家选择屏", "玩家选择_标题",
     "玩家选择_槽位1", "玩家选择_槽位2", "玩家选择_槽位3", "玩家选择_槽位4",
@@ -216,6 +218,7 @@ local function _build_target_pick_env()
 
   state.game = game
   state.ui_model = { choice = choice, current_player_id = 1 }
+  _bind_ui_runtime(state)
   state.ui.choice_active = true
   state.ui.active_choice_screen_key = "target"
   state.board_scene = {
@@ -844,6 +847,7 @@ local function _test_turn_dispatch_item_slot_uses_actor_slot_map()
       },
     },
   }
+  _bind_ui_runtime(state)
 
   local res = turn_dispatch.dispatch_action(g, state, {
     type = "ui_button",
@@ -1667,6 +1671,7 @@ local function _test_ui_intent_dispatcher_market_confirm_skin_opens_pre_confirm_
     },
     game = {},
   }
+  _bind_ui_runtime(state)
   local game = {}
 
   _with_patches({
@@ -1728,6 +1733,7 @@ local function _test_ui_intent_dispatcher_market_confirm_skin_cancel_restores_ma
     },
     game = {},
   }
+  _bind_ui_runtime(state)
   local game = {}
 
   _with_patches({
@@ -1930,6 +1936,7 @@ local function _test_popup_hidden_for_non_current_role()
     _build_role_with_events(1, role1_events),
     _build_role_with_events(2, role2_events),
   }
+  _bind_ui_runtime(state)
 
   _with_patches({
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
@@ -1963,6 +1970,7 @@ local function _test_popup_visible_for_all_roles_when_allowed_kind()
     current_player_id = 1,
     item_slots_by_player = { [1] = {}, [2] = {} },
   }
+  _bind_ui_runtime(state)
   local role1_events = {}
   local role2_events = {}
   local roles = {
@@ -2008,6 +2016,7 @@ local function _test_bankruptcy_popup_visible_for_all_roles()
     current_player_id = 1,
     item_slots_by_player = { [1] = {}, [2] = {} },
   }
+  _bind_ui_runtime(state)
   local role1_events = {}
   local role2_events = {}
   local roles = {
@@ -2640,6 +2649,7 @@ local function _test_ui_event_router_player_target_click_direct_submit()
     pending_choice_selected_option_id = nil,
     choice_visible_option_ids = nil,
   }
+  _bind_ui_runtime(state)
 
   _with_patches({
     { key = "all_roles", value = nil },
@@ -3096,6 +3106,7 @@ local function _test_ui_event_router_injects_actor_for_next_with_current_player_
         current_player_id = "2",
       },
     }
+    _bind_ui_runtime(state)
     canvas_event_router.bind(state, function()
       return {}
     end)
@@ -3169,6 +3180,7 @@ local function _test_ui_event_router_injects_actor_for_market_confirm_and_cancel
       },
       pending_choice_selected_option_id = 34,
     }
+    _bind_ui_runtime(state)
     canvas_event_router.bind(state, function()
       return {}
     end)
@@ -3651,6 +3663,7 @@ local function _test_item_slot_intents_include_outline_nodes()
       },
     },
   }
+  _bind_ui_runtime(state)
 
   local specs = item_slot_intents.build(state)
   _assert_eq(#specs, 2, "item slot intents should include slot and outline")
@@ -4020,6 +4033,7 @@ local function _test_modal_presenter_market_same_choice_id_still_refreshes_marke
     ui_dirty = false,
     ui = ui_view.build_ui_state(),
   }
+  _bind_ui_runtime(state)
   state.ui.market_active = true
   state.ui.choice_active = false
   local choice = {
@@ -4143,6 +4157,7 @@ local function _test_item_phase_ask_confirm_clears_highlight_suppress()
     },
     ui = ui_view.build_ui_state(),
   }
+  _bind_ui_runtime(state)
 
   local handled = false
   _with_patches({
@@ -5502,6 +5517,7 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
     ui = ui_view.build_ui_state(),
     ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY" }),
   }
+  _bind_ui_runtime(state)
 
   _with_patches(patches, function()
     runtime_event_bridge._reset_for_tests()
@@ -5626,6 +5642,7 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
     ui = ui_view.build_ui_state(),
     ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY" }),
   }
+  _bind_ui_runtime(state)
 
   _with_patches(patches, function()
     runtime_event_bridge._reset_for_tests()

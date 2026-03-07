@@ -1,4 +1,4 @@
-local runtime_context = require("src.core.runtime_facade.runtime_context")
+local runtime_context = require("src.infrastructure.runtime.runtime_context")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_global_aliases = require("src.app.bootstrap.runtime_install.runtime_global_aliases")
 local runtime_port_defaults = require("src.app.bootstrap.runtime_install.runtime_port_defaults")

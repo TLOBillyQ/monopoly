@@ -1,4 +1,4 @@
-local runtime_event_bridge = require("src.core.runtime_facade.runtime_event_bridge")
+local runtime_event_bridge = require("src.infrastructure.runtime.runtime_event_bridge")
 
 local monopoly_events = {
   movement = {

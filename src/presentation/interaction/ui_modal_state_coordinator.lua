@@ -13,7 +13,6 @@ function modal_state.open_choice(state, choice_id, option_ids, selected_option_i
   local ui_runtime = _ui_runtime(state)
   ui_runtime.choice_visible_option_ids = option_ids
   ui_runtime.pending_choice_selected_option_id = selected_option_id
-  state.choice_visible_option_ids = option_ids
   canvas_store.mark_dirty(state, "choice")
 end
 
@@ -38,7 +37,6 @@ function modal_state.close_choice(state)
   local ui_runtime = _ui_runtime(state)
   ui_runtime.choice_visible_option_ids = nil
   ui_runtime.pending_choice_selected_option_id = nil
-  state.choice_visible_option_ids = nil
   canvas_store.mark_dirty(state, "choice")
 end
 

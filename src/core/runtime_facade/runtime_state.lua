@@ -19,24 +19,15 @@ end
 function runtime_state.ensure_ui_runtime(state)
   assert(type(state) == "table", "missing state")
   local ui_runtime = _ensure_table(state, "ui_runtime")
-  _ensure_field(ui_runtime, "ui_dirty", state.ui_dirty == true)
-  _ensure_field(ui_runtime, "ui_model", state.ui_model)
-  _ensure_field(ui_runtime, "pending_choice", state.pending_choice)
-  _ensure_field(ui_runtime, "pending_choice_elapsed", state.pending_choice_elapsed or 0)
-  _ensure_field(ui_runtime, "pending_choice_id", state.pending_choice_id)
-  _ensure_field(ui_runtime, "ui_modal_elapsed", state.ui_modal_elapsed or 0)
-  _ensure_field(ui_runtime, "ui_modal_ref", state.ui_modal_ref)
+  _ensure_field(ui_runtime, "ui_dirty", false)
+  _ensure_field(ui_runtime, "ui_model", nil)
+  _ensure_field(ui_runtime, "pending_choice", nil)
+  _ensure_field(ui_runtime, "pending_choice_elapsed", 0)
+  _ensure_field(ui_runtime, "pending_choice_id", nil)
+  _ensure_field(ui_runtime, "ui_modal_elapsed", 0)
+  _ensure_field(ui_runtime, "ui_modal_ref", nil)
   if ui_runtime.item_name_by_id == nil then
     ui_runtime.item_name_by_id = state.item_name_by_id or {}
-  end
-  if ui_runtime._legacy_choice_seeded ~= true then
-    if ui_runtime.choice_visible_option_ids == nil then
-      ui_runtime.choice_visible_option_ids = state.choice_visible_option_ids
-    end
-    if ui_runtime.pending_choice_selected_option_id == nil then
-      ui_runtime.pending_choice_selected_option_id = state.pending_choice_selected_option_id
-    end
-    ui_runtime._legacy_choice_seeded = true
   end
   return ui_runtime
 end

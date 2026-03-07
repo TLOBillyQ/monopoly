@@ -18,7 +18,7 @@ UI → Turn Management → (Player | Computer) → shared-mechanics → (state |
 | state | `src/game/core/player/`, `src/game/core/runtime/Game*.lua` |
 | config | `Config/generated/`, `src/core/config/` |
 
-辅助层（不计入 7 组件）：`src/game/runtime/`（Port Adapter）、`src/game/turn_engine/`（deprecated/frozen 的历史执行器容器）、`src/game/scheduler/`（协程调度细节）、`src/app/bootstrap/`（装配）、`src/infrastructure/runtime/`（Eggy 宿主）、`src/core/`（跨层工具）。
+辅助层（不计入 7 组件）：`src/game/runtime/`（Port Adapter）、`src/game/turn_engine/`（deprecated/frozen 的历史执行器容器）、`src/game/scheduler/`（协程调度细节）、`src/app/bootstrap/`（装配）、`src/infrastructure/runtime/`（Eggy 宿主真实实现）、`src/core/`（跨层工具）。
 
 ## 已强制的边界
 
@@ -26,8 +26,10 @@ UI → Turn Management → (Player | Computer) → shared-mechanics → (state |
 |------|----------------|
 | UI ↛ game | interaction layer forbidden `src.game.*` |
 | game ↛ presentation | (grep 维持为零) |
+| core/player ↛ systems | player state forbidden `src.game.systems.*` |
 | systems ↛ flow | systems forbidden `src.game.flow.*` |
 | systems ↛ core.runtime | systems forbidden `src.game.core.runtime.*` |
+| systems ↛ game.gameplay_loop_ports | systems forbidden direct gameplay loop runtime object fields |
 | core ↛ flow | core forbidden `src.game.flow.*` |
 | state/config ↛ 上层 | Player/Inventory 仅依赖 vendor |
 
@@ -44,6 +46,8 @@ systems → src/game/ports/xxx_port.lua (assert-only)
 ```
 
 默认 adapter 在 `CompositionRoot.assemble()` 安装；flow 层可覆盖。
+
+`game.bankruptcy_feedback_port` 也是同一模式：systems 只依赖 `src/game/ports/bankruptcy_feedback_port.lua`，由 outer runtime 在装配时注入“清地块后如何做展示反馈”的实现。
 
 ## 依赖图
 

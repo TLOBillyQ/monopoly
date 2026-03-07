@@ -218,7 +218,13 @@ local presentation_game_systems_whitelist = {
   -- },
 }
 
-local forbidden_files = {}
+local forbidden_files = {
+  "src/game/flow/output_adapters/legacy_output_mirror.lua",
+  "src/game/systems/market/service/paid_purchase_gateway.lua",
+  "src/core/runtime_facade/runtime_context.lua",
+  "src/core/runtime_facade/runtime_event_bridge.lua",
+  "src/core/runtime_ports/default_ports.lua",
+}
 
 local growth_budget_rules = {
   {
@@ -233,9 +239,22 @@ local growth_budget_rules = {
     },
     budget = {
       ["src/core/utils/logger.lua"] = 0,
-      ["src/core/runtime_facade/runtime_context.lua"] = 0,
       ["src/core/runtime_facade/runtime_editor_exports.lua"] = 0,
-      ["src/core/runtime_ports/default_ports.lua"] = 0,
+    },
+  },
+  {
+    description = "app/presentation host runtime global aliases must stay confined to bootstrap shell only",
+    roots = { "src/app", "src/presentation" },
+    patterns = {
+      "%f[%w_]SetTimeOut%f[^%w_]",
+      "%f[%w_]RegisterCustomEvent%f[^%w_]",
+      "%f[%w_]TriggerCustomEvent%f[^%w_]",
+      "%f[%w_]all_roles%f[^%w_]",
+      "%f[%w_]ALLROLES%f[^%w_]",
+    },
+    budget = {
+      ["src/app/bootstrap/runtime_install/runtime_global_aliases.lua"] = 3,
+      ["src/app/init.lua"] = 2,
     },
   },
   {

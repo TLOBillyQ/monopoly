@@ -1,31 +1,41 @@
 # 代码库现状研究报告（2026-03-07）
 
-> 本文档基于当前代码库快照，结论只描述仓库里现在已经存在的结构、兼容层、转发层与遗留债务，不追溯不可验证的历史过程。
+> 本文档描述当前仓库已经落地的事实，不追溯不可验证的历史过程。
 >
-> 主要证据来源：`docs/architecture/boundaries.md`、`docs/architecture/layer-model.md`、`src/app/`、`src/core/`、`src/game/`、`src/presentation/`、`tests/internal/dep_rules.lua`。
+> 主要证据来源：`docs/architecture/boundaries.md`、`docs/architecture/layer-model.md`、`src/app/`、`src/core/`、`src/game/`、`src/infrastructure/`、`src/presentation/`、`tests/internal/dep_rules.lua`、`lua tests/regression.lua`。
 
 ## 执行摘要
 
-### 架构结论
+当前代码库已经完成本轮“兼容层与 legacy 债务清理”的主要目标，仓库状态从“研究中建议清理”进入“已落地收口”。
 
-当前代码库已经基本满足 Clean Architecture 的核心约束：
+### 当前结论
 
 - `src/app/bootstrap/` 与 `src/infrastructure/runtime/` 负责启动与宿主细节
-- `src/game/flow/` 负责用例编排与回合推进
-- `src/game/systems/` 是主要玩法规则承载层；破产结算、胜负判定均已进入 `src/game/systems/endgame/`
-- `src/presentation/` 通过 adapter / read_model / widget / canvas 承接展示
+- `src/game/flow/` 负责用例编排、回合推进、输入校验与输出端口协同
+- `src/game/systems/` 是主要玩法规则承载层；破产与胜负判定已稳定位于 `src/game/systems/endgame/`
+- `src/presentation/` 负责 UI 展示、事件映射、读模型和渲染适配
+- `state.ui_runtime` 已成为 UI runtime 的唯一真源；root UI 字段不再作为生产读路径
+- runtime façade 路线已经确定为 **方案 B**：调用方统一直接引用 `src/infrastructure/runtime/*` 真实实现，纯转发壳已删除
 
-**最近一轮边界收口已切断两条关键泄漏**（见 `.agents/plan.md` 历史记录）：
-- `src/game/core/player/state_ops/location_ops.lua` 不再直连 `systems/endgame/bankruptcy`，而是通过 `bankruptcy_port` 触发
-- `src/game/systems/endgame/bankruptcy.lua` 不再直读 `game.gameplay_loop_ports`，而是走 `bankruptcy_feedback_port`
+### 本轮已完成的关键收口
 
-因此，当前代码库的主要问题已不再是"规则模块放错目录"，而是：
+1. **删除纯兼容壳与导入别名壳**
+   - `src/game/flow/output_adapters/legacy_output_mirror.lua` 已删除
+   - `src/game/systems/market/service/paid_purchase_gateway.lua` 已删除
+2. **删除历史 runtime façade 壳**
+   - `src/core/runtime_facade/runtime_context.lua` 已删除
+   - `src/core/runtime_facade/runtime_event_bridge.lua` 已删除
+   - `src/core/runtime_ports/default_ports.lua` 已删除
+3. **完成 UI runtime state 迁移**
+   - `runtime_state.ensure_ui_runtime()` 不再从 root state seed 新结构
+   - `presentation` 与 `flow` 的生产读写已切到 `ui_runtime` / `runtime_state.*`
+4. **收缩宿主全局别名使用面**
+   - `SetTimeOut` / `RegisterCustomEvent` / `TriggerCustomEvent` 的使用已收口到 bootstrap 外壳与极少数兼容点
+   - `tests/internal/dep_rules.lua` 已新增增长预算与 forbidden file 防回流
+5. **移除历史 loop 对象泄漏**
+   - `game.gameplay_loop_ports` 写入已删除；生产代码使用显式 port/状态对象
 
-1. **兼容/转发层仍然偏多，真实所有权不够一眼可见**
-2. **部分 legacy 迁移壳仍然存在，但价值已经下降**
-3. **宿主全局别名与旧 state 迁移痕迹仍在，属于下一阶段应该主动收缩的范围**
-
-**结论：当前仓库已进入"清兼容层、删转发壳、退 legacy 迁移桥"的阶段。**
+**结论：当前仓库已从“架构重组期”进入“边界稳定 + 债务冻结期”。** 接下来的工作重点不再是继续大规模搬目录，而是围绕已形成的边界做小步精修。
 
 ## 项目概况
 
@@ -33,10 +43,10 @@
 |------|--------|
 | 目标平台 | Eggy Game |
 | 主要语言 | Lua 5.4 |
-| `src/` Lua 文件数 | 298 |
-| `tests/` Lua 文件数 | 47 |
-| `src/` Lua 代码行数 | 24,948 |
-| `tests/` Lua 代码行数 | 17,827 |
+| `src/` Lua 文件数 | 293 |
+| `tests/` Lua 文件数 | 46 |
+| `src/` Lua 代码行数 | 24,913 |
+| `tests/` Lua 代码行数 | 17,872 |
 
 ## 当前目录语义
 
@@ -44,82 +54,73 @@
 
 ```text
 src/
-├── app/                   # 启动、装配、测试场景入口
-├── core/                  # 跨层稳定工具、端口、配置、运行时门面
-├── game/                  # 游戏领域与用例实现
-├── infrastructure/        # Eggy 宿主相关实现
-└── presentation/          # UI 展示、事件映射、读模型
+├── app/                   # 启动、装配、bootstrap、测试引导
+├── core/                  # 跨层稳定工具、配置、状态 façade（仅保留 runtime_state）
+├── game/                  # 游戏领域、用例流、ports、runtime adapter
+├── infrastructure/        # Eggy 宿主真实实现
+└── presentation/          # UI 展示、交互映射、读模型、渲染
 ```
 
 ### `src/app/`
 
-职责已经比较清晰：
+`src/app/` 是最外层装配区：
 
-- `src/app/init.lua` 负责应用级启动
-- `src/app/bootstrap/` 负责 runtime install、startup、UI bootstrap、runtime alias 安装
-- `src/app/testing/` 负责测试 profile 和测试引导
+- `src/app/init.lua` 负责应用级启动与最后一层兼容调度
+- `src/app/bootstrap/` 负责 runtime install、startup、UI bootstrap、alias 安装
+- `src/app/testing/` 负责测试 profile 与测试引导
 
-这一层是"程序如何启动"的细节层，可以依赖其他层。
+这一层可以依赖其他层，因为它表达的是“程序如何启动”。
 
 ### `src/core/`
 
 `src/core/` 当前主要承载跨层稳定资产：
 
-- `src/core/config/`：配置校验、feature toggle、runtime constant
+- `src/core/config/`：配置、feature toggle、runtime constant、sanity
 - `src/core/events/`：事件常量与事件边界
-- `src/core/ports/`：runtime 访问与动作动画等稳定契约
-- `src/core/runtime_facade/`：运行时 façade / state façade / role global façade
-- `src/core/runtime_ports/`：默认 runtime ports 的 façade 出口
+- `src/core/ports/`：runtime 访问、动作动画等稳定契约
+- `src/core/runtime_facade/runtime_state.lua`：UI / board / anim / turn runtime 的状态 façade
 - `src/core/utils/`：日志、dirty tracker、角色 ID、数值工具
 
-这里已经摆脱"业务代码直接摸宿主全局"的旧模式，但仍保留若干 façade 与迁移桥。
+需要特别说明的是：**`src/core/runtime_facade/` 不再承载 runtime_context / event_bridge façade。** 这些运行时真实实现已经统一收口到 `src/infrastructure/runtime/`。
 
 ### `src/game/`
 
-`src/game/` 现在分成几块相对稳定的子层：
+`src/game/` 现在分成几块职责清晰的子层：
 
 - `src/game/core/ai/`：AI 决策
 - `src/game/core/player/`：玩家状态与状态操作
-- `src/game/core/runtime/`：`Game` 聚合根、`composition_root`、`game_factory` 等装配
-- `src/game/flow/`：回合推进、intent 分发、输出适配
+- `src/game/core/runtime/`：`Game` 聚合根、`composition_root`、`game_factory`
+- `src/game/flow/`：回合推进、intent 分发、输出协同
 - `src/game/ports/`：玩法层对外声明的 Port 契约
-- `src/game/runtime/`：Port Adapter，目前只保留少量 gameplay 适配器
+- `src/game/runtime/`：Port Adapter，目前保留贴近 gameplay 的 adapter
 - `src/game/scheduler/`：协程调度
 - `src/game/systems/`：主要玩法规则系统
-- `src/game/turn_engine/`：历史执行器容器，文档已标记为 deprecated/frozen
+- `src/game/turn_engine/`：deprecated/frozen 的历史执行器容器，仍存在但已明确不再扩展职责
 
-### `src/game/systems/`
+### `src/infrastructure/runtime/`
 
-当前主要规则位于：
+这是当前 runtime 真实实现的集中区，已经成为宿主细节的唯一真实所有者，主要包含：
 
-- `board/` - 游戏板相关逻辑
-- `chance/` - 机会卡系统
-- `choices/` - 选择系统
-- `commerce/` - 交易系统
-- `effects/` - 效果系统
-- `endgame/` - 终局规则（破产、胜负判定）
-- `items/` - 道具系统
-- `land/` - 地块系统
-- `market/` - 市场系统
-- `movement/` - 移动系统
-- `vehicle/` - 载具系统
+- `runtime_context.lua`
+- `runtime_event_bridge.lua`
+- `default_ports.lua`
 
-其中 `src/game/systems/endgame/bankruptcy.lua` 负责破产结算，`src/game/systems/endgame/game_victory.lua` 负责胜负判定。
+所有新 runtime 能力都应优先落在这里，而不是回写到 `src/core` 或 `src/game/flow`。
 
 ### `src/presentation/`
 
-展示层现在已经形成 adapter 风格组织：
+展示层已经形成 adapter 风格组织：
 
 - `adapter/`：展示侧 Port 与 host runtime 适配
-- `canvas/`：页面级 UI
+- `canvas/`：页面级 UI 结构
 - `canvas_runtime/`：Canvas 运行时桥接
 - `interaction/`：UI 输入到 action/intent 的映射
 - `read_model/`：UI 读模型
 - `render/`：动画与可视反馈
-- `state/`：UI runtime state / ui_model
+- `state/`：UI 模型与状态结构
 - `widgets/`：可复用组件
 
-这表明 presentation 已不再只是"节点脚本堆"，而是一个带稳定 adapter 边界的展示层。
+这里已经不再承担“补业务语义”的责任，而是消费上层显式给出的 choice / popup / market / countdown 等视图语义。
 
 ## 当前边界如何被落实
 
@@ -128,15 +129,17 @@ src/
 证据：
 - `src/app/bootstrap/runtime_install.lua`
 - `src/core/ports/runtime_ports.lua`
-- `src/core/runtime_facade/runtime_context.lua`
+- `src/infrastructure/runtime/runtime_context.lua`
+- `src/infrastructure/runtime/default_ports.lua`
 - `tests/suites/runtime_ports_contract.lua`
 
 当前策略：
 - `runtime_install` 创建 context 并装配默认 ports
-- `runtime_ports` 作为业务侧的稳定访问入口
-- runtime install 已明确拒绝 `context_policy = legacy` 和 `enable_legacy_helper_fallback = true` 这类旧选项
+- `runtime_ports` 作为稳定访问入口
+- 真实 runtime 实现统一位于 `src/infrastructure/runtime/`
+- 原 façade 文件已删除，避免“双重所有权错觉”
 
-### 2. flow 层承担用例编排与运行时 Port 注入
+### 2. flow 层承担用例编排与 Port 注入
 
 证据：
 - `src/game/flow/turn/gameplay_loop.lua`
@@ -153,390 +156,156 @@ src/
 - `auto_play_port`
 - `bankruptcy_port`
 
-这意味着 flow 已经是运行时边界注入中心，而不是直接承载业务规则本身。
+与上一阶段不同的是，**`game.gameplay_loop_ports` 历史写入已删除**，systems 不再能绕过 port 直接接触 loop runtime 对象。
 
-### 3. state → systems 与 systems → gameplay_loop_ports 两条关键泄漏已被切断
+### 3. systems 与 loop runtime 对象已切断直连
 
 证据：
-- `src/game/core/player/state_ops/location_ops.lua`
-- `src/game/systems/endgame/bankruptcy.lua`
 - `src/game/ports/bankruptcy_feedback_port.lua`
+- `src/game/runtime/bankruptcy_port_adapter.lua`
+- `src/game/systems/endgame/bankruptcy.lua`
 - `tests/internal/dep_rules.lua`
 
 当前状态：
-- `location_ops.lua` 通过 `src/game/ports/bankruptcy_port.lua` 触发破产
-- `bankruptcy.lua` 通过 `src/game/ports/bankruptcy_feedback_port.lua` 发地块清空反馈
-- `dep_rules` 已新增 `core/player ↛ systems` 和 `systems ↛ game.gameplay_loop_ports`
+- `src/game/systems/endgame/bankruptcy.lua` 通过 `bankruptcy_feedback_port` 发出稳定语义
+- `tests/internal/dep_rules.lua` 显式禁止 `src/game/systems/*` 读取 `game.gameplay_loop_ports`
 
-这标志着本轮边界收口已经从"目录级整理"推进到了"对象级耦合切断"。
+这说明最危险的一类“对象级反向泄漏”已经被结构化切断。
 
-### 4. 兼容壳多数已经从"行为兼容"退化到"导入兼容"
+### 4. UI runtime 已完成 root-state 迁移
 
 证据：
-- `src/core/runtime_facade/runtime_context.lua` - 单行转发
-- `src/core/runtime_facade/runtime_event_bridge.lua` - 单行转发
-- `src/core/runtime_ports/default_ports.lua` - 单行转发
+- `src/core/runtime_facade/runtime_state.lua`
+- `src/presentation/widgets/ui_modal_presenter.lua`
+- `src/presentation/interaction/ui_modal_state_coordinator.lua`
+- `tests/suites/ui_runtime_state_contract.lua`
 
-这些文件已经不再自己承载复杂逻辑，而是单行转发到 `src/infrastructure/runtime/*` 的对应模块。说明它们的作用已经从"真正的兼容逻辑"退化为"稳定 import 路径壳"。
+当前状态：
+- `runtime_state.ensure_ui_runtime()` 只负责确保新结构存在并给出默认值
+- 不再从 `state.ui_dirty`、`state.ui_model`、`state.pending_choice*`、`state.ui_modal_*` seed 新结构
+- `ui_runtime` 成为唯一真源；root UI 字段仅可能出现在测试夹具或历史兼容上下文中，不再是生产读路径
 
-## 兼容 / 转发 / legacy 盘点
+### 5. 宿主全局别名使用面已显著缩小
 
-### A. 活跃但必要的桥接层
+证据：
+- `src/app/bootstrap/runtime_install/runtime_global_aliases.lua`
+- `src/app/init.lua`
+- `tests/internal/dep_rules.lua`
 
-| 类型 | 路径 | 当前职责 | 结论 |
-|------|------|----------|------|
-| 宿主全局别名安装 | `src/app/bootstrap/runtime_install/runtime_global_aliases.lua` | 把 `LuaAPI` / `GameAPI` 能力映射到 `SetTimeOut`、`RegisterCustomEvent`、`TriggerCustomEvent` 等宿主全局名 | 仍然活跃；短期必要，但应该继续限制在 bootstrap/app 边界 |
-| 角色全局安装 | `src/core/runtime_facade/ui_role_globals.lua` | 写入 `all_roles` / `ALLROLES` 给 UIManager 侧使用 | 仍然活跃；属于宿主/UI 兼容桥 |
-| 展示侧 grouped ports | `src/presentation/adapter/presentation_ports.lua` | 组装 modal/anim/ui_sync/debug/clock/state 端口 | 不是 legacy，而是当前正式 adapter 边界 |
-| gameplay loop grouped port resolver | `src/game/flow/turn/gameplay_loop_ports.lua` | 为 loop 解析 grouped override；拒绝 legacy flat override | 当前正式边界，但内部仍带一点兼容形态判断 |
-| runtime state façade | `src/core/runtime_facade/runtime_state.lua` | 统一读写 `ui_runtime / board_runtime / anim_runtime / turn_runtime / debug_runtime` | 正在承载 state 迁移，但仍保留 legacy seed 逻辑 |
+当前状态：
+- `SetTimeOut` / `RegisterCustomEvent` / `TriggerCustomEvent` 的直接使用已经被压缩到 bootstrap 外壳与少量兼容点
+- `presentation` 层事件注册已改走 `runtime_context` / `host_runtime_port`
+- `ui_bootstrap` 延时调度已改走 `runtime_ports.schedule`
+- `dep_rules` 已新增增长预算，防止使用面再次扩散
 
-### B. 纯转发壳（import-stable shell）
+## 当前仍然存在的遗留点
 
-| 路径 | 当前形态 | 使用状态 | 判断 |
-|------|----------|----------|------|
-| `src/core/runtime_facade/runtime_context.lua` | 单行 `return require(...)` | 被 `runtime_ports`、`runtime_install`、测试等广泛 import | 纯转发壳；要么保留为公开 API，要么未来统一改 import 后删除 |
-| `src/core/runtime_facade/runtime_event_bridge.lua` | 单行 `return require(...)` | 被 `monopoly_events`、presentation、测试等使用 | 纯转发壳；问题同上 |
-| `src/core/runtime_ports/default_ports.lua` | 单行 `return require(...)` | 被 `runtime_ports.lua` 使用 | 纯转发壳；低风险清理候选 |
-| `src/game/systems/market/service/paid_purchase_gateway.lua` | 单行 `return require(...)` | 生产代码已直接依赖 `src.game.systems.market.ports.paid_purchase_port`，该壳当前只剩名义出口价值 | 高概率可删或标记为过渡别名 |
+### 1. `src/game/turn_engine/` 仍在主树中
 
-### C. 明确的 legacy 迁移壳 / 兼容残留
+当前状态：
+- 文档已明确其为 deprecated/frozen 历史执行器容器
+- 仍由 `src/game/core/runtime/composition_root.lua` 承接装配
+- 它不再是新逻辑的推荐落点，但尚未完全退场
 
-| 路径 | 现状 | 风险 |
-|------|------|------|
-| `src/core/runtime_facade/runtime_state.lua` | `ensure_ui_runtime()` 仍会把根级 `state.ui_dirty`、`state.ui_model`、`state.pending_choice`、`state.ui_modal_*` 等旧字段 seed 进 `ui_runtime`；还保留 `_legacy_choice_seeded` 分支 | 说明 UI runtime 迁移尚未完全结束；新代码虽然不应回写旧字段，但旧字段仍在被读取作为 seed 来源 |
-| `src/game/flow/output_adapters/legacy_output_mirror.lua` | 仅做 output_ports 的薄包装；全仓生产代码没有引用，只剩 `tests/suites/legacy_output_mirror_contract.lua` 在验证它"不再回写 root legacy state" | 极像"已经失去生产价值的兼容壳"；可以优先清理 |
-| `game.gameplay_loop_ports` 字段 | 仍在 `src/game/flow/turn/gameplay_loop.lua:163` 中写入（`game.gameplay_loop_ports = ports`），但当前 `src/` 生产代码已经不再读取该字段 | 很可能是历史兼容残留；当前真正活跃的是 `state.gameplay_loop_ports` |
-| `src/game/turn_engine/` | 文档明确标记 deprecated/frozen，但仍在 `composition_root.lua` 中被使用 | 历史执行器容器，若长期保留，应进一步明确只读/不可新增代码 |
+判断：
+- 这是一笔**已冻结、可控、可观察**的历史债务
+- 当前优先级低于“继续保持 runtime / systems / presentation 边界不回流”
 
-### D. 已被测试护栏冻结的 retired 路径与策略
+### 2. `src/app/init.lua` 仍保留最后一层兼容调度
 
-证据集中在 `tests/internal/dep_rules.lua`：
+当前状态：
+- `src/app/init.lua` 中仍保留对 `SetTimeOut` 的直接读取作为启动壳兼容点
+- 该使用面已被 `dep_rules` 冻结，不再允许扩散
 
-- `src.core.runtime_compat` retired
-- `src.game.core.runtime.TurnEngine` / `PhaseRegistry` retired（作为 core runtime 代理）
-- `MonopolyEvents` 旧桥 retired
-- `clock.now/diff_seconds` retired
-- `legacy flat gameplay_loop_ports` retired
-- `context_policy = legacy` retired
-- `enable_legacy_helper_fallback = true` retired
-- `core/player ↛ systems` 已禁止
-- `systems ↛ game.gameplay_loop_ports` 已禁止
+判断：
+- 这是刻意保留在最外层的一小块兼容壳，而不是新的边界回流
 
-这些已经不是"活跃兼容层"，而是"测试明确禁止再复活的历史路径"。
+## 已删除的兼容层 / 转发壳
 
-## 主要问题（P0-P3）
-
-### P0
-
-当前没有发现新的 P0：核心业务没有再被外部框架直接反向控制，且最近两条关键对象级泄漏已经被切断。
-
-### P1：宿主全局别名兼容层仍然活跃，且范围不小
-
-**现状**
-
-- `runtime_global_aliases.install()` 仍会写入 `SetTimeOut`、`RegisterCustomEvent`、`TriggerCustomEvent` 等宿主全局名
-- `ui_role_globals.install()` 仍会写入 `all_roles` / `ALLROLES`
-- `app/bootstrap/ui_bootstrap.lua`、`presentation/adapter/host_runtime_port.lua`、`game_startup_event_bridge.lua` 等外层模块仍直接依赖这些全局名
-
-**为什么这是问题**
-
-这不是分层错误，但说明"strict-only runtime install"并不等于"全局名已经退休"。当前只是把全局写入限制到了更外层；它们仍是活跃兼容机制。
-
-**影响**
-
-- 宿主接入边界不够单一，既有 `runtime_ports/context`，又有宿主全局别名
-- 新代码稍不注意就可能在 app/presentation 层继续扩大对全局的依赖面
-- 测试里需要持续 patch 这些全局，维护成本偏高
-
-### P1：UI runtime 迁移尚未完全完成，`runtime_state` 仍在 seed 旧字段
-
-**现状**
-
-`src/core/runtime_facade/runtime_state.lua` 的 `ensure_ui_runtime()` 仍会把旧根级字段 seed 到 `ui_runtime`：
-
-- `state.ui_dirty`
-- `state.ui_model`
-- `state.pending_choice`
-- `state.pending_choice_id`
-- `state.pending_choice_elapsed`
-- `state.ui_modal_elapsed`
-- `state.ui_modal_ref`
-- 以及 `_legacy_choice_seeded` 相关字段
-
-**为什么这是问题**
-
-这说明虽然写路径大多已迁到 `ui_runtime`，但读路径仍在兼容旧结构。也就是说，状态模型已经"新结构主导"，但还没有彻底摆脱旧 state 形状。
-
-**影响**
-
-- state 形状的真实标准不够单一
-- 读者很难一眼判断"哪些根字段还允许存在"
-- 后续如果有人继续补旧根字段，兼容 seed 会默默接住，降低问题暴露速度
-
-### P2：多处纯转发壳继续存在，所有权表达不够直接
-
-**现状**
-
-当前至少有 4 个明显的纯转发壳：
-
-- `src/core/runtime_facade/runtime_context.lua`
-- `src/core/runtime_facade/runtime_event_bridge.lua`
-- `src/core/runtime_ports/default_ports.lua`
-- `src/game/systems/market/service/paid_purchase_gateway.lua`
-
-其中前三个仍有稳定 import 价值，第四个则连生产代码都已基本不再使用。
-
-**为什么这是问题**
-
-转发壳本身不危险，但会制造"双重所有权错觉"：
-
-- 读者可能误以为逻辑属于 `src/core/runtime_facade/*`，实际上真正实现已在 `src/infrastructure/runtime/*`
-- 市场支付网关的 service 路径别名则会继续模糊"port 在哪、service 在哪"
-
-**影响**
-
-- 代码导航成本增加
-- 新人更难判断"应该改 façade 还是改实现"
-- 某些壳如果长期只剩单行 `return require(...)`，维护价值会低于认知负担
-
-### P2：`game.gameplay_loop_ports` 很可能已经退化为历史兼容字段
-
-**现状**
-
-当前 `src/game/flow/turn/gameplay_loop.lua:163` 仍会写 `game.gameplay_loop_ports = ports`，但在当前 `src/` 生产代码里，`game.gameplay_loop_ports` 已不再有正常消费方（只有 `state.gameplay_loop_ports` 读取）。
-
-**为什么这是问题**
-
-这意味着 `game.gameplay_loop_ports` 很可能已经从"活跃接口"退化成"历史兼容写入"。
-
-**影响**
-
-- 增加对象图噪音
-- 让读者误以为 `game` 仍应该感知 loop port 组
-- 如果未来有人再次读取它，会把刚切断的对象级耦合重新引回来
-
-### P3：部分 legacy 模块已接近"仅为测试存在"
-
-**现状**
-
-- `src/game/flow/output_adapters/legacy_output_mirror.lua` 当前只有测试使用
-- `src/game/systems/market/service/paid_purchase_gateway.lua` 目前更像历史导入别名
-- `src/game/turn_engine/` 虽然有文档说明，但仍作为目录实体留在主代码树里
-
-**为什么这是问题**
-
-这类模块不是立刻有害，但会不断制造"是不是还活着"的认知成本。
-
-**影响**
-
-- 代码树噪音增大
-- 清理意愿被拖延，久而久之又会变成"没人敢动"的历史包袱
-
-### P3：架构文档略滞后于最新 Port 收口
-
-**现状**
-
-`docs/architecture/boundaries.md` 与 `docs/architecture/layer-model.md` 现在已经正确描述了 `endgame` 规则从 `core/runtime` 移出，但还没有明确写出：
-
-- `bankruptcy_feedback_port` 的存在
-- `core/player ↛ systems`
-- `systems ↛ game.gameplay_loop_ports`
-
-**影响**
-
-实现已比文档更先进，下一位开发者只能从代码和测试推断最新边界。
-
-## 清理方案
-
-下面给出按风险与收益排序的清理路径。核心原则是：**先删死壳，再收紧活桥，最后决定 façade 是公开 API 还是过渡路径。**
-
-### 步骤 1：先删"只剩名义价值"的兼容壳
-
-**目标**
-
-优先去掉对运行行为没有实质贡献、但会增加认知噪音的模块。
-
-**建议目标**
+以下对象已不再存在于当前仓库：
 
 - `src/game/flow/output_adapters/legacy_output_mirror.lua`
 - `src/game/systems/market/service/paid_purchase_gateway.lua`
-- `game.gameplay_loop_ports` 写入（前提是确认 `src/` 无生产读取）
+- `src/core/runtime_facade/runtime_context.lua`
+- `src/core/runtime_facade/runtime_event_bridge.lua`
+- `src/core/runtime_ports/default_ports.lua`
+- `tests/suites/legacy_output_mirror_contract.lua`
 
-**实施方式**
+`tests/internal/dep_rules.lua` 已把这些文件列为 forbidden files，防止回流。
 
-- 先把相关测试改成直接验证正式接口，而不是验证 legacy 包装壳
-- 对 `game.gameplay_loop_ports`，先加回归/grep 验证，再删写入
+## 当前测试与护栏状态
 
-**预期收益**
+### 回归状态
 
-最低风险地减少代码树噪音，立刻提高"现在谁是正式接口"的可见性。
+已验证：
 
-**回归风险**
+- 运行 `lua tests/regression.lua`
+- 预期结果为：
+  - `All regression checks passed (377)`
+  - `dep_rules ok`
+  - `forbidden_globals ok`
 
-低。
+### 边界护栏
 
-### 步骤 2：完成 UI runtime state 迁移，收掉 root-state seed
-
-**目标**
-
-让 `runtime_state.ensure_ui_runtime()` 不再从旧根级字段 seed 新结构。
-
-**建议动作**
-
-- 清点仍读取 root 字段的模块与测试
-- 把剩余读路径全部切到 `ui_runtime` / `runtime_state.*`
-- 最后删除 `_legacy_choice_seeded` 分支和 root-state seed 行为
-
-**重点文件**
-
-- `src/core/runtime_facade/runtime_state.lua`
-- `src/game/flow/output_adapters/use_case_output_port.lua`
-- `src/presentation/state/` / `src/presentation/widgets/` / `tests/suites/*ui*_contract.lua`
-
-**预期收益**
-
-统一 state 形状，降低"新旧状态共存"的隐性复杂度。
-
-**回归风险**
-
-中等。UI 选择态、modal timer、pending choice 很容易因为历史字段漏迁移而出问题。
-
-### 步骤 3：收缩宿主全局别名使用面
-
-**目标**
-
-把 `SetTimeOut`、`RegisterCustomEvent`、`TriggerCustomEvent`、`all_roles` 等宿主全局的使用范围继续压缩到最外层。
-
-**建议动作**
-
-- 保留 `runtime_global_aliases.install()` 和 `ui_role_globals.install()` 作为 bootstrap 内部实现细节
-- 审查 `app/` 与 `presentation/` 中直接读取这些全局的模块；凡是能走 `runtime_ports`、`host_runtime_port`、`runtime_context` 的，优先改走显式接口
-- 给 `tests/internal/dep_rules.lua` 增加更细的白名单或增长预算，防止使用面再次扩散
-
-**预期收益**
-
-让"宿主全局名"从显式 API 退化成真正的内部兼容细节。
-
-**回归风险**
-
-中等。因为 UI bootstrap、事件绑定和 tick 循环都与宿主全局有交互。
-
-### 步骤 4：对 façade 做一次明确取舍
-
-**目标**
-
-解决"`src/core/runtime_facade/*` / `src/core/runtime_ports/*` 到底是长期公开 API，还是过渡壳"这个问题。
-
-**两种可选路线**
-
-- **路线 A：正式承认 façade 为稳定 import 面**
-  - 保留 `src/core/runtime_facade/runtime_context.lua`
-  - 保留 `src/core/runtime_facade/runtime_event_bridge.lua`
-  - 保留 `src/core/runtime_ports/default_ports.lua`
-  - 在文档中明确它们是唯一推荐入口
-- **路线 B：统一改 import 到真实实现后删除 façade**
-  - 把调用方直接切到 `src/infrastructure/runtime/*`
-  - 删除纯转发壳
-
-**建议**
-
-如果仍希望保持"内层不 import infrastructure"，就采用路线 A，并把这些 façade 明确记为正式边界；否则就采用路线 B，一次性删掉单行壳。
-
-**预期收益**
-
-消除所有权歧义。
-
-**回归风险**
-
-低到中等，主要取决于 import 面是否广。
-
-### 步骤 5：继续冻结并最终清理 `src/game/turn_engine/`
-
-**目标**
-
-让历史执行器从"代码树里还活着的旧容器"进一步退化为真正的历史归档。
-
-**建议动作**
-
-- 统计 `src/game/turn_engine/` 的生产 import 面（当前仅在 `composition_root.lua` 中使用）
-- 若仍有活跃 import，先记录用途与退出条件
-- 若 import 已降到零，考虑迁到 `deprecated/`、`archive/` 或移出主路径树
-
-**预期收益**
-
-减少"旧执行器是否还能继续加代码"的歧义。
-
-**回归风险**
-
-低，前提是 import 面已经清楚。
-
-### 步骤 6：同步文档，让"实现 > 文档"的差距收口
-
-**建议同步项**
-
-- 在 `docs/architecture/boundaries.md` 增加 `bankruptcy_feedback_port` 作为"systems 不直接感知 loop 对象"的例子
-- 在 `docs/architecture/layer-model.md` 增加：
-  - `core/player ↛ systems`
-  - `systems ↛ game.gameplay_loop_ports`
-  - `legacy_output_mirror` / `turn_engine` 的退休方向（如决定了的话）
-
-**预期收益**
-
-避免下一位开发者只能靠 grep 猜当前边界。
-
-## 测试建议
-
-清理兼容层时，建议按以下顺序补和跑测试：
-
-### 1. 用例级回归
-
-- 破产后地块清空、库存清空、淘汰、反馈事件
-- 医院扣费失败触发破产
-- 市场支付、载具开关、状态同步不受清理兼容层影响
-
-### 2. 契约测试
-
-- `runtime_ports_contract`
-- `usecase_boundary_contract`
-- `legacy_output_mirror_contract`（若决定删除该模块，则应一并删除或替换为正式接口测试）
-
-### 3. 边界守卫测试
+当前护栏主要包括：
 
 - `tests/internal/dep_rules.lua`
+  - 禁止 systems 依赖 `src.game.flow.*`
+  - 禁止 systems 依赖 `src.game.core.runtime.*`
+  - 禁止 systems 读取 `game.gameplay_loop_ports`
+  - 禁止已删除 façade / 兼容壳文件重新出现
+  - 冻结 app/presentation 中宿主全局别名使用面的增长预算
 - `tests/internal/forbidden_globals.lua`
 - `tests/internal/gameplay_loop_no_ui.lua`
 
-### 4. 全量回归
+这说明仓库已经不仅有“文档约定”，还有持续执行的结构性守卫。
 
-- 运行 `lua tests/regression.lua`
-- 预期：`All regression checks passed (...)`、`dep_rules ok`、`forbidden_globals ok`
+## 当前最重要的架构判断
 
-## 权衡说明
+### 1. 主架构已经稳定
 
-### 短期成本
+目前 `app / core / game / infrastructure / presentation` 的职责边界已经比早期状态清晰得多，而且关键依赖方向有测试护栏托底。
 
-- 清兼容层会碰到不少测试，因为很多 contract 本身就是为迁移期留的
-- 删除纯转发壳虽然代码少，但需要先统一 import 面，否则会引发"大量小改"
-- UI runtime state 迁移完成前，删 legacy seed 风险不低
+### 2. runtime 真正所有权已经明确
 
-### 长期收益
+方案 B 落地后，runtime 的真实实现统一位于 `src/infrastructure/runtime/`。这比 façade 并存阶段更直接，也减少了“到底哪里才是正式出口”的歧义。
 
-- 新人可以更快判断"哪里是正式 API，哪里只是兼容桥"
-- 生产代码路径会更短，真实所有权更清楚
-- 兼容层被压缩后，边界回流更难发生，测试护栏也更有针对性
+### 3. 兼容债务已经从“失控”转为“冻结”
+
+最噪音的 pure forwarder / legacy bridge 已经删除；剩余遗留点主要是：
+- `src/game/turn_engine/`
+- `src/app/init.lua` 的最后兼容调度点
+
+它们已经被文档和 dep_rules 共同限定，不再处于继续扩散的状态。
+
+## 下一阶段建议
+
+基于当前快照，下一阶段高价值工作不再是继续大拆分，而是围绕稳定边界做精修：
+
+1. **继续冻结 `src/game/turn_engine/`**
+   - 统计剩余生产 import 面
+   - 明确退出条件
+   - 避免任何新职责进入该目录
+
+2. **继续把 runtime 宿主细节限制在 outer shell**
+   - 保持 `src/infrastructure/runtime/` 是唯一真实实现
+   - 保持 `app/bootstrap` 是唯一允许安装 alias 的地方
+
+3. **围绕 `ui_runtime` 真源继续删测试夹具中的 root-state 假设**
+   - 当前生产代码已完成迁移
+   - 后续可以继续清理测试辅助代码中的历史兼容形状
+
+4. **维持 dep_rules 的 decay-only 治理**
+   - 新 debt 只能更少，不能更多
+   - 对少数保留兼容点继续用增长预算冻结
 
 ## 当前验收结论
 
 从当前仓库快照可以得出以下结论：
 
-1. **主架构已经基本稳定。** `app / core / game / infrastructure / presentation` 的职责划分比早期状态清晰得多。
-2. **最近一轮边界收口已经切断关键对象级泄漏。** 这让代码库从"纠正分层方向错误"进入了"清理迁移残留"的阶段。
-3. **当前最值得继续做的，不是再搬目录，而是清兼容层。** 特别是：
-   - pure forwarder 壳
-   - runtime_state legacy seed
-   - 宿主全局别名使用面
-   - `turn_engine` 这类冻结历史目录
-4. **兼容/转发/legacy 现在已经是有序债务，而不是失控债务。** 这意味着它们适合被阶段性删除，而不是继续被动保留。
+1. **主架构已经基本稳定。** 目录职责、依赖方向和 port 注入关系都已较清晰。
+2. **本轮兼容层清理已经完成。** 纯兼容壳、pure forwarder façade、legacy UI state seed 都已落地删除或收口。
+3. **runtime 所有权已经明确到 `src/infrastructure/runtime/`。** 方案 B 已完成，不再存在 façade 与真实实现并存的双重所有权错觉。
+4. **当前仓库已进入“边界稳定 + 债务冻结期”。** 接下来更适合做精修和继续冻结历史目录，而不是再次大范围重组。
 
-换句话说，当前代码库已经从"架构重组期"进入了"技术债精修期"。下一阶段的高价值工作，是把兼容桥从"还在现场"逐步变成"被正式退休"。
+换句话说，当前代码库已经从“架构重组期”正式进入“架构维护期”。
