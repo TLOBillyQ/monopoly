@@ -16,7 +16,7 @@
 
 `src/game/systems` 是玩法业务层。这里放黑市、道具、地块、机会卡、移动等规则本身。规则模块可以生成 choice spec、popup payload、动画请求等稳定输出模型，但不应该自己决定 UI 节点名、Canvas 切换方式或宿主 API 调用顺序。
 
-`src/game/runtime` 与 `src/app/bootstrap/runtime_install` 一起承担运行时适配职责。前者保留仍属于游戏运行流程的宿主桥接，后者负责把宿主能力安装为显式端口或 hook。以后只要看到新的 Eggy API 调用需求，优先判断它是不是应该留在这里，而不是回写到 `src/core` 或 `src/game/flow`。
+`src/game/runtime` 与 `src/infrastructure/runtime` 一起承担运行时适配职责。前者保留回合执行与状态机编排，后者承接运行时上下文、事件桥和默认 runtime ports 这类实现细节；`src/app/bootstrap/runtime_install` 则只负责安装别名和装配。当前 `src/core/RuntimeContext.lua`、`src/core/RuntimeEventBridge.lua`、`src/core/runtime_ports/DefaultPorts.lua` 已经退化为 façade，真实实现位于 `src/infrastructure/runtime/`；以后只要看到新的 Eggy API 调用需求，优先判断它是不是应该留在那里，而不是回写到 `src/core` 或 `src/game/flow`。
 
 `src/presentation` 是展示适配层。它负责把 `ui_model`、choice view、popup view、market view 渲染成具体 UI，并处理输入事件到 turn action 的映射。它可以解释 ViewModel，但不应该再根据 `choice.kind`、`choice.meta` 或商品配置自行补业务语义。
 
@@ -30,7 +30,7 @@
 
 第三，market 的 session 状态属于用例输出的一部分。`active_tab`、`page_index`、`page_count` 应挂在显式字段上，由 `ChoiceSession` 维护，而不是靠 `meta` 给 UI 做兜底。
 
-第四，凡是宿主 API、支付面板、编辑器导出、全局别名安装这类“离开 Eggy 就不存在”的逻辑，都应停留在 app/bootstrap/runtime 侧，不再回流到内层目录。
+第四，凡是宿主 API、支付面板、编辑器导出、运行时上下文、事件桥和默认 runtime ports 这类“离开 Eggy 就不存在”的逻辑，都应停留在 `src/infrastructure/runtime` 或 `src/app/bootstrap` 一侧，不再回流到内层目录。
 
 ## 后续新增代码时的放置规则
 
@@ -40,6 +40,6 @@
 
 如果你在写“某个 ViewModel 应该怎么渲染到 UI 节点”，优先放进 `src/presentation`。
 
-如果你在写“程序启动时把哪条宿主能力接成端口”，优先放进 `src/app/bootstrap`。
+如果你在写“程序启动时把哪条宿主能力接成端口”，优先放进 `src/app/bootstrap`；如果你在写“这些宿主能力的具体实现长什么样”，优先放进 `src/infrastructure/runtime`。
 
 如果一个模块既想碰业务规则，又想碰宿主/UI 细节，先停下来拆边界，不要再新增跨层混合模块。

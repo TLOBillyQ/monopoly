@@ -10,9 +10,9 @@
 
 ## 架构结论
 
-当前代码库不是“完全不符合 Clean Architecture”，也不是“已经只剩目录收尾”的状态。更准确的判断是：它已经在 **use case ↔ presentation** 边界上取得了实质进展，但在 **`game/systems -> game/flow` 反向依赖**、**`src/core` 运行时基础设施滞留**、以及 **UI 输出状态双轨并存** 这三处，Dependency Rule 仍未真正闭合。
+当前代码库已经满足 Clean Architecture 的大部分核心约束。更准确的判断是：**最危险的反向依赖已经被切断，主要运行时事实源已经统一，运行时基础设施也已从 `src/core` 外迁为 façade + outer implementation 结构。**
 
-因此，本仓库当前最合适的标签不是“完成态架构”，而是 **迁移中的混合架构**：外圈与内圈已经被部分切开，但仍保留几条关键的反向依赖和兼容桥。
+因此，本仓库当前更接近 **主体迁移已完成、只剩少量语义整理和守护补强** 的状态。剩余工作仍然存在，但它们主要不再是“硬方向错误”，而是收尾质量问题。
 
 ---
 
@@ -21,11 +21,12 @@
 - `src/presentation` 中直接 `require("src.game.*")` 的静态扫描命中为 **0**，说明展示层没有直接反向侵入业务层。
 - `src/presentation` 中基于 `choice.kind` / `choice.meta` / `pending_choice.kind` / `pending_choice.meta` 做业务推断的静态扫描命中为 **0**，说明 choice 显式字段协议已经落地。
 - `src/game/flow` 中直接写 `state.ui_* =` 的静态扫描命中为 **0**，说明“回合编排层直接写 UI 根状态”这类旧耦合已被明显收口。
-- `src/game/systems` 中直接 `require("src.game.flow.intent.IntentDispatcher")` 的静态扫描命中为 **9 个文件**，这是当前最明确的 Dependency Rule 反向依赖。
-- `src/game` + `src/core` 中与退役 `ui_port` 兼容回退相关的引用仍有 **5 处**，说明旧适配边界还没有彻底移除。
-- `src/core` 仍保留宿主/运行时触点：`RuntimeContext.lua` 直接约束 `LuaAPI` 环境，`RuntimeEventBridge.lua` 直接走 `TriggerCustomEvent` 与调试反射路径。
+- `src/game/systems` 中直接 `require("src.game.flow.*")` 的静态扫描命中现已降为 **0**，说明最明显的 Dependency Rule 反向依赖已经切断。
+- `src/game` + `src/core` 中与退役 `ui_port` 兼容回退相关的生产代码引用现已降为 **0**。
+- `src/presentation` 与 `src/app/bootstrap/GameStartupEventBridge.lua` 中针对 `state.ui_model` / `state.pending_choice*` / `state.ui_modal_*` 的 legacy 读取已基本收口；相关运行时事实改由 `state.ui_runtime` 承接。
+- `src/core/RuntimeContext.lua`、`src/core/RuntimeEventBridge.lua`、`src/core/runtime_ports/DefaultPorts.lua` 已退化为 façade，真实实现迁到 `src/infrastructure/runtime/`。
 
-这些事实共同说明：**presentation 边界比 runtime/core 边界更健康，输出协议比目录语义更健康。**
+这些事实说明：**当前仓库已经跨过“迁移中的混合架构”阶段，进入“主要硬边界已闭合、剩余工作以语义整理和后续守护为主”的阶段。**
 
 ---
 
@@ -201,7 +202,7 @@
 
 ### P2：`src/core` 的目录语义与当前职责不一致
 
-`src/core` 现在一半像稳定策略层，一半像运行时基础设施层。
+`src/core` 现在已经比研究时更接近稳定策略层：`RuntimeContext.lua`、`RuntimeEventBridge.lua`、`runtime_ports/DefaultPorts.lua` 已经退化为转发壳，真实实现位于 `src/app/bootstrap/runtime_install/`。但 `src/core` 仍保留这些 façade 名称，因此目录语义仍不算完全纯净。
 
 代表文件：
 
