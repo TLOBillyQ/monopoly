@@ -3,3 +3,4 @@
 - `ui_manager_lib.md` UIManagerLib：提供UI组件的注册、查询和事件分发功能，解耦UI组件与业务逻辑。
 - `lua_agent_memory.md`
 - `docs/architecture/boundaries.md` 目录语义与边界约定
+- `docs/architecture/layer-model.md` 7组件分层模型、Port注入模式与已强制边界
