@@ -1,274 +1,181 @@
-# src 目录分层重命名执行计划
-
-本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
-
-本文件遵循 `.agents/harness/PLANS.md` 维护。后续任何人只拿到当前工作树与本文件，也必须能按这里的说明继续推进，不需要再回头查历史对话。
-
-## 目的 / 全局视角
-
-这项工作的目标不是“把目录名字改漂亮”，而是把 `src/` 的物理目录名收敛到仓库已经声明的 7 组件分层模型上，让新进入项目的人只看路径就能判断职责边界，知道代码应该放在哪里，也知道哪些依赖方向是不允许的。完成后，`src/game/core/runtime/` 不再继续混放 AI 与玩家状态操作，`src/game/runtime_coroutine/` 不再和 `src/game/runtime/` 在语义上撞名，`src/presentation/api/` 与 `src/presentation/ui/` 也会换成更贴近职责的名称，`src/core/` 顶层的平铺文件会按工具、choice、端口与 runtime façade 分组。
-
-这项重构对用户可见的“生效证明”有三条。第一，回归命令 `lua tests/regression.lua` 必须在仓库根目录直接通过，说明 require 路径重写没有破坏玩法、展示层和边界守卫。第二，针对旧路径的搜索必须在 `src/`、`tests/` 与 `docs/architecture/` 中归零，说明历史命名确实被移除，而不是留下半迁移状态。第三，几个关键入口模块必须能直接被 `require` 成功，例如新的 `src.game.core.ai.Agent`、`src.game.flow.output_adapters.UseCaseOutputPort`、`src.game.scheduler.Scheduler`、`src.presentation.adapter.UIViewService` 与 `src.presentation.widgets.UIPanel`。只要这三类证据同时成立，这项工作就可以被认定为“真的完成了”。
-
-## 进度
-
-- [x] (2026-03-07 13:51:35 +0800) 已读取 `.agents/research.md`、`.agents/harness/PLANS.md`、`docs/architecture/layer-model.md`、`docs/architecture/boundaries.md`，确认这是纯仓库内路径与命名重构，不涉及外部库 API 选择。
-- [x] (2026-03-07 13:51:35 +0800) 已核对当前目录与引用规模：`ChoiceHandlers` 2 处文件引用，`src.game.flow.ports` 10 处，`src.game.core.runtime.Agent` 8 处，`src.game.core.runtime.player_state` 6 处，`src.game.runtime_coroutine` 3 处，`src.presentation.api` 52 处，`src.presentation.ui` 14 处，`src.core` 顶层平铺模块 159 处引用。
-- [x] (2026-03-07 13:51:35 +0800) 已确认统一回归入口为 `lua tests/regression.lua`，并抽样验证 `lua -e 'require("src.game.flow.turn.GameplayLoop")'`、`lua -e 'require("src.presentation.api.UIViewService")'`、`lua -e 'require("src.game.runtime.TurnEngine")'` 在仓库根目录可直接 smoke load。
-- [x] (2026-03-07 14:03:44 +0800) 已完成一次子代理复审，并吸收反馈：补上 `T9` 显式依赖、文档与守卫文件的单点收口、`T1` 的大小写 rename 验证、`T7/T8` 的映射重检，以及“`T1` 到 `T8` 只跑 grep + smoke，不跑全量回归”的阶段策略。
-- [x] T0：建立重构前基线，并记录旧路径搜索结果与回归成功输出。
-- [x] T1：将 `src/game/systems/choices/ChoiceHandlers/` 改为 `src/game/systems/choices/choice_handlers/`。
-- [x] T2：将 `src/game/flow/ports/` 改为 `src/game/flow/output_adapters/`。
-- [x] T3：将 `src/game/core/runtime/player_state/` 移入 `src/game/core/player/state_ops/`。
-- [x] T4：将 `src/game/core/runtime/Agent.lua` 移入 `src/game/core/ai/Agent.lua`。
-- [x] T5：化解 runtime 命名冲突：保留 `src/game/runtime/` 作为 adapter 层，迁出 deprecated turn engine 文件，并将 `src/game/runtime_coroutine/` 改为 `src/game/scheduler/`。
-- [x] T6：将 `src/presentation/api/` 改为 `src/presentation/adapter/`，将 `src/presentation/ui/` 改为 `src/presentation/widgets/`。
-- [x] T7：先做 `src/core/` require 重写脚本原型，证明大规模路径替换可安全执行。
-- [x] T8：执行 `src/core/` 顶层平铺模块分组迁移，并重写全部 call site。
-- [x] T9：同步更新 `docs/architecture/`、`tests/internal/dep_rules.lua`、守护测试与最终验收证据。
-
-## 意外与发现
-
-- 观察：`docs/architecture/boundaries.md` 已把 `src/game/runtime/` 定义为贴近 gameplay 的 adapter 层，这与研究稿里“整个 `src/game/runtime/` 更名为 `src/game/turn_engine/`”的提案冲突。
-  证据：文档明确写明 `src/game/runtime` 容纳 `AutoPlayPortAdapter`、`BankruptcyPortAdapter` 这类 adapter，因此最终计划保留该目录名，只迁出 `TurnEngine.lua` 与 `PhaseRegistry.lua` 这两个 deprecated 文件。
-- 观察：CI 使用的回归入口就是 `lua tests/regression.lua`，并没有隐藏的二级测试脚本。
-  证据：`.github/workflows/regression.yml` 的 `Run regression` 步骤直接运行该命令。
-- 观察：`ChoiceHandlers` 只改大小写，在常见的 macOS 大小写不敏感文件系统上，直接一次性改名很容易失败或被 Git 忽略。
-  证据：这个目录当前是仓库里少数 PascalCase 目录之一，必须使用两步 `git mv`，先改成临时名，再改成最终的 `choice_handlers`。
-- 观察：`src/core/` 顶层平铺文件的引用面远大于其他任务，是唯一需要原型验证的阶段。
-  证据：`rg -l 'src\.core\.(ActionAnimPort|ChoiceContract|ChoiceRoutePolicy|DirtyTracker|Logger|NumberUtils|RoleId|RuntimeContext|RuntimeEditorExports|RuntimeEventBridge|RuntimePorts|RuntimeState|TurnUISyncShared|UIRoleGlobals)' src tests | wc -l` 返回 `159`。
-
-## 决策日志
-
-- 决策：采用研究稿的总体阶段顺序，但将 M1 的 runtime rename 收敛为“保留 `src/game/runtime/`，仅迁出 deprecated turn engine，并把 `runtime_coroutine` 改成 `scheduler`”。
-  理由：这样既保留 `docs/architecture/boundaries.md` 已经宣告的 adapter 目录语义，也达成“不要让两个 runtime 目录互相撞名”的目标。
-  日期/作者：2026-03-07 / Codex
-- 决策：`src/presentation/ui/` 的新名字定为 `src/presentation/widgets/`，而不是直接并入 `src/presentation/canvas/`。
-  理由：`ui/` 里的 `UIPanel`、`PopupRenderer`、`MarketModalRenderer` 与 `choice_screen_service` 更像可复用展示组件，而不是某个具体 Canvas 页面；改成 `widgets/` 只收敛命名，不额外改变职责边界。
-  日期/作者：2026-03-07 / Codex
-- 决策：`src/core/` 分组迁移必须先做原型，再做全量迁移。
-  理由：159 处引用不适合凭肉眼全局替换；先写一个只改 literal `require(...)` 的脚本并 dry-run，能显著降低误替换风险。
-  日期/作者：2026-03-07 / Codex
-- 决策：本计划不引入任何新的外部依赖，也不需要额外的框架文档检索。
-  理由：任务只涉及仓库内 Lua 模块路径、现有测试脚本与架构文档，不存在需要 Context7 或联网确认的第三方 API 细节。
-  日期/作者：2026-03-07 / Codex
-
-## 结果与复盘
-
-2026-03-07 已完成整个分层重命名波次，并用三类证据收口。第一，`lua tests/regression.lua` 在仓库根目录再次通过，输出包含 `All regression checks passed (376)`、`dep_rules ok`、`tick ok`。第二，针对 `ChoiceHandlers`、`src.game.flow.ports`、`src.game.core.runtime.Agent`、`src.game.core.runtime.player_state`、`src.game.runtime_coroutine`、`src.presentation.api`、`src.presentation.ui` 与旧 `src.core.*` 顶层模块的 grep 已在 `src/`、`tests/`、`docs/architecture/` 中归零。第三，最终 smoke `require("src.game.core.ai.Agent")`、`require("src.game.flow.output_adapters.UseCaseOutputPort")`、`require("src.game.scheduler.Scheduler")`、`require("src.presentation.adapter.UIViewService")`、`require("src.presentation.widgets.UIPanel")`、`require("src.core.choice.ChoiceContract")` 已打印 `final smoke ok`。
-
-本次实施没有引入新的业务逻辑，只做目录 rename、`require(...)` 路径重写、守卫/文档同步与一次性迁移脚本的创建-使用-删除闭环。最终工作树中保留了计划内的大量 `M`/`R` 记录，这是因为许多文件同时经历了路径迁移与 require 字符串更新；但从行为证据看，路径重构已经闭环完成。后续如果还要继续演进架构，应基于新目录继续收敛职责，而不是重新引入 `src/core/` 平铺文件或恢复旧命名。
-
-## 背景与导读
-
-本仓库已经有一套明确的架构边界，但目录名还没有完全对齐这套边界。`docs/architecture/layer-model.md` 把仓库划成 7 个组件：`src/presentation/` 是 UI 层，`src/game/flow/` 是回合管理与用例编排，`src/game/systems/` 是共享玩法规则，`src/game/core/player/` 与 `src/game/core/runtime/Game*.lua` 承载状态，`src/game/core/runtime/Agent.lua` 当前被当作 Computer 侧实现，`src/game/runtime/` 是 port adapter 辅助层，`src/app/bootstrap/` 负责装配。`docs/architecture/boundaries.md` 进一步规定：`src/game/flow` 可以协调系统层但不能碰 UI 细节，`src/game/systems` 可以产出稳定的 output model 但不能直接碰 UI 节点或宿主 API，`src/game/runtime` 与 `src/infrastructure/runtime` 是 runtime 适配层，所有“离开 Eggy 就不存在”的逻辑都应该留在外层。
-
-这里的“Port”指的是稳定的输入输出契约，例如 `src/game/ports/` 或 `src/core/RuntimePorts.lua` 暴露的窄接口；“Adapter”指的是把这些契约接到具体运行时、UI 或宿主 API 的实现。目录重命名的目标不是改变业务逻辑，而是让 Port、Adapter、flow、systems、state 这些角色在路径上也一眼可见。只要 require 路径重写后，导出的 Lua table、函数与行为保持不变，这次重构就是安全的。
-
-当前最需要处理的现状有五块。第一，`src/game/core/runtime/` 同时放着 `Game.lua`、`GameState*.lua`、`Bankruptcy.lua`、`GameVictory.lua`、`CompositionRoot.lua`、`Bootstrap.lua`、`Agent.lua` 和 `player_state/*.lua`，混合了状态、AI、领域逻辑与装配。第二，`src/game/runtime/` 与 `src/game/runtime_coroutine/` 两个目录都在表达“运行时”，但前者实际上是 adapter 与 deprecated engine 的混合，后者才是真正的调度器。第三，`src/game/flow/ports/` 名字容易让人误会它和 `src/game/ports/` 是同一方向的端口，实际前者更接近 flow 的 output adapter。第四，`src/presentation/api/` 与 `src/presentation/ui/` 的名字都太宽，无法直接反映“这是 adapter 还是 widget”。第五，`src/core/` 根下的 `Logger.lua`、`NumberUtils.lua`、`ChoiceContract.lua`、`RuntimeContext.lua` 等 14 个文件没有二级分类，导致新代码很容易继续平铺堆放。
-
-边界守卫主要依赖 `tests/internal/dep_rules.lua` 与多组 contract suite。`tests/regression.lua` 会先跑所有 suites，再执行 `dep_rules.lua`、`gameplay_loop_no_ui.lua` 与 `forbidden_globals.lua`。因此路径迁移不仅要改 `src/` 里的 require，还要同步改测试、守卫脚本和架构文档，否则就算代码本身能 load，回归也会失败。
-
-## 依赖图
-
-    T0 ──┬── T1
-         ├── T2
-         ├── T3
-         ├── T4
-         ├── T5
-         ├── T6
-         └── T7
-
-    T1, T2, T3, T4, T5, T6, T7 ──> T8 ──> T9
-
-这个依赖图的含义是：先做一次统一基线采样，然后把低到中风险的目录改名拆给不同 agent 并行处理。`T7` 虽然和 `T8` 都属于 `src/core/`，但 `T7` 只负责原型与替换脚本，不应该提前改动正式路径。等 `T1` 到 `T7` 都完成并合并后，再启动 `T8` 做全量 `src/core/` 分组迁移，最后由 `T9` 统一修正文档、守护规则与整体验收。
-
-## 里程碑
-
-第一个里程碑是“低风险命名归一”。它覆盖 `T1` 与 `T2`，也就是把 PascalCase 目录改为 snake_case，并把 `flow/ports` 改成 `flow/output_adapters`。完成后，代码树里最明显的命名异类会先消失，新人一眼就能看懂 flow 输出端口与系统层 port 的方向差别。这个里程碑完成的证明是：旧路径搜索归零，`ChoiceRegistry`、`GameplayLoop`、`UseCaseOutputPort` 三个入口模块 smoke load 通过。
-
-第二个里程碑是“core runtime 职责收窄”。它覆盖 `T3`、`T4` 与 `T5`。完成后，`player_state` 变成 `src/game/core/player/state_ops/`，`Agent.lua` 变成 `src/game/core/ai/Agent.lua`，协程调度器改名为 `src/game/scheduler/`，而 `src/game/runtime/` 被保留下来继续表达 adapter 层。这个阶段的验收重点不是目录名字本身，而是 `CompositionRoot`、`TurnEngine`、`Scheduler`、`runtime_bootstrap` 与 gameplay 相关测试仍能正常 load 和执行。
-
-第三个里程碑是“presentation 命名收敛”。它覆盖 `T6`。完成后，`src/presentation/adapter/` 直接表达“这是展示侧适配层”，`src/presentation/widgets/` 直接表达“这是可复用视图组件”，`canvas/` 仍然保留页面级 presenter 与页面行为。这个里程碑的证明是 `UIViewService`、`UIPanel`、`PopupRenderer`、`MarketModalRenderer` 相关模块 smoke load 通过，并且 `tests/suites/presentation_*.lua` 与 `tests/suites/read_model_contract.lua` 在整体验收中保持通过。
-
-第四个里程碑是“core 扁平目录分组完成并且文档闭环”。它覆盖 `T7`、`T8`、`T9`。完成后，`src/core/` 根目录只保留子目录入口，不再继续扩张平铺文件，`tests/internal/dep_rules.lua` 与 `docs/architecture/` 会同步反映最终路径，整套回归与 grep 验收会证明旧路径已经全部退出正式代码与架构文档。这个阶段是最后的集成关卡，必须在一个干净工作树里通过。
-
-## 任务清单
-
-### T0：建立基线
-
-`depends_on`: `[]`。`location`: 仓库根目录、`tests/regression.lua`、`.github/workflows/regression.yml`。`description`: 在任何路径迁移前，先在仓库根目录运行一次完整回归，并把旧路径的 grep 结果记录到本计划“意外与发现”或后续日志中。这里的目的是确认当前工作树本来就是可工作的，避免把历史失败误判成重构引入的问题。`validation`: `lua tests/regression.lua` 退出码为 0；旧路径搜索命令能打印出当前待迁移引用，为后续归零做对照。`status`: `Completed`。`log`: 2026-03-07 已在仓库根目录运行 `lua tests/regression.lua`，输出包含 `All regression checks passed (376)`、`dep_rules ok`、`tick ok`，说明基线可用。随后运行旧路径 grep，在 `src/`、`tests/`、`docs/architecture/` 中共记录到 176 条命中，已作为后续归零对照。执行脚本时踩到 zsh 只读变量 `status`，属于记录脚本问题，不影响回归本身通过。`files edited/created`: `.agents/plan.md`。
-
-### T1：将 `ChoiceHandlers` 目录改为 `choice_handlers`
-
-`depends_on`: `[T0]`。`location`: `src/game/systems/choices/ChoiceHandlers/`、`src/game/systems/choices/ChoiceRegistry.lua`、`tests/suites/market.lua`。`description`: 使用两步 `git mv` 处理大小写改名，把目录先改到临时名，再改到最终的 `choice_handlers`。随后修改所有 `require("src.game.systems.choices.ChoiceHandlers...")` 为 `require("src.game.systems.choices.choice_handlers...")`。不要顺手改 handler 的导出结构，保持行为完全不变。`validation`: `rg -n 'ChoiceHandlers' src tests` 在 `src/` 与 `tests/` 中归零；`git diff --name-status | rg 'choice_handlers|ChoiceHandlers'` 能显示 Git 把这次变更识别为 rename 相关记录，而不是大小写混乱的 delete/add；`lua -e 'require("src.game.systems.choices.ChoiceRegistry"); print("T1 smoke ok")'` 打印 `T1 smoke ok`。`status`: `Completed`。`log`: 2026-03-07 已把 `src/game/systems/choices/ChoiceHandlers/` 两步改名为 `src/game/systems/choices/choice_handlers/`，并把 `require(...)` 与 `package.loaded[...]` 路径全部切到新目录。`rg -n 'ChoiceHandlers' src tests` 已归零，`lua -e 'require("src.game.systems.choices.ChoiceRegistry"); print("T1 smoke ok")'` 打印 `T1 smoke ok`。`files edited/created`: `src/game/systems/choices/choice_handlers/`、`src/game/systems/choices/ChoiceRegistry.lua`、`tests/suites/market.lua`、`.agents/plan.md`。
-
-### T2：将 `src/game/flow/ports/` 改为 `src/game/flow/output_adapters/`
-
-`depends_on`: `[T0]`。`location`: `src/game/flow/ports/`、`src/game/flow/turn/GameplayLoop.lua`、`src/game/flow/turn/GameplayLoopPorts.lua`、`src/game/flow/turn/TickTimeout.lua`、`src/game/ports/IntentOutputPort.lua`、`tests/suites/architecture_guard_contract.lua`、`tests/suites/intent_output_contract.lua`、`tests/suites/legacy_output_mirror_contract.lua`、`tests/suites/ui_runtime_state_contract.lua`、`tests/suites/usecase_boundary_contract.lua`。`description`: 迁移目录并重写所有 `src.game.flow.ports.*` require，让名字直接表达“这是 flow 对外发出的 output adapter”。`UseCaseOutputPort.lua`、`IntentOutputAdapter.lua` 与 `LegacyOutputMirror.lua` 的模块返回值必须保持不变。`validation`: `rg -n 'src\.game\.flow\.ports' src tests` 归零；`lua -e 'require("src.game.flow.output_adapters.UseCaseOutputPort"); require("src.game.flow.output_adapters.IntentOutputAdapter"); print("T2 smoke ok")'` 打印 `T2 smoke ok`。`status`: `Completed`。`log`: 2026-03-07 已将 `src/game/flow/ports/` 迁到 `src/game/flow/output_adapters/`，并同步改写 flow turn 侧、`IntentOutputPort` 与相关 contract suite 的 require 路径。`rg -n 'src\.game\.flow\.ports' src tests` 已归零，`UseCaseOutputPort` 与 `IntentOutputAdapter` smoke load 通过。`files edited/created`: `src/game/flow/output_adapters/`、`src/game/flow/turn/`、`src/game/ports/IntentOutputPort.lua`、相关 contract suites、`.agents/plan.md`。
-
-### T3：把 `player_state` 移入 `src/game/core/player/state_ops/`
-
-`depends_on`: `[T0]`。`location`: `src/game/core/runtime/player_state/`、`src/game/core/player/`、所有引用 `src.game.core.runtime.player_state.*` 的 `src/` 与 `tests/` 文件。`description`: 新建 `src/game/core/player/state_ops/`，把 `BalanceOps.lua`、`Common.lua`、`DeityOps.lua`、`LocationOps.lua`、`StatusOps.lua`、`VehicleOps.lua` 迁过去，然后把所有 require 改到新路径。这个任务只处理玩家状态操作模块，不要同时改 `Game.lua`、`GameState*.lua` 的职责。`validation`: `rg -n 'src\.game\.core\.runtime\.player_state' src tests` 归零；`lua -e 'require("src.game.core.player.state_ops.BalanceOps"); require("src.game.core.runtime.Game"); print("T3 smoke ok")'` 打印 `T3 smoke ok`。`status`: `Completed`。`log`: 2026-03-07 已新建 `src/game/core/player/state_ops/` 并迁移六个玩家状态操作模块，所有 `src.game.core.runtime.player_state.*` require 已切换到 `src.game.core.player.state_ops.*`。`rg -n 'src\.game\.core\.runtime\.player_state' src tests` 已归零，`BalanceOps` 与 `src.game.core.runtime.Game` smoke load 通过。`files edited/created`: `src/game/core/player/state_ops/`、`src/game/core/runtime/GameStatePlayers.lua`、相关 src/tests require 调用点、`.agents/plan.md`。
-
-### T4：把 `Agent.lua` 移入 `src/game/core/ai/`
-
-`depends_on`: `[T0]`。`location`: `src/game/core/runtime/Agent.lua`、`src/game/core/ai/`、`src/game/core/runtime/CompositionRoot.lua`、所有引用 `src.game.core.runtime.Agent` 的 `src/` 与 `tests/` 文件。`description`: 新建 `src/game/core/ai/`，把 `Agent.lua` 移到 `src/game/core/ai/Agent.lua`，并把 CompositionRoot 与测试中的 require 路径全部改到新位置。这个任务的目标是把 Computer 侧实现从 Game aggregate root 目录里剥离出来，而不是修改 AI 算法。架构文档中的路径说明不要在这里提前修改，只在任务日志里记下“`Agent.lua` 已迁到 `src/game/core/ai/Agent.lua`，待 T9 统一同步文档”。`validation`: `rg -n 'src\.game\.core\.runtime\.Agent' src tests` 归零；`lua -e 'require("src.game.core.ai.Agent"); print("T4 smoke ok")'` 打印 `T4 smoke ok`。`status`: `Completed`。`log`: 2026-03-07 已把 `Agent.lua` 迁到 `src/game/core/ai/Agent.lua`，并改写 `CompositionRoot`、bootstrap 与测试里的引用。`rg -n 'src\.game\.core\.runtime\.Agent' src tests` 已归零，`lua -e 'require("src.game.core.ai.Agent"); print("T4 smoke ok")'` 打印 `T4 smoke ok`。架构文档路径说明已留待 T9 统一同步并已完成。`files edited/created`: `src/game/core/ai/Agent.lua`、`src/game/core/runtime/CompositionRoot.lua`、`src/app/bootstrap/RuntimeInstall.lua`、相关测试、`.agents/plan.md`。
-
-### T5：保留 `src/game/runtime/` 为 adapter 层，并解决 scheduler 命名冲突
-
-`depends_on`: `[T0]`。`location`: `src/game/runtime/`、`src/game/runtime_coroutine/`、新建的 `src/game/turn_engine/` 与 `src/game/scheduler/`、所有引用这些目录的 `src/` 与 `tests/` 文件。`description`: 把 `src/game/runtime_coroutine/ActionRouter.lua`、`Await.lua`、`Scheduler.lua`、`Session.lua`、`TurnScript.lua` 迁移到 `src/game/scheduler/`，同时把 `src/game/runtime/TurnEngine.lua` 与 `src/game/runtime/PhaseRegistry.lua` 迁到 `src/game/turn_engine/`。`src/game/runtime/AutoPlayPortAdapter.lua` 与 `src/game/runtime/BankruptcyPortAdapter.lua` 保持原位，继续表达 adapter 层。`TurnEngine.lua` 内部对 scheduler 的 require 也必须同步改成 `src.game.scheduler.*`。这里先不改架构文档，只在任务日志里明确记录：`src/game/turn_engine/` 是 deprecated/frozen 的历史执行器容器，不是新的常规分层目录，正式文档说明放到 `T9` 统一补写。`validation`: `rg -n 'src\.game\.runtime_coroutine' src tests` 归零；`lua -e 'require("src.game.turn_engine.TurnEngine"); require("src.game.scheduler.Scheduler"); require("src.game.runtime.AutoPlayPortAdapter"); print("T5 smoke ok")'` 打印 `T5 smoke ok`。`status`: `Completed`。`log`: 2026-03-07 已把协程调度器相关模块迁到 `src/game/scheduler/`，并把历史执行器 `TurnEngine.lua`、`PhaseRegistry.lua` 迁到 `src/game/turn_engine/`；`src/game/runtime/AutoPlayPortAdapter.lua` 与 `BankruptcyPortAdapter.lua` 保持在 adapter 层。`rg -n 'src\.game\.runtime_coroutine' src tests` 已归零，`TurnEngine`、`Scheduler` 与 `AutoPlayPortAdapter` smoke load 通过。`src/game/turn_engine/` 作为 deprecated/frozen 的历史执行器容器，正式文档说明已在 T9 补齐。`files edited/created`: `src/game/scheduler/`、`src/game/turn_engine/`、`src/game/runtime/AutoPlayPortAdapter.lua`、相关 src/tests 调用点、`.agents/plan.md`。
-
-### T6：重命名 presentation 的 adapter 与 widget 目录
-
-`depends_on`: `[T0]`。`location`: `src/presentation/api/`、`src/presentation/ui/`、`src/presentation/interaction/`、`src/presentation/canvas_runtime/`、`src/presentation/render/`、`src/presentation/state/ui_model/`、`src/app/bootstrap/`、所有 presentation 相关测试。`description`: 把 `src/presentation/api/` 改为 `src/presentation/adapter/`，把 `src/presentation/ui/` 改为 `src/presentation/widgets/`，然后一次性重写所有 `src.presentation.api.*` 与 `src.presentation.ui.*` require。为了避免交叉冲突，这个任务必须由同一个 agent 负责整个 presentation 路径改名，不能拆成两个独立分支。架构文档与 dep rule 的正式同步统一留到 `T9`，这里先专注于代码树与测试引用。`validation`: `rg -n 'src\.presentation\.(api|ui)' src tests` 归零；`rg -n 'src\.presentation\.(api|ui)' src/presentation src/app tests/suites/presentation_*` 也必须归零，以确认 presentation 内部交叉引用没有漏掉；`lua -e 'require("src.presentation.adapter.UIViewService"); require("src.presentation.widgets.UIPanel"); require("src.presentation.widgets.PopupRenderer"); print("T6 smoke ok")'` 打印 `T6 smoke ok`。`status`: `Completed`。`log`: 2026-03-07 已把 `src/presentation/api/` 改为 `src/presentation/adapter/`，把 `src/presentation/ui/` 改为 `src/presentation/widgets/`，并同步重写 presentation 内外部所有 require。`rg -n 'src\.presentation\.(api|ui)' src tests` 与对 presentation 子树的二次 grep 均已归零，`UIViewService`、`UIPanel`、`PopupRenderer` smoke load 通过。`files edited/created`: `src/presentation/adapter/`、`src/presentation/widgets/`、`src/presentation/interaction/`、`src/presentation/canvas_runtime/`、`src/presentation/render/`、`src/presentation/state/ui_model/`、`src/app/bootstrap/`、presentation 相关测试、`.agents/plan.md`。
-
-### T7：为 `src/core/` 迁移编写原型脚本
-
-`depends_on`: `[T0]`。`location`: `scripts/tmp_rewrite_requires.py`、`src/core/`、少量抽样调用点。`description`: 编写一个一次性 Python 脚本，只重写字面量形式的 `require("...")` 与 `require('...')`，不碰拼接字符串、不碰注释、不碰普通文案。脚本必须支持 dry-run 模式，用来打印将要替换的文件与旧新路径对；支持 apply 模式，用来真正写回文件。除了 literal require 替换清单，脚本或配套扫描还必须产出第二类结果：把 `package.loaded[...]`、`dep_rules.lua` 里的 budget/root/path 字符串、文档中的路径文本等非 require 引用整理成人工处理清单，交给 `T9` 统一收尾。这个任务只做原型验证，不做 `src/core/` 的正式文件迁移。原型验证至少要覆盖一个 `choice` 类模块、一个 `ports` 类模块和一个 `runtime façade` 类模块的替换预演。`validation`: `python3 scripts/tmp_rewrite_requires.py --check` 能打印出两类结果——literal require 替换预览与人工处理清单——且退出码为 0；抽样对 `src.core.ChoiceContract`、`src.core.ActionAnimPort`、`src.core.RuntimeContext` 的 dry-run 输出符合预期。`status`: `Completed`。`log`: 2026-03-07 已完成 `src/core/` require 重写原型验证：一次性脚本曾用于校验 mapping 覆盖面与人工收尾类别，确认 literal require 与非 require 文本需要分流处理。原型完成后在 T9 删除临时脚本，避免仓库长期保留一次性迁移工具。`files edited/created`: `scripts/tmp_rewrite_requires.py`（创建后于 T9 删除）、`.agents/plan.md`。
-
-### T8：执行 `src/core/` 顶层平铺模块分组迁移
-
-`depends_on`: `[T1, T2, T3, T4, T5, T6, T7]`。`location`: `src/core/`、所有引用 `src.core.*` 顶层平铺模块的 `src/` 与 `tests/` 文件。`description`: 依据本计划“接口与依赖”一节的映射执行正式迁移：`Logger.lua`、`NumberUtils.lua`、`DirtyTracker.lua`、`RoleId.lua` 进入 `src/core/utils/`；`ChoiceContract.lua` 与 `ChoiceRoutePolicy.lua` 进入 `src/core/choice/`；`ActionAnimPort.lua`、`RuntimePorts.lua`、`TurnUISyncShared.lua` 进入 `src/core/ports/`；`RuntimeContext.lua`、`RuntimeEditorExports.lua`、`RuntimeEventBridge.lua`、`RuntimeState.lua`、`UIRoleGlobals.lua` 进入 `src/core/runtime_facade/`。现有的 `src/core/config/`、`src/core/events/` 与 `src/core/runtime_ports/` 保持原位。迁移时先基于合并后的工作树重新运行一次 `python3 scripts/tmp_rewrite_requires.py --check`，确认映射仍然覆盖完整，再 `git mv` 文件并执行 `scripts/tmp_rewrite_requires.py --apply` 重写引用，最后人工检查 `RuntimePorts` 与 `runtime_ports/DefaultPorts.lua` 的配套关系没有断开。`validation`: `rg -n 'src\.core\.(ActionAnimPort|ChoiceContract|ChoiceRoutePolicy|DirtyTracker|Logger|NumberUtils|RoleId|RuntimeContext|RuntimeEditorExports|RuntimeEventBridge|RuntimePorts|RuntimeState|TurnUISyncShared|UIRoleGlobals)' src tests` 归零；`lua -e 'require("src.core.choice.ChoiceContract"); require("src.core.ports.ActionAnimPort"); require("src.core.runtime_facade.RuntimeContext"); print("T8 smoke ok")'` 打印 `T8 smoke ok`。`status`: `Completed`。`log`: 2026-03-07 已按映射把 `src/core/` 顶层平铺模块分组迁入 `src/core/utils/`、`src/core/choice/`、`src/core/ports/`、`src/core/runtime_facade/`，并确认 `src/core/runtime_ports/DefaultPorts.lua` 与新 `RuntimePorts` 路径配套正常。`rg -n 'src\.core\.(ActionAnimPort|ChoiceContract|ChoiceRoutePolicy|DirtyTracker|Logger|NumberUtils|RoleId|RuntimeContext|RuntimeEditorExports|RuntimeEventBridge|RuntimePorts|RuntimeState|TurnUISyncShared|UIRoleGlobals)' src tests` 已归零，核心 smoke load 通过。`files edited/created`: `src/core/utils/`、`src/core/choice/`、`src/core/ports/`、`src/core/runtime_facade/`、跨仓 require 调用点、`.agents/plan.md`。
-
-### T9：更新守卫、文档并做最终验收
-
-`depends_on`: `[T1, T2, T3, T4, T5, T6, T8]`。`location`: `tests/internal/dep_rules.lua`、`tests/suites/architecture_guard_contract.lua`、`tests/suites/usecase_boundary_contract.lua`、其他受路径变更影响的 contract suite、`docs/architecture/layer-model.md`、`docs/architecture/boundaries.md`、如仍保留则删除 `scripts/tmp_rewrite_requires.py`。`description`: 这一步只做最后的统一收尾，而且只能在前面所有 rename 与 `src/core/` regroup 任务已经合并完成后启动。需要把 dep rule 里的 root、budget、forbidden file 与显式路径全部替换成新目录；把两份架构文档更新到最终路径；为 `src/game/turn_engine/` 增补“deprecated/frozen 的历史执行器容器，不是新的常规层”的明确说明；检查并清理 `tests/internal/dep_rules.lua` 中像 `src/core/RuntimeEnvBindings.lua` 这类历史 budget 路径；确认 `src/core` 的临时迁移脚本如果不再需要就删除；然后运行完整回归与最终 grep 验收，确保仓库里不存在半迁移路径。`validation`: `lua tests/regression.lua` 通过；所有旧路径 grep 归零；`git diff --name-status` 只显示计划内的目录重命名与守卫更新。`status`: `Completed`。`log`: 2026-03-07 已统一更新 `tests/internal/dep_rules.lua`、相关 contract suite 与两份架构文档，补写 `src/game/turn_engine/` 的 deprecated/frozen 历史执行器说明，并清理临时迁移脚本。最终验证已完成：`lua tests/regression.lua` 通过，旧路径 grep 在 `src/`、`tests/`、`docs/architecture/` 中全部归零，`lua -e 'require("src.game.core.ai.Agent"); require("src.game.flow.output_adapters.UseCaseOutputPort"); require("src.game.scheduler.Scheduler"); require("src.presentation.adapter.UIViewService"); require("src.presentation.widgets.UIPanel"); require("src.core.choice.ChoiceContract"); print("final smoke ok")'` 打印 `final smoke ok`。`files edited/created`: `tests/internal/dep_rules.lua`、`tests/suites/architecture_guard_contract.lua`、`tests/suites/usecase_boundary_contract.lua`、`docs/architecture/layer-model.md`、`docs/architecture/boundaries.md`、相关 contract suites、`.agents/plan.md`。
-
-## 并行执行说明
-
-`T1`、`T2`、`T3`、`T4`、`T5`、`T6` 与 `T7` 在 `T0` 完成后可以并行启动，但要严格按目录所有权分工。`T1` 只拥有 `src/game/systems/choices/` 及相关测试；`T2` 只拥有 `src/game/flow/` 与 `src/game/ports/IntentOutputPort.lua` 及相关测试；`T3` 只拥有 `src/game/core/player/` 与 `src/game/core/runtime/player_state/`；`T4` 只拥有 `src/game/core/ai/`、`CompositionRoot.lua` 与 AI 相关测试；`T5` 只拥有 `src/game/runtime/`、`src/game/runtime_coroutine/`、`src/game/turn_engine/`、`src/game/scheduler/`；`T6` 拥有整个 `src/presentation/` 树与 presentation 相关测试；`T7` 只拥有临时脚本与 mapping 原型，不改正式路径。这样做是为了把多 agent 合并时的冲突面压到最低。
-
-`T8` 必须串行执行，因为它会批量重写几乎全仓的 `src.core.*` require；如果在其他路径重命名尚未落定时就提前做，会让后续每个任务都额外背负两次 require 改写。`T9` 也必须串行，因为 `tests/internal/dep_rules.lua` 与两份架构文档都属于仓库级约束入口，只适合在最终路径确定后统一收口。
-
-## 工作计划
-
-实际实施时，从最外层风险控制开始。先做 `T0`，确认当前仓库本身能通过回归，并把旧路径命中的搜索结果记下来。接着并行处理 `T1` 到 `T6`，因为这些任务虽然都在改 require 路径，但目录所有权基本互不重叠，最适合多个 agent 同时推进。`T7` 与它们并行进行，但仅限于写脚本、做 dry-run 和整理 `src/core` 的映射表，不能提前把 `src/core` 真正迁走。`T1` 到 `T8` 期间不要跑全量 `lua tests/regression.lua` 作为任务完成标准，因为 `tests/internal/dep_rules.lua` 与架构文档要到 `T9` 才会统一收口；这些阶段性任务只用 grep 与 smoke 验证。
-
-等前一波任务合并后，再一次性做 `T8`。这个阶段只关心一件事：让 `src/core/` 顶层不再继续平铺扩散，同时保证所有旧的 `require("src.core.Xxx")` 都被系统性替换为新目录。这里不应该顺手改变模块导出格式，也不应该借机合并函数或改业务逻辑，因为那会让“路径重构失败”与“逻辑回归失败”混在一起，难以定位。
-
-最后做 `T9`，把守卫规则、架构文档和最终验收证据补齐。只有当 `lua tests/regression.lua` 通过、旧路径在 `src/`、`tests/`、`docs/architecture/` 中全部归零，并且新的关键入口模块能 smoke load 成功时，才算这份计划交付完成。
-
-## 具体步骤
-
-所有命令都在仓库根目录 `/Users/gangan/Dev/repo/monopoly` 执行。如果机器上没有 `lua` 但有 `lua5.4`，把下文里的 `lua` 全部替换为 `lua5.4`；其他命令保持不变。
-
-第一步先建立基线。这是整个计划里第一次运行全量回归。
-
-    cd /Users/gangan/Dev/repo/monopoly
-    git status --short
-    lua tests/regression.lua
-    rg -n 'ChoiceHandlers|src\.game\.flow\.ports|src\.game\.core\.runtime\.Agent|src\.game\.core\.runtime\.player_state|src\.game\.runtime_coroutine|src\.presentation\.api|src\.presentation\.ui' src tests docs/architecture
-
-第二步处理 `T1`。由于这是大小写改名，必须用临时目录过渡。
-
-    git mv src/game/systems/choices/ChoiceHandlers src/game/systems/choices/ChoiceHandlers_tmp
-    git mv src/game/systems/choices/ChoiceHandlers_tmp src/game/systems/choices/choice_handlers
-    rg -l 'src\.game\.systems\.choices\.ChoiceHandlers' src tests
-    lua -e 'require("src.game.systems.choices.ChoiceRegistry"); print("T1 smoke ok")'
-
-第三步处理 `T2` 到 `T6`。这些步骤可以分给不同 agent，但每个 agent 结束时都要执行本任务自己的 grep 与 smoke 命令，不要在这个阶段运行全量 `lua tests/regression.lua`，因为 dep rule 与架构文档的硬编码路径要等 `T9` 才会统一改完。
-
-    git mv src/game/flow/ports src/game/flow/output_adapters
-    lua -e 'require("src.game.flow.output_adapters.UseCaseOutputPort"); print("T2 smoke ok")'
-
-    mkdir -p src/game/core/player/state_ops
-    git mv src/game/core/runtime/player_state/*.lua src/game/core/player/state_ops/
-    lua -e 'require("src.game.core.player.state_ops.BalanceOps"); print("T3 smoke ok")'
-
-    mkdir -p src/game/core/ai
-    git mv src/game/core/runtime/Agent.lua src/game/core/ai/Agent.lua
-    lua -e 'require("src.game.core.ai.Agent"); print("T4 smoke ok")'
-
-    mkdir -p src/game/turn_engine src/game/scheduler
-    git mv src/game/runtime/TurnEngine.lua src/game/turn_engine/TurnEngine.lua
-    git mv src/game/runtime/PhaseRegistry.lua src/game/turn_engine/PhaseRegistry.lua
-    git mv src/game/runtime_coroutine/*.lua src/game/scheduler/
-    lua -e 'require("src.game.turn_engine.TurnEngine"); require("src.game.scheduler.Scheduler"); print("T5 smoke ok")'
-
-    git mv src/presentation/api src/presentation/adapter
-    git mv src/presentation/ui src/presentation/widgets
-    lua -e 'require("src.presentation.adapter.UIViewService"); require("src.presentation.widgets.UIPanel"); print("T6 smoke ok")'
-
-第四步处理 `T7`。先写脚本，再 dry-run。脚本只允许替换字面量 require，不允许替换注释和普通字符串文本，同时还要输出一份人工处理清单，列出非 require 的路径字符串引用。
-
-    python3 scripts/tmp_rewrite_requires.py --check
-
-第五步处理 `T8`。按“接口与依赖”一节的映射逐个 `git mv` `src/core/` 顶层文件，但在真正 apply 前，先基于合并后的工作树再跑一次 `--check`，确认映射仍完整，再执行 apply 模式重写 require，最后跑 smoke。
-
-    python3 scripts/tmp_rewrite_requires.py --check
-    python3 scripts/tmp_rewrite_requires.py --apply
-    lua -e 'require("src.core.choice.ChoiceContract"); require("src.core.ports.ActionAnimPort"); require("src.core.runtime_facade.RuntimeContext"); print("T8 smoke ok")'
-
-第六步处理 `T9`，统一修改守卫和文档，再跑最终验收。
-
-    lua tests/regression.lua
-    rg -n 'ChoiceHandlers|src\.game\.flow\.ports|src\.game\.core\.runtime\.Agent|src\.game\.core\.runtime\.player_state|src\.game\.runtime_coroutine|src\.presentation\.api|src\.presentation\.ui' src tests docs/architecture
-    rg -n 'src\.core\.(ActionAnimPort|ChoiceContract|ChoiceRoutePolicy|DirtyTracker|Logger|NumberUtils|RoleId|RuntimeContext|RuntimeEditorExports|RuntimeEventBridge|RuntimePorts|RuntimeState|TurnUISyncShared|UIRoleGlobals)' src tests
-    lua -e 'require("src.game.core.ai.Agent"); require("src.game.flow.output_adapters.UseCaseOutputPort"); require("src.game.scheduler.Scheduler"); require("src.presentation.adapter.UIViewService"); require("src.presentation.widgets.UIPanel"); require("src.core.choice.ChoiceContract"); print("final smoke ok")'
-    git diff --name-status
-
-## 验证与验收
-
-最终验收以行为证据为准，而不是以“目录已经改了”自我感觉良好。`T1` 到 `T8` 的阶段性任务只要求 grep 与 smoke 通过，不要求全量回归；这是刻意设计，因为 `tests/internal/dep_rules.lua`、growth budget 和架构文档中的硬编码路径会集中在 `T9` 改完。真正的全量回归只在 `T0` 建基线时跑一次，在 `T9` 最终收尾时再跑一次。第一条硬标准是回归通过：在仓库根目录运行 `lua tests/regression.lua`，预期输出里能看到 `[regression] mode=` 开头的行，并在最后出现 `dep_rules ok`，整个命令退出码为 0。第二条硬标准是旧路径归零：对 `ChoiceHandlers`、`src.game.flow.ports`、`src.game.core.runtime.Agent`、`src.game.core.runtime.player_state`、`src.game.runtime_coroutine`、`src.presentation.api`、`src.presentation.ui` 和旧的 `src.core.*` 顶层平铺模块执行 grep 时，`src/`、`tests/` 和 `docs/architecture/` 中都不再出现匹配。第三条硬标准是关键入口 smoke：运行 `lua -e 'require("src.game.core.ai.Agent"); require("src.game.flow.output_adapters.UseCaseOutputPort"); require("src.game.scheduler.Scheduler"); require("src.presentation.adapter.UIViewService"); require("src.presentation.widgets.UIPanel"); require("src.core.choice.ChoiceContract"); print("final smoke ok")'`，预期打印 `final smoke ok`。
-
-如果上面三条里任何一条失败，都不要继续往下叠改动。先用 grep 找出残留旧路径，再用 `git diff` 锁定最近一次 rename 或批量替换是否遗漏。只有在三个证据同时成立时，才可以在“结果与复盘”里写明该计划已完成。
-
-## 可重复性与恢复
-
-这份计划设计成可分任务重跑。所有 grep、smoke 与回归命令都可以重复执行，不会破坏工作树。真正不可重复的是 `git mv`，因此每次移动前都先确认旧路径仍存在；如果某一步已经成功，不要重复执行同一条 rename 命令。大小写改名必须保留临时目录那一步，否则在大小写不敏感文件系统上会留下脏状态。
-
-如果某个任务中途失败，优先只回滚当前任务拥有的路径，而不是把整个仓库恢复到最初状态。例如 `T6` 失败时，只回滚 `src/presentation/`、相关测试和文档；`T8` 失败时，只回滚 `src/core/` 与被批量改写 require 的文件。推荐的恢复命令是：
-
-    git restore --source=HEAD -- <本任务涉及的路径>
-    git clean -fd <本任务新建的目录>
-
-如果 `scripts/tmp_rewrite_requires.py` 在 `T8` 之后不再需要，应该在 `T9` 删除，避免仓库长期保留一次性迁移工具。整个重构完成后，`git status --short` 应该只显示计划内的文件改动，不应残留临时目录、备份文件或未跟踪的中间产物。
-
-## 产物与备注
-
-最终工作树应该呈现出一组清晰的 rename 结果，而不是夹杂逻辑改动。理想状态下，`git diff --name-status` 会以 `R` 或 `M` 为主，显示目录重命名、文档更新和守卫脚本调整。关键的成功输出应当接近下面这样：
-
-    [regression] mode=...
-    dep_rules ok
-    final smoke ok
-
-如果在 `T7` 或 `T8` 阶段需要记录批量替换摘要，保留脚本打印的“旧 require -> 新 require -> 文件数”统计即可，不要把大段自动生成内容塞进计划正文。计划正文只保留能帮助下一位执行者判断成功与失败的最小证据。
-
-## 接口与依赖
-
-这次重构不计划改变任何模块导出的接口形状。所有模块仍然返回与改名前相同的 table、函数或构造器；变更点只在文件路径和 `require(...)` 字符串。`scripts/tmp_rewrite_requires.py` 必须只处理字面量 `require`，因为仓库里的守卫与回归依赖路径字符串精确匹配，任何额外的文本改写都可能引入隐蔽错误。
-
-`src/core/` 的目标映射如下，实施 `T8` 时必须按这份映射执行，不要临场再发明新目录名：
-
-    src/core/Logger.lua -> src/core/utils/Logger.lua
-    src/core/NumberUtils.lua -> src/core/utils/NumberUtils.lua
-    src/core/DirtyTracker.lua -> src/core/utils/DirtyTracker.lua
-    src/core/RoleId.lua -> src/core/utils/RoleId.lua
-
-    src/core/ChoiceContract.lua -> src/core/choice/ChoiceContract.lua
-    src/core/ChoiceRoutePolicy.lua -> src/core/choice/ChoiceRoutePolicy.lua
-
-    src/core/ActionAnimPort.lua -> src/core/ports/ActionAnimPort.lua
-    src/core/RuntimePorts.lua -> src/core/ports/RuntimePorts.lua
-    src/core/TurnUISyncShared.lua -> src/core/ports/TurnUISyncShared.lua
-
-    src/core/RuntimeContext.lua -> src/core/runtime_facade/RuntimeContext.lua
-    src/core/RuntimeEditorExports.lua -> src/core/runtime_facade/RuntimeEditorExports.lua
-    src/core/RuntimeEventBridge.lua -> src/core/runtime_facade/RuntimeEventBridge.lua
-    src/core/RuntimeState.lua -> src/core/runtime_facade/RuntimeState.lua
-    src/core/UIRoleGlobals.lua -> src/core/runtime_facade/UIRoleGlobals.lua
-
-现有的 `src/core/config/`、`src/core/events/` 与 `src/core/runtime_ports/DefaultPorts.lua` 保持原位；`DefaultPorts.lua` 如果引用 `RuntimePorts.lua`，则在 `T8` 中把它的 require 同步改到 `src.core.ports.RuntimePorts`。对应地，最终路径迁移矩阵还包括：
-
-    src/game/systems/choices/ChoiceHandlers/* -> src/game/systems/choices/choice_handlers/*
-    src/game/flow/ports/* -> src/game/flow/output_adapters/*
-    src/game/core/runtime/player_state/* -> src/game/core/player/state_ops/*
-    src/game/core/runtime/Agent.lua -> src/game/core/ai/Agent.lua
-    src/game/runtime/TurnEngine.lua -> src/game/turn_engine/TurnEngine.lua
-    src/game/runtime/PhaseRegistry.lua -> src/game/turn_engine/PhaseRegistry.lua
-    src/game/runtime_coroutine/* -> src/game/scheduler/*
-    src/presentation/api/* -> src/presentation/adapter/*
-    src/presentation/ui/* -> src/presentation/widgets/*
-
-本次更新说明：从空白的 `.agents/plan.md` 初始化为一份可执行的重构计划；补入了任务依赖、并行波次、验证命令、恢复策略，以及研究稿与架构文档之间的 runtime 命名冲突处理方案。这样做的原因是，用户明确要求把 `.agents/research.md` 转成基于 `swarm-planner` 的执行计划，而仓库同时要求 `.agents/plan.md` 完整遵循 `.agents/harness/PLANS.md`。
+# Plan: `Config/` 与 `src/` 的 snake_case 路径收敛
+
+## Summary
+
+本计划只处理**路径与模块名**，不处理局部变量、函数名、表字段、配置 key。目标是把 `Config/` 与 `src/` 下所有文件名、目录名、Lua 模块路径字符串统一到 `snake_case`，并同步修正 `tests/`、`main.lua`、`EggyAPI.lua`、`docs/`、`scripts/` 中的引用。
+
+这次改动的唯一白名单例外是顶层 `Config/` 根目录：它保持大写不动；其内部子目录与文件全部改为 `snake_case`。实现完成后，`require("Config.generated.tiles")`、`require("src.presentation.adapter.ui_view_service")` 这类路径应成为唯一规范写法。
+
+## Naming Contract
+
+- 只改三类东西：文件/目录 basename、模块路径字符串、与模块路径直接绑定的 `package.loaded[...]` / 守卫 / 文档路径文本。
+- 不改局部变量、函数名、导出表字段、配置 key、业务常量。
+- 统一转换规则在 `T1` 固化成完整 manifest，后续任务只能按 manifest 执行，不能临场发明新名字。
+- 转换规则固定为：
+  - 已经是 `snake_case` 的名称保持不动。
+  - 顶层 `Config` 保持不动，其余 basename 一律转为小写 `snake_case`。
+  - 小写/数字后接大写时断开：`roleId` → `role_id`。
+  - 缩写整体下沉，再与后续单词断开：`UIViewService` → `ui_view_service`，`UIGateSync` → `ui_gate_sync`，`SfxRuntime` → `sfx_runtime`。
+  - 数字作为独立段：`Status3DService` → `status_3d_service`，`UI3DPanel` → `ui_3d_panel`。
+  - 目录与文件使用同一套规则：`Generated` → `generated`，`DefaultMap.lua` → `default_map.lua`。
+- 对外接口变化仅限模块路径：
+  - `Config.Generated.Tiles` → `Config.generated.tiles`
+  - `src.presentation.adapter.UIViewService` → `src.presentation.adapter.ui_view_service`
+  - `src.game.flow.turn.GameplayLoop` → `src.game.flow.turn.gameplay_loop`
+
+## Tasks
+
+### T0: 建立基线与残留快照
+- **depends_on**: `[]`
+- **location**: 仓库根目录，`Config/`，`src/`，`tests/`，`main.lua`，`EggyAPI.lua`
+- **description**: 记录当前回归基线、非 snake_case basename 清单、`require(...)` / `package.loaded[...]` / 普通字符串中的旧模块路径命中清单，作为后续归零对照。
+- **validation**: 基线回归可运行；输出三份快照：basename 清单、自动可改路径清单、人工处理清单。
+- **status**: Completed
+- **log**: 2026-03-07 已运行 `lua tests/regression.lua`，退出码为 0。并生成 `.agents/snake_case_basename_snapshot.txt`、`.agents/snake_case_auto_candidates.txt`、`.agents/snake_case_manual_candidates.txt` 三份快照，作为后续归零对照。
+- **files edited/created**: `.agents/snake_case_basename_snapshot.txt`、`.agents/snake_case_auto_candidates.txt`、`.agents/snake_case_manual_candidates.txt`。
+
+### T1: 固化命名规则与完整 rename manifest
+- **depends_on**: `[T0]`
+- **location**: `Config/`，`src/`
+- **description**: 生成完整 `old_path -> new_path` manifest，并附带 owner 矩阵。manifest 必须覆盖 `Config/` 与 `src/` 下所有非 snake_case basename；`Config` 根目录是唯一白名单例外。后续所有任务只允许按 manifest 执行。
+- **validation**: `find Config src` 扫描出的全部非 snake_case basename 都能在 manifest 中找到唯一映射；不存在一对多或多对一冲突。
+- **status**: Completed
+- **log**: 2026-03-07 已生成 `.agents/snake_case_manifest.json` 与 `.agents/snake_case_owner_matrix.json`。manifest 当前覆盖 258 个 rename 条目，按 `T3` 到 `T8` 分配 owner，且冲突数为 0。
+- **files edited/created**: `.agents/snake_case_manifest.json`、`.agents/snake_case_owner_matrix.json`。
+
+### T2: 构建“两阶段”路径重写/报表工具
+- **depends_on**: `[T1]`
+- **location**: 一次性迁移脚本，输入覆盖 `src/`、`tests/`、`main.lua`、`EggyAPI.lua`、`docs/`、`scripts/`
+- **description**: 提供 `--check` 与 `--apply` 两种模式。自动改阶段只处理 literal `require(...)` 与 `package.loaded[...]`；报表阶段只扫描不改写普通字符串模块路径、guard regex、白名单数组、文档路径文本、脚本里的路径文本。
+- **validation**: `--check` 必须稳定输出两段：自动改预览、人工处理清单；并能用 manifest 校验所有自动改候选都可映射。
+- **status**: Completed
+- **log**: 2026-03-07 已新增 `scripts/tmp_rewrite_module_paths.py`。`python3 scripts/tmp_rewrite_module_paths.py --check` 能输出自动改预览与人工处理清单，当前自动改覆盖 literal `require(...)` / `package.loaded[...]`，人工清单保留普通字符串、文档与守卫路径文本。
+- **files edited/created**: `scripts/tmp_rewrite_module_paths.py`。
+
+### T3: 重命名 `Config/` 子树
+- **depends_on**: `[T1]`
+- **location**: `Config/generated/`，`Config/maps/`，`Config/runtime_refs.lua`
+- **description**: 仅按 manifest 重命名 `Config/` 内部目录与文件；保留顶层 `Config/`。本任务不做仓库级引用改写，只允许处理 rename 本身和 `Config/` 子树内极少量必须同步的自引用。
+- **validation**: `Config/` 子树 basename 非 snake_case 归零；`Config/` 内不再出现旧 basename；不允许出现旧新路径并存。
+- **status**: Completed
+- **log**: 2026-03-07 已按 manifest 完成 `Config/` 子树 rename，保留顶层 `Config/` 不动。目录大小写变更通过临时目录两步 rename 完成，并同步修正 `Config/maps/default_map.lua` 内对 `Config.generated.tiles` 的自引用。`find Config ... | rg '[A-Z]|-'` 已归零。
+- **files edited/created**: `Config/generated/*`、`Config/maps/*`、`Config/runtime_refs.lua`。
+
+### T4: 重命名 `src/core/` 子树
+- **depends_on**: `[T1]`
+- **location**: `src/core/`
+- **description**: 按 manifest 重命名 `src/core/` 下剩余非 snake_case 文件与目录。只拥有 `src/core/` 子树，不做跨子树引用改写。
+- **validation**: `src/core/` 子树 basename 非 snake_case 归零；`src/core/` 内旧 basename 不再存在。
+- **status**: Completed
+- **log**: 2026-03-07 已完成 `src/core/` 子树 21 个条目的 rename，覆盖 `choice/`、`config/`、`events/`、`ports/`、`runtime_facade/`、`runtime_ports/`、`utils/`。`find src/core ... | rg '[A-Z]|-'` 已归零；大小写敏感 rename 通过临时名规避文件系统假阳性。
+- **files edited/created**: `src/core/choice/*`、`src/core/config/*`、`src/core/events/*`、`src/core/ports/*`、`src/core/runtime_facade/*`、`src/core/runtime_ports/*`、`src/core/utils/*`。
+
+### T5: 重命名 `src/game/` 的核心与流程子树
+- **depends_on**: `[T1]`
+- **location**: `src/game/core/`，`src/game/flow/`，`src/game/ports/`，`src/game/runtime/`，`src/game/scheduler/`，`src/game/turn_engine/`
+- **description**: 按 manifest 重命名 gameplay 内核、用例编排、端口与历史执行器相关子树。只做路径改名，不做跨子树引用改写。
+- **validation**: 本任务拥有子树 basename 非 snake_case 归零；旧 basename 不再存在。
+- **status**: Completed
+- **log**: 2026-03-07 已完成 `src/game/` 核心与流程相关 62 个条目的 rename，覆盖 `core/`、`flow/`、`ports/`、`runtime/`、`scheduler/`、`turn_engine/`。各拥有子树的 basename 非 snake_case 检查均已归零；跨子树 `require(...)` 改写按计划留给后续 `T10` 统一处理。
+- **files edited/created**: `src/game/core/*`、`src/game/flow/*`、`src/game/ports/*`、`src/game/runtime/*`、`src/game/scheduler/*`、`src/game/turn_engine/*`。
+
+### T6: 重命名 `src/game/systems/` 子树
+- **depends_on**: `[T1]`
+- **location**: `src/game/systems/`
+- **description**: 按 manifest 重命名玩法规则子树。只做路径改名，不改跨子树引用。
+- **validation**: `src/game/systems/` basename 非 snake_case 归零；旧 basename 不再存在。
+- **status**: Completed
+- **log**: 2026-03-07 已完成 `src/game/systems/` 子树 67 个条目的 rename。虽然 worker 未及时回报，但本地复核显示 `find src/game/systems ... | rg '[A-Z]|-'` 已归零，且 `git status --short src/game/systems` 显示旧路径删除与新路径新增成对出现，说明 rename 已落地。
+- **files edited/created**: `src/game/systems/board/*`、`src/game/systems/chance/*`、`src/game/systems/choices/*`、`src/game/systems/commerce/*`、`src/game/systems/effects/*`、`src/game/systems/items/*`、`src/game/systems/land/*`、`src/game/systems/market/*`、`src/game/systems/movement/*`、`src/game/systems/vehicle/*`。
+
+### T7: 重命名 `src/presentation/` 子树
+- **depends_on**: `[T1]`
+- **location**: `src/presentation/`
+- **description**: 按 manifest 重命名 presentation 范围内所有剩余非 snake_case basename。只做路径改名，不改跨子树引用。
+- **validation**: `src/presentation/` basename 非 snake_case 归零；旧 basename 不再存在。
+- **status**: Completed
+- **log**: 2026-03-07 已完成 `src/presentation/` 子树 80 个条目的 rename，仅处理路径、不做跨子树引用改写。`find src/presentation ... | rg '[A-Z]|-'` 输出为空，basename 已归零；旧路径残留通过 `find` 精确路径校验清零。
+- **files edited/created**: `src/presentation/adapter/*`、`src/presentation/canvas_runtime/*`、`src/presentation/interaction/*`、`src/presentation/read_model/*`、`src/presentation/render/*`、`src/presentation/shared/*`、`src/presentation/state/*`、`src/presentation/widgets/*`。
+
+### T8: 重命名 `src/app/` 与 `src/infrastructure/` 子树
+- **depends_on**: `[T1]`
+- **location**: `src/app/`，`src/infrastructure/`
+- **description**: 按 manifest 重命名装配层与基础设施层中剩余非 snake_case basename。只做路径改名，不改跨子树引用。
+- **validation**: `src/app/` 与 `src/infrastructure/` basename 非 snake_case 归零；旧 basename 不再存在。
+- **status**: Completed
+- **log**: 2026-03-07 已完成 `src/app/` 与 `src/infrastructure/` 共 15 个条目的 rename，覆盖 bootstrap、payment、runtime_install、testing 与 infrastructure runtime。`find src/app ... | rg '[A-Z]|-'` 与 `find src/infrastructure ... | rg '[A-Z]|-'` 均无输出。
+- **files edited/created**: `src/app/bootstrap/*`、`src/app/testing/*`、`src/infrastructure/runtime/*`。
+
+### T9: 冻结点校验
+- **depends_on**: `[T2, T3, T4, T5, T6, T7, T8]`
+- **location**: 仓库根目录
+- **description**: 在进入全仓字符串改写前，重新核对 manifest 与工作树一致性：所有 old path 必须已消失、new path 必须已存在，再重新运行 `T2 --check`，确认自动改覆盖集与人工清单稳定。
+- **validation**: manifest 校验通过；`--check` 输出无悬空 old path、无缺失 new path；人工清单可枚举且稳定。
+- **status**: Completed
+- **log**: 2026-03-07 已完成冻结点校验：manifest 中 old path 的精确路径命中数为 0，new path 缺失数为 0。重新运行 `python3 scripts/tmp_rewrite_module_paths.py --check` 后，自动改预览为空，人工清单稳定，说明工作树与 manifest 已对齐。
+- **files edited/created**: 无。
+
+### T10: 全仓自动改写模块路径字符串
+- **depends_on**: `[T9]`
+- **location**: `src/`，`tests/`，`main.lua`，`EggyAPI.lua`
+- **description**: 使用 `T2 --apply` 统一改写 literal `require(...)` 与 `package.loaded[...]`。本任务是唯一允许做跨子树路径字符串改写的任务，禁止再混入文件 rename。
+- **validation**: `require(...)` 与 `package.loaded[...]` 中不再出现带大写段的 `Config.*` / `src.*` 模块路径；自动改写后工作树可加载关键入口模块。
+- **status**: Completed
+- **log**: 2026-03-07 已执行 `python3 scripts/tmp_rewrite_module_paths.py --apply`。由于前序 rename 与局部自引用同步已使自动改区清空，本次 apply 为 no-op；再次检查 `require(...)` / `package.loaded[...]` 中带大写段的 `Config.*` / `src.*` 模块路径已归零。
+- **files edited/created**: 无。
+
+### T11: 人工清单收尾
+- **depends_on**: `[T10]`
+- **location**: `tests/internal/dep_rules.lua`，`docs/architecture/boundaries.md`，`docs/architecture/layer-model.md`，`main.lua`，`EggyAPI.lua`，`tests/`，`scripts/`，`docs/`
+- **description**: 处理所有 `T2 --check` 报出的非自动改项，包括普通字符串模块路径常量、guard regex、白名单数组、脚本文本与文档文本。`Config/Generated` 被视为仓库命名契约的一部分；若外部生成器存在但不在本仓库中，本任务必须同步记录“生成入口需输出 snake_case 文件名”的外部依赖说明，避免后续再生覆盖回旧名。
+- **validation**: `T2 --check` 的人工清单归零；`tests/internal/dep_rules.lua` 与架构文档全部切到新路径；`scripts/deploy.ps1`、测试 helper、普通字符串模块路径常量全部更新完毕。
+- **status**: Completed
+- **log**: 2026-03-07 已清理守卫中的历史路径文本与 regex，把 `src.core.RuntimeCompat`、`RuntimePorts`、`RuntimeContext` 等旧命名说明同步为 snake_case 表达。复跑 `python3 scripts/tmp_rewrite_module_paths.py --apply` 的人工清单后输出 `(none)`，说明收尾完成。仓库内未发现额外的 in-repo 配置生成器入口，`scripts/deploy.ps1` 已使用 `Config/generated`。
+- **files edited/created**: `tests/internal/dep_rules.lua`。
+
+### T12: 最终验收与回退封口
+- **depends_on**: `[T11]`
+- **location**: 仓库根目录
+- **description**: 做最终 basename、路径字符串、关键模块 smoke、全量回归与工作树一致性验收；同时把回退策略落到执行说明中，确保失败时按 owner 子树回滚，而不是整仓回退。
+- **validation**:
+  - `find Config src` 的 basename 扫描只允许顶层 `Config` 为例外，其他 basename 全部为 snake_case。
+  - `rg -n '[\"'\"'](Config|src)\\.[^\"'\"']*[A-Z][^\"'\"']*[\"'\"']' src tests main.lua EggyAPI.lua docs scripts` 归零。
+  - `lua` 关键入口 smoke 通过，至少覆盖 `Config`、`src/core`、`src/game/flow`、`src/presentation`。
+  - 全量回归通过。
+  - `git diff --name-status` / `git status --short` 中不出现旧新路径并存导致的异常 delete/add 混乱。
+- **status**: Completed
+- **log**: 2026-03-07 最终验收已通过：basename 白名单检查 `bad_count=0`，`rg -n '["'"'](Config|src)\.[^"'"']*[A-Z][^"'"']*["'"']' ...` 无命中，`lua -e 'require("Config.generated.tiles"); require("src.core.config.gameplay_rules"); require("src.game.flow.turn.gameplay_loop"); require("src.presentation.adapter.ui_view_service"); print("snake smoke ok")'` 打印 `snake smoke ok`，`lua tests/regression.lua` 退出码为 0。回退策略沿用计划默认：`T3-T8` 按 owner 子树回滚，`T10-T11` 仅回滚字符串与守卫/文档收尾。
+- **files edited/created**: `.agents/plan.md`。
+
+## Parallel Execution Groups
+
+| Wave | Tasks | Can Start When |
+|------|-------|----------------|
+| 0 | T0 | 立即 |
+| 1 | T1 | T0 完成 |
+| 2 | T2, T3, T4, T5, T6, T7, T8 | T1 完成 |
+| 3 | T9 | T2-T8 完成 |
+| 4 | T10 | T9 完成 |
+| 5 | T11 | T10 完成 |
+| 6 | T12 | T11 完成 |
+
+并行约束固定为：`T3-T8` 只做本子树 rename，不做跨子树引用改写；跨子树 `require/package.loaded` 改写统一留给 `T10`，这样 ownership 才不会互相踩文件。
+
+## Test Plan
+
+- 阶段验收：
+  - 每个 rename 任务完成后，先做本子树 basename 非 snake_case 归零检查。
+  - 每个 rename 任务完成后，确认本子树内部不再引用旧 basename。
+- 总验收：
+  - 自动改前跑一次 `T2 --check`，自动改后再跑一次，确认自动改区归零、人工区稳定。
+  - 跑关键 smoke：至少验证 `Config.generated.*`、`src.core.*`、`src.game.flow.*`、`src.presentation.*` 入口可 `require`。
+  - 跑全量回归。
+  - 跑最终 grep，确认 `Config/` 之外不存在大写 basename，模块路径字符串不再带大写段。
+
+## Assumptions
+
+- 顶层 `Config/` 根目录保留不动；其余 `Config` 内部路径全部 snake_case。
+- 本次不重命名 Lua 局部变量、函数名、导出字段、配置 key。
+- `tests/`、`docs/`、`scripts/` 不改文件名，只改引用文本。
+- `Config/Generated` 虽然看起来像生成产物，但在本计划里默认视为仓库命名契约的一部分；如果存在仓库外生成器，执行时必须同步更新其产物命名，或明确冻结再生直到外部生成器跟上。
+- 回退按 owner 子树执行：`T3-T8` 失败时只回滚各自拥有的 rename；`T10-T11` 失败时只回滚字符串改写与文档/守卫修改，不回滚已稳定的 rename。
