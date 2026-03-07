@@ -3,7 +3,7 @@ local constants = require("Config.Generated.Constants")
 local board_utils = require("src.game.systems.land.LandBoardUtils")
 local inventory = require("src.game.systems.items.ItemInventory")
 local gameplay_rules = require("src.core.config.GameplayRules")
-local bankruptcy = require("src.game.core.runtime.Bankruptcy")
+local bankruptcy_port = require("src.game.ports.BankruptcyPort")
 local action_anim_port = require("src.core.ActionAnimPort")
 local number_utils = require("src.core.NumberUtils")
 local facing_policy = require("src.game.systems.board.FacingPolicy")
@@ -75,7 +75,7 @@ local target_effects = {
       game:deduct_player_cash(target, fee)
       logger.event(user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. number_utils.format_integer_part(fee) .. " 税金")
       if game:player_balance(target, "金币") <= 0 then
-        bankruptcy.eliminate(game, target, { reason = target.name .. " 支付查税费用后破产" })
+        bankruptcy_port.eliminate(game, target, { reason = target.name .. " 支付查税费用后破产" })
       end
       return true
     end,

@@ -6,6 +6,8 @@ local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
 local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
 local gameplay_loop_runtime = require("src.game.flow.turn.GameplayLoopRuntime")
 local intent_output_adapter = require("src.game.flow.ports.IntentOutputAdapter")
+local auto_play_port_adapter = require("src.game.runtime.AutoPlayPortAdapter")
+local bankruptcy_port_adapter = require("src.game.runtime.BankruptcyPortAdapter")
 local auto_context = require("src.game.flow.turn.AutoContext")
 local tick_flow = require("src.game.flow.turn.GameplayLoopTickFlow")
 local turn_timer_policy = require("src.game.flow.turn.TurnTimerPolicy")
@@ -151,6 +153,8 @@ local function _initialize_ports(state, game)
   game.tile_feedback_port = gameplay_loop_runtime.build_tile_feedback_port(state)
   game.anim_gate_port = gameplay_loop_runtime.build_anim_gate_port(state)
   game.intent_output_port = intent_output_adapter.build()
+  game.auto_play_port = auto_play_port_adapter.build()
+  game.bankruptcy_port = bankruptcy_port_adapter.build()
   game.gameplay_loop_ports = ports
   return ports
 end

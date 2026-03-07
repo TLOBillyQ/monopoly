@@ -140,6 +140,14 @@ local rules = {
     description = "systems layer must not depend on src.game.flow.* directly; emit stable intents through ports instead",
   },
   {
+    root = "src/game/systems",
+    forbidden_patterns = {
+      "require%(\"src%.game%.core%.runtime%..-\"%)",
+      "require%(%'src%.game%.core%.runtime%..-'%)",
+    },
+    description = "systems layer must not depend on game.core.runtime directly; use injected ports instead",
+  },
+  {
     root = "src/game/flow/turn",
     forbidden_patterns = {
       "state%.ui%."

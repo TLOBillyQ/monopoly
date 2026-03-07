@@ -1,6 +1,6 @@
 local items_cfg = require("Config.Generated.Items")
 local gameplay_rules = require("src.core.config.GameplayRules")
-local agent = require("src.game.core.runtime.Agent")
+local auto_play_port = require("src.game.ports.AutoPlayPort")
 local strategy = require("src.game.systems.items.ItemStrategy")
 local inventory = require("src.game.systems.items.ItemInventory")
 local intent_output_port = require("src.game.ports.IntentOutputPort")
@@ -83,7 +83,7 @@ function item_phase.run(turn_mgr, phase, args)
     return nil
   end
 
-  if agent.is_auto_player(player) then
+  if auto_play_port.is_auto_player(game, player) then
     local pre = strategy.auto_pre_action(game, player, phase)
     if pre then
       intent_output_port.dispatch(game, pre)

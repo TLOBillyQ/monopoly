@@ -1,4 +1,5 @@
 local item_phase = require("src.game.systems.items.ItemPhase")
+local item_auto_play_context = require("src.game.flow.turn.ItemAutoPlayContext")
 local dirty_tracker = require("src.core.DirtyTracker")
 local logger = require("src.core.Logger")
 local turn_start = require("src.game.flow.turn.TurnStart")
@@ -23,6 +24,7 @@ local function _phase_post(turn_mgr, args)
   local player = args.player or turn_mgr.game:current_player()
   local phase_res = item_phase.run(turn_mgr, "post_action", {
     player = player,
+    auto_play = item_auto_play_context.build(turn_mgr.game, player),
     next_state = "post_action",
     next_args = { player = player },
   })

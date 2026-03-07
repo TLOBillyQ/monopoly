@@ -2,7 +2,7 @@ local inventory = require("src.game.systems.items.ItemInventory")
 local tile = require("src.game.systems.board.Tile")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 local movement = require("src.game.systems.movement.Movement")
-local bankruptcy = require("src.game.core.runtime.Bankruptcy")
+local bankruptcy_port = require("src.game.ports.BankruptcyPort")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
 local number_utils = require("src.core.NumberUtils")
@@ -42,7 +42,7 @@ function common.handle_bankruptcy_if_non_positive(game, player, reason)
   if game:player_balance(player, "金币") > 0 then
     return
   end
-  bankruptcy.eliminate(game, player, { reason = reason })
+  bankruptcy_port.eliminate(game, player, { reason = reason })
 end
 
 function common.apply_cash_and_maybe_bankrupt(game, player, delta, reason)

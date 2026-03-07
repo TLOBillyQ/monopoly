@@ -1,5 +1,5 @@
 local logger = require("src.core.Logger")
-local agent = require("src.game.core.runtime.Agent")
+local auto_play_port = require("src.game.ports.AutoPlayPort")
 local item_effects = require("src.game.systems.items.ItemPostEffects")
 local inventory = require("src.game.systems.items.ItemInventory")
 local number_utils = require("src.core.NumberUtils")
@@ -113,7 +113,7 @@ function handlers.handle_target_player_item(game, player, item_id, context)
       logger.warn("没有可选择的目标玩家")
     end,
     ai_select = function(inner_game, inner_player, inner_item_id, candidates)
-      local target = agent.pick_target_player(inner_game, inner_player, inner_item_id, candidates)
+      local target = auto_play_port.pick_target_player(inner_game, inner_player, inner_item_id, candidates)
       assert(target ~= nil, "missing target player")
       return _apply_target_player_item(inner_game, inner_player, inner_item_id, target, context)
     end,
@@ -151,7 +151,7 @@ function handlers.handle_remote_dice(game, player, item_id, context)
       return { 1, 2, 3, 4, 5, 6 }
     end,
     ai_select = function(inner_game, inner_player, inner_item_id)
-      local value, target_tile = agent.pick_remote_dice_value(inner_game, inner_player, dice_count)
+      local value, target_tile = auto_play_port.pick_remote_dice_value(inner_game, inner_player, dice_count)
       assert(value ~= nil, "missing remote dice value")
       assert(inventory.consume(inner_player, inner_item_id) == true, "consume remote dice failed")
       local ok = remote_dice.apply(inner_game, inner_player, dice_count, value)

@@ -1,4 +1,4 @@
-local agent = require("src.game.core.runtime.Agent")
+local auto_play_port = require("src.game.ports.AutoPlayPort")
 local item_effects = require("src.game.systems.items.ItemPostEffects")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local logger = require("src.core.Logger")
@@ -58,7 +58,7 @@ function strategy.timing_allowed(phase, timing, allow_missing_phase)
   return allowed[timing] == true
 end
 
-function strategy.can_offer_in_phase(game, player, item_id, phase)
+function strategy.can_offer_in_phase(game, player, item_id, phase, auto_play)
   local cfg = inventory.cfg(item_id)
   if not cfg then
     return false
@@ -72,7 +72,7 @@ function strategy.can_offer_in_phase(game, player, item_id, phase)
 
   if item_id == item_ids.roadblock then
     local candidates = nil
-    if agent.is_auto_player(player) then
+    if auto_play_port.is_auto_player(game, player) then
       candidates = roadblock.auto_candidates(game, player, 3)
     else
       candidates = roadblock.ui_candidates(game, player, 3)
@@ -109,7 +109,7 @@ function strategy.can_offer_in_phase(game, player, item_id, phase)
 end
 
 function strategy.auto_pre_action(game, player, phase)
-  if not agent.is_auto_player(player) then
+  if not auto_play_port.is_auto_player(game, player) then
     return nil
   end
 
@@ -132,7 +132,7 @@ function strategy.auto_pre_action(game, player, phase)
     else
       return nil
     end
-    local res = executor.use_item(game, player, item_id, { by_ai = true })
+    local res = executor.use_item(game, player, item_id, { by_ai = true, auto_play = auto_play })
     if type(res) == "table" and (res.waiting or res.intent or res.kind or res.action_anim) then
       return res
     end
@@ -140,7 +140,7 @@ function strategy.auto_pre_action(game, player, phase)
   end
 
   local function _has_target(item_id)
-    return agent.pick_target_player(game, player, item_id, strategy.target_candidates(game, player, item_id)) and true or false
+    return auto_play_port.pick_target_player(game, player, item_id, strategy.target_candidates(game, player, item_id)) and true or false
   end
 
   local function _has_demolish_target()
@@ -156,7 +156,7 @@ function strategy.auto_pre_action(game, player, phase)
 
   local dice_result = _try_use(item_ids.remote_dice, function()
     local dice_count = game:player_dice_count(player)
-    return agent.pick_remote_dice_value(game, player, dice_count) and true or false
+    return auto_play_port.pick_remote_dice_value(game, player, dice_count) and true or false
   end)
   if dice_result then return dice_result end
 
@@ -167,7 +167,7 @@ function strategy.auto_pre_action(game, player, phase)
   if double_result then return double_result end
 
   local roadblock_result = _try_use(item_ids.roadblock, function()
-    return agent.pick_roadblock_target(game, player) and true or false
+    return auto_play_port.pick_roadblock_target(game, player) and true or false
   end)
   if roadblock_result then return roadblock_result end
 

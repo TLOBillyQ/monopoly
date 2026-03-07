@@ -19,8 +19,8 @@ function land_events.apply(game, result)
   emit(event_key, payload)
 
   if result.bankrupt_reason then
-    local bankruptcy = require("src.game.core.runtime.Bankruptcy")
-    bankruptcy.eliminate(game, payload.player, { reason = result.bankrupt_reason })
+    local bankruptcy_port = require("src.game.ports.BankruptcyPort")
+    bankruptcy_port.eliminate(game, payload.player, { reason = result.bankrupt_reason })
   end
 end
 

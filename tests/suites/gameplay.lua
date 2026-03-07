@@ -597,7 +597,7 @@ local function _test_ai_obstacle_probe_does_not_enter_event_feed()
   g.board:place_roadblock(next_index)
 
   logger.clear()
-  item_strategy.auto_pre_action(g, player, "pre_action")
+  item_strategy.auto_pre_action(g, player, "pre_action", { is_auto_player = true })
   local text = logger.get_text_by_level("event")
   assert(string.find(text, "前方发现障碍，准备使用清障卡", 1, true) == nil,
     "AI obstacle probe should not enter event feed")

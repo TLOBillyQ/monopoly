@@ -1,5 +1,6 @@
 local logger = require("src.core.Logger")
 local item_phase = require("src.game.systems.items.ItemPhase")
+local item_auto_play_context = require("src.game.flow.turn.ItemAutoPlayContext")
 local number_utils = require("src.core.NumberUtils")
 
 local function _roll_dice(count, override_values, rng)
@@ -70,6 +71,7 @@ local function _phase_roll(turn_mgr, args)
 
   local phase_res = item_phase.run(turn_mgr, "pre_move", {
     player = player,
+    auto_play = item_auto_play_context.build(game, player),
     next_state = "move",
     next_args = { player = player, total = total, raw_total = raw_total },
   })

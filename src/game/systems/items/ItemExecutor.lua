@@ -1,5 +1,5 @@
 local item_effects = require("src.game.systems.items.ItemPostEffects")
-local agent = require("src.game.core.runtime.Agent")
+local auto_play_port = require("src.game.ports.AutoPlayPort")
 local inventory = require("src.game.systems.items.ItemInventory")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local action_anim_port = require("src.core.ActionAnimPort")
@@ -60,7 +60,7 @@ end
 function executor.use_item(game, player, item_id, context)
   context = context or {}
   if type(context.by_ai) == "nil" then
-    context.by_ai = agent.is_auto_player(player)
+    context.by_ai = auto_play_port.is_auto_player(game, player)
   end
   local cfg = inventory.cfg(item_id)
   assert(cfg ~= nil, "missing item cfg: " .. tostring(item_id))

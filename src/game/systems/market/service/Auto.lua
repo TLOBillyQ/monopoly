@@ -1,4 +1,4 @@
-local agent = require("src.game.core.runtime.Agent")
+local auto_play_port = require("src.game.ports.AutoPlayPort")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 local query = require("src.game.systems.market.service.Eligibility")
 local purchase = require("src.game.systems.market.service.Purchase")
@@ -8,7 +8,7 @@ local auto = {}
 local _emit_event = monopoly_event.emit
 
 function auto.execute(game, player)
-  if agent.is_auto_player(player) then
+  if auto_play_port.is_auto_player(game, player) then
     _emit_event(monopoly_event.market.auto_skip, {
       player = player,
       text = player.name .. " (AI) 到达黑市，选择不购买",

@@ -1,5 +1,6 @@
 local logger = require("src.core.Logger")
 local item_phase = require("src.game.systems.items.ItemPhase")
+local item_auto_play_context = require("src.game.flow.turn.ItemAutoPlayContext")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 
 local function _clear_no_action_notice(turn)
@@ -65,6 +66,7 @@ local function _phase_start(turn_mgr)
 
   local phase_res = item_phase.run(turn_mgr, "pre_action", {
     player = player,
+    auto_play = item_auto_play_context.build(turn_mgr.game, player),
     next_state = "roll",
     next_args = { player = player },
   })
