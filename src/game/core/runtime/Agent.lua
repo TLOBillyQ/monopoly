@@ -228,38 +228,38 @@ function agent.auto_action_for_choice(game, choice)
   if choice.kind == "remote_dice_value" then
     local dice_count = choice.meta.dice_count
     local value = agent.pick_remote_dice_value(game, actor, dice_count)
-    return { type = "choice_select", choice_id = choice.id, option_id = value or _first_option_id(choice.options) }
+    return { type = "choice_select", choice_id = choice.id, option_id = value or _first_option_id(choice.options), actor_role_id = actor.id }
   end
 
   if choice.kind == "roadblock_target" then
     local idx = agent.pick_roadblock_target(game, actor)
-    return { type = "choice_select", choice_id = choice.id, option_id = idx or _first_option_id(choice.options) }
+    return { type = "choice_select", choice_id = choice.id, option_id = idx or _first_option_id(choice.options), actor_role_id = actor.id }
   end
 
   if choice.kind == "demolish_target" or choice.kind == "missile_target" then
     local idx = agent.pick_demolish_target(game, actor, 3)
-    return { type = "choice_select", choice_id = choice.id, option_id = idx or _first_option_id(choice.options) }
+    return { type = "choice_select", choice_id = choice.id, option_id = idx or _first_option_id(choice.options), actor_role_id = actor.id }
   end
 
   if choice.kind == "item_target_player" then
     local item_id = choice.meta.item_id
     local target = agent.pick_target_player(game, actor, item_id, choice.options)
     if target then
-      return { type = "choice_select", choice_id = choice.id, option_id = target.id }
+      return { type = "choice_select", choice_id = choice.id, option_id = target.id, actor_role_id = actor.id }
     end
-    return { type = "choice_cancel", choice_id = choice.id }
+    return { type = "choice_cancel", choice_id = choice.id, actor_role_id = actor.id }
   end
 
   if choice.kind == "steal_item" then
     local id = _first_option_id(choice.options)
     if id then
-      return { type = "choice_select", choice_id = choice.id, option_id = id }
+      return { type = "choice_select", choice_id = choice.id, option_id = id, actor_role_id = actor.id }
     end
-    return { type = "choice_cancel", choice_id = choice.id }
+    return { type = "choice_cancel", choice_id = choice.id, actor_role_id = actor.id }
   end
 
   if choice.kind == "steal_prompt" then
-    return { type = "choice_select", choice_id = choice.id, option_id = "use" }
+    return { type = "choice_select", choice_id = choice.id, option_id = "use", actor_role_id = actor.id }
   end
 
   if choice.kind == "landing_optional_effect" or choice.kind == "land_optional_effect" then
@@ -285,21 +285,21 @@ function agent.auto_action_for_choice(game, choice)
       target = _first_option_id(options)
     end
     if target then
-      return { type = "choice_select", choice_id = choice.id, option_id = target }
+      return { type = "choice_select", choice_id = choice.id, option_id = target, actor_role_id = actor.id }
     end
-    return { type = "choice_cancel", choice_id = choice.id }
+    return { type = "choice_cancel", choice_id = choice.id, actor_role_id = actor.id }
   end
 
   if choice.kind == "rent_card_prompt" or choice.kind == "tax_card_prompt" then
-    return { type = "choice_select", choice_id = choice.id, option_id = "use" }
+    return { type = "choice_select", choice_id = choice.id, option_id = "use", actor_role_id = actor.id }
   end
 
   if choice.kind == "item_phase_choice" then
-    return { type = "choice_cancel", choice_id = choice.id }
+    return { type = "choice_cancel", choice_id = choice.id, actor_role_id = actor.id }
   end
 
   if choice.kind == "market_buy" then
-    return { type = "choice_cancel", choice_id = choice.id }
+    return { type = "choice_cancel", choice_id = choice.id, actor_role_id = actor.id }
   end
 
   return nil

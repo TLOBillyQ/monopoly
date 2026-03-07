@@ -4,7 +4,7 @@ function action_anim_port.is_enabled(game)
   if not game then
     return false
   end
-  local anim_gate_port = game.anim_gate_port or game["ui_port"]
+  local anim_gate_port = assert(game.anim_gate_port, "missing anim_gate_port")
   return anim_gate_port and anim_gate_port.wait_action_anim == true or false
 end
 

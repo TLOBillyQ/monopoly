@@ -5,6 +5,7 @@ local logger = require("src.core.Logger")
 local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
 local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
 local gameplay_loop_runtime = require("src.game.flow.turn.GameplayLoopRuntime")
+local intent_output_adapter = require("src.game.flow.ports.IntentOutputAdapter")
 local auto_context = require("src.game.flow.turn.AutoContext")
 local tick_flow = require("src.game.flow.turn.GameplayLoopTickFlow")
 local turn_timer_policy = require("src.game.flow.turn.TurnTimerPolicy")
@@ -149,6 +150,7 @@ local function _initialize_ports(state, game)
   game.popup_port = gameplay_loop_runtime.build_popup_port(state)
   game.tile_feedback_port = gameplay_loop_runtime.build_tile_feedback_port(state)
   game.anim_gate_port = gameplay_loop_runtime.build_anim_gate_port(state)
+  game.intent_output_port = intent_output_adapter.build()
   game.gameplay_loop_ports = ports
   return ports
 end
@@ -256,7 +258,7 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
   local min_popup_visible = gameplay_rules.auto_popup_min_visible_seconds or 0
   if min_popup_visible > 0 and ui_sync_ports.is_popup_active and ui_sync_ports.is_popup_active(state) then
     if _is_auto_popup_owner(game, state) then
-      local elapsed = state.ui_modal_elapsed or 0
+      local elapsed = runtime_state.get_modal_elapsed(state)
       if elapsed < min_popup_visible then
         return nil
       end

@@ -58,7 +58,7 @@ local function _phase_move(turn_mgr, args)
     move_result = movement.move(turn_mgr.game, player, total, move_opts)
     turn_mgr.game.last_turn.move_result = move_result
 
-    local anim_gate_port = assert(game.anim_gate_port or game["ui_port"], "missing anim_gate_port")
+    local anim_gate_port = assert(game.anim_gate_port, "missing anim_gate_port")
     if anim_gate_port.wait_move_anim == true then
       local seq = (game.turn.move_anim_seq or 0) + 1
       game.turn.move_anim_seq = seq

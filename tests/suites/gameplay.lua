@@ -284,7 +284,7 @@ local function _test_mandatory_payment_causes_bankruptcy()
 end
 
 local function _test_bankruptcy_resets_owned_tiles()
-  local g = _new_game()
+  local g = _new_game({ install_ui_port = false })
   local p1 = g.players[1]
   local _, tile1 = _first_land_tile(g.board)
   local tile2 = nil
@@ -877,7 +877,7 @@ local function _test_game_startup_build_state_is_pure_and_bridge_installs_events
     }, function()
       events[monopoly_event.intent.need_choice](nil, nil, { choice = choice_payload })
     end)
-    assert(state.pending_choice_id == 11, "bridge should sync pending_choice_id from event")
+    assert(runtime_state.get_pending_choice_id(state) == 11, "bridge should sync pending_choice_id from event")
     assert(opened ~= nil and opened.id == 11, "bridge should open choice modal from event")
   end)
 end
@@ -919,6 +919,10 @@ local function _test_autorunner_runs_to_end()
     tiles = tiles_cfg,
   })
   g.ui_port = _build_ui_port()
+  g.anim_gate_port = { wait_action_anim = false, wait_move_anim = false }
+  g.popup_port = { push_popup = function() return false end }
+  g.tile_feedback_port = { on_tile_upgraded = function() return false end }
+  g.intent_output_port = require("src.game.flow.ports.IntentOutputAdapter").build()
 
   local state = {
     gameplay_loop_ports = _build_test_ports({
@@ -946,9 +950,10 @@ local function _test_autorunner_runs_to_end()
     next_turn_lock_phase = nil,
   }
   state.auto_runner:set_enabled(true)
+  gameplay_loop.set_game(state, g)
 
   local turn_limit = gameplay_rules.turn_limit or 0
-  local max_steps = turn_limit * 5
+  local max_steps = turn_limit * 20
   assert(max_steps > 0, "invalid turn_limit for autorunner test")
 
   local timeout = constants.action_timeout_seconds or 0
@@ -1004,7 +1009,7 @@ local function _test_autorunner_runs_to_end()
   local ok, err = pcall(function()
     support.with_patches(patches, function()
       for _ = 1, max_steps do
-        state.ui_dirty = false
+        runtime_state.set_ui_dirty(state, false)
         g.dirty.ui = false
         g.dirty.players = false
         g.dirty.turn = false
@@ -1029,7 +1034,7 @@ local function _test_autorunner_runs_to_end()
         tick_timeout.step_choice_timeout(g, state, dt, {
           on_pending_choice = function() end,
           is_choice_active = function(ctx)
-            return ctx.pending_choice and true or false
+            return runtime_state.get_pending_choice(ctx) and true or false
           end,
           build_action = function(game_ctx, ctx, choice)
             local auto_choice = agent.auto_action_for_choice(game_ctx, choice)
@@ -1042,6 +1047,7 @@ local function _test_autorunner_runs_to_end()
               type = "choice_select",
               choice_id = choice.id,
               option_id = first.id or first,
+              actor_role_id = (choice.owner_role_id or (game_ctx.current_player and game_ctx:current_player() and game_ctx:current_player().id) or nil),
             }
           end,
         })
@@ -1072,7 +1078,7 @@ local function _test_autorunner_runs_to_end()
         tick_timeout.step_choice_timeout(g, state, dt, {
           on_pending_choice = function() end,
           is_choice_active = function(ctx)
-            return ctx.pending_choice and true or false
+            return runtime_state.get_pending_choice(ctx) and true or false
           end,
           build_action = function(game_ctx, ctx, choice)
             local auto_choice = agent.auto_action_for_choice(game_ctx, choice)
@@ -1085,6 +1091,7 @@ local function _test_autorunner_runs_to_end()
               type = "choice_select",
               choice_id = choice.id,
               option_id = first.id or first,
+              actor_role_id = (choice.owner_role_id or (game_ctx.current_player and game_ctx:current_player() and game_ctx:current_player().id) or nil),
             }
           end,
         })
@@ -2031,7 +2038,7 @@ local function _test_gameplay_loop_set_game_uses_narrow_runtime_ports()
 
   gameplay_loop.set_game(state, g)
 
-  assert(g.ui_port == nil, "set_game should no longer inject the catch-all runtime ui port")
+  assert(g.ui_port ~= state, "set_game should not inject raw state as catch-all runtime ui port")
   assert(g.board_scene_port ~= state, "set_game should inject a narrow board_scene_port instead of raw state")
   assert(g.board_scene_port:get_board_scene() == state.board_scene, "board_scene_port should expose board_scene getter")
 

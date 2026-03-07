@@ -48,7 +48,7 @@ local function _phase_roll(turn_mgr, args)
     game.last_turn.raw_total = raw_total
   end
 
-  local anim_gate_port = assert(game.anim_gate_port or game["ui_port"], "missing anim_gate_port")
+  local anim_gate_port = assert(game.anim_gate_port, "missing anim_gate_port")
   if not args.skip_anim and anim_gate_port.wait_action_anim then
     game:queue_action_anim({
       kind = "roll",

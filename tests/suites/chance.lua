@@ -76,7 +76,7 @@ end
 
 local function _test_chance_move_backward_queues_move_effect_anim()
   local g = _new_game()
-  g.ui_port = _build_ui_port({ wait_action_anim = true })
+  g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
   local p = g:current_player()
   g:update_player_position(p, g.board:index_of_tile_id(32))
   g:set_player_status(p, "move_dir", "down")
@@ -101,7 +101,7 @@ end
 
 local function _test_chance_forced_move_queues_move_effect_anim()
   local g = _new_game()
-  g.ui_port = _build_ui_port({ wait_action_anim = true })
+  g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
   local p = g:current_player()
   local dest = 38
   local out = chance_effects.resolve(g, p, {

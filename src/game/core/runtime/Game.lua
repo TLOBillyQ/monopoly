@@ -32,11 +32,35 @@ local function _mark_board(game_ctx)
   game_ctx.dirty.board_tiles = true
 end
 
+local function _install_default_runtime_ports(game_ctx)
+  if type(game_ctx.anim_gate_port) ~= "table" then
+    game_ctx.anim_gate_port = {
+      wait_move_anim = false,
+      wait_action_anim = false,
+    }
+  end
+  if type(game_ctx.popup_port) ~= "table" or type(game_ctx.popup_port.push_popup) ~= "function" then
+    game_ctx.popup_port = {
+      push_popup = function()
+        return false
+      end,
+    }
+  end
+  if type(game_ctx.tile_feedback_port) ~= "table" or type(game_ctx.tile_feedback_port.on_tile_upgraded) ~= "function" then
+    game_ctx.tile_feedback_port = {
+      on_tile_upgraded = function()
+        return false
+      end,
+    }
+  end
+end
+
 function game:init(opts)
   if opts and opts.__skip_assemble then
     return
   end
   composition_root.assemble(opts, self)
+  _install_default_runtime_ports(self)
 end
 
 local function _resolve_turn_runtime(self)
@@ -48,18 +72,7 @@ function game:ensure_popup_port()
   if type(popup_port) == "table" and type(popup_port.push_popup) == "function" then
     return popup_port
   end
-
-  local compat_port = {}
-  compat_port.push_popup = function(_, payload, opts)
-    local raw_port = self["ui_port"]
-    local push_popup = raw_port and raw_port["push_popup"] or nil
-    if type(push_popup) == "function" then
-      return push_popup(raw_port, payload, opts)
-    end
-    return false
-  end
-  self.popup_port = compat_port
-  return compat_port
+  error("missing popup_port")
 end
 
 function game:ensure_tile_feedback_port()
@@ -67,18 +80,7 @@ function game:ensure_tile_feedback_port()
   if type(tile_feedback_port) == "table" and type(tile_feedback_port.on_tile_upgraded) == "function" then
     return tile_feedback_port
   end
-
-  local compat_port = {}
-  compat_port.on_tile_upgraded = function(_, tile_id, level)
-    local raw_port = self["ui_port"]
-    local on_tile_upgraded = raw_port and raw_port["on_tile_upgraded"] or nil
-    if type(on_tile_upgraded) == "function" then
-      return on_tile_upgraded(raw_port, tile_id, level) == true
-    end
-    return false
-  end
-  self.tile_feedback_port = compat_port
-  return compat_port
+  error("missing tile_feedback_port")
 end
 
 function game:advance_turn()

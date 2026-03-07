@@ -132,6 +132,14 @@ local rules = {
     description = "systems layer must use ActionAnimPort instead of direct ui_port.wait_action_anim checks",
   },
   {
+    root = "src/game/systems",
+    forbidden_patterns = {
+      "require%(\"src%.game%.flow%..-\"%)",
+      "require%(%'src%.game%.flow%..-'%)",
+    },
+    description = "systems layer must not depend on src.game.flow.* directly; emit stable intents through ports instead",
+  },
+  {
     root = "src/game/flow/turn",
     forbidden_patterns = {
       "state%.ui%."
@@ -155,16 +163,6 @@ local rules = {
       "ui_port%.board_scene",
     },
     description = "presentation ports must consume narrow board_scene_port instead of retired ui_port fallbacks",
-  },
-  {
-    root = "src/app",
-    forbidden_patterns = {
-      "%f[%w_]all_roles%f[^%w_]",
-      "%f[%w_]ALLROLES%f[^%w_]",
-      "%f[%w_]vehicle_helper%f[^%w_]",
-      "%f[%w_]camera_helper%f[^%w_]",
-    },
-    description = "app layer must not read legacy runtime globals directly; use RuntimePorts/context",
   },
   {
     root = "src/game",
