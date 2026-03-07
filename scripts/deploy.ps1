@@ -188,6 +188,142 @@ function Export-GeneratedConfig {
     }
 }
 
+function Get-LuaEffectiveLineCount {
+    param([string]$FilePath)
+
+    if (-not (Test-Path $FilePath)) {
+        return 0
+    }
+
+    $lines = Get-Content -Path $FilePath
+    $effectiveLineCount = 0
+    $inBlockComment = $false
+
+    foreach ($line in $lines) {
+        $currentLine = $line
+
+        while ($true) {
+            if ($inBlockComment) {
+                $blockCommentEnd = $currentLine.IndexOf("]]")
+                if ($blockCommentEnd -lt 0) {
+                    $currentLine = ""
+                    break
+                }
+
+                $currentLine = $currentLine.Substring($blockCommentEnd + 2)
+                $inBlockComment = $false
+                continue
+            }
+
+            $blockCommentStart = $currentLine.IndexOf("--[[")
+            $lineCommentStart = $currentLine.IndexOf("--")
+
+            if ($lineCommentStart -lt 0) {
+                break
+            }
+
+            if ($blockCommentStart -ge 0 -and $blockCommentStart -eq $lineCommentStart) {
+                $beforeComment = $currentLine.Substring(0, $blockCommentStart)
+                $blockCommentEnd = $currentLine.IndexOf("]]", $blockCommentStart + 4)
+
+                if ($blockCommentEnd -ge 0) {
+                    $currentLine = $beforeComment + $currentLine.Substring($blockCommentEnd + 2)
+                    continue
+                }
+
+                $currentLine = $beforeComment
+                $inBlockComment = $true
+                break
+            }
+
+            $currentLine = $currentLine.Substring(0, $lineCommentStart)
+            break
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($currentLine)) {
+            $effectiveLineCount += 1
+        }
+    }
+
+    return $effectiveLineCount
+}
+
+function Get-DeploymentEffectiveLuaLineCount {
+    param(
+        [string]$DeployTargetPath,
+        [string[]]$DeployedDirectories,
+        [object[]]$DeployedFiles
+    )
+
+    $allLuaFiles = @()
+
+    foreach ($dir in $DeployedDirectories) {
+        $deployedDirPath = Join-Path $DeployTargetPath $dir
+        if (Test-Path $deployedDirPath) {
+            $allLuaFiles += @(Get-ChildItem -Path $deployedDirPath -Recurse -File -Filter "*.lua" | Select-Object -ExpandProperty FullName)
+        }
+    }
+
+    foreach ($file in $DeployedFiles) {
+        $deployedFilePath = Join-Path $DeployTargetPath $file.Target
+        if ((Test-Path $deployedFilePath) -and $deployedFilePath.EndsWith(".lua")) {
+            $allLuaFiles += $deployedFilePath
+        }
+    }
+
+    $totalEffectiveLineCount = 0
+    foreach ($luaFile in ($allLuaFiles | Sort-Object -Unique)) {
+        $totalEffectiveLineCount += Get-LuaEffectiveLineCount -FilePath $luaFile
+    }
+
+    return $totalEffectiveLineCount
+}
+
+function Get-DeploymentEffectiveLuaLineBreakdown {
+    param(
+        [string]$DeployTargetPath,
+        [string[]]$DeployedDirectories,
+        [object[]]$DeployedFiles
+    )
+
+    $lineBreakdown = @()
+
+    foreach ($dir in $DeployedDirectories) {
+        $deployedDirPath = Join-Path $DeployTargetPath $dir
+        $effectiveLineCount = 0
+
+        if (Test-Path $deployedDirPath) {
+            $luaFiles = @(Get-ChildItem -Path $deployedDirPath -Recurse -File -Filter "*.lua" | Select-Object -ExpandProperty FullName)
+            foreach ($luaFile in $luaFiles) {
+                $effectiveLineCount += Get-LuaEffectiveLineCount -FilePath $luaFile
+            }
+        }
+
+        $lineBreakdown += @{
+            Name = $dir
+            Type = "Directory"
+            EffectiveLuaLineCount = $effectiveLineCount
+        }
+    }
+
+    foreach ($file in $DeployedFiles) {
+        $deployedFilePath = Join-Path $DeployTargetPath $file.Target
+        $effectiveLineCount = 0
+
+        if ((Test-Path $deployedFilePath) -and $deployedFilePath.EndsWith(".lua")) {
+            $effectiveLineCount = Get-LuaEffectiveLineCount -FilePath $deployedFilePath
+        }
+
+        $lineBreakdown += @{
+            Name = $file.Target
+            Type = "File"
+            EffectiveLuaLineCount = $effectiveLineCount
+        }
+    }
+
+    return $lineBreakdown
+}
+
 if ($Mode -eq "release" -and [string]::IsNullOrWhiteSpace($StartupProfile) -eq $false -and -not $AllowReleaseTestProfile) {
     Write-Host "✗ release 模式如需 -StartupProfile，必须同时传入 -AllowReleaseTestProfile。" -ForegroundColor Red
     exit 1
@@ -251,6 +387,8 @@ $Files = @(
     @{Source = "Data/UIManagerNodes.lua"; Target = "Data/UIManagerNodes.lua"},
     @{Source = "Data/Prefab.lua"; Target = "Data/Prefab.lua"}
 )
+
+$DeployLineCountSummary = @()
 
 foreach ($TargetPath in $TargetPaths) {
     Write-Host "--------------------------------------" -ForegroundColor Cyan
@@ -325,9 +463,28 @@ foreach ($TargetPath in $TargetPaths) {
         }
     }
 
+    Write-Host "" 
+
+    $effectiveLuaLineCount = Get-DeploymentEffectiveLuaLineCount -DeployTargetPath $TargetPath -DeployedDirectories $Directories -DeployedFiles $Files
+    $effectiveLuaLineBreakdown = Get-DeploymentEffectiveLuaLineBreakdown -DeployTargetPath $TargetPath -DeployedDirectories $Directories -DeployedFiles $Files
+    $DeployLineCountSummary += @{
+        TargetPath = $TargetPath
+        EffectiveLuaLineCount = $effectiveLuaLineCount
+        EffectiveLuaLineBreakdown = $effectiveLuaLineBreakdown
+    }
+    Write-Host ("有效代码行数: {0}" -f $effectiveLuaLineCount) -ForegroundColor Magenta
+    foreach ($entry in $effectiveLuaLineBreakdown) {
+        Write-Host ("  - {0}: {1}" -f $entry.Name, $entry.EffectiveLuaLineCount) -ForegroundColor DarkMagenta
+    }
     Write-Host ""
 }
 
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host "部署完成！" -ForegroundColor Green
+foreach ($summary in $DeployLineCountSummary) {
+    Write-Host ("  {0} -> 有效代码行数 {1}" -f $summary.TargetPath, $summary.EffectiveLuaLineCount) -ForegroundColor Magenta
+    foreach ($entry in $summary.EffectiveLuaLineBreakdown) {
+        Write-Host ("    - {0}: {1}" -f $entry.Name, $entry.EffectiveLuaLineCount) -ForegroundColor DarkMagenta
+    }
+}
 Write-Host "======================================" -ForegroundColor Cyan
