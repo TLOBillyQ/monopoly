@@ -9,6 +9,8 @@ local game_factory = require("src.game.core.runtime.GameFactory")
 local phase_registry = require("src.game.runtime.PhaseRegistry")
 local number_utils = require("src.core.NumberUtils")
 local role_id_utils = require("src.core.RoleId")
+local auto_play_port_adapter = require("src.game.runtime.AutoPlayPortAdapter")
+local bankruptcy_port_adapter = require("src.game.runtime.BankruptcyPortAdapter")
 
 local composition_root = {}
 
@@ -133,6 +135,8 @@ function composition_root.assemble(opts, game_or_class)
   game.tile_owner_notifier = game.tile_owner_notifier or {
     notify_owner_changed = function() end,
   }
+  game.auto_play_port = game.auto_play_port or auto_play_port_adapter.build()
+  game.bankruptcy_port = game.bankruptcy_port or bankruptcy_port_adapter.build()
 
   function game:consume_dirty()
     return dirty_tracker.consume(self.dirty)

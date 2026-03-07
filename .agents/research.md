@@ -1,4 +1,4 @@
-# 架构审查：7 组件分层模型（v2 — 2026-03-07 更新）
+# 架构审查：7 组件分层模型（v3 — 2026-03-07 更新）
 
 ## 目标模型
 
@@ -26,7 +26,7 @@ UI → Turn Management → (Player | Computer) → shared-mechanics → (state |
 - `src/infrastructure/runtime/` — Eggy 宿主适配
 - `src/core/` — 跨层共享工具（Logger, NumberUtils, ActionAnimPort, events）
 
-## 审查结果 v2
+## 审查结果 v3
 
 ### ✅ 全部主边界合规 (6/6)
 
@@ -62,33 +62,22 @@ UI → Turn Management → (Player | Computer) → shared-mechanics → (state |
 - `GameplayLoop` 在运行时通过 `game.bankruptcy_port = adapter.build()` 注入 — ✅
 - dep_rules 同一条新规则覆盖 — ✅
 
-### ⚠️ 残余观察项
+### ✅ 残余观察项全部收口（v3 确认）
 
-#### OBS-1: BankruptcyPort fallback 仍硬编码 Bankruptcy
+#### OBS-1 / OBS-2 ✅ — Port 契约已为纯接口
 
-`src/game/ports/BankruptcyPort.lua` L3-8:
-```lua
-local function _fallback_port()
-  local runtime_bankruptcy = require("src.game.core.runtime.Bankruptcy")
-  ...
-end
-```
+`AutoPlayPort.lua` 和 `BankruptcyPort.lua` 已去除所有 `_fallback_port()` 和具体实现 `require` 链。现在只做：
+1. 从 `game.auto_play_port` / `game.bankruptcy_port` 读取已注入的端口
+2. `assert` 端口存在和方法存在
+3. 转调
 
-**风险**: `src/game/ports/` 不在 `src/game/systems/` 下，因此不被 dep_rules 拦截。但 Port 契约文件携带具体实现引用，削弱了 Port 的"纯契约"语义。
+默认 adapter 安装点前移至 `CompositionRoot.assemble()`（L137-138），确保 game 实例创建即可用。`GameplayLoop` 仍可按需覆盖。
 
-**建议**: fallback 移到 Adapter 或 bootstrap 层；Port 文件应无 fallback，port 缺失时直接报错。
+#### OBS-3 ✅ — `src/game/runtime/` 目录语义已文档化
 
-#### OBS-2: AutoPlayPort fallback 同理
-
-`src/game/ports/AutoPlayPort.lua` L3-5 同样有 fallback 到 `src.game.runtime.AutoPlayPortAdapter`。
-
-**建议**: 与 OBS-1 同处理。长期目标：Port 文件只声明接口，不含 require 链。
-
-#### OBS-3: Adapter 层位置
-
-当前 Adapter 位于 `src/game/runtime/`（2 个新文件 + PhaseRegistry deprecated）。该目录语义模糊——既有 deprecated 模块又有新 adapter。
-
-**建议**: 考虑迁至 `src/game/adapters/` 或保留在 `src/game/runtime/` 但在 boundaries.md 补充说明。
+`docs/architecture/boundaries.md` 已更新，明确该目录同时承载：
+- 回合执行与状态机编排（TurnEngine/PhaseRegistry，deprecated）
+- gameplay adapter（AutoPlayPortAdapter, BankruptcyPortAdapter）——实现 `src/game/ports/*` 契约到 runtime 细节的边界穿越
 
 ## 定量快照
 
@@ -101,6 +90,7 @@ growth_budget: 全部 within budget
 forbidden_files (3): 均已删除
 presentation→game.systems whitelist: 空（完全隔离）
 legacy_policy 引用: 0
+Port fallback require: 0（纯 assert 契约）
 ```
 
 ## 当前架构依赖图
@@ -112,15 +102,17 @@ src/presentation/  ──(ports)──>  src/core/
        ▼
 src/game/flow/turn/  ──>  src/game/systems/
        │                        │
-       │ (injects ports)        │ (requires Port contracts)
+       │ (can override ports)   │ (requires Port contracts)
        ▼                        ▼
-src/game/runtime/   src/game/ports/  ←──  (pure contracts)
-  (Adapters)              │
-       │                  │ (fallback - 待移除)
-       ▼                  ▼
+src/game/runtime/   src/game/ports/  ←──  (pure contracts, assert-only)
+  (Adapters)
+       │
+       ▼
 src/game/core/runtime/   src/core/config/
   (Agent, Bankruptcy,     Config/Generated/
-   Game, GameState*)
+   Game, GameState*,
+   CompositionRoot
+     └─ installs default adapters)
        │
        ▼
 src/game/core/player/  (state)
