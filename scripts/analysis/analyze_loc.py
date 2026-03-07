@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-分析最近两天src/目录的有效代码行数变化并生成折线图（优化版）
-使用多进程并行处理提升性能
+分析最近两天 src/ 和 tests/ 目录的有效代码行数变化并生成折线图（优化版）
+使用多进程并行处理提升性能，src/ 和 tests/ 分开统计和展示
 """
 
 import subprocess
@@ -51,15 +51,12 @@ def get_commits():
                 })
     return commits
 
-def count_loc_at_commit_optimized(commit_info):
+def count_loc_for_dir(commit_hash, dir_name):
     """
-    优化的LOC计算 - 使用cloc来精确统计各类语言的有效行数
-    返回 (commit_info, loc, file_count)
+    统计指定目录的LOC
+    返回 (loc, file_count)
     """
-    commit_hash = commit_info['full_hash']
-
-    # 使用npx cloc分析特定commit的src目录结构，计算有效代码行（code字段）
-    cmd = f'npx cloc --json {commit_hash} --match-d=src 2>/dev/null'
+    cmd = f'npx cloc --json {commit_hash} --match-d={dir_name} 2>/dev/null'
     result = run_cmd(cmd, check=False)
 
     total_loc = 0
@@ -67,7 +64,6 @@ def count_loc_at_commit_optimized(commit_info):
 
     if result:
         try:
-            # 找到JSON输出的起始位置，避免前面有其他输出干扰
             json_start = result.find('{')
             if json_start != -1:
                 json_str = result[json_start:]
@@ -78,14 +74,27 @@ def count_loc_at_commit_optimized(commit_info):
         except Exception:
             pass
 
-    return (commit_info, total_loc, file_count)
+    return total_loc, file_count
+
+
+def count_loc_at_commit_optimized(commit_info):
+    """
+    优化的LOC计算 - 分别统计src/和tests/目录
+    返回 (commit_info, src_loc, src_files, tests_loc, tests_files)
+    """
+    commit_hash = commit_info['full_hash']
+
+    src_loc, src_files = count_loc_for_dir(commit_hash, 'src')
+    tests_loc, tests_files = count_loc_for_dir(commit_hash, 'tests')
+
+    return (commit_info, src_loc, src_files, tests_loc, tests_files)
 
 def parse_datetime(date_str):
     """解析git日期格式"""
     return datetime.strptime(date_str[:19], "%Y-%m-%d %H:%M:%S")
 
 def generate_chart(data, output_path='loc_trend.png'):
-    """生成折线图"""
+    """生成折线图 - 分别展示src/和tests/"""
     # 设置支持中文的字体
     chinese_fonts = ['SimHei', 'Microsoft YaHei', 'PingFang SC', 'Heiti SC', 'Arial Unicode MS', 'WenQuanYi Micro Hei']
     for font in chinese_fonts:
@@ -97,40 +106,60 @@ def generate_chart(data, output_path='loc_trend.png'):
             continue
 
     dates = [parse_datetime(d['date']) for d in data]
-    locs = [d['loc'] for d in data]
+    src_locs = [d['src_loc'] for d in data]
+    tests_locs = [d['tests_loc'] for d in data]
 
-    fig, ax = plt.subplots(figsize=(16, 8))
-    ax.plot(dates, locs, marker='o', markersize=4, linewidth=1.5, color='#2E86AB')
-    ax.fill_between(dates, locs, alpha=0.3, color='#2E86AB')
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 12))
 
-    ax.set_title('src/ Directory LOC Trend (Last 2 Days)', fontsize=16, fontweight='bold', pad=20)
-    ax.set_xlabel('Commit Time', fontsize=12)
-    ax.set_ylabel('Lines of Code (LOC)', fontsize=12)
+    # src/ 目录图表
+    ax1.plot(dates, src_locs, marker='o', markersize=4, linewidth=1.5, color='#2E86AB', label='src/')
+    ax1.fill_between(dates, src_locs, alpha=0.3, color='#2E86AB')
+    ax1.set_title('src/ Directory LOC Trend (Last 2 Days)', fontsize=14, fontweight='bold', pad=15)
+    ax1.set_ylabel('Lines of Code (LOC)', fontsize=11)
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d %H:%M'))
+    ax1.xaxis.set_major_locator(mdates.HourLocator(interval=3))
+    ax1.tick_params(axis='x', rotation=45)
+    ax1.grid(True, linestyle='--', alpha=0.7)
+    ax1.legend(loc='upper left')
 
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d %H:%M'))
-    ax.xaxis.set_major_locator(mdates.HourLocator(interval=3))
-    plt.xticks(rotation=45, ha='right')
-    ax.grid(True, linestyle='--', alpha=0.7)
-
-    if locs:
-        min_loc = min(locs)
-        max_loc = max(locs)
-        margin = (max_loc - min_loc) * 0.1
-        ax.set_ylim(bottom=min_loc - margin, top=max_loc + margin)
-
-        start_loc = locs[0]
-        end_loc = locs[-1]
+    if src_locs:
+        min_loc = min(src_locs)
+        max_loc = max(src_locs)
+        start_loc = src_locs[0]
+        end_loc = src_locs[-1]
         change = end_loc - start_loc
+        margin = (max_loc - min_loc) * 0.1 if max_loc != min_loc else end_loc * 0.1
+        ax1.set_ylim(bottom=max(0, min_loc - margin), top=max_loc + margin)
 
-        stats_text = f"Start: {start_loc:,} lines\n"
-        stats_text += f"End: {end_loc:,} lines\n"
-        stats_text += f"Change: {change:+,} ({change/start_loc*100:.1f}%)\n"
-        stats_text += f"Max: {max_loc:,} lines\n"
-        stats_text += f"Min: {min_loc:,} lines\n"
-        stats_text += f"Commits: {len(data)}"
+        stats_text = f"Start: {start_loc:,} | End: {end_loc:,} | Change: {change:+,} ({change/start_loc*100:.1f}%)"
+        ax1.text(0.02, 0.98, stats_text, transform=ax1.transAxes,
+                fontsize=9, verticalalignment='top',
+                bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 
-        ax.text(0.02, 0.98, stats_text, transform=ax.transAxes,
-                fontsize=10, verticalalignment='top',
+    # tests/ 目录图表
+    ax2.plot(dates, tests_locs, marker='s', markersize=4, linewidth=1.5, color='#A23B72', label='tests/')
+    ax2.fill_between(dates, tests_locs, alpha=0.3, color='#A23B72')
+    ax2.set_title('tests/ Directory LOC Trend (Last 2 Days)', fontsize=14, fontweight='bold', pad=15)
+    ax2.set_xlabel('Commit Time', fontsize=11)
+    ax2.set_ylabel('Lines of Code (LOC)', fontsize=11)
+    ax2.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d %H:%M'))
+    ax2.xaxis.set_major_locator(mdates.HourLocator(interval=3))
+    ax2.tick_params(axis='x', rotation=45)
+    ax2.grid(True, linestyle='--', alpha=0.7)
+    ax2.legend(loc='upper left')
+
+    if tests_locs:
+        min_loc = min(tests_locs)
+        max_loc = max(tests_locs)
+        start_loc = tests_locs[0]
+        end_loc = tests_locs[-1]
+        change = end_loc - start_loc
+        margin = (max_loc - min_loc) * 0.1 if max_loc != min_loc else end_loc * 0.1
+        ax2.set_ylim(bottom=max(0, min_loc - margin), top=max_loc + margin)
+
+        stats_text = f"Start: {start_loc:,} | End: {end_loc:,} | Change: {change:+,} ({change/start_loc*100:.1f}%)"
+        ax2.text(0.02, 0.98, stats_text, transform=ax2.transAxes,
+                fontsize=9, verticalalignment='top',
                 bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 
     plt.tight_layout()
@@ -143,7 +172,7 @@ def main():
     start_time = time.time()
 
     print("=" * 60)
-    print("src/目录有效代码行数变化分析（优化版）")
+    print("src/ 和 tests/ 目录有效代码行数变化分析（优化版）")
     print("=" * 60)
 
     print("\n正在获取最近两天的提交...")
@@ -169,19 +198,25 @@ def main():
         }
 
         for future in as_completed(future_to_commit):
-            commit_info, loc, file_count = future.result()
+            commit_info, src_loc, src_files, tests_loc, tests_files = future.result()
             processed += 1
 
             data.append({
                 'hash': commit_info['hash'],
                 'date': commit_info['date'],
                 'message': commit_info['message'],
-                'loc': loc,
-                'files': file_count
+                'src_loc': src_loc,
+                'src_files': src_files,
+                'tests_loc': tests_loc,
+                'tests_files': tests_files,
+                'total_loc': src_loc + tests_loc,
+                'total_files': src_files + tests_files
             })
 
             print(f"[{processed:3d}/{total:3d}] {commit_info['hash']} | "
-                  f"LOC: {loc:5d} | Files: {file_count:3d} | {commit_info['message'][:40]}")
+                  f"src: {src_loc:5d} lines/{src_files:3d} files | "
+                  f"tests: {tests_loc:5d} lines/{tests_files:3d} files | "
+                  f"{commit_info['message'][:30]}")
 
     # 按原始顺序排序
     data.sort(key=lambda x: next(i for i, c in enumerate(commits) if c['hash'] == x['hash']))
@@ -211,12 +246,23 @@ def main():
     if data:
         start = data[0]
         end = data[-1]
-        change = end['loc'] - start['loc']
         print(f"Period: {start['date'][:10]} ~ {end['date'][:10]}")
-        print(f"Start LOC: {start['loc']:,} lines")
-        print(f"End LOC: {end['loc']:,} lines")
-        print(f"Net Change: {change:+,} lines ({change/start['loc']*100:.1f}%)")
         print(f"Commits Analyzed: {len(data)}")
+        print("")
+        print("src/ Directory:")
+        src_change = end['src_loc'] - start['src_loc']
+        print(f"  Start: {start['src_loc']:,} lines  |  End: {end['src_loc']:,} lines")
+        print(f"  Change: {src_change:+,} lines ({src_change/start['src_loc']*100:.1f}%)")
+        print("")
+        print("tests/ Directory:")
+        tests_change = end['tests_loc'] - start['tests_loc']
+        print(f"  Start: {start['tests_loc']:,} lines  |  End: {end['tests_loc']:,} lines")
+        if start['tests_loc'] > 0:
+            print(f"  Change: {tests_change:+,} lines ({tests_change/start['tests_loc']*100:.1f}%)")
+        else:
+            print(f"  Change: {tests_change:+,} lines")
+        print("")
+        print(f"Total (src + tests): {end['total_loc']:,} lines")
     print(f"Elapsed Time: {elapsed:.1f}s")
 
 if __name__ == '__main__':
