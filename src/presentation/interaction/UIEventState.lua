@@ -1,5 +1,5 @@
-local runtime = require("src.presentation.api.UIRuntimePort")
-local role_id_utils = require("src.core.RoleId")
+local runtime = require("src.presentation.adapter.UIRuntimePort")
+local role_id_utils = require("src.core.utils.RoleId")
 
 local ui_event_state = {}
 

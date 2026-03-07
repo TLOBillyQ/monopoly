@@ -1,4 +1,4 @@
-local logger = require("src.core.Logger")
+local logger = require("src.core.utils.Logger")
 
 local remote_dice = {}
 

@@ -1,12 +1,12 @@
 local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
-local number_utils = require("src.core.NumberUtils")
+local number_utils = require("src.core.utils.NumberUtils")
 local choice_auto_policy = require("src.game.flow.turn.TurnChoiceAutoPolicy")
 local tick_ui_gate = require("src.game.flow.turn.TickUIGate")
 local tick_choice_timeout = require("src.game.flow.turn.TickChoiceTimeout")
-local use_case_output_port = require("src.game.flow.ports.UseCaseOutputPort")
-local runtime_state = require("src.core.RuntimeState")
+local use_case_output_port = require("src.game.flow.output_adapters.UseCaseOutputPort")
+local runtime_state = require("src.core.runtime_facade.RuntimeState")
 
 local tick_timeout = {}
 

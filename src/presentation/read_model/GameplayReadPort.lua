@@ -1,5 +1,5 @@
 local feature_toggles = require("src.core.config.FeatureToggles")
-local number_utils = require("src.core.NumberUtils")
+local number_utils = require("src.core.utils.NumberUtils")
 
 local gameplay_read_port = {}
 

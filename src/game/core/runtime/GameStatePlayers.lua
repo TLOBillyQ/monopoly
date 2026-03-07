@@ -1,8 +1,8 @@
-local status_ops = require("src.game.core.runtime.player_state.StatusOps")
-local balance_ops = require("src.game.core.runtime.player_state.BalanceOps")
-local deity_ops = require("src.game.core.runtime.player_state.DeityOps")
-local vehicle_ops = require("src.game.core.runtime.player_state.VehicleOps")
-local location_ops = require("src.game.core.runtime.player_state.LocationOps")
+local status_ops = require("src.game.core.player.state_ops.StatusOps")
+local balance_ops = require("src.game.core.player.state_ops.BalanceOps")
+local deity_ops = require("src.game.core.player.state_ops.DeityOps")
+local vehicle_ops = require("src.game.core.player.state_ops.VehicleOps")
+local location_ops = require("src.game.core.player.state_ops.LocationOps")
 
 local game_state_players = {}
 

@@ -2,7 +2,7 @@
 local M = {}
 
 local app = require("src.game.core.runtime.Game")
-local logger = require("src.core.Logger")
+local logger = require("src.core.utils.Logger")
 local movement = require("src.game.systems.movement.Movement")
 local turn_move = require("src.game.flow.turn.TurnMove")
 local inventory = require("src.game.systems.items.ItemInventory")
@@ -23,10 +23,10 @@ local constants = require("Config.Generated.Constants")
 local bankruptcy = require("src.game.core.runtime.Bankruptcy")
 local map_cfg = require("Config.Maps.DefaultMap")
 local tiles_cfg = require("Config.Generated.Tiles")
-local number_utils = require("src.core.NumberUtils")
+local number_utils = require("src.core.utils.NumberUtils")
 local tile = require("src.game.systems.board.Tile")
-local runtime_context = require("src.core.RuntimeContext")
-local runtime_ports = require("src.core.RuntimePorts")
+local runtime_context = require("src.core.runtime_facade.RuntimeContext")
+local runtime_ports = require("src.core.ports.RuntimePorts")
 
 if not math.tofixed then
   function math.tofixed(value)
@@ -169,7 +169,7 @@ TriggerCustomEvent = TriggerCustomEvent or function() end
 _refresh_runtime_context_for_tests()
 
 local function build_ui_port(overrides)
-  local ui_view = require("src.presentation.api.UIViewService")
+  local ui_view = require("src.presentation.adapter.UIViewService")
   local ui_state = ui_view.build_ui_state()
   local refs = {
     images = {

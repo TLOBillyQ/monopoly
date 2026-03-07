@@ -24,10 +24,10 @@ local turn_move = support.turn_move
 local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local mine_effect = require("src.game.systems.effects.MineEffect")
-local runtime_context = require("src.core.RuntimeContext")
-local runtime_ports = require("src.core.RuntimePorts")
-local runtime_event_bridge = require("src.core.RuntimeEventBridge")
-local runtime_state = require("src.core.RuntimeState")
+local runtime_context = require("src.core.runtime_facade.RuntimeContext")
+local runtime_ports = require("src.core.ports.RuntimePorts")
+local runtime_event_bridge = require("src.core.runtime_facade.RuntimeEventBridge")
+local runtime_state = require("src.core.runtime_facade.RuntimeState")
 local runtime_global_aliases = require("src.app.bootstrap.runtime_install.RuntimeGlobalAliases")
 local dispatch_validator = require("src.game.flow.turn.TurnDispatchValidator")
 local tick_ui_sync = require("src.game.flow.turn.TickUISync")
@@ -41,11 +41,11 @@ local game_startup = require("src.app.bootstrap.GameStartup")
 local game_startup_event_bridge = require("src.app.bootstrap.GameStartupEventBridge")
 local test_profile_bootstrap = require("src.app.testing.TestProfileBootstrap")
 local monopoly_event = require("src.core.events.MonopolyEvents")
-local number_utils = require("src.core.NumberUtils")
-local role_id_utils = require("src.core.RoleId")
-local logger = require("src.core.Logger")
+local number_utils = require("src.core.utils.NumberUtils")
+local role_id_utils = require("src.core.utils.RoleId")
+local logger = require("src.core.utils.Logger")
 local market_service = require("src.game.systems.market.MarketService")
-local phase_registry = require("src.game.runtime.PhaseRegistry")
+local phase_registry = require("src.game.turn_engine.PhaseRegistry")
 local turn_decision = require("src.game.flow.turn.TurnDecision")
 local item_effects = require("src.game.systems.items.ItemPostEffects")
 local item_strategy = require("src.game.systems.items.ItemStrategy")
@@ -871,7 +871,7 @@ local function _test_game_startup_build_state_is_pure_and_bridge_installs_events
       board = { get_overlays = function() return { roadblocks = {}, mines = {} } end, tile_lookup = {}, path = {} },
     }
     support.with_patches({
-      { target = require("src.presentation.api.UIViewService"), key = "open_choice_modal", value = function(_, choice)
+      { target = require("src.presentation.adapter.UIViewService"), key = "open_choice_modal", value = function(_, choice)
         opened = choice
       end },
     }, function()
@@ -905,7 +905,7 @@ end
 
 local function _test_autorunner_runs_to_end()
   local auto_runner = require("src.game.flow.turn.AutoRunner")
-  local agent = require("src.game.core.runtime.Agent")
+  local agent = require("src.game.core.ai.Agent")
   local gameplay_rules = require("src.core.config.GameplayRules")
   local land = require("src.game.systems.land.LandingEffectExecutors")
   local land_actions = require("src.game.systems.land.LandActions")
@@ -922,7 +922,7 @@ local function _test_autorunner_runs_to_end()
   g.anim_gate_port = { wait_action_anim = false, wait_move_anim = false }
   g.popup_port = { push_popup = function() return false end }
   g.tile_feedback_port = { on_tile_upgraded = function() return false end }
-  g.intent_output_port = require("src.game.flow.ports.IntentOutputAdapter").build()
+  g.intent_output_port = require("src.game.flow.output_adapters.IntentOutputAdapter").build()
 
   local state = {
     gameplay_loop_ports = _build_test_ports({
@@ -2305,7 +2305,7 @@ local function _test_game_startup_role_roster_retries_before_debug_players_fallb
   local state = nil
   local resolve_calls = 0
   local created_opts = nil
-  local runtime_ports = require("src.core.RuntimePorts")
+  local runtime_ports = require("src.core.ports.RuntimePorts")
   support.with_patches({
     { target = runtime_ports, key = "resolve_roles", value = function()
       resolve_calls = resolve_calls + 1

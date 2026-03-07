@@ -1,7 +1,7 @@
 local runtime_refs = require("Config.RuntimeRefs")
 local runtime_constants = require("src.core.config.RuntimeConstants")
-local logger = require("src.core.Logger")
-local number_utils = require("src.core.NumberUtils")
+local logger = require("src.core.utils.Logger")
+local number_utils = require("src.core.utils.NumberUtils")
 
 local catalog = {}
 

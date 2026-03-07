@@ -1,14 +1,14 @@
 
 require "vendor.third_party.Utils"
-local dirty_tracker = require("src.core.DirtyTracker")
-local logger = require("src.core.Logger")
+local dirty_tracker = require("src.core.utils.DirtyTracker")
+local logger = require("src.core.utils.Logger")
 local market_cfg = require("Config.Generated.Market")
-local turn_engine = require("src.game.runtime.TurnEngine")
+local turn_engine = require("src.game.turn_engine.TurnEngine")
 local bootstrap = require("src.game.core.runtime.Bootstrap")
 local game_factory = require("src.game.core.runtime.GameFactory")
-local phase_registry = require("src.game.runtime.PhaseRegistry")
-local number_utils = require("src.core.NumberUtils")
-local role_id_utils = require("src.core.RoleId")
+local phase_registry = require("src.game.turn_engine.PhaseRegistry")
+local number_utils = require("src.core.utils.NumberUtils")
+local role_id_utils = require("src.core.utils.RoleId")
 local auto_play_port_adapter = require("src.game.runtime.AutoPlayPortAdapter")
 local bankruptcy_port_adapter = require("src.game.runtime.BankruptcyPortAdapter")
 

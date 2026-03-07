@@ -1,6 +1,6 @@
-local runtime = require("src.presentation.api.UIRuntimePort")
-local host_runtime = require("src.presentation.api.HostRuntimePort")
-local role_id_utils = require("src.core.RoleId")
+local runtime = require("src.presentation.adapter.UIRuntimePort")
+local host_runtime = require("src.presentation.adapter.HostRuntimePort")
+local role_id_utils = require("src.core.utils.RoleId")
 
 local role_context = {}
 

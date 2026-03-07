@@ -3,7 +3,7 @@ local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
 local monopoly_events = require("src.core.events.MonopolyEvents")
-local runtime_event_bridge = require("src.core.RuntimeEventBridge")
+local runtime_event_bridge = require("src.core.runtime_facade.RuntimeEventBridge")
 local land_events = require("src.game.systems.land.LandEvents")
 local land_rules = require("src.game.systems.land.LandRules")
 local land_rent_resolver = require("src.game.systems.land.LandRentResolver")

@@ -1,7 +1,7 @@
 local support = require("TestSupport")
 local _assert_eq = support.assert_eq
 local number_utils = support.number_utils
-local logger = require("src.core.Logger")
+local logger = require("src.core.utils.Logger")
 
 local function _test_number_utils_to_integer()
   _assert_eq(number_utils.to_integer("12"), 12, "string integer should parse")

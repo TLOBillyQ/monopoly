@@ -1,7 +1,7 @@
 local intent_output_port = {}
 
 local function _fallback_port()
-  return require("src.game.flow.ports.IntentOutputAdapter").build()
+  return require("src.game.flow.output_adapters.IntentOutputAdapter").build()
 end
 
 local function _resolve_port(game)

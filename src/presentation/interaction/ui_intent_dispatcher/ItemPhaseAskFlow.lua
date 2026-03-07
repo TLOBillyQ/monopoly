@@ -1,6 +1,6 @@
-local ui_view = require("src.presentation.api.UIViewService")
-local choice_common = require("src.presentation.ui.choice_screen_service.common")
-local runtime_state = require("src.core.RuntimeState")
+local ui_view = require("src.presentation.adapter.UIViewService")
+local choice_common = require("src.presentation.widgets.choice_screen_service.common")
+local runtime_state = require("src.core.runtime_facade.RuntimeState")
 
 local item_phase_ask_flow = {}
 

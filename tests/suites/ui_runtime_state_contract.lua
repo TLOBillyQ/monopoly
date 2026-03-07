@@ -1,8 +1,8 @@
 local support = require("TestSupport")
 local _assert_eq = support.assert_eq
 
-local runtime_state = require("src.core.RuntimeState")
-local output_port = require("src.game.flow.ports.UseCaseOutputPort")
+local runtime_state = require("src.core.runtime_facade.RuntimeState")
+local output_port = require("src.game.flow.output_adapters.UseCaseOutputPort")
 local tick_ui_sync = require("src.game.flow.turn.TickUISync")
 local validator = require("src.game.flow.turn.TurnDispatchValidator")
 

@@ -9,7 +9,7 @@ local movement = support.movement
 local board_utils = support.board_utils
 local move_anim = require("src.presentation.render.MoveAnim")
 local board_feedback = require("src.presentation.render.BoardFeedbackService")
-local runtime_ports = require("src.core.RuntimePorts")
+local runtime_ports = require("src.core.ports.RuntimePorts")
 
 local function _simulate_heading(board, start_index, facing, steps, backward, parity)
   local current = start_index

@@ -1,10 +1,10 @@
-local logger = require("src.core.Logger")
+local logger = require("src.core.utils.Logger")
 local tile = require("src.game.systems.board.Tile")
 local board_utils = require("src.game.systems.land.LandBoardUtils")
 local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("src.core.config.GameplayRules")
-local action_anim_port = require("src.core.ActionAnimPort")
-local number_utils = require("src.core.NumberUtils")
+local action_anim_port = require("src.core.ports.ActionAnimPort")
+local number_utils = require("src.core.utils.NumberUtils")
 
 local demolish = {}
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0

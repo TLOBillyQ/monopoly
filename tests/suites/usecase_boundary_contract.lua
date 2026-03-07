@@ -4,7 +4,7 @@ local _with_patches = support.with_patches
 
 local turn_action_port = require("src.presentation.interaction.ui_intent_dispatcher.TurnActionPort")
 local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
-local runtime_ports = require("src.core.RuntimePorts")
+local runtime_ports = require("src.core.ports.RuntimePorts")
 local turn_roll = require("src.game.flow.turn.TurnRoll")
 local turn_move = require("src.game.flow.turn.TurnMove")
 
@@ -110,7 +110,7 @@ local function _test_gameplay_loop_clock_contract_split_sources()
 end
 
 local function _test_choice_contract_copies_explicit_fields_once()
-  local choice_contract = require("src.core.ChoiceContract")
+  local choice_contract = require("src.core.choice.ChoiceContract")
   local source = {
     route_key = "target",
     requires_confirm = true,
@@ -134,7 +134,7 @@ local function _test_choice_contract_copies_explicit_fields_once()
 end
 
 local function _test_use_case_output_port_runtime_variant_stays_off_legacy_state()
-  local use_case_output_port = require("src.game.flow.ports.UseCaseOutputPort")
+  local use_case_output_port = require("src.game.flow.output_adapters.UseCaseOutputPort")
   local output = use_case_output_port.build_runtime_output_ports()
   local state = {}
   local changed = output.invalidate_ui(state)

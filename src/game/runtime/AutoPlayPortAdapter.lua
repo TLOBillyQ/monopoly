@@ -1,4 +1,4 @@
-local agent = require("src.game.core.runtime.Agent")
+local agent = require("src.game.core.ai.Agent")
 
 local adapter = {}
 

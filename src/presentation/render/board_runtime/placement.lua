@@ -1,6 +1,6 @@
 local gameplay_read_port = require("src.presentation.read_model.GameplayReadPort")
-local runtime_state = require("src.core.RuntimeState")
-local runtime_ports = require("src.core.RuntimePorts")
+local runtime_state = require("src.core.runtime_facade.RuntimeState")
+local runtime_ports = require("src.core.ports.RuntimePorts")
 
 local M = {}
 

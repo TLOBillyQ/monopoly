@@ -1,5 +1,5 @@
 local ui_events = require("src.presentation.shared.UIEvents")
-local runtime = require("src.presentation.api.UIRuntimePort")
+local runtime = require("src.presentation.adapter.UIRuntimePort")
 local base_nodes = require("src.presentation.canvas.base.nodes")
 local always_show_nodes = require("src.presentation.canvas.always_show.nodes")
 local player_choice_nodes = require("src.presentation.canvas.player_choice.nodes")
@@ -10,7 +10,7 @@ local market_nodes = require("src.presentation.canvas.market.nodes")
 local popup_nodes = require("src.presentation.canvas.popup.nodes")
 local bankruptcy_nodes = require("src.presentation.canvas.bankruptcy.nodes")
 local debug_nodes = require("src.presentation.canvas.debug.nodes")
-local role_id_utils = require("src.core.RoleId")
+local role_id_utils = require("src.core.utils.RoleId")
 
 local coordinator = {}
 

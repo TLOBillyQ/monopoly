@@ -1,8 +1,8 @@
 local support = require("TestSupport")
 local _assert_eq = support.assert_eq
 
-local use_case_output_port = require("src.game.flow.ports.UseCaseOutputPort")
-local legacy_output_mirror = require("src.game.flow.ports.LegacyOutputMirror")
+local use_case_output_port = require("src.game.flow.output_adapters.UseCaseOutputPort")
+local legacy_output_mirror = require("src.game.flow.output_adapters.LegacyOutputMirror")
 
 local function _test_base_output_ports_stay_runtime_only()
   local output = use_case_output_port.build_base_output_ports()

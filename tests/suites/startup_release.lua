@@ -3,7 +3,7 @@ local with_patches = support.with_patches
 local app = support.app
 local startup_policy = require("src.app.bootstrap.StartupPolicy")
 local game_startup = require("src.app.bootstrap.GameStartup")
-local runtime_ports = require("src.core.RuntimePorts")
+local runtime_ports = require("src.core.ports.RuntimePorts")
 local test_profile_bootstrap = require("src.app.testing.TestProfileBootstrap")
 
 local function _test_release_prod_forces_default_profile()

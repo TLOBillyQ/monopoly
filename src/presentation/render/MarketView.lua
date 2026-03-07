@@ -1,12 +1,12 @@
 local market_layout = require("src.presentation.shared.MarketLayout")
 local modal_state = require("src.presentation.interaction.UIModalStateCoordinator")
-local runtime = require("src.presentation.api.UIRuntimePort")
-local runtime_state = require("src.core.RuntimeState")
+local runtime = require("src.presentation.adapter.UIRuntimePort")
+local runtime_state = require("src.core.runtime_facade.RuntimeState")
 local items_cfg = require("Config.Generated.Items")
 local market_cfg = require("Config.Generated.Market")
-local number_utils = require("src.core.NumberUtils")
+local number_utils = require("src.core.utils.NumberUtils")
 local vehicle_catalog = require("src.core.config.VehicleCatalog")
-local logger = require("src.core.Logger")
+local logger = require("src.core.utils.Logger")
 
 local market_view = {}
 local VEHICLE_TAB_ENABLED = false

@@ -1,6 +1,6 @@
 local items_cfg = require("Config.Generated.Items")
 require "vendor.third_party.Utils"
-local logger = require("src.core.Logger")
+local logger = require("src.core.utils.Logger")
 local intent_output_port = require("src.game.ports.IntentOutputPort")
 
 local inventory = {}

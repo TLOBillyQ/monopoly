@@ -1,7 +1,7 @@
 local gameplay_loop = require("src.game.flow.turn.GameplayLoop")
 local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
-local presentation_ports = require("src.presentation.api.PresentationPorts")
-local number_utils = require("src.core.NumberUtils")
+local presentation_ports = require("src.presentation.adapter.PresentationPorts")
+local number_utils = require("src.core.utils.NumberUtils")
 local runtime_constants = require("src.core.config.RuntimeConstants")
 
 local M = {}

@@ -1,5 +1,5 @@
-local panel_view = require("src.presentation.ui.UIPanel")
-local role_id_utils = require("src.core.RoleId")
+local panel_view = require("src.presentation.widgets.UIPanel")
+local role_id_utils = require("src.core.utils.RoleId")
 
 local panel_slice = {}
 

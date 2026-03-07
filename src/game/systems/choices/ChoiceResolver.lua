@@ -1,4 +1,4 @@
-local logger = require("src.core.Logger")
+local logger = require("src.core.utils.Logger")
 local executor = require("src.game.systems.items.ItemExecutor")
 local item_phase = require("src.game.systems.items.ItemPhase")
 local effect_runner = require("src.game.systems.effects.EffectRunner")

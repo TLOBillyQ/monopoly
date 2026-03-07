@@ -1,5 +1,5 @@
-local logger = require("src.core.Logger")
-local role_id_utils = require("src.core.RoleId")
+local logger = require("src.core.utils.Logger")
+local role_id_utils = require("src.core.utils.RoleId")
 
 local role_context = {}
 

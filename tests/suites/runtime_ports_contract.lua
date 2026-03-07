@@ -2,8 +2,8 @@ local support = require("TestSupport")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
-local runtime_ports = require("src.core.RuntimePorts")
-local runtime_context = require("src.core.RuntimeContext")
+local runtime_ports = require("src.core.ports.RuntimePorts")
+local runtime_context = require("src.core.runtime_facade.RuntimeContext")
 local runtime_install = require("src.app.bootstrap.RuntimeInstall")
 
 local function _reset_runtime_contract_state()

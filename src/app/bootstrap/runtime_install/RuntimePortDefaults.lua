@@ -1,5 +1,5 @@
 local runtime_port_defaults = {}
-local number_utils = require("src.core.NumberUtils")
+local number_utils = require("src.core.utils.NumberUtils")
 
 function runtime_port_defaults.build()
   return {

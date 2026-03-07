@@ -6,8 +6,8 @@ local gameplay_loop = require("src.game.flow.turn.GameplayLoop")
 local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
 local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
 local turn_roll = require("src.game.flow.turn.TurnRoll")
-local use_case_output_port = require("src.game.flow.ports.UseCaseOutputPort")
-local action_anim_port = require("src.core.ActionAnimPort")
+local use_case_output_port = require("src.game.flow.output_adapters.UseCaseOutputPort")
+local action_anim_port = require("src.core.ports.ActionAnimPort")
 
 local function _merge_group(base_group, override_group)
   local merged = {}

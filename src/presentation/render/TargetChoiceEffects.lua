@@ -1,10 +1,10 @@
-local logger = require("src.core.Logger")
-local number_utils = require("src.core.NumberUtils")
+local logger = require("src.core.utils.Logger")
+local number_utils = require("src.core.utils.NumberUtils")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local modal_state = require("src.presentation.interaction.UIModalStateCoordinator")
-local host_runtime = require("src.presentation.api.HostRuntimePort")
-local ui_core = require("src.presentation.api.ui_view_service.core")
-local choice_contract = require("src.core.ChoiceContract")
+local host_runtime = require("src.presentation.adapter.HostRuntimePort")
+local ui_core = require("src.presentation.adapter.ui_view_service.core")
+local choice_contract = require("src.core.choice.ChoiceContract")
 
 local target_choice_effects = {}
 

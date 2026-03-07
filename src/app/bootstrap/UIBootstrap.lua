@@ -1,5 +1,5 @@
 local board_scene = require("src.presentation.render.BoardScene")
-local ui_view = require("src.presentation.api.UIViewService")
+local ui_view = require("src.presentation.adapter.UIViewService")
 local canvas_event_router = require("src.presentation.canvas_runtime.CanvasEventRouter")
 local base_nodes = require("src.presentation.canvas.base.nodes")
 local always_show_nodes = require("src.presentation.canvas.always_show.nodes")
@@ -10,8 +10,8 @@ local remote_choice_nodes = require("src.presentation.canvas.remote_choice.nodes
 local secondary_confirm_nodes = require("src.presentation.canvas.secondary_confirm.nodes")
 local market_ui = require("src.presentation.shared.MarketLayout")
 local ui_events = require("src.presentation.shared.UIEvents")
-local runtime_ports = require("src.core.RuntimePorts")
-local role_globals = require("src.core.UIRoleGlobals")
+local runtime_ports = require("src.core.ports.RuntimePorts")
+local role_globals = require("src.core.runtime_facade.UIRoleGlobals")
 
 local M = {}
 

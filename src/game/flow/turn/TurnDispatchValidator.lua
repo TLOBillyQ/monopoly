@@ -1,10 +1,10 @@
-local logger = require("src.core.Logger")
-local number_utils = require("src.core.NumberUtils")
+local logger = require("src.core.utils.Logger")
+local number_utils = require("src.core.utils.NumberUtils")
 local item_slot_data = require("src.game.flow.turn.ItemSlotData")
 local turn_action_gate = require("src.game.flow.turn.TurnActionGate")
-local role_id_utils = require("src.core.RoleId")
-local choice_contract = require("src.core.ChoiceContract")
-local runtime_state = require("src.core.RuntimeState")
+local role_id_utils = require("src.core.utils.RoleId")
+local choice_contract = require("src.core.choice.ChoiceContract")
+local runtime_state = require("src.core.runtime_facade.RuntimeState")
 
 local validator = {}
 

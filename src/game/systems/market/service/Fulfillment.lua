@@ -1,9 +1,9 @@
 local inventory = require("src.game.systems.items.ItemInventory")
 local context = require("src.game.systems.market.service.Context")
 local monopoly_event = require("src.core.events.MonopolyEvents")
-local number_utils = require("src.core.NumberUtils")
-local runtime_ports = require("src.core.RuntimePorts")
-local action_anim_port = require("src.core.ActionAnimPort")
+local number_utils = require("src.core.utils.NumberUtils")
+local runtime_ports = require("src.core.ports.RuntimePorts")
+local action_anim_port = require("src.core.ports.ActionAnimPort")
 
 local fulfillment = {}
 local _emit_event = monopoly_event.emit

@@ -1,13 +1,13 @@
-local logger = require("src.core.Logger")
+local logger = require("src.core.utils.Logger")
 local auto_play_port = require("src.game.ports.AutoPlayPort")
 local item_effects = require("src.game.systems.items.ItemPostEffects")
 local inventory = require("src.game.systems.items.ItemInventory")
-local number_utils = require("src.core.NumberUtils")
+local number_utils = require("src.core.utils.NumberUtils")
 local roadblock = require("src.game.systems.items.ItemRoadblock")
 local remote_dice = require("src.game.systems.items.ItemRemoteDice")
 local demolish = require("src.game.systems.items.ItemDemolish")
 local gameplay_rules = require("src.core.config.GameplayRules")
-local action_anim_port = require("src.core.ActionAnimPort")
+local action_anim_port = require("src.core.ports.ActionAnimPort")
 
 local handlers = {}
 local item_ids = gameplay_rules.item_ids

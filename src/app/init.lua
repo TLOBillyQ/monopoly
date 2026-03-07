@@ -1,4 +1,4 @@
-local logger = require("src.core.Logger")
+local logger = require("src.core.utils.Logger")
 local runtime_install = require("src.app.bootstrap.RuntimeInstall")
 local game_startup = require("src.app.bootstrap.GameStartup")
 local game_startup_event_bridge = require("src.app.bootstrap.GameStartupEventBridge")

@@ -1,6 +1,6 @@
 local context = require("src.game.systems.market.service.Context")
 local eligibility = require("src.game.systems.market.service.Eligibility")
-local number_utils = require("src.core.NumberUtils")
+local number_utils = require("src.core.utils.NumberUtils")
 
 local choice = {}
 local PAGE_SIZE = 10

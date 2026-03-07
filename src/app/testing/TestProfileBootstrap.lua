@@ -1,7 +1,7 @@
 local test_profile_resolver = require("src.app.testing.TestProfileResolver")
 local inventory = require("src.game.systems.items.ItemInventory")
 local constants = require("Config.Generated.Constants")
-local number_utils = require("src.core.NumberUtils")
+local number_utils = require("src.core.utils.NumberUtils")
 
 local bootstrap = {}
 

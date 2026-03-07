@@ -1,12 +1,12 @@
 local action_anim = require("src.presentation.render.ActionAnim")
-local runtime_port = require("src.presentation.api.UIRuntimePort")
+local runtime_port = require("src.presentation.adapter.UIRuntimePort")
 local handlers = require("src.presentation.render.ActionAnimHandlers")
-local host_runtime = require("src.presentation.api.HostRuntimePort")
+local host_runtime = require("src.presentation.adapter.HostRuntimePort")
 local board_feedback = require("src.presentation.render.BoardFeedbackService")
 local runtime_refs = require("Config.RuntimeRefs")
 local gameplay_rules = require("src.core.config.GameplayRules")
-local logger = require("src.core.Logger")
-local runtime_context = require("src.core.RuntimeContext")
+local logger = require("src.core.utils.Logger")
+local runtime_context = require("src.core.runtime_facade.RuntimeContext")
 
 if not math.Vector3 then
   function math.Vector3(x, y, z)

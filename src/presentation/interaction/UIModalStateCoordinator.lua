@@ -1,6 +1,6 @@
 local modal_state = {}
 local canvas_store = require("src.presentation.canvas_runtime.CanvasStore")
-local runtime_state = require("src.core.RuntimeState")
+local runtime_state = require("src.core.runtime_facade.RuntimeState")
 
 local function _ui_runtime(state)
   return runtime_state.ensure_ui_runtime(state)

@@ -1,9 +1,9 @@
-local logger = require("src.core.Logger")
-local runtime = require("src.presentation.api.UIRuntimePort")
+local logger = require("src.core.utils.Logger")
+local runtime = require("src.presentation.adapter.UIRuntimePort")
 local always_show_nodes = require("src.presentation.canvas.always_show.nodes")
 local always_show_contract = require("src.presentation.canvas.always_show.contract")
 local ui_touch_policy = require("src.presentation.interaction.UITouchPolicy")
-local host_runtime = require("src.presentation.api.HostRuntimePort")
+local host_runtime = require("src.presentation.adapter.HostRuntimePort")
 
 local bindings = {}
 

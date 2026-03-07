@@ -13,7 +13,7 @@ local pricing = support.pricing
 local choice_resolver = support.choice_resolver
 
 local function _test_ai_picks_land_purchase()
-  local agent = require("src.game.core.runtime.Agent")
+  local agent = require("src.game.core.ai.Agent")
   local g = _new_game()
   local ai_player = g.players[2]
   assert(agent.is_auto_player(ai_player), "player 2 should be AI")

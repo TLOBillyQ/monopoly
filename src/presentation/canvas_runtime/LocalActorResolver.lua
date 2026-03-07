@@ -1,7 +1,7 @@
-local runtime = require("src.presentation.api.UIRuntimePort")
-local number_utils = require("src.core.NumberUtils")
-local role_id_utils = require("src.core.RoleId")
-local runtime_state = require("src.core.RuntimeState")
+local runtime = require("src.presentation.adapter.UIRuntimePort")
+local number_utils = require("src.core.utils.NumberUtils")
+local role_id_utils = require("src.core.utils.RoleId")
+local runtime_state = require("src.core.runtime_facade.RuntimeState")
 
 local resolver = {}
 

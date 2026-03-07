@@ -4,7 +4,7 @@ local gameplay_rules = require("src.core.config.GameplayRules")
 local inventory = require("src.game.systems.items.ItemInventory")
 local item_use_broadcast = require("src.game.systems.items.ItemUseBroadcast")
 local rent_resolver = require("src.game.systems.land.LandRentResolver")
-local number_utils = require("src.core.NumberUtils")
+local number_utils = require("src.core.utils.NumberUtils")
 
 local land_rules = {}
 local item_ids = gameplay_rules.item_ids

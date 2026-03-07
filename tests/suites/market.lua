@@ -1,9 +1,9 @@
 local support = require("TestSupport")
 local _new_game = support.new_game
 local market_cfg = require("Config.Generated.Market")
-local runtime_ports = require("src.core.RuntimePorts")
+local runtime_ports = require("src.core.ports.RuntimePorts")
 local monopoly_event = require("src.core.events.MonopolyEvents")
-local runtime_event_bridge = require("src.core.RuntimeEventBridge")
+local runtime_event_bridge = require("src.core.runtime_facade.RuntimeEventBridge")
 local choice_resolver = require("src.game.systems.choices.ChoiceResolver")
 
 local function _contains_product(list, product_id)
@@ -54,7 +54,7 @@ local function _reload_market_service()
 end
 
 local function _reset_market_choice_runtime_modules()
-  package.loaded["src.game.systems.choices.ChoiceHandlers.MarketChoiceHandler"] = nil
+  package.loaded["src.game.systems.choices.choice_handlers.MarketChoiceHandler"] = nil
   package.loaded["src.game.systems.choices.ChoiceRegistry"] = nil
   package.loaded["src.game.systems.choices.ChoiceResolver"] = nil
 end

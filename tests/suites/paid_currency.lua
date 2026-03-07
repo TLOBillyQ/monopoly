@@ -1,8 +1,8 @@
 local support = require("TestSupport")
 local _new_game = support.new_game
 local _with_patches = support.with_patches
-local runtime_ports = require("src.core.RuntimePorts")
-local logger = require("src.core.Logger")
+local runtime_ports = require("src.core.ports.RuntimePorts")
+local logger = require("src.core.utils.Logger")
 local paid_goods_cfg = require("src.game.systems.commerce.config.RuntimePaidGoods")
 
 local function _reload_bridge()

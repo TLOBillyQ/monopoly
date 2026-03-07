@@ -1,4 +1,4 @@
-local logger = require("src.core.Logger")
+local logger = require("src.core.utils.Logger")
 local local_actor_resolver = require("src.presentation.canvas_runtime.LocalActorResolver")
 
 local turn_action_port = {}

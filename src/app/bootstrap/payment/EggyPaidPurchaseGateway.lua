@@ -1,6 +1,6 @@
-local logger = require("src.core.Logger")
-local number_utils = require("src.core.NumberUtils")
-local runtime_ports = require("src.core.RuntimePorts")
+local logger = require("src.core.utils.Logger")
+local number_utils = require("src.core.utils.NumberUtils")
+local runtime_ports = require("src.core.ports.RuntimePorts")
 
 local gateway = {}
 

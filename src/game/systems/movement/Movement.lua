@@ -2,7 +2,7 @@ local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local inventory = require("src.game.systems.items.ItemInventory")
 local monopoly_event = require("src.core.events.MonopolyEvents")
-local number_utils = require("src.core.NumberUtils")
+local number_utils = require("src.core.utils.NumberUtils")
 local facing_policy = require("src.game.systems.board.FacingPolicy")
 
 local movement = {}

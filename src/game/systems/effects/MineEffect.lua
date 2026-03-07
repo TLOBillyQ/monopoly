@@ -1,7 +1,7 @@
-local logger = require("src.core.Logger")
+local logger = require("src.core.utils.Logger")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 local gameplay_rules = require("src.core.config.GameplayRules")
-local action_anim_port = require("src.core.ActionAnimPort")
+local action_anim_port = require("src.core.ports.ActionAnimPort")
 
 local mine_effect = {}
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0

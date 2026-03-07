@@ -1,6 +1,6 @@
 local monopoly_event = require("src.core.events.MonopolyEvents")
-local ui_view = require("src.presentation.api.UIViewService")
-local runtime_state = require("src.core.RuntimeState")
+local ui_view = require("src.presentation.adapter.UIViewService")
+local runtime_state = require("src.core.runtime_facade.RuntimeState")
 local choice_slice = require("src.presentation.state" .. ".ui_model.ChoiceSlice")
 
 local M = {}

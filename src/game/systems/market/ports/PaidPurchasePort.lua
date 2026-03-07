@@ -1,4 +1,4 @@
-local runtime_ports = require("src.core.RuntimePorts")
+local runtime_ports = require("src.core.ports.RuntimePorts")
 
 local port = {}
 

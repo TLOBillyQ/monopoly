@@ -164,7 +164,7 @@ local rules = {
     description = "market service layer must not call host purchase globals directly; move Eggy payment details to outer adapters",
   },
   {
-    root = "src/presentation/api/presentation_ports",
+    root = "src/presentation/adapter/presentation_ports",
     forbidden_patterns = {
       "game%.ui_port",
       "ui_port%.get_board_scene",
@@ -220,10 +220,9 @@ local growth_budget_rules = {
       "%f[%w_]RegisterCustomEvent%f[^%w_]",
     },
     budget = {
-      ["src/core/Logger.lua"] = 0,
-      ["src/core/RuntimeContext.lua"] = 0,
-      ["src/core/RuntimeEditorExports.lua"] = 0,
-      ["src/core/RuntimeEnvBindings.lua"] = 0,
+      ["src/core/utils/Logger.lua"] = 0,
+      ["src/core/runtime_facade/RuntimeContext.lua"] = 0,
+      ["src/core/runtime_facade/RuntimeEditorExports.lua"] = 0,
       ["src/core/runtime_ports/DefaultPorts.lua"] = 0,
     },
   },
@@ -240,7 +239,7 @@ local growth_budget_rules = {
       "ui_port%.state",
     },
     budget = {
-      ["src/core/ActionAnimPort.lua"] = 0,
+      ["src/core/ports/ActionAnimPort.lua"] = 0,
       ["src/game/core/runtime/Bankruptcy.lua"] = 0,
       ["src/game/core/runtime/GameStateTiles.lua"] = 0,
       ["src/game/flow/intent/IntentDispatcher.lua"] = 0,

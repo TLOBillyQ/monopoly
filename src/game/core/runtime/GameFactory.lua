@@ -4,7 +4,7 @@ local player = require("src.game.core.player.Player")
 local inventory = require("src.game.core.player.Inventory")
 local constants = require("Config.Generated.Constants")
 local roles_cfg = require("Config.Generated.Roles")
-local runtime_ports = require("src.core.RuntimePorts")
+local runtime_ports = require("src.core.ports.RuntimePorts")
 require "vendor.third_party.Utils"
 
 local game_factory = {}

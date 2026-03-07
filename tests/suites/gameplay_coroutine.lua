@@ -1,5 +1,5 @@
 local support = require("TestSupport")
-local turn_engine = require("src.game.runtime.TurnEngine")
+local turn_engine = require("src.game.turn_engine.TurnEngine")
 
 ---------------------------------------------------------------------------
 -- 1. coroutine mode default

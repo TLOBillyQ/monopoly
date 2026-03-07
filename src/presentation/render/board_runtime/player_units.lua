@@ -1,6 +1,6 @@
 local M = {}
-local runtime_ports = require("src.core.RuntimePorts")
-local role_id_utils = require("src.core.RoleId")
+local runtime_ports = require("src.core.ports.RuntimePorts")
+local role_id_utils = require("src.core.utils.RoleId")
 
 local function _resolve_player_id(player, i)
   return assert(role_id_utils.normalize(player.id), "missing player id: " .. tostring(i))

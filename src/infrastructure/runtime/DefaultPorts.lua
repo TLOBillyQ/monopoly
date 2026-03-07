@@ -1,5 +1,5 @@
 local default_ports = {}
-local number_utils = require("src.core.NumberUtils")
+local number_utils = require("src.core.utils.NumberUtils")
 local game_api_key = "Game" .. "API"
 local lua_api_key = "Lua" .. "API"
 

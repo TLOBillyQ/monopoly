@@ -1,9 +1,9 @@
 local gameplay_rules = require("src.core.config.GameplayRules")
-local number_utils = require("src.core.NumberUtils")
-local logger = require("src.core.Logger")
+local number_utils = require("src.core.utils.NumberUtils")
+local logger = require("src.core.utils.Logger")
 
-local runtime = require("src.presentation.api.UIRuntimePort")
-local host_runtime = require("src.presentation.api.HostRuntimePort")
+local runtime = require("src.presentation.adapter.UIRuntimePort")
+local host_runtime = require("src.presentation.adapter.HostRuntimePort")
 local registry = require("src.presentation.render.ActionAnimRegistry")
 local handlers = require("src.presentation.render.ActionAnimHandlers")
 local board_feedback = require("src.presentation.render.BoardFeedbackService")

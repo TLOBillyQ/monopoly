@@ -1,10 +1,10 @@
-local ui_view = require("src.presentation.api.UIViewService")
+local ui_view = require("src.presentation.adapter.UIViewService")
 local ui_event_bindings = require("src.presentation.interaction.UIEventBindings")
 local ui_intent_dispatcher = require("src.presentation.interaction.UIIntentDispatcher")
 local canvas_registry = require("src.presentation.canvas_runtime.CanvasRegistry")
 local local_actor_resolver = require("src.presentation.canvas_runtime.LocalActorResolver")
-local host_runtime = require("src.presentation.api.HostRuntimePort")
-local logger = require("src.core.Logger")
+local host_runtime = require("src.presentation.adapter.HostRuntimePort")
+local logger = require("src.core.utils.Logger")
 
 local router = {}
 

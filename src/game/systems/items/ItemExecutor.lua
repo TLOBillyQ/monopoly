@@ -2,7 +2,7 @@ local item_effects = require("src.game.systems.items.ItemPostEffects")
 local auto_play_port = require("src.game.ports.AutoPlayPort")
 local inventory = require("src.game.systems.items.ItemInventory")
 local gameplay_rules = require("src.core.config.GameplayRules")
-local action_anim_port = require("src.core.ActionAnimPort")
+local action_anim_port = require("src.core.ports.ActionAnimPort")
 local item_use_broadcast = require("src.game.systems.items.ItemUseBroadcast")
 
 local executor = {}

@@ -1,4 +1,4 @@
-local logger = require("src.core.Logger")
+local logger = require("src.core.utils.Logger")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local chance_cfg = require("Config.Generated.ChanceCards")
 local chance_resolver = require("src.game.systems.chance.ChanceResolver")

@@ -1,4 +1,4 @@
-local number_utils = require("src.core.NumberUtils")
+local number_utils = require("src.core.utils.NumberUtils")
 
 local turn_camera_policy = {}
 

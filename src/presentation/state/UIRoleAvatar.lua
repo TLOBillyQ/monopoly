@@ -1,5 +1,5 @@
-local number_utils = require("src.core.NumberUtils")
-local logger = require("src.core.Logger")
+local number_utils = require("src.core.utils.NumberUtils")
+local logger = require("src.core.utils.Logger")
 
 local role_avatar = {}
 local warned_values = {}

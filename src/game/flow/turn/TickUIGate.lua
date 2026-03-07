@@ -1,5 +1,5 @@
 local gameplay_rules = require("src.core.config.GameplayRules")
-local number_utils = require("src.core.NumberUtils")
+local number_utils = require("src.core.utils.NumberUtils")
 
 local tick_ui_gate = {}
 

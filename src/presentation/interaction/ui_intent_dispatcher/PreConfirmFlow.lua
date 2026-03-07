@@ -1,8 +1,8 @@
-local choice_openers = require("src.presentation.ui.choice_screen_service.openers")
-local choice_common = require("src.presentation.ui.choice_screen_service.common")
-local number_utils = require("src.core.NumberUtils")
-local ui_view = require("src.presentation.api.UIViewService")
-local runtime_state = require("src.core.RuntimeState")
+local choice_openers = require("src.presentation.widgets.choice_screen_service.openers")
+local choice_common = require("src.presentation.widgets.choice_screen_service.common")
+local number_utils = require("src.core.utils.NumberUtils")
+local ui_view = require("src.presentation.adapter.UIViewService")
+local runtime_state = require("src.core.runtime_facade.RuntimeState")
 
 local pre_confirm_flow = {}
 

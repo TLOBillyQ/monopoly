@@ -5,8 +5,8 @@ local movement = require("src.game.systems.movement.Movement")
 local bankruptcy_port = require("src.game.ports.BankruptcyPort")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
-local number_utils = require("src.core.NumberUtils")
-local action_anim_port = require("src.core.ActionAnimPort")
+local number_utils = require("src.core.utils.NumberUtils")
+local action_anim_port = require("src.core.ports.ActionAnimPort")
 local vehicle_catalog = require("src.core.config.VehicleCatalog")
 
 local common = {}

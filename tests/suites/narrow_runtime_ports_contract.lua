@@ -1,7 +1,7 @@
 local support = require("TestSupport")
 local _assert_eq = support.assert_eq
 
-local action_anim_port = require("src.core.ActionAnimPort")
+local action_anim_port = require("src.core.ports.ActionAnimPort")
 local turn_roll = require("src.game.flow.turn.TurnRoll")
 local turn_move = require("src.game.flow.turn.TurnMove")
 

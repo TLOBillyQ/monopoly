@@ -1,6 +1,6 @@
-local logger = require("src.core.Logger")
+local logger = require("src.core.utils.Logger")
 local ui_event_intents = require("src.presentation.interaction.UIEventIntents")
-local runtime_state = require("src.core.RuntimeState")
+local runtime_state = require("src.core.runtime_facade.RuntimeState")
 local nodes = require("src.presentation.canvas.remote_choice.nodes")
 
 local intents = {}

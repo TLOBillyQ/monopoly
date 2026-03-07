@@ -13,12 +13,12 @@ UI → Turn Management → (Player | Computer) → shared-mechanics → (state |
 | UI | `src/presentation/` |
 | Turn Management | `src/game/flow/` |
 | Player | 人类玩家路径：UI 发出 action → Turn Management `dispatch_action` |
-| Computer | `src/game/core/runtime/Agent.lua` |
+| Computer | `src/game/core/ai/Agent.lua` |
 | shared-mechanics | `src/game/systems/` + `src/game/ports/`（Port 契约） |
 | state | `src/game/core/player/`, `src/game/core/runtime/Game*.lua` |
 | config | `Config/Generated/`, `src/core/config/` |
 
-辅助层（不计入 7 组件）：`src/game/runtime/`（Port Adapter）、`src/app/bootstrap/`（装配）、`src/infrastructure/runtime/`（Eggy 宿主）、`src/core/`（跨层工具）。
+辅助层（不计入 7 组件）：`src/game/runtime/`（Port Adapter）、`src/game/turn_engine/`（deprecated/frozen 的历史执行器容器）、`src/game/scheduler/`（协程调度细节）、`src/app/bootstrap/`（装配）、`src/infrastructure/runtime/`（Eggy 宿主）、`src/core/`（跨层工具）。
 
 ## 已强制的边界
 

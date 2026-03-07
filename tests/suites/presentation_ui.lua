@@ -11,34 +11,34 @@ local constants = support.constants
 local choice_resolver = support.choice_resolver
 local gameplay_loop = support.gameplay_loop
 local turn_move = support.turn_move
-local event_handlers = require("src.presentation.api.UIEventHandlers")
+local event_handlers = require("src.presentation.adapter.UIEventHandlers")
 local paid_currency_bridge = require("src.game.systems.commerce.PaidCurrencyBridge")
 local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
-local runtime_port = require("src.presentation.api.UIRuntimePort")
+local runtime_port = require("src.presentation.adapter.UIRuntimePort")
 local ui_intent_dispatcher = require("src.presentation.interaction.UIIntentDispatcher")
-local choice_openers = require("src.presentation.ui.choice_screen_service.openers")
+local choice_openers = require("src.presentation.widgets.choice_screen_service.openers")
 local market_view = require("src.presentation.render.MarketView")
 local market_layout = require("src.presentation.shared.MarketLayout")
 local canvas_event_router = require("src.presentation.canvas_runtime.CanvasEventRouter")
-local ui_view = require("src.presentation.api.UIViewService")
+local ui_view = require("src.presentation.adapter.UIViewService")
 local ui_status_3d_layer = require("src.presentation.render.Status3DService")
 local action_anim = require("src.presentation.render.ActionAnim")
 local move_anim = require("src.presentation.render.MoveAnim")
-local turn_engine_cls = require("src.game.runtime.TurnEngine")
-local turn_effects = require("src.presentation.ui.UITurnEffects")
-local popup_renderer = require("src.presentation.ui.PopupRenderer")
-local market_modal_renderer = require("src.presentation.ui.MarketModalRenderer")
-local debug_ports_module = require("src.presentation.api.presentation_ports.DebugPorts")
+local turn_engine_cls = require("src.game.turn_engine.TurnEngine")
+local turn_effects = require("src.presentation.widgets.UITurnEffects")
+local popup_renderer = require("src.presentation.widgets.PopupRenderer")
+local market_modal_renderer = require("src.presentation.widgets.MarketModalRenderer")
+local debug_ports_module = require("src.presentation.adapter.presentation_ports.DebugPorts")
 local role_control_lock_policy = require("src.presentation.interaction.UIRoleControlLockPolicy")
 local ui_touch_policy = require("src.presentation.interaction.UITouchPolicy")
 local ui_choice_route_policy = require("src.presentation.interaction.UIChoiceRoutePolicy")
-local logger = require("src.core.Logger")
-local runtime_event_bridge = require("src.core.RuntimeEventBridge")
+local logger = require("src.core.utils.Logger")
+local runtime_event_bridge = require("src.core.runtime_facade.RuntimeEventBridge")
 local market_cfg = require("Config.Generated.Market")
 local runtime_constants = require("src.core.config.RuntimeConstants")
 local gameplay_rules = require("src.core.config.GameplayRules")
-local host_runtime = require("src.presentation.api.HostRuntimePort")
-local runtime_state = require("src.core.RuntimeState")
+local host_runtime = require("src.presentation.adapter.HostRuntimePort")
+local runtime_state = require("src.core.runtime_facade.RuntimeState")
 local target_choice_effects = require("src.presentation.render.TargetChoiceEffects")
 local vec3 = require("fixtures.vec3")
 
@@ -581,7 +581,7 @@ local function _test_ui_model_structure()
 end
 
 local function _test_ui_panel_clamps_negative_assets_to_zero()
-  local ui_panel = require("src.presentation.ui.UIPanel")
+  local ui_panel = require("src.presentation.widgets.UIPanel")
   local statuses = ui_panel.build_player_statuses({
     players = {
       {
@@ -1226,7 +1226,7 @@ local function _test_ui_intent_dispatcher_auto_button_honors_intent_actor_during
 end
 
 local function _test_ui_view_render_by_role_slots_are_isolated()
-  local main_view = require("src.presentation.api.UIViewService")
+  local main_view = require("src.presentation.adapter.UIViewService")
 
   local image_logs = {}
   local node_map = {}
@@ -1548,7 +1548,7 @@ local function _test_apply_input_lock_disables_always_show_controls_when_market_
 end
 
 local function _test_ui_view_render_auto_button_keeps_local_touch_when_unmapped_role_exists()
-  local main_view = require("src.presentation.api.UIViewService")
+  local main_view = require("src.presentation.adapter.UIViewService")
   local touch_logs = {}
   local state = {
     ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY", ["2001"] = "ICON2001" }),
@@ -1870,7 +1870,7 @@ local function _test_push_popup_sets_card_image_by_image_ref()
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
-    state.gameplay_loop_ports = require("src.presentation.api.PresentationPorts").build(state)
+    state.gameplay_loop_ports = require("src.presentation.adapter.PresentationPorts").build(state)
     ui_view.push_popup(state, {
       title = "道具卡",
       body = "测试",
@@ -1898,7 +1898,7 @@ local function _test_push_popup_hides_card_and_clears_image_when_missing()
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
-    state.gameplay_loop_ports = require("src.presentation.api.PresentationPorts").build(state)
+    state.gameplay_loop_ports = require("src.presentation.adapter.PresentationPorts").build(state)
     ui_view.push_popup(state, {
       title = "道具卡",
       body = "测试",
@@ -2077,7 +2077,7 @@ local function _test_popup_timeout_closes_even_when_input_blocked()
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
-    state.gameplay_loop_ports = require("src.presentation.api.PresentationPorts").build(state)
+    state.gameplay_loop_ports = require("src.presentation.adapter.PresentationPorts").build(state)
     ui_view.push_popup(state, {
       title = "道具卡",
       body = "测试",
@@ -2294,7 +2294,7 @@ local function _test_target_screen_uses_labels_only_and_keeps_projection_unmanag
     _assert_eq(nodes["位置-槽位7投影"].visible, true, "slot7 projection should not be managed on open")
     _assert_eq(nodes["位置-槽位7投影"].disabled, false, "slot7 projection touch state should not be managed on open")
 
-    local common = require("src.presentation.ui.choice_screen_service.common")
+    local common = require("src.presentation.widgets.choice_screen_service.common")
     common.hide_choice_screens(state.ui)
 
     _assert_eq(nodes["位置-槽位1文本"].visible, false, "hide_choice_screens should hide slot label")
@@ -2798,7 +2798,7 @@ local function _test_ui_event_router_rejects_action_log_without_role()
 end
 
 local function _test_secondary_confirm_copy_item_phase_selected_option()
-  local common = require("src.presentation.ui.choice_screen_service.common")
+  local common = require("src.presentation.widgets.choice_screen_service.common")
   local choice = {
     kind = "item_phase_choice",
     route_key = "base_inline",
@@ -2820,7 +2820,7 @@ local function _test_secondary_confirm_copy_item_phase_selected_option()
 end
 
 local function _test_secondary_confirm_copy_land_actions()
-  local common = require("src.presentation.ui.choice_screen_service.common")
+  local common = require("src.presentation.widgets.choice_screen_service.common")
   local choice = {
     kind = "landing_optional_effect",
     options = {
@@ -2862,7 +2862,7 @@ local function _test_secondary_confirm_copy_land_actions()
 end
 
 local function _test_secondary_confirm_copy_generic_pre_confirm()
-  local common = require("src.presentation.ui.choice_screen_service.common")
+  local common = require("src.presentation.widgets.choice_screen_service.common")
   local choice = {
     kind = "remote_dice_value",
     title = "遥控骰子",
@@ -2877,7 +2877,7 @@ local function _test_secondary_confirm_copy_generic_pre_confirm()
 end
 
 local function _test_secondary_confirm_prefers_usecase_confirm_copy()
-  local common = require("src.presentation.ui.choice_screen_service.common")
+  local common = require("src.presentation.widgets.choice_screen_service.common")
   local choice = {
     kind = "landing_optional_effect",
     confirm_title = "不会被读取",
@@ -4009,7 +4009,7 @@ local function _test_target_pick_prefers_explicit_owner_role_id()
 end
 
 local function _test_modal_presenter_market_same_choice_id_still_refreshes_market_panel()
-  local modal_presenter = require("src.presentation.ui.UIModalPresenter")
+  local modal_presenter = require("src.presentation.widgets.UIModalPresenter")
   local market_presenter = require("src.presentation.canvas.market.presenter")
   local target_choice_effects_local = require("src.presentation.render.TargetChoiceEffects")
   local canvas_store = require("src.presentation.canvas_runtime.CanvasStore")
@@ -4496,8 +4496,8 @@ local function _test_item_slot_refresh_resets_highlight_without_client_role()
 end
 
 local function _test_tick_skips_anim_when_no_anim()
-  local dirty_tracker = require("src.core.DirtyTracker")
-  local main_view = require("src.presentation.api.UIViewService")
+  local dirty_tracker = require("src.core.utils.DirtyTracker")
+  local main_view = require("src.presentation.adapter.UIViewService")
   local ui_model = require("src.presentation.state.UIModel")
   local board_view_mod = require("src.presentation.render.BoardRuntime")
 
@@ -5395,8 +5395,8 @@ local function _test_turn_effects_sync_restores_client_role_nil()
 end
 
 local function _test_tick_ui_sync_turn_switch_still_follows()
-  local dirty_tracker = require("src.core.DirtyTracker")
-  local main_view = require("src.presentation.api.UIViewService")
+  local dirty_tracker = require("src.core.utils.DirtyTracker")
+  local main_view = require("src.presentation.adapter.UIViewService")
   local ui_model = require("src.presentation.state.UIModel")
   local board_view_mod = require("src.presentation.render.BoardRuntime")
   local helper = { target_role_id = nil }
@@ -5505,7 +5505,7 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
 
   _with_patches(patches, function()
     runtime_event_bridge._reset_for_tests()
-    state.gameplay_loop_ports = require("src.presentation.api.PresentationPorts").build(state)
+    state.gameplay_loop_ports = require("src.presentation.adapter.PresentationPorts").build(state)
     gameplay_loop.tick(game, state, 0.1)
     runtime_event_bridge._reset_for_tests()
   end)
@@ -5518,8 +5518,8 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
 end
 
 local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailable()
-  local dirty_tracker = require("src.core.DirtyTracker")
-  local main_view = require("src.presentation.api.UIViewService")
+  local dirty_tracker = require("src.core.utils.DirtyTracker")
+  local main_view = require("src.presentation.adapter.UIViewService")
   local ui_model = require("src.presentation.state.UIModel")
   local board_view_mod = require("src.presentation.render.BoardRuntime")
   local helper = { target_role_id = nil }
@@ -5630,7 +5630,7 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
   _with_patches(patches, function()
     runtime_event_bridge._reset_for_tests()
     local ok, err = pcall(function()
-      state.gameplay_loop_ports = require("src.presentation.api.PresentationPorts").build(state)
+      state.gameplay_loop_ports = require("src.presentation.adapter.PresentationPorts").build(state)
       gameplay_loop.tick(game, state, 0.1)
     end)
     runtime_event_bridge._reset_for_tests()
@@ -5642,9 +5642,9 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
 end
 
 local function _test_ui_sync_defers_choice_modal_during_wait_action_anim()
-  local ui_view_service = require("src.presentation.api.UIViewService")
+  local ui_view_service = require("src.presentation.adapter.UIViewService")
   local ui_model = require("src.presentation.state.UIModel")
-  local ui_model_sync = require("src.presentation.api.presentation_ports.ui_sync.UIModelSync")
+  local ui_model_sync = require("src.presentation.adapter.presentation_ports.ui_sync.UIModelSync")
   local opened = 0
   local game = {
       turn = {
@@ -5703,9 +5703,9 @@ local function _test_ui_sync_defers_choice_modal_during_wait_action_anim()
 end
 
 local function _test_ui_sync_opens_choice_modal_after_wait_action_anim()
-  local ui_view_service = require("src.presentation.api.UIViewService")
+  local ui_view_service = require("src.presentation.adapter.UIViewService")
   local ui_model = require("src.presentation.state.UIModel")
-  local ui_model_sync = require("src.presentation.api.presentation_ports.ui_sync.UIModelSync")
+  local ui_model_sync = require("src.presentation.adapter.presentation_ports.ui_sync.UIModelSync")
   local opened = 0
   local game = {
     turn = {
@@ -5771,9 +5771,9 @@ local function _test_ui_sync_opens_choice_modal_after_wait_action_anim()
 end
 
 local function _test_ui_sync_defers_choice_modal_during_wait_move_anim()
-  local ui_view_service = require("src.presentation.api.UIViewService")
+  local ui_view_service = require("src.presentation.adapter.UIViewService")
   local ui_model = require("src.presentation.state.UIModel")
-  local ui_model_sync = require("src.presentation.api.presentation_ports.ui_sync.UIModelSync")
+  local ui_model_sync = require("src.presentation.adapter.presentation_ports.ui_sync.UIModelSync")
   local opened = 0
   local game = {
     turn = {
@@ -5832,7 +5832,7 @@ local function _test_ui_sync_defers_choice_modal_during_wait_move_anim()
 end
 
 local function _test_popup_defer_policy_queues_and_replays_in_order()
-  local modal_presenter = require("src.presentation.ui.UIModalPresenter")
+  local modal_presenter = require("src.presentation.widgets.UIModalPresenter")
   local popup_presenter = require("src.presentation.canvas.popup.presenter")
   local canvas = require("src.presentation.interaction.UICanvasCoordinator")
   local state = {
@@ -5959,7 +5959,7 @@ end
 
 local function _test_debug_ports_sync_restores_client_role_nil()
   local ui_event_state = require("src.presentation.interaction.UIEventState")
-  local ui_view_service = require("src.presentation.api.UIViewService")
+  local ui_view_service = require("src.presentation.adapter.UIViewService")
   local manager = { client_role = { stale = true } }
   local role1 = { id = 1, get_roleid = function() return 1 end }
   local role2 = { id = 2, get_roleid = function() return 2 end }
@@ -6006,7 +6006,7 @@ local function _test_debug_ports_sync_restores_client_role_nil()
 end
 
 local function _test_panel_avatar_uses_native_size_path()
-  local presenter = require("src.presentation.ui.UIPanelPresenter")
+  local presenter = require("src.presentation.widgets.UIPanelPresenter")
   local native_size_calls = 0
   local client_role = { stale = true }
   local state = {
@@ -6068,8 +6068,8 @@ end
 
 local function _new_cash_delta_presenter_env(opts)
   opts = opts or {}
-  local presenter = require("src.presentation.ui.UIPanelPresenter")
-  local number_utils = require("src.core.NumberUtils")
+  local presenter = require("src.presentation.widgets.UIPanelPresenter")
+  local number_utils = require("src.core.utils.NumberUtils")
   local state = {
     ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY_AVATAR" }),
     ui = {
@@ -6167,7 +6167,7 @@ local function _new_cash_delta_presenter_env(opts)
 end
 
 local function _test_panel_cash_delta_shows_negative_and_auto_hides()
-  local runtime_ports = require("src.core.RuntimePorts")
+  local runtime_ports = require("src.core.ports.RuntimePorts")
   local gameplay_rules = require("src.core.config.GameplayRules")
   local env = _new_cash_delta_presenter_env()
   local scheduled = {}
@@ -6193,7 +6193,7 @@ local function _test_panel_cash_delta_shows_negative_and_auto_hides()
 end
 
 local function _test_panel_cash_delta_shows_positive_and_auto_hides()
-  local runtime_ports = require("src.core.RuntimePorts")
+  local runtime_ports = require("src.core.ports.RuntimePorts")
   local env = _new_cash_delta_presenter_env()
   local scheduled = {}
 
@@ -6217,7 +6217,7 @@ local function _test_panel_cash_delta_shows_positive_and_auto_hides()
 end
 
 local function _test_panel_cash_delta_keeps_latest_when_changes_are_continuous()
-  local runtime_ports = require("src.core.RuntimePorts")
+  local runtime_ports = require("src.core.ports.RuntimePorts")
   local env = _new_cash_delta_presenter_env()
   local scheduled = {}
 
@@ -6246,7 +6246,7 @@ local function _test_panel_cash_delta_keeps_latest_when_changes_are_continuous()
 end
 
 local function _test_panel_cash_delta_hides_when_value_unchanged()
-  local runtime_ports = require("src.core.RuntimePorts")
+  local runtime_ports = require("src.core.ports.RuntimePorts")
   local env = _new_cash_delta_presenter_env()
   local scheduled = {}
 
@@ -6267,7 +6267,7 @@ local function _test_panel_cash_delta_hides_when_value_unchanged()
 end
 
 local function _test_panel_cash_delta_missing_node_is_safe()
-  local runtime_ports = require("src.core.RuntimePorts")
+  local runtime_ports = require("src.core.ports.RuntimePorts")
   local env = _new_cash_delta_presenter_env({ missing_delta_node = true })
   local scheduled = {}
   local ok, err = pcall(function()

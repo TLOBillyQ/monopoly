@@ -1,8 +1,8 @@
 local constants = require("Config.Generated.Constants")
 local gameplay_rules = require("src.core.config.GameplayRules")
-local number_utils = require("src.core.NumberUtils")
+local number_utils = require("src.core.utils.NumberUtils")
 local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
-local choice_contract = require("src.core.ChoiceContract")
+local choice_contract = require("src.core.choice.ChoiceContract")
 
 local tick_choice_timeout = {}
 

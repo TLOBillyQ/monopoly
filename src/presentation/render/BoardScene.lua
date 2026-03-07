@@ -1,5 +1,5 @@
 local board_scene = {}
-local runtime_ports = require("src.core.RuntimePorts")
+local runtime_ports = require("src.core.ports.RuntimePorts")
 
 function board_scene.init(state, map_cfg, game)
   assert(state ~= nil, "missing state")

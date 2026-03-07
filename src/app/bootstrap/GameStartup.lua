@@ -1,15 +1,15 @@
 local auto_runner = require("src.game.flow.turn.AutoRunner")
 local board_view = require("src.presentation.render.BoardRuntime")
 local game = require("src.game.core.runtime.Game")
-local ui_view = require("src.presentation.api.UIViewService")
+local ui_view = require("src.presentation.adapter.UIViewService")
 local tiles_cfg = require("Config.Generated.Tiles")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local test_profile_bootstrap = require("src.app.testing.TestProfileBootstrap")
 local test_profile_resolver = require("src.app.testing.TestProfileResolver")
-local logger = require("src.core.Logger")
-local runtime_state = require("src.core.RuntimeState")
-local runtime_ports = require("src.core.RuntimePorts")
-local role_id_utils = require("src.core.RoleId")
+local logger = require("src.core.utils.Logger")
+local runtime_state = require("src.core.runtime_facade.RuntimeState")
+local runtime_ports = require("src.core.ports.RuntimePorts")
+local role_id_utils = require("src.core.utils.RoleId")
 
 local max_player_count = 4
 

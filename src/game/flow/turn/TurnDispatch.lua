@@ -1,11 +1,11 @@
-local logger = require("src.core.Logger")
-local number_utils = require("src.core.NumberUtils")
+local logger = require("src.core.utils.Logger")
+local number_utils = require("src.core.utils.NumberUtils")
 local item_slot_data = require("src.game.flow.turn.ItemSlotData")
 local validator = require("src.game.flow.turn.TurnDispatchValidator")
 local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
-local runtime_state = require("src.core.RuntimeState")
+local runtime_state = require("src.core.runtime_facade.RuntimeState")
 local market_service = require("src.game.systems.market.MarketService")
-local role_id_utils = require("src.core.RoleId")
+local role_id_utils = require("src.core.utils.RoleId")
 
 local turn_dispatch = {}
 

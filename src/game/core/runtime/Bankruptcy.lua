@@ -1,5 +1,5 @@
-local logger = require("src.core.Logger")
-local runtime_ports = require("src.core.RuntimePorts")
+local logger = require("src.core.utils.Logger")
+local runtime_ports = require("src.core.ports.RuntimePorts")
 local inventory = require("src.game.systems.items.ItemInventory")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 

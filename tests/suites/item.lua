@@ -15,7 +15,7 @@ local land_choice_specs = require("src.game.systems.land.LandChoiceSpecs")
 local item_phase = require("src.game.systems.items.ItemPhase")
 local roadblock = require("src.game.systems.items.ItemRoadblock")
 local steal = require("src.game.systems.items.ItemSteal")
-local runtime_event_bridge = require("src.core.RuntimeEventBridge")
+local runtime_event_bridge = require("src.core.runtime_facade.RuntimeEventBridge")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 
 local function _install_narrow_ports(game, ui_port)

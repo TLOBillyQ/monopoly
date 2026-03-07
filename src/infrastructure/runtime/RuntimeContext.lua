@@ -1,9 +1,9 @@
 local runtime_constants = require("src.core.config.RuntimeConstants")
-local runtime_event_bridge = require("src.core.RuntimeEventBridge")
-local logger = require("src.core.Logger")
-local runtime_editor_exports = require("src.core.RuntimeEditorExports")
+local runtime_event_bridge = require("src.core.runtime_facade.RuntimeEventBridge")
+local logger = require("src.core.utils.Logger")
+local runtime_editor_exports = require("src.core.runtime_facade.RuntimeEditorExports")
 local vehicle_feature = require("src.game.systems.vehicle.VehicleFeature")
-local number_utils = require("src.core.NumberUtils")
+local number_utils = require("src.core.utils.NumberUtils")
 require("Config.RuntimeRefs")
 
 local runtime_context = {}

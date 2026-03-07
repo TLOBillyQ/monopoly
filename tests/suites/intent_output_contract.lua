@@ -3,7 +3,7 @@ local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
 local intent_output_port = require("src.game.ports.IntentOutputPort")
-local intent_output_adapter = require("src.game.flow.ports.IntentOutputAdapter")
+local intent_output_adapter = require("src.game.flow.output_adapters.IntentOutputAdapter")
 local gameplay_loop = require("src.game.flow.turn.GameplayLoop")
 local paid_currency_bridge = require("src.game.systems.commerce.PaidCurrencyBridge")
 local market_purchase = require("src.game.systems.market.service.Purchase")

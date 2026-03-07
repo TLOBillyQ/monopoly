@@ -1,5 +1,5 @@
 local prefab = require("Data.Prefab")
-local host_runtime = require("src.presentation.api.HostRuntimePort")
+local host_runtime = require("src.presentation.adapter.HostRuntimePort")
 
 local building_effects = {}
 

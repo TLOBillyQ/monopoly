@@ -1,5 +1,5 @@
-local runtime_context = require("src.core.RuntimeContext")
-local runtime_ports = require("src.core.RuntimePorts")
+local runtime_context = require("src.core.runtime_facade.RuntimeContext")
+local runtime_ports = require("src.core.ports.RuntimePorts")
 local runtime_global_aliases = require("src.app.bootstrap.runtime_install.RuntimeGlobalAliases")
 local runtime_port_defaults = require("src.app.bootstrap.runtime_install.RuntimePortDefaults")
 local config_sanity = require("src.core.config.ConfigSanity")
@@ -35,7 +35,7 @@ function M.install(opts)
 
   runtime_ports.configure(runtime_port_defaults.build())
   require "src.game.core.runtime.Bankruptcy"
-  require "src.game.core.runtime.Agent"
+  require "src.game.core.ai.Agent"
   require "src.game.core.runtime.GameVictory"
   require "src.game.core.runtime.CompositionRoot"
 end

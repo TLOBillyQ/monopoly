@@ -1,4 +1,4 @@
-local panel_presenter = require("src.presentation.ui.UIPanelPresenter")
+local panel_presenter = require("src.presentation.widgets.UIPanelPresenter")
 
 local presenter = {}
 

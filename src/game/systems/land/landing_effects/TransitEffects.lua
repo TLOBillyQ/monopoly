@@ -1,10 +1,10 @@
-local logger = require("src.core.Logger")
+local logger = require("src.core.utils.Logger")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local constants = require("Config.Generated.Constants")
 local inventory = require("src.game.systems.items.ItemInventory")
 local landing_presenter = require("src.game.systems.land.LandingPresenter")
 local steal = require("src.game.systems.items.ItemSteal")
-local number_utils = require("src.core.NumberUtils")
+local number_utils = require("src.core.utils.NumberUtils")
 
 local popup_show_seconds = gameplay_rules.popup_auto_close_seconds or 1.0
 

@@ -1,12 +1,12 @@
-local logger = require("src.core.Logger")
-local runtime = require("src.presentation.api.UIRuntimePort")
-local ui_view = require("src.presentation.api.UIViewService")
+local logger = require("src.core.utils.Logger")
+local runtime = require("src.presentation.adapter.UIRuntimePort")
+local ui_view = require("src.presentation.adapter.UIViewService")
 local canvas = require("src.presentation.interaction.UICanvasCoordinator")
 local ui_events = require("src.presentation.shared.UIEvents")
 local ui_event_state = require("src.presentation.interaction.UIEventState")
 local role_context = require("src.presentation.interaction.ui_intent_dispatcher.RoleContext")
 local target_choice_effects = require("src.presentation.render.TargetChoiceEffects")
-local role_id_utils = require("src.core.RoleId")
+local role_id_utils = require("src.core.utils.RoleId")
 
 local view_command_dispatcher = {}
 

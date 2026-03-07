@@ -1,6 +1,6 @@
 local ui_events = require("src.presentation.shared.UIEvents")
-local number_utils = require("src.core.NumberUtils")
-local host_runtime = require("src.presentation.api.HostRuntimePort")
+local number_utils = require("src.core.utils.NumberUtils")
+local host_runtime = require("src.presentation.adapter.HostRuntimePort")
 
 local dice = {}
 

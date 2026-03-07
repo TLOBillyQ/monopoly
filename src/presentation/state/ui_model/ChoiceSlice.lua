@@ -1,5 +1,5 @@
-local choice_view = require("src.presentation.ui.UIChoice")
-local runtime_state = require("src.core.RuntimeState")
+local choice_view = require("src.presentation.widgets.UIChoice")
+local runtime_state = require("src.core.runtime_facade.RuntimeState")
 
 local choice_slice = {}
 
