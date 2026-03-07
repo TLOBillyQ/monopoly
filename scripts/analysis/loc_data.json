@@ -1,0 +1,814 @@
+[
+  {
+    "hash": "e76b0d04",
+    "date": "2026-03-05 17:13:45 +0800",
+    "message": "Document development feedback report",
+    "loc": 19932,
+    "files": 270
+  },
+  {
+    "hash": "01a73a6a",
+    "date": "2026-03-05 18:40:43 +0800",
+    "message": "Create swarm plan from research",
+    "loc": 19932,
+    "files": 270
+  },
+  {
+    "hash": "2e37b8a2",
+    "date": "2026-03-05 18:54:07 +0800",
+    "message": "feat: land full feedback fixes and regression stabilization",
+    "loc": 20043,
+    "files": 270
+  },
+  {
+    "hash": "88ff836e",
+    "date": "2026-03-05 19:11:45 +0800",
+    "message": "Update deploy paths for 大富翁",
+    "loc": 20043,
+    "files": 270
+  },
+  {
+    "hash": "00cc5d2c",
+    "date": "2026-03-05 19:13:34 +0800",
+    "message": "Add player coin usage labels",
+    "loc": 20043,
+    "files": 270
+  },
+  {
+    "hash": "82633707",
+    "date": "2026-03-05 19:24:29 +0800",
+    "message": "Add player cash delta plan",
+    "loc": 20043,
+    "files": 270
+  },
+  {
+    "hash": "69b7886c",
+    "date": "2026-03-05 20:46:42 +0800",
+    "message": "feat: implement UIPanelPresenter with tests",
+    "loc": 20151,
+    "files": 270
+  },
+  {
+    "hash": "a5e89c98",
+    "date": "2026-03-05 21:18:35 +0800",
+    "message": "chore: sync plan/research and market tests",
+    "loc": 20151,
+    "files": 270
+  },
+  {
+    "hash": "bc34a839",
+    "date": "2026-03-05 21:53:50 +0800",
+    "message": "test(profile): remove startup items from market staging",
+    "loc": 20147,
+    "files": 270
+  },
+  {
+    "hash": "6bc0d5c0",
+    "date": "2026-03-05 22:01:09 +0800",
+    "message": "build: export release generated config back to repo before deploy",
+    "loc": 20147,
+    "files": 270
+  },
+  {
+    "hash": "2a44b7ed",
+    "date": "2026-03-05 22:04:30 +0800",
+    "message": "chore: update tiles sheet and regenerate release configs",
+    "loc": 20147,
+    "files": 270
+  },
+  {
+    "hash": "b46863d0",
+    "date": "2026-03-05 22:05:52 +0800",
+    "message": "Commit map and config updates",
+    "loc": 20147,
+    "files": 270
+  },
+  {
+    "hash": "fbddb725",
+    "date": "2026-03-05 23:08:44 +0800",
+    "message": "refactor(market): switch paid purchase to goods panel + callback fulfillment",
+    "loc": 20267,
+    "files": 270
+  },
+  {
+    "hash": "5fbfb6dc",
+    "date": "2026-03-05 23:09:14 +0800",
+    "message": "test(market): cover goods mapping and purchase callback flow",
+    "loc": 20267,
+    "files": 270
+  },
+  {
+    "hash": "7e0ccd2f",
+    "date": "2026-03-05 23:14:06 +0800",
+    "message": "fix(ui): unify avatar sizing and stabilize release-trimmed regression",
+    "loc": 20368,
+    "files": 270
+  },
+  {
+    "hash": "dac60e6b",
+    "date": "2026-03-05 23:59:03 +0800",
+    "message": "chore(config): update generated release market and vehicles",
+    "loc": 20368,
+    "files": 270
+  },
+  {
+    "hash": "6a09ca13",
+    "date": "2026-03-06 08:51:19 +0800",
+    "message": "feat(roadblock): split ui and auto targeting",
+    "loc": 20413,
+    "files": 270
+  },
+  {
+    "hash": "70561636",
+    "date": "2026-03-06 09:24:25 +0800",
+    "message": "test(startup): add chance-card profile and remove release whitelist",
+    "loc": 20404,
+    "files": 269
+  },
+  {
+    "hash": "a7622c08",
+    "date": "2026-03-06 09:55:56 +0800",
+    "message": "refactor(market): keep paid market open and trim vehicle tests",
+    "loc": 20477,
+    "files": 269
+  },
+  {
+    "hash": "08ba2a32",
+    "date": "2026-03-06 10:16:04 +0800",
+    "message": "fix(tax): confirm tax-free card use in tax office",
+    "loc": 20542,
+    "files": 269
+  },
+  {
+    "hash": "5d870a28",
+    "date": "2026-03-06 11:58:11 +0800",
+    "message": "docs(agents): update plan and research for delivery sprint",
+    "loc": 20542,
+    "files": 269
+  },
+  {
+    "hash": "2918a4ed",
+    "date": "2026-03-06 13:33:25 +0800",
+    "message": "Fix mine arming and pre-action availability",
+    "loc": 20587,
+    "files": 269
+  },
+  {
+    "hash": "58e2ce17",
+    "date": "2026-03-06 13:35:20 +0800",
+    "message": "Hide rent cards outside valid landing contexts",
+    "loc": 20604,
+    "files": 269
+  },
+  {
+    "hash": "3bc36fdd",
+    "date": "2026-03-06 13:38:19 +0800",
+    "message": "Ignore stale move_dir on fresh rolls",
+    "loc": 20604,
+    "files": 269
+  },
+  {
+    "hash": "67b53427",
+    "date": "2026-03-06 13:41:31 +0800",
+    "message": "Skip detained turns without blocking",
+    "loc": 20637,
+    "files": 269
+  },
+  {
+    "hash": "1f3c98a7",
+    "date": "2026-03-06 13:42:38 +0800",
+    "message": "Prioritize market close over always-show controls",
+    "loc": 20638,
+    "files": 269
+  },
+  {
+    "hash": "ed89f991",
+    "date": "2026-03-06 13:45:53 +0800",
+    "message": "Broadcast used items to all players",
+    "loc": 20677,
+    "files": 270
+  },
+  {
+    "hash": "8e542881",
+    "date": "2026-03-06 13:49:11 +0800",
+    "message": "Broadcast rent and tax cards to all players",
+    "loc": 20681,
+    "files": 270
+  },
+  {
+    "hash": "d5bbdcf4",
+    "date": "2026-03-06 13:49:34 +0800",
+    "message": "Update research execution plan status",
+    "loc": 20681,
+    "files": 270
+  },
+  {
+    "hash": "6b9cb746",
+    "date": "2026-03-06 14:19:58 +0800",
+    "message": "Update Agent landing facing",
+    "loc": 20746,
+    "files": 271
+  },
+  {
+    "hash": "cc04459a",
+    "date": "2026-03-06 14:26:09 +0800",
+    "message": "chore: align macOS deploy defaults with windows",
+    "loc": 20746,
+    "files": 271
+  },
+  {
+    "hash": "a04c44d0",
+    "date": "2026-03-06 14:27:10 +0800",
+    "message": "Add market item selection frames",
+    "loc": 20777,
+    "files": 271
+  },
+  {
+    "hash": "f01763a8",
+    "date": "2026-03-06 14:29:13 +0800",
+    "message": "Align macOS deploy defaults",
+    "loc": 20777,
+    "files": 271
+  },
+  {
+    "hash": "aed50b18",
+    "date": "2026-03-06 14:42:09 +0800",
+    "message": "test: add chance backward intersection startup profile",
+    "loc": 20809,
+    "files": 271
+  },
+  {
+    "hash": "f2e8f512",
+    "date": "2026-03-06 15:12:20 +0800",
+    "message": "feat: fill roadblock target slots by nearest tiles",
+    "loc": 20831,
+    "files": 271
+  },
+  {
+    "hash": "1c513278",
+    "date": "2026-03-06 15:12:34 +0800",
+    "message": "Update roadblock UI candidate logic",
+    "loc": 20831,
+    "files": 271
+  },
+  {
+    "hash": "0a7aec37",
+    "date": "2026-03-06 15:39:45 +0800",
+    "message": "feat: auto host inactive players after afk timeout",
+    "loc": 20943,
+    "files": 271
+  },
+  {
+    "hash": "a59f4fac",
+    "date": "2026-03-06 15:39:46 +0800",
+    "message": "docs: add audio visual delivery plan",
+    "loc": 20943,
+    "files": 271
+  },
+  {
+    "hash": "1fd44ff1",
+    "date": "2026-03-06 15:42:12 +0800",
+    "message": "新增音效特效需求计划」} Project? wait we need 1",
+    "loc": 20943,
+    "files": 271
+  },
+  {
+    "hash": "07504500",
+    "date": "2026-03-06 15:45:03 +0800",
+    "message": "feat: add cancel option handling for choice auto policy during timeout",
+    "loc": 20949,
+    "files": 271
+  },
+  {
+    "hash": "14372fac",
+    "date": "2026-03-06 16:44:32 +0800",
+    "message": "scripts: support multiple deploy target paths",
+    "loc": 20949,
+    "files": 271
+  },
+  {
+    "hash": "1a14ef35",
+    "date": "2026-03-06 16:45:13 +0800",
+    "message": "feat(feedback): add board feedback audio and sfx routing",
+    "loc": 21481,
+    "files": 274
+  },
+  {
+    "hash": "00c50409",
+    "date": "2026-03-06 16:45:30 +0800",
+    "message": "refactor(ui): move runtime image refs under images",
+    "loc": 21489,
+    "files": 274
+  },
+  {
+    "hash": "a5d81609",
+    "date": "2026-03-06 16:45:42 +0800",
+    "message": "docs(plan): update audio feedback execution status",
+    "loc": 21489,
+    "files": 274
+  },
+  {
+    "hash": "ffe4b295",
+    "date": "2026-03-06 16:51:43 +0800",
+    "message": "refactor(currency): streamline paid currency handling and update test cases",
+    "loc": 21275,
+    "files": 274
+  },
+  {
+    "hash": "f132040d",
+    "date": "2026-03-06 16:52:47 +0800",
+    "message": "feat: add sound effect ID reference table for audio and visual effects",
+    "loc": 21275,
+    "files": 274
+  },
+  {
+    "hash": "5edc96e9",
+    "date": "2026-03-06 17:29:48 +0800",
+    "message": "feat: update audio and effect references in runtime configuration and enhance validation",
+    "loc": 21308,
+    "files": 274
+  },
+  {
+    "hash": "bfde25bf",
+    "date": "2026-03-06 18:14:57 +0800",
+    "message": "Fix SFX parameter contract and trim debug logs",
+    "loc": 21168,
+    "files": 274
+  },
+  {
+    "hash": "682f5c2c",
+    "date": "2026-03-06 18:22:12 +0800",
+    "message": "Refine event action log timeline",
+    "loc": 21206,
+    "files": 274
+  },
+  {
+    "hash": "9675137c",
+    "date": "2026-03-06 18:46:17 +0800",
+    "message": "feat: Implement AFK tracking improvements and related tests",
+    "loc": 21243,
+    "files": 274
+  },
+  {
+    "hash": "acc52b04",
+    "date": "2026-03-06 18:53:01 +0800",
+    "message": "fix(feedback): normalize sfx runtime params",
+    "loc": 21384,
+    "files": 274
+  },
+  {
+    "hash": "3ec34345",
+    "date": "2026-03-06 18:55:29 +0800",
+    "message": "feat: Add logging for AFK timeout events in gameplay loop",
+    "loc": 21385,
+    "files": 274
+  },
+  {
+    "hash": "e8061152",
+    "date": "2026-03-06 18:58:03 +0800",
+    "message": "Fix play_sfx_by_key param errors",
+    "loc": 21408,
+    "files": 274
+  },
+  {
+    "hash": "c99745a0",
+    "date": "2026-03-06 19:54:08 +0800",
+    "message": "refactor: Revise architecture review document to align with Clean Architecture principles",
+    "loc": 21408,
+    "files": 274
+  },
+  {
+    "hash": "d54928f3",
+    "date": "2026-03-06 20:02:03 +0800",
+    "message": "refactor: Enhance architecture review document with detailed evaluations and actionable recommendations",
+    "loc": 21408,
+    "files": 274
+  },
+  {
+    "hash": "910d10d1",
+    "date": "2026-03-06 20:23:34 +0800",
+    "message": "refactor: Finalize multi-model architecture review with 6-phase roadmap",
+    "loc": 21408,
+    "files": 274
+  },
+  {
+    "hash": "71a5f43d",
+    "date": "2026-03-06 20:24:27 +0800",
+    "message": "refactor: Remove outdated concept analysis document for clarity",
+    "loc": 21408,
+    "files": 274
+  },
+  {
+    "hash": "a0fcf92a",
+    "date": "2026-03-06 20:39:09 +0800",
+    "message": "test: add architecture guardrails baseline",
+    "loc": 21408,
+    "files": 274
+  },
+  {
+    "hash": "86376a78",
+    "date": "2026-03-06 20:48:11 +0800",
+    "message": "refactor: route gameplay ui writes through output port",
+    "loc": 21585,
+    "files": 275
+  },
+  {
+    "hash": "21745c2c",
+    "date": "2026-03-06 20:52:48 +0800",
+    "message": "refactor: extract animation gate port",
+    "loc": 21598,
+    "files": 275
+  },
+  {
+    "hash": "a5aa1713",
+    "date": "2026-03-06 21:01:07 +0800",
+    "message": "refactor: inject logger host runtime hooks",
+    "loc": 21645,
+    "files": 275
+  },
+  {
+    "hash": "4961a77b",
+    "date": "2026-03-06 21:10:14 +0800",
+    "message": "refactor: decouple core runtime defaults from host globals",
+    "loc": 21667,
+    "files": 275
+  },
+  {
+    "hash": "b23f14cf",
+    "date": "2026-03-06 21:12:12 +0800",
+    "message": "refactor: decouple runtime editor exports from host globals",
+    "loc": 21674,
+    "files": 275
+  },
+  {
+    "hash": "620cb40c",
+    "date": "2026-03-06 21:19:09 +0800",
+    "message": "refactor: move runtime global aliases to bootstrap",
+    "loc": 21682,
+    "files": 275
+  },
+  {
+    "hash": "7027e1b8",
+    "date": "2026-03-06 21:22:04 +0800",
+    "message": "refactor: finish core runtime host extraction",
+    "loc": 21685,
+    "files": 275
+  },
+  {
+    "hash": "b0ed97c7",
+    "date": "2026-03-06 21:39:09 +0800",
+    "message": "refactor: extract paid purchase gateway",
+    "loc": 21704,
+    "files": 276
+  },
+  {
+    "hash": "c5226fcf",
+    "date": "2026-03-06 21:43:09 +0800",
+    "message": "fix: stabilize paid purchase gateway callback flow",
+    "loc": 21707,
+    "files": 276
+  },
+  {
+    "hash": "a1afed81",
+    "date": "2026-03-06 21:46:20 +0800",
+    "message": "refactor: move market paid choice refresh into choice service",
+    "loc": 21708,
+    "files": 276
+  },
+  {
+    "hash": "ea8a7088",
+    "date": "2026-03-06 21:53:56 +0800",
+    "message": "refactor: extract market fulfillment service",
+    "loc": 21706,
+    "files": 277
+  },
+  {
+    "hash": "9be7c703",
+    "date": "2026-03-06 21:58:27 +0800",
+    "message": "refactor: extract market purchase policy",
+    "loc": 21722,
+    "files": 278
+  },
+  {
+    "hash": "7beb97b5",
+    "date": "2026-03-06 22:06:22 +0800",
+    "message": "refactor: externalize market feedback and confirm flags",
+    "loc": 21738,
+    "files": 279
+  },
+  {
+    "hash": "1323bfe9",
+    "date": "2026-03-06 22:12:14 +0800",
+    "message": "refactor: move confirm copy into use case output",
+    "loc": 21801,
+    "files": 279
+  },
+  {
+    "hash": "21abb24e",
+    "date": "2026-03-06 22:13:34 +0800",
+    "message": "refactor: expose item phase confirm copy",
+    "loc": 21809,
+    "files": 279
+  },
+  {
+    "hash": "6f5b6c30",
+    "date": "2026-03-06 22:17:00 +0800",
+    "message": "refactor: encode item phase slot interaction flags",
+    "loc": 21832,
+    "files": 279
+  },
+  {
+    "hash": "bca3a58c",
+    "date": "2026-03-06 22:20:37 +0800",
+    "message": "refactor: remove item phase ui fallback",
+    "loc": 21763,
+    "files": 279
+  },
+  {
+    "hash": "746bbc22",
+    "date": "2026-03-06 22:22:49 +0800",
+    "message": "refactor: remove secondary confirm copy fallbacks",
+    "loc": 21723,
+    "files": 279
+  },
+  {
+    "hash": "24146afa",
+    "date": "2026-03-06 22:24:57 +0800",
+    "message": "refactor: make secondary confirm routes explicit",
+    "loc": 21710,
+    "files": 279
+  },
+  {
+    "hash": "d86a80c5",
+    "date": "2026-03-06 22:31:23 +0800",
+    "message": "refactor: externalize choice route defaults",
+    "loc": 21703,
+    "files": 279
+  },
+  {
+    "hash": "8cce86ef",
+    "date": "2026-03-06 22:37:03 +0800",
+    "message": "refactor: make base inline routes explicit",
+    "loc": 21701,
+    "files": 279
+  },
+  {
+    "hash": "5cfacac3",
+    "date": "2026-03-06 22:40:58 +0800",
+    "message": "refactor: extract market choice outcome coordinator",
+    "loc": 21715,
+    "files": 280
+  },
+  {
+    "hash": "d295ebda",
+    "date": "2026-03-06 22:49:11 +0800",
+    "message": "refactor: remove turn decision ui state backread",
+    "loc": 21729,
+    "files": 280
+  },
+  {
+    "hash": "29530f31",
+    "date": "2026-03-06 22:51:19 +0800",
+    "message": "refactor: extract local market purchase flow",
+    "loc": 21741,
+    "files": 281
+  },
+  {
+    "hash": "b1f06095",
+    "date": "2026-03-06 22:58:11 +0800",
+    "message": "refactor: route popups through popup port",
+    "loc": 21778,
+    "files": 281
+  },
+  {
+    "hash": "55ae8f34",
+    "date": "2026-03-06 23:01:46 +0800",
+    "message": "refactor: migrate popup adapters to popup port",
+    "loc": 21800,
+    "files": 281
+  },
+  {
+    "hash": "a98ebacc",
+    "date": "2026-03-06 23:06:03 +0800",
+    "message": "refactor: remove item phase ui port dependency",
+    "loc": 21799,
+    "files": 281
+  },
+  {
+    "hash": "66cf0747",
+    "date": "2026-03-06 23:09:50 +0800",
+    "message": "refactor: route tile upgrade feedback through port",
+    "loc": 21836,
+    "files": 281
+  },
+  {
+    "hash": "cab0a497",
+    "date": "2026-03-06 23:12:29 +0800",
+    "message": "refactor: extract paid market fulfillment flow",
+    "loc": 21843,
+    "files": 282
+  },
+  {
+    "hash": "542e2921",
+    "date": "2026-03-07 00:05:56 +0800",
+    "message": "refactor: remove gameplay ui_port runtime dto",
+    "loc": 21819,
+    "files": 282
+  },
+  {
+    "hash": "0fb0618f",
+    "date": "2026-03-07 00:11:02 +0800",
+    "message": "refactor: split market choice session updater",
+    "loc": 21824,
+    "files": 283
+  },
+  {
+    "hash": "bad3e168",
+    "date": "2026-03-07 00:42:04 +0800",
+    "message": "refactor: finish choice protocol and boundary docs",
+    "loc": 21877,
+    "files": 283
+  },
+  {
+    "hash": "295d945f",
+    "date": "2026-03-07 01:20:15 +0800",
+    "message": "docs: refresh architecture research and plan",
+    "loc": 21877,
+    "files": 283
+  },
+  {
+    "hash": "7dc0e545",
+    "date": "2026-03-07 01:24:25 +0800",
+    "message": "refactor: move market paid adapter to outer layer",
+    "loc": 21878,
+    "files": 284
+  },
+  {
+    "hash": "83889926",
+    "date": "2026-03-07 01:26:42 +0800",
+    "message": "refactor: route market payments through port",
+    "loc": 21910,
+    "files": 285
+  },
+  {
+    "hash": "a70fa237",
+    "date": "2026-03-07 01:30:06 +0800",
+    "message": "refactor: split legacy mirror from output port",
+    "loc": 21953,
+    "files": 286
+  },
+  {
+    "hash": "edf7eaa7",
+    "date": "2026-03-07 01:32:08 +0800",
+    "message": "refactor: centralize choice explicit contract",
+    "loc": 21982,
+    "files": 287
+  },
+  {
+    "hash": "0ca04eed",
+    "date": "2026-03-07 01:36:38 +0800",
+    "message": "refactor: enforce explicit choice ownership",
+    "loc": 21978,
+    "files": 287
+  },
+  {
+    "hash": "d8a91c5b",
+    "date": "2026-03-07 01:40:28 +0800",
+    "message": "refactor: remove remaining payment and ui_port fallbacks",
+    "loc": 21968,
+    "files": 287
+  },
+  {
+    "hash": "e4cbd418",
+    "date": "2026-03-07 10:49:16 +0800",
+    "message": "Rewrite Clean Architecture report",
+    "loc": 21968,
+    "files": 287
+  },
+  {
+    "hash": "a4ed8447",
+    "date": "2026-03-07 11:08:33 +0800",
+    "message": "Rewrite Clean Architecture plan",
+    "loc": 21968,
+    "files": 287
+  },
+  {
+    "hash": "8397fa4b",
+    "date": "2026-03-07 11:45:06 +0800",
+    "message": "refactor: decouple systems from flow intent dispatch",
+    "loc": 22015,
+    "files": 289
+  },
+  {
+    "hash": "46982255",
+    "date": "2026-03-07 11:45:22 +0800",
+    "message": "refactor: route ui runtime state through RuntimeState",
+    "loc": 22059,
+    "files": 289
+  },
+  {
+    "hash": "a2a29757",
+    "date": "2026-03-07 11:45:30 +0800",
+    "message": "refactor: remove ui_port fallback and extract runtime adapters",
+    "loc": 22067,
+    "files": 292
+  },
+  {
+    "hash": "f678da15",
+    "date": "2026-03-07 11:45:45 +0800",
+    "message": "docs: record clean architecture migration results",
+    "loc": 22067,
+    "files": 292
+  },
+  {
+    "hash": "8fe9b855",
+    "date": "2026-03-07 12:41:17 +0800",
+    "message": "chore: update deploy summary and eggy docs",
+    "loc": 22067,
+    "files": 292
+  },
+  {
+    "hash": "7820f41f",
+    "date": "2026-03-07 13:03:39 +0800",
+    "message": "Refactor gameplay runtime dependencies behind ports",
+    "loc": 22199,
+    "files": 297
+  },
+  {
+    "hash": "9e05616c",
+    "date": "2026-03-07 13:11:33 +0800",
+    "message": "refactor: update port implementations to remove fallbacks and ensure pure contract usage",
+    "loc": 22173,
+    "files": 297
+  },
+  {
+    "hash": "e6d1e5d5",
+    "date": "2026-03-07 13:16:00 +0800",
+    "message": "docs: add layer model documentation and enforce architectural boundaries",
+    "loc": 22173,
+    "files": 297
+  },
+  {
+    "hash": "75494b17",
+    "date": "2026-03-07 13:48:04 +0800",
+    "message": "docs: update architecture documentation for clarity and consistency",
+    "loc": 22173,
+    "files": 297
+  },
+  {
+    "hash": "b6ead3e7",
+    "date": "2026-03-07 14:07:18 +0800",
+    "message": "docs: initialize executable restructuring plan for src directory renaming",
+    "loc": 22173,
+    "files": 297
+  },
+  {
+    "hash": "52d14434",
+    "date": "2026-03-07 15:56:41 +0800",
+    "message": "refactor: regroup module paths across runtime and presentation",
+    "loc": 22173,
+    "files": 297
+  },
+  {
+    "hash": "16fe69ab",
+    "date": "2026-03-07 16:29:50 +0800",
+    "message": "refactor: rename lua modules to snake_case",
+    "loc": 22173,
+    "files": 297
+  },
+  {
+    "hash": "417e7cb8",
+    "date": "2026-03-07 16:30:08 +0800",
+    "message": "chore: align config export scripts with snake_case",
+    "loc": 22173,
+    "files": 297
+  },
+  {
+    "hash": "d3e3a379",
+    "date": "2026-03-07 16:30:13 +0800",
+    "message": "docs: record snake_case migration plan progress",
+    "loc": 22173,
+    "files": 297
+  },
+  {
+    "hash": "8295d773",
+    "date": "2026-03-07 16:53:45 +0800",
+    "message": "refactor: move endgame rules out of core runtime",
+    "loc": 22173,
+    "files": 297
+  },
+  {
+    "hash": "e4b6861a",
+    "date": "2026-03-07 16:53:50 +0800",
+    "message": "docs: rewrite architecture research snapshot",
+    "loc": 22173,
+    "files": 297
+  },
+  {
+    "hash": "2898b4da",
+    "date": "2026-03-07 16:56:02 +0800",
+    "message": "docs(agents): rewrite clean architecture and uncle bob AI reviewer prompts",
+    "loc": 22173,
+    "files": 297
+  }
+]
