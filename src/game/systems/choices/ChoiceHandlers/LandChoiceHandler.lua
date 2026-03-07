@@ -1,7 +1,7 @@
 local land_choice_specs = require("src.game.systems.land.LandChoiceSpecs")
 local inventory = require("src.game.systems.items.ItemInventory")
 local gameplay_rules = require("src.core.config.GameplayRules")
-local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
+local intent_output_port = require("src.game.ports.IntentOutputPort")
 
 local land_choice_handler = {}
 local item_ids = gameplay_rules.item_ids
@@ -28,10 +28,7 @@ function land_choice_handler.build(helpers)
       if card_kind == "strong" then
         local player = assert(game:find_player_by_id(player_id), "missing player: " .. tostring(player_id))
         if inventory.find_index(player, item_ids.free_rent) then
-          intent_dispatcher.dispatch(game, {
-            kind = "need_choice",
-            choice_spec = land_choice_specs.rent_prompt(player_id, tile_id, "free"),
-          })
+          intent_output_port.open_choice(game, land_choice_specs.rent_prompt(player_id, tile_id, "free"))
           return { stay = true }
         end
       end

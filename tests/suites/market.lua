@@ -138,7 +138,7 @@ local function _test_skin_entry_can_buy_but_no_effect()
   local market_service = _reload_market_service()
   local g = _new_game()
   local p = g:current_player()
-  g.ui_port.wait_action_anim = true
+  g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
 
   local price = target.price or 0
   local currency = target.currency or "金币"

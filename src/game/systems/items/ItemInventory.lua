@@ -1,7 +1,7 @@
 local items_cfg = require("Config.Generated.Items")
 require "vendor.third_party.Utils"
 local logger = require("src.core.Logger")
-local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
+local intent_output_port = require("src.game.ports.IntentOutputPort")
 
 local inventory = {}
 
@@ -93,12 +93,9 @@ local function _notify_full(game, player, item_id)
   if player.is_ai or player.auto then
     return
   end
-  intent_dispatcher.dispatch(game, {
-    kind = "push_popup",
-    payload = {
-      title = "道具",
-      body = player.name .. " 背包已满，无法获得道具 " .. inventory.item_name(item_id),
-    },
+  intent_output_port.push_popup(game, {
+    title = "道具",
+    body = player.name .. " 背包已满，无法获得道具 " .. inventory.item_name(item_id),
   })
 end
 

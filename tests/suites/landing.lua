@@ -17,6 +17,34 @@ local gameplay_rules = require("src.core.config.GameplayRules")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 local runtime_event_bridge = require("src.core.RuntimeEventBridge")
 
+local function _install_narrow_ports(game, ui_port)
+  game.ui_port = ui_port
+  game.anim_gate_port = {
+    wait_move_anim = ui_port and ui_port.wait_move_anim == true,
+    wait_action_anim = ui_port and ui_port.wait_action_anim == true,
+  }
+  game.popup_port = {
+    push_popup = function(_, payload, popup_opts)
+      if ui_port and type(ui_port.push_popup) == "function" then
+        return ui_port:push_popup(payload, popup_opts)
+      end
+      return false
+    end,
+  }
+  game.tile_feedback_port = {
+    on_tile_upgraded = function(_, tile_id, level)
+      if ui_port and type(ui_port.on_tile_upgraded) == "function" then
+        return ui_port:on_tile_upgraded(tile_id, level) == true
+      end
+      return false
+    end,
+  }
+end
+
+local function _set_ui_port(game, overrides)
+  _install_narrow_ports(game, _build_ui_port(overrides))
+end
+
 local function _test_land_on_start_reward()
   local g = _new_game()
   local p = g:current_player()
@@ -48,7 +76,7 @@ end
 
 local function _test_landing_optional_waits_with_ui()
   local g = _new_game()
-  g.ui_port = _build_ui_port()
+  _set_ui_port(g)
   local p = g:current_player()
   local idx, tile_ref = _first_land_tile(g.board)
   g:update_player_position(p, idx)
@@ -76,7 +104,7 @@ end
 
 local function _test_landing_optional_stale_choice_is_blocked()
   local g = _new_game()
-  g.ui_port = _build_ui_port()
+  _set_ui_port(g)
   local p = g:current_player()
   local idx, tile_ref = _first_land_tile(g.board)
   g:update_player_position(p, idx)
@@ -105,7 +133,7 @@ end
 
 local function _test_turn_land_bridges_to_wait_action_anim_for_chance()
   local g = _new_game()
-  g.ui_port = _build_ui_port({ wait_action_anim = true })
+  _set_ui_port(g, { wait_action_anim = true })
   local p = g:current_player()
   local idx, tile_ref = _first_tile_by_type(g.board, "chance")
   g:update_player_position(p, idx)
@@ -123,7 +151,7 @@ end
 
 local function _test_turn_land_bridges_to_wait_action_anim_for_item()
   local g = _new_game()
-  g.ui_port = _build_ui_port({ wait_action_anim = true })
+  _set_ui_port(g, { wait_action_anim = true })
   local p = g:current_player()
   local idx, tile_ref = _first_tile_by_type(g.board, "item")
   g:update_player_position(p, idx)
@@ -142,7 +170,7 @@ end
 local function _test_item_landing_pushes_popup_on_success()
   local g = _new_game()
   local popups = {}
-  g.ui_port = _build_ui_port({
+  _set_ui_port(g, {
     push_popup = function(_, payload)
       popups[#popups + 1] = payload
     end,
@@ -169,7 +197,7 @@ end
 local function _test_item_landing_full_inventory_no_duplicate_success_popup()
   local g = _new_game()
   local popups = {}
-  g.ui_port = _build_ui_port({
+  _set_ui_port(g, {
     push_popup = function(_, payload)
       popups[#popups + 1] = payload
     end,
@@ -197,7 +225,7 @@ end
 local function _test_chance_landing_pushes_popup()
   local g = _new_game()
   local popups = {}
-  g.ui_port = _build_ui_port({
+  _set_ui_port(g, {
     push_popup = function(_, payload)
       popups[#popups + 1] = payload
     end,
@@ -258,7 +286,7 @@ end
 local function _test_upgrade_land_prefers_direct_ui_notify_before_event_bridge()
   local g = _new_game()
   local direct_calls = 0
-  g.ui_port = _build_ui_port({
+  _set_ui_port(g, {
     on_tile_upgraded = function(_, tile_id, level)
       direct_calls = direct_calls + 1
       assert(tile_id ~= nil and level ~= nil, "direct tile upgraded callback should receive payload")
@@ -298,7 +326,7 @@ local function _test_execute_strong_card_pushes_item_card_popup()
   local player = g.players[1]
   local owner = g.players[2]
   local idx, tile_ref = _first_land_tile(g.board)
-  g.ui_port = _build_ui_port({
+  _set_ui_port(g, {
     push_popup = function(_, payload)
       popups[#popups + 1] = payload
     end,
@@ -322,7 +350,7 @@ local function _test_execute_free_card_pushes_item_card_popup()
   local popups = {}
   local player = g.players[1]
   local idx, tile_ref = _first_land_tile(g.board)
-  g.ui_port = _build_ui_port({
+  _set_ui_port(g, {
     push_popup = function(_, payload)
       popups[#popups + 1] = payload
     end,
@@ -341,7 +369,7 @@ local function _test_execute_tax_free_card_pushes_item_card_popup()
   local g = _new_game()
   local popups = {}
   local player = g.players[1]
-  g.ui_port = _build_ui_port({
+  _set_ui_port(g, {
     push_popup = function(_, payload)
       popups[#popups + 1] = payload
     end,

@@ -18,6 +18,34 @@ local steal = require("src.game.systems.items.ItemSteal")
 local runtime_event_bridge = require("src.core.RuntimeEventBridge")
 local monopoly_event = require("src.core.events.MonopolyEvents")
 
+local function _install_narrow_ports(game, ui_port)
+  game.ui_port = ui_port
+  game.anim_gate_port = {
+    wait_move_anim = ui_port and ui_port.wait_move_anim == true,
+    wait_action_anim = ui_port and ui_port.wait_action_anim == true,
+  }
+  game.popup_port = {
+    push_popup = function(_, payload, popup_opts)
+      if ui_port and type(ui_port.push_popup) == "function" then
+        return ui_port:push_popup(payload, popup_opts)
+      end
+      return false
+    end,
+  }
+  game.tile_feedback_port = {
+    on_tile_upgraded = function(_, tile_id, level)
+      if ui_port and type(ui_port.on_tile_upgraded) == "function" then
+        return ui_port:on_tile_upgraded(tile_id, level) == true
+      end
+      return false
+    end,
+  }
+end
+
+local function _set_ui_port(game, overrides)
+  _install_narrow_ports(game, support.build_ui_port(overrides))
+end
+
 local function _test_monster_card()
   local g = _new_game()
   local p = g:current_player()
@@ -165,7 +193,7 @@ end
 
 local function _test_target_item_manual_direct_exec_and_duration()
   local g = _new_game()
-  g.ui_port = support.build_ui_port({ wait_action_anim = true })
+  _set_ui_port(g, { wait_action_anim = true })
   local user = g.players[1]
   local target = g.players[2]
   g:set_player_cash(user, 1000)
@@ -192,7 +220,7 @@ end
 
 local function _test_item_executor_fallback_item_use_anim()
   local g = _new_game()
-  g.ui_port = support.build_ui_port({ wait_action_anim = true })
+  _set_ui_port(g, { wait_action_anim = true })
   local p = g:current_player()
   p.inventory:add({ id = 2003 })
 
@@ -208,7 +236,7 @@ end
 
 local function _test_item_executor_keeps_specific_anim_without_fallback()
   local g = _new_game()
-  g.ui_port = support.build_ui_port({ wait_action_anim = true })
+  _set_ui_port(g, { wait_action_anim = true })
   local p = g:current_player()
   p.inventory:add({ id = 2005 })
 
@@ -461,7 +489,7 @@ local function _test_simple_item_use_pushes_item_card_popup()
   local g = _new_game()
   local popups = {}
   local p = g:current_player()
-  g.ui_port = support.build_ui_port({
+  _set_ui_port(g, {
     push_popup = function(_, payload)
       popups[#popups + 1] = payload
     end,
@@ -483,7 +511,7 @@ local function _test_target_item_use_pushes_item_card_popup()
   local popups = {}
   local user = g.players[1]
   local target = g.players[2]
-  g.ui_port = support.build_ui_port({
+  _set_ui_port(g, {
     push_popup = function(_, payload)
       popups[#popups + 1] = payload
     end,
@@ -509,7 +537,7 @@ local function _test_remote_dice_followup_pushes_item_card_popup()
   local g = _new_game()
   local popups = {}
   local p = g:current_player()
-  g.ui_port = support.build_ui_port({
+  _set_ui_port(g, {
     push_popup = function(_, payload)
       popups[#popups + 1] = payload
     end,
@@ -548,7 +576,7 @@ local function _test_steal_success_pushes_item_card_broadcast_before_result_popu
   local popups = {}
   local stealer = g.players[1]
   local target = g.players[2]
-  g.ui_port = support.build_ui_port({
+  _set_ui_port(g, {
     push_popup = function(_, payload)
       popups[#popups + 1] = payload
     end,

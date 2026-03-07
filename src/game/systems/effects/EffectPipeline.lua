@@ -1,5 +1,5 @@
 local effect_runner = require("src.game.systems.effects.EffectRunner")
-local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
+local intent_output_port = require("src.game.ports.IntentOutputPort")
 
 local pipeline = {}
 
@@ -88,7 +88,7 @@ local function _build_optional_choice(optional, player, tile, game_ctx, opts)
     next_args = opts.next_args,
   }
 
-  intent_dispatcher.dispatch(game_ctx.game, { kind = "need_choice", choice_spec = choice_spec })
+  intent_output_port.open_choice(game_ctx.game, choice_spec)
   return out
 end
 
@@ -124,7 +124,7 @@ function pipeline.run(effect_defs, player, tile, game_ctx, opts)
 
     local payload = out or res
     if payload then
-      intent_dispatcher.dispatch(game_ctx.game, payload)
+      intent_output_port.dispatch(game_ctx.game, payload)
     end
 
     if type(out) == "table" and out.waiting then

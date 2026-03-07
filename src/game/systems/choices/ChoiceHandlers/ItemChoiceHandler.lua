@@ -7,7 +7,7 @@ local remote_dice = require("src.game.systems.items.ItemRemoteDice")
 local item_phase = require("src.game.systems.items.ItemPhase")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local number_utils = require("src.core.NumberUtils")
-local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
+local intent_output_port = require("src.game.ports.IntentOutputPort")
 local item_use_broadcast = require("src.game.systems.items.ItemUseBroadcast")
 
 local item_choice_handler = {}
@@ -40,9 +40,7 @@ function item_choice_handler.build(helpers)
       table.insert(lines, i .. ". " .. label)
       table.insert(options, { id = i, label = label })
     end
-    intent_dispatcher.dispatch(game, {
-      kind = "need_choice",
-      choice_spec = {
+    intent_output_port.open_choice(game, {
         kind = "steal_item",
         owner_role_id = stealer.id,
         title = "选择要偷的道具",
@@ -51,8 +49,7 @@ function item_choice_handler.build(helpers)
         allow_cancel = true,
         cancel_label = "取消",
         meta = { player_id = stealer.id, target_id = target.id },
-      },
-    })
+      })
   end
 
   local function _reopen_item_phase(game, player, phase)
@@ -61,7 +58,7 @@ function item_choice_handler.build(helpers)
       finish_item_phase(game, phase)
       return nil
     end
-    intent_dispatcher.dispatch(game, { kind = "need_choice", choice_spec = spec })
+    intent_output_port.open_choice(game, spec)
     return { stay = true }
   end
 
@@ -82,7 +79,7 @@ function item_choice_handler.build(helpers)
       item_use_broadcast.dispatch(game, player, meta.item_id)
     end
     local intent = res.intent or {}
-    intent_dispatcher.dispatch(game, intent)
+    intent_output_port.dispatch(game, intent)
     return _finish_and_clear(game)
   end
 
@@ -102,7 +99,7 @@ function item_choice_handler.build(helpers)
     local res = roadblock.apply(game, player, idx)
     if res then
       item_use_broadcast.dispatch(game, player, meta.item_id)
-      intent_dispatcher.dispatch(game, res)
+      intent_output_port.dispatch(game, res)
     end
     return _finish_and_clear(game)
   end
@@ -118,7 +115,7 @@ function item_choice_handler.build(helpers)
     assert(idx ~= nil, "missing steal index")
     local res = steal.steal_item_at_index(game, stealer, target, idx)
     assert(res ~= nil, "missing steal result")
-    intent_dispatcher.dispatch(game, res.intent or {})
+    intent_output_port.dispatch(game, res.intent or {})
     return _finish_and_clear(game)
   end
 
@@ -138,7 +135,7 @@ function item_choice_handler.build(helpers)
       if inventory.count(target) <= 1 then
         local res = steal.steal_item_at_index(game, stealer, target, 1)
         if res then
-          intent_dispatcher.dispatch(game, res.intent or {})
+          intent_output_port.dispatch(game, res.intent or {})
         end
         return finish_choice(game, false)
       end
@@ -151,7 +148,7 @@ function item_choice_handler.build(helpers)
     if inventory.find_index(stealer, item_ids.steal) and queue[next_index] then
       local spec = steal.build_prompt_spec(game, stealer, queue, next_index)
       assert(spec ~= nil, "missing steal prompt spec")
-      intent_dispatcher.dispatch(game, { kind = "need_choice", choice_spec = spec })
+      intent_output_port.open_choice(game, spec)
       return { stay = true }
     end
 
@@ -217,7 +214,7 @@ function item_choice_handler.build(helpers)
         choice_spec.meta.item_id = choice_spec.meta.item_id or item_id
         choice_spec.meta.player_id = choice_spec.meta.player_id or player.id
       end
-      intent_dispatcher.dispatch(game, intent)
+      intent_output_port.dispatch(game, intent)
       return { stay = true }
     end
     finish_item_phase(game, phase)

@@ -1,4 +1,4 @@
-local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
+local intent_output_port = require("src.game.ports.IntentOutputPort")
 local inventory = require("src.game.systems.items.ItemInventory")
 local gameplay_rules = require("src.core.config.GameplayRules")
 
@@ -15,15 +15,12 @@ function item_use_broadcast.dispatch(game, player, item_id)
   if popup_port == nil then
     return false
   end
-  intent_dispatcher.dispatch(game, {
-    kind = "push_popup",
-    payload = {
-      title = "道具卡",
-      body = player.name .. " 使用了 " .. inventory.item_name(item_id),
-      kind = "item_card",
-      image_ref = item_id,
-      auto_close_seconds = gameplay_rules.action_anim_default_seconds,
-    },
+  intent_output_port.push_popup(game, {
+    title = "道具卡",
+    body = player.name .. " 使用了 " .. inventory.item_name(item_id),
+    kind = "item_card",
+    image_ref = item_id,
+    auto_close_seconds = gameplay_rules.action_anim_default_seconds,
   })
   return true
 end

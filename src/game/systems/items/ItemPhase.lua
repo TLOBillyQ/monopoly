@@ -3,7 +3,7 @@ local gameplay_rules = require("src.core.config.GameplayRules")
 local agent = require("src.game.core.runtime.Agent")
 local strategy = require("src.game.systems.items.ItemStrategy")
 local inventory = require("src.game.systems.items.ItemInventory")
-local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
+local intent_output_port = require("src.game.ports.IntentOutputPort")
 
 local item_phase = {}
 
@@ -86,7 +86,7 @@ function item_phase.run(turn_mgr, phase, args)
   if agent.is_auto_player(player) then
     local pre = strategy.auto_pre_action(game, player, phase)
     if pre then
-      intent_dispatcher.dispatch(game, pre)
+      intent_output_port.dispatch(game, pre)
     end
     if pre and pre.waiting then
       game.turn.item_phase_active = phase
@@ -108,7 +108,7 @@ function item_phase.run(turn_mgr, phase, args)
     return nil
   end
 
-  intent_dispatcher.dispatch(game, { kind = "need_choice", choice_spec = spec })
+  intent_output_port.open_choice(game, spec)
 
   game.turn.item_phase = game.turn.item_phase or {}
   game.turn.item_phase[phase] = { active = true }

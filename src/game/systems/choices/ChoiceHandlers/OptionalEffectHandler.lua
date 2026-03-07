@@ -1,6 +1,6 @@
 local effect_runner = require("src.game.systems.effects.EffectRunner")
 local logger = require("src.core.Logger")
-local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
+local intent_output_port = require("src.game.ports.IntentOutputPort")
 
 local optional_effect_handler = {}
 
@@ -29,7 +29,7 @@ function optional_effect_handler.build(helpers)
     local game_ctx = build_game_ctx(game, move_result)
 
     local res = effect_runner.execute(target_eff, player, tile, game_ctx)
-    intent_dispatcher.dispatch(game, res.result or res)
+    intent_output_port.dispatch(game, res.result or res)
     if res.ok ~= true then
       logger.warn("landing_optional_effect execute blocked:", tostring(res and res.reason))
     end

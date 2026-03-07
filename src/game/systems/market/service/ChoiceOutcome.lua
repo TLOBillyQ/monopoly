@@ -1,7 +1,20 @@
 local choice_session = require("src.game.systems.market.service.ChoiceSession")
-local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
+local intent_output_port = require("src.game.ports.IntentOutputPort")
 
 local outcome = {}
+
+local function _dispatch_intent(game, intent)
+  if type(intent) ~= "table" then
+    return false
+  end
+  if intent.kind == "need_choice" and intent.choice_spec ~= nil then
+    return intent_output_port.open_choice(game, intent.choice_spec, intent.opts) ~= nil
+  end
+  if intent.kind == "push_popup" and intent.payload ~= nil then
+    return intent_output_port.push_popup(game, intent.payload, intent.popup_opts or intent.opts) == true
+  end
+  return false
+end
 
 local function _should_keep_market_open(entry, result)
   if type(result) ~= "table" or result.ok ~= true then
@@ -25,7 +38,7 @@ function outcome.resolve_purchase(game, choice, player, entry, result, finish_ch
         and entry.kind == "item"
         and result.fulfilled_now == true
         and result.inventory_full_after == true then
-      intent_dispatcher.dispatch(game, {
+      _dispatch_intent(game, {
         kind = "push_popup",
         payload = { title = "黑市", body = "卡槽已满，自动退出黑市" },
       })
@@ -36,7 +49,7 @@ function outcome.resolve_purchase(game, choice, player, entry, result, finish_ch
 
   if type(result) == "table" then
     local intent = result.intent or {}
-    intent_dispatcher.dispatch(game, intent)
+    _dispatch_intent(game, intent)
     if intent.kind == "need_choice" then
       return { stay = true }
     end
