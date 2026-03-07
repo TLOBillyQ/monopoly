@@ -29,3 +29,10 @@ __pycache__/
 .tmp_designation_full.js
 .tmp_designation_lean.js
 .tmp_designation.html
+
+# Node.js
+node_modules/
+
+# Analysis artifacts
+scripts/analysis/loc_trend.png
+scripts/analysis/loc_data.json

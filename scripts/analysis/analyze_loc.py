@@ -53,111 +53,30 @@ def get_commits():
 
 def count_loc_at_commit_optimized(commit_info):
     """
-    优化的LOC计算 - 使用shell pipeline批量处理
+    优化的LOC计算 - 使用cloc来精确统计各类语言的有效行数
     返回 (commit_info, loc, file_count)
     """
     commit_hash = commit_info['full_hash']
 
-    # 使用单个命令获取所有代码文件的LOC统计
-    # 1. 获取文件列表 2. 对每个文件统计有效行数（排除空行和注释行）
-    cmd = f'''
-    git ls-tree -r --name-only {commit_hash} 2>/dev/null | grep "^src/" | grep -E "\\.(lua|ts|js|tsx|jsx|py)$" | while read f; do
-        git show {commit_hash}:"$f" 2>/dev/null | \
-        grep -v '^[[:space:]]*$' | \
-        grep -v '^[[:space:]]*--' | \
-        grep -v '^[[:space:]]*//' | \
-        grep -v '^[[:space:]]*#' | \
-        wc -l
-    done | awk '{{sum+=$1; count++}} END {{print sum, count}}'
-    '''
-
+    # 使用npx cloc分析特定commit的src目录结构，计算有效代码行（code字段）
+    cmd = f'npx cloc --json {commit_hash} --match-d=src 2>/dev/null'
     result = run_cmd(cmd, check=False)
-
-    if result:
-        parts = result.split()
-        if len(parts) == 2:
-            try:
-                total_loc = int(parts[0])
-                file_count = int(parts[1])
-                return (commit_info, total_loc, file_count)
-            except ValueError:
-                pass
-
-    # 如果失败，回退到逐个文件处理
-    return _count_loc_fallback(commit_info)
-
-def _count_loc_fallback(commit_info):
-    """回退方法：逐个文件处理"""
-    commit_hash = commit_info['full_hash']
-    cmd = f'git ls-tree -r --name-only {commit_hash} | grep "^src/" | grep -E "\\.(lua|ts|js|tsx|jsx|py)$"'
-    output = run_cmd(cmd, check=False)
-
-    if not output:
-        return (commit_info, 0, 0)
 
     total_loc = 0
     file_count = 0
 
-    for filepath in output.split('\n'):
-        if not filepath:
-            continue
-
-        content_cmd = f'git show {commit_hash}:"{filepath}" 2>/dev/null'
-        content = run_cmd(content_cmd, check=False)
-
-        if not content:
-            continue
-
-        # 简化的LOC计算
-        loc = 0
-        in_multiline_comment = False
-
-        for line in content.split('\n'):
-            line = line.strip()
-            if not line:
-                continue
-
-            # 处理Lua多行注释
-            if '--[[' in line:
-                if ']]--' in line or ']]' in line:
-                    comment_start = line.index('--[[')
-                    comment_end = line.find(']]--', comment_start)
-                    if comment_end == -1:
-                        comment_end = line.find(']]', comment_start)
-                    if comment_end != -1:
-                        line = line[:comment_start] + line[comment_end+2:]
-                        line = line.strip()
-                        if not line:
-                            continue
-                else:
-                    in_multiline_comment = True
-                    if line.startswith('--[['):
-                        continue
-                    line = line[:line.index('--[[')].strip()
-                    if not line:
-                        continue
-
-            if in_multiline_comment:
-                if ']]--' in line:
-                    in_multiline_comment = False
-                    line = line[line.index(']]--')+4:].strip()
-                    if not line:
-                        continue
-                elif ']]' in line:
-                    in_multiline_comment = False
-                    line = line[line.index(']]')+2:].strip()
-                    if not line:
-                        continue
-                else:
-                    continue
-
-            if line.startswith('--') or line.startswith('//') or line.startswith('#'):
-                continue
-
-            loc += 1
-
-        total_loc += loc
-        file_count += 1
+    if result:
+        try:
+            # 找到JSON输出的起始位置，避免前面有其他输出干扰
+            json_start = result.find('{')
+            if json_start != -1:
+                json_str = result[json_start:]
+                data = json.loads(json_str)
+                if 'SUM' in data:
+                    total_loc = data['SUM']['code']
+                    file_count = data['SUM']['nFiles']
+        except Exception:
+            pass
 
     return (commit_info, total_loc, file_count)
 
