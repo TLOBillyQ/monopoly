@@ -4,3 +4,4 @@
 - `lua_agent_memory.md`
 - `docs/architecture/boundaries.md` 目录语义与边界约定
 - `docs/architecture/layer-model.md` 7组件分层模型、Port注入模式与已强制边界
+- snake_case
