@@ -151,6 +151,11 @@ local function _initialize_ports(state, game)
   game.board_scene_port = gameplay_loop_runtime.build_board_scene_port(state)
   game.popup_port = gameplay_loop_runtime.build_popup_port(state)
   game.tile_feedback_port = gameplay_loop_runtime.build_tile_feedback_port(state)
+  game.bankruptcy_feedback_port = {
+    on_tiles_cleared = function(game_ctx, player, owned_tile_ids)
+      return ports.state.on_bankruptcy_tiles_cleared(game_ctx, player, owned_tile_ids)
+    end,
+  }
   game.anim_gate_port = gameplay_loop_runtime.build_anim_gate_port(state)
   game.intent_output_port = intent_output_adapter.build()
   game.auto_play_port = auto_play_port_adapter.build()

@@ -1,5 +1,5 @@
 local logger = require("src.core.utils.logger")
-local bankruptcy = require("src.game.systems.endgame.bankruptcy")
+local bankruptcy_port = require("src.game.ports.bankruptcy_port")
 local common = require("src.game.core.player.state_ops.common")
 local number_utils = require("src.core.utils.number_utils")
 local role_id_utils = require("src.core.utils.role_id")
@@ -25,13 +25,13 @@ function location_ops.player_apply_hospital_effects(self, player)
   local fee = common.constants.hospital_fee
   if self:player_balance(player, "金币") < fee then
     logger.event(player.name .. " 资金不足，无法支付医药费 " .. number_utils.format_integer_part(fee))
-    bankruptcy.eliminate(self, player, { reason = player.name .. " 医药费不足破产" })
+    bankruptcy_port.eliminate(self, player, { reason = player.name .. " 医药费不足破产" })
     return
   end
   self:deduct_player_cash(player, fee)
   logger.event(player.name .. " 支付医药费 " .. number_utils.format_integer_part(fee))
   if self:player_balance(player, "金币") <= 0 then
-    bankruptcy.eliminate(self, player, { reason = player.name .. " 支付医药费后破产" })
+    bankruptcy_port.eliminate(self, player, { reason = player.name .. " 支付医药费后破产" })
     return
   end
   _emit_status_feedback(self, player, "hospital", "hospital_shock")

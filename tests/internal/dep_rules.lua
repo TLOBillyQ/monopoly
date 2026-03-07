@@ -132,6 +132,14 @@ local rules = {
     description = "systems layer must use ActionAnimPort instead of direct ui_port.wait_action_anim checks",
   },
   {
+    root = "src/game/core/player",
+    forbidden_patterns = {
+      "require%(\"src%.game%.systems%..-\"%)",
+      "require%('src%.game%.systems%..-'%)",
+    },
+    description = "game core player state must not depend on src.game.systems.* directly; use ports or use-case orchestration",
+  },
+  {
     root = "src/game/systems",
     forbidden_patterns = {
       "require%(\"src%.game%.flow%..-\"%)",
@@ -146,6 +154,14 @@ local rules = {
       "require%(%'src%.game%.core%.runtime%..-'%)",
     },
     description = "systems layer must not depend on game.core.runtime directly; use injected ports instead",
+  },
+  {
+    root = "src/game/systems",
+    forbidden_patterns = {
+      "game%.gameplay_loop_ports",
+      "self%.gameplay_loop_ports",
+    },
+    description = "systems layer must not read gameplay loop runtime object fields directly; use explicit game ports instead",
   },
   {
     root = "src/game/flow/turn",

@@ -2,6 +2,7 @@ local support = require("TestSupport")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
+local bankruptcy_feedback_port = require("src.game.ports.bankruptcy_feedback_port")
 local turn_action_port = require("src.presentation.interaction.ui_intent_dispatcher.turn_action_port")
 local gameplay_loop_ports = require("src.game.flow.turn.gameplay_loop_ports")
 local runtime_ports = require("src.core.ports.runtime_ports")
@@ -173,6 +174,13 @@ local function _test_gameplay_loop_output_port_override_precedence()
   _assert_eq(state.ui_dirty, nil, "override output.invalidate_ui should bypass default ui_dirty bridge")
 end
 
+local function _test_bankruptcy_feedback_port_defaults_to_no_op_port()
+  local game = support.new_game({ ai = {} })
+  local player = game.players[1]
+  local handled = bankruptcy_feedback_port.on_tiles_cleared(game, player, { 1, 2 })
+  _assert_eq(handled, false, "default bankruptcy feedback port should be a no-op false fallback")
+end
+
 local function _test_turn_roll_uses_anim_gate_port_without_ui_port()
   local game = support.new_game({ ai = {} })
   local player = game:current_player()
@@ -225,6 +233,7 @@ return {
     { name = "gameplay_loop_clock_contract_split_sources", run = _test_gameplay_loop_clock_contract_split_sources },
     { name = "gameplay_loop_output_port_defaults_to_ui_runtime_only", run = _test_gameplay_loop_output_port_defaults_to_ui_runtime_only },
     { name = "gameplay_loop_output_port_override_precedence", run = _test_gameplay_loop_output_port_override_precedence },
+    { name = "bankruptcy_feedback_port_defaults_to_no_op_port", run = _test_bankruptcy_feedback_port_defaults_to_no_op_port },
     { name = "turn_roll_uses_anim_gate_port_without_ui_port", run = _test_turn_roll_uses_anim_gate_port_without_ui_port },
     { name = "turn_move_uses_anim_gate_port_without_ui_port", run = _test_turn_move_uses_anim_gate_port_without_ui_port },
   },

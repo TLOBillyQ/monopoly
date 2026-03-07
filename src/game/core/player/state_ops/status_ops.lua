@@ -1,9 +1,16 @@
 local common = require("src.game.core.player.state_ops.common")
-local vehicle_feature = require("src.game.systems.vehicle.vehicle_feature")
+local feature_toggles = require("src.core.config.feature_toggles")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local logger = require("src.core.utils.logger")
 
 local status_ops = {}
+
+local function _resolve_seat_id(seat_id)
+  if not feature_toggles.is_vehicle_enabled() then
+    return nil
+  end
+  return seat_id
+end
 
 function status_ops.set_player_status(self, player, key, value)
   local status = common.player_status_table(player)
@@ -12,8 +19,8 @@ function status_ops.set_player_status(self, player, key, value)
 end
 
 function status_ops.set_player_seat(self, player, seat_id)
-  seat_id = vehicle_feature.resolve_seat_id(seat_id)
-  if not vehicle_feature.is_enabled() then
+  seat_id = _resolve_seat_id(seat_id)
+  if not feature_toggles.is_vehicle_enabled() then
     player.seat_id = nil
     common.mark_players(self)
     return
@@ -77,7 +84,7 @@ function status_ops.stop_all_players_movement(self)
       status.move_dir = nil
       players_dirty = true
     end
-    local seat_id = vehicle_feature.resolve_seat_id(player.seat_id)
+    local seat_id = _resolve_seat_id(player.seat_id)
     if vehicle and emit_stop and seat_id ~= nil then
       local role_ok = true
       if vehicle.resolve_role then

@@ -1,10 +1,10 @@
 local logger = require("src.core.utils.logger")
 local runtime_ports = require("src.core.ports.runtime_ports")
+local bankruptcy_feedback_port = require("src.game.ports.bankruptcy_feedback_port")
 local inventory = require("src.game.systems.items.item_inventory")
 local monopoly_event = require("src.core.events.monopoly_events")
 
 local bankruptcy = {}
-local warned_missing_tiles_cleared_callback = false
 
 local function _try_call_life_die(role)
   if not role then
@@ -88,21 +88,7 @@ local function _collect_owned_tiles(game, player)
 end
 
 local function _notify_tiles_cleared(game, player, owned_tile_ids)
-  local ports = game and game.gameplay_loop_ports or nil
-  local callback = nil
-  if ports and type(ports.state) == "table" and type(ports.state.on_bankruptcy_tiles_cleared) == "function" then
-    callback = ports.state.on_bankruptcy_tiles_cleared
-  elseif ports and type(ports.on_bankruptcy_tiles_cleared) == "function" then
-    callback = ports.on_bankruptcy_tiles_cleared
-  end
-  if callback then
-    callback(game, player, owned_tile_ids)
-    return
-  end
-  if not warned_missing_tiles_cleared_callback then
-    warned_missing_tiles_cleared_callback = true
-    logger.warn("missing gameplay_loop_ports.state.on_bankruptcy_tiles_cleared")
-  end
+  bankruptcy_feedback_port.on_tiles_cleared(game, player, owned_tile_ids)
 end
 
 function bankruptcy.eliminate(game, player, opts)

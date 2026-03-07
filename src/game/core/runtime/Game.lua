@@ -53,6 +53,14 @@ local function _install_default_runtime_ports(game_ctx)
       end,
     }
   end
+  if type(game_ctx.bankruptcy_feedback_port) ~= "table"
+      or type(game_ctx.bankruptcy_feedback_port.on_tiles_cleared) ~= "function" then
+    game_ctx.bankruptcy_feedback_port = {
+      on_tiles_cleared = function()
+        return false
+      end,
+    }
+  end
 end
 
 function game:init(opts)

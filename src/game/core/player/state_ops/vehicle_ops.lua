@@ -1,10 +1,13 @@
 local common = require("src.game.core.player.state_ops.common")
-local vehicle_feature = require("src.game.systems.vehicle.vehicle_feature")
+local feature_toggles = require("src.core.config.feature_toggles")
 
 local vehicle_ops = {}
 
 function vehicle_ops.player_vehicle_cfg(_self, player)
-  local seat_id = vehicle_feature.resolve_seat_id(player.seat_id)
+  local seat_id = nil
+  if feature_toggles.is_vehicle_enabled() then
+    seat_id = player.seat_id
+  end
   if seat_id then
     local cfg = common.vehicle_catalog.find(seat_id)
     if cfg ~= nil then

@@ -322,15 +322,14 @@ local function _test_bankruptcy_notifier_reads_grouped_ports()
 
   g:set_tile_owner(tile_ref, p1.id)
   g:set_player_property(p1, tile_ref.id, true)
-  g.gameplay_loop_ports = {
-    state = {
-      on_bankruptcy_tiles_cleared = function(_, player, owned_tile_ids)
-        calls[#calls + 1] = {
-          player_id = player and player.id or nil,
-          owned_tile_ids = owned_tile_ids,
-        }
-      end,
-    },
+  g.bankruptcy_feedback_port = {
+    on_tiles_cleared = function(_, player, owned_tile_ids)
+      calls[#calls + 1] = {
+        player_id = player and player.id or nil,
+        owned_tile_ids = owned_tile_ids,
+      }
+      return true
+    end,
   }
 
   bankruptcy.eliminate(g, p1)
@@ -339,6 +338,29 @@ local function _test_bankruptcy_notifier_reads_grouped_ports()
   assert(calls[1].player_id == p1.id, "notifier should receive eliminated player")
   assert(type(calls[1].owned_tile_ids) == "table", "notifier should receive owned_tile_ids list")
   assert(calls[1].owned_tile_ids[1] == tile_ref.id, "notifier should receive cleared tile id")
+end
+
+local function _test_gameplay_loop_set_game_installs_bankruptcy_feedback_port()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local calls = {}
+
+  state.gameplay_loop_ports = _build_test_ports({
+    on_bankruptcy_tiles_cleared = function(_, player, owned_tile_ids)
+      calls[#calls + 1] = {
+        player_id = player and player.id or nil,
+        owned_tile_ids = owned_tile_ids,
+      }
+      return true
+    end,
+  })
+
+  gameplay_loop.set_game(state, g)
+  g.bankruptcy_feedback_port.on_tiles_cleared(g, g.players[1], { 101 })
+
+  assert(#calls == 1, "set_game should install bankruptcy feedback port")
+  assert(calls[1].player_id == g.players[1].id, "feedback port should forward player")
+  assert(calls[1].owned_tile_ids[1] == 101, "feedback port should forward tile ids")
 end
 
 local function _test_bankruptcy_calls_role_life_die_before_lose()
@@ -2493,6 +2515,7 @@ return {
   _test_mandatory_payment_causes_bankruptcy,
   _test_bankruptcy_resets_owned_tiles,
   _test_bankruptcy_notifier_reads_grouped_ports,
+  _test_gameplay_loop_set_game_installs_bankruptcy_feedback_port,
   _test_bankruptcy_calls_role_life_die_before_lose,
   _test_bankruptcy_emits_feedback_event,
   _test_chance_pay_others_stops_after_bankruptcy,
