@@ -1,318 +1,278 @@
-# 消除终局边界泄漏并补强依赖护栏
+# 清理兼容层与遗留债务
 
-本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
+本可执行计划是活文档。实施过程中必须持续更新"进度"、"意外与发现"、"决策日志"、"结果与复盘"。
 
 本文件遵循仓库规范 `.agents/harness/PLANS.md` 维护。
 
 ## 目的 / 全局视角
 
-当前代码库的目录边界已经基本成型，但仍残留两处关键的对象级/依赖级泄漏：
+当前代码库的主架构已经稳定，Clean Architecture 的核心约束已基本落实。上一轮边界收口已切断关键的对象级泄漏（`state → systems` 和 `systems → game.gameplay_loop_ports`）。现在的问题是**兼容层、转发壳和 legacy 债务仍然偏多**，导致代码所有权不够直接，新人难以判断"哪里是正式 API，哪里只是兼容桥"。
 
-1. `src/game/core/player/state_ops/location_ops.lua` 直接依赖 `src/game.systems.endgame.bankruptcy`，形成 state → systems 的反向依赖。
-2. `src/game/systems/endgame/bankruptcy.lua` 直接读取 `game.gameplay_loop_ports`，让 systems 通过对象字段感知 flow/runtime 细节。
+本计划的目标是：
+1. 删除只剩名义价值的兼容壳，减少代码树噪音
+2. 完成 UI runtime state 迁移，收掉 root-state seed
+3. 收缩宿主全局别名使用面
+4. 对 façade 层做明确取舍（正式承认或删除）
+5. 同步更新架构文档
 
-本计划的目标不是继续搬目录，而是把这两处泄漏收敛为显式 Port，并用测试把边界固定下来。完成后，读者应能看到以下可见结果：
-
-- `src/game/core/player/` 不再直接 `require` `src/game/systems/*`。
-- `src/game/systems/endgame/bankruptcy.lua` 不再直接访问 `game.gameplay_loop_ports`。
-- `tests/internal/dep_rules.lua` 能阻止上述两类倒退。
-- 现有破产、医院扣费、地块清空、反馈事件回归测试仍通过。
+完成后，读者应能看到以下可见结果：
+- 代码库中不再存在纯转发壳模块
+- `runtime_state.ensure_ui_runtime()` 不再从旧根级字段 seed 新结构
+- 宿主全局别名被限制在最外层 bootstrap 内部
+- 架构文档与实现保持一致
 
 ## 进度
 
-- [x] (2026-03-07 00:00Z) 已完成研究快照，确认主要问题集中在 `location_ops` 反向依赖与 `bankruptcy.lua` 对 `game.gameplay_loop_ports` 的对象耦合。
-- [x] (2026-03-07 09:25Z) 已新增 `src/game/ports/bankruptcy_feedback_port.lua`，并在 `src/game/core/runtime/game.lua` 提供默认 no-op 实现。
-- [x] (2026-03-07 09:25Z) `src/game/systems/endgame/bankruptcy.lua` 已改为通过 `bankruptcy_feedback_port` 发地块清空反馈，不再读取 `game.gameplay_loop_ports`。
-- [x] (2026-03-07 09:25Z) `src/game/core/player/state_ops/location_ops.lua` 已改为通过 `src/game/ports/bankruptcy_port.lua` 触发破产，移除对 `systems/endgame/bankruptcy.lua` 的直接依赖。
-- [x] (2026-03-07 09:25Z) 已补 `tests/internal/dep_rules.lua` 与回归/契约测试，覆盖 `core/player ↛ systems` 和 `systems ↛ game.gameplay_loop_ports`；同时顺手清理 `vehicle_ops.lua`、`status_ops.lua` 对 `systems/vehicle/vehicle_feature.lua` 的旧依赖。
-- [x] (2026-03-07 09:25Z) 已运行针对性回归与全量回归，并把结果回写到本计划。
+- [ ] (2026-03-07) 研究阶段：确认需要清理的兼容壳和遗留债务清单
+- [ ] 里程碑 1：删除"只剩名义价值"的兼容壳
+  - [ ] 删除 `src/game/flow/output_adapters/legacy_output_mirror.lua`
+  - [ ] 删除 `src/game/systems/market/service/paid_purchase_gateway.lua`
+  - [ ] 确认并删除 `game.gameplay_loop_ports` 写入（若生产无读取）
+- [ ] 里程碑 2：完成 UI runtime state 迁移
+  - [ ] 清点仍读取 root 字段的模块与测试
+  - [ ] 迁移 `state.ui_dirty` 读路径到 `ui_runtime`
+  - [ ] 迁移 `state.ui_model` 读路径到 `ui_runtime`
+  - [ ] 迁移 `state.pending_choice*` 读路径到 `ui_runtime`
+  - [ ] 迁移 `state.ui_modal_*` 读路径到 `ui_runtime`
+  - [ ] 删除 `runtime_state.ensure_ui_runtime()` 中的 `_legacy_choice_seeded` 分支和 root-state seed 行为
+- [ ] 里程碑 3：收缩宿主全局别名使用面
+  - [ ] 审查 `app/` 与 `presentation/` 中直接读取 `SetTimeOut` / `RegisterCustomEvent` / `TriggerCustomEvent` 的模块
+  - [ ] 审查 `all_roles` / `ALLROLES` 全局的使用
+  - [ ] 将能走显式接口（`runtime_ports`、`host_runtime_port`、`runtime_context`）的调用改走显式接口
+  - [ ] 给 `tests/internal/dep_rules.lua` 增加白名单，防止使用面再次扩散
+- [ ] 里程碑 4：对 façade 做明确取舍
+  - [ ] 决策：路线 A（正式承认 façade 为稳定 import 面）或 路线 B（统一改 import 后删除）
+  - [ ] 若路线 A：更新文档明确 façade 是正式边界
+  - [ ] 若路线 B：统一改 import 到 `src/infrastructure/runtime/*` 后删除纯转发壳
+- [ ] 里程碑 5：同步架构文档
+  - [ ] 更新 `docs/architecture/boundaries.md` 增加 `bankruptcy_feedback_port` 说明
+  - [ ] 更新 `docs/architecture/layer-model.md` 增加 `core/player ↛ systems` 和 `systems ↛ game.gameplay_loop_ports` 规则
+  - [ ] 更新文档说明 `legacy_output_mirror` / `turn_engine` 的退休方向
 
 ## 意外与发现
 
-- 观察：`src/game/core/runtime/` 已经收窄为聚合根与装配，破产与胜负规则已迁到 `src/game/systems/endgame/`，目录级重构阶段基本完成。
-  证据：`src/game/core/runtime/game.lua` 现在绑定 `src.game.systems.endgame.game_victory`；`src/game/runtime/bankruptcy_port_adapter.lua` 指向 `src.game.systems.endgame.bankruptcy`。
-- 观察：当前最大风险不是继续“放错目录”，而是 `game` 对象上的临时字段变成跨层隐式接口。
-  证据：`src/game/systems/endgame/bankruptcy.lua` 的 `_notify_tiles_cleared()` 直接读取 `game.gameplay_loop_ports.state.on_bankruptcy_tiles_cleared`。
-- 观察：现有 `tests/internal/dep_rules.lua` 擅长拦截 `require(...)` 与部分 legacy 字段，但对对象字段耦合的覆盖不足。
-  证据：研究快照与当前规则中没有针对 `game.gameplay_loop_ports` 的禁止项。
-- 观察：新增 `core/player ↛ systems` 规则后，立即暴露出 `vehicle_ops.lua` 与 `status_ops.lua` 两条既有依赖，不仅是 `location_ops.lua` 一处。
-  证据：第一次运行 `tests/internal/dep_rules.lua` 时先后报出 `src/game/core/player/state_ops/vehicle_ops.lua` 与 `src/game/core/player/state_ops/status_ops.lua` 依赖 `src.game.systems.vehicle.vehicle_feature`；两处现已改为直接依赖 `src.core.config.feature_toggles`。
-- 观察：本轮不需要新增新的 presentation 适配模块，只需让 `gameplay_loop.set_game()` 把 `ports.state.on_bankruptcy_tiles_cleared` 包装成 `game.bankruptcy_feedback_port` 即可。
-  证据：新增的 `_test_gameplay_loop_set_game_installs_bankruptcy_feedback_port` 已证明 `state` 端口回调仍然被转发。
+（实施过程中记录）
 
 ## 决策日志
 
-- 决策：本轮优先修两处真实边界泄漏，不再做新的目录搬迁。
-  理由：研究已确认目录语义基本稳定，继续搬目录收益低于修对象级/依赖级泄漏。
-  日期/作者：2026-03-07 / Codex
-- 决策：优先采用“Port 增量隔离”，而不是大范围重写 `gameplay_loop` 或 `player/state_ops`。
-  理由：这是最小可落地路径，能在不动大框架的前提下切断关键反向依赖。
-  日期/作者：2026-03-07 / Codex
-- 决策：把边界收口与 dep rules/contract tests 绑定推进，不接受“只改实现、不加护栏”。
-  理由：当前问题的本质是边界容易回流，仅靠目录命名无法防守。
-  日期/作者：2026-03-07 / Codex
-- 决策：本轮复用 `game` 上的新 `bankruptcy_feedback_port`，而不是扩展 `tile_feedback_port`。
-  理由：破产清空地块是终局反馈，不等同于单地块升级反馈；单独 Port 语义更清晰，也能避免把 `tile_feedback_port` 职责继续做大。
-  日期/作者：2026-03-07 / Codex
-- 决策：把 `core/player ↛ systems` 规则按目录整体收紧，并顺手清理新暴露出来的两条既有载具依赖。
-  理由：若只为 `location_ops.lua` 开特判，会保留同类问题并削弱规则价值；而 `vehicle_feature` 依赖很薄，清理成本低。
-  日期/作者：2026-03-07 / Codex
+（实施过程中记录）
 
 ## 结果与复盘
 
-本轮计划已完成，结果如下：
-
-1. `src/game/systems/endgame/bankruptcy.lua` 不再直接读取 `game.gameplay_loop_ports`，而是只依赖新增的 `src/game/ports/bankruptcy_feedback_port.lua`。
-2. `src/game/core/player/state_ops/location_ops.lua` 不再直接依赖 `src/game/systems/endgame/bankruptcy.lua`，而是通过 `src/game/ports/bankruptcy_port.lua` 触发破产。
-3. `tests/internal/dep_rules.lua` 已新增两条护栏：`core/player ↛ systems`、`systems ↛ game.gameplay_loop_ports`。
-4. 在收紧 `core/player ↛ systems` 之后，顺手清理了 `src/game/core/player/state_ops/vehicle_ops.lua` 与 `src/game/core/player/state_ops/status_ops.lua` 对 `src.game.systems.vehicle.vehicle_feature` 的既有依赖。
-
-验证结果：
-
-- 运行针对性回归：`All regression checks passed (25)`，随后输出 `dep_rules ok`。
-- 运行全量回归：`lua tests/regression.lua` 通过，输出 `All regression checks passed (377)`、`dep_rules ok`、`tick ok`、`forbidden_globals ok`。
-
-缺口与后续：
-
-- 本轮没有继续拆 `presentation_ports.state.on_bankruptcy_tiles_cleared` 这条展示适配实现，因为它已经位于外层 adapter，且当前不再被 systems 直接感知。
-- 仍可继续关注 `game` 对象上是否还有其他临时字段被内层规则当作隐式接口，但本轮计划里点名的关键泄漏已经被切断。
+（里程碑完成或整体完成时总结）
 
 ## 背景与导读
 
-这份计划面向第一次接触仓库的实现者。下面按职责列出与任务直接相关的模块。
+### 关键兼容壳与遗留债务
 
-### 关键业务与装配文件
+| 路径 | 当前形态 | 问题 |
+|------|----------|------|
+| `src/game/flow/output_adapters/legacy_output_mirror.lua` | 仅做 output_ports 的薄包装；全仓生产代码没有引用 | 只剩测试使用，是"已经失去生产价值的兼容壳" |
+| `src/game/systems/market/service/paid_purchase_gateway.lua` | 单行 `return require(...)` | 生产代码已直接依赖 `paid_purchase_port`，该壳只剩名义出口价值 |
+| `game.gameplay_loop_ports` 字段 | 在 `gameplay_loop.lua` 中写入，但 `src/` 生产代码已无读取 | 历史兼容残留；当前真正活跃的是 `state.gameplay_loop_ports` |
+| `src/core/runtime_facade/runtime_state.lua` | `ensure_ui_runtime()` 仍从旧根级字段 seed 新结构 | UI runtime 迁移尚未完全结束；新旧状态共存 |
+| `src/core/runtime_facade/runtime_context.lua` | 单行 `return require(...)` | 纯转发壳；制造"双重所有权错觉" |
+| `src/core/runtime_facade/runtime_event_bridge.lua` | 单行 `return require(...)` | 纯转发壳；制造"双重所有权错觉" |
+| `src/core/runtime_ports/default_ports.lua` | 单行 `return require(...)` | 纯转发壳；制造"双重所有权错觉" |
+| `src/game/turn_engine/` | 文档标记 deprecated/frozen，但仍在 `composition_root.lua` 中被使用 | 历史执行器容器，状态不明确 |
 
-- `src/game/core/player/state_ops/location_ops.lua`
-  - 玩家进入医院、深山、位置相关状态操作。
-  - 当前在医院扣费失败时直接调用 `src.game.systems.endgame.bankruptcy`，是本计划要移除的反向依赖。
-- `src/game/systems/endgame/bankruptcy.lua`
-  - 负责破产结算：清空地块、清空库存、发破产弹窗、发反馈事件、淘汰玩家、触发生命/失败表现。
-  - 当前通过 `game.gameplay_loop_ports` 发“地块已清空”通知，是本计划要隔离的对象耦合。
-- `src/game/systems/endgame/game_victory.lua`
-  - 负责胜负判定；本轮不计划大改，只作为终局规则上下文参考。
-- `src/game/ports/bankruptcy_port.lua`
-  - 当前已经存在的玩法 Port 契约；本计划将优先复用它，而不是为 `location_ops` 另开直连路径。
-- `src/game/runtime/bankruptcy_port_adapter.lua`
-  - 当前把 `bankruptcy_port` 接到 `src.game.systems.endgame.bankruptcy`。
-- `src/game/flow/turn/gameplay_loop.lua`
-  - 负责运行时注入 port 与 loop 级装配；若新增 `bankruptcy_feedback_port`，大概率要在这里注入或覆盖。
-- `src/game/core/runtime/composition_root.lua`
-  - 负责 game 初始装配与默认 adapter；若新增默认空实现，这里可能是默认安装点。
+### 关键文件位置
 
-### 关键测试与文档文件
-
-- `tests/suites/gameplay.lua`
-  - 已覆盖破产、地块清空、医院/强制支付、角色死亡/失败表现等路径，是本计划的主要回归依据。
-- `tests/TestSupport.lua`
-  - 统一测试入口；若 Port 注入方式变化，需要同步更新测试构造。
-- `tests/internal/dep_rules.lua`
-  - 当前路径级边界守卫，需要在这里补充新的禁止规则。
-- `tests/suites/usecase_boundary_contract.lua`
-  - 当前验证 output port 与 use case 边界；若引入新的反馈 Port，应视情况增加契约测试。
-- `docs/architecture/boundaries.md`
-  - 目录语义文档，若本轮引入新的稳定 Port，需要同步说明“systems 不再读取 gameplay_loop_ports”。
-- `docs/architecture/layer-model.md`
-  - 7 组件分层模型；若 Port 链条发生变化，应把新 Port 放进示意。
+- `src/core/runtime_facade/runtime_state.lua` - UI runtime state 迁移核心文件
+- `src/core/runtime_facade/runtime_context.lua` - 纯转发壳候选
+- `src/core/runtime_facade/runtime_event_bridge.lua` - 纯转发壳候选
+- `src/core/runtime_ports/default_ports.lua` - 纯转发壳候选
+- `src/game/flow/output_adapters/legacy_output_mirror.lua` - 待删除兼容壳
+- `src/game/systems/market/service/paid_purchase_gateway.lua` - 待删除兼容壳
+- `src/game/flow/turn/gameplay_loop.lua` - `game.gameplay_loop_ports` 写入点
+- `src/app/bootstrap/runtime_install/runtime_global_aliases.lua` - 宿主全局别名安装
+- `src/core/runtime_facade/ui_role_globals.lua` - 角色全局安装
 
 ### 术语说明
 
-- **state**：这里主要指 `src/game/core/player/` 一侧的状态与状态操作，不是 UI state。
-- **systems**：`src/game/systems/` 中的玩法规则模块。
-- **Port**：稳定边界契约。内层只依赖 Port，不依赖具体注入方或外层字段组织方式。
-- **对象级耦合**：没有 `require` 错路径，但通过运行时对象字段名知道外层怎么组织数据，比如直接读 `game.gameplay_loop_ports`。
+- **兼容壳**：为了保持向后兼容而存在的包装层，通常只转发调用
+- **转发壳**：单行 `return require(...)` 的模块，仅提供稳定 import 路径
+- **legacy seed**：在状态迁移期间，从旧结构向新结构复制数据的兼容逻辑
+- **宿主全局别名**：把 Eggy 宿主 API 映射到全局变量（如 `SetTimeOut`、`RegisterCustomEvent`）
+- **façade**：门面模式，此处指 `runtime_facade` 和 `runtime_ports` 目录下的模块
 
 ## 里程碑
 
-### 里程碑 1：终局反馈先被端口化
+### 里程碑 1：删除"只剩名义价值"的兼容壳
 
-范围是把 `bankruptcy.lua` 对 `game.gameplay_loop_ports` 的直接读取换成稳定 Port。完成后，代码库会新增一个之前没有的、显式可替换的破产反馈边界，终局规则不再知道 gameplay loop 的字段组织。实施时应至少运行与破产相关的 gameplay 用例和边界契约。验收信号是：`src/game/systems/endgame/bankruptcy.lua` 中不再出现 `game.gameplay_loop_ports`，且破产清空地块后的反馈仍然被现有 UI / state 路径收到。
+范围是删除三个已确认无生产价值的兼容壳：`legacy_output_mirror.lua`、`paid_purchase_gateway.lua`、以及 `game.gameplay_loop_ports` 写入（若确认生产无读取）。完成后，代码树中不再存在"仅为测试存在"或"仅为导入别名存在"的模块。实施时应先把相关测试改成直接验证正式接口，再删除壳模块。验收信号是：`src/` 中不再出现这三个兼容壳的引用，且所有测试仍然通过。
 
-### 里程碑 2：state 不再直连 systems
+### 里程碑 2：完成 UI runtime state 迁移
 
-范围是把 `location_ops.lua` 从直接 `require("src.game.systems.endgame.bankruptcy")` 改为通过 `src/game/ports/bankruptcy_port.lua` 触发破产。完成后，`src/game/core/player/` 不再反向依赖 `src/game/systems/`。实施时应至少运行医院扣费失败、破产弹窗、玩家淘汰三类路径。验收信号是：`tests/internal/dep_rules.lua` 可以禁止 `core/player -> systems` 直接依赖，且相关 gameplay 测试通过。
+范围是让 `runtime_state.ensure_ui_runtime()` 不再从旧根级字段 seed 新结构。完成后，state 形状的标准将变得单一，不再有"新旧状态共存"的隐性复杂度。实施时应先清点仍读取 root 字段的模块与测试，逐一切换到 `ui_runtime` / `runtime_state.*`，最后删除 `_legacy_choice_seeded` 分支和 root-state seed 行为。验收信号是：`runtime_state.lua` 中不再出现 `state.ui_dirty`、`state.ui_model`、`state.pending_choice*`、`state.ui_modal_*` 的读取，且 UI 选择态、modal timer、pending choice 相关测试仍然通过。
 
-### 里程碑 3：护栏固化并形成可回归证明
+### 里程碑 3：收缩宿主全局别名使用面
 
-范围是补 dep rules、contract tests、必要文档。完成后，下一位开发者即使不了解这次重构，也会在引入同类倒退时立即被测试拦住。实施时应运行针对性回归，再视情况跑 `lua tests/regression.lua`。验收信号是：新增规则命中风险路径、现有回归不红、文档说明与实现一致。
+范围是把 `SetTimeOut`、`RegisterCustomEvent`、`TriggerCustomEvent`、`all_roles` 等宿主全局的使用范围压缩到最外层。完成后，"宿主全局名"将从显式 API 退化成真正的内部兼容细节。实施时应审查 `app/` 与 `presentation/` 中的直接读取，优先改走显式接口，并给 `dep_rules` 增加白名单。验收信号是：`grep -r "SetTimeOut\|RegisterCustomEvent\|TriggerCustomEvent\|all_roles\|ALLROLES" src/` 的命中数显著下降，且功能测试仍然通过。
+
+### 里程碑 4：对 façade 做明确取舍
+
+范围是解决 `src/core/runtime_facade/*` / `src/core/runtime_ports/*` 到底是长期公开 API 还是过渡壳的问题。有两种可选路线：
+
+- **路线 A**：正式承认 façade 为稳定 import 面，保留现有转发壳，并在文档中明确它们是唯一推荐入口。
+- **路线 B**：统一改 import 到真实实现后删除 façade，把调用方直接切到 `src/infrastructure/runtime/*`。
+
+决策应考虑"是否仍希望保持内层不 import infrastructure"。验收信号是：文档明确说明路线选择，代码与文档一致。
+
+### 里程碑 5：同步架构文档
+
+范围是更新 `docs/architecture/boundaries.md` 和 `docs/architecture/layer-model.md`，使其反映最新的边界约定。完成后，下一位开发者不需要只靠 grep 推断当前边界。验收信号是：文档中包含 `bankruptcy_feedback_port` 说明、`core/player ↛ systems` 和 `systems ↛ game.gameplay_loop_ports` 规则、以及 `legacy_output_mirror` / `turn_engine` 的退休方向。
 
 ## 工作计划
 
-先从最窄的泄漏点下手：在 `src/game/systems/endgame/bankruptcy.lua` 周围建立稳定反馈 Port，而不是直接修改更多业务流程。第一步阅读 `bankruptcy.lua` 的 `_notify_tiles_cleared()`、`src/game/flow/turn/gameplay_loop.lua` 中现有的 `gameplay_loop_ports` 组织方式，以及 `src/presentation/adapter/presentation_ports/state_ports.lua` 对 `on_bankruptcy_tiles_cleared` 的消费路径，明确最小需要暴露的函数签名。
+从风险最低、收益最直接的步骤开始：先删死壳，再收紧活桥，最后决定 façade 的取舍。
 
-接着在 `src/game/ports/` 或现有反馈 port 体系中新增/扩展稳定契约，并在 `src/game/core/runtime/composition_root.lua` 提供默认空实现，在 `src/game/flow/turn/gameplay_loop.lua` 提供运行时覆盖实现。之后修改 `src/game/systems/endgame/bankruptcy.lua`，让它只通过该 Port 发通知。此时先补针对 `bankruptcy.lua` 的契约测试与 gameplay 测试，确认“清空地块后的反馈链条”没有断。
+第一步，删除 `legacy_output_mirror.lua` 和 `paid_purchase_gateway.lua`。先把相关测试改成直接验证正式接口，而不是验证 legacy 包装壳。然后直接删除这两个文件。
 
-第二阶段再处理 `src/game/core/player/state_ops/location_ops.lua`。修改时只做最小必要变更：删除对 `src.game.systems.endgame.bankruptcy` 的 `require`，改为调用 `src/game/ports/bankruptcy_port.lua`。如果现有 `bankruptcy_port` 已足够，则不新增额外接口；如果调用语义不够清楚，再微调 Port 契约，但不把医院逻辑整块搬进 use case。修改后优先复跑医院扣费失败与破产相关用例。
+第二步，处理 `game.gameplay_loop_ports`。先在全仓 grep 确认生产代码无读取，然后删除 `gameplay_loop.lua` 中的写入语句。
 
-最后统一补强护栏：在 `tests/internal/dep_rules.lua` 中新增 `src/game/core/player/` 不能直接 require `src/game/systems/*` 的规则，并为 `src/game/systems/` 新增禁止读取 `game.gameplay_loop_ports` 的规则。必要时在 `tests/suites/usecase_boundary_contract.lua` 或新测试中增加 Port 默认行为与覆盖优先级验证。若文档中的 Port 注入示意已过时，同步更新 `docs/architecture/boundaries.md` 与 `docs/architecture/layer-model.md`。
+第三步，完成 UI runtime state 迁移。清点仍读取 root 字段的模块与测试，逐一切换到 `ui_runtime`。这是一个渐进过程，需要保证每一步测试都通过。最后删除 `_legacy_choice_seeded` 分支。
+
+第四步，收缩宿主全局别名使用面。审查 `app/` 和 `presentation/` 中的直接全局读取，改为显式接口调用。给 `dep_rules` 增加白名单防止扩散。
+
+第五步，对 façade 做取舍。根据"是否希望内层不 import infrastructure"决定路线 A 或 B，然后执行。
+
+第六步，同步更新架构文档。
 
 ## 具体步骤
 
 以下命令默认在仓库根目录 `/Users/gangan/Dev/repo/monopoly` 执行。
 
-1. 清点当前调用链与消费方。
+1. 验证兼容壳的生产引用状态。
 
-   ```bash
-   rg -n "gameplay_loop_ports|on_bankruptcy_tiles_cleared|bankruptcy_port|systems.endgame.bankruptcy|location_ops" src tests
-   ```
+       rg -l "legacy_output_mirror" src/
+       rg -l "paid_purchase_gateway" src/
+       rg -l "game\.gameplay_loop_ports" src/
 
-   预期：能看到 `location_ops.lua`、`bankruptcy.lua`、`bankruptcy_port.lua`、`bankruptcy_port_adapter.lua`、`gameplay_loop.lua`、`presentation_ports/state_ports.lua` 的命中。
+   预期：前两条命令无输出；第三条命令应只命中写入点（`gameplay_loop.lua`），无读取点。
 
-2. 设计并落地稳定反馈 Port。
+2. 删除兼容壳并更新相关测试。
 
-   ```bash
-   # 编辑相关文件
-   # - src/game/ports/<new_or_extended_port>.lua
-   # - src/game/core/runtime/composition_root.lua
-   # - src/game/flow/turn/gameplay_loop.lua
-   # - src/game/systems/endgame/bankruptcy.lua
-   ```
+       rm src/game/flow/output_adapters/legacy_output_mirror.lua
+       rm src/game/systems/market/service/paid_purchase_gateway.lua
+       # 编辑相关测试文件，移除对这两个模块的引用
 
-   预期：`bankruptcy.lua` 不再出现 `game.gameplay_loop_ports`。
+3. 清点 UI runtime 旧字段读取。
 
-3. 处理 `location_ops` 反向依赖。
+       rg -n "state\.ui_dirty|state\.ui_model|state\.pending_choice|state\.ui_modal" src/ tests/
 
-   ```bash
-   # 编辑相关文件
-   # - src/game/core/player/state_ops/location_ops.lua
-   # - src/game/ports/bankruptcy_port.lua (若需微调)
-   ```
+   预期：能看到仍读取 root 字段的模块清单。
 
-   预期：`location_ops.lua` 不再 `require("src.game.systems.endgame.bankruptcy")`。
+4. 逐一切换读路径到 `ui_runtime`。
 
-4. 补 dep rules 与契约测试。
+       # 编辑相关文件，把 state.xxx 改为 runtime_state.get_xxx(state)
 
-   ```bash
-   # 编辑相关文件
-   # - tests/internal/dep_rules.lua
-   # - tests/suites/usecase_boundary_contract.lua 或新增相关测试
-   # - tests/suites/gameplay.lua（如需）
-   ```
+5. 删除 `_legacy_choice_seeded` 分支和 root-state seed 行为。
 
-   预期：新增规则能表达两条禁止边界，相关测试文件可独立运行。
+       # 编辑 src/core/runtime_facade/runtime_state.lua
+       # 移除 _legacy_choice_seeded 相关逻辑
+       # 移除从 state.xxx 到 ui_runtime 的 seed 行为
 
-5. 运行针对性验证。
+6. 清点宿主全局别名使用面。
 
-   ```bash
-   lua - <<'LUA'
-   package.path = package.path .. ';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua'
-   local harness = require('TestHarness')
-   harness.run_all({
-     require('gameplay_core'),
-     require('architecture_guard_contract'),
-     require('usecase_boundary_contract'),
-   })
-   dofile('tests/internal/dep_rules.lua')
-   LUA
-   ```
+       rg -n "SetTimeOut|RegisterCustomEvent|TriggerCustomEvent|all_roles|ALLROLES" src/ --type lua
 
-   预期：输出 `All regression checks passed (...)` 且 `dep_rules ok`。
+   预期：命中数集中在 `app/bootstrap/` 和少量 `presentation/adapter/` 文件。
 
-6. 如针对性验证稳定，再跑全量回归。
+7. 审查并收缩宿主全局使用。
 
-   ```bash
-   lua tests/regression.lua
-   ```
+       # 编辑相关文件，优先改走 runtime_ports / host_runtime_port / runtime_context
 
-   预期：全量回归通过；若不是本轮改动引入的问题，需要记录在“意外与发现”，但不扩展修 unrelated 问题。
+8. 给 dep_rules 增加白名单。
+
+       # 编辑 tests/internal/dep_rules.lua
+       # 增加宿主全局别名使用面的白名单或增长预算
+
+9. 决策并执行 façade 取舍。
+
+       # 若路线 B：统一改 import 后删除转发壳
+       # rm src/core/runtime_facade/runtime_context.lua
+       # rm src/core/runtime_facade/runtime_event_bridge.lua
+       # rm src/core/runtime_ports/default_ports.lua
+
+10. 同步更新架构文档。
+
+        # 编辑 docs/architecture/boundaries.md
+        # 编辑 docs/architecture/layer-model.md
+
+11. 运行全量回归。
+
+        lua tests/regression.lua
+
+    预期：全量回归通过；若出现失败，记录到"意外与发现"。
 
 ## 验证与验收
 
-验收必须覆盖以下四类结果：
+验收必须覆盖以下结果：
 
-1. **实现边界**
-   - `src/game/systems/endgame/bankruptcy.lua` 不再直接读取 `game.gameplay_loop_ports`。
-   - `src/game/core/player/state_ops/location_ops.lua` 不再直接 require `src/game/systems/*`。
+1. **兼容壳删除**
+   - `src/game/flow/output_adapters/legacy_output_mirror.lua` 不存在
+   - `src/game/systems/market/service/paid_purchase_gateway.lua` 不存在
+   - `game.gameplay_loop_ports` 写入已删除（若确认生产无读取）
 
-2. **Port 边界**
-   - 新增/调整后的 Port 在无实现时有安全默认值。
-   - `gameplay_loop` 或 `composition_root` 的注入优先级有测试覆盖。
+2. **UI runtime 迁移完成**
+   - `runtime_state.ensure_ui_runtime()` 不再从旧根级字段 seed
+   - 所有读路径已切到 `ui_runtime` / `runtime_state.*`
 
-3. **回归行为**
-   - 医院扣费失败仍会触发破产。
-   - 破产仍会清空地块、清空库存、淘汰玩家、发反馈事件、保持现有 UI/状态同步。
+3. **宿主全局别名收缩**
+   - 宿主全局使用面显著压缩
+   - `dep_rules` 有白名单防止扩散
 
-4. **护栏固定**
-   - `tests/internal/dep_rules.lua` 能拦截 `core/player -> systems` 的直接依赖。
-   - `tests/internal/dep_rules.lua` 或等价测试能拦截 `systems -> game.gameplay_loop_ports` 的对象字段耦合。
+4. **façade 取舍明确**
+   - 文档明确说明路线选择（A 或 B）
+   - 代码与文档一致
+
+5. **架构文档同步**
+   - `docs/architecture/boundaries.md` 反映最新边界
+   - `docs/architecture/layer-model.md` 反映最新边界
 
 建议采用以下验收表述：
 
-- 运行上文第 5 步命令，预期针对性回归全部通过；新/调整测试在变更前失败、变更后通过。
-- 运行 `lua tests/regression.lua`，预期全量回归通过；如果出现历史既存失败，需要在“意外与发现”记录，不把 unrelated 修复混入本计划。
+- 运行 `lua tests/regression.lua`，预期全量回归通过。
+- 运行 `rg` 命令验证兼容壳已删除、宿主全局使用面已收缩。
+- 运行 `rg` 命令验证 `runtime_state.lua` 中无 root-state seed 行为。
 
 ## 可重复性与恢复
 
-本计划适合按里程碑重复执行。推荐顺序是“先加 Port 与默认实现，再改消费者，再删旧耦合”。不要反过来先删旧路径，否则容易在中间态打断回归。
+本计划适合按里程碑重复执行。推荐顺序是"先删死壳，再收紧活桥，最后决定 façade 取舍"。
 
 若某一步失败，按以下原则恢复：
 
-- Port 设计失败：回退新 Port 及其注入点，保留现有 `bankruptcy.lua` 逻辑不动。
-- `location_ops` 改造失败：仅回退 `location_ops.lua` 与相关 Port 微调，不回退已稳定的反馈 Port。
-- dep rules/测试失败：先保留实现修复，再单独调整测试表达，避免把真正已修复的边界问题回滚掉。
+- 兼容壳删除失败：回退删除操作，保留原文件。
+- UI runtime 迁移失败：仅回退当前正在迁移的字段，不回退已完成的字段。
+- 宿主全局收缩失败：保留已收缩的部分，仅回退当前正在收缩的调用点。
+- façade 取舍失败：保留现有转发壳，在决策日志中记录原因。
 
-完成后应保持工作区整洁，避免把分析脚本、统计产物或无关技能文档混入同一提交。
+完成后应保持工作区整洁，避免把分析脚本、统计产物或无关文档混入同一提交。
 
 ## 产物与备注
 
 本计划实施完成后，预期最小产物如下：
 
-    src/game/ports/bankruptcy_port.lua                  # 继续承载“触发破产”稳定契约
-    src/game/ports/<bankruptcy_feedback_port>.lua       # 若新增，则承载“地块清空反馈”稳定契约
-    src/game/systems/endgame/bankruptcy.lua             # 不再读取 game.gameplay_loop_ports
-    src/game/core/player/state_ops/location_ops.lua     # 不再直接 require systems/endgame
-    tests/internal/dep_rules.lua                        # 新增边界禁止规则
-    tests/suites/usecase_boundary_contract.lua          # 新增/补强 Port 契约测试
-    tests/suites/gameplay.lua                           # 补或调整破产相关回归
-
-如果最终决定不单独新增 `bankruptcy_feedback_port.lua`，也必须在代码与文档里明确“复用哪一个现有 port，以及为什么它足够稳定”。
+（待里程碑完成后补充）
 
 ## 接口与依赖
 
-本轮优先复用现有接口，只有在现有接口无法表达稳定边界时才新增最小接口。
+### 允许变更
 
-### 已有接口
+- 删除 `legacy_output_mirror.lua` 和 `paid_purchase_gateway.lua`
+- 修改 `runtime_state.lua` 移除 seed 行为
+- 修改各模块从 `state.xxx` 改为 `runtime_state.get_xxx(state)`
+- 修改各模块从宿主全局改为显式接口
+- 更新 `dep_rules.lua` 增加白名单
+- 更新架构文档
 
-在 `src/game/ports/bankruptcy_port.lua` 中应继续维持：
+### 禁止变更
 
-```lua
-function bankruptcy_port.eliminate(game, player, opts)
-end
-```
-
-在 `src/game/runtime/bankruptcy_port_adapter.lua` 中应继续维持：
-
-```lua
-function adapter.build()
-  return {
-    eliminate = function(game, player, opts)
-      -- adapter 到具体破产实现
-    end,
-  }
-end
-```
-
-### 建议新增的接口（若现有体系无法承载）
-
-在 `src/game/ports/bankruptcy_feedback_port.lua` 中定义：
-
-```lua
-function bankruptcy_feedback_port.on_tiles_cleared(game, player, owned_tile_ids)
-end
-```
-
-对应默认实现应为 no-op，运行时实现可由 `src/game/flow/turn/gameplay_loop.lua` 或展示侧 adapter 注入。关键约束是：`src/game/systems/endgame/bankruptcy.lua` 只能依赖这个稳定函数签名，不能依赖 `gameplay_loop_ports` 的字段组织。
-
-### 允许依赖与禁止依赖
-
-- 允许：`src/game/core/player/state_ops/location_ops.lua` → `src/game/ports/bankruptcy_port.lua`
-- 允许：`src/game/runtime/bankruptcy_port_adapter.lua` → `src/game/systems/endgame/bankruptcy.lua`
-- 允许：`src/game/flow/turn/gameplay_loop.lua` / `src/game/core/runtime/composition_root.lua` 安装 Port 实现
-- 禁止：`src/game/core/player/*` → `src/game/systems/*`
-- 禁止：`src/game/systems/*` 直接读取 `game.gameplay_loop_ports`
+- 不改变任何业务规则的行为
+- 不修改 `turn_engine/` 功能（仍在使用）
+- 不修改 Port 契约的函数签名（只改内部实现）
 
 ---
 
-更新说明：2026-03-07 基于 `.agents/research.md` 重写本计划，废弃旧的 snake_case 迁移计划内容。原因是仓库当前的主要工作已从目录搬迁转向边界收口，需要一份围绕终局 Port、依赖方向与回归验证的可执行计划。
-
-更新说明：2026-03-07 09:25Z 已按本计划完成终局反馈 Port 化、`location_ops` 去直连、dep rules 收紧、既有载具依赖清理，并记录回归证据。原因是本轮实施已完成，计划必须同步反映真实状态与验证结果。
+更新说明：2026-03-07 基于 `.agents/research.md` 重写本计划，废弃旧的边界收口内容。原因是上一轮边界收口已完成，当前代码库已从"架构重组期"进入"技术债精修期"，需要一份围绕清理兼容层、转发壳、legacy 债务的可执行计划。
