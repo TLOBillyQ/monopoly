@@ -16,41 +16,41 @@ local app = support.app
 local map_cfg = support.map_cfg
 local tiles_cfg = support.tiles_cfg
 local gameplay_loop = support.gameplay_loop
-local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
+local gameplay_loop_ports = require("src.game.flow.turn.gameplay_loop_ports")
 local tick_timeout = support.tick_timeout
 local constants = support.constants
 local bankruptcy = support.bankruptcy
 local turn_move = support.turn_move
-local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
-local gameplay_rules = require("src.core.config.GameplayRules")
-local mine_effect = require("src.game.systems.effects.MineEffect")
-local runtime_context = require("src.core.runtime_facade.RuntimeContext")
-local runtime_ports = require("src.core.ports.RuntimePorts")
-local runtime_event_bridge = require("src.core.runtime_facade.RuntimeEventBridge")
-local runtime_state = require("src.core.runtime_facade.RuntimeState")
-local runtime_global_aliases = require("src.app.bootstrap.runtime_install.RuntimeGlobalAliases")
-local dispatch_validator = require("src.game.flow.turn.TurnDispatchValidator")
-local tick_ui_sync = require("src.game.flow.turn.TickUISync")
-local choice_auto_policy = require("src.game.flow.turn.TurnChoiceAutoPolicy")
-local turn_timer_policy = require("src.game.flow.turn.TurnTimerPolicy")
-local turn_role_control_policy = require("src.game.flow.turn.TurnRoleControlPolicy")
-local turn_camera_policy = require("src.game.flow.turn.TurnCameraPolicy")
-local gameplay_loop_runtime = require("src.game.flow.turn.GameplayLoopRuntime")
-local intent_dispatcher = require("src.game.flow.intent.IntentDispatcher")
-local game_startup = require("src.app.bootstrap.GameStartup")
-local game_startup_event_bridge = require("src.app.bootstrap.GameStartupEventBridge")
-local test_profile_bootstrap = require("src.app.testing.TestProfileBootstrap")
-local monopoly_event = require("src.core.events.MonopolyEvents")
-local number_utils = require("src.core.utils.NumberUtils")
-local role_id_utils = require("src.core.utils.RoleId")
-local logger = require("src.core.utils.Logger")
-local market_service = require("src.game.systems.market.MarketService")
-local phase_registry = require("src.game.turn_engine.PhaseRegistry")
-local turn_decision = require("src.game.flow.turn.TurnDecision")
-local item_effects = require("src.game.systems.items.ItemPostEffects")
-local item_strategy = require("src.game.systems.items.ItemStrategy")
-local facing_policy = require("src.game.systems.board.FacingPolicy")
-local turn_start = require("src.game.flow.turn.TurnStart")
+local turn_dispatch = require("src.game.flow.turn.turn_dispatch")
+local gameplay_rules = require("src.core.config.gameplay_rules")
+local mine_effect = require("src.game.systems.effects.mine_effect")
+local runtime_context = require("src.core.runtime_facade.runtime_context")
+local runtime_ports = require("src.core.ports.runtime_ports")
+local runtime_event_bridge = require("src.core.runtime_facade.runtime_event_bridge")
+local runtime_state = require("src.core.runtime_facade.runtime_state")
+local runtime_global_aliases = require("src.app.bootstrap.runtime_install.runtime_global_aliases")
+local dispatch_validator = require("src.game.flow.turn.turn_dispatch_validator")
+local tick_ui_sync = require("src.game.flow.turn.tick_ui_sync")
+local choice_auto_policy = require("src.game.flow.turn.turn_choice_auto_policy")
+local turn_timer_policy = require("src.game.flow.turn.turn_timer_policy")
+local turn_role_control_policy = require("src.game.flow.turn.turn_role_control_policy")
+local turn_camera_policy = require("src.game.flow.turn.turn_camera_policy")
+local gameplay_loop_runtime = require("src.game.flow.turn.gameplay_loop_runtime")
+local intent_dispatcher = require("src.game.flow.intent.intent_dispatcher")
+local game_startup = require("src.app.bootstrap.game_startup")
+local game_startup_event_bridge = require("src.app.bootstrap.game_startup_event_bridge")
+local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
+local monopoly_event = require("src.core.events.monopoly_events")
+local number_utils = require("src.core.utils.number_utils")
+local role_id_utils = require("src.core.utils.role_id")
+local logger = require("src.core.utils.logger")
+local market_service = require("src.game.systems.market.market_service")
+local phase_registry = require("src.game.turn_engine.phase_registry")
+local turn_decision = require("src.game.flow.turn.turn_decision")
+local item_effects = require("src.game.systems.items.item_post_effects")
+local item_strategy = require("src.game.systems.items.item_strategy")
+local facing_policy = require("src.game.systems.board.facing_policy")
+local turn_start = require("src.game.flow.turn.turn_start")
 
 local function _mock_lua_api(send_custom_event)
   return {
@@ -198,7 +198,7 @@ local function _build_test_ports(overrides)
 end
 
 local function _build_loop_state()
-  local auto_runner = require("src.game.flow.turn.AutoRunner")
+  local auto_runner = require("src.game.flow.turn.auto_runner")
   local ui_port = _build_ui_port()
   local state = {
     gameplay_loop_ports = _build_test_ports({
@@ -871,7 +871,7 @@ local function _test_game_startup_build_state_is_pure_and_bridge_installs_events
       board = { get_overlays = function() return { roadblocks = {}, mines = {} } end, tile_lookup = {}, path = {} },
     }
     support.with_patches({
-      { target = require("src.presentation.adapter.UIViewService"), key = "open_choice_modal", value = function(_, choice)
+      { target = require("src.presentation.adapter.ui_view_service"), key = "open_choice_modal", value = function(_, choice)
         opened = choice
       end },
     }, function()
@@ -904,12 +904,12 @@ local function _test_runtime_context_install_environment_fails_fast()
 end
 
 local function _test_autorunner_runs_to_end()
-  local auto_runner = require("src.game.flow.turn.AutoRunner")
-  local agent = require("src.game.core.ai.Agent")
-  local gameplay_rules = require("src.core.config.GameplayRules")
-  local land = require("src.game.systems.land.LandingEffectExecutors")
-  local land_actions = require("src.game.systems.land.LandActions")
-  local item_inventory = require("src.game.systems.items.ItemInventory")
+  local auto_runner = require("src.game.flow.turn.auto_runner")
+  local agent = require("src.game.core.ai.agent")
+  local gameplay_rules = require("src.core.config.gameplay_rules")
+  local land = require("src.game.systems.land.landing_effect_executors")
+  local land_actions = require("src.game.systems.land.land_actions")
+  local item_inventory = require("src.game.systems.items.item_inventory")
 
   local g = app:new({
     players = { "P1", "P2", "P3", "P4" },
@@ -922,7 +922,7 @@ local function _test_autorunner_runs_to_end()
   g.anim_gate_port = { wait_action_anim = false, wait_move_anim = false }
   g.popup_port = { push_popup = function() return false end }
   g.tile_feedback_port = { on_tile_upgraded = function() return false end }
-  g.intent_output_port = require("src.game.flow.output_adapters.IntentOutputAdapter").build()
+  g.intent_output_port = require("src.game.flow.output_adapters.intent_output_adapter").build()
 
   local state = {
     gameplay_loop_ports = _build_test_ports({
@@ -1130,7 +1130,7 @@ local function _test_complex_consecutive_turn_settlement()
     g.board:place_mine(chance_idx + 2)
   end
 
-  local chance_cfg = require("Config.Generated.ChanceCards")
+  local chance_cfg = require("Config.generated.chance_cards")
   local has_move_forward = false
   for _, card in ipairs(chance_cfg) do
     if card.effect == "move_forward" and card.steps == 2 and card.target == "self" then
@@ -2305,7 +2305,7 @@ local function _test_game_startup_role_roster_retries_before_debug_players_fallb
   local state = nil
   local resolve_calls = 0
   local created_opts = nil
-  local runtime_ports = require("src.core.ports.RuntimePorts")
+  local runtime_ports = require("src.core.ports.runtime_ports")
   support.with_patches({
     { target = runtime_ports, key = "resolve_roles", value = function()
       resolve_calls = resolve_calls + 1

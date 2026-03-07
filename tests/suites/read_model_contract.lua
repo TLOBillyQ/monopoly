@@ -2,8 +2,8 @@ local support = require("TestSupport")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
-local gameplay_read_port = require("src.presentation.read_model.GameplayReadPort")
-local land_pricing = require("src.game.systems.land.LandPricing")
+local gameplay_read_port = require("src.presentation.read_model.gameplay_read_port")
+local land_pricing = require("src.game.systems.land.land_pricing")
 
 local function _test_total_land_invested_matches_domain_pricing()
   local tile = {

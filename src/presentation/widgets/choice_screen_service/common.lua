@@ -1,7 +1,7 @@
-local route_policy = require("src.presentation.interaction.UIChoiceRoutePolicy")
-local runtime = require("src.presentation.adapter.UIRuntimePort")
-local canvas = require("src.presentation.interaction.UICanvasCoordinator")
-local runtime_state = require("src.core.runtime_facade.RuntimeState")
+local route_policy = require("src.presentation.interaction.ui_choice_route_policy")
+local runtime = require("src.presentation.adapter.ui_runtime_port")
+local canvas = require("src.presentation.interaction.ui_canvas_coordinator")
+local runtime_state = require("src.core.runtime_facade.runtime_state")
 
 local M = {}
 
@@ -200,7 +200,7 @@ function M.switch_modal_canvas(state, target_canvas)
   local ui = state.ui
   runtime.for_each_role_or_global(function(role)
     local current_model = runtime_state.get_ui_model(state)
-    local ctx = require("src.presentation.state.UIRoleContext").resolve(role, current_model, { runtime = runtime })
+    local ctx = require("src.presentation.state.ui_role_context").resolve(role, current_model, { runtime = runtime })
     if ctx.can_operate == true then
       if role then
         canvas.switch_for_role(ui, target_canvas, role)

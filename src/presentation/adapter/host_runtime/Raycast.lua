@@ -1,4 +1,4 @@
-local number_utils = require("src.core.utils.NumberUtils")
+local number_utils = require("src.core.utils.number_utils")
 
 local raycast = {}
 

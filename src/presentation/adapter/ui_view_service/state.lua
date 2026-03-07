@@ -4,7 +4,7 @@ local bankruptcy_nodes = require("src.presentation.canvas.bankruptcy.nodes")
 local always_show_nodes = require("src.presentation.canvas.always_show.nodes")
 local core = require("src.presentation.adapter.ui_view_service.core")
 local always_show_contract = require("src.presentation.canvas.always_show.contract")
-local canvas_store = require("src.presentation.canvas_runtime.CanvasStore")
+local canvas_store = require("src.presentation.canvas_runtime.canvas_store")
 
 local M = {}
 

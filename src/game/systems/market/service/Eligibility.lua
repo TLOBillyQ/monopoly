@@ -1,6 +1,6 @@
-local inventory = require("src.game.systems.items.ItemInventory")
-local context = require("src.game.systems.market.service.Context")
-local purchase = require("src.game.systems.market.service.Purchase")
+local inventory = require("src.game.systems.items.item_inventory")
+local context = require("src.game.systems.market.service.context")
+local purchase = require("src.game.systems.market.service.purchase")
 
 local eligibility = {}
 

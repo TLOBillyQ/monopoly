@@ -2,12 +2,12 @@ local support = require("TestSupport")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
-local gameplay_loop = require("src.game.flow.turn.GameplayLoop")
-local gameplay_loop_ports = require("src.game.flow.turn.GameplayLoopPorts")
-local turn_dispatch = require("src.game.flow.turn.TurnDispatch")
-local turn_roll = require("src.game.flow.turn.TurnRoll")
-local use_case_output_port = require("src.game.flow.output_adapters.UseCaseOutputPort")
-local action_anim_port = require("src.core.ports.ActionAnimPort")
+local gameplay_loop = require("src.game.flow.turn.gameplay_loop")
+local gameplay_loop_ports = require("src.game.flow.turn.gameplay_loop_ports")
+local turn_dispatch = require("src.game.flow.turn.turn_dispatch")
+local turn_roll = require("src.game.flow.turn.turn_roll")
+local use_case_output_port = require("src.game.flow.output_adapters.use_case_output_port")
+local action_anim_port = require("src.core.ports.action_anim_port")
 
 local function _merge_group(base_group, override_group)
   local merged = {}
@@ -120,7 +120,7 @@ local function _build_guard_ports(output_log, overrides)
 end
 
 local function _build_loop_state()
-  local auto_runner = require("src.game.flow.turn.AutoRunner")
+  local auto_runner = require("src.game.flow.turn.auto_runner")
   local ui_port = support.build_ui_port()
   local state = {
     gameplay_loop_ports = _build_guard_ports(),

@@ -1,5 +1,5 @@
 local support = require("TestSupport")
-local default_map = require("Config.Maps.DefaultMap")
+local default_map = require("Config.maps.default_map")
 local function _new_game()
   return support.new_game({ map = default_map })
 end
@@ -13,7 +13,7 @@ local pricing = support.pricing
 local choice_resolver = support.choice_resolver
 
 local function _test_ai_picks_land_purchase()
-  local agent = require("src.game.core.ai.Agent")
+  local agent = require("src.game.core.ai.agent")
   local g = _new_game()
   local ai_player = g.players[2]
   assert(agent.is_auto_player(ai_player), "player 2 should be AI")
@@ -102,7 +102,7 @@ local function _test_land_rent_graph_adjacency_breaks_path_neighbors()
 end
 
 local function _test_rent_owner_missing_skips_payment()
-  local land = require("src.game.systems.land.LandingEffectExecutors")
+  local land = require("src.game.systems.land.landing_effect_executors")
   local g = _new_game()
   local tenant = g.players[1]
   local owner = g.players[2]

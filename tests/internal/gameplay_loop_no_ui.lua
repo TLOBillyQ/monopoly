@@ -1,7 +1,7 @@
-local app = require("src.game.core.runtime.Game")
-local gameplay_loop = require("src.game.flow.turn.GameplayLoop")
-local map_cfg = require("Config.Maps.DefaultMap")
-local tiles_cfg = require("Config.Generated.Tiles")
+local app = require("src.game.core.runtime.game")
+local gameplay_loop = require("src.game.flow.turn.gameplay_loop")
+local map_cfg = require("Config.maps.default_map")
+local tiles_cfg = require("Config.generated.tiles")
 
 if not math.tofixed then
   function math.tofixed(value)

@@ -1,8 +1,8 @@
-local auto_play_port = require("src.game.ports.AutoPlayPort")
-local monopoly_event = require("src.core.events.MonopolyEvents")
-local query = require("src.game.systems.market.service.Eligibility")
-local purchase = require("src.game.systems.market.service.Purchase")
-local context = require("src.game.systems.market.service.Context")
+local auto_play_port = require("src.game.ports.auto_play_port")
+local monopoly_event = require("src.core.events.monopoly_events")
+local query = require("src.game.systems.market.service.eligibility")
+local purchase = require("src.game.systems.market.service.purchase")
+local context = require("src.game.systems.market.service.context")
 
 local auto = {}
 local _emit_event = monopoly_event.emit

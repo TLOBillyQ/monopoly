@@ -42,34 +42,34 @@ local rules = {
   {
     root = "src/game/core",
     forbidden_patterns = {
-      "require%(\"src%.core%.RuntimeCompat\"%)",
-      "require%('src%.core%.RuntimeCompat'%)",
+      "require%(\"src%.core%.runtime_compat\"%)",
+      "require%('src%.core%.runtime_compat'%)",
     },
-    description = "game core must not depend on retired runtime bridge path src.core.RuntimeCompat; use RuntimePorts/context-injected ports",
+    description = "game core must not depend on retired runtime bridge path src.core.runtime_compat; use runtime_ports/context-injected ports",
   },
   {
     root = "src/app",
     forbidden_patterns = {
-      "require%(\"src%.core%.RuntimeCompat\"%)",
-      "require%('src%.core%.RuntimeCompat'%)",
+      "require%(\"src%.core%.runtime_compat\"%)",
+      "require%('src%.core%.runtime_compat'%)",
     },
-    description = "app layer must not depend on retired runtime bridge path src.core.RuntimeCompat; use RuntimePorts/context",
+    description = "app layer must not depend on retired runtime bridge path src.core.runtime_compat; use runtime_ports/context",
   },
   {
     root = "src/presentation",
     forbidden_patterns = {
-      "require%(\"src%.core%.RuntimeCompat\"%)",
-      "require%('src%.core%.RuntimeCompat'%)",
+      "require%(\"src%.core%.runtime_compat\"%)",
+      "require%('src%.core%.runtime_compat'%)",
     },
-    description = "presentation layer must not depend on retired runtime bridge path src.core.RuntimeCompat; use RuntimePorts/context",
+    description = "presentation layer must not depend on retired runtime bridge path src.core.runtime_compat; use runtime_ports/context",
   },
   {
     root = "tests",
     forbidden_patterns = {
-      "require%(\"src%.core%.RuntimeCompat\"%)",
-      "require%('src%.core%.RuntimeCompat'%)",
+      "require%(\"src%.core%.runtime_compat\"%)",
+      "require%('src%.core%.runtime_compat'%)",
     },
-    description = "tests must not depend on retired runtime bridge path src.core.RuntimeCompat; validate RuntimePorts/RuntimeContext contracts directly",
+    description = "tests must not depend on retired runtime bridge path src.core.runtime_compat; validate runtime_ports/runtime_context contracts directly",
   },
   {
     root = "src/game/core",
@@ -180,7 +180,7 @@ local rules = {
       "%f[%w_]vehicle_helper%f[^%w_]",
       "%f[%w_]camera_helper%f[^%w_]",
     },
-    description = "game layer must not read legacy runtime globals directly; use RuntimePorts/context",
+    description = "game layer must not read legacy runtime globals directly; use runtime_ports/context",
   },
   {
     root = "src/presentation",
@@ -190,7 +190,7 @@ local rules = {
       "%f[%w_]vehicle_helper%f[^%w_]",
       "%f[%w_]camera_helper%f[^%w_]",
     },
-    description = "presentation layer must not read legacy runtime globals directly; use RuntimePorts/context",
+    description = "presentation layer must not read legacy runtime globals directly; use runtime_ports/context",
   },
 }
 
@@ -198,15 +198,11 @@ local rules = {
 -- Entries that are no longer observed will fail the rule check to enforce decay.
 local presentation_game_systems_whitelist = {
   -- ["src/presentation/example.lua"] = {
-  --   ["src.game.systems.some.Module"] = true,
+  --   ["src.game.systems.some.module"] = true,
   -- },
 }
 
-local forbidden_files = {
-  "src/game/core/runtime/TurnEngine.lua",
-  "src/game/core/runtime/PhaseRegistry.lua",
-  "src/game/core/runtime/MonopolyEvents.lua",
-}
+local forbidden_files = {}
 
 local growth_budget_rules = {
   {
@@ -220,10 +216,10 @@ local growth_budget_rules = {
       "%f[%w_]RegisterCustomEvent%f[^%w_]",
     },
     budget = {
-      ["src/core/utils/Logger.lua"] = 0,
-      ["src/core/runtime_facade/RuntimeContext.lua"] = 0,
-      ["src/core/runtime_facade/RuntimeEditorExports.lua"] = 0,
-      ["src/core/runtime_ports/DefaultPorts.lua"] = 0,
+      ["src/core/utils/logger.lua"] = 0,
+      ["src/core/runtime_facade/runtime_context.lua"] = 0,
+      ["src/core/runtime_facade/runtime_editor_exports.lua"] = 0,
+      ["src/core/runtime_ports/default_ports.lua"] = 0,
     },
   },
   {
@@ -239,19 +235,19 @@ local growth_budget_rules = {
       "ui_port%.state",
     },
     budget = {
-      ["src/core/ports/ActionAnimPort.lua"] = 0,
-      ["src/game/core/runtime/Bankruptcy.lua"] = 0,
-      ["src/game/core/runtime/GameStateTiles.lua"] = 0,
-      ["src/game/flow/intent/IntentDispatcher.lua"] = 0,
-      ["src/game/flow/turn/GameplayLoop.lua"] = 0,
-      ["src/game/flow/turn/TurnDecision.lua"] = 0,
-      ["src/game/flow/turn/TurnMove.lua"] = 0,
-      ["src/game/flow/turn/TurnRoll.lua"] = 0,
-      ["src/game/systems/items/ItemInventory.lua"] = 0,
-      ["src/game/systems/items/ItemPhase.lua"] = 0,
-      ["src/game/systems/items/ItemUseBroadcast.lua"] = 0,
-      ["src/game/systems/land/LandingPresenter.lua"] = 0,
-      ["src/game/systems/land/landing_effects/BaseLandEffects.lua"] = 0,
+      ["src/core/ports/action_anim_port.lua"] = 0,
+      ["src/game/core/runtime/bankruptcy.lua"] = 0,
+      ["src/game/core/runtime/game_state_tiles.lua"] = 0,
+      ["src/game/flow/intent/intent_dispatcher.lua"] = 0,
+      ["src/game/flow/turn/gameplay_loop.lua"] = 0,
+      ["src/game/flow/turn/turn_decision.lua"] = 0,
+      ["src/game/flow/turn/turn_move.lua"] = 0,
+      ["src/game/flow/turn/turn_roll.lua"] = 0,
+      ["src/game/systems/items/item_inventory.lua"] = 0,
+      ["src/game/systems/items/item_phase.lua"] = 0,
+      ["src/game/systems/items/item_use_broadcast.lua"] = 0,
+      ["src/game/systems/land/landing_presenter.lua"] = 0,
+      ["src/game/systems/land/landing_effects/base_land_effects.lua"] = 0,
     },
   },
   {

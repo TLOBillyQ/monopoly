@@ -1,8 +1,8 @@
 local support = require("TestSupport")
 local _assert_eq = support.assert_eq
 
-local validator = require("src.game.flow.turn.TurnDispatchValidator")
-local tick_timeout = require("src.game.flow.turn.TickTimeout")
+local validator = require("src.game.flow.turn.turn_dispatch_validator")
+local tick_timeout = require("src.game.flow.turn.tick_timeout")
 
 local function _test_ui_gate_resolve_state_uses_port_contract()
   local state = {

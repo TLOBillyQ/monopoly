@@ -1,11 +1,11 @@
-local logger = require("src.core.utils.Logger")
-local runtime_install = require("src.app.bootstrap.RuntimeInstall")
-local game_startup = require("src.app.bootstrap.GameStartup")
-local game_startup_event_bridge = require("src.app.bootstrap.GameStartupEventBridge")
-local game_runtime_bootstrap = require("src.app.bootstrap.GameRuntimeBootstrap")
-local ui_bootstrap = require("src.app.bootstrap.UIBootstrap")
-local startup_policy = require("src.app.bootstrap.StartupPolicy")
-local gameplay_rules = require("src.core.config.GameplayRules")
+local logger = require("src.core.utils.logger")
+local runtime_install = require("src.app.bootstrap.runtime_install")
+local game_startup = require("src.app.bootstrap.game_startup")
+local game_startup_event_bridge = require("src.app.bootstrap.game_startup_event_bridge")
+local game_runtime_bootstrap = require("src.app.bootstrap.game_runtime_bootstrap")
+local ui_bootstrap = require("src.app.bootstrap.ui_bootstrap")
+local startup_policy = require("src.app.bootstrap.startup_policy")
+local gameplay_rules = require("src.core.config.gameplay_rules")
 
 logger.configure_host_runtime({
   game_api = GameAPI,

@@ -1,15 +1,15 @@
 local support = require("TestSupport")
-local default_map = require("Config.Maps.DefaultMap")
-local facing_policy = require("src.game.systems.board.FacingPolicy")
+local default_map = require("Config.maps.default_map")
+local facing_policy = require("src.game.systems.board.facing_policy")
 local function _new_game()
   return support.new_game({ map = default_map })
 end
 local _assert_eq = support.assert_eq
 local movement = support.movement
 local board_utils = support.board_utils
-local move_anim = require("src.presentation.render.MoveAnim")
-local board_feedback = require("src.presentation.render.BoardFeedbackService")
-local runtime_ports = require("src.core.ports.RuntimePorts")
+local move_anim = require("src.presentation.render.move_anim")
+local board_feedback = require("src.presentation.render.board_feedback_service")
+local runtime_ports = require("src.core.ports.runtime_ports")
 
 local function _simulate_heading(board, start_index, facing, steps, backward, parity)
   local current = start_index

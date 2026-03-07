@@ -1,6 +1,6 @@
-local turn_decision = require("src.game.flow.turn.TurnDecision")
-local validator = require("src.game.flow.turn.TurnDispatchValidator")
-local number_utils = require("src.core.utils.NumberUtils")
+local turn_decision = require("src.game.flow.turn.turn_decision")
+local validator = require("src.game.flow.turn.turn_dispatch_validator")
+local number_utils = require("src.core.utils.number_utils")
 
 local await = {}
 

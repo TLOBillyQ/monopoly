@@ -1,9 +1,9 @@
-local tile = require("src.game.systems.board.Tile")
-local roadblock = require("src.game.systems.items.ItemRoadblock")
-local demolish = require("src.game.systems.items.ItemDemolish")
-local pricing = require("src.game.systems.land.LandPricing")
-local gameplay_rules = require("src.core.config.GameplayRules")
-local facing_policy = require("src.game.systems.board.FacingPolicy")
+local tile = require("src.game.systems.board.tile")
+local roadblock = require("src.game.systems.items.item_roadblock")
+local demolish = require("src.game.systems.items.item_demolish")
+local pricing = require("src.game.systems.land.land_pricing")
+local gameplay_rules = require("src.core.config.gameplay_rules")
+local facing_policy = require("src.game.systems.board.facing_policy")
 
 -- Runtime sandbox contract (docs/eggy/lua_env.md):
 -- 1) Release sandbox removes debug/io/os/package.

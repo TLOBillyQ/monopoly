@@ -1,7 +1,7 @@
-local logger = require("src.core.utils.Logger")
+local logger = require("src.core.utils.logger")
 local nodes = require("src.presentation.canvas.base.nodes")
 local choice_common = require("src.presentation.widgets.choice_screen_service.common")
-local runtime_state = require("src.core.runtime_facade.RuntimeState")
+local runtime_state = require("src.core.runtime_facade.runtime_state")
 
 local intents = {}
 

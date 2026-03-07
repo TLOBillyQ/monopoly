@@ -1,7 +1,7 @@
-local logger = require("src.core.utils.Logger")
-local runtime_ports = require("src.core.ports.RuntimePorts")
-local inventory = require("src.game.systems.items.ItemInventory")
-local monopoly_event = require("src.core.events.MonopolyEvents")
+local logger = require("src.core.utils.logger")
+local runtime_ports = require("src.core.ports.runtime_ports")
+local inventory = require("src.game.systems.items.item_inventory")
+local monopoly_event = require("src.core.events.monopoly_events")
 
 local bankruptcy = {}
 local warned_missing_tiles_cleared_callback = false

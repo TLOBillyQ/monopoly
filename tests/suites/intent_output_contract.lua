@@ -2,12 +2,12 @@ local support = require("TestSupport")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
-local intent_output_port = require("src.game.ports.IntentOutputPort")
-local intent_output_adapter = require("src.game.flow.output_adapters.IntentOutputAdapter")
-local gameplay_loop = require("src.game.flow.turn.GameplayLoop")
-local paid_currency_bridge = require("src.game.systems.commerce.PaidCurrencyBridge")
-local market_purchase = require("src.game.systems.market.service.Purchase")
-local landing_presenter = require("src.game.systems.land.LandingPresenter")
+local intent_output_port = require("src.game.ports.intent_output_port")
+local intent_output_adapter = require("src.game.flow.output_adapters.intent_output_adapter")
+local gameplay_loop = require("src.game.flow.turn.gameplay_loop")
+local paid_currency_bridge = require("src.game.systems.commerce.paid_currency_bridge")
+local market_purchase = require("src.game.systems.market.service.purchase")
+local landing_presenter = require("src.game.systems.land.landing_presenter")
 
 local function _build_state()
   return {

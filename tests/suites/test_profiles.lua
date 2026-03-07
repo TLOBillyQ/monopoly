@@ -5,10 +5,10 @@ local tiles_cfg = support.tiles_cfg
 local tile_state = support.tile_state
 local with_patches = support.with_patches
 
-local constants = require("Config.Generated.Constants")
-local test_profiles_cfg = require("src.app.testing.config.TestProfiles")
-local test_profile_bootstrap = require("src.app.testing.TestProfileBootstrap")
-local test_profile_resolver = require("src.app.testing.TestProfileResolver")
+local constants = require("Config.generated.constants")
+local test_profiles_cfg = require("src.app.testing.config.test_profiles")
+local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
+local test_profile_resolver = require("src.app.testing.test_profile_resolver")
 
 local function _load_map_for_profile(profile_name)
   return test_profile_resolver.resolve_map(profile_name)
@@ -62,7 +62,7 @@ local function _test_default_profile_map_is_stable()
 end
 
 local function _test_all_profiles_use_default_map()
-  local default_map = require("Config.Maps.DefaultMap")
+  local default_map = require("Config.maps.default_map")
   local names = test_profile_resolver.available_profiles()
   for _, name in ipairs(names) do
     local map = _load_map_for_profile(name)

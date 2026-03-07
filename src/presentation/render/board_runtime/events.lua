@@ -1,7 +1,7 @@
-local building_effects = require("src.presentation.render.BuildingEffects")
-local tile_renderer = require("src.presentation.render.TileRenderer")
-local number_utils = require("src.core.utils.NumberUtils")
-local runtime_constants = require("src.core.config.RuntimeConstants")
+local building_effects = require("src.presentation.render.building_effects")
+local tile_renderer = require("src.presentation.render.tile_renderer")
+local number_utils = require("src.core.utils.number_utils")
+local runtime_constants = require("src.core.config.runtime_constants")
 
 local M = {}
 

@@ -1,10 +1,10 @@
 local support = require("TestSupport")
 local with_patches = support.with_patches
 local app = support.app
-local startup_policy = require("src.app.bootstrap.StartupPolicy")
-local game_startup = require("src.app.bootstrap.GameStartup")
-local runtime_ports = require("src.core.ports.RuntimePorts")
-local test_profile_bootstrap = require("src.app.testing.TestProfileBootstrap")
+local startup_policy = require("src.app.bootstrap.startup_policy")
+local game_startup = require("src.app.bootstrap.game_startup")
+local runtime_ports = require("src.core.ports.runtime_ports")
+local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
 
 local function _test_release_prod_forces_default_profile()
   with_patches({

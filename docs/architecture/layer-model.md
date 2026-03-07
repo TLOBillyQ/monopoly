@@ -13,10 +13,10 @@ UI → Turn Management → (Player | Computer) → shared-mechanics → (state |
 | UI | `src/presentation/` |
 | Turn Management | `src/game/flow/` |
 | Player | 人类玩家路径：UI 发出 action → Turn Management `dispatch_action` |
-| Computer | `src/game/core/ai/Agent.lua` |
+| Computer | `src/game/core/ai/agent.lua` |
 | shared-mechanics | `src/game/systems/` + `src/game/ports/`（Port 契约） |
 | state | `src/game/core/player/`, `src/game/core/runtime/Game*.lua` |
-| config | `Config/Generated/`, `src/core/config/` |
+| config | `Config/generated/`, `src/core/config/` |
 
 辅助层（不计入 7 组件）：`src/game/runtime/`（Port Adapter）、`src/game/turn_engine/`（deprecated/frozen 的历史执行器容器）、`src/game/scheduler/`（协程调度细节）、`src/app/bootstrap/`（装配）、`src/infrastructure/runtime/`（Eggy 宿主）、`src/core/`（跨层工具）。
 
@@ -36,11 +36,11 @@ UI → Turn Management → (Player | Computer) → shared-mechanics → (state |
 systems 需要调用 runtime 细节时，通过 Port 契约 + Adapter 解耦：
 
 ```
-systems → src/game/ports/XxxPort.lua (assert-only)
+systems → src/game/ports/xxx_port.lua (assert-only)
                     ↑
-          src/game/runtime/XxxPortAdapter.lua (实现)
+          src/game/runtime/xxx_port_adapter.lua (实现)
                     ↑
-          src/game/core/runtime/Xxx.lua (具体逻辑)
+          src/game/core/runtime/xxx.lua (具体逻辑)
 ```
 
 默认 adapter 在 `CompositionRoot.assemble()` 安装；flow 层可覆盖。
@@ -60,7 +60,7 @@ src/game/runtime/      src/game/ports/  (pure assert contracts)
       │
       ▼
 src/game/core/runtime/     src/core/config/
-  (Agent, Bankruptcy,       Config/Generated/
+  (Agent, Bankruptcy,       Config/generated/
    Game, CompositionRoot)
       │
       ▼

@@ -1,8 +1,8 @@
-local modal_state = require("src.presentation.interaction.UIModalStateCoordinator")
-local canvas = require("src.presentation.interaction.UICanvasCoordinator")
+local modal_state = require("src.presentation.interaction.ui_modal_state_coordinator")
+local canvas = require("src.presentation.interaction.ui_canvas_coordinator")
 local common = require("src.presentation.widgets.choice_screen_service.common")
 local core = require("src.presentation.adapter.ui_view_service.core")
-local logger = require("src.core.utils.Logger")
+local logger = require("src.core.utils.logger")
 
 local M = {}
 

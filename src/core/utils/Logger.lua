@@ -18,7 +18,7 @@ local logger = {
   tip_presenter = nil,
   scheduler = nil,
 }
-local number_utils = require("src.core.utils.NumberUtils")
+local number_utils = require("src.core.utils.number_utils")
 
 local function _stringify(start_index, ...)
   local start = start_index or 1

@@ -1,6 +1,6 @@
-local logger = require("src.core.utils.Logger")
-local runtime_state = require("src.core.runtime_facade.RuntimeState")
-local ui_event_intents = require("src.presentation.interaction.UIEventIntents")
+local logger = require("src.core.utils.logger")
+local runtime_state = require("src.core.runtime_facade.runtime_state")
+local ui_event_intents = require("src.presentation.interaction.ui_event_intents")
 local nodes = require("src.presentation.canvas.market.nodes")
 
 local intents = {}

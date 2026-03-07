@@ -1,4 +1,4 @@
-local market_renderer = require("src.presentation.widgets.MarketModalRenderer")
+local market_renderer = require("src.presentation.widgets.market_modal_renderer")
 
 local presenter = {}
 

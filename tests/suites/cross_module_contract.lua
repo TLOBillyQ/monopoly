@@ -2,13 +2,13 @@ local support = require("TestSupport")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
-local monopoly_events = require("src.core.events.MonopolyEvents")
-local runtime_event_bridge = require("src.core.runtime_facade.RuntimeEventBridge")
-local land_events = require("src.game.systems.land.LandEvents")
-local land_rules = require("src.game.systems.land.LandRules")
-local land_rent_resolver = require("src.game.systems.land.LandRentResolver")
-local action_anim = require("src.presentation.render.ActionAnim")
-local handlers = require("src.presentation.render.ActionAnimHandlers")
+local monopoly_events = require("src.core.events.monopoly_events")
+local runtime_event_bridge = require("src.core.runtime_facade.runtime_event_bridge")
+local land_events = require("src.game.systems.land.land_events")
+local land_rules = require("src.game.systems.land.land_rules")
+local land_rent_resolver = require("src.game.systems.land.land_rent_resolver")
+local action_anim = require("src.presentation.render.action_anim")
+local handlers = require("src.presentation.render.action_anim_handlers")
 
 local function _test_event_contract_land_events_use_catalog_keys()
   local emitted = {}

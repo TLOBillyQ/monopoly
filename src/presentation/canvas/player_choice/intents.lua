@@ -1,4 +1,4 @@
-local ui_event_intents = require("src.presentation.interaction.UIEventIntents")
+local ui_event_intents = require("src.presentation.interaction.ui_event_intents")
 local nodes = require("src.presentation.canvas.player_choice.nodes")
 
 local intents = {}

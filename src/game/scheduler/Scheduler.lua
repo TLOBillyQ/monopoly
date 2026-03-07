@@ -1,5 +1,5 @@
-local turn_script = require("src.game.scheduler.TurnScript")
-local action_router = require("src.game.scheduler.ActionRouter")
+local turn_script = require("src.game.scheduler.turn_script")
+local action_router = require("src.game.scheduler.action_router")
 
 local scheduler = {}
 local SIGNAL_ACTION = "action"

@@ -1,23 +1,23 @@
 local support = require("TestSupport")
 local _new_game = support.new_game
 local _with_patches = support.with_patches
-local runtime_ports = require("src.core.ports.RuntimePorts")
-local logger = require("src.core.utils.Logger")
-local paid_goods_cfg = require("src.game.systems.commerce.config.RuntimePaidGoods")
+local runtime_ports = require("src.core.ports.runtime_ports")
+local logger = require("src.core.utils.logger")
+local paid_goods_cfg = require("src.game.systems.commerce.config.runtime_paid_goods")
 
 local function _reload_bridge()
-  package.loaded["src.game.systems.commerce.PaidCurrencyBridge"] = nil
-  return require("src.game.systems.commerce.PaidCurrencyBridge")
+  package.loaded["src.game.systems.commerce.paid_currency_bridge"] = nil
+  return require("src.game.systems.commerce.paid_currency_bridge")
 end
 
 local function _reload_market()
-  package.loaded["src.game.systems.market.MarketService"] = nil
-  package.loaded["src.game.systems.market.service.Context"] = nil
-  package.loaded["src.game.systems.market.service.Eligibility"] = nil
-  package.loaded["src.game.systems.market.service.Purchase"] = nil
-  package.loaded["src.game.systems.market.service.Auto"] = nil
-  package.loaded["src.game.systems.market.service.Choice"] = nil
-  return require("src.game.systems.market.MarketService")
+  package.loaded["src.game.systems.market.market_service"] = nil
+  package.loaded["src.game.systems.market.service.context"] = nil
+  package.loaded["src.game.systems.market.service.eligibility"] = nil
+  package.loaded["src.game.systems.market.service.purchase"] = nil
+  package.loaded["src.game.systems.market.service.auto"] = nil
+  package.loaded["src.game.systems.market.service.choice"] = nil
+  return require("src.game.systems.market.market_service")
 end
 
 local function _build_fake_env(game, opts)
@@ -71,7 +71,7 @@ local function _build_fake_env(game, opts)
       target = runtime_ports,
       key = "resolve_market_paid_gateway",
       value = function()
-        return require("src.app.bootstrap.payment.EggyPaidPurchaseGateway")
+        return require("src.app.bootstrap.payment.eggy_paid_purchase_gateway")
       end,
     },
     {

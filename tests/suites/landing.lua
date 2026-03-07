@@ -9,13 +9,13 @@ local _first_tile_by_type = support.first_tile_by_type
 local _tile_state = support.tile_state
 local _with_patches = support.with_patches
 local _assert_eq = support.assert_eq
-local turn_land = require("src.game.flow.turn.TurnLand")
-local chance_cfg = require("Config.Generated.ChanceCards")
-local item_inventory = require("src.game.systems.items.ItemInventory")
-local land_rules = require("src.game.systems.land.LandRules")
-local gameplay_rules = require("src.core.config.GameplayRules")
-local monopoly_event = require("src.core.events.MonopolyEvents")
-local runtime_event_bridge = require("src.core.runtime_facade.RuntimeEventBridge")
+local turn_land = require("src.game.flow.turn.turn_land")
+local chance_cfg = require("Config.generated.chance_cards")
+local item_inventory = require("src.game.systems.items.item_inventory")
+local land_rules = require("src.game.systems.land.land_rules")
+local gameplay_rules = require("src.core.config.gameplay_rules")
+local monopoly_event = require("src.core.events.monopoly_events")
+local runtime_event_bridge = require("src.core.runtime_facade.runtime_event_bridge")
 
 local function _install_narrow_ports(game, ui_port)
   game.ui_port = ui_port

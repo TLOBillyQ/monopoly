@@ -1,4 +1,4 @@
-local monopoly_event = require("src.core.events.MonopolyEvents")
+local monopoly_event = require("src.core.events.monopoly_events")
 
 local feedback = {}
 local _emit_event = monopoly_event.emit

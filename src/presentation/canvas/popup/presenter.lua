@@ -1,4 +1,4 @@
-local popup_renderer = require("src.presentation.widgets.PopupRenderer")
+local popup_renderer = require("src.presentation.widgets.popup_renderer")
 
 local presenter = {}
 

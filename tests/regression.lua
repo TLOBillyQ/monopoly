@@ -27,9 +27,9 @@ local function _contains(list, value)
 end
 
 local function _has_vehicle_generated_content()
-  local vehicles_cfg = require("Config.Generated.Vehicles")
-  local market_cfg = require("Config.Generated.Market")
-  local chance_cfg = require("Config.Generated.ChanceCards")
+  local vehicles_cfg = require("Config.generated.vehicles")
+  local market_cfg = require("Config.generated.market")
+  local chance_cfg = require("Config.generated.chance_cards")
   if #vehicles_cfg > 0 then
     return true
   end

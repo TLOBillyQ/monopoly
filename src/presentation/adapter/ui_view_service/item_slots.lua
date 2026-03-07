@@ -1,9 +1,9 @@
 local core = require("src.presentation.adapter.ui_view_service.core")
-local runtime = require("src.presentation.adapter.UIRuntimePort")
-local ui_events = require("src.presentation.shared.UIEvents")
-local runtime_ports = require("src.core.ports.RuntimePorts")
-local gameplay_rules = require("src.core.config.GameplayRules")
-local role_id_utils = require("src.core.utils.RoleId")
+local runtime = require("src.presentation.adapter.ui_runtime_port")
+local ui_events = require("src.presentation.shared.ui_events")
+local runtime_ports = require("src.core.ports.runtime_ports")
+local gameplay_rules = require("src.core.config.gameplay_rules")
+local role_id_utils = require("src.core.utils.role_id")
 local choice_common = require("src.presentation.widgets.choice_screen_service.common")
 
 local M = {}

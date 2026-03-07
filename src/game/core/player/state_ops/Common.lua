@@ -1,5 +1,5 @@
-local constants = require("Config.Generated.Constants")
-local vehicle_catalog = require("src.core.config.VehicleCatalog")
+local constants = require("Config.generated.constants")
+local vehicle_catalog = require("src.core.config.vehicle_catalog")
 
 local common = {}
 

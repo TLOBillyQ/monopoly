@@ -1,14 +1,14 @@
-local runtime = require("src.presentation.adapter.UIRuntimePort")
-local player_colors = require("src.presentation.shared.PlayerColors")
+local runtime = require("src.presentation.adapter.ui_runtime_port")
+local player_colors = require("src.presentation.shared.player_colors")
 local core = require("src.presentation.adapter.ui_view_service.core")
 local base_nodes = require("src.presentation.canvas.base.nodes")
-local number_utils = require("src.core.utils.NumberUtils")
+local number_utils = require("src.core.utils.number_utils")
 
 local M = {}
 
 function M.init_ui_assets(state)
   assert(state ~= nil, "missing state")
-  local refs = require("Config.RuntimeRefs")
+  local refs = require("Config.runtime_refs")
   local image_refs = refs.images or {}
   state.ui_refs = refs
 

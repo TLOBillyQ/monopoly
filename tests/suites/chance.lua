@@ -1,5 +1,5 @@
 local support = require("TestSupport")
-local default_map = require("Config.Maps.DefaultMap")
+local default_map = require("Config.maps.default_map")
 local function _new_game()
   return support.new_game({ map = default_map })
 end
@@ -11,7 +11,7 @@ local _with_patches = support.with_patches
 local _assert_eq = support.assert_eq
 local chance_effects = support.chance_effects
 local _build_ui_port = support.build_ui_port
-local test_profile_bootstrap = require("src.app.testing.TestProfileBootstrap")
+local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
 
 local function _test_chance_is_mandatory_effect_entrypoint()
   local g = _new_game()

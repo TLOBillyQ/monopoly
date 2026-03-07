@@ -1,10 +1,10 @@
 local support = require("TestSupport")
 local with_patches = support.with_patches
-local config_sanity = require("src.core.config.ConfigSanity")
-local market_cfg = require("Config.Generated.Market")
-local chance_cfg = require("Config.Generated.ChanceCards")
-local tiles_cfg = require("Config.Generated.Tiles")
-local runtime_refs = require("Config.RuntimeRefs")
+local config_sanity = require("src.core.config.config_sanity")
+local market_cfg = require("Config.generated.market")
+local chance_cfg = require("Config.generated.chance_cards")
+local tiles_cfg = require("Config.generated.tiles")
+local runtime_refs = require("Config.runtime_refs")
 
 local function _test_config_sanity_validate_passes_current_generated_data()
   config_sanity.reset_for_tests()

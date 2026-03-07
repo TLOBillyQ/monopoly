@@ -1,9 +1,9 @@
 local support = require("TestSupport")
 local _with_patches = support.with_patches
-local number_utils = require("src.core.utils.NumberUtils")
-local monopoly_event = require("src.core.events.MonopolyEvents")
-local host_runtime = require("src.presentation.adapter.HostRuntimePort")
-local board_feedback = require("src.presentation.render.BoardFeedbackService")
+local number_utils = require("src.core.utils.number_utils")
+local monopoly_event = require("src.core.events.monopoly_events")
+local host_runtime = require("src.presentation.adapter.host_runtime_port")
+local board_feedback = require("src.presentation.render.board_feedback_service")
 
 if not math.Vector3 then
   function math.Vector3(x, y, z)
@@ -12,8 +12,8 @@ if not math.Vector3 then
 end
 
 local function _load_fresh_handlers()
-  package.loaded["src.presentation.adapter.UIEventHandlers"] = nil
-  return require("src.presentation.adapter.UIEventHandlers")
+  package.loaded["src.presentation.adapter.ui_event_handlers"] = nil
+  return require("src.presentation.adapter.ui_event_handlers")
 end
 
 local function _test_market_buy_failed_shows_tip_for_three_seconds_without_popup()
