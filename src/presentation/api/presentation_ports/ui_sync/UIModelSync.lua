@@ -1,4 +1,5 @@
 local turn_ui_sync_shared = require("src.core.TurnUISyncShared")
+local runtime_state = require("src.core.RuntimeState")
 
 local ui_model_sync = {}
 
@@ -14,7 +15,7 @@ function ui_model_sync.build_model(state, game)
 end
 
 function ui_model_sync.refresh_from_dirty(game, state, dirty, common)
-  if state.ui_dirty then
+  if runtime_state.is_ui_dirty(state) then
     dirty.ui = true
   end
   local only_countdown = turn_ui_sync_shared.is_only_turn_countdown(dirty)
@@ -23,8 +24,8 @@ function ui_model_sync.refresh_from_dirty(game, state, dirty, common)
     local ui_model = require("src.presentation.state.UIModel")
     local ui_view = require("src.presentation.api.UIViewService")
     local env = turn_ui_sync_shared.build_ui_env(state, game)
-    local next_model = ui_model.update(state.ui_model, game, env, dirty)
-    state.ui_model = next_model
+    local next_model = ui_model.update(runtime_state.get_ui_model(state), game, env, dirty)
+    runtime_state.set_ui_model(state, next_model)
     if only_countdown then
       ui_view.refresh_turn_label(state, next_model.panel and next_model.panel.turn_label or "")
     else
@@ -35,7 +36,7 @@ function ui_model_sync.refresh_from_dirty(game, state, dirty, common)
         ui_view.open_choice_modal(state, next_model.choice, next_model.market)
       end
     end
-    state.ui_dirty = false
+    runtime_state.set_ui_dirty(state, false)
   end
   return ui_refreshed
 end

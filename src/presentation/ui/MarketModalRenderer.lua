@@ -2,6 +2,7 @@ local market_view = require("src.presentation.render.MarketView")
 local canvas = require("src.presentation.interaction.UICanvasCoordinator")
 local runtime = require("src.presentation.api.UIRuntimePort")
 local role_context = require("src.presentation.state.UIRoleContext")
+local runtime_state = require("src.core.RuntimeState")
 
 local renderer = {}
 
@@ -21,7 +22,8 @@ function renderer.open_market_panel(state, choice, choice_id, market)
   local ui = state.ui
   runtime.for_each_role_or_global(function(role)
     _with_client_role(role, function()
-      local ctx = role_context.resolve(role, state.ui_model, { runtime = runtime })
+      local current_model = runtime_state.get_ui_model(state)
+      local ctx = role_context.resolve(role, current_model, { runtime = runtime })
       local target = canvas.CANVAS_BASE
       if ctx.can_operate == true then
         target = canvas.CANVAS_MARKET
@@ -39,7 +41,7 @@ function renderer.open_market_panel(state, choice, choice_id, market)
     options = choice.options,
     allow_cancel = choice.allow_cancel,
     cancel_label = choice.cancel_label,
-    selected_option_id = state.pending_choice_selected_option_id,
+    selected_option_id = runtime_state.ensure_ui_runtime(state).pending_choice_selected_option_id,
     active_tab = choice.active_tab,
     page_index = choice.page_index,
     page_count = choice.page_count,

@@ -1,12 +1,19 @@
 local modal_state = {}
 local canvas_store = require("src.presentation.canvas_runtime.CanvasStore")
+local runtime_state = require("src.core.RuntimeState")
+
+local function _ui_runtime(state)
+  return runtime_state.ensure_ui_runtime(state)
+end
 
 function modal_state.open_choice(state, choice_id, option_ids, selected_option_id)
   assert(state ~= nil, "missing state")
-  state.pending_choice_elapsed = 0
-  state.pending_choice_id = choice_id
+  runtime_state.set_pending_choice_elapsed(state, 0)
+  runtime_state.set_pending_choice_id(state, choice_id)
+  local ui_runtime = _ui_runtime(state)
+  ui_runtime.choice_visible_option_ids = option_ids
+  ui_runtime.pending_choice_selected_option_id = selected_option_id
   state.choice_visible_option_ids = option_ids
-  state.pending_choice_selected_option_id = selected_option_id
   canvas_store.mark_dirty(state, "choice")
 end
 
@@ -17,7 +24,8 @@ end
 
 function modal_state.select_choice_option(state, option_id)
   assert(state ~= nil, "missing state")
-  state.pending_choice_selected_option_id = option_id
+  local ui_runtime = _ui_runtime(state)
+  ui_runtime.pending_choice_selected_option_id = option_id
   canvas_store.mark_dirty(state, "choice")
 end
 
@@ -27,8 +35,10 @@ end
 
 function modal_state.close_choice(state)
   assert(state ~= nil, "missing state")
+  local ui_runtime = _ui_runtime(state)
+  ui_runtime.choice_visible_option_ids = nil
+  ui_runtime.pending_choice_selected_option_id = nil
   state.choice_visible_option_ids = nil
-  state.pending_choice_selected_option_id = nil
   canvas_store.mark_dirty(state, "choice")
 end
 

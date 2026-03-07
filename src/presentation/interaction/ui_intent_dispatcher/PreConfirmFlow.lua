@@ -2,6 +2,7 @@ local choice_openers = require("src.presentation.ui.choice_screen_service.opener
 local choice_common = require("src.presentation.ui.choice_screen_service.common")
 local number_utils = require("src.core.NumberUtils")
 local ui_view = require("src.presentation.api.UIViewService")
+local runtime_state = require("src.core.RuntimeState")
 
 local pre_confirm_flow = {}
 
@@ -26,7 +27,8 @@ local function _resolve_item_slot_option(state, intent)
   if not item_id then
     return nil, nil
   end
-  local choice = state.ui_model and state.ui_model.choice or nil
+  local current_model = runtime_state.get_ui_model(state)
+  local choice = current_model and current_model.choice or nil
   local label = choice_common.resolve_option_label_by_id(choice, item_id)
   return item_id, label
 end
@@ -35,7 +37,8 @@ local function _resolve_market_skin_option(state, intent)
   if intent.type ~= "market_confirm" then
     return nil, nil
   end
-  local choice = state.ui_model and state.ui_model.choice or nil
+  local current_model = runtime_state.get_ui_model(state)
+  local choice = current_model and current_model.choice or nil
   if choice_common.resolve_screen_key(choice) ~= "market" then
     return nil, nil
   end
@@ -66,7 +69,8 @@ end
 function pre_confirm_flow.needs_pre_confirm(state, intent)
   local intent_type = intent.type
   local ui = state.ui
-  local choice = state.ui_model and state.ui_model.choice or nil
+  local current_model = runtime_state.get_ui_model(state)
+  local choice = current_model and current_model.choice or nil
   if not ui then
     return false
   end
@@ -91,7 +95,8 @@ function pre_confirm_flow.needs_pre_confirm(state, intent)
 end
 
 function pre_confirm_flow.enter(state, intent)
-  local choice = state.ui_model and state.ui_model.choice or nil
+  local current_model = runtime_state.get_ui_model(state)
+  local choice = current_model and current_model.choice or nil
   if not choice or not choice.id then
     return false
   end
@@ -137,9 +142,10 @@ function pre_confirm_flow.cancel(state)
   state._pre_confirm_active = nil
   local source = state._pre_confirm_source_screen
   state._pre_confirm_source_screen = nil
-  state.pending_choice_id = nil
+  runtime_state.set_pending_choice_id(state, nil)
 
-  local choice = state.ui_model and state.ui_model.choice or nil
+  local current_model = runtime_state.get_ui_model(state)
+  local choice = current_model and current_model.choice or nil
   if not choice then
     return
   end

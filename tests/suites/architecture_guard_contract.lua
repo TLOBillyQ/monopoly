@@ -335,8 +335,8 @@ local function _test_gameplay_loop_set_game_routes_choice_state_through_output_p
   _assert_eq(output_log[1].kind, "sync_pending_choice", "set_game should publish pending choice through output port")
   _assert_eq(output_log[2].kind, "sync_ui_model", "set_game should publish UI model through output port")
   _assert_eq(output_log[3].kind, "invalidate_ui", "set_game should invalidate UI through output port")
-  _assert_eq(state.pending_choice_id, choice.id, "set_game should keep pending choice legacy mirror")
-  _assert_eq(state.ui_model.choice.id, choice.id, "set_game should keep ui_model legacy mirror")
+  _assert_eq(state.ui_runtime and state.ui_runtime.pending_choice_id, choice.id, "set_game should keep pending choice in ui_runtime")
+  _assert_eq(state.ui_runtime and state.ui_runtime.ui_model and state.ui_runtime.ui_model.choice.id, choice.id, "set_game should keep ui_model in ui_runtime")
 end
 
 local function _test_turn_roll_uses_anim_gate_port_without_ui_port()

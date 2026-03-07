@@ -4,6 +4,7 @@ local item_slot_data = require("src.game.flow.turn.ItemSlotData")
 local turn_action_gate = require("src.game.flow.turn.TurnActionGate")
 local role_id_utils = require("src.core.RoleId")
 local choice_contract = require("src.core.ChoiceContract")
+local runtime_state = require("src.core.RuntimeState")
 
 local validator = {}
 
@@ -142,7 +143,7 @@ function validator.resolve_item_slot_action(item_slot_source, state, action)
   if not (action and action.id and string.match(action.id, "^item_slot_(%d+)$")) then
     return nil
   end
-  local choice = state.pending_choice
+  local choice = runtime_state.get_pending_choice(state)
   if not choice or choice.kind ~= "item_phase_choice" then
     return { ok = false }
   end

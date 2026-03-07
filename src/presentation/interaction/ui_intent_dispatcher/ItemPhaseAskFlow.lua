@@ -1,5 +1,6 @@
 local ui_view = require("src.presentation.api.UIViewService")
 local choice_common = require("src.presentation.ui.choice_screen_service.common")
+local runtime_state = require("src.core.RuntimeState")
 
 local item_phase_ask_flow = {}
 
@@ -12,7 +13,8 @@ function item_phase_ask_flow.dispatch(state, game, intent, opts, action_port)
     state._item_phase_ask_active = nil
     state._item_phase_confirmed = true
     state._suppress_item_slot_highlight_until_pick = nil
-    local choice = state.ui_model and state.ui_model.choice or nil
+    local current_model = runtime_state.get_ui_model(state)
+    local choice = current_model and current_model.choice or nil
     state._skip_item_slot_highlight_replay_choice_id = choice and choice.id or nil
     if choice_common.requires_item_slot_pre_confirm(choice) and type(choice.options) == "table" and #choice.options == 1 then
       local opt = choice.options[1]
@@ -35,7 +37,8 @@ function item_phase_ask_flow.dispatch(state, game, intent, opts, action_port)
     state._suppress_item_slot_highlight_until_pick = nil
     state._skip_item_slot_highlight_replay_choice_id = nil
     ui_view.close_choice_modal(state)
-    local choice = state.ui_model and state.ui_model.choice or nil
+    local current_model = runtime_state.get_ui_model(state)
+    local choice = current_model and current_model.choice or nil
     if choice and choice.id then
       action_port.dispatch_action(game, state, {
         type = "choice_cancel",

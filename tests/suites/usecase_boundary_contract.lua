@@ -143,14 +143,15 @@ local function _test_use_case_output_port_runtime_variant_stays_off_legacy_state
   _assert_eq(state.ui_runtime and state.ui_runtime.ui_dirty, true, "runtime output should write ui_runtime only")
 end
 
-local function _test_gameplay_loop_output_port_defaults_to_ui_dirty_bridge()
+local function _test_gameplay_loop_output_port_defaults_to_ui_runtime_only()
   local resolved = gameplay_loop_ports.resolve(nil)
   local state = {}
   local changed = resolved.output.invalidate_ui(state)
-  _assert_eq(changed, true, "default output.invalidate_ui should bridge to state.ui_dirty")
-  _assert_eq(state.ui_dirty, true, "default output.invalidate_ui should mark ui_dirty")
+  _assert_eq(changed, true, "default output.invalidate_ui should mark ui_runtime dirty")
+  _assert_eq(state.ui_dirty, nil, "default output.invalidate_ui should not mark legacy state.ui_dirty")
+  _assert_eq(state.ui_runtime and state.ui_runtime.ui_dirty, true, "default output.invalidate_ui should write ui_runtime")
   local changed_again = resolved.output.invalidate_ui(state)
-  _assert_eq(changed_again, false, "default output.invalidate_ui should be idempotent when state already dirty")
+  _assert_eq(changed_again, false, "default output.invalidate_ui should be idempotent when ui_runtime already dirty")
 end
 
 local function _test_gameplay_loop_output_port_override_precedence()
@@ -222,7 +223,7 @@ return {
     { name = "turn_action_port_normalize_auto_intent_contract", run = _test_turn_action_port_normalize_auto_intent_contract },
     { name = "turn_action_port_normalize_auto_intent_rejects_missing_actor", run = _test_turn_action_port_normalize_auto_intent_rejects_missing_actor },
     { name = "gameplay_loop_clock_contract_split_sources", run = _test_gameplay_loop_clock_contract_split_sources },
-    { name = "gameplay_loop_output_port_defaults_to_ui_dirty_bridge", run = _test_gameplay_loop_output_port_defaults_to_ui_dirty_bridge },
+    { name = "gameplay_loop_output_port_defaults_to_ui_runtime_only", run = _test_gameplay_loop_output_port_defaults_to_ui_runtime_only },
     { name = "gameplay_loop_output_port_override_precedence", run = _test_gameplay_loop_output_port_override_precedence },
     { name = "turn_roll_uses_anim_gate_port_without_ui_port", run = _test_turn_roll_uses_anim_gate_port_without_ui_port },
     { name = "turn_move_uses_anim_gate_port_without_ui_port", run = _test_turn_move_uses_anim_gate_port_without_ui_port },

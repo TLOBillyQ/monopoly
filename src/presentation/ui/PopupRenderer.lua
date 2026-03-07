@@ -2,6 +2,7 @@ local role_avatar = require("src.presentation.state.UIRoleAvatar")
 local runtime = require("src.presentation.api.UIRuntimePort")
 local runtime_ports = require("src.core.RuntimePorts")
 local canvas = require("src.presentation.interaction.UICanvasCoordinator")
+local runtime_state = require("src.core.RuntimeState")
 
 local renderer = {}
 local _apply_node_image
@@ -150,7 +151,8 @@ function renderer.switch_popup_canvas(state, kind, target_canvas, fallback_canva
   local ui = state.ui
   runtime.for_each_role_or_global(function(role)
     _with_client_role(role, function()
-      local ctx = require("src.presentation.state.UIRoleContext").resolve(role, state.ui_model, { runtime = runtime })
+      local current_model = runtime_state.get_ui_model(state)
+      local ctx = require("src.presentation.state.UIRoleContext").resolve(role, current_model, { runtime = runtime })
       if _should_show_modal_for_ctx(ctx, kind) then
         _switch_canvas_for_role(ui, role, target_canvas)
       else

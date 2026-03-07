@@ -1,6 +1,7 @@
 local market_layout = require("src.presentation.shared.MarketLayout")
 local modal_state = require("src.presentation.interaction.UIModalStateCoordinator")
 local runtime = require("src.presentation.api.UIRuntimePort")
+local runtime_state = require("src.core.RuntimeState")
 local items_cfg = require("Config.Generated.Items")
 local market_cfg = require("Config.Generated.Market")
 local number_utils = require("src.core.NumberUtils")
@@ -234,7 +235,7 @@ end
 
 function market_view.select_market_option(state, option_id)
   modal_state.select_market_option(state, option_id)
-  _refresh_market_selection_frames(state.ui, state.choice_visible_option_ids, option_id)
+  _refresh_market_selection_frames(state.ui, runtime_state.ensure_ui_runtime(state).choice_visible_option_ids, option_id)
   market_view.refresh_market_selection(state, option_id)
 end
 

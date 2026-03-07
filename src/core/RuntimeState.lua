@@ -29,13 +29,103 @@ function runtime_state.ensure_ui_runtime(state)
   if ui_runtime.item_name_by_id == nil then
     ui_runtime.item_name_by_id = state.item_name_by_id or {}
   end
-  if ui_runtime.choice_visible_option_ids == nil then
-    ui_runtime.choice_visible_option_ids = state.choice_visible_option_ids
-  end
-  if ui_runtime.pending_choice_selected_option_id == nil then
-    ui_runtime.pending_choice_selected_option_id = state.pending_choice_selected_option_id
+  if ui_runtime._legacy_choice_seeded ~= true then
+    if ui_runtime.choice_visible_option_ids == nil then
+      ui_runtime.choice_visible_option_ids = state.choice_visible_option_ids
+    end
+    if ui_runtime.pending_choice_selected_option_id == nil then
+      ui_runtime.pending_choice_selected_option_id = state.pending_choice_selected_option_id
+    end
+    ui_runtime._legacy_choice_seeded = true
   end
   return ui_runtime
+end
+
+function runtime_state.is_ui_dirty(state)
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  return ui_runtime.ui_dirty == true
+end
+
+function runtime_state.set_ui_dirty(state, dirty)
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  ui_runtime.ui_dirty = dirty == true
+  return ui_runtime.ui_dirty
+end
+
+function runtime_state.get_ui_model(state)
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  return ui_runtime.ui_model
+end
+
+function runtime_state.set_ui_model(state, model)
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  ui_runtime.ui_model = model
+  return model
+end
+
+function runtime_state.get_pending_choice(state)
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  return ui_runtime.pending_choice
+end
+
+function runtime_state.get_pending_choice_id(state)
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  return ui_runtime.pending_choice_id
+end
+
+function runtime_state.set_pending_choice_id(state, choice_id)
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  ui_runtime.pending_choice_id = choice_id
+  return choice_id
+end
+
+function runtime_state.get_pending_choice_elapsed(state)
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  return ui_runtime.pending_choice_elapsed or 0
+end
+
+function runtime_state.set_pending_choice_elapsed(state, elapsed_seconds)
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  local next_elapsed = elapsed_seconds or 0
+  ui_runtime.pending_choice_elapsed = next_elapsed
+  return next_elapsed
+end
+
+function runtime_state.set_pending_choice(state, choice, opts)
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  opts = opts or {}
+  local choice_id = opts.choice_id
+  if choice_id == nil and choice ~= nil then
+    choice_id = choice.id
+  end
+  local elapsed_seconds = opts.elapsed_seconds
+  if elapsed_seconds == nil then
+    elapsed_seconds = 0
+  end
+  ui_runtime.pending_choice = choice
+  ui_runtime.pending_choice_id = choice_id
+  ui_runtime.pending_choice_elapsed = elapsed_seconds
+  return choice
+end
+
+function runtime_state.get_modal_elapsed(state)
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  return ui_runtime.ui_modal_elapsed or 0
+end
+
+function runtime_state.get_modal_ref(state)
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  return ui_runtime.ui_modal_ref
+end
+
+function runtime_state.set_modal_timer(state, payload)
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  payload = payload or {}
+  local elapsed_seconds = payload.elapsed_seconds or 0
+  local ref = payload.ref
+  ui_runtime.ui_modal_elapsed = elapsed_seconds
+  ui_runtime.ui_modal_ref = ref
+  return ref, elapsed_seconds
 end
 
 function runtime_state.ensure_board_runtime(state)

@@ -1,4 +1,5 @@
 local logger = require("src.core.Logger")
+local runtime_state = require("src.core.RuntimeState")
 local ui_event_intents = require("src.presentation.interaction.UIEventIntents")
 local nodes = require("src.presentation.canvas.market.nodes")
 
@@ -6,7 +7,8 @@ local intents = {}
 local VEHICLE_TAB_ENABLED = false
 
 local function _resolve_market(state, warn_label)
-  local market = state.ui_model and state.ui_model.market or nil
+  local current_model = runtime_state.get_ui_model(state)
+  local market = current_model and current_model.market or nil
   if not market then
     return nil
   end
@@ -44,7 +46,8 @@ function intents.build_controls(state)
       build_intent = function()
         local market = _resolve_market(state, "market_confirm")
         if not market then return nil end
-        local option_id = state.pending_choice_selected_option_id
+        local ui_runtime = runtime_state.ensure_ui_runtime(state)
+        local option_id = ui_runtime.pending_choice_selected_option_id
         if not option_id then
           logger.warn("[MarketDebug] market_confirm missing selected option")
           return nil

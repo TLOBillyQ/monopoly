@@ -1,62 +1,36 @@
 local runtime_state = require("src.core.RuntimeState")
-local legacy_output_mirror = require("src.game.flow.ports.LegacyOutputMirror")
-
 local output_port = {}
 
-local function _ensure_ui_runtime(state)
-  return runtime_state.ensure_ui_runtime(state)
-end
-
 function output_port.invalidate_ui(state)
-  local ui_runtime = _ensure_ui_runtime(state)
-  if ui_runtime.ui_dirty == true then
+  if runtime_state.is_ui_dirty(state) then
     return false
   end
-  ui_runtime.ui_dirty = true
+  runtime_state.set_ui_dirty(state, true)
   return true
 end
 
 function output_port.clear_ui_dirty(state)
-  local ui_runtime = _ensure_ui_runtime(state)
-  if ui_runtime.ui_dirty ~= true then
+  if not runtime_state.is_ui_dirty(state) then
     return false
   end
-  ui_runtime.ui_dirty = false
+  runtime_state.set_ui_dirty(state, false)
   return true
 end
 
 function output_port.is_ui_dirty(state)
-  local ui_runtime = _ensure_ui_runtime(state)
-  return ui_runtime.ui_dirty == true
+  return runtime_state.is_ui_dirty(state)
 end
 
 function output_port.sync_ui_model(state, model)
-  local ui_runtime = _ensure_ui_runtime(state)
-  ui_runtime.ui_model = model
-  return model
+  return runtime_state.set_ui_model(state, model)
 end
 
 function output_port.get_ui_model(state)
-  local ui_runtime = _ensure_ui_runtime(state)
-  return ui_runtime.ui_model
+  return runtime_state.get_ui_model(state)
 end
 
 function output_port.sync_pending_choice(state, choice, opts)
-  local ui_runtime = _ensure_ui_runtime(state)
-  opts = opts or {}
-  local choice_id = opts.choice_id
-  if choice_id == nil and choice ~= nil then
-    choice_id = choice.id
-  end
-  local elapsed_seconds = opts.elapsed_seconds
-  if elapsed_seconds == nil then
-    elapsed_seconds = 0
-  end
-
-  ui_runtime.pending_choice = choice
-  ui_runtime.pending_choice_id = choice_id
-  ui_runtime.pending_choice_elapsed = elapsed_seconds
-  return choice
+  return runtime_state.set_pending_choice(state, choice, opts)
 end
 
 function output_port.clear_pending_choice(state)
@@ -67,51 +41,35 @@ function output_port.clear_pending_choice(state)
 end
 
 function output_port.get_pending_choice(state)
-  local ui_runtime = _ensure_ui_runtime(state)
-  return ui_runtime.pending_choice
+  return runtime_state.get_pending_choice(state)
 end
 
 function output_port.get_pending_choice_id(state)
-  local ui_runtime = _ensure_ui_runtime(state)
-  return ui_runtime.pending_choice_id
+  return runtime_state.get_pending_choice_id(state)
 end
 
 function output_port.get_pending_choice_elapsed(state)
-  local ui_runtime = _ensure_ui_runtime(state)
-  return ui_runtime.pending_choice_elapsed or 0
+  return runtime_state.get_pending_choice_elapsed(state)
 end
 
 function output_port.set_pending_choice_elapsed(state, elapsed_seconds)
-  local ui_runtime = _ensure_ui_runtime(state)
-  local next_elapsed = elapsed_seconds or 0
-  ui_runtime.pending_choice_elapsed = next_elapsed
-  return next_elapsed
+  return runtime_state.set_pending_choice_elapsed(state, elapsed_seconds)
 end
 
 function output_port.set_pending_choice_id(state, choice_id)
-  local ui_runtime = _ensure_ui_runtime(state)
-  ui_runtime.pending_choice_id = choice_id
-  return choice_id
+  return runtime_state.set_pending_choice_id(state, choice_id)
 end
 
 function output_port.sync_modal_timer(state, payload)
-  local ui_runtime = _ensure_ui_runtime(state)
-  payload = payload or {}
-  local elapsed_seconds = payload.elapsed_seconds or 0
-  local ref = payload.ref
-  ui_runtime.ui_modal_elapsed = elapsed_seconds
-  ui_runtime.ui_modal_ref = ref
-  return ref, elapsed_seconds
+  return runtime_state.set_modal_timer(state, payload)
 end
 
 function output_port.get_modal_elapsed(state)
-  local ui_runtime = _ensure_ui_runtime(state)
-  return ui_runtime.ui_modal_elapsed or 0
+  return runtime_state.get_modal_elapsed(state)
 end
 
 function output_port.get_modal_ref(state)
-  local ui_runtime = _ensure_ui_runtime(state)
-  return ui_runtime.ui_modal_ref
+  return runtime_state.get_modal_ref(state)
 end
 
 function output_port.build_runtime_output_ports()
@@ -135,7 +93,7 @@ function output_port.build_runtime_output_ports()
 end
 
 function output_port.build_base_output_ports()
-  return legacy_output_mirror.wrap(output_port.build_runtime_output_ports())
+  return output_port.build_runtime_output_ports()
 end
 
 function output_port.fill_output_defaults()

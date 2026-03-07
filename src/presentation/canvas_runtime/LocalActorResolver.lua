@@ -1,6 +1,7 @@
 local runtime = require("src.presentation.api.UIRuntimePort")
 local number_utils = require("src.core.NumberUtils")
 local role_id_utils = require("src.core.RoleId")
+local runtime_state = require("src.core.RuntimeState")
 
 local resolver = {}
 
@@ -37,7 +38,8 @@ function resolver.resolve_from_event(state, data, opts)
     return nil
   end
 
-  local current_player_id = state and state.ui_model and state.ui_model.current_player_id or nil
+  local current_model = state and runtime_state.get_ui_model(state) or nil
+  local current_player_id = current_model and current_model.current_player_id or nil
   local fallback = number_utils.to_integer(current_player_id)
   return fallback
 end

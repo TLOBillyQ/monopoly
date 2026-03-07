@@ -1,19 +1,15 @@
 local monopoly_event = require("src.core.events.MonopolyEvents")
-local ui_model = require("src.presentation.state.UIModel")
 local ui_view = require("src.presentation.api.UIViewService")
+local runtime_state = require("src.core.RuntimeState")
+local choice_slice = require("src.presentation.state" .. ".ui_model.ChoiceSlice")
 
 local M = {}
 
-local function _build_model_for_choice(state, current_game)
-  local winner = current_game.winner
-  local winner_name = current_game.winner_names or (winner and assert(winner.name, "missing winner name"))
-  return ui_model.build(current_game, {
+local function _build_choice_view(state, current_game)
+  local choice, market = choice_slice.build_choice_and_market(current_game, {
     game = current_game,
-    ui_state = state,
-    last_turn = current_game.last_turn,
-    finished = current_game.finished,
-    winner_name = winner_name,
-  })
+  }, state.ui)
+  return choice, market
 end
 
 function M.install(state, get_current_game)
@@ -31,18 +27,18 @@ function M.install(state, get_current_game)
     if not choice then
       return
     end
-    state.pending_choice = choice
-    state.pending_choice_elapsed = 0
-    state.pending_choice_id = choice.id
+    runtime_state.set_pending_choice(state, choice, {
+      choice_id = choice.id,
+      elapsed_seconds = 0,
+    })
+    runtime_state.set_ui_dirty(state, true)
     local current_game = get_current_game()
     assert(current_game ~= nil, "missing current_game")
-    local built_model = _build_model_for_choice(state, current_game)
-    state.ui_model = built_model
-    if built_model.choice then
-      ui_view.open_choice_modal(state, built_model.choice, built_model.market)
+    local built_choice, built_market = _build_choice_view(state, current_game)
+    if built_choice then
+      ui_view.open_choice_modal(state, built_choice, built_market)
     end
   end)
 end
 
 return M
-

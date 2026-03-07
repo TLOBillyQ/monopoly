@@ -38,8 +38,14 @@ local market_cfg = require("Config.Generated.Market")
 local runtime_constants = require("src.core.config.RuntimeConstants")
 local gameplay_rules = require("src.core.config.GameplayRules")
 local host_runtime = require("src.presentation.api.HostRuntimePort")
+local runtime_state = require("src.core.RuntimeState")
 local target_choice_effects = require("src.presentation.render.TargetChoiceEffects")
 local vec3 = require("fixtures.vec3")
+
+
+local function _ui_runtime(state)
+  return runtime_state.ensure_ui_runtime(state)
+end
 
 local function _wrap_ui_refs(image_refs)
   return {
@@ -454,7 +460,10 @@ end
 
 local function _test_move_anim_wait_and_resume()
   local g = _new_game()
-  g.ui_port = _build_ui_port({ wait_move_anim = true })
+  g.anim_gate_port = {
+    wait_move_anim = true,
+    wait_action_anim = false,
+  }
   local player = g:current_player()
   g.last_turn = {
     player_id = player.id,
@@ -2413,7 +2422,7 @@ local function _test_target_pick_tick_updates_selection_on_hit_change()
     runtime.set_hit(env.tile_unit_ids[102], env.tile_positions[102])
     target_choice_effects.step(env.game, env.state, 0.1)
     _assert_eq(env.state.target_choice_runtime.hover_option_id, nil, "hover should wait for external pick")
-    _assert_eq(env.state.pending_choice_selected_option_id, nil, "hover should not lock selected option")
+    _assert_eq(_ui_runtime(env.state).pending_choice_selected_option_id, nil, "hover should not lock selected option")
     _assert_eq(env.arrow.visible, false, "arrow should stay hidden before lock")
   end)
 end
@@ -2436,7 +2445,7 @@ local function _test_target_pick_scene_click_locks_target_and_pauses_raycast()
     runtime.set_hit(env.tile_unit_ids[102], env.tile_positions[102])
     target_choice_effects.step(env.game, env.state, 0.1)
     _assert_eq(env.state.target_choice_runtime.locked_option_id, 103, "scene pick should lock option")
-    _assert_eq(env.state.pending_choice_selected_option_id, 103, "locked option should sync selected option")
+    _assert_eq(_ui_runtime(env.state).pending_choice_selected_option_id, 103, "locked option should sync selected option")
     _assert_eq(env.state.target_choice_runtime.hover_option_id, 103, "locked option should drive hover")
   end)
 end
@@ -3301,8 +3310,8 @@ local function _test_market_close_resets_icon_without_resize()
   market_view.close_market_panel(state)
 
   _assert_eq(state.ui.market_active, false, "market panel should be inactive")
-  _assert_eq(state.choice_visible_option_ids, nil, "market options should clear")
-  _assert_eq(state.pending_choice_selected_option_id, nil, "selected market option should clear")
+  _assert_eq(_ui_runtime(state).choice_visible_option_ids, nil, "market options should clear")
+  _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, nil, "selected market option should clear")
   _assert_eq(selected_node.image_texture, 4321, "market selected icon should reset to empty key")
   _assert_eq(reset_calls, 0, "market close should not call reset_size")
   for _, name in ipairs(market_layout.item_selection_frames) do
@@ -3347,7 +3356,7 @@ local function _test_market_view_default_selection_shows_matching_selection_fram
   })
 
   _assert_eq(opened, true, "market panel should open")
-  _assert_eq(state.pending_choice_selected_option_id, entry_a.product_id,
+  _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, entry_a.product_id,
     "market should still prefer first visible buyable option by default")
   _assert_eq(visible[market_layout.item_selection_frames[1]], true,
     "first selection frame should match default selected option")
@@ -3393,7 +3402,7 @@ local function _test_market_select_switches_selection_frame()
 
   market_view.select_market_option(state, entry_b.product_id)
 
-  _assert_eq(state.pending_choice_selected_option_id, entry_b.product_id, "market select should update selected option")
+  _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, entry_b.product_id, "market select should update selected option")
   _assert_eq(visible[market_layout.item_selection_frames[1]], false,
     "old selection frame should hide after reselection")
   _assert_eq(visible[market_layout.item_selection_frames[2]], true,
@@ -3460,7 +3469,7 @@ local function _test_market_view_empty_filtered_tab_hides_selection_frames()
     })
 
     _assert_eq(reopened, true, "market panel should stay open when filtered tab is empty")
-    _assert_eq(state.pending_choice_selected_option_id, nil, "empty filtered tab should clear selected option")
+    _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, nil, "empty filtered tab should clear selected option")
     for _, name in ipairs(market_layout.item_selection_frames) do
       _assert_eq(visible[name], false, "empty filtered tab should hide all selection frames")
     end
@@ -3523,7 +3532,7 @@ local function _test_market_view_refresh_retargets_selection_frame_on_page_chang
   })
 
   _assert_eq(reopened, true, "market panel should refresh on page change")
-  _assert_eq(state.pending_choice_selected_option_id, entry_b.product_id,
+  _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, entry_b.product_id,
     "page change should retarget selected option to current visible page")
   _assert_eq(visible[market_layout.item_selection_frames[1]], true,
     "current page selected option should show selection frame")
@@ -3731,7 +3740,7 @@ local function _test_market_view_hides_market_disabled_entries()
     _assert_eq(state.ui.market_active, true, "market panel should remain active on empty filtered tab")
     _assert_eq(visible[market_layout.item_labels[1]], false, "empty filtered tab should hide first slot label")
     _assert_eq(visible[market_layout.item_buttons[1]], false, "empty filtered tab should hide first slot button")
-    _assert_eq(state.pending_choice_selected_option_id, nil, "empty filtered tab should clear selected option")
+    _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, nil, "empty filtered tab should clear selected option")
   end, debug.traceback or function(e) return e end)
 
   market_cfg[market_cfg_size + 1] = nil
@@ -3872,7 +3881,7 @@ local function _test_market_view_invalid_selected_option_falls_back_to_current_v
   })
 
   _assert_eq(opened, true, "market panel should open")
-  _assert_eq(state.pending_choice_selected_option_id, entry_a.product_id,
+  _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, entry_a.product_id,
     "invalid selected option should fallback to first visible buyable option")
 end
 

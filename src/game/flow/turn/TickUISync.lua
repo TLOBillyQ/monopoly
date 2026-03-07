@@ -59,9 +59,11 @@ function tick_ui_sync.update_countdown(game, state)
     end
     seconds = math.ceil(remaining)
   elseif timeout > 0 then
-    if state.pending_choice and state.pending_choice_elapsed then
+    local pending_choice = runtime_state.get_pending_choice(state)
+    local pending_choice_elapsed = runtime_state.get_pending_choice_elapsed(state)
+    if pending_choice and pending_choice_elapsed then
       active = true
-      local remaining = timeout - state.pending_choice_elapsed
+      local remaining = timeout - pending_choice_elapsed
       if remaining < 0 then
         remaining = 0
       end
@@ -70,7 +72,7 @@ function tick_ui_sync.update_countdown(game, state)
       local popup_timeout = tick_timeout.resolve_modal_timeout_seconds(game, state)
       if popup_timeout > 0 then
         active = true
-        local remaining = popup_timeout - (state.ui_modal_elapsed or 0)
+        local remaining = popup_timeout - runtime_state.get_modal_elapsed(state)
         if remaining < 0 then
           remaining = 0
         end

@@ -7,6 +7,7 @@ local canvas = require("src.presentation.interaction.UICanvasCoordinator")
 local canvas_store = require("src.presentation.canvas_runtime.CanvasStore")
 local logger = require("src.core.Logger")
 local target_choice_effects = require("src.presentation.render.TargetChoiceEffects")
+local runtime_state = require("src.core.RuntimeState")
 
 local modal_presenter = {}
 
@@ -23,7 +24,8 @@ function modal_presenter.select_choice_option(state, option_id)
     return
   end
   local screen = ui.choice_screens and ui.choice_screens.secondary_confirm or nil
-  local choice = state.ui_model and state.ui_model.choice or nil
+  local current_model = runtime_state.get_ui_model(state)
+  local choice = current_model and current_model.choice or nil
   if screen and screen.title then
     ui:set_label(screen.title, choice_common.resolve_secondary_confirm_title(choice, state.game, "secondary_confirm", option_id))
   end
@@ -51,7 +53,7 @@ function modal_presenter.open_choice_modal(state, choice, market)
   local screen_key = choice_common.resolve_screen_key(choice)
   local choice_id = choice.id
   if screen_key ~= "market"
-      and state.pending_choice_id == choice_id
+      and runtime_state.get_pending_choice_id(state) == choice_id
       and (state.ui.choice_active or state.ui.market_active) then
     return
   end

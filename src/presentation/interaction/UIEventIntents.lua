@@ -1,4 +1,5 @@
 local logger = require("src.core.Logger")
+local runtime_state = require("src.core.RuntimeState")
 
 local intents = {}
 
@@ -11,7 +12,8 @@ function intents.resolve_option_id(choice, payload, state)
   end
   local index = payload.index or payload.option_index or payload.card_index or payload.choice_index
   if index then
-    local mapped = state and state.choice_visible_option_ids and state.choice_visible_option_ids[index]
+    local ui_runtime = state and runtime_state.ensure_ui_runtime(state) or nil
+    local mapped = ui_runtime and ui_runtime.choice_visible_option_ids and ui_runtime.choice_visible_option_ids[index]
     if mapped then
       return mapped
     end
@@ -28,7 +30,8 @@ function intents.resolve_option_id(choice, payload, state)
 end
 
 function intents.choice_cancel_intent(state, warn_label)
-  local choice = state.ui_model and state.ui_model.choice or nil
+  local current_model = runtime_state.get_ui_model(state)
+  local choice = current_model and current_model.choice or nil
   if not choice then
     logger.warn(warn_label .. " without choice")
     return nil
@@ -40,7 +43,8 @@ function intents.choice_cancel_intent(state, warn_label)
 end
 
 function intents.choice_select_intent(state, index, warn_label)
-  local choice = state.ui_model and state.ui_model.choice or nil
+  local current_model = runtime_state.get_ui_model(state)
+  local choice = current_model and current_model.choice or nil
   if not choice then
     logger.warn(warn_label .. " without choice")
     return nil
@@ -58,14 +62,16 @@ function intents.choice_select_intent(state, index, warn_label)
 end
 
 function intents.choice_confirm_intent(state, warn_label)
-  local choice = state.ui_model and state.ui_model.choice or nil
+  local current_model = runtime_state.get_ui_model(state)
+  local choice = current_model and current_model.choice or nil
   if not choice then
     logger.warn(warn_label .. " without choice")
     return nil
   end
-  local option_id = state.pending_choice_selected_option_id
-  if option_id == nil and type(state.choice_visible_option_ids) == "table" then
-    option_id = state.choice_visible_option_ids[1]
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  local option_id = ui_runtime.pending_choice_selected_option_id
+  if option_id == nil and type(ui_runtime.choice_visible_option_ids) == "table" then
+    option_id = ui_runtime.choice_visible_option_ids[1]
   end
   if option_id == nil then
     logger.warn(warn_label .. " missing selected option")

@@ -1,4 +1,5 @@
 local choice_view = require("src.presentation.ui.UIChoice")
+local runtime_state = require("src.core.RuntimeState")
 
 local choice_slice = {}
 
@@ -9,13 +10,14 @@ function choice_slice.build_choice_and_market(game, env, ui_state)
     choice = choice_view.build_choice_view(pending, { game = env.game })
   end
   local market = nil
+  local ui_runtime = ui_state and runtime_state.ensure_ui_runtime(ui_state) or nil
   if choice and choice.route_key == "market" then
     market = {
       choice_id = choice.id,
       options = choice.options,
       allow_cancel = choice.allow_cancel,
       cancel_label = choice.cancel_label,
-      selected_option_id = ui_state and ui_state.pending_choice_selected_option_id or nil,
+      selected_option_id = ui_runtime and ui_runtime.pending_choice_selected_option_id or nil,
       active_tab = choice.active_tab,
       page_index = choice.page_index,
       page_count = choice.page_count,

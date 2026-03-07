@@ -3,6 +3,7 @@ local turn_anim = require("src.game.flow.turn.TurnAnim")
 local gameplay_loop_runtime = require("src.game.flow.turn.GameplayLoopRuntime")
 local turn_timer_policy = require("src.game.flow.turn.TurnTimerPolicy")
 local turn_camera_policy = require("src.game.flow.turn.TurnCameraPolicy")
+local runtime_state = require("src.core.RuntimeState")
 
 local tick_steps = {}
 
@@ -82,8 +83,9 @@ function tick_steps.refresh_tick_from_dirty(game, state, ports, input_blocked_ch
       ui_sync_ports.apply_input_lock(state)
     end
   end
-  if state.ui_model then
-    debug_ports.log_status(state.ui_model)
+  local ui_model = runtime_state.get_ui_model(state)
+  if ui_model then
+    debug_ports.log_status(ui_model)
   end
 
   debug_ports.sync_debug_log(state)

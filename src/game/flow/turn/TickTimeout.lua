@@ -6,12 +6,13 @@ local choice_auto_policy = require("src.game.flow.turn.TurnChoiceAutoPolicy")
 local tick_ui_gate = require("src.game.flow.turn.TickUIGate")
 local tick_choice_timeout = require("src.game.flow.turn.TickChoiceTimeout")
 local use_case_output_port = require("src.game.flow.ports.UseCaseOutputPort")
+local runtime_state = require("src.core.RuntimeState")
 
 local tick_timeout = {}
 
 function tick_timeout.resolve_choice_timeout_seconds(game, state, choice)
   local timeout = constants.action_timeout_seconds or 0
-  local pending_choice = choice or (game and game.turn and game.turn.pending_choice) or (state and state.pending_choice) or nil
+  local pending_choice = choice or (game and game.turn and game.turn.pending_choice) or (state and runtime_state.get_pending_choice(state)) or nil
   if pending_choice and pending_choice.kind == "market_buy" then
     return timeout * 2
   end

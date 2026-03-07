@@ -1,6 +1,7 @@
 local logger = require("src.core.Logger")
 local ui_event_intents = require("src.presentation.interaction.UIEventIntents")
 local nodes = require("src.presentation.canvas.target_choice.nodes")
+local runtime_state = require("src.core.RuntimeState")
 
 local intents = {}
 
@@ -32,7 +33,8 @@ function intents.build(state)
     specs[#specs + 1] = {
       name = name,
       build_intent = function()
-        local choice = state.ui_model and state.ui_model.choice or nil
+        local current_model = runtime_state.get_ui_model(state)
+        local choice = current_model and current_model.choice or nil
         if not choice then
           logger.warn("target_lock without choice")
           return nil
