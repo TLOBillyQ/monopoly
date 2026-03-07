@@ -4,7 +4,7 @@
     将项目文件部署到目标目录
 .DESCRIPTION
     该脚本要求在 PowerShell 7 (pwsh) 环境执行。
-    默认拷贝 Config/、src/ 目录以及 Data/UIManagerNodes.lua、Data/Prefab.lua 和 main.lua 到目标目录。
+    默认拷贝 Config/、src/ 目录以及 Data/UIManagerNodes.lua、Data/Prefab.lua 和 main.lua 到目标目录；release 模式会先把生成配置导出到 Config/generated/。
     Windows 与 macOS 在未传 -TargetPath 时都会默认部署到“开发/发布”两个目录。
     如需额外拷贝 vendor/，请传入 -IncludeVendor 参数。
 .PARAMETER TargetPath
@@ -370,7 +370,7 @@ foreach ($target in $TargetPaths) {
 Write-Host ""
 
 if ($Mode -eq "release") {
-    $repoGeneratedDir = Join-Path $ProjectRoot "Config/Generated"
+    $repoGeneratedDir = Join-Path $ProjectRoot "Config/generated"
     Export-GeneratedConfig -ModeName "release" -OutputDir $repoGeneratedDir -Label "仓库"
     Write-Host ""
 }

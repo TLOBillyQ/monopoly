@@ -231,7 +231,7 @@ def main(argv=None):
     if not os.path.isdir(design_dir):
         # Backward compatibility: older repos may place xlsx files under root/design.
         design_dir = os.path.join(root, "design")
-    config_dir = args.output_dir or os.path.join(root, "Config", "Generated")
+    config_dir = args.output_dir or os.path.join(root, "Config", "generated")
     config_dir = os.path.abspath(config_dir)
     os.makedirs(config_dir, exist_ok=True)
 
@@ -299,7 +299,7 @@ def main(argv=None):
         tiles.append(record)
 
     write_lua_table(
-        os.path.join(config_dir, "Tiles.lua"),
+        os.path.join(config_dir, "tiles.lua"),
         "tiles",
         tiles,
         [
@@ -333,7 +333,7 @@ def main(argv=None):
         )
 
     write_lua_table(
-        os.path.join(config_dir, "Roles.lua"),
+        os.path.join(config_dir, "roles.lua"),
         "roles",
         roles,
         ["id", "name", "prototype", "description"],
@@ -372,7 +372,7 @@ def main(argv=None):
         )
 
     write_lua_table(
-        os.path.join(config_dir, "Items.lua"),
+        os.path.join(config_dir, "items.lua"),
         "items",
         items,
         [
@@ -408,7 +408,7 @@ def main(argv=None):
             )
 
     write_lua_table(
-        os.path.join(config_dir, "Vehicles.lua"),
+        os.path.join(config_dir, "vehicles.lua"),
         "vehicles",
         vehicles,
         ["id", "name", "tier", "dice_count", "indestructible"],
@@ -431,7 +431,7 @@ def main(argv=None):
         )
 
     write_lua_table(
-        os.path.join(config_dir, "Skins.lua"),
+        os.path.join(config_dir, "skins.lua"),
         "skins",
         skins,
         ["id", "name"],
@@ -464,7 +464,7 @@ def main(argv=None):
         market.append(record)
 
     write_lua_table(
-        os.path.join(config_dir, "Market.lua"),
+        os.path.join(config_dir, "market.lua"),
         "market",
         market,
         ["order", "product_id", "name", "page", "kind", "currency", "price", "limit", "market_enabled"],
@@ -534,7 +534,7 @@ def main(argv=None):
         cards.append(record)
 
     write_lua_table(
-        os.path.join(config_dir, "ChanceCards.lua"),
+        os.path.join(config_dir, "chance_cards.lua"),
         "chance_cards",
         cards,
         [
@@ -584,7 +584,7 @@ def main(argv=None):
         constants[key] = parse_int(row.get(col_map.get("常量参数")))
 
     write_lua_kv(
-        os.path.join(config_dir, "Constants.lua"),
+        os.path.join(config_dir, "constants.lua"),
         "constants",
         constants,
         [
