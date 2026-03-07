@@ -1,103 +1,216 @@
-# 目录层级优化计划（保守收敛版）
+# `/src` 有效代码行收敛计划（并行版，修订后）
 
 ## 摘要
+- 目标：在 **不打破现有分层边界** 的前提下，降低 `/src` 的净有效代码行，并压缩热点大文件数量。
+- 已冻结基线（**2026-03-08**）：`lua tests/regression.lua` 通过，回归总数 **381**；`/src` 有效代码约 **22162**；`>=250` 有效行的热点文件 **11** 个。
+- 硬验收：
+  - `/src` 有效代码 **<= 21662**；
+  - 热点文件数 **11 -> <= 6**；
+  - **不得新增** `>=250` 有效行的新文件；
+  - 分层 LOC 不得通过“横向搬运复杂度”作弊：至少跟踪 `src/presentation`、`src/game/flow`、`src/game/systems`、`src/core`、`src/infrastructure` 五组。
+- 允许的小范围交互归一化仅限：
+  - market tab/page clamp 与空页 fallback；
+  - choice 默认选中逻辑统一；
+  - secondary confirm 默认 title/body fallback；
+  - cancel/confirm 显隐一致性。
+  - 其余交互不在本次调整范围内。
 
-- 目标是在**不改变现有 7 组件分层与 5 个顶层命名空间**的前提下，收敛 `src` 与 `tests` 的目录语义，解决当前 `runtime / adapter / service / ports / shared` 多轴混排带来的认知和迁移成本。
-- 外部依据采用 [Lua 5.4 手册（`require` / `package.searchers` / `package.path`）](https://www.lua.org/manual/5.4/manual.html#pdf-require) 与 [LuaRocks rockspec `build.modules` 约定](https://github.com/luarocks/luarocks/blob/main/docs/rockspec_format.md)。据此拍板：**Lua 目录应优先服务稳定模块命名空间，而不是堆叠技术标签；同一层内只按一个主轴分组**。
-- 当前迁移热点已确认：`src.presentation.adapter` 约 107 处引用，`src.game.systems.market.service` 约 47 处，`src.core.runtime_facade` 约 38 处，`src.presentation.canvas_runtime` 约 14 处，`src.game.turn_engine` 约 5 处；因此顺序必须是**低爆点先、`presentation` 最后**。
-- 默认保持 `main.lua` 与 `src.app.init` 入口语义不变；实施时一次性更新内部 `require`，**不保留长期兼容 shim**。
-- 现有基线可用：`lua tests\\regression.lua` 已在当前树上通过，377 项回归 + `dep_rules` + `forbidden_globals` 为本次重组护栏。
-
-## 关键变更
-
-- 顶层保持不变：`src.app`、`src.core`、`src.game`、`src.infrastructure`、`src.presentation` 不跨层重包，不做 feature-first 穿层目录。
-- `app` 层统一启动期 runtime 命名：
-  - 将 `runtime_install.lua` 与 `runtime_install/` 目录收敛为单一命名空间 `src.app.bootstrap.runtime.*`。
-  - 目标语义是：`install` 为装配入口，`port_defaults` / `global_aliases` 为安装细节，`payment` 继续留在 bootstrap 外围装配侧。
-- `core` 层澄清“状态访问”与“宿主 runtime”：
-  - `src.core.runtime_facade.*` 改为 `src.core.state_access.*`。
-  - 原因是该目录实际承载 `state` / `ui_runtime` 薄访问层，不是宿主 runtime；继续叫 `runtime_facade` 会与 `src.game.core.runtime`、`src.infrastructure.runtime` 冲突。
-- `game` 层收敛历史与应用子目录：
-  - `src.game.turn_engine.*` 迁到 `src.game.legacy.turn_engine.*`，明确“冻结历史容器”身份，禁止新增调用方。
-  - `src.game.systems.market.service.*` 改为 `src.game.systems.market.application.*`，表达它是用例编排，不是通用 service 垃圾桶。
-  - `src.game.systems.land.config.*` 改为 `src.game.systems.land.specs.*`。
-  - `src.game.systems.commerce.config.runtime_paid_goods.lua` 改为 `src.game.systems.commerce.specs.paid_goods.lua`；本阶段只做目录语义收敛，不跨层挪到 `infrastructure`。
-- `presentation` 层按 4 个稳定职责面收敛：
-  - `input`：承接现 `interaction`。
-  - `model`：承接现 `state` + `read_model`。
-  - `view`：承接现 `canvas` + `widgets` + `render`。
-  - `runtime`：承接现 `adapter` + `canvas_runtime` + 运行时桥接类 shared。
-- `presentation/shared` 逐文件拍板，不保留“shared 大杂烩”：
-  - `market_layout`、`player_colors`、`ui_aliases` 进入 `view.support`。
-  - `ui_events` 进入 `runtime`，因为它直接依赖 `Data.UIManagerNodes` 与 `role.send_ui_custom_event`。
-- `tests` 仅做保守镜像：
-  - 保留 `tests\\regression.lua`、`tests\\TestHarness.lua`、`tests\\TestSupport.lua`。
-  - 现有 `tests\\suites` 从扁平文件改为 namespaced 分组：`architecture`、`domain`、`gameplay`、`presentation`、`runtime`。
-  - `tests\\internal` 本阶段保持平铺，只新增旧路径扫描与 require 路径契约，不额外拆层。
+## 关键约束
+- 公开入口保持稳定：`gameplay_loop`、`market_view`、`ui_panel_presenter`、`runtime_context`、`logger`、`eggy_paid_purchase_gateway`、`test_profiles` 的模块入口与导出名不变。
+- `presentation` 不得补业务语义；`game/flow` 不得回碰 UI/宿主细节；宿主实现继续留在 `src/infrastructure/runtime` 或 `src/app/bootstrap`。
+- 共享 helper 的落点先冻结，避免并行任务各自造 `helpers.lua`：
+  - market/choice 共享仅落 `src/presentation/view/render/market_*` 与 `src/presentation/view/widgets/choice_screen_service/*`
+  - panel 共享仅落 `src/presentation/view/widgets/ui_panel_*`
+  - gameplay loop 共享仅落 `src/game/flow/turn/gameplay_loop_*`
+  - runtime context 共享仅落 `src/infrastructure/runtime/runtime_context_*`
+  - 玩法规则共享仅落 `src/game/systems/*` 或同层 shared-mechanics，不上提到 `src/core`
+- `logger` 单独后置，且只允许“私有职责抽取”，禁止 API、输出格式、调用方式变化。
+- 任何删代码都不能只靠 `rg`；必须同时检查 bootstrap 装配、runtime helper 安装、editor/runtime refs、场景/节点绑定与目标测试。
 
 ## 任务图
+```text
+T1 ── T2 ──┬── T3 ──┐
+           ├── T4 ──┼── T7 ── T8 ── T9
+           ├── T5a ─┤
+           ├── T5b ─┤
+           └── T6a ─┘
+T4 ── T5c ──────────┘
+T7 ── T6b ──────────┘
+```
 
-- **T0** `[depends_on: []]` 将本计划落到 `C:\Users\Lzx_8\Desktop\dev\repo\monopoly\.agents\plan.md`，格式严格对齐 `C:\Users\Lzx_8\Desktop\dev\repo\monopoly\.agents\harness\PLANS.md`；附当前→目标模块映射表与迁移日志模板。
-- **T1** `[depends_on: [T0]]` 先建护栏，不先搬代码：
-  - 给 `tests\\regression.lua` 增加 suite manifest 或 namespaced suite 加载方式，支持子目录套件。
-  - 新增“旧路径残留”检查，至少覆盖：`src.core.runtime_facade`、`src.game.turn_engine`、`src.presentation.adapter`、`src.presentation.canvas_runtime`、`src.game.systems.market.service`、`src.app.bootstrap.runtime_install`。
-  - 验证：护栏在旧路径仍存在时能准确报错，且不会误伤 `vendor` / `Config` / `Data`。
-- **T2** `[depends_on: [T1]]` 先做低爆点重命名：
-  - `src.core.runtime_facade.*` → `src.core.state_access.*`
-  - `src.game.turn_engine.*` → `src.game.legacy.turn_engine.*`
-  - `src.game.systems.market.service.*` → `src.game.systems.market.application.*`
-  - `src.game.systems.land.config.*` → `src.game.systems.land.specs.*`
-  - `src.game.systems.commerce.config.runtime_paid_goods.lua` → `src.game.systems.commerce.specs.paid_goods.lua`
-  - 验证：上述旧前缀在 `src` / `tests` 中清零，`architecture_guard_contract`、`cross_module_contract`、`usecase_boundary_contract` 通过。
-- **T3** `[depends_on: [T1]]` 统一 `app.bootstrap.runtime` 命名空间：
-  - 把 `runtime_install.lua` 与 `runtime_install/` 合并为 `src.app.bootstrap.runtime.*`。
-  - 保持 `src.app.init` 的对外入口职责不变，只更新内部 require。
-  - 验证：`runtime_bootstrap`、`startup_release`、`runtime_ports_contract` 相关套件通过。
-- **T4** `[depends_on: [T2, T3]]` 重组 `presentation`：
-  - `interaction` → `input`
-  - `state` + `read_model` → `model`
-  - `canvas` + `widgets` + `render` → `view`
-  - `adapter` + `canvas_runtime` + `shared.ui_events` → `runtime`
-  - `shared.market_layout` / `player_colors` / `ui_aliases` → `view.support`
-  - 只改目录与 require，不顺手改行为逻辑；任何边界修补仅限导入方向修正。
-  - 验证：`presentation_ui_*`、`read_model_contract`、`ui_gate_contract`、`ui_runtime_state_contract` 全绿，且 `dep_rules` 无新增豁免。
-- **T5** `[depends_on: [T4]]` 重组测试目录：
-  - 将 `tests\\suites` 按 `architecture / domain / gameplay / presentation / runtime` 分组。
-  - `tests\\regression.lua` 改为从 suite manifest 加载，不再依赖扁平短名 `require("chance")` 这类隐式路径。
-  - 保留 `tests\\internal` 作为脚本式护栏目录，并把旧路径扫描接入回归尾部。
-  - 验证：回归覆盖范围与迁移前一致；suite 总量不减少；失败时能定位到新 namespaced suite。
-- **T6** `[depends_on: [T5]]` 做最终清场：
-  - 运行完整 `lua tests\\regression.lua`。
-  - 清掉所有 stale require、遗漏的 package 路径、suite manifest 漏项。
-  - 更新 `C:\Users\Lzx_8\Desktop\dev\repo\monopoly\docs\architecture\boundaries.md` 与 `C:\Users\Lzx_8\Desktop\dev\repo\monopoly\docs\architecture\layer-model.md` 中涉及目录示例的文字，使文档与新树一致。
-  - 验证：377 项回归仍通过；`dep_rules ok`；`forbidden_globals ok`；文档中不再出现退役目录名。
+### T1: 冻结基线与护栏
+- **depends_on**: `[]`
+- **description**: 冻结当前绿线、LOC 口径、热点名单、分层 LOC 基线；把“先绿后改”定为后续所有任务前提。
+- **必须通过**:
+  - `lua tests/regression.lua`
+  - `tests/internal/dep_rules.lua`
+  - `tests/internal/gameplay_loop_no_ui.lua`
+  - `tests/suites/architecture/architecture_guard_contract.lua`
+- **热点冻结名单**:
+  - `src/presentation/view/render/market_view.lua`
+  - `src/core/utils/logger.lua`
+  - `src/infrastructure/runtime/runtime_context.lua`
+  - `src/presentation/view/widgets/ui_panel_presenter.lua`
+  - `src/game/flow/turn/gameplay_loop.lua`
+  - `src/app/bootstrap/payment/eggy_paid_purchase_gateway.lua`
+  - `src/game/core/ai/agent.lua`
+  - `src/presentation/view/render/board_feedback_service.lua`
+  - `src/game/systems/items/item_post_effects.lua`
+  - `src/game/systems/board/board.lua`
+  - `src/app/testing/config/test_profiles.lua`
 
-## 测试与验收
+### T2: 冻结 `presentation` 合约与共享落点
+- **depends_on**: `[T1]`
+- **description**: 在改展示代码前先冻结 contract，明确本轮 dedupe 不能重新引入推断逻辑。
+- **要锁住的字段/语义**:
+  - market：`active_tab`、`page_index`、`page_count`
+  - choice owner：`owner_role_id`
+  - secondary confirm：默认文案 fallback 规则
+  - target picker：owner 必须走显式字段，不回读 `meta.player_id`
+- **涉及消费者**:
+  - `choice_screen_service/*`
+  - `market_view`
+  - `ui_intent_dispatcher/pre_confirm_flow`
+  - `presentation/model` 中消费 choice/market slice 的模块
+  - `target_choice_effects`
+- **验证**: presentation 相关 contract 测试先补齐/冻结，再进入 T3。
 
-- 必跑总验收：`lua tests\\regression.lua`
-- 必查旧路径清零：
-  - `src.core.runtime_facade`
-  - `src.game.turn_engine`
-  - `src.presentation.adapter`
-  - `src.presentation.canvas_runtime`
-  - `src.game.systems.market.service`
-  - `src.app.bootstrap.runtime_install`
-- 必查边界不退化：
+### T3: 收敛 `choice_screen_service + market_view`
+- **depends_on**: `[T2]`
+- **description**: 合并 option 解析、按钮显隐、默认选中、selection frame、tab/page 控制与 fallback；保留 `market_view` 入口不变。
+- **落点**:
+  - market 共享 helper 只放 `src/presentation/view/render/market_*`
+  - choice screen 共享保持在 `src/presentation/view/widgets/choice_screen_service/*`
+- **本任务负责消灭的热点**:
+  - `src/presentation/view/render/market_view.lua`
+- **阶段验证**:
+  - market tab/page clamp
+  - 空页 fallback
+  - confirm title/body fallback
+  - target picker owner 显式字段
+  - market/popup/ui gate/ui runtime 相关 suite
+
+### T4: 先稳住 `gameplay_loop` 外观 API
+- **depends_on**: `[T1]`
+- **description**: 先把 `gameplay_loop` 中 AFK、`set_game` 装配、`tick` orchestration 拆到同层 helper，稳定它对 `agent/logger/ports` 的接口面，再允许后续 game 侧继续减法。
+- **落点**: 仅 `src/game/flow/turn/gameplay_loop_*`
+- **本任务负责消灭的热点**:
+  - `src/game/flow/turn/gameplay_loop.lua`
+- **阶段验证**:
   - `architecture_guard_contract`
-  - `usecase_boundary_contract`
-  - `cross_module_contract`
-  - `runtime_ports_contract`
-  - `ui_runtime_state_contract`
-- 必查关键业务场景未坏：
-  - 黑市选择与分页
-  - 选择弹窗 / 远端选择 / 二次确认
-  - turn dispatch 与 gameplay loop 的 UI dirty 流
-  - bankruptcy / land event / action anim 桥接
+  - `intent_output_contract`
+  - `runtime_bootstrap`
+  - `gameplay_loop_no_ui`
 
-## 假设与默认值
+### T5a: 收敛 `item_post_effects`
+- **depends_on**: `[T1]`
+- **description**: 把可枚举后效处理改为 handler registry / spec table，合并重复分支与日志路径。
+- **落点**: `src/game/systems/items/*`
+- **本任务负责消灭的热点**:
+  - `src/game/systems/items/item_post_effects.lua`
+- **阶段验证**: `tests/suites/domain/item.lua` + 相关 gameplay suite
 
-- 这次只整理 `src` 与 `tests`；`Config`、`Data` 物理目录不动。
-- 不做永久兼容层；所有内部 `require` 在同一批次改完。
-- 不借“目录优化”顺手修改玩法规则、Port 契约形状或 UI 行为；行为变化视为越界。
-- `presentation` 允许一次性大规模路径替换，但不允许新增从 `presentation` 指向 `game.systems` 的直接依赖。
-- `game.legacy.turn_engine` 迁入后仅作为历史兼容容器保留，不允许新模块继续引用。
+### T5b: 收敛 `board`
+- **depends_on**: `[T1]`
+- **description**: 将方向选择、邻接 fallback、覆盖物读写的重复分支表驱动化；不改 `board` 对外方法名。
+- **落点**: `src/game/systems/board/*`
+- **本任务负责消灭的热点**:
+  - `src/game/systems/board/board.lua`
+- **阶段验证**: `land`、`movement`、`landing` 相关 suite
+
+### T5c: 收敛 `agent`
+- **depends_on**: `[T4]`
+- **description**: 在 `gameplay_loop` 接口面稳定后，再提炼 `agent` 的目标选择/自动决策；禁止新增 `meta.player_id` ownership 推断，优先对齐 `owner_role_id`。
+- **落点**: `src/game/core/ai/*` 或同层 mechanics helper
+- **本任务负责消灭的热点**:
+  - `src/game/core/ai/agent.lua`
+- **阶段验证**: AI 选择路径、remote dice、choice auto-action 相关 gameplay suite
+
+### T6a: 收敛 `runtime_context + payment + test_profiles`
+- **depends_on**: `[T1]`
+- **description**:
+  - `runtime_context`：拆 vehicle/change-skin/install builder
+  - `eggy_paid_purchase_gateway`：统一 goods mapping、pending queue、role 解析与 warn 流程
+  - `test_profiles`：抽共享片段/构造器，保留现有 profile key
+- **边界**: 宿主/支付/runtime builder 仍留在 `src/infrastructure/runtime` 与 `src/app/bootstrap`
+- **本任务负责消灭的热点**:
+  - `src/infrastructure/runtime/runtime_context.lua`
+  - `src/app/bootstrap/payment/eggy_paid_purchase_gateway.lua`
+  - `src/app/testing/config/test_profiles.lua`
+- **阶段验证**:
+  - runtime contract suite
+  - `paid_currency.lua`
+  - `test_profiles.lua`
+
+### T7: 收敛 `ui_panel_presenter`
+- **depends_on**: `[T3, T4, T5a, T5b, T6a]`
+- **description**: 在 `presentation` 其他共享落点稳定后，再拆 `ui_panel_presenter`，避免并行造第二套 UI helper。
+- **必须同时冻结**:
+  - `ui_panel.lua` 产出的 row schema
+  - avatar fallback
+  - cash delta 正/负/零态
+  - eliminated 行
+  - crown 并列竞态
+  - visible/touch_enabled 一致性
+- **落点**: `src/presentation/view/widgets/ui_panel_*`
+- **本任务负责消灭的热点**:
+  - `src/presentation/view/widgets/ui_panel_presenter.lua`
+- **阶段验证**: panel 相关 presentation suite
+
+### T6b: 收敛 `logger`
+- **depends_on**: `[T7]`
+- **description**: 最后处理 `logger`，只拆私有职责：tip queue、entry store、formatting；不改对外 API、不改文本格式、不改调用点。
+- **边界**: 不新增宿主全局触点；不把 logger 责任扩散到其他层。
+- **本任务负责消灭的热点**:
+  - `src/core/utils/logger.lua`
+- **阶段验证**: logger 相关 domain/runtime 回归 + 依赖规则
+
+### T8: 删除死代码与退休 helper
+- **depends_on**: `[T5c, T6b]`
+- **description**: 删除被新 helper/registry 替代的 wrapper、重复 alias、无调用 helper、退休兼容路径。
+- **删除前证据**:
+  - repo 级引用扫描
+  - bootstrap/runtime helper/editor exports 检查
+  - 节点/场景名绑定检查
+  - 对应 focused suites 通过
+- **禁止**: 仅凭 `rg` 判断“未使用”
+- **阶段验证**: `dep_rules`、`legacy_path_guard`、对应 touched suites
+
+### T9: 全量验证与指标对账
+- **depends_on**: `[T8]`
+- **description**: 跑全量回归，复算总 LOC、分层 LOC、热点文件数；未达标时只允许在已触达模块内继续净删减。
+- **必须满足**:
+  - `lua tests/regression.lua` 继续通过
+  - `/src` 有效代码 `<=21662`
+  - 热点文件 `<=6`
+  - 无新增 `>=250` 有效行文件
+
+## 并行波次
+| Wave | Tasks | Can Start When |
+|------|-------|----------------|
+| 1 | `T1` | 立即开始 |
+| 2 | `T2`, `T4`, `T5a`, `T5b`, `T6a` | `T1` 完成 |
+| 3 | `T3`, `T5c` | `T2` / `T4` 完成后分别开始 |
+| 4 | `T7` | `T3`, `T4`, `T5a`, `T5b`, `T6a` 完成 |
+| 5 | `T6b`, `T8` | `T7` 完成；`T8` 还需 `T5c` 完成 |
+| 6 | `T9` | `T8` 完成 |
+
+## 测试计划
+- **Wave 2 后**:
+  - `presentation`：market/popup/ui gate/ui runtime 相关 suite
+  - `game`：`gameplay_loop_no_ui`、`architecture_guard_contract`
+  - `runtime`：runtime contract、payment/test_profiles 相关 suite
+- **Wave 3 后**:
+  - `choice/market` 与 AI 选择路径 focused suites
+- **Wave 4/5 后**:
+  - panel 展示 suite
+  - logger 相关 suite
+  - `dep_rules`、`legacy_path_guard`
+- **最终**:
+  - `lua tests/regression.lua`
+  - LOC/热点/分层 LOC 复算并与 T1 基线对账
+
+## 假设与默认项
+- 本次主要追求“**净减法**”，不是单纯拆文件；每个任务都要明确自己负责消灭的热点与预期 delta。
+- 若执行时要落盘，正式可执行版必须写入 `.agents/plan.md`，并补齐 `进度 / 意外与发现 / 决策日志 / 结果与复盘 / 具体命令 / 回滚路径`，以符合 `.agents/harness/PLANS.md`。
+- 本计划不引入新三方依赖，不新增长期兼容 shim，不扩到 `/src` 之外的结构重组。
