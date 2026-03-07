@@ -1,5 +1,5 @@
 local logger = require("src.core.utils.logger")
-local bankruptcy = require("src.game.core.runtime.bankruptcy")
+local bankruptcy = require("src.game.systems.endgame.bankruptcy")
 local common = require("src.game.core.player.state_ops.common")
 local number_utils = require("src.core.utils.number_utils")
 local role_id_utils = require("src.core.utils.role_id")

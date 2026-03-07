@@ -2,7 +2,7 @@ local composition_root = require("src.game.core.runtime.composition_root")
 local game_state_players = require("src.game.core.runtime.game_state_players")
 local game_state_tiles = require("src.game.core.runtime.game_state_tiles")
 local game_state_turn = require("src.game.core.runtime.game_state_turn")
-local game_victory = require("src.game.core.runtime.game_victory")
+local game_victory = require("src.game.systems.endgame.game_victory")
 require "vendor.third_party.ClassUtils"
 
 

@@ -34,9 +34,9 @@ function M.install(opts)
   end
 
   runtime_ports.configure(runtime_port_defaults.build())
-  require "src.game.core.runtime.bankruptcy"
+  require "src.game.systems.endgame.bankruptcy"
   require "src.game.core.ai.agent"
-  require "src.game.core.runtime.game_victory"
+  require "src.game.systems.endgame.game_victory"
   require "src.game.core.runtime.composition_root"
 end
 

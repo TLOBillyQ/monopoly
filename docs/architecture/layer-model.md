@@ -33,14 +33,14 @@ UI → Turn Management → (Player | Computer) → shared-mechanics → (state |
 
 ## Port 注入模式
 
-systems 需要调用 runtime 细节时，通过 Port 契约 + Adapter 解耦：
+systems 需要调用宿主或装配细节时，通过 Port 契约 + Adapter 解耦：
 
 ```
 systems → src/game/ports/xxx_port.lua (assert-only)
                     ↑
           src/game/runtime/xxx_port_adapter.lua (实现)
                     ↑
-          src/game/core/runtime/xxx.lua (具体逻辑)
+          src/game/core/* 或 src/game/systems/* (具体实现)
 ```
 
 默认 adapter 在 `CompositionRoot.assemble()` 安装；flow 层可覆盖。
@@ -60,9 +60,11 @@ src/game/runtime/      src/game/ports/  (pure assert contracts)
       │
       ▼
 src/game/core/runtime/     src/core/config/
-  (Agent, Bankruptcy,       Config/generated/
-   Game, CompositionRoot)
+  (Game, CompositionRoot)   Config/generated/
       │
       ▼
 src/game/core/player/  (state)
+
+src/game/core/ai/      src/game/systems/endgame/
+  (Agent)               (Bankruptcy, GameVictory)
 ```

@@ -236,7 +236,6 @@ local growth_budget_rules = {
     },
     budget = {
       ["src/core/ports/action_anim_port.lua"] = 0,
-      ["src/game/core/runtime/bankruptcy.lua"] = 0,
       ["src/game/core/runtime/game_state_tiles.lua"] = 0,
       ["src/game/flow/intent/intent_dispatcher.lua"] = 0,
       ["src/game/flow/turn/gameplay_loop.lua"] = 0,

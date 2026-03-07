@@ -14,9 +14,9 @@
 
 `src/game/flow` 是用例编排层。这里负责一回合怎么推进、意图怎么分发、输入怎么校验、输出端口怎么发射。它可以协调 `src/game/systems` 的业务模块，但不应该回头操作 UI 细节或宿主运行时对象图。
 
-`src/game/systems` 是玩法业务层。这里放黑市、道具、地块、机会卡、移动等规则本身。规则模块可以生成 choice spec、popup payload、动画请求等稳定输出模型，但不应该自己决定 UI 节点名、Canvas 切换方式或宿主 API 调用顺序。
+`src/game/systems` 是玩法业务层。这里放黑市、道具、地块、机会卡、移动、破产结算、胜负判定等规则本身。规则模块可以生成 choice spec、popup payload、动画请求等稳定输出模型，但不应该自己决定 UI 节点名、Canvas 切换方式或宿主 API 调用顺序。
 
-`src/game/runtime` 与 `src/infrastructure/runtime` 一起承担运行时适配职责。前者现在只保留贴近 gameplay 的 adapter，例如 `AutoPlayPortAdapter`、`BankruptcyPortAdapter` 这类“把 runtime 细节接成 `src/game/ports/*` 契约”的实现；历史回合执行器被收拢到 `src/game/turn_engine/`，它是 deprecated/frozen 的历史执行器容器，不是新的常规分层目录；协程调度细节则收拢到 `src/game/scheduler/`。后者承接运行时上下文、事件桥和默认 runtime ports 这类更外层的宿主细节；`src/app/bootstrap/runtime_install` 则只负责安装别名和装配。当前 `src/core/runtime_facade/runtime_context.lua`、`src/core/runtime_facade/runtime_event_bridge.lua`、`src/core/runtime_ports/default_ports.lua` 已经退化为 façade，真实实现位于 `src/infrastructure/runtime/`；以后只要看到新的 Eggy API 调用需求，优先判断它是不是应该留在那里，而不是回写到 `src/core` 或 `src/game/flow`。
+`src/game/runtime` 与 `src/infrastructure/runtime` 一起承担运行时适配职责。前者现在只保留贴近 gameplay 的 adapter，例如 `AutoPlayPortAdapter`、`BankruptcyPortAdapter` 这类“把端口实现接成 `src/game/ports/*` 契约”的实现；`src/game/core/runtime` 只保留 `Game` 聚合根与装配代码，不再承接破产结算、胜负判定这类业务规则；历史回合执行器被收拢到 `src/game/turn_engine/`，它是 deprecated/frozen 的历史执行器容器，不是新的常规分层目录；协程调度细节则收拢到 `src/game/scheduler/`。后者承接运行时上下文、事件桥和默认 runtime ports 这类更外层的宿主细节；`src/app/bootstrap/runtime_install` 则只负责安装别名和装配。当前 `src/core/runtime_facade/runtime_context.lua`、`src/core/runtime_facade/runtime_event_bridge.lua`、`src/core/runtime_ports/default_ports.lua` 已经退化为 façade，真实实现位于 `src/infrastructure/runtime/`；以后只要看到新的 Eggy API 调用需求，优先判断它是不是应该留在那里，而不是回写到 `src/core` 或 `src/game/flow`。
 
 `src/presentation` 是展示适配层。其中 `src/presentation/adapter/` 表达展示侧 adapter，`src/presentation/widgets/` 表达可复用 UI 组件，`canvas/` 保留页面级 presenter 与页面行为。它负责把 `ui_model`、choice view、popup view、market view 渲染成具体 UI，并处理输入事件到 turn action 的映射。它可以解释 ViewModel，但不应该再根据 `choice.kind`、`choice.meta` 或商品配置自行补业务语义。
 
