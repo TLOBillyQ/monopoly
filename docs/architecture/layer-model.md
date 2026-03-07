@@ -15,7 +15,7 @@ UI → Turn Management → (Player | Computer) → shared-mechanics → (state |
 | Player | 人类玩家路径：UI 发出 action → Turn Management `dispatch_action` |
 | Computer | `src/game/core/ai/agent.lua` |
 | shared-mechanics | `src/game/systems/` + `src/game/ports/`（Port 契约） |
-| state | `src/game/core/player/`, `src/game/core/runtime/Game*.lua` |
+| state | `src/game/core/player/`, `src/game/core/runtime/game.lua` |
 | config | `Config/generated/`, `src/core/config/` |
 
 辅助层（不计入 7 组件）：`src/game/runtime/`（Port Adapter）、`src/game/turn_engine/`（deprecated/frozen 的历史执行器容器）、`src/game/scheduler/`（协程调度细节）、`src/app/bootstrap/`（装配）、`src/infrastructure/runtime/`（Eggy 宿主真实实现）、`src/core/`（跨层工具）。
