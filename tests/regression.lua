@@ -3,6 +3,8 @@ package.path = package.path
   .. ";./.agents/tests/?.lua;./.agents/tests/suites/?.lua;./.agents/tests/fixtures/?.lua"
   .. ";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua"
 
+local suite_manifest = require("suites.manifest")
+
 local function dofile_first(paths)
   for _, path in ipairs(paths) do
     local f = io.open(path, "r")
@@ -101,47 +103,15 @@ local function _apply_release_trimmed_filters(suites)
   end
 end
 
-local suites = {
-  -- core: domain rules
-  require("chance"),
-  require("land"),
-  require("item"),
-  require("movement"),
-  require("landing"),
-  require("market"),
-  require("paid_currency"),
-  require("config_sanity"),
-  require("startup_release"),
+local function load_suites(manifest)
+  local suites = {}
+  for _, module_name in ipairs(manifest) do
+    suites[#suites + 1] = require(module_name)
+  end
+  return suites
+end
 
-  -- runtime: gameplay flow
-  require("gameplay_core"),
-  require("gameplay_runtime"),
-  require("gameplay_coroutine"),
-  require("gameplay_loop"),
-  require("gameplay_afk"),
-  require("runtime_bootstrap"),
-
-  -- presentation: UI layer
-  require("presentation_ui_timing_anim"),
-  require("presentation_ui_model_dispatch"),
-  require("presentation_ui_interaction"),
-  require("presentation_ui_popup_market"),
-  require("presentation_ui_action_status"),
-  require("presentation_ui_action_anim"),
-  require("presentation_ui_event_handlers"),
-  require("presentation_ui_event_bindings"),
-  require("presentation_player_colors"),
-  require("read_model_contract"),
-  require("architecture_guard_contract"),
-  require("usecase_boundary_contract"),
-  require("cross_module_contract"),
-  require("ui_gate_contract"),
-  require("runtime_ports_contract"),
-
-  -- integration: cross-cutting
-  require("test_profiles"),
-  require("misc"),
-}
+local suites = load_suites(suite_manifest)
 
 local mode = _resolve_regression_mode()
 print("[regression] mode=" .. mode)
@@ -151,6 +121,10 @@ end
 
 harness.run_all(suites)
 dofile_first({".agents/tests/internal/dep_rules.lua", "tests/internal/dep_rules.lua"})
+dofile_first({
+  ".agents/tests/internal/legacy_path_guard.lua",
+  "tests/internal/legacy_path_guard.lua",
+})
 dofile_first({
   ".agents/tests/internal/gameplay_loop_no_ui.lua",
   "tests/internal/gameplay_loop_no_ui.lua",

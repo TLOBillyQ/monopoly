@@ -8,7 +8,7 @@ local runtime_field = "__market_paid_runtime"
 local panel_show_seconds = 10.0
 
 local function _context()
-  return require("src.game.systems.market.service.context")
+  return require("src.game.systems.market.application.context")
 end
 
 local function _new_runtime()

@@ -12,8 +12,8 @@ local auto_context = require("src.game.flow.turn.auto_context")
 local tick_flow = require("src.game.flow.turn.gameplay_loop_tick_flow")
 local turn_timer_policy = require("src.game.flow.turn.turn_timer_policy")
 local paid_currency_bridge = require("src.game.systems.commerce.paid_currency_bridge")
-local market_purchase = require("src.game.systems.market.service.purchase")
-local runtime_state = require("src.core.runtime_facade.runtime_state")
+local market_purchase = require("src.game.systems.market.application.purchase")
+local runtime_state = require("src.core.state_access.runtime_state")
 local role_id_utils = require("src.core.utils.role_id")
 
 local gameplay_loop = {}

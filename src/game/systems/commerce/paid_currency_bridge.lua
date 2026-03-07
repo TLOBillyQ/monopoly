@@ -1,4 +1,4 @@
-local paid_goods_cfg = require("src.game.systems.commerce.config.runtime_paid_goods")
+local paid_goods_cfg = require("src.game.systems.commerce.specs.paid_goods")
 
 local bridge = {}
 

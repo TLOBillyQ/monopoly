@@ -16,11 +16,11 @@
 
 `src/game/systems` 是玩法业务层。这里放黑市、道具、地块、机会卡、移动、破产结算、胜负判定等规则本身。规则模块可以生成 choice spec、popup payload、动画请求等稳定输出模型，但不应该自己决定 UI 节点名、Canvas 切换方式或宿主 API 调用顺序。
 
-`src/game/runtime` 与 `src/infrastructure/runtime` 一起承担运行时适配职责。前者现在只保留贴近 gameplay 的 adapter，例如 `AutoPlayPortAdapter`、`BankruptcyPortAdapter` 这类“把端口实现接成 `src/game/ports/*` 契约”的实现；`src/game/core/runtime` 只保留 `Game` 聚合根与装配代码，不再承接破产结算、胜负判定这类业务规则；历史回合执行器被收拢到 `src/game/turn_engine/`，它是 deprecated/frozen 的历史执行器容器，不是新的常规分层目录，当前仍由 `src/game/core/runtime/composition_root.lua` 承接装配，后续只做替换式退休、不再扩展新职责；协程调度细节则收拢到 `src/game/scheduler/`。后者承接运行时上下文、事件桥和默认 runtime ports 这类更外层的宿主细节；`src/app/bootstrap/runtime_install` 则只负责安装别名和装配。当前 `src/core/runtime_facade/runtime_context.lua`、`src/core/runtime_facade/runtime_event_bridge.lua`、`src/core/runtime_ports/default_ports.lua` 已退休并删除；调用方统一直接引用 `src/infrastructure/runtime/*` 真实实现。以后只要看到新的 Eggy API 调用需求，优先判断它是不是应该留在那里，而不是回写到 `src/core` 或 `src/game/flow`。
+`src/game/runtime` 与 `src/infrastructure/runtime` 一起承担运行时适配职责。前者现在只保留贴近 gameplay 的 adapter，例如 `AutoPlayPortAdapter`、`BankruptcyPortAdapter` 这类“把端口实现接成 `src/game/ports/*` 契约”的实现；`src/game/core/runtime` 只保留 `Game` 聚合根与装配代码，不再承接破产结算、胜负判定这类业务规则；历史回合执行器被收拢到 `src/game/legacy/turn_engine/`，它是 deprecated/frozen 的历史执行器容器，不是新的常规分层目录，当前仍由 `src/game/core/runtime/composition_root.lua` 承接装配，后续只做替换式退休、不再扩展新职责；协程调度细节则收拢到 `src/game/scheduler/`。后者承接运行时上下文、事件桥和默认 runtime ports 这类更外层的宿主细节；`src/app/bootstrap/runtime.lua` 与 `src/app/bootstrap/runtime/*` 则只负责安装别名和装配。`src/core/state_access/*` 只保留状态访问语义；运行时上下文、事件桥和默认 runtime ports 的真实实现统一落在 `src/infrastructure/runtime/*`，调用方应直接依赖这些实现或经端口注入。以后只要看到新的 Eggy API 调用需求，优先判断它是不是应该留在那里，而不是回写到 `src/core` 或 `src/game/flow`。
 
-`src/presentation` 是展示适配层。其中 `src/presentation/adapter/` 表达展示侧 adapter，`src/presentation/widgets/` 表达可复用 UI 组件，`canvas/` 保留页面级 presenter 与页面行为。它负责把 `ui_model`、choice view、popup view、market view 渲染成具体 UI，并处理输入事件到 turn action 的映射。它可以解释 ViewModel，但不应该再根据 `choice.kind`、`choice.meta` 或商品配置自行补业务语义。
+`src/presentation` 是展示适配层。当前按四个稳定职责面组织：`src/presentation/input/` 负责输入事件与 turn action 映射，`src/presentation/model/` 负责 UI model 与只读查询辅助，`src/presentation/view/` 负责 Canvas / widgets / render 输出，`src/presentation/runtime/` 负责展示侧 runtime adapter、canvas store 与 UI 事件桥接。它负责把 `ui_model`、choice view、popup view、market view 渲染成具体 UI，并处理输入事件到 turn action 的映射。它可以解释 ViewModel，但不应该再根据 `choice.kind`、`choice.meta` 或商品配置自行补业务语义。
 
-`src/presentation/read_model` 目前仍是 presentation 的一部分，不是独立 CQRS 查询层。它的职责是给 UI 组装轻量只读辅助数据；如果未来出现更明确的跨界查询需求，再考虑把它提升为独立 adapter。
+`src/presentation/model/gameplay_read_port.lua` 目前仍是 presentation 的一部分，不是独立 CQRS 查询层。它的职责是给 UI 组装轻量只读辅助数据；如果未来出现更明确的跨界查询需求，再考虑把它提升为独立 adapter。
 
 ## 这轮重构后形成的硬边界
 

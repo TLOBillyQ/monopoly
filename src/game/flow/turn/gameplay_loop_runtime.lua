@@ -1,4 +1,4 @@
-local runtime_state = require("src.core.runtime_facade.runtime_state")
+local runtime_state = require("src.core.state_access.runtime_state")
 
 local runtime = {}
 

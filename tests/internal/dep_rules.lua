@@ -1,6 +1,6 @@
 local rules = {
   {
-    root = "src/presentation/interaction",
+    root = "src/presentation/input",
     forbidden = { "src.game." },
     description = "interaction layer must not require src.game.* directly",
   },
@@ -20,7 +20,7 @@ local rules = {
     description = "runtime must not depend on retired TurnFlow",
   },
   {
-    root = "src/presentation/canvas/base",
+    root = "src/presentation/view/canvas/base",
     forbidden = {
       "canvas.always_show", "canvas.market", "canvas.secondary_confirm",
       "canvas.remote_choice", "canvas.player_choice", "canvas.popup",
@@ -171,7 +171,7 @@ local rules = {
     description = "turn flow must use ui_sync.resolve_ui_gate/ui_sync ports instead of direct state.ui reads",
   },
   {
-    root = "src/game/systems/market/service",
+    root = "src/game/systems/market/application",
     forbidden_patterns = {
       "%f[%w_]GameAPI%f[^%w_]",
       "%f[%w_]RegisterTriggerEvent%f[^%w_]",
@@ -180,7 +180,7 @@ local rules = {
     description = "market service layer must not call host purchase globals directly; move Eggy payment details to outer adapters",
   },
   {
-    root = "src/presentation/adapter/presentation_ports",
+    root = "src/presentation/runtime/presentation_ports",
     forbidden_patterns = {
       "game%.ui_port",
       "ui_port%.get_board_scene",
@@ -239,7 +239,7 @@ local growth_budget_rules = {
     },
     budget = {
       ["src/core/utils/logger.lua"] = 0,
-      ["src/core/runtime_facade/runtime_editor_exports.lua"] = 0,
+      ["src/core/state_access/runtime_editor_exports.lua"] = 0,
     },
   },
   {
@@ -253,7 +253,7 @@ local growth_budget_rules = {
       "%f[%w_]ALLROLES%f[^%w_]",
     },
     budget = {
-      ["src/app/bootstrap/runtime_install/runtime_global_aliases.lua"] = 3,
+      ["src/app/bootstrap/runtime/global_aliases.lua"] = 3,
       ["src/app/init.lua"] = 2,
     },
   },

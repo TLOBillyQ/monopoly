@@ -1,8 +1,8 @@
-local eligibility = require("src.game.systems.market.service.eligibility")
-local choice = require("src.game.systems.market.service.choice")
-local choice_session = require("src.game.systems.market.service.choice_session")
-local purchase = require("src.game.systems.market.service.purchase")
-local auto = require("src.game.systems.market.service.auto")
+local eligibility = require("src.game.systems.market.application.eligibility")
+local choice = require("src.game.systems.market.application.choice")
+local choice_session = require("src.game.systems.market.application.choice_session")
+local purchase = require("src.game.systems.market.application.purchase")
+local auto = require("src.game.systems.market.application.auto")
 
 local market_service = {
   query = {},

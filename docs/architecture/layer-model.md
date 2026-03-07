@@ -18,7 +18,7 @@ UI → Turn Management → (Player | Computer) → shared-mechanics → (state |
 | state | `src/game/core/player/`, `src/game/core/runtime/game.lua` |
 | config | `Config/generated/`, `src/core/config/` |
 
-辅助层（不计入 7 组件）：`src/game/runtime/`（Port Adapter）、`src/game/turn_engine/`（deprecated/frozen 的历史执行器容器）、`src/game/scheduler/`（协程调度细节）、`src/app/bootstrap/`（装配）、`src/infrastructure/runtime/`（Eggy 宿主真实实现）、`src/core/`（跨层工具）。
+辅助层（不计入 7 组件）：`src/game/runtime/`（Port Adapter）、`src/game/legacy/turn_engine/`（deprecated/frozen 的历史执行器容器）、`src/game/scheduler/`（协程调度细节）、`src/app/bootstrap/`（装配）、`src/infrastructure/runtime/`（Eggy 宿主真实实现）、`src/core/`（跨层工具）。
 
 ## 已强制的边界
 
