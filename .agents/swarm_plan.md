@@ -58,6 +58,16 @@
 - **location**: `src/`, `tests/`, `docs/`, `.agents/`
 - **description**: 生成本轮唯一合法的“旧路径 -> 新路径”表，确认目标路径不存在，并在工作计划中写死排除项：不碰 `turn_*`、`presentation/runtime/ui_*`、`presentation/model/ui_*`、`action_anim.lua`。
 - **validation**: 全部目标路径无冲突；映射表覆盖后续所有任务；排除项在计划里单独列明。
+- **status**: completed (2026-03-08 15:25Z)
+- **work_log**:
+  - 核对全部目标路径当前均不存在，可直接进行原子 rename，不需要过渡桥。
+  - 确认首轮高命中旧路径仍集中在 `presentation/input/ui_*`、`game/core/runtime/game_state_*`、`game/flow/turn/gameplay_loop*`、`presentation/view/render/market_view*` 与 `action_anim_*` 叶子 helper。
+  - 冻结排除项：`turn_*` 家族、`presentation/runtime/ui_*`、`presentation/model/ui_*`、`action_anim.lua` 主入口不纳入本轮。
+- **files_touched**:
+  - `.agents/swarm_plan.md`
+- **gotchas**:
+  - `tests/suites/presentation/presentation_ui.lua` 对 `market_view` 有 `package.loaded[...]` 热重载断言，T4 必须同步更新这些 key。
+  - `state.gameplay_loop_ports` 是运行时字段，不是模块路径；T7 只改 `require(...)` 目标，不改状态字段名或协议名。
 
 ### T2: 收口 `presentation/input/ui_*`
 - **depends_on**: `[T1]`
