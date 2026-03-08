@@ -2,11 +2,11 @@ local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_event_bridge = require("src.infrastructure.runtime.runtime_event_bridge")
 local runtime_context = require("src.infrastructure.runtime.runtime_context")
 local logger = require("src.core.utils.logger")
-local role_resolver = require("src.presentation.runtime.host_runtime.role_resolver")
-local unit_lifecycle = require("src.presentation.runtime.host_runtime.unit_lifecycle")
-local scene_ui = require("src.presentation.runtime.host_runtime.scene_ui")
-local raycast = require("src.presentation.runtime.host_runtime.raycast")
-local sfx_runtime = require("src.presentation.runtime.host_runtime.sfx_runtime")
+local role_resolver = require("src.presentation.runtime.host.role_resolver")
+local unit_lifecycle = require("src.presentation.runtime.host.unit_lifecycle")
+local scene_ui = require("src.presentation.runtime.host.scene_ui")
+local raycast = require("src.presentation.runtime.host.raycast")
+local sfx_runtime = require("src.presentation.runtime.host.sfx_runtime")
 
 local host_runtime = {}
 local target_pick_listener_seq = 0

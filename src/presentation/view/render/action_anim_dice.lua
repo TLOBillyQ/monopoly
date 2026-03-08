@@ -1,6 +1,6 @@
 local ui_events = require("src.presentation.runtime.ui_events")
 local number_utils = require("src.core.utils.number_utils")
-local host_runtime = require("src.presentation.runtime.host_runtime")
+local host_runtime = require("src.presentation.runtime.host")
 local effect_timeline = require("src.presentation.view.support.effect_timeline")
 
 local dice = {}

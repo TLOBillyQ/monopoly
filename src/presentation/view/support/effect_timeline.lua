@@ -1,4 +1,4 @@
-local host_runtime = require("src.presentation.runtime.host_runtime")
+local host_runtime = require("src.presentation.runtime.host")
 
 local effect_timeline = {}
 

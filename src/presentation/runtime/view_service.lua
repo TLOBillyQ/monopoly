@@ -3,14 +3,14 @@ local base_presenter = require("src.presentation.view.canvas.base.presenter")
 local render_pipeline = require("src.presentation.runtime.canvas_render_pipeline")
 local input_lock_policy = require("src.presentation.input.ui_input_lock_policy")
 local role_control_lock_policy = require("src.presentation.input.ui_role_control_lock_policy")
-local modal_presenter = require("src.presentation.view.widgets.ui_modal_presenter")
+local modal_presenter = require("src.presentation.view.widgets.modal_presenter")
 local logger = require("src.core.utils.logger")
 local runtime = require("src.presentation.runtime.ui_runtime")
 
-local state = require("src.presentation.runtime.ui_view_service.state")
-local assets = require("src.presentation.runtime.ui_view_service.assets")
-local item_slots = require("src.presentation.runtime.ui_view_service.item_slots")
-local debug = require("src.presentation.runtime.ui_view_service.debug")
+local state = require("src.presentation.runtime.view_service.state")
+local assets = require("src.presentation.runtime.view_service.assets")
+local item_slots = require("src.presentation.runtime.view_service.item_slots")
+local debug = require("src.presentation.runtime.view_service.debug")
 
 local service = {}
 

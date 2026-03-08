@@ -3,8 +3,8 @@ local base_nodes = require("src.presentation.view.canvas.base.nodes")
 local always_show_nodes = require("src.presentation.view.canvas.always_show.nodes")
 local ui_touch_policy = require("src.presentation.input.ui_touch_policy")
 local role_id_utils = require("src.core.utils.role_id")
-local ui_panel_cash_delta = require("src.presentation.view.widgets.ui_panel_cash_delta")
-local ui_panel_player_slots = require("src.presentation.view.widgets.ui_panel_player_slots")
+local panel_cash_delta = require("src.presentation.view.widgets.panel_cash_delta")
+local panel_player_slots = require("src.presentation.view.widgets.panel_player_slots")
 
 local panel_presenter = {}
 
@@ -70,7 +70,7 @@ local function _render_role_view(state, ui_model, runtime, role, panel, refresh_
   local ctx = role_context.resolve(role, ui_model, { runtime = runtime })
   local base_visible = panel_presenter.is_base_non_player_visible(ui, ctx)
   panel_presenter.apply_base_non_player_visibility(ui, base_visible)
-  ui_panel_player_slots.force_item_slots_visible_for_player(ui, ctx)
+  panel_player_slots.force_item_slots_visible_for_player(ui, ctx)
   ui:set_visible(always_show_nodes.auto_effect, _resolve_auto_effect_visible(ui_model, ctx))
   ui:set_touch_enabled(always_show_nodes.auto_effect, false)
   ui:set_visible(base_nodes.countdown, true)
@@ -101,25 +101,25 @@ function panel_presenter.refresh(state, ui_model, deps)
   local refs = state.ui_refs or {}
   local image_refs = refs.images or {}
   local empty_avatar_key = image_refs["Empty"]
-  ui_panel_cash_delta.ensure_state(ui)
+  panel_cash_delta.ensure_state(ui)
   for i = 1, 4 do
-    ui_panel_player_slots.render_player_slot(
+    panel_player_slots.render_player_slot(
       ui,
       runtime,
       player_rows[i],
       i,
       empty_avatar_key,
-      ui_panel_cash_delta.refresh_cash_delta_label
+      panel_cash_delta.refresh_cash_delta_label
     )
   end
-  ui_panel_player_slots.refresh_player_crowns(ui, player_rows)
+  panel_player_slots.refresh_player_crowns(ui, player_rows)
   if type(ui.item_slot_item_ids_by_role) ~= "table" then
     ui.item_slot_item_ids_by_role = {}
   end
   runtime.for_each_role_or_global(function(role)
     _render_role_view(state, ui_model, runtime, role, panel, refresh_item_slots)
     for i = 1, 4 do
-      ui_panel_player_slots.apply_player_colors(role, runtime, players[i], i)
+      panel_player_slots.apply_player_colors(role, runtime, players[i], i)
     end
   end)
   runtime.set_client_role(nil)

@@ -15,7 +15,7 @@ local function _load_action_anim_player()
 end
 
 local function _apply_role_control_lock(state, enabled)
-  local ui_view = require("src.presentation.runtime.ui_view_service")
+  local ui_view = require("src.presentation.runtime.view_service")
   ui_view.apply_role_control_lock(state, enabled)
 end
 
@@ -77,12 +77,12 @@ function anim_ports.build()
       return player.play(state, anim_ctx)
     end,
     reset_status_3d = function(state)
-      local ui_status_3d = require("src.presentation.view.render.status_3_d_service")
-      ui_status_3d.reset(state)
+      local status3d = require("src.presentation.view.render.status3d")
+      status3d.reset(state)
     end,
     sync_status_3d = function(game, state, dirty)
-      local ui_status_3d = require("src.presentation.view.render.status_3_d_service")
-      ui_status_3d.sync(game, state, dirty)
+      local status3d = require("src.presentation.view.render.status3d")
+      status3d.sync(game, state, dirty)
     end,
   }
 end

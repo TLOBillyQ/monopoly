@@ -1,4 +1,4 @@
-local choice_contract = require("src.core.choice.choice_contract")
+local choice_contract = require("src.core.choice.contract")
 
 local choice = {}
 

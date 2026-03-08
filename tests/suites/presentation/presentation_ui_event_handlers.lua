@@ -2,7 +2,7 @@ local support = require("TestSupport")
 local _with_patches = support.with_patches
 local number_utils = require("src.core.utils.number_utils")
 local monopoly_event = require("src.core.events.monopoly_events")
-local host_runtime = require("src.presentation.runtime.host_runtime")
+local host_runtime = require("src.presentation.runtime.host")
 local board_feedback = require("src.presentation.view.render.board_feedback_service")
 
 if not math.Vector3 then

@@ -210,7 +210,7 @@ local rules = {
     description = "market service layer must not call host purchase globals directly; move Eggy payment details to outer adapters",
   },
   {
-    root = "src/presentation/runtime/presentation_ports",
+    root = "src/presentation/runtime/ports",
     forbidden_patterns = {
       "game%.ui_port",
       "ui_port%.get_board_scene",

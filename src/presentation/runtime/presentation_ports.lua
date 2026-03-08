@@ -1,10 +1,10 @@
-local common = require("src.presentation.runtime.presentation_ports.common")
-local modal_ports = require("src.presentation.runtime.presentation_ports.modal_ports")
-local anim_ports = require("src.presentation.runtime.presentation_ports.anim_ports")
-local ui_sync_ports = require("src.presentation.runtime.presentation_ports.ui_sync_ports")
-local debug_ports = require("src.presentation.runtime.presentation_ports.debug_ports")
-local state_ports = require("src.presentation.runtime.presentation_ports.state_ports")
-local clock_ports = require("src.presentation.runtime.presentation_ports.clock_ports")
+local common = require("src.presentation.runtime.ports.common")
+local modal_ports = require("src.presentation.runtime.ports.modal_ports")
+local anim_ports = require("src.presentation.runtime.ports.anim_ports")
+local ui_sync_ports = require("src.presentation.runtime.ports.ui_sync_ports")
+local debug_ports = require("src.presentation.runtime.ports.debug_ports")
+local state_ports = require("src.presentation.runtime.ports.state_ports")
+local clock_ports = require("src.presentation.runtime.ports.clock_ports")
 
 local presentation_ports = {}
 

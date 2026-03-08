@@ -1,6 +1,6 @@
 local board_runtime = require("src.presentation.view.render.board_runtime")
 local base_presenter = require("src.presentation.view.canvas.base.presenter")
-local turn_effects = require("src.presentation.view.widgets.ui_turn_effects")
+local turn_effects = require("src.presentation.view.widgets.turn_effects")
 local canvas_store = require("src.presentation.runtime.canvas_store")
 
 local pipeline = {}

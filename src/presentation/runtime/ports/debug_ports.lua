@@ -26,7 +26,7 @@ function debug_ports.build(common)
     sync_debug_log = function(state)
       state._debug_log_enabled_by_role = state._debug_log_enabled_by_role or {}
       state._debug_log_seq_by_role = state._debug_log_seq_by_role or {}
-      local ui_view = require("src.presentation.runtime.ui_view_service")
+      local ui_view = require("src.presentation.runtime.view_service")
       runtime.for_each_role_or_global(function(role)
         local role_id = role_id_utils.normalize(runtime.resolve_role_id(role))
         if role_id == nil then

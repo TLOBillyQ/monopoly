@@ -1,6 +1,6 @@
 local monopoly_event = require("src.core.events.monopoly_events")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local host_runtime = require("src.presentation.runtime.host_runtime")
+local host_runtime = require("src.presentation.runtime.host")
 local board_feedback = require("src.presentation.view.render.board_feedback_service")
 
 local event_handlers = {}

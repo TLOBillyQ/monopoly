@@ -1,7 +1,7 @@
 local modal_state = require("src.presentation.input.ui_modal_state_coordinator")
 local canvas = require("src.presentation.input.ui_canvas_coordinator")
 local common = require("src.presentation.view.widgets.choice_screen_service.common")
-local core = require("src.presentation.runtime.ui_view_service.core")
+local core = require("src.presentation.runtime.view_service.core")
 local ui_controls = require("src.presentation.view.support.ui_controls")
 local logger = require("src.core.utils.logger")
 

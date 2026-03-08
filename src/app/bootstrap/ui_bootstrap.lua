@@ -1,5 +1,5 @@
 local board_scene = require("src.presentation.view.render.board_scene")
-local ui_view = require("src.presentation.runtime.ui_view_service")
+local ui_view = require("src.presentation.runtime.view_service")
 local canvas_event_router = require("src.presentation.runtime.canvas_event_router")
 local base_nodes = require("src.presentation.view.canvas.base.nodes")
 local always_show_nodes = require("src.presentation.view.canvas.always_show.nodes")

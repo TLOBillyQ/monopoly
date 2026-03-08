@@ -52,7 +52,7 @@ systems → src/game/ports/xxx_port.lua (systems-facing contract)
 
 这里要固定三类不同的东西。`src/core/ports/` 只放宿主 / 运行时广义契约，面向多个内层复用。`src/game/ports/` 只放 systems-facing 注入契约，帮助玩法规则向外发出稳定语义。`src/game/flow/turn/gameplay_loop_ports.lua` 只服务于 turn use case 本身，把 gameplay loop 运行时需要的多组函数按用途打包成 override bundle；它不是通用 Port 层，不能被 systems 或别的目录当成新的契约中心。
 
-命名时直接看文件后缀。`*_port.lua` 是单一契约，应该落在 `src/core/ports/` 或 `src/game/ports/`，例如 `runtime_ports.lua`、`bankruptcy_feedback_port.lua`。`*_ports.lua` 是按 use case 或展示面打包的一组 override bundle，当前典型例子是 `src/game/flow/turn/gameplay_loop_ports.lua` 与 `src/presentation/runtime/presentation_ports.lua`；它们可以汇总多项能力，但不替代单一 Port 契约。`*_port_adapter.lua` 是 outer layer 的实现文件，负责把宿主能力接入前面的契约，例如 `src/game/runtime/auto_play_port_adapter.lua`。新增文件时，如果后缀和职责对不上，先改名字或拆文件，不要让 `_ports.lua` 和 `_port_adapter.lua` 退化成“随手起名”。
+命名时直接看文件后缀。`*_port.lua` 是单一契约，应该落在 `src/core/ports/` 或 `src/game/ports/`，例如 `runtime_ports.lua`、`bankruptcy_feedback_port.lua`。`*_ports.lua` 是按 use case 或展示面打包的一组 override bundle，当前典型例子是 `src/game/flow/turn/gameplay_loop_ports.lua` 与 `src/presentation/runtime/ports.lua`；它们可以汇总多项能力，但不替代单一 Port 契约。`*_port_adapter.lua` 是 outer layer 的实现文件，负责把宿主能力接入前面的契约，例如 `src/game/runtime/auto_play_port_adapter.lua`。新增文件时，如果后缀和职责对不上，先改名字或拆文件，不要让 `_ports.lua` 和 `_port_adapter.lua` 退化成“随手起名”。
 
 `src/game/flow/output_adapters/*.lua` 则是另一种更窄的“用例内部 adapter”语义：它们不定义 Port 契约，也不实现宿主 Port，而是把 flow 内部输出桥到 `intent_dispatcher` 或 `ui_runtime`。所以第三周先固定它们的目录语义，不把它们误并到 `src/game/runtime/`。
 

@@ -16,11 +16,11 @@
   - 已存在：`src/presentation/view/support/effect_timeline.lua`
   - 已存在：`src/presentation/view/support/market_layout.lua`
 - `active_tab`、`page_index`、`page_count` 已是显式字段，不应再重复推动“从 `meta` 中提出分页状态”。
-  - 相关位置：`src/core/choice/choice_contract.lua`
+  - 相关位置：`src/core/choice/contract.lua`
   - 相关位置：`src/game/systems/market/application/choice_session.lua`
 - `choice.meta` 并非零约束状态；现有系统已经支持 `required_meta` 校验。下一步应做“强化”，而不是另起一套重型 schema 体系。
   - 相关位置：`src/game/flow/intent/intent_dispatcher.lua`
-  - 相关位置：`src/game/systems/choices/choice_registry.lua`
+  - 相关位置：`src/game/systems/choices/registry.lua`
 
 ## P1：本周必须执行
 
@@ -53,7 +53,7 @@
 
 **目标**
 
-- 让 `src/presentation/view/widgets/ui_panel_presenter.lua` 回到“入口 presenter”角色，不再同时承担玩家槽位渲染、现金变化提示、角色视图刷新三类职责。
+- 让 `src/presentation/view/widgets/panel_presenter.lua` 回到“入口 presenter”角色，不再同时承担玩家槽位渲染、现金变化提示、角色视图刷新三类职责。
 
 **建议拆分方向**
 
@@ -125,7 +125,7 @@
 
 **落点建议**
 
-- 统一收敛到 `src/core/choice/choice_contract.lua`
+- 统一收敛到 `src/core/choice/contract.lua`
 - 由 `intent_dispatcher` 负责复制显式字段，避免多处分散拷贝
 
 ### 5. 固化 Port 命名规则，但不做一次性大迁移
@@ -147,7 +147,7 @@
 
 **说明**
 
-- `src/game/flow/turn/gameplay_loop_ports.lua` 和 `src/presentation/runtime/presentation_ports.lua` 这类文件，本质上是 port group / bundle，不应按单 port 规则硬改。
+- `src/game/flow/turn/gameplay_loop_ports.lua` 和 `src/presentation/runtime/ports.lua` 这类文件，本质上是 port group / bundle，不应按单 port 规则硬改。
 
 ## P3：本月内观察项
 

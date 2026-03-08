@@ -4,7 +4,7 @@ local runtime_state = require("src.core.state_access.runtime_state")
 local ui_model_sync = {}
 
 function ui_model_sync.apply_input_lock(state)
-  local ui_view = require("src.presentation.runtime.ui_view_service")
+  local ui_view = require("src.presentation.runtime.view_service")
   ui_view.apply_input_lock(state)
 end
 
@@ -22,7 +22,7 @@ function ui_model_sync.refresh_from_dirty(game, state, dirty, common)
   local ui_refreshed = false
   if dirty.any or dirty.ui then
     local ui_model = require("src.presentation.model.ui_model")
-    local ui_view = require("src.presentation.runtime.ui_view_service")
+    local ui_view = require("src.presentation.runtime.view_service")
     local env = turn_ui_sync_shared.build_ui_env(state, game)
     local next_model = ui_model.update(runtime_state.get_ui_model(state), game, env, dirty)
     runtime_state.set_ui_model(state, next_model)

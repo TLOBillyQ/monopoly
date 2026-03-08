@@ -1,5 +1,5 @@
 local logger = require("src.core.utils.logger")
-local specs = require("src.presentation.view.render.status3d_service.specs")
+local specs = require("src.presentation.view.render.status3d.specs")
 
 local M = {}
 

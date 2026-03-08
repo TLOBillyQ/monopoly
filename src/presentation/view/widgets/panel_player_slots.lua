@@ -2,7 +2,7 @@ local player_colors = require("src.presentation.view.support.player_colors")
 local base_nodes = require("src.presentation.view.canvas.base.nodes")
 local number_utils = require("src.core.utils.number_utils")
 
-local ui_panel_player_slots = {}
+local panel_player_slots = {}
 
 local player_label_patterns = {
   base_nodes.player_name,
@@ -48,7 +48,7 @@ local function _for_each_player_label_name(index, callback)
   end
 end
 
-function ui_panel_player_slots.force_item_slots_visible_for_player(ui, ctx)
+function panel_player_slots.force_item_slots_visible_for_player(ui, ctx)
   if not ui or not ui.set_visible then
     return
   end
@@ -61,7 +61,7 @@ function ui_panel_player_slots.force_item_slots_visible_for_player(ui, ctx)
   end
 end
 
-function ui_panel_player_slots.refresh_player_crowns(ui, player_rows)
+function panel_player_slots.refresh_player_crowns(ui, player_rows)
   local top_total_assets = nil
   for i = 1, 4 do
     local row = player_rows[i]
@@ -80,7 +80,7 @@ function ui_panel_player_slots.refresh_player_crowns(ui, player_rows)
   end
 end
 
-function ui_panel_player_slots.apply_player_colors(role, runtime, player, index)
+function panel_player_slots.apply_player_colors(role, runtime, player, index)
   if not role then
     return
   end
@@ -105,7 +105,7 @@ function ui_panel_player_slots.apply_player_colors(role, runtime, player, index)
   end
 end
 
-function ui_panel_player_slots.render_player_slot(ui, runtime, row, index, empty_avatar_key, refresh_cash_delta_label)
+function panel_player_slots.render_player_slot(ui, runtime, row, index, empty_avatar_key, refresh_cash_delta_label)
   assert(row ~= nil, "missing player row: " .. tostring(index))
   ui:set_label(string.format(base_nodes.player_name, index), row.name)
   ui:set_label(string.format(base_nodes.player_cash, index), row.cash)
@@ -115,4 +115,4 @@ function ui_panel_player_slots.render_player_slot(ui, runtime, row, index, empty
   _set_player_avatar(ui, runtime, string.format(base_nodes.player_avatar, index), _resolve_avatar_key(row, empty_avatar_key))
 end
 
-return ui_panel_player_slots
+return panel_player_slots

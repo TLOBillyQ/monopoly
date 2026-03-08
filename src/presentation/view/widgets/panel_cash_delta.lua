@@ -3,7 +3,7 @@ local runtime_ports = require("src.core.ports.runtime_ports")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local number_utils = require("src.core.utils.number_utils")
 
-local ui_panel_cash_delta = {}
+local panel_cash_delta = {}
 
 local function _safe_ui_call(ui, method_name, ...)
   if not ui or type(ui[method_name]) ~= "function" then
@@ -55,7 +55,7 @@ local function _schedule_hide_cash_delta(ui, index)
   end)
 end
 
-function ui_panel_cash_delta.ensure_state(ui)
+function panel_cash_delta.ensure_state(ui)
   if type(ui.player_cash_value_cache_by_index) ~= "table" then
     ui.player_cash_value_cache_by_index = {}
   end
@@ -64,7 +64,7 @@ function ui_panel_cash_delta.ensure_state(ui)
   end
 end
 
-function ui_panel_cash_delta.refresh_cash_delta_label(ui, index, row)
+function panel_cash_delta.refresh_cash_delta_label(ui, index, row)
   local cash_value = _resolve_integer_field(row, "cash_value")
   local prev_cash_value = ui.player_cash_value_cache_by_index[index]
   if cash_value == nil then
@@ -95,4 +95,4 @@ function ui_panel_cash_delta.refresh_cash_delta_label(ui, index, row)
   end
 end
 
-return ui_panel_cash_delta
+return panel_cash_delta

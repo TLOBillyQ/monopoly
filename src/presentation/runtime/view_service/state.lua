@@ -2,7 +2,7 @@ local base_nodes = require("src.presentation.view.canvas.base.nodes")
 local popup_nodes = require("src.presentation.view.canvas.popup.nodes")
 local bankruptcy_nodes = require("src.presentation.view.canvas.bankruptcy.nodes")
 local always_show_nodes = require("src.presentation.view.canvas.always_show.nodes")
-local core = require("src.presentation.runtime.ui_view_service.core")
+local core = require("src.presentation.runtime.view_service.core")
 local always_show_contract = require("src.presentation.view.canvas.always_show.contract")
 local canvas_store = require("src.presentation.runtime.canvas_store")
 
