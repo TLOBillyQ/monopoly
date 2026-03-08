@@ -1,216 +1,138 @@
-# `/src` 有效代码行收敛计划（并行版，修订后）
+# 3.2 降线策略开发计划（行为稳态版）
 
-## 摘要
-- 目标：在 **不打破现有分层边界** 的前提下，降低 `/src` 的净有效代码行，并压缩热点大文件数量。
-- 已冻结基线（**2026-03-08**）：`lua tests/regression.lua` 通过，回归总数 **381**；`/src` 有效代码约 **22162**；`>=250` 有效行的热点文件 **11** 个。
-- 硬验收：
-  - `/src` 有效代码 **<= 21662**；
-  - 热点文件数 **11 -> <= 6**；
-  - **不得新增** `>=250` 有效行的新文件；
-  - 分层 LOC 不得通过“横向搬运复杂度”作弊：至少跟踪 `src/presentation`、`src/game/flow`、`src/game/systems`、`src/core`、`src/infrastructure` 五组。
-- 允许的小范围交互归一化仅限：
-  - market tab/page clamp 与空页 fallback；
-  - choice 默认选中逻辑统一；
-  - secondary confirm 默认 title/body fallback；
-  - cancel/confirm 显隐一致性。
-  - 其余交互不在本次调整范围内。
+**摘要**
+- 目标不是机械照抄 `.agents/research.md:1` 的旧估算，而是基于当前仓库真相做“行为不变、回归可证、净减行数”的降线。
+- 已确认的当前基线：`src/` 共 `293` 个 Lua 文件、`24,913` 行；热点分别为 `src/game/legacy/turn_engine:1` `160` 行、`src/core/ports:1` + `src/game/ports:1` `268` 行、`src/presentation/view/render:1` `2,822` 行、`src/game/systems/choices:1` `630` 行、`src/app/testing/config/test_profiles.lua:1` `368` 行。
+- 关键纠偏：A 不能直接做删除，因为 `src/game/core/runtime/composition_root.lua:1`、`src/game/core/runtime/game.lua:1` 和多组测试仍直接依赖 `src/game/legacy/turn_engine/*`；B 里的 `src/core/runtime_ports/` 已不存在；C 首轮只抽 helper，不上 DSL；E 的真实配置热点是 `src/app/testing/config/test_profiles.lua:1`，不是旧 research 里的缺失路径。
+- 成功标准：`lua tests/regression.lua` 全绿，且 `src/` Lua 净减不少于 `800` 行；最终禁止任何 `require("src.game.legacy.turn_engine.*")` 残留。
 
-## 关键约束
-- 公开入口保持稳定：`gameplay_loop`、`market_view`、`ui_panel_presenter`、`runtime_context`、`logger`、`eggy_paid_purchase_gateway`、`test_profiles` 的模块入口与导出名不变。
-- `presentation` 不得补业务语义；`game/flow` 不得回碰 UI/宿主细节；宿主实现继续留在 `src/infrastructure/runtime` 或 `src/app/bootstrap`。
-- 共享 helper 的落点先冻结，避免并行任务各自造 `helpers.lua`：
-  - market/choice 共享仅落 `src/presentation/view/render/market_*` 与 `src/presentation/view/widgets/choice_screen_service/*`
-  - panel 共享仅落 `src/presentation/view/widgets/ui_panel_*`
-  - gameplay loop 共享仅落 `src/game/flow/turn/gameplay_loop_*`
-  - runtime context 共享仅落 `src/infrastructure/runtime/runtime_context_*`
-  - 玩法规则共享仅落 `src/game/systems/*` 或同层 shared-mechanics，不上提到 `src/core`
-- `logger` 单独后置，且只允许“私有职责抽取”，禁止 API、输出格式、调用方式变化。
-- 任何删代码都不能只靠 `rg`；必须同时检查 bootstrap 装配、runtime helper 安装、editor/runtime refs、场景/节点绑定与目标测试。
+**接口与边界变更**
+- `src/app/testing/config/test_profiles.lua:1` 保持现有读取 API，不再承载大表；新增 `Config/testing/test_profiles.lua:1` 作为 data-only 源。
+- 新增 `src/presentation/view/support/ui_controls.lua:1`，统一当前 UI API 下的 `visible` / `touch_enabled` / 批量控件状态更新。
+- 新增 `src/presentation/view/support/effect_timeline.lua:1`，统一基于调度器的显隐、延时清理、follow-up 回调。
+- 新增 `src/game/ports/contract_helper.lua:1`，吸收 `src/game/ports/*.lua` 的重复断言/解析模板。
+- `src/core/ports/turn_ui_sync_shared.lua:1` 迁到 `src/core/ui_sync/turn_ui_sync_shared.lua:1`，因为它是共享策略，不是 Port。
+- 新增稳定入口 `src/game/flow/turn/turn_runtime.lua:1`，并引入 `src/game/flow/turn/scheduler_turn_runtime.lua:1`、`src/game/flow/turn/turn_phase_registry.lua:1`；`src/game/legacy/turn_engine/*` 最终退休。
+- `src/game/systems/choices/choice_resolver.lua:1` 统一 canonical kind；`land_optional_effect` 继续兼容，但内部一律归一到 `landing_optional_effect`。
 
-## 任务图
-```text
-T1 ── T2 ──┬── T3 ──┐
-           ├── T4 ──┼── T7 ── T8 ── T9
-           ├── T5a ─┤
-           ├── T5b ─┤
-           └── T6a ─┘
-T4 ── T5c ──────────┘
-T7 ── T6b ──────────┘
-```
+**依赖图**
+- `T0 -> T1 -> {T2, T3, T4, T6, T8, T10}`
+- `{T3, T4} -> T5`
+- `T6 -> T7`
+- `T8 -> T9`
+- `T10 -> T11`
+- `{T2, T5, T7, T9, T11} -> T12 -> T13`
 
-### T1: 冻结基线与护栏
-- **depends_on**: `[]`
-- **description**: 冻结当前绿线、LOC 口径、热点名单、分层 LOC 基线；把“先绿后改”定为后续所有任务前提。
-- **必须通过**:
-  - `lua tests/regression.lua`
-  - `tests/internal/dep_rules.lua`
-  - `tests/internal/gameplay_loop_no_ui.lua`
-  - `tests/suites/architecture/architecture_guard_contract.lua`
-- **热点冻结名单**:
-  - `src/presentation/view/render/market_view.lua`
-  - `src/core/utils/logger.lua`
-  - `src/infrastructure/runtime/runtime_context.lua`
-  - `src/presentation/view/widgets/ui_panel_presenter.lua`
-  - `src/game/flow/turn/gameplay_loop.lua`
-  - `src/app/bootstrap/payment/eggy_paid_purchase_gateway.lua`
-  - `src/game/core/ai/agent.lua`
-  - `src/presentation/view/render/board_feedback_service.lua`
-  - `src/game/systems/items/item_post_effects.lua`
-  - `src/game/systems/board/board.lua`
-  - `src/app/testing/config/test_profiles.lua`
+**任务**
+### T0 重新基线化 3.2
+- `depends_on`: `[]`
+- `location`: `.agents/research.md:1`, `.agents/plan.md:1`
+- `description`: 把 research 3.2 改写成当前仓库真实范围：明确 A 仍有生产依赖、B 的旧路径已清零、C 基于 `ui_view_service` 而非 Canvas DSL、E 的真实目标是 `src/app/testing/config/test_profiles.lua:1`。同时固定量化口径与验收阈值。
+- `validation`: 用 `find src -type f -name '*.lua' -print0 | xargs -0 cat | wc -l` 记录 `24,913` 行；并把各热点行数写入计划。
 
-### T2: 冻结 `presentation` 合约与共享落点
-- **depends_on**: `[T1]`
-- **description**: 在改展示代码前先冻结 contract，明确本轮 dedupe 不能重新引入推断逻辑。
-- **要锁住的字段/语义**:
-  - market：`active_tab`、`page_index`、`page_count`
-  - choice owner：`owner_role_id`
-  - secondary confirm：默认文案 fallback 规则
-  - target picker：owner 必须走显式字段，不回读 `meta.player_id`
-- **涉及消费者**:
-  - `choice_screen_service/*`
-  - `market_view`
-  - `ui_intent_dispatcher/pre_confirm_flow`
-  - `presentation/model` 中消费 choice/market slice 的模块
-  - `target_choice_effects`
-- **验证**: presentation 相关 contract 测试先补齐/冻结，再进入 T3。
+### T1 先补护栏与量化命令
+- `depends_on`: `[T0]`
+- `location`: `tests/internal/legacy_path_guard.lua:1`, `tests/internal/dep_rules.lua:1`, `.agents/plan.md:1`
+- `description`: 在任何重构前先固定 guard rail：记录单 suite 运行命令、LOC 统计命令、legacy path 扫描命令，并为新的 Port 分类与 turn runtime 迁移预留架构护栏。
+- `validation`: `lua tests/regression.lua` 当前全绿；计划里明确写出最小验证矩阵与 `rg` 扫描命令。
 
-### T3: 收敛 `choice_screen_service + market_view`
-- **depends_on**: `[T2]`
-- **description**: 合并 option 解析、按钮显隐、默认选中、selection frame、tab/page 控制与 fallback；保留 `market_view` 入口不变。
-- **落点**:
-  - market 共享 helper 只放 `src/presentation/view/render/market_*`
-  - choice screen 共享保持在 `src/presentation/view/widgets/choice_screen_service/*`
-- **本任务负责消灭的热点**:
-  - `src/presentation/view/render/market_view.lua`
-- **阶段验证**:
-  - market tab/page clamp
-  - 空页 fallback
-  - confirm title/body fallback
-  - target picker owner 显式字段
-  - market/popup/ui gate/ui runtime 相关 suite
+### T2 外置测试 profile 数据
+- `depends_on`: `[T1]`
+- `location`: `src/app/testing/config/test_profiles.lua:1`, `src/app/testing/test_profile_resolver.lua:1`, `src/app/testing/test_profile_bootstrap.lua:1`, `Config/testing/test_profiles.lua:1`, `tests/suites/runtime/test_profiles.lua:1`
+- `description`: 把 `profiles` 大表搬到 `Config/testing/test_profiles.lua:1`，保留 `src/app/testing/config/test_profiles.lua:1` 作为薄 loader/validator，现有 resolver/bootstrap 调用点不改接口。
+- `validation`: 运行单 suite 命令加载 `suites.runtime.test_profiles`；`src/app/testing/config/test_profiles.lua:1` 只剩读取、校验、导出逻辑。
 
-### T4: 先稳住 `gameplay_loop` 外观 API
-- **depends_on**: `[T1]`
-- **description**: 先把 `gameplay_loop` 中 AFK、`set_game` 装配、`tick` orchestration 拆到同层 helper，稳定它对 `agent/logger/ports` 的接口面，再允许后续 game 侧继续减法。
-- **落点**: 仅 `src/game/flow/turn/gameplay_loop_*`
-- **本任务负责消灭的热点**:
-  - `src/game/flow/turn/gameplay_loop.lua`
-- **阶段验证**:
-  - `architecture_guard_contract`
-  - `intent_output_contract`
-  - `runtime_bootstrap`
-  - `gameplay_loop_no_ui`
+### T3 提取 UI 控件状态 helper
+- `depends_on`: `[T1]`
+- `location`: `src/presentation/view/support/ui_controls.lua:1`, `src/presentation/view/render/market_view.lua:1`, `src/presentation/view/widgets/ui_turn_effects.lua:1`, `src/presentation/view/widgets/choice_screen_service/common.lua:1`
+- `description`: 面向当前 `ui_view_service` 风格，提取“显隐 + 可触摸 + 批量控件组更新 + 选择框 reset”共用 helper，不引入新的 View DSL。
+- `validation`: 运行单 suite 命令加载 `suites.presentation.presentation_ui_popup_market` 和 `suites.presentation.presentation_ui_interaction`。
 
-### T5a: 收敛 `item_post_effects`
-- **depends_on**: `[T1]`
-- **description**: 把可枚举后效处理改为 handler registry / spec table，合并重复分支与日志路径。
-- **落点**: `src/game/systems/items/*`
-- **本任务负责消灭的热点**:
-  - `src/game/systems/items/item_post_effects.lua`
-- **阶段验证**: `tests/suites/domain/item.lua` + 相关 gameplay suite
+### T4 提取调度式特效时间线 helper
+- `depends_on`: `[T1]`
+- `location`: `src/presentation/view/support/effect_timeline.lua:1`, `src/presentation/view/render/action_anim_dice.lua:1`, `src/presentation/view/render/board_feedback_service.lua:1`, `src/presentation/view/render/target_choice_effects.lua:1`
+- `description`: 把“显示 -> 延时 -> 清理 -> follow-up”模式抽成统一时间线 helper，统一当前 `runtime_ports.schedule` / host scheduler 用法，不碰领域逻辑。
+- `validation`: 运行单 suite 命令加载 `suites.presentation.presentation_ui_action_anim` 和 `suites.presentation.presentation_ui_action_status`。
 
-### T5b: 收敛 `board`
-- **depends_on**: `[T1]`
-- **description**: 将方向选择、邻接 fallback、覆盖物读写的重复分支表驱动化；不改 `board` 对外方法名。
-- **落点**: `src/game/systems/board/*`
-- **本任务负责消灭的热点**:
-  - `src/game/systems/board/board.lua`
-- **阶段验证**: `land`、`movement`、`landing` 相关 suite
+### T5 渲染热点迁移并删重复局部函数
+- `depends_on`: `[T3, T4]`
+- `location`: `src/presentation/view/render/market_view.lua:1`, `src/presentation/view/render/action_anim_dice.lua:1`, `src/presentation/view/render/board_feedback_service.lua:1`, `src/presentation/view/render/target_choice_effects.lua:1`
+- `description`: 把首批热点文件迁到共享 helper，删除重复本地函数；首轮只做 helper 化，不上声明式 DSL。
+- `validation`: 运行 `suites.presentation.presentation_ui_popup_market`、`suites.presentation.presentation_ui_action_anim`、`suites.presentation.presentation_ui_action_status`、`suites.presentation.presentation_ui_interaction`。
 
-### T5c: 收敛 `agent`
-- **depends_on**: `[T4]`
-- **description**: 在 `gameplay_loop` 接口面稳定后，再提炼 `agent` 的目标选择/自动决策；禁止新增 `meta.player_id` ownership 推断，优先对齐 `owner_role_id`。
-- **落点**: `src/game/core/ai/*` 或同层 mechanics helper
-- **本任务负责消灭的热点**:
-  - `src/game/core/ai/agent.lua`
-- **阶段验证**: AI 选择路径、remote dice、choice auto-action 相关 gameplay suite
+### T6 固化 Port 分类
+- `depends_on`: `[T1]`
+- `location`: `docs/architecture/boundaries.md:1`, `docs/architecture/layer-model.md:1`, `tests/internal/dep_rules.lua:1`, `src/game/flow/turn/gameplay_loop_ports.lua:1`
+- `description`: 明确三类东西的边界：`src/core/ports:1` 只放宿主/运行时广义契约，`src/game/ports:1` 只放 systems-facing 注入契约，`src/game/flow/turn/gameplay_loop_ports.lua:1` 保持用例局部分组 override，不把它升级成通用 Port 层。
+- `validation`: 运行单 suite 命令加载 `suites.architecture.architecture_guard_contract`、`suites.architecture.usecase_boundary_contract`、`suites.runtime.runtime_ports_contract`。
 
-### T6a: 收敛 `runtime_context + payment + test_profiles`
-- **depends_on**: `[T1]`
-- **description**:
-  - `runtime_context`：拆 vehicle/change-skin/install builder
-  - `eggy_paid_purchase_gateway`：统一 goods mapping、pending queue、role 解析与 warn 流程
-  - `test_profiles`：抽共享片段/构造器，保留现有 profile key
-- **边界**: 宿主/支付/runtime builder 仍留在 `src/infrastructure/runtime` 与 `src/app/bootstrap`
-- **本任务负责消灭的热点**:
-  - `src/infrastructure/runtime/runtime_context.lua`
-  - `src/app/bootstrap/payment/eggy_paid_purchase_gateway.lua`
-  - `src/app/testing/config/test_profiles.lua`
-- **阶段验证**:
-  - runtime contract suite
-  - `paid_currency.lua`
-  - `test_profiles.lua`
+### T7 合并 Port 样板代码并迁出假 Port helper
+- `depends_on`: `[T6]`
+- `location`: `src/game/ports/contract_helper.lua:1`, `src/game/ports/auto_play_port.lua:1`, `src/game/ports/bankruptcy_port.lua:1`, `src/game/ports/bankruptcy_feedback_port.lua:1`, `src/game/ports/intent_output_port.lua:1`, `src/core/ports/turn_ui_sync_shared.lua:1`, `src/core/ui_sync/turn_ui_sync_shared.lua:1`, `src/game/flow/turn/tick_ui_sync.lua:1`, `src/presentation/runtime/presentation_ports/ui_sync/ui_model_sync.lua:1`
+- `description`: 抽出通用 resolver/assert helper，消除 `game/ports` 重复模板；同时把 `turn_ui_sync_shared` 从 `src/core/ports:1` 迁出，避免“共享策略伪装成 Port”。
+- `validation`: `rg -n 'src\\.core\\.ports\\.turn_ui_sync_shared' src tests` 结果为零；对应 architecture/runtime suites 继续通过。
 
-### T7: 收敛 `ui_panel_presenter`
-- **depends_on**: `[T3, T4, T5a, T5b, T6a]`
-- **description**: 在 `presentation` 其他共享落点稳定后，再拆 `ui_panel_presenter`，避免并行造第二套 UI helper。
-- **必须同时冻结**:
-  - `ui_panel.lua` 产出的 row schema
-  - avatar fallback
-  - cash delta 正/负/零态
-  - eliminated 行
-  - crown 并列竞态
-  - visible/touch_enabled 一致性
-- **落点**: `src/presentation/view/widgets/ui_panel_*`
-- **本任务负责消灭的热点**:
-  - `src/presentation/view/widgets/ui_panel_presenter.lua`
-- **阶段验证**: panel 相关 presentation suite
+### T8 统一 choice kind 别名
+- `depends_on`: `[T1]`
+- `location`: `src/game/systems/choices/choice_resolver.lua:1`, `src/game/systems/choices/choice_registry.lua:1`, `src/game/systems/choices/choice_handlers/optional_effect_handler.lua:1`, `src/game/systems/choices/choice_kind_aliases.lua:1`
+- `description`: 在 resolver 边界先做 canonical 化；对外继续兼容 `land_optional_effect`，内部统一映射为 `landing_optional_effect`，并补契约测试。
+- `validation`: 运行单 suite 命令加载 `suites.domain.land`、`suites.domain.item`、`suites.domain.market`，并新增 alias 回归用例。
 
-### T6b: 收敛 `logger`
-- **depends_on**: `[T7]`
-- **description**: 最后处理 `logger`，只拆私有职责：tip queue、entry store、formatting；不改对外 API、不改文本格式、不改调用点。
-- **边界**: 不新增宿主全局触点；不把 logger 责任扩散到其他层。
-- **本任务负责消灭的热点**:
-  - `src/core/utils/logger.lua`
-- **阶段验证**: logger 相关 domain/runtime 回归 + 依赖规则
+### T9 把 choice registry 从函数组改成 descriptor
+- `depends_on`: `[T8]`
+- `location`: `src/game/systems/choices/choice_registry.lua:1`, `src/game/systems/choices/choice_resolver.lua:1`, `src/game/systems/choices/choice_handlers/item_choice_handler.lua:1`, `src/game/systems/choices/choice_handlers/land_choice_handler.lua:1`, `src/game/systems/choices/choice_handlers/market_choice_handler.lua:1`, `src/game/systems/choices/choice_handlers/optional_effect_handler.lua:1`
+- `description`: handler 模块改为注册 descriptor 表，公共的 cancel/option 校验/meta 前置校验继续留在 resolver 或 descriptor helper，handler 只保留业务执行分支。
+- `validation`: 运行单 suite 命令加载 `suites.domain.land`、`suites.domain.item`、`suites.domain.market`、`suites.gameplay.gameplay_core`。
 
-### T8: 删除死代码与退休 helper
-- **depends_on**: `[T5c, T6b]`
-- **description**: 删除被新 helper/registry 替代的 wrapper、重复 alias、无调用 helper、退休兼容路径。
-- **删除前证据**:
-  - repo 级引用扫描
-  - bootstrap/runtime helper/editor exports 检查
-  - 节点/场景名绑定检查
-  - 对应 focused suites 通过
-- **禁止**: 仅凭 `rg` 判断“未使用”
-- **阶段验证**: `dep_rules`、`legacy_path_guard`、对应 touched suites
+### T10 引入非 legacy 的 turn runtime 稳定入口
+- `depends_on`: `[T1]`
+- `location`: `src/game/flow/turn/turn_runtime.lua:1`, `src/game/flow/turn/scheduler_turn_runtime.lua:1`, `src/game/flow/turn/turn_phase_registry.lua:1`, `src/game/core/runtime/composition_root.lua:1`, `src/game/core/runtime/game.lua:1`
+- `description`: 新建稳定 public path，但首版只包装当前 scheduler-based turn runtime；明确不直接拿 `src/game/flow/turn/gameplay_loop.lua:1` 替代，因为它是 UI tick/autorunner 入口，不是 `Game:advance_turn()` 执行器。
+- `validation`: 运行单 suite 命令加载 `suites.gameplay.gameplay_coroutine`、`suites.gameplay.gameplay_loop`、`suites.runtime.runtime_bootstrap`。
 
-### T9: 全量验证与指标对账
-- **depends_on**: `[T8]`
-- **description**: 跑全量回归，复算总 LOC、分层 LOC、热点文件数；未达标时只允许在已触达模块内继续净删减。
-- **必须满足**:
-  - `lua tests/regression.lua` 继续通过
-  - `/src` 有效代码 `<=21662`
-  - 热点文件 `<=6`
-  - 无新增 `>=250` 有效行文件
+### T11 迁移生产调用方与测试到新 turn runtime 路径
+- `depends_on`: `[T10]`
+- `location`: `src/game/core/runtime/composition_root.lua:1`, `src/game/core/runtime/game.lua:1`, `tests/suites/gameplay/gameplay_coroutine.lua:1`, `tests/suites/gameplay/gameplay.lua:1`, `tests/suites/presentation/presentation_ui.lua:1`
+- `description`: 替换所有直接依赖 `src.game.legacy.turn_engine.*` 的调用方，保持 `new` / `run_turn` / `dispatch` API 形状不变，先迁路径再删旧实现。
+- `validation`: `rg -n 'src\\.game\\.legacy\\.turn_engine' src tests` 只剩 legacy 源文件本身；gameplay/presentation 相关 suite 通过。
 
-## 并行波次
-| Wave | Tasks | Can Start When |
-|------|-------|----------------|
-| 1 | `T1` | 立即开始 |
-| 2 | `T2`, `T4`, `T5a`, `T5b`, `T6a` | `T1` 完成 |
-| 3 | `T3`, `T5c` | `T2` / `T4` 完成后分别开始 |
-| 4 | `T7` | `T3`, `T4`, `T5a`, `T5b`, `T6a` 完成 |
-| 5 | `T6b`, `T8` | `T7` 完成；`T8` 还需 `T5c` 完成 |
-| 6 | `T9` | `T8` 完成 |
+### T12 删除 legacy 目录并拉紧护栏
+- `depends_on`: `[T2, T5, T7, T9, T11]`
+- `location`: `src/game/legacy/turn_engine/phase_registry.lua:1`, `src/game/legacy/turn_engine/turn_engine.lua:1`, `tests/internal/legacy_path_guard.lua:1`, `docs/architecture/boundaries.md:1`, `docs/architecture/layer-model.md:1`
+- `description`: 将剩余 scheduler runtime 实现完全迁到新的 `src/game/flow/turn/*` 路径，删除 `src/game/legacy/turn_engine/*`，并把 guard/doc 一并更新成“禁止回流”状态。
+- `validation`: `rg -n 'src\\.game\\.legacy\\.turn_engine' src tests` 返回零；`lua tests/regression.lua` 全绿。
 
-## 测试计划
-- **Wave 2 后**:
-  - `presentation`：market/popup/ui gate/ui runtime 相关 suite
-  - `game`：`gameplay_loop_no_ui`、`architecture_guard_contract`
-  - `runtime`：runtime contract、payment/test_profiles 相关 suite
-- **Wave 3 后**:
-  - `choice/market` 与 AI 选择路径 focused suites
-- **Wave 4/5 后**:
-  - panel 展示 suite
-  - logger 相关 suite
-  - `dep_rules`、`legacy_path_guard`
-- **最终**:
-  - `lua tests/regression.lua`
-  - LOC/热点/分层 LOC 复算并与 T1 基线对账
+### T13 最终验收与冻结指标
+- `depends_on`: `[T12]`
+- `location`: `.agents/research.md:1`, `.agents/plan.md:1`
+- `description`: 记录每个策略的真实产出、净减行数、未采纳项（例如 DSL 延后），并冻结新的基线与后续禁止项。
+- `validation`: `find src -type f -name '*.lua' -print0 | xargs -0 cat | wc -l` 显示净减不少于 `800` 行；`lua tests/regression.lua` 保持通过。
 
-## 假设与默认项
-- 本次主要追求“**净减法**”，不是单纯拆文件；每个任务都要明确自己负责消灭的热点与预期 delta。
-- 若执行时要落盘，正式可执行版必须写入 `.agents/plan.md`，并补齐 `进度 / 意外与发现 / 决策日志 / 结果与复盘 / 具体命令 / 回滚路径`，以符合 `.agents/harness/PLANS.md`。
-- 本计划不引入新三方依赖，不新增长期兼容 shim，不扩到 `/src` 之外的结构重组。
+**并行波次**
+- Wave 1：`T0`
+- Wave 2：`T1`
+- Wave 3：`T2`, `T3`, `T4`, `T6`, `T8`, `T10`
+- Wave 4：`T5`, `T7`, `T9`, `T11`
+- Wave 5：`T12`
+- Wave 6：`T13`
+
+**测试计划**
+- 全量回归始终使用：`lua tests/regression.lua`
+- 单 suite 统一使用：`lua -e 'package.path=package.path..\";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua\"; require(\"TestHarness\").run_all({require(\"<suite_module>\")})'`
+- 最小 suite 组合：
+  - `T2`：`suites.runtime.test_profiles`
+  - `T3/T5`：`suites.presentation.presentation_ui_popup_market`、`suites.presentation.presentation_ui_interaction`
+  - `T4/T5`：`suites.presentation.presentation_ui_action_anim`、`suites.presentation.presentation_ui_action_status`
+  - `T6/T7`：`suites.architecture.architecture_guard_contract`、`suites.architecture.usecase_boundary_contract`、`suites.runtime.runtime_ports_contract`
+  - `T8/T9`：`suites.domain.land`、`suites.domain.item`、`suites.domain.market`、`suites.gameplay.gameplay_core`
+  - `T10/T11`：`suites.gameplay.gameplay_coroutine`、`suites.gameplay.gameplay_loop`、`suites.runtime.runtime_bootstrap`
+- 结构扫描始终补跑：
+  - `rg -n 'src\\.game\\.legacy\\.turn_engine' src tests`
+  - `rg -n 'src\\.core\\.ports\\.turn_ui_sync_shared' src tests`
+
+**假设与默认决策**
+- 以“行为稳态降线”为最高优先级；不为追求行数引入 DSL、大规模 API 重写或 gameplay loop 替代。
+- `src/core/ports/runtime_ports.lua:1` 继续保留在 `core/ports`，本轮不与 `src/game/flow/turn/gameplay_loop_ports.lua:1` 合并。
+- `src/game/flow/turn/gameplay_loop.lua:1` 不承担 legacy turn runtime 替换职责；真正替换路径是新的 `src/game/flow/turn/turn_runtime.lua:1`。
+- 所有新文件与新符号继续遵守 snake_case、`NumberUtils` 规则，以及现有边界文档约束。
+- 当前处于 Plan Mode，本轮交付的是 decision-complete 计划文本；后续如需落盘，应写入 `.agents/plan.md:1` 并按 `.agents/harness/PLANS.md:1` 展开成单一 `md` 可执行计划。
