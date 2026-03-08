@@ -64,40 +64,26 @@ local function _is_vehicle_anim(anim_ctx)
   return gameplay_read_port.resolve_vehicle_seat_id(anim_ctx.vehicle_id) ~= nil
 end
 
-local function _resolve_emit_vehicle_move(vehicle)
-  if not vehicle then
-    return nil
-  end
-  return vehicle.emit_vehicle_move
+local function _vehicle_helper_method(method_name)
+  local vehicle = runtime_ports.resolve_vehicle_helper()
+  return vehicle and vehicle[method_name] or nil
 end
 
-local function _resolve_emit_vehicle_set_position(vehicle)
-  if not vehicle then
-    return nil
-  end
-  return vehicle.emit_vehicle_set_position
+local function _is_vehicle_mode(anim_ctx, move_enabled, method_name)
+  return anim_ctx
+    and _is_vehicle_anim(anim_ctx)
+    and (runtime_constants.vehicle_move_api_enabled == true) == move_enabled
+    and _vehicle_helper_method(method_name)
+    and true
+    or false
 end
 
 local function _is_vehicle_move_mode(anim_ctx)
-  local vehicle = runtime_ports.resolve_vehicle_helper()
-  return anim_ctx
-    and _is_vehicle_anim(anim_ctx)
-    and runtime_constants.vehicle_move_api_enabled == true
-    and vehicle
-    and _resolve_emit_vehicle_move(vehicle)
-    and true
-    or false
+  return _is_vehicle_mode(anim_ctx, true, "emit_vehicle_move")
 end
 
 local function _is_vehicle_jump_mode(anim_ctx)
-  local vehicle = runtime_ports.resolve_vehicle_helper()
-  return anim_ctx
-    and _is_vehicle_anim(anim_ctx)
-    and runtime_constants.vehicle_move_api_enabled ~= true
-    and vehicle
-    and _resolve_emit_vehicle_set_position(vehicle)
-    and true
-    or false
+  return _is_vehicle_mode(anim_ctx, false, "emit_vehicle_set_position")
 end
 
 local function _calc_step_time(scene, from_index, to_index, anim_ctx)
@@ -126,17 +112,11 @@ function move_anim.one_step(scene, player_id, from_index, to_index, anim_ctx)
     end)
   end
   if _is_vehicle_jump_mode(anim_ctx) then
-    local vehicle = runtime_ports.resolve_vehicle_helper()
-    local emit_set_position = _resolve_emit_vehicle_set_position(vehicle)
-    local end_tile = scene.tiles[to_index]
-    local target_pos = end_tile.get_position()
-    emit_set_position(player_id, target_pos)
+    _vehicle_helper_method("emit_vehicle_set_position")(player_id, scene.tiles[to_index].get_position())
     return time
   end
   if _is_vehicle_move_mode(anim_ctx) then
-    local vehicle = runtime_ports.resolve_vehicle_helper()
-    local emit_move = _resolve_emit_vehicle_move(vehicle)
-    emit_move(player_id, step_dir, time)
+    _vehicle_helper_method("emit_vehicle_move")(player_id, step_dir, time)
     return time
   end
   local unit = scene.units_by_player_id[player_id]
@@ -219,19 +199,17 @@ function move_anim.play_sequence(board_scene, anim_ctx)
       end
     end
   end
+  local function _run_step(step)
+    if anim_ctx and anim_ctx.state then
+      board_feedback.play_step_tile_sound(anim_ctx.state, player_id, step.to)
+    end
+    move_anim.one_step(board_scene, player_id, step.from, step.to, anim_ctx)
+  end
   for _, step in ipairs(steps) do
     if step.delay <= 0 then
-      if anim_ctx and anim_ctx.state then
-        board_feedback.play_step_tile_sound(anim_ctx.state, player_id, step.to)
-      end
-      move_anim.one_step(board_scene, player_id, step.from, step.to, anim_ctx)
+      _run_step(step)
     else
-      runtime_ports.schedule(step.delay, function()
-        if anim_ctx and anim_ctx.state then
-          board_feedback.play_step_tile_sound(anim_ctx.state, player_id, step.to)
-        end
-        move_anim.one_step(board_scene, player_id, step.from, step.to, anim_ctx)
-      end)
+      runtime_ports.schedule(step.delay, function() _run_step(step) end)
     end
   end
   return total_time

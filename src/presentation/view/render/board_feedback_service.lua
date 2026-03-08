@@ -77,13 +77,6 @@ local function _resolve_sfx_scale(cue_name, value, fallback)
   return default_sfx_scale
 end
 
-local function _resolve_cue(cue_name)
-  if type(cue_name) ~= "string" or cue_name == "" then
-    return nil
-  end
-  return catalog.get(cue_name)
-end
-
 local function _resolve_tile_position(state, tile_index)
   local tile = state and state.board_scene and state.board_scene.tiles and state.board_scene.tiles[tile_index] or nil
   if tile and type(tile.get_position) == "function" then
@@ -110,8 +103,7 @@ local function _resolve_player_position(state, player_id)
     return unit.get_position()
   end
   local player = state and state.game and state.game.find_player_by_id and state.game:find_player_by_id(player_id) or nil
-  local tile_index = player and player.position or nil
-  return _resolve_tile_position(state, tile_index)
+  return _resolve_tile_position(state, player and player.position or nil)
 end
 
 local function _schedule_followup_sound(cue_name, pos, entry)
@@ -216,7 +208,7 @@ local function _play_sound(cue_name, cue, pos, payload)
 end
 
 local function _play_cue(state, cue_name, pos, unit, payload)
-  local cue = _resolve_cue(cue_name)
+  local cue = type(cue_name) == "string" and cue_name ~= "" and catalog.get(cue_name) or nil
   if cue == nil then
     return false
   end
@@ -262,12 +254,13 @@ function service.play_player_cue(state, cue_name, player_id, payload)
 end
 
 function service.play_sound_only(state, cue_name, payload)
-  local pos = payload and payload.pos or nil
-  if pos == nil and payload then
-    pos = payload.player_id ~= nil and _resolve_player_position(state, payload.player_id)
-      or (payload.tile_index ~= nil and _resolve_tile_position(state, payload.tile_index))
-  end
-  return _play_cue(state, cue_name, pos, nil, payload)
+  return _play_cue(
+    state,
+    cue_name,
+    payload and (payload.pos or (payload.player_id ~= nil and _resolve_player_position(state, payload.player_id)) or (payload.tile_index ~= nil and _resolve_tile_position(state, payload.tile_index))) or nil,
+    nil,
+    payload
+  )
 end
 
 function service.play_step_tile_sound(state, player_id, tile_index)
