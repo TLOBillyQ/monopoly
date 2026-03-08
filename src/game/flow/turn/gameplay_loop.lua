@@ -103,8 +103,7 @@ function gameplay_loop.step_afk_auto_host(game, state, dt)
     return false
   end
 
-  local current_index = game.turn and game.turn.current_player_index or nil
-  local current_player = current_index and game.players and game.players[current_index] or nil
+  local current_player = game.turn and game.players and game.players[game.turn.current_player_index] or nil
   if not current_player or current_player.auto == true then
     _sync_afk_view(turn_runtime, nil, false)
     return false
@@ -135,8 +134,9 @@ function gameplay_loop.step_afk_auto_host(game, state, dt)
     game.dirty.players = true
   end
   ports.output.invalidate_ui(state)
-  if state.auto_runner and state.auto_runner.reset_timer then
-    state.auto_runner:reset_timer()
+  local auto_runner = state.auto_runner
+  if auto_runner and auto_runner.reset_timer then
+    auto_runner:reset_timer()
   end
   _reset_afk_tracking(state, current_player.id)
   logger.event_no_tips(tostring(current_player.name) .. " AFK 超时，进入托管")
