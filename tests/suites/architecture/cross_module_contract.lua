@@ -8,7 +8,7 @@ local land_events = require("src.game.systems.land.land_events")
 local land_rules = require("src.game.systems.land.land_rules")
 local land_rent_resolver = require("src.game.systems.land.land_rent_resolver")
 local action_anim = require("src.presentation.view.render.action_anim")
-local handlers = require("src.presentation.view.render.action_anim_handlers")
+local handlers = require("src.presentation.view.render.anim_handlers")
 
 local function _test_event_contract_land_events_use_catalog_keys()
   local emitted = {}

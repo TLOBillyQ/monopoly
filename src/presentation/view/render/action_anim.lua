@@ -4,8 +4,8 @@ local logger = require("src.core.utils.logger")
 
 local runtime = require("src.presentation.runtime.ui_runtime")
 local host_runtime = require("src.presentation.runtime.host")
-local registry = require("src.presentation.view.render.action_anim_registry")
-local handlers = require("src.presentation.view.render.action_anim_handlers")
+local registry = require("src.presentation.view.render.anim_registry")
+local handlers = require("src.presentation.view.render.anim_handlers")
 local board_feedback = require("src.presentation.view.render.board_feedback_service")
 local dice_nodes = require("src.presentation.view.canvas.dice.nodes")
 

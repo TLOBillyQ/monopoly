@@ -74,12 +74,62 @@
 - **location**: `src/presentation/input`, `src/presentation/runtime/canvas_event_router.lua`, `src/presentation/runtime/view_service.lua`, `src/presentation/view/widgets`, `src/presentation/view/canvas`, `tests/suites/presentation`
 - **description**: 批量移除 `ui_` 前缀，统一更新静态 `require(...)`、内联 `require(...)`、测试直接引用和 patch target。`intent_dispatcher.lua` 与 `intent_dispatch/` 不再改名。
 - **validation**: `rg 'src\.presentation\.input\.ui_' src tests docs .agents` 仅允许命中历史计划文档；`presentation_ui`、`presentation_ui_event_bindings` 可加载新路径。
+- **status**: completed (2026-03-08 15:31Z)
+- **work_log**:
+  - 完成 `presentation/input` 下 9 个 `ui_*` 文件到无 `ui_` 前缀文件名的原子 rename。
+  - 同步更新 `canvas_event_router.lua`、`view_service.lua`、widgets、canvas intents、`debug_ports.lua` 和 presentation suite 中的直接 `require(...)`。
+  - 保持 `intent_dispatcher.lua` 与 `intent_dispatch/` 原样不动，未扩大到 runtime/model 里的 `ui_*` 入口。
+- **files_touched**:
+  - `src/presentation/input/canvas_coordinator.lua`
+  - `src/presentation/input/choice_route_policy.lua`
+  - `src/presentation/input/event_bindings.lua`
+  - `src/presentation/input/event_intents.lua`
+  - `src/presentation/input/event_state.lua`
+  - `src/presentation/input/input_lock_policy.lua`
+  - `src/presentation/input/modal_state_coordinator.lua`
+  - `src/presentation/input/role_control_lock_policy.lua`
+  - `src/presentation/input/touch_policy.lua`
+  - `src/presentation/input/intent_dispatch/view_command.lua`
+  - `src/presentation/runtime/canvas_event_router.lua`
+  - `src/presentation/runtime/view_service.lua`
+  - `src/presentation/runtime/ports/debug_ports.lua`
+  - `src/presentation/view/widgets/choice_screen_service/common.lua`
+  - `src/presentation/view/widgets/choice_screen_service/openers.lua`
+  - `src/presentation/view/widgets/popup_renderer.lua`
+  - `src/presentation/view/widgets/market_modal_renderer.lua`
+  - `src/presentation/view/widgets/modal_presenter.lua`
+  - `src/presentation/view/widgets/panel_presenter.lua`
+  - `src/presentation/view/render/market_view.lua`
+  - `src/presentation/view/render/target_choice_effects.lua`
+  - `src/presentation/view/canvas/player_choice/intents.lua`
+  - `src/presentation/view/canvas/market/intents.lua`
+  - `src/presentation/view/canvas/secondary_confirm/intents.lua`
+  - `src/presentation/view/canvas/remote_choice/intents.lua`
+  - `src/presentation/view/canvas/target_choice/intents.lua`
+  - `tests/suites/presentation/presentation_ui.lua`
+  - `tests/suites/presentation/presentation_ui_event_bindings.lua`
+  - `.agents/swarm_plan.md`
+- **gotchas**:
+  - `rg 'src\\.presentation\\.input\\.ui_' ...` 会继续命中 `.agents/swarm_plan.md` 的历史描述，因此校验时要把计划文档视作历史记录，不算代码残留。
 
 ### T3: 收口 `game_state_*`
 - **depends_on**: `[T1]`
 - **location**: `src/game/core/runtime`, `tests/internal/dep_rules.lua`, `tests/suites/gameplay`
 - **description**: 将 `game_state_players/tiles/turn` 改为 `players/tiles/turn`，同步 `game.lua` 聚合装配、gameplay suite 和任何显式文件路径引用。
 - **validation**: `rg 'src\.game\.core\.runtime\.game_state_' src tests docs .agents` 无残留；`game.lua` 仍能装配三组 state helper。
+- **status**: completed (2026-03-08 15:33Z)
+- **work_log**:
+  - 完成 `game_state_players.lua`、`game_state_tiles.lua`、`game_state_turn.lua` 到 `players.lua`、`tiles.lua`、`turn.lua` 的重命名。
+  - 同步更新 `src/game/core/runtime/game.lua` 的聚合 require，保持 `Game` 组装逻辑不变。
+  - 结合 Wave 2 集成校验确认 gameplay 相关加载链可通过新路径装配。
+- **files_touched**:
+  - `src/game/core/runtime/players.lua`
+  - `src/game/core/runtime/tiles.lua`
+  - `src/game/core/runtime/turn.lua`
+  - `src/game/core/runtime/game.lua`
+  - `.agents/swarm_plan.md`
+- **gotchas**:
+  - 该簇的 require 校验会经过 `src/game/core/runtime/game.lua` 间接加载；如果只测单文件而不测聚合入口，容易漏掉旧路径残留。
 
 ### T4: 收口 `market_view*`
 - **depends_on**: `[T1, T2]`
@@ -92,12 +142,48 @@
 - **location**: `src/presentation/view/render`, `tests/suites/presentation/presentation_ui_action_anim.lua`, `tests/suites/architecture/cross_module_contract.lua`
 - **description**: 只把 leaf helper 收口到 `anim_*`，不动 `action_anim.lua` 主入口。同步 `action_anim.lua`、`anim_handlers.lua`、`anim_units.lua`、`anim_unit_overlay.lua` 的内部 require 链。
 - **validation**: `rg 'src\.presentation\.view\.render\.action_anim_(registry|handlers|dice|units|tip_text|overlay_compute|overlay_runtime|unit_overlay)' src tests docs .agents` 无残留；`action_anim.lua` 仍是唯一稳定入口。
+- **status**: completed (2026-03-08 15:33Z)
+- **work_log**:
+  - 完成 8 个 `action_anim_*` 叶子 helper 到 `anim_*` 的重命名，保留 `action_anim.lua` 主入口原名不动。
+  - 同步更新 `action_anim.lua`、`anim_handlers.lua`、`anim_units.lua`、`anim_unit_overlay.lua` 的内部 require 链，以及 `presentation_ui_action_anim`、`cross_module_contract` 的直接引用。
+  - 集成运行 `presentation_ui_action_anim` 时，现有告警保持为既有测试噪音，没有新增路径错误或加载错误。
+- **files_touched**:
+  - `src/presentation/view/render/anim_registry.lua`
+  - `src/presentation/view/render/anim_handlers.lua`
+  - `src/presentation/view/render/anim_dice.lua`
+  - `src/presentation/view/render/anim_units.lua`
+  - `src/presentation/view/render/anim_tip_text.lua`
+  - `src/presentation/view/render/anim_overlay_compute.lua`
+  - `src/presentation/view/render/anim_overlay_runtime.lua`
+  - `src/presentation/view/render/anim_unit_overlay.lua`
+  - `src/presentation/view/render/action_anim.lua`
+  - `tests/suites/presentation/presentation_ui_action_anim.lua`
+  - `tests/suites/architecture/cross_module_contract.lua`
+  - `.agents/swarm_plan.md`
+- **gotchas**:
+  - `action_anim.lua` 继续作为稳定入口；后续 T8 / T9 的旧路径扫描必须只退休 leaf helper 根路径，不能把 `src.presentation.view.render.action_anim` 本身列为 retired。
 
 ### T6: 先收口 `gameplay_loop_*` 低扇出 helper
 - **depends_on**: `[T1]`
 - **location**: `src/game/flow/turn`, `tests/suites/gameplay`
 - **description**: 先改 `gameplay_loop_runtime`、`gameplay_loop_tick_flow`、`gameplay_loop_tick_steps`、`gameplay_loop_ui_sync_defaults` 到 `loop_*`。这一波先稳定 helper，再处理高扇出入口。
 - **validation**: `rg 'src\.game\.flow\.turn\.gameplay_loop_(runtime|tick_flow|tick_steps|ui_sync_defaults)' src tests docs .agents` 无残留；gameplay suite 的 patch target 已更新。
+- **status**: completed (2026-03-08 15:30Z)
+- **work_log**:
+  - 完成 `gameplay_loop_runtime.lua`、`gameplay_loop_tick_flow.lua`、`gameplay_loop_tick_steps.lua`、`gameplay_loop_ui_sync_defaults.lua` 到 `loop_*` 的重命名。
+  - 同步更新 `src/game/flow/turn/gameplay_loop.lua`、`src/game/flow/turn/gameplay_loop_ports.lua` 与 `tests/suites/gameplay/gameplay.lua` 的 helper require。
+  - 保持 `gameplay_loop.lua`、`gameplay_loop_ports.lua` 与 `state.gameplay_loop_ports` 运行时字段名不变，留给 T7 继续处理入口 rename。
+- **files_touched**:
+  - `src/game/flow/turn/loop_runtime.lua`
+  - `src/game/flow/turn/loop_tick_flow.lua`
+  - `src/game/flow/turn/loop_tick_steps.lua`
+  - `src/game/flow/turn/loop_ui_sync_defaults.lua`
+  - `src/game/flow/turn/gameplay_loop.lua`
+  - `src/game/flow/turn/gameplay_loop_ports.lua`
+  - `tests/suites/gameplay/gameplay.lua`
+  - `.agents/swarm_plan.md`
+- **gotchas**:
+  - `.agents/swarm_plan.md` 作为执行计划会保留旧路径映射与任务描述，因此旧字符串扫描需要把该计划文件视作历史记录，不作为代码残留处理。
 
 ### T7: 再收口 `gameplay_loop` 入口
 - **depends_on**: `[T1, T6]`

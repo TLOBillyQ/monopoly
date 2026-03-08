@@ -30,9 +30,9 @@ local turn_effects = require("src.presentation.view.widgets.turn_effects")
 local popup_renderer = require("src.presentation.view.widgets.popup_renderer")
 local market_modal_renderer = require("src.presentation.view.widgets.market_modal_renderer")
 local debug_ports_module = require("src.presentation.runtime.ports.debug_ports")
-local role_control_lock_policy = require("src.presentation.input.ui_role_control_lock_policy")
-local ui_touch_policy = require("src.presentation.input.ui_touch_policy")
-local ui_choice_route_policy = require("src.presentation.input.ui_choice_route_policy")
+local role_control_lock_policy = require("src.presentation.input.role_control_lock_policy")
+local ui_touch_policy = require("src.presentation.input.touch_policy")
+local ui_choice_route_policy = require("src.presentation.input.choice_route_policy")
 local logger = require("src.core.utils.logger")
 local runtime_event_bridge = require("src.infrastructure.runtime.runtime_event_bridge")
 local market_cfg = require("Config.generated.market")
@@ -2744,7 +2744,7 @@ local function _test_ui_event_router_action_log_toggle_uses_role_context()
     local role_id = role.get_roleid()
     _assert_eq(state.ui.debug_visible_by_role[role_id], nil, "action_log role flag should start nil")
     assert(type(node_map["始终显示_行动日志图标"]._listener_cb) == "function", "action_log button should bind click listener")
-    local before = require("src.presentation.input.ui_event_state").resolve_debug_enabled(state, role_id)
+    local before = require("src.presentation.input.event_state").resolve_debug_enabled(state, role_id)
     node_map["始终显示_行动日志图标"]._listener_cb({ role = role })
     local first_value = state.ui.debug_visible_by_role[role_id]
     _assert_eq(first_value, not before, "action_log toggle should invert role visibility")
@@ -3048,8 +3048,8 @@ local function _test_ui_event_state_resolve_debug_enabled_supports_mixed_role_id
     },
   }
 
-  local enabled_by_int = require("src.presentation.input.ui_event_state").resolve_debug_enabled(state, 1)
-  local enabled_by_string = require("src.presentation.input.ui_event_state").resolve_debug_enabled(state, "1")
+  local enabled_by_int = require("src.presentation.input.event_state").resolve_debug_enabled(state, 1)
+  local enabled_by_string = require("src.presentation.input.event_state").resolve_debug_enabled(state, "1")
 
   _assert_eq(enabled_by_int, true, "debug_enabled should read string key by int role_id")
   _assert_eq(enabled_by_string, true, "debug_enabled should read string key by string role_id")
@@ -5853,7 +5853,7 @@ end
 local function _test_popup_defer_policy_queues_and_replays_in_order()
   local modal_presenter = require("src.presentation.view.widgets.modal_presenter")
   local popup_presenter = require("src.presentation.view.canvas.popup.presenter")
-  local canvas = require("src.presentation.input.ui_canvas_coordinator")
+  local canvas = require("src.presentation.input.canvas_coordinator")
   local state = {
     ui = ui_view.build_ui_state(),
     ui_dirty = false,
@@ -5889,7 +5889,7 @@ local function _test_popup_defer_policy_queues_and_replays_in_order()
 end
 
 local function _test_popup_renderer_switch_popup_canvas_restores_client_role_nil()
-  local canvas = require("src.presentation.input.ui_canvas_coordinator")
+  local canvas = require("src.presentation.input.canvas_coordinator")
   local role_ctx = require("src.presentation.model.ui_role_context")
   local manager = { client_role = { stale = true } }
   local role1 = { id = 1, get_roleid = function() return 1 end }
@@ -5929,7 +5929,7 @@ local function _test_popup_renderer_switch_popup_canvas_restores_client_role_nil
 end
 
 local function _test_market_modal_renderer_open_restores_client_role_nil()
-  local canvas = require("src.presentation.input.ui_canvas_coordinator")
+  local canvas = require("src.presentation.input.canvas_coordinator")
   local role_ctx = require("src.presentation.model.ui_role_context")
   local manager = { client_role = { stale = true } }
   local role1 = { id = 1, get_roleid = function() return 1 end }
@@ -5977,7 +5977,7 @@ local function _test_market_modal_renderer_open_restores_client_role_nil()
 end
 
 local function _test_debug_ports_sync_restores_client_role_nil()
-  local ui_event_state = require("src.presentation.input.ui_event_state")
+  local ui_event_state = require("src.presentation.input.event_state")
   local ui_view_service = require("src.presentation.runtime.view_service")
   local manager = { client_role = { stale = true } }
   local role1 = { id = 1, get_roleid = function() return 1 end }
