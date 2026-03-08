@@ -1,7 +1,7 @@
 local logger = require("src.core.utils.logger")
-local turn_action_port = require("src.presentation.input.ui_intent_dispatcher.turn_action_port")
-local game_action_dispatcher = require("src.presentation.input.ui_intent_dispatcher.game_action_dispatcher")
-local view_command_dispatcher = require("src.presentation.input.ui_intent_dispatcher.view_command_dispatcher")
+local turn_action_port = require("src.presentation.input.intent_dispatch.turn_action_port")
+local game_action_dispatcher = require("src.presentation.input.intent_dispatch.game_action")
+local view_command_dispatcher = require("src.presentation.input.intent_dispatch.view_command")
 
 local intent_dispatcher = {}
 
