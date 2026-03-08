@@ -28,7 +28,7 @@
 
 **目标**
 
-- 让 `src/presentation/view/render/market_view.lua` 保留公开入口与薄编排。
+- 让 `src/presentation/view/render/market.lua` 保留公开入口与薄编排。
 - 把“槽位渲染 / 选中态 / 分页和页签控制”拆成更小模块，减少单文件条件分支和重复 UI 状态设置。
 
 **建议拆分方向**
@@ -45,7 +45,7 @@
 
 **验收标准**
 
-- `src/presentation/view/render/market_view.lua` 明显降薄。
+- `src/presentation/view/render/market.lua` 明显降薄。
 - 市场弹窗的选择、翻页、页签切换行为保持不变。
 - 相关回归继续通过：`tests/suites/presentation/presentation_ui.lua`。
 
@@ -147,7 +147,7 @@
 
 **说明**
 
-- `src/game/flow/turn/gameplay_loop_ports.lua` 和 `src/presentation/runtime/ports.lua` 这类文件，本质上是 port group / bundle，不应按单 port 规则硬改。
+- `src/game/flow/turn/loop_ports.lua` 和 `src/presentation/runtime/ports.lua` 这类文件，本质上是 port group / bundle，不应按单 port 规则硬改。
 
 ## P3：本月内观察项
 

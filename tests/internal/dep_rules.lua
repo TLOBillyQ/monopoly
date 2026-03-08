@@ -76,18 +76,18 @@ local rules = {
     forbidden_patterns = {
       "require%(%\"src%.game%.ports%..-%\"%)",
       "require%(%'src%.game%.ports%..-%'%)",
-      "require%(%\"src%.game%.flow%.turn%.gameplay_loop_ports%\"%)",
-      "require%(%'src%.game%.flow%.turn%.gameplay_loop_ports'%)",
+      "require%(%\"src%.game%.flow%.turn%.loop_ports%\"%)",
+      "require%(%'src%.game%.flow%.turn%.loop_ports'%)",
     },
-    description = "core ports must stay host/runtime-wide contracts; do not reach into systems-facing game ports or flow-local gameplay_loop_ports",
+    description = "core ports must stay host/runtime-wide contracts; do not reach into systems-facing game ports or flow-local loop_ports",
   },
   {
     root = "src/game/ports",
     forbidden_patterns = {
-      "require%(%\"src%.game%.flow%.turn%.gameplay_loop_ports%\"%)",
-      "require%(%'src%.game%.flow%.turn%.gameplay_loop_ports'%)",
+      "require%(%\"src%.game%.flow%.turn%.loop_ports%\"%)",
+      "require%(%'src%.game%.flow%.turn%.loop_ports'%)",
     },
-    description = "game ports must stay systems-facing contracts; gameplay_loop_ports is a turn-flow-local override bundle, not a shared port layer",
+    description = "game ports must stay systems-facing contracts; loop_ports is a turn-flow-local override bundle, not a shared port layer",
   },
   {
     root = "src/game/core/player",
@@ -188,10 +188,10 @@ local rules = {
     forbidden_patterns = {
       "game%.gameplay_loop_ports",
       "self%.gameplay_loop_ports",
-      "require%(%\"src%.game%.flow%.turn%.gameplay_loop_ports%\"%)",
-      "require%(%'src%.game%.flow%.turn%.gameplay_loop_ports'%)",
+      "require%(%\"src%.game%.flow%.turn%.loop_ports%\"%)",
+      "require%(%'src%.game%.flow%.turn%.loop_ports'%)",
     },
-    description = "systems layer must not read gameplay loop runtime object fields directly or depend on gameplay_loop_ports; use explicit game ports instead",
+    description = "systems layer must not read gameplay loop runtime object fields directly or depend on loop_ports; use explicit game ports instead",
   },
   {
     root = "src/game/flow/turn",

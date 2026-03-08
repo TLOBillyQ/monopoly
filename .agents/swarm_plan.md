@@ -313,6 +313,21 @@
 - **location**: `src/`, `tests/`, `docs/`, `.agents/`, `tests/internal/legacy_path_guard.lua`, `tests/internal/dep_rules.lua`
 - **description**: 清掉旧模块路径字符串，更新 `package.loaded[...]`、测试 patch target、架构文档和 `.agents/*`，并把本轮真正退休的路径加入 `legacy_path_guard`。排除项不加入 retired roots。
 - **validation**: 每个旧根路径各自 `rg` 为零；`legacy_path_guard.lua` 只新增本轮真实退休路径；`dep_rules` 与文档示例全部指向新路径。
+- **status**: completed (2026-03-08 15:44Z)
+- **work_log**:
+  - 更新 `tests/internal/legacy_path_guard.lua`，把第二轮退休路径纳入 retired roots，覆盖 `presentation/input`、`game_state_*`、`market_view*`、`action_anim_*` 叶子 helper、`gameplay_loop*`。
+  - 更新 `tests/internal/dep_rules.lua` 与架构文档，把当前 canonical bundle 路径统一收口到 `src/game/flow/turn/loop_ports.lua`。
+  - 同步修正文档与 `.agents/*` 中仍在表达“当前现状”的路径示例；`swarm_plan.md` 自身保留旧路径映射作为迁移记录。
+- **files_touched**:
+  - `tests/internal/legacy_path_guard.lua`
+  - `tests/internal/dep_rules.lua`
+  - `docs/architecture/boundaries.md`
+  - `docs/architecture/layer-model.md`
+  - `.agents/plan.md`
+  - `.agents/research.md`
+  - `.agents/swarm_plan.md`
+- **gotchas**:
+  - `.agents/swarm_plan.md` 作为执行计划会保留旧路径映射；全局 `rg` 校验需要把它视作历史记录，不算代码残留。
 
 ### T9: 定向回归与全量回归
 - **depends_on**: `[T8]`
@@ -321,6 +336,15 @@
 - **validation**: 运行  
   `lua -e 'package.path=package.path..";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua"; require("TestHarness").run_all({require("suites.presentation.presentation_ui"), require("suites.presentation.presentation_ui_event_bindings"), require("suites.presentation.presentation_ui_action_anim"), require("suites.gameplay.gameplay"), require("suites.runtime.runtime_bootstrap"), require("suites.architecture.cross_module_contract")})'`  
   再运行 `lua tests/regression.lua`；预期包含 `dep_rules ok`、`legacy_path_guard ok`、全量回归通过。
+- **status**: completed (2026-03-08 15:45Z)
+- **work_log**:
+  - 运行热点 suite：`presentation_ui`、`presentation_ui_event_bindings`、`presentation_ui_action_anim`、`gameplay`、`runtime_bootstrap`、`cross_module_contract`、`intent_output_contract`、`architecture_guard_contract`、`usecase_boundary_contract`，全部通过。
+  - 运行全量回归 `lua tests/regression.lua`，输出包含 `All regression checks passed (385)`、`dep_rules ok`、`legacy_path_guard ok`。
+  - 验证过程中仅看到既有 `market paid goods mapping missing` 与 `forbidden_globals warn: no lua files found under: scripts` 告警，没有新增路径错误。
+- **files_touched**:
+  - `.agents/swarm_plan.md`
+- **gotchas**:
+  - T9 没有新增代码修改；本节主要记录验证证据和现有非阻塞告警。
 
 ## Parallel Execution Groups
 

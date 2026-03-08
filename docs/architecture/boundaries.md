@@ -12,7 +12,7 @@
 
 `src/core` 是跨玩法共享的稳定策略与小型契约层。这里允许放日志、数值工具、配置访问器、领域无关的 route policy，以及“被内层依赖的端口定义”。这里不应该直接读取 Eggy 全局对象，也不应该塞入具体 UI 结点或支付面板逻辑。`src/core/ports/` 只放宿主 / 运行时广义契约，例如 `runtime_ports`、`action_anim_port` 这类可被多个内层消费的窄接口；共享策略如果不是契约，就不应继续伪装成 Port 留在这里。
 
-`src/game/flow` 是用例编排层。这里负责一回合怎么推进、意图怎么分发、输入怎么校验、输出端口怎么发射。它可以协调 `src/game/systems` 的业务模块，但不应该回头操作 UI 细节或宿主运行时对象图。`src/game/flow/turn/gameplay_loop_ports.lua` 只是 turn use case 自己的分组 override 容器，用来把 modal / anim / ui_sync / debug / clock / state / output 这些局部端口打包给 gameplay loop；它不是新的通用 Port 层，也不是 `src/core/ports/` 或 `src/game/ports/` 的升级版本。
+`src/game/flow` 是用例编排层。这里负责一回合怎么推进、意图怎么分发、输入怎么校验、输出端口怎么发射。它可以协调 `src/game/systems` 的业务模块，但不应该回头操作 UI 细节或宿主运行时对象图。`src/game/flow/turn/loop_ports.lua` 只是 turn use case 自己的分组 override 容器，用来把 modal / anim / ui_sync / debug / clock / state / output 这些局部端口打包给 gameplay loop；它不是新的通用 Port 层，也不是 `src/core/ports/` 或 `src/game/ports/` 的升级版本。
 
 `src/game/flow/output_adapters/` 仍然属于 `flow`，不是一块漏放的 runtime 目录。这里放的是 turn use case 本地输出桥：例如 `intent_output_adapter.lua` 负责把 `open_choice` / `push_popup` 这类流程输出转给 `intent_dispatcher`，`output_state_adapter.lua` 负责把 pending choice、modal timer、ui_dirty 这类流程输出写回 `ui_runtime` 状态。它们服务的是“当前用例怎么发出输出”，而不是“宿主能力如何实现”；因此第三周先文档化这条边界，不做迁位。
 
@@ -24,9 +24,9 @@
 
 `src/presentation/model/gameplay_read_port.lua` 目前仍是 presentation 的一部分，不是独立 CQRS 查询层。它的职责是给 UI 组装轻量只读辅助数据；如果未来出现更明确的跨界查询需求，再考虑把它提升为独立 adapter。
 
-Port 目录在本轮之后固定分成三类，而且三类名字不能混用。`src/core/ports/` 只放宿主 / 运行时广义契约，例如“如何拿到 runtime context”或“如何访问默认 runtime ports”；这些契约必须保持 gameplay 无关，不能顺手塞进地块、黑市、破产反馈这类玩法语义。`src/game/ports/` 只放 systems-facing 注入契约，也就是 gameplay 规则向外请求能力时使用的窄接口；这里允许出现业务名词，因为它服务的是具体用例，而不是整个宿主运行时。`src/game/flow/turn/gameplay_loop_ports.lua` 则不是第三个通用 Port 层，它只是 turn use case 自己的局部分组 override：把 modal、anim、ui_sync、clock、state、output 这些同一回合循环里会一起覆盖的函数聚在一处，方便 gameplay loop、测试和 bootstrap 按组替换默认实现。
+Port 目录在本轮之后固定分成三类，而且三类名字不能混用。`src/core/ports/` 只放宿主 / 运行时广义契约，例如“如何拿到 runtime context”或“如何访问默认 runtime ports”；这些契约必须保持 gameplay 无关，不能顺手塞进地块、黑市、破产反馈这类玩法语义。`src/game/ports/` 只放 systems-facing 注入契约，也就是 gameplay 规则向外请求能力时使用的窄接口；这里允许出现业务名词，因为它服务的是具体用例，而不是整个宿主运行时。`src/game/flow/turn/loop_ports.lua` 则不是第三个通用 Port 层，它只是 turn use case 自己的局部分组 override：把 modal、anim、ui_sync、clock、state、output 这些同一回合循环里会一起覆盖的函数聚在一处，方便 gameplay loop、测试和 bootstrap 按组替换默认实现。
 
-文件后缀也要和这三类语义一起保持稳定。`*_port.lua` 表示单一契约文件，调用方读文件名就应该能知道“这里只有一组窄接口定义”，例如 `src/game/ports/bankruptcy_feedback_port.lua`、`src/game/ports/auto_play_port.lua`。`*_ports.lua` 表示一组同生命周期、会一起被注入或覆盖的 bundle，而不是新的契约中心，例如 `src/game/flow/turn/gameplay_loop_ports.lua`、`src/presentation/runtime/ports.lua`。`*_port_adapter.lua` 表示外层对某个 Port 契约的实现，负责把宿主或旧实现接到内层语义上，例如 `src/game/runtime/auto_play_port_adapter.lua`、`src/game/runtime/bankruptcy_port_adapter.lua`。如果一个文件既不是单一契约、也不是 bundle、也不是 adapter，就不要硬套这些后缀。
+文件后缀也要和这三类语义一起保持稳定。`*_port.lua` 表示单一契约文件，调用方读文件名就应该能知道“这里只有一组窄接口定义”，例如 `src/game/ports/bankruptcy_feedback_port.lua`、`src/game/ports/auto_play_port.lua`。`*_ports.lua` 表示一组同生命周期、会一起被注入或覆盖的 bundle，而不是新的契约中心，例如 `src/game/flow/turn/loop_ports.lua`、`src/presentation/runtime/ports.lua`。`*_port_adapter.lua` 表示外层对某个 Port 契约的实现，负责把宿主或旧实现接到内层语义上，例如 `src/game/runtime/auto_play_port_adapter.lua`、`src/game/runtime/bankruptcy_port_adapter.lua`。如果一个文件既不是单一契约、也不是 bundle、也不是 adapter，就不要硬套这些后缀。
 
 `src/game/flow/output_adapters/` 也不应被误读成第四类 Port 目录。这里的 `*_adapter.lua` 不是宿主 Port Adapter，而是 flow use case 内部的输出桥接实现，所以它继续留在 `flow` 目录下；只有当这类文件开始承载宿主细节、被多个非 turn 用例共享，或与 `src/game/runtime/*_port_adapter.lua` 形成职责重叠时，才值得考虑迁移或改名。
 
@@ -44,7 +44,7 @@ Port 目录在本轮之后固定分成三类，而且三类名字不能混用。
 
 第六，`src/game/flow/output_adapters/legacy_output_mirror.lua` 已退休并删除；UI runtime 状态以 `state.ui_runtime` 为唯一真源，不再维护 root-state 镜像兼容层。
 
-第七，只有 `src/app/bootstrap/*`、`src/game/flow/turn/*` 与测试夹具可以直接拼装 `gameplay_loop_ports` 分组 override。其他目录如果只是想拿某一项能力，应该依赖对应的广义 runtime contract 或 gameplay Port，而不是把 `gameplay_loop_ports` 当成一个新的“万能 Port 容器”。
+第七，只有 `src/app/bootstrap/*`、`src/game/flow/turn/*` 与测试夹具可以直接拼装 `loop_ports` 分组 override。其他目录如果只是想拿某一项能力，应该依赖对应的广义 runtime contract 或 gameplay Port，而不是把 `loop_ports` 当成一个新的“万能 Port 容器”。
 
 ## 后续新增代码时的放置规则
 
@@ -56,6 +56,6 @@ Port 目录在本轮之后固定分成三类，而且三类名字不能混用。
 
 如果你在写“程序启动时把哪条宿主能力接成端口”，优先放进 `src/app/bootstrap`；如果你在写“这些宿主能力的具体实现长什么样”，优先放进 `src/infrastructure/runtime`。
 
-如果你在写“宿主 / 运行时广义能力的窄契约”，优先放进 `src/core/ports/`；如果你在写“玩法规则向外请求的业务能力契约”，优先放进 `src/game/ports/`；如果你只是需要给回合循环临时覆盖一组默认函数，就继续留在 `src/game/flow/turn/gameplay_loop_ports.lua`，不要新建第四类 Port 目录。
+如果你在写“宿主 / 运行时广义能力的窄契约”，优先放进 `src/core/ports/`；如果你在写“玩法规则向外请求的业务能力契约”，优先放进 `src/game/ports/`；如果你只是需要给回合循环临时覆盖一组默认函数，就继续留在 `src/game/flow/turn/loop_ports.lua`，不要新建第四类 Port 目录。
 
 如果一个模块既想碰业务规则，又想碰宿主/UI 细节，先停下来拆边界，不要再新增跨层混合模块。
