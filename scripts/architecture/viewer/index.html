@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monopoly Arch View</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script defer src="./architecture_data.js"></script>
+  <script defer src="./script.js"></script>
+</head>
+<body>
+  <div class="page_shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Monopoly Architecture</p>
+        <h1>Static Arch Viewer</h1>
+      </div>
+      <div class="topbar_meta">
+        <div class="legend">
+          <span class="legend_chip legend_default">Concrete</span>
+          <span class="legend_chip legend_abstract">Abstract</span>
+          <span class="legend_chip legend_cycle">Cycle</span>
+        </div>
+        <button id="back_button" class="ghost_button" type="button">Back</button>
+      </div>
+    </header>
+
+    <section class="summary_strip">
+      <div class="summary_card">
+        <span class="summary_label">Current View</span>
+        <strong id="current_view_label">root</strong>
+      </div>
+      <div class="summary_card">
+        <span class="summary_label">Nodes</span>
+        <strong id="node_count_label">0</strong>
+      </div>
+      <div class="summary_card">
+        <span class="summary_label">Edges</span>
+        <strong id="edge_count_label">0</strong>
+      </div>
+      <div class="summary_card">
+        <span class="summary_label">Cycles</span>
+        <strong id="cycle_count_label">0</strong>
+      </div>
+    </section>
+
+    <main class="main_grid">
+      <section class="graph_panel">
+        <nav id="breadcrumb" class="breadcrumb"></nav>
+        <div id="graph_notice" class="graph_notice" hidden></div>
+        <div id="graph_canvas" class="graph_canvas"></div>
+      </section>
+
+      <aside class="detail_panel">
+        <div class="detail_header">
+          <p class="eyebrow">Inspector</p>
+          <h2 id="detail_title">Select a leaf module</h2>
+          <p id="detail_subtitle" class="detail_subtitle">Click a non-leaf node to drill down. Click a leaf node to inspect source and dependencies.</p>
+        </div>
+
+        <section class="detail_section">
+          <h3>Metadata</h3>
+          <dl id="metadata_list" class="metadata_list"></dl>
+        </section>
+
+        <section class="detail_section">
+          <h3>Internal Dependencies</h3>
+          <ul id="internal_dependency_list" class="token_list empty_state"></ul>
+        </section>
+
+        <section class="detail_section">
+          <h3>External Dependencies</h3>
+          <ul id="external_dependency_list" class="token_list empty_state"></ul>
+        </section>
+
+        <section class="detail_section detail_section_source">
+          <div class="source_heading">
+            <h3>Source</h3>
+            <span id="source_path_label" class="source_path_label"></span>
+          </div>
+          <pre id="source_code" class="source_code empty_state">No module selected.</pre>
+        </section>
+      </aside>
+    </main>
+  </div>
+</body>
+</html>
