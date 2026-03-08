@@ -117,6 +117,19 @@
 - **location**: `src/game/core/runtime`, `tests/internal/dep_rules.lua`, `tests/suites/gameplay`
 - **description**: 将 `game_state_players/tiles/turn` 改为 `players/tiles/turn`，同步 `game.lua` 聚合装配、gameplay suite 和任何显式文件路径引用。
 - **validation**: `rg 'src\.game\.core\.runtime\.game_state_' src tests docs .agents` 无残留；`game.lua` 仍能装配三组 state helper。
+- **status**: completed (2026-03-08 15:32Z)
+- **work_log**:
+  - 完成 `game_state_players.lua`、`game_state_tiles.lua`、`game_state_turn.lua` 到 `players.lua`、`tiles.lua`、`turn.lua` 的重命名。
+  - 同步更新 `src/game/core/runtime/game.lua` 的聚合 require，保持 `Game` 聚合行为与导出函数不变。
+  - 当前仓库内没有额外 gameplay suite 直接引用旧 `game_state_*` 模块路径，验证以字符串扫描与模块加载为主。
+- **files_touched**:
+  - `src/game/core/runtime/players.lua`
+  - `src/game/core/runtime/tiles.lua`
+  - `src/game/core/runtime/turn.lua`
+  - `src/game/core/runtime/game.lua`
+  - `.agents/swarm_plan.md`
+- **gotchas**:
+  - 新文件 `src/game/core/runtime/turn.lua` 与 `src/game/flow/turn/` 目录同名但不冲突；后续扫尾时必须按完整模块路径检查，避免误报。
 - **status**: completed (2026-03-08 15:33Z)
 - **work_log**:
   - 完成 `game_state_players.lua`、`game_state_tiles.lua`、`game_state_turn.lua` 到 `players.lua`、`tiles.lua`、`turn.lua` 的重命名。
@@ -142,6 +155,26 @@
 - **location**: `src/presentation/view/render`, `tests/suites/presentation/presentation_ui_action_anim.lua`, `tests/suites/architecture/cross_module_contract.lua`
 - **description**: 只把 leaf helper 收口到 `anim_*`，不动 `action_anim.lua` 主入口。同步 `action_anim.lua`、`anim_handlers.lua`、`anim_units.lua`、`anim_unit_overlay.lua` 的内部 require 链。
 - **validation**: `rg 'src\.presentation\.view\.render\.action_anim_(registry|handlers|dice|units|tip_text|overlay_compute|overlay_runtime|unit_overlay)' src tests docs .agents` 无残留；`action_anim.lua` 仍是唯一稳定入口。
+- **status**: completed (2026-03-08 15:32Z)
+- **work_log**:
+  - 完成八个 `action_anim_*` 叶子 helper 到 `anim_*` 的重命名。
+  - 同步更新 `action_anim.lua` 主入口与 `anim_handlers.lua`、`anim_units.lua`、`anim_unit_overlay.lua` 的内部 require 链。
+  - 更新 `presentation_ui_action_anim.lua` 与 `cross_module_contract.lua` 的 helper require，保留 `action_anim.lua` 主入口名称不变。
+- **files_touched**:
+  - `src/presentation/view/render/anim_registry.lua`
+  - `src/presentation/view/render/anim_handlers.lua`
+  - `src/presentation/view/render/anim_dice.lua`
+  - `src/presentation/view/render/anim_units.lua`
+  - `src/presentation/view/render/anim_tip_text.lua`
+  - `src/presentation/view/render/anim_overlay_compute.lua`
+  - `src/presentation/view/render/anim_overlay_runtime.lua`
+  - `src/presentation/view/render/anim_unit_overlay.lua`
+  - `src/presentation/view/render/action_anim.lua`
+  - `tests/suites/presentation/presentation_ui_action_anim.lua`
+  - `tests/suites/architecture/cross_module_contract.lua`
+  - `.agents/swarm_plan.md`
+- **gotchas**:
+  - `legacy_path_guard` 在 T8 只能退休叶子 helper 的旧路径，不能退休主入口 `src.presentation.view.render.action_anim`。
 - **status**: completed (2026-03-08 15:33Z)
 - **work_log**:
   - 完成 8 个 `action_anim_*` 叶子 helper 到 `anim_*` 的重命名，保留 `action_anim.lua` 主入口原名不动。
