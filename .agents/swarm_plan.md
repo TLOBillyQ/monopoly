@@ -66,6 +66,16 @@
   - `item_strategy -> strategy`
   - `item_use_broadcast -> use_broadcast`
 - **validation**: 所有目标路径当前不存在；映射表完整；排除项明确写入计划。
+- **status**: completed (2026-03-08 16:00Z)
+- **work_log**:
+  - 核对全部目标路径当前均不存在，可直接做原子 rename，不需要兼容桥。
+  - 确认旧路径命中仍集中在四簇：`presentation/runtime.ui_*` 与 `presentation/model.ui_*`、`game/flow/turn/turn_*`、`game/systems/land/landing_*`、`game/systems/items/item_*`。
+  - 冻结排除项：不改 `state.ui_runtime`、`ui_model` 数据结构字段、`state.gameplay_loop_ports`、`action_anim.lua` 主入口、`*_port.lua` / `*_ports.lua` / `*_port_adapter.lua` 语义。
+- **files_touched**:
+  - `.agents/swarm_plan.md`
+- **gotchas**:
+  - `presentation_ui.lua` 与 `gameplay.lua` 都是多簇共用的大测试文件，Wave 2 需要按写集保守拆分，避免并行覆盖同一文件。
+  - `turn_runtime.lua` 当前是稳定入口别名，本轮只能改路径命名与引用，不把它当成删除目标。
 
 ### T2: 收口 `presentation/runtime/ui_*` 与 `presentation/model/ui_*`
 - **depends_on**: `[T1]`
