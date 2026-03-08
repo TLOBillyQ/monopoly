@@ -89,6 +89,7 @@ local function _test_movement_backward_from_hongkong_follows_three_unique_tiles(
   local g = _new_game()
   local p = g:current_player()
   g:update_player_position(p, 7)
+  g:set_player_status(p, "move_dir", "down")
 
   local res = movement.move(g, p, -3, { branch_parity = 1, skip_market_check = true })
 
@@ -101,7 +102,19 @@ local function _test_movement_backward_from_hongkong_follows_three_unique_tiles(
   _assert_eq(names[1], "广州路", "backward step 1 should be guangzhou")
   _assert_eq(names[2], "道具卡", "backward step 2 should be item tile")
   _assert_eq(names[3], "海口路", "backward step 3 should be haikou")
-  _assert_eq(p.status.move_dir, "left", "backward move_dir should keep the next-step backward heading")
+  _assert_eq(p.status.move_dir, "down", "backward move should preserve the recorded forward heading")
+end
+
+local function _test_movement_backward_without_move_dir_keeps_nil()
+  local g = _new_game()
+  local p = g:current_player()
+  g:update_player_position(p, g.board:index_of_tile_id(42))
+  g:set_player_status(p, "move_dir", nil)
+
+  local res = movement.move(g, p, -1, { branch_parity = 1, skip_market_check = true })
+
+  assert(#res.visited == 1, "backward move should still record visited tiles")
+  _assert_eq(p.status.move_dir, nil, "backward move without stored heading should keep nil")
 end
 
 local function _run_start_move_with_stale_dir(start_index, stale_dir)
@@ -260,6 +273,7 @@ return {
     { name = "board_indices_in_range_uses_graph_distance", run = _test_board_indices_in_range_uses_graph_distance },
     { name = "movement_backward_wrap", run = _test_movement_backward_wrap },
     { name = "movement_backward_from_hongkong_follows_three_unique_tiles", run = _test_movement_backward_from_hongkong_follows_three_unique_tiles },
+    { name = "movement_backward_without_move_dir_keeps_nil", run = _test_movement_backward_without_move_dir_keeps_nil },
     { name = "movement_fresh_roll_ignores_stale_move_dir", run = _test_movement_fresh_roll_ignores_stale_move_dir },
     { name = "movement_single_step_sets_move_dir_to_next_heading", run = _test_movement_single_step_sets_move_dir_to_next_heading },
     { name = "movement_multi_step_sets_move_dir_to_next_heading", run = _test_movement_multi_step_sets_move_dir_to_next_heading },

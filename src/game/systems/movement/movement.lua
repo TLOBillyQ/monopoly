@@ -108,6 +108,7 @@ function movement.move(game, player, steps, opts)
     end
   end
   local facing = facing_policy.resolve_initial_facing(facing_mode, player, opts)
+  local persisted_facing = player.status and player.status.move_dir or nil
 
   local mine = board.get_mine and board:get_mine(current) or nil
   if type(mine) == "table" and mine.owner_id == player.id then
@@ -153,6 +154,10 @@ function movement.move(game, player, steps, opts)
     end
   end
 
+  if not backward then
+    persisted_facing = facing
+  end
+
   local landing_tile = board:get_tile(current)
   _emit_event(monopoly_event.movement.moved, {
     player = player,
@@ -176,8 +181,8 @@ function movement.move(game, player, steps, opts)
   end
 
   game:update_player_position(player, current)
-  -- move_dir stores the heading used to continue movement from the current tile.
-  game:set_player_status(player, "move_dir", facing)
+  -- move_dir stores the recorded forward heading from the landing tile.
+  game:set_player_status(player, "move_dir", persisted_facing)
 
   return {
     encountered_players = encountered,

@@ -8,6 +8,7 @@ local vehicle_feature = require("src.game.systems.vehicle.vehicle_feature")
 local number_utils = require("src.core.utils.number_utils")
 local action_anim_port = require("src.core.ports.action_anim_port")
 local vehicle_catalog = require("src.core.config.vehicle_catalog")
+local facing_policy = require("src.game.systems.board.facing_policy")
 
 local common = {}
 
@@ -91,6 +92,11 @@ function common.move_steps(game, player, steps, opts)
   }
 end
 
+function common.resolve_forced_move_reset_facing(game, idx, parity)
+  assert(game ~= nil, "missing game")
+  return facing_policy.resolve_forced_move_reset_facing(game.board, idx, parity)
+end
+
 function common.dependencies()
   return {
     inventory = inventory,
@@ -103,4 +109,3 @@ function common.dependencies()
 end
 
 return common
-
