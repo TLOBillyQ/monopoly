@@ -1,9 +1,9 @@
 local intent_output_port = require("src.game.ports.intent_output_port")
 local action_anim_port = require("src.core.ports.action_anim_port")
 
-local landing_presenter = {}
+local presenter = {}
 
-function landing_presenter.push_popup(game, title, body, opts)
+function presenter.push_popup(game, title, body, opts)
   if not game then
     return false
   end
@@ -17,8 +17,8 @@ function landing_presenter.push_popup(game, title, body, opts)
   }, opts.popup_opts) == true
 end
 
-function landing_presenter.queue_action_anim(game, payload)
+function presenter.queue_action_anim(game, payload)
   return action_anim_port.queue(game, payload)
 end
 
-return landing_presenter
+return presenter

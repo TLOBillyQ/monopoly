@@ -2,7 +2,7 @@ local board_utils = require("src.game.systems.land.land_board_utils")
 local constants = require("Config.generated.constants")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local inventory = require("src.game.systems.items.inventory")
-local item_use_broadcast = require("src.game.systems.items.use_broadcast")
+local use_broadcast = require("src.game.systems.items.use_broadcast")
 local rent_resolver = require("src.game.systems.land.land_rent_resolver")
 local number_utils = require("src.core.utils.number_utils")
 
@@ -59,7 +59,7 @@ function land_rules.execute_strong_card(game, player_id, tile_id)
     return { ok = false, reason = "insufficient_balance" }
   end
   assert(inventory.consume(player, item_ids.strong) == true, "consume strong card failed")
-  item_use_broadcast.dispatch(game, player, item_ids.strong)
+  use_broadcast.dispatch(game, player, item_ids.strong)
   game:deduct_player_cash(player, total_value)
   game:add_player_cash(owner, total_value)
   game:set_tile_owner(tile, player.id)
@@ -77,7 +77,7 @@ end
 function land_rules.execute_free_card(game, player_id, tile_id)
   local player, tile = _resolve_player_and_tile(game, player_id, tile_id)
   assert(inventory.consume(player, item_ids.free_rent) == true, "consume free rent failed")
-  item_use_broadcast.dispatch(game, player, item_ids.free_rent)
+  use_broadcast.dispatch(game, player, item_ids.free_rent)
   return _build_land_event("free_rent_used", {
     player = player,
     tile = tile,
@@ -138,7 +138,7 @@ end
 function land_rules.execute_tax_free_card(game, player_id)
   local player = game:find_player_by_id(player_id)
   assert(inventory.consume(player, item_ids.tax_free) == true, "consume tax_free failed")
-  item_use_broadcast.dispatch(game, player, item_ids.tax_free)
+  use_broadcast.dispatch(game, player, item_ids.tax_free)
   return _build_land_event("tax_free", {
     player = player,
     text = player.name .. " 出示免税卡，本次免税",

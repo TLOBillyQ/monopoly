@@ -7,7 +7,7 @@ local intent_output_adapter = require("src.game.flow.output_adapters.intent_outp
 local gameplay_loop = require("src.game.flow.turn.loop")
 local paid_currency_bridge = require("src.game.systems.commerce.paid_currency_bridge")
 local market_purchase = require("src.game.systems.market.application.purchase")
-local landing_presenter = require("src.game.systems.land.landing_presenter")
+local presenter = require("src.game.systems.land.presenter")
 
 local function _build_state()
   return {
@@ -34,7 +34,7 @@ local function _test_gameplay_loop_set_game_installs_intent_output_port()
   _assert_eq(game.intent_output_port, installed_port, "set_game should install intent_output_port from adapter")
 end
 
-local function _test_landing_presenter_push_popup_prefers_intent_output_port()
+local function _test_land_presenter_push_popup_prefers_intent_output_port()
   local payload = nil
   local popup_called = false
   local game = {
@@ -59,7 +59,7 @@ local function _test_landing_presenter_push_popup_prefers_intent_output_port()
     },
   }
 
-  local ok = landing_presenter.push_popup(game, "机会卡", "描述", {
+  local ok = presenter.push_popup(game, "机会卡", "描述", {
     kind = "chance",
     image_ref = 101,
     auto_close_seconds = 2.0,
@@ -120,8 +120,8 @@ return {
       run = _test_gameplay_loop_set_game_installs_intent_output_port,
     },
     {
-      name = "landing_presenter_push_popup_prefers_intent_output_port",
-      run = _test_landing_presenter_push_popup_prefers_intent_output_port,
+      name = "land_presenter_push_popup_prefers_intent_output_port",
+      run = _test_land_presenter_push_popup_prefers_intent_output_port,
     },
     {
       name = "intent_output_port_falls_back_to_adapter_when_game_port_missing",
