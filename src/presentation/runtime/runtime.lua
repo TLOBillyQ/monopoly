@@ -2,7 +2,7 @@ local ui_aliases = require("src.presentation.view.support.ui_aliases")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local role_id_utils = require("src.core.utils.role_id")
 
-local ui_runtime = {}
+local runtime = {}
 
 local function _traceback(err)
   if type(traceback) == "function" then
@@ -11,20 +11,20 @@ local function _traceback(err)
   return err
 end
 
-function ui_runtime.set_client_role(role)
+function runtime.set_client_role(role)
   if UIManager then
     UIManager.client_role = role
   end
 end
 
-function ui_runtime.get_client_role()
+function runtime.get_client_role()
   if UIManager then
     return UIManager.client_role
   end
   return nil
 end
 
-function ui_runtime.resolve_role_id(role)
+function runtime.resolve_role_id(role)
   if not role or not role.get_roleid then
     return nil
   end
@@ -35,35 +35,35 @@ function ui_runtime.resolve_role_id(role)
   return role_id_utils.normalize(raw_role_id)
 end
 
-function ui_runtime.with_client_role(role, fn)
+function runtime.with_client_role(role, fn)
   assert(type(fn) == "function", "missing fn")
   local previous_role = UIManager and UIManager.client_role or nil
-  ui_runtime.set_client_role(role)
+  runtime.set_client_role(role)
   local ok, result = xpcall(fn, _traceback)
-  ui_runtime.set_client_role(previous_role)
+  runtime.set_client_role(previous_role)
   if not ok then
     error(result)
   end
   return result
 end
 
-function ui_runtime.for_each_role_or_global(fn)
+function runtime.for_each_role_or_global(fn)
   assert(type(fn) == "function", "missing fn")
   local roles = runtime_ports.resolve_roles()
   if type(roles) == "table" and #roles > 0 then
     for _, role in ipairs(roles) do
-      ui_runtime.with_client_role(role, function()
+      runtime.with_client_role(role, function()
         fn(role)
       end)
     end
     return
   end
-  ui_runtime.with_client_role(nil, function()
+  runtime.with_client_role(nil, function()
     fn(nil)
   end)
 end
 
-function ui_runtime.query_nodes(name)
+function runtime.query_nodes(name)
   assert(name ~= nil, "missing ui node name")
   assert(UIManager ~= nil and UIManager.query_nodes_by_name ~= nil, "missing UIManager.query_nodes_by_name")
   local resolved = ui_aliases.resolve(name)
@@ -72,12 +72,12 @@ function ui_runtime.query_nodes(name)
   return nodes
 end
 
-function ui_runtime.query_node(name)
-  local nodes = ui_runtime.query_nodes(name)
+function runtime.query_node(name)
+  local nodes = runtime.query_nodes(name)
   return nodes[1]
 end
 
-function ui_runtime.set_node_texture_keep_size(node, image_key)
+function runtime.set_node_texture_keep_size(node, image_key)
   assert(node ~= nil, "missing image node")
   assert(image_key ~= nil, "missing image key")
   if node.set_texture_keep_size then
@@ -87,7 +87,7 @@ function ui_runtime.set_node_texture_keep_size(node, image_key)
   node.image_texture = image_key
 end
 
-function ui_runtime.set_node_texture_native_size(node, image_key)
+function runtime.set_node_texture_native_size(node, image_key)
   assert(node ~= nil, "missing image node")
   assert(image_key ~= nil, "missing image key")
   if node.set_texture_native_size then
@@ -101,4 +101,4 @@ function ui_runtime.set_node_texture_native_size(node, image_key)
   node.image_texture = image_key
 end
 
-return ui_runtime
+return runtime

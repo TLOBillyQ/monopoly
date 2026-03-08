@@ -5,7 +5,7 @@ local panel_slice = require("src.presentation.model.model.panel_slice")
 local number_utils = require("src.core.utils.number_utils")
 local role_id_utils = require("src.core.utils.role_id")
 
-local ui_model = {}
+local model_api = {}
 
 local FALLBACK_CURRENT_PLAYER_NAME = "-"
 local FALLBACK_CURRENT_PLAYER_CASH = 0
@@ -61,7 +61,7 @@ local function _fill_meta(model, env, current, turn)
   return model
 end
 
-function ui_model.build(game, env)
+function model_api.build(game, env)
   assert(game ~= nil, "missing game")
   env = env or _build_ui_env(nil, game)
   local ui_state = env.ui_state
@@ -91,10 +91,10 @@ function ui_model.build(game, env)
   return _fill_meta(model, env, current, turn)
 end
 
-function ui_model.update(prev, game, env, dirty)
+function model_api.update(prev, game, env, dirty)
   assert(game ~= nil, "missing game")
   if not prev then
-    return ui_model.build(game, env)
+    return model_api.build(game, env)
   end
   env = env or _build_ui_env(nil, game)
   dirty = dirty or {}
@@ -168,4 +168,4 @@ function ui_model.update(prev, game, env, dirty)
   return model
 end
 
-return ui_model
+return model_api
