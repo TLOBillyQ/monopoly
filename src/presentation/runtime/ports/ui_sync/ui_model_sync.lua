@@ -9,7 +9,7 @@ function ui_model_sync.apply_input_lock(state)
 end
 
 function ui_model_sync.build_model(state, game)
-  local ui_model = require("src.presentation.model.ui_model")
+  local ui_model = require("src.presentation.model.model")
   local env = turn_ui_sync_shared.build_ui_env(state, game)
   return ui_model.build(game, env)
 end
@@ -21,7 +21,7 @@ function ui_model_sync.refresh_from_dirty(game, state, dirty, common)
   local only_countdown = turn_ui_sync_shared.is_only_turn_countdown(dirty)
   local ui_refreshed = false
   if dirty.any or dirty.ui then
-    local ui_model = require("src.presentation.model.ui_model")
+    local ui_model = require("src.presentation.model.model")
     local ui_view = require("src.presentation.runtime.view_service")
     local env = turn_ui_sync_shared.build_ui_env(state, game)
     local next_model = ui_model.update(runtime_state.get_ui_model(state), game, env, dirty)

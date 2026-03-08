@@ -9,7 +9,7 @@ local target_choice_nodes = require("src.presentation.view.canvas.target_choice.
 local remote_choice_nodes = require("src.presentation.view.canvas.remote_choice.nodes")
 local secondary_confirm_nodes = require("src.presentation.view.canvas.secondary_confirm.nodes")
 local market_ui = require("src.presentation.view.support.market_layout")
-local ui_events = require("src.presentation.runtime.ui_events")
+local ui_events = require("src.presentation.runtime.events")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local role_globals = require("src.core.state_access.ui_role_globals")
 

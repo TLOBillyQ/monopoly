@@ -5,7 +5,7 @@ local input_lock_policy = require("src.presentation.input.input_lock_policy")
 local role_control_lock_policy = require("src.presentation.input.role_control_lock_policy")
 local modal_presenter = require("src.presentation.view.widgets.modal_presenter")
 local logger = require("src.core.utils.logger")
-local runtime = require("src.presentation.runtime.ui_runtime")
+local runtime = require("src.presentation.runtime.runtime")
 
 local state = require("src.presentation.runtime.view_service.state")
 local assets = require("src.presentation.runtime.view_service.assets")

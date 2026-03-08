@@ -1,4 +1,4 @@
-local role_context = require("src.presentation.model.ui_role_context")
+local role_context = require("src.presentation.model.role_context")
 local base_nodes = require("src.presentation.view.canvas.base.nodes")
 local always_show_nodes = require("src.presentation.view.canvas.always_show.nodes")
 local ui_touch_policy = require("src.presentation.input.touch_policy")

@@ -1,6 +1,6 @@
 local gameplay_read_port = require("src.presentation.model.gameplay_read_port")
 local number_utils = require("src.core.utils.number_utils")
-local role_avatar = require("src.presentation.model.ui_role_avatar")
+local role_avatar = require("src.presentation.model.role_avatar")
 local runtime_ports = require("src.core.ports.runtime_ports")
 
 local panel = {}

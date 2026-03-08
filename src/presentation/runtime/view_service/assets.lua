@@ -1,4 +1,4 @@
-local runtime = require("src.presentation.runtime.ui_runtime")
+local runtime = require("src.presentation.runtime.runtime")
 local player_colors = require("src.presentation.view.support.player_colors")
 local core = require("src.presentation.runtime.view_service.core")
 local base_nodes = require("src.presentation.view.canvas.base.nodes")

@@ -4,11 +4,11 @@ local _with_patches = support.with_patches
 local _bind_ui_runtime = support.bind_ui_runtime
 local bindings = require("src.presentation.input.event_bindings")
 local logger = require("src.core.utils.logger")
-local runtime = require("src.presentation.runtime.ui_runtime")
+local runtime = require("src.presentation.runtime.runtime")
 local canvas_registry = require("src.presentation.runtime.canvas_registry")
 local canvas_store = require("src.presentation.runtime.canvas_store")
 local canvas = require("src.presentation.input.canvas_coordinator")
-local ui_events = require("src.presentation.runtime.ui_events")
+local ui_events = require("src.presentation.runtime.events")
 local base_nodes = require("src.presentation.view.canvas.base.nodes")
 local always_show_nodes = require("src.presentation.view.canvas.always_show.nodes")
 
