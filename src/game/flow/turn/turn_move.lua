@@ -1,4 +1,4 @@
-local steal = require("src.game.systems.items.item_steal")
+local steal = require("src.game.systems.items.steal")
 local movement = require("src.game.systems.movement.movement")
 local market_service = require("src.game.systems.market.market_service")
 local intent_dispatcher = require("src.game.flow.intent.intent_dispatcher")

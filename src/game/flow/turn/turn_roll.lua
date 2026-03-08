@@ -1,5 +1,5 @@
 local logger = require("src.core.utils.logger")
-local item_phase = require("src.game.systems.items.item_phase")
+local item_phase = require("src.game.systems.items.phase")
 local item_auto_play_context = require("src.game.flow.turn.item_auto_play_context")
 local number_utils = require("src.core.utils.number_utils")
 

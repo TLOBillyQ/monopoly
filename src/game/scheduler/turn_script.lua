@@ -1,4 +1,4 @@
-local turn_logger = require("src.game.flow.turn.turn_logger")
+local turn_logger = require("src.game.flow.turn.logger")
 local await = require("src.game.scheduler.await")
 
 local turn_script = {}

@@ -1,5 +1,5 @@
 local gameplay_loop_runtime = require("src.game.flow.turn.loop_runtime")
-local turn_role_control_policy = require("src.game.flow.turn.turn_role_control_policy")
+local turn_role_control_policy = require("src.game.flow.turn.role_control_policy")
 local auto_context = require("src.game.flow.turn.auto_context")
 local tick_steps = require("src.game.flow.turn.loop_tick_steps")
 

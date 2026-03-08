@@ -1,8 +1,8 @@
-local turn_dispatch = require("src.game.flow.turn.turn_dispatch")
-local turn_anim = require("src.game.flow.turn.turn_anim")
+local turn_dispatch = require("src.game.flow.turn.dispatch")
+local turn_anim = require("src.game.flow.turn.anim")
 local gameplay_loop_runtime = require("src.game.flow.turn.loop_runtime")
-local turn_timer_policy = require("src.game.flow.turn.turn_timer_policy")
-local turn_camera_policy = require("src.game.flow.turn.turn_camera_policy")
+local turn_timer_policy = require("src.game.flow.turn.timer_policy")
+local turn_camera_policy = require("src.game.flow.turn.camera_policy")
 local runtime_state = require("src.core.state_access.runtime_state")
 
 local tick_steps = {}

@@ -1,8 +1,8 @@
 local logger = require("src.core.utils.logger")
-local inventory = require("src.game.systems.items.item_inventory")
+local inventory = require("src.game.systems.items.inventory")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local number_utils = require("src.core.utils.number_utils")
-local choice_auto_policy = require("src.game.flow.turn.turn_choice_auto_policy")
+local choice_auto_policy = require("src.game.flow.turn.choice_auto_policy")
 
 local turn_decision = {}
 
