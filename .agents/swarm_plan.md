@@ -69,6 +69,50 @@ T1 ──┬── T2 ──┐
 - **location**: `src/`, `tests/`, `docs/`, `.agents/`
 - **description**: 冻结“旧路径 -> 新路径”映射；逐类列出受影响引用面：静态 `require`、内联 `require`、`package.loaded`、测试 patch target、文档示例、guard root。
 - **validation**: 产出一份无歧义映射表；确认不存在目标重名冲突；明确 `presentation_ports.lua` 保持不改。
+- **status**: completed (2026-03-08 14:08Z)
+- **mapping**:
+  - `src/core/choice/choice_contract.lua -> src/core/choice/contract.lua`
+  - `src/core/choice/choice_route_policy.lua -> src/core/choice/route_policy.lua`
+  - `src/game/systems/choices/choice_registry.lua -> src/game/systems/choices/registry.lua`
+  - `src/game/systems/choices/choice_resolver.lua -> src/game/systems/choices/resolver.lua`
+  - `src/game/systems/choices/choice_handlers/ -> src/game/systems/choices/handlers/`
+  - `src/game/systems/choices/choice_handlers/item_choice_handler.lua -> src/game/systems/choices/handlers/item.lua`
+  - `src/game/systems/choices/choice_handlers/land_choice_handler.lua -> src/game/systems/choices/handlers/land.lua`
+  - `src/game/systems/choices/choice_handlers/market_choice_handler.lua -> src/game/systems/choices/handlers/market.lua`
+  - `src/game/systems/choices/choice_handlers/optional_effect_handler.lua -> src/game/systems/choices/handlers/optional_effect.lua`
+  - `src/presentation/input/ui_intent_dispatcher.lua -> src/presentation/input/intent_dispatcher.lua`
+  - `src/presentation/input/ui_intent_dispatcher/ -> src/presentation/input/intent_dispatch/`
+  - `src/presentation/input/ui_intent_dispatcher/game_action_dispatcher.lua -> src/presentation/input/intent_dispatch/game_action.lua`
+  - `src/presentation/input/ui_intent_dispatcher/view_command_dispatcher.lua -> src/presentation/input/intent_dispatch/view_command.lua`
+  - `src/presentation/input/ui_intent_dispatcher/item_phase_ask_flow.lua -> src/presentation/input/intent_dispatch/item_phase_ask.lua`
+  - `src/presentation/input/ui_intent_dispatcher/pre_confirm_flow.lua -> src/presentation/input/intent_dispatch/pre_confirm.lua`
+  - `src/presentation/runtime/presentation_ports/ -> src/presentation/runtime/ports/`
+  - `src/presentation/runtime/host_runtime.lua -> src/presentation/runtime/host.lua`
+  - `src/presentation/runtime/host_runtime/ -> src/presentation/runtime/host/`
+  - `src/presentation/runtime/ui_view_service.lua -> src/presentation/runtime/view_service.lua`
+  - `src/presentation/runtime/ui_view_service/ -> src/presentation/runtime/view_service/`
+  - `src/presentation/view/widgets/ui_choice.lua -> src/presentation/view/widgets/choice.lua`
+  - `src/presentation/view/widgets/ui_modal_presenter.lua -> src/presentation/view/widgets/modal_presenter.lua`
+  - `src/presentation/view/widgets/ui_panel.lua -> src/presentation/view/widgets/panel.lua`
+  - `src/presentation/view/widgets/ui_panel_presenter.lua -> src/presentation/view/widgets/panel_presenter.lua`
+  - `src/presentation/view/widgets/ui_panel_player_slots.lua -> src/presentation/view/widgets/panel_player_slots.lua`
+  - `src/presentation/view/widgets/ui_panel_cash_delta.lua -> src/presentation/view/widgets/panel_cash_delta.lua`
+  - `src/presentation/view/widgets/ui_turn_effects.lua -> src/presentation/view/widgets/turn_effects.lua`
+  - `src/presentation/view/render/status_3_d_service.lua -> src/presentation/view/render/status3d.lua`
+  - `src/presentation/view/render/status3d_service/ -> src/presentation/view/render/status3d/`
+- **reference_surface**:
+  - 静态与内联 `require(...)`：`src/`, `tests/`, `docs/architecture/`, `.agents/`
+  - `package.loaded[...]` / monkey patch target：`tests/suites/domain/market.lua`, `tests/suites/gameplay/gameplay.lua` 等 suite 与 `tests/TestSupport.lua`
+  - guard / rule roots：`tests/internal/dep_rules.lua`, `tests/internal/legacy_path_guard.lua`
+  - 文档示例：`docs/architecture/*.md`, `.agents/*.md`
+- **work_log**:
+  - 确认全部目标路径当前不存在，无命名冲突。
+  - 明确 `src/presentation/runtime/presentation_ports.lua` 保持原名，仅其目录 `presentation_ports/` 重命名为 `ports/`。
+  - 确认 Wave 2 可按 `T2/T3/T4/T5` 并行拆分，`T6` 仍依赖 `T5` 先完成。
+- **files_touched**: `.agents/swarm_plan.md`
+- **gotchas**:
+  - `status3d_service/` 目录与 `status_3_d_service.lua` 主文件需要同波切换，避免内部 require 短暂断裂。
+  - `presentation_ports.lua` 与 `presentation_ports/` 仅一处改名，引用校验时必须允许顶层 bundle 文件继续存在。
 
 ### T2: 执行 `choice` / `choices` 集群重命名
 - **depends_on**: [T1]
