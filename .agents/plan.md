@@ -13,11 +13,11 @@
 ## 进度
 
 - [x] (2026-03-08 12:10Z) 已冻结第一周目标：只做 `market_view` 拆分、`ui_panel_presenter` 拆分、`market_buy` descriptor 契约强化。
-- [ ] 基线验证：记录当前目标文件行数，运行市场与 UI 相关 suite，确认改动起点。
-- [ ] M1：拆分 `src/presentation/view/render/market_view.lua`，提取槽位渲染与控件状态模块，保持原入口函数不变。
-- [ ] M2：拆分 `src/presentation/view/widgets/ui_panel_presenter.lua`，提取玩家槽位与现金变化模块，保持 `refresh()` 入口不变。
-- [ ] M3：扩展 choice descriptor 契约，让 `market_buy` 支持 `normalize_meta`、`meta_validator`、`normalize_action` 这类轻量钩子，并补测试。
-- [ ] M4：运行回归、同步本文档的“结果与复盘”，确认第一周工作可以从当前工作树无歧义继续推进。
+- [x] (2026-03-08 12:16Z) 基线验证完成：目标文件行数与计划一致，`presentation_ui` / `domain.market` suite 起点均通过。
+- [x] (2026-03-08 12:24Z) M1 完成：`market_view.lua` 收口为薄入口，新增 `market_view_slots.lua` 与 `market_view_controls.lua`，外部入口与行为保持不变。
+- [x] (2026-03-08 12:31Z) M2 完成：`ui_panel_presenter.lua` 收口为 role 级编排入口，新增 `ui_panel_player_slots.lua` 与 `ui_panel_cash_delta.lua`。
+- [x] (2026-03-08 12:35Z) M3 完成：choice descriptor 支持 `normalize_meta` / `meta_validator` / `normalize_action`，`market_buy` 与 `market_vehicle_replace` 接入，相关测试补齐。
+- [x] (2026-03-08 12:37Z) M4 完成：`presentation_ui`、`domain.market`、`gameplay` 与 `lua tests/regression.lua` 全部通过，本文已同步为真实结果。
 
 ## 意外与发现
 
@@ -26,6 +26,10 @@
 市场 choice 的分页字段已经是显式字段，而不是靠 `meta` 临时兜底。`src/core/choice/choice_contract.lua` 已经列出 `active_tab`、`page_index`、`page_count`，`src/game/systems/market/application/choice_session.lua` 也已经显式维护它们。因此本周不再做“把分页状态从 `meta` 拿出来”这类工作。
 
 Choice 体系也不是零契约状态。`src/game/systems/choices/choice_registry.lua` 已支持 `required_meta`，`src/game/flow/intent/intent_dispatcher.lua` 会在 `open_choice` 时检查 `meta` 必填项。本周要做的是把这条链路从“只检查字段存在”增强到“可归一化、可验证、可在 resolver 前处理 action”。
+
+市场 UI 的 companion 文件不能缓存 `market_cfg` 快照。`tests/suites/presentation/presentation_ui.lua` 里有通过 `package.loaded["src.presentation.view.render.market_view"] = nil` 再热重载主文件的用例，如果 companion 在 `require` 时把 `market_cfg` 建成静态索引，会让 `market_enabled=false` 相关断言读到旧配置。实施时已改成按调用读取配置。
+
+`market_buy` 的 `normalize_action` 不能越过 `choice_resolver` 现有的“非法 option 保持 pending choice”语义。若在 normalizer 里直接校验商品存在性，会把原本应该记录 `invalid choice option` 的拒绝流打成 hard error。最终实现只负责数值归一化，把 option membership 继续留给 resolver。
 
 ## 决策日志
 
@@ -41,11 +45,21 @@ Choice 体系也不是零契约状态。`src/game/systems/choices/choice_registr
 理由：它虽然不小，但职责单一、调用稳定、测试覆盖相对充分，当前收益明显低于 `market_view` 与 `ui_panel_presenter`。
 日期/作者：2026-03-08 / Codex
 
+决策：`market_view_slots.lua` 不在模块加载时缓存 `market_cfg` / `items_cfg` 索引。
+理由：现有 presentation 测试会只重载 `market_view.lua` 来验证 `market_enabled=false` 过滤行为，companion 若缓存配置会与测试和运行时热更新预期冲突。
+日期/作者：2026-03-08 / Codex
+
+决策：`market_buy.normalize_action` 只做 `option_id` 数值归一化，不提前校验 option 是否属于当前 choice。
+理由：resolver 现有职责已经覆盖“非法 option 保持 pending choice 并记录 warn”；把这个语义前移到 normalizer 会改变已有行为和测试预期。
+日期/作者：2026-03-08 / Codex
+
 ## 结果与复盘
 
-第一周工作尚未实施，因此本节先写成功标准，实施后必须改成实际结果。成功标准不是“文件看起来更小”，而是三件事实同时成立：一，`market_view.lua` 与 `ui_panel_presenter.lua` 成为薄入口；二，市场弹窗和玩家面板的现有行为无回归；三，`market_buy` 的非法输入在更靠外的边界被拒绝，并有明确测试证明。
+第一周工作已经完成，结果满足最初定义的三个目标。其一，`src/presentation/view/render/market_view.lua` 已缩成 76 行薄入口，槽位渲染和控件状态分别下沉到 `market_view_slots.lua` 与 `market_view_controls.lua`，`market_modal_renderer.lua` 和 `ui_view_service.lua` 的调用方式未改。其二，`src/presentation/view/widgets/ui_panel_presenter.lua` 已缩成 134 行 role 级编排入口，玩家槽位渲染与现金变化状态机分别下沉到 `ui_panel_player_slots.lua` 与 `ui_panel_cash_delta.lua`，`refresh(state, ui_model, deps)` 签名保持不变。其三，`choice_registry` / `intent_dispatcher` / `choice_resolver` 现在支持 descriptor 级归一化与验证钩子，`market_buy` 会在 `open_choice` 阶段提前拒绝未知 `player_id`，并在 `resolve` 早期把字符串 `option_id` 归一化为整数。
 
-如果周中发现拆分后反而引入额外重复，允许收回某个 companion 文件，但必须把原因记录到“决策日志”，并同步修改“工作计划”和“具体步骤”，避免后来者按照失效路径继续拆。
+验收结果也符合预期。`lua -e '...presentation_ui...'` 继续通过，说明市场弹窗打开、翻页、页签切换、关闭、玩家面板头像与现金变化提示都没有回归。`lua -e '...domain.market..., ...gameplay.gameplay...'` 通过，说明 market 领域逻辑与 gameplay 主流程兼容新的 descriptor 钩子。最终 `lua tests/regression.lua` 输出 `All regression checks passed (384)`，并继续包含 `dep_rules ok`、`legacy_path_guard ok`、`tick ok`。
+
+这轮实施最大的经验是：UI companion 可以拆，但不能把测试依赖的热重载语义和现有 resolver 失败语义一起“顺手优化”掉。后续如果继续拆别的 presentation 热点，优先保留现有入口与运行时副作用，只抽离内部编排。
 
 ## 背景与导读
 
@@ -156,6 +170,25 @@ Choice 相关逻辑主要在 `src/game/systems/choices/` 和 `src/game/flow/inte
 
 本周预计新增但不一定全部保留的 companion 文件是：`src/presentation/view/render/market_view_slots.lua`、`src/presentation/view/render/market_view_controls.lua`、`src/presentation/view/widgets/ui_panel_player_slots.lua`、`src/presentation/view/widgets/ui_panel_cash_delta.lua`，以及仅在确有必要时新增的 `src/presentation/view/widgets/ui_panel_role_view.lua`。
 
+本周实际产物如下：
+
+    76 src/presentation/view/render/market_view.lua
+   205 src/presentation/view/render/market_view_slots.lua
+   128 src/presentation/view/render/market_view_controls.lua
+   134 src/presentation/view/widgets/ui_panel_presenter.lua
+   118 src/presentation/view/widgets/ui_panel_player_slots.lua
+    98 src/presentation/view/widgets/ui_panel_cash_delta.lua
+   127 src/game/flow/intent/intent_dispatcher.lua
+    60 src/game/systems/choices/choice_registry.lua
+   138 src/game/systems/choices/choice_handlers/market_choice_handler.lua
+
+终验证据如下：
+
+    All regression checks passed (384)
+    dep_rules ok
+    legacy_path_guard ok
+    tick ok
+
 ## 接口与依赖
 
 第一周结束时，Choice descriptor 至少应支持以下稳定结构：`execute(game, choice, action)` 仍然必选；`required_meta` 仍然是字符串数组；新增的 `normalize_meta(game, meta, choice_spec)` 返回归一化后的 `meta` 表；新增的 `meta_validator(game, meta, choice_spec)` 在发现非法输入时直接抛出带上下文的错误；新增的 `normalize_action(game, choice, action)` 返回归一化后的 `action` 表。`src/game/systems/choices/choice_registry.lua` 负责接纳这些字段，`src/game/flow/intent/intent_dispatcher.lua` 负责在 open choice 时调用前两个钩子，`src/game/systems/choices/choice_resolver.lua` 负责在 resolve 早期调用 `normalize_action`。
@@ -165,3 +198,5 @@ UI 侧不新增公共接口。`src/presentation/view/render/market_view.lua` 和
 所有数值解析继续统一走 `src.core.utils.number_utils`。这是仓库约束，不允许为了图省事重新写 `tonumber` 或 `type(x) == "number"` 分支。
 
 更新记录（2026-03-08 12:10Z）：清空旧的 3.3 轮降线计划，改写为只覆盖第一周的可执行计划。这样做是因为 `.agents/research.md` 已切换为“下一步行动建议”，而旧计划仍围绕已过时的 LOC 压缩目标，会误导后续实施。
+
+更新记录（2026-03-08 12:37Z）：完成第一周实施并把文档改成真实状态，补充了 companion 热重载约束、`market_buy` normalizer 边界、实际行数与全量回归结果。这样做是为了让后来者只看当前工作树和本文件，就能无歧义地继续后续周计划。

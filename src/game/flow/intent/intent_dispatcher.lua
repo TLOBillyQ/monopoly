@@ -26,18 +26,31 @@ local function _validate_choice_meta(game, choice_spec)
   local registries = game and game.registries or nil
   local choice_registry = registries and registries.choices or nil
   if type(choice_registry) ~= "table" or type(choice_registry.descriptor_for) ~= "function" then
-    return
+    return nil
   end
   local descriptor = choice_registry:descriptor_for(choice_spec.kind)
+  if descriptor and descriptor.normalize_meta ~= nil then
+    local normalized_meta = descriptor.normalize_meta(game, choice_spec.meta, choice_spec)
+    if normalized_meta ~= nil then
+      choice_spec.meta = normalized_meta
+    end
+  end
   local required_meta = descriptor and descriptor.required_meta or nil
   if type(required_meta) ~= "table" or #required_meta == 0 then
-    return
+    if descriptor and descriptor.meta_validator ~= nil then
+      descriptor.meta_validator(game, choice_spec.meta, choice_spec)
+    end
+    return descriptor
   end
   local meta = choice_spec.meta
   assert(type(meta) == "table", tostring(choice_spec.kind) .. " requires meta")
   for _, key in ipairs(required_meta) do
     assert(meta[key] ~= nil, tostring(choice_spec.kind) .. " requires meta." .. tostring(key))
   end
+  if descriptor and descriptor.meta_validator ~= nil then
+    descriptor.meta_validator(game, meta, choice_spec)
+  end
+  return descriptor
 end
 
 function intent_dispatcher.open_choice(game, choice_spec, opts)

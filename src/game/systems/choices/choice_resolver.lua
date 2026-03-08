@@ -201,6 +201,13 @@ function choice_resolver.resolve(game, choice, action)
     end
   end
 
+  if descriptor.normalize_action ~= nil then
+    local normalized_action = descriptor.normalize_action(game, choice, action)
+    if normalized_action ~= nil then
+      action = normalized_action
+    end
+  end
+
   if not _option_exists(choice, action.option_id) then
     logger.warn("invalid choice option:", tostring(choice.kind), tostring(action.option_id))
     return { status = "rejected", stay = true }

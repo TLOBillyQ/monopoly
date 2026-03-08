@@ -543,6 +543,44 @@ local function _test_intent_dispatcher_rejects_missing_required_choice_meta()
   assert(g.turn.pending_choice == nil, "open_choice should not mutate pending_choice on schema failure")
 end
 
+local function _test_intent_dispatcher_normalizes_market_choice_meta()
+  local g = _new_game()
+  local entry = intent_dispatcher.open_choice(g, {
+    kind = "market_buy",
+    title = "黑市",
+    options = { { id = 2001, label = "A" } },
+    meta = {
+      player_id = tostring(g:current_player().id),
+      active_tab = "vehicle",
+      page_index = "2",
+      page_count = "3",
+    },
+  }, {})
+
+  assert(entry.meta.player_id == g:current_player().id, "market choice meta should normalize player_id")
+  assert(entry.owner_role_id == g:current_player().id, "market choice should backfill owner_role_id from meta")
+  assert(entry.active_tab == "item", "market choice should normalize unsupported tab to item")
+  assert(entry.page_index == 2, "market choice should normalize page_index")
+  assert(entry.page_count == 3, "market choice should normalize page_count")
+end
+
+local function _test_intent_dispatcher_rejects_unknown_market_choice_player()
+  local g = _new_game()
+  local ok, err = pcall(function()
+    intent_dispatcher.open_choice(g, {
+      kind = "market_buy",
+      title = "黑市",
+      options = { { id = 2001, label = "A" } },
+      meta = { player_id = 999999 },
+    }, {})
+  end)
+
+  assert(ok == false, "open_choice should reject unknown market player")
+  assert(tostring(err):find("missing player: 999999", 1, true) ~= nil,
+    "open_choice should report missing market player at dispatcher boundary")
+  assert(g.turn.pending_choice == nil, "dispatcher validation failure should not mutate pending choice")
+end
+
 local function _test_turn_start_logs_phase_event_to_event_feed()
   local g = _new_game()
   logger.clear()
@@ -607,6 +645,42 @@ local function _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not()
   local tax_text = logger.get_text_by_level("event")
   assert(string.find(tax_text, "跳过选择", 1, true) == nil,
     "tax cancel fallback should not log skip-choice event")
+end
+
+local function _test_choice_resolver_normalizes_market_buy_action_before_execute()
+  local g = _new_game()
+  local p = g:current_player()
+  local choice = {
+    id = 901,
+    kind = "market_buy",
+    route_key = "market",
+    owner_role_id = p.id,
+    options = { { id = 2001, label = "免费卡" } },
+    meta = { player_id = p.id },
+  }
+  g.turn.pending_choice = choice
+
+  local called_product_id = nil
+  local descriptor = g.registries.choices:descriptor_for("market_buy")
+  support.with_patches({
+    {
+      target = descriptor,
+      key = "execute",
+      value = function(_, _, action)
+        called_product_id = action and action.option_id or nil
+        return { status = "resolved", stay = false }
+      end,
+    },
+  }, function()
+    choice_resolver.resolve(g, choice, {
+      type = "choice_select",
+      choice_id = choice.id,
+      option_id = "2001",
+      actor_role_id = p.id,
+    })
+  end)
+
+  assert(called_product_id == 2001, "market buy should normalize string option_id before execute")
 end
 
 local function _test_end_turn_logs_phase_event_to_event_feed()
@@ -2561,8 +2635,11 @@ return {
   _test_dispatch_validator_accepts_ui_state_snapshot,
     _test_intent_dispatcher_sets_choice_route_metadata,
     _test_intent_dispatcher_rejects_missing_required_choice_meta,
+    _test_intent_dispatcher_normalizes_market_choice_meta,
+    _test_intent_dispatcher_rejects_unknown_market_choice_player,
     _test_turn_start_logs_phase_event_to_event_feed,
   _test_intent_dispatcher_logs_waiting_choice_event,
+  _test_choice_resolver_normalizes_market_buy_action_before_execute,
   _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not,
   _test_end_turn_logs_phase_event_to_event_feed,
   _test_clear_obstacles_zero_does_not_log_event_noise,

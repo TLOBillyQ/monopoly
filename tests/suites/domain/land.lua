@@ -157,6 +157,10 @@ local function _test_choice_registry_registers_descriptors_with_cancel_metadata(
   local item_phase_descriptor = registry:descriptor_for("item_phase_choice")
   assert(item_phase_descriptor and item_phase_descriptor.cancel and item_phase_descriptor.cancel.mode == "finish_item_phase",
     "item phase descriptor should delegate cancel cleanup to resolver")
+  local market_buy_descriptor = registry:descriptor_for("market_buy")
+  assert(type(market_buy_descriptor.normalize_meta) == "function", "market buy should expose meta normalizer")
+  assert(type(market_buy_descriptor.meta_validator) == "function", "market buy should expose meta validator")
+  assert(type(market_buy_descriptor.normalize_action) == "function", "market buy should expose action normalizer")
   _assert_eq(tax_descriptor.required_meta[1], "player_id", "tax descriptor should expose required meta")
   _assert_eq(item_phase_descriptor.required_meta[1], "player_id", "item phase should expose required meta")
   _assert_eq(item_phase_descriptor.required_meta[2], "phase", "item phase should require phase")
