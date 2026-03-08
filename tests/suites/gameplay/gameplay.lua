@@ -564,6 +564,43 @@ local function _test_intent_dispatcher_normalizes_market_choice_meta()
   assert(entry.page_count == 3, "market choice should normalize page_count")
 end
 
+local function _test_intent_dispatcher_normalizes_item_choice_meta()
+  local g = _new_game()
+  local entry = intent_dispatcher.open_choice(g, {
+    kind = "item_phase_choice",
+    route_key = "base_inline",
+    title = "行动前：使用道具？",
+    options = { { id = gameplay_rules.item_ids.remote_dice, label = "遥控骰子" } },
+    meta = {
+      player_id = tostring(g:current_player().id),
+      phase = "pre_action",
+    },
+  }, {})
+
+  assert(entry.meta.player_id == g:current_player().id, "item phase choice should normalize player_id")
+  assert(entry.owner_role_id == g:current_player().id, "item phase choice should backfill owner_role_id from meta")
+end
+
+local function _test_intent_dispatcher_normalizes_landing_optional_effect_meta()
+  local g = _new_game()
+  local _, tile_ref = _first_land_tile(g.board)
+  local entry = intent_dispatcher.open_choice(g, {
+    kind = "landing_optional_effect",
+    title = "请选择",
+    options = { { id = "buy_land", label = "购买地块" } },
+    meta = {
+      player_id = tostring(g:current_player().id),
+      tile_id = tostring(tile_ref.id),
+      effect_ids = { "buy_land" },
+      move_result = { next_state = "wait_choice" },
+    },
+  }, {})
+
+  assert(entry.meta.player_id == g:current_player().id, "landing optional should normalize player_id")
+  assert(entry.meta.tile_id == tile_ref.id, "landing optional should normalize tile_id")
+  assert(entry.owner_role_id == g:current_player().id, "landing optional should backfill owner_role_id")
+end
+
 local function _test_intent_dispatcher_rejects_unknown_market_choice_player()
   local g = _new_game()
   local ok, err = pcall(function()
@@ -578,6 +615,27 @@ local function _test_intent_dispatcher_rejects_unknown_market_choice_player()
   assert(ok == false, "open_choice should reject unknown market player")
   assert(tostring(err):find("missing player: 999999", 1, true) ~= nil,
     "open_choice should report missing market player at dispatcher boundary")
+  assert(g.turn.pending_choice == nil, "dispatcher validation failure should not mutate pending choice")
+end
+
+local function _test_intent_dispatcher_rejects_unknown_landing_optional_effect_tile()
+  local g = _new_game()
+  local ok, err = pcall(function()
+    intent_dispatcher.open_choice(g, {
+      kind = "landing_optional_effect",
+      title = "请选择",
+      options = { { id = "buy_land", label = "购买地块" } },
+      meta = {
+        player_id = g:current_player().id,
+        tile_id = 999999,
+        effect_ids = { "buy_land" },
+      },
+    }, {})
+  end)
+
+  assert(ok == false, "open_choice should reject unknown landing tile")
+  assert(tostring(err):find("missing tile: 999999", 1, true) ~= nil,
+    "open_choice should report missing tile at dispatcher boundary")
   assert(g.turn.pending_choice == nil, "dispatcher validation failure should not mutate pending choice")
 end
 
@@ -681,6 +739,47 @@ local function _test_choice_resolver_normalizes_market_buy_action_before_execute
   end)
 
   assert(called_product_id == 2001, "market buy should normalize string option_id before execute")
+end
+
+local function _test_choice_resolver_normalizes_roadblock_action_before_execute()
+  local g = _new_game()
+  local p = g:current_player()
+  local choice = {
+    id = 902,
+    kind = "roadblock_target",
+    route_key = "target",
+    owner_role_id = p.id,
+    uses_target_picker = true,
+    target_picker_owner_role_id = p.id,
+    options = { { id = 3, label = "上海路" } },
+    meta = {
+      player_id = p.id,
+      item_id = gameplay_rules.item_ids.roadblock,
+    },
+  }
+  g.turn.pending_choice = choice
+
+  local called_target_index = nil
+  local descriptor = g.registries.choices:descriptor_for("roadblock_target")
+  support.with_patches({
+    {
+      target = descriptor,
+      key = "execute",
+      value = function(_, _, action)
+        called_target_index = action and action.option_id or nil
+        return { status = "resolved", stay = false }
+      end,
+    },
+  }, function()
+    choice_resolver.resolve(g, choice, {
+      type = "choice_select",
+      choice_id = choice.id,
+      option_id = "3",
+      actor_role_id = p.id,
+    })
+  end)
+
+  assert(called_target_index == 3, "roadblock target should normalize string option_id before execute")
 end
 
 local function _test_end_turn_logs_phase_event_to_event_feed()
@@ -2636,10 +2735,14 @@ return {
     _test_intent_dispatcher_sets_choice_route_metadata,
     _test_intent_dispatcher_rejects_missing_required_choice_meta,
     _test_intent_dispatcher_normalizes_market_choice_meta,
+    _test_intent_dispatcher_normalizes_item_choice_meta,
+    _test_intent_dispatcher_normalizes_landing_optional_effect_meta,
     _test_intent_dispatcher_rejects_unknown_market_choice_player,
+    _test_intent_dispatcher_rejects_unknown_landing_optional_effect_tile,
     _test_turn_start_logs_phase_event_to_event_feed,
   _test_intent_dispatcher_logs_waiting_choice_event,
   _test_choice_resolver_normalizes_market_buy_action_before_execute,
+  _test_choice_resolver_normalizes_roadblock_action_before_execute,
   _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not,
   _test_end_turn_logs_phase_event_to_event_feed,
   _test_clear_obstacles_zero_does_not_log_event_noise,

@@ -2,6 +2,7 @@ local number_utils = require("src.core.utils.number_utils")
 
 local choice_contract = {}
 
+-- Handler-specific payload like phase, queue, effect_ids, and move_result stays in meta.
 choice_contract.explicit_fields = {
   "route_key",
   "requires_confirm",

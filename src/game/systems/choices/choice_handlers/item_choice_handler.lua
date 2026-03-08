@@ -13,6 +13,56 @@ local item_use_broadcast = require("src.game.systems.items.item_use_broadcast")
 local item_choice_handler = {}
 local item_ids = gameplay_rules.item_ids
 
+local function _copy_table(source)
+  local out = {}
+  if type(source) ~= "table" then
+    return out
+  end
+  for key, value in pairs(source) do
+    out[key] = value
+  end
+  return out
+end
+
+local function _normalize_integer_field(meta, key, choice_kind)
+  if meta[key] == nil then
+    return
+  end
+  meta[key] = assert(
+    number_utils.to_integer(meta[key]),
+    tostring(choice_kind) .. " requires numeric meta." .. tostring(key)
+  )
+end
+
+local function _normalize_integer_list(values, field_name, choice_kind)
+  assert(type(values) == "table", tostring(choice_kind) .. " requires table meta." .. tostring(field_name))
+  local normalized = {}
+  for index, value in ipairs(values) do
+    normalized[index] = assert(
+      number_utils.to_integer(value),
+      tostring(choice_kind) .. " requires numeric meta." .. tostring(field_name) .. "[" .. tostring(index) .. "]"
+    )
+  end
+  return normalized
+end
+
+local function _normalize_choice_action_option_id(choice_kind, action)
+  local normalized_action = _copy_table(action)
+  normalized_action.option_id = assert(
+    number_utils.to_integer(normalized_action.option_id),
+    tostring(choice_kind) .. " requires numeric action.option_id"
+  )
+  return normalized_action
+end
+
+local function _validate_item_player(game, choice_kind, meta)
+  return assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
+end
+
+local function _validate_item_target(game, field_name, meta)
+  return assert(game:find_player_by_id(meta[field_name]), "missing " .. tostring(field_name) .. ": " .. tostring(meta[field_name]))
+end
+
 local function _finish_item_target_choice(helpers, game)
   helpers.finish_active_item_phase(game)
   return helpers.finish_choice(game, false)
@@ -51,10 +101,9 @@ function item_choice_handler.build(helpers)
   end
 
   local function _handle_demolish_target(game, choice, action)
-    local index = number_utils.to_integer(action.option_id)
+    local index = action.option_id
     local meta = choice.meta
-    local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
-    assert(index ~= nil, "missing demolish index")
+    local player = _validate_item_player(game, choice.kind, meta)
     _consume_if_needed(player, meta.item_id, meta.item_preconsumed)
     local result = demolish.apply(game, player, index, {
       injure = meta.injure,
@@ -69,10 +118,9 @@ function item_choice_handler.build(helpers)
   end
 
   local function _handle_roadblock_target(game, choice, action)
-    local index = number_utils.to_integer(action.option_id)
+    local index = action.option_id
     local meta = choice.meta
-    local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
-    assert(index ~= nil, "missing roadblock index")
+    local player = _validate_item_player(game, choice.kind, meta)
     if not roadblock.is_ui_candidate(game, player, index) then
       logger.warn(player.name .. " 选择了无效的路障位置: " .. tostring(index))
       return { stay = true }
@@ -87,11 +135,10 @@ function item_choice_handler.build(helpers)
   end
 
   local function _handle_steal_item(game, choice, action)
-    local index = number_utils.to_integer(action.option_id)
+    local index = action.option_id
     local meta = choice.meta
-    local stealer = assert(game:find_player_by_id(meta.player_id), "missing stealer: " .. tostring(meta.player_id))
-    local target = assert(game:find_player_by_id(meta.target_id), "missing target: " .. tostring(meta.target_id))
-    assert(index ~= nil, "missing steal index")
+    local stealer = _validate_item_player(game, choice.kind, meta)
+    local target = _validate_item_target(game, "target_id", meta)
     local result = steal.steal_item_at_index(game, stealer, target, index)
     assert(result ~= nil, "missing steal result")
     intent_output_port.dispatch(game, result.intent or {})
@@ -100,8 +147,8 @@ function item_choice_handler.build(helpers)
 
   local function _handle_steal_prompt(game, choice, action)
     local meta = choice.meta
-    local stealer = assert(game:find_player_by_id(meta.player_id), "missing stealer: " .. tostring(meta.player_id))
-    local target = assert(game:find_player_by_id(meta.target_id), "missing target: " .. tostring(meta.target_id))
+    local stealer = _validate_item_player(game, choice.kind, meta)
+    local target = _validate_item_target(game, "target_id", meta)
     if target.eliminated then
       return finish_choice(game, false)
     end
@@ -131,11 +178,10 @@ function item_choice_handler.build(helpers)
   end
 
   local function _handle_item_target_player(game, choice, action)
-    local target_id = number_utils.to_integer(action.option_id)
+    local target_id = action.option_id
     local meta = choice.meta
-    local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
-    local item_id = assert(meta.item_id, "missing item_id")
-    assert(target_id ~= nil, "missing target_id")
+    local player = _validate_item_player(game, choice.kind, meta)
+    local item_id = meta.item_id
     local result = use_item(game, player, item_id, {
       target_id = target_id,
       item_preconsumed = meta.item_preconsumed == true,
@@ -148,10 +194,9 @@ function item_choice_handler.build(helpers)
   end
 
   local function _handle_remote_dice_value(game, choice, action)
-    local value = number_utils.to_integer(action.option_id)
+    local value = action.option_id
     local meta = choice.meta
-    local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
-    assert(value ~= nil, "missing dice value")
+    local player = _validate_item_player(game, choice.kind, meta)
     local dice_count = meta.dice_count or game:player_dice_count(player)
     _consume_if_needed(player, meta.item_id, meta.item_preconsumed)
     local result = remote_dice.apply(game, player, dice_count, value)
@@ -163,10 +208,9 @@ function item_choice_handler.build(helpers)
 
   local function _handle_item_phase_choice(game, choice, action)
     local meta = choice.meta
-    local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
+    local player = _validate_item_player(game, choice.kind, meta)
     local phase = meta.phase
-    local item_id = number_utils.to_integer(action.option_id)
-    assert(item_id ~= nil, "missing item_id")
+    local item_id = action.option_id
 
     local result = use_item(game, player, item_id)
     if type(result) == "table" and result.waiting then
@@ -188,39 +232,143 @@ function item_choice_handler.build(helpers)
     return finish_choice(game, false)
   end
 
+  local function _normalize_owner_meta(choice_kind, meta, choice_spec)
+    local normalized_meta = _copy_table(meta)
+    _normalize_integer_field(normalized_meta, "player_id", choice_kind)
+    choice_spec.owner_role_id = choice_spec.owner_role_id or normalized_meta.player_id
+    return normalized_meta
+  end
+
+  local function _normalize_target_picker_meta(choice_kind, meta, choice_spec)
+    local normalized_meta = _normalize_owner_meta(choice_kind, meta, choice_spec)
+    _normalize_integer_field(normalized_meta, "item_id", choice_kind)
+    choice_spec.target_picker_owner_role_id = choice_spec.target_picker_owner_role_id or normalized_meta.player_id
+    return normalized_meta
+  end
+
+  local function _normalize_item_phase_meta(game, meta, choice_spec)
+    local normalized_meta = _normalize_owner_meta(choice_spec.kind, meta, choice_spec)
+    assert(type(normalized_meta.phase) == "string" and normalized_meta.phase ~= "",
+      tostring(choice_spec.kind) .. " requires string meta.phase")
+    return normalized_meta
+  end
+
+  local function _validate_item_phase_meta(game, meta, choice_spec)
+    _validate_item_player(game, choice_spec.kind, meta)
+    assert(item_phase.is_enabled(meta.phase), tostring(choice_spec.kind) .. " requires enabled meta.phase")
+  end
+
+  local function _validate_item_owner_meta(game, meta, choice_spec)
+    _validate_item_player(game, choice_spec.kind, meta)
+  end
+
+  local function _normalize_steal_meta(game, meta, choice_spec)
+    local normalized_meta = _normalize_owner_meta(choice_spec.kind, meta, choice_spec)
+    _normalize_integer_field(normalized_meta, "target_id", choice_spec.kind)
+    return normalized_meta
+  end
+
+  local function _validate_steal_meta(game, meta, choice_spec)
+    _validate_item_player(game, choice_spec.kind, meta)
+    _validate_item_target(game, "target_id", meta)
+  end
+
+  local function _normalize_steal_prompt_meta(game, meta, choice_spec)
+    local normalized_meta = _normalize_steal_meta(game, meta, choice_spec)
+    normalized_meta.queue = _normalize_integer_list(normalized_meta.queue, "queue", choice_spec.kind)
+    _normalize_integer_field(normalized_meta, "index", choice_spec.kind)
+    return normalized_meta
+  end
+
+  local function _validate_steal_prompt_meta(game, meta, choice_spec)
+    _validate_steal_meta(game, meta, choice_spec)
+    assert(meta.queue[meta.index] ~= nil, tostring(choice_spec.kind) .. " requires meta.queue[meta.index]")
+  end
+
+  local function _normalize_item_target_meta(game, meta, choice_spec)
+    local normalized_meta = _normalize_owner_meta(choice_spec.kind, meta, choice_spec)
+    _normalize_integer_field(normalized_meta, "item_id", choice_spec.kind)
+    return normalized_meta
+  end
+
+  local function _normalize_remote_dice_meta(game, meta, choice_spec)
+    local normalized_meta = _normalize_item_target_meta(game, meta, choice_spec)
+    _normalize_integer_field(normalized_meta, "dice_count", choice_spec.kind)
+    return normalized_meta
+  end
+
+  local function _validate_remote_dice_meta(game, meta, choice_spec)
+    _validate_item_owner_meta(game, meta, choice_spec)
+    if meta.dice_count ~= nil then
+      assert(meta.dice_count >= 1, tostring(choice_spec.kind) .. " requires positive meta.dice_count")
+    end
+  end
+
   return {
     item_phase_choice = {
       required_meta = { "player_id", "phase" },
       cancel = { mode = "finish_item_phase" },
+      normalize_meta = _normalize_item_phase_meta,
+      meta_validator = _validate_item_phase_meta,
+      normalize_action = function(_, _, action)
+        return _normalize_choice_action_option_id("item_phase_choice", action)
+      end,
       execute = _handle_item_phase_choice,
     },
     demolish_target = {
       required_meta = { "player_id", "item_id" },
       cancel = { mode = "finish_active_item_phase" },
+      normalize_meta = _normalize_item_target_meta,
+      meta_validator = _validate_item_owner_meta,
+      normalize_action = function(_, _, action)
+        return _normalize_choice_action_option_id("demolish_target", action)
+      end,
       execute = _handle_demolish_target,
     },
     roadblock_target = {
       required_meta = { "player_id", "item_id" },
       cancel = { mode = "finish_active_item_phase" },
+      normalize_meta = _normalize_target_picker_meta,
+      meta_validator = _validate_item_owner_meta,
+      normalize_action = function(_, _, action)
+        return _normalize_choice_action_option_id("roadblock_target", action)
+      end,
       execute = _handle_roadblock_target,
     },
     steal_item = {
       required_meta = { "player_id", "target_id" },
       cancel = { mode = "finish_active_item_phase" },
+      normalize_meta = _normalize_steal_meta,
+      meta_validator = _validate_steal_meta,
+      normalize_action = function(_, _, action)
+        return _normalize_choice_action_option_id("steal_item", action)
+      end,
       execute = _handle_steal_item,
     },
     steal_prompt = {
       required_meta = { "player_id", "target_id", "queue", "index" },
+      normalize_meta = _normalize_steal_prompt_meta,
+      meta_validator = _validate_steal_prompt_meta,
       execute = _handle_steal_prompt,
     },
     item_target_player = {
       required_meta = { "player_id", "item_id" },
       cancel = { mode = "finish_active_item_phase" },
+      normalize_meta = _normalize_item_target_meta,
+      meta_validator = _validate_item_owner_meta,
+      normalize_action = function(_, _, action)
+        return _normalize_choice_action_option_id("item_target_player", action)
+      end,
       execute = _handle_item_target_player,
     },
     remote_dice_value = {
       required_meta = { "player_id", "item_id" },
       cancel = { mode = "finish_active_item_phase" },
+      normalize_meta = _normalize_remote_dice_meta,
+      meta_validator = _validate_remote_dice_meta,
+      normalize_action = function(_, _, action)
+        return _normalize_choice_action_option_id("remote_dice_value", action)
+      end,
       execute = _handle_remote_dice_value,
     },
   }

@@ -125,6 +125,10 @@ local function _test_choice_contract_copies_explicit_fields_once()
     active_tab = "skin",
     page_index = 2,
     page_count = 3,
+    phase = "pre_action",
+    queue = { 2, 3 },
+    effect_ids = { "buy_land" },
+    move_result = { next_state = "wait_choice" },
   }
   local target = {}
   choice_contract.copy_explicit_fields(source, target)
@@ -132,6 +136,10 @@ local function _test_choice_contract_copies_explicit_fields_once()
   _assert_eq(target.owner_role_id, 8, "contract should copy owner_role_id")
   _assert_eq(target.target_picker_owner_role_id, 9, "contract should copy target picker owner")
   _assert_eq(target.page_count, 3, "contract should copy market paging fields")
+  _assert_eq(target.phase, nil, "contract should keep phase in meta")
+  _assert_eq(target.queue, nil, "contract should keep queue in meta")
+  _assert_eq(target.effect_ids, nil, "contract should keep effect_ids in meta")
+  _assert_eq(target.move_result, nil, "contract should keep move_result in meta")
 end
 
 local function _test_output_state_adapter_runtime_variant_stays_off_legacy_state()
@@ -231,6 +239,7 @@ return {
     { name = "turn_action_port_normalize_auto_intent_contract", run = _test_turn_action_port_normalize_auto_intent_contract },
     { name = "turn_action_port_normalize_auto_intent_rejects_missing_actor", run = _test_turn_action_port_normalize_auto_intent_rejects_missing_actor },
     { name = "gameplay_loop_clock_contract_split_sources", run = _test_gameplay_loop_clock_contract_split_sources },
+    { name = "choice_contract_copies_explicit_fields_once", run = _test_choice_contract_copies_explicit_fields_once },
     { name = "gameplay_loop_output_port_defaults_to_ui_runtime_only", run = _test_gameplay_loop_output_port_defaults_to_ui_runtime_only },
     { name = "gameplay_loop_output_port_override_precedence", run = _test_gameplay_loop_output_port_override_precedence },
     { name = "bankruptcy_feedback_port_defaults_to_no_op_port", run = _test_bankruptcy_feedback_port_defaults_to_no_op_port },
