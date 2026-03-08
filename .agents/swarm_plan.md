@@ -1,339 +1,133 @@
-# Plan: `src/` 冗余路径重命名
+# Plan: `src/` 第二轮命名收口盘点
 
 ## Summary
 
-目标是做一轮“保守但彻底”的命名收口：只改 `src/` 下明显重复父目录语义的目录和文件名，统一保持完整英文单词，不做缩写，不保留旧路径兼容桥，仓库内一次性原子切换。
+这一轮继续做“更短但不丢语义”的命名收口，只覆盖你已选定的“基础层”范围：`presentation/input`、`game/core/runtime`、`game/flow/turn`、`presentation/view/render`。原则是删除父目录已经提供的重复前缀，保留仍然承担职责辨识的词，比如 `policy`、`ports`、`controls`、`slots`。
 
-本轮只覆盖这些热点：
+冻结后的候选映射如下：
 
-- `core/choice`：去掉文件名前缀 `choice_`
-  - `choice_contract.lua -> contract.lua`
-  - `choice_route_policy.lua -> route_policy.lua`
-- `game/systems/choices`：去掉文件名前缀 `choice_`，并把 `choice_handlers/` 收口成 `handlers/`
-  - `choice_registry.lua -> registry.lua`
-  - `choice_resolver.lua -> resolver.lua`
-  - `choice_handlers/ -> handlers/`
-  - `item_choice_handler.lua -> item.lua`
-  - `land_choice_handler.lua -> land.lua`
-  - `market_choice_handler.lua -> market.lua`
-  - `optional_effect_handler.lua -> optional_effect.lua`
-- `presentation/input`：去掉 `ui_` 和 `dispatcher/flow` 重复
-  - `ui_intent_dispatcher.lua -> intent_dispatcher.lua`
-  - `ui_intent_dispatcher/ -> intent_dispatch/`
-  - `game_action_dispatcher.lua -> game_action.lua`
-  - `view_command_dispatcher.lua -> view_command.lua`
-  - `item_phase_ask_flow.lua -> item_phase_ask.lua`
-  - `pre_confirm_flow.lua -> pre_confirm.lua`
-- `presentation/runtime`：只去掉重复目录名，保留 `*_ports.lua` 语义
-  - `presentation_ports/ -> ports/`
-  - `presentation_ports.lua` 保持不改
-  - `host_runtime.lua -> host.lua`
-  - `host_runtime/ -> host/`
-  - `ui_view_service.lua -> view_service.lua`
-  - `ui_view_service/ -> view_service/`
-- `presentation/view/widgets`：去掉 `ui_` 前缀
-  - `ui_choice.lua -> choice.lua`
-  - `ui_modal_presenter.lua -> modal_presenter.lua`
-  - `ui_panel.lua -> panel.lua`
-  - `ui_panel_presenter.lua -> panel_presenter.lua`
-  - `ui_panel_player_slots.lua -> panel_player_slots.lua`
-  - `ui_panel_cash_delta.lua -> panel_cash_delta.lua`
-  - `ui_turn_effects.lua -> turn_effects.lua`
-- `presentation/view/render`：统一 `status3d` 命名
-  - `status_3_d_service.lua -> status3d.lua`
-  - `status3d_service/ -> status3d/`
+- `src/presentation/input/ui_canvas_coordinator.lua -> canvas_coordinator.lua`
+- `src/presentation/input/ui_choice_route_policy.lua -> choice_route_policy.lua`
+- `src/presentation/input/ui_event_bindings.lua -> event_bindings.lua`
+- `src/presentation/input/ui_event_intents.lua -> event_intents.lua`
+- `src/presentation/input/ui_event_state.lua -> event_state.lua`
+- `src/presentation/input/ui_input_lock_policy.lua -> input_lock_policy.lua`
+- `src/presentation/input/ui_modal_state_coordinator.lua -> modal_state_coordinator.lua`
+- `src/presentation/input/ui_role_control_lock_policy.lua -> role_control_lock_policy.lua`
+- `src/presentation/input/ui_touch_policy.lua -> touch_policy.lua`
 
-## Important Changes
+- `src/game/core/runtime/game_state_players.lua -> players.lua`
+- `src/game/core/runtime/game_state_tiles.lua -> tiles.lua`
+- `src/game/core/runtime/game_state_turn.lua -> turn.lua`
 
-- 所有 `require("src....")`、内联 `require(...)`、`package.loaded[...]`、测试里的 monkey patch 目标都必须同步改到新路径，不能只改顶部 `local x = require(...)`。
-- `tests/internal/dep_rules.lua` 中针对 `src/presentation/runtime/ports` 的 `root` 必须随目录改成 `src/presentation/runtime/ports`；这是目录 rename 的同波依赖，不放到最后。
-- `tests/internal/legacy_path_guard.lua` 不能提前加新“退休路径”；必须在所有源码、测试、文档都切完后，同一波把本次旧路径加入 retired 列表，防止中途把工作树锁死。
-- `docs/architecture/boundaries.md`、`docs/architecture/layer-model.md`、`docs/architecture/health_signals.md`、`.agents/plan.md`、`.agents/research.md` 都要同步更新路径示例和说明。
-- `presentation_ports.lua` 保持原名，不改成 `ports.lua`。原因是仓库已把它作为 `*_ports.lua` 的 canonical bundle 示例，改名会和当前命名语义冲突。
+- `src/game/flow/turn/gameplay_loop.lua -> loop.lua`
+- `src/game/flow/turn/gameplay_loop_ports.lua -> loop_ports.lua`
+- `src/game/flow/turn/gameplay_loop_runtime.lua -> loop_runtime.lua`
+- `src/game/flow/turn/gameplay_loop_tick_flow.lua -> loop_tick_flow.lua`
+- `src/game/flow/turn/gameplay_loop_tick_steps.lua -> loop_tick_steps.lua`
+- `src/game/flow/turn/gameplay_loop_ui_sync_defaults.lua -> loop_ui_sync_defaults.lua`
+
+- `src/presentation/view/render/market_view.lua -> market.lua`
+- `src/presentation/view/render/market_view_controls.lua -> market_controls.lua`
+- `src/presentation/view/render/market_view_slots.lua -> market_slots.lua`
+
+- `src/presentation/view/render/action_anim_registry.lua -> anim_registry.lua`
+- `src/presentation/view/render/action_anim_handlers.lua -> anim_handlers.lua`
+- `src/presentation/view/render/action_anim_dice.lua -> anim_dice.lua`
+- `src/presentation/view/render/action_anim_units.lua -> anim_units.lua`
+- `src/presentation/view/render/action_anim_tip_text.lua -> anim_tip_text.lua`
+- `src/presentation/view/render/action_anim_overlay_compute.lua -> anim_overlay_compute.lua`
+- `src/presentation/view/render/action_anim_overlay_runtime.lua -> anim_overlay_runtime.lua`
+- `src/presentation/view/render/action_anim_unit_overlay.lua -> anim_unit_overlay.lua`
+
+明确排除本轮：`turn_*` 家族、`presentation/runtime/ui_*`、`presentation/model/ui_*`、`action_anim.lua` 主入口。这些名字虽然还能更短，但已经承担稳定入口语义，应单开第三轮而不是并入本轮。
 
 ## Dependency Graph
 
-```text
-T1 ──┬── T2 ──┐
-     ├── T3 ──┤
-     ├── T4 ──┤
-     ├── T5 ──┤
-     └── T6 ──┘
-                └── T7 ── T8
-```
+`T1 ──┬── T2 ──┐`  
+`     ├── T3 ──┤`  
+`     ├── T5 ──┤`  
+`     └── T6 ── T7 ──┤`  
+`T2 ─────────────── T4 ─┤`  
+`T3,T4,T5,T7 ───────── T8 ── T9`
 
 ## Tasks
 
-### T1: 建立最终映射与迁移清单
-- **depends_on**: []
+### T1: 冻结映射与排除项
+- **depends_on**: `[]`
 - **location**: `src/`, `tests/`, `docs/`, `.agents/`
-- **description**: 冻结“旧路径 -> 新路径”映射；逐类列出受影响引用面：静态 `require`、内联 `require`、`package.loaded`、测试 patch target、文档示例、guard root。
-- **validation**: 产出一份无歧义映射表；确认不存在目标重名冲突；明确 `presentation_ports.lua` 保持不改。
-- **status**: completed (2026-03-08 14:08Z)
-- **mapping**:
-  - `src/core/choice/choice_contract.lua -> src/core/choice/contract.lua`
-  - `src/core/choice/choice_route_policy.lua -> src/core/choice/route_policy.lua`
-  - `src/game/systems/choices/choice_registry.lua -> src/game/systems/choices/registry.lua`
-  - `src/game/systems/choices/choice_resolver.lua -> src/game/systems/choices/resolver.lua`
-  - `src/game/systems/choices/choice_handlers/ -> src/game/systems/choices/handlers/`
-  - `src/game/systems/choices/choice_handlers/item_choice_handler.lua -> src/game/systems/choices/handlers/item.lua`
-  - `src/game/systems/choices/choice_handlers/land_choice_handler.lua -> src/game/systems/choices/handlers/land.lua`
-  - `src/game/systems/choices/choice_handlers/market_choice_handler.lua -> src/game/systems/choices/handlers/market.lua`
-  - `src/game/systems/choices/choice_handlers/optional_effect_handler.lua -> src/game/systems/choices/handlers/optional_effect.lua`
-  - `src/presentation/input/ui_intent_dispatcher.lua -> src/presentation/input/intent_dispatcher.lua`
-  - `src/presentation/input/ui_intent_dispatcher/ -> src/presentation/input/intent_dispatch/`
-  - `src/presentation/input/ui_intent_dispatcher/game_action_dispatcher.lua -> src/presentation/input/intent_dispatch/game_action.lua`
-  - `src/presentation/input/ui_intent_dispatcher/view_command_dispatcher.lua -> src/presentation/input/intent_dispatch/view_command.lua`
-  - `src/presentation/input/ui_intent_dispatcher/item_phase_ask_flow.lua -> src/presentation/input/intent_dispatch/item_phase_ask.lua`
-  - `src/presentation/input/ui_intent_dispatcher/pre_confirm_flow.lua -> src/presentation/input/intent_dispatch/pre_confirm.lua`
-  - `src/presentation/runtime/presentation_ports/ -> src/presentation/runtime/ports/`
-  - `src/presentation/runtime/host_runtime.lua -> src/presentation/runtime/host.lua`
-  - `src/presentation/runtime/host_runtime/ -> src/presentation/runtime/host/`
-  - `src/presentation/runtime/ui_view_service.lua -> src/presentation/runtime/view_service.lua`
-  - `src/presentation/runtime/ui_view_service/ -> src/presentation/runtime/view_service/`
-  - `src/presentation/view/widgets/ui_choice.lua -> src/presentation/view/widgets/choice.lua`
-  - `src/presentation/view/widgets/ui_modal_presenter.lua -> src/presentation/view/widgets/modal_presenter.lua`
-  - `src/presentation/view/widgets/ui_panel.lua -> src/presentation/view/widgets/panel.lua`
-  - `src/presentation/view/widgets/ui_panel_presenter.lua -> src/presentation/view/widgets/panel_presenter.lua`
-  - `src/presentation/view/widgets/ui_panel_player_slots.lua -> src/presentation/view/widgets/panel_player_slots.lua`
-  - `src/presentation/view/widgets/ui_panel_cash_delta.lua -> src/presentation/view/widgets/panel_cash_delta.lua`
-  - `src/presentation/view/widgets/ui_turn_effects.lua -> src/presentation/view/widgets/turn_effects.lua`
-  - `src/presentation/view/render/status_3_d_service.lua -> src/presentation/view/render/status3d.lua`
-  - `src/presentation/view/render/status3d_service/ -> src/presentation/view/render/status3d/`
-- **reference_surface**:
-  - 静态与内联 `require(...)`：`src/`, `tests/`, `docs/architecture/`, `.agents/`
-  - `package.loaded[...]` / monkey patch target：`tests/suites/domain/market.lua`, `tests/suites/gameplay/gameplay.lua` 等 suite 与 `tests/TestSupport.lua`
-  - guard / rule roots：`tests/internal/dep_rules.lua`, `tests/internal/legacy_path_guard.lua`
-  - 文档示例：`docs/architecture/*.md`, `.agents/*.md`
-- **work_log**:
-  - 确认全部目标路径当前不存在，无命名冲突。
-  - 明确 `src/presentation/runtime/presentation_ports.lua` 保持原名，仅其目录 `presentation_ports/` 重命名为 `ports/`。
-  - 确认 Wave 2 可按 `T2/T3/T4/T5` 并行拆分，`T6` 仍依赖 `T5` 先完成。
-- **files_touched**: `.agents/swarm_plan.md`
-- **gotchas**:
-  - `status3d_service/` 目录与 `status_3_d_service.lua` 主文件需要同波切换，避免内部 require 短暂断裂。
-  - `presentation_ports.lua` 与 `presentation_ports/` 仅一处改名，引用校验时必须允许顶层 bundle 文件继续存在。
+- **description**: 生成本轮唯一合法的“旧路径 -> 新路径”表，确认目标路径不存在，并在工作计划中写死排除项：不碰 `turn_*`、`presentation/runtime/ui_*`、`presentation/model/ui_*`、`action_anim.lua`。
+- **validation**: 全部目标路径无冲突；映射表覆盖后续所有任务；排除项在计划里单独列明。
 
-### T2: 执行 `choice` / `choices` 集群重命名
-- **depends_on**: [T1]
-- **location**: `src/core/choice`, `src/game/systems/choices`, `src/game/flow`, `tests/suites/domain`, `tests/TestSupport.lua`
-- **description**: 完成 `contract.lua`、`route_policy.lua`、`registry.lua`、`resolver.lua`、`handlers/` 及四个 handler 文件改名，并同步所有 choice 相关引用。
-- **validation**: `rg 'src\\.core\\.choice\\.choice_|src\\.game\\.systems\\.choices\\.choice_' src tests docs .agents` 无残留；`tests/suites/domain/market.lua` 的 `package.loaded[...]` 已改到新路径；`turn_decision.lua` 的动态 `require` 已更新。
-- **status**: completed (2026-03-08 14:09Z)
-- **work_log**:
-  - 完成 `src/core/choice/*`、`src/game/systems/choices/*` 的目标文件和目录重命名，并把 registry 内部 handler require 全部切到 `handlers/*`。
-  - 同步更新 `src/game/flow/intent/intent_dispatcher.lua`、`src/game/flow/turn/turn_decision.lua`、`src/game/core/runtime/bootstrap.lua`、`tests/TestSupport.lua`、`tests/suites/domain/{market,land}.lua` 等直接引用点。
-  - 更新 `tests/suites/domain/market.lua` 的 `package.loaded[...]` 重置键到 `src.game.systems.choices.handlers.market` / `registry` / `resolver` 新路径。
-- **files_touched**:
-  - `src/core/choice/contract.lua`
-  - `src/core/choice/route_policy.lua`
-  - `src/game/systems/choices/registry.lua`
-  - `src/game/systems/choices/resolver.lua`
-  - `src/game/systems/choices/handlers/item.lua`
-  - `src/game/systems/choices/handlers/land.lua`
-  - `src/game/systems/choices/handlers/market.lua`
-  - `src/game/systems/choices/handlers/optional_effect.lua`
-  - `src/game/flow/intent/intent_dispatcher.lua`
-  - `src/game/flow/turn/turn_decision.lua`
-  - `src/game/flow/turn/turn_choice_auto_policy.lua`
-  - `src/game/flow/turn/tick_choice_timeout.lua`
-  - `src/game/flow/turn/turn_dispatch_validator.lua`
-  - `src/game/core/runtime/bootstrap.lua`
-  - `src/game/systems/market/application/choice_session.lua`
-  - `src/presentation/model/ui_model/item_slice.lua`
-  - `src/presentation/view/render/target_choice_effects.lua`
-  - `src/presentation/view/widgets/ui_choice.lua`
-  - `src/presentation/input/ui_choice_route_policy.lua`
-  - `tests/TestSupport.lua`
-  - `tests/suites/domain/market.lua`
-  - `tests/suites/domain/land.lua`
-  - `tests/suites/architecture/usecase_boundary_contract.lua`
-- **gotchas**:
-  - 目标 domain suite 受 `src.presentation.runtime.ui_view_service` 旧路径依赖影响，当前 Wave 2 的 T4 未完成前无法作为 T2 绿灯依据；因此仅保留字符串级校验和模块级 require 校验。
+### T2: 收口 `presentation/input/ui_*`
+- **depends_on**: `[T1]`
+- **location**: `src/presentation/input`, `src/presentation/runtime/canvas_event_router.lua`, `src/presentation/runtime/view_service.lua`, `src/presentation/view/widgets`, `src/presentation/view/canvas`, `tests/suites/presentation`
+- **description**: 批量移除 `ui_` 前缀，统一更新静态 `require(...)`、内联 `require(...)`、测试直接引用和 patch target。`intent_dispatcher.lua` 与 `intent_dispatch/` 不再改名。
+- **validation**: `rg 'src\.presentation\.input\.ui_' src tests docs .agents` 仅允许命中历史计划文档；`presentation_ui`、`presentation_ui_event_bindings` 可加载新路径。
 
-### T3: 执行 `presentation/input` dispatcher 集群重命名
-- **depends_on**: [T1]
-- **location**: `src/presentation/input`, `src/presentation/runtime/canvas_event_router.lua`, `tests/suites/presentation`, `tests/suites/architecture/usecase_boundary_contract.lua`
-- **description**: 把 `ui_intent_dispatcher` 主文件和子目录迁到 `intent_dispatcher.lua` / `intent_dispatch/`，并把 `game_action_dispatcher`、`view_command_dispatcher`、`item_phase_ask_flow`、`pre_confirm_flow` 收口成更短文件名。
-- **validation**: `rg 'src\\.presentation\\.input\\.ui_intent_dispatcher' src tests docs .agents` 无残留；presentation suite 中相关 `require` 全部指向新路径。
-- **status**: completed (2026-03-08 14:10Z)
-- **work_log**:
-  - 完成 `src/presentation/input/ui_intent_dispatcher.lua` 到 `src/presentation/input/intent_dispatcher.lua` 的迁移，并将子目录重命名为 `src/presentation/input/intent_dispatch/`。
-  - 同步将 `game_action_dispatcher.lua`、`view_command_dispatcher.lua`、`item_phase_ask_flow.lua`、`pre_confirm_flow.lua` 收口为 `game_action.lua`、`view_command.lua`、`item_phase_ask.lua`、`pre_confirm.lua`，并把内部 `require(...)` 全部切到新路径。
-  - 更新 `src/presentation/runtime/canvas_event_router.lua`、`tests/suites/presentation/presentation_ui.lua`、`tests/suites/architecture/usecase_boundary_contract.lua` 的入口引用，确保测试与运行时入口不再指向旧路径。
-- **files_touched**:
-  - `src/presentation/input/intent_dispatcher.lua`
-  - `src/presentation/input/intent_dispatch/game_action.lua`
-  - `src/presentation/input/intent_dispatch/view_command.lua`
-  - `src/presentation/input/intent_dispatch/item_phase_ask.lua`
-  - `src/presentation/input/intent_dispatch/pre_confirm.lua`
-  - `src/presentation/input/intent_dispatch/role_context.lua`
-  - `src/presentation/input/intent_dispatch/turn_action_port.lua`
-  - `src/presentation/runtime/canvas_event_router.lua`
-  - `tests/suites/presentation/presentation_ui.lua`
-  - `tests/suites/architecture/usecase_boundary_contract.lua`
-  - `.agents/swarm_plan.md`
-- **gotchas**:
-  - `tests/suites/presentation/presentation_ui.lua` 在本波验证时被并行中的 T4 阻塞：当前工作树已暂时移走 `src/presentation/runtime/host_runtime.lua`，导致 suite 在加载 `ui_event_handlers.lua` 时提前失败；因此 T3 的独立验证以旧路径残留扫描和 `usecase_boundary_contract` 单跑通过为准。
+### T3: 收口 `game_state_*`
+- **depends_on**: `[T1]`
+- **location**: `src/game/core/runtime`, `tests/internal/dep_rules.lua`, `tests/suites/gameplay`
+- **description**: 将 `game_state_players/tiles/turn` 改为 `players/tiles/turn`，同步 `game.lua` 聚合装配、gameplay suite 和任何显式文件路径引用。
+- **validation**: `rg 'src\.game\.core\.runtime\.game_state_' src tests docs .agents` 无残留；`game.lua` 仍能装配三组 state helper。
 
-### T4: 执行 `presentation/runtime` 核心集群重命名
-- **depends_on**: [T1]
-- **location**: `src/presentation/runtime`, `src/app/bootstrap`, `tests/suites/runtime`, `tests/internal/dep_rules.lua`
-- **description**: 顺序完成三件事，不并行拆开：
-  1. `presentation_ports/ -> ports/`，但保留 `presentation_ports.lua`
-  2. `host_runtime.lua` / `host_runtime/` -> `host.lua` / `host/`
-  3. `ui_view_service.lua` / `ui_view_service/` -> `view_service.lua` / `view_service/`
-  同时更新 bootstrap、runtime tests、presentation tests 和 `dep_rules` 根路径。
-- **validation**: `rg 'src\\.presentation\\.runtime\\.(host_runtime|ui_view_service|presentation_ports)' src tests docs .agents` 只允许保留 `presentation_ports.lua` 顶层 bundle 自身引用；`tests/internal/dep_rules.lua` 的 root 已改到 `src/presentation/runtime/ports`。
-- **status**: completed (2026-03-08 14:20Z)
-- **work_log**:
-  - 完成 `presentation_ports/ -> ports/`、`host_runtime.lua` / `host_runtime/ -> host.lua` / `host/`、`ui_view_service.lua` / `ui_view_service/ -> view_service.lua` / `view_service/` 三组重命名。
-  - 同步更新 `src/app/bootstrap/*`、`src/presentation/runtime/*`、`tests/suites/runtime/runtime_bootstrap.lua`、`tests/suites/presentation/presentation_ui*.lua` 等引用，保留 `src/presentation/runtime/presentation_ports.lua` 顶层 bundle 文件名不变。
-  - 将 `tests/internal/dep_rules.lua` 的根路径切到 `src/presentation/runtime/ports`，消除回归中对旧目录的扫描失败。
-- **files_touched**:
-  - `src/presentation/runtime/presentation_ports.lua`
-  - `src/presentation/runtime/ports/*`
-  - `src/presentation/runtime/host.lua`
-  - `src/presentation/runtime/host/*`
-  - `src/presentation/runtime/view_service.lua`
-  - `src/presentation/runtime/view_service/*`
-  - `src/presentation/runtime/canvas_event_router.lua`
-  - `src/presentation/runtime/canvas_render_pipeline.lua`
-  - `src/presentation/runtime/ui_event_handlers.lua`
-  - `src/app/bootstrap/game_startup.lua`
-  - `src/app/bootstrap/game_startup_event_bridge.lua`
-  - `src/app/bootstrap/ui_bootstrap.lua`
-  - `tests/suites/runtime/runtime_bootstrap.lua`
-  - `tests/internal/dep_rules.lua`
-- **gotchas**:
-  - `presentation_ports.lua` 不能退休；只能退休其子模块根路径，否则会误伤顶层 bundle 入口。
+### T4: 收口 `market_view*`
+- **depends_on**: `[T1, T2]`
+- **location**: `src/presentation/view/render`, `src/presentation/view/widgets/market_modal_renderer.lua`, `tests/suites/presentation`, `.agents/plan.md`
+- **description**: 将 `market_view.lua` 改为 `market.lua`，companion 文件改为 `market_controls.lua` 和 `market_slots.lua`。不改成裸 `controls` / `slots`，避免在 `render/` 下丢掉业务辨识度。
+- **validation**: `rg 'src\.presentation\.view\.render\.market_view' src tests docs .agents` 仅允许历史迁移记录；市场弹窗相关 presentation 用例继续通过。
 
-### T5: 执行低扇出 presentation 叶子模块重命名
-- **depends_on**: [T1]
-- **location**: `src/presentation/view/widgets`, `src/presentation/view/render`, `tests/suites/presentation`
-- **description**: 先改低扇出文件，降低后续大入口改名成本：
-  - `ui_panel_player_slots.lua -> panel_player_slots.lua`
-  - `ui_panel_cash_delta.lua -> panel_cash_delta.lua`
-  - `ui_turn_effects.lua -> turn_effects.lua`
-  - `status_3_d_service.lua -> status3d.lua`
-  - `status3d_service/ -> status3d/`
-- **validation**: `rg 'status_3_d_service|ui_panel_player_slots|ui_panel_cash_delta|ui_turn_effects' src tests docs .agents` 无残留；相关 action anim / status3d / panel 测试引用已切换。
-- **status**: completed (2026-03-08 14:20Z)
-- **work_log**:
-  - 完成 `ui_panel_player_slots.lua`、`ui_panel_cash_delta.lua`、`ui_turn_effects.lua`、`status_3_d_service.lua` 与 `status3d_service/` 的重命名。
-  - 同步更新 `panel_presenter.lua`、`canvas_render_pipeline.lua`、`ports/anim_ports.lua` 与 presentation suite 中的 require 路径。
-  - 额外修复 `status3d.lua` 与 `status3d/*` 内部相互 require，确保目录重命名后模块链路仍然闭合。
-- **files_touched**:
-  - `src/presentation/view/widgets/panel_player_slots.lua`
-  - `src/presentation/view/widgets/panel_cash_delta.lua`
-  - `src/presentation/view/widgets/turn_effects.lua`
-  - `src/presentation/view/render/status3d.lua`
-  - `src/presentation/view/render/status3d/*`
-  - `src/presentation/runtime/canvas_render_pipeline.lua`
-  - `src/presentation/runtime/ports/anim_ports.lua`
-  - `tests/suites/presentation/presentation_ui.lua`
-- **gotchas**:
-  - `status3d` 主文件与子目录必须同波改名；分波会让 `require("...status3d.*")` 与旧目录互相找不到。
+### T5: 收口 `action_anim_*` 叶子 helper
+- **depends_on**: `[T1]`
+- **location**: `src/presentation/view/render`, `tests/suites/presentation/presentation_ui_action_anim.lua`, `tests/suites/architecture/cross_module_contract.lua`
+- **description**: 只把 leaf helper 收口到 `anim_*`，不动 `action_anim.lua` 主入口。同步 `action_anim.lua`、`anim_handlers.lua`、`anim_units.lua`、`anim_unit_overlay.lua` 的内部 require 链。
+- **validation**: `rg 'src\.presentation\.view\.render\.action_anim_(registry|handlers|dice|units|tip_text|overlay_compute|overlay_runtime|unit_overlay)' src tests docs .agents` 无残留；`action_anim.lua` 仍是唯一稳定入口。
 
-### T6: 执行高扇出 widget 入口重命名
-- **depends_on**: [T1, T5]
-- **location**: `src/presentation/view/widgets`, `src/presentation/model/ui_model`, `src/presentation/runtime`, `src/presentation/view/canvas`, `tests/suites/presentation`
-- **description**: 改高扇出入口文件：
-  - `ui_choice.lua -> choice.lua`
-  - `ui_modal_presenter.lua -> modal_presenter.lua`
-  - `ui_panel.lua -> panel.lua`
-  - `ui_panel_presenter.lua -> panel_presenter.lua`
-  并同步 model slice、runtime service、canvas presenter 与大体量 UI suite 引用。
-- **validation**: `rg 'src\\.presentation\\.view\\.widgets\\.ui_' src tests docs .agents` 无残留；`panel_slice.lua`、`choice_slice.lua`、`base/presenter.lua`、`view_service.lua` 都已切到新路径。
-- **status**: completed (2026-03-08 14:20Z)
-- **work_log**:
-  - 完成 `ui_choice.lua`、`ui_modal_presenter.lua`、`ui_panel.lua`、`ui_panel_presenter.lua` 到新入口文件名的迁移。
-  - 同步更新 `src/presentation/model/ui_model/{choice_slice,panel_slice}.lua`、`src/presentation/view/canvas/base/presenter.lua`、`src/presentation/runtime/view_service.lua` 与 presentation suite 的 require。
-  - 因为 T5 同波完成，`panel_presenter.lua` 已直接切到 `panel_player_slots.lua` 与 `panel_cash_delta.lua`，没有留下过渡桥。
-- **files_touched**:
-  - `src/presentation/view/widgets/choice.lua`
-  - `src/presentation/view/widgets/modal_presenter.lua`
-  - `src/presentation/view/widgets/panel.lua`
-  - `src/presentation/view/widgets/panel_presenter.lua`
-  - `src/presentation/model/ui_model/choice_slice.lua`
-  - `src/presentation/model/ui_model/panel_slice.lua`
-  - `src/presentation/view/canvas/base/presenter.lua`
-  - `src/presentation/runtime/view_service.lua`
-  - `tests/suites/presentation/presentation_ui.lua`
-- **gotchas**:
-  - `ui_panel` 是高频入口，批量替换时必须用精确模块路径，避免误伤变量名或注释中的普通 `ui_panel` 文案。
+### T6: 先收口 `gameplay_loop_*` 低扇出 helper
+- **depends_on**: `[T1]`
+- **location**: `src/game/flow/turn`, `tests/suites/gameplay`
+- **description**: 先改 `gameplay_loop_runtime`、`gameplay_loop_tick_flow`、`gameplay_loop_tick_steps`、`gameplay_loop_ui_sync_defaults` 到 `loop_*`。这一波先稳定 helper，再处理高扇出入口。
+- **validation**: `rg 'src\.game\.flow\.turn\.gameplay_loop_(runtime|tick_flow|tick_steps|ui_sync_defaults)' src tests docs .agents` 无残留；gameplay suite 的 patch target 已更新。
 
-### T7: 全局扫尾与 guard / 文档同步
-- **depends_on**: [T2, T3, T4, T5, T6]
-- **location**: `src/`, `tests/`, `docs/`, `.agents/`, `tests/internal/legacy_path_guard.lua`
-- **description**: 做最终全局清理：
-  - 清掉所有旧路径字符串
-  - 更新 `package.loaded[...]` 和测试 patch target
-  - 更新架构文档与 `.agents/*`
-  - 在确认没有旧路径残留后，把本次退休路径加入 `legacy_path_guard`
-- **validation**: 对每个旧根路径执行 `rg` 均无匹配；`legacy_path_guard.lua` 已把本次 retired roots 纳入列表，且不会误伤仍在使用的新路径。
-- **status**: completed (2026-03-08 14:27Z)
-- **work_log**:
-  - 扫尾更新 `docs/architecture/*`、`.agents/plan.md`、`.agents/research.md` 中与新路径直接相关的引用。
-  - 将本轮 retired roots 写入 `tests/internal/legacy_path_guard.lua`，覆盖 choice、input、runtime、widgets 与 status3d 的旧模块根路径。
-  - 核对全仓旧路径残留时保留 `.agents/swarm_plan.md` 中作为迁移记录存在的“旧 -> 新”说明，不将其视为代码残留。
-- **files_touched**:
-  - `docs/architecture/boundaries.md`
-  - `docs/architecture/layer-model.md`
-  - `.agents/plan.md`
-  - `.agents/research.md`
-  - `tests/internal/legacy_path_guard.lua`
-  - `.agents/swarm_plan.md`
-- **gotchas**:
-  - `legacy_path_guard.lua` 不能直接退休 `src.presentation.runtime.presentation_ports` 根路径，因为顶层 bundle `presentation_ports.lua` 仍是合法入口。
+### T7: 再收口 `gameplay_loop` 入口
+- **depends_on**: `[T1, T6]`
+- **location**: `src/game/flow/turn`, `src/app/bootstrap`, `tests/suites/gameplay`, `docs/architecture`, `.agents/plan.md`
+- **description**: 将 `gameplay_loop.lua -> loop.lua`、`gameplay_loop_ports.lua -> loop_ports.lua`。只改模块路径，不改 `state.gameplay_loop_ports` 等运行时字段名，避免把 rename 扩大成状态协议变更。
+- **validation**: `rg 'src\.game\.flow\.turn\.gameplay_loop($|\.)' src tests docs .agents` 仅允许历史计划记录；bootstrap 与 gameplay suite 全部切到 `loop` / `loop_ports`。
 
-### T8: 验证与收口
-- **depends_on**: [T7]
-- **location**: `tests/`, `docs/architecture/health_signals.md`
-- **description**: 先跑热点 suite，再跑全量回归，确认 rename 没破坏架构护栏、presentation 热点和 runtime bootstrap。
-- **validation**:
-  - `lua -e 'package.path=package.path..";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua"; require("TestHarness").run_all({require("suites.domain.market"), require("suites.domain.land"), require("suites.architecture.usecase_boundary_contract"), require("suites.architecture.intent_output_contract"), require("suites.architecture.architecture_guard_contract"), require("suites.presentation.presentation_ui"), require("suites.runtime.runtime_bootstrap")})'`
-  - `lua tests/regression.lua`
-- **status**: completed (2026-03-08 14:29Z)
-- **work_log**:
-  - 运行热点 suite：`domain.market`、`domain.land`、`architecture.usecase_boundary_contract`、`presentation.presentation_ui`、`runtime.runtime_bootstrap`，全部通过。
-  - 运行全量回归 `lua tests/regression.lua`；最终输出包含 `All regression checks passed (385)`、`dep_rules ok`、`legacy_path_guard ok`。
-  - 验证过程中发现 `dep_rules` 仍扫描旧的 `src/presentation/runtime/presentation_ports` 根路径；修正后重新跑回归收口。
-- **files_touched**:
-  - `tests/internal/dep_rules.lua`
-  - `.agents/swarm_plan.md`
-- **gotchas**:
-  - 回归输出仍有既有 `market paid goods mapping missing`、`forbidden_globals warn: no lua files found under: scripts` 警告，但不影响本轮 rename 验收。
+### T8: 全局扫尾与 guard / 文档同步
+- **depends_on**: `[T2, T3, T4, T5, T7]`
+- **location**: `src/`, `tests/`, `docs/`, `.agents/`, `tests/internal/legacy_path_guard.lua`, `tests/internal/dep_rules.lua`
+- **description**: 清掉旧模块路径字符串，更新 `package.loaded[...]`、测试 patch target、架构文档和 `.agents/*`，并把本轮真正退休的路径加入 `legacy_path_guard`。排除项不加入 retired roots。
+- **validation**: 每个旧根路径各自 `rg` 为零；`legacy_path_guard.lua` 只新增本轮真实退休路径；`dep_rules` 与文档示例全部指向新路径。
+
+### T9: 定向回归与全量回归
+- **depends_on**: `[T8]`
+- **location**: `tests/`
+- **description**: 先跑受影响最大的热点 suite，再跑全量回归，确认 UI 热点、gameplay loop 和护栏没有被 rename 破坏。
+- **validation**: 运行  
+  `lua -e 'package.path=package.path..";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua"; require("TestHarness").run_all({require("suites.presentation.presentation_ui"), require("suites.presentation.presentation_ui_event_bindings"), require("suites.presentation.presentation_ui_action_anim"), require("suites.gameplay.gameplay"), require("suites.runtime.runtime_bootstrap"), require("suites.architecture.cross_module_contract")})'`  
+  再运行 `lua tests/regression.lua`；预期包含 `dep_rules ok`、`legacy_path_guard ok`、全量回归通过。
 
 ## Parallel Execution Groups
 
 | Wave | Tasks | Can Start When |
 |------|-------|----------------|
-| 1 | T1 | 立即 |
-| 2 | T2, T3, T4, T5 | T1 完成后 |
-| 3 | T6 | T5 完成后 |
-| 4 | T7 | T2, T3, T4, T6 完成后 |
-| 5 | T8 | T7 完成后 |
+| 1 | `T1` | 立即 |
+| 2 | `T2`, `T3`, `T5`, `T6` | `T1` 完成后 |
+| 3 | `T4`, `T7` | `T2` 与 `T6` 完成后 |
+| 4 | `T8` | `T3`, `T4`, `T5`, `T7` 完成后 |
+| 5 | `T9` | `T8` 完成后 |
 
 ## Test Plan
 
-- 重命名完成后先做字符串级检查：
-  - 每个旧模块根路径执行一次 `rg`
-  - 重点检查动态 `require`、`package.loaded`、测试 patch target
-- 然后跑定向 suite：
-  - choice/domain：`market`, `land`
-  - architecture：`usecase_boundary_contract`, `intent_output_contract`, `architecture_guard_contract`
-  - presentation/runtime：`presentation_ui`, `runtime_bootstrap`
-- 最后跑 `lua tests/regression.lua`
-- 验收标准：
-  - 所有 suite 通过
-  - `dep_rules` 仍覆盖新的 `src/presentation/runtime/ports`
-  - `legacy_path_guard` 能拦住旧路径，不误报新路径
-  - `docs/architecture/*` 与 `.agents/*` 不再引用旧名称
+- 先做字符串级检查，分别扫描 `src.presentation.input.ui_`、`src.game.core.runtime.game_state_`、`src.presentation.view.render.market_view`、`src.presentation.view.render.action_anim_*` 叶子 helper、`src.game.flow.turn.gameplay_loop*`。
+- 再跑热点 suite：`presentation_ui`、`presentation_ui_event_bindings`、`presentation_ui_action_anim`、`gameplay`、`runtime_bootstrap`、`cross_module_contract`。
+- 最后跑 `lua tests/regression.lua`，确认护栏、退休路径和整仓回归闭合。
 
 ## Assumptions
 
-- 采用“仓库内原子切换”，不保留旧路径兼容桥。
-- 只做上面列出的热点，不对 `turn_*`、`land_*`、`market_*` 等虽长但语义仍清晰的名字继续压缩。
-- 保持 `_port.lua`、`*_ports.lua`、`*_port_adapter.lua` 语义不变，因此 `presentation_ports.lua` 顶层 bundle 文件不改名。
-- 当前回合处于 Plan Mode；执行时先把本计划原样保存为 `src-rename-plan.md`，再开始实际改动。
+- 本轮仍然采用仓库内原子切换，不保留旧路径兼容桥。
+- “激进收口”只体现在覆盖范围，不体现在任意砍掉职责词；因此保留 `policy`、`ports`、`controls`、`slots` 等剩余辨识词。
+- 本轮只涉及仓库内 Lua 模块路径，不引入第三方依赖或外部 API 变更，不需要额外文档检索。
+- 如果后续还要继续压 `turn_*`、`presentation/runtime/ui_*`、`presentation/model/ui_*` 或 `action_anim.lua` 主入口，应单开第三轮计划，不并入本轮。
