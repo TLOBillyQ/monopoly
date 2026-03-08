@@ -133,3 +133,7 @@ dofile_first({
   ".agents/tests/internal/forbidden_globals.lua",
   "tests/internal/forbidden_globals.lua",
 })
+dofile_first({
+  ".agents/tests/internal/arch_view_guard.lua",
+  "tests/internal/arch_view_guard.lua",
+})

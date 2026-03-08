@@ -1,10 +1,5 @@
 local rules = {
   {
-    root = "src/presentation/input",
-    forbidden = { "src.game." },
-    description = "interaction layer must not require src.game.* directly",
-  },
-  {
     root = "src/presentation",
     forbidden = { "shared.UINodes" },
     description = "no module may depend on retired shared.UINodes",
@@ -72,32 +67,6 @@ local rules = {
     description = "tests must not depend on retired runtime bridge path src.core.runtime_compat; validate runtime_ports/runtime_context contracts directly",
   },
   {
-    root = "src/core/ports",
-    forbidden_patterns = {
-      "require%(%\"src%.game%.ports%..-%\"%)",
-      "require%(%'src%.game%.ports%..-%'%)",
-      "require%(%\"src%.game%.flow%.turn%.loop_ports%\"%)",
-      "require%(%'src%.game%.flow%.turn%.loop_ports'%)",
-    },
-    description = "core ports must stay host/runtime-wide contracts; do not reach into systems-facing game ports or flow-local loop_ports",
-  },
-  {
-    root = "src/game/ports",
-    forbidden_patterns = {
-      "require%(%\"src%.game%.flow%.turn%.loop_ports%\"%)",
-      "require%(%'src%.game%.flow%.turn%.loop_ports'%)",
-    },
-    description = "game ports must stay systems-facing contracts; loop_ports is a turn-flow-local override bundle, not a shared port layer",
-  },
-  {
-    root = "src/game/core/player",
-    forbidden_patterns = {
-      "require%(\"src%.game%.flow%..-\"%)",
-      "require%('src%.game%.flow%..-'%)",
-    },
-    description = "game core player state must not depend on src.game.flow.* directly",
-  },
-  {
     root = "src",
     forbidden_patterns = {
       "require%(\"src%.game%.core%.runtime%.TurnEngine\"%)",
@@ -148,40 +117,6 @@ local rules = {
       "game%.ui_port%.wait_action_anim",
     },
     description = "systems layer must use ActionAnimPort instead of direct ui_port.wait_action_anim checks",
-  },
-  {
-    root = "src/core/ports",
-    forbidden_patterns = {
-      "require%(\"src%.game%.systems%..-\"%)",
-      "require%('src%.game%.systems%..-'%)",
-      "require%(\"src%.game%.flow%..-\"%)",
-      "require%('src%.game%.flow%..-'%)",
-    },
-    description = "core runtime contracts must stay gameplay-agnostic; put use-case local bundles in game.flow or systems-facing contracts in game.ports",
-  },
-  {
-    root = "src/game/core/player",
-    forbidden_patterns = {
-      "require%(\"src%.game%.systems%..-\"%)",
-      "require%('src%.game%.systems%..-'%)",
-    },
-    description = "game core player state must not depend on src.game.systems.* directly; use ports or use-case orchestration",
-  },
-  {
-    root = "src/game/systems",
-    forbidden_patterns = {
-      "require%(\"src%.game%.flow%..-\"%)",
-      "require%(%'src%.game%.flow%..-'%)",
-    },
-    description = "systems layer must not depend on src.game.flow.* directly; emit stable intents through ports instead",
-  },
-  {
-    root = "src/game/systems",
-    forbidden_patterns = {
-      "require%(\"src%.game%.core%.runtime%..-\"%)",
-      "require%(%'src%.game%.core%.runtime%..-'%)",
-    },
-    description = "systems layer must not depend on game.core.runtime directly; use injected ports instead",
   },
   {
     root = "src/game/systems",
@@ -238,14 +173,6 @@ local rules = {
     },
     description = "presentation layer must not read legacy runtime globals directly; use runtime_ports/context",
   },
-}
-
--- Keep this whitelist minimal and only for temporary migration bridges.
--- Entries that are no longer observed will fail the rule check to enforce decay.
-local presentation_game_systems_whitelist = {
-  -- ["src/presentation/example.lua"] = {
-  --   ["src.game.systems.some.module"] = true,
-  -- },
 }
 
 local dep_rules_whitelist = {
@@ -443,73 +370,6 @@ local function _to_repo_relpath(path)
   return normalized:match(".*(src/.+)") or normalized:match(".*(tests/.+)") or normalized
 end
 
-local function _to_presentation_relpath(path)
-  local normalized = _normalize_path(path)
-  local rel = normalized:match(".*(src/presentation/.+)")
-  return rel or normalized
-end
-
-local function _scan_presentation_system_requires()
-  local files, err = _collect_lua_files("src/presentation")
-  if not files then
-    return nil, err
-  end
-
-  local observed = {}
-
-  for _, path in ipairs(files) do
-    local relpath = _to_presentation_relpath(path)
-    local file = io.open(path, "r")
-    if not file then
-      return nil, "cannot open: " .. tostring(path)
-    end
-    local lineno = 0
-    for line in file:lines() do
-      lineno = lineno + 1
-      local dep = line:match("require%(%s*\"(src%.game%.systems%.[^\"]+)\"%s*%)")
-      if dep == nil then
-        dep = line:match("require%(%s*'(src%.game%.systems%.[^']+)'%s*%)")
-      end
-      if dep ~= nil then
-        if observed[relpath] == nil then
-          observed[relpath] = {}
-        end
-        observed[relpath][dep] = true
-        local allow_by_file = presentation_game_systems_whitelist[relpath]
-        local is_allowed = allow_by_file ~= nil and allow_by_file[dep] == true
-        if not is_allowed then
-          file:close()
-          return {
-            path = relpath,
-            line = lineno,
-            token = dep,
-            text = line,
-            description = "presentation must not require src.game.systems.* directly (whitelist only allows temporary migration entries)",
-          }
-        end
-      end
-    end
-    file:close()
-  end
-
-  for relpath, deps in pairs(presentation_game_systems_whitelist) do
-    for dep in pairs(deps) do
-      local has_dep = observed[relpath] and observed[relpath][dep] == true
-      if not has_dep then
-        return {
-          path = relpath,
-          line = 1,
-          token = dep,
-          text = "stale whitelist entry",
-          description = "presentation->game/systems whitelist must only keep active dependencies (decay-only governance)",
-        }
-      end
-    end
-  end
-
-  return nil
-end
-
 local function _scan_legacy_policy_usages()
   local roots = { "src", "tests" }
   for _, root in ipairs(roots) do
@@ -643,18 +503,6 @@ for _, rule in ipairs(rules) do
     io.stderr:write(hit.text, "\n")
     os.exit(1)
   end
-end
-
-local presentation_hit, presentation_err = _scan_presentation_system_requires()
-if presentation_err and not tostring(presentation_err):find("no lua files found under", 1, true) then
-  io.stderr:write("dep_rules error: ", presentation_err, "\n")
-  os.exit(1)
-end
-if presentation_hit then
-  io.stderr:write("dep_rules violation: ", presentation_hit.path, ":", presentation_hit.line, " contains ", presentation_hit.token, "\n")
-  io.stderr:write("rule: ", presentation_hit.description, "\n")
-  io.stderr:write(presentation_hit.text, "\n")
-  os.exit(1)
 end
 
 local legacy_usage_hit, legacy_usage_err = _scan_legacy_policy_usages()
