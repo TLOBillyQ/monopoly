@@ -72,7 +72,7 @@ function game:init(opts)
 end
 
 local function _resolve_turn_runtime(self)
-  return self.turn_engine
+  return self.turn_engine or self.turn_runtime
 end
 
 function game:ensure_popup_port()

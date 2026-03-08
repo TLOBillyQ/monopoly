@@ -120,20 +120,15 @@ local function _move_arrow(scene, option_id)
   end
 end
 
-local function _resolve_pending_target_choice(game)
-  local choice = game and game.turn and game.turn.pending_choice or nil
-  if not _is_target_choice(choice) then
-    return nil
-  end
-  return choice
-end
+local function _runtime(state) return type(state and state.target_choice_runtime) == "table" and state.target_choice_runtime or nil end
 
-local function _resolve_runtime(state)
-  local runtime = state and state.target_choice_runtime or nil
-  if type(runtime) ~= "table" then
-    return nil
+local function _reset_runtime_state(state, runtime)
+  _move_arrow(state.board_scene, nil)
+  _sync_buttons(state, false)
+  if runtime and runtime.scene_pick_listener_token ~= nil then
+    host_runtime.unregister_target_pick_listener(runtime.scene_pick_listener_token)
   end
-  return runtime
+  state.target_choice_runtime = nil
 end
 
 function target_choice_effects.enter(state, choice)
@@ -186,13 +181,13 @@ function target_choice_effects.enter(state, choice)
 end
 
 function target_choice_effects.step(game, state, _dt)
-  local runtime = _resolve_runtime(state)
+  local runtime = _runtime(state)
   if not runtime then
     return false
   end
 
-  local choice = _resolve_pending_target_choice(game)
-  if not choice or choice.id ~= runtime.choice_id then
+  local choice = game and game.turn and game.turn.pending_choice or nil
+  if not _is_target_choice(choice) or choice.id ~= runtime.choice_id then
     target_choice_effects.leave(state, "choice_changed")
     return false
   end
@@ -206,7 +201,7 @@ function target_choice_effects.step(game, state, _dt)
 end
 
 function target_choice_effects.on_scene_pick(state, option_id, actor_role_id, payload)
-  local runtime = _resolve_runtime(state)
+  local runtime = _runtime(state)
   if not runtime then
     return false
   end
@@ -238,7 +233,7 @@ function target_choice_effects.on_scene_pick(state, option_id, actor_role_id, pa
 end
 
 function target_choice_effects.on_unlock(state)
-  local runtime = _resolve_runtime(state)
+  local runtime = _runtime(state)
   if not runtime then
     return false
   end
@@ -254,19 +249,13 @@ function target_choice_effects.on_unlock(state)
   return true
 end
 
-function target_choice_effects.leave(state, reason)
-  local runtime = _resolve_runtime(state)
+function target_choice_effects.leave(state, _)
+  local runtime = _runtime(state)
   if not runtime then
     return false
   end
 
-  if runtime.scene_pick_listener_token ~= nil then
-    host_runtime.unregister_target_pick_listener(runtime.scene_pick_listener_token)
-  end
-
-  _move_arrow(state.board_scene, nil)
-  _sync_buttons(state, false)
-  state.target_choice_runtime = nil
+  _reset_runtime_state(state, runtime)
   return true
 end
 

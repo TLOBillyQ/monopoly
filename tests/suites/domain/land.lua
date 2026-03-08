@@ -11,6 +11,7 @@ local _resolve_landing = support.resolve_landing
 local land_actions = support.land_actions
 local pricing = support.pricing
 local choice_resolver = support.choice_resolver
+local choice_registry = require("src.game.systems.choices.choice_registry")
 
 local function _test_ai_picks_land_purchase()
   local agent = require("src.game.core.ai.agent")
@@ -143,6 +144,52 @@ local function _test_tax_only_bankrupts_when_balance_depleted()
   assert(p.eliminated == true, "player should be eliminated only when tax depletes balance")
 end
 
+local function _test_choice_registry_registers_descriptors_with_cancel_metadata()
+  local registry = choice_registry:new()
+  registry:register_defaults(choice_resolver.helpers())
+
+  local tax_descriptor = registry:descriptor_for("tax_card_prompt")
+  assert(type(tax_descriptor) == "table", "tax prompt should register as descriptor")
+  assert(type(tax_descriptor.execute) == "function", "tax descriptor should expose execute")
+  assert(tax_descriptor.cancel and tax_descriptor.cancel.mode == "select_option", "tax descriptor should expose cancel fallback")
+  assert(tax_descriptor.cancel.option_id == "skip", "tax cancel fallback should target skip option")
+
+  local item_phase_descriptor = registry:descriptor_for("item_phase_choice")
+  assert(item_phase_descriptor and item_phase_descriptor.cancel and item_phase_descriptor.cancel.mode == "finish_item_phase",
+    "item phase descriptor should delegate cancel cleanup to resolver")
+end
+
+local function _test_choice_resolver_accepts_legacy_land_optional_effect_alias()
+  local g = _new_game()
+  local p = g:current_player()
+  local idx, tile_ref = _first_land_tile(g.board)
+  g:update_player_position(p, idx)
+
+  local res = _resolve_landing(g, p, tile_ref, {})
+  assert(res and res.waiting, "landing resolver should wait for optional effect")
+
+  local pending = g.turn.pending_choice
+  assert(pending and pending.kind == "landing_optional_effect", "expected canonical optional choice")
+
+  local legacy_choice = {}
+  for key, value in pairs(pending) do
+    legacy_choice[key] = value
+  end
+  legacy_choice.kind = "land_optional_effect"
+
+  local before_cash = p.cash
+  local action = {
+    type = "choice_select",
+    choice_id = legacy_choice.id,
+    option_id = "buy_land",
+  }
+
+  local resolved = choice_resolver.resolve(g, legacy_choice, action)
+  assert(resolved and resolved.status == "resolved", "legacy alias should resolve successfully")
+  assert(p.cash < before_cash, "legacy alias should still execute buy_land")
+  assert(_tile_state(g, tile_ref).owner_id == p.id, "legacy alias should still purchase land")
+end
+
 return {
   name = "land",
   tests = {
@@ -151,5 +198,6 @@ return {
     { name = "land_rent_graph_adjacency_breaks_path_neighbors", run = _test_land_rent_graph_adjacency_breaks_path_neighbors },
     { name = "rent_owner_missing_skips_payment", run = _test_rent_owner_missing_skips_payment },
     { name = "tax_only_bankrupts_when_balance_depleted", run = _test_tax_only_bankrupts_when_balance_depleted },
+    { name = "choice_resolver_accepts_legacy_land_optional_effect_alias", run = _test_choice_resolver_accepts_legacy_land_optional_effect_alias },
   },
 }

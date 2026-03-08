@@ -10,17 +10,19 @@
 
 `src/app` 是最外层装配区。这里负责把运行时端口、bootstrap 安装逻辑和测试场景拼起来。它可以依赖别的层，因为它本身就是“程序如何启动”的细节层。
 
-`src/core` 是跨玩法共享的稳定策略与小型契约层。这里允许放日志、数值工具、配置访问器、领域无关的 route policy，以及“被内层依赖的端口定义”。这里不应该直接读取 Eggy 全局对象，也不应该塞入具体 UI 结点或支付面板逻辑。
+`src/core` 是跨玩法共享的稳定策略与小型契约层。这里允许放日志、数值工具、配置访问器、领域无关的 route policy，以及“被内层依赖的端口定义”。这里不应该直接读取 Eggy 全局对象，也不应该塞入具体 UI 结点或支付面板逻辑。`src/core/ports/` 只放宿主 / 运行时广义契约，例如 `runtime_ports`、`action_anim_port` 这类可被多个内层消费的窄接口；共享策略如果不是契约，就不应继续伪装成 Port 留在这里。
 
-`src/game/flow` 是用例编排层。这里负责一回合怎么推进、意图怎么分发、输入怎么校验、输出端口怎么发射。它可以协调 `src/game/systems` 的业务模块，但不应该回头操作 UI 细节或宿主运行时对象图。
+`src/game/flow` 是用例编排层。这里负责一回合怎么推进、意图怎么分发、输入怎么校验、输出端口怎么发射。它可以协调 `src/game/systems` 的业务模块，但不应该回头操作 UI 细节或宿主运行时对象图。`src/game/flow/turn/gameplay_loop_ports.lua` 只是 turn use case 自己的分组 override 容器，用来把 modal / anim / ui_sync / debug / clock / state / output 这些局部端口打包给 gameplay loop；它不是新的通用 Port 层，也不是 `src/core/ports/` 或 `src/game/ports/` 的升级版本。
 
 `src/game/systems` 是玩法业务层。这里放黑市、道具、地块、机会卡、移动、破产结算、胜负判定等规则本身。规则模块可以生成 choice spec、popup payload、动画请求等稳定输出模型，但不应该自己决定 UI 节点名、Canvas 切换方式或宿主 API 调用顺序。
 
-`src/game/runtime` 与 `src/infrastructure/runtime` 一起承担运行时适配职责。前者现在只保留贴近 gameplay 的 adapter，例如 `AutoPlayPortAdapter`、`BankruptcyPortAdapter` 这类“把端口实现接成 `src/game/ports/*` 契约”的实现；`src/game/core/runtime` 只保留 `Game` 聚合根与装配代码，不再承接破产结算、胜负判定这类业务规则；历史回合执行器被收拢到 `src/game/legacy/turn_engine/`，它是 deprecated/frozen 的历史执行器容器，不是新的常规分层目录，当前仍由 `src/game/core/runtime/composition_root.lua` 承接装配，后续只做替换式退休、不再扩展新职责；协程调度细节则收拢到 `src/game/scheduler/`。后者承接运行时上下文、事件桥和默认 runtime ports 这类更外层的宿主细节；`src/app/bootstrap/runtime.lua` 与 `src/app/bootstrap/runtime/*` 则只负责安装别名和装配。`src/core/state_access/*` 只保留状态访问语义；运行时上下文、事件桥和默认 runtime ports 的真实实现统一落在 `src/infrastructure/runtime/*`，调用方应直接依赖这些实现或经端口注入。以后只要看到新的 Eggy API 调用需求，优先判断它是不是应该留在那里，而不是回写到 `src/core` 或 `src/game/flow`。
+`src/game/runtime` 与 `src/infrastructure/runtime` 一起承担运行时适配职责。前者现在只保留贴近 gameplay 的 adapter，例如 `AutoPlayPortAdapter`、`BankruptcyPortAdapter` 这类“把端口实现接成 `src/game/ports/*` 契约”的实现；`src/game/ports/` 自身只放 systems-facing 注入契约，不承接 gameplay loop 的局部 override，也不收纳共享 helper。`src/game/core/runtime` 只保留 `Game` 聚合根与装配代码，不再承接破产结算、胜负判定这类业务规则；历史回合执行器被收拢到 `src/game/flow/turn/turn_runtime.lua` 与 `src/game/flow/turn/turn_phase_registry.lua` 现在承接稳定 turn runtime 入口与默认 phase 装配；旧的 `src/game/legacy/turn_engine/` 已退休并由护栏禁止回流；协程调度细节则收拢到 `src/game/scheduler/`。后者承接运行时上下文、事件桥和默认 runtime ports 这类更外层的宿主细节；`src/app/bootstrap/runtime.lua` 与 `src/app/bootstrap/runtime/*` 则只负责安装别名和装配。`src/core/state_access/*` 只保留状态访问语义；运行时上下文、事件桥和默认 runtime ports 的真实实现统一落在 `src/infrastructure/runtime/*`，调用方应直接依赖这些实现或经端口注入。以后只要看到新的 Eggy API 调用需求，优先判断它是不是应该留在那里，而不是回写到 `src/core` 或 `src/game/flow`。
 
 `src/presentation` 是展示适配层。当前按四个稳定职责面组织：`src/presentation/input/` 负责输入事件与 turn action 映射，`src/presentation/model/` 负责 UI model 与只读查询辅助，`src/presentation/view/` 负责 Canvas / widgets / render 输出，`src/presentation/runtime/` 负责展示侧 runtime adapter、canvas store 与 UI 事件桥接。它负责把 `ui_model`、choice view、popup view、market view 渲染成具体 UI，并处理输入事件到 turn action 的映射。它可以解释 ViewModel，但不应该再根据 `choice.kind`、`choice.meta` 或商品配置自行补业务语义。
 
 `src/presentation/model/gameplay_read_port.lua` 目前仍是 presentation 的一部分，不是独立 CQRS 查询层。它的职责是给 UI 组装轻量只读辅助数据；如果未来出现更明确的跨界查询需求，再考虑把它提升为独立 adapter。
+
+Port 目录在本轮之后固定分成三类，而且三类名字不能混用。`src/core/ports/` 只放宿主 / 运行时广义契约，例如“如何拿到 runtime context”或“如何访问默认 runtime ports”；这些契约必须保持 gameplay 无关，不能顺手塞进地块、黑市、破产反馈这类玩法语义。`src/game/ports/` 只放 systems-facing 注入契约，也就是 gameplay 规则向外请求能力时使用的窄接口；这里允许出现业务名词，因为它服务的是具体用例，而不是整个宿主运行时。`src/game/flow/turn/gameplay_loop_ports.lua` 则不是第三个通用 Port 层，它只是 turn use case 自己的局部分组 override：把 modal、anim、ui_sync、clock、state、output 这些同一回合循环里会一起覆盖的函数聚在一处，方便 gameplay loop、测试和 bootstrap 按组替换默认实现。
 
 ## 这轮重构后形成的硬边界
 
@@ -36,6 +38,8 @@
 
 第六，`src/game/flow/output_adapters/legacy_output_mirror.lua` 已退休并删除；UI runtime 状态以 `state.ui_runtime` 为唯一真源，不再维护 root-state 镜像兼容层。
 
+第七，只有 `src/app/bootstrap/*`、`src/game/flow/turn/*` 与测试夹具可以直接拼装 `gameplay_loop_ports` 分组 override。其他目录如果只是想拿某一项能力，应该依赖对应的广义 runtime contract 或 gameplay Port，而不是把 `gameplay_loop_ports` 当成一个新的“万能 Port 容器”。
+
 ## 后续新增代码时的放置规则
 
 如果你在写“回合推进到下一步应该做什么”，优先放进 `src/game/flow`。
@@ -45,5 +49,7 @@
 如果你在写“某个 ViewModel 应该怎么渲染到 UI 节点”，优先放进 `src/presentation`。
 
 如果你在写“程序启动时把哪条宿主能力接成端口”，优先放进 `src/app/bootstrap`；如果你在写“这些宿主能力的具体实现长什么样”，优先放进 `src/infrastructure/runtime`。
+
+如果你在写“宿主 / 运行时广义能力的窄契约”，优先放进 `src/core/ports/`；如果你在写“玩法规则向外请求的业务能力契约”，优先放进 `src/game/ports/`；如果你只是需要给回合循环临时覆盖一组默认函数，就继续留在 `src/game/flow/turn/gameplay_loop_ports.lua`，不要新建第四类 Port 目录。
 
 如果一个模块既想碰业务规则，又想碰宿主/UI 细节，先停下来拆边界，不要再新增跨层混合模块。

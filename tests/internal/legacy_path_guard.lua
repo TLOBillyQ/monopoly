@@ -1,10 +1,12 @@
 local retired_path_parts = {
   { "src", "core", "runtime_facade" },
   { "src", "game", "turn_engine" },
+  { "src", "game", "legacy", "turn_engine" },
   { "src", "presentation", "adapter" },
   { "src", "presentation", "canvas_runtime" },
   { "src", "game", "systems", "market", "service" },
   { "src", "app", "bootstrap", "runtime_install" },
+  { "src", "core", "ports", "turn_ui_sync_shared" },
 }
 
 local scan_roots = { "src", "tests" }

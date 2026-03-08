@@ -216,22 +216,11 @@ local function _copy_group_ports(base_group, override_group, required_keys)
   return merged
 end
 
-local function _fill_ui_sync_defaults(ui_sync_ports, base_ui_sync_ports)
-  ui_sync_defaults.fill_ui_sync_defaults(ui_sync_ports, base_ui_sync_ports)
-end
-
 local function _fill_clock_defaults(clock_ports, base_clock_ports)
-  if clock_ports.wall_now_seconds == base_clock_ports.wall_now_seconds then
-    clock_ports.wall_now_seconds = base_clock_ports.wall_now_seconds
-  end
-  if clock_ports.wall_diff_seconds == base_clock_ports.wall_diff_seconds then
-    clock_ports.wall_diff_seconds = base_clock_ports.wall_diff_seconds
-  end
-  if clock_ports.cpu_now_seconds == base_clock_ports.cpu_now_seconds then
-    clock_ports.cpu_now_seconds = base_clock_ports.cpu_now_seconds
-  end
-  if clock_ports.cpu_diff_seconds == base_clock_ports.cpu_diff_seconds then
-    clock_ports.cpu_diff_seconds = base_clock_ports.cpu_diff_seconds
+  for _, key in ipairs({ "wall_now_seconds", "wall_diff_seconds", "cpu_now_seconds", "cpu_diff_seconds" }) do
+    if clock_ports[key] == base_clock_ports[key] then
+      clock_ports[key] = base_clock_ports[key]
+    end
   end
 end
 
@@ -244,7 +233,7 @@ local function _build_resolved_ports(grouped_override)
     local override_group = grouped_override and grouped_override[group_name] or nil
     resolved[group_name] = _copy_group_ports(base_group, override_group, port_groups[group_name])
   end
-  _fill_ui_sync_defaults(resolved.ui_sync, base_ports.ui_sync)
+  ui_sync_defaults.fill_ui_sync_defaults(resolved.ui_sync, base_ports.ui_sync)
   _fill_clock_defaults(resolved.clock, base_ports.clock)
   return resolved
 end

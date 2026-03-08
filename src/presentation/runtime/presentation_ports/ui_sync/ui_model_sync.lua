@@ -1,4 +1,4 @@
-local turn_ui_sync_shared = require("src.core.ports.turn_ui_sync_shared")
+local turn_ui_sync_shared = require("src.core.ui_sync.turn_ui_sync_shared")
 local runtime_state = require("src.core.state_access.runtime_state")
 
 local ui_model_sync = {}

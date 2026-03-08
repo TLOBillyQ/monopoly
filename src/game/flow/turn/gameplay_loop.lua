@@ -164,18 +164,13 @@ local function _initialize_ports(state, game)
 end
 
 local function _configure_tile_owner_notifier(state, game)
-  if type(state.on_tile_owner_changed) == "function" then
+  local notifier = type(state.on_tile_owner_changed) == "function" and state.on_tile_owner_changed
+    or type(state.notify_owner_changed) == "function" and state.notify_owner_changed
+    or nil
+  if notifier then
     game.tile_owner_notifier = {
       notify_owner_changed = function(_, tile_id, owner_id)
-        state:on_tile_owner_changed(tile_id, owner_id)
-      end,
-    }
-    return
-  end
-  if type(state.notify_owner_changed) == "function" then
-    game.tile_owner_notifier = {
-      notify_owner_changed = function(_, tile_id, owner_id)
-        state:notify_owner_changed(tile_id, owner_id)
+        notifier(state, tile_id, owner_id)
       end,
     }
   end
@@ -194,9 +189,7 @@ local function _configure_environment(state, game, ports)
   market_purchase.setup_for_game(game)
   state_ports.install_event_handlers(game, logger, state)
   logger.set_info_per_turn_limit(gameplay_rules.info_log_per_turn_limit)
-  logger.set_info_turn_provider(function()
-    return game.turn and game.turn.turn_count
-  end)
+  logger.set_info_turn_provider(function() return game.turn and game.turn.turn_count end)
 end
 
 local function _configure_pending_choice(state, game, ports)
@@ -245,12 +238,12 @@ function gameplay_loop.new_game(state)
   assert(state.game_factory, "game_factory not set")
   local game = state.game_factory()
   _build_item_index(state)
-  assert(state.auto_runner ~= nil, "missing auto_runner")
-  assert(state.auto_runner.reset_timer ~= nil, "missing auto_runner.ResetTimer")
-  if state.auto_runner.set_enabled then
-    state.auto_runner:set_enabled(true)
+  local auto_runner = assert(state.auto_runner, "missing auto_runner")
+  assert(auto_runner.reset_timer ~= nil, "missing auto_runner.ResetTimer")
+  if auto_runner.set_enabled then
+    auto_runner:set_enabled(true)
   end
-  state.auto_runner:reset_timer()
+  auto_runner:reset_timer()
   game.logger.info("启动蛋仔大富翁，玩家数:", #game.players)
   return game
 end

@@ -4,6 +4,7 @@ local runtime_refs = require("Config.runtime_refs")
 local runtime_constants = require("src.core.config.runtime_constants")
 local host_runtime = require("src.presentation.runtime.host_runtime_port")
 local catalog = require("src.presentation.view.render.board_feedback_catalog")
+local effect_timeline = require("src.presentation.view.support.effect_timeline")
 
 local service = {}
 local warned_missing_effect_refs = {}
@@ -83,14 +84,8 @@ local function _resolve_cue(cue_name)
   return catalog.get(cue_name)
 end
 
-local function _resolve_scene(state)
-  return state and state.board_scene or nil
-end
-
 local function _resolve_tile_position(state, tile_index)
-  local scene = _resolve_scene(state)
-  local tiles = scene and scene.tiles or nil
-  local tile = tiles and tiles[tile_index] or nil
+  local tile = state and state.board_scene and state.board_scene.tiles and state.board_scene.tiles[tile_index] or nil
   if tile and type(tile.get_position) == "function" then
     return tile.get_position()
   end
@@ -98,8 +93,7 @@ local function _resolve_tile_position(state, tile_index)
 end
 
 local function _resolve_player_unit(state, player_id)
-  local scene = _resolve_scene(state)
-  local units_by_player_id = scene and scene.units_by_player_id or nil
+  local units_by_player_id = state and state.board_scene and state.board_scene.units_by_player_id or nil
   if type(units_by_player_id) == "table" and units_by_player_id[player_id] ~= nil then
     return units_by_player_id[player_id]
   end
@@ -125,7 +119,7 @@ local function _schedule_followup_sound(cue_name, pos, entry)
     return false
   end
   local delay = _resolve_numeric(entry.delay, 0) or 0
-  host_runtime.schedule(delay, function()
+  effect_timeline.run_step(delay, function()
     local sound_id_ref = entry.sound_id_ref
     local audio_refs = runtime_refs.audio or {}
     local sound_id = number_utils.to_integer(audio_refs[sound_id_ref])
@@ -134,7 +128,9 @@ local function _schedule_followup_sound(cue_name, pos, entry)
       return
     end
     host_runtime.play_3d_sound(pos, sound_id, _resolve_numeric(entry.duration, default_sound_duration), _resolve_numeric(entry.volume, default_sound_volume))
-  end)
+  end, {
+    schedule = host_runtime.schedule,
+  })
   return true
 end
 
@@ -267,11 +263,9 @@ end
 
 function service.play_sound_only(state, cue_name, payload)
   local pos = payload and payload.pos or nil
-  if pos == nil and payload and payload.player_id ~= nil then
-    pos = _resolve_player_position(state, payload.player_id)
-  end
-  if pos == nil and payload and payload.tile_index ~= nil then
-    pos = _resolve_tile_position(state, payload.tile_index)
+  if pos == nil and payload then
+    pos = payload.player_id ~= nil and _resolve_player_position(state, payload.player_id)
+      or (payload.tile_index ~= nil and _resolve_tile_position(state, payload.tile_index))
   end
   return _play_cue(state, cue_name, pos, nil, payload)
 end

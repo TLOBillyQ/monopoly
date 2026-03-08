@@ -9,13 +9,7 @@ local runtime_state = require("src.core.state_access.runtime_state")
 local validator = {}
 
 local function _is_turn_bound_ui_button(action_id)
-  if action_id == "next" then
-    return true
-  end
-  if action_id and string.match(action_id, "^item_slot_(%d+)$") then
-    return true
-  end
-  return false
+  return action_id == "next" or action_id and string.match(action_id, "^item_slot_(%d+)$") ~= nil
 end
 
 local function _resolve_choice_owner_role_id(game, choice)
@@ -42,14 +36,10 @@ local function _resolve_item_slot_id(source, actor_role_id, slot_id)
 end
 
 function validator.resolve_gate_state(state, ui_sync_ports)
-  local gate = nil
-  if ui_sync_ports and type(ui_sync_ports.resolve_ui_gate) == "function" then
-    gate = ui_sync_ports.resolve_ui_gate(state)
-  end
-  gate = turn_action_gate.resolve_gate_state(gate)
-
-  local game = type(state) == "table" and state.game or nil
-  local turn = game and game.turn or nil
+  local gate = turn_action_gate.resolve_gate_state(
+    ui_sync_ports and type(ui_sync_ports.resolve_ui_gate) == "function" and ui_sync_ports.resolve_ui_gate(state) or nil
+  )
+  local turn = type(state) == "table" and state.game and state.game.turn or nil
   return {
     input_blocked = gate.input_blocked == true,
     choice_active = gate.choice_active == true,
@@ -156,8 +146,7 @@ function validator.resolve_item_slot_action(item_slot_source, state, action)
   local options = assert(choice.options, "missing choice options")
   local option_ok = false
   for _, opt in ipairs(options) do
-    local opt_id = opt.id or opt
-    if opt_id == item_id then
+    if (opt.id or opt) == item_id then
       option_ok = true
       break
     end

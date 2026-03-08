@@ -6,7 +6,7 @@
 
 | 指标 | 数值 |
 |------|------|
-| `src/` Lua 代码行数 | **24,913 行** |
+| `src/` Lua 代码行数 | **24,613 行（当前工作树）** |
 | `src/` Lua 文件数 | **293 个** |
 | 涉及 "choice" 概念的文件 | **104 个** |
 | 涉及 "port" 概念的文件 | **121 个** |
@@ -188,94 +188,19 @@ src/game/legacy/turn_engine/
 | `game/core/ai/agent.lua` | 308 | AI | 低（算法密集） |
 | `game/flow/turn/gameplay_loop.lua` | 299 | 流程编排 | 中（条件分支多） |
 
-### 3.2 降线策略
+### 3.2 降线策略（按当前仓库真相纠偏）
 
-#### 策略A: 删除 legacy 代码（预估 -160行）
+旧版 3.2 把“删 legacy turn engine、清理 `core/runtime_ports/`、引入 UI DSL、再顺手压测试配置”放在同一层级，但当前仓库真相已经变化，必须先纠偏后执行。
 
-**操作**：移除 `src/game/legacy/turn_engine/`
+首先，`src/game/legacy/turn_engine/` 现在仍然是生产路径的一部分，而不是可以直接删除的死目录。`src/game/core/runtime/composition_root.lua`、`src/game/core/runtime/game.lua`、`tests/suites/gameplay/gameplay_coroutine.lua`、`tests/suites/gameplay/gameplay.lua` 与 `tests/suites/presentation/presentation_ui.lua` 仍直接引用它，所以真正安全的路线是先在 `src/game/flow/turn/` 下建立新的稳定入口，再迁移调用方，最后在 T12 删除 legacy 目录。
 
-**前提条件**：
-1. 验证 `gameplay_loop.lua` 已完全接管回合管理
-2. 迁移 `scheduler/` 的依赖关系（如有）
+其次，旧 research 提到的 `src/core/runtime_ports/` 当前仓库中已经不存在，因此它不再是一个待删除的目标。Port 相关的真实热点是 `src/core/ports/` 与 `src/game/ports/` 合计 `268` 行，问题主要是重复的断言 / 解析模板，以及 `turn_ui_sync_shared` 这种“共享策略伪装成 Port”的落点错误。
 
-**风险**：低。已通过冻结标记隔离。
+再次，`presentation` 的首轮压缩不应走 DSL 化路线。当前 UI 代码围绕 `ui_view_service`、现有 runtime port 与 host scheduler 运作，最安全的降线方式是提取 `ui_controls` 与 `effect_timeline` 两类 helper，把重复的显隐 / `touch_enabled` / 批量控件更新 / 延时清理模式收敛起来，而不是引入新的 Canvas DSL。
 
-#### 策略B: 合并重复 Port 契约（预估 -400行）
+最后，测试配置的真实热点不是缺失目录，而是 `src/app/testing/config/test_profiles.lua` 当前自身有 `368` 行，其中大部分是 data table。它适合外置到 `Config/testing/test_profiles.lua`，保留 loader/validator API 以避免波及 resolver 与 bootstrap。
 
-**操作**：
-1. 审计 `core/ports/` vs `game/ports/` 的职责重叠
-2. 统一 runtime 访问契约到 `infrastructure/ports/`
-3. 删除 `core/runtime_ports/`
-
-**预期收益**：
-- 减少 25个 port 文件中的重复断言代码
-- 统一错误处理模式
-
-#### 策略C: 提取 presentation 中的重复渲染模式（预估 -800行）
-
-**模式识别**：
-
-`presentation/view/render/` 中的文件共享以下结构：
-```lua
--- 重复模式1: 动画生命周期管理
-local function play_anim(params)
-  local anim_id = generate_id()
-  active_anims[anim_id] = { ... }
-  return anim_id
-end
-
--- 重复模式2: 条件渲染分支
-if condition_a then
-  render_variant_a()
-elseif condition_b then
-  render_variant_b()
-else
-  render_default()
-end
-
--- 重复模式3: Canvas 节点操作
-local node = Canvas.GetNode(path)
-if node then
-  node:SetText(text)
-  node:SetVisible(true)
-end
-```
-
-**提取方案**：
-1. 创建 `presentation/view/support/anim_utils.lua` 统一动画管理
-2. 创建 `presentation/view/support/canvas_helpers.lua` 统一节点操作
-3. 引入声明式渲染 DSL 替代命令式 Canvas 操作
-
-#### 策略D: Choice 处理器重构（预估 -600行）
-
-**现状**：`game/systems/choices/choice_handlers/` 中17+处理器，每文件约150-200行。
-
-**重构方案**：
-```lua
--- 从命令式 handler
-function item_choice_handler(game, choice, action)
-  if action.option_id == "use" then
-    -- 100+ lines of logic
-  elseif action.option_id == "cancel" then
-    -- 50+ lines of cleanup
-  end
-end
-
--- 转换为声明式配置
-choice_registry:register("item_use", {
-  validate = ItemChoiceValidator,
-  execute = ItemChoiceExecutor,
-  fallback = ItemChoiceFallback,
-})
-```
-
-#### 策略E: 配置与代码分离（预估 -500行）
-
-**目标文件**：
-- `app/testing/config/test_profiles.lua` (368行)
-- `core/config/` 中的硬编码表格
-
-**操作**：将测试配置、特性开关外置到 JSON/Lua 数据文件。
+基于以上纠偏，当前 3.2 的成功标准固定为：`lua tests/regression.lua` 全绿；`src/` Lua 相对当前 `24,913` 行基线净减不少于 `800` 行；最终 `src/` 与 `tests/` 中不再残留任何 `require("src.game.legacy.turn_engine.*")`。本轮重点热点依次是：`src/game/legacy/turn_engine/` `160` 行，`src/core/ports/` + `src/game/ports/` `268` 行，`src/presentation/view/render/` `2,822` 行，`src/game/systems/choices/` `630` 行，以及 `src/app/testing/config/test_profiles.lua` `368` 行。
 
 ### 3.3 降线路线图
 
@@ -345,3 +270,15 @@ choice_registry:register("item_use", {
 
 *报告生成时间：2026-03-08*
 *基于 commit: 90106c5*
+
+## 五、本轮 3.2 执行结果（2026-03-08 16:13 +08:00）
+
+实际执行结果与计划存在一个重要偏差：行为稳态与结构目标已经达成，但净减行数目标没有达成。当前仓库 `src/` 共 `298` 个 Lua 文件、`24,801` 行，相比基线 `24,913` 仅减少 `112` 行。与此同时，`lua tests/regression.lua` 已恢复全绿，输出 `All regression checks passed (382)`、`dep_rules ok`、`legacy_path_guard ok`、`forbidden_globals ok`；`rg -n 'src\.game\.legacy\.turn_engine' src tests` 与 `rg -n 'src\.core\.ports\.turn_ui_sync_shared' src tests` 均返回零。
+
+这说明 3.2 前半段的架构纠偏是正确的：legacy turn engine 已完全退出调用面，turn runtime 有了稳定入口，测试 profile 大表已外置，Port 假契约也已清理。但 helper-first / wrapper-first 的低风险策略带来的“新增稳定入口与抽象层”抵消了大量删减收益，因此并没有实现原先设想的 800 行以上净减。若要继续追求该阈值，下一轮应该把重点从“路径迁移”转向“热点文件内部的重复逻辑压缩”，尤其是 `market_view`、`board_feedback_service`、`target_choice_effects` 与 `choice_resolver`。
+
+## 2026-03-08 执行结果补记
+
+3.2 计划的结构性目标已经兑现：`src/game/legacy/turn_engine/` 已删除，turn runtime 稳定入口改为 `src/game/flow/turn/turn_runtime.lua`、`src/game/flow/turn/scheduler_turn_runtime.lua` 与 `src/game/flow/turn/turn_phase_registry.lua`；`src/core/ports/turn_ui_sync_shared.lua` 已迁出到 `src/core/ui_sync/turn_ui_sync_shared.lua`；`src/app/testing/config/test_profiles.lua` 已缩成 loader / validator，数据表移到 `Config/testing/test_profiles.lua`。
+
+最终验收结果是：`lua tests/regression.lua` 通过，`rg -n 'src\.game\.legacy\.turn_engine' src tests` 与 `rg -n 'src\.core\.ports\.turn_ui_sync_shared' src tests` 返回零，但 `src/` Lua 总行数只从 `24,913` 下降到 `24,801`，净减 `112` 行，未达到原计划要求的 `800` 行。这说明本轮更接近“边界清障 + 稳定入口迁移 + 首轮 helper 化”，还不是足够激进的降线收缩。

@@ -1,34 +1,23 @@
 local intent_output_port = {}
+local contract_helper = require("src.game.ports.contract_helper")
 
 local function _fallback_port()
   return require("src.game.flow.output_adapters.intent_output_adapter").build()
 end
 
-local function _resolve_port(game)
-  if not game then
-    return nil
-  end
-  local port = game.intent_output_port
-  if type(port) == "table" then
-    return port
-  end
-  return _fallback_port()
+local function _call_optional(game, method_name, default_result, ...)
+  return contract_helper.call_optional_method(game, "intent_output_port", method_name, {
+    fallback_port = _fallback_port(),
+    default_result = default_result,
+  }, ...)
 end
 
 function intent_output_port.open_choice(game, choice_spec, opts)
-  local port = _resolve_port(game)
-  if not port or type(port.open_choice) ~= "function" then
-    return nil
-  end
-  return port.open_choice(game, choice_spec, opts)
+  return _call_optional(game, "open_choice", nil, game, choice_spec, opts)
 end
 
 function intent_output_port.push_popup(game, payload, opts)
-  local port = _resolve_port(game)
-  if not port or type(port.push_popup) ~= "function" then
-    return false
-  end
-  return port.push_popup(game, payload, opts)
+  return _call_optional(game, "push_popup", false, game, payload, opts)
 end
 
 function intent_output_port.dispatch(game, payload, opts)

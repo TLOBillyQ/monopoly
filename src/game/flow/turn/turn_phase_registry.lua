@@ -7,7 +7,7 @@ local turn_roll = require("src.game.flow.turn.turn_roll")
 local turn_move = require("src.game.flow.turn.turn_move")
 local turn_land = require("src.game.flow.turn.turn_land")
 
-local phase_registry = {}
+local turn_phase_registry = {}
 
 local function _resolve_tile_name(game, player)
   if not (game and game.board and player and player.position) then
@@ -55,7 +55,7 @@ local function _phase_end(turn_mgr, args)
   return nil
 end
 
-function phase_registry.build_default_phases()
+function turn_phase_registry.build_default_phases()
   return {
     start = turn_start,
     roll = turn_roll,
@@ -66,4 +66,4 @@ function phase_registry.build_default_phases()
   }
 end
 
-return phase_registry
+return turn_phase_registry

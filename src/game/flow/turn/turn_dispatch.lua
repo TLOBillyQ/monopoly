@@ -147,7 +147,6 @@ local function _dispatch_action(game, state, action, opts, dispatch_ctx)
       if not player then
         return { status = "rejected" }
       end
-      local before = player.auto == true
       player.auto = not (player.auto == true)
       _reset_afk_tracking(state, player.id)
       return { status = "applied" }

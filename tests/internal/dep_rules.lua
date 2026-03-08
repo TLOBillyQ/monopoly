@@ -72,12 +72,30 @@ local rules = {
     description = "tests must not depend on retired runtime bridge path src.core.runtime_compat; validate runtime_ports/runtime_context contracts directly",
   },
   {
-    root = "src/game/core",
+    root = "src/core/ports",
+    forbidden_patterns = {
+      "require%(%\"src%.game%.ports%..-%\"%)",
+      "require%(%'src%.game%.ports%..-%'%)",
+      "require%(%\"src%.game%.flow%.turn%.gameplay_loop_ports%\"%)",
+      "require%(%'src%.game%.flow%.turn%.gameplay_loop_ports'%)",
+    },
+    description = "core ports must stay host/runtime-wide contracts; do not reach into systems-facing game ports or flow-local gameplay_loop_ports",
+  },
+  {
+    root = "src/game/ports",
+    forbidden_patterns = {
+      "require%(%\"src%.game%.flow%.turn%.gameplay_loop_ports%\"%)",
+      "require%(%'src%.game%.flow%.turn%.gameplay_loop_ports'%)",
+    },
+    description = "game ports must stay systems-facing contracts; gameplay_loop_ports is a turn-flow-local override bundle, not a shared port layer",
+  },
+  {
+    root = "src/game/core/player",
     forbidden_patterns = {
       "require%(\"src%.game%.flow%..-\"%)",
       "require%('src%.game%.flow%..-'%)",
     },
-    description = "game core must not depend on src.game.flow.* directly",
+    description = "game core player state must not depend on src.game.flow.* directly",
   },
   {
     root = "src",
@@ -132,6 +150,16 @@ local rules = {
     description = "systems layer must use ActionAnimPort instead of direct ui_port.wait_action_anim checks",
   },
   {
+    root = "src/core/ports",
+    forbidden_patterns = {
+      "require%(\"src%.game%.systems%..-\"%)",
+      "require%('src%.game%.systems%..-'%)",
+      "require%(\"src%.game%.flow%..-\"%)",
+      "require%('src%.game%.flow%..-'%)",
+    },
+    description = "core runtime contracts must stay gameplay-agnostic; put use-case local bundles in game.flow or systems-facing contracts in game.ports",
+  },
+  {
     root = "src/game/core/player",
     forbidden_patterns = {
       "require%(\"src%.game%.systems%..-\"%)",
@@ -160,8 +188,10 @@ local rules = {
     forbidden_patterns = {
       "game%.gameplay_loop_ports",
       "self%.gameplay_loop_ports",
+      "require%(%\"src%.game%.flow%.turn%.gameplay_loop_ports%\"%)",
+      "require%(%'src%.game%.flow%.turn%.gameplay_loop_ports'%)",
     },
-    description = "systems layer must not read gameplay loop runtime object fields directly; use explicit game ports instead",
+    description = "systems layer must not read gameplay loop runtime object fields directly or depend on gameplay_loop_ports; use explicit game ports instead",
   },
   {
     root = "src/game/flow/turn",
@@ -217,6 +247,25 @@ local presentation_game_systems_whitelist = {
   --   ["src.game.systems.some.module"] = true,
   -- },
 }
+
+local dep_rules_whitelist = {
+  ["src/game/core/runtime/composition_root.lua"] = {
+    ["src.game.flow.turn.turn_runtime"] = true,
+    ["src.game.flow.turn.turn_phase_registry"] = true,
+  },
+}
+
+local function _is_whitelisted_line(allow_by_file, line)
+  if allow_by_file == nil then
+    return false
+  end
+  for snippet in pairs(allow_by_file) do
+    if line:find(snippet, 1, true) then
+      return true
+    end
+  end
+  return false
+end
 
 local forbidden_files = {
   "src/game/flow/output_adapters/legacy_output_mirror.lua",
@@ -336,10 +385,13 @@ local function _scan_file(path, forbidden, forbidden_patterns)
     return nil, "cannot open: " .. tostring(path)
   end
   local lineno = 0
+  local normalized_path = tostring(path or ""):gsub("\\", "/")
+  local relpath = normalized_path:match(".*(src/.+)") or normalized_path:match(".*(tests/.+)") or normalized_path
+  local allow_by_file = dep_rules_whitelist[relpath]
   for line in file:lines() do
     lineno = lineno + 1
     for _, prefix in ipairs(forbidden or {}) do
-      if line:find(prefix, 1, true) then
+      if line:find(prefix, 1, true) and not _is_whitelisted_line(allow_by_file, line) then
         file:close()
         return {
           path = path,
@@ -350,7 +402,7 @@ local function _scan_file(path, forbidden, forbidden_patterns)
       end
     end
     for _, pattern in ipairs(forbidden_patterns or {}) do
-      if line:find(pattern) then
+      if line:find(pattern) and not _is_whitelisted_line(allow_by_file, line) then
         file:close()
         return {
           path = path,

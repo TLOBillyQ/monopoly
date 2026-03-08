@@ -1,17 +1,8 @@
 local bankruptcy_port = {}
-
-local function _resolve_port(game)
-  assert(game ~= nil, "missing game for bankruptcy_port")
-  local port = game.bankruptcy_port
-  assert(type(port) == "table", "missing game.bankruptcy_port")
-  return port
-end
+local contract_helper = require("src.game.ports.contract_helper")
 
 function bankruptcy_port.eliminate(game, player, opts)
-  local port = _resolve_port(game)
-  local eliminate = port.eliminate
-  assert(type(eliminate) == "function", "missing bankruptcy_port.eliminate")
-  return eliminate(game, player, opts)
+  return contract_helper.call_required_method(game, "bankruptcy_port", "bankruptcy_port", "eliminate", game, player, opts)
 end
 
 return bankruptcy_port

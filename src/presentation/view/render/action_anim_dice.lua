@@ -1,6 +1,7 @@
 local ui_events = require("src.presentation.runtime.ui_events")
 local number_utils = require("src.core.utils.number_utils")
 local host_runtime = require("src.presentation.runtime.host_runtime_port")
+local effect_timeline = require("src.presentation.view.support.effect_timeline")
 
 local dice = {}
 
@@ -50,33 +51,42 @@ function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
       nodes.faces[index] = runtime.query_node(name)
     end
 
-    nodes.screen.visible = true
-    nodes.spin.visible = true
-    for _, node in ipairs(nodes.faces or {}) do
-      node.visible = false
-    end
-
-    host_runtime.schedule(duration, function()
-      ui_events.send_to_all("重置骰子旋转", {})
-      nodes.spin.visible = false
-      if face then
-        for index, node in ipairs(nodes.faces or {}) do
-          node.visible = face == index
+    effect_timeline.play({
+      schedule = host_runtime.schedule,
+      show = function()
+        nodes.screen.visible = true
+        nodes.spin.visible = true
+        for _, node in ipairs(nodes.faces or {}) do
+          node.visible = false
         end
-      end
-    end)
-
-    host_runtime.schedule(duration + hold_seconds, function()
-      local hide_event = ui_events.hide[dice_nodes.canvas]
-      if hide_event then
-        ui_events.send_to_all(hide_event, {})
-      end
-      nodes.screen.visible = false
-      nodes.spin.visible = false
-      for _, node in ipairs(nodes.faces or {}) do
-        node.visible = false
-      end
-    end)
+      end,
+      steps = {
+        {
+          delay = duration,
+          run = function()
+            ui_events.send_to_all("重置骰子旋转", {})
+            nodes.spin.visible = false
+            if face then
+              for index, node in ipairs(nodes.faces or {}) do
+                node.visible = face == index
+              end
+            end
+          end,
+        },
+      },
+      cleanup_delay = duration + hold_seconds,
+      cleanup = function()
+        local hide_event = ui_events.hide[dice_nodes.canvas]
+        if hide_event then
+          ui_events.send_to_all(hide_event, {})
+        end
+        nodes.screen.visible = false
+        nodes.spin.visible = false
+        for _, node in ipairs(nodes.faces or {}) do
+          node.visible = false
+        end
+      end,
+    })
   end)
 end
 

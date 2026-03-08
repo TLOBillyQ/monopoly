@@ -7,7 +7,6 @@ local land_choice_handler = {}
 local item_ids = gameplay_rules.item_ids
 
 function land_choice_handler.build(helpers)
-  local is_cancel = helpers.is_cancel
   local finish_choice = helpers.finish_choice
   local land_actions = require("src.game.systems.land.land_actions")
 
@@ -16,9 +15,7 @@ function land_choice_handler.build(helpers)
     local player_id = meta.player_id
     local tile_id = meta.tile_id
     local card_kind = meta.card_kind
-
-    assert(action ~= nil, "missing action")
-    local use_card = (action.option_id == "use") and not is_cancel(action)
+    local use_card = action.option_id == "use"
 
     if use_card and card_kind == "strong" then
       land_actions.execute_strong_card(game, player_id, tile_id)
@@ -41,9 +38,7 @@ function land_choice_handler.build(helpers)
   local function _handle_tax_prompt(game, choice, action)
     local meta = choice.meta
     local player_id = meta.player_id
-
-    assert(action ~= nil, "missing action")
-    local use_card = (action.option_id == "use") and not is_cancel(action)
+    local use_card = action.option_id == "use"
 
     if use_card then
       land_actions.execute_tax_free_card(game, player_id)
@@ -55,8 +50,13 @@ function land_choice_handler.build(helpers)
   end
 
   return {
-    rent_card_prompt = _handle_rent_prompt,
-    tax_card_prompt = _handle_tax_prompt,
+    rent_card_prompt = {
+      execute = _handle_rent_prompt,
+    },
+    tax_card_prompt = {
+      cancel = { mode = "select_option", option_id = "skip" },
+      execute = _handle_tax_prompt,
+    },
   }
 end
 

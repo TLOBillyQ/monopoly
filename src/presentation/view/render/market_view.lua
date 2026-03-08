@@ -1,4 +1,5 @@
 local market_layout = require("src.presentation.view.support.market_layout")
+local ui_controls = require("src.presentation.view.support.ui_controls")
 local modal_state = require("src.presentation.input.ui_modal_state_coordinator")
 local runtime = require("src.presentation.runtime.ui_runtime_port")
 local runtime_state = require("src.core.state_access.runtime_state")
@@ -6,7 +7,6 @@ local items_cfg = require("Config.generated.items")
 local market_cfg = require("Config.generated.market")
 local number_utils = require("src.core.utils.number_utils")
 local vehicle_catalog = require("src.core.config.vehicle_catalog")
-local logger = require("src.core.utils.logger")
 
 local market_view = {}
 local VEHICLE_TAB_ENABLED = false
@@ -45,17 +45,6 @@ local function _resolve_market_name(opt, product_id, entry, cfg)
   return tostring(product_id)
 end
 
-local function _resolve_market_currency(entry)
-  assert(entry ~= nil, "missing market entry")
-  assert(entry.currency ~= nil and entry.currency ~= "", "missing market currency")
-  return entry.currency
-end
-
-local function _resolve_market_price(entry)
-  assert(entry ~= nil, "missing market entry")
-  return entry.price
-end
-
 local function _resolve_market_level(cfg)
   local level = cfg and cfg.tier or 1
   if level < 1 then
@@ -89,20 +78,65 @@ local function _resolve_market_icon_key(refs, product_id, entry, cfg)
 end
 
 local function _set_market_slot_hidden(ui, button, label, frame)
-  ui:set_visible(button, false)
-  ui:set_touch_enabled(button, false)
-  ui:set_visible(label, false)
-  ui:set_touch_enabled(label, false)
-  ui:set_visible(frame, false)
-  ui:set_touch_enabled(frame, false)
+  ui_controls.set_slot_state(ui, {
+    button = button,
+    label = label,
+    frame = frame,
+  }, {
+    button = { visible = false, touch_enabled = false },
+    label = { visible = false, touch_enabled = false },
+    frame = { visible = false, touch_enabled = false },
+  })
+end
+
+local function _set_market_container_active(ui, active)
+  ui_controls.set_control_state(ui, market_layout.container, { visible = active })
+  ui.market_active = active == true
+end
+
+local function _set_confirm_button_state(ui, enabled)
+  ui_controls.set_control_state(ui, market_layout.confirm_button, {
+    visible = true,
+    touch_enabled = enabled == true,
+  })
+end
+
+local function _for_each_market_slot(callback)
+  local buttons = market_layout.item_buttons
+  local labels = market_layout.item_labels
+  local frames = market_layout.item_frames
+  for idx = 1, math.max(#buttons, #labels, #frames) do
+    local button, label, frame = buttons[idx], labels[idx], frames[idx]
+    if button and label and frame then
+      callback(idx, button, label, frame)
+    end
+  end
+end
+
+local function _hide_market_slots(ui)
+  _for_each_market_slot(function(_, button, label, frame)
+    _set_market_slot_hidden(ui, button, label, frame)
+  end)
 end
 
 local function _clear_market_selection_frames(ui)
-  local selection_frames = market_layout.item_selection_frames or {}
-  for _, name in ipairs(selection_frames) do
-    ui:set_visible(name, false)
-    ui:set_touch_enabled(name, false)
+  ui_controls.set_controls_state(ui, market_layout.item_selection_frames or {}, { visible = false, touch_enabled = false })
+end
+
+local function _reset_market_preview(state)
+  local ui = state.ui
+  ui:set_label(market_layout.price_label, "")
+  _clear_market_selection_frames(ui)
+  ui_controls.set_control_state(ui, market_layout.selected_card, { touch_enabled = false })
+
+  local image_refs = state.ui_refs and state.ui_refs.images or {}
+  local empty_key = _resolve_ref_key(image_refs, market_layout.empty_ref_key)
+  if empty_key == nil then
+    return
   end
+
+  local node = ui.query_node(market_layout.selected_card)
+  runtime.set_node_texture_keep_size(node, empty_key)
 end
 
 local function _refresh_market_selection_frames(ui, option_ids, option_id)
@@ -111,12 +145,9 @@ local function _refresh_market_selection_frames(ui, option_ids, option_id)
     return
   end
   for index, visible_option_id in pairs(option_ids or {}) do
-    if visible_option_id == option_id then
-      local name = market_layout.item_selection_frames and market_layout.item_selection_frames[index] or nil
-      if name then
-        ui:set_visible(name, true)
-        ui:set_touch_enabled(name, false)
-      end
+    local name = market_layout.item_selection_frames and market_layout.item_selection_frames[index] or nil
+    if visible_option_id == option_id and name then
+      ui_controls.set_control_state(ui, name, { visible = true, touch_enabled = false })
       return
     end
   end
@@ -127,12 +158,11 @@ local function _set_market_slot_visible(ui, refs, slot, opt)
   local entry, cfg = _resolve_market_entry(opt_id)
   local name = _resolve_market_name(opt, opt_id, entry, cfg)
   ui:set_label(slot.label, name)
-  ui:set_visible(slot.label, true)
-  ui:set_touch_enabled(slot.label, false)
-  ui:set_visible(slot.button, true)
-  ui:set_touch_enabled(slot.button, true)
-  ui:set_visible(slot.frame, true)
-  ui:set_touch_enabled(slot.frame, false)
+  ui_controls.set_slot_state(ui, slot, {
+    label = { visible = true, touch_enabled = false },
+    button = { visible = true, touch_enabled = true },
+    frame = { visible = true, touch_enabled = false },
+  })
   local level = _resolve_market_level(cfg)
   local rarity_key = _resolve_ref_key(refs, market_layout.rarity_ref_keys[level])
   if rarity_key == nil then
@@ -145,21 +175,10 @@ local function _set_market_slot_visible(ui, refs, slot, opt)
   return opt_id
 end
 
-local function _set_control_visible(ui, name, visible, enabled)
-  if not name then
-    return
-  end
-  ui:set_visible(name, visible == true)
-  ui:set_touch_enabled(name, enabled == true)
-end
-
 local function _contains_option_id(option_ids, option_id)
-  if option_id == nil then
-    return false
-  end
   for _, value in pairs(option_ids or {}) do
     if value == option_id then
-      return true
+      return option_id ~= nil
     end
   end
   return false
@@ -168,12 +187,10 @@ end
 local function _set_cancel_controls(ui, visible, enabled)
   local names = market_layout.cancel_buttons
   if type(names) == "table" and #names > 0 then
-    for _, name in ipairs(names) do
-      _set_control_visible(ui, name, visible, enabled)
-    end
+    ui_controls.set_controls_state(ui, names, { visible = visible, touch_enabled = enabled })
     return
   end
-  _set_control_visible(ui, market_layout.cancel_button, visible, enabled)
+  ui_controls.set_control_state(ui, market_layout.cancel_button, { visible = visible, touch_enabled = enabled })
 end
 
 local function _resolve_market_tab(market)
@@ -184,32 +201,24 @@ local function _resolve_market_tab(market)
   return "item"
 end
 
-local function _resolve_market_page_index(market)
-  local page_index = number_utils.to_integer(market and market.page_index) or 1
-  if page_index < 1 then
+local function _resolve_market_page_value(market, key)
+  local value = number_utils.to_integer(market and market[key]) or 1
+  if value < 1 then
     return 1
   end
-  return page_index
-end
-
-local function _resolve_market_page_count(market)
-  local page_count = number_utils.to_integer(market and market.page_count) or 1
-  if page_count < 1 then
-    return 1
-  end
-  return page_count
+  return value
 end
 
 local function _refresh_market_controls(ui, market)
   local active_tab = _resolve_market_tab(market)
-  local page_index = _resolve_market_page_index(market)
-  local page_count = _resolve_market_page_count(market)
+  local page_index = _resolve_market_page_value(market, "page_index")
+  local page_count = _resolve_market_page_value(market, "page_count")
   local paging_visible = page_count > 1
-  _set_control_visible(ui, market_layout.page_prev, paging_visible, paging_visible and page_index > 1)
-  _set_control_visible(ui, market_layout.page_next, paging_visible, paging_visible and page_index < page_count)
-  _set_control_visible(ui, market_layout.tab_item, true, active_tab ~= "item")
-  _set_control_visible(ui, market_layout.tab_skin, true, active_tab ~= "skin")
-  _set_control_visible(ui, market_layout.tab_vehicle, VEHICLE_TAB_ENABLED, VEHICLE_TAB_ENABLED and active_tab ~= "vehicle")
+  ui_controls.set_control_state(ui, market_layout.page_prev, { visible = paging_visible, touch_enabled = paging_visible and page_index > 1 })
+  ui_controls.set_control_state(ui, market_layout.page_next, { visible = paging_visible, touch_enabled = paging_visible and page_index < page_count })
+  ui_controls.set_control_state(ui, market_layout.tab_item, { visible = true, touch_enabled = active_tab ~= "item" })
+  ui_controls.set_control_state(ui, market_layout.tab_skin, { visible = true, touch_enabled = active_tab ~= "skin" })
+  ui_controls.set_control_state(ui, market_layout.tab_vehicle, { visible = VEHICLE_TAB_ENABLED, touch_enabled = VEHICLE_TAB_ENABLED and active_tab ~= "vehicle" })
 end
 
 function market_view.refresh_market_selection(state, option_id)
@@ -219,17 +228,15 @@ function market_view.refresh_market_selection(state, option_id)
   local icon_key = _resolve_ref_key(image_refs, market_layout.empty_ref_key)
   assert(option_id ~= nil, "missing market option_id")
   local entry, cfg = _resolve_market_entry(option_id)
-  local price = _resolve_market_price(entry)
-  local currency = _resolve_market_currency(entry)
-  local price_text = tostring(price) .. " " .. currency
+  assert(entry ~= nil, "missing market entry")
+  local price_text = tostring(entry.price) .. " " .. tostring(assert(entry.currency ~= nil and entry.currency ~= "" and entry.currency, "missing market currency"))
   local resolved_icon_key = _resolve_market_icon_key(image_refs, option_id, entry, cfg)
   if resolved_icon_key ~= nil then
     icon_key = resolved_icon_key
   end
   ui:set_label(market_layout.price_label, price_text)
   if icon_key ~= nil then
-    local node = ui.query_node(market_layout.selected_card)
-    runtime.set_node_texture_keep_size(node, icon_key)
+    runtime.set_node_texture_keep_size(ui.query_node(market_layout.selected_card), icon_key)
   end
 end
 
@@ -251,73 +258,39 @@ function market_view.refresh_market(state, market)
     end
   end
   if #options == 0 then
-    ui:set_visible(market_layout.container, true)
-    ui.market_active = true
-
-    local buttons = market_layout.item_buttons
-    local labels = market_layout.item_labels
-    local frames = market_layout.item_frames
-    local max_slots = math.max(#buttons, #labels, #frames)
-    for idx = 1, max_slots do
-      local button = buttons[idx]
-      local label = labels[idx]
-      local frame = frames[idx]
-      if button and label and frame then
-        _set_market_slot_hidden(ui, button, label, frame)
-      end
-    end
-
-    ui:set_label(market_layout.price_label, "")
-    _clear_market_selection_frames(ui)
-    local image_refs = state.ui_refs and state.ui_refs.images or {}
-    local empty_key = _resolve_ref_key(image_refs, market_layout.empty_ref_key)
-    if empty_key ~= nil then
-      local node = ui.query_node(market_layout.selected_card)
-      runtime.set_node_texture_keep_size(node, empty_key)
-    end
+    _set_market_container_active(ui, true)
+    _hide_market_slots(ui)
+    _reset_market_preview(state)
     _refresh_market_controls(ui, market)
-    ui:set_visible(market_layout.confirm_button, true)
-    ui:set_touch_enabled(market_layout.confirm_button, false)
+    _set_confirm_button_state(ui, false)
     local show_cancel = market.allow_cancel
     _set_cancel_controls(ui, show_cancel, show_cancel)
     modal_state.open_market(state, market.choice_id, {}, nil)
     return true
   end
 
-  ui:set_visible(market_layout.container, true)
-  ui.market_active = true
+  _set_market_container_active(ui, true)
 
   local refs = state.ui_refs and state.ui_refs.images or {}
   local option_ids = {}
-  local buttons = market_layout.item_buttons
-  local labels = market_layout.item_labels
-  local frames = market_layout.item_frames
-  local max_slots = math.max(#buttons, #labels, #frames)
   local first_buyable = nil
-  for idx = 1, max_slots do
+  _for_each_market_slot(function(idx, button, label, frame)
     local opt = options[idx]
-    local button = buttons[idx]
-    local label = labels[idx]
-    local frame = frames[idx]
-    if button and label and frame then
-      local slot = { button = button, label = label, frame = frame }
-      if opt then
-        if opt.can_buy == true and first_buyable == nil then
-          first_buyable = opt.id or opt
-        end
-        option_ids[idx] = _set_market_slot_visible(ui, refs, slot, opt)
-      else
-        _set_market_slot_hidden(ui, button, label, frame)
-      end
+    if not opt then
+      _set_market_slot_hidden(ui, button, label, frame)
+      return
     end
-  end
+    if opt.can_buy == true and first_buyable == nil then
+      first_buyable = opt.id or opt
+    end
+    option_ids[idx] = _set_market_slot_visible(ui, refs, { button = button, label = label, frame = frame }, opt)
+  end)
 
-  ui:set_touch_enabled(market_layout.selected_card, false)
+  ui_controls.set_control_state(ui, market_layout.selected_card, { touch_enabled = false })
   _clear_market_selection_frames(ui)
   _refresh_market_controls(ui, market)
 
-  ui:set_visible(market_layout.confirm_button, true)
-  ui:set_touch_enabled(market_layout.confirm_button, true)
+  _set_confirm_button_state(ui, true)
   local show_cancel = market.allow_cancel
   _set_cancel_controls(ui, show_cancel, show_cancel)
 
@@ -336,28 +309,19 @@ end
 function market_view.close_market_panel(state)
   local ui = state.ui
   assert(ui ~= nil and ui.market_active == true, "market panel not active")
-  ui:set_visible(market_layout.container, false)
-  ui.market_active = false
+  _set_market_container_active(ui, false)
   modal_state.close_choice(state)
-  ui:set_label(market_layout.price_label, "")
-  for _, name in ipairs(market_layout.item_labels) do
-    ui:set_touch_enabled(name, false)
-  end
-  for _, name in ipairs(market_layout.item_frames) do
-    ui:set_touch_enabled(name, false)
-  end
-  _clear_market_selection_frames(ui)
-  ui:set_touch_enabled(market_layout.selected_card, false)
-  _set_control_visible(ui, market_layout.page_prev, false, false)
-  _set_control_visible(ui, market_layout.page_next, false, false)
-  _set_control_visible(ui, market_layout.tab_item, false, false)
-  _set_control_visible(ui, market_layout.tab_skin, false, false)
-  _set_control_visible(ui, market_layout.tab_vehicle, false, false)
+  _reset_market_preview(state)
+  ui_controls.set_controls_state(ui, market_layout.item_labels, { touch_enabled = false })
+  ui_controls.set_controls_state(ui, market_layout.item_frames, { touch_enabled = false })
+  ui_controls.set_controls_state(ui, {
+    market_layout.page_prev,
+    market_layout.page_next,
+    market_layout.tab_item,
+    market_layout.tab_skin,
+    market_layout.tab_vehicle,
+  }, { visible = false, touch_enabled = false })
   _set_cancel_controls(ui, false, false)
-  local image_refs = state.ui_refs and state.ui_refs.images or {}
-  local empty_key = _resolve_ref_key(image_refs, market_layout.empty_ref_key)
-  local node = ui.query_node(market_layout.selected_card)
-  runtime.set_node_texture_keep_size(node, empty_key)
 end
 
 return market_view

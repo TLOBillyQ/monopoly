@@ -19,31 +19,21 @@ function tick_timeout.resolve_choice_timeout_seconds(game, state, choice)
   return timeout
 end
 
-local function _resolve_ports(state)
-  local ports = state and state.gameplay_loop_ports or nil
-  if not ports then
-    return nil
-  end
-  local modal_ports = ports.modal
+local function _resolve_modal_ports(state)
+  local modal_ports = state and state.gameplay_loop_ports and state.gameplay_loop_ports.modal or nil
   if type(modal_ports) ~= "table" then
     return nil
   end
-  if type(modal_ports.close_choice_modal) == "function" or type(modal_ports.close_popup) == "function" then
-    return modal_ports
-  end
-  return nil
+  return (type(modal_ports.close_choice_modal) == "function" or type(modal_ports.close_popup) == "function") and modal_ports or nil
 end
 
 local function _dispatch_action_with_close_choice(game, state, action)
-  local ports = _resolve_ports(state)
-  if not ports then
-    return turn_dispatch.dispatch_action(game, state, action)
-  end
-  return turn_dispatch.dispatch_action(game, state, action, {
+  local modal_ports = _resolve_modal_ports(state)
+  return turn_dispatch.dispatch_action(game, state, action, modal_ports and {
     on_close_choice = function(ctx)
-      ports.close_choice_modal(ctx)
+      modal_ports.close_choice_modal(ctx)
     end,
-  })
+  } or nil)
 end
 
 function tick_timeout.resolve_modal_timeout_seconds(_, state, ui_sync_ports)
@@ -99,8 +89,7 @@ function tick_timeout.step_modal_timeout(state, dt, opts)
   end
 end
 
-local function _noop()
-end
+local function _noop() end
 
 local default_policy = {
   choice = {
@@ -119,7 +108,7 @@ local default_policy = {
       return tick_timeout.resolve_modal_timeout_seconds(game, state)
     end,
     on_timeout = function(ctx)
-      local ports = _resolve_ports(ctx)
+      local ports = _resolve_modal_ports(ctx)
       if ports and ports.close_popup then
         ports.close_popup(ctx)
         return
