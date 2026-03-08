@@ -7,25 +7,27 @@ local role_id_utils = require("src.core.utils.role_id")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local number_utils = require("src.core.utils.number_utils")
-
 local panel_presenter = {}
-
+local player_label_patterns = {
+  base_nodes.player_name,
+  base_nodes.player_cash,
+  base_nodes.player_cash_delta,
+  base_nodes.player_land_count,
+  base_nodes.player_total_assets,
+}
+local function _safe_ui_call(ui, method_name, ...)
+  if not ui or type(ui[method_name]) ~= "function" then
+    return false
+  end
+  local ok = pcall(ui[method_name], ui, ...)
+  return ok
+end
 local function _set_label_safe(ui, name, value)
-  if not ui or not ui.set_label then
-    return false
-  end
-  local ok = pcall(ui.set_label, ui, name, value)
-  return ok
+  return _safe_ui_call(ui, "set_label", name, value)
 end
-
 local function _set_visible_safe(ui, name, visible)
-  if not ui or not ui.set_visible then
-    return false
-  end
-  local ok = pcall(ui.set_visible, ui, name, visible)
-  return ok
+  return _safe_ui_call(ui, "set_visible", name, visible)
 end
-
 function panel_presenter.apply_base_non_player_visibility(ui, visible)
   assert(ui ~= nil, "missing ui")
   local value = visible == true
@@ -38,7 +40,6 @@ function panel_presenter.apply_base_non_player_visibility(ui, visible)
     ui:set_visible(name, value)
   end
 end
-
 function panel_presenter.render_auto_controls_for_role(state, ui, ctx, ui_model)
   assert(ui ~= nil, "missing ui")
   local controls = ui.auto_control_nodes or { always_show_nodes.auto_button, always_show_nodes.auto_label }
@@ -62,14 +63,12 @@ function panel_presenter.render_auto_controls_for_role(state, ui, ctx, ui_model)
   local allow_touch = auto_enabled
   ui_touch_policy.set_auto_controls_touch(ui, allow_touch, controls)
 end
-
 function panel_presenter.is_base_non_player_visible(ui, ctx)
   if ui and ui.input_blocked then
     return false
   end
   return ctx and ctx.can_operate == true
 end
-
 local function _force_item_slots_visible_for_player(ui, ctx)
   if not ui or not ui.set_visible then
     return
@@ -82,14 +81,12 @@ local function _force_item_slots_visible_for_player(ui, ctx)
     ui:set_visible(slot_name, true)
   end
 end
-
 local function _resolve_avatar_key(row, empty_avatar_key)
   if row and row.avatar ~= nil then
     return row.avatar
   end
   return empty_avatar_key
 end
-
 local function _resolve_auto_effect_visible(ui_model, ctx)
   if not ui_model or not ctx then
     return false
@@ -104,7 +101,6 @@ local function _resolve_auto_effect_visible(ui_model, ctx)
   local auto_by_player = ui_model.auto_enabled_by_player or {}
   return role_id_utils.read(auto_by_player, role_id) == true
 end
-
 local function _set_player_avatar(ui, runtime, avatar_name, image_key)
   if image_key == nil then
     return
@@ -112,29 +108,12 @@ local function _set_player_avatar(ui, runtime, avatar_name, image_key)
   local avatar_node = ui.query_node and ui.query_node(avatar_name) or runtime.query_node(avatar_name)
   runtime.set_node_texture_native_size(avatar_node, image_key)
 end
-
-local function _resolve_cash_value(row)
+local function _resolve_integer_field(row, key)
   if not row then
     return nil
   end
-  local normalized = number_utils.to_integer(row.cash_value)
-  if normalized == nil then
-    return nil
-  end
-  return normalized
+  return number_utils.to_integer(row[key])
 end
-
-local function _resolve_total_assets_value(row)
-  if not row then
-    return nil
-  end
-  local normalized = number_utils.to_integer(row.total_assets_value)
-  if normalized == nil then
-    return nil
-  end
-  return normalized
-end
-
 local function _ensure_cash_delta_state(ui)
   if type(ui.player_cash_value_cache_by_index) ~= "table" then
     ui.player_cash_value_cache_by_index = {}
@@ -143,22 +122,17 @@ local function _ensure_cash_delta_state(ui)
     ui.player_cash_delta_hide_token_by_index = {}
   end
 end
-
-local function _clear_cash_delta_label(ui, index)
+local function _set_cash_delta_label(ui, index, text, visible)
   local label_name = string.format(base_nodes.player_cash_delta, index)
-  _set_label_safe(ui, label_name, "")
-  _set_visible_safe(ui, label_name, false)
-end
-
-local function _show_cash_delta_label(ui, index, text)
-  local label_name = string.format(base_nodes.player_cash_delta, index)
-  local ok = _set_label_safe(ui, label_name, text)
-  if ok then
-    _set_visible_safe(ui, label_name, true)
+  local shown = _set_label_safe(ui, label_name, text or "")
+  if shown or visible ~= nil then
+    _set_visible_safe(ui, label_name, visible == true)
   end
-  return ok
+  return shown
 end
-
+local function _clear_cash_delta_label(ui, index)
+  _set_cash_delta_label(ui, index, "", false)
+end
 local function _schedule_hide_cash_delta(ui, index)
   local token = (ui.player_cash_delta_hide_token_by_index[index] or 0) + 1
   ui.player_cash_delta_hide_token_by_index[index] = token
@@ -172,9 +146,8 @@ local function _schedule_hide_cash_delta(ui, index)
     _clear_cash_delta_label(ui, index)
   end)
 end
-
 local function _refresh_cash_delta_label(ui, index, row)
-  local cash_value = _resolve_cash_value(row)
+  local cash_value = _resolve_integer_field(row, "cash_value")
   local prev_cash_value = ui.player_cash_value_cache_by_index[index]
   if cash_value == nil then
     _clear_cash_delta_label(ui, index)
@@ -198,41 +171,34 @@ local function _refresh_cash_delta_label(ui, index, row)
     delta = -delta
   end
   local text = sign .. number_utils.format_integer_part(delta)
-  local shown = _show_cash_delta_label(ui, index, text)
+  local shown = _set_cash_delta_label(ui, index, text, true)
   if shown then
     _schedule_hide_cash_delta(ui, index)
   end
 end
-
 local function _refresh_player_crowns(ui, player_rows)
   local top_total_assets = nil
-  local crown_visible_by_index = {}
   for i = 1, 4 do
     local row = player_rows[i]
-    local total_assets_value = _resolve_total_assets_value(row)
-    local eligible = row and row.eliminated ~= true and total_assets_value ~= nil
-    if eligible then
-      if top_total_assets == nil or total_assets_value > top_total_assets then
-        top_total_assets = total_assets_value
-      end
+    local total_assets_value = _resolve_integer_field(row, "total_assets_value")
+    if row and row.eliminated ~= true and total_assets_value ~= nil
+        and (top_total_assets == nil or total_assets_value > top_total_assets) then
+      top_total_assets = total_assets_value
     end
   end
-
   for i = 1, 4 do
     local row = player_rows[i]
-    local total_assets_value = _resolve_total_assets_value(row)
-    local visible = false
-    if row and row.eliminated ~= true and top_total_assets ~= nil and total_assets_value ~= nil then
-      visible = total_assets_value == top_total_assets
-    end
-    crown_visible_by_index[i] = visible
-  end
-
-  for i = 1, 4 do
-    _set_visible_safe(ui, string.format(base_nodes.player_crown, i), crown_visible_by_index[i] == true)
+    local total_assets_value = _resolve_integer_field(row, "total_assets_value")
+    local visible = row and row.eliminated ~= true and top_total_assets ~= nil
+        and total_assets_value ~= nil and total_assets_value == top_total_assets
+    _set_visible_safe(ui, string.format(base_nodes.player_crown, i), visible == true)
   end
 end
-
+local function _for_each_player_label_name(index, callback)
+  for _, pattern in ipairs(player_label_patterns) do
+    callback(string.format(pattern, index))
+  end
+end
 local function _apply_player_colors(role, runtime, player, index)
   if not role then
     return
@@ -249,22 +215,45 @@ local function _apply_player_colors(role, runtime, player, index)
     pcall(set_image_color, role, image_node, color, 0)
   end
   if set_label_color then
-    local label_names = {
-      string.format(base_nodes.player_name, index),
-      string.format(base_nodes.player_cash, index),
-      string.format(base_nodes.player_cash_delta, index),
-      string.format(base_nodes.player_land_count, index),
-      string.format(base_nodes.player_total_assets, index),
-    }
-    for _, name in ipairs(label_names) do
+    _for_each_player_label_name(index, function(name)
       local ok, label_node = pcall(runtime.query_node, name)
       if ok then
         pcall(set_label_color, role, label_node, color, 0)
       end
-    end
+    end)
   end
 end
-
+local function _render_player_slot(ui, runtime, row, index, empty_avatar_key)
+  assert(row ~= nil, "missing player row: " .. tostring(index))
+  ui:set_label(string.format(base_nodes.player_name, index), row.name)
+  ui:set_label(string.format(base_nodes.player_cash, index), row.cash)
+  ui:set_label(string.format(base_nodes.player_land_count, index), row.land_count)
+  ui:set_label(string.format(base_nodes.player_total_assets, index), row.total_assets)
+  _refresh_cash_delta_label(ui, index, row)
+  _set_player_avatar(ui, runtime, string.format(base_nodes.player_avatar, index), _resolve_avatar_key(row, empty_avatar_key))
+end
+local function _render_role_view(state, ui_model, runtime, role, panel, refresh_item_slots)
+  local ui = state.ui
+  local ctx = role_context.resolve(role, ui_model, { runtime = runtime })
+  local base_visible = panel_presenter.is_base_non_player_visible(ui, ctx)
+  panel_presenter.apply_base_non_player_visibility(ui, base_visible)
+  _force_item_slots_visible_for_player(ui, ctx)
+  ui:set_visible(always_show_nodes.auto_effect, _resolve_auto_effect_visible(ui_model, ctx))
+  ui:set_touch_enabled(always_show_nodes.auto_effect, false)
+  ui:set_visible(base_nodes.countdown, true)
+  ui:set_label(base_nodes.countdown, panel.turn_label)
+  if panel.no_action_visible == true then
+    ui:set_visible(base_nodes.action_hint, true)
+  end
+  ui:set_touch_enabled(base_nodes.action_button, base_visible)
+  refresh_item_slots(state, ui_model, {
+    role_id = ctx.role_id,
+    display_player_id = ctx.display_player_id,
+    allow_interact = base_visible,
+  })
+  panel_presenter.render_auto_controls_for_role(state, ui, ctx, ui_model)
+  return ctx
+end
 function panel_presenter.refresh(state, ui_model, deps)
   assert(state ~= nil and state.ui ~= nil, "missing state.ui")
   assert(ui_model ~= nil and ui_model.panel ~= nil, "missing ui_model.panel")
@@ -274,7 +263,6 @@ function panel_presenter.refresh(state, ui_model, deps)
   local ui = state.ui
   local panel = ui_model.panel
   local players = ui_model.board and ui_model.board.players or {}
-
   runtime.set_client_role(nil)
   local player_rows = panel.player_rows or {}
   local refs = state.ui_refs or {}
@@ -282,50 +270,19 @@ function panel_presenter.refresh(state, ui_model, deps)
   local empty_avatar_key = image_refs["Empty"]
   _ensure_cash_delta_state(ui)
   for i = 1, 4 do
-    local row = player_rows[i]
-    assert(row ~= nil, "missing player row: " .. tostring(i))
-    ui:set_label(string.format(base_nodes.player_name, i), row.name)
-    ui:set_label(string.format(base_nodes.player_cash, i), row.cash)
-    ui:set_label(string.format(base_nodes.player_land_count, i), row.land_count)
-    ui:set_label(string.format(base_nodes.player_total_assets, i), row.total_assets)
-    _refresh_cash_delta_label(ui, i, row)
-    local avatar_key = _resolve_avatar_key(row, empty_avatar_key)
-    _set_player_avatar(ui, runtime, string.format(base_nodes.player_avatar, i), avatar_key)
+    _render_player_slot(ui, runtime, player_rows[i], i, empty_avatar_key)
   end
   _refresh_player_crowns(ui, player_rows)
-
   if type(ui.item_slot_item_ids_by_role) ~= "table" then
     ui.item_slot_item_ids_by_role = {}
   end
-
   runtime.for_each_role_or_global(function(role)
-    local ctx = role_context.resolve(role, ui_model, { runtime = runtime })
-    local base_visible = panel_presenter.is_base_non_player_visible(ui, ctx)
-    panel_presenter.apply_base_non_player_visibility(ui, base_visible)
-    _force_item_slots_visible_for_player(ui, ctx)
-    local auto_effect_visible = _resolve_auto_effect_visible(ui_model, ctx)
-    ui:set_visible(always_show_nodes.auto_effect, auto_effect_visible)
-    ui:set_touch_enabled(always_show_nodes.auto_effect, false)
-
-    ui:set_visible(base_nodes.countdown, true)
-    ui:set_label(base_nodes.countdown, panel.turn_label)
-    if panel.no_action_visible == true then
-      ui:set_visible(base_nodes.action_hint, true)
-    end
-    ui:set_touch_enabled(base_nodes.action_button, base_visible)
-    refresh_item_slots(state, ui_model, {
-      role_id = ctx.role_id,
-      display_player_id = ctx.display_player_id,
-      allow_interact = base_visible,
-    })
-    panel_presenter.render_auto_controls_for_role(state, ui, ctx, ui_model)
-
+    _render_role_view(state, ui_model, runtime, role, panel, refresh_item_slots)
     for i = 1, 4 do
       _apply_player_colors(role, runtime, players[i], i)
     end
   end)
   runtime.set_client_role(nil)
-
   local current_player_id = role_id_utils.normalize(ui_model.current_player_id)
   local by_role = ui.item_slot_item_ids_by_role
   if current_player_id and by_role and role_id_utils.read(by_role, current_player_id) then
@@ -334,5 +291,4 @@ function panel_presenter.refresh(state, ui_model, deps)
     ui.item_slot_item_ids = {}
   end
 end
-
 return panel_presenter

@@ -15,9 +15,7 @@ local paid_currency_bridge = require("src.game.systems.commerce.paid_currency_br
 local market_purchase = require("src.game.systems.market.application.purchase")
 local runtime_state = require("src.core.state_access.runtime_state")
 local role_id_utils = require("src.core.utils.role_id")
-
 local gameplay_loop = {}
-
 local function _resolve_ports(state)
   if not state then
     return gameplay_loop_ports.resolve(nil)
@@ -32,7 +30,6 @@ local function _resolve_ports(state)
   state.gameplay_loop_ports = resolved
   return resolved
 end
-
 local function _dispatch_action_with_close_choice(game, state, action, ports)
   local modal_ports = ports.modal
   turn_dispatch.dispatch_action(game, state, action, {
@@ -41,7 +38,6 @@ local function _dispatch_action_with_close_choice(game, state, action, ports)
     end,
   })
 end
-
 local function _build_item_index(state)
   local ui_runtime = runtime_state.ensure_ui_runtime(state)
   ui_runtime.item_name_by_id = {}
@@ -49,7 +45,6 @@ local function _build_item_index(state)
     ui_runtime.item_name_by_id[cfg.id] = cfg.name or tostring(cfg.id)
   end
 end
-
 local function _is_auto_popup_owner(game, state)
   local ports = _resolve_ports(state)
   local ui_sync_ports = ports.ui_sync
@@ -63,7 +58,6 @@ local function _is_auto_popup_owner(game, state)
   local actor = game.players[idx]
   return actor and agent.is_auto_player(actor) or false
 end
-
 local function _reset_afk_tracking(state, actor_role_id)
   local turn_runtime = runtime_state.ensure_turn_runtime(state)
   local normalized = role_id_utils.normalize(actor_role_id)
@@ -74,11 +68,9 @@ local function _reset_afk_tracking(state, actor_role_id)
   turn_runtime.afk_elapsed_seconds = 0
   turn_runtime.afk_tracking_active = false
 end
-
 local function _read_afk_elapsed(turn_runtime, actor_role_id)
   return role_id_utils.read(turn_runtime.afk_elapsed_seconds_by_role, actor_role_id) or 0
 end
-
 local function _write_afk_elapsed(turn_runtime, actor_role_id, elapsed_seconds)
   local normalized = role_id_utils.write(turn_runtime.afk_elapsed_seconds_by_role, actor_role_id, elapsed_seconds or 0)
   if normalized ~= nil and role_id_utils.equals(turn_runtime.afk_actor_role_id, normalized) then
@@ -86,14 +78,12 @@ local function _write_afk_elapsed(turn_runtime, actor_role_id, elapsed_seconds)
   end
   return normalized
 end
-
 local function _sync_afk_view(turn_runtime, actor_role_id, tracking_active)
   local normalized = role_id_utils.normalize(actor_role_id)
   turn_runtime.afk_actor_role_id = normalized
   turn_runtime.afk_elapsed_seconds = _read_afk_elapsed(turn_runtime, normalized)
   turn_runtime.afk_tracking_active = tracking_active == true
 end
-
 function gameplay_loop.step_afk_auto_host(game, state, dt)
   assert(game ~= nil, "missing game")
   local timeout = gameplay_rules.afk_auto_host_seconds or 0
@@ -102,30 +92,25 @@ function gameplay_loop.step_afk_auto_host(game, state, dt)
     _sync_afk_view(turn_runtime, nil, false)
     return false
   end
-
   local current_player = game.turn and game.players and game.players[game.turn.current_player_index] or nil
   if not current_player or current_player.auto == true then
     _sync_afk_view(turn_runtime, nil, false)
     return false
   end
-
   local ports = _resolve_ports(state)
   local ui_sync_ports = ports.ui_sync
   if not turn_timer_policy.is_afk_trackable_wait(game, state, ports) then
     _sync_afk_view(turn_runtime, current_player.id, false)
     return false
   end
-
   local elapsed_seconds = _read_afk_elapsed(turn_runtime, current_player.id) + (dt or 0)
   _write_afk_elapsed(turn_runtime, current_player.id, elapsed_seconds)
   turn_runtime.afk_actor_role_id = role_id_utils.normalize(current_player.id)
   turn_runtime.afk_elapsed_seconds = elapsed_seconds
   turn_runtime.afk_tracking_active = true
-
   if elapsed_seconds < timeout then
     return false
   end
-
   current_player.auto = true
   if game.mark_players_dirty then
     game:mark_players_dirty()
@@ -143,7 +128,6 @@ function gameplay_loop.step_afk_auto_host(game, state, dt)
   logger.warn("afk auto host enabled:", tostring(current_player.name), "role_id=" .. tostring(current_player.id))
   return true
 end
-
 local function _initialize_ports(state, game)
   local ports = _resolve_ports(state)
   state.game = game
@@ -162,7 +146,6 @@ local function _initialize_ports(state, game)
   game.bankruptcy_port = bankruptcy_port_adapter.build()
   return ports
 end
-
 local function _configure_tile_owner_notifier(state, game)
   local notifier = type(state.on_tile_owner_changed) == "function" and state.on_tile_owner_changed
     or type(state.notify_owner_changed) == "function" and state.notify_owner_changed
@@ -175,7 +158,6 @@ local function _configure_tile_owner_notifier(state, game)
     }
   end
 end
-
 local function _configure_environment(state, game, ports)
   local anim_ports = ports.anim
   local state_ports = ports.state
@@ -191,7 +173,6 @@ local function _configure_environment(state, game, ports)
   logger.set_info_per_turn_limit(gameplay_rules.info_log_per_turn_limit)
   logger.set_info_turn_provider(function() return game.turn and game.turn.turn_count end)
 end
-
 local function _configure_pending_choice(state, game, ports)
   local output_ports = ports.output
   local ui_sync_ports = ports.ui_sync
@@ -207,7 +188,6 @@ local function _configure_pending_choice(state, game, ports)
     end
   end
 end
-
 local function _reset_runtime_state(state, ports)
   local ui_sync_ports = ports.ui_sync
   state.player_units = nil
@@ -223,7 +203,6 @@ local function _reset_runtime_state(state, ports)
     state.auto_runner:reset_timer()
   end
 end
-
 function gameplay_loop.set_game(state, game)
   assert(game ~= nil, "missing game")
   runtime_state.ensure_all(state)
@@ -232,7 +211,6 @@ function gameplay_loop.set_game(state, game)
   _configure_pending_choice(state, game, ports)
   _reset_runtime_state(state, ports)
 end
-
 function gameplay_loop.new_game(state)
   logger.clear()
   assert(state.game_factory, "game_factory not set")
@@ -247,7 +225,6 @@ function gameplay_loop.new_game(state)
   game.logger.info("启动蛋仔大富翁，玩家数:", #game.players)
   return game
 end
-
 function gameplay_loop.step_auto_runner(game, state, dt, context)
   assert(game ~= nil, "missing game")
   assert(state.auto_runner ~= nil, "missing auto_runner")
@@ -275,12 +252,10 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
   end
   return auto_action
 end
-
 function gameplay_loop.tick(game, state, dt)
   if not game then
     return
   end
-
   local ports = _resolve_ports(state)
   tick_flow.tick(game, state, dt, ports, {
     step_afk_auto_host = gameplay_loop.step_afk_auto_host,
@@ -288,5 +263,4 @@ function gameplay_loop.tick(game, state, dt)
     dispatch_action_with_close_choice = _dispatch_action_with_close_choice,
   })
 end
-
 return gameplay_loop

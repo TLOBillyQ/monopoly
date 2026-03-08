@@ -2,10 +2,12 @@ local gameplay_loop_ports = {}
 local number_utils = require("src.core.utils.number_utils")
 local ui_sync_defaults = require("src.game.flow.turn.gameplay_loop_ui_sync_defaults")
 local output_state_adapter = require("src.game.flow.output_adapters.output_state_adapter")
-
 local _tick_timeout = nil
 local _tick_ui_sync = nil
-
+local _noop = function() end
+local _zero = function()
+  return 0
+end
 local function _load_tick_timeout()
   if _tick_timeout then
     return _tick_timeout
@@ -13,7 +15,6 @@ local function _load_tick_timeout()
   _tick_timeout = require("src.game.flow.turn.tick_timeout")
   return _tick_timeout
 end
-
 local function _load_tick_ui_sync()
   if _tick_ui_sync then
     return _tick_ui_sync
@@ -21,7 +22,6 @@ local function _load_tick_ui_sync()
   _tick_ui_sync = require("src.game.flow.turn.tick_ui_sync")
   return _tick_ui_sync
 end
-
 local port_groups = {
   modal = {
     "close_choice_modal",
@@ -86,7 +86,6 @@ local port_groups = {
     "get_modal_ref",
   },
 }
-
 local group_names = {
   "modal",
   "anim",
@@ -96,83 +95,60 @@ local group_names = {
   "state",
   "output",
 }
-
-local function _base_modal_ports()
-  return {
-    close_choice_modal = function() end,
-    open_choice_modal = function() end,
-    close_popup = function() end,
-  }
+local function _build_noop_group(keys, overrides)
+  local group = {}
+  for _, key in ipairs(keys or {}) do
+    group[key] = _noop
+  end
+  for key, fn in pairs(overrides or {}) do
+    group[key] = fn
+  end
+  return group
 end
-
-local function _base_anim_ports()
-  return {
-    play_move_anim = function() end,
-    play_action_anim = function() end,
-    reset_status_3d = function() end,
-    sync_status_3d = function() end,
-  }
+local function _clock_diff(timestamp_1, timestamp_2)
+  if number_utils.is_numeric(timestamp_1) and number_utils.is_numeric(timestamp_2) then
+    return timestamp_1 - timestamp_2
+  end
+  return 0
 end
-
 local function _base_ui_sync_ports()
   return ui_sync_defaults.build_base_ui_sync_ports(_load_tick_timeout, _load_tick_ui_sync)
 end
-
-local function _base_debug_ports()
-  return {
-    log_status = function() end,
-    sync_debug_log = function() end,
-    resolve_debug_enabled = function() return false end,
-  }
-end
-
-local function _base_clock_ports()
-  return {
-    wall_now_seconds = function()
-      return 0
-    end,
-    wall_diff_seconds = function(timestamp_1, timestamp_2)
-      if number_utils.is_numeric(timestamp_1) and number_utils.is_numeric(timestamp_2) then
-        return timestamp_1 - timestamp_2
-      end
-      return 0
-    end,
-    cpu_now_seconds = function()
-      return 0
-    end,
-    cpu_diff_seconds = function(timestamp_1, timestamp_2)
-      if number_utils.is_numeric(timestamp_1) and number_utils.is_numeric(timestamp_2) then
-        return timestamp_1 - timestamp_2
-      end
-      return 0
-    end,
-  }
-end
-
-local function _base_state_ports()
-  return {
-    apply_role_control_lock = function() end,
-    install_event_handlers = function() end,
-    on_bankruptcy_tiles_cleared = function() end,
-  }
-end
-
-local function _base_output_ports()
-  return output_state_adapter.build_base_output_ports()
-end
-
+local base_port_builders = {
+  modal = function()
+    return _build_noop_group(port_groups.modal)
+  end,
+  anim = function()
+    return _build_noop_group(port_groups.anim)
+  end,
+  ui_sync = _base_ui_sync_ports,
+  debug = function()
+    return _build_noop_group(port_groups.debug, {
+      resolve_debug_enabled = function()
+        return false
+      end,
+    })
+  end,
+  clock = function()
+    return {
+      wall_now_seconds = _zero,
+      wall_diff_seconds = _clock_diff,
+      cpu_now_seconds = _zero,
+      cpu_diff_seconds = _clock_diff,
+    }
+  end,
+  state = function()
+    return _build_noop_group(port_groups.state)
+  end,
+  output = output_state_adapter.build_base_output_ports,
+}
 local function _resolve_base_ports()
-  return {
-    modal = _base_modal_ports(),
-    anim = _base_anim_ports(),
-    ui_sync = _base_ui_sync_ports(),
-    debug = _base_debug_ports(),
-    clock = _base_clock_ports(),
-    state = _base_state_ports(),
-    output = _base_output_ports(),
-  }
+  local resolved = {}
+  for _, group_name in ipairs(group_names) do
+    resolved[group_name] = base_port_builders[group_name]()
+  end
+  return resolved
 end
-
 local function _resolve_grouped_override(override_ports)
   if type(override_ports) ~= "table" then
     return nil
@@ -184,7 +160,6 @@ local function _resolve_grouped_override(override_ports)
   end
   return nil
 end
-
 local function _has_legacy_flat_override(override_ports)
   if type(override_ports) ~= "table" then
     return false
@@ -199,7 +174,6 @@ local function _has_legacy_flat_override(override_ports)
   end
   return false
 end
-
 local function _copy_group_ports(base_group, override_group, required_keys)
   local merged = {}
   for _, key in ipairs(required_keys) do
@@ -215,7 +189,6 @@ local function _copy_group_ports(base_group, override_group, required_keys)
   end
   return merged
 end
-
 local function _fill_clock_defaults(clock_ports, base_clock_ports)
   for _, key in ipairs({ "wall_now_seconds", "wall_diff_seconds", "cpu_now_seconds", "cpu_diff_seconds" }) do
     if clock_ports[key] == base_clock_ports[key] then
@@ -223,9 +196,7 @@ local function _fill_clock_defaults(clock_ports, base_clock_ports)
     end
   end
 end
-
 local base_ports = _resolve_base_ports()
-
 local function _build_resolved_ports(grouped_override)
   local resolved = {}
   for _, group_name in ipairs(group_names) do
@@ -237,7 +208,6 @@ local function _build_resolved_ports(grouped_override)
   _fill_clock_defaults(resolved.clock, base_ports.clock)
   return resolved
 end
-
 function gameplay_loop_ports.resolve(override_ports)
   if override_ports == nil then
     return _build_resolved_ports(nil)
@@ -245,17 +215,13 @@ function gameplay_loop_ports.resolve(override_ports)
   if type(override_ports) ~= "table" then
     error("invalid gameplay_loop_ports override: expected table")
   end
-
   local grouped_override = _resolve_grouped_override(override_ports)
   if grouped_override then
     return _build_resolved_ports(grouped_override)
   end
-
   if _has_legacy_flat_override(override_ports) then
     error("legacy flat gameplay_loop_ports is not supported; use grouped ports: modal/anim/ui_sync/debug/clock/state")
   end
-
   return _build_resolved_ports(nil)
 end
-
 return gameplay_loop_ports
