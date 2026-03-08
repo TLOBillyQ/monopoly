@@ -51,9 +51,11 @@ function land_choice_handler.build(helpers)
 
   return {
     rent_card_prompt = {
+      required_meta = { "player_id", "tile_id" },
       execute = _handle_rent_prompt,
     },
     tax_card_prompt = {
+      required_meta = { "player_id" },
       cancel = { mode = "select_option", option_id = "skip" },
       execute = _handle_tax_prompt,
     },

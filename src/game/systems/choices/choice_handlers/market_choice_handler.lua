@@ -32,9 +32,11 @@ function market_choice_handler.build(helpers)
 
   return {
     market_buy = {
+      required_meta = { "player_id" },
       execute = _handle_market_buy,
     },
     market_vehicle_replace = {
+      required_meta = { "player_id", "product_id" },
       execute = _handle_vehicle_replace,
     },
   }

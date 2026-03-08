@@ -492,6 +492,7 @@ local function _test_intent_dispatcher_sets_choice_route_metadata()
     options = { { id = 1, label = "1" }, { id = 2, label = "2" } },
     allow_cancel = true,
     cancel_label = "取消",
+    meta = { player_id = g:current_player().id, item_id = 2001 },
   }
   local entry = intent_dispatcher.open_choice(g, choice_spec, {})
   assert(entry.route_key == "remote", "intent_dispatcher should inject explicit route_key")
@@ -502,6 +503,7 @@ local function _test_intent_dispatcher_sets_choice_route_metadata()
     title = "自定义路由",
     options = { { id = 1, label = "A" } },
     route = { route_key = "secondary_confirm", requires_confirm = true },
+    meta = { player_id = g:current_player().id, item_id = 2001 },
   }, {})
   assert(custom_entry.route_key == "secondary_confirm", "explicit route should override inferred route")
   assert(custom_entry.requires_confirm == true, "explicit requires_confirm should be kept")
@@ -511,6 +513,7 @@ local function _test_intent_dispatcher_sets_choice_route_metadata()
     route_key = "base_inline",
     title = "行动前：使用道具？",
     options = { { id = 2001, label = "路障卡" } },
+    meta = { player_id = g:current_player().id, phase = "pre_action" },
   }, {})
   assert(inline_entry.route_key == "base_inline", "item_phase_choice should use base_inline route")
   assert(inline_entry.requires_confirm == false, "base_inline route should not require confirm")
@@ -521,6 +524,23 @@ local function _test_intent_dispatcher_sets_choice_route_metadata()
     options = { { id = 1, label = "A" } },
   }, {})
   assert(unknown_entry.route_key == "base_inline", "unknown choice should fallback to base_inline route")
+end
+
+local function _test_intent_dispatcher_rejects_missing_required_choice_meta()
+  local g = _new_game()
+  local ok, err = pcall(function()
+    intent_dispatcher.open_choice(g, {
+      kind = "market_buy",
+      title = "黑市",
+      options = { { id = 2001, label = "A" } },
+      meta = {},
+    }, {})
+  end)
+
+  assert(ok == false, "open_choice should reject missing required meta")
+  assert(tostring(err):find("market_buy requires meta.player_id", 1, true) ~= nil,
+    "open_choice should report the missing required meta key")
+  assert(g.turn.pending_choice == nil, "open_choice should not mutate pending_choice on schema failure")
 end
 
 local function _test_turn_start_logs_phase_event_to_event_feed()
@@ -542,6 +562,7 @@ local function _test_intent_dispatcher_logs_waiting_choice_event()
     body_lines = { "选择点数" },
     options = { { id = 1, label = "1" } },
     allow_cancel = true,
+    meta = { player_id = g:current_player().id, item_id = 2001 },
   }, {})
   local text = logger.get_text_by_level("event")
   assert(string.find(text, "等待选择：遥控骰子：选择点数", 1, true) ~= nil,
@@ -2294,6 +2315,8 @@ local function _test_market_countdown_uses_double_action_timeout()
   }
   state.pending_choice_elapsed = 12.2
   _bind_ui_runtime(state)
+  state.ui_runtime.pending_choice = state.pending_choice
+  state.ui_runtime.pending_choice_elapsed = state.pending_choice_elapsed
   state.action_button_active = false
   state.countdown_last = nil
   state.countdown_active_last = nil
@@ -2536,8 +2559,9 @@ return {
   _test_set_tile_owner_without_ui_port_does_not_crash,
   _test_tile_owner_notifier_receives_owner_changes,
   _test_dispatch_validator_accepts_ui_state_snapshot,
-  _test_intent_dispatcher_sets_choice_route_metadata,
-  _test_turn_start_logs_phase_event_to_event_feed,
+    _test_intent_dispatcher_sets_choice_route_metadata,
+    _test_intent_dispatcher_rejects_missing_required_choice_meta,
+    _test_turn_start_logs_phase_event_to_event_feed,
   _test_intent_dispatcher_logs_waiting_choice_event,
   _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not,
   _test_end_turn_logs_phase_event_to_event_feed,

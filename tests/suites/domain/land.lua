@@ -157,9 +157,12 @@ local function _test_choice_registry_registers_descriptors_with_cancel_metadata(
   local item_phase_descriptor = registry:descriptor_for("item_phase_choice")
   assert(item_phase_descriptor and item_phase_descriptor.cancel and item_phase_descriptor.cancel.mode == "finish_item_phase",
     "item phase descriptor should delegate cancel cleanup to resolver")
+  _assert_eq(tax_descriptor.required_meta[1], "player_id", "tax descriptor should expose required meta")
+  _assert_eq(item_phase_descriptor.required_meta[1], "player_id", "item phase should expose required meta")
+  _assert_eq(item_phase_descriptor.required_meta[2], "phase", "item phase should require phase")
 end
 
-local function _test_choice_resolver_accepts_legacy_land_optional_effect_alias()
+local function _test_choice_resolver_executes_canonical_landing_optional_effect()
   local g = _new_game()
   local p = g:current_player()
   local idx, tile_ref = _first_land_tile(g.board)
@@ -171,23 +174,17 @@ local function _test_choice_resolver_accepts_legacy_land_optional_effect_alias()
   local pending = g.turn.pending_choice
   assert(pending and pending.kind == "landing_optional_effect", "expected canonical optional choice")
 
-  local legacy_choice = {}
-  for key, value in pairs(pending) do
-    legacy_choice[key] = value
-  end
-  legacy_choice.kind = "land_optional_effect"
-
   local before_cash = p.cash
   local action = {
     type = "choice_select",
-    choice_id = legacy_choice.id,
+    choice_id = pending.id,
     option_id = "buy_land",
   }
 
-  local resolved = choice_resolver.resolve(g, legacy_choice, action)
-  assert(resolved and resolved.status == "resolved", "legacy alias should resolve successfully")
-  assert(p.cash < before_cash, "legacy alias should still execute buy_land")
-  assert(_tile_state(g, tile_ref).owner_id == p.id, "legacy alias should still purchase land")
+  local resolved = choice_resolver.resolve(g, pending, action)
+  assert(resolved and resolved.status == "resolved", "canonical optional choice should resolve successfully")
+  assert(p.cash < before_cash, "canonical optional choice should still execute buy_land")
+  assert(_tile_state(g, tile_ref).owner_id == p.id, "canonical optional choice should still purchase land")
 end
 
 return {
@@ -198,6 +195,9 @@ return {
     { name = "land_rent_graph_adjacency_breaks_path_neighbors", run = _test_land_rent_graph_adjacency_breaks_path_neighbors },
     { name = "rent_owner_missing_skips_payment", run = _test_rent_owner_missing_skips_payment },
     { name = "tax_only_bankrupts_when_balance_depleted", run = _test_tax_only_bankrupts_when_balance_depleted },
-    { name = "choice_resolver_accepts_legacy_land_optional_effect_alias", run = _test_choice_resolver_accepts_legacy_land_optional_effect_alias },
+    {
+      name = "choice_resolver_executes_canonical_landing_optional_effect",
+      run = _test_choice_resolver_executes_canonical_landing_optional_effect,
+    },
   },
 }

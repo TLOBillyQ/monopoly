@@ -22,10 +22,29 @@ local function _resolve_choice_route(choice_spec)
   return route_key, requires_confirm
 end
 
+local function _validate_choice_meta(game, choice_spec)
+  local registries = game and game.registries or nil
+  local choice_registry = registries and registries.choices or nil
+  if type(choice_registry) ~= "table" or type(choice_registry.descriptor_for) ~= "function" then
+    return
+  end
+  local descriptor = choice_registry:descriptor_for(choice_spec.kind)
+  local required_meta = descriptor and descriptor.required_meta or nil
+  if type(required_meta) ~= "table" or #required_meta == 0 then
+    return
+  end
+  local meta = choice_spec.meta
+  assert(type(meta) == "table", tostring(choice_spec.kind) .. " requires meta")
+  for _, key in ipairs(required_meta) do
+    assert(meta[key] ~= nil, tostring(choice_spec.kind) .. " requires meta." .. tostring(key))
+  end
+end
+
 function intent_dispatcher.open_choice(game, choice_spec, opts)
   assert(game and game.turn, "Choice.open requires game.turn")
   assert(choice_spec ~= nil, "missing choice_spec")
   opts = opts or {}
+  _validate_choice_meta(game, choice_spec)
 
   local seq = game.turn.choice_seq or 0
   seq = seq + 1

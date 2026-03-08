@@ -190,29 +190,36 @@ function item_choice_handler.build(helpers)
 
   return {
     item_phase_choice = {
+      required_meta = { "player_id", "phase" },
       cancel = { mode = "finish_item_phase" },
       execute = _handle_item_phase_choice,
     },
     demolish_target = {
+      required_meta = { "player_id", "item_id" },
       cancel = { mode = "finish_active_item_phase" },
       execute = _handle_demolish_target,
     },
     roadblock_target = {
+      required_meta = { "player_id", "item_id" },
       cancel = { mode = "finish_active_item_phase" },
       execute = _handle_roadblock_target,
     },
     steal_item = {
+      required_meta = { "player_id", "target_id" },
       cancel = { mode = "finish_active_item_phase" },
       execute = _handle_steal_item,
     },
     steal_prompt = {
+      required_meta = { "player_id", "target_id", "queue", "index" },
       execute = _handle_steal_prompt,
     },
     item_target_player = {
+      required_meta = { "player_id", "item_id" },
       cancel = { mode = "finish_active_item_phase" },
       execute = _handle_item_target_player,
     },
     remote_dice_value = {
+      required_meta = { "player_id", "item_id" },
       cancel = { mode = "finish_active_item_phase" },
       execute = _handle_remote_dice_value,
     },

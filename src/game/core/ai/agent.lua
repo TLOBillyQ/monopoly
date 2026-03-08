@@ -262,7 +262,7 @@ function agent.auto_action_for_choice(game, choice)
     return { type = "choice_select", choice_id = choice.id, option_id = "use", actor_role_id = actor.id }
   end
 
-  if choice.kind == "landing_optional_effect" or choice.kind == "land_optional_effect" then
+  if choice.kind == "landing_optional_effect" then
     local options = choice.options or {}
     local target = nil
     for _, opt in ipairs(options) do

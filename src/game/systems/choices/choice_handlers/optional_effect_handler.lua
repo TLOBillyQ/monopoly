@@ -1,7 +1,6 @@
 local effect_runner = require("src.game.systems.effects.effect_runner")
 local logger = require("src.core.utils.logger")
 local intent_output_port = require("src.game.ports.intent_output_port")
-local choice_kind_aliases = require("src.game.systems.choices.choice_kind_aliases")
 
 local optional_effect_handler = {}
 
@@ -21,7 +20,7 @@ function optional_effect_handler.build(helpers)
       return finish_choice(game, false)
     end
 
-    local effect_defs = get_container_defs_by_choice_kind(choice_kind_aliases.to_canonical(choice.kind))
+    local effect_defs = get_container_defs_by_choice_kind(choice.kind)
     local target_effect = assert(find_effect_by_id(effect_defs, effect_id), "missing target effect: " .. tostring(effect_id))
 
     local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
@@ -39,6 +38,7 @@ function optional_effect_handler.build(helpers)
 
   return {
     landing_optional_effect = {
+      required_meta = { "player_id", "tile_id" },
       execute = _handle_optional_landing_effect,
     },
   }

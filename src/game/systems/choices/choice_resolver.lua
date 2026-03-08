@@ -1,5 +1,4 @@
 local logger = require("src.core.utils.logger")
-local choice_kind_aliases = require("src.game.systems.choices.choice_kind_aliases")
 local executor = require("src.game.systems.items.item_executor")
 local item_phase = require("src.game.systems.items.item_phase")
 local effect_runner = require("src.game.systems.effects.effect_runner")
@@ -101,26 +100,10 @@ local function _build_game_ctx(game, move_result)
 end
 
 local function _get_container_defs_by_choice_kind(choice_kind)
-  if choice_kind_aliases.to_canonical(choice_kind) == "landing_optional_effect" then
+  if choice_kind == "landing_optional_effect" then
     return landing_defs
   end
   return nil
-end
-
-local function _canonicalize_choice(choice)
-  if type(choice) ~= "table" then
-    return choice
-  end
-  local canonical_kind = choice_kind_aliases.to_canonical(choice.kind)
-  if canonical_kind == choice.kind then
-    return choice
-  end
-  local canonical_choice = {}
-  for key, value in pairs(choice) do
-    canonical_choice[key] = value
-  end
-  canonical_choice.kind = canonical_kind
-  return canonical_choice
 end
 
 local function _find_effect_by_id(effect_defs, effect_id)
@@ -195,7 +178,6 @@ function choice_resolver.resolve(game, choice, action)
   assert(choice ~= nil, "missing choice")
   assert(action ~= nil, "missing action")
 
-  choice = _canonicalize_choice(choice)
   local descriptor = _resolve_descriptor(game, choice)
 
   if _is_cancel(action) and choice.meta and choice.meta.item_preconsumed == true then

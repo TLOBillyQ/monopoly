@@ -1,13 +1,10 @@
 require "vendor.third_party.ClassUtils"
 
-local choice_kind_aliases = require("src.game.systems.choices.choice_kind_aliases")
-
 local choice_registry = Class("ChoiceRegistry")
 
 local function _normalize_descriptor(kind, handler)
-  local canonical_kind = choice_kind_aliases.to_canonical(kind)
   if type(handler) == "function" then
-    return canonical_kind, {
+    return kind, {
       execute = handler,
     }
   end
@@ -17,8 +14,11 @@ local function _normalize_descriptor(kind, handler)
   for key, value in pairs(handler) do
     descriptor[key] = value
   end
-  assert(type(descriptor.execute) == "function", "choice descriptor missing execute: " .. tostring(canonical_kind))
-  return canonical_kind, descriptor
+  assert(type(descriptor.execute) == "function", "choice descriptor missing execute: " .. tostring(kind))
+  if descriptor.required_meta ~= nil then
+    assert(type(descriptor.required_meta) == "table", "choice descriptor required_meta must be table: " .. tostring(kind))
+  end
+  return kind, descriptor
 end
 
 function choice_registry:init()
@@ -26,13 +26,12 @@ function choice_registry:init()
 end
 
 function choice_registry:register(kind, handler)
-  local canonical_kind, descriptor = _normalize_descriptor(kind, handler)
-  self.handlers[canonical_kind] = descriptor
+  local normalized_kind, descriptor = _normalize_descriptor(kind, handler)
+  self.handlers[normalized_kind] = descriptor
 end
 
 function choice_registry:descriptor_for(kind)
-  local canonical_kind = choice_kind_aliases.to_canonical(kind)
-  return self.handlers[canonical_kind]
+  return self.handlers[kind]
 end
 
 function choice_registry:register_defaults(helpers)
