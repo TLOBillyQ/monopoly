@@ -1,6 +1,6 @@
 local logger = require("src.core.utils.logger")
 local auto_play_port = require("src.game.ports.auto_play_port")
-local item_effects = require("src.game.systems.items.post_effects")
+local effects = require("src.game.systems.items.post_effects")
 local inventory = require("src.game.systems.items.inventory")
 local number_utils = require("src.core.utils.number_utils")
 local roadblock = require("src.game.systems.items.roadblock")
@@ -35,7 +35,7 @@ local function _queue_target_player_anim(game, user, item_id, target)
 end
 
 local function _apply_target_player_item(game, user, item_id, target, context)
-  local apply_res = item_effects.apply_target(game, user, item_id, target, context)
+  local apply_res = effects.apply_target(game, user, item_id, target, context)
   local ok = _resolve_apply_ok(apply_res)
   if not ok then
     return apply_res

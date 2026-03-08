@@ -3,7 +3,7 @@ local inventory = require("src.game.systems.items.inventory")
 local land_choice_specs = require("src.game.systems.land.land_choice_specs")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local action_anim_port = require("src.core.ports.action_anim_port")
-local item_use_broadcast = require("src.game.systems.items.use_broadcast")
+local use_broadcast = require("src.game.systems.items.use_broadcast")
 
 local steal = {}
 local item_ids = gameplay_rules.item_ids
@@ -40,7 +40,7 @@ function steal.steal_item_at_index(game, player, target, item_idx)
     item_name = "偷窃卡",
     duration = action_anim_duration,
   })
-  item_use_broadcast.dispatch(game, player, item_ids.steal)
+  use_broadcast.dispatch(game, player, item_ids.steal)
   return {
     ok = true,
     stolen = stolen,

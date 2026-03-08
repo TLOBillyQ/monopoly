@@ -1,5 +1,5 @@
 local auto_play_port = require("src.game.ports.auto_play_port")
-local item_effects = require("src.game.systems.items.post_effects")
+local effects = require("src.game.systems.items.post_effects")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local logger = require("src.core.utils.logger")
 local inventory = require("src.game.systems.items.inventory")
@@ -13,14 +13,14 @@ local facing_policy = require("src.game.systems.board.facing_policy")
 local strategy = {}
 local item_ids = gameplay_rules.item_ids
 local target_item_set = {}
-for _, target_item_id in ipairs(item_effects.target_item_ids()) do
+for _, target_item_id in ipairs(effects.target_item_ids()) do
   target_item_set[target_item_id] = true
 end
 
 function strategy.target_candidates(game, player, item_id)
   local registries = assert(game.registries, "missing game.registries")
-  local item_registry = assert(registries.items, "missing item registry")
-  return item_registry:target_candidates(game, player, item_id)
+  local registry = assert(registries.items, "missing item registry")
+  return registry:target_candidates(game, player, item_id)
 end
 
 function strategy.has_obstacles_ahead(game, player, distance)
@@ -176,7 +176,7 @@ function strategy.auto_pre_action(game, player, phase)
   local missile_result = _try_use(item_ids.missile, _has_demolish_target)
   if missile_result then return missile_result end
 
-  for _, id in ipairs(item_effects.target_item_ids()) do
+  for _, id in ipairs(effects.target_item_ids()) do
     local res = _try_use(id, function() return _has_target(id) end)
     if res then return res end
   end

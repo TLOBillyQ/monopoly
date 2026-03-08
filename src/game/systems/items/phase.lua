@@ -5,7 +5,7 @@ local strategy = require("src.game.systems.items.strategy")
 local inventory = require("src.game.systems.items.inventory")
 local intent_output_port = require("src.game.ports.intent_output_port")
 
-local item_phase = {}
+local phase_module = {}
 
 local cfg_by_id = {}
 for _, cfg in ipairs(items_cfg) do
@@ -24,7 +24,7 @@ local phase_confirm_titles = {
   post_action = "行动后",
 }
 
-function item_phase.is_enabled(phase)
+function phase_module.is_enabled(phase)
   local queue = gameplay_rules.item_phase_queue
   assert(type(queue) == "table", "invalid item_phase_queue")
   for _, name in ipairs(queue) do
@@ -54,7 +54,7 @@ local function _build_options(game, player, phase)
   return body_lines, options
 end
 
-function item_phase.finish(game, phase)
+function phase_module.finish(game, phase)
   game.turn.item_phase = game.turn.item_phase or {}
   game.turn.item_phase[phase] = { done = true }
   local active = game.turn.item_phase_active
@@ -65,11 +65,11 @@ function item_phase.finish(game, phase)
   game.dirty.any = true
 end
 
-function item_phase.run(turn_mgr, phase, args)
+function phase_module.run(turn_mgr, phase, args)
   local game = turn_mgr.game
   local player = args.player
   assert(player ~= nil, "missing player")
-  if not item_phase.is_enabled(phase) then
+  if not phase_module.is_enabled(phase) then
     return nil
   end
 
@@ -95,16 +95,16 @@ function item_phase.run(turn_mgr, phase, args)
       return { waiting = true, next_state = args.next_state, next_args = args.next_args }
     end
     if game.turn.action_anim then
-      item_phase.finish(game, phase)
+      phase_module.finish(game, phase)
       return { waiting = true, wait_action_anim = true, next_state = args.next_state, next_args = args.next_args }
     end
-    item_phase.finish(game, phase)
+    phase_module.finish(game, phase)
     return nil
   end
 
-  local spec = item_phase.build_choice_spec(game, player, phase)
+  local spec = phase_module.build_choice_spec(game, player, phase)
   if spec == nil then
-    item_phase.finish(game, phase)
+    phase_module.finish(game, phase)
     return nil
   end
 
@@ -119,7 +119,7 @@ function item_phase.run(turn_mgr, phase, args)
   return { waiting = true, next_state = args.next_state, next_args = args.next_args }
 end
 
-function item_phase.build_choice_spec(game, player, phase)
+function phase_module.build_choice_spec(game, player, phase)
   assert(game ~= nil, "missing game")
   assert(player ~= nil, "missing player")
   local body_lines, options = _build_options(game, player, phase)
@@ -149,4 +149,4 @@ function item_phase.build_choice_spec(game, player, phase)
   }
 end
 
-return item_phase
+return phase_module

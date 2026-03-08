@@ -8,7 +8,7 @@ local action_anim_port = require("src.core.ports.action_anim_port")
 local number_utils = require("src.core.utils.number_utils")
 local facing_policy = require("src.game.systems.board.facing_policy")
 
-local item_effects = {}
+local post_effects = {}
 local item_ids = gameplay_rules.item_ids
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
 
@@ -258,25 +258,25 @@ handlers.log = _handle_log
 handlers.place_mine_here = _handle_place_mine_here
 handlers.clear_obstacles_ahead = _handle_clear_obstacles_ahead
 
-function item_effects.get_target_spec(item_id)
+function post_effects.get_target_spec(item_id)
   return target_effects[item_id]
 end
 
-function item_effects.target_item_ids()
+function post_effects.target_item_ids()
   return target_item_order
 end
 
-function item_effects.apply_target(game, user, item_id, target, context)
+function post_effects.apply_target(game, user, item_id, target, context)
   local spec = target_effects[item_id]
   assert(spec ~= nil and spec.apply ~= nil, "missing target spec: " .. tostring(item_id))
   return spec.apply(game, user, target, context)
 end
 
-function item_effects.apply_post(game, player, item_id, context)
+function post_effects.apply_post(game, player, item_id, context)
   context = context or {}
   local cfg = assert(post_effects[item_id], "missing post effect: " .. tostring(item_id))
   local handler = assert(handlers[cfg.type], "missing post effect handler: " .. tostring(cfg.type))
   return handler(game, player, cfg, context)
 end
 
-return item_effects
+return post_effects

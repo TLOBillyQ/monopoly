@@ -2,9 +2,9 @@ local intent_output_port = require("src.game.ports.intent_output_port")
 local inventory = require("src.game.systems.items.inventory")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 
-local item_use_broadcast = {}
+local use_broadcast = {}
 
-function item_use_broadcast.dispatch(game, player, item_id)
+function use_broadcast.dispatch(game, player, item_id)
   if not (game and player and item_id) then
     return false
   end
@@ -25,4 +25,4 @@ function item_use_broadcast.dispatch(game, player, item_id)
   return true
 end
 
-return item_use_broadcast
+return use_broadcast
