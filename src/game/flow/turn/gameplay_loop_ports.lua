@@ -1,6 +1,6 @@
 local gameplay_loop_ports = {}
 local number_utils = require("src.core.utils.number_utils")
-local ui_sync_defaults = require("src.game.flow.turn.gameplay_loop_ui_sync_defaults")
+local ui_sync_defaults = require("src.game.flow.turn.loop_ui_sync_defaults")
 local output_state_adapter = require("src.game.flow.output_adapters.output_state_adapter")
 local _tick_timeout = nil
 local _tick_ui_sync = nil
