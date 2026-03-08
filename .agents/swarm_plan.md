@@ -211,9 +211,8 @@
   - `src/game/systems/land/specs/effects.lua`
   - `tests/suites/domain/land.lua`
 - **gotchas**:
-  - `tests/suites/gameplay/gameplay.lua:1137` 仍引用旧 `src.game.systems.land.landing_effect_executors`；按任务约束未改，留给后续共享集成波统一收口。
   - `tests/suites/architecture/intent_output_contract.lua:10` 仍引用旧 `src.game.systems.land.landing_presenter`；该文件不在本任务所有权内，需后续集成波改为 `src.game.systems.land.presenter`。
-  - `domain.land` 定向执行被并行中的 items 收口中间态阻塞，错误来自 `src.game.systems.items.item_inventory` 缺失，不是 land require 链问题。
+  - `rg 'src\\.game\\.systems\\.land\\.landing_' src tests docs .agents` 现只剩计划文档中的 gotcha 文本和 `tests/suites/architecture/intent_output_contract.lua` 的共享测试引用。
 
 ### T5: 收口 `items/item_*` 结构冗余
 - **depends_on**: `[T1]`

@@ -1,4 +1,4 @@
-local inventory = require("src.game.systems.items.item_inventory")
+local inventory = require("src.game.systems.items.inventory")
 local context = require("src.game.systems.market.application.context")
 local monopoly_event = require("src.core.events.monopoly_events")
 local number_utils = require("src.core.utils.number_utils")

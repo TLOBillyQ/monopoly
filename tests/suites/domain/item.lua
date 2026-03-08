@@ -12,9 +12,9 @@ local executor = support.executor
 local choice_resolver = support.choice_resolver
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local land_choice_specs = require("src.game.systems.land.land_choice_specs")
-local item_phase = require("src.game.systems.items.item_phase")
-local roadblock = require("src.game.systems.items.item_roadblock")
-local steal = require("src.game.systems.items.item_steal")
+local item_phase = require("src.game.systems.items.phase")
+local roadblock = require("src.game.systems.items.roadblock")
+local steal = require("src.game.systems.items.steal")
 local runtime_event_bridge = require("src.infrastructure.runtime.runtime_event_bridge")
 local monopoly_event = require("src.core.events.monopoly_events")
 

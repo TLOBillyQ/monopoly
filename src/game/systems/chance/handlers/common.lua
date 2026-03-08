@@ -1,4 +1,4 @@
-local inventory = require("src.game.systems.items.item_inventory")
+local inventory = require("src.game.systems.items.inventory")
 local tile = require("src.game.systems.board.tile")
 local monopoly_event = require("src.core.events.monopoly_events")
 local movement = require("src.game.systems.movement.movement")

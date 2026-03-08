@@ -1,8 +1,8 @@
 local items_cfg = require("Config.generated.items")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local auto_play_port = require("src.game.ports.auto_play_port")
-local strategy = require("src.game.systems.items.item_strategy")
-local inventory = require("src.game.systems.items.item_inventory")
+local strategy = require("src.game.systems.items.strategy")
+local inventory = require("src.game.systems.items.inventory")
 local intent_output_port = require("src.game.ports.intent_output_port")
 
 local item_phase = {}

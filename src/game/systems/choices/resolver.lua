@@ -1,8 +1,8 @@
 local logger = require("src.core.utils.logger")
-local executor = require("src.game.systems.items.item_executor")
-local item_phase = require("src.game.systems.items.item_phase")
+local executor = require("src.game.systems.items.executor")
+local item_phase = require("src.game.systems.items.phase")
 local effect_runner = require("src.game.systems.effects.effect_runner")
-local landing_defs = require("src.game.systems.land.specs.landing_effects")
+local landing_defs = require("src.game.systems.land.specs.effects")
 
 local choice_resolver = {}
 

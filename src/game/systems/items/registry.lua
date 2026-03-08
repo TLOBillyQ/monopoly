@@ -1,6 +1,6 @@
-local item_effects = require("src.game.systems.items.item_post_effects")
+local item_effects = require("src.game.systems.items.post_effects")
 local gameplay_rules = require("src.core.config.gameplay_rules")
-local item_handlers = require("src.game.systems.items.item_handlers")
+local item_handlers = require("src.game.systems.items.handlers")
 require "vendor.third_party.ClassUtils"
 
 local item_ids = gameplay_rules.item_ids

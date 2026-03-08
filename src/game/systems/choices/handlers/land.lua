@@ -1,5 +1,5 @@
 local land_choice_specs = require("src.game.systems.land.land_choice_specs")
-local inventory = require("src.game.systems.items.item_inventory")
+local inventory = require("src.game.systems.items.inventory")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local intent_output_port = require("src.game.ports.intent_output_port")
 

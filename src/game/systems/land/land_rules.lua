@@ -1,8 +1,8 @@
 local board_utils = require("src.game.systems.land.land_board_utils")
 local constants = require("Config.generated.constants")
 local gameplay_rules = require("src.core.config.gameplay_rules")
-local inventory = require("src.game.systems.items.item_inventory")
-local item_use_broadcast = require("src.game.systems.items.item_use_broadcast")
+local inventory = require("src.game.systems.items.inventory")
+local item_use_broadcast = require("src.game.systems.items.use_broadcast")
 local rent_resolver = require("src.game.systems.land.land_rent_resolver")
 local number_utils = require("src.core.utils.number_utils")
 

@@ -1,6 +1,6 @@
 local constants = require("Config.generated.constants")
 local gameplay_rules = require("src.core.config.gameplay_rules")
-local inventory = require("src.game.systems.items.item_inventory")
+local inventory = require("src.game.systems.items.inventory")
 local monopoly_event = require("src.core.events.monopoly_events")
 local number_utils = require("src.core.utils.number_utils")
 local facing_policy = require("src.game.systems.board.facing_policy")
