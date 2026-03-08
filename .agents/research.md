@@ -215,3 +215,9 @@
 - `choice` 在进入运行态前就具备明确契约，减少 handler 深处的防御式断言。
 - Port / Adapter / Port Bundle 的语义和命名逐步稳定，降低目录认知成本。
 - 代码库后续演进优先围绕边界清晰度与可测试性，而不是单纯追求更小的行数。
+
+## 2026-03-09 补充：`src/` 第三轮命名收口已完成
+
+- 本轮已经完成四簇路径收口：`src/presentation/runtime/ui_* -> src/presentation/runtime/*`、`src/presentation/model/ui_* -> src/presentation/model/*` 与 `src/presentation/model/model/*`、`src/game/systems/land/landing_* -> src/game/systems/land/{effects/*, executors.lua, presenter.lua, specs/effects.lua}`、`src/game/systems/items/item_* -> src/game/systems/items/*`。`src/game/flow/turn/turn_*` 也已完成冻结映射内的 rename，明确保留 `turn_move.lua` / `turn_roll.lua` 作为稳定模块。
+- 本轮的 guard 与文档已经同步：`tests/internal/legacy_path_guard.lua` 会拦截上述退休路径回流，`tests/internal/dep_rules.lua` 的 whitelist / growth budget 已切到新路径，`docs/architecture/boundaries.md` 与 `docs/architecture/layer-model.md` 的示例路径也已对齐当前工作树。
+- 最新验证口径已经固定：先运行计划中的强相关 suite 组合，预期 `All regression checks passed (275)`；再运行 `lua tests/regression.lua`，预期 `All regression checks passed (385)`，且输出包含 `dep_rules ok`、`legacy_path_guard ok`、`tick ok`、`forbidden_globals ok`。如果后续再动这些目录，先复用这套口径，不要重新发明校验清单。

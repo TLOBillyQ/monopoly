@@ -14,7 +14,7 @@ local gameplay_loop = support.gameplay_loop
 local turn_move = support.turn_move
 local event_handlers = require("src.presentation.runtime.event_handlers")
 local paid_currency_bridge = require("src.game.systems.commerce.paid_currency_bridge")
-local turn_dispatch = require("src.game.flow.turn.turn_dispatch")
+local dispatch = require("src.game.flow.turn.dispatch")
 local runtime_port = require("src.presentation.runtime.runtime")
 local ui_intent_dispatcher = require("src.presentation.input.intent_dispatcher")
 local choice_openers = require("src.presentation.view.widgets.choice_screen_service.openers")
@@ -25,7 +25,7 @@ local ui_view = require("src.presentation.runtime.view_service")
 local ui_status_3d_layer = require("src.presentation.view.render.status3d")
 local action_anim = require("src.presentation.view.render.action_anim")
 local move_anim = require("src.presentation.view.render.move_anim")
-local turn_engine_cls = require("src.game.flow.turn.turn_runtime")
+local runtime_cls = require("src.game.flow.turn.runtime")
 local turn_effects = require("src.presentation.view.widgets.turn_effects")
 local popup_renderer = require("src.presentation.view.widgets.popup_renderer")
 local market_modal_renderer = require("src.presentation.view.widgets.market_modal_renderer")
@@ -412,7 +412,7 @@ local function _test_choice_timeout_supports_explicit_timeout_strategy()
   }
   local dispatched = nil
   _with_patches({
-    { target = turn_dispatch, key = "dispatch_action", value = function(_, _, action)
+    { target = dispatch, key = "dispatch_action", value = function(_, _, action)
       dispatched = action
     end },
     { target = ui_view, key = "close_choice_modal", value = function() end },
@@ -486,7 +486,7 @@ local function _test_move_anim_wait_and_resume()
       return nil
     end,
   }
-  g.turn_engine = turn_engine_cls:new(g, phases, { experimental_coroutine_turn = true })
+  g.turn_engine = runtime_cls:new(g, phases, { experimental_coroutine_turn = true })
 
   local res = g.turn_engine:run_turn()
   assert(res == "wait_move_anim", "should wait for move anim")
@@ -744,7 +744,7 @@ local function _test_turn_dispatch_rejects_non_current_actor()
     },
   }
 
-  local res_auto = turn_dispatch.dispatch_action(g, state, {
+  local res_auto = dispatch.dispatch_action(g, state, {
     type = "ui_button",
     id = "auto",
     actor_role_id = 2,
@@ -752,7 +752,7 @@ local function _test_turn_dispatch_rejects_non_current_actor()
   assert(res_auto and res_auto.status == "applied", "auto button should allow non-current actor")
   assert(g.players[2].auto == true, "player2 auto should toggle")
 
-  local res_next = turn_dispatch.dispatch_action(g, state, {
+  local res_next = dispatch.dispatch_action(g, state, {
     type = "ui_button",
     id = "next",
     actor_role_id = 2,
@@ -786,7 +786,7 @@ local function _test_turn_dispatch_rejects_choice_non_owner()
     self.turn.pending_choice = nil
   end
 
-  local res = turn_dispatch.dispatch_action(g, state, {
+  local res = dispatch.dispatch_action(g, state, {
     type = "choice_select",
     choice_id = 9,
     option_id = 1,
@@ -808,7 +808,7 @@ local function _test_turn_dispatch_auto_rejects_unmapped_role()
     },
   }
   local before = g.players[1].auto
-  local res = turn_dispatch.dispatch_action(g, state, {
+  local res = dispatch.dispatch_action(g, state, {
     type = "ui_button",
     id = "auto",
     actor_role_id = 99,
@@ -849,7 +849,7 @@ local function _test_turn_dispatch_item_slot_uses_actor_slot_map()
   }
   _bind_ui_runtime(state)
 
-  local res = turn_dispatch.dispatch_action(g, state, {
+  local res = dispatch.dispatch_action(g, state, {
     type = "ui_button",
     id = "item_slot_1",
     actor_role_id = 1,
@@ -1195,7 +1195,7 @@ local function _test_ui_intent_dispatcher_auto_button_honors_intent_actor_during
   local state = {
     turn_action_port = {
       dispatch_action = function(game, state_ctx, action, opts)
-        return turn_dispatch.dispatch_action(game, state_ctx, action, opts)
+        return dispatch.dispatch_action(game, state_ctx, action, opts)
       end,
       should_block_action = function()
         return false
@@ -3013,7 +3013,7 @@ local function _test_ui_event_router_auto_uses_cached_local_role_instead_of_curr
     local state = {
       turn_action_port = {
         dispatch_action = function(game_ctx, state_ctx, action, opts)
-          return turn_dispatch.dispatch_action(game_ctx, state_ctx, action, opts)
+          return dispatch.dispatch_action(game_ctx, state_ctx, action, opts)
         end,
         should_block_action = function()
           return false
@@ -4648,7 +4648,7 @@ local function _test_action_anim_queue_consumes_in_order()
   function g:player_balance(player)
     return player.cash
   end
-  local engine = turn_engine_cls:new(g, phases, { experimental_coroutine_turn = true })
+  local engine = runtime_cls:new(g, phases, { experimental_coroutine_turn = true })
 
   local state = engine:run_turn()
   _assert_eq(state, "wait_action_anim", "should wait action anim")

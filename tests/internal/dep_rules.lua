@@ -250,8 +250,8 @@ local presentation_game_systems_whitelist = {
 
 local dep_rules_whitelist = {
   ["src/game/core/runtime/composition_root.lua"] = {
-    ["src.game.flow.turn.turn_runtime"] = true,
-    ["src.game.flow.turn.turn_phase_registry"] = true,
+    ["src.game.flow.turn.runtime"] = true,
+    ["src.game.flow.turn.phase_registry"] = true,
   },
 }
 
@@ -322,15 +322,15 @@ local growth_budget_rules = {
       ["src/core/ports/action_anim_port.lua"] = 0,
       ["src/game/core/runtime/game_state_tiles.lua"] = 0,
       ["src/game/flow/intent/intent_dispatcher.lua"] = 0,
-      ["src/game/flow/turn/gameplay_loop.lua"] = 0,
-      ["src/game/flow/turn/turn_decision.lua"] = 0,
+      ["src/game/flow/turn/loop.lua"] = 0,
+      ["src/game/flow/turn/decision.lua"] = 0,
       ["src/game/flow/turn/turn_move.lua"] = 0,
       ["src/game/flow/turn/turn_roll.lua"] = 0,
-      ["src/game/systems/items/item_inventory.lua"] = 0,
-      ["src/game/systems/items/item_phase.lua"] = 0,
-      ["src/game/systems/items/item_use_broadcast.lua"] = 0,
-      ["src/game/systems/land/landing_presenter.lua"] = 0,
-      ["src/game/systems/land/landing_effects/base_land_effects.lua"] = 0,
+      ["src/game/systems/items/inventory.lua"] = 0,
+      ["src/game/systems/items/phase.lua"] = 0,
+      ["src/game/systems/items/use_broadcast.lua"] = 0,
+      ["src/game/systems/land/presenter.lua"] = 0,
+      ["src/game/systems/land/effects/base.lua"] = 0,
     },
   },
   {

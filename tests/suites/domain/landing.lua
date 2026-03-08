@@ -9,7 +9,7 @@ local _first_tile_by_type = support.first_tile_by_type
 local _tile_state = support.tile_state
 local _with_patches = support.with_patches
 local _assert_eq = support.assert_eq
-local turn_land = require("src.game.flow.turn.turn_land")
+local land = require("src.game.flow.turn.land")
 local chance_cfg = require("Config.generated.chance_cards")
 local item_inventory = require("src.game.systems.items.inventory")
 local land_rules = require("src.game.systems.land.land_rules")
@@ -143,7 +143,7 @@ local function _test_turn_land_bridges_to_wait_action_anim_for_chance()
     { key = "LuaAPI", value = patched },
     { target = patched, key = "rand", value = function() return 0 end },
   }, function()
-    local next_state, _ = turn_land({ game = g }, { player = p, move_result = {} })
+    local next_state, _ = land({ game = g }, { player = p, move_result = {} })
     assert(next_state == "wait_action_anim", "chance landing should bridge to wait_action_anim")
     assert(g.turn.action_anim and g.turn.action_anim.kind == "chance", "chance action anim should be queued")
   end)
@@ -160,7 +160,7 @@ local function _test_turn_land_bridges_to_wait_action_anim_for_item()
       return { id = 2001, name = item_inventory.item_name(2001) }
     end },
   }, function()
-    local next_state, _ = turn_land({ game = g }, { player = p, move_result = {} })
+    local next_state, _ = land({ game = g }, { player = p, move_result = {} })
     assert(next_state == "wait_action_anim", "item landing should bridge to wait_action_anim")
     assert(g.turn.action_anim and g.turn.action_anim.kind == "item_use", "item action anim should be queued")
     assert(g.turn.action_anim and g.turn.action_anim.item_id == 2001, "item action anim item_id mismatch")

@@ -275,12 +275,60 @@
   - 把 `items/registry.lua` 中重复 context copy / target resolver 注入提成局部 helper，保持行为不变
   - 清掉 rename 后已经失去意义的重复 require 路径与临时 alias
 - **validation**: 受影响模块的 require 链保持闭合；没有新增跨层依赖；architecture suites 通过。
+- **status**: completed (2026-03-09 00:34+08:00)
+- **work_log**:
+  - 将 `src/presentation/runtime/runtime.lua` 的局部导出表从 `ui_runtime` 收口为 `runtime`，并把 `src/presentation/model/model.lua` 的局部导出表收口为 `model_api`；同时在 `src/presentation/runtime/ports/ui_sync/ui_model_sync.lua` 对齐新的局部别名，避免 rename 后继续传播旧前缀。
+  - 将 `src/game/systems/land/executors.lua` 的手工 merge 收口为 `_merge_executor_groups(...)`，并把 `base_land` 别名收口为 `base`，保持导出的 `executors` 表和 `register_effect_executors(...)` 行为不变。
+  - 将 `src/game/systems/items/registry.lua` 的 `item_handlers` / `item_registry` / `item_effects` 别名收口为 `handlers` / `registry` / `effects`，并提炼 `_copy_context(...)`、`_inject_target_candidates(...)`，消除重复 context copy 与目标解析器注入样板。
+  - 将 `src/game/systems/items/{executor,handlers,phase,post_effects,steal,strategy,use_broadcast}.lua` 与 `src/game/systems/land/land_rules.lua` 中仍沿用旧文件名前缀的局部表名和 require 别名收口为最终名字，不改协议、不改事件、不改 Port。
+  - 完成定向验证：计划中的强相关 suite 通过，`architecture_guard_contract` 和全量 `tests/regression.lua` 也覆盖了本波清理。
+- **files_touched**:
+  - `.agents/swarm_plan.md`
+  - `src/game/systems/items/executor.lua`
+  - `src/game/systems/items/handlers.lua`
+  - `src/game/systems/items/phase.lua`
+  - `src/game/systems/items/post_effects.lua`
+  - `src/game/systems/items/registry.lua`
+  - `src/game/systems/items/steal.lua`
+  - `src/game/systems/items/strategy.lua`
+  - `src/game/systems/items/use_broadcast.lua`
+  - `src/game/systems/land/executors.lua`
+  - `src/game/systems/land/land_rules.lua`
+  - `src/presentation/model/model.lua`
+  - `src/presentation/runtime/ports/ui_sync/ui_model_sync.lua`
+  - `src/presentation/runtime/runtime.lua`
+- **gotchas**:
+  - `src/game/systems/land/executors.lua` 当前在工作树里表现为新路径文件，`git diff` 不会显示原文件对比；需要结合本轮 rename 背景理解为同一收口链上的安全整理，而不是新增职责。
+  - `phase.lua`、`use_broadcast.lua` 等局部导出表名虽然改动较多，但都停留在文件内部；对外模块路径、函数签名和 payload 形状未变化。
 
 ### T7: guard / 文档 / 活文档同步
 - **depends_on**: `[T2, T3, T4, T5, T6]`
 - **location**: `tests/internal/legacy_path_guard.lua`, `tests/internal/dep_rules.lua`, `docs/architecture/*.md`, `.agents/*.md`
 - **description**: 更新 retired paths、dep_rules 根路径与架构文档示例；把这轮新旧路径写入执行计划和研究文档。只同步命名，不改边界规则本身。若实施时涉及 `.agents/plan.md`，必须按 `.agents/harness/PLANS.md` 维护。
 - **validation**: 新退休路径可被 `legacy_path_guard` 拦住；文档示例不再引用本轮旧路径；`dep_rules` 不扫描失效位置。
+- **status**: completed (2026-03-09 00:34+08:00)
+- **work_log**:
+  - 为 `tests/internal/legacy_path_guard.lua` 补入本轮退休路径全集，覆盖 `presentation/runtime.ui_*`、`presentation/model.ui_*`、`game/flow/turn.turn_*`、`game/systems/land.landing_*`、`game/systems/items.item_*`，让旧路径回流能被 guard 直接打断。
+  - 更新 `tests/internal/dep_rules.lua` 的 whitelist 与 growth budget 路径，把 `turn_runtime/turn_phase_registry`、`gameplay_loop/turn_decision`、`item_inventory/item_phase/item_use_broadcast`、`landing_presenter/base_land_effects` 等旧路径同步到当前命名。
+  - 更新 `docs/architecture/boundaries.md` 与 `docs/architecture/layer-model.md` 的示例路径，并同步修正共享 suite 中仍引用旧路径的 require：`intent_output_contract`、`presentation_ui`、`ui_gate_contract`、`ui_runtime_state_contract`、`domain/landing`、`domain/land`。
+  - 在 `.agents/research.md` 追加本轮命名收口结论与验证口径，保持执行计划和研究文档都能独立说明“哪些路径退休了、如何验证没有回流”。
+  - 运行字符串级扫描后，仓库里本轮旧路径只剩 `.agents/swarm_plan.md` 的历史执行记录，以及冻结不改的 `turn_move` / `turn_roll` 稳定模块。
+- **files_touched**:
+  - `.agents/swarm_plan.md`
+  - `.agents/research.md`
+  - `docs/architecture/boundaries.md`
+  - `docs/architecture/layer-model.md`
+  - `tests/internal/dep_rules.lua`
+  - `tests/internal/legacy_path_guard.lua`
+  - `tests/suites/architecture/intent_output_contract.lua`
+  - `tests/suites/domain/land.lua`
+  - `tests/suites/domain/landing.lua`
+  - `tests/suites/presentation/presentation_ui.lua`
+  - `tests/suites/presentation/ui_gate_contract.lua`
+  - `tests/suites/presentation/ui_runtime_state_contract.lua`
+- **gotchas**:
+  - `turn_move.lua` 与 `turn_roll.lua` 属于 T3 明确冻结不改的稳定模块，所以相关引用与 guard 都保留；T7 只同步真正退休的 `turn_*` 文件。
+  - `.agents/plan.md` 在工作树中已有独立修改，本波没有继续触碰它，避免在未重写整份执行计划的前提下破坏 `.agents/harness/PLANS.md` 约束。
 
 ### T8: 定向回归与全量回归
 - **depends_on**: `[T7]`
@@ -290,6 +338,15 @@
   - `lua -e 'package.path=package.path..";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua"; require("TestHarness").run_all({require("suites.presentation.presentation_ui"), require("suites.runtime.runtime_bootstrap"), require("suites.domain.land"), require("suites.domain.item"), require("suites.gameplay.gameplay"), require("suites.architecture.cross_module_contract"), require("suites.architecture.architecture_guard_contract"), require("suites.architecture.intent_output_contract"), require("suites.architecture.usecase_boundary_contract")})'`
   - `lua tests/regression.lua`
   预期包含 `dep_rules ok`、`legacy_path_guard ok`、全量回归通过。
+- **status**: completed (2026-03-09 00:34+08:00)
+- **work_log**:
+  - 运行计划指定的 9 个强相关 suite，最终结果 `All regression checks passed (275)`。
+  - 运行 `lua tests/regression.lua`，最终结果 `All regression checks passed (385)`，并包含 `dep_rules ok`、`legacy_path_guard ok`、`tick ok`、`forbidden_globals ok`。
+  - 结合字符串级扫描与回归结果，确认本轮命名收口、结构收口和代码层清理没有引入新的跨层依赖或行为回归。
+- **files_touched**:
+  - `.agents/swarm_plan.md`
+- **gotchas**:
+  - 回归输出仍包含大量黑市商品映射缺失 warning，这是仓库当前已知噪音，不属于本轮命名收口回归。
 
 ## Parallel Execution Groups
 
