@@ -11,7 +11,7 @@ local _resolve_landing = support.resolve_landing
 local land_actions = support.land_actions
 local pricing = support.pricing
 local choice_resolver = support.choice_resolver
-local choice_registry = require("src.game.systems.choices.choice_registry")
+local choice_registry = require("src.game.systems.choices.registry")
 
 local function _test_ai_picks_land_purchase()
   local agent = require("src.game.core.ai.agent")

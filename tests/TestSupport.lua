@@ -14,7 +14,7 @@ local chance_effects = require("src.game.systems.chance.chance_resolver")
 local landing_defs = require("src.game.systems.land.specs.landing_effects")
 local effect_pipeline = require("src.game.systems.effects.effect_pipeline")
 local effect = require("src.game.systems.effects.effect_runner")
-local choice_resolver = require("src.game.systems.choices.choice_resolver")
+local choice_resolver = require("src.game.systems.choices.resolver")
 local board_utils = require("src.game.systems.land.land_board_utils")
 local gameplay_loop = require("src.game.flow.turn.gameplay_loop")
 local turn_anim = require("src.game.flow.turn.turn_anim")
@@ -216,7 +216,7 @@ TriggerCustomEvent = TriggerCustomEvent or function() end
 _refresh_runtime_context_for_tests()
 
 local function build_ui_port(overrides)
-  local ui_view = require("src.presentation.runtime.ui_view_service")
+  local ui_view = require("src.presentation.runtime.view_service")
   local ui_state = ui_view.build_ui_state()
   local refs = {
     images = {

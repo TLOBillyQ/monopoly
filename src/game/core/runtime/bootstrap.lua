@@ -1,8 +1,8 @@
-local choice_registry_module = require("src.game.systems.choices.choice_registry")
+local choice_registry_module = require("src.game.systems.choices.registry")
 local chance_handlers = require("src.game.systems.chance.chance_handlers")
 local item_registry_module = require("src.game.systems.items.item_registry")
 local effect_registry_module = require("src.game.systems.effects.effect_registry")
-local choice_resolver = require("src.game.systems.choices.choice_resolver")
+local choice_resolver = require("src.game.systems.choices.resolver")
 local landing_effect_executors = require("src.game.systems.land.landing_effect_executors")
 
 local bootstrap = {}

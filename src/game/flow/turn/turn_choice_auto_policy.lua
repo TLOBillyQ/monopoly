@@ -1,6 +1,6 @@
 local agent = require("src.game.core.ai.agent")
 local number_utils = require("src.core.utils.number_utils")
-local choice_contract = require("src.core.choice.choice_contract")
+local choice_contract = require("src.core.choice.contract")
 
 local choice_auto_policy = {}
 

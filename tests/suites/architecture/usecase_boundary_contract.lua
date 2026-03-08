@@ -3,7 +3,7 @@ local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
 local bankruptcy_feedback_port = require("src.game.ports.bankruptcy_feedback_port")
-local turn_action_port = require("src.presentation.input.ui_intent_dispatcher.turn_action_port")
+local turn_action_port = require("src.presentation.input.intent_dispatch.turn_action_port")
 local gameplay_loop_ports = require("src.game.flow.turn.gameplay_loop_ports")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local turn_roll = require("src.game.flow.turn.turn_roll")
@@ -111,7 +111,7 @@ local function _test_gameplay_loop_clock_contract_split_sources()
 end
 
 local function _test_choice_contract_copies_explicit_fields_once()
-  local choice_contract = require("src.core.choice.choice_contract")
+  local choice_contract = require("src.core.choice.contract")
   local source = {
     route_key = "target",
     requires_confirm = true,

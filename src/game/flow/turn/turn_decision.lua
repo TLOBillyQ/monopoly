@@ -93,7 +93,7 @@ function turn_decision.decide_choice_action(game, choice, pending_action, opts)
 end
 
 function turn_decision.resolve_choice(game, choice, action)
-  return require("src.game.systems.choices.choice_resolver").resolve(game, choice, action) or {}
+  return require("src.game.systems.choices.resolver").resolve(game, choice, action) or {}
 end
 
 function turn_decision.log_turn_start(game)

@@ -45,10 +45,10 @@ end
 
 function choice_registry:register_defaults(helpers)
   local groups = {
-    require("src.game.systems.choices.choice_handlers.optional_effect_handler").build(helpers),
-    require("src.game.systems.choices.choice_handlers.land_choice_handler").build(helpers),
-    require("src.game.systems.choices.choice_handlers.item_choice_handler").build(helpers),
-    require("src.game.systems.choices.choice_handlers.market_choice_handler").build(helpers),
+    require("src.game.systems.choices.handlers.optional_effect").build(helpers),
+    require("src.game.systems.choices.handlers.land").build(helpers),
+    require("src.game.systems.choices.handlers.item").build(helpers),
+    require("src.game.systems.choices.handlers.market").build(helpers),
   }
   for _, group in ipairs(groups) do
     for key, handler in pairs(group) do

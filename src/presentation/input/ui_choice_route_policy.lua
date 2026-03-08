@@ -1,4 +1,4 @@
-local choice_route_policy = require("src.core.choice.choice_route_policy")
+local choice_route_policy = require("src.core.choice.route_policy")
 
 local policy = {}
 

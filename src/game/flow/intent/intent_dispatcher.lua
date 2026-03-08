@@ -1,6 +1,6 @@
 local monopoly_event = require("src.core.events.monopoly_events")
-local choice_contract = require("src.core.choice.choice_contract")
-local choice_route_policy = require("src.core.choice.choice_route_policy")
+local choice_contract = require("src.core.choice.contract")
+local choice_route_policy = require("src.core.choice.route_policy")
 
 local intent_dispatcher = {}
 local emit = monopoly_event.emit
