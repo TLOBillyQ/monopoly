@@ -1,7 +1,7 @@
 local support = require("TestSupport")
 local with_patches = support.with_patches
 local game_runtime_bootstrap = require("src.app.bootstrap.game_runtime_bootstrap")
-local gameplay_loop = require("src.game.flow.turn.gameplay_loop")
+local gameplay_loop = require("src.game.flow.turn.loop")
 local presentation_ports = require("src.presentation.runtime.presentation_ports")
 
 local function _assert_close(actual, expected, epsilon, msg)

@@ -149,6 +149,21 @@
 - **location**: `src/presentation/view/render`, `src/presentation/view/widgets/market_modal_renderer.lua`, `tests/suites/presentation`, `.agents/plan.md`
 - **description**: 将 `market_view.lua` 改为 `market.lua`，companion 文件改为 `market_controls.lua` 和 `market_slots.lua`。不改成裸 `controls` / `slots`，避免在 `render/` 下丢掉业务辨识度。
 - **validation**: `rg 'src\.presentation\.view\.render\.market_view' src tests docs .agents` 仅允许历史迁移记录；市场弹窗相关 presentation 用例继续通过。
+- **status**: completed (2026-03-08 15:39Z)
+- **work_log**:
+  - 完成 `market_view.lua`、`market_view_controls.lua`、`market_view_slots.lua` 到 `market.lua`、`market_controls.lua`、`market_slots.lua` 的重命名。
+  - 同步更新 `market_modal_renderer.lua`、`view_service.lua` 与 `presentation_ui.lua` 中的直接 require 和 `package.loaded[...]` 热重载 key。
+  - 保持市场 companion 的职责分层不变，只做路径收口，不调整市场 UI 逻辑。
+- **files_touched**:
+  - `src/presentation/view/render/market.lua`
+  - `src/presentation/view/render/market_controls.lua`
+  - `src/presentation/view/render/market_slots.lua`
+  - `src/presentation/view/widgets/market_modal_renderer.lua`
+  - `src/presentation/runtime/view_service.lua`
+  - `tests/suites/presentation/presentation_ui.lua`
+  - `.agents/swarm_plan.md`
+- **gotchas**:
+  - `tests/suites/presentation/presentation_ui.lua` 依赖 `package.loaded[...]` 热重载校验；如果只改 `require(...)` 而不改 `package.loaded` key，会留下假阳性。
 
 ### T5: 收口 `action_anim_*` 叶子 helper
 - **depends_on**: `[T1]`
@@ -223,6 +238,27 @@
 - **location**: `src/game/flow/turn`, `src/app/bootstrap`, `tests/suites/gameplay`, `docs/architecture`, `.agents/plan.md`
 - **description**: 将 `gameplay_loop.lua -> loop.lua`、`gameplay_loop_ports.lua -> loop_ports.lua`。只改模块路径，不改 `state.gameplay_loop_ports` 等运行时字段名，避免把 rename 扩大成状态协议变更。
 - **validation**: `rg 'src\.game\.flow\.turn\.gameplay_loop($|\.)' src tests docs .agents` 仅允许历史计划记录；bootstrap 与 gameplay suite 全部切到 `loop` / `loop_ports`。
+- **status**: completed (2026-03-08 15:39Z)
+- **work_log**:
+  - 完成 `gameplay_loop.lua -> loop.lua`、`gameplay_loop_ports.lua -> loop_ports.lua` 的入口重命名。
+  - 同步更新 `app/bootstrap`、`tests/TestSupport.lua`、`tests/internal/gameplay_loop_no_ui.lua`、runtime / architecture / gameplay suite 中的直接 require。
+  - 保持 `state.gameplay_loop_ports`、`_resolved_gameplay_loop_ports` 等运行时字段名原样不动，只修改模块路径。
+- **files_touched**:
+  - `src/game/flow/turn/loop.lua`
+  - `src/game/flow/turn/loop_ports.lua`
+  - `src/game/flow/turn/tick_choice_timeout.lua`
+  - `src/game/flow/turn/turn_dispatch.lua`
+  - `src/app/bootstrap/game_runtime_bootstrap.lua`
+  - `tests/TestSupport.lua`
+  - `tests/internal/gameplay_loop_no_ui.lua`
+  - `tests/suites/runtime/runtime_bootstrap.lua`
+  - `tests/suites/architecture/intent_output_contract.lua`
+  - `tests/suites/architecture/architecture_guard_contract.lua`
+  - `tests/suites/architecture/usecase_boundary_contract.lua`
+  - `tests/suites/gameplay/gameplay.lua`
+  - `.agents/swarm_plan.md`
+- **gotchas**:
+  - 旧路径字符串会继续保留在 `.agents/swarm_plan.md` 的任务说明里；T7 的扫描应把该计划文件视作历史记录，而不是代码残留。
 
 ### T8: 全局扫尾与 guard / 文档同步
 - **depends_on**: `[T2, T3, T4, T5, T7]`

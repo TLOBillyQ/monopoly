@@ -3,8 +3,8 @@ local ui_controls = require("src.presentation.view.support.ui_controls")
 local modal_state = require("src.presentation.input.modal_state_coordinator")
 local runtime = require("src.presentation.runtime.ui_runtime")
 local runtime_state = require("src.core.state_access.runtime_state")
-local market_view_slots = require("src.presentation.view.render.market_view_slots")
-local market_view_controls = require("src.presentation.view.render.market_view_controls")
+local market_view_slots = require("src.presentation.view.render.market_slots")
+local market_view_controls = require("src.presentation.view.render.market_controls")
 
 local market_view = {}
 local VEHICLE_TAB_ENABLED = false

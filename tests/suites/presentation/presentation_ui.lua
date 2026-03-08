@@ -18,7 +18,7 @@ local turn_dispatch = require("src.game.flow.turn.turn_dispatch")
 local runtime_port = require("src.presentation.runtime.ui_runtime")
 local ui_intent_dispatcher = require("src.presentation.input.intent_dispatcher")
 local choice_openers = require("src.presentation.view.widgets.choice_screen_service.openers")
-local market_view = require("src.presentation.view.render.market_view")
+local market_view = require("src.presentation.view.render.market")
 local market_layout = require("src.presentation.view.support.market_layout")
 local canvas_event_router = require("src.presentation.runtime.canvas_event_router")
 local ui_view = require("src.presentation.runtime.view_service")
@@ -3455,12 +3455,12 @@ local function _test_market_view_empty_filtered_tab_hides_selection_frames()
   }
 
   local market_cfg_size = #market_cfg
-  local old_market_view = package.loaded["src.presentation.view.render.market_view"]
+  local old_market_view = package.loaded["src.presentation.view.render.market"]
   market_cfg[market_cfg_size + 1] = hidden_entry
-  package.loaded["src.presentation.view.render.market_view"] = nil
+  package.loaded["src.presentation.view.render.market"] = nil
 
   local ok, err = xpcall(function()
-    local test_market_view = require("src.presentation.view.render.market_view")
+    local test_market_view = require("src.presentation.view.render.market")
 
     test_market_view.refresh_market(state, {
       choice_id = 23,
@@ -3488,8 +3488,8 @@ local function _test_market_view_empty_filtered_tab_hides_selection_frames()
   end, debug.traceback or function(e) return e end)
 
   market_cfg[market_cfg_size + 1] = nil
-  package.loaded["src.presentation.view.render.market_view"] = nil
-  package.loaded["src.presentation.view.render.market_view"] = old_market_view
+  package.loaded["src.presentation.view.render.market"] = nil
+  package.loaded["src.presentation.view.render.market"] = old_market_view
   if not ok then
     error(err)
   end
@@ -3719,12 +3719,12 @@ local function _test_market_view_hides_market_disabled_entries()
   }
 
   local market_cfg_size = #market_cfg
-  local old_market_view = package.loaded["src.presentation.view.render.market_view"]
+  local old_market_view = package.loaded["src.presentation.view.render.market"]
   market_cfg[market_cfg_size + 1] = hidden_entry
-  package.loaded["src.presentation.view.render.market_view"] = nil
+  package.loaded["src.presentation.view.render.market"] = nil
 
   local ok, err = xpcall(function()
-    local test_market_view = require("src.presentation.view.render.market_view")
+    local test_market_view = require("src.presentation.view.render.market")
 
     local opened = test_market_view.refresh_market(state, {
       choice_id = 7,
@@ -3757,8 +3757,8 @@ local function _test_market_view_hides_market_disabled_entries()
   end, debug.traceback or function(e) return e end)
 
   market_cfg[market_cfg_size + 1] = nil
-  package.loaded["src.presentation.view.render.market_view"] = nil
-  package.loaded["src.presentation.view.render.market_view"] = old_market_view
+  package.loaded["src.presentation.view.render.market"] = nil
+  package.loaded["src.presentation.view.render.market"] = old_market_view
   if not ok then
     error(err)
   end

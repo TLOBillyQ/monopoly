@@ -4,7 +4,7 @@ local _with_patches = support.with_patches
 
 local intent_output_port = require("src.game.ports.intent_output_port")
 local intent_output_adapter = require("src.game.flow.output_adapters.intent_output_adapter")
-local gameplay_loop = require("src.game.flow.turn.gameplay_loop")
+local gameplay_loop = require("src.game.flow.turn.loop")
 local paid_currency_bridge = require("src.game.systems.commerce.paid_currency_bridge")
 local market_purchase = require("src.game.systems.market.application.purchase")
 local landing_presenter = require("src.game.systems.land.landing_presenter")

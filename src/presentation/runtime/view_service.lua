@@ -1,4 +1,4 @@
-local market_view = require("src.presentation.view.render.market_view")
+local market_view = require("src.presentation.view.render.market")
 local base_presenter = require("src.presentation.view.canvas.base.presenter")
 local render_pipeline = require("src.presentation.runtime.canvas_render_pipeline")
 local input_lock_policy = require("src.presentation.input.input_lock_policy")

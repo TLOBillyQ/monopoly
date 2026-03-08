@@ -3,8 +3,8 @@ local _assert_eq = support.assert_eq
 local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
 
-local gameplay_loop = require("src.game.flow.turn.gameplay_loop")
-local gameplay_loop_ports = require("src.game.flow.turn.gameplay_loop_ports")
+local gameplay_loop = require("src.game.flow.turn.loop")
+local gameplay_loop_ports = require("src.game.flow.turn.loop_ports")
 local turn_dispatch = require("src.game.flow.turn.turn_dispatch")
 local turn_roll = require("src.game.flow.turn.turn_roll")
 local output_state_adapter = require("src.game.flow.output_adapters.output_state_adapter")
