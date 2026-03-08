@@ -1,218 +1,167 @@
-# 语义收敛与热点压缩（3.3 轮）
+# 第一周执行计划：UI 热点拆分与 `market_buy` 契约前移
 
-本可执行计划是活文档。实施过程中必须持续更新"进度"、"意外与发现"、"决策日志"、"结果与复盘"。
+本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
-本文件遵循仓库规范 `.agents/harness/PLANS.md` 维护。前置计划为同目录下旧版 3.2 降线计划（已归档于 git 历史）。实施时以本文件作为唯一持续更新的执行面板。
-
+本文件遵循仓库规范 `.agents/harness/PLANS.md` 维护。本版本只覆盖 `.agents/research.md` 中定义的“第 1 周”工作，不再承接旧的 LOC 压缩目标。
 
 ## 目的 / 全局视角
 
-本轮工作承接 3.2 降线的结构收口成果，转向"热点文件内部的重复逻辑压缩"与"概念语义的进一步收敛"。3.2 建立了稳定入口、helper 文件与 descriptor 抽象，但净减行数仅 375 行（基线 24,913 → 当前 24,538），远未达到 800 行目标。本轮不再做路径迁移或新入口引入，而是直接在已有 helper 基础上压缩热点文件，同时把 Choice 和 Port 两个概念的语义边界再收紧一级。
+这一周的目标不是继续做目录迁移，也不是单纯把 Lua 行数压得更低，而是先把最容易继续失控的三个点收住：`src/presentation/view/render/market_view.lua` 的市场弹窗编排，`src/presentation/view/widgets/ui_panel_presenter.lua` 的玩家面板编排，以及 `market_buy` choice 在进入运行态之前的契约校验。
 
-完成后，读者应能直接观察到三件事：第一，`lua tests/regression.lua` 仍然全绿；第二，`src/` 的 Lua 总行数相对当前基线 24,538 行至少再净减 400 行（即降到 24,138 以下，累计相对原始基线 24,913 净减 775+）；第三，12 个 >250 行的文件中至少有 6 个降到 250 行以下。
-
+完成后，用户应能看到三个可观察结果。第一，市场弹窗的打开、选择、翻页、切页签、关闭行为与现在一致，但 `market_view.lua` 只保留薄入口。第二，玩家面板的头像、资产、现金变化提示行为与现在一致，但 `ui_panel_presenter.lua` 不再同时承担多类细节渲染。第三，非法的 `market_buy` 输入会更早在 descriptor/dispatcher 边界报错，而不是深处 handler 才失败。最直接的证明方式仍然是运行 `lua tests/regression.lua`，并补跑市场与 UI 相关 suite。
 
 ## 进度
 
-- [x] (2026-03-08 11:26Z) M0: 已冻结基线并验证，`lua tests/regression.lua` 通过；`src/` 基线为 24,538 行 / 296 文件。
-- [ ] (2026-03-08 11:26Z) M1: 已完成一轮渲染热点压缩并通过相关 suite 与全量回归；`board_feedback_service.lua` 273 → 226、`target_choice_effects.lua` 262 → 239、`market_view.lua` 327 → 294。剩余：`market_view.lua` 仍高于 250 行，未达到原计划“三个文件各减 40+ 行”。
-- [ ] (2026-03-08 11:26Z) M2: 已完成 Widget 热点压缩并通过相关 suite 与全量回归；`ui_panel_presenter.lua` 338 → 294、`popup_renderer.lua` 206 → 202。剩余：`ui_panel_presenter.lua` 未降到 260 以下，`popup_renderer.lua` 未降到 170 以下。
-- [ ] (2026-03-08 11:26Z) M3: 已核对现状并完成压缩验证；`gameplay_loop.lua` 的 `tick` 入口已由 `gameplay_loop_tick_flow.lua` / `gameplay_loop_tick_steps.lua` 承接，当前文件 292 → 266。剩余：未达到 250 行以下。
-- [ ] (2026-03-08 11:26Z) M4: 已把 `gameplay_loop_ports.lua` 改为列表驱动的 noop group，261 → 227，并通过 architecture suite 与 `tests/internal/gameplay_loop_no_ui.lua`。剩余：未达到 210 行以下。
-- [ ] (2026-03-08 11:26Z) M5: 已完成终验并记录结果；`lua tests/regression.lua` 全绿，`src/` 总行数 24,327，>250 行文件从 12 降到 9。剩余：未达到 `24,138` / `≤ 6` 的原终验目标。
-
+- [x] (2026-03-08 12:10Z) 已冻结第一周目标：只做 `market_view` 拆分、`ui_panel_presenter` 拆分、`market_buy` descriptor 契约强化。
+- [ ] 基线验证：记录当前目标文件行数，运行市场与 UI 相关 suite，确认改动起点。
+- [ ] M1：拆分 `src/presentation/view/render/market_view.lua`，提取槽位渲染与控件状态模块，保持原入口函数不变。
+- [ ] M2：拆分 `src/presentation/view/widgets/ui_panel_presenter.lua`，提取玩家槽位与现金变化模块，保持 `refresh()` 入口不变。
+- [ ] M3：扩展 choice descriptor 契约，让 `market_buy` 支持 `normalize_meta`、`meta_validator`、`normalize_action` 这类轻量钩子，并补测试。
+- [ ] M4：运行回归、同步本文档的“结果与复盘”，确认第一周工作可以从当前工作树无歧义继续推进。
 
 ## 意外与发现
 
-- 观察：计划中的 presentation 路径描述已过时，实际热点文件位于 `src/presentation/view/render/` 与 `src/presentation/view/widgets/`，不是旧的 `src/presentation/view/` 平铺路径。
-  证据：`rg --files src | rg 'market_view|board_feedback_service|target_choice_effects|ui_panel_presenter|popup_renderer'` 输出为 `src/presentation/view/render/...` 与 `src/presentation/view/widgets/...`。
+当前仓库已经有可复用的 support 层，因此本周不应再把“抽 helper”当作主要目标。`src/presentation/view/support/ui_controls.lua`、`src/presentation/view/support/effect_timeline.lua`、`src/presentation/view/support/market_layout.lua` 已经存在，新的改动要优先复用这些模块，而不是再建一层新的通用目录。
 
-- 观察：`gameplay_loop.lua` 的 `tick` 入口在开工前已经只剩委派壳，原计划里“继续把 tick 内部大段逻辑迁出”的描述与现状不符。
-  证据：`gameplay_loop.tick(...)` 当前只负责 `_resolve_ports(state)` 和 `tick_flow.tick(...)` 调用；实际 phase/dirty/debug 逻辑位于 `gameplay_loop_tick_flow.lua` 与 `gameplay_loop_tick_steps.lua`。
+市场 choice 的分页字段已经是显式字段，而不是靠 `meta` 临时兜底。`src/core/choice/choice_contract.lua` 已经列出 `active_tab`、`page_index`、`page_count`，`src/game/systems/market/application/choice_session.lua` 也已经显式维护它们。因此本周不再做“把分页状态从 `meta` 拿出来”这类工作。
 
-- 观察：并行压缩时曾引入两处回归，分别是 `market_view.lua` 在空 slot 上直接读取 `opt.can_buy`，以及 `target_choice_effects.lua` 在前向局部函数声明缺失时调用 `_move_arrow`。
-  证据：`suites.presentation.presentation_ui` 首次回归失败，报错点分别为 `market_view.lua:309` 和 `target_choice_effects.lua:85`；修复后二次运行同 suite 全绿。
-
-- 观察：纯格式压缩（去空行）在不改行为的前提下带来了可观 LOC 收益，是本轮净减的重要组成部分。
-  证据：终验前 `src/` 总行数从 24,526 进一步降到 24,327，相关 suite 与全量回归保持通过。
-
+Choice 体系也不是零契约状态。`src/game/systems/choices/choice_registry.lua` 已支持 `required_meta`，`src/game/flow/intent/intent_dispatcher.lua` 会在 `open_choice` 时检查 `meta` 必填项。本周要做的是把这条链路从“只检查字段存在”增强到“可归一化、可验证、可在 resolver 前处理 action”。
 
 ## 决策日志
 
-- 决策：本轮不引入新的 helper 文件，优先在已有 `ui_controls.lua` 和 `effect_timeline.lua` 上扩展复用。
-  理由：3.2 的教训是新 helper 抵消了删减收益。本轮目标是纯压缩。
+决策：本周不新建大而全的 schema 机制，而是在现有 descriptor 结构上做增量扩展。
+理由：仓库已有 `required_meta`，继续沿 descriptor 增量演化，风险最低，也最符合现有 `choice_registry` 的组织方式。
+日期/作者：2026-03-08 / Codex
 
-- 决策：不拆分 `gameplay_loop.lua` 为多个物理文件，改为内部提取子函数减少 tick 的行数。
-  理由：`game/flow/turn/` 已有 33 个文件，再增文件数会加重目录噪声。内部提函数可降单函数复杂度而不增文件。
+决策：`market_view` 和 `ui_panel_presenter` 的拆分采用“同目录 companion 文件”形式，而不是新增同名目录。
+理由：当前已有 `market_view.lua` 与 `ui_panel_presenter.lua` 主文件，文件系统里不能同时存在同名目录；使用 `market_view_controls.lua`、`market_view_slots.lua`、`ui_panel_cash_delta.lua`、`ui_panel_player_slots.lua` 这类 sibling 文件最直接，也最少 require churn。
+日期/作者：2026-03-08 / Codex
 
-- 决策：不动 `logger.lua`（364 行）、`runtime_context.lua`（339 行）、`board.lua`（324 行）、`agent.lua`（308 行）、`eggy_paid_purchase_gateway.lua`（289 行）。
-  理由：这些文件功能内聚或算法密集，压缩收益低且风险高。本轮只压有明确重复模式的文件。
-
-- 决策：不拆分 Choice 为 DomainChoice / ViewChoice 两套类型。
-  理由：3.2 已经通过 `required_meta` 断言守卫和 `choice_contract.copy_explicit_fields` 建立了边界，加一层 ChoicePresenter 只会增加转发。
-
-- 决策：M3 不再强行把 `gameplay_loop.lua` 继续拆到新的 helper，而是接受当前 `tick_flow/tick_steps` 已承接主逻辑的事实，只做文件内部压缩与验证。
-  理由：继续为了追计划文本而迁逻辑，只会制造目录噪声和伪收益；当前瓶颈已不在 `tick` 主流程。
-  日期/作者：2026-03-08 / Codex
-
-- 决策：允许在已修改热点文件中做纯格式压缩（去空行），将其视为“热点压缩”的一部分。
-  理由：本轮目标本质上是 `src/` 净减行数；在行为不变且回归全绿的前提下，留白压缩是低风险、直接的 LOC 收益来源。
-  日期/作者：2026-03-08 / Codex
-
+决策：`board_feedback_service.lua` 不进入第一周范围。
+理由：它虽然不小，但职责单一、调用稳定、测试覆盖相对充分，当前收益明显低于 `market_view` 与 `ui_panel_presenter`。
+日期/作者：2026-03-08 / Codex
 
 ## 结果与复盘
 
-本轮实施已经完成一次端到端执行，并保持 `lua tests/regression.lua` 全绿。相对基线 24,538 行，当前 `src/` 为 24,327 行，净减 211 行；相对基线的 12 个 >250 行文件，当前剩 9 个。跨过 250 门槛的文件有三个：`board_feedback_service.lua`、`target_choice_effects.lua`、`gameplay_loop_ports.lua`。
+第一周工作尚未实施，因此本节先写成功标准，实施后必须改成实际结果。成功标准不是“文件看起来更小”，而是三件事实同时成立：一，`market_view.lua` 与 `ui_panel_presenter.lua` 成为薄入口；二，市场弹窗和玩家面板的现有行为无回归；三，`market_buy` 的非法输入在更靠外的边界被拒绝，并有明确测试证明。
 
-未完成项也需要明确记录。原计划要求的 `24,138` 总行数和 `≤ 6` 个 >250 行文件，本轮没有达到；最大的缺口在 `market_view.lua`、`ui_panel_presenter.lua`、`gameplay_loop.lua` 仍分别停在 294、294、266 行。后续若继续推进，优先级应当是：第一，继续压这三个文件到 250 以下；第二，再决定是否对 `popup_renderer.lua`、`board_feedback_service.lua` 做第二轮表驱动压缩，以补足总 LOC 缺口。
-
-本轮经验是：计划文本必须随代码现状收敛，否则会把人引向“为了符合计划而重构”的低收益路径。实际最高收益来自三件事：一是把 `gameplay_loop_ports.lua` 收成列表驱动；二是把 target/highlight 与 popup/panel 的重复渲染路径收口；三是利用全量回归兜住纯格式压缩。
-
+如果周中发现拆分后反而引入额外重复，允许收回某个 companion 文件，但必须把原因记录到“决策日志”，并同步修改“工作计划”和“具体步骤”，避免后来者按照失效路径继续拆。
 
 ## 背景与导读
 
-本仓库是一个基于 Lua 的大富翁游戏，运行在自研宿主引擎上。代码位于 `src/`，分为 `app`（启动链）、`core`（基础工具与配置）、`game`（领域逻辑）、`infrastructure`（宿主适配）、`presentation`（UI 层）五个顶级目录。测试位于 `tests/`，通过 `lua tests/regression.lua` 统一执行。
+本仓库的 UI 层主要在 `src/presentation/`。本周涉及的两个热点文件都属于“接口适配层”，也就是把领域状态和 runtime 状态投影成 UI 节点状态的那一层。`src/presentation/view/render/market_view.lua` 负责市场弹窗的槽位渲染、选中态、翻页按钮、页签按钮和关闭动作。它不应该理解新的业务规则，只应该编排现有市场数据如何显示到 UI。`src/presentation/view/widgets/ui_panel_presenter.lua` 负责基础玩家面板的标签、头像、头顶王冠、自动按钮、现金变化提示。它同样不应该承担新的业务逻辑，只应该把 `ui_model.panel` 渲染到节点。
 
-3.2 轮已完成的关键变更：legacy turn engine 退休、turn runtime 稳定入口建立、test profiles 外置、`ui_controls` 与 `effect_timeline` helper 提取、choice descriptor 化、choice kind alias 消除、choice meta 断言守卫、runtime facade 重命名（`host_runtime_port` → `host_runtime`、`ui_runtime_port` → `ui_runtime`、`use_case_output_port` → `output_state_adapter`）、`port_defaults` 合并到 `default_ports`。
+Choice 相关逻辑主要在 `src/game/systems/choices/` 和 `src/game/flow/intent/`。这里的“descriptor”指的是 `choice_registry` 中每个 `choice.kind` 对应的一张表，当前最少包含 `execute`，有些 descriptor 还声明 `required_meta`。本周的目标是让 descriptor 除了声明“哪些字段必须有”，还可以声明“如何归一化 meta”和“如何验证 action”，这样 `market_buy` 的失败点可以更靠近边界。
 
-当前基线（commit `546fd923` 之后）：`src/` 共 296 个 Lua 文件、24,538 行。
+与本周工作直接相关的文件有：`src/presentation/view/render/market_view.lua`、`src/presentation/view/support/ui_controls.lua`、`src/presentation/view/support/market_layout.lua`、`src/presentation/view/widgets/ui_panel_presenter.lua`、`src/presentation/model/ui_role_context.lua`、`src/game/systems/choices/choice_registry.lua`、`src/game/flow/intent/intent_dispatcher.lua`、`src/game/systems/choices/choice_resolver.lua`、`src/game/systems/choices/choice_handlers/market_choice_handler.lua`、`tests/suites/presentation/presentation_ui.lua`、`tests/suites/domain/market.lua`、`tests/suites/gameplay/gameplay.lua`。
 
-当前 >250 行的文件（12 个，占 4.1%）：
+当前已知基线是：`src/presentation/view/render/market_view.lua` 为 294 行，`src/presentation/view/widgets/ui_panel_presenter.lua` 为 294 行，`src/game/flow/intent/intent_dispatcher.lua` 为 114 行，`src/game/systems/choices/choice_registry.lua` 为 51 行，`src/game/systems/choices/choice_handlers/market_choice_handler.lua` 为 45 行。
 
-    logger.lua                      364  （不动）
-    runtime_context.lua             339  （不动）
-    ui_panel_presenter.lua          338  ← M2 目标
-    market_view.lua                 327  ← M1 目标
-    board.lua                       324  （不动）
-    agent.lua                       308  （不动）
-    gameplay_loop.lua               292  ← M3 目标
-    eggy_paid_purchase_gateway.lua  289  （不动）
-    item_post_effects.lua           282  （不动）
-    board_feedback_service.lua      273  ← M1 目标
-    target_choice_effects.lua       262  ← M1 目标
-    gameplay_loop_ports.lua         261  ← M4 目标
+## 里程碑
 
+### M1：`market_view` 从“大文件”变回“薄入口”
+
+这一里程碑完成后，市场弹窗仍然可以打开、选择商品、切换页签、翻页、关闭，但 `src/presentation/view/render/market_view.lua` 自身只保留对外函数与少量编排。具体做法是把槽位渲染、选中框刷新和通用控件状态拆出去，分别放到 `src/presentation/view/render/market_view_slots.lua` 与 `src/presentation/view/render/market_view_controls.lua`。原文件继续作为稳定入口，被 `src/presentation/view/widgets/market_modal_renderer.lua` 直接引用，避免改调用点。
+
+这一里程碑完成的证明不是“新增了两个文件”，而是现有市场相关测试依然通过，尤其是 `tests/suites/presentation/presentation_ui.lua` 中覆盖市场打开、重开、空页签、选中切换的那些用例继续全绿。
+
+### M2：`ui_panel_presenter` 只保留入口编排
+
+这一里程碑完成后，玩家面板仍然会刷新头像、名称、现金、地产数、总资产、自动状态和现金变化提示，但 `src/presentation/view/widgets/ui_panel_presenter.lua` 不再同时拥有全部细节实现。具体做法是先提取 `src/presentation/view/widgets/ui_panel_player_slots.lua`，承接玩家槽位文本、头像与头冠刷新；再提取 `src/presentation/view/widgets/ui_panel_cash_delta.lua`，承接现金变化缓存、显示与延迟隐藏。若拆完两块后主文件仍明显偏大，可以再把 `_render_role_view` 一组逻辑拆到 `src/presentation/view/widgets/ui_panel_role_view.lua`，但这一步不是强制要求，只有在前两步仍不足以让入口变薄时才执行。
+
+这一里程碑的证明是玩家面板相关的 presentation suite 继续通过，而且 `refresh()` 仍然是外部唯一稳定入口，`src/presentation/view/canvas/base/presenter.lua` 无需行为改动。
+
+### M3：为 `market_buy` 增加 descriptor 级的归一化与校验
+
+这一里程碑完成后，`market_buy` 不仅能声明 `required_meta = { "player_id" }`，还可以在更靠前的位置处理输入。计划中的最小扩展是：在 `src/game/systems/choices/choice_registry.lua` 允许 descriptor 声明 `normalize_meta`、`meta_validator`、`normalize_action` 三个可选钩子；在 `src/game/flow/intent/intent_dispatcher.lua` 里，在复制显式字段并写入 `pending_choice` 之前，先运行 `normalize_meta` 和 `meta_validator`；在 `src/game/systems/choices/choice_resolver.lua` 里，在 cancel 分支和 option 校验之前，如果 descriptor 提供了 `normalize_action`，就先用它归一化 action；在 `src/game/systems/choices/choice_handlers/market_choice_handler.lua` 里，给 `market_buy` 增加针对 `player_id` 与 `option_id` 的轻量实现。
+
+这里的“轻量”有明确边界。本周不引入新的 schema 框架，不新增独立 DSL，也不把所有 choice kind 一次性迁完。第一周只要求 `market_buy` 率先走通整条链路，然后用测试证明它可行。等第二周再决定是否扩到 item choice 和 `landing_optional_effect`。
+
+这一里程碑完成的证明，是市场领域测试与 gameplay 测试里新增或改造后的 case 可以明确区分“缺字段”“字段不可归一化”“玩家不存在”这几类失败，并且失败点比现在更靠前。
+
+### M4：第一周终验与文档收口
+
+这一里程碑不是额外功能，而是把本周的结果固定下来。完成后，开发者应该可以只看当前工作树和这份 `plan.md`，就知道第一周做了什么、还剩什么、应该从哪里接着做。要做的事包括：运行全量回归；把“进度”改成真实状态；把“结果与复盘”改成真实结果；如果中途改过文件落点或函数签名，把变更原因补进“决策日志”。
 
 ## 工作计划
 
-工作分为五个里程碑，按依赖顺序执行：M0 → {M1, M2} → M3 → M4 → M5。其中 M1 与 M2 可并行。
+先做基线验证，再动 UI，再动 Choice。基线验证的目的不是走形式，而是确认本周所有回归锚点都可用。验证完成后，先改 `market_view`，因为它最集中体现了“重复 UI 状态编排”的问题，且已经有 `ui_controls` 和 `market_layout` 可复用，拆分收益最高。接着改 `ui_panel_presenter`，因为它也是 UI 入口，但与市场弹窗无共享状态，适合在第二个里程碑独立推进。最后再改 Choice descriptor 链路，因为这一步会同时触碰 `choice_registry`、`intent_dispatcher`、`choice_resolver` 和 market choice handler，越放在后面越能减少与 UI 重构交叉调试。
 
-### M0：冻结基线与验证矩阵
-
-运行全量回归，确认 24,538 行基线，冻结命令。
-
-### M1：渲染热点压缩（预估 -150 行）
-
-三个文件共 862 行，目标降到 ~710 行。
-
-`market_view.lua`（327 行）：已经引入 `ui_controls` 和 `market_layout`，但仍有大量重复的"解析商品 → 格式化价格 → 设置控件文本 → 设置可见性"流水线。把"商品卡片渲染"提为内部 `_render_product_card(ui, slot_index, product)` 函数，替代当前散落在 `_render_page` 和 `_render_tab` 中的重复逻辑。
-
-`board_feedback_service.lua`（273 行）：多个 feedback 类型（rent、tax、chance、item）共享"创建浮动文字 → 延时 → 清除"模式。将这一模式收敛到 `effect_timeline` 的调用，替代各 handler 内部的重复调度代码。
-
-`target_choice_effects.lua`（262 行）：多个目标选择（tile、player、item slot）共享"高亮 → 等待选择 → 清除高亮"模式。提取内部 `_with_highlight_cycle(targets, opts, callback)` 函数统一此模式。
-
-验收：`lua tests/regression.lua` 通过；三个文件各自减少 40+ 行。
-
-### M2：Widget 热点压缩（预估 -100 行）
-
-`ui_panel_presenter.lua`（338 行）：`_set_label_safe` 和 `_set_visible_safe` 两个 pcall 包装函数已有 `ui_controls` 提供同等功能。将其替换为 `ui_controls` 调用。大量重复的"遍历 player slot → 设置颜色/名称/金币/道具"模式可提为 `_render_player_slot(ui, index, player_data)` 内部函数。
-
-`popup_renderer.lua`（206 行）：多种 popup 类型（rent_card、tax_card、chance_card、item_use）共享"设置标题 → 设置内容 → 设置按钮 → 显示"模式。提取内部 `_render_card_popup(ui, card_data)` 函数。
-
-验收：`lua tests/regression.lua` 通过；`ui_panel_presenter` 降到 260 以下，`popup_renderer` 降到 170 以下。
-
-### M3：GameplayLoop.tick 职责拆分（预估 -50 行）
-
-`gameplay_loop.lua`（292 行）当前 `tick` 函数（233-292 行，约 60 行）同时处理输入锁同步、角色控制锁、auto runner、超时、动画、倒计时、dirty 刷新、debug 同步。已有 `gameplay_loop_tick_flow.lua`（94 行）和 `gameplay_loop_runtime.lua`（112 行）承接了部分逻辑，但 tick 内部仍有可继续委托的代码。
-
-具体做法：把 `tick` 内的 auto context 构造（246-263 行）委托到已有的 `auto_context.lua`；把 dirty 刷新 + debug 同步尾段（292-307 行）委托到 `gameplay_loop_runtime` 的新函数。
-
-验收：`lua tests/regression.lua` 通过；`lua tests/internal/gameplay_loop_no_ui.lua` 通过；`gameplay_loop.lua` 降到 250 以下。
-
-### M4：gameplay_loop_ports 基础实现去重（预估 -60 行）
-
-`gameplay_loop_ports.lua`（261 行）为 7 组 port 提供基础实现，其中 `_build_base_modal_ports`、`_build_base_anim_ports`、`_build_base_debug_ports` 等函数使用相同的"创建空函数表 → 逐个赋值 noop"模式。提取一个内部 `_build_noop_group(keys)` 工具函数，把 noop 声明从散写收敛为列表驱动。
-
-验收：`lua tests/regression.lua` 通过；`gameplay_loop_ports.lua` 降到 210 以下。
-
-### M5：终验与冻结
-
-运行全量回归与 LOC 统计，记录最终结果。
-
+修改 `market_view` 时，不改变 `market_modal_renderer.lua` 的调用方式。主文件继续导出 `refresh_market_selection`、`select_market_option`、`refresh_market`、`close_market_panel`。新文件只承接内部 helper，不暴露新的跨层 API。修改 `ui_panel_presenter` 时，同样不改外部入口；`src/presentation/view/canvas/base/presenter.lua` 继续只调用 `panel_presenter.refresh(state, ui_model, deps)`。修改 Choice 契约时，所有数值归一化都使用 `src.core.utils.number_utils`，不允许重新引入 `tonumber` 或 `type(x) == "number"` 式分支。
 
 ## 具体步骤
 
-所有命令在仓库根目录 `/Users/billyq/Dev/Github/Lua/monopoly` 执行。
+所有命令都在仓库根目录 `/Users/billyq/Dev/Github/Lua/monopoly` 执行。
 
-M0 步骤：
+先执行基线验证：
 
-    lua tests/regression.lua
-    find src -type f -name '*.lua' -print0 | xargs -0 cat | wc -l
-    find src -type f -name '*.lua' | wc -l
-
-预期：回归通过；24,538 行；296 文件。
-
-M1-M4 步骤：每个里程碑完成后立即运行：
-
-    lua tests/regression.lua
-    wc -l <被修改的文件>
-
-M5 步骤：
-
-    lua tests/regression.lua
-    find src -type f -name '*.lua' -print0 | xargs -0 cat | wc -l
-    find src -type f -name '*.lua' -print0 | xargs -0 wc -l | awk '$1 > 250' | sort -rn
-
-预期：回归通过；总行数 ≤ 24,138；>250 行文件不超过 6 个。
-
-本轮实际已执行命令（按时间顺序）：
-
-    lua tests/regression.lua
-    find src -type f -name '*.lua' -print0 | xargs -0 cat | wc -l
-    find src -type f -name '*.lua' | wc -l
+    wc -l src/presentation/view/render/market_view.lua src/presentation/view/widgets/ui_panel_presenter.lua src/game/flow/intent/intent_dispatcher.lua src/game/systems/choices/choice_registry.lua src/game/systems/choices/choice_handlers/market_choice_handler.lua
     lua -e 'package.path=package.path..";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua"; require("TestHarness").run_all({require("suites.presentation.presentation_ui")})'
-    lua -e 'package.path=package.path..";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua"; require("TestHarness").run_all({require("suites.presentation.presentation_ui_action_anim"), require("suites.presentation.presentation_ui_event_handlers")})'
-    lua -e 'package.path=package.path..";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua"; require("TestHarness").run_all({require("suites.architecture.usecase_boundary_contract"), require("suites.architecture.architecture_guard_contract")})'
-    lua tests/internal/gameplay_loop_no_ui.lua
-    find src -type f -name '*.lua' -print0 | xargs -0 cat | wc -l
-    find src -type f -name '*.lua' -print0 | xargs -0 wc -l | awk '$1 > 250' | sort -rn
+    lua -e 'package.path=package.path..";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua"; require("TestHarness").run_all({require("suites.domain.market")})'
 
+预期现象是目标文件行数与本文基线一致，两个 suite 均无 assertion 失败。
+
+完成 M1 后执行：
+
+    lua -e 'package.path=package.path..";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua"; require("TestHarness").run_all({require("suites.presentation.presentation_ui")})'
+    wc -l src/presentation/view/render/market_view.lua src/presentation/view/render/market_view_slots.lua src/presentation/view/render/market_view_controls.lua
+
+预期现象是市场相关 suite 继续通过，且主文件 `market_view.lua` 明显比 294 行更薄。
+
+完成 M2 后执行：
+
+    lua -e 'package.path=package.path..";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua"; require("TestHarness").run_all({require("suites.presentation.presentation_ui")})'
+    wc -l src/presentation/view/widgets/ui_panel_presenter.lua src/presentation/view/widgets/ui_panel_player_slots.lua src/presentation/view/widgets/ui_panel_cash_delta.lua
+
+如果额外提取 `ui_panel_role_view.lua`，把它也加到 `wc -l` 命令中。预期现象是玩家面板相关 suite 继续通过，主文件行数明显下降。
+
+完成 M3 后执行：
+
+    lua -e 'package.path=package.path..";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua"; require("TestHarness").run_all({require("suites.domain.market"), require("suites.gameplay.gameplay")})'
+
+预期现象是市场领域测试和 gameplay 测试继续通过，新加的 `market_buy` 契约测试能稳定证明失败点前移。
+
+完成 M4 后执行终验：
+
+    lua tests/regression.lua
+
+预期输出包含：
+
+    All regression checks passed
+    dep_rules ok
+    legacy_path_guard ok
+    forbidden_globals ok
 
 ## 验证与验收
 
-全量回归始终使用 `lua tests/regression.lua`，预期输出包含 `All regression checks passed`、`dep_rules ok`、`legacy_path_guard ok`、`forbidden_globals ok`。
+第一周的验收必须同时覆盖 UI 和 Choice 两条线。UI 线的验证标准是：市场弹窗相关测试证明打开、重开、切页签、翻页、关闭行为不变；玩家面板相关测试证明头像、文本、现金变化提示和自动状态行为不变。Choice 线的验证标准是：`market_buy` 的非法输入可以在 descriptor/dispatcher/resolver 边界被更早拒绝，且测试能分辨不同失败原因，而不是只在 handler 深处收到通用断言。
 
-单 suite 回归按需使用：
-
-    lua -e 'package.path=package.path..";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua"; require("TestHarness").run_all({require("<suite_module>")})'
-
-里程碑与 suite 对应关系：M1 运行 `suites.presentation.presentation_ui_action_anim`、`suites.presentation.presentation_ui`；M2 运行 `suites.presentation.presentation_ui`、`suites.presentation.presentation_ui_event_handlers`；M3 运行 `suites.gameplay.gameplay`、`suites.presentation.presentation_ui`；M4 运行 `suites.architecture.architecture_guard_contract`、`suites.architecture.usecase_boundary_contract`。
-
-终验成功标准：`lua tests/regression.lua` 全绿；`src/` 总行数 ≤ 24,138；>250 行文件 ≤ 6 个。
-
-本轮实际终验结果：`lua tests/regression.lua` 全绿；`src/` 总行数 24,327；>250 行文件 9 个。
-
+如果需要人工 spot check，可以在修改后重点阅读 `tests/suites/presentation/presentation_ui.lua` 中市场段落和玩家面板段落，以及 `tests/suites/domain/market.lua`、`tests/suites/gameplay/gameplay.lua` 中 `market_buy` 相关 case，确认新增断言的名字与行为一致。最终仍以 `lua tests/regression.lua` 为准。
 
 ## 可重复性与恢复
 
-所有变更均为文件内部重构，不新增文件、不改对外 API、不改 require 路径。每个里程碑都是独立可回滚的 git commit。如果某个里程碑回归失败，直接 `git checkout -- <文件>` 恢复该文件，不影响其他里程碑。
+这一周的所有改动都应当是增量可重复的。若某个里程碑中途失败，可以先回到最近一次通过测试的状态，再重做当前里程碑。恢复手段保持简单：对被修改的既有文件使用 `git checkout -- <path>`，对本周新增的 companion 文件使用 `rm <path>` 删除。每完成一个里程碑就运行对应 suite，不要把三个里程碑积到最后一起调试。
 
+如果某个 companion 文件提取后发现只是在做无意义转发，应当立即回收，不要因为“计划里写了要拆”就保留死中间层。计划服务于可运行结果，不服务于人为制造文件数量。
+
+## 产物与备注
+
+当前基线证据如下：
+
+    294 src/presentation/view/render/market_view.lua
+    294 src/presentation/view/widgets/ui_panel_presenter.lua
+    114 src/game/flow/intent/intent_dispatcher.lua
+     51 src/game/systems/choices/choice_registry.lua
+     45 src/game/systems/choices/choice_handlers/market_choice_handler.lua
+
+本周预计新增但不一定全部保留的 companion 文件是：`src/presentation/view/render/market_view_slots.lua`、`src/presentation/view/render/market_view_controls.lua`、`src/presentation/view/widgets/ui_panel_player_slots.lua`、`src/presentation/view/widgets/ui_panel_cash_delta.lua`，以及仅在确有必要时新增的 `src/presentation/view/widgets/ui_panel_role_view.lua`。
 
 ## 接口与依赖
 
-本轮不新增任何公共接口。所有变更均为文件内部函数提取与调用替换。
+第一周结束时，Choice descriptor 至少应支持以下稳定结构：`execute(game, choice, action)` 仍然必选；`required_meta` 仍然是字符串数组；新增的 `normalize_meta(game, meta, choice_spec)` 返回归一化后的 `meta` 表；新增的 `meta_validator(game, meta, choice_spec)` 在发现非法输入时直接抛出带上下文的错误；新增的 `normalize_action(game, choice, action)` 返回归一化后的 `action` 表。`src/game/systems/choices/choice_registry.lua` 负责接纳这些字段，`src/game/flow/intent/intent_dispatcher.lua` 负责在 open choice 时调用前两个钩子，`src/game/systems/choices/choice_resolver.lua` 负责在 resolve 早期调用 `normalize_action`。
 
-已有依赖（不修改，仅增加调用）：
+UI 侧不新增公共接口。`src/presentation/view/render/market_view.lua` 和 `src/presentation/view/widgets/ui_panel_presenter.lua` 的对外函数签名保持原样，这一点是第一周的硬约束。内部新模块只被同层主文件 require，不得向 `game/`、`core/ports/` 或 `infrastructure/` 扩散新的依赖。
 
-- `src/presentation/view/support/ui_controls.lua`：控件显隐、touch_enabled 批量操作
-- `src/presentation/view/support/effect_timeline.lua`：调度式特效流程
-- `src/game/flow/turn/auto_context.lua`：auto runner 上下文构造
-- `src/game/flow/turn/gameplay_loop_runtime.lua`：tick 子步骤委托
+所有数值解析继续统一走 `src.core.utils.number_utils`。这是仓库约束，不允许为了图省事重新写 `tonumber` 或 `type(x) == "number"` 分支。
 
-不修改的边界文件：
-
-- `src/core/ports/runtime_ports.lua`（97 行）：宿主/运行时广义契约，保持不动
-- `src/game/ports/contract_helper.lua`（61 行）：Port 断言模板，保持不动
-- `src/game/flow/turn/turn_runtime.lua`（3 行）：稳定入口 stub，保持不动
-
-更新记录（2026-03-08 11:26Z）：同步了本轮实际实施结果，补充了路径漂移、并行回归修复、M3 现状校正、终验数字与未达成目标，保证后续接手者能从当前计划继续推进，而不是从旧目标描述重新猜测现状。
+更新记录（2026-03-08 12:10Z）：清空旧的 3.3 轮降线计划，改写为只覆盖第一周的可执行计划。这样做是因为 `.agents/research.md` 已切换为“下一步行动建议”，而旧计划仍围绕已过时的 LOC 压缩目标，会误导后续实施。
