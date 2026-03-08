@@ -165,7 +165,7 @@ Choice 相关逻辑主要在 `src/game/systems/choices/` 和 `src/game/flow/inte
 
 ### M6：完成 `choice.meta` 审计，并把结论锁进 `choice_contract`
 
-这一里程碑完成后，开发者应该能明确判断一个字段到底该放在 `choice.meta` 还是 `choice.xxx` 显式字段。具体做法是审查 `src/game/systems/items/item_handlers.lua`、`src/game/systems/land/land_choice_specs.lua`、`src/game/systems/effects/effect_pipeline.lua`、`src/presentation/view/widgets/choice.lua`、`src/presentation/model/ui_model/item_slice.lua` 等当前显式消费 choice 字段的地方，然后只提升真正跨层稳定、被多个外层共同消费的语义。
+这一里程碑完成后，开发者应该能明确判断一个字段到底该放在 `choice.meta` 还是 `choice.xxx` 显式字段。具体做法是审查 `src/game/systems/items/handlers.lua`、`src/game/systems/land/land_choice_specs.lua`、`src/game/systems/effects/effect_pipeline.lua`、`src/presentation/view/widgets/choice.lua`、`src/presentation/model/model/item_slice.lua` 等当前显式消费 choice 字段的地方，然后只提升真正跨层稳定、被多个外层共同消费的语义。
 
 这一里程碑允许两种正确结果，但不能模糊。第一种结果是审计后确认存在少量真正应提升的字段，那么就把它们加进 `src/core/choice/contract.lua`，并更新 `intent_dispatcher`、相应 spec builder 与测试。第二种结果是审计后确认当前显式字段集合已经足够，那就不要新增字段，而是把“不提升”的结论补进测试，尤其是 `tests/suites/architecture/usecase_boundary_contract.lua`，让后来者看到哪些字段必须继续留在 `meta`。无论哪种结果，都必须在“决策日志”和“结果与复盘”里写清理由。
 
