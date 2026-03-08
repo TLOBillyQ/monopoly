@@ -117,6 +117,19 @@
 - **location**: `src/game/core/runtime`, `tests/internal/dep_rules.lua`, `tests/suites/gameplay`
 - **description**: 将 `game_state_players/tiles/turn` 改为 `players/tiles/turn`，同步 `game.lua` 聚合装配、gameplay suite 和任何显式文件路径引用。
 - **validation**: `rg 'src\.game\.core\.runtime\.game_state_' src tests docs .agents` 无残留；`game.lua` 仍能装配三组 state helper。
+- **status**: completed (2026-03-08 15:39Z)
+- **work_log**:
+  - 完成 `game_state_players.lua`、`game_state_tiles.lua`、`game_state_turn.lua` 到 `players.lua`、`tiles.lua`、`turn.lua` 的重命名。
+  - 同步更新 `src/game/core/runtime/game.lua` 的聚合 require，保持 `Game` 的 state helper 装配逻辑不变。
+  - 旧路径字符串扫描已归零，校验时仅保留计划文档里的历史描述。
+- **files_touched**:
+  - `src/game/core/runtime/game.lua`
+  - `src/game/core/runtime/players.lua`
+  - `src/game/core/runtime/tiles.lua`
+  - `src/game/core/runtime/turn.lua`
+  - `.agents/swarm_plan.md`
+- **gotchas**:
+  - `turn.lua` 只是在 `game/core/runtime/` 下的新 helper 文件，不代表可以触碰 `game/flow/turn/*` 的入口命名边界。
 - **status**: completed (2026-03-08 15:32Z)
 - **work_log**:
   - 完成 `game_state_players.lua`、`game_state_tiles.lua`、`game_state_turn.lua` 到 `players.lua`、`tiles.lua`、`turn.lua` 的重命名。
@@ -170,6 +183,26 @@
 - **location**: `src/presentation/view/render`, `tests/suites/presentation/presentation_ui_action_anim.lua`, `tests/suites/architecture/cross_module_contract.lua`
 - **description**: 只把 leaf helper 收口到 `anim_*`，不动 `action_anim.lua` 主入口。同步 `action_anim.lua`、`anim_handlers.lua`、`anim_units.lua`、`anim_unit_overlay.lua` 的内部 require 链。
 - **validation**: `rg 'src\.presentation\.view\.render\.action_anim_(registry|handlers|dice|units|tip_text|overlay_compute|overlay_runtime|unit_overlay)' src tests docs .agents` 无残留；`action_anim.lua` 仍是唯一稳定入口。
+- **status**: completed (2026-03-08 15:39Z)
+- **work_log**:
+  - 完成 8 个 `action_anim_*` 叶子 helper 到 `anim_*` 的 rename，保留 `action_anim.lua` 主入口不变。
+  - 同步更新 `action_anim.lua`、`presentation_ui_action_anim.lua`、`cross_module_contract.lua` 和 helper 之间的内部 require 链。
+  - 定向回归通过，证明动画 bridge、overlay helper 和测试 patch target 都已切到新路径。
+- **files_touched**:
+  - `src/presentation/view/render/action_anim.lua`
+  - `src/presentation/view/render/anim_registry.lua`
+  - `src/presentation/view/render/anim_handlers.lua`
+  - `src/presentation/view/render/anim_dice.lua`
+  - `src/presentation/view/render/anim_units.lua`
+  - `src/presentation/view/render/anim_tip_text.lua`
+  - `src/presentation/view/render/anim_overlay_compute.lua`
+  - `src/presentation/view/render/anim_overlay_runtime.lua`
+  - `src/presentation/view/render/anim_unit_overlay.lua`
+  - `tests/suites/presentation/presentation_ui_action_anim.lua`
+  - `tests/suites/architecture/cross_module_contract.lua`
+  - `.agents/swarm_plan.md`
+- **gotchas**:
+  - `action_anim.lua` 必须保持原名；否则本轮会从 helper rename 升级成主入口协议 rename，影响面明显扩大。
 - **status**: completed (2026-03-08 15:32Z)
 - **work_log**:
   - 完成八个 `action_anim_*` 叶子 helper 到 `anim_*` 的重命名。
@@ -238,6 +271,21 @@
 - **location**: `src/game/flow/turn`, `src/app/bootstrap`, `tests/suites/gameplay`, `docs/architecture`, `.agents/plan.md`
 - **description**: 将 `gameplay_loop.lua -> loop.lua`、`gameplay_loop_ports.lua -> loop_ports.lua`。只改模块路径，不改 `state.gameplay_loop_ports` 等运行时字段名，避免把 rename 扩大成状态协议变更。
 - **validation**: `rg 'src\.game\.flow\.turn\.gameplay_loop($|\.)' src tests docs .agents` 仅允许历史计划记录；bootstrap 与 gameplay suite 全部切到 `loop` / `loop_ports`。
+- **status**: completed (2026-03-08 15:39Z)
+- **work_log**:
+  - 实际工作树中 `loop.lua` 与 `loop_ports.lua` 已先于本任务出现，因此本任务改为补齐旧入口引用和验证，而不是重复移动文件。
+  - 同步更新 `tests/TestSupport.lua`、`tests/internal/gameplay_loop_no_ui.lua`、architecture/runtime suite 与 `src/app/bootstrap/game_runtime_bootstrap.lua` 到 `src.game.flow.turn.loop`。
+  - 保持 `state.gameplay_loop_ports`、`_resolved_gameplay_loop_ports` 等运行时字段名不变，只切模块路径。
+- **files_touched**:
+  - `src/app/bootstrap/game_runtime_bootstrap.lua`
+  - `tests/TestSupport.lua`
+  - `tests/internal/gameplay_loop_no_ui.lua`
+  - `tests/suites/architecture/architecture_guard_contract.lua`
+  - `tests/suites/architecture/intent_output_contract.lua`
+  - `tests/suites/runtime/runtime_bootstrap.lua`
+  - `.agents/swarm_plan.md`
+- **gotchas**:
+  - `gameplay_loop` 旧入口一旦缺失，任何还未切到 `loop.lua` 的 suite 都会直接在加载期失败；因此本任务被提前并入当前波次处理。
 - **status**: completed (2026-03-08 15:39Z)
 - **work_log**:
   - 完成 `gameplay_loop.lua -> loop.lua`、`gameplay_loop_ports.lua -> loop_ports.lua` 的入口重命名。
