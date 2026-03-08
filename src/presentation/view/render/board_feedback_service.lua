@@ -2,7 +2,7 @@ local number_utils = require("src.core.utils.number_utils")
 local logger = require("src.core.utils.logger")
 local runtime_refs = require("Config.runtime_refs")
 local runtime_constants = require("src.core.config.runtime_constants")
-local host_runtime = require("src.presentation.runtime.host_runtime_port")
+local host_runtime = require("src.presentation.runtime.host_runtime")
 local catalog = require("src.presentation.view.render.board_feedback_catalog")
 local effect_timeline = require("src.presentation.view.support.effect_timeline")
 

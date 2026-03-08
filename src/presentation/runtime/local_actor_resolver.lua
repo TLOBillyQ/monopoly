@@ -1,4 +1,4 @@
-local runtime = require("src.presentation.runtime.ui_runtime_port")
+local runtime = require("src.presentation.runtime.ui_runtime")
 local number_utils = require("src.core.utils.number_utils")
 local role_id_utils = require("src.core.utils.role_id")
 local runtime_state = require("src.core.state_access.runtime_state")

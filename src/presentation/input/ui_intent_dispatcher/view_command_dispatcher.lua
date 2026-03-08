@@ -1,5 +1,5 @@
 local logger = require("src.core.utils.logger")
-local runtime = require("src.presentation.runtime.ui_runtime_port")
+local runtime = require("src.presentation.runtime.ui_runtime")
 local ui_view = require("src.presentation.runtime.ui_view_service")
 local canvas = require("src.presentation.input.ui_canvas_coordinator")
 local ui_events = require("src.presentation.runtime.ui_events")

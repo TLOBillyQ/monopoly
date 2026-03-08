@@ -1,4 +1,4 @@
-local runtime = require("src.presentation.runtime.ui_runtime_port")
+local runtime = require("src.presentation.runtime.ui_runtime")
 local debug_nodes = require("src.presentation.view.canvas.debug.nodes")
 local player_choice_nodes = require("src.presentation.view.canvas.player_choice.nodes")
 local target_choice_nodes = require("src.presentation.view.canvas.target_choice.nodes")

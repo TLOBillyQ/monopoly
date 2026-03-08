@@ -134,9 +134,9 @@ local function _test_choice_contract_copies_explicit_fields_once()
   _assert_eq(target.page_count, 3, "contract should copy market paging fields")
 end
 
-local function _test_use_case_output_port_runtime_variant_stays_off_legacy_state()
-  local use_case_output_port = require("src.game.flow.output_adapters.use_case_output_port")
-  local output = use_case_output_port.build_runtime_output_ports()
+local function _test_output_state_adapter_runtime_variant_stays_off_legacy_state()
+  local output_state_adapter = require("src.game.flow.output_adapters.output_state_adapter")
+  local output = output_state_adapter.build_runtime_output_ports()
   local state = {}
   local changed = output.invalidate_ui(state)
   _assert_eq(changed, true, "runtime output.invalidate_ui should still mark ui runtime dirty")

@@ -188,6 +188,10 @@ function default_ports.build(runtime_context)
     return 0
   end
 
+  function defaults.resolve_market_paid_gateway()
+    return require("src.app.bootstrap.payment.eggy_paid_purchase_gateway")
+  end
+
   return defaults
 end
 

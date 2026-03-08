@@ -1,5 +1,5 @@
 local route_policy = require("src.presentation.input.ui_choice_route_policy")
-local runtime = require("src.presentation.runtime.ui_runtime_port")
+local runtime = require("src.presentation.runtime.ui_runtime")
 local canvas = require("src.presentation.input.ui_canvas_coordinator")
 local runtime_state = require("src.core.state_access.runtime_state")
 local role_context = require("src.presentation.model.ui_role_context")

@@ -1,5 +1,5 @@
 local ui_events = require("src.presentation.runtime.ui_events")
-local runtime = require("src.presentation.runtime.ui_runtime_port")
+local runtime = require("src.presentation.runtime.ui_runtime")
 local base_nodes = require("src.presentation.view.canvas.base.nodes")
 local always_show_nodes = require("src.presentation.view.canvas.always_show.nodes")
 local player_choice_nodes = require("src.presentation.view.canvas.player_choice.nodes")

@@ -1,7 +1,7 @@
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local logger = require("src.core.utils.logger")
 local ui_event_state = require("src.presentation.input.ui_event_state")
-local runtime = require("src.presentation.runtime.ui_runtime_port")
+local runtime = require("src.presentation.runtime.ui_runtime")
 local role_id_utils = require("src.core.utils.role_id")
 
 local debug_ports = {}

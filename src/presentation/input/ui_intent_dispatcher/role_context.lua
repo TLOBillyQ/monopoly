@@ -1,5 +1,5 @@
-local runtime = require("src.presentation.runtime.ui_runtime_port")
-local host_runtime = require("src.presentation.runtime.host_runtime_port")
+local runtime = require("src.presentation.runtime.ui_runtime")
+local host_runtime = require("src.presentation.runtime.host_runtime")
 local role_id_utils = require("src.core.utils.role_id")
 
 local role_context = {}

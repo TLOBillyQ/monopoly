@@ -1,5 +1,5 @@
 local core = require("src.presentation.runtime.ui_view_service.core")
-local runtime = require("src.presentation.runtime.ui_runtime_port")
+local runtime = require("src.presentation.runtime.ui_runtime")
 local ui_events = require("src.presentation.runtime.ui_events")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_state = require("src.core.state_access.runtime_state")

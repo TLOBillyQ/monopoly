@@ -7,7 +7,7 @@ local gameplay_loop = require("src.game.flow.turn.gameplay_loop")
 local gameplay_loop_ports = require("src.game.flow.turn.gameplay_loop_ports")
 local turn_dispatch = require("src.game.flow.turn.turn_dispatch")
 local turn_roll = require("src.game.flow.turn.turn_roll")
-local use_case_output_port = require("src.game.flow.output_adapters.use_case_output_port")
+local output_state_adapter = require("src.game.flow.output_adapters.output_state_adapter")
 local action_anim_port = require("src.core.ports.action_anim_port")
 
 local function _merge_group(base_group, override_group)
@@ -22,7 +22,7 @@ local function _merge_group(base_group, override_group)
 end
 
 local function _build_output_ports(output_log)
-  local base = use_case_output_port.build_base_output_ports()
+  local base = output_state_adapter.build_base_output_ports()
   return {
     invalidate_ui = function(state)
       if output_log then

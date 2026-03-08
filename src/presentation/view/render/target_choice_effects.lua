@@ -2,7 +2,7 @@ local logger = require("src.core.utils.logger")
 local number_utils = require("src.core.utils.number_utils")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local modal_state = require("src.presentation.input.ui_modal_state_coordinator")
-local host_runtime = require("src.presentation.runtime.host_runtime_port")
+local host_runtime = require("src.presentation.runtime.host_runtime")
 local ui_core = require("src.presentation.runtime.ui_view_service.core")
 local choice_contract = require("src.core.choice.choice_contract")
 

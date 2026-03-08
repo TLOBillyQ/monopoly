@@ -5,7 +5,7 @@ local number_utils = require("src.core.utils.number_utils")
 local choice_auto_policy = require("src.game.flow.turn.turn_choice_auto_policy")
 local tick_ui_gate = require("src.game.flow.turn.tick_ui_gate")
 local tick_choice_timeout = require("src.game.flow.turn.tick_choice_timeout")
-local use_case_output_port = require("src.game.flow.output_adapters.use_case_output_port")
+local output_state_adapter = require("src.game.flow.output_adapters.output_state_adapter")
 local runtime_state = require("src.core.state_access.runtime_state")
 
 local tick_timeout = {}
@@ -57,7 +57,7 @@ end
 
 function tick_timeout.step_modal_timeout(state, dt, opts)
   local ports = state and state.gameplay_loop_ports or nil
-  local output_ports = ports and ports.output or use_case_output_port
+  local output_ports = ports and ports.output or output_state_adapter
   local timeout = constants.action_timeout_seconds or 0
   if opts and opts.get_timeout_seconds then
     local override = opts.get_timeout_seconds(state)

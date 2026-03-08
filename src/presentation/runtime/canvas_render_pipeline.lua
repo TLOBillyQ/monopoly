@@ -40,7 +40,7 @@ function pipeline.render(state_ctx, ui_model, log_once, build_log_prefix, opts)
   end
 
   local refresh_item_slots = opts and opts.refresh_item_slots
-  local runtime = opts and opts.runtime or require("src.presentation.runtime.ui_runtime_port")
+  local runtime = opts and opts.runtime or require("src.presentation.runtime.ui_runtime")
   if _should_refresh_panel(dirty) then
     base_presenter.refresh(state_ctx, ui_model, {
       runtime = runtime,

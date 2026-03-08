@@ -1,5 +1,5 @@
 local state_ports = {}
-local host_runtime = require("src.presentation.runtime.host_runtime_port")
+local host_runtime = require("src.presentation.runtime.host_runtime")
 
 function state_ports.build()
   return {

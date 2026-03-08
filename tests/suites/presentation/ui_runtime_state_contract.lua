@@ -2,7 +2,7 @@ local support = require("TestSupport")
 local _assert_eq = support.assert_eq
 
 local runtime_state = require("src.core.state_access.runtime_state")
-local output_port = require("src.game.flow.output_adapters.use_case_output_port")
+local output_port = require("src.game.flow.output_adapters.output_state_adapter")
 local tick_ui_sync = require("src.game.flow.turn.tick_ui_sync")
 local validator = require("src.game.flow.turn.turn_dispatch_validator")
 

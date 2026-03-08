@@ -1,6 +1,6 @@
 local monopoly_event = require("src.core.events.monopoly_events")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local host_runtime = require("src.presentation.runtime.host_runtime_port")
+local host_runtime = require("src.presentation.runtime.host_runtime")
 local board_feedback = require("src.presentation.view.render.board_feedback_service")
 
 local event_handlers = {}
@@ -240,4 +240,3 @@ function event_handlers.install(_, logger, state)
 end
 
 return event_handlers
-

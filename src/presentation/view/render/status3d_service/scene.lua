@@ -1,7 +1,7 @@
 local meta = require("src.presentation.view.render.status3d_service.meta")
 local specs = require("src.presentation.view.render.status3d_service.specs")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local host_runtime = require("src.presentation.runtime.host_runtime_port")
+local host_runtime = require("src.presentation.runtime.host_runtime")
 
 local M = {}
 

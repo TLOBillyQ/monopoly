@@ -1,7 +1,6 @@
 local runtime_context = require("src.infrastructure.runtime.runtime_context")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_global_aliases = require("src.app.bootstrap.runtime.global_aliases")
-local runtime_port_defaults = require("src.app.bootstrap.runtime.port_defaults")
 local config_sanity = require("src.core.config.config_sanity")
 
 local M = {}
@@ -33,7 +32,7 @@ function M.install(opts)
     runtime_context.set_current(nil)
   end
 
-  runtime_ports.configure(runtime_port_defaults.build())
+  runtime_ports.reset_for_tests()
   require "src.game.systems.endgame.bankruptcy"
   require "src.game.core.ai.agent"
   require "src.game.systems.endgame.game_victory"
