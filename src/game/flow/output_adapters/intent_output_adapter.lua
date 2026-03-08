@@ -1,3 +1,4 @@
+-- Turn flow-local bridge that forwards use-case output to the intent dispatcher.
 local intent_dispatcher = require("src.game.flow.intent.intent_dispatcher")
 
 local adapter = {}

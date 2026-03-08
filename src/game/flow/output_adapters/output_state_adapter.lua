@@ -1,3 +1,4 @@
+-- Turn flow-local bridge that syncs runtime-facing output back into ui_runtime state.
 local runtime_state = require("src.core.state_access.runtime_state")
 local output_state_adapter = {}
 

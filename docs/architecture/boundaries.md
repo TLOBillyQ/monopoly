@@ -14,6 +14,8 @@
 
 `src/game/flow` 是用例编排层。这里负责一回合怎么推进、意图怎么分发、输入怎么校验、输出端口怎么发射。它可以协调 `src/game/systems` 的业务模块，但不应该回头操作 UI 细节或宿主运行时对象图。`src/game/flow/turn/gameplay_loop_ports.lua` 只是 turn use case 自己的分组 override 容器，用来把 modal / anim / ui_sync / debug / clock / state / output 这些局部端口打包给 gameplay loop；它不是新的通用 Port 层，也不是 `src/core/ports/` 或 `src/game/ports/` 的升级版本。
 
+`src/game/flow/output_adapters/` 仍然属于 `flow`，不是一块漏放的 runtime 目录。这里放的是 turn use case 本地输出桥：例如 `intent_output_adapter.lua` 负责把 `open_choice` / `push_popup` 这类流程输出转给 `intent_dispatcher`，`output_state_adapter.lua` 负责把 pending choice、modal timer、ui_dirty 这类流程输出写回 `ui_runtime` 状态。它们服务的是“当前用例怎么发出输出”，而不是“宿主能力如何实现”；因此第三周先文档化这条边界，不做迁位。
+
 `src/game/systems` 是玩法业务层。这里放黑市、道具、地块、机会卡、移动、破产结算、胜负判定等规则本身。规则模块可以生成 choice spec、popup payload、动画请求等稳定输出模型，但不应该自己决定 UI 节点名、Canvas 切换方式或宿主 API 调用顺序。
 
 `src/game/runtime` 与 `src/infrastructure/runtime` 一起承担运行时适配职责。前者现在只保留贴近 gameplay 的 adapter，例如 `AutoPlayPortAdapter`、`BankruptcyPortAdapter` 这类“把端口实现接成 `src/game/ports/*` 契约”的实现；`src/game/ports/` 自身只放 systems-facing 注入契约，不承接 gameplay loop 的局部 override，也不收纳共享 helper。`src/game/core/runtime` 只保留 `Game` 聚合根与装配代码，不再承接破产结算、胜负判定这类业务规则；历史回合执行器被收拢到 `src/game/flow/turn/turn_runtime.lua` 与 `src/game/flow/turn/turn_phase_registry.lua` 现在承接稳定 turn runtime 入口与默认 phase 装配；旧的 `src/game/legacy/turn_engine/` 已退休并由护栏禁止回流；协程调度细节则收拢到 `src/game/scheduler/`。后者承接运行时上下文、事件桥和默认 runtime ports 这类更外层的宿主细节；`src/app/bootstrap/runtime.lua` 与 `src/app/bootstrap/runtime/*` 则只负责安装别名和装配。`src/core/state_access/*` 只保留状态访问语义；运行时上下文、事件桥和默认 runtime ports 的真实实现统一落在 `src/infrastructure/runtime/*`，调用方应直接依赖这些实现或经端口注入。以后只要看到新的 Eggy API 调用需求，优先判断它是不是应该留在那里，而不是回写到 `src/core` 或 `src/game/flow`。
@@ -25,6 +27,8 @@
 Port 目录在本轮之后固定分成三类，而且三类名字不能混用。`src/core/ports/` 只放宿主 / 运行时广义契约，例如“如何拿到 runtime context”或“如何访问默认 runtime ports”；这些契约必须保持 gameplay 无关，不能顺手塞进地块、黑市、破产反馈这类玩法语义。`src/game/ports/` 只放 systems-facing 注入契约，也就是 gameplay 规则向外请求能力时使用的窄接口；这里允许出现业务名词，因为它服务的是具体用例，而不是整个宿主运行时。`src/game/flow/turn/gameplay_loop_ports.lua` 则不是第三个通用 Port 层，它只是 turn use case 自己的局部分组 override：把 modal、anim、ui_sync、clock、state、output 这些同一回合循环里会一起覆盖的函数聚在一处，方便 gameplay loop、测试和 bootstrap 按组替换默认实现。
 
 文件后缀也要和这三类语义一起保持稳定。`*_port.lua` 表示单一契约文件，调用方读文件名就应该能知道“这里只有一组窄接口定义”，例如 `src/game/ports/bankruptcy_feedback_port.lua`、`src/game/ports/auto_play_port.lua`。`*_ports.lua` 表示一组同生命周期、会一起被注入或覆盖的 bundle，而不是新的契约中心，例如 `src/game/flow/turn/gameplay_loop_ports.lua`、`src/presentation/runtime/presentation_ports.lua`。`*_port_adapter.lua` 表示外层对某个 Port 契约的实现，负责把宿主或旧实现接到内层语义上，例如 `src/game/runtime/auto_play_port_adapter.lua`、`src/game/runtime/bankruptcy_port_adapter.lua`。如果一个文件既不是单一契约、也不是 bundle、也不是 adapter，就不要硬套这些后缀。
+
+`src/game/flow/output_adapters/` 也不应被误读成第四类 Port 目录。这里的 `*_adapter.lua` 不是宿主 Port Adapter，而是 flow use case 内部的输出桥接实现，所以它继续留在 `flow` 目录下；只有当这类文件开始承载宿主细节、被多个非 turn 用例共享，或与 `src/game/runtime/*_port_adapter.lua` 形成职责重叠时，才值得考虑迁移或改名。
 
 ## 这轮重构后形成的硬边界
 
