@@ -5,10 +5,10 @@
 .DESCRIPTION
     该脚本要求在 PowerShell 7 (pwsh) 环境执行。
     默认拷贝 Config/、src/ 目录以及 Data/UIManagerNodes.lua、Data/Prefab.lua 和 main.lua 到目标目录。
-    Windows 与 macOS 在未传 -TargetPath 时都会默认部署到两个历史目录。
+    Windows 与 macOS 在未传 -TargetPath 时都会默认部署到两个同步目标目录。
     如需额外拷贝 vendor/，请传入 -IncludeVendor 参数。
 .PARAMETER TargetPath
-    目标目录的绝对路径。支持传入多个；如果只传入默认“开发/发布”目录中的一个，脚本会自动补齐另一个默认目录。
+    目标目录的绝对路径。支持传入多个；如果只传入默认双目标中的一个，脚本会自动补齐另一个默认目标。
 .PARAMETER IncludeVendor
     是否额外拷贝 vendor/ 目录（默认不拷贝）
 .PARAMETER StartupProfile
@@ -22,12 +22,16 @@
 .EXAMPLE
     pwsh -File .\deploy.ps1 -TargetPath "C:\Target\Project" -IncludeVendor
 .EXAMPLE
-    pwsh -File .\deploy.ps1 -TargetPath "C:\Users\Lzx_8\Desktop\dev\LuaSource_大富翁-发布","C:\Users\Lzx_8\Desktop\dev\LuaSource_大富翁-开发"
+    pwsh -File .\deploy.ps1 -TargetPath "C:\Users\Lzx_8\Desktop\dev\LuaSource_大富翁-开发","C:\Users\Lzx_8\Desktop\dev\LuaSource_大富翁-发布"
+.EXAMPLE
+    pwsh -File .\deploy.ps1 -TargetPath "C:\Users\Lzx_8\Desktop\dev\LuaSource_大富翁-开发"
+.EXAMPLE
+    pwsh -File .\deploy.ps1 -TargetPath "C:\Users\Lzx_8\Desktop\dev\LuaSource_大富翁-发布"
 .EXAMPLE
     pwsh -File .\deploy.ps1 -StartupProfile "items_move_control"
 .EXAMPLE
     pwsh -File .\deploy.ps1 -StartupProfile "scenario_market_staging" -StartupAiMode "all_except_local_human" -StartupLocalHumanRoleId 123
-# macOS 默认目录:
+# macOS 默认同步目录:
 #   /Users/billyq/Documents/eggy/LuaSource_大富翁-开发
 #   /Users/billyq/Documents/eggy/LuaSource_大富翁-发布
 #>
@@ -48,7 +52,7 @@ function Test-Pwsh7 {
     return ($edition -eq "Core" -and $major -ge 7)
 }
 
-function Get-DefaultTargetPaths {
+function Get-DefaultSyncTargetPaths {
     if ($IsWindows) {
         return @(
             "C:\\Users\\Lzx_8\\Desktop\\dev\\LuaSource_大富翁-开发",
@@ -73,24 +77,24 @@ function Normalize-TargetPath {
     return [System.IO.Path]::GetFullPath($normalized)
 }
 
-function Resolve-TargetPaths {
+function Resolve-SyncTargetPaths {
     param([string[]]$RequestedPaths)
 
-    $defaultTargets = Get-DefaultTargetPaths
+    $defaultSyncTargets = Get-DefaultSyncTargetPaths
     if (-not $RequestedPaths -or $RequestedPaths.Count -eq 0) {
-        if ($defaultTargets) {
-            return $defaultTargets
+        if ($defaultSyncTargets) {
+            return $defaultSyncTargets
         }
         Write-Host "✗ 不支持的系统平台，请显式传入 -TargetPath" -ForegroundColor Red
         exit 1
     }
 
     $resolved = @($RequestedPaths)
-    if ($defaultTargets -and $RequestedPaths.Count -eq 1) {
+    if ($defaultSyncTargets -and $RequestedPaths.Count -eq 1) {
         $normalizedRequested = Normalize-TargetPath -Path $RequestedPaths[0]
-        $normalizedDefaults = @($defaultTargets | ForEach-Object { Normalize-TargetPath -Path $_ })
+        $normalizedDefaults = @($defaultSyncTargets | ForEach-Object { Normalize-TargetPath -Path $_ })
         if ($normalizedDefaults -contains $normalizedRequested) {
-            foreach ($defaultTarget in $defaultTargets) {
+            foreach ($defaultTarget in $defaultSyncTargets) {
                 $normalizedDefault = Normalize-TargetPath -Path $defaultTarget
                 if ($normalizedDefault -ne $normalizedRequested) {
                     $resolved += $defaultTarget
@@ -286,8 +290,8 @@ function Get-DeploymentEffectiveLuaLineBreakdown {
     return $lineBreakdown
 }
 
-# 未传入时按平台选择默认路径；若只传入两个历史目录之一，则自动补齐另一侧目录。
-$TargetPaths = Resolve-TargetPaths -RequestedPaths $TargetPath
+# 未传入时按平台选择默认双目标；若只传入默认双目标中的一个，则自动补齐另一侧目标。
+$TargetPaths = Resolve-SyncTargetPaths -RequestedPaths $TargetPath
 
 # 规范化目标路径（移除末尾斜杠，解析完整路径，并去重）
 $normalizedTargets = @()
@@ -304,6 +308,7 @@ Write-Host "开始部署项目文件" -ForegroundColor Cyan
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host "项目根目录: $ProjectRoot" -ForegroundColor Yellow
 Write-Host "目标目录数量: $($TargetPaths.Count)" -ForegroundColor Yellow
+Write-Host "部署模式: 双目标同步" -ForegroundColor Yellow
 if ([string]::IsNullOrWhiteSpace($StartupProfile)) {
     Write-Host "启动 Profile: default (未注入 STARTUP_TEST_PROFILE)" -ForegroundColor Yellow
 } else {
