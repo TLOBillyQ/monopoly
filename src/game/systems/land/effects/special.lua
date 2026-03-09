@@ -33,6 +33,12 @@ M.executors = {
       if mine.armed ~= true then
         return false
       end
+      local player = ctx.player
+      local turn = ctx.game and ctx.game.turn or nil
+      if player and mine.owner_id == player.id and mine.placed_turn_count ~= nil
+          and turn and mine.placed_turn_count == turn.turn_count then
+        return false
+      end
       return true
     end,
     apply = function(ctx)

@@ -2916,6 +2916,13 @@ local function _test_owner_mine_does_not_trigger_until_owner_leaves_tile()
   assert(move_res and move_res.landing_tile, "owner should move away from mine tile")
   local mine_state = g.board:get_mine(mine_index)
   assert(type(mine_state) == "table" and mine_state.armed == true, "mine should arm after owner leaves tile")
+  assert(mine_state.placed_turn_count == g.turn.turn_count, "mine should record placement turn count")
+
+  g:update_player_position(p1, mine_index)
+  local owner_return_res = _resolve_landing(g, p1, mine_tile, {})
+  assert(not owner_return_res, "owner should stay immune when returning in the placement turn")
+  assert((p1.status.stay_turns or 0) == 0, "owner should not be hospitalized by own mine in placement turn")
+  assert(g.board:has_mine(mine_index), "mine should remain after owner returns during placement turn")
 
   g:update_player_position(p2, mine_index)
   local trigger_res = _resolve_landing(g, p2, mine_tile, {})
@@ -2927,6 +2934,36 @@ local function _test_owner_mine_does_not_trigger_until_owner_leaves_tile()
   assert(resumed_state == "post_action", "mine trigger should resume into post_action after followup")
   assert((p2.status.stay_turns or 0) > 0, "other player should be hospitalized by armed mine after move followup")
   assert(g.board:has_mine(mine_index) == false, "mine should clear after detonation")
+end
+
+local function _test_owner_mine_triggers_again_after_placement_turn()
+  local g = _new_game()
+  local p1 = g.players[1]
+  local mine_index = p1.position
+  local mine_tile = assert(g.board:get_tile(mine_index), "missing owner tile")
+
+  p1.inventory:add({ id = gameplay_rules.item_ids.mine })
+  local use_res = support.executor.use_item(g, p1, gameplay_rules.item_ids.mine, { by_ai = true })
+  assert(use_res ~= nil, "mine use should succeed")
+  assert(g.board:has_mine(mine_index), "mine should be placed on owner tile")
+
+  local move_res = movement.move(g, p1, 1, { branch_parity = 1, skip_market_check = true })
+  assert(move_res and move_res.landing_tile, "owner should move away from mine tile")
+  local mine_state = assert(g.board:get_mine(mine_index), "mine should still exist after owner leaves tile")
+  assert(mine_state.armed == true, "mine should arm after owner leaves tile")
+
+  g.turn.turn_count = g.turn.turn_count + 1
+  g:update_player_position(p1, mine_index)
+
+  local trigger_res = _resolve_landing(g, p1, mine_tile, {})
+  assert(trigger_res and trigger_res.waiting == true, "owner should be hit by own mine after placement turn ends")
+  assert(trigger_res.next_state == "move_followup", "owner mine trigger should resume through move_followup")
+  assert((p1.status.stay_turns or 0) == 0, "hospital stay should still be deferred until move followup")
+
+  local resumed_state = move_followup.run({ game = g }, trigger_res.next_args)
+  assert(resumed_state == "post_action", "owner mine trigger should resume into post_action after followup")
+  assert((p1.status.stay_turns or 0) > 0, "owner should be hospitalized by own mine on later turns")
+  assert(g.board:has_mine(mine_index) == false, "mine should clear after detonating on owner later turn")
 end
 
 local function _test_detained_turn_skips_immediately_without_wait_state()
@@ -3082,5 +3119,6 @@ return {
   _test_game_startup_role_roster_retries_before_debug_players_fallback,
   _test_find_player_by_id_accepts_mixed_representation,
   _test_owner_mine_does_not_trigger_until_owner_leaves_tile,
+  _test_owner_mine_triggers_again_after_placement_turn,
   _test_runtime_context_change_skin_exports_and_event,
 }
