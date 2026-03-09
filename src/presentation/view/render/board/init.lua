@@ -9,11 +9,15 @@ local logger = require("src.core.utils.logger")
 
 local M = {}
 
+local function _should_debug_log()
+  return logger.is_anim_debug_enabled() or gameplay_rules.move_anim_debug_log_enabled == true
+end
+
 local function _debug_log(...)
-  if gameplay_rules.move_anim_debug_log_enabled ~= true then
+  if not _should_debug_log() then
     return
   end
-  logger.info("[MoveAnim]", ...)
+  logger.info_unlimited("[MoveAnim]", ...)
 end
 
 function M.refresh(state, ui_model, log_once, build_log_prefix)

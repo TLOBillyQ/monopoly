@@ -8,11 +8,15 @@ local logger = require("src.core.utils.logger")
 
 local await = {}
 
+local function _should_move_anim_debug_log()
+  return logger.is_anim_debug_enabled() or gameplay_rules.move_anim_debug_log_enabled == true
+end
+
 local function _move_anim_debug_log(...)
-  if gameplay_rules.move_anim_debug_log_enabled ~= true then
+  if not _should_move_anim_debug_log() then
     return
   end
-  logger.info("[MoveAnim]", ...)
+  logger.info_unlimited("[MoveAnim]", ...)
 end
 
 local function _next(args)
@@ -139,7 +143,7 @@ end
 
 function await.move_anim(session, args, opts)
   opts = opts or {}
-  if gameplay_rules.move_anim_debug_log_enabled == true then
+  if _should_move_anim_debug_log() then
     local game = session and session.game or nil
     local anim = game and game.turn and game.turn[opts.anim_key or "move_anim"] or nil
     local action = session and session.peek_pending_action and session:peek_pending_action() or nil

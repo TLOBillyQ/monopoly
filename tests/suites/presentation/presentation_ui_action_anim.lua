@@ -403,7 +403,14 @@ local function _test_action_anim_debug_log_uses_info_without_tip()
     {
       target = gameplay_rules,
       key = "action_anim_debug_log_enabled",
-      value = true,
+      value = false,
+    },
+    {
+      target = logger,
+      key = "anim_debug_enabled_provider",
+      value = function()
+        return true
+      end,
     },
     {
       target = host_runtime,
@@ -415,7 +422,7 @@ local function _test_action_anim_debug_log_uses_info_without_tip()
     },
     {
       target = logger,
-      key = "info",
+      key = "info_unlimited",
       value = function(...)
         info_calls[#info_calls + 1] = table.concat({ ... }, " ")
       end,

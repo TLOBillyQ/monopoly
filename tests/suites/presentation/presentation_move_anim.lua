@@ -126,13 +126,15 @@ local function _test_move_anim_debug_log_writes_when_enabled()
 
   logger.clear()
   _with_patches({
-    { target = gameplay_rules, key = "move_anim_debug_log_enabled", value = true },
-    { target = logger, key = "info_per_turn_limit", value = 100 },
-    { target = logger, key = "info_turn_provider", value = nil },
+    { target = gameplay_rules, key = "move_anim_debug_log_enabled", value = false },
+    { target = logger, key = "anim_debug_enabled_provider", value = function() return true end },
+    { target = logger, key = "info_per_turn_limit", value = 1 },
+    { target = logger, key = "info_turn_provider", value = function() return 7 end },
     { target = runtime_ports, key = "schedule", value = function(_, fn)
       fn()
     end },
   }, function()
+    logger.info("[Eggy]", "consume per-turn info budget")
     move_anim.play_sequence(scene, {
       player_id = 1,
       seq = 31,
@@ -143,6 +145,7 @@ local function _test_move_anim_debug_log_writes_when_enabled()
   end)
 
   local text = logger.get_text_by_level("info")
+  assert(string.find(text, "[Eggy] consume per-turn info budget", 1, true) ~= nil, "regular info log should still be present")
   assert(string.find(text, "[MoveAnim] play_sequence_start", 1, true) ~= nil, "debug log should include sequence start")
   assert(string.find(text, "[MoveAnim] finish_stop", 1, true) ~= nil, "debug log should include finish stop")
 end

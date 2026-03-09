@@ -21,6 +21,13 @@ local user_tip_whitelist = {
 local roll_spin_seconds = 1.0
 local roll_face_hold_seconds = 1.0
 
+local function _should_debug_log(anim)
+  return anim
+    and anim.kind ~= "roll"
+    and (logger.is_anim_debug_enabled() or gameplay_rules.action_anim_debug_log_enabled == true)
+    or false
+end
+
 local function _show_tip(text, duration)
   host_runtime.show_tips(text, duration)
 end
@@ -108,14 +115,14 @@ function action_anim.play(state, anim)
   end
 
   local should_show_tip = _should_show_tip(anim)
-  local should_debug_log = gameplay_rules.action_anim_debug_log_enabled == true and anim.kind ~= "roll"
+  local should_debug_log = _should_debug_log(anim)
   local tip_text = nil
   if should_show_tip or should_debug_log then
     tip_text = handlers.build_tip(state, anim)
   end
 
   if should_debug_log and tip_text ~= nil and tip_text ~= "" then
-    logger.info("[ActionAnim]", tip_text)
+    logger.info_unlimited("[ActionAnim]", tip_text)
   end
 
   if should_show_tip and tip_text ~= nil and tip_text ~= "" then

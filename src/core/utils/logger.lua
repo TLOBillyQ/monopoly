@@ -19,6 +19,7 @@ local logger = {
   scheduler = nil,
   event_buffer_stack = {},
   event_collection_enabled_provider = nil,
+  anim_debug_enabled_provider = nil,
 }
 local number_utils = require("src.core.utils.number_utils")
 
@@ -160,8 +161,8 @@ function logger.show_tip(text, duration)
   return true
 end
 
-local function _push(level, ...)
-  if level == "info" then
+local function _push(level, opts, ...)
+  if level == "info" and not (opts and opts.unlimited == true) then
     local limit = logger.info_per_turn_limit
     local provider = logger.info_turn_provider
     if limit and limit > 0 and provider then
@@ -180,12 +181,8 @@ local function _push(level, ...)
   end
   local no_tip = false
   local text_start = 1
-  if level == "event" then
-    local opts = select(1, ...)
-    if type(opts) == "table" and opts.no_tip == true then
-      no_tip = true
-      text_start = 2
-    end
+  if level == "event" and opts and opts.no_tip == true then
+    no_tip = true
   end
   local text = _stringify(text_start, ...)
   if level == "event" then
@@ -267,6 +264,25 @@ function logger.set_event_collection_enabled_provider(provider)
   logger.event_collection_enabled_provider = provider
 end
 
+function logger.set_anim_debug_enabled_provider(provider)
+  if provider ~= nil then
+    assert(type(provider) == "function", "anim debug provider must be function or nil")
+  end
+  logger.anim_debug_enabled_provider = provider
+end
+
+function logger.is_anim_debug_enabled()
+  local provider = logger.anim_debug_enabled_provider
+  if type(provider) ~= "function" then
+    return false
+  end
+  local ok, enabled = pcall(provider)
+  if not ok then
+    return false
+  end
+  return enabled == true
+end
+
 function logger.configure_host_runtime(opts)
   opts = opts or {}
   logger.set_tip_presenter(opts.tip_presenter)
@@ -323,15 +339,19 @@ function logger.set_ui_sink(sink)
 end
 
 function logger.info(...)
-  _push("info", ...)
+  _push("info", nil, ...)
+end
+
+function logger.info_unlimited(...)
+  _push("info", { unlimited = true }, ...)
 end
 
 function logger.warn(...)
-  _push("warn", ...)
+  _push("warn", nil, ...)
 end
 
 function logger.event(...)
-  _push("event", ...)
+  _push("event", nil, ...)
 end
 
 function logger.event_no_tips(...)
