@@ -5,6 +5,7 @@ local startup_policy = require("src.app.bootstrap.startup_policy")
 local game_startup = require("src.app.bootstrap.game_startup")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
+local test_profile_resolver = require("src.app.testing.test_profile_resolver")
 local runtime_refs = require("Config.runtime_refs")
 
 local function _build_role(role_id)
@@ -258,6 +259,71 @@ local function _test_startup_policy_accepts_explicit_ai_mode_in_dev()
   end)
 end
 
+local function _test_startup_policy_reads_profile_rotation_flags()
+  with_patches({
+    { key = "RELEASE_BUILD", value = nil },
+    { key = "STARTUP_TEST_PROFILE", value = "market" },
+    { key = "STARTUP_PROFILE_ROTATION", value = true },
+    { key = "STARTUP_ROTATION_TURNS", value = "7" },
+  }, function()
+    local policy = startup_policy.resolve(_G)
+    assert(policy.profile_name == "market", "rotation should not rewrite startup profile at policy layer")
+    assert(policy.profile_rotation == true, "startup policy should enable profile rotation")
+    assert(policy.rotation_turns == 7, "startup policy should normalize rotation turns")
+  end)
+end
+
+local function _test_game_startup_uses_active_profile_name_when_rotation_overrides_initial_profile()
+  local created_opts = nil
+  local applied_profile = nil
+  with_patches({
+    {
+      target = runtime_ports,
+      key = "resolve_roles",
+      value = function()
+        return { _build_role(11) }
+      end,
+    },
+    {
+      target = app,
+      key = "new",
+      value = function(_, opts)
+        created_opts = opts
+        return {}
+      end,
+    },
+    {
+      target = test_profile_bootstrap,
+      key = "apply",
+      value = function(_, profile_name)
+        applied_profile = profile_name
+      end,
+    },
+    {
+      target = test_profile_resolver,
+      key = "resolve_map",
+      value = function(profile_name)
+        return {
+          profile_name = profile_name,
+        }
+      end,
+    },
+  }, function()
+    local state = game_startup.build_state(function() return nil end, {
+      profile_name = "market",
+      release_mode = false,
+      force_non_p1_ai = false,
+      fail_fast_when_roles_empty = false,
+    })
+    state.active_profile_name = "monster"
+    state.game_factory()
+  end)
+
+  assert(type(created_opts) == "table", "rotation override should still create game options")
+  assert(created_opts.map.profile_name == "monster", "game factory should resolve map from active profile name")
+  assert(applied_profile == "monster", "game factory should apply active profile name")
+end
+
 local function _test_game_startup_release_fills_synthetic_ai_when_role_roster_empty()
   local created_opts = nil
   with_patches({
@@ -490,6 +556,11 @@ return {
     },
     { name = "startup_policy_dev_accepts_profile_override", run = _test_startup_policy_dev_accepts_profile_override },
     { name = "startup_policy_accepts_explicit_ai_mode_in_dev", run = _test_startup_policy_accepts_explicit_ai_mode_in_dev },
+    { name = "startup_policy_reads_profile_rotation_flags", run = _test_startup_policy_reads_profile_rotation_flags },
+    {
+      name = "game_startup_uses_active_profile_name_when_rotation_overrides_initial_profile",
+      run = _test_game_startup_uses_active_profile_name_when_rotation_overrides_initial_profile,
+    },
     {
       name = "game_startup_release_fills_synthetic_ai_when_role_roster_empty",
       run = _test_game_startup_release_fills_synthetic_ai_when_role_roster_empty,

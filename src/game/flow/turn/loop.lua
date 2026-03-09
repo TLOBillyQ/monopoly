@@ -16,6 +16,7 @@ local market_purchase = require("src.game.systems.market.application.purchase")
 local runtime_state = require("src.core.state_access.runtime_state")
 local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 local role_id_utils = require("src.core.utils.role_id")
+local profile_rotation = require("src.app.testing.profile_rotation")
 local gameplay_loop = {}
 local function _resolve_ports(state)
   if not state then
@@ -291,5 +292,28 @@ function gameplay_loop.tick(game, state, dt)
     step_auto_runner = gameplay_loop.step_auto_runner,
     dispatch_action_with_close_choice = _dispatch_action_with_close_choice,
   })
+  if profile_rotation.is_active() then
+    local turn_count = game.turn and game.turn.turn_count or 0
+    local should_rotate = game.finished == true or turn_count >= profile_rotation.turns_per_profile()
+    if should_rotate then
+      local current_profile_name = state and state.active_profile_name or profile_rotation.current_profile_name() or "default"
+      profile_rotation.record_result(current_profile_name, turn_count, game.finished == true)
+      if profile_rotation.advance() then
+        local next_profile_name = profile_rotation.current_profile_name()
+        if state then
+          state.active_profile_name = next_profile_name
+        end
+        local next_game = gameplay_loop.new_game(state)
+        if state and type(state.on_game_replaced) == "function" then
+          state.on_game_replaced(next_game)
+        else
+          gameplay_loop.set_game(state, next_game)
+        end
+      elseif state and state.auto_runner and state.auto_runner.set_enabled then
+        state.auto_runner:set_enabled(false)
+      end
+      return
+    end
+  end
 end
 return gameplay_loop

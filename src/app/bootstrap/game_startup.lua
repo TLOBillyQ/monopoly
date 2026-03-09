@@ -193,9 +193,9 @@ function M.build_state(get_current_game, opts)
   local release_mode = opts.release_mode == true
   local force_non_p1_ai = opts.force_non_p1_ai
   local fail_fast_when_roles_empty = opts.fail_fast_when_roles_empty == true
-  local map_cfg = test_profile_resolver.resolve_map(profile_name)
   local ui = ui_view.build_ui_state()
-  local state = {
+  local state = nil
+  state = {
     ui = ui,
     pending_choice = nil,
     pending_choice_elapsed = 0,
@@ -204,7 +204,10 @@ function M.build_state(get_current_game, opts)
     ui_modal_ref = nil,
     wait_move_anim = true,
     wait_action_anim = true,
+    active_profile_name = profile_name,
     game_factory = function()
+      local active_profile = state.active_profile_name or profile_name
+      local map_cfg = test_profile_resolver.resolve_map(active_profile)
       local role_roster = _build_startup_roster(max_player_count)
       local forced_ai = _build_startup_ai_map(role_roster, {
         ai_mode = ai_mode,
@@ -234,7 +237,7 @@ function M.build_state(get_current_game, opts)
         end
       end
       created_game.startup_synthetic_players = synthetic_players
-      test_profile_bootstrap.apply(created_game, profile_name)
+      test_profile_bootstrap.apply(created_game, active_profile)
       return created_game
     end,
     auto_runner = auto_runner:new({ interval = gameplay_rules.ai_auto_turn_interval_seconds }),

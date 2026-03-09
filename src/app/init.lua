@@ -3,8 +3,10 @@ local runtime_install = require("src.app.bootstrap.runtime")
 local game_startup = require("src.app.bootstrap.game_startup")
 local game_startup_event_bridge = require("src.app.bootstrap.game_startup_event_bridge")
 local game_runtime_bootstrap = require("src.app.bootstrap.game_runtime_bootstrap")
+local gameplay_loop = require("src.game.flow.turn.loop")
 local ui_bootstrap = require("src.app.bootstrap.ui_bootstrap")
 local startup_policy = require("src.app.bootstrap.startup_policy")
+local profile_rotation = require("src.app.testing.profile_rotation")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 
 logger.configure_host_runtime({
@@ -37,6 +39,8 @@ logger.info(
   "release_mode=" .. tostring(startup.release_mode),
   "release_allow_test_profile=" .. tostring(startup.release_allow_test_profile),
   "resolved_profile=" .. tostring(startup.profile_name),
+  "profile_rotation=" .. tostring(startup.profile_rotation),
+  "rotation_turns=" .. tostring(startup.rotation_turns),
   "ai_mode=" .. tostring(startup.ai_mode),
   "local_human_role_id=" .. tostring(startup.local_human_role_id)
 )
@@ -45,8 +49,15 @@ if startup.release_mode then
 end
 
 runtime_install.install()
+local effective_profile = startup.profile_name
+if startup.profile_rotation then
+  profile_rotation.init({
+    turns_per_profile = startup.rotation_turns,
+  })
+  effective_profile = profile_rotation.current_profile_name() or "default"
+end
 local state = game_startup.build_state(function() return current_game_ref[1] end, {
-  profile_name = startup.profile_name,
+  profile_name = effective_profile,
   ai_mode = startup.ai_mode,
   local_human_role_id = startup.local_human_role_id,
   release_mode = startup.release_mode,
@@ -70,6 +81,10 @@ end
 
 logger.set_event_collection_enabled_provider(_is_debug_log_enabled)
 logger.set_anim_debug_enabled_provider(_is_debug_log_enabled)
+state.on_game_replaced = function(new_game)
+  current_game_ref[1] = new_game
+  gameplay_loop.set_game(state, new_game)
+end
 game_startup_event_bridge.install(state, function() return current_game_ref[1] end)
 ui_bootstrap.install(state, current_game_ref, {
   start_runtime = function(ctx_state, game_ref)

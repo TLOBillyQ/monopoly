@@ -38,10 +38,12 @@ local turn_timer_policy = require("src.game.flow.turn.timer_policy")
 local turn_role_control_policy = require("src.game.flow.turn.role_control_policy")
 local turn_camera_policy = require("src.game.flow.turn.camera_policy")
 local gameplay_loop_runtime = require("src.game.flow.turn.loop_runtime")
+local tick_flow = require("src.game.flow.turn.loop_tick_flow")
 local move_followup = require("src.game.flow.turn.move_followup")
 local intent_dispatcher = require("src.game.flow.intent.intent_dispatcher")
 local game_startup = require("src.app.bootstrap.game_startup")
 local game_startup_event_bridge = require("src.app.bootstrap.game_startup_event_bridge")
+local profile_rotation = require("src.app.testing.profile_rotation")
 local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
 local monopoly_event = require("src.core.events.monopoly_events")
@@ -3324,6 +3326,160 @@ local function _test_turn_start_emits_turn_started_feedback_event()
   assert(emitted[1].payload.player_id == g:current_player().id, "turn_start should emit current player id")
 end
 
+local function _test_profile_rotation_switches_game_after_turn_limit()
+  local old_game = {
+    turn = {
+      turn_count = 3,
+    },
+    finished = false,
+  }
+  local replacement = {
+    logger = {
+      info = function() end,
+    },
+    players = {},
+    turn = {
+      turn_count = 0,
+    },
+    finished = false,
+  }
+  local replaced_game = nil
+  local state = _build_loop_state()
+  state.active_profile_name = "bankruptcy"
+  state.game_factory = function()
+    return replacement
+  end
+  state.on_game_replaced = function(new_game)
+    replaced_game = new_game
+  end
+
+  support.with_patches({
+    {
+      target = tick_flow,
+      key = "tick",
+      value = function() end,
+    },
+    {
+      target = logger,
+      key = "info",
+      value = function() end,
+    },
+  }, function()
+    profile_rotation._reset_for_tests()
+    profile_rotation.init({
+      queue = { "bankruptcy", "market" },
+      turns_per_profile = 3,
+    })
+    gameplay_loop.tick(old_game, state, 0.1)
+  end)
+
+  local snapshot = profile_rotation.snapshot()
+  assert(state.active_profile_name == "market", "rotation should advance active profile after turn limit")
+  assert(replaced_game == replacement, "rotation should replace game after turn limit")
+  assert(type(snapshot) == "table" and snapshot.finished == false, "rotation should stay active when next profile exists")
+  assert(snapshot.results[1].profile == "bankruptcy", "rotation should record completed profile name")
+  assert(snapshot.results[1].turns == 3, "rotation should record completed profile turns")
+  assert(snapshot.results[1].finished == false, "turn-limit rotation should record unfinished game")
+  profile_rotation._reset_for_tests()
+end
+
+local function _test_profile_rotation_switches_game_when_current_game_finishes()
+  local old_game = {
+    turn = {
+      turn_count = 1,
+    },
+    finished = true,
+  }
+  local replacement = {
+    logger = {
+      info = function() end,
+    },
+    players = {},
+    turn = {
+      turn_count = 0,
+    },
+    finished = false,
+  }
+  local replaced_game = nil
+  local state = _build_loop_state()
+  state.active_profile_name = "bankruptcy"
+  state.game_factory = function()
+    return replacement
+  end
+  state.on_game_replaced = function(new_game)
+    replaced_game = new_game
+  end
+
+  support.with_patches({
+    {
+      target = tick_flow,
+      key = "tick",
+      value = function() end,
+    },
+    {
+      target = logger,
+      key = "info",
+      value = function() end,
+    },
+  }, function()
+    profile_rotation._reset_for_tests()
+    profile_rotation.init({
+      queue = { "bankruptcy", "market" },
+      turns_per_profile = 9,
+    })
+    gameplay_loop.tick(old_game, state, 0.1)
+  end)
+
+  local snapshot = profile_rotation.snapshot()
+  assert(state.active_profile_name == "market", "finished game should trigger profile rotation")
+  assert(replaced_game == replacement, "finished game should be replaced by next profile")
+  assert(snapshot.results[1].finished == true, "rotation should record early-finished game")
+  profile_rotation._reset_for_tests()
+end
+
+local function _test_profile_rotation_disables_auto_runner_after_last_profile()
+  local old_game = {
+    turn = {
+      turn_count = 2,
+    },
+    finished = false,
+  }
+  local disabled_value = nil
+  local state = _build_loop_state()
+  state.active_profile_name = "bankruptcy"
+  state.auto_runner = {
+    set_enabled = function(_, enabled)
+      disabled_value = enabled
+    end,
+  }
+
+  support.with_patches({
+    {
+      target = tick_flow,
+      key = "tick",
+      value = function() end,
+    },
+    {
+      target = logger,
+      key = "info",
+      value = function() end,
+    },
+  }, function()
+    profile_rotation._reset_for_tests()
+    profile_rotation.init({
+      queue = { "bankruptcy" },
+      turns_per_profile = 2,
+    })
+    gameplay_loop.tick(old_game, state, 0.1)
+  end)
+
+  local snapshot = profile_rotation.snapshot()
+  assert(disabled_value == false, "rotation completion should disable auto runner")
+  assert(type(snapshot) == "table" and snapshot.finished == true, "rotation should mark completion after last profile")
+  assert(snapshot.results[1].profile == "bankruptcy", "final rotation should still record completed profile")
+  profile_rotation._reset_for_tests()
+end
+
 local function _test_bankruptcy_emits_feedback_event()
   local g = _new_game()
   local p1 = g.players[1]
@@ -3399,6 +3555,9 @@ return {
   _test_steal_interrupt_resume_uses_interrupt_facing = _test_steal_interrupt_resume_uses_interrupt_facing,
   _test_detained_turn_enters_wait_state_before_advancing = _test_detained_turn_enters_wait_state_before_advancing,
   _test_tick_headless_ports_cover_anim_phases = _test_tick_headless_ports_cover_anim_phases,
+  _test_profile_rotation_switches_game_after_turn_limit = _test_profile_rotation_switches_game_after_turn_limit,
+  _test_profile_rotation_switches_game_when_current_game_finishes = _test_profile_rotation_switches_game_when_current_game_finishes,
+  _test_profile_rotation_disables_auto_runner_after_last_profile = _test_profile_rotation_disables_auto_runner_after_last_profile,
   _test_action_button_timeout_auto_advances = _test_action_button_timeout_auto_advances,
   _test_action_button_timeout_blocked_when_input_locked = _test_action_button_timeout_blocked_when_input_locked,
   _test_action_button_timeout_blocked_when_popup_active = _test_action_button_timeout_blocked_when_popup_active,
