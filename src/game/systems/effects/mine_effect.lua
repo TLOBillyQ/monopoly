@@ -14,11 +14,11 @@ function mine_effect.apply(game, player, position)
 
   if game:player_has_angel(player) then
     logger.event(player.name .. " 天使保护，地雷无效")
-    board:clear_mine(position)
+    game:clear_mine(position)
     return { detonated = true, protected = true }
   end
 
-  board:clear_mine(position)
+  game:clear_mine(position)
   if monopoly_event and monopoly_event.land and monopoly_event.land.mine_hit then
     local tile = board:get_tile(position)
     monopoly_event.emit(monopoly_event.land.mine_hit, {

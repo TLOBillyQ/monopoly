@@ -36,8 +36,10 @@ function M.install(state, get_current_game)
 
   lua_api.global_register_custom_event(monopoly_event.land.tile_upgraded, function(_, _, data)
     _dispatch_or_defer(monopoly_event.land.tile_upgraded, data, function(payload)
-      if payload and payload.tile_id and payload.level and state.on_tile_upgraded then
-        state:on_tile_upgraded(payload.tile_id, payload.level)
+      if payload and payload.tile_id and state.on_board_visual_sync then
+        state:on_board_visual_sync({
+          tile_ids = { payload.tile_id },
+        })
       end
     end)
   end)

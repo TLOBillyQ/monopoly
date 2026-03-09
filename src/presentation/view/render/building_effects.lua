@@ -3,6 +3,21 @@ local host_runtime = require("src.presentation.runtime.host")
 
 local building_effects = {}
 
+function building_effects.clear_building_units(scene, building_index)
+  assert(scene ~= nil, "missing scene")
+  assert(building_index ~= nil, "missing building_index")
+  local groups = scene.building_unit_groups
+  if type(groups) == "table" and groups[building_index] then
+    host_runtime.destroy_unit_with_children(groups[building_index], true)
+    groups[building_index] = nil
+  end
+  local txt = scene.building_txt and scene.building_txt[building_index] or nil
+  if txt and txt.set_billboard_text then
+    txt.set_billboard_text("  ")
+  end
+  return true
+end
+
 function building_effects.spawn_upgrade_building_units(scene, root_quaternion, building_index, level)
   assert(scene ~= nil, "missing scene")
   assert(building_index ~= nil, "missing building_index")
@@ -16,10 +31,7 @@ function building_effects.spawn_upgrade_building_units(scene, root_quaternion, b
   local idx = building_index
   local lv = level
   local groups = assert(scene.building_unit_groups, "missing scene.building_unit_groups")
-  if groups[idx] then
-    host_runtime.destroy_unit_with_children(groups[idx], true)
-    groups[idx] = nil
-  end
+  building_effects.clear_building_units(scene, idx)
   if buildings[idx] == nil then
     return false
   end

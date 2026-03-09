@@ -141,6 +141,11 @@ function composition_root.assemble(opts, game_or_class)
   game.tile_owner_notifier = game.tile_owner_notifier or {
     notify_owner_changed = function() end,
   }
+  game.board_visual_feedback_port = game.board_visual_feedback_port or {
+    sync_many = function()
+      return false
+    end,
+  }
   game.auto_play_port = game.auto_play_port or auto_play_port_adapter.build()
   game.bankruptcy_port = game.bankruptcy_port or bankruptcy_port_adapter.build()
 

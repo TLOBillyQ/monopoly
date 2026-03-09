@@ -217,6 +217,9 @@ function M.build_state(get_current_game, opts)
   state.on_tile_owner_changed = function(_, tile_id, owner_id)
     board_view.on_tile_owner_changed(state, tile_id, owner_id)
   end
+  state.on_board_visual_sync = function(_, payload)
+    return board_view.sync_many(state, payload)
+  end
 
   return state
 end

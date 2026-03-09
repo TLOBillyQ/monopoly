@@ -56,5 +56,6 @@ M.refresh_board = M.refresh
 
 M.on_tile_upgraded = events.on_tile_upgraded
 M.on_tile_owner_changed = events.on_tile_owner_changed
+M.sync_many = events.sync_many
 
 return M

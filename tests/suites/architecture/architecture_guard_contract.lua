@@ -170,8 +170,9 @@ local function _test_gameplay_loop_set_game_injects_narrow_runtime_ports()
     state.last_popup_payload = payload
     return true
   end
-  state.on_tile_owner_changed = function(_, tile_id, owner_id)
-    state.last_tile_owner_event = { tile_id = tile_id, owner_id = owner_id }
+  state.on_board_visual_sync = function(_, payload)
+    state.last_board_visual_sync = payload
+    return true
   end
 
   gameplay_loop.set_game(state, game)
@@ -181,6 +182,7 @@ local function _test_gameplay_loop_set_game_injects_narrow_runtime_ports()
   assert(game.board_scene_port ~= state, "board_scene_port should not expose raw state")
   assert(game.board_scene_port.get_board_scene ~= nil, "board_scene_port should expose board scene getter")
   assert(game.popup_port ~= nil, "set_game should inject popup_port dto")
+  assert(game.board_visual_feedback_port ~= nil, "set_game should inject board_visual_feedback_port dto")
   assert(game.tile_owner_notifier ~= nil, "set_game should inject tile_owner_notifier dto")
   assert(game.anim_gate_port ~= nil, "set_game should inject anim_gate_port dto")
   assert(game.anim_gate_port.wait_move_anim == true, "anim_gate_port should expose wait_move_anim")
@@ -191,8 +193,7 @@ local function _test_gameplay_loop_set_game_injects_narrow_runtime_ports()
   _assert_eq(state.last_popup_payload.kind, "test_popup", "runtime ui_port should forward popup payload")
 
   game.tile_owner_notifier:notify_owner_changed(9, 3)
-  _assert_eq(state.last_tile_owner_event.tile_id, 9, "runtime ui_port should forward tile id")
-  _assert_eq(state.last_tile_owner_event.owner_id, 3, "runtime ui_port should forward owner id")
+  _assert_eq(state.last_board_visual_sync.tile_ids[1], 9, "runtime ui_port should forward tile id via board visual sync")
 end
 
 local function _test_turn_dispatch_next_only_marks_ui_dirty()

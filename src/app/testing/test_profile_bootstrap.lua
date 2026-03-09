@@ -178,7 +178,7 @@ local function _apply_overlay_bootstrap(game, overlays)
     for _, entry in ipairs(roadblocks) do
       local raw_tile_id, render_called = _resolve_overlay_entry(entry)
       local board_index = _resolve_overlay_index(game, raw_tile_id, "roadblock")
-      game.board:place_roadblock(board_index)
+      game:place_roadblock(board_index)
       if render_called then
         render_bootstrap.overlays.roadblock[board_index] = true
       end
@@ -190,7 +190,7 @@ local function _apply_overlay_bootstrap(game, overlays)
     for _, entry in ipairs(mines) do
       local raw_tile_id, render_called = _resolve_overlay_entry(entry)
       local board_index = _resolve_overlay_index(game, raw_tile_id, "mine")
-      game.board:place_mine(board_index)
+      game:place_mine(board_index)
       if render_called then
         render_bootstrap.overlays.mine[board_index] = true
       end

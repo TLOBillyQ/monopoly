@@ -135,18 +135,22 @@ local function _initialize_ports(state, game)
   state.gameplay_loop_ports = ports
   game.board_scene_port = gameplay_loop_runtime.build_board_scene_port(state)
   game.popup_port = gameplay_loop_runtime.build_popup_port(state)
+  game.board_visual_feedback_port = gameplay_loop_runtime.build_board_visual_feedback_port(state)
   game.tile_feedback_port = gameplay_loop_runtime.build_tile_feedback_port(state)
   game.bankruptcy_feedback_port = {
-    on_tiles_cleared = function(game_ctx, player, owned_tile_ids)
-      if landing_visual_hold.is_active_state(state) and not landing_visual_hold.is_flushing_state(state) then
-        landing_visual_hold.defer_bankruptcy_clear(state, game_ctx, player, owned_tile_ids, function(inner_game,
-                                                                                                      inner_player,
-                                                                                                      inner_owned_tile_ids)
-          return ports.state.on_bankruptcy_tiles_cleared(inner_game, inner_player, inner_owned_tile_ids)
-        end)
-        return true
+    on_tiles_cleared = function(arg1, arg2, arg3, arg4)
+      local game_ctx = nil
+      local owned_tile_ids = nil
+      if arg4 ~= nil then
+        game_ctx = arg2
+        owned_tile_ids = arg4
+      else
+        game_ctx = arg1
+        owned_tile_ids = arg3
       end
-      return ports.state.on_bankruptcy_tiles_cleared(game_ctx, player, owned_tile_ids)
+      return game.board_visual_feedback_port.sync_many(game_ctx, {
+        tile_ids = owned_tile_ids,
+      })
     end,
   }
   game.anim_gate_port = gameplay_loop_runtime.build_anim_gate_port(state)
@@ -156,22 +160,13 @@ local function _initialize_ports(state, game)
   return ports
 end
 local function _configure_tile_owner_notifier(state, game)
-  local notifier = type(state.on_tile_owner_changed) == "function" and state.on_tile_owner_changed
-    or type(state.notify_owner_changed) == "function" and state.notify_owner_changed
-    or nil
-  if notifier then
-    game.tile_owner_notifier = {
-      notify_owner_changed = function(_, tile_id, owner_id)
-        if landing_visual_hold.is_active_state(state) and not landing_visual_hold.is_flushing_state(state) then
-          landing_visual_hold.defer_owner_change(state, tile_id, owner_id, function(inner_tile_id, inner_owner_id)
-            notifier(state, inner_tile_id, inner_owner_id)
-          end)
-          return
-        end
-        notifier(state, tile_id, owner_id)
-      end,
-    }
-  end
+  game.tile_owner_notifier = {
+    notify_owner_changed = function(_, tile_id, owner_id)
+      return game.board_visual_feedback_port.sync_many(game, {
+        tile_ids = { tile_id },
+      })
+    end,
+  }
 end
 local function _configure_environment(state, game, ports)
   local anim_ports = ports.anim

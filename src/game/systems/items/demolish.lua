@@ -13,8 +13,8 @@ local list_unpack = table.unpack or unpack
 
 local function _clear_overlays(game, idx)
   assert(game ~= nil, "missing game")
-  assert(game.board ~= nil and game.board.clear_all ~= nil, "missing board.ClearAll")
-  game.board:clear_all(idx)
+  assert(game.clear_all_overlays ~= nil, "missing game.clear_all_overlays")
+  game:clear_all_overlays(idx)
 end
 
 local function _destroy_building(game, tile)

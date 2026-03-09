@@ -9,6 +9,24 @@ local function _mark_board(self)
   self.dirty.board_tiles = true
 end
 
+local function _sync_board_visual(self, payload)
+  if not self then
+    return false
+  end
+  local board_visual_feedback_port = self.board_visual_feedback_port
+  if board_visual_feedback_port == nil and type(self.ensure_board_visual_feedback_port) == "function" then
+    board_visual_feedback_port = self:ensure_board_visual_feedback_port()
+  end
+  if not (type(board_visual_feedback_port) == "table" and type(board_visual_feedback_port.sync_many) == "function") then
+    return false
+  end
+  local ok, handled = pcall(board_visual_feedback_port.sync_many, self, payload)
+  if not ok then
+    return false
+  end
+  return handled == true
+end
+
 local function _notify_tile_owner_changed(self, tile_id, owner_id)
   local notifier = self and self.tile_owner_notifier or nil
   if notifier and type(notifier.notify_owner_changed) == "function" then
@@ -33,22 +51,62 @@ end
 function game_state_tiles.set_tile_owner(self, tile, owner_id)
   assert(tile ~= nil and tile.type == "land", "invalid tile for owner")
   _bump_land_rent_version(self)
-  _notify_tile_owner_changed(self, tile.id, owner_id)
   game_state_tiles.update_tile(self, tile, { owner_id = owner_id })
+  _notify_tile_owner_changed(self, tile.id, owner_id)
+  _sync_board_visual(self, { tile_ids = { tile.id } })
 end
 
 function game_state_tiles.set_tile_level(self, tile, level)
   _bump_land_rent_version(self)
   game_state_tiles.update_tile(self, tile, { level = level })
+  if tile and tile.id ~= nil then
+    _sync_board_visual(self, { tile_ids = { tile.id } })
+  end
 end
 
 function game_state_tiles.reset_tile(self, tile)
   assert(tile ~= nil and tile.type == "land", "invalid tile for reset")
   _bump_land_rent_version(self)
-  _notify_tile_owner_changed(self, tile.id, nil)
   tile.owner_id = nil
   tile.level = 0
   _mark_board(self)
+  _notify_tile_owner_changed(self, tile.id, nil)
+  _sync_board_visual(self, { tile_ids = { tile.id } })
+end
+
+function game_state_tiles.place_roadblock(self, index)
+  assert(self ~= nil and self.board ~= nil, "missing board")
+  self.board:place_roadblock(index)
+  _mark_board(self)
+  _sync_board_visual(self, { overlay_indices = { index } })
+end
+
+function game_state_tiles.clear_roadblock(self, index)
+  assert(self ~= nil and self.board ~= nil, "missing board")
+  self.board:clear_roadblock(index)
+  _mark_board(self)
+  _sync_board_visual(self, { overlay_indices = { index } })
+end
+
+function game_state_tiles.place_mine(self, index, data)
+  assert(self ~= nil and self.board ~= nil, "missing board")
+  self.board:place_mine(index, data)
+  _mark_board(self)
+  _sync_board_visual(self, { overlay_indices = { index } })
+end
+
+function game_state_tiles.clear_mine(self, index)
+  assert(self ~= nil and self.board ~= nil, "missing board")
+  self.board:clear_mine(index)
+  _mark_board(self)
+  _sync_board_visual(self, { overlay_indices = { index } })
+end
+
+function game_state_tiles.clear_all_overlays(self, index)
+  assert(self ~= nil and self.board ~= nil, "missing board")
+  self.board:clear_all(index)
+  _mark_board(self)
+  _sync_board_visual(self, { overlay_indices = { index } })
 end
 
 return game_state_tiles

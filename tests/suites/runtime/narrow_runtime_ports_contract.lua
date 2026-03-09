@@ -41,6 +41,19 @@ local function _test_game_requires_explicit_tile_feedback_port()
     "ensure_tile_feedback_port should report missing tile_feedback_port")
 end
 
+local function _test_game_requires_explicit_board_visual_feedback_port()
+  local game = support.new_game({ ai = {} })
+  game.board_visual_feedback_port = nil
+
+  local ok, err = pcall(function()
+    game:ensure_board_visual_feedback_port()
+  end)
+
+  _assert_eq(ok, false, "ensure_board_visual_feedback_port should reject missing board_visual_feedback_port")
+  assert(tostring(err):find("missing board_visual_feedback_port", 1, true) ~= nil,
+    "ensure_board_visual_feedback_port should report missing board_visual_feedback_port")
+end
+
 local function _test_action_anim_port_requires_anim_gate_port()
   local game = support.new_game({ ai = {} })
   game.anim_gate_port = nil
@@ -106,6 +119,7 @@ return {
   tests = {
     { name = "game_requires_explicit_popup_port", run = _test_game_requires_explicit_popup_port },
     { name = "game_requires_explicit_tile_feedback_port", run = _test_game_requires_explicit_tile_feedback_port },
+    { name = "game_requires_explicit_board_visual_feedback_port", run = _test_game_requires_explicit_board_visual_feedback_port },
     { name = "action_anim_port_requires_anim_gate_port", run = _test_action_anim_port_requires_anim_gate_port },
     { name = "turn_roll_rejects_missing_anim_gate_port_even_with_ui_port", run = _test_turn_roll_rejects_missing_anim_gate_port_even_with_ui_port },
     { name = "turn_move_rejects_missing_anim_gate_port_even_with_ui_port", run = _test_turn_move_rejects_missing_anim_gate_port_even_with_ui_port },

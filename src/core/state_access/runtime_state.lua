@@ -167,6 +167,7 @@ function runtime_state.ensure_turn_runtime(state)
       },
       deferred_popups = {},
       deferred_runtime_events = {},
+      deferred_board_visual_syncs = {},
       deferred_tile_updates = {},
       deferred_owner_changes = {},
       deferred_bankruptcy_clears = {},

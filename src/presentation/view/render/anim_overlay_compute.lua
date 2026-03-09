@@ -7,14 +7,44 @@ local function _resolve_vector_value(vec, key, index)
   return vec[key] or vec[index]
 end
 
+local function _zero_vector()
+  if math and math.Vector3 then
+    return math.Vector3(0.0, 0.0, 0.0)
+  end
+  return {
+    x = 0.0,
+    y = 0.0,
+    z = 0.0,
+  }
+end
+
+local function _read_unit_position(unit)
+  if type(unit) == "table" and type(unit.get_position) == "function" then
+    return unit.get_position()
+  end
+  return nil
+end
+
 function compute.resolve_tile_pos(state, tile_index)
   assert(state ~= nil, "missing state")
   assert(tile_index ~= nil, "missing tile_index")
   local scene = assert(state.board_scene, "missing board_scene")
   local tiles = assert(scene.tiles, "missing scene.tiles")
-  local tile = assert(tiles[tile_index], "missing tile unit: " .. tostring(tile_index))
-  assert(tile.get_position ~= nil, "missing tile.get_position: " .. tostring(tile_index))
-  return tile.get_position()
+  local tile = tiles[tile_index]
+  local tile_pos = _read_unit_position(tile)
+  if tile_pos ~= nil then
+    return tile_pos
+  end
+
+  local buildings = scene.buildings
+  if type(buildings) == "table" then
+    local building_pos = _read_unit_position(buildings[tile_index])
+    if building_pos ~= nil then
+      return building_pos
+    end
+  end
+
+  return _zero_vector()
 end
 
 function compute.offset_pos(pos, offset)

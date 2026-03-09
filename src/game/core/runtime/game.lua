@@ -53,6 +53,14 @@ local function _install_default_runtime_ports(game_ctx)
       end,
     }
   end
+  if type(game_ctx.board_visual_feedback_port) ~= "table"
+      or type(game_ctx.board_visual_feedback_port.sync_many) ~= "function" then
+    game_ctx.board_visual_feedback_port = {
+      sync_many = function()
+        return false
+      end,
+    }
+  end
   if type(game_ctx.bankruptcy_feedback_port) ~= "table"
       or type(game_ctx.bankruptcy_feedback_port.on_tiles_cleared) ~= "function" then
     game_ctx.bankruptcy_feedback_port = {
@@ -89,6 +97,14 @@ function game:ensure_tile_feedback_port()
     return tile_feedback_port
   end
   error("missing tile_feedback_port")
+end
+
+function game:ensure_board_visual_feedback_port()
+  local board_visual_feedback_port = self.board_visual_feedback_port
+  if type(board_visual_feedback_port) == "table" and type(board_visual_feedback_port.sync_many) == "function" then
+    return board_visual_feedback_port
+  end
+  error("missing board_visual_feedback_port")
 end
 
 function game:advance_turn()

@@ -350,22 +350,16 @@ local function _test_gameplay_loop_set_game_installs_bankruptcy_feedback_port()
   local state = _build_loop_state()
   local calls = {}
 
-  state.gameplay_loop_ports = _build_test_ports({
-    on_bankruptcy_tiles_cleared = function(_, player, owned_tile_ids)
-      calls[#calls + 1] = {
-        player_id = player and player.id or nil,
-        owned_tile_ids = owned_tile_ids,
-      }
-      return true
-    end,
-  })
+  state.on_board_visual_sync = function(_, payload)
+    calls[#calls + 1] = payload
+    return true
+  end
 
   gameplay_loop.set_game(state, g)
   g.bankruptcy_feedback_port.on_tiles_cleared(g, g.players[1], { 101 })
 
   assert(#calls == 1, "set_game should install bankruptcy feedback port")
-  assert(calls[1].player_id == g.players[1].id, "feedback port should forward player")
-  assert(calls[1].owned_tile_ids[1] == 101, "feedback port should forward tile ids")
+  assert(calls[1].tile_ids[1] == 101, "feedback port should forward tile ids into board visual sync")
 end
 
 local function _test_bankruptcy_calls_role_life_die_before_lose()
@@ -2156,6 +2150,7 @@ end
 local function _test_afk_auto_host_enters_auto_after_timeout_in_start_phase()
   local g = _new_game()
   local state = _build_loop_state()
+  logger.clear()
   g.ui_port = _build_ui_port()
   g.turn.current_player_index = 1
   g.turn.phase = "start"
@@ -2185,6 +2180,7 @@ end
 local function _test_afk_auto_host_enters_auto_after_timeout_in_wait_choice()
   local g = _new_game()
   local state = _build_loop_state()
+  logger.clear()
   g.ui_port = _build_ui_port()
   g.turn.current_player_index = 1
   g.turn.phase = "wait_choice"
@@ -2477,8 +2473,9 @@ local function _test_gameplay_loop_set_game_uses_narrow_runtime_ports()
     state._last_popup = payload
     return true
   end
-  state.on_tile_owner_changed = function(_, tile_id, owner_id)
-    state._last_tile_owner = { tile_id = tile_id, owner_id = owner_id }
+  state.on_board_visual_sync = function(_, payload)
+    state._last_board_visual_sync = payload
+    return true
   end
 
   gameplay_loop.set_game(state, g)
@@ -2486,19 +2483,20 @@ local function _test_gameplay_loop_set_game_uses_narrow_runtime_ports()
   assert(g.ui_port ~= state, "set_game should not inject raw state as catch-all runtime ui port")
   assert(g.board_scene_port ~= state, "set_game should inject a narrow board_scene_port instead of raw state")
   assert(g.board_scene_port:get_board_scene() == state.board_scene, "board_scene_port should expose board_scene getter")
+  assert(g.board_visual_feedback_port ~= nil, "set_game should inject board_visual_feedback_port dto")
 
   g.popup_port:push_popup({ kind = "test_popup" })
   assert(state._last_popup and state._last_popup.kind == "test_popup", "popup_port should forward popup calls")
 
   g.tile_owner_notifier:notify_owner_changed(11, 22)
-  assert(state._last_tile_owner and state._last_tile_owner.tile_id == 11, "tile_owner_notifier should forward tile owner callback")
-  assert(state._last_tile_owner and state._last_tile_owner.owner_id == 22, "tile_owner_notifier should forward owner id")
+  assert(state._last_board_visual_sync and state._last_board_visual_sync.tile_ids[1] == 11,
+    "tile_owner_notifier should forward tile id through board visual sync")
 end
 
 local function _test_gameplay_loop_set_game_defers_visual_ports_during_landing_hold()
   local g = _new_game()
   local state = _build_loop_state()
-  local cleared = {}
+  local board_syncs = {}
 
   state.wait_move_anim = true
   state.wait_action_anim = true
@@ -2506,20 +2504,11 @@ local function _test_gameplay_loop_set_game_defers_visual_ports_during_landing_h
     state._last_popup = payload
     return true
   end
-  state.on_tile_owner_changed = function(_, tile_id, owner_id)
-    state._last_tile_owner = { tile_id = tile_id, owner_id = owner_id }
-  end
-  state.on_tile_upgraded = function(_, tile_id, level)
-    state._last_tile_upgrade = { tile_id = tile_id, level = level }
+  state.on_board_visual_sync = function(_, payload)
+    board_syncs[#board_syncs + 1] = payload
+    return true
   end
   state.gameplay_loop_ports = _build_test_ports({
-    on_bankruptcy_tiles_cleared = function(_, player, owned_tile_ids)
-      cleared[#cleared + 1] = {
-        player_id = player and player.id or nil,
-        owned_tile_ids = owned_tile_ids,
-      }
-      return true
-    end,
     update_countdown = function() end,
     refresh_from_dirty = function()
       return false
@@ -2539,17 +2528,181 @@ local function _test_gameplay_loop_set_game_defers_visual_ports_during_landing_h
   g.bankruptcy_feedback_port:on_tiles_cleared(g, g.players[1], { 44 })
 
   assert(state._last_popup == nil, "popup should be deferred during landing hold")
-  assert(state._last_tile_owner == nil, "tile owner change should be deferred during landing hold")
-  assert(state._last_tile_upgrade == nil, "tile upgrade should be deferred during landing hold")
-  assert(#cleared == 0, "bankruptcy clear should be deferred during landing hold")
+  assert(#board_syncs == 0, "board visual sync should be deferred during landing hold")
 
   g.turn.landing_visual_release_pending = true
   gameplay_loop.tick(g, state, 0.1)
 
   assert(state._last_popup and state._last_popup.kind == "held_popup", "popup should flush after landing hold release")
-  assert(state._last_tile_owner and state._last_tile_owner.tile_id == 11, "tile owner should flush after release")
-  assert(state._last_tile_upgrade and state._last_tile_upgrade.level == 2, "tile upgrade should flush after release")
-  assert(#cleared == 1 and cleared[1].owned_tile_ids[1] == 44, "bankruptcy clear should flush after release")
+  assert(#board_syncs == 3, "board visual syncs should flush after landing hold release")
+  assert(board_syncs[1].tile_ids[1] == 11, "tile owner sync should flush after release")
+  assert(board_syncs[2].tile_ids[1] == 33, "tile upgrade sync should flush after release")
+  assert(board_syncs[3].tile_ids[1] == 44, "bankruptcy clear sync should flush after release")
+end
+
+local function _test_board_visual_feedback_port_reconciles_destroyed_tile_and_cleared_overlays()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local idx, tile_ref = _first_land_tile(g.board)
+  local render_calls = {}
+  local cleared_buildings = {}
+  local cleared_overlays = {}
+  local board_view = require("src.presentation.view.render.board")
+  local tile_renderer = require("src.presentation.view.render.tile_renderer")
+  local building_effects = require("src.presentation.view.render.building_effects")
+  local overlay_runtime = require("src.presentation.view.render.anim_overlay_runtime")
+
+  tile_ref.owner_id = g.players[2].id
+  tile_ref.level = 1
+
+  state.board_scene = {
+    tiles = { [idx] = {} },
+    buildings = {
+      [idx] = {
+        get_position = function()
+          return math and math.Vector3 and math.Vector3(0, 0, 0) or { x = 0, y = 0, z = 0 }
+        end,
+      },
+    },
+    building_unit_groups = { [idx] = { handle = "building" } },
+    building_txt = {
+      [idx] = {
+        set_billboard_text = function() end,
+      },
+    },
+    overlay_units = {
+      roadblocks = { [idx] = { handle = "roadblock" } },
+      mines = { [idx] = { handle = "mine" } },
+    },
+  }
+  state.tile_units = state.board_scene.tiles
+  state.on_board_visual_sync = function(_, payload)
+    return board_view.sync_many(state, payload)
+  end
+
+  gameplay_loop.set_game(state, g)
+
+  support.with_patches({
+    {
+      target = tile_renderer,
+      key = "render_tile",
+      value = function(_, tile_id, owner_id)
+        render_calls[#render_calls + 1] = { tile_id = tile_id, owner_id = owner_id }
+        return true
+      end,
+    },
+    {
+      target = building_effects,
+      key = "clear_building_units",
+      value = function(_, building_index)
+        cleared_buildings[#cleared_buildings + 1] = building_index
+        return true
+      end,
+    },
+    {
+      target = overlay_runtime,
+      key = "clear_overlay",
+      value = function(_, kind, tile_index)
+        cleared_overlays[#cleared_overlays + 1] = { kind = kind, tile_index = tile_index }
+      end,
+    },
+  }, function()
+    g:set_tile_level(tile_ref, 0)
+    g:clear_all_overlays(idx)
+  end)
+
+  assert(render_calls[1] and render_calls[1].tile_id == tile_ref.id, "destroy sync should re-render tile")
+  assert(cleared_buildings[1] == idx, "destroy sync should clear building group")
+  assert(#cleared_overlays == 2, "destroy sync should clear both overlay kinds")
+  assert(cleared_overlays[1].tile_index == idx and cleared_overlays[2].tile_index == idx,
+    "destroy sync should target the demolished tile index")
+end
+
+local function _test_board_visual_feedback_port_reconciles_spawned_tile_and_overlays_without_action_anim()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local idx, tile_ref = _first_land_tile(g.board)
+  local render_calls = {}
+  local spawned_buildings = {}
+  local spawned_overlays = {}
+  local board_view = require("src.presentation.view.render.board")
+  local tile_renderer = require("src.presentation.view.render.tile_renderer")
+  local building_effects = require("src.presentation.view.render.building_effects")
+  local overlay_runtime = require("src.presentation.view.render.anim_overlay_runtime")
+
+  state.board_scene = {
+    tiles = { [idx] = {} },
+    buildings = {
+      [idx] = {
+        get_position = function()
+          return math and math.Vector3 and math.Vector3(0, 0, 0) or { x = 0, y = 0, z = 0 }
+        end,
+      },
+    },
+    building_unit_groups = {},
+    building_txt = {
+      [idx] = {
+        set_billboard_text = function() end,
+      },
+    },
+    overlay_units = {
+      roadblocks = {},
+      mines = {},
+    },
+  }
+  state.tile_units = state.board_scene.tiles
+  state.on_board_visual_sync = function(_, payload)
+    return board_view.sync_many(state, payload)
+  end
+
+  gameplay_loop.set_game(state, g)
+
+  support.with_patches({
+    {
+      target = tile_renderer,
+      key = "render_tile",
+      value = function(_, tile_id, owner_id)
+        render_calls[#render_calls + 1] = { tile_id = tile_id, owner_id = owner_id }
+        return true
+      end,
+    },
+    {
+      target = building_effects,
+      key = "spawn_upgrade_building_units",
+      value = function(_, _, building_index, level)
+        spawned_buildings[#spawned_buildings + 1] = { building_index = building_index, level = level }
+        return true
+      end,
+    },
+    {
+      target = overlay_runtime,
+      key = "spawn_overlay",
+      value = function(_, kind, tile_index)
+        spawned_overlays[#spawned_overlays + 1] = { kind = kind, tile_index = tile_index }
+        return true
+      end,
+    },
+  }, function()
+    g:set_tile_owner(tile_ref, g.players[1].id)
+    g:set_tile_level(tile_ref, 2)
+    g:place_roadblock(idx)
+    g:place_mine(idx, { owner_id = g.players[1].id, armed = false })
+  end)
+
+  assert(#render_calls >= 2, "spawn sync should re-render tile for owner/level changes")
+  assert(spawned_buildings[1] and spawned_buildings[1].building_index == idx and spawned_buildings[1].level == 2,
+    "spawn sync should rebuild building units at the final level")
+  local saw_roadblock = false
+  local saw_mine = false
+  for _, entry in ipairs(spawned_overlays) do
+    if entry.kind == "roadblock" and entry.tile_index == idx then
+      saw_roadblock = true
+    end
+    if entry.kind == "mine" and entry.tile_index == idx then
+      saw_mine = true
+    end
+  end
+  assert(saw_roadblock and saw_mine, "spawn sync should create both overlay kinds without action anim")
 end
 
 local function _test_gameplay_loop_refresh_drives_camera_follow_via_port()
@@ -3107,6 +3260,8 @@ return {
   _test_turn_dispatch_uses_clock_ports_without_game_api,
   _test_gameplay_loop_set_game_uses_narrow_runtime_ports,
   _test_gameplay_loop_set_game_defers_visual_ports_during_landing_hold,
+  _test_board_visual_feedback_port_reconciles_destroyed_tile_and_cleared_overlays,
+  _test_board_visual_feedback_port_reconciles_spawned_tile_and_overlays_without_action_anim,
   _test_gameplay_loop_refresh_drives_camera_follow_via_port,
   _test_gameplay_loop_camera_follow_skips_eliminated_current_player,
   _test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics,

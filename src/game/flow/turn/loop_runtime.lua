@@ -96,24 +96,56 @@ function runtime.build_tile_feedback_port(state)
 
   local port = {}
   port.on_tile_upgraded = function(_, tile_id, level)
+    local game = state.game
+    if game == nil or game.board_visual_feedback_port == nil then
+      return false
+    end
+    return game.board_visual_feedback_port.sync_many(game, {
+      tile_ids = { tile_id },
+    })
+  end
+
+  state._tile_feedback_port = port
+  return port
+end
+
+function runtime.build_board_visual_feedback_port(state)
+  assert(type(state) == "table", "missing state")
+  if type(state._board_visual_feedback_port) == "table" then
+    return state._board_visual_feedback_port
+  end
+
+  local port = {}
+  port.sync_many = function(arg1, arg2, arg3)
+    local game = nil
+    local payload = nil
+    if arg3 ~= nil or (type(arg1) == "table" and arg1 == port) then
+      game = arg2
+      payload = arg3
+    else
+      game = arg1
+      payload = arg2
+    end
+    local current_game = game or state.game
+    if current_game ~= nil then
+      state.game = current_game
+    end
     if landing_visual_hold.is_active_state(state) and not landing_visual_hold.is_flushing_state(state) then
-      landing_visual_hold.defer_tile_update(state, tile_id, level, function(inner_tile_id, inner_level)
-        if type(state.on_tile_upgraded) == "function" then
-          state:on_tile_upgraded(inner_tile_id, inner_level)
-          return true
+      landing_visual_hold.defer_board_visual_sync(state, payload, function(inner_payload)
+        if type(state.on_board_visual_sync) == "function" then
+          return state:on_board_visual_sync(inner_payload) == true
         end
         return false
       end)
       return true
     end
-    if type(state.on_tile_upgraded) == "function" then
-      state:on_tile_upgraded(tile_id, level)
-      return true
+    if type(state.on_board_visual_sync) == "function" then
+      return state:on_board_visual_sync(payload) == true
     end
     return false
   end
 
-  state._tile_feedback_port = port
+  state._board_visual_feedback_port = port
   return port
 end
 

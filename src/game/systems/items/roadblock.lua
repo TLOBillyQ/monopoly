@@ -210,7 +210,7 @@ end
 function roadblock.apply(game, player, idx)
   assert(idx ~= nil, "missing idx")
   assert(game.board ~= nil, "missing board")
-  game.board:place_roadblock(idx)
+  game:place_roadblock(idx)
   local tile = game.board:get_tile(idx)
   logger.event(player.name .. " 放置路障在 " .. tile.name)
   local queued = action_anim_port.queue(game, {

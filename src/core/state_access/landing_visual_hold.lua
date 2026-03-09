@@ -26,6 +26,7 @@ local function _ensure_hold(state)
       deferred_dirty = _new_dirty_bucket(),
       deferred_popups = {},
       deferred_runtime_events = {},
+      deferred_board_visual_syncs = {},
       deferred_tile_updates = {},
       deferred_owner_changes = {},
       deferred_bankruptcy_clears = {},
@@ -40,6 +41,7 @@ local function _ensure_hold(state)
   end
   hold.deferred_popups = hold.deferred_popups or {}
   hold.deferred_runtime_events = hold.deferred_runtime_events or {}
+  hold.deferred_board_visual_syncs = hold.deferred_board_visual_syncs or {}
   hold.deferred_tile_updates = hold.deferred_tile_updates or {}
   hold.deferred_owner_changes = hold.deferred_owner_changes or {}
   hold.deferred_bankruptcy_clears = hold.deferred_bankruptcy_clears or {}
@@ -215,6 +217,14 @@ function landing_visual_hold.defer_runtime_event(state, event_name, payload, rep
   }
 end
 
+function landing_visual_hold.defer_board_visual_sync(state, payload, replay)
+  local hold = _ensure_hold(state)
+  hold.deferred_board_visual_syncs[#hold.deferred_board_visual_syncs + 1] = {
+    payload = payload,
+    replay = replay,
+  }
+end
+
 function landing_visual_hold.defer_tile_update(state, tile_id, level, replay)
   local hold = _ensure_hold(state)
   hold.deferred_tile_updates[#hold.deferred_tile_updates + 1] = {
@@ -277,6 +287,12 @@ function landing_visual_hold.release(state, game)
     local logger = require("src.core.utils.logger")
     logger.flush_event_buffer(hold)
 
+    for _, entry in ipairs(hold.deferred_board_visual_syncs) do
+      if type(entry.replay) == "function" then
+        entry.replay(entry.payload)
+      end
+    end
+
     for _, entry in ipairs(hold.deferred_runtime_events) do
       if type(entry.replay) == "function" then
         entry.replay(entry.payload)
@@ -308,6 +324,7 @@ function landing_visual_hold.release(state, game)
   hold.deferred_dirty = _new_dirty_bucket()
   hold.deferred_popups = {}
   hold.deferred_runtime_events = {}
+  hold.deferred_board_visual_syncs = {}
   hold.deferred_tile_updates = {}
   hold.deferred_owner_changes = {}
   hold.deferred_bankruptcy_clears = {}
@@ -328,6 +345,7 @@ function landing_visual_hold.reset_state(state)
   hold.deferred_dirty = _new_dirty_bucket()
   hold.deferred_popups = {}
   hold.deferred_runtime_events = {}
+  hold.deferred_board_visual_syncs = {}
   hold.deferred_tile_updates = {}
   hold.deferred_owner_changes = {}
   hold.deferred_bankruptcy_clears = {}

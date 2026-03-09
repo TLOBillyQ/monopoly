@@ -17,11 +17,11 @@ local function _tile_label(tile)
   return tile.name
 end
 
-local function _check_roadblock(board, current, player)
+local function _check_roadblock(game, board, current, player)
   if not board:has_roadblock(current) then
     return false
   end
-  board:clear_roadblock(current)
+  game:clear_roadblock(current)
   _emit_event(monopoly_event.movement.roadblock_hit, {
     player = player,
     tile = board:get_tile(current),
@@ -136,7 +136,7 @@ function movement.move(game, player, steps, opts)
       end
     end
 
-    if _check_roadblock(board, current, player) then
+    if _check_roadblock(game, board, current, player) then
       stopped_on_roadblock = true
       break
     end

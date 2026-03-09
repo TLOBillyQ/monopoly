@@ -177,7 +177,7 @@ local function _handle_log(_, player, cfg, _context)
 end
 
 local function _handle_place_mine_here(game, player, _cfg, context)
-  game.board:place_mine(player.position, {
+  game:place_mine(player.position, {
     owner_id = player.id,
     armed = false,
     placed_turn_count = game.turn and game.turn.turn_count or nil,
@@ -232,7 +232,7 @@ local function _handle_clear_obstacles_ahead(game, player, cfg, context)
         if not back or dir ~= back then
           local next_index = assert(board:index_of_tile_id(next_id), "missing tile index: " .. tostring(next_id))
           if board:has_roadblock(next_index) then
-            board:clear_roadblock(next_index)
+            game:clear_roadblock(next_index)
             cleared = cleared + 1
             if not cleared_map[next_index] then
               cleared_map[next_index] = true
@@ -240,7 +240,7 @@ local function _handle_clear_obstacles_ahead(game, player, cfg, context)
             end
           end
           if board:has_mine(next_index) then
-            board:clear_mine(next_index)
+            game:clear_mine(next_index)
             cleared = cleared + 1
             if not cleared_map[next_index] then
               cleared_map[next_index] = true
