@@ -9,6 +9,22 @@ local function _next(args)
   return args.next_state, args.next_args
 end
 
+local function _resolve_after_action_anim(args, res)
+  local default_next_state, default_next_args = _next(args)
+  local next_state, next_args = default_next_state, default_next_args
+  local after_action_anim = type(res) == "table" and res.after_action_anim or nil
+  if type(after_action_anim) ~= "table" then
+    return next_state, next_args
+  end
+  next_state = after_action_anim.next_state or next_state
+  next_args = after_action_anim.next_args or next_args
+  if next_state == "move_followup" and type(next_args) == "table" then
+    next_args.next_state = next_args.next_state or default_next_state
+    next_args.next_args = next_args.next_args or default_next_args
+  end
+  return next_state, next_args
+end
+
 local function _mark_dirty(game)
   if game and game.dirty then
     game.dirty.turn = true
@@ -89,14 +105,21 @@ function await.choice(session, args)
 
   session.choice_elapsed_seconds = 0
 
+  local next_state, next_args = _resolve_after_action_anim(args, res)
   if game.turn.action_anim then
+    if next_state == "move_followup" then
+      game.turn.move_followup_pending = true
+      _mark_dirty(game)
+    end
     return {
       next_state = "wait_action_anim",
-      next_args = args,
+      next_args = {
+        next_state = next_state,
+        next_args = next_args,
+      },
     }
   end
 
-  local next_state, next_args = _next(args)
   return {
     next_state = next_state,
     next_args = next_args,

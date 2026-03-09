@@ -19,6 +19,21 @@ function movement_handlers.register(handlers, common)
 
   handlers.forced_move = function(game, player, card, context)
     local from_index = player.position
+    local function _build_location_followup(effect_name)
+      return {
+        waiting = true,
+        wait_action_anim = true,
+        next_state = "move_followup",
+        next_args = {
+          mode = "apply_location_effects",
+          effects = {
+            { player_id = player.id, effect = effect_name },
+          },
+          next_state = "post_action",
+          next_args = { player = player },
+        },
+      }
+    end
     if card.destination_tile_id then
       local idx = game.board:index_of_tile_id(card.destination_tile_id)
       assert(idx ~= nil, "missing destination tile index: " .. tostring(card.destination_tile_id))
@@ -34,15 +49,21 @@ function movement_handlers.register(handlers, common)
     end
 
     if card.destination == "hospital" then
-      game:player_send_to_hospital(player)
-      common.queue_move_effect(game, player, from_index, player.position, nil)
-      return
+      local idx = game.board:find_first_by_type("hospital")
+      assert(idx ~= nil, "missing hospital tile")
+      game:update_player_position(player, idx)
+      game:set_player_status(player, "move_dir", nil)
+      common.queue_move_effect(game, player, from_index, idx, nil)
+      return _build_location_followup("hospital")
     end
 
     if card.destination == "mountain" then
-      game:player_send_to_mountain(player)
-      common.queue_move_effect(game, player, from_index, player.position, nil)
-      return
+      local idx = game.board:find_first_by_type("mountain")
+      assert(idx ~= nil, "missing mountain tile")
+      game:update_player_position(player, idx)
+      game:set_player_status(player, "move_dir", nil)
+      common.queue_move_effect(game, player, from_index, idx, nil)
+      return _build_location_followup("mountain")
     end
 
     local type_by_destination = {

@@ -22,7 +22,8 @@ function M.refresh(state, ui_model, log_once, build_log_prefix)
 
   local phase = board.phase
   local anim = board.move_anim
-  local suppress_sync = phase == "wait_move_anim" and anim
+  local suppress_sync = (phase == "wait_move_anim" and anim)
+    or (phase == "wait_action_anim" and board.move_followup_pending == true)
   local vehicle_resync_seq = board.vehicle_resync_seq or 0
 
   local snapshot = placement.build_snapshot(players)

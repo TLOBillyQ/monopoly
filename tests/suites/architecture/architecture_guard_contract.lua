@@ -376,7 +376,8 @@ local function _test_turn_move_uses_anim_gate_port_without_ui_port()
   })
 
   _assert_eq(next_state, "wait_move_anim", "turn_move should rely on anim_gate_port instead of ui_port")
-  _assert_eq(payload.next_state, "move", "turn_move should keep move continuation payload")
+  _assert_eq(payload.next_state, "move_followup", "turn_move should keep move followup continuation payload")
+  _assert_eq(game.last_turn.move_result, nil, "turn_move should defer move_result publication until move anim completes")
 end
 
 local function _test_action_anim_port_uses_anim_gate_port_without_ui_port()

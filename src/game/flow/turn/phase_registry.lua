@@ -6,6 +6,7 @@ local turn_start = require("src.game.flow.turn.start")
 local turn_roll = require("src.game.flow.turn.roll")
 local turn_move = require("src.game.flow.turn.move")
 local turn_land = require("src.game.flow.turn.land")
+local move_followup = require("src.game.flow.turn.move_followup")
 
 local turn_phase_registry = {}
 
@@ -60,6 +61,7 @@ function turn_phase_registry.build_default_phases()
     start = turn_start,
     roll = turn_roll,
     move = turn_move,
+    move_followup = move_followup.run,
     landing = turn_land,
     post_action = _phase_post,
     end_turn = _phase_end,

@@ -17,6 +17,7 @@ local roadblock = require("src.game.systems.items.roadblock")
 local steal = require("src.game.systems.items.steal")
 local runtime_event_bridge = require("src.infrastructure.runtime.event_bridge")
 local monopoly_event = require("src.core.events.monopoly_events")
+local move_followup = require("src.game.flow.turn.move_followup")
 
 local function _install_narrow_ports(game, ui_port)
   game.ui_port = ui_port
@@ -216,6 +217,29 @@ local function _test_target_item_manual_direct_exec_and_duration()
     gameplay_rules.action_anim_default_seconds or 1.0,
     "target item anim should use default duration"
   )
+end
+
+local function _test_exile_item_defers_mountain_effect_until_move_followup()
+  local g = _new_game()
+  _set_ui_port(g, { wait_action_anim = true })
+  local user = g.players[1]
+  local target = g.players[2]
+  user.inventory:add({ id = gameplay_rules.item_ids.exile })
+
+  local res = executor.use_item(g, user, gameplay_rules.item_ids.exile, {
+    by_ai = true,
+    target_id = target.id,
+  })
+
+  _assert_eq(type(res), "table", "exile should return result payload")
+  _assert_eq(res.ok, true, "exile should succeed")
+  assert(type(res.after_action_anim) == "table", "exile should expose move followup continuation")
+  _assert_eq(target.status.stay_turns or 0, 0, "exile should not apply mountain stay immediately")
+  assert(g.turn.action_anim and g.turn.action_anim.kind == "move_effect", "exile should queue move effect first")
+
+  local next_state, _ = move_followup.run({ game = g }, res.after_action_anim.next_args)
+  _assert_eq(next_state, nil, "exile move followup should return to caller continuation")
+  assert((target.status.stay_turns or 0) > 0, "exile should apply mountain stay after move followup")
 end
 
 local function _test_item_executor_fallback_item_use_anim()
@@ -630,6 +654,10 @@ return {
     { name = "item_phase_keeps_rent_cards_on_other_owned_land", run = _test_item_phase_keeps_rent_cards_on_other_owned_land },
     { name = "item_equalize_cash", run = _test_item_equalize_cash },
     { name = "target_item_manual_direct_exec_and_duration", run = _test_target_item_manual_direct_exec_and_duration },
+    {
+      name = "exile_item_defers_mountain_effect_until_move_followup",
+      run = _test_exile_item_defers_mountain_effect_until_move_followup,
+    },
     { name = "item_executor_fallback_item_use_anim", run = _test_item_executor_fallback_item_use_anim },
     { name = "item_executor_keeps_specific_anim_without_fallback", run = _test_item_executor_keeps_specific_anim_without_fallback },
     { name = "item_phase_exposes_mine_in_pre_action", run = _test_item_phase_exposes_mine_in_pre_action },

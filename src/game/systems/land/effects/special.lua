@@ -41,6 +41,14 @@ M.executors = {
       local position = player.position
       local res = mine_effect.apply(game, player, position)
       if res and res.hospitalized then
+        if res.wait_action_anim == true then
+          return {
+            waiting = true,
+            wait_action_anim = true,
+            next_state = res.next_state,
+            next_args = res.next_args,
+          }
+        end
         return {
           kind = "need_landing",
           player_id = player.id,

@@ -68,6 +68,13 @@ local function _finish_item_target_choice(helpers, game)
   return helpers.finish_choice(game, false)
 end
 
+local function _merge_after_action_anim(result, final_res)
+  if type(result) == "table" and type(result.after_action_anim) == "table" then
+    final_res.after_action_anim = result.after_action_anim
+  end
+  return final_res
+end
+
 function item_choice_handler.build(helpers)
   local finish_choice = helpers.finish_choice
   local use_item = helpers.use_item
@@ -114,7 +121,7 @@ function item_choice_handler.build(helpers)
     end
     local intent = result.intent or {}
     intent_output_port.dispatch(game, intent)
-    return _finish_item_target_choice(helpers, game)
+    return _merge_after_action_anim(result, _finish_item_target_choice(helpers, game))
   end
 
   local function _handle_roadblock_target(game, choice, action)
@@ -131,7 +138,7 @@ function item_choice_handler.build(helpers)
       item_use_broadcast.dispatch(game, player, meta.item_id)
       intent_output_port.dispatch(game, result)
     end
-    return _finish_item_target_choice(helpers, game)
+    return _merge_after_action_anim(result, _finish_item_target_choice(helpers, game))
   end
 
   local function _handle_steal_item(game, choice, action)
@@ -190,7 +197,7 @@ function item_choice_handler.build(helpers)
     if result.waiting then
       return { stay = true }
     end
-    return _finish_item_target_choice(helpers, game)
+    return _merge_after_action_anim(result, _finish_item_target_choice(helpers, game))
   end
 
   local function _handle_remote_dice_value(game, choice, action)
@@ -203,7 +210,7 @@ function item_choice_handler.build(helpers)
     if result then
       item_use_broadcast.dispatch(game, player, meta.item_id)
     end
-    return _finish_item_target_choice(helpers, game)
+    return _merge_after_action_anim(result, _finish_item_target_choice(helpers, game))
   end
 
   local function _handle_item_phase_choice(game, choice, action)
@@ -229,7 +236,7 @@ function item_choice_handler.build(helpers)
       return { stay = true }
     end
     finish_item_phase(game, phase)
-    return finish_choice(game, false)
+    return _merge_after_action_anim(result, finish_choice(game, false))
   end
 
   local function _normalize_owner_meta(choice_kind, meta, choice_spec)

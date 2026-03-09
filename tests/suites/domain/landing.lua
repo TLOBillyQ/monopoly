@@ -16,6 +16,7 @@ local land_rules = require("src.game.systems.land.rules")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local monopoly_event = require("src.core.events.monopoly_events")
 local runtime_event_bridge = require("src.infrastructure.runtime.event_bridge")
+local move_followup = require("src.game.flow.turn.move_followup")
 
 local function _install_narrow_ports(game, ui_port)
   game.ui_port = ui_port
@@ -438,6 +439,27 @@ local function _test_mountain_landing_emits_status_feedback_event()
   _assert_eq(emitted[1].payload.tile_index, idx, "mountain feedback should preserve landing index")
 end
 
+local function _test_mine_landing_defers_hospital_effect_until_move_followup()
+  local g = _new_game()
+  _set_ui_port(g, { wait_action_anim = true })
+  local player = g.players[1]
+  local idx = player.position
+  g.board:place_mine(idx, {
+    owner_id = g.players[2].id,
+    armed = true,
+  })
+
+  local next_state, next_args = land({ game = g }, { player = player, move_result = {} })
+
+  _assert_eq(next_state, "wait_action_anim", "mine landing should wait for move effect animation")
+  _assert_eq(next_args.next_state, "move_followup", "mine landing should resume through move_followup")
+  _assert_eq(player.status.stay_turns or 0, 0, "mine landing should not hospitalize before move followup")
+
+  local resumed_state, _ = move_followup.run({ game = g }, next_args.next_args)
+  _assert_eq(resumed_state, "post_action", "mine move followup should resume into post_action")
+  assert((player.status.stay_turns or 0) > 0, "mine move followup should apply hospital stay")
+end
+
 return {
   name = "landing",
   tests = {
@@ -459,6 +481,10 @@ return {
     },
     { name = "hospital_landing_emits_status_feedback_event", run = _test_hospital_landing_emits_status_feedback_event },
     { name = "mountain_landing_emits_status_feedback_event", run = _test_mountain_landing_emits_status_feedback_event },
+    {
+      name = "mine_landing_defers_hospital_effect_until_move_followup",
+      run = _test_mine_landing_defers_hospital_effect_until_move_followup,
+    },
     { name = "execute_strong_card_pushes_item_card_popup", run = _test_execute_strong_card_pushes_item_card_popup },
     { name = "execute_free_card_pushes_item_card_popup", run = _test_execute_free_card_pushes_item_card_popup },
     { name = "execute_tax_free_card_pushes_item_card_popup", run = _test_execute_tax_free_card_pushes_item_card_popup },

@@ -53,6 +53,8 @@ function board_slice.build(game, env, turn)
     players = game.players,
     phase = turn.phase,
     move_anim = turn.move_anim,
+    action_anim = turn.action_anim,
+    move_followup_pending = turn.move_followup_pending == true,
     turn_start_prompt_seq = turn.turn_start_prompt_seq or 0,
     turn_start_prompt_player_id = turn.turn_start_prompt_player_id,
     vehicle_resync_seq = turn.vehicle_resync_seq or 0,
@@ -71,6 +73,8 @@ function board_slice.update(board, game, env, turn)
   board.players = game.players
   board.phase = turn.phase
   board.move_anim = turn.move_anim
+  board.action_anim = turn.action_anim
+  board.move_followup_pending = turn.move_followup_pending == true
   board.turn_start_prompt_seq = turn.turn_start_prompt_seq or 0
   board.turn_start_prompt_player_id = turn.turn_start_prompt_player_id
   board.vehicle_resync_seq = turn.vehicle_resync_seq or 0

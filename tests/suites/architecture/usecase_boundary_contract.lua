@@ -227,8 +227,9 @@ local function _test_turn_move_uses_anim_gate_port_without_ui_port()
   })
 
   _assert_eq(next_state, "wait_move_anim", "turn_move should use anim_gate_port when deciding move anim wait")
-  _assert_eq(next_args.next_state, "move", "turn_move should resume into move after move anim")
+  _assert_eq(next_args.next_state, "move_followup", "turn_move should resume into move_followup after move anim")
   _assert_eq(game.turn.move_anim.player_id, player.id, "turn_move should still queue move animation")
+  _assert_eq(game.last_turn.move_result, nil, "turn_move should not publish move_result before move anim completes")
 end
 
 return {

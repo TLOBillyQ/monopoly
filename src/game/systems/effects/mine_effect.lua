@@ -34,15 +34,31 @@ function mine_effect.apply(game, player, position)
   game:set_player_seat(player, nil)
   logger.event(player.name .. " 触发地雷，座驾被摧毁并送医")
   local from_index = position
-  game:player_send_to_hospital(player)
+  local hospital_index = assert(board:find_first_by_type("hospital"), "missing hospital tile")
+  game:update_player_position(player, hospital_index)
+  game:set_player_status(player, "move_dir", nil)
   action_anim_port.queue(game, {
     kind = "move_effect",
     player_id = player.id,
     from_index = from_index,
-    to_index = player.position,
+    to_index = hospital_index,
     duration = action_anim_duration,
   })
-  return { detonated = true, hospitalized = true, new_position = player.position }
+  return {
+    detonated = true,
+    hospitalized = true,
+    new_position = hospital_index,
+    wait_action_anim = true,
+    next_state = "move_followup",
+    next_args = {
+      mode = "apply_location_effects",
+      effects = {
+        { player_id = player.id, effect = "hospital" },
+      },
+      next_state = "post_action",
+      next_args = { player = player },
+    },
+  }
 end
 
 return mine_effect

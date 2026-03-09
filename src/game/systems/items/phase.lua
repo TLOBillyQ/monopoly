@@ -24,6 +24,22 @@ local phase_confirm_titles = {
   post_action = "行动后",
 }
 
+local function _resolve_after_action_anim(args, res)
+  local next_state = args.next_state
+  local next_args = args.next_args
+  local after_action_anim = type(res) == "table" and res.after_action_anim or nil
+  if type(after_action_anim) ~= "table" then
+    return next_state, next_args
+  end
+  next_state = after_action_anim.next_state or next_state
+  next_args = after_action_anim.next_args or next_args
+  if next_state == "move_followup" and type(next_args) == "table" then
+    next_args.next_state = next_args.next_state or args.next_state
+    next_args.next_args = next_args.next_args or args.next_args
+  end
+  return next_state, next_args
+end
+
 function phase_module.is_enabled(phase)
   local queue = gameplay_rules.item_phase_queue
   assert(type(queue) == "table", "invalid item_phase_queue")
@@ -95,8 +111,14 @@ function phase_module.run(turn_mgr, phase, args)
       return { waiting = true, next_state = args.next_state, next_args = args.next_args }
     end
     if game.turn.action_anim then
+      local next_state, next_args = _resolve_after_action_anim(args, pre)
       phase_module.finish(game, phase)
-      return { waiting = true, wait_action_anim = true, next_state = args.next_state, next_args = args.next_args }
+      if next_state == "move_followup" then
+        game.turn.move_followup_pending = true
+        game.dirty.turn = true
+        game.dirty.any = true
+      end
+      return { waiting = true, wait_action_anim = true, next_state = next_state, next_args = next_args }
     end
     phase_module.finish(game, phase)
     return nil

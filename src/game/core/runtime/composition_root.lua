@@ -64,6 +64,7 @@ local function _build_initial_turn()
     action_anim_seq = 0,
     action_anim = nil,
     action_anim_queue = {},
+    move_followup_pending = false,
     detained_wait_active = false,
     detained_wait_seconds = 0,
     detained_wait_elapsed = 0,

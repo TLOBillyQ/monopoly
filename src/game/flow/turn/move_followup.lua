@@ -1,0 +1,148 @@
+local steal = require("src.game.systems.items.steal")
+local market_service = require("src.game.systems.market")
+local intent_dispatcher = require("src.game.flow.intent.intent_dispatcher")
+
+local move_followup = {}
+
+local function _clear_pending_flag(game)
+  if not (game and game.turn) then
+    return
+  end
+  if game.turn.move_followup_pending == true then
+    game.turn.move_followup_pending = false
+    game.dirty.turn = true
+    game.dirty.any = true
+  end
+end
+
+local function _resolve_player(game, args)
+  local player = args.player
+  if player then
+    return player
+  end
+  local player_id = args.player_id
+  assert(player_id ~= nil, "missing move followup player_id")
+  return assert(game:find_player_by_id(player_id), "missing move followup player: " .. tostring(player_id))
+end
+
+local function _apply_roadblock_detain(game, player, move_result)
+  if not (move_result and move_result.stopped_on_roadblock) then
+    return
+  end
+  local stay = player.status.stay_turns or 0
+  if stay < 1 then
+    game:set_player_status(player, "stay_turns", 1)
+  end
+end
+
+local function _handle_resume_turn_move(game, args)
+  local player = _resolve_player(game, args)
+  local move_result = assert(args.move_result, "missing move followup move_result")
+  local raw_total = args.raw_total
+  game.last_turn.move_result = move_result
+  _apply_roadblock_detain(game, player, move_result)
+
+  if move_result.steal_interrupt then
+    local interrupt = move_result.steal_interrupt
+    local res = steal.handle_pass_players(game, player, interrupt.encountered_ids or {})
+    if res and res.intent then
+      intent_dispatcher.dispatch(game, res.intent)
+    end
+    if res and res.waiting then
+      return "wait_choice", {
+        next_state = "move",
+        next_args = {
+          player = player,
+          raw_total = raw_total,
+          continue_from_steal = true,
+          remaining_steps = interrupt.remaining_steps,
+          facing = interrupt.facing,
+          branch_parity = interrupt.branch_parity,
+        },
+      }
+    end
+    if interrupt.remaining_steps and interrupt.remaining_steps > 0 then
+      return "move", {
+        player = player,
+        raw_total = raw_total,
+        continue_from_steal = true,
+        remaining_steps = interrupt.remaining_steps,
+        facing = interrupt.facing,
+        branch_parity = interrupt.branch_parity,
+      }
+    end
+    move_result.encountered_players = {}
+  end
+
+  if move_result.market_interrupt then
+    local spec, intent = market_service.choice.build(player, game)
+    if spec then
+      intent_dispatcher.dispatch(game, { kind = "need_choice", choice_spec = spec })
+      local interrupt = move_result.market_interrupt
+      return "wait_choice", {
+        next_state = "move",
+        next_args = {
+          player = player,
+          raw_total = raw_total,
+          continue_from_market = true,
+          remaining_steps = interrupt.remaining_steps,
+          facing = interrupt.facing,
+          branch_parity = interrupt.branch_parity,
+        },
+      }
+    end
+    if intent then
+      intent_dispatcher.dispatch(game, intent)
+    end
+  end
+
+  return "landing", {
+    player = player,
+    move_result = move_result,
+  }
+end
+
+local function _handle_resolve_landing(game, args)
+  local player = _resolve_player(game, args)
+  local move_result = args.move_result
+  _apply_roadblock_detain(game, player, move_result)
+  return "landing", {
+    player = player,
+    move_result = move_result,
+  }
+end
+
+local function _handle_apply_location_effects(game, args)
+  local effects = args.effects or {}
+  for _, entry in ipairs(effects) do
+    local player = assert(game:find_player_by_id(entry.player_id), "missing move followup effect player")
+    if entry.effect == "hospital" then
+      game:player_apply_hospital_effects(player)
+    elseif entry.effect == "mountain" then
+      game:player_apply_mountain_effects(player)
+    else
+      error("unknown move followup effect: " .. tostring(entry.effect))
+    end
+  end
+  return args.next_state, args.next_args
+end
+
+function move_followup.run(turn_mgr, args)
+  local game = assert(turn_mgr and turn_mgr.game, "missing move followup game")
+  args = args or {}
+  _clear_pending_flag(game)
+
+  local mode = args.mode
+  if mode == "resume_turn_move" then
+    return _handle_resume_turn_move(game, args)
+  end
+  if mode == "resolve_landing" then
+    return _handle_resolve_landing(game, args)
+  end
+  if mode == "apply_location_effects" then
+    return _handle_apply_location_effects(game, args)
+  end
+  error("unknown move followup mode: " .. tostring(mode))
+end
+
+return move_followup

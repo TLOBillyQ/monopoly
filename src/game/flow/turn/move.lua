@@ -1,8 +1,6 @@
-local steal = require("src.game.systems.items.steal")
 local movement = require("src.game.systems.movement")
-local market_service = require("src.game.systems.market")
-local intent_dispatcher = require("src.game.flow.intent.intent_dispatcher")
 local vehicle_feature = require("src.game.systems.vehicle")
+local move_followup = require("src.game.flow.turn.move_followup")
 
 local function _build_move_args(player, raw_total, extra)
   local out = {
@@ -16,15 +14,6 @@ local function _build_move_args(player, raw_total, extra)
     out[key] = value
   end
   return out
-end
-
-local function _build_interrupt_args(player, raw_total, interrupt, source_flag)
-  return _build_move_args(player, raw_total, {
-    [source_flag] = true,
-    remaining_steps = interrupt.remaining_steps,
-    facing = interrupt.facing,
-    branch_parity = interrupt.branch_parity,
-  })
 end
 
 local function _phase_move(turn_mgr, args)
@@ -56,7 +45,6 @@ local function _phase_move(turn_mgr, args)
   if not move_result then
     local start_index = player.position
     move_result = movement.move(turn_mgr.game, player, total, move_opts)
-    turn_mgr.game.last_turn.move_result = move_result
 
     local anim_gate_port = assert(game.anim_gate_port, "missing anim_gate_port")
     if anim_gate_port.wait_move_anim == true then
@@ -77,62 +65,28 @@ local function _phase_move(turn_mgr, args)
       game.dirty.turn = true
       game.dirty.any = true
       return "wait_move_anim", {
-        next_state = "move",
+        next_state = "move_followup",
         next_args = _build_move_args(player, raw_total, {
-          total = total,
+          mode = "resume_turn_move",
           move_result = move_result,
+          raw_total = raw_total,
         }),
       }
     end
-  else
-    turn_mgr.game.last_turn.move_result = move_result
+    return move_followup.run(turn_mgr, {
+      mode = "resume_turn_move",
+      player = player,
+      raw_total = raw_total,
+      move_result = move_result,
+    })
   end
 
-  if move_result.stopped_on_roadblock then
-    local stay = player.status.stay_turns or 0
-    if stay < 1 then
-      turn_mgr.game:set_player_status(player, "stay_turns", 1)
-    end
-  end
-
-  if move_result.steal_interrupt then
-    local interrupt = move_result.steal_interrupt
-    local res = steal.handle_pass_players(turn_mgr.game, player, interrupt.encountered_ids or {})
-    if res and res.intent then
-      intent_dispatcher.dispatch(turn_mgr.game, res.intent)
-    end
-    if res and res.waiting then
-      return "wait_choice", {
-        next_state = "move",
-        next_args = _build_interrupt_args(player, raw_total, interrupt, "continue_from_steal"),
-      }
-    end
-    if interrupt.remaining_steps and interrupt.remaining_steps > 0 then
-      return "move", _build_interrupt_args(player, raw_total, interrupt, "continue_from_steal")
-    end
-    move_result.encountered_players = {}
-  end
-
-  if move_result.market_interrupt then
-    local spec, intent = market_service.choice.build(player, turn_mgr.game)
-    if spec then
-      intent_dispatcher.dispatch(turn_mgr.game, { kind = "need_choice", choice_spec = spec })
-      return "wait_choice", {
-        next_state = "move",
-        next_args = _build_interrupt_args(
-          player,
-          raw_total,
-          move_result.market_interrupt,
-          "continue_from_market"
-        ),
-      }
-    end
-    if intent then
-      intent_dispatcher.dispatch(turn_mgr.game, intent)
-    end
-  end
-
-  return "landing", { player = player, move_result = move_result }
+  return move_followup.run(turn_mgr, {
+    mode = "resume_turn_move",
+    player = player,
+    raw_total = raw_total,
+    move_result = move_result,
+  })
 end
 
 return _phase_move

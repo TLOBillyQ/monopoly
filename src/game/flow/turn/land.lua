@@ -15,6 +15,26 @@ local function _has_action_anim(game)
   return type(queue) == "table" and #queue > 0
 end
 
+local function _has_pending_move_action_anim(game)
+  if not game or not game.turn then
+    return false
+  end
+  local current = game.turn.action_anim
+  if current and current.kind == "move_effect" then
+    return true
+  end
+  local queue = game.turn.action_anim_queue
+  if type(queue) ~= "table" then
+    return false
+  end
+  for _, entry in ipairs(queue) do
+    if entry and entry.kind == "move_effect" then
+      return true
+    end
+  end
+  return false
+end
+
 local function _resolve_landing(game, player, tile, move_result, depth)
   depth = depth or 0
   local game_ctx = effect_runner.build_game_ctx(game, move_result, {
@@ -38,6 +58,18 @@ local function _resolve_landing(game, player, tile, move_result, depth)
       end
     end
     if next_tile then
+      if _has_pending_move_action_anim(game) then
+        return {
+          waiting = true,
+          wait_action_anim = true,
+          next_state = "move_followup",
+          next_args = {
+            mode = "resolve_landing",
+            player_id = target_player.id,
+            move_result = out.move_result,
+          },
+        }
+      end
       return _resolve_landing(game, target_player, next_tile, out.move_result, depth + 1)
     end
     return out
@@ -63,6 +95,16 @@ local function _phase_land(turn_mgr, args)
   if res and res.waiting then
     local next_state = res.next_state or "landing"
     local next_args = res.next_args or { player = player, move_result = move_result }
+    if res.wait_action_anim == true then
+      if _has_action_anim(turn_mgr.game) then
+        turn_mgr.game.turn.move_followup_pending = next_state == "move_followup"
+        return "wait_action_anim", {
+          next_state = next_state,
+          next_args = next_args,
+        }
+      end
+      return next_state, next_args
+    end
     if _has_action_anim(turn_mgr.game) then
       return "wait_action_anim", {
         next_state = "wait_choice",

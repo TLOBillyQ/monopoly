@@ -78,12 +78,6 @@ function common.move_steps(game, player, steps, opts)
   local res = movement.move(game, player, steps, opts)
   assert(res ~= nil, "missing move result")
   common.queue_move_effect(game, player, from_index, player.position, res.visited)
-  if res.stopped_on_roadblock then
-    local stay = player.status.stay_turns or 0
-    if stay < 1 then
-      game:set_player_status(player, "stay_turns", 1)
-    end
-  end
   return {
     kind = "need_landing",
     player_id = player.id,

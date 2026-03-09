@@ -36,9 +36,10 @@ local target_effects = {
     apply = function(game, user, target, context)
       local idx = game.board:find_first_by_type("mountain")
       local from_index = target.position
+      local queued = false
       if idx then
         game:update_player_position(target, idx)
-        action_anim_port.queue(game, {
+        queued = action_anim_port.queue(game, {
           kind = "move_effect",
           player_id = target.id,
           from_index = from_index,
@@ -47,15 +48,30 @@ local target_effects = {
         })
       end
       game:set_player_status(target, "move_dir", nil)
-      game:set_player_status(target, "stay_turns", constants.mountain_stay_turns)
       logger.event(
         user.name
           .. " 使用流放卡，将 "
           .. target.name
           .. " 送往深山，停留 "
-          .. number_utils.format_integer_part(target.status.stay_turns)
+          .. number_utils.format_integer_part(constants.mountain_stay_turns)
           .. " 回合"
       )
+      if queued then
+        return {
+          ok = true,
+          action_anim = true,
+          after_action_anim = {
+            next_state = "move_followup",
+            next_args = {
+              mode = "apply_location_effects",
+              effects = {
+                { player_id = target.id, effect = "mountain" },
+              },
+            },
+          },
+        }
+      end
+      game:player_apply_mountain_effects(target)
       return true
     end,
   },
