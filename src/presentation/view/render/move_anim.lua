@@ -55,18 +55,6 @@ local function _get_active_sequence(board_scene, player_id)
   return runtime.active_sequence_by_player_id[player_id]
 end
 
-local function _read_bool_method(target, method_name)
-  if target == nil or type(target[method_name]) ~= "function" then
-    return nil
-  end
-  local method = target[method_name]
-  local ok, value = pcall(method)
-  if not ok then
-    return nil
-  end
-  return value == true
-end
-
 local function _sequence_meta(entry)
   if entry == nil then
     return nil
@@ -401,33 +389,20 @@ local function _stop_active_sequence(board_scene, player_id, anim_ctx, token)
     return
   end
   local unit = board_scene and board_scene.units_by_player_id and board_scene.units_by_player_id[player_id] or nil
-  local is_moving_before = _read_bool_method(unit, "is_moving")
-  local is_forced_moving_before = _read_bool_method(unit, "is_forced_moving")
   local stop_result = move_anim.stop_player_presentation(player_id, unit, {
     stop_vehicle = _is_vehicle_anim(anim_ctx),
     emit_vehicle_stop = _vehicle_helper_method("emit_vehicle_stop"),
     stop_synthetic_ai = true,
   })
-  local is_moving_after = _read_bool_method(unit, "is_moving")
-  local is_forced_moving_after = _read_bool_method(unit, "is_forced_moving")
   local active_sequence = _get_active_sequence(board_scene, player_id)
   _debug_log(
     "finish_stop",
     "player_id=" .. tostring(player_id),
     "seq=" .. tostring(anim_ctx and anim_ctx.seq or "nil"),
     "token=" .. tostring(token),
-    "synthetic_actor=" .. tostring(stop_result.synthetic_actor == true),
-    "ai_stop=" .. tostring(stop_result.ai_stop_path or "none"),
-    "pending_ai_stop=" .. tostring(stop_result.synthetic_actor == true),
     "vehicle_stop=" .. tostring(stop_result.vehicle_stop_path or "none"),
     "motion_stop=" .. tostring(stop_result.motion_stop_path or "none"),
-    "anim_stop=" .. tostring(stop_result.anim_stop_path or "none"),
-    "is_moving_before=" .. tostring(is_moving_before),
-    "is_moving_after=" .. tostring(is_moving_after),
-    "is_forced_moving_before=" .. tostring(is_forced_moving_before),
-    "is_forced_moving_after=" .. tostring(is_forced_moving_after),
-    "role_control_lock_active=" .. tostring(anim_ctx and anim_ctx.role_control_lock_active == true),
-    "role_control_exempt=" .. tostring(anim_ctx and anim_ctx.role_control_exempt == true)
+    "anim_stop=" .. tostring(stop_result.anim_stop_path or "none")
   )
   if stop_result.synthetic_actor == true then
     move_anim.mark_pending_synthetic_ai_stop(board_scene, player_id)
@@ -576,9 +551,7 @@ function move_anim.play_sequence(board_scene, anim_ctx)
     "step_count=" .. tostring(#steps),
     "total_time=" .. tostring(total_time),
     "visited=" .. _format_visited(anim_ctx.visited),
-    "token=" .. tostring(token or "nil"),
-    "role_control_lock_active=" .. tostring(anim_ctx and anim_ctx.role_control_lock_active == true),
-    "role_control_exempt=" .. tostring(anim_ctx and anim_ctx.role_control_exempt == true)
+    "token=" .. tostring(token or "nil")
   )
   local function _run_step(step)
     if token ~= nil and not _token_matches(board_scene, player_id, token) then
