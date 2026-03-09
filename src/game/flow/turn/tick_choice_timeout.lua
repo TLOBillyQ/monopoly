@@ -1,10 +1,19 @@
 local constants = require("Config.generated.constants")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local number_utils = require("src.core.utils.number_utils")
-local gameplay_loop_ports = require("src.game.flow.turn.loop_ports")
 local choice_contract = require("src.core.choice.contract")
+local output_state_adapter = require("src.game.flow.output_adapters.output_state_adapter")
 
 local tick_choice_timeout = {}
+
+local function _resolve_output_ports(state)
+  local resolved = state and (state._resolved_gameplay_loop_ports or state.gameplay_loop_ports) or nil
+  local output_ports = type(resolved) == "table" and resolved.output or nil
+  if type(output_ports) == "table" then
+    return output_ports
+  end
+  return output_state_adapter
+end
 
 local function _resolve_choice_owner_id(game, choice)
   local owner_role_id = choice_contract.resolve_owner_role_id(choice)
@@ -38,8 +47,7 @@ function tick_choice_timeout.step(game, state, dt, opts)
   assert(opts.build_action ~= nil, "missing opts.build_action")
   assert(type(opts.dispatch_action_with_close_choice) == "function", "missing opts.dispatch_action_with_close_choice")
 
-  local ports = gameplay_loop_ports.resolve(state and state.gameplay_loop_ports or nil)
-  local output_ports = ports.output
+  local output_ports = _resolve_output_ports(state)
   local timeout = constants.action_timeout_seconds or 0
   if type(opts.get_timeout_seconds) == "function" then
     local override = opts.get_timeout_seconds(game, state)

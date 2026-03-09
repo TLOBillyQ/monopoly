@@ -2,14 +2,44 @@ local logger = require("src.core.utils.logger")
 local number_utils = require("src.core.utils.number_utils")
 local item_slot_data = require("src.game.flow.turn.item_slot_data")
 local validator = require("src.game.flow.turn.dispatch_validator")
-local gameplay_loop_ports = require("src.game.flow.turn.loop_ports")
 local runtime_state = require("src.core.state_access.runtime_state")
 local market_service = require("src.game.systems.market.market_service")
 local role_id_utils = require("src.core.utils.role_id")
+local output_state_adapter = require("src.game.flow.output_adapters.output_state_adapter")
 
 local turn_dispatch = {}
 
 local next_turn_cooldown = 0.4
+local default_ui_sync_ports = {
+  get_ui_state = function(state)
+    return state and state.ui or nil
+  end,
+  resolve_ui_gate = function()
+    return nil
+  end,
+}
+
+local default_clock_ports = {
+  wall_now_seconds = function()
+    return 0
+  end,
+  wall_diff_seconds = function(timestamp_1, timestamp_2)
+    if number_utils.is_numeric(timestamp_1) and number_utils.is_numeric(timestamp_2) then
+      return timestamp_1 - timestamp_2
+    end
+    return 0
+  end,
+}
+
+local function _resolve_port_group(state, key)
+  local resolved = state and (state._resolved_gameplay_loop_ports or state.gameplay_loop_ports) or nil
+  local group = type(resolved) == "table" and resolved[key] or nil
+  if type(group) == "table" then
+    return group
+  end
+  return nil
+end
+
 local function _reset_afk_tracking(state, actor_role_id)
   if type(state) ~= "table" then
     return
@@ -68,8 +98,8 @@ function turn_dispatch.step_turn(game)
 end
 
 function turn_dispatch.clear_choice(state, opts)
-  local ports = gameplay_loop_ports.resolve(state and state.gameplay_loop_ports or nil)
-  ports.output.clear_pending_choice(state)
+  local output_ports = _resolve_port_group(state, "output") or output_state_adapter
+  output_ports.clear_pending_choice(state)
   if opts and opts.on_close_choice then
     opts.on_close_choice(state)
   end
@@ -79,15 +109,15 @@ local function _resolve_dispatch_context(state, context)
   if context then
     return context
   end
-  local ports = gameplay_loop_ports.resolve(state and state.gameplay_loop_ports or nil)
-  local ui_sync_ports = ports.ui_sync
+  local output_ports = _resolve_port_group(state, "output") or output_state_adapter
+  local ui_sync_ports = _resolve_port_group(state, "ui_sync") or default_ui_sync_ports
+  local clock_ports = _resolve_port_group(state, "clock") or default_clock_ports
   local ui_state = ui_sync_ports.get_ui_state and ui_sync_ports.get_ui_state(state) or nil
   local item_slot_source = item_slot_data.from_ui_state(ui_state)
   return {
-    ports = ports,
-    output_ports = ports.output,
+    output_ports = output_ports,
     ui_sync_ports = ui_sync_ports,
-    clock_ports = ports.clock,
+    clock_ports = clock_ports,
     item_slot_source = item_slot_source,
   }
 end
