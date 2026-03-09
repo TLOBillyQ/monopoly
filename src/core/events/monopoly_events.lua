@@ -1,4 +1,4 @@
-local runtime_event_bridge = require("src.infrastructure.runtime.runtime_event_bridge")
+local runtime_ports = require("src.core.ports.runtime_ports")
 
 local monopoly_events = {
   movement = {
@@ -52,7 +52,7 @@ function monopoly_events.resolve_intent(kind)
 end
 
 function monopoly_events.emit(kind, payload)
-  runtime_event_bridge.emit_custom_event(kind, payload or {}, {
+  runtime_ports.emit_event(kind, payload or {}, {
     feature_key = "event." .. tostring(kind),
   })
 end

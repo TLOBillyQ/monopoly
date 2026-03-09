@@ -4,6 +4,7 @@ local _with_patches = support.with_patches
 local runtime_ports = require("src.core.ports.runtime_ports")
 local logger = require("src.core.utils.logger")
 local paid_goods_cfg = require("src.game.systems.commerce.specs.paid_goods")
+local paid_purchase_port = require("src.game.systems.market.ports.paid_purchase_port")
 
 local function _reload_bridge()
   package.loaded["src.game.systems.commerce.paid_currency_bridge"] = nil
@@ -68,13 +69,6 @@ local function _build_fake_env(game, opts)
       end,
     },
     {
-      target = runtime_ports,
-      key = "resolve_market_paid_gateway",
-      value = function()
-        return require("src.app.bootstrap.payment.eggy_paid_purchase_gateway")
-      end,
-    },
-    {
       key = "EVENT",
       value = { SPEC_ROLE_PURCHASE_GOODS = "SPEC_ROLE_PURCHASE_GOODS" },
     },
@@ -99,7 +93,11 @@ local function _with_currency_cfg(cfg, fn)
   _with_patches({
     { target = paid_goods_cfg, key = "enabled", value = true },
     { target = paid_goods_cfg, key = "currencies", value = cfg },
-  }, fn)
+  }, function()
+    paid_purchase_port.reset_for_tests()
+    paid_purchase_port.configure(require("src.app.bootstrap.payment.eggy_paid_purchase_gateway"))
+    fn()
+  end)
 end
 
 local function _collect_warn_logs(run)

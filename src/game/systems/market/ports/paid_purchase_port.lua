@@ -1,13 +1,27 @@
-local runtime_ports = require("src.core.ports.runtime_ports")
-
 local port = {}
+local configured_gateway = nil
+
+local function _assert_gateway_shape(gateway)
+  assert(type(gateway) == "table", "invalid market paid gateway")
+  assert(type(gateway.setup_for_game) == "function", "market paid gateway missing setup_for_game")
+  assert(type(gateway.can_start) == "function", "market paid gateway missing can_start")
+  assert(type(gateway.start) == "function", "market paid gateway missing start")
+  return gateway
+end
 
 local function _resolve_gateway()
-  local resolver = runtime_ports.resolve_market_paid_gateway
-  if type(resolver) ~= "function" then
+  if configured_gateway == nil then
     return nil
   end
-  return resolver()
+  return configured_gateway
+end
+
+function port.configure(gateway)
+  configured_gateway = _assert_gateway_shape(gateway)
+end
+
+function port.reset_for_tests()
+  configured_gateway = nil
 end
 
 function port.setup_for_game(game, on_purchase)

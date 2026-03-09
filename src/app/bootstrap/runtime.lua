@@ -1,6 +1,8 @@
 local runtime_context = require("src.infrastructure.runtime.runtime_context")
+local default_ports = require("src.infrastructure.runtime.default_ports")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_global_aliases = require("src.app.bootstrap.runtime.global_aliases")
+local paid_purchase_port = require("src.game.systems.market.ports.paid_purchase_port")
 local config_sanity = require("src.core.config.config_sanity")
 
 local M = {}
@@ -33,6 +35,11 @@ function M.install(opts)
   end
 
   runtime_ports.reset_for_tests()
+  paid_purchase_port.reset_for_tests()
+  if runtime_ctx ~= nil then
+    runtime_ports.configure(default_ports.build(runtime_context))
+  end
+  paid_purchase_port.configure(require("src.app.bootstrap.payment.eggy_paid_purchase_gateway"))
   require "src.game.systems.endgame.bankruptcy"
   require "src.game.core.ai.agent"
   require "src.game.systems.endgame.game_victory"

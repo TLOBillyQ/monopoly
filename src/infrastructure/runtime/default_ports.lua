@@ -1,5 +1,6 @@
 local default_ports = {}
 local number_utils = require("src.core.utils.number_utils")
+local runtime_event_bridge = require("src.infrastructure.runtime.runtime_event_bridge")
 local game_api_key = "Game" .. "API"
 local lua_api_key = "Lua" .. "API"
 
@@ -130,16 +131,9 @@ function default_ports.build(runtime_context)
     return nil
   end
 
-  function defaults.emit_event(event_name, payload)
-    if event_name == nil then
-      return false
-    end
-    local lua_api = _current_lua_api(runtime_context)
-    if not (lua_api and type(lua_api.global_send_custom_event) == "function") then
-      return false
-    end
-    local ok = pcall(lua_api.global_send_custom_event, event_name, payload or {})
-    return ok
+  function defaults.emit_event(event_name, payload, opts)
+    local ok = runtime_event_bridge.emit_custom_event(event_name, payload or {}, opts)
+    return ok == true
   end
 
   function defaults.wall_now_seconds()
@@ -186,10 +180,6 @@ function default_ports.build(runtime_context)
       return timestamp_1 - timestamp_2
     end
     return 0
-  end
-
-  function defaults.resolve_market_paid_gateway()
-    return require("src.app.bootstrap.payment.eggy_paid_purchase_gateway")
   end
 
   return defaults

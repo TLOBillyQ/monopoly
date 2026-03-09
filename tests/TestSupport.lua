@@ -26,7 +26,9 @@ local tiles_cfg = require("Config.generated.tiles")
 local number_utils = require("src.core.utils.number_utils")
 local tile = require("src.game.systems.board.tile")
 local runtime_context = require("src.infrastructure.runtime.runtime_context")
+local default_ports = require("src.infrastructure.runtime.default_ports")
 local runtime_ports = require("src.core.ports.runtime_ports")
+local paid_purchase_port = require("src.game.systems.market.ports.paid_purchase_port")
 
 if not math.tofixed then
   function math.tofixed(value)
@@ -137,11 +139,10 @@ local function _refresh_runtime_context_for_tests()
   end
   runtime_context.install_runtime_helpers(ctx, { install_globals = false })
   runtime_context.set_current(ctx)
-  runtime_ports.configure({
-    resolve_market_paid_gateway = function()
-      return require("src.app.bootstrap.payment.eggy_paid_purchase_gateway")
-    end,
-  })
+  runtime_ports.reset_for_tests()
+  runtime_ports.configure(default_ports.build(runtime_context))
+  paid_purchase_port.reset_for_tests()
+  paid_purchase_port.configure(require("src.app.bootstrap.payment.eggy_paid_purchase_gateway"))
   logger.configure_host_runtime({
     game_api = GameAPI,
     tip_presenter = function(text, duration)

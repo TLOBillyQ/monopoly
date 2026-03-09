@@ -5,10 +5,16 @@ local _with_patches = support.with_patches
 local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_context = require("src.infrastructure.runtime.runtime_context")
 local runtime_install = require("src.app.bootstrap.runtime")
+local default_ports = require("src.infrastructure.runtime.default_ports")
 
 local function _reset_runtime_contract_state()
   runtime_ports.reset_for_tests()
   runtime_context.set_current(nil)
+end
+
+local function _set_current_runtime_context(ctx)
+  runtime_context.set_current(ctx)
+  runtime_ports.configure(default_ports.build(runtime_context))
 end
 
 local function _test_runtime_ports_strict_mode_requires_context()
@@ -35,7 +41,7 @@ local function _test_runtime_ports_resolve_roles_prefers_context_over_globals()
   ctx.roles = { { id = 2 } }
   ctx.camera_helper = { id = "camera_ctx" }
   ctx.change_skin_helper = { id = "change_skin_ctx" }
-  runtime_context.set_current(ctx)
+  _set_current_runtime_context(ctx)
   _with_patches({
     { key = "all_roles", value = { { id = 1 } } },
     { key = "camera_helper", value = { id = "camera_global" } },
@@ -152,7 +158,7 @@ local function _test_runtime_ports_resolve_roles_refreshes_empty_context_from_ga
     },
   })
   ctx.roles = {}
-  runtime_context.set_current(ctx)
+  _set_current_runtime_context(ctx)
   _with_patches({}, function()
     local roles = runtime_ports.resolve_roles()
     _assert_eq(#roles, 1, "resolve_roles should refresh empty context roles from GameAPI")
@@ -182,7 +188,7 @@ local function _test_runtime_ports_resolve_role_uses_zero_arity_get_roleid_and_i
 
   local ctx = runtime_context.new({})
   ctx.roles = { role_with_strict_getter, role_with_failing_getter }
-  runtime_context.set_current(ctx)
+  _set_current_runtime_context(ctx)
 
   local resolved_by_getter = runtime_ports.resolve_role(7)
   _assert_eq(resolved_by_getter, role_with_strict_getter, "resolve_role should match get_roleid result")

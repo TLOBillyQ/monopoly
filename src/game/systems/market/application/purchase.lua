@@ -3,7 +3,7 @@ local context = require("src.game.systems.market.application.context")
 local market_feedback = require("src.game.systems.market.application.feedback")
 local purchase_policy = require("src.game.systems.market.application.purchase_policy")
 local local_purchase = require("src.game.systems.market.application.local_purchase")
-local paid_fulfillment = require("src.game.systems.market.application.paid_fulfillment")
+local paid_purchase_callback = require("src.game.systems.market.application.paid_purchase_callback")
 local paid_purchase_gateway = require("src.game.systems.market.ports.paid_purchase_port")
 local number_utils = require("src.core.utils.number_utils")
 
@@ -23,11 +23,7 @@ local function _is_release_build()
 end
 
 function purchase.setup_for_game(game)
-  paid_purchase_gateway.setup_for_game(game, paid_fulfillment.handle_callback)
-end
-
-function purchase.can_start_external_purchase(game, player, entry)
-  return paid_purchase_gateway.can_start(game, player, entry)
+  paid_purchase_gateway.setup_for_game(game, paid_purchase_callback.handle)
 end
 
 function purchase.execute(game, player, product_id, opts)
