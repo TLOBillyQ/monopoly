@@ -18,7 +18,7 @@
 
     lua scripts/architecture/arch_view_cli.lua scan --out /tmp/monopoly_architecture.json
 
-这会导出完整机器可读数据，包含 `graph`、`modules`、`layout`、`views` 与 `check`。
+这会导出完整机器可读数据，包含 `graph`、`modules`、`layout`、`classified_edges`、`views` 与 `check`。第二阶段开始，`views[*]` 还会带上 `display_edges`、`route_points`、`indicators`、`full_name`、`incoming_dependencies`、`outgoing_dependencies` 等 viewer 渲染字段。
 
     lua scripts/architecture/arch_view_cli.lua viewer --out-dir /tmp/monopoly_arch_view
 
@@ -28,4 +28,6 @@
 
 根视图直接展示 `app`、`core`、`game`、`infrastructure`、`presentation` 五个顶层子树。点击非叶子节点会继续下钻；点击叶子节点会在右侧看到源码、内部依赖、外部依赖、组件、层级、抽象标记与循环标记。
 
-红色节点或红色边表示该节点子树或该聚合边中包含当前循环依赖。绿色节点表示它包含抽象契约，目前主要对应 `src.core.ports.*` 与 `src.game.ports.*`。
+第二阶段 viewer 额外增加了三类交互。第一，每个节点顶部/底部会出现 incoming/outgoing 依赖三角，悬浮后显示当前聚合依赖条目列表。第二，视图中央会绘制 `display_edges` 的正交折线路由与箭头，不再只在 inspector 中展示边。第三，breadcrumb 与 `Back` 现在会恢复上一视图的滚动位置与选中叶子状态，便于在多层 drill-down 之间来回查看。
+
+红色节点、红色边或红色三角 tooltip 行表示该节点子树或该依赖条目涉及当前循环依赖。绿色节点表示它包含抽象契约，目前主要对应 `src.core.ports.*` 与 `src.game.ports.*`。叶子节点默认展示源码文件 basename，悬浮时再显示去掉顶层 `src` 前缀后的 full name。

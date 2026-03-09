@@ -46,7 +46,7 @@ Port 目录在本轮之后固定分成三类，而且三类名字不能混用。
 
 第七，只有 `src/app/bootstrap/*`、`src/game/flow/turn/*` 与测试夹具可以直接拼装 `loop_ports` 分组 override。其他目录如果只是想拿某一项能力，应该依赖对应的广义 runtime contract 或 gameplay Port，而不是把 `loop_ports` 当成一个新的“万能 Port 容器”。
 
-第八，模块级 `require` 结构边界的可执行真源现在收拢到 `scripts/architecture/monopoly_architecture.lua`。`arch_view` 负责扫描 `src/**/*.lua`、输出层级视图、检查禁止依赖和循环基线；`tests/internal/dep_rules.lua` 继续保留文本模式护栏，例如宿主 API、旧路径、growth budget 与 runtime 字段直读，不再重复维护同一批模块依赖规则。
+第八，模块级 `require` 结构边界的可执行真源现在收拢到 `scripts/architecture/monopoly_architecture.lua`。`arch_view` 负责扫描 `src/**/*.lua`、输出层级视图、检查禁止依赖和循环基线；第二阶段开始，`viewer --out-dir` 导出的静态页面还会带上 routed edges、incoming/outgoing dependency triangles、tooltip 与返回状态恢复，作为本地查看依赖图的默认入口。`tests/internal/dep_rules.lua` 继续保留文本模式护栏，例如宿主 API、旧路径、growth budget 与 runtime 字段直读，不再重复维护同一批模块依赖规则。
 
 第九，`arch_view` 当前基线化了 3 个已知循环依赖：`runtime_ports/default_ports/payment gateway`、`turn dispatch/loop_ports/tick_*`、`market application choice/session/purchase`。这表示“先可视化并防新增”，不表示这些循环是理想设计；新增循环、扩大循环，或循环已消失但基线未更新，都会让 `arch_view` 护栏失败。
 
