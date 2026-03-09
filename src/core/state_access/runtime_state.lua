@@ -150,6 +150,28 @@ function runtime_state.ensure_turn_runtime(state)
   _ensure_field(turn_runtime, "afk_actor_role_id", nil)
   _ensure_field(turn_runtime, "afk_elapsed_seconds", 0)
   _ensure_field(turn_runtime, "afk_tracking_active", false)
+  if type(turn_runtime.landing_visual_hold) ~= "table" then
+    turn_runtime.landing_visual_hold = {
+      active = false,
+      release_pending = false,
+      flushing = false,
+      frozen_ui_model = nil,
+      deferred_dirty = {
+        any = false,
+        players = false,
+        board_tiles = false,
+        turn = false,
+        market = false,
+        turn_countdown = false,
+        inventory_ids = {},
+      },
+      deferred_popups = {},
+      deferred_runtime_events = {},
+      deferred_tile_updates = {},
+      deferred_owner_changes = {},
+      deferred_bankruptcy_clears = {},
+    }
+  end
   if type(turn_runtime.afk_elapsed_seconds_by_role) ~= "table" then
     turn_runtime.afk_elapsed_seconds_by_role = {}
   end

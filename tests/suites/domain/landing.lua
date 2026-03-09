@@ -17,6 +17,7 @@ local gameplay_rules = require("src.core.config.gameplay_rules")
 local monopoly_event = require("src.core.events.monopoly_events")
 local runtime_event_bridge = require("src.infrastructure.runtime.event_bridge")
 local move_followup = require("src.game.flow.turn.move_followup")
+local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 
 local function _install_narrow_ports(game, ui_port)
   game.ui_port = ui_port
@@ -135,6 +136,7 @@ end
 local function _test_turn_land_bridges_to_wait_action_anim_for_chance()
   local g = _new_game()
   _set_ui_port(g, { wait_action_anim = true })
+  landing_visual_hold.start(g)
   local p = g:current_player()
   local idx, tile_ref = _first_tile_by_type(g.board, "chance")
   g:update_player_position(p, idx)
@@ -144,8 +146,10 @@ local function _test_turn_land_bridges_to_wait_action_anim_for_chance()
     { key = "LuaAPI", value = patched },
     { target = patched, key = "rand", value = function() return 0 end },
   }, function()
-    local next_state, _ = land({ game = g }, { player = p, move_result = {} })
-    assert(next_state == "wait_action_anim", "chance landing should bridge to wait_action_anim")
+    local next_state, next_args = land({ game = g }, { player = p, move_result = {} })
+    assert(next_state == "wait_landing_visual", "chance landing should defer visual release before action anim")
+    assert(next_args and next_args.next_state == "wait_action_anim",
+      "chance landing should resume into wait_action_anim after visual hold")
     assert(g.turn.action_anim and g.turn.action_anim.kind == "chance", "chance action anim should be queued")
   end)
 end
@@ -153,6 +157,7 @@ end
 local function _test_turn_land_bridges_to_wait_action_anim_for_item()
   local g = _new_game()
   _set_ui_port(g, { wait_action_anim = true })
+  landing_visual_hold.start(g)
   local p = g:current_player()
   local idx, tile_ref = _first_tile_by_type(g.board, "item")
   g:update_player_position(p, idx)
@@ -161,8 +166,10 @@ local function _test_turn_land_bridges_to_wait_action_anim_for_item()
       return { id = 2001, name = item_inventory.item_name(2001) }
     end },
   }, function()
-    local next_state, _ = land({ game = g }, { player = p, move_result = {} })
-    assert(next_state == "wait_action_anim", "item landing should bridge to wait_action_anim")
+    local next_state, next_args = land({ game = g }, { player = p, move_result = {} })
+    assert(next_state == "wait_landing_visual", "item landing should defer visual release before action anim")
+    assert(next_args and next_args.next_state == "wait_action_anim",
+      "item landing should resume into wait_action_anim after visual hold")
     assert(g.turn.action_anim and g.turn.action_anim.kind == "item_use", "item action anim should be queued")
     assert(g.turn.action_anim and g.turn.action_anim.item_id == 2001, "item action anim item_id mismatch")
   end)
@@ -469,8 +476,14 @@ return {
     { name = "landing_optional_waits_without_ui_and_can_resolve", run = _test_landing_optional_waits_without_ui_and_can_resolve },
     { name = "landing_optional_stale_choice_is_blocked", run = _test_landing_optional_stale_choice_is_blocked },
     { name = "zero_cash_no_buy_choice", run = _test_zero_cash_no_buy_choice },
-    { name = "turn_land_bridges_to_wait_action_anim_for_chance", run = _test_turn_land_bridges_to_wait_action_anim_for_chance },
-    { name = "turn_land_bridges_to_wait_action_anim_for_item", run = _test_turn_land_bridges_to_wait_action_anim_for_item },
+    {
+      name = "turn_land_bridges_to_wait_action_anim_for_chance",
+      run = _test_turn_land_bridges_to_wait_action_anim_for_chance,
+    },
+    {
+      name = "turn_land_bridges_to_wait_action_anim_for_item",
+      run = _test_turn_land_bridges_to_wait_action_anim_for_item,
+    },
     { name = "item_landing_pushes_popup_on_success", run = _test_item_landing_pushes_popup_on_success },
     { name = "item_landing_full_inventory_no_duplicate_success_popup", run = _test_item_landing_full_inventory_no_duplicate_success_popup },
     { name = "chance_landing_pushes_popup", run = _test_chance_landing_pushes_popup },

@@ -2,9 +2,10 @@ local monopoly_event = require("src.core.events.monopoly_events")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local host_runtime = require("src.presentation.runtime.host")
 local board_feedback = require("src.presentation.view.render.board_feedback_service")
+local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 
 local event_handlers = {}
-local context = { installed = false, logger = nil, state = nil }
+local context = { installed = false, logger = nil, state = nil, handlers_by_event = {} }
 local MARKET_BUY_FAILED_MIN_TIP_SECONDS = 3.0
 
 local function _resolve_market_buy_failed_tip(event_data)
@@ -78,8 +79,36 @@ function event_handlers.install(_, logger, state)
     return nil
   end
 
-  for _, event_name in ipairs(log_events) do
+  local function _dispatch_or_defer(event_name, data, handler)
+    local current_state = context.state
+    if current_state then
+      landing_visual_hold.sync_state_from_game(current_state, current_state.game)
+    end
+    if current_state
+        and landing_visual_hold.is_active_state(current_state)
+        and not landing_visual_hold.is_flushing_state(current_state) then
+      landing_visual_hold.defer_runtime_event(current_state, event_name, data, function(payload)
+        handler(payload)
+      end)
+      return
+    end
+    handler(data)
+  end
+
+  local function _register_handler(event_name, handler)
+    local list = context.handlers_by_event[event_name]
+    if type(list) ~= "table" then
+      list = {}
+      context.handlers_by_event[event_name] = list
+    end
+    list[#list + 1] = handler
     host_runtime.register_custom_event(event_name, function(_, _, data)
+      _dispatch_or_defer(event_name, data, handler)
+    end)
+  end
+
+  for _, event_name in ipairs(log_events) do
+    _register_handler(event_name, function(data)
       local event_data = _event_data(data)
       local log = context.logger
       if log and event_data and event_data.text then
@@ -89,7 +118,7 @@ function event_handlers.install(_, logger, state)
   end
 
   for _, event_name in ipairs(movement_log_events) do
-    host_runtime.register_custom_event(event_name, function(_, _, data)
+    _register_handler(event_name, function(data)
       local event_data = _event_data(data)
       local log = context.logger
       if log and event_data and event_data.text then
@@ -120,7 +149,7 @@ function event_handlers.install(_, logger, state)
     return nil
   end
 
-  host_runtime.register_custom_event(monopoly_event.movement.roadblock_hit, function(_, _, data)
+  _register_handler(monopoly_event.movement.roadblock_hit, function(data)
     local idx = _resolve_tile_index(data)
     local ctx = context.state
     if ok and action_anim and idx and ctx then
@@ -128,7 +157,7 @@ function event_handlers.install(_, logger, state)
     end
   end)
 
-  host_runtime.register_custom_event(monopoly_event.land.mine_hit, function(_, _, data)
+  _register_handler(monopoly_event.land.mine_hit, function(data)
     local idx = _resolve_tile_index(data)
     local ctx = context.state
     if ok and action_anim and idx and ctx then
@@ -141,7 +170,7 @@ function event_handlers.install(_, logger, state)
     end
   end)
 
-  host_runtime.register_custom_event(monopoly_event.land.rent_paid, function(_, _, data)
+  _register_handler(monopoly_event.land.rent_paid, function(data)
     local event_data = _event_data(data)
     local ctx = context.state
     local owner = event_data and event_data.owner or nil
@@ -150,7 +179,7 @@ function event_handlers.install(_, logger, state)
     end
   end)
 
-  host_runtime.register_custom_event(monopoly_event.land.rent_bankrupt, function(_, _, data)
+  _register_handler(monopoly_event.land.rent_bankrupt, function(data)
     local event_data = _event_data(data)
     local ctx = context.state
     local owner = event_data and event_data.owner or nil
@@ -159,7 +188,7 @@ function event_handlers.install(_, logger, state)
     end
   end)
 
-  host_runtime.register_custom_event(monopoly_event.land.tax_paid, function(_, _, data)
+  _register_handler(monopoly_event.land.tax_paid, function(data)
     local event_data = _event_data(data)
     local ctx = context.state
     local player = event_data and event_data.player or nil
@@ -168,7 +197,7 @@ function event_handlers.install(_, logger, state)
     end
   end)
 
-  host_runtime.register_custom_event(monopoly_event.chance.applied, function(_, _, data)
+  _register_handler(monopoly_event.chance.applied, function(data)
     local event_data = _event_data(data)
     local ctx = context.state
     local player = event_data and event_data.player or nil
@@ -178,7 +207,7 @@ function event_handlers.install(_, logger, state)
     end
   end)
 
-  host_runtime.register_custom_event(monopoly_event.feedback.turn_started, function(_, _, data)
+  _register_handler(monopoly_event.feedback.turn_started, function(data)
     local event_data = _event_data(data)
     local ctx = context.state
     local player_id = event_data and (event_data.player_id or (event_data.player and event_data.player.id)) or nil
@@ -187,7 +216,7 @@ function event_handlers.install(_, logger, state)
     end
   end)
 
-  host_runtime.register_custom_event(monopoly_event.feedback.status_applied, function(_, _, data)
+  _register_handler(monopoly_event.feedback.status_applied, function(data)
     local event_data = _event_data(data)
     local ctx = context.state
     local cue_name = event_data and event_data.cue_name or nil
@@ -202,7 +231,7 @@ function event_handlers.install(_, logger, state)
     end
   end)
 
-  host_runtime.register_custom_event(monopoly_event.feedback.deity_applied, function(_, _, data)
+  _register_handler(monopoly_event.feedback.deity_applied, function(data)
     local event_data = _event_data(data)
     local ctx = context.state
     local deity_type = event_data and event_data.deity_type or nil
@@ -218,7 +247,7 @@ function event_handlers.install(_, logger, state)
     end
   end)
 
-  host_runtime.register_custom_event(monopoly_event.feedback.bankruptcy, function(_, _, data)
+  _register_handler(monopoly_event.feedback.bankruptcy, function(data)
     local event_data = _event_data(data)
     local ctx = context.state
     local player_id = event_data and (event_data.player_id or (event_data.player and event_data.player.id)) or nil
@@ -227,13 +256,13 @@ function event_handlers.install(_, logger, state)
     end
   end)
 
-  host_runtime.register_custom_event(monopoly_event.market.buy_failed, function(_, _, data)
+  _register_handler(monopoly_event.market.buy_failed, function(data)
     local event_data = _event_data(data)
     local tip_text = _resolve_market_buy_failed_tip(event_data)
     host_runtime.show_tips(tip_text, MARKET_BUY_FAILED_MIN_TIP_SECONDS)
   end)
 
-  host_runtime.register_custom_event(monopoly_event.game.finished, function(_, _, data)
+  _register_handler(monopoly_event.game.finished, function(data)
     local event_data = _event_data(data)
     _apply_game_result_panels(event_data)
   end)

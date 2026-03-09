@@ -4,6 +4,7 @@ local number_utils = require("src.core.utils.number_utils")
 local monopoly_event = require("src.core.events.monopoly_events")
 local host_runtime = require("src.presentation.runtime.host")
 local board_feedback = require("src.presentation.view.render.board_feedback_service")
+local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 
 if not math.Vector3 then
   function math.Vector3(x, y, z)
@@ -313,6 +314,61 @@ local function _test_negative_chance_routes_generic_negative_cue()
   assert(calls[1].player_id == 4, "negative chance should target payload player id")
 end
 
+local function _test_turn_started_feedback_defers_during_landing_hold()
+  local handlers = {}
+  local calls = {}
+  local state = {
+    game = {
+      turn = {
+        landing_visual_hold_active = true,
+        landing_visual_release_pending = false,
+        landing_visual_wait_started = false,
+        landing_visual_wait_ready = false,
+      },
+      dirty = {
+        any = false,
+        turn = false,
+      },
+    },
+  }
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "register_custom_event",
+      value = function(event_name, handler)
+        handlers[event_name] = handler
+        return true
+      end,
+    },
+    {
+      target = board_feedback,
+      key = "play_player_cue",
+      value = function(_, cue_name, player_id)
+        calls[#calls + 1] = { cue_name = cue_name, player_id = player_id }
+        return true
+      end,
+    },
+  }, function()
+    local event_handlers = _load_fresh_handlers()
+    event_handlers.install(nil, nil, state)
+    local handler = handlers[monopoly_event.feedback.turn_started]
+    assert(type(handler) == "function", "turn_started handler should be registered")
+    handler(nil, nil, { player_id = 5 })
+    assert(#calls == 0, "landing hold should defer turn_started cue")
+
+    local hold = state.turn_runtime and state.turn_runtime.landing_visual_hold or nil
+    assert(hold and #hold.deferred_runtime_events == 1, "landing hold should queue deferred runtime event")
+
+    state.game.turn.landing_visual_release_pending = true
+    landing_visual_hold.release(state, state.game)
+  end)
+
+  assert(#calls == 1, "releasing landing hold should replay deferred runtime event")
+  assert(calls[1].cue_name == "turn_started", "replayed turn_started cue mismatch")
+  assert(calls[1].player_id == 5, "replayed turn_started player mismatch")
+end
+
 return {
   name = "presentation_ui.event_handlers",
   tests = {
@@ -343,6 +399,10 @@ return {
     {
       name = "negative_chance_routes_generic_negative_cue",
       run = _test_negative_chance_routes_generic_negative_cue,
+    },
+    {
+      name = "turn_started_feedback_defers_during_landing_hold",
+      run = _test_turn_started_feedback_defers_during_landing_hold,
     },
   },
 }

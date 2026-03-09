@@ -42,6 +42,7 @@ local move_followup = require("src.game.flow.turn.move_followup")
 local intent_dispatcher = require("src.game.flow.intent.intent_dispatcher")
 local game_startup = require("src.app.bootstrap.game_startup")
 local game_startup_event_bridge = require("src.app.bootstrap.game_startup_event_bridge")
+local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
 local monopoly_event = require("src.core.events.monopoly_events")
 local number_utils = require("src.core.utils.number_utils")
@@ -2494,6 +2495,63 @@ local function _test_gameplay_loop_set_game_uses_narrow_runtime_ports()
   assert(state._last_tile_owner and state._last_tile_owner.owner_id == 22, "tile_owner_notifier should forward owner id")
 end
 
+local function _test_gameplay_loop_set_game_defers_visual_ports_during_landing_hold()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local cleared = {}
+
+  state.wait_move_anim = true
+  state.wait_action_anim = true
+  state.push_popup = function(_, payload)
+    state._last_popup = payload
+    return true
+  end
+  state.on_tile_owner_changed = function(_, tile_id, owner_id)
+    state._last_tile_owner = { tile_id = tile_id, owner_id = owner_id }
+  end
+  state.on_tile_upgraded = function(_, tile_id, level)
+    state._last_tile_upgrade = { tile_id = tile_id, level = level }
+  end
+  state.gameplay_loop_ports = _build_test_ports({
+    on_bankruptcy_tiles_cleared = function(_, player, owned_tile_ids)
+      cleared[#cleared + 1] = {
+        player_id = player and player.id or nil,
+        owned_tile_ids = owned_tile_ids,
+      }
+      return true
+    end,
+    update_countdown = function() end,
+    refresh_from_dirty = function()
+      return false
+    end,
+    sync_status_3d = function() end,
+    sync_debug_log = function() end,
+  })
+
+  gameplay_loop.set_game(state, g)
+
+  g.turn.landing_visual_hold_active = true
+  landing_visual_hold.sync_state_from_game(state, g)
+
+  g.popup_port:push_popup({ kind = "held_popup" })
+  g.tile_owner_notifier:notify_owner_changed(11, 22)
+  g.tile_feedback_port:on_tile_upgraded(33, 2)
+  g.bankruptcy_feedback_port:on_tiles_cleared(g, g.players[1], { 44 })
+
+  assert(state._last_popup == nil, "popup should be deferred during landing hold")
+  assert(state._last_tile_owner == nil, "tile owner change should be deferred during landing hold")
+  assert(state._last_tile_upgrade == nil, "tile upgrade should be deferred during landing hold")
+  assert(#cleared == 0, "bankruptcy clear should be deferred during landing hold")
+
+  g.turn.landing_visual_release_pending = true
+  gameplay_loop.tick(g, state, 0.1)
+
+  assert(state._last_popup and state._last_popup.kind == "held_popup", "popup should flush after landing hold release")
+  assert(state._last_tile_owner and state._last_tile_owner.tile_id == 11, "tile owner should flush after release")
+  assert(state._last_tile_upgrade and state._last_tile_upgrade.level == 2, "tile upgrade should flush after release")
+  assert(#cleared == 1 and cleared[1].owned_tile_ids[1] == 44, "bankruptcy clear should flush after release")
+end
+
 local function _test_gameplay_loop_refresh_drives_camera_follow_via_port()
   local g = _new_game()
   local state = _build_loop_state()
@@ -3011,6 +3069,7 @@ return {
   _test_turn_start_emits_turn_started_feedback_event,
   _test_turn_dispatch_uses_clock_ports_without_game_api,
   _test_gameplay_loop_set_game_uses_narrow_runtime_ports,
+  _test_gameplay_loop_set_game_defers_visual_ports_during_landing_hold,
   _test_gameplay_loop_refresh_drives_camera_follow_via_port,
   _test_gameplay_loop_camera_follow_skips_eliminated_current_player,
   _test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics,

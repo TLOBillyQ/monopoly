@@ -1,5 +1,6 @@
 local support = require("TestSupport")
 local turn_engine = require("src.game.flow.turn.engine")
+local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 
 ---------------------------------------------------------------------------
 -- 1. coroutine mode default
@@ -140,7 +141,32 @@ local function _test_coroutine_mode_resolves_detained_wait()
 end
 
 ---------------------------------------------------------------------------
--- 6. full turn lifecycle (start -> roll -> move -> landing -> post -> end)
+-- 6. wait_landing_visual
+---------------------------------------------------------------------------
+local function _test_coroutine_mode_resolves_wait_landing_visual()
+  local g = support.new_game()
+  landing_visual_hold.start(g)
+
+  g.turn_engine = turn_engine:new(g, {
+    start = function()
+      return "wait_landing_visual", { next_state = "done", next_args = {} }
+    end,
+    done = function()
+      return nil
+    end,
+  })
+
+  g:advance_turn()
+  assert(g.turn.phase == "wait_landing_visual", "should enter wait_landing_visual")
+  assert(g.turn.landing_visual_wait_ready == true, "wait_landing_visual should arm release callback")
+
+  g:advance_turn()
+  assert(g.turn.phase ~= "wait_landing_visual", "second advance should leave wait_landing_visual")
+  assert(g.turn.landing_visual_release_pending == true, "wait_landing_visual should mark release pending")
+end
+
+---------------------------------------------------------------------------
+-- 7. full turn lifecycle (start -> roll -> move -> landing -> post -> end)
 ---------------------------------------------------------------------------
 local function _test_coroutine_mode_full_turn_lifecycle()
   local g = support.new_game()
@@ -209,6 +235,10 @@ return {
     {
       name = "coroutine_mode_resolves_detained_wait",
       run = _test_coroutine_mode_resolves_detained_wait,
+    },
+    {
+      name = "coroutine_mode_resolves_wait_landing_visual",
+      run = _test_coroutine_mode_resolves_wait_landing_visual,
     },
     {
       name = "coroutine_mode_full_turn_lifecycle",

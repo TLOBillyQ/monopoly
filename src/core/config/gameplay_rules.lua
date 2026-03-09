@@ -10,6 +10,7 @@ local gameplay_rules = {
   auto_popup_min_visible_seconds = 3.0,
   popup_auto_close_seconds = 2.0,
   action_anim_default_seconds = 2.0,
+  landing_visual_hold_seconds = 0.1,
   item_slot_highlight_anim_delay_seconds = 0.35,
   ai_auto_turn_interval_seconds = 1.0,
   afk_auto_host_seconds = 90,

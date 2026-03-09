@@ -1,6 +1,7 @@
 local steal = require("src.game.systems.items.steal")
 local market_service = require("src.game.systems.market")
 local intent_dispatcher = require("src.game.flow.intent.intent_dispatcher")
+local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 
 local move_followup = {}
 
@@ -96,6 +97,7 @@ local function _handle_resume_turn_move(game, args)
     end
   end
 
+  landing_visual_hold.start(game)
   return "landing", {
     player = player,
     move_result = move_result,
@@ -106,6 +108,7 @@ local function _handle_resolve_landing(game, args)
   local player = _resolve_player(game, args)
   local move_result = args.move_result
   _apply_roadblock_detain(game, player, move_result)
+  landing_visual_hold.start(game)
   return "landing", {
     player = player,
     move_result = move_result,

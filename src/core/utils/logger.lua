@@ -17,6 +17,7 @@ local logger = {
   tip_epoch = 0,
   tip_presenter = nil,
   scheduler = nil,
+  event_buffer_stack = {},
 }
 local number_utils = require("src.core.utils.number_utils")
 
@@ -89,6 +90,14 @@ local function _show_tip_immediately(text, duration)
     return ok
   end
   return false
+end
+
+local function _active_event_buffer()
+  local stack = logger.event_buffer_stack
+  if type(stack) ~= "table" or #stack == 0 then
+    return nil
+  end
+  return stack[#stack]
 end
 
 local function _dispatch_next_tip()
@@ -166,6 +175,22 @@ local function _push(level, ...)
     end
   end
   local text = _stringify(text_start, ...)
+  if level == "event" then
+    local active_buffer = _active_event_buffer()
+    if type(active_buffer) == "table" then
+      local entries = active_buffer.entries
+      if type(entries) ~= "table" then
+        entries = {}
+        active_buffer.entries = entries
+      end
+      entries[#entries + 1] = {
+        level = level,
+        text = text,
+        no_tip = no_tip,
+      }
+      return
+    end
+  end
   if level == "event" and not no_tip then
     logger.show_tip(text, 2.0)
   end
@@ -297,6 +322,7 @@ function logger.clear()
   logger.tip_queue = {}
   logger.tip_active = false
   logger.tip_epoch = (logger.tip_epoch or 0) + 1
+  logger.event_buffer_stack = {}
 end
 
 function logger.get_seq()
@@ -359,6 +385,63 @@ function logger.get_text_by_level(level, max_lines)
     lines[#lines + 1] = _format_entry(entry)
   end
   return table.concat(lines, "\n")
+end
+
+function logger.push_event_buffer(buffer)
+  assert(type(buffer) == "table", "missing event buffer")
+  local stack = logger.event_buffer_stack
+  if type(stack) ~= "table" then
+    stack = {}
+    logger.event_buffer_stack = stack
+  end
+  for _, current in ipairs(stack) do
+    if current == buffer then
+      return buffer
+    end
+  end
+  if type(buffer.entries) ~= "table" then
+    buffer.entries = {}
+  end
+  stack[#stack + 1] = buffer
+  return buffer
+end
+
+function logger.pop_event_buffer(buffer)
+  local stack = logger.event_buffer_stack
+  if type(stack) ~= "table" or #stack == 0 then
+    return nil
+  end
+  if buffer == nil then
+    return table.remove(stack)
+  end
+  for index = #stack, 1, -1 do
+    if stack[index] == buffer then
+      return table.remove(stack, index)
+    end
+  end
+  return nil
+end
+
+function logger.flush_event_buffer(buffer)
+  if type(buffer) ~= "table" then
+    return false
+  end
+  if _active_event_buffer() == buffer then
+    logger.pop_event_buffer(buffer)
+  end
+  local entries = buffer.entries
+  if type(entries) ~= "table" or #entries == 0 then
+    return false
+  end
+  buffer.entries = {}
+  for _, entry in ipairs(entries) do
+    if entry.no_tip == true then
+      _push("event", { no_tip = true }, entry.text or "")
+    else
+      _push("event", entry.text or "")
+    end
+  end
+  return true
 end
 
 return logger

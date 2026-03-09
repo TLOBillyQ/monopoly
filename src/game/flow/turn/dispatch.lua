@@ -93,7 +93,9 @@ end
 
 function turn_dispatch.step_turn(game)
   assert(game ~= nil, "missing game")
-  assert(not game.finished, "game finished")
+  if game.finished then
+    return
+  end
   game:advance_turn()
 end
 

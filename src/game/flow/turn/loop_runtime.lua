@@ -1,9 +1,13 @@
 local runtime_state = require("src.core.state_access.runtime_state")
+local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 
 local runtime = {}
 
 function runtime.is_phase_input_blocked(phase)
-  return phase == "wait_move_anim" or phase == "wait_action_anim" or phase == "detained_wait"
+  return phase == "wait_move_anim"
+    or phase == "wait_action_anim"
+    or phase == "wait_landing_visual"
+    or phase == "detained_wait"
 end
 
 function runtime.sync_input_blocked(state, phase, ports)
@@ -65,6 +69,15 @@ function runtime.build_popup_port(state)
 
   local port = {}
   port.push_popup = function(_, payload, opts)
+    if landing_visual_hold.is_active_state(state) and not landing_visual_hold.is_flushing_state(state) then
+      landing_visual_hold.defer_popup(state, payload, opts, function(inner_payload, inner_opts)
+        if type(state.push_popup) == "function" then
+          return state:push_popup(inner_payload, inner_opts)
+        end
+        return false
+      end)
+      return true
+    end
     if type(state.push_popup) == "function" then
       return state:push_popup(payload, opts)
     end
@@ -83,6 +96,16 @@ function runtime.build_tile_feedback_port(state)
 
   local port = {}
   port.on_tile_upgraded = function(_, tile_id, level)
+    if landing_visual_hold.is_active_state(state) and not landing_visual_hold.is_flushing_state(state) then
+      landing_visual_hold.defer_tile_update(state, tile_id, level, function(inner_tile_id, inner_level)
+        if type(state.on_tile_upgraded) == "function" then
+          state:on_tile_upgraded(inner_tile_id, inner_level)
+          return true
+        end
+        return false
+      end)
+      return true
+    end
     if type(state.on_tile_upgraded) == "function" then
       state:on_tile_upgraded(tile_id, level)
       return true

@@ -14,6 +14,7 @@ local turn_timer_policy = require("src.game.flow.turn.timer_policy")
 local paid_currency_bridge = require("src.game.systems.commerce.paid_currency_bridge")
 local market_purchase = require("src.game.systems.market.application.purchase")
 local runtime_state = require("src.core.state_access.runtime_state")
+local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 local role_id_utils = require("src.core.utils.role_id")
 local gameplay_loop = {}
 local function _resolve_ports(state)
@@ -137,6 +138,14 @@ local function _initialize_ports(state, game)
   game.tile_feedback_port = gameplay_loop_runtime.build_tile_feedback_port(state)
   game.bankruptcy_feedback_port = {
     on_tiles_cleared = function(game_ctx, player, owned_tile_ids)
+      if landing_visual_hold.is_active_state(state) and not landing_visual_hold.is_flushing_state(state) then
+        landing_visual_hold.defer_bankruptcy_clear(state, game_ctx, player, owned_tile_ids, function(inner_game,
+                                                                                                      inner_player,
+                                                                                                      inner_owned_tile_ids)
+          return ports.state.on_bankruptcy_tiles_cleared(inner_game, inner_player, inner_owned_tile_ids)
+        end)
+        return true
+      end
       return ports.state.on_bankruptcy_tiles_cleared(game_ctx, player, owned_tile_ids)
     end,
   }
@@ -153,6 +162,12 @@ local function _configure_tile_owner_notifier(state, game)
   if notifier then
     game.tile_owner_notifier = {
       notify_owner_changed = function(_, tile_id, owner_id)
+        if landing_visual_hold.is_active_state(state) and not landing_visual_hold.is_flushing_state(state) then
+          landing_visual_hold.defer_owner_change(state, tile_id, owner_id, function(inner_tile_id, inner_owner_id)
+            notifier(state, inner_tile_id, inner_owner_id)
+          end)
+          return
+        end
         notifier(state, tile_id, owner_id)
       end,
     }
@@ -206,6 +221,8 @@ end
 function gameplay_loop.set_game(state, game)
   assert(game ~= nil, "missing game")
   runtime_state.ensure_all(state)
+  landing_visual_hold.reset_state(state)
+  game.landing_visual_hold_state = state
   local ports = _initialize_ports(state, game)
   _configure_environment(state, game, ports)
   _configure_pending_choice(state, game, ports)

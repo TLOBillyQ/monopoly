@@ -4,6 +4,7 @@ local gameplay_loop_runtime = require("src.game.flow.turn.loop_runtime")
 local turn_timer_policy = require("src.game.flow.turn.timer_policy")
 local turn_camera_policy = require("src.game.flow.turn.camera_policy")
 local runtime_state = require("src.core.state_access.runtime_state")
+local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 
 local tick_steps = {}
 
@@ -73,9 +74,12 @@ function tick_steps.refresh_tick_from_dirty(game, state, ports, input_blocked_ch
   ui_sync_ports.update_countdown(game, state)
 
   local dirty = game:consume_dirty()
+  landing_visual_hold.sync_state_from_game(state, game)
   local ui_refreshed = ui_sync_ports.refresh_from_dirty(game, state, dirty)
   turn_camera_policy.sync_follow(game, state, ports, ui_refreshed)
-  anim_ports.sync_status_3d(game, state, dirty)
+  if not landing_visual_hold.is_active_state(state) then
+    anim_ports.sync_status_3d(game, state, dirty)
+  end
 
   if ui_sync_ports.get_ui_state and ui_sync_ports.is_input_blocked then
     local ui = ui_sync_ports.get_ui_state(state)
@@ -84,11 +88,13 @@ function tick_steps.refresh_tick_from_dirty(game, state, ports, input_blocked_ch
     end
   end
   local ui_model = runtime_state.get_ui_model(state)
-  if ui_model then
+  if ui_model and not landing_visual_hold.is_active_state(state) then
     debug_ports.log_status(ui_model)
   end
 
-  debug_ports.sync_debug_log(state)
+  if not landing_visual_hold.is_active_state(state) then
+    debug_ports.sync_debug_log(state)
+  end
 end
 
 return tick_steps

@@ -29,6 +29,9 @@ local function _run_wait(session, state_name, args)
   if state_name == "wait_action_anim" then
     return await.action_anim(session, args)
   end
+  if state_name == "wait_landing_visual" then
+    return await.landing_visual(session, args)
+  end
   if state_name == "detained_wait" then
     return await.detained(session, args)
   end

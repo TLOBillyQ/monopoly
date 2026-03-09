@@ -3,6 +3,7 @@ local ui_view = require("src.presentation.runtime.view")
 local runtime_state = require("src.core.state_access.runtime_state")
 local runtime_context = require("src.infrastructure.runtime.context")
 local choice_slice = require("src.presentation.model.choice_slice")
+local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 
 local M = {}
 
@@ -20,28 +21,45 @@ function M.install(state, get_current_game)
   local lua_api = runtime_ctx and runtime_ctx.env and runtime_ctx.env.LuaAPI or nil
   assert(lua_api and type(lua_api.global_register_custom_event) == "function", "missing LuaAPI.global_register_custom_event")
 
-  lua_api.global_register_custom_event(monopoly_event.land.tile_upgraded, function(_, _, data)
-    if data and data.tile_id and data.level and state.on_tile_upgraded then
-      state:on_tile_upgraded(data.tile_id, data.level)
+  local function _dispatch_or_defer(event_name, data, handler)
+    local current_game = get_current_game()
+    state.game = current_game
+    landing_visual_hold.sync_state_from_game(state, current_game)
+    if landing_visual_hold.is_active_state(state) and not landing_visual_hold.is_flushing_state(state) then
+      landing_visual_hold.defer_runtime_event(state, event_name, data, function(payload)
+        handler(payload)
+      end)
+      return
     end
+    handler(data)
+  end
+
+  lua_api.global_register_custom_event(monopoly_event.land.tile_upgraded, function(_, _, data)
+    _dispatch_or_defer(monopoly_event.land.tile_upgraded, data, function(payload)
+      if payload and payload.tile_id and payload.level and state.on_tile_upgraded then
+        state:on_tile_upgraded(payload.tile_id, payload.level)
+      end
+    end)
   end)
 
   lua_api.global_register_custom_event(monopoly_event.intent.need_choice, function(_, _, data)
-    local choice = data and data.choice or nil
-    if not choice then
-      return
-    end
-    runtime_state.set_pending_choice(state, choice, {
-      choice_id = choice.id,
-      elapsed_seconds = 0,
-    })
-    runtime_state.set_ui_dirty(state, true)
-    local current_game = get_current_game()
-    assert(current_game ~= nil, "missing current_game")
-    local built_choice, built_market = _build_choice_view(state, current_game)
-    if built_choice then
-      ui_view.open_choice_modal(state, built_choice, built_market)
-    end
+    _dispatch_or_defer(monopoly_event.intent.need_choice, data, function(payload)
+      local choice = payload and payload.choice or nil
+      if not choice then
+        return
+      end
+      runtime_state.set_pending_choice(state, choice, {
+        choice_id = choice.id,
+        elapsed_seconds = 0,
+      })
+      runtime_state.set_ui_dirty(state, true)
+      local current_game = get_current_game()
+      assert(current_game ~= nil, "missing current_game")
+      local built_choice, built_market = _build_choice_view(state, current_game)
+      if built_choice then
+        ui_view.open_choice_modal(state, built_choice, built_market)
+      end
+    end)
   end)
 end
 

@@ -2,6 +2,7 @@ local gameplay_loop_runtime = require("src.game.flow.turn.loop_runtime")
 local turn_role_control_policy = require("src.game.flow.turn.role_control_policy")
 local auto_context = require("src.game.flow.turn.auto_context")
 local tick_steps = require("src.game.flow.turn.loop_tick_steps")
+local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 
 local tick_flow = {}
 
@@ -11,6 +12,18 @@ function tick_flow.tick(game, state, dt, ports, deps)
   assert(type(deps.step_auto_runner) == "function", "missing deps.step_auto_runner")
   assert(type(deps.dispatch_action_with_close_choice) == "function",
     "missing deps.dispatch_action_with_close_choice")
+
+  if game.turn
+      and game.turn.phase == "wait_landing_visual"
+      and game.turn.landing_visual_wait_ready == true
+      and game.advance_turn then
+    game:advance_turn()
+  end
+
+  landing_visual_hold.sync_state_from_game(state, game)
+  if landing_visual_hold.is_release_pending_game(game) then
+    landing_visual_hold.release(state, game)
+  end
 
   local phase = game.turn.phase
   local input_blocked_changed = gameplay_loop_runtime.sync_input_blocked(state, phase, ports)

@@ -1,6 +1,9 @@
 local turn_decision = require("src.game.flow.turn.decision")
 local validator = require("src.game.flow.turn.dispatch_validator")
 local number_utils = require("src.core.utils.number_utils")
+local gameplay_rules = require("src.core.config.gameplay_rules")
+local runtime_ports = require("src.core.ports.runtime_ports")
+local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 
 local await = {}
 
@@ -167,6 +170,43 @@ function await.action_anim(session, args)
   if _next_action_anim(game) then
     return { wait = true }
   end
+  local next_state, next_args = _next(args)
+  return {
+    next_state = next_state,
+    next_args = next_args,
+  }
+end
+
+function await.landing_visual(session, args)
+  assert(session ~= nil and session.game ~= nil, "missing await session")
+  local game = session.game
+  session:mark_phase("wait_landing_visual")
+  local turn = assert(game.turn, "missing game.turn")
+
+  if turn.landing_visual_wait_started ~= true then
+    local seq = (turn.landing_visual_wait_seq or 0) + 1
+    turn.landing_visual_wait_seq = seq
+    turn.landing_visual_wait_started = true
+    turn.landing_visual_wait_ready = false
+    _mark_dirty(game)
+    local delay = gameplay_rules.landing_visual_hold_seconds or 0
+    runtime_ports.schedule(delay, function()
+      if game and game.turn and game.turn.landing_visual_wait_seq == seq then
+        game.turn.landing_visual_wait_ready = true
+        _mark_dirty(game)
+      end
+    end)
+    return { wait = true }
+  end
+
+  if turn.landing_visual_wait_ready ~= true then
+    return { wait = true }
+  end
+
+  turn.landing_visual_wait_started = false
+  turn.landing_visual_wait_ready = false
+  turn.landing_visual_wait_seq = nil
+  landing_visual_hold.mark_release_pending(game)
   local next_state, next_args = _next(args)
   return {
     next_state = next_state,

@@ -1,6 +1,7 @@
 local landing_defs = require("src.game.systems.land.specs.effects")
 local effect_pipeline = require("src.game.systems.effects.effect_pipeline")
 local effect_runner = require("src.game.systems.effects.effect_runner")
+local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 
 local max_landing_depth = 10
 
@@ -111,16 +112,35 @@ local function _phase_land(turn_mgr, args)
         next_args = { next_state = next_state, next_args = next_args },
       }
     end
+    if landing_visual_hold.is_active_game(turn_mgr.game) then
+      return "wait_landing_visual", {
+        next_state = "wait_choice",
+        next_args = { next_state = next_state, next_args = next_args },
+      }
+    end
     return "wait_choice", { next_state = next_state, next_args = next_args }
   end
 
   if _has_action_anim(turn_mgr.game) then
-    return "wait_action_anim", {
+    local next_args = {
+      next_state = "post_action",
+      next_args = { player = player },
+    }
+    if landing_visual_hold.is_active_game(turn_mgr.game) then
+      return "wait_landing_visual", {
+        next_state = "wait_action_anim",
+        next_args = next_args,
+      }
+    end
+    return "wait_action_anim", next_args
+  end
+
+  if landing_visual_hold.is_active_game(turn_mgr.game) then
+    return "wait_landing_visual", {
       next_state = "post_action",
       next_args = { player = player },
     }
   end
-
   return "post_action", { player = player }
 end
 

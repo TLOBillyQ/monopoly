@@ -1,5 +1,6 @@
 local turn_ui_sync_shared = require("src.core.ui_sync.turn_ui_sync_shared")
 local runtime_state = require("src.core.state_access.runtime_state")
+local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 
 local ui_model_sync = {}
 
@@ -15,8 +16,16 @@ function ui_model_sync.build_model(state, game)
 end
 
 function ui_model_sync.refresh_from_dirty(game, state, dirty, common)
+  landing_visual_hold.sync_state_from_game(state, game)
   if runtime_state.is_ui_dirty(state) then
     dirty.ui = true
+  end
+  if landing_visual_hold.is_active_state(state) then
+    landing_visual_hold.freeze_active_ui(state)
+    if dirty.any or dirty.ui then
+      landing_visual_hold.defer_dirty(state, dirty)
+    end
+    return false
   end
   local only_countdown = turn_ui_sync_shared.is_only_turn_countdown(dirty)
   local ui_refreshed = false
