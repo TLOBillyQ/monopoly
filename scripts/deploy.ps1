@@ -6,6 +6,7 @@
     该脚本要求在 PowerShell 7 (pwsh) 环境执行。
     默认拷贝 Config/、src/ 目录以及 Data/UIManagerNodes.lua、Data/Prefab.lua 和 main.lua 到目标目录。
     Windows 与 macOS 在未传 -TargetPath 时都会默认部署到单个同步目标目录。
+    为避免误发，脚本禁止部署到名称包含“发布”的目录。
     如需额外拷贝 vendor/，请传入 -IncludeVendor 参数。
 .PARAMETER TargetPath
     目标目录的绝对路径。支持传入多个；未传时使用平台默认同步目录。
@@ -23,8 +24,6 @@
     pwsh -File .\deploy.ps1 -TargetPath "C:\Target\Project" -IncludeVendor
 .EXAMPLE
     pwsh -File .\deploy.ps1 -TargetPath "C:\Users\Lzx_8\Desktop\dev\LuaSource_大富翁-开发"
-.EXAMPLE
-    pwsh -File .\deploy.ps1 -TargetPath "C:\Users\Lzx_8\Desktop\dev\LuaSource_大富翁-发布"
 .EXAMPLE
     pwsh -File .\deploy.ps1 -StartupProfile "items_move_control"
 .EXAMPLE
@@ -70,6 +69,21 @@ function Normalize-TargetPath {
         return (Resolve-Path $normalized).Path
     }
     return [System.IO.Path]::GetFullPath($normalized)
+}
+
+function Test-ForbiddenDeployTargetPath {
+    param([string]$Path)
+
+    foreach ($segment in ($Path -split '[\\/]')) {
+        if ([string]::IsNullOrWhiteSpace($segment)) {
+            continue
+        }
+        if ($segment.Contains("发布")) {
+            return $true
+        }
+    }
+
+    return $false
 }
 
 function Resolve-SyncTargetPaths {
@@ -278,6 +292,10 @@ $TargetPaths = Resolve-SyncTargetPaths -RequestedPaths $TargetPath
 $normalizedTargets = @()
 foreach ($path in $TargetPaths) {
     $normalized = Normalize-TargetPath -Path $path
+    if (Test-ForbiddenDeployTargetPath -Path $normalized) {
+        Write-Host "✗ 禁止部署到名称包含“发布”的目录: $normalized" -ForegroundColor Red
+        exit 1
+    }
     if (-not ($normalizedTargets -contains $normalized)) {
         $normalizedTargets += $normalized
     }
