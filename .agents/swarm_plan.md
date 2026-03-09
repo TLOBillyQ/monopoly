@@ -1,102 +1,64 @@
-# 怪兽卡与导弹卡的启动场景和覆盖补齐
+# 修正本地玩家移动结束后仍持续跑步的问题（二次定位版）
 
 ## Summary
 
-当前怪兽卡、导弹卡的基础配置、注册和 domain 冒烟都已经存在，但还缺两块关键收口：
+新日志已经证明第一版修复命中了我们能想到的单位级停止链：本地玩家在 `finish_stop` 和后续 `board_refresh_stop_and_snap` 中都执行了 `stop_forced_move`、`stop_anim`、`model_stop_animation`，但视觉仍不停。这说明问题不再是“漏调 stop API”，而是本地玩家在更上层的控制/动画状态里被重新保持为 moving。
 
-- 缺少可直接复现这两张卡的独立启动场景，`items_target_disrupt` 只是给卡，不是可用来启动验证的定向场景。
-- 覆盖不对称：导弹有部分动画桥接断言，怪兽没有；两张卡都没有通过“启动 profile -> 选目标 -> 动画/后续效果”这条完整链路做回归。导弹如果继续参与“动画后提交结果”的规则，也需要把这个契约测死。
-
-本次实现按“新增专用 startup profile + 补齐 runtime/domain/architecture/gameplay 四层覆盖”处理。`items_target_disrupt` 保留为汇总型道具分组 profile，不再承担怪兽/导弹的场景化验证职责。
+当前代码里唯一仍会在移动结束同一时刻额外干预本地玩家的，是 `anim_ports` 通过 `on_step_lock` 对 `role_control_lock_exempt` 做按步切换。对单步移动，这个“重新上锁”与 `finish_stop` 发生在同一时间点，极可能把本地玩家重新压进宿主 locomotion 状态；AI 不走这条本地控制链，所以没有同类问题。下一版修复应把“本地角色控制锁豁免”从按步切换改成按整段移动切换，并补充 moving 状态日志来验证这一点。
 
 ## Key Changes
 
-### 1. 新增两个专用启动场景
+- 在 `src/presentation/view/render/move_anim.lua` 中把移动序列运行时从“只记录 token”升级为“按玩家记录 active sequence entry”，至少包含 `token` 和 sequence 级释放逻辑。
+- 为 `play_sequence` 增加 `anim_ctx.on_sequence_lock(enabled, total_time, meta)` 生命周期钩子：
+  - 序列真正开始时只调用一次 `on_sequence_lock(false, ...)`
+  - 序列结束、被新序列顶掉、或被 `clear_player_token` 强制清理时只调用一次 `on_sequence_lock(true, ...)`
+  - 保留现有 `on_step_lock`，但它不再承担 role control 管理职责
+- 在 `src/presentation/runtime/ports/anim_ports.lua` 中把 `role_control_lock_exempt_by_role` / `role_control_lock_exempt_count_by_role` 的维护从 `on_step_lock` 挪到 `on_sequence_lock`：
+  - 移动整段期间，本地玩家持续豁免 `BUFF_FORBID_CONTROL`
+  - 只有在 `finish_stop` 或 forced clear 后才恢复锁
+  - 不再在每一步结束时重新套 lock
+- 同时强化 `stop_player_presentation` 的动画层清理，但保持风险可控：
+  - 保留现有 `force_stop_move` / `stop_forced_move` / `ai_command_stop_move`
+  - 在动画层增加 `interrupt_multi_animation`、`stop_play_body_anim`、`stop_play_upper_anim`
+  - 暂不引入 `stop_ai`，避免影响 synthetic AI 生命周期
+- 调试日志改为同时输出 stop 前后状态：
+  - `is_moving_before` / `is_moving_after`
+  - `is_forced_moving_before` / `is_forced_moving_after`
+  - `role_control_lock_active`
+  - `role_control_exempt`
+  这样可以直接验证问题是“stop 没生效”还是“stop 后又被控制层重新拉回 moving”。
 
-在 `Config/testing/test_profiles.lua` 新增：
+## Interfaces
 
-- `scenario_monster_staging`
-  - 当前玩家仅持有 1 张怪兽卡
-  - 前后 3 格内至少有 1 个敌方建筑目标
-  - 不预置路障、地雷、乘客，场景只验证“选楼拆楼”
-- `scenario_missile_staging`
-  - 当前玩家仅持有 1 张导弹卡
-  - 前后 3 格内有 1 个敌方建筑目标
-  - 目标格预置路障、地雷、至少 1 名玩家占位，确保“拆楼 + 清障碍 + 送医”同场景可复现
-
-这两个 profile 都使用默认地图，不引入新地图或新启动入口。
-
-### 2. runtime 启动配置测试改为显式覆盖怪兽/导弹场景
-
-扩展现有 runtime profile suite，分别断言：
-
-- `scenario_monster_staging` 的玩家位置、背包、目标地块 owner/level 都按预期生效
-- `scenario_missile_staging` 除上述外，还要断言目标格上的路障、地雷、占位玩家也被正确 bootstrap
-- 保留现有 `all_item_group_profiles_cover_all_items_once` 之类分组测试；新场景不计入“每张卡只出现一次”的 item-group 统计
-
-同时补 1 条 startup policy / release-qa 可接受新 profile 名的回归，避免 profile 只加在配置里却没被启动链路接受。
-
-### 3. 怪兽/导弹执行结果统一补齐集成契约
-
-两张卡继续共用 `demolish_target` choice kind，不引入 `missile_target` 新分支。实现与测试都按这个契约收口。
-
-- 怪兽卡：
-  - 保持现有同步拆楼语义
-  - 必须显式产出 `monster` action_anim
-  - 不产出 `after_action_anim`
-- 导弹卡：
-  - 保持现有 `missile` action_anim
-  - 建筑摧毁、路障/地雷清理可在导弹命中时完成
-  - 送医相关的状态提交改为走现有 `after_action_anim -> move_followup.apply_location_effects`
-  - 不新增独立位移动画；导弹动画本身就是提交门槛
-  - 这样测试上可以明确约束：导弹动画结束前，不写入住院停留等展示驱动状态；动画结束后才提交
-
-这部分需要在导弹执行结果里返回 `after_action_anim = { next_state = "move_followup", next_args = { mode = "apply_location_effects", ... } }`，形状与现有流放卡一致。
-
-### 4. 补齐四层测试覆盖
-
-- `runtime/test_profiles`
-  - 新增 monster/missile 两个 profile 的 bootstrap 断言
-- `domain/item`
-  - 怪兽卡：打开 `demolish_target`、拆楼成功、`action_anim.kind == "monster"`、无 `after_action_anim`
-  - 导弹卡：打开 `demolish_target`、拆楼/清障成功、`action_anim.kind == "missile"`、存在 `after_action_anim`
-  - 导弹卡新增“动画前后”断言：
-    - 动画前：目标玩家 `stay_turns == 0`
-    - 执行 `move_followup` 后：目标玩家进入医院停留
-- `architecture/cross_module_contract`
-  - 在现有 `missile` bridge 断言旁边补 `monster`，确保 `action_anim.play` 对两种 kind 都有稳定桥接
-- `gameplay`
-  - 用新 startup profile 跑完整使用链路，而不是只直调底层 apply
-  - 怪兽：验证从启动场景到目标选择再到建筑销毁的完整流程
-  - 导弹：验证从启动场景到目标选择、导弹动画等待、followup 送医提交的完整流程
-
-## Interface Changes
-
-- 新增内部 startup profile 名：
-  - `scenario_monster_staging`
-  - `scenario_missile_staging`
-- 不新增对外 UI API
-- 内部执行结果约定补充：
-  - 怪兽卡继续只返回 `action_anim`
-  - 导弹卡新增 `after_action_anim`，复用现有 `move_followup.apply_location_effects`
-- `demolish_target` 继续作为怪兽卡/导弹卡共享的 choice kind；不新增 `missile_target`
+- 不新增对外 public API。
+- 内部新增 `anim_ctx.on_sequence_lock` 约定，作为 `move_anim.play_sequence` 的可选输入字段；`anim_ports.build().play_move_anim` 负责填充它。
+- `move_anim.clear_player_token` 需要具备“如果该玩家存在未释放的 sequence lock，则在清 token 时释放”的语义，避免 stale token 或 board sync 清理后遗留豁免状态。
+- `on_step_lock` 继续保留现状语义，避免影响现有 step 级测试与其他潜在调用方。
 
 ## Test Plan
 
-至少覆盖这些场景：
-
-- 启动 `scenario_monster_staging` 后，玩家持有且仅持有怪兽卡，目标建筑在 3 格范围内
-- 启动 `scenario_missile_staging` 后，玩家持有且仅持有导弹卡，目标格建筑/路障/地雷/占位玩家全部存在
-- 怪兽卡使用后只拆楼，不送医，不产生 followup
-- 导弹卡使用后会摧毁建筑并清理该格障碍
-- 导弹卡动画结束前不提交医院停留状态
-- 导弹卡 followup 执行后才提交住院状态
-- `action_anim.play` 对 `monster`、`missile` 都能稳定分发到对应 bridge
-- release-qa 模式下显式传入新 profile 名时，启动链路能接受并进入 profile bootstrap
+- 在 `tests/suites/presentation/presentation_move_anim.lua` 增加 sequence-lock 生命周期用例：
+  - 单步移动：`on_sequence_lock(false)` 只在开始触发一次，`on_sequence_lock(true)` 只在 finish 触发一次
+  - 重叠序列：旧序列被新序列覆盖时，旧序列的 sequence lock 会释放，但 stale finish callback 不会释放新序列
+- 在 `tests/suites/presentation/presentation_board_sync.lua` 增加 forced clear 用例：
+  - `clear_player_token(..., "board_sync_place_players")` 会同步释放 sequence lock，不留下 active exempt 状态
+- 在 `tests/suites/presentation/presentation_ui_action_status_part2.lua` 或现有 role-control 相关 suite 中增加用例：
+  - 本地玩家在整段 move anim 期间保持 exempt
+  - 不会在每一步结束时重新加 `BUFF_FORBID_CONTROL`
+  - finish 后才恢复正常 lock 状态
+- 保留并继续通过现有 step 级测试：
+  - `presentation_ui_timing_anim` 里的 `on_step_lock` 测试仍应成立
+- 回归命令至少执行：
+  - `presentation.move_anim`
+  - `presentation.board_sync`
+  - 包含 role_control_lock 的 presentation suite
+- 编辑器验收：
+  - 本地玩家 1 步移动后，在 `finish_stop` 前后日志中可见 moving 状态从 `true -> false`
+  - `wait_choice` 和 `inter_turn_wait` 阶段不再出现本地玩家原地跑动
+  - 日志中 role control 豁免只在序列结束后释放，不再与单步 finish 同帧反复切换
 
 ## Assumptions
 
-- “启动配置”按“测试/QA 启动 profile”处理，不改生产道具配置、商店配置或运行时资源映射，因为这些已存在。
-- `items_target_disrupt` 继续保留为汇总型 profile，不把怪兽/导弹的专用场景塞回这个 profile。
-- 导弹卡不新增独立角色位移动画；本次只把“送医状态提交时机”挂到现有导弹 action_anim 之后。
-- 怪兽卡与导弹卡继续共用 `demolish_target` 目标选择协议。
+- 本地玩家问题主要来自角色控制锁与宿主 locomotion 状态的时序冲突，而不是再次缺少某个基础 stop API。
+- `interrupt_multi_animation`、`stop_play_body_anim`、`stop_play_upper_anim` 对本地玩家 ctrl unit 是安全的；若方法不存在则静默跳过。
+- 本次修复默认不改 turn phase、await 流程和移动路径计算；只修正 move animation 的 sequence 生命周期与本地控制锁时序。
