@@ -18,7 +18,7 @@ function tick_flow.tick(game, state, dt, ports, deps)
 
   local afk_triggered = deps.step_afk_auto_host(game, state, dt) == true
   if not afk_triggered then
-    deps.step_auto_runner(game, state, dt, auto_context.build_tick(game))
+    deps.step_auto_runner(game, state, dt, auto_context.build_tick(game, state, ports.ui_sync))
   end
   tick_steps.step_tick_timeouts(game, state, dt, ports, deps.dispatch_action_with_close_choice)
   input_blocked_changed = tick_steps.sync_tick_phase(game, state, ports, input_blocked_changed)

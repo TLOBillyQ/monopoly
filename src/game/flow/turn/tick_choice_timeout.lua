@@ -1,10 +1,21 @@
 local constants = require("Config.generated.constants")
 local gameplay_rules = require("src.core.config.gameplay_rules")
+local logger = require("src.core.utils.logger")
 local number_utils = require("src.core.utils.number_utils")
 local choice_contract = require("src.core.choice.contract")
+local runtime_state = require("src.core.state_access.runtime_state")
 local output_state_adapter = require("src.game.flow.output_adapters.output_state_adapter")
 
 local tick_choice_timeout = {}
+
+local function _log_once(state, key, ...)
+  local debug_runtime = runtime_state.ensure_debug_runtime(state)
+  if debug_runtime.log_once[key] then
+    return
+  end
+  debug_runtime.log_once[key] = true
+  logger.warn(...)
+end
 
 local function _resolve_output_ports(state)
   local resolved = state and (state._resolved_gameplay_loop_ports or state.gameplay_loop_ports) or nil
@@ -70,8 +81,21 @@ function tick_choice_timeout.step(game, state, dt, opts)
     output_ports.clear_pending_choice(state)
   end
 
-  local active = opts.is_choice_active(state)
+  local ui_choice_active = opts.is_choice_active(state) == true
   active_choice = output_ports.get_pending_choice(state)
+  local active = pending ~= nil or active_choice ~= nil
+  if active and active_choice and not ui_choice_active then
+    _log_once(
+      state,
+      "choice_runtime_without_ui_" .. tostring(active_choice.id),
+      "[Eggy]",
+      "runtime pending choice active without ui.choice_active",
+      "choice_id=" .. tostring(active_choice.id),
+      "kind=" .. tostring(active_choice.kind),
+      "owner_role_id=" .. tostring(active_choice.owner_role_id),
+      "route_key=" .. tostring(active_choice.route_key)
+    )
+  end
   if not active or not active_choice then
     output_ports.set_pending_choice_elapsed(state, 0)
     output_ports.set_pending_choice_id(state, nil)

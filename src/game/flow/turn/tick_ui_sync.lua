@@ -50,6 +50,8 @@ function tick_ui_sync.update_countdown(game, state)
   local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state)
   local seconds = 0
   local active = false
+  local gate = tick_timeout.resolve_modal_gate(state)
+  local pending_choice = game and game.turn and game.turn.pending_choice or runtime_state.get_pending_choice(state)
   if game.turn and game.turn.detained_wait_active then
     active = true
     local turn = game.turn
@@ -59,16 +61,28 @@ function tick_ui_sync.update_countdown(game, state)
     end
     seconds = math.ceil(remaining)
   elseif timeout > 0 then
-    local pending_choice = runtime_state.get_pending_choice(state)
     local pending_choice_elapsed = runtime_state.get_pending_choice_elapsed(state)
-    if pending_choice and pending_choice_elapsed then
+    if pending_choice ~= nil then
       active = true
+      if pending_choice_elapsed < 0 then
+        pending_choice_elapsed = 0
+      end
+      if gate.choice_active ~= true and gate.market_active ~= true then
+        _log_once(
+          state,
+          "countdown_runtime_choice_without_ui_" .. tostring(pending_choice.id),
+          _build_log_prefix(),
+          "countdown driven by runtime pending choice without ui choice screen",
+          "choice_id=" .. tostring(pending_choice.id),
+          "kind=" .. tostring(pending_choice.kind)
+        )
+      end
       local remaining = timeout - pending_choice_elapsed
       if remaining < 0 then
         remaining = 0
       end
       seconds = math.ceil(remaining)
-    elseif tick_timeout.resolve_modal_gate(state).popup_active == true then
+    elseif gate.popup_active == true then
       local popup_timeout = tick_timeout.resolve_modal_timeout_seconds(game, state)
       if popup_timeout > 0 then
         active = true

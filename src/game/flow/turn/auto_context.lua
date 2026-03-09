@@ -1,4 +1,5 @@
 local agent = require("src.game.core.ai.agent")
+local runtime_state = require("src.core.state_access.runtime_state")
 
 local auto_context = {}
 
@@ -23,9 +24,20 @@ function auto_context.build(game, context)
   return ctx
 end
 
-function auto_context.build_tick(game)
+function auto_context.build_tick(game, state, ui_sync_ports)
+  local gate = nil
+  if ui_sync_ports and type(ui_sync_ports.resolve_ui_gate) == "function" then
+    gate = ui_sync_ports.resolve_ui_gate(state)
+  end
+  local pending_choice = game and game.turn and game.turn.pending_choice or runtime_state.get_pending_choice(state)
   return auto_context.build(game, {
-    modal_active = false,
+    game = game,
+    state = state,
+    pending_choice = pending_choice,
+    choice_active = gate and gate.choice_active == true or false,
+    market_active = gate and gate.market_active == true or false,
+    popup_active = gate and gate.popup_active == true or false,
+    modal_active = gate and (gate.popup_active == true or gate.market_active == true or gate.choice_active == true) or false,
     modal_buttons = nil,
   })
 end

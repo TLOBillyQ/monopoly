@@ -247,6 +247,22 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
   if auto_action and auto_action.type == "ui_button" and not auto_action.actor_role_id then
     auto_action.actor_role_id = ctx.current_player_id
   end
+  if auto_action == nil
+      and ctx.pending_choice
+      and ctx.current_player_auto == true then
+    local debug_runtime = runtime_state.ensure_debug_runtime(state)
+    local key = "auto_runner_choice_no_action_" .. tostring(ctx.pending_choice.id)
+    if not debug_runtime.log_once[key] then
+      debug_runtime.log_once[key] = true
+      logger.warn(
+        "[Eggy]",
+        "auto runner produced no action for runtime pending choice",
+        "choice_id=" .. tostring(ctx.pending_choice.id),
+        "kind=" .. tostring(ctx.pending_choice.kind),
+        "actor_role_id=" .. tostring(ctx.current_player_id)
+      )
+    end
+  end
   if auto_action then
     _dispatch_action_with_close_choice(game, state, auto_action, ports)
   end

@@ -32,11 +32,13 @@ local runtime_state = require("src.core.state_access.runtime_state")
 local runtime_global_aliases = require("src.app.bootstrap.runtime.global_aliases")
 local dispatch_validator = require("src.game.flow.turn.dispatch_validator")
 local tick_ui_sync = require("src.game.flow.turn.tick_ui_sync")
+local tick_choice_timeout = require("src.game.flow.turn.tick_choice_timeout")
 local choice_auto_policy = require("src.game.flow.turn.choice_auto_policy")
 local turn_timer_policy = require("src.game.flow.turn.timer_policy")
 local turn_role_control_policy = require("src.game.flow.turn.role_control_policy")
 local turn_camera_policy = require("src.game.flow.turn.camera_policy")
 local gameplay_loop_runtime = require("src.game.flow.turn.loop_runtime")
+local move_followup = require("src.game.flow.turn.move_followup")
 local intent_dispatcher = require("src.game.flow.intent.intent_dispatcher")
 local game_startup = require("src.app.bootstrap.game_startup")
 local game_startup_event_bridge = require("src.app.bootstrap.game_startup_event_bridge")
@@ -1861,6 +1863,59 @@ local function _test_auto_runner_human_turn_not_auto_advanced()
   end)
 end
 
+local function _test_auto_runner_selects_runtime_pending_choice_without_ui_choice_screen()
+  local g = _new_game()
+  g.ui_port = _build_ui_port()
+  local state = _build_loop_state()
+  local ai_player = g.players[2]
+  local dispatched = nil
+  local choice = {
+    id = 701,
+    kind = "landing_optional_effect",
+    route_key = "secondary_confirm",
+    requires_confirm = true,
+    owner_role_id = ai_player.id,
+    options = {
+      { id = "buy_land", label = "购买地块" },
+      { id = "skip", label = "跳过" },
+    },
+    allow_cancel = true,
+    meta = {
+      player_id = ai_player.id,
+      tile_id = 1,
+      effect_ids = { "buy_land" },
+    },
+  }
+  g.turn.current_player_index = 2
+  g.turn.phase = "wait_choice"
+  g.turn.pending_choice = choice
+  runtime_state.set_pending_choice(state, choice, { choice_id = choice.id, elapsed_seconds = 0 })
+  g.dispatch_action = function(_, action)
+    dispatched = action
+    g.turn.pending_choice = nil
+  end
+
+  _with_timestamp_stub(function()
+    local action = gameplay_loop.step_auto_runner(g, state, 1.0, {
+      game = g,
+      state = state,
+      pending_choice = choice,
+      choice_active = false,
+      market_active = false,
+      popup_active = false,
+      current_player_index = g.turn.current_player_index,
+      current_player_id = ai_player.id,
+      current_player_auto = true,
+    })
+    assert(action and action.type == "choice_select", "auto runner should resolve pending choice without ui choice screen")
+    assert(action.option_id == "buy_land", "auto runner should select buy_land for AI landing optional effect")
+    assert(action.actor_role_id == ai_player.id, "auto runner should preserve AI owner role")
+  end)
+
+  assert(dispatched and dispatched.type == "choice_select", "auto runner should dispatch the auto-selected choice")
+  assert(dispatched.option_id == "buy_land", "dispatched choice should still select buy_land")
+end
+
 local function _test_auto_runner_not_advanced_when_input_blocked()
   local g = _new_game()
   g.ui_port = _build_ui_port()
@@ -1879,6 +1934,85 @@ local function _test_auto_runner_not_advanced_when_input_blocked()
     })
     assert(action == nil, "blocked phase should not auto dispatch next")
   end)
+end
+
+local function _test_tick_choice_timeout_uses_runtime_pending_choice_without_ui_choice_screen()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local player = g.players[2]
+  local dispatched = nil
+  local choice = {
+    id = 702,
+    kind = "landing_optional_effect",
+    route_key = "secondary_confirm",
+    requires_confirm = true,
+    owner_role_id = player.id,
+    options = { { id = "buy_land", label = "购买地块" } },
+    allow_cancel = true,
+    meta = {
+      player_id = player.id,
+      tile_id = 1,
+      effect_ids = { "buy_land" },
+    },
+  }
+  g.turn.current_player_index = 2
+  g.turn.phase = "wait_choice"
+  g.turn.pending_choice = choice
+  runtime_state.set_pending_choice(state, choice, { choice_id = choice.id, elapsed_seconds = 0 })
+
+  tick_choice_timeout.step(g, state, (constants.action_timeout_seconds or 0) + 0.1, {
+    on_pending_choice = function() end,
+    is_choice_active = function()
+      return false
+    end,
+    build_action = function()
+      return {
+        type = "choice_select",
+        choice_id = choice.id,
+        option_id = "buy_land",
+      }
+    end,
+    dispatch_action_with_close_choice = function(_, _, action)
+      dispatched = action
+    end,
+  })
+
+  assert(dispatched and dispatched.type == "choice_select", "timeout should still dispatch choice action without ui choice screen")
+  assert(dispatched.actor_role_id == player.id, "timeout-dispatched choice should inherit owner role id")
+  assert(runtime_state.get_pending_choice_elapsed(state) == 0, "timeout should reset pending choice elapsed after dispatch")
+end
+
+local function _test_tick_ui_sync_countdown_uses_runtime_pending_choice_without_ui_choice_screen()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local player = g.players[2]
+  local choice = {
+    id = 703,
+    kind = "landing_optional_effect",
+    route_key = "secondary_confirm",
+    owner_role_id = player.id,
+    options = { { id = "buy_land", label = "购买地块" } },
+    meta = {
+      player_id = player.id,
+      tile_id = 1,
+      effect_ids = { "buy_land" },
+    },
+  }
+  g.turn.current_player_index = 2
+  g.turn.phase = "wait_choice"
+  g.turn.pending_choice = choice
+  runtime_state.set_pending_choice(state, choice, {
+    choice_id = choice.id,
+    elapsed_seconds = 1,
+  })
+  state.ui.choice_active = false
+  state.ui.market_active = false
+
+  tick_ui_sync.update_countdown(g, state)
+
+  assert(g.turn.countdown_active == true, "countdown should stay active for runtime pending choice without ui choice screen")
+  assert(g.turn.countdown_seconds == (constants.action_timeout_seconds or 0) - 1,
+    "countdown should use runtime pending choice elapsed seconds")
 end
 
 local function _test_turn_prompt_initialized_for_first_player()
@@ -2645,8 +2779,13 @@ local function _test_owner_mine_does_not_trigger_until_owner_leaves_tile()
 
   g:update_player_position(p2, mine_index)
   local trigger_res = _resolve_landing(g, p2, mine_tile, {})
-  assert(not trigger_res, "mine trigger should resolve synchronously")
-  assert((p2.status.stay_turns or 0) > 0, "other player should be hospitalized by armed mine")
+  assert(not g.turn.pending_choice, "mine trigger should not open a pending choice")
+  assert(trigger_res and trigger_res.waiting == true, "mine trigger should wait for move effect animation")
+  assert(trigger_res.next_state == "move_followup", "mine trigger should resume through move_followup")
+  assert((p2.status.stay_turns or 0) == 0, "hospital stay should be deferred until move followup")
+  local resumed_state = move_followup.run({ game = g }, trigger_res.next_args)
+  assert(resumed_state == "post_action", "mine trigger should resume into post_action after followup")
+  assert((p2.status.stay_turns or 0) > 0, "other player should be hospitalized by armed mine after move followup")
   assert(g.board:has_mine(mine_index) == false, "mine should clear after detonation")
 end
 
@@ -2768,7 +2907,10 @@ return {
   _test_action_button_timeout_blocked_when_popup_active,
   _test_auto_runner_auto_advances_ai_player,
   _test_auto_runner_human_turn_not_auto_advanced,
+  _test_auto_runner_selects_runtime_pending_choice_without_ui_choice_screen,
   _test_auto_runner_not_advanced_when_input_blocked,
+  _test_tick_choice_timeout_uses_runtime_pending_choice_without_ui_choice_screen,
+  _test_tick_ui_sync_countdown_uses_runtime_pending_choice_without_ui_choice_screen,
   _test_auto_runner_depends_on_current_player_auto,
   _test_afk_auto_host_enters_auto_after_timeout_in_start_phase,
   _test_afk_auto_host_enters_auto_after_timeout_in_wait_choice,
