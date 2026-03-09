@@ -5,6 +5,13 @@ local runtime_ports = require("src.core.ports.runtime_ports")
 
 local M = {}
 
+local function _zero_fixed()
+  if math and type(math.tofixed) == "function" then
+    return math.tofixed(0)
+  end
+  return 0
+end
+
 local function _stop_unit_anim(unit)
   if unit ~= nil and type(unit.stop_anim) == "function" then
     unit.stop_anim()
@@ -20,7 +27,7 @@ local function _stop_unit_motion(unit)
     return
   end
   if type(unit.ai_command_stop_move) == "function" then
-    unit.ai_command_stop_move(0)
+    unit.ai_command_stop_move(_zero_fixed())
   end
 end
 

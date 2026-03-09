@@ -5950,6 +5950,118 @@ local function _test_ui_sync_defers_choice_modal_during_wait_move_anim()
   _assert_eq(opened, 0, "wait_move_anim should defer opening choice modal")
 end
 
+local function _test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop()
+  local ui_view_service = require("src.presentation.runtime.view")
+  local ui_model = require("src.presentation.model")
+  local ui_model_sync = require("src.presentation.runtime.ports.ui_sync.ui_model_sync")
+  local anchors = require("src.presentation.view.render.board.anchors")
+  local startup_render = require("src.presentation.view.render.board.startup_render")
+  local player_units = require("src.presentation.view.render.board.player_units")
+  local base_presenter = require("src.presentation.view.canvas.base.presenter")
+  local turn_effects = require("src.presentation.view.widgets.turn_effects")
+  local fixed_zero = { kind = "fixed_zero", value = 0 }
+  local calls = {}
+  local game = {
+    turn = {
+      phase = "start",
+      current_player_index = 1,
+      turn_count = 1,
+    },
+    players = {
+      [1] = { id = 1, name = "P1", position = 1, seat_id = nil, eliminated = false, inventory = { items = {} }, cash = 0 },
+    },
+  }
+  local state
+  state = {
+    ui = ui_view_service.build_ui_state(),
+    ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY" }),
+    ui_dirty = true,
+    ui_model = nil,
+    board_scene = {
+      ground = {
+        get_position = function()
+          return { y = 0 }
+        end,
+      },
+    },
+    tile_positions = {
+      [1] = vec3.with_add(10, 0, 20),
+    },
+    tile_spacing = 0,
+    player_units = {
+      [1] = {
+        ai_command_stop_move = function(duration)
+          _assert_eq(duration, fixed_zero, "refresh_from_dirty should pass Fix32 zero into ai stop")
+          calls[#calls + 1] = "ai_command_stop_move"
+        end,
+        stop_anim = function()
+          calls[#calls + 1] = "stop_anim"
+        end,
+        set_position = function(pos)
+          calls[#calls + 1] = "set_position"
+          state._last_target_pos = pos
+        end,
+      },
+    },
+  }
+
+  _with_patches({
+    { target = anchors, key = "ensure_tile_anchors", value = function() end },
+    { target = startup_render, key = "apply", value = function() end },
+    { target = player_units, key = "ensure_player_units", value = function() end },
+    { target = base_presenter, key = "refresh", value = function() end },
+    { target = turn_effects, key = "sync", value = function() end },
+    { target = math, key = "tofixed", value = function(value)
+      _assert_eq(value, 0, "refresh_from_dirty should only request zero stop duration")
+      return fixed_zero
+    end },
+    { target = ui_model, key = "build", value = function()
+      return {
+        panel = { turn_label = "" },
+        board = {
+          phase = "start",
+          move_anim = nil,
+          move_followup_pending = false,
+          vehicle_resync_seq = 0,
+          tile_count = 1,
+          tiles = { { id = 1 } },
+          players = {
+            { id = 1, name = "P1", position = 1, seat_id = nil, eliminated = false },
+          },
+        },
+      }
+    end },
+    { target = ui_model, key = "update", value = function()
+      return {
+        panel = { turn_label = "" },
+        board = {
+          phase = "start",
+          move_anim = nil,
+          move_followup_pending = false,
+          vehicle_resync_seq = 0,
+          tile_count = 1,
+          tiles = { { id = 1 } },
+          players = {
+            { id = 1, name = "P1", position = 1, seat_id = nil, eliminated = false },
+          },
+        },
+      }
+    end },
+  }, function()
+    ui_model_sync.refresh_from_dirty(game, state, { any = true, turn = true }, {
+      log_once = function() end,
+      build_log_prefix = function() return "[test]" end,
+    })
+  end)
+
+  _assert_eq(calls[1], "ai_command_stop_move", "refresh_from_dirty should reach ai stop fallback")
+  _assert_eq(calls[2], "stop_anim", "refresh_from_dirty should stop anim after ai stop")
+  _assert_eq(calls[3], "set_position", "refresh_from_dirty should still place the player")
+  _assert_eq(state._last_target_pos.x, 10, "refresh_from_dirty should preserve tile x during board render")
+  _assert_eq(state._last_target_pos.y, 0.5, "refresh_from_dirty should clamp player y during board render")
+  _assert_eq(state._last_target_pos.z, 20, "refresh_from_dirty should preserve tile z during board render")
+end
+
 local function _test_popup_defer_policy_queues_and_replays_in_order()
   local modal_presenter = require("src.presentation.view.widgets.modal_presenter")
   local popup_presenter = require("src.presentation.view.canvas.popup.presenter")
@@ -6538,6 +6650,7 @@ suite_tail = {
   _test_ui_sync_defers_choice_modal_during_wait_action_anim,
   _test_ui_sync_opens_choice_modal_after_wait_action_anim,
   _test_ui_sync_defers_choice_modal_during_wait_move_anim,
+  _test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop,
   _test_popup_defer_policy_queues_and_replays_in_order,
   _test_panel_avatar_uses_native_size_path,
   _test_panel_cash_delta_shows_negative_and_auto_hides,

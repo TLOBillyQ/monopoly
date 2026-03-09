@@ -111,8 +111,10 @@ end
 local function _test_board_refresh_falls_back_to_ai_stop_before_set_position()
   local board_view = require("src.presentation.view.render.board")
   local env = _build_board_refresh_test_env()
+  local fixed_zero = { kind = "fixed_zero", value = 0 }
   env.unit.ai_command_stop_move = function(duration)
-    env.calls[#env.calls + 1] = "ai_command_stop_move:" .. tostring(duration)
+    _assert_eq(duration, fixed_zero, "refresh should pass Fix32 zero into ai stop fallback")
+    env.calls[#env.calls + 1] = "ai_command_stop_move"
   end
   env.unit.stop_anim = function()
     env.calls[#env.calls + 1] = "stop_anim"
@@ -122,11 +124,16 @@ local function _test_board_refresh_falls_back_to_ai_stop_before_set_position()
     env.target_pos = pos
   end
 
-  _with_board_refresh_patches(nil, function()
+  _with_board_refresh_patches({
+    { target = math, key = "tofixed", value = function(value)
+      _assert_eq(value, 0, "ai stop fallback should only request zero duration")
+      return fixed_zero
+    end },
+  }, function()
     board_view.refresh(env.state, env.ui_model, function() end, function() return "presentation_board_sync" end)
   end)
 
-  _assert_eq(env.calls[1], "ai_command_stop_move:0", "refresh should fall back to ai stop before sync")
+  _assert_eq(env.calls[1], "ai_command_stop_move", "refresh should fall back to ai stop before sync")
   _assert_eq(env.calls[2], "stop_anim", "refresh should stop anim after ai stop fallback")
   _assert_eq(env.calls[3], "set_position", "refresh should snap after ai stop fallback")
   _assert_eq(env.target_pos.x, 10, "refresh should still snap to tile x after ai stop fallback")
