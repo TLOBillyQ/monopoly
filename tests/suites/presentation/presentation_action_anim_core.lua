@@ -3,9 +3,6 @@ local runtime_port = require("src.presentation.runtime.ui")
 local handlers = require("src.presentation.view.render.anim_handlers")
 local host_runtime = require("src.presentation.runtime.host")
 local board_feedback = require("src.presentation.view.render.board_feedback_service")
-local overlay_compute = require("src.presentation.view.render.anim_overlay_compute")
-local visual_sync = require("src.presentation.view.render.board.visual_sync")
-local runtime_refs = require("Config.runtime_refs")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local logger = require("src.core.utils.logger")
 local runtime_context = require("src.infrastructure.runtime.context")
@@ -74,26 +71,20 @@ local function _with_patches(patches, fn)
 end
 
 local function _build_state()
-  local state = {
+  return {
     ui = {},
     board_scene = {
       tiles = {
         [1] = {
           get_position = function()
-            if math and math.Vector3 then
-              return math.Vector3(0.0, 0.0, 0.0)
-            end
-            return { x = 0.0, y = 0.0, z = 0.0 }
+            return math.Vector3(0.0, 0.0, 0.0)
           end,
         },
       },
       buildings = {
         [1] = {
           get_position = function()
-            if math and math.Vector3 then
-              return math.Vector3(10.0, 0.0, 0.0)
-            end
-            return { x = 10.0, y = 0.0, z = 0.0 }
+            return math.Vector3(10.0, 0.0, 0.0)
           end,
         },
       },
@@ -108,24 +99,6 @@ local function _build_state()
         return { position = 1, name = "测试玩家" }
       end,
     },
-  }
-  return state
-end
-
-local function _make_host_unit(x, y, z)
-  if type(newproxy) == "function" then
-    local unit = newproxy(true)
-    getmetatable(unit).__index = {
-      get_position = function()
-        return math.Vector3(x, y, z)
-      end,
-    }
-    return unit
-  end
-  return {
-    get_position = function()
-      return math.Vector3(x, y, z)
-    end,
   }
 end
 
@@ -187,9 +160,10 @@ local function _test_action_anim_roll_screen_two_stage_timeline()
   end
 
   local timers = {}
+
   local function run_timers_until(limit)
-    table.sort(timers, function(a, b)
-      return a.delay < b.delay
+    table.sort(timers, function(left, right)
+      return left.delay < right.delay
     end)
     for _, entry in ipairs(timers) do
       if not entry.done and entry.delay <= limit then
@@ -276,9 +250,10 @@ local function _test_action_anim_roll_screen_fallback_face_when_invalid()
   end
 
   local timers = {}
+
   local function run_timers_until(limit)
-    table.sort(timers, function(a, b)
-      return a.delay < b.delay
+    table.sort(timers, function(left, right)
+      return left.delay < right.delay
     end)
     for _, entry in ipairs(timers) do
       if not entry.done and entry.delay <= limit then
@@ -339,11 +314,12 @@ end
 local function _test_action_anim_upgrade_land_does_not_call_overlay_handler()
   local state = _build_state()
   local called = 0
+
   _with_patches({
     {
       target = handlers,
       key = "play_overlay",
-      value = function(_, anim, duration)
+      value = function()
         called = called + 1
       end,
     },
@@ -524,381 +500,6 @@ local function _test_host_runtime_sfx_port_skips_missing_keys_and_routes_valid_c
   assert(sound_calls[1].sound_id == 301, "sound id should route unchanged")
 end
 
-local function _test_board_feedback_effect_id_ref_routes_integer_sfx_key()
-  local effect_calls = {}
-
-  _with_patches({
-    {
-      target = host_runtime,
-      key = "play_sfx_by_key",
-      value = function(sfx_key, pos, rot, scale, duration, rate, with_sound)
-        effect_calls[#effect_calls + 1] = {
-          sfx_key = sfx_key,
-          scale = scale,
-          duration = duration,
-        }
-        return 501
-      end,
-    },
-    {
-      target = host_runtime,
-      key = "play_3d_sound",
-      value = function()
-        return nil
-      end,
-    },
-  }, function()
-    local state = _build_state()
-    local played = board_feedback.play_tile_cue(state, "upgrade_land_smoke", 1, {})
-    assert(played == true, "configured effect cue should play")
-  end)
-
-  assert(#effect_calls == 1, "effect cue should call engine once")
-  assert(effect_calls[1].sfx_key == runtime_refs.effects.upgrade_land_smoke, "effect id ref should resolve to integer sfx key")
-  assert(effect_calls[1].scale == 3.0, "upgrade_land_smoke should use scalar scale")
-end
-
-local function _test_board_feedback_tile_cue_uses_building_position_when_requested()
-  local effect_calls = {}
-
-  _with_patches({
-    {
-      target = host_runtime,
-      key = "play_sfx_by_key",
-      value = function(sfx_key, pos, rot, scale, duration, rate, with_sound)
-        effect_calls[#effect_calls + 1] = {
-          sfx_key = sfx_key,
-          pos = pos,
-        }
-        return 502
-      end,
-    },
-    {
-      target = host_runtime,
-      key = "play_3d_sound",
-      value = function()
-        return nil
-      end,
-    },
-  }, function()
-    local state = _build_state()
-    local played = board_feedback.play_tile_cue(state, "upgrade_land_smoke", 1, {
-      use_building_tile_position = true,
-    })
-    assert(played == true, "configured effect cue should play from building position")
-  end)
-
-  assert(#effect_calls == 1, "building-position tile cue should call engine once")
-  assert(effect_calls[1].pos.x == 10.0, "building-position tile cue should use building x")
-  assert(effect_calls[1].pos.y == 0.0, "building-position tile cue should use building y")
-  assert(effect_calls[1].pos.z == 0.0, "building-position tile cue should use building z")
-end
-
-local function _test_board_feedback_tile_cue_falls_back_to_tile_position_when_building_missing()
-  local effect_calls = {}
-
-  _with_patches({
-    {
-      target = host_runtime,
-      key = "play_sfx_by_key",
-      value = function(sfx_key, pos, rot, scale, duration, rate, with_sound)
-        effect_calls[#effect_calls + 1] = {
-          sfx_key = sfx_key,
-          pos = pos,
-        }
-        return 503
-      end,
-    },
-    {
-      target = host_runtime,
-      key = "play_3d_sound",
-      value = function()
-        return nil
-      end,
-    },
-  }, function()
-    local state = _build_state()
-    state.board_scene.buildings = {}
-    local played = board_feedback.play_tile_cue(state, "upgrade_land_smoke", 1, {
-      use_building_tile_position = true,
-    })
-    assert(played == true, "tile cue should fall back to tile position when building is missing")
-  end)
-
-  assert(#effect_calls == 1, "fallback tile cue should call engine once")
-  assert(effect_calls[1].pos.x == 0.0, "fallback tile cue should use tile x")
-  assert(effect_calls[1].pos.y == 0.0, "fallback tile cue should use tile y")
-  assert(effect_calls[1].pos.z == 0.0, "fallback tile cue should use tile z")
-end
-
-local function _test_overlay_compute_reads_host_unit_position_without_table_guard()
-  local state = _build_state()
-  state.board_scene.tiles[1] = _make_host_unit(5.0, 6.0, 7.0)
-
-  local pos = overlay_compute.overlay_pos_for_tile(state, 1)
-  assert(pos.x == 5.0, "overlay compute should preserve host unit x")
-  assert(pos.y == 7.0, "overlay compute should add y offset on host unit position")
-  assert(pos.z == 7.0, "overlay compute should preserve host unit z")
-end
-
-local function _test_visual_sync_overlay_uses_host_unit_position()
-  local state = _build_state()
-  state.board_scene.tiles[1] = _make_host_unit(12.0, 3.0, 4.0)
-  state.game.board = {
-    has_roadblock = function()
-      return false
-    end,
-    has_mine = function()
-      return true
-    end,
-  }
-  local spawn_calls = {}
-
-  _with_patches({
-    {
-      target = require("src.presentation.view.render.anim_overlay_runtime"),
-      key = "spawn_overlay",
-      value = function(scene, kind, tile_index, group_id, unit_id, pos)
-        spawn_calls[#spawn_calls + 1] = {
-          kind = kind,
-          tile_index = tile_index,
-          pos = pos,
-        }
-        return true
-      end,
-    },
-  }, function()
-    local handled = visual_sync.sync_overlay_visual(state, 1)
-    assert(handled == true, "visual sync should handle mine overlay")
-  end)
-
-  assert(#spawn_calls == 1, "visual sync should spawn one mine overlay")
-  assert(spawn_calls[1].kind == "mine", "visual sync should spawn mine overlay")
-  assert(spawn_calls[1].pos.x == 12.0, "visual sync should pass host unit x")
-  assert(spawn_calls[1].pos.y == 4.0, "visual sync should add overlay y offset")
-  assert(spawn_calls[1].pos.z == 4.0, "visual sync should pass host unit z")
-end
-
-local function _test_board_feedback_tile_cue_reads_host_unit_position()
-  local effect_calls = {}
-  local state = _build_state()
-  state.board_scene.tiles[1] = _make_host_unit(21.0, 22.0, 23.0)
-
-  _with_patches({
-    {
-      target = host_runtime,
-      key = "play_sfx_by_key",
-      value = function(sfx_key, pos)
-        effect_calls[#effect_calls + 1] = {
-          sfx_key = sfx_key,
-          pos = pos,
-        }
-        return 504
-      end,
-    },
-    {
-      target = host_runtime,
-      key = "play_3d_sound",
-      value = function()
-        return nil
-      end,
-    },
-  }, function()
-    local played = board_feedback.play_tile_cue(state, "upgrade_land_smoke", 1, {})
-    assert(played == true, "board feedback should play on host unit position")
-  end)
-
-  assert(#effect_calls == 1, "board feedback should call engine once for host unit position")
-  assert(effect_calls[1].pos.x == 21.0, "board feedback should use host unit x")
-  assert(effect_calls[1].pos.y == 22.0, "board feedback should use host unit y")
-  assert(effect_calls[1].pos.z == 23.0, "board feedback should use host unit z")
-end
-
-local function _test_board_feedback_player_effect_binding_keeps_bind_call()
-  local effect_calls = {}
-  local bind_calls = {}
-  local state = _build_state()
-  state.board_scene.units_by_player_id = {
-    [1] = {
-      get_position = function()
-        return math.Vector3(1.0, 2.0, 3.0)
-      end,
-    },
-  }
-
-  _with_patches({
-    {
-      target = host_runtime,
-      key = "play_sfx_by_key",
-      value = function(sfx_key, pos, rot, scale, duration, rate, with_sound)
-        effect_calls[#effect_calls + 1] = { sfx_key = sfx_key, scale = scale }
-        return 777
-      end,
-    },
-    {
-      target = host_runtime,
-      key = "bind_sfx_to_unit",
-      value = function(sfx_id, unit, socket_name, pos, bind_type)
-        bind_calls[#bind_calls + 1] = {
-          sfx_id = sfx_id,
-          socket_name = socket_name,
-          pos = pos,
-        }
-        return true
-      end,
-    },
-    {
-      target = host_runtime,
-      key = "play_3d_sound",
-      value = function()
-        return nil
-      end,
-    },
-  }, function()
-    local played = board_feedback.play_player_cue(state, "rich_deity", 1, {})
-    assert(played == true, "bound player effect should play")
-  end)
-
-  assert(#effect_calls == 1, "player effect should call engine once")
-  assert(effect_calls[1].sfx_key == runtime_refs.effects.rich_deity, "player effect should resolve configured integer sfx key")
-  assert(effect_calls[1].scale == 1.4, "player effect should use scalar scale")
-  assert(#bind_calls == 1, "player effect should still bind to unit")
-  assert(bind_calls[1].sfx_id == 777, "bind call should receive runtime sfx handle")
-end
-
-local function _test_board_feedback_cash_burst_routes_scalar_scale()
-  local effect_calls = {}
-
-  _with_patches({
-    {
-      target = host_runtime,
-      key = "play_sfx_by_key",
-      value = function(sfx_key, pos, rot, scale, duration, rate, with_sound)
-        effect_calls[#effect_calls + 1] = { sfx_key = sfx_key, scale = scale }
-        return 888
-      end,
-    },
-    {
-      target = host_runtime,
-      key = "play_3d_sound",
-      value = function()
-        return nil
-      end,
-    },
-  }, function()
-    local state = _build_state()
-    local played = board_feedback.play_player_cue(state, "cash_burst", 1, {})
-    assert(played == true, "cash_burst should play")
-  end)
-
-  assert(#effect_calls == 1, "cash_burst should call engine once")
-  assert(effect_calls[1].sfx_key == runtime_refs.effects.cash_burst, "cash_burst should resolve configured integer sfx key")
-  assert(effect_calls[1].scale == 1.6, "cash_burst should use scalar scale")
-end
-
-local function _test_board_feedback_bankruptcy_routes_scalar_scale()
-  local effect_calls = {}
-
-  _with_patches({
-    {
-      target = host_runtime,
-      key = "play_sfx_by_key",
-      value = function(sfx_key, pos, rot, scale, duration, rate, with_sound)
-        effect_calls[#effect_calls + 1] = { sfx_key = sfx_key, scale = scale }
-        return 999
-      end,
-    },
-    {
-      target = host_runtime,
-      key = "play_3d_sound",
-      value = function()
-        return nil
-      end,
-    },
-  }, function()
-    local state = _build_state()
-    local played = board_feedback.play_player_cue(state, "bankruptcy_slam", 1, {})
-    assert(played == true, "bankruptcy_slam should play")
-  end)
-
-  assert(#effect_calls == 1, "bankruptcy_slam should call engine once")
-  assert(effect_calls[1].sfx_key == runtime_refs.effects.bankruptcy_slam, "bankruptcy should resolve configured integer sfx key")
-  assert(effect_calls[1].scale == 1.0, "bankruptcy should fallback to scalar scale 1.0")
-end
-
-local function _test_board_feedback_followup_sound_defaults_are_numeric()
-  local sound_calls = {}
-
-  _with_patches({
-    {
-      target = host_runtime,
-      key = "play_sfx_by_key",
-      value = function()
-        return nil
-      end,
-    },
-    {
-      target = host_runtime,
-      key = "schedule",
-      value = function(delay, fn)
-        sound_calls[#sound_calls + 1] = { scheduled_delay = delay }
-        fn()
-      end,
-    },
-    {
-      target = host_runtime,
-      key = "play_3d_sound",
-      value = function(pos, sound_id, duration, volume)
-        sound_calls[#sound_calls + 1] = {
-          sound_id = sound_id,
-          duration = duration,
-          volume = volume,
-        }
-        return 303
-      end,
-    },
-  }, function()
-    local state = _build_state()
-    local played = board_feedback.play_tile_cue(state, "upgrade_land_smoke", 1, {
-      followup_sounds = {
-        { sound_id_ref = "turn_started" },
-      },
-    })
-    assert(played == true, "followup sound should count as played")
-  end)
-
-  assert(#sound_calls == 3, "followup sound path should include one main sound, one schedule, and one followup sound")
-  assert(sound_calls[1].sound_id == runtime_refs.audio.cash_receive, "main cue sound should play first")
-  assert(sound_calls[2].scheduled_delay == 0, "missing followup delay should default to zero")
-  assert(sound_calls[3].sound_id == runtime_refs.audio.turn_started, "followup sound should resolve configured integer sound id")
-  assert(sound_calls[3].duration == 1.0, "missing followup duration should default to 1.0")
-  assert(sound_calls[3].volume == 1.0, "missing followup volume should default to 1.0")
-end
-
-local function _test_board_feedback_unconfigured_effect_id_ref_skips_without_error()
-  local play_calls = 0
-
-  _with_patches({
-    {
-      target = host_runtime,
-      key = "play_sfx_by_key",
-      value = function()
-        play_calls = play_calls + 1
-        return 1
-      end,
-    },
-  }, function()
-    local state = _build_state()
-    local played = board_feedback.play_tile_cue(state, "upgrade_land_smoke", 1, {
-      effect_id_ref = "missing_effect_ref_for_test",
-      sound_id_ref = "missing_sound_ref_for_test",
-    })
-    assert(played == true, "followup sound scheduling may still keep cue successful")
-  end)
-
-  assert(play_calls == 0, "missing effect ref should not call engine")
-end
-
 local function _test_action_anim_upgrade_land_routes_board_feedback()
   local state = _build_state()
   local calls = {}
@@ -970,7 +571,7 @@ local function _test_action_anim_cash_receive_routes_board_feedback()
 end
 
 return {
-  name = "presentation_ui_action_anim",
+  name = "presentation.action_anim_core",
   tests = {
     { name = "action_anim_overlay_handler_returns_duration", run = _test_action_anim_overlay_handler_returns_duration },
     { name = "action_anim_roadblock_overlay_uses_4x_scale", run = _test_action_anim_roadblock_overlay_uses_4x_scale },
@@ -978,54 +579,7 @@ return {
     { name = "action_anim_is_silent_by_default", run = _test_action_anim_is_silent_by_default },
     { name = "action_anim_user_tip_policy_forces_tip", run = _test_action_anim_user_tip_policy_forces_tip },
     { name = "action_anim_debug_log_uses_info_without_tip", run = _test_action_anim_debug_log_uses_info_without_tip },
-    {
-      name = "host_runtime_sfx_port_skips_missing_keys_and_routes_valid_calls",
-      run = _test_host_runtime_sfx_port_skips_missing_keys_and_routes_valid_calls,
-    },
-    {
-      name = "board_feedback_effect_id_ref_routes_integer_sfx_key",
-      run = _test_board_feedback_effect_id_ref_routes_integer_sfx_key,
-    },
-    {
-      name = "board_feedback_tile_cue_uses_building_position_when_requested",
-      run = _test_board_feedback_tile_cue_uses_building_position_when_requested,
-    },
-    {
-      name = "board_feedback_tile_cue_falls_back_to_tile_position_when_building_missing",
-      run = _test_board_feedback_tile_cue_falls_back_to_tile_position_when_building_missing,
-    },
-    {
-      name = "board_feedback_player_effect_binding_keeps_bind_call",
-      run = _test_board_feedback_player_effect_binding_keeps_bind_call,
-    },
-    {
-      name = "overlay_compute_reads_host_unit_position_without_table_guard",
-      run = _test_overlay_compute_reads_host_unit_position_without_table_guard,
-    },
-    {
-      name = "visual_sync_overlay_uses_host_unit_position",
-      run = _test_visual_sync_overlay_uses_host_unit_position,
-    },
-    {
-      name = "board_feedback_tile_cue_reads_host_unit_position",
-      run = _test_board_feedback_tile_cue_reads_host_unit_position,
-    },
-    {
-      name = "board_feedback_cash_burst_routes_scalar_scale",
-      run = _test_board_feedback_cash_burst_routes_scalar_scale,
-    },
-    {
-      name = "board_feedback_bankruptcy_routes_scalar_scale",
-      run = _test_board_feedback_bankruptcy_routes_scalar_scale,
-    },
-    {
-      name = "board_feedback_unconfigured_effect_id_ref_skips_without_error",
-      run = _test_board_feedback_unconfigured_effect_id_ref_skips_without_error,
-    },
-    {
-      name = "board_feedback_followup_sound_defaults_are_numeric",
-      run = _test_board_feedback_followup_sound_defaults_are_numeric,
-    },
+    { name = "host_runtime_sfx_port_skips_missing_keys_and_routes_valid_calls", run = _test_host_runtime_sfx_port_skips_missing_keys_and_routes_valid_calls },
     { name = "action_anim_upgrade_land_routes_board_feedback", run = _test_action_anim_upgrade_land_routes_board_feedback },
     { name = "action_anim_cash_receive_routes_board_feedback", run = _test_action_anim_cash_receive_routes_board_feedback },
     { name = "action_anim_roll_screen_two_stage_timeline", run = _test_action_anim_roll_screen_two_stage_timeline },
