@@ -638,11 +638,23 @@ end
 
 local function _test_turn_start_logs_phase_event_to_event_feed()
   local g = _new_game()
+  g.players[1].status.stay_turns = 2
+  g.players[1].status.deity = { type = "poor", remaining = 3 }
+  inventory.give(g.players[1], gameplay_rules.item_ids.remote_dice)
+  local _, tile_ref = _first_land_tile(g.board)
+  g:set_tile_owner(tile_ref, g.players[1].id)
+  g:set_tile_level(tile_ref, 2)
+  g:set_player_property(g.players[1], tile_ref.id, true)
+  g:set_player_cash(g.players[1], 4321)
   logger.clear()
   turn_decision.log_turn_start(g)
   local text = logger.get_text_by_level("event")
   assert(string.find(text, "第1回合开始：", 1, true) ~= nil, "turn start should write phase event to event feed")
   assert(string.find(text, g.players[1].name, 1, true) ~= nil, "turn start event should mention current player")
+  assert(string.find(text, "金币=", 1, true) == nil, "turn start event should not include player balance")
+  assert(string.find(text, "状态:", 1, true) == nil, "turn start event should not include player status details")
+  assert(string.find(text, "背包:", 1, true) == nil, "turn start event should not include player items")
+  assert(string.find(text, "地产:", 1, true) == nil, "turn start event should not include player properties")
 end
 
 local function _test_intent_dispatcher_logs_waiting_choice_event()
