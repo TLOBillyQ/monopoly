@@ -1,9 +1,12 @@
 package.path = package.path .. ";./scripts/architecture/?.lua;./scripts/architecture/?/?.lua"
 
 local build = require("arch_view.build")
+local cli = require("arch_view.cli")
 local checker = require("arch_view.checker")
 local common = require("arch_view.common")
 local dependency_extract = require("arch_view.dependency_extract")
+local json_reader = require("arch_view.json_reader")
+local json_writer = require("arch_view.json_writer")
 local layout = require("arch_view.layers")
 local route_engine = require("arch_view.route_engine")
 local source_scan = require("arch_view.source_scan")
@@ -168,6 +171,40 @@ local function _test_source_scan_treats_init_as_package_entry()
   assert(scan_result.module_ids[root_module .. ".init"] ~= true, "init.lua should not emit foo.init module id")
 end
 
+local function _test_source_scan_resolves_relative_root_against_project_root()
+  local project_root = tmp_root .. "/sample_project"
+  local package_dir = project_root .. "/src/demo/pkg"
+  local ok, err = common.ensure_dir(package_dir)
+  if not ok then
+    error(err)
+  end
+
+  local init_file = assert(io.open(package_dir .. "/init.lua", "w"))
+  init_file:write('local util = require("src.demo.util")\nreturn util\n')
+  init_file:close()
+
+  local util_dir = project_root .. "/src/demo"
+  ok, err = common.ensure_dir(util_dir)
+  if not ok then
+    error(err)
+  end
+  local util_file = assert(io.open(util_dir .. "/util.lua", "w"))
+  util_file:write("return {}\n")
+  util_file:close()
+
+  local scan_result, scan_err = source_scan.scan_with_options({
+    source_roots = { "src" },
+  }, {
+    project_root = project_root,
+  })
+  if scan_result == nil then
+    error(scan_err)
+  end
+
+  assert(scan_result.module_ids["src.demo.pkg"] == true, "relative source root should resolve package module id")
+  assert(scan_result.module_ids["src.demo.util"] == true, "relative source root should resolve sibling module id")
+end
+
 local function _test_projection_builds_root_and_game_views()
   local architecture = _analyze_architecture()
   local root_view = architecture.views.root
@@ -319,6 +356,91 @@ local function _test_projection_exposes_full_names_and_display_edges()
   assert(first_edge.count >= 1, "display edges should keep aggregate count")
 end
 
+local function _test_build_includes_metadata_for_project_root_and_config_path()
+  local architecture, err = build.analyze(config, {
+    project_root = ".",
+    config_path = "scripts/architecture/monopoly_architecture.lua",
+  })
+  if architecture == nil then
+    error(err)
+  end
+
+  _assert_eq(architecture.schema_version, 1, "build should stamp schema_version")
+  assert(architecture.project_root ~= nil and architecture.project_root ~= "", "build should stamp project_root")
+  assert(architecture.config_path ~= nil and architecture.config_path ~= "", "build should stamp config_path")
+end
+
+local function _test_cli_scan_writes_metadata()
+  local out_path = tmp_root .. "/scan/architecture.json"
+  local ok, err = common.ensure_parent_dir(out_path)
+  if not ok then
+    error(err)
+  end
+
+  cli.run({
+    "scan",
+    "--out", out_path,
+  }, {
+    script_dir = "scripts/architecture",
+    default_project_root = ".",
+  })
+
+  local payload = json_reader.decode(_read_file(out_path))
+  _assert_eq(payload.schema_version, 1, "scan command should write schema_version")
+  assert(payload.project_root ~= nil and payload.project_root ~= "", "scan command should write project_root")
+  assert(payload.config_path ~= nil and payload.config_path ~= "", "scan command should write config_path")
+  assert(payload.views ~= nil and payload.views.root ~= nil, "scan command should keep architecture views")
+end
+
+local function _test_cli_supports_external_project_root_and_config()
+  local project_root = tmp_root .. "/cli_sample"
+  local src_dir = project_root .. "/src/demo"
+  local ok, err = common.ensure_dir(src_dir)
+  if not ok then
+    error(err)
+  end
+
+  local alpha_file = assert(io.open(src_dir .. "/alpha.lua", "w"))
+  alpha_file:write('local beta = require("src.demo.beta")\nreturn beta\n')
+  alpha_file:close()
+
+  local beta_file = assert(io.open(src_dir .. "/beta.lua", "w"))
+  beta_file:write("return {}\n")
+  beta_file:close()
+
+  local config_path = project_root .. "/sample_architecture.lua"
+  local config_file = assert(io.open(config_path, "w"))
+  config_file:write(table.concat({
+    "return {",
+    '  source_roots = { "src" },',
+    "  component_rules = {",
+    '    { name = "demo", match = { "^src%.demo$", "^src%.demo%..+" }, component = "demo" },',
+    "  },",
+    "  abstract_rules = {},",
+    "  forbidden_dependency_rules = {},",
+    "  cycle_baseline = {},",
+    "}",
+    "",
+  }, "\n"))
+  config_file:close()
+
+  local out_path = project_root .. "/out/architecture.json"
+  cli.run({
+    "scan",
+    "--project-root", project_root,
+    "--config", config_path,
+    "--out", out_path,
+  }, {
+    script_dir = "scripts/architecture",
+    default_project_root = ".",
+  })
+
+  local payload = json_reader.decode(_read_file(out_path))
+  assert(payload.modules["src.demo.alpha"] ~= nil, "external project scan should include alpha module")
+  assert(payload.modules["src.demo.beta"] ~= nil, "external project scan should include beta module")
+  _assert_eq(payload.modules["src.demo.alpha"].component, "demo", "external config should classify modules")
+end
+
 local function _test_viewer_command_writes_static_bundle()
   local out_dir = tmp_root .. "/viewer"
   local ok, err = common.ensure_dir(out_dir)
@@ -344,17 +466,63 @@ local function _test_viewer_command_writes_static_bundle()
   assert(data_script:find('"indicators"', 1, true) ~= nil, "viewer payload should contain indicators")
 end
 
+local function _test_cli_viewer_supports_in_json()
+  local out_dir = tmp_root .. "/viewer_from_json"
+  local json_path = tmp_root .. "/viewer_from_json_input/architecture.json"
+  local ok, err = common.ensure_parent_dir(json_path)
+  if not ok then
+    error(err)
+  end
+  local architecture = _analyze_architecture()
+  local write_ok, write_err = common.write_file(json_path, json_writer.encode(architecture))
+  if not write_ok then
+    error(write_err)
+  end
+
+  cli.run({
+    "viewer",
+    "--in-json", json_path,
+    "--out-dir", out_dir,
+  }, {
+    script_dir = "scripts/architecture",
+    default_project_root = ".",
+  })
+
+  assert(_exists(out_dir .. "/index.html"), "viewer --in-json should export index.html")
+  assert(_exists(out_dir .. "/architecture.json"), "viewer --in-json should export architecture.json")
+  local payload = json_reader.decode(_read_file(out_dir .. "/architecture.json"))
+  assert(payload.views ~= nil and payload.views.root ~= nil, "viewer --in-json should preserve architecture payload")
+end
+
+local function _test_common_builds_open_command()
+  local command = common.build_open_command("/tmp/arch_view/index.html")
+  assert(command ~= nil and command ~= "", "open command should be non-empty")
+  if common.is_windows() then
+    assert(command:find("start", 1, true) ~= nil, "windows open command should use start")
+  elseif common.is_macos() then
+    assert(command:find("open", 1, true) ~= nil, "mac open command should use open")
+  else
+    assert(command:find("xdg-open", 1, true) ~= nil, "linux open command should use xdg-open")
+  end
+end
+
 return {
   name = "architecture.arch_view_contract",
   tests = {
     { name = "dependency_extract_supports_static_requires", run = _test_dependency_extract_supports_static_requires },
     { name = "layers_assign_feedback_edges_for_cycles", run = _test_layers_assign_feedback_edges_for_cycles },
     { name = "source_scan_treats_init_as_package_entry", run = _test_source_scan_treats_init_as_package_entry },
+    { name = "source_scan_resolves_relative_root_against_project_root", run = _test_source_scan_resolves_relative_root_against_project_root },
     { name = "projection_builds_root_and_game_views", run = _test_projection_builds_root_and_game_views },
     { name = "config_classifies_runtime_game_and_ports", run = _test_config_classifies_runtime_game_and_ports },
     { name = "cycle_baseline_rejects_unexpected_cycles", run = _test_cycle_baseline_rejects_unexpected_cycles },
     { name = "route_engine_emits_orthogonal_paths_without_exact_overlap", run = _test_route_engine_emits_orthogonal_paths_without_exact_overlap },
     { name = "projection_exposes_full_names_and_display_edges", run = _test_projection_exposes_full_names_and_display_edges },
+    { name = "build_includes_metadata_for_project_root_and_config_path", run = _test_build_includes_metadata_for_project_root_and_config_path },
+    { name = "cli_scan_writes_metadata", run = _test_cli_scan_writes_metadata },
+    { name = "cli_supports_external_project_root_and_config", run = _test_cli_supports_external_project_root_and_config },
     { name = "viewer_command_writes_static_bundle", run = _test_viewer_command_writes_static_bundle },
+    { name = "cli_viewer_supports_in_json", run = _test_cli_viewer_supports_in_json },
+    { name = "common_builds_open_command", run = _test_common_builds_open_command },
   },
 }

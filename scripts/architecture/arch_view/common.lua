@@ -25,8 +25,101 @@ function common.is_windows()
   return package.config:sub(1, 1) == "\\"
 end
 
+function common.is_macos()
+  if common.is_windows() then
+    return false
+  end
+  local process = io.popen("uname")
+  if not process then
+    return false
+  end
+  local content = process:read("*l") or ""
+  process:close()
+  return common.normalize_path(content) == "Darwin"
+end
+
 function common.normalize_path(path)
   return tostring(path or ""):gsub("\\", "/")
+end
+
+function common.simplify_path(path)
+  local normalized = common.normalize_path(path)
+  local prefix = ""
+  local remainder = normalized
+  if normalized:match("^%a:/") then
+    prefix = normalized:sub(1, 2)
+    remainder = normalized:sub(4)
+  elseif normalized:sub(1, 1) == "/" then
+    prefix = "/"
+    remainder = normalized:sub(2)
+  end
+  local parts = {}
+  for _, segment in ipairs(common.split(remainder, "/")) do
+    if segment ~= "" and segment ~= "." then
+      if segment == ".." then
+        if #parts > 0 and parts[#parts] ~= ".." then
+          parts[#parts] = nil
+        elseif prefix == "" then
+          parts[#parts + 1] = segment
+        end
+      else
+        parts[#parts + 1] = segment
+      end
+    end
+  end
+  local simplified = table.concat(parts, "/")
+  if prefix == "" then
+    return simplified
+  end
+  if simplified == "" then
+    return prefix == "/" and "/" or (prefix .. "/")
+  end
+  return prefix .. "/" .. simplified
+end
+
+function common.current_dir()
+  local command = common.is_windows() and "cd" or "pwd"
+  local process = io.popen(command)
+  if not process then
+    return "."
+  end
+  local path = process:read("*l") or "."
+  process:close()
+  return common.normalize_path(path)
+end
+
+function common.is_absolute_path(path)
+  local normalized = common.normalize_path(path)
+  if normalized:match("^%a:/") then
+    return true
+  end
+  if normalized:match("^//") then
+    return true
+  end
+  return normalized:sub(1, 1) == "/"
+end
+
+function common.join_path(base, child)
+  local normalized_base = common.normalize_path(base)
+  local normalized_child = common.normalize_path(child)
+  if normalized_base == "" then
+    return normalized_child
+  end
+  if normalized_child == "" then
+    return normalized_base
+  end
+  return normalized_base:gsub("/+$", "") .. "/" .. normalized_child:gsub("^/+", "")
+end
+
+function common.resolve_path(base, path)
+  local normalized_path = common.normalize_path(path)
+  if normalized_path == "" then
+    return common.simplify_path(base)
+  end
+  if common.is_absolute_path(normalized_path) then
+    return common.simplify_path(normalized_path)
+  end
+  return common.simplify_path(common.join_path(base or "", normalized_path))
 end
 
 function common.system_tmp_dir()
@@ -123,6 +216,25 @@ end
 
 function common.ensure_parent_dir(path)
   return common.ensure_dir(common.parent_dir(path))
+end
+
+function common.build_open_command(path)
+  local normalized = common.normalize_path(path)
+  if common.is_windows() then
+    return 'start "" "' .. normalized:gsub("/", "\\") .. '"'
+  end
+  if common.is_macos() then
+    return 'open "' .. normalized .. '"'
+  end
+  return 'xdg-open "' .. normalized .. '" >/dev/null 2>&1'
+end
+
+function common.open_path(path)
+  local ok = os.execute(common.build_open_command(path))
+  if ok == nil or ok == false then
+    return nil, "failed to open path: " .. common.normalize_path(path)
+  end
+  return true
 end
 
 function common.split(text, delimiter)

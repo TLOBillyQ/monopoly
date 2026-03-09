@@ -58,7 +58,7 @@ systems → src/game/ports/xxx_port.lua (systems-facing contract)
 
 `game.bankruptcy_feedback_port` 也是同一模式：systems 只依赖 `src/game/ports/bankruptcy_feedback_port.lua`，由 outer runtime 在装配时注入“清地块后如何做展示反馈”的实现。
 
-`scripts/architecture/monopoly_architecture.lua` 是这套分层模型的可执行投影。它把 `app`、`core`、`presentation`、`game_flow`、`game_systems`、`game_runtime`、`game_ai`、`state`、`infrastructure` 这些组件映射成 `arch_view` 的分类规则，再由 `lua scripts/architecture/arch_view_cli.lua check` 对 `src/**/*.lua` 的静态 `require` 图做校验。这个工具只检查模块依赖图与循环基线；`lua scripts/architecture/arch_view_cli.lua viewer --out-dir <dir>` 则把同一份投影导出为静态 viewer，支持层级 drill-down、dependency triangles、聚合 edge tooltip 与返回状态恢复。像旧路径禁用、宿主全局 API、runtime 对象字段直读这类文本护栏，仍留在 `tests/guards/dep_rules.lua`、`tests/guards/legacy_path_guard.lua`、`tests/guards/forbidden_globals.lua`；其中 `dep_rules.lua` 只保留硬边界，`legacy_path_guard.lua` 只保留 exact/prefix 退休路径回流检查。默认入口是 `lua tests/guard.lua`。
+`scripts/architecture/monopoly_architecture.lua` 是这套分层模型的可执行投影。它把 `app`、`core`、`presentation`、`game_flow`、`game_systems`、`game_runtime`、`game_ai`、`state`、`infrastructure` 这些组件映射成 `arch_view` 的分类规则，再由 `lua scripts/architecture/arch_view_cli.lua check` 对 `src/**/*.lua` 的静态 `require` 图做校验。这个工具只检查模块依赖图与循环基线；`lua scripts/architecture/arch_view_cli.lua viewer --out-dir <dir>` 则把同一份投影导出为静态 viewer，支持层级 drill-down、dependency triangles、聚合 edge tooltip 与返回状态恢复。若要扫描别的 Lua 项目，可显式传 `--project-root <dir> --config <file>`；若要复用已有扫描结果，可传 `viewer --in-json <file> --out-dir <dir> [--open]`。像旧路径禁用、宿主全局 API、runtime 对象字段直读这类文本护栏，仍留在 `tests/guards/dep_rules.lua`、`tests/guards/legacy_path_guard.lua`、`tests/guards/forbidden_globals.lua`；其中 `dep_rules.lua` 只保留硬边界，`legacy_path_guard.lua` 只保留 exact/prefix 退休路径回流检查。默认入口是 `lua tests/guard.lua`。
 
 ## 依赖图
 

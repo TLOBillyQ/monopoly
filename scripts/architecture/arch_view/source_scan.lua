@@ -2,13 +2,14 @@ local common = require("arch_view.common")
 
 local source_scan = {}
 
-local function _module_from_path(root, path)
-  local normalized_root = common.normalize_path(root)
+local function _module_from_path(logical_root, filesystem_root, path)
+  local normalized_root = common.normalize_path(logical_root)
+  local normalized_filesystem_root = common.normalize_path(filesystem_root)
   local normalized_path = common.normalize_path(path)
-  local pattern = "^" .. normalized_root:gsub("%.", "%%.") .. "/(.+)%.lua$"
+  local pattern = "^" .. normalized_filesystem_root:gsub("%.", "%%.") .. "/(.+)%.lua$"
   local module_path = normalized_path:match(pattern)
   if module_path == nil then
-    local suffix_pattern = "/" .. normalized_root:gsub("%.", "%%.") .. "/(.+)%.lua$"
+    local suffix_pattern = "/" .. normalized_filesystem_root:gsub("%.", "%%.") .. "/(.+)%.lua$"
     module_path = normalized_path:match(suffix_pattern)
   end
   if module_path == nil then
@@ -35,17 +36,25 @@ local function _module_from_path(root, path)
 end
 
 function source_scan.scan(config)
+  return source_scan.scan_with_options(config, nil)
+end
+
+function source_scan.scan_with_options(config, opts)
+  opts = opts or {}
+  local project_root = common.normalize_path(opts.project_root or common.current_dir())
   local modules = {}
   local module_ids = {}
 
   for _, root in ipairs(config.source_roots or {}) do
-    local files, err = common.collect_lua_files(root)
+    local logical_root = common.normalize_path(root)
+    local filesystem_root = common.resolve_path(project_root, root)
+    local files, err = common.collect_lua_files(filesystem_root)
     if not files then
       return nil, err
     end
 
     for _, path in ipairs(files) do
-      local resolved = _module_from_path(root, path)
+      local resolved = _module_from_path(logical_root, filesystem_root, path)
       if resolved ~= nil then
         local source_text, read_err = common.read_file(path)
         if source_text == nil then
@@ -68,6 +77,7 @@ function source_scan.scan(config)
     modules = modules,
     module_ids = module_ids,
     module_list = common.sorted_keys(modules),
+    project_root = project_root,
   }
 end
 

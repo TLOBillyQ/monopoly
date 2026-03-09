@@ -16,13 +16,27 @@
 
 这会扫描 `src/`，执行边界校验，并在失败时用非零退出码结束。`tests/guards/arch_view_guard.lua` 与 `tests/regression.lua` 使用的就是这套能力；如果只想跑所有文本护栏与 `arch_view` 护栏，执行 `lua tests/guard.lua`。
 
+如果要扫描其他 Lua 项目，可显式指定项目根和配置文件：
+
+    lua scripts/architecture/arch_view_cli.lua check --project-root /path/to/project --config /path/to/architecture.lua
+
     lua scripts/architecture/arch_view_cli.lua scan --out /tmp/monopoly_architecture.json
 
-这会导出完整机器可读数据，包含 `graph`、`modules`、`layout`、`classified_edges`、`views` 与 `check`。第二阶段开始，`views[*]` 还会带上 `display_edges`、`route_points`、`indicators`、`full_name`、`incoming_dependencies`、`outgoing_dependencies` 等 viewer 渲染字段。
+这会导出完整机器可读数据，包含 `schema_version`、`project_root`、`config_path`、`graph`、`modules`、`layout`、`classified_edges`、`views` 与 `check`。第二阶段开始，`views[*]` 还会带上 `display_edges`、`route_points`、`indicators`、`full_name`、`incoming_dependencies`、`outgoing_dependencies` 等 viewer 渲染字段。
 
     lua scripts/architecture/arch_view_cli.lua viewer --out-dir /tmp/monopoly_arch_view
 
 这会导出静态 viewer：`index.html`、`script.js`、`styles.css`、`architecture.json`、`architecture_data.js`。打开 `index.html` 即可查看，不需要本地服务。
+
+如果已经有导出的 JSON，可直接复用而不重扫源码：
+
+    lua scripts/architecture/arch_view_cli.lua viewer --in-json /tmp/monopoly_architecture.json --out-dir /tmp/monopoly_arch_view
+
+如果想在导出后自动打开浏览器，可加 `--open`：
+
+    lua scripts/architecture/arch_view_cli.lua viewer --out-dir /tmp/monopoly_arch_view --open
+
+这里的“对齐远端 viewer 体验”采用的是静态 web viewer + 自动打开浏览器，而不是 Quil/桌面 GUI 复刻。本轮也不包含远端 `PROJECT_NOTES.md` 中的 guidance-vs-actual diff、pan/zoom、image export 和 CI 报表等 roadmap 项。
 
 ## Viewer 读法
 
