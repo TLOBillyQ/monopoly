@@ -1,4 +1,4 @@
-local support = require("TestSupport")
+local support = require("support.runtime_support")
 local _assert_eq = support.assert_eq
 local number_utils = support.number_utils
 local logger = require("src.core.utils.logger")

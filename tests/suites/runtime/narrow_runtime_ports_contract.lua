@@ -1,4 +1,4 @@
-local support = require("TestSupport")
+local support = require("support.runtime_support")
 local _assert_eq = support.assert_eq
 
 local action_anim_port = require("src.core.ports.action_anim_port")

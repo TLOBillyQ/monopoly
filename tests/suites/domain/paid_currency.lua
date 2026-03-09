@@ -1,4 +1,4 @@
-local support = require("TestSupport")
+local support = require("support.domain_support")
 local _new_game = support.new_game
 local _with_patches = support.with_patches
 local runtime_ports = require("src.core.ports.runtime_ports")

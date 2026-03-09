@@ -2,7 +2,7 @@ local player_colors = require("src.presentation.view.support.player_colors")
 local assets = require("src.presentation.runtime.view.assets")
 local runtime = require("src.presentation.runtime.ui")
 local base_nodes = require("src.presentation.view.canvas.base.nodes")
-local support = require("TestSupport")
+local support = require("support.presentation_support")
 local _with_patches = support.with_patches
 
 local function _assert_eq(actual, expected, msg)

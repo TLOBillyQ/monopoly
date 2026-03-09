@@ -1,4 +1,4 @@
-local support = require("TestSupport")
+local support = require("support.gameplay_support")
 local gameplay_loop = support.gameplay_loop
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local game_startup = require("src.app.bootstrap.game_startup")
@@ -11,7 +11,7 @@ local choice_resolver = support.choice_resolver
 local movement = support.movement
 local steal = support.steal
 local _build_ui_port = support.build_ui_port
-local _bind_ui_runtime = support.bind_ui_runtime
+local _bind_ui_runtime = support.migrate_legacy_ui_state_for_test
 local _get_choice = support.get_choice
 local _open_choice = support.open_choice
 local _tile_state = support.tile_state

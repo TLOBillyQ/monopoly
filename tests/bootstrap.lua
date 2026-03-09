@@ -21,11 +21,6 @@ function M.install_package_paths()
   _append_path("./scripts/architecture/?.lua")
   _append_path("./scripts/architecture/?/?.lua")
 
-  -- Keep legacy lookup paths for compatibility while the migration is in flight.
-  _append_path("./.agents/tests/?.lua")
-  _append_path("./.agents/tests/suites/?.lua")
-  _append_path("./.agents/tests/fixtures/?.lua")
-
   _package_paths_installed = true
 end
 

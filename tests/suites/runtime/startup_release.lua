@@ -1,4 +1,4 @@
-local support = require("TestSupport")
+local support = require("support.runtime_support")
 local with_patches = support.with_patches
 local app = support.app
 local startup_policy = require("src.app.bootstrap.startup_policy")

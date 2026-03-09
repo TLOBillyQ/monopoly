@@ -1,6 +1,6 @@
-local dep_rules = require("internal.dep_rules")
-local forbidden_globals = require("internal.forbidden_globals")
-local legacy_path_guard = require("internal.legacy_path_guard")
+local dep_rules = require("guards.dep_rules")
+local forbidden_globals = require("guards.forbidden_globals")
+local legacy_path_guard = require("guards.legacy_path_guard")
 
 local path_sep = package.config:sub(1, 1)
 local tmp_root = (function()

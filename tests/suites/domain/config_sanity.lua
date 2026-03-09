@@ -1,4 +1,4 @@
-local support = require("TestSupport")
+local support = require("support.domain_support")
 local with_patches = support.with_patches
 local config_sanity = require("src.core.config.config_sanity")
 local market_cfg = require("Config.generated.market")

@@ -1,4 +1,4 @@
-local support = require("TestSupport")
+local support = require("support.gameplay_support")
 local turn_engine = require("src.game.flow.turn.engine")
 local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 

@@ -1,6 +1,6 @@
-local support = require("TestSupport")
+local support = require("support.runtime_support")
 local _assert_eq = support.assert_eq
-local _bind_ui_runtime = support.bind_ui_runtime
+local _bind_ui_runtime = support.migrate_legacy_ui_state_for_test
 local _with_patches = support.with_patches
 
 local gameplay_loop = require("src.game.flow.turn.loop")

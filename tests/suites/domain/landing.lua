@@ -1,4 +1,4 @@
-local support = require("TestSupport")
+local support = require("support.domain_support")
 local _new_game = support.new_game
 local _build_ui_port = support.build_ui_port
 local _resolve_landing = support.resolve_landing

@@ -1,4 +1,4 @@
-local support = require("TestSupport")
+local support = require("support.domain_support")
 local default_map = require("Config.maps.default_map")
 local function _new_game()
   return support.new_game({ map = default_map })

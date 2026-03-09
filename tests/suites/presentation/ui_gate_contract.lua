@@ -1,4 +1,4 @@
-local support = require("TestSupport")
+local support = require("support.presentation_support")
 local _assert_eq = support.assert_eq
 
 local validator = require("src.game.flow.turn.dispatch_validator")

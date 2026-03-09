@@ -124,33 +124,9 @@ local function _load_modules(module_names, layer, kind)
   return suites
 end
 
-local function _concat(left, right)
-  local combined = {}
-  for _, value in ipairs(left or {}) do
-    combined[#combined + 1] = value
-  end
-  for _, value in ipairs(right or {}) do
-    combined[#combined + 1] = value
-  end
-  return combined
-end
-
 M.behavior_suites = behavior_modules
 M.contract_suites = contract_modules
 M.guard_scripts = guard_scripts
-M.manifest_modules = _concat(behavior_modules, {
-  "suites.presentation.read_model_contract",
-  "suites.architecture.architecture_guard_contract",
-  "suites.architecture.arch_view_contract",
-  "suites.architecture.guard_scripts_contract",
-  "suites.architecture.usecase_boundary_contract",
-  "suites.architecture.cross_module_contract",
-  "suites.presentation.ui_gate_contract",
-  "suites.runtime.runtime_ports_contract",
-  "suites.presentation.ui_runtime_state_contract",
-  "suites.architecture.intent_output_contract",
-  "suites.runtime.narrow_runtime_ports_contract",
-})
 
 function M.load_behavior_suites()
   bootstrap.install_package_paths()
