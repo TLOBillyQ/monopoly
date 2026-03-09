@@ -12,7 +12,7 @@
 
     lua tests/regression.lua
 
-这条命令回答的问题是：当前工作树在全局上是否仍然满足回归、依赖边界和护栏要求。健康时应至少看到：
+这条命令回答的问题是：当前工作树在全局上是否仍然满足回归、依赖边界和护栏要求。这里的护栏现在是“硬边界”集合：`arch_view` 看结构依赖，`dep_rules` 看宿主 API/退休桥接/UI 旁路，`legacy_path_guard` 看旧模块 id 回流，`forbidden_globals` 看运行时禁用语法。健康时应至少看到：
 
     All regression checks passed
     dep_rules ok

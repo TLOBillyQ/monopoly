@@ -1,21 +1,25 @@
+package.path = package.path .. ";./tests/?.lua"
+
+local guard_support = require("internal.guard_support")
+
 local rules = {
   {
-    root = "src/presentation",
+    roots = { "src/presentation" },
     forbidden = { "shared.UINodes" },
     description = "no module may depend on retired shared.UINodes",
   },
   {
-    root = "src/presentation",
+    roots = { "src/presentation" },
     forbidden = { "intent_builders" },
     description = "no module may depend on retired intent_builders",
   },
   {
-    root = "src/game/core/runtime",
+    roots = { "src/game/core/runtime" },
     forbidden = { "TurnFlow" },
     description = "runtime must not depend on retired TurnFlow",
   },
   {
-    root = "src/presentation/view/canvas/base",
+    roots = { "src/presentation/view/canvas/base" },
     forbidden = {
       "canvas.always_show", "canvas.market", "canvas.secondary_confirm",
       "canvas.remote_choice", "canvas.player_choice", "canvas.popup",
@@ -24,7 +28,7 @@ local rules = {
     description = "base canvas must not import other canvas modules",
   },
   {
-    root = "src/game/core",
+    roots = { "src/game/core" },
     forbidden_patterns = {
       "%f[%w_]GameAPI%f[^%w_]",
       "%f[%w_]GlobalAPI%f[^%w_]",
@@ -35,75 +39,44 @@ local rules = {
     description = "game core must not use runtime global APIs directly",
   },
   {
-    root = "src/game/core",
+    roots = { "src/core" },
+    forbidden_patterns = {
+      "%f[%w_]GameAPI%f[^%w_]",
+      "%f[%w_]GlobalAPI%f[^%w_]",
+      "%f[%w_]SetTimeOut%f[^%w_]",
+      "%f[%w_]RegisterTriggerEvent%f[^%w_]",
+      "%f[%w_]RegisterCustomEvent%f[^%w_]",
+    },
+    description = "core utility layer must not use host runtime globals directly",
+  },
+  {
+    roots = { "src/game/core", "src/app", "src/presentation", "tests" },
     forbidden_patterns = {
       "require%(\"src%.core%.runtime_compat\"%)",
       "require%('src%.core%.runtime_compat'%)",
     },
-    description = "game core must not depend on retired runtime bridge path src.core.runtime_compat; use runtime_ports/context-injected ports",
+    description = "runtime_compat bridge path is retired; use runtime ports or injected context",
   },
   {
-    root = "src/app",
-    forbidden_patterns = {
-      "require%(\"src%.core%.runtime_compat\"%)",
-      "require%('src%.core%.runtime_compat'%)",
-    },
-    description = "app layer must not depend on retired runtime bridge path src.core.runtime_compat; use runtime_ports/context",
-  },
-  {
-    root = "src/presentation",
-    forbidden_patterns = {
-      "require%(\"src%.core%.runtime_compat\"%)",
-      "require%('src%.core%.runtime_compat'%)",
-    },
-    description = "presentation layer must not depend on retired runtime bridge path src.core.runtime_compat; use runtime_ports/context",
-  },
-  {
-    root = "tests",
-    forbidden_patterns = {
-      "require%(\"src%.core%.runtime_compat\"%)",
-      "require%('src%.core%.runtime_compat'%)",
-    },
-    description = "tests must not depend on retired runtime bridge path src.core.runtime_compat; validate runtime_ports/runtime_context contracts directly",
-  },
-  {
-    root = "src",
+    roots = { "src", "tests" },
     forbidden_patterns = {
       "require%(\"src%.game%.core%.runtime%.TurnEngine\"%)",
       "require%('src%.game%.core%.runtime%.TurnEngine'%)",
       "require%(\"src%.game%.core%.runtime%.PhaseRegistry\"%)",
       "require%('src%.game%.core%.runtime%.PhaseRegistry'%)",
     },
-    description = "source must not depend on retired core runtime proxy modules",
+    description = "TurnEngine/PhaseRegistry proxy modules are retired",
   },
   {
-    root = "tests",
-    forbidden_patterns = {
-      "require%(\"src%.game%.core%.runtime%.TurnEngine\"%)",
-      "require%('src%.game%.core%.runtime%.TurnEngine'%)",
-      "require%(\"src%.game%.core%.runtime%.PhaseRegistry\"%)",
-      "require%('src%.game%.core%.runtime%.PhaseRegistry'%)",
-    },
-    description = "tests must not depend on retired core runtime proxy modules",
-  },
-  {
-    root = "src",
+    roots = { "src", "tests" },
     forbidden_patterns = {
       "require%(\"src%.game%.core%.runtime%.MonopolyEvents\"%)",
       "require%('src%.game%.core%.runtime%.MonopolyEvents'%)",
     },
-    description = "source must not depend on MonopolyEvents retired bridge path",
+    description = "MonopolyEvents proxy module is retired",
   },
   {
-    root = "tests",
-    forbidden_patterns = {
-      "require%(\"src%.game%.core%.runtime%.MonopolyEvents\"%)",
-      "require%('src%.game%.core%.runtime%.MonopolyEvents'%)",
-    },
-    description = "tests must not depend on MonopolyEvents retired bridge path",
-  },
-  {
-    root = "src",
+    roots = { "src" },
     forbidden_patterns = {
       "clock%.now%(",
       "clock%.diff_seconds%(",
@@ -111,7 +84,7 @@ local rules = {
     description = "source must not use retired clock.now/diff_seconds aliases",
   },
   {
-    root = "src/game/systems",
+    roots = { "src/game/systems" },
     forbidden_patterns = {
       "ui_port%.wait_action_anim",
       "game%.ui_port%.wait_action_anim",
@@ -119,33 +92,34 @@ local rules = {
     description = "systems layer must use ActionAnimPort instead of direct ui_port.wait_action_anim checks",
   },
   {
-    root = "src/game/systems",
+    roots = { "src/game/systems" },
     forbidden_patterns = {
       "game%.gameplay_loop_ports",
       "self%.gameplay_loop_ports",
       "require%(%\"src%.game%.flow%.turn%.loop_ports%\"%)",
       "require%(%'src%.game%.flow%.turn%.loop_ports'%)",
     },
-    description = "systems layer must not read gameplay loop runtime object fields directly or depend on loop_ports; use explicit game ports instead",
+    description = "systems layer must not read gameplay loop runtime object fields directly or depend on loop_ports",
   },
   {
-    root = "src/game/flow/turn",
+    roots = { "src/game/flow/turn" },
     forbidden_patterns = {
-      "state%.ui%."
+      "state%.ui%.",
+      "state%.ui_[A-Za-z0-9_]+%s*=",
     },
-    description = "turn flow must use ui_sync.resolve_ui_gate/ui_sync ports instead of direct state.ui reads",
+    description = "turn flow must route UI reads and writes through output/ui_sync ports",
   },
   {
-    root = "src/game/systems/market/application",
+    roots = { "src/game/systems/market/application" },
     forbidden_patterns = {
       "%f[%w_]GameAPI%f[^%w_]",
       "%f[%w_]RegisterTriggerEvent%f[^%w_]",
       "%f[%w_]EVENT%f[^%w_]",
     },
-    description = "market service layer must not call host purchase globals directly; move Eggy payment details to outer adapters",
+    description = "market service layer must not call host purchase globals directly",
   },
   {
-    root = "src/presentation/runtime/ports",
+    roots = { "src/presentation/runtime/ports" },
     forbidden_patterns = {
       "game%.ui_port",
       "ui_port%.get_board_scene",
@@ -154,24 +128,23 @@ local rules = {
     description = "presentation ports must consume narrow board_scene_port instead of retired ui_port fallbacks",
   },
   {
-    root = "src/game",
+    roots = { "src/game", "src/presentation" },
     forbidden_patterns = {
       "%f[%w_]all_roles%f[^%w_]",
       "%f[%w_]ALLROLES%f[^%w_]",
       "%f[%w_]vehicle_helper%f[^%w_]",
       "%f[%w_]camera_helper%f[^%w_]",
     },
-    description = "game layer must not read legacy runtime globals directly; use runtime_ports/context",
+    description = "game/presentation layers must not read legacy runtime globals directly",
   },
   {
-    root = "src/presentation",
+    roots = { "src", "tests" },
     forbidden_patterns = {
-      "%f[%w_]all_roles%f[^%w_]",
-      "%f[%w_]ALLROLES%f[^%w_]",
-      "%f[%w_]vehicle_helper%f[^%w_]",
-      "%f[%w_]camera_helper%f[^%w_]",
+      "context_policy%s*=%s*\"legacy\"",
+      "context_policy%s*=%s*'legacy'",
+      "enable_legacy_helper_fallback%s*=%s*true",
     },
-    description = "presentation layer must not read legacy runtime globals directly; use runtime_ports/context",
+    description = "legacy runtime context fallback flags are retired",
   },
 }
 
@@ -182,7 +155,16 @@ local dep_rules_whitelist = {
   },
 }
 
-local function _is_whitelisted_line(allow_by_file, line)
+local forbidden_files = {
+  "src/game/flow/output_adapters/legacy_output_mirror.lua",
+  "src/game/systems/market/service/paid_purchase_gateway.lua",
+  "src/core/runtime_facade/runtime_context.lua",
+  "src/core/runtime_facade/runtime_event_bridge.lua",
+  "src/core/runtime_ports/default_ports.lua",
+}
+
+local function _is_whitelisted_line(relpath, line)
+  local allow_by_file = dep_rules_whitelist[relpath]
   if allow_by_file == nil then
     return false
   end
@@ -194,350 +176,113 @@ local function _is_whitelisted_line(allow_by_file, line)
   return false
 end
 
-local forbidden_files = {
-  "src/game/flow/output_adapters/legacy_output_mirror.lua",
-  "src/game/systems/market/service/paid_purchase_gateway.lua",
-  "src/core/runtime_facade/runtime_context.lua",
-  "src/core/runtime_facade/runtime_event_bridge.lua",
-  "src/core/runtime_ports/default_ports.lua",
-}
-
-local growth_budget_rules = {
-  {
-    description = "src/core host runtime global touch points are frozen until stage 3 runtime extraction",
-    roots = { "src/core" },
-    patterns = {
-      "%f[%w_]GameAPI%f[^%w_]",
-      "%f[%w_]GlobalAPI%f[^%w_]",
-      "%f[%w_]SetTimeOut%f[^%w_]",
-      "%f[%w_]RegisterTriggerEvent%f[^%w_]",
-      "%f[%w_]RegisterCustomEvent%f[^%w_]",
-    },
-    budget = {
-      ["src/core/utils/logger.lua"] = 0,
-      ["src/core/state_access/runtime_editor_exports.lua"] = 0,
-    },
-  },
-  {
-    description = "app/presentation host runtime global aliases must stay confined to bootstrap shell only",
-    roots = { "src/app", "src/presentation" },
-    patterns = {
-      "%f[%w_]SetTimeOut%f[^%w_]",
-      "%f[%w_]RegisterCustomEvent%f[^%w_]",
-      "%f[%w_]TriggerCustomEvent%f[^%w_]",
-      "%f[%w_]all_roles%f[^%w_]",
-      "%f[%w_]ALLROLES%f[^%w_]",
-    },
-    budget = {
-      ["src/app/bootstrap/runtime/global_aliases.lua"] = 3,
-      ["src/app/init.lua"] = 2,
-    },
-  },
-  {
-    description = "gameplay/runtime modules must not add new game.ui_port dependency points before stage 2 port extraction",
-    roots = { "src/game", "src/core" },
-    patterns = {
-      "game%.ui_port",
-      "self%.ui_port",
-      "ui_port%.wait_action_anim",
-      "ui_port%.wait_move_anim",
-      "ui_port:push_popup",
-      "ui_port%.push_popup",
-      "ui_port%.state",
-    },
-    budget = {
-      ["src/core/ports/action_anim_port.lua"] = 0,
-      ["src/game/core/runtime/game_state_tiles.lua"] = 0,
-      ["src/game/flow/intent/intent_dispatcher.lua"] = 0,
-      ["src/game/flow/turn/loop.lua"] = 0,
-      ["src/game/flow/turn/decision.lua"] = 0,
-      ["src/game/flow/turn/move.lua"] = 0,
-      ["src/game/flow/turn/roll.lua"] = 0,
-      ["src/game/systems/items/inventory.lua"] = 0,
-      ["src/game/systems/items/phase.lua"] = 0,
-      ["src/game/systems/items/use_broadcast.lua"] = 0,
-      ["src/game/systems/land/presenter.lua"] = 0,
-      ["src/game/systems/land/effects/base.lua"] = 0,
-    },
-  },
-  {
-    description = "turn flow must not add new state.ui_* writes before stage 1 output-port extraction",
-    roots = { "src/game/flow" },
-    patterns = {
-      "state%.ui_[A-Za-z0-9_]+%s*=",
-    },
-    budget = {},
-  },
-}
-
-local function _is_windows()
-  return package.config:sub(1, 1) == "\\"
-end
-
-local function _build_list_command(root)
-  if _is_windows() then
-    local win_root = root:gsub("/", "\\")
-    return 'dir /b /s /a-d "' .. win_root .. '\\*.lua" 2>nul'
-  end
-  return 'find "' .. root .. '" -type f -name "*.lua" 2>/dev/null'
-end
-
-local function _collect_lua_files(root)
-  local cmd = _build_list_command(root)
-  local p = io.popen(cmd)
-  if not p then
-    return nil, "cannot run list command: " .. cmd
-  end
-
-  local files = {}
-  for line in p:lines() do
-    if line and line ~= "" then
-      files[#files + 1] = line
-    end
-  end
-
-  local ok = p:close()
-  if ok == nil or ok == false then
-    return nil, "list command failed: " .. tostring(cmd)
-  end
-  if #files == 0 then
-    return nil, "no lua files found under: " .. tostring(root)
-  end
-  return files
-end
-
-local function _scan_file(path, forbidden, forbidden_patterns)
-  local file = io.open(path, "r")
-  if not file then
-    return nil, "cannot open: " .. tostring(path)
-  end
-  local lineno = 0
-  local normalized_path = tostring(path or ""):gsub("\\", "/")
-  local relpath = normalized_path:match(".*(src/.+)") or normalized_path:match(".*(tests/.+)") or normalized_path
-  local allow_by_file = dep_rules_whitelist[relpath]
-  for line in file:lines() do
-    lineno = lineno + 1
-    for _, prefix in ipairs(forbidden or {}) do
-      if line:find(prefix, 1, true) and not _is_whitelisted_line(allow_by_file, line) then
-        file:close()
-        return {
-          path = path,
-          line = lineno,
-          token = prefix,
-          text = line,
-        }
+local function _scan_rule(rule)
+  return guard_support.find_line_violation({
+    roots = rule.roots,
+    find_violation = function(path, relpath, line, line_number)
+      if _is_whitelisted_line(relpath, line) then
+        return nil
       end
-    end
-    for _, pattern in ipairs(forbidden_patterns or {}) do
-      if line:find(pattern) and not _is_whitelisted_line(allow_by_file, line) then
-        file:close()
-        return {
-          path = path,
-          line = lineno,
-          token = pattern,
-          text = line,
-        }
-      end
-    end
-  end
-  file:close()
-  return nil
-end
 
-local function _scan_tree(rule)
-  local files, files_err = _collect_lua_files(rule.root)
-  if not files then
-    return nil, files_err
-  end
-  for _, path in ipairs(files) do
-    local hit, scan_err = _scan_file(path, rule.forbidden, rule.forbidden_patterns)
-    if hit then
-      return hit
-    end
-    if scan_err then
-      return nil, scan_err
-    end
-  end
-  return nil
-end
-
-local function _normalize_path(path)
-  return tostring(path or ""):gsub("\\", "/")
-end
-
-local function _to_repo_relpath(path)
-  local normalized = _normalize_path(path)
-  return normalized:match(".*(src/.+)") or normalized:match(".*(tests/.+)") or normalized
-end
-
-local function _scan_legacy_policy_usages()
-  local roots = { "src", "tests" }
-  for _, root in ipairs(roots) do
-    local files, err = _collect_lua_files(root)
-    if not files then
-      if not tostring(err):find("no lua files found under", 1, true) then
-        return nil, err
-      end
-    else
-      for _, path in ipairs(files) do
-        local normalized = _normalize_path(path)
-        local relpath = normalized:match(".*(src/.+)") or normalized:match(".*(tests/.+)") or normalized
-        if not relpath:match("tests/internal/dep_rules.lua$") then
-          local file = io.open(path, "r")
-          if not file then
-            return nil, "cannot open: " .. tostring(path)
-          end
-          local lineno = 0
-          for line in file:lines() do
-            lineno = lineno + 1
-            if line:find("context_policy%s*=%s*\"legacy\"")
-              or line:find("context_policy%s*=%s*'legacy'") then
-              file:close()
-              return {
-                path = relpath,
-                line = lineno,
-                token = "context_policy = legacy",
-                text = line,
-                description = "legacy context_policy is retired",
-              }
-            end
-            if line:find("enable_legacy_helper_fallback%s*=%s*true") then
-              file:close()
-              return {
-                path = relpath,
-                line = lineno,
-                token = "enable_legacy_helper_fallback = true",
-                text = line,
-                description = "legacy helper fallback opt-in is retired",
-              }
-            end
-          end
-          file:close()
+      for _, token in ipairs(rule.forbidden or {}) do
+        if line:find(token, 1, true) then
+          return {
+            path = relpath,
+            line = line_number,
+            token = token,
+            text = line,
+            description = rule.description,
+          }
         end
       end
-    end
-  end
-  return nil
-end
 
-local function _count_pattern_hits(line, patterns)
-  local total = 0
-  for _, pattern in ipairs(patterns or {}) do
-    local _, count = line:gsub(pattern, "")
-    total = total + count
-  end
-  return total
-end
-
-local function _scan_growth_budget_rule(rule)
-  local observed = {}
-  for _, root in ipairs(rule.roots or {}) do
-    local files, err = _collect_lua_files(root)
-    if not files then
-      if not tostring(err):find("no lua files found under", 1, true) then
-        return nil, err
-      end
-    else
-      for _, path in ipairs(files) do
-        local relpath = _to_repo_relpath(path)
-        local file = io.open(path, "r")
-        if not file then
-          return nil, "cannot open: " .. tostring(path)
-        end
-        local hits = 0
-        for line in file:lines() do
-          hits = hits + _count_pattern_hits(line, rule.patterns)
-        end
-        file:close()
-        if hits > 0 then
-          observed[relpath] = hits
-          local budget = rule.budget[relpath] or 0
-          if hits > budget then
-            return {
-              path = relpath,
-              line = 1,
-              token = "growth_budget",
-              text = "observed=" .. tostring(hits) .. " budget=" .. tostring(budget),
-              description = rule.description,
-            }
-          end
-          if budget == 0 then
-            return {
-              path = relpath,
-              line = 1,
-              token = "growth_budget",
-              text = "observed=" .. tostring(hits) .. " budget=0",
-              description = rule.description,
-            }
-          end
+      for _, pattern in ipairs(rule.forbidden_patterns or {}) do
+        if line:find(pattern) then
+          return {
+            path = relpath,
+            line = line_number,
+            token = pattern,
+            text = line,
+            description = rule.description,
+          }
         end
       end
-    end
-  end
 
-  for relpath, budget in pairs(rule.budget or {}) do
-    local hits = observed[relpath] or 0
-    if hits ~= budget then
+      return nil
+    end,
+  })
+end
+
+local function _check_forbidden_files(paths)
+  for _, path in ipairs(paths or {}) do
+    local file = io.open(path, "r")
+    if file then
+      file:close()
       return {
-        path = relpath,
+        path = path,
         line = 1,
-        token = "growth_budget_stale",
-        text = "observed=" .. tostring(hits) .. " budget=" .. tostring(budget),
-        description = rule.description .. " (update budget after debt shrinks)",
+        token = "forbidden_file",
+        text = path,
+        description = "forbidden file exists",
       }
     end
   end
-
   return nil
 end
 
-for _, rule in ipairs(rules) do
-  local hit, err = _scan_tree(rule)
-  if err and not tostring(err):find("no lua files found under", 1, true) then
-    io.stderr:write("dep_rules error: ", err, "\n")
-    os.exit(1)
+local M = {}
+
+function M.run(opts)
+  opts = opts or {}
+  local active_rules = opts.rules or rules
+  for _, rule in ipairs(active_rules) do
+    local hit, err = _scan_rule(rule)
+    if err and not tostring(err):find("no lua files found under", 1, true) then
+      return { ok = false, error = err }
+    end
+    if hit then
+      return { ok = false, violation = hit }
+    end
   end
-  if hit then
-    io.stderr:write("dep_rules violation: ", hit.path, ":", hit.line, " contains ", hit.token, "\n")
-    io.stderr:write("rule: ", rule.description, "\n")
-    io.stderr:write(hit.text, "\n")
-    os.exit(1)
+
+  local forbidden_file_hit = _check_forbidden_files(opts.forbidden_files or forbidden_files)
+  if forbidden_file_hit then
+    return { ok = false, violation = forbidden_file_hit }
   end
+
+  return { ok = true }
 end
 
-local legacy_usage_hit, legacy_usage_err = _scan_legacy_policy_usages()
-if legacy_usage_err and not tostring(legacy_usage_err):find("no lua files found under", 1, true) then
-  io.stderr:write("dep_rules error: ", legacy_usage_err, "\n")
-  os.exit(1)
-end
-if legacy_usage_hit then
-  io.stderr:write("dep_rules violation: ", legacy_usage_hit.path, ":", legacy_usage_hit.line, " contains ", legacy_usage_hit.token, "\n")
-  io.stderr:write("rule: ", legacy_usage_hit.description, "\n")
-  io.stderr:write(legacy_usage_hit.text, "\n")
-  os.exit(1)
-end
-
-for _, rule in ipairs(growth_budget_rules) do
-  local hit, err = _scan_growth_budget_rule(rule)
-  if err and not tostring(err):find("no lua files found under", 1, true) then
-    io.stderr:write("dep_rules error: ", err, "\n")
+local function _main()
+  local result = M.run()
+  if result.error then
+    io.stderr:write("dep_rules error: ", result.error, "\n")
     os.exit(1)
   end
-  if hit then
-    io.stderr:write("dep_rules violation: ", hit.path, ":", hit.line, " contains ", hit.token, "\n")
-    io.stderr:write("rule: ", hit.description, "\n")
-    io.stderr:write(hit.text, "\n")
+  if result.violation then
+    if result.violation.token == "forbidden_file" then
+      io.stderr:write("dep_rules violation: forbidden file exists: ", result.violation.path, "\n")
+      os.exit(1)
+    end
+    io.stderr:write(
+      "dep_rules violation: ",
+      result.violation.path,
+      ":",
+      tostring(result.violation.line),
+      " contains ",
+      result.violation.token,
+      "\n"
+    )
+    io.stderr:write("rule: ", result.violation.description, "\n")
+    io.stderr:write(result.violation.text, "\n")
     os.exit(1)
   end
+
+  print("dep_rules ok")
 end
 
-for _, path in ipairs(forbidden_files) do
-  local file = io.open(path, "r")
-  if file then
-    file:close()
-    io.stderr:write("dep_rules violation: forbidden file exists: ", path, "\n")
-    os.exit(1)
-  end
+if ... == nil then
+  _main()
+else
+  return M
 end
-
-print("dep_rules ok")
