@@ -194,6 +194,94 @@ local profiles = {
       },
     },
   },
+  scenario_steal_staging = {
+    bootstrap = {
+      players = {
+        [1] = {
+          cash = 120000,
+          position_tile_id = 7,
+          item_counts = {
+            [2007] = 1,
+          },
+        },
+        [2] = {
+          cash = 120000,
+          position_tile_id = 8,
+          item_counts = {
+            [2001] = 1,
+            [2010] = 1,
+          },
+        },
+        [3] = {
+          cash = 120000,
+          position_tile_id = 44,
+        },
+        [4] = {
+          cash = 120000,
+          position_tile_id = 37,
+        },
+      },
+    },
+  },
+  scenario_steal_single_item_staging = {
+    bootstrap = {
+      players = {
+        [1] = {
+          cash = 120000,
+          position_tile_id = 7,
+          item_counts = {
+            [2007] = 1,
+          },
+        },
+        [2] = {
+          cash = 120000,
+          position_tile_id = 8,
+          item_counts = {
+            [2001] = 1,
+          },
+        },
+        [3] = {
+          cash = 120000,
+          position_tile_id = 44,
+        },
+        [4] = {
+          cash = 120000,
+          position_tile_id = 37,
+        },
+      },
+    },
+  },
+  scenario_steal_queue_staging = {
+    bootstrap = {
+      players = {
+        [1] = {
+          cash = 120000,
+          position_tile_id = 7,
+          item_counts = {
+            [2007] = 1,
+          },
+        },
+        [2] = {
+          cash = 120000,
+          position_tile_id = 8,
+          item_counts = {
+            [2001] = 1,
+          },
+        },
+        [3] = {
+          cash = 120000,
+          position_tile_id = 9,
+          item_counts = {
+            [2010] = 1,
+          },
+        },
+        [4] = {
+          cash = 120000,
+          position_tile_id = 44,
+        },
+      },
+    },
+  },
   scenario_monster_staging = {
     bootstrap = {
       players = {

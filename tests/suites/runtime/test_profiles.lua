@@ -6,6 +6,7 @@ local tiles_cfg = support.tiles_cfg
 local tile_state = support.tile_state
 local build_ui_port = support.build_ui_port
 local with_patches = support.with_patches
+local movement = support.movement
 
 local constants = require("Config.generated.constants")
 local board_view = require("src.presentation.view.render.board")
@@ -137,7 +138,7 @@ local function _test_profile_bootstrap_rejects_item_count_over_inventory_limit()
     "error should explain inventory limit breach")
 end
 
-local function _test_non_default_profiles_are_scenarios_with_remote_dice()
+local function _test_non_default_profiles_are_scenarios_with_p1_item_counts()
   local profiles = test_profile_resolver.available_profiles()
   for _, profile_name in ipairs(profiles) do
     if profile_name ~= "default" then
@@ -147,7 +148,6 @@ local function _test_non_default_profiles_are_scenarios_with_remote_dice()
       local p1_cfg = cfg.bootstrap and cfg.bootstrap.players and cfg.bootstrap.players[1]
       local item_counts = p1_cfg and p1_cfg.item_counts or nil
       assert(type(item_counts) == "table", "scenario profile should define p1 item_counts: " .. tostring(profile_name))
-      assert(item_counts[2002] == 1, "scenario profile should preload one remote dice: " .. tostring(profile_name))
     end
   end
 end
@@ -378,6 +378,65 @@ local function _test_scenario_missile_staging_bootstraps_target_tile_and_overlay
   assert(game.players[2].position == target_index, "missile staging should place occupant on target tile")
 end
 
+local function _test_scenario_steal_staging_bootstraps_positions_and_inventory()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "scenario_steal_staging")
+
+  assert(game.players[1].position == assert(game.board:index_of_tile_id(7)),
+    "steal staging should place p1 on tile 7")
+  assert(game.players[2].position == assert(game.board:index_of_tile_id(8)),
+    "steal staging should place p2 on tile 8")
+  _assert_inventory_counts(game.players[1], {
+    [2007] = 1,
+  })
+  _assert_inventory_counts(game.players[2], {
+    [2001] = 1,
+    [2010] = 1,
+  })
+end
+
+local function _test_scenario_steal_single_item_staging_bootstraps_positions_and_inventory()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "scenario_steal_single_item_staging")
+
+  assert(game.players[1].position == assert(game.board:index_of_tile_id(7)),
+    "single-item steal staging should place p1 on tile 7")
+  assert(game.players[2].position == assert(game.board:index_of_tile_id(8)),
+    "single-item steal staging should place p2 on tile 8")
+  _assert_inventory_counts(game.players[1], {
+    [2007] = 1,
+  })
+  _assert_inventory_counts(game.players[2], {
+    [2001] = 1,
+  })
+end
+
+local function _test_scenario_steal_queue_staging_keeps_route_and_interrupt_stable()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "scenario_steal_queue_staging")
+
+  local p1 = game.players[1]
+  local p2 = game.players[2]
+  local p3 = game.players[3]
+  local p1_index = assert(game.board:index_of_tile_id(7), "tile 7 should exist in board path")
+  local p2_index = assert(game.board:index_of_tile_id(8), "tile 8 should exist in board path")
+  local p3_index = assert(game.board:index_of_tile_id(9), "tile 9 should exist in board path")
+  local landing_tile = assert(game.board:get_tile(p1_index + 3), "steal queue landing tile should exist")
+
+  assert(p1.position == p1_index, "queue steal staging should place p1 on tile 7")
+  assert(p2.position == p2_index, "queue steal staging should place p2 on tile 8")
+  assert(p3.position == p3_index, "queue steal staging should place p3 on tile 9")
+  assert(landing_tile.id == 40, "queue steal staging should keep tile 40 as three-step landing tile")
+
+  local move_result = movement.move(game, p1, 3, { branch_parity = 3, skip_market_check = true })
+  local interrupt = assert(move_result.steal_interrupt, "queue steal staging should still trigger steal interrupt")
+
+  assert(interrupt.position == p2_index, "current steal interrupt should stop on the first encountered player tile")
+  assert(interrupt.remaining_steps == 2, "steal interrupt should leave two resumable steps from tile 8")
+  assert(#(interrupt.encountered_ids or {}) == 1 and interrupt.encountered_ids[1] == p2.id,
+    "current steal interrupt should only capture current-step targets")
+end
+
 local function _test_scenario_upgrade_building_render_marks_tile_render_called_for_startup_render()
   local game = _new_game()
   test_profile_bootstrap.apply(game, "scenario_upgrade_building_render")
@@ -523,7 +582,7 @@ return {
       name = "profile_bootstrap_rejects_item_count_over_inventory_limit",
       run = _test_profile_bootstrap_rejects_item_count_over_inventory_limit,
     },
-    { name = "non_default_profiles_are_scenarios_with_remote_dice", run = _test_non_default_profiles_are_scenarios_with_remote_dice },
+    { name = "non_default_profiles_are_scenarios_with_p1_item_counts", run = _test_non_default_profiles_are_scenarios_with_p1_item_counts },
     { name = "scenario_bankruptcy_applies_tile_override", run = _test_scenario_bankruptcy_applies_tile_override },
     {
       name = "scenario_upgrade_building_render_applies_bootstrap",
@@ -560,6 +619,18 @@ return {
     {
       name = "scenario_missile_staging_bootstraps_target_tile_and_overlays",
       run = _test_scenario_missile_staging_bootstraps_target_tile_and_overlays,
+    },
+    {
+      name = "scenario_steal_staging_bootstraps_positions_and_inventory",
+      run = _test_scenario_steal_staging_bootstraps_positions_and_inventory,
+    },
+    {
+      name = "scenario_steal_single_item_staging_bootstraps_positions_and_inventory",
+      run = _test_scenario_steal_single_item_staging_bootstraps_positions_and_inventory,
+    },
+    {
+      name = "scenario_steal_queue_staging_keeps_route_and_interrupt_stable",
+      run = _test_scenario_steal_queue_staging_keeps_route_and_interrupt_stable,
     },
     {
       name = "scenario_upgrade_building_render_marks_tile_render_called_for_startup_render",

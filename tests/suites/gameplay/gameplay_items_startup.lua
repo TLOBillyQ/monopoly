@@ -7,6 +7,8 @@ local move_followup = require("src.game.flow.turn.move_followup")
 local board_utils = require("src.game.systems.land.board_utils")
 local land_rules = require("src.game.systems.land.rules")
 local choice_resolver = support.choice_resolver
+local movement = support.movement
+local steal = support.steal
 local _build_ui_port = support.build_ui_port
 local _bind_ui_runtime = support.bind_ui_runtime
 local _get_choice = support.get_choice
@@ -99,6 +101,54 @@ local function _new_profile_game(profile_name)
   local game = gameplay_loop.new_game(state)
   gameplay_loop.set_game(state, game)
   return game, state
+end
+
+local function _count_item(player, item_id)
+  local count = 0
+  for _, item in ipairs(player.inventory.items or {}) do
+    if item.id == item_id then
+      count = count + 1
+    end
+  end
+  return count
+end
+
+local function _find_option_id_by_label(choice, label)
+  for _, option in ipairs(choice.options or {}) do
+    if option.label == label then
+      return option.id
+    end
+  end
+  return nil
+end
+
+local function _start_steal_interrupt(game, player)
+  local move_result = movement.move(game, player, 3, {
+    branch_parity = 3,
+    skip_market_check = true,
+  })
+  local interrupt = assert(move_result.steal_interrupt, "steal staging should produce steal interrupt")
+  return move_result, interrupt
+end
+
+local function _open_steal_prompt_from_interrupt(game, player, interrupt)
+  local steal_res = steal.handle_pass_players(game, player, interrupt.encountered_ids or {})
+  assert(type(steal_res) == "table" and steal_res.waiting == true, "steal interrupt should open steal prompt")
+  local pending = _open_choice(game, steal_res.intent.choice_spec)
+  assert(pending and pending.kind == "steal_prompt", "pending choice should be steal_prompt")
+  return pending
+end
+
+local function _resume_after_steal_interrupt(game, player, interrupt)
+  local resumed = movement.move(game, player, interrupt.remaining_steps, {
+    branch_parity = interrupt.branch_parity,
+    direction = interrupt.facing,
+    skip_market_check = true,
+    skip_steal_check = true,
+  })
+  assert(resumed and resumed.landing_tile and resumed.landing_tile.id == 40,
+    "resumed steal move should land on tile 40 chance")
+  return resumed
 end
 
 local function _advance_strong_card_staging_to_rent_prompt()
@@ -289,6 +339,108 @@ local function _test_strong_card_startup_profile_falls_back_to_direct_rent_after
     "skipping both rent cards should keep target tile level")
 end
 
+local function _test_steal_startup_profile_multi_item_choice_resumes_to_chance()
+  local g, _ = _new_profile_game("scenario_steal_staging")
+  local player = g.players[1]
+  local target = g.players[2]
+  local _, interrupt = _start_steal_interrupt(g, player)
+
+  assert(interrupt.position == assert(g.board:index_of_tile_id(8)), "steal interrupt should stop on tile 8 occupant")
+  local pending = _open_steal_prompt_from_interrupt(g, player, interrupt)
+  assert(pending.meta and pending.meta.target_id == target.id, "steal prompt should target p2")
+
+  local prompt_result = choice_resolver.resolve(g, pending, { option_id = "use" })
+  assert(prompt_result and prompt_result.stay == true, "multi-item steal should open item picker")
+
+  pending = _get_choice(g)
+  assert(pending and pending.kind == "steal_item", "multi-item steal should expose steal_item choice")
+  local tax_free_option_id = assert(_find_option_id_by_label(pending, "免税卡"), "steal item choice should expose 免税卡")
+  local choice_result = choice_resolver.resolve(g, pending, { option_id = tax_free_option_id })
+
+  assert(choice_result and choice_result.status == "resolved", "steal item selection should resolve")
+  assert(_count_item(player, gameplay_rules.item_ids.steal) == 0, "steal card should be consumed after success")
+  assert(_count_item(player, gameplay_rules.item_ids.tax_free) == 1, "p1 should receive stolen tax_free")
+  assert(_count_item(target, gameplay_rules.item_ids.tax_free) == 0, "p2 should lose stolen tax_free")
+  assert(_count_item(target, gameplay_rules.item_ids.free_rent) == 1, "p2 should keep the unstolen item")
+  assert(g.turn.action_anim and g.turn.action_anim.kind == "item_target_player",
+    "steal success should queue target-player action anim")
+
+  _resume_after_steal_interrupt(g, player, interrupt)
+end
+
+local function _test_steal_startup_profile_single_item_auto_steal_resumes_to_chance()
+  local g, _ = _new_profile_game("scenario_steal_single_item_staging")
+  local player = g.players[1]
+  local target = g.players[2]
+  local _, interrupt = _start_steal_interrupt(g, player)
+
+  local pending = _open_steal_prompt_from_interrupt(g, player, interrupt)
+  local prompt_result = choice_resolver.resolve(g, pending, { option_id = "use" })
+
+  assert(prompt_result and prompt_result.status == "resolved", "single-item steal should resolve directly")
+  assert(_get_choice(g) == nil, "single-item steal should not open steal_item picker")
+  assert(_count_item(player, gameplay_rules.item_ids.steal) == 0, "single-item steal should consume steal card")
+  assert(_count_item(player, gameplay_rules.item_ids.free_rent) == 1, "p1 should receive the only target item")
+  assert(_count_item(target, gameplay_rules.item_ids.free_rent) == 0, "p2 should lose the only target item")
+  assert(g.turn.action_anim and g.turn.action_anim.kind == "item_target_player",
+    "single-item steal should queue target-player action anim")
+
+  _resume_after_steal_interrupt(g, player, interrupt)
+end
+
+local function _test_steal_queue_startup_profile_skip_opens_next_target_and_resumes()
+  local g, _ = _new_profile_game("scenario_steal_queue_staging")
+  local player = g.players[1]
+  local second_target = g.players[3]
+  local _, interrupt = _start_steal_interrupt(g, player)
+  local queue = { g.players[2].id, second_target.id }
+  local pending = _open_choice(g, steal.build_prompt_spec(g, player, queue, 1))
+
+  assert(pending and pending.kind == "steal_prompt", "queue steal should start from prompt choice")
+  local skip_result = choice_resolver.resolve(g, pending, { option_id = "skip" })
+  assert(skip_result and skip_result.stay == true, "skip should open the next queued steal target")
+
+  pending = _get_choice(g)
+  assert(pending and pending.kind == "steal_prompt", "skip should keep steal prompt open for next target")
+  assert(pending.meta and pending.meta.target_id == second_target.id, "skip should advance queue to p3")
+
+  local use_result = choice_resolver.resolve(g, pending, { option_id = "use" })
+  assert(use_result and use_result.status == "resolved", "single-item queued target should resolve directly")
+  assert(_count_item(player, gameplay_rules.item_ids.steal) == 0, "queued steal success should consume steal card")
+  assert(_count_item(player, gameplay_rules.item_ids.tax_free) == 1, "queued steal should transfer p3 tax_free to p1")
+  assert(_count_item(second_target, gameplay_rules.item_ids.tax_free) == 0, "queued steal should remove p3 tax_free")
+  assert(_get_choice(g) == nil, "queued steal success should clear pending choice")
+
+  _resume_after_steal_interrupt(g, player, interrupt)
+end
+
+local function _test_steal_startup_profile_cancel_item_picker_keeps_state_and_resumes()
+  local g, _ = _new_profile_game("scenario_steal_staging")
+  local player = g.players[1]
+  local target = g.players[2]
+  local _, interrupt = _start_steal_interrupt(g, player)
+
+  local pending = _open_steal_prompt_from_interrupt(g, player, interrupt)
+  local prompt_result = choice_resolver.resolve(g, pending, { option_id = "use" })
+  assert(prompt_result and prompt_result.stay == true, "cancel path should first open item picker")
+
+  pending = _get_choice(g)
+  assert(pending and pending.kind == "steal_item", "cancel path should enter steal_item picker")
+  local cancel_result = choice_resolver.resolve(g, pending, {
+    type = "choice_cancel",
+    choice_id = pending.id,
+  })
+
+  assert(cancel_result and cancel_result.status == "resolved", "cancel should resolve steal_item picker")
+  assert(_get_choice(g) == nil, "cancel should clear pending choice without reopening another prompt")
+  assert(_count_item(player, gameplay_rules.item_ids.steal) == 1, "cancel should keep steal card on p1")
+  assert(_count_item(player, gameplay_rules.item_ids.tax_free) == 0, "cancel should not transfer any item to p1")
+  assert(_count_item(target, gameplay_rules.item_ids.tax_free) == 1, "cancel should keep target inventory unchanged")
+  assert(_count_item(target, gameplay_rules.item_ids.free_rent) == 1, "cancel should keep all target items intact")
+
+  _resume_after_steal_interrupt(g, player, interrupt)
+end
+
 return {
   name = "gameplay_items_startup",
   tests = {
@@ -311,6 +463,22 @@ return {
     {
       name = "strong_card_startup_profile_falls_back_to_direct_rent_after_skipping_both_cards",
       run = _test_strong_card_startup_profile_falls_back_to_direct_rent_after_skipping_both_cards,
+    },
+    {
+      name = "steal_startup_profile_multi_item_choice_resumes_to_chance",
+      run = _test_steal_startup_profile_multi_item_choice_resumes_to_chance,
+    },
+    {
+      name = "steal_startup_profile_single_item_auto_steal_resumes_to_chance",
+      run = _test_steal_startup_profile_single_item_auto_steal_resumes_to_chance,
+    },
+    {
+      name = "steal_queue_startup_profile_skip_opens_next_target_and_resumes",
+      run = _test_steal_queue_startup_profile_skip_opens_next_target_and_resumes,
+    },
+    {
+      name = "steal_startup_profile_cancel_item_picker_keeps_state_and_resumes",
+      run = _test_steal_startup_profile_cancel_item_picker_keeps_state_and_resumes,
     },
   },
 }
