@@ -5,6 +5,7 @@ local checker = require("arch_view.checker")
 local common = require("arch_view.common")
 local dependency_extract = require("arch_view.dependency_extract")
 local layout = require("arch_view.layers")
+local route_engine = require("arch_view.route_engine")
 local config = require("monopoly_architecture")
 
 local cached_architecture = nil
@@ -157,6 +158,17 @@ local function _test_projection_builds_root_and_game_views()
   end
   _assert_contains(game_labels, "flow", "game view should drill down into flow")
   _assert_contains(game_labels, "systems", "game view should drill down into systems")
+
+  local game_node
+  for _, node in ipairs(root_view.nodes or {}) do
+    if node.id == "game" then
+      game_node = node
+      break
+    end
+  end
+  assert(game_node ~= nil, "root view should contain game node")
+  assert(#(game_node.incoming_dependencies or {}) > 0, "game node should expose incoming dependency indicators")
+  assert(#(game_node.outgoing_dependencies or {}) > 0, "game node should expose outgoing dependency indicators")
 end
 
 local function _test_config_classifies_runtime_game_and_ports()
@@ -208,8 +220,75 @@ local function _test_cycle_baseline_rejects_unexpected_cycles()
   assert(#result.cycles == 1 and #result.cycles[1] == 3, "cycle output should expose module arrays")
 end
 
+local function _test_route_engine_emits_orthogonal_paths_without_exact_overlap()
+  local routed = route_engine.route_edges({
+    {
+      id = "a->c",
+      from = "a",
+      to = "c",
+      from_layer = 0,
+      to_layer = 1,
+      from_rect = { x = 0.0, y = 0.0, width = 100.0, height = 60.0 },
+      to_rect = { x = 220.0, y = 160.0, width = 100.0, height = 60.0 },
+    },
+    {
+      id = "b->c",
+      from = "b",
+      to = "c",
+      from_layer = 0,
+      to_layer = 1,
+      from_rect = { x = 130.0, y = 0.0, width = 100.0, height = 60.0 },
+      to_rect = { x = 220.0, y = 160.0, width = 100.0, height = 60.0 },
+    },
+  })
+
+  _assert_eq(#routed, 2, "route engine should preserve both edges")
+  _assert_eq(#(routed[1].route_points or {}), 4, "route engine should emit orthogonal route points")
+  _assert_eq(#(routed[2].route_points or {}), 4, "route engine should emit orthogonal route points for adjacent edges")
+
+  local first_signature = table.concat({
+    routed[1].route_points[1][1], routed[1].route_points[1][2],
+    routed[1].route_points[2][1], routed[1].route_points[2][2],
+    routed[1].route_points[3][1], routed[1].route_points[3][2],
+    routed[1].route_points[4][1], routed[1].route_points[4][2],
+  }, ",")
+  local second_signature = table.concat({
+    routed[2].route_points[1][1], routed[2].route_points[1][2],
+    routed[2].route_points[2][1], routed[2].route_points[2][2],
+    routed[2].route_points[3][1], routed[2].route_points[3][2],
+    routed[2].route_points[4][1], routed[2].route_points[4][2],
+  }, ",")
+  assert(first_signature ~= second_signature, "adjacent edges should not fully overlap")
+end
+
+local function _test_projection_exposes_full_names_and_display_edges()
+  local architecture = _analyze_architecture()
+  local utils_view = architecture.views["core.utils"]
+  assert(utils_view ~= nil, "core.utils view should exist")
+
+  local number_utils_node
+  for _, node in ipairs(utils_view.nodes or {}) do
+    if node.module_id == "src.core.utils.number_utils" then
+      number_utils_node = node
+      break
+    end
+  end
+
+  assert(number_utils_node ~= nil, "core.utils view should contain number_utils leaf")
+  _assert_eq(number_utils_node.display_label, "number_utils", "leaf display label should use source file basename")
+  _assert_eq(number_utils_node.full_name, "core.utils.number_utils", "leaf full name should strip top-level src prefix")
+
+  local root_view = architecture.views.root
+  assert(#(root_view.display_edges or {}) > 0, "root view should expose routed display edges")
+  local first_edge = root_view.display_edges[1]
+  assert(first_edge ~= nil, "root view should contain at least one display edge")
+  assert(#(first_edge.route_points or {}) >= 4, "display edges should expose route points")
+  assert(#(first_edge.tooltip_lines or {}) > 0, "display edges should expose tooltip lines")
+  assert(first_edge.count >= 1, "display edges should keep aggregate count")
+end
+
 local function _test_viewer_command_writes_static_bundle()
-  local out_dir = ".tmp_arch_view_test_output/viewer"
+  local out_dir = common.is_windows() and "tmp_arch_view_test_output/viewer" or "/tmp/monopoly_arch_view_test_output/viewer"
   local ok, err = common.ensure_dir(out_dir)
   if not ok then
     error(err)
@@ -228,6 +307,9 @@ local function _test_viewer_command_writes_static_bundle()
   assert(_exists(out_dir .. "/styles.css"), "viewer should export styles.css")
   local data_script = _read_file(out_dir .. "/architecture_data.js")
   assert(data_script:find("window%.ARCH_VIEW_DATA%s*=", 1) ~= nil, "viewer bundle should expose global payload")
+  assert(data_script:find('"display_edges"', 1, true) ~= nil, "viewer payload should contain display_edges")
+  assert(data_script:find('"route_points"', 1, true) ~= nil, "viewer payload should contain route_points")
+  assert(data_script:find('"indicators"', 1, true) ~= nil, "viewer payload should contain indicators")
 end
 
 return {
@@ -238,6 +320,8 @@ return {
     { name = "projection_builds_root_and_game_views", run = _test_projection_builds_root_and_game_views },
     { name = "config_classifies_runtime_game_and_ports", run = _test_config_classifies_runtime_game_and_ports },
     { name = "cycle_baseline_rejects_unexpected_cycles", run = _test_cycle_baseline_rejects_unexpected_cycles },
+    { name = "route_engine_emits_orthogonal_paths_without_exact_overlap", run = _test_route_engine_emits_orthogonal_paths_without_exact_overlap },
+    { name = "projection_exposes_full_names_and_display_edges", run = _test_projection_exposes_full_names_and_display_edges },
     { name = "viewer_command_writes_static_bundle", run = _test_viewer_command_writes_static_bundle },
   },
 }

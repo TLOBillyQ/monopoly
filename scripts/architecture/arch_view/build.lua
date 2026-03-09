@@ -19,11 +19,13 @@ function build.analyze(config)
     edges = extracted.graph.edges,
   }
   local layout = layers.assign_layers(graph)
+  local classified_edges = checker.classify_edges(graph, classified_modules)
 
   local architecture = {
     graph = graph,
     modules = classified_modules,
     layout = layout,
+    classified_edges = classified_edges,
   }
 
   architecture.views = projection.build_views(architecture)

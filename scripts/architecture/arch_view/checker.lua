@@ -63,6 +63,28 @@ function checker.classify_modules(modules, config)
   return classified
 end
 
+function checker.classify_edges(graph, modules)
+  local classified = {}
+  for _, edge in ipairs((graph and graph.edges) or {}) do
+    local target = modules and modules[edge.to] or nil
+    classified[#classified + 1] = {
+      from = edge.from,
+      to = edge.to,
+      type = (target and target.abstract == true) and "abstract" or "direct",
+    }
+  end
+  table.sort(classified, function(left, right)
+    if left.from == right.from then
+      if left.to == right.to then
+        return tostring(left.type) < tostring(right.type)
+      end
+      return tostring(left.to) < tostring(right.to)
+    end
+    return tostring(left.from) < tostring(right.from)
+  end)
+  return classified
+end
+
 local function _rule_allows_edge(edge, rule)
   for _, allow in ipairs(rule.allow or {}) do
     if _matches_any(edge.from, allow.from) and _matches_any(edge.to, allow.to) then

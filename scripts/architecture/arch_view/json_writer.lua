@@ -1,4 +1,5 @@
 local common = require("arch_view.common")
+local number_utils = require("src.core.utils.number_utils")
 
 local json_writer = {}
 
@@ -18,7 +19,8 @@ local function _is_array(value)
   end
   local count = 0
   for key in pairs(value) do
-    if type(key) ~= "number" then
+    local normalized_key = number_utils.to_integer(key)
+    if normalized_key == nil or normalized_key ~= key or normalized_key < 1 then
       return false
     end
     count = count + 1
@@ -39,7 +41,7 @@ local function _encode(value)
   if value_type == "string" then
     return "\"" .. _escape_string(value) .. "\""
   end
-  if value_type == "boolean" or value_type == "number" then
+  if value_type == "boolean" or number_utils.is_numeric(value) then
     return tostring(value)
   end
   if value_type ~= "table" then

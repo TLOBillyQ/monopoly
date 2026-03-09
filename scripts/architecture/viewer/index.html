@@ -11,9 +11,10 @@
 <body>
   <div class="page_shell">
     <header class="topbar">
-      <div>
+      <div class="topbar_title">
         <p class="eyebrow">Monopoly Architecture</p>
-        <h1>Static Arch Viewer</h1>
+        <h1>Arch View</h1>
+        <p class="topbar_subtitle">Layered static viewer with drilldown, dependency indicators, routed edges, and source inspection.</p>
       </div>
       <div class="topbar_meta">
         <div class="legend">
@@ -48,7 +49,15 @@
       <section class="graph_panel">
         <nav id="breadcrumb" class="breadcrumb"></nav>
         <div id="graph_notice" class="graph_notice" hidden></div>
-        <div id="graph_canvas" class="graph_canvas"></div>
+
+        <div id="graph_scroller" class="graph_scroller">
+          <div id="graph_surface" class="graph_surface">
+            <svg id="graph_svg" class="graph_svg" aria-hidden="true"></svg>
+            <div id="layer_labels" class="layer_labels"></div>
+            <div id="node_layer" class="node_layer"></div>
+            <div id="tooltip" class="tooltip" hidden></div>
+          </div>
+        </div>
       </section>
 
       <aside class="detail_panel">

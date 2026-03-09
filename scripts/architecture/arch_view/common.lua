@@ -192,4 +192,22 @@ function common.view_key(path_segments)
   return table.concat(path_segments, ".")
 end
 
+function common.strip_src_prefix(module_id)
+  local text = tostring(module_id or "")
+  return (text:gsub("^src%.", ""))
+end
+
+function common.source_filename(path)
+  local normalized = common.normalize_path(path)
+  return normalized:match("([^/]+)$")
+end
+
+function common.source_filename_base(path)
+  local filename = common.source_filename(path)
+  if filename == nil then
+    return nil
+  end
+  return (filename:gsub("%.[^.]+$", ""))
+end
+
 return common
