@@ -136,13 +136,6 @@ function item_choice_handler.build(helpers)
     local index = action.option_id
     local meta = choice.meta
     local player = _validate_item_player(game, choice.kind, meta)
-    logger.info_unlimited(
-      "[OverlayDebug]",
-      "roadblock target choice",
-      "player_id=" .. tostring(player and player.id or nil),
-      "option_id=" .. tostring(index),
-      "option_type=" .. tostring(type(index))
-    )
     if not roadblock.is_ui_candidate(game, player, index) then
       logger.warn(player.name .. " 选择了无效的路障位置: " .. tostring(index))
       return { stay = true }

@@ -5,6 +5,7 @@ local runtime_constants = require("src.core.config.runtime_constants")
 local host_runtime = require("src.presentation.runtime.host")
 local catalog = require("src.presentation.view.render.board_feedback_catalog")
 local effect_timeline = require("src.presentation.view.support.effect_timeline")
+local unit_position = require("src.presentation.view.render.unit_position")
 local service = {}
 local warned_missing_refs = {
   effect = {},
@@ -79,18 +80,10 @@ local function _resolve_cue_ref_id(cue_name, cue, payload, kind, refs)
   return resolved_id
 end
 local function _resolve_tile_position(state, tile_index)
-  local tile = state and state.board_scene and state.board_scene.tiles and state.board_scene.tiles[tile_index] or nil
-  if tile and type(tile.get_position) == "function" then
-    return tile.get_position()
-  end
-  return nil
+  return unit_position.read_scene_tile_position(state and state.board_scene or nil, tile_index)
 end
 local function _resolve_building_tile_position(state, tile_index)
-  local building = state and state.board_scene and state.board_scene.buildings and state.board_scene.buildings[tile_index] or nil
-  if building and type(building.get_position) == "function" then
-    return building.get_position()
-  end
-  return nil
+  return unit_position.read_scene_building_position(state and state.board_scene or nil, tile_index)
 end
 local function _resolve_tile_cue_position(state, tile_index, payload)
   if payload and payload.use_building_tile_position == true then
@@ -114,8 +107,9 @@ local function _resolve_player_unit(state, player_id)
 end
 local function _resolve_player_position(state, player_id)
   local unit = _resolve_player_unit(state, player_id)
-  if unit and type(unit.get_position) == "function" then
-    return unit.get_position()
+  local unit_pos = unit_position.read_unit_position(unit)
+  if unit_pos ~= nil then
+    return unit_pos
   end
   local player = state and state.game and state.game.find_player_by_id and state.game:find_player_by_id(player_id) or nil
   return _resolve_tile_position(state, player and player.position or nil)

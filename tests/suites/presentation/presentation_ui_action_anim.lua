@@ -3,6 +3,8 @@ local runtime_port = require("src.presentation.runtime.ui")
 local handlers = require("src.presentation.view.render.anim_handlers")
 local host_runtime = require("src.presentation.runtime.host")
 local board_feedback = require("src.presentation.view.render.board_feedback_service")
+local overlay_compute = require("src.presentation.view.render.anim_overlay_compute")
+local visual_sync = require("src.presentation.view.render.board.visual_sync")
 local runtime_refs = require("Config.runtime_refs")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local logger = require("src.core.utils.logger")
@@ -108,6 +110,23 @@ local function _build_state()
     },
   }
   return state
+end
+
+local function _make_host_unit(x, y, z)
+  if type(newproxy) == "function" then
+    local unit = newproxy(true)
+    getmetatable(unit).__index = {
+      get_position = function()
+        return math.Vector3(x, y, z)
+      end,
+    }
+    return unit
+  end
+  return {
+    get_position = function()
+      return math.Vector3(x, y, z)
+    end,
+  }
 end
 
 local function _test_action_anim_overlay_handler_returns_duration()
@@ -612,6 +631,89 @@ local function _test_board_feedback_tile_cue_falls_back_to_tile_position_when_bu
   assert(effect_calls[1].pos.z == 0.0, "fallback tile cue should use tile z")
 end
 
+local function _test_overlay_compute_reads_host_unit_position_without_table_guard()
+  local state = _build_state()
+  state.board_scene.tiles[1] = _make_host_unit(5.0, 6.0, 7.0)
+
+  local pos = overlay_compute.overlay_pos_for_tile(state, 1)
+  assert(pos.x == 5.0, "overlay compute should preserve host unit x")
+  assert(pos.y == 7.0, "overlay compute should add y offset on host unit position")
+  assert(pos.z == 7.0, "overlay compute should preserve host unit z")
+end
+
+local function _test_visual_sync_overlay_uses_host_unit_position()
+  local state = _build_state()
+  state.board_scene.tiles[1] = _make_host_unit(12.0, 3.0, 4.0)
+  state.game.board = {
+    has_roadblock = function()
+      return false
+    end,
+    has_mine = function()
+      return true
+    end,
+  }
+  local spawn_calls = {}
+
+  _with_patches({
+    {
+      target = require("src.presentation.view.render.anim_overlay_runtime"),
+      key = "spawn_overlay",
+      value = function(scene, kind, tile_index, group_id, unit_id, pos)
+        spawn_calls[#spawn_calls + 1] = {
+          kind = kind,
+          tile_index = tile_index,
+          pos = pos,
+        }
+        return true
+      end,
+    },
+  }, function()
+    local handled = visual_sync.sync_overlay_visual(state, 1)
+    assert(handled == true, "visual sync should handle mine overlay")
+  end)
+
+  assert(#spawn_calls == 1, "visual sync should spawn one mine overlay")
+  assert(spawn_calls[1].kind == "mine", "visual sync should spawn mine overlay")
+  assert(spawn_calls[1].pos.x == 12.0, "visual sync should pass host unit x")
+  assert(spawn_calls[1].pos.y == 4.0, "visual sync should add overlay y offset")
+  assert(spawn_calls[1].pos.z == 4.0, "visual sync should pass host unit z")
+end
+
+local function _test_board_feedback_tile_cue_reads_host_unit_position()
+  local effect_calls = {}
+  local state = _build_state()
+  state.board_scene.tiles[1] = _make_host_unit(21.0, 22.0, 23.0)
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "play_sfx_by_key",
+      value = function(sfx_key, pos)
+        effect_calls[#effect_calls + 1] = {
+          sfx_key = sfx_key,
+          pos = pos,
+        }
+        return 504
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "play_3d_sound",
+      value = function()
+        return nil
+      end,
+    },
+  }, function()
+    local played = board_feedback.play_tile_cue(state, "upgrade_land_smoke", 1, {})
+    assert(played == true, "board feedback should play on host unit position")
+  end)
+
+  assert(#effect_calls == 1, "board feedback should call engine once for host unit position")
+  assert(effect_calls[1].pos.x == 21.0, "board feedback should use host unit x")
+  assert(effect_calls[1].pos.y == 22.0, "board feedback should use host unit y")
+  assert(effect_calls[1].pos.z == 23.0, "board feedback should use host unit z")
+end
+
 local function _test_board_feedback_player_effect_binding_keeps_bind_call()
   local effect_calls = {}
   local bind_calls = {}
@@ -895,6 +997,18 @@ return {
     {
       name = "board_feedback_player_effect_binding_keeps_bind_call",
       run = _test_board_feedback_player_effect_binding_keeps_bind_call,
+    },
+    {
+      name = "overlay_compute_reads_host_unit_position_without_table_guard",
+      run = _test_overlay_compute_reads_host_unit_position_without_table_guard,
+    },
+    {
+      name = "visual_sync_overlay_uses_host_unit_position",
+      run = _test_visual_sync_overlay_uses_host_unit_position,
+    },
+    {
+      name = "board_feedback_tile_cue_reads_host_unit_position",
+      run = _test_board_feedback_tile_cue_reads_host_unit_position,
     },
     {
       name = "board_feedback_cash_burst_routes_scalar_scale",

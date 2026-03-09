@@ -24,12 +24,14 @@ function unit_lifecycle.create_unit_group(group_id, pos, rotation)
     return nil, "missing GameAPI.create_unit_group"
   end
   local handle = GameAPI.create_unit_group(group_id, pos, rotation)
-  logger.info_unlimited(
-    "[OverlayDebug]",
-    "create_unit_group result",
-    "group_id=" .. tostring(group_id),
-    "handle=" .. _describe_handle(handle)
-  )
+  if handle == nil then
+    logger.warn(
+      "[OverlayDebug]",
+      "create_unit_group returned nil",
+      "group_id=" .. tostring(group_id),
+      "handle=" .. _describe_handle(handle)
+    )
+  end
   return handle
 end
 
@@ -45,12 +47,14 @@ function unit_lifecycle.create_unit_with_scale(unit_id, pos, rotation, scale)
     return nil, "missing GameAPI.create_unit_with_scale"
   end
   local handle = GameAPI.create_unit_with_scale(unit_id, pos, rotation, scale)
-  logger.info_unlimited(
-    "[OverlayDebug]",
-    "create_unit_with_scale result",
-    "unit_id=" .. tostring(unit_id),
-    "handle=" .. _describe_handle(handle)
-  )
+  if handle == nil then
+    logger.warn(
+      "[OverlayDebug]",
+      "create_unit_with_scale returned nil",
+      "unit_id=" .. tostring(unit_id),
+      "handle=" .. _describe_handle(handle)
+    )
+  end
   return handle
 end
 

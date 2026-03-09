@@ -3,7 +3,6 @@ local inventory = require("src.game.systems.items.inventory")
 local land_choice_specs = require("src.game.systems.land.choice_specs")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local action_anim_port = require("src.core.ports.action_anim_port")
-local use_broadcast = require("src.game.systems.items.use_broadcast")
 
 local steal = {}
 local item_ids = gameplay_rules.item_ids
@@ -14,7 +13,6 @@ local function _fail_popup(game, stealer, target)
   logger.event(stealer.name .. " 使用偷窃卡失败：" .. msg)
   return {
     ok = false,
-    intent = { kind = "push_popup", payload = { title = "偷窃失败", body = msg } },
   }
 end
 
@@ -40,12 +38,10 @@ function steal.steal_item_at_index(game, player, target, item_idx)
     item_name = "偷窃卡",
     duration = action_anim_duration,
   })
-  use_broadcast.dispatch(game, player, item_ids.steal)
   return {
     ok = true,
     stolen = stolen,
     action_anim = queued,
-    intent = { kind = "push_popup", payload = { title = "偷窃成功", body = player.name .. " 从 " .. target.name .. " 偷走了 " .. name } },
   }
 end
 

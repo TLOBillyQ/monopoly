@@ -601,24 +601,79 @@ local function _test_remote_dice_followup_pushes_item_card_popup()
   _assert_eq(popups[1].image_ref, gameplay_rules.item_ids.remote_dice, "remote dice broadcast image_ref mismatch")
 end
 
-local function _test_steal_success_pushes_item_card_broadcast_before_result_popup()
+local function _test_steal_uses_tip_without_popup()
   local g = _new_game()
   local popups = {}
+  local tips = {}
   local stealer = g.players[1]
   local target = g.players[2]
-  _set_ui_port(g, {
-    push_popup = function(_, payload)
-      popups[#popups + 1] = payload
-    end,
-  })
   stealer.inventory:add({ id = gameplay_rules.item_ids.steal })
   target.inventory:add({ id = gameplay_rules.item_ids.tax_free })
 
-  local res = steal.steal_item_at_index(g, stealer, target, 1)
-  _assert_eq(res and res.ok, true, "steal should succeed")
-  assert(#popups >= 1, "steal success should push at least one popup")
-  _assert_eq(popups[1].kind, "item_card", "steal should first broadcast used card")
-  _assert_eq(popups[1].image_ref, gameplay_rules.item_ids.steal, "steal broadcast image_ref mismatch")
+  support.with_patches({
+    {
+      key = "GlobalAPI",
+      value = {
+        show_tips = function(text)
+          tips[#tips + 1] = text
+          return true
+        end,
+      },
+    },
+  }, function()
+    _set_ui_port(g, {
+      push_popup = function(_, payload)
+        popups[#popups + 1] = payload
+      end,
+    })
+
+    local res = steal.steal_item_at_index(g, stealer, target, 1)
+    _assert_eq(res and res.ok, true, "steal should succeed")
+    _assert_eq(res and res.intent, nil, "steal success should not return popup intent")
+  end)
+
+  _assert_eq(#popups, 0, "steal success should not push popup")
+  assert(#tips >= 1, "steal success should show tip")
+  assert(string.find(tips[1], stealer.name, 1, true), "steal success tip should include stealer name")
+  assert(string.find(tips[1], target.name, 1, true), "steal success tip should include target name")
+  assert(string.find(tips[1], "免税卡", 1, true), "steal success tip should include stolen item name")
+end
+
+local function _test_steal_failure_uses_tip_without_popup()
+  local g = _new_game()
+  local popups = {}
+  local tips = {}
+  local stealer = g.players[1]
+  local target = g.players[2]
+  stealer.inventory:add({ id = gameplay_rules.item_ids.steal })
+
+  support.with_patches({
+    {
+      key = "GlobalAPI",
+      value = {
+        show_tips = function(text)
+          tips[#tips + 1] = text
+          return true
+        end,
+      },
+    },
+  }, function()
+    _set_ui_port(g, {
+      push_popup = function(_, payload)
+        popups[#popups + 1] = payload
+      end,
+    })
+
+    local res = steal.steal_item_at_index(g, stealer, target, 1)
+    _assert_eq(res and res.ok, false, "steal should fail when target has no items")
+    _assert_eq(res and res.intent, nil, "steal failure should not return popup intent")
+  end)
+
+  _assert_eq(#popups, 0, "steal failure should not push popup")
+  assert(#tips >= 1, "steal failure should show tip")
+  assert(string.find(tips[1], stealer.name, 1, true), "steal failure tip should include stealer name")
+  assert(string.find(tips[1], target.name, 1, true), "steal failure tip should include target name")
+  assert(string.find(tips[1], "没有任何道具", 1, true), "steal failure tip should explain failure")
 end
 
 local function _test_rich_item_emits_deity_feedback_event()
@@ -714,8 +769,12 @@ return {
       run = _test_remote_dice_followup_pushes_item_card_popup,
     },
     {
-      name = "steal_success_pushes_item_card_broadcast_before_result_popup",
-      run = _test_steal_success_pushes_item_card_broadcast_before_result_popup,
+      name = "steal_uses_tip_without_popup",
+      run = _test_steal_uses_tip_without_popup,
+    },
+    {
+      name = "steal_failure_uses_tip_without_popup",
+      run = _test_steal_failure_uses_tip_without_popup,
     },
     {
       name = "rich_item_emits_deity_feedback_event",
