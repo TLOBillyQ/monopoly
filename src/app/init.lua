@@ -53,6 +53,19 @@ local state = game_startup.build_state(function() return current_game_ref[1] end
   force_non_p1_ai = startup.force_non_p1_ai,
   fail_fast_when_roles_empty = startup.fail_fast_when_roles_empty,
 })
+logger.set_event_collection_enabled_provider(function()
+  local ui = state and state.ui or nil
+  local enabled_by_role = ui and ui.debug_log_enabled_by_role or nil
+  if type(enabled_by_role) ~= "table" then
+    return false
+  end
+  for _, enabled in pairs(enabled_by_role) do
+    if enabled == true then
+      return true
+    end
+  end
+  return false
+end)
 game_startup_event_bridge.install(state, function() return current_game_ref[1] end)
 ui_bootstrap.install(state, current_game_ref, {
   start_runtime = function(ctx_state, game_ref)

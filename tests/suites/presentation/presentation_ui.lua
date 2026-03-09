@@ -2256,7 +2256,7 @@ local function _test_choice_modal_routes_to_new_screens()
   end)
 end
 
-local function _test_target_screen_uses_labels_only_and_keeps_projection_unmanaged()
+local function _test_target_screen_uses_labels_only_and_hides_projection_with_slots()
   local state, nodes, query_nodes = _build_choice_modal_state()
   local choice = {
     id = 88,
@@ -2298,18 +2298,18 @@ local function _test_target_screen_uses_labels_only_and_keeps_projection_unmanag
     _assert_eq(nodes["位置-槽位7文本"].text, "香港路", "slot7 label should show tile name")
     _assert_eq(nodes["位置-槽位7按钮"].visible, true, "slot7 button should be visible when seven candidates exist")
     _assert_eq(nodes["位置-槽位7文本"].visible, true, "slot7 label should be visible when seven candidates exist")
-    _assert_eq(nodes["位置-槽位1投影"].visible, true, "slot projection should not be managed on open")
-    _assert_eq(nodes["位置-槽位1投影"].disabled, false, "slot projection touch state should not be managed on open")
-    _assert_eq(nodes["位置-槽位7投影"].visible, true, "slot7 projection should not be managed on open")
-    _assert_eq(nodes["位置-槽位7投影"].disabled, false, "slot7 projection touch state should not be managed on open")
+    _assert_eq(nodes["位置-槽位1投影"].visible, true, "slot projection should be visible with populated slot")
+    _assert_eq(nodes["位置-槽位1投影"].disabled, true, "slot projection should stay non-interactive")
+    _assert_eq(nodes["位置-槽位7投影"].visible, true, "slot7 projection should be visible with populated slot")
+    _assert_eq(nodes["位置-槽位7投影"].disabled, true, "slot7 projection should stay non-interactive")
 
     local common = require("src.presentation.view.widgets.choice_screen_service.common")
     common.hide_choice_screens(state.ui)
 
     _assert_eq(nodes["位置-槽位1文本"].visible, false, "hide_choice_screens should hide slot label")
     _assert_eq(nodes["位置-槽位1按钮"].disabled, true, "hide_choice_screens should disable slot button")
-    _assert_eq(nodes["位置-槽位1投影"].visible, true, "hide_choice_screens should not hide slot projection")
-    _assert_eq(nodes["位置-槽位1投影"].disabled, false, "hide_choice_screens should not disable slot projection")
+    _assert_eq(nodes["位置-槽位1投影"].visible, false, "hide_choice_screens should hide slot projection")
+    _assert_eq(nodes["位置-槽位1投影"].disabled, true, "hide_choice_screens should disable slot projection")
   end)
 end
 
@@ -6205,7 +6205,8 @@ local function _test_panel_cash_delta_shows_negative_and_auto_hides()
   _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "-20", "cash delta should render negative text")
   _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], true, "cash delta label should be visible")
   _assert_eq(#scheduled, 1, "cash delta should schedule hide once")
-  _assert_eq(scheduled[1].delay, gameplay_rules.action_anim_default_seconds, "cash delta hide duration should follow gameplay rule")
+  _assert_eq(scheduled[1].delay, gameplay_rules.panel_cash_delta_visible_seconds,
+    "cash delta hide duration should follow dedicated gameplay rule")
   scheduled[1].cb()
   _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "", "cash delta label should clear after timeout")
   _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], false, "cash delta label should hide after timeout")
@@ -6395,7 +6396,7 @@ return {
   _test_bankruptcy_popup_avatar_uses_native_size_path,
   _test_popup_timeout_closes_even_when_input_blocked,
   _test_choice_modal_routes_to_new_screens,
-  _test_target_screen_uses_labels_only_and_keeps_projection_unmanaged,
+  _test_target_screen_uses_labels_only_and_hides_projection_with_slots,
   _test_target_screen_hides_unused_slots_when_unique_options_less_than_seven,
   _test_secondary_confirm_copy_item_phase_selected_option,
   _test_secondary_confirm_copy_land_actions,

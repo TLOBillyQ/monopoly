@@ -1177,7 +1177,7 @@ local function _test_autorunner_runs_to_end()
   gameplay_loop.set_game(state, g)
 
   local turn_limit = gameplay_rules.turn_limit or 0
-  local max_steps = turn_limit * 20
+  local max_steps = turn_limit * 40
   assert(max_steps > 0, "invalid turn_limit for autorunner test")
 
   local timeout = constants.action_timeout_seconds or 0
@@ -1194,7 +1194,9 @@ local function _test_autorunner_runs_to_end()
     end
     turn_dispatch.dispatch_action(game_ctx, state_ctx, auto_action)
     local guard = 0
-    while game_ctx.turn and game_ctx.turn.phase == "detained_wait" and guard < 20 do
+    while game_ctx.turn
+        and (game_ctx.turn.phase == "detained_wait" or game_ctx.turn.phase == "inter_turn_wait")
+        and guard < 20 do
       gameplay_loop.tick(game_ctx, state_ctx, dt)
       guard = guard + 1
     end
@@ -1205,6 +1207,8 @@ local function _test_autorunner_runs_to_end()
   local old_can_pay_rent = land.executors.pay_rent.can_apply
   local game_api = GameAPI or {}
   local patches = {
+    { target = gameplay_rules, key = "detained_turn_wait_seconds", value = 0 },
+    { target = gameplay_rules, key = "inter_turn_wait_seconds", value = 0 },
     { target = steal, key = "handle_pass_players", value = function(game_ctx, player, encountered_ids)
       if not item_inventory.find_index(player, gameplay_rules.item_ids.steal) then
         return nil
@@ -1239,6 +1243,9 @@ local function _test_autorunner_runs_to_end()
         g.dirty.turn = false
         g.dirty.board_tiles = false
         g.dirty.any = false
+        if g.turn and (g.turn.phase == "detained_wait" or g.turn.phase == "inter_turn_wait") then
+          gameplay_loop.tick(g, state, dt)
+        end
         gameplay_loop.step_auto_runner(g, state, dt, {
           modal_active = false,
           modal_buttons = nil,
@@ -1296,7 +1303,7 @@ local function _test_autorunner_runs_to_end()
           end)(),
         })
         _drive_auto_turn(g, state, auto_action)
-        if g.turn and g.turn.phase == "detained_wait" then
+        if g.turn and (g.turn.phase == "detained_wait" or g.turn.phase == "inter_turn_wait") then
           gameplay_loop.tick(g, state, dt)
         end
         tick_timeout.step_choice_timeout(g, state, dt, {
@@ -1628,6 +1635,9 @@ local function _test_tick_headless_ports_cover_anim_phases()
     { target = turn_timer_policy, key = "update_detained_wait_timer", value = function()
       sequence[#sequence + 1] = "update_detained_wait_timer"
     end },
+    { target = turn_timer_policy, key = "update_inter_turn_wait_timer", value = function()
+      sequence[#sequence + 1] = "update_inter_turn_wait_timer"
+    end },
     { target = turn_camera_policy, key = "sync_follow", value = function()
       sequence[#sequence + 1] = "sync_follow"
     end },
@@ -1662,6 +1672,7 @@ local function _test_tick_headless_ports_cover_anim_phases()
     "step_modal_timeout",
     "update_action_button_timer",
     "update_detained_wait_timer",
+    "update_inter_turn_wait_timer",
     "sync_input_blocked",
     "play_move_anim",
     "sync_phase_flags",
@@ -3122,7 +3133,7 @@ local function _test_owner_mine_triggers_again_after_placement_turn()
   assert(g.board:has_mine(mine_index) == false, "mine should clear after detonating on owner later turn")
 end
 
-local function _test_detained_turn_skips_immediately_without_wait_state()
+local function _test_detained_turn_enters_wait_state_before_advancing()
   local g = _new_game()
   local p1 = g.players[1]
 
@@ -3130,14 +3141,15 @@ local function _test_detained_turn_skips_immediately_without_wait_state()
 
   g:advance_turn()
 
-  assert(g.turn.current_player_index == 2, "detained player turn should advance immediately to next player")
+  assert(g.turn.current_player_index == 1, "detained player should stay current while wait is active")
   assert((p1.status.stay_turns or 0) == 0, "detained player stay_turns should be decremented")
   assert(g.last_turn and g.last_turn.player_id == p1.id, "last_turn should record skipped player")
   assert(g.last_turn and g.last_turn.skipped == true, "last_turn should mark detained turn as skipped")
   assert(g.last_turn and g.last_turn.stay_turns == 0, "last_turn should keep post-decrement stay_turns for UI projection")
-  assert(g.turn.phase ~= "detained_wait", "detained turn should not enter detained_wait")
-  assert(g.turn.detained_wait_active == false, "detained wait flag should stay disabled")
-  assert(g.turn.no_action_notice_active == true, "auto-skip should still expose a non-blocking notice")
+  assert(g.turn.phase == "detained_wait", "detained turn should enter detained_wait")
+  assert(g.turn.detained_wait_active == true, "detained wait flag should stay enabled during wait")
+  assert(g.turn.detained_wait_seconds == 5.0, "detained wait should use configured 5 second delay")
+  assert(g.turn.no_action_notice_active == true, "detained wait should still expose a non-blocking notice")
   assert(g.turn.no_action_notice_player_id == p1.id, "notice should belong to skipped player")
 end
 
@@ -3233,7 +3245,7 @@ return {
   _test_complex_market_interrupt_with_rent,
   _test_market_interrupt_resume_uses_interrupt_facing,
   _test_steal_interrupt_resume_uses_interrupt_facing,
-  _test_detained_turn_skips_immediately_without_wait_state,
+  _test_detained_turn_enters_wait_state_before_advancing,
   _test_tick_headless_ports_cover_anim_phases,
   _test_action_button_timeout_auto_advances,
   _test_action_button_timeout_blocked_when_input_locked,

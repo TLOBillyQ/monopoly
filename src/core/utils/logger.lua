@@ -18,6 +18,7 @@ local logger = {
   tip_presenter = nil,
   scheduler = nil,
   event_buffer_stack = {},
+  event_collection_enabled_provider = nil,
 }
 local number_utils = require("src.core.utils.number_utils")
 
@@ -98,6 +99,18 @@ local function _active_event_buffer()
     return nil
   end
   return stack[#stack]
+end
+
+local function _should_collect_event()
+  local provider = logger.event_collection_enabled_provider
+  if type(provider) ~= "function" then
+    return true
+  end
+  local ok, enabled = pcall(provider)
+  if not ok then
+    return true
+  end
+  return enabled == true
 end
 
 local function _dispatch_next_tip()
@@ -194,6 +207,9 @@ local function _push(level, ...)
   if level == "event" and not no_tip then
     logger.show_tip(text, 2.0)
   end
+  if level == "event" and not _should_collect_event() then
+    return
+  end
   local timestamp = _get_timestamp()
   local time_text = _format_timestamp(timestamp)
   logger.seq = logger.seq + 1
@@ -244,10 +260,18 @@ function logger.set_scheduler(scheduler)
   logger.scheduler = scheduler
 end
 
+function logger.set_event_collection_enabled_provider(provider)
+  if provider ~= nil then
+    assert(type(provider) == "function", "event collection provider must be function or nil")
+  end
+  logger.event_collection_enabled_provider = provider
+end
+
 function logger.configure_host_runtime(opts)
   opts = opts or {}
   logger.set_tip_presenter(opts.tip_presenter)
   logger.set_scheduler(opts.scheduler)
+  logger.set_event_collection_enabled_provider(opts.event_collection_enabled_provider)
   local game_api = opts.game_api
   if game_api ~= nil
       and type(game_api.get_timestamp) == "function"

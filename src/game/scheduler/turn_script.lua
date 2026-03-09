@@ -35,6 +35,9 @@ local function _run_wait(session, state_name, args)
   if state_name == "detained_wait" then
     return await.detained(session, args)
   end
+  if state_name == "inter_turn_wait" then
+    return await.inter_turn(session, args)
+  end
   return nil
 end
 

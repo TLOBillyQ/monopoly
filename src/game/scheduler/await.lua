@@ -228,6 +228,23 @@ function await.detained(session, args)
   }
 end
 
+function await.inter_turn(session, args)
+  assert(session ~= nil and session.game ~= nil, "missing await session")
+  local game = session.game
+  session:mark_phase("inter_turn_wait")
+  if game.turn.inter_turn_wait_active then
+    session:clear_pending_action()
+    return { wait = true }
+  end
+  local turn_mgr = session.turn_mgr or session
+  assert(type(turn_mgr.next_player) == "function", "missing turn_mgr.next_player")
+  turn_mgr:next_player()
+  return {
+    next_state = "start",
+    next_args = args,
+  }
+end
+
 function await.seconds(session, sec, opts)
   assert(session ~= nil, "missing await session")
   local wait_sec = sec or 0

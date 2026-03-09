@@ -119,4 +119,31 @@ function turn_timer_policy.update_detained_wait_timer(game, state, dt, step_turn
   step_turn(game)
 end
 
+function turn_timer_policy.update_inter_turn_wait_timer(game, state, dt, step_turn)
+  if not (game and state) then
+    return
+  end
+  local turn = game.turn
+  if not (turn and turn.inter_turn_wait_active) then
+    return
+  end
+
+  local elapsed = (turn.inter_turn_wait_elapsed or 0) + (dt or 0)
+  local timeout = turn.inter_turn_wait_seconds or 0
+  if timeout <= 0 then
+    turn.inter_turn_wait_active = false
+    turn.inter_turn_wait_elapsed = 0
+    step_turn(game)
+    return
+  end
+  if elapsed < timeout then
+    turn.inter_turn_wait_elapsed = elapsed
+    return
+  end
+
+  turn.inter_turn_wait_active = false
+  turn.inter_turn_wait_elapsed = 0
+  step_turn(game)
+end
+
 return turn_timer_policy

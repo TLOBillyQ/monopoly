@@ -2,6 +2,7 @@ local logger = require("src.core.utils.logger")
 local item_phase = require("src.game.systems.items.phase")
 local item_auto_play_context = require("src.game.flow.turn.item_auto_play_context")
 local monopoly_event = require("src.core.events.monopoly_events")
+local gameplay_rules = require("src.core.config.gameplay_rules")
 
 local function _clear_no_action_notice(turn)
   if not turn then
@@ -50,18 +51,22 @@ local function _phase_start(turn_mgr)
   turn_mgr.game.dirty.turn = true
   turn_mgr.game.dirty.any = true
   if player.status.stay_turns and player.status.stay_turns > 0 then
+    local detained_wait_seconds = gameplay_rules.detained_turn_wait_seconds or 5.0
     turn_mgr.game:set_player_status(player, "stay_turns", player.status.stay_turns - 1)
     logger.event(player.name .. " 被扣留，剩余回合:", player.status.stay_turns)
     turn_mgr.game.last_turn.note = "被扣留"
     turn_mgr.game.last_turn.skipped = true
     turn_mgr.game.last_turn.stay_turns = player.status.stay_turns
-    turn.detained_wait_active = false
+    turn.detained_wait_active = detained_wait_seconds > 0
     turn.detained_wait_elapsed = 0
-    turn.detained_wait_seconds = 0
+    turn.detained_wait_seconds = detained_wait_seconds
     turn.no_action_notice_active = true
     turn.no_action_notice_player_id = player.id
     turn.no_action_notice_text = "本回合无法行动"
-    return "end_turn", { player = player }
+    if detained_wait_seconds <= 0 then
+      return "end_turn", { player = player }
+    end
+    return "detained_wait", { player = player }
   end
 
   local phase_res = item_phase.run(turn_mgr, "pre_action", {

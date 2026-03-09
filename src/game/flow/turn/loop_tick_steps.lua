@@ -55,6 +55,7 @@ function tick_steps.step_tick_timeouts(game, state, dt, ports, dispatch_action_w
     end,
   })
   turn_timer_policy.update_detained_wait_timer(game, state, dt, turn_dispatch.step_turn)
+  turn_timer_policy.update_inter_turn_wait_timer(game, state, dt, turn_dispatch.step_turn)
 end
 
 function tick_steps.sync_tick_phase(game, state, ports, input_blocked_changed)

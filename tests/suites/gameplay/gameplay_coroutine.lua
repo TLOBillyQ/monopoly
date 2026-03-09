@@ -143,6 +143,37 @@ end
 ---------------------------------------------------------------------------
 -- 6. wait_landing_visual
 ---------------------------------------------------------------------------
+local function _test_coroutine_mode_resolves_inter_turn_wait()
+  local g = support.new_game()
+
+  g.turn_engine = turn_engine:new(g, {
+    start = function(_, args)
+      if args and args.resumed == true then
+        return "done", {}
+      end
+      g.turn.inter_turn_wait_active = true
+      return "inter_turn_wait", { resumed = true }
+    end,
+    done = function()
+      return nil
+    end,
+  })
+
+  g:advance_turn()
+  assert(g.turn.phase == "inter_turn_wait", "should enter inter_turn_wait")
+
+  g:advance_turn()
+  assert(g.turn.phase == "inter_turn_wait", "should stay in inter_turn_wait while active")
+
+  g.turn.inter_turn_wait_active = false
+  g:advance_turn()
+  assert(g.turn.current_player_index == 2, "inter_turn_wait should advance to next player before restart")
+  assert(g.turn.phase ~= "inter_turn_wait", "should leave inter_turn_wait when cleared")
+end
+
+---------------------------------------------------------------------------
+-- 7. wait_landing_visual
+---------------------------------------------------------------------------
 local function _test_coroutine_mode_resolves_wait_landing_visual()
   local g = support.new_game()
   landing_visual_hold.start(g)
@@ -166,7 +197,7 @@ local function _test_coroutine_mode_resolves_wait_landing_visual()
 end
 
 ---------------------------------------------------------------------------
--- 7. full turn lifecycle (start -> roll -> move -> landing -> post -> end)
+-- 8. full turn lifecycle (start -> roll -> move -> landing -> post -> end)
 ---------------------------------------------------------------------------
 local function _test_coroutine_mode_full_turn_lifecycle()
   local g = support.new_game()
@@ -235,6 +266,10 @@ return {
     {
       name = "coroutine_mode_resolves_detained_wait",
       run = _test_coroutine_mode_resolves_detained_wait,
+    },
+    {
+      name = "coroutine_mode_resolves_inter_turn_wait",
+      run = _test_coroutine_mode_resolves_inter_turn_wait,
     },
     {
       name = "coroutine_mode_resolves_wait_landing_visual",

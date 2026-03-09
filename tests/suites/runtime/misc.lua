@@ -167,6 +167,33 @@ local function _test_logger_configure_host_runtime_uses_injected_hooks()
   end
 end
 
+local function _test_logger_event_collection_provider_drops_closed_action_log_events()
+  local shown = {}
+
+  logger.clear()
+  logger.set_tip_presenter(function(text, duration)
+    shown[#shown + 1] = { text = text, duration = duration }
+  end)
+  logger.set_event_collection_enabled_provider(function()
+    return false
+  end)
+
+  local ok, err = pcall(function()
+    logger.event("closed action log event")
+    local text = logger.get_text_by_level("event")
+    _assert_eq(text, "", "closed action log should not retain event feed entries")
+    _assert_eq(#shown, 1, "closed action log should still show tips")
+    _assert_eq(shown[1].text, "closed action log event", "tip text should still be emitted")
+  end)
+
+  logger.set_tip_presenter(nil)
+  logger.set_event_collection_enabled_provider(nil)
+  logger.clear()
+  if not ok then
+    error(err)
+  end
+end
+
 return {
   name = "misc",
   tests = {
@@ -177,5 +204,6 @@ return {
     { name = "logger_event_tip_defers_until_current_tip_finishes", run = _test_logger_event_tip_defers_until_current_tip_finishes },
     { name = "logger_event_no_tips_stays_in_event_feed_without_showing_tip", run = _test_logger_event_no_tips_stays_in_event_feed_without_showing_tip },
     { name = "logger_configure_host_runtime_uses_injected_hooks", run = _test_logger_configure_host_runtime_uses_injected_hooks },
+    { name = "logger_event_collection_provider_drops_closed_action_log_events", run = _test_logger_event_collection_provider_drops_closed_action_log_events },
   },
 }

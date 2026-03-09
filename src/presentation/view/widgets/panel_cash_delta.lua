@@ -44,7 +44,7 @@ end
 local function _schedule_hide_cash_delta(ui, index)
   local token = (ui.player_cash_delta_hide_token_by_index[index] or 0) + 1
   ui.player_cash_delta_hide_token_by_index[index] = token
-  runtime_ports.schedule(gameplay_rules.action_anim_default_seconds or 1.0, function()
+  runtime_ports.schedule(gameplay_rules.panel_cash_delta_visible_seconds or 3.0, function()
     if not ui.player_cash_delta_hide_token_by_index then
       return
     end

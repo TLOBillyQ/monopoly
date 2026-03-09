@@ -74,6 +74,14 @@ local function _fill_option_nodes(ui, screen, options, opts)
       })
     end
 
+    local projection_node = screen.slot_projections and screen.slot_projections[index] or nil
+    if projection_node then
+      ui_controls.set_control_state(ui, projection_node, {
+        visible = option ~= nil,
+        touch_enabled = false,
+      })
+    end
+
     if selected == nil and option_id ~= nil then
       selected = option_id
     end

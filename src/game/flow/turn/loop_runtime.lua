@@ -8,6 +8,7 @@ function runtime.is_phase_input_blocked(phase)
     or phase == "wait_action_anim"
     or phase == "wait_landing_visual"
     or phase == "detained_wait"
+    or phase == "inter_turn_wait"
 end
 
 function runtime.sync_input_blocked(state, phase, ports)
