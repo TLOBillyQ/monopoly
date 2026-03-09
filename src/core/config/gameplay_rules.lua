@@ -23,6 +23,9 @@ local gameplay_rules = {
   turn_limit = 1000,
 
   item_phase_queue = { "pre_action", "pre_move", "post_action" },
+  board = {
+    player_min_ground_offset = 0.5,
+  },
   target_pick = {
     eye_offset_y = 1.5,
     ray_distance = 24.0,

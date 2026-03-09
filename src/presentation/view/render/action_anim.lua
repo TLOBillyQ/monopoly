@@ -58,6 +58,7 @@ local function _register_default_handlers()
     board_feedback.play_tile_cue(state, "upgrade_land_smoke", anim.tile_index, {
       player_id = anim.player_id,
       duration = duration,
+      use_building_tile_position = true,
     })
     return duration
   end)

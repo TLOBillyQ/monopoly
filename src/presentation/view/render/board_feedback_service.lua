@@ -85,6 +85,22 @@ local function _resolve_tile_position(state, tile_index)
   end
   return nil
 end
+local function _resolve_building_tile_position(state, tile_index)
+  local building = state and state.board_scene and state.board_scene.buildings and state.board_scene.buildings[tile_index] or nil
+  if building and type(building.get_position) == "function" then
+    return building.get_position()
+  end
+  return nil
+end
+local function _resolve_tile_cue_position(state, tile_index, payload)
+  if payload and payload.use_building_tile_position == true then
+    local building_pos = _resolve_building_tile_position(state, tile_index)
+    if building_pos ~= nil then
+      return building_pos
+    end
+  end
+  return _resolve_tile_position(state, tile_index)
+end
 local function _resolve_player_unit(state, player_id)
   local units_by_player_id = state and state.board_scene and state.board_scene.units_by_player_id or nil
   if type(units_by_player_id) == "table" and units_by_player_id[player_id] ~= nil then
@@ -192,7 +208,7 @@ local function _play_cue(state, cue_name, pos, unit, payload)
   return played
 end
 function service.play_tile_cue(state, cue_name, tile_index, payload)
-  local pos = _resolve_tile_position(state, tile_index)
+  local pos = _resolve_tile_cue_position(state, tile_index, payload)
   if pos == nil then
     return false
   end

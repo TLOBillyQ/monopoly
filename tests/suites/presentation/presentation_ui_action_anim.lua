@@ -85,6 +85,16 @@ local function _build_state()
           end,
         },
       },
+      buildings = {
+        [1] = {
+          get_position = function()
+            if math and math.Vector3 then
+              return math.Vector3(10.0, 0.0, 0.0)
+            end
+            return { x = 10.0, y = 0.0, z = 0.0 }
+          end,
+        },
+      },
     },
     game = {
       board = {
@@ -522,6 +532,79 @@ local function _test_board_feedback_effect_id_ref_routes_integer_sfx_key()
   assert(effect_calls[1].scale == 3.0, "upgrade_land_smoke should use scalar scale")
 end
 
+local function _test_board_feedback_tile_cue_uses_building_position_when_requested()
+  local effect_calls = {}
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "play_sfx_by_key",
+      value = function(sfx_key, pos, rot, scale, duration, rate, with_sound)
+        effect_calls[#effect_calls + 1] = {
+          sfx_key = sfx_key,
+          pos = pos,
+        }
+        return 502
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "play_3d_sound",
+      value = function()
+        return nil
+      end,
+    },
+  }, function()
+    local state = _build_state()
+    local played = board_feedback.play_tile_cue(state, "upgrade_land_smoke", 1, {
+      use_building_tile_position = true,
+    })
+    assert(played == true, "configured effect cue should play from building position")
+  end)
+
+  assert(#effect_calls == 1, "building-position tile cue should call engine once")
+  assert(effect_calls[1].pos.x == 10.0, "building-position tile cue should use building x")
+  assert(effect_calls[1].pos.y == 0.0, "building-position tile cue should use building y")
+  assert(effect_calls[1].pos.z == 0.0, "building-position tile cue should use building z")
+end
+
+local function _test_board_feedback_tile_cue_falls_back_to_tile_position_when_building_missing()
+  local effect_calls = {}
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "play_sfx_by_key",
+      value = function(sfx_key, pos, rot, scale, duration, rate, with_sound)
+        effect_calls[#effect_calls + 1] = {
+          sfx_key = sfx_key,
+          pos = pos,
+        }
+        return 503
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "play_3d_sound",
+      value = function()
+        return nil
+      end,
+    },
+  }, function()
+    local state = _build_state()
+    state.board_scene.buildings = {}
+    local played = board_feedback.play_tile_cue(state, "upgrade_land_smoke", 1, {
+      use_building_tile_position = true,
+    })
+    assert(played == true, "tile cue should fall back to tile position when building is missing")
+  end)
+
+  assert(#effect_calls == 1, "fallback tile cue should call engine once")
+  assert(effect_calls[1].pos.x == 0.0, "fallback tile cue should use tile x")
+  assert(effect_calls[1].pos.y == 0.0, "fallback tile cue should use tile y")
+  assert(effect_calls[1].pos.z == 0.0, "fallback tile cue should use tile z")
+end
+
 local function _test_board_feedback_player_effect_binding_keeps_bind_call()
   local effect_calls = {}
   local bind_calls = {}
@@ -721,6 +804,7 @@ local function _test_action_anim_upgrade_land_routes_board_feedback()
           tile_index = tile_index,
           player_id = payload and payload.player_id or nil,
           duration = payload and payload.duration or nil,
+          use_building_tile_position = payload and payload.use_building_tile_position or nil,
         }
         return true
       end,
@@ -740,6 +824,7 @@ local function _test_action_anim_upgrade_land_routes_board_feedback()
   assert(calls[1].cue_name == "upgrade_land_smoke", "upgrade cue name mismatch")
   assert(calls[1].tile_index == 1, "upgrade cue should target tile index")
   assert(calls[1].player_id == 1, "upgrade cue should preserve player id")
+  assert(calls[1].use_building_tile_position == true, "upgrade cue should request building tile position")
 end
 
 local function _test_action_anim_cash_receive_routes_board_feedback()
@@ -791,6 +876,14 @@ return {
     {
       name = "board_feedback_effect_id_ref_routes_integer_sfx_key",
       run = _test_board_feedback_effect_id_ref_routes_integer_sfx_key,
+    },
+    {
+      name = "board_feedback_tile_cue_uses_building_position_when_requested",
+      run = _test_board_feedback_tile_cue_uses_building_position_when_requested,
+    },
+    {
+      name = "board_feedback_tile_cue_falls_back_to_tile_position_when_building_missing",
+      run = _test_board_feedback_tile_cue_falls_back_to_tile_position_when_building_missing,
     },
     {
       name = "board_feedback_player_effect_binding_keeps_bind_call",
