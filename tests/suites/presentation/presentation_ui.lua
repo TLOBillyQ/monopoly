@@ -6339,7 +6339,7 @@ local function _test_panel_crown_excludes_eliminated_players()
   _assert_eq(env.state.ui.visible["基础_玩家4皇冠"], false, "player4 crown should hide")
 end
 
-return {
+local suite = {
   _test_move_anim_callback_and_delay,
   _test_popup_timeout_auto_confirm,
   _test_runtime_port_with_client_role_restores_nested_context,
@@ -6382,6 +6382,9 @@ return {
   _test_apply_input_lock_keeps_auto_controls_enabled,
   _test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapped,
   _test_apply_input_lock_disables_always_show_controls_when_market_active,
+}
+
+local suite_more = {
   _test_ui_view_render_auto_button_keeps_local_touch_when_unmapped_role_exists,
   _test_ui_touch_policy_auto_controls_touch,
   _test_ui_touch_policy_runtime_nodes_touch_enabled,
@@ -6426,6 +6429,9 @@ return {
   _test_status3d_reset_destroy_layers,
   _test_turn_effects_prompt_visibility_follows_phase_and_role,
   _test_turn_effects_other_prompt_fallback_text,
+}
+
+local suite_tail = {
   _test_tick_ui_sync_turn_switch_still_follows,
   _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailable,
   _test_ui_sync_defers_choice_modal_during_wait_action_anim,
@@ -6476,3 +6482,13 @@ return {
   _test_market_view_empty_filtered_tab_hides_selection_frames,
   _test_market_view_refresh_retargets_selection_frame_on_page_change,
 }
+
+for _, test_case in ipairs(suite_more) do
+  suite[#suite + 1] = test_case
+end
+
+for _, test_case in ipairs(suite_tail) do
+  suite[#suite + 1] = test_case
+end
+
+return suite

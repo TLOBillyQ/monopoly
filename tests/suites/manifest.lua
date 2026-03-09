@@ -23,6 +23,7 @@ return {
   "suites.presentation.presentation_ui_popup_market",
   "suites.presentation.presentation_ui_action_status",
   "suites.presentation.presentation_ui_action_anim",
+  "suites.presentation.presentation_board_sync",
   "suites.presentation.presentation_ui_event_handlers",
   "suites.presentation.presentation_ui_event_bindings",
   "suites.presentation.presentation_player_colors",

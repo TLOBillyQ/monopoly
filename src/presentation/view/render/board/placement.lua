@@ -4,6 +4,33 @@ local runtime_ports = require("src.core.ports.runtime_ports")
 
 local M = {}
 
+local function _stop_unit_anim(unit)
+  if unit ~= nil and type(unit.stop_anim) == "function" then
+    unit.stop_anim()
+  end
+end
+
+local function _stop_unit_motion(unit)
+  if unit == nil then
+    return
+  end
+  if type(unit.force_stop_move) == "function" then
+    unit.force_stop_move()
+    return
+  end
+  if type(unit.ai_command_stop_move) == "function" then
+    unit.ai_command_stop_move(0)
+  end
+end
+
+local function _stop_player_motion(pid, seat_id, unit, vehicle)
+  if seat_id ~= nil and vehicle and type(vehicle.emit_vehicle_stop) == "function" then
+    vehicle.emit_vehicle_stop(pid)
+  end
+  _stop_unit_motion(unit)
+  _stop_unit_anim(unit)
+end
+
 local function _resolve_player_id(player, i)
   return assert(player.id, "missing player id: " .. tostring(i))
 end
@@ -120,6 +147,7 @@ function M.place_players(state, players, occupants, spacing, min_player_y)
       local seat_id = gameplay_read_port.resolve_vehicle_seat_id(player.seat_id)
       local vehicle = runtime_ports.resolve_vehicle_helper()
       local emit_set_position = vehicle and vehicle.emit_vehicle_set_position or nil
+      _stop_player_motion(pid, seat_id, unit, vehicle)
       if seat_id and emit_set_position then
         emit_set_position(pid, target_pos)
       else
