@@ -4,9 +4,9 @@
 
 ## 真源与边界
 
-结构性依赖规则的唯一真源是 `scripts/architecture/monopoly_architecture.lua`。这里声明了 source roots、组件归类、抽象 Port 规则、禁止依赖边界和当前允许存在的循环基线。`tests/internal/dep_rules.lua` 现在保留文本模式护栏与 growth budget，不再重复维护模块级 `require` 边界。
+结构性依赖规则的唯一真源是 `scripts/architecture/monopoly_architecture.lua`。这里声明了 source roots、组件归类、抽象 Port 规则、禁止依赖边界和循环基线。`tests/internal/dep_rules.lua` 现在保留文本模式护栏与 growth budget，不再重复维护模块级 `require` 边界。
 
-当前基线化的 3 个循环依赖只是“暂时允许存在并防止继续扩张”，不是合理性的背书。`arch_view` 会在两种情况下失败：出现新的循环/扩大已有循环，或者某个基线循环消失后配置未同步更新。
+当前 `cycle_baseline` 已清空，表示 `src/**/*.lua` 的模块依赖图不再允许任何已知循环。`arch_view` 现在会在出现任意新循环时直接失败；如果将来确实需要临时基线化某个 SCC，也必须同步更新 `monopoly_architecture.lua`，并在循环拆除后把基线删回去。
 
 ## 命令
 

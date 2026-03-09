@@ -67,25 +67,5 @@ return {
       to = { "^src%.game%.core%.runtime%..+" },
     },
   },
-  cycle_baseline = {
-    {
-      "src.app.bootstrap.payment.eggy_paid_purchase_gateway",
-      "src.core.ports.runtime_ports",
-      "src.infrastructure.runtime.default_ports",
-    },
-    {
-      "src.game.flow.turn.dispatch",
-      "src.game.flow.turn.loop_ports",
-      "src.game.flow.turn.tick_choice_timeout",
-      "src.game.flow.turn.tick_timeout",
-      "src.game.flow.turn.tick_ui_sync",
-    },
-    {
-      "src.game.systems.market.application.choice",
-      "src.game.systems.market.application.choice_session",
-      "src.game.systems.market.application.eligibility",
-      "src.game.systems.market.application.paid_fulfillment",
-      "src.game.systems.market.application.purchase",
-    },
-  },
+  cycle_baseline = {},
 }
