@@ -2,8 +2,23 @@ local dep_rules = require("internal.dep_rules")
 local forbidden_globals = require("internal.forbidden_globals")
 local legacy_path_guard = require("internal.legacy_path_guard")
 
-local tmp_root = "tmp_guard_contract_output"
 local path_sep = package.config:sub(1, 1)
+local tmp_root = (function()
+  local env = nil
+  if path_sep == "\\" then
+    env = os.getenv("TEMP") or os.getenv("TMP")
+    if env == nil or env == "" then
+      env = "C:/Windows/Temp"
+    end
+  else
+    env = os.getenv("TMPDIR")
+    if env == nil or env == "" then
+      env = "/tmp"
+    end
+  end
+  env = tostring(env):gsub("\\", "/")
+  return env .. "/monopoly_guard_contract_output"
+end)()
 
 local function _shell_quote(path)
   return '"' .. tostring(path) .. '"'

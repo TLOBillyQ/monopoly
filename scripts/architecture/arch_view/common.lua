@@ -29,6 +29,23 @@ function common.normalize_path(path)
   return tostring(path or ""):gsub("\\", "/")
 end
 
+function common.system_tmp_dir()
+  local env = nil
+  if common.is_windows() then
+    env = os.getenv("TEMP") or os.getenv("TMP")
+  else
+    env = os.getenv("TMPDIR")
+  end
+  if env == nil or env == "" then
+    if common.is_windows() then
+      env = "C:/Windows/Temp"
+    else
+      env = "/tmp"
+    end
+  end
+  return common.normalize_path(env)
+end
+
 function common.build_list_command(root)
   local normalized_root = common.normalize_path(root)
   if common.is_windows() then

@@ -10,6 +10,7 @@ local source_scan = require("arch_view.source_scan")
 local config = require("monopoly_architecture")
 
 local cached_architecture = nil
+local tmp_root = common.system_tmp_dir() .. "/monopoly_arch_view_test_output"
 
 local function _assert_eq(actual, expected, message)
   if actual ~= expected then
@@ -138,7 +139,7 @@ local function _test_layers_assign_feedback_edges_for_cycles()
 end
 
 local function _test_source_scan_treats_init_as_package_entry()
-  local root = common.is_windows() and "tmp_arch_view_test_output/source_scan/pkg_root" or "/tmp/monopoly_arch_view_test_output/source_scan/pkg_root"
+  local root = tmp_root .. "/source_scan/pkg_root"
   local package_dir = root .. "/demo/pkg"
   local ok, err = common.ensure_dir(package_dir)
   if not ok then
@@ -319,7 +320,7 @@ local function _test_projection_exposes_full_names_and_display_edges()
 end
 
 local function _test_viewer_command_writes_static_bundle()
-  local out_dir = common.is_windows() and "tmp_arch_view_test_output/viewer" or "/tmp/monopoly_arch_view_test_output/viewer"
+  local out_dir = tmp_root .. "/viewer"
   local ok, err = common.ensure_dir(out_dir)
   if not ok then
     error(err)
