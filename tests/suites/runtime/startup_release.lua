@@ -45,6 +45,46 @@ local function _test_release_qa_accepts_defined_profile()
   end)
 end
 
+local function _test_release_qa_accepts_monster_staging_profile_in_startup_chain()
+  local created_opts = nil
+  local applied_profile = nil
+  with_patches({
+    {
+      target = runtime_ports,
+      key = "resolve_roles",
+      value = function()
+        return { _build_role(11) }
+      end,
+    },
+    {
+      target = app,
+      key = "new",
+      value = function(_, opts)
+        created_opts = opts
+        return {}
+      end,
+    },
+    {
+      target = test_profile_bootstrap,
+      key = "apply",
+      value = function(_, profile_name)
+        applied_profile = profile_name
+      end,
+    },
+  }, function()
+    local state = game_startup.build_state(function() return nil end, {
+      profile_name = "scenario_monster_staging",
+      release_mode = true,
+      force_non_p1_ai = false,
+      fail_fast_when_roles_empty = true,
+    })
+    state.game_factory()
+  end)
+
+  assert(type(created_opts) == "table", "release-qa startup should still create game options")
+  assert(applied_profile == "scenario_monster_staging", "release-qa startup should pass through monster staging profile")
+end
+
 local function _test_release_prod_allows_explicit_ai_mode()
   with_patches({
     { key = "RELEASE_BUILD", value = true },
@@ -287,6 +327,10 @@ return {
   tests = {
     { name = "release_prod_forces_default_profile", run = _test_release_prod_forces_default_profile },
     { name = "release_qa_accepts_defined_profile", run = _test_release_qa_accepts_defined_profile },
+    {
+      name = "release_qa_accepts_monster_staging_profile_in_startup_chain",
+      run = _test_release_qa_accepts_monster_staging_profile_in_startup_chain,
+    },
     { name = "release_prod_allows_explicit_ai_mode", run = _test_release_prod_allows_explicit_ai_mode },
     { name = "release_qa_without_profile_falls_back_to_default", run = _test_release_qa_without_profile_falls_back_to_default },
     {

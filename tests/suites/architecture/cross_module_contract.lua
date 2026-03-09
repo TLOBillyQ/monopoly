@@ -57,13 +57,14 @@ local function _test_land_rent_chain_contract_rules_match_resolver()
 end
 
 local function _test_action_anim_bridge_contract_dispatches_by_kind()
-  local calls = { overlay = 0, missile = 0, clear_obstacles = 0 }
+  local calls = { overlay = 0, missile = 0, monster = 0, clear_obstacles = 0 }
   local state = { ui = {} }
 
   _with_patches({
     { target = handlers, key = "build_tip", value = function() return "tip" end },
     { target = handlers, key = "play_overlay", value = function() calls.overlay = calls.overlay + 1 end },
     { target = handlers, key = "play_missile", value = function() calls.missile = calls.missile + 1 end },
+    { target = handlers, key = "play_monster", value = function() calls.monster = calls.monster + 1 end },
     {
       target = handlers,
       key = "play_clear_obstacles",
@@ -79,12 +80,15 @@ local function _test_action_anim_bridge_contract_dispatches_by_kind()
       "mine should keep anim duration")
     _assert_eq(action_anim.play(state, { kind = "missile", tile_index = 1, duration = 0.2 }), 0.2,
       "missile should keep anim duration")
+    _assert_eq(action_anim.play(state, { kind = "monster", tile_index = 1, duration = 0.2 }), 0.2,
+      "monster should keep anim duration")
     _assert_eq(action_anim.play(state, { kind = "clear_obstacles", tile_index = 1, duration = 0.2 }), 0.2,
       "clear_obstacles should keep anim duration")
   end)
 
   _assert_eq(calls.overlay, 2, "roadblock/mine should share overlay handler bridge")
   _assert_eq(calls.missile, 1, "missile should dispatch to missile handler bridge")
+  _assert_eq(calls.monster, 1, "monster should dispatch to monster handler bridge")
   _assert_eq(calls.clear_obstacles, 1, "clear_obstacles should dispatch to clear handler bridge")
 end
 

@@ -294,6 +294,72 @@ local profiles = {
       },
     },
   },
+  scenario_monster_staging = {
+    bootstrap = {
+      players = {
+        [1] = {
+          cash = 120000,
+          position_tile_id = 40,
+          item_counts = {
+            [2008] = 1,
+          },
+        },
+        [2] = {
+          cash = 120000,
+          position_tile_id = 44,
+        },
+        [3] = {
+          cash = 120000,
+          position_tile_id = 38,
+        },
+        [4] = {
+          cash = 120000,
+          position_tile_id = 37,
+        },
+      },
+      tiles = {
+        [12] = {
+          owner_player_index = 2,
+          level = 2,
+        },
+      },
+    },
+  },
+  scenario_missile_staging = {
+    bootstrap = {
+      players = {
+        [1] = {
+          cash = 120000,
+          position_tile_id = 40,
+          item_counts = {
+            [2013] = 1,
+          },
+        },
+        [2] = {
+          cash = 120000,
+          position_tile_id = 11,
+        },
+        [3] = {
+          cash = 120000,
+          position_tile_id = 44,
+        },
+        [4] = {
+          cash = 120000,
+          position_tile_id = 37,
+        },
+      },
+      tiles = {
+        [11] = {
+          owner_player_index = 2,
+          level = 2,
+        },
+      },
+      overlays = {
+        roadblocks = { 11 },
+        mines = { 11 },
+      },
+    },
+  },
   items_deity_status = {
     bootstrap = {
       players = {

@@ -15,6 +15,10 @@ function handlers.play_missile(state, anim, duration, opts)
   units.play_missile(state, anim, duration, opts)
 end
 
+function handlers.play_monster(state, anim, duration, opts)
+  units.play_monster(state, anim, duration, opts)
+end
+
 function handlers.play_clear_obstacles(state, anim, duration, opts)
   units.play_clear_obstacles(state, anim, duration, opts)
 end

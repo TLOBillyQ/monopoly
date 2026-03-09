@@ -49,29 +49,31 @@ end
 
 local function _test_monster_card()
   local g = _new_game()
+  _set_ui_port(g, { wait_action_anim = true })
   local p = g:current_player()
   local idx = 3
   local tile_ref = g.board:get_tile(idx)
   g:set_tile_owner(tile_ref, 2)
   g:set_tile_level(tile_ref, 2)
   p.inventory:add({ id = 2008 })
-  local res = executor.use_item(g, p, 2008, { by_ai = true })
+  local res = executor.use_item(g, p, 2008, {})
   if type(res) == "table" and res.intent then
     if res.intent.kind == "need_choice" then
       _open_choice(g, res.intent.choice_spec)
     end
     local pending = _get_choice(g)
     assert(pending and pending.kind == "demolish_target", "monster should open choice")
-    _resolve_choice_first(g, pending)
-    res = true
+    res = choice_resolver.resolve(g, pending, { option_id = pending.options[1].id })
   end
-  local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
-  _assert_eq(ok, true, "monster use ok")
+  _assert_eq(res.status, "resolved", "monster choice should resolve")
   _assert_eq(_tile_state(g, tile_ref).level, 0, "building destroyed")
+  assert(g.turn.action_anim and g.turn.action_anim.kind == "monster", "monster should queue monster action anim")
+  _assert_eq(res.after_action_anim, nil, "monster should not expose move followup")
 end
 
 local function _test_missile_card()
   local g = _new_game()
+  _set_ui_port(g, { wait_action_anim = true })
   local p = g:current_player()
   local idx = 4
   local tile_ref = g.board:get_tile(idx)
@@ -88,15 +90,19 @@ local function _test_missile_card()
     end
     local pending = _get_choice(g)
     assert(pending and pending.kind == "demolish_target", "missile should open choice")
-    _resolve_choice_first(g, pending)
-    res = true
+    res = choice_resolver.resolve(g, pending, { option_id = pending.options[1].id })
   end
-  local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
-  _assert_eq(ok, true, "missile use ok")
+  _assert_eq(res.status, "resolved", "missile choice should resolve")
   _assert_eq(_tile_state(g, tile_ref).level, 0, "building destroyed by missile")
   _assert_eq(g.board:has_roadblock(idx), false, "roadblock cleared")
   _assert_eq(g.board:has_mine(idx), false, "mine cleared")
-  assert(g.players[2].status.stay_turns > 0, "target sent to hospital")
+  assert(g.turn.action_anim and g.turn.action_anim.kind == "missile", "missile should queue missile action anim")
+  assert(type(res.after_action_anim) == "table", "missile should expose move followup")
+  _assert_eq(g.players[2].status.stay_turns or 0, 0, "missile should defer hospital stay until move followup")
+
+  local next_state, _ = move_followup.run({ game = g }, res.after_action_anim.next_args)
+  _assert_eq(next_state, nil, "missile move followup should return caller continuation")
+  assert(g.players[2].status.stay_turns > 0, "missile target should enter hospital after move followup")
 end
 
 local function _test_demolish_card_no_target_returns_false()

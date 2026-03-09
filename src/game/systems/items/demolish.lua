@@ -24,27 +24,51 @@ end
 
 local tile_state = tile.get_state
 
-local function _send_players_to_hospital(game, idx)
+local function _collect_hospital_targets(game, idx)
   local occupants = assert(game.occupants[idx], "missing occupants: " .. tostring(idx))
-
-  local hospital_index = assert(game.board:find_first_by_type("hospital"), "missing hospital")
-
-  local count = 0
+  local targets = {}
   local snapshot = { list_unpack(occupants) }
   for _, pid in ipairs(snapshot) do
     local target = assert(game:find_player_by_id(pid), "missing target player: " .. tostring(pid))
     if game:player_is_vehicle_indestructible(target) then
       logger.event(target.name .. " 座驾免疫导弹效果")
     else
-      game:set_player_seat(target, nil)
-      game:update_player_position(target, hospital_index)
-      game:set_player_status(target, "move_dir", nil)
-      game:set_player_status(target, "stay_turns", constants.hospital_stay_turns)
-      logger.event(target.name .. " 被炸伤送往医院，需停留 " .. number_utils.format_integer_part(constants.hospital_stay_turns) .. " 回合")
-      count = count + 1
+      targets[#targets + 1] = target
     end
   end
-  return count
+  return targets
+end
+
+local function _relocate_to_hospital(game, targets)
+  local hospital_index = assert(game.board:find_first_by_type("hospital"), "missing hospital")
+  for _, target in ipairs(targets) do
+    game:set_player_seat(target, nil)
+    game:update_player_position(target, hospital_index)
+    game:set_player_status(target, "move_dir", nil)
+  end
+end
+
+local function _apply_hospital_effects(game, targets)
+  for _, target in ipairs(targets) do
+    game:player_apply_hospital_effects(target)
+  end
+end
+
+local function _build_hospital_followup(targets)
+  local effects = {}
+  for index, target in ipairs(targets) do
+    effects[index] = {
+      player_id = target.id,
+      effect = "hospital",
+    }
+  end
+  return {
+    next_state = "move_followup",
+    next_args = {
+      mode = "apply_location_effects",
+      effects = effects,
+    },
+  }
 end
 
 function demolish.find_target(game, player, distance)
@@ -74,8 +98,10 @@ function demolish.apply(game, player, idx, opts)
   _destroy_building(game, tile)
 
   local hit = 0
+  local hospital_targets = nil
   if opts.injure then
-    hit = _send_players_to_hospital(game, idx)
+    hospital_targets = _collect_hospital_targets(game, idx)
+    hit = #hospital_targets
   end
 
   local msg
@@ -104,6 +130,17 @@ function demolish.apply(game, player, idx, opts)
     item_id = opts.item_id,
     duration = action_anim_duration,
   })
+  if opts.injure and hit > 0 then
+    _relocate_to_hospital(game, hospital_targets)
+    if queued then
+      return {
+        ok = true,
+        action_anim = queued,
+        after_action_anim = _build_hospital_followup(hospital_targets),
+      }
+    end
+    _apply_hospital_effects(game, hospital_targets)
+  end
   return { ok = true, action_anim = queued }
 end
 

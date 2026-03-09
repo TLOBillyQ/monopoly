@@ -114,6 +114,36 @@ local function _apply_tile_bootstrap(game, tiles)
   end
 end
 
+local function _resolve_overlay_index(game, raw_tile_id, overlay_kind)
+  local tile_id = number_utils.to_integer(raw_tile_id)
+  assert(tile_id ~= nil, "invalid " .. tostring(overlay_kind) .. " tile id: " .. tostring(raw_tile_id))
+  local board_index = game.board:index_of_tile_id(tile_id)
+  assert(board_index ~= nil, tostring(overlay_kind) .. " tile id not in board path: " .. tostring(tile_id))
+  return board_index
+end
+
+local function _apply_overlay_bootstrap(game, overlays)
+  if type(overlays) ~= "table" then
+    return
+  end
+
+  local roadblocks = overlays.roadblocks
+  if type(roadblocks) == "table" then
+    for _, raw_tile_id in ipairs(roadblocks) do
+      local board_index = _resolve_overlay_index(game, raw_tile_id, "roadblock")
+      game.board:place_roadblock(board_index)
+    end
+  end
+
+  local mines = overlays.mines
+  if type(mines) == "table" then
+    for _, raw_tile_id in ipairs(mines) do
+      local board_index = _resolve_overlay_index(game, raw_tile_id, "mine")
+      game.board:place_mine(board_index)
+    end
+  end
+end
+
 function bootstrap.apply(game, profile_name)
   assert(game ~= nil, "missing game")
 
@@ -124,6 +154,7 @@ function bootstrap.apply(game, profile_name)
 
   _apply_player_bootstrap(game, cfg.players)
   _apply_tile_bootstrap(game, cfg.tiles)
+  _apply_overlay_bootstrap(game, cfg.overlays)
 end
 
 return bootstrap

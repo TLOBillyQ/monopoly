@@ -14,6 +14,7 @@ return {
   "suites.gameplay.gameplay_coroutine",
   "suites.gameplay.gameplay_loop",
   "suites.gameplay.gameplay_afk",
+  "suites.gameplay.gameplay_items_startup",
   "suites.runtime.runtime_bootstrap",
 
   "suites.presentation.presentation_ui_timing_anim",

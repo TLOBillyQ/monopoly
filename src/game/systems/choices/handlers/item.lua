@@ -115,6 +115,7 @@ function item_choice_handler.build(helpers)
     local result = demolish.apply(game, player, index, {
       injure = meta.injure,
       title = meta.title,
+      item_id = meta.item_id,
     })
     if result then
       item_use_broadcast.dispatch(game, player, meta.item_id)

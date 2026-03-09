@@ -72,6 +72,10 @@ local function _register_default_handlers()
     handlers.play_missile(state, anim, duration, opts)
     return duration
   end)
+  registry.register("monster", function(state, anim, duration, opts)
+    handlers.play_monster(state, anim, duration, opts)
+    return duration
+  end)
   registry.register("clear_obstacles", function(state, anim, duration, opts)
     handlers.play_clear_obstacles(state, anim, duration, opts)
     return duration

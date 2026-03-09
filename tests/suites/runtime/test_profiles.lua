@@ -288,6 +288,45 @@ local function _test_chance_backward_intersection_profile_applies_tile_42()
   assert(game.players[1].inventory:count() == 0, "chance backward intersection profile should not preload startup items")
 end
 
+local function _test_scenario_monster_staging_bootstraps_target_building()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "scenario_monster_staging")
+
+  local target_tile = assert(game.board:get_tile_by_id(12), "monster staging target tile should exist")
+  local target_state = tile_state(game, target_tile)
+  local player_index = game.board:index_of_tile_id(40)
+
+  assert(player_index ~= nil, "scenario_monster_staging start tile should exist")
+  assert(game.players[1].position == player_index, "monster staging should place p1 on configured tile")
+  _assert_inventory_counts(game.players[1], {
+    [2008] = 1,
+  })
+  assert(target_state.owner_id == game.players[2].id, "monster staging should assign target building owner")
+  assert(target_state.level == 2, "monster staging should assign target building level")
+end
+
+local function _test_scenario_missile_staging_bootstraps_target_tile_and_overlays()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "scenario_missile_staging")
+
+  local target_tile = assert(game.board:get_tile_by_id(11), "missile staging target tile should exist")
+  local target_state = tile_state(game, target_tile)
+  local target_index = game.board:index_of_tile_id(11)
+  local player_index = game.board:index_of_tile_id(40)
+
+  assert(target_index ~= nil, "scenario_missile_staging target tile should exist in board path")
+  assert(player_index ~= nil, "scenario_missile_staging start tile should exist")
+  assert(game.players[1].position == player_index, "missile staging should place p1 on configured tile")
+  _assert_inventory_counts(game.players[1], {
+    [2013] = 1,
+  })
+  assert(target_state.owner_id == game.players[2].id, "missile staging should assign target building owner")
+  assert(target_state.level == 2, "missile staging should assign target building level")
+  assert(game.board:has_roadblock(target_index) == true, "missile staging should place roadblock on target tile")
+  assert(game.board:has_mine(target_index) == true, "missile staging should place mine on target tile")
+  assert(game.players[2].position == target_index, "missile staging should place occupant on target tile")
+end
+
 return {
   name = "test_profiles",
   tests = {
@@ -334,6 +373,14 @@ return {
     {
       name = "chance_backward_intersection_profile_applies_tile_42",
       run = _test_chance_backward_intersection_profile_applies_tile_42,
+    },
+    {
+      name = "scenario_monster_staging_bootstraps_target_building",
+      run = _test_scenario_monster_staging_bootstraps_target_building,
+    },
+    {
+      name = "scenario_missile_staging_bootstraps_target_tile_and_overlays",
+      run = _test_scenario_missile_staging_bootstraps_target_tile_and_overlays,
     },
   },
 }
