@@ -1,56 +1,272 @@
-- # 测试目录清理与优化方案
+# Profile 自动轮播：Eggy 运行时全量 Profile 巡检
 
-  ## 摘要
-  - 当前 `tests/` 实际混合了 5 类职责：运行入口、共享脚手架、夹具、架构/文本 guard、行为/契约 suite。目录共有 56 个文件；suite 清单装载 468 个 case，默认 `lua tests/regression.lua` 在 `release_trimmed` 下执行 466 个检查并通过，但通过路径输出噪声过大，失败定位成本偏高。
-  - 主要维护热点已经很明确：`gameplay/gameplay.lua` 3126 行并配套 `registry.lua` 与 4 个 slice 壳；`presentation_ui_action_status_part1/2/3.lua` 合计 4837 行并配套聚合壳；`presentation_ui_popup_market.lua` 1048 行；`presentation_ui_action_anim.lua` 961 行。
-  - 推荐目标不是改测试语义，而是重做测试“装配方式”：保留 `lua tests/regression.lua` 兼容入口和现有断言结果不变，把测试目录重组为可发现、可分层、可独立运行、可低噪声失败定位的结构。
+## Context
 
-  ## 关键改动
-  1. 重做 runner 与清单真源
-  - 新增 `tests/bootstrap.lua`，统一处理 `package.path`、随机种子、测试环境初始化；删除各 runner/guard 文件里重复的 `package.path = package.path .. ...` 拼接。
-  - 新增 `tests/catalog.lua` 作为唯一真源，拆成 `behavior_suites`、`contract_suites`、`guard_scripts` 三组；`tests/regression.lua` 只负责 `bootstrap -> behavior -> contract -> guard` 的顺序调度。
-  - 保留 `tests/suites/manifest.lua` 一个兼容周期，让它转发到 `catalog.lua`；下一轮清掉所有直接依赖后再删除。
-  - Suite 接口统一为 `{ name, layer, kind, tests = {...} }`；case 接口统一为 `{ name, run, disabled_in = { release_trimmed = true }, tags = {...} }`，把当前 `regression.lua` 里按 suite/test 名硬编码过滤的逻辑迁到 case metadata。
+当前 `Config/testing/test_profiles.lua` 定义了 14 个场景 profile（bankruptcy、upgrade_build、market、tax 等），每个设置了特定的玩家位置、现金、道具、地块归属和覆盖物。启动时通过 `_G.STARTUP_TEST_PROFILE` 指定**单个** profile，由 `startup_policy` → `game_startup.build_state` → `test_profile_bootstrap.apply` 应用到游戏。auto_runner 驱动 AI 自动操作直到 `game.finished = true`。
 
-  2. 拆共享脚手架，收口 helper 边界
-  - `TestHarness.lua` 下沉为 `tests/support/harness.lua`，接口改为 `run_all(suites, opts)`；`opts` 至少支持 `filter`, `reporter`, `capture_logs`。
-  - `TestSupport.lua` 按职责拆成 `tests/support/assertions.lua`、`tests/support/patches.lua`、`tests/support/factories/game_factory.lua`、`tests/support/factories/ui_factory.lua`、`tests/support/runtime_helpers.lua`、`tests/support/scenario_helpers.lua`。
-  - `tests/internal/guard_support.lua` 迁到 `tests/support/guards/guard_support.lua`；guard 不再挂在 `internal` 这个误导性目录下。
-  - 迁移期间保留 `tests/TestSupport.lua` 兼容 facade，但新 suite 禁止继续 require 这个大而全入口；所有大文件拆分完成后删掉 facade。
+**问题**：目前只能手动切换 profile，无法一键跑完全部 14 个场景做巡检。
 
-  3. 按行为簇拆掉巨型 suite，不再保留壳文件
-  - `gameplay/gameplay.lua` 直接拆成 7 个真实 suite：`gameplay_bankruptcy_and_tile_owner.lua`、`gameplay_intent_dispatch.lua`、`gameplay_runtime_context.lua`、`gameplay_turn_loop.lua`、`gameplay_auto_runner.lua`、`gameplay_afk_host.lua`、`gameplay_visual_feedback.lua`。
-  - 删除 `tests/suites/gameplay/registry.lua` 与 4 个 slice 壳；manifest/case 名字直接来自真实 suite，不再靠索引区间维护。
-  - `presentation_ui_action_status_part1/2/3.lua` 改成 9 个真实 suite：`presentation_choice_routes.lua`、`presentation_target_pick.lua`、`presentation_action_log_and_role_context.lua`、`presentation_market_panel.lua`、`presentation_item_slots.lua`、`presentation_action_queue.lua`、`presentation_role_control_lock.lua`、`presentation_status3d_and_turn_effects.lua`、`presentation_popup_and_modal_renderers.lua`、`presentation_player_panels.lua`。
-  - 删除 `presentation_ui_action_status.lua` 这个聚合壳；catalog 直接登记拆分后的 suite。
-  - `presentation_ui_popup_market.lua` 拆成 `presentation_popup_visibility.lua`、`presentation_ui_touch_policy.lua`、`presentation_market_confirm_flow.lua`、`presentation_market_panel_state.lua`。
-  - `presentation_ui_action_anim.lua` 拆成 `presentation_action_anim_core.lua`、`presentation_board_feedback.lua`、`presentation_overlay_compute.lua`。
-  - 拆分原则固定：按行为边界拆，不按平均行数切；拆完后不保留“仅转发/仅聚合”的 suite 壳文件。
+**目标**：在 Eggy 运行时内实现 profile 自动轮播——加载一个 profile，auto_runner 跑固定回合数后自动切换到下一个 profile 重启游戏，跑完全部 14 个后停止。
 
-  4. 把 guard 从“回归尾巴”升级成独立测试车道
-  - `dep_rules.lua`、`legacy_path_guard.lua`、`forbidden_globals.lua`、`gameplay_loop_no_ui.lua`、`arch_view_guard.lua` 迁到 `tests/guards/`，保留 CLI 入口能力，但不再放在 `tests/internal/`。
-  - `guard_scripts_contract.lua` 继续保留在 contract lane，职责只验证 guard 本身的判定逻辑；真正的 guard 执行放到 guard lane。
-  - `architecture_guard_contract.lua`、`arch_view_contract.lua`、`usecase_boundary_contract.lua`、`runtime_ports_contract.lua` 统一归到 contract lane；behavior lane 只放玩法/展示/运行时行为。
+## 现有关键代码路径
 
-  5. 降低通过路径噪声，提升失败可读性
-  - `harness` 默认捕获单 case 日志；通过时只打印进度点和摘要，失败时回放该 case 的缓冲日志；`MONO_TEST_VERBOSE=1` 时才输出全量日志。
-  - 对当前大量重复的 market mapping / host capability warning 只做计数摘要，不做逐行回显；guard 失败仍保持原始错误文本。
-  - 清掉 runner 注释和路径漂移，例如旧的 `.agents/tests/...` 文案，避免继续误导调用方式。
+```
+_G.STARTUP_TEST_PROFILE        → startup_policy.resolve(_G)
+                                → game_startup.build_state(get_game, opts)
+                                   opts.profile_name → test_profile_resolver.resolve_map()
+                                   state.game_factory = function()
+                                     ...
+                                     test_profile_bootstrap.apply(game, profile_name)
+                                     return game
+                                   end
+                                → game_runtime_bootstrap.start(state, game_ref)
+                                   gameplay_loop.new_game(state) → state.game_factory()
+                                → tick loop: gameplay_loop.tick → step_auto_runner
+                                → game.turn.turn_count 每回合递增
+                                → game_victory.check_victory → game.finished = true
+```
 
-  ## 重要接口变化
-  - `tests/catalog.lua` 成为 suite/guard 注册真源。
-  - `tests/support/harness.lua` 暴露 `run_all(suites, opts)`，替代当前固定输出行为。
-  - Suite table 新增 `layer`、`kind`；case table 新增 `disabled_in`、`tags`。
-  - `lua tests/regression.lua` 保持兼容，不要求调用方改命令。
+关键文件：
+- `src/app/bootstrap/startup_policy.lua` — 读 `_G` 全局，输出 policy
+- `src/app/bootstrap/game_startup.lua:207` — `game_factory` 闭包，profile_name 被闭包捕获
+- `src/app/bootstrap/game_runtime_bootstrap.lua:125` — `gameplay_loop.new_game(state)`
+- `src/game/flow/turn/loop.lua:226` — `gameplay_loop.new_game` 调 `state.game_factory()`
+- `src/game/flow/turn/auto_runner.lua:100` — `game_finished` 时停止
+- `src/game/systems/endgame/game_victory.lua` — `game.finished = true`
+- `src/game/flow/turn/auto_context.lua:8` — `ctx.game_finished = game.finished`
+- `src/app/testing/test_profile_resolver.lua:34` — `available_profiles()` 返回全部 profile 名
+- `src/core/config/gameplay_rules.lua:24` — `turn_limit = 1000`
 
-  ## 测试与验收
-  - 迁移前后默认 `lua tests/regression.lua` 都必须为绿；当前基线是默认模式输出 `All regression checks passed (466)`。如果数量变化，只能来自 catalog 显式记录的 case 重分类，不能是丢 case。
-  - 新增 `behavior`、`contract`、`guard` 三个独立入口，各自可单跑，也能被 `regression.lua` 串起来。
-  - 做一次故意失败演练：验证通过路径不回放日志、失败路径只回放失败 case 的缓冲日志。
-  - 做一次 inventory 对账：原 `gameplay.lua`、`presentation_ui_action_status_*`、`presentation_ui_popup_market.lua`、`presentation_ui_action_anim.lua` 的 case 名称全部可在新 catalog 中一一映射。
-  - 结构验收固定为两条：不再存在 wrapper-only suite；单个 suite 文件不再超过约 800 行，support 文件不再承担多领域职责。
+## 实现方案
 
-  ## 假设与默认决策
-  - 本轮只清理测试目录与 runner，不改 `src/` 生产逻辑语义。
-  - 新文件与新模块命名全部使用 `snake_case`；helper 代码继续遵守 `forbidden_globals` 与 `lua_env` 约束，不引入 `tonumber`、`type(...) == "number"` 这类违规写法。
-  - 清理过程不回退当前工作树里的未提交修改；如果迁移命中正在被改的 suite，先新增新 suite 并切 catalog，再删除旧入口，避免直接覆盖他人改动。
+### 触发方式
+
+新增全局变量 `_G.STARTUP_PROFILE_ROTATION = true`，由 `startup_policy` 读取。当此标志开启时，忽略 `STARTUP_TEST_PROFILE` 的单 profile 指定，启用轮播模式。
+
+### 新增模块：`src/app/testing/profile_rotation.lua`
+
+职责：维护轮播状态——当前 profile 索引、已完成列表、每个 profile 的回合限制。
+
+```lua
+-- src/app/testing/profile_rotation.lua
+local test_profile_resolver = require("src.app.testing.test_profile_resolver")
+local logger = require("src.core.utils.logger")
+
+local rotation = {}
+local _state = nil
+
+local DEFAULT_TURNS_PER_PROFILE = 20
+
+function rotation.init(opts)
+  opts = opts or {}
+  local names = test_profile_resolver.available_profiles()
+  -- 排除 "default"，只跑有实际 bootstrap 配置的 profile
+  local queue = {}
+  for _, name in ipairs(names) do
+    if name ~= "default" then
+      queue[#queue + 1] = name
+    end
+  end
+  _state = {
+    queue = queue,
+    index = 1,
+    turns_per_profile = opts.turns_per_profile or DEFAULT_TURNS_PER_PROFILE,
+    results = {},
+    finished = false,
+  }
+  logger.info("[ProfileRotation]", "init", "profiles=" .. tostring(#queue),
+    "turns_per_profile=" .. tostring(_state.turns_per_profile))
+  return _state
+end
+
+function rotation.current_profile_name()
+  if not _state or _state.finished then return nil end
+  return _state.queue[_state.index]
+end
+
+function rotation.advance()
+  if not _state or _state.finished then return false end
+  _state.index = _state.index + 1
+  if _state.index > #_state.queue then
+    _state.finished = true
+    rotation.report()
+    return false
+  end
+  return true
+end
+
+function rotation.record_result(profile_name, turn_count, game_finished)
+  if not _state then return end
+  _state.results[#_state.results + 1] = {
+    profile = profile_name,
+    turns = turn_count,
+    finished = game_finished,
+  }
+end
+
+function rotation.is_active()
+  return _state ~= nil and not _state.finished
+end
+
+function rotation.turns_per_profile()
+  return _state and _state.turns_per_profile or DEFAULT_TURNS_PER_PROFILE
+end
+
+function rotation.report()
+  if not _state then return end
+  logger.info("[ProfileRotation]", "=== ROTATION COMPLETE ===")
+  for _, r in ipairs(_state.results) do
+    logger.info("[ProfileRotation]",
+      r.profile,
+      "turns=" .. tostring(r.turns),
+      "game_finished=" .. tostring(r.finished))
+  end
+  logger.info("[ProfileRotation]", "=== END ===")
+end
+```
+
+### 修改 1：`src/app/bootstrap/startup_policy.lua`
+
+新增读取 `_G.STARTUP_PROFILE_ROTATION` 和可选的 `_G.STARTUP_ROTATION_TURNS`。
+
+```lua
+-- 新增
+local function _read_profile_rotation(globals)
+  return _read_truthy_flag(globals and globals.STARTUP_PROFILE_ROTATION or nil)
+end
+
+local function _read_rotation_turns(globals)
+  local raw = globals and globals.STARTUP_ROTATION_TURNS or nil
+  return number_utils.to_integer(raw)
+end
+
+-- resolve() 返回值新增两个字段
+  return {
+    ...
+    profile_rotation = _read_profile_rotation(globals),
+    rotation_turns = _read_rotation_turns(globals),
+  }
+```
+
+### 修改 2：`src/app/init.lua`
+
+在轮播模式下，初始化 profile_rotation 并将第一个 profile 名传给 game_startup。
+
+```lua
+local profile_rotation = require("src.app.testing.profile_rotation")
+
+-- 在 startup_policy.resolve 之后
+local effective_profile = startup.profile_name
+if startup.profile_rotation then
+  profile_rotation.init({ turns_per_profile = startup.rotation_turns })
+  effective_profile = profile_rotation.current_profile_name() or "default"
+end
+
+-- 传给 game_startup.build_state
+local state = game_startup.build_state(function() return current_game_ref[1] end, {
+  profile_name = effective_profile,
+  profile_rotation = startup.profile_rotation,
+  ...
+})
+```
+
+### 修改 3：`src/app/bootstrap/game_startup.lua` — game_factory 使用可变 profile
+
+将 `profile_name` 改为通过 `state` 间接引用：
+
+```lua
+-- 当前：profile_name 直接闭包捕获
+state.active_profile_name = profile_name
+
+game_factory = function()
+  local active_profile = state.active_profile_name or profile_name
+  local map_cfg = test_profile_resolver.resolve_map(active_profile)
+  ...
+  test_profile_bootstrap.apply(created_game, active_profile)
+  return created_game
+end
+```
+
+这样轮播切换时只需 `state.active_profile_name = next_profile`，再调用 `gameplay_loop.new_game(state)` 即可。
+
+### 修改 4：`src/game/flow/turn/loop.lua` — tick 中检测轮播切换
+
+在 `gameplay_loop.tick` 末尾，检查轮播条件（回合数到达 or game.finished）：
+
+```lua
+local profile_rotation = require("src.app.testing.profile_rotation")
+
+-- 在 tick_flow.tick 之后
+if profile_rotation.is_active() and game then
+  local turn_count = game.turn and game.turn.turn_count or 0
+  local should_rotate = turn_count >= profile_rotation.turns_per_profile()
+    or game.finished == true
+  if should_rotate then
+    local current_name = profile_rotation.current_profile_name()
+    profile_rotation.record_result(current_name, turn_count, game.finished == true)
+    if profile_rotation.advance() then
+      local next_name = profile_rotation.current_profile_name()
+      state.active_profile_name = next_name
+      local new_game = gameplay_loop.new_game(state)
+      if state.on_game_replaced then
+        state.on_game_replaced(new_game)
+      end
+      return
+    end
+  end
+end
+```
+
+### 修改 5：`src/app/init.lua` — 注册 game 引用更新回调
+
+`game_runtime_bootstrap.start` 中 `current_game_ref[1]` 指向当前 game。轮播切换时需要更新它。
+
+```lua
+state.on_game_replaced = function(new_game)
+  current_game_ref[1] = new_game
+  gameplay_loop.set_game(state, new_game)
+end
+```
+
+## 完整修改清单
+
+| # | 文件 | 变更 |
+|---|------|------|
+| 1 | `src/app/testing/profile_rotation.lua` | **新建**，轮播状态机 |
+| 2 | `src/app/bootstrap/startup_policy.lua` | 新增读 `STARTUP_PROFILE_ROTATION` / `STARTUP_ROTATION_TURNS` |
+| 3 | `src/app/init.lua` | 轮播模式初始化 rotation + 注册 `on_game_replaced` 回调 |
+| 4 | `src/app/bootstrap/game_startup.lua` | game_factory 闭包改读 `state.active_profile_name` |
+| 5 | `src/game/flow/turn/loop.lua` | tick 末尾新增轮播检测与切换逻辑 |
+
+## 使用方式
+
+在 Eggy 运行时设置全局变量：
+
+```lua
+_G.STARTUP_PROFILE_ROTATION = true        -- 开启轮播
+_G.STARTUP_ROTATION_TURNS = 15            -- 可选，每个 profile 跑 15 回合（默认 20）
+```
+
+启动后 auto_runner 自动驱动，日志输出：
+
+```
+[ProfileRotation] init profiles=13 turns_per_profile=15
+[ProfileRotation] → bankruptcy (1/13)
+[ProfileRotation] → upgrade_build (2/13)
+...
+[ProfileRotation] === ROTATION COMPLETE ===
+[ProfileRotation] bankruptcy turns=15 game_finished=false
+[ProfileRotation] upgrade_build turns=15 game_finished=false
+[ProfileRotation] market turns=12 game_finished=true    ← 提前结束
+...
+[ProfileRotation] === END ===
+```
+
+## 验证
+
+1. 设置 `_G.STARTUP_PROFILE_ROTATION = true`，`_G.STARTUP_ROTATION_TURNS = 3`，确认所有 profile 依次运行 3 回合后切换
+2. 确认 bankruptcy 等可能提前结束的 profile 在 game.finished 时正确切换
+3. 确认轮播完成后 auto_runner 停止
+4. 确认不设置 `STARTUP_PROFILE_ROTATION` 时现有行为完全不受影响
+5. 运行现有回归：`MONO_REGRESSION_MODE=release_trimmed lua tests/regression.lua`
+6. 运行 profile 相关测试：确认 `tests/suites/runtime/test_profiles.lua` 和 `tests/suites/runtime/startup_release.lua` 通过
