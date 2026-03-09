@@ -72,9 +72,24 @@ function runtime.spawn_overlay(scene, kind, tile_index, group_id, unit_id, pos, 
   assert(tile_index ~= nil, "missing tile_index")
   assert(pos ~= nil, "missing pos")
 
+  logger.info_unlimited(
+    "[OverlayDebug]",
+    "spawn_overlay request",
+    "kind=" .. tostring(kind),
+    "tile_index=" .. tostring(tile_index),
+    "group_id=" .. tostring(group_id),
+    "unit_id=" .. tostring(unit_id)
+  )
+
   local overlays = _ensure_overlays(scene)
   local bucket = _get_overlay_bucket(overlays, kind)
   if not bucket then
+    logger.warn(
+      "[OverlayDebug]",
+      "spawn_overlay missing bucket",
+      "kind=" .. tostring(kind),
+      "tile_index=" .. tostring(tile_index)
+    )
     return false
   end
   if bucket[tile_index] then
@@ -86,43 +101,97 @@ function runtime.spawn_overlay(scene, kind, tile_index, group_id, unit_id, pos, 
     local handle = _spawn_unit_group(group_id, pos)
     if handle then
       bucket[tile_index] = { kind = "group", handle = handle }
+      logger.info_unlimited(
+        "[OverlayDebug]",
+        "spawn_overlay success",
+        "kind=" .. tostring(kind),
+        "tile_index=" .. tostring(tile_index),
+        "spawn_kind=group"
+      )
       return true
     end
-    logger.warn("[ActionAnim]", "create_unit_group missing, skip overlay")
+    logger.warn(
+      "[OverlayDebug]",
+      "spawn_overlay group failed",
+      "kind=" .. tostring(kind),
+      "tile_index=" .. tostring(tile_index),
+      "group_id=" .. tostring(group_id)
+    )
     return false
   end
   if unit_id then
     local handle = _spawn_unit(unit_id, pos, scale)
     if handle then
       bucket[tile_index] = { kind = "unit", handle = handle }
+      logger.info_unlimited(
+        "[OverlayDebug]",
+        "spawn_overlay success",
+        "kind=" .. tostring(kind),
+        "tile_index=" .. tostring(tile_index),
+        "spawn_kind=unit"
+      )
       return true
     end
-    logger.warn("[ActionAnim]", "create_unit_with_scale missing, skip overlay")
+    logger.warn(
+      "[OverlayDebug]",
+      "spawn_overlay unit failed",
+      "kind=" .. tostring(kind),
+      "tile_index=" .. tostring(tile_index),
+      "unit_id=" .. tostring(unit_id)
+    )
     return false
   end
+  logger.warn(
+    "[OverlayDebug]",
+    "spawn_overlay skipped because no prefab id resolved",
+    "kind=" .. tostring(kind),
+    "tile_index=" .. tostring(tile_index)
+  )
   return false
 end
 
 function runtime.spawn_transient(group_id, unit_id, pos, duration)
   if not group_id and not unit_id then
+    logger.warn("[OverlayDebug]", "spawn_transient skipped because no prefab id resolved")
     return
   end
+  logger.info_unlimited(
+    "[OverlayDebug]",
+    "spawn_transient request",
+    "group_id=" .. tostring(group_id),
+    "unit_id=" .. tostring(unit_id),
+    "duration=" .. tostring(duration)
+  )
   local entry
   if group_id then
     local handle = _spawn_unit_group(group_id, pos)
     if not handle then
-      logger.warn("[ActionAnim]", "create_unit_group missing, skip transient")
+      logger.warn(
+        "[OverlayDebug]",
+        "spawn_transient group failed",
+        "group_id=" .. tostring(group_id)
+      )
       return
     end
     entry = { kind = "group", handle = handle }
   else
     local handle = _spawn_unit(unit_id, pos)
     if not handle then
-      logger.warn("[ActionAnim]", "create_unit_with_scale missing, skip transient")
+      logger.warn(
+        "[OverlayDebug]",
+        "spawn_transient unit failed",
+        "unit_id=" .. tostring(unit_id)
+      )
       return
     end
     entry = { kind = "unit", handle = handle }
   end
+  logger.info_unlimited(
+    "[OverlayDebug]",
+    "spawn_transient success",
+    "entry_kind=" .. tostring(entry.kind),
+    "duration=" .. tostring(duration)
+  )
 
   if duration and duration > 0 then
     host_runtime.schedule(duration, function()

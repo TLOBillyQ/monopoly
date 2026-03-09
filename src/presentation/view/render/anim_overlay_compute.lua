@@ -1,3 +1,5 @@
+local logger = require("src.core.utils.logger")
+
 local compute = {}
 
 local function _resolve_vector_value(vec, key, index)
@@ -44,6 +46,13 @@ function compute.resolve_tile_pos(state, tile_index)
     end
   end
 
+  logger.warn(
+    "[OverlayDebug]",
+    "resolve_tile_pos fallback_zero",
+    "tile_index=" .. tostring(tile_index),
+    "tile_exists=" .. tostring(tile ~= nil),
+    "building_exists=" .. tostring(type(buildings) == "table" and buildings[tile_index] ~= nil or false)
+  )
   return _zero_vector()
 end
 

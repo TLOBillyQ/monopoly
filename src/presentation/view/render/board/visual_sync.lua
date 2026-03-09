@@ -4,6 +4,7 @@ local tile_renderer = require("src.presentation.view.render.tile_renderer")
 local overlay_runtime = require("src.presentation.view.render.anim_overlay_runtime")
 local overlay_compute = require("src.presentation.view.render.anim_overlay_compute")
 local runtime_constants = require("src.core.config.runtime_constants")
+local logger = require("src.core.utils.logger")
 
 local visual_sync = {}
 
@@ -116,17 +117,49 @@ function visual_sync.sync_overlay_visual(state, board_index)
   local board = _resolve_board(state)
   local scene = _resolve_scene(state)
   if not (board and scene) then
+    logger.warn(
+      "[OverlayDebug]",
+      "sync_overlay_visual missing board or scene",
+      "board_index=" .. tostring(board_index),
+      "has_board=" .. tostring(board ~= nil),
+      "has_scene=" .. tostring(scene ~= nil)
+    )
     return false
   end
 
-  if board:has_roadblock(board_index) then
-    _spawn_roadblock_overlay(state, board_index)
+  local has_roadblock = board:has_roadblock(board_index)
+  local has_mine = board:has_mine(board_index)
+  logger.info_unlimited(
+    "[OverlayDebug]",
+    "sync_overlay_visual",
+    "board_index=" .. tostring(board_index),
+    "has_roadblock=" .. tostring(has_roadblock),
+    "has_mine=" .. tostring(has_mine),
+    "roadblock_unit_id=" .. tostring(prefab.unit and prefab.unit["路障"] or nil),
+    "mine_group_id=" .. tostring(prefab.group and prefab.group["地雷"] or nil),
+    "mine_unit_id=" .. tostring(prefab.unit and prefab.unit["地雷"] or nil)
+  )
+
+  if has_roadblock then
+    local roadblock_ok = _spawn_roadblock_overlay(state, board_index)
+    logger.info_unlimited(
+      "[OverlayDebug]",
+      "roadblock overlay sync result",
+      "board_index=" .. tostring(board_index),
+      "ok=" .. tostring(roadblock_ok == true)
+    )
   else
     overlay_runtime.clear_overlay(scene, "roadblock", board_index)
   end
 
-  if board:has_mine(board_index) then
-    _spawn_mine_overlay(state, board_index)
+  if has_mine then
+    local mine_ok = _spawn_mine_overlay(state, board_index)
+    logger.info_unlimited(
+      "[OverlayDebug]",
+      "mine overlay sync result",
+      "board_index=" .. tostring(board_index),
+      "ok=" .. tostring(mine_ok == true)
+    )
   else
     overlay_runtime.clear_overlay(scene, "mine", board_index)
   end
@@ -145,6 +178,12 @@ end
 function visual_sync.sync_many(state, payload)
   local normalized = visual_sync.normalize_payload(payload)
   local handled = false
+  logger.info_unlimited(
+    "[OverlayDebug]",
+    "sync_many payload",
+    "tile_count=" .. tostring(#normalized.tile_ids),
+    "overlay_count=" .. tostring(#normalized.overlay_indices)
+  )
 
   for _, tile_id in ipairs(normalized.tile_ids) do
     if visual_sync.sync_tile_visual(state, tile_id) then
