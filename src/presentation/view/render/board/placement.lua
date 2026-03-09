@@ -2,8 +2,17 @@ local gameplay_read_port = require("src.presentation.model.gameplay_read_port")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local runtime_state = require("src.core.state_access.runtime_state")
 local runtime_ports = require("src.core.ports.runtime_ports")
+local logger = require("src.core.utils.logger")
+local move_anim = require("src.presentation.view.render.move_anim")
 
 local M = {}
+
+local function _debug_log(...)
+  if gameplay_rules.move_anim_debug_log_enabled ~= true then
+    return
+  end
+  logger.info("[MoveAnim]", ...)
+end
 
 local function _zero_fixed()
   if math and type(math.tofixed) == "function" then
@@ -160,7 +169,15 @@ function M.place_players(state, players, occupants, spacing, min_player_y)
       local seat_id = gameplay_read_port.resolve_vehicle_seat_id(player.seat_id)
       local vehicle = runtime_ports.resolve_vehicle_helper()
       local emit_set_position = vehicle and vehicle.emit_vehicle_set_position or nil
+      move_anim.clear_player_token(state.board_scene, pid, "board_sync_place_players")
       _stop_player_motion(pid, seat_id, unit, vehicle)
+      _debug_log(
+        "board_refresh_stop_and_snap",
+        "player_id=" .. tostring(pid),
+        "position=" .. tostring(idx),
+        "seat_id=" .. tostring(seat_id or "nil"),
+        "target_pos=" .. tostring(target_pos)
+      )
       if seat_id and emit_set_position then
         emit_set_position(pid, target_pos)
       else

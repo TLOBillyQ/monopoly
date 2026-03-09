@@ -4,8 +4,17 @@ local player_units = require("src.presentation.view.render.board.player_units")
 local placement = require("src.presentation.view.render.board.placement")
 local events = require("src.presentation.view.render.board.events")
 local runtime_state = require("src.core.state_access.runtime_state")
+local gameplay_rules = require("src.core.config.gameplay_rules")
+local logger = require("src.core.utils.logger")
 
 local M = {}
+
+local function _debug_log(...)
+  if gameplay_rules.move_anim_debug_log_enabled ~= true then
+    return
+  end
+  logger.info("[MoveAnim]", ...)
+end
 
 function M.refresh(state, ui_model, log_once, build_log_prefix)
   assert(ui_model ~= nil, "missing ui_model")
@@ -34,6 +43,12 @@ function M.refresh(state, ui_model, log_once, build_log_prefix)
 
   if suppress_sync then
     board_runtime.board_sync_pending = true
+    _debug_log(
+      "board_refresh_suppress_sync",
+      "phase=" .. tostring(phase),
+      "has_anim=" .. tostring(anim ~= nil),
+      "move_followup_pending=" .. tostring(board.move_followup_pending == true)
+    )
   end
 
   if suppress_sync or not need_sync then
@@ -42,6 +57,12 @@ function M.refresh(state, ui_model, log_once, build_log_prefix)
     return
   end
 
+  _debug_log(
+    "board_refresh_apply_sync",
+    "phase=" .. tostring(phase),
+    "board_sync_pending=" .. tostring(board_runtime.board_sync_pending == true),
+    "vehicle_resync_seq=" .. tostring(vehicle_resync_seq)
+  )
   local occupants = placement.build_occupants(state, players)
   local spacing = state.tile_spacing or 0
   local min_player_y = placement.resolve_min_player_y(scene)

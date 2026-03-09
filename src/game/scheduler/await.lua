@@ -4,8 +4,16 @@ local number_utils = require("src.core.utils.number_utils")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
+local logger = require("src.core.utils.logger")
 
 local await = {}
+
+local function _move_anim_debug_log(...)
+  if gameplay_rules.move_anim_debug_log_enabled ~= true then
+    return
+  end
+  logger.info("[MoveAnim]", ...)
+end
 
 local function _next(args)
   args = args or {}
@@ -131,6 +139,18 @@ end
 
 function await.move_anim(session, args, opts)
   opts = opts or {}
+  if gameplay_rules.move_anim_debug_log_enabled == true then
+    local game = session and session.game or nil
+    local anim = game and game.turn and game.turn[opts.anim_key or "move_anim"] or nil
+    local action = session and session.peek_pending_action and session:peek_pending_action() or nil
+    _move_anim_debug_log(
+      "await_move_anim",
+      "phase=" .. tostring(game and game.turn and game.turn.phase or "nil"),
+      "anim_seq=" .. tostring(anim and anim.seq or "nil"),
+      "pending_action_type=" .. tostring(action and action.type or "nil"),
+      "pending_action_seq=" .. tostring(action and action.seq or "nil")
+    )
+  end
   return _await_anim_done(session, args, {
     state_name = opts.state_name or "wait_move_anim",
     anim_key = opts.anim_key or "move_anim",

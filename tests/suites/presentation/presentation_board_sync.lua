@@ -236,6 +236,11 @@ local function _test_board_refresh_replays_pending_sync_with_stop_after_wait_mov
     move_anim = { seq = 1 },
   })
   local board_runtime = runtime_state.ensure_board_runtime(env.state)
+  env.state.board_scene._move_anim_runtime = {
+    active_token_by_player_id = {
+      [1] = "1:1",
+    },
+  }
   env.unit.force_stop_move = function()
     env.calls[#env.calls + 1] = "force_stop_move"
   end
@@ -259,6 +264,8 @@ local function _test_board_refresh_replays_pending_sync_with_stop_after_wait_mov
   _assert_eq(env.calls[2], "stop_anim", "pending sync should stop anim after motion stop")
   _assert_eq(env.calls[3], "set_position", "pending sync should snap after stop")
   _assert_eq(board_runtime.board_sync_pending, false, "pending sync should clear board_sync_pending after replay")
+  _assert_eq(env.state.board_scene._move_anim_runtime.active_token_by_player_id[1], nil,
+    "pending sync replay should clear the active move token")
   _assert_eq(env.target_pos.y, 0.5, "pending sync should use configured y offset after wait_move_anim")
   _assert_eq(env.target_pos.z, 20, "pending sync should snap to the current tile position")
 end

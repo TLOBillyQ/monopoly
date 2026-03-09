@@ -1,9 +1,62 @@
 local runtime_constants = require("src.core.config.runtime_constants")
+local gameplay_rules = require("src.core.config.gameplay_rules")
 local gameplay_read_port = require("src.presentation.model.gameplay_read_port")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local board_feedback = require("src.presentation.view.render.board_feedback_service")
+local logger = require("src.core.utils.logger")
 
 local move_anim = {}
+
+local function _debug_log(...)
+  if gameplay_rules.move_anim_debug_log_enabled ~= true then
+    return
+  end
+  logger.info("[MoveAnim]", ...)
+end
+
+local function _ensure_runtime(board_scene)
+  if type(board_scene._move_anim_runtime) ~= "table" then
+    board_scene._move_anim_runtime = {
+      active_token_by_player_id = {},
+    }
+  end
+  return board_scene._move_anim_runtime
+end
+
+local function _build_token(player_id, seq)
+  return tostring(player_id) .. ":" .. tostring(seq or "no_seq")
+end
+
+local function _set_active_token(board_scene, player_id, token)
+  local runtime = _ensure_runtime(board_scene)
+  runtime.active_token_by_player_id[player_id] = token
+  return token
+end
+
+local function _get_active_token(board_scene, player_id)
+  local runtime = _ensure_runtime(board_scene)
+  return runtime.active_token_by_player_id[player_id]
+end
+
+function move_anim.clear_player_token(board_scene, player_id, reason)
+  if board_scene == nil or player_id == nil then
+    return
+  end
+  local runtime = _ensure_runtime(board_scene)
+  if runtime.active_token_by_player_id[player_id] == nil then
+    return
+  end
+  runtime.active_token_by_player_id[player_id] = nil
+  _debug_log(
+    "clear_token",
+    "player_id=" .. tostring(player_id),
+    "reason=" .. tostring(reason or "none")
+  )
+end
+
+local function _token_matches(board_scene, player_id, token)
+  return _get_active_token(board_scene, player_id) == token
+end
 
 local function _zero_vector()
   if math and math.Vector3 then
@@ -98,6 +151,66 @@ function move_anim.step_duration(scene, from_index, to_index, anim_ctx)
   return _calc_step_time(scene, from_index, to_index, anim_ctx)
 end
 
+local function _stop_unit_motion(unit)
+  if unit == nil then
+    return nil
+  end
+  if type(unit.force_stop_move) == "function" then
+    unit.force_stop_move()
+    return "force_stop_move"
+  end
+  if type(unit.ai_command_stop_move) == "function" then
+    local zero = 0
+    if math and type(math.tofixed) == "function" then
+      zero = math.tofixed(0)
+    end
+    unit.ai_command_stop_move(zero)
+    return "ai_command_stop_move"
+  end
+  return nil
+end
+
+local function _stop_unit_anim(unit)
+  if unit == nil or type(unit.stop_anim) ~= "function" then
+    return nil
+  end
+  unit.stop_anim()
+  return "stop_anim"
+end
+
+local function _stop_active_sequence(board_scene, player_id, anim_ctx, token)
+  if not _token_matches(board_scene, player_id, token) then
+    _debug_log(
+      "finish_skip_stale_token",
+      "player_id=" .. tostring(player_id),
+      "seq=" .. tostring(anim_ctx and anim_ctx.seq or "nil"),
+      "token=" .. tostring(token)
+    )
+    return
+  end
+  local vehicle_stop_path = nil
+  if _is_vehicle_anim(anim_ctx) then
+    local emit_vehicle_stop = _vehicle_helper_method("emit_vehicle_stop")
+    if emit_vehicle_stop then
+      emit_vehicle_stop(player_id)
+      vehicle_stop_path = "emit_vehicle_stop"
+    end
+  end
+  local unit = board_scene and board_scene.units_by_player_id and board_scene.units_by_player_id[player_id] or nil
+  local motion_stop_path = _stop_unit_motion(unit)
+  local anim_stop_path = _stop_unit_anim(unit)
+  _debug_log(
+    "finish_stop",
+    "player_id=" .. tostring(player_id),
+    "seq=" .. tostring(anim_ctx and anim_ctx.seq or "nil"),
+    "token=" .. tostring(token),
+    "vehicle_stop=" .. tostring(vehicle_stop_path or "none"),
+    "motion_stop=" .. tostring(motion_stop_path or "none"),
+    "anim_stop=" .. tostring(anim_stop_path or "none")
+  )
+  move_anim.clear_player_token(board_scene, player_id, "sequence_finished")
+end
+
 function move_anim.one_step(scene, player_id, from_index, to_index, anim_ctx)
   local step_dir, _ = _calc_step_vector(scene, from_index, to_index)
   local time = move_anim.step_duration(scene, from_index, to_index, anim_ctx)
@@ -182,6 +295,17 @@ local function _consume_enter_delay(anim_ctx, player_id)
   return vehicle.consume_enter_delay(player_id, vehicle_id) or 0
 end
 
+local function _format_visited(visited)
+  if type(visited) ~= "table" or #visited == 0 then
+    return "nil"
+  end
+  local out = {}
+  for i, value in ipairs(visited) do
+    out[i] = tostring(value)
+  end
+  return table.concat(out, ",")
+end
+
 function move_anim.play_sequence(board_scene, anim_ctx)
   assert(anim_ctx ~= nil, "missing anim")
   local player_id = assert(anim_ctx.player_id, "missing player_id")
@@ -189,6 +313,10 @@ function move_anim.play_sequence(board_scene, anim_ctx)
   local to_index = assert(anim_ctx.to_index, "missing to_index")
   assert(_resolve_direction(anim_ctx), "missing anim.direction")
   local steps, total_time = _build_steps(board_scene, from_index, to_index, anim_ctx.visited, anim_ctx)
+  local token = nil
+  if total_time > 0 then
+    token = _set_active_token(board_scene, player_id, _build_token(player_id, anim_ctx.seq))
+  end
   local enter_delay = 0
   if #steps > 0 then
     enter_delay = _consume_enter_delay(anim_ctx, player_id)
@@ -199,18 +327,63 @@ function move_anim.play_sequence(board_scene, anim_ctx)
       end
     end
   end
+  _debug_log(
+    "play_sequence_start",
+    "player_id=" .. tostring(player_id),
+    "seq=" .. tostring(anim_ctx.seq or "nil"),
+    "from=" .. tostring(from_index),
+    "to=" .. tostring(to_index),
+    "step_count=" .. tostring(#steps),
+    "total_time=" .. tostring(total_time),
+    "visited=" .. _format_visited(anim_ctx.visited),
+    "token=" .. tostring(token or "nil")
+  )
   local function _run_step(step)
+    if token ~= nil and not _token_matches(board_scene, player_id, token) then
+      _debug_log(
+        "step_skip_stale_token",
+        "player_id=" .. tostring(player_id),
+        "seq=" .. tostring(anim_ctx.seq or "nil"),
+        "from=" .. tostring(step.from),
+        "to=" .. tostring(step.to),
+        "token=" .. tostring(token)
+      )
+      return
+    end
+    _debug_log(
+      "step_execute",
+      "player_id=" .. tostring(player_id),
+      "seq=" .. tostring(anim_ctx.seq or "nil"),
+      "from=" .. tostring(step.from),
+      "to=" .. tostring(step.to),
+      "delay=" .. tostring(step.delay),
+      "step_time=" .. tostring(move_anim.step_duration(board_scene, step.from, step.to, anim_ctx)),
+      "vehicle=" .. tostring(_is_vehicle_anim(anim_ctx))
+    )
     if anim_ctx and anim_ctx.state then
       board_feedback.play_step_tile_sound(anim_ctx.state, player_id, step.to)
     end
     move_anim.one_step(board_scene, player_id, step.from, step.to, anim_ctx)
   end
   for _, step in ipairs(steps) do
+    _debug_log(
+      "step_schedule",
+      "player_id=" .. tostring(player_id),
+      "seq=" .. tostring(anim_ctx.seq or "nil"),
+      "from=" .. tostring(step.from),
+      "to=" .. tostring(step.to),
+      "delay=" .. tostring(step.delay)
+    )
     if step.delay <= 0 then
       _run_step(step)
     else
       runtime_ports.schedule(step.delay, function() _run_step(step) end)
     end
+  end
+  if token ~= nil then
+    runtime_ports.schedule(total_time, function()
+      _stop_active_sequence(board_scene, player_id, anim_ctx, token)
+    end)
   end
   return total_time
 end
