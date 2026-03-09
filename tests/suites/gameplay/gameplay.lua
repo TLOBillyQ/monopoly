@@ -1048,6 +1048,142 @@ local function _test_runtime_context_install_helpers_without_globals()
   end)
 end
 
+local function _test_runtime_editor_exports_camera_target_returns_real_role_ctrl_unit()
+  _with_runtime_context_globals(function()
+    local ctrl_unit = { tag = "real_ctrl_unit" }
+    local role1 = {
+      id = 1,
+      get_roleid = function()
+        return 1
+      end,
+      get_ctrl_unit = function()
+        return ctrl_unit
+      end,
+    }
+    local ctx = runtime_context.new({
+      GameAPI = {
+        get_role = function(role_id)
+          if role_id == 1 then
+            return role1
+          end
+          return nil
+        end,
+        get_all_valid_roles = function()
+          return { role1 }
+        end,
+      },
+      LuaAPI = _mock_lua_api(),
+    })
+    runtime_context.install_environment(ctx)
+    runtime_context.install_runtime_helpers(ctx)
+    ctx.camera_helper.target_role_id = 1
+    runtime_context.install_editor_exports(ctx)
+
+    assert(get_camera_target() == ctrl_unit, "camera target should return real player ctrl_unit")
+  end)
+end
+
+local function _test_runtime_editor_exports_camera_target_returns_synthetic_actor_unit()
+  _with_runtime_context_globals(function()
+    local synthetic_unit = { tag = "synthetic_unit" }
+    local ctx = runtime_context.new({
+      GameAPI = {
+        get_role = function()
+          return nil
+        end,
+        get_all_valid_roles = function()
+          return {}
+        end,
+      },
+      LuaAPI = _mock_lua_api(),
+    })
+    runtime_context.install_environment(ctx)
+    runtime_context.install_runtime_helpers(ctx)
+    ctx.camera_helper.target_role_id = -1
+    ctx.synthetic_actor_registry = {
+      resolve_actor = function(role_id)
+        if role_id == -1 then
+          return { unit = synthetic_unit }
+        end
+        return nil
+      end,
+    }
+    runtime_context.install_editor_exports(ctx)
+
+    assert(get_camera_target() == synthetic_unit, "camera target should return synthetic actor unit")
+  end)
+end
+
+local function _test_runtime_editor_exports_camera_target_returns_nil_when_unit_unavailable()
+  _with_runtime_context_globals(function()
+    local role_without_unit = {
+      id = 1,
+      get_roleid = function()
+        return 1
+      end,
+    }
+    local ctx = runtime_context.new({
+      GameAPI = {
+        get_role = function(role_id)
+          if role_id == 1 then
+            return role_without_unit
+          end
+          error("missing role")
+        end,
+        get_all_valid_roles = function()
+          return { role_without_unit }
+        end,
+      },
+      LuaAPI = _mock_lua_api(),
+    })
+    runtime_context.install_environment(ctx)
+    runtime_context.install_runtime_helpers(ctx)
+    runtime_context.install_editor_exports(ctx)
+
+    ctx.camera_helper.target_role_id = 1
+    assert(get_camera_target() == nil, "camera target should return nil when role has no ctrl unit")
+
+    ctx.camera_helper.target_role_id = 7
+    assert(get_camera_target() == nil, "camera target should return nil when get_role fails")
+  end)
+end
+
+local function _test_camera_sync_follow_camera_keeps_role_id_event_chain()
+  local camera_sync = require("src.presentation.runtime.ports.ui_sync.camera_sync")
+  local emitted = {}
+  local helper = { target_role_id = nil }
+
+  support.with_patches({
+    {
+      target = runtime_ports,
+      key = "resolve_camera_helper",
+      value = function()
+        return helper
+      end,
+    },
+    {
+      target = runtime_event_bridge,
+      key = "emit_custom_event",
+      value = function(event_name, payload, opts)
+        emitted[#emitted + 1] = {
+          event_name = event_name,
+          payload = payload,
+          opts = opts,
+        }
+        return true
+      end,
+    },
+  }, function()
+    local ok = camera_sync.follow_camera(9)
+    assert(ok == true, "camera_sync.follow_camera should still emit event")
+  end)
+
+  assert(helper.target_role_id == 9, "camera sync should still write target_role_id")
+  assert(#emitted == 1, "camera sync should emit one camera follow event")
+  assert(emitted[1].event_name == "follow_camera", "camera sync should keep follow_camera event name")
+  assert(emitted[1].payload == nil, "camera sync should keep nil payload")
+end
+
 local function _test_game_startup_build_state_is_pure_and_bridge_installs_events()
   local events = {}
   local state = nil
@@ -3234,6 +3370,10 @@ return {
   _test_runtime_event_bridge_detects_unbound_binding_without_call,
   _test_runtime_context_split_install_stages,
   _test_runtime_context_install_helpers_without_globals,
+  _test_runtime_editor_exports_camera_target_returns_real_role_ctrl_unit,
+  _test_runtime_editor_exports_camera_target_returns_synthetic_actor_unit,
+  _test_runtime_editor_exports_camera_target_returns_nil_when_unit_unavailable,
+  _test_camera_sync_follow_camera_keeps_role_id_event_chain,
   _test_runtime_context_install_environment_fails_fast,
   _test_game_startup_build_state_is_pure_and_bridge_installs_events,
   _test_stop_all_players_movement_clears_move_dir_and_stop_event,
