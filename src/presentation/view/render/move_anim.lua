@@ -22,7 +22,11 @@ local function _ensure_runtime(board_scene)
   if type(board_scene._move_anim_runtime) ~= "table" then
     board_scene._move_anim_runtime = {
       active_token_by_player_id = {},
+      active_sequence_by_player_id = {},
     }
+  end
+  if type(board_scene._move_anim_runtime.active_sequence_by_player_id) ~= "table" then
+    board_scene._move_anim_runtime.active_sequence_by_player_id = {}
   end
   return board_scene._move_anim_runtime
 end
@@ -42,19 +46,88 @@ local function _get_active_token(board_scene, player_id)
   return runtime.active_token_by_player_id[player_id]
 end
 
+local function _get_active_sequence(board_scene, player_id)
+  local runtime = _ensure_runtime(board_scene)
+  return runtime.active_sequence_by_player_id[player_id]
+end
+
+local function _read_bool_method(target, method_name)
+  if target == nil or type(target[method_name]) ~= "function" then
+    return nil
+  end
+  local ok, value = pcall(target[method_name], target)
+  if not ok then
+    return nil
+  end
+  return value == true
+end
+
+local function _sequence_meta(entry)
+  if entry == nil then
+    return nil
+  end
+  return {
+    player_id = entry.player_id,
+    from = entry.from_index,
+    to = entry.to_index,
+    seq = entry.seq,
+    token = entry.token,
+    reason = entry.reason,
+  }
+end
+
+local function _release_sequence_lock(board_scene, player_id, entry, reason)
+  if entry == nil or entry.lock_released == true then
+    return
+  end
+  entry.lock_released = true
+  entry.reason = reason
+  if entry.anim_ctx and type(entry.anim_ctx.on_sequence_lock) == "function" then
+    entry.anim_ctx.on_sequence_lock(true, entry.total_time, _sequence_meta(entry))
+  end
+  _debug_log(
+    "sequence_lock_release",
+    "player_id=" .. tostring(player_id),
+    "seq=" .. tostring(entry.seq or "nil"),
+    "token=" .. tostring(entry.token or "nil"),
+    "reason=" .. tostring(reason or "none")
+  )
+end
+
+local function _clear_active_sequence(board_scene, player_id)
+  local runtime = _ensure_runtime(board_scene)
+  runtime.active_sequence_by_player_id[player_id] = nil
+end
+
+local function _set_active_sequence(board_scene, player_id, entry)
+  local runtime = _ensure_runtime(board_scene)
+  local previous = runtime.active_sequence_by_player_id[player_id]
+  if previous ~= nil and previous ~= entry then
+    _release_sequence_lock(board_scene, player_id, previous, "sequence_replaced")
+  end
+  runtime.active_sequence_by_player_id[player_id] = entry
+end
+
 function move_anim.clear_player_token(board_scene, player_id, reason)
   if board_scene == nil or player_id == nil then
     return
   end
   local runtime = _ensure_runtime(board_scene)
-  if runtime.active_token_by_player_id[player_id] == nil then
+  local active_token = runtime.active_token_by_player_id[player_id]
+  local active_sequence = runtime.active_sequence_by_player_id[player_id]
+  if active_token == nil and active_sequence == nil then
     return
   end
   runtime.active_token_by_player_id[player_id] = nil
+  if active_sequence ~= nil then
+    _release_sequence_lock(board_scene, player_id, active_sequence, reason or "clear_player_token")
+    _clear_active_sequence(board_scene, player_id)
+  end
   _debug_log(
     "clear_token",
     "player_id=" .. tostring(player_id),
-    "reason=" .. tostring(reason or "none")
+    "reason=" .. tostring(reason or "none"),
+    "token=" .. tostring(active_token or "nil")
   )
 end
 
@@ -196,9 +269,21 @@ local function _stop_unit_anim(unit)
     return nil
   end
   local path = nil
+  if type(unit.interrupt_multi_animation) == "function" then
+    unit.interrupt_multi_animation()
+    path = _append_stop_path(path, "interrupt_multi_animation")
+  end
   if type(unit.stop_anim) == "function" then
     unit.stop_anim()
     path = _append_stop_path(path, "stop_anim")
+  end
+  if type(unit.stop_play_body_anim) == "function" then
+    unit.stop_play_body_anim()
+    path = _append_stop_path(path, "stop_play_body_anim")
+  end
+  if type(unit.stop_play_upper_anim) == "function" then
+    unit.stop_play_upper_anim()
+    path = _append_stop_path(path, "stop_play_upper_anim")
   end
   if type(unit.model_stop_animation) == "function" then
     unit.model_stop_animation()
@@ -232,10 +317,15 @@ local function _stop_active_sequence(board_scene, player_id, anim_ctx, token)
     return
   end
   local unit = board_scene and board_scene.units_by_player_id and board_scene.units_by_player_id[player_id] or nil
+  local is_moving_before = _read_bool_method(unit, "is_moving")
+  local is_forced_moving_before = _read_bool_method(unit, "is_forced_moving")
   local stop_result = move_anim.stop_player_presentation(player_id, unit, {
     stop_vehicle = _is_vehicle_anim(anim_ctx),
     emit_vehicle_stop = _vehicle_helper_method("emit_vehicle_stop"),
   })
+  local is_moving_after = _read_bool_method(unit, "is_moving")
+  local is_forced_moving_after = _read_bool_method(unit, "is_forced_moving")
+  local active_sequence = _get_active_sequence(board_scene, player_id)
   _debug_log(
     "finish_stop",
     "player_id=" .. tostring(player_id),
@@ -243,8 +333,15 @@ local function _stop_active_sequence(board_scene, player_id, anim_ctx, token)
     "token=" .. tostring(token),
     "vehicle_stop=" .. tostring(stop_result.vehicle_stop_path or "none"),
     "motion_stop=" .. tostring(stop_result.motion_stop_path or "none"),
-    "anim_stop=" .. tostring(stop_result.anim_stop_path or "none")
+    "anim_stop=" .. tostring(stop_result.anim_stop_path or "none"),
+    "is_moving_before=" .. tostring(is_moving_before),
+    "is_moving_after=" .. tostring(is_moving_after),
+    "is_forced_moving_before=" .. tostring(is_forced_moving_before),
+    "is_forced_moving_after=" .. tostring(is_forced_moving_after),
+    "role_control_lock_active=" .. tostring(anim_ctx and anim_ctx.role_control_lock_active == true),
+    "role_control_exempt=" .. tostring(anim_ctx and anim_ctx.role_control_exempt == true)
   )
+  _release_sequence_lock(board_scene, player_id, active_sequence, "sequence_finished")
   move_anim.clear_player_token(board_scene, player_id, "sequence_finished")
 end
 
@@ -351,9 +448,6 @@ function move_anim.play_sequence(board_scene, anim_ctx)
   assert(_resolve_direction(anim_ctx), "missing anim.direction")
   local steps, total_time = _build_steps(board_scene, from_index, to_index, anim_ctx.visited, anim_ctx)
   local token = nil
-  if total_time > 0 then
-    token = _set_active_token(board_scene, player_id, _build_token(player_id, anim_ctx.seq))
-  end
   local enter_delay = 0
   if #steps > 0 then
     enter_delay = _consume_enter_delay(anim_ctx, player_id)
@@ -362,6 +456,24 @@ function move_anim.play_sequence(board_scene, anim_ctx)
       for _, step in ipairs(steps) do
         step.delay = step.delay + enter_delay
       end
+    end
+  end
+  if total_time > 0 then
+    token = _build_token(player_id, anim_ctx.seq)
+    _set_active_token(board_scene, player_id, token)
+    local entry = {
+      token = token,
+      player_id = player_id,
+      from_index = from_index,
+      to_index = to_index,
+      seq = anim_ctx.seq,
+      total_time = total_time,
+      anim_ctx = anim_ctx,
+      lock_released = false,
+    }
+    _set_active_sequence(board_scene, player_id, entry)
+    if type(anim_ctx.on_sequence_lock) == "function" then
+      anim_ctx.on_sequence_lock(false, total_time, _sequence_meta(entry))
     end
   end
   _debug_log(
@@ -373,7 +485,9 @@ function move_anim.play_sequence(board_scene, anim_ctx)
     "step_count=" .. tostring(#steps),
     "total_time=" .. tostring(total_time),
     "visited=" .. _format_visited(anim_ctx.visited),
-    "token=" .. tostring(token or "nil")
+    "token=" .. tostring(token or "nil"),
+    "role_control_lock_active=" .. tostring(anim_ctx and anim_ctx.role_control_lock_active == true),
+    "role_control_exempt=" .. tostring(anim_ctx and anim_ctx.role_control_exempt == true)
   )
   local function _run_step(step)
     if token ~= nil and not _token_matches(board_scene, player_id, token) then

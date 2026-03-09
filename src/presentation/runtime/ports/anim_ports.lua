@@ -57,17 +57,34 @@ local function _update_role_control_lock_exempt(state, enabled, meta)
   _apply_role_control_lock(state, turn_runtime.role_control_lock_active == true)
 end
 
+local function _build_sequence_lock_meta(anim_ctx, meta)
+  local payload = meta or {}
+  payload.player_id = payload.player_id or (anim_ctx and anim_ctx.player_id) or nil
+  return payload
+end
+
 function anim_ports.build()
   return {
     play_move_anim = function(state, anim_ctx)
       if anim_ctx then
         anim_ctx.state = anim_ctx.state or state
-        local prev = anim_ctx.on_step_lock
+        local turn_runtime = runtime_state.ensure_turn_runtime(state)
+        local prev_step_lock = anim_ctx.on_step_lock
+        local prev_sequence_lock = anim_ctx.on_sequence_lock
+        anim_ctx.role_control_lock_active = turn_runtime.role_control_lock_active == true
+        anim_ctx.role_control_exempt = false
         anim_ctx.on_step_lock = function(enabled, step_time, meta)
-          if prev then
-            prev(enabled, step_time, meta)
+          if prev_step_lock then
+            prev_step_lock(enabled, step_time, meta)
           end
-          _update_role_control_lock_exempt(state, enabled, meta)
+        end
+        anim_ctx.on_sequence_lock = function(enabled, total_time, meta)
+          local sequence_meta = _build_sequence_lock_meta(anim_ctx, meta)
+          if prev_sequence_lock then
+            prev_sequence_lock(enabled, total_time, sequence_meta)
+          end
+          _update_role_control_lock_exempt(state, enabled, sequence_meta)
+          anim_ctx.role_control_exempt = enabled ~= true
         end
       end
       return move_anim.play_sequence(state.board_scene, anim_ctx)

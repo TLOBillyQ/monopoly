@@ -303,6 +303,52 @@ local function _test_board_refresh_replays_pending_sync_with_stop_after_wait_mov
   _assert_eq(env.target_pos.z, 20, "pending sync should snap to the current tile position")
 end
 
+local function _test_board_refresh_clear_player_token_releases_sequence_lock()
+  local board_view = require("src.presentation.view.render.board")
+  local env = _build_board_refresh_test_env()
+  local sequence_calls = {}
+  env.state.board_scene._move_anim_runtime = {
+    active_token_by_player_id = {
+      [1] = "1:301",
+    },
+    active_sequence_by_player_id = {
+      [1] = {
+        token = "1:301",
+        player_id = 1,
+        seq = 301,
+        total_time = 0.25,
+        lock_released = false,
+        anim_ctx = {
+          on_sequence_lock = function(enabled, _, meta)
+            sequence_calls[#sequence_calls + 1] = tostring(enabled) .. ":" .. tostring(meta and meta.reason)
+          end,
+        },
+      },
+    },
+  }
+  env.unit.force_stop_move = function()
+    env.calls[#env.calls + 1] = "force_stop_move"
+  end
+  env.unit.stop_anim = function()
+    env.calls[#env.calls + 1] = "stop_anim"
+  end
+  env.unit.set_position = function(pos)
+    env.calls[#env.calls + 1] = "set_position"
+    env.target_pos = pos
+  end
+
+  _with_board_refresh_patches(nil, function()
+    board_view.refresh(env.state, env.ui_model, function() end, function() return "presentation_board_sync" end)
+  end)
+
+  _assert_eq(sequence_calls[1], "true:board_sync_place_players", "board sync clear should release the sequence lock")
+  _assert_eq(sequence_calls[2], nil, "board sync clear should only release once")
+  _assert_eq(env.state.board_scene._move_anim_runtime.active_token_by_player_id[1], nil,
+    "board sync clear should remove the stale move token")
+  _assert_eq(env.state.board_scene._move_anim_runtime.active_sequence_by_player_id[1], nil,
+    "board sync clear should remove the stale sequence entry")
+end
+
 return {
   name = "presentation.board_sync",
   tests = {
@@ -333,6 +379,10 @@ return {
     {
       name = "_test_board_refresh_replays_pending_sync_with_stop_after_wait_move_anim",
       run = _test_board_refresh_replays_pending_sync_with_stop_after_wait_move_anim,
+    },
+    {
+      name = "_test_board_refresh_clear_player_token_releases_sequence_lock",
+      run = _test_board_refresh_clear_player_token_releases_sequence_lock,
     },
   },
 }
