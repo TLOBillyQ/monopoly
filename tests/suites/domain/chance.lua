@@ -12,7 +12,6 @@ local _with_patches = support.with_patches
 local _assert_eq = support.assert_eq
 local chance_effects = support.chance_effects
 local _build_ui_port = support.build_ui_port
-local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
 
 local function _test_chance_is_mandatory_effect_entrypoint()
   local g = _new_game()
@@ -60,21 +59,6 @@ local function _test_chance_move_backward_pass_intersection()
   local visited_ids = _visited_tile_ids(g.board, out.move_result.visited)
   assert(_list_contains(visited_ids, 45), "backward move should pass intersection")
   _assert_eq(p.status.move_dir, "down", "move_backward should preserve heading across intersections")
-end
-
-local function _test_chance_backward_intersection_profile_reproduces_chain()
-  local g = support.new_game({
-    map = default_map,
-    players = { "P1", "P2", "P3", "P4" },
-    ai = { [2] = true, [3] = true, [4] = true },
-  })
-  local p = g:current_player()
-  test_profile_bootstrap.apply(g, "机会卡倒退交叉口测试")
-
-  local out = chance_effects.resolve(g, p, { effect = "move_backward", steps = 2, target = "self" }, {})
-  assert(out and out.move_result, "profile-driven move_backward should return move result")
-  local visited_ids = _visited_tile_ids(g.board, out.move_result.visited)
-  assert(_list_contains(visited_ids, 45), "profile-driven move_backward should pass intersection")
 end
 
 local function _test_chance_move_backward_queues_move_effect_anim()
@@ -144,7 +128,6 @@ return {
     { name = "chance_is_mandatory_effect_entrypoint", run = _test_chance_is_mandatory_effect_entrypoint },
     { name = "chance_move_backward_pass_market", run = _test_chance_move_backward_pass_market },
     { name = "chance_move_backward_pass_intersection", run = _test_chance_move_backward_pass_intersection },
-    { name = "chance_backward_intersection_profile_reproduces_chain", run = _test_chance_backward_intersection_profile_reproduces_chain },
     { name = "chance_move_backward_queues_move_effect_anim", run = _test_chance_move_backward_queues_move_effect_anim },
     { name = "chance_move_backward_without_move_dir_uses_stable_fallback", run = _test_chance_move_backward_without_move_dir_uses_stable_fallback },
     { name = "chance_forced_move_queues_move_effect_anim", run = _test_chance_forced_move_queues_move_effect_anim },

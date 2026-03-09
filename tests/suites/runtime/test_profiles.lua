@@ -83,7 +83,7 @@ end
 
 local function _test_profile_bootstrap_applies_player_position_by_tile_id()
   local game = _new_game()
-  test_profile_bootstrap.apply(game, "items_move_control")
+  test_profile_bootstrap.apply(game, "scenario_bankruptcy")
 
   local p1_expected = game.board:index_of_tile_id(35)
   local p2_expected = game.board:index_of_tile_id(39)
@@ -94,16 +94,13 @@ end
 
 local function _test_profile_bootstrap_applies_item_counts()
   local game = _new_game()
-  test_profile_bootstrap.apply(game, "items_economy_tax")
+  test_profile_bootstrap.apply(game, "scenario_tax_survive")
 
   _assert_inventory_counts(game.players[1], {
-    [2001] = 1,
-    [2009] = 1,
+    [2002] = 1,
     [2010] = 1,
-    [2011] = 1,
-    [2014] = 1,
   })
-  assert(game.players[1].inventory:count() == 5, "items_economy_tax should grant exactly 5 items to p1")
+  assert(game.players[1].inventory:count() == 2, "scenario_tax_survive should grant exactly 2 items to p1")
 end
 
 local function _test_profile_bootstrap_rejects_item_count_over_inventory_limit()
@@ -136,45 +133,17 @@ local function _test_profile_bootstrap_rejects_item_count_over_inventory_limit()
     "error should explain inventory limit breach")
 end
 
-local function _test_all_item_group_profiles_cover_all_items_once()
-  local profiles = {
-    "items_move_control",
-    "items_economy_tax",
-    "items_target_disrupt",
-    "items_deity_status",
-  }
-  local occur = {}
+local function _test_non_default_profiles_are_scenarios_with_remote_dice()
+  local profiles = test_profile_resolver.available_profiles()
   for _, profile_name in ipairs(profiles) do
-    local cfg = test_profiles_cfg.get(profile_name)
-    local players = cfg and cfg.bootstrap and cfg.bootstrap.players or {}
-    for _, player_cfg in pairs(players or {}) do
-      local item_counts = player_cfg and player_cfg.item_counts
-      if type(item_counts) == "table" then
-        for item_id in pairs(item_counts) do
-          occur[item_id] = (occur[item_id] or 0) + 1
-        end
-      end
-    end
-  end
-
-  for item_id = 2001, 2019 do
-    assert(occur[item_id] == 1, "all item group profiles should cover each item exactly once: " .. tostring(item_id))
-  end
-end
-
-local function _test_all_item_group_profiles_respect_max_5_items_per_player()
-  local profiles = {
-    "items_move_control",
-    "items_economy_tax",
-    "items_target_disrupt",
-    "items_deity_status",
-  }
-  for _, profile_name in ipairs(profiles) do
-    local game = _new_game()
-    test_profile_bootstrap.apply(game, profile_name)
-    for player_index, player in ipairs(game.players) do
-      assert(player.inventory:count() <= constants.inventory_slots,
-        string.format("profile %s player%d exceeds max inventory slots", profile_name, player_index))
+    if profile_name ~= "default" then
+      assert(profile_name:find("scenario_", 1, true) == 1,
+        "non-default profiles should keep scenario_ prefix: " .. tostring(profile_name))
+      local cfg = assert(test_profiles_cfg.get(profile_name), "profile config should exist")
+      local p1_cfg = cfg.bootstrap and cfg.bootstrap.players and cfg.bootstrap.players[1]
+      local item_counts = p1_cfg and p1_cfg.item_counts or nil
+      assert(type(item_counts) == "table", "scenario profile should define p1 item_counts: " .. tostring(profile_name))
+      assert(item_counts[2002] == 1, "scenario profile should preload one remote dice: " .. tostring(profile_name))
     end
   end
 end
@@ -222,11 +191,13 @@ local function _test_scenario_market_staging_applies_player_position()
   assert(game.players[1].position == p1_expected, "p1 position should match scenario_market_staging")
 end
 
-local function _test_scenario_market_staging_has_no_startup_items()
+local function _test_scenario_market_staging_preloads_remote_dice()
   local game = _new_game()
   test_profile_bootstrap.apply(game, "scenario_market_staging")
 
-  _assert_inventory_counts(game.players[1], {})
+  _assert_inventory_counts(game.players[1], {
+    [2002] = 1,
+  })
 end
 
 local function _test_scenario_market_staging_is_eight_steps_before_market()
@@ -265,29 +236,6 @@ local function _test_scenario_mountain_staging_is_before_mountain_with_remote_di
   })
 end
 
-local function _test_chance_card_profile_applies_tile_9_and_remote_dice()
-  local game = _new_game()
-  test_profile_bootstrap.apply(game, "机会卡测试")
-
-  local p1_expected = game.board:index_of_tile_id(9)
-  assert(p1_expected ~= nil, "tile 9 should exist in board path")
-  assert(game.players[1].position == p1_expected, "p1 position should match 机会卡测试")
-  _assert_inventory_counts(game.players[1], {
-    [2002] = 1,
-  })
-end
-
-local function _test_chance_backward_intersection_profile_applies_tile_42()
-  local game = _new_game()
-  test_profile_bootstrap.apply(game, "机会卡倒退交叉口测试")
-
-  local p1_expected = game.board:index_of_tile_id(42)
-  assert(p1_expected ~= nil, "tile 42 should exist in board path")
-  assert(game.players[1].position == p1_expected, "p1 position should match 机会卡倒退交叉口测试")
-  assert(game.players[1].status.move_dir == "down", "chance backward intersection profile should preset move_dir")
-  assert(game.players[1].inventory:count() == 0, "chance backward intersection profile should not preload startup items")
-end
-
 local function _test_scenario_monster_staging_bootstraps_target_building()
   local game = _new_game()
   test_profile_bootstrap.apply(game, "scenario_monster_staging")
@@ -299,6 +247,7 @@ local function _test_scenario_monster_staging_bootstraps_target_building()
   assert(player_index ~= nil, "scenario_monster_staging start tile should exist")
   assert(game.players[1].position == player_index, "monster staging should place p1 on configured tile")
   _assert_inventory_counts(game.players[1], {
+    [2002] = 1,
     [2008] = 1,
   })
   assert(target_state.owner_id == game.players[2].id, "monster staging should assign target building owner")
@@ -318,6 +267,7 @@ local function _test_scenario_missile_staging_bootstraps_target_tile_and_overlay
   assert(player_index ~= nil, "scenario_missile_staging start tile should exist")
   assert(game.players[1].position == player_index, "missile staging should place p1 on configured tile")
   _assert_inventory_counts(game.players[1], {
+    [2002] = 1,
     [2013] = 1,
   })
   assert(target_state.owner_id == game.players[2].id, "missile staging should assign target building owner")
@@ -339,8 +289,7 @@ return {
       name = "profile_bootstrap_rejects_item_count_over_inventory_limit",
       run = _test_profile_bootstrap_rejects_item_count_over_inventory_limit,
     },
-    { name = "all_item_group_profiles_cover_all_items_once", run = _test_all_item_group_profiles_cover_all_items_once },
-    { name = "all_item_group_profiles_respect_max_5_items_per_player", run = _test_all_item_group_profiles_respect_max_5_items_per_player },
+    { name = "non_default_profiles_are_scenarios_with_remote_dice", run = _test_non_default_profiles_are_scenarios_with_remote_dice },
     { name = "scenario_bankruptcy_applies_tile_override", run = _test_scenario_bankruptcy_applies_tile_override },
     {
       name = "scenario_upgrade_building_render_applies_bootstrap",
@@ -351,8 +300,8 @@ return {
       run = _test_scenario_market_staging_applies_player_position,
     },
     {
-      name = "scenario_market_staging_has_no_startup_items",
-      run = _test_scenario_market_staging_has_no_startup_items,
+      name = "scenario_market_staging_preloads_remote_dice",
+      run = _test_scenario_market_staging_preloads_remote_dice,
     },
     {
       name = "scenario_market_staging_is_eight_steps_before_market",
@@ -365,14 +314,6 @@ return {
     {
       name = "scenario_mountain_staging_is_before_mountain_with_remote_dice",
       run = _test_scenario_mountain_staging_is_before_mountain_with_remote_dice,
-    },
-    {
-      name = "chance_card_profile_applies_tile_9_and_remote_dice",
-      run = _test_chance_card_profile_applies_tile_9_and_remote_dice,
-    },
-    {
-      name = "chance_backward_intersection_profile_applies_tile_42",
-      run = _test_chance_backward_intersection_profile_applies_tile_42,
     },
     {
       name = "scenario_monster_staging_bootstraps_target_building",

@@ -19,7 +19,7 @@ local function _test_release_prod_forces_default_profile()
   with_patches({
     { key = "RELEASE_BUILD", value = true },
     { key = "RELEASE_ALLOW_TEST_PROFILE", value = nil },
-    { key = "STARTUP_TEST_PROFILE", value = "items_move_control" },
+    { key = "STARTUP_TEST_PROFILE", value = "scenario_market_staging" },
   }, function()
     local policy = startup_policy.resolve(_G)
     assert(policy.release_mode == true, "release flag should be enabled")
@@ -36,12 +36,12 @@ local function _test_release_qa_accepts_defined_profile()
   with_patches({
     { key = "RELEASE_BUILD", value = true },
     { key = "RELEASE_ALLOW_TEST_PROFILE", value = true },
-    { key = "STARTUP_TEST_PROFILE", value = "items_target_disrupt" },
+    { key = "STARTUP_TEST_PROFILE", value = "scenario_market_staging" },
   }, function()
     local policy = startup_policy.resolve(_G)
     assert(policy.release_mode == true, "release mode should stay enabled")
     assert(policy.release_allow_test_profile == true, "release-qa should allow profile override")
-    assert(policy.profile_name == "items_target_disrupt", "release-qa should accept defined profile")
+    assert(policy.profile_name == "scenario_market_staging", "release-qa should accept defined profile")
   end)
 end
 
@@ -134,12 +134,12 @@ local function _test_startup_policy_dev_accepts_profile_override()
   with_patches({
     { key = "RELEASE_BUILD", value = nil },
     { key = "RELEASE_ALLOW_TEST_PROFILE", value = true },
-    { key = "STARTUP_TEST_PROFILE", value = "items_move_control" },
+    { key = "STARTUP_TEST_PROFILE", value = "scenario_market_staging" },
   }, function()
     local policy = startup_policy.resolve(_G)
     assert(policy.release_mode == false, "dev should not mark release mode")
     assert(policy.release_allow_test_profile == true, "dev can ignore release-only override flag")
-    assert(policy.profile_name == "items_move_control", "dev should accept startup profile override")
+    assert(policy.profile_name == "scenario_market_staging", "dev should accept startup profile override")
     assert(policy.ai_mode == "default", "dev should default ai mode when unset")
     assert(policy.force_non_p1_ai == true, "dev should keep non-p1 ai policy enabled")
     assert(policy.fail_fast_when_roles_empty == false, "dev should allow empty role fallback")
