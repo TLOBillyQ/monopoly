@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-分析最近10条提交 src/ 和 tests/ 目录的有效代码行数变化并生成折线图（跨平台版）
+分析最近三天 src/ 和 tests/ 目录的有效代码行数变化并生成折线图（跨平台版）
 支持 Windows 和 macOS，使用多线程并行处理提升性能
 """
 
@@ -55,8 +55,8 @@ def get_git_root():
 
 
 def get_commits():
-    """获取最近10条提交（按时间正序）"""
-    cmd = ['git', 'log', '-10', '--format=%H|%ci|%s', '--reverse']
+    """获取最近三天的所有提交（按时间正序）"""
+    cmd = ['git', 'log', '--since=3 days ago', '--format=%H|%ci|%s', '--reverse']
     output = run_cmd(cmd)
     commits = []
     for line in output.split('\n'):
@@ -203,7 +203,7 @@ def generate_chart(data, output_path):
     # src/ 目录图表
     ax1.plot(dates, src_locs, marker='o', markersize=4, linewidth=1.5, color='#2E86AB', label='src/')
     ax1.fill_between(dates, src_locs, alpha=0.3, color='#2E86AB')
-    ax1.set_title('src/ Directory LOC Trend (Last 10 Commits)', fontsize=14, fontweight='bold', pad=15)
+    ax1.set_title('src/ Directory LOC Trend (Last 3 Days)', fontsize=14, fontweight='bold', pad=15)
     ax1.set_ylabel('Lines of Code (LOC)', fontsize=11)
     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d %H:%M'))
     ax1.xaxis.set_major_locator(mdates.HourLocator(interval=3))
@@ -232,7 +232,7 @@ def generate_chart(data, output_path):
     # tests/ 目录图表
     ax2.plot(dates, tests_locs, marker='s', markersize=4, linewidth=1.5, color='#A23B72', label='tests/')
     ax2.fill_between(dates, tests_locs, alpha=0.3, color='#A23B72')
-    ax2.set_title('tests/ Directory LOC Trend (Last 10 Commits)', fontsize=14, fontweight='bold', pad=15)
+    ax2.set_title('tests/ Directory LOC Trend (Last 3 Days)', fontsize=14, fontweight='bold', pad=15)
     ax2.set_xlabel('Commit Time', fontsize=11)
     ax2.set_ylabel('Lines of Code (LOC)', fontsize=11)
     ax2.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d %H:%M'))
