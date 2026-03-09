@@ -55,7 +55,8 @@ local function _read_bool_method(target, method_name)
   if target == nil or type(target[method_name]) ~= "function" then
     return nil
   end
-  local ok, value = pcall(target[method_name], target)
+  local method = target[method_name]
+  local ok, value = pcall(method)
   if not ok then
     return nil
   end

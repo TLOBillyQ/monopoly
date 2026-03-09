@@ -280,6 +280,64 @@ local function _test_move_anim_prefers_forced_move_stop_and_model_stop_for_local
   _assert_eq(calls[8], nil, "finish callback should not fall through to ai stop when forced stop exists")
 end
 
+local function _test_move_anim_probe_methods_are_called_without_self_arg()
+  local _vec3 = vec3.with_sub_length
+  local scheduled = {}
+  local calls = {}
+  local arg_counts = {}
+  local scene = {
+    tiles = {
+      [1] = { get_position = function() return _vec3(0, 0, 0) end },
+      [2] = { get_position = function() return _vec3(10, 0, 0) end },
+    },
+    units_by_player_id = {
+      [1] = {
+        start_move_by_direction = function()
+          calls[#calls + 1] = "start_move_by_direction"
+        end,
+        force_stop_move = function()
+          calls[#calls + 1] = "force_stop_move"
+        end,
+        stop_anim = function()
+          calls[#calls + 1] = "stop_anim"
+        end,
+        is_moving = function(...)
+          arg_counts[#arg_counts + 1] = "is_moving:" .. tostring(select("#", ...))
+          return true
+        end,
+        is_forced_moving = function(...)
+          arg_counts[#arg_counts + 1] = "is_forced_moving:" .. tostring(select("#", ...))
+          return false
+        end,
+      },
+    },
+  }
+
+  _with_patches({
+    { target = runtime_ports, key = "schedule", value = function(delay, fn)
+      scheduled[#scheduled + 1] = { delay = delay, fn = fn }
+    end },
+  }, function()
+    move_anim.play_sequence(scene, {
+      player_id = 1,
+      seq = 81,
+      from_index = 1,
+      to_index = 2,
+      direction = { x = 1, y = 0, z = 0 },
+    })
+  end)
+
+  _assert_eq(#scheduled, 1, "probe test should schedule one finish callback")
+  local ok, err = pcall(scheduled[1].fn)
+  assert(ok == true, tostring(err))
+  _assert_eq(arg_counts[1], "is_moving:0", "finish callback should call is_moving without extra args")
+  _assert_eq(arg_counts[2], "is_forced_moving:0", "finish callback should call is_forced_moving without extra args before stop")
+  _assert_eq(arg_counts[3], "is_moving:0", "finish callback should re-read is_moving without extra args after stop")
+  _assert_eq(arg_counts[4], "is_forced_moving:0", "finish callback should re-read is_forced_moving without extra args after stop")
+  _assert_eq(calls[2], "force_stop_move", "probe test should still run movement stop path")
+  _assert_eq(calls[3], "stop_anim", "probe test should still run anim stop path")
+end
+
 local function _test_anim_ports_role_control_exempt_stays_until_sequence_finish()
   local _vec3 = vec3.with_sub_length
   local scheduled = {}
@@ -399,6 +457,10 @@ return {
     {
       name = "_test_anim_ports_role_control_exempt_stays_until_sequence_finish",
       run = _test_anim_ports_role_control_exempt_stays_until_sequence_finish,
+    },
+    {
+      name = "_test_move_anim_probe_methods_are_called_without_self_arg",
+      run = _test_move_anim_probe_methods_are_called_without_self_arg,
     },
     {
       name = "_test_move_anim_debug_log_writes_when_enabled",
