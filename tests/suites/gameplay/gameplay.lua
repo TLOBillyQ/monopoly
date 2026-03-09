@@ -680,11 +680,11 @@ local function _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not()
   logger.clear()
   local normal_choice = {
     id = 10,
-    kind = "steal_prompt",
-    title = "是否使用偷窃卡",
-    options = { { id = "use", label = "使用" }, { id = "skip", label = "跳过" } },
+    kind = "landing_optional_effect",
+    title = "可选效果",
+    options = { { id = "buy_land", label = "购买地块" } },
     allow_cancel = true,
-    meta = { player_id = g.players[1].id, target_id = g.players[2].id, queue = { g.players[2].id }, index = 1 },
+    meta = { player_id = g.players[1].id, tile_id = 1, effect_ids = { "buy_land" } },
   }
   choice_resolver.resolve(g, normal_choice, {
     type = "choice_cancel",
@@ -692,7 +692,7 @@ local function _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not()
     actor_role_id = g.players[1].id,
   })
   local skip_text = logger.get_text_by_level("event")
-  assert(string.find(skip_text, "跳过选择：是否使用偷窃卡", 1, true) ~= nil,
+  assert(string.find(skip_text, "跳过选择：可选效果", 1, true) ~= nil,
     "true cancel should log skip-choice event")
 
   logger.clear()

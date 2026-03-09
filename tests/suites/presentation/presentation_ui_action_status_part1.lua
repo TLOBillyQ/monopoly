@@ -443,25 +443,69 @@ local function _test_choice_modal_routes_to_new_screens()
     ui_view.open_choice_modal(state, {
       id = 8,
       kind = "rent_card_prompt",
-      route_key = "base_inline",
-      requires_confirm = false,
+      route_key = "secondary_confirm",
+      requires_confirm = true,
       title = "是否使用免费卡",
       body = "",
+      confirm_title = "免费卡",
+      confirm_body = "这次要用免费卡吗？",
       options = {
         { id = "use", label = "使用" },
-        { id = "skip", label = "放弃" },
+        { id = "skip", label = "不用" },
       },
-      allow_cancel = false,
+      allow_cancel = true,
+      cancel_label = "不用",
       meta = { card_kind = "free", tile_id = 1 },
     })
-    _assert_eq(state.ui.active_choice_screen_key, nil, "free rent prompt should remain inline")
-    _assert_eq(nodes["通用二次确认屏"].visible, false, "free rent prompt should not open secondary confirm")
+    _assert_eq(state.ui.active_choice_screen_key, "secondary_confirm", "free rent prompt should route to secondary confirm")
+    _assert_eq(nodes["通用二次确认屏"].visible, true, "free rent prompt should open secondary confirm")
+    _assert_eq(nodes["通用二次确认_标题"].text, "免费卡", "free rent prompt should use explicit confirm title")
+    _assert_eq(nodes["通用二次确认_文本"].text, "这次要用免费卡吗？", "free rent prompt should use explicit confirm body")
+    _assert_eq(nodes["通用二次确认_取消"].visible, true, "free rent prompt should expose cancel as skip")
 
     ui_view.open_choice_modal(state, {
       id = 9,
+      kind = "steal_prompt",
+      route_key = "secondary_confirm",
+      requires_confirm = true,
+      title = "是否使用偷窃卡",
+      body = "",
+      confirm_title = "偷窃卡",
+      confirm_body = "目标：玩家A",
+      options = {
+        { id = "use", label = "使用" },
+        { id = "skip", label = "跳过" },
+      },
+      allow_cancel = true,
+      cancel_label = "跳过",
+      meta = { player_id = 1, target_id = 11, queue = { 11 }, index = 1 },
+    })
+    _assert_eq(state.ui.active_choice_screen_key, "secondary_confirm", "steal prompt should route to secondary confirm")
+    _assert_eq(nodes["通用二次确认_标题"].text, "偷窃卡", "steal prompt should use explicit confirm title")
+    _assert_eq(nodes["通用二次确认_文本"].text, "目标：玩家A", "steal prompt should use explicit confirm body")
+
+    ui_view.open_choice_modal(state, {
+      id = 10,
+      kind = "steal_item",
+      route_key = "player",
+      title = "选择要偷的道具",
+      body = "",
+      options = {
+        { id = 2001, label = "免税卡" },
+        { id = 2010, label = "免费卡" },
+      },
+      allow_cancel = true,
+      cancel_label = "取消",
+      meta = { player_id = 1, target_id = 2 },
+    })
+    _assert_eq(state.ui.active_choice_screen_key, "player", "steal item should route to player screen")
+    _assert_eq(nodes["玩家选择屏"].visible, true, "steal item should open player screen")
+
+    ui_view.open_choice_modal(state, {
+      id = 11,
       kind = "landing_optional_effect",
-      route_key = "base_inline",
-      requires_confirm = false,
+      route_key = "secondary_confirm",
+      requires_confirm = true,
       title = "可选效果",
       body = "",
       options = {
@@ -470,8 +514,47 @@ local function _test_choice_modal_routes_to_new_screens()
       allow_cancel = true,
       cancel_label = "跳过",
     })
-    _assert_eq(state.ui.active_choice_screen_key, nil, "non-building optional should not open dedicated screen")
-    _assert_eq(nodes["位置选择屏"].visible, false, "target screen should stay hidden for base_inline route")
+    _assert_eq(state.ui.active_choice_screen_key, "secondary_confirm", "single optional effect should route to secondary confirm")
+    _assert_eq(nodes["通用二次确认屏"].visible, true, "single optional effect should open secondary confirm")
+
+    ui_view.open_choice_modal(state, {
+      id = 12,
+      kind = "landing_optional_effect",
+      route_key = "player",
+      requires_confirm = false,
+      title = "可选效果",
+      body = "",
+      options = {
+        { id = "other_effect_a", label = "其他效果A" },
+        { id = "other_effect_b", label = "其他效果B" },
+      },
+      allow_cancel = true,
+      cancel_label = "跳过",
+    })
+    _assert_eq(state.ui.active_choice_screen_key, "player", "multi optional effect should route to player screen")
+    _assert_eq(nodes["玩家选择屏"].visible, true, "multi optional effect should open player screen")
+
+    ui_view.open_choice_modal(state, {
+      id = 13,
+      kind = "market_vehicle_replace",
+      route_key = "secondary_confirm",
+      requires_confirm = true,
+      title = "是否更换座驾",
+      body = "",
+      confirm_title = "更换座驾",
+      confirm_body = "当前座驾：滑板\n新座驾：筋斗云\n价格：1200 金币",
+      options = {
+        { id = "use", label = "更换" },
+        { id = "skip", label = "算了" },
+      },
+      allow_cancel = true,
+      cancel_label = "算了",
+      meta = { player_id = 1, product_id = 9001 },
+    })
+    _assert_eq(state.ui.active_choice_screen_key, "secondary_confirm", "vehicle replace should route to secondary confirm")
+    _assert_eq(nodes["通用二次确认_标题"].text, "更换座驾", "vehicle replace should use explicit confirm title")
+    _assert_eq(nodes["通用二次确认_文本"].text, "当前座驾：滑板\n新座驾：筋斗云\n价格：1200 金币",
+      "vehicle replace should use descriptive confirm body")
   end)
 end
 

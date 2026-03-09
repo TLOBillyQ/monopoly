@@ -54,12 +54,16 @@ function steal.build_prompt_spec(game, player, queue, index)
   local target_id = assert(queue[index], "missing target id")
   assert(player ~= nil, "missing player")
   local target = assert(game:find_player_by_id(target_id), "missing target player: " .. tostring(target_id))
-  return land_choice_specs.build_use_skip(
+  local choice = land_choice_specs.build_use_skip(
     "steal_prompt",
     "是否使用偷窃卡",
     { "目标：" .. target.name },
-    { player_id = player.id, target_id = target.id, queue = queue, index = index }
+    { player_id = player.id, target_id = target.id, queue = queue, index = index },
+    { skip = "跳过" }
   )
+  choice.confirm_title = "偷窃卡"
+  choice.confirm_body = "目标：" .. target.name
+  return choice
 end
 
 function steal.handle_pass_players(game, player, encountered_ids)

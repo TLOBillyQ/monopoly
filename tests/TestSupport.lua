@@ -15,6 +15,7 @@ local landing_defs = require("src.game.systems.land.specs.effects")
 local effect_pipeline = require("src.game.systems.effects.effect_pipeline")
 local effect = require("src.game.systems.effects.effect_runner")
 local choice_resolver = require("src.game.systems.choices.resolver")
+local choice_contract = require("src.core.choice.contract")
 local board_utils = require("src.game.systems.land.board_utils")
 local gameplay_loop = require("src.game.flow.turn.loop")
 local turn_anim = require("src.game.flow.turn.anim")
@@ -291,6 +292,7 @@ local function open_choice(game, payload)
     cancel_label = payload.cancel_label or "取消",
     meta = payload.meta,
   }
+  choice_contract.copy_explicit_fields(payload, entry)
   game.turn.pending_choice = entry
   game.dirty.turn = true
   game.dirty.any = true

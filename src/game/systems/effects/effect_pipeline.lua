@@ -31,17 +31,14 @@ local function _build_optional_confirm_copy(effect_id, tile_name)
   return nil, nil
 end
 
-local function _uses_secondary_confirm_route(optional)
+local function _resolve_optional_route(optional)
   if type(optional) ~= "table" or #optional == 0 then
-    return false
+    return nil, nil
   end
-  for _, eff in ipairs(optional) do
-    local effect_id = eff and eff.id or nil
-    if effect_id ~= "buy_land" and effect_id ~= "upgrade_land" then
-      return false
-    end
+  if #optional == 1 then
+    return "secondary_confirm", true
   end
-  return true
+  return "player", false
 end
 
 local function _build_optional_choice(optional, player, tile, game_ctx, opts)
@@ -68,11 +65,13 @@ local function _build_optional_choice(optional, player, tile, game_ctx, opts)
     move_result = game_ctx.move_result,
   }
 
+  local route_key, requires_confirm = _resolve_optional_route(optional)
+
   local choice_spec = {
     kind = opts.optional_choice_kind or "landing_optional_effect",
     owner_role_id = player.id,
-    route_key = _uses_secondary_confirm_route(optional) and "secondary_confirm" or nil,
-    requires_confirm = _uses_secondary_confirm_route(optional) and true or nil,
+    route_key = route_key,
+    requires_confirm = requires_confirm == true,
     title = opts.optional_title,
     body_lines = body_lines,
     options = options,

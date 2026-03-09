@@ -137,6 +137,8 @@ local function _open_steal_prompt_from_interrupt(game, player, interrupt)
   assert(type(steal_res) == "table" and steal_res.waiting == true, "steal interrupt should open steal prompt")
   local pending = _open_choice(game, steal_res.intent.choice_spec)
   assert(pending and pending.kind == "steal_prompt", "pending choice should be steal_prompt")
+  assert(pending.route_key == "secondary_confirm", "steal prompt should route to secondary confirm")
+  assert(pending.requires_confirm == true, "steal prompt should require confirm")
   return pending
 end
 
@@ -302,8 +304,10 @@ local function _test_strong_card_startup_profile_allows_free_rent_after_skipping
   local free_prompt = _get_choice(g)
   assert(free_prompt and free_prompt.kind == "rent_card_prompt", "skipping strong card should expose free rent prompt")
   assert(free_prompt.title == "是否使用免费卡", "skipping strong card should prompt free rent next")
-  assert(free_prompt.route_key == "base_inline", "free rent prompt should remain base_inline after skipping strong card")
-  assert(free_prompt.requires_confirm == false, "free rent prompt should not switch to secondary confirm")
+  assert(free_prompt.route_key == "secondary_confirm", "free rent prompt should route to secondary confirm")
+  assert(free_prompt.requires_confirm == true, "free rent prompt should require confirm before using")
+  assert(free_prompt.confirm_title == "免费卡", "free rent prompt should expose short confirm title")
+  assert(free_prompt.confirm_body == "这次要用免费卡吗？", "free rent prompt should expose explicit confirm body")
 
   local use_result = choice_resolver.resolve(g, free_prompt, { option_id = "use" })
   assert(use_result and use_result.stay == false, "using free rent should resolve prompt")
@@ -391,12 +395,15 @@ local function _test_steal_startup_profile_multi_item_choice_resumes_to_chance()
   assert(interrupt.position == assert(g.board:index_of_tile_id(8)), "steal interrupt should stop on tile 8 occupant")
   local pending = _open_steal_prompt_from_interrupt(g, player, interrupt)
   assert(pending.meta and pending.meta.target_id == target.id, "steal prompt should target p2")
+  assert(pending.confirm_title == "偷窃卡", "steal prompt should expose short confirm title")
+  assert(pending.confirm_body == "目标：" .. target.name, "steal prompt should expose explicit confirm body")
 
   local prompt_result = choice_resolver.resolve(g, pending, { option_id = "use" })
   assert(prompt_result and prompt_result.stay == true, "multi-item steal should open item picker")
 
   pending = _get_choice(g)
   assert(pending and pending.kind == "steal_item", "multi-item steal should expose steal_item choice")
+  assert(pending.route_key == "player", "multi-item steal should route item picker to player screen")
   local tax_free_option_id = assert(_find_option_id_by_label(pending, "免税卡"), "steal item choice should expose 免税卡")
   local choice_result = choice_resolver.resolve(g, pending, { option_id = tax_free_option_id })
 
@@ -446,6 +453,7 @@ local function _test_steal_queue_startup_profile_skip_opens_next_target_and_resu
   pending = _get_choice(g)
   assert(pending and pending.kind == "steal_prompt", "skip should keep steal prompt open for next target")
   assert(pending.meta and pending.meta.target_id == second_target.id, "skip should advance queue to p3")
+  assert(pending.route_key == "secondary_confirm", "skip followup should keep secondary confirm route")
 
   local use_result = choice_resolver.resolve(g, pending, { option_id = "use" })
   assert(use_result and use_result.status == "resolved", "single-item queued target should resolve directly")
@@ -469,6 +477,7 @@ local function _test_steal_startup_profile_cancel_item_picker_keeps_state_and_re
 
   pending = _get_choice(g)
   assert(pending and pending.kind == "steal_item", "cancel path should enter steal_item picker")
+  assert(pending.route_key == "player", "cancel path should keep player route for item picker")
   local cancel_result = choice_resolver.resolve(g, pending, {
     type = "choice_cancel",
     choice_id = pending.id,
@@ -482,6 +491,50 @@ local function _test_steal_startup_profile_cancel_item_picker_keeps_state_and_re
   assert(_count_item(target, gameplay_rules.item_ids.free_rent) == 1, "cancel should keep all target items intact")
 
   _resume_after_steal_interrupt(g, player, interrupt)
+end
+
+local function _test_choice_builders_reserve_base_inline_for_item_slots_only()
+  local g, _ = _new_profile_game("scenario_steal_staging")
+  local player = g.players[1]
+  local land_choice_specs = require("src.game.systems.land.choice_specs")
+  local purchase_policy = require("src.game.systems.market.application.purchase_policy")
+  player.inventory:add({ id = gameplay_rules.item_ids.remote_dice })
+
+  local item_phase_choice = item_phase.build_choice_spec(g, player, "pre_action")
+  assert(item_phase_choice and item_phase_choice.route_key == "base_inline",
+    "item phase should keep explicit base_inline route")
+  assert(item_phase_choice and item_phase_choice.uses_item_slots == true,
+    "base_inline contract should stay limited to item slot flows")
+
+  local steal_prompt = steal.build_prompt_spec(g, player, { g.players[2].id }, 1)
+  assert(steal_prompt.route_key == "secondary_confirm", "steal prompt should no longer use base_inline")
+  assert(steal_prompt.requires_confirm == true, "steal prompt should require confirm")
+  assert(steal_prompt.confirm_title == "偷窃卡", "steal prompt should expose explicit confirm title")
+  assert(steal_prompt.confirm_body == "目标：" .. g.players[2].name, "steal prompt should expose explicit confirm body")
+
+  local free_rent_prompt = land_choice_specs.rent_prompt(player.id, 1, "free")
+  assert(free_rent_prompt.route_key == "secondary_confirm", "free rent prompt should no longer use base_inline")
+  assert(free_rent_prompt.requires_confirm == true, "free rent prompt should require confirm")
+  assert(free_rent_prompt.allow_cancel == true, "free rent prompt should expose skip through cancel")
+  assert(free_rent_prompt.cancel_label == "不用", "free rent prompt should keep skip wording on cancel")
+  assert(free_rent_prompt.confirm_title == "免费卡", "free rent prompt should expose confirm title")
+  assert(free_rent_prompt.confirm_body == "这次要用免费卡吗？", "free rent prompt should expose confirm body")
+
+  local vehicle_intent = purchase_policy.build_vehicle_replace_intent(player, {
+    product_id = 9001,
+    name = "筋斗云",
+  }, 1200, "金币")
+  local vehicle_choice = vehicle_intent and vehicle_intent.choice_spec or nil
+  assert(vehicle_choice and vehicle_choice.route_key == "secondary_confirm",
+    "market vehicle replace should no longer use base_inline")
+  assert(vehicle_choice and vehicle_choice.requires_confirm == true,
+    "market vehicle replace should require confirm")
+  assert(vehicle_choice and vehicle_choice.cancel_label == "算了",
+    "market vehicle replace should expose skip wording")
+  assert(vehicle_choice and vehicle_choice.confirm_title == "更换座驾",
+    "market vehicle replace should expose confirm title")
+  assert(vehicle_choice and string.find(vehicle_choice.confirm_body, "当前座驾：", 1, true) ~= nil,
+    "market vehicle replace should expose a descriptive confirm body")
 end
 
 return {
@@ -526,6 +579,10 @@ return {
     {
       name = "steal_startup_profile_cancel_item_picker_keeps_state_and_resumes",
       run = _test_steal_startup_profile_cancel_item_picker_keeps_state_and_resumes,
+    },
+    {
+      name = "choice_builders_reserve_base_inline_for_item_slots_only",
+      run = _test_choice_builders_reserve_base_inline_for_item_slots_only,
     },
   },
 }

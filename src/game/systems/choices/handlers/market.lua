@@ -133,6 +133,7 @@ function market_choice_handler.build(helpers)
     },
     market_vehicle_replace = {
       required_meta = { "player_id", "product_id" },
+      cancel = { mode = "select_option", option_id = "skip" },
       normalize_meta = _normalize_market_vehicle_replace_meta,
       meta_validator = _validate_market_vehicle_replace_meta,
       execute = _handle_vehicle_replace,

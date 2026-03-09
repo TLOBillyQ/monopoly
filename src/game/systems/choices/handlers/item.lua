@@ -103,6 +103,7 @@ function item_choice_handler.build(helpers)
     end
     intent_output_port.open_choice(game, {
       kind = "steal_item",
+      route_key = "player",
       owner_role_id = stealer.id,
       title = "选择要偷的道具",
       body_lines = lines,
@@ -368,6 +369,7 @@ function item_choice_handler.build(helpers)
     },
     steal_prompt = {
       required_meta = { "player_id", "target_id", "queue", "index" },
+      cancel = { mode = "select_option", option_id = "skip" },
       normalize_meta = _normalize_steal_prompt_meta,
       meta_validator = _validate_steal_prompt_meta,
       execute = _handle_steal_prompt,
