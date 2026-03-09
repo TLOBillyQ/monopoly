@@ -202,6 +202,7 @@ end
 local function _test_runtime_ports_resolve_role_prefers_synthetic_actor_registry()
   _reset_runtime_contract_state()
   local synthetic_unit = {}
+  local synthetic_avatar_image_key = 1625605305
   local ctx = runtime_context.new({})
   ctx.roles = { { id = 11 } }
   ctx.synthetic_actor_registry = {
@@ -219,6 +220,9 @@ local function _test_runtime_ports_resolve_role_prefers_synthetic_actor_registry
             get_ctrl_unit = function()
               return synthetic_unit
             end,
+            get_head_icon = function()
+              return synthetic_avatar_image_key
+            end,
           },
         }
       end
@@ -231,6 +235,8 @@ local function _test_runtime_ports_resolve_role_prefers_synthetic_actor_registry
   assert(resolved ~= nil, "resolve_role should return synthetic adapter")
   _assert_eq(resolved.get_name(), "AI1", "resolve_role should prefer synthetic actor registry")
   _assert_eq(resolved.get_ctrl_unit(), synthetic_unit, "synthetic adapter should expose ctrl_unit")
+  _assert_eq(resolved.get_head_icon(), synthetic_avatar_image_key,
+    "synthetic adapter should expose startup avatar image key")
   _reset_runtime_contract_state()
 end
 

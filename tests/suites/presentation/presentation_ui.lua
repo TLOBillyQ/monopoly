@@ -734,6 +734,88 @@ local function _test_ui_model_player_profile_accepts_stringified_avatar()
   assert(row1 and row1.avatar == 67890, "player1 avatar should parse stringified icon key")
 end
 
+local function _test_ui_model_player_profile_uses_slot_avatar_for_synthetic_ai()
+  local ui_model = require("src.presentation.model")
+  local runtime_ports = require("src.core.ports.runtime_ports")
+  local runtime_refs = require("Config.runtime_refs")
+  local g = _new_game()
+  g.players[1].name = "本地玩家1"
+  g.players[2].name = "AI2"
+  g.players[3].name = "AI3"
+  g.players[4].name = "AI4"
+
+  local avatar_ai_2 = runtime_refs.images.AI2
+  local avatar_ai_3 = runtime_refs.images.AI3
+  local avatar_ai_4 = runtime_refs.images.AI4
+  local model = nil
+  _with_patches({
+    {
+      target = runtime_ports,
+      key = "resolve_role",
+      value = function(player_id)
+        if player_id == 1 then
+          return {
+            get_name = function()
+              return "远端昵称1"
+            end,
+            get_head_icon = function()
+              return 12345
+            end,
+          }
+        end
+        if player_id == 2 then
+          return {
+            get_name = function()
+              return "AI2"
+            end,
+            get_head_icon = function()
+              return avatar_ai_2
+            end,
+          }
+        end
+        if player_id == 3 then
+          return {
+            get_name = function()
+              return "AI3"
+            end,
+            get_head_icon = function()
+              return avatar_ai_3
+            end,
+          }
+        end
+        if player_id == 4 then
+          return {
+            get_name = function()
+              return "AI4"
+            end,
+            get_head_icon = function()
+              return avatar_ai_4
+            end,
+          }
+        end
+        return nil
+      end,
+    },
+  }, function()
+    model = ui_model.build(g, {
+      game = g,
+      ui_state = { ui = { item_slots = { 1, 2, 3, 4, 5 }, auto_play = false } },
+      last_turn = g.last_turn,
+      finished = g.finished,
+    })
+  end)
+
+  local player_rows = model and model.panel and model.panel.player_rows or nil
+  local row1 = player_rows and player_rows[1] or nil
+  local row2 = player_rows and player_rows[2] or nil
+  local row3 = player_rows and player_rows[3] or nil
+  local row4 = player_rows and player_rows[4] or nil
+  assert(row1 and row1.avatar == 12345, "player1 should keep real role avatar")
+  assert(row2 and row2.avatar == avatar_ai_2, "player2 should use slot-mapped AI2 avatar")
+  assert(row3 and row3.avatar == avatar_ai_3, "player3 should use slot-mapped AI3 avatar")
+  assert(row4 and row4.avatar == avatar_ai_4, "player4 should use slot-mapped AI4 avatar")
+end
+
 local function _test_turn_dispatch_rejects_non_current_actor()
   local g = _new_game()
   local state = {
@@ -6357,6 +6439,7 @@ local suite = {
   _test_ui_model_player_slot_map_and_choice_owner,
   _test_ui_model_player_profile_prefers_role_api_with_fallback,
   _test_ui_model_player_profile_accepts_stringified_avatar,
+  _test_ui_model_player_profile_uses_slot_avatar_for_synthetic_ai,
   _test_turn_dispatch_rejects_non_current_actor,
   _test_turn_dispatch_rejects_choice_non_owner,
   _test_turn_dispatch_auto_rejects_unmapped_role,

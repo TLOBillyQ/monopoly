@@ -59,7 +59,7 @@ local function _build_adapter(actor)
       return actor.unit
     end,
     get_head_icon = function()
-      return nil
+      return actor.avatar_image_key
     end,
     send_ui_custom_event = function()
       return false
@@ -98,6 +98,7 @@ function synthetic_actor_registry.new(env)
         player_id = role_id_utils.normalize(spec and spec.player_id),
         name = spec and spec.name or nil,
         unit_key = spec and spec.unit_key or nil,
+        avatar_image_key = spec and spec.avatar_image_key or nil,
       }
     end
   end
@@ -132,6 +133,7 @@ function synthetic_actor_registry.new(env)
         name = spec.name or ("AI" .. tostring(player_id)),
         unit = unit,
         unit_key = spec.unit_key,
+        avatar_image_key = spec.avatar_image_key,
       }
       actor.adapter = _build_adapter(actor)
       role_id_utils.write(registry.actors_by_player_id, player_id, actor)

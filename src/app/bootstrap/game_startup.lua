@@ -3,6 +3,7 @@ local board_view = require("src.presentation.view.render.board")
 local game = require("src.game.core.runtime.game")
 local ui_view = require("src.presentation.runtime.view")
 local tiles_cfg = require("Config.generated.tiles")
+local runtime_refs = require("Config.runtime_refs")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
 local test_profile_resolver = require("src.app.testing.test_profile_resolver")
@@ -13,6 +14,7 @@ local role_id_utils = require("src.core.utils.role_id")
 
 local max_player_count = 4
 local synthetic_unit_keys = { 9000601, 9000602, 9000603, 9000604, 9000605, 9000607 }
+local synthetic_avatar_refs = runtime_refs.images or {}
 
 local M = {}
 
@@ -81,11 +83,13 @@ local function _build_startup_roster(max_players)
   local selected_unit_keys = _pick_synthetic_unit_keys(missing_count)
   for index = 1, missing_count do
     local slot_index = #roster + 1
+    local avatar_ref_id = "AI" .. tostring(slot_index)
     roster[slot_index] = {
       role_id = -slot_index,
       name = "AI" .. tostring(slot_index),
       synthetic = true,
       unit_key = selected_unit_keys[index],
+      avatar_image_key = synthetic_avatar_refs[avatar_ref_id],
     }
   end
   if max_players and #roles > max_players then
@@ -225,6 +229,7 @@ function M.build_state(get_current_game, opts)
             player_id = role.role_id,
             name = role.name,
             unit_key = role.unit_key,
+            avatar_image_key = role.avatar_image_key,
           }
         end
       end
