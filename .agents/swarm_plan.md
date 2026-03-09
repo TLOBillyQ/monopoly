@@ -1,64 +1,56 @@
-# 修正本地玩家移动结束后仍持续跑步的问题（二次定位版）
+- # 测试目录清理与优化方案
 
-## Summary
+  ## 摘要
+  - 当前 `tests/` 实际混合了 5 类职责：运行入口、共享脚手架、夹具、架构/文本 guard、行为/契约 suite。目录共有 56 个文件；suite 清单装载 468 个 case，默认 `lua tests/regression.lua` 在 `release_trimmed` 下执行 466 个检查并通过，但通过路径输出噪声过大，失败定位成本偏高。
+  - 主要维护热点已经很明确：`gameplay/gameplay.lua` 3126 行并配套 `registry.lua` 与 4 个 slice 壳；`presentation_ui_action_status_part1/2/3.lua` 合计 4837 行并配套聚合壳；`presentation_ui_popup_market.lua` 1048 行；`presentation_ui_action_anim.lua` 961 行。
+  - 推荐目标不是改测试语义，而是重做测试“装配方式”：保留 `lua tests/regression.lua` 兼容入口和现有断言结果不变，把测试目录重组为可发现、可分层、可独立运行、可低噪声失败定位的结构。
 
-新日志已经证明第一版修复命中了我们能想到的单位级停止链：本地玩家在 `finish_stop` 和后续 `board_refresh_stop_and_snap` 中都执行了 `stop_forced_move`、`stop_anim`、`model_stop_animation`，但视觉仍不停。这说明问题不再是“漏调 stop API”，而是本地玩家在更上层的控制/动画状态里被重新保持为 moving。
+  ## 关键改动
+  1. 重做 runner 与清单真源
+  - 新增 `tests/bootstrap.lua`，统一处理 `package.path`、随机种子、测试环境初始化；删除各 runner/guard 文件里重复的 `package.path = package.path .. ...` 拼接。
+  - 新增 `tests/catalog.lua` 作为唯一真源，拆成 `behavior_suites`、`contract_suites`、`guard_scripts` 三组；`tests/regression.lua` 只负责 `bootstrap -> behavior -> contract -> guard` 的顺序调度。
+  - 保留 `tests/suites/manifest.lua` 一个兼容周期，让它转发到 `catalog.lua`；下一轮清掉所有直接依赖后再删除。
+  - Suite 接口统一为 `{ name, layer, kind, tests = {...} }`；case 接口统一为 `{ name, run, disabled_in = { release_trimmed = true }, tags = {...} }`，把当前 `regression.lua` 里按 suite/test 名硬编码过滤的逻辑迁到 case metadata。
 
-当前代码里唯一仍会在移动结束同一时刻额外干预本地玩家的，是 `anim_ports` 通过 `on_step_lock` 对 `role_control_lock_exempt` 做按步切换。对单步移动，这个“重新上锁”与 `finish_stop` 发生在同一时间点，极可能把本地玩家重新压进宿主 locomotion 状态；AI 不走这条本地控制链，所以没有同类问题。下一版修复应把“本地角色控制锁豁免”从按步切换改成按整段移动切换，并补充 moving 状态日志来验证这一点。
+  2. 拆共享脚手架，收口 helper 边界
+  - `TestHarness.lua` 下沉为 `tests/support/harness.lua`，接口改为 `run_all(suites, opts)`；`opts` 至少支持 `filter`, `reporter`, `capture_logs`。
+  - `TestSupport.lua` 按职责拆成 `tests/support/assertions.lua`、`tests/support/patches.lua`、`tests/support/factories/game_factory.lua`、`tests/support/factories/ui_factory.lua`、`tests/support/runtime_helpers.lua`、`tests/support/scenario_helpers.lua`。
+  - `tests/internal/guard_support.lua` 迁到 `tests/support/guards/guard_support.lua`；guard 不再挂在 `internal` 这个误导性目录下。
+  - 迁移期间保留 `tests/TestSupport.lua` 兼容 facade，但新 suite 禁止继续 require 这个大而全入口；所有大文件拆分完成后删掉 facade。
 
-## Key Changes
+  3. 按行为簇拆掉巨型 suite，不再保留壳文件
+  - `gameplay/gameplay.lua` 直接拆成 7 个真实 suite：`gameplay_bankruptcy_and_tile_owner.lua`、`gameplay_intent_dispatch.lua`、`gameplay_runtime_context.lua`、`gameplay_turn_loop.lua`、`gameplay_auto_runner.lua`、`gameplay_afk_host.lua`、`gameplay_visual_feedback.lua`。
+  - 删除 `tests/suites/gameplay/registry.lua` 与 4 个 slice 壳；manifest/case 名字直接来自真实 suite，不再靠索引区间维护。
+  - `presentation_ui_action_status_part1/2/3.lua` 改成 9 个真实 suite：`presentation_choice_routes.lua`、`presentation_target_pick.lua`、`presentation_action_log_and_role_context.lua`、`presentation_market_panel.lua`、`presentation_item_slots.lua`、`presentation_action_queue.lua`、`presentation_role_control_lock.lua`、`presentation_status3d_and_turn_effects.lua`、`presentation_popup_and_modal_renderers.lua`、`presentation_player_panels.lua`。
+  - 删除 `presentation_ui_action_status.lua` 这个聚合壳；catalog 直接登记拆分后的 suite。
+  - `presentation_ui_popup_market.lua` 拆成 `presentation_popup_visibility.lua`、`presentation_ui_touch_policy.lua`、`presentation_market_confirm_flow.lua`、`presentation_market_panel_state.lua`。
+  - `presentation_ui_action_anim.lua` 拆成 `presentation_action_anim_core.lua`、`presentation_board_feedback.lua`、`presentation_overlay_compute.lua`。
+  - 拆分原则固定：按行为边界拆，不按平均行数切；拆完后不保留“仅转发/仅聚合”的 suite 壳文件。
 
-- 在 `src/presentation/view/render/move_anim.lua` 中把移动序列运行时从“只记录 token”升级为“按玩家记录 active sequence entry”，至少包含 `token` 和 sequence 级释放逻辑。
-- 为 `play_sequence` 增加 `anim_ctx.on_sequence_lock(enabled, total_time, meta)` 生命周期钩子：
-  - 序列真正开始时只调用一次 `on_sequence_lock(false, ...)`
-  - 序列结束、被新序列顶掉、或被 `clear_player_token` 强制清理时只调用一次 `on_sequence_lock(true, ...)`
-  - 保留现有 `on_step_lock`，但它不再承担 role control 管理职责
-- 在 `src/presentation/runtime/ports/anim_ports.lua` 中把 `role_control_lock_exempt_by_role` / `role_control_lock_exempt_count_by_role` 的维护从 `on_step_lock` 挪到 `on_sequence_lock`：
-  - 移动整段期间，本地玩家持续豁免 `BUFF_FORBID_CONTROL`
-  - 只有在 `finish_stop` 或 forced clear 后才恢复锁
-  - 不再在每一步结束时重新套 lock
-- 同时强化 `stop_player_presentation` 的动画层清理，但保持风险可控：
-  - 保留现有 `force_stop_move` / `stop_forced_move` / `ai_command_stop_move`
-  - 在动画层增加 `interrupt_multi_animation`、`stop_play_body_anim`、`stop_play_upper_anim`
-  - 暂不引入 `stop_ai`，避免影响 synthetic AI 生命周期
-- 调试日志改为同时输出 stop 前后状态：
-  - `is_moving_before` / `is_moving_after`
-  - `is_forced_moving_before` / `is_forced_moving_after`
-  - `role_control_lock_active`
-  - `role_control_exempt`
-  这样可以直接验证问题是“stop 没生效”还是“stop 后又被控制层重新拉回 moving”。
+  4. 把 guard 从“回归尾巴”升级成独立测试车道
+  - `dep_rules.lua`、`legacy_path_guard.lua`、`forbidden_globals.lua`、`gameplay_loop_no_ui.lua`、`arch_view_guard.lua` 迁到 `tests/guards/`，保留 CLI 入口能力，但不再放在 `tests/internal/`。
+  - `guard_scripts_contract.lua` 继续保留在 contract lane，职责只验证 guard 本身的判定逻辑；真正的 guard 执行放到 guard lane。
+  - `architecture_guard_contract.lua`、`arch_view_contract.lua`、`usecase_boundary_contract.lua`、`runtime_ports_contract.lua` 统一归到 contract lane；behavior lane 只放玩法/展示/运行时行为。
 
-## Interfaces
+  5. 降低通过路径噪声，提升失败可读性
+  - `harness` 默认捕获单 case 日志；通过时只打印进度点和摘要，失败时回放该 case 的缓冲日志；`MONO_TEST_VERBOSE=1` 时才输出全量日志。
+  - 对当前大量重复的 market mapping / host capability warning 只做计数摘要，不做逐行回显；guard 失败仍保持原始错误文本。
+  - 清掉 runner 注释和路径漂移，例如旧的 `.agents/tests/...` 文案，避免继续误导调用方式。
 
-- 不新增对外 public API。
-- 内部新增 `anim_ctx.on_sequence_lock` 约定，作为 `move_anim.play_sequence` 的可选输入字段；`anim_ports.build().play_move_anim` 负责填充它。
-- `move_anim.clear_player_token` 需要具备“如果该玩家存在未释放的 sequence lock，则在清 token 时释放”的语义，避免 stale token 或 board sync 清理后遗留豁免状态。
-- `on_step_lock` 继续保留现状语义，避免影响现有 step 级测试与其他潜在调用方。
+  ## 重要接口变化
+  - `tests/catalog.lua` 成为 suite/guard 注册真源。
+  - `tests/support/harness.lua` 暴露 `run_all(suites, opts)`，替代当前固定输出行为。
+  - Suite table 新增 `layer`、`kind`；case table 新增 `disabled_in`、`tags`。
+  - `lua tests/regression.lua` 保持兼容，不要求调用方改命令。
 
-## Test Plan
+  ## 测试与验收
+  - 迁移前后默认 `lua tests/regression.lua` 都必须为绿；当前基线是默认模式输出 `All regression checks passed (466)`。如果数量变化，只能来自 catalog 显式记录的 case 重分类，不能是丢 case。
+  - 新增 `behavior`、`contract`、`guard` 三个独立入口，各自可单跑，也能被 `regression.lua` 串起来。
+  - 做一次故意失败演练：验证通过路径不回放日志、失败路径只回放失败 case 的缓冲日志。
+  - 做一次 inventory 对账：原 `gameplay.lua`、`presentation_ui_action_status_*`、`presentation_ui_popup_market.lua`、`presentation_ui_action_anim.lua` 的 case 名称全部可在新 catalog 中一一映射。
+  - 结构验收固定为两条：不再存在 wrapper-only suite；单个 suite 文件不再超过约 800 行，support 文件不再承担多领域职责。
 
-- 在 `tests/suites/presentation/presentation_move_anim.lua` 增加 sequence-lock 生命周期用例：
-  - 单步移动：`on_sequence_lock(false)` 只在开始触发一次，`on_sequence_lock(true)` 只在 finish 触发一次
-  - 重叠序列：旧序列被新序列覆盖时，旧序列的 sequence lock 会释放，但 stale finish callback 不会释放新序列
-- 在 `tests/suites/presentation/presentation_board_sync.lua` 增加 forced clear 用例：
-  - `clear_player_token(..., "board_sync_place_players")` 会同步释放 sequence lock，不留下 active exempt 状态
-- 在 `tests/suites/presentation/presentation_ui_action_status_part2.lua` 或现有 role-control 相关 suite 中增加用例：
-  - 本地玩家在整段 move anim 期间保持 exempt
-  - 不会在每一步结束时重新加 `BUFF_FORBID_CONTROL`
-  - finish 后才恢复正常 lock 状态
-- 保留并继续通过现有 step 级测试：
-  - `presentation_ui_timing_anim` 里的 `on_step_lock` 测试仍应成立
-- 回归命令至少执行：
-  - `presentation.move_anim`
-  - `presentation.board_sync`
-  - 包含 role_control_lock 的 presentation suite
-- 编辑器验收：
-  - 本地玩家 1 步移动后，在 `finish_stop` 前后日志中可见 moving 状态从 `true -> false`
-  - `wait_choice` 和 `inter_turn_wait` 阶段不再出现本地玩家原地跑动
-  - 日志中 role control 豁免只在序列结束后释放，不再与单步 finish 同帧反复切换
-
-## Assumptions
-
-- 本地玩家问题主要来自角色控制锁与宿主 locomotion 状态的时序冲突，而不是再次缺少某个基础 stop API。
-- `interrupt_multi_animation`、`stop_play_body_anim`、`stop_play_upper_anim` 对本地玩家 ctrl unit 是安全的；若方法不存在则静默跳过。
-- 本次修复默认不改 turn phase、await 流程和移动路径计算；只修正 move animation 的 sequence 生命周期与本地控制锁时序。
+  ## 假设与默认决策
+  - 本轮只清理测试目录与 runner，不改 `src/` 生产逻辑语义。
+  - 新文件与新模块命名全部使用 `snake_case`；helper 代码继续遵守 `forbidden_globals` 与 `lua_env` 约束，不引入 `tonumber`、`type(...) == "number"` 这类违规写法。
+  - 清理过程不回退当前工作树里的未提交修改；如果迁移命中正在被改的 suite，先新增新 suite 并切 catalog，再删除旧入口，避免直接覆盖他人改动。

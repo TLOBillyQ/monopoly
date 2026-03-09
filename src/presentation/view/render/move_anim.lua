@@ -23,10 +23,14 @@ local function _ensure_runtime(board_scene)
     board_scene._move_anim_runtime = {
       active_token_by_player_id = {},
       active_sequence_by_player_id = {},
+      pending_synthetic_ai_stop_by_player_id = {},
     }
   end
   if type(board_scene._move_anim_runtime.active_sequence_by_player_id) ~= "table" then
     board_scene._move_anim_runtime.active_sequence_by_player_id = {}
+  end
+  if type(board_scene._move_anim_runtime.pending_synthetic_ai_stop_by_player_id) ~= "table" then
+    board_scene._move_anim_runtime.pending_synthetic_ai_stop_by_player_id = {}
   end
   return board_scene._move_anim_runtime
 end
@@ -257,13 +261,63 @@ local function _resolve_role(player_id)
   return role
 end
 
-local function _stop_synthetic_ai(player_id, unit)
-  if unit == nil or type(unit.stop_ai) ~= "function" then
+local function _is_synthetic_actor(player_id)
+  local role = _resolve_role(player_id)
+  return role and role.is_synthetic_actor == true or false
+end
+
+function move_anim.has_active_stop_context(board_scene, player_id)
+  if board_scene == nil or player_id == nil then
+    return false
+  end
+  local runtime = _ensure_runtime(board_scene)
+  if runtime.active_token_by_player_id[player_id] ~= nil then
+    return true
+  end
+  if runtime.active_sequence_by_player_id[player_id] ~= nil then
+    return true
+  end
+  return false
+end
+
+function move_anim.mark_pending_synthetic_ai_stop(board_scene, player_id)
+  if board_scene == nil or player_id == nil then
+    return
+  end
+  local runtime = _ensure_runtime(board_scene)
+  runtime.pending_synthetic_ai_stop_by_player_id[player_id] = true
+end
+
+function move_anim.peek_pending_synthetic_ai_stop(board_scene, player_id)
+  if board_scene == nil or player_id == nil then
+    return false
+  end
+  local runtime = _ensure_runtime(board_scene)
+  return runtime.pending_synthetic_ai_stop_by_player_id[player_id] == true
+end
+
+function move_anim.consume_pending_synthetic_ai_stop(board_scene, player_id)
+  if board_scene == nil or player_id == nil then
+    return false
+  end
+  local runtime = _ensure_runtime(board_scene)
+  if runtime.pending_synthetic_ai_stop_by_player_id[player_id] ~= true then
+    return false
+  end
+  runtime.pending_synthetic_ai_stop_by_player_id[player_id] = nil
+  return true
+end
+
+local function _stop_synthetic_ai(player_id, unit, should_stop)
+  local synthetic_actor = _is_synthetic_actor(player_id)
+  if synthetic_actor ~= true then
     return false, nil
   end
-  local role = _resolve_role(player_id)
-  if not (role and role.is_synthetic_actor == true) then
-    return false, nil
+  if should_stop ~= true then
+    return true, nil
+  end
+  if unit == nil or type(unit.stop_ai) ~= "function" then
+    return true, nil
   end
   local ok = pcall(unit.stop_ai)
   if not ok then
@@ -326,7 +380,7 @@ function move_anim.stop_player_presentation(player_id, unit, opts)
     opts.emit_vehicle_stop(player_id)
     vehicle_stop_path = "emit_vehicle_stop"
   end
-  local synthetic_actor, ai_stop_path = _stop_synthetic_ai(player_id, unit)
+  local synthetic_actor, ai_stop_path = _stop_synthetic_ai(player_id, unit, opts.stop_synthetic_ai == true)
   return {
     synthetic_actor = synthetic_actor == true,
     ai_stop_path = ai_stop_path,
@@ -352,6 +406,7 @@ local function _stop_active_sequence(board_scene, player_id, anim_ctx, token)
   local stop_result = move_anim.stop_player_presentation(player_id, unit, {
     stop_vehicle = _is_vehicle_anim(anim_ctx),
     emit_vehicle_stop = _vehicle_helper_method("emit_vehicle_stop"),
+    stop_synthetic_ai = true,
   })
   local is_moving_after = _read_bool_method(unit, "is_moving")
   local is_forced_moving_after = _read_bool_method(unit, "is_forced_moving")
@@ -363,6 +418,7 @@ local function _stop_active_sequence(board_scene, player_id, anim_ctx, token)
     "token=" .. tostring(token),
     "synthetic_actor=" .. tostring(stop_result.synthetic_actor == true),
     "ai_stop=" .. tostring(stop_result.ai_stop_path or "none"),
+    "pending_ai_stop=" .. tostring(stop_result.synthetic_actor == true),
     "vehicle_stop=" .. tostring(stop_result.vehicle_stop_path or "none"),
     "motion_stop=" .. tostring(stop_result.motion_stop_path or "none"),
     "anim_stop=" .. tostring(stop_result.anim_stop_path or "none"),
@@ -373,6 +429,9 @@ local function _stop_active_sequence(board_scene, player_id, anim_ctx, token)
     "role_control_lock_active=" .. tostring(anim_ctx and anim_ctx.role_control_lock_active == true),
     "role_control_exempt=" .. tostring(anim_ctx and anim_ctx.role_control_exempt == true)
   )
+  if stop_result.synthetic_actor == true then
+    move_anim.mark_pending_synthetic_ai_stop(board_scene, player_id)
+  end
   _release_sequence_lock(board_scene, player_id, active_sequence, "sequence_finished")
   move_anim.clear_player_token(board_scene, player_id, "sequence_finished")
 end

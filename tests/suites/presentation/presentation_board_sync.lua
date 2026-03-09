@@ -353,6 +353,13 @@ local function _test_board_refresh_synthetic_actor_stops_ai_before_snap()
   local board_view = require("src.presentation.view.render.board")
   local runtime_ports = require("src.core.ports.runtime_ports")
   local env = _build_board_refresh_test_env({ position = 2 })
+  env.state.board_scene._move_anim_runtime = {
+    active_token_by_player_id = {},
+    active_sequence_by_player_id = {},
+    pending_synthetic_ai_stop_by_player_id = {
+      [1] = true,
+    },
+  }
   env.unit.stop_ai = function()
     env.calls[#env.calls + 1] = "stop_ai"
   end
@@ -382,6 +389,93 @@ local function _test_board_refresh_synthetic_actor_stops_ai_before_snap()
   _assert_eq(env.calls[2], "force_stop_move", "synthetic refresh should still stop motion before snap")
   _assert_eq(env.calls[3], "stop_anim", "synthetic refresh should still stop anim before snap")
   _assert_eq(env.calls[4], "set_position", "synthetic refresh should snap after stopping ai and motion")
+  _assert_eq(env.state.board_scene._move_anim_runtime.pending_synthetic_ai_stop_by_player_id[1], nil,
+    "synthetic refresh should consume the pending board-sync ai stop marker")
+end
+
+local function _test_board_refresh_idle_synthetic_actor_skips_stop_ai()
+  local board_view = require("src.presentation.view.render.board")
+  local runtime_ports = require("src.core.ports.runtime_ports")
+  local env = _build_board_refresh_test_env({ position = 2 })
+  env.state.board_scene._move_anim_runtime = {
+    active_token_by_player_id = {},
+    active_sequence_by_player_id = {},
+    pending_synthetic_ai_stop_by_player_id = {},
+  }
+  env.unit.stop_ai = function()
+    env.calls[#env.calls + 1] = "stop_ai"
+  end
+  env.unit.force_stop_move = function()
+    env.calls[#env.calls + 1] = "force_stop_move"
+  end
+  env.unit.stop_anim = function()
+    env.calls[#env.calls + 1] = "stop_anim"
+  end
+  env.unit.set_position = function(pos)
+    env.calls[#env.calls + 1] = "set_position"
+    env.target_pos = pos
+  end
+
+  _with_board_refresh_patches({
+    { target = runtime_ports, key = "resolve_role", value = function(player_id)
+      if player_id == 1 then
+        return { is_synthetic_actor = true }
+      end
+      return nil
+    end },
+  }, function()
+    board_view.refresh(env.state, env.ui_model, function() end, function() return "presentation_board_sync" end)
+  end)
+
+  _assert_eq(env.calls[1], "force_stop_move", "idle synthetic refresh should skip stop_ai and stop motion first")
+  _assert_eq(env.calls[2], "stop_anim", "idle synthetic refresh should still stop anim before snap")
+  _assert_eq(env.calls[3], "set_position", "idle synthetic refresh should still snap to tile position")
+  _assert_eq(env.calls[4], nil, "idle synthetic refresh should not call stop_ai")
+end
+
+local function _test_board_refresh_pending_synthetic_ai_stop_consumes_only_once()
+  local board_view = require("src.presentation.view.render.board")
+  local runtime_ports = require("src.core.ports.runtime_ports")
+  local env = _build_board_refresh_test_env({ position = 2 })
+  env.state.board_scene._move_anim_runtime = {
+    active_token_by_player_id = {},
+    active_sequence_by_player_id = {},
+    pending_synthetic_ai_stop_by_player_id = {
+      [1] = true,
+    },
+  }
+  env.unit.stop_ai = function()
+    env.calls[#env.calls + 1] = "stop_ai"
+  end
+  env.unit.force_stop_move = function()
+    env.calls[#env.calls + 1] = "force_stop_move"
+  end
+  env.unit.stop_anim = function()
+    env.calls[#env.calls + 1] = "stop_anim"
+  end
+  env.unit.set_position = function(pos)
+    env.calls[#env.calls + 1] = "set_position"
+    env.target_pos = pos
+  end
+
+  _with_board_refresh_patches({
+    { target = runtime_ports, key = "resolve_role", value = function(player_id)
+      if player_id == 1 then
+        return { is_synthetic_actor = true }
+      end
+      return nil
+    end },
+  }, function()
+    board_view.refresh(env.state, env.ui_model, function() end, function() return "presentation_board_sync" end)
+    env.ui_model.board.vehicle_resync_seq = 1
+    board_view.refresh(env.state, env.ui_model, function() end, function() return "presentation_board_sync" end)
+  end)
+
+  _assert_eq(env.calls[1], "stop_ai", "first refresh should consume pending synthetic ai stop")
+  _assert_eq(env.calls[5], "force_stop_move", "second refresh should skip stop_ai and go straight to motion stop")
+  _assert_eq(env.calls[6], "stop_anim", "second refresh should still stop anim")
+  _assert_eq(env.calls[7], "set_position", "second refresh should still snap position")
+  _assert_eq(env.calls[8], nil, "second refresh should not invoke stop_ai again")
 end
 
 return {
@@ -422,6 +516,14 @@ return {
     {
       name = "_test_board_refresh_synthetic_actor_stops_ai_before_snap",
       run = _test_board_refresh_synthetic_actor_stops_ai_before_snap,
+    },
+    {
+      name = "_test_board_refresh_idle_synthetic_actor_skips_stop_ai",
+      run = _test_board_refresh_idle_synthetic_actor_skips_stop_ai,
+    },
+    {
+      name = "_test_board_refresh_pending_synthetic_ai_stop_consumes_only_once",
+      run = _test_board_refresh_pending_synthetic_ai_stop_consumes_only_once,
     },
   },
 }

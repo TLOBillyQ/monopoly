@@ -18,10 +18,11 @@ local function _debug_log(...)
   logger.info_unlimited("[MoveAnim]", ...)
 end
 
-local function _stop_player_motion(pid, seat_id, unit, vehicle)
+local function _stop_player_motion(pid, seat_id, unit, vehicle, stop_synthetic_ai)
   return move_anim.stop_player_presentation(pid, unit, {
     stop_vehicle = seat_id ~= nil,
     emit_vehicle_stop = vehicle and vehicle.emit_vehicle_stop or nil,
+    stop_synthetic_ai = stop_synthetic_ai == true,
   })
 end
 
@@ -146,8 +147,12 @@ function M.place_players(state, players, occupants, spacing, min_player_y)
       local seat_id = gameplay_read_port.resolve_vehicle_seat_id(player.seat_id)
       local vehicle = runtime_ports.resolve_vehicle_helper()
       local emit_set_position = vehicle and vehicle.emit_vehicle_set_position or nil
+      local stop_synthetic_ai = move_anim.peek_pending_synthetic_ai_stop(state.board_scene, pid)
       move_anim.clear_player_token(state.board_scene, pid, "board_sync_place_players")
-      local stop_result = _stop_player_motion(pid, seat_id, unit, vehicle)
+      local stop_result = _stop_player_motion(pid, seat_id, unit, vehicle, stop_synthetic_ai)
+      if stop_synthetic_ai == true then
+        move_anim.consume_pending_synthetic_ai_stop(state.board_scene, pid)
+      end
       _debug_log(
         "board_refresh_stop_and_snap",
         "player_id=" .. tostring(pid),
@@ -155,6 +160,7 @@ function M.place_players(state, players, occupants, spacing, min_player_y)
         "seat_id=" .. tostring(seat_id or "nil"),
         "synthetic_actor=" .. tostring(stop_result.synthetic_actor == true),
         "ai_stop=" .. tostring(stop_result.ai_stop_path or "none"),
+        "pending_ai_stop=" .. tostring(stop_synthetic_ai == true),
         "vehicle_stop=" .. tostring(stop_result.vehicle_stop_path or "none"),
         "motion_stop=" .. tostring(stop_result.motion_stop_path or "none"),
         "anim_stop=" .. tostring(stop_result.anim_stop_path or "none"),

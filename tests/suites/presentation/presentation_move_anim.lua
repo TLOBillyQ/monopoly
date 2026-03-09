@@ -388,6 +388,8 @@ local function _test_move_anim_synthetic_actor_stops_ai_before_motion_stop()
     _assert_eq(calls[2], "stop_ai", "synthetic actor should stop ai before motion stop")
     _assert_eq(calls[3], "force_stop_move", "synthetic actor should still stop motion")
     _assert_eq(calls[4], "stop_anim", "synthetic actor should still stop anim")
+    _assert_eq(move_anim.peek_pending_synthetic_ai_stop(scene, -2), true,
+      "synthetic finish should leave a pending board-sync ai stop marker")
   end)
 end
 
@@ -436,6 +438,8 @@ local function _test_move_anim_non_synthetic_actor_does_not_stop_ai()
     _assert_eq(calls[2], "force_stop_move", "non-synthetic actor should go straight to motion stop")
     _assert_eq(calls[3], "stop_anim", "non-synthetic actor should still stop anim")
     _assert_eq(calls[4], nil, "non-synthetic actor should not call stop_ai")
+    _assert_eq(move_anim.peek_pending_synthetic_ai_stop(scene, -2), false,
+      "non-synthetic finish should not mark pending board-sync ai stop")
   end)
 end
 
@@ -485,6 +489,8 @@ local function _test_move_anim_synthetic_stop_ai_failure_falls_through_to_motion
     _assert_eq(calls[2], "stop_ai", "synthetic actor should still attempt stop_ai first")
     _assert_eq(calls[3], "force_stop_move", "stop_ai failure should not block motion stop")
     _assert_eq(calls[4], "stop_anim", "stop_ai failure should not block anim stop")
+    _assert_eq(move_anim.peek_pending_synthetic_ai_stop(scene, -2), true,
+      "stop_ai failure should still leave a pending board-sync ai stop marker")
   end)
 end
 
