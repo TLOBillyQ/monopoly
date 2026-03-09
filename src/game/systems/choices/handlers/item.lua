@@ -68,6 +68,13 @@ local function _finish_item_target_choice(helpers, game)
   return helpers.finish_choice(game, false)
 end
 
+local function _finish_item_phase_by_name(game, phase)
+  if type(phase) ~= "string" or phase == "" then
+    return
+  end
+  item_phase.finish(game, phase)
+end
+
 local function _merge_after_action_anim(result, final_res)
   if type(result) == "table" and type(result.after_action_anim) == "table" then
     final_res.after_action_anim = result.after_action_anim
@@ -78,7 +85,6 @@ end
 function item_choice_handler.build(helpers)
   local finish_choice = helpers.finish_choice
   local use_item = helpers.use_item
-  local finish_item_phase = helpers.finish_item_phase
 
   local function _consume_if_needed(player, item_id, already_consumed)
     if not item_id or already_consumed == true then
@@ -236,7 +242,7 @@ function item_choice_handler.build(helpers)
       intent_output_port.dispatch(game, intent)
       return { stay = true }
     end
-    finish_item_phase(game, phase)
+    _finish_item_phase_by_name(game, phase)
     return _merge_after_action_anim(result, finish_choice(game, false))
   end
 

@@ -6,6 +6,7 @@ local turn_roll = require("src.game.flow.turn.roll")
 local move_followup = require("src.game.flow.turn.move_followup")
 local board_utils = require("src.game.systems.land.board_utils")
 local land_rules = require("src.game.systems.land.rules")
+local item_phase = require("src.game.systems.items.phase")
 local choice_resolver = support.choice_resolver
 local movement = support.movement
 local steal = support.steal
@@ -346,6 +347,41 @@ local function _test_strong_card_startup_profile_falls_back_to_direct_rent_after
     "skipping both rent cards should keep target tile level")
 end
 
+local function _test_post_action_item_phase_free_rent_resolves_after_skipping_strong()
+  local g, _, player, target_tile, rent_prompt = _advance_strong_card_staging_to_rent_prompt()
+  local owner = g.players[2]
+  local target_state_before = _tile_state(g, target_tile)
+  local player_cash_before = g:player_balance(player, "金币")
+  local owner_cash_before = g:player_balance(owner, "金币")
+
+  local skip_result = choice_resolver.resolve(g, rent_prompt, { option_id = "skip" })
+  assert(skip_result and skip_result.stay == true, "skipping strong card should keep flow open")
+
+  local post_action_choice = assert(item_phase.build_choice_spec(g, player, "post_action"),
+    "post_action item phase should offer free rent after skipping strong card")
+  _open_choice(g, post_action_choice)
+
+  local pending = _get_choice(g)
+  assert(pending and pending.kind == "item_phase_choice", "post_action item phase should expose item phase choice")
+  local use_result = choice_resolver.resolve(g, pending, { option_id = gameplay_rules.item_ids.free_rent })
+
+  assert(use_result and use_result.stay == false, "using free rent from item phase should resolve")
+  assert(_get_choice(g) == nil, "using free rent from item phase should clear pending choice")
+  assert(g.turn.item_phase_active == "", "using free rent from item phase should finish active item phase")
+  assert(g.turn.item_phase and g.turn.item_phase.post_action and g.turn.item_phase.post_action.done == true,
+    "using free rent from item phase should mark post_action done")
+  assert(g:player_balance(player, "金币") == player_cash_before,
+    "using free rent from item phase should not change player cash")
+  assert(g:player_balance(owner, "金币") == owner_cash_before,
+    "using free rent from item phase should not change owner cash")
+
+  local target_state_after = _tile_state(g, target_tile)
+  assert(target_state_after.owner_id == target_state_before.owner_id,
+    "using free rent from item phase should keep target tile owner")
+  assert(target_state_after.level == target_state_before.level,
+    "using free rent from item phase should keep target tile level")
+end
+
 local function _test_steal_startup_profile_multi_item_choice_resumes_to_chance()
   local g, _ = _new_profile_game("scenario_steal_staging")
   local player = g.players[1]
@@ -470,6 +506,10 @@ return {
     {
       name = "strong_card_startup_profile_falls_back_to_direct_rent_after_skipping_both_cards",
       run = _test_strong_card_startup_profile_falls_back_to_direct_rent_after_skipping_both_cards,
+    },
+    {
+      name = "post_action_item_phase_free_rent_resolves_after_skipping_strong",
+      run = _test_post_action_item_phase_free_rent_resolves_after_skipping_strong,
     },
     {
       name = "steal_startup_profile_multi_item_choice_resumes_to_chance",
