@@ -1,6 +1,7 @@
 local support = require("TestSupport")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
+local gameplay_rules = require("src.core.config.gameplay_rules")
 local runtime_state = require("src.core.state_access.runtime_state")
 local vec3 = require("fixtures.vec3")
 
@@ -8,17 +9,20 @@ local function _build_board_refresh_test_env(opts)
   opts = opts or {}
   local calls = {}
   local unit = opts.unit or {}
+  local ground_y = opts.ground_y or 0
+  local tile_y_1 = opts.tile_y_1 or 0
+  local tile_y_2 = opts.tile_y_2 or 0
   local state = {
     board_scene = {
       ground = {
         get_position = function()
-          return { y = 0 }
+          return { y = ground_y }
         end,
       },
     },
     tile_positions = {
-      [1] = vec3.with_add(10, 0, 20),
-      [2] = vec3.with_add(20, 0, 30),
+      [1] = vec3.with_add(10, tile_y_1, 20),
+      [2] = vec3.with_add(20, tile_y_2, 30),
     },
     tile_spacing = 0,
     player_units = {
@@ -60,17 +64,22 @@ local function _with_board_refresh_patches(extra_patches, fn)
   local anchors = require("src.presentation.view.render.board.anchors")
   local startup_render = require("src.presentation.view.render.board.startup_render")
   local player_units = require("src.presentation.view.render.board.player_units")
+  local board_cfg = gameplay_rules.board
   local patches = {
     { target = anchors, key = "ensure_tile_anchors", value = function() end },
     { target = startup_render, key = "apply", value = function() end },
     { target = player_units, key = "ensure_player_units", value = function() end },
+    { target = gameplay_rules, key = "board", value = { player_min_ground_offset = 0.5 } },
   }
   if type(extra_patches) == "table" then
     for _, patch in ipairs(extra_patches) do
       patches[#patches + 1] = patch
     end
   end
-  _with_patches(patches, fn)
+  _with_patches(patches, function()
+    fn()
+    gameplay_rules.board = board_cfg
+  end)
 end
 
 local function _test_board_refresh_stops_force_move_before_set_position()
@@ -95,6 +104,7 @@ local function _test_board_refresh_stops_force_move_before_set_position()
   _assert_eq(env.calls[2], "stop_anim", "refresh should stop anim before position sync")
   _assert_eq(env.calls[3], "set_position", "refresh should snap after stopping force move")
   _assert_eq(env.target_pos.x, 10, "refresh should snap to tile x")
+  _assert_eq(env.target_pos.y, 0.5, "refresh should clamp player y to configured minimum")
   _assert_eq(env.target_pos.z, 20, "refresh should snap to tile z")
 end
 
@@ -120,6 +130,7 @@ local function _test_board_refresh_falls_back_to_ai_stop_before_set_position()
   _assert_eq(env.calls[2], "stop_anim", "refresh should stop anim after ai stop fallback")
   _assert_eq(env.calls[3], "set_position", "refresh should snap after ai stop fallback")
   _assert_eq(env.target_pos.x, 10, "refresh should still snap to tile x after ai stop fallback")
+  _assert_eq(env.target_pos.y, 0.5, "refresh should use configured y offset after ai stop fallback")
 end
 
 local function _test_board_refresh_stops_vehicle_before_vehicle_set_position()
@@ -159,6 +170,31 @@ local function _test_board_refresh_stops_vehicle_before_vehicle_set_position()
   _assert_eq(env.calls[4], "emit_vehicle_set_position:1", "vehicle sync should snap vehicle after stop")
   _assert_eq(env.calls[5], nil, "vehicle sync should not fall back to unit.set_position")
   _assert_eq(env.target_pos.x, 10, "vehicle sync should target tile x")
+  _assert_eq(env.target_pos.y, 0.5, "vehicle sync should use configured y offset")
+end
+
+local function _test_board_refresh_keeps_base_y_when_already_above_minimum()
+  local board_view = require("src.presentation.view.render.board")
+  local env = _build_board_refresh_test_env({
+    ground_y = 0,
+    tile_y_1 = 0.75,
+  })
+  env.unit.force_stop_move = function()
+    env.calls[#env.calls + 1] = "force_stop_move"
+  end
+  env.unit.stop_anim = function()
+    env.calls[#env.calls + 1] = "stop_anim"
+  end
+  env.unit.set_position = function(pos)
+    env.calls[#env.calls + 1] = "set_position"
+    env.target_pos = pos
+  end
+
+  _with_board_refresh_patches(nil, function()
+    board_view.refresh(env.state, env.ui_model, function() end, function() return "presentation_board_sync" end)
+  end)
+
+  _assert_eq(env.target_pos.y, 0.75, "refresh should keep base y when already above configured minimum")
 end
 
 local function _test_board_refresh_suppresses_stop_and_snap_during_wait_move_anim()
@@ -216,6 +252,7 @@ local function _test_board_refresh_replays_pending_sync_with_stop_after_wait_mov
   _assert_eq(env.calls[2], "stop_anim", "pending sync should stop anim after motion stop")
   _assert_eq(env.calls[3], "set_position", "pending sync should snap after stop")
   _assert_eq(board_runtime.board_sync_pending, false, "pending sync should clear board_sync_pending after replay")
+  _assert_eq(env.target_pos.y, 0.5, "pending sync should use configured y offset after wait_move_anim")
   _assert_eq(env.target_pos.z, 20, "pending sync should snap to the current tile position")
 end
 
@@ -233,6 +270,10 @@ return {
     {
       name = "_test_board_refresh_stops_vehicle_before_vehicle_set_position",
       run = _test_board_refresh_stops_vehicle_before_vehicle_set_position,
+    },
+    {
+      name = "_test_board_refresh_keeps_base_y_when_already_above_minimum",
+      run = _test_board_refresh_keeps_base_y_when_already_above_minimum,
     },
     {
       name = "_test_board_refresh_suppresses_stop_and_snap_during_wait_move_anim",

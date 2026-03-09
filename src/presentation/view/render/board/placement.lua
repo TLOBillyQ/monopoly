@@ -1,4 +1,5 @@
 local gameplay_read_port = require("src.presentation.model.gameplay_read_port")
+local gameplay_rules = require("src.core.config.gameplay_rules")
 local runtime_state = require("src.core.state_access.runtime_state")
 local runtime_ports = require("src.core.ports.runtime_ports")
 
@@ -95,7 +96,12 @@ function M.resolve_min_player_y(scene)
   assert(scene.ground.get_position ~= nil, "missing board_scene.ground.get_position")
   local ground_pos = scene.ground.get_position()
   assert(ground_pos ~= nil and ground_pos.y ~= nil, "missing ground position")
-  return ground_pos.y + 1.5
+  local board_cfg = gameplay_rules.board or {}
+  local offset = board_cfg.player_min_ground_offset
+  if offset == nil then
+    offset = 0.5
+  end
+  return ground_pos.y + offset
 end
 
 local function _resolve_occupant_slot(list, pid)

@@ -739,6 +739,24 @@ local function _test_ui_model_player_profile_uses_slot_avatar_for_synthetic_ai()
   local runtime_ports = require("src.core.ports.runtime_ports")
   local runtime_refs = require("Config.runtime_refs")
   local g = _new_game()
+  g.players[3] = g.players[3] or {
+    id = 3,
+    name = "AI3",
+    cash = 0,
+    eliminated = false,
+    inventory = { items = {} },
+    properties = {},
+    status = { stay_turns = 0, deity = nil },
+  }
+  g.players[4] = g.players[4] or {
+    id = 4,
+    name = "AI4",
+    cash = 0,
+    eliminated = false,
+    inventory = { items = {} },
+    properties = {},
+    status = { stay_turns = 0, deity = nil },
+  }
   g.players[1].name = "本地玩家1"
   g.players[2].name = "AI2"
   g.players[3].name = "AI3"
@@ -6421,7 +6439,7 @@ local function _test_panel_crown_excludes_eliminated_players()
   _assert_eq(env.state.ui.visible["基础_玩家4皇冠"], false, "player4 crown should hide")
 end
 
-local suite = {
+suite = {
   _test_move_anim_callback_and_delay,
   _test_popup_timeout_auto_confirm,
   _test_runtime_port_with_client_role_restores_nested_context,
@@ -6467,7 +6485,7 @@ local suite = {
   _test_apply_input_lock_disables_always_show_controls_when_market_active,
 }
 
-local suite_more = {
+suite_more = {
   _test_ui_view_render_auto_button_keeps_local_touch_when_unmapped_role_exists,
   _test_ui_touch_policy_auto_controls_touch,
   _test_ui_touch_policy_runtime_nodes_touch_enabled,
@@ -6514,7 +6532,7 @@ local suite_more = {
   _test_turn_effects_other_prompt_fallback_text,
 }
 
-local suite_tail = {
+suite_tail = {
   _test_tick_ui_sync_turn_switch_still_follows,
   _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailable,
   _test_ui_sync_defers_choice_modal_during_wait_action_anim,
