@@ -36,7 +36,9 @@ logger.info(
   "startup policy:",
   "release_mode=" .. tostring(startup.release_mode),
   "release_allow_test_profile=" .. tostring(startup.release_allow_test_profile),
-  "resolved_profile=" .. tostring(startup.profile_name)
+  "resolved_profile=" .. tostring(startup.profile_name),
+  "ai_mode=" .. tostring(startup.ai_mode),
+  "local_human_role_id=" .. tostring(startup.local_human_role_id)
 )
 if startup.release_mode then
   gameplay_rules.debug_log_enabled = false
@@ -45,6 +47,8 @@ end
 runtime_install.install()
 local state = game_startup.build_state(function() return current_game_ref[1] end, {
   profile_name = startup.profile_name,
+  ai_mode = startup.ai_mode,
+  local_human_role_id = startup.local_human_role_id,
   release_mode = startup.release_mode,
   force_non_p1_ai = startup.force_non_p1_ai,
   fail_fast_when_roles_empty = startup.fail_fast_when_roles_empty,

@@ -80,10 +80,55 @@ local function _build_non_p1_ai_map(player_count, force_enabled)
   return ai
 end
 
+local function _find_role_index(role_roster, role_id)
+  local normalized_role_id = role_id_utils.normalize(role_id)
+  if normalized_role_id == nil then
+    return nil
+  end
+  for index, role in ipairs(role_roster or {}) do
+    if role_id_utils.equals(role and role.role_id or nil, normalized_role_id) then
+      return index
+    end
+  end
+  return nil
+end
+
+local function _build_all_except_human_ai_map(player_count, human_index)
+  local ai = {}
+  for index = 1, player_count or 0 do
+    if index ~= human_index then
+      ai[index] = true
+    end
+  end
+  return ai
+end
+
+local function _build_startup_ai_map(role_roster, opts)
+  opts = opts or {}
+  local ai_mode = opts.ai_mode or "default"
+  if ai_mode ~= "all_except_local_human" then
+    return _build_non_p1_ai_map(opts.player_count, opts.force_non_p1_ai)
+  end
+
+  local player_count = opts.player_count or 0
+  local human_index = _find_role_index(role_roster, opts.local_human_role_id)
+  if human_index == nil then
+    logger.warn(
+      "[Eggy]",
+      "startup ai override missing local human role, fallback to player1 human",
+      "local_human_role_id=" .. tostring(opts.local_human_role_id)
+    )
+    human_index = 1
+  end
+  return _build_all_except_human_ai_map(player_count, human_index)
+end
+
 -- state 中保存当前 game 的引用，由 UIBootstrap 在 GAME_INIT 之后赋值
 function M.build_state(get_current_game, opts)
   opts = opts or {}
   local profile_name = opts.profile_name
+  local ai_mode = opts.ai_mode or "default"
+  local local_human_role_id = opts.local_human_role_id
   local release_mode = opts.release_mode == true
   local force_non_p1_ai = opts.force_non_p1_ai
   local fail_fast_when_roles_empty = opts.fail_fast_when_roles_empty == true
@@ -100,7 +145,12 @@ function M.build_state(get_current_game, opts)
     wait_action_anim = true,
     game_factory = function()
       local role_roster = _build_role_roster(max_player_count)
-      local forced_ai = _build_non_p1_ai_map(#role_roster, force_non_p1_ai)
+      local forced_ai = _build_startup_ai_map(role_roster, {
+        ai_mode = ai_mode,
+        local_human_role_id = local_human_role_id,
+        player_count = #role_roster,
+        force_non_p1_ai = force_non_p1_ai,
+      })
       local created_game = nil
       if #role_roster > 0 then
         logger.info("[Eggy]", "使用角色驱动初始化，角色数量:", tostring(#role_roster))
@@ -117,7 +167,12 @@ function M.build_state(get_current_game, opts)
         end
         logger.warn("[Eggy]", "角色列表为空，回退调试玩家初始化")
         local player_names = { "玩家1", "AI2", "AI3", "AI4" }
-        local fallback_ai = _build_non_p1_ai_map(#player_names, force_non_p1_ai) or { [2] = true, [3] = true, [4] = true }
+        local fallback_ai = _build_startup_ai_map(nil, {
+          ai_mode = ai_mode,
+          local_human_role_id = local_human_role_id,
+          player_count = #player_names,
+          force_non_p1_ai = force_non_p1_ai,
+        }) or { [2] = true, [3] = true, [4] = true }
         created_game = game:new({
           players = player_names,
           ai = fallback_ai,

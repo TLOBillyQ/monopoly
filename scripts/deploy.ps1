@@ -4,8 +4,8 @@
     将项目文件部署到目标目录
 .DESCRIPTION
     该脚本要求在 PowerShell 7 (pwsh) 环境执行。
-    默认拷贝 Config/、src/ 目录以及 Data/UIManagerNodes.lua、Data/Prefab.lua 和 main.lua 到目标目录；release 模式会先把生成配置导出到 Config/generated/。
-    Windows 与 macOS 在未传 -TargetPath 时都会默认部署到“开发/发布”两个目录。
+    默认拷贝 Config/、src/ 目录以及 Data/UIManagerNodes.lua、Data/Prefab.lua 和 main.lua 到目标目录。
+    Windows 与 macOS 在未传 -TargetPath 时都会默认部署到两个历史目录。
     如需额外拷贝 vendor/，请传入 -IncludeVendor 参数。
 .PARAMETER TargetPath
     目标目录的绝对路径。支持传入多个；如果只传入默认“开发/发布”目录中的一个，脚本会自动补齐另一个默认目录。
@@ -13,10 +13,10 @@
     是否额外拷贝 vendor/ 目录（默认不拷贝）
 .PARAMETER StartupProfile
     启动时注入的测试 profile 名（写入 main.lua 的 STARTUP_TEST_PROFILE）
-.PARAMETER AllowReleaseTestProfile
-    release 模式下允许注入 STARTUP_TEST_PROFILE（会额外写入 RELEASE_ALLOW_TEST_PROFILE=true）
-.PARAMETER Mode
-    部署模式：dev 或 release（默认 dev）。release 模式会注入 RELEASE_BUILD=true。
+.PARAMETER StartupAiMode
+    启动时注入的 AI 模式（写入 main.lua 的 STARTUP_AI_MODE）
+.PARAMETER StartupLocalHumanRoleId
+    启动时注入的本机人类 role_id（写入 main.lua 的 STARTUP_LOCAL_HUMAN_ROLE_ID）
 .EXAMPLE
     pwsh -File .\deploy.ps1 -TargetPath "C:\Target\Project"
 .EXAMPLE
@@ -26,9 +26,7 @@
 .EXAMPLE
     pwsh -File .\deploy.ps1 -StartupProfile "items_move_control"
 .EXAMPLE
-    pwsh -File .\deploy.ps1 -Mode release
-.EXAMPLE
-    pwsh -File .\deploy.ps1 -Mode release -AllowReleaseTestProfile -StartupProfile "items_target_disrupt"
+    pwsh -File .\deploy.ps1 -StartupProfile "scenario_market_staging" -StartupAiMode "all_except_local_human" -StartupLocalHumanRoleId 123
 # macOS 默认目录:
 #   /Users/billyq/Documents/eggy/LuaSource_大富翁-开发
 #   /Users/billyq/Documents/eggy/LuaSource_大富翁-发布
@@ -39,26 +37,15 @@ param(
     [string[]]$TargetPath,
     [switch]$IncludeVendor,
     [string]$StartupProfile,
-    [switch]$AllowReleaseTestProfile,
-    [ValidateSet("dev", "release")]
-    [string]$Mode = "dev"
+    [ValidateSet("default", "all_except_local_human")]
+    [string]$StartupAiMode = "default",
+    [string]$StartupLocalHumanRoleId
 )
 
 function Test-Pwsh7 {
     $edition = $PSVersionTable.PSEdition
     $major = $PSVersionTable.PSVersion.Major
     return ($edition -eq "Core" -and $major -ge 7)
-}
-
-function Resolve-PythonCommand {
-    $candidates = @("python", "python3")
-    foreach ($name in $candidates) {
-        $cmd = Get-Command $name -ErrorAction SilentlyContinue
-        if ($cmd) {
-            return $cmd.Source
-        }
-    }
-    return $null
 }
 
 function Get-DefaultTargetPaths {
@@ -120,19 +107,13 @@ if (-not (Test-Pwsh7)) {
     $version = $PSVersionTable.PSVersion.ToString()
     Write-Host "✗ 部署脚本要求在 PowerShell 7+ (pwsh) 环境运行。" -ForegroundColor Red
     Write-Host "  当前环境: PSEdition=$edition Version=$version" -ForegroundColor Yellow
-    Write-Host "  请使用: pwsh -File .\scripts\deploy.ps1 [-TargetPath PATH] [-IncludeVendor] [-StartupProfile NAME] [-AllowReleaseTestProfile] [-Mode dev|release]" -ForegroundColor Yellow
+    Write-Host "  请使用: pwsh -File .\scripts\deploy.ps1 [-TargetPath PATH] [-IncludeVendor] [-StartupProfile NAME] [-StartupAiMode MODE] [-StartupLocalHumanRoleId ID]" -ForegroundColor Yellow
     exit 1
 }
 
 # 获取脚本所在目录的上一级目录（项目根目录）
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $SourceMainLuaPath = Join-Path $ProjectRoot "main.lua"
-$PythonCommand = Resolve-PythonCommand
-
-if (-not $PythonCommand) {
-    Write-Host "✗ 未找到可用的 Python 解释器（已尝试: python, python3）。" -ForegroundColor Red
-    exit 1
-}
 
 function Escape-LuaStringDoubleQuoted {
     param([string]$Text)
@@ -145,20 +126,21 @@ function Write-MainLuaForStartupPolicy {
         [string]$SourceMainLua,
         [string]$DestMainLua,
         [string]$ProfileName,
-        [string]$DeployMode,
-        [bool]$AllowReleaseProfileOverride
+        [string]$AiMode,
+        [string]$LocalHumanRoleId
     )
     $sourceText = Get-Content -Path $SourceMainLua -Raw
     $prefixes = @()
-    if ($DeployMode -eq "release") {
-        $prefixes += "RELEASE_BUILD = true"
-        if ($AllowReleaseProfileOverride) {
-            $prefixes += "RELEASE_ALLOW_TEST_PROFILE = true"
-        }
-    }
     if ([string]::IsNullOrWhiteSpace($ProfileName) -eq $false) {
         $escaped = Escape-LuaStringDoubleQuoted -Text $ProfileName
         $prefixes += "STARTUP_TEST_PROFILE = `"$escaped`""
+    }
+    if ([string]::IsNullOrWhiteSpace($AiMode) -eq $false -and $AiMode -ne "default") {
+        $escapedAiMode = Escape-LuaStringDoubleQuoted -Text $AiMode
+        $prefixes += "STARTUP_AI_MODE = `"$escapedAiMode`""
+    }
+    if ([string]::IsNullOrWhiteSpace($LocalHumanRoleId) -eq $false) {
+        $prefixes += "STARTUP_LOCAL_HUMAN_ROLE_ID = $LocalHumanRoleId"
     }
     if ($prefixes.Count -eq 0) {
       Set-Content -Path $DestMainLua -Value $sourceText -NoNewline
@@ -166,26 +148,6 @@ function Write-MainLuaForStartupPolicy {
     }
     $prefix = ($prefixes -join [Environment]::NewLine) + [Environment]::NewLine
     Set-Content -Path $DestMainLua -Value ($prefix + $sourceText) -NoNewline
-}
-
-function Export-GeneratedConfig {
-    param(
-        [string]$ModeName,
-        [string]$OutputDir,
-        [string]$Label
-    )
-    Write-Host "正在导出 $ModeName 配置到$Label..." -ForegroundColor Cyan
-    Write-Host "  目: $OutputDir" -ForegroundColor Gray
-    try {
-        & $PythonCommand (Join-Path $ProjectRoot "scripts/export_xlsx.py") --mode $ModeName --output-dir $OutputDir
-        if ($LASTEXITCODE -ne 0) {
-            throw "export_xlsx.py failed with exit code $LASTEXITCODE"
-        }
-        Write-Host "✓ $ModeName 配置导出成功（$Label）" -ForegroundColor Green
-    } catch {
-        Write-Host "✗ $ModeName 配置导出失败（$Label）: $_" -ForegroundColor Red
-        exit 1
-    }
 }
 
 function Get-LuaEffectiveLineCount {
@@ -324,17 +286,7 @@ function Get-DeploymentEffectiveLuaLineBreakdown {
     return $lineBreakdown
 }
 
-if ($Mode -eq "release" -and [string]::IsNullOrWhiteSpace($StartupProfile) -eq $false -and -not $AllowReleaseTestProfile) {
-    Write-Host "✗ release 模式如需 -StartupProfile，必须同时传入 -AllowReleaseTestProfile。" -ForegroundColor Red
-    exit 1
-}
-
-if ($Mode -eq "dev" -and $AllowReleaseTestProfile) {
-    Write-Host "✗ -AllowReleaseTestProfile 仅支持与 -Mode release 搭配使用。" -ForegroundColor Red
-    exit 1
-}
-
-# 未传入时按平台选择默认路径；若只传入默认开发/发布目录之一，则自动补齐另一侧目录。
+# 未传入时按平台选择默认路径；若只传入两个历史目录之一，则自动补齐另一侧目录。
 $TargetPaths = Resolve-TargetPaths -RequestedPaths $TargetPath
 
 # 规范化目标路径（移除末尾斜杠，解析完整路径，并去重）
@@ -351,29 +303,23 @@ Write-Host "======================================" -ForegroundColor Cyan
 Write-Host "开始部署项目文件" -ForegroundColor Cyan
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host "项目根目录: $ProjectRoot" -ForegroundColor Yellow
-Write-Host "部署模式: $Mode" -ForegroundColor Yellow
 Write-Host "目标目录数量: $($TargetPaths.Count)" -ForegroundColor Yellow
-if ($Mode -eq "release" -and -not $AllowReleaseTestProfile) {
-    Write-Host "启动 Profile: default (release-prod 固定，不注入 STARTUP_TEST_PROFILE)" -ForegroundColor Yellow
-} elseif ($Mode -eq "release" -and $AllowReleaseTestProfile -and [string]::IsNullOrWhiteSpace($StartupProfile)) {
-    Write-Host "启动 Profile: default (release-qa 已启用覆盖，但未传 StartupProfile)" -ForegroundColor Yellow
-} elseif ($Mode -eq "release" -and $AllowReleaseTestProfile) {
-    Write-Host "启动 Profile: $StartupProfile (release-qa 覆盖已启用)" -ForegroundColor Yellow
-} elseif ([string]::IsNullOrWhiteSpace($StartupProfile)) {
+if ([string]::IsNullOrWhiteSpace($StartupProfile)) {
     Write-Host "启动 Profile: default (未注入 STARTUP_TEST_PROFILE)" -ForegroundColor Yellow
 } else {
     Write-Host "启动 Profile: $StartupProfile" -ForegroundColor Yellow
+}
+if ([string]::IsNullOrWhiteSpace($StartupAiMode) -or $StartupAiMode -eq "default") {
+    Write-Host "启动 AI 模式: default" -ForegroundColor Yellow
+} elseif ([string]::IsNullOrWhiteSpace($StartupLocalHumanRoleId)) {
+    Write-Host "启动 AI 模式: $StartupAiMode (未传 StartupLocalHumanRoleId，运行时将回退到 1 号位人类)" -ForegroundColor Yellow
+} else {
+    Write-Host "启动 AI 模式: $StartupAiMode (local_human_role_id=$StartupLocalHumanRoleId)" -ForegroundColor Yellow
 }
 foreach ($target in $TargetPaths) {
     Write-Host "  - $target" -ForegroundColor Yellow
 }
 Write-Host ""
-
-if ($Mode -eq "release") {
-    $repoGeneratedDir = Join-Path $ProjectRoot "Config/generated"
-    Export-GeneratedConfig -ModeName "release" -OutputDir $repoGeneratedDir -Label "仓库"
-    Write-Host ""
-}
 
 # 定义要拷贝的目录列表（vendor 默认不拷贝）
 $Directories = @("Config", "src")
@@ -449,7 +395,7 @@ foreach ($TargetPath in $TargetPaths) {
                     New-Item -ItemType Directory -Path $fileDestDir -Force | Out-Null
                 }
                 if ($file.Source -eq "main.lua") {
-                    Write-MainLuaForStartupPolicy -SourceMainLua $sourcePath -DestMainLua $fileDestPath -ProfileName $StartupProfile -DeployMode $Mode -AllowReleaseProfileOverride $AllowReleaseTestProfile
+                    Write-MainLuaForStartupPolicy -SourceMainLua $sourcePath -DestMainLua $fileDestPath -ProfileName $StartupProfile -AiMode $StartupAiMode -LocalHumanRoleId $StartupLocalHumanRoleId
                 } else {
                     Copy-Item -LiteralPath $sourcePath -Destination $fileDestPath -Force
                 }
