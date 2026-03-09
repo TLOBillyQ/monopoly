@@ -26,6 +26,7 @@ local profiles = {
         [1] = {
           owner_player_index = 2,
           level = 3,
+          render_called = true,
         },
       },
     },
@@ -57,6 +58,7 @@ local profiles = {
         [1] = {
           owner_player_index = 1,
           level = 0,
+          render_called = true,
         },
       },
     },
@@ -186,6 +188,7 @@ local profiles = {
         [12] = {
           owner_player_index = 2,
           level = 2,
+          render_called = true,
         },
       },
     },
@@ -218,11 +221,22 @@ local profiles = {
         [11] = {
           owner_player_index = 2,
           level = 2,
+          render_called = true,
         },
       },
       overlays = {
-        roadblocks = { 11 },
-        mines = { 11 },
+        roadblocks = {
+          {
+            tile_id = 11,
+            render_called = true,
+          },
+        },
+        mines = {
+          {
+            tile_id = 11,
+            render_called = true,
+          },
+        },
       },
     },
   },

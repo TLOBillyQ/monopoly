@@ -1,11 +1,15 @@
 local support = require("TestSupport")
 local app = support.app
+local bind_ui_runtime = support.bind_ui_runtime
 local map_cfg = support.map_cfg
 local tiles_cfg = support.tiles_cfg
 local tile_state = support.tile_state
+local build_ui_port = support.build_ui_port
 local with_patches = support.with_patches
 
 local constants = require("Config.generated.constants")
+local board_view = require("src.presentation.view.render.board")
+local runtime_state = require("src.core.state_access.runtime_state")
 local test_profiles_cfg = require("src.app.testing.config.test_profiles")
 local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
 local test_profile_resolver = require("src.app.testing.test_profile_resolver")
@@ -200,6 +204,84 @@ local function _test_scenario_market_staging_preloads_remote_dice()
   })
 end
 
+local function _new_render_state(game)
+  local state = {
+    game = game,
+    ui = build_ui_port().ui,
+    board_scene = {
+      tiles = {},
+      buildings = {},
+      building_txt = {},
+      building_unit_groups = {},
+      ground = {
+        get_position = function()
+          return math.Vector3(0, 0, 0)
+        end,
+      },
+    },
+    tile_units = {},
+    tile_positions = {},
+    tile_spacing = 1,
+    player_units = {},
+    player_units_missing = false,
+  }
+  bind_ui_runtime(state)
+  runtime_state.ensure_all(state)
+  for index = 1, #game.board.path do
+    local tile_pos = math.Vector3(index, 0, 0)
+    state.board_scene.tiles[index] = {
+      get_position = function()
+        return tile_pos
+      end,
+    }
+    state.tile_units[index] = state.board_scene.tiles[index]
+    state.tile_positions[index] = tile_pos
+    state.board_scene.buildings[index] = {
+      get_position = function()
+        return math.Vector3(index, 1, 0)
+      end,
+    }
+    state.board_scene.building_txt[index] = {
+      set_billboard_text = function() end,
+    }
+  end
+  for _, player in ipairs(game.players) do
+    state.player_units[player.id] = {
+      set_position = function() end,
+    }
+  end
+  return state
+end
+
+local function _render_profile_startup(game)
+  local state = _new_render_state(game)
+  local ui_model = {
+    board = {
+      tiles = {},
+      tile_states = game.board.tile_lookup,
+      players = game.players,
+      tile_count = #game.board.path,
+      phase = game.turn and game.turn.phase or "start",
+      move_anim = nil,
+      move_followup_pending = false,
+      vehicle_resync_seq = 0,
+    },
+  }
+  for index, tile in ipairs(game.board.path) do
+    ui_model.board.tiles[index] = {
+      id = tile.id,
+      type = tile.type,
+    }
+  end
+  local board_runtime = runtime_state.ensure_board_runtime(state)
+  for _, player in ipairs(game.players) do
+    board_runtime.board_last_positions[player.id] = tostring(player.position) .. ":" .. tostring(player.eliminated and 1 or 0)
+  end
+  board_runtime.board_last_vehicle_resync_seq = ui_model.board.vehicle_resync_seq
+  board_view.refresh(state, ui_model, function() end, function() return "test_profiles" end)
+  return state
+end
+
 local function _test_scenario_market_staging_is_eight_steps_before_market()
   local game = _new_game()
   test_profile_bootstrap.apply(game, "scenario_market_staging")
@@ -277,6 +359,102 @@ local function _test_scenario_missile_staging_bootstraps_target_tile_and_overlay
   assert(game.players[2].position == target_index, "missile staging should place occupant on target tile")
 end
 
+local function _test_scenario_upgrade_building_render_marks_tile_render_called_for_startup_render()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "scenario_upgrade_building_render")
+
+  local tile_renderer = require("src.presentation.view.render.tile_renderer")
+  local building_effects = require("src.presentation.view.render.building_effects")
+  local rendered_tile_ids = {}
+  local rendered_building_tile_ids = {}
+
+  with_patches({
+    {
+      target = tile_renderer,
+      key = "render_tile",
+      value = function(_, tile_id)
+        rendered_tile_ids[#rendered_tile_ids + 1] = tile_id
+        return true
+      end,
+    },
+    {
+      target = building_effects,
+      key = "spawn_upgrade_building_units",
+      value = function(_, _, building_index)
+        local tile = game.board:get_tile(building_index)
+        rendered_building_tile_ids[#rendered_building_tile_ids + 1] = tile and tile.id or nil
+        return true
+      end,
+    },
+  }, function()
+    _render_profile_startup(game)
+  end)
+
+  assert(rendered_tile_ids[1] == 1, "startup render should render configured tile")
+  assert(#rendered_tile_ids == 1, "startup render should only render flagged tiles")
+  assert(#rendered_building_tile_ids == 0, "level 0 tile should not spawn startup building render")
+end
+
+local function _test_scenario_missile_staging_marks_overlay_render_called_for_startup_render()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "scenario_missile_staging")
+
+  local overlay_runtime = require("src.presentation.view.render.anim_overlay_runtime")
+  local tile_renderer = require("src.presentation.view.render.tile_renderer")
+  local building_effects = require("src.presentation.view.render.building_effects")
+  local overlay_calls = {}
+  local rendered_tile_ids = {}
+  local rendered_building_tile_ids = {}
+
+  with_patches({
+    {
+      target = overlay_runtime,
+      key = "spawn_overlay",
+      value = function(_, kind, tile_index)
+        overlay_calls[#overlay_calls + 1] = { kind = kind, tile_index = tile_index }
+        return true
+      end,
+    },
+    {
+      target = tile_renderer,
+      key = "render_tile",
+      value = function(_, tile_id)
+        rendered_tile_ids[#rendered_tile_ids + 1] = tile_id
+        return true
+      end,
+    },
+    {
+      target = building_effects,
+      key = "spawn_upgrade_building_units",
+      value = function(_, _, building_index)
+        local tile = game.board:get_tile(building_index)
+        rendered_building_tile_ids[#rendered_building_tile_ids + 1] = tile and tile.id or nil
+        return true
+      end,
+    },
+  }, function()
+    _render_profile_startup(game)
+  end)
+
+  local target_index = assert(game.board:index_of_tile_id(11), "missile staging target tile should exist in board path")
+  assert(rendered_tile_ids[1] == 11, "startup render should render flagged tile before overlay")
+  assert(#rendered_tile_ids == 1, "startup render should only render flagged tile")
+  assert(rendered_building_tile_ids[1] == 11, "startup render should spawn building for flagged tile with level")
+  assert(#rendered_building_tile_ids == 1, "startup render should only spawn flagged building")
+  assert(#overlay_calls == 2, "startup render should spawn both flagged overlays")
+  local kinds = {
+    [overlay_calls[1].kind] = true,
+    [overlay_calls[2].kind] = true,
+  }
+  local indices = {
+    [overlay_calls[1].tile_index] = true,
+    [overlay_calls[2].tile_index] = true,
+  }
+  assert(kinds.roadblock == true, "startup render should spawn roadblock overlay")
+  assert(kinds.mine == true, "startup render should spawn mine overlay")
+  assert(indices[target_index] == true, "startup overlay render should target configured tile index")
+end
+
 return {
   name = "test_profiles",
   tests = {
@@ -322,6 +500,14 @@ return {
     {
       name = "scenario_missile_staging_bootstraps_target_tile_and_overlays",
       run = _test_scenario_missile_staging_bootstraps_target_tile_and_overlays,
+    },
+    {
+      name = "scenario_upgrade_building_render_marks_tile_render_called_for_startup_render",
+      run = _test_scenario_upgrade_building_render_marks_tile_render_called_for_startup_render,
+    },
+    {
+      name = "scenario_missile_staging_marks_overlay_render_called_for_startup_render",
+      run = _test_scenario_missile_staging_marks_overlay_render_called_for_startup_render,
     },
   },
 }

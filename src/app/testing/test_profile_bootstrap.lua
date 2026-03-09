@@ -4,6 +4,31 @@ local constants = require("Config.generated.constants")
 local number_utils = require("src.core.utils.number_utils")
 
 local bootstrap = {}
+local _is_render_called_flag_enabled
+
+local function _new_render_bootstrap()
+  return {
+    applied = false,
+    tiles_by_id = {},
+    overlays = {
+      roadblock = {},
+      mine = {},
+    },
+  }
+end
+
+local function _ensure_render_bootstrap(game)
+  if type(game.test_profile_render_bootstrap) ~= "table" then
+    game.test_profile_render_bootstrap = _new_render_bootstrap()
+    return game.test_profile_render_bootstrap
+  end
+  return game.test_profile_render_bootstrap
+end
+
+local function _reset_render_bootstrap(game)
+  game.test_profile_render_bootstrap = _new_render_bootstrap()
+  return game.test_profile_render_bootstrap
+end
 
 local function _assert_player_profile_schema(player_cfg, index)
   assert(type(player_cfg) == "table", "invalid profile player config at index: " .. tostring(index))
@@ -96,6 +121,7 @@ local function _apply_tile_bootstrap(game, tiles)
   if type(tiles) ~= "table" then
     return
   end
+  local render_bootstrap = _ensure_render_bootstrap(game)
   for tile_id, tile_cfg in pairs(tiles) do
     local tile = game.board:get_tile_by_id(tile_id)
     assert(tile ~= nil, "invalid profile tile id: " .. tostring(tile_id))
@@ -111,7 +137,25 @@ local function _apply_tile_bootstrap(game, tiles)
     if tile_cfg.level ~= nil then
       game:set_tile_level(tile, tile_cfg.level)
     end
+
+    if _is_render_called_flag_enabled(tile_cfg.render_called) then
+      render_bootstrap.tiles_by_id[tile.id] = true
+    end
   end
+end
+
+function _is_render_called_flag_enabled(value)
+  return value == true
+end
+
+local function _resolve_overlay_entry(raw_entry)
+  if raw_entry == nil then
+    return nil, false
+  end
+  if type(raw_entry) == "table" then
+    return raw_entry.tile_id, _is_render_called_flag_enabled(raw_entry.render_called)
+  end
+  return raw_entry, false
 end
 
 local function _resolve_overlay_index(game, raw_tile_id, overlay_kind)
@@ -127,25 +171,36 @@ local function _apply_overlay_bootstrap(game, overlays)
     return
   end
 
+  local render_bootstrap = _ensure_render_bootstrap(game)
+
   local roadblocks = overlays.roadblocks
   if type(roadblocks) == "table" then
-    for _, raw_tile_id in ipairs(roadblocks) do
+    for _, entry in ipairs(roadblocks) do
+      local raw_tile_id, render_called = _resolve_overlay_entry(entry)
       local board_index = _resolve_overlay_index(game, raw_tile_id, "roadblock")
       game.board:place_roadblock(board_index)
+      if render_called then
+        render_bootstrap.overlays.roadblock[board_index] = true
+      end
     end
   end
 
   local mines = overlays.mines
   if type(mines) == "table" then
-    for _, raw_tile_id in ipairs(mines) do
+    for _, entry in ipairs(mines) do
+      local raw_tile_id, render_called = _resolve_overlay_entry(entry)
       local board_index = _resolve_overlay_index(game, raw_tile_id, "mine")
       game.board:place_mine(board_index)
+      if render_called then
+        render_bootstrap.overlays.mine[board_index] = true
+      end
     end
   end
 end
 
 function bootstrap.apply(game, profile_name)
   assert(game ~= nil, "missing game")
+  _reset_render_bootstrap(game)
 
   local cfg = test_profile_resolver.resolve_bootstrap(profile_name)
   if type(cfg) ~= "table" then

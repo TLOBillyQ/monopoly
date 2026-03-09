@@ -1,4 +1,5 @@
 local anchors = require("src.presentation.view.render.board.anchors")
+local startup_render = require("src.presentation.view.render.board.startup_render")
 local player_units = require("src.presentation.view.render.board.player_units")
 local placement = require("src.presentation.view.render.board.placement")
 local events = require("src.presentation.view.render.board.events")
@@ -18,6 +19,7 @@ function M.refresh(state, ui_model, log_once, build_log_prefix)
   local scene = assert(state.board_scene, "missing board_scene")
 
   anchors.ensure_tile_anchors(state, board, scene, tile_count, log_once, build_log_prefix)
+  startup_render.apply(state, board, scene)
   player_units.ensure_player_units(state, players, log_once, build_log_prefix)
 
   local phase = board.phase
