@@ -1,4 +1,4 @@
-local board_runtime = require("src.presentation.view.render.board_runtime")
+local board_runtime = require("src.presentation.view.render.board")
 local base_presenter = require("src.presentation.view.canvas.base.presenter")
 local turn_effects = require("src.presentation.view.widgets.turn_effects")
 local canvas_store = require("src.presentation.runtime.canvas_store")
@@ -40,7 +40,7 @@ function pipeline.render(state_ctx, ui_model, log_once, build_log_prefix, opts)
   end
 
   local refresh_item_slots = opts and opts.refresh_item_slots
-  local runtime = opts and opts.runtime or require("src.presentation.runtime.runtime")
+  local runtime = opts and opts.runtime or require("src.presentation.runtime.ui")
   if _should_refresh_panel(dirty) then
     base_presenter.refresh(state_ctx, ui_model, {
       runtime = runtime,

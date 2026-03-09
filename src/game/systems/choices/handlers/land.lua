@@ -1,4 +1,4 @@
-local land_choice_specs = require("src.game.systems.land.land_choice_specs")
+local land_choice_specs = require("src.game.systems.land.choice_specs")
 local inventory = require("src.game.systems.items.inventory")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local intent_output_port = require("src.game.ports.intent_output_port")
@@ -8,7 +8,7 @@ local item_ids = gameplay_rules.item_ids
 
 function land_choice_handler.build(helpers)
   local finish_choice = helpers.finish_choice
-  local land_actions = require("src.game.systems.land.land_actions")
+  local land_actions = require("src.game.systems.land.actions")
 
   local function _handle_rent_prompt(game, choice, action)
     local meta = choice.meta

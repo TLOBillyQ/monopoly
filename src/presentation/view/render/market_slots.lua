@@ -1,6 +1,6 @@
 local market_layout = require("src.presentation.view.support.market_layout")
 local ui_controls = require("src.presentation.view.support.ui_controls")
-local runtime = require("src.presentation.runtime.runtime")
+local runtime = require("src.presentation.runtime.ui")
 local items_cfg = require("Config.generated.items")
 local market_cfg = require("Config.generated.market")
 local number_utils = require("src.core.utils.number_utils")

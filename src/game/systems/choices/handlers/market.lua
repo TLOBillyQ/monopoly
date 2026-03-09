@@ -1,4 +1,4 @@
-local market_service = require("src.game.systems.market.market_service")
+local market_service = require("src.game.systems.market")
 local choice_outcome = require("src.game.systems.market.application.choice_outcome")
 local number_utils = require("src.core.utils.number_utils")
 local market_context = require("src.game.systems.market.application.context")

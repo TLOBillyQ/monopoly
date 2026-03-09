@@ -3,7 +3,7 @@ local number_utils = require("src.core.utils.number_utils")
 local item_slot_data = require("src.game.flow.turn.item_slot_data")
 local validator = require("src.game.flow.turn.dispatch_validator")
 local runtime_state = require("src.core.state_access.runtime_state")
-local market_service = require("src.game.systems.market.market_service")
+local market_service = require("src.game.systems.market")
 local role_id_utils = require("src.core.utils.role_id")
 local output_state_adapter = require("src.game.flow.output_adapters.output_state_adapter")
 

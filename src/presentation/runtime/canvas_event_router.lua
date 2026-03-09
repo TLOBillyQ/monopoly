@@ -1,4 +1,4 @@
-local ui_view = require("src.presentation.runtime.view_service")
+local ui_view = require("src.presentation.runtime.view")
 local ui_event_bindings = require("src.presentation.input.event_bindings")
 local ui_intent_dispatcher = require("src.presentation.input.intent_dispatcher")
 local canvas_registry = require("src.presentation.runtime.canvas_registry")

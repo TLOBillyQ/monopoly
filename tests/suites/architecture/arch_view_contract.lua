@@ -6,6 +6,7 @@ local common = require("arch_view.common")
 local dependency_extract = require("arch_view.dependency_extract")
 local layout = require("arch_view.layers")
 local route_engine = require("arch_view.route_engine")
+local source_scan = require("arch_view.source_scan")
 local config = require("monopoly_architecture")
 
 local cached_architecture = nil
@@ -134,6 +135,36 @@ local function _test_layers_assign_feedback_edges_for_cycles()
   assert(layered.module_to_layer.a ~= nil, "layer assignment should include node a")
   assert(layered.module_to_layer.b ~= nil, "layer assignment should include node b")
   assert(layered.module_to_layer.c ~= nil, "layer assignment should include node c")
+end
+
+local function _test_source_scan_treats_init_as_package_entry()
+  local root = common.is_windows() and "tmp_arch_view_test_output/source_scan/pkg_root" or "/tmp/monopoly_arch_view_test_output/source_scan/pkg_root"
+  local package_dir = root .. "/demo/pkg"
+  local ok, err = common.ensure_dir(package_dir)
+  if not ok then
+    error(err)
+  end
+
+  local init_file = assert(io.open(package_dir .. "/init.lua", "w"))
+  init_file:write("return {}\n")
+  init_file:close()
+
+  local child_file = assert(io.open(package_dir .. "/child.lua", "w"))
+  child_file:write("return {}\n")
+  child_file:close()
+
+  local scan_result, scan_err = source_scan.scan({
+    source_roots = { root },
+  })
+  if scan_result == nil then
+    error(scan_err)
+  end
+
+  local root_module = common.normalize_path(root):gsub("/", ".") .. ".demo.pkg"
+  local child_module = root_module .. ".child"
+  assert(scan_result.module_ids[root_module] == true, "init.lua should resolve to package module id")
+  assert(scan_result.module_ids[child_module] == true, "package child should keep nested module id")
+  assert(scan_result.module_ids[root_module .. ".init"] ~= true, "init.lua should not emit foo.init module id")
 end
 
 local function _test_projection_builds_root_and_game_views()
@@ -317,6 +348,7 @@ return {
   tests = {
     { name = "dependency_extract_supports_static_requires", run = _test_dependency_extract_supports_static_requires },
     { name = "layers_assign_feedback_edges_for_cycles", run = _test_layers_assign_feedback_edges_for_cycles },
+    { name = "source_scan_treats_init_as_package_entry", run = _test_source_scan_treats_init_as_package_entry },
     { name = "projection_builds_root_and_game_views", run = _test_projection_builds_root_and_game_views },
     { name = "config_classifies_runtime_game_and_ports", run = _test_config_classifies_runtime_game_and_ports },
     { name = "cycle_baseline_rejects_unexpected_cycles", run = _test_cycle_baseline_rejects_unexpected_cycles },

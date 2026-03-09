@@ -4,7 +4,7 @@ local host_runtime = require("src.presentation.runtime.host")
 function state_ports.build()
   return {
     apply_role_control_lock = function(state, enabled)
-      local ui_view = require("src.presentation.runtime.view_service")
+      local ui_view = require("src.presentation.runtime.view")
       ui_view.apply_role_control_lock(state, enabled)
     end,
     install_event_handlers = function(game, log, state)

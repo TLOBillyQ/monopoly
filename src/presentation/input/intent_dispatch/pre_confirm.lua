@@ -1,7 +1,7 @@
 local choice_openers = require("src.presentation.view.widgets.choice_screen_service.openers")
 local choice_common = require("src.presentation.view.widgets.choice_screen_service.common")
 local number_utils = require("src.core.utils.number_utils")
-local ui_view = require("src.presentation.runtime.view_service")
+local ui_view = require("src.presentation.runtime.view")
 local runtime_state = require("src.core.state_access.runtime_state")
 
 local pre_confirm_flow = {}

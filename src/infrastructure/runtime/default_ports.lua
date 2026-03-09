@@ -1,6 +1,6 @@
 local default_ports = {}
 local number_utils = require("src.core.utils.number_utils")
-local runtime_event_bridge = require("src.infrastructure.runtime.runtime_event_bridge")
+local runtime_event_bridge = require("src.infrastructure.runtime.event_bridge")
 local game_api_key = "Game" .. "API"
 local lua_api_key = "Lua" .. "API"
 

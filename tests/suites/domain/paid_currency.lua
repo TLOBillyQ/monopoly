@@ -12,13 +12,13 @@ local function _reload_bridge()
 end
 
 local function _reload_market()
-  package.loaded["src.game.systems.market.market_service"] = nil
+  package.loaded["src.game.systems.market"] = nil
   package.loaded["src.game.systems.market.application.context"] = nil
   package.loaded["src.game.systems.market.application.eligibility"] = nil
   package.loaded["src.game.systems.market.application.purchase"] = nil
   package.loaded["src.game.systems.market.application.auto"] = nil
   package.loaded["src.game.systems.market.application.choice"] = nil
-  return require("src.game.systems.market.market_service")
+  return require("src.game.systems.market")
 end
 
 local function _build_fake_env(game, opts)

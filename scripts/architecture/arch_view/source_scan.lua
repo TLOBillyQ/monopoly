@@ -8,11 +8,18 @@ local function _module_from_path(root, path)
   local pattern = "^" .. normalized_root:gsub("%.", "%%.") .. "/(.+)%.lua$"
   local module_path = normalized_path:match(pattern)
   if module_path == nil then
+    local suffix_pattern = "/" .. normalized_root:gsub("%.", "%%.") .. "/(.+)%.lua$"
+    module_path = normalized_path:match(suffix_pattern)
+  end
+  if module_path == nil then
     return nil
   end
 
   local root_segments = common.split(normalized_root, "/")
   local path_segments = common.split(module_path, "/")
+  if path_segments[#path_segments] == "init" then
+    path_segments[#path_segments] = nil
+  end
   local full_segments = common.copy_array(root_segments)
   for _, segment in ipairs(path_segments) do
     full_segments[#full_segments + 1] = segment

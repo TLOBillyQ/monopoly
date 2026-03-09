@@ -1,6 +1,6 @@
 local logger = require("src.core.utils.logger")
 local tile = require("src.game.systems.board.tile")
-local board_utils = require("src.game.systems.land.land_board_utils")
+local board_utils = require("src.game.systems.land.board_utils")
 local constants = require("Config.generated.constants")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local action_anim_port = require("src.core.ports.action_anim_port")

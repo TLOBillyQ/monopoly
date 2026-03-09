@@ -1,5 +1,5 @@
-local pricing = require("src.game.systems.land.land_pricing")
-local rent_math = require("src.game.systems.land.land_rent_math")
+local pricing = require("src.game.systems.land.pricing")
+local rent_math = require("src.game.systems.land.rent_math")
 
 local resolver = {}
 

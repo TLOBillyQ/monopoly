@@ -3,8 +3,8 @@ local item_auto_play_context = require("src.game.flow.turn.item_auto_play_contex
 local dirty_tracker = require("src.core.utils.dirty_tracker")
 local logger = require("src.core.utils.logger")
 local turn_start = require("src.game.flow.turn.start")
-local turn_roll = require("src.game.flow.turn.turn_roll")
-local turn_move = require("src.game.flow.turn.turn_move")
+local turn_roll = require("src.game.flow.turn.roll")
+local turn_move = require("src.game.flow.turn.move")
 local turn_land = require("src.game.flow.turn.land")
 
 local turn_phase_registry = {}

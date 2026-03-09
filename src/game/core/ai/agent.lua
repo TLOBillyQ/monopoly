@@ -1,7 +1,7 @@
 local tile = require("src.game.systems.board.tile")
 local roadblock = require("src.game.systems.items.roadblock")
 local demolish = require("src.game.systems.items.demolish")
-local pricing = require("src.game.systems.land.land_pricing")
+local pricing = require("src.game.systems.land.pricing")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local facing_policy = require("src.game.systems.board.facing_policy")
 

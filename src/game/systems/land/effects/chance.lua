@@ -3,7 +3,7 @@ local gameplay_rules = require("src.core.config.gameplay_rules")
 local chance_cfg = require("Config.generated.chance_cards")
 local chance_resolver = require("src.game.systems.chance.chance_resolver")
 local presenter = require("src.game.systems.land.presenter")
-local vehicle_feature = require("src.game.systems.vehicle.vehicle_feature")
+local vehicle_feature = require("src.game.systems.vehicle")
 
 local popup_show_seconds = gameplay_rules.popup_auto_close_seconds or 1.0
 

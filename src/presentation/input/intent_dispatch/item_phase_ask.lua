@@ -1,4 +1,4 @@
-local ui_view = require("src.presentation.runtime.view_service")
+local ui_view = require("src.presentation.runtime.view")
 local choice_common = require("src.presentation.view.widgets.choice_screen_service.common")
 local runtime_state = require("src.core.state_access.runtime_state")
 

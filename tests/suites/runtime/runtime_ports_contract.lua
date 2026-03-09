@@ -3,7 +3,7 @@ local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
 local runtime_ports = require("src.core.ports.runtime_ports")
-local runtime_context = require("src.infrastructure.runtime.runtime_context")
+local runtime_context = require("src.infrastructure.runtime.context")
 local runtime_install = require("src.app.bootstrap.runtime")
 local default_ports = require("src.infrastructure.runtime.default_ports")
 

@@ -6,8 +6,8 @@ local inventory = require("src.game.systems.items.inventory")
 local executor = require("src.game.systems.items.executor")
 local demolish = require("src.game.systems.items.demolish")
 local roadblock = require("src.game.systems.items.roadblock")
-local rent_resolver = require("src.game.systems.land.land_rent_resolver")
-local board_utils = require("src.game.systems.land.land_board_utils")
+local rent_resolver = require("src.game.systems.land.rent_resolver")
+local board_utils = require("src.game.systems.land.board_utils")
 local facing_policy = require("src.game.systems.board.facing_policy")
 
 local strategy = {}

@@ -1,8 +1,8 @@
 local steal = require("src.game.systems.items.steal")
-local movement = require("src.game.systems.movement.movement")
-local market_service = require("src.game.systems.market.market_service")
+local movement = require("src.game.systems.movement")
+local market_service = require("src.game.systems.market")
 local intent_dispatcher = require("src.game.flow.intent.intent_dispatcher")
-local vehicle_feature = require("src.game.systems.vehicle.vehicle_feature")
+local vehicle_feature = require("src.game.systems.vehicle")
 
 local function _build_move_args(player, raw_total, extra)
   local out = {

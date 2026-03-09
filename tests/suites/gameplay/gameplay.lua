@@ -25,9 +25,9 @@ local turn_move = support.turn_move
 local turn_dispatch = require("src.game.flow.turn.dispatch")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local mine_effect = require("src.game.systems.effects.mine_effect")
-local runtime_context = require("src.infrastructure.runtime.runtime_context")
+local runtime_context = require("src.infrastructure.runtime.context")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local runtime_event_bridge = require("src.infrastructure.runtime.runtime_event_bridge")
+local runtime_event_bridge = require("src.infrastructure.runtime.event_bridge")
 local runtime_state = require("src.core.state_access.runtime_state")
 local runtime_global_aliases = require("src.app.bootstrap.runtime.global_aliases")
 local dispatch_validator = require("src.game.flow.turn.dispatch_validator")
@@ -45,7 +45,7 @@ local monopoly_event = require("src.core.events.monopoly_events")
 local number_utils = require("src.core.utils.number_utils")
 local role_id_utils = require("src.core.utils.role_id")
 local logger = require("src.core.utils.logger")
-local market_service = require("src.game.systems.market.market_service")
+local market_service = require("src.game.systems.market")
 local phase_registry = require("src.game.flow.turn.phase_registry")
 local turn_decision = require("src.game.flow.turn.decision")
 local item_effects = require("src.game.systems.items.post_effects")
@@ -1098,7 +1098,7 @@ local function _test_game_startup_build_state_is_pure_and_bridge_installs_events
       board = { get_overlays = function() return { roadblocks = {}, mines = {} } end, tile_lookup = {}, path = {} },
     }
     support.with_patches({
-      { target = require("src.presentation.runtime.view_service"), key = "open_choice_modal", value = function(_, choice)
+      { target = require("src.presentation.runtime.view"), key = "open_choice_modal", value = function(_, choice)
         opened = choice
       end },
     }, function()
@@ -1135,7 +1135,7 @@ local function _test_autorunner_runs_to_end()
   local agent = require("src.game.core.ai.agent")
   local gameplay_rules = require("src.core.config.gameplay_rules")
   local land = require("src.game.systems.land.executors")
-  local land_actions = require("src.game.systems.land.land_actions")
+  local land_actions = require("src.game.systems.land.actions")
   local item_inventory = require("src.game.systems.items.inventory")
 
   local g = app:new({

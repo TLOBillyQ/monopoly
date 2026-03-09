@@ -3,7 +3,7 @@ local number_utils = require("src.core.utils.number_utils")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local modal_state = require("src.presentation.input.modal_state_coordinator")
 local host_runtime = require("src.presentation.runtime.host")
-local ui_core = require("src.presentation.runtime.view_service.core")
+local ui_core = require("src.presentation.runtime.view.core")
 local choice_contract = require("src.core.choice.contract")
 local target_choice_effects = {}
 local _move_arrow

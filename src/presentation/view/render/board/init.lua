@@ -1,7 +1,7 @@
-local anchors = require("src.presentation.view.render.board_runtime.anchors")
-local player_units = require("src.presentation.view.render.board_runtime.player_units")
-local placement = require("src.presentation.view.render.board_runtime.placement")
-local events = require("src.presentation.view.render.board_runtime.events")
+local anchors = require("src.presentation.view.render.board.anchors")
+local player_units = require("src.presentation.view.render.board.player_units")
+local placement = require("src.presentation.view.render.board.placement")
+local events = require("src.presentation.view.render.board.events")
 local runtime_state = require("src.core.state_access.runtime_state")
 
 local M = {}

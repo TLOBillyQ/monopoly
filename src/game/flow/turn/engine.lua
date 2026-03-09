@@ -1,4 +1,4 @@
-local scheduler = require("src.game.scheduler.scheduler")
+local scheduler = require("src.game.scheduler")
 local session_factory = require("src.game.scheduler.session")
 local action_router = require("src.game.scheduler.action_router")
 require "vendor.third_party.ClassUtils"

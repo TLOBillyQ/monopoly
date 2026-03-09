@@ -2,7 +2,7 @@ local gameplay_rules = require("src.core.config.gameplay_rules")
 local number_utils = require("src.core.utils.number_utils")
 local logger = require("src.core.utils.logger")
 
-local runtime = require("src.presentation.runtime.runtime")
+local runtime = require("src.presentation.runtime.ui")
 local host_runtime = require("src.presentation.runtime.host")
 local registry = require("src.presentation.view.render.anim_registry")
 local handlers = require("src.presentation.view.render.anim_handlers")

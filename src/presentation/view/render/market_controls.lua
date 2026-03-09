@@ -1,7 +1,7 @@
 local market_layout = require("src.presentation.view.support.market_layout")
 local ui_controls = require("src.presentation.view.support.ui_controls")
 local runtime_state = require("src.core.state_access.runtime_state")
-local runtime = require("src.presentation.runtime.runtime")
+local runtime = require("src.presentation.runtime.ui")
 local number_utils = require("src.core.utils.number_utils")
 
 local market_view_controls = {}

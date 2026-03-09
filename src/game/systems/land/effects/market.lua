@@ -1,4 +1,4 @@
-local market_service = require("src.game.systems.market.market_service")
+local market_service = require("src.game.systems.market")
 
 local M = {}
 

@@ -1,17 +1,19 @@
 return {
   source_roots = { "src" },
   component_rules = {
-    { name = "app", match = { "^src%.app%..+" }, component = "app" },
+    { name = "app", match = { "^src%.app$", "^src%.app%..+" }, component = "app" },
     { name = "core", match = { "^src%.core%..+" }, component = "core" },
     { name = "presentation", match = { "^src%.presentation%..+" }, component = "presentation" },
     { name = "game_flow", match = { "^src%.game%.flow%..+" }, component = "game_flow" },
     { name = "game_systems", match = { "^src%.game%.systems%..+", "^src%.game%.ports%..+" }, component = "game_systems" },
     { name = "game_ai", match = { "^src%.game%.core%.ai%..+" }, component = "game_ai" },
     { name = "state", match = {
+      "^src%.game%.core%.player$",
       "^src%.game%.core%.player%..+",
       "^src%.game%.core%.runtime%.game$",
     }, component = "state" },
     { name = "game_runtime", match = {
+      "^src%.game%.scheduler$",
       "^src%.game%.runtime%..+",
       "^src%.game%.scheduler%..+",
       "^src%.game%.core%.runtime%..+",
@@ -45,13 +47,13 @@ return {
     {
       name = "game_core_player_no_flow",
       description = "game core player state must not depend on src.game.flow.* directly",
-      from = { "^src%.game%.core%.player%..+" },
+      from = { "^src%.game%.core%.player$", "^src%.game%.core%.player%..+" },
       to = { "^src%.game%.flow%..+" },
     },
     {
       name = "game_core_player_no_systems",
       description = "game core player state must not depend on src.game.systems.* directly",
-      from = { "^src%.game%.core%.player%..+" },
+      from = { "^src%.game%.core%.player$", "^src%.game%.core%.player%..+" },
       to = { "^src%.game%.systems%..+" },
     },
     {

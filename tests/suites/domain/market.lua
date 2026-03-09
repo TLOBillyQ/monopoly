@@ -3,7 +3,7 @@ local _new_game = support.new_game
 local market_cfg = require("Config.generated.market")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local monopoly_event = require("src.core.events.monopoly_events")
-local runtime_event_bridge = require("src.infrastructure.runtime.runtime_event_bridge")
+local runtime_event_bridge = require("src.infrastructure.runtime.event_bridge")
 local choice_resolver = require("src.game.systems.choices.resolver")
 
 local function _contains_product(list, product_id)
@@ -43,14 +43,14 @@ local function _find_paid_item_entry()
 end
 
 local function _reload_market_service()
-  package.loaded["src.game.systems.market.market_service"] = nil
+  package.loaded["src.game.systems.market"] = nil
   package.loaded["src.game.systems.market.application.context"] = nil
   package.loaded["src.game.systems.market.application.eligibility"] = nil
   package.loaded["src.game.systems.market.application.purchase"] = nil
   package.loaded["src.game.systems.market.application.auto"] = nil
   package.loaded["src.game.systems.market.application.choice"] = nil
   package.loaded["src.game.systems.market.application.choice_session"] = nil
-  return require("src.game.systems.market.market_service")
+  return require("src.game.systems.market")
 end
 
 local function _reset_market_choice_runtime_modules()
@@ -60,7 +60,7 @@ local function _reset_market_choice_runtime_modules()
 end
 
 local function _test_ai_skips_auto_buy_at_market()
-  local market_service = require("src.game.systems.market.market_service")
+  local market_service = require("src.game.systems.market")
   local g = _new_game()
   local ai_player = g.players[2]
   assert(ai_player.is_ai, "player 2 should be AI")
@@ -74,7 +74,7 @@ local function _test_ai_skips_auto_buy_at_market()
 end
 
 local function _test_market_full_inventory_blocks_items()
-  local market_service = require("src.game.systems.market.market_service")
+  local market_service = require("src.game.systems.market")
   local g = _new_game()
   local p = g:current_player()
   g:set_player_cash(p, 999999)
@@ -89,7 +89,7 @@ local function _test_market_full_inventory_blocks_items()
 end
 
 local function _test_market_global_limit()
-  local market_service = require("src.game.systems.market.market_service")
+  local market_service = require("src.game.systems.market")
   local g = _new_game()
   local p = g:current_player()
   local entry = nil
@@ -248,7 +248,7 @@ local function _test_market_choice_marks_skin_options_for_pre_confirm()
   end
   assert(target ~= nil, "test requires at least one enabled skin market entry")
 
-  local market_service = require("src.game.systems.market.market_service")
+  local market_service = require("src.game.systems.market")
   local g = _new_game()
   local p = g:current_player()
   g:set_player_balance(p, "金豆", 999999)
@@ -266,7 +266,7 @@ local function _test_market_choice_marks_skin_options_for_pre_confirm()
 end
 
 local function _test_market_disabled_products_hidden()
-  local market_service = require("src.game.systems.market.market_service")
+  local market_service = require("src.game.systems.market")
   local g = _new_game()
   local p = g:current_player()
   g:set_player_balance(p, "金豆", 999999)
@@ -295,7 +295,7 @@ local function _test_market_disabled_products_hidden()
 end
 
 local function _test_buy_disabled_market_product_rejected()
-  local market_service = require("src.game.systems.market.market_service")
+  local market_service = require("src.game.systems.market")
   local g = _new_game()
   local p = g:current_player()
   g:set_player_balance(p, "金豆", 999999)
@@ -320,7 +320,7 @@ local function _test_buy_disabled_market_product_rejected()
 end
 
 local function _test_market_tab_all_unbuyable_still_builds_market_choice()
-  local market_service = require("src.game.systems.market.market_service")
+  local market_service = require("src.game.systems.market")
   local g = _new_game()
   local p = g:current_player()
 
@@ -338,7 +338,7 @@ local function _test_market_tab_all_unbuyable_still_builds_market_choice()
 end
 
 local function _test_market_tab_select_navigation_applies_with_unbuyable_tab()
-  local market_service = require("src.game.systems.market.market_service")
+  local market_service = require("src.game.systems.market")
   local g = _new_game()
   local p = g:current_player()
 
@@ -376,7 +376,7 @@ local function _test_market_tab_select_navigation_applies_with_unbuyable_tab()
 end
 
 local function _test_market_choice_build_is_pure_and_session_marks_dirty()
-  local market_service = require("src.game.systems.market.market_service")
+  local market_service = require("src.game.systems.market")
   local g = _new_game()
   local p = g:current_player()
 
@@ -408,7 +408,7 @@ local function _test_market_choice_build_is_pure_and_session_marks_dirty()
 end
 
 local function _test_market_tab_select_empty_tab_keeps_choice_and_emits_buy_failed_tip_event()
-  local market_service = require("src.game.systems.market.market_service")
+  local market_service = require("src.game.systems.market")
   local g = _new_game()
   local p = g:current_player()
 
@@ -493,7 +493,7 @@ local function _test_market_buy_failed_resolves_and_clears_pending_choice()
   local result = nil
   support.with_patches({
     {
-      target = require("src.game.systems.market.market_service").purchase,
+      target = require("src.game.systems.market").purchase,
       key = "execute",
       value = function()
         return { ok = false }

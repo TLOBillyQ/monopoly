@@ -1,3 +1,5 @@
+package.path = package.path .. ";./?/init.lua"
+
 local function normalize_suite(suite, suite_index)
   if suite and suite.tests then
     return suite.name or ("suite_" .. tostring(suite_index)), suite.tests

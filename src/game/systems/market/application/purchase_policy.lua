@@ -1,4 +1,4 @@
-local land_choice_specs = require("src.game.systems.land.land_choice_specs")
+local land_choice_specs = require("src.game.systems.land.choice_specs")
 local context = require("src.game.systems.market.application.context")
 
 local policy = {}

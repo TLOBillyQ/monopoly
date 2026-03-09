@@ -1,8 +1,8 @@
 local runtime_constants = require("src.core.config.runtime_constants")
-local runtime_event_bridge = require("src.infrastructure.runtime.runtime_event_bridge")
+local runtime_event_bridge = require("src.infrastructure.runtime.event_bridge")
 local logger = require("src.core.utils.logger")
 local runtime_editor_exports = require("src.core.state_access.runtime_editor_exports")
-local vehicle_feature = require("src.game.systems.vehicle.vehicle_feature")
+local vehicle_feature = require("src.game.systems.vehicle")
 local number_utils = require("src.core.utils.number_utils")
 require("Config.runtime_refs")
 

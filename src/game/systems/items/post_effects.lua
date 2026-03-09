@@ -1,6 +1,6 @@
 local logger = require("src.core.utils.logger")
 local constants = require("Config.generated.constants")
-local board_utils = require("src.game.systems.land.land_board_utils")
+local board_utils = require("src.game.systems.land.board_utils")
 local inventory = require("src.game.systems.items.inventory")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local bankruptcy_port = require("src.game.ports.bankruptcy_port")

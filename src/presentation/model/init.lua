@@ -1,7 +1,7 @@
-local board_slice = require("src.presentation.model.model.board_slice")
-local item_slice = require("src.presentation.model.model.item_slice")
-local choice_slice = require("src.presentation.model.model.choice_slice")
-local panel_slice = require("src.presentation.model.model.panel_slice")
+local board_slice = require("src.presentation.model.board_slice")
+local item_slice = require("src.presentation.model.item_slice")
+local choice_slice = require("src.presentation.model.choice_slice")
+local panel_slice = require("src.presentation.model.panel_slice")
 local number_utils = require("src.core.utils.number_utils")
 local role_id_utils = require("src.core.utils.role_id")
 

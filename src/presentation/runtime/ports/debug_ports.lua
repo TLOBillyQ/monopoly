@@ -1,7 +1,7 @@
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local logger = require("src.core.utils.logger")
 local ui_event_state = require("src.presentation.input.event_state")
-local runtime = require("src.presentation.runtime.runtime")
+local runtime = require("src.presentation.runtime.ui")
 local role_id_utils = require("src.core.utils.role_id")
 
 local debug_ports = {}
@@ -26,7 +26,7 @@ function debug_ports.build(common)
     sync_debug_log = function(state)
       state._debug_log_enabled_by_role = state._debug_log_enabled_by_role or {}
       state._debug_log_seq_by_role = state._debug_log_seq_by_role or {}
-      local ui_view = require("src.presentation.runtime.view_service")
+      local ui_view = require("src.presentation.runtime.view")
       runtime.for_each_role_or_global(function(role)
         local role_id = role_id_utils.normalize(runtime.resolve_role_id(role))
         if role_id == nil then

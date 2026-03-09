@@ -1,4 +1,4 @@
-local pricing = require("src.game.systems.land.land_pricing")
+local pricing = require("src.game.systems.land.pricing")
 
 local board_utils = {}
 

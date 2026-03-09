@@ -1,4 +1,4 @@
-local runtime = require("src.presentation.runtime.runtime")
+local runtime = require("src.presentation.runtime.ui")
 local role_id_utils = require("src.core.utils.role_id")
 
 local ui_event_state = {}

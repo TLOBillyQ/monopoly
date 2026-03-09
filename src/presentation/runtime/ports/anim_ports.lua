@@ -15,7 +15,7 @@ local function _load_action_anim_player()
 end
 
 local function _apply_role_control_lock(state, enabled)
-  local ui_view = require("src.presentation.runtime.view_service")
+  local ui_view = require("src.presentation.runtime.view")
   ui_view.apply_role_control_lock(state, enabled)
 end
 
