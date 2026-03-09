@@ -6,9 +6,9 @@
 
 ## 目的 / 全局视角
 
-这项工作要把 `tests/` 从“runner、共享脚手架、guard 脚本、契约 suite、行为 suite 混装且依赖隐式入口”的状态，收口为一个可发现、可分 lane、可并行迁移、失败时可低噪声定位的测试系统。改完后，开发者仍然执行 `lua tests/regression.lua`，但也可以单独执行 `behavior`、`contract`、`guard` 三条车道；默认通过路径不再被大量重复 warning 淹没。
+这项工作已经把 `tests/` 从“runner、共享脚手架、guard 脚本、契约 suite、行为 suite 混装且依赖隐式入口”的状态，收口为一个可发现、可分 lane、可并行迁移、失败时可低噪声定位的测试系统。现在开发者仍然执行 `MONO_REGRESSION_MODE=release_trimmed lua tests/regression.lua`，但也可以单独执行 `behavior`、`contract`、`guard` 三条车道；默认通过路径不再被大量重复 warning 淹没。
 
-可观察结果必须是具体可见的。当前基线是：`tests/` 共有 56 个文件；`tests/suites/manifest.lua` 平铺装载 471 个 suite case；`MONO_REGRESSION_MODE=release_trimmed lua tests/regression.lua` 通过并输出 `All regression checks passed (469)`，随后 5 个 guard 脚本各自报告成功。计划完成后，`tests/catalog.lua` 成为唯一真源，两个当前未接入 manifest 的孤儿 contract suite 也会被纳入正式回归，所以总 case 基线更新为 480，`release_trimmed` 基线更新为 478，同时 guard 仍保持 5 个脚本检查。
+可观察结果必须是具体可见的。当前基线已经更新为：`tests/catalog.lua` 是 suite 唯一真源；behavior lane 为 `418` 个 case，其中 `release_trimmed` 命中 `416`；contract lane 为 `62` 个 case；`MONO_REGRESSION_MODE=release_trimmed lua tests/regression.lua` 通过并输出 `All regression checks passed (416)`、`All regression checks passed (62)`，随后 5 个 guard 脚本各自报告成功。因此当前正式回归总 case 基线是 `480`，`release_trimmed` 总基线是 `478`。
 
 ## 进度
 
@@ -19,8 +19,9 @@
 - [x] (2026-03-09 19:04+08:00) 已新增 `.agents/test_reorg_inventory.md`，固定当前 `471/469/5` 基线、孤儿 contract suite 和旧入口引用清单，作为迁移真源。
 - [x] (2026-03-09 19:04+08:00) 已引入 `tests/bootstrap.lua`、`tests/catalog.lua`、`tests/suites/manifest.lua` 转发 shim 与 `tests/support/test_env.lua`，并保持 `lua tests/regression.lua` 入口可用。
 - [x] (2026-03-09 19:04+08:00) 已完成 `release_trimmed` metadata 迁移、`behavior`/`contract`/`guard` runner、guard shim、孤儿 contract suite 纳管与共享日志捕获；当前 `MONO_REGRESSION_MODE=release_trimmed lua tests/behavior.lua` 通过 `416`，`lua tests/contract.lua` 通过 `62`，`lua tests/guard.lua` 通过 `5`。
-- [ ] 再完成 gameplay / presentation 巨型 suite 拆分，并退役 wrapper-only suite。
-- [ ] 替换 `TestSupport` 的 logger/test-mode 钩子后，清理旧入口、更新文档与命令示例，跑完整验证。
+- [x] (2026-03-09 22:10+08:00) 已完成 gameplay 巨型 suite 拆分并退役 `registry.lua`、`gameplay.lua`、`gameplay_core.lua`、`gameplay_runtime.lua`、`gameplay_loop.lua`；为保持历史兼容面，catalog 仅暴露旧 registry 实际映射到的 39 个 gameplay slot，并保留 `release_trimmed` 的 gameplay 禁跑项。
+- [x] (2026-03-09 22:10+08:00) 已完成 `presentation_ui_action_status`、`presentation_ui_popup_market`、`presentation_ui_action_anim` 拆分，catalog 已直接指向真实 suite，wrapper-only suite 全部退役。
+- [x] (2026-03-09 22:10+08:00) 已更新 `docs/architecture/*` 的测试入口与 guard 路径说明，完成整体验证：`MONO_REGRESSION_MODE=release_trimmed lua tests/regression.lua` 通过 `416 + 62 + 5`。
 
 ## 意外与发现
 
@@ -44,6 +45,9 @@
 
 - 观察：如果先拆 `gameplay.loop` 和 `presentation_ui.action_status` wrapper，再迁移 `release_trimmed` metadata，过滤会悄悄失效。
   证据：当前 `release_trimmed` 是按旧 suite 名和 case 名硬编码过滤，依赖 `registry.lua` 和 `presentation_ui_action_status.lua` 产出的旧命名。
+
+- 观察：旧 gameplay wrapper 的兼容面不能只看 `gameplay.lua` 当前导出顺序，还要兼顾 `registry.lua` 的历史命名和禁跑约定。
+  证据：第一次直接按新分片全量暴露时，behavior 总数膨胀到 `457`、`release_trimmed` 到 `455`；修正为旧 registry 兼容集后恢复到 `418/416`。
 
 ## 决策日志
 
@@ -73,13 +77,13 @@
 
 ## 结果与复盘
 
-当前已完成 `T0-T3`。测试入口、catalog、lane runner、guard shim 与日志捕获已经落地，且新的整体验证已经通过：`MONO_REGRESSION_MODE=release_trimmed lua tests/regression.lua` 当前输出为 `All regression checks passed (416)`、`All regression checks passed (62)`、以及 5 个 guard `ok`。剩余工作集中在 `T4-T7`：拆掉 gameplay / presentation 巨型 suite、退役 wrapper-only suite、替换剩余旧入口引用并更新文档。
+当前 `T0-T7` 已全部完成。测试入口、catalog、lane runner、guard shim、日志捕获、gameplay/presentation 巨型 suite 拆分与文档同步都已落地，且整体验证已经通过：`MONO_REGRESSION_MODE=release_trimmed lua tests/regression.lua` 当前输出为 `All regression checks passed (416)`、`All regression checks passed (62)`、以及 5 个 guard `ok`。这份计划的剩余价值是为后续删除兼容 facade 提供背景，不再包含未完成的主线任务。
 
 ## 背景与导读
 
-当前测试入口由 `tests/regression.lua` 驱动。它手工拼 `package.path`，从 `tests/suites/manifest.lua` 装载 suite，运行 `tests/TestHarness.lua`，然后再用 `dofile(...)` 顺序执行 `tests/internal/dep_rules.lua`、`legacy_path_guard.lua`、`gameplay_loop_no_ui.lua`、`forbidden_globals.lua`、`arch_view_guard.lua`。同时，`release_trimmed` 过滤被硬编码在这个 runner 里，且依赖旧 suite 命名 `gameplay.loop` 与 `presentation_ui.action_status`。
+当前测试入口由 `tests/bootstrap.lua`、`tests/catalog.lua` 与三条 lane runner 共同驱动。`tests/regression.lua` 负责顺序执行 `behavior`、`contract`、`guard`；`tests/suites/manifest.lua` 只剩兼容转发；真实 guard 脚本位于 `tests/guards/`，`tests/internal/*` 只保留兼容 shim。`release_trimmed` 过滤已经迁移到 case metadata，不再由 `regression.lua` 内部硬编码。
 
-当前共享脚手架主要集中在 `tests/TestSupport.lua` 与 `tests/internal/guard_support.lua`。前者承担断言、patch、建模、UI 夹具、runtime context 刷新和 logger 装配等多种职责，并在模块加载时执行副作用；后者承担文本级 guard 的文件枚举与行级扫描。当前大文件热点集中在 `tests/suites/gameplay/gameplay.lua`、`tests/suites/presentation/presentation_ui_action_status_part1.lua`、`presentation_ui_action_status_part2.lua`、`presentation_ui_action_status_part3.lua`、`presentation_ui_popup_market.lua` 与 `presentation_ui_action_anim.lua`。同时，`tests/suites/gameplay/registry.lua` 与 `gameplay_core.lua` / `gameplay_runtime.lua` / `gameplay_loop.lua` 仍在用索引切片；`presentation_ui_action_status.lua` 仍只是 part1/2/3 聚合壳；`tests/suites/architecture/intent_output_contract.lua` 与 `tests/suites/runtime/narrow_runtime_ports_contract.lua` 目前未接入 manifest。
+当前共享脚手架已经显式拆出 `tests/support/test_env.lua` 与 `tests/support/log_capture.lua`。`tests/TestSupport.lua` 仍是兼容 facade，但 `src/core/utils/logger.lua` 已改为显式测试模式开关，不再依赖 `package.loaded["TestSupport"]`。原先的 gameplay 与 presentation 巨型 suite 已拆成真实分片，孤儿 contract suite 也已经纳入 catalog，因此当前需要关注的遗留物主要是兼容 facade 与 `tests/internal/*` shim，而不是 suite 结构本身。
 
 ## 工作计划
 
@@ -176,7 +180,7 @@ validation: `rg` 对 `require("TestSupport")`、`require("TestHarness")`、`test
     print(total)
     LUA
 
-预期输出 `471`。
+预期输出 `480`。
 
 然后确认当前 release_trimmed 基线：
 
@@ -184,10 +188,11 @@ validation: `rg` 对 `require("TestSupport")`、`require("TestHarness")`、`test
 
 预期看到：
 
-    All regression checks passed (469)
+    All regression checks passed (416)
+    All regression checks passed (62)
     dep_rules ok
     legacy_path_guard ok
-    tick ok
+    gameplay_loop_no_ui ok
     forbidden_globals ok
     arch_view_guard ok
 
@@ -202,7 +207,7 @@ validation: `rg` 对 `require("TestSupport")`、`require("TestHarness")`、`test
 
 ## 验证与验收
 
-验收必须同时满足七条。第一，`tests/catalog.lua` 成为 suite 真源，`tests/suites/manifest.lua` 只剩兼容转发或已在最终清理阶段删除。第二，原始 suite case 总数从当前 471 增长到 480，增长的 9 个 case 仅来自 `intent_output_contract` 与 `narrow_runtime_ports_contract` 正式纳管。第三，`release_trimmed` 总数为 478，且禁用项全部来自 case metadata，不再存在 `regression.lua` 内部硬编码过滤表。第四，在 wrapper 仍存在的中间阶段和 wrapper 删除后的最终阶段，`release_trimmed` 命中集合必须一致。第五，不再存在 `registry.lua`、`presentation_ui_action_status.lua`、part1/2/3 这类 wrapper-only suite。第六，默认通过路径不再逐行回放重复 `market paid goods mapping missing` 和同类 warning，但失败 case 仍能回放完整缓冲日志，`MONO_TEST_VERBOSE=1` 仍可输出全量日志。第七，repo 内文档与命令示例全部切换到新 runner，不再引用旧 `tests/internal/*` 路径或旧 `.agents/tests/...` 说明。
+验收必须同时满足七条，而且当前都已经满足。第一，`tests/catalog.lua` 成为 suite 真源，`tests/suites/manifest.lua` 只剩兼容转发。第二，原始 suite case 总数为 `480`，其中新增的 `9` 个 case 来自 `intent_output_contract` 与 `narrow_runtime_ports_contract` 正式纳管。第三，`release_trimmed` 总数为 `478`，且禁用项全部来自 case metadata，不再存在 `regression.lua` 内部硬编码过滤表。第四，在 wrapper 删除后的最终阶段，`release_trimmed` 命中集合与迁移目标一致。第五，不再存在 `registry.lua`、`presentation_ui_action_status.lua`、part1/2/3 这类 wrapper-only suite。第六，默认通过路径不再逐行回放重复 `market paid goods mapping missing` 和同类 warning，但失败 case 仍能回放完整缓冲日志，`MONO_TEST_VERBOSE=1` 仍可输出全量日志。第七，repo 内文档与命令示例已经切换到新 runner，不再以旧 `tests/internal/*` 路径作为正式入口说明。
 
 ## 可重复性与恢复
 
@@ -216,4 +221,4 @@ validation: `rg` 对 `require("TestSupport")`、`require("TestHarness")`、`test
 
 新测试装配接口固定如下。`tests/catalog.lua` 导出 `behavior_suites`、`contract_suites`、`guard_scripts`。suite 表统一为 `{ name, layer, kind, tests = {...} }`；case 表统一为 `{ name, run, disabled_in = { release_trimmed = true }, tags = {...} }`。`tests/TestHarness.lua` 升级后必须支持 `run_all(suites, opts)`，其中 `opts` 至少包含 `filter`、`reporter`、`capture_logs`、`mode`，但必须继续兼容现有单参数调用。`tests/support/test_env.lua` 是唯一允许安装测试运行时副作用的入口；`tests/support/log_capture.lua` 是 behavior、contract、guard 三条 lane 共用的日志缓冲层。guard 迁移后真实脚本位于 `tests/guards/`，但在删除 shim 之前，旧 `tests/internal/*` 路径与 `internal.*` 模块名仍需可执行。`src/core/utils/logger.lua` 必须提供显式测试模式开关或等价注入点，替代 `package.loaded["TestSupport"]` 特判。
 
-本文件于 2026-03-09 19:04+08:00 更新：完成 `T0-T3` 实施，新增 inventory 文档、bootstrap/catalog/test_env/log_capture、behavior/contract/guard runner、guard shim 与孤儿 contract suite 纳管，并记录新的 `416 + 62 + 5` 验证结果。
+本文件于 2026-03-09 22:10+08:00 更新：完成 `T4-T7` 收口，修正 gameplay catalog 的历史兼容集，确认当前正式基线为 `behavior 418 / release_trimmed 416 / contract 62 / regression 478 / guard 5`，并同步更新 architecture 文档中的 runner 与 guard 路径说明。

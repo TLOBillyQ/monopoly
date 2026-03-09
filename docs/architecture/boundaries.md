@@ -46,7 +46,7 @@ Port 目录在本轮之后固定分成三类，而且三类名字不能混用。
 
 第七，只有 `src/app/bootstrap/*`、`src/game/flow/turn/*` 与测试夹具可以直接拼装 `loop_ports` 分组 override。其他目录如果只是想拿某一项能力，应该依赖对应的广义 runtime contract 或 gameplay Port，而不是把 `loop_ports` 当成一个新的“万能 Port 容器”。
 
-第八，模块级 `require` 结构边界的可执行真源现在收拢到 `scripts/architecture/monopoly_architecture.lua`。`arch_view` 负责扫描 `src/**/*.lua`、输出层级视图、检查禁止依赖和循环基线；第二阶段开始，`viewer --out-dir` 导出的静态页面还会带上 routed edges、incoming/outgoing dependency triangles、tooltip 与返回状态恢复，作为本地查看依赖图的默认入口。`tests/internal/dep_rules.lua` 只保留文本级硬边界，例如宿主 API、退休桥接路径、`ui_port` 旁路访问与 runtime 字段直读；`tests/internal/legacy_path_guard.lua` 则只负责旧模块 id 的 exact/prefix 回流检查，不再维护 growth budget 一类治理账本。
+第八，模块级 `require` 结构边界的可执行真源现在收拢到 `scripts/architecture/monopoly_architecture.lua`。`arch_view` 负责扫描 `src/**/*.lua`、输出层级视图、检查禁止依赖和循环基线；第二阶段开始，`viewer --out-dir` 导出的静态页面还会带上 routed edges、incoming/outgoing dependency triangles、tooltip 与返回状态恢复，作为本地查看依赖图的默认入口。`tests/guards/dep_rules.lua` 只保留文本级硬边界，例如宿主 API、退休桥接路径、`ui_port` 旁路访问与 runtime 字段直读；`tests/guards/legacy_path_guard.lua` 则只负责旧模块 id 的 exact/prefix 回流检查，不再维护 growth budget 一类治理账本。需要一次性跑完整护栏时，统一执行 `lua tests/guard.lua`。
 
 第九，`arch_view` 的 `cycle_baseline` 当前为空，表示 `src/**/*.lua` 的静态 `require` 图不再允许任何已知循环。后续新增循环会直接让 `arch_view` 护栏失败；如果某次重构不得不短期基线化某个 SCC，也只能在 `scripts/architecture/monopoly_architecture.lua` 中显式登记，并在循环拆除后立即删回去。
 

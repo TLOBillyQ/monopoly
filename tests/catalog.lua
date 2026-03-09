@@ -12,19 +12,35 @@ local behavior_modules = {
   "suites.domain.paid_currency",
   "suites.domain.config_sanity",
   "suites.runtime.startup_release",
-  "suites.gameplay.gameplay_core",
-  "suites.gameplay.gameplay_runtime",
+  "suites.gameplay.gameplay_bankruptcy_and_tile_owner",
+  "suites.gameplay.gameplay_intent_dispatch_and_event_feed",
+  "suites.gameplay.gameplay_runtime_context_and_camera_sync",
   "suites.gameplay.gameplay_coroutine",
-  "suites.gameplay.gameplay_loop",
+  "suites.gameplay.gameplay_turn_flow_and_interrupts",
+  "suites.gameplay.gameplay_timeout_and_auto_runner",
+  "suites.gameplay.gameplay_visual_feedback_and_prompts",
   "suites.gameplay.gameplay_afk",
   "suites.gameplay.gameplay_items_startup",
   "suites.runtime.runtime_bootstrap",
   "suites.presentation.presentation_ui_timing_anim",
   "suites.presentation.presentation_ui_model_dispatch",
   "suites.presentation.presentation_ui_interaction",
-  "suites.presentation.presentation_ui_popup_market",
-  "suites.presentation.presentation_ui_action_status",
-  "suites.presentation.presentation_ui_action_anim",
+  "suites.presentation.presentation_ui_role_slots",
+  "suites.presentation.presentation_ui_touch_policy",
+  "suites.presentation.presentation_market_confirm_flow",
+  "suites.presentation.presentation_popup_visibility",
+  "suites.presentation.presentation_choice_routes",
+  "suites.presentation.presentation_target_pick",
+  "suites.presentation.presentation_action_log_and_role_context",
+  "suites.presentation.presentation_market_panel",
+  "suites.presentation.presentation_item_slots",
+  "suites.presentation.presentation_action_anim_queue_and_turn_lock",
+  "suites.presentation.presentation_status3d_and_turn_effects",
+  "suites.presentation.presentation_popup_and_modal_renderers",
+  "suites.presentation.presentation_player_panels",
+  "suites.presentation.presentation_action_anim_core",
+  "suites.presentation.presentation_overlay_compute",
+  "suites.presentation.presentation_board_feedback",
   "suites.presentation.presentation_move_anim",
   "suites.presentation.presentation_board_sync",
   "suites.presentation.presentation_ui_event_handlers",
@@ -48,14 +64,7 @@ local contract_modules = {
   "suites.presentation.ui_runtime_state_contract",
 }
 
-local disabled_cases = {
-  ["suites.gameplay.gameplay_loop::_test_action_button_timeout_auto_advances"] = {
-    release_trimmed = true,
-  },
-  ["suites.presentation.presentation_ui_action_status::_test_status3d_priority_single_status"] = {
-    release_trimmed = true,
-  },
-}
+local disabled_cases = {}
 
 local guard_scripts = {
   { name = "dep_rules", module_name = "guards.dep_rules", path = "tests/guards/dep_rules.lua" },
