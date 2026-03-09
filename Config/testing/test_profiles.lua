@@ -160,6 +160,40 @@ local profiles = {
       },
     },
   },
+  scenario_strong_card_staging = {
+    bootstrap = {
+      players = {
+        [1] = {
+          cash = 120000,
+          position_tile_id = 11,
+          item_counts = {
+            [2001] = 1,
+            [2002] = 1,
+            [2009] = 1,
+          },
+        },
+        [2] = {
+          cash = 120000,
+          position_tile_id = 44,
+        },
+        [3] = {
+          cash = 120000,
+          position_tile_id = 38,
+        },
+        [4] = {
+          cash = 120000,
+          position_tile_id = 37,
+        },
+      },
+      tiles = {
+        [12] = {
+          owner_player_index = 2,
+          level = 2,
+          render_called = true,
+        },
+      },
+    },
+  },
   scenario_monster_staging = {
     bootstrap = {
       players = {

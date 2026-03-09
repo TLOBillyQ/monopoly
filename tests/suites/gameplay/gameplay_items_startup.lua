@@ -2,13 +2,18 @@ local support = require("TestSupport")
 local gameplay_loop = support.gameplay_loop
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local game_startup = require("src.app.bootstrap.game_startup")
+local turn_roll = require("src.game.flow.turn.roll")
 local move_followup = require("src.game.flow.turn.move_followup")
+local board_utils = require("src.game.systems.land.board_utils")
+local land_rules = require("src.game.systems.land.rules")
 local choice_resolver = support.choice_resolver
 local _build_ui_port = support.build_ui_port
 local _bind_ui_runtime = support.bind_ui_runtime
 local _get_choice = support.get_choice
 local _open_choice = support.open_choice
 local _tile_state = support.tile_state
+local _turn_move = support.turn_move
+local _resolve_landing = support.resolve_landing
 
 local function _build_test_ports(overrides)
   overrides = overrides or {}
@@ -96,6 +101,40 @@ local function _new_profile_game(profile_name)
   return game, state
 end
 
+local function _advance_strong_card_staging_to_rent_prompt()
+  local g, state = _new_profile_game("scenario_strong_card_staging")
+  local player = g.players[1]
+
+  g.anim_gate_port.wait_action_anim = false
+  g.anim_gate_port.wait_move_anim = false
+  g.last_turn = {}
+
+  local use_result = support.executor.use_item(g, player, gameplay_rules.item_ids.remote_dice, { by_ai = false })
+  assert(type(use_result) == "table" and use_result.waiting == true, "strong card staging should open remote dice choice")
+  _open_choice(g, use_result.intent.choice_spec)
+
+  local pending = _get_choice(g)
+  assert(pending and pending.kind == "remote_dice_value", "strong card staging should expose remote dice value choice")
+  local choice_result = choice_resolver.resolve(g, pending, { option_id = 1 })
+  assert(choice_result and choice_result.stay == false, "remote dice value choice should resolve immediately")
+
+  local next_state, next_args = turn_roll({ game = g }, { player = player, skip_anim = true })
+  assert(next_state == "move", "strong card staging should proceed from roll to move")
+
+  local landing_state, landing_args = _turn_move({ game = g }, next_args)
+  assert(landing_state == "landing", "strong card staging should proceed from move to landing")
+
+  local target_tile = assert(g.board:get_tile(player.position), "strong card staging target tile should exist after move")
+  local landing_result = _resolve_landing(g, player, target_tile, landing_args.move_result)
+  assert(type(landing_result) == "table" and landing_result.waiting == true,
+    "strong card staging should pause on rent prompt after landing")
+
+  local rent_prompt = _get_choice(g)
+  assert(rent_prompt and rent_prompt.kind == "rent_card_prompt", "strong card staging should expose rent prompt")
+
+  return g, state, player, target_tile, rent_prompt
+end
+
 local function _test_monster_startup_profile_runs_choice_to_action_anim()
   local g, state = _new_profile_game("scenario_monster_staging")
   local dispatched = {}
@@ -171,6 +210,85 @@ local function _test_missile_startup_profile_defers_hospital_followup_until_afte
   assert((g.players[2].status.stay_turns or 0) > 0, "missile staging should apply hospital stay after followup")
 end
 
+local function _test_strong_card_startup_profile_transfers_target_tile_on_use()
+  local g, _, player, target_tile, rent_prompt = _advance_strong_card_staging_to_rent_prompt()
+  local owner = g.players[2]
+  local target_state_before = _tile_state(g, target_tile)
+  local strong_amount = board_utils.total_invested(target_tile, target_state_before.level)
+  local player_cash_before = g:player_balance(player, "金币")
+  local owner_cash_before = g:player_balance(owner, "金币")
+
+  assert(rent_prompt.title == "是否使用强征卡", "strong card staging should prompt strong card first")
+  local result = choice_resolver.resolve(g, rent_prompt, { option_id = "use" })
+
+  assert(result and result.stay == false, "using strong card should resolve rent prompt")
+  assert(_get_choice(g) == nil, "using strong card should clear pending choice")
+  assert(g:player_balance(player, "金币") == player_cash_before - strong_amount,
+    "using strong card should deduct total invested amount from player")
+  assert(g:player_balance(owner, "金币") == owner_cash_before + strong_amount,
+    "using strong card should transfer total invested amount to owner")
+
+  local target_state_after = _tile_state(g, target_tile)
+  assert(target_state_after.owner_id == player.id, "using strong card should transfer target tile ownership")
+  assert(target_state_after.level == target_state_before.level, "using strong card should keep target tile level")
+end
+
+local function _test_strong_card_startup_profile_allows_free_rent_after_skipping_strong()
+  local g, _, player, target_tile, rent_prompt = _advance_strong_card_staging_to_rent_prompt()
+  local owner = g.players[2]
+  local target_state_before = _tile_state(g, target_tile)
+  local player_cash_before = g:player_balance(player, "金币")
+  local owner_cash_before = g:player_balance(owner, "金币")
+
+  local skip_result = choice_resolver.resolve(g, rent_prompt, { option_id = "skip" })
+  assert(skip_result and skip_result.stay == true, "skipping strong card should keep flow open for free rent prompt")
+
+  local free_prompt = _get_choice(g)
+  assert(free_prompt and free_prompt.kind == "rent_card_prompt", "skipping strong card should expose free rent prompt")
+  assert(free_prompt.title == "是否使用免费卡", "skipping strong card should prompt free rent next")
+
+  local use_result = choice_resolver.resolve(g, free_prompt, { option_id = "use" })
+  assert(use_result and use_result.stay == false, "using free rent should resolve prompt")
+  assert(_get_choice(g) == nil, "using free rent should clear pending choice")
+  assert(g:player_balance(player, "金币") == player_cash_before, "using free rent should not change player cash")
+  assert(g:player_balance(owner, "金币") == owner_cash_before, "using free rent should not change owner cash")
+
+  local target_state_after = _tile_state(g, target_tile)
+  assert(target_state_after.owner_id == target_state_before.owner_id, "using free rent should keep target tile owner")
+  assert(target_state_after.level == target_state_before.level, "using free rent should keep target tile level")
+end
+
+local function _test_strong_card_startup_profile_falls_back_to_direct_rent_after_skipping_both_cards()
+  local g, _, player, target_tile, rent_prompt = _advance_strong_card_staging_to_rent_prompt()
+  local owner = g.players[2]
+  local target_state_before = _tile_state(g, target_tile)
+  local target_index = assert(g.board:index_of_tile_id(target_tile.id), "strong card staging target index should exist")
+  local rent_amount = land_rules.contiguous_rent(g, g.board, target_index, owner.id)
+  local player_cash_before = g:player_balance(player, "金币")
+  local owner_cash_before = g:player_balance(owner, "金币")
+
+  local skip_strong_result = choice_resolver.resolve(g, rent_prompt, { option_id = "skip" })
+  assert(skip_strong_result and skip_strong_result.stay == true,
+    "skipping strong card should keep flow open for direct rent fallback")
+
+  local free_prompt = _get_choice(g)
+  assert(free_prompt and free_prompt.title == "是否使用免费卡", "direct rent fallback should pass through free rent prompt")
+
+  local skip_free_result = choice_resolver.resolve(g, free_prompt, { option_id = "skip" })
+  assert(skip_free_result and skip_free_result.stay == false, "skipping both rent cards should resolve prompt")
+  assert(_get_choice(g) == nil, "skipping both rent cards should clear pending choice")
+  assert(g:player_balance(player, "金币") == player_cash_before - rent_amount,
+    "skipping both rent cards should pay normal rent")
+  assert(g:player_balance(owner, "金币") == owner_cash_before + rent_amount,
+    "skipping both rent cards should credit normal rent to owner")
+
+  local target_state_after = _tile_state(g, target_tile)
+  assert(target_state_after.owner_id == target_state_before.owner_id,
+    "skipping both rent cards should keep target tile owner")
+  assert(target_state_after.level == target_state_before.level,
+    "skipping both rent cards should keep target tile level")
+end
+
 return {
   name = "gameplay_items_startup",
   tests = {
@@ -181,6 +299,18 @@ return {
     {
       name = "missile_startup_profile_defers_hospital_followup_until_after_anim",
       run = _test_missile_startup_profile_defers_hospital_followup_until_after_anim,
+    },
+    {
+      name = "strong_card_startup_profile_transfers_target_tile_on_use",
+      run = _test_strong_card_startup_profile_transfers_target_tile_on_use,
+    },
+    {
+      name = "strong_card_startup_profile_allows_free_rent_after_skipping_strong",
+      run = _test_strong_card_startup_profile_allows_free_rent_after_skipping_strong,
+    },
+    {
+      name = "strong_card_startup_profile_falls_back_to_direct_rent_after_skipping_both_cards",
+      run = _test_strong_card_startup_profile_falls_back_to_direct_rent_after_skipping_both_cards,
     },
   },
 }

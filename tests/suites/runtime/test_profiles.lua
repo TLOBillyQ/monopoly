@@ -318,6 +318,25 @@ local function _test_scenario_mountain_staging_is_before_mountain_with_remote_di
   })
 end
 
+local function _test_scenario_strong_card_staging_bootstraps_rent_target()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "scenario_strong_card_staging")
+
+  local target_tile = assert(game.board:get_tile_by_id(12), "strong card staging target tile should exist")
+  local target_state = tile_state(game, target_tile)
+  local player_index = game.board:index_of_tile_id(11)
+
+  assert(player_index ~= nil, "scenario_strong_card_staging start tile should exist")
+  assert(game.players[1].position == player_index, "strong card staging should place p1 on configured tile")
+  _assert_inventory_counts(game.players[1], {
+    [2001] = 1,
+    [2002] = 1,
+    [2009] = 1,
+  })
+  assert(target_state.owner_id == game.players[2].id, "strong card staging should assign target building owner")
+  assert(target_state.level == 2, "strong card staging should assign target building level")
+end
+
 local function _test_scenario_monster_staging_bootstraps_target_building()
   local game = _new_game()
   test_profile_bootstrap.apply(game, "scenario_monster_staging")
@@ -393,6 +412,43 @@ local function _test_scenario_upgrade_building_render_marks_tile_render_called_f
   assert(rendered_tile_ids[1] == 1, "startup render should render configured tile")
   assert(#rendered_tile_ids == 1, "startup render should only render flagged tiles")
   assert(#rendered_building_tile_ids == 0, "level 0 tile should not spawn startup building render")
+end
+
+local function _test_scenario_strong_card_staging_marks_tile_render_called_for_startup_render()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "scenario_strong_card_staging")
+
+  local tile_renderer = require("src.presentation.view.render.tile_renderer")
+  local building_effects = require("src.presentation.view.render.building_effects")
+  local rendered_tile_ids = {}
+  local rendered_building_tile_ids = {}
+
+  with_patches({
+    {
+      target = tile_renderer,
+      key = "render_tile",
+      value = function(_, tile_id)
+        rendered_tile_ids[#rendered_tile_ids + 1] = tile_id
+        return true
+      end,
+    },
+    {
+      target = building_effects,
+      key = "spawn_upgrade_building_units",
+      value = function(_, _, building_index)
+        local tile = game.board:get_tile(building_index)
+        rendered_building_tile_ids[#rendered_building_tile_ids + 1] = tile and tile.id or nil
+        return true
+      end,
+    },
+  }, function()
+    _render_profile_startup(game)
+  end)
+
+  assert(rendered_tile_ids[1] == 12, "startup render should render strong card staging target tile")
+  assert(#rendered_tile_ids == 1, "startup render should only render flagged tile")
+  assert(rendered_building_tile_ids[1] == 12, "startup render should spawn building for strong card staging target tile")
+  assert(#rendered_building_tile_ids == 1, "startup render should only spawn flagged building")
 end
 
 local function _test_scenario_missile_staging_marks_overlay_render_called_for_startup_render()
@@ -494,6 +550,10 @@ return {
       run = _test_scenario_mountain_staging_is_before_mountain_with_remote_dice,
     },
     {
+      name = "scenario_strong_card_staging_bootstraps_rent_target",
+      run = _test_scenario_strong_card_staging_bootstraps_rent_target,
+    },
+    {
       name = "scenario_monster_staging_bootstraps_target_building",
       run = _test_scenario_monster_staging_bootstraps_target_building,
     },
@@ -504,6 +564,10 @@ return {
     {
       name = "scenario_upgrade_building_render_marks_tile_render_called_for_startup_render",
       run = _test_scenario_upgrade_building_render_marks_tile_render_called_for_startup_render,
+    },
+    {
+      name = "scenario_strong_card_staging_marks_tile_render_called_for_startup_render",
+      run = _test_scenario_strong_card_staging_marks_tile_render_called_for_startup_render,
     },
     {
       name = "scenario_missile_staging_marks_overlay_render_called_for_startup_render",
