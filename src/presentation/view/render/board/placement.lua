@@ -18,38 +18,11 @@ local function _debug_log(...)
   logger.info_unlimited("[MoveAnim]", ...)
 end
 
-local function _zero_fixed()
-  if math and type(math.tofixed) == "function" then
-    return math.tofixed(0)
-  end
-  return 0
-end
-
-local function _stop_unit_anim(unit)
-  if unit ~= nil and type(unit.stop_anim) == "function" then
-    unit.stop_anim()
-  end
-end
-
-local function _stop_unit_motion(unit)
-  if unit == nil then
-    return
-  end
-  if type(unit.force_stop_move) == "function" then
-    unit.force_stop_move()
-    return
-  end
-  if type(unit.ai_command_stop_move) == "function" then
-    unit.ai_command_stop_move(_zero_fixed())
-  end
-end
-
 local function _stop_player_motion(pid, seat_id, unit, vehicle)
-  if seat_id ~= nil and vehicle and type(vehicle.emit_vehicle_stop) == "function" then
-    vehicle.emit_vehicle_stop(pid)
-  end
-  _stop_unit_motion(unit)
-  _stop_unit_anim(unit)
+  return move_anim.stop_player_presentation(pid, unit, {
+    stop_vehicle = seat_id ~= nil,
+    emit_vehicle_stop = vehicle and vehicle.emit_vehicle_stop or nil,
+  })
 end
 
 local function _resolve_player_id(player, i)
@@ -174,12 +147,15 @@ function M.place_players(state, players, occupants, spacing, min_player_y)
       local vehicle = runtime_ports.resolve_vehicle_helper()
       local emit_set_position = vehicle and vehicle.emit_vehicle_set_position or nil
       move_anim.clear_player_token(state.board_scene, pid, "board_sync_place_players")
-      _stop_player_motion(pid, seat_id, unit, vehicle)
+      local stop_result = _stop_player_motion(pid, seat_id, unit, vehicle)
       _debug_log(
         "board_refresh_stop_and_snap",
         "player_id=" .. tostring(pid),
         "position=" .. tostring(idx),
         "seat_id=" .. tostring(seat_id or "nil"),
+        "vehicle_stop=" .. tostring(stop_result.vehicle_stop_path or "none"),
+        "motion_stop=" .. tostring(stop_result.motion_stop_path or "none"),
+        "anim_stop=" .. tostring(stop_result.anim_stop_path or "none"),
         "target_pos=" .. tostring(target_pos)
       )
       if seat_id and emit_set_position then

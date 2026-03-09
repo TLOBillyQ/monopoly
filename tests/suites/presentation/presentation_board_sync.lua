@@ -140,6 +140,39 @@ local function _test_board_refresh_falls_back_to_ai_stop_before_set_position()
   _assert_eq(env.target_pos.y, 0.5, "refresh should use configured y offset after ai stop fallback")
 end
 
+local function _test_board_refresh_prefers_forced_move_stop_and_model_stop_before_set_position()
+  local board_view = require("src.presentation.view.render.board")
+  local env = _build_board_refresh_test_env()
+  env.unit.stop_forced_move = function()
+    env.calls[#env.calls + 1] = "stop_forced_move"
+  end
+  env.unit.ai_command_stop_move = function()
+    env.calls[#env.calls + 1] = "ai_command_stop_move"
+  end
+  env.unit.stop_anim = function()
+    env.calls[#env.calls + 1] = "stop_anim"
+  end
+  env.unit.model_stop_animation = function()
+    env.calls[#env.calls + 1] = "model_stop_animation"
+  end
+  env.unit.set_position = function(pos)
+    env.calls[#env.calls + 1] = "set_position"
+    env.target_pos = pos
+  end
+
+  _with_board_refresh_patches(nil, function()
+    board_view.refresh(env.state, env.ui_model, function() end, function() return "presentation_board_sync" end)
+  end)
+
+  _assert_eq(env.calls[1], "stop_forced_move", "refresh should prefer forced-move stop before ai fallback")
+  _assert_eq(env.calls[2], "stop_anim", "refresh should stop display anim after motion stop")
+  _assert_eq(env.calls[3], "model_stop_animation", "refresh should stop model anim before snap")
+  _assert_eq(env.calls[4], "set_position", "refresh should snap after stop_forced_move path")
+  _assert_eq(env.calls[5], nil, "refresh should not fall through to ai stop when forced stop exists")
+  _assert_eq(env.target_pos.x, 10, "refresh should preserve tile x on forced stop path")
+  _assert_eq(env.target_pos.y, 0.5, "refresh should preserve configured y offset on forced stop path")
+end
+
 local function _test_board_refresh_stops_vehicle_before_vehicle_set_position()
   local board_view = require("src.presentation.view.render.board")
   local runtime_ports = require("src.core.ports.runtime_ports")
@@ -280,6 +313,10 @@ return {
     {
       name = "_test_board_refresh_falls_back_to_ai_stop_before_set_position",
       run = _test_board_refresh_falls_back_to_ai_stop_before_set_position,
+    },
+    {
+      name = "_test_board_refresh_prefers_forced_move_stop_and_model_stop_before_set_position",
+      run = _test_board_refresh_prefers_forced_move_stop_and_model_stop_before_set_position,
     },
     {
       name = "_test_board_refresh_stops_vehicle_before_vehicle_set_position",

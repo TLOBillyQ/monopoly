@@ -155,6 +155,23 @@ function move_anim.step_duration(scene, from_index, to_index, anim_ctx)
   return _calc_step_time(scene, from_index, to_index, anim_ctx)
 end
 
+local function _zero_fixed()
+  if math and type(math.tofixed) == "function" then
+    return math.tofixed(0)
+  end
+  return 0
+end
+
+local function _append_stop_path(path, step)
+  if step == nil then
+    return path
+  end
+  if path == nil then
+    return step
+  end
+  return path .. "+" .. step
+end
+
 local function _stop_unit_motion(unit)
   if unit == nil then
     return nil
@@ -163,23 +180,45 @@ local function _stop_unit_motion(unit)
     unit.force_stop_move()
     return "force_stop_move"
   end
+  if type(unit.stop_forced_move) == "function" then
+    unit.stop_forced_move()
+    return "stop_forced_move"
+  end
   if type(unit.ai_command_stop_move) == "function" then
-    local zero = 0
-    if math and type(math.tofixed) == "function" then
-      zero = math.tofixed(0)
-    end
-    unit.ai_command_stop_move(zero)
+    unit.ai_command_stop_move(_zero_fixed())
     return "ai_command_stop_move"
   end
   return nil
 end
 
 local function _stop_unit_anim(unit)
-  if unit == nil or type(unit.stop_anim) ~= "function" then
+  if unit == nil then
     return nil
   end
-  unit.stop_anim()
-  return "stop_anim"
+  local path = nil
+  if type(unit.stop_anim) == "function" then
+    unit.stop_anim()
+    path = _append_stop_path(path, "stop_anim")
+  end
+  if type(unit.model_stop_animation) == "function" then
+    unit.model_stop_animation()
+    path = _append_stop_path(path, "model_stop_animation")
+  end
+  return path
+end
+
+function move_anim.stop_player_presentation(player_id, unit, opts)
+  opts = opts or {}
+  local vehicle_stop_path = nil
+  if opts.stop_vehicle == true and type(opts.emit_vehicle_stop) == "function" and player_id ~= nil then
+    opts.emit_vehicle_stop(player_id)
+    vehicle_stop_path = "emit_vehicle_stop"
+  end
+  return {
+    vehicle_stop_path = vehicle_stop_path,
+    motion_stop_path = _stop_unit_motion(unit),
+    anim_stop_path = _stop_unit_anim(unit),
+  }
 end
 
 local function _stop_active_sequence(board_scene, player_id, anim_ctx, token)
@@ -192,25 +231,19 @@ local function _stop_active_sequence(board_scene, player_id, anim_ctx, token)
     )
     return
   end
-  local vehicle_stop_path = nil
-  if _is_vehicle_anim(anim_ctx) then
-    local emit_vehicle_stop = _vehicle_helper_method("emit_vehicle_stop")
-    if emit_vehicle_stop then
-      emit_vehicle_stop(player_id)
-      vehicle_stop_path = "emit_vehicle_stop"
-    end
-  end
   local unit = board_scene and board_scene.units_by_player_id and board_scene.units_by_player_id[player_id] or nil
-  local motion_stop_path = _stop_unit_motion(unit)
-  local anim_stop_path = _stop_unit_anim(unit)
+  local stop_result = move_anim.stop_player_presentation(player_id, unit, {
+    stop_vehicle = _is_vehicle_anim(anim_ctx),
+    emit_vehicle_stop = _vehicle_helper_method("emit_vehicle_stop"),
+  })
   _debug_log(
     "finish_stop",
     "player_id=" .. tostring(player_id),
     "seq=" .. tostring(anim_ctx and anim_ctx.seq or "nil"),
     "token=" .. tostring(token),
-    "vehicle_stop=" .. tostring(vehicle_stop_path or "none"),
-    "motion_stop=" .. tostring(motion_stop_path or "none"),
-    "anim_stop=" .. tostring(anim_stop_path or "none")
+    "vehicle_stop=" .. tostring(stop_result.vehicle_stop_path or "none"),
+    "motion_stop=" .. tostring(stop_result.motion_stop_path or "none"),
+    "anim_stop=" .. tostring(stop_result.anim_stop_path or "none")
   )
   move_anim.clear_player_token(board_scene, player_id, "sequence_finished")
 end

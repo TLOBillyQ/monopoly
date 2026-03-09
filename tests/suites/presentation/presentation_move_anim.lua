@@ -108,6 +108,58 @@ local function _test_move_anim_stale_finish_callback_does_not_stop_new_sequence(
   _assert_eq(calls[4], "stop_anim", "active finish callback should stop anim")
 end
 
+local function _test_move_anim_prefers_forced_move_stop_and_model_stop_for_local_player_units()
+  local _vec3 = vec3.with_sub_length
+  local scheduled = {}
+  local calls = {}
+  local scene = {
+    tiles = {
+      [1] = { get_position = function() return _vec3(0, 0, 0) end },
+      [2] = { get_position = function() return _vec3(10, 0, 0) end },
+    },
+    units_by_player_id = {
+      [1] = {
+        start_move_by_direction = function()
+          calls[#calls + 1] = "start_move_by_direction"
+        end,
+        stop_forced_move = function()
+          calls[#calls + 1] = "stop_forced_move"
+        end,
+        ai_command_stop_move = function()
+          calls[#calls + 1] = "ai_command_stop_move"
+        end,
+        stop_anim = function()
+          calls[#calls + 1] = "stop_anim"
+        end,
+        model_stop_animation = function()
+          calls[#calls + 1] = "model_stop_animation"
+        end,
+      },
+    },
+  }
+
+  _with_patches({
+    { target = runtime_ports, key = "schedule", value = function(delay, fn)
+      scheduled[#scheduled + 1] = { delay = delay, fn = fn }
+    end },
+  }, function()
+    move_anim.play_sequence(scene, {
+      player_id = 1,
+      seq = 41,
+      from_index = 1,
+      to_index = 2,
+      direction = { x = 1, y = 0, z = 0 },
+    })
+  end)
+
+  _assert_eq(#scheduled, 1, "move sequence should schedule a finish callback for local-player stop fallback")
+  scheduled[1].fn()
+  _assert_eq(calls[2], "stop_forced_move", "finish callback should stop forced movement before ai fallback")
+  _assert_eq(calls[3], "stop_anim", "finish callback should stop display anim")
+  _assert_eq(calls[4], "model_stop_animation", "finish callback should also stop model anim")
+  _assert_eq(calls[5], nil, "finish callback should not fall through to ai stop when forced stop exists")
+end
+
 local function _test_move_anim_debug_log_writes_when_enabled()
   local _vec3 = vec3.with_sub_length
   local scene = {
@@ -160,6 +212,10 @@ return {
     {
       name = "_test_move_anim_stale_finish_callback_does_not_stop_new_sequence",
       run = _test_move_anim_stale_finish_callback_does_not_stop_new_sequence,
+    },
+    {
+      name = "_test_move_anim_prefers_forced_move_stop_and_model_stop_for_local_player_units",
+      run = _test_move_anim_prefers_forced_move_stop_and_model_stop_for_local_player_units,
     },
     {
       name = "_test_move_anim_debug_log_writes_when_enabled",
