@@ -184,7 +184,7 @@ function M.build_state(get_current_game, opts)
       test_profile_bootstrap.apply(created_game, profile_name)
       return created_game
     end,
-    auto_runner = auto_runner:new({ interval = ui.auto_interval }),
+    auto_runner = auto_runner:new({ interval = gameplay_rules.ai_auto_turn_interval_seconds }),
     tile_units = nil,
     tile_positions = nil,
     tile_spacing = nil,

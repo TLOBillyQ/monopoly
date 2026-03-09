@@ -1821,20 +1821,20 @@ local function _test_auto_runner_auto_advances_ai_player()
   local g = _new_game()
   g.ui_port = _build_ui_port()
   local state = _build_loop_state()
-  state.auto_runner.interval = 0.4
+  state.auto_runner.interval = 1.0
   g.turn.current_player_index = 2
   g.turn.phase = "start"
   g.turn.turn_count = 1
 
   _with_timestamp_stub(function()
-    local a1 = gameplay_loop.step_auto_runner(g, state, 0.2, {
+    local a1 = gameplay_loop.step_auto_runner(g, state, 0.5, {
       game_finished = g.finished,
       current_player_index = g.turn.current_player_index,
       current_player_id = g.players[2].id,
       current_player_auto = true,
     })
     assert(a1 == nil, "should not trigger before reaching auto interval")
-    local a2 = gameplay_loop.step_auto_runner(g, state, 0.2, {
+    local a2 = gameplay_loop.step_auto_runner(g, state, 0.5, {
       game_finished = g.finished,
       current_player_index = g.turn.current_player_index,
       current_player_id = g.players[2].id,
@@ -1896,6 +1896,18 @@ local function _test_auto_runner_selects_runtime_pending_choice_without_ui_choic
   end
 
   _with_timestamp_stub(function()
+    local early = gameplay_loop.step_auto_runner(g, state, 2.0, {
+      game = g,
+      state = state,
+      pending_choice = choice,
+      choice_active = false,
+      market_active = false,
+      popup_active = false,
+      current_player_index = g.turn.current_player_index,
+      current_player_id = ai_player.id,
+      current_player_auto = true,
+    })
+    assert(early == nil, "choice auto action should wait before looking decided")
     local action = gameplay_loop.step_auto_runner(g, state, 1.0, {
       game = g,
       state = state,
@@ -1914,6 +1926,76 @@ local function _test_auto_runner_selects_runtime_pending_choice_without_ui_choic
 
   assert(dispatched and dispatched.type == "choice_select", "auto runner should dispatch the auto-selected choice")
   assert(dispatched.option_id == "buy_land", "dispatched choice should still select buy_land")
+end
+
+local function _test_auto_runner_resets_timer_when_wait_kind_changes()
+  local g = _new_game()
+  g.ui_port = _build_ui_port()
+  local state = _build_loop_state()
+  local ai_player = g.players[2]
+  local dispatched = nil
+  local choice = {
+    id = 704,
+    kind = "landing_optional_effect",
+    route_key = "secondary_confirm",
+    requires_confirm = true,
+    owner_role_id = ai_player.id,
+    options = { { id = "buy_land", label = "购买地块" } },
+    allow_cancel = true,
+    meta = {
+      player_id = ai_player.id,
+      tile_id = 1,
+      effect_ids = { "buy_land" },
+    },
+  }
+  state.auto_runner.interval = 1.0
+  g.turn.current_player_index = 2
+  g.turn.phase = "start"
+  g.dispatch_action = function(_, action)
+    dispatched = action
+    g.turn.pending_choice = nil
+  end
+
+  _with_timestamp_stub(function()
+    local next_action = gameplay_loop.step_auto_runner(g, state, 0.8, {
+      game_finished = g.finished,
+      current_player_index = g.turn.current_player_index,
+      current_player_id = ai_player.id,
+      current_player_auto = true,
+    })
+    assert(next_action == nil, "next timer should not fire before short delay")
+
+    g.turn.phase = "wait_choice"
+    g.turn.pending_choice = choice
+    runtime_state.set_pending_choice(state, choice, { choice_id = choice.id, elapsed_seconds = 0 })
+
+    local early_choice = gameplay_loop.step_auto_runner(g, state, 2.2, {
+      game = g,
+      state = state,
+      pending_choice = choice,
+      choice_active = false,
+      market_active = false,
+      popup_active = false,
+      current_player_index = g.turn.current_player_index,
+      current_player_id = ai_player.id,
+      current_player_auto = true,
+    })
+    assert(early_choice == nil, "choice timer should reset when switching from next to wait_choice")
+
+    local final_choice = gameplay_loop.step_auto_runner(g, state, 0.8, {
+      game = g,
+      state = state,
+      pending_choice = choice,
+      choice_active = false,
+      market_active = false,
+      popup_active = false,
+      current_player_index = g.turn.current_player_index,
+      current_player_id = ai_player.id,
+      current_player_auto = true,
+    })
+    assert(final_choice and final_choice.type == "choice_select", "choice timer should fire after a fresh full wait")
+  end)
+  assert(dispatched and dispatched.type == "choice_select", "final choice should still dispatch after reset")
 end
 
 local function _test_auto_runner_not_advanced_when_input_blocked()
@@ -2908,6 +2990,7 @@ return {
   _test_auto_runner_auto_advances_ai_player,
   _test_auto_runner_human_turn_not_auto_advanced,
   _test_auto_runner_selects_runtime_pending_choice_without_ui_choice_screen,
+  _test_auto_runner_resets_timer_when_wait_kind_changes,
   _test_auto_runner_not_advanced_when_input_blocked,
   _test_tick_choice_timeout_uses_runtime_pending_choice_without_ui_choice_screen,
   _test_tick_ui_sync_countdown_uses_runtime_pending_choice_without_ui_choice_screen,

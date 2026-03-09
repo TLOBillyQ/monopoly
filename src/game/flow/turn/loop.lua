@@ -249,7 +249,8 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
   end
   if auto_action == nil
       and ctx.pending_choice
-      and ctx.current_player_auto == true then
+      and ctx.current_player_auto == true
+      and state.auto_runner.waiting_for_interval ~= true then
     local debug_runtime = runtime_state.ensure_debug_runtime(state)
     local key = "auto_runner_choice_no_action_" .. tostring(ctx.pending_choice.id)
     if not debug_runtime.log_once[key] then

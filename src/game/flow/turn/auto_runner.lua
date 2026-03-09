@@ -1,6 +1,7 @@
 require "vendor.third_party.ClassUtils"
 
 local choice_auto_policy = require("src.game.flow.turn.choice_auto_policy")
+local gameplay_rules = require("src.core.config.gameplay_rules")
 
 local auto_runner = Class("AutoRunner")
 
@@ -10,17 +11,29 @@ function auto_runner:init(opts)
   self.interval = opts.interval or 0.15
   self.timer = 0
   self.enabled = false
+  self.waiting_for_interval = false
+  self.last_actor_role_id = nil
+  self.last_wait_kind = nil
+  self.last_choice_id = nil
 end
 
 
 function auto_runner:set_enabled(on)
   self.enabled = on
   self.timer = 0
+  self.waiting_for_interval = false
+  self.last_actor_role_id = nil
+  self.last_wait_kind = nil
+  self.last_choice_id = nil
 end
 
 
 function auto_runner:reset_timer()
   self.timer = 0
+  self.waiting_for_interval = false
+  self.last_actor_role_id = nil
+  self.last_wait_kind = nil
+  self.last_choice_id = nil
 end
 
 local function _resolve_choice_actor_role_id(env)
@@ -44,6 +57,41 @@ local function _resolve_choice_action(env)
   return action
 end
 
+local function _resolve_wait_kind(env)
+  if env and env.pending_choice then
+    return "choice"
+  end
+  if env and env.modal_active then
+    return "modal"
+  end
+  return "next"
+end
+
+local function _resolve_interval_seconds(self, env)
+  local wait_kind = _resolve_wait_kind(env)
+  if wait_kind == "choice" then
+    return gameplay_rules.auto_choice_min_visible_seconds or 0
+  end
+  return self.interval or 0
+end
+
+local function _sync_wait_signature(self, env)
+  local actor_role_id = env and (env.current_player_id or env.current_player_index) or nil
+  local wait_kind = _resolve_wait_kind(env)
+  local choice = env and env.pending_choice or nil
+  local choice_id = choice and choice.id or nil
+  local changed = actor_role_id ~= self.last_actor_role_id
+      or wait_kind ~= self.last_wait_kind
+      or choice_id ~= self.last_choice_id
+  if changed then
+    self.timer = 0
+    self.waiting_for_interval = false
+    self.last_actor_role_id = actor_role_id
+    self.last_wait_kind = wait_kind
+    self.last_choice_id = choice_id
+  end
+end
+
 function auto_runner:next_action(dt, env)
   if not self.enabled then
     return nil
@@ -56,11 +104,15 @@ function auto_runner:next_action(dt, env)
     return nil
   end
 
+  _sync_wait_signature(self, env)
+  local interval = _resolve_interval_seconds(self, env)
   self.timer = self.timer + dt
-  if self.timer < self.interval then
+  if self.timer < interval then
+    self.waiting_for_interval = true
     return nil
   end
   self.timer = 0
+  self.waiting_for_interval = false
 
   local choice_action = _resolve_choice_action(env)
   if choice_action then
