@@ -155,7 +155,7 @@ local function _resume_after_steal_interrupt(game, player, interrupt)
 end
 
 local function _advance_strong_card_staging_to_rent_prompt()
-  local g, state = _new_profile_game("scenario_strong_card_staging")
+  local g, state = _new_profile_game("strong_card")
   local player = g.players[1]
 
   g.anim_gate_port.wait_action_anim = false
@@ -189,7 +189,7 @@ local function _advance_strong_card_staging_to_rent_prompt()
 end
 
 local function _test_monster_startup_profile_runs_choice_to_action_anim()
-  local g, state = _new_profile_game("scenario_monster_staging")
+  local g, state = _new_profile_game("monster")
   local dispatched = {}
   local player = g.players[1]
   local target_tile = assert(g.board:get_tile_by_id(12), "monster staging target tile should exist")
@@ -222,7 +222,7 @@ local function _test_monster_startup_profile_runs_choice_to_action_anim()
 end
 
 local function _test_missile_startup_profile_defers_hospital_followup_until_after_anim()
-  local g, state = _new_profile_game("scenario_missile_staging")
+  local g, state = _new_profile_game("missile")
   local dispatched = {}
   local player = g.players[1]
   local target_tile = assert(g.board:get_tile_by_id(11), "missile staging target tile should exist")
@@ -387,7 +387,7 @@ local function _test_post_action_item_phase_free_rent_resolves_after_skipping_st
 end
 
 local function _test_steal_startup_profile_multi_item_choice_resumes_to_chance()
-  local g, _ = _new_profile_game("scenario_steal_staging")
+  local g, _ = _new_profile_game("steal")
   local player = g.players[1]
   local target = g.players[2]
   local _, interrupt = _start_steal_interrupt(g, player)
@@ -419,7 +419,7 @@ local function _test_steal_startup_profile_multi_item_choice_resumes_to_chance()
 end
 
 local function _test_steal_startup_profile_single_item_auto_steal_resumes_to_chance()
-  local g, _ = _new_profile_game("scenario_steal_single_item_staging")
+  local g, _ = _new_profile_game("steal_one")
   local player = g.players[1]
   local target = g.players[2]
   local _, interrupt = _start_steal_interrupt(g, player)
@@ -439,7 +439,7 @@ local function _test_steal_startup_profile_single_item_auto_steal_resumes_to_cha
 end
 
 local function _test_steal_queue_startup_profile_skip_opens_next_target_and_resumes()
-  local g, _ = _new_profile_game("scenario_steal_queue_staging")
+  local g, _ = _new_profile_game("steal_queue")
   local player = g.players[1]
   local second_target = g.players[3]
   local _, interrupt = _start_steal_interrupt(g, player)
@@ -466,7 +466,7 @@ local function _test_steal_queue_startup_profile_skip_opens_next_target_and_resu
 end
 
 local function _test_steal_startup_profile_cancel_item_picker_keeps_state_and_resumes()
-  local g, _ = _new_profile_game("scenario_steal_staging")
+  local g, _ = _new_profile_game("steal")
   local player = g.players[1]
   local target = g.players[2]
   local _, interrupt = _start_steal_interrupt(g, player)
@@ -494,7 +494,7 @@ local function _test_steal_startup_profile_cancel_item_picker_keeps_state_and_re
 end
 
 local function _test_choice_builders_reserve_base_inline_for_item_slots_only()
-  local g, _ = _new_profile_game("scenario_steal_staging")
+  local g, _ = _new_profile_game("steal")
   local player = g.players[1]
   local land_choice_specs = require("src.game.systems.land.choice_specs")
   local purchase_policy = require("src.game.systems.market.application.purchase_policy")

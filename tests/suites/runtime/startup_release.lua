@@ -78,7 +78,7 @@ local function _test_release_prod_forces_default_profile()
   with_patches({
     { key = "RELEASE_BUILD", value = true },
     { key = "RELEASE_ALLOW_TEST_PROFILE", value = nil },
-    { key = "STARTUP_TEST_PROFILE", value = "scenario_market_staging" },
+    { key = "STARTUP_TEST_PROFILE", value = "market" },
   }, function()
     local policy = startup_policy.resolve(_G)
     assert(policy.release_mode == true, "release flag should be enabled")
@@ -95,16 +95,16 @@ local function _test_release_qa_accepts_defined_profile()
   with_patches({
     { key = "RELEASE_BUILD", value = true },
     { key = "RELEASE_ALLOW_TEST_PROFILE", value = true },
-    { key = "STARTUP_TEST_PROFILE", value = "scenario_market_staging" },
+    { key = "STARTUP_TEST_PROFILE", value = "market" },
   }, function()
     local policy = startup_policy.resolve(_G)
     assert(policy.release_mode == true, "release mode should stay enabled")
     assert(policy.release_allow_test_profile == true, "release-qa should allow profile override")
-    assert(policy.profile_name == "scenario_market_staging", "release-qa should accept defined profile")
+    assert(policy.profile_name == "market", "release-qa should accept defined profile")
   end)
 end
 
-local function _test_release_qa_accepts_monster_staging_profile_in_startup_chain()
+local function _test_release_qa_accepts_monster_profile_in_startup_chain()
   local created_opts = nil
   local applied_profile = nil
   with_patches({
@@ -132,7 +132,7 @@ local function _test_release_qa_accepts_monster_staging_profile_in_startup_chain
     },
   }, function()
     local state = game_startup.build_state(function() return nil end, {
-      profile_name = "scenario_monster_staging",
+      profile_name = "monster",
       release_mode = true,
       force_non_p1_ai = false,
       fail_fast_when_roles_empty = true,
@@ -141,10 +141,10 @@ local function _test_release_qa_accepts_monster_staging_profile_in_startup_chain
   end)
 
   assert(type(created_opts) == "table", "release-qa startup should still create game options")
-  assert(applied_profile == "scenario_monster_staging", "release-qa startup should pass through monster staging profile")
+  assert(applied_profile == "monster", "release-qa startup should pass through monster profile")
 end
 
-local function _test_release_qa_accepts_steal_staging_profile_in_startup_chain()
+local function _test_release_qa_accepts_steal_profile_in_startup_chain()
   local created_opts = nil
   local applied_profile = nil
   with_patches({
@@ -172,7 +172,7 @@ local function _test_release_qa_accepts_steal_staging_profile_in_startup_chain()
     },
   }, function()
     local state = game_startup.build_state(function() return nil end, {
-      profile_name = "scenario_steal_staging",
+      profile_name = "steal",
       release_mode = true,
       force_non_p1_ai = false,
       fail_fast_when_roles_empty = true,
@@ -180,8 +180,8 @@ local function _test_release_qa_accepts_steal_staging_profile_in_startup_chain()
     state.game_factory()
   end)
 
-  assert(type(created_opts) == "table", "release-qa startup should still create game options for steal staging")
-  assert(applied_profile == "scenario_steal_staging", "release-qa startup should pass through steal staging profile")
+  assert(type(created_opts) == "table", "release-qa startup should still create game options for steal profile")
+  assert(applied_profile == "steal", "release-qa startup should pass through steal profile")
 end
 
 local function _test_release_prod_allows_explicit_ai_mode()
@@ -233,12 +233,12 @@ local function _test_startup_policy_dev_accepts_profile_override()
   with_patches({
     { key = "RELEASE_BUILD", value = nil },
     { key = "RELEASE_ALLOW_TEST_PROFILE", value = true },
-    { key = "STARTUP_TEST_PROFILE", value = "scenario_market_staging" },
+    { key = "STARTUP_TEST_PROFILE", value = "market" },
   }, function()
     local policy = startup_policy.resolve(_G)
     assert(policy.release_mode == false, "dev should not mark release mode")
     assert(policy.release_allow_test_profile == true, "dev can ignore release-only override flag")
-    assert(policy.profile_name == "scenario_market_staging", "dev should accept startup profile override")
+    assert(policy.profile_name == "market", "dev should accept startup profile override")
     assert(policy.ai_mode == "default", "dev should default ai mode when unset")
     assert(policy.force_non_p1_ai == true, "dev should keep non-p1 ai policy enabled")
     assert(policy.fail_fast_when_roles_empty == false, "dev should allow empty role fallback")
@@ -348,7 +348,7 @@ local function _test_game_startup_explicit_ai_mode_keeps_matching_local_role_hum
     },
   }, function()
     local state = game_startup.build_state(function() return nil end, {
-      profile_name = "scenario_market_staging",
+      profile_name = "market",
       ai_mode = "all_except_local_human",
       local_human_role_id = 33,
       release_mode = false,
@@ -361,7 +361,7 @@ local function _test_game_startup_explicit_ai_mode_keeps_matching_local_role_hum
   assert(type(created_opts.role_roster) == "table" and #created_opts.role_roster == 4, "explicit ai mode should keep role roster")
   assert(created_opts.ai[1] == true and created_opts.ai[2] == true and created_opts.ai[4] == true, "non-local roles should be AI")
   assert(created_opts.ai[3] == nil, "matching local human role should stay human")
-  assert(applied_profile == "scenario_market_staging", "profile bootstrap should still compose with explicit ai mode")
+  assert(applied_profile == "market", "profile bootstrap should still compose with explicit ai mode")
 end
 
 local function _test_game_startup_explicit_ai_mode_falls_back_to_slot1_when_role_missing()
@@ -475,12 +475,12 @@ return {
     { name = "release_prod_forces_default_profile", run = _test_release_prod_forces_default_profile },
     { name = "release_qa_accepts_defined_profile", run = _test_release_qa_accepts_defined_profile },
     {
-      name = "release_qa_accepts_monster_staging_profile_in_startup_chain",
-      run = _test_release_qa_accepts_monster_staging_profile_in_startup_chain,
+      name = "release_qa_accepts_monster_profile_in_startup_chain",
+      run = _test_release_qa_accepts_monster_profile_in_startup_chain,
     },
     {
-      name = "release_qa_accepts_steal_staging_profile_in_startup_chain",
-      run = _test_release_qa_accepts_steal_staging_profile_in_startup_chain,
+      name = "release_qa_accepts_steal_profile_in_startup_chain",
+      run = _test_release_qa_accepts_steal_profile_in_startup_chain,
     },
     { name = "release_prod_allows_explicit_ai_mode", run = _test_release_prod_allows_explicit_ai_mode },
     { name = "release_qa_without_profile_falls_back_to_default", run = _test_release_qa_without_profile_falls_back_to_default },

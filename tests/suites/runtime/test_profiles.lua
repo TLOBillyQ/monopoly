@@ -88,7 +88,7 @@ end
 
 local function _test_profile_bootstrap_applies_player_position_by_tile_id()
   local game = _new_game()
-  test_profile_bootstrap.apply(game, "scenario_bankruptcy")
+  test_profile_bootstrap.apply(game, "bankruptcy")
 
   local p1_expected = game.board:index_of_tile_id(35)
   local p2_expected = game.board:index_of_tile_id(39)
@@ -99,13 +99,13 @@ end
 
 local function _test_profile_bootstrap_applies_item_counts()
   local game = _new_game()
-  test_profile_bootstrap.apply(game, "scenario_tax_survive")
+  test_profile_bootstrap.apply(game, "tax")
 
   _assert_inventory_counts(game.players[1], {
     [2002] = 1,
     [2010] = 1,
   })
-  assert(game.players[1].inventory:count() == 2, "scenario_tax_survive should grant exactly 2 items to p1")
+  assert(game.players[1].inventory:count() == 2, "tax should grant exactly 2 items to p1")
 end
 
 local function _test_profile_bootstrap_rejects_item_count_over_inventory_limit()
@@ -138,23 +138,21 @@ local function _test_profile_bootstrap_rejects_item_count_over_inventory_limit()
     "error should explain inventory limit breach")
 end
 
-local function _test_non_default_profiles_are_scenarios_with_p1_item_counts()
+local function _test_non_default_profiles_define_p1_item_counts()
   local profiles = test_profile_resolver.available_profiles()
   for _, profile_name in ipairs(profiles) do
     if profile_name ~= "default" then
-      assert(profile_name:find("scenario_", 1, true) == 1,
-        "non-default profiles should keep scenario_ prefix: " .. tostring(profile_name))
       local cfg = assert(test_profiles_cfg.get(profile_name), "profile config should exist")
       local p1_cfg = cfg.bootstrap and cfg.bootstrap.players and cfg.bootstrap.players[1]
       local item_counts = p1_cfg and p1_cfg.item_counts or nil
-      assert(type(item_counts) == "table", "scenario profile should define p1 item_counts: " .. tostring(profile_name))
+      assert(type(item_counts) == "table", "non-default profile should define p1 item_counts: " .. tostring(profile_name))
     end
   end
 end
 
-local function _test_scenario_bankruptcy_applies_tile_override()
+local function _test_bankruptcy_applies_tile_override()
   local game = _new_game()
-  test_profile_bootstrap.apply(game, "scenario_bankruptcy")
+  test_profile_bootstrap.apply(game, "bankruptcy")
 
   local tile = game.board:get_tile_by_id(1)
   assert(tile ~= nil, "tile 1 should exist")
@@ -163,16 +161,16 @@ local function _test_scenario_bankruptcy_applies_tile_override()
   assert(state.owner_id == game.players[2].id, "tile 1 owner should be player2")
   assert(state.level == 3, "tile 1 level should be 3")
   assert(game.players[2].properties[1] == true, "player2 should own tile 1")
-  assert(game.players[1].cash == 3000, "p1 cash should match scenario_bankruptcy")
+  assert(game.players[1].cash == 3000, "p1 cash should match bankruptcy")
 end
 
-local function _test_scenario_upgrade_building_render_applies_bootstrap()
+local function _test_upgrade_build_applies_bootstrap()
   local game = _new_game()
-  test_profile_bootstrap.apply(game, "scenario_upgrade_building_render")
+  test_profile_bootstrap.apply(game, "upgrade_build")
 
   local p1_expected = game.board:index_of_tile_id(35)
   assert(p1_expected ~= nil, "start tile id should exist in board path")
-  assert(game.players[1].position == p1_expected, "p1 position should match scenario_upgrade_building_render")
+  assert(game.players[1].position == p1_expected, "p1 position should match upgrade_build")
 
   local tile = game.board:get_tile_by_id(1)
   assert(tile ~= nil, "tile 1 should exist")
@@ -186,18 +184,18 @@ local function _test_scenario_upgrade_building_render_applies_bootstrap()
   })
 end
 
-local function _test_scenario_market_staging_applies_player_position()
+local function _test_market_applies_player_position()
   local game = _new_game()
-  test_profile_bootstrap.apply(game, "scenario_market_staging")
+  test_profile_bootstrap.apply(game, "market")
 
   local p1_expected = game.board:index_of_tile_id(27)
   assert(p1_expected ~= nil, "tile 27 should exist in board path")
-  assert(game.players[1].position == p1_expected, "p1 position should match scenario_market_staging")
+  assert(game.players[1].position == p1_expected, "p1 position should match market")
 end
 
-local function _test_scenario_market_staging_preloads_remote_dice()
+local function _test_market_preloads_remote_dice()
   local game = _new_game()
-  test_profile_bootstrap.apply(game, "scenario_market_staging")
+  test_profile_bootstrap.apply(game, "market")
 
   _assert_inventory_counts(game.players[1], {
     [2002] = 1,
@@ -282,9 +280,9 @@ local function _render_profile_startup(game)
   return state
 end
 
-local function _test_scenario_market_staging_is_eight_steps_before_market()
+local function _test_market_is_eight_steps_before_market()
   local game = _new_game()
-  test_profile_bootstrap.apply(game, "scenario_market_staging")
+  test_profile_bootstrap.apply(game, "market")
 
   local market_index = game.board:index_of_tile_id(map_cfg.market_id)
   assert(market_index ~= nil, "market tile id should exist in board path")
@@ -292,9 +290,9 @@ local function _test_scenario_market_staging_is_eight_steps_before_market()
     "p1 should start eight steps before market after bootstrap")
 end
 
-local function _test_scenario_hospital_staging_is_before_hospital_with_remote_dice()
+local function _test_hospital_is_before_hospital_with_remote_dice()
   local game = _new_game()
-  test_profile_bootstrap.apply(game, "scenario_hospital_staging")
+  test_profile_bootstrap.apply(game, "hospital")
 
   local p1_pos = game.players[1].position
   local hospital_idx = game.board:index_of_tile_id(36)
@@ -305,9 +303,9 @@ local function _test_scenario_hospital_staging_is_before_hospital_with_remote_di
   })
 end
 
-local function _test_scenario_mountain_staging_is_before_mountain_with_remote_dice()
+local function _test_mountain_is_before_mountain_with_remote_dice()
   local game = _new_game()
-  test_profile_bootstrap.apply(game, "scenario_mountain_staging")
+  test_profile_bootstrap.apply(game, "mountain")
 
   local p1_pos = game.players[1].position
   local mountain_idx = game.board:index_of_tile_id(37)
@@ -318,15 +316,15 @@ local function _test_scenario_mountain_staging_is_before_mountain_with_remote_di
   })
 end
 
-local function _test_scenario_strong_card_staging_bootstraps_rent_target()
+local function _test_strong_card_bootstraps_rent_target()
   local game = _new_game()
-  test_profile_bootstrap.apply(game, "scenario_strong_card_staging")
+  test_profile_bootstrap.apply(game, "strong_card")
 
   local target_tile = assert(game.board:get_tile_by_id(12), "strong card staging target tile should exist")
   local target_state = tile_state(game, target_tile)
   local player_index = game.board:index_of_tile_id(11)
 
-  assert(player_index ~= nil, "scenario_strong_card_staging start tile should exist")
+  assert(player_index ~= nil, "strong_card start tile should exist")
   assert(game.players[1].position == player_index, "strong card staging should place p1 on configured tile")
   _assert_inventory_counts(game.players[1], {
     [2001] = 1,
@@ -337,15 +335,15 @@ local function _test_scenario_strong_card_staging_bootstraps_rent_target()
   assert(target_state.level == 2, "strong card staging should assign target building level")
 end
 
-local function _test_scenario_monster_staging_bootstraps_target_building()
+local function _test_monster_bootstraps_target_building()
   local game = _new_game()
-  test_profile_bootstrap.apply(game, "scenario_monster_staging")
+  test_profile_bootstrap.apply(game, "monster")
 
   local target_tile = assert(game.board:get_tile_by_id(12), "monster staging target tile should exist")
   local target_state = tile_state(game, target_tile)
   local player_index = game.board:index_of_tile_id(40)
 
-  assert(player_index ~= nil, "scenario_monster_staging start tile should exist")
+  assert(player_index ~= nil, "monster start tile should exist")
   assert(game.players[1].position == player_index, "monster staging should place p1 on configured tile")
   _assert_inventory_counts(game.players[1], {
     [2002] = 1,
@@ -355,17 +353,17 @@ local function _test_scenario_monster_staging_bootstraps_target_building()
   assert(target_state.level == 2, "monster staging should assign target building level")
 end
 
-local function _test_scenario_missile_staging_bootstraps_target_tile_and_overlays()
+local function _test_missile_bootstraps_target_tile_and_overlays()
   local game = _new_game()
-  test_profile_bootstrap.apply(game, "scenario_missile_staging")
+  test_profile_bootstrap.apply(game, "missile")
 
   local target_tile = assert(game.board:get_tile_by_id(11), "missile staging target tile should exist")
   local target_state = tile_state(game, target_tile)
   local target_index = game.board:index_of_tile_id(11)
   local player_index = game.board:index_of_tile_id(40)
 
-  assert(target_index ~= nil, "scenario_missile_staging target tile should exist in board path")
-  assert(player_index ~= nil, "scenario_missile_staging start tile should exist")
+  assert(target_index ~= nil, "missile target tile should exist in board path")
+  assert(player_index ~= nil, "missile start tile should exist")
   assert(game.players[1].position == player_index, "missile staging should place p1 on configured tile")
   _assert_inventory_counts(game.players[1], {
     [2002] = 1,
@@ -378,9 +376,9 @@ local function _test_scenario_missile_staging_bootstraps_target_tile_and_overlay
   assert(game.players[2].position == target_index, "missile staging should place occupant on target tile")
 end
 
-local function _test_scenario_steal_staging_bootstraps_positions_and_inventory()
+local function _test_steal_bootstraps_positions_and_inventory()
   local game = _new_game()
-  test_profile_bootstrap.apply(game, "scenario_steal_staging")
+  test_profile_bootstrap.apply(game, "steal")
 
   assert(game.players[1].position == assert(game.board:index_of_tile_id(7)),
     "steal staging should place p1 on tile 7")
@@ -395,9 +393,9 @@ local function _test_scenario_steal_staging_bootstraps_positions_and_inventory()
   })
 end
 
-local function _test_scenario_steal_single_item_staging_bootstraps_positions_and_inventory()
+local function _test_steal_one_bootstraps_positions_and_inventory()
   local game = _new_game()
-  test_profile_bootstrap.apply(game, "scenario_steal_single_item_staging")
+  test_profile_bootstrap.apply(game, "steal_one")
 
   assert(game.players[1].position == assert(game.board:index_of_tile_id(7)),
     "single-item steal staging should place p1 on tile 7")
@@ -411,9 +409,9 @@ local function _test_scenario_steal_single_item_staging_bootstraps_positions_and
   })
 end
 
-local function _test_scenario_steal_queue_staging_keeps_route_and_interrupt_stable()
+local function _test_steal_queue_keeps_route_and_interrupt_stable()
   local game = _new_game()
-  test_profile_bootstrap.apply(game, "scenario_steal_queue_staging")
+  test_profile_bootstrap.apply(game, "steal_queue")
 
   local p1 = game.players[1]
   local p2 = game.players[2]
@@ -437,9 +435,9 @@ local function _test_scenario_steal_queue_staging_keeps_route_and_interrupt_stab
     "current steal interrupt should only capture current-step targets")
 end
 
-local function _test_scenario_upgrade_building_render_marks_tile_render_called_for_startup_render()
+local function _test_upgrade_build_marks_tile_render_called_for_startup_render()
   local game = _new_game()
-  test_profile_bootstrap.apply(game, "scenario_upgrade_building_render")
+  test_profile_bootstrap.apply(game, "upgrade_build")
 
   local tile_renderer = require("src.presentation.view.render.tile_renderer")
   local building_effects = require("src.presentation.view.render.building_effects")
@@ -473,9 +471,9 @@ local function _test_scenario_upgrade_building_render_marks_tile_render_called_f
   assert(#rendered_building_tile_ids == 0, "level 0 tile should not spawn startup building render")
 end
 
-local function _test_scenario_strong_card_staging_marks_tile_render_called_for_startup_render()
+local function _test_strong_card_marks_tile_render_called_for_startup_render()
   local game = _new_game()
-  test_profile_bootstrap.apply(game, "scenario_strong_card_staging")
+  test_profile_bootstrap.apply(game, "strong_card")
 
   local tile_renderer = require("src.presentation.view.render.tile_renderer")
   local building_effects = require("src.presentation.view.render.building_effects")
@@ -510,9 +508,9 @@ local function _test_scenario_strong_card_staging_marks_tile_render_called_for_s
   assert(#rendered_building_tile_ids == 1, "startup render should only spawn flagged building")
 end
 
-local function _test_scenario_missile_staging_marks_overlay_render_called_for_startup_render()
+local function _test_missile_marks_overlay_render_called_for_startup_render()
   local game = _new_game()
-  test_profile_bootstrap.apply(game, "scenario_missile_staging")
+  test_profile_bootstrap.apply(game, "missile")
 
   local overlay_runtime = require("src.presentation.view.render.anim_overlay_runtime")
   local tile_renderer = require("src.presentation.view.render.tile_renderer")
@@ -582,67 +580,67 @@ return {
       name = "profile_bootstrap_rejects_item_count_over_inventory_limit",
       run = _test_profile_bootstrap_rejects_item_count_over_inventory_limit,
     },
-    { name = "non_default_profiles_are_scenarios_with_p1_item_counts", run = _test_non_default_profiles_are_scenarios_with_p1_item_counts },
-    { name = "scenario_bankruptcy_applies_tile_override", run = _test_scenario_bankruptcy_applies_tile_override },
+    { name = "non_default_profiles_define_p1_item_counts", run = _test_non_default_profiles_define_p1_item_counts },
+    { name = "bankruptcy_applies_tile_override", run = _test_bankruptcy_applies_tile_override },
     {
-      name = "scenario_upgrade_building_render_applies_bootstrap",
-      run = _test_scenario_upgrade_building_render_applies_bootstrap,
+      name = "upgrade_build_applies_bootstrap",
+      run = _test_upgrade_build_applies_bootstrap,
     },
     {
-      name = "scenario_market_staging_applies_player_position",
-      run = _test_scenario_market_staging_applies_player_position,
+      name = "market_applies_player_position",
+      run = _test_market_applies_player_position,
     },
     {
-      name = "scenario_market_staging_preloads_remote_dice",
-      run = _test_scenario_market_staging_preloads_remote_dice,
+      name = "market_preloads_remote_dice",
+      run = _test_market_preloads_remote_dice,
     },
     {
-      name = "scenario_market_staging_is_eight_steps_before_market",
-      run = _test_scenario_market_staging_is_eight_steps_before_market,
+      name = "market_is_eight_steps_before_market",
+      run = _test_market_is_eight_steps_before_market,
     },
     {
-      name = "scenario_hospital_staging_is_before_hospital_with_remote_dice",
-      run = _test_scenario_hospital_staging_is_before_hospital_with_remote_dice,
+      name = "hospital_is_before_hospital_with_remote_dice",
+      run = _test_hospital_is_before_hospital_with_remote_dice,
     },
     {
-      name = "scenario_mountain_staging_is_before_mountain_with_remote_dice",
-      run = _test_scenario_mountain_staging_is_before_mountain_with_remote_dice,
+      name = "mountain_is_before_mountain_with_remote_dice",
+      run = _test_mountain_is_before_mountain_with_remote_dice,
     },
     {
-      name = "scenario_strong_card_staging_bootstraps_rent_target",
-      run = _test_scenario_strong_card_staging_bootstraps_rent_target,
+      name = "strong_card_bootstraps_rent_target",
+      run = _test_strong_card_bootstraps_rent_target,
     },
     {
-      name = "scenario_monster_staging_bootstraps_target_building",
-      run = _test_scenario_monster_staging_bootstraps_target_building,
+      name = "monster_bootstraps_target_building",
+      run = _test_monster_bootstraps_target_building,
     },
     {
-      name = "scenario_missile_staging_bootstraps_target_tile_and_overlays",
-      run = _test_scenario_missile_staging_bootstraps_target_tile_and_overlays,
+      name = "missile_bootstraps_target_tile_and_overlays",
+      run = _test_missile_bootstraps_target_tile_and_overlays,
     },
     {
-      name = "scenario_steal_staging_bootstraps_positions_and_inventory",
-      run = _test_scenario_steal_staging_bootstraps_positions_and_inventory,
+      name = "steal_bootstraps_positions_and_inventory",
+      run = _test_steal_bootstraps_positions_and_inventory,
     },
     {
-      name = "scenario_steal_single_item_staging_bootstraps_positions_and_inventory",
-      run = _test_scenario_steal_single_item_staging_bootstraps_positions_and_inventory,
+      name = "steal_one_bootstraps_positions_and_inventory",
+      run = _test_steal_one_bootstraps_positions_and_inventory,
     },
     {
-      name = "scenario_steal_queue_staging_keeps_route_and_interrupt_stable",
-      run = _test_scenario_steal_queue_staging_keeps_route_and_interrupt_stable,
+      name = "steal_queue_keeps_route_and_interrupt_stable",
+      run = _test_steal_queue_keeps_route_and_interrupt_stable,
     },
     {
-      name = "scenario_upgrade_building_render_marks_tile_render_called_for_startup_render",
-      run = _test_scenario_upgrade_building_render_marks_tile_render_called_for_startup_render,
+      name = "upgrade_build_marks_tile_render_called_for_startup_render",
+      run = _test_upgrade_build_marks_tile_render_called_for_startup_render,
     },
     {
-      name = "scenario_strong_card_staging_marks_tile_render_called_for_startup_render",
-      run = _test_scenario_strong_card_staging_marks_tile_render_called_for_startup_render,
+      name = "strong_card_marks_tile_render_called_for_startup_render",
+      run = _test_strong_card_marks_tile_render_called_for_startup_render,
     },
     {
-      name = "scenario_missile_staging_marks_overlay_render_called_for_startup_render",
-      run = _test_scenario_missile_staging_marks_overlay_render_called_for_startup_render,
+      name = "missile_marks_overlay_render_called_for_startup_render",
+      run = _test_missile_marks_overlay_render_called_for_startup_render,
     },
   },
 }

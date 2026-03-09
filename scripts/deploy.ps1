@@ -28,7 +28,7 @@
 .EXAMPLE
     pwsh -File .\deploy.ps1 -StartupProfile "items_move_control"
 .EXAMPLE
-    pwsh -File .\deploy.ps1 -StartupProfile "scenario_market_staging" -StartupAiMode "all_except_local_human" -StartupLocalHumanRoleId 123
+    pwsh -File .\deploy.ps1 -StartupProfile "market" -StartupAiMode "all_except_local_human" -StartupLocalHumanRoleId 123
 # macOS 默认同步目录:
 #   /Users/billyq/Documents/eggy/LuaSource_大富翁-开发
 #>

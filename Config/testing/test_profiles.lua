@@ -1,5 +1,5 @@
 local profiles = {
-  scenario_bankruptcy = {
+  bankruptcy = {
     bootstrap = {
       players = {
         [1] = {
@@ -31,7 +31,7 @@ local profiles = {
       },
     },
   },
-  scenario_upgrade_building_render = {
+  upgrade_build = {
     bootstrap = {
       players = {
         [1] = {
@@ -63,7 +63,7 @@ local profiles = {
       },
     },
   },
-  scenario_market_staging = {
+  market = {
     bootstrap = {
       players = {
         [1] = {
@@ -84,7 +84,7 @@ local profiles = {
       },
     },
   },
-  scenario_tax_survive = {
+  tax = {
     bootstrap = {
       players = {
         [1] = {
@@ -110,7 +110,7 @@ local profiles = {
       },
     },
   },
-  scenario_hospital_staging = {
+  hospital = {
     bootstrap = {
       players = {
         [1] = {
@@ -135,7 +135,7 @@ local profiles = {
       },
     },
   },
-  scenario_mountain_staging = {
+  mountain = {
     bootstrap = {
       players = {
         [1] = {
@@ -160,7 +160,7 @@ local profiles = {
       },
     },
   },
-  scenario_strong_card_staging = {
+  strong_card = {
     bootstrap = {
       players = {
         [1] = {
@@ -194,7 +194,7 @@ local profiles = {
       },
     },
   },
-  scenario_steal_staging = {
+  steal = {
     bootstrap = {
       players = {
         [1] = {
@@ -223,7 +223,7 @@ local profiles = {
       },
     },
   },
-  scenario_steal_single_item_staging = {
+  steal_one = {
     bootstrap = {
       players = {
         [1] = {
@@ -251,7 +251,7 @@ local profiles = {
       },
     },
   },
-  scenario_steal_queue_staging = {
+  steal_queue = {
     bootstrap = {
       players = {
         [1] = {
@@ -282,7 +282,7 @@ local profiles = {
       },
     },
   },
-  scenario_monster_staging = {
+  monster = {
     bootstrap = {
       players = {
         [1] = {
@@ -315,7 +315,7 @@ local profiles = {
       },
     },
   },
-  scenario_missile_staging = {
+  missile = {
     bootstrap = {
       players = {
         [1] = {

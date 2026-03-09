@@ -246,6 +246,32 @@ local function _append_stop_path(path, step)
   return path .. "+" .. step
 end
 
+local function _resolve_role(player_id)
+  if player_id == nil then
+    return nil
+  end
+  local ok, role = pcall(runtime_ports.resolve_role, player_id)
+  if not ok then
+    return nil
+  end
+  return role
+end
+
+local function _stop_synthetic_ai(player_id, unit)
+  if unit == nil or type(unit.stop_ai) ~= "function" then
+    return false, nil
+  end
+  local role = _resolve_role(player_id)
+  if not (role and role.is_synthetic_actor == true) then
+    return false, nil
+  end
+  local ok = pcall(unit.stop_ai)
+  if not ok then
+    return true, "stop_ai_failed"
+  end
+  return true, "stop_ai"
+end
+
 local function _stop_unit_motion(unit)
   if unit == nil then
     return nil
@@ -300,7 +326,10 @@ function move_anim.stop_player_presentation(player_id, unit, opts)
     opts.emit_vehicle_stop(player_id)
     vehicle_stop_path = "emit_vehicle_stop"
   end
+  local synthetic_actor, ai_stop_path = _stop_synthetic_ai(player_id, unit)
   return {
+    synthetic_actor = synthetic_actor == true,
+    ai_stop_path = ai_stop_path,
     vehicle_stop_path = vehicle_stop_path,
     motion_stop_path = _stop_unit_motion(unit),
     anim_stop_path = _stop_unit_anim(unit),
@@ -332,6 +361,8 @@ local function _stop_active_sequence(board_scene, player_id, anim_ctx, token)
     "player_id=" .. tostring(player_id),
     "seq=" .. tostring(anim_ctx and anim_ctx.seq or "nil"),
     "token=" .. tostring(token),
+    "synthetic_actor=" .. tostring(stop_result.synthetic_actor == true),
+    "ai_stop=" .. tostring(stop_result.ai_stop_path or "none"),
     "vehicle_stop=" .. tostring(stop_result.vehicle_stop_path or "none"),
     "motion_stop=" .. tostring(stop_result.motion_stop_path or "none"),
     "anim_stop=" .. tostring(stop_result.anim_stop_path or "none"),

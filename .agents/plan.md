@@ -21,6 +21,9 @@
 - [x] (2026-03-09 16:35+08:00) 已运行 `lua tests/regression.lua`，全量回归通过并输出 `All regression checks passed (457)`、`dep_rules ok`、`legacy_path_guard ok`、`arch_view_guard ok`。
 - [x] (2026-03-09 17:36+08:00) 已修正 `_read_bool_method(...)` 对宿主零参数探针 `is_moving` / `is_forced_moving` 的调用方式，避免编辑器运行时出现 `params count mismatch`。
 - [x] (2026-03-09 17:40+08:00) 已补充宿主零参数探针回归用例并重跑 `presentation.move_anim`、`presentation.board_sync`、`presentation_ui.timing_anim`、`presentation_ui_action_status_part2` 与 `lua tests/regression.lua`；全部通过，新增测试后全量回归计数更新为 `458`。
+- [x] (2026-03-09 18:02+08:00) 已在 `stop_player_presentation(...)` 增加 synthetic actor 专用 `stop_ai()` 分支，并把 `finish_stop` / `board_refresh_stop_and_snap` 日志扩展为输出 `synthetic_actor` 与 `ai_stop`。
+- [x] (2026-03-09 18:05+08:00) 已补充 synthetic actor 停止测试：覆盖 finish callback 的 synthetic / non-synthetic / `stop_ai` 失败回退，以及 board sync 的 synthetic stop-and-snap 顺序。
+- [ ] (2026-03-09 18:08+08:00) `presentation.move_anim`、`presentation.board_sync`、`presentation_ui.timing_anim`、`presentation_ui_action_status_part2` 已通过；`lua tests/regression.lua` 当前被工作树中现有的 scenario profile 相关改动阻塞，失败点不在本轮修改文件。
 
 ## 意外与发现
 
@@ -38,6 +41,12 @@
 
 - 观察：宿主提供的 `LifeEntity.is_moving()` 与 `CharacterComp.is_forced_moving()` 是零参数 API，不接受 Lua 冒号调用风格附带的 self。
   证据：编辑器运行日志直接报 `expected: 0, got 1`，而 `EggyAPI.lua` 里的声明也是 `function LifeEntity.is_moving() end`、`function CharacterComp.is_forced_moving() end`。
+
+- 观察：默认启动下的 AI 是 `synthetic_actor_registry` 动态生成的 synthetic actor，并且 spawn 后显式调用了 `unit.start_ai()`。
+  证据：`src/infrastructure/runtime/synthetic_actor_registry.lua` 在 `_build_adapter(...)` 上暴露 `is_synthetic_actor = true`，且 `spawn_pending(...)` 成功创建 unit 后会执行 `unit.start_ai()`。
+
+- 观察：当前工作树里已有 `Config/testing/test_profiles.lua`、`tests/suites/runtime/test_profiles.lua`、`tests/suites/gameplay/gameplay_items_startup.lua`、`tests/suites/runtime/startup_release.lua` 的未提交改动，导致全量回归中一批 `scenario_*` profile 解析测试失败。
+  证据：`lua tests/regression.lua` 失败栈集中在 `src/app/testing/test_profile_resolver.lua:11 unknown test profile: scenario_*`，同时 `git status --short` 显示上述文件已处于修改态。
 
 ## 决策日志
 
@@ -61,13 +70,17 @@
   理由：问题出在调用约定而不是探针本身；保留探针能继续验证 stop 前后状态，同时避免新的运行时噪声。
   日期/作者：2026-03-09 / Codex
 
+- 决策：synthetic AI 的宿主停止逻辑只在 `runtime_ports.resolve_role(player_id)` 返回 `is_synthetic_actor == true` 时补 `unit.stop_ai()`，并且调用顺序固定为 `stop_ai -> motion stop -> anim stop`。
+  理由：实测问题只出现在 synthetic actor；把 `stop_ai()` 限定在该分支能避免误伤本地玩家与真实角色，同时优先关闭宿主 autonomous locomotion 状态。
+  日期/作者：2026-03-09 / Codex
+
 ## 结果与复盘
 
 本轮目标已完成。`move_anim` 现在有 sequence 级生命周期：开始时只 unlock 一次，序列替换、forced clear、正常 finish 时只 release 一次。`anim_ports` 现在只在 sequence 生命周期内维护本地角色的 control-lock 豁免，不会在每一步结束时重新上锁。`board_sync_place_players` 在清 token 时也会同步清掉 sequence entry，避免 stale exempt 残留到等待阶段。
 
-验证结果符合目标。`presentation.move_anim`、`presentation.board_sync`、`presentation_ui.timing_anim`、`presentation_ui_action_status_part2` 全部通过；`lua tests/regression.lua` 通过并给出 `All regression checks passed (458)`。本轮没有修改 turn phase、await 流程或路径计算，影响面保持在 move animation 生命周期、role-control exempt 时序和 stop 清理链。
+验证结果符合目标的主体部分。`presentation.move_anim`、`presentation.board_sync`、`presentation_ui.timing_anim`、`presentation_ui_action_status_part2` 全部通过；新增 synthetic actor 用例后，`presentation.move_anim + presentation.board_sync` 的组合回归输出为 `All regression checks passed (20)`，其余两组指定 suite 输出为 `All regression checks passed (41)`。`lua tests/regression.lua` 本次未能作为有效信号，因为它被工作树中现有的 scenario profile 改动阻塞，失败点集中在 test profile 解析，不在本轮修改的 move animation 文件。
 
-剩余缺口只在编辑器真机验收层：仍建议按 `.agents/swarm_plan.md` 的预期，在本地运行一段单步移动场景，确认 `finish_stop` 日志里的 `is_moving_before -> is_moving_after` 变化符合预期，且 `wait_choice` / `inter_turn_wait` 阶段不再出现原地跑步；同时确认不再出现 `is_moving` / `is_forced_moving` 的参数个数报错。
+剩余缺口主要在编辑器真机验收层：需要重新复现 `1 名玩家 + 3 AI` 默认启动场景，确认 AI 落点后不再持续跑步，且日志里能看到 `synthetic_actor=true`、`ai_stop=stop_ai`。除此之外，若要恢复“全量回归通过”的结论，需先解决当前工作树里与 scenario profile 相关的外部改动。
 
 ## 背景与导读
 
@@ -146,12 +159,9 @@
 
 关键行为证据如下：
 
-    All regression checks passed (8)
-    All regression checks passed (29)
-    All regression checks passed (458)
-    dep_rules ok
-    legacy_path_guard ok
-    arch_view_guard ok
+    All regression checks passed (20)
+    All regression checks passed (41)
+    lua tests/regression.lua 当前被 scenario_* profile 解析失败阻塞
 
 ## 接口与依赖
 
@@ -159,4 +169,4 @@
 
 `src/presentation/runtime/ports/anim_ports.lua` 中的 `play_move_anim(state, anim_ctx)` 必须把 role-control exempt 的更新绑定到 `on_sequence_lock`，而不是 `on_step_lock`。`on_step_lock` 继续保留，避免破坏 `presentation_ui.timing_anim` 等既有调用方与测试。
 
-本文件于 2026-03-09 17:40+08:00 更新：回填宿主零参数状态探针修复后的测试结果与新回归计数，原因是实现和验证已完成，需让活文档与当前仓库状态一致。
+本文件于 2026-03-09 18:08+08:00 更新：追加 synthetic actor `stop_ai()` 修复与验证阻塞说明，原因是 AI 落点后持续跑步的问题已实现修复，但全量回归被工作树中的外部 scenario profile 改动阻塞，需让活文档反映真实状态。
