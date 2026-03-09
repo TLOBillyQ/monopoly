@@ -1,6 +1,8 @@
 -- Shared helpers for regression suites.
 local M = {}
 
+require("tests.bootstrap")
+
 local app = require("src.game.core.runtime.game")
 local logger = require("src.core.utils.logger")
 local movement = require("src.game.systems.movement")
@@ -26,28 +28,7 @@ local map_cfg = require("Config.maps.default_map")
 local tiles_cfg = require("Config.generated.tiles")
 local number_utils = require("src.core.utils.number_utils")
 local tile = require("src.game.systems.board.tile")
-local runtime_context = require("src.infrastructure.runtime.context")
-local default_ports = require("src.infrastructure.runtime.default_ports")
-local runtime_ports = require("src.core.ports.runtime_ports")
-local paid_purchase_port = require("src.game.systems.market.ports.paid_purchase_port")
-
-if not math.tofixed then
-  function math.tofixed(value)
-    return value
-  end
-end
-
-if not math.Vector3 then
-  function math.Vector3(x, y, z)
-    return { x = x, y = y, z = z }
-  end
-end
-
-if not math.Quaternion then
-  function math.Quaternion(x, y, z)
-    return { x = x, y = y, z = z }
-  end
-end
+local test_env = require("tests.support.test_env")
 
 local function assert_eq(a, b, msg)
   if a ~= b then
@@ -93,75 +74,17 @@ local function bind_ui_runtime(state)
 end
 
 local function _refresh_runtime_context_for_tests()
-  local lua_api = {}
-  local set_timeout = SetTimeOut
-  if type(LuaAPI) == "table" then
-    for key, value in pairs(LuaAPI) do
-      lua_api[key] = value
-    end
-  end
-  if type(set_timeout) == "function" then
-    lua_api.call_delay_time = function(delay, fn)
-      return set_timeout(delay, fn)
-    end
-  elseif type(lua_api.call_delay_time) ~= "function" then
-    lua_api.call_delay_time = function(_, fn)
-      if fn then
-        fn()
-        return true
-      end
-      return false
-    end
-  end
-  if type(lua_api.global_register_custom_event) ~= "function" and type(RegisterCustomEvent) == "function" then
-    lua_api.global_register_custom_event = function(event_name, handler)
-      return RegisterCustomEvent(event_name, handler)
-    end
-  end
-  if type(lua_api.global_send_custom_event) ~= "function" and type(TriggerCustomEvent) == "function" then
-    lua_api.global_send_custom_event = function(event_name, payload)
-      return TriggerCustomEvent(event_name, payload)
-    end
-  end
-  local ctx = runtime_context.new({
+  return test_env.refresh_runtime_context_for_tests({
     GameAPI = GameAPI,
-    LuaAPI = lua_api,
-  })
-  if type(all_roles) == "table" then
-    ctx.roles = all_roles
-  elseif type(ALLROLES) == "table" then
-    ctx.roles = ALLROLES
-  end
-  if type(vehicle_helper) == "table" then
-    ctx.vehicle_helper = vehicle_helper
-  end
-  if type(camera_helper) == "table" then
-    ctx.camera_helper = camera_helper
-  end
-  runtime_context.install_runtime_helpers(ctx, { install_globals = false })
-  runtime_context.set_current(ctx)
-  runtime_ports.reset_for_tests()
-  runtime_ports.configure(default_ports.build(runtime_context))
-  paid_purchase_port.reset_for_tests()
-  paid_purchase_port.configure(require("src.app.bootstrap.payment.eggy_paid_purchase_gateway"))
-  logger.configure_host_runtime({
-    game_api = GameAPI,
-    tip_presenter = function(text, duration)
-      if GlobalAPI and type(GlobalAPI.show_tips) == "function" then
-        return GlobalAPI.show_tips(text, duration)
-      end
-      return false
-    end,
-    scheduler = function(delay, fn)
-      if type(SetTimeOut) == "function" then
-        return SetTimeOut(delay, fn)
-      end
-      if fn then
-        fn()
-        return true
-      end
-      return false
-    end,
+    LuaAPI = LuaAPI,
+    GlobalAPI = GlobalAPI,
+    SetTimeOut = SetTimeOut,
+    RegisterCustomEvent = RegisterCustomEvent,
+    TriggerCustomEvent = TriggerCustomEvent,
+    all_roles = all_roles,
+    ALLROLES = ALLROLES,
+    vehicle_helper = vehicle_helper,
+    camera_helper = camera_helper,
   })
 end
 
@@ -190,31 +113,7 @@ local function with_patches(patches, fn, opts)
   end
 end
 
-LuaAPI = LuaAPI or {}
-LuaAPI.rand = LuaAPI.rand or function()
-  return math.random()
-end
-
-GameAPI = GameAPI or {}
-UIManager = UIManager or {}
-if not UIManager.query_nodes_by_name then
-  UIManager.query_nodes_by_name = function(name)
-    local node = {
-      name = name,
-      set_texture_keep_size = function() end,
-      set_texture_native_size = function() end,
-    }
-    return { node }
-  end
-end
-if not GameAPI.random_int then
-  math.randomseed(1)
-  GameAPI.random_int = function(min, max)
-    return math.random(min, max)
-  end
-end
-
-TriggerCustomEvent = TriggerCustomEvent or function() end
+test_env.install_defaults()
 _refresh_runtime_context_for_tests()
 
 local function build_ui_port(overrides)

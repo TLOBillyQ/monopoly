@@ -1,0 +1,165 @@
+local bootstrap = require("tests.bootstrap")
+
+local M = {}
+
+local behavior_modules = {
+  "suites.domain.chance",
+  "suites.domain.land",
+  "suites.domain.item",
+  "suites.domain.movement",
+  "suites.domain.landing",
+  "suites.domain.market",
+  "suites.domain.paid_currency",
+  "suites.domain.config_sanity",
+  "suites.runtime.startup_release",
+  "suites.gameplay.gameplay_core",
+  "suites.gameplay.gameplay_runtime",
+  "suites.gameplay.gameplay_coroutine",
+  "suites.gameplay.gameplay_loop",
+  "suites.gameplay.gameplay_afk",
+  "suites.gameplay.gameplay_items_startup",
+  "suites.runtime.runtime_bootstrap",
+  "suites.presentation.presentation_ui_timing_anim",
+  "suites.presentation.presentation_ui_model_dispatch",
+  "suites.presentation.presentation_ui_interaction",
+  "suites.presentation.presentation_ui_popup_market",
+  "suites.presentation.presentation_ui_action_status",
+  "suites.presentation.presentation_ui_action_anim",
+  "suites.presentation.presentation_move_anim",
+  "suites.presentation.presentation_board_sync",
+  "suites.presentation.presentation_ui_event_handlers",
+  "suites.presentation.presentation_ui_event_bindings",
+  "suites.presentation.presentation_player_colors",
+  "suites.runtime.test_profiles",
+  "suites.runtime.misc",
+}
+
+local contract_modules = {
+  "suites.presentation.read_model_contract",
+  "suites.architecture.architecture_guard_contract",
+  "suites.architecture.arch_view_contract",
+  "suites.architecture.guard_scripts_contract",
+  "suites.architecture.usecase_boundary_contract",
+  "suites.architecture.cross_module_contract",
+  "suites.architecture.intent_output_contract",
+  "suites.presentation.ui_gate_contract",
+  "suites.runtime.narrow_runtime_ports_contract",
+  "suites.runtime.runtime_ports_contract",
+  "suites.presentation.ui_runtime_state_contract",
+}
+
+local disabled_cases = {
+  ["suites.gameplay.gameplay_loop::_test_action_button_timeout_auto_advances"] = {
+    release_trimmed = true,
+  },
+  ["suites.presentation.presentation_ui_action_status::_test_status3d_priority_single_status"] = {
+    release_trimmed = true,
+  },
+}
+
+local guard_scripts = {
+  { name = "dep_rules", module_name = "guards.dep_rules", path = "tests/guards/dep_rules.lua" },
+  { name = "legacy_path_guard", module_name = "guards.legacy_path_guard", path = "tests/guards/legacy_path_guard.lua" },
+  { name = "gameplay_loop_no_ui", module_name = "guards.gameplay_loop_no_ui", path = "tests/guards/gameplay_loop_no_ui.lua" },
+  { name = "forbidden_globals", module_name = "guards.forbidden_globals", path = "tests/guards/forbidden_globals.lua" },
+  { name = "arch_view_guard", module_name = "guards.arch_view_guard", path = "tests/guards/arch_view_guard.lua" },
+}
+
+local function _clone_case(test)
+  if type(test) == "function" then
+    return {
+      name = nil,
+      run = test,
+      disabled_in = {},
+      tags = {},
+    }
+  end
+  local clone = {}
+  for key, value in pairs(test or {}) do
+    clone[key] = value
+  end
+  clone.disabled_in = clone.disabled_in or {}
+  clone.tags = clone.tags or {}
+  return clone
+end
+
+local function _clone_suite(module_name, suite, layer, kind)
+  local clone = {
+    name = suite.name,
+    layer = suite.layer or layer,
+    kind = suite.kind or kind,
+    tests = {},
+    module_name = module_name,
+  }
+  local source_tests = suite.tests or suite
+  for _, test in ipairs(source_tests or {}) do
+    local case = _clone_case(test)
+    local key = module_name .. "::" .. tostring(case.name)
+    local disabled_in = disabled_cases[key]
+    if disabled_in then
+      for mode, value in pairs(disabled_in) do
+        case.disabled_in[mode] = value
+      end
+    end
+    clone.tests[#clone.tests + 1] = case
+  end
+  return clone
+end
+
+local function _load_modules(module_names, layer, kind)
+  local suites = {}
+  for _, module_name in ipairs(module_names or {}) do
+    local suite = require(module_name)
+    suites[#suites + 1] = _clone_suite(module_name, suite, layer, kind)
+  end
+  return suites
+end
+
+local function _concat(left, right)
+  local combined = {}
+  for _, value in ipairs(left or {}) do
+    combined[#combined + 1] = value
+  end
+  for _, value in ipairs(right or {}) do
+    combined[#combined + 1] = value
+  end
+  return combined
+end
+
+M.behavior_suites = behavior_modules
+M.contract_suites = contract_modules
+M.guard_scripts = guard_scripts
+M.manifest_modules = _concat(behavior_modules, {
+  "suites.presentation.read_model_contract",
+  "suites.architecture.architecture_guard_contract",
+  "suites.architecture.arch_view_contract",
+  "suites.architecture.guard_scripts_contract",
+  "suites.architecture.usecase_boundary_contract",
+  "suites.architecture.cross_module_contract",
+  "suites.presentation.ui_gate_contract",
+  "suites.runtime.runtime_ports_contract",
+  "suites.presentation.ui_runtime_state_contract",
+  "suites.architecture.intent_output_contract",
+  "suites.runtime.narrow_runtime_ports_contract",
+})
+
+function M.load_behavior_suites()
+  bootstrap.install_package_paths()
+  return _load_modules(M.behavior_suites, "behavior", "suite")
+end
+
+function M.load_contract_suites()
+  bootstrap.install_package_paths()
+  return _load_modules(M.contract_suites, "contract", "contract")
+end
+
+function M.load_all_suites()
+  local suites = M.load_behavior_suites()
+  local contract_suites = M.load_contract_suites()
+  for _, suite in ipairs(contract_suites) do
+    suites[#suites + 1] = suite
+  end
+  return suites
+end
+
+return M

@@ -20,6 +20,7 @@ local logger = {
   event_buffer_stack = {},
   event_collection_enabled_provider = nil,
   anim_debug_enabled_provider = nil,
+  test_mode = false,
 }
 local number_utils = require("src.core.utils.number_utils")
 
@@ -58,7 +59,7 @@ local function _schedule_tip_release(delay, fn)
     if ok and (invoked or handled == true) then
       return true
     end
-    if ok and package and package.loaded and package.loaded["TestSupport"] then
+    if ok and logger.test_mode == true then
       fn()
       return true
     end
@@ -269,6 +270,14 @@ function logger.set_anim_debug_enabled_provider(provider)
     assert(type(provider) == "function", "anim debug provider must be function or nil")
   end
   logger.anim_debug_enabled_provider = provider
+end
+
+function logger.set_test_mode(enabled)
+  logger.test_mode = enabled == true
+end
+
+function logger.is_test_mode()
+  return logger.test_mode == true
 end
 
 function logger.is_anim_debug_enabled()

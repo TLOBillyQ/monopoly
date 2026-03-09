@@ -1,172 +1,219 @@
-# 修正本地玩家移动结束后仍持续跑步的问题
+# 修订 `.agents/swarm_plan.md`：测试目录重组与回归装配收口
 
 本可执行计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
-本文件遵循仓库规范 `.agents/harness/PLANS.md` 维护。本轮实现依据 `.agents/swarm_plan.md` 执行，当前文件作为实际实施记录与验证真源。
+本文件遵循仓库规范 `.agents/harness/PLANS.md` 维护。它替换当前偏摘要式的 `.agents/swarm_plan.md`，作为后续并行实施的唯一真源。
 
 ## 目的 / 全局视角
 
-这次修复要解决一个用户可见问题：本地玩家在移动动画结束、甚至棋盘同步已经把角色 snap 回地块后，角色仍会原地跑步。修复完成后，本地玩家在单步移动、多步移动被覆盖、以及 board sync 强制清理这三类路径里，都只能在整段移动期间保持控制锁豁免；移动结束后豁免会被释放，角色停止跑步，等待选择与回合间阶段不再残留 moving 视觉。
+这项工作要把 `tests/` 从“runner、共享脚手架、guard 脚本、契约 suite、行为 suite 混装且依赖隐式入口”的状态，收口为一个可发现、可分 lane、可并行迁移、失败时可低噪声定位的测试系统。改完后，开发者仍然执行 `lua tests/regression.lua`，但也可以单独执行 `behavior`、`contract`、`guard` 三条车道；默认通过路径不再被大量重复 warning 淹没。
 
-可观察结果有三类。第一，`move_anim` 的 sequence 级 lock 生命周期存在且只触发一次开始、一次结束。第二，`board_sync_place_players` 在清 token 时会同步释放 sequence lock，不会留下 stale exempt。第三，相关 suite 与全量回归通过，证明没有打断既有 step 级 lock 流程和 presentation 同步流程。
+可观察结果必须是具体可见的。当前基线是：`tests/` 共有 56 个文件；`tests/suites/manifest.lua` 平铺装载 471 个 suite case；`MONO_REGRESSION_MODE=release_trimmed lua tests/regression.lua` 通过并输出 `All regression checks passed (469)`，随后 5 个 guard 脚本各自报告成功。计划完成后，`tests/catalog.lua` 成为唯一真源，两个当前未接入 manifest 的孤儿 contract suite 也会被纳入正式回归，所以总 case 基线更新为 480，`release_trimmed` 基线更新为 478，同时 guard 仍保持 5 个脚本检查。
 
 ## 进度
 
-- [x] (2026-03-09 15:54+08:00) 已读取 `.agents/swarm_plan.md`、`.agents/harness/PLANS.md`、`move_anim.lua`、`anim_ports.lua`、`board/placement.lua` 与相关测试，确认现状仍是 step-level lock 控制本地 role-control 豁免。
-- [x] (2026-03-09 16:08+08:00) 已在 `src/presentation/view/render/move_anim.lua` 引入按玩家记录的 active sequence entry，并把清 token、序列替换、序列完成三条路径统一接到 sequence lock release。
-- [x] (2026-03-09 16:12+08:00) 已在 `src/presentation/runtime/ports/anim_ports.lua` 把 role-control 豁免维护从 `on_step_lock` 迁到 `on_sequence_lock`，保留 `on_step_lock` 仅作原有 step 生命周期回调。
-- [x] (2026-03-09 16:18+08:00) 已增强 `stop_player_presentation` 的动画清理链，新增 `interrupt_multi_animation`、`stop_play_body_anim`、`stop_play_upper_anim` 的可选调用，同时保留原有 motion stop 优先级。
-- [x] (2026-03-09 16:26+08:00) 已补充 `presentation.move_anim` 与 `presentation.board_sync` 覆盖：单步 sequence lock、重叠 sequence 替换、role-control exempt 整段保持、board sync forced clear 释放 sequence lock。
-- [x] (2026-03-09 16:31+08:00) 已运行 `presentation.move_anim`、`presentation.board_sync`、`presentation_ui.timing_anim`、`presentation_ui_action_status_part2`，全部通过。
-- [x] (2026-03-09 16:35+08:00) 已运行 `lua tests/regression.lua`，全量回归通过并输出 `All regression checks passed (457)`、`dep_rules ok`、`legacy_path_guard ok`、`arch_view_guard ok`。
-- [x] (2026-03-09 17:36+08:00) 已修正 `_read_bool_method(...)` 对宿主零参数探针 `is_moving` / `is_forced_moving` 的调用方式，避免编辑器运行时出现 `params count mismatch`。
-- [x] (2026-03-09 17:40+08:00) 已补充宿主零参数探针回归用例并重跑 `presentation.move_anim`、`presentation.board_sync`、`presentation_ui.timing_anim`、`presentation_ui_action_status_part2` 与 `lua tests/regression.lua`；全部通过，新增测试后全量回归计数更新为 `458`。
-- [x] (2026-03-09 18:02+08:00) 已在 `stop_player_presentation(...)` 增加 synthetic actor 专用 `stop_ai()` 分支，并把 `finish_stop` / `board_refresh_stop_and_snap` 日志扩展为输出 `synthetic_actor` 与 `ai_stop`。
-- [x] (2026-03-09 18:05+08:00) 已补充 synthetic actor 停止测试：覆盖 finish callback 的 synthetic / non-synthetic / `stop_ai` 失败回退，以及 board sync 的 synthetic stop-and-snap 顺序。
-- [ ] (2026-03-09 18:08+08:00) `presentation.move_anim`、`presentation.board_sync`、`presentation_ui.timing_anim`、`presentation_ui_action_status_part2` 已通过；`lua tests/regression.lua` 当前被工作树中现有的 scenario profile 相关改动阻塞，失败点不在本轮修改文件。
+- [x] (2026-03-09 18:30+08:00) 已核对 `.agents/harness/PLANS.md`、现有 `.agents/swarm_plan.md`、架构边界文档、`lua_env.md` 与测试目录现状。
+- [x] (2026-03-09 18:30+08:00) 已确认当前测试基线：`tests/` 56 个文件，manifest 原始装载 471 个 case，`release_trimmed` 实际通过数为 469。
+- [x] (2026-03-09 18:30+08:00) 已确认当前大文件与装配热点：`tests/TestSupport.lua`、`tests/TestHarness.lua`、`tests/internal/guard_support.lua`、`tests/suites/gameplay/gameplay.lua`、`presentation_ui_action_status_part1/2/3.lua`、`presentation_ui_popup_market.lua`、`presentation_ui_action_anim.lua`。
+- [x] (2026-03-09 18:30+08:00) 已确认当前孤儿 suite：`tests/suites/architecture/intent_output_contract.lua` 与 `tests/suites/runtime/narrow_runtime_ports_contract.lua` 未接入 manifest，本计划默认把它们纳入正式 contract lane。
+- [x] (2026-03-09 19:04+08:00) 已新增 `.agents/test_reorg_inventory.md`，固定当前 `471/469/5` 基线、孤儿 contract suite 和旧入口引用清单，作为迁移真源。
+- [x] (2026-03-09 19:04+08:00) 已引入 `tests/bootstrap.lua`、`tests/catalog.lua`、`tests/suites/manifest.lua` 转发 shim 与 `tests/support/test_env.lua`，并保持 `lua tests/regression.lua` 入口可用。
+- [x] (2026-03-09 19:04+08:00) 已完成 `release_trimmed` metadata 迁移、`behavior`/`contract`/`guard` runner、guard shim、孤儿 contract suite 纳管与共享日志捕获；当前 `MONO_REGRESSION_MODE=release_trimmed lua tests/behavior.lua` 通过 `416`，`lua tests/contract.lua` 通过 `62`，`lua tests/guard.lua` 通过 `5`。
+- [ ] 再完成 gameplay / presentation 巨型 suite 拆分，并退役 wrapper-only suite。
+- [ ] 替换 `TestSupport` 的 logger/test-mode 钩子后，清理旧入口、更新文档与命令示例，跑完整验证。
 
 ## 意外与发现
 
-- 观察：`move_anim.clear_player_token` 之前只清 `active_token_by_player_id`，不会处理任何“序列级”生命周期，因此 board sync 虽然能清 stale token，却无法释放控制锁豁免。
-  证据：修复前 `src/presentation/view/render/move_anim.lua` 的 `clear_player_token` 只把 `runtime.active_token_by_player_id[player_id]` 设为 `nil`。
+- 观察：当前 `.agents/swarm_plan.md` 的数字已经过期，不能直接沿用。
+  证据：现树 `manifest` 原始装载 471 个 case，而 `release_trimmed` 实际通过数是 469，不是旧计划中的 468/466。
 
-- 观察：`anim_ports` 把 role-control 豁免绑在 `on_step_lock` 上，会导致单步移动在 step finish 同帧立即重新套回 `BUFF_FORBID_CONTROL`。
-  证据：修复前 `src/presentation/runtime/ports/anim_ports.lua` 在 `anim_ctx.on_step_lock` 中直接调用 `_update_role_control_lock_exempt(state, enabled, meta)`。
+- 观察：`tests/regression.lua` 的 `release_trimmed` 过滤真源已经漂移，不能直接机械搬到 case metadata。
+  证据：现有 hardcoded 列表里 `chance`、`config_sanity` 的若干目标名已经不存在，真正命中的只剩少数 case。
 
-- 观察：role-control 相关测试若把异步 finish callback 放到 patch 作用域外执行，会因为 `Enums.BuffState.BUFF_FORBID_CONTROL` 恢复为 `nil` 而得到误报。
-  证据：第一次测试运行时出现 `missing Enums.BuffState.BUFF_FORBID_CONTROL`；把 scheduled callback 移回 `_with_patches(...)` 作用域后测试通过。
+- 观察：`tests/TestHarness.lua` 的稳定性依赖“每个 case 执行前都 `math.randomseed(1)`”，不是进程启动时只设一次。
+  证据：当前 harness 在 case 循环内部重置随机种子；如果改成 bootstrap 级别，会把 case 顺序变成语义的一部分。
 
-- 观察：全量回归通过，但仓库仍存在大量 market paid goods mapping warning，以及少量 `The system cannot find the file specified.` 的环境噪声；这些不是本轮修改引入的新失败。
-  证据：`lua tests/regression.lua` 最终输出 `All regression checks passed (457)`，同时伴随既有 warning/环境日志。
+- 观察：`tests/TestSupport.lua` 不只是 helper 汇总，它还在加载时补全全局 API、刷新 runtime context、配置 logger，并立刻执行环境刷新；`logger.lua` 还把 `package.loaded["TestSupport"]` 当作测试模式信号。
+  证据：`tests/TestSupport.lua` 内存在 `_refresh_runtime_context_for_tests()` 与加载期副作用，`src/core/utils/logger.lua` 存在 `TestSupport` 特判。
 
-- 观察：宿主提供的 `LifeEntity.is_moving()` 与 `CharacterComp.is_forced_moving()` 是零参数 API，不接受 Lua 冒号调用风格附带的 self。
-  证据：编辑器运行日志直接报 `expected: 0, got 1`，而 `EggyAPI.lua` 里的声明也是 `function LifeEntity.is_moving() end`、`function CharacterComp.is_forced_moving() end`。
+- 观察：噪声并不只来自 harness；大量输出来自 `logger` 直接 `print(...)`，guard 脚本也运行在 harness 之外。
+  证据：当前全量回归的大部分 warning 来自 `market paid goods mapping missing`、`board_feedback skip ...` 等 `logger` 输出。
 
-- 观察：默认启动下的 AI 是 `synthetic_actor_registry` 动态生成的 synthetic actor，并且 spawn 后显式调用了 `unit.start_ai()`。
-  证据：`src/infrastructure/runtime/synthetic_actor_registry.lua` 在 `_build_adapter(...)` 上暴露 `is_synthetic_actor = true`，且 `spawn_pending(...)` 成功创建 unit 后会执行 `unit.start_ai()`。
+- 观察：guard 迁移不能直接改路径，否则 contract suite、`regression.lua` 和文档会一起断。
+  证据：当前 `guard_scripts_contract.lua`、`tests/regression.lua` 和若干文档仍把 `tests/internal/*` 当作入口。
 
-- 观察：当前工作树里已有 `Config/testing/test_profiles.lua`、`tests/suites/runtime/test_profiles.lua`、`tests/suites/gameplay/gameplay_items_startup.lua`、`tests/suites/runtime/startup_release.lua` 的未提交改动，导致全量回归中一批 `scenario_*` profile 解析测试失败。
-  证据：`lua tests/regression.lua` 失败栈集中在 `src/app/testing/test_profile_resolver.lua:11 unknown test profile: scenario_*`，同时 `git status --short` 显示上述文件已处于修改态。
+- 观察：如果先拆 `gameplay.loop` 和 `presentation_ui.action_status` wrapper，再迁移 `release_trimmed` metadata，过滤会悄悄失效。
+  证据：当前 `release_trimmed` 是按旧 suite 名和 case 名硬编码过滤，依赖 `registry.lua` 和 `presentation_ui_action_status.lua` 产出的旧命名。
 
 ## 决策日志
 
-- 决策：在 `board_scene._move_anim_runtime` 中新增 `active_sequence_by_player_id`，而不是把 sequence 数据塞进原 token map。
-  理由：token 仍然负责 stale callback 判定；sequence entry 负责生命周期、meta 与 release 状态，两者职责不同，拆开更清晰。
+- 决策：先做 inventory，再做 catalog / metadata 迁移。
+  理由：当前 `release_trimmed` 过滤名单已漂移，必须先得到真实命中表，否则会把错误禁用项永久写进 catalog。
   日期/作者：2026-03-09 / Codex
 
-- 决策：sequence lock 的 release 统一走三条路径：新序列覆盖旧序列、`clear_player_token` 强制清理、正常 finish callback。
-  理由：这三条路径正好覆盖了本轮定位出的 stale exempt 来源；统一 release 点能避免重复或遗漏。
+- 决策：`bootstrap` 只统一 `package.path`、环境装配与 runner 入口，不接管每个 case 的随机种子重置。
+  理由：必须保持现有 case 级确定性，避免引入顺序相关回归。
   日期/作者：2026-03-09 / Codex
 
-- 决策：保留 `on_step_lock` 原语义，不再让它管理 role-control 豁免。
-  理由：`presentation_ui.timing_anim` 已经对 step unlock/relock 有既有断言；按计划应保留兼容，降低回归风险。
+- 决策：`TestSupport` 先拆出显式 `tests/support/test_env.lua` 与 `tests/support/log_capture.lua`，再拆 assertions / factories / helpers；删除 facade 前必须先替换 `logger.lua` 的 `package.loaded["TestSupport"]` 测试钩子。
+  理由：先把加载期副作用与测试模式判断显式化，才能安全做 helper 粒度拆分。
   日期/作者：2026-03-09 / Codex
 
-- 决策：`stop_player_presentation` 只增加动画层清理，不引入 `stop_ai` 或更激进的宿主控制停止。
-  理由：本轮目标是修正本地玩家 locomotion/lock 时序，不扩大到 synthetic AI 生命周期，避免无关风险。
+- 决策：两个孤儿 contract suite 不放到最后清理阶段，而是在 catalog / runner 切换时一并纳入正式 contract lane。
+  理由：否则新 contract lane 会出现“假绿”。
   日期/作者：2026-03-09 / Codex
 
-- 决策：moving 状态日志探针保持启用，但 `_read_bool_method(...)` 必须用零参数 `pcall(method)` 调用宿主 API。
-  理由：问题出在调用约定而不是探针本身；保留探针能继续验证 stop 前后状态，同时避免新的运行时噪声。
+- 决策：guard 迁移采用“先 shim、后切换、再删除”的三段式，不允许一步到位改路径。
+  理由：当前真实调用面包括 suite、脚本入口和文档，直接迁移会造成多入口同时失效。
   日期/作者：2026-03-09 / Codex
 
-- 决策：synthetic AI 的宿主停止逻辑只在 `runtime_ports.resolve_role(player_id)` 返回 `is_synthetic_actor == true` 时补 `unit.stop_ai()`，并且调用顺序固定为 `stop_ai -> motion stop -> anim stop`。
-  理由：实测问题只出现在 synthetic actor；把 `stop_ai()` 限定在该分支能避免误伤本地玩家与真实角色，同时优先关闭宿主 autonomous locomotion 状态。
+- 决策：catalog metadata 与 runner 切换必须先于大 suite 拆分。
+  理由：只有先把 `release_trimmed` 从旧命名切到 case metadata，后续删 wrapper 才不会改变回归语义。
   日期/作者：2026-03-09 / Codex
 
 ## 结果与复盘
 
-本轮目标已完成。`move_anim` 现在有 sequence 级生命周期：开始时只 unlock 一次，序列替换、forced clear、正常 finish 时只 release 一次。`anim_ports` 现在只在 sequence 生命周期内维护本地角色的 control-lock 豁免，不会在每一步结束时重新上锁。`board_sync_place_players` 在清 token 时也会同步清掉 sequence entry，避免 stale exempt 残留到等待阶段。
-
-验证结果符合目标的主体部分。`presentation.move_anim`、`presentation.board_sync`、`presentation_ui.timing_anim`、`presentation_ui_action_status_part2` 全部通过；新增 synthetic actor 用例后，`presentation.move_anim + presentation.board_sync` 的组合回归输出为 `All regression checks passed (20)`，其余两组指定 suite 输出为 `All regression checks passed (41)`。`lua tests/regression.lua` 本次未能作为有效信号，因为它被工作树中现有的 scenario profile 改动阻塞，失败点集中在 test profile 解析，不在本轮修改的 move animation 文件。
-
-剩余缺口主要在编辑器真机验收层：需要重新复现 `1 名玩家 + 3 AI` 默认启动场景，确认 AI 落点后不再持续跑步，且日志里能看到 `synthetic_actor=true`、`ai_stop=stop_ai`。除此之外，若要恢复“全量回归通过”的结论，需先解决当前工作树里与 scenario profile 相关的外部改动。
+当前已完成 `T0-T3`。测试入口、catalog、lane runner、guard shim 与日志捕获已经落地，且新的整体验证已经通过：`MONO_REGRESSION_MODE=release_trimmed lua tests/regression.lua` 当前输出为 `All regression checks passed (416)`、`All regression checks passed (62)`、以及 5 个 guard `ok`。剩余工作集中在 `T4-T7`：拆掉 gameplay / presentation 巨型 suite、退役 wrapper-only suite、替换剩余旧入口引用并更新文档。
 
 ## 背景与导读
 
-本问题涉及三个直接协作的模块。`src/presentation/view/render/move_anim.lua` 负责把一个移动序列拆成多个 step，并在结束时停止角色表现。`src/presentation/runtime/ports/anim_ports.lua` 是 presentation runtime 到动画层的端口适配器，它会在调用 move anim 时附加一些运行时钩子。`src/presentation/view/render/board/placement.lua` 负责 board refresh 时的 stop-and-snap，同样会清理 move token 并强制把角色放回当前地块。
+当前测试入口由 `tests/regression.lua` 驱动。它手工拼 `package.path`，从 `tests/suites/manifest.lua` 装载 suite，运行 `tests/TestHarness.lua`，然后再用 `dofile(...)` 顺序执行 `tests/internal/dep_rules.lua`、`legacy_path_guard.lua`、`gameplay_loop_no_ui.lua`、`forbidden_globals.lua`、`arch_view_guard.lua`。同时，`release_trimmed` 过滤被硬编码在这个 runner 里，且依赖旧 suite 命名 `gameplay.loop` 与 `presentation_ui.action_status`。
 
-这里的 “sequence lock” 指的是整段移动动画期间的角色控制锁豁免生命周期，而不是单步动画的 begin/end 回调。这里的 “step lock” 指 `move_anim.one_step(...)` 在每一步开始和结束时触发的 `on_step_lock`。本轮修复的核心，就是把 role-control 豁免从 step lock 迁到 sequence lock。
-
-与本轮直接相关的关键文件如下：
-
-- `src/presentation/view/render/move_anim.lua`
-- `src/presentation/runtime/ports/anim_ports.lua`
-- `src/presentation/view/render/board/placement.lua`
-- `tests/suites/presentation/presentation_move_anim.lua`
-- `tests/suites/presentation/presentation_board_sync.lua`
-- `tests/suites/presentation/presentation_ui_timing_anim.lua`
-- `tests/suites/presentation/presentation_ui_action_status_part2.lua`
+当前共享脚手架主要集中在 `tests/TestSupport.lua` 与 `tests/internal/guard_support.lua`。前者承担断言、patch、建模、UI 夹具、runtime context 刷新和 logger 装配等多种职责，并在模块加载时执行副作用；后者承担文本级 guard 的文件枚举与行级扫描。当前大文件热点集中在 `tests/suites/gameplay/gameplay.lua`、`tests/suites/presentation/presentation_ui_action_status_part1.lua`、`presentation_ui_action_status_part2.lua`、`presentation_ui_action_status_part3.lua`、`presentation_ui_popup_market.lua` 与 `presentation_ui_action_anim.lua`。同时，`tests/suites/gameplay/registry.lua` 与 `gameplay_core.lua` / `gameplay_runtime.lua` / `gameplay_loop.lua` 仍在用索引切片；`presentation_ui_action_status.lua` 仍只是 part1/2/3 聚合壳；`tests/suites/architecture/intent_output_contract.lua` 与 `tests/suites/runtime/narrow_runtime_ports_contract.lua` 目前未接入 manifest。
 
 ## 工作计划
 
-先修改 `move_anim.lua`。在 `_move_anim_runtime` 中增加 `active_sequence_by_player_id`，把 sequence entry 定义为至少包含 `token`、`player_id`、`seq`、`total_time`、`anim_ctx`、`lock_released`。`play_sequence(...)` 在总时长大于零时创建 sequence entry，并在序列开始时调用一次 `anim_ctx.on_sequence_lock(false, total_time, meta)`。`clear_player_token(...)` 在清 token 的同时也释放 active sequence；如果该玩家存在 sequence entry，则必须调用 release 逻辑并删掉 entry。`_stop_active_sequence(...)` 在 finish stop 时读取 stop 前后 moving 状态，记录日志，然后释放 sequence lock 并清 token。若新序列覆盖旧序列，则 `_set_active_sequence(...)` 需要先释放旧序列，但 stale finish callback 不得影响新序列。
+先建立一个不会改变现有测试语义的 inventory。这个 inventory 记录 manifest 当前 471 个 case、`release_trimmed` 实际命中的 case、5 个 guard 脚本入口、两个孤儿 contract suite、以及所有 repo 内对 `TestHarness`、`TestSupport`、`tests/internal/*`、旧 `package.path` 配方的引用。只有拿到这份 inventory，后面的 catalog 与 metadata 才不会把过期信息固化下来。
 
-然后修改 `anim_ports.lua`。`play_move_anim(...)` 在保留 `anim_ctx.on_step_lock` 向前兼容的同时，新增 `anim_ctx.on_sequence_lock` 包装层。role-control exempt 的增减只在 `on_sequence_lock` 中维护；`on_step_lock` 继续只调用原回调，不再操作 `role_control_lock_exempt_by_role`。这样本地角色在整段移动期间都维持 exempt，只有 finish 或 forced clear 后才恢复正常锁。
+然后引入新装配骨架，但先保留兼容面。新增 `tests/bootstrap.lua` 负责路径安装和 test bootstrap；新增 `tests/catalog.lua` 作为唯一注册真源，结构固定为 `behavior_suites`、`contract_suites`、`guard_scripts` 三组；保留 `tests/suites/manifest.lua` 作为转发 shim；保留 `tests/TestHarness.lua`、`tests/TestSupport.lua` 与 `tests/internal/*` 作为兼容 facade。这个阶段不删旧入口，只让新旧入口同时可用，并保证 `lua tests/regression.lua` 继续工作。
 
-最后补测试并做验证。`presentation_move_anim.lua` 新增 sequence 生命周期测试、重叠 sequence 覆盖测试、以及通过 `anim_ports.build().play_move_anim(...)` 验证 exempt 仅在 sequence finish 后释放。`presentation_board_sync.lua` 新增 forced clear 释放 sequence lock 的用例。既有 `presentation_ui.timing_anim` 的 step lock 测试必须继续通过，证明本轮没有破坏 step 级行为。
+接着先做 catalog metadata、guard shim 和 runner 切换，再做大 suite 拆分。`release_trimmed` 过滤要先从 `regression.lua` 硬编码迁到 case metadata，格式固定为 `{ name, run, disabled_in = { release_trimmed = true }, tags = {...} }`；suite 格式固定为 `{ name, layer, kind, tests = {...} }`。guard lane 真实脚本迁到 `tests/guards/`，但必须同时提供脚本级 shim 和模块级 shim，确保 `tests/regression.lua`、`guard_scripts_contract.lua`、以及仍然 `require("internal.*")` 的 guard 文件在迁移期都不被打断。两个孤儿 contract suite 也在这一刀里纳入 `contract` lane，不放到最后补录。
+
+在 runner 稳定后，再把 `TestSupport` 的加载期副作用拆显式。先抽出 `tests/support/test_env.lua` 负责 LuaAPI / GameAPI / runtime context / logger 的测试环境安装，再抽出 `tests/support/log_capture.lua` 负责 logger 与 stdout 捕获，最后才把 assertions、patches、`game_factory.lua`、`ui_factory.lua`、`runtime_helpers.lua`、`scenario_helpers.lua` 拆出去。只有当 `logger.lua` 的测试模式判断不再依赖 `package.loaded["TestSupport"]` 后，`tests/TestSupport.lua` 才能从“必须加载的测试模式开关”退化为纯 facade。
+
+大 suite 拆分分三块并行推进。`tests/suites/gameplay/gameplay.lua` 拆成 6 个真实 suite：`gameplay_bankruptcy_and_tile_owner.lua`、`gameplay_intent_dispatch_and_event_feed.lua`、`gameplay_runtime_context_and_camera_sync.lua`、`gameplay_turn_flow_and_interrupts.lua`、`gameplay_timeout_and_auto_runner.lua`、`gameplay_visual_feedback_and_prompts.lua`；已有 `gameplay_afk.lua`、`gameplay_coroutine.lua`、`gameplay_items_startup.lua` 保留，`registry.lua` 与 `gameplay_core.lua` / `gameplay_runtime.lua` / `gameplay_loop.lua` 删除。`presentation_ui_action_status` 系列拆成 9 个真实 suite：`presentation_choice_routes.lua`、`presentation_target_pick.lua`、`presentation_action_log_and_role_context.lua`、`presentation_market_panel.lua`、`presentation_item_slots.lua`、`presentation_action_anim_queue_and_turn_lock.lua`、`presentation_status3d_and_turn_effects.lua`、`presentation_popup_and_modal_renderers.lua`、`presentation_player_panels.lua`；`presentation_ui_action_status.lua` 与 part1/2/3 删除。`presentation_ui_popup_market.lua` 拆成 `presentation_ui_role_slots.lua`、`presentation_ui_touch_policy.lua`、`presentation_market_confirm_flow.lua`、`presentation_popup_visibility.lua`；`presentation_ui_action_anim.lua` 拆成 `presentation_action_anim_core.lua`、`presentation_overlay_compute.lua`、`presentation_board_feedback.lua`。
+
+最后才收口删除旧入口。只有当 repo 内对 `require("TestSupport")`、`require("TestHarness")`、`tests/internal/*` 旧入口、旧 `package.path` 配方和 wrapper-only suite 的引用经 `rg` 清零，且文档命令全部更新后，才允许删除 facade 与 shim。
+
+## 任务与依赖
+
+### T0: 建立 inventory 与真实基线
+
+depends_on: []  
+location: `tests/regression.lua`、`tests/suites/manifest.lua`、`tests/internal/`、`docs/architecture/`  
+description: 产出迁移真源，记录 471 原始 case、469 release_trimmed case、5 个 guard 脚本、2 个孤儿 contract suite、以及所有旧入口引用与实际命中过滤项。  
+validation: inventory 能解释当前 `manifest`、`release_trimmed` 与 guard 执行面的全部数字来源。
+
+### T1: 建立 bootstrap、catalog 与兼容 shim
+
+depends_on: [T0]  
+location: `tests/bootstrap.lua`、`tests/catalog.lua`、`tests/suites/manifest.lua`、`tests/regression.lua`  
+description: 建立统一入口与 catalog 分组，保留 `manifest` 转发 shim 和 `lua tests/regression.lua` 兼容；`bootstrap` 不接管 case 级 `math.randomseed(1)`。  
+validation: 在不改 suite 内容的前提下，`lua tests/regression.lua` 仍输出当前基线，`manifest` 与 `catalog` 装载结果一致。
+
+### T2: 抽离显式 test_env 与可替换测试模式钩子
+
+depends_on: [T1]  
+location: `tests/TestSupport.lua`、`tests/support/test_env.lua`、`tests/support/log_capture.lua`、`src/core/utils/logger.lua`  
+description: 先把 `TestSupport` 的环境副作用显式化，再为 `logger` 增加不依赖 `package.loaded["TestSupport"]` 的测试模式入口；此阶段保留 `tests/TestSupport.lua` facade。  
+validation: 现有 suite 继续通过，`logger` 与 runtime context 相关测试不因模块拆分改变行为，且测试模式不再依赖 `TestSupport` 是否已加载。
+
+### T3: 先完成 metadata、guard shim、runner 与 contract lane 切换
+
+depends_on: [T0, T1, T2]  
+location: `tests/behavior.lua`、`tests/contract.lua`、`tests/guard.lua`、`tests/regression.lua`、`tests/TestHarness.lua`、`tests/guards/`、`tests/internal/`  
+description: 把 suite 分成 behavior / contract / guard 三条车道；把 `release_trimmed` 迁到 case metadata；为 `tests/internal/*` 与 `internal.*` require 提供兼容 shim；把 `intent_output_contract` 与 `narrow_runtime_ports_contract` 一并纳入 contract lane；引入共享日志捕获，让通过路径只输出进度点与摘要，失败路径回放失败 case 日志。  
+validation: `MONO_TEST_VERBOSE=1` 可恢复全量日志；默认通过路径不再回放重复 warning；guard lane 也走统一捕获；`release_trimmed` 在 wrapper 仍存在和 wrapper 删除后都命中同一批 case。
+
+### T4: 拆 gameplay 巨型 suite 并退役索引切片
+
+depends_on: [T3]  
+location: `tests/suites/gameplay/`  
+description: 按行为边界拆掉 `gameplay.lua`，移除 `registry.lua` 与 wrapper-only slice suite，把 catalog 直接指向真实 suite。  
+validation: gameplay 相关 case 总数与命名可从旧文件一一映射，新 catalog 不再依赖索引区间，`release_trimmed` 仍保持相同禁用结果。
+
+### T5: 拆 `presentation_ui_action_status` 系列
+
+depends_on: [T3]  
+location: `tests/suites/presentation/`  
+description: 用 9 个真实 suite 替代 `presentation_ui_action_status.lua` 与 part1/2/3 聚合结构，catalog 直接登记新 suite。  
+validation: 当前 82 个 case 全部有归宿，status3d 相关禁用项来自真实 case metadata，不再靠旧 suite 名硬编码。
+
+### T6: 拆 `presentation_ui_popup_market` 与 `presentation_ui_action_anim`
+
+depends_on: [T3]  
+location: `tests/suites/presentation/`  
+description: 分别把 popup_market 拆成 4 个 suite，把 action_anim 拆成 3 个 suite；保留现有 smaller suite 不动。  
+validation: 相关 case 全部映射完成，catalog 不再引用聚合壳文件。
+
+### T7: 清理旧入口、更新文档并完成对账
+
+depends_on: [T4, T5, T6]  
+location: `tests/catalog.lua`、`tests/suites/`、`tests/internal/`、`docs/architecture/`  
+description: 删除已无引用的 wrapper-only suite、facade 与旧路径文档，更新命令示例，并完成最终基线对账。  
+validation: `rg` 对 `require("TestSupport")`、`require("TestHarness")`、`tests/internal/` 旧入口引用归零或只剩兼容层本身；文档命令与实际 runner 一致。
+
+## 依赖图
+
+    T0 ──> T1 ──> T2 ──> T3 ──┬── T4 ──┐
+                              ├── T5 ──┤── T7
+                              └── T6 ──┘
+
+并行波次固定为三轮。第一轮先做 `T0-T2`。第二轮先完成 `T3`，也就是 catalog metadata、孤儿 contract suite 纳管、guard shim、runner 与日志捕获。第三轮并行执行 `T4-T6`，最后执行 `T7` 收口删除旧入口。
 
 ## 具体步骤
 
-在仓库根目录实施并验证本轮修复时，使用以下命令：
+在仓库根目录先校准现基线：
 
-    lua -e 'package.path=package.path..";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua;./?/init.lua"; require("TestHarness").run_all({require("suites.presentation.presentation_move_anim"), require("suites.presentation.presentation_board_sync"), require("suites.presentation.presentation_ui_timing_anim")})'
+    lua - <<'LUA'
+    package.path = package.path .. ';./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua;./?/init.lua'
+    local manifest = require('suites.manifest')
+    local total = 0
+    for _, mod in ipairs(manifest) do
+      local suite = require(mod)
+      total = total + #(suite.tests or suite)
+    end
+    print(total)
+    LUA
 
-期望看到 `All regression checks passed (8)`。
+预期输出 `471`。
 
-然后运行 role-control 相关 suite：
+然后确认当前 release_trimmed 基线：
 
-    lua -e 'package.path=package.path..";./tests/?.lua;./tests/suites/?.lua;./tests/fixtures/?.lua;./?/init.lua"; require("TestHarness").run_all({require("suites.presentation.presentation_ui_action_status_part2")})'
+    MONO_REGRESSION_MODE=release_trimmed lua tests/regression.lua
 
-期望看到 `All regression checks passed (29)`。
+预期看到：
 
-最后运行全量回归：
-
-    lua tests/regression.lua
-
-期望看到：
-
-    All regression checks passed (458)
+    All regression checks passed (469)
     dep_rules ok
     legacy_path_guard ok
+    tick ok
+    forbidden_globals ok
     arch_view_guard ok
+
+实施完成后，用新 runner 验收：
+
+    MONO_REGRESSION_MODE=release_trimmed lua tests/behavior.lua
+    lua tests/contract.lua
+    lua tests/guard.lua
+    MONO_REGRESSION_MODE=release_trimmed lua tests/regression.lua
+
+预期结果分别为：behavior lane `416` 通过，contract lane `62` 通过，guard lane `5` 个脚本全部成功，整体验收输出 `All regression checks passed (478)` 且仍保留 5 条 guard 成功行。
 
 ## 验证与验收
 
-验收标准如下。
-
-第一，单步移动时 `on_sequence_lock(false)` 只在序列开始触发一次，`on_sequence_lock(true)` 只在 finish stop 触发一次；step 级 `on_step_lock` 仍保持 begin/end 各一次。
-
-第二，重叠序列时，旧序列在新序列开始时立即释放 sequence lock，但旧序列自己的 stale finish callback 不得额外释放新序列。
-
-第三，board sync 强制清理时，`clear_player_token(..., "board_sync_place_players")` 会同时清掉 token 与 sequence entry，不留下 `role_control_lock_exempt_by_role` 残留状态。
-
-第四，本地玩家的 role-control exempt 在整个 sequence 存活期保持开启，finish 后才恢复；不会在每一步结束时重新套回 `BUFF_FORBID_CONTROL`。
+验收必须同时满足七条。第一，`tests/catalog.lua` 成为 suite 真源，`tests/suites/manifest.lua` 只剩兼容转发或已在最终清理阶段删除。第二，原始 suite case 总数从当前 471 增长到 480，增长的 9 个 case 仅来自 `intent_output_contract` 与 `narrow_runtime_ports_contract` 正式纳管。第三，`release_trimmed` 总数为 478，且禁用项全部来自 case metadata，不再存在 `regression.lua` 内部硬编码过滤表。第四，在 wrapper 仍存在的中间阶段和 wrapper 删除后的最终阶段，`release_trimmed` 命中集合必须一致。第五，不再存在 `registry.lua`、`presentation_ui_action_status.lua`、part1/2/3 这类 wrapper-only suite。第六，默认通过路径不再逐行回放重复 `market paid goods mapping missing` 和同类 warning，但失败 case 仍能回放完整缓冲日志，`MONO_TEST_VERBOSE=1` 仍可输出全量日志。第七，repo 内文档与命令示例全部切换到新 runner，不再引用旧 `tests/internal/*` 路径或旧 `.agents/tests/...` 说明。
 
 ## 可重复性与恢复
 
-本轮步骤可重复执行。测试命令都是只读验证，不会改变仓库状态。若某次回归失败，应优先检查 sequence release 是否重复触发，或测试里的异步 callback 是否跑在 patch 作用域外。恢复时不要通过移除 sequence lock 逻辑或恢复 step-level exempt 管理来“临时过测”；应修正具体的 stale token、release 时序或测试补丁范围，然后重新运行同一组命令。
+本计划必须按“先增量、后删减”执行。每一轮都先新增新入口与 shim，再切 catalog，再删旧入口。任何一步失败时，都回到上一轮仍保持兼容的状态，不允许通过直接删除 facade 来“逼着” suite 迁移。所有新增文件与新 suite 命名使用 `snake_case`，测试辅助代码继续遵守 `lua_env` 与 `forbidden_globals` 约束，不引入 `tonumber` 或 `type(x) == "number"` 之类违规写法。
 
 ## 产物与备注
 
-本轮直接产物为：
-
-    src/presentation/view/render/move_anim.lua
-    src/presentation/runtime/ports/anim_ports.lua
-    tests/suites/presentation/presentation_move_anim.lua
-    tests/suites/presentation/presentation_board_sync.lua
-    .agents/plan.md
-
-关键行为证据如下：
-
-    All regression checks passed (20)
-    All regression checks passed (41)
-    lua tests/regression.lua 当前被 scenario_* profile 解析失败阻塞
+本轮最终应留下的关键产物是 `tests/bootstrap.lua`、`tests/catalog.lua`、`tests/behavior.lua`、`tests/contract.lua`、`tests/guard.lua`、`tests/support/test_env.lua`、`tests/support/log_capture.lua` 与拆分后的真实 suite 文件。最终应删除的旧装配壳包括 `tests/suites/gameplay/registry.lua`、`tests/suites/gameplay/gameplay.lua`、`tests/suites/gameplay/gameplay_core.lua`、`tests/suites/gameplay/gameplay_runtime.lua`、`tests/suites/gameplay/gameplay_loop.lua`、`tests/suites/presentation/presentation_ui_action_status.lua`、`tests/suites/presentation/presentation_ui_action_status_part1.lua`、`tests/suites/presentation/presentation_ui_action_status_part2.lua`、`tests/suites/presentation/presentation_ui_action_status_part3.lua`，以及在引用清零后的兼容 facade。
 
 ## 接口与依赖
 
-`src/presentation/view/render/move_anim.lua` 现在要求 `_move_anim_runtime` 同时维护 `active_token_by_player_id` 与 `active_sequence_by_player_id`。`move_anim.play_sequence(board_scene, anim_ctx)` 支持可选 `anim_ctx.on_sequence_lock(enabled, total_time, meta)`，其中 `meta` 至少包含 `player_id`、`from`、`to`、`seq`、`token`、`reason`。`move_anim.clear_player_token(board_scene, player_id, reason)` 必须在存在 active sequence 时释放 sequence lock 并删除 entry。
+新测试装配接口固定如下。`tests/catalog.lua` 导出 `behavior_suites`、`contract_suites`、`guard_scripts`。suite 表统一为 `{ name, layer, kind, tests = {...} }`；case 表统一为 `{ name, run, disabled_in = { release_trimmed = true }, tags = {...} }`。`tests/TestHarness.lua` 升级后必须支持 `run_all(suites, opts)`，其中 `opts` 至少包含 `filter`、`reporter`、`capture_logs`、`mode`，但必须继续兼容现有单参数调用。`tests/support/test_env.lua` 是唯一允许安装测试运行时副作用的入口；`tests/support/log_capture.lua` 是 behavior、contract、guard 三条 lane 共用的日志缓冲层。guard 迁移后真实脚本位于 `tests/guards/`，但在删除 shim 之前，旧 `tests/internal/*` 路径与 `internal.*` 模块名仍需可执行。`src/core/utils/logger.lua` 必须提供显式测试模式开关或等价注入点，替代 `package.loaded["TestSupport"]` 特判。
 
-`src/presentation/runtime/ports/anim_ports.lua` 中的 `play_move_anim(state, anim_ctx)` 必须把 role-control exempt 的更新绑定到 `on_sequence_lock`，而不是 `on_step_lock`。`on_step_lock` 继续保留，避免破坏 `presentation_ui.timing_anim` 等既有调用方与测试。
-
-本文件于 2026-03-09 18:08+08:00 更新：追加 synthetic actor `stop_ai()` 修复与验证阻塞说明，原因是 AI 落点后持续跑步的问题已实现修复，但全量回归被工作树中的外部 scenario profile 改动阻塞，需让活文档反映真实状态。
+本文件于 2026-03-09 19:04+08:00 更新：完成 `T0-T3` 实施，新增 inventory 文档、bootstrap/catalog/test_env/log_capture、behavior/contract/guard runner、guard shim 与孤儿 contract suite 纳管，并记录新的 `416 + 62 + 5` 验证结果。
