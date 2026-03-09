@@ -12,8 +12,21 @@ local market_ui = require("src.presentation.view.support.market_layout")
 local ui_events = require("src.presentation.runtime.events")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local role_globals = require("src.core.state_access.ui_role_globals")
+local runtime_context = require("src.infrastructure.runtime.context")
 
 local M = {}
+
+local function _spawn_startup_synthetic_actors(current_game)
+  local runtime_ctx = runtime_context.current()
+  local registry = runtime_ctx and runtime_ctx.synthetic_actor_registry or nil
+  if not (registry and type(registry.register_specs) == "function" and type(registry.spawn_pending) == "function") then
+    return
+  end
+  local specs = current_game and current_game.startup_synthetic_players or nil
+  registry.register_specs(specs)
+  local map_cfg = current_game and current_game.board and current_game.board.map or nil
+  registry.spawn_pending(map_cfg)
+end
 
 local function _required_click_nodes(opts)
   local required = {
@@ -102,6 +115,7 @@ function M.install(state, current_game_ref, opts)
 
     ui_events.send_to_all(ui_events.show["加载屏"], {})
     local board_map = current_game and current_game.board and current_game.board.map or nil
+    _spawn_startup_synthetic_actors(current_game)
     board_scene.init(state, board_map, current_game)
     ui_view.init_ui_assets(state)
     ui_view.capture_player_colors(state, current_game)

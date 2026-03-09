@@ -83,6 +83,14 @@ function default_ports.build(runtime_context)
     if player_id == nil then
       return nil
     end
+    local ctx = runtime_context.current()
+    local synthetic_registry = ctx and ctx.synthetic_actor_registry or nil
+    if synthetic_registry and type(synthetic_registry.resolve_actor) == "function" then
+      local synthetic_actor = synthetic_registry.resolve_actor(player_id)
+      if synthetic_actor and synthetic_actor.adapter then
+        return synthetic_actor.adapter
+      end
+    end
     local roles = defaults.resolve_roles()
     if type(roles) == "table" then
       for _, role in ipairs(roles) do

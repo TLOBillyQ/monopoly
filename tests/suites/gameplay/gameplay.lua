@@ -2991,11 +2991,14 @@ local function _test_game_startup_role_roster_retries_before_debug_players_fallb
   end)
 
   assert(type(created_opts) == "table", "game startup should create game options")
-  assert(type(created_opts.role_roster) == "table" and #created_opts.role_roster == 1,
-    "game startup should use role_roster after retry")
+  assert(type(created_opts.role_roster) == "table" and #created_opts.role_roster == 4,
+    "game startup should build a 4-slot role_roster after retry")
   assert(created_opts.role_roster[1].role_id == 101, "role_roster should include retried role id")
   assert(created_opts.role_roster[1].name == "Role101", "role_roster should include retried role name")
-  assert(created_opts.players == nil, "game startup should not fallback to debug players when retry succeeds")
+  assert(created_opts.role_roster[2].synthetic == true and created_opts.role_roster[3].synthetic == true
+    and created_opts.role_roster[4].synthetic == true,
+    "game startup should synthesize missing slots when retry succeeds")
+  assert(created_opts.players == nil, "game startup should keep role_roster startup when retry succeeds")
 end
 
 local function _test_runtime_context_change_skin_exports_and_event()

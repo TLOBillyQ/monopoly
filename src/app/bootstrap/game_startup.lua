@@ -12,6 +12,7 @@ local runtime_ports = require("src.core.ports.runtime_ports")
 local role_id_utils = require("src.core.utils.role_id")
 
 local max_player_count = 4
+local synthetic_unit_keys = { 9000601, 9000602, 9000603, 9000604, 9000605, 9000607 }
 
 local M = {}
 
@@ -28,7 +29,30 @@ local function _resolve_roles()
   return {}
 end
 
-local function _build_role_roster(max_players)
+local function _pick_synthetic_unit_keys(count)
+  local selected = {}
+  if count == nil or count <= 0 then
+    return selected
+  end
+  local pool = {}
+  for index, unit_key in ipairs(synthetic_unit_keys) do
+    pool[index] = unit_key
+  end
+  local limit = count
+  if limit > #pool then
+    limit = #pool
+  end
+  for index = 1, limit do
+    local pick_index = runtime_ports.rng_next_int(index, #pool)
+    local picked = pool[pick_index]
+    pool[pick_index] = pool[index]
+    pool[index] = picked
+    selected[index] = pool[index]
+  end
+  return selected
+end
+
+local function _build_startup_roster(max_players)
   local roster = {}
   local roles = _resolve_roles()
   for _, role in ipairs(roles) do
@@ -52,6 +76,17 @@ local function _build_role_roster(max_players)
     if max_players and #roster >= max_players then
       break
     end
+  end
+  local missing_count = max_players and (max_players - #roster) or 0
+  local selected_unit_keys = _pick_synthetic_unit_keys(missing_count)
+  for index = 1, missing_count do
+    local slot_index = #roster + 1
+    roster[slot_index] = {
+      role_id = -slot_index,
+      name = "AI" .. tostring(slot_index),
+      synthetic = true,
+      unit_key = selected_unit_keys[index],
+    }
   end
   if max_players and #roles > max_players then
     logger.warn(
@@ -86,7 +121,7 @@ local function _find_role_index(role_roster, role_id)
     return nil
   end
   for index, role in ipairs(role_roster or {}) do
-    if role_id_utils.equals(role and role.role_id or nil, normalized_role_id) then
+    if role and role.synthetic ~= true and role_id_utils.equals(role.role_id, normalized_role_id) then
       return index
     end
   end
@@ -103,24 +138,46 @@ local function _build_all_except_human_ai_map(player_count, human_index)
   return ai
 end
 
+local function _count_real_roles(role_roster)
+  local count = 0
+  for _, role in ipairs(role_roster or {}) do
+    if role and role.synthetic ~= true then
+      count = count + 1
+    end
+  end
+  return count
+end
+
 local function _build_startup_ai_map(role_roster, opts)
   opts = opts or {}
   local ai_mode = opts.ai_mode or "default"
-  if ai_mode ~= "all_except_local_human" then
-    return _build_non_p1_ai_map(opts.player_count, opts.force_non_p1_ai)
-  end
-
+  local ai = nil
   local player_count = opts.player_count or 0
-  local human_index = _find_role_index(role_roster, opts.local_human_role_id)
-  if human_index == nil then
-    logger.warn(
-      "[Eggy]",
-      "startup ai override missing local human role, fallback to player1 human",
-      "local_human_role_id=" .. tostring(opts.local_human_role_id)
-    )
-    human_index = 1
+  local real_role_count = opts.real_role_count or 0
+  if ai_mode ~= "all_except_local_human" then
+    ai = _build_non_p1_ai_map(opts.player_count, opts.force_non_p1_ai)
+  else
+    local human_index = _find_role_index(role_roster, opts.local_human_role_id)
+    if human_index == nil and player_count > 0 then
+      logger.warn(
+        "[Eggy]",
+        "startup ai override missing local human role, fallback to player1 human",
+        "local_human_role_id=" .. tostring(opts.local_human_role_id)
+      )
+      human_index = 1
+    end
+    ai = _build_all_except_human_ai_map(player_count, human_index)
   end
-  return _build_all_except_human_ai_map(player_count, human_index)
+  for index, role in ipairs(role_roster or {}) do
+    if role and role.synthetic == true then
+      if ai == nil then
+        ai = {}
+      end
+      ai[index] = true
+      ai[role.role_id] = true
+    end
+  end
+  return ai
 end
 
 -- state 中保存当前 game 的引用，由 UIBootstrap 在 GAME_INIT 之后赋值
@@ -144,43 +201,34 @@ function M.build_state(get_current_game, opts)
     wait_move_anim = true,
     wait_action_anim = true,
     game_factory = function()
-      local role_roster = _build_role_roster(max_player_count)
+      local role_roster = _build_startup_roster(max_player_count)
       local forced_ai = _build_startup_ai_map(role_roster, {
         ai_mode = ai_mode,
         local_human_role_id = local_human_role_id,
         player_count = #role_roster,
+        real_role_count = _count_real_roles(role_roster),
         force_non_p1_ai = force_non_p1_ai,
+        release_mode = release_mode,
       })
-      local created_game = nil
-      if #role_roster > 0 then
-        logger.info("[Eggy]", "使用角色驱动初始化，角色数量:", tostring(#role_roster))
-        created_game = game:new({
-          role_roster = role_roster,
-          ai = forced_ai,
-          auto_all = false,
-          map = map_cfg,
-          tiles = tiles_cfg,
-        })
-      else
-        if release_mode or fail_fast_when_roles_empty then
-          error("[Eggy] release startup failed: role roster is empty")
+      logger.info("[Eggy]", "使用四槽角色驱动初始化，角色数量:", tostring(#role_roster))
+      local created_game = game:new({
+        role_roster = role_roster,
+        ai = forced_ai,
+        auto_all = false,
+        map = map_cfg,
+        tiles = tiles_cfg,
+      })
+      local synthetic_players = {}
+      for _, role in ipairs(role_roster) do
+        if role and role.synthetic == true then
+          synthetic_players[#synthetic_players + 1] = {
+            player_id = role.role_id,
+            name = role.name,
+            unit_key = role.unit_key,
+          }
         end
-        logger.warn("[Eggy]", "角色列表为空，回退调试玩家初始化")
-        local player_names = { "玩家1", "AI2", "AI3", "AI4" }
-        local fallback_ai = _build_startup_ai_map(nil, {
-          ai_mode = ai_mode,
-          local_human_role_id = local_human_role_id,
-          player_count = #player_names,
-          force_non_p1_ai = force_non_p1_ai,
-        }) or { [2] = true, [3] = true, [4] = true }
-        created_game = game:new({
-          players = player_names,
-          ai = fallback_ai,
-          auto_all = false,
-          map = map_cfg,
-          tiles = tiles_cfg,
-        })
       end
+      created_game.startup_synthetic_players = synthetic_players
       test_profile_bootstrap.apply(created_game, profile_name)
       return created_game
     end,

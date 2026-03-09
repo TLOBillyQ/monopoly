@@ -38,9 +38,12 @@ local function _build_role_units(roles)
     local unit = role.get_ctrl_unit()
     local role_id = _resolve_role_id(role, i)
     role_units[role_id] = unit
-    assert(role.get_name ~= nil, "missing role.get_name: " .. tostring(i))
-    local name = assert(role.get_name(), "missing role name: " .. tostring(i))
-    name_to_unit[name] = unit
+    if role.get_name ~= nil then
+      local name = role.get_name()
+      if name ~= nil and name ~= "" then
+        name_to_unit[name] = unit
+      end
+    end
   end
   return name_to_unit, role_units
 end
@@ -64,6 +67,12 @@ function M.ensure_player_units(state, players, log_once, build_log_prefix)
     local pid = _resolve_player_id(player, i)
     local name = assert(player.name, "missing player name: " .. tostring(i))
     local unit = name_to_unit[name] or role_units[pid]
+    if unit == nil then
+      local role = runtime_ports.resolve_role(pid)
+      if role and type(role.get_ctrl_unit) == "function" then
+        unit = role.get_ctrl_unit()
+      end
+    end
     assert(unit ~= nil, "missing player unit: " .. tostring(pid))
     mapped[pid] = unit
     mapped_count = mapped_count + 1

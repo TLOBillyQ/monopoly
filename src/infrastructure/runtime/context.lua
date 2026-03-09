@@ -4,6 +4,7 @@ local logger = require("src.core.utils.logger")
 local runtime_editor_exports = require("src.core.state_access.runtime_editor_exports")
 local vehicle_feature = require("src.game.systems.vehicle")
 local number_utils = require("src.core.utils.number_utils")
+local synthetic_actor_registry = require("src.infrastructure.runtime.synthetic_actor_registry")
 require("Config.runtime_refs")
 
 local runtime_context = {}
@@ -241,6 +242,7 @@ function runtime_context.new(env)
     vehicle_helper = nil,
     camera_helper = nil,
     change_skin_helper = nil,
+    synthetic_actor_registry = nil,
   }
 end
 
@@ -304,6 +306,9 @@ function runtime_context.install_runtime_helpers(ctx, opts)
   end
   if not ctx.change_skin_helper then
     ctx.change_skin_helper = _build_change_skin_helper()
+  end
+  if not ctx.synthetic_actor_registry then
+    ctx.synthetic_actor_registry = synthetic_actor_registry.new(ctx.env)
   end
 
   if not ctx.roles then

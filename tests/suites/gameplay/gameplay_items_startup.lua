@@ -106,7 +106,7 @@ local function _test_monster_startup_profile_runs_choice_to_action_anim()
     dispatched[#dispatched + 1] = action
   end
 
-  local res = support.executor.use_item(g, player, gameplay_rules.item_ids.monster, {})
+  local res = support.executor.use_item(g, player, gameplay_rules.item_ids.monster, { by_ai = false })
   assert(type(res) == "table" and res.waiting == true, "monster staging should open target choice")
   _open_choice(g, res.intent.choice_spec)
 
@@ -140,7 +140,7 @@ local function _test_missile_startup_profile_defers_hospital_followup_until_afte
     dispatched[#dispatched + 1] = action
   end
 
-  local res = support.executor.use_item(g, player, gameplay_rules.item_ids.missile, {})
+  local res = support.executor.use_item(g, player, gameplay_rules.item_ids.missile, { by_ai = false })
   assert(type(res) == "table" and res.waiting == true, "missile staging should open target choice")
   _open_choice(g, res.intent.choice_spec)
 

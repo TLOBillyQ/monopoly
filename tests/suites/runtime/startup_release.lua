@@ -15,6 +15,20 @@ local function _build_role(role_id)
   }
 end
 
+local function _assert_unique_unit_keys(role_roster, expected_count)
+  local seen = {}
+  local synthetic_count = 0
+  for _, entry in ipairs(role_roster or {}) do
+    if entry and entry.synthetic == true then
+      synthetic_count = synthetic_count + 1
+      assert(entry.unit_key ~= nil, "synthetic entry should provide unit_key")
+      assert(seen[entry.unit_key] == nil, "synthetic unit_key should be unique per match")
+      seen[entry.unit_key] = true
+    end
+  end
+  assert(synthetic_count == expected_count, "unexpected synthetic entry count")
+end
+
 local function _test_release_prod_forces_default_profile()
   with_patches({
     { key = "RELEASE_BUILD", value = true },
@@ -159,7 +173,7 @@ local function _test_startup_policy_accepts_explicit_ai_mode_in_dev()
   end)
 end
 
-local function _test_game_startup_release_fails_when_role_roster_empty()
+local function _test_game_startup_release_fills_synthetic_ai_when_role_roster_empty()
   local created_opts = nil
   with_patches({
     { target = runtime_ports, key = "resolve_roles", value = function() return {} end },
@@ -179,17 +193,17 @@ local function _test_game_startup_release_fails_when_role_roster_empty()
       force_non_p1_ai = false,
       fail_fast_when_roles_empty = true,
     })
-    local ok, err = pcall(state.game_factory)
-    assert(ok == false, "release should fail fast when role roster is empty")
-    assert(
-      tostring(err):find("release startup failed: role roster is empty", 1, true) ~= nil,
-      "release startup failure should report empty role roster"
-    )
+    state.game_factory()
   end)
-  assert(created_opts == nil, "release fail-fast should stop before creating game options")
+  assert(type(created_opts) == "table", "release should still create game options when role roster is empty")
+  assert(type(created_opts.role_roster) == "table" and #created_opts.role_roster == 4,
+    "release should synthesize a 4-slot role roster")
+  _assert_unique_unit_keys(created_opts.role_roster, 4)
+  assert(created_opts.ai[-1] == true and created_opts.ai[-2] == true and created_opts.ai[-3] == true and created_opts.ai[-4] == true,
+    "synthetic entries should always be AI")
 end
 
-local function _test_game_startup_dev_falls_back_to_debug_players_when_roles_empty()
+local function _test_game_startup_dev_fills_synthetic_ai_when_roles_empty()
   local created_opts = nil
   with_patches({
     { target = runtime_ports, key = "resolve_roles", value = function() return {} end },
@@ -211,8 +225,12 @@ local function _test_game_startup_dev_falls_back_to_debug_players_when_roles_emp
     })
     state.game_factory()
   end)
-  assert(type(created_opts) == "table", "dev fallback should still build game options")
-  assert(type(created_opts.players) == "table" and #created_opts.players == 4, "dev fallback should use debug player roster")
+  assert(type(created_opts) == "table", "dev should still build game options")
+  assert(type(created_opts.role_roster) == "table" and #created_opts.role_roster == 4,
+    "dev should synthesize a 4-slot role roster")
+  _assert_unique_unit_keys(created_opts.role_roster, 4)
+  assert(created_opts.ai[-1] == true and created_opts.ai[-2] == true and created_opts.ai[-3] == true and created_opts.ai[-4] == true,
+    "dev synthetic fallback should keep all synthetic players as AI")
 end
 
 local function _test_game_startup_explicit_ai_mode_keeps_matching_local_role_human()
@@ -289,11 +307,12 @@ local function _test_game_startup_explicit_ai_mode_falls_back_to_slot1_when_role
     })
     state.game_factory()
   end)
+  assert(type(created_opts.role_roster) == "table" and #created_opts.role_roster == 4, "startup should still keep a 4-slot roster")
   assert(created_opts.ai[1] == nil, "fallback should keep slot1 human")
-  assert(created_opts.ai[2] == true and created_opts.ai[3] == true and created_opts.ai[4] == true, "fallback should move other slots to AI")
+  assert(created_opts.ai[2] == true and created_opts.ai[3] == true and created_opts.ai[4] == true, "fallback should move other real slots to AI")
 end
 
-local function _test_game_startup_explicit_ai_mode_falls_back_to_slot1_for_debug_players()
+local function _test_game_startup_explicit_ai_mode_falls_back_to_slot1_for_synthetic_players()
   local created_opts = nil
   with_patches({
     { target = runtime_ports, key = "resolve_roles", value = function() return {} end },
@@ -317,9 +336,9 @@ local function _test_game_startup_explicit_ai_mode_falls_back_to_slot1_for_debug
     })
     state.game_factory()
   end)
-  assert(type(created_opts.players) == "table" and #created_opts.players == 4, "debug fallback should still use 4 debug players")
-  assert(created_opts.ai[1] == nil, "debug fallback should keep slot1 human")
-  assert(created_opts.ai[2] == true and created_opts.ai[3] == true and created_opts.ai[4] == true, "debug fallback should keep non-slot1 AI")
+  assert(type(created_opts.role_roster) == "table" and #created_opts.role_roster == 4, "synthetic fallback should still use 4 slots")
+  assert(created_opts.ai[-1] == true and created_opts.ai[-2] == true and created_opts.ai[-3] == true and created_opts.ai[-4] == true,
+    "synthetic fallback should keep all synthetic players as AI")
 end
 
 return {
@@ -339,10 +358,13 @@ return {
     },
     { name = "startup_policy_dev_accepts_profile_override", run = _test_startup_policy_dev_accepts_profile_override },
     { name = "startup_policy_accepts_explicit_ai_mode_in_dev", run = _test_startup_policy_accepts_explicit_ai_mode_in_dev },
-    { name = "game_startup_release_fails_when_role_roster_empty", run = _test_game_startup_release_fails_when_role_roster_empty },
     {
-      name = "game_startup_dev_falls_back_to_debug_players_when_roles_empty",
-      run = _test_game_startup_dev_falls_back_to_debug_players_when_roles_empty,
+      name = "game_startup_release_fills_synthetic_ai_when_role_roster_empty",
+      run = _test_game_startup_release_fills_synthetic_ai_when_role_roster_empty,
+    },
+    {
+      name = "game_startup_dev_fills_synthetic_ai_when_roles_empty",
+      run = _test_game_startup_dev_fills_synthetic_ai_when_roles_empty,
     },
     {
       name = "game_startup_explicit_ai_mode_keeps_matching_local_role_human",
@@ -353,8 +375,8 @@ return {
       run = _test_game_startup_explicit_ai_mode_falls_back_to_slot1_when_role_missing,
     },
     {
-      name = "game_startup_explicit_ai_mode_falls_back_to_slot1_for_debug_players",
-      run = _test_game_startup_explicit_ai_mode_falls_back_to_slot1_for_debug_players,
+      name = "game_startup_explicit_ai_mode_falls_back_to_slot1_for_synthetic_players",
+      run = _test_game_startup_explicit_ai_mode_falls_back_to_slot1_for_synthetic_players,
     },
   },
 }

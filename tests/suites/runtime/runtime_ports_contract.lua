@@ -199,6 +199,41 @@ local function _test_runtime_ports_resolve_role_uses_zero_arity_get_roleid_and_i
   _reset_runtime_contract_state()
 end
 
+local function _test_runtime_ports_resolve_role_prefers_synthetic_actor_registry()
+  _reset_runtime_contract_state()
+  local synthetic_unit = {}
+  local ctx = runtime_context.new({})
+  ctx.roles = { { id = 11 } }
+  ctx.synthetic_actor_registry = {
+    resolve_actor = function(player_id)
+      if player_id == -1 then
+        return {
+          adapter = {
+            id = -1,
+            get_roleid = function()
+              return -1
+            end,
+            get_name = function()
+              return "AI1"
+            end,
+            get_ctrl_unit = function()
+              return synthetic_unit
+            end,
+          },
+        }
+      end
+      return nil
+    end,
+  }
+  _set_current_runtime_context(ctx)
+
+  local resolved = runtime_ports.resolve_role(-1)
+  assert(resolved ~= nil, "resolve_role should return synthetic adapter")
+  _assert_eq(resolved.get_name(), "AI1", "resolve_role should prefer synthetic actor registry")
+  _assert_eq(resolved.get_ctrl_unit(), synthetic_unit, "synthetic adapter should expose ctrl_unit")
+  _reset_runtime_contract_state()
+end
+
 return {
   name = "runtime_ports_contract",
   tests = {
@@ -233,6 +268,10 @@ return {
     {
       name = "runtime_ports_resolve_role_uses_zero_arity_get_roleid_and_id_fallback",
       run = _test_runtime_ports_resolve_role_uses_zero_arity_get_roleid_and_id_fallback,
+    },
+    {
+      name = "runtime_ports_resolve_role_prefers_synthetic_actor_registry",
+      run = _test_runtime_ports_resolve_role_prefers_synthetic_actor_registry,
     },
   },
 }
