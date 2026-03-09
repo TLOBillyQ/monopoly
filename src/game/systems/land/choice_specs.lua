@@ -22,19 +22,25 @@ end
 land_choice_specs.build_use_skip = _build_use_skip
 
 function land_choice_specs.rent_prompt(player_id, tile_id, card_kind, total_value, tile_name)
-  local body = nil
-  local title = nil
   if card_kind == "strong" then
-    body = { "支付 " .. tostring(total_value) .. " 强制购入 " .. tile_name }
-    title = "是否使用强征卡"
-  else
-    body = { "免除本次租金" }
-    title = "是否使用免费卡"
+    local choice = _build_use_skip(
+      "rent_card_prompt",
+      "是否使用强征卡",
+      { "支付 " .. tostring(total_value) .. " 强制购入 " .. tile_name },
+      { player_id = player_id, tile_id = tile_id, card_kind = card_kind }
+    )
+    choice.route_key = "secondary_confirm"
+    choice.requires_confirm = true
+    choice.allow_cancel = true
+    choice.cancel_label = "不用"
+    choice.confirm_title = "强征卡"
+    choice.confirm_body = "支付 " .. tostring(total_value) .. " 强制购入 " .. tile_name
+    return choice
   end
   return _build_use_skip(
     "rent_card_prompt",
-    title,
-    body,
+    "是否使用免费卡",
+    { "免除本次租金" },
     { player_id = player_id, tile_id = tile_id, card_kind = card_kind }
   )
 end

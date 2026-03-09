@@ -269,6 +269,11 @@ local function _test_strong_card_startup_profile_transfers_target_tile_on_use()
   local owner_cash_before = g:player_balance(owner, "金币")
 
   assert(rent_prompt.title == "是否使用强征卡", "strong card staging should prompt strong card first")
+  assert(rent_prompt.route_key == "secondary_confirm", "strong card staging should route strong prompt to secondary confirm")
+  assert(rent_prompt.requires_confirm == true, "strong card staging should require confirm before using strong card")
+  assert(rent_prompt.confirm_title == "强征卡", "strong card staging should expose short strong-card confirm title")
+  assert(rent_prompt.confirm_body == "支付 " .. tostring(strong_amount) .. " 强制购入 " .. target_tile.name,
+    "strong card staging should expose explicit confirm body")
   local result = choice_resolver.resolve(g, rent_prompt, { option_id = "use" })
 
   assert(result and result.stay == false, "using strong card should resolve rent prompt")
@@ -296,6 +301,8 @@ local function _test_strong_card_startup_profile_allows_free_rent_after_skipping
   local free_prompt = _get_choice(g)
   assert(free_prompt and free_prompt.kind == "rent_card_prompt", "skipping strong card should expose free rent prompt")
   assert(free_prompt.title == "是否使用免费卡", "skipping strong card should prompt free rent next")
+  assert(free_prompt.route_key == "base_inline", "free rent prompt should remain base_inline after skipping strong card")
+  assert(free_prompt.requires_confirm == false, "free rent prompt should not switch to secondary confirm")
 
   local use_result = choice_resolver.resolve(g, free_prompt, { option_id = "use" })
   assert(use_result and use_result.stay == false, "using free rent should resolve prompt")

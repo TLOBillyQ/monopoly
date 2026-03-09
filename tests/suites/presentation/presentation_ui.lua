@@ -2340,6 +2340,47 @@ local function _test_choice_modal_routes_to_new_screens()
 
     ui_view.open_choice_modal(state, {
       id = 7,
+      kind = "rent_card_prompt",
+      route_key = "secondary_confirm",
+      requires_confirm = true,
+      confirm_title = "强征卡",
+      confirm_body = "支付 2800 强制购入 福州路",
+      title = "是否使用强征卡",
+      body = "",
+      options = {
+        { id = "use", label = "使用" },
+        { id = "skip", label = "不用" },
+      },
+      allow_cancel = true,
+      cancel_label = "不用",
+      meta = { card_kind = "strong", tile_id = 1 },
+    })
+    _assert_eq(state.ui.active_choice_screen_key, "secondary_confirm", "strong rent prompt should route to secondary confirm")
+    _assert_eq(nodes["通用二次确认屏"].visible, true, "strong rent prompt should open secondary confirm screen")
+    _assert_eq(nodes["通用二次确认_标题"].text, "强征卡", "strong rent prompt should use short confirm title")
+    _assert_eq(nodes["通用二次确认_文本"].text, "支付 2800 强制购入 福州路", "strong rent prompt should use explicit confirm body")
+    _assert_eq(nodes["通用二次确认_取消"].visible, true, "strong rent prompt should show do-not-use action")
+    _assert_eq(nodes["通用二次确认_取消"].disabled, false, "strong rent cancel should stay touchable")
+
+    ui_view.open_choice_modal(state, {
+      id = 8,
+      kind = "rent_card_prompt",
+      route_key = "base_inline",
+      requires_confirm = false,
+      title = "是否使用免费卡",
+      body = "",
+      options = {
+        { id = "use", label = "使用" },
+        { id = "skip", label = "放弃" },
+      },
+      allow_cancel = false,
+      meta = { card_kind = "free", tile_id = 1 },
+    })
+    _assert_eq(state.ui.active_choice_screen_key, nil, "free rent prompt should remain inline")
+    _assert_eq(nodes["通用二次确认屏"].visible, false, "free rent prompt should not open secondary confirm")
+
+    ui_view.open_choice_modal(state, {
+      id = 9,
       kind = "landing_optional_effect",
       route_key = "base_inline",
       requires_confirm = false,
