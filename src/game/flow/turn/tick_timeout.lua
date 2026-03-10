@@ -92,6 +92,15 @@ end
 
 local function _noop() end
 
+local function _resolve_ui_sync_ports(state)
+  local resolved = state and (state._resolved_gameplay_loop_ports or state.gameplay_loop_ports) or nil
+  local ui_sync_ports = type(resolved) == "table" and resolved.ui_sync or nil
+  if type(ui_sync_ports) == "table" then
+    return ui_sync_ports
+  end
+  return nil
+end
+
 local default_policy = {
   choice = {
     get_timeout_seconds = function(game, state)
@@ -140,12 +149,24 @@ end
 
 function tick_timeout.step_default_choice(game, state, dt)
   local policy = tick_timeout.default_policy()
+  local ui_sync_ports = _resolve_ui_sync_ports(state)
   tick_timeout.step_choice_timeout(game, state, dt, {
-    on_pending_choice = _noop,
+    on_pending_choice = function(state_ctx, pending)
+      if ui_sync_ports and type(ui_sync_ports.on_pending_choice) == "function" then
+        return ui_sync_ports.on_pending_choice(game, state_ctx, pending)
+      end
+      return _noop()
+    end,
     is_choice_active = function(ctx)
+      if ui_sync_ports and type(ui_sync_ports.is_choice_active) == "function" then
+        return ui_sync_ports.is_choice_active(ctx)
+      end
       return ctx.pending_choice ~= nil
     end,
-    resolve_choice_ui_state = function(_, _, choice)
+    resolve_choice_ui_state = function(game_ctx, state_ctx, choice)
+      if ui_sync_ports and type(ui_sync_ports.resolve_choice_ui_state) == "function" then
+        return ui_sync_ports.resolve_choice_ui_state(game_ctx, state_ctx, choice)
+      end
       return {
         route_key = choice and choice.route_key or nil,
         should_warn = false,

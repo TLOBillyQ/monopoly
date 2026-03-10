@@ -187,6 +187,13 @@ local function _copy_group_ports(base_group, override_group, required_keys)
       merged[key] = fn
     end
   end
+  if type(override_group) == "table" then
+    for key, value in pairs(override_group) do
+      if merged[key] == nil then
+        merged[key] = value
+      end
+    end
+  end
   return merged
 end
 local function _fill_clock_defaults(clock_ports, base_clock_ports)

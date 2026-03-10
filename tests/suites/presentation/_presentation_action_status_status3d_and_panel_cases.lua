@@ -1099,6 +1099,7 @@ local function _test_ui_sync_opens_choice_modal_after_wait_action_anim()
     end },
     { target = ui_model, key = "build", value = function()
       return {
+        current_player_id = 1,
         panel = { turn_label = "" },
         board = {},
         choice = { id = 8, kind = "market_buy", route_key = "market", options = { { id = 1, label = "A" } }, allow_cancel = true },
@@ -1107,6 +1108,7 @@ local function _test_ui_sync_opens_choice_modal_after_wait_action_anim()
     end },
     { target = ui_model, key = "update", value = function()
       return {
+        current_player_id = 1,
         panel = { turn_label = "" },
         board = {},
         choice = { id = 8, kind = "market_buy", route_key = "market", options = { { id = 1, label = "A" } }, allow_cancel = true },
@@ -1194,6 +1196,7 @@ local function _test_ui_sync_step_choice_timeout_reopens_remote_choice_for_local
   local ui_view_service = require("src.presentation.runtime.view")
   local ui_model = require("src.presentation.model")
   local ui_sync_ports = require("src.presentation.runtime.ports.ui_sync_ports")
+  local gameplay_loop_ports = require("src.game.flow.turn.loop_ports")
   local common = require("src.presentation.runtime.ports.common")
   local runtime_ports_module = require("src.core.ports.runtime_ports")
   local opened = 0
@@ -1223,7 +1226,7 @@ local function _test_ui_sync_step_choice_timeout_reopens_remote_choice_for_local
     ui = ui_view_service.build_ui_state(),
     ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY" }),
     ui_dirty = false,
-    ui_model = nil,
+    ui_model = { current_player_id = 1 },
     _log_once = {},
   }
   _bind_ui_runtime(state)
@@ -1251,7 +1254,10 @@ local function _test_ui_sync_step_choice_timeout_reopens_remote_choice_for_local
       return {}
     end },
   }, function()
-    ui_sync_ports.build(common).step_choice_timeout(game, state, 0.1)
+    state.gameplay_loop_ports = gameplay_loop_ports.resolve({
+      ui_sync = ui_sync_ports.build(common),
+    })
+    state.gameplay_loop_ports.ui_sync.step_choice_timeout(game, state, 0.1)
   end)
 
   _assert_eq(opened, 1, "step_choice_timeout should reopen remote choice for local owner")
