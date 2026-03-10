@@ -52,11 +52,14 @@ function viewer.write(paths, data, opts)
   if not write_ok then
     return nil, write_err
   end
+  local index_path = common.join_path(paths.out_dir, "index.html")
+  print("[crap] viewer_index=" .. tostring(index_path))
   if opts and opts.open then
-    local opened, open_err = common.open_path(common.join_path(paths.out_dir, "index.html"))
+    local opened, open_err = common.open_path(index_path)
     if not opened then
       return nil, open_err
     end
+    print("[crap] viewer_opened=" .. tostring(index_path))
   end
   print("[crap] viewer_ok=" .. tostring(paths.out_dir))
   return true

@@ -78,13 +78,13 @@ end
 local function _resolve_paths(options, env)
   local cwd = common.current_dir()
   local script_dir = common.normalize_path(env.script_dir or "scripts/quality")
-  local default_project_root = common.resolve_path(cwd, env.default_project_root or ".")
+  local default_project_root = common.resolve_cli_path(cwd, env.default_project_root or ".")
   return {
     script_dir = script_dir,
-    project_root = common.resolve_path(cwd, options.project_root or default_project_root),
-    out_path = options.out and common.resolve_path(cwd, options.out) or nil,
-    out_dir = options.out_dir and common.resolve_path(cwd, options.out_dir) or nil,
-    in_json = options.in_json and common.resolve_path(cwd, options.in_json) or nil,
+    project_root = common.resolve_cli_path(cwd, options.project_root or default_project_root),
+    out_path = options.out and common.resolve_cli_path(cwd, options.out) or nil,
+    out_dir = options.out_dir and common.resolve_cli_path(cwd, options.out_dir) or nil,
+    in_json = options.in_json and common.resolve_cli_path(cwd, options.in_json) or nil,
   }
 end
 
@@ -116,7 +116,17 @@ local function _run_viewer(options, env)
   local view_report = nil
   if paths.in_json ~= nil then
     local loader = env.load_report or viewer.load_report
-    view_report = assert(loader(paths.in_json))
+    local loaded_report, load_err = loader(paths.in_json)
+    if loaded_report == nil then
+      error(
+        "viewer input json not found or unreadable: " .. tostring(paths.in_json)
+          .. "\nrun `lua scripts/quality/crap_cli.lua report --out "
+          .. tostring(paths.in_json)
+          .. "` first, or omit `--in-json` to generate the report on demand"
+          .. (load_err and ("\nloader error: " .. tostring(load_err)) or "")
+      )
+    end
+    view_report = loaded_report
   else
     local runner = env.run_report or report.build
     view_report = assert(runner({

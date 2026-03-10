@@ -21,6 +21,13 @@
 
     lua scripts/quality/crap_cli.lua report --out tmp/crap_report.json --top 20
 
+这里的 `tmp/...` 不是仓库内相对目录，而是 CRAP CLI 约定的“逻辑临时目录别名”。它会自动映射到当前系统的临时目录：
+
+- Windows：`%TEMP%/monopoly_crap/...`
+- macOS：`$TMPDIR/monopoly_crap/...`
+
+如果你想覆盖这个默认位置，可以先设置 `MONOPOLY_CRAP_TMP`。
+
 默认行为：
 
 - 作用域：`src/**/*.lua`
@@ -39,7 +46,7 @@
 
     lua scripts/quality/crap_cli.lua viewer --in-json tmp/crap_report.json --out-dir tmp/crap_view
 
-打开 `tmp/crap_view/index.html` 即可查看，不需要本地服务。
+命令完成后会打印实际输出路径；打开打印出来的 `index.html` 即可查看，不需要本地服务。
 
 ## 分数与数据来源
 

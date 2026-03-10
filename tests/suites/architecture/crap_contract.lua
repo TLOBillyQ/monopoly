@@ -207,6 +207,58 @@ local function _test_viewer_writes_static_bundle()
   end)
 end
 
+local function _test_viewer_open_prints_index_and_uses_open_path()
+  _with_fixture({}, function()
+    local printed = {}
+    local original_print = print
+    local original_open_path = common.open_path
+    local opened_path = nil
+    print = function(...)
+      local parts = {}
+      for i = 1, select("#", ...) do
+        parts[#parts + 1] = tostring(select(i, ...))
+      end
+      printed[#printed + 1] = table.concat(parts, "\t")
+    end
+    common.open_path = function(path)
+      opened_path = path
+      return true
+    end
+
+    local ok, err = viewer.write({
+      script_dir = common.normalize_path(common.current_dir() .. "/scripts/quality"),
+      out_dir = tmp_root .. "/viewer_open_out",
+    }, {
+      summary = { module_count = 1, function_count = 1, total_crap = 1.0, critical_function_count = 0 },
+      modules = {},
+      functions = {},
+    }, {
+      open = true,
+    })
+
+    print = original_print
+    common.open_path = original_open_path
+    if not ok then
+      error(err)
+    end
+
+    local expected_index = tmp_root .. "/viewer_open_out/index.html"
+    local saw_index = false
+    local saw_opened = false
+    for _, line in ipairs(printed) do
+      if line:find("[crap] viewer_index=" .. expected_index, 1, true) ~= nil then
+        saw_index = true
+      end
+      if line:find("[crap] viewer_opened=" .. expected_index, 1, true) ~= nil then
+        saw_opened = true
+      end
+    end
+    assert(opened_path == expected_index, "viewer should open resolved index path")
+    assert(saw_index == true, "viewer should print resolved index path")
+    assert(saw_opened == true, "viewer should print opened index path")
+  end)
+end
+
 local function _test_cli_report_uses_injected_runner()
   _with_fixture({}, function()
     local called = false
@@ -251,13 +303,87 @@ local function _test_cli_viewer_uses_json_loader_and_writer()
   end)
 end
 
+local function _test_cli_viewer_reports_missing_json_with_actionable_error()
+  _with_fixture({}, function()
+    local ok, err = pcall(function()
+      crap_cli.run({
+        "viewer",
+        "--in-json", tmp_root .. "/missing.json",
+        "--out-dir", tmp_root .. "/viewer",
+      }, {
+        load_report = function(path)
+          return nil, "cannot open file: " .. tostring(path)
+        end,
+      })
+    end)
+    assert(ok == false, "cli viewer should fail when input json is missing")
+    assert(tostring(err):find("viewer input json not found or unreadable", 1, true) ~= nil, "error should explain missing input json")
+    assert(tostring(err):find("report --out", 1, true) ~= nil, "error should suggest generating report first")
+  end)
+end
+
+local function _test_common_resolve_cli_path_maps_tmp_alias_to_system_tmp_root()
+  local resolved_report = common.resolve_cli_path("/repo/monopoly", "tmp/crap_report.json")
+  local resolved_view = common.resolve_cli_path("/repo/monopoly", "tmp/crap_view")
+  local expected_root = common.default_tmp_root()
+  assert(resolved_report:find(expected_root, 1, true) == 1, "tmp alias should resolve under system tmp root")
+  assert(resolved_view:find(expected_root, 1, true) == 1, "tmp alias should resolve viewer under system tmp root")
+end
+
+local function _test_cli_report_resolves_tmp_alias_before_runner()
+  _with_fixture({}, function()
+    local captured_out_path = nil
+    local ok = crap_cli.run({
+      "report",
+      "--out", "tmp/crap_report.json",
+    }, {
+      run_report = function(opts)
+        captured_out_path = opts.out_path
+        return { exit_code = 0 }
+      end,
+    })
+    assert(ok == true, "cli report should return true")
+    assert(captured_out_path ~= nil, "cli report should pass resolved out path")
+    assert(captured_out_path:find(common.default_tmp_root(), 1, true) == 1, "tmp alias should be expanded before runner")
+  end)
+end
+
+local function _test_cli_viewer_resolves_tmp_alias_before_loader_and_writer()
+  _with_fixture({}, function()
+    local captured_in_json = nil
+    local captured_out_dir = nil
+    local ok = crap_cli.run({
+      "viewer",
+      "--in-json", "tmp/crap_report.json",
+      "--out-dir", "tmp/crap_view",
+    }, {
+      load_report = function(path)
+        captured_in_json = path
+        return { summary = {}, modules = {}, functions = {} }
+      end,
+      write_viewer = function(paths, data)
+        captured_out_dir = paths.out_dir
+        return data and data.summary ~= nil
+      end,
+    })
+    assert(ok == true, "cli viewer should return true")
+    assert(captured_in_json:find(common.default_tmp_root(), 1, true) == 1, "tmp alias should be expanded before loader")
+    assert(captured_out_dir:find(common.default_tmp_root(), 1, true) == 1, "tmp alias should be expanded before writer")
+  end)
+end
+
 return {
   name = "architecture.crap_contract",
   tests = {
+    { name = "common_resolve_cli_path_maps_tmp_alias_to_system_tmp_root", run = _test_common_resolve_cli_path_maps_tmp_alias_to_system_tmp_root },
     { name = "luac_listing_extracts_named_functions", run = _test_luac_listing_extracts_named_functions },
     { name = "report_builds_function_metrics_from_coverage", run = _test_report_builds_function_metrics_from_coverage },
     { name = "viewer_writes_static_bundle", run = _test_viewer_writes_static_bundle },
+    { name = "viewer_open_prints_index_and_uses_open_path", run = _test_viewer_open_prints_index_and_uses_open_path },
+    { name = "cli_report_resolves_tmp_alias_before_runner", run = _test_cli_report_resolves_tmp_alias_before_runner },
     { name = "cli_report_uses_injected_runner", run = _test_cli_report_uses_injected_runner },
+    { name = "cli_viewer_resolves_tmp_alias_before_loader_and_writer", run = _test_cli_viewer_resolves_tmp_alias_before_loader_and_writer },
     { name = "cli_viewer_uses_json_loader_and_writer", run = _test_cli_viewer_uses_json_loader_and_writer },
+    { name = "cli_viewer_reports_missing_json_with_actionable_error", run = _test_cli_viewer_reports_missing_json_with_actionable_error },
   },
 }

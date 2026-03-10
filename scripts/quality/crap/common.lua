@@ -10,6 +10,18 @@ function common.current_dir()
   return arch_common.current_dir()
 end
 
+function common.is_windows()
+  return arch_common.is_windows()
+end
+
+function common.is_macos()
+  return arch_common.is_macos()
+end
+
+function common.system_tmp_dir()
+  return arch_common.system_tmp_dir()
+end
+
 function common.resolve_path(base, path)
   return arch_common.resolve_path(base, path)
 end
@@ -40,6 +52,26 @@ end
 
 function common.open_path(path)
   return arch_common.open_path(path)
+end
+
+function common.default_tmp_root()
+  local env_root = os.getenv("MONOPOLY_CRAP_TMP")
+  if env_root ~= nil and env_root ~= "" then
+    return common.normalize_path(env_root)
+  end
+  return common.join_path(common.system_tmp_dir(), "monopoly_crap")
+end
+
+function common.resolve_cli_path(base, path)
+  local normalized = common.normalize_path(path)
+  if normalized == "" then
+    return common.resolve_path(base, normalized)
+  end
+  if normalized == "tmp" or normalized:match("^tmp/") then
+    local suffix = normalized == "tmp" and "" or normalized:sub(5)
+    return common.resolve_path(common.default_tmp_root(), suffix)
+  end
+  return common.resolve_path(base, normalized)
 end
 
 function common.strip_source_prefix(path)
