@@ -362,6 +362,31 @@ local profiles = {
       },
     },
   },
+  mine = {
+    bootstrap = {
+      players = {
+        [1] = {
+          cash = 120000,
+          position_tile_id = 7,
+          item_counts = {
+            [2005] = 1,
+          },
+        },
+        [2] = {
+          cash = 120000,
+          position_tile_id = 8,
+        },
+        [3] = {
+          cash = 120000,
+          position_tile_id = 44,
+        },
+        [4] = {
+          cash = 120000,
+          position_tile_id = 37,
+        },
+      },
+    },
+  },
 }
 
 return profiles

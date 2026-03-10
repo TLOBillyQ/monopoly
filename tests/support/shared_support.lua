@@ -45,7 +45,7 @@ local function ensure_ui_runtime_for_test(state)
   return state
 end
 
-local function migrate_legacy_ui_state_for_test(state)
+local function bind_ui_runtime(state)
   ensure_ui_runtime_for_test(state)
   local ui_runtime = state.ui_runtime
   if state.ui_model ~= nil and ui_runtime.ui_model == nil then
@@ -362,8 +362,7 @@ M.map_cfg = map_cfg
 M.tiles_cfg = tiles_cfg
 M.number_utils = number_utils
 M.assert_eq = assert_eq
-M.ensure_ui_runtime_for_test = ensure_ui_runtime_for_test
-M.migrate_legacy_ui_state_for_test = migrate_legacy_ui_state_for_test
+M.bind_ui_runtime = bind_ui_runtime
 M.with_patches = with_patches
 M.build_ui_port = build_ui_port
 M.visited_tile_ids = visited_tile_ids

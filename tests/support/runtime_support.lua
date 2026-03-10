@@ -1,5 +1,12 @@
-local pick = require("support.select_exports")
 local shared = require("support.shared_support")
+
+local function pick(source, keys)
+  local out = {}
+  for _, key in ipairs(keys) do
+    out[key] = source[key]
+  end
+  return out
+end
 
 return pick(shared, {
   "app",
@@ -13,8 +20,7 @@ return pick(shared, {
   "tiles_cfg",
   "number_utils",
   "assert_eq",
-  "ensure_ui_runtime_for_test",
-  "migrate_legacy_ui_state_for_test",
+  "bind_ui_runtime",
   "with_patches",
   "build_ui_port",
   "open_choice",

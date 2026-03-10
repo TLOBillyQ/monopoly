@@ -1,5 +1,12 @@
-local pick = require("support.select_exports")
 local shared = require("support.shared_support")
+
+local function pick(source, keys)
+  local out = {}
+  for _, key in ipairs(keys) do
+    out[key] = source[key]
+  end
+  return out
+end
 
 return pick(shared, {
   "assert_eq",

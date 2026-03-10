@@ -1,6 +1,6 @@
 local support = require("support.runtime_support")
 local app = support.app
-local bind_ui_runtime = support.migrate_legacy_ui_state_for_test
+local bind_ui_runtime = support.bind_ui_runtime
 local map_cfg = support.map_cfg
 local tiles_cfg = support.tiles_cfg
 local tile_state = support.tile_state
@@ -376,6 +376,19 @@ local function _test_missile_bootstraps_target_tile_and_overlays()
   assert(game.players[2].position == target_index, "missile staging should place occupant on target tile")
 end
 
+local function _test_mine_bootstraps_positions_and_inventory()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "mine")
+
+  assert(game.players[1].position == assert(game.board:index_of_tile_id(7)),
+    "mine profile should place p1 on tile 7")
+  assert(game.players[2].position == assert(game.board:index_of_tile_id(8)),
+    "mine profile should place p2 on tile 8")
+  _assert_inventory_counts(game.players[1], {
+    [2005] = 1,
+  })
+end
+
 local function _test_steal_bootstraps_positions_and_inventory()
   local game = _new_game()
   test_profile_bootstrap.apply(game, "steal")
@@ -617,6 +630,10 @@ return {
     {
       name = "missile_bootstraps_target_tile_and_overlays",
       run = _test_missile_bootstraps_target_tile_and_overlays,
+    },
+    {
+      name = "mine_bootstraps_positions_and_inventory",
+      run = _test_mine_bootstraps_positions_and_inventory,
     },
     {
       name = "steal_bootstraps_positions_and_inventory",

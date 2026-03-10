@@ -11,7 +11,7 @@ local choice_resolver = support.choice_resolver
 local movement = support.movement
 local steal = support.steal
 local _build_ui_port = support.build_ui_port
-local _bind_ui_runtime = support.migrate_legacy_ui_state_for_test
+local _bind_ui_runtime = support.bind_ui_runtime
 local _get_choice = support.get_choice
 local _open_choice = support.open_choice
 local _tile_state = support.tile_state
@@ -261,6 +261,75 @@ local function _test_missile_startup_profile_defers_hospital_followup_until_afte
   local next_state, _ = move_followup.run({ game = g }, choice_result.after_action_anim.next_args)
   assert(next_state == nil, "missile staging followup should return caller continuation")
   assert((g.players[2].status.stay_turns or 0) > 0, "missile staging should apply hospital stay after followup")
+end
+
+local function _test_mine_startup_profile_owner_arms_and_other_player_triggers_after_followup()
+  local g, _ = _new_profile_game("mine")
+  local p1 = g.players[1]
+  local p2 = g.players[2]
+  local mine_index = p1.position
+  local mine_tile = assert(g.board:get_tile(mine_index), "mine startup tile should exist")
+
+  local use_res = support.executor.use_item(g, p1, gameplay_rules.item_ids.mine, { by_ai = false })
+  assert(use_res ~= nil, "mine startup profile should allow mine use")
+  assert(g.board:has_mine(mine_index), "mine startup profile should place mine on owner tile")
+
+  local owner_res = _resolve_landing(g, p1, mine_tile, {})
+  assert(not (owner_res and owner_res.waiting == true and owner_res.next_state == "move_followup"),
+    "owner should not trigger mine followup before mine is armed")
+  assert((p1.status.stay_turns or 0) == 0, "owner should not be hospitalized before leaving mine tile")
+
+  local move_res = movement.move(g, p1, 1, { branch_parity = 1, skip_market_check = true })
+  assert(move_res and move_res.landing_tile, "owner should move away and arm the mine")
+  local mine_state = assert(g.board:get_mine(mine_index), "armed mine should still exist")
+  assert(mine_state.armed == true, "mine should arm after owner leaves tile")
+  assert(mine_state.placed_turn_count == g.turn.turn_count, "mine should keep placement turn count")
+
+  g:update_player_position(p1, mine_index)
+  local owner_return_res = _resolve_landing(g, p1, mine_tile, {})
+  assert(not (owner_return_res and owner_return_res.waiting == true and owner_return_res.next_state == "move_followup"),
+    "owner should stay immune when returning in placement turn")
+  assert((p1.status.stay_turns or 0) == 0, "owner return should not hospitalize in placement turn")
+
+  g:update_player_position(p2, mine_index)
+  local trigger_res = _resolve_landing(g, p2, mine_tile, {})
+  assert(trigger_res and trigger_res.waiting == true, "other player mine trigger should wait for move followup")
+  assert(trigger_res.next_state == "move_followup", "other player mine trigger should resume through move_followup")
+  assert((p2.status.stay_turns or 0) == 0, "mine hospital stay should be deferred until followup")
+
+  local resumed_state = move_followup.run({ game = g }, trigger_res.next_args)
+  assert(resumed_state == "post_action", "other player mine trigger should resume into post_action")
+  assert((p2.status.stay_turns or 0) > 0, "other player should be hospitalized after mine followup")
+  assert(g.board:has_mine(mine_index) == false, "mine should clear after detonation")
+end
+
+local function _test_mine_startup_profile_owner_triggers_on_later_turn_after_arming()
+  local g, _ = _new_profile_game("mine")
+  local p1 = g.players[1]
+  local mine_index = p1.position
+  local mine_tile = assert(g.board:get_tile(mine_index), "mine startup tile should exist")
+
+  local use_res = support.executor.use_item(g, p1, gameplay_rules.item_ids.mine, { by_ai = false })
+  assert(use_res ~= nil, "mine startup profile should allow mine use")
+  assert(g.board:has_mine(mine_index), "mine startup profile should place mine on owner tile")
+
+  local move_res = movement.move(g, p1, 1, { branch_parity = 1, skip_market_check = true })
+  assert(move_res and move_res.landing_tile, "owner should move away and arm the mine")
+  local mine_state = assert(g.board:get_mine(mine_index), "armed mine should still exist after owner leaves tile")
+  assert(mine_state.armed == true, "mine should arm after owner leaves tile")
+
+  g.turn.turn_count = g.turn.turn_count + 1
+  g:update_player_position(p1, mine_index)
+
+  local trigger_res = _resolve_landing(g, p1, mine_tile, {})
+  assert(trigger_res and trigger_res.waiting == true, "owner should be hit by own mine after placement turn ends")
+  assert(trigger_res.next_state == "move_followup", "owner mine trigger should resume through move_followup")
+  assert((p1.status.stay_turns or 0) == 0, "owner hospital stay should still be deferred until followup")
+
+  local resumed_state = move_followup.run({ game = g }, trigger_res.next_args)
+  assert(resumed_state == "post_action", "owner mine trigger should resume into post_action")
+  assert((p1.status.stay_turns or 0) > 0, "owner should be hospitalized on later turn self-trigger")
+  assert(g.board:has_mine(mine_index) == false, "mine should clear after owner self-trigger")
 end
 
 local function _test_strong_card_startup_profile_transfers_target_tile_on_use()
@@ -547,6 +616,14 @@ return {
     {
       name = "missile_startup_profile_defers_hospital_followup_until_after_anim",
       run = _test_missile_startup_profile_defers_hospital_followup_until_after_anim,
+    },
+    {
+      name = "mine_startup_profile_owner_arms_and_other_player_triggers_after_followup",
+      run = _test_mine_startup_profile_owner_arms_and_other_player_triggers_after_followup,
+    },
+    {
+      name = "mine_startup_profile_owner_triggers_on_later_turn_after_arming",
+      run = _test_mine_startup_profile_owner_triggers_on_later_turn_after_arming,
     },
     {
       name = "strong_card_startup_profile_transfers_target_tile_on_use",

@@ -1,5 +1,12 @@
-local pick = require("support.select_exports")
 local shared = require("support.shared_support")
+
+local function pick(source, keys)
+  local out = {}
+  for _, key in ipairs(keys) do
+    out[key] = source[key]
+  end
+  return out
+end
 
 return pick(shared, {
   "app",
@@ -7,27 +14,17 @@ return pick(shared, {
   "turn_move",
   "inventory",
   "executor",
-  "pricing",
-  "land_actions",
   "steal",
-  "chance_effects",
   "choice_resolver",
-  "board_utils",
   "gameplay_loop",
-  "turn_anim",
   "tick_timeout",
   "constants",
   "bankruptcy",
   "map_cfg",
   "tiles_cfg",
-  "number_utils",
-  "assert_eq",
-  "ensure_ui_runtime_for_test",
-  "migrate_legacy_ui_state_for_test",
+  "bind_ui_runtime",
   "with_patches",
   "build_ui_port",
-  "visited_tile_ids",
-  "list_contains",
   "open_choice",
   "get_choice",
   "resolve_choice_first",
@@ -36,6 +33,5 @@ return pick(shared, {
   "new_game",
   "first_land_tile",
   "first_tile_by_type",
-  "first_adjacent_land_pair",
   "tile_state",
 })
