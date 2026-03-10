@@ -1,223 +1,147 @@
-# 下一步行动建议（2026-03-08）
+# Arch-view Lua 移植研究
+- 最新验证口径已经固定：先运行计划中的强相关 suite 组合，预期 `All regression checks passed (275)`；再运行 `lua tests/regression.lua`，预期 `All regression checks passed (420)`，且输出包含 `dep_rules ok`、`legacy_path_guard ok`、`gameplay_loop_no_ui ok`、`forbidden_globals ok`、`arch_view_guard ok`。如果后续再动这些目录，先复用这套口径，不要重新发明校验清单。
 
-> 本文档替换原“代码库现状研究报告”，仅保留后续行动建议。
-> 当前原则：**先修边界与重复编排，再追求行数下降；先做增量拆分，再做统一命名。**
+## 2026-03-10 arch-view Lua 移植深度研究
 
-## 架构健康度摘要
+> 研究对象：https://github.com/unclebob/arch-view（Clojure 原版）
+> 研究目标：评估当前 `scripts/architecture/arch_view` Lua 实现的移植完整性，确认已知偏差与后续行动。
 
-- 当前代码库的主要风险不再是 legacy 路径残留，而是 **UI 编排层重复逻辑** 与 **Choice 契约边界不够强**。
-- 接下来的动作应从“目录迁移 / 继续降行”切换到“热点模块内聚化 + 边界前移校验”。
-- 以 Clean Architecture 视角看，近期最值得投入的改造点，是让 `presentation` 只负责投影与编排，让 `choice` 在进入运行态之前就完成契约化约束。
+### 原版模块对照表
 
-## 已确认的前提
+| Clojure 原版 | Lua 对应实现 | 备注 |
+|---|---|---|
+| `input/source_scan.clj` | `arch_view/source_scan.lua` | 已完成；适配 Lua `require` 路径与 `init.lua` 包约定 |
+| `input/dependency_extract.clj` | `arch_view/dependency_extract.lua` | 已完成；解析 4 种 Lua `require()` 语法形式，忽略动态 require |
+| `input/dependency_checker.clj` | `cli.lua` 内 `_load_config` | Clojure 读 EDN 文件；Lua 直接 `loadfile()` 加载 `.lua` 配置 |
+| `domain/architecture_projection.cljc` | `arch_view/projection.lua` | 已完成；Lua 版额外合并了坐标计算与边路由装饰 |
+| `layout/layers.clj` | `arch_view/layers.lua` | 已完成；Tarjan SCC、反馈边最小集（精确 + 启发式）、拓扑层分配 |
+| `model/classify.clj` | `arch_view/checker.lua`（部分） | 边分类：`direct` / `abstract` |
+| `model/components.clj` | `arch_view/checker.lua`（部分） | 组件分类，`component_rules` 配置驱动 |
+| `model/graph.clj` | 内联于 `dependency_extract.lua` / `layers.lua` | 无独立模块 |
+| `render/ui/quil/` | `viewer/`（HTML + JS） | 策略完全替换：Quil 交互式 GUI → 静态 HTML 打包输出 |
+| `core.clj` | `arch_view/cli.lua` + `arch_view_cli.lua` | CLI 入口；`scan / check / viewer` 三命令 |
+| （无） | `arch_view/checker.lua` 中的 forbidden / cycle_baseline | Lua 版新增能力，原版无对应 |
+| （无） | `arch_view/json_reader.lua` + `arch_view/json_writer.lua` | 原版用 EDN；Lua 版用 JSON |
+| （无） | `arch_view/route_engine.lua` | 正交边路由；原版由 Quil 渲染层负责 |
 
-- `src/presentation/view/support/` 已经具备可复用基础模块，不再把“新建 support 目录”作为近期目标。
-  - 已存在：`src/presentation/view/support/ui_controls.lua`
-  - 已存在：`src/presentation/view/support/effect_timeline.lua`
-  - 已存在：`src/presentation/view/support/market_layout.lua`
-- `active_tab`、`page_index`、`page_count` 已是显式字段，不应再重复推动“从 `meta` 中提出分页状态”。
-  - 相关位置：`src/core/choice/contract.lua`
-  - 相关位置：`src/game/systems/market/application/choice_session.lua`
-- `choice.meta` 并非零约束状态；现有系统已经支持 `required_meta` 校验。下一步应做“强化”，而不是另起一套重型 schema 体系。
-  - 相关位置：`src/game/flow/intent/intent_dispatcher.lua`
-  - 相关位置：`src/game/systems/choices/registry.lua`
+### 移植完整性确认
 
-## P1：本周必须执行
+- **功能链路完整**：`source_scan → dependency_extract → layers → projection → checker → build → cli` 全链路已实现。
+- **回归全绿**：`lua tests/regression.lua` 输出 `All regression checks passed (420)`，包含 `arch_view_guard ok`。
+- **集成测试覆盖**：`tests/suites/architecture/arch_view_contract.lua` 覆盖全部 11 个功能点，含外部项目根与外部配置场景。
+- **viewer 输出完整**：`viewer` 命令输出 `index.html / script.js / styles.css / architecture_data.js`，`display_edges / route_points / indicators` 字段均已写入。
 
-### 1. 拆分 `market_view`，把 UI 编排和槽位渲染分开
+### 已落地事项
 
-**目标**
+#### 1. JSON 模块已完成自包含
 
-- 让 `src/presentation/view/render/market.lua` 保留公开入口与薄编排。
-- 把“槽位渲染 / 选中态 / 分页和页签控制”拆成更小模块，减少单文件条件分支和重复 UI 状态设置。
+`json_reader.lua` 与 `json_writer.lua` 已不再依赖 `src.core.utils.number_utils`。
 
-**建议拆分方向**
+- 已将 `to_integer` / `is_numeric` 所需能力下沉到 `arch_view/common.lua`。
+- `json_*` 现在只依赖 `arch_view` 自身模块，工具边界恢复自包含。
+- 对应测试已补：`json_modules_are_self_contained`。
 
-- `market_view.lua`：只保留 `refresh_market_selection`、`select_market_option`、`refresh_market`、`close_market_panel` 的流程编排。
-- 新增一个槽位渲染模块：负责 `_set_market_slot_visible`、`_set_market_slot`、`_refresh_market_selection_frames` 一类逻辑。
-- 新增一个控制器模块：负责分页、页签、取消按钮、确认按钮等通用控件状态。
+#### 2. 子树环传播语义已对齐
 
-**边界要求**
+Lua 版 `projection.lua` 已不再仅依赖顶层 `layout.feedback_edges` 做子树环标记。
 
-- 不改变现有调用入口。
-- 不把业务规则回流进 `presentation`。
-- 保持对 `ui_controls`、`market_layout` 的复用，不重造 helper。
+- 当前实现会递归聚合子视图结果，将深层子树中的环正确向父层传播。
+- 深层 `alpha.beta.gamma` 环会正确反映到 `alpha.beta`、`alpha` 与 root 层节点。
+- 对应测试已补：`projection_propagates_deep_subtree_cycles_to_parents`。
 
-**验收标准**
+#### 3. `projection.lua` 的视觉职责已拆出
 
-- `src/presentation/view/render/market.lua` 明显降薄。
-- 市场弹窗的选择、翻页、页签切换行为保持不变。
-- 相关回归继续通过：`tests/suites/presentation/presentation_ui.lua`。
+原先混在 `projection.lua` 中的视觉布局与 viewer 装饰逻辑，已拆到 `layout_renderer.lua`。
 
-### 2. 拆分 `ui_panel_presenter`，压缩重复布局逻辑
+当前拆分结果：
 
-**目标**
+- `projection.lua`：保留 scoped projection、node/module 映射、edge aggregation、view tree 递归构建
+- `layout_renderer.lua`：负责 node rect、layer item、indicator、display edge decoration、canvas size
 
-- 让 `src/presentation/view/widgets/panel_presenter.lua` 回到“入口 presenter”角色，不再同时承担玩家槽位渲染、现金变化提示、角色视图刷新三类职责。
+对应测试已补：
 
-**建议拆分方向**
+- `layout_renderer_preserves_viewer_contract_shape`
 
-- 提取玩家槽位渲染模块：负责名称、现金、地产数、总资产、头像。
-- 提取现金变化模块：负责 cash delta 状态、显示、延迟隐藏。
-- 如仍偏大，再单独提取 role view 渲染模块。
+### 当前剩余观察项
 
-**边界要求**
+#### 1. `projection.lua` 仍承担部分 view-model 组装（低风险）
 
-- `refresh()` 继续作为稳定入口。
-- `role_context`、`player_colors` 等既有协作者保持不变。
-- 不新增跨层依赖，不让 `presentation` 直接依赖 `game/flow` 或 `game/systems`。
+虽然视觉布局已拆出，但 `projection.lua` 仍然负责：
 
-**验收标准**
-
-- `ui_panel_presenter.lua` 只剩入口编排和少量组装逻辑。
-- 玩家面板视觉行为不变。
-- 相关回归继续通过：`tests/suites/presentation/presentation_ui.lua`。
-
-### 3. 强化 Choice descriptor 契约，而不是引入重量级 schema
-
-**目标**
-
-- 把 Choice 的错误尽量前移到“打开 choice 时”或“注册 descriptor 时”暴露，而不是在 handler 深处用 `assert(meta.xxx)` 才炸。
-
-**建议动作**
-
-- 在现有 `required_meta` 基础上，为 descriptor 增加轻量扩展点：
-  - `meta_validator(meta, choice_spec)`
-  - `normalize_meta(meta, choice_spec)`（可选）
-  - `normalize_action(action, choice)`（可选）
-- 第一批只覆盖高频路径：
-  - `market_buy`
-  - item choice 系列
-  - `landing_optional_effect`
-
-**边界要求**
-
-- 不引入独立 JSON Schema 框架。
-- 不为“形式完整”牺牲当前测试可维护性。
-- Descriptor 仍然围绕用例组织，不把 UI 细节带入 `game/systems/choices/`。
-
-**验收标准**
-
-- 非法 `meta` 的失败位置前移，错误信息更具体。
-- 关键 choice kind 具备针对性测试。
-- `choice_resolver` 继续保持薄协调者角色。
-
-## P2：两周内推进
-
-### 4. 做一次 `choice.meta` 审计，只提升真正跨层稳定的字段
-
-**目标**
-
-- 控制 `meta` 继续口袋化，但避免把所有 kind-specific 数据都错误提升为显式字段。
-
-**筛选标准**
-
-- 满足以下条件之一，才考虑提升为显式字段：
-  - 跨多个 choice kind 复用
-  - 被 `presentation` / `flow` / timeout policy 等外层通用消费
-  - 属于路由、确认、拥有者、分页这类通用 UI/runtime 语义
-
-**不提升的内容**
-
-- 单个玩法专用 payload
-- 单个 handler 内部消费的数据
-- 只为减少 `meta.xxx` 书写而提出的字段
-
-**落点建议**
-
-- 统一收敛到 `src/core/choice/contract.lua`
-- 由 `intent_dispatcher` 负责复制显式字段，避免多处分散拷贝
-
-### 5. 固化 Port 命名规则，但不做一次性大迁移
-
-**目标**
-
-- 解决“`*_port.lua` / `*_ports.lua` / `*_adapter.lua` 混用”带来的认知成本。
-
-**规则**
-
-- 单一契约：`*_port.lua`
-- 成组 bundle：`*_ports.lua`
-- 适配器实现：`*_port_adapter.lua`
-
-**执行方式**
-
-- 先写清规则，再在“触碰到相关文件时”顺手收敛。
-- 不做大规模 rename，不为了命名统一而制造额外 churn。
-
-**说明**
-
-- `src/game/flow/turn/loop_ports.lua` 和 `src/presentation/runtime/ports.lua` 这类文件，本质上是 port group / bundle，不应按单 port 规则硬改。
-
-## P3：本月内观察项
-
-### 6. 重新定义健康指标，弱化纯 LOC 导向
-
-后续跟踪不再以“继续净减多少行”为主，而以以下指标为主：
-
-- `dep_rules` 持续为零违例
-- Choice 关键路径测试完整度
-- UI 热点文件是否回到薄入口 + 小模块组合
-- 新增代码是否遵守 `docs/architecture/boundaries.md`
-
-可保留的辅助指标：
-
-- 热点文件数量
-- `src/` 月度净增长
-- 回归测试通过率
-
-### 7. `output_adapters/` 先文档化，不急于迁目录
+- breadcrumb 生成
+- label / full_name 组装
+- node item 组装
+- 子视图递归拼装
 
 **判断**
 
-- 当前 `src/game/flow/output_adapters/` 只有少量文件，体量不大。
-- 它更像 turn use case 本地输出桥，而不是必须立刻迁走的架构污染源。
+- 当前职责边界已显著优于首版实现。
+- 现阶段继续拆分收益有限，暂不作为近期动作。
 
-**建议**
+#### 2. Windows shell 兼容性噪音已修复（已完成）
 
-- 先补说明文档或命名注释，明确它服务于 turn 编排。
-- 等 Choice 和 UI 热点收敛后，再决定是否迁出或重命名。
+此前 contract suite 中出现的：
 
-## 当前明确不做
+- `The system cannot find the file specified.`
 
-- 不把 `src/presentation/view/render/board_feedback_service.lua` 作为近期优先拆分对象。
-  - 原因：职责单一、API 面稳定、已有较多调用与测试覆盖。
-- 不再把“提取 `presentation/view/support/` 公共模块”列为新目标。
-  - 原因：关键 support 模块已经存在。
-- 不做全仓 Port 批量重命名。
-  - 原因：收益低于 churn 成本。
-- 不围绕 `choice.meta` 新增独立重型 schema 运行时。
-  - 原因：现阶段更适合渐进式 descriptor 契约强化。
+并非 arch_view 核心逻辑错误，而是测试临时目录脚本在 Windows + `sh` 环境下调用了不兼容 shell 命令。
 
-## 推荐执行顺序
+现已修复：
 
-### 第 1 周
+- `guard_scripts_contract.lua` 的临时目录创建/删除逻辑已改为跨 shell 实现
+- `arch_view.common.current_dir()` 也已避免 Windows 下通过 `cd` 产生 shell 噪音
 
-1. 拆 `market_view`
-2. 拆 `ui_panel_presenter`
-3. 为 `market_buy` 加 descriptor 契约强化和测试
+结果：
 
-### 第 2 周
+- `tests/contract.lua` 输出已恢复干净
+- 全量 `tests/regression.lua` 继续通过
 
-1. 扩展 item choice / `landing_optional_effect` 的 descriptor 契约
-2. 做 `choice.meta` 审计，更新 `choice_contract`
-3. 补 Port 命名规则说明
+### 原版已有但 Lua 版有意不移植的部分
 
-### 第 3 周及以后
+| 原版特性 | 决策 | 理由 |
+|---|---|---|
+| Quil 交互式 GUI（点击下钻、源码查看）| 不移植 | 已被静态 HTML viewer 策略替代 |
+| EDN 序列化格式 | 不移植 | JSON 已满足 viewer 与 CI 场景需求 |
+| `defprotocol` / `defmulti` 源码扫描标记抽象模块 | 不移植 | Lua 无对应语义；`abstract_rules` 配置驱动更适合 Lua 代码库 |
+| `model/graph.clj` 独立模块 | 不提取 | 当前内联方式已足够，无独立的调用方 |
 
-1. 观察 UI 热点是否继续收敛
-2. 评估 `output_adapters/` 是否需要改名或迁位
-3. 建立以边界和测试为核心的健康指标面板
+### 移植功能完成清单
 
-## 最终目标
+| 功能 | 状态 | 测试入口 |
+|---|---|---|
+| Lua 文件扫描与模块 ID 推导（含 `init.lua` 包） | ✅ 完成 | `_test_source_scan_*` |
+| 相对 source root 解析 | ✅ 完成 | `_test_source_scan_resolves_*` |
+| `require()` 依赖提取（4 种语法形式） | ✅ 完成 | `_test_dependency_extract_*` |
+| Tarjan SCC 强连通分量检测 | ✅ 完成 | `_test_layers_*` |
+| 反馈边最小集（≤8 节点精确，超限启发式） | ✅ 完成 | `_test_layers_*` |
+| 拓扑层分配 | ✅ 完成 | `_test_layers_*` |
+| 命名空间投影（root / 子树视图递归构建） | ✅ 完成 | `_test_projection_*` |
+| 混合叶节点（mixed-leaf `\|file` 后缀） | ✅ 完成 | 投影测试覆盖 |
+| 正交边路由（跨层 / 同层分流） | ✅ 完成 | `_test_route_engine_*` |
+| 禁止依赖规则检查 | ✅ 完成 | `arch_view_guard` / `_test_config_*` |
+| 循环基准线校验（unexpected / missing） | ✅ 完成 | `_test_cycle_baseline_*` |
+| 组件分类与 abstract 标记 | ✅ 完成 | `_test_config_classifies_*` |
+| JSON 读写（含 schema_version / project_root 元数据） | ✅ 完成 | `_test_cli_scan_*` |
+| CLI `scan / check / viewer` 三命令 | ✅ 完成 | `_test_cli_*` |
+| 静态 HTML viewer 打包（含全局 JS payload） | ✅ 完成 | `_test_viewer_command_*` |
+| `--in-json` 从已有扫描结果生成 viewer | ✅ 完成 | `_test_cli_viewer_supports_in_json` |
 
-- `presentation` 只保留投影与薄编排，不继续积累“半业务半 UI”的混合模块。
-- `choice` 在进入运行态前就具备明确契约，减少 handler 深处的防御式断言。
-- Port / Adapter / Port Bundle 的语义和命名逐步稳定，降低目录认知成本。
-- 代码库后续演进优先围绕边界清晰度与可测试性，而不是单纯追求更小的行数。
+### 已完成动作
 
-## 2026-03-09 补充：`src/` 第三轮命名收口已完成
+- 已消除 `json_reader.lua` / `json_writer.lua` 对 `src.core.utils.number_utils` 的依赖。
+- 已将 viewer 视觉布局与装饰逻辑从 `projection.lua` 拆出到 `layout_renderer.lua`。
+- 已修正深层子树环向父节点传播的语义偏差。
+- 已补充对应 contract 测试，并维持全量回归通过。
+- 已修复 Windows 下 contract suite 的 shell 噪音问题。
 
-- 本轮已经完成四簇路径收口：`src/presentation/runtime/ui_* -> src/presentation/runtime/*`、`src/presentation/model/ui_* -> src/presentation/model/*` 与 `src/presentation/model/model/*`、`src/game/systems/land/landing_* -> src/game/systems/land/{effects/*, executors.lua, presenter.lua, specs/effects.lua}`、`src/game/systems/items/item_* -> src/game/systems/items/*`。`src/game/flow/turn/turn_*` 也已完成冻结映射内的 rename，明确保留 `turn_move.lua` / `turn_roll.lua` 作为稳定模块。
-- 本轮的 guard 与文档已经同步：`tests/internal/legacy_path_guard.lua` 会拦截上述退休路径回流，`tests/internal/dep_rules.lua` 的 whitelist / growth budget 已切到新路径，`docs/architecture/boundaries.md` 与 `docs/architecture/layer-model.md` 的示例路径也已对齐当前工作树。
-- 最新验证口径已经固定：先运行计划中的强相关 suite 组合，预期 `All regression checks passed (275)`；再运行 `lua tests/regression.lua`，预期 `All regression checks passed (385)`，且输出包含 `dep_rules ok`、`legacy_path_guard ok`、`tick ok`、`forbidden_globals ok`。如果后续再动这些目录，先复用这套口径，不要重新发明校验清单。
+### 后续仅保留观察项
+
+- 若未来 viewer 视觉层继续复杂化，再评估是否把 node item 组装继续从 `projection.lua` 细拆。
+- 若未来需要把 arch_view 提取为仓库外独立工具，再评估是否抽离 `common.lua` 中与当前项目目录结构相关的辅助逻辑。
+
+**明确不做**
+
+- 不实现 Quil GUI 渲染（HTML viewer 已替代）。
+- 不支持 EDN 格式（JSON 已满足所有场景）。
+- 不移植 Clojure 源码级 `defprotocol` 扫描（`abstract_rules` 已足够）。
+- 不把 `model/graph.clj` 提取为独立 Lua 模块（无独立调用方，内联已合适）。

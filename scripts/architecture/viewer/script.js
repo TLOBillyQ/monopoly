@@ -1,13 +1,13 @@
 (function () {
-  var NODE_WIDTH = 248;
-  var NODE_HEIGHT = 154;
-  var CARD_GAP_X = 46;
-  var CARD_GAP_Y = 88;
-  var LAYER_TOP = 94;
-  var LAYER_GAP = 262;
-  var SURFACE_PADDING_X = 92;
-  var SURFACE_PADDING_BOTTOM = 120;
-  var LABEL_Y_OFFSET = 26;
+  var NODE_WIDTH = 188;
+  var NODE_HEIGHT = 86;
+  var CARD_GAP_X = 44;
+  var CARD_GAP_Y = 0;
+  var LAYER_TOP = 100;
+  var LAYER_GAP = 176;
+  var SURFACE_PADDING_X = 72;
+  var SURFACE_PADDING_BOTTOM = 80;
+  var LABEL_Y_OFFSET = 28;
   var TRIANGLE_OFFSET = 10;
 
   function by_id(id) {
@@ -94,22 +94,48 @@
   }
 
   function normalize_module(module_id, raw_module, cycle_by_id) {
-    var source_text = raw_module && (raw_module.source_text || raw_module.source || raw_module.contents || "");
+    var source_text =
+      raw_module &&
+      (raw_module.source_text ||
+        raw_module.source ||
+        raw_module.contents ||
+        "");
     return {
       id: module_id,
-      name: (raw_module && (raw_module.name || raw_module.label || raw_module.display_label)) || plain_label(module_id),
-      full_name: raw_module && (raw_module.full_name || raw_module.module_id || module_id) || module_id,
-      component: raw_module && raw_module.component ? raw_module.component : null,
-      abstract: raw_module && (raw_module.abstract === true || raw_module.kind === "abstract"),
-      source_path: raw_module && raw_module.source_path ? raw_module.source_path : "",
-      source_text: typeof source_text === "string" ? source_text : JSON.stringify(source_text, null, 2),
+      name:
+        (raw_module &&
+          (raw_module.name || raw_module.label || raw_module.display_label)) ||
+        plain_label(module_id),
+      full_name:
+        (raw_module &&
+          (raw_module.full_name || raw_module.module_id || module_id)) ||
+        module_id,
+      component:
+        raw_module && raw_module.component ? raw_module.component : null,
+      abstract:
+        raw_module &&
+        (raw_module.abstract === true || raw_module.kind === "abstract"),
+      source_path:
+        raw_module && raw_module.source_path ? raw_module.source_path : "",
+      source_text:
+        typeof source_text === "string"
+          ? source_text
+          : JSON.stringify(source_text, null, 2),
       internal_requires: unique_sorted(
-        (raw_module && (raw_module.internal_requires || raw_module.internal_dependencies || raw_module.requires)) || []
+        (raw_module &&
+          (raw_module.internal_requires ||
+            raw_module.internal_dependencies ||
+            raw_module.requires)) ||
+          [],
       ),
       external_requires: unique_sorted(
-        (raw_module && (raw_module.external_requires || raw_module.external_dependencies)) || []
+        (raw_module &&
+          (raw_module.external_requires || raw_module.external_dependencies)) ||
+          [],
       ),
-      cycle: cycle_by_id[module_id] === true || (raw_module && raw_module.cycle === true)
+      cycle:
+        cycle_by_id[module_id] === true ||
+        (raw_module && raw_module.cycle === true),
     };
   }
 
@@ -117,7 +143,11 @@
     var cycle_by_id = cycle_lookup(data);
     var modules = Object.create(null);
     Object.keys(data.modules || {}).forEach(function (module_id) {
-      modules[module_id] = normalize_module(module_id, data.modules[module_id], cycle_by_id);
+      modules[module_id] = normalize_module(
+        module_id,
+        data.modules[module_id],
+        cycle_by_id,
+      );
     });
     return modules;
   }
@@ -141,12 +171,20 @@
       if (typeof crumb === "string") {
         return {
           key: index === 0 && crumb === "" ? "root" : crumb,
-          label: crumb === "" ? "src" : crumb
+          label: crumb === "" ? "src" : crumb,
         };
       }
       return {
-        key: view_key_for_breadcrumb(crumb, index) || (index === 0 ? "root" : view_key),
-        label: crumb.label || crumb.name || crumb.title || crumb.key || crumb.id || (index === 0 ? "src" : view_key)
+        key:
+          view_key_for_breadcrumb(crumb, index) ||
+          (index === 0 ? "root" : view_key),
+        label:
+          crumb.label ||
+          crumb.name ||
+          crumb.title ||
+          crumb.key ||
+          crumb.id ||
+          (index === 0 ? "src" : view_key),
       };
     });
   }
@@ -165,13 +203,13 @@
     if (!entry) {
       return {
         text: fallback_text || "",
-        cycle: false
+        cycle: false,
       };
     }
     if (typeof entry === "string") {
       return {
         text: entry,
-        cycle: false
+        cycle: false,
       };
     }
     var text = entry.text;
@@ -187,62 +225,106 @@
     var cycle = entry.cycle === true || entry.feedback === true;
     if (!cycle && entry.module_edges) {
       cycle = to_array(entry.module_edges).some(function (module_edge) {
-        return cycle_by_id[module_edge.from] === true || cycle_by_id[module_edge.to] === true;
+        return (
+          cycle_by_id[module_edge.from] === true ||
+          cycle_by_id[module_edge.to] === true
+        );
       });
     }
     return {
       text: text,
-      cycle: cycle
+      cycle: cycle,
     };
   }
 
   function normalize_indicator(direction, raw, cycle_by_id) {
     var indicator = raw || {};
     var dependencies = unique_sorted(
-      to_array(indicator.tooltip_lines).map(function (line) {
-        return typeof line === "string" ? line : (line && line.text) || "";
-      }).filter(Boolean)
+      to_array(indicator.tooltip_lines)
+        .map(function (line) {
+          return typeof line === "string" ? line : (line && line.text) || "";
+        })
+        .filter(Boolean),
     ).map(function (line) {
       return {
         text: line,
-        cycle: false
+        cycle: false,
       };
     });
 
     if (dependencies.length === 0) {
-      dependencies = to_array(indicator.dependencies).map(function (dep, index) {
-        return normalize_dependency_entry(dep, direction + "_" + index, cycle_by_id);
-      });
+      dependencies = to_array(indicator.dependencies).map(
+        function (dep, index) {
+          return normalize_dependency_entry(
+            dep,
+            direction + "_" + index,
+            cycle_by_id,
+          );
+        },
+      );
     }
 
     return {
       direction: direction,
-      cycle: indicator.cycle === true || indicator.has_cycle === true || dependencies.some(function (dep) { return dep.cycle; }),
-      dependencies: dependencies
+      cycle:
+        indicator.cycle === true ||
+        indicator.has_cycle === true ||
+        dependencies.some(function (dep) {
+          return dep.cycle;
+        }),
+      dependencies: dependencies,
     };
   }
 
   function node_indicators_from_dependencies(node, cycle_by_id) {
     return {
-      incoming: normalize_indicator("incoming", {
-        dependencies: to_array(node.incoming_dependencies).map(function (dep) {
-          return normalize_dependency_entry(dep, "", cycle_by_id);
-        })
-      }, cycle_by_id),
-      outgoing: normalize_indicator("outgoing", {
-        dependencies: to_array(node.outgoing_dependencies).map(function (dep) {
-          return normalize_dependency_entry(dep, "", cycle_by_id);
-        })
-      }, cycle_by_id)
+      incoming: normalize_indicator(
+        "incoming",
+        {
+          dependencies: to_array(node.incoming_dependencies).map(
+            function (dep) {
+              return normalize_dependency_entry(dep, "", cycle_by_id);
+            },
+          ),
+        },
+        cycle_by_id,
+      ),
+      outgoing: normalize_indicator(
+        "outgoing",
+        {
+          dependencies: to_array(node.outgoing_dependencies).map(
+            function (dep) {
+              return normalize_dependency_entry(dep, "", cycle_by_id);
+            },
+          ),
+        },
+        cycle_by_id,
+      ),
     };
   }
 
-  function normalize_node(raw_node, index, modules, layer_map, feedback_by_edge, cycle_by_id) {
+  function normalize_node(
+    raw_node,
+    index,
+    modules,
+    layer_map,
+    feedback_by_edge,
+    cycle_by_id,
+  ) {
     var node = raw_node || {};
-    var id = node.id || node.key || node.module_id || node.module || node.name || ("node_" + index);
+    var id =
+      node.id ||
+      node.key ||
+      node.module_id ||
+      node.module ||
+      node.name ||
+      "node_" + index;
     var module_ref = node.module_id || node.module || (modules[id] ? id : null);
     var module_info = module_ref ? modules[module_ref] : null;
-    var is_leaf = node.leaf === true || node.is_leaf === true || (!!module_info && node.branch !== true && node.group !== true);
+    var is_leaf =
+      node.leaf === true ||
+      node.is_leaf === true ||
+      (!!module_info && node.branch !== true && node.group !== true);
     var layer = node.layer;
     if (layer === undefined || layer === null) {
       layer = layer_map[id];
@@ -250,18 +332,27 @@
         layer = layer_map[module_ref];
       }
     }
-    var abstract_flag = node.abstract === true || node.is_abstract === true || (module_info && module_info.abstract === true);
-    var cycle_flag = node.cycle === true
-      || node.is_cycle === true
-      || node.has_cycle_subtree === true
-      || cycle_by_id[id] === true
-      || (module_ref && cycle_by_id[module_ref] === true);
+    var abstract_flag =
+      node.abstract === true ||
+      node.is_abstract === true ||
+      (module_info && module_info.abstract === true);
+    var cycle_flag =
+      node.cycle === true ||
+      node.is_cycle === true ||
+      node.has_cycle_subtree === true ||
+      cycle_by_id[id] === true ||
+      (module_ref && cycle_by_id[module_ref] === true);
 
     var normalized = {
       id: id,
       label: node.label || node.name || node.title || id,
-      display_label: node.display_label || node.label || node.name || node.title || id,
-      full_name: node.full_name || (module_info && module_info.full_name) || (module_ref || id),
+      display_label:
+        node.display_label || node.label || node.name || node.title || id,
+      full_name:
+        node.full_name ||
+        (module_info && module_info.full_name) ||
+        module_ref ||
+        id,
       description: node.description || node.summary || "",
       view_key: node.view_key || node.child_view_key || node.next_view || id,
       module_id: module_ref,
@@ -269,30 +360,60 @@
       abstract: abstract_flag,
       cycle: cycle_flag,
       has_cycle_subtree: cycle_flag,
-      drillable: node.drillable === true || (!is_leaf && !!(node.view_key || node.child_view_key || node.next_view)),
-      component: node.component || (module_info && module_info.component) || null,
-      source_path: node.source_path || (module_info && module_info.source_path) || "",
-      source_text: node.source_text || (module_info && module_info.source_text) || "",
-      source_file_name: node.source_file_name || source_file_name(node.source_path || (module_info && module_info.source_path) || ""),
+      drillable:
+        node.drillable === true ||
+        (!is_leaf &&
+          !!(node.view_key || node.child_view_key || node.next_view)),
+      component:
+        node.component || (module_info && module_info.component) || null,
+      source_path:
+        node.source_path || (module_info && module_info.source_path) || "",
+      source_text:
+        node.source_text || (module_info && module_info.source_text) || "",
+      source_file_name:
+        node.source_file_name ||
+        source_file_name(
+          node.source_path || (module_info && module_info.source_path) || "",
+        ),
       internal_requires: unique_sorted(
-        node.internal_requires || node.internal_dependencies || (module_info && module_info.internal_requires) || []
+        node.internal_requires ||
+          node.internal_dependencies ||
+          (module_info && module_info.internal_requires) ||
+          [],
       ),
       external_requires: unique_sorted(
-        node.external_requires || node.external_dependencies || (module_info && module_info.external_requires) || []
+        node.external_requires ||
+          node.external_dependencies ||
+          (module_info && module_info.external_requires) ||
+          [],
       ),
       incoming_dependencies: to_array(node.incoming_dependencies),
       outgoing_dependencies: to_array(node.outgoing_dependencies),
       layer: typeof layer === "number" ? layer : 0,
-      geometry: node.geometry || node.rect || null
+      geometry: node.geometry || node.rect || null,
     };
 
     normalized.indicators = {
-      incoming: normalize_indicator("incoming", node.indicators && node.indicators.incoming, cycle_by_id),
-      outgoing: normalize_indicator("outgoing", node.indicators && node.indicators.outgoing, cycle_by_id)
+      incoming: normalize_indicator(
+        "incoming",
+        node.indicators && node.indicators.incoming,
+        cycle_by_id,
+      ),
+      outgoing: normalize_indicator(
+        "outgoing",
+        node.indicators && node.indicators.outgoing,
+        cycle_by_id,
+      ),
     };
 
-    if (normalized.indicators.incoming.dependencies.length === 0 && normalized.indicators.outgoing.dependencies.length === 0) {
-      normalized.indicators = node_indicators_from_dependencies(normalized, cycle_by_id);
+    if (
+      normalized.indicators.incoming.dependencies.length === 0 &&
+      normalized.indicators.outgoing.dependencies.length === 0
+    ) {
+      normalized.indicators = node_indicators_from_dependencies(
+        normalized,
+        cycle_by_id,
+      );
     }
 
     return normalized;
@@ -315,12 +436,14 @@
   }
 
   function normalize_route_points(edge) {
-    return to_array(edge.route_points).map(function (point) {
-      if (Array.isArray(point) && point.length >= 2) {
-        return [Number(point[0]) || 0, Number(point[1]) || 0];
-      }
-      return null;
-    }).filter(Boolean);
+    return to_array(edge.route_points)
+      .map(function (point) {
+        if (Array.isArray(point) && point.length >= 2) {
+          return [Number(point[0]) || 0, Number(point[1]) || 0];
+        }
+        return null;
+      })
+      .filter(Boolean);
   }
 
   function normalize_edge(edge, fallback_id, feedback_by_edge, cycle_by_id) {
@@ -333,13 +456,20 @@
       return null;
     }
     var module_edges = to_array(edge.module_edges);
-    var cycle = edge.cycle === true || edge.is_cycle === true || edge.feedback === true || edge.cycle_break === true;
+    var cycle =
+      edge.cycle === true ||
+      edge.is_cycle === true ||
+      edge.feedback === true ||
+      edge.cycle_break === true;
     if (!cycle) {
       cycle = feedback_by_edge[from + "->" + to] === true;
     }
     if (!cycle) {
       cycle = module_edges.some(function (module_edge) {
-        return cycle_by_id[module_edge.from] === true || cycle_by_id[module_edge.to] === true;
+        return (
+          cycle_by_id[module_edge.from] === true ||
+          cycle_by_id[module_edge.to] === true
+        );
       });
     }
     var tooltip_lines = to_array(edge.tooltip_lines).map(function (line) {
@@ -350,11 +480,17 @@
     });
     if (tooltip_lines.length === 0 && module_edges.length > 0) {
       tooltip_lines = module_edges.map(function (module_edge) {
-        return normalize_dependency_entry({
-          from: module_edge.from,
-          to: module_edge.to,
-          cycle: cycle_by_id[module_edge.from] === true || cycle_by_id[module_edge.to] === true
-        }, "", cycle_by_id);
+        return normalize_dependency_entry(
+          {
+            from: module_edge.from,
+            to: module_edge.to,
+            cycle:
+              cycle_by_id[module_edge.from] === true ||
+              cycle_by_id[module_edge.to] === true,
+          },
+          "",
+          cycle_by_id,
+        );
       });
     }
 
@@ -362,18 +498,24 @@
       id: edge.id || fallback_id || from + "->" + to,
       from: from,
       to: to,
-      count: Number(edge.count) || (module_edges.length > 0 ? module_edges.length : 1),
+      count:
+        Number(edge.count) ||
+        (module_edges.length > 0 ? module_edges.length : 1),
       type: edge.type || edge.kind || "direct",
       cycle: cycle,
       module_edges: module_edges,
       tooltip_lines: tooltip_lines,
       route_points: normalize_route_points(edge),
       path: "",
-      label: edge.label || edge_label({
-        from: from,
-        to: to,
-        count: Number(edge.count) || (module_edges.length > 0 ? module_edges.length : 1)
-      })
+      label:
+        edge.label ||
+        edge_label({
+          from: from,
+          to: to,
+          count:
+            Number(edge.count) ||
+            (module_edges.length > 0 ? module_edges.length : 1),
+        }),
     };
   }
 
@@ -385,17 +527,24 @@
         if (Array.isArray(layer.node_ids) && layer.node_ids.length > 0) {
           node_ids = unique_sorted(layer.node_ids);
         } else if (Array.isArray(layer.nodes) && layer.nodes.length > 0) {
-          node_ids = unique_sorted(layer.nodes.map(function (node) {
-            return typeof node === "string" ? node : node && node.id;
-          }).filter(Boolean));
+          node_ids = unique_sorted(
+            layer.nodes
+              .map(function (node) {
+                return typeof node === "string" ? node : node && node.id;
+              })
+              .filter(Boolean),
+          );
         } else {
           node_ids = unique_sorted(layer.modules || []);
         }
         return {
           index: typeof layer.index === "number" ? layer.index : index,
-          label: layer.label || ("Layer " + String(typeof layer.index === "number" ? layer.index : index)),
+          label:
+            layer.label ||
+            "Layer " +
+              String(typeof layer.index === "number" ? layer.index : index),
           nodes: node_ids,
-          rect: layer.rect || null
+          rect: layer.rect || null,
         };
       });
     }
@@ -409,19 +558,26 @@
       buckets[key].push(node.id);
     });
 
-    return Object.keys(buckets).map(function (key) {
-      return {
-        index: Number(key),
-        label: "Layer " + key,
-        nodes: buckets[key],
-        rect: null
-      };
-    }).sort(function (left, right) {
-      return left.index - right.index;
-    });
+    return Object.keys(buckets)
+      .map(function (key) {
+        return {
+          index: Number(key),
+          label: "Layer " + key,
+          nodes: buckets[key],
+          rect: null,
+        };
+      })
+      .sort(function (left, right) {
+        return left.index - right.index;
+      });
   }
 
-  function fallback_root_view(modules, layer_map, feedback_by_edge, cycle_by_id) {
+  function fallback_root_view(
+    modules,
+    layer_map,
+    feedback_by_edge,
+    cycle_by_id,
+  ) {
     var root_modules = Object.keys(modules).map(function (module_id) {
       return {
         id: module_id,
@@ -437,38 +593,70 @@
         source_text: modules[module_id].source_text,
         internal_requires: modules[module_id].internal_requires,
         external_requires: modules[module_id].external_requires,
-        layer: layer_map[module_id] || 0
+        layer: layer_map[module_id] || 0,
       };
     });
-    var graph_edges = to_array((window.ARCH_VIEW_DATA.graph && window.ARCH_VIEW_DATA.graph.edges) || [])
+    var graph_edges = to_array(
+      (window.ARCH_VIEW_DATA.graph && window.ARCH_VIEW_DATA.graph.edges) || [],
+    )
       .map(function (edge, index) {
-        return normalize_edge(edge, "root_edge_" + index, feedback_by_edge, cycle_by_id);
+        return normalize_edge(
+          edge,
+          "root_edge_" + index,
+          feedback_by_edge,
+          cycle_by_id,
+        );
       })
       .filter(Boolean);
     return {
       title: "root",
       breadcrumb: [{ key: "root", label: "src" }],
       nodes: root_modules,
-      display_edges: graph_edges
+      display_edges: graph_edges,
     };
   }
 
-  function normalize_view(view_key, raw_view, modules, layer_map, feedback_by_edge, cycle_by_id) {
+  function normalize_view(
+    view_key,
+    raw_view,
+    modules,
+    layer_map,
+    feedback_by_edge,
+    cycle_by_id,
+  ) {
     var view = raw_view || {};
     var nodes = to_array(view.nodes).map(function (node, index) {
-      return normalize_node(node, index, modules, layer_map, feedback_by_edge, cycle_by_id);
+      return normalize_node(
+        node,
+        index,
+        modules,
+        layer_map,
+        feedback_by_edge,
+        cycle_by_id,
+      );
     });
     var node_ids = Object.create(null);
     nodes.forEach(function (node) {
       node_ids[node.id] = true;
     });
 
-    var display_edges = to_array(view.display_edges && view.display_edges.length ? view.display_edges : (view.edges || []))
+    var display_edges = to_array(
+      view.display_edges && view.display_edges.length
+        ? view.display_edges
+        : view.edges || [],
+    )
       .map(function (edge, index) {
-        return normalize_edge(edge, view_key + "_edge_" + index, feedback_by_edge, cycle_by_id);
+        return normalize_edge(
+          edge,
+          view_key + "_edge_" + index,
+          feedback_by_edge,
+          cycle_by_id,
+        );
       })
       .filter(function (edge) {
-        return !!edge && node_ids[edge.from] === true && node_ids[edge.to] === true;
+        return (
+          !!edge && node_ids[edge.from] === true && node_ids[edge.to] === true
+        );
       });
 
     return {
@@ -477,7 +665,7 @@
       breadcrumb: normalize_breadcrumb(view_key, view.breadcrumb),
       nodes: nodes,
       display_edges: display_edges,
-      layers: derived_layers(nodes, view)
+      layers: derived_layers(nodes, view),
     };
   }
 
@@ -496,7 +684,7 @@
         modules,
         layer_map,
         feedback_by_edge,
-        cycle_by_id
+        cycle_by_id,
       );
     });
 
@@ -507,7 +695,7 @@
         modules,
         layer_map,
         feedback_by_edge,
-        cycle_by_id
+        cycle_by_id,
       );
     }
 
@@ -516,7 +704,7 @@
       modules: modules,
       views: normalized_views,
       feedback_by_edge: feedback_by_edge,
-      cycle_by_id: cycle_by_id
+      cycle_by_id: cycle_by_id,
     };
   }
 
@@ -525,9 +713,17 @@
       target.innerHTML = "<dt>Status</dt><dd>Unavailable</dd>";
       return;
     }
-    target.innerHTML = rows.map(function (row) {
-      return "<dt>" + html_escape(row.label) + "</dt><dd>" + html_escape(row.value) + "</dd>";
-    }).join("");
+    target.innerHTML = rows
+      .map(function (row) {
+        return (
+          "<dt>" +
+          html_escape(row.label) +
+          "</dt><dd>" +
+          html_escape(row.value) +
+          "</dd>"
+        );
+      })
+      .join("");
   }
 
   function create_empty_message(target, text) {
@@ -541,9 +737,11 @@
       return;
     }
     target.classList.remove("empty_state");
-    target.innerHTML = items.map(function (item) {
-      return "<li>" + html_escape(item) + "</li>";
-    }).join("");
+    target.innerHTML = items
+      .map(function (item) {
+        return "<li>" + html_escape(item) + "</li>";
+      })
+      .join("");
   }
 
   function render_inspector(node) {
@@ -557,7 +755,8 @@
 
     if (!node) {
       title.textContent = "Select a leaf module";
-      subtitle.textContent = "Click a non-leaf node to drill down. Click a leaf node to inspect source and dependencies.";
+      subtitle.textContent =
+        "Click a non-leaf node to drill down. Click a leaf node to inspect source and dependencies.";
       render_metadata(metadata, []);
       create_empty_message(internal_list, "No module selected.");
       create_empty_message(external_list, "No module selected.");
@@ -574,17 +773,29 @@
 
     render_metadata(metadata, [
       { label: "Module", value: node.module_id || node.id },
-      { label: "Full Name", value: plain_label(node.full_name || node.module_id || node.id) },
+      {
+        label: "Full Name",
+        value: plain_label(node.full_name || node.module_id || node.id),
+      },
       { label: "Component", value: node.component || "unclassified" },
       { label: "Layer", value: String(node.layer) },
       { label: "Abstract", value: node.abstract ? "yes" : "no" },
-      { label: "Cycle", value: node.cycle ? "yes" : "no" }
+      { label: "Cycle", value: node.cycle ? "yes" : "no" },
     ]);
 
-    render_token_list(internal_list, node.internal_requires, "No internal dependencies.");
-    render_token_list(external_list, node.external_requires, "No external dependencies.");
+    render_token_list(
+      internal_list,
+      node.internal_requires,
+      "No internal dependencies.",
+    );
+    render_token_list(
+      external_list,
+      node.external_requires,
+      "No external dependencies.",
+    );
     source_path.textContent = node.source_path || "";
-    source_code.textContent = node.source_text || "Source text missing from payload.";
+    source_code.textContent =
+      node.source_text || "Source text missing from payload.";
     source_code.classList.toggle("empty_state", !node.source_text);
   }
 
@@ -595,7 +806,7 @@
     by_id("cycle_count_label").textContent = String(
       view.nodes.filter(function (node) {
         return node.cycle;
-      }).length
+      }).length,
     );
   }
 
@@ -647,9 +858,9 @@
         }
       });
       if (y === null) {
-        y = LAYER_TOP + (layer_index * LAYER_GAP);
+        y = LAYER_TOP + layer_index * LAYER_GAP + LABEL_Y_OFFSET;
       }
-      layer.y = y;
+      layer.y = y - LABEL_Y_OFFSET;
 
       layer.nodes.forEach(function (node_id, index) {
         var view_node = view.nodes.find(function (entry) {
@@ -657,35 +868,43 @@
         });
         var rect = view_node && view_node.geometry;
         var width = rect && finite_number(rect.width) ? rect.width : NODE_WIDTH;
-        var height = rect && finite_number(rect.height) ? rect.height : NODE_HEIGHT;
-        var x = rect && finite_number(rect.x)
-          ? rect.x
-          : SURFACE_PADDING_X + (index * (NODE_WIDTH + CARD_GAP_X));
+        var height =
+          rect && finite_number(rect.height) ? rect.height : NODE_HEIGHT;
+        var x =
+          rect && finite_number(rect.x)
+            ? rect.x
+            : SURFACE_PADDING_X + index * (NODE_WIDTH + CARD_GAP_X);
         var node_y = rect && finite_number(rect.y) ? rect.y : y;
         positions[node_id] = {
           x: x,
           y: node_y,
           width: width,
           height: height,
-          center_x: x + (width / 2),
-          center_y: node_y + (height / 2)
+          center_x: x + width / 2,
+          center_y: node_y + height / 2,
         };
         max_width = Math.max(max_width, x + width + SURFACE_PADDING_X);
-        max_height = Math.max(max_height, node_y + height + SURFACE_PADDING_BOTTOM);
+        max_height = Math.max(
+          max_height,
+          node_y + height + SURFACE_PADDING_BOTTOM,
+        );
       });
     });
 
-    var surface_width = Math.max(max_width, 900);
+    var surface_width = Math.max(max_width, 1180);
     var surface_height = Math.max(
       max_height,
-      LAYER_TOP + (Math.max(layers.length, 1) * LAYER_GAP) + SURFACE_PADDING_BOTTOM
+      LAYER_TOP +
+        Math.max(layers.length, 1) * LAYER_GAP +
+        NODE_HEIGHT +
+        SURFACE_PADDING_BOTTOM,
     );
 
     return {
       layers: layers,
       positions: positions,
       width: surface_width,
-      height: surface_height
+      height: surface_height,
     };
   }
 
@@ -713,7 +932,7 @@
       [from.center_x, from_y],
       [from.center_x, pivot_y],
       [to.center_x, pivot_y],
-      [to.center_x, to_y]
+      [to.center_x, to_y],
     ];
   }
 
@@ -725,22 +944,22 @@
     var prev = points[points.length - 2];
     var dx = end[0] - prev[0];
     var dy = end[1] - prev[1];
-    var length = Math.sqrt((dx * dx) + (dy * dy)) || 1;
+    var length = Math.sqrt(dx * dx + dy * dy) || 1;
     var ux = dx / length;
     var uy = dy / length;
     var px = -uy;
     var py = ux;
     var size = 9;
-    var back_x = end[0] - (ux * size);
-    var back_y = end[1] - (uy * size);
-    var left_x = back_x + (px * (size * 0.6));
-    var left_y = back_y + (py * (size * 0.6));
-    var right_x = back_x - (px * (size * 0.6));
-    var right_y = back_y - (py * (size * 0.6));
+    var back_x = end[0] - ux * size;
+    var back_y = end[1] - uy * size;
+    var left_x = back_x + px * (size * 0.6);
+    var left_y = back_y + py * (size * 0.6);
+    var right_x = back_x - px * (size * 0.6);
+    var right_y = back_y - py * (size * 0.6);
     return [
       end[0] + "," + end[1],
       left_x + "," + left_y,
-      right_x + "," + right_y
+      right_x + "," + right_y,
     ].join(" ");
   }
 
@@ -752,7 +971,7 @@
     var surface_rect = by_id("graph_surface").getBoundingClientRect();
     return {
       x: event.clientX - surface_rect.left,
-      y: event.clientY - surface_rect.top
+      y: event.clientY - surface_rect.top,
     };
   }
 
@@ -770,10 +989,10 @@
       var box = tooltip.getBoundingClientRect();
       var surface_width = surface.width;
       var surface_height = surface.height;
-      if ((left + box.width) > surface_width - 16) {
+      if (left + box.width > surface_width - 16) {
         tooltip.style.left = String(Math.max(16, x - box.width - 18)) + "px";
       }
-      if ((top + box.height) > surface_height - 16) {
+      if (top + box.height > surface_height - 16) {
         tooltip.style.top = String(Math.max(16, y - box.height - 18)) + "px";
       }
     });
@@ -785,22 +1004,33 @@
 
   function tooltip_markup(title, lines) {
     return (
-      '<p class="tooltip_title">' + html_escape(title) + "</p>" +
+      '<p class="tooltip_title">' +
+      html_escape(title) +
+      "</p>" +
       '<ul class="tooltip_list">' +
-      (lines || []).map(function (entry) {
-        return '<li class="' + (entry.cycle ? "is_cycle" : "") + '">' + html_escape(entry.text) + "</li>";
-      }).join("") +
+      (lines || [])
+        .map(function (entry) {
+          return (
+            '<li class="' +
+            (entry.cycle ? "is_cycle" : "") +
+            '">' +
+            html_escape(entry.text) +
+            "</li>"
+          );
+        })
+        .join("") +
       "</ul>"
     );
   }
 
   function indicator_markup(direction, cycle) {
-    var points = direction === "incoming"
-      ? "10,0 20,16 0,16"
-      : "0,0 20,0 10,16";
+    var points =
+      direction === "incoming" ? "10,0 20,16 0,16" : "0,0 20,0 10,16";
     return (
       '<svg viewBox="0 0 20 16" aria-hidden="true">' +
-      '<polygon points="' + points + '"></polygon>' +
+      '<polygon points="' +
+      points +
+      '"></polygon>' +
       "</svg>"
     );
   }
@@ -831,30 +1061,59 @@
 
     button.innerHTML =
       '<div class="node_kicker">' +
-      '<span class="node_tag">' + html_escape(node.leaf ? "leaf" : "group") + "</span>" +
-      (node.component ? '<span class="node_tag">' + html_escape(node.component) + "</span>" : "") +
-      (node.abstract ? '<span class="node_tag node_tag_abstract">abstract</span>' : "") +
+      '<span class="node_tag">' +
+      html_escape(node.leaf ? "leaf" : "group") +
+      "</span>" +
+      (node.component
+        ? '<span class="node_tag">' + html_escape(node.component) + "</span>"
+        : "") +
+      (node.abstract
+        ? '<span class="node_tag node_tag_abstract">abstract</span>'
+        : "") +
       (node.cycle ? '<span class="node_tag node_tag_cycle">cycle</span>' : "") +
       "</div>" +
       '<div class="node_heading">' +
-      '<div>' +
-      '<h3 class="node_heading_title">' + html_escape(node.display_label || node.label) + "</h3>" +
-      (node.source_file_name ? '<div class="node_source_name">' + html_escape(node.source_file_name) + "</div>" : "") +
+      "<div>" +
+      '<h3 class="node_heading_title">' +
+      html_escape(node.display_label || node.label) +
+      "</h3>" +
+      (node.source_file_name
+        ? '<div class="node_source_name">' +
+          html_escape(node.source_file_name) +
+          "</div>"
+        : "") +
       "</div>" +
       "</div>" +
-      '<p class="node_supporting">' + html_escape(node.description || (node.leaf ? "Inspect source and dependencies." : "Drill into nested namespace view.")) + "</p>" +
+      '<p class="node_supporting">' +
+      html_escape(
+        node.description ||
+          (node.leaf
+            ? "Inspect source and dependencies."
+            : "Drill into nested namespace view."),
+      ) +
+      "</p>" +
       '<div class="node_dependency_summary">' +
-      '<span>in ' + String(node.indicators.incoming.dependencies.length) + "</span>" +
-      '<span>out ' + String(node.indicators.outgoing.dependencies.length) + "</span>" +
+      "<span>in " +
+      String(node.indicators.incoming.dependencies.length) +
+      "</span>" +
+      "<span>out " +
+      String(node.indicators.outgoing.dependencies.length) +
+      "</span>" +
       "</div>";
 
     function attach_indicator(direction, indicator) {
-      if (!indicator || !indicator.dependencies || indicator.dependencies.length === 0) {
+      if (
+        !indicator ||
+        !indicator.dependencies ||
+        indicator.dependencies.length === 0
+      ) {
         return;
       }
       var anchor = document.createElement("button");
       anchor.type = "button";
-      anchor.className = "node_dependency_button is_" + (direction === "incoming" ? "top" : "bottom");
+      anchor.className =
+        "node_dependency_button is_" +
+        (direction === "incoming" ? "top" : "bottom");
       if (indicator.cycle) {
         anchor.className += " is_cycle";
       }
@@ -862,9 +1121,14 @@
       function show_indicator_tooltip(event) {
         event.stopPropagation();
         set_tooltip(
-          tooltip_markup(direction === "incoming" ? "Incoming" : "Outgoing", indicator.dependencies),
+          tooltip_markup(
+            direction === "incoming" ? "Incoming" : "Outgoing",
+            indicator.dependencies,
+          ),
           node.position.center_x,
-          direction === "incoming" ? node.position.y - 12 : node.position.y + node.position.height + 12
+          direction === "incoming"
+            ? node.position.y - 12
+            : node.position.y + node.position.height + 12,
         );
       }
       anchor.addEventListener("mouseenter", show_indicator_tooltip);
@@ -877,34 +1141,56 @@
     attach_indicator("outgoing", node.indicators.outgoing);
 
     button.addEventListener("mouseenter", function (event) {
-      if (event.target && event.target.closest && event.target.closest(".node_dependency_button")) {
+      if (
+        event.target &&
+        event.target.closest &&
+        event.target.closest(".node_dependency_button")
+      ) {
         return;
       }
       var point = surface_point_from_event(event);
       set_tooltip(
-        tooltip_markup("Module", [{ text: plain_label(node.full_name || node.module_id || node.id), cycle: node.cycle }]),
+        tooltip_markup("Module", [
+          {
+            text: plain_label(node.full_name || node.module_id || node.id),
+            cycle: node.cycle,
+          },
+        ]),
         point.x,
-        point.y
+        point.y,
       );
     });
     button.addEventListener("mousemove", function (event) {
-      if (event.target && event.target.closest && event.target.closest(".node_dependency_button")) {
+      if (
+        event.target &&
+        event.target.closest &&
+        event.target.closest(".node_dependency_button")
+      ) {
         return;
       }
       var point = surface_point_from_event(event);
       set_tooltip(
-        tooltip_markup("Module", [{ text: plain_label(node.full_name || node.module_id || node.id), cycle: node.cycle }]),
+        tooltip_markup("Module", [
+          {
+            text: plain_label(node.full_name || node.module_id || node.id),
+            cycle: node.cycle,
+          },
+        ]),
         point.x,
-        point.y
+        point.y,
       );
     });
     button.addEventListener("mouseleave", hide_tooltip);
     button.addEventListener("click", function () {
       if (node.leaf) {
         state.selected_leaf_id = node.id;
-        state.view_state[state.current_view_key] = Object.assign({}, state.view_state[state.current_view_key], {
-          selected_leaf_id: node.id
-        });
+        state.view_state[state.current_view_key] = Object.assign(
+          {},
+          state.view_state[state.current_view_key],
+          {
+            selected_leaf_id: node.id,
+          },
+        );
         render_inspector(node);
         render_view(state.current_view_key, state);
         return;
@@ -928,14 +1214,20 @@
       var last_node = layout.positions[layer.nodes[layer.nodes.length - 1]];
       var label = document.createElement("div");
       label.className = "layer_label";
-      label.textContent = layer.label || ("Layer " + String(layer.index));
-      label.style.left = String((first_node.center_x + last_node.center_x) / 2) + "px";
+      label.textContent = layer.label || "Layer " + String(layer.index);
+      label.style.left =
+        String((first_node.center_x + last_node.center_x) / 2) + "px";
       label.style.top = String(layer.y - LABEL_Y_OFFSET) + "px";
       label.addEventListener("mouseenter", function () {
         set_tooltip(
-          tooltip_markup("Layer", [{ text: String(layer.label || ("Layer " + String(layer.index))), cycle: false }]),
+          tooltip_markup("Layer", [
+            {
+              text: String(layer.label || "Layer " + String(layer.index)),
+              cycle: false,
+            },
+          ]),
           (first_node.center_x + last_node.center_x) / 2,
-          layer.y - LABEL_Y_OFFSET
+          layer.y - LABEL_Y_OFFSET,
         );
       });
       label.addEventListener("mouseleave", hide_tooltip);
@@ -952,7 +1244,12 @@
       }
       var path = make_svg_el("path");
       path.setAttribute("d", edge.path);
-      path.setAttribute("class", "graph_edge edge_type_" + html_escape(edge.type || "direct") + (edge.cycle ? " edge_is_cycle" : ""));
+      path.setAttribute(
+        "class",
+        "graph_edge edge_type_" +
+          html_escape(edge.type || "direct") +
+          (edge.cycle ? " edge_is_cycle" : ""),
+      );
       svg.appendChild(path);
 
       var hit = make_svg_el("path");
@@ -960,20 +1257,27 @@
       hit.setAttribute("class", "graph_edge_hit");
       hit.addEventListener("mouseenter", function (event) {
         var point = surface_point_from_event(event);
-        var tooltip_lines = edge.tooltip_lines.length > 0
-          ? edge.tooltip_lines
-          : [{ text: edge.label, cycle: edge.cycle }];
-        set_tooltip(tooltip_markup("Dependency", tooltip_lines), point.x, point.y);
+        var tooltip_lines =
+          edge.tooltip_lines.length > 0
+            ? edge.tooltip_lines
+            : [{ text: edge.label, cycle: edge.cycle }];
+        set_tooltip(
+          tooltip_markup("Dependency", tooltip_lines),
+          point.x,
+          point.y,
+        );
       });
       hit.addEventListener("mousemove", function (event) {
         var point = surface_point_from_event(event);
         set_tooltip(
           tooltip_markup(
             "Dependency",
-            edge.tooltip_lines.length > 0 ? edge.tooltip_lines : [{ text: edge.label, cycle: edge.cycle }]
+            edge.tooltip_lines.length > 0
+              ? edge.tooltip_lines
+              : [{ text: edge.label, cycle: edge.cycle }],
           ),
           point.x,
-          point.y
+          point.y,
         );
       });
       hit.addEventListener("mouseleave", hide_tooltip);
@@ -981,7 +1285,12 @@
 
       var arrow = make_svg_el("polygon");
       arrow.setAttribute("points", arrow_points(edge.route_points));
-      arrow.setAttribute("class", "graph_arrow arrow_type_" + html_escape(edge.type || "direct") + (edge.cycle ? " arrow_is_cycle" : ""));
+      arrow.setAttribute(
+        "class",
+        "graph_arrow arrow_type_" +
+          html_escape(edge.type || "direct") +
+          (edge.cycle ? " arrow_is_cycle" : ""),
+      );
       svg.appendChild(arrow);
     });
   }
@@ -1002,7 +1311,7 @@
     state.view_state[state.current_view_key] = {
       scroll_left: scroller.scrollLeft,
       scroll_top: scroller.scrollTop,
-      selected_leaf_id: state.selected_leaf_id
+      selected_leaf_id: state.selected_leaf_id,
     };
   }
 
@@ -1030,7 +1339,9 @@
     });
     state.current_view_key = view_key;
     if (!selected_in_view) {
-      state.selected_leaf_id = state.view_state[view_key] ? (state.view_state[view_key].selected_leaf_id || null) : null;
+      state.selected_leaf_id = state.view_state[view_key]
+        ? state.view_state[view_key].selected_leaf_id || null
+        : null;
     }
     render_breadcrumb(view, state);
     update_summary(view);
@@ -1041,7 +1352,9 @@
     }).length;
     if (cycle_nodes > 0) {
       notice.hidden = false;
-      notice.textContent = String(cycle_nodes) + " node(s) in this view are marked by cycle or cycle-adjacent dependencies.";
+      notice.textContent =
+        String(cycle_nodes) +
+        " node(s) in this view are marked by cycle or cycle-adjacent dependencies.";
     } else {
       notice.hidden = true;
     }
@@ -1085,7 +1398,8 @@
     if (!payload) {
       var graph_notice = by_id("graph_notice");
       graph_notice.hidden = false;
-      graph_notice.textContent = "Missing window.ARCH_VIEW_DATA. Generate architecture_data.js before opening this viewer.";
+      graph_notice.textContent =
+        "Missing window.ARCH_VIEW_DATA. Generate architecture_data.js before opening this viewer.";
       by_id("back_button").disabled = true;
       return;
     }
@@ -1102,12 +1416,16 @@
           return;
         }
         save_current_view_state(state);
-        if (push_history && state.current_view_key && state.current_view_key !== view_key) {
+        if (
+          push_history &&
+          state.current_view_key &&
+          state.current_view_key !== view_key
+        ) {
           state.history.push(state.current_view_key);
         }
         state.selected_leaf_id = null;
         render_view(view_key, state);
-      }
+      },
     };
 
     by_id("back_button").addEventListener("click", function () {
