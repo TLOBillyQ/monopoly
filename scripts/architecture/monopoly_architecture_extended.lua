@@ -44,4 +44,10 @@ config.component_rules[#config.component_rules + 1] = {
   component = "architecture_scripts",
 }
 
+config.component_rules[#config.component_rules + 1] = {
+  name = "quality_scripts",
+  match = { "^scripts%.quality$", "^scripts%.quality%..+" },
+  component = "quality_scripts",
+}
+
 return config

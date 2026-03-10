@@ -20,6 +20,8 @@ function M.install_package_paths()
   _append_path("./tests/fixtures/?.lua")
   _append_path("./scripts/architecture/?.lua")
   _append_path("./scripts/architecture/?/?.lua")
+  _append_path("./scripts/quality/?.lua")
+  _append_path("./scripts/quality/?/?.lua")
 
   _package_paths_installed = true
 end

@@ -44,6 +44,16 @@ local function _default_reporter()
   }
 end
 
+local function _run_hook(hook, ...)
+  if type(hook) ~= "function" then
+    return true
+  end
+  local args = { ... }
+  return xpcall(function()
+    hook(unpack(args))
+  end, debug.traceback)
+end
+
 local function run_all(suites, opts)
   opts = opts or {}
   local reporter = opts.reporter or _default_reporter()
@@ -58,9 +68,27 @@ local function run_all(suites, opts)
       local case_name, run, case_opts = normalize_case(test, case_index, suite_name)
       if not _is_case_disabled(case_opts, opts.mode) then
         local full_name = suite_name .. "." .. case_name
+        local context = {
+          suite_name = suite_name,
+          case_name = case_name,
+          full_name = full_name,
+          case_opts = case_opts,
+          mode = opts.mode,
+        }
         total = total + 1
         math.randomseed(1)
-        local ok, err, captured = log_capture.capture(run, { enabled = capture_logs })
+        local before_ok, before_err = _run_hook(opts.before_case, context)
+        local ok = before_ok
+        local err = before_err
+        local captured = { lines = {} }
+        if before_ok then
+          ok, err, captured = log_capture.capture(run, { enabled = capture_logs })
+        end
+        local after_ok, after_err = _run_hook(opts.after_case, context, ok, err, captured)
+        if ok and not after_ok then
+          ok = false
+          err = after_err
+        end
         if ok then
           log_capture.collect_summary(summary, captured)
           reporter.case_pass(full_name, captured)
@@ -78,7 +106,14 @@ local function run_all(suites, opts)
 
   reporter.finish(summary, failures)
 
-  if #failures > 0 then
+  local result = {
+    total = total,
+    failures = failures,
+    failed = #failures > 0,
+    summary = summary,
+  }
+
+  if #failures > 0 and opts.raise_on_failure ~= false then
     io.stdout:write("\n")
     print("Regression failed (" .. tostring(#failures) .. "/" .. tostring(total) .. ")")
     for i, failure in ipairs(failures) do
@@ -91,7 +126,11 @@ local function run_all(suites, opts)
     error("regression failed")
   end
 
-  print("\nAll regression checks passed (" .. tostring(total) .. ")")
+  if #failures == 0 then
+    print("\nAll regression checks passed (" .. tostring(total) .. ")")
+  end
+
+  return result
 end
 
 return { run_all = run_all }
