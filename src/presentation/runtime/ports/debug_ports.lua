@@ -44,7 +44,7 @@ function debug_ports.build(common)
             end
           end
           if debug_enabled then
-            local seq = logger.get_seq()
+            local seq = logger.get_event_seq()
             if seq ~= role_id_utils.read(state._debug_log_seq_by_role, role_id) then
               role_id_utils.write(state._debug_log_seq_by_role, role_id, seq)
               local max_lines = gameplay_rules.debug_log_max_lines or 50

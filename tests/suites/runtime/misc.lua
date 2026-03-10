@@ -194,6 +194,36 @@ local function _test_logger_event_collection_provider_drops_closed_action_log_ev
   end
 end
 
+local function _test_logger_event_seq_only_tracks_event_feed_changes()
+  logger.clear()
+
+  local ok, err = pcall(function()
+    local initial_seq = logger.get_event_seq()
+
+    logger.info("info message")
+    _assert_eq(logger.get_event_seq(), initial_seq, "info should not change event_seq")
+
+    logger.warn("warn message")
+    _assert_eq(logger.get_event_seq(), initial_seq, "warn should not change event_seq")
+
+    logger.event("event message")
+    local event_seq = logger.get_event_seq()
+    assert(event_seq > initial_seq, "event should advance event_seq")
+
+    logger.event_no_tips("event no tips message")
+    local event_no_tips_seq = logger.get_event_seq()
+    assert(event_no_tips_seq > event_seq, "event_no_tips should advance event_seq")
+
+    logger.clear()
+    assert(logger.get_event_seq() > event_no_tips_seq, "clear should advance event_seq for UI reset")
+  end)
+
+  logger.clear()
+  if not ok then
+    error(err)
+  end
+end
+
 return {
   name = "misc",
   tests = {
@@ -205,5 +235,6 @@ return {
     { name = "logger_event_no_tips_stays_in_event_feed_without_showing_tip", run = _test_logger_event_no_tips_stays_in_event_feed_without_showing_tip },
     { name = "logger_configure_host_runtime_uses_injected_hooks", run = _test_logger_configure_host_runtime_uses_injected_hooks },
     { name = "logger_event_collection_provider_drops_closed_action_log_events", run = _test_logger_event_collection_provider_drops_closed_action_log_events },
+    { name = "logger_event_seq_only_tracks_event_feed_changes", run = _test_logger_event_seq_only_tracks_event_feed_changes },
   },
 }

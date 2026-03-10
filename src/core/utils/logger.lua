@@ -2,6 +2,7 @@ local logger = {
   entries = {},
   max_entries = 200,
   seq = 0,
+  event_seq = 0,
   info_per_turn_limit = nil,
   info_turn_provider = nil,
   info_turn = nil,
@@ -208,6 +209,9 @@ local function _push(level, opts, ...)
   if level == "event" and not _should_collect_event() then
     return
   end
+  if level == "event" then
+    logger.event_seq = (logger.event_seq or 0) + 1
+  end
   local timestamp = _get_timestamp()
   local time_text = _format_timestamp(timestamp)
   logger.seq = logger.seq + 1
@@ -370,6 +374,7 @@ end
 function logger.clear()
   logger.entries = {}
   logger.seq = logger.seq + 1
+  logger.event_seq = (logger.event_seq or 0) + 1
   logger.info_turn = nil
   logger.info_turn_count = 0
   logger.tip_queue = {}
@@ -380,6 +385,10 @@ end
 
 function logger.get_seq()
   return logger.seq
+end
+
+function logger.get_event_seq()
+  return logger.event_seq or 0
 end
 
 function _format_entry(entry)

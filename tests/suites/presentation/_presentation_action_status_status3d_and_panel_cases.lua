@@ -1543,6 +1543,81 @@ local function _test_debug_ports_sync_restores_client_role_nil()
   _assert_eq(manager.client_role, nil, "debug ports sync should restore client_role to nil")
 end
 
+local function _test_debug_ports_sync_ignores_non_event_log_seq_changes()
+  local ui_event_state = require("src.presentation.input.event_state")
+  local ui_view_service = require("src.presentation.runtime.view")
+  local manager = { client_role = { stale = true } }
+  local role1 = { id = 1, get_roleid = function() return 1 end }
+  local role2 = { id = 2, get_roleid = function() return 2 end }
+  local ports = debug_ports_module.build({
+    log_status = function() end,
+  })
+  local log_calls = {}
+
+  logger.clear()
+  local ok, err = pcall(function()
+    _with_patches({
+      { key = "UIManager", value = manager },
+      { target = runtime_port, key = "for_each_role_or_global", value = function(fn)
+        fn(role1)
+        fn(role2)
+      end },
+      { target = runtime_port, key = "set_client_role", value = function(role)
+        manager.client_role = role
+      end },
+      { target = runtime_port, key = "with_client_role", value = function(role, fn)
+        local prev = manager.client_role
+        manager.client_role = role
+        local inner_ok, inner_err = pcall(fn)
+        manager.client_role = prev
+        if not inner_ok then
+          error(inner_err)
+        end
+      end },
+      { target = runtime_port, key = "resolve_role_id", value = function(role)
+        return role and role.id or nil
+      end },
+      { target = ui_event_state, key = "resolve_debug_enabled", value = function(_, role_id)
+        return role_id == 1
+      end },
+      { target = ui_view_service, key = "set_debug_visible_for_role", value = function() end },
+      { target = ui_view_service, key = "set_debug_log_for_role", value = function(_, role, text)
+        log_calls[#log_calls + 1] = {
+          role_id = role and role.id or nil,
+          text = text,
+        }
+      end },
+    }, function()
+      local state = {
+        ui = ui_view.build_ui_state(),
+        _debug_log_enabled_by_role = {
+          [2] = false,
+        },
+        _debug_log_seq_by_role = {},
+      }
+
+      ports.sync_debug_log(state)
+      _assert_eq(#log_calls, 1, "first sync should write empty event feed once for enabled role")
+      _assert_eq(log_calls[1].role_id, 1, "first sync should target enabled role")
+      _assert_eq(log_calls[1].text, "", "first sync should clear stale action log text")
+
+      logger.info("info only")
+      ports.sync_debug_log(state)
+      _assert_eq(#log_calls, 1, "info logs should not retrigger empty action log sync")
+
+      logger.event_no_tips("event only")
+      ports.sync_debug_log(state)
+      _assert_eq(#log_calls, 2, "event logs should retrigger action log sync")
+      _assert_eq(log_calls[2].role_id, 1, "event sync should target enabled role")
+      assert(string.find(log_calls[2].text or "", "event only", 1, true) ~= nil, "event sync should include latest event text")
+    end)
+  end)
+  logger.clear()
+  if not ok then
+    error(err)
+  end
+end
+
 local function _test_panel_avatar_uses_native_size_path()
   local presenter = require("src.presentation.view.widgets.panel_presenter")
   local native_size_calls = 0
@@ -1881,6 +1956,7 @@ return {
   { name = "_test_popup_renderer_switch_popup_canvas_restores_client_role_nil", run = _test_popup_renderer_switch_popup_canvas_restores_client_role_nil },
   { name = "_test_market_modal_renderer_open_restores_client_role_nil", run = _test_market_modal_renderer_open_restores_client_role_nil },
   { name = "_test_debug_ports_sync_restores_client_role_nil", run = _test_debug_ports_sync_restores_client_role_nil },
+  { name = "_test_debug_ports_sync_ignores_non_event_log_seq_changes", run = _test_debug_ports_sync_ignores_non_event_log_seq_changes },
   { name = "_test_panel_avatar_uses_native_size_path", run = _test_panel_avatar_uses_native_size_path },
   { name = "_test_panel_cash_delta_shows_negative_and_auto_hides", run = _test_panel_cash_delta_shows_negative_and_auto_hides },
   { name = "_test_panel_cash_delta_shows_positive_and_auto_hides", run = _test_panel_cash_delta_shows_positive_and_auto_hides },
