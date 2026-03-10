@@ -84,7 +84,15 @@ function tick_choice_timeout.step(game, state, dt, opts)
   local ui_choice_active = opts.is_choice_active(state) == true
   active_choice = output_ports.get_pending_choice(state)
   local active = pending ~= nil or active_choice ~= nil
-  if active and active_choice and not ui_choice_active then
+  local resolved_ui_gate = nil
+  if active and active_choice and type(opts.resolve_choice_ui_state) == "function" then
+    resolved_ui_gate = opts.resolve_choice_ui_state(game, state, active_choice)
+  end
+  local should_warn_missing_ui = active and active_choice and not ui_choice_active
+  if type(resolved_ui_gate) == "table" then
+    should_warn_missing_ui = resolved_ui_gate.should_warn == true
+  end
+  if should_warn_missing_ui then
     _log_once(
       state,
       "choice_runtime_without_ui_" .. tostring(active_choice.id),

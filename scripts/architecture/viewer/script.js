@@ -9,6 +9,8 @@
   var SURFACE_PADDING_BOTTOM = 80;
   var LABEL_Y_OFFSET = 28;
   var TRIANGLE_OFFSET = 10;
+  var NODE_EDGE_GAP = 14;
+  var NODE_BUTTON_EXCLUSION_HALF_WIDTH = 26;
 
   function by_id(id) {
     return document.getElementById(id);
@@ -918,21 +920,62 @@
       return [];
     }
 
-    var from_y = from.y + from.height + TRIANGLE_OFFSET;
-    var to_y = to.y - TRIANGLE_OFFSET;
-    var pivot_y = (from_y + to_y) / 2;
-
-    if (to.y <= from.y) {
-      pivot_y = Math.min(from.y, to.y) - 34;
-      from_y = from.y - TRIANGLE_OFFSET;
-      to_y = to.y - TRIANGLE_OFFSET;
+    function center_x(rect) {
+      return rect.x + rect.width / 2;
     }
 
+    function center_y(rect) {
+      return rect.y + rect.height / 2;
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function top_bottom_offset(rect, bias) {
+      var max_offset = Math.max(0, rect.width / 2 - NODE_EDGE_GAP - 6);
+      return clamp(
+        bias * NODE_BUTTON_EXCLUSION_HALF_WIDTH,
+        -max_offset,
+        max_offset,
+      );
+    }
+
+    if (edge.from_layer === edge.to_layer) {
+      var from_side_right = center_x(to) >= center_x(from);
+      var start_x = from_side_right
+        ? from.x + from.width + NODE_EDGE_GAP
+        : from.x - NODE_EDGE_GAP;
+      var end_x = from_side_right
+        ? to.x - NODE_EDGE_GAP
+        : to.x + to.width + NODE_EDGE_GAP;
+      var start_y = center_y(from);
+      var end_y = center_y(to);
+      var lane_x =
+        (start_x + end_x) / 2 + (from_side_right ? 0 : 0);
+      return [
+        [start_x, start_y],
+        [lane_x, start_y],
+        [lane_x, end_y],
+        [end_x, end_y],
+      ];
+    }
+
+    var downward = edge.to_layer > edge.from_layer;
+    var bias = center_x(to) >= center_x(from) ? 1 : -1;
+    var start_x = center_x(from) + top_bottom_offset(from, bias);
+    var end_x = center_x(to) + top_bottom_offset(to, bias);
+    var start_y = downward
+      ? from.y + from.height + NODE_EDGE_GAP
+      : from.y - NODE_EDGE_GAP;
+    var end_y = downward ? to.y - NODE_EDGE_GAP : to.y + to.height + NODE_EDGE_GAP;
+    var pivot_y = (start_y + end_y) / 2;
+
     return [
-      [from.center_x, from_y],
-      [from.center_x, pivot_y],
-      [to.center_x, pivot_y],
-      [to.center_x, to_y],
+      [start_x, start_y],
+      [start_x, pivot_y],
+      [end_x, pivot_y],
+      [end_x, end_y],
     ];
   }
 
@@ -949,7 +992,7 @@
     var uy = dy / length;
     var px = -uy;
     var py = ux;
-    var size = 9;
+    var size = 12;
     var back_x = end[0] - ux * size;
     var back_y = end[1] - uy * size;
     var left_x = back_x + px * (size * 0.6);
@@ -1242,6 +1285,16 @@
       if (!edge.path) {
         return;
       }
+      var backdrop = make_svg_el("path");
+      backdrop.setAttribute("d", edge.path);
+      backdrop.setAttribute(
+        "class",
+        "graph_edge_backdrop edge_type_" +
+          html_escape(edge.type || "direct") +
+          (edge.cycle ? " edge_is_cycle" : ""),
+      );
+      svg.appendChild(backdrop);
+
       var path = make_svg_el("path");
       path.setAttribute("d", edge.path);
       path.setAttribute(
@@ -1283,8 +1336,14 @@
       hit.addEventListener("mouseleave", hide_tooltip);
       svg.appendChild(hit);
 
+      var arrow_shape = arrow_points(edge.route_points);
+      var arrow_backdrop = make_svg_el("polygon");
+      arrow_backdrop.setAttribute("points", arrow_shape);
+      arrow_backdrop.setAttribute("class", "graph_arrow_backdrop");
+      svg.appendChild(arrow_backdrop);
+
       var arrow = make_svg_el("polygon");
-      arrow.setAttribute("points", arrow_points(edge.route_points));
+      arrow.setAttribute("points", arrow_shape);
       arrow.setAttribute(
         "class",
         "graph_arrow arrow_type_" +

@@ -48,6 +48,7 @@ function tick_timeout.step_choice_timeout(game, state, dt, opts)
   return tick_choice_timeout.step(game, state, dt, {
     on_pending_choice = opts.on_pending_choice,
     is_choice_active = opts.is_choice_active,
+    resolve_choice_ui_state = opts.resolve_choice_ui_state,
     build_action = opts.build_action,
     get_timeout_seconds = opts.get_timeout_seconds,
     get_min_visible_seconds = opts.get_min_visible_seconds,
@@ -143,6 +144,12 @@ function tick_timeout.step_default_choice(game, state, dt)
     on_pending_choice = _noop,
     is_choice_active = function(ctx)
       return ctx.pending_choice ~= nil
+    end,
+    resolve_choice_ui_state = function(_, _, choice)
+      return {
+        route_key = choice and choice.route_key or nil,
+        should_warn = false,
+      }
     end,
     build_action = policy.choice.build_action,
     get_timeout_seconds = policy.choice.get_timeout_seconds,

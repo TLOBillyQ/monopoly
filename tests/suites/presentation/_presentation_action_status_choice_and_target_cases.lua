@@ -651,6 +651,43 @@ local function _test_target_screen_hides_unused_slots_when_unique_options_less_t
   end)
 end
 
+local function _test_target_screen_close_clears_confirm_and_cancel_residue()
+  local state, nodes, query_nodes = _build_choice_modal_state()
+  local choice = {
+    id = 90,
+    kind = "roadblock_target",
+    route_key = "target",
+    owner_role_id = 1,
+    uses_target_picker = true,
+    target_picker_owner_role_id = 1,
+    title = "路障卡：选择位置",
+    body = "body",
+    options = {
+      { id = 101, label = "福州路" },
+      { id = 102, label = "台北路" },
+    },
+    allow_cancel = true,
+    cancel_label = "取消",
+  }
+
+  _with_patches({
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = nil },
+  }, function()
+    ui_view.open_choice_modal(state, choice)
+    _assert_eq(nodes["位置_确认按钮"].text, "确定", "target confirm should be populated while screen open")
+    _assert_eq(nodes["位置_取消按钮"].text, "取消", "target cancel should be populated while screen open")
+
+    ui_view.close_choice_modal(state)
+
+    _assert_eq(nodes["位置选择屏"].visible, false, "target screen should hide after close")
+    _assert_eq(nodes["位置_确认按钮"].visible, false, "target confirm should hide after close")
+    _assert_eq(nodes["位置_取消按钮"].visible, false, "target cancel should hide after close")
+    _assert_eq(nodes["位置_确认按钮"].text, "", "target confirm text should clear after close")
+    _assert_eq(nodes["位置_取消按钮"].text, "", "target cancel text should clear after close")
+  end)
+end
+
 local function _with_target_pick_runtime(env, fn)
   local marker_seq = 0
   local created_markers = {}
@@ -1363,6 +1400,7 @@ return {
   { name = "_test_choice_modal_routes_to_new_screens", run = _test_choice_modal_routes_to_new_screens },
   { name = "_test_target_screen_uses_labels_only_and_hides_projection_with_slots", run = _test_target_screen_uses_labels_only_and_hides_projection_with_slots },
   { name = "_test_target_screen_hides_unused_slots_when_unique_options_less_than_seven", run = _test_target_screen_hides_unused_slots_when_unique_options_less_than_seven },
+  { name = "_test_target_screen_close_clears_confirm_and_cancel_residue", run = _test_target_screen_close_clears_confirm_and_cancel_residue },
   { name = "_test_target_confirm_dispatches_selected_option", run = _test_target_confirm_dispatches_selected_option },
   { name = "_test_target_pick_tick_updates_selection_on_hit_change", run = _test_target_pick_tick_updates_selection_on_hit_change },
   { name = "_test_target_pick_tick_ignores_non_candidate", run = _test_target_pick_tick_ignores_non_candidate },

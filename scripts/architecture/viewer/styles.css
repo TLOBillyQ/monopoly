@@ -14,6 +14,11 @@
     --abstract-soft: rgba(58, 122, 87, 0.16);
     --cycle: #b03232;
     --cycle-soft: rgba(176, 50, 50, 0.14);
+    --edge-halo: rgba(255, 251, 245, 0.98);
+    --edge-default: rgba(72, 58, 40, 0.82);
+    --edge-default-strong: rgba(72, 58, 40, 0.96);
+    --edge-abstract: rgba(46, 110, 76, 0.94);
+    --edge-cycle: rgba(176, 50, 50, 0.98);
     --graph-grid: rgba(104, 84, 58, 0.06);
     --shadow: 0 24px 70px var(--surface-shadow);
     --mono: "SFMono-Regular", "SF Mono", Menlo, Monaco, Consolas, monospace;
@@ -268,10 +273,12 @@ body {
 
 .graph_svg {
     overflow: visible;
+    z-index: 1;
 }
 
 .layer_labels {
     pointer-events: none;
+    z-index: 2;
 }
 
 .layer_label {
@@ -280,17 +287,20 @@ body {
     transform: translateX(-50%);
     padding: 7px 12px;
     border-radius: 999px;
-    background: rgba(255, 248, 238, 0.94);
-    border: 1px solid rgba(42, 36, 29, 0.08);
+    background: rgba(255, 248, 238, 0.98);
+    border: 1px solid rgba(42, 36, 29, 0.14);
     color: var(--muted);
     font-size: 0.8rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    box-shadow: 0 8px 24px rgba(60, 40, 20, 0.08);
+    box-shadow:
+        0 0 0 6px rgba(255, 252, 246, 0.92),
+        0 8px 24px rgba(60, 40, 20, 0.08);
 }
 
 .node_layer {
     pointer-events: none;
+    z-index: 3;
 }
 
 .node_card {
@@ -384,20 +394,25 @@ body {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    width: 20px;
-    height: 16px;
+    width: 28px;
+    height: 22px;
     padding: 0;
-    border: none;
-    background: transparent;
+    border: 1px solid rgba(42, 36, 29, 0.14);
+    border-radius: 999px;
+    background: rgba(255, 251, 245, 0.98);
+    box-shadow:
+        0 0 0 5px rgba(255, 252, 246, 0.92),
+        0 8px 18px rgba(60, 40, 20, 0.08);
     cursor: help;
+    z-index: 4;
 }
 
 .node_dependency_button.is_top {
-    top: -12px;
+    top: -15px;
 }
 
 .node_dependency_button.is_bottom {
-    bottom: -12px;
+    bottom: -15px;
 }
 
 .node_dependency_button svg {
@@ -489,18 +504,35 @@ body {
 
 .graph_edge {
     fill: none;
-    stroke: rgba(53, 47, 39, 0.44);
-    stroke-width: 2.25px;
+    stroke: var(--edge-default);
+    stroke-width: 2.9px;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
 
+.graph_edge_backdrop {
+    fill: none;
+    stroke: var(--edge-halo);
+    stroke-width: 7.5px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.96;
+}
+
+.graph_edge_backdrop.edge_type_abstract {
+    stroke: rgba(241, 250, 244, 0.99);
+}
+
+.graph_edge_backdrop.edge_is_cycle {
+    stroke: rgba(255, 244, 244, 0.99);
+}
+
 .graph_edge.edge_type_abstract {
-    stroke: rgba(58, 122, 87, 0.88);
+    stroke: var(--edge-abstract);
 }
 
 .graph_edge.edge_is_cycle {
-    stroke: rgba(176, 50, 50, 0.9);
+    stroke: var(--edge-cycle);
 }
 
 .graph_edge_hit {
@@ -511,15 +543,23 @@ body {
 }
 
 .graph_arrow {
-    fill: rgba(53, 47, 39, 0.66);
+    fill: var(--edge-default-strong);
+    stroke: var(--edge-halo);
+    stroke-width: 1.8px;
+    stroke-linejoin: round;
+}
+
+.graph_arrow_backdrop {
+    fill: var(--edge-halo);
+    opacity: 0.98;
 }
 
 .graph_arrow.arrow_type_abstract {
-    fill: rgba(58, 122, 87, 0.88);
+    fill: var(--edge-abstract);
 }
 
 .graph_arrow.arrow_is_cycle {
-    fill: rgba(176, 50, 50, 0.92);
+    fill: var(--edge-cycle);
 }
 
 .detail_subtitle {

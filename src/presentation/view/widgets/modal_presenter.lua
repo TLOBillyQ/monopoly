@@ -8,6 +8,7 @@ local canvas_store = require("src.presentation.runtime.canvas_store")
 local logger = require("src.core.utils.logger")
 local target_choice_effects = require("src.presentation.view.render.target_choice_effects")
 local runtime_state = require("src.core.state_access.runtime_state")
+local ui_controls = require("src.presentation.view.support.ui_controls")
 
 local modal_presenter = {}
 
@@ -111,8 +112,8 @@ function modal_presenter.close_choice_modal(state)
   if ui.choice_active then
     local key = ui.active_choice_screen_key
     local screen = key and ui.choice_screens and ui.choice_screens[key] or nil
-    if screen and screen.root then
-      ui:set_visible(screen.root, false)
+    if screen then
+      ui_controls.reset_choice_screen(ui, screen)
     end
     ui.choice_active = false
     ui.active_choice_screen_key = nil

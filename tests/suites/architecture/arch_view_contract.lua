@@ -378,6 +378,75 @@ local function _test_route_engine_emits_orthogonal_paths_without_exact_overlap()
     assert(first_signature ~= second_signature, "adjacent edges should not fully overlap")
 end
 
+local function _test_route_engine_spreads_cross_layer_ports_away_from_center()
+    local routed = route_engine.route_edges({
+        {
+            id = "a->c",
+            from = "a",
+            to = "c",
+            from_layer = 0,
+            to_layer = 1,
+            from_rect = { x = 0.0, y = 0.0, width = 100.0, height = 60.0 },
+            to_rect = { x = 220.0, y = 160.0, width = 100.0, height = 60.0 },
+        },
+        {
+            id = "a->d",
+            from = "a",
+            to = "d",
+            from_layer = 0,
+            to_layer = 1,
+            from_rect = { x = 0.0, y = 0.0, width = 100.0, height = 60.0 },
+            to_rect = { x = 360.0, y = 160.0, width = 100.0, height = 60.0 },
+        },
+    })
+
+    local first_start = routed[1].route_points[1]
+    local second_start = routed[2].route_points[1]
+    assert(first_start[1] ~= second_start[1], "cross-layer sibling edges should not share the same start port")
+    assert(math.abs(first_start[1] - 50.0) >= 20.0, "cross-layer edge should avoid the top/bottom center exclusion zone")
+    assert(math.abs(second_start[1] - 50.0) >= 20.0, "cross-layer edge should avoid the top/bottom center exclusion zone")
+    assert(first_start[2] > 60.0, "downward edge should start outside the source node")
+end
+
+local function _test_route_engine_uses_side_ports_for_same_layer_edges()
+    local routed = route_engine.route_edges({
+        {
+            id = "a->b",
+            from = "a",
+            to = "b",
+            from_layer = 0,
+            to_layer = 0,
+            from_rect = { x = 0.0, y = 0.0, width = 100.0, height = 60.0 },
+            to_rect = { x = 220.0, y = 0.0, width = 100.0, height = 60.0 },
+        },
+    })
+
+    local points = routed[1].route_points
+    assert(points[1][1] > 100.0, "same-layer edge should leave from the side of the source node")
+    assert(points[4][1] < 220.0, "same-layer edge should enter from the side of the target node")
+    assert(math.abs(points[1][2] - 30.0) <= 24.0, "same-layer edge should stay near the node side center, not the top edge")
+    assert(math.abs(points[4][2] - 30.0) <= 24.0, "same-layer edge should end near the node side center, not the top edge")
+end
+
+local function _test_route_engine_avoids_top_bottom_button_lane_for_single_edge()
+    local routed = route_engine.route_edges({
+        {
+            id = "a->c",
+            from = "a",
+            to = "c",
+            from_layer = 0,
+            to_layer = 1,
+            from_rect = { x = 0.0, y = 0.0, width = 100.0, height = 60.0 },
+            to_rect = { x = 0.0, y = 160.0, width = 100.0, height = 60.0 },
+        },
+    })
+
+    local points = routed[1].route_points
+    assert(math.abs(points[1][1] - 50.0) >= 20.0, "single downward edge should not use the button center lane on source")
+    assert(math.abs(points[4][1] - 50.0) >= 20.0, "single downward edge should not use the button center lane on target")
+    assert(points[4][2] < 160.0, "single downward edge should terminate outside the target node")
+end
+
 local function _test_projection_exposes_full_names_and_display_edges()
     local architecture = _analyze_architecture()
     local utils_view = architecture.views["core.utils"]
@@ -810,6 +879,9 @@ return {
         { name = "extended_config_classifies_tests_and_scripts",              run = _test_extended_config_classifies_tests_and_scripts },
         { name = "cycle_baseline_rejects_unexpected_cycles",                  run = _test_cycle_baseline_rejects_unexpected_cycles },
         { name = "route_engine_emits_orthogonal_paths_without_exact_overlap", run = _test_route_engine_emits_orthogonal_paths_without_exact_overlap },
+        { name = "route_engine_spreads_cross_layer_ports_away_from_center",   run = _test_route_engine_spreads_cross_layer_ports_away_from_center },
+        { name = "route_engine_uses_side_ports_for_same_layer_edges",         run = _test_route_engine_uses_side_ports_for_same_layer_edges },
+        { name = "route_engine_avoids_top_bottom_button_lane_for_single_edge", run = _test_route_engine_avoids_top_bottom_button_lane_for_single_edge },
         { name = "projection_exposes_full_names_and_display_edges",           run = _test_projection_exposes_full_names_and_display_edges },
         { name = "build_includes_metadata_for_project_root_and_config_path",  run = _test_build_includes_metadata_for_project_root_and_config_path },
         { name = "cli_scan_writes_metadata",                                  run = _test_cli_scan_writes_metadata },

@@ -4,6 +4,18 @@ local function _has_ui_method(ui, method_name)
   return ui ~= nil and type(ui[method_name]) == "function"
 end
 
+local function _clear_control_text(ui, name)
+  if not name or ui == nil then
+    return
+  end
+  if _has_ui_method(ui, "set_label") then
+    ui:set_label(name, "")
+  end
+  if _has_ui_method(ui, "set_button") then
+    ui:set_button(name, "")
+  end
+end
+
 function ui_controls.set_control_state(ui, name, options)
   if not name or ui == nil then
     return
@@ -46,6 +58,13 @@ function ui_controls.reset_choice_screen(ui, screen)
   end
 
   ui_controls.set_control_state(ui, screen.root, { visible = false })
+  _clear_control_text(ui, screen.title)
+  _clear_control_text(ui, screen.body)
+  _clear_control_text(ui, screen.confirm)
+  _clear_control_text(ui, screen.cancel)
+  ui_controls.set_control_state(ui, screen.confirm, { visible = false, touch_enabled = false })
+  ui_controls.set_control_state(ui, screen.cancel, { visible = false, touch_enabled = false })
+  ui_controls.set_controls_state(ui, screen.option_buttons, { visible = false, touch_enabled = false })
   ui_controls.set_controls_state(ui, screen.option_buttons, { touch_enabled = false })
   ui_controls.set_controls_state(ui, screen.slot_labels, { visible = false, touch_enabled = false })
   ui_controls.set_controls_state(ui, screen.slot_projections, { visible = false, touch_enabled = false })

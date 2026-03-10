@@ -1190,6 +1190,73 @@ local function _test_ui_sync_defers_choice_modal_during_wait_move_anim()
   _assert_eq(opened, 0, "wait_move_anim should defer opening choice modal")
 end
 
+local function _test_ui_sync_step_choice_timeout_reopens_remote_choice_for_local_owner()
+  local ui_view_service = require("src.presentation.runtime.view")
+  local ui_model = require("src.presentation.model")
+  local ui_sync_ports = require("src.presentation.runtime.ports.ui_sync_ports")
+  local common = require("src.presentation.runtime.ports.common")
+  local runtime_ports_module = require("src.core.ports.runtime_ports")
+  local opened = 0
+  local game = {
+    turn = {
+      phase = "wait_choice",
+      current_player_index = 1,
+      turn_count = 1,
+      pending_choice = {
+        id = 10,
+        kind = "remote_dice_value",
+        route_key = "remote",
+        owner_role_id = 1,
+        title = "遥控骰子",
+        body_lines = { "A" },
+        options = { { id = 1, label = "1" } },
+        allow_cancel = true,
+        cancel_label = "取消",
+        meta = { player_id = 1, item_id = 2004, dice_count = 1 },
+      },
+    },
+    players = {
+      [1] = { id = 1, name = "P1", cash = 0, auto = false, is_ai = false, inventory = { items = {} }, eliminated = false },
+    },
+  }
+  local state = {
+    ui = ui_view_service.build_ui_state(),
+    ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY" }),
+    ui_dirty = false,
+    ui_model = nil,
+    _log_once = {},
+  }
+  _bind_ui_runtime(state)
+
+  _with_patches({
+    { target = ui_view_service, key = "open_choice_modal", value = function()
+      opened = opened + 1
+    end },
+    { target = ui_model, key = "build", value = function()
+      return {
+        current_player_id = 1,
+        panel = { turn_label = "" },
+        board = {},
+        choice = {
+          id = 10,
+          kind = "remote_dice_value",
+          route_key = "remote",
+          options = { { id = 1, label = "1" } },
+          allow_cancel = true,
+          meta = { player_id = 1, item_id = 2004, dice_count = 1 },
+        },
+      }
+    end },
+    { target = runtime_ports_module, key = "resolve_roles", value = function()
+      return {}
+    end },
+  }, function()
+    ui_sync_ports.build(common).step_choice_timeout(game, state, 0.1)
+  end)
+
+  _assert_eq(opened, 1, "step_choice_timeout should reopen remote choice for local owner")
+end
+
 local function _test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop()
   local ui_view_service = require("src.presentation.runtime.view")
   local ui_model = require("src.presentation.model")
@@ -1808,6 +1875,7 @@ return {
   { name = "_test_ui_sync_defers_choice_modal_during_wait_action_anim", run = _test_ui_sync_defers_choice_modal_during_wait_action_anim },
   { name = "_test_ui_sync_opens_choice_modal_after_wait_action_anim", run = _test_ui_sync_opens_choice_modal_after_wait_action_anim },
   { name = "_test_ui_sync_defers_choice_modal_during_wait_move_anim", run = _test_ui_sync_defers_choice_modal_during_wait_move_anim },
+  { name = "_test_ui_sync_step_choice_timeout_reopens_remote_choice_for_local_owner", run = _test_ui_sync_step_choice_timeout_reopens_remote_choice_for_local_owner },
   { name = "_test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop", run = _test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop },
   { name = "_test_popup_defer_policy_queues_and_replays_in_order", run = _test_popup_defer_policy_queues_and_replays_in_order },
   { name = "_test_popup_renderer_switch_popup_canvas_restores_client_role_nil", run = _test_popup_renderer_switch_popup_canvas_restores_client_role_nil },

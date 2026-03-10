@@ -1,6 +1,7 @@
 local turn_ui_sync_shared = require("src.core.ui_sync.turn_ui_sync_shared")
 local runtime_state = require("src.core.state_access.runtime_state")
 local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
+local choice_ui_state = require("src.presentation.runtime.ports.ui_sync.choice_ui_state")
 
 local ui_model_sync = {}
 
@@ -42,7 +43,10 @@ function ui_model_sync.refresh_from_dirty(game, state, dirty, common)
       ui_refreshed = true
       local phase = game and game.turn and game.turn.phase or nil
       if next_model.choice and phase ~= "wait_action_anim" and phase ~= "wait_move_anim" then
-        ui_view.open_choice_modal(state, next_model.choice, next_model.market)
+        local route_key = choice_ui_state.resolve_route_key(next_model.choice)
+        if route_key == "base_inline" or choice_ui_state.should_reconcile(game, state, next_model.choice) then
+          ui_view.open_choice_modal(state, next_model.choice, next_model.market)
+        end
       end
     end
     runtime_state.set_ui_dirty(state, false)

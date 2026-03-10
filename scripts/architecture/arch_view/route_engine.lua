@@ -2,9 +2,11 @@ local common = require("arch_view.common")
 
 local route_engine = {}
 
-local SAME_LAYER_LANE_STEP = 24.0
-local CROSS_LAYER_LANE_STEP = 14.0
-local NODE_PORT_STEP = 14.0
+local SAME_LAYER_LANE_STEP = 30.0
+local CROSS_LAYER_LANE_STEP = 22.0
+local NODE_PORT_STEP = 24.0
+local NODE_EDGE_GAP = 14.0
+local NODE_BUTTON_EXCLUSION_HALF_WIDTH = 26.0
 
 local function _copy_point(point)
   return { point[1], point[2] }
@@ -68,7 +70,12 @@ local function _port_offset(index_info)
   if index_info == nil then
     return 0.0
   end
-  return ((index_info.index or 1) - ((index_info.count or 1) + 1) / 2.0) * NODE_PORT_STEP
+  local count = index_info.count or 1
+  local offset = ((index_info.index or 1) - (count + 1) / 2.0) * NODE_PORT_STEP
+  if count > 1 and math.abs(offset) < 0.001 then
+    return NODE_PORT_STEP * 0.5
+  end
+  return offset
 end
 
 local function _lane_offset(index_info, same_layer)
@@ -79,35 +86,119 @@ local function _lane_offset(index_info, same_layer)
   return ((index_info.index or 1) - 1) * step
 end
 
+local function _node_center_x(rect)
+  return rect.x + rect.width / 2.0
+end
+
+local function _node_center_y(rect)
+  return rect.y + rect.height / 2.0
+end
+
+local function _edge_horizontal_bias(edge, index_info)
+  local from_center = _node_center_x(edge.from_rect)
+  local to_center = _node_center_x(edge.to_rect)
+  if to_center > from_center then
+    return 1.0
+  end
+  if to_center < from_center then
+    return -1.0
+  end
+  if index_info ~= nil and (index_info.index or 1) <= ((index_info.count or 1) / 2.0) then
+    return -1.0
+  end
+  return 1.0
+end
+
+local function _clamp(value, minimum, maximum)
+  if value < minimum then
+    return minimum
+  end
+  if value > maximum then
+    return maximum
+  end
+  return value
+end
+
+local function _apply_top_bottom_exclusion(edge, rect, raw_offset, index_info)
+  local max_offset = math.max(0.0, rect.width / 2.0 - NODE_EDGE_GAP - 6.0)
+  local offset = _clamp(raw_offset, -max_offset, max_offset)
+  if math.abs(offset) >= NODE_BUTTON_EXCLUSION_HALF_WIDTH then
+    return offset
+  end
+
+  local bias = _edge_horizontal_bias(edge, index_info)
+  local shifted = bias * NODE_BUTTON_EXCLUSION_HALF_WIDTH
+  return _clamp(shifted, -max_offset, max_offset)
+end
+
+local function _top_port(edge, rect, raw_offset, index_info)
+  local offset = _apply_top_bottom_exclusion(edge, rect, raw_offset, index_info)
+  return _node_center_x(rect) + offset, rect.y - NODE_EDGE_GAP
+end
+
+local function _bottom_port(edge, rect, raw_offset, index_info)
+  local offset = _apply_top_bottom_exclusion(edge, rect, raw_offset, index_info)
+  return _node_center_x(rect) + offset, rect.y + rect.height + NODE_EDGE_GAP
+end
+
+local function _left_port(rect, raw_offset)
+  local max_offset = math.max(0.0, rect.height / 2.0 - NODE_EDGE_GAP - 6.0)
+  local offset = _clamp(raw_offset, -max_offset, max_offset)
+  return rect.x - NODE_EDGE_GAP, _node_center_y(rect) + offset
+end
+
+local function _right_port(rect, raw_offset)
+  local max_offset = math.max(0.0, rect.height / 2.0 - NODE_EDGE_GAP - 6.0)
+  local offset = _clamp(raw_offset, -max_offset, max_offset)
+  return rect.x + rect.width + NODE_EDGE_GAP, _node_center_y(rect) + offset
+end
+
 local function _route_same_layer(edge, bucket_info)
   local from_rect = edge.from_rect
   local to_rect = edge.to_rect
   local from_offset = _port_offset(bucket_info.outgoing[edge.id])
   local to_offset = _port_offset(bucket_info.incoming[edge.id])
   local lane_offset = _lane_offset(bucket_info.lanes[edge.id], true)
-  local lane_y = math.min(from_rect.y, to_rect.y) - 34.0 - lane_offset
-  local from_x = from_rect.x + from_rect.width / 2.0 + from_offset
-  local to_x = to_rect.x + to_rect.width / 2.0 + to_offset
+  local from_x, from_y
+  local to_x, to_y
+  local lane_x
+
+  if _node_center_x(to_rect) >= _node_center_x(from_rect) then
+    from_x, from_y = _right_port(from_rect, from_offset)
+    to_x, to_y = _left_port(to_rect, to_offset)
+    lane_x = ((from_x + to_x) / 2.0) + lane_offset
+  else
+    from_x, from_y = _left_port(from_rect, from_offset)
+    to_x, to_y = _right_port(to_rect, to_offset)
+    lane_x = ((from_x + to_x) / 2.0) - lane_offset
+  end
 
   return {
-    { from_x, from_rect.y },
-    { from_x, lane_y },
-    { to_x, lane_y },
-    { to_x, to_rect.y },
+    { from_x, from_y },
+    { lane_x, from_y },
+    { lane_x, to_y },
+    { to_x, to_y },
   }
 end
 
 local function _route_cross_layer(edge, bucket_info)
   local from_rect = edge.from_rect
   local to_rect = edge.to_rect
-  local from_offset = _port_offset(bucket_info.outgoing[edge.id])
-  local to_offset = _port_offset(bucket_info.incoming[edge.id])
+  local from_index = bucket_info.outgoing[edge.id]
+  local to_index = bucket_info.incoming[edge.id]
+  local from_offset = _port_offset(from_index)
+  local to_offset = _port_offset(to_index)
   local lane_offset = _lane_offset(bucket_info.lanes[edge.id], false)
+  local start_x, start_y
+  local end_x, end_y
 
-  local start_x = from_rect.x + from_rect.width / 2.0 + from_offset
-  local start_y = from_rect.y + from_rect.height
-  local end_x = to_rect.x + to_rect.width / 2.0 + to_offset
-  local end_y = to_rect.y
+  if edge.to_layer > edge.from_layer then
+    start_x, start_y = _bottom_port(edge, from_rect, from_offset, from_index)
+    end_x, end_y = _top_port(edge, to_rect, to_offset, to_index)
+  else
+    start_x, start_y = _top_port(edge, from_rect, from_offset, from_index)
+    end_x, end_y = _bottom_port(edge, to_rect, to_offset, to_index)
+  end
   local lane_y = ((start_y + end_y) / 2.0) + lane_offset
 
   return {

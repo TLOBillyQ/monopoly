@@ -2253,6 +2253,119 @@ local function _test_tick_ui_sync_countdown_uses_runtime_pending_choice_without_
     "countdown should use runtime pending choice elapsed seconds")
 end
 
+local function _test_tick_choice_timeout_warning_ignores_non_modal_or_non_local_choice()
+  local choice_ui_state = require("src.presentation.runtime.ports.ui_sync.choice_ui_state")
+  local warned = {}
+
+  local function _run_case(choice, state, current_player_index)
+    local g = _new_game()
+    g.turn.current_player_index = current_player_index or 1
+    g.turn.phase = "wait_choice"
+    g.turn.pending_choice = choice
+    runtime_state.set_pending_choice(state, choice, { choice_id = choice.id, elapsed_seconds = 0 })
+    tick_choice_timeout.step(g, state, 0.1, {
+      on_pending_choice = function() end,
+      is_choice_active = function()
+        return false
+      end,
+      resolve_choice_ui_state = function(game_ctx, state_ctx, active_choice)
+        return choice_ui_state.resolve_gate_state(game_ctx, state_ctx, active_choice)
+      end,
+      build_action = function()
+        return nil
+      end,
+      dispatch_action_with_close_choice = function() end,
+    })
+  end
+
+  support.with_patches({
+    { target = logger, key = "warn", value = function(...)
+      warned[#warned + 1] = table.concat({ ... }, " ")
+    end },
+  }, function()
+    local base_inline_state = _build_loop_state()
+    runtime_state.set_ui_model(base_inline_state, { current_player_id = 1 })
+    _run_case({
+      id = 810,
+      kind = "item_phase_choice",
+      route_key = "base_inline",
+      owner_role_id = 1,
+      uses_item_slots = true,
+      options = { { id = 2001, label = "路障卡" } },
+      meta = { player_id = 1, phase = "pre_action" },
+    }, base_inline_state, 1)
+
+    local market_state = _build_loop_state()
+    market_state.ui.market_active = true
+    runtime_state.set_ui_model(market_state, { current_player_id = 1 })
+    _run_case({
+      id = 811,
+      kind = "market_buy",
+      route_key = "market",
+      owner_role_id = 1,
+      options = { { id = 1, label = "A" } },
+      meta = { player_id = 1 },
+    }, market_state, 1)
+
+    local ai_state = _build_loop_state()
+    runtime_state.set_ui_model(ai_state, { current_player_id = 2 })
+    _run_case({
+      id = 812,
+      kind = "landing_optional_effect",
+      route_key = "secondary_confirm",
+      owner_role_id = 2,
+      options = { { id = "buy_land", label = "购买地块" } },
+      meta = { player_id = 2, tile_id = 1, effect_ids = { "buy_land" } },
+    }, ai_state, 2)
+  end)
+
+  assert(#warned == 0, "non-modal or non-local pending choices should not log missing-ui warning")
+end
+
+local function _test_tick_choice_timeout_warning_keeps_local_modal_choice()
+  local choice_ui_state = require("src.presentation.runtime.ports.ui_sync.choice_ui_state")
+  local warned = {}
+  local g = _new_game()
+  local state = _build_loop_state()
+  local choice = {
+    id = 813,
+    kind = "remote_dice_value",
+    route_key = "remote",
+    owner_role_id = 1,
+    options = { { id = 1, label = "1" } },
+    meta = { player_id = 1, item_id = gameplay_rules.item_ids.remote_dice, dice_count = 1 },
+  }
+  g.turn.current_player_index = 1
+  g.turn.phase = "wait_choice"
+  g.turn.pending_choice = choice
+  runtime_state.set_pending_choice(state, choice, { choice_id = choice.id, elapsed_seconds = 0 })
+  runtime_state.set_ui_model(state, { current_player_id = 1 })
+
+  support.with_patches({
+    { target = logger, key = "warn", value = function(...)
+      warned[#warned + 1] = table.concat({ ... }, " ")
+    end },
+  }, function()
+    tick_choice_timeout.step(g, state, 0.1, {
+      on_pending_choice = function() end,
+      is_choice_active = function()
+        return false
+      end,
+      resolve_choice_ui_state = function(game_ctx, state_ctx, active_choice)
+        return choice_ui_state.resolve_gate_state(game_ctx, state_ctx, active_choice)
+      end,
+      build_action = function()
+        return nil
+      end,
+      dispatch_action_with_close_choice = function() end,
+    })
+  end)
+
+  assert(#warned == 1, "local modal choice should still log missing-ui warning")
+  assert(string.find(warned[1], "runtime pending choice active without ui.choice_active", 1, true) ~= nil,
+    "local modal warning should keep original message")
+end
+
 local function _test_turn_prompt_initialized_for_first_player()
   local g = _new_game()
   local current_player = g:current_player()
@@ -3568,6 +3681,8 @@ return {
   _test_auto_runner_not_advanced_when_input_blocked = _test_auto_runner_not_advanced_when_input_blocked,
   _test_tick_choice_timeout_uses_runtime_pending_choice_without_ui_choice_screen = _test_tick_choice_timeout_uses_runtime_pending_choice_without_ui_choice_screen,
   _test_tick_ui_sync_countdown_uses_runtime_pending_choice_without_ui_choice_screen = _test_tick_ui_sync_countdown_uses_runtime_pending_choice_without_ui_choice_screen,
+  _test_tick_choice_timeout_warning_ignores_non_modal_or_non_local_choice = _test_tick_choice_timeout_warning_ignores_non_modal_or_non_local_choice,
+  _test_tick_choice_timeout_warning_keeps_local_modal_choice = _test_tick_choice_timeout_warning_keeps_local_modal_choice,
   _test_auto_runner_depends_on_current_player_auto = _test_auto_runner_depends_on_current_player_auto,
   _test_afk_auto_host_enters_auto_after_timeout_in_start_phase = _test_afk_auto_host_enters_auto_after_timeout_in_start_phase,
   _test_afk_auto_host_enters_auto_after_timeout_in_wait_choice = _test_afk_auto_host_enters_auto_after_timeout_in_wait_choice,

@@ -29,6 +29,8 @@ return {
     _case("_test_auto_runner_human_turn_not_auto_advanced"),
     _case("_test_auto_runner_not_advanced_when_input_blocked"),
     _case("_test_auto_runner_depends_on_current_player_auto"),
+    _case("_test_tick_choice_timeout_warning_ignores_non_modal_or_non_local_choice"),
+    _case("_test_tick_choice_timeout_warning_keeps_local_modal_choice"),
     _case("_test_choice_auto_policy_wait_and_timeout_both_cancel_market_buy"),
     _case("_test_popup_countdown_uses_effective_modal_timeout"),
     _case("_test_market_countdown_uses_double_action_timeout"),
