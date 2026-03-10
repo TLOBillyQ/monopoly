@@ -4,20 +4,7 @@ local layout_renderer = require("arch_view.layout_renderer")
 
 local projection = {}
 
-local MIXED_LEAF_SUFFIX = "|file"
-
-local function _mixed_leaf_id(child_name)
-    return child_name .. MIXED_LEAF_SUFFIX
-end
-
-local function _is_mixed_leaf(node_id)
-    return tostring(node_id):sub(- #MIXED_LEAF_SUFFIX) == MIXED_LEAF_SUFFIX
-end
-
 local function _node_child_name(node_id)
-    if _is_mixed_leaf(node_id) then
-        return node_id:sub(1, #node_id - #MIXED_LEAF_SUFFIX)
-    end
     return node_id
 end
 
@@ -65,9 +52,8 @@ end
 local function _module_to_node(child_info)
     local module_node_map = {}
     for child_name, info in common.sorted_pairs(child_info) do
-        local has_descendants = next(info.descendant_modules) ~= nil
         if info.exact_module ~= nil then
-            module_node_map[info.exact_module] = has_descendants and _mixed_leaf_id(child_name) or child_name
+            module_node_map[info.exact_module] = child_name
         end
         for module_id in common.sorted_pairs(info.descendant_modules) do
             module_node_map[module_id] = child_name
@@ -139,7 +125,7 @@ local function _display_label_for_node(node_id, child_info, modules)
     local child_name = _node_child_name(node_id)
     local info = child_info[child_name]
     local exact_module = info and info.exact_module or nil
-    if exact_module ~= nil then
+    if exact_module ~= nil and next(info.descendant_modules) == nil then
         local source_file_name = common.source_filename_base(modules[exact_module] and modules[exact_module].source_path or
         nil)
         if source_file_name ~= nil and source_file_name ~= "" then
@@ -153,9 +139,6 @@ local function _full_name_for_node(node_id, prefix_segments, child_info, modules
     local child_name = _node_child_name(node_id)
     local info = child_info[child_name]
     if info and info.exact_module ~= nil and next(info.descendant_modules) == nil then
-        return _stripped_module_name(info.exact_module)
-    end
-    if info and _is_mixed_leaf(node_id) and info.exact_module ~= nil then
         return _stripped_module_name(info.exact_module)
     end
 
@@ -410,7 +393,7 @@ local function _build_view(architecture, prefix_segments)
         local info = child_info[child_name]
         local exact_module = info and info.exact_module or nil
         local has_descendants = info ~= nil and next(info.descendant_modules) ~= nil or false
-        local leaf = exact_module ~= nil and not has_descendants or _is_mixed_leaf(node_id)
+        local leaf = exact_module ~= nil and not has_descendants
         local child_prefix = common.copy_array(prefix_segments)
         child_prefix[#child_prefix + 1] = child_name
         local source_file_name = exact_module and

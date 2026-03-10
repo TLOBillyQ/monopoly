@@ -27,10 +27,22 @@ return {
   },
   forbidden_dependency_rules = {
     {
+      name = "presentation_no_game",
+      description = "presentation layer must not require src.game.* directly",
+      from = { "^src%.presentation%..+" },
+      to = { "^src%.game%..+" },
+    },
+    {
       name = "presentation_input_no_game",
       description = "interaction layer must not require src.game.* directly",
       from = { "^src%.presentation%.input%..+" },
       to = { "^src%.game%..+" },
+    },
+    {
+      name = "core_no_flow",
+      description = "core layer must not depend on src.game.flow.* directly",
+      from = { "^src%.core%..+" },
+      to = { "^src%.game%.flow%..+" },
     },
     {
       name = "core_ports_no_gameplay",

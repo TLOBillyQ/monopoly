@@ -72,6 +72,7 @@ local guard_scripts = {
   { name = "gameplay_loop_no_ui", module_name = "guards.gameplay_loop_no_ui", path = "tests/guards/gameplay_loop_no_ui.lua" },
   { name = "forbidden_globals", module_name = "guards.forbidden_globals", path = "tests/guards/forbidden_globals.lua" },
   { name = "arch_view_guard", module_name = "guards.arch_view_guard", path = "tests/guards/arch_view_guard.lua" },
+  { name = "arch_view_extended_guard", module_name = "guards.arch_view_extended_guard", path = "tests/guards/arch_view_extended_guard.lua" },
 }
 
 local function _clone_case(test)

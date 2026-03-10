@@ -11,6 +11,7 @@ local layout = require("arch_view.layers")
 local route_engine = require("arch_view.route_engine")
 local source_scan = require("arch_view.source_scan")
 local config = require("monopoly_architecture")
+local extended_config = require("monopoly_architecture_extended")
 
 local cached_architecture = nil
 local tmp_root = common.system_tmp_dir() .. "/monopoly_arch_view_test_output"
@@ -240,6 +241,34 @@ local function _test_projection_builds_root_and_game_views()
     assert(#(game_node.outgoing_dependencies or {}) > 0, "game node should expose outgoing dependency indicators")
 end
 
+local function _test_projection_collapses_package_init_nodes_into_single_drillable_node()
+    local architecture = _analyze_architecture()
+    local root_view = architecture.views.root
+    local game_view = architecture.views.game
+    local presentation_view = architecture.views.presentation
+
+    for _, view in ipairs({ root_view, game_view, presentation_view }) do
+        for _, node in ipairs(view.nodes or {}) do
+            assert(
+                tostring(node.id):find("|file", 1, true) == nil,
+                "projection should not emit duplicate init leaf nodes: " .. tostring(node.id)
+            )
+        end
+    end
+
+    local app_node = nil
+    for _, node in ipairs(root_view.nodes or {}) do
+        if node.id == "app" then
+            app_node = node
+            break
+        end
+    end
+    assert(app_node ~= nil, "root view should keep a single app node")
+    _assert_eq(app_node.display_label, "app", "package nodes with descendants should display namespace label")
+    assert(app_node.drillable == true, "package nodes with descendants should remain drillable")
+    assert(app_node.leaf == false, "package nodes with descendants should not be marked leaf")
+end
+
 local function _test_config_classifies_runtime_game_and_ports()
     local architecture = _analyze_architecture()
 
@@ -257,6 +286,25 @@ local function _test_config_classifies_runtime_game_and_ports()
         true,
         "core ports should be marked abstract"
     )
+end
+
+local function _test_extended_config_classifies_tests_and_scripts()
+    local architecture, err = build.analyze(extended_config)
+    if architecture == nil then
+        error(err)
+    end
+
+    _assert_eq(
+        architecture.modules["tests.guard"].component,
+        "tests",
+        "extended config should classify tests entrypoints"
+    )
+    _assert_eq(
+        architecture.modules["scripts.architecture.arch_view.build"].component,
+        "architecture_scripts",
+        "extended config should classify architecture scripts"
+    )
+    assert(architecture.check ~= nil and architecture.check.ok == true, "extended config should pass check")
 end
 
 local function _test_cycle_baseline_rejects_unexpected_cycles()
@@ -439,6 +487,16 @@ local function _test_cli_supports_external_project_root_and_config()
     assert(payload.modules["src.demo.alpha"] ~= nil, "external project scan should include alpha module")
     assert(payload.modules["src.demo.beta"] ~= nil, "external project scan should include beta module")
     _assert_eq(payload.modules["src.demo.alpha"].component, "demo", "external config should classify modules")
+end
+
+local function _test_cli_check_supports_extended_config()
+    cli.run({
+        "check",
+        "--config", "scripts/architecture/monopoly_architecture_extended.lua",
+    }, {
+        script_dir = "scripts/architecture",
+        default_project_root = ".",
+    })
 end
 
 local function _test_viewer_command_writes_static_bundle()
@@ -747,13 +805,16 @@ return {
         { name = "source_scan_treats_init_as_package_entry",                  run = _test_source_scan_treats_init_as_package_entry },
         { name = "source_scan_resolves_relative_root_against_project_root",   run = _test_source_scan_resolves_relative_root_against_project_root },
         { name = "projection_builds_root_and_game_views",                     run = _test_projection_builds_root_and_game_views },
+        { name = "projection_collapses_package_init_nodes_into_single_drillable_node", run = _test_projection_collapses_package_init_nodes_into_single_drillable_node },
         { name = "config_classifies_runtime_game_and_ports",                  run = _test_config_classifies_runtime_game_and_ports },
+        { name = "extended_config_classifies_tests_and_scripts",              run = _test_extended_config_classifies_tests_and_scripts },
         { name = "cycle_baseline_rejects_unexpected_cycles",                  run = _test_cycle_baseline_rejects_unexpected_cycles },
         { name = "route_engine_emits_orthogonal_paths_without_exact_overlap", run = _test_route_engine_emits_orthogonal_paths_without_exact_overlap },
         { name = "projection_exposes_full_names_and_display_edges",           run = _test_projection_exposes_full_names_and_display_edges },
         { name = "build_includes_metadata_for_project_root_and_config_path",  run = _test_build_includes_metadata_for_project_root_and_config_path },
         { name = "cli_scan_writes_metadata",                                  run = _test_cli_scan_writes_metadata },
         { name = "cli_supports_external_project_root_and_config",             run = _test_cli_supports_external_project_root_and_config },
+        { name = "cli_check_supports_extended_config",                        run = _test_cli_check_supports_extended_config },
         { name = "viewer_command_writes_static_bundle",                       run = _test_viewer_command_writes_static_bundle },
         { name = "cli_viewer_supports_in_json",                               run = _test_cli_viewer_supports_in_json },
         { name = "common_builds_open_command",                                run = _test_common_builds_open_command },

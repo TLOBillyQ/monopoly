@@ -154,6 +154,12 @@ function common.current_dir()
         if env_path ~= nil and env_path ~= "" then
             return common.normalize_path(env_path)
         end
+        local process = io.popen("cd")
+        if process then
+            local path = process:read("*l") or "."
+            process:close()
+            return common.normalize_path(path)
+        end
         return "."
     end
 
