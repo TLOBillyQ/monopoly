@@ -6,7 +6,6 @@ local game_runtime_bootstrap = require("src.app.bootstrap.game_runtime_bootstrap
 local gameplay_loop = require("src.game.flow.turn.loop")
 local ui_bootstrap = require("src.app.bootstrap.ui_bootstrap")
 local startup_policy = require("src.app.bootstrap.startup_policy")
-local profile_rotation = require("src.app.testing.profile_rotation")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 
 logger.configure_host_runtime({
@@ -37,32 +36,15 @@ logger.info(
   "[Eggy]",
   "startup policy:",
   "release_mode=" .. tostring(startup.release_mode),
-  "release_allow_test_profile=" .. tostring(startup.release_allow_test_profile),
-  "resolved_profile=" .. tostring(startup.profile_name),
-  "profile_rotation=" .. tostring(startup.profile_rotation),
-  "rotation_turns=" .. tostring(startup.rotation_turns),
-  "ai_mode=" .. tostring(startup.ai_mode),
-  "local_human_role_id=" .. tostring(startup.local_human_role_id)
+  "resolved_profile=" .. tostring(startup.profile_name)
 )
 if startup.release_mode then
   gameplay_rules.debug_log_enabled = false
 end
 
 runtime_install.install()
-local effective_profile = startup.profile_name
-if startup.profile_rotation then
-  profile_rotation.init({
-    turns_per_profile = startup.rotation_turns,
-  })
-  effective_profile = profile_rotation.current_profile_name() or "default"
-end
 local state = game_startup.build_state(function() return current_game_ref[1] end, {
-  profile_name = effective_profile,
-  ai_mode = startup.ai_mode,
-  local_human_role_id = startup.local_human_role_id,
-  release_mode = startup.release_mode,
-  force_non_p1_ai = startup.force_non_p1_ai,
-  fail_fast_when_roles_empty = startup.fail_fast_when_roles_empty,
+  profile_name = startup.profile_name,
 })
 
 local function _is_debug_log_enabled()

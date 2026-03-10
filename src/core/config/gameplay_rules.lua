@@ -18,8 +18,6 @@ local gameplay_rules = {
   item_slot_highlight_anim_delay_seconds = 0.35,
   ai_auto_turn_interval_seconds = 1.0,
   afk_auto_host_seconds = 90,
-  -- 临时测试开关：开启后将非1号玩家视作AI，便于后续整体清理。
-  test_force_non_p1_ai = true,
 
   turn_limit = 1000,
 

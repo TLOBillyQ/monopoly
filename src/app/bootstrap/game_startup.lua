@@ -104,74 +104,8 @@ local function _build_startup_roster(max_players)
   return roster
 end
 
-local function _build_non_p1_ai_map(player_count, force_enabled)
-  local enabled = gameplay_rules.test_force_non_p1_ai == true
-  if force_enabled ~= nil then
-    enabled = force_enabled == true
-  end
-  if not enabled then
-    return nil
-  end
-  local ai = {}
-  for i = 2, player_count or 0 do
-    ai[i] = true
-  end
-  return ai
-end
-
-local function _find_role_index(role_roster, role_id)
-  local normalized_role_id = role_id_utils.normalize(role_id)
-  if normalized_role_id == nil then
-    return nil
-  end
-  for index, role in ipairs(role_roster or {}) do
-    if role and role.synthetic ~= true and role_id_utils.equals(role.role_id, normalized_role_id) then
-      return index
-    end
-  end
-  return nil
-end
-
-local function _build_all_except_human_ai_map(player_count, human_index)
-  local ai = {}
-  for index = 1, player_count or 0 do
-    if index ~= human_index then
-      ai[index] = true
-    end
-  end
-  return ai
-end
-
-local function _count_real_roles(role_roster)
-  local count = 0
-  for _, role in ipairs(role_roster or {}) do
-    if role and role.synthetic ~= true then
-      count = count + 1
-    end
-  end
-  return count
-end
-
-local function _build_startup_ai_map(role_roster, opts)
-  opts = opts or {}
-  local ai_mode = opts.ai_mode or "default"
+local function _build_startup_ai_map(role_roster)
   local ai = nil
-  local player_count = opts.player_count or 0
-  local real_role_count = opts.real_role_count or 0
-  if ai_mode ~= "all_except_local_human" then
-    ai = _build_non_p1_ai_map(opts.player_count, opts.force_non_p1_ai)
-  else
-    local human_index = _find_role_index(role_roster, opts.local_human_role_id)
-    if human_index == nil and player_count > 0 then
-      logger.warn(
-        "[Eggy]",
-        "startup ai override missing local human role, fallback to player1 human",
-        "local_human_role_id=" .. tostring(opts.local_human_role_id)
-      )
-      human_index = 1
-    end
-    ai = _build_all_except_human_ai_map(player_count, human_index)
-  end
   for index, role in ipairs(role_roster or {}) do
     if role and role.synthetic == true then
       if ai == nil then
@@ -188,11 +122,6 @@ end
 function M.build_state(get_current_game, opts)
   opts = opts or {}
   local profile_name = opts.profile_name
-  local ai_mode = opts.ai_mode or "default"
-  local local_human_role_id = opts.local_human_role_id
-  local release_mode = opts.release_mode == true
-  local force_non_p1_ai = opts.force_non_p1_ai
-  local fail_fast_when_roles_empty = opts.fail_fast_when_roles_empty == true
   local ui = ui_view.build_ui_state()
   local state = nil
   state = {
@@ -209,14 +138,7 @@ function M.build_state(get_current_game, opts)
       local active_profile = state.active_profile_name or profile_name
       local map_cfg = test_profile_resolver.resolve_map(active_profile)
       local role_roster = _build_startup_roster(max_player_count)
-      local forced_ai = _build_startup_ai_map(role_roster, {
-        ai_mode = ai_mode,
-        local_human_role_id = local_human_role_id,
-        player_count = #role_roster,
-        real_role_count = _count_real_roles(role_roster),
-        force_non_p1_ai = force_non_p1_ai,
-        release_mode = release_mode,
-      })
+      local forced_ai = _build_startup_ai_map(role_roster)
       logger.info("[Eggy]", "使用四槽角色驱动初始化，角色数量:", tostring(#role_roster))
       local created_game = game:new({
         role_roster = role_roster,
