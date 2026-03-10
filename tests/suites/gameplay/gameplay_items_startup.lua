@@ -606,6 +606,64 @@ local function _test_choice_builders_reserve_base_inline_for_item_slots_only()
     "market vehicle replace should expose a descriptive confirm body")
 end
 
+local function _test_circle_startup_profile_second_remote_roll_reaches_nanchang_after_market_resume()
+  local g, _ = _new_profile_game("circle")
+  local player = g.players[1]
+  local remote_dice_id = gameplay_rules.item_ids.remote_dice
+  g.last_turn = {}
+  g.anim_gate_port.wait_action_anim = false
+  g.anim_gate_port.wait_move_anim = false
+
+  local first_use_result = support.executor.use_item(g, player, remote_dice_id, { by_ai = false })
+  assert(type(first_use_result) == "table" and first_use_result.waiting == true,
+    "circle first turn should open remote dice choice")
+  _open_choice(g, first_use_result.intent.choice_spec)
+  local first_pending = assert(_get_choice(g), "circle first turn should expose remote dice choice")
+  local first_choice_result = choice_resolver.resolve(g, first_pending, { option_id = 4 })
+  assert(first_choice_result and first_choice_result.stay == false,
+    "circle first turn remote dice choice should resolve")
+
+  local first_roll_state, first_roll_args = turn_roll({ game = g }, { player = player, skip_anim = true })
+  assert(first_roll_state == "move", "circle first turn should continue from roll to move")
+  local first_move_state, _ = _turn_move({ game = g }, first_roll_args)
+  assert(first_move_state == "landing", "circle first turn should land directly")
+  assert(player.position == assert(g.board:index_of_tile_id(28)), "circle first turn should land on taiyuan")
+
+  g:clear_player_temporal_flags(player)
+  g:stop_all_players_movement()
+  g.last_turn = {}
+
+  local second_use_result = support.executor.use_item(g, player, remote_dice_id, { by_ai = false })
+  assert(type(second_use_result) == "table" and second_use_result.waiting == true,
+    "circle second turn should open remote dice choice")
+  _open_choice(g, second_use_result.intent.choice_spec)
+  local second_pending = assert(_get_choice(g), "circle second turn should expose remote dice choice")
+  local second_choice_result = choice_resolver.resolve(g, second_pending, { option_id = 4 })
+  assert(second_choice_result and second_choice_result.stay == false,
+    "circle second turn remote dice choice should resolve")
+
+  local second_roll_state, second_roll_args = turn_roll({ game = g }, { player = player, skip_anim = true })
+  assert(second_roll_state == "move", "circle second turn should continue from roll to move")
+  local second_move_state, second_move_args = _turn_move({ game = g }, second_roll_args)
+  assert(second_move_state == "wait_choice", "circle second turn should pause at market interrupt")
+  local second_move_result = assert(g.last_turn and g.last_turn.move_result, "circle second turn should keep move result")
+  local second_interrupt = assert(second_move_result.market_interrupt, "circle second turn should include market interrupt")
+
+  local visited_tile_ids = {}
+  for _, idx in ipairs(second_move_result.visited or {}) do
+    local tile_ref = assert(g.board:get_tile(idx), "circle second turn visited tile should exist")
+    visited_tile_ids[#visited_tile_ids + 1] = tile_ref.id
+  end
+  assert(visited_tile_ids[1] == 39, "circle second turn should hit market first")
+  assert(second_interrupt.remaining_steps == 3, "circle second turn should leave three resumable steps after market")
+
+  g.turn.pending_choice = nil
+
+  local final_move_state, _ = _turn_move({ game = g }, second_move_args.next_args)
+  assert(final_move_state == "landing", "circle second turn should land after market resume")
+  assert(player.position == assert(g.board:index_of_tile_id(25)), "circle second turn should land on nanchang")
+end
+
 return {
   name = "gameplay_items_startup",
   tests = {
@@ -660,6 +718,10 @@ return {
     {
       name = "choice_builders_reserve_base_inline_for_item_slots_only",
       run = _test_choice_builders_reserve_base_inline_for_item_slots_only,
+    },
+    {
+      name = "circle_startup_profile_second_remote_roll_reaches_nanchang_after_market_resume",
+      run = _test_circle_startup_profile_second_remote_roll_reaches_nanchang_after_market_resume,
     },
   },
 }

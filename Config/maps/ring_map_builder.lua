@@ -95,6 +95,7 @@ function builder.build(opts)
     outer_next = outer_next,
     outer_prev = outer_prev,
     entry_points = {},
+    fresh_forward_next = {},
     branches = {},
     start_id = start_id,
     market_id = market_id,

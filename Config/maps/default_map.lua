@@ -105,6 +105,21 @@ entry_points[_id_at({ 5, 1 })] = { inner_id = _id_at({ 5, 2 }) }
 entry_points[_id_at({ 1, 5 })] = { inner_id = _id_at({ 2, 5 }) }
 entry_points[_id_at({ 5, 9 })] = { inner_id = _id_at({ 5, 8 }) }
 
+local fresh_forward_next = {
+  [_id_at({ 5, 2 })] = _id_at({ 5, 3 }),
+  [_id_at({ 5, 3 })] = _id_at({ 5, 4 }),
+  [_id_at({ 5, 4 })] = _id_at({ 5, 5 }),
+  [_id_at({ 4, 5 })] = _id_at({ 5, 5 }),
+  [_id_at({ 3, 5 })] = _id_at({ 4, 5 }),
+  [_id_at({ 2, 5 })] = _id_at({ 3, 5 }),
+  [_id_at({ 7, 5 })] = _id_at({ 6, 5 }),
+  [_id_at({ 6, 5 })] = _id_at({ 5, 5 }),
+  [_id_at({ 5, 7 })] = _id_at({ 5, 6 }),
+  [_id_at({ 5, 8 })] = _id_at({ 5, 7 }),
+  [_id_at({ 5, 6 })] = _id_at({ 5, 5 }),
+  [_id_at({ 8, 5 })] = _id_at({ 7, 5 }),
+}
+
 local path = {}
 for _, id in ipairs(outer_ccw_ids) do
   table.insert(path, id)
@@ -122,6 +137,7 @@ return {
   outer_next = outer_next,
   outer_prev = outer_prev,
   entry_points = entry_points,
+  fresh_forward_next = fresh_forward_next,
   branches = {},
   start_id = _id_at({ 9, 9 }),
   market_id = _id_at({ 5, 5 }),

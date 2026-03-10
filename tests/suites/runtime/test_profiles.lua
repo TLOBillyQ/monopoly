@@ -389,6 +389,17 @@ local function _test_mine_bootstraps_positions_and_inventory()
   })
 end
 
+local function _test_circle_bootstraps_position_and_inventory()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "circle")
+
+  assert(game.players[1].position == assert(game.board:index_of_tile_id(15)),
+    "circle should place p1 on tile 15")
+  _assert_inventory_counts(game.players[1], {
+    [2002] = 2,
+  })
+end
+
 local function _test_steal_bootstraps_positions_and_inventory()
   local game = _new_game()
   test_profile_bootstrap.apply(game, "steal")
@@ -634,6 +645,10 @@ return {
     {
       name = "mine_bootstraps_positions_and_inventory",
       run = _test_mine_bootstraps_positions_and_inventory,
+    },
+    {
+      name = "circle_bootstraps_position_and_inventory",
+      run = _test_circle_bootstraps_position_and_inventory,
     },
     {
       name = "steal_bootstraps_positions_and_inventory",

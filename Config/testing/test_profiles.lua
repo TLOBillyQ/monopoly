@@ -160,6 +160,31 @@ local profiles = {
       },
     },
   },
+  circle = {
+    bootstrap = {
+      players = {
+        [1] = {
+          cash = 100000,
+          position_tile_id = 15,
+          item_counts = {
+            [2002] = 2,
+          },
+        },
+        [2] = {
+          cash = 100000,
+          position_tile_id = 35,
+        },
+        [3] = {
+          cash = 100000,
+          position_tile_id = 44,
+        },
+        [4] = {
+          cash = 100000,
+          position_tile_id = 40,
+        },
+      },
+    },
+  },
   strong_card = {
     bootstrap = {
       players = {

@@ -72,6 +72,14 @@ local function _resolve_forward_next_id(map, current_id, neigh, facing, parity)
     return next_id
   end
 
+  if facing == nil then
+    local fresh_forward_next = map.fresh_forward_next or nil
+    local fresh_next_id = fresh_forward_next and fresh_forward_next[current_id] or nil
+    if fresh_next_id ~= nil then
+      return fresh_next_id
+    end
+  end
+
   if current_id == map.market_id and facing and parity then
     local exit_dir = map.turn_right[facing]
     if parity % 2 == 1 then
