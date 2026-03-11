@@ -1,57 +1,51 @@
 # Arch View
 
-`arch_view` 是本仓库的静态架构扫描器。它只分析 `src/**/*.lua` 的模块级 `require` 依赖，负责三件事：生成依赖图、按层投影视图、校验声明式边界规则。它不替代 `tests/guards/legacy_path_guard.lua`、`tests/guards/forbidden_globals.lua` 这类文本护栏；这些脚本仍负责旧路径、宿主全局 API 与运行时禁用语法的检查。
+`arch_view` 是静态架构扫描器，分析 `src/**/*.lua` 的模块级 `require` 依赖。职责：生成依赖图、按层投影视图、校验声明式边界规则。
 
-## 真源与边界
+文本护栏（旧路径、宿主全局 API、运行时禁用语法）仍由 `tests/guards/legacy_path_guard.lua`、`tests/guards/forbidden_globals.lua` 负责，arch_view 不替代它们。
 
-结构性依赖规则的唯一真源是 `scripts/arch/config.lua`。这里声明了 source roots、组件归类、抽象 Port 规则和禁止依赖边界。`tests/guards/dep_rules.lua` 现在只保留文本级硬边界，例如退休桥接路径、宿主全局 API、`state.ui_*` 直写和 `ui_port` 旁路访问；它不再维护 growth budget 或模块级 `require` 边界。
+## 真源与约束
 
-`arch_view` 不允许任何模块级循环依赖。出现任意新循环时 `arch_view check` 会直接失败，没有白名单机制。
+- 结构性依赖规则唯一真源：`scripts/arch/config.lua`
+- `tests/guards/dep_rules.lua` 只保留文本级硬边界（退休路径、宿主全局 API、`state.ui_*` 直写、`ui_port` 旁路）
+- 零模块级循环依赖，无白名单，任意新循环直接让 `check` 失败
 
 ## 命令
 
-在仓库根目录运行：
+```
+lua scripts/arch.lua check
+```
+扫描 `src/`，执行边界校验，失败则非零退出。`tests/guards/arch_view_guard.lua` 与 `tests/regression.lua` 均使用此能力；跑全部护栏用 `lua tests/guard.lua`。
 
-    lua scripts/arch.lua check
+```
+lua scripts/arch.lua
+```
+无参数：生成并打开静态 viewer，等价于 `viewer --out-dir ./tmp/arch_view --open`。
 
-这会扫描 `src/`，执行边界校验，并在失败时用非零退出码结束。`tests/guards/arch_view_guard.lua` 与 `tests/regression.lua` 使用的就是这套能力；如果只想跑所有文本护栏与 `arch_view` 护栏，执行 `lua tests/guard.lua`。
+```
+lua scripts/arch.lua viewer
+lua scripts/arch.lua viewer --out-dir <dir> [--open]
+lua scripts/arch.lua viewer --in-json <file> --out-dir <dir> [--open]
+```
+导出静态 viewer（`index.html`、`script.js`、`styles.css`、`architecture.json`、`architecture_data.js`）。有已导出 JSON 时可用 `--in-json` 跳过重扫。默认输出目录 `./tmp/arch_view`。
 
-如果要扫描其他 Lua 项目，可显式指定项目根和配置文件：
+```
+lua scripts/arch.lua scan --out /tmp/monopoly_architecture.json
+```
+导出完整机器可读数据（含 `graph`、`modules`、`layout`、`classified_edges`、`views`、`check` 等）。
 
-    lua scripts/arch.lua check --project-root /path/to/project --config /path/to/architecture.lua
+**扫描其他项目：**
 
-    lua scripts/arch.lua scan --out /tmp/monopoly_architecture.json
-
-这会导出完整机器可读数据，包含 `schema_version`、`project_root`、`config_path`、`graph`、`modules`、`layout`、`classified_edges`、`views` 与 `check`。第二阶段开始，`views[*]` 还会带上 `display_edges`、`route_points`、`indicators`、`full_name`、`incoming_dependencies`、`outgoing_dependencies` 等 viewer 渲染字段。
-
-    lua scripts/arch.lua
-
-无参数时，`arch.lua` 会直接生成并打开静态 viewer，等价于：
-
-    lua scripts/arch.lua viewer --out-dir ./tmp/arch_view --open
-
-默认输出目录是仓库根下的 `./tmp/arch_view`。
-
-    lua scripts/arch.lua viewer
-
-这会导出静态 viewer：`index.html`、`script.js`、`styles.css`、`architecture.json`、`architecture_data.js`。打开 `index.html` 即可查看，不需要本地服务。
-
-显式执行 `viewer` 但不带 `--out-dir` 时，也会默认导出到 `./tmp/arch_view`；不过它不会像无参数入口那样自动打开浏览器。
-
-如果已经有导出的 JSON，可直接复用而不重扫源码：
-
-    lua scripts/arch.lua viewer --in-json /tmp/monopoly_architecture.json --out-dir ./tmp/arch_view
-
-如果想在导出后自动打开浏览器，可加 `--open`：
-
-    lua scripts/arch.lua viewer --out-dir ./tmp/arch_view --open
-
-这里的“对齐远端 viewer 体验”采用的是静态 web viewer + 自动打开浏览器，而不是 Quil/桌面 GUI 复刻。本轮也不包含远端 `PROJECT_NOTES.md` 中的 guidance-vs-actual diff、pan/zoom、image export 和 CI 报表等 roadmap 项。
+```
+lua scripts/arch.lua check --project-root /path/to/project --config /path/to/architecture.lua
+```
 
 ## Viewer 读法
 
-根视图直接展示 `app`、`core`、`game`、`infrastructure`、`presentation` 五个顶层子树。点击非叶子节点会继续下钻；点击叶子节点会在右侧看到源码、内部依赖、外部依赖、组件、层级、抽象标记与循环标记。
+根视图展示 `app`、`core`、`game`、`infrastructure`、`presentation` 五个顶层子树。点击非叶节点下钻；点击叶节点在右侧看到源码、内外依赖、组件、层级、抽象标记与循环标记。
 
-第二阶段 viewer 额外增加了三类交互。第一，每个节点顶部/底部会出现 incoming/outgoing 依赖三角，悬浮后显示当前聚合依赖条目列表。第二，视图中央会绘制 `display_edges` 的正交折线路由与箭头，不再只在 inspector 中展示边。第三，breadcrumb 与 `Back` 现在会恢复上一视图的滚动位置与选中叶子状态，便于在多层 drill-down 之间来回查看。
+**节点颜色：**
+- 红色：子树或依赖条目涉及循环依赖
+- 绿色：含抽象契约（主要对应 `src.core.ports.*` 与 `src.game.ports.*`）
 
-红色节点、红色边或红色三角 tooltip 行表示该节点子树或该依赖条目涉及当前循环依赖。绿色节点表示它包含抽象契约，目前主要对应 `src.core.ports.*` 与 `src.game.ports.*`。叶子节点默认展示源码文件 basename，悬浮时再显示去掉顶层 `src` 前缀后的 full name。
+**交互：** 节点顶/底有 incoming/outgoing 依赖三角，悬浮显示聚合依赖列表；视图中央绘制 `display_edges` 正交折线路由；breadcrumb 与 Back 恢复上一视图的滚动位置与选中状态。

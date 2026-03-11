@@ -1,72 +1,54 @@
 # 目录边界约定
 
-本文固定重构后各目录的职责范围，防止旧耦合回流。
-
----
-
 ## 目录职责
 
 | 目录 | 职责 | 不允许 |
 |------|------|--------|
-| `src/app` | 装配层：拼接运行时端口、bootstrap、测试场景 | — |
-| `src/core` | 跨玩法共享策略与契约（日志、数值工具、配置访问器、runtime 广义契约） | 直接读取 Eggy 全局对象；塞入 UI 节点或支付面板逻辑 |
+| `src/app` | 装配：拼接运行时端口、bootstrap | — |
+| `src/core` | 跨玩法共享：日志、数值工具、配置访问、runtime 广义契约 | 直读 Eggy 全局对象；UI 节点或支付面板逻辑 |
 | `src/game/flow` | 用例编排：回合推进、意图分发、输入校验、输出端口发射 | 操作 UI 细节或宿主运行时对象 |
-| `src/game/systems` | 玩法规则：黑市、道具、地块、机会卡、移动、破产、胜负 | 决定 UI 节点名、Canvas 切换方式或宿主 API 调用顺序 |
-| `src/game/runtime` | 贴近 gameplay 的端口实现（接到 `src/game/ports/*` 契约） | 承接业务规则 |
+| `src/game/systems` | 玩法规则：黑市、道具、地块、机会卡、移动、破产、胜负 | UI 节点名、Canvas 切换、宿主 API 调用 |
+| `src/game/runtime` | gameplay 端口实现（接 `src/game/ports/*` 契约） | 承接业务规则 |
 | `src/infrastructure/runtime` | 宿主细节：运行时上下文、事件桥、默认 runtime ports | — |
 | `src/presentation` | 展示适配：input 映射、UI model 查询、Canvas 渲染、UI 事件桥接 | 根据 `choice.kind`/`meta`/商品配置自行推断业务语义 |
 
-**`src/game/flow/output_adapters/`** 属于 `flow`，不是独立 runtime 目录。这里是 turn use case 的输出桥（`intent_output_adapter`、`output_state_adapter`），服务当前用例的输出，不承载宿主能力。
-
----
+`src/game/flow/output_adapters/` 属于 `flow`，不是独立 runtime 目录。其中 `intent_output_adapter`、`output_state_adapter` 只服务 turn use case 输出，不承载宿主能力。
 
 ## Port 命名规则
 
 | 后缀 | 含义 | 示例 |
 |------|------|------|
 | `*_port.lua` | 单一窄接口契约 | `bankruptcy_feedback_port.lua` |
-| `*_ports.lua` | 同生命周期的注入 bundle | `loop_ports.lua` |
+| `*_ports.lua` | 同生命周期注入 bundle | `loop_ports.lua` |
 | `*_port_adapter.lua` | 外层对某契约的实现 | `auto_play_port_adapter.lua` |
 
 **三类 Port 目录：**
 
-- `src/core/ports/` — 宿主/运行时广义契约，必须 gameplay 无关
+- `src/core/ports/` — 宿主/运行时广义契约，gameplay 无关
 - `src/game/ports/` — systems-facing 注入契约，允许业务名词
-- `src/game/flow/turn/loop_ports.lua` — turn use case 的局部分组 override，不是通用 Port 层
-
----
+- `src/game/flow/turn/loop_ports.lua` — turn use case 局部 override，不是通用 Port 层
 
 ## 硬边界（不可违反）
 
 1. **choice 语义显式输出**：路由、确认文案、item slot、target picker、market 分页状态由用例层显式输出，presentation 只做通用 fallback。
-
 2. **choice 归属显式传递**：通过 `owner_role_id` 等显式字段传递，不允许展示层反查 `meta.player_id`。
-
 3. **market session 状态**：`active_tab`、`page_index`、`page_count` 挂在 `ChoiceSession` 显式字段，不靠 `meta` 兜底。
-
-4. **宿主逻辑不回流内层**：Eggy API、支付面板、运行时上下文、事件桥等只能在 `src/infrastructure/runtime` 或 `src/app/bootstrap`，不得回写到内层目录。
-
+4. **宿主逻辑不回流内层**：Eggy API、支付面板、运行时上下文、事件桥只能在 `src/infrastructure/runtime` 或 `src/app/bootstrap`。
 5. **破产反馈通过端口**：systems 通过 `src/game/ports/bankruptcy_feedback_port.lua` 发出语义，UI 更新由外层 adapter 决定。
-
 6. **root-state 镜像已退休**：`legacy_output_mirror.lua` 已删除，UI runtime 状态以 `state.ui_runtime` 为唯一真源。
-
-7. **loop_ports 拼装权限**：只有 `src/app/bootstrap/*`、`src/game/flow/turn/*` 与测试夹具可直接拼装 `loop_ports` 分组 override。
-
-8. **架构边界可执行真源**：`scripts/arch/config.lua`。执行命令：
+7. **loop_ports 拼装权限**：只有 `src/app/bootstrap/*`、`src/game/flow/turn/*` 与测试夹具可直接拼装 `loop_ports` override。
+8. **架构边界可执行真源**：`scripts/arch/config.lua`。
    - `lua scripts/arch.lua check` — 边界扫描
    - `lua scripts/arch.lua viewer --out-dir <dir> [--open]` — 导出静态 viewer
    - `lua tests/guard.lua` — 完整护栏
-
 9. **零模块级循环依赖**：无白名单，任意新循环直接让 `arch_view` 护栏失败。
 
----
+## 放置速查
 
-## 放置规则速查
-
-- 回合推进逻辑 → `src/game/flow`
+- 回合推进 → `src/game/flow`
 - 玩法业务规则 → `src/game/systems`
 - ViewModel 渲染 → `src/presentation`
-- 宿主能力接入端口 → `src/app/bootstrap`；宿主能力实现 → `src/infrastructure/runtime`
+- 宿主能力接入端口 → `src/app/bootstrap`；实现 → `src/infrastructure/runtime`
 - 宿主/运行时广义契约 → `src/core/ports/`
 - 玩法规则业务能力契约 → `src/game/ports/`
 - 回合循环临时 override → `src/game/flow/turn/loop_ports.lua`
