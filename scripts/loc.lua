@@ -414,7 +414,7 @@ local function main()
 
   _println(string.rep("-", 60))
 
-  local output_dir = env.script_dir
+  local output_dir = common.join_path(env.repo_root, "tmp")
   local json_path = common.join_path(output_dir, "loc_data.json")
   local chart_path = common.join_path(output_dir, "loc_trend.png")
 
