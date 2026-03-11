@@ -1,4 +1,29 @@
 (function () {
+  /* ── theme toggle ──────────────────────────────────────────── */
+  function get_preferred_theme() {
+    var stored = null;
+    try { stored = localStorage.getItem("crap_theme"); } catch (e) { /* noop */ }
+    if (stored === "dark" || stored === "light") {
+      return stored;
+    }
+    if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+      return "light";
+    }
+    return "dark";
+  }
+
+  function apply_theme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    var icon = document.querySelector(".theme_toggle_icon");
+    var label = document.querySelector(".theme_toggle_label");
+    if (icon) { icon.textContent = theme === "dark" ? "\u263E" : "\u2600"; }
+    if (label) { label.textContent = theme === "dark" ? "Dark" : "Light"; }
+    try { localStorage.setItem("crap_theme", theme); } catch (e) { /* noop */ }
+  }
+
+  /* apply immediately to avoid flash */
+  apply_theme(get_preferred_theme());
+
   function by_id(id) {
     return document.getElementById(id);
   }
@@ -146,9 +171,11 @@
       "</div>";
   }
 
-  function metric_card(label, value, note, signal) {
+  function metric_card(label, value, note, signal, risk) {
     return (
-      "<article class='metric_card'>" +
+      "<article class='metric_card'" +
+      (risk ? " data-risk='" + risk + "'" : "") +
+      ">" +
       "<div><p class='metric_label'>" +
       safe_text(label) +
       "</p><div class='metric_value'>" +
@@ -174,13 +201,14 @@
     by_id("metric_cards").innerHTML =
       metric_card("Modules", summary.module_count || 0, "Distinct source modules analyzed", "Portfolio") +
       metric_card("Functions", summary.function_count || 0, "Functions detected from luac listings", "Inventory") +
-      metric_card("Critical Hotspots", summary.critical_function_count || 0, "Above the critical risk threshold", "Action") +
-      metric_card("Average CRAP", average_crap, "Average function-level risk score", "Benchmark") +
+      metric_card("Critical Hotspots", summary.critical_function_count || 0, "Above the critical risk threshold", "Action", "critical") +
+      metric_card("Average CRAP", average_crap, "Average function-level risk score", "Benchmark", "warning") +
       metric_card(
         "Lead Module",
         lead_module ? lead_module.max_function_crap : "n/a",
         lead_module ? lead_module.source_name : "No module data",
-        "Top exposure"
+        "Top exposure",
+        "warning"
       );
   }
 
@@ -494,5 +522,14 @@
     };
 
     render_all(data, state);
+
+    /* wire theme toggle */
+    var toggle = by_id("theme_toggle");
+    if (toggle) {
+      toggle.addEventListener("click", function () {
+        var current = document.documentElement.getAttribute("data-theme") || "dark";
+        apply_theme(current === "dark" ? "light" : "dark");
+      });
+    }
   });
 })();

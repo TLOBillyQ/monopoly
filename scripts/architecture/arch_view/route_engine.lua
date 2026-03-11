@@ -6,7 +6,6 @@ local SAME_LAYER_LANE_STEP = 30.0
 local CROSS_LAYER_LANE_STEP = 22.0
 local NODE_PORT_STEP = 24.0
 local NODE_EDGE_GAP = 14.0
-local NODE_BUTTON_EXCLUSION_HALF_WIDTH = 26.0
 
 local function _copy_point(point)
   return { point[1], point[2] }
@@ -119,25 +118,15 @@ local function _clamp(value, minimum, maximum)
   return value
 end
 
-local function _apply_top_bottom_exclusion(edge, rect, raw_offset, index_info)
+local function _top_port(edge, rect, raw_offset, index_info)
   local max_offset = math.max(0.0, rect.width / 2.0 - NODE_EDGE_GAP - 6.0)
   local offset = _clamp(raw_offset, -max_offset, max_offset)
-  if math.abs(offset) >= NODE_BUTTON_EXCLUSION_HALF_WIDTH then
-    return offset
-  end
-
-  local bias = _edge_horizontal_bias(edge, index_info)
-  local shifted = bias * NODE_BUTTON_EXCLUSION_HALF_WIDTH
-  return _clamp(shifted, -max_offset, max_offset)
-end
-
-local function _top_port(edge, rect, raw_offset, index_info)
-  local offset = _apply_top_bottom_exclusion(edge, rect, raw_offset, index_info)
   return _node_center_x(rect) + offset, rect.y - NODE_EDGE_GAP
 end
 
 local function _bottom_port(edge, rect, raw_offset, index_info)
-  local offset = _apply_top_bottom_exclusion(edge, rect, raw_offset, index_info)
+  local max_offset = math.max(0.0, rect.width / 2.0 - NODE_EDGE_GAP - 6.0)
+  local offset = _clamp(raw_offset, -max_offset, max_offset)
   return _node_center_x(rect) + offset, rect.y + rect.height + NODE_EDGE_GAP
 end
 

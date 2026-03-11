@@ -4,12 +4,12 @@ local route_engine = require("arch_view.route_engine")
 local layout_renderer = {}
 
 local CANVAS_WIDTH = 1480.0
-local NODE_WIDTH = 248.0
-local NODE_HEIGHT = 154.0
-local LAYER_GAP = 262.0
-local HORIZONTAL_GAP = 46.0
-local PADDING_X = 92.0
-local PADDING_TOP = 94.0
+local NODE_WIDTH = 188.0
+local NODE_HEIGHT = 60.0
+local LAYER_GAP = 220.0
+local HORIZONTAL_GAP = 100.0
+local PADDING_X = 72.0
+local PADDING_TOP = 100.0
 local LAYER_LABEL_HEIGHT = 28.0
 
 local function _copy_array(values)

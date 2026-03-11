@@ -1,16 +1,46 @@
 (function () {
+  /* ── theme toggle ──────────────────────────────────────────── */
+  function get_preferred_theme() {
+    var stored = null;
+    try { stored = localStorage.getItem("arch_theme"); } catch (e) { /* noop */ }
+    if (stored === "dark" || stored === "light") {
+      return stored;
+    }
+    if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+      return "light";
+    }
+    return "dark";
+  }
+
+  function apply_theme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    var icon = document.querySelector(".theme_toggle_icon");
+    var label = document.querySelector(".theme_toggle_label");
+    if (icon) { icon.textContent = theme === "dark" ? "\u263E" : "\u2600"; }
+    if (label) { label.textContent = theme === "dark" ? "Dark" : "Light"; }
+    try { localStorage.setItem("arch_theme", theme); } catch (e) { /* noop */ }
+  }
+
+  /* apply immediately to avoid flash */
+  apply_theme(get_preferred_theme());
+
   var NODE_WIDTH = 188;
-  var NODE_HEIGHT = 86;
-  var CARD_GAP_X = 44;
+  var NODE_HEIGHT = 60;
+  var CARD_GAP_X = 100;
   var CARD_GAP_Y = 0;
   var LAYER_TOP = 100;
-  var LAYER_GAP = 176;
+  var LAYER_GAP = 220;
   var SURFACE_PADDING_X = 72;
   var SURFACE_PADDING_BOTTOM = 80;
   var LABEL_Y_OFFSET = 28;
   var TRIANGLE_OFFSET = 10;
   var NODE_EDGE_GAP = 14;
-  var NODE_BUTTON_EXCLUSION_HALF_WIDTH = 26;
+
+  var drag_did_move = false;
+  var current_zoom = 1;
+  var ZOOM_MIN = 0.25;
+  var ZOOM_MAX = 2;
+  var ZOOM_STEP = 0.15;
 
   function by_id(id) {
     return document.getElementById(id);
@@ -421,15 +451,23 @@
     return normalized;
   }
 
-  function polyline_to_path(points) {
-    if (!points || points.length === 0) {
+  function smooth_path(points, same_layer) {
+    if (!points || points.length < 2) {
       return "";
     }
-    var commands = ["M " + points[0][0] + " " + points[0][1]];
-    for (var index = 1; index < points.length; index += 1) {
-      commands.push("L " + points[index][0] + " " + points[index][1]);
+    if (points.length === 2) {
+      return "M " + points[0][0] + " " + points[0][1] + " L " + points[1][0] + " " + points[1][1];
     }
-    return commands.join(" ");
+    var sx = points[0][0];
+    var sy = points[0][1];
+    var ex = points[points.length - 1][0];
+    var ey = points[points.length - 1][1];
+    if (same_layer && points.length >= 4) {
+      var lx = points[1][0];
+      return "M " + sx + " " + sy + " C " + lx + " " + sy + " " + lx + " " + ey + " " + ex + " " + ey;
+    }
+    var my = (sy + ey) / 2;
+    return "M " + sx + " " + sy + " C " + sx + " " + my + " " + ex + " " + my + " " + ex + " " + ey;
   }
 
   function edge_label(edge) {
@@ -500,6 +538,8 @@
       id: edge.id || fallback_id || from + "->" + to,
       from: from,
       to: to,
+      from_layer: typeof edge.from_layer === "number" ? edge.from_layer : undefined,
+      to_layer: typeof edge.to_layer === "number" ? edge.to_layer : undefined,
       count:
         Number(edge.count) ||
         (module_edges.length > 0 ? module_edges.length : 1),
@@ -840,7 +880,7 @@
     });
   }
 
-  function derive_layout(view) {
+  function derive_layout(view, position_overrides) {
     var positions = Object.create(null);
     var layers = view.layers.slice().sort(function (left, right) {
       return left.index - right.index;
@@ -864,6 +904,10 @@
       }
       layer.y = y - LABEL_Y_OFFSET;
 
+      var node_count = layer.nodes.length;
+      var layer_total_width = node_count * NODE_WIDTH + Math.max(0, node_count - 1) * CARD_GAP_X;
+      var layer_start_x = Math.max(SURFACE_PADDING_X, (1480 - layer_total_width) / 2);
+
       layer.nodes.forEach(function (node_id, index) {
         var view_node = view.nodes.find(function (entry) {
           return entry.id === node_id;
@@ -875,8 +919,13 @@
         var x =
           rect && finite_number(rect.x)
             ? rect.x
-            : SURFACE_PADDING_X + index * (NODE_WIDTH + CARD_GAP_X);
+            : layer_start_x + index * (NODE_WIDTH + CARD_GAP_X);
         var node_y = rect && finite_number(rect.y) ? rect.y : y;
+        var override = position_overrides && position_overrides[node_id];
+        if (override) {
+          x = override.x;
+          node_y = override.y;
+        }
         positions[node_id] = {
           x: x,
           y: node_y,
@@ -893,7 +942,7 @@
       });
     });
 
-    var surface_width = Math.max(max_width, 1180);
+    var surface_width = Math.max(max_width, 1480);
     var surface_height = Math.max(
       max_height,
       LAYER_TOP +
@@ -928,19 +977,6 @@
       return rect.y + rect.height / 2;
     }
 
-    function clamp(value, min, max) {
-      return Math.max(min, Math.min(max, value));
-    }
-
-    function top_bottom_offset(rect, bias) {
-      var max_offset = Math.max(0, rect.width / 2 - NODE_EDGE_GAP - 6);
-      return clamp(
-        bias * NODE_BUTTON_EXCLUSION_HALF_WIDTH,
-        -max_offset,
-        max_offset,
-      );
-    }
-
     if (edge.from_layer === edge.to_layer) {
       var from_side_right = center_x(to) >= center_x(from);
       var start_x = from_side_right
@@ -951,8 +987,7 @@
         : to.x + to.width + NODE_EDGE_GAP;
       var start_y = center_y(from);
       var end_y = center_y(to);
-      var lane_x =
-        (start_x + end_x) / 2 + (from_side_right ? 0 : 0);
+      var lane_x = (start_x + end_x) / 2;
       return [
         [start_x, start_y],
         [lane_x, start_y],
@@ -962,9 +997,8 @@
     }
 
     var downward = edge.to_layer > edge.from_layer;
-    var bias = center_x(to) >= center_x(from) ? 1 : -1;
-    var start_x = center_x(from) + top_bottom_offset(from, bias);
-    var end_x = center_x(to) + top_bottom_offset(to, bias);
+    var start_x = center_x(from);
+    var end_x = center_x(to);
     var start_y = downward
       ? from.y + from.height + NODE_EDGE_GAP
       : from.y - NODE_EDGE_GAP;
@@ -992,13 +1026,13 @@
     var uy = dy / length;
     var px = -uy;
     var py = ux;
-    var size = 12;
+    var size = 16;
     var back_x = end[0] - ux * size;
     var back_y = end[1] - uy * size;
-    var left_x = back_x + px * (size * 0.6);
-    var left_y = back_y + py * (size * 0.6);
-    var right_x = back_x - px * (size * 0.6);
-    var right_y = back_y - py * (size * 0.6);
+    var left_x = back_x + px * (size * 0.5);
+    var left_y = back_y + py * (size * 0.5);
+    var right_x = back_x - px * (size * 0.5);
+    var right_y = back_y - py * (size * 0.5);
     return [
       end[0] + "," + end[1],
       left_x + "," + left_y,
@@ -1010,11 +1044,28 @@
     return document.createElementNS("http://www.w3.org/2000/svg", tag);
   }
 
+  function apply_zoom(zoom) {
+    current_zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom));
+    var surface = by_id("graph_surface");
+    surface.style.transform = "scale(" + current_zoom + ")";
+    var base_w = parseFloat(surface.dataset.baseWidth) || 0;
+    var base_h = parseFloat(surface.dataset.baseHeight) || 0;
+    surface.style.width = String(base_w * current_zoom) + "px";
+    surface.style.height = String(base_h * current_zoom) + "px";
+    var label = by_id("zoom_level");
+    if (label) { label.textContent = Math.round(current_zoom * 100) + "%"; }
+  }
+
   function surface_point_from_event(event) {
-    var surface_rect = by_id("graph_surface").getBoundingClientRect();
+    var surface = by_id("graph_surface");
+    var surface_rect = surface.getBoundingClientRect();
+    var base_w = parseFloat(surface.dataset.baseWidth) || surface_rect.width;
+    var base_h = parseFloat(surface.dataset.baseHeight) || surface_rect.height;
+    var scale_x = base_w / (surface_rect.width || 1);
+    var scale_y = base_h / (surface_rect.height || 1);
     return {
-      x: event.clientX - surface_rect.left,
-      y: event.clientY - surface_rect.top,
+      x: (event.clientX - surface_rect.left) * scale_x,
+      y: (event.clientY - surface_rect.top) * scale_y,
     };
   }
 
@@ -1066,16 +1117,139 @@
     );
   }
 
-  function indicator_markup(direction, cycle) {
-    var points =
-      direction === "incoming" ? "10,0 20,16 0,16" : "0,0 20,0 10,16";
-    return (
-      '<svg viewBox="0 0 20 16" aria-hidden="true">' +
-      '<polygon points="' +
-      points +
-      '"></polygon>' +
-      "</svg>"
-    );
+  var COMPONENT_PALETTE = [
+    "#5b8def", "#e8a838", "#50c878", "#c77dba",
+    "#50e3c2", "#e85d75", "#d4a44c", "#7b68ee",
+    "#4a90d9", "#d35f5f",
+  ];
+  var component_color_cache = Object.create(null);
+  var component_color_index = 0;
+
+  function component_color(name) {
+    if (!name) { return "transparent"; }
+    if (component_color_cache[name]) { return component_color_cache[name]; }
+    var color = COMPONENT_PALETTE[component_color_index % COMPONENT_PALETTE.length];
+    component_color_index += 1;
+    component_color_cache[name] = color;
+    return color;
+  }
+
+  function highlight_edges_for_node(node_id) {
+    var svg = by_id("graph_svg");
+    var groups = svg.querySelectorAll(".edge_group");
+    for (var i = 0; i < groups.length; i++) {
+      var g = groups[i];
+      var base = g.classList.contains("edge_is_cycle") ? "edge_group edge_is_cycle" : "edge_group";
+      var from = g.getAttribute("data-from");
+      var to = g.getAttribute("data-to");
+      if (from === node_id) {
+        g.className.baseVal = base + " edge_highlight_out";
+      } else if (to === node_id) {
+        g.className.baseVal = base + " edge_highlight_in";
+      } else {
+        g.className.baseVal = base + " edge_dimmed";
+      }
+    }
+  }
+
+  function clear_edge_highlights() {
+    var svg = by_id("graph_svg");
+    var groups = svg.querySelectorAll(".edge_group");
+    for (var i = 0; i < groups.length; i++) {
+      var g = groups[i];
+      var base = g.classList.contains("edge_is_cycle") ? "edge_group edge_is_cycle" : "edge_group";
+      g.className.baseVal = base;
+    }
+  }
+
+  function update_edges_for_node(node_id, state) {
+    if (!state.current_view || !state.current_layout) { return; }
+    var view = state.current_view;
+    var positions = state.current_layout.positions;
+    var node_layer_lookup = state.current_node_layer_lookup || Object.create(null);
+    var svg = by_id("graph_svg");
+    view.display_edges.forEach(function (edge) {
+      if (edge.from !== node_id && edge.to !== node_id) { return; }
+      var old_route = edge.route_points;
+      var old_path = edge.path;
+      edge.route_points = [];
+      var new_route = make_route_points(edge, positions);
+      if (new_route.length < 2) {
+        edge.route_points = old_route;
+        return;
+      }
+      edge.route_points = new_route;
+      var fl = typeof edge.from_layer === "number" ? edge.from_layer : node_layer_lookup[edge.from];
+      var tl = typeof edge.to_layer === "number" ? edge.to_layer : node_layer_lookup[edge.to];
+      edge.path = smooth_path(edge.route_points, fl === tl);
+      if (!edge.path) {
+        edge.route_points = old_route;
+        edge.path = old_path;
+        return;
+      }
+      var group = svg.querySelector(
+        '.edge_group[data-from="' + edge.from + '"][data-to="' + edge.to + '"]',
+      );
+      if (!group) { return; }
+      group.querySelectorAll("path").forEach(function (p) {
+        p.setAttribute("d", edge.path);
+      });
+      var arrow_shape = arrow_points(edge.route_points);
+      group.querySelectorAll("polygon").forEach(function (poly) {
+        poly.setAttribute("points", arrow_shape);
+      });
+    });
+  }
+
+  function attach_drag(button, node_id, state) {
+    button.addEventListener("mousedown", function (e) {
+      if (e.button !== 0) { return; }
+      var pos = state.current_layout && state.current_layout.positions[node_id];
+      if (!pos) { return; }
+      e.preventDefault();
+      var point = surface_point_from_event(e);
+      var offset_x = pos.x - point.x;
+      var offset_y = pos.y - point.y;
+      drag_did_move = false;
+      button.classList.add("node_is_dragging");
+
+      function on_move(ev) {
+        var pt = surface_point_from_event(ev);
+        var new_x = pt.x + offset_x;
+        var new_y = pt.y + offset_y;
+        var cur = state.current_layout.positions[node_id];
+        if (!drag_did_move) {
+          var dx = new_x - cur.x;
+          var dy = new_y - cur.y;
+          if (dx * dx + dy * dy < 16) { return; }
+          drag_did_move = true;
+        }
+        cur.x = new_x;
+        cur.y = new_y;
+        cur.center_x = new_x + cur.width / 2;
+        cur.center_y = new_y + cur.height / 2;
+        state.position_overrides[node_id] = { x: new_x, y: new_y };
+        button.style.left = String(new_x) + "px";
+        button.style.top = String(new_y) + "px";
+        update_edges_for_node(node_id, state);
+      }
+
+      function on_up() {
+        button.classList.remove("node_is_dragging");
+        document.removeEventListener("mousemove", on_move);
+        document.removeEventListener("mouseup", on_up);
+      }
+
+      document.addEventListener("mousemove", on_move);
+      document.addEventListener("mouseup", on_up);
+    });
+
+    button.addEventListener("click", function (e) {
+      if (drag_did_move) {
+        drag_did_move = false;
+        e.stopImmediatePropagation();
+      }
+    }, true);
   }
 
   function build_node_card(node, state) {
@@ -1102,115 +1276,36 @@
     button.style.height = String(node.position.height) + "px";
     button.dataset.nodeId = node.id;
 
+    if (node.component) {
+      button.style.borderLeftColor = component_color(node.component);
+    }
+
     button.innerHTML =
-      '<div class="node_kicker">' +
-      '<span class="node_tag">' +
-      html_escape(node.leaf ? "leaf" : "group") +
-      "</span>" +
-      (node.component
-        ? '<span class="node_tag">' + html_escape(node.component) + "</span>"
-        : "") +
-      (node.abstract
-        ? '<span class="node_tag node_tag_abstract">abstract</span>'
-        : "") +
-      (node.cycle ? '<span class="node_tag node_tag_cycle">cycle</span>' : "") +
-      "</div>" +
       '<div class="node_heading">' +
       "<div>" +
       '<h3 class="node_heading_title">' +
       html_escape(node.display_label || node.label) +
       "</h3>" +
-      (node.source_file_name
-        ? '<div class="node_source_name">' +
-          html_escape(node.source_file_name) +
-          "</div>"
-        : "") +
       "</div>" +
-      "</div>" +
-      '<p class="node_supporting">' +
-      html_escape(
-        node.description ||
-          (node.leaf
-            ? "Inspect source and dependencies."
-            : "Drill into nested namespace view."),
-      ) +
-      "</p>" +
-      '<div class="node_dependency_summary">' +
-      "<span>in " +
-      String(node.indicators.incoming.dependencies.length) +
-      "</span>" +
-      "<span>out " +
-      String(node.indicators.outgoing.dependencies.length) +
-      "</span>" +
       "</div>";
 
-    function attach_indicator(direction, indicator) {
-      if (
-        !indicator ||
-        !indicator.dependencies ||
-        indicator.dependencies.length === 0
-      ) {
-        return;
-      }
-      var anchor = document.createElement("button");
-      anchor.type = "button";
-      anchor.className =
-        "node_dependency_button is_" +
-        (direction === "incoming" ? "top" : "bottom");
-      if (indicator.cycle) {
-        anchor.className += " is_cycle";
-      }
-      anchor.innerHTML = indicator_markup(direction, indicator.cycle);
-      function show_indicator_tooltip(event) {
-        event.stopPropagation();
-        set_tooltip(
-          tooltip_markup(
-            direction === "incoming" ? "Incoming" : "Outgoing",
-            indicator.dependencies,
-          ),
-          node.position.center_x,
-          direction === "incoming"
-            ? node.position.y - 12
-            : node.position.y + node.position.height + 12,
-        );
-      }
-      anchor.addEventListener("mouseenter", show_indicator_tooltip);
-      anchor.addEventListener("mousemove", show_indicator_tooltip);
-      anchor.addEventListener("mouseleave", hide_tooltip);
-      button.appendChild(anchor);
-    }
-
-    attach_indicator("incoming", node.indicators.incoming);
-    attach_indicator("outgoing", node.indicators.outgoing);
-
     button.addEventListener("mouseenter", function (event) {
-      if (
-        event.target &&
-        event.target.closest &&
-        event.target.closest(".node_dependency_button")
-      ) {
-        return;
-      }
       var point = surface_point_from_event(event);
-      set_tooltip(
-        tooltip_markup("Module", [
-          {
-            text: plain_label(node.full_name || node.module_id || node.id),
-            cycle: node.cycle,
-          },
-        ]),
-        point.x,
-        point.y,
-      );
+      var lines = [
+        {
+          text: plain_label(node.full_name || node.module_id || node.id),
+          cycle: node.cycle,
+        },
+      ];
+      var in_count = node.indicators.incoming.dependencies.length;
+      var out_count = node.indicators.outgoing.dependencies.length;
+      if (in_count > 0 || out_count > 0) {
+        lines.push({ text: "in " + in_count + " / out " + out_count, cycle: false });
+      }
+      set_tooltip(tooltip_markup("Module", lines), point.x, point.y);
+      highlight_edges_for_node(node.id);
     });
     button.addEventListener("mousemove", function (event) {
-      if (
-        event.target &&
-        event.target.closest &&
-        event.target.closest(".node_dependency_button")
-      ) {
-        return;
-      }
       var point = surface_point_from_event(event);
       set_tooltip(
         tooltip_markup("Module", [
@@ -1223,10 +1318,16 @@
         point.y,
       );
     });
-    button.addEventListener("mouseleave", hide_tooltip);
+    button.addEventListener("mouseleave", function () {
+      hide_tooltip();
+      if (!state.pinned_highlight_node) {
+        clear_edge_highlights();
+      }
+    });
     button.addEventListener("click", function () {
       if (node.leaf) {
         state.selected_leaf_id = node.id;
+        state.pinned_highlight_node = node.id;
         state.view_state[state.current_view_key] = Object.assign(
           {},
           state.view_state[state.current_view_key],
@@ -1243,6 +1344,7 @@
       }
     });
 
+    attach_drag(button, node.id, state);
     return button;
   }
 
@@ -1255,6 +1357,13 @@
       }
       var first_node = layout.positions[layer.nodes[0]];
       var last_node = layout.positions[layer.nodes[layer.nodes.length - 1]];
+
+      var rule = document.createElement("div");
+      rule.className = "layer_rule";
+      rule.style.top = String(layer.y) + "px";
+      rule.style.width = String(layout.width) + "px";
+      layer_labels.appendChild(rule);
+
       var label = document.createElement("div");
       label.className = "layer_label";
       label.textContent = layer.label || "Layer " + String(layer.index);
@@ -1285,6 +1394,11 @@
       if (!edge.path) {
         return;
       }
+      var group = make_svg_el("g");
+      group.setAttribute("class", "edge_group" + (edge.cycle ? " edge_is_cycle" : ""));
+      group.setAttribute("data-from", edge.from);
+      group.setAttribute("data-to", edge.to);
+
       var backdrop = make_svg_el("path");
       backdrop.setAttribute("d", edge.path);
       backdrop.setAttribute(
@@ -1293,7 +1407,7 @@
           html_escape(edge.type || "direct") +
           (edge.cycle ? " edge_is_cycle" : ""),
       );
-      svg.appendChild(backdrop);
+      group.appendChild(backdrop);
 
       var path = make_svg_el("path");
       path.setAttribute("d", edge.path);
@@ -1303,7 +1417,7 @@
           html_escape(edge.type || "direct") +
           (edge.cycle ? " edge_is_cycle" : ""),
       );
-      svg.appendChild(path);
+      group.appendChild(path);
 
       var hit = make_svg_el("path");
       hit.setAttribute("d", edge.path);
@@ -1334,13 +1448,13 @@
         );
       });
       hit.addEventListener("mouseleave", hide_tooltip);
-      svg.appendChild(hit);
+      group.appendChild(hit);
 
       var arrow_shape = arrow_points(edge.route_points);
       var arrow_backdrop = make_svg_el("polygon");
       arrow_backdrop.setAttribute("points", arrow_shape);
       arrow_backdrop.setAttribute("class", "graph_arrow_backdrop");
-      svg.appendChild(arrow_backdrop);
+      group.appendChild(arrow_backdrop);
 
       var arrow = make_svg_el("polygon");
       arrow.setAttribute("points", arrow_shape);
@@ -1350,7 +1464,9 @@
           html_escape(edge.type || "direct") +
           (edge.cycle ? " arrow_is_cycle" : ""),
       );
-      svg.appendChild(arrow);
+      group.appendChild(arrow);
+
+      svg.appendChild(group);
     });
   }
 
@@ -1418,22 +1534,33 @@
       notice.hidden = true;
     }
 
-    var layout = derive_layout(view);
+    var layout = derive_layout(view, state.position_overrides);
+    state.current_layout = layout;
+    state.current_view = view;
     view.nodes.forEach(function (node) {
       node.position = layout.positions[node.id];
     });
+    var node_layer_lookup = Object.create(null);
+    view.nodes.forEach(function (node) {
+      node_layer_lookup[node.id] = node.layer;
+    });
+    state.current_node_layer_lookup = node_layer_lookup;
     view.display_edges.forEach(function (edge) {
       edge.route_points = make_route_points(edge, layout.positions);
-      edge.path = polyline_to_path(edge.route_points);
+      var fl = typeof edge.from_layer === "number" ? edge.from_layer : node_layer_lookup[edge.from];
+      var tl = typeof edge.to_layer === "number" ? edge.to_layer : node_layer_lookup[edge.to];
+      var same_layer = fl === tl;
+      edge.path = smooth_path(edge.route_points, same_layer);
     });
 
     var surface = by_id("graph_surface");
     var svg = by_id("graph_svg");
-    surface.style.width = String(layout.width) + "px";
-    surface.style.height = String(layout.height) + "px";
+    surface.dataset.baseWidth = String(layout.width);
+    surface.dataset.baseHeight = String(layout.height);
     svg.setAttribute("viewBox", "0 0 " + layout.width + " " + layout.height);
     svg.setAttribute("width", String(layout.width));
     svg.setAttribute("height", String(layout.height));
+    apply_zoom(current_zoom);
 
     render_layer_labels(layout);
     render_edges(view);
@@ -1450,6 +1577,10 @@
 
     by_id("back_button").disabled = state.history.length === 0;
     restore_view_state(state);
+
+    if (state.pinned_highlight_node) {
+      highlight_edges_for_node(state.pinned_highlight_node);
+    }
   }
 
   function start() {
@@ -1469,7 +1600,12 @@
       current_view_key: "root",
       history: [],
       selected_leaf_id: null,
+      pinned_highlight_node: null,
       view_state: Object.create(null),
+      position_overrides: Object.create(null),
+      current_layout: null,
+      current_view: null,
+      current_node_layer_lookup: null,
       open_view: function (view_key, push_history) {
         if (!normalized.views[view_key]) {
           return;
@@ -1483,6 +1619,8 @@
           state.history.push(state.current_view_key);
         }
         state.selected_leaf_id = null;
+        state.pinned_highlight_node = null;
+        state.position_overrides = Object.create(null);
         render_view(view_key, state);
       },
     };
@@ -1493,6 +1631,7 @@
       }
       save_current_view_state(state);
       var previous = state.history.pop();
+      state.position_overrides = Object.create(null);
       render_view(previous, state);
     });
 
@@ -1501,10 +1640,98 @@
       hide_tooltip();
     });
 
-    by_id("graph_surface").addEventListener("mouseleave", hide_tooltip);
+    by_id("graph_surface").addEventListener("mouseleave", function () {
+      hide_tooltip();
+      if (!state.pinned_highlight_node) {
+        clear_edge_highlights();
+      }
+    });
+
+    by_id("graph_surface").addEventListener("click", function (event) {
+      if (!event.target.closest(".node_card")) {
+        state.pinned_highlight_node = null;
+        clear_edge_highlights();
+      }
+    });
 
     render_inspector(null);
     render_view("root", state);
+
+    /* wire theme toggle */
+    var toggle = by_id("theme_toggle");
+    if (toggle) {
+      toggle.addEventListener("click", function () {
+        var current = document.documentElement.getAttribute("data-theme") || "dark";
+        apply_theme(current === "dark" ? "light" : "dark");
+      });
+    }
+
+    /* wire flow toggle */
+    var flow_toggle = by_id("flow_toggle");
+    if (flow_toggle) {
+      flow_toggle.addEventListener("click", function () {
+        var svg = by_id("graph_svg");
+        var active = svg.classList.toggle("flow_active");
+        flow_toggle.classList.toggle("is_active", active);
+        try { localStorage.setItem("arch_flow", active ? "on" : "off"); } catch (e) { /* noop */ }
+      });
+      try {
+        if (localStorage.getItem("arch_flow") === "on") {
+          by_id("graph_svg").classList.add("flow_active");
+          flow_toggle.classList.add("is_active");
+        }
+      } catch (e) { /* noop */ }
+    }
+
+    /* wire fullscreen toggle */
+    var fullscreen_toggle = by_id("fullscreen_toggle");
+    if (fullscreen_toggle) {
+      fullscreen_toggle.addEventListener("click", function () {
+        var panel = document.querySelector(".graph_panel");
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        } else {
+          panel.requestFullscreen();
+        }
+      });
+      function on_fullscreen_change() {
+        var active = !!document.fullscreenElement;
+        fullscreen_toggle.textContent = active ? "Exit Full" : "Full";
+        fullscreen_toggle.classList.toggle("is_active", active);
+      }
+      document.addEventListener("fullscreenchange", on_fullscreen_change);
+      document.addEventListener("webkitfullscreenchange", on_fullscreen_change);
+    }
+
+    /* wire zoom controls */
+    by_id("zoom_in").addEventListener("click", function () {
+      apply_zoom(current_zoom + ZOOM_STEP);
+    });
+    by_id("zoom_out").addEventListener("click", function () {
+      apply_zoom(current_zoom - ZOOM_STEP);
+    });
+    by_id("zoom_reset").addEventListener("click", function () {
+      apply_zoom(1);
+    });
+
+    var scroller = by_id("graph_scroller");
+    scroller.addEventListener("wheel", function (e) {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        var delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+        apply_zoom(current_zoom + delta);
+      }
+    }, { passive: false });
+
+    /* wire cycle toggle */
+    var cycle_toggle = by_id("cycle_toggle");
+    if (cycle_toggle) {
+      cycle_toggle.addEventListener("click", function () {
+        var svg = by_id("graph_svg");
+        var active = svg.classList.toggle("cycle_only");
+        cycle_toggle.classList.toggle("is_active", active);
+      });
+    }
   }
 
   document.addEventListener("DOMContentLoaded", start);
