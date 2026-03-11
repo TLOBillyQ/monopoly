@@ -1,10 +1,12 @@
 local logger = require("src.core.utils.logger")
 local tile = require("src.game.systems.board.tile")
-local board_utils = require("src.game.systems.land.board_utils")
+local board_query = require("src.game.systems.board.query")
+local property_value = require("src.game.systems.commerce.property_value")
 local constants = require("Config.generated.constants")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local action_anim_port = require("src.core.ports.action_anim_port")
 local number_utils = require("src.core.utils.number_utils")
+local target_query = require("src.game.systems.items.target_query")
 
 local demolish = {}
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
@@ -72,7 +74,7 @@ local function _build_hospital_followup(targets)
 end
 
 function demolish.find_target(game, player, distance)
-  local idx, value = board_utils.find_best_tile(game, player, distance, {
+  local idx, value = target_query.find_best_tile(game, player, distance, {
     score_fn = function(tile)
       if tile.type ~= "land" then
         return -1
@@ -81,7 +83,7 @@ function demolish.find_target(game, player, distance)
       if not st.owner_id or st.owner_id == player.id or (st.level or 0) <= 0 then
         return -1
       end
-      return board_utils.total_invested(tile, st.level)
+      return property_value.total_invested(tile, st.level)
     end,
   })
   if value < 0 then
@@ -153,7 +155,7 @@ function demolish.use(game, player, distance, consume_fn, opts)
   end
 
   if not opts.by_ai then
-    local idxs = board_utils.indices_in_range(game.board, player.position, distance)
+    local idxs = board_query.indices_in_range(game.board, player.position, distance)
     local options = {}
     local body_lines = {}
 

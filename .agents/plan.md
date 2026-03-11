@@ -113,9 +113,22 @@ T6 ──┘  │
   - 如 `find_best_tile` 只服务道具 targeting，则落到 `src/game/systems/items/target_query.lua`
   - 明确迁走 `src/game/systems/items/strategy.lua -> src/game/systems/land/rent_resolver.lua`
 - **validation**: `items` 不再直接依赖 `land.board_utils` 或 `land.rent_resolver`；怪兽/导弹目标、强征/免费卡判定、清障/偷窃相关行为不变；`game.systems` 视图不再出现 `items -> land` feedback edge。
-- **status**: Not Completed
+- **status**: Completed
 - **log**:
+  - 2026-03-11 21:44:45 +0800: 新增 `board/query`、`board/property_query`、`commerce/property_value`、`items/target_query`，把 `items/demolish.lua`、`items/post_effects.lua`、`items/strategy.lua` 改为依赖中性查询模块。
+  - 2026-03-11 21:44:45 +0800: 将 `land/board_utils.lua`、`land/rent_resolver.lua` 保留为兼容包装层，避免把 API 变动扩散到 `land` 与测试；`items` 子树已不再直接引用这两个 land 模块。
+  - 2026-03-11 21:44:45 +0800: 运行 `suites.domain.movement`、`suites.domain.item`、`suites.domain.land`、`suites.gameplay.gameplay_items_startup`、`suites.architecture.cross_module_contract`，验证怪兽/导弹目标、清障、强征/免费卡与连续租金行为未回归。
 - **files edited/created**:
+  - `src/game/systems/board/query.lua`
+  - `src/game/systems/board/property_query.lua`
+  - `src/game/systems/commerce/property_value.lua`
+  - `src/game/systems/items/target_query.lua`
+  - `src/game/systems/items/demolish.lua`
+  - `src/game/systems/items/post_effects.lua`
+  - `src/game/systems/items/strategy.lua`
+  - `src/game/systems/land/board_utils.lua`
+  - `src/game/systems/land/rent_resolver.lua`
+  - `.agents/plan.md`
 
 ### T7: 收口护栏、仓库级断言与文档
 - **depends_on**: [T1, T2, T3, T5, T6]

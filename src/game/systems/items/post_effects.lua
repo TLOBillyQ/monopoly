@@ -1,6 +1,6 @@
 local logger = require("src.core.utils.logger")
 local constants = require("Config.generated.constants")
-local board_utils = require("src.game.systems.land.board_utils")
+local board_query = require("src.game.systems.board.query")
 local inventory = require("src.game.systems.items.inventory")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local bankruptcy_port = require("src.game.ports.bankruptcy_port")
@@ -224,7 +224,7 @@ local function _handle_clear_obstacles_ahead(game, player, cfg, context)
   end
   _mark(start_id, facing, 0)
   table.insert(queue, { tile_id = start_id, facing = facing, depth = 0 })
-  board_utils.queue_walk(queue, function(node, push)
+  board_query.queue_walk(queue, function(node, push)
     if node.depth < distance then
       local neigh = assert(neighbors[node.tile_id], "missing neighbors: " .. tostring(node.tile_id))
       local back = opposite[node.facing]

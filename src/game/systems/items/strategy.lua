@@ -6,8 +6,8 @@ local inventory = require("src.game.systems.items.inventory")
 local executor = require("src.game.systems.items.executor")
 local demolish = require("src.game.systems.items.demolish")
 local roadblock = require("src.game.systems.items.roadblock")
-local rent_resolver = require("src.game.systems.land.rent_resolver")
-local board_utils = require("src.game.systems.land.board_utils")
+local property_query = require("src.game.systems.board.property_query")
+local property_value = require("src.game.systems.commerce.property_value")
 local facing_policy = require("src.game.systems.board.facing_policy")
 
 local strategy = {}
@@ -94,12 +94,12 @@ function strategy.can_offer_in_phase(game, player, item_id, phase, auto_play)
     if not (tile_ref and tile_ref.type == "land") then
       return false
     end
-    local owner, st = rent_resolver.resolve_rent_owner(game, tile_ref)
+    local owner, st = property_query.resolve_rent_owner(game, tile_ref)
     if not owner or owner.id == player.id then
       return false
     end
     if item_id == item_ids.strong then
-      local total_value = board_utils.total_invested(tile_ref, st and st.level or 0)
+      local total_value = property_value.total_invested(tile_ref, st and st.level or 0)
       return game:player_balance(player, "金币") >= total_value
     end
     return true
