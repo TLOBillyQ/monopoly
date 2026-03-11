@@ -1,4 +1,4 @@
-local land_choice_specs = require("src.game.systems.land.choice_specs")
+local use_skip_choice = require("src.game.systems.choices.use_skip_choice")
 local context = require("src.game.systems.market.application.context")
 
 local policy = {}
@@ -40,7 +40,7 @@ function policy.build_vehicle_replace_intent(player, entry, price, currency)
   }
   return {
     kind = "need_choice",
-    choice_spec = land_choice_specs.build_use_skip(
+    choice_spec = use_skip_choice.build(
       "market_vehicle_replace",
       "是否更换座驾",
       body_lines,

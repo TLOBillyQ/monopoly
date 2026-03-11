@@ -73,9 +73,16 @@ T6 ──┘  │
 - **location**: `src/game/systems/choices/`, `src/game/systems/land/choice_specs.lua`, `src/game/systems/items/steal.lua`, `src/game/systems/market/application/purchase_policy.lua`
 - **description**: 把 `build_use_skip` 从 `land/choice_specs.lua` 提取到中性 helper；`land/choice_specs.lua` 只保留 `rent_prompt`、`tax_prompt` 等 land 专属 API；steal 与 market 改用新 helper。
 - **validation**: `steal_prompt`、`rent_card_prompt`、`tax_card_prompt`、`market_vehicle_replace` 继续显式输出 `owner_role_id`、`route_key`、`requires_confirm`、`allow_cancel`、`confirm_title`、`confirm_body`；`market` 不再依赖 `land.choice_specs`。
-- **status**: Not Completed
+- **status**: Completed
 - **log**:
+  - 2026-03-11 21:42:54 +0800: 新增 `src/game/systems/choices/use_skip_choice.lua` 作为中性 secondary-confirm builder，并把 `land/choice_specs.lua`、`items/steal.lua`、`market/application/purchase_policy.lua` 改为使用该 helper。
+  - 2026-03-11 21:42:54 +0800: 运行 `suites.domain.item`、`suites.domain.market`、`suites.gameplay.gameplay_items_startup`，确认 `steal_prompt`、租金/免税提示、market 换车确认的 route/confirm 字段保持不变。
 - **files edited/created**:
+  - `src/game/systems/choices/use_skip_choice.lua`
+  - `src/game/systems/land/choice_specs.lua`
+  - `src/game/systems/items/steal.lua`
+  - `src/game/systems/market/application/purchase_policy.lua`
+  - `.agents/plan.md`
 
 ### T5: 把 market 落地 effect 归还给 market 子系统
 - **depends_on**: [T4]

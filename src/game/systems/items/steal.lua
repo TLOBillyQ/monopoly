@@ -1,6 +1,6 @@
 local logger = require("src.core.utils.logger")
 local inventory = require("src.game.systems.items.inventory")
-local land_choice_specs = require("src.game.systems.land.choice_specs")
+local use_skip_choice = require("src.game.systems.choices.use_skip_choice")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local action_anim_port = require("src.core.ports.action_anim_port")
 
@@ -50,7 +50,7 @@ function steal.build_prompt_spec(game, player, queue, index)
   local target_id = assert(queue[index], "missing target id")
   assert(player ~= nil, "missing player")
   local target = assert(game:find_player_by_id(target_id), "missing target player: " .. tostring(target_id))
-  local choice = land_choice_specs.build_use_skip(
+  local choice = use_skip_choice.build(
     "steal_prompt",
     "是否使用偷窃卡",
     { "目标：" .. target.name },
