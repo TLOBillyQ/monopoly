@@ -27,7 +27,8 @@ local function _usage()
     "  <lua> scripts/arch.lua scan --out <file> [--project-root <dir>] [--config <file>]\n")
     io.write("  <lua> scripts/arch.lua check [--project-root <dir>] [--config <file>]\n")
     io.write(
-    "  <lua> scripts/arch.lua viewer --out-dir <dir> [--project-root <dir>] [--config <file>] [--in-json <file>] [--open]\n")
+    "  <lua> scripts/arch.lua viewer [--out-dir <dir>] [--project-root <dir>] [--config <file>] [--in-json <file>] [--open]\n")
+    io.write("  <lua> scripts/arch.lua\n")
 end
 
 local function _parse_args(args)
@@ -74,9 +75,11 @@ local function _resolve_paths(options, env)
     local default_project_root = common.resolve_path(cwd, env.default_project_root or _repo_root(script_dir))
     local project_root = common.resolve_path(cwd, options.project_root or default_project_root)
     local default_config = common.join_path(script_dir, "config.lua")
+    local default_viewer_out_dir = common.join_path(project_root, "tmp/arch_view")
     local config_path = common.resolve_path(cwd, options.config or default_config)
     local out_path = options.out and common.resolve_path(cwd, options.out) or nil
-    local out_dir = options.out_dir and common.resolve_path(cwd, options.out_dir) or nil
+    local out_dir = options.out_dir and common.resolve_path(cwd, options.out_dir)
+        or (options.command == "viewer" and default_viewer_out_dir or nil)
     local in_json = options.in_json and common.resolve_path(cwd, options.in_json) or nil
     return {
         script_dir = script_dir,
@@ -200,9 +203,14 @@ function cli.run(args, env)
     env = env or {}
     local options = _parse_args(args or {})
     local command = options.command
-    if command == nil or command == "--help" or command == "-h" then
+    if command == "--help" or command == "-h" then
         _usage()
         return true
+    end
+    if command == nil then
+        options.command = "viewer"
+        options.open = true
+        command = options.command
     end
     if command == "scan" then
         _run_scan(options, env)

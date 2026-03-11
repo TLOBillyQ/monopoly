@@ -44,6 +44,20 @@
 
 导出静态 viewer：
 
+    lua scripts/crap.lua
+
+无参数时，`crap.lua` 会直接生成并打开静态 viewer，等价于：
+
+    lua scripts/crap.lua viewer --out-dir tmp/crap_view --open
+
+这里的 `tmp/...` 仍然是 CRAP CLI 的临时目录别名，不是仓库内 `./tmp/...`。
+
+    lua scripts/crap.lua viewer
+
+显式执行 `viewer` 但不带 `--out-dir` 时，也会默认导出到 `tmp/crap_view`；不过它不会像无参数入口那样自动打开浏览器。
+
+如果已经有导出的 JSON，可直接复用：
+
     lua scripts/crap.lua viewer --in-json tmp/crap_report.json --out-dir tmp/crap_view
 
 命令完成后会打印实际输出路径；打开打印出来的 `index.html` 即可查看，不需要本地服务。

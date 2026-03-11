@@ -8,7 +8,8 @@ local cli = {}
 local function _usage()
   io.write("Usage:\n")
   io.write("  <lua> scripts/crap.lua report [--mode <auto|dev|release_trimmed>] [--lane <behavior|contract>] [--out <file>] [--top <n>] [--strict-tests]\n")
-  io.write("  <lua> scripts/crap.lua viewer --out-dir <dir> [--in-json <file>] [--open]\n")
+  io.write("  <lua> scripts/crap.lua viewer [--out-dir <dir>] [--in-json <file>] [--open]\n")
+  io.write("  <lua> scripts/crap.lua\n")
 end
 
 local function _parse_top(value)
@@ -83,7 +84,8 @@ local function _resolve_paths(options, env)
     script_dir = script_dir,
     project_root = common.resolve_cli_path(cwd, options.project_root or default_project_root),
     out_path = options.out and common.resolve_cli_path(cwd, options.out) or nil,
-    out_dir = options.out_dir and common.resolve_cli_path(cwd, options.out_dir) or nil,
+    out_dir = options.out_dir and common.resolve_cli_path(cwd, options.out_dir)
+      or (options.command == "viewer" and common.resolve_cli_path(cwd, "tmp/crap_view") or nil),
     in_json = options.in_json and common.resolve_cli_path(cwd, options.in_json) or nil,
   }
 end
@@ -153,9 +155,13 @@ end
 function cli.run(args, env)
   env = env or {}
   local options = _parse_args(args or {})
-  if options.command == nil or options.command == "--help" or options.command == "-h" then
+  if options.command == "--help" or options.command == "-h" then
     _usage()
     return true
+  end
+  if options.command == nil then
+    options.command = "viewer"
+    options.open = true
   end
   if options.command == "report" then
     return _run_report(options, env)

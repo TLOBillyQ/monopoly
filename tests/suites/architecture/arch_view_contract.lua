@@ -559,6 +559,43 @@ local function _test_viewer_command_writes_static_bundle()
     assert(data_script:find('"indicators"', 1, true) ~= nil, "viewer payload should contain indicators")
 end
 
+local function _test_cli_viewer_defaults_to_tmp_arch_view()
+    local default_out_dir = "tmp/arch_view"
+    local open_calls = {}
+
+    cli.run({
+        "viewer",
+    }, {
+        script_dir = "scripts/arch",
+        default_project_root = ".",
+        open_path = function(path)
+            open_calls[#open_calls + 1] = path
+            return true
+        end,
+    })
+
+    assert(_exists(default_out_dir .. "/index.html"), "viewer should default to tmp/arch_view")
+    _assert_eq(#open_calls, 0, "explicit viewer command should not auto-open")
+end
+
+local function _test_cli_without_args_defaults_to_opened_viewer()
+    local default_out_dir = "tmp/arch_view"
+    local open_calls = {}
+
+    cli.run({}, {
+        script_dir = "scripts/arch",
+        default_project_root = ".",
+        open_path = function(path)
+            open_calls[#open_calls + 1] = path
+            return true
+        end,
+    })
+
+    assert(_exists(default_out_dir .. "/index.html"), "bare arch cli should export tmp/arch_view")
+    _assert_eq(#open_calls, 1, "bare arch cli should auto-open viewer")
+    assert(open_calls[1]:match("tmp/arch_view/index%.html$") ~= nil, "auto-open should target tmp/arch_view/index.html")
+end
+
 local function _test_cli_viewer_supports_in_json()
     local out_dir = tmp_root .. "/viewer_from_json"
     local json_path = tmp_root .. "/viewer_from_json_input/architecture.json"
@@ -959,6 +996,8 @@ return {
         { name = "cli_scan_writes_metadata",                                  run = _test_cli_scan_writes_metadata },
         { name = "cli_supports_external_project_root_and_config",             run = _test_cli_supports_external_project_root_and_config },
         { name = "viewer_command_writes_static_bundle",                       run = _test_viewer_command_writes_static_bundle },
+        { name = "cli_viewer_defaults_to_tmp_arch_view",                      run = _test_cli_viewer_defaults_to_tmp_arch_view },
+        { name = "cli_without_args_defaults_to_opened_viewer",                run = _test_cli_without_args_defaults_to_opened_viewer },
         { name = "cli_viewer_supports_in_json",                               run = _test_cli_viewer_supports_in_json },
         { name = "common_builds_open_command",                                run = _test_common_builds_open_command },
         { name = "json_modules_are_self_contained",                           run = _test_json_modules_are_self_contained },

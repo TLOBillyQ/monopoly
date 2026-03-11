@@ -24,17 +24,27 @@
 
 这会导出完整机器可读数据，包含 `schema_version`、`project_root`、`config_path`、`graph`、`modules`、`layout`、`classified_edges`、`views` 与 `check`。第二阶段开始，`views[*]` 还会带上 `display_edges`、`route_points`、`indicators`、`full_name`、`incoming_dependencies`、`outgoing_dependencies` 等 viewer 渲染字段。
 
-    lua scripts/arch.lua viewer --out-dir /tmp/monopoly_arch_view
+    lua scripts/arch.lua
+
+无参数时，`arch.lua` 会直接生成并打开静态 viewer，等价于：
+
+    lua scripts/arch.lua viewer --out-dir ./tmp/arch_view --open
+
+默认输出目录是仓库根下的 `./tmp/arch_view`。
+
+    lua scripts/arch.lua viewer
 
 这会导出静态 viewer：`index.html`、`script.js`、`styles.css`、`architecture.json`、`architecture_data.js`。打开 `index.html` 即可查看，不需要本地服务。
 
+显式执行 `viewer` 但不带 `--out-dir` 时，也会默认导出到 `./tmp/arch_view`；不过它不会像无参数入口那样自动打开浏览器。
+
 如果已经有导出的 JSON，可直接复用而不重扫源码：
 
-    lua scripts/arch.lua viewer --in-json /tmp/monopoly_architecture.json --out-dir /tmp/monopoly_arch_view
+    lua scripts/arch.lua viewer --in-json /tmp/monopoly_architecture.json --out-dir ./tmp/arch_view
 
 如果想在导出后自动打开浏览器，可加 `--open`：
 
-    lua scripts/arch.lua viewer --out-dir /tmp/monopoly_arch_view --open
+    lua scripts/arch.lua viewer --out-dir ./tmp/arch_view --open
 
 这里的“对齐远端 viewer 体验”采用的是静态 web viewer + 自动打开浏览器，而不是 Quil/桌面 GUI 复刻。本轮也不包含远端 `PROJECT_NOTES.md` 中的 guidance-vs-actual diff、pan/zoom、image export 和 CI 报表等 roadmap 项。
 

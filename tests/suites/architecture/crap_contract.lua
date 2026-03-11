@@ -303,6 +303,62 @@ local function _test_cli_viewer_uses_json_loader_and_writer()
   end)
 end
 
+local function _test_cli_viewer_defaults_to_tmp_alias_without_auto_open()
+  _with_fixture({}, function()
+    local captured_out_dir = nil
+    local open_calls = 0
+    local ok = crap_cli.run({
+      "viewer",
+    }, {
+      run_report = function(opts)
+        return {
+          summary = { module_count = 0, function_count = 0, total_crap = 0, critical_function_count = 0 },
+          modules = {},
+          functions = {},
+        }
+      end,
+      write_viewer = function(paths, data, opts)
+        captured_out_dir = paths.out_dir
+        if opts and opts.open then
+          open_calls = open_calls + 1
+        end
+        return data and data.summary ~= nil
+      end,
+    })
+    assert(ok == true, "cli viewer should return true")
+    assert(captured_out_dir ~= nil, "cli viewer should supply a default output dir")
+    assert(captured_out_dir:find(common.default_tmp_root(), 1, true) == 1, "viewer default output should resolve under tmp alias root")
+    _assert_eq(open_calls, 0, "explicit viewer command should not auto-open")
+  end)
+end
+
+local function _test_cli_without_args_defaults_to_opened_viewer()
+  _with_fixture({}, function()
+    local captured_out_dir = nil
+    local open_calls = 0
+    local ok = crap_cli.run({}, {
+      run_report = function(opts)
+        return {
+          summary = { module_count = 0, function_count = 0, total_crap = 0, critical_function_count = 0 },
+          modules = {},
+          functions = {},
+        }
+      end,
+      write_viewer = function(paths, data, opts)
+        captured_out_dir = paths.out_dir
+        if opts and opts.open then
+          open_calls = open_calls + 1
+        end
+        return data and data.summary ~= nil
+      end,
+    })
+    assert(ok == true, "bare cli should return true")
+    assert(captured_out_dir ~= nil, "bare cli should supply viewer output dir")
+    assert(captured_out_dir:find(common.default_tmp_root(), 1, true) == 1, "bare cli should resolve tmp alias root")
+    _assert_eq(open_calls, 1, "bare cli should auto-open viewer")
+  end)
+end
+
 local function _test_cli_viewer_reports_missing_json_with_actionable_error()
   _with_fixture({}, function()
     local ok, err = pcall(function()
@@ -384,6 +440,8 @@ return {
     { name = "cli_report_uses_injected_runner", run = _test_cli_report_uses_injected_runner },
     { name = "cli_viewer_resolves_tmp_alias_before_loader_and_writer", run = _test_cli_viewer_resolves_tmp_alias_before_loader_and_writer },
     { name = "cli_viewer_uses_json_loader_and_writer", run = _test_cli_viewer_uses_json_loader_and_writer },
+    { name = "cli_viewer_defaults_to_tmp_alias_without_auto_open", run = _test_cli_viewer_defaults_to_tmp_alias_without_auto_open },
+    { name = "cli_without_args_defaults_to_opened_viewer", run = _test_cli_without_args_defaults_to_opened_viewer },
     { name = "cli_viewer_reports_missing_json_with_actionable_error", run = _test_cli_viewer_reports_missing_json_with_actionable_error },
   },
 }
