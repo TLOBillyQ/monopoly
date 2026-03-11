@@ -103,7 +103,10 @@ local function _build_goods_mappings(game)
   local context_service = _context()
   for _, entry in ipairs(context_service.entries()) do
     local currency = context_service.entry_currency(entry)
-    if context_service.is_paid_currency(currency) then
+    local is_paid_entry = context_service.is_paid_currency(currency)
+    local is_market_enabled = context_service.entry_market_enabled(entry)
+    local is_vehicle_enabled = context_service.entry_vehicle_enabled(entry)
+    if is_paid_entry and is_market_enabled and is_vehicle_enabled then
       local market_name = entry and entry.name or nil
       local goods = market_name and goods_by_name[market_name] or nil
       local goods_id = goods and goods.goods_id or nil

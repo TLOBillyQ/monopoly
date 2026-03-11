@@ -1,6 +1,7 @@
 local support = require("support.domain_support")
 local _new_game = support.new_game
 local _with_patches = support.with_patches
+local market_cfg = require("Config.generated.market")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local logger = require("src.core.utils.logger")
 local paid_goods_cfg = require("src.game.systems.commerce.specs.paid_goods")
@@ -19,6 +20,25 @@ local function _reload_market()
   package.loaded["src.game.systems.market.application.auto"] = nil
   package.loaded["src.game.systems.market.application.choice"] = nil
   return require("src.game.systems.market")
+end
+
+local function _find_hidden_paid_entry()
+  for _, entry in ipairs(market_cfg) do
+    if entry.market_enabled == false and (entry.currency == "金豆" or entry.currency == "乐园币") then
+      return entry
+    end
+  end
+  return nil
+end
+
+local function _hidden_paid_product_ids()
+  local ids = {}
+  for _, entry in ipairs(market_cfg) do
+    if entry.market_enabled == false and (entry.currency == "金豆" or entry.currency == "乐园币") then
+      ids[#ids + 1] = entry.product_id
+    end
+  end
+  return ids
 end
 
 local function _build_fake_env(game, opts)
@@ -186,6 +206,73 @@ local function _test_market_paid_purchase_requires_goods_mapping()
   assert(joined:find("market paid goods mapping missing:", 1, true) ~= nil, "should log missing paid goods mapping")
 end
 
+local function _test_hidden_paid_entries_do_not_log_mapping_missing()
+  local game = _new_game()
+  local p = game.players[1]
+  local env = _build_fake_env(game, {
+    goods_list = {
+      { name = "强征卡", goods_id = "goods_strong_card" },
+    },
+  })
+
+  local warns = _collect_warn_logs(function()
+    _with_currency_cfg({
+      ["金豆"] = { source = "external" },
+      ["乐园币"] = { source = "external" },
+    }, function()
+      _with_patches(env.patch_list, function()
+        local market = _reload_market()
+        local result = market.purchase.execute(game, p, 2009, nil)
+        assert(type(result) == "table" and result.ok == true, "enabled paid item should still start purchase flow")
+        assert(result.deferred_fulfillment == true, "enabled paid item should stay deferred")
+        assert(#env.panel_calls == 1, "enabled paid item should open purchase panel")
+      end)
+    end)
+  end)
+
+  local joined = table.concat(warns, "\n")
+  for _, product_id in ipairs(_hidden_paid_product_ids()) do
+    assert(joined:find("product_id=" .. tostring(product_id), 1, true) == nil,
+      "hidden paid entry should not emit missing mapping warning: " .. tostring(product_id))
+  end
+end
+
+local function _test_hidden_paid_product_is_rejected_before_mapping()
+  local hidden_entry = _find_hidden_paid_entry()
+  if hidden_entry == nil then
+    return
+  end
+
+  local game = _new_game()
+  local p = game.players[1]
+  game:set_player_balance(p, hidden_entry.currency, 999999)
+  local env = _build_fake_env(game, {
+    goods_list = {
+      { name = "强征卡", goods_id = "goods_strong_card" },
+    },
+  })
+
+  local warns = _collect_warn_logs(function()
+    _with_currency_cfg({
+      ["金豆"] = { source = "external" },
+      ["乐园币"] = { source = "external" },
+    }, function()
+      _with_patches(env.patch_list, function()
+        local market = _reload_market()
+        local result = market.purchase.execute(game, p, hidden_entry.product_id, nil)
+        assert(type(result) == "table" and result.ok == false, "hidden paid product should be rejected")
+        assert(result.reason == "disabled" or result.reason == "vehicle_disabled",
+          "hidden paid product should fail via market policy, not goods mapping")
+        assert(#env.panel_calls == 0, "hidden paid product should not open purchase panel")
+      end)
+    end)
+  end)
+
+  local joined = table.concat(warns, "\n")
+  assert(joined:find("product_id=" .. tostring(hidden_entry.product_id), 1, true) == nil,
+    "hidden paid product rejection should not depend on its paid goods mapping warning")
+end
+
 local function _test_paid_purchase_callback_fulfills_item()
   local game = _new_game()
   local p = game.players[1]
@@ -224,6 +311,8 @@ return {
       run = _test_external_paid_currency_still_starts_goods_purchase_panel,
     },
     { name = "market_paid_purchase_requires_goods_mapping", run = _test_market_paid_purchase_requires_goods_mapping },
+    { name = "hidden_paid_entries_do_not_log_mapping_missing", run = _test_hidden_paid_entries_do_not_log_mapping_missing },
+    { name = "hidden_paid_product_is_rejected_before_mapping", run = _test_hidden_paid_product_is_rejected_before_mapping },
     { name = "paid_purchase_callback_fulfills_item", run = _test_paid_purchase_callback_fulfills_item },
   },
 }
