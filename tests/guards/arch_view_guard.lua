@@ -1,7 +1,7 @@
-package.path = package.path .. ";./scripts/architecture/?.lua;./scripts/architecture/?/?.lua"
+package.path = package.path .. ";./scripts/arch/?.lua;./scripts/arch/?/?.lua"
 
 local build = require("arch_view.build")
-local config = require("monopoly_architecture")
+local config = require("config")
 
 local M = {}
 

@@ -1,4 +1,4 @@
-package.path = package.path .. ";./scripts/architecture/?.lua;./scripts/architecture/?/?.lua"
+package.path = package.path .. ";./scripts/arch/?.lua;./scripts/arch/?/?.lua"
 
 local build = require("arch_view.build")
 local cli = require("arch_view.cli")
@@ -10,8 +10,7 @@ local json_writer = require("arch_view.json_writer")
 local layout = require("arch_view.layers")
 local route_engine = require("arch_view.route_engine")
 local source_scan = require("arch_view.source_scan")
-local config = require("monopoly_architecture")
-local extended_config = require("monopoly_architecture_extended")
+local config = require("config")
 
 local cached_architecture = nil
 local tmp_root = common.system_tmp_dir() .. "/monopoly_arch_view_test_output"
@@ -288,26 +287,7 @@ local function _test_config_classifies_runtime_game_and_ports()
     )
 end
 
-local function _test_extended_config_classifies_tests_and_scripts()
-    local architecture, err = build.analyze(extended_config)
-    if architecture == nil then
-        error(err)
-    end
-
-    _assert_eq(
-        architecture.modules["tests.guard"].component,
-        "tests",
-        "extended config should classify tests entrypoints"
-    )
-    _assert_eq(
-        architecture.modules["scripts.architecture.arch_view.build"].component,
-        "architecture_scripts",
-        "extended config should classify architecture scripts"
-    )
-    assert(architecture.check ~= nil and architecture.check.ok == true, "extended config should pass check")
-end
-
-local function _test_cycle_baseline_rejects_unexpected_cycles()
+local function _test_any_cycle_fails_check()
     local architecture = {
         graph = {
             nodes = { "a", "b", "c" },
@@ -327,13 +307,10 @@ local function _test_cycle_baseline_rejects_unexpected_cycles()
         component_rules = {},
         abstract_rules = {},
         forbidden_dependency_rules = {},
-        cycle_baseline = {
-            { "a", "b" },
-        },
     })
 
-    assert(result.ok == false, "unexpected cycle should fail check")
-    _assert_eq(result.violations[1].kind, "unexpected_cycle", "unexpected cycle should be reported first")
+    assert(result.ok == false, "cycle should fail check")
+    _assert_eq(result.violations[1].kind, "unexpected_cycle", "cycle should be reported")
     assert(#result.cycles == 1 and #result.cycles[1] == 3, "cycle output should expose module arrays")
 end
 
@@ -476,7 +453,7 @@ end
 local function _test_build_includes_metadata_for_project_root_and_config_path()
     local architecture, err = build.analyze(config, {
         project_root = ".",
-        config_path = "scripts/architecture/monopoly_architecture.lua",
+        config_path = "scripts/arch/config.lua",
     })
     if architecture == nil then
         error(err)
@@ -498,7 +475,7 @@ local function _test_cli_scan_writes_metadata()
         "scan",
         "--out", out_path,
     }, {
-        script_dir = "scripts/architecture",
+        script_dir = "scripts/arch",
         default_project_root = ".",
     })
 
@@ -535,7 +512,6 @@ local function _test_cli_supports_external_project_root_and_config()
         "  },",
         "  abstract_rules = {},",
         "  forbidden_dependency_rules = {},",
-        "  cycle_baseline = {},",
         "}",
         "",
     }, "\n"))
@@ -548,7 +524,7 @@ local function _test_cli_supports_external_project_root_and_config()
         "--config", config_path,
         "--out", out_path,
     }, {
-        script_dir = "scripts/architecture",
+        script_dir = "scripts/arch",
         default_project_root = ".",
     })
 
@@ -558,16 +534,6 @@ local function _test_cli_supports_external_project_root_and_config()
     _assert_eq(payload.modules["src.demo.alpha"].component, "demo", "external config should classify modules")
 end
 
-local function _test_cli_check_supports_extended_config()
-    cli.run({
-        "check",
-        "--config", "scripts/architecture/monopoly_architecture_extended.lua",
-    }, {
-        script_dir = "scripts/architecture",
-        default_project_root = ".",
-    })
-end
-
 local function _test_viewer_command_writes_static_bundle()
     local out_dir = tmp_root .. "/viewer"
     local ok, err = common.ensure_dir(out_dir)
@@ -575,7 +541,7 @@ local function _test_viewer_command_writes_static_bundle()
         error(err)
     end
 
-    local command = 'lua scripts/architecture/arch_view_cli.lua viewer --out-dir "' .. out_dir .. '"'
+    local command = 'lua scripts/arch.lua viewer --out-dir "' .. out_dir .. '"'
     if common.is_windows() then
         command = command .. " >nul 2>nul"
     else
@@ -611,7 +577,7 @@ local function _test_cli_viewer_supports_in_json()
         "--in-json", json_path,
         "--out-dir", out_dir,
     }, {
-        script_dir = "scripts/architecture",
+        script_dir = "scripts/arch",
         default_project_root = ".",
     })
 
@@ -634,8 +600,8 @@ local function _test_common_builds_open_command()
 end
 
 local function _test_json_modules_are_self_contained()
-    local reader_source = _read_file("scripts/architecture/arch_view/json_reader.lua")
-    local writer_source = _read_file("scripts/architecture/arch_view/json_writer.lua")
+    local reader_source = _read_file("scripts/arch/arch_view/json_reader.lua")
+    local writer_source = _read_file("scripts/arch/arch_view/json_writer.lua")
     assert(reader_source:find('src.core.utils.number_utils', 1, true) == nil,
         "json_reader should not depend on src.core.utils.number_utils")
     assert(writer_source:find('src.core.utils.number_utils', 1, true) == nil,
@@ -866,6 +832,113 @@ local function _test_common_resolves_tmp_path_for_windows_shell_compat()
     common.system_tmp_dir = original_system_tmp_dir
 end
 
+local function _test_check_includes_projection_cycles()
+    local projection = require("arch_view.projection")
+    local architecture = {
+        graph = {
+            nodes = {
+                "src.alpha.a1",
+                "src.alpha.a2",
+                "src.beta.b1",
+                "src.beta.b2",
+            },
+            edges = {
+                { from = "src.alpha.a1", to = "src.beta.b1" },
+                { from = "src.beta.b2",  to = "src.alpha.a2" },
+            },
+        },
+        modules = {
+            ["src.alpha.a1"] = {
+                module_id = "src.alpha.a1",
+                module_segments = { "src", "alpha", "a1" },
+                namespace_segments = { "alpha", "a1" },
+                source_path = "src/alpha/a1.lua",
+                source_text = "",
+                internal_requires = { "src.beta.b1" },
+                external_requires = {},
+                component = "demo",
+                abstract = false,
+            },
+            ["src.alpha.a2"] = {
+                module_id = "src.alpha.a2",
+                module_segments = { "src", "alpha", "a2" },
+                namespace_segments = { "alpha", "a2" },
+                source_path = "src/alpha/a2.lua",
+                source_text = "",
+                internal_requires = {},
+                external_requires = {},
+                component = "demo",
+                abstract = false,
+            },
+            ["src.beta.b1"] = {
+                module_id = "src.beta.b1",
+                module_segments = { "src", "beta", "b1" },
+                namespace_segments = { "beta", "b1" },
+                source_path = "src/beta/b1.lua",
+                source_text = "",
+                internal_requires = {},
+                external_requires = {},
+                component = "demo",
+                abstract = false,
+            },
+            ["src.beta.b2"] = {
+                module_id = "src.beta.b2",
+                module_segments = { "src", "beta", "b2" },
+                namespace_segments = { "beta", "b2" },
+                source_path = "src/beta/b2.lua",
+                source_text = "",
+                internal_requires = { "src.alpha.a2" },
+                external_requires = {},
+                component = "demo",
+                abstract = false,
+            },
+        },
+        classified_edges = {
+            { from = "src.alpha.a1", to = "src.beta.b1", type = "direct" },
+            { from = "src.beta.b2",  to = "src.alpha.a2", type = "direct" },
+        },
+        layout = layout.assign_layers({
+            nodes = {
+                "src.alpha.a1",
+                "src.alpha.a2",
+                "src.beta.b1",
+                "src.beta.b2",
+            },
+            edges = {
+                { from = "src.alpha.a1", to = "src.beta.b1" },
+                { from = "src.beta.b2",  to = "src.alpha.a2" },
+            },
+        }),
+    }
+
+    local module_cycles = layout.find_cycles(architecture.graph)
+    _assert_eq(#module_cycles, 0, "module-level graph should have no cycles")
+
+    architecture.views = projection.build_views(architecture)
+
+    local projection_cycles = projection.collect_projection_cycles(architecture.views)
+    assert(type(projection_cycles) == "table", "projection_cycles should be a table")
+    assert(#projection_cycles > 0, "should detect at least one projection-level cycle")
+
+    local root_entry = nil
+    for _, entry in ipairs(projection_cycles) do
+        if entry.view == "root" then
+            root_entry = entry
+            break
+        end
+    end
+    assert(root_entry ~= nil, "root view should have a projection cycle")
+    assert(#root_entry.feedback_edges > 0, "root projection cycle should have feedback edges")
+
+    local found_feedback = false
+    for _, fe in ipairs(root_entry.feedback_edges) do
+        if #fe.module_edges > 0 then
+            found_feedback = true
+        end
+    end
+    assert(found_feedback, "feedback edges should carry module_edges")
+end
+
 return {
     name = "architecture.arch_view_contract",
     tests = {
@@ -876,8 +949,7 @@ return {
         { name = "projection_builds_root_and_game_views",                     run = _test_projection_builds_root_and_game_views },
         { name = "projection_collapses_package_init_nodes_into_single_drillable_node", run = _test_projection_collapses_package_init_nodes_into_single_drillable_node },
         { name = "config_classifies_runtime_game_and_ports",                  run = _test_config_classifies_runtime_game_and_ports },
-        { name = "extended_config_classifies_tests_and_scripts",              run = _test_extended_config_classifies_tests_and_scripts },
-        { name = "cycle_baseline_rejects_unexpected_cycles",                  run = _test_cycle_baseline_rejects_unexpected_cycles },
+        { name = "any_cycle_fails_check",                                      run = _test_any_cycle_fails_check },
         { name = "route_engine_emits_orthogonal_paths_without_exact_overlap", run = _test_route_engine_emits_orthogonal_paths_without_exact_overlap },
         { name = "route_engine_spreads_cross_layer_ports_away_from_center",   run = _test_route_engine_spreads_cross_layer_ports_away_from_center },
         { name = "route_engine_uses_side_ports_for_same_layer_edges",         run = _test_route_engine_uses_side_ports_for_same_layer_edges },
@@ -886,7 +958,6 @@ return {
         { name = "build_includes_metadata_for_project_root_and_config_path",  run = _test_build_includes_metadata_for_project_root_and_config_path },
         { name = "cli_scan_writes_metadata",                                  run = _test_cli_scan_writes_metadata },
         { name = "cli_supports_external_project_root_and_config",             run = _test_cli_supports_external_project_root_and_config },
-        { name = "cli_check_supports_extended_config",                        run = _test_cli_check_supports_extended_config },
         { name = "viewer_command_writes_static_bundle",                       run = _test_viewer_command_writes_static_bundle },
         { name = "cli_viewer_supports_in_json",                               run = _test_cli_viewer_supports_in_json },
         { name = "common_builds_open_command",                                run = _test_common_builds_open_command },
@@ -894,5 +965,6 @@ return {
         { name = "projection_propagates_deep_subtree_cycles_to_parents",      run = _test_projection_propagates_deep_subtree_cycles_to_parents },
         { name = "layout_renderer_preserves_viewer_contract_shape",           run = _test_layout_renderer_preserves_viewer_contract_shape },
         { name = "common_resolves_tmp_path_for_windows_shell_compat",         run = _test_common_resolves_tmp_path_for_windows_shell_compat },
+        { name = "check_includes_projection_cycles",                           run = _test_check_includes_projection_cycles },
     },
 }

@@ -1,5 +1,5 @@
 local bootstrap = require("tests.bootstrap")
-local crap_cli = require("crap_cli")
+local crap_cli = require("crap")
 local common = require("crap.common")
 local luac_listing = require("crap.luac_listing")
 local report = require("crap.report")
