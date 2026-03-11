@@ -7,8 +7,8 @@ local cli = {}
 
 local function _usage()
   io.write("Usage:\n")
-  io.write("  <lua> scripts/quality/crap_cli.lua report [--mode <auto|dev|release_trimmed>] [--lane <behavior|contract>] [--out <file>] [--top <n>] [--strict-tests]\n")
-  io.write("  <lua> scripts/quality/crap_cli.lua viewer --out-dir <dir> [--in-json <file>] [--open]\n")
+  io.write("  <lua> scripts/crap.lua report [--mode <auto|dev|release_trimmed>] [--lane <behavior|contract>] [--out <file>] [--top <n>] [--strict-tests]\n")
+  io.write("  <lua> scripts/crap.lua viewer --out-dir <dir> [--in-json <file>] [--open]\n")
 end
 
 local function _parse_top(value)
@@ -120,7 +120,7 @@ local function _run_viewer(options, env)
     if loaded_report == nil then
       error(
         "viewer input json not found or unreadable: " .. tostring(paths.in_json)
-          .. "\nrun `lua scripts/quality/crap_cli.lua report --out "
+          .. "\nrun `lua scripts/crap.lua report --out "
           .. tostring(paths.in_json)
           .. "` first, or omit `--in-json` to generate the report on demand"
           .. (load_err and ("\nloader error: " .. tostring(load_err)) or "")
