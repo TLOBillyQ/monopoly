@@ -48,7 +48,7 @@ T6 ──┘  │
 - **validation**: `src/game/scheduler/*` 不再 `require("src.game.flow...")`；`session:snapshot()`、`game.turn.phase`、`choice_elapsed_seconds`、各 wait state 行为保持不变；`game` 视图不再出现 `flow <-> scheduler` feedback edge。
 - **status**: Completed
 - **log**:
-  - 2026-03-11 17:03 CST: 把 coroutine turn script 与 wait-state 解析从 `src/game/scheduler/` 迁到 `src/game/flow/turn/await.lua` 和 `src/game/flow/turn/turn_script.lua`。
+  - 2026-03-11 17:03 CST: 把 coroutine turn script 与 wait-state 解析从 `src/game/scheduler/` 迁到 `src/game/flow/turn/await.lua` 和 `src/game/flow/turn/script.lua`。
   - 2026-03-11 17:03 CST: `session` 新增 `script_factory` 注入，`scheduler` 改为只负责 queue / resume / wait-state bookkeeping，不再直接 `require("src.game.flow...")`。
   - 2026-03-11 17:03 CST: 定向运行 `suites.gameplay.gameplay_coroutine`，8 个 coroutine 行为用例通过。
 - **files edited/created**:
@@ -56,7 +56,7 @@ T6 ──┘  │
   - `src/game/scheduler/init.lua`
   - `src/game/flow/turn/engine.lua`
   - `src/game/flow/turn/await.lua`
-  - `src/game/flow/turn/turn_script.lua`
+  - `src/game/flow/turn/script.lua`
   - deleted `src/game/scheduler/await.lua`
   - deleted `src/game/scheduler/turn_script.lua`
 
@@ -123,10 +123,14 @@ T6 ──┘  │
 - **validation**: 进入 market 地块后的 choice/intention、等待态、自动流程保持一致；`land` 不再直接依赖 `market`。
 - **status**: Completed
 - **log**:
-  - 2026-03-11 17:24 CST: 现有树已经使用中性 helper `src/game/systems/choices/use_skip_choice.lua`，`steal` 与 `market` 均未再依赖 `land.choice_specs`。
-  - 2026-03-11 17:24 CST: 定向回归 `suites.domain.item` + `suites.gameplay.gameplay_items_startup` 共 43 个用例通过，确认 `steal_prompt`、rent/tax prompt、market vehicle replace 的 confirm 字段保持不变。
+  - 2026-03-11 22:48 CST: 新增 `src/game/systems/market/effects.lua`，把 market landing effect 注册从 `land` 子系统迁回 `market` 子系统。
+  - 2026-03-11 22:48 CST: `src/game/systems/land/executors.lua` 删除 `market` effect group，`src/game/core/runtime/bootstrap.lua` 改为同时注册 land 与 market 的 effect executors。
+  - 2026-03-11 22:48 CST: 定向运行 `suites.domain.market`、`suites.gameplay.gameplay_items_startup`，确认 market choice / waiting / auto flow 行为保持不变。
 - **files edited/created**:
-  - no code changes required; validated existing implementation
+  - `src/game/systems/market/effects.lua`
+  - `src/game/systems/land/executors.lua`
+  - deleted `src/game/systems/land/effects/market.lua`
+  - `src/game/core/runtime/bootstrap.lua`
 
 ### T6: 提取中性 board/property 查询，切断 `items -> land`
 - **depends_on**: []
@@ -166,9 +170,28 @@ T6 ──┘  │
   - `src.game.systems.items.*` 不能依赖 `src.game.systems.land.rent_resolver`
   同时在 `arch_view_contract` 中直接分析真实仓库，断言 `projection_cycles` 不再包含 `game`、`game.systems`；同步文档到新归属。
 - **validation**: repo 级 architecture suite 明确检查 `projection_cycles` 范围；guard 与文档同步反映新边界，没有残留旧 whitelist。
-- **status**: Not Completed
+- **status**: Completed
 - **log**:
+  - 2026-03-11 23:24 CST: `tests/guards/dep_rules.lua` 新增 scheduler/core.runtime/market/items 的硬边界检查，直接阻断旧路径回流。
+  - 2026-03-11 23:24 CST: `scripts/arch/config.lua` 补充 `src.game.ai.*` 分类与 repo 级禁止边，`tests/suites/architecture/arch_view_contract.lua` 新增真实仓库 `projection_cycles` 断言。
+  - 2026-03-11 23:24 CST: 将 item/land/market choice handlers 迁回各自子系统，并把 `choices.registry` / `choices.resolver` 改成只保留通用注册与注入式 helper，清掉 `game.systems` 视图里的 `choices -> items/land/market` 回折。
+  - 2026-03-11 23:24 CST: 更新 `docs/architecture/boundaries.md` 与 `docs/architecture/subsystems.md`，同步 AI 中性模块、scheduler 纯调度职责与新的架构护栏。
 - **files edited/created**:
+  - `scripts/arch/config.lua`
+  - `tests/guards/dep_rules.lua`
+  - `tests/suites/architecture/arch_view_contract.lua`
+  - `src/game/systems/choices/registry.lua`
+  - `src/game/systems/choices/resolver.lua`
+  - `src/game/systems/items/choice_handlers.lua`
+  - `src/game/systems/land/choice_handlers.lua`
+  - `src/game/systems/market/choice_handlers.lua`
+  - deleted `src/game/systems/choices/handlers/item.lua`
+  - deleted `src/game/systems/choices/handlers/land.lua`
+  - deleted `src/game/systems/choices/handlers/market.lua`
+  - `docs/architecture/boundaries.md`
+  - `docs/architecture/subsystems.md`
+  - `tests/suites/domain/land.lua`
+  - `tests/suites/domain/market.lua`
 
 ### T8: 回归验证
 - **depends_on**: [T7]
@@ -180,9 +203,15 @@ T6 ──┘  │
   - `lua tests/contract.lua`
   - `MONO_REGRESSION_MODE=release_trimmed lua tests/regression.lua`
   - 验收标准：真实仓库 `projection_cycles` 不含 `game`、`game.systems`；不要求清掉 `presentation.runtime`；协程等待态、AI 自动操作、偷窃提示、租金/免税提示、市场换车确认均保持原行为。
-- **status**: Not Completed
+- **status**: Completed
 - **log**:
+  - 2026-03-11 23:39 CST: 运行 `lua scripts/arch.lua check`，通过。
+  - 2026-03-11 23:39 CST: 运行 `lua tests/guard.lua`，5/5 guard scripts 通过。
+  - 2026-03-11 23:39 CST: 运行 `lua tests/contract.lua`，92 个 contract 用例通过。
+  - 2026-03-11 23:39 CST: 运行 `MONO_REGRESSION_MODE=release_trimmed lua tests/regression.lua`，420 个 trimmed behavior 用例与 92 个 contract 用例通过。
+  - 2026-03-11 23:39 CST: 复查真实仓库 `projection_cycles` 仅剩 `presentation.runtime`，`game` 与 `game.systems` 均已消失。
 - **files edited/created**:
+  - no code changes; validation only
 
 ## Parallel Execution Groups
 

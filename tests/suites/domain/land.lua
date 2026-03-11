@@ -12,6 +12,57 @@ local land_actions = support.land_actions
 local pricing = support.pricing
 local choice_resolver = support.choice_resolver
 local choice_registry = require("src.game.systems.choices.registry")
+local choice_optional_effect_handler = require("src.game.systems.choices.handlers.optional_effect")
+local item_choice_handlers = require("src.game.systems.items.choice_handlers")
+local item_executor = require("src.game.systems.items.executor")
+local item_phase = require("src.game.systems.items.phase")
+local land_choice_handlers = require("src.game.systems.land.choice_handlers")
+local landing_defs = require("src.game.systems.land.specs.effects")
+local effect_runner = require("src.game.systems.effects.effect_runner")
+local market_choice_handlers = require("src.game.systems.market.choice_handlers")
+
+local function _build_choice_groups()
+  local helpers = choice_resolver.helpers({
+    use_item = item_executor.use_item,
+    build_game_ctx = function(game, move_result)
+      return effect_runner.build_game_ctx(game, move_result, {
+        phase_default = "wait_choice",
+        on_landing = true,
+      })
+    end,
+    finish_item_phase = function(game, choice)
+      item_phase.finish(game, choice and choice.meta and choice.meta.phase or nil)
+    end,
+    finish_active_item_phase = function(game)
+      local phase = game.turn.item_phase_active
+      if phase and phase ~= "" then
+        item_phase.finish(game, phase)
+      end
+    end,
+    get_container_defs_by_choice_kind = function(choice_kind)
+      if choice_kind == "landing_optional_effect" then
+        return landing_defs
+      end
+      return nil
+    end,
+    find_effect_by_id = function(effect_defs, effect_id)
+      assert(effect_defs ~= nil, "missing effect defs")
+      for _, effect_definition in ipairs(effect_defs) do
+        if effect_definition.id == effect_id then
+          return effect_definition
+        end
+      end
+      return nil
+    end,
+  })
+
+  return {
+    choice_optional_effect_handler.build(helpers),
+    land_choice_handlers.build(helpers),
+    item_choice_handlers.build(helpers),
+    market_choice_handlers.build(helpers),
+  }
+end
 
 local function _test_ai_picks_land_purchase()
   local agent = require("src.game.ai.agent")
@@ -146,7 +197,7 @@ end
 
 local function _test_choice_registry_registers_descriptors_with_cancel_metadata()
   local registry = choice_registry:new()
-  registry:register_defaults(choice_resolver.helpers())
+  registry:register_defaults(_build_choice_groups())
 
   local tax_descriptor = registry:descriptor_for("tax_card_prompt")
   assert(type(tax_descriptor) == "table", "tax prompt should register as descriptor")

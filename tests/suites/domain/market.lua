@@ -54,7 +54,7 @@ local function _reload_market_service()
 end
 
 local function _reset_market_choice_runtime_modules()
-  package.loaded["src.game.systems.choices.handlers.market"] = nil
+  package.loaded["src.game.systems.market.choice_handlers"] = nil
   package.loaded["src.game.systems.choices.registry"] = nil
   package.loaded["src.game.systems.choices.resolver"] = nil
 end

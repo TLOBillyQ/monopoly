@@ -6,7 +6,6 @@ local turn_dispatch = require("src.game.flow.turn.dispatch")
 local gameplay_loop_ports = require("src.game.flow.turn.loop_ports")
 local gameplay_loop_runtime = require("src.game.flow.turn.loop_runtime")
 local intent_output_adapter = require("src.game.flow.output_adapters.intent_output_adapter")
-local default_ports = require("src.game.runtime.default_ports")
 local auto_context = require("src.game.flow.turn.auto_context")
 local tick_flow = require("src.game.flow.turn.loop_tick_flow")
 local turn_timer_policy = require("src.game.flow.turn.timer_policy")
@@ -16,6 +15,27 @@ local runtime_state = require("src.core.state_access.runtime_state")
 local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 local role_id_utils = require("src.core.utils.role_id")
 local gameplay_loop = {}
+
+local function _ensure_fallback_ports(game)
+  if type(game.auto_play_port) ~= "table" then
+    game.auto_play_port = {
+      is_auto_player = function(_, _, player)
+        return player and (player.auto == true or player.is_ai == true or player.ai == true) or false
+      end,
+      choose_action = function()
+        return nil
+      end,
+    }
+  end
+  if type(game.bankruptcy_port) ~= "table" then
+    game.bankruptcy_port = {
+      on_bankruptcy = function()
+        return nil
+      end,
+    }
+  end
+end
+
 local function _ensure_runtime_ports(game)
   if not game then
     return
@@ -23,7 +43,7 @@ local function _ensure_runtime_ports(game)
   if type(game.intent_output_port) ~= "table" then
     game.intent_output_port = intent_output_adapter.build()
   end
-  default_ports.install(game)
+  _ensure_fallback_ports(game)
 end
 
 local function _resolve_ports(state)
@@ -164,7 +184,7 @@ local function _initialize_ports(state, game)
   }
   game.anim_gate_port = gameplay_loop_runtime.build_anim_gate_port(state)
   game.intent_output_port = intent_output_adapter.build()
-  default_ports.install(game)
+  _ensure_fallback_ports(game)
   return ports
 end
 local function _configure_tile_owner_notifier(state, game)

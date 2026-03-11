@@ -5,9 +5,10 @@
 | 路径 | 职责 | 不属于这里 |
 |------|------|-----------|
 | `src/game/scheduler/` | 协程调度：创建、推进、超时、AFK 时钟 | 游戏规则、UI 通知 |
+| `src/game/ai/` | 中性 AI 策略：自动玩家判断、目标选择、自动 choice | 回合推进、宿主调用 |
 | `src/game/flow/output_adapters/` | turn use case 内部输出桥：接回 `intent_dispatcher` / `ui_runtime` | 宿主能力、跨用例共享 |
 | `src/game/core/player/` | 玩家状态：资金、道具、位置 | 业务规则（不引用 systems） |
-| `src/game/core/ai/` | AI 决策策略，产出 action | 回合推进（委托给 flow） |
+| `src/game/core/ai/` | AI 兼容入口：为旧调用点转发到 `src/game/ai/` | 扩展新的策略实现 |
 | `src/game/core/runtime/` | `Game` 聚合根与 `CompositionRoot` 装配 | 破产结算等业务规则 |
 | `src/game/systems/movement/` | 移动规则：步数、格子推进 | UI 节点名、Canvas 切换 |
 | `src/game/systems/land/` | 地块规则：落地触发、地块状态 | 宿主 API |
@@ -41,7 +42,8 @@
 - 宿主/运行时广义契约 → `src/core/ports/`
 - 玩法规则业务能力契约 → `src/game/ports/`
 - 协程创建/推进/超时 → `src/game/scheduler/`
+- 自动玩家策略与目标选择 → `src/game/ai/`
 - 玩家资金/位置/道具字段 → `src/game/core/player/`
-- AI 决策 → `src/game/core/ai/`
+- AI 兼容入口 → `src/game/core/ai/`
 
 > 模块同时涉及业务规则和宿主/UI 细节时，先拆边界，不新增跨层混合模块。

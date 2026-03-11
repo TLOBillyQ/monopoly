@@ -6,7 +6,7 @@ return {
     { name = "presentation", match = { "^src%.presentation%..+" }, component = "presentation" },
     { name = "game_flow", match = { "^src%.game%.flow%..+" }, component = "game_flow" },
     { name = "game_systems", match = { "^src%.game%.systems%..+", "^src%.game%.ports%..+" }, component = "game_systems" },
-    { name = "game_ai", match = { "^src%.game%.core%.ai%..+" }, component = "game_ai" },
+    { name = "game_ai", match = { "^src%.game%.ai%..+", "^src%.game%.core%.ai%..+" }, component = "game_ai" },
     { name = "state", match = {
       "^src%.game%.core%.player$",
       "^src%.game%.core%.player%..+",
@@ -123,6 +123,36 @@ return {
       description = "systems layer must not depend on game.core.runtime directly",
       from = { "^src%.game%.systems%..+" },
       to = { "^src%.game%.core%.runtime%..+" },
+    },
+    {
+      name = "scheduler_no_flow",
+      description = "scheduler layer must not depend on flow layer directly",
+      from = { "^src%.game%.scheduler$", "^src%.game%.scheduler%..+" },
+      to = { "^src%.game%.flow%..+" },
+    },
+    {
+      name = "core_runtime_no_runtime_adapters",
+      description = "game core runtime must not depend on gameplay runtime adapters directly",
+      from = { "^src%.game%.core%.runtime%..+" },
+      to = { "^src%.game%.runtime%..+" },
+    },
+    {
+      name = "market_no_land_choice_specs",
+      description = "market subsystem must not depend on land choice specs",
+      from = { "^src%.game%.systems%.market%..+" },
+      to = { "^src%.game%.systems%.land%.choice_specs$" },
+    },
+    {
+      name = "items_no_land_board_utils",
+      description = "items subsystem must not depend on land board helpers directly",
+      from = { "^src%.game%.systems%.items%..+" },
+      to = { "^src%.game%.systems%.land%.board_utils$" },
+    },
+    {
+      name = "items_no_land_rent_resolver",
+      description = "items subsystem must not depend on land rent resolver directly",
+      from = { "^src%.game%.systems%.items%..+" },
+      to = { "^src%.game%.systems%.land%.rent_resolver$" },
     },
   },
 }

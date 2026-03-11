@@ -1,20 +1,20 @@
-local query = {}
+local board_query = {}
 
 local dir_order = { "up", "right", "down", "left" }
 
-function query.queue_walk(queue, visit)
-  local q = queue or {}
+function board_query.queue_walk(queue, visit)
+  local pending = queue or {}
   local head = 1
-  while head <= #q do
-    local node = q[head]
+  while head <= #pending do
+    local node = pending[head]
     head = head + 1
     visit(node, function(next_node)
-      q[#q + 1] = next_node
+      pending[#pending + 1] = next_node
     end)
   end
 end
 
-function query.indices_in_range(board, start, distance)
+function board_query.indices_in_range(board, start, distance)
   assert(board ~= nil, "missing board")
   assert(board.map ~= nil, "missing board.map")
   local neighbors = assert(board.map.neighbors, "missing board.map.neighbors")
@@ -23,6 +23,7 @@ function query.indices_in_range(board, start, distance)
   if max_dist <= 0 then
     return {}
   end
+
   local dist_by_id = { [start_tile.id] = 0 }
   local queue = { start_tile.id }
   local qhead = 1
@@ -60,4 +61,4 @@ function query.indices_in_range(board, start, distance)
   return list
 end
 
-return query
+return board_query

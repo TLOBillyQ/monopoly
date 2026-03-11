@@ -110,6 +110,40 @@ local rules = {
     description = "turn flow must route UI reads and writes through output/ui_sync ports",
   },
   {
+    roots = { "src/game/scheduler" },
+    forbidden_patterns = {
+      "require%(\"src%.game%.flow%..+\"%)",
+      "require%('src%.game%.flow%..+'%)",
+    },
+    description = "scheduler must stay as a pure coroutine scheduler and not depend on flow modules",
+  },
+  {
+    roots = { "src/game/core/runtime" },
+    forbidden_patterns = {
+      "require%(\"src%.game%.runtime%..+\"%)",
+      "require%('src%.game%.runtime%..+'%)",
+    },
+    description = "core runtime must not depend on gameplay runtime adapters directly",
+  },
+  {
+    roots = { "src/game/systems/market" },
+    forbidden_patterns = {
+      "require%(\"src%.game%.systems%.land%.choice_specs\"%)",
+      "require%('src%.game%.systems%.land%.choice_specs'%)",
+    },
+    description = "market subsystem must not depend on land choice specs",
+  },
+  {
+    roots = { "src/game/systems/items" },
+    forbidden_patterns = {
+      "require%(\"src%.game%.systems%.land%.board_utils\"%)",
+      "require%('src%.game%.systems%.land%.board_utils'%)",
+      "require%(\"src%.game%.systems%.land%.rent_resolver\"%)",
+      "require%('src%.game%.systems%.land%.rent_resolver'%)",
+    },
+    description = "items subsystem must use neutral board/property helpers instead of land internals",
+  },
+  {
     roots = { "src/game/systems/market/application" },
     forbidden_patterns = {
       "%f[%w_]GameAPI%f[^%w_]",

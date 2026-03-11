@@ -1,22 +1,6 @@
 local logger = require("src.core.utils.logger")
-local executor = require("src.game.systems.items.executor")
-local item_phase = require("src.game.systems.items.phase")
-local effect_runner = require("src.game.systems.effects.effect_runner")
-local landing_defs = require("src.game.systems.land.specs.effects")
 
 local choice_resolver = {}
-
-local cancel_result_by_mode = {
-  finish_item_phase = function(game, choice)
-    item_phase.finish(game, choice.meta and choice.meta.phase or nil)
-  end,
-  finish_active_item_phase = function(game)
-    local phase = game.turn.item_phase_active
-    if phase and phase ~= "" then
-      item_phase.finish(game, phase)
-    end
-  end,
-}
 
 local function _each_option(choice, visitor)
   local options = choice and choice.options or nil
@@ -92,30 +76,6 @@ local function _option_exists(choice, target_option_id)
   end) == true
 end
 
-local function _build_game_ctx(game, move_result)
-  return effect_runner.build_game_ctx(game, move_result, {
-    phase_default = "wait_choice",
-    on_landing = true,
-  })
-end
-
-local function _get_container_defs_by_choice_kind(choice_kind)
-  if choice_kind == "landing_optional_effect" then
-    return landing_defs
-  end
-  return nil
-end
-
-local function _find_effect_by_id(effect_defs, effect_id)
-  assert(effect_defs ~= nil, "missing effect defs")
-  for _, effect_definition in ipairs(effect_defs) do
-    if effect_definition.id == effect_id then
-      return effect_definition
-    end
-  end
-  return nil
-end
-
 local function _build_select_action(choice, option_id, action)
   return {
     type = "choice_select",
@@ -144,25 +104,22 @@ local function _resolve_cancel_followup(game, choice, descriptor)
   if cancel.mode == "select_option" then
     return _find_option_id(choice, cancel.option_id), nil
   end
-  return nil, cancel_result_by_mode[cancel.mode]
+  return nil, nil
 end
 
-local helpers = {
+local base_helpers = {
   is_cancel = _is_cancel,
   clear_choice = _clear_choice,
   finish_choice = _finish_choice,
-  use_item = executor.use_item,
   contains = _contains,
-  build_game_ctx = _build_game_ctx,
-  finish_item_phase = cancel_result_by_mode.finish_item_phase,
-  finish_active_item_phase = cancel_result_by_mode.finish_active_item_phase,
-  get_container_defs_by_choice_kind = _get_container_defs_by_choice_kind,
-  find_effect_by_id = _find_effect_by_id,
 }
 
-function choice_resolver.helpers()
+function choice_resolver.helpers(overrides)
   local out = {}
-  for key, value in pairs(helpers) do
+  for key, value in pairs(base_helpers) do
+    out[key] = value
+  end
+  for key, value in pairs(overrides or {}) do
     out[key] = value
   end
   return setmetatable(out, {
@@ -192,6 +149,7 @@ function choice_resolver.resolve(game, choice, action)
     if fallback_option_id ~= nil then
       action = _build_select_action(choice, fallback_option_id, action)
     else
+      cancel_result = cancel_result or (descriptor.cancel and descriptor.cancel.resolve)
       if type(cancel_result) == "function" then
         cancel_result(game, choice)
       end

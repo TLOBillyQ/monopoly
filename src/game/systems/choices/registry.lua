@@ -43,14 +43,8 @@ function choice_registry:descriptor_for(kind)
   return self.handlers[kind]
 end
 
-function choice_registry:register_defaults(helpers)
-  local groups = {
-    require("src.game.systems.choices.handlers.optional_effect").build(helpers),
-    require("src.game.systems.choices.handlers.land").build(helpers),
-    require("src.game.systems.choices.handlers.item").build(helpers),
-    require("src.game.systems.choices.handlers.market").build(helpers),
-  }
-  for _, group in ipairs(groups) do
+function choice_registry:register_defaults(groups)
+  for _, group in ipairs(groups or {}) do
     for key, handler in pairs(group) do
       self:register(key, handler)
     end

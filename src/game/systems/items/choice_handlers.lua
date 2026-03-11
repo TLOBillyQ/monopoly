@@ -322,7 +322,11 @@ function item_choice_handler.build(helpers)
   return {
     item_phase_choice = {
       required_meta = { "player_id", "phase" },
-      cancel = { mode = "finish_item_phase" },
+      cancel = {
+        resolve = function(game, choice)
+          item_phase.finish(game, choice.meta and choice.meta.phase or nil)
+        end,
+      },
       normalize_meta = _normalize_item_phase_meta,
       meta_validator = _validate_item_phase_meta,
       normalize_action = function(_, _, action)
@@ -332,7 +336,14 @@ function item_choice_handler.build(helpers)
     },
     demolish_target = {
       required_meta = { "player_id", "item_id" },
-      cancel = { mode = "finish_active_item_phase" },
+      cancel = {
+        resolve = function(game)
+          local phase = game.turn.item_phase_active
+          if phase and phase ~= "" then
+            item_phase.finish(game, phase)
+          end
+        end,
+      },
       normalize_meta = _normalize_item_target_meta,
       meta_validator = _validate_item_owner_meta,
       normalize_action = function(_, _, action)
@@ -342,7 +353,14 @@ function item_choice_handler.build(helpers)
     },
     roadblock_target = {
       required_meta = { "player_id", "item_id" },
-      cancel = { mode = "finish_active_item_phase" },
+      cancel = {
+        resolve = function(game)
+          local phase = game.turn.item_phase_active
+          if phase and phase ~= "" then
+            item_phase.finish(game, phase)
+          end
+        end,
+      },
       normalize_meta = _normalize_target_picker_meta,
       meta_validator = _validate_item_owner_meta,
       normalize_action = function(_, _, action)
@@ -352,7 +370,14 @@ function item_choice_handler.build(helpers)
     },
     steal_item = {
       required_meta = { "player_id", "target_id" },
-      cancel = { mode = "finish_active_item_phase" },
+      cancel = {
+        resolve = function(game)
+          local phase = game.turn.item_phase_active
+          if phase and phase ~= "" then
+            item_phase.finish(game, phase)
+          end
+        end,
+      },
       normalize_meta = _normalize_steal_meta,
       meta_validator = _validate_steal_meta,
       normalize_action = function(_, _, action)
@@ -369,7 +394,14 @@ function item_choice_handler.build(helpers)
     },
     item_target_player = {
       required_meta = { "player_id", "item_id" },
-      cancel = { mode = "finish_active_item_phase" },
+      cancel = {
+        resolve = function(game)
+          local phase = game.turn.item_phase_active
+          if phase and phase ~= "" then
+            item_phase.finish(game, phase)
+          end
+        end,
+      },
       normalize_meta = _normalize_item_target_meta,
       meta_validator = _validate_item_owner_meta,
       normalize_action = function(_, _, action)
@@ -379,7 +411,14 @@ function item_choice_handler.build(helpers)
     },
     remote_dice_value = {
       required_meta = { "player_id", "item_id" },
-      cancel = { mode = "finish_active_item_phase" },
+      cancel = {
+        resolve = function(game)
+          local phase = game.turn.item_phase_active
+          if phase and phase ~= "" then
+            item_phase.finish(game, phase)
+          end
+        end,
+      },
       normalize_meta = _normalize_remote_dice_meta,
       meta_validator = _validate_remote_dice_meta,
       normalize_action = function(_, _, action)

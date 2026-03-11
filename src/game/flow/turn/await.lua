@@ -260,13 +260,42 @@ function await.inter_turn(session, args)
     session:clear_pending_action()
     return { wait = true }
   end
-  session:clear_pending_action()
-  session.choice_elapsed_seconds = 0
-  session.turn_mgr:next_player()
+  local turn_mgr = session.turn_mgr or session
+  assert(type(turn_mgr.next_player) == "function", "missing turn_mgr.next_player")
+  turn_mgr:next_player()
   return {
     next_state = "start",
     next_args = args,
   }
+end
+
+function await.seconds(session, sec, opts)
+  assert(session ~= nil, "missing await session")
+  local wait_sec = sec or 0
+  if wait_sec <= 0 then
+    return { done = true }
+  end
+  opts = opts or {}
+  local key = opts.key or "__default__"
+  local now_fn = opts.now_fn
+  if type(now_fn) ~= "function" then
+    return { done = true }
+  end
+  local ok, now_or_err = pcall(now_fn)
+  if not ok or not number_utils.is_numeric(now_or_err) then
+    return { done = true }
+  end
+  local now = now_or_err
+  local started = session._seconds_wait[key]
+  if started == nil then
+    session._seconds_wait[key] = now
+    return { wait = true }
+  end
+  if (now - started) < wait_sec then
+    return { wait = true }
+  end
+  session._seconds_wait[key] = nil
+  return { done = true }
 end
 
 return await

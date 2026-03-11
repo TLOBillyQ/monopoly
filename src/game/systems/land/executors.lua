@@ -1,6 +1,5 @@
 local base = require("src.game.systems.land.effects.base")
 local chance = require("src.game.systems.land.effects.chance")
-local market = require("src.game.systems.land.effects.market")
 local transit = require("src.game.systems.land.effects.transit")
 local special = require("src.game.systems.land.effects.special")
 
@@ -19,7 +18,6 @@ end
 local executors = _merge_executor_groups({
   base.executors,
   chance.executors,
-  market.executors,
   transit.executors,
   special.executors,
 })

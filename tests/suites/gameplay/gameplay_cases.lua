@@ -57,6 +57,7 @@ local item_effects = require("src.game.systems.items.post_effects")
 local item_strategy = require("src.game.systems.items.strategy")
 local facing_policy = require("src.game.systems.board.facing_policy")
 local turn_start = require("src.game.flow.turn.start")
+local default_ports = require("src.game.runtime.default_ports")
 
 local function _mock_lua_api(send_custom_event)
   return {
@@ -393,13 +394,13 @@ local function _test_bankruptcy_calls_role_life_die_before_lose()
 end
 
 local function _test_chance_pay_others_stops_after_bankruptcy()
-  local g = app:new({
+  local g = app:new(default_ports.resolve_game_opts({
     players = { "P1", "P2", "P3", "P4" },
     ai = {},
     auto_all = false,
     map = map_cfg,
     tiles = tiles_cfg,
-  })
+  }))
   local p1 = g.players[1]
   local p2 = g.players[2]
   local p3 = g.players[3]
@@ -1285,13 +1286,13 @@ local function _test_autorunner_runs_to_end()
   local land_actions = require("src.game.systems.land.actions")
   local item_inventory = require("src.game.systems.items.inventory")
 
-  local g = app:new({
+  local g = app:new(default_ports.resolve_game_opts({
     players = { "P1", "P2", "P3", "P4" },
     ai = { [2] = true, [3] = true, [4] = true },
     auto_all = true,
     map = map_cfg,
     tiles = tiles_cfg,
-  })
+  }))
   g.ui_port = _build_ui_port()
   g.anim_gate_port = { wait_action_anim = false, wait_move_anim = false }
   g.popup_port = { push_popup = function() return false end }

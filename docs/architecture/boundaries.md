@@ -8,6 +8,7 @@
 | `src/core` | 跨玩法共享：日志、数值工具、配置访问、runtime 广义契约 | 直读 Eggy 全局对象；UI 节点或支付面板逻辑 |
 | `src/game/flow` | 用例编排：回合推进、意图分发、输入校验、输出端口发射 | 操作 UI 细节或宿主运行时对象 |
 | `src/game/systems` | 玩法规则：黑市、道具、地块、机会卡、移动、破产、胜负 | UI 节点名、Canvas 切换、宿主 API 调用 |
+| `src/game/ai` | 中性 AI 策略：自动出牌、目标选择、自动 choice 决策 | 回合调度、宿主 API |
 | `src/game/runtime` | gameplay 端口实现（接 `src/game/ports/*` 契约） | 承接业务规则 |
 | `src/infrastructure/runtime` | 宿主细节：运行时上下文、事件桥、默认 runtime ports | — |
 | `src/presentation/schema` | 展示 schema：canvas 节点名、contract 常量、布局清单 | 写状态、宿主调用、输入路由 |
@@ -42,6 +43,7 @@
    - `lua scripts/arch.lua check` — 边界扫描
    - `lua scripts/arch.lua viewer --out-dir <dir> [--open]` — 导出静态 viewer
    - `lua tests/guard.lua` — 完整护栏
+   - 当前额外硬边界：`scheduler -> flow` 禁止、`core.runtime -> game.runtime` 禁止、`market -> land.choice_specs` 禁止、`items -> land.board_utils/rent_resolver` 禁止。
 9. **零模块级循环依赖**：无白名单，任意新循环直接让 `arch_view` 护栏失败。
 10. **presentation schema 纯只读**：`src/presentation/schema` 只能承载节点名、画布常量与布局定义；运行时编排留在 `runtime`，渲染留在 `view`。
 

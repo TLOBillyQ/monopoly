@@ -7,6 +7,7 @@ local tile_state = support.tile_state
 local build_ui_port = support.build_ui_port
 local with_patches = support.with_patches
 local movement = support.movement
+local default_ports = require("src.game.runtime.default_ports")
 
 local constants = require("Config.generated.constants")
 local board_view = require("src.presentation.view.render.board")
@@ -28,13 +29,13 @@ local function _assert_unique_path(path)
 end
 
 local function _new_game()
-  return app:new({
+  return app:new(default_ports.resolve_game_opts({
     players = { "P1", "P2", "P3", "P4" },
     ai = { [2] = true, [3] = true, [4] = true },
     auto_all = false,
     map = map_cfg,
     tiles = tiles_cfg,
-  })
+  }))
 end
 
 local function _inventory_counts_by_id(player)

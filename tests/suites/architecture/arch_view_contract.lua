@@ -976,6 +976,25 @@ local function _test_check_includes_projection_cycles()
     assert(found_feedback, "feedback edges should carry module_edges")
 end
 
+local function _test_real_repo_projection_cycles_exclude_game_subtrees()
+    local projection = require("arch_view.projection")
+    local architecture = _analyze_architecture()
+    architecture.views = architecture.views or projection.build_views(architecture)
+
+    local projection_cycles = projection.collect_projection_cycles(architecture.views)
+    local blocked_views = {
+        game = true,
+        ["game.systems"] = true,
+    }
+
+    for _, entry in ipairs(projection_cycles or {}) do
+        assert(
+            blocked_views[entry.view] ~= true,
+            "projection_cycles should not include " .. tostring(entry.view)
+        )
+    end
+end
+
 return {
     name = "architecture.arch_view_contract",
     tests = {
@@ -1005,5 +1024,6 @@ return {
         { name = "layout_renderer_preserves_viewer_contract_shape",           run = _test_layout_renderer_preserves_viewer_contract_shape },
         { name = "common_resolves_tmp_path_for_windows_shell_compat",         run = _test_common_resolves_tmp_path_for_windows_shell_compat },
         { name = "check_includes_projection_cycles",                           run = _test_check_includes_projection_cycles },
+        { name = "real_repo_projection_cycles_exclude_game_subtrees",         run = _test_real_repo_projection_cycles_exclude_game_subtrees },
     },
 }
