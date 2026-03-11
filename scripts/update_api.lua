@@ -26,7 +26,7 @@ local function _fail(message)
 end
 
 local DEFAULT_NEW = common.join_path(env.repo_root, "EggyAPI.lua")
-local DEFAULT_OLD = common.join_path(env.repo_root, "EggyAPI_old.lua")
+local DEFAULT_OLD = common.join_path(env.repo_root, "EggyAPI copy.lua")
 local DEFAULT_DOC_DIR = common.join_path(env.repo_root, "docs/eggy/api")
 local DEFAULT_CHANGELOG = common.join_path(env.repo_root, "docs/eggy/api_changelog.md")
 
