@@ -20,20 +20,20 @@ jobs:
         run: lua tests/regression.lua
 
       - name: Collect deploy line counts
-        shell: pwsh
         run: |
-          $targetPath = Join-Path $env:RUNNER_TEMP "monopoly-deploy"
-          $output = & ./scripts/deploy.ps1 -TargetPath $targetPath 2>&1
-          $output | ForEach-Object { Write-Host $_ }
+          target_path="$RUNNER_TEMP/monopoly-deploy"
+          output="$(lua scripts/deploy.lua --target-path "$target_path" 2>&1)"
+          printf '%s\n' "$output"
 
-          $summaryLines = @($output | Where-Object {
-            $_ -match '有效代码行数' -or $_ -match '^\s+- (Config|src|vendor|main\.lua|Data/UIManagerNodes\.lua|Data/Prefab\.lua):'
-          })
+          summary_lines="$(printf '%s\n' "$output" | grep -E '有效代码行数|^[[:space:]]+- (Config|src|vendor|main\.lua|Data/UIManagerNodes\.lua|Data/Prefab\.lua):' || true)"
 
-          if ($summaryLines.Count -gt 0) {
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '## Deploy line counts'
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ''
-            foreach ($line in $summaryLines) {
-              Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ("- {0}" -f $line.Trim())
-            }
-          }
+          if [[ -n "$summary_lines" ]]; then
+            {
+              echo '## Deploy line counts'
+              echo ''
+              while IFS= read -r line; do
+                trimmed="$(printf '%s' "$line" | sed 's/^[[:space:]]*//')"
+                echo "- $trimmed"
+              done <<< "$summary_lines"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
