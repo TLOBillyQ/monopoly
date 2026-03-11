@@ -54,3 +54,12 @@ Removed: 0
 Signature changed: 0
 Type changed: 0
 
+## 2026-03-11
+
+Added: 1
+  - Role.show_map_share_panel
+Removed: 0
+Signature changed: 1
+  - GameAPI.create_unit_group: _unit_group_id, _pos, _root_quaternion, _role -> _unit_group_id, _pos, _root_quaternion, _role, _use_center_offset
+Type changed: 0
+

@@ -22,7 +22,7 @@ GameAPI|create_sfx_with_socket|_sfx_key, _unit, _socket_name, _scale, _duration,
 GameAPI|create_sfx_with_socket_offset|_sfx_key, _unit, _socket_name, _offset, _rot, _scale, _duration, _bind_type
 GameAPI|create_sheet
 GameAPI|create_triggerspace|_u_key, _pos, _rotation, _scale, _role
-GameAPI|create_unit_group|_unit_group_id, _pos, _root_quaternion, _role
+GameAPI|create_unit_group|_unit_group_id, _pos, _root_quaternion, _role, _use_center_offset
 GameAPI|create_unit_with_scale|_u_key, _pos, _rotation, _scale
 GameAPI|creature_prefab_get_kv_by_type|_value_type, _key, _prop
 GameAPI|creature_prefab_get_prop_by_type|_value_type, _key, _prop

@@ -389,6 +389,7 @@ Role|show_bag_panel|_visible
 Role|show_dynamic_text|_text, _pos, _color, _duration, _anim_type
 Role|show_goods_purchase_panel|_raw_goods_id, _show_time
 Role|show_like_panel
+Role|show_map_share_panel
 Role|show_tips|_content, _duration
 Role|show_ultimate_ability_panel|_keep_time
 Role|skip_current_montage|_has_black_screen

@@ -2496,8 +2496,9 @@ function GameAPI.create_triggerspace(_u_key, _pos, _rotation, _scale, _role) end
 ---@param _pos Vector3 位置
 ---@param _root_quaternion Quaternion 旋转
 ---@param _role Role? 所属玩家
+---@param _use_center_offset boolean? 应用原点偏移
 ---@return UnitGroup 创建出的单位
-function GameAPI.create_unit_group(_unit_group_id, _pos, _root_quaternion, _role) end
+function GameAPI.create_unit_group(_unit_group_id, _pos, _root_quaternion, _role, _use_center_offset) end
 
 ---创建一个缩放单位
 ---@param _u_key UnitKey 单位编号
@@ -4924,6 +4925,9 @@ function Role.show_goods_purchase_panel(_raw_goods_id, _show_time) end
 
 ---显示点赞界面
 function Role.show_like_panel() end
+
+---指定玩家显示地图分享界面
+function Role.show_map_share_panel() end
 
 ---玩家显示飘字信息
 ---@param _content string 字符串

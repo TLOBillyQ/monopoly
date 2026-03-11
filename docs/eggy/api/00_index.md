@@ -14,4 +14,4 @@
 - 08_components.md：组件类方法索引（*Comp）。
 - 09_events.md：事件常量与示例。
 
-校验方式：运行 `lua scripts/eggy_api_change.lua`，默认包含校验。
+校验方式：运行 `lua scripts/eggy_api.lua`，默认包含校验。

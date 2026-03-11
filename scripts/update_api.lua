@@ -45,6 +45,68 @@ local function _split_lines(text)
   return lines
 end
 
+local function _split_lines_keepends(text)
+  local lines = {}
+  local cursor = 1
+  local source = tostring(text or "")
+  local source_length = #source
+  if source_length == 0 then
+    return lines
+  end
+
+  while cursor <= source_length do
+    local newline_index = source:find("\n", cursor, true)
+    if newline_index == nil then
+      lines[#lines + 1] = source:sub(cursor)
+      break
+    end
+    lines[#lines + 1] = source:sub(cursor, newline_index)
+    cursor = newline_index + 1
+  end
+
+  return lines
+end
+
+local function _remove_deprecated_api(lines)
+  local output = {}
+  local buffer = {}
+  local deprecated_in_buffer = false
+
+  for _, line in ipairs(lines or {}) do
+    local stripped = line:gsub("^%s*", "")
+    local is_doc = stripped:sub(1, 3) == "---"
+    if is_doc then
+      buffer[#buffer + 1] = line
+      if line:find("@deprecated", 1, true) ~= nil then
+        deprecated_in_buffer = true
+      end
+    else
+      if deprecated_in_buffer then
+        if line:match("^%s*$") == nil then
+          buffer = {}
+          deprecated_in_buffer = false
+        end
+      else
+        if #buffer > 0 then
+          for _, buffered_line in ipairs(buffer) do
+            output[#output + 1] = buffered_line
+          end
+          buffer = {}
+        end
+        output[#output + 1] = line
+      end
+    end
+  end
+
+  if not deprecated_in_buffer and #buffer > 0 then
+    for _, buffered_line in ipairs(buffer) do
+      output[#output + 1] = buffered_line
+    end
+  end
+
+  return output
+end
+
 local function _normalize_params(params, drop_empty)
   local source = _trim(params)
   if source == "" then
@@ -536,6 +598,29 @@ local function _write_text(path, text)
   end
 end
 
+local function _cleanup_deprecated_api(path)
+  _validate_file(path, "new")
+
+  local original, read_err = common.read_file(path)
+  if original == nil then
+    _fail(read_err)
+  end
+
+  local updated = table.concat(_remove_deprecated_api(_split_lines_keepends(original)))
+  _write_text(path, updated)
+end
+
+local function _delete_old_api(path)
+  if not common.path_exists(path) then
+    return
+  end
+
+  local ok = common.remove_path(path)
+  if not ok then
+    _fail("cannot delete old file: " .. tostring(path))
+  end
+end
+
 local function _generate_docs(text, options)
   local ensure_ok, ensure_err = common.ensure_dir(options.doc_dir)
   if not ensure_ok then
@@ -709,9 +794,10 @@ end
 
 local function main(args)
   local options = _parse_args(args or {})
+  _cleanup_deprecated_api(options.new)
+
   local text = ""
   if not options.skip_generate or not options.skip_check then
-    _validate_file(options.new, "new")
     local read_text, read_err = common.read_file(options.new)
     if read_text == nil then
       _fail(read_err)
@@ -750,6 +836,11 @@ local function main(args)
   if diff_failed or check_failed then
     return 1
   end
+
+  if not options.skip_generate then
+    _delete_old_api(options.old)
+  end
+
   return 0
 end
 
