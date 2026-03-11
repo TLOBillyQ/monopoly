@@ -10,6 +10,10 @@ function modal_ports.build()
       local ui_view = require("src.presentation.runtime.view")
       ui_view.open_choice_modal(state, choice, market)
     end,
+    open_pre_confirm_screen = function(state, choice, option_id, title, body)
+      local controller = require("src.presentation.runtime.controllers.choice_screen_service.openers")
+      controller.open_pre_confirm_screen(state, choice, option_id, title, body)
+    end,
     close_popup = function(state)
       local ui_view = require("src.presentation.runtime.view")
       ui_view.close_popup(state)

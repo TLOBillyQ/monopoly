@@ -1,6 +1,4 @@
-local ui_events = require("src.presentation.runtime.events")
 local number_utils = require("src.core.utils.number_utils")
-local host_runtime = require("src.presentation.runtime.host")
 local effect_timeline = require("src.presentation.view.support.effect_timeline")
 
 local dice = {}
@@ -29,6 +27,7 @@ end
 function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
   local runtime = assert(opts and opts.runtime, "missing runtime")
   local dice_nodes = assert(opts and opts.dice_screen_nodes, "missing dice_screen_nodes")
+  local ui_events = assert(opts and opts.ui_events, "missing opts.ui_events")
   duration = duration or 0
   hold_seconds = hold_seconds or 0
   local face = _resolve_roll_face(anim)
@@ -52,7 +51,7 @@ function dice.play_roll_dice_screen(anim, duration, hold_seconds, opts)
     end
 
     effect_timeline.play({
-      schedule = host_runtime.schedule,
+      schedule = opts.schedule,
       show = function()
         nodes.screen.visible = true
         nodes.spin.visible = true

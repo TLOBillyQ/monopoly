@@ -17,9 +17,9 @@ local paid_currency_bridge = require("src.game.systems.commerce.paid_currency_br
 local dispatch = require("src.game.flow.turn.dispatch")
 local runtime_port = require("src.presentation.runtime.ui")
 local ui_intent_dispatcher = require("src.presentation.input.intent_dispatcher")
-local choice_openers = require("src.presentation.view.widgets.choice_screen_service.openers")
+local choice_openers = require("src.presentation.runtime.controllers.choice_screen_service.openers")
 local market_view = require("src.presentation.view.render.market")
-local market_layout = require("src.presentation.view.support.market_layout")
+local market_layout = require("src.presentation.schema.market_layout")
 local canvas_event_router = require("src.presentation.runtime.canvas_event_router")
 local ui_view = require("src.presentation.runtime.view")
 local ui_status_3d_layer = require("src.presentation.view.render.status3d")
@@ -27,8 +27,8 @@ local action_anim = require("src.presentation.view.render.action_anim")
 local move_anim = require("src.presentation.view.render.move_anim")
 local runtime_cls = require("src.game.flow.turn.engine")
 local turn_effects = require("src.presentation.view.widgets.turn_effects")
-local popup_renderer = require("src.presentation.view.widgets.popup_renderer")
-local market_modal_renderer = require("src.presentation.view.widgets.market_modal_renderer")
+local popup_renderer = require("src.presentation.runtime.controllers.popup_controller")
+local market_modal_renderer = require("src.presentation.runtime.controllers.market_controller")
 local debug_ports_module = require("src.presentation.runtime.ports.debug_ports")
 local role_control_lock_policy = require("src.presentation.input.role_control_lock_policy")
 local ui_touch_policy = require("src.presentation.input.touch_policy")
@@ -40,7 +40,7 @@ local runtime_constants = require("src.core.config.runtime_constants")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local host_runtime = require("src.presentation.runtime.host")
 local runtime_state = require("src.core.state_access.runtime_state")
-local target_choice_effects = require("src.presentation.view.render.target_choice_effects")
+local target_choice_effects = require("src.presentation.runtime.controllers.target_choice_effects")
 local vec3 = require("fixtures.vec3")
 
 
@@ -642,7 +642,7 @@ local function _test_item_slot_refresh_shows_only_playable_outlines()
 end
 
 local function _test_item_slot_intents_include_outline_nodes()
-  local item_slot_intents = require("src.presentation.view.canvas.base.item_slot_intents")
+  local item_slot_intents = require("src.presentation.runtime.canvas_specs.base.item_slot_intents")
   local state = {
     ui = {
       item_slots = { "基础_道具槽位1" },
@@ -1016,9 +1016,9 @@ local function _test_target_pick_prefers_explicit_owner_role_id()
 end
 
 local function _test_modal_presenter_market_same_choice_id_still_refreshes_market_panel()
-  local modal_presenter = require("src.presentation.view.widgets.modal_presenter")
-  local market_presenter = require("src.presentation.view.canvas.market.presenter")
-  local target_choice_effects_local = require("src.presentation.view.render.target_choice_effects")
+  local modal_presenter = require("src.presentation.runtime.controllers.modal_controller")
+  local market_presenter = require("src.presentation.runtime.controllers.market_controller")
+  local target_choice_effects_local = require("src.presentation.runtime.controllers.target_choice_effects")
   local canvas_store = require("src.presentation.runtime.canvas_store")
 
   local opened = 0
@@ -1065,7 +1065,7 @@ local function _test_modal_presenter_market_same_choice_id_still_refreshes_marke
 end
 
 local function _test_ui_event_router_market_cancel_button_dispatches_choice_cancel()
-  local market_nodes = require("src.presentation.view.canvas.market.nodes")
+  local market_nodes = require("src.presentation.schema.canvas.market.nodes")
 
   local function new_node()
     local node = {}

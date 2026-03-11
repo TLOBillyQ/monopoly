@@ -1,5 +1,5 @@
-local always_show_nodes = require("src.presentation.view.canvas.always_show.nodes")
-local always_show_contract = require("src.presentation.view.canvas.always_show.contract")
+local always_show_nodes = require("src.presentation.schema.canvas.always_show.nodes")
+local always_show_contract = require("src.presentation.schema.canvas.always_show.contract")
 
 local touch_policy = {}
 

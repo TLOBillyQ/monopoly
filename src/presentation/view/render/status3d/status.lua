@@ -1,10 +1,11 @@
 local specs = require("src.presentation.view.render.status3d.specs")
 local scene = require("src.presentation.view.render.status3d.scene")
-local host_runtime = require("src.presentation.runtime.host")
 
 local M = {}
 
-local function _resolve_role(player_id)
+local function _resolve_role(player_id, deps)
+  local host_runtime = deps and deps.host_runtime or package.loaded["src.presentation.runtime.host"] or nil
+  assert(host_runtime ~= nil, "missing deps.host_runtime")
   return host_runtime.resolve_role_with(player_id, function(role)
     return role.set_label_text ~= nil
   end)
@@ -78,7 +79,7 @@ function M.resolve_player_status_key(game, player)
   return nil
 end
 
-function M.sync_layer_status(cache, player, status_key)
+function M.sync_layer_status(cache, player, status_key, deps)
   local player_id = player.id
   local player_layers = cache.layers[player_id]
   if not player_layers then
@@ -89,7 +90,7 @@ function M.sync_layer_status(cache, player, status_key)
       local stay_turns = player.status and player.status.stay_turns or 0
       local text_node = cache.text_nodes[player_id] and cache.text_nodes[player_id][status_key]
       if stay_turns > 0 and text_node then
-        local role = _resolve_role(player_id)
+        local role = _resolve_role(player_id, deps)
         if role and role.set_label_text then
           local text = "当前回合无法行动\n剩余停留回合数：" .. tostring(stay_turns)
           pcall(role.set_label_text, text_node, text)
@@ -102,14 +103,14 @@ function M.sync_layer_status(cache, player, status_key)
   for _, key in ipairs(specs.status_priority) do
     local layer = player_layers[key]
     if layer then
-      scene.set_layer_visible_for_roles(layer, roles, status_key == key)
+      scene.set_layer_visible_for_roles(layer, roles, status_key == key, deps)
     end
   end
   if specs.text_statuses[status_key] then
     local stay_turns = player.status and player.status.stay_turns or 0
     local text_node = cache.text_nodes[player_id] and cache.text_nodes[player_id][status_key]
     if stay_turns > 0 and text_node then
-      local role = _resolve_role(player_id)
+      local role = _resolve_role(player_id, deps)
       if role and role.set_label_text then
         local text = "当前回合无法行动\n剩余停留回合数：" .. tostring(stay_turns)
         pcall(role.set_label_text, text_node, text)

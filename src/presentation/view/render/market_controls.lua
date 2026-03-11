@@ -1,10 +1,14 @@
-local market_layout = require("src.presentation.view.support.market_layout")
+local market_layout = require("src.presentation.schema.market_layout")
 local ui_controls = require("src.presentation.view.support.ui_controls")
 local runtime_state = require("src.core.state_access.runtime_state")
-local runtime = require("src.presentation.runtime.ui")
 local number_utils = require("src.core.utils.number_utils")
 
 local market_view_controls = {}
+
+local function _resolve_runtime(state, deps)
+  local resolved_deps = deps or (state and state.presentation_runtime) or {}
+  return assert(resolved_deps.runtime or package.loaded["src.presentation.runtime.ui"], "missing deps.runtime")
+end
 
 local function _resolve_ref_key(refs, key)
   if number_utils.is_numeric(key) then
@@ -54,7 +58,8 @@ function market_view_controls.clear_market_selection_frames(ui)
   ui_controls.set_controls_state(ui, market_layout.item_selection_frames or {}, { visible = false, touch_enabled = false })
 end
 
-function market_view_controls.reset_market_preview(state)
+function market_view_controls.reset_market_preview(state, deps)
+  local runtime = _resolve_runtime(state, deps)
   local ui = state.ui
   ui:set_label(market_layout.price_label, "")
   market_view_controls.clear_market_selection_frames(ui)
@@ -107,12 +112,12 @@ function market_view_controls.apply_market_common_controls(ui, market, confirm_e
   _set_cancel_controls(ui, market.allow_cancel, market.allow_cancel)
 end
 
-function market_view_controls.close_market_panel(state)
+function market_view_controls.close_market_panel(state, deps)
   local ui = state.ui
   market_view_controls.set_market_container_active(ui, false)
   runtime_state.ensure_ui_runtime(state).choice_visible_option_ids = nil
   runtime_state.ensure_ui_runtime(state).pending_choice_selected_option_id = nil
-  market_view_controls.reset_market_preview(state)
+  market_view_controls.reset_market_preview(state, deps)
   ui_controls.set_controls_state(ui, market_layout.item_labels, { touch_enabled = false })
   ui_controls.set_controls_state(ui, market_layout.item_frames, { touch_enabled = false })
   ui_controls.set_controls_state(ui, {

@@ -1,7 +1,7 @@
 local runtime = require("src.presentation.runtime.ui")
 local player_colors = require("src.presentation.view.support.player_colors")
 local core = require("src.presentation.runtime.view.core")
-local base_nodes = require("src.presentation.view.canvas.base.nodes")
+local base_nodes = require("src.presentation.schema.canvas.base.nodes")
 local number_utils = require("src.core.utils.number_utils")
 
 local M = {}

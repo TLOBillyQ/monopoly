@@ -1,5 +1,5 @@
 local board_runtime = require("src.presentation.view.render.board")
-local base_presenter = require("src.presentation.view.canvas.base.presenter")
+local panel_presenter = require("src.presentation.view.widgets.panel_presenter")
 local turn_effects = require("src.presentation.view.widgets.turn_effects")
 local canvas_store = require("src.presentation.runtime.canvas_store")
 
@@ -41,17 +41,21 @@ function pipeline.render(state_ctx, ui_model, log_once, build_log_prefix, opts)
 
   local refresh_item_slots = opts and opts.refresh_item_slots
   local runtime = opts and opts.runtime or require("src.presentation.runtime.ui")
+  local ui_touch_policy = opts and opts.ui_touch_policy or require("src.presentation.input.touch_policy")
   if _should_refresh_panel(dirty) then
-    base_presenter.refresh(state_ctx, ui_model, {
+    panel_presenter.refresh(state_ctx, ui_model, {
       runtime = runtime,
       refresh_item_slots = refresh_item_slots,
+      ui_touch_policy = ui_touch_policy,
     })
   end
   if dirty.any == true or dirty.board == true or dirty.base == true then
     board_runtime.refresh(state_ctx, ui_model, log_once, build_log_prefix)
   end
   if dirty.any == true or dirty.effects == true or dirty.base == true then
-    turn_effects.sync(state_ctx, ui_model)
+    turn_effects.sync(state_ctx, ui_model, {
+      runtime = runtime,
+    })
   end
 end
 

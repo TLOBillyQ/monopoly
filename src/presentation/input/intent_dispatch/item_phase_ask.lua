@@ -1,8 +1,12 @@
-local ui_view = require("src.presentation.runtime.view")
-local choice_common = require("src.presentation.view.widgets.choice_screen_service.common")
+local choice_support = require("src.presentation.model.choice_support")
 local runtime_state = require("src.core.state_access.runtime_state")
 
 local item_phase_ask_flow = {}
+
+local function _modal_ports(state)
+  local ports = state and state.gameplay_loop_ports or nil
+  return ports and ports.modal or {}
+end
 
 function item_phase_ask_flow.dispatch(state, game, intent, opts, action_port)
   local intent_type = intent and intent.type
@@ -16,7 +20,7 @@ function item_phase_ask_flow.dispatch(state, game, intent, opts, action_port)
     local current_model = runtime_state.get_ui_model(state)
     local choice = current_model and current_model.choice or nil
     state._skip_item_slot_highlight_replay_choice_id = choice and choice.id or nil
-    if choice_common.requires_item_slot_pre_confirm(choice) and type(choice.options) == "table" and #choice.options == 1 then
+    if choice_support.requires_item_slot_pre_confirm(choice) and type(choice.options) == "table" and #choice.options == 1 then
       local opt = choice.options[1]
       local opt_id = type(opt) == "table" and opt.id or opt
       if opt_id ~= nil then
@@ -28,7 +32,10 @@ function item_phase_ask_flow.dispatch(state, game, intent, opts, action_port)
         }, opts)
       end
     end
-    ui_view.close_choice_modal(state)
+    local modal = _modal_ports(state)
+    if type(modal.close_choice_modal) == "function" then
+      modal.close_choice_modal(state)
+    end
     return true
   end
   if intent_type == "choice_cancel" then
@@ -36,7 +43,10 @@ function item_phase_ask_flow.dispatch(state, game, intent, opts, action_port)
     state._item_phase_confirmed = nil
     state._suppress_item_slot_highlight_until_pick = nil
     state._skip_item_slot_highlight_replay_choice_id = nil
-    ui_view.close_choice_modal(state)
+    local modal = _modal_ports(state)
+    if type(modal.close_choice_modal) == "function" then
+      modal.close_choice_modal(state)
+    end
     local current_model = runtime_state.get_ui_model(state)
     local choice = current_model and current_model.choice or nil
     if choice and choice.id then

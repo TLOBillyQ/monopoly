@@ -28,6 +28,8 @@ local tiles_cfg = require("Config.generated.tiles")
 local number_utils = require("src.core.utils.number_utils")
 local tile = require("src.game.systems.board.tile")
 local test_env = require("support.test_env")
+local presentation_runtime_deps = require("src.presentation.runtime.deps")
+local presentation_ports = require("src.presentation.runtime.ports")
 
 local function assert_eq(a, b, msg)
   if a ~= b then
@@ -41,6 +43,15 @@ local function ensure_ui_runtime_for_test(state)
   if type(ui_runtime) ~= "table" then
     ui_runtime = {}
     state.ui_runtime = ui_runtime
+  end
+  if type(state.presentation_runtime) ~= "table" then
+    state.presentation_runtime = presentation_runtime_deps.build()
+  end
+  if type(state.gameplay_loop_ports) ~= "table" then
+    state.gameplay_loop_ports = presentation_ports.build()
+  end
+  if type(state.board_scene) == "table" and type(state.board_scene.presentation_runtime) ~= "table" then
+    state.board_scene.presentation_runtime = state.presentation_runtime
   end
   return state
 end

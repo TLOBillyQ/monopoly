@@ -28,6 +28,10 @@ local function _dedupe_list(raw_list)
   return list
 end
 
+local function _deps(state)
+  return state and state.presentation_runtime or nil
+end
+
 local function _resolve_board(state)
   local game = state and state.game or nil
   return game and game.board or nil
@@ -57,7 +61,8 @@ local function _spawn_roadblock_overlay(state, idx)
     nil,
     prefab.unit and prefab.unit["路障"] or nil,
     overlay_compute.overlay_pos_for_tile(state, idx),
-    roadblock_scale
+    roadblock_scale,
+    _deps(state)
   )
 end
 
@@ -68,7 +73,8 @@ local function _spawn_mine_overlay(state, idx)
     idx,
     prefab.group["地雷"],
     prefab.unit and prefab.unit["地雷"] or nil,
-    overlay_compute.overlay_pos_for_tile(state, idx)
+    overlay_compute.overlay_pos_for_tile(state, idx),
+    _deps(state)
   )
 end
 
@@ -102,10 +108,11 @@ function visual_sync.sync_tile_visual(state, tile_id)
       scene,
       assert(runtime_constants.q_zero, "missing Q_ZERO"),
       idx,
-      level
+      level,
+      _deps(state)
     ) or tile_unit ~= nil
   end
-  building_effects.clear_building_units(scene, idx)
+  building_effects.clear_building_units(scene, idx, _deps(state))
   return true
 end
 
@@ -125,13 +132,13 @@ function visual_sync.sync_overlay_visual(state, board_index)
   if has_roadblock then
     _spawn_roadblock_overlay(state, board_index)
   else
-    overlay_runtime.clear_overlay(scene, "roadblock", board_index)
+    overlay_runtime.clear_overlay(scene, "roadblock", board_index, _deps(state))
   end
 
   if has_mine then
     _spawn_mine_overlay(state, board_index)
   else
-    overlay_runtime.clear_overlay(scene, "mine", board_index)
+    overlay_runtime.clear_overlay(scene, "mine", board_index, _deps(state))
   end
 
   return true

@@ -17,9 +17,9 @@ local paid_currency_bridge = require("src.game.systems.commerce.paid_currency_br
 local dispatch = require("src.game.flow.turn.dispatch")
 local runtime_port = require("src.presentation.runtime.ui")
 local ui_intent_dispatcher = require("src.presentation.input.intent_dispatcher")
-local choice_openers = require("src.presentation.view.widgets.choice_screen_service.openers")
+local choice_openers = require("src.presentation.runtime.controllers.choice_screen_service.openers")
 local market_view = require("src.presentation.view.render.market")
-local market_layout = require("src.presentation.view.support.market_layout")
+local market_layout = require("src.presentation.schema.market_layout")
 local canvas_event_router = require("src.presentation.runtime.canvas_event_router")
 local ui_view = require("src.presentation.runtime.view")
 local ui_status_3d_layer = require("src.presentation.view.render.status3d")
@@ -27,8 +27,8 @@ local action_anim = require("src.presentation.view.render.action_anim")
 local move_anim = require("src.presentation.view.render.move_anim")
 local runtime_cls = require("src.game.flow.turn.engine")
 local turn_effects = require("src.presentation.view.widgets.turn_effects")
-local popup_renderer = require("src.presentation.view.widgets.popup_renderer")
-local market_modal_renderer = require("src.presentation.view.widgets.market_modal_renderer")
+local popup_renderer = require("src.presentation.runtime.controllers.popup_controller")
+local market_modal_renderer = require("src.presentation.runtime.controllers.market_controller")
 local debug_ports_module = require("src.presentation.runtime.ports.debug_ports")
 local role_control_lock_policy = require("src.presentation.input.role_control_lock_policy")
 local ui_touch_policy = require("src.presentation.input.touch_policy")
@@ -40,7 +40,7 @@ local runtime_constants = require("src.core.config.runtime_constants")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local host_runtime = require("src.presentation.runtime.host")
 local runtime_state = require("src.core.state_access.runtime_state")
-local target_choice_effects = require("src.presentation.view.render.target_choice_effects")
+local target_choice_effects = require("src.presentation.runtime.controllers.target_choice_effects")
 local vec3 = require("fixtures.vec3")
 
 
@@ -605,7 +605,7 @@ local function _test_target_screen_uses_labels_only_and_hides_projection_with_sl
     _assert_eq(nodes["位置-槽位7投影"].visible, true, "slot7 projection should be visible with populated slot")
     _assert_eq(nodes["位置-槽位7投影"].disabled, true, "slot7 projection should stay non-interactive")
 
-    local common = require("src.presentation.view.widgets.choice_screen_service.common")
+    local common = require("src.presentation.runtime.controllers.choice_screen_service.common")
     common.hide_choice_screens(state.ui)
 
     _assert_eq(nodes["位置-槽位1文本"].visible, false, "hide_choice_screens should hide slot label")
@@ -1083,7 +1083,7 @@ local function _test_ui_event_router_action_log_toggle_uses_role_context()
     local role_id = role.get_roleid()
     _assert_eq(state.ui.debug_visible_by_role[role_id], nil, "action_log role flag should start nil")
     assert(type(node_map["始终显示_行动日志图标"]._listener_cb) == "function", "action_log button should bind click listener")
-    local before = require("src.presentation.input.event_state").resolve_debug_enabled(state, role_id)
+    local before = require("src.presentation.runtime.event_state").resolve_debug_enabled(state, role_id)
     node_map["始终显示_行动日志图标"]._listener_cb({ role = role })
     local first_value = state.ui.debug_visible_by_role[role_id]
     _assert_eq(first_value, not before, "action_log toggle should invert role visibility")
@@ -1147,7 +1147,7 @@ local function _test_ui_event_router_rejects_action_log_without_role()
 end
 
 local function _test_secondary_confirm_copy_item_phase_selected_option()
-  local common = require("src.presentation.view.widgets.choice_screen_service.common")
+  local common = require("src.presentation.runtime.controllers.choice_screen_service.common")
   local choice = {
     kind = "item_phase_choice",
     route_key = "base_inline",
@@ -1169,7 +1169,7 @@ local function _test_secondary_confirm_copy_item_phase_selected_option()
 end
 
 local function _test_secondary_confirm_copy_land_actions()
-  local common = require("src.presentation.view.widgets.choice_screen_service.common")
+  local common = require("src.presentation.runtime.controllers.choice_screen_service.common")
   local choice = {
     kind = "landing_optional_effect",
     options = {
@@ -1211,7 +1211,7 @@ local function _test_secondary_confirm_copy_land_actions()
 end
 
 local function _test_secondary_confirm_copy_generic_pre_confirm()
-  local common = require("src.presentation.view.widgets.choice_screen_service.common")
+  local common = require("src.presentation.runtime.controllers.choice_screen_service.common")
   local choice = {
     kind = "remote_dice_value",
     title = "遥控骰子",
@@ -1226,7 +1226,7 @@ local function _test_secondary_confirm_copy_generic_pre_confirm()
 end
 
 local function _test_secondary_confirm_prefers_usecase_confirm_copy()
-  local common = require("src.presentation.view.widgets.choice_screen_service.common")
+  local common = require("src.presentation.runtime.controllers.choice_screen_service.common")
   local choice = {
     kind = "landing_optional_effect",
     confirm_title = "不会被读取",
@@ -1305,7 +1305,7 @@ local function _test_ui_event_router_action_log_uses_cached_local_role_when_even
 end
 
 local function _test_ui_event_router_auto_uses_cached_local_role_instead_of_current_player()
-  local always_show_nodes = require("src.presentation.view.canvas.always_show.nodes")
+  local always_show_nodes = require("src.presentation.schema.canvas.always_show.nodes")
 
   local function new_node()
     local node = {}
@@ -1387,8 +1387,8 @@ local function _test_ui_event_state_resolve_debug_enabled_supports_mixed_role_id
     },
   }
 
-  local enabled_by_int = require("src.presentation.input.event_state").resolve_debug_enabled(state, 1)
-  local enabled_by_string = require("src.presentation.input.event_state").resolve_debug_enabled(state, "1")
+  local enabled_by_int = require("src.presentation.runtime.event_state").resolve_debug_enabled(state, 1)
+  local enabled_by_string = require("src.presentation.runtime.event_state").resolve_debug_enabled(state, "1")
 
   _assert_eq(enabled_by_int, true, "debug_enabled should read string key by int role_id")
   _assert_eq(enabled_by_string, true, "debug_enabled should read string key by string role_id")

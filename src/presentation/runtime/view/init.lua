@@ -1,9 +1,10 @@
 local market_view = require("src.presentation.view.render.market")
-local base_presenter = require("src.presentation.view.canvas.base.presenter")
+local panel_presenter = require("src.presentation.view.widgets.panel_presenter")
 local render_pipeline = require("src.presentation.runtime.canvas_render_pipeline")
 local input_lock_policy = require("src.presentation.input.input_lock_policy")
 local role_control_lock_policy = require("src.presentation.input.role_control_lock_policy")
-local modal_presenter = require("src.presentation.view.widgets.modal_presenter")
+local ui_touch_policy = require("src.presentation.input.touch_policy")
+local modal_presenter = require("src.presentation.runtime.controllers.modal_controller")
 local logger = require("src.core.utils.logger")
 local runtime = require("src.presentation.runtime.ui")
 local core = require("src.presentation.runtime.view.core")
@@ -28,9 +29,10 @@ function service.capture_player_colors(ui_state, game)
 end
 
 function service.refresh_panel(state_ctx, ui_model)
-  base_presenter.refresh(state_ctx, ui_model, {
+  panel_presenter.refresh(state_ctx, ui_model, {
     runtime = runtime,
     refresh_item_slots = service.refresh_item_slots,
+    ui_touch_policy = ui_touch_policy,
   })
 end
 
@@ -40,7 +42,7 @@ function service.refresh_turn_label(state_ctx, label_text)
     return
   end
   runtime.for_each_role_or_global(function()
-    ui:set_label(require("src.presentation.view.canvas.base.nodes").countdown, label_text)
+    ui:set_label(require("src.presentation.schema.canvas.base.nodes").countdown, label_text)
   end)
   runtime.set_client_role(nil)
 end
@@ -61,6 +63,7 @@ function service.render(state_ctx, ui_model, log_once, build_log_prefix)
   render_pipeline.render(state_ctx, ui_model, log_once, build_log_prefix, {
     runtime = runtime,
     refresh_item_slots = service.refresh_item_slots,
+    ui_touch_policy = ui_touch_policy,
   })
 end
 
@@ -85,7 +88,7 @@ function service.select_market_option(state_ctx, option_id)
     logger.warn("select_market_option missing option_id")
     return
   end
-  market_view.select_market_option(state_ctx, option_id)
+  market_controller.select_market_option(state_ctx, option_id)
 end
 
 function service.select_choice_option(state_ctx, option_id)

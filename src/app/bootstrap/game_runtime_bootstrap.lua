@@ -1,6 +1,7 @@
 local gameplay_loop = require("src.game.flow.turn.loop")
 local turn_dispatch = require("src.game.flow.turn.dispatch")
 local presentation_ports = require("src.presentation.runtime.ports")
+local runtime_deps = require("src.presentation.runtime.deps")
 local number_utils = require("src.core.utils.number_utils")
 local runtime_constants = require("src.core.config.runtime_constants")
 
@@ -122,6 +123,7 @@ function M.start(state, current_game_ref)
 
   state.turn_action_port = _build_turn_action_port()
   state.gameplay_loop_ports = _build_gameplay_loop_ports()
+  state.presentation_runtime = runtime_deps.build()
   local current_game = gameplay_loop.new_game(state)
   current_game_ref[1] = current_game
   gameplay_loop.set_game(state, current_game)

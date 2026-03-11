@@ -1,9 +1,9 @@
-local base_nodes = require("src.presentation.view.canvas.base.nodes")
-local popup_nodes = require("src.presentation.view.canvas.popup.nodes")
-local bankruptcy_nodes = require("src.presentation.view.canvas.bankruptcy.nodes")
-local always_show_nodes = require("src.presentation.view.canvas.always_show.nodes")
+local base_nodes = require("src.presentation.schema.canvas.base.nodes")
+local popup_nodes = require("src.presentation.schema.canvas.popup.nodes")
+local bankruptcy_nodes = require("src.presentation.schema.canvas.bankruptcy.nodes")
+local always_show_nodes = require("src.presentation.schema.canvas.always_show.nodes")
 local core = require("src.presentation.runtime.view.core")
-local always_show_contract = require("src.presentation.view.canvas.always_show.contract")
+local always_show_contract = require("src.presentation.schema.canvas.always_show.contract")
 local canvas_store = require("src.presentation.runtime.canvas_store")
 
 local M = {}

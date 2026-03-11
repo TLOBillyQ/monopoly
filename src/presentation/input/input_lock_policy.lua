@@ -1,5 +1,5 @@
-local market_ui = require("src.presentation.view.support.market_layout")
-local base_nodes = require("src.presentation.view.canvas.base.nodes")
+local market_ui = require("src.presentation.schema.market_layout")
+local base_nodes = require("src.presentation.schema.canvas.base.nodes")
 local ui_touch_policy = require("src.presentation.input.touch_policy")
 
 local input_lock_policy = {}

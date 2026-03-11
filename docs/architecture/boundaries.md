@@ -10,6 +10,7 @@
 | `src/game/systems` | 玩法规则：黑市、道具、地块、机会卡、移动、破产、胜负 | UI 节点名、Canvas 切换、宿主 API 调用 |
 | `src/game/runtime` | gameplay 端口实现（接 `src/game/ports/*` 契约） | 承接业务规则 |
 | `src/infrastructure/runtime` | 宿主细节：运行时上下文、事件桥、默认 runtime ports | — |
+| `src/presentation/schema` | 展示 schema：canvas 节点名、contract 常量、布局清单 | 写状态、宿主调用、输入路由 |
 | `src/presentation` | 展示适配：input 映射、UI model 查询、Canvas 渲染、UI 事件桥接 | 根据 `choice.kind`/`meta`/商品配置自行推断业务语义 |
 
 `src/game/flow/output_adapters/` 属于 `flow`，不是独立 runtime 目录。其中 `intent_output_adapter`、`output_state_adapter` 只服务 turn use case 输出，不承载宿主能力。
@@ -42,12 +43,14 @@
    - `lua scripts/arch.lua viewer --out-dir <dir> [--open]` — 导出静态 viewer
    - `lua tests/guard.lua` — 完整护栏
 9. **零模块级循环依赖**：无白名单，任意新循环直接让 `arch_view` 护栏失败。
+10. **presentation schema 纯只读**：`src/presentation/schema` 只能承载节点名、画布常量与布局定义；运行时编排留在 `runtime`，渲染留在 `view`。
 
 ## 放置速查
 
 - 回合推进 → `src/game/flow`
 - 玩法业务规则 → `src/game/systems`
 - ViewModel 渲染 → `src/presentation`
+- 纯展示节点/schema → `src/presentation/schema`
 - 宿主能力接入端口 → `src/app/bootstrap`；实现 → `src/infrastructure/runtime`
 - 宿主/运行时广义契约 → `src/core/ports/`
 - 玩法规则业务能力契约 → `src/game/ports/`

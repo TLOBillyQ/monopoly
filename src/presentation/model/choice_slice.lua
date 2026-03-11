@@ -1,4 +1,4 @@
-local choice_view = require("src.presentation.view.widgets.choice")
+local choice_view = require("src.presentation.model.choice_builder")
 local runtime_state = require("src.core.state_access.runtime_state")
 
 local choice_slice = {}

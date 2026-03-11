@@ -2,15 +2,15 @@ local support = require("support.presentation_support")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 local _bind_ui_runtime = support.bind_ui_runtime
-local bindings = require("src.presentation.input.event_bindings")
+local bindings = require("src.presentation.runtime.event_bindings")
 local logger = require("src.core.utils.logger")
 local runtime = require("src.presentation.runtime.ui")
 local canvas_registry = require("src.presentation.runtime.canvas_registry")
 local canvas_store = require("src.presentation.runtime.canvas_store")
-local canvas = require("src.presentation.input.canvas_coordinator")
+local canvas = require("src.presentation.runtime.canvas_coordinator")
 local ui_events = require("src.presentation.runtime.events")
-local base_nodes = require("src.presentation.view.canvas.base.nodes")
-local always_show_nodes = require("src.presentation.view.canvas.always_show.nodes")
+local base_nodes = require("src.presentation.schema.canvas.base.nodes")
+local always_show_nodes = require("src.presentation.schema.canvas.always_show.nodes")
 
 local function _find_spec(specs, node_name)
   for _, spec in ipairs(specs or {}) do

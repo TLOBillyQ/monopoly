@@ -2,7 +2,7 @@ local ui_model_sync = require("src.presentation.runtime.ports.ui_sync.ui_model_s
 local camera_sync = require("src.presentation.runtime.ports.ui_sync.camera_sync")
 local ui_gate_sync = require("src.presentation.runtime.ports.ui_sync.ui_gate_sync")
 local choice_ui_state = require("src.presentation.runtime.ports.ui_sync.choice_ui_state")
-local target_choice_effects = require("src.presentation.view.render.target_choice_effects")
+local target_choice_effects = require("src.presentation.runtime.controllers.target_choice_effects")
 local runtime_state = require("src.core.state_access.runtime_state")
 
 local ui_sync_ports = {}

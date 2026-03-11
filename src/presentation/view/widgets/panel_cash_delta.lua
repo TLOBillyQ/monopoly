@@ -1,4 +1,4 @@
-local base_nodes = require("src.presentation.view.canvas.base.nodes")
+local base_nodes = require("src.presentation.schema.canvas.base.nodes")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local number_utils = require("src.core.utils.number_utils")

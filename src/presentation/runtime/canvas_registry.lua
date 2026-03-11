@@ -1,12 +1,12 @@
-local base_intents = require("src.presentation.view.canvas.base.intents")
-local popup_intents = require("src.presentation.view.canvas.popup.intents")
-local item_slot_intents = require("src.presentation.view.canvas.base.item_slot_intents")
-local player_choice_intents = require("src.presentation.view.canvas.player_choice.intents")
-local target_choice_intents = require("src.presentation.view.canvas.target_choice.intents")
-local remote_choice_intents = require("src.presentation.view.canvas.remote_choice.intents")
-local market_intents = require("src.presentation.view.canvas.market.intents")
-local always_show_intents = require("src.presentation.view.canvas.always_show.intents")
-local secondary_confirm_intents = require("src.presentation.view.canvas.secondary_confirm.intents")
+local base_intents = require("src.presentation.runtime.canvas_specs.base.intents")
+local popup_intents = require("src.presentation.runtime.canvas_specs.popup.intents")
+local item_slot_intents = require("src.presentation.runtime.canvas_specs.base.item_slot_intents")
+local player_choice_intents = require("src.presentation.runtime.canvas_specs.player_choice.intents")
+local target_choice_intents = require("src.presentation.runtime.canvas_specs.target_choice.intents")
+local remote_choice_intents = require("src.presentation.runtime.canvas_specs.remote_choice.intents")
+local market_intents = require("src.presentation.runtime.canvas_specs.market.intents")
+local always_show_intents = require("src.presentation.runtime.canvas_specs.always_show.intents")
+local secondary_confirm_intents = require("src.presentation.runtime.canvas_specs.secondary_confirm.intents")
 
 local registry = {}
 

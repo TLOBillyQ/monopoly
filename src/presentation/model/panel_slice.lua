@@ -1,4 +1,4 @@
-local panel_view = require("src.presentation.view.widgets.panel")
+local panel_view = require("src.presentation.model.panel_builder")
 local role_id_utils = require("src.core.utils.role_id")
 
 local panel_slice = {}

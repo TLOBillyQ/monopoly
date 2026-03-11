@@ -17,9 +17,9 @@ local paid_currency_bridge = require("src.game.systems.commerce.paid_currency_br
 local dispatch = require("src.game.flow.turn.dispatch")
 local runtime_port = require("src.presentation.runtime.ui")
 local ui_intent_dispatcher = require("src.presentation.input.intent_dispatcher")
-local choice_openers = require("src.presentation.view.widgets.choice_screen_service.openers")
+local choice_openers = require("src.presentation.runtime.controllers.choice_screen_service.openers")
 local market_view = require("src.presentation.view.render.market")
-local market_layout = require("src.presentation.view.support.market_layout")
+local market_layout = require("src.presentation.schema.market_layout")
 local canvas_event_router = require("src.presentation.runtime.canvas_event_router")
 local ui_view = require("src.presentation.runtime.view")
 local ui_status_3d_layer = require("src.presentation.view.render.status3d")
@@ -27,8 +27,8 @@ local action_anim = require("src.presentation.view.render.action_anim")
 local move_anim = require("src.presentation.view.render.move_anim")
 local runtime_cls = require("src.game.flow.turn.engine")
 local turn_effects = require("src.presentation.view.widgets.turn_effects")
-local popup_renderer = require("src.presentation.view.widgets.popup_renderer")
-local market_modal_renderer = require("src.presentation.view.widgets.market_modal_renderer")
+local popup_renderer = require("src.presentation.runtime.controllers.popup_controller")
+local market_modal_renderer = require("src.presentation.runtime.controllers.market_controller")
 local debug_ports_module = require("src.presentation.runtime.ports.debug_ports")
 local role_control_lock_policy = require("src.presentation.input.role_control_lock_policy")
 local ui_touch_policy = require("src.presentation.input.touch_policy")
@@ -40,7 +40,7 @@ local runtime_constants = require("src.core.config.runtime_constants")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local host_runtime = require("src.presentation.runtime.host")
 local runtime_state = require("src.core.state_access.runtime_state")
-local target_choice_effects = require("src.presentation.view.render.target_choice_effects")
+local target_choice_effects = require("src.presentation.runtime.controllers.target_choice_effects")
 local vec3 = require("fixtures.vec3")
 
 
@@ -1270,7 +1270,7 @@ local function _test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop
   local anchors = require("src.presentation.view.render.board.anchors")
   local startup_render = require("src.presentation.view.render.board.startup_render")
   local player_units = require("src.presentation.view.render.board.player_units")
-  local base_presenter = require("src.presentation.view.canvas.base.presenter")
+  local base_presenter = require("src.presentation.view.widgets.panel_presenter")
   local turn_effects = require("src.presentation.view.widgets.turn_effects")
   local fixed_zero = { kind = "fixed_zero", value = 0 }
   local calls = {}
@@ -1376,9 +1376,9 @@ local function _test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop
 end
 
 local function _test_popup_defer_policy_queues_and_replays_in_order()
-  local modal_presenter = require("src.presentation.view.widgets.modal_presenter")
-  local popup_presenter = require("src.presentation.view.canvas.popup.presenter")
-  local canvas = require("src.presentation.input.canvas_coordinator")
+  local modal_presenter = require("src.presentation.runtime.controllers.modal_controller")
+  local popup_presenter = require("src.presentation.runtime.controllers.popup_controller")
+  local canvas = require("src.presentation.runtime.canvas_coordinator")
   local state = {
     ui = ui_view.build_ui_state(),
     ui_dirty = false,
@@ -1414,7 +1414,7 @@ local function _test_popup_defer_policy_queues_and_replays_in_order()
 end
 
 local function _test_popup_renderer_switch_popup_canvas_restores_client_role_nil()
-  local canvas = require("src.presentation.input.canvas_coordinator")
+  local canvas = require("src.presentation.runtime.canvas_coordinator")
   local role_ctx = require("src.presentation.model.role_context")
   local manager = { client_role = { stale = true } }
   local role1 = { id = 1, get_roleid = function() return 1 end }
@@ -1454,7 +1454,7 @@ local function _test_popup_renderer_switch_popup_canvas_restores_client_role_nil
 end
 
 local function _test_market_modal_renderer_open_restores_client_role_nil()
-  local canvas = require("src.presentation.input.canvas_coordinator")
+  local canvas = require("src.presentation.runtime.canvas_coordinator")
   local role_ctx = require("src.presentation.model.role_context")
   local manager = { client_role = { stale = true } }
   local role1 = { id = 1, get_roleid = function() return 1 end }
@@ -1502,7 +1502,7 @@ local function _test_market_modal_renderer_open_restores_client_role_nil()
 end
 
 local function _test_debug_ports_sync_restores_client_role_nil()
-  local ui_event_state = require("src.presentation.input.event_state")
+  local ui_event_state = require("src.presentation.runtime.event_state")
   local ui_view_service = require("src.presentation.runtime.view")
   local manager = { client_role = { stale = true } }
   local role1 = { id = 1, get_roleid = function() return 1 end }
@@ -1550,7 +1550,7 @@ local function _test_debug_ports_sync_restores_client_role_nil()
 end
 
 local function _test_debug_ports_sync_ignores_non_event_log_seq_changes()
-  local ui_event_state = require("src.presentation.input.event_state")
+  local ui_event_state = require("src.presentation.runtime.event_state")
   local ui_view_service = require("src.presentation.runtime.view")
   local manager = { client_role = { stale = true } }
   local role1 = { id = 1, get_roleid = function() return 1 end }

@@ -1,4 +1,4 @@
-local host_runtime = require("src.presentation.runtime.host")
+local runtime_ports = require("src.core.ports.runtime_ports")
 
 local effect_timeline = {}
 
@@ -7,7 +7,7 @@ local function _resolve_scheduler(opts)
   if type(scheduler) == "function" then
     return scheduler
   end
-  return host_runtime.schedule
+  return runtime_ports.schedule
 end
 
 function effect_timeline.run_step(delay, callback, opts)

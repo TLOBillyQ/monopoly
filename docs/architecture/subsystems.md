@@ -23,6 +23,7 @@
 | `src/infrastructure/runtime/` | Eggy 宿主实现：事件桥、运行时上下文、默认 runtime ports | 游戏逻辑、UI 渲染 |
 | `src/app/bootstrap/` | 装配：安装端口别名、读取启动参数 | 业务规则、宿主能力实现 |
 | `src/core/` | 跨层共享：日志、数值工具、配置访问、宿主广义契约 | Eggy 全局对象直读、UI 节点操作 |
+| `src/presentation/schema/` | 纯展示 schema：节点名、contract、布局常量 | 状态写入、事件桥、输入语义 |
 | `src/presentation/input/` | 输入事件 → turn action 映射 | 业务推断 |
 | `src/presentation/model/` | UI model 构建与只读查询 | 写状态、触发副作用 |
 | `src/presentation/view/` | Canvas / widgets / render 输出 | 业务逻辑、输入处理 |
@@ -33,6 +34,7 @@
 - 回合推进下一步 → `src/game/flow/`
 - 玩法规则业务逻辑 → `src/game/systems/` 对应子目录
 - ViewModel 渲染 → `src/presentation/view/`
+- 节点名 / 画布 contract / 布局常量 → `src/presentation/schema/`
 - 输入事件 → turn action → `src/presentation/input/`
 - 宿主能力接入端口 → `src/app/bootstrap/`
 - 宿主能力实现 → `src/infrastructure/runtime/`

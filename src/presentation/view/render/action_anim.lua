@@ -1,13 +1,10 @@
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local number_utils = require("src.core.utils.number_utils")
 local logger = require("src.core.utils.logger")
-
-local runtime = require("src.presentation.runtime.ui")
-local host_runtime = require("src.presentation.runtime.host")
 local registry = require("src.presentation.view.render.anim_registry")
 local handlers = require("src.presentation.view.render.anim_handlers")
 local board_feedback = require("src.presentation.view.render.board_feedback_service")
-local dice_nodes = require("src.presentation.view.canvas.dice.nodes")
+local dice_nodes = require("src.presentation.schema.canvas.dice.nodes")
 
 local action_anim = {}
 
@@ -21,15 +18,29 @@ local user_tip_whitelist = {
 local roll_spin_seconds = 1.0
 local roll_face_hold_seconds = 1.0
 
+local function _resolve_runtime_bundle(state, opts)
+  if opts and opts.runtime_bundle then
+    return opts.runtime_bundle
+  end
+  if state and state.presentation_runtime then
+    return state.presentation_runtime
+  end
+  return {
+    runtime = package.loaded["src.presentation.runtime.ui"],
+    host_runtime = package.loaded["src.presentation.runtime.host"],
+    ui_events = package.loaded["src.presentation.runtime.events"] or {
+      show = {},
+      hide = {},
+      send_to_all = function() end,
+    },
+  }
+end
+
 local function _should_debug_log(anim)
   return anim
     and anim.kind ~= "roll"
     and (logger.is_anim_debug_enabled() or gameplay_rules.action_anim_debug_log_enabled == true)
     or false
-end
-
-local function _show_tip(text, duration)
-  host_runtime.show_tips(text, duration)
 end
 
 local function _should_show_tip(anim)
@@ -48,7 +59,9 @@ local function _register_default_handlers()
   end
   registry.register("roll", function(state, anim, duration, opts)
     handlers.play_roll_dice_screen(state, anim, roll_spin_seconds, roll_face_hold_seconds, {
-      runtime = runtime,
+      runtime = opts and opts.runtime,
+      ui_events = opts and opts.ui_events,
+      schedule = opts and opts.schedule,
       dice_screen_nodes = dice_nodes,
     })
     return roll_spin_seconds + roll_face_hold_seconds
@@ -66,14 +79,14 @@ local function _register_default_handlers()
       player_id = anim.player_id,
       duration = duration,
       use_building_tile_position = true,
-    })
+    }, opts and opts.runtime_bundle)
     return duration
   end)
   registry.register("cash_receive", function(state, anim, duration, opts)
     board_feedback.play_player_cue(state, "cash_burst", anim.player_id, {
       duration = duration,
       amount = anim.amount,
-    })
+    }, opts and opts.runtime_bundle)
     return duration
   end)
   registry.register("missile", function(state, anim, duration, opts)
@@ -94,10 +107,12 @@ function action_anim.clear_overlay(state, kind, tile_index)
   handlers.clear_overlay(state, kind, tile_index)
 end
 
-function action_anim.play(state, anim)
+function action_anim.play(state, anim, opts)
   assert(anim ~= nil, "missing anim")
   assert(state ~= nil, "missing state")
   _register_default_handlers()
+  local runtime_bundle = _resolve_runtime_bundle(state, opts)
+  local host_runtime = runtime_bundle.host_runtime
 
   local default_duration = gameplay_rules.action_anim_default_seconds or 1.0
   local duration = anim.duration or durations[anim.kind] or default_duration
@@ -126,12 +141,22 @@ function action_anim.play(state, anim)
   end
 
   if should_show_tip and tip_text ~= nil and tip_text ~= "" then
-    _show_tip(tip_text, tip_duration)
+    if host_runtime and type(host_runtime.show_tips) == "function" then
+      host_runtime.show_tips(tip_text, tip_duration)
+    end
   end
 
   if handler then
     return handler(state, anim, duration, {
-      show_tip = _show_tip,
+      runtime = runtime_bundle.runtime,
+      ui_events = runtime_bundle.ui_events,
+      schedule = host_runtime and host_runtime.schedule or nil,
+      runtime_bundle = runtime_bundle,
+      show_tip = function(text, duration_seconds)
+        if host_runtime and type(host_runtime.show_tips) == "function" then
+          host_runtime.show_tips(text, duration_seconds)
+        end
+      end,
       hold_seconds = roll_face_hold_seconds,
       clear_overlay = action_anim.clear_overlay,
     })

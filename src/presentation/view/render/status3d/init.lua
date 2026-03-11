@@ -1,14 +1,26 @@
 local meta = require("src.presentation.view.render.status3d.meta")
 local scene = require("src.presentation.view.render.status3d.scene")
 local status = require("src.presentation.view.render.status3d.status")
-local host_runtime = require("src.presentation.runtime.host")
 
 local M = {}
 
-function M.reset(state)
+local function _resolve_host_runtime(state, deps)
+  local resolved_deps = deps or (state and state.presentation_runtime) or nil
+  if resolved_deps and resolved_deps.host_runtime then
+    return resolved_deps.host_runtime
+  end
+  local loaded = package.loaded["src.presentation.runtime.host"]
+  if loaded ~= nil then
+    return loaded
+  end
+  error("missing deps.host_runtime")
+end
+
+function M.reset(state, deps)
   if not state or not state.ui_status_3d then
     return
   end
+  local host_runtime = _resolve_host_runtime(state, deps)
   local cache = state.ui_status_3d
   for _, player_layers in pairs(cache.layers or {}) do
     for _, layer in pairs(player_layers) do
@@ -20,10 +32,11 @@ function M.reset(state)
   state.ui_status_3d = nil
 end
 
-function M.sync(game, state, dirty)
+function M.sync(game, state, dirty, deps)
   if not game or not state then
     return
   end
+  local host_runtime = _resolve_host_runtime(state, deps)
   local cache = meta.ensure_cache(state)
   if cache.disabled then
     return
@@ -56,11 +69,11 @@ function M.sync(game, state, dirty)
     return
   end
   for _, player in ipairs(game.players or {}) do
-    scene.ensure_layers_for_player(cache, player)
+    scene.ensure_layers_for_player(cache, player, deps)
   end
   for _, player in ipairs(game.players or {}) do
     if cache.layers[player.id] ~= nil then
-      status.sync_layer_status(cache, player, status.resolve_player_status_key(game, player))
+      status.sync_layer_status(cache, player, status.resolve_player_status_key(game, player), deps)
     end
   end
 end

@@ -1,7 +1,6 @@
 local role_context = require("src.presentation.model.role_context")
-local base_nodes = require("src.presentation.view.canvas.base.nodes")
-local always_show_nodes = require("src.presentation.view.canvas.always_show.nodes")
-local ui_touch_policy = require("src.presentation.input.touch_policy")
+local base_nodes = require("src.presentation.schema.canvas.base.nodes")
+local always_show_nodes = require("src.presentation.schema.canvas.always_show.nodes")
 local role_id_utils = require("src.core.utils.role_id")
 local panel_cash_delta = require("src.presentation.view.widgets.panel_cash_delta")
 local panel_player_slots = require("src.presentation.view.widgets.panel_player_slots")
@@ -20,7 +19,7 @@ function panel_presenter.apply_base_non_player_visibility(ui, visible)
     ui:set_visible(name, value)
   end
 end
-function panel_presenter.render_auto_controls_for_role(state, ui, ctx, ui_model)
+function panel_presenter.render_auto_controls_for_role(state, ui, ctx, ui_model, ui_touch_policy)
   assert(ui ~= nil, "missing ui")
   local controls = ui.auto_control_nodes or { always_show_nodes.auto_button, always_show_nodes.auto_label }
   local auto_enabled = ctx and ctx.is_player_role == true or false
@@ -65,7 +64,7 @@ local function _resolve_auto_effect_visible(ui_model, ctx)
   return role_id_utils.read(auto_by_player, role_id) == true
 end
 
-local function _render_role_view(state, ui_model, runtime, role, panel, refresh_item_slots)
+local function _render_role_view(state, ui_model, runtime, role, panel, refresh_item_slots, ui_touch_policy)
   local ui = state.ui
   local ctx = role_context.resolve(role, ui_model, { runtime = runtime })
   local base_visible = panel_presenter.is_base_non_player_visible(ui, ctx)
@@ -84,7 +83,7 @@ local function _render_role_view(state, ui_model, runtime, role, panel, refresh_
     display_player_id = ctx.display_player_id,
     allow_interact = base_visible,
   })
-  panel_presenter.render_auto_controls_for_role(state, ui, ctx, ui_model)
+  panel_presenter.render_auto_controls_for_role(state, ui, ctx, ui_model, ui_touch_policy)
   return ctx
 end
 function panel_presenter.refresh(state, ui_model, deps)
@@ -93,6 +92,10 @@ function panel_presenter.refresh(state, ui_model, deps)
   assert(deps ~= nil, "missing deps")
   local runtime = assert(deps.runtime, "missing deps.runtime")
   local refresh_item_slots = assert(deps.refresh_item_slots, "missing deps.refresh_item_slots")
+  local ui_touch_policy = deps.ui_touch_policy
+    or state and state.presentation_runtime and state.presentation_runtime.ui_touch_policy
+    or package.loaded["src.presentation.input.touch_policy"]
+  assert(ui_touch_policy, "missing deps.ui_touch_policy")
   local ui = state.ui
   local panel = ui_model.panel
   local players = ui_model.board and ui_model.board.players or {}
@@ -117,7 +120,7 @@ function panel_presenter.refresh(state, ui_model, deps)
     ui.item_slot_item_ids_by_role = {}
   end
   runtime.for_each_role_or_global(function(role)
-    _render_role_view(state, ui_model, runtime, role, panel, refresh_item_slots)
+    _render_role_view(state, ui_model, runtime, role, panel, refresh_item_slots, ui_touch_policy)
     for i = 1, 4 do
       panel_player_slots.apply_player_colors(role, runtime, players[i], i)
     end

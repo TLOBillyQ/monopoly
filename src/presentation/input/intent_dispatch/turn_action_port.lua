@@ -1,5 +1,4 @@
 local logger = require("src.core.utils.logger")
-local local_actor_resolver = require("src.presentation.runtime.local_actor_resolver")
 
 local turn_action_port = {}
 
@@ -31,6 +30,15 @@ function turn_action_port.should_block(state, intent, action_port)
   return action_port.should_block_action(state, intent)
 end
 
+local function _resolve_local_actor_role_id(state)
+  local ports = state and state.gameplay_loop_ports or nil
+  local actor_context = ports and ports.actor_context or nil
+  if actor_context and type(actor_context.resolve_local_actor_role_id) == "function" then
+    return actor_context.resolve_local_actor_role_id(state)
+  end
+  return nil
+end
+
 function turn_action_port.normalize_auto_intent(state, intent)
   local action = {}
   for k, v in pairs(intent) do
@@ -39,7 +47,7 @@ function turn_action_port.normalize_auto_intent(state, intent)
   if action.actor_role_id ~= nil then
     return action
   end
-  local local_role_id = local_actor_resolver.resolve_local(state)
+  local local_role_id = _resolve_local_actor_role_id(state)
   if local_role_id ~= nil then
     action.actor_role_id = local_role_id
   else

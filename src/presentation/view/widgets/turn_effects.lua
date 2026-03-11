@@ -1,12 +1,14 @@
-local runtime = require("src.presentation.runtime.ui")
-local base_nodes = require("src.presentation.view.canvas.base.nodes")
+local base_nodes = require("src.presentation.schema.canvas.base.nodes")
 local role_id_utils = require("src.core.utils.role_id")
 
 local turn_effects = {}
 
-local function _with_client_role(role, fn)
+local function _with_client_role(runtime, role, fn)
   if type(runtime.with_client_role) == "function" then
     return runtime.with_client_role(role, fn)
+  end
+  if type(runtime.set_client_role) ~= "function" then
+    return fn()
   end
   runtime.set_client_role(role)
   local ok, err = pcall(fn)
@@ -38,25 +40,25 @@ local function _set_node_visible(node, visible)
   node.visible = visible == true
 end
 
-local function _set_highlight_visible(index)
+local function _set_highlight_visible(runtime, index)
   for i, name in ipairs(base_nodes.player_action_effects) do
     local node = runtime.query_node(name)
     _set_node_visible(node, index ~= nil and i == index)
   end
 end
 
-local function _sync_current_turn_highlight(_, ui_model)
-  _with_client_role(nil, function()
+local function _sync_current_turn_highlight(runtime, _, ui_model)
+  _with_client_role(runtime, nil, function()
     local current_index = _resolve_current_player_index(ui_model)
-    _set_highlight_visible(current_index)
+    _set_highlight_visible(runtime, current_index)
   end)
 end
 
-local function _get_role_id(role)
+local function _get_role_id(runtime, role)
   return role_id_utils.normalize(runtime.resolve_role_id(role))
 end
 
-local function _get_prompt_nodes()
+local function _get_prompt_nodes(runtime)
   return {
     star = runtime.query_node(base_nodes.action_hint_effect),
     label = runtime.query_node(base_nodes.action_hint),
@@ -72,28 +74,28 @@ local function _is_pre_action_phase(phase)
   return phase == "start" or phase == "end_turn"
 end
 
-local function _sync_local_turn_prompt(_, ui_model)
+local function _sync_local_turn_prompt(runtime, _, ui_model)
   local board = ui_model and ui_model.board or nil
   local phase = board and board.phase or nil
   local current_player_id = role_id_utils.normalize(ui_model and ui_model.current_player_id or nil)
   local can_show = _is_pre_action_phase(phase)
   runtime.for_each_role_or_global(function(role)
-    local role_id = _get_role_id(role)
-    _with_client_role(role, function()
-      local nodes = _get_prompt_nodes()
+    local role_id = _get_role_id(runtime, role)
+    _with_client_role(runtime, role, function()
+      local nodes = _get_prompt_nodes(runtime)
       local show = role_id ~= nil and current_player_id ~= nil and role_id_utils.equals(role_id, current_player_id) and can_show
       _set_prompt_visible(nodes, show)
     end)
   end)
 end
 
-local function _get_other_action_prompt_label_node()
+local function _get_other_action_prompt_label_node(runtime)
   return runtime.query_node(base_nodes.other_player_hint)
 end
 
-local function _set_other_action_prompt(role, text, visible)
-  _with_client_role(role, function()
-    local node = _get_other_action_prompt_label_node()
+local function _set_other_action_prompt(runtime, role, text, visible)
+  _with_client_role(runtime, role, function()
+    local node = _get_other_action_prompt_label_node(runtime)
     if node then
       node.text = text or ""
       node.visible = visible == true
@@ -109,27 +111,32 @@ local function _resolve_other_action_prompt_text(ui_model)
   return "其他玩家正在行动"
 end
 
-local function _sync_other_player_action_prompt(_, ui_model)
+local function _sync_other_player_action_prompt(runtime, _, ui_model)
   local current_player_id = role_id_utils.normalize(ui_model and ui_model.current_player_id or nil)
   local prompt_text = _resolve_other_action_prompt_text(ui_model)
   runtime.for_each_role_or_global(function(role)
-    local role_id = _get_role_id(role)
+    local role_id = _get_role_id(runtime, role)
     local show = role_id ~= nil
       and current_player_id ~= nil
       and not role_id_utils.equals(role_id, current_player_id)
     if show then
-      _set_other_action_prompt(role, prompt_text, true)
+      _set_other_action_prompt(runtime, role, prompt_text, true)
     else
-      _set_other_action_prompt(role, "", false)
+      _set_other_action_prompt(runtime, role, "", false)
     end
   end)
 end
 
-function turn_effects.sync(state, ui_model)
-  _sync_current_turn_highlight(state, ui_model)
-  _sync_local_turn_prompt(state, ui_model)
-  _sync_other_player_action_prompt(state, ui_model)
-  runtime.set_client_role(nil)
+function turn_effects.sync(state, ui_model, deps)
+  local runtime = deps and deps.runtime or state and state.presentation_runtime and state.presentation_runtime.runtime
+    or package.loaded["src.presentation.runtime.ui"]
+  assert(runtime, "missing deps.runtime")
+  _sync_current_turn_highlight(runtime, state, ui_model)
+  _sync_local_turn_prompt(runtime, state, ui_model)
+  _sync_other_player_action_prompt(runtime, state, ui_model)
+  if type(runtime.set_client_role) == "function" then
+    runtime.set_client_role(nil)
+  end
 end
 
 return turn_effects

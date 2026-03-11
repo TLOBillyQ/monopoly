@@ -1,10 +1,10 @@
 local runtime = require("src.presentation.runtime.ui")
-local debug_nodes = require("src.presentation.view.canvas.debug.nodes")
-local player_choice_nodes = require("src.presentation.view.canvas.player_choice.nodes")
-local target_choice_nodes = require("src.presentation.view.canvas.target_choice.nodes")
-local remote_choice_nodes = require("src.presentation.view.canvas.remote_choice.nodes")
-local secondary_confirm_nodes = require("src.presentation.view.canvas.secondary_confirm.nodes")
-local always_show_contract = require("src.presentation.view.canvas.always_show.contract")
+local debug_nodes = require("src.presentation.schema.canvas.debug.nodes")
+local player_choice_nodes = require("src.presentation.schema.canvas.player_choice.nodes")
+local target_choice_nodes = require("src.presentation.schema.canvas.target_choice.nodes")
+local remote_choice_nodes = require("src.presentation.schema.canvas.remote_choice.nodes")
+local secondary_confirm_nodes = require("src.presentation.schema.canvas.secondary_confirm.nodes")
+local always_show_contract = require("src.presentation.schema.canvas.always_show.contract")
 
 local M = {}
 

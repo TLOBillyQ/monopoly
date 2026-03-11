@@ -2,11 +2,11 @@ local number_utils = require("src.core.utils.number_utils")
 local logger = require("src.core.utils.logger")
 local runtime_refs = require("Config.runtime_refs")
 local runtime_constants = require("src.core.config.runtime_constants")
-local host_runtime = require("src.presentation.runtime.host")
 local catalog = require("src.presentation.view.render.board_feedback_catalog")
 local effect_timeline = require("src.presentation.view.support.effect_timeline")
 local unit_position = require("src.presentation.view.render.unit_position")
 local service = {}
+local active_host_runtime = nil
 local warned_missing_refs = {
   effect = {},
   sound = {},
@@ -17,6 +17,18 @@ local default_sfx_duration = 1.0
 local default_sound_duration = 1.0
 local default_sound_volume = 1.0
 local default_with_sound = false
+
+local function _resolve_host_runtime(state, deps)
+  local resolved_deps = deps or (state and state.presentation_runtime) or nil
+  if resolved_deps and resolved_deps.host_runtime then
+    return resolved_deps.host_runtime
+  end
+  local loaded = package.loaded["src.presentation.runtime.host"]
+  if loaded ~= nil then
+    return loaded
+  end
+  error("missing deps.host_runtime")
+end
 local function _warn(...)
   logger.warn("board_feedback", ...)
 end
@@ -127,9 +139,9 @@ local function _schedule_followup_sound(cue_name, pos, entry)
       _warn_missing_ref_once("sound", cue_name, sound_id_ref, "missing_or_unconfigured")
       return
     end
-    host_runtime.play_3d_sound(pos, sound_id, _resolve_numeric(entry.duration, default_sound_duration), _resolve_numeric(entry.volume, default_sound_volume))
+    active_host_runtime.play_3d_sound(pos, sound_id, _resolve_numeric(entry.duration, default_sound_duration), _resolve_numeric(entry.volume, default_sound_volume))
   end, {
-    schedule = host_runtime.schedule,
+    schedule = active_host_runtime.schedule,
   })
   return true
 end
@@ -149,14 +161,14 @@ local function _play_effect(cue_name, cue, pos, unit, payload)
   if with_sound == nil then
     with_sound = default_with_sound
   end
-  local sfx_id = host_runtime.play_sfx_by_key(effect_id, pos, rot, scale, duration, rate, with_sound, {
+  local sfx_id = active_host_runtime.play_sfx_by_key(effect_id, pos, rot, scale, duration, rate, with_sound, {
     cue_name = cue_name,
   })
   if sfx_id == nil then
     return false
   end
   if cue.bind_to_player == true and unit ~= nil then
-    host_runtime.bind_sfx_to_unit(
+    active_host_runtime.bind_sfx_to_unit(
       sfx_id,
       unit,
       cue.socket_name,
@@ -173,7 +185,7 @@ local function _play_sound(cue_name, cue, pos, payload)
   end
   local duration = _resolve_numeric(payload and payload.sound_duration or cue.sound_duration or cue.duration, default_sound_duration)
   local volume = _resolve_numeric(payload and payload.volume or cue.volume, default_sound_volume)
-  local sound_handle = host_runtime.play_3d_sound(pos, sound_id, duration, volume)
+  local sound_handle = active_host_runtime.play_3d_sound(pos, sound_id, duration, volume)
   return sound_handle ~= nil
 end
 local function _play_cue(state, cue_name, pos, unit, payload)
@@ -201,7 +213,8 @@ local function _play_cue(state, cue_name, pos, unit, payload)
   end
   return played
 end
-function service.play_tile_cue(state, cue_name, tile_index, payload)
+function service.play_tile_cue(state, cue_name, tile_index, payload, deps)
+  active_host_runtime = _resolve_host_runtime(state, deps)
   local pos = _resolve_tile_cue_position(state, tile_index, payload)
   if pos == nil then
     return false
@@ -210,7 +223,8 @@ function service.play_tile_cue(state, cue_name, tile_index, payload)
   local unit = player_id and _resolve_player_unit(state, player_id) or nil
   return _play_cue(state, cue_name, pos, unit, payload)
 end
-function service.play_player_cue(state, cue_name, player_id, payload)
+function service.play_player_cue(state, cue_name, player_id, payload, deps)
+  active_host_runtime = _resolve_host_runtime(state, deps)
   local pos = _resolve_player_position(state, player_id)
   if pos == nil then
     return false
@@ -218,7 +232,8 @@ function service.play_player_cue(state, cue_name, player_id, payload)
   local unit = _resolve_player_unit(state, player_id)
   return _play_cue(state, cue_name, pos, unit, payload)
 end
-function service.play_sound_only(state, cue_name, payload)
+function service.play_sound_only(state, cue_name, payload, deps)
+  active_host_runtime = _resolve_host_runtime(state, deps)
   return _play_cue(
     state,
     cue_name,
@@ -227,10 +242,10 @@ function service.play_sound_only(state, cue_name, payload)
     payload
   )
 end
-function service.play_step_tile_sound(state, player_id, tile_index)
+function service.play_step_tile_sound(state, player_id, tile_index, deps)
   return service.play_sound_only(state, "move_step_pounce", {
     player_id = player_id,
     tile_index = tile_index,
-  })
+  }, deps)
 end
 return service

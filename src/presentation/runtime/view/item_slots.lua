@@ -5,7 +5,7 @@ local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_state = require("src.core.state_access.runtime_state")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local role_id_utils = require("src.core.utils.role_id")
-local choice_common = require("src.presentation.view.widgets.choice_screen_service.common")
+local choice_common = require("src.presentation.runtime.controllers.choice_screen_service.common")
 
 local M = {}
 

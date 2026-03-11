@@ -1,12 +1,16 @@
-local market_layout = require("src.presentation.view.support.market_layout")
+local market_layout = require("src.presentation.schema.market_layout")
 local ui_controls = require("src.presentation.view.support.ui_controls")
-local runtime = require("src.presentation.runtime.ui")
 local items_cfg = require("Config.generated.items")
 local market_cfg = require("Config.generated.market")
 local number_utils = require("src.core.utils.number_utils")
 local vehicle_catalog = require("src.core.config.vehicle_catalog")
 
 local market_view_slots = {}
+
+local function _resolve_runtime(deps)
+  local resolved_deps = deps or {}
+  return assert(resolved_deps.runtime or package.loaded["src.presentation.runtime.ui"], "missing deps.runtime")
+end
 
 local function _item_cfg_by_id(product_id)
   for _, cfg in ipairs(items_cfg) do
@@ -103,7 +107,8 @@ local function _for_each_market_slot(callback)
   end
 end
 
-local function _set_market_slot_visible(ui, refs, slot, opt)
+local function _set_market_slot_visible(ui, refs, slot, opt, deps)
+  local runtime = _resolve_runtime(deps)
   local opt_id = opt.id or opt
   local entry, cfg = _resolve_market_entry(opt_id)
   local name = _resolve_market_name(opt, opt_id, entry, cfg)
@@ -121,12 +126,12 @@ local function _set_market_slot_visible(ui, refs, slot, opt)
   return opt_id
 end
 
-local function _set_market_slot(ui, refs, slot, opt)
+local function _set_market_slot(ui, refs, slot, opt, deps)
   if not opt then
     _set_market_slot_hidden(ui, slot)
     return nil
   end
-  return _set_market_slot_visible(ui, refs, slot, opt)
+  return _set_market_slot_visible(ui, refs, slot, opt, deps)
 end
 
 local function _contains_option_id(option_ids, option_id)
@@ -156,7 +161,7 @@ function market_view_slots.hide_market_slots(ui)
   end)
 end
 
-function market_view_slots.populate_market_slots(ui, refs, options)
+function market_view_slots.populate_market_slots(ui, refs, options, deps)
   local option_ids = {}
   local first_buyable = nil
   _for_each_market_slot(function(index, slot)
@@ -164,7 +169,7 @@ function market_view_slots.populate_market_slots(ui, refs, options)
     if opt and opt.can_buy == true and first_buyable == nil then
       first_buyable = opt.id or opt
     end
-    option_ids[index] = _set_market_slot(ui, refs, slot, opt)
+    option_ids[index] = _set_market_slot(ui, refs, slot, opt, deps)
   end)
   return {
     option_ids = option_ids,

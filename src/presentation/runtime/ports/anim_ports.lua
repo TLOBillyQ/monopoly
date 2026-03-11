@@ -91,15 +91,17 @@ function anim_ports.build()
     end,
     play_action_anim = function(state, anim_ctx)
       local player = _load_action_anim_player()
-      return player.play(state, anim_ctx)
+      return player.play(state, anim_ctx, {
+        runtime_bundle = state and state.presentation_runtime or nil,
+      })
     end,
     reset_status_3d = function(state)
       local status3d = require("src.presentation.view.render.status3d")
-      status3d.reset(state)
+      status3d.reset(state, state and state.presentation_runtime or nil)
     end,
     sync_status_3d = function(game, state, dirty)
       local status3d = require("src.presentation.view.render.status3d")
-      status3d.sync(game, state, dirty)
+      status3d.sync(game, state, dirty, state and state.presentation_runtime or nil)
     end,
   }
 end

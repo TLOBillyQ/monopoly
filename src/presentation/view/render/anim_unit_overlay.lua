@@ -11,11 +11,15 @@ local roadblock_scale = (function()
   return { x = 4.0, y = 4.0, z = 4.0 }
 end)()
 
+local function _deps(state)
+  return state and state.presentation_runtime or nil
+end
+
 function overlay.clear_overlay(state, kind, tile_index)
   assert(state ~= nil, "missing state")
   assert(kind ~= nil, "missing kind")
   assert(tile_index ~= nil, "missing tile_index")
-  runtime.clear_overlay(assert(state.board_scene, "missing board_scene"), kind, tile_index)
+  runtime.clear_overlay(assert(state.board_scene, "missing board_scene"), kind, tile_index, _deps(state))
 end
 
 function overlay.play_overlay(state, anim, duration, opts)
@@ -31,7 +35,8 @@ function overlay.play_overlay(state, anim, duration, opts)
       nil,
       unit_id,
       compute.overlay_pos_for_tile(state, tile_index),
-      roadblock_scale
+      roadblock_scale,
+      _deps(state)
     )
     return
   end
@@ -46,7 +51,7 @@ function overlay.play_overlay(state, anim, duration, opts)
       return
     end
     runtime.spawn_overlay(assert(state.board_scene, "missing board_scene"), overlay_kind, tile_index, group_id, unit_id,
-      compute.overlay_pos_for_tile(state, tile_index))
+      compute.overlay_pos_for_tile(state, tile_index), nil, _deps(state))
     return
   end
 end
@@ -58,7 +63,7 @@ function overlay.play_missile(state, anim, duration, opts)
   clear_overlay(state, "mine", tile_index)
   local unit_id = prefab.unit and prefab.unit["导弹"] or nil
   local group_id = prefab.group["导弹"]
-  runtime.spawn_transient(group_id, unit_id, compute.overlay_pos_for_tile(state, tile_index), duration)
+  runtime.spawn_transient(group_id, unit_id, compute.overlay_pos_for_tile(state, tile_index), duration, _deps(state))
 end
 
 function overlay.play_monster(_state, _anim, _duration, _opts)
@@ -72,7 +77,7 @@ function overlay.play_clear_obstacles(state, anim, duration, opts)
     clear_overlay(state, "mine", idx)
   end
   local robot_id = prefab.group["清障机器人"]
-  runtime.spawn_transient(robot_id, nil, compute.overlay_pos_for_player(state, assert(anim.player_id, "missing clear_obstacles player_id")), duration)
+  runtime.spawn_transient(robot_id, nil, compute.overlay_pos_for_player(state, assert(anim.player_id, "missing clear_obstacles player_id")), duration, _deps(state))
 end
 
 return overlay
