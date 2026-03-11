@@ -4,7 +4,7 @@
 
 ## 真源与边界
 
-结构性依赖规则的唯一真源是 `scripts/architecture/monopoly_architecture.lua`。这里声明了 source roots、组件归类、抽象 Port 规则和禁止依赖边界。`tests/guards/dep_rules.lua` 现在只保留文本级硬边界，例如退休桥接路径、宿主全局 API、`state.ui_*` 直写和 `ui_port` 旁路访问；它不再维护 growth budget 或模块级 `require` 边界。
+结构性依赖规则的唯一真源是 `scripts/arch/config.lua`。这里声明了 source roots、组件归类、抽象 Port 规则和禁止依赖边界。`tests/guards/dep_rules.lua` 现在只保留文本级硬边界，例如退休桥接路径、宿主全局 API、`state.ui_*` 直写和 `ui_port` 旁路访问；它不再维护 growth budget 或模块级 `require` 边界。
 
 `arch_view` 不允许任何模块级循环依赖。出现任意新循环时 `arch_view check` 会直接失败，没有白名单机制。
 
