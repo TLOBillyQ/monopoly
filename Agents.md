@@ -33,7 +33,7 @@
 
 ## Harness 指引
 
-- **`PLANS.md`**（`.agents/harness/PLANS.md`）：可执行计划规范，所有 `.agents/plan.md` 必须符合此格式。
+- **`PLANS.md`**（`.agents/harness/PLANS.md`）：可执行计划规范。
 - **`READING.md`**（`.agents/harness/READING.md`）：按需查代码，不预读整个目录树。
 - **`CODING.md`**（`.agents/harness/CODING.md`）：命名与结构规范，新增文件前先读。
 
