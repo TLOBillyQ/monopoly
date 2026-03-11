@@ -133,31 +133,12 @@ function checker.run(architecture, config)
   end
 
   local current_cycle_map = _current_cycle_keys(architecture.graph)
-  local baseline_map = {}
-  for _, cycle in ipairs(config.cycle_baseline or {}) do
-    local copied = common.copy_array(cycle)
-    table.sort(copied)
-    baseline_map[table.concat(copied, "|")] = copied
-  end
-
-  for cycle_key, cycle in common.sorted_pairs(current_cycle_map) do
-    if baseline_map[cycle_key] == nil then
-      violations[#violations + 1] = {
-        kind = "unexpected_cycle",
-        cycle = cycle,
-        description = "cycle is not present in the configured baseline",
-      }
-    end
-  end
-
-  for cycle_key, cycle in common.sorted_pairs(baseline_map) do
-    if current_cycle_map[cycle_key] == nil then
-      violations[#violations + 1] = {
-        kind = "missing_baseline_cycle",
-        cycle = cycle,
-        description = "configured cycle baseline no longer matches the current graph",
-      }
-    end
+  for _, cycle in common.sorted_pairs(current_cycle_map) do
+    violations[#violations + 1] = {
+      kind = "unexpected_cycle",
+      cycle = cycle,
+      description = "module-level circular dependency detected",
+    }
   end
 
   local cycle_list = {}
@@ -169,11 +150,6 @@ function checker.run(architecture, config)
     ok = #violations == 0,
     violations = violations,
     cycles = cycle_list,
-    baseline_status = {
-      ok = #violations == 0,
-      current = common.sorted_keys(current_cycle_map),
-      expected = common.sorted_keys(baseline_map),
-    },
   }
 end
 

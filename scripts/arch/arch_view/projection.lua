@@ -485,4 +485,36 @@ function projection.build_views(architecture)
     return _build_view(architecture, {})
 end
 
+function projection.collect_projection_cycles(views)
+    local result = {}
+    for _, view_key in ipairs(common.sorted_keys(views or {})) do
+        local view = views[view_key]
+        local feedback_edges = {}
+        for _, edge in ipairs(view.display_edges or {}) do
+            if edge.feedback == true then
+                local module_edges = {}
+                for _, me in ipairs(edge.module_edges or {}) do
+                    module_edges[#module_edges + 1] = {
+                        from = me.from,
+                        to = me.to,
+                        type = me.type,
+                    }
+                end
+                feedback_edges[#feedback_edges + 1] = {
+                    from = edge.from,
+                    to = edge.to,
+                    module_edges = module_edges,
+                }
+            end
+        end
+        if #feedback_edges > 0 then
+            result[#result + 1] = {
+                view = view_key,
+                feedback_edges = feedback_edges,
+            }
+        end
+    end
+    return result
+end
+
 return projection

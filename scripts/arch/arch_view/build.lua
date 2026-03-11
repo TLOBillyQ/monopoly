@@ -54,9 +54,6 @@ function build.validate_config(config)
   if not ok then
     return nil, err
   end
-  if config.cycle_baseline ~= nil and type(config.cycle_baseline) ~= "table" then
-    return nil, "cycle_baseline must be an array"
-  end
   return true
 end
 
@@ -92,6 +89,7 @@ function build.analyze(config, opts)
 
   architecture.views = projection.build_views(architecture)
   architecture.check = checker.run(architecture, config)
+  architecture.check.projection_cycles = projection.collect_projection_cycles(architecture.views)
   architecture.schema_version = 1
   architecture.project_root = project_root
   architecture.config_path = opts.config_path and common.resolve_path(common.current_dir(), opts.config_path) or nil

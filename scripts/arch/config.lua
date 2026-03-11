@@ -81,5 +81,4 @@ return {
       to = { "^src%.game%.core%.runtime%..+" },
     },
   },
-  cycle_baseline = {},
 }

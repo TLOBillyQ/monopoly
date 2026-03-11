@@ -24,10 +24,10 @@ end
 local function _usage()
     io.write("Usage:\n")
     io.write(
-    "  <lua> scripts/architecture/arch_view_cli.lua scan --out <file> [--project-root <dir>] [--config <file>]\n")
-    io.write("  <lua> scripts/architecture/arch_view_cli.lua check [--project-root <dir>] [--config <file>]\n")
+    "  <lua> scripts/arch.lua scan --out <file> [--project-root <dir>] [--config <file>]\n")
+    io.write("  <lua> scripts/arch.lua check [--project-root <dir>] [--config <file>]\n")
     io.write(
-    "  <lua> scripts/architecture/arch_view_cli.lua viewer --out-dir <dir> [--project-root <dir>] [--config <file>] [--in-json <file>] [--open]\n")
+    "  <lua> scripts/arch.lua viewer --out-dir <dir> [--project-root <dir>] [--config <file>] [--in-json <file>] [--open]\n")
 end
 
 local function _parse_args(args)
@@ -70,10 +70,10 @@ end
 
 local function _resolve_paths(options, env)
     local cwd = common.current_dir()
-    local script_dir = common.normalize_path(env.script_dir or "scripts/architecture")
+    local script_dir = common.normalize_path(env.script_dir or "scripts/arch")
     local default_project_root = common.resolve_path(cwd, env.default_project_root or _repo_root(script_dir))
     local project_root = common.resolve_path(cwd, options.project_root or default_project_root)
-    local default_config = common.join_path(script_dir, "monopoly_architecture.lua")
+    local default_config = common.join_path(script_dir, "config.lua")
     local config_path = common.resolve_path(cwd, options.config or default_config)
     local out_path = options.out and common.resolve_path(cwd, options.out) or nil
     local out_dir = options.out_dir and common.resolve_path(cwd, options.out_dir) or nil
