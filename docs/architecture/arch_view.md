@@ -17,6 +17,10 @@ lua scripts/arch.lua check
 ```
 扫描 `src/`，执行边界校验，失败则非零退出。`tests/guards/arch_view_guard.lua` 与 `tests/regression.lua` 均使用此能力；跑全部护栏用 `lua tests/guard.lua`。
 
+`check` 同时校验两类循环：
+- 模块级 `require` 环
+- projection/view 级反馈环（即模块图无环，但聚合到 viewer 视图后形成的往返依赖）
+
 ```
 lua scripts/arch.lua
 ```

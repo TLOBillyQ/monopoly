@@ -23,6 +23,8 @@ function M.run()
           .. tostring(violation.from) .. " -> " .. tostring(violation.to)
       elseif violation.kind == "unclassified_module" then
         lines[#lines + 1] = "arch_view_guard: unclassified_module " .. tostring(violation.module_id)
+      elseif violation.kind == "projection_cycle" then
+        lines[#lines + 1] = "arch_view_guard: projection_cycle " .. tostring(violation.view)
       else
         lines[#lines + 1] = "arch_view_guard: " .. tostring(violation.kind)
       end

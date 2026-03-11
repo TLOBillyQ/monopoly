@@ -88,8 +88,8 @@ function build.analyze(config, opts)
   }
 
   architecture.views = projection.build_views(architecture)
+  architecture.projection_cycles = projection.collect_projection_cycles(architecture.views)
   architecture.check = checker.run(architecture, config)
-  architecture.check.projection_cycles = projection.collect_projection_cycles(architecture.views)
   architecture.schema_version = 1
   architecture.project_root = project_root
   architecture.config_path = opts.config_path and common.resolve_path(common.current_dir(), opts.config_path) or nil

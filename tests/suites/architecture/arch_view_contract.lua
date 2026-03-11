@@ -870,6 +870,7 @@ local function _test_common_resolves_tmp_path_for_windows_shell_compat()
 end
 
 local function _test_check_includes_projection_cycles()
+    local checker = require("arch_view.checker")
     local projection = require("arch_view.projection")
     local architecture = {
         graph = {
@@ -952,10 +953,14 @@ local function _test_check_includes_projection_cycles()
     _assert_eq(#module_cycles, 0, "module-level graph should have no cycles")
 
     architecture.views = projection.build_views(architecture)
+    architecture.projection_cycles = projection.collect_projection_cycles(architecture.views)
 
-    local projection_cycles = projection.collect_projection_cycles(architecture.views)
+    local projection_cycles = architecture.projection_cycles
     assert(type(projection_cycles) == "table", "projection_cycles should be a table")
     assert(#projection_cycles > 0, "should detect at least one projection-level cycle")
+
+    local result = checker.run(architecture, {})
+    assert(result.ok == false, "projection cycle should fail check")
 
     local root_entry = nil
     for _, entry in ipairs(projection_cycles) do
@@ -974,6 +979,15 @@ local function _test_check_includes_projection_cycles()
         end
     end
     assert(found_feedback, "feedback edges should carry module_edges")
+
+    local found_projection_violation = false
+    for _, violation in ipairs(result.violations) do
+        if violation.kind == "projection_cycle" and violation.view == "root" then
+            found_projection_violation = true
+            break
+        end
+    end
+    assert(found_projection_violation, "check should report projection_cycle violation for root view")
 end
 
 local function _test_real_repo_projection_cycles_exclude_game_subtrees()

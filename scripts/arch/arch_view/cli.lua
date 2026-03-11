@@ -162,6 +162,9 @@ local function _run_check(options, env)
             io.stderr:write("    ", tostring(violation.description), "\n")
         elseif violation.kind == "unclassified_module" then
             io.stderr:write("  unclassified_module ", tostring(violation.module_id), "\n")
+        elseif violation.kind == "projection_cycle" then
+            io.stderr:write("  projection_cycle ", tostring(violation.view), "\n")
+            io.stderr:write("    ", tostring(violation.description), "\n")
         else
             io.stderr:write("  ", tostring(violation.kind), " ", table.concat(violation.cycle or {}, ", "), "\n")
             io.stderr:write("    ", tostring(violation.description), "\n")

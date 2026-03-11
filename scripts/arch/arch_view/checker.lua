@@ -105,6 +105,17 @@ local function _current_cycle_keys(graph)
   return cycle_map
 end
 
+local function _current_projection_cycles(architecture)
+  local projection_cycles = architecture.projection_cycles
+  if projection_cycles ~= nil then
+    return projection_cycles
+  end
+  if architecture.check ~= nil and architecture.check.projection_cycles ~= nil then
+    return architecture.check.projection_cycles
+  end
+  return {}
+end
+
 function checker.run(architecture, config)
   local violations = {}
 
@@ -146,10 +157,21 @@ function checker.run(architecture, config)
     cycle_list[#cycle_list + 1] = common.copy_array(cycle)
   end
 
+  local projection_cycles = _current_projection_cycles(architecture)
+  for _, entry in ipairs(projection_cycles) do
+    violations[#violations + 1] = {
+      kind = "projection_cycle",
+      view = entry.view,
+      feedback_edges = common.copy_array(entry.feedback_edges or {}),
+      description = "projection-level circular dependency detected",
+    }
+  end
+
   return {
     ok = #violations == 0,
     violations = violations,
     cycles = cycle_list,
+    projection_cycles = projection_cycles,
   }
 end
 
