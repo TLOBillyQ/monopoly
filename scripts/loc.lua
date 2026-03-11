@@ -362,7 +362,7 @@ local function _write_json(data, output_path)
 end
 
 local function main()
-  local start_clock = os.clock()
+  local start_time = os.time()
 
   _println(string.rep("=", 60))
   _println("src/ 和 tests/ 目录有效代码行数变化分析（Lua 版）")
@@ -429,7 +429,7 @@ local function main()
   _println("正在生成折线图...")
   _generate_chart(data, chart_path)
 
-  local elapsed = os.clock() - start_clock
+  local elapsed = os.time() - start_time
   _println("")
   _println(string.rep("=", 60))
   _println("Analysis Summary")

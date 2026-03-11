@@ -6,6 +6,7 @@ local SAME_LAYER_LANE_STEP = 30.0
 local CROSS_LAYER_LANE_STEP = 22.0
 local NODE_PORT_STEP = 24.0
 local NODE_EDGE_GAP = 14.0
+local CENTER_EXCLUSION_HALF_WIDTH = 20.0
 
 local function _copy_point(point)
   return { point[1], point[2] }
@@ -118,15 +119,36 @@ local function _clamp(value, minimum, maximum)
   return value
 end
 
-local function _top_port(edge, rect, raw_offset, index_info)
+local function _signed(value)
+  if value < 0.0 then
+    return -1.0
+  end
+  return 1.0
+end
+
+local function _cross_layer_port_offset(rect, raw_offset, preferred_direction)
   local max_offset = math.max(0.0, rect.width / 2.0 - NODE_EDGE_GAP - 6.0)
   local offset = _clamp(raw_offset, -max_offset, max_offset)
+  local minimum_offset = math.min(max_offset, CENTER_EXCLUSION_HALF_WIDTH)
+
+  if minimum_offset > 0.0 and math.abs(offset) < minimum_offset then
+    local direction = preferred_direction
+    if math.abs(offset) >= 0.001 then
+      direction = offset
+    end
+    offset = _signed(direction or 1.0) * minimum_offset
+  end
+
+  return offset
+end
+
+local function _top_port(rect, raw_offset, preferred_direction)
+  local offset = _cross_layer_port_offset(rect, raw_offset, preferred_direction)
   return _node_center_x(rect) + offset, rect.y - NODE_EDGE_GAP
 end
 
-local function _bottom_port(edge, rect, raw_offset, index_info)
-  local max_offset = math.max(0.0, rect.width / 2.0 - NODE_EDGE_GAP - 6.0)
-  local offset = _clamp(raw_offset, -max_offset, max_offset)
+local function _bottom_port(rect, raw_offset, preferred_direction)
+  local offset = _cross_layer_port_offset(rect, raw_offset, preferred_direction)
   return _node_center_x(rect) + offset, rect.y + rect.height + NODE_EDGE_GAP
 end
 
@@ -178,15 +200,16 @@ local function _route_cross_layer(edge, bucket_info)
   local from_offset = _port_offset(from_index)
   local to_offset = _port_offset(to_index)
   local lane_offset = _lane_offset(bucket_info.lanes[edge.id], false)
+  local horizontal_bias = _edge_horizontal_bias(edge, from_index)
   local start_x, start_y
   local end_x, end_y
 
   if edge.to_layer > edge.from_layer then
-    start_x, start_y = _bottom_port(edge, from_rect, from_offset, from_index)
-    end_x, end_y = _top_port(edge, to_rect, to_offset, to_index)
+    start_x, start_y = _bottom_port(from_rect, from_offset, horizontal_bias)
+    end_x, end_y = _top_port(to_rect, to_offset, horizontal_bias)
   else
-    start_x, start_y = _top_port(edge, from_rect, from_offset, from_index)
-    end_x, end_y = _bottom_port(edge, to_rect, to_offset, to_index)
+    start_x, start_y = _top_port(from_rect, from_offset, horizontal_bias)
+    end_x, end_y = _bottom_port(to_rect, to_offset, horizontal_bias)
   end
   local lane_y = ((start_y + end_y) / 2.0) + lane_offset
 
