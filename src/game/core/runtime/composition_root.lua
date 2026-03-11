@@ -9,8 +9,6 @@ local game_factory = require("src.game.core.runtime.game_factory")
 local phase_registry = require("src.game.flow.turn.phase_registry")
 local number_utils = require("src.core.utils.number_utils")
 local role_id_utils = require("src.core.utils.role_id")
-local auto_play_port_adapter = require("src.game.runtime.auto_play_port_adapter")
-local bankruptcy_port_adapter = require("src.game.runtime.bankruptcy_port_adapter")
 local intent_output_adapter = require("src.game.flow.output_adapters.intent_output_adapter")
 
 local composition_root = {}
@@ -151,8 +149,6 @@ function composition_root.assemble(opts, game_or_class)
     end,
   }
   game.intent_output_port = game.intent_output_port or intent_output_adapter.build()
-  game.auto_play_port = game.auto_play_port or auto_play_port_adapter.build()
-  game.bankruptcy_port = game.bankruptcy_port or bankruptcy_port_adapter.build()
 
   function game:consume_dirty()
     return dirty_tracker.consume(self.dirty)

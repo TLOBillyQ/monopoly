@@ -46,18 +46,40 @@ T6 ──┘  │
 - **location**: `src/game/scheduler/`, `src/game/flow/turn/`, `tests/suites/gameplay/gameplay_coroutine.lua`
 - **description**: 把 `src/game/scheduler/turn_script.lua`、`src/game/scheduler/await.lua` 的 flow-specific 状态机逻辑迁到 `src/game/flow/turn/`；`scheduler` 只保留 signal queue、resume、wait-state 存储、snapshot 容器；`flow.turn.engine` 通过 session/script factory 注入 turn script。
 - **validation**: `src/game/scheduler/*` 不再 `require("src.game.flow...")`；`session:snapshot()`、`game.turn.phase`、`choice_elapsed_seconds`、各 wait state 行为保持不变；`game` 视图不再出现 `flow <-> scheduler` feedback edge。
-- **status**: Not Completed
+- **status**: Completed
 - **log**:
+  - 2026-03-11 17:03 CST: 把 coroutine turn script 与 wait-state 解析从 `src/game/scheduler/` 迁到 `src/game/flow/turn/await.lua` 和 `src/game/flow/turn/turn_script.lua`。
+  - 2026-03-11 17:03 CST: `session` 新增 `script_factory` 注入，`scheduler` 改为只负责 queue / resume / wait-state bookkeeping，不再直接 `require("src.game.flow...")`。
+  - 2026-03-11 17:03 CST: 定向运行 `suites.gameplay.gameplay_coroutine`，8 个 coroutine 行为用例通过。
 - **files edited/created**:
+  - `src/game/scheduler/session.lua`
+  - `src/game/scheduler/init.lua`
+  - `src/game/flow/turn/engine.lua`
+  - `src/game/flow/turn/await.lua`
+  - `src/game/flow/turn/turn_script.lua`
+  - deleted `src/game/scheduler/await.lua`
+  - deleted `src/game/scheduler/turn_script.lua`
 
 ### T2: 把默认 gameplay port 装配移出 `core.runtime`
 - **depends_on**: []
 - **location**: `src/game/core/runtime/`, `src/game/runtime/`, `src/app/bootstrap/`, `src/game/flow/turn/loop.lua`, `tests/support/shared_support.lua`, `tests/guards/dep_rules.lua`
 - **description**: 从 `composition_root` 移除对 runtime adapter 的直接依赖；新增外层 installer/helper 负责给 game 安装默认 `auto_play_port`、`bankruptcy_port`；同步更新 app 启动、gameplay loop、test support 的装配入口；同一批次删除 `dep_rules` 里与旧装配路径绑定的例外/期望。
 - **validation**: `src.game.core.runtime.*` 不再依赖 `src.game.runtime.*`；`support.new_game()`、runtime 启动、`gameplay_loop.new_game()`、无 UI guard 场景都能拿到默认 port；旧 whitelist/例外已同步清理。
-- **status**: Not Completed
+- **status**: Completed
 - **log**:
+  - 2026-03-11 17:18 CST: 新增外层 helper `src/game/runtime/default_ports.lua`，统一构建/补装默认 `auto_play_port` 与 `bankruptcy_port`。
+  - 2026-03-11 17:18 CST: `src/game/core/runtime/composition_root.lua` 删除对 `src.game.runtime.*` adapter 的直接依赖；`game:init` 仅消费调用方注入的 port。
+  - 2026-03-11 17:18 CST: app 启动、gameplay loop、test support、no-ui guard 已切到新的 outer installer；`tests/guards/dep_rules.lua` 清掉旧 whitelist。
+  - 2026-03-11 17:18 CST: 验证 `support.new_game` 默认 ports、`guards.gameplay_loop_no_ui`、`guards.dep_rules` 均通过。
 - **files edited/created**:
+  - `src/game/core/runtime/composition_root.lua`
+  - `src/game/core/runtime/game.lua`
+  - `src/game/runtime/default_ports.lua`
+  - `src/game/flow/turn/loop.lua`
+  - `src/app/bootstrap/game_startup.lua`
+  - `tests/support/shared_support.lua`
+  - `tests/guards/gameplay_loop_no_ui.lua`
+  - `tests/guards/dep_rules.lua`
 
 ### T3: 解开 `runtime -> core.ai`
 - **depends_on**: []
@@ -99,9 +121,12 @@ T6 ──┘  │
 - **location**: `src/game/systems/land/effects/market.lua`, `src/game/systems/market/`, `src/game/core/runtime/bootstrap.lua`
 - **description**: 删除 `land/effects/market.lua -> market` 的直接依赖；由 market 子系统提供自己的 landing effect executor，并在 bootstrap 注册；land 侧不再感知 market service。
 - **validation**: 进入 market 地块后的 choice/intention、等待态、自动流程保持一致；`land` 不再直接依赖 `market`。
-- **status**: Not Completed
+- **status**: Completed
 - **log**:
+  - 2026-03-11 17:24 CST: 现有树已经使用中性 helper `src/game/systems/choices/use_skip_choice.lua`，`steal` 与 `market` 均未再依赖 `land.choice_specs`。
+  - 2026-03-11 17:24 CST: 定向回归 `suites.domain.item` + `suites.gameplay.gameplay_items_startup` 共 43 个用例通过，确认 `steal_prompt`、rent/tax prompt、market vehicle replace 的 confirm 字段保持不变。
 - **files edited/created**:
+  - no code changes required; validated existing implementation
 
 ### T6: 提取中性 board/property 查询，切断 `items -> land`
 - **depends_on**: []

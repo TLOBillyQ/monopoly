@@ -148,12 +148,7 @@ local rules = {
   },
 }
 
-local dep_rules_whitelist = {
-  ["src/game/core/runtime/composition_root.lua"] = {
-    ["src.game.flow.turn.engine"] = true,
-    ["src.game.flow.turn.phase_registry"] = true,
-  },
-}
+local dep_rules_whitelist = {}
 
 local forbidden_files = {
   "src/game/flow/output_adapters/legacy_output_mirror.lua",

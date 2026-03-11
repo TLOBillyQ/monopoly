@@ -1,6 +1,7 @@
 local scheduler = require("src.game.scheduler")
 local session_factory = require("src.game.scheduler.session")
 local action_router = require("src.game.scheduler.action_router")
+local turn_script = require("src.game.flow.turn.turn_script")
 require "vendor.third_party.ClassUtils"
 
 local scheduler_turn_runtime = Class("SchedulerTurnRuntime")
@@ -44,6 +45,7 @@ function scheduler_turn_runtime:init(game, phases, opts)
     game = game,
     phases = phases,
     turn_mgr = self.turn_mgr,
+    script_factory = turn_script.create,
   })
 end
 

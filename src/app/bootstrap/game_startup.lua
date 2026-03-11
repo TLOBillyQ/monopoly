@@ -11,6 +11,7 @@ local logger = require("src.core.utils.logger")
 local runtime_state = require("src.core.state_access.runtime_state")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local role_id_utils = require("src.core.utils.role_id")
+local default_ports = require("src.game.runtime.default_ports")
 
 local max_player_count = 4
 local synthetic_unit_keys = { 9000601, 9000602, 9000603, 9000604, 9000605, 9000607 }
@@ -140,13 +141,13 @@ function M.build_state(get_current_game, opts)
       local role_roster = _build_startup_roster(max_player_count)
       local forced_ai = _build_startup_ai_map(role_roster)
       logger.info("[Eggy]", "使用四槽角色驱动初始化，角色数量:", tostring(#role_roster))
-      local created_game = game:new({
+      local created_game = game:new(default_ports.resolve_game_opts({
         role_roster = role_roster,
         ai = forced_ai,
         auto_all = false,
         map = map_cfg,
         tiles = tiles_cfg,
-      })
+      }))
       local synthetic_players = {}
       for _, role in ipairs(role_roster) do
         if role and role.synthetic == true then

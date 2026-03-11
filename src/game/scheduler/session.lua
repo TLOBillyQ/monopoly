@@ -18,6 +18,7 @@ local function _build_session(opts)
     game = opts.game,
     phases = opts.phases,
     turn_mgr = opts.turn_mgr,
+    script_factory = opts.script_factory,
     queue = {},
     script = nil,
     finished = false,
@@ -64,6 +65,12 @@ local function _build_session(opts)
       return
     end
     _mark_phase_default(self.game, phase)
+  end
+
+  function s:create_script()
+    local factory = self.script_factory
+    assert(type(factory) == "function", "missing session script_factory")
+    return factory(self)
   end
 
   function s:reset_turn()

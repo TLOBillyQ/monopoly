@@ -30,6 +30,7 @@ local tile = require("src.game.systems.board.tile")
 local test_env = require("support.test_env")
 local presentation_runtime_deps = require("src.presentation.runtime.deps")
 local presentation_ports = require("src.presentation.runtime.ports")
+local default_ports = require("src.game.runtime.default_ports")
 
 local function assert_eq(a, b, msg)
   if a ~= b then
@@ -297,13 +298,13 @@ end
 
 local function new_game(opts)
   opts = opts or {}
-  local game = app:new({
+  local game = app:new(default_ports.resolve_game_opts({
     players = opts.players or { "P1", "P2" },
     ai = opts.ai or { [2] = true },
     auto_all = opts.auto_all == true,
     map = opts.map or map_cfg,
     tiles = opts.tiles or tiles_cfg,
-  })
+  }))
   if opts.install_ui_port ~= false then
     game.ui_port = build_ui_port(opts.ui_port)
   end

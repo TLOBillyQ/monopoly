@@ -1,4 +1,3 @@
-local turn_script = require("src.game.scheduler.turn_script")
 local action_router = require("src.game.scheduler.action_router")
 
 local scheduler = {}
@@ -26,7 +25,7 @@ local function _ensure_script(session)
     return co
   end
   session:reset_turn()
-  co = turn_script.create(session)
+  co = session:create_script()
   session.script = co
   return co
 end

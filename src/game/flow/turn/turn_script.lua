@@ -1,5 +1,6 @@
 local turn_logger = require("src.game.flow.turn.logger")
-local await = require("src.game.scheduler.await")
+local await = require("src.game.flow.turn.await")
+local move_followup = require("src.game.flow.turn.move_followup")
 
 local turn_script = {}
 
@@ -8,7 +9,7 @@ local function _run_phase(session, state_name, args)
   assert(type(phases) == "table", "missing session phases")
   local handler = phases[state_name]
   if handler == nil and state_name == "move_followup" then
-    handler = require("src.game.flow.turn.move_followup").run
+    handler = move_followup.run
   end
   assert(type(handler) == "function", "missing phase handler: " .. tostring(state_name))
   if state_name == "start" then

@@ -3,6 +3,7 @@ local gameplay_loop = require("src.game.flow.turn.loop")
 local map_cfg = require("Config.maps.default_map")
 local tiles_cfg = require("Config.generated.tiles")
 local test_env = require("tests.support.test_env")
+local default_ports = require("src.game.runtime.default_ports")
 
 local M = {}
 
@@ -104,13 +105,13 @@ function M.run()
   }
 
   local ok, err = xpcall(function()
-    local game = app:new({
+    local game = app:new(default_ports.resolve_game_opts({
       players = { "玩家1", "玩家2", "玩家3", "玩家4" },
       ai = {},
       auto_all = false,
       map = map_cfg,
       tiles = tiles_cfg,
-    })
+    }))
 
     gameplay_loop.set_game(state, game)
     gameplay_loop.tick(game, state, 0.1)

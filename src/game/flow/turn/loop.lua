@@ -6,8 +6,7 @@ local turn_dispatch = require("src.game.flow.turn.dispatch")
 local gameplay_loop_ports = require("src.game.flow.turn.loop_ports")
 local gameplay_loop_runtime = require("src.game.flow.turn.loop_runtime")
 local intent_output_adapter = require("src.game.flow.output_adapters.intent_output_adapter")
-local auto_play_port_adapter = require("src.game.runtime.auto_play_port_adapter")
-local bankruptcy_port_adapter = require("src.game.runtime.bankruptcy_port_adapter")
+local default_ports = require("src.game.runtime.default_ports")
 local auto_context = require("src.game.flow.turn.auto_context")
 local tick_flow = require("src.game.flow.turn.loop_tick_flow")
 local turn_timer_policy = require("src.game.flow.turn.timer_policy")
@@ -24,12 +23,7 @@ local function _ensure_runtime_ports(game)
   if type(game.intent_output_port) ~= "table" then
     game.intent_output_port = intent_output_adapter.build()
   end
-  if type(game.auto_play_port) ~= "table" then
-    game.auto_play_port = auto_play_port_adapter.build()
-  end
-  if type(game.bankruptcy_port) ~= "table" then
-    game.bankruptcy_port = bankruptcy_port_adapter.build()
-  end
+  default_ports.install(game)
 end
 
 local function _resolve_ports(state)
@@ -170,8 +164,7 @@ local function _initialize_ports(state, game)
   }
   game.anim_gate_port = gameplay_loop_runtime.build_anim_gate_port(state)
   game.intent_output_port = intent_output_adapter.build()
-  game.auto_play_port = auto_play_port_adapter.build()
-  game.bankruptcy_port = bankruptcy_port_adapter.build()
+  default_ports.install(game)
   return ports
 end
 local function _configure_tile_owner_notifier(state, game)
