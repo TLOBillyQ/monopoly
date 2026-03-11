@@ -64,9 +64,19 @@ T6 ──┘  │
 - **location**: `src/game/runtime/auto_play_port_adapter.lua`, `src/game/core/ai/`, `src/app/bootstrap/runtime/init.lua`, affected tests
 - **description**: 拆分 AI 逻辑归属，避免 `src/game/runtime/auto_play_port_adapter.lua` 直接依赖 `src/game/core/ai/agent.lua`。固定方案是把纯策略实现下沉到中性/外层可复用模块，由 runtime adapter 依赖中性实现，`core.ai` 不再成为 `game` 顶层反馈边目标；同步更新直接 `require agent` 的测试入口。
 - **validation**: 自动玩家识别、远程骰子、偷窃/路障/目标选择、自动 choice action 行为不变；`game` 视图不再出现 `runtime -> core` 反馈边。
-- **status**: Not Completed
+- **status**: Completed
 - **log**:
+  - 提取 `src/game/ai/agent.lua` 作为中性 AI 策略模块，保留原有自动玩家、选目标、远程骰子与自动 choice 行为。
+  - 将 `src/game/core/ai/agent.lua` 收敛为兼容转发层，避免现有调用点一次性断裂。
+  - 将 runtime adapter、runtime bootstrap 和两处直接 `require agent` 的测试切到新入口。
+  - 验证：`suites.domain.land.ai_picks_land_purchase`、`suites.gameplay.gameplay_timeout_and_auto_runner._test_autorunner_runs_to_end` 通过。
 - **files edited/created**:
+  - `src/game/ai/agent.lua`
+  - `src/game/core/ai/agent.lua`
+  - `src/game/runtime/auto_play_port_adapter.lua`
+  - `src/app/bootstrap/runtime/init.lua`
+  - `tests/suites/domain/land.lua`
+  - `tests/suites/gameplay/gameplay_cases.lua`
 
 ### T4: 提取通用 secondary-confirm choice builder
 - **depends_on**: []

@@ -41,7 +41,7 @@ function M.install(opts)
   end
   paid_purchase_port.configure(require("src.app.bootstrap.payment.eggy_paid_purchase_gateway"))
   require "src.game.systems.endgame.bankruptcy"
-  require "src.game.core.ai.agent"
+  require "src.game.ai.agent"
   require "src.game.systems.endgame.game_victory"
   require "src.game.core.runtime.composition_root"
 end

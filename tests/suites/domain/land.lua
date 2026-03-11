@@ -14,7 +14,7 @@ local choice_resolver = support.choice_resolver
 local choice_registry = require("src.game.systems.choices.registry")
 
 local function _test_ai_picks_land_purchase()
-  local agent = require("src.game.core.ai.agent")
+  local agent = require("src.game.ai.agent")
   local g = _new_game()
   local ai_player = g.players[2]
   assert(agent.is_auto_player(ai_player), "player 2 should be AI")
