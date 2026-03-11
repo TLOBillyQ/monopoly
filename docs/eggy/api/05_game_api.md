@@ -127,6 +127,7 @@ GameAPI|play_link_sfx|_sfx_key, _unit, _from_socket_name, _target_unit, _target_
 GameAPI|play_sfx_by_key|_sfx_key, _pos, _rot, _scale, _duration, _rate, _with_sound
 GameAPI|random_color
 GameAPI|random_int|_min_value, _max_value
+GameAPI|raycast_test|_start_pos, _end_pos, _collision_mask, _find_closest, _callback
 GameAPI|raycast_unit|_start_pos, _end_pos, _include_unit_types, _raycast_handler
 GameAPI|register_geometry_box|_size, _chamfer_radius, _chamfer_level, _use_box_collider, _preconf
 GameAPI|register_geometry_frustum|_height, _inner_radius, _outer_radius, _inner_poly_count, _outer_poly_count, _chamfer_radius, _angle, _layer, _bend, _preconf
@@ -148,6 +149,7 @@ GameAPI|set_scene_ui_visible|_layer, _role, _visible
 GameAPI|set_sheet_value_by_type|_value_type, _sheet_id, _key1, _key2, _val
 GameAPI|set_unit_survival_scene_boundary|_x, _y, _z
 GameAPI|stop_sound|_assigned_id
+GameAPI|sweep_test|_body_unit, _test_dir, _max_dist, _collision_mask, _find_closest, _callback
 GameAPI|triggerspace_prefab_get_kv_by_type|_value_type, _key, _prop
 GameAPI|triggerspace_prefab_get_prop_by_type|_value_type, _key, _prop
 GameAPI|triggerspace_prefab_has_kv|_key, _prop

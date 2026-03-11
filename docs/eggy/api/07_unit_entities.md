@@ -444,6 +444,7 @@ Unit|get_linear_velocity
 Unit|get_local_direction|_direction_type
 Unit|get_local_offset_position|_offset
 Unit|get_local_quaternion|_direction_type
+Unit|get_max_linear_velocity
 Unit|get_name
 Unit|get_orientation
 Unit|get_parent
@@ -470,6 +471,7 @@ Unit|play_3d_sound|_sound_key, _duration, _volume
 Unit|play_emoji|_emoji_key
 Unit|play_emoji_with_offset|_emoji_key, _show_time, _offset
 Unit|play_sound_with_dis_and_attenuation|_event_id, _vis_dis, _sound_attenuation_curve
+Unit|recover_max_linear_velocity
 Unit|remove_from_parent
 Unit|remove_surround_motor
 Unit|set_acc_motor_init_velocity|_index, _init_vel
@@ -478,6 +480,7 @@ Unit|set_current_mass|_mass
 Unit|set_current_mass_center|_center
 Unit|set_linear_motor_velocity|_index, _vel, _is_local
 Unit|set_linear_velocity|_vel
+Unit|set_max_linear_velocity|_velocity
 Unit|set_mirror_reflect_enabled|_enable
 Unit|set_model_visible|_v
 Unit|set_orientation|_rot

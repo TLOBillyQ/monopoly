@@ -51,7 +51,7 @@ busted → penlight → lua-term → mediator_lua → luassert → say → luasy
 
 ### 5. 环境割裂
 
-LuaRocks 只能在开发机和 CI 上运行。生产 Eggy 沙箱永远没有它。这意味着新增一个"仅存在于测试侧"的包管理工具链，而项目的唯一 npm 依赖已经只有 `cloc`（行数统计）。
+LuaRocks 只能在开发机和 CI 上运行。生产 Eggy 沙箱永远没有它。这意味着新增一个"仅存在于测试侧"的包管理工具链；当前仓库已经不再保留 npm 依赖。
 
 ## 收益
 

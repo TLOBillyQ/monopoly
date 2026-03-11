@@ -1,7 +1,9 @@
 - `.agents/plan.md`始终要符合`.agents/harness/PLANS.md`的规范要求。
-- `lua_env.md` 数值按lua_env：禁tonumber/type=="number"，统一NumberUtils。
 - `ui_manager_lib.md` UIManagerLib：提供UI组件的注册、查询和事件分发功能，解耦UI组件与业务逻辑。
-- `lua_agent_memory.md`
 - `docs/architecture/boundaries.md` 目录语义与边界约定
 - `docs/architecture/layer-model.md` 7组件分层模型、Port注入模式与已强制边界
 - snake_case
+
+以下规则仅适用src/目录下：
+-  `lua_env.md` 数值按lua_env：禁tonumber/type=="number"，统一NumberUtils。
+- `lua_agent_memory.md`

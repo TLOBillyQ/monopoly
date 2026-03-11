@@ -4,37 +4,37 @@
 
 ## 真源与边界
 
-结构性依赖规则的唯一真源是 `scripts/architecture/monopoly_architecture.lua`。这里声明了 source roots、组件归类、抽象 Port 规则、禁止依赖边界和循环基线。`tests/guards/dep_rules.lua` 现在只保留文本级硬边界，例如退休桥接路径、宿主全局 API、`state.ui_*` 直写和 `ui_port` 旁路访问；它不再维护 growth budget 或模块级 `require` 边界。
+结构性依赖规则的唯一真源是 `scripts/architecture/monopoly_architecture.lua`。这里声明了 source roots、组件归类、抽象 Port 规则和禁止依赖边界。`tests/guards/dep_rules.lua` 现在只保留文本级硬边界，例如退休桥接路径、宿主全局 API、`state.ui_*` 直写和 `ui_port` 旁路访问；它不再维护 growth budget 或模块级 `require` 边界。
 
-当前 `cycle_baseline` 已清空，表示 `src/**/*.lua` 的模块依赖图不再允许任何已知循环。`arch_view` 现在会在出现任意新循环时直接失败；如果将来确实需要临时基线化某个 SCC，也必须同步更新 `monopoly_architecture.lua`，并在循环拆除后把基线删回去。
+`arch_view` 不允许任何模块级循环依赖。出现任意新循环时 `arch_view check` 会直接失败，没有白名单机制。
 
 ## 命令
 
 在仓库根目录运行：
 
-    lua scripts/architecture/arch_view_cli.lua check
+    lua scripts/arch.lua check
 
 这会扫描 `src/`，执行边界校验，并在失败时用非零退出码结束。`tests/guards/arch_view_guard.lua` 与 `tests/regression.lua` 使用的就是这套能力；如果只想跑所有文本护栏与 `arch_view` 护栏，执行 `lua tests/guard.lua`。
 
 如果要扫描其他 Lua 项目，可显式指定项目根和配置文件：
 
-    lua scripts/architecture/arch_view_cli.lua check --project-root /path/to/project --config /path/to/architecture.lua
+    lua scripts/arch.lua check --project-root /path/to/project --config /path/to/architecture.lua
 
-    lua scripts/architecture/arch_view_cli.lua scan --out /tmp/monopoly_architecture.json
+    lua scripts/arch.lua scan --out /tmp/monopoly_architecture.json
 
 这会导出完整机器可读数据，包含 `schema_version`、`project_root`、`config_path`、`graph`、`modules`、`layout`、`classified_edges`、`views` 与 `check`。第二阶段开始，`views[*]` 还会带上 `display_edges`、`route_points`、`indicators`、`full_name`、`incoming_dependencies`、`outgoing_dependencies` 等 viewer 渲染字段。
 
-    lua scripts/architecture/arch_view_cli.lua viewer --out-dir /tmp/monopoly_arch_view
+    lua scripts/arch.lua viewer --out-dir /tmp/monopoly_arch_view
 
 这会导出静态 viewer：`index.html`、`script.js`、`styles.css`、`architecture.json`、`architecture_data.js`。打开 `index.html` 即可查看，不需要本地服务。
 
 如果已经有导出的 JSON，可直接复用而不重扫源码：
 
-    lua scripts/architecture/arch_view_cli.lua viewer --in-json /tmp/monopoly_architecture.json --out-dir /tmp/monopoly_arch_view
+    lua scripts/arch.lua viewer --in-json /tmp/monopoly_architecture.json --out-dir /tmp/monopoly_arch_view
 
 如果想在导出后自动打开浏览器，可加 `--open`：
 
-    lua scripts/architecture/arch_view_cli.lua viewer --out-dir /tmp/monopoly_arch_view --open
+    lua scripts/arch.lua viewer --out-dir /tmp/monopoly_arch_view --open
 
 这里的“对齐远端 viewer 体验”采用的是静态 web viewer + 自动打开浏览器，而不是 Quil/桌面 GUI 复刻。本轮也不包含远端 `PROJECT_NOTES.md` 中的 guidance-vs-actual diff、pan/zoom、image export 和 CI 报表等 roadmap 项。
 

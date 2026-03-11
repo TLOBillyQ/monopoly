@@ -1,6 +1,6 @@
 # CRAP Report
 
-`scripts/quality/crap_cli.lua` 是仓库里的 Lua 版 CRAP 热点工具。它参考 Crap4j 的核心思路：把函数复杂度和动态测试覆盖率合成一个分数，用来排出“最该先重构/补测”的函数热点。
+`scripts/crap.lua` 是仓库里的 Lua 版 CRAP 热点工具。它参考 Crap4j 的核心思路：把函数复杂度和动态测试覆盖率合成一个分数，用来排出“最该先重构/补测”的函数热点。
 
 它不是新的 guard，也不会替代 `tests/behavior.lua`、`tests/contract.lua` 或 `lua tests/guard.lua`。它回答的问题更窄：当前 `src/**/*.lua` 里，哪些函数既复杂、又缺少测试触达，因此最危险。
 
@@ -19,7 +19,7 @@
 
 在仓库根目录执行：
 
-    lua scripts/quality/crap_cli.lua report --out tmp/crap_report.json --top 20
+    lua scripts/crap.lua report --out tmp/crap_report.json --top 20
 
 这里的 `tmp/...` 不是仓库内相对目录，而是 CRAP CLI 约定的“逻辑临时目录别名”。它会自动映射到当前系统的临时目录：
 
@@ -36,15 +36,15 @@
 
 如果你还想把 contract 测试的动态触达一起算进去：
 
-    lua scripts/quality/crap_cli.lua report --lane behavior --lane contract --out tmp/crap_report.json
+    lua scripts/crap.lua report --lane behavior --lane contract --out tmp/crap_report.json
 
 如果你希望测试 lane 失败时让命令返回非零退出码：
 
-    lua scripts/quality/crap_cli.lua report --strict-tests --out tmp/crap_report.json
+    lua scripts/crap.lua report --strict-tests --out tmp/crap_report.json
 
 导出静态 viewer：
 
-    lua scripts/quality/crap_cli.lua viewer --in-json tmp/crap_report.json --out-dir tmp/crap_view
+    lua scripts/crap.lua viewer --in-json tmp/crap_report.json --out-dir tmp/crap_view
 
 命令完成后会打印实际输出路径；打开打印出来的 `index.html` 即可查看，不需要本地服务。
 
