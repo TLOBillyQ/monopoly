@@ -1,13 +1,8 @@
 local intent_output_port = {}
 local contract_helper = require("src.game.ports.contract_helper")
 
-local function _fallback_port()
-  return require("src.game.flow.output_adapters.intent_output_adapter").build()
-end
-
 local function _call_optional(game, method_name, default_result, ...)
   return contract_helper.call_optional_method(game, "intent_output_port", method_name, {
-    fallback_port = _fallback_port(),
     default_result = default_result,
   }, ...)
 end

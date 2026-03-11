@@ -1,5 +1,5 @@
-local agent = require("src.game.core.ai.agent")
 local runtime_state = require("src.core.state_access.runtime_state")
+local auto_play_port = require("src.game.ports.auto_play_port")
 
 local auto_context = {}
 
@@ -18,7 +18,7 @@ function auto_context.build(game, context)
   if ctx.current_player_auto == nil then
     local player = current_player_index and game.players and game.players[current_player_index] or nil
     local is_player_auto = player and player.auto == true or false
-    local is_ai_auto = player and agent.is_auto_player(player) == true or false
+    local is_ai_auto = player and auto_play_port.is_auto_player(game, player) == true or false
     ctx.current_player_auto = is_player_auto or is_ai_auto
   end
   return ctx

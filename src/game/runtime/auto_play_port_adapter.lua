@@ -16,6 +16,9 @@ function adapter.build()
     pick_roadblock_target = function(game, player, _candidates)
       return agent.pick_roadblock_target(game, player)
     end,
+    auto_action_for_choice = function(game, choice)
+      return agent.auto_action_for_choice(game, choice)
+    end,
   }
 end
 

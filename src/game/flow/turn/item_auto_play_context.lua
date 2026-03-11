@@ -1,10 +1,10 @@
-local agent = require("src.game.core.ai.agent")
+local auto_play_port = require("src.game.ports.auto_play_port")
 
 local item_auto_play_context = {}
 
 function item_auto_play_context.build(game, player, context)
   local ctx = context or {}
-  local is_auto_player = player and agent.is_auto_player(player) == true or false
+  local is_auto_player = player and auto_play_port.is_auto_player(game, player) == true or false
   ctx.is_auto_player = is_auto_player
   ctx.by_ai = is_auto_player
 
@@ -14,13 +14,13 @@ function item_auto_play_context.build(game, player, context)
 
   if type(ctx.select_target_player) ~= "function" then
     ctx.select_target_player = function(item_id, candidates)
-      return agent.pick_target_player(game, player, item_id, candidates)
+      return auto_play_port.pick_target_player(game, player, item_id, candidates)
     end
   end
 
   if type(ctx.select_remote_dice) ~= "function" then
     ctx.select_remote_dice = function(dice_count)
-      return agent.pick_remote_dice_value(game, player, dice_count)
+      return auto_play_port.pick_remote_dice_value(game, player, dice_count)
     end
   end
 

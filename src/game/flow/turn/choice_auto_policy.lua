@@ -1,6 +1,6 @@
-local agent = require("src.game.core.ai.agent")
 local number_utils = require("src.core.utils.number_utils")
 local choice_contract = require("src.core.choice.contract")
+local auto_play_port = require("src.game.ports.auto_play_port")
 
 local choice_auto_policy = {}
 
@@ -42,7 +42,7 @@ local function _build_auto_or_fallback_action(game, choice, allow_first_option_f
       option_id = option_id,
     }
   end
-  local auto_action = agent.auto_action_for_choice(game, choice)
+  local auto_action = auto_play_port.auto_action_for_choice(game, choice)
   if auto_action then
     return auto_action
   end
@@ -75,7 +75,7 @@ function choice_auto_policy.decide(game, state, choice, ctx)
 
   local mode = ctx.mode or "wait_choice"
   local actor = _resolve_choice_owner(game, choice)
-  local is_auto_actor = actor and agent.is_auto_player(actor) or false
+  local is_auto_actor = actor and auto_play_port.is_auto_player(game, actor) or false
   local min_visible = ctx.min_visible_seconds
   if not number_utils.is_numeric(min_visible) or min_visible < 0 then
     min_visible = 0

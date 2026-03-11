@@ -1,7 +1,7 @@
-local agent = require("src.game.core.ai.agent")
 local items_cfg = require("Config.generated.items")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local logger = require("src.core.utils.logger")
+local auto_play_port = require("src.game.ports.auto_play_port")
 local turn_dispatch = require("src.game.flow.turn.dispatch")
 local gameplay_loop_ports = require("src.game.flow.turn.loop_ports")
 local gameplay_loop_runtime = require("src.game.flow.turn.loop_runtime")
@@ -16,8 +16,22 @@ local market_purchase = require("src.game.systems.market.application.purchase")
 local runtime_state = require("src.core.state_access.runtime_state")
 local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 local role_id_utils = require("src.core.utils.role_id")
-local profile_rotation = require("src.app.testing.profile_rotation")
 local gameplay_loop = {}
+local function _ensure_runtime_ports(game)
+  if not game then
+    return
+  end
+  if type(game.intent_output_port) ~= "table" then
+    game.intent_output_port = intent_output_adapter.build()
+  end
+  if type(game.auto_play_port) ~= "table" then
+    game.auto_play_port = auto_play_port_adapter.build()
+  end
+  if type(game.bankruptcy_port) ~= "table" then
+    game.bankruptcy_port = bankruptcy_port_adapter.build()
+  end
+end
+
 local function _resolve_ports(state)
   if not state then
     return gameplay_loop_ports.resolve(nil)
@@ -58,7 +72,7 @@ local function _is_auto_popup_owner(game, state)
     return false
   end
   local actor = game.players[idx]
-  return actor and agent.is_auto_player(actor) or false
+  return actor and auto_play_port.is_auto_player(game, actor) or false
 end
 local function _reset_afk_tracking(state, actor_role_id)
   local turn_runtime = runtime_state.ensure_turn_runtime(state)
@@ -238,6 +252,53 @@ function gameplay_loop.new_game(state)
   game.logger.info("启动蛋仔大富翁，玩家数:", #game.players)
   return game
 end
+
+local function _resolve_profile_rotation_hook(state)
+  local hook = state and state.profile_rotation or nil
+  if type(hook) ~= "table" then
+    return nil
+  end
+  if type(hook.is_active) ~= "function"
+      or type(hook.turns_per_profile) ~= "function"
+      or type(hook.record_result) ~= "function"
+      or type(hook.advance) ~= "function"
+      or type(hook.current_profile_name) ~= "function" then
+    return nil
+  end
+  return hook
+end
+
+local function _maybe_rotate_profile(game, state)
+  local rotation = _resolve_profile_rotation_hook(state)
+  if not rotation or not rotation.is_active() then
+    return false
+  end
+  local turn_count = game.turn and game.turn.turn_count or 0
+  local should_rotate = game.finished == true or turn_count >= rotation.turns_per_profile()
+  if not should_rotate then
+    return false
+  end
+  local current_profile_name = state and state.active_profile_name or rotation.current_profile_name() or "default"
+  rotation.record_result(current_profile_name, turn_count, game.finished == true)
+  if rotation.advance() then
+    local next_profile_name = rotation.current_profile_name()
+    if state then
+      state.active_profile_name = next_profile_name
+    end
+    local next_game = gameplay_loop.new_game(state)
+    if state and type(state.on_game_replaced) == "function" then
+      state.on_game_replaced(next_game)
+    else
+      gameplay_loop.set_game(state, next_game)
+    end
+    return true
+  end
+  if state and state.auto_runner and state.auto_runner.set_enabled then
+    state.auto_runner:set_enabled(false)
+  end
+  return true
+end
+
 function gameplay_loop.step_auto_runner(game, state, dt, context)
   assert(game ~= nil, "missing game")
   assert(state.auto_runner ~= nil, "missing auto_runner")
@@ -286,34 +347,15 @@ function gameplay_loop.tick(game, state, dt)
   if not game then
     return
   end
+  _ensure_runtime_ports(game)
   local ports = _resolve_ports(state)
   tick_flow.tick(game, state, dt, ports, {
     step_afk_auto_host = gameplay_loop.step_afk_auto_host,
     step_auto_runner = gameplay_loop.step_auto_runner,
     dispatch_action_with_close_choice = _dispatch_action_with_close_choice,
   })
-  if profile_rotation.is_active() then
-    local turn_count = game.turn and game.turn.turn_count or 0
-    local should_rotate = game.finished == true or turn_count >= profile_rotation.turns_per_profile()
-    if should_rotate then
-      local current_profile_name = state and state.active_profile_name or profile_rotation.current_profile_name() or "default"
-      profile_rotation.record_result(current_profile_name, turn_count, game.finished == true)
-      if profile_rotation.advance() then
-        local next_profile_name = profile_rotation.current_profile_name()
-        if state then
-          state.active_profile_name = next_profile_name
-        end
-        local next_game = gameplay_loop.new_game(state)
-        if state and type(state.on_game_replaced) == "function" then
-          state.on_game_replaced(next_game)
-        else
-          gameplay_loop.set_game(state, next_game)
-        end
-      elseif state and state.auto_runner and state.auto_runner.set_enabled then
-        state.auto_runner:set_enabled(false)
-      end
-      return
-    end
+  if _maybe_rotate_profile(game, state) then
+    return
   end
 end
 return gameplay_loop

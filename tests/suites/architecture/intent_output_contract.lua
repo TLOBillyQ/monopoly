@@ -76,40 +76,13 @@ local function _test_land_presenter_push_popup_prefers_intent_output_port()
   _assert_eq(payload.popup_opts.policy, "replace", "landing presenter should pass popup opts through intent_output_port")
 end
 
-local function _test_intent_output_port_falls_back_to_adapter_when_game_port_missing()
-  local calls = {}
+local function _test_intent_output_port_returns_default_when_game_port_missing()
+  local game = {}
+  local popup_ok = intent_output_port.push_popup(game, { title = "A" }, { policy = "defer" })
+  local choice_entry = intent_output_port.open_choice(game, { title = "B" }, { source = "test" })
 
-  _with_patches({
-    {
-      target = intent_output_adapter,
-      key = "build",
-      value = function()
-        return {
-          open_choice = function(_, choice_spec, opts)
-            calls[#calls + 1] = { kind = "open_choice", title = choice_spec.title, opts = opts }
-            return { id = 9 }
-          end,
-          push_popup = function(_, popup_payload, opts)
-            calls[#calls + 1] = { kind = "push_popup", title = popup_payload.title, opts = opts }
-            return true
-          end,
-        }
-      end,
-    },
-  }, function()
-    local game = {}
-    local popup_ok = intent_output_port.push_popup(game, { title = "A" }, { policy = "defer" })
-    local choice_entry = intent_output_port.open_choice(game, { title = "B" }, { source = "test" })
-    _assert_eq(popup_ok, true, "intent_output_port should fall back to adapter for popup")
-    _assert_eq(choice_entry.id, 9, "intent_output_port should fall back to adapter for choice")
-  end)
-
-  _assert_eq(calls[1].kind, "push_popup", "fallback adapter should receive popup first")
-  _assert_eq(calls[1].title, "A", "fallback adapter should receive popup payload")
-  _assert_eq(calls[1].opts.policy, "defer", "fallback adapter should receive popup opts")
-  _assert_eq(calls[2].kind, "open_choice", "fallback adapter should receive open_choice")
-  _assert_eq(calls[2].title, "B", "fallback adapter should receive choice spec")
-  _assert_eq(calls[2].opts.source, "test", "fallback adapter should receive choice opts")
+  _assert_eq(popup_ok, false, "intent_output_port should stay inert when no adapter is installed")
+  _assert_eq(choice_entry, nil, "intent_output_port should not resolve choice output without installed adapter")
 end
 
 return {
@@ -124,8 +97,8 @@ return {
       run = _test_land_presenter_push_popup_prefers_intent_output_port,
     },
     {
-      name = "intent_output_port_falls_back_to_adapter_when_game_port_missing",
-      run = _test_intent_output_port_falls_back_to_adapter_when_game_port_missing,
+      name = "intent_output_port_returns_default_when_game_port_missing",
+      run = _test_intent_output_port_returns_default_when_game_port_missing,
     },
   },
 }

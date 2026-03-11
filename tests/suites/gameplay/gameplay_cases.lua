@@ -3459,6 +3459,7 @@ local function _test_profile_rotation_switches_game_after_turn_limit()
   local replaced_game = nil
   local state = _build_loop_state()
   state.active_profile_name = "bankruptcy"
+  state.profile_rotation = profile_rotation
   state.game_factory = function()
     return replacement
   end
@@ -3516,6 +3517,7 @@ local function _test_profile_rotation_switches_game_when_current_game_finishes()
   local replaced_game = nil
   local state = _build_loop_state()
   state.active_profile_name = "bankruptcy"
+  state.profile_rotation = profile_rotation
   state.game_factory = function()
     return replacement
   end
@@ -3560,6 +3562,7 @@ local function _test_profile_rotation_disables_auto_runner_after_last_profile()
   local disabled_value = nil
   local state = _build_loop_state()
   state.active_profile_name = "bankruptcy"
+  state.profile_rotation = profile_rotation
   state.auto_runner = {
     set_enabled = function(_, enabled)
       disabled_value = enabled

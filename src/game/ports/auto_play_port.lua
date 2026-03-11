@@ -17,4 +17,8 @@ function auto_play_port.pick_roadblock_target(game, player, candidates)
   return contract_helper.call_required_method(game, "auto_play_port", "auto_play_port", "pick_roadblock_target", game, player, candidates)
 end
 
+function auto_play_port.auto_action_for_choice(game, choice)
+  return contract_helper.call_required_method(game, "auto_play_port", "auto_play_port", "auto_action_for_choice", game, choice)
+end
+
 return auto_play_port

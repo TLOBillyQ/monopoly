@@ -1,6 +1,7 @@
 require("tests.bootstrap")
 
 local log_capture = require("tests.support.log_capture")
+local unpack_args = table.unpack or unpack
 
 local function normalize_suite(suite, suite_index)
   if suite and suite.tests then
@@ -50,7 +51,7 @@ local function _run_hook(hook, ...)
   end
   local args = { ... }
   return xpcall(function()
-    hook(unpack(args))
+    hook(unpack_args(args))
   end, debug.traceback)
 end
 
