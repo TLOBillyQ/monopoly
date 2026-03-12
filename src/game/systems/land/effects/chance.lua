@@ -23,27 +23,46 @@ local function _is_drawable_chance_card(card)
   return true
 end
 
-local function _pick_chance_card()
-  local total_weight = 0
+local function _collect_drawable_cards()
+  local drawable = {}
   local first_drawable = nil
   for i, card in ipairs(chance_cfg) do
     if _is_drawable_chance_card(card) then
       first_drawable = first_drawable or card
-      total_weight = total_weight + (chance_weights[i] or 0)
+      table.insert(drawable, { index = i, card = card })
     end
   end
+  return drawable, first_drawable
+end
 
-  if first_drawable == nil then return nil end
-  if total_weight <= 0 then return first_drawable end
+local function _calc_total_weight(drawable)
+  local total = 0
+  for _, item in ipairs(drawable) do
+    total = total + (chance_weights[item.index] or 0)
+  end
+  return total
+end
 
+local function _pick_weighted_card(drawable, total_weight)
   local rand = LuaAPI.rand() * total_weight
   local accumulated = 0
-  for i, card in ipairs(chance_cfg) do
-    if _is_drawable_chance_card(card) then
-      accumulated = accumulated + (chance_weights[i] or 0)
-      if accumulated >= rand then return card end
-    end
+  for _, item in ipairs(drawable) do
+    accumulated = accumulated + (chance_weights[item.index] or 0)
+    if accumulated >= rand then return item.card end
   end
+  return nil
+end
+
+local function _pick_chance_card()
+  local drawable, first_drawable = _collect_drawable_cards()
+
+  if first_drawable == nil then return nil end
+
+  local total_weight = _calc_total_weight(drawable)
+  if total_weight <= 0 then return first_drawable end
+
+  local picked = _pick_weighted_card(drawable, total_weight)
+  if picked then return picked end
 
   if #chance_cfg == 0 then return nil end
   return first_drawable

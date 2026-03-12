@@ -30,4 +30,7 @@ function module.register_effect_executors(effect_registry)
   effect_registry:register_many(executors)
 end
 
+-- Export helper for testability
+module._merge_executor_groups = _merge_executor_groups
+
 return module

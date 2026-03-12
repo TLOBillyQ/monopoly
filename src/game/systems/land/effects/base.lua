@@ -113,6 +113,43 @@ local function _can_pay_rent(ctx)
   return st.owner_id and st.owner_id ~= player.id
 end
 
+local function _find_rent_item_indices(player)
+  local strong_idx, free_idx = nil, nil
+  for idx, it in ipairs(inventory.items(player)) do
+    if it.id == item_ids.strong then
+      strong_idx = idx
+      if free_idx then break end
+    elseif it.id == item_ids.free_rent then
+      free_idx = idx
+      if strong_idx then break end
+    end
+  end
+  return strong_idx, free_idx
+end
+
+local function _can_use_strong_card(player, strong_idx, total_value, game)
+  return strong_idx and game:player_balance(player, "金币") >= total_value
+end
+
+local function _build_rent_choice_intent(player, tile, total_value)
+  return {
+    waiting = true,
+    reason = "rent_choice",
+    intent = {
+      kind = "need_choice",
+      choice_spec = land_choice_specs.rent_prompt(player.id, tile.id, "strong", total_value, tile.name),
+    },
+  }
+end
+
+local function _try_use_free_rent_card(game, player, tile_id, free_idx)
+  if free_idx then
+    land_actions.execute_free_card(game, player.id, tile_id)
+    return true
+  end
+  return false
+end
+
 local function _apply_pay_rent(ctx)
   local t = ctx.tile
   local player = ctx.player
@@ -127,31 +164,13 @@ local function _apply_pay_rent(ctx)
   end
 
   local total_value = board_utils.total_invested(t, st.level)
-  local strong_idx = nil
-  local free_idx = nil
-  for idx, it in ipairs(inventory.items(player)) do
-    if it.id == item_ids.strong then
-      strong_idx = idx
-      if free_idx then break end
-    elseif it.id == item_ids.free_rent then
-      free_idx = idx
-      if strong_idx then break end
-    end
-  end
-  local can_use_strong = strong_idx and ctx.game:player_balance(player, "金币") >= total_value
-  if can_use_strong then
-    return {
-      waiting = true,
-      reason = "rent_choice",
-      intent = {
-        kind = "need_choice",
-        choice_spec = land_choice_specs.rent_prompt(player.id, t.id, "strong", total_value, t.name),
-      },
-    }
+  local strong_idx, free_idx = _find_rent_item_indices(player)
+
+  if _can_use_strong_card(player, strong_idx, total_value, ctx.game) then
+    return _build_rent_choice_intent(player, t, total_value)
   end
 
-  if free_idx then
-    land_actions.execute_free_card(ctx.game, player.id, t.id)
+  if _try_use_free_rent_card(ctx.game, player, t.id, free_idx) then
     return
   end
 

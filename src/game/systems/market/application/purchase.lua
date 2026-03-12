@@ -26,10 +26,50 @@ function purchase.setup_for_game(game)
   paid_purchase_gateway.setup_for_game(game, paid_purchase_callback.handle)
 end
 
+local function _resolve_product_id(product_id)
+  local resolved = number_utils.to_integer(product_id)
+  if resolved == nil or resolved <= 0 then
+    return nil
+  end
+  return resolved
+end
+
+local function _validate_purchase_entry(game, player, entry)
+  local decision = purchase_policy.validate_entry(game, player, entry)
+  if not decision.ok then
+    market_feedback.emit_buy_failed(player, entry, decision.reason, decision.body)
+    return false, decision.reason
+  end
+  return true
+end
+
+local function _handle_paid_purchase(game, player, entry, product_id)
+  purchase.setup_for_game(game)
+  local ok_start, reason = paid_purchase_gateway.start(game, player, entry)
+  if not ok_start then
+    if _is_release_build() then
+      logger.warn(
+        "market paid purchase blocked in release:",
+        "product_id=" .. tostring(product_id),
+        "name=" .. tostring(entry.name or ""),
+        "reason=" .. tostring(reason or "unknown")
+      )
+    end
+    market_feedback.emit_buy_failed(player, entry, reason or "paid_purchase_start_failed", player.name .. " 购买通道暂不可用")
+    return { ok = false, reason = reason or "paid_purchase_start_failed" }
+  end
+  return {
+    ok = true,
+    kind = entry.kind,
+    product_id = product_id,
+    deferred_fulfillment = true,
+  }
+end
+
 function purchase.execute(game, player, product_id, opts)
   opts = opts or {}
-  local resolved_product_id = number_utils.to_integer(product_id)
-  if resolved_product_id == nil or resolved_product_id <= 0 then
+  local resolved_product_id = _resolve_product_id(product_id)
+  if resolved_product_id == nil then
     logger.warn("invalid market product id:", tostring(product_id))
     return false
   end
@@ -38,35 +78,14 @@ function purchase.execute(game, player, product_id, opts)
   local entry = context.entry_by_id(product_id)
   assert(entry ~= nil, "missing market entry: " .. tostring(product_id))
 
-  local decision = purchase_policy.validate_entry(game, player, entry)
-  if not decision.ok then
-    market_feedback.emit_buy_failed(player, entry, decision.reason, decision.body)
-    return { ok = false, reason = decision.reason }
+  local ok, reason = _validate_purchase_entry(game, player, entry)
+  if not ok then
+    return { ok = false, reason = reason }
   end
 
-  local price = context.entry_price(entry)
   local currency = context.entry_currency(entry)
   if context.is_paid_currency(currency) then
-    purchase.setup_for_game(game)
-    local ok_start, reason = paid_purchase_gateway.start(game, player, entry)
-    if not ok_start then
-      if _is_release_build() then
-        logger.warn(
-          "market paid purchase blocked in release:",
-          "product_id=" .. tostring(product_id),
-          "name=" .. tostring(entry.name or ""),
-          "reason=" .. tostring(reason or "unknown")
-        )
-      end
-      market_feedback.emit_buy_failed(player, entry, reason or "paid_purchase_start_failed", player.name .. " 购买通道暂不可用")
-      return { ok = false, reason = reason or "paid_purchase_start_failed" }
-    end
-    return {
-      ok = true,
-      kind = entry.kind,
-      product_id = product_id,
-      deferred_fulfillment = true,
-    }
+    return _handle_paid_purchase(game, player, entry, product_id)
   end
   return local_purchase.execute(game, player, entry, opts)
 end

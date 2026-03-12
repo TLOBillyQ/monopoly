@@ -35,79 +35,90 @@ local function _charge_if_needed(game, player, currency, price, opts)
   return context.try_charge_player(game, player, currency, price)
 end
 
+local function _fulfill_item(game, player, entry, opts, price, currency, priced_text)
+  if inventory.is_full(player) then
+    return { ok = false, reason = "inventory_full", body = player.name .. " 卡槽已满" }
+  end
+  if not _charge_if_needed(game, player, currency, price, opts) then
+    return { ok = false, reason = "charge_failed", body = player.name .. " 支付失败" }
+  end
+  inventory.give(player, entry.product_id)
+  context.consume_global_limit(game, entry.product_id)
+  _emit_event(monopoly_event.market.bought_item, {
+    player = player,
+    entry = entry,
+    price = price,
+    currency = currency,
+    text = _success_text(player, entry, price, currency, priced_text),
+  })
+  return {
+    ok = true,
+    kind = "item",
+    product_id = entry.product_id,
+    inventory_full_after = inventory.is_full(player),
+    fulfilled_now = true,
+  }
+end
+
+local function _fulfill_vehicle(game, player, entry, opts, price, currency, priced_text)
+  if not _charge_if_needed(game, player, currency, price, opts) then
+    return { ok = false, reason = "charge_failed", body = player.name .. " 支付失败" }
+  end
+  assert(game.set_player_seat ~= nil, "missing game.SetPlayerSeat")
+  game:set_player_seat(player, entry.product_id)
+  context.consume_global_limit(game, entry.product_id)
+  _emit_event(monopoly_event.market.bought_vehicle, {
+    player = player,
+    entry = entry,
+    price = price,
+    currency = currency,
+    text = _success_text(player, entry, price, currency, priced_text),
+  })
+  return { ok = true, fulfilled_now = true }
+end
+
+local function _fulfill_skin(game, player, entry, opts, price, currency, priced_text)
+  if not _charge_if_needed(game, player, currency, price, opts) then
+    return { ok = false, reason = "charge_failed", body = player.name .. " 支付失败" }
+  end
+  context.consume_global_limit(game, entry.product_id)
+  local change_skin_helper = runtime_ports.resolve_change_skin_helper()
+  if change_skin_helper and type(change_skin_helper.emit_change_skin) == "function" then
+    change_skin_helper.emit_change_skin(player.id, entry.product_id)
+  end
+  action_anim_port.queue(game, {
+    kind = "change_skin",
+    player_id = player.id,
+    skin_id = entry.product_id,
+    skin_name = context.entry_name(entry),
+    duration = 1.0,
+  })
+  _emit_event(monopoly_event.market.bought_item, {
+    player = player,
+    entry = entry,
+    price = price,
+    currency = currency,
+    text = _success_text(player, entry, price, currency, priced_text),
+  })
+  return { ok = true, fulfilled_now = true }
+end
+
 function fulfillment.apply(game, player, entry, opts)
   opts = opts or {}
-  local product_id = entry.product_id
   local price = opts.price or context.entry_price(entry)
   local currency = opts.currency or context.entry_currency(entry)
   local priced_text = opts.priced_text == true
 
   if entry.kind == "item" then
-    if inventory.is_full(player) then
-      return { ok = false, reason = "inventory_full", body = player.name .. " 卡槽已满" }
-    end
-    if not _charge_if_needed(game, player, currency, price, opts) then
-      return { ok = false, reason = "charge_failed", body = player.name .. " 支付失败" }
-    end
-    inventory.give(player, product_id)
-    context.consume_global_limit(game, product_id)
-    _emit_event(monopoly_event.market.bought_item, {
-      player = player,
-      entry = entry,
-      price = price,
-      currency = currency,
-      text = _success_text(player, entry, price, currency, priced_text),
-    })
-    return {
-      ok = true,
-      kind = "item",
-      product_id = product_id,
-      inventory_full_after = inventory.is_full(player),
-      fulfilled_now = true,
-    }
+    return _fulfill_item(game, player, entry, opts, price, currency, priced_text)
   end
 
   if entry.kind == "vehicle" then
-    if not _charge_if_needed(game, player, currency, price, opts) then
-      return { ok = false, reason = "charge_failed", body = player.name .. " 支付失败" }
-    end
-    assert(game.set_player_seat ~= nil, "missing game.SetPlayerSeat")
-    game:set_player_seat(player, product_id)
-    context.consume_global_limit(game, product_id)
-    _emit_event(monopoly_event.market.bought_vehicle, {
-      player = player,
-      entry = entry,
-      price = price,
-      currency = currency,
-      text = _success_text(player, entry, price, currency, priced_text),
-    })
-    return { ok = true, fulfilled_now = true }
+    return _fulfill_vehicle(game, player, entry, opts, price, currency, priced_text)
   end
 
   if entry.kind == "skin" then
-    if not _charge_if_needed(game, player, currency, price, opts) then
-      return { ok = false, reason = "charge_failed", body = player.name .. " 支付失败" }
-    end
-    context.consume_global_limit(game, product_id)
-    local change_skin_helper = runtime_ports.resolve_change_skin_helper()
-    if change_skin_helper and type(change_skin_helper.emit_change_skin) == "function" then
-      change_skin_helper.emit_change_skin(player.id, entry.product_id)
-    end
-    action_anim_port.queue(game, {
-      kind = "change_skin",
-      player_id = player.id,
-      skin_id = entry.product_id,
-      skin_name = context.entry_name(entry),
-      duration = 1.0,
-    })
-    _emit_event(monopoly_event.market.bought_item, {
-      player = player,
-      entry = entry,
-      price = price,
-      currency = currency,
-      text = _success_text(player, entry, price, currency, priced_text),
-    })
-    return { ok = true, fulfilled_now = true }
+    return _fulfill_skin(game, player, entry, opts, price, currency, priced_text)
   end
 
   return { ok = false, reason = "unsupported_kind", body = player.name .. " 该商品类型暂不支持购买" }

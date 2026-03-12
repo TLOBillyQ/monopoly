@@ -145,4 +145,10 @@ function bankruptcy.eliminate(game, player, opts)
   end
 end
 
+-- Export helpers for testability
+bankruptcy._call_life_die = _call_life_die
+bankruptcy._try_call_life_die = _try_call_life_die
+bankruptcy._resolve_life_component = _resolve_life_component
+bankruptcy._call_role_die = _call_role_die
+
 return bankruptcy
