@@ -76,6 +76,36 @@ local function _test_enable_action_log_toggle_touch_prefers_named_ui_touch_path(
   _assert_eq(calls[1].enabled, true, "toggle button should be enabled")
 end
 
+local function _test_enable_action_log_toggle_touch_fallback_queries_targets_and_tolerates_bad_nodes()
+  logger.clear()
+  local cache = {}
+  local query_calls = 0
+  local good_node = {}
+  local bad_node = _build_crash_node()
+  local manager = { client_role = { any = true } }
+
+  _with_patches({
+    { key = "UIManager", value = manager },
+    { target = runtime, key = "set_client_role", value = function(role)
+      manager.client_role = role
+    end },
+    { target = runtime, key = "query_nodes", value = function(name)
+      query_calls = query_calls + 1
+      return { good_node, bad_node }
+    end },
+  }, function()
+    bindings.enable_action_log_toggle_touch(cache, {
+      set_touch_enabled = function()
+        error("force fallback")
+      end,
+    })
+  end)
+
+  assert(query_calls >= 1, "fallback path should query action-log target nodes")
+  _assert_eq(good_node.disabled, false, "fallback should enable nodes returned by runtime.query_nodes")
+  _assert_eq(manager.client_role, nil, "fallback should restore client role to nil")
+end
+
 local function _test_canvas_registry_builds_canvas_first_route_specs()
   local state = {
     ui = {
@@ -176,6 +206,10 @@ return {
     {
       name = "enable_action_log_toggle_touch_prefers_named_ui_touch_path",
       run = _test_enable_action_log_toggle_touch_prefers_named_ui_touch_path,
+    },
+    {
+      name = "enable_action_log_toggle_touch_fallback_queries_targets_and_tolerates_bad_nodes",
+      run = _test_enable_action_log_toggle_touch_fallback_queries_targets_and_tolerates_bad_nodes,
     },
     {
       name = "canvas_registry_builds_canvas_first_route_specs",

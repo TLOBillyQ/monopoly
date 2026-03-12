@@ -314,6 +314,120 @@ local function _test_negative_chance_routes_generic_negative_cue()
   assert(calls[1].player_id == 4, "negative chance should target payload player id")
 end
 
+local function _test_roadblock_hit_resolves_tile_index_from_tile_id()
+  local handlers = {}
+  local cleared = {}
+  local action_anim = require("src.presentation.view.render.action_anim")
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "register_custom_event",
+      value = function(event_name, handler)
+        handlers[event_name] = handler
+        return true
+      end,
+    },
+    {
+      target = action_anim,
+      key = "clear_overlay",
+      value = function(_, overlay_kind, tile_index)
+        cleared[#cleared + 1] = {
+          overlay_kind = overlay_kind,
+          tile_index = tile_index,
+        }
+      end,
+    },
+  }, function()
+    local event_handlers = _load_fresh_handlers()
+    event_handlers.install(nil, nil, {
+      game = {
+        board = {
+          index_of_tile_id = function(_, tile_id)
+            if tile_id == 12 then
+              return 7
+            end
+            return nil
+          end,
+        },
+      },
+    })
+    local handler = handlers[monopoly_event.movement.roadblock_hit]
+    assert(type(handler) == "function", "roadblock_hit handler should be registered")
+    handler(nil, nil, { tile_id = 12 })
+  end)
+
+  assert(#cleared == 1, "roadblock_hit should clear one overlay when tile_id resolves")
+  assert(cleared[1].overlay_kind == "roadblock", "roadblock_hit should clear roadblock overlay")
+  assert(cleared[1].tile_index == 7, "roadblock_hit should resolve tile index via board.index_of_tile_id")
+end
+
+local function _test_mine_hit_resolves_tile_index_from_tile_payload()
+  local handlers = {}
+  local cleared = {}
+  local cues = {}
+  local action_anim = require("src.presentation.view.render.action_anim")
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "register_custom_event",
+      value = function(event_name, handler)
+        handlers[event_name] = handler
+        return true
+      end,
+    },
+    {
+      target = action_anim,
+      key = "clear_overlay",
+      value = function(_, overlay_kind, tile_index)
+        cleared[#cleared + 1] = {
+          overlay_kind = overlay_kind,
+          tile_index = tile_index,
+        }
+      end,
+    },
+    {
+      target = board_feedback,
+      key = "play_tile_cue",
+      value = function(_, cue_name, tile_index)
+        cues[#cues + 1] = {
+          cue_name = cue_name,
+          tile_index = tile_index,
+        }
+        return true
+      end,
+    },
+  }, function()
+    local event_handlers = _load_fresh_handlers()
+    event_handlers.install(nil, nil, {
+      game = {
+        board = {
+          index_of_tile_id = function(_, tile_id)
+            if tile_id == 20 then
+              return 11
+            end
+            return nil
+          end,
+        },
+      },
+    })
+    local handler = handlers[monopoly_event.land.mine_hit]
+    assert(type(handler) == "function", "mine_hit handler should be registered")
+    handler(nil, nil, {
+      tile = { id = 20 },
+      player = { id = 3 },
+    })
+  end)
+
+  assert(#cleared == 1, "mine_hit should clear one mine overlay")
+  assert(cleared[1].overlay_kind == "mine", "mine_hit should clear mine overlay")
+  assert(cleared[1].tile_index == 11, "mine_hit should resolve tile index from tile payload")
+  assert(#cues == 1, "mine_hit should emit one tile cue")
+  assert(cues[1].cue_name == "mine_blast", "mine_hit should use mine_blast cue")
+  assert(cues[1].tile_index == 11, "mine_hit cue should target the resolved tile index")
+end
+
 local function _test_turn_started_feedback_defers_during_landing_hold()
   local handlers = {}
   local calls = {}
@@ -432,6 +546,14 @@ return {
     {
       name = "market_buy_failed_without_popup_body_uses_fallback_tip",
       run = _test_market_buy_failed_without_popup_body_uses_fallback_tip,
+    },
+    {
+      name = "roadblock_hit_resolves_tile_index_from_tile_id",
+      run = _test_roadblock_hit_resolves_tile_index_from_tile_id,
+    },
+    {
+      name = "mine_hit_resolves_tile_index_from_tile_payload",
+      run = _test_mine_hit_resolves_tile_index_from_tile_payload,
     },
     {
       name = "turn_started_feedback_routes_to_player_cue",

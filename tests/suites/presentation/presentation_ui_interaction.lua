@@ -42,6 +42,7 @@ local gameplay_rules = require("src.core.config.gameplay_rules")
 local host_runtime = require("src.presentation.runtime.host")
 local runtime_state = require("src.core.state_access.runtime_state")
 local target_choice_effects = require("src.presentation.runtime.controllers.target_choice_effects")
+local raycast = require("src.presentation.runtime.host.raycast")
 local vec3 = require("fixtures.vec3")
 
 
@@ -794,6 +795,66 @@ local function _test_ui_event_router_rejects_next_without_actor_context()
   _assert_eq(show_tip_calls, 1, "next click without actor context should show tip once")
 end
 
+local function _test_raycast_build_camera_ray_supports_table_vectors()
+  local role = {
+    get_ctrl_unit = function()
+      return {
+        get_position = function()
+          return { x = 1, y = 2, z = 3 }
+        end,
+      }
+    end,
+    get_camera_dir = function()
+      return { x = 0, y = 0, z = 1 }
+    end,
+  }
+
+  local ray = assert(raycast.build_camera_ray(role, {
+    eye_offset_y = "invalid",
+    ray_distance = "invalid",
+  }))
+
+  _assert_eq(ray.start_pos.x, 1, "camera ray should keep x when using table vectors")
+  _assert_eq(ray.start_pos.y, 3.5, "camera ray should apply default eye offset when cfg is invalid")
+  _assert_eq(ray.start_pos.z, 3, "camera ray should keep z when using table vectors")
+  _assert_eq(ray.end_pos.x, 1, "camera ray end should keep x when direction is forward")
+  _assert_eq(ray.end_pos.y, 3.5, "camera ray end should keep y when direction is flat")
+  _assert_eq(ray.end_pos.z, 27, "camera ray should apply default ray distance when cfg is invalid")
+end
+
+local function _test_raycast_get_unit_id_uses_lua_api_then_unit_method_fallback()
+  local unit = {
+    get_unit_id = function()
+      return 99
+    end,
+  }
+  local lua_api_calls = 0
+
+  _with_patches({
+    { key = "LuaAPI", value = {
+      get_unit_id = function()
+        lua_api_calls = lua_api_calls + 1
+        return 88
+      end,
+    } },
+  }, function()
+    _assert_eq(raycast.get_unit_id(unit), 88, "raycast should prefer LuaAPI.get_unit_id when available")
+  end)
+
+  _with_patches({
+    { key = "LuaAPI", value = {
+      get_unit_id = function()
+        lua_api_calls = lua_api_calls + 1
+        error("boom")
+      end,
+    } },
+  }, function()
+    _assert_eq(raycast.get_unit_id(unit), 99, "raycast should fall back to unit method when LuaAPI.get_unit_id fails")
+  end)
+
+  assert(lua_api_calls >= 2, "raycast get_unit_id should try LuaAPI before local fallback")
+end
+
 
 return {
   name = "presentation_ui.interaction",
@@ -811,5 +872,7 @@ return {
     { name = "_test_ui_event_router_injects_actor_for_next_with_current_player_fallback", run = _test_ui_event_router_injects_actor_for_next_with_current_player_fallback },
     { name = "_test_ui_event_router_injects_actor_for_market_confirm_and_cancel", run = _test_ui_event_router_injects_actor_for_market_confirm_and_cancel },
     { name = "_test_ui_event_router_rejects_next_without_actor_context", run = _test_ui_event_router_rejects_next_without_actor_context },
+    { name = "_test_raycast_build_camera_ray_supports_table_vectors", run = _test_raycast_build_camera_ray_supports_table_vectors },
+    { name = "_test_raycast_get_unit_id_uses_lua_api_then_unit_method_fallback", run = _test_raycast_get_unit_id_uses_lua_api_then_unit_method_fallback },
   },
 }
