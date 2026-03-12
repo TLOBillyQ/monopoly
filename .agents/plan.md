@@ -62,6 +62,7 @@
 - log: 2026-03-12 继续收尾 T4：将 `items/strategy.can_offer_in_phase` 拆成 roadblock/target/rent-response helper，并在 `suites.domain.item` 增补 `can_offer_in_phase`、`item_phase` move_followup patch、`set_player_seat`、`board.advance`、`collect_from_others` 的 characterization tests；定向 item suite 通过，最新 CRAP 报告中 T4 residual 从 34 降到 27。
 - log: 2026-03-12 将工作区中的 `effect_pipeline.run` 收口为 mandatory/optional 分发 helper，并在 `tests.suites.domain.item` 增补 waiting followup、`stop_if` 短路、single optional secondary-confirm 路径的 characterization tests；定向 suite `tests.suites.domain.item` 通过，等待下一轮双 lane CRAP 确认该热点是否出桶。
 - log: 2026-03-12 为 `game_victory.check_victory` 补上 finished short-circuit、turn-limit 并列胜者、turn-limit 无人生还的 characterization tests；定向 suite `tests.suites.gameplay.gameplay_bankruptcy_and_tile_owner` 通过，等待下一轮双 lane CRAP 确认该热点是否出桶。
+- log: 2026-03-12 重构 T4 头部热点（complexity >= 9）：`_resolve_forward_next_id` 拆分为 5 个 helper（`_resolve_outer_next`, `_resolve_fresh_forward_next`, `_resolve_market_exit`, `_resolve_facing_next`, `_resolve_fallback_next`）；`board_query.indices_in_range` 拆分为 2 个 helper（`_bfs_collect_indices`, `_flatten_by_distance`）；`strategy.auto_pre_action` 拆分为 10 个 helper（`_ai_can_use_item`, `_try_use_item`, `_has_target_player`, `_has_demolish_target`, `_try_clear_obstacles`, `_try_remote_dice`, `_try_roadblock`, `_try_target_items`, `_try_deity_items`）；定向 suites（domain.item, domain.market, gameplay_items_startup, gameplay_bankruptcy_and_tile_owner）全部通过；T4 residual 保持 25，待下一轮双 lane CRAP 确认重构后热点是否出桶。
 
 ### T5 Presentation model/runtime cluster
 - depends_on: `[T1]`
