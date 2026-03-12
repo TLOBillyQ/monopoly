@@ -71,7 +71,7 @@ end
 function turn_phase_registry.build_default_phases()
   return {
     start = turn_start,
-    roll = turn_roll,
+    roll = turn_roll._phase_roll,
     move = turn_move,
     move_followup = move_followup.run,
     landing = turn_land,

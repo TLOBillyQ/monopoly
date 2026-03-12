@@ -79,7 +79,7 @@ local function _test_turn_roll_rejects_missing_anim_gate_port_even_with_ui_port(
   }
 
   local ok, err = pcall(function()
-    turn_roll({ game = game }, {
+    turn_roll._phase_roll({ game = game }, {
       player = player,
       rolls = { 2 },
       raw_total = 2,

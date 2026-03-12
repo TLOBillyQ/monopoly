@@ -171,7 +171,7 @@ local function _advance_strong_card_staging_to_rent_prompt()
   local choice_result = choice_resolver.resolve(g, pending, { option_id = 1 })
   assert(choice_result and choice_result.stay == false, "remote dice value choice should resolve immediately")
 
-  local next_state, next_args = turn_roll({ game = g }, { player = player, skip_anim = true })
+  local next_state, next_args = turn_roll._phase_roll({ game = g }, { player = player, skip_anim = true })
   assert(next_state == "move", "strong card staging should proceed from roll to move")
 
   local landing_state, landing_args = _turn_move({ game = g }, next_args)
@@ -623,7 +623,7 @@ local function _test_circle_startup_profile_second_remote_roll_reaches_nanchang_
   assert(first_choice_result and first_choice_result.stay == false,
     "circle first turn remote dice choice should resolve")
 
-  local first_roll_state, first_roll_args = turn_roll({ game = g }, { player = player, skip_anim = true })
+  local first_roll_state, first_roll_args = turn_roll._phase_roll({ game = g }, { player = player, skip_anim = true })
   assert(first_roll_state == "move", "circle first turn should continue from roll to move")
   local first_move_state, _ = _turn_move({ game = g }, first_roll_args)
   assert(first_move_state == "landing", "circle first turn should land directly")
@@ -642,7 +642,7 @@ local function _test_circle_startup_profile_second_remote_roll_reaches_nanchang_
   assert(second_choice_result and second_choice_result.stay == false,
     "circle second turn remote dice choice should resolve")
 
-  local second_roll_state, second_roll_args = turn_roll({ game = g }, { player = player, skip_anim = true })
+  local second_roll_state, second_roll_args = turn_roll._phase_roll({ game = g }, { player = player, skip_anim = true })
   assert(second_roll_state == "move", "circle second turn should continue from roll to move")
   local second_move_state, second_move_args = _turn_move({ game = g }, second_roll_args)
   assert(second_move_state == "wait_choice", "circle second turn should pause at market interrupt")

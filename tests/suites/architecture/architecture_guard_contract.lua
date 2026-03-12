@@ -350,7 +350,7 @@ local function _test_turn_roll_uses_anim_gate_port_without_ui_port()
     wait_action_anim = true,
   }
 
-  local next_state, payload = turn_roll({ game = game }, {
+  local next_state, payload = turn_roll._phase_roll({ game = game }, {
     player = player,
     rolls = { 2 },
     raw_total = 2,

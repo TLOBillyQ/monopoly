@@ -58,6 +58,7 @@ local item_strategy = require("src.game.systems.items.strategy")
 local facing_policy = require("src.game.systems.board.facing_policy")
 local turn_start = require("src.game.flow.turn.start")
 local turn_script = require("src.game.flow.turn.script")
+local roll = require("src.game.flow.turn.roll")
 local item_slot_data = require("src.game.flow.turn.item_slot_data")
 local default_ports = require("src.game.runtime.default_ports")
 
@@ -4202,6 +4203,125 @@ local function _test_game_victory_turn_limit_with_no_survivors_reports_empty_win
     "no-survivor finish should preserve the no-survivor message")
 end
 
+local function _test_camera_policy_follows_eliminated_then_skips_to_next()
+  local g = _new_game()
+  g.players[1].eliminated = true
+  g.turn.current_player_index = 1
+  local followed = nil
+  local ports = {
+    ui_sync = {
+      follow_camera = function(_, player_id)
+        followed = player_id
+      end,
+    },
+  }
+  turn_camera_policy.sync_follow(g, {}, ports, true)
+  assert(followed == g.players[2].id, "should skip eliminated player and follow next")
+end
+
+local function _test_camera_policy_follows_current_when_not_eliminated()
+  local g = _new_game()
+  g.turn.current_player_index = 2
+  local followed = nil
+  local ports = {
+    ui_sync = {
+      follow_camera = function(_, player_id)
+        followed = player_id
+      end,
+    },
+  }
+  turn_camera_policy.sync_follow(g, {}, ports, true)
+  assert(followed == g.players[2].id, "should follow current player when not eliminated")
+end
+
+local function _test_camera_policy_skips_all_eliminated_and_returns_nil()
+  local g = _new_game()
+  for _, p in ipairs(g.players) do
+    p.eliminated = true
+  end
+  g.turn.current_player_index = 1
+  local followed = "not-called"
+  local ports = {
+    ui_sync = {
+      follow_camera = function(_, player_id)
+        followed = player_id
+      end,
+    },
+  }
+  turn_camera_policy.sync_follow(g, {}, ports, true)
+  assert(followed == "not-called", "should not call follow when all eliminated")
+end
+
+local function _test_choice_auto_policy_tick_timeout_cancels_when_allowed()
+  local g = _new_game()
+  local choice = {
+    id = 801,
+    kind = "test_choice",
+    allow_cancel = true,
+    options = { { id = "opt1" } },
+  }
+  local action = choice_auto_policy.decide(g, {}, choice, {
+    mode = "tick_timeout",
+    is_auto_actor = true,
+  })
+  assert(action and action.type == "choice_cancel", "tick_timeout should cancel when allowed")
+end
+
+local function _test_choice_auto_policy_tick_timeout_fallback_when_not_cancelable()
+  local g = _new_game()
+  local choice = {
+    id = 802,
+    kind = "test_choice",
+    allow_cancel = false,
+    options = { { id = "opt1" } },
+  }
+  local action = choice_auto_policy.decide(g, {}, choice, {
+    mode = "tick_timeout",
+    is_auto_actor = true,
+    allow_first_option_fallback = true,
+  })
+  assert(action and action.type == "choice_select", "tick_timeout should fallback to first option when not cancelable")
+  assert(action.option_id == "opt1", "should select first option")
+end
+
+local function _test_choice_auto_policy_generic_mode_uses_fallback_flag()
+  local g = _new_game()
+  local choice = {
+    id = 803,
+    kind = "test_choice",
+    options = { { id = "opt1" } },
+  }
+  local action = choice_auto_policy.decide(g, {}, choice, {
+    mode = "unknown_mode",
+    is_auto_actor = true,
+    allow_first_option_fallback = true,
+  })
+  assert(action and action.type == "choice_select", "generic mode should respect allow_first_option_fallback")
+end
+
+local function _test_tick_timeout_resolve_choice_ui_state_returns_route_key()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local choice = { id = 901, route_key = "test_route" }
+  local result = tick_timeout.resolve_choice_ui_state(g, state, choice)
+  assert(result.route_key == "test_route", "should return route_key from choice")
+  assert(result.should_warn == false, "should not warn by default")
+end
+
+local function _test_roll_dice_with_override_uses_provided_values()
+  local results, total = roll._roll_dice(3, { 4, 5, 6 }, nil)
+  assert(#results == 3, "should return 3 results")
+  assert(results[1] == 4 and results[2] == 5 and results[3] == 6, "should use override values")
+  assert(total == 15, "total should sum override values")
+end
+
+local function _test_roll_dice_with_partial_override_uses_last_for_remaining()
+  local results, total = roll._roll_dice(4, { 2, 3 }, { next_int = function() return 6 end })
+  assert(#results == 4, "should return 4 results")
+  assert(results[1] == 2 and results[2] == 3, "should use provided overrides")
+  assert(results[3] == 3 and results[4] == 3, "should repeat last override value")
+end
+
 return {
   _test_mandatory_payment_causes_bankruptcy = _test_mandatory_payment_causes_bankruptcy,
   _test_bankruptcy_resets_owned_tiles = _test_bankruptcy_resets_owned_tiles,
@@ -4332,4 +4452,13 @@ return {
   _test_owner_mine_does_not_trigger_until_owner_leaves_tile = _test_owner_mine_does_not_trigger_until_owner_leaves_tile,
   _test_owner_mine_triggers_again_after_placement_turn = _test_owner_mine_triggers_again_after_placement_turn,
   _test_runtime_context_change_skin_exports_and_event = _test_runtime_context_change_skin_exports_and_event,
+  _test_camera_policy_follows_eliminated_then_skips_to_next = _test_camera_policy_follows_eliminated_then_skips_to_next,
+  _test_camera_policy_follows_current_when_not_eliminated = _test_camera_policy_follows_current_when_not_eliminated,
+  _test_camera_policy_skips_all_eliminated_and_returns_nil = _test_camera_policy_skips_all_eliminated_and_returns_nil,
+  _test_choice_auto_policy_tick_timeout_cancels_when_allowed = _test_choice_auto_policy_tick_timeout_cancels_when_allowed,
+  _test_choice_auto_policy_tick_timeout_fallback_when_not_cancelable = _test_choice_auto_policy_tick_timeout_fallback_when_not_cancelable,
+  _test_choice_auto_policy_generic_mode_uses_fallback_flag = _test_choice_auto_policy_generic_mode_uses_fallback_flag,
+  _test_tick_timeout_resolve_choice_ui_state_returns_route_key = _test_tick_timeout_resolve_choice_ui_state_returns_route_key,
+  _test_roll_dice_with_override_uses_provided_values = _test_roll_dice_with_override_uses_provided_values,
+  _test_roll_dice_with_partial_override_uses_last_for_remaining = _test_roll_dice_with_partial_override_uses_last_for_remaining,
 }

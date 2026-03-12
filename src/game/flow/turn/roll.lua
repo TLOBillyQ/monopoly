@@ -86,4 +86,8 @@ local function _phase_roll(turn_mgr, args)
   return "move", { player = player, total = total, raw_total = raw_total }
 end
 
-return _phase_roll
+local roll = {}
+roll._roll_dice = _roll_dice
+roll._phase_roll = _phase_roll
+
+return roll

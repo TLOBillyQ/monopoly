@@ -198,7 +198,7 @@ local function _test_turn_roll_uses_anim_gate_port_without_ui_port()
     wait_move_anim = false,
   }
 
-  local next_state, next_args = turn_roll({ game = game }, {
+  local next_state, next_args = turn_roll._phase_roll({ game = game }, {
     player = player,
     rolls = { 3 },
     raw_total = 3,
