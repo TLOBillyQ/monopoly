@@ -1147,6 +1147,13 @@ local function _test_item_phase_ask_confirm_clears_highlight_suppress()
     _item_phase_ask_active = true,
     _item_phase_confirmed = nil,
     _suppress_item_slot_highlight_until_pick = true,
+    gameplay_loop_ports = {
+      modal = {
+        close_choice_modal = function()
+          closed = closed + 1
+        end,
+      },
+    },
     ui_model = {
       choice = { id = 66, kind = "item_phase_choice", route_key = "base_inline", uses_item_slots = true, pre_confirm_before_slot_pick = true },
       
@@ -1156,15 +1163,7 @@ local function _test_item_phase_ask_confirm_clears_highlight_suppress()
   _bind_ui_runtime(state)
 
   local handled = false
-  _with_patches({
-    {
-      target = ui_view,
-      key = "close_choice_modal",
-      value = function()
-        closed = closed + 1
-      end,
-    },
-  }, function()
+  _with_patches({}, function()
     handled = item_phase_ask_flow.dispatch(state, {}, { type = "choice_select" }, {}, {
       dispatch_action = function()
         error("choice_select on item_phase_ask should not dispatch action directly")
@@ -1516,7 +1515,7 @@ local function _test_tick_skips_anim_when_no_anim()
   local patches = {
     { target = main_view, key = "refresh_panel", value = function() end },
     { target = board_view_mod, key = "refresh", value = function() end },
-    { target = main_view, key = "open_choice_modal", value = function() end },
+    { target = require("src.presentation.runtime.controllers.modal_controller"), key = "open_choice_modal", value = function() end },
     { target = ui_model, key = "build", value = function(game_ctx)
       return {
         current_player_name = "P",

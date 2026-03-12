@@ -1246,7 +1246,7 @@ local function _test_game_startup_build_state_is_pure_and_bridge_installs_events
       board = { get_overlays = function() return { roadblocks = {}, mines = {} } end, tile_lookup = {}, path = {} },
     }
     support.with_patches({
-      { target = require("src.presentation.runtime.view"), key = "open_choice_modal", value = function(_, choice)
+      { target = require("src.presentation.runtime.controllers.modal_controller"), key = "open_choice_modal", value = function(_, choice)
         opened = choice
       end },
     }, function()

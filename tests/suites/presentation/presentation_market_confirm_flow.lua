@@ -5,6 +5,7 @@ local _with_patches = support.with_patches
 local ui_intent_dispatcher = require("src.presentation.input.intent_dispatcher")
 local choice_openers = require("src.presentation.runtime.controllers.choice_screen_service.openers")
 local ui_view = require("src.presentation.runtime.view")
+local modal_presenter = require("src.presentation.runtime.controllers.modal_controller")
 
 local function _test_ui_intent_dispatcher_market_confirm_skin_opens_pre_confirm_then_dispatches()
   local opened_pre_confirm = nil
@@ -105,7 +106,7 @@ local function _test_ui_intent_dispatcher_market_confirm_skin_cancel_restores_ma
     { target = choice_openers, key = "open_pre_confirm_screen", value = function()
       opened_pre_confirm = opened_pre_confirm + 1
     end },
-    { target = ui_view, key = "open_choice_modal", value = function(_, choice)
+    { target = modal_presenter, key = "open_choice_modal", value = function(_, choice)
       reopened_choice = choice
     end },
   }, function()

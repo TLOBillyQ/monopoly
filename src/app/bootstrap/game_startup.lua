@@ -2,6 +2,7 @@ local auto_runner = require("src.game.flow.turn.auto_runner")
 local board_view = require("src.presentation.view.render.board")
 local game = require("src.game.core.runtime.game")
 local ui_view = require("src.presentation.runtime.view")
+local modal_controller = require("src.presentation.runtime.controllers.modal_controller")
 local tiles_cfg = require("Config.generated.tiles")
 local runtime_refs = require("Config.runtime_refs")
 local gameplay_rules = require("src.core.config.gameplay_rules")
@@ -179,7 +180,7 @@ function M.build_state(get_current_game, opts)
   runtime_state.ensure_all(state)
 
   state.push_popup = function(_, payload, opts)
-    local ok = ui_view.push_popup(state, payload, opts)
+    local ok = modal_controller.push_popup(state, payload, opts)
     if state.ui then
       local current_game = get_current_game()
       if ok and current_game and current_game.turn then

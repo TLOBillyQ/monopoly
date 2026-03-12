@@ -1,13 +1,9 @@
-local market_view = require("src.presentation.view.render.market")
 local panel_presenter = require("src.presentation.view.widgets.panel_presenter")
 local render_pipeline = require("src.presentation.runtime.canvas_render_pipeline")
 local input_lock_policy = require("src.presentation.input.input_lock_policy")
 local role_control_lock_policy = require("src.presentation.input.role_control_lock_policy")
 local ui_touch_policy = require("src.presentation.input.touch_policy")
-local modal_presenter = require("src.presentation.runtime.controllers.modal_controller")
-local logger = require("src.core.utils.logger")
 local runtime = require("src.presentation.runtime.ui")
-local core = require("src.presentation.runtime.view.core")
 
 local state = require("src.presentation.runtime.view.state")
 local assets = require("src.presentation.runtime.view.assets")
@@ -81,42 +77,6 @@ end
 
 function service.set_debug_log_for_role(state_ctx, role, text)
   debug.set_debug_log_for_role(state_ctx, role, text)
-end
-
-function service.select_market_option(state_ctx, option_id)
-  if not option_id then
-    logger.warn("select_market_option missing option_id")
-    return
-  end
-  market_controller.select_market_option(state_ctx, option_id)
-end
-
-function service.select_choice_option(state_ctx, option_id)
-  if not option_id then
-    logger.warn("select_choice_option missing option_id")
-    return
-  end
-  modal_presenter.select_choice_option(state_ctx, option_id)
-end
-
-function service.sync_target_choice_buttons(state_ctx, locked)
-  core.sync_target_choice_buttons(state_ctx, locked)
-end
-
-function service.open_choice_modal(state_ctx, choice, market)
-  modal_presenter.open_choice_modal(state_ctx, choice, market)
-end
-
-function service.close_choice_modal(state_ctx)
-  modal_presenter.close_choice_modal(state_ctx)
-end
-
-function service.push_popup(state_ctx, payload, opts)
-  return modal_presenter.push_popup(state_ctx, payload, opts)
-end
-
-function service.close_popup(state_ctx)
-  modal_presenter.close_popup(state_ctx)
 end
 
 return service

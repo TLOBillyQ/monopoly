@@ -4,6 +4,7 @@ local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
 local runtime_port = require("src.presentation.runtime.ui")
 local ui_view = require("src.presentation.runtime.view")
+local modal_presenter = require("src.presentation.runtime.controllers.modal_controller")
 
 local function _wrap_ui_refs(image_refs)
   return {
@@ -87,7 +88,7 @@ local function _test_push_popup_sets_card_image_by_image_ref()
     { key = "all_roles", value = nil },
   }, function()
     state.gameplay_loop_ports = require("src.presentation.runtime.ports").build(state)
-    ui_view.push_popup(state, {
+    modal_presenter.push_popup(state, {
       title = "道具卡",
       body = "测试",
       image_ref = 2001,
@@ -115,12 +116,12 @@ local function _test_push_popup_hides_card_and_clears_image_when_missing()
     { key = "all_roles", value = nil },
   }, function()
     state.gameplay_loop_ports = require("src.presentation.runtime.ports").build(state)
-    ui_view.push_popup(state, {
+    modal_presenter.push_popup(state, {
       title = "道具卡",
       body = "测试",
       image_ref = 2001,
     })
-    ui_view.push_popup(state, {
+    modal_presenter.push_popup(state, {
       title = "黑市",
       body = "测试2",
     })
@@ -160,7 +161,7 @@ local function _test_popup_hidden_for_non_current_role()
       return role.get_roleid()
     end },
   }, function()
-    ui_view.push_popup(state, {
+    modal_presenter.push_popup(state, {
       title = "黑市",
       body = "测试",
     })
@@ -200,12 +201,12 @@ local function _test_popup_visible_for_all_roles_when_allowed_kind()
       return role.get_roleid()
     end },
   }, function()
-    ui_view.push_popup(state, {
+    modal_presenter.push_popup(state, {
       title = "机会卡",
       body = "测试",
       kind = "chance_card",
     })
-    ui_view.push_popup(state, {
+    modal_presenter.push_popup(state, {
       title = "道具卡",
       body = "测试",
       kind = "item_card",
@@ -246,7 +247,7 @@ local function _test_bankruptcy_popup_visible_for_all_roles()
       return role.get_roleid()
     end },
   }, function()
-    ui_view.push_popup(state, {
+    modal_presenter.push_popup(state, {
       kind = "bankruptcy",
       text = "破产测试",
     })
@@ -273,7 +274,7 @@ local function _test_bankruptcy_popup_avatar_uses_native_size_path()
       avatar_image_key = image_key
     end },
   }, function()
-    ui_view.push_popup(state, {
+    modal_presenter.push_popup(state, {
       kind = "bankruptcy",
       text = "破产测试",
       avatar_key = 2002,

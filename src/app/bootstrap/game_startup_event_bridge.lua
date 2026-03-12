@@ -1,5 +1,5 @@
 local monopoly_event = require("src.core.events.monopoly_events")
-local ui_view = require("src.presentation.runtime.view")
+local modal_controller = require("src.presentation.runtime.controllers.modal_controller")
 local runtime_state = require("src.core.state_access.runtime_state")
 local runtime_context = require("src.infrastructure.runtime.context")
 local choice_slice = require("src.presentation.model.choice_slice")
@@ -59,7 +59,7 @@ function M.install(state, get_current_game)
       assert(current_game ~= nil, "missing current_game")
       local built_choice, built_market = _build_choice_view(state, current_game)
       if built_choice then
-        ui_view.open_choice_modal(state, built_choice, built_market)
+        modal_controller.open_choice_modal(state, built_choice, built_market)
       end
     end)
   end)

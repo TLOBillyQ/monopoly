@@ -764,7 +764,7 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
   local patches = {
     { target = main_view, key = "refresh_panel", value = function() end },
     { target = board_view_mod, key = "refresh", value = function() end },
-    { target = main_view, key = "open_choice_modal", value = function() end },
+    { target = require("src.presentation.runtime.controllers.modal_controller"), key = "open_choice_modal", value = function() end },
     { target = ui_model, key = "build", value = function(game_ctx)
       local _player_rows = {
         { name = "P1", cash = "0", land_count = "0", total_assets = "0" },
@@ -893,7 +893,7 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
   local patches = {
     { target = main_view, key = "refresh_panel", value = function() end },
     { target = board_view_mod, key = "refresh", value = function() end },
-    { target = main_view, key = "open_choice_modal", value = function() end },
+    { target = require("src.presentation.runtime.controllers.modal_controller"), key = "open_choice_modal", value = function() end },
     { target = ui_model, key = "build", value = function(game_ctx)
       local _player_rows = {
         { name = "P1", cash = "0", land_count = "0", total_assets = "0" },
@@ -1033,7 +1033,7 @@ local function _test_ui_sync_defers_choice_modal_during_wait_action_anim()
   }
   _with_patches({
     { target = ui_view_service, key = "render", value = function() end },
-    { target = ui_view_service, key = "open_choice_modal", value = function()
+    { target = require("src.presentation.runtime.controllers.modal_controller"), key = "open_choice_modal", value = function()
       opened = opened + 1
     end },
     { target = ui_model, key = "build", value = function()
@@ -1094,7 +1094,7 @@ local function _test_ui_sync_opens_choice_modal_after_wait_action_anim()
   }
   _with_patches({
     { target = ui_view_service, key = "render", value = function() end },
-    { target = ui_view_service, key = "open_choice_modal", value = function()
+    { target = require("src.presentation.runtime.controllers.modal_controller"), key = "open_choice_modal", value = function()
       opened = opened + 1
     end },
     { target = ui_model, key = "build", value = function()
@@ -1164,7 +1164,7 @@ local function _test_ui_sync_defers_choice_modal_during_wait_move_anim()
   }
   _with_patches({
     { target = ui_view_service, key = "render", value = function() end },
-    { target = ui_view_service, key = "open_choice_modal", value = function()
+    { target = require("src.presentation.runtime.controllers.modal_controller"), key = "open_choice_modal", value = function()
       opened = opened + 1
     end },
     { target = ui_model, key = "build", value = function()
@@ -1232,7 +1232,7 @@ local function _test_ui_sync_step_choice_timeout_reopens_remote_choice_for_local
   _bind_ui_runtime(state)
 
   _with_patches({
-    { target = ui_view_service, key = "open_choice_modal", value = function()
+    { target = require("src.presentation.runtime.controllers.modal_controller"), key = "open_choice_modal", value = function()
       opened = opened + 1
     end },
     { target = ui_model, key = "build", value = function()

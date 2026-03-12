@@ -1,9 +1,9 @@
-local ui_view = require("src.presentation.runtime.view")
 local ui_event_bindings = require("src.presentation.runtime.event_bindings")
 local ui_intent_dispatcher = require("src.presentation.input.intent_dispatcher")
 local canvas_registry = require("src.presentation.runtime.canvas_registry")
 local local_actor_resolver = require("src.presentation.runtime.local_actor_resolver")
 local host_runtime = require("src.presentation.runtime.host")
+local modal_controller = require("src.presentation.runtime.controllers.modal_controller")
 local logger = require("src.core.utils.logger")
 
 local router = {}
@@ -37,7 +37,7 @@ function router.bind(state, resolve_game)
 
   local dispatch_opts = {
     on_close_choice = function(ctx)
-      ui_view.close_choice_modal(ctx)
+      modal_controller.close_choice_modal(ctx)
     end,
   }
 

@@ -2,7 +2,7 @@ local base_nodes = require("src.presentation.schema.canvas.base.nodes")
 local popup_nodes = require("src.presentation.schema.canvas.popup.nodes")
 local bankruptcy_nodes = require("src.presentation.schema.canvas.bankruptcy.nodes")
 local always_show_nodes = require("src.presentation.schema.canvas.always_show.nodes")
-local core = require("src.presentation.runtime.view.core")
+local ui_nodes = require("src.presentation.runtime.node_ops")
 local always_show_contract = require("src.presentation.schema.canvas.always_show.contract")
 local canvas_store = require("src.presentation.runtime.canvas_store")
 
@@ -15,7 +15,7 @@ function M.build_ui_state()
   for _, name in ipairs(item_slots) do
     table.insert(base_hidden_nodes, name)
   end
-  local choice_screens = core.build_choice_screens()
+  local choice_screens = ui_nodes.build_choice_screens()
   local popup_screen = {
     root = popup_nodes.canvas,
     title = popup_nodes.title,
@@ -76,13 +76,13 @@ function M.build_ui_state()
     popup_seq = 0,
     popup_return_canvas = nil,
     item_slot_item_ids_by_role = {},
-    query_node = core.query_node,
-    set_label = core.set_text,
-    set_button = core.set_text,
-    set_visible = core.set_visible,
-    set_touch_enabled = core.set_touch_enabled,
-    set_debug_log = core.set_debug_log,
-    set_debug_visible = core.set_debug_visible,
+    query_node = ui_nodes.query_node,
+    set_label = ui_nodes.set_text,
+    set_button = ui_nodes.set_text,
+    set_visible = ui_nodes.set_visible,
+    set_touch_enabled = ui_nodes.set_touch_enabled,
+    set_debug_log = ui_nodes.set_debug_log,
+    set_debug_visible = ui_nodes.set_debug_visible,
   }
   canvas_store.ensure(ui_state)
   return ui_state

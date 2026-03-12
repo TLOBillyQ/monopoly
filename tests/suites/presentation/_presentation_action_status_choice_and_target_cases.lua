@@ -22,6 +22,7 @@ local market_view = require("src.presentation.view.render.market")
 local market_layout = require("src.presentation.schema.market_layout")
 local canvas_event_router = require("src.presentation.runtime.canvas_event_router")
 local ui_view = require("src.presentation.runtime.view")
+local modal_presenter = require("src.presentation.runtime.controllers.modal_controller")
 local ui_status_3d_layer = require("src.presentation.view.render.status3d")
 local action_anim = require("src.presentation.view.render.action_anim")
 local move_anim = require("src.presentation.view.render.move_anim")
@@ -265,7 +266,7 @@ local function _test_popup_timeout_closes_even_when_input_blocked()
     { key = "all_roles", value = nil },
   }, function()
     state.gameplay_loop_ports = require("src.presentation.runtime.ports").build(state)
-    ui_view.push_popup(state, {
+    modal_presenter.push_popup(state, {
       title = "道具卡",
       body = "测试",
       image_ref = 2001,
@@ -296,7 +297,7 @@ local function _test_choice_modal_routes_to_new_screens()
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
-    ui_view.open_choice_modal(state, {
+    modal_presenter.open_choice_modal(state, {
       id = 1,
       kind = "item_target_player",
       route_key = "player",
@@ -311,7 +312,7 @@ local function _test_choice_modal_routes_to_new_screens()
     _assert_eq(state.ui.active_choice_screen_key, "player", "item_target_player should route to player screen")
     _assert_eq(nodes["玩家选择屏"].visible, true, "player screen should be visible")
 
-    ui_view.open_choice_modal(state, {
+    modal_presenter.open_choice_modal(state, {
       id = 2,
       kind = "roadblock_target",
       route_key = "target",
@@ -329,7 +330,7 @@ local function _test_choice_modal_routes_to_new_screens()
     _assert_eq(state.ui.active_choice_screen_key, "target", "roadblock_target should route to target screen")
     _assert_eq(nodes["位置选择屏"].visible, true, "target screen should be visible")
 
-    ui_view.open_choice_modal(state, {
+    modal_presenter.open_choice_modal(state, {
       id = 3,
       kind = "remote_dice_value",
       route_key = "remote",
@@ -346,7 +347,7 @@ local function _test_choice_modal_routes_to_new_screens()
     _assert_eq(state.ui.active_choice_screen_key, "remote", "remote_dice_value should route to remote screen")
     _assert_eq(nodes["遥控骰子屏"].visible, true, "remote screen should be visible")
 
-    ui_view.open_choice_modal(state, {
+    modal_presenter.open_choice_modal(state, {
       id = 4,
       kind = "landing_optional_effect",
       route_key = "secondary_confirm",
@@ -367,7 +368,7 @@ local function _test_choice_modal_routes_to_new_screens()
     _assert_eq(nodes["通用二次确认_确定按钮"].text, "", "building confirm text should be empty")
     _assert_eq(nodes["通用二次确认_取消"].text, "", "building cancel text should be empty")
 
-    ui_view.open_choice_modal(state, {
+    modal_presenter.open_choice_modal(state, {
       id = 5,
       kind = "item_phase_choice",
       route_key = "base_inline",
@@ -393,7 +394,7 @@ local function _test_choice_modal_routes_to_new_screens()
     _assert_eq(nodes["位置选择屏"].visible, false, "target screen should stay hidden for item phase")
     _assert_eq(nodes["遥控骰子屏"].visible, false, "remote screen should stay hidden for item phase")
 
-    ui_view.open_choice_modal(state, {
+    modal_presenter.open_choice_modal(state, {
       id = 6,
       kind = "tax_card_prompt",
       route_key = "secondary_confirm",
@@ -416,7 +417,7 @@ local function _test_choice_modal_routes_to_new_screens()
     _assert_eq(nodes["通用二次确认_取消"].visible, true, "tax prompt should show cancel as do-not-use")
     _assert_eq(nodes["通用二次确认_取消"].disabled, false, "tax prompt cancel should stay touchable")
 
-    ui_view.open_choice_modal(state, {
+    modal_presenter.open_choice_modal(state, {
       id = 7,
       kind = "rent_card_prompt",
       route_key = "secondary_confirm",
@@ -440,7 +441,7 @@ local function _test_choice_modal_routes_to_new_screens()
     _assert_eq(nodes["通用二次确认_取消"].visible, true, "strong rent prompt should show do-not-use action")
     _assert_eq(nodes["通用二次确认_取消"].disabled, false, "strong rent cancel should stay touchable")
 
-    ui_view.open_choice_modal(state, {
+    modal_presenter.open_choice_modal(state, {
       id = 8,
       kind = "rent_card_prompt",
       route_key = "secondary_confirm",
@@ -463,7 +464,7 @@ local function _test_choice_modal_routes_to_new_screens()
     _assert_eq(nodes["通用二次确认_文本"].text, "这次要用免费卡吗？", "free rent prompt should use explicit confirm body")
     _assert_eq(nodes["通用二次确认_取消"].visible, true, "free rent prompt should expose cancel as skip")
 
-    ui_view.open_choice_modal(state, {
+    modal_presenter.open_choice_modal(state, {
       id = 9,
       kind = "steal_prompt",
       route_key = "secondary_confirm",
@@ -484,7 +485,7 @@ local function _test_choice_modal_routes_to_new_screens()
     _assert_eq(nodes["通用二次确认_标题"].text, "偷窃卡", "steal prompt should use explicit confirm title")
     _assert_eq(nodes["通用二次确认_文本"].text, "目标：玩家A", "steal prompt should use explicit confirm body")
 
-    ui_view.open_choice_modal(state, {
+    modal_presenter.open_choice_modal(state, {
       id = 10,
       kind = "steal_item",
       route_key = "player",
@@ -501,7 +502,7 @@ local function _test_choice_modal_routes_to_new_screens()
     _assert_eq(state.ui.active_choice_screen_key, "player", "steal item should route to player screen")
     _assert_eq(nodes["玩家选择屏"].visible, true, "steal item should open player screen")
 
-    ui_view.open_choice_modal(state, {
+    modal_presenter.open_choice_modal(state, {
       id = 11,
       kind = "landing_optional_effect",
       route_key = "secondary_confirm",
@@ -517,7 +518,7 @@ local function _test_choice_modal_routes_to_new_screens()
     _assert_eq(state.ui.active_choice_screen_key, "secondary_confirm", "single optional effect should route to secondary confirm")
     _assert_eq(nodes["通用二次确认屏"].visible, true, "single optional effect should open secondary confirm")
 
-    ui_view.open_choice_modal(state, {
+    modal_presenter.open_choice_modal(state, {
       id = 12,
       kind = "landing_optional_effect",
       route_key = "player",
@@ -534,7 +535,7 @@ local function _test_choice_modal_routes_to_new_screens()
     _assert_eq(state.ui.active_choice_screen_key, "player", "multi optional effect should route to player screen")
     _assert_eq(nodes["玩家选择屏"].visible, true, "multi optional effect should open player screen")
 
-    ui_view.open_choice_modal(state, {
+    modal_presenter.open_choice_modal(state, {
       id = 13,
       kind = "market_vehicle_replace",
       route_key = "secondary_confirm",
@@ -591,7 +592,7 @@ local function _test_target_screen_uses_labels_only_and_hides_projection_with_sl
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
-    ui_view.open_choice_modal(state, choice)
+    modal_presenter.open_choice_modal(state, choice)
     _assert_eq(state.ui.active_choice_screen_key, "target", "roadblock_target should open target screen")
     _assert_eq(nodes["位置-槽位1按钮"].text, "", "slot1 button text should stay empty")
     _assert_eq(nodes["位置-槽位7按钮"].text, "", "slot7 button text should stay empty")
@@ -642,7 +643,7 @@ local function _test_target_screen_hides_unused_slots_when_unique_options_less_t
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
-    ui_view.open_choice_modal(state, choice)
+    modal_presenter.open_choice_modal(state, choice)
     _assert_eq(state.ui.active_choice_screen_key, "target", "target screen should open for unique-option roadblock choice")
     _assert_eq(nodes["位置-槽位6按钮"].visible, true, "slot6 button should stay visible for the sixth unique option")
     _assert_eq(nodes["位置-槽位6文本"].text, "郑州路", "slot6 label should match the last unique option")
@@ -674,11 +675,11 @@ local function _test_target_screen_close_clears_confirm_and_cancel_residue()
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
-    ui_view.open_choice_modal(state, choice)
+    modal_presenter.open_choice_modal(state, choice)
     _assert_eq(nodes["位置_确认按钮"].text, "确定", "target confirm should be populated while screen open")
     _assert_eq(nodes["位置_取消按钮"].text, "取消", "target cancel should be populated while screen open")
 
-    ui_view.close_choice_modal(state)
+    modal_presenter.close_choice_modal(state)
 
     _assert_eq(nodes["位置选择屏"].visible, false, "target screen should hide after close")
     _assert_eq(nodes["位置_确认按钮"].visible, false, "target confirm should hide after close")

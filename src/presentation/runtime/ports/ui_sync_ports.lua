@@ -3,6 +3,7 @@ local camera_sync = require("src.presentation.runtime.ports.ui_sync.camera_sync"
 local ui_gate_sync = require("src.presentation.runtime.ports.ui_sync.ui_gate_sync")
 local choice_ui_state = require("src.presentation.runtime.ports.ui_sync.choice_ui_state")
 local target_choice_effects = require("src.presentation.runtime.controllers.target_choice_effects")
+local modal_controller = require("src.presentation.runtime.controllers.modal_controller")
 local runtime_state = require("src.core.state_access.runtime_state")
 
 local ui_sync_ports = {}
@@ -19,8 +20,7 @@ local function _reopen_choice_modal_if_needed(game, state, pending)
   if not (model and model.choice) then
     return false
   end
-  local ui_view = require("src.presentation.runtime.view")
-  ui_view.open_choice_modal(state, model.choice, model.market)
+  modal_controller.open_choice_modal(state, model.choice, model.market)
   return true
 end
 

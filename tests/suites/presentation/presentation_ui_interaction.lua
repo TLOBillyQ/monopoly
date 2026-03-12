@@ -22,6 +22,7 @@ local market_view = require("src.presentation.view.render.market")
 local market_layout = require("src.presentation.schema.market_layout")
 local canvas_event_router = require("src.presentation.runtime.canvas_event_router")
 local ui_view = require("src.presentation.runtime.view")
+local modal_presenter = require("src.presentation.runtime.controllers.modal_controller")
 local ui_status_3d_layer = require("src.presentation.view.render.status3d")
 local action_anim = require("src.presentation.view.render.action_anim")
 local move_anim = require("src.presentation.view.render.move_anim")
@@ -264,7 +265,7 @@ local function _test_ui_intent_dispatcher_market_select_updates_ui_only()
   local game = {}
 
   _with_patches({
-    { target = ui_view, key = "select_market_option", value = function(_, option_id)
+    { target = market_modal_renderer, key = "select_market_option", value = function(_, option_id)
       selected_option = option_id
     end },
   }, function()
@@ -289,7 +290,7 @@ local function _test_ui_intent_dispatcher_popup_confirm_closes_popup()
   local game = {}
 
   _with_patches({
-    { target = ui_view, key = "close_popup", value = function()
+    { target = modal_presenter, key = "close_popup", value = function()
       closed = closed + 1
     end },
   }, function()

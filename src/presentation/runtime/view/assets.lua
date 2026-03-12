@@ -1,6 +1,6 @@
 local runtime = require("src.presentation.runtime.ui")
 local player_colors = require("src.presentation.view.support.player_colors")
-local core = require("src.presentation.runtime.view.core")
+local ui_nodes = require("src.presentation.runtime.node_ops")
 local base_nodes = require("src.presentation.schema.canvas.base.nodes")
 local number_utils = require("src.core.utils.number_utils")
 
@@ -17,7 +17,7 @@ function M.init_ui_assets(state)
       local ref_id = tostring(3000 + index)
       local image_key = image_refs[ref_id]
       assert(image_key ~= nil, "missing item icon: " .. tostring(ref_id))
-      core.set_item_slot_image("基础_道具槽位" .. tostring(index), image_key)
+      ui_nodes.set_item_slot_image("基础_道具槽位" .. tostring(index), image_key)
     end
   end)
   runtime.set_client_role(nil)

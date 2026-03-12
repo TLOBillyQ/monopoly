@@ -1,7 +1,7 @@
 local modal_state = require("src.presentation.runtime.modal_state")
 local canvas = require("src.presentation.runtime.canvas_coordinator")
 local common = require("src.presentation.runtime.controllers.choice_screen_service.common")
-local core = require("src.presentation.runtime.view.core")
+local ui_nodes = require("src.presentation.runtime.node_ops")
 local ui_controls = require("src.presentation.view.support.ui_controls")
 local logger = require("src.core.utils.logger")
 
@@ -144,7 +144,7 @@ function M.open_target_screen(state, choice, choice_id)
   _set_action_button(ui, screen.confirm, true, false, "确定")
   _set_action_button(ui, screen.cancel, true, false, choice.cancel_label or "取消")
   modal_state.open_choice(state, choice_id, option_ids, selected)
-  core.sync_target_choice_buttons(state, false)
+  ui_nodes.sync_target_choice_buttons(state, false)
 end
 
 function M.open_secondary_confirm_screen(state, choice, choice_id)

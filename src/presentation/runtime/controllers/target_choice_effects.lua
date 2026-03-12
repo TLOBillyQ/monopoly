@@ -3,7 +3,7 @@ local number_utils = require("src.core.utils.number_utils")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local modal_state = require("src.presentation.runtime.modal_state")
 local host_runtime = require("src.presentation.runtime.host")
-local ui_core = require("src.presentation.runtime.view.core")
+local ui_nodes = require("src.presentation.runtime.node_ops")
 local choice_contract = require("src.core.choice.contract")
 local target_choice_effects = {}
 local _move_arrow
@@ -69,7 +69,7 @@ local function _warn_once(state, key, ...)
   logger.warn("[TargetPick]", ...)
 end
 local function _sync_buttons(state, locked)
-  ui_core.sync_target_choice_buttons(state, locked == true)
+  ui_nodes.sync_target_choice_buttons(state, locked == true)
 end
 local function _sync_highlight_state(state, option_id, locked)
   _sync_buttons(state, locked)
