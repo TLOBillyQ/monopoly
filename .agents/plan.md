@@ -66,6 +66,14 @@
   - Add 18 characterization tests for T2 hotspots: `_resolve_wait_state` (4 tests), `_resolve_choice_ui_state` (2 tests), `_resolve_follow_player_id` (4 tests), `_update_countdown` (2 tests), `_is_action_button_wait_active` (3 tests), `choice_auto_policy.decide` (3 tests)
   - T2 residual: 21 functions with CRAP > 8 (down from 23 in previous baseline)
   - All behavior suites pass (652 tests)
+- log: 2026-03-12 T2 third wave cleanup - clear top hotspots:
+  - Add 12 characterization tests for top T2 hotspots:
+    - `_resolve_phase_wait_result` (3 tests: with wait_action_anim, without wait_action_anim, defaults) - CRAP from 20.00 to cleared
+    - `validate_choice_actor` (4 tests: match, mismatch, no owner, no actor_id) - CRAP from 11.64 to cleared
+    - `_log_missing_auto_choice_action` (3 tests: logs once, skips when waiting, skips when not auto) - CRAP from 9.03 to cleared
+  - Cleared 5 major T2 hotspots from top 50: `_resolve_phase_wait_result`, `validate_choice_actor`, `_maybe_rotate_profile`, `_log_missing_auto_choice_action`, `_phase_move`
+  - T2 residual: 17 functions with CRAP > 8 (down from 21), total src_over8 dropped from 56 to 46
+  - All behavior suites pass (688 tests)
 - files edited/created: `src/game/flow/turn/roll.lua`, `src/game/flow/turn/move.lua`, `src/game/flow/turn/phase_registry.lua`, `src/game/flow/turn/loop.lua`, `src/game/flow/turn/tick_timeout.lua`, `src/game/flow/turn/timer_policy.lua`, `tests/suites/gameplay/gameplay_cases.lua`, `tests/suites/gameplay/gameplay_turn_flow_and_interrupts.lua`, `tests/suites/gameplay/gameplay_items_startup.lua`, `tests/suites/architecture/usecase_boundary_contract.lua`, `tests/suites/architecture/architecture_guard_contract.lua`, `tests/suites/runtime/narrow_runtime_ports_contract.lua`, `src/game/flow/turn/loop_ports.lua`, `tests/suites/gameplay/gameplay_timeout_and_auto_runner.lua`, `tests/suites/gameplay/gameplay_t2_characterization.lua`, `src/game/flow/turn/land.lua`, `src/game/flow/turn/script.lua`, `src/game/flow/turn/camera_policy.lua`
 
 ### T3 Flow orchestration/AI cluster

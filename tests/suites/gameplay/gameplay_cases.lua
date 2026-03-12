@@ -4491,4 +4491,88 @@ return {
   _test_tick_timeout_resolve_choice_ui_state_returns_route_key = _test_tick_timeout_resolve_choice_ui_state_returns_route_key,
   _test_roll_dice_with_override_uses_provided_values = _roll_dice_tests[1],
   _test_roll_dice_with_partial_override_uses_last_for_remaining = _roll_dice_tests[2],
+  _test_resolve_phase_wait_result_with_wait_action_anim = function()
+    local player = { id = 1, name = "P1" }
+    local phase_res = { next_state = "move", next_args = { player = player, total = 10 }, wait_action_anim = true }
+    local state, args = roll._resolve_phase_wait_result(phase_res, player, 10, 5)
+    assert(state == "wait_action_anim", "should return wait_action_anim state")
+    assert(args.next_state == "move", "should preserve next_state")
+    assert(args.next_args.total == 10, "should preserve total in next_args")
+  end,
+  _test_resolve_phase_wait_result_without_wait_action_anim = function()
+    local player = { id = 1, name = "P1" }
+    local phase_res = { next_state = "land", next_args = { player = player, total = 8 }, wait_action_anim = false }
+    local state, args = roll._resolve_phase_wait_result(phase_res, player, 8, 4)
+    assert(state == "wait_choice", "should return wait_choice state when no anim wait")
+    assert(args.next_state == "land", "should preserve next_state")
+  end,
+  _test_resolve_phase_wait_result_defaults = function()
+    local player = { id = 1, name = "P1" }
+    local phase_res = {}
+    local state, args = roll._resolve_phase_wait_result(phase_res, player, 6, 3)
+    assert(state == "wait_choice", "should default to wait_choice")
+    assert(args.next_state == "move", "should default next_state to move")
+    assert(args.next_args.player == player, "should include player in default next_args")
+    assert(args.next_args.total == 6, "should include total in default next_args")
+    assert(args.next_args.raw_total == 3, "should include raw_total in default next_args")
+  end,
+  _test_validate_choice_actor_match = function()
+    local g = _new_game()
+    local p1 = g.players[1]
+    local choice = { id = 1, owner_role_id = p1.id }
+    local action = { type = "choice_select", actor_role_id = p1.id }
+    local result = dispatch_validator.validate_choice_actor(g, action, choice)
+    assert(result == true, "should return true when actor matches owner")
+  end,
+  _test_validate_choice_actor_mismatch = function()
+    local g = _new_game()
+    local p1 = g.players[1]
+    local p2 = g.players[2]
+    local choice = { id = 1, owner_role_id = p1.id }
+    local action = { type = "choice_select", actor_role_id = p2.id }
+    local result = dispatch_validator.validate_choice_actor(g, action, choice)
+    assert(result == false, "should return false when actor does not match owner")
+  end,
+  _test_validate_choice_actor_no_owner = function()
+    local g = _new_game()
+    local p1 = g.players[1]
+    local choice = { id = 1 }
+    local action = { type = "choice_select", actor_role_id = p1.id }
+    local result = dispatch_validator.validate_choice_actor(g, action, choice)
+    assert(result == true, "should return true when choice has no owner")
+  end,
+  _test_validate_choice_actor_no_actor_id = function()
+    local g = _new_game()
+    local p1 = g.players[1]
+    local choice = { id = 1, owner_role_id = p1.id }
+    local action = { type = "choice_select" }
+    local result = dispatch_validator.validate_choice_actor(g, action, choice)
+    assert(result == false, "should return false when action has no actor_role_id")
+  end,
+  _test_log_missing_auto_choice_action_logs_once = function()
+    local g = _new_game()
+    local state = _build_loop_state()
+    runtime_state.ensure_debug_runtime(state)
+    local ctx = { pending_choice = { id = 123, kind = "test_choice" }, current_player_auto = true }
+    gameplay_loop._log_missing_auto_choice_action(state, ctx)
+    gameplay_loop._log_missing_auto_choice_action(state, ctx)
+    assert(state.debug_runtime.log_once["auto_runner_choice_no_action_123"] == true, "should mark log_once key")
+  end,
+  _test_log_missing_auto_choice_action_skips_when_waiting = function()
+    local g = _new_game()
+    local state = _build_loop_state()
+    runtime_state.ensure_debug_runtime(state)
+    state.auto_runner.waiting_for_interval = true
+    local ctx = { pending_choice = { id = 123, kind = "test_choice" }, current_player_auto = true }
+    gameplay_loop._log_missing_auto_choice_action(state, ctx)
+    assert(state.debug_runtime.log_once["auto_runner_choice_no_action_123"] == nil, "should not log when waiting for interval")
+  end,
+  _test_log_missing_auto_choice_action_skips_when_not_auto = function()
+    local g = _new_game()
+    local state = _build_loop_state()
+    runtime_state.ensure_debug_runtime(state)
+    local ctx = { pending_choice = { id = 123, kind = "test_choice" }, current_player_auto = false }
+    gameplay_loop._log_missing_auto_choice_action(state, ctx)
+    assert(state.debug_runtime.log_once["auto_runner_choice_no_action_123"] == nil, "should not log when not auto")
+  end,
 }
