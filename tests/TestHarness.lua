@@ -1,6 +1,8 @@
 require("tests.bootstrap")
 
 local log_capture = require("tests.support.log_capture")
+local number_utils = require("src.core.utils.number_utils")
+local runtime_ports = require("src.core.ports.runtime_ports")
 local unpack_args = table.unpack or unpack
 
 local function normalize_suite(suite, suite_index)
@@ -55,12 +57,31 @@ local function _run_hook(hook, ...)
   end, debug.traceback)
 end
 
+local function _start_timer()
+  return {
+    cpu = runtime_ports.cpu_now_seconds(),
+    wall = runtime_ports.wall_now_seconds(),
+  }
+end
+
+local function _elapsed_ms(timer)
+  local cpu_elapsed = runtime_ports.cpu_diff_seconds(runtime_ports.cpu_now_seconds(), timer.cpu)
+  local wall_elapsed = runtime_ports.wall_diff_seconds(runtime_ports.wall_now_seconds(), timer.wall)
+  local elapsed_seconds = cpu_elapsed
+  if elapsed_seconds <= 0 and wall_elapsed > 0 then
+    elapsed_seconds = wall_elapsed
+  end
+  return math.floor(elapsed_seconds * 1000)
+end
+
 local function run_all(suites, opts)
   opts = opts or {}
   local reporter = opts.reporter or _default_reporter()
   local total = 0
   local failures = {}
   local summary = {}
+  local slow_cases = {}
+  local slow_ms = number_utils.to_integer(os.getenv("MONO_TEST_SLOW_MS")) or 500
   local capture_logs = opts.capture_logs ~= false and os.getenv("MONO_TEST_VERBOSE") ~= "1"
 
   for suite_index, suite in ipairs(suites) do
@@ -78,6 +99,7 @@ local function run_all(suites, opts)
         }
         total = total + 1
         math.randomseed(1)
+        local timer = _start_timer()
         local before_ok, before_err = _run_hook(opts.before_case, context)
         local ok = before_ok
         local err = before_err
@@ -89,6 +111,14 @@ local function run_all(suites, opts)
         if ok and not after_ok then
           ok = false
           err = after_err
+        end
+        local elapsed_ms = _elapsed_ms(timer)
+        context.elapsed_ms = elapsed_ms
+        if elapsed_ms >= slow_ms then
+          slow_cases[#slow_cases + 1] = {
+            name = full_name,
+            ms = elapsed_ms,
+          }
         end
         if ok then
           log_capture.collect_summary(summary, captured)
@@ -105,6 +135,17 @@ local function run_all(suites, opts)
     end
   end
 
+  if #slow_cases > 0 then
+    print("")
+    print("Slow cases (>= " .. tostring(slow_ms) .. "ms):")
+    table.sort(slow_cases, function(left, right)
+      return left.ms > right.ms
+    end)
+    for _, entry in ipairs(slow_cases) do
+      print(string.format("  [%5dms] %s", entry.ms, entry.name))
+    end
+  end
+
   reporter.finish(summary, failures)
 
   local result = {
@@ -112,6 +153,7 @@ local function run_all(suites, opts)
     failures = failures,
     failed = #failures > 0,
     summary = summary,
+    slow_cases = slow_cases,
   }
 
   if #failures > 0 and opts.raise_on_failure ~= false then

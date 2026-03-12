@@ -57,6 +57,7 @@ local item_effects = require("src.game.systems.items.post_effects")
 local item_strategy = require("src.game.systems.items.strategy")
 local facing_policy = require("src.game.systems.board.facing_policy")
 local turn_start = require("src.game.flow.turn.start")
+local turn_script = require("src.game.flow.turn.script")
 local default_ports = require("src.game.runtime.default_ports")
 
 local function _mock_lua_api(send_custom_event)
@@ -1328,7 +1329,8 @@ local function _test_autorunner_runs_to_end()
   gameplay_loop.set_game(state, g)
 
   local turn_limit = gameplay_rules.turn_limit or 0
-  local max_steps = turn_limit * 40
+  local env_steps = number_utils.to_integer(os.getenv("MONO_TEST_AUTORUNNER_STEPS"))
+  local max_steps = env_steps or (turn_limit * 40)
   assert(max_steps > 0, "invalid turn_limit for autorunner test")
 
   local timeout = constants.action_timeout_seconds or 0
@@ -3440,6 +3442,225 @@ local function _test_turn_start_emits_turn_started_feedback_event()
   assert(emitted[1].payload.player_id == g:current_player().id, "turn_start should emit current player id")
 end
 
+local function _test_turn_start_waits_for_pre_action_item_phase_choice()
+  local g = _new_game()
+  local player = g:current_player()
+  local item_phase = require("src.game.systems.items.phase")
+
+  support.with_patches({
+    { target = item_phase, key = "run", value = function(_, phase_name, args)
+      assert(phase_name == "pre_action", "turn_start should run pre_action item phase")
+      assert(args and args.player == player, "turn_start should pass current player to item phase")
+      return {
+        waiting = true,
+        next_state = "roll",
+        next_args = { player = player, source = "pre_action" },
+      }
+    end },
+  }, function()
+    local next_state, next_args = turn_start({ game = g })
+    assert(next_state == "wait_choice", "waiting pre_action item phase should route to wait_choice")
+    assert(next_args and next_args.next_state == "roll", "wait_choice should preserve next state")
+    assert(next_args.next_args and next_args.next_args.source == "pre_action", "wait_choice should preserve next args")
+  end)
+end
+
+local function _test_turn_start_waits_for_pre_action_item_phase_action_anim()
+  local g = _new_game()
+  local player = g:current_player()
+  local item_phase = require("src.game.systems.items.phase")
+
+  support.with_patches({
+    { target = item_phase, key = "run", value = function()
+      return {
+        waiting = true,
+        wait_action_anim = true,
+        next_state = "roll",
+        next_args = { player = player, source = "action_anim" },
+      }
+    end },
+  }, function()
+    local next_state, next_args = turn_start({ game = g })
+    assert(next_state == "wait_action_anim", "wait_action_anim pre_action should route to wait_action_anim")
+    assert(next_args and next_args.next_state == "roll", "wait_action_anim should preserve next state")
+    assert(next_args.next_args and next_args.next_args.source == "action_anim", "wait_action_anim should preserve next args")
+  end)
+end
+
+local function _test_phase_registry_post_action_routes_wait_variants()
+  local g = _new_game()
+  local player = g:current_player()
+  local item_phase = require("src.game.systems.items.phase")
+  local phases = phase_registry.build_default_phases()
+
+  support.with_patches({
+    { target = item_phase, key = "run", value = function()
+      return {
+        waiting = true,
+        next_state = "post_action_done",
+        next_args = { player = player, source = "choice_wait" },
+      }
+    end },
+  }, function()
+    local next_state, next_args = phases.post_action({ game = g }, { player = player })
+    assert(next_state == "wait_choice", "post_action waiting without action anim should route to wait_choice")
+    assert(next_args and next_args.next_state == "post_action_done", "post_action wait_choice should preserve next state")
+    assert(next_args.next_args and next_args.next_args.source == "choice_wait", "post_action wait_choice should preserve next args")
+  end)
+
+  support.with_patches({
+    { target = item_phase, key = "run", value = function()
+      return {
+        waiting = true,
+        wait_action_anim = true,
+        next_state = "post_action_done",
+        next_args = { player = player, source = "action_wait" },
+      }
+    end },
+  }, function()
+    local next_state, next_args = phases.post_action({ game = g }, { player = player })
+    assert(next_state == "wait_action_anim", "post_action waiting with action anim should route to wait_action_anim")
+    assert(next_args and next_args.next_state == "post_action_done", "post_action wait_action_anim should preserve next state")
+    assert(next_args.next_args and next_args.next_args.source == "action_wait", "post_action wait_action_anim should preserve next args")
+  end)
+end
+
+local function _test_auto_runner_choice_actor_falls_back_to_choice_owner()
+  local auto_runner = require("src.game.flow.turn.auto_runner")
+  local auto_policy = require("src.game.flow.turn.choice_auto_policy")
+  local runner = auto_runner:new({ interval = 0 })
+  runner:set_enabled(true)
+
+  local g = _new_game()
+  local ai_player = g.players[2]
+  ai_player.auto = true
+  local action = nil
+  local original_decide = auto_policy.decide
+  auto_policy.decide = function()
+    return {
+      type = "choice_select",
+      choice_id = 901,
+      option_id = "use",
+    }
+  end
+  local ok, err = pcall(function()
+    action = runner:next_action((gameplay_rules.auto_choice_min_visible_seconds or 0) + 0.1, {
+      game = g,
+      pending_choice = {
+        id = 901,
+        kind = "steal_prompt",
+        owner_role_id = ai_player.id,
+        meta = {
+          player_id = ai_player.id,
+        },
+        options = { { id = "use" } },
+      },
+      current_player_id = g.players[1].id,
+      current_player_auto = true,
+    })
+  end)
+  auto_policy.decide = original_decide
+  assert(ok, err)
+
+  assert(action and action.type == "choice_select", "auto runner should resolve pending choice action")
+  assert(action.actor_role_id == ai_player.id, "auto runner should use pending choice owner as actor role")
+end
+
+local function _test_auto_runner_modal_without_buttons_confirms()
+  local auto_runner = require("src.game.flow.turn.auto_runner")
+  local runner = auto_runner:new({ interval = 0 })
+  runner:set_enabled(true)
+
+  local action = runner:next_action(0, {
+    modal_active = true,
+    modal_buttons = {},
+    current_player_auto = true,
+    current_player_id = 2,
+  })
+
+  assert(action and action.type == "modal_confirm", "modal without buttons should fall back to modal_confirm")
+end
+
+local function _test_turn_script_dispatches_wait_states_and_move_followup_fallback()
+  local g = _new_game()
+  local script_calls = {}
+  local phase_calls = {}
+  local session = {
+    game = g,
+    current_state = "move_followup",
+    current_args = { mode = "resume_turn_move" },
+    phases = {},
+    mark_phase = function(_, name)
+      script_calls[#script_calls + 1] = name
+    end,
+  }
+
+  local move_followup_module = require("src.game.flow.turn.move_followup")
+  support.with_patches({
+    { target = move_followup_module, key = "run", value = function(_, args)
+      phase_calls[#phase_calls + 1] = "move_followup"
+      assert(args and args.mode == "resume_turn_move", "turn_script should pass move_followup args through fallback")
+      return nil
+    end },
+  }, function()
+    local co = turn_script.create(session)
+    local first_ok = coroutine.resume(co)
+    assert(first_ok == true, "turn_script should execute move_followup fallback state")
+    assert(session.finished == true, "turn_script should finish after move_followup fallback")
+  end)
+
+  assert(phase_calls[1] == "move_followup", "turn_script should fallback to move_followup handler")
+  assert(script_calls[1] == "move_followup", "turn_script should mark move_followup phase")
+end
+
+local function _test_intent_dispatcher_dispatch_handles_popup_and_ignores_invalid_payload()
+  local g = _new_game()
+  local pushed = {}
+  g.popup_port = {
+    push_popup = function(_, payload)
+      pushed[#pushed + 1] = payload
+    end,
+  }
+
+  local pushed_ok = intent_dispatcher.dispatch(g, {
+    intent = {
+      kind = "push_popup",
+      payload = { message = "popup" },
+    },
+  })
+  local ignored = intent_dispatcher.dispatch(g, { intent = "invalid" })
+
+  assert(pushed_ok == true, "dispatch should route push_popup intents")
+  assert(#pushed == 1 and pushed[1].message == "popup", "dispatch should forward popup payload")
+  assert(ignored == nil, "dispatch should ignore invalid intent payloads")
+end
+
+local function _test_ai_board_target_choice_falls_back_to_first_option()
+  local agent = require("src.game.ai.agent")
+  local g = _new_game()
+  local ai_player = g.players[2]
+  ai_player.auto = true
+  local choice = {
+    id = 321,
+    kind = "roadblock_target",
+    meta = {
+      player_id = ai_player.id,
+    },
+    options = { { id = 8 }, { id = 9 } },
+  }
+
+  support.with_patches({
+    { target = agent, key = "pick_roadblock_target", value = function()
+      return nil
+    end },
+  }, function()
+    local action = agent.auto_action_for_choice(g, choice)
+    assert(action and action.type == "choice_select", "AI roadblock target should produce choice_select")
+    assert(action.option_id == 8, "AI roadblock target should fall back to first option when probe returns nil")
+    assert(action.actor_role_id == ai_player.id, "AI roadblock target should preserve owner role")
+  end)
+end
+
 local function _test_profile_rotation_switches_game_after_turn_limit()
   local old_game = {
     turn = {
@@ -3702,6 +3923,14 @@ return {
   _test_turn_prompt_initialized_for_first_player = _test_turn_prompt_initialized_for_first_player,
   _test_turn_prompt_emitted_on_next_player_switch = _test_turn_prompt_emitted_on_next_player_switch,
   _test_turn_start_emits_turn_started_feedback_event = _test_turn_start_emits_turn_started_feedback_event,
+  _test_turn_start_waits_for_pre_action_item_phase_choice = _test_turn_start_waits_for_pre_action_item_phase_choice,
+  _test_turn_start_waits_for_pre_action_item_phase_action_anim = _test_turn_start_waits_for_pre_action_item_phase_action_anim,
+  _test_phase_registry_post_action_routes_wait_variants = _test_phase_registry_post_action_routes_wait_variants,
+  _test_auto_runner_choice_actor_falls_back_to_choice_owner = _test_auto_runner_choice_actor_falls_back_to_choice_owner,
+  _test_auto_runner_modal_without_buttons_confirms = _test_auto_runner_modal_without_buttons_confirms,
+  _test_turn_script_dispatches_wait_states_and_move_followup_fallback = _test_turn_script_dispatches_wait_states_and_move_followup_fallback,
+  _test_intent_dispatcher_dispatch_handles_popup_and_ignores_invalid_payload = _test_intent_dispatcher_dispatch_handles_popup_and_ignores_invalid_payload,
+  _test_ai_board_target_choice_falls_back_to_first_option = _test_ai_board_target_choice_falls_back_to_first_option,
   _test_turn_dispatch_uses_clock_ports_without_game_api = _test_turn_dispatch_uses_clock_ports_without_game_api,
   _test_gameplay_loop_set_game_uses_narrow_runtime_ports = _test_gameplay_loop_set_game_uses_narrow_runtime_ports,
   _test_gameplay_loop_set_game_defers_visual_ports_during_landing_hold = _test_gameplay_loop_set_game_defers_visual_ports_during_landing_hold,

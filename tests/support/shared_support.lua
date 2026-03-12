@@ -30,6 +30,11 @@ local tile = require("src.game.systems.board.tile")
 local test_env = require("support.test_env")
 local presentation_runtime_deps = require("src.presentation.runtime.deps")
 local presentation_ports = require("src.presentation.runtime.ports")
+local logger = require("src.core.utils.logger")
+local runtime_context = require("src.infrastructure.runtime.context")
+local runtime_ports = require("src.core.ports.runtime_ports")
+local runtime_default_ports = require("src.infrastructure.runtime.default_ports")
+local paid_purchase_port = require("src.game.systems.market.ports.paid_purchase_port")
 local default_ports = require("src.game.runtime.default_ports")
 
 local function assert_eq(a, b, msg)
@@ -105,6 +110,69 @@ local function _refresh_runtime_context_for_tests()
   })
 end
 
+local _RUNTIME_CONTEXT_KEYS = {
+  GameAPI = true,
+  LuaAPI = true,
+  SetTimeOut = true,
+  RegisterCustomEvent = true,
+  RegisterTriggerEvent = true,
+  TriggerCustomEvent = true,
+  vehicle_helper = true,
+  camera_helper = true,
+  change_skin_helper = true,
+  all_roles = true,
+  ALLROLES = true,
+  get_vehicle_player = true,
+  get_vehicle_move_direction = true,
+  get_vehicle_move_time = true,
+  get_spawn_vehicle_id = true,
+  get_camera_target = true,
+  get_skin_id = true,
+  get_change_skin_role = true,
+}
+
+local function _patches_need_context_refresh(patches)
+  for _, patch in ipairs(patches) do
+    local target = patch.target
+    if (target == nil or target == _G) and _RUNTIME_CONTEXT_KEYS[patch.key] then
+      return true
+    end
+  end
+  return false
+end
+
+local function _refresh_runtime_services_for_tests()
+  local ctx = runtime_context.current()
+  if ctx == nil or ctx.env == nil then
+    return _refresh_runtime_context_for_tests()
+  end
+
+  runtime_ports.reset_for_tests()
+  runtime_ports.configure(runtime_default_ports.build(runtime_context))
+  paid_purchase_port.reset_for_tests()
+  paid_purchase_port.configure(require("src.app.bootstrap.payment.eggy_paid_purchase_gateway"))
+  logger.configure_host_runtime({
+    game_api = GameAPI,
+    tip_presenter = function(text, duration)
+      if GlobalAPI and type(GlobalAPI.show_tips) == "function" then
+        return GlobalAPI.show_tips(text, duration)
+      end
+      return false
+    end,
+    scheduler = function(delay, fn)
+      if type(SetTimeOut) == "function" then
+        return SetTimeOut(delay, fn)
+      end
+      if fn then
+        fn()
+        return true
+      end
+      return false
+    end,
+  })
+  return ctx
+end
+
 local function with_patches(patches, fn, opts)
   local patch_opts = opts or {}
   local originals = {}
@@ -113,8 +181,12 @@ local function with_patches(patches, fn, opts)
     originals[i] = { target = target, key = patch.key, value = target[patch.key] }
     target[patch.key] = patch.value
   end
-  if not patch_opts.skip_runtime_context_refresh then
+  local need_refresh = not patch_opts.skip_runtime_context_refresh
+      and _patches_need_context_refresh(patches)
+  if need_refresh then
     _refresh_runtime_context_for_tests()
+  elseif not patch_opts.skip_runtime_context_refresh then
+    _refresh_runtime_services_for_tests()
   end
   local handler = debug and debug.traceback or function(err) return err end
   local ok, err = xpcall(fn, handler)
@@ -122,8 +194,10 @@ local function with_patches(patches, fn, opts)
     local patch = originals[i]
     patch.target[patch.key] = patch.value
   end
-  if not patch_opts.skip_runtime_context_refresh then
+  if need_refresh then
     _refresh_runtime_context_for_tests()
+  elseif not patch_opts.skip_runtime_context_refresh then
+    _refresh_runtime_services_for_tests()
   end
   if not ok then
     error(err)

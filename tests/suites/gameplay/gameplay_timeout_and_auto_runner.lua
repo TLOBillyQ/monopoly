@@ -27,6 +27,8 @@ return {
     _case("_test_profile_rotation_disables_auto_runner_after_last_profile"),
     _case("_test_auto_runner_auto_advances_ai_player"),
     _case("_test_auto_runner_human_turn_not_auto_advanced"),
+    _case("_test_auto_runner_choice_actor_falls_back_to_choice_owner"),
+    _case("_test_auto_runner_modal_without_buttons_confirms"),
     _case("_test_auto_runner_not_advanced_when_input_blocked"),
     _case("_test_auto_runner_depends_on_current_player_auto"),
     _case("_test_tick_choice_timeout_warning_ignores_non_modal_or_non_local_choice"),

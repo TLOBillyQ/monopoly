@@ -328,6 +328,68 @@ local function _test_await_action_anim_advances_through_queue()
   assert(second.next_args and second.next_args.ok == true, "queue drain should preserve next args")
 end
 
+local function _test_await_move_anim_waits_for_matching_seq()
+  local g = support.new_game()
+  g.turn.move_anim = { seq = 11, player_id = g:current_player().id }
+  local session = _new_await_session(g, {
+    type = "move_anim_done",
+    seq = 99,
+  })
+
+  local first = await.move_anim(session, { next_state = "done", next_args = { ok = true } })
+  assert(first and first.wait == true, "mismatched move_anim seq should keep waiting")
+  assert(g.turn.move_anim and g.turn.move_anim.seq == 11, "mismatched move_anim seq should keep active anim")
+
+  session._action = {
+    type = "move_anim_done",
+    seq = 11,
+  }
+  local second = await.move_anim(session, { next_state = "done", next_args = { ok = true } })
+  assert(second and second.next_state == "done", "matching move_anim seq should resume next state")
+  assert(second.next_args and second.next_args.ok == true, "move_anim should preserve next args")
+  assert(g.turn.move_anim == nil, "matching move_anim seq should clear active anim")
+end
+
+local function _test_await_landing_visual_marks_release_pending_after_wait()
+  local g = support.new_game()
+  landing_visual_hold.start(g)
+  local session = _new_await_session(g)
+
+  local first = await.landing_visual(session, { next_state = "done", next_args = { ok = true } })
+  assert(first and first.wait == true, "landing visual should wait on first entry")
+  assert(g.turn.landing_visual_wait_started == true, "landing visual should arm wait state")
+  assert(g.turn.landing_visual_wait_ready == true, "landing visual test scheduler should mark wait ready")
+
+  local second = await.landing_visual(session, { next_state = "done", next_args = { ok = true } })
+  assert(second and second.next_state == "done", "landing visual should resume after timer fires")
+  assert(second.next_args and second.next_args.ok == true, "landing visual should preserve next args")
+  assert(g.turn.landing_visual_release_pending == true, "landing visual should mark release pending on completion")
+end
+
+local function _test_await_inter_turn_wait_clears_action_and_advances_player()
+  local g = support.new_game()
+  g.turn.inter_turn_wait_active = true
+  local next_calls = 0
+  local session = _new_await_session(g, {
+    type = "noop",
+  })
+  function session:next_player()
+    next_calls = next_calls + 1
+    self.game.turn.current_player_index = 2
+  end
+
+  local first = await.inter_turn(session, { resumed = true })
+  assert(first and first.wait == true, "active inter-turn wait should keep waiting")
+  assert(session._action == nil, "active inter-turn wait should clear pending action")
+
+  g.turn.inter_turn_wait_active = false
+  local second = await.inter_turn(session, { resumed = true })
+  assert(second and second.next_state == "start", "completed inter-turn wait should resume at start")
+  assert(second.next_args and second.next_args.resumed == true, "inter-turn wait should preserve args")
+  assert(next_calls == 1, "inter-turn wait should advance to next player once")
+  assert(g.turn.current_player_index == 2, "inter-turn wait should move to next player")
+end
+
 local function _test_await_seconds_waits_until_elapsed()
   local session = { _seconds_wait = {} }
   local times = { 10, 12, 15 }
@@ -392,6 +454,18 @@ return {
     {
       name = "await_action_anim_advances_through_queue",
       run = _test_await_action_anim_advances_through_queue,
+    },
+    {
+      name = "await_move_anim_waits_for_matching_seq",
+      run = _test_await_move_anim_waits_for_matching_seq,
+    },
+    {
+      name = "await_landing_visual_marks_release_pending_after_wait",
+      run = _test_await_landing_visual_marks_release_pending_after_wait,
+    },
+    {
+      name = "await_inter_turn_wait_clears_action_and_advances_player",
+      run = _test_await_inter_turn_wait_clears_action_and_advances_player,
     },
     {
       name = "await_seconds_waits_until_elapsed",

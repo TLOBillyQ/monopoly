@@ -1,4 +1,5 @@
 local M = {}
+local _resolved_mode = nil
 
 local function _validate_mode(mode)
   assert(
@@ -8,13 +9,20 @@ local function _validate_mode(mode)
 end
 
 function M.resolve_behavior_mode(explicit_mode)
-  local raw = explicit_mode
-  if raw == nil or raw == "" then
-    raw = os.getenv("MONO_REGRESSION_MODE")
+  if explicit_mode and explicit_mode ~= "" then
+    _validate_mode(explicit_mode)
+    return explicit_mode
   end
+
+  if _resolved_mode ~= nil then
+    return _resolved_mode
+  end
+
+  local raw = os.getenv("MONO_REGRESSION_MODE")
   local mode = (raw and raw ~= "") and raw or "auto"
   _validate_mode(mode)
   if mode ~= "auto" then
+    _resolved_mode = mode
     return mode
   end
 
@@ -22,19 +30,23 @@ function M.resolve_behavior_mode(explicit_mode)
   local market_cfg = require("Config.generated.market")
   local chance_cfg = require("Config.generated.chance_cards")
   if #vehicles_cfg > 0 then
-    return "dev"
+    _resolved_mode = "dev"
+    return _resolved_mode
   end
   for _, row in ipairs(market_cfg) do
     if row.kind == "vehicle" then
-      return "dev"
+      _resolved_mode = "dev"
+      return _resolved_mode
     end
   end
   for _, card in ipairs(chance_cfg) do
     if card.effect == "set_vehicle" then
-      return "dev"
+      _resolved_mode = "dev"
+      return _resolved_mode
     end
   end
-  return "release_trimmed"
+  _resolved_mode = "release_trimmed"
+  return _resolved_mode
 end
 
 return M
