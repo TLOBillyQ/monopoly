@@ -1181,6 +1181,68 @@ local function _test_item_phase_ask_confirm_clears_highlight_suppress()
   _assert_eq(closed, 1, "item_phase ask confirm should close modal once")
 end
 
+local function _test_item_phase_ask_single_option_pre_confirm_dispatches_choice_select()
+  local item_phase_ask_flow = require("src.presentation.input.intent_dispatch.item_phase_ask")
+  local dispatched = {}
+  local closed = 0
+  local state = {
+    _item_phase_ask_active = true,
+    _item_phase_confirmed = nil,
+    _suppress_item_slot_highlight_until_pick = true,
+    gameplay_loop_ports = {
+      modal = {
+        close_choice_modal = function()
+          closed = closed + 1
+        end,
+      },
+    },
+    ui_model = {
+      choice = {
+        id = 88,
+        kind = "item_phase_choice",
+        route_key = "base_inline",
+        uses_item_slots = true,
+        pre_confirm_before_slot_pick = true,
+        options = {
+          { id = 2002, label = "导弹卡" },
+        },
+      },
+    },
+    ui = ui_view.build_ui_state(),
+  }
+  _bind_ui_runtime(state)
+
+  local handled = false
+  _with_patches({}, function()
+    handled = item_phase_ask_flow.dispatch(state, {}, {
+      type = "choice_select",
+      actor_role_id = 5,
+    }, {
+      source = "item_phase_ask",
+    }, {
+      dispatch_action = function(_, _, action, opts)
+        dispatched[#dispatched + 1] = {
+          action = action,
+          opts = opts,
+        }
+      end,
+    })
+  end)
+
+  _assert_eq(handled, true, "single-option item_phase_ask confirm should be handled")
+  _assert_eq(state._item_phase_ask_active, nil, "single-option item_phase_ask should clear active flag")
+  _assert_eq(state._item_phase_confirmed, true, "single-option item_phase_ask should mark confirmed")
+  _assert_eq(closed, 1, "single-option item_phase_ask should close modal once")
+  _assert_eq(dispatched[1] and dispatched[1].action and dispatched[1].action.type, "choice_select",
+    "single-option item_phase_ask should dispatch choice_select directly")
+  _assert_eq(dispatched[1] and dispatched[1].action and dispatched[1].action.choice_id, 88,
+    "single-option item_phase_ask should keep choice id")
+  _assert_eq(dispatched[1] and dispatched[1].action and dispatched[1].action.option_id, 2002,
+    "single-option item_phase_ask should select the only option")
+  _assert_eq(dispatched[1] and dispatched[1].action and dispatched[1].action.actor_role_id, 5,
+    "single-option item_phase_ask should preserve actor role id")
+end
+
 local function _test_item_phase_confirmed_skips_replay_before_slot_click()
   local ui_events = require("src.presentation.runtime.events")
   local events = {}
@@ -1926,6 +1988,7 @@ return {
   { name = "_test_modal_presenter_market_same_choice_id_still_refreshes_market_panel", run = _test_modal_presenter_market_same_choice_id_still_refreshes_market_panel },
   { name = "_test_ui_event_router_market_cancel_button_dispatches_choice_cancel", run = _test_ui_event_router_market_cancel_button_dispatches_choice_cancel },
   { name = "_test_item_phase_ask_confirm_clears_highlight_suppress", run = _test_item_phase_ask_confirm_clears_highlight_suppress },
+  { name = "_test_item_phase_ask_single_option_pre_confirm_dispatches_choice_select", run = _test_item_phase_ask_single_option_pre_confirm_dispatches_choice_select },
   { name = "_test_item_phase_confirmed_skips_replay_before_slot_click", run = _test_item_phase_confirmed_skips_replay_before_slot_click },
   { name = "_test_item_slot_refresh_item_phase_ask_replays_highlight_then_reveals_outlines", run = _test_item_slot_refresh_item_phase_ask_replays_highlight_then_reveals_outlines },
   { name = "_test_item_slot_refresh_resets_highlight_without_client_role", run = _test_item_slot_refresh_resets_highlight_without_client_role },

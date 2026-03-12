@@ -69,6 +69,7 @@ local case_groups = {
     "_test_item_slot_refresh_shows_only_playable_outlines",
     "_test_item_slot_intents_include_outline_nodes",
     "_test_item_phase_ask_confirm_clears_highlight_suppress",
+    "_test_item_phase_ask_single_option_pre_confirm_dispatches_choice_select",
     "_test_item_phase_confirmed_skips_replay_before_slot_click",
     "_test_item_slot_refresh_item_phase_ask_replays_highlight_then_reveals_outlines",
     "_test_item_slot_refresh_resets_highlight_without_client_role",

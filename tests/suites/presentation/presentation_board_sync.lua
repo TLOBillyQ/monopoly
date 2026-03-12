@@ -584,6 +584,77 @@ local function _test_tile_renderer_renders_land_metadata()
   assert(captured.color ~= nil, "tile renderer should render owner color")
 end
 
+local function _test_player_units_resolve_roles_by_name_and_role_id()
+  local player_units = require("src.presentation.view.render.board.player_units")
+  local resolved_role = {
+    get_roleid = function()
+      return 1
+    end,
+    get_name = function()
+      return "P1"
+    end,
+    get_ctrl_unit = function()
+      return { unit = "unit_1" }
+    end,
+  }
+  local state = {}
+  local players = {
+    { id = 1, name = "P1" },
+  }
+  local log_calls = {}
+
+  _with_patches({
+    { target = require("src.core.ports.runtime_ports"), key = "resolve_roles", value = function()
+      return { resolved_role }
+    end },
+  }, function()
+    player_units.ensure_player_units(state, players, function(_, _, key)
+      log_calls[#log_calls + 1] = key
+    end, function()
+      return "presentation_board_sync"
+    end)
+  end)
+
+  _assert_eq(state.player_units[1] and state.player_units[1].unit, "unit_1",
+    "player_units should map runtime unit by role id/name")
+  _assert_eq(state.player_units_missing, false, "player_units should clear missing flag after mapping")
+  _assert_eq(log_calls[1], "player_units_ready", "player_units should emit ready log once")
+end
+
+local function _test_player_units_falls_back_to_resolve_role_when_roles_list_missing()
+  local player_units = require("src.presentation.view.render.board.player_units")
+  local state = {}
+  local players = {
+    { id = 2, name = "P2" },
+  }
+
+  _with_patches({
+    { target = require("src.core.ports.runtime_ports"), key = "resolve_roles", value = function()
+      return {}
+    end },
+    { target = require("src.core.ports.runtime_ports"), key = "resolve_role", value = function(player_id)
+      if player_id == 2 then
+        return {
+          get_roleid = function()
+            return 2
+          end,
+          get_ctrl_unit = function()
+            return { unit = "unit_2" }
+          end,
+        }
+      end
+      return nil
+    end },
+  }, function()
+    player_units.ensure_player_units(state, players, function() end, function()
+      return "presentation_board_sync"
+    end)
+  end)
+
+  _assert_eq(state.player_units[2] and state.player_units[2].unit, "unit_2",
+    "player_units should fall back to resolve_role when resolve_roles is empty")
+end
+
 return {
   name = "presentation.board_sync",
   tests = {
@@ -638,6 +709,14 @@ return {
     {
       name = "_test_tile_renderer_renders_land_metadata",
       run = _test_tile_renderer_renders_land_metadata,
+    },
+    {
+      name = "_test_player_units_resolve_roles_by_name_and_role_id",
+      run = _test_player_units_resolve_roles_by_name_and_role_id,
+    },
+    {
+      name = "_test_player_units_falls_back_to_resolve_role_when_roles_list_missing",
+      run = _test_player_units_falls_back_to_resolve_role_when_roles_list_missing,
     },
   },
 }

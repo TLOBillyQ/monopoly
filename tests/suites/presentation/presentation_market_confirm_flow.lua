@@ -213,6 +213,68 @@ local function _test_ui_intent_dispatcher_market_confirm_without_pre_confirm_fla
     "direct dispatch should keep selected option id when pre-confirm flag missing")
 end
 
+local function _test_ui_intent_dispatcher_item_slot_pre_confirm_opens_secondary_confirm()
+  local opened_pre_confirm = nil
+  local dispatched = {}
+  local state = {
+    turn_action_port = {
+      dispatch_action = function(_, _, action)
+        dispatched[#dispatched + 1] = action
+      end,
+      should_block_action = function()
+        return false
+      end,
+    },
+    ui_model = {
+      choice = {
+        id = 21,
+        kind = "item_phase_choice",
+        route_key = "base_inline",
+        uses_item_slots = true,
+        pre_confirm_before_slot_pick = true,
+        options = {
+          { id = 2001, label = "路障卡" },
+          { id = 2002, label = "导弹卡" },
+        },
+      },
+    },
+    ui = {
+      input_blocked = false,
+      active_choice_screen_key = "base_inline",
+      item_slot_item_ids = { 2002, 2001 },
+      item_slot_item_ids_by_role = {},
+    },
+    game = {},
+  }
+  _bind_ui_runtime(state)
+
+  _with_patches({
+    { target = choice_openers, key = "open_pre_confirm_screen", value = function(_, _, option_id, title, body)
+      opened_pre_confirm = {
+        option_id = option_id,
+        title = title,
+        body = body,
+      }
+    end },
+  }, function()
+    ui_intent_dispatcher.dispatch(state, {}, {
+      type = "ui_button",
+      id = "item_slot_1",
+      actor_role_id = 7,
+    }, {})
+  end)
+
+  _assert_eq(#dispatched, 0, "item slot pre-confirm should defer dispatch until secondary confirm")
+  _assert_eq(state._pre_confirm_active, true, "item slot pre-confirm should activate pre-confirm state")
+  _assert_eq(state._pre_confirm_source_screen, "base_inline", "item slot pre-confirm should preserve source screen")
+  _assert_eq(opened_pre_confirm and opened_pre_confirm.option_id, 2002,
+    "item slot pre-confirm should resolve option id from slot payload")
+  _assert_eq(type(opened_pre_confirm and opened_pre_confirm.title), "string",
+    "item slot pre-confirm should build title text")
+  _assert_eq(type(opened_pre_confirm and opened_pre_confirm.body), "string",
+    "item slot pre-confirm should build body text")
+end
+
 return {
   name = "presentation.market_confirm_flow",
   tests = {
@@ -220,5 +282,6 @@ return {
     { name = "_test_ui_intent_dispatcher_market_confirm_skin_cancel_restores_market", run = _test_ui_intent_dispatcher_market_confirm_skin_cancel_restores_market },
     { name = "_test_ui_intent_dispatcher_market_confirm_non_skin_still_direct_dispatch", run = _test_ui_intent_dispatcher_market_confirm_non_skin_still_direct_dispatch },
     { name = "_test_ui_intent_dispatcher_market_confirm_without_pre_confirm_flag_dispatches_directly", run = _test_ui_intent_dispatcher_market_confirm_without_pre_confirm_flag_dispatches_directly },
+    { name = "_test_ui_intent_dispatcher_item_slot_pre_confirm_opens_secondary_confirm", run = _test_ui_intent_dispatcher_item_slot_pre_confirm_opens_secondary_confirm },
   },
 }

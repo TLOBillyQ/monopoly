@@ -515,6 +515,50 @@ local function _test_action_anim_cash_receive_routes_board_feedback()
   assert(calls[1].amount == 500, "cash cue should preserve amount")
 end
 
+local function _test_anim_tip_text_builds_named_player_and_clear_obstacles_copy()
+  local tip_text = require("src.presentation.view.render.anim_tip_text")
+  local state = _build_state()
+
+  local target_copy = tip_text.build(state, {
+    kind = "item_target_player",
+    item_name = "导弹卡",
+    target_player_id = 1,
+  })
+  local clear_copy = tip_text.build(state, {
+    kind = "clear_obstacles",
+    cleared_indices = { 3, 4, 5 },
+  })
+
+  assert(target_copy == "目标道具：导弹卡 -> 玩家 测试玩家",
+    "item_target_player tip should resolve runtime player name")
+  assert(clear_copy == "清障动画：清除数量 3",
+    "clear_obstacles tip should count removed indices")
+end
+
+local function _test_anim_tip_text_falls_back_for_unknown_player_and_change_skin()
+  local tip_text = require("src.presentation.view.render.anim_tip_text")
+  local state = _build_state()
+  state.game.find_player_by_id = function()
+    return nil
+  end
+
+  local target_copy = tip_text.build(state, {
+    kind = "item_target_player",
+    item_id = 2009,
+    target_player_id = 99,
+  })
+  local change_skin_copy = tip_text.build(state, {
+    kind = "change_skin",
+    player_id = 99,
+    skin_name = "海绵宝宝",
+  })
+
+  assert(target_copy == "目标道具：2009 -> 玩家 99",
+    "item_target_player tip should fall back to raw player id when lookup is missing")
+  assert(change_skin_copy == "换肤动画：99 -> 海绵宝宝",
+    "change_skin tip should fall back to raw player id when lookup is missing")
+end
+
 return {
   name = "presentation.action_anim_core",
   tests = {
@@ -527,6 +571,8 @@ return {
     { name = "host_runtime_sfx_port_skips_missing_keys_and_routes_valid_calls", run = _test_host_runtime_sfx_port_skips_missing_keys_and_routes_valid_calls },
     { name = "action_anim_upgrade_land_routes_board_feedback", run = _test_action_anim_upgrade_land_routes_board_feedback },
     { name = "action_anim_cash_receive_routes_board_feedback", run = _test_action_anim_cash_receive_routes_board_feedback },
+    { name = "anim_tip_text_builds_named_player_and_clear_obstacles_copy", run = _test_anim_tip_text_builds_named_player_and_clear_obstacles_copy },
+    { name = "anim_tip_text_falls_back_for_unknown_player_and_change_skin", run = _test_anim_tip_text_falls_back_for_unknown_player_and_change_skin },
     { name = "action_anim_roll_screen_two_stage_timeline", run = _test_action_anim_roll_screen_two_stage_timeline },
     { name = "action_anim_roll_screen_fallback_face_when_invalid", run = _test_action_anim_roll_screen_fallback_face_when_invalid },
   },
