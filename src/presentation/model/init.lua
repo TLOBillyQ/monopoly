@@ -123,6 +123,50 @@ local function _fill_runtime_meta(model, env)
   model.winner_name = env.winner_name
 end
 
+local function _refresh_board_and_auto_labels(model, game, env, turn, dirty, ui_dirty)
+  if _should_update_board(dirty) then
+    model.board = board_slice.update(model.board, game, env, turn)
+  end
+
+  if _should_update_auto_labels(dirty, ui_dirty) then
+    model.auto_enabled_by_player = item_slice.build_auto_enabled_by_player(game.players)
+  end
+end
+
+local function _refresh_panel_and_slots(model, game, env, turn, current, current_player_id, ui_runtime, dirty, ui_dirty)
+  model.panel = panel_slice.update(
+    model.panel,
+    game,
+    env,
+    turn,
+    current_player_id,
+    model.auto_enabled_by_player,
+    _build_panel_flags(dirty, ui_dirty)
+  )
+
+  local update_slots = _should_update_slots(dirty, ui_dirty)
+  if update_slots then
+    _update_slots(model, game, current, current_player_id, ui_runtime)
+  end
+  return update_slots
+end
+
+local function _refresh_choice_and_meta(model, game, env, ui_state, ui_runtime, current_name, current_cash, current_player_id, turn, dirty, ui_dirty, update_slots)
+  if _should_refresh_choice(dirty, ui_dirty) then
+    _update_choice_and_market(model, game, env, ui_state, current_player_id)
+  elseif dirty.players or update_slots then
+    model.item_choice_owner_id = item_slice.resolve_item_choice_owner_id(game, model.choice, current_player_id)
+  end
+
+  if ui_dirty then
+    model.popup = choice_slice.build_popup(ui_runtime)
+  end
+
+  if dirty.players or dirty.turn then
+    _update_current_player_meta(model, current_name, current_cash, current_player_id, turn)
+  end
+end
+
 function model_api.build(game, env)
   assert(game ~= nil, "missing game")
   env = env or _build_ui_env(nil, game)
@@ -167,42 +211,32 @@ function model_api.update(prev, game, env, dirty)
   local ui_dirty = dirty.ui == true
   local model = prev
 
-  if _should_update_board(dirty) then
-    model.board = board_slice.update(model.board, game, env, turn)
-  end
-
-  if _should_update_auto_labels(dirty, ui_dirty) then
-    model.auto_enabled_by_player = item_slice.build_auto_enabled_by_player(game.players)
-  end
-
-  model.panel = panel_slice.update(
-    model.panel,
+  _refresh_board_and_auto_labels(model, game, env, turn, dirty, ui_dirty)
+  local update_slots = _refresh_panel_and_slots(
+    model,
     game,
     env,
     turn,
+    current,
     current_player_id,
-    model.auto_enabled_by_player,
-    _build_panel_flags(dirty, ui_dirty)
+    ui_runtime,
+    dirty,
+    ui_dirty
   )
-
-  local update_slots = _should_update_slots(dirty, ui_dirty)
-  if update_slots then
-    _update_slots(model, game, current, current_player_id, ui_runtime)
-  end
-
-  if _should_refresh_choice(dirty, ui_dirty) then
-    _update_choice_and_market(model, game, env, ui_state, current_player_id)
-  elseif dirty.players or update_slots then
-    model.item_choice_owner_id = item_slice.resolve_item_choice_owner_id(game, model.choice, current_player_id)
-  end
-
-  if ui_dirty then
-    model.popup = choice_slice.build_popup(ui_runtime)
-  end
-
-  if dirty.players or dirty.turn then
-    _update_current_player_meta(model, current_name, current_cash, current_player_id, turn)
-  end
+  _refresh_choice_and_meta(
+    model,
+    game,
+    env,
+    ui_state,
+    ui_runtime,
+    current_name,
+    current_cash,
+    current_player_id,
+    turn,
+    dirty,
+    ui_dirty,
+    update_slots
+  )
 
   _fill_runtime_meta(model, env)
   return model

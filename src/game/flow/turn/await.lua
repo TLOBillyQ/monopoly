@@ -26,6 +26,7 @@ local function _move_anim_debug_log(...)
 end
 
 local function _resolve_wait_anim(game, opts)
+  opts = opts or {}
   local anim_key = opts.anim_key or "move_anim"
   return anim_key, game and game.turn and game.turn[anim_key] or nil
 end

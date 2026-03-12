@@ -678,6 +678,42 @@ local function _test_intent_dispatcher_logs_waiting_choice_event()
     "open_choice should log waiting-choice phase event")
 end
 
+local function _test_intent_dispatcher_dispatches_descriptor_meta_validator_without_required_keys()
+  local g = _new_game()
+  local validated = false
+  g.registries = {
+    choices = {
+      descriptor_for = function(_, kind)
+        if kind ~= "custom_probe" then
+          return nil
+        end
+        return {
+          normalize_meta = function(_, meta)
+            meta = meta or {}
+            meta.normalized = true
+            return meta
+          end,
+          meta_validator = function(_, meta, choice_spec)
+            validated = true
+            assert(meta.normalized == true, "descriptor meta_validator should receive normalized meta")
+            assert(choice_spec.kind == "custom_probe", "descriptor meta_validator should receive choice spec")
+          end,
+        }
+      end,
+    },
+  }
+
+  local entry = intent_dispatcher.open_choice(g, {
+    kind = "custom_probe",
+    title = "自定义流程",
+    options = { { id = 1, label = "A" } },
+    meta = {},
+  }, {})
+
+  assert(validated == true, "dispatcher should run descriptor meta_validator even without required_meta")
+  assert(entry.meta and entry.meta.normalized == true, "dispatcher should keep normalized meta on custom descriptor choices")
+end
+
 local function _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not()
   local g = _new_game()
 
@@ -3525,6 +3561,39 @@ local function _test_phase_registry_post_action_routes_wait_variants()
   end)
 end
 
+local function _test_turn_land_waits_for_move_followup_when_move_effect_queue_pending()
+  local turn_land = require("src.game.flow.turn.land")
+  local effect_pipeline = require("src.game.systems.effects.effect_pipeline")
+  local g = _new_game()
+  local player = g:current_player()
+  local move_result = { kind = "move_result" }
+  local tile = g.board:get_tile(player.position)
+  g.turn.action_anim_queue = {
+    { kind = "move_effect", seq = 41 },
+  }
+
+  support.with_patches({
+    { target = effect_pipeline, key = "run", value = function(_, _, _, _, opts)
+      return opts.on_need_landing({
+        player_id = player.id,
+        board_index = tile.id,
+        move_result = move_result,
+      })
+    end },
+  }, function()
+    local next_state, next_args = turn_land({ game = g }, {
+      player = player,
+      move_result = move_result,
+    })
+    assert(next_state == "wait_action_anim", "pending move_effect queue should defer landing followup behind wait_action_anim")
+    assert(next_args and next_args.next_state == "move_followup", "pending move_effect queue should resume through move_followup")
+    assert(next_args.next_args and next_args.next_args.mode == "resolve_landing", "move_followup should resume landing resolution mode")
+    assert(next_args.next_args.player_id == player.id, "move_followup should preserve target player id")
+    assert(next_args.next_args.move_result == move_result, "move_followup should preserve move result")
+    assert(g.turn.move_followup_pending == true, "pending move_effect queue should flag move_followup_pending")
+  end)
+end
+
 local function _test_auto_runner_choice_actor_falls_back_to_choice_owner()
   local auto_runner = require("src.game.flow.turn.auto_runner")
   local auto_policy = require("src.game.flow.turn.choice_auto_policy")
@@ -3867,6 +3936,8 @@ return {
   _test_intent_dispatcher_rejects_unknown_landing_optional_effect_tile = _test_intent_dispatcher_rejects_unknown_landing_optional_effect_tile,
   _test_turn_start_logs_phase_event_to_event_feed = _test_turn_start_logs_phase_event_to_event_feed,
   _test_intent_dispatcher_logs_waiting_choice_event = _test_intent_dispatcher_logs_waiting_choice_event,
+  _test_intent_dispatcher_dispatches_descriptor_meta_validator_without_required_keys =
+    _test_intent_dispatcher_dispatches_descriptor_meta_validator_without_required_keys,
   _test_choice_resolver_normalizes_market_buy_action_before_execute = _test_choice_resolver_normalizes_market_buy_action_before_execute,
   _test_choice_resolver_normalizes_roadblock_action_before_execute = _test_choice_resolver_normalizes_roadblock_action_before_execute,
   _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not = _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not,
@@ -3926,6 +3997,8 @@ return {
   _test_turn_start_waits_for_pre_action_item_phase_choice = _test_turn_start_waits_for_pre_action_item_phase_choice,
   _test_turn_start_waits_for_pre_action_item_phase_action_anim = _test_turn_start_waits_for_pre_action_item_phase_action_anim,
   _test_phase_registry_post_action_routes_wait_variants = _test_phase_registry_post_action_routes_wait_variants,
+  _test_turn_land_waits_for_move_followup_when_move_effect_queue_pending =
+    _test_turn_land_waits_for_move_followup_when_move_effect_queue_pending,
   _test_auto_runner_choice_actor_falls_back_to_choice_owner = _test_auto_runner_choice_actor_falls_back_to_choice_owner,
   _test_auto_runner_modal_without_buttons_confirms = _test_auto_runner_modal_without_buttons_confirms,
   _test_turn_script_dispatches_wait_states_and_move_followup_fallback = _test_turn_script_dispatches_wait_states_and_move_followup_fallback,

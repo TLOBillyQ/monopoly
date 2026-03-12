@@ -2,6 +2,7 @@ local support = require("support.gameplay_support")
 local turn_engine = require("src.game.flow.turn.engine")
 local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 local await = require("src.game.flow.turn.await")
+local logger = require("src.core.utils.logger")
 
 ---------------------------------------------------------------------------
 -- 1. coroutine mode default
@@ -350,6 +351,38 @@ local function _test_await_move_anim_waits_for_matching_seq()
   assert(g.turn.move_anim == nil, "matching move_anim seq should clear active anim")
 end
 
+local function _test_await_move_anim_debug_log_reports_pending_action_details()
+  local g = support.new_game()
+  g.turn.phase = "wait_move_anim"
+  g.turn.move_anim = { seq = 21 }
+  local session = _new_await_session(g, {
+    type = "move_anim_done",
+    seq = 99,
+  })
+  local captured = nil
+  local original_enabled = logger.is_anim_debug_enabled
+  local original_log = logger.info_unlimited
+  logger.is_anim_debug_enabled = function()
+    return true
+  end
+  logger.info_unlimited = function(...)
+    captured = table.concat({ ... }, "|")
+  end
+
+  local ok, err = pcall(function()
+    local res = await.move_anim(session, { next_state = "done", next_args = {} })
+    assert(res and res.wait == true, "mismatched move_anim seq should still wait while logging")
+  end)
+
+  logger.is_anim_debug_enabled = original_enabled
+  logger.info_unlimited = original_log
+  assert(ok, err)
+  assert(captured and captured:find("await_move_anim", 1, true) ~= nil, "move_anim debug log should include wait event name")
+  assert(captured:find("phase=wait_move_anim", 1, true) ~= nil, "move_anim debug log should include phase")
+  assert(captured:find("anim_seq=21", 1, true) ~= nil, "move_anim debug log should include anim seq")
+  assert(captured:find("pending_action_seq=99", 1, true) ~= nil, "move_anim debug log should include pending action seq")
+end
+
 local function _test_await_landing_visual_marks_release_pending_after_wait()
   local g = support.new_game()
   landing_visual_hold.start(g)
@@ -458,6 +491,10 @@ return {
     {
       name = "await_move_anim_waits_for_matching_seq",
       run = _test_await_move_anim_waits_for_matching_seq,
+    },
+    {
+      name = "await_move_anim_debug_log_reports_pending_action_details",
+      run = _test_await_move_anim_debug_log_reports_pending_action_details,
     },
     {
       name = "await_landing_visual_marks_release_pending_after_wait",

@@ -62,6 +62,53 @@ local function _set_node_touch_enabled_fallback(node, enabled)
   return true
 end
 
+local function _query_target_nodes(cache, name)
+  local nodes = cache and cache[name] or nil
+  if nodes and nodes[1] then
+    return nodes
+  end
+  local ok, result = pcall(runtime.query_nodes, name)
+  if not ok then
+    logger.info(
+      "[调试屏] 行动日志触控启用失败: query_nodes异常",
+      "node=" .. tostring(name),
+      "err=" .. tostring(result)
+    )
+    return nil
+  end
+  return result
+end
+
+local function _enable_target_nodes(name, nodes)
+  if not nodes or not nodes[1] then
+    logger.info("[调试屏] 行动日志触控启用失败: 未找到节点", "node=" .. tostring(name))
+    return 0
+  end
+  local enabled_count = 0
+  for index, node in ipairs(nodes) do
+    local ok, err = pcall(_set_node_touch_enabled_fallback, node, true)
+    if ok then
+      enabled_count = enabled_count + 1
+    else
+      logger.info(
+        "[调试屏] 行动日志触控启用失败: 节点触控设置异常",
+        "node=" .. tostring(name),
+        "index=" .. tostring(index),
+        "err=" .. tostring(err)
+      )
+    end
+  end
+  return enabled_count
+end
+
+local function _enable_action_log_targets(cache, targets)
+  local enabled_count = 0
+  for _, name in ipairs(targets) do
+    enabled_count = enabled_count + _enable_target_nodes(name, _query_target_nodes(cache, name))
+  end
+  return enabled_count
+end
+
 function bindings.enable_action_log_toggle_touch(cache, ui)
   local targets = always_show_contract.action_log.toggle_targets or {}
   local enabled_count = 0
@@ -84,38 +131,7 @@ function bindings.enable_action_log_toggle_touch(cache, ui)
   end
 
   if not main_path_ok then
-    for _, name in ipairs(targets) do
-      local nodes = cache and cache[name] or nil
-      if not nodes or not nodes[1] then
-        local ok, result = pcall(runtime.query_nodes, name)
-        if not ok then
-          logger.info(
-            "[调试屏] 行动日志触控启用失败: query_nodes异常",
-            "node=" .. tostring(name),
-            "err=" .. tostring(result)
-          )
-        else
-          nodes = result
-        end
-      end
-      if nodes and nodes[1] then
-        for index, node in ipairs(nodes) do
-          local ok, err = pcall(_set_node_touch_enabled_fallback, node, true)
-          if ok then
-            enabled_count = enabled_count + 1
-          else
-            logger.info(
-              "[调试屏] 行动日志触控启用失败: 节点触控设置异常",
-              "node=" .. tostring(name),
-              "index=" .. tostring(index),
-              "err=" .. tostring(err)
-            )
-          end
-        end
-      else
-        logger.info("[调试屏] 行动日志触控启用失败: 未找到节点", "node=" .. tostring(name))
-      end
-    end
+    enabled_count = _enable_action_log_targets(cache, targets)
   end
 
   pcall(runtime.set_client_role, nil)

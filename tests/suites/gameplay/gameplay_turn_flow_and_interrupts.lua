@@ -15,6 +15,7 @@ return {
     _case("_test_turn_start_waits_for_pre_action_item_phase_choice"),
     _case("_test_turn_start_waits_for_pre_action_item_phase_action_anim"),
     _case("_test_phase_registry_post_action_routes_wait_variants"),
+    _case("_test_turn_land_waits_for_move_followup_when_move_effect_queue_pending"),
     _case("_test_turn_script_dispatches_wait_states_and_move_followup_fallback"),
   },
 }

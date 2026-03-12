@@ -20,6 +20,7 @@ return {
     _case("_test_intent_dispatcher_rejects_unknown_landing_optional_effect_tile"),
     _case("_test_turn_start_logs_phase_event_to_event_feed"),
     _case("_test_intent_dispatcher_logs_waiting_choice_event"),
+    _case("_test_intent_dispatcher_dispatches_descriptor_meta_validator_without_required_keys"),
     _case("_test_intent_dispatcher_dispatch_handles_popup_and_ignores_invalid_payload"),
     _case("_test_choice_cancel_logs_skip_event_but_tax_cancel_does_not"),
     _case("_test_end_turn_logs_phase_event_to_event_feed"),
