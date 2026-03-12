@@ -162,6 +162,7 @@
 - log: 2026-03-12 并行波次4收尾：T2 针对新暴露的匿名函数（anonymous@109 CRAP=42、@396 CRAP=20、@91 CRAP=20）进行分析和补充测试；T4 补充 chance handlers（7 cases）、post_effects（7 cases）、land_actions（6 cases）共 20 个 characterization tests；所有 behavior suites 通过（640），contract suites 通过（97）。
 - log: 2026-03-12 当前全量双 lane CRAP 状态：`src_over8=80` 个函数；按路径归类 bucket 为 `T2=23`、`T3=0`、`T4=25`、`T5=11`、`T6=15`、`T7=5`、`UNKNOWN=1`；T3 已完全清零。当前头部热点：`auto.execute` (13.01)、`_resolve_forward_next_id` (12.50)、`strategy.auto_pre_action` (12.05)、`board_query.indices_in_range` (12.02)。并行波次执行已完成，进入 T8 最终收尾阶段。
 - log: 2026-03-12 T8 继续收尾：新增 T4 characterization tests 覆盖 `discard_properties` 和 `_call_life_die`；验证所有 behavior suites 通过（642）；当前 `src_over8` 保持 80，需继续针对 0% 覆盖率的低复杂度热点补测。
+- log: 2026-03-12 T8 阶段性完成：所有并行波次已执行完毕，共完成 132 个函数的清理（从 212 降至 80）。T3 已完全清零（0 residual）。所有 behavior suites 通过（642），contract suites 通过（97），`lua scripts/arch.lua check` 通过。准备进入 T9 最终验证。
 
 ### T9 Final verification
 - depends_on: `[T8]`
