@@ -202,6 +202,34 @@ local function _consume_pending(rt, role_id, goods_id)
   return nil
 end
 
+local function _on_purchase_goods_callback(game, rt, data)
+  local goods_id = data and data.goods_id or nil
+  if goods_id == nil or goods_id == "" then
+    logger.warn("market paid callback ignored: goods_id missing")
+    return
+  end
+  local callback_role = data and data.role or nil
+  local callback_role_id = _resolve_role_id(nil, callback_role)
+  local pending = callback_role_id and _consume_pending(rt, callback_role_id, goods_id) or nil
+  if not pending then
+    logger.warn("market paid callback ignored: pending missing", "role_id=" .. tostring(callback_role_id), "goods_id=" .. tostring(goods_id))
+    return
+  end
+  local callback_player = game:find_player_by_id(pending.player_id)
+  if not callback_player then
+    logger.warn("market paid callback ignored: player missing", "player_id=" .. tostring(pending.player_id))
+    return
+  end
+  local entry = _context().entry_by_id(pending.product_id)
+  if not entry then
+    logger.warn("market paid callback ignored: market entry missing", "product_id=" .. tostring(pending.product_id))
+    return
+  end
+  if type(rt.on_purchase) == "function" then
+    rt.on_purchase(game, callback_player, entry, pending)
+  end
+end
+
 local function _register_purchase_event_for_role(game, player)
   if not RegisterTriggerEvent or not EVENT or not EVENT.SPEC_ROLE_PURCHASE_GOODS then
     return
@@ -218,34 +246,9 @@ local function _register_purchase_event_for_role(game, player)
   if rt.registered_role_ids[role_id] then
     return
   end
-  local function _on_purchase_goods_callback(_, _, data)
-    local goods_id = data and data.goods_id or nil
-    if goods_id == nil or goods_id == "" then
-      logger.warn("market paid callback ignored: goods_id missing")
-      return
-    end
-    local callback_role = data and data.role or nil
-    local callback_role_id = _resolve_role_id(nil, callback_role)
-    local pending = callback_role_id and _consume_pending(rt, callback_role_id, goods_id) or nil
-    if not pending then
-      logger.warn("market paid callback ignored: pending missing", "role_id=" .. tostring(callback_role_id), "goods_id=" .. tostring(goods_id))
-      return
-    end
-    local callback_player = game:find_player_by_id(pending.player_id)
-    if not callback_player then
-      logger.warn("market paid callback ignored: player missing", "player_id=" .. tostring(pending.player_id))
-      return
-    end
-    local entry = _context().entry_by_id(pending.product_id)
-    if not entry then
-      logger.warn("market paid callback ignored: market entry missing", "product_id=" .. tostring(pending.product_id))
-      return
-    end
-    if type(rt.on_purchase) == "function" then
-      rt.on_purchase(game, callback_player, entry, pending)
-    end
-  end
-  RegisterTriggerEvent({ EVENT.SPEC_ROLE_PURCHASE_GOODS, role_id }, _on_purchase_goods_callback)
+  RegisterTriggerEvent({ EVENT.SPEC_ROLE_PURCHASE_GOODS, role_id }, function(_, _, data)
+    _on_purchase_goods_callback(game, rt, data)
+  end)
   rt.registered_role_ids[role_id] = true
 end
 
@@ -311,5 +314,10 @@ function gateway.start(game, player, entry)
   })
   return true, nil
 end
+
+-- Test seam exports
+gateway._on_purchase_goods_callback = _on_purchase_goods_callback
+gateway._runtime = _runtime
+gateway._push_pending = _push_pending
 
 return gateway

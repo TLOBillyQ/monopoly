@@ -1059,5 +1059,12 @@ return {
     { name = "runtime_context_first_role_from_game_api_pcall_failure", run = _test_runtime_context_first_role_from_game_api_pcall_failure },
     { name = "landing_visual_hold_release_flushes_event_buffer_and_replays_deferred", run = _test_landing_visual_hold_release_flushes_event_buffer_and_replays_deferred },
     { name = "landing_visual_hold_release_skips_when_not_pending", run = _test_landing_visual_hold_release_skips_when_not_pending },
+    { name = "eggy_paid_gateway_callback_missing_goods_id", run = _test_eggy_paid_gateway_callback_missing_goods_id },
+    { name = "eggy_paid_gateway_callback_empty_goods_id", run = _test_eggy_paid_gateway_callback_empty_goods_id },
+    { name = "eggy_paid_gateway_callback_missing_pending", run = _test_eggy_paid_gateway_callback_missing_pending },
+    { name = "eggy_paid_gateway_callback_missing_player", run = _test_eggy_paid_gateway_callback_missing_player },
+    { name = "eggy_paid_gateway_callback_missing_entry", run = _test_eggy_paid_gateway_callback_missing_entry },
+    { name = "eggy_paid_gateway_callback_success_with_on_purchase", run = _test_eggy_paid_gateway_callback_success_with_on_purchase },
+    { name = "eggy_paid_gateway_callback_success_without_on_purchase", run = _test_eggy_paid_gateway_callback_success_without_on_purchase },
   },
 }
