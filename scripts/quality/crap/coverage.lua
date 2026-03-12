@@ -13,11 +13,6 @@ local function _silent_reporter()
   }
 end
 
-local function _normalize_debug_source(project_root, source)
-  local normalized = common.relative_to(project_root, source)
-  return normalized:gsub("^%./", "")
-end
-
 local function _resolve_hit_lines(line_hits, relative_path)
   local hit_lines = line_hits[relative_path]
   if hit_lines == nil then
@@ -27,48 +22,40 @@ local function _resolve_hit_lines(line_hits, relative_path)
   return hit_lines
 end
 
-local function _resolve_cached_hit_lines(debug_api, function_cache, project_root, tracked_sources, line_hits)
-  local function_info = debug_api.getinfo(3, "f")
-  local current_function = function_info and function_info.func or nil
-  if current_function == nil then
-    return nil
-  end
-
-  local cached_hit_lines = function_cache[current_function]
-  if cached_hit_lines ~= nil then
-    return cached_hit_lines or nil
-  end
-
-  local source_info = debug_api.getinfo(3, "Sf")
-  if source_info == nil or source_info.source == nil then
-    function_cache[current_function] = false
-    return nil
-  end
-
-  local relative_path = _normalize_debug_source(project_root, source_info.source)
-  if tracked_sources[relative_path] ~= true then
-    function_cache[current_function] = false
-    return nil
-  end
-
-  local hit_lines = _resolve_hit_lines(line_hits, relative_path)
-  function_cache[current_function] = hit_lines
-  return hit_lines
-end
-
 local function _make_hook(project_root, tracked_sources, line_hits, debug_api)
   local function_cache = setmetatable({}, { __mode = "k" })
+  local getinfo = debug_api.getinfo
+  local relative_to = common.relative_to
+
   return function(_, line_no)
-    local hit_lines = _resolve_cached_hit_lines(
-      debug_api,
-      function_cache,
-      project_root,
-      tracked_sources,
-      line_hits
-    )
-    if hit_lines ~= nil then
-      hit_lines[line_no] = true
+    local info = getinfo(2, "f")
+    local func = info and info.func
+    if func == nil then return end
+
+    local cached = function_cache[func]
+    if cached then
+      cached[line_no] = true
+      return
     end
+    if cached == false then return end
+
+    local source_info = getinfo(func, "S")
+    if source_info == nil or source_info.source == nil then
+      function_cache[func] = false
+      return
+    end
+
+    local source = source_info.source
+    local normalized = relative_to(project_root, source)
+    normalized = normalized:gsub("^%./", "")
+    if tracked_sources[normalized] ~= true then
+      function_cache[func] = false
+      return
+    end
+
+    local hit_lines = _resolve_hit_lines(line_hits, normalized)
+    function_cache[func] = hit_lines
+    hit_lines[line_no] = true
   end
 end
 
