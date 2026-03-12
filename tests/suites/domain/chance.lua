@@ -337,6 +337,59 @@ local function _test_post_effects_get_target_spec_returns_spec()
   assert(type(spec.apply) == "function", "target spec should have apply function")
 end
 
+-- T8 characterization tests for 0% coverage hotspots
+local bankruptcy = require("src.game.systems.endgame.bankruptcy")
+
+local function _test_chance_handler_discard_properties_removes_properties()
+  local g = _new_game()
+  local handlers = chance_handlers.build()
+  local p = g:current_player()
+
+  -- Give player a property first
+  local tile_id = 2
+  g:set_player_property(p, tile_id, true)
+  assert(p.properties[tile_id] == true, "precondition: player should have property")
+
+  local events = {}
+  _with_patches({
+    { target = require("src.core.events.monopoly_events"), key = "emit", value = function(_, payload)
+      events[#events + 1] = payload
+    end },
+  }, function()
+    handlers.discard_properties(g, p, { effect = "discard_properties", count = 1 })
+  end)
+
+  assert(p.properties[tile_id] == nil or p.properties[tile_id] == false, "discard_properties should remove player property")
+  assert(#events >= 1, "discard_properties should emit events")
+end
+
+local function _test_bankruptcy_eliminate_calls_life_die()
+  local g = _new_game()
+  local p = g:current_player()
+
+  -- Track if life die was attempted
+  local life_die_called = false
+  local mock_role = {
+    die = function() life_die_called = true end,
+    get_component = function(_, name)
+      if name == "LifeComp" then
+        return { die = function() life_die_called = true end }
+      end
+      return nil
+    end
+  }
+
+  _with_patches({
+    { target = require("src.core.ports.runtime_ports"), key = "resolve_role", value = function() return mock_role end },
+    { target = require("src.core.ports.runtime_ports"), key = "mark_role_lose", value = function() end },
+  }, function()
+    bankruptcy.eliminate(g, p, {})
+  end)
+
+  assert(p.eliminated == true, "eliminate should mark player as eliminated")
+  assert(life_die_called == true, "eliminate should call life die on role")
+end
+
 return {
   name = "chance",
   tests = {
@@ -366,5 +419,8 @@ return {
     { name = "post_effects_apply_clear_obstacles_ahead_clears_obstacles", run = _test_post_effects_apply_clear_obstacles_ahead_clears_obstacles },
     { name = "post_effects_target_item_ids_returns_ordered_list", run = _test_post_effects_target_item_ids_returns_ordered_list },
     { name = "post_effects_get_target_spec_returns_spec", run = _test_post_effects_get_target_spec_returns_spec },
+    -- T8 characterization tests for 0% coverage hotspots
+    { name = "chance_handler_discard_properties_removes_properties", run = _test_chance_handler_discard_properties_removes_properties },
+    { name = "bankruptcy_eliminate_calls_life_die", run = _test_bankruptcy_eliminate_calls_life_die },
   },
 }

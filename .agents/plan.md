@@ -161,6 +161,7 @@
 - log: 2026-03-12 并行波次3执行后验证：双 lane CRAP 仍为 `src_over8=80`，bucket 分布 `T2=23`、`T3=0`、`T4=25`、`T5=11`、`T6=15`、`T7=5`、`UNKNOWN=1`。本轮完成：T4 `auto.execute` CRAP 从 13.01 降到 5.0（覆盖率 32%→95%）；T2 `_phase_roll` 拆分为 10 个 helper、`step_afk_auto_host` 拆分为 9 个 helper；T5/T6 低复杂度热点补充 characterization tests（`_pick_with`、`_toggle_action_log`、`_resolve_bankruptcy_text`、`overlay.play_missile`、`building_effects.spawn_upgrade_building_units` 等）。虽然总函数数仍为 80，但原头部热点（CRAP>12）已全部出桶，当前新头部为复杂度 10 的函数（`_maybe_rotate_profile`、`step_modal_timeout`、`update_action_button_timer`、`auto_context.build`、`M.place_players` 等），需继续重构。
 - log: 2026-03-12 并行波次4收尾：T2 针对新暴露的匿名函数（anonymous@109 CRAP=42、@396 CRAP=20、@91 CRAP=20）进行分析和补充测试；T4 补充 chance handlers（7 cases）、post_effects（7 cases）、land_actions（6 cases）共 20 个 characterization tests；所有 behavior suites 通过（640），contract suites 通过（97）。
 - log: 2026-03-12 当前全量双 lane CRAP 状态：`src_over8=80` 个函数；按路径归类 bucket 为 `T2=23`、`T3=0`、`T4=25`、`T5=11`、`T6=15`、`T7=5`、`UNKNOWN=1`；T3 已完全清零。当前头部热点：`auto.execute` (13.01)、`_resolve_forward_next_id` (12.50)、`strategy.auto_pre_action` (12.05)、`board_query.indices_in_range` (12.02)。并行波次执行已完成，进入 T8 最终收尾阶段。
+- log: 2026-03-12 T8 继续收尾：新增 T4 characterization tests 覆盖 `discard_properties` 和 `_call_life_die`；验证所有 behavior suites 通过（642）；当前 `src_over8` 保持 80，需继续针对 0% 覆盖率的低复杂度热点补测。
 
 ### T9 Final verification
 - depends_on: `[T8]`
