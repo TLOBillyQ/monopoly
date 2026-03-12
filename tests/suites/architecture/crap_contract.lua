@@ -1,6 +1,8 @@
 local bootstrap = require("tests.bootstrap")
+local test_harness = require("TestHarness")
 local crap_cli = require("crap")
 local common = require("crap.common")
+local coverage = require("crap.coverage")
 local luac_listing = require("crap.luac_listing")
 local report = require("crap.report")
 local viewer = require("crap.viewer")
@@ -168,6 +170,118 @@ local function _test_report_builds_function_metrics_from_coverage()
     assert(result.functions[1].crap >= result.functions[2].crap, "functions should be sorted by crap descending")
     assert(result.functions[1].coverage <= 1, "coverage should be normalized ratio")
   end)
+end
+
+local function _test_coverage_collect_tracks_only_tracked_sources_and_accumulates_hits()
+  _with_fixture({
+    ["support/untracked.lua"] = table.concat({
+      "local helper = {}",
+      "",
+      "function helper.bump(flag)",
+      "  if flag then",
+      "    return 10",
+      "  end",
+      "  return 20",
+      "end",
+      "",
+      "return helper",
+    }, "\n"),
+    ["src/tracked.lua"] = table.concat({
+      "local helper = assert(loadfile(" .. string.format("%q", tmp_root .. "/support/untracked.lua") .. "))()",
+      "local tracked = {}",
+      "",
+      "function tracked.run(flag)",
+      "  local total = helper.bump(flag)",
+      "  if flag then",
+      "    total = total + 1",
+      "  end",
+      "  return total",
+      "end",
+      "",
+      "return tracked",
+    }, "\n"),
+  }, function()
+    local tracked = assert(loadfile(tmp_root .. "/src/tracked.lua"))()
+    local suites = {
+      {
+        name = "synthetic.coverage",
+        tests = {
+          { name = "truthy_first", run = function() _assert_eq(tracked.run(true), 11, "tracked fixture should take truthy branch") end },
+          { name = "falsy", run = function() _assert_eq(tracked.run(false), 20, "tracked fixture should take falsy branch") end },
+          { name = "truthy_second", run = function() _assert_eq(tracked.run(true), 11, "tracked fixture should allow repeated calls") end },
+        },
+      },
+    }
+
+    local result = coverage.collect({
+      project_root = tmp_root,
+      tracked_sources = { "src/tracked.lua" },
+      lanes = { "behavior" },
+      resolve_lane_suites = function(lane, mode)
+        _assert_eq(lane, "behavior", "synthetic suite should be resolved for requested lane")
+        _assert_eq(mode, nil, "synthetic suite should preserve explicit mode input")
+        return suites, "dev"
+      end,
+      run_all = function(run_suites, opts)
+        return test_harness.run_all(run_suites, opts)
+      end,
+      debug_api = debug,
+    })
+
+    local tracked_hits = result.line_hits["src/tracked.lua"]
+    assert(tracked_hits ~= nil, "tracked fixture should collect hit lines")
+    assert(tracked_hits[5] == true, "tracked fixture should record helper call line")
+    assert(tracked_hits[6] == true, "tracked fixture should record branch line")
+    assert(tracked_hits[7] == true, "tracked fixture should record truthy branch body")
+    assert(tracked_hits[9] == true, "tracked fixture should record return line")
+    assert(result.line_hits["support/untracked.lua"] == nil, "untracked helper should not be recorded")
+    _assert_eq(result.lanes[1].total, 3, "synthetic coverage lane should report all executed cases")
+    _assert_eq(result.lanes[1].failure_count, 0, "synthetic coverage lane should keep passing status")
+  end)
+end
+
+local function _test_coverage_collect_uses_injected_debug_api_and_runner()
+  local sethook_calls = {}
+  local fake_debug = {
+    sethook = function(hook, mask)
+      sethook_calls[#sethook_calls + 1] = {
+        hook = hook,
+        mask = mask,
+      }
+    end,
+    getinfo = function()
+      return nil
+    end,
+  }
+
+  local run_called = false
+  local result = coverage.collect({
+    project_root = tmp_root,
+    tracked_sources = {},
+    lanes = { "behavior" },
+    resolve_lane_suites = function()
+      return {}, "synthetic_mode"
+    end,
+    run_all = function(suites, opts)
+      run_called = suites ~= nil and opts.mode == "synthetic_mode"
+      opts.before_case({ full_name = "synthetic.case" })
+      opts.after_case({ full_name = "synthetic.case" }, true, nil, { lines = {} })
+      return {
+        total = 0,
+        failures = {},
+        failed = false,
+      }
+    end,
+    debug_api = fake_debug,
+  })
+
+  assert(run_called == true, "coverage.collect should delegate through injected runner")
+  _assert_eq(#sethook_calls, 3, "coverage.collect should set and clear hooks through injected debug api")
+  assert(type(sethook_calls[1].hook) == "function", "coverage.collect should install a line hook")
+  _assert_eq(sethook_calls[1].mask, "l", "coverage.collect should install line hook mask")
+  _assert_eq(sethook_calls[2].mask, nil, "coverage.collect should clear hook after case")
+  _assert_eq(sethook_calls[3].mask, nil, "coverage.collect should clear hook after lane completion")
+  _assert_eq(result.lanes[1].mode, "synthetic_mode", "coverage.collect should report injected lane mode")
 end
 
 local function _test_viewer_writes_static_bundle()
@@ -439,6 +553,8 @@ return {
   tests = {
     { name = "common_resolve_cli_path_maps_tmp_alias_to_system_tmp_root", run = _test_common_resolve_cli_path_maps_tmp_alias_to_system_tmp_root },
     { name = "luac_listing_extracts_named_functions", run = _test_luac_listing_extracts_named_functions },
+    { name = "coverage_collect_tracks_only_tracked_sources_and_accumulates_hits", run = _test_coverage_collect_tracks_only_tracked_sources_and_accumulates_hits },
+    { name = "coverage_collect_uses_injected_debug_api_and_runner", run = _test_coverage_collect_uses_injected_debug_api_and_runner },
     { name = "report_builds_function_metrics_from_coverage", run = _test_report_builds_function_metrics_from_coverage },
     { name = "viewer_writes_static_bundle", run = _test_viewer_writes_static_bundle },
     { name = "viewer_open_prints_index_and_uses_open_path", run = _test_viewer_open_prints_index_and_uses_open_path },
