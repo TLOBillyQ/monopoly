@@ -119,8 +119,8 @@ local function _fill_default(ui_sync_ports, base_ui_sync_ports, key, resolver)
   end
 end
 
-function M.fill_ui_sync_defaults(ui_sync_ports, base_ui_sync_ports)
-  local specs = {
+local function _build_ui_sync_specs()
+  return {
     { key = "get_ui_state", resolver = function() return _default_get_ui_state end },
     { key = "is_input_blocked", resolver = _default_is_input_blocked },
     { key = "is_popup_active", resolver = _default_is_popup_active },
@@ -130,9 +130,17 @@ function M.fill_ui_sync_defaults(ui_sync_ports, base_ui_sync_ports)
     { key = "set_input_blocked", resolver = _default_set_input_blocked },
     { key = "resolve_ui_gate", resolver = _default_resolve_ui_gate },
   }
+end
+
+local function _apply_ui_sync_defaults(ui_sync_ports, base_ui_sync_ports, specs)
   for _, spec in ipairs(specs) do
     _fill_default(ui_sync_ports, base_ui_sync_ports, spec.key, spec.resolver)
   end
+end
+
+function M.fill_ui_sync_defaults(ui_sync_ports, base_ui_sync_ports)
+  local specs = _build_ui_sync_specs()
+  _apply_ui_sync_defaults(ui_sync_ports, base_ui_sync_ports, specs)
 end
 
 return M
