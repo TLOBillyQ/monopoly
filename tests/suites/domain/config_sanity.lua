@@ -5,10 +5,21 @@ local market_cfg = require("Config.generated.market")
 local chance_cfg = require("Config.generated.chance_cards")
 local tiles_cfg = require("Config.generated.tiles")
 local runtime_refs = require("Config.runtime_refs")
+local vehicle_catalog = require("src.core.config.vehicle_catalog")
 
 local function _test_config_sanity_validate_passes_current_generated_data()
   config_sanity.reset_for_tests()
   assert(config_sanity.validate() == true, "current generated config should pass sanity checks")
+end
+
+local function _assert_validate_fails(message_fragment)
+  config_sanity.reset_for_tests()
+  local ok, err = pcall(config_sanity.validate)
+  assert(ok == false, "config sanity validate should fail")
+  assert(
+    tostring(err):find(message_fragment, 1, true) ~= nil,
+    "config sanity error should mention: " .. tostring(message_fragment) .. ", got: " .. tostring(err)
+  )
 end
 
 local function _replace_table_rows(target, rows)
@@ -42,6 +53,26 @@ local function _with_release_tables(chance_rows, market_rows, fn)
   if not ok then
     error(err)
   end
+end
+
+local function _with_runtime_ref_tables(board_feedback, audio_refs, effect_refs, fn)
+  with_patches({
+    {
+      target = runtime_refs,
+      key = "board_feedback",
+      value = board_feedback,
+    },
+    {
+      target = runtime_refs,
+      key = "audio",
+      value = audio_refs,
+    },
+    {
+      target = runtime_refs,
+      key = "effects",
+      value = effect_refs,
+    },
+  }, fn)
 end
 
 local function _test_chance_forced_move_destinations_are_valid_tiles()
@@ -100,6 +131,114 @@ local function _test_board_feedback_audio_refs_exist_in_runtime_refs()
   end
 end
 
+local function _test_config_sanity_release_build_rejects_vehicle_chance_cards()
+  local vehicle_id = vehicle_catalog.list()[1].id
+  with_patches({
+    {
+      target = _G,
+      key = "RELEASE_BUILD",
+      value = true,
+    },
+  }, function()
+    _with_release_tables({
+      { id = 99001, effect = "set_vehicle", vehicle_id = vehicle_id },
+    }, {}, function()
+      _assert_validate_fails("release config must not include chance set_vehicle cards")
+    end)
+  end)
+end
+
+local function _test_config_sanity_release_build_rejects_vehicle_market_entries()
+  local vehicle_id = vehicle_catalog.list()[1].id
+  with_patches({
+    {
+      target = _G,
+      key = "RELEASE_BUILD",
+      value = "TRUE",
+    },
+  }, function()
+    _with_release_tables({}, {
+      { kind = "vehicle", product_id = vehicle_id },
+    }, function()
+      _assert_validate_fails("release config must not include vehicle market entries")
+    end)
+  end)
+end
+
+local function _test_config_sanity_validate_rejects_missing_board_feedback_effect_ref()
+  _with_runtime_ref_tables({
+    cue = {
+      effect_id_ref = "missing_effect",
+    },
+  }, {}, {}, function()
+    _assert_validate_fails("board feedback cue references unknown effect_id_ref")
+  end)
+end
+
+local function _test_config_sanity_validate_rejects_missing_board_feedback_followup_sound_ref()
+  _with_runtime_ref_tables({
+    cue = {
+      followup_sounds = {
+        { sound_id_ref = "missing_followup" },
+      },
+    },
+  }, {}, {}, function()
+    _assert_validate_fails("board feedback followup references unknown sound_id_ref")
+  end)
+end
+
+local function _test_config_sanity_validate_rejects_missing_board_feedback_sound_ref()
+  _with_runtime_ref_tables({
+    cue = {
+      sound_id_ref = "missing_sound",
+    },
+  }, {}, {}, function()
+    _assert_validate_fails("board feedback cue references unknown sound_id_ref")
+  end)
+end
+
+local function _test_config_sanity_validate_rejects_unknown_vehicle_refs()
+  local original_has = vehicle_catalog.has
+  with_patches({
+    {
+      target = vehicle_catalog,
+      key = "has",
+      value = function(id)
+        if id == "missing_vehicle" or id == "missing_product" then
+          return false
+        end
+        return original_has(id)
+      end,
+    },
+  }, function()
+    _with_release_tables({
+      { id = 99002, effect = "set_vehicle", vehicle_id = "missing_vehicle" },
+    }, {}, function()
+      _assert_validate_fails("chance card references unknown vehicle_id")
+    end)
+
+    _with_release_tables({}, {
+      { kind = "vehicle", product_id = "missing_product" },
+    }, function()
+      _assert_validate_fails("market entry references unknown vehicle product_id")
+    end)
+  end)
+end
+
+local function _test_config_sanity_validate_is_cached_until_reset()
+  config_sanity.reset_for_tests()
+  assert(config_sanity.validate() == true, "first validate should pass on generated data")
+
+  _with_runtime_ref_tables({
+    cue = {
+      effect_id_ref = "missing_effect",
+    },
+  }, {}, {}, function()
+    assert(config_sanity.validate() == true, "validated cache should skip re-validating until reset")
+    _assert_validate_fails("board feedback cue references unknown effect_id_ref")
+  end)
+end
+
 return {
   name = "config_sanity",
   tests = {
@@ -111,6 +250,34 @@ return {
     {
       name = "board_feedback_audio_refs_exist_in_runtime_refs",
       run = _test_board_feedback_audio_refs_exist_in_runtime_refs,
+    },
+    {
+      name = "config_sanity_release_build_rejects_vehicle_chance_cards",
+      run = _test_config_sanity_release_build_rejects_vehicle_chance_cards,
+    },
+    {
+      name = "config_sanity_release_build_rejects_vehicle_market_entries",
+      run = _test_config_sanity_release_build_rejects_vehicle_market_entries,
+    },
+    {
+      name = "config_sanity_validate_rejects_missing_board_feedback_effect_ref",
+      run = _test_config_sanity_validate_rejects_missing_board_feedback_effect_ref,
+    },
+    {
+      name = "config_sanity_validate_rejects_missing_board_feedback_followup_sound_ref",
+      run = _test_config_sanity_validate_rejects_missing_board_feedback_followup_sound_ref,
+    },
+    {
+      name = "config_sanity_validate_rejects_missing_board_feedback_sound_ref",
+      run = _test_config_sanity_validate_rejects_missing_board_feedback_sound_ref,
+    },
+    {
+      name = "config_sanity_validate_rejects_unknown_vehicle_refs",
+      run = _test_config_sanity_validate_rejects_unknown_vehicle_refs,
+    },
+    {
+      name = "config_sanity_validate_is_cached_until_reset",
+      run = _test_config_sanity_validate_is_cached_until_reset,
     },
   },
 }

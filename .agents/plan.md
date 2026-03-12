@@ -44,9 +44,12 @@
 - location: `/Users/billyq/Dev/Github/Lua/monopoly/src/game/flow/` 中除 T2 之外的其余模块，以及 `/Users/billyq/Dev/Github/Lua/monopoly/src/game/ai/`；测试优先放在 `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_timeout_and_auto_runner.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_afk.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_intent_dispatch_and_event_feed.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_runtime_context_and_camera_sync.lua`
 - description: 拆 AFK timing、auto-runner、timeout、dispatch、move_followup、AI decision 热点，优先抽成纯 helper，保持 ports 与 state shape 完全不变。凡是 `complexity >= 9` 仍超标的函数，一律做结构性拆分，不接受只补测。
 - validation: 相关 gameplay suites 通过；重新跑 CRAP 后，T3 负责的 `src/game/flow/**/*` 与 `src/game/ai/**/*` 不再出现 `crap > 8`。
-- status: In Progress
+- status: Completed
 - log: 2026-03-12 已拆分 `dispatch.lua`、`tick_choice_timeout.lua`、`movement/init.lua`、`agent.lua` 的分派/超时/移动/AI 选择路径；`suites.gameplay.gameplay_timeout_and_auto_runner`、`suites.gameplay.gameplay_afk`、`suites.gameplay.gameplay_intent_dispatch_and_event_feed`、`suites.gameplay.gameplay_runtime_context_and_camera_sync` 定向回归通过。
 - log: 2026-03-12 补充 `intent_dispatcher` 与 AI/auto-runner 定向覆盖：新增 descriptor meta validator、popup dispatch、board target fallback、choice owner actor fallback 等用例；最新双 lane CRAP 中 T3 residual 收敛到 1。
+- log: 2026-03-12 为 `intent_dispatcher._validate_choice_meta` 补上缺失 registry 退化路径测试，`suites.gameplay.gameplay_intent_dispatch_and_event_feed` 定向回归通过；完整双 lane CRAP 复核后 T3 当前 residual=0，已完成出桶。
+- log: 2026-03-12 再补 `intent_dispatcher` 缺失 choice registry 的 fallback 用例，确保 `_validate_choice_meta` 在无 descriptor registry 时保持透传；定向 suite `tests.suites.gameplay.gameplay_intent_dispatch_and_event_feed` 通过，待下一轮双 lane CRAP 确认 T3 清零。
+- log: 2026-03-12 继续收 T3 尾项：给 `intent_dispatcher` 补上 required-meta 缺失整表分支的 characterization case，并把 meta 校验/validator 路径收口成 helper；`suites.gameplay.gameplay_intent_dispatch_and_event_feed` 定向回归通过，待下一轮双 lane CRAP 确认 bucket 清零。
 
 ### T4 Gameplay systems/core cluster
 - depends_on: `[T1]`
@@ -83,6 +86,8 @@
 - status: In Progress
 - log: 2026-03-12 已拆分 `synthetic_actor_registry.lua`、`context.lua`、`ui_bootstrap.lua` 的 fallback/anchor/wiring helper，并补充 runtime misc 覆盖；`lua scripts/arch.lua check` 与 `suites.runtime.misc` 通过。
 - log: 2026-03-12 继续收尾 T7：重构 `eggy_paid_purchase_gateway` 的 paid goods mapping 流程与 `landing_visual_hold` 的 dirty/hold helper，给 `runtime.misc` 与 `gameplay_runtime_context_and_camera_sync` 补充 vehicle enter delay、wall diff、startup synthetic actors、landing_visual_hold deferred dirty、runtime editor camera target 覆盖；定向回归与 `lua scripts/arch.lua check` 通过。最新 CRAP 将 T7 residual 从 23 降到 14。
+- log: 2026-03-12 继续用覆盖率吃 T7 低复杂度热点：为 `config_sanity.lua` 补充 release build 车辆内容拒绝、board feedback 缺失 effect/sound/followup 引用、未知 vehicle 引用，以及 `validate()` 缓存短路等 characterization tests；定向 suite `tests.suites.domain.config_sanity` 通过，待下一轮双 lane CRAP 确认 residual 变化。
+- log: 2026-03-12 补充 `app/init.lua` 的 release/debug provider wiring 与 scheduler fallback 覆盖，修正 startup harness 对 `GlobalAPI`/`SetTimeOut` 生命周期的假设；定向 suite `tests.suites.runtime.startup_release` 通过。
 
 ### T8 Residual sweep and merge-safe cleanup
 - depends_on: `[T2, T3, T4, T5, T6, T7]`

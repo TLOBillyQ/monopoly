@@ -6,6 +6,7 @@ local game_startup = require("src.app.bootstrap.game_startup")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
 local runtime_refs = require("Config.runtime_refs")
+local gameplay_rules = require("src.core.config.gameplay_rules")
 
 local function _build_role(role_id)
   return {
@@ -192,6 +193,241 @@ local function _test_game_startup_mixed_real_and_synthetic_players_keep_slot_ava
   _assert_startup_synthetic_specs_have_slot_avatars(created_game.startup_synthetic_players, { 2, 3, 4 })
 end
 
+local function _reload_app_init_with_stubs(startup)
+  local capture = {}
+  local state = {
+    ui = {},
+  }
+  local logger_stub = {
+    configure_host_runtime = function(opts)
+      capture.host_runtime = opts
+    end,
+    info = function(...)
+      capture.info = { ... }
+    end,
+    set_event_collection_enabled_provider = function(fn)
+      capture.event_provider = fn
+    end,
+    set_anim_debug_enabled_provider = function(fn)
+      capture.anim_provider = fn
+    end,
+  }
+
+  with_patches({
+    { target = package.loaded, key = "src.app.init", value = nil },
+    { target = package.loaded, key = "src.core.utils.logger", value = logger_stub },
+    {
+      target = package.loaded,
+      key = "src.app.bootstrap.runtime",
+      value = {
+        install = function()
+          capture.runtime_install_called = true
+        end,
+      },
+    },
+    {
+      target = package.loaded,
+      key = "src.app.bootstrap.game_startup",
+      value = {
+        build_state = function(get_game, opts)
+          capture.startup_get_game = get_game
+          capture.startup_opts = opts
+          return state
+        end,
+      },
+    },
+    {
+      target = package.loaded,
+      key = "src.app.bootstrap.game_startup_event_bridge",
+      value = {
+        install = function(installed_state, get_game)
+          capture.bridge_state = installed_state
+          capture.bridge_get_game = get_game
+        end,
+      },
+    },
+    {
+      target = package.loaded,
+      key = "src.app.bootstrap.game_runtime_bootstrap",
+      value = {
+        start = function(installed_state, game_ref)
+          capture.runtime_start_state = installed_state
+          capture.runtime_start_game_ref = game_ref
+          return "runtime_started"
+        end,
+      },
+    },
+    {
+      target = package.loaded,
+      key = "src.game.flow.turn.loop",
+      value = {
+        set_game = function(installed_state, new_game)
+          capture.set_game_state = installed_state
+          capture.set_game = new_game
+        end,
+      },
+    },
+    {
+      target = package.loaded,
+      key = "src.app.bootstrap.ui_bootstrap",
+      value = {
+        install = function(installed_state, current_game_ref, opts)
+          capture.ui_state = installed_state
+          capture.current_game_ref = current_game_ref
+          capture.ui_opts = opts
+        end,
+      },
+    },
+    {
+      target = package.loaded,
+      key = "src.app.bootstrap.startup_policy",
+      value = {
+        resolve = function()
+          return startup
+        end,
+      },
+    },
+    { target = package.loaded, key = "src.core.config.gameplay_rules", value = gameplay_rules },
+    {
+      key = "GlobalAPI",
+      value = {
+        show_tips = function(text, duration)
+          capture.tip_text = text
+          capture.tip_duration = duration
+          return "tip_called"
+        end,
+      },
+    },
+    {
+      key = "SetTimeOut",
+      value = function(delay, fn)
+        capture.timeout_delay = delay
+        capture.timeout_callback = fn
+        return "timeout_scheduled"
+      end,
+    },
+  }, function()
+    require("src.app.init")
+  end, { skip_runtime_context_refresh = true })
+
+  package.loaded["src.app.init"] = nil
+  capture.state = state
+  return capture
+end
+
+local function _test_app_init_release_mode_wires_runtime_and_debug_providers()
+  gameplay_rules.debug_log_enabled = true
+  local capture = _reload_app_init_with_stubs({
+    release_mode = true,
+    profile_name = "market",
+  })
+
+  assert(capture.runtime_install_called == true, "app init should install runtime")
+  assert(capture.startup_opts.profile_name == "market", "app init should pass resolved startup profile")
+  assert(gameplay_rules.debug_log_enabled == false, "release startup should disable gameplay debug logs")
+  assert(type(capture.host_runtime.tip_presenter) == "function", "logger tip presenter should be configured")
+  assert(type(capture.host_runtime.scheduler) == "function", "logger scheduler should be configured")
+  with_patches({
+    {
+      key = "GlobalAPI",
+      value = {
+        show_tips = function(text, duration)
+          capture.tip_text = text
+          capture.tip_duration = duration
+          return "tip_called"
+        end,
+      },
+    },
+    {
+      key = "SetTimeOut",
+      value = function(delay, fn)
+        capture.timeout_delay = delay
+        capture.timeout_callback = fn
+        return "timeout_scheduled"
+      end,
+    },
+  }, function()
+    assert(capture.host_runtime.tip_presenter("hello", 3) == "tip_called", "tip presenter should forward to GlobalAPI")
+    assert(capture.tip_text == "hello" and capture.tip_duration == 3, "tip presenter should forward arguments")
+    assert(capture.host_runtime.scheduler(0.25, function() end) == "timeout_scheduled",
+      "scheduler should forward to SetTimeOut when available")
+  end)
+  assert(type(capture.event_provider) == "function", "event debug provider should be installed")
+  assert(type(capture.anim_provider) == "function", "anim debug provider should be installed")
+  assert(capture.event_provider() == false, "empty debug role state should disable event logging")
+  capture.state.ui.debug_log_enabled_by_role = {
+    p1 = false,
+    p2 = true,
+  }
+  assert(capture.event_provider() == true, "any enabled role should enable event logging")
+  assert(capture.anim_provider() == true, "anim provider should share the same debug source")
+
+  local new_game = { id = 99 }
+  capture.state.on_game_replaced(new_game)
+  assert(capture.current_game_ref[1] == new_game, "on_game_replaced should update shared game ref")
+  assert(capture.set_game_state == capture.state, "on_game_replaced should pass state to gameplay loop")
+  assert(capture.set_game == new_game, "on_game_replaced should pass new game to gameplay loop")
+  assert(capture.bridge_state == capture.state, "startup bridge should install with created state")
+  assert(capture.bridge_get_game() == new_game, "startup bridge getter should read shared game ref")
+  assert(capture.ui_opts.start_runtime("ctx_state", { "game_ref" }) == "runtime_started",
+    "ui bootstrap should expose runtime start closure")
+  assert(capture.runtime_start_state == "ctx_state", "runtime start closure should forward state")
+  assert(type(capture.runtime_start_game_ref) == "table", "runtime start closure should forward game ref")
+end
+
+local function _test_app_init_non_release_keeps_debug_logs_and_scheduler_fallback()
+  gameplay_rules.debug_log_enabled = true
+  local capture = {}
+  local state = { ui = {} }
+  local logger_stub = {
+    configure_host_runtime = function(opts)
+      capture.host_runtime = opts
+    end,
+    info = function() end,
+    set_event_collection_enabled_provider = function(fn)
+      capture.event_provider = fn
+    end,
+    set_anim_debug_enabled_provider = function(fn)
+      capture.anim_provider = fn
+    end,
+  }
+
+  with_patches({
+    { target = package.loaded, key = "src.app.init", value = nil },
+    { target = package.loaded, key = "src.core.utils.logger", value = logger_stub },
+    { target = package.loaded, key = "src.app.bootstrap.runtime", value = { install = function() end } },
+    { target = package.loaded, key = "src.app.bootstrap.game_startup", value = { build_state = function() return state end } },
+    { target = package.loaded, key = "src.app.bootstrap.game_startup_event_bridge", value = { install = function() end } },
+    { target = package.loaded, key = "src.app.bootstrap.game_runtime_bootstrap", value = { start = function() return true end } },
+    { target = package.loaded, key = "src.game.flow.turn.loop", value = { set_game = function() end } },
+    { target = package.loaded, key = "src.app.bootstrap.ui_bootstrap", value = { install = function() end } },
+    {
+      target = package.loaded,
+      key = "src.app.bootstrap.startup_policy",
+      value = {
+        resolve = function()
+          return { release_mode = false, profile_name = "default" }
+        end,
+      },
+    },
+    { target = package.loaded, key = "src.core.config.gameplay_rules", value = gameplay_rules },
+    { key = "GlobalAPI", value = {} },
+    { key = "SetTimeOut", value = nil },
+  }, function()
+    require("src.app.init")
+  end, { skip_runtime_context_refresh = true })
+
+  package.loaded["src.app.init"] = nil
+  assert(gameplay_rules.debug_log_enabled == true, "non-release startup should keep debug logs enabled")
+  assert(capture.host_runtime.tip_presenter("tip", 1) == false, "tip presenter should fall back when GlobalAPI is missing")
+  local called = false
+  assert(capture.host_runtime.scheduler(0.5, function() called = true end) == true,
+    "scheduler should execute callback inline when SetTimeOut is missing")
+  assert(called == true, "scheduler fallback should invoke callback")
+  assert(capture.event_provider() == false and capture.anim_provider() == false,
+    "providers should stay disabled when ui debug flags are absent")
+end
+
 return {
   name = "startup_release",
   tests = {
@@ -208,6 +444,14 @@ return {
     {
       name = "game_startup_mixed_real_and_synthetic_players_keep_slot_avatar_specs",
       run = _test_game_startup_mixed_real_and_synthetic_players_keep_slot_avatar_specs,
+    },
+    {
+      name = "app_init_release_mode_wires_runtime_and_debug_providers",
+      run = _test_app_init_release_mode_wires_runtime_and_debug_providers,
+    },
+    {
+      name = "app_init_non_release_keeps_debug_logs_and_scheduler_fallback",
+      run = _test_app_init_non_release_keeps_debug_logs_and_scheduler_fallback,
     },
   },
 }

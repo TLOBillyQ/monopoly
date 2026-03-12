@@ -545,6 +545,22 @@ local function _test_intent_dispatcher_rejects_missing_required_choice_meta()
   assert(g.turn.pending_choice == nil, "open_choice should not mutate pending_choice on schema failure")
 end
 
+local function _test_intent_dispatcher_rejects_missing_required_choice_meta_table()
+  local g = _new_game()
+  local ok, err = pcall(function()
+    intent_dispatcher.open_choice(g, {
+      kind = "market_buy",
+      title = "黑市",
+      options = { { id = 2001, label = "A" } },
+    }, {})
+  end)
+
+  assert(ok == false, "open_choice should reject missing meta table for required_meta descriptors")
+  assert(tostring(err):find("market_buy requires meta", 1, true) ~= nil,
+    "open_choice should report missing meta table before validating required keys")
+  assert(g.turn.pending_choice == nil, "dispatcher should not mutate pending choice when meta table is missing")
+end
+
 local function _test_intent_dispatcher_normalizes_market_choice_meta()
   local g = _new_game()
   local entry = intent_dispatcher.open_choice(g, {
@@ -713,6 +729,21 @@ local function _test_intent_dispatcher_dispatches_descriptor_meta_validator_with
 
   assert(validated == true, "dispatcher should run descriptor meta_validator even without required_meta")
   assert(entry.meta and entry.meta.normalized == true, "dispatcher should keep normalized meta on custom descriptor choices")
+end
+
+local function _test_intent_dispatcher_allows_missing_choice_registry()
+  local g = _new_game()
+  g.registries = {}
+
+  local entry = intent_dispatcher.open_choice(g, {
+    kind = "custom_probe_without_registry",
+    title = "无注册表",
+    options = { { id = 1, label = "A" } },
+    meta = { probe = true },
+  }, {})
+
+  assert(entry.kind == "custom_probe_without_registry", "dispatcher should still open choices without registry descriptors")
+  assert(entry.meta and entry.meta.probe == true, "dispatcher should preserve original meta when registry is missing")
 end
 
 local function _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not()
@@ -4054,6 +4085,8 @@ return {
   _test_dispatch_validator_accepts_ui_state_snapshot = _test_dispatch_validator_accepts_ui_state_snapshot,
   _test_intent_dispatcher_sets_choice_route_metadata = _test_intent_dispatcher_sets_choice_route_metadata,
   _test_intent_dispatcher_rejects_missing_required_choice_meta = _test_intent_dispatcher_rejects_missing_required_choice_meta,
+  _test_intent_dispatcher_rejects_missing_required_choice_meta_table =
+    _test_intent_dispatcher_rejects_missing_required_choice_meta_table,
   _test_intent_dispatcher_normalizes_market_choice_meta = _test_intent_dispatcher_normalizes_market_choice_meta,
   _test_intent_dispatcher_normalizes_item_choice_meta = _test_intent_dispatcher_normalizes_item_choice_meta,
   _test_intent_dispatcher_normalizes_landing_optional_effect_meta = _test_intent_dispatcher_normalizes_landing_optional_effect_meta,
@@ -4063,6 +4096,7 @@ return {
   _test_intent_dispatcher_logs_waiting_choice_event = _test_intent_dispatcher_logs_waiting_choice_event,
   _test_intent_dispatcher_dispatches_descriptor_meta_validator_without_required_keys =
     _test_intent_dispatcher_dispatches_descriptor_meta_validator_without_required_keys,
+  _test_intent_dispatcher_allows_missing_choice_registry = _test_intent_dispatcher_allows_missing_choice_registry,
   _test_choice_resolver_normalizes_market_buy_action_before_execute = _test_choice_resolver_normalizes_market_buy_action_before_execute,
   _test_choice_resolver_normalizes_roadblock_action_before_execute = _test_choice_resolver_normalizes_roadblock_action_before_execute,
   _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not = _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not,

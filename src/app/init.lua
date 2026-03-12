@@ -47,18 +47,30 @@ local state = game_startup.build_state(function() return current_game_ref[1] end
   profile_name = startup.profile_name,
 })
 
-local function _is_debug_log_enabled()
-  local ui = state and state.ui or nil
-  local enabled_by_role = ui and ui.debug_log_enabled_by_role or nil
-  if type(enabled_by_role) ~= "table" then
-    return false
-  end
+local function _has_enabled_debug_role(enabled_by_role)
   for _, enabled in pairs(enabled_by_role) do
     if enabled == true then
       return true
     end
   end
   return false
+end
+
+local function _resolve_debug_log_roles(ctx_state)
+  local ui = ctx_state and ctx_state.ui or nil
+  local enabled_by_role = ui and ui.debug_log_enabled_by_role or nil
+  if type(enabled_by_role) ~= "table" then
+    return nil
+  end
+  return enabled_by_role
+end
+
+local function _is_debug_log_enabled()
+  local enabled_by_role = _resolve_debug_log_roles(state)
+  if enabled_by_role == nil then
+    return false
+  end
+  return _has_enabled_debug_role(enabled_by_role)
 end
 
 logger.set_event_collection_enabled_provider(_is_debug_log_enabled)
