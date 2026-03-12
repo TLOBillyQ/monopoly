@@ -96,6 +96,14 @@
 - log: 2026-03-12 继续补 `target_choice_effects` 的低覆盖路径：新增 `payload.unit -> tile_index` 拾取回退与 `owner_role_id` 缺失时回退当前玩家的 target-pick characterization tests；定向 suite `tests.suites.presentation.presentation_target_pick` 通过，等待下一轮双 lane CRAP 确认 `target_choice_effects` 是否出桶。
 - log: 2026-03-12 T5 新一轮收尾：重构 `sync_target_choice_buttons`（complexity 9）拆分为 `_resolve_target_screen`、`_is_target_choice_active`、`_sync_target_button` 三个 helper，CRAP 从 9.24 降至 8 以下，已出桶；补充 characterization tests 覆盖 `_resolve_bankruptcy_text`（4 个 cases）、`_pick_with`（3 个 cases）、`on_bankruptcy_tiles_cleared`（3 个 cases）、`build_intent`（3 个 cases）、event_handlers 匿名函数（4 个 cases）、`register_node_click`（1 个 case）、`choice.build_choice_view`（5 个 cases）；定向 suites `presentation_popup_visibility`、`presentation_ui_event_handlers`、`presentation_ui_event_bindings`、`read_model_contract`、`presentation_ui_interaction` 全部通过；T5 residual 从 12 降到 11。
 - log: 2026-03-12 补充 T5 characterization tests 覆盖低复杂度热点：新增 `_pick_with` 多 API 回退与 hit unit 格式解析（3 cases）、`_toggle_action_log` UI 缺失与 role_id 缺失处理（2 cases）、`_resolve_bankruptcy_text` 多层级 fallback（4 cases）；定向 suite `presentation_ui_interaction` 与 `presentation_popup_visibility` 通过；所有 behavior suites 通过（574）。
+- log: 2026-03-12 T5 最终状态：剩余 8 个函数 CRAP > 8，全部为 complexity <= 8 的低复杂度热点，需通过补测达标。热点列表：
+  - `item_slot_intents.lua:build_intent:16` (CRAP=8.67, complexity=3, coverage=0.14) - item slot 的 build_intent 嵌套函数
+  - `state_ports.lua:on_bankruptcy_tiles_cleared:14` (CRAP=8.67, complexity=3, coverage=0.14) - bankruptcy tiles cleared 回调
+  - `event_handlers.lua:anonymous@169,178,187,246` (CRAP=8.21, complexity=3, coverage=0.17) - rent_paid/rent_bankrupt/tax_paid/bankruptcy 事件处理器
+  - `event_bindings.lua:bindings.register_node_click:20` (CRAP=8.08, complexity=8, coverage=0.89) - 节点点击注册
+  - `choice_builder.lua:choice.build_choice_view:63` (CRAP=8.03, complexity=8, coverage=0.93) - choice view 构建
+  - `canvas_coordinator.lua:_hide_other_canvases:60` (CRAP=8.00, complexity=8, coverage=1.00) - 隐藏其他画布
+  所有 behavior suites 通过（650 tests），contract suites 通过（97 tests）。
 
 ### T6 Presentation view/input cluster
 - depends_on: `[T1]`
