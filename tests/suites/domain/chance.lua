@@ -1,6 +1,8 @@
 local support = require("support.domain_support")
 local default_map = require("Config.maps.default_map")
 local facing_policy = require("src.game.systems.board.facing_policy")
+local gameplay_rules = require("src.core.config.gameplay_rules")
+local inventory = require("src.game.systems.items.inventory")
 local function _new_game()
   return support.new_game({ map = default_map })
 end
@@ -12,6 +14,7 @@ local _with_patches = support.with_patches
 local _assert_eq = support.assert_eq
 local chance_effects = support.chance_effects
 local _build_ui_port = support.build_ui_port
+local item_ids = gameplay_rules.item_ids
 
 local function _test_chance_is_mandatory_effect_entrypoint()
   local g = _new_game()
@@ -122,6 +125,218 @@ local function _test_chance_forced_move_to_market_sets_default_forward_heading()
   _assert_eq(p.status.move_dir, expected, "forced_move market should set default forward heading")
 end
 
+-- Characterization tests for chance handlers (T4)
+local chance_handlers = require("src.game.systems.chance.chance_handlers")
+local post_effects = require("src.game.systems.items.post_effects")
+
+local function _test_chance_handlers_build_returns_handler_table()
+  local handlers = chance_handlers.build()
+  assert(type(handlers) == "table", "chance_handlers.build should return a table")
+  assert(type(handlers.handlers) == "table", "chance_handlers.build should return nested handlers table")
+  assert(type(handlers.add_cash) == "function", "chance_handlers should register add_cash handler")
+  assert(type(handlers.pay_cash) == "function", "chance_handlers should register pay_cash handler")
+  assert(type(handlers.percent_pay_cash) == "function", "chance_handlers should register percent_pay_cash handler")
+  assert(type(handlers.pay_others) == "function", "chance_handlers should register pay_others handler")
+  assert(type(handlers.collect_from_others) == "function", "chance_handlers should register collect_from_others handler")
+  assert(type(handlers.move_backward) == "function", "chance_handlers should register move_backward handler")
+  assert(type(handlers.move_forward) == "function", "chance_handlers should register move_forward handler")
+  assert(type(handlers.forced_move) == "function", "chance_handlers should register forced_move handler")
+  assert(type(handlers.set_vehicle) == "function", "chance_handlers should register set_vehicle handler")
+  assert(type(handlers.destroy_buildings_on_path) == "function", "chance_handlers should register destroy_buildings_on_path handler")
+  assert(type(handlers.reset_tiles_on_path) == "function", "chance_handlers should register reset_tiles_on_path handler")
+  assert(type(handlers.grant_item) == "function", "chance_handlers should register grant_item handler")
+  assert(type(handlers.discard_items) == "function", "chance_handlers should register discard_items handler")
+  assert(type(handlers.discard_properties) == "function", "chance_handlers should register discard_properties handler")
+end
+
+local function _test_chance_handler_add_cash_applies_to_all_players()
+  local g = _new_game()
+  local handlers = chance_handlers.build()
+  local p = g:current_player()
+  local events = {}
+
+  _with_patches({
+    { target = require("src.core.events.monopoly_events"), key = "emit", value = function(_, payload)
+      events[#events + 1] = payload
+    end },
+  }, function()
+    handlers.add_cash(g, p, { effect = "add_cash", amount = 100, target = "all" })
+  end)
+
+  assert(#events >= 2, "add_cash with target=all should emit events for all players")
+  assert(events[1].effect == "add_cash", "add_cash event should have correct effect")
+  assert(events[1].text:find("获得"), "add_cash event text should indicate gain")
+end
+
+local function _test_chance_handler_pay_cash_applies_to_single_player()
+  local g = _new_game()
+  local handlers = chance_handlers.build()
+  local p = g:current_player()
+  local before_cash = g:player_balance(p, "金币")
+  local events = {}
+
+  _with_patches({
+    { target = require("src.core.events.monopoly_events"), key = "emit", value = function(_, payload)
+      events[#events + 1] = payload
+    end },
+  }, function()
+    handlers.pay_cash(g, p, { effect = "pay_cash", amount = 50, target = "self" })
+  end)
+
+  assert(g:player_balance(p, "金币") < before_cash, "pay_cash should reduce player cash")
+  assert(#events == 1, "pay_cash should emit one event for single player")
+  assert(events[1].effect == "pay_cash", "pay_cash event should have correct effect")
+  assert(events[1].text:find("支付"), "pay_cash event text should indicate payment")
+end
+
+local function _test_chance_handler_percent_pay_cash_calculates_correctly()
+  local g = _new_game()
+  local handlers = chance_handlers.build()
+  local p = g:current_player()
+  g:set_player_cash(p, 1000)
+  local events = {}
+
+  _with_patches({
+    { target = require("src.core.events.monopoly_events"), key = "emit", value = function(_, payload)
+      events[#events + 1] = payload
+    end },
+  }, function()
+    handlers.percent_pay_cash(g, p, { effect = "percent_pay_cash", percent = 10, target = "self" })
+  end)
+
+  assert(g:player_balance(p, "金币") == 900, "percent_pay_cash should deduct 10% of 1000")
+  assert(#events == 1, "percent_pay_cash should emit one event")
+  assert(events[1].text:find("按比例支付"), "percent_pay_cash event text should indicate proportional payment")
+end
+
+local function _test_chance_handler_grant_item_gives_item_to_player()
+  local g = _new_game()
+  local handlers = chance_handlers.build()
+  local p = g:current_player()
+  local item_count_before = #inventory.items(p)
+
+  handlers.grant_item(g, p, { effect = "grant_item", item_id = item_ids.free_rent })
+
+  assert(#inventory.items(p) > item_count_before, "grant_item should increase player item count")
+end
+
+local function _test_chance_handler_discard_items_removes_items()
+  local g = _new_game()
+  local handlers = chance_handlers.build()
+  local p = g:current_player()
+  inventory.give(p, item_ids.free_rent, { game = g })
+  local item_count_before = #inventory.items(p)
+  local events = {}
+
+  _with_patches({
+    { target = require("src.core.events.monopoly_events"), key = "emit", value = function(_, payload)
+      events[#events + 1] = payload
+    end },
+  }, function()
+    handlers.discard_items(g, p, { effect = "discard_items", count = 1 })
+  end)
+
+  assert(#inventory.items(p) < item_count_before, "discard_items should reduce player item count")
+  assert(#events == 1, "discard_items should emit one event")
+  assert(events[1].text:find("丢弃道具"), "discard_items event text should indicate item discard")
+end
+
+local function _test_chance_handler_move_forward_moves_player()
+  local g = _new_game()
+  local handlers = chance_handlers.build()
+  local p = g:current_player()
+  local start_pos = p.position
+
+  local out = handlers.move_forward(g, p, { effect = "move_forward", steps = 3, target = "self" })
+
+  assert(out and out.kind == "need_landing", "move_forward should return need_landing")
+  assert(p.position ~= start_pos, "move_forward should change player position")
+end
+
+-- Characterization tests for post_effects (T4)
+local function _test_post_effects_apply_sets_status()
+  local g = _new_game()
+  local p = g:current_player()
+
+  post_effects.apply_post(g, p, item_ids.free_rent, {})
+
+  assert(p.status.pending_free_rent == true, "post_effects apply should set pending_free_rent status")
+end
+
+local function _test_post_effects_apply_deity_sets_deity()
+  local g = _new_game()
+  local p = g:current_player()
+
+  post_effects.apply_post(g, p, item_ids.rich, {})
+
+  assert(p.status.deity ~= nil, "post_effects apply deity should set player deity")
+  assert(p.status.deity.type == "rich", "post_effects apply deity should set correct deity type")
+end
+
+local function _test_post_effects_apply_log_emits_event()
+  local g = _new_game()
+  local p = g:current_player()
+  local events = {}
+
+  _with_patches({
+    { target = require("src.core.utils.logger"), key = "event", value = function(text)
+      events[#events + 1] = text
+    end },
+  }, function()
+    post_effects.apply_post(g, p, item_ids.steal, {})
+  end)
+
+  assert(#events == 1, "post_effects log type should emit one event")
+  assert(events[1]:find("偷窃"), "post_effects log type should emit steal preparation message")
+end
+
+local function _test_post_effects_apply_place_mine_here_places_mine()
+  local g = _new_game()
+  local p = g:current_player()
+  local idx = g.board:index_of_tile_id(2)
+  g:update_player_position(p, idx)
+  local tile_idx = p.position
+
+  post_effects.apply_post(g, p, item_ids.mine, {})
+
+  assert(g.board:has_mine(tile_idx), "post_effects place_mine_here should place a mine at player position")
+end
+
+local function _test_post_effects_apply_clear_obstacles_ahead_clears_obstacles()
+  local g = _new_game()
+  local p = g:current_player()
+  local idx = g.board:index_of_tile_id(2)
+  g:update_player_position(p, idx)
+  g:place_roadblock(idx + 1, { owner_id = p.id })
+
+  assert(g.board:has_roadblock(idx + 1), "precondition: roadblock should exist")
+
+  post_effects.apply_post(g, p, item_ids.clear_obstacles, { branch_parity = 12 })
+
+  assert(not g.board:has_roadblock(idx + 1), "post_effects clear_obstacles_ahead should clear roadblocks")
+end
+
+local function _test_post_effects_target_item_ids_returns_ordered_list()
+  local ids = post_effects.target_item_ids()
+  assert(type(ids) == "table", "target_item_ids should return a table")
+  assert(#ids > 0, "target_item_ids should return non-empty list")
+  -- Check for known target items (share_wealth = 2011)
+  local has_share_wealth = false
+  for _, id in ipairs(ids) do
+    if id == item_ids.share_wealth then
+      has_share_wealth = true
+      break
+    end
+  end
+  assert(has_share_wealth, "target_item_ids should include share_wealth item")
+end
+
+local function _test_post_effects_get_target_spec_returns_spec()
+  local spec = post_effects.get_target_spec(item_ids.share_wealth)
+  assert(type(spec) == "table", "get_target_spec should return a table for target items")
+  assert(type(spec.apply) == "function", "target spec should have apply function")
+end
+
 return {
   name = "chance",
   tests = {
@@ -135,5 +350,21 @@ return {
       name = "chance_forced_move_to_market_sets_default_forward_heading",
       run = _test_chance_forced_move_to_market_sets_default_forward_heading,
     },
+    -- T4 characterization tests for chance handlers
+    { name = "chance_handlers_build_returns_handler_table", run = _test_chance_handlers_build_returns_handler_table },
+    { name = "chance_handler_add_cash_applies_to_all_players", run = _test_chance_handler_add_cash_applies_to_all_players },
+    { name = "chance_handler_pay_cash_applies_to_single_player", run = _test_chance_handler_pay_cash_applies_to_single_player },
+    { name = "chance_handler_percent_pay_cash_calculates_correctly", run = _test_chance_handler_percent_pay_cash_calculates_correctly },
+    { name = "chance_handler_grant_item_gives_item_to_player", run = _test_chance_handler_grant_item_gives_item_to_player },
+    { name = "chance_handler_discard_items_removes_items", run = _test_chance_handler_discard_items_removes_items },
+    { name = "chance_handler_move_forward_moves_player", run = _test_chance_handler_move_forward_moves_player },
+    -- T4 characterization tests for post_effects
+    { name = "post_effects_apply_sets_status", run = _test_post_effects_apply_sets_status },
+    { name = "post_effects_apply_deity_sets_deity", run = _test_post_effects_apply_deity_sets_deity },
+    { name = "post_effects_apply_log_emits_event", run = _test_post_effects_apply_log_emits_event },
+    { name = "post_effects_apply_place_mine_here_places_mine", run = _test_post_effects_apply_place_mine_here_places_mine },
+    { name = "post_effects_apply_clear_obstacles_ahead_clears_obstacles", run = _test_post_effects_apply_clear_obstacles_ahead_clears_obstacles },
+    { name = "post_effects_target_item_ids_returns_ordered_list", run = _test_post_effects_target_item_ids_returns_ordered_list },
+    { name = "post_effects_get_target_spec_returns_spec", run = _test_post_effects_get_target_spec_returns_spec },
   },
 }
