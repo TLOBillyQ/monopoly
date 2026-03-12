@@ -1,9 +1,10 @@
 local gameplay_cases = require("suites.gameplay.gameplay_cases")
+local t2_enabled_cases = require("suites.gameplay.gameplay_t2_enabled_cases")
 
 local function _case(name, overrides)
   local case = {
     name = name,
-    run = assert(gameplay_cases[name], "missing gameplay case: " .. tostring(name)),
+    run = assert(gameplay_cases[name] or t2_enabled_cases[name], "missing gameplay case: " .. tostring(name)),
   }
   for key, value in pairs(overrides or {}) do
     case[key] = value
@@ -37,6 +38,19 @@ return {
     _case("_test_popup_countdown_uses_effective_modal_timeout"),
     _case("_test_market_countdown_uses_double_action_timeout"),
     _case("_test_dispatch_gate_blocks_next_when_choice_active"),
+    _case("_test_fill_ui_sync_defaults_fills_all"),
+    _case("_test_fill_ui_sync_defaults_preserves_custom"),
+    _case("_test_fill_ui_sync_defaults_resolve_ui_gate"),
+    _case("_test_fill_ui_sync_defaults_set_input_blocked"),
+    _case("_test_fill_ui_sync_defaults_gate_nil_state"),
+    _case("_test_update_countdown_pending_choice"),
+    _case("_test_update_countdown_detained_wait"),
+    _case("_test_update_countdown_action_button"),
+    _case("_test_update_countdown_popup_zero_timeout"),
+    _case("_test_is_action_button_wait_active_pending_choice"),
+    _case("_test_is_action_button_wait_active_input_blocked"),
+    _case("_test_is_action_button_wait_active_popup"),
+    _case("_test_is_action_button_wait_active_finished_game"),
     _case("_test_choice_auto_policy_preconsumed_wait_choice_picks_first_option"),
     _case("_test_turn_timer_policy_detained_wait_steps_when_timeout_elapsed"),
     _case("_test_turn_timer_policy_inter_turn_wait_steps_when_timeout_elapsed"),

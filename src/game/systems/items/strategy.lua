@@ -140,7 +140,8 @@ end
 
 local function _try_use_item(game, player, item_id, cond, auto_play)
   if cond and cond() == false then return nil end
-  if _ai_can_use_item(item_id, player) then
+  local phase = game and game.turn and game.turn.phase or nil
+  if _ai_can_use_item(item_id, phase) then
   else
     return nil
   end
@@ -198,35 +199,57 @@ local function _try_deity_items(game, player, auto_play)
   return _try_use_item(game, player, item_ids.angel, nil, auto_play)
 end
 
-function strategy.auto_pre_action(game, player, phase)
+local function _auto_pre_action_probes(game, player, auto_play)
+  return {
+    function()
+      return _try_clear_obstacles(game, player, auto_play)
+    end,
+    function()
+      return _try_remote_dice(game, player, auto_play)
+    end,
+    function()
+      return _try_use_item(game, player, item_ids.mine, nil, auto_play)
+    end,
+    function()
+      return _try_use_item(game, player, item_ids.dice_multiplier, nil, auto_play)
+    end,
+    function()
+      return _try_roadblock(game, player, auto_play)
+    end,
+    function()
+      return _try_use_item(game, player, item_ids.monster, function()
+        return _has_demolish_target(game, player)
+      end, auto_play)
+    end,
+    function()
+      return _try_use_item(game, player, item_ids.missile, function()
+        return _has_demolish_target(game, player)
+      end, auto_play)
+    end,
+    function()
+      return _try_target_items(game, player, auto_play)
+    end,
+    function()
+      return _try_deity_items(game, player, auto_play)
+    end,
+  }
+end
+
+local function _run_auto_pre_action_probes(game, player, auto_play)
+  for _, probe in ipairs(_auto_pre_action_probes(game, player, auto_play)) do
+    local result = probe()
+    if result then
+      return result
+    end
+  end
+  return nil
+end
+
+function strategy.auto_pre_action(game, player, _phase)
   if not auto_play_port.is_auto_player(game, player) then
     return nil
   end
-
-  local clear_result = _try_clear_obstacles(game, player, auto_play)
-  if clear_result then return clear_result end
-
-  local dice_result = _try_remote_dice(game, player, auto_play)
-  if dice_result then return dice_result end
-
-  local mine_result = _try_use_item(game, player, item_ids.mine, nil, auto_play)
-  if mine_result then return mine_result end
-
-  local double_result = _try_use_item(game, player, item_ids.dice_multiplier, nil, auto_play)
-  if double_result then return double_result end
-
-  local roadblock_result = _try_roadblock(game, player, auto_play)
-  if roadblock_result then return roadblock_result end
-
-  local monster_result = _try_use_item(game, player, item_ids.monster, function() return _has_demolish_target(game, player) end, auto_play)
-  if monster_result then return monster_result end
-  local missile_result = _try_use_item(game, player, item_ids.missile, function() return _has_demolish_target(game, player) end, auto_play)
-  if missile_result then return missile_result end
-
-  local target_result = _try_target_items(game, player, auto_play)
-  if target_result then return target_result end
-
-  return _try_deity_items(game, player, auto_play)
+  return _run_auto_pre_action_probes(game, player, nil)
 end
 
 -- Export helpers for testability

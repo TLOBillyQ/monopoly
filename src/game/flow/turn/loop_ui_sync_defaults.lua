@@ -113,30 +113,25 @@ local function _default_resolve_ui_gate(ui_sync_ports)
   end
 end
 
+local function _fill_default(ui_sync_ports, base_ui_sync_ports, key, resolver)
+  if ui_sync_ports[key] == base_ui_sync_ports[key] then
+    ui_sync_ports[key] = resolver(ui_sync_ports)
+  end
+end
+
 function M.fill_ui_sync_defaults(ui_sync_ports, base_ui_sync_ports)
-  if ui_sync_ports.get_ui_state == base_ui_sync_ports.get_ui_state then
-    ui_sync_ports.get_ui_state = _default_get_ui_state
-  end
-  if ui_sync_ports.is_input_blocked == base_ui_sync_ports.is_input_blocked then
-    ui_sync_ports.is_input_blocked = _default_is_input_blocked(ui_sync_ports)
-  end
-  if ui_sync_ports.is_popup_active == base_ui_sync_ports.is_popup_active then
-    ui_sync_ports.is_popup_active = _default_is_popup_active(ui_sync_ports)
-  end
-  if ui_sync_ports.is_choice_active == base_ui_sync_ports.is_choice_active then
-    ui_sync_ports.is_choice_active = _default_is_choice_active(ui_sync_ports)
-  end
-  if ui_sync_ports.is_market_active == base_ui_sync_ports.is_market_active then
-    ui_sync_ports.is_market_active = _default_is_market_active(ui_sync_ports)
-  end
-  if ui_sync_ports.get_popup_owner_index == base_ui_sync_ports.get_popup_owner_index then
-    ui_sync_ports.get_popup_owner_index = _default_get_popup_owner_index(ui_sync_ports)
-  end
-  if ui_sync_ports.set_input_blocked == base_ui_sync_ports.set_input_blocked then
-    ui_sync_ports.set_input_blocked = _default_set_input_blocked(ui_sync_ports)
-  end
-  if ui_sync_ports.resolve_ui_gate == base_ui_sync_ports.resolve_ui_gate then
-    ui_sync_ports.resolve_ui_gate = _default_resolve_ui_gate(ui_sync_ports)
+  local specs = {
+    { key = "get_ui_state", resolver = function() return _default_get_ui_state end },
+    { key = "is_input_blocked", resolver = _default_is_input_blocked },
+    { key = "is_popup_active", resolver = _default_is_popup_active },
+    { key = "is_choice_active", resolver = _default_is_choice_active },
+    { key = "is_market_active", resolver = _default_is_market_active },
+    { key = "get_popup_owner_index", resolver = _default_get_popup_owner_index },
+    { key = "set_input_blocked", resolver = _default_set_input_blocked },
+    { key = "resolve_ui_gate", resolver = _default_resolve_ui_gate },
+  }
+  for _, spec in ipairs(specs) do
+    _fill_default(ui_sync_ports, base_ui_sync_ports, spec.key, spec.resolver)
   end
 end
 
