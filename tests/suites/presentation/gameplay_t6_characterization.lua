@@ -9,6 +9,7 @@ local status3d_scene = require("src.presentation.view.render.status3d.scene")
 local pre_confirm_flow = require("src.presentation.input.intent_dispatch.pre_confirm")
 local status3d_init = require("src.presentation.view.render.status3d.init")
 local startup_render = require("src.presentation.view.render.board.startup_render")
+local runtime_refs = require("Config.runtime_refs")
 
 local function _with_globals(overrides, fn)
   local original = {}
@@ -1152,6 +1153,103 @@ local function _test_create_scene_ui_bind_unit_preserves_offset()
   end)
 end
 
+-- T8 additional tests for board_feedback._play_cue to reach 100% coverage
+-- Note: _play_cue is an internal function that uses runtime_refs internally.
+-- Since runtime_refs is captured at module load time, we test via the public API
+-- and focus on the paths we can reliably exercise.
+
+local function _test_play_cue_empty_cue_name()
+  local result = board_feedback.play_tile_cue(
+    { presentation_runtime = { host_runtime = { play_sfx_by_key = function() end, play_3d_sound = function() end } } },
+    "",
+    1,
+    {},
+    {}
+  )
+  assert(result == false, "should return false for empty cue name")
+end
+
+local function _test_play_cue_nil_cue_name()
+  local result = board_feedback.play_tile_cue(
+    { presentation_runtime = { host_runtime = { play_sfx_by_key = function() end, play_3d_sound = function() end } } },
+    nil,
+    1,
+    {},
+    {}
+  )
+  assert(result == false, "should return false for nil cue name")
+end
+
+local function _test_play_cue_nonexistent()
+  local mock_host = {
+    play_sfx_by_key = function() return nil end,
+    play_3d_sound = function() return nil end,
+  }
+
+  local result = board_feedback.play_tile_cue(
+    { presentation_runtime = { host_runtime = mock_host } },
+    "nonexistent_cue_12345",
+    1,
+    {},
+    { host_runtime = mock_host }
+  )
+  assert(result == false, "should return false for nonexistent cue")
+end
+
+local function _test_play_sound_only_nil_pos_fallback()
+  local mock_host = {
+    play_sfx_by_key = function() return nil end,
+    play_3d_sound = function() return nil end,
+  }
+
+  -- Call play_sound_only with no pos, no player_id, no tile_index
+  -- This should pass nil to _play_cue, triggering the fallback to v3_zero
+  local result = board_feedback.play_sound_only(
+    { presentation_runtime = { host_runtime = mock_host } },
+    "nonexistent_cue_12345",
+    {},
+    { host_runtime = mock_host }
+  )
+
+  assert(result == false, "should return false for nonexistent cue even with nil pos fallback")
+end
+
+local function _test_play_player_cue_nil_position()
+  local mock_host = {
+    play_sfx_by_key = function() return nil end,
+    play_3d_sound = function() return nil end,
+  }
+
+  -- When player has no position and no unit, _resolve_player_position returns nil
+  -- which causes play_player_cue to return false early
+  local state = {
+    presentation_runtime = { host_runtime = mock_host },
+    board_scene = {},
+    game = {
+      find_player_by_id = function() return { position = nil } end,
+    },
+  }
+
+  local result = board_feedback.play_player_cue(state, "test_cue", "p1", {}, { host_runtime = mock_host })
+  assert(result == false, "should return false when player position cannot be resolved")
+end
+
+local function _test_play_tile_cue_nil_position()
+  local mock_host = {
+    play_sfx_by_key = function() return nil end,
+    play_3d_sound = function() return nil end,
+  }
+
+  -- When tile position cannot be resolved, play_tile_cue returns false
+  local state = {
+    presentation_runtime = { host_runtime = mock_host },
+    board_scene = nil, -- No board_scene means no tile position
+  }
+
+  local result = board_feedback.play_tile_cue(state, "test_cue", 1, {}, { host_runtime = mock_host })
+  assert(result == false, "should return false when tile position cannot be resolved")
+end
+
 return {
   name = "gameplay.t6_characterization",
   tests = {
@@ -1219,5 +1317,12 @@ return {
     { name = "role_control_lock_sync_role_without_get_ctrl_unit", run = _test_role_control_lock_sync_role_without_get_ctrl_unit },
     { name = "anim_overlay_spawn_overlay_failed_spawn", run = _test_anim_overlay_spawn_overlay_failed_spawn },
     { name = "create_scene_ui_bind_unit_preserves_offset", run = _test_create_scene_ui_bind_unit_preserves_offset },
+    -- T8 additional tests for _play_cue (testing via public API)
+    { name = "play_cue_empty_cue_name", run = _test_play_cue_empty_cue_name },
+    { name = "play_cue_nil_cue_name", run = _test_play_cue_nil_cue_name },
+    { name = "play_cue_nonexistent", run = _test_play_cue_nonexistent },
+    { name = "play_sound_only_nil_pos_fallback", run = _test_play_sound_only_nil_pos_fallback },
+    { name = "play_player_cue_nil_position", run = _test_play_player_cue_nil_position },
+    { name = "play_tile_cue_nil_position", run = _test_play_tile_cue_nil_position },
   },
 }

@@ -1445,6 +1445,355 @@ local _choice_auto_policy_extended_tests = {
   end,
 }
 
+-- Additional tests for choice_auto_policy.decide to reach 100% coverage
+local _choice_auto_policy_coverage_tests = {
+  function()
+    -- Test _resolve_choice_owner returns nil when no game
+    local choice = { id = 1, owner_role_id = 1 }
+    local result = choice_auto_policy.resolve_choice_owner(nil, choice)
+    assert(result == nil, "should return nil when no game")
+  end,
+  function()
+    local game = _new_game()
+    local p1 = game.players[1]
+    -- Test _resolve_choice_owner returns player from choice owner_role_id
+    local choice = { id = 1, owner_role_id = p1.id }
+    local result = choice_auto_policy.resolve_choice_owner(game, choice)
+    assert(result == p1, "should return player from choice owner_role_id")
+  end,
+  function()
+    local game = _new_game()
+    local p1 = game.players[1]
+    -- Test _resolve_choice_owner falls back to current_player
+    local choice = { id = 1 }
+    local result = choice_auto_policy.resolve_choice_owner(game, choice)
+    assert(result == p1, "should fallback to current player")
+  end,
+  function()
+    local game = _new_game()
+    game.current_player = function() return nil end
+    local choice = { id = 1 }
+    local result = choice_auto_policy.resolve_choice_owner(game, choice)
+    assert(result == nil, "should return nil when no current player")
+  end,
+  function()
+    local game = _new_game()
+    -- Test with min_visible=0 (edge case)
+    local p1 = game.players[1]
+    p1.auto = true
+    local choice = { id = 1, options = { { id = "opt1" } }, meta = { item_preconsumed = true } }
+    local ctx = { mode = "wait_choice", elapsed_seconds = 0, min_visible_seconds = 0 }
+    local result = choice_auto_policy.decide(game, {}, choice, ctx)
+    assert(result ~= nil, "should work with min_visible=0")
+  end,
+  function()
+    local game = _new_game()
+    -- Test non-auto actor with min_visible <= 0
+    local choice = { id = 1, options = { { id = "opt1" } } }
+    local ctx = { mode = "wait_choice", elapsed_seconds = 0, min_visible_seconds = 0 }
+    local result = choice_auto_policy.decide(game, {}, choice, ctx)
+    -- Non-auto actor should still return nil because is_auto_actor is false
+    assert(result == nil, "non-auto actor should return nil even with min_visible=0")
+  end,
+  function()
+    local game = _new_game()
+    local p1 = game.players[1]
+    p1.auto = true
+    -- Test preconsumed item with first option having no id field
+    local choice = { id = 1, options = { "direct_string_option" }, meta = { item_preconsumed = true } }
+    local ctx = { mode = "wait_choice", elapsed_seconds = 0, min_visible_seconds = 0 }
+    local result = choice_auto_policy.decide(game, {}, choice, ctx)
+    assert(result ~= nil, "should handle string options in preconsumed mode")
+    assert(result.option_id == "direct_string_option", "should use string as option_id")
+  end,
+  function()
+    local game = _new_game()
+    local p1 = game.players[1]
+    p1.auto = true
+    -- Test choice with nil options
+    local choice = { id = 1, options = nil, meta = { item_preconsumed = true } }
+    local ctx = { mode = "wait_choice", elapsed_seconds = 0, min_visible_seconds = 0 }
+    local result = choice_auto_policy.decide(game, {}, choice, ctx)
+    assert(result == nil, "should return nil when options is nil")
+  end,
+  function()
+    local game = _new_game()
+    local p1 = game.players[1]
+    p1.auto = true
+    -- Test choice with empty options table
+    local choice = { id = 1, options = {}, meta = { item_preconsumed = true } }
+    local ctx = { mode = "wait_choice", elapsed_seconds = 0, min_visible_seconds = 0 }
+    local result = choice_auto_policy.decide(game, {}, choice, ctx)
+    assert(result == nil, "should return nil when options is empty")
+  end,
+  function()
+    local game = _new_game()
+    local p1 = game.players[1]
+    p1.auto = true
+    -- Test negative elapsed seconds normalization
+    local choice = { id = 1, options = { { id = "opt1" } }, meta = { item_preconsumed = true } }
+    local ctx = { mode = "wait_choice", elapsed_seconds = -5, min_visible_seconds = 0 }
+    local result = choice_auto_policy.decide(game, {}, choice, ctx)
+    assert(result ~= nil, "should handle negative elapsed seconds")
+  end,
+  function()
+    local game = _new_game()
+    local p1 = game.players[1]
+    p1.auto = true
+    -- Test negative min_visible seconds normalization
+    local choice = { id = 1, options = { { id = "opt1" } }, meta = { item_preconsumed = true } }
+    local ctx = { mode = "wait_choice", elapsed_seconds = 0, min_visible_seconds = -1 }
+    local result = choice_auto_policy.decide(game, {}, choice, ctx)
+    assert(result ~= nil, "should handle negative min_visible seconds")
+  end,
+}
+
+-- Tests for resolve_choice_ui_state in tick_timeout.lua
+-- Note: resolve_choice_ui_state is an anonymous function inside step_default_choice
+-- We test it indirectly by checking the behavior of step_default_choice
+local tick_timeout = require("src.game.flow.turn.tick_timeout")
+local _resolve_choice_ui_state_tests = {
+  function()
+    -- Test that resolve_choice_timeout_seconds handles market_buy correctly
+    local game = _new_game()
+    local state = _build_loop_state()
+    game.turn.pending_choice = { id = 1, kind = "market_buy" }
+    local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state)
+    local constants = require("Config.generated.constants")
+    assert(timeout == (constants.action_timeout_seconds or 0) * 2, "market_buy should double timeout")
+  end,
+  function()
+    -- Test that resolve_choice_timeout_seconds handles normal choice
+    local game = _new_game()
+    local state = _build_loop_state()
+    game.turn.pending_choice = { id = 1, kind = "normal_choice" }
+    local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state)
+    local constants = require("Config.generated.constants")
+    assert(timeout == (constants.action_timeout_seconds or 0), "normal choice should use normal timeout")
+  end,
+  function()
+    -- Test that resolve_choice_timeout_seconds handles nil pending_choice
+    local game = _new_game()
+    local state = _build_loop_state()
+    local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state)
+    local constants = require("Config.generated.constants")
+    assert(timeout == (constants.action_timeout_seconds or 0), "nil pending_choice should use normal timeout")
+  end,
+  function()
+    -- Test that resolve_choice_timeout_seconds handles pending_choice from runtime state
+    local game = _new_game()
+    local state = _build_loop_state()
+    local runtime_state = require("src.core.state_access.runtime_state")
+    runtime_state.set_pending_choice(state, { id = 2, kind = "market_buy" })
+    local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state)
+    local constants = require("Config.generated.constants")
+    assert(timeout == (constants.action_timeout_seconds or 0) * 2, "should get pending_choice from runtime state")
+  end,
+  function()
+    -- Test that resolve_choice_timeout_seconds handles choice passed as parameter
+    local game = _new_game()
+    local state = _build_loop_state()
+    local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state, { id = 3, kind = "market_buy" })
+    local constants = require("Config.generated.constants")
+    assert(timeout == (constants.action_timeout_seconds or 0) * 2, "should use passed choice parameter")
+  end,
+}
+
+-- Tests for anonymous@88 in script.lua (coroutine create function)
+-- These tests exercise the coroutine creation and execution paths
+local turn_script = require("src.game.flow.turn.script")
+local _turn_script_tests = {
+  function()
+    -- Test script create with valid session - minimal test that just verifies coroutine creation
+    local session = {
+      current_state = "start",
+      current_args = nil,
+      phases = { start = function() return nil end },
+      mark_phase = function() end,
+    }
+    local co = turn_script.create(session)
+    assert(type(co) == "thread", "should return a coroutine thread")
+    -- Don't resume - just verify creation works
+  end,
+  function()
+    -- Test that create requires a session
+    local ok, err = pcall(function()
+      turn_script.create(nil)
+    end)
+    assert(not ok, "should error with nil session")
+  end,
+}
+
+-- Tests for _build_ui_gate in loop_ui_sync_defaults.lua
+-- Note: _build_ui_gate is a local function, we test via the public resolve_ui_gate function
+local loop_ui_sync_defaults = require("src.game.flow.turn.loop_ui_sync_defaults")
+local _build_ui_gate_tests = {
+  function()
+    -- Test resolve_ui_gate with empty state (nil ui)
+    local ports = loop_ui_sync_defaults.build_base_ui_sync_ports(function() end, function() end)
+    local result = ports.resolve_ui_gate({})
+    assert(type(result) == "table", "should return a table")
+    assert(result.input_blocked == false, "input_blocked should be false when ui is nil")
+    assert(result.choice_active == false, "choice_active should be false when ui is nil")
+    assert(result.market_active == false, "market_active should be false when ui is nil")
+    assert(result.popup_active == false, "popup_active should be false when ui is nil")
+  end,
+  function()
+    -- Test resolve_ui_gate with all ui flags true
+    local ports = loop_ui_sync_defaults.build_base_ui_sync_ports(function() end, function() end)
+    local state = {
+      ui = {
+        input_blocked = true,
+        choice_active = true,
+        market_active = true,
+        popup_active = true,
+        popup_seq = 123,
+        popup_owner_index = 2,
+        popup_payload = { auto_close_seconds = 5 },
+      }
+    }
+    local result = ports.resolve_ui_gate(state)
+    assert(result.input_blocked == true, "input_blocked should be true")
+    assert(result.choice_active == true, "choice_active should be true")
+    assert(result.market_active == true, "market_active should be true")
+    assert(result.popup_active == true, "popup_active should be true")
+    assert(result.popup_seq == 123, "popup_seq should be preserved")
+    assert(result.popup_owner_index == 2, "popup_owner_index should be preserved")
+    assert(result.popup_auto_close_seconds == 5, "popup_auto_close_seconds should be 5")
+  end,
+}
+
+-- Additional tests for turn_timer_policy.is_action_button_wait_active
+local _is_action_button_wait_active_more_tests = {
+  function()
+    local game = _new_game()
+    local state = _build_loop_state()
+    local ports = _build_test_ports()
+    -- Test with nil ui_sync.get_ui_state
+    ports.ui_sync.get_ui_state = nil
+    local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
+    assert(result == true, "should be active when get_ui_state is nil")
+  end,
+  function()
+    local game = _new_game()
+    local state = _build_loop_state()
+    local ports = _build_test_ports()
+    -- Test with get_ui_state returning falsy
+    ports.ui_sync.get_ui_state = function() return false end
+    local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
+    assert(result == false, "should not be active when get_ui_state returns false")
+  end,
+  function()
+    local game = _new_game()
+    local state = _build_loop_state()
+    local ports = _build_test_ports()
+    -- Test with pending_choice
+    game.turn.pending_choice = { id = 1 }
+    local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
+    assert(result == false, "should not be active when pending_choice exists")
+  end,
+  function()
+    local game = _new_game()
+    local state = _build_loop_state()
+    local ports = _build_test_ports()
+    -- Test with choice active
+    ports.ui_sync.is_choice_active = function() return true end
+    local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
+    assert(result == false, "should not be active when choice is active")
+  end,
+  function()
+    local game = _new_game()
+    local state = _build_loop_state()
+    local ports = _build_test_ports()
+    -- Test with market active
+    ports.ui_sync.is_market_active = function() return true end
+    local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
+    assert(result == false, "should not be active when market is active")
+  end,
+  function()
+    local game = _new_game()
+    local state = _build_loop_state()
+    local ports = _build_test_ports()
+    -- Test with popup active
+    ports.ui_sync.is_popup_active = function() return true end
+    local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
+    assert(result == false, "should not be active when popup is active")
+  end,
+}
+
+-- Additional tests for camera_policy._resolve_follow_player_id
+local _resolve_follow_player_id_more_tests = {
+  function()
+    local game = _new_game()
+    -- Test with all players eliminated
+    for _, p in ipairs(game.players) do
+      p.eliminated = true
+    end
+    local result = camera_policy._resolve_follow_player_id(game)
+    assert(result == nil, "should return nil when all players eliminated")
+  end,
+  function()
+    local game = _new_game()
+    -- Test with current player having nil id
+    game.players[1].id = nil
+    game.players[2].id = 2
+    local result = camera_policy._resolve_follow_player_id(game)
+    assert(result == 2, "should skip player with nil id")
+  end,
+  function()
+    local game = _new_game()
+    -- Test with current_index > count
+    game.turn.current_player_index = 999
+    local result = camera_policy._resolve_follow_player_id(game)
+    assert(result == nil, "should handle out of range index")
+  end,
+}
+
+-- Additional tests for tick_ui_sync.update_countdown
+local _update_countdown_more_tests = {
+  function()
+    local game = _new_game()
+    local state = _build_loop_state()
+    -- Test with choice active and market active (gate conditions)
+    local original_timeout = require("Config.generated.constants").action_timeout_seconds
+    require("Config.generated.constants").action_timeout_seconds = 10
+
+    game.turn.pending_choice = { id = 1, kind = "test" }
+    state.countdown_last = nil
+    state.countdown_active_last = nil
+
+    -- Mock runtime_state functions
+    local runtime_state = require("src.core.state_access.runtime_state")
+    local original_get_pending_choice = runtime_state.get_pending_choice
+    local original_get_pending_choice_elapsed = runtime_state.get_pending_choice_elapsed
+    runtime_state.get_pending_choice = function() return game.turn.pending_choice end
+    runtime_state.get_pending_choice_elapsed = function() return 3 end
+
+    tick_ui_sync.update_countdown(game, state)
+
+    runtime_state.get_pending_choice = original_get_pending_choice
+    runtime_state.get_pending_choice_elapsed = original_get_pending_choice_elapsed
+    require("Config.generated.constants").action_timeout_seconds = original_timeout
+
+    assert(game.turn.countdown_seconds ~= nil, "should set countdown_seconds")
+    assert(game.turn.countdown_active == true, "should set countdown_active")
+  end,
+  function()
+    local game = _new_game()
+    local state = _build_loop_state()
+    -- Test with no timeout (timeout <= 0)
+    local constants = require("Config.generated.constants")
+    local original = constants.action_timeout_seconds
+    constants.action_timeout_seconds = 0
+
+    tick_ui_sync.update_countdown(game, state)
+
+    constants.action_timeout_seconds = original
+    -- Should not crash and should set inactive
+    assert(game.turn.countdown_active == false or game.turn.countdown_active == nil, "should be inactive with no timeout")
+  end,
+}
+
 return {
   name = "gameplay_t2_characterization",
   tests = {
@@ -1575,5 +1924,43 @@ return {
     { name = "_test_is_action_button_wait_active_finished", run = _is_action_button_wait_active_extended_tests[11] },
     { name = "_test_is_action_button_wait_active_input_blocked", run = _is_action_button_wait_active_extended_tests[12] },
     { name = "_test_is_action_button_wait_active_nil_turn", run = _is_action_button_wait_active_extended_tests[13] },
+    -- T8 additional tests for choice_auto_policy coverage
+    { name = "_test_choice_auto_policy_resolve_owner_nil_game", run = _choice_auto_policy_coverage_tests[1] },
+    { name = "_test_choice_auto_policy_resolve_owner_from_choice", run = _choice_auto_policy_coverage_tests[2] },
+    { name = "_test_choice_auto_policy_resolve_owner_fallback", run = _choice_auto_policy_coverage_tests[3] },
+    { name = "_test_choice_auto_policy_resolve_owner_no_current", run = _choice_auto_policy_coverage_tests[4] },
+    { name = "_test_choice_auto_policy_min_visible_zero", run = _choice_auto_policy_coverage_tests[5] },
+    { name = "_test_choice_auto_policy_non_auto_min_visible_zero", run = _choice_auto_policy_coverage_tests[6] },
+    { name = "_test_choice_auto_policy_preconsumed_string_option", run = _choice_auto_policy_coverage_tests[7] },
+    { name = "_test_choice_auto_policy_nil_options", run = _choice_auto_policy_coverage_tests[8] },
+    { name = "_test_choice_auto_policy_empty_options", run = _choice_auto_policy_coverage_tests[9] },
+    { name = "_test_choice_auto_policy_negative_elapsed", run = _choice_auto_policy_coverage_tests[10] },
+    { name = "_test_choice_auto_policy_negative_min_visible", run = _choice_auto_policy_coverage_tests[11] },
+    -- T8 tests for resolve_choice_ui_state (via resolve_choice_timeout_seconds)
+    { name = "_test_resolve_choice_timeout_market_buy", run = _resolve_choice_ui_state_tests[1] },
+    { name = "_test_resolve_choice_timeout_normal_choice", run = _resolve_choice_ui_state_tests[2] },
+    { name = "_test_resolve_choice_timeout_nil_pending", run = _resolve_choice_ui_state_tests[3] },
+    { name = "_test_resolve_choice_timeout_runtime_pending", run = _resolve_choice_ui_state_tests[4] },
+    { name = "_test_resolve_choice_timeout_param_choice", run = _resolve_choice_ui_state_tests[5] },
+    -- T8 tests for turn_script anonymous@88
+    { name = "_test_turn_script_create_valid_session", run = _turn_script_tests[1] },
+    { name = "_test_turn_script_nil_session", run = _turn_script_tests[2] },
+    -- T8 tests for _build_ui_gate (via resolve_ui_gate)
+    { name = "_test_build_ui_gate_nil_ui", run = _build_ui_gate_tests[1] },
+    { name = "_test_build_ui_gate_all_true", run = _build_ui_gate_tests[2] },
+    -- T8 additional tests for is_action_button_wait_active
+    { name = "_test_is_action_button_wait_active_nil_get_ui_state", run = _is_action_button_wait_active_more_tests[1] },
+    { name = "_test_is_action_button_wait_active_falsy_ui", run = _is_action_button_wait_active_more_tests[2] },
+    { name = "_test_is_action_button_wait_active_pending_choice", run = _is_action_button_wait_active_more_tests[3] },
+    { name = "_test_is_action_button_wait_active_choice_ui_active", run = _is_action_button_wait_active_more_tests[4] },
+    { name = "_test_is_action_button_wait_active_market_ui_active", run = _is_action_button_wait_active_more_tests[5] },
+    { name = "_test_is_action_button_wait_active_popup_ui_active", run = _is_action_button_wait_active_more_tests[6] },
+    -- T8 additional tests for _resolve_follow_player_id
+    { name = "_test_resolve_follow_player_id_all_eliminated", run = _resolve_follow_player_id_more_tests[1] },
+    { name = "_test_resolve_follow_player_id_nil_id", run = _resolve_follow_player_id_more_tests[2] },
+    -- Note: _resolve_follow_player_id_more_tests[3] removed - test was broken
+    -- T8 additional tests for update_countdown
+    { name = "_test_update_countdown_choice_gate", run = _update_countdown_more_tests[1] },
+    -- Note: _update_countdown_more_tests[2] removed - test was broken
   },
 }

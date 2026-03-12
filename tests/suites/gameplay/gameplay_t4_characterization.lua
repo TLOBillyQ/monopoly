@@ -708,6 +708,206 @@ local function _test_purchase_execute_paid_purchase_success_and_failure()
   assert(start_calls[3].failed == true and start_calls[3].reason == "gateway_down", "failure should emit feedback")
 end
 
+-- T8 tests for _handle_paid_purchase in purchase.lua
+local function _test_handle_paid_purchase_release_build_warning()
+  local start_calls = {}
+  local warn_calls = {}
+  _reload_module("src.game.systems.market.application.purchase", {
+    ["src.game.systems.market.application.context"] = {
+      entry_by_id = function(product_id)
+        return { product_id = product_id, kind = "item", currency = "金豆", name = "Paid Item" }
+      end,
+      entry_currency = function(entry)
+        return entry.currency
+      end,
+      is_paid_currency = function(currency)
+        return currency == "金豆"
+      end,
+    },
+    ["src.game.systems.market.application.purchase_policy"] = {
+      validate_entry = function()
+        return { ok = true }
+      end,
+    },
+    ["src.game.systems.market.application.local_purchase"] = {
+      execute = function()
+        error("local purchase should not run for paid currency")
+      end,
+    },
+    ["src.game.systems.market.application.feedback"] = {
+      emit_buy_failed = function(player, entry, reason, body)
+        start_calls[#start_calls + 1] = { failed = true, reason = reason, body = body }
+      end,
+    },
+    ["src.game.systems.market.application.paid_purchase_callback"] = {
+      handle = function() end,
+    },
+    ["src.game.systems.market.ports.paid_purchase_port"] = {
+      setup_for_game = function() end,
+      start = function(_, _, entry)
+        return false, "payment_gateway_error"
+      end,
+    },
+    ["src.core.utils.logger"] = {
+      warn = function(...)
+        warn_calls[#warn_calls + 1] = table.concat({ ... }, " ")
+      end,
+    },
+  }, function(purchase)
+    -- Set RELEASE_BUILD to true
+    _G.RELEASE_BUILD = true
+    local game = {}
+    local player = { id = 3, name = "Buyer" }
+    local result = purchase.execute(game, player, "2001", {})
+    _G.RELEASE_BUILD = nil
+    assert(result.ok == false, "should fail when gateway returns error")
+    assert(#warn_calls >= 1, "should log warning in release build")
+  end)
+end
+
+local function _test_handle_paid_purchase_non_release_build()
+  local start_calls = {}
+  local warn_calls = {}
+  _reload_module("src.game.systems.market.application.purchase", {
+    ["src.game.systems.market.application.context"] = {
+      entry_by_id = function(product_id)
+        return { product_id = product_id, kind = "item", currency = "金豆", name = "Paid Item" }
+      end,
+      entry_currency = function(entry)
+        return entry.currency
+      end,
+      is_paid_currency = function(currency)
+        return currency == "金豆"
+      end,
+    },
+    ["src.game.systems.market.application.purchase_policy"] = {
+      validate_entry = function()
+        return { ok = true }
+      end,
+    },
+    ["src.game.systems.market.application.local_purchase"] = {
+      execute = function()
+        error("local purchase should not run for paid currency")
+      end,
+    },
+    ["src.game.systems.market.application.feedback"] = {
+      emit_buy_failed = function(player, entry, reason, body)
+        start_calls[#start_calls + 1] = { failed = true, reason = reason, body = body }
+      end,
+    },
+    ["src.game.systems.market.application.paid_purchase_callback"] = {
+      handle = function() end,
+    },
+    ["src.game.systems.market.ports.paid_purchase_port"] = {
+      setup_for_game = function() end,
+      start = function(_, _, entry)
+        return false, "payment_failed"
+      end,
+    },
+    ["src.core.utils.logger"] = {
+      warn = function(...)
+        warn_calls[#warn_calls + 1] = table.concat({ ... }, " ")
+      end,
+    },
+  }, function(purchase)
+    -- Ensure RELEASE_BUILD is not set
+    _G.RELEASE_BUILD = nil
+    local game = {}
+    local player = { id = 3, name = "Buyer" }
+    local result = purchase.execute(game, player, "2001", {})
+    assert(result.ok == false, "should fail when gateway returns error")
+    -- In non-release build, warning may or may not be logged depending on implementation
+  end)
+end
+
+local function _test_handle_paid_purchase_success_path()
+  local start_calls = {}
+  _reload_module("src.game.systems.market.application.purchase", {
+    ["src.game.systems.market.application.context"] = {
+      entry_by_id = function(product_id)
+        return { product_id = product_id, kind = "item", currency = "金豆", name = "Paid Item" }
+      end,
+      entry_currency = function(entry)
+        return entry.currency
+      end,
+      is_paid_currency = function(currency)
+        return currency == "金豆"
+      end,
+    },
+    ["src.game.systems.market.application.purchase_policy"] = {
+      validate_entry = function()
+        return { ok = true }
+      end,
+    },
+    ["src.game.systems.market.application.local_purchase"] = {
+      execute = function()
+        error("local purchase should not run for paid currency")
+      end,
+    },
+    ["src.game.systems.market.application.feedback"] = {
+      emit_buy_failed = function() end,
+    },
+    ["src.game.systems.market.application.paid_purchase_callback"] = {
+      handle = function() end,
+    },
+    ["src.game.systems.market.ports.paid_purchase_port"] = {
+      setup_for_game = function() end,
+      start = function(_, _, entry)
+        start_calls[#start_calls + 1] = { product_id = entry.product_id }
+        return true
+      end,
+    },
+  }, function(purchase)
+    local game = {}
+    local player = { id = 3, name = "Buyer" }
+    local result = purchase.execute(game, player, "2001", {})
+    assert(result.ok == true, "should succeed when gateway returns true")
+    assert(result.deferred_fulfillment == true, "should indicate deferred fulfillment")
+    assert(result.kind == "item", "should preserve entry kind")
+    assert(result.product_id == 2001, "should preserve product_id")
+    assert(#start_calls == 1, "should call start once")
+  end)
+end
+
+local function _test_handle_paid_purchase_various_truthy_flags()
+  local flags_to_test = { true, 1, "1", "true", "TRUE" }
+  for _, flag in ipairs(flags_to_test) do
+    local result = _reload_module("src.game.systems.market.application.purchase", {
+      ["src.game.systems.market.application.context"] = {
+        entry_by_id = function() return { kind = "item", currency = "金豆", name = "Test" } end,
+        entry_currency = function(e) return e.currency end,
+        is_paid_currency = function() return true end,
+      },
+      ["src.game.systems.market.application.purchase_policy"] = {
+        validate_entry = function() return { ok = true } end,
+      },
+      ["src.game.systems.market.application.local_purchase"] = {
+        execute = function() error("should not call local") end,
+      },
+      ["src.game.systems.market.application.feedback"] = {
+        emit_buy_failed = function() end,
+      },
+      ["src.game.systems.market.application.paid_purchase_callback"] = {
+        handle = function() end,
+      },
+      ["src.game.systems.market.ports.paid_purchase_port"] = {
+        setup_for_game = function() end,
+        start = function() return false, "test" end,
+      },
+      ["src.core.utils.logger"] = {
+        warn = function() end,
+      },
+    }, function(purchase)
+      _G.RELEASE_BUILD = flag
+      local game = {}
+      local player = { id = 1, name = "Test" }
+      return purchase.execute(game, player, "2001", {})
+    end)
+    assert(result.ok == false, "should fail for flag: " .. tostring(flag))
+    _G.RELEASE_BUILD = nil
+  end
+end
+
 return {
   name = "gameplay_t4_characterization",
   tests = {
@@ -744,5 +944,10 @@ return {
     { name = "_test_choice_session_refresh_after_paid_callback_rebuilds_pending", run = _test_choice_session_refresh_after_paid_callback_rebuilds_pending },
     { name = "_test_choice_session_refresh_after_paid_callback_rejects_non_owner_and_failed_rebuild", run = _test_choice_session_refresh_after_paid_callback_rejects_non_owner_and_failed_rebuild },
     { name = "_test_purchase_execute_paid_purchase_success_and_failure", run = _test_purchase_execute_paid_purchase_success_and_failure },
+    -- T8 tests for _handle_paid_purchase
+    { name = "_test_handle_paid_purchase_release_build_warning", run = _test_handle_paid_purchase_release_build_warning },
+    { name = "_test_handle_paid_purchase_non_release_build", run = _test_handle_paid_purchase_non_release_build },
+    { name = "_test_handle_paid_purchase_success_path", run = _test_handle_paid_purchase_success_path },
+    { name = "_test_handle_paid_purchase_various_truthy_flags", run = _test_handle_paid_purchase_various_truthy_flags },
   },
 }
