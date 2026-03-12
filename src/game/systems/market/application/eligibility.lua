@@ -52,7 +52,7 @@ function eligibility.list_available(player, game)
   return list
 end
 
-function eligibility.build_visible_entries(player, game, limit)
+local function _split_entries_by_buyable(player, game)
   local buyable = {}
   local unbuyable = {}
   for _, entry in ipairs(eligibility.sorted_entries()) do
@@ -62,20 +62,26 @@ function eligibility.build_visible_entries(player, game, limit)
       unbuyable[#unbuyable + 1] = entry
     end
   end
+  return buyable, unbuyable
+end
 
+local function _append_visible_entries(visible, entries, can_buy, limit)
+  for _, entry in ipairs(entries) do
+    visible[#visible + 1] = { entry = entry, can_buy = can_buy }
+    if limit and #visible >= limit then
+      return true
+    end
+  end
+  return false
+end
+
+function eligibility.build_visible_entries(player, game, limit)
+  local buyable, unbuyable = _split_entries_by_buyable(player, game)
   local visible = {}
-  for _, entry in ipairs(buyable) do
-    visible[#visible + 1] = { entry = entry, can_buy = true }
-    if limit and #visible >= limit then
-      return visible, buyable
-    end
+  if _append_visible_entries(visible, buyable, true, limit) then
+    return visible, buyable
   end
-  for _, entry in ipairs(unbuyable) do
-    visible[#visible + 1] = { entry = entry, can_buy = false }
-    if limit and #visible >= limit then
-      return visible, buyable
-    end
-  end
+  _append_visible_entries(visible, unbuyable, false, limit)
   return visible, buyable
 end
 

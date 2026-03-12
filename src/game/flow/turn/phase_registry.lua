@@ -22,6 +22,15 @@ local function _resolve_tile_name(game, player)
   return tile.name
 end
 
+local function _resolve_post_phase_wait(player, phase_res)
+  local next_state = phase_res.next_state or "post_action"
+  local next_args = phase_res.next_args or { player = player }
+  if phase_res.wait_action_anim then
+    return "wait_action_anim", { next_state = next_state, next_args = next_args }
+  end
+  return "wait_choice", { next_state = next_state, next_args = next_args }
+end
+
 local function _phase_post(turn_mgr, args)
   local player = args.player or turn_mgr.game:current_player()
   local phase_res = item_phase.run(turn_mgr, "post_action", {
@@ -31,12 +40,7 @@ local function _phase_post(turn_mgr, args)
     next_args = { player = player },
   })
   if phase_res and phase_res.waiting then
-    local next_state = phase_res.next_state or "post_action"
-    local next_args = phase_res.next_args or { player = player }
-    if phase_res.wait_action_anim then
-      return "wait_action_anim", { next_state = next_state, next_args = next_args }
-    end
-    return "wait_choice", { next_state = next_state, next_args = next_args }
+    return _resolve_post_phase_wait(player, phase_res)
   end
   return "end_turn", { player = player }
 end

@@ -1,5 +1,6 @@
 local support = require("support.runtime_support")
 local _assert_eq = support.assert_eq
+local with_patches = support.with_patches
 local number_utils = support.number_utils
 local logger = require("src.core.utils.logger")
 
@@ -224,6 +225,159 @@ local function _test_logger_event_seq_only_tracks_event_feed_changes()
   end
 end
 
+local function _test_synthetic_actor_registry_spawns_from_first_path_tile()
+  local registry_module = require("src.infrastructure.runtime.synthetic_actor_registry")
+  local created = {}
+  local registry = registry_module.new({
+    LuaAPI = {
+      query_unit = function(name)
+        return {
+          get_position = function()
+            created.query_name = name
+            return { x = 1, y = 2, z = 3 }
+          end,
+        }
+      end,
+    },
+    GameAPI = {
+      create_creature_fixed_scale = function(unit_key, pos)
+        created[#created + 1] = { unit_key = unit_key, pos = pos }
+        return {
+          start_ai = function() end,
+        }
+      end,
+    },
+  })
+
+  registry.register_specs({
+    { player_id = -2, unit_key = "npc_2", avatar_image_key = 1002 },
+  })
+  registry.spawn_pending({
+    path = { 7, 8, 9 },
+  })
+
+  _assert_eq(created.query_name, "t7", "registry should use the first path tile as spawn anchor")
+  _assert_eq(created[1].unit_key, "npc_2", "registry should spawn configured synthetic unit key")
+  _assert_eq(created[1].pos.x, 1, "registry should pass queried spawn position to GameAPI")
+end
+
+local function _test_ui_bootstrap_required_click_nodes_appends_extras()
+  local ui_bootstrap = require("src.app.bootstrap.ui_bootstrap")
+  local ui_manager_nodes = {
+    { "基础屏_行动按钮" },
+  }
+  local missing = nil
+
+  with_patches({
+    {
+      target = _G,
+      key = "RegisterTriggerEvent",
+      value = function(_, cb)
+        cb()
+      end,
+    },
+    {
+      target = _G,
+      key = "EVENT",
+      value = {
+        GAME_INIT = "GAME_INIT",
+      },
+    },
+    {
+      target = package.loaded,
+      key = "vendor.third_party.UIManager.Utils",
+      value = true,
+    },
+    {
+      target = package.loaded,
+      key = "Data.UIManagerNodes",
+      value = ui_manager_nodes,
+    },
+    {
+      target = _G,
+      key = "UIManager",
+      value = {
+        Builder = {
+          new = function()
+            return {}
+          end,
+        },
+      },
+    },
+    {
+      target = require("src.presentation.runtime.events"),
+      key = "send_to_all",
+      value = function() end,
+    },
+    {
+      target = require("src.presentation.runtime.canvas_event_router"),
+      key = "bind",
+      value = function() end,
+    },
+    {
+      target = require("src.presentation.runtime.view"),
+      key = "init_ui_assets",
+      value = function() end,
+    },
+    {
+      target = require("src.presentation.runtime.view"),
+      key = "capture_player_colors",
+      value = function() end,
+    },
+    {
+      target = require("src.presentation.view.render.board_scene"),
+      key = "init",
+      value = function() end,
+    },
+    {
+      target = require("src.infrastructure.runtime.context"),
+      key = "current",
+      value = function()
+        return nil
+      end,
+    },
+    {
+      target = require("src.core.ports.runtime_ports"),
+      key = "resolve_roles",
+      value = function()
+        return {}
+      end,
+    },
+    {
+      target = require("src.core.ports.runtime_ports"),
+      key = "schedule",
+      value = function(_, fn)
+        fn()
+      end,
+    },
+    {
+      target = require("src.core.state_access.ui_role_globals"),
+      key = "install",
+      value = function()
+        return {}
+      end,
+    },
+  }, function()
+    local ok, err = pcall(function()
+      ui_bootstrap.install({}, {
+        {
+          board = { map = {} },
+        },
+      }, {
+        start_runtime = function()
+          return {
+            board = { map = {} },
+          }
+        end,
+      })
+    end)
+    missing = err
+    assert(ok == false, "ui bootstrap should validate missing UI nodes")
+  end)
+
+  assert(tostring(missing):find("UI 节点缺失", 1, true) ~= nil, "ui bootstrap should report missing required nodes")
+end
+
 return {
   name = "misc",
   tests = {
@@ -236,5 +390,7 @@ return {
     { name = "logger_configure_host_runtime_uses_injected_hooks", run = _test_logger_configure_host_runtime_uses_injected_hooks },
     { name = "logger_event_collection_provider_drops_closed_action_log_events", run = _test_logger_event_collection_provider_drops_closed_action_log_events },
     { name = "logger_event_seq_only_tracks_event_feed_changes", run = _test_logger_event_seq_only_tracks_event_feed_changes },
+    { name = "synthetic_actor_registry_spawns_from_first_path_tile", run = _test_synthetic_actor_registry_spawns_from_first_path_tile },
+    { name = "ui_bootstrap_required_click_nodes_appends_extras", run = _test_ui_bootstrap_required_click_nodes_appends_extras },
   },
 }

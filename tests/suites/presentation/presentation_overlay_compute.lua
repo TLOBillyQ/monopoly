@@ -165,10 +165,53 @@ local function _test_visual_sync_overlay_uses_host_unit_position()
   assert(spawn_calls[1].pos.z == 4.0, "visual sync should pass host unit z")
 end
 
+local function _test_overlay_runtime_spawn_transient_schedules_destroy_for_groups()
+  local calls = {
+    create_group = 0,
+    destroy = 0,
+    scheduled = 0,
+  }
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "create_unit_group",
+      value = function(group_id, pos)
+        calls.create_group = calls.create_group + 1
+        return { id = group_id, pos = pos }
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "destroy_unit_with_children",
+      value = function()
+        calls.destroy = calls.destroy + 1
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "schedule",
+      value = function(delay, fn)
+        calls.scheduled = delay
+        fn()
+      end,
+    },
+  }, function()
+    overlay_runtime.spawn_transient(2001, nil, math.Vector3(1, 2, 3), 0.5, {
+      host_runtime = host_runtime,
+    })
+  end)
+
+  assert(calls.create_group == 1, "spawn_transient should create one transient group")
+  assert(calls.scheduled == 0.5, "spawn_transient should schedule delayed cleanup")
+  assert(calls.destroy == 1, "spawn_transient should destroy transient group after delay")
+end
+
 return {
   name = "presentation.overlay_compute",
   tests = {
     { name = "overlay_compute_reads_host_unit_position_without_table_guard", run = _test_overlay_compute_reads_host_unit_position_without_table_guard },
     { name = "visual_sync_overlay_uses_host_unit_position", run = _test_visual_sync_overlay_uses_host_unit_position },
+    { name = "overlay_runtime_spawn_transient_schedules_destroy_for_groups", run = _test_overlay_runtime_spawn_transient_schedules_destroy_for_groups },
   },
 }

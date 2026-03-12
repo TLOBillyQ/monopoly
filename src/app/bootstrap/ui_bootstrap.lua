@@ -37,25 +37,28 @@ local function _required_click_nodes(opts)
     secondary_confirm_nodes.confirm,
     secondary_confirm_nodes.cancel,
   }
+  return required
+end
+
+local function _append_click_nodes(required, names)
+  for _, name in ipairs(names or {}) do
+    required[#required + 1] = name
+  end
+end
+
+local function _build_required_click_nodes(opts)
+  local required = _required_click_nodes()
   for _, name in ipairs(player_choice_nodes.slots) do
     required[#required + 1] = name
   end
   for _, name in ipairs(remote_choice_nodes.options) do
     required[#required + 1] = name
   end
-  for _, name in ipairs(base_nodes.card_outlines or {}) do
-    required[#required + 1] = name
-  end
-  for _, name in ipairs(always_show_contract.action_log.toggle_targets or {}) do
-    required[#required + 1] = name
-  end
+  _append_click_nodes(required, base_nodes.card_outlines)
+  _append_click_nodes(required, always_show_contract.action_log.toggle_targets)
 
   local extra = opts and opts.extra or nil
-  if type(extra) == "table" then
-    for _, name in ipairs(extra) do
-      required[#required + 1] = name
-    end
-  end
+  _append_click_nodes(required, type(extra) == "table" and extra or nil)
   return required
 end
 
@@ -105,7 +108,7 @@ function M.install(state, current_game_ref, opts)
       ui_events.set_roles(runtime_ports.resolve_roles())
     end
 
-    local required_nodes = _required_click_nodes({
+    local required_nodes = _build_required_click_nodes({
       extra = market_ui.item_buttons or {},
     })
     local missing = _validate_required_nodes(ui_manager_nodes, required_nodes)

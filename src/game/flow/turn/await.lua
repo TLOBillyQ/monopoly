@@ -7,6 +7,12 @@ local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 local logger = require("src.core.utils.logger")
 
 local await = {}
+local _resolve_after_action_anim_state
+local _build_move_anim_wait_details
+local _resolve_choice_action
+local _validate_choice_action
+local _wait_for_choice_action_anim
+local _next_action_anim
 
 local function _should_move_anim_debug_log()
   return logger.is_anim_debug_enabled() or gameplay_rules.move_anim_debug_log_enabled == true
@@ -17,6 +23,41 @@ local function _move_anim_debug_log(...)
     return
   end
   logger.info_unlimited("[MoveAnim]", ...)
+end
+
+local function _resolve_wait_anim(game, opts)
+  local anim_key = opts.anim_key or "move_anim"
+  return anim_key, game and game.turn and game.turn[anim_key] or nil
+end
+
+local function _resolve_pending_action(session)
+  if not (session and session.peek_pending_action) then
+    return nil
+  end
+  return session:peek_pending_action()
+end
+
+local function _log_move_anim_wait(session, opts)
+  local game = session and session.game or nil
+  local _, anim = _resolve_wait_anim(game, opts)
+  local action = _resolve_pending_action(session)
+  local details = _build_move_anim_wait_details(game, anim, action)
+  _move_anim_debug_log(
+    "await_move_anim",
+    "phase=" .. tostring(details.phase),
+    "anim_seq=" .. tostring(details.anim_seq),
+    "pending_action_type=" .. tostring(details.action_type),
+    "pending_action_seq=" .. tostring(details.action_seq)
+  )
+end
+
+_build_move_anim_wait_details = function(game, anim, action)
+  return {
+    phase = game and game.turn and game.turn.phase or "nil",
+    anim_seq = anim and anim.seq or "nil",
+    action_type = action and action.type or "nil",
+    action_seq = action and action.seq or "nil",
+  }
 end
 
 local function _next(args)
@@ -31,12 +72,20 @@ local function _resolve_after_action_anim(args, res)
   if type(after_action_anim) ~= "table" then
     return next_state, next_args
   end
-  next_state = after_action_anim.next_state or next_state
-  next_args = after_action_anim.next_args or next_args
-  if next_state == "move_followup" and type(next_args) == "table" then
-    next_args.next_state = next_args.next_state or default_next_state
-    next_args.next_args = next_args.next_args or default_next_args
+  return _resolve_after_action_anim_state(
+    after_action_anim.next_state or next_state,
+    after_action_anim.next_args or next_args,
+    default_next_state,
+    default_next_args
+  )
+end
+
+_resolve_after_action_anim_state = function(next_state, next_args, default_next_state, default_next_args)
+  if next_state ~= "move_followup" or type(next_args) ~= "table" then
+    return next_state, next_args
   end
+  next_args.next_state = next_args.next_state or default_next_state
+  next_args.next_args = next_args.next_args or default_next_args
   return next_state, next_args
 end
 
@@ -47,7 +96,127 @@ local function _mark_dirty(game)
   end
 end
 
-local function _next_action_anim(game)
+local function _clear_choice_wait(session, args)
+  session.choice_elapsed_seconds = 0
+  session:clear_pending_action()
+  local next_state, next_args = _next(args)
+  return {
+    next_state = next_state,
+    next_args = next_args,
+  }
+end
+
+local function _resolve_choice_result(game, choice, session)
+  local action = _resolve_choice_action(choice, session, game)
+  if action == nil then
+    return nil, false
+  end
+  if not _validate_choice_action(action, choice) then
+    return nil, false
+  end
+  return turn_decision.resolve_choice(game, choice, action), true
+end
+
+local function _finish_choice_wait(session, args, game, res)
+  if res and res.stay then
+    return { wait = true }
+  end
+  session.choice_elapsed_seconds = 0
+  local next_state, next_args = _resolve_after_action_anim(args, res)
+  if game.turn.action_anim then
+    return _wait_for_choice_action_anim(game, next_state, next_args)
+  end
+  return {
+    next_state = next_state,
+    next_args = next_args,
+  }
+end
+
+_resolve_choice_action = function(choice, session, game)
+  return turn_decision.decide_choice_action(game, choice, session:take_pending_action(), {
+    elapsed_seconds = session.choice_elapsed_seconds or 0,
+  })
+end
+
+_validate_choice_action = function(action, choice)
+  if action.type ~= "choice_select" and action.type ~= "choice_cancel" then
+    return true
+  end
+  return validator.validate_choice_id(action, choice)
+end
+
+_wait_for_choice_action_anim = function(game, next_state, next_args)
+  if next_state == "move_followup" then
+    game.turn.move_followup_pending = true
+    _mark_dirty(game)
+  end
+  return {
+    next_state = "wait_action_anim",
+    next_args = {
+      next_state = next_state,
+      next_args = next_args,
+    },
+  }
+end
+
+local function _resolve_action_anim_wait(game)
+  local anim = game.turn.action_anim
+  if anim then
+    return anim, false
+  end
+  local next_anim = _next_action_anim(game)
+  return next_anim, next_anim ~= nil
+end
+
+local function _resolve_action_anim_idle(session, args, game, anim, queued_next_anim)
+  if anim ~= nil then
+    return nil
+  end
+  if queued_next_anim then
+    return { wait = true }
+  end
+  session:clear_pending_action()
+  local next_state, next_args = _next(args)
+  return {
+    next_state = next_state,
+    next_args = next_args,
+  }
+end
+
+local function _is_matching_done_action(action, anim, action_type)
+  if not action or action.type ~= action_type then
+    return false
+  end
+  if action.seq and anim.seq and action.seq ~= anim.seq then
+    return false
+  end
+  return true
+end
+
+local function _resolve_wait_anim_opts(opts)
+  opts = opts or {}
+  return {
+    state_name = opts.state_name or "wait_move_anim",
+    anim_key = opts.anim_key or "move_anim",
+    done_action_type = opts.done_action_type or "move_anim_done",
+  }
+end
+
+local function _complete_action_anim(session, args, game)
+  game.turn.action_anim = nil
+  _mark_dirty(game)
+  if _next_action_anim(game) then
+    return { wait = true }
+  end
+  session:clear_pending_action()
+  local next_state, next_args = _next(args)
+  return {
+    next_state = next_state,
+    next_args = next_args,
+  }
+end
+
+_next_action_anim = function(game)
   assert(game ~= nil and game.turn ~= nil, "missing game.turn")
   local queue = game.turn.action_anim_queue
   if type(queue) ~= "table" or #queue == 0 then
@@ -92,113 +261,39 @@ function await.choice(session, args)
   session:mark_phase("wait_choice")
   local choice = game.turn.pending_choice
   if not choice then
-    session.choice_elapsed_seconds = 0
-    session:clear_pending_action()
-    local next_state, next_args = _next(args)
-    return {
-      next_state = next_state,
-      next_args = next_args,
-    }
+    return _clear_choice_wait(session, args)
   end
 
-  local action = turn_decision.decide_choice_action(game, choice, session:take_pending_action(), {
-    elapsed_seconds = session.choice_elapsed_seconds or 0,
-  })
-  if not action then
+  local res, resolved = _resolve_choice_result(game, choice, session)
+  if not resolved then
     return { wait = true }
   end
-  if action.type == "choice_select" or action.type == "choice_cancel" then
-    if not validator.validate_choice_id(action, choice) then
-      return { wait = true }
-    end
-  end
-
-  local res = turn_decision.resolve_choice(game, choice, action)
-  if res and res.stay then
-    return { wait = true }
-  end
-
-  session.choice_elapsed_seconds = 0
-
-  local next_state, next_args = _resolve_after_action_anim(args, res)
-  if game.turn.action_anim then
-    if next_state == "move_followup" then
-      game.turn.move_followup_pending = true
-      _mark_dirty(game)
-    end
-    return {
-      next_state = "wait_action_anim",
-      next_args = {
-        next_state = next_state,
-        next_args = next_args,
-      },
-    }
-  end
-
-  return {
-    next_state = next_state,
-    next_args = next_args,
-  }
+  return _finish_choice_wait(session, args, game, res)
 end
 
 function await.move_anim(session, args, opts)
-  opts = opts or {}
-  if _should_move_anim_debug_log() then
-    local game = session and session.game or nil
-    local anim = game and game.turn and game.turn[opts.anim_key or "move_anim"] or nil
-    local action = session and session.peek_pending_action and session:peek_pending_action() or nil
-    _move_anim_debug_log(
-      "await_move_anim",
-      "phase=" .. tostring(game and game.turn and game.turn.phase or "nil"),
-      "anim_seq=" .. tostring(anim and anim.seq or "nil"),
-      "pending_action_type=" .. tostring(action and action.type or "nil"),
-      "pending_action_seq=" .. tostring(action and action.seq or "nil")
-    )
+  local should_log = _should_move_anim_debug_log()
+  if should_log then
+    _log_move_anim_wait(session, opts)
   end
-  return _await_anim_done(session, args, {
-    state_name = opts.state_name or "wait_move_anim",
-    anim_key = opts.anim_key or "move_anim",
-    done_action_type = opts.done_action_type or "move_anim_done",
-  })
+  return _await_anim_done(session, args, _resolve_wait_anim_opts(opts))
 end
 
 function await.action_anim(session, args)
   assert(session ~= nil and session.game ~= nil, "missing await session")
   local game = session.game
   session:mark_phase("wait_action_anim")
-  local anim = game.turn.action_anim
-  if not anim then
-    local next_anim = _next_action_anim(game)
-    if next_anim then
-      return { wait = true }
-    end
-    session:clear_pending_action()
-    local next_state, next_args = _next(args)
-    return {
-      next_state = next_state,
-      next_args = next_args,
-    }
+  local anim, queued_next_anim = _resolve_action_anim_wait(game)
+  local idle_res = _resolve_action_anim_idle(session, args, game, anim, queued_next_anim)
+  if idle_res ~= nil then
+    return idle_res
   end
 
   local action = session:take_pending_action()
-  if not action or action.type ~= "action_anim_done" then
+  if not _is_matching_done_action(action, anim, "action_anim_done") then
     return { wait = true }
   end
-  if action.seq and anim.seq and action.seq ~= anim.seq then
-    return { wait = true }
-  end
-
-  game.turn.action_anim = nil
-  _mark_dirty(game)
-
-  if _next_action_anim(game) then
-    return { wait = true }
-  end
-  local next_state, next_args = _next(args)
-  return {
-    next_state = next_state,
-    next_args = next_args,
-  }
+  return _complete_action_anim(session, args, game)
 end
 
 function await.landing_visual(session, args)
@@ -269,26 +364,41 @@ function await.inter_turn(session, args)
   }
 end
 
-function await.seconds(session, sec, opts)
-  assert(session ~= nil, "missing await session")
-  local wait_sec = sec or 0
-  if wait_sec <= 0 then
-    return { done = true }
-  end
-  opts = opts or {}
-  local key = opts.key or "__default__"
-  local now_fn = opts.now_fn
-  if type(now_fn) ~= "function" then
-    return { done = true }
-  end
-  local ok, now_or_err = pcall(now_fn)
-  if not ok or not number_utils.is_numeric(now_or_err) then
-    return { done = true }
-  end
-  local now = now_or_err
+local function _resolve_seconds_wait(key, session, now)
   local started = session._seconds_wait[key]
   if started == nil then
     session._seconds_wait[key] = now
+    return nil, true
+  end
+  return started, false
+end
+
+local function _resolve_seconds_now(now_fn)
+  if type(now_fn) ~= "function" then
+    return nil
+  end
+  local ok, now_or_err = pcall(now_fn)
+  if not ok or not number_utils.is_numeric(now_or_err) then
+    return nil
+  end
+  return now_or_err
+end
+
+local function _resolve_seconds_key(opts)
+  if type(opts) ~= "table" or opts.key == nil then
+    return "__default__"
+  end
+  return opts.key
+end
+
+local function _await_seconds_step(session, wait_sec, opts)
+  local key = _resolve_seconds_key(opts)
+  local now = _resolve_seconds_now(opts and opts.now_fn)
+  if now == nil then
+    return { done = true }
+  end
+  local started, started_now = _resolve_seconds_wait(key, session, now)
+  if started_now then
     return { wait = true }
   end
   if (now - started) < wait_sec then
@@ -296,6 +406,15 @@ function await.seconds(session, sec, opts)
   end
   session._seconds_wait[key] = nil
   return { done = true }
+end
+
+function await.seconds(session, sec, opts)
+  assert(session ~= nil, "missing await session")
+  local wait_sec = sec or 0
+  if wait_sec <= 0 then
+    return { done = true }
+  end
+  return _await_seconds_step(session, wait_sec, opts)
 end
 
 return await

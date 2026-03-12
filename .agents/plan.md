@@ -33,6 +33,8 @@
 - location: `/Users/billyq/Dev/Github/Lua/monopoly/src/game/flow/turn/`，重点文件 `/Users/billyq/Dev/Github/Lua/monopoly/src/game/flow/turn/await.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/src/game/flow/turn/start.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/src/game/flow/turn/land.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/src/game/flow/turn/phase_registry.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/src/game/flow/turn/decision.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/src/game/flow/turn/script.lua`；测试优先放在 `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/domain/landing.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_coroutine.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_turn_flow_and_interrupts.lua`
 - description: 先钉住 wait-state 行为，再把 `await.move_anim`、`await.choice`、`_phase_start`、`handle_need_landing`、`_phase_land` 及其邻近分支拆成局部 helper，直到全部函数 `<= 8`。新 helper 只能留在 `flow/turn`，不得引入 presentation/runtime 细节。
 - validation: 相关 behavior suites 通过；重新跑 CRAP 后，T2 负责的 `flow/turn` 文件不再出现 `crap > 8`。
+- status: In Progress
+- log: 2026-03-12 已拆分 `await.lua` 的 choice/action_anim/seconds/move_anim wait 辅助路径、`land.lua` 的 landing wait/post-action 收口，以及 `phase_registry.lua` 的 post_action wait 路由；`suites.gameplay.gameplay_coroutine`、`suites.gameplay.gameplay_turn_flow_and_interrupts`、`suites.gameplay.gameplay_timeout_and_auto_runner` 定向回归通过。
 
 ### T3 Flow orchestration/AI cluster
 - depends_on: `[T1]`
@@ -45,12 +47,16 @@
 - location: `/Users/billyq/Dev/Github/Lua/monopoly/src/game/systems/` 和 `/Users/billyq/Dev/Github/Lua/monopoly/src/game/core/`；测试优先放在 `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/domain/`、`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_items_startup.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_bankruptcy_and_tile_owner.lua`
 - description: 用 characterization tests 覆盖 item post effects、bankruptcy feedback、market eligibility、chance handlers、board init、seat/state ops；`complexity >= 9` 的函数在原子系统内拆 resolver/helper，不把 presentation 或 host 细节带回 systems/core。
 - validation: 相关 domain/gameplay suites 通过；重新跑 CRAP 后，T4 负责的 systems/core 文件不再出现 `crap > 8`。
+- status: In Progress
+- log: 2026-03-12 已对 `status_ops.lua`、`post_effects.lua`、`bankruptcy.lua`、`eligibility.lua`、`items/phase.lua` 做 helper 下沉与等待/收尾路径拆分；`suites.gameplay.gameplay_bankruptcy_and_tile_owner`、`suites.gameplay.gameplay_items_startup`、`suites.domain.item` 定向回归通过。
 
 ### T5 Presentation model/runtime cluster
 - depends_on: `[T1]`
 - location: `/Users/billyq/Dev/Github/Lua/monopoly/src/presentation/model/` 和 `/Users/billyq/Dev/Github/Lua/monopoly/src/presentation/runtime/`；测试优先放在 `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/presentation/presentation_ui_model_dispatch.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/presentation/presentation_ui_event_handlers.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/presentation/presentation_popup_visibility.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/presentation/presentation_ui_interaction.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/presentation/read_model_contract.lua`
 - description: 把 `model_api.update`、`panel_slice.update` 一类 dirty-flag 扇出逻辑拆成按 slice 分工的 updater helpers；把 modal/event handler 的大分支拆成聚焦操作；补齐 popup/choice/game-result 路径覆盖。保持 canvas key、route key、`ui_model` 字段与 runtime APIs 不变。
 - validation: 相关 presentation/contract suites 通过；重新跑 CRAP 后，T5 负责的 model/runtime 文件不再出现 `crap > 8`。
+- status: In Progress
+- log: 2026-03-12 已抽离 `model/init.lua`、`panel_slice.lua`、`event_handlers.lua`、`modal_controller.lua`、`view_command_ports.lua` 的 slice/route helper，并补充 UI model dispatch、event handler、interaction 定向用例；相关 presentation suites 通过。
 
 ### T6 Presentation view/input cluster
 - depends_on: `[T1]`
@@ -63,6 +69,8 @@
 - location: `/Users/billyq/Dev/Github/Lua/monopoly/src/infrastructure/runtime/`、`/Users/billyq/Dev/Github/Lua/monopoly/src/app/`、`/Users/billyq/Dev/Github/Lua/monopoly/src/core/`；测试优先放在 `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/runtime/` 和 `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/architecture/`
 - description: 清理 bootstrap/runtime/core 的低覆盖热点，包括 synthetic actors、default ports、runtime context、bootstrap wiring、config/state access；优先做小型同层抽取或直接补测。任何生产代码中新加的数值判断继续遵守 `NumberUtils` 约束。
 - validation: runtime/contract/guard suites 通过；`lua scripts/arch.lua check` 保持通过；重新跑 CRAP 后，T7 负责的文件不再出现 `crap > 8`。
+- status: In Progress
+- log: 2026-03-12 已拆分 `synthetic_actor_registry.lua`、`context.lua`、`ui_bootstrap.lua` 的 fallback/anchor/wiring helper，并补充 runtime misc 覆盖；`lua scripts/arch.lua check` 与 `suites.runtime.misc` 通过。
 
 ### T8 Residual sweep and merge-safe cleanup
 - depends_on: `[T2, T3, T4, T5, T6, T7]`

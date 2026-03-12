@@ -59,6 +59,31 @@ local function _destroy_unit(host_runtime, entry)
   host_runtime.destroy_unit(entry.handle)
 end
 
+local function _spawn_transient_entry(host_runtime, group_id, unit_id, pos)
+  if group_id then
+    local handle = _spawn_unit_group(host_runtime, group_id, pos)
+    if not handle then
+      return nil
+    end
+    return { kind = "group", handle = handle }
+  end
+  local handle = _spawn_unit(host_runtime, unit_id, pos)
+  if not handle then
+    return nil
+  end
+  return { kind = "unit", handle = handle }
+end
+
+local function _schedule_transient_destroy(host_runtime, entry, duration)
+  if duration and duration > 0 then
+    host_runtime.schedule(duration, function()
+      _destroy_unit(host_runtime, entry)
+    end)
+    return
+  end
+  _destroy_unit(host_runtime, entry)
+end
+
 function runtime.clear_overlay(scene, kind, tile_index, deps)
   assert(scene ~= nil, "missing board_scene")
   assert(kind ~= nil, "missing kind")
@@ -118,28 +143,11 @@ function runtime.spawn_transient(group_id, unit_id, pos, duration, deps)
     return
   end
   local host_runtime = _resolve_host_runtime(deps and deps.scene or nil, deps)
-  local entry
-  if group_id then
-    local handle = _spawn_unit_group(host_runtime, group_id, pos)
-    if not handle then
-      return
-    end
-    entry = { kind = "group", handle = handle }
-  else
-    local handle = _spawn_unit(host_runtime, unit_id, pos)
-    if not handle then
-      return
-    end
-    entry = { kind = "unit", handle = handle }
-  end
-
-  if duration and duration > 0 then
-    host_runtime.schedule(duration, function()
-      _destroy_unit(host_runtime, entry)
-    end)
+  local entry = _spawn_transient_entry(host_runtime, group_id, unit_id, pos)
+  if not entry then
     return
   end
-  _destroy_unit(host_runtime, entry)
+  _schedule_transient_destroy(host_runtime, entry, duration)
 end
 
 return runtime

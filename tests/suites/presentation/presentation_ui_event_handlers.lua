@@ -369,6 +369,59 @@ local function _test_turn_started_feedback_defers_during_landing_hold()
   assert(calls[1].player_id == 5, "replayed turn_started player mismatch")
 end
 
+local function _test_game_result_feedback_routes_winner_and_loser_panels()
+  local handlers = {}
+  local role_calls = {}
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "register_custom_event",
+      value = function(event_name, handler)
+        handlers[event_name] = handler
+        return true
+      end,
+    },
+    {
+      target = require("src.core.ports.runtime_ports"),
+      key = "resolve_role",
+      value = function(player_id)
+        role_calls[player_id] = role_calls[player_id] or { wins = 0, loses = 0 }
+        return {
+          game_win_and_show_result_panel = function()
+            role_calls[player_id].wins = role_calls[player_id].wins + 1
+          end,
+          lose = function()
+            role_calls[player_id].loses = role_calls[player_id].loses + 1
+          end,
+        }
+      end,
+    },
+  }, function()
+    local event_handlers = _load_fresh_handlers()
+    event_handlers.install(nil, nil, {
+      game = {
+        players = {
+          { id = 1, name = "P1" },
+          { id = 2, name = "P2" },
+          { id = 3, name = "P3" },
+        },
+      },
+    })
+    local handler = handlers[monopoly_event.game.finished]
+    assert(type(handler) == "function", "game_finished handler should be registered")
+    handler(nil, nil, {
+      winner_ids = {
+        [2] = true,
+      },
+    })
+  end)
+
+  assert(role_calls[1].wins == 0 and role_calls[1].loses == 1, "loser should call lose once")
+  assert(role_calls[2].wins == 1 and role_calls[2].loses == 0, "winner should show result panel once")
+  assert(role_calls[3].wins == 0 and role_calls[3].loses == 1, "other loser should call lose once")
+end
+
 return {
   name = "presentation_ui.event_handlers",
   tests = {
@@ -403,6 +456,10 @@ return {
     {
       name = "turn_started_feedback_defers_during_landing_hold",
       run = _test_turn_started_feedback_defers_during_landing_hold,
+    },
+    {
+      name = "game_result_feedback_routes_winner_and_loser_panels",
+      run = _test_game_result_feedback_routes_winner_and_loser_panels,
     },
   },
 }

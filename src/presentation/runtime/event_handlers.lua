@@ -27,16 +27,12 @@ local function _apply_game_result_panels(event_data)
   local winner_ids = event_data and event_data.winner_ids or {}
   for _, player in ipairs(players) do
     local role = runtime_ports.resolve_role(player.id)
-    if role then
-      if winner_ids[player.id] then
-        if role.game_win_and_show_result_panel then
-          role.game_win_and_show_result_panel()
-        end
-      else
-        if role.lose then
-          role.lose()
-        end
-      end
+    local is_winner = winner_ids[player.id] == true
+    if is_winner and role and role.game_win_and_show_result_panel then
+      role.game_win_and_show_result_panel()
+    end
+    if not is_winner and role and role.lose then
+      role.lose()
     end
   end
 end

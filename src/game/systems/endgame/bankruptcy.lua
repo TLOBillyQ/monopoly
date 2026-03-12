@@ -6,38 +6,49 @@ local monopoly_event = require("src.core.events.monopoly_events")
 
 local bankruptcy = {}
 
+local function _try_pcall(fn, ...)
+  if type(fn) ~= "function" then
+    return false
+  end
+  local ok = pcall(fn, ...)
+  return ok == true
+end
+
+local function _call_role_die(role)
+  if type(role) ~= "table" then
+    return false
+  end
+  return _try_pcall(role.die, role, nil) or _try_pcall(role.die, nil)
+end
+
+local function _resolve_life_component(role)
+  if type(role) ~= "table" or type(role.get_component) ~= "function" then
+    return nil
+  end
+  local ok, life_comp = pcall(role.get_component, role, "LifeComp")
+  if ok then
+    return life_comp
+  end
+  return nil
+end
+
+local function _call_life_die(life_comp, role)
+  if type(life_comp) ~= "table" then
+    return false
+  end
+  return _try_pcall(life_comp.die, life_comp, role)
+    or _try_pcall(life_comp.die, role)
+    or _try_pcall(life_comp.die, nil)
+end
+
 local function _try_call_life_die(role)
   if not role then
     return false
   end
-  if type(role.die) == "function" then
-    local ok = pcall(role.die, role, nil)
-    if ok then
-      return true
-    end
-    ok = pcall(role.die, nil)
-    if ok then
-      return true
-    end
+  if _call_role_die(role) then
+    return true
   end
-  if type(role.get_component) == "function" then
-    local ok, life_comp = pcall(role.get_component, role, "LifeComp")
-    if ok and life_comp and type(life_comp.die) == "function" then
-      local die_ok = pcall(life_comp.die, life_comp, role)
-      if die_ok then
-        return true
-      end
-      die_ok = pcall(life_comp.die, role)
-      if die_ok then
-        return true
-      end
-      die_ok = pcall(life_comp.die, nil)
-      if die_ok then
-        return true
-      end
-    end
-  end
-  return false
+  return _call_life_die(_resolve_life_component(role), role)
 end
 
 local function _resolve_bankruptcy_text(player, opts)

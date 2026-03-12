@@ -195,78 +195,108 @@ local function _handle_place_mine_here(game, player, _cfg, context)
   return true
 end
 
-local function _handle_clear_obstacles_ahead(game, player, cfg, context)
-  local board = game.board
-  local cleared = 0
-  local cleared_indices = {}
-  local cleared_map = {}
-  local current = player.position
-  local distance = cfg.distance or 12
+local function _new_obstacle_clear_state(distance, context)
   assert(context ~= nil, "missing context")
-  local parity = context.branch_parity or distance
+  return {
+    cleared = 0,
+    cleared_indices = {},
+    cleared_map = {},
+    distance = distance,
+    parity = context.branch_parity or distance,
+  }
+end
+
+local function _mark_visited(visited, tile_id, dir, depth)
+  visited[tile_id] = visited[tile_id] or {}
+  local key = dir or ""
+  local prev = visited[tile_id][key]
+  if prev and prev <= depth then
+    return false
+  end
+  visited[tile_id][key] = depth
+  return true
+end
+
+local function _record_cleared_index(state, next_index)
+  state.cleared = state.cleared + 1
+  if state.cleared_map[next_index] then
+    return
+  end
+  state.cleared_map[next_index] = true
+  state.cleared_indices[#state.cleared_indices + 1] = next_index
+end
+
+local function _clear_obstacle_at(game, board, state, next_index)
+  if board:has_roadblock(next_index) then
+    game:clear_roadblock(next_index)
+    _record_cleared_index(state, next_index)
+  end
+  if board:has_mine(next_index) then
+    game:clear_mine(next_index)
+    _record_cleared_index(state, next_index)
+  end
+end
+
+local function _seed_walk_queue(board, player, context, distance)
   local facing = facing_policy.resolve_initial_facing("relative_forward", player, context)
+  local start_tile = assert(board:get_tile(player.position), "missing start tile")
+  local start_id = assert(start_tile.id, "missing start tile id")
+  local visited = {}
+  _mark_visited(visited, start_id, facing, 0)
+  return {
+    queue = {
+      { tile_id = start_id, facing = facing, depth = 0 },
+    },
+    visited = visited,
+  }
+end
+
+local function _walk_and_clear_obstacles(game, player, board, state, context)
   local map = assert(board.map, "missing board.map")
   local neighbors = assert(map.neighbors, "missing board.map.neighbors")
   local opposite = { up = "down", down = "up", left = "right", right = "left" }
-  local start_tile = assert(board:get_tile(current), "missing start tile")
-  local start_id = assert(start_tile.id, "missing start tile id")
-  local queue = {}
-  local visited = {}
-  local function _mark(tile_id, dir, depth)
-    visited[tile_id] = visited[tile_id] or {}
-    local key = dir or ""
-    local prev = visited[tile_id][key]
-    if prev and prev <= depth then
-      return false
+  local walk = _seed_walk_queue(board, player, context, state.distance)
+
+  board_query.queue_walk(walk.queue, function(node, push)
+    if node.depth >= state.distance then
+      return
     end
-    visited[tile_id][key] = depth
-    return true
-  end
-  _mark(start_id, facing, 0)
-  table.insert(queue, { tile_id = start_id, facing = facing, depth = 0 })
-  board_query.queue_walk(queue, function(node, push)
-    if node.depth < distance then
-      local neigh = assert(neighbors[node.tile_id], "missing neighbors: " .. tostring(node.tile_id))
-      local back = opposite[node.facing]
-      for dir, next_id in pairs(neigh) do
-        if not back or dir ~= back then
-          local next_index = assert(board:index_of_tile_id(next_id), "missing tile index: " .. tostring(next_id))
-          if board:has_roadblock(next_index) then
-            game:clear_roadblock(next_index)
-            cleared = cleared + 1
-            if not cleared_map[next_index] then
-              cleared_map[next_index] = true
-              cleared_indices[#cleared_indices + 1] = next_index
-            end
-          end
-          if board:has_mine(next_index) then
-            game:clear_mine(next_index)
-            cleared = cleared + 1
-            if not cleared_map[next_index] then
-              cleared_map[next_index] = true
-              cleared_indices[#cleared_indices + 1] = next_index
-            end
-          end
-          if _mark(next_id, dir, node.depth + 1) then
-            push({ tile_id = next_id, facing = dir, depth = node.depth + 1 })
-          end
+    local neigh = assert(neighbors[node.tile_id], "missing neighbors: " .. tostring(node.tile_id))
+    local back = opposite[node.facing]
+    for dir, next_id in pairs(neigh) do
+      if not back or dir ~= back then
+        local next_index = assert(board:index_of_tile_id(next_id), "missing tile index: " .. tostring(next_id))
+        _clear_obstacle_at(game, board, state, next_index)
+        if _mark_visited(walk.visited, next_id, dir, node.depth + 1) then
+          push({ tile_id = next_id, facing = dir, depth = node.depth + 1 })
         end
       end
     end
   end)
-  if cleared > 0 then
-    logger.event(player.name .. " 清除前方障碍数：" .. cleared)
-  end
+end
+
+local function _queue_clear_obstacles_anim(game, player, state)
   local queued = action_anim_port.queue(game, {
     kind = "clear_obstacles",
     player_id = player.id,
-    cleared_indices = cleared_indices,
+    cleared_indices = state.cleared_indices,
     duration = action_anim_duration,
   })
   if queued then
     return { ok = true, action_anim = true }
   end
   return true
+end
+
+local function _handle_clear_obstacles_ahead(game, player, cfg, context)
+  local board = game.board
+  local distance = cfg.distance or 12
+  local state = _new_obstacle_clear_state(distance, context)
+  _walk_and_clear_obstacles(game, player, board, state, context)
+  if state.cleared > 0 then
+    logger.event(player.name .. " 清除前方障碍数：" .. state.cleared)
+  end
+  return _queue_clear_obstacles_anim(game, player, state)
 end
 
 handlers.set_status = _handle_set_status

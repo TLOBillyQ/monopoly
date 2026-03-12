@@ -15,6 +15,8 @@ local turn_move = support.turn_move
 local event_handlers = require("src.presentation.runtime.event_handlers")
 local paid_currency_bridge = require("src.game.systems.commerce.paid_currency_bridge")
 local dispatch = require("src.game.flow.turn.dispatch")
+local modal_presenter = require("src.presentation.runtime.controllers.modal_controller")
+local panel_slice = require("src.presentation.model.panel_slice")
 local runtime_port = require("src.presentation.runtime.ui")
 local ui_intent_dispatcher = require("src.presentation.input.intent_dispatcher")
 local choice_openers = require("src.presentation.runtime.controllers.choice_screen_service.openers")
@@ -683,6 +685,179 @@ local function _test_ui_intent_dispatcher_market_confirm_routes_choice_select()
   _assert_eq(captured and captured.option_id, 34, "market_confirm should keep option id")
 end
 
+local function _test_ui_model_update_refreshes_targeted_slices_only()
+  local ui_model = require("src.presentation.model")
+  local g = _new_game()
+  local state = {
+    ui = {
+      item_slots = { 1, 2, 3, 4, 5 },
+      auto_play = false,
+    },
+  }
+  local env = {
+    game = g,
+    ui_state = state,
+    last_turn = g.last_turn,
+    finished = g.finished,
+  }
+  local model = ui_model.build(g, env)
+
+  local original_board = model.board
+  local original_turn_label = model.panel.turn_label
+  local original_choice_owner_id = model.item_choice_owner_id
+  local original_popup = model.popup
+
+  g.players[1].cash = 4321
+  g.players[1].auto = true
+  g.turn.turn_count = 7
+  g.turn.countdown_seconds = 12
+  g.turn.countdown_active = true
+
+  local updated = ui_model.update(model, g, env, {
+    turn = true,
+    turn_countdown = true,
+  })
+
+  assert(updated == model, "update should mutate existing model table")
+  assert(updated.board == original_board, "turn-only refresh should keep board slice")
+  assert(updated.panel.turn_label ~= original_turn_label, "turn refresh should rebuild turn label")
+  assert(updated.item_choice_owner_id == original_choice_owner_id, "turn refresh should keep normalized choice owner when choice is unchanged")
+  assert(updated.popup == original_popup, "non-ui refresh should keep popup slice")
+  _assert_eq(updated.current_player_cash, 4321, "current player cash should refresh")
+  _assert_eq(updated.turn_count, 7, "turn count should refresh")
+  assert(updated.panel.turn_label ~= nil, "turn label should remain populated")
+end
+
+local function _test_ui_model_update_refreshes_inventory_owned_slots()
+  local ui_model = require("src.presentation.model")
+  local g = _new_game()
+  local state = {
+    ui = {
+      item_slots = { 1, 2, 3, 4, 5 },
+      auto_play = false,
+    },
+  }
+  local env = {
+    game = g,
+    ui_state = state,
+    last_turn = g.last_turn,
+    finished = g.finished,
+  }
+  local model = ui_model.build(g, env)
+  local before_item_slots = model.item_slots
+
+  g.players[1].inventory:add({ id = 2001 })
+
+  local updated = ui_model.update(model, g, env, {
+    inventory_ids = { [1] = true },
+  })
+
+  assert(updated.item_slots ~= before_item_slots, "inventory refresh should rebuild current item slots")
+  assert(updated.item_slots_by_player ~= nil, "inventory refresh should keep per-player slots")
+  assert(updated.item_choice_owner_id ~= nil or updated.choice == nil, "inventory refresh should recompute choice owner when needed")
+end
+
+local function _test_panel_slice_update_refreshes_only_requested_flags()
+  local g = _new_game()
+  local env = { game = g }
+  local turn = g.turn
+  local current_player_id = g.players[1].id
+  local auto_enabled_by_player = { [current_player_id] = false }
+  local panel = panel_slice.build(g, env, turn, current_player_id, auto_enabled_by_player)
+  local player_rows = panel.player_rows
+  local auto_label = panel.auto_label
+
+  g.players[1].auto = true
+  turn.no_action_notice_active = true
+  turn.no_action_notice_text = "locked"
+
+  local updated = panel_slice.update(panel, g, env, turn, current_player_id, {
+    [current_player_id] = true,
+  }, {
+    auto_label = true,
+  })
+
+  assert(updated == panel, "panel update should mutate the existing panel table")
+  assert(updated.player_rows == player_rows, "auto-label-only refresh should keep player rows")
+  assert(updated.auto_label ~= auto_label, "auto-label-only refresh should rebuild current auto label")
+  assert(updated.no_action_text ~= "locked", "no_action notice should not refresh without turn_label flag")
+end
+
+local function _test_modal_presenter_select_choice_option_refreshes_secondary_confirm_copy()
+  local state = _build_choice_modal_state()
+  local labels = {}
+  state.ui.set_label = function(_, node_name, value)
+    labels[node_name] = value
+  end
+  state.game = {}
+  state.ui.choice_active = true
+  state.ui.active_choice_screen_key = "secondary_confirm"
+  state.ui.choice_screens.secondary_confirm = {
+    title = "通用二次确认_标题",
+    body = "通用二次确认_文本",
+  }
+  state.ui_model = {
+    choice = {
+      kind = "tax_card_prompt",
+      route_key = "secondary_confirm",
+      options = {
+        { id = "confirm", label = "确认" },
+      },
+    },
+  }
+  _bind_ui_runtime(state)
+
+  modal_presenter.select_choice_option(state, "confirm")
+
+  assert(labels["通用二次确认_标题"] ~= nil, "secondary confirm title should refresh")
+  assert(labels["通用二次确认_文本"] ~= nil, "secondary confirm body should refresh")
+end
+
+local function _test_modal_presenter_close_choice_modal_resets_choice_and_market()
+  local state = {
+    ui = {
+      choice_active = true,
+      market_active = true,
+      popup_active = false,
+      active_choice_screen_key = "secondary_confirm",
+      choice_screens = {
+        secondary_confirm = {
+          confirm = "confirm",
+          cancel = "cancel",
+          body = "body",
+        },
+      },
+    },
+  }
+  _bind_ui_runtime(state)
+  local market_closed = 0
+  local modal_closed = 0
+
+  _with_patches({
+    {
+      target = require("src.presentation.runtime.controllers.market_controller"),
+      key = "close",
+      value = function()
+        market_closed = market_closed + 1
+      end,
+    },
+    {
+      target = require("src.presentation.runtime.modal_state"),
+      key = "close_choice",
+      value = function()
+        modal_closed = modal_closed + 1
+      end,
+    },
+  }, function()
+    modal_presenter.close_choice_modal(state)
+  end)
+
+  assert(state.ui.choice_active == false, "close_choice_modal should deactivate choice screen")
+  assert(state.ui.market_active == false, "close_choice_modal should deactivate market")
+  assert(market_closed == 1, "close_choice_modal should close market once")
+  assert(modal_closed == 1, "close_choice_modal should close modal state once")
+end
+
 
 return {
   name = "presentation_ui.model_dispatch",
@@ -698,5 +873,10 @@ return {
     { name = "_test_turn_dispatch_auto_rejects_unmapped_role", run = _test_turn_dispatch_auto_rejects_unmapped_role },
     { name = "_test_turn_dispatch_item_slot_uses_actor_slot_map", run = _test_turn_dispatch_item_slot_uses_actor_slot_map },
     { name = "_test_ui_intent_dispatcher_market_confirm_routes_choice_select", run = _test_ui_intent_dispatcher_market_confirm_routes_choice_select },
+    { name = "_test_ui_model_update_refreshes_targeted_slices_only", run = _test_ui_model_update_refreshes_targeted_slices_only },
+    { name = "_test_ui_model_update_refreshes_inventory_owned_slots", run = _test_ui_model_update_refreshes_inventory_owned_slots },
+    { name = "_test_panel_slice_update_refreshes_only_requested_flags", run = _test_panel_slice_update_refreshes_only_requested_flags },
+    { name = "_test_modal_presenter_select_choice_option_refreshes_secondary_confirm_copy", run = _test_modal_presenter_select_choice_option_refreshes_secondary_confirm_copy },
+    { name = "_test_modal_presenter_close_choice_modal_resets_choice_and_market", run = _test_modal_presenter_close_choice_modal_resets_choice_and_market },
   },
 }

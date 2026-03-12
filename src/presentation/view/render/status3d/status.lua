@@ -79,26 +79,31 @@ function M.resolve_player_status_key(game, player)
   return nil
 end
 
-function M.sync_layer_status(cache, player, status_key, deps)
-  local player_id = player.id
-  local player_layers = cache.layers[player_id]
-  if not player_layers then
+local function _resolve_text_status_context(cache, player, status_key)
+  if not specs.text_statuses[status_key] then
+    return nil, nil
+  end
+  local stay_turns = player.status and player.status.stay_turns or 0
+  local text_node = cache.text_nodes[player.id] and cache.text_nodes[player.id][status_key]
+  if stay_turns <= 0 or text_node == nil then
+    return nil, nil
+  end
+  return stay_turns, text_node
+end
+
+local function _sync_text_status(cache, player, status_key, deps)
+  local stay_turns, text_node = _resolve_text_status_context(cache, player, status_key)
+  if stay_turns == nil then
     return
   end
-  if cache.last_status_key_by_player[player_id] == status_key then
-    if specs.text_statuses[status_key] then
-      local stay_turns = player.status and player.status.stay_turns or 0
-      local text_node = cache.text_nodes[player_id] and cache.text_nodes[player_id][status_key]
-      if stay_turns > 0 and text_node then
-        local role = _resolve_role(player_id, deps)
-        if role and role.set_label_text then
-          local text = "当前回合无法行动\n剩余停留回合数：" .. tostring(stay_turns)
-          pcall(role.set_label_text, text_node, text)
-        end
-      end
-    end
-    return
+  local role = _resolve_role(player.id, deps)
+  if role and role.set_label_text then
+    local text = "当前回合无法行动\n剩余停留回合数：" .. tostring(stay_turns)
+    pcall(role.set_label_text, text_node, text)
   end
+end
+
+local function _sync_visible_layers(player_layers, status_key, deps)
   local roles = scene.resolve_observer_roles()
   for _, key in ipairs(specs.status_priority) do
     local layer = player_layers[key]
@@ -106,17 +111,20 @@ function M.sync_layer_status(cache, player, status_key, deps)
       scene.set_layer_visible_for_roles(layer, roles, status_key == key, deps)
     end
   end
-  if specs.text_statuses[status_key] then
-    local stay_turns = player.status and player.status.stay_turns or 0
-    local text_node = cache.text_nodes[player_id] and cache.text_nodes[player_id][status_key]
-    if stay_turns > 0 and text_node then
-      local role = _resolve_role(player_id, deps)
-      if role and role.set_label_text then
-        local text = "当前回合无法行动\n剩余停留回合数：" .. tostring(stay_turns)
-        pcall(role.set_label_text, text_node, text)
-      end
-    end
+end
+
+function M.sync_layer_status(cache, player, status_key, deps)
+  local player_id = player.id
+  local player_layers = cache.layers[player_id]
+  if not player_layers then
+    return
   end
+  if cache.last_status_key_by_player[player_id] == status_key then
+    _sync_text_status(cache, player, status_key, deps)
+    return
+  end
+  _sync_visible_layers(player_layers, status_key, deps)
+  _sync_text_status(cache, player, status_key, deps)
   cache.last_status_key_by_player[player_id] = status_key
 end
 

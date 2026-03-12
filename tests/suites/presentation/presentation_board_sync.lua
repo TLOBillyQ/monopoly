@@ -478,6 +478,112 @@ local function _test_board_refresh_pending_synthetic_ai_stop_consumes_only_once(
   _assert_eq(env.calls[8], nil, "second refresh should not invoke stop_ai again")
 end
 
+local function _test_board_scene_init_binds_units_and_target_pick_metadata()
+  local board_scene = require("src.presentation.view.render.board_scene")
+  local runtime_ports = require("src.core.ports.runtime_ports")
+  local state = {}
+  local players = {
+    { id = 1 },
+    { id = 2 },
+  }
+  local queried = { units = {}, single = {} }
+
+  local function new_unit(id)
+    local unit = { _id = id }
+    unit.set_physics_active = function(active)
+      unit.physics_active = active
+    end
+    unit.get_child_by_name = function(_, _)
+      return {
+        set_billboard_text = function(_, text)
+          queried.billboard_text = text
+        end,
+      }
+    end
+    unit.set_model_visible = function(visible)
+      unit.model_visible = visible
+    end
+    return unit
+  end
+
+  _with_patches({
+    {
+      target = runtime_ports,
+      key = "resolve_role",
+      value = function(player_id)
+        return {
+          get_ctrl_unit = function()
+            return { role_unit_id = player_id }
+          end,
+        }
+      end,
+    },
+    {
+      target = _G,
+      key = "LuaAPI",
+      value = {
+        query_units = function(names)
+          queried.units[#queried.units + 1] = names
+          local out = {}
+          for i = 1, #names do
+            out[i] = new_unit(i)
+          end
+          return out
+        end,
+        query_unit = function(name)
+          queried.single[#queried.single + 1] = name
+          if name == "ground" then
+            return new_unit(999)
+          end
+          return new_unit(name)
+        end,
+        get_unit_id = function(unit)
+          return unit._id
+        end,
+      },
+    },
+  }, function()
+    local scene = board_scene.init(state, { path = {} }, { players = players })
+    _assert_eq(scene.units_by_player_id[1].role_unit_id, 1, "board_scene should bind player 1 unit")
+    _assert_eq(scene.units_by_player_id[2].role_unit_id, 2, "board_scene should bind player 2 unit")
+    _assert_eq(scene.target_pick.tile_index_by_unit_id[1], 1, "board_scene should map tile unit id to tile index")
+    _assert_eq(scene.target_pick.marker_unit_id, "可选择地块", "board_scene should store marker unit id")
+    assert(scene.target_pick.arrow_unit ~= nil, "board_scene should bind arrow unit")
+    assert(scene.ground ~= nil, "board_scene should bind ground unit")
+    assert(state.board_scene == scene, "board_scene init should persist scene on state")
+  end)
+end
+
+local function _test_tile_renderer_renders_land_metadata()
+  local tile_renderer = require("src.presentation.view.render.tile_renderer")
+  local captured = {}
+  local unit = {
+    get_child_by_name = function(name)
+      if name == "name" or name == "price" then
+        return {
+          set_billboard_text = function(text)
+            captured[name] = text
+          end,
+        }
+      end
+      if name == "color" then
+        return {
+          set_paint_area_color = function(_, color)
+            captured.color = color
+          end,
+        }
+      end
+      return nil
+    end,
+  }
+
+  tile_renderer.render_tile(unit, 1, 2)
+
+  assert(captured.name ~= nil, "tile renderer should render land name")
+  assert(captured.price ~= nil, "tile renderer should render land price")
+  assert(captured.color ~= nil, "tile renderer should render owner color")
+end
+
 return {
   name = "presentation.board_sync",
   tests = {
@@ -524,6 +630,14 @@ return {
     {
       name = "_test_board_refresh_pending_synthetic_ai_stop_consumes_only_once",
       run = _test_board_refresh_pending_synthetic_ai_stop_consumes_only_once,
+    },
+    {
+      name = "_test_board_scene_init_binds_units_and_target_pick_metadata",
+      run = _test_board_scene_init_binds_units_and_target_pick_metadata,
+    },
+    {
+      name = "_test_tile_renderer_renders_land_metadata",
+      run = _test_tile_renderer_renders_land_metadata,
     },
   },
 }

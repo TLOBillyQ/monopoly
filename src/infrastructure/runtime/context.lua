@@ -28,29 +28,37 @@ local function _build_vehicle_helper(get_roles, get_game_api)
     return role
   end
 
-  local function _first_valid_role()
-    local roles = nil
-    if type(get_roles) == "function" then
-      roles = get_roles()
+  local function _first_role_from_list(roles)
+    if type(roles) ~= "table" then
+      return nil
     end
-    if type(roles) == "table" then
-      for _, role in ipairs(roles) do
-        if role ~= nil then
-          return role
-        end
+    for _, role in ipairs(roles) do
+      if role ~= nil then
+        return role
       end
     end
-    local game_api = get_game_api and get_game_api() or nil
-    if game_api and game_api.get_all_valid_roles then
-      local ok, valid_roles = pcall(game_api.get_all_valid_roles)
-      if ok and type(valid_roles) == "table" then
-        for _, role in ipairs(valid_roles) do
-          if role ~= nil then
-            return role
-          end
-        end
-      end
+    return nil
+  end
+
+  local function _first_role_from_provider()
+    if type(get_roles) ~= "function" then
+      return nil
     end
+    return _first_role_from_list(get_roles())
+  end
+
+  local function _first_role_from_game_api(game_api)
+    if not (game_api and game_api.get_all_valid_roles) then
+      return nil
+    end
+    local ok, valid_roles = pcall(game_api.get_all_valid_roles)
+    if not ok then
+      return nil
+    end
+    return _first_role_from_list(valid_roles)
+  end
+
+  local function _first_role_from_range()
     for role_id = 1, 8 do
       local role = _safe_get_role(role_id)
       if role ~= nil then
@@ -58,6 +66,19 @@ local function _build_vehicle_helper(get_roles, get_game_api)
       end
     end
     return nil
+  end
+
+  local function _first_valid_role()
+    local provider_role = _first_role_from_provider()
+    if provider_role ~= nil then
+      return provider_role
+    end
+    local game_api = get_game_api and get_game_api() or nil
+    local api_role = _first_role_from_game_api(game_api)
+    if api_role ~= nil then
+      return api_role
+    end
+    return _first_role_from_range()
   end
 
   local function _ensure_valid_role(role_id, action)
