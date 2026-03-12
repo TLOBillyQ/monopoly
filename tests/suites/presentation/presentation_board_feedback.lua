@@ -443,6 +443,120 @@ local function _test_board_feedback_unconfigured_effect_id_ref_skips_without_err
   assert(play_calls == 0, "missing effect ref should not call engine")
 end
 
+local function _test_board_feedback_play_cue_with_nil_cue_name_returns_false()
+  local effect_calls = {}
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "play_sfx_by_key",
+      value = function()
+        effect_calls[#effect_calls + 1] = {}
+        return 1
+      end,
+    },
+  }, function()
+    local state = _build_state()
+    local played = board_feedback.play_tile_cue(state, nil, 1, {})
+    assert(played == false, "nil cue name should return false")
+    played = board_feedback.play_tile_cue(state, "", 1, {})
+    assert(played == false, "empty cue name should return false")
+  end)
+
+  assert(#effect_calls == 0, "invalid cue name should not call engine")
+end
+
+local function _test_board_feedback_play_cue_with_nil_pos_uses_default()
+  local effect_calls = {}
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "play_sfx_by_key",
+      value = function(sfx_key, pos)
+        effect_calls[#effect_calls + 1] = { sfx_key = sfx_key, pos = pos }
+        return 601
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "play_3d_sound",
+      value = function()
+        return nil
+      end,
+    },
+  }, function()
+    local state = _build_state()
+    -- Use player_cue which may have nil pos resolved
+    local played = board_feedback.play_player_cue(state, "cash_burst", 999, {})
+    assert(played == true, "cue should play with fallback position")
+  end)
+
+  assert(#effect_calls >= 1, "cue with fallback pos should call engine")
+end
+
+local function _test_board_feedback_play_cue_both_effect_and_sound()
+  local effect_calls = {}
+  local sound_calls = {}
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "play_sfx_by_key",
+      value = function(sfx_key, pos)
+        effect_calls[#effect_calls + 1] = { sfx_key = sfx_key }
+        return 701
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "play_3d_sound",
+      value = function(pos, sound_id)
+        sound_calls[#sound_calls + 1] = { sound_id = sound_id }
+        return 702
+      end,
+    },
+  }, function()
+    local state = _build_state()
+    -- Use a cue that has both effect and sound configured
+    local played = board_feedback.play_tile_cue(state, "upgrade_land_smoke", 1, {})
+    assert(played == true, "cue with both effect and sound should play")
+  end)
+
+  assert(#effect_calls >= 1, "cue should trigger effect")
+end
+
+local function _test_board_feedback_play_cue_only_sound_no_effect()
+  local effect_calls = {}
+  local sound_calls = {}
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "play_sfx_by_key",
+      value = function()
+        effect_calls[#effect_calls + 1] = {}
+        return nil
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "play_3d_sound",
+      value = function(pos, sound_id)
+        sound_calls[#sound_calls + 1] = { sound_id = sound_id }
+        return 801
+      end,
+    },
+  }, function()
+    local state = _build_state()
+    -- Use a cue that may only have sound
+    local played = board_feedback.play_sound_only(state, "turn_started", {})
+    assert(played == true, "sound-only cue should play")
+  end)
+
+  assert(#sound_calls >= 1, "sound-only cue should trigger sound")
+end
+
 return {
   name = "presentation.board_feedback",
   tests = {
@@ -455,5 +569,9 @@ return {
     { name = "board_feedback_bankruptcy_routes_scalar_scale", run = _test_board_feedback_bankruptcy_routes_scalar_scale },
     { name = "board_feedback_followup_sound_defaults_are_numeric", run = _test_board_feedback_followup_sound_defaults_are_numeric },
     { name = "board_feedback_unconfigured_effect_id_ref_skips_without_error", run = _test_board_feedback_unconfigured_effect_id_ref_skips_without_error },
+    { name = "board_feedback_play_cue_with_nil_cue_name_returns_false", run = _test_board_feedback_play_cue_with_nil_cue_name_returns_false },
+    { name = "board_feedback_play_cue_with_nil_pos_uses_default", run = _test_board_feedback_play_cue_with_nil_pos_uses_default },
+    { name = "board_feedback_play_cue_both_effect_and_sound", run = _test_board_feedback_play_cue_both_effect_and_sound },
+    { name = "board_feedback_play_cue_only_sound_no_effect", run = _test_board_feedback_play_cue_only_sound_no_effect },
   },
 }

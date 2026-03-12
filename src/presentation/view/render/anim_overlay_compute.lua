@@ -42,21 +42,37 @@ function compute.resolve_tile_pos(state, tile_index)
   return _zero_vector()
 end
 
-function compute.offset_pos(pos, offset)
+local function _try_native_vector_add(pos, offset)
   local ok, result = pcall(function()
     return pos + offset
   end)
+  return ok, result
+end
+
+local function _resolve_vector_components(vec)
+  local x = _resolve_vector_value(vec, "x", 1) or 0
+  local y = _resolve_vector_value(vec, "y", 2) or 0
+  local z = _resolve_vector_value(vec, "z", 3) or 0
+  return x, y, z
+end
+
+local function _create_offset_vector(pos_x, pos_y, pos_z, offset_x, offset_y, offset_z)
+  if math and math.Vector3 then
+    return math.Vector3(pos_x + offset_x, pos_y + offset_y, pos_z + offset_z)
+  end
+  return nil
+end
+
+function compute.offset_pos(pos, offset)
+  local ok, result = _try_native_vector_add(pos, offset)
   if ok then
     return result
   end
-  local pos_x = _resolve_vector_value(pos, "x", 1) or 0
-  local pos_y = _resolve_vector_value(pos, "y", 2) or 0
-  local pos_z = _resolve_vector_value(pos, "z", 3) or 0
-  local offset_x = _resolve_vector_value(offset, "x", 1) or 0
-  local offset_y = _resolve_vector_value(offset, "y", 2) or 0
-  local offset_z = _resolve_vector_value(offset, "z", 3) or 0
-  if math and math.Vector3 then
-    return math.Vector3(pos_x + offset_x, pos_y + offset_y, pos_z + offset_z)
+  local pos_x, pos_y, pos_z = _resolve_vector_components(pos)
+  local offset_x, offset_y, offset_z = _resolve_vector_components(offset)
+  local vector = _create_offset_vector(pos_x, pos_y, pos_z, offset_x, offset_y, offset_z)
+  if vector then
+    return vector
   end
   return pos
 end

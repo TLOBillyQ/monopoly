@@ -3,28 +3,45 @@ local runtime_state = require("src.core.state_access.runtime_state")
 
 local intents = {}
 
+local function _resolve_option_id_from_payload(payload)
+  return payload.option_id or payload.option or nil
+end
+
+local function _resolve_index_from_payload(payload)
+  return payload.index or payload.option_index or payload.card_index or payload.choice_index
+end
+
+local function _resolve_mapped_from_runtime(state, index)
+  local ui_runtime = state and runtime_state.ensure_ui_runtime(state) or nil
+  return ui_runtime and ui_runtime.choice_visible_option_ids and ui_runtime.choice_visible_option_ids[index]
+end
+
+local function _resolve_option_by_index(choice, index)
+  local options = choice.options
+  if type(options) ~= "table" then
+    return nil
+  end
+  local option = options[index]
+  if option then
+    return option.id or option
+  end
+  return nil
+end
+
 function intents.resolve_option_id(choice, payload, state)
   assert(choice ~= nil, "missing choice")
   assert(payload ~= nil, "missing payload")
-  local option_id = payload.option_id or payload.option or nil
+  local option_id = _resolve_option_id_from_payload(payload)
   if option_id then
     return option_id
   end
-  local index = payload.index or payload.option_index or payload.card_index or payload.choice_index
+  local index = _resolve_index_from_payload(payload)
   if index then
-    local ui_runtime = state and runtime_state.ensure_ui_runtime(state) or nil
-    local mapped = ui_runtime and ui_runtime.choice_visible_option_ids and ui_runtime.choice_visible_option_ids[index]
+    local mapped = _resolve_mapped_from_runtime(state, index)
     if mapped then
       return mapped
     end
-    local options = choice.options
-    if type(options) ~= "table" then
-      return nil
-    end
-    local option = options[index]
-    if option then
-      return option.id or option
-    end
+    return _resolve_option_by_index(choice, index)
   end
   return nil
 end
