@@ -355,6 +355,82 @@ local function _test_role_control_lock_sync_unit_without_buff_api_warns()
   assert(state.role_control_lock.warn_once ~= nil, "warn_once should exist")
 end
 
+local function _test_role_control_lock_sync_applies_and_tracks_owned_lock()
+  local original_enums = Enums
+  Enums = { BuffState = { BUFF_FORBID_CONTROL = 77 } }
+  local add_calls = 0
+  local mock_unit = {
+    get_state_count = function() return 0 end,
+    add_state = function(buff_id)
+      assert(buff_id == 77, "should apply configured buff id")
+      add_calls = add_calls + 1
+    end,
+    remove_state = function() end,
+  }
+  local state = {
+    role_control_lock = {
+      by_role = {},
+      warn_once = {},
+    },
+  }
+  local ok, err = pcall(function()
+    role_control_lock_policy.sync(state, true, {
+      runtime = {
+        for_each_role_or_global = function(fn)
+          fn({
+            get_ctrl_unit = function() return mock_unit end,
+          })
+        end,
+        resolve_role_id = function() return "p1" end,
+      },
+    })
+  end)
+  Enums = original_enums
+  if not ok then
+    error(err)
+  end
+  assert(add_calls == 1, "should add control-forbid buff when unit is unlocked")
+  assert(state.role_control_lock.by_role.p1.owned == true, "lock state should track owned buff")
+end
+
+local function _test_role_control_lock_sync_cleans_stale_role_entries()
+  local original_enums = Enums
+  Enums = { BuffState = { BUFF_FORBID_CONTROL = 88 } }
+  local removed = 0
+  local stale_unit = {
+    get_state_count = function() return 1 end,
+    add_state = function() end,
+    remove_state = function(buff_id)
+      assert(buff_id == 88, "should remove stale buff with configured id")
+      removed = removed + 1
+    end,
+  }
+  local state = {
+    role_control_lock = {
+      by_role = {
+        stale = { owned = true, unit = stale_unit },
+      },
+      warn_once = {},
+    },
+  }
+  local ok, err = pcall(function()
+    role_control_lock_policy.sync(state, true, {
+      runtime = {
+        for_each_role_or_global = function(fn)
+          fn(nil)
+        end,
+        resolve_role_id = function() return nil end,
+      },
+    })
+  end)
+  Enums = original_enums
+  if not ok then
+    error(err)
+  end
+  assert(removed == 1, "stale owned entry should be released")
+  assert(state.role_control_lock.by_role.stale == nil, "stale role entry should be pruned")
+end
+
 -- Tests for anim_overlay_runtime.spawn_overlay
 local function _test_anim_overlay_spawn_overlay_group()
   local scene = {
@@ -864,6 +940,8 @@ return {
     { name = "role_control_lock_sync_exempt_role_skips_lock", run = _test_role_control_lock_sync_exempt_role_skips_lock },
     { name = "role_control_lock_sync_missing_unit_skips", run = _test_role_control_lock_sync_missing_unit_skips },
     { name = "role_control_lock_sync_unit_without_buff_api_warns", run = _test_role_control_lock_sync_unit_without_buff_api_warns },
+    { name = "role_control_lock_sync_applies_and_tracks_owned_lock", run = _test_role_control_lock_sync_applies_and_tracks_owned_lock },
+    { name = "role_control_lock_sync_cleans_stale_role_entries", run = _test_role_control_lock_sync_cleans_stale_role_entries },
     -- anim_overlay_runtime tests
     { name = "anim_overlay_spawn_overlay_group", run = _test_anim_overlay_spawn_overlay_group },
     { name = "anim_overlay_spawn_overlay_unit", run = _test_anim_overlay_spawn_overlay_unit },
