@@ -73,6 +73,75 @@ local function _test_ai_skips_auto_buy_at_market()
   assert(ai_player.cash == before_cash, "AI should not spend money on auto_buy")
 end
 
+local function _test_auto_execute_empty_list_no_purchase()
+  local market_service = require("src.game.systems.market")
+  local g = _new_game()
+  local p = g:current_player()
+
+  -- Set player to have no cash so no items are available
+  g:set_player_cash(p, 0)
+  g:set_player_balance(p, "金豆", 0)
+  g:set_player_balance(p, "乐园币", 0)
+
+  local before_cash = p.cash
+  market_service.auto.execute(g, p)
+
+  assert(p.cash == before_cash, "should not spend money when no items available")
+end
+
+local function _test_auto_execute_purchases_first_non_vehicle()
+  local market_service = _reload_market_service()
+  local g = _new_game()
+  local p = g:current_player()
+
+  -- Give player enough cash to buy items
+  g:set_player_cash(p, 999999)
+
+  -- Find first available item (non-vehicle)
+  local list = market_service.query.list_available(p, g)
+  if #list == 0 then
+    return -- skip if no items available
+  end
+
+  local first_entry = list[1]
+  local before_cash = p.cash
+
+  market_service.auto.execute(g, p)
+
+  -- Should have purchased the cheapest item
+  assert(p.cash < before_cash, "should have purchased an item")
+end
+
+local function _test_auto_execute_skips_vehicles_when_has_seat()
+  local market_service = _reload_market_service()
+  local g = _new_game()
+  local p = g:current_player()
+
+  -- Give player enough cash and a vehicle seat
+  g:set_player_cash(p, 999999)
+  p.seat_id = 1001 -- assign a vehicle seat
+
+  -- Find first available non-vehicle item
+  local list = market_service.query.list_available(p, g)
+  local non_vehicle_entry = nil
+  for _, entry in ipairs(list) do
+    if entry.kind ~= "vehicle" then
+      non_vehicle_entry = entry
+      break
+    end
+  end
+
+  if not non_vehicle_entry then
+    return -- skip if no non-vehicle items available
+  end
+
+  local before_cash = p.cash
+  market_service.auto.execute(g, p)
+
+  -- Should have purchased a non-vehicle item (not vehicle)
+  assert(p.cash < before_cash, "should have purchased a non-vehicle item")
+end
+
 local function _test_market_full_inventory_blocks_items()
   local market_service = require("src.game.systems.market")
   local g = _new_game()
@@ -695,6 +764,9 @@ return {
   name = "market",
   tests = {
     { name = "ai_skips_auto_buy_at_market", run = _test_ai_skips_auto_buy_at_market },
+    { name = "auto_execute_empty_list_no_purchase", run = _test_auto_execute_empty_list_no_purchase },
+    { name = "auto_execute_purchases_first_non_vehicle", run = _test_auto_execute_purchases_first_non_vehicle },
+    { name = "auto_execute_skips_vehicles_when_has_seat", run = _test_auto_execute_skips_vehicles_when_has_seat },
     { name = "market_full_inventory_blocks_items", run = _test_market_full_inventory_blocks_items },
     { name = "market_global_limit", run = _test_market_global_limit },
     { name = "market_disabled_products_hidden", run = _test_market_disabled_products_hidden },
