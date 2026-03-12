@@ -218,7 +218,7 @@ local function _register_purchase_event_for_role(game, player)
   if rt.registered_role_ids[role_id] then
     return
   end
-  RegisterTriggerEvent({ EVENT.SPEC_ROLE_PURCHASE_GOODS, role_id }, function(_, _, data)
+  local function _on_purchase_goods_callback(_, _, data)
     local goods_id = data and data.goods_id or nil
     if goods_id == nil or goods_id == "" then
       logger.warn("market paid callback ignored: goods_id missing")
@@ -236,7 +236,7 @@ local function _register_purchase_event_for_role(game, player)
       logger.warn("market paid callback ignored: player missing", "player_id=" .. tostring(pending.player_id))
       return
     end
-  local entry = _context().entry_by_id(pending.product_id)
+    local entry = _context().entry_by_id(pending.product_id)
     if not entry then
       logger.warn("market paid callback ignored: market entry missing", "product_id=" .. tostring(pending.product_id))
       return
@@ -244,7 +244,8 @@ local function _register_purchase_event_for_role(game, player)
     if type(rt.on_purchase) == "function" then
       rt.on_purchase(game, callback_player, entry, pending)
     end
-  end)
+  end
+  RegisterTriggerEvent({ EVENT.SPEC_ROLE_PURCHASE_GOODS, role_id }, _on_purchase_goods_callback)
   rt.registered_role_ids[role_id] = true
 end
 

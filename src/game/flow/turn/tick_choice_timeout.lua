@@ -187,4 +187,6 @@ function tick_choice_timeout.step(game, state, dt, opts)
   end
 end
 
+tick_choice_timeout._resolve_choice_owner_id = _resolve_choice_owner_id
+
 return tick_choice_timeout

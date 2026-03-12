@@ -85,4 +85,8 @@ function eligibility.build_visible_entries(player, game, limit)
   return visible, buyable
 end
 
+-- Export helpers for testability
+eligibility._split_entries_by_buyable = _split_entries_by_buyable
+eligibility._append_visible_entries = _append_visible_entries
+
 return eligibility

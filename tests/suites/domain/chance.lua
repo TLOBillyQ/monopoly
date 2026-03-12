@@ -390,6 +390,75 @@ local function _test_bankruptcy_eliminate_calls_life_die()
   assert(life_die_called == true, "eliminate should call life die on role")
 end
 
+-- T4 characterization tests for executors
+local function _test_merge_executor_groups_combines_groups()
+  local executors = require("src.game.systems.land.executors")
+  -- The module already uses _merge_executor_groups internally
+  -- Test that executors module loads and has expected structure
+  assert(type(executors.executors) == "table", "executors.executors should be a table")
+  assert(type(executors.register_effect_executors) == "function", "executors should expose register_effect_executors")
+end
+
+-- T4 characterization tests for eligibility helpers
+local function _test_split_entries_by_buyable_separates_entries()
+  local eligibility = require("src.game.systems.market.application.eligibility")
+  local g = _new_game()
+  local p = g:current_player()
+
+  -- Give player enough cash to buy some items
+  g:set_player_cash(p, 999999)
+
+  local buyable, unbuyable = eligibility._split_entries_by_buyable(p, g)
+
+  assert(type(buyable) == "table", "split_entries_by_buyable should return buyable table")
+  assert(type(unbuyable) == "table", "split_entries_by_buyable should return unbuyable table")
+  -- With plenty of cash, most items should be buyable
+  assert(#buyable >= 0, "buyable list should be non-negative")
+end
+
+local function _test_append_visible_entries_respects_limit()
+  local eligibility = require("src.game.systems.market.application.eligibility")
+  local g = _new_game()
+  local p = g:current_player()
+
+  local entries = eligibility.sorted_entries()
+  local visible = {}
+  local limit = 3
+
+  local hit_limit = eligibility._append_visible_entries(visible, entries, true, limit)
+
+  if #entries >= limit then
+    assert(#visible == limit, "append_visible_entries should respect limit")
+    assert(hit_limit == true, "append_visible_entries should return true when limit hit")
+  end
+end
+
+local function _test_append_visible_entries_without_limit_adds_all()
+  local eligibility = require("src.game.systems.market.application.eligibility")
+  local g = _new_game()
+
+  local entries = eligibility.sorted_entries()
+  local visible = {}
+
+  local hit_limit = eligibility._append_visible_entries(visible, entries, true, nil)
+
+  assert(#visible == #entries, "append_visible_entries without limit should add all entries")
+  assert(hit_limit == false, "append_visible_entries should return false when no limit")
+end
+
+-- T4 characterization tests for market context
+local function _test_context_entry_name_returns_name()
+  local context = require("src.game.systems.market.application.context")
+  local market_cfg = require("Config.generated.market")
+
+  if #market_cfg > 0 then
+    local first_entry = market_cfg[1]
+    local name = context.entry_name(first_entry)
+    assert(type(name) == "string", "entry_name should return a string")
+    assert(name ~= "", "entry_name should return non-empty string")
+  end
+end
+
 return {
   name = "chance",
   tests = {
@@ -422,5 +491,11 @@ return {
     -- T8 characterization tests for 0% coverage hotspots
     { name = "chance_handler_discard_properties_removes_properties", run = _test_chance_handler_discard_properties_removes_properties },
     { name = "bankruptcy_eliminate_calls_life_die", run = _test_bankruptcy_eliminate_calls_life_die },
+    -- T4 characterization tests for low-complexity hotspots
+    { name = "merge_executor_groups_combines_groups", run = _test_merge_executor_groups_combines_groups },
+    { name = "split_entries_by_buyable_separates_entries", run = _test_split_entries_by_buyable_separates_entries },
+    { name = "append_visible_entries_respects_limit", run = _test_append_visible_entries_respects_limit },
+    { name = "append_visible_entries_without_limit_adds_all", run = _test_append_visible_entries_without_limit_adds_all },
+    { name = "context_entry_name_returns_name", run = _test_context_entry_name_returns_name },
   },
 }

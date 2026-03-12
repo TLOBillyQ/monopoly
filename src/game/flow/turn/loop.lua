@@ -430,4 +430,5 @@ function gameplay_loop.tick(game, state, dt)
     return
   end
 end
+gameplay_loop._log_missing_auto_choice_action = _log_missing_auto_choice_action
 return gameplay_loop

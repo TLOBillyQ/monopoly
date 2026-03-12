@@ -157,6 +157,14 @@ local function _try_resolve_tick_diff(wall_diff_seconds, now, previous, fallback
   return fallback_seconds, "fallback:diff_invalid", now, previous, wall_raw
 end
 
+local function _try_get_previous_tick(state, now)
+  local previous = _update_tick_state(state, now)
+  if not number_utils.is_numeric(previous) then
+    return nil, "fallback:no_previous"
+  end
+  return previous, nil
+end
+
 local function _resolve_tick_seconds(state, fallback_seconds)
   if not state then
     return _resolve_tick_fallback(nil, fallback_seconds, "fallback:no_state")
@@ -173,9 +181,9 @@ local function _resolve_tick_seconds(state, fallback_seconds)
     return _resolve_tick_fallback(state, fallback_seconds, "fallback:now_invalid")
   end
 
-  local previous = _update_tick_state(state, now)
-  if not number_utils.is_numeric(previous) then
-    return fallback_seconds, "fallback:no_previous", now, nil, nil
+  local previous, previous_err = _try_get_previous_tick(state, now)
+  if previous_err then
+    return fallback_seconds, previous_err, now, nil, nil
   end
 
   return _try_resolve_tick_diff(wall_diff_seconds, now, previous, fallback_seconds)

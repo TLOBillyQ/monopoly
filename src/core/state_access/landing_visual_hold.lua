@@ -293,7 +293,7 @@ function landing_visual_hold.release(state, game)
     _merge_dirty_into(game.dirty, hold.deferred_dirty)
   end
 
-  landing_visual_hold.with_flushing(state, function()
+  local function _replay_deferred_entries(hold)
     local logger = require("src.core.utils.logger")
     logger.flush_event_buffer(hold)
 
@@ -328,6 +328,9 @@ function landing_visual_hold.release(state, game)
         entry.replay(entry.payload, entry.opts)
       end
     end
+  end
+  landing_visual_hold.with_flushing(state, function()
+    _replay_deferred_entries(hold)
   end)
 
   hold.frozen_ui_model = nil

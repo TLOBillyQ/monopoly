@@ -134,5 +134,6 @@ end
 local roll = {}
 roll._roll_dice = _roll_dice
 roll._phase_roll = _phase_roll
+roll._resolve_phase_wait_result = _resolve_phase_wait_result
 
 return roll

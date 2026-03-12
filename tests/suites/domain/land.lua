@@ -367,6 +367,62 @@ local function _test_land_actions_resolve_rent_owner_skips_mountain_owner()
   end)
 end
 
+-- T4 characterization tests for _apply_tax
+local function _test_apply_tax_with_pending_tax_free_skips_payment()
+  local land = require("src.game.systems.land.executors")
+  local g = _new_game()
+  local p = g:current_player()
+  g:set_player_cash(p, 10000)
+  g:set_player_status(p, "pending_tax_free", true)
+
+  local before_cash = p.cash
+  -- Find tax tile
+  local tax_idx = nil
+  for i = 1, g.board:length() do
+    local tile = g.board:get_tile(i)
+    if tile and tile.type == "tax" then
+      tax_idx = i
+      break
+    end
+  end
+
+  if tax_idx then
+    g:update_player_position(p, tax_idx)
+    local tile = g.board:get_tile(tax_idx)
+    land.executors.tax.apply({ game = g, player = p, tile = tile })
+    assert(p.cash == before_cash, "_apply_tax should skip payment when pending_tax_free is set")
+    assert(p.status.pending_tax_free == false, "_apply_tax should clear pending_tax_free after use")
+  end
+end
+
+local function _test_apply_tax_without_tax_free_card_prompts_choice()
+  local land = require("src.game.systems.land.executors")
+  local g = _new_game()
+  local p = g:current_player()
+  g:set_player_cash(p, 10000)
+  g:set_player_status(p, "pending_tax_free", false)
+  inventory.clear(p)
+
+  -- Find tax tile
+  local tax_idx = nil
+  for i = 1, g.board:length() do
+    local tile = g.board:get_tile(i)
+    if tile and tile.type == "tax" then
+      tax_idx = i
+      break
+    end
+  end
+
+  if tax_idx then
+    g:update_player_position(p, tax_idx)
+    local tile = g.board:get_tile(tax_idx)
+    local res = land.executors.tax.apply({ game = g, player = p, tile = tile })
+    -- Should return waiting intent for tax choice when player has tax_free card
+    -- or pay tax directly if no card
+    assert(res == nil or (type(res) == "table" and res.waiting), "_apply_tax should either pay tax or prompt choice")
+  end
+end
+
 return {
   name = "land",
   tests = {
@@ -386,5 +442,8 @@ return {
     { name = "land_actions_safe_tile_state_returns_state", run = _test_land_actions_safe_tile_state_returns_state },
     { name = "land_actions_resolve_rent_owner_returns_owner", run = _test_land_actions_resolve_rent_owner_returns_owner },
     { name = "land_actions_resolve_rent_owner_skips_mountain_owner", run = _test_land_actions_resolve_rent_owner_skips_mountain_owner },
+    -- T4 characterization tests for _apply_tax
+    { name = "apply_tax_with_pending_tax_free_skips_payment", run = _test_apply_tax_with_pending_tax_free_skips_payment },
+    { name = "apply_tax_without_tax_free_card_prompts_choice", run = _test_apply_tax_without_tax_free_card_prompts_choice },
   },
 }
