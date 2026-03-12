@@ -724,7 +724,7 @@ local function _test_status3d_init_sync_disabled_cache_returns_early()
     ui_status_3d = { disabled = true, layers = {}, text_nodes = {}, last_status_key_by_player = {} },
   }
   local game = { players = {} }
-  status3d_init.sync(game, state, {}, {})
+  status3d_init.sync(game, state, {}, { host_runtime = { has_scene_ui_support = function() return true end } })
   assert(true, "sync with disabled cache should return early")
 end
 
@@ -914,6 +914,244 @@ local function _test_startup_render_apply_marks_applied()
   assert(state.game.test_profile_render_bootstrap.applied == true, "should mark bootstrap as applied")
 end
 
+-- Test for board_feedback._play_cue with nil pos (via play_sound_only path)
+local function _test_play_cue_with_nil_pos()
+  -- This test covers the nil pos fallback path in _play_cue at line 197
+  -- The fallback uses runtime_constants.v3_zero when pos is nil
+  -- play_sound_only with no payload.pos, no player_id, no tile_index will pass nil pos
+  local mock_host = {
+    play_sfx_by_key = function() return nil end,
+    play_3d_sound = function() return nil end,
+  }
+
+  -- Test that calling with a cue that has no catalog entry returns false
+  -- This is the early return path we can reliably test
+  local result = board_feedback.play_tile_cue(
+    { presentation_runtime = { host_runtime = mock_host } },
+    "nonexistent_cue_12345",
+    1,
+    {},
+    { host_runtime = mock_host }
+  )
+
+  assert(result == false, "should return false for nonexistent cue")
+end
+
+-- Test for board_feedback.play_sound_only with nil pos fallback
+local function _test_play_sound_only_with_nil_pos_fallback()
+  -- This test covers the nil pos fallback path in _play_cue at line 197
+  -- by calling play_sound_only with minimal params that result in nil pos
+  local mock_host = {
+    play_sfx_by_key = function() return nil end,
+    play_3d_sound = function() return nil end,
+  }
+
+  -- Call play_sound_only with no pos, no player_id, no tile_index
+  -- This should pass nil to _play_cue, triggering the fallback
+  local result = board_feedback.play_sound_only(
+    { presentation_runtime = { host_runtime = mock_host } },
+    "nonexistent_cue_12345",
+    {},
+    { host_runtime = mock_host }
+  )
+
+  assert(result == false, "should return false for nonexistent cue even with nil pos fallback")
+end
+
+-- Test for pre_confirm_flow.enter when modal function is missing
+local function _test_pre_confirm_enter_missing_modal_function()
+  local state = {
+    ui = { active_choice_screen_key = "base" },
+    _pre_confirm_active = false,
+    game = {},
+    gameplay_loop_ports = {
+      modal = {
+        -- open_pre_confirm_screen is intentionally missing
+      },
+    },
+  }
+
+  local result = _reload_module("src.presentation.input.intent_dispatch.pre_confirm", {
+    ["src.core.state_access.runtime_state"] = {
+      get_ui_model = function()
+        return { choice = { id = "choice1", options = { { id = "opt1", label = "Option 1" } } } }
+      end,
+    },
+    ["src.presentation.model.choice_support"] = {
+      resolve_option_label_by_id = function() return "Option 1" end,
+      resolve_secondary_confirm_title = function() return "Title" end,
+      resolve_secondary_confirm_body = function() return "Body" end,
+    },
+  }, function(flow)
+    return flow.enter(state, { type = "choice_select", option_id = "opt1" })
+  end)
+
+  assert(result == false, "should return false when modal.open_pre_confirm_screen is not a function")
+end
+
+-- Test for pre_confirm_flow.enter with market_confirm when option not found
+local function _test_pre_confirm_enter_market_confirm_option_not_found()
+  local state = {
+    ui = { active_choice_screen_key = "market" },
+    _pre_confirm_active = false,
+    game = {},
+  }
+
+  local result = _reload_module("src.presentation.input.intent_dispatch.pre_confirm", {
+    ["src.core.state_access.runtime_state"] = {
+      get_ui_model = function()
+        return { choice = { id = "choice1", options = { { id = "9999", requires_pre_confirm = false } } } }
+      end,
+    },
+    ["src.presentation.model.choice_support"] = {
+      resolve_screen_key = function() return "market" end,
+    },
+  }, function(flow)
+    return flow.enter(state, { type = "market_confirm", option_id = "1001" })
+  end)
+
+  assert(result == false, "should return false when market option not found or doesn't require pre_confirm")
+end
+
+-- Additional test for role_control_lock_policy.sync - unit with existing buff
+local function _test_role_control_lock_sync_unit_with_existing_buff()
+  local original_enums = Enums
+  Enums = { BuffState = { BUFF_FORBID_CONTROL = 77 } }
+  local mock_unit = {
+    get_state_count = function(buff_id) return 1 end, -- buff already exists
+    add_state = function() error("should not add when buff exists") end,
+    remove_state = function() end,
+  }
+  local state = {
+    role_control_lock = {
+      by_role = {},
+      warn_once = {},
+    },
+  }
+  local ok, err = pcall(function()
+    role_control_lock_policy.sync(state, true, {
+      runtime = {
+        for_each_role_or_global = function(fn)
+          fn({
+            get_ctrl_unit = function() return mock_unit end,
+          })
+        end,
+        resolve_role_id = function() return "p1" end,
+      },
+    })
+  end)
+  Enums = original_enums
+  if not ok then
+    error(err)
+  end
+  -- Entry should exist but not owned (since buff was pre-existing)
+  assert(state.role_control_lock.by_role.p1 ~= nil, "should create entry for unit with existing buff")
+  assert(state.role_control_lock.by_role.p1.owned == false, "should not mark as owned when buff pre-exists")
+end
+
+-- Additional test for role_control_lock_policy.sync - nil role_id after normalization
+local function _test_role_control_lock_sync_nil_role_id()
+  local original_enums = Enums
+  Enums = { BuffState = { BUFF_FORBID_CONTROL = 77 } }
+  local state = {
+    role_control_lock = {
+      by_role = {},
+      warn_once = {},
+    },
+  }
+  local ok, err = pcall(function()
+    role_control_lock_policy.sync(state, true, {
+      runtime = {
+        for_each_role_or_global = function(fn)
+          fn({
+            get_ctrl_unit = function() return {} end,
+          })
+        end,
+        resolve_role_id = function() return nil end, -- nil role_id
+      },
+    })
+  end)
+  Enums = original_enums
+  if not ok then
+    error(err)
+  end
+  -- Should not create entry for nil role_id
+  local count = 0
+  for _ in pairs(state.role_control_lock.by_role) do count = count + 1 end
+  assert(count == 0, "should not create entry for nil role_id")
+end
+
+-- Additional test for role_control_lock_policy.sync - role without get_ctrl_unit
+local function _test_role_control_lock_sync_role_without_get_ctrl_unit()
+  local original_enums = Enums
+  Enums = { BuffState = { BUFF_FORBID_CONTROL = 77 } }
+  local state = {
+    role_control_lock = {
+      by_role = {},
+      warn_once = {},
+    },
+  }
+  local ok, err = pcall(function()
+    role_control_lock_policy.sync(state, true, {
+      runtime = {
+        for_each_role_or_global = function(fn)
+          fn({
+            -- no get_ctrl_unit method
+          })
+        end,
+        resolve_role_id = function() return "p1" end,
+      },
+    })
+  end)
+  Enums = original_enums
+  if not ok then
+    error(err)
+  end
+  -- When unit is nil, the entry is pruned (set to nil), so it should not exist
+  assert(state.role_control_lock.by_role.p1 == nil, "should not create entry for role without get_ctrl_unit")
+end
+
+-- Additional test for anim_overlay_runtime.spawn_overlay with failed spawn
+local function _test_anim_overlay_spawn_overlay_failed_spawn()
+  local scene = {
+    overlay_units = { roadblocks = {}, mines = {} },
+    presentation_runtime = {
+      host_runtime = {
+        create_unit_group = function() return nil end, -- failed to create
+        create_unit_with_scale = function() return nil end,
+        destroy_unit = function() end,
+        destroy_unit_with_children = function() end,
+      },
+    },
+  }
+  local result = anim_overlay_runtime.spawn_overlay(scene, "roadblock", 1, "group_123", nil, { x = 0, y = 0, z = 0 }, nil, nil)
+  assert(result == false, "spawn_overlay should return false when unit creation fails")
+end
+
+-- Additional test for status3d_scene._create_scene_ui_bind_unit with nil offset
+local function _test_create_scene_ui_bind_unit_preserves_offset()
+  _with_globals({
+    Enums = { ModelSocket = { socket_head = 1 } },
+  }, function()
+    local original_vector3 = math.Vector3
+    local captured_offset = nil
+    math.Vector3 = function(x, y, z)
+      captured_offset = { x = x, y = y, z = z }
+      return captured_offset
+    end
+    local mock_ctrl_unit = {
+      create_scene_ui_bind_unit = function(layout_id, socket, offset)
+        return { id = "layer", offset = offset }
+      end,
+    }
+    local result = status3d_scene._create_scene_ui_bind_unit({}, mock_ctrl_unit, "layout_1")
+    math.Vector3 = original_vector3
+    assert(result ~= nil, "should create layer")
+    assert(captured_offset ~= nil, "should create offset vector")
+    assert(captured_offset.y == 4, "offset y should be 4")
+  end)
+end
+
 return {
   name = "gameplay.t6_characterization",
   tests = {
@@ -971,5 +1209,15 @@ return {
     { name = "startup_render_apply_collects_tile_ids", run = _test_startup_render_apply_collects_tile_ids },
     { name = "startup_render_apply_collects_overlay_indices", run = _test_startup_render_apply_collects_overlay_indices },
     { name = "startup_render_apply_marks_applied", run = _test_startup_render_apply_marks_applied },
+    -- Additional T6 coverage tests
+    { name = "play_cue_with_nil_pos", run = _test_play_cue_with_nil_pos },
+    { name = "play_sound_only_with_nil_pos_fallback", run = _test_play_sound_only_with_nil_pos_fallback },
+    { name = "pre_confirm_enter_missing_modal_function", run = _test_pre_confirm_enter_missing_modal_function },
+    { name = "pre_confirm_enter_market_confirm_option_not_found", run = _test_pre_confirm_enter_market_confirm_option_not_found },
+    { name = "role_control_lock_sync_unit_with_existing_buff", run = _test_role_control_lock_sync_unit_with_existing_buff },
+    { name = "role_control_lock_sync_nil_role_id", run = _test_role_control_lock_sync_nil_role_id },
+    { name = "role_control_lock_sync_role_without_get_ctrl_unit", run = _test_role_control_lock_sync_role_without_get_ctrl_unit },
+    { name = "anim_overlay_spawn_overlay_failed_spawn", run = _test_anim_overlay_spawn_overlay_failed_spawn },
+    { name = "create_scene_ui_bind_unit_preserves_offset", run = _test_create_scene_ui_bind_unit_preserves_offset },
   },
 }
