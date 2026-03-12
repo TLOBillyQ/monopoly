@@ -36,24 +36,98 @@ local function _is_integer_like_time(value)
   return value == as_int
 end
 
+local function _resolve_clock_from_state(state)
+  if not state then
+    return nil
+  end
+  local ports = state.gameplay_loop_ports
+  local clock = ports and ports.clock or nil
+  return clock
+end
+
+local function _resolve_wall_functions(clock)
+  if not clock then
+    return nil, nil
+  end
+  return clock.wall_now_seconds, clock.wall_diff_seconds
+end
+
+local function _try_get_now(wall_now_seconds)
+  if type(wall_now_seconds) ~= "function" then
+    return nil, false
+  end
+  local ok_now, now = pcall(wall_now_seconds)
+  if not ok_now or not number_utils.is_numeric(now) then
+    return nil, false
+  end
+  return now, true
+end
+
+local function _update_tick_state(state, now)
+  local previous = state.tick_wall_now_seconds
+  state.tick_wall_now_seconds = now
+  return previous
+end
+
+local function _try_wall_diff(wall_diff_seconds, now, previous)
+  if type(wall_diff_seconds) ~= "function" then
+    return nil, false
+  end
+  local ok_diff, diff = pcall(wall_diff_seconds, now, previous)
+  local normalized = _normalize_positive_dt(diff)
+  if ok_diff and normalized ~= nil then
+    return normalized, true, diff
+  end
+  return nil, false, diff
+end
+
+local function _try_wall_diff_reversed(wall_diff_seconds, now, previous)
+  if type(wall_diff_seconds) ~= "function" then
+    return nil, false
+  end
+  local ok_reverse, reverse_diff = pcall(wall_diff_seconds, previous, now)
+  local normalized = _normalize_positive_dt(reverse_diff)
+  if ok_reverse and normalized ~= nil then
+    return normalized, true, reverse_diff
+  end
+  return nil, false, reverse_diff
+end
+
+local function _try_raw_diff(now, previous)
+  local raw_diff = now - previous
+  local normalized = _normalize_positive_dt(raw_diff)
+  if normalized ~= nil then
+    return normalized, true, raw_diff
+  end
+  return nil, false, raw_diff
+end
+
+local function _try_raw_diff_reversed(now, previous)
+  local raw_reverse = previous - now
+  local normalized = _normalize_positive_dt(raw_reverse)
+  if normalized ~= nil then
+    return normalized, true, raw_reverse
+  end
+  return nil, false, raw_reverse
+end
+
 local function _resolve_tick_seconds(state, fallback_seconds)
   if not state then
     return fallback_seconds, "fallback:no_state", nil, nil, nil
   end
-  local ports = state.gameplay_loop_ports
-  local clock = ports and ports.clock or nil
-  local wall_now_seconds = clock and clock.wall_now_seconds or nil
-  local wall_diff_seconds = clock and clock.wall_diff_seconds or nil
-  if type(wall_now_seconds) ~= "function" or type(wall_diff_seconds) ~= "function" then
+
+  local clock = _resolve_clock_from_state(state)
+  local wall_now_seconds, wall_diff_seconds = _resolve_wall_functions(clock)
+  if not wall_now_seconds or not wall_diff_seconds then
     return fallback_seconds, "fallback:no_clock", nil, nil, nil
   end
 
-  local ok_now, now = pcall(wall_now_seconds)
-  if not ok_now or not number_utils.is_numeric(now) then
+  local now, ok_now = _try_get_now(wall_now_seconds)
+  if not ok_now then
     return fallback_seconds, "fallback:now_invalid", nil, nil, nil
   end
-  local previous = state.tick_wall_now_seconds
-  state.tick_wall_now_seconds = now
+
+  local previous = _update_tick_state(state, now)
   if not number_utils.is_numeric(previous) then
     return fallback_seconds, "fallback:no_previous", now, nil, nil
   end
@@ -62,31 +136,27 @@ local function _resolve_tick_seconds(state, fallback_seconds)
     return fallback_seconds, "fallback:coarse_wall_clock", now, previous, nil
   end
 
-  local ok_diff, diff = pcall(wall_diff_seconds, now, previous)
-  local normalized_diff = _normalize_positive_dt(diff)
-  if ok_diff and normalized_diff ~= nil then
-    return normalized_diff, "wall:diff", now, previous, diff
+  local diff_result, diff_ok, diff_raw = _try_wall_diff(wall_diff_seconds, now, previous)
+  if diff_ok then
+    return diff_result, "wall:diff", now, previous, diff_raw
   end
 
-  local ok_reverse_diff, reverse_diff = pcall(wall_diff_seconds, previous, now)
-  local normalized_reverse = _normalize_positive_dt(reverse_diff)
-  if ok_reverse_diff and normalized_reverse ~= nil then
-    return normalized_reverse, "wall:diff_reversed", now, previous, reverse_diff
+  local reverse_result, reverse_ok, reverse_raw = _try_wall_diff_reversed(wall_diff_seconds, now, previous)
+  if reverse_ok then
+    return reverse_result, "wall:diff_reversed", now, previous, reverse_raw
   end
 
-  local raw_diff = now - previous
-  local normalized_raw = _normalize_positive_dt(raw_diff)
-  if normalized_raw ~= nil then
-    return normalized_raw, "wall:raw_diff", now, previous, raw_diff
+  local raw_result, raw_ok, raw_val = _try_raw_diff(now, previous)
+  if raw_ok then
+    return raw_result, "wall:raw_diff", now, previous, raw_val
   end
 
-  local raw_reverse = previous - now
-  local normalized_raw_reverse = _normalize_positive_dt(raw_reverse)
-  if normalized_raw_reverse ~= nil then
-    return normalized_raw_reverse, "wall:raw_diff_reversed", now, previous, raw_reverse
+  local raw_rev_result, raw_rev_ok, raw_rev_val = _try_raw_diff_reversed(now, previous)
+  if raw_rev_ok then
+    return raw_rev_result, "wall:raw_diff_reversed", now, previous, raw_rev_val
   end
 
-  return fallback_seconds, "fallback:diff_invalid", now, previous, diff
+  return fallback_seconds, "fallback:diff_invalid", now, previous, diff_raw
 end
 
 local function _start_tick_loop(state, current_game_ref, interval)

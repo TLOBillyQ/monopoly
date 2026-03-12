@@ -163,78 +163,124 @@ function logger.show_tip(text, duration)
   return true
 end
 
-local function _push(level, opts, ...)
-  if level == "info" and not (opts and opts.unlimited == true) then
-    local limit = logger.info_per_turn_limit
-    local provider = logger.info_turn_provider
-    if limit and limit > 0 and provider then
-      local turn = provider()
-      if turn ~= nil then
-        if logger.info_turn ~= turn then
-          logger.info_turn = turn
-          logger.info_turn_count = 0
-        end
-        if logger.info_turn_count >= limit then
-          return
-        end
-        logger.info_turn_count = logger.info_turn_count + 1
-      end
-    end
+local function _check_info_turn_limit(opts)
+  if opts and opts.unlimited == true then
+    return false
   end
-  local no_tip = false
-  local text_start = 1
+  local limit = logger.info_per_turn_limit
+  local provider = logger.info_turn_provider
+  if not (limit and limit > 0 and provider) then
+    return false
+  end
+  local turn = provider()
+  if turn == nil then
+    return false
+  end
+  if logger.info_turn ~= turn then
+    logger.info_turn = turn
+    logger.info_turn_count = 0
+  end
+  if logger.info_turn_count >= limit then
+    return true
+  end
+  logger.info_turn_count = logger.info_turn_count + 1
+  return false
+end
+
+local function _resolve_no_tip(level, opts)
   if level == "event" and opts and opts.no_tip == true then
-    no_tip = true
+    return true
   end
-  local text = _stringify(text_start, ...)
-  if level == "event" then
-    local active_buffer = _active_event_buffer()
-    if type(active_buffer) == "table" then
-      local entries = active_buffer.entries
-      if type(entries) ~= "table" then
-        entries = {}
-        active_buffer.entries = entries
-      end
-      entries[#entries + 1] = {
-        level = level,
-        text = text,
-        no_tip = no_tip,
-      }
-      return
-    end
+  return false
+end
+
+local function _try_buffer_event(level, text, no_tip)
+  if level ~= "event" then
+    return false
   end
-  if level == "event" and not no_tip then
-    logger.show_tip(text, 2.0)
+  local active_buffer = _active_event_buffer()
+  if type(active_buffer) ~= "table" then
+    return false
   end
-  if level == "event" and not _should_collect_event() then
+  local entries = active_buffer.entries
+  if type(entries) ~= "table" then
+    entries = {}
+    active_buffer.entries = entries
+  end
+  entries[#entries + 1] = {
+    level = level,
+    text = text,
+    no_tip = no_tip,
+  }
+  return true
+end
+
+local function _maybe_show_event_tip(level, no_tip, text)
+  if level ~= "event" or no_tip then
     return
   end
+  logger.show_tip(text, 2.0)
+end
+
+local function _should_skip_event_collection(level)
+  if level ~= "event" then
+    return false
+  end
+  return not _should_collect_event()
+end
+
+local function _advance_event_seq(level)
   if level == "event" then
     logger.event_seq = (logger.event_seq or 0) + 1
   end
+end
+
+local function _create_entry(level, text)
   local timestamp = _get_timestamp()
   local time_text = _format_timestamp(timestamp)
   logger.seq = logger.seq + 1
-  local entry = {
+  return {
     level = level,
     text = text,
     timestamp = timestamp,
     time_text = time_text,
     seq = logger.seq,
   }
+end
+
+local function _store_entry(entry)
   table.insert(logger.entries, entry)
   if #logger.entries > logger.max_entries then
     table.remove(logger.entries, 1)
   end
+end
+
+local function _notify_entry_sinks(entry)
   if logger.ui_sink then
     logger.ui_sink(entry)
   end
   if type(print) == "function" then
-    local ok = pcall(print, _format_entry(entry))
-    if not ok then
-      -- ignore print failures in sandbox/runtime
-    end
+    pcall(print, _format_entry(entry))
   end
+end
+
+local function _push(level, opts, ...)
+  if level == "info" and _check_info_turn_limit(opts) then
+    return
+  end
+  local no_tip = _resolve_no_tip(level, opts)
+  local text = _stringify(1, ...)
+  if _try_buffer_event(level, text, no_tip) then
+    return
+  end
+  _maybe_show_event_tip(level, no_tip, text)
+  if _should_skip_event_collection(level) then
+    return
+  end
+  _advance_event_seq(level)
+  local entry = _create_entry(level, text)
+  _store_entry(entry)
+  _notify_entry_sinks(entry)
 end
 
 function logger.set_timestamp_provider(provider)

@@ -56,53 +56,82 @@ local function _pick_synthetic_unit_keys(count)
   return selected
 end
 
-local function _build_startup_roster(max_players)
-  local roster = {}
-  local roles = _resolve_roles()
+local function _resolve_role_id_from_role(role)
+  if not (role and role.get_roleid) then
+    return nil
+  end
+  local ok, id = pcall(role.get_roleid)
+  if not ok or id == nil then
+    return nil
+  end
+  return role_id_utils.normalize(id)
+end
+
+local function _resolve_role_name(role)
+  if not role.get_name then
+    return nil
+  end
+  local ok, name = pcall(role.get_name)
+  if not ok or not name or name == "" then
+    return nil
+  end
+  return name
+end
+
+local function _add_real_roles_to_roster(roster, roles, max_players)
   for _, role in ipairs(roles) do
-    local role_id = nil
-    if role and role.get_roleid then
-      local ok, id = pcall(role.get_roleid)
-      if ok and id ~= nil then
-        role_id = role_id_utils.normalize(id)
-      end
-    end
+    local role_id = _resolve_role_id_from_role(role)
     if role_id ~= nil then
-      local role_name = nil
-      if role.get_name then
-        local ok, name = pcall(role.get_name)
-        if ok and name and name ~= "" then
-          role_name = name
-        end
-      end
+      local role_name = _resolve_role_name(role)
       roster[#roster + 1] = { role_id = role_id, name = role_name }
     end
     if max_players and #roster >= max_players then
       break
     end
   end
+  return roster
+end
+
+local function _build_synthetic_role(slot_index, unit_key)
+  local avatar_ref_id = "AI" .. tostring(slot_index)
+  return {
+    role_id = -slot_index,
+    name = "AI" .. tostring(slot_index),
+    synthetic = true,
+    unit_key = unit_key,
+    avatar_image_key = synthetic_avatar_refs[avatar_ref_id],
+  }
+end
+
+local function _add_synthetic_roles_to_roster(roster, max_players, selected_unit_keys)
   local missing_count = max_players and (max_players - #roster) or 0
-  local selected_unit_keys = _pick_synthetic_unit_keys(missing_count)
   for index = 1, missing_count do
     local slot_index = #roster + 1
-    local avatar_ref_id = "AI" .. tostring(slot_index)
-    roster[slot_index] = {
-      role_id = -slot_index,
-      name = "AI" .. tostring(slot_index),
-      synthetic = true,
-      unit_key = selected_unit_keys[index],
-      avatar_image_key = synthetic_avatar_refs[avatar_ref_id],
-    }
+    roster[slot_index] = _build_synthetic_role(slot_index, selected_unit_keys[index])
   end
-  if max_players and #roles > max_players then
+  return roster
+end
+
+local function _warn_if_roles_truncated(roles_count, max_players)
+  if max_players and roles_count > max_players then
     logger.warn(
       "[Eggy]",
       "角色数量超过上限，已截断:",
-      tostring(#roles),
+      tostring(roles_count),
       "->",
       tostring(max_players)
     )
   end
+end
+
+local function _build_startup_roster(max_players)
+  local roster = {}
+  local roles = _resolve_roles()
+  roster = _add_real_roles_to_roster(roster, roles, max_players)
+  local missing_count = max_players and (max_players - #roster) or 0
+  local selected_unit_keys = _pick_synthetic_unit_keys(missing_count)
+  roster = _add_synthetic_roles_to_roster(roster, max_players, selected_unit_keys)
+  _warn_if_roles_truncated(#roles, max_players)
   return roster
 end
 
