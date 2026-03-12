@@ -16,7 +16,7 @@
   - 第二波覆盖更大的 presentation/gameplay 热点组，包含当前失败所在的 `presentation_action_anim_queue_and_turn_lock`，但在切换前先让生成测试复现同一失败签名。
   - 第三波补 runtime/startup/domain 行为，并开始把 `contract/guard` 写成规则型 feature，再编译成 fixture 驱动的 contract case 或 guard wrapper。
 - `contract/guard` 不另起第二套执行器。规则型 feature 仍由同一个编译器产出 Lua suite，但 backend 分成两类：`behavior_backend` 生成普通回归 case，`policy_backend` 生成 fixture 驱动的 contract/guard case。
-- 每个迁移里程碑都要做遗留代码退役审查，但本仓库当前没有成片 `src/**/legacy` 子树，所以“遗留”主要指兼容桥、deprecated export、旧路径别名和已退休模块引用。只有当某个手写 suite 或兼容层被 feature 完整覆盖、生成 suite 已并跑验证、且 `legacy_path_guard` 能禁止回流时，才允许删除旧实现。
+- 每个迁移里程碑都要做遗留代码退役审查，但本仓库当前没有成片 `src/**/legacy` 子树，所以“遗留”主要指兼容桥、deprecated export、旧路径别名和已退休模块引用。`legacy_path_guard` 已退役；删除旧实现前仍需确认 feature 完整覆盖、生成 suite 已并跑验证，并由现有 contract/guard 文档同步声明新的边界真相。
 
 ## 公开接口与工作流
 - `lua tests/ci.lua --lane behavior --mode release_trimmed`

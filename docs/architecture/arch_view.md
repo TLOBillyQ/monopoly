@@ -2,12 +2,12 @@
 
 `arch_view` 是静态架构扫描器，分析 `src/**/*.lua` 的模块级 `require` 依赖。职责：生成依赖图、按层投影视图、校验声明式边界规则。
 
-文本护栏（旧路径、宿主全局 API、运行时禁用语法）仍由 `tests/guards/legacy_path_guard.lua`、`tests/guards/forbidden_globals.lua` 负责，arch_view 不替代它们。
+文本护栏（宿主全局 API、运行时禁用语法与少量仓库级硬边界）仍由 `tests/guards/dep_rules.lua`、`tests/guards/forbidden_globals.lua` 负责，arch_view 不替代它们。
 
 ## 真源与约束
 
 - 结构性依赖规则唯一真源：`scripts/arch/config.lua`
-- `tests/guards/dep_rules.lua` 只保留文本级硬边界（退休路径、宿主全局 API、`state.ui_*` 直写、`ui_port` 旁路）
+- `tests/guards/dep_rules.lua` 只保留文本级硬边界（宿主全局 API、`state.ui_*` 直写、`ui_port` 旁路，以及少量跨子系统禁令）
 - 零模块级循环依赖，无白名单，任意新循环直接让 `check` 失败
 
 ## 命令

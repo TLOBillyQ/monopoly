@@ -16,11 +16,12 @@ MONO_REGRESSION_MODE=release_trimmed lua tests/regression.lua
 All regression checks passed (416)
 All regression checks passed (62)
 dep_rules ok
-legacy_path_guard ok
 gameplay_loop_no_ui ok
+forbidden_globals ok
+arch_view_guard ok
 ```
 
-失败则优先修复，不要继续看其他信号。
+失败则优先修复，不要继续看其他信号。当前 guard lane 预期为 4 条：`dep_rules`、`gameplay_loop_no_ui`、`forbidden_globals`、`arch_view_guard`。
 
 **2. 架构与契约（必跑）**
 

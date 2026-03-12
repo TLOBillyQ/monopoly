@@ -206,7 +206,8 @@ T6 ──┘  │
 - **status**: Completed
 - **log**:
   - 2026-03-11 23:39 CST: 运行 `lua scripts/arch.lua check`，通过。
-  - 2026-03-11 23:39 CST: 运行 `lua tests/guard.lua`，5/5 guard scripts 通过。
+  - 2026-03-11 23:39 CST: 运行 `lua tests/guard.lua`，当时的 5/5 guard scripts 通过。
+  - 2026-03-12 运行时基线更新：`legacy_path_guard` 已退役，guard lane 现为 4 条脚本。
   - 2026-03-11 23:39 CST: 运行 `lua tests/contract.lua`，92 个 contract 用例通过。
   - 2026-03-11 23:39 CST: 运行 `MONO_REGRESSION_MODE=release_trimmed lua tests/regression.lua`，420 个 trimmed behavior 用例与 92 个 contract 用例通过。
   - 2026-03-11 23:39 CST: 复查真实仓库 `projection_cycles` 仅剩 `presentation.runtime`，`game` 与 `game.systems` 均已消失。

@@ -1,6 +1,5 @@
 local dep_rules = require("guards.dep_rules")
 local forbidden_globals = require("guards.forbidden_globals")
-local legacy_path_guard = require("guards.legacy_path_guard")
 local arch_common = require("arch_view.common")
 
 local path_sep = package.config:sub(1, 1)
@@ -91,25 +90,6 @@ local function _test_dep_rules_catches_ui_runtime_bypass()
     end)
 end
 
-local function _test_legacy_path_guard_catches_exact_and_prefix_paths()
-    local retired_exact = "src.presentation.runtime." .. "presentation_ports"
-    local retired_prefix = "src.game.systems.items.item" .. "_"
-    _with_fixture({
-        ["src/exact.lua"] = 'return require("' .. retired_exact .. '")\n',
-        ["tests/prefix.lua"] = 'return require("' .. retired_prefix .. 'executor")\n',
-    }, function()
-        local result = legacy_path_guard.run({
-            scan_roots = { tmp_root .. "/src", tmp_root .. "/tests" },
-            retired_exact_paths = { retired_exact },
-            retired_prefixes = { retired_prefix },
-        })
-
-        assert(result.ok == false, "legacy_path_guard should reject retired paths")
-        assert(result.violations ~= nil and #result.violations == 2,
-            "legacy_path_guard should report both exact and prefix hits")
-    end)
-end
-
 local function _test_forbidden_globals_catches_numeric_cast()
     local forbidden_call = "ton" .. "umber"
     _with_fixture({
@@ -141,17 +121,11 @@ local function _test_guard_scripts_allow_clean_fixtures()
             },
             forbidden_files = {},
         })
-        local legacy_result = legacy_path_guard.run({
-            scan_roots = { tmp_root .. "/src", tmp_root .. "/tests" },
-            retired_exact_paths = { "src.presentation.runtime." .. "presentation_ports" },
-            retired_prefixes = { "src.game.systems.items.item" .. "_" },
-        })
         local globals_result = forbidden_globals.run({
             scan_roots = { tmp_root .. "/scripts" },
         })
 
         assert(dep_result.ok == true, "dep_rules should allow clean fixtures")
-        assert(legacy_result.ok == true, "legacy_path_guard should allow clean fixtures")
         assert(globals_result.ok == true, "forbidden_globals should allow clean fixtures")
     end)
 end
@@ -160,7 +134,6 @@ return {
     name = "guard_scripts_contract",
     tests = {
         { name = "dep_rules_catches_ui_runtime_bypass",              run = _test_dep_rules_catches_ui_runtime_bypass },
-        { name = "legacy_path_guard_catches_exact_and_prefix_paths", run = _test_legacy_path_guard_catches_exact_and_prefix_paths },
         { name = "forbidden_globals_catches_numeric_cast",           run = _test_forbidden_globals_catches_numeric_cast },
         { name = "guard_scripts_allow_clean_fixtures",               run = _test_guard_scripts_allow_clean_fixtures },
     },

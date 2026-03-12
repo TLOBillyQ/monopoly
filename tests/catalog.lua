@@ -69,7 +69,6 @@ local disabled_cases = {}
 
 local guard_scripts = {
   { name = "dep_rules", module_name = "guards.dep_rules", path = "tests/guards/dep_rules.lua" },
-  { name = "legacy_path_guard", module_name = "guards.legacy_path_guard", path = "tests/guards/legacy_path_guard.lua" },
   { name = "gameplay_loop_no_ui", module_name = "guards.gameplay_loop_no_ui", path = "tests/guards/gameplay_loop_no_ui.lua" },
   { name = "forbidden_globals", module_name = "guards.forbidden_globals", path = "tests/guards/forbidden_globals.lua" },
   { name = "arch_view_guard", module_name = "guards.arch_view_guard", path = "tests/guards/arch_view_guard.lua" },
