@@ -2,14 +2,27 @@ local turn_logger = require("src.game.flow.turn.logger")
 local await = require("src.game.flow.turn.await")
 
 local turn_script = {}
+local WAIT_HANDLERS = {
+  wait_choice = await.choice,
+  wait_move_anim = await.move_anim,
+  wait_action_anim = await.action_anim,
+  wait_landing_visual = await.landing_visual,
+  detained_wait = await.detained,
+  inter_turn_wait = await.inter_turn,
+}
+
+local function _resolve_phase_handler(phases, state_name)
+  local handler = phases[state_name]
+  if handler ~= nil or state_name ~= "move_followup" then
+    return handler
+  end
+  return require("src.game.flow.turn.move_followup").run
+end
 
 local function _run_phase(session, state_name, args)
   local phases = session.phases
   assert(type(phases) == "table", "missing session phases")
-  local handler = phases[state_name]
-  if handler == nil and state_name == "move_followup" then
-    handler = require("src.game.flow.turn.move_followup").run
-  end
+  local handler = _resolve_phase_handler(phases, state_name)
   assert(type(handler) == "function", "missing phase handler: " .. tostring(state_name))
   if state_name == "start" then
     turn_logger.log_turn_start(session.game)
@@ -20,25 +33,11 @@ local function _run_phase(session, state_name, args)
 end
 
 local function _run_wait(session, state_name, args)
-  if state_name == "wait_choice" then
-    return await.choice(session, args)
+  local handler = WAIT_HANDLERS[state_name]
+  if handler == nil then
+    return nil
   end
-  if state_name == "wait_move_anim" then
-    return await.move_anim(session, args)
-  end
-  if state_name == "wait_action_anim" then
-    return await.action_anim(session, args)
-  end
-  if state_name == "wait_landing_visual" then
-    return await.landing_visual(session, args)
-  end
-  if state_name == "detained_wait" then
-    return await.detained(session, args)
-  end
-  if state_name == "inter_turn_wait" then
-    return await.inter_turn(session, args)
-  end
-  return nil
+  return handler(session, args)
 end
 
 function turn_script.create(session)

@@ -423,6 +423,39 @@ local function _test_await_inter_turn_wait_clears_action_and_advances_player()
   assert(g.turn.current_player_index == 2, "inter-turn wait should move to next player")
 end
 
+local function _test_turn_script_wait_move_anim_yields_and_resumes()
+  local g = support.new_game()
+  g.turn.move_anim = { seq = 31 }
+  local session = _new_await_session(g, {
+    type = "move_anim_done",
+    seq = 99,
+  })
+  session.current_state = "wait_move_anim"
+  session.current_args = {
+    next_state = "done",
+    next_args = { ok = true },
+  }
+  session.phases = {
+    done = function()
+      return nil
+    end,
+  }
+
+  local co = require("src.game.flow.turn.script").create(session)
+  local ok1, yielded = coroutine.resume(co)
+  assert(ok1 == true, "turn_script should enter wait_move_anim")
+  assert(yielded and yielded.kind == "wait" and yielded.wait_state == "wait_move_anim",
+    "turn_script should yield while waiting on move_anim")
+
+  session._action = {
+    type = "move_anim_done",
+    seq = 31,
+  }
+  local ok2 = coroutine.resume(co)
+  assert(ok2 == true, "turn_script should resume after matching move_anim_done")
+  assert(session.finished == true, "turn_script should finish after resuming to done")
+end
+
 local function _test_await_seconds_waits_until_elapsed()
   local session = { _seconds_wait = {} }
   local times = { 10, 12, 15 }
@@ -503,6 +536,10 @@ return {
     {
       name = "await_inter_turn_wait_clears_action_and_advances_player",
       run = _test_await_inter_turn_wait_clears_action_and_advances_player,
+    },
+    {
+      name = "turn_script_wait_move_anim_yields_and_resumes",
+      run = _test_turn_script_wait_move_anim_yields_and_resumes,
     },
     {
       name = "await_seconds_waits_until_elapsed",

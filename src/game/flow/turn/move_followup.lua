@@ -36,6 +36,49 @@ local function _apply_roadblock_detain(game, player, move_result)
   end
 end
 
+local function _build_resume_move_args(player, raw_total, interrupt, continue_key)
+  return {
+    player = player,
+    raw_total = raw_total,
+    [continue_key] = true,
+    remaining_steps = interrupt.remaining_steps,
+    facing = interrupt.facing,
+    branch_parity = interrupt.branch_parity,
+  }
+end
+
+local function _resolve_steal_interrupt_wait(game, player, raw_total, interrupt)
+  local res = steal.handle_pass_players(game, player, interrupt.encountered_ids or {})
+  if res and res.intent then
+    intent_dispatcher.dispatch(game, res.intent)
+  end
+  if res and res.waiting then
+    return "wait_choice", {
+      next_state = "move",
+      next_args = _build_resume_move_args(player, raw_total, interrupt, "continue_from_steal"),
+    }
+  end
+  if interrupt.remaining_steps and interrupt.remaining_steps > 0 then
+    return "move", _build_resume_move_args(player, raw_total, interrupt, "continue_from_steal")
+  end
+  return nil
+end
+
+local function _resolve_market_interrupt_wait(game, player, raw_total, interrupt)
+  local spec, intent = market_service.choice.build(player, game)
+  if spec then
+    intent_dispatcher.dispatch(game, { kind = "need_choice", choice_spec = spec })
+    return "wait_choice", {
+      next_state = "move",
+      next_args = _build_resume_move_args(player, raw_total, interrupt, "continue_from_market"),
+    }
+  end
+  if intent then
+    intent_dispatcher.dispatch(game, intent)
+  end
+  return nil
+end
+
 local function _handle_resume_turn_move(game, args)
   local player = _resolve_player(game, args)
   local move_result = assert(args.move_result, "missing move followup move_result")
@@ -45,55 +88,18 @@ local function _handle_resume_turn_move(game, args)
 
   if move_result.steal_interrupt then
     local interrupt = move_result.steal_interrupt
-    local res = steal.handle_pass_players(game, player, interrupt.encountered_ids or {})
-    if res and res.intent then
-      intent_dispatcher.dispatch(game, res.intent)
-    end
-    if res and res.waiting then
-      return "wait_choice", {
-        next_state = "move",
-        next_args = {
-          player = player,
-          raw_total = raw_total,
-          continue_from_steal = true,
-          remaining_steps = interrupt.remaining_steps,
-          facing = interrupt.facing,
-          branch_parity = interrupt.branch_parity,
-        },
-      }
-    end
-    if interrupt.remaining_steps and interrupt.remaining_steps > 0 then
-      return "move", {
-        player = player,
-        raw_total = raw_total,
-        continue_from_steal = true,
-        remaining_steps = interrupt.remaining_steps,
-        facing = interrupt.facing,
-        branch_parity = interrupt.branch_parity,
-      }
+    local next_state, next_args = _resolve_steal_interrupt_wait(game, player, raw_total, interrupt)
+    if next_state ~= nil then
+      return next_state, next_args
     end
     move_result.encountered_players = {}
   end
 
   if move_result.market_interrupt then
-    local spec, intent = market_service.choice.build(player, game)
-    if spec then
-      intent_dispatcher.dispatch(game, { kind = "need_choice", choice_spec = spec })
-      local interrupt = move_result.market_interrupt
-      return "wait_choice", {
-        next_state = "move",
-        next_args = {
-          player = player,
-          raw_total = raw_total,
-          continue_from_market = true,
-          remaining_steps = interrupt.remaining_steps,
-          facing = interrupt.facing,
-          branch_parity = interrupt.branch_parity,
-        },
-      }
-    end
-    if intent then
-      intent_dispatcher.dispatch(game, intent)
+    local interrupt = move_result.market_interrupt
+    local next_state, next_args = _resolve_market_interrupt_wait(game, player, raw_total, interrupt)
+    if next_state ~= nil then
+      return next_state, next_args
     end
   end
 

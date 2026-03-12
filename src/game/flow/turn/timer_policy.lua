@@ -2,6 +2,27 @@ local constants = require("Config.generated.constants")
 
 local turn_timer_policy = {}
 
+local function _reset_action_button(state)
+  state.action_button_active = false
+  state.action_button_elapsed = 0
+end
+
+local function _has_blocking_ui(ui_sync_ports, state)
+  return (ui_sync_ports and ui_sync_ports.is_choice_active and ui_sync_ports.is_choice_active(state))
+      or (ui_sync_ports and ui_sync_ports.is_market_active and ui_sync_ports.is_market_active(state))
+      or (ui_sync_ports and ui_sync_ports.is_popup_active and ui_sync_ports.is_popup_active(state))
+end
+
+local function _resolve_elapsed(elapsed, dt)
+  return (elapsed or 0) + (dt or 0)
+end
+
+local function _complete_wait(turn, active_key, elapsed_key, step_turn, game)
+  turn[active_key] = false
+  turn[elapsed_key] = 0
+  step_turn(game)
+end
+
 function turn_timer_policy.is_action_button_wait_active(game, state, ports)
   local ui_sync_ports = ports and ports.ui_sync or nil
   if not (game and state and ports) then
@@ -16,9 +37,7 @@ function turn_timer_policy.is_action_button_wait_active(game, state, ports)
   if ui_sync_ports and ui_sync_ports.is_input_blocked and ui_sync_ports.is_input_blocked(state) then
     return false
   end
-  if (ui_sync_ports and ui_sync_ports.is_choice_active and ui_sync_ports.is_choice_active(state))
-      or (ui_sync_ports and ui_sync_ports.is_market_active and ui_sync_ports.is_market_active(state))
-      or (ui_sync_ports and ui_sync_ports.is_popup_active and ui_sync_ports.is_popup_active(state)) then
+  if _has_blocking_ui(ui_sync_ports, state) then
     return false
   end
   if game.turn and game.turn.pending_choice then
@@ -62,20 +81,18 @@ function turn_timer_policy.update_action_button_timer(ctx)
   local game = ctx.game
   local ports = ctx.ports
   if not turn_timer_policy.is_action_button_wait_active(game, state, ports) then
-    state.action_button_active = false
-    state.action_button_elapsed = 0
+    _reset_action_button(state)
     return
   end
 
   local timeout = constants.action_timeout_seconds or 0
   if timeout <= 0 then
-    state.action_button_active = false
-    state.action_button_elapsed = 0
+    _reset_action_button(state)
     return
   end
   state.action_button_active = true
 
-  local elapsed = (state.action_button_elapsed or 0) + (ctx.dt or 0)
+  local elapsed = _resolve_elapsed(state.action_button_elapsed, ctx.dt)
   if elapsed < timeout then
     state.action_button_elapsed = elapsed
     return
@@ -101,12 +118,10 @@ function turn_timer_policy.update_detained_wait_timer(game, state, dt, step_turn
     return
   end
 
-  local elapsed = (turn.detained_wait_elapsed or 0) + (dt or 0)
+  local elapsed = _resolve_elapsed(turn.detained_wait_elapsed, dt)
   local timeout = turn.detained_wait_seconds or 0
   if timeout <= 0 then
-    turn.detained_wait_active = false
-    turn.detained_wait_elapsed = 0
-    step_turn(game)
+    _complete_wait(turn, "detained_wait_active", "detained_wait_elapsed", step_turn, game)
     return
   end
   if elapsed < timeout then
@@ -114,9 +129,7 @@ function turn_timer_policy.update_detained_wait_timer(game, state, dt, step_turn
     return
   end
 
-  turn.detained_wait_active = false
-  turn.detained_wait_elapsed = 0
-  step_turn(game)
+  _complete_wait(turn, "detained_wait_active", "detained_wait_elapsed", step_turn, game)
 end
 
 function turn_timer_policy.update_inter_turn_wait_timer(game, state, dt, step_turn)
@@ -128,12 +141,10 @@ function turn_timer_policy.update_inter_turn_wait_timer(game, state, dt, step_tu
     return
   end
 
-  local elapsed = (turn.inter_turn_wait_elapsed or 0) + (dt or 0)
+  local elapsed = _resolve_elapsed(turn.inter_turn_wait_elapsed, dt)
   local timeout = turn.inter_turn_wait_seconds or 0
   if timeout <= 0 then
-    turn.inter_turn_wait_active = false
-    turn.inter_turn_wait_elapsed = 0
-    step_turn(game)
+    _complete_wait(turn, "inter_turn_wait_active", "inter_turn_wait_elapsed", step_turn, game)
     return
   end
   if elapsed < timeout then
@@ -141,9 +152,7 @@ function turn_timer_policy.update_inter_turn_wait_timer(game, state, dt, step_tu
     return
   end
 
-  turn.inter_turn_wait_active = false
-  turn.inter_turn_wait_elapsed = 0
-  step_turn(game)
+  _complete_wait(turn, "inter_turn_wait_active", "inter_turn_wait_elapsed", step_turn, game)
 end
 
 return turn_timer_policy

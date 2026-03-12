@@ -60,6 +60,20 @@ local function _build_auto_or_fallback_action(game, choice, allow_first_option_f
   }
 end
 
+local function _normalize_visible_seconds(value)
+  if not number_utils.is_numeric(value) or value < 0 then
+    return 0
+  end
+  return value
+end
+
+local function _can_auto_actor_choose(is_auto_actor, min_visible, elapsed)
+  if not is_auto_actor then
+    return false
+  end
+  return min_visible <= 0 or elapsed >= min_visible
+end
+
 function choice_auto_policy.resolve_choice_owner(game, choice)
   return _resolve_choice_owner(game, choice)
 end
@@ -76,30 +90,18 @@ function choice_auto_policy.decide(game, state, choice, ctx)
   local mode = ctx.mode or "wait_choice"
   local actor = _resolve_choice_owner(game, choice)
   local is_auto_actor = actor and auto_play_port.is_auto_player(game, actor) or false
-  local min_visible = ctx.min_visible_seconds
-  if not number_utils.is_numeric(min_visible) or min_visible < 0 then
-    min_visible = 0
-  end
-  local elapsed = ctx.elapsed_seconds
-  if not number_utils.is_numeric(elapsed) or elapsed < 0 then
-    elapsed = 0
-  end
+  local min_visible = _normalize_visible_seconds(ctx.min_visible_seconds)
+  local elapsed = _normalize_visible_seconds(ctx.elapsed_seconds)
 
   if mode == "wait_choice" then
-    if not is_auto_actor then
-      return nil
-    end
-    if min_visible > 0 and elapsed < min_visible then
+    if not _can_auto_actor_choose(is_auto_actor, min_visible, elapsed) then
       return nil
     end
     return _build_auto_or_fallback_action(game, choice, false)
   end
 
   if mode == "tick_min_visible" then
-    if not is_auto_actor then
-      return nil
-    end
-    if min_visible > 0 and elapsed < min_visible then
+    if not _can_auto_actor_choose(is_auto_actor, min_visible, elapsed) then
       return nil
     end
     return _build_auto_or_fallback_action(game, choice, true)

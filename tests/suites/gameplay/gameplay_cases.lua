@@ -3594,6 +3594,41 @@ local function _test_turn_land_waits_for_move_followup_when_move_effect_queue_pe
   end)
 end
 
+local function _test_move_followup_resume_turn_move_waits_on_steal_interrupt_choice()
+  local g = _new_game()
+  local player = g:current_player()
+  g.last_turn = {}
+  local steal_module = require("src.game.systems.items.steal")
+  local move_result = {
+    steal_interrupt = {
+      encountered_ids = { g.players[2].id },
+      remaining_steps = 2,
+      facing = "left",
+      branch_parity = 3,
+    },
+  }
+
+  support.with_patches({
+    { target = steal_module, key = "handle_pass_players", value = function()
+      return {
+        waiting = true,
+      }
+    end },
+  }, function()
+    local next_state, next_args = move_followup.run({ game = g }, {
+      mode = "resume_turn_move",
+      player = player,
+      raw_total = 5,
+      move_result = move_result,
+    })
+    assert(next_state == "wait_choice", "steal interrupt wait should route through wait_choice")
+    assert(next_args and next_args.next_state == "move", "steal interrupt wait should resume move phase")
+    assert(next_args.next_args and next_args.next_args.continue_from_steal == true,
+      "steal interrupt wait should preserve continue_from_steal flag")
+    assert(next_args.next_args.remaining_steps == 2, "steal interrupt wait should preserve remaining steps")
+  end)
+end
+
 local function _test_auto_runner_choice_actor_falls_back_to_choice_owner()
   local auto_runner = require("src.game.flow.turn.auto_runner")
   local auto_policy = require("src.game.flow.turn.choice_auto_policy")
@@ -3999,6 +4034,8 @@ return {
   _test_phase_registry_post_action_routes_wait_variants = _test_phase_registry_post_action_routes_wait_variants,
   _test_turn_land_waits_for_move_followup_when_move_effect_queue_pending =
     _test_turn_land_waits_for_move_followup_when_move_effect_queue_pending,
+  _test_move_followup_resume_turn_move_waits_on_steal_interrupt_choice =
+    _test_move_followup_resume_turn_move_waits_on_steal_interrupt_choice,
   _test_auto_runner_choice_actor_falls_back_to_choice_owner = _test_auto_runner_choice_actor_falls_back_to_choice_owner,
   _test_auto_runner_modal_without_buttons_confirms = _test_auto_runner_modal_without_buttons_confirms,
   _test_turn_script_dispatches_wait_states_and_move_followup_fallback = _test_turn_script_dispatches_wait_states_and_move_followup_fallback,
