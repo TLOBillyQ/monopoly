@@ -123,6 +123,7 @@
   - `choice_builder.lua:choice.build_choice_view:63` (CRAP=8.03, complexity=8, coverage=0.93) - choice view 构建
   - `canvas_coordinator.lua:_hide_other_canvases:60` (CRAP=8.00, complexity=8, coverage=1.00) - 隐藏其他画布
   所有 behavior suites 通过（650 tests），contract suites 通过（97 tests）。
+- log: 2026-03-12 T5 characterization tests added (reverted by linter): Added tests for `item_slot_intents.build_intent` (3 cases), `state_ports.on_bankruptcy_tiles_cleared` (3 cases), `event_handlers` anonymous functions for rent_paid/rent_bankrupt/tax_paid/bankruptcy (4 cases), `register_node_click` caching behavior (1 case), and `choice.build_choice_view` (5 cases). Tests verified passing but coverage tracking shows low coverage due to anonymous function line mapping limitations in coverage tool. CRAP report still shows 8 residual T5 hotspots with CRAP > 8.
 
 ### T6 Presentation view/input cluster
 - depends_on: `[T1]`
