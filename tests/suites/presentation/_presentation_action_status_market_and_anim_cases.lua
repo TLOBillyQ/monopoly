@@ -1243,6 +1243,110 @@ local function _test_item_phase_ask_single_option_pre_confirm_dispatches_choice_
     "single-option item_phase_ask should preserve actor role id")
 end
 
+local function _test_item_phase_ask_cancel_closes_modal_and_dispatches_choice_cancel()
+  local item_phase_ask_flow = require("src.presentation.input.intent_dispatch.item_phase_ask")
+  local dispatched = {}
+  local closed = 0
+  local state = {
+    _item_phase_ask_active = true,
+    _item_phase_confirmed = true,
+    _suppress_item_slot_highlight_until_pick = true,
+    _skip_item_slot_highlight_replay_choice_id = 88,
+    gameplay_loop_ports = {
+      modal = {
+        close_choice_modal = function()
+          closed = closed + 1
+        end,
+      },
+    },
+    ui_model = {
+      choice = {
+        id = 91,
+        kind = "item_phase_choice",
+      },
+    },
+    ui = ui_view.build_ui_state(),
+  }
+  _bind_ui_runtime(state)
+
+  local handled = item_phase_ask_flow.dispatch(state, {}, {
+    type = "choice_cancel",
+    actor_role_id = 7,
+  }, {
+    source = "item_phase_ask_cancel",
+  }, {
+    dispatch_action = function(_, _, action, opts)
+      dispatched[#dispatched + 1] = {
+        action = action,
+        opts = opts,
+      }
+    end,
+  })
+
+  _assert_eq(handled, true, "item_phase_ask choice_cancel should be handled")
+  _assert_eq(state._item_phase_ask_active, nil, "item_phase_ask cancel should clear active flag")
+  _assert_eq(state._item_phase_confirmed, nil, "item_phase_ask cancel should clear confirmed flag")
+  _assert_eq(state._suppress_item_slot_highlight_until_pick, nil,
+    "item_phase_ask cancel should clear highlight suppression")
+  _assert_eq(state._skip_item_slot_highlight_replay_choice_id, nil,
+    "item_phase_ask cancel should clear skip replay flag")
+  _assert_eq(closed, 1, "item_phase_ask cancel should close modal once")
+  _assert_eq(dispatched[1] and dispatched[1].action and dispatched[1].action.type, "choice_cancel",
+    "item_phase_ask cancel should dispatch choice_cancel")
+  _assert_eq(dispatched[1] and dispatched[1].action and dispatched[1].action.choice_id, 91,
+    "item_phase_ask cancel should keep choice id")
+  _assert_eq(dispatched[1] and dispatched[1].action and dispatched[1].action.actor_role_id, 7,
+    "item_phase_ask cancel should preserve actor role id")
+end
+
+local function _test_view_command_target_lock_and_unlock_fallback_routes_to_target_effects()
+  local view_command_dispatcher = require("src.presentation.input.intent_dispatch.view_command")
+  local target_choice_effects_local = require("src.presentation.runtime.controllers.target_choice_effects")
+  local state = { ui = ui_view.build_ui_state() }
+  local calls = {}
+
+  _with_patches({
+    {
+      target = target_choice_effects_local,
+      key = "on_scene_pick",
+      value = function(_, option_id, actor_role_id, payload)
+        calls[#calls + 1] = {
+          kind = "lock",
+          option_id = option_id,
+          actor_role_id = actor_role_id,
+          payload = payload,
+        }
+      end,
+    },
+    {
+      target = target_choice_effects_local,
+      key = "on_unlock",
+      value = function()
+        calls[#calls + 1] = { kind = "unlock" }
+      end,
+    },
+  }, function()
+    local locked = view_command_dispatcher.dispatch(state, {
+      type = "target_lock",
+      option_id = 102,
+      actor_role_id = 3,
+    })
+    local unlocked = view_command_dispatcher.dispatch(state, {
+      type = "target_unlock",
+    })
+
+    _assert_eq(locked, true, "target_lock should be handled by fallback dispatcher")
+    _assert_eq(unlocked, true, "target_unlock should be handled by fallback dispatcher")
+  end)
+
+  _assert_eq(calls[1] and calls[1].kind, "lock", "target_lock should call on_scene_pick")
+  _assert_eq(calls[1] and calls[1].option_id, 102, "target_lock should forward option id")
+  _assert_eq(calls[1] and calls[1].actor_role_id, 3, "target_lock should forward actor role id")
+  _assert_eq(calls[1] and calls[1].payload and calls[1].payload.option_id, 102,
+    "target_lock should build fallback payload with option id")
+  _assert_eq(calls[2] and calls[2].kind, "unlock", "target_unlock should call on_unlock")
+end
+
 local function _test_item_phase_confirmed_skips_replay_before_slot_click()
   local ui_events = require("src.presentation.runtime.events")
   local events = {}
@@ -1989,6 +2093,8 @@ return {
   { name = "_test_ui_event_router_market_cancel_button_dispatches_choice_cancel", run = _test_ui_event_router_market_cancel_button_dispatches_choice_cancel },
   { name = "_test_item_phase_ask_confirm_clears_highlight_suppress", run = _test_item_phase_ask_confirm_clears_highlight_suppress },
   { name = "_test_item_phase_ask_single_option_pre_confirm_dispatches_choice_select", run = _test_item_phase_ask_single_option_pre_confirm_dispatches_choice_select },
+  { name = "_test_item_phase_ask_cancel_closes_modal_and_dispatches_choice_cancel", run = _test_item_phase_ask_cancel_closes_modal_and_dispatches_choice_cancel },
+  { name = "_test_view_command_target_lock_and_unlock_fallback_routes_to_target_effects", run = _test_view_command_target_lock_and_unlock_fallback_routes_to_target_effects },
   { name = "_test_item_phase_confirmed_skips_replay_before_slot_click", run = _test_item_phase_confirmed_skips_replay_before_slot_click },
   { name = "_test_item_slot_refresh_item_phase_ask_replays_highlight_then_reveals_outlines", run = _test_item_slot_refresh_item_phase_ask_replays_highlight_then_reveals_outlines },
   { name = "_test_item_slot_refresh_resets_highlight_without_client_role", run = _test_item_slot_refresh_resets_highlight_without_client_role },

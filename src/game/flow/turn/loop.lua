@@ -88,6 +88,49 @@ local function _is_auto_popup_owner(game, state)
   local actor = game.players[idx]
   return actor and auto_play_port.is_auto_player(game, actor) or false
 end
+
+local function _is_auto_popup_waiting(game, state, ui_sync_ports)
+  local min_popup_visible = gameplay_rules.auto_popup_min_visible_seconds or 0
+  if min_popup_visible <= 0 then
+    return false
+  end
+  if not (ui_sync_ports.is_popup_active and ui_sync_ports.is_popup_active(state)) then
+    return false
+  end
+  if not _is_auto_popup_owner(game, state) then
+    return false
+  end
+  local elapsed = runtime_state.get_modal_elapsed(state)
+  return elapsed < min_popup_visible
+end
+
+local function _fill_auto_action_actor(auto_action, current_player_id)
+  if auto_action and auto_action.type == "ui_button" and not auto_action.actor_role_id then
+    auto_action.actor_role_id = current_player_id
+  end
+end
+
+local function _log_missing_auto_choice_action(state, ctx)
+  if not (ctx.pending_choice and ctx.current_player_auto == true) then
+    return
+  end
+  if state.auto_runner.waiting_for_interval == true then
+    return
+  end
+  local debug_runtime = runtime_state.ensure_debug_runtime(state)
+  local key = "auto_runner_choice_no_action_" .. tostring(ctx.pending_choice.id)
+  if debug_runtime.log_once[key] then
+    return
+  end
+  debug_runtime.log_once[key] = true
+  logger.warn(
+    "[Eggy]",
+    "auto runner produced no action for runtime pending choice",
+    "choice_id=" .. tostring(ctx.pending_choice.id),
+    "kind=" .. tostring(ctx.pending_choice.kind),
+    "actor_role_id=" .. tostring(ctx.current_player_id)
+  )
+end
 local function _reset_afk_tracking(state, actor_role_id)
   local turn_runtime = runtime_state.ensure_turn_runtime(state)
   local normalized = role_id_utils.normalize(actor_role_id)
@@ -320,36 +363,14 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
   if ui_sync_ports.is_input_blocked and ui_sync_ports.is_input_blocked(state) then
     return nil
   end
-  local min_popup_visible = gameplay_rules.auto_popup_min_visible_seconds or 0
-  if min_popup_visible > 0 and ui_sync_ports.is_popup_active and ui_sync_ports.is_popup_active(state) then
-    if _is_auto_popup_owner(game, state) then
-      local elapsed = runtime_state.get_modal_elapsed(state)
-      if elapsed < min_popup_visible then
-        return nil
-      end
-    end
+  if _is_auto_popup_waiting(game, state, ui_sync_ports) then
+    return nil
   end
   local ctx = auto_context.build(game, context)
   local auto_action = state.auto_runner:next_action(dt, ctx)
-  if auto_action and auto_action.type == "ui_button" and not auto_action.actor_role_id then
-    auto_action.actor_role_id = ctx.current_player_id
-  end
-  if auto_action == nil
-      and ctx.pending_choice
-      and ctx.current_player_auto == true
-      and state.auto_runner.waiting_for_interval ~= true then
-    local debug_runtime = runtime_state.ensure_debug_runtime(state)
-    local key = "auto_runner_choice_no_action_" .. tostring(ctx.pending_choice.id)
-    if not debug_runtime.log_once[key] then
-      debug_runtime.log_once[key] = true
-      logger.warn(
-        "[Eggy]",
-        "auto runner produced no action for runtime pending choice",
-        "choice_id=" .. tostring(ctx.pending_choice.id),
-        "kind=" .. tostring(ctx.pending_choice.kind),
-        "actor_role_id=" .. tostring(ctx.current_player_id)
-      )
-    end
+  _fill_auto_action_actor(auto_action, ctx.current_player_id)
+  if auto_action == nil then
+    _log_missing_auto_choice_action(state, ctx)
   end
   if auto_action then
     _dispatch_action_with_close_choice(game, state, auto_action, ports)

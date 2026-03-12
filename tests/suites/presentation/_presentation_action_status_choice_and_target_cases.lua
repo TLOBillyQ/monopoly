@@ -886,6 +886,84 @@ local function _test_target_pick_degrades_without_raycast_api()
   end)
 end
 
+local function _test_target_pick_scene_click_resolves_option_from_payload_unit()
+  local env = _build_target_pick_env()
+  _with_target_pick_runtime(env, function()
+    target_choice_effects.enter(env.state, env.choice)
+    local handled = target_choice_effects.on_scene_pick(env.state, nil, 1, {
+      unit = { _unit_id = env.tile_unit_ids[102] },
+    })
+    _assert_eq(handled, true, "scene pick should accept payload.unit fallback")
+    _assert_eq(env.state.target_choice_runtime.locked_option_id, 102, "payload.unit should resolve tile option id")
+    _assert_eq(_ui_runtime(env.state).pending_choice_selected_option_id, 102, "payload.unit fallback should sync selected option")
+  end)
+end
+
+local function _test_target_pick_owner_role_falls_back_to_current_player()
+  local env = _build_target_pick_env()
+  env.choice.owner_role_id = nil
+  env.choice.target_picker_owner_role_id = nil
+  env.game.current_player = function()
+    return { id = "7" }
+  end
+
+  _with_target_pick_runtime(env, function()
+    target_choice_effects.enter(env.state, env.choice)
+    _assert_eq(env.state.target_choice_runtime.owner_role_id, 7, "missing explicit owner should fall back to current player id")
+    local rejected = target_choice_effects.on_scene_pick(env.state, 101, 6, {})
+    local handled = target_choice_effects.on_scene_pick(env.state, 101, "7", {})
+    _assert_eq(rejected, false, "mismatched actor should still be rejected under current-player fallback")
+    _assert_eq(handled, true, "current-player fallback owner should accept matching actor role id")
+  end)
+end
+
+local function _test_target_pick_owner_role_falls_back_to_choice_owner_role_id()
+  local env = _build_target_pick_env()
+  env.choice.target_picker_owner_role_id = nil
+  env.choice.owner_role_id = "8"
+  env.game.current_player = function()
+    return { id = 3 }
+  end
+
+  _with_target_pick_runtime(env, function()
+    target_choice_effects.enter(env.state, env.choice)
+    _assert_eq(env.state.target_choice_runtime.owner_role_id, 8,
+      "missing target_picker_owner_role_id should fall back to choice owner_role_id")
+    local rejected = target_choice_effects.on_scene_pick(env.state, 101, 7, {})
+    local handled = target_choice_effects.on_scene_pick(env.state, 101, "8", {})
+    _assert_eq(rejected, false, "choice owner fallback should reject mismatched actor role id")
+    _assert_eq(handled, true, "choice owner fallback should accept normalized matching actor role id")
+  end)
+end
+
+local function _test_target_pick_scene_click_normalizes_string_option_id()
+  local env = _build_target_pick_env()
+
+  _with_target_pick_runtime(env, function()
+    target_choice_effects.enter(env.state, env.choice)
+    local handled = target_choice_effects.on_scene_pick(env.state, "102", 1, {})
+    _assert_eq(handled, true, "scene pick should normalize string option ids")
+    _assert_eq(env.state.target_choice_runtime.locked_option_id, 102,
+      "normalized string option id should lock matching candidate")
+    _assert_eq(_ui_runtime(env.state).pending_choice_selected_option_id, 102,
+      "normalized string option id should sync selected option")
+  end)
+end
+
+local function _test_target_pick_scene_click_rejects_payload_unit_without_mapping()
+  local env = _build_target_pick_env()
+
+  _with_target_pick_runtime(env, function()
+    target_choice_effects.enter(env.state, env.choice)
+    local handled = target_choice_effects.on_scene_pick(env.state, nil, 1, {
+      unit = { _unit_id = 999999 },
+    })
+    _assert_eq(handled, false, "payload.unit without tile mapping should be ignored")
+    _assert_eq(env.state.target_choice_runtime.locked_option_id, nil,
+      "payload.unit without mapping should not lock any option")
+  end)
+end
+
 local function _test_choice_route_policy_prefers_explicit_route_metadata()
   local cases = {
     {
@@ -1412,6 +1490,11 @@ return {
   { name = "_test_target_pick_leave_hides_scene_units", run = _test_target_pick_leave_hides_scene_units },
   { name = "_test_target_pick_enter_spawns_candidate_markers_at_height_1_6", run = _test_target_pick_enter_spawns_candidate_markers_at_height_1_6 },
   { name = "_test_target_pick_degrades_without_raycast_api", run = _test_target_pick_degrades_without_raycast_api },
+  { name = "_test_target_pick_scene_click_resolves_option_from_payload_unit", run = _test_target_pick_scene_click_resolves_option_from_payload_unit },
+  { name = "_test_target_pick_owner_role_falls_back_to_current_player", run = _test_target_pick_owner_role_falls_back_to_current_player },
+  { name = "_test_target_pick_owner_role_falls_back_to_choice_owner_role_id", run = _test_target_pick_owner_role_falls_back_to_choice_owner_role_id },
+  { name = "_test_target_pick_scene_click_normalizes_string_option_id", run = _test_target_pick_scene_click_normalizes_string_option_id },
+  { name = "_test_target_pick_scene_click_rejects_payload_unit_without_mapping", run = _test_target_pick_scene_click_rejects_payload_unit_without_mapping },
   { name = "_test_choice_route_policy_prefers_explicit_route_metadata", run = _test_choice_route_policy_prefers_explicit_route_metadata },
   { name = "_test_ui_event_router_player_target_click_direct_submit", run = _test_ui_event_router_player_target_click_direct_submit },
   { name = "_test_ui_event_router_action_log_toggle_uses_role_context", run = _test_ui_event_router_action_log_toggle_uses_role_context },

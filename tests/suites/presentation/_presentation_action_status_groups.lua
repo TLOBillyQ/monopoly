@@ -38,6 +38,11 @@ local case_groups = {
     "_test_target_pick_leave_hides_scene_units",
     "_test_target_pick_enter_spawns_candidate_markers_at_height_1_6",
     "_test_target_pick_degrades_without_raycast_api",
+    "_test_target_pick_scene_click_resolves_option_from_payload_unit",
+    "_test_target_pick_owner_role_falls_back_to_current_player",
+    "_test_target_pick_owner_role_falls_back_to_choice_owner_role_id",
+    "_test_target_pick_scene_click_normalizes_string_option_id",
+    "_test_target_pick_scene_click_rejects_payload_unit_without_mapping",
     "_test_ui_event_router_player_target_click_direct_submit",
     "_test_target_pick_prefers_explicit_owner_role_id",
   },
@@ -100,6 +105,7 @@ local case_groups = {
     "_test_tick_ui_sync_turn_switch_still_follows",
     "_test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailable",
     "_test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop",
+    "_test_ui_sync_refresh_from_dirty_only_turn_countdown_updates_label_without_full_render",
   },
   popup_and_modal_renderers = {
     "_test_popup_timeout_closes_even_when_input_blocked",
@@ -117,6 +123,8 @@ local case_groups = {
     "_test_panel_cash_delta_missing_node_is_safe",
     "_test_panel_crown_shows_for_top_total_assets_and_ties",
     "_test_panel_crown_excludes_eliminated_players",
+    "_test_panel_apply_player_colors_updates_image_and_labels",
+    "_test_panel_apply_player_colors_skips_when_role_has_no_color_hooks",
   },
 }
 

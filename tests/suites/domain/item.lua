@@ -21,6 +21,9 @@ local cash_handlers = require("src.game.systems.chance.handlers.cash_handlers")
 local runtime_event_bridge = require("src.infrastructure.runtime.event_bridge")
 local monopoly_event = require("src.core.events.monopoly_events")
 local move_followup = require("src.game.flow.turn.move_followup")
+local effect_pipeline = require("src.game.systems.effects.effect_pipeline")
+local effect_runner = require("src.game.systems.effects.effect_runner")
+local intent_output_port = require("src.game.ports.intent_output_port")
 
 local function _install_narrow_ports(game, ui_port)
   game.ui_port = ui_port
@@ -907,6 +910,170 @@ local function _test_rich_item_emits_deity_feedback_event()
   _assert_eq(emitted[1].payload.player_id, p.id, "rich item should emit current player id")
 end
 
+local function _test_effect_pipeline_waiting_result_patches_followup_and_strips_intent()
+  local g = _new_game()
+  local player = g:current_player()
+  local tile_ref = g.board:get_tile(player.position)
+  local dispatched = nil
+
+  support.with_patches({
+    {
+      target = effect_runner,
+      key = "scan",
+      value = function()
+        return {
+          {
+            ok = true,
+            mandatory = true,
+            effect = { id = "clear_obstacles", label = "clear_obstacles" },
+          },
+        }
+      end,
+    },
+    {
+      target = effect_runner,
+      key = "execute",
+      value = function()
+        return {
+          ok = true,
+          result = {
+            waiting = true,
+            intent = { kind = "debug_only" },
+          },
+        }
+      end,
+    },
+    {
+      target = intent_output_port,
+      key = "dispatch",
+      value = function(_, payload)
+        dispatched = payload
+      end,
+    },
+  }, function()
+    local result = effect_pipeline.run({}, player, tile_ref, {
+      game = g,
+      move_result = { kind = "move_result" },
+    }, {
+      next_state = "resume_turn",
+      next_args = { source = "effect_pipeline" },
+    })
+    assert(type(result) == "table" and result.waiting == true, "waiting result should be returned")
+    _assert_eq(result.next_state, "resume_turn", "waiting result should inherit next_state")
+    _assert_eq(result.next_args.source, "effect_pipeline", "waiting result should inherit next_args")
+    _assert_eq(result.intent, nil, "waiting result should not leak intent payload")
+  end)
+
+  assert(type(dispatched) == "table" and dispatched.waiting == true, "waiting payload should still dispatch")
+end
+
+local function _test_effect_pipeline_stop_if_short_circuits_before_optional_choice()
+  local g = _new_game()
+  local player = g:current_player()
+  local tile_ref = g.board:get_tile(player.position)
+  local open_choice_called = false
+
+  support.with_patches({
+    {
+      target = effect_runner,
+      key = "scan",
+      value = function()
+        return {
+          {
+            ok = true,
+            mandatory = true,
+            effect = { id = "mandatory_first", label = "mandatory_first" },
+          },
+          {
+            ok = true,
+            mandatory = false,
+            effect = { id = "buy_land", label = "buy_land" },
+          },
+        }
+      end,
+    },
+    {
+      target = effect_runner,
+      key = "execute",
+      value = function()
+        return {
+          ok = true,
+          result = {
+            kind = "resolved",
+            marker = "stop_here",
+          },
+        }
+      end,
+    },
+    {
+      target = intent_output_port,
+      key = "open_choice",
+      value = function()
+        open_choice_called = true
+      end,
+    },
+  }, function()
+    local result = effect_pipeline.run({}, player, tile_ref, {
+      game = g,
+      move_result = { kind = "move_result" },
+    }, {
+      stop_if = function(out)
+        return out and out.marker == "stop_here"
+      end,
+    })
+    _assert_eq(result.marker, "stop_here", "stop_if should return current mandatory result")
+  end)
+
+  _assert_eq(open_choice_called, false, "stop_if should skip optional choice building")
+end
+
+local function _test_effect_pipeline_single_optional_effect_uses_secondary_confirm_route()
+  local g = _new_game()
+  local player = g:current_player()
+  local tile_ref = g.board:get_tile(player.position)
+  local opened_choice = nil
+
+  support.with_patches({
+    {
+      target = effect_runner,
+      key = "scan",
+      value = function()
+        return {
+          {
+            ok = true,
+            mandatory = false,
+            effect = { id = "buy_land", label = "买地" },
+          },
+        }
+      end,
+    },
+    {
+      target = intent_output_port,
+      key = "open_choice",
+      value = function(_, choice_spec)
+        opened_choice = choice_spec
+      end,
+    },
+  }, function()
+    local result = effect_pipeline.run({}, player, tile_ref, {
+      game = g,
+      move_result = { kind = "move_result" },
+    }, {
+      next_state = "after_optional",
+      next_args = { source = "optional_effect" },
+      optional_title = "可选效果",
+    })
+    assert(type(result) == "table" and result.waiting == true, "optional effect should wait on choice")
+    _assert_eq(result.next_state, "after_optional", "optional followup should preserve next_state")
+    _assert_eq(result.next_args.source, "optional_effect", "optional followup should preserve next_args")
+  end)
+
+  assert(type(opened_choice) == "table", "single optional effect should open choice")
+  _assert_eq(opened_choice.route_key, "secondary_confirm", "single optional effect should use secondary_confirm route")
+  _assert_eq(opened_choice.requires_confirm, true, "single optional effect should require confirm")
+  _assert_eq(opened_choice.options[1].id, "buy_land", "single optional effect should expose chosen effect id")
+end
+
 return {
   name = "item",
   tests = {
@@ -1003,6 +1170,18 @@ return {
     {
       name = "rich_item_emits_deity_feedback_event",
       run = _test_rich_item_emits_deity_feedback_event,
+    },
+    {
+      name = "effect_pipeline_waiting_result_patches_followup_and_strips_intent",
+      run = _test_effect_pipeline_waiting_result_patches_followup_and_strips_intent,
+    },
+    {
+      name = "effect_pipeline_stop_if_short_circuits_before_optional_choice",
+      run = _test_effect_pipeline_stop_if_short_circuits_before_optional_choice,
+    },
+    {
+      name = "effect_pipeline_single_optional_effect_uses_secondary_confirm_route",
+      run = _test_effect_pipeline_single_optional_effect_uses_secondary_confirm_route,
     },
   },
 }

@@ -264,6 +264,39 @@ local function _test_runtime_ports_resolve_role_falls_back_to_game_api_get_role(
   _reset_runtime_contract_state()
 end
 
+local function _test_runtime_ports_resolve_role_returns_nil_for_missing_id_and_skips_adapterless_synthetic_actor()
+  _reset_runtime_contract_state()
+  local requested_player_id = nil
+  local fallback_role = { id = 77 }
+  local ctx = runtime_context.new({
+    GameAPI = {
+      get_role = function(player_id)
+        requested_player_id = player_id
+        if player_id == 77 then
+          return fallback_role
+        end
+        return nil
+      end,
+    },
+  })
+  ctx.roles = {}
+  ctx.synthetic_actor_registry = {
+    resolve_actor = function(player_id)
+      if player_id == 77 then
+        return {}
+      end
+      return nil
+    end,
+  }
+  _set_current_runtime_context(ctx)
+
+  _assert_eq(runtime_ports.resolve_role(nil), nil, "resolve_role should early-return nil for missing player_id")
+  local resolved = runtime_ports.resolve_role(77)
+  _assert_eq(requested_player_id, 77, "resolve_role should continue to GameAPI when synthetic actor lacks adapter")
+  _assert_eq(resolved, fallback_role, "resolve_role should still return GameAPI fallback role")
+  _reset_runtime_contract_state()
+end
+
 return {
   name = "runtime_ports_contract",
   tests = {
@@ -306,6 +339,10 @@ return {
     {
       name = "runtime_ports_resolve_role_falls_back_to_game_api_get_role",
       run = _test_runtime_ports_resolve_role_falls_back_to_game_api_get_role,
+    },
+    {
+      name = "runtime_ports_resolve_role_returns_nil_for_missing_id_and_skips_adapterless_synthetic_actor",
+      run = _test_runtime_ports_resolve_role_returns_nil_for_missing_id_and_skips_adapterless_synthetic_actor,
     },
   },
 }

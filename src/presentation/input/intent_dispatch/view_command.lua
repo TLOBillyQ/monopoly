@@ -33,72 +33,115 @@ local function _resolve_role_by_id(runtime, role_id)
   }
 end
 
+local function _resolve_intent_type(intent)
+  return intent and intent.type or nil
+end
+
+local function _handle_market_select(state, intent, market_controller)
+  if market_controller == nil then
+    return false
+  end
+  market_controller.select_market_option(state, intent.option_id)
+  return true
+end
+
+local function _handle_popup_confirm(state, modal_controller)
+  if modal_controller == nil then
+    return false
+  end
+  modal_controller.close_popup(state)
+  return true
+end
+
+local function _warn_missing_toggle_channel(actor_role_id)
+  local logger = _resolve_loaded("src.core.utils.logger")
+  if logger and type(logger.warn) == "function" then
+    logger.warn("toggle_action_log missing role event channel:", tostring(actor_role_id))
+  end
+end
+
+local function _emit_toggle_event(active_role, next_enabled)
+  local send_event = active_role and active_role.send_ui_custom_event
+  local event_name = next_enabled and "显示调试屏" or "隐藏调试屏"
+  if type(send_event) == "function" then
+    local ok = pcall(send_event, event_name, {})
+    if not ok then
+      pcall(send_event, active_role, event_name, {})
+    end
+    return true
+  end
+  return false
+end
+
+local function _handle_toggle_action_log(state, intent, debug_view)
+  local runtime = _resolve_loaded("src.presentation.runtime.ui")
+  if runtime == nil or debug_view == nil then
+    return false
+  end
+  local actor_role_id = intent.actor_role_id
+  if actor_role_id == nil then
+    return true
+  end
+  local active_role = _resolve_role_by_id(runtime, actor_role_id)
+  local visible_by_role = state.ui.debug_visible_by_role or {}
+  local next_enabled = visible_by_role[actor_role_id] ~= true
+  debug_view.set_debug_visible_for_role(state, active_role, next_enabled)
+  if not _emit_toggle_event(active_role, next_enabled) then
+    _warn_missing_toggle_channel(actor_role_id)
+  end
+  if runtime.set_client_role then
+    runtime.set_client_role(nil)
+  end
+  return true
+end
+
+local function _handle_target_unlock(state, target_choice_effects)
+  if target_choice_effects == nil then
+    return false
+  end
+  target_choice_effects.on_unlock(state)
+  return true
+end
+
+local function _handle_target_lock(state, intent, target_choice_effects)
+  if target_choice_effects == nil then
+    return false
+  end
+  target_choice_effects.on_scene_pick(state, intent.option_id, intent.actor_role_id, {
+    option_id = intent.option_id,
+    actor_role_id = intent.actor_role_id,
+  })
+  return true
+end
+
 local function _fallback_dispatch(state, intent)
-  local intent_type = intent and intent.type or nil
+  local intent_type = _resolve_intent_type(intent)
   if intent_type == nil then
     return false
   end
   local market_controller = _resolve_loaded("src.presentation.runtime.controllers.market_controller")
   local modal_controller = _resolve_loaded("src.presentation.runtime.controllers.modal_controller")
   local debug_view = _resolve_loaded("src.presentation.runtime.view.debug")
-  if intent_type == "market_select" then
-    if market_controller == nil then
-      return false
-    end
-    market_controller.select_market_option(state, intent.option_id)
-    return true
-  end
-  if intent_type == "popup_confirm" then
-    if modal_controller == nil then
-      return false
-    end
-    modal_controller.close_popup(state)
-    return true
-  end
-
-  local runtime = _resolve_loaded("src.presentation.runtime.ui")
-  if intent_type == "toggle_action_log" and runtime ~= nil and debug_view ~= nil then
-    local actor_role_id = intent.actor_role_id
-    if actor_role_id == nil then
-      return true
-    end
-    local active_role = _resolve_role_by_id(runtime, actor_role_id)
-    local visible_by_role = state.ui.debug_visible_by_role or {}
-    local next_enabled = visible_by_role[actor_role_id] ~= true
-    debug_view.set_debug_visible_for_role(state, active_role, next_enabled)
-    local send_event = active_role and active_role.send_ui_custom_event
-    if type(send_event) == "function" then
-      local ok = pcall(send_event, next_enabled and "显示调试屏" or "隐藏调试屏", {})
-      if not ok then
-        pcall(send_event, active_role, next_enabled and "显示调试屏" or "隐藏调试屏", {})
-      end
-    else
-      local logger = _resolve_loaded("src.core.utils.logger")
-      if logger and type(logger.warn) == "function" then
-        logger.warn("toggle_action_log missing role event channel:", tostring(actor_role_id))
-      end
-    end
-    if runtime.set_client_role then
-      runtime.set_client_role(nil)
-    end
-    return true
-  end
-
   local target_choice_effects = _resolve_loaded("src.presentation.runtime.controllers.target_choice_effects")
-  if target_choice_effects ~= nil then
-    if intent_type == "target_unlock" then
-      target_choice_effects.on_unlock(state)
-      return true
-    end
-    if intent_type == "target_lock" then
-      target_choice_effects.on_scene_pick(state, intent.option_id, intent.actor_role_id, {
-        option_id = intent.option_id,
-        actor_role_id = intent.actor_role_id,
-      })
-      return true
-    end
-  end
-  return false
+  local handlers = {
+    market_select = function()
+      return _handle_market_select(state, intent, market_controller)
+    end,
+    popup_confirm = function()
+      return _handle_popup_confirm(state, modal_controller)
+    end,
+    toggle_action_log = function()
+      return _handle_toggle_action_log(state, intent, debug_view)
+    end,
+    target_unlock = function()
+      return _handle_target_unlock(state, target_choice_effects)
+    end,
+    target_lock = function()
+      return _handle_target_lock(state, intent, target_choice_effects)
+    end,
+  }
+  local handler = handlers[intent_type]
+  return handler and handler() or false
 end
 
 function view_command_dispatcher.dispatch(state, intent)

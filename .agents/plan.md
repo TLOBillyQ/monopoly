@@ -38,6 +38,7 @@
 - log: 2026-03-12 继续补 T2 characterization tests：覆盖 `await.move_anim` 匹配/日志分支、`await.landing_visual`、`await.inter_turn`、`turn_start` pre_action wait 路由、`phase_registry` post_action wait 路由、`turn_land` 的 move_effect followup 延迟路径，并修复 `await.move_anim` 在 debug log 开启时 `opts=nil` 触发的空索引问题；最新双 lane CRAP 中 T2 residual 从 45 降到 30。
 - log: 2026-03-12 新一轮收尾把 `turn_script` wait/phase 分发改成表驱动，拆平 `timer_policy` 的 action/detained/inter-turn timer 公共逻辑，并提炼 `move_followup` 的 steal/market resume helper；补充 `turn_script` wait_move_anim yield/resume 与 `move_followup` steal interrupt wait 的定向测试后，最新双 lane CRAP 将 T2 residual 从 30 降到 29。
 - log: 2026-03-12 继续用覆盖率吃 T2 低复杂度热点：新增 `choice_auto_policy` preconsumed first-option、`timer_policy` detained/inter-turn timeout、`item_slot_data` role/fallback、`loop_ports` legacy flat override 用例，并将 `turn_script.create` 的 coroutine 主循环拆成 step/yield/finish helper；最新双 lane CRAP 将 T2 residual 从 29 降到 23。
+- log: 2026-03-12 将工作区中的 `flow/turn/loop.lua` 纳入当前波次，继续把 auto-runner 的 popup wait、actor_role_id 回填与缺失 choice action 日志拆成 helper；定向 suite `tests.suites.gameplay.gameplay_timeout_and_auto_runner` 通过，后续残余以下一轮双 lane CRAP 为准。
 
 ### T3 Flow orchestration/AI cluster
 - depends_on: `[T1]`
@@ -59,6 +60,8 @@
 - status: In Progress
 - log: 2026-03-12 已对 `status_ops.lua`、`post_effects.lua`、`bankruptcy.lua`、`eligibility.lua`、`items/phase.lua` 做 helper 下沉与等待/收尾路径拆分；`suites.gameplay.gameplay_bankruptcy_and_tile_owner`、`suites.gameplay.gameplay_items_startup`、`suites.domain.item` 定向回归通过。
 - log: 2026-03-12 继续收尾 T4：将 `items/strategy.can_offer_in_phase` 拆成 roadblock/target/rent-response helper，并在 `suites.domain.item` 增补 `can_offer_in_phase`、`item_phase` move_followup patch、`set_player_seat`、`board.advance`、`collect_from_others` 的 characterization tests；定向 item suite 通过，最新 CRAP 报告中 T4 residual 从 34 降到 27。
+- log: 2026-03-12 将工作区中的 `effect_pipeline.run` 收口为 mandatory/optional 分发 helper，并在 `tests.suites.domain.item` 增补 waiting followup、`stop_if` 短路、single optional secondary-confirm 路径的 characterization tests；定向 suite `tests.suites.domain.item` 通过，等待下一轮双 lane CRAP 确认该热点是否出桶。
+- log: 2026-03-12 为 `game_victory.check_victory` 补上 finished short-circuit、turn-limit 并列胜者、turn-limit 无人生还的 characterization tests；定向 suite `tests.suites.gameplay.gameplay_bankruptcy_and_tile_owner` 通过，等待下一轮双 lane CRAP 确认该热点是否出桶。
 
 ### T5 Presentation model/runtime cluster
 - depends_on: `[T1]`
@@ -72,6 +75,10 @@
 - log: 2026-03-12 继续收 T5 runtime/model 低覆盖热点：将 `ui_model_sync.refresh_from_dirty`、`ui_sync_ports` choice reconcile、`view_command_ports`/`debug.lua` 的 debug toggle 路径拆成细粒度 helper，并收口 `panel_builder.build_player_statuses` 与 choice screen opener 的 slot/projection 分支；定向 suites `presentation_ui_model_dispatch`、`presentation_ui_interaction`、`presentation_popup_visibility`、`presentation_ui_event_handlers` 通过。
 - log: 2026-03-12 继续联动 T5/T6 收尾：补平 `event_state.is_base_screen_active`、`ui_sync_ports._reopen_choice_modal_if_needed`、`view_command_ports._toggle_action_log` 与 `runtime.view.debug` 的低覆盖 helper；联跑 `presentation_ui_event_bindings`、`presentation_ui_model_dispatch`、`presentation_ui_interaction`、`presentation_action_log_and_role_context`、`presentation_move_anim`、`presentation_board_sync` 全部通过，最新双 lane CRAP 将 T5 residual 从 29 降到 28。
 - log: 2026-03-12 继续补 T5 contract/interaction 覆盖：新增 canvas remote/target/market intents、`actor_context.resolve_role_by_id` 与 `host_runtime.register_custom_event` fallback、`choice_builder` 默认 title/body/option-label，以及 `panel_builder` 空槽位/land-only 资产汇总断言；联跑 `presentation_ui_event_bindings`、`presentation_ui_interaction`、`presentation_ui_model_dispatch`、`read_model_contract` 通过。
+- log: 2026-03-12 继续补 `ui_model_sync.refresh_from_dirty` 的 countdown-only 分支覆盖：新增只刷新 turn label、不触发 full render 的 characterization case；定向 suites `tests.suites.presentation.presentation_status3d_and_turn_effects` 与 `tests.suites.presentation.presentation_ui_interaction` 通过，等待本轮双 lane CRAP 回填 T5 residual。
+- log: 2026-03-12 继续收 T5 target-pick runtime：为 `target_choice_effects` 增补 payload.unit 回退、owner role fallback、string option_id 归一化与无映射拒绝的 characterization tests；联跑 `tests.suites.presentation.presentation_target_pick`、`tests.suites.presentation.presentation_choice_routes`、`tests.suites.presentation.presentation_status3d_and_turn_effects` 通过，最新双 lane CRAP 确认 `target_choice_effects` 已出桶。
+- log: 2026-03-12 继续补 `target_choice_effects` 的 owner/payload 降级覆盖：新增 `owner_role_id` fallback、string option_id 归一化、payload.unit 无映射拒绝锁定的 characterization cases；定向 suite `tests.suites.presentation.presentation_target_pick` 通过，等待下一轮双 lane CRAP 回填 `_resolve_picked_option_id` 与 `_resolve_choice_owner_role_id`。
+- log: 2026-03-12 继续补 `target_choice_effects` 的低覆盖路径：新增 `payload.unit -> tile_index` 拾取回退与 `owner_role_id` 缺失时回退当前玩家的 target-pick characterization tests；定向 suite `tests.suites.presentation.presentation_target_pick` 通过，等待下一轮双 lane CRAP 确认 `target_choice_effects` 是否出桶。
 
 ### T6 Presentation view/input cluster
 - depends_on: `[T1]`
@@ -85,6 +92,11 @@
 - log: 2026-03-12 继续用 helper 下沉与 characterization tests 吃 T6 热点：拆出 `anim_unit_overlay.clear_obstacles`、`board.anchors` tile-id/spacing 收口，以及 `move_anim` vehicle step-duration 计算 helper；新增 `presentation_action_anim_core`、`presentation_board_sync`、`presentation_move_anim` 定向用例后，与 T5 联跑的 presentation suites 全部通过。
 - log: 2026-03-12 再收一轮 T6 低覆盖 helper：将 `anim_unit_overlay.play_clear_obstacles`、`board.anchors._render_board_tiles`、`move_anim._calc_vehicle_step_time` 继续压平成局部 helper；与 T5 联跑 `presentation_ui_event_bindings`、`presentation_ui_model_dispatch`、`presentation_ui_interaction`、`presentation_action_log_and_role_context`、`presentation_move_anim`、`presentation_board_sync` 均通过。最新双 lane CRAP 中 T6 residual 仍为 28，但已把这些旧头部函数移出榜首。
 - log: 2026-03-12 补充 `anim_unit_overlay.play_clear_obstacles`、`board.anchors.ensure_tile_anchors` 与 `move_anim.step_duration` 的 characterization tests；定向 suites `tests.suites.presentation.presentation_action_anim_core`、`tests.suites.presentation.presentation_board_sync`、`tests.suites.presentation.presentation_move_anim` 通过，最新双 lane CRAP 将 T6 residual 从 28 降到 25。
+- log: 2026-03-12 将工作区中的 `anim_tip_text.build` 表驱动重构与新增 tip 文案覆盖纳入当前波次，并修正 action-anim 夹具对已知/未知地块的断言；定向 suite `tests.suites.presentation.presentation_action_anim_core` 通过，等待本轮双 lane CRAP 确认 `anim_tip_text.build` 是否继续留在头部。
+- log: 2026-03-12 将 `anim_tip_text.build` 改成表驱动文案 builder，并在 `tests.suites.presentation.presentation_action_anim_core` 增补 focus_text、roll、tile-target、chance/item_use、cash_receive 与 unknown kind 的 characterization tests；定向 suite 通过，等待本轮双 lane CRAP 确认 `anim_tip_text` 是否出桶。
+- log: 2026-03-12 继续收 T6 input/view 头部：将 `item_phase_ask.dispatch` 与 `view_command._fallback_dispatch` 收口成 intent-specific helpers，并补上 cancel/target_lock/unlock 回退断言；同时给 `panel_player_slots.apply_player_colors` 增补 image/label 染色与无 hook 早退用例。联跑 `tests.suites.presentation.presentation_target_pick`、`tests.suites.presentation.presentation_choice_routes`、`tests.suites.presentation.presentation_status3d_and_turn_effects` 通过，最新双 lane CRAP 确认 `item_phase_ask`、`view_command` 与 `panel_player_slots` 已出桶。
+- log: 2026-03-12 继续补 `panel_player_slots.apply_player_colors` 的 characterization 覆盖：新增图片/标签着色与单 label 查询失败容错、无 color hook 早退两条断言；定向 suite `tests.suites.presentation.presentation_player_panels` 通过，等待下一轮双 lane CRAP 确认该热点是否出桶。
+- log: 2026-03-12 将 `item_phase_ask.dispatch` 与 `view_command._fallback_dispatch` 拆成 intent-specific helper，并在 `tests.suites.presentation._presentation_action_status_market_and_anim_cases` 补上 item-phase cancel 与 target lock/unlock fallback 的 characterization tests；联跑该 suite 与 `tests.suites.presentation.presentation_ui_interaction` 后，最新双 lane CRAP 已确认这两个热点分别降到 `3.07` 与 `2.01`，均已出桶。
 
 ### T7 Infrastructure/app/core sweep
 - depends_on: `[T1]`
@@ -101,6 +113,7 @@
 - log: 2026-03-12 将 `app/init.lua` 的 debug-log provider 判定与 `config_sanity.lua` 的 release/board-feedback 遍历再拆一层 helper，避免低覆盖小函数继续卡在 `>8`；定向 suites `tests.suites.runtime.startup_release` 与 `tests.suites.domain.config_sanity` 通过，最新双 lane CRAP 将 T7 residual 从 14 降到 11。
 - log: 2026-03-12 合并 `config_sanity` 与 `app.init` 的新增定向覆盖后，最新双 lane CRAP 将 T7 residual 从 14 降到 11；当前头部已转到 `logger._push`、`game_runtime_bootstrap._resolve_tick_seconds` 与 `game_startup._build_startup_roster`。
 - log: 2026-03-12 继续补 T7 runtime coverage：新增 `runtime_event_bridge` dispatch-failure disable 与 `runtime_ports.resolve_role` 回退到 `GameAPI.get_role` 的合同用例；联跑 `gameplay_runtime_context_and_camera_sync` 与 `runtime_ports_contract` 通过。
+- log: 2026-03-12 将工作区中的 `synthetic_actor_registry._destroy_actor` fallback 拆成 destroy-unit/unit resolver helper，并给 `tests.suites.runtime.runtime_ports_contract` 补上 missing player_id 与 adapterless synthetic actor 回退到 `GameAPI.get_role` 的合同断言；定向 suite `tests.suites.runtime.runtime_ports_contract` 通过。
 
 ### T8 Residual sweep and merge-safe cleanup
 - depends_on: `[T2, T3, T4, T5, T6, T7]`
@@ -115,6 +128,15 @@
 - log: 2026-03-12 全量双 lane CRAP 再次刷新为 `src_over8=115`；其中已确认 `app/init.lua` 与 `config_sanity.lua` 出桶，T7 当前 residual 为 11。剩余收尾重心继续停留在 T5/T6/T7，其中 T7 头部已收敛到 `logger.lua`、`synthetic_actor_registry.lua`、`game_runtime_bootstrap.lua`、`game_startup.lua`、`turn_ui_sync_shared.lua`、`event_bridge.lua`、`eggy_paid_purchase_gateway.lua`、`landing_visual_hold.lua`、`context.lua`、`default_ports.lua`。
 - log: 2026-03-12 按当前真值继续收尾后，双 lane CRAP 进一步降到 `src_over8=118`；当前 ownership bucket 为 `T2=23`、`T3=0`、`T4=27`、`T5=28`、`T6=28`、`T7=11`、`UNKNOWN=1`。本轮已确认 T3 出桶，并把 `app/init.lua`、`config_sanity.lua`、`play_clear_obstacles`、`_render_board_tiles`、`_calc_vehicle_step_time` 等旧头部移走，新的高位已集中到 `effect_pipeline.run`、presentation runtime openers/ui_model_sync，以及 `logger._push`。
 - log: 2026-03-12 合并 T3/T6/T7 新一轮 characterization tests 后，双 lane CRAP 进一步降到 `src_over8=115`；当前 ownership bucket 为 `T2=23`、`T4=27`、`T5=28`、`T6=25`、`T7=11`、`UNKNOWN=1`，其中 `T3` 已清零。当前头部集中在 `anim_tip_text.build`、`effect_pipeline.run`、`logger._push` 与其余 presentation helper。
+- log: 2026-03-12 已把工作区内的 T2/T4/T7 增量纳入 residual sweep：`loop.lua`、`effect_pipeline.lua`、`synthetic_actor_registry.lua` 及其配套测试的定向回归全部通过。下一轮全量双 lane CRAP 需要用这些改动重算真实 bucket 与头部热点。
+- log: 2026-03-12 已追加 T5 的 `ui_model_sync.refresh_from_dirty` countdown-only 覆盖，并开始重新生成双 lane CRAP，以把工作区内 T2/T4/T7 增量与本轮 presentation 补测一起计入新的 residual 真值。
+- log: 2026-03-12 全量双 lane CRAP 已刷新为 `src_over8=94`；当前 ownership bucket 为 `T2=23`、`T3=0`、`T4=26`、`T5=14`、`T6=22`、`T7=8`、`UNKNOWN=1`。本轮确认 `effect_pipeline.run`、`synthetic_actor_registry._destroy_actor` 与 `anim_tip_text.build` 已移出头部，新的高位集中到 `panel_player_slots.apply_player_colors`、`target_choice_effects`、`item_phase_ask_flow.dispatch` 与 `logger._push`。
+- log: 2026-03-12 已将工作区中的 T6 `anim_tip_text` 重构与新增 tip 文案用例一并纳入 residual sweep；`tests.suites.presentation.presentation_action_anim_core` 定向回归通过，待双 lane CRAP 统一回填最新 T5/T6 bucket。
+- log: 2026-03-12 复跑 `MONO_REGRESSION_MODE=dev lua tests/behavior.lua` 后，523 个 behavior suites 全通过；按最新 `tmp/crap_report.json` 复核，`src_over8` 进一步降到 `92`，头部热点更新为 `panel_player_slots.apply_player_colors`、`target_choice_effects._resolve_picked_option_id`、`item_phase_ask_flow.dispatch`、`game_victory.check_victory` 与 `view_command._fallback_dispatch`。该报告未携带 ownership 字段，后续 bucket 需按路径重新归类。
+- log: 2026-03-12 继续合并 T4/T5/T6 新一轮 characterization tests 与 helper 下沉后，双 lane CRAP 再降到 `src_over8=86`；按路径归类后的当前 bucket 为 `T2=23`、`T3=0`、`T4=25`、`T5=12`、`T6=18`、`T7=7`、`T8=1`。本轮确认 `game_victory.check_victory`、`target_choice_effects`、`item_phase_ask_flow.dispatch`、`view_command._fallback_dispatch` 与 `panel_player_slots.apply_player_colors` 已全部出桶，新的头部转到 `market.application.auto.execute`、`presentation.view.render.status3d.init.M.sync`、`logger._push`。
+- log: 2026-03-12 已继续补 T5/T6 头部热点的 characterization tests：`presentation_target_pick` 覆盖 `target_choice_effects` 的 payload-unit / current-player fallback，`presentation_player_panels` 覆盖 `panel_player_slots.apply_player_colors` 的 label/image tint 与 early-return；新的双 lane CRAP 正在后台复算，待结果回填最新 residual 真值。
+- log: 2026-03-12 再次全量重跑双 lane CRAP 并同步到 `tmp/crap_report.json` 后，`src_over8` 已进一步降到 `87`；本轮确认 `item_phase_ask_flow.dispatch` 与 `view_command._fallback_dispatch` 出桶，最新头部转为 `panel_player_slots.apply_player_colors`、`auto.execute`、`status3d.init.M.sync`、`board._resolve_forward_next_id` 与 `logger._push`。
+- log: 2026-03-12 复核当前工作树的 `tmp/crap_report.json` 后，最新真值应以 `src_over8=86` 为准；按路径重算 bucket 为 `T2=23`、`T3=0`、`T4=25`、`T5=12`、`T6=18`、`T7=7`、`UNKNOWN=1`。当前头部为 `auto.execute`、`status3d.init.M.sync`、`board._resolve_forward_next_id`、`logger._push` 与 `strategy.auto_pre_action`。
 
 ### T9 Final verification
 - depends_on: `[T8]`

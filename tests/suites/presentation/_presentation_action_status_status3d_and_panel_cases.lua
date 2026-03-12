@@ -1375,6 +1375,62 @@ local function _test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop
   _assert_eq(state._last_target_pos.z, 20, "refresh_from_dirty should preserve tile z during board render")
 end
 
+local function _test_ui_sync_refresh_from_dirty_only_turn_countdown_updates_label_without_full_render()
+  local ui_view_service = require("src.presentation.runtime.view")
+  local ui_model = require("src.presentation.model")
+  local ui_model_sync = require("src.presentation.runtime.ports.ui_sync.ui_model_sync")
+  local render_calls = 0
+  local refreshed_label = nil
+  local game = {
+    turn = {
+      phase = "wait_choice",
+      current_player_index = 1,
+      turn_count = 1,
+    },
+    players = {
+      [1] = { id = 1, name = "P1", cash = 0, inventory = { items = {} }, eliminated = false },
+    },
+  }
+  local state = {
+    ui = ui_view_service.build_ui_state(),
+    ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY" }),
+    ui_dirty = false,
+    ui_model = {
+      panel = { turn_label = "旧标签" },
+    },
+  }
+
+  _with_patches({
+    { target = ui_view_service, key = "render", value = function()
+      render_calls = render_calls + 1
+    end },
+    { target = ui_view_service, key = "refresh_turn_label", value = function(_, label)
+      refreshed_label = label
+    end },
+    { target = ui_model, key = "update", value = function()
+      return {
+        panel = { turn_label = "倒计时 3" },
+      }
+    end },
+  }, function()
+    local changed = ui_model_sync.refresh_from_dirty(game, state, {
+      any = true,
+      turn_countdown = true,
+    }, {
+      log_once = function() end,
+      build_log_prefix = function()
+        return "[test]"
+      end,
+    })
+
+    _assert_eq(changed, false, "countdown-only refresh should report no full render")
+  end)
+
+  _assert_eq(render_calls, 0, "countdown-only refresh should skip full render")
+  _assert_eq(refreshed_label, "倒计时 3", "countdown-only refresh should update turn label directly")
+  _assert_eq(state.ui_dirty, false, "countdown-only refresh should clear ui dirty flag")
+end
+
 local function _test_popup_defer_policy_queues_and_replays_in_order()
   local modal_presenter = require("src.presentation.runtime.controllers.modal_controller")
   local popup_presenter = require("src.presentation.runtime.controllers.popup_controller")
@@ -1939,6 +1995,53 @@ local function _test_panel_crown_excludes_eliminated_players()
   _assert_eq(env.state.ui.visible["基础_玩家4皇冠"], false, "player4 crown should hide")
 end
 
+local function _test_panel_apply_player_colors_updates_image_and_labels()
+  local panel_player_slots = require("src.presentation.view.widgets.panel_player_slots")
+  local image_calls = {}
+  local label_calls = {}
+
+  panel_player_slots.apply_player_colors({
+    set_image_color = function(_, node, color, alpha)
+      image_calls[#image_calls + 1] = { node = node, color = color, alpha = alpha }
+    end,
+    set_label_color = function(_, node, color, alpha)
+      label_calls[#label_calls + 1] = { node = node, color = color, alpha = alpha }
+    end,
+  }, {
+    query_node = function(name)
+      if name == "基础-玩家2消耗金币显示" then
+        error("missing label node")
+      end
+      return name
+    end,
+  }, {
+    id = 2,
+  }, 2)
+
+  _assert_eq(#image_calls, 1, "player color should tint one image node")
+  _assert_eq(image_calls[1].node, "基础_玩家2底板颜色", "player color should target indexed image node")
+  _assert_eq(image_calls[1].alpha, 0, "player color should keep image alpha at zero")
+  _assert_eq(#label_calls, 4, "player color should tint every resolved label node")
+  _assert_eq(label_calls[1].node, "基础_玩家2名字", "player color should tint player name label")
+  _assert_eq(label_calls[#label_calls].alpha, 0, "player color should keep label alpha at zero")
+end
+
+local function _test_panel_apply_player_colors_skips_when_role_has_no_color_hooks()
+  local panel_player_slots = require("src.presentation.view.widgets.panel_player_slots")
+  local queried = 0
+
+  panel_player_slots.apply_player_colors({}, {
+    query_node = function()
+      queried = queried + 1
+      return {}
+    end,
+  }, {
+    id = 1,
+  }, 1)
+
+  _assert_eq(queried, 0, "panel player colors should early-return before querying nodes without color hooks")
+end
+
 
 return {
   { name = "_test_status3d_init_and_global_visibility", run = _test_status3d_init_and_global_visibility },
@@ -1958,6 +2061,7 @@ return {
   { name = "_test_ui_sync_defers_choice_modal_during_wait_move_anim", run = _test_ui_sync_defers_choice_modal_during_wait_move_anim },
   { name = "_test_ui_sync_step_choice_timeout_reopens_remote_choice_for_local_owner", run = _test_ui_sync_step_choice_timeout_reopens_remote_choice_for_local_owner },
   { name = "_test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop", run = _test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop },
+  { name = "_test_ui_sync_refresh_from_dirty_only_turn_countdown_updates_label_without_full_render", run = _test_ui_sync_refresh_from_dirty_only_turn_countdown_updates_label_without_full_render },
   { name = "_test_popup_defer_policy_queues_and_replays_in_order", run = _test_popup_defer_policy_queues_and_replays_in_order },
   { name = "_test_popup_renderer_switch_popup_canvas_restores_client_role_nil", run = _test_popup_renderer_switch_popup_canvas_restores_client_role_nil },
   { name = "_test_market_modal_renderer_open_restores_client_role_nil", run = _test_market_modal_renderer_open_restores_client_role_nil },
@@ -1971,4 +2075,6 @@ return {
   { name = "_test_panel_cash_delta_missing_node_is_safe", run = _test_panel_cash_delta_missing_node_is_safe },
   { name = "_test_panel_crown_shows_for_top_total_assets_and_ties", run = _test_panel_crown_shows_for_top_total_assets_and_ties },
   { name = "_test_panel_crown_excludes_eliminated_players", run = _test_panel_crown_excludes_eliminated_players },
+  { name = "_test_panel_apply_player_colors_updates_image_and_labels", run = _test_panel_apply_player_colors_updates_image_and_labels },
+  { name = "_test_panel_apply_player_colors_skips_when_role_has_no_color_hooks", run = _test_panel_apply_player_colors_skips_when_role_has_no_color_hooks },
 }

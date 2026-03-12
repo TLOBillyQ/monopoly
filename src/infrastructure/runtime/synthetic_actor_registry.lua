@@ -52,17 +52,27 @@ local function _safe_query_start_pos(env, map_cfg)
   return pos
 end
 
-local function _destroy_actor(env, actor)
+local function _resolve_destroy_unit(game_api)
+  if game_api and type(game_api.destroy_unit) == "function" then
+    return game_api.destroy_unit
+  end
+  return nil
+end
+
+local function _resolve_actor_unit(actor)
   if actor == nil then
+    return nil
+  end
+  return actor.unit
+end
+
+local function _destroy_actor(env, actor)
+  local destroy_unit = _resolve_destroy_unit(env and env.GameAPI or nil)
+  local unit = _resolve_actor_unit(actor)
+  if destroy_unit == nil or unit == nil then
     return
   end
-  local game_api = env and env.GameAPI or nil
-  if not (game_api and type(game_api.destroy_unit) == "function") then
-    return
-  end
-  if actor.unit ~= nil then
-    pcall(game_api.destroy_unit, actor.unit)
-  end
+  pcall(destroy_unit, unit)
 end
 
 local function _build_adapter(actor)

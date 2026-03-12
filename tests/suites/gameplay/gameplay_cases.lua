@@ -4103,6 +4103,105 @@ local function _test_bankruptcy_emits_feedback_event()
   assert(found, "bankruptcy should emit feedback.bankruptcy")
 end
 
+local function _test_game_victory_finished_game_short_circuits_without_reemitting()
+  local g = _new_game({ install_ui_port = false })
+  local emitted = 0
+  g.finished = true
+  g.winner_names = "existing winner"
+
+  support.with_patches({
+    {
+      target = monopoly_event,
+      key = "emit",
+      value = function()
+        emitted = emitted + 1
+      end,
+    },
+  }, function()
+    local result = g:check_victory()
+    assert(result == true, "finished game should still report victory")
+  end)
+
+  assert(emitted == 0, "finished game should not emit duplicate finished events")
+  assert(g.winner_names == "existing winner", "finished game should preserve winner names")
+end
+
+local function _test_game_victory_turn_limit_tie_keeps_multiple_winners()
+  local g = _new_game({ install_ui_port = false })
+  local p1 = g.players[1]
+  local p2 = g.players[2]
+  local captured = nil
+
+  for index = 3, #g.players do
+    g.players[index].eliminated = true
+  end
+  g.turn.turn_count = 1
+  g:set_player_cash(p1, 3000)
+  g:set_player_cash(p2, 3000)
+
+  support.with_patches({
+    { target = gameplay_rules, key = "turn_limit", value = 1 },
+    {
+      target = monopoly_event,
+      key = "emit",
+      value = function(event_name, payload)
+        captured = {
+          event_name = event_name,
+          payload = payload,
+        }
+      end,
+    },
+  }, function()
+    local result = g:check_victory()
+    assert(result == true, "turn-limit tie should finish the game")
+  end)
+
+  assert(g.finished == true, "turn-limit tie should mark game finished")
+  assert(g.winner == nil, "turn-limit tie should not pick a single winner")
+  assert(g.winner_names == "P1、P2", "turn-limit tie should preserve winner name ordering")
+  assert(type(g.winners) == "table" and #g.winners == 2, "turn-limit tie should keep both winners")
+  assert(captured ~= nil and captured.event_name == monopoly_event.game.finished,
+    "turn-limit tie should emit game.finished")
+  assert(captured.payload.winner_ids[1] == true and captured.payload.winner_ids[2] == true,
+    "turn-limit tie should expose both winner ids")
+end
+
+local function _test_game_victory_turn_limit_with_no_survivors_reports_empty_winners()
+  local g = _new_game({ install_ui_port = false })
+  local captured = nil
+
+  for _, player in ipairs(g.players) do
+    player.eliminated = true
+  end
+  g.turn.turn_count = 1
+
+  support.with_patches({
+    { target = gameplay_rules, key = "turn_limit", value = 1 },
+    {
+      target = monopoly_event,
+      key = "emit",
+      value = function(event_name, payload)
+        captured = {
+          event_name = event_name,
+          payload = payload,
+        }
+      end,
+    },
+  }, function()
+    local result = g:check_victory()
+    assert(result == true, "turn-limit elimination should finish the game")
+  end)
+
+  assert(g.finished == true, "turn-limit elimination should mark game finished")
+  assert(g.winner == nil, "no-survivor finish should not expose a single winner")
+  assert(type(g.winners) == "table" and #g.winners == 0, "no-survivor finish should store empty winners")
+  assert(g.winner_names == "", "no-survivor finish should keep empty winner names")
+  assert(captured ~= nil and captured.event_name == monopoly_event.game.finished,
+    "no-survivor finish should emit game.finished")
+  assert(captured.payload.message == "游戏结束，无人生还",
+    "no-survivor finish should preserve the no-survivor message")
+end
+
 return {
   _test_mandatory_payment_causes_bankruptcy = _test_mandatory_payment_causes_bankruptcy,
   _test_bankruptcy_resets_owned_tiles = _test_bankruptcy_resets_owned_tiles,
@@ -4110,6 +4209,12 @@ return {
   _test_gameplay_loop_set_game_installs_bankruptcy_feedback_port = _test_gameplay_loop_set_game_installs_bankruptcy_feedback_port,
   _test_bankruptcy_calls_role_life_die_before_lose = _test_bankruptcy_calls_role_life_die_before_lose,
   _test_bankruptcy_emits_feedback_event = _test_bankruptcy_emits_feedback_event,
+  _test_game_victory_finished_game_short_circuits_without_reemitting =
+    _test_game_victory_finished_game_short_circuits_without_reemitting,
+  _test_game_victory_turn_limit_tie_keeps_multiple_winners =
+    _test_game_victory_turn_limit_tie_keeps_multiple_winners,
+  _test_game_victory_turn_limit_with_no_survivors_reports_empty_winners =
+    _test_game_victory_turn_limit_with_no_survivors_reports_empty_winners,
   _test_chance_pay_others_stops_after_bankruptcy = _test_chance_pay_others_stops_after_bankruptcy,
   _test_set_tile_owner_without_ui_port_does_not_crash = _test_set_tile_owner_without_ui_port_does_not_crash,
   _test_tile_owner_notifier_receives_owner_changes = _test_tile_owner_notifier_receives_owner_changes,

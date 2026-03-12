@@ -91,6 +91,66 @@ local function _build_optional_choice(optional, player, tile, game_ctx, opts)
   return out
 end
 
+local function _partition_scanned_effects(scanned, mandatory, optional)
+  for _, entry in ipairs(scanned) do
+    if entry.ok then
+      local target = entry.mandatory and mandatory or optional
+      table.insert(target, entry.effect)
+    end
+  end
+end
+
+local function _apply_need_landing(out, opts)
+  if not (opts.on_need_landing and type(out) == "table" and out.kind == "need_landing") then
+    return out
+  end
+  return opts.on_need_landing(out) or out
+end
+
+local function _dispatch_effect_payload(game, out, res)
+  local payload = out or res
+  if payload then
+    intent_output_port.dispatch(game, payload)
+  end
+end
+
+local function _finalize_waiting_output(out, opts)
+  if type(out) ~= "table" or out.waiting ~= true then
+    return nil
+  end
+  out.next_state = out.next_state or opts.next_state
+  out.next_args = out.next_args or opts.next_args
+  out.intent = nil
+  return out
+end
+
+local function _run_mandatory_effect(mandatory_effect, player, tile, game_ctx, opts)
+  local res = effect_runner.execute(mandatory_effect, player, tile, game_ctx)
+  local out = _apply_need_landing(res and res.result, opts)
+  _dispatch_effect_payload(game_ctx.game, out, res)
+
+  local waiting = _finalize_waiting_output(out, opts)
+  if waiting then
+    return waiting, true
+  end
+
+  if opts.stop_if and opts.stop_if(out, res) then
+    return out, true
+  end
+
+  return nil, false
+end
+
+local function _run_mandatory_effects(mandatory, player, tile, game_ctx, opts)
+  for _, mandatory_effect in ipairs(mandatory) do
+    local result, should_stop = _run_mandatory_effect(mandatory_effect, player, tile, game_ctx, opts)
+    if should_stop then
+      return result
+    end
+  end
+  return nil
+end
+
 function pipeline.run(effect_defs, player, tile, game_ctx, opts)
   opts = opts or {}
   local scanned = effect_runner.scan(effect_defs, player, tile, game_ctx)
@@ -103,39 +163,11 @@ function pipeline.run(effect_defs, player, tile, game_ctx, opts)
     return result
   end
 
-  for _, entry in ipairs(scanned) do
-    if entry.ok then
-      if entry.mandatory then
-        table.insert(mandatory, entry.effect)
-      else
-        table.insert(optional, entry.effect)
-      end
-    end
-  end
+  _partition_scanned_effects(scanned, mandatory, optional)
 
-  for _, eff in ipairs(mandatory) do
-    local res = effect_runner.execute(eff, player, tile, game_ctx)
-    local out = res and res.result
-
-    if opts.on_need_landing and type(out) == "table" and out.kind == "need_landing" then
-      out = opts.on_need_landing(out) or out
-    end
-
-    local payload = out or res
-    if payload then
-      intent_output_port.dispatch(game_ctx.game, payload)
-    end
-
-    if type(out) == "table" and out.waiting then
-      out.next_state = out.next_state or opts.next_state
-      out.next_args = out.next_args or opts.next_args
-      out.intent = nil
-      return _finalize(out)
-    end
-
-    if opts.stop_if and opts.stop_if(out, res) then
-      return _finalize(out)
-    end
+  local mandatory_result = _run_mandatory_effects(mandatory, player, tile, game_ctx, opts)
+  if mandatory_result ~= nil then
+    return _finalize(mandatory_result)
   end
 
   if opts.allow_optional == false or #optional == 0 then
