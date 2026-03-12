@@ -3,10 +3,12 @@ local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 local logger = require("src.core.utils.logger")
 local gameplay_rules = require("src.core.config.gameplay_rules")
+local runtime_constants = require("src.core.config.runtime_constants")
 local move_anim = require("src.presentation.view.render.move_anim")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local anim_ports = require("src.presentation.runtime.ports.anim_ports")
 local ui_view = require("src.presentation.runtime.view")
+local gameplay_read_port = require("src.presentation.model.gameplay_read_port")
 local vec3 = require("fixtures.vec3")
 
 local function _test_move_anim_sequence_stops_unit_when_duration_finishes()
@@ -529,6 +531,52 @@ local function _test_move_anim_debug_log_writes_when_enabled()
   assert(string.find(text, "[MoveAnim] finish_stop", 1, true) ~= nil, "debug log should include finish stop")
 end
 
+local function _build_step_duration_scene(length)
+  local _vec3 = vec3.with_sub_length
+  return {
+    tiles = {
+      [1] = { get_position = function() return _vec3(0, 0, 0) end },
+      [2] = { get_position = function() return _vec3(length, 0, 0) end },
+    },
+  }
+end
+
+local function _test_move_anim_step_duration_uses_vehicle_accel_curve_for_short_hops()
+  local duration = nil
+
+  _with_patches({
+    { target = runtime_constants, key = "vehicle_speed", value = 10 },
+    { target = runtime_constants, key = "vehicle_accel", value = 5 },
+    { target = gameplay_read_port, key = "resolve_vehicle_seat_id", value = function(vehicle_id)
+      return vehicle_id == "vehicle_1" and 1 or nil
+    end },
+  }, function()
+    duration = move_anim.step_duration(_build_step_duration_scene(5), 1, 2, {
+      vehicle_id = "vehicle_1",
+    })
+  end)
+
+  _assert_eq(duration, 2, "vehicle step duration should use the accelerate-decelerate curve when hop is below critical distance")
+end
+
+local function _test_move_anim_step_duration_falls_back_to_linear_speed_when_vehicle_accel_missing()
+  local duration = nil
+
+  _with_patches({
+    { target = runtime_constants, key = "vehicle_speed", value = 4 },
+    { target = runtime_constants, key = "vehicle_accel", value = 0 },
+    { target = gameplay_read_port, key = "resolve_vehicle_seat_id", value = function(vehicle_id)
+      return vehicle_id == "vehicle_2" and 2 or nil
+    end },
+  }, function()
+    duration = move_anim.step_duration(_build_step_duration_scene(12), 1, 2, {
+      vehicle_id = "vehicle_2",
+    })
+  end)
+
+  _assert_eq(duration, 3, "vehicle step duration should fall back to linear speed when accel is unavailable")
+end
+
 return {
   name = "presentation.move_anim",
   tests = {
@@ -571,6 +619,14 @@ return {
     {
       name = "_test_move_anim_debug_log_writes_when_enabled",
       run = _test_move_anim_debug_log_writes_when_enabled,
+    },
+    {
+      name = "_test_move_anim_step_duration_uses_vehicle_accel_curve_for_short_hops",
+      run = _test_move_anim_step_duration_uses_vehicle_accel_curve_for_short_hops,
+    },
+    {
+      name = "_test_move_anim_step_duration_falls_back_to_linear_speed_when_vehicle_accel_missing",
+      run = _test_move_anim_step_duration_falls_back_to_linear_speed_when_vehicle_accel_missing,
     },
   },
 }

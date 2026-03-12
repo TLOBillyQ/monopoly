@@ -655,6 +655,118 @@ local function _test_player_units_falls_back_to_resolve_role_when_roles_list_mis
     "player_units should fall back to resolve_role when resolve_roles is empty")
 end
 
+local function _test_tile_anchors_collect_positions_render_tiles_and_spacing()
+  local anchors = require("src.presentation.view.render.board.anchors")
+  local render_calls = {}
+  local log_calls = {}
+  local state = {}
+  local board = {
+    tile_states = {
+      land_a = { owner_id = "role_1" },
+    },
+    tiles = {
+      { id = "land_a", type = "land" },
+      { id = "chance_b", type = "chance" },
+    },
+  }
+  local scene = {
+    tiles = {
+      [1] = {
+        get_position = function()
+          return { x = 0, y = 0, z = 0 }
+        end,
+      },
+      [2] = {
+        get_position = function()
+          return { x = 10, y = 0, z = 0 }
+        end,
+      },
+    },
+  }
+
+  _with_patches({
+    {
+      target = math,
+      key = "Vector3",
+      value = function(x, y, z)
+        return vec3.with_sub_length(x, y, z)
+      end,
+    },
+    {
+      target = require("src.presentation.view.render.tile_renderer"),
+      key = "render_tile",
+      value = function(unit, tile_id, owner_id)
+        render_calls[#render_calls + 1] = {
+          unit = unit,
+          tile_id = tile_id,
+          owner_id = owner_id,
+        }
+      end,
+    },
+  }, function()
+    anchors.ensure_tile_anchors(state, board, scene, 2, function(_, level, key, prefix, message, count)
+      log_calls[#log_calls + 1] = { level = level, key = key, prefix = prefix, message = message, count = count }
+    end, function()
+      return "presentation_board_sync"
+    end)
+  end)
+
+  _assert_eq(state.tile_units, scene.tiles, "ensure_tile_anchors should cache tile units")
+  _assert_eq(state.tile_positions[1].x, 0, "ensure_tile_anchors should cache first tile position")
+  _assert_eq(state.tile_positions[2].x, 10, "ensure_tile_anchors should cache second tile position")
+  assert(math.abs(state.tile_spacing - 2.8) < 0.000001,
+    "ensure_tile_anchors should derive tile spacing from neighboring tiles")
+  _assert_eq(render_calls[1].tile_id, "land_a", "ensure_tile_anchors should render the first tile id")
+  _assert_eq(render_calls[1].owner_id, "role_1", "ensure_tile_anchors should include land owner ids")
+  _assert_eq(render_calls[2].tile_id, "chance_b", "ensure_tile_anchors should render non-land tiles too")
+  _assert_eq(render_calls[2].owner_id, nil, "ensure_tile_anchors should omit owner ids for tiles without state")
+  _assert_eq(log_calls[1].key, "tiles_ready", "ensure_tile_anchors should log the ready marker once")
+end
+
+local function _test_tile_anchors_return_early_when_cache_is_ready()
+  local anchors = require("src.presentation.view.render.board.anchors")
+  local render_calls = 0
+  local log_calls = 0
+  local state = {
+    tile_positions = {
+      { x = 1, y = 0, z = 0 },
+      { x = 2, y = 0, z = 0 },
+    },
+  }
+  local board = {
+    tile_states = {},
+    tiles = {
+      { id = "a", type = "land" },
+      { id = "b", type = "land" },
+    },
+  }
+  local scene = {
+    tiles = {
+      [1] = { get_position = function() return { x = 0, y = 0, z = 0 } end },
+      [2] = { get_position = function() return { x = 10, y = 0, z = 0 } end },
+    },
+  }
+
+  _with_patches({
+    {
+      target = require("src.presentation.view.render.tile_renderer"),
+      key = "render_tile",
+      value = function()
+        render_calls = render_calls + 1
+      end,
+    },
+  }, function()
+    anchors.ensure_tile_anchors(state, board, scene, 2, function()
+      log_calls = log_calls + 1
+    end, function()
+      return "presentation_board_sync"
+    end)
+  end)
+
+  _assert_eq(render_calls, 0, "ensure_tile_anchors should skip re-render when cached positions already cover tile count")
+  _assert_eq(log_calls, 0, "ensure_tile_anchors should skip logging when cache is already ready")
+end
+
 return {
   name = "presentation.board_sync",
   tests = {
@@ -717,6 +829,14 @@ return {
     {
       name = "_test_player_units_falls_back_to_resolve_role_when_roles_list_missing",
       run = _test_player_units_falls_back_to_resolve_role_when_roles_list_missing,
+    },
+    {
+      name = "_test_tile_anchors_collect_positions_render_tiles_and_spacing",
+      run = _test_tile_anchors_collect_positions_render_tiles_and_spacing,
+    },
+    {
+      name = "_test_tile_anchors_return_early_when_cache_is_ready",
+      run = _test_tile_anchors_return_early_when_cache_is_ready,
     },
   },
 }

@@ -12,17 +12,25 @@ local function _ensure_debug_tables(ui)
   end
 end
 
-function M.set_debug_log(state, text)
+local function _resolve_debug_log_ui(state)
   local ui = state and state.ui
   if not ui or not ui.set_debug_log then
+    return nil
+  end
+  return ui
+end
+
+function M.set_debug_log(state, text)
+  local ui = _resolve_debug_log_ui(state)
+  if ui == nil then
     return
   end
   ui:set_debug_log(text or "")
 end
 
 function M.set_debug_log_for_role(state, role, text)
-  local ui = state and state.ui
-  if not ui or not ui.set_debug_log or role == nil then
+  local ui = _resolve_debug_log_ui(state)
+  if ui == nil or role == nil then
     return
   end
   runtime.with_client_role(role, function()

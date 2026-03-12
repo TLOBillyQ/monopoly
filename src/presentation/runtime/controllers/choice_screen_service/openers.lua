@@ -49,6 +49,38 @@ local function _set_action_button(ui, name, visible, enabled, label)
   })
 end
 
+local function _sync_slot_label(ui, label_node, option)
+  if not label_node then
+    return
+  end
+  if option then
+    ui:set_label(label_node, common.resolve_option_label(option))
+  else
+    ui:set_label(label_node, "")
+  end
+  ui_controls.set_control_state(ui, label_node, {
+    visible = option ~= nil,
+    touch_enabled = false,
+  })
+end
+
+local function _sync_projection_node(ui, projection_node, option)
+  if not projection_node then
+    return
+  end
+  ui_controls.set_control_state(ui, projection_node, {
+    visible = option ~= nil,
+    touch_enabled = false,
+  })
+end
+
+local function _capture_selected_option(selected, option_id)
+  if selected ~= nil then
+    return selected
+  end
+  return option_id
+end
+
 local function _fill_option_nodes(ui, screen, options, opts)
   local option_ids = {}
   local selected = nil
@@ -61,30 +93,9 @@ local function _fill_option_nodes(ui, screen, options, opts)
       ui:set_button(name, "")
     end
 
-    local label_node = screen.slot_labels and screen.slot_labels[index] or nil
-    if label_node then
-      if option then
-        ui:set_label(label_node, common.resolve_option_label(option))
-      else
-        ui:set_label(label_node, "")
-      end
-      ui_controls.set_control_state(ui, label_node, {
-        visible = option ~= nil,
-        touch_enabled = false,
-      })
-    end
-
-    local projection_node = screen.slot_projections and screen.slot_projections[index] or nil
-    if projection_node then
-      ui_controls.set_control_state(ui, projection_node, {
-        visible = option ~= nil,
-        touch_enabled = false,
-      })
-    end
-
-    if selected == nil and option_id ~= nil then
-      selected = option_id
-    end
+    _sync_slot_label(ui, screen.slot_labels and screen.slot_labels[index] or nil, option)
+    _sync_projection_node(ui, screen.slot_projections and screen.slot_projections[index] or nil, option)
+    selected = _capture_selected_option(selected, option_id)
   end
   return option_ids, selected
 end

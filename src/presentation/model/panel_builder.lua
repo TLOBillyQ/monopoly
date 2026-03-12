@@ -71,6 +71,49 @@ local function _resolve_player_profile(player)
   }
 end
 
+local function _build_empty_player_status()
+  return {
+    name = "",
+    avatar = nil,
+    eliminated = false,
+    cash_value = nil,
+    total_assets_value = nil,
+    cash = "",
+    land_count = "",
+    total_assets = "",
+  }
+end
+
+local function _accumulate_player_assets(player, board)
+  local cash = _normalize_cash_value(player.cash)
+  local land_count = 0
+  local total = cash
+  for tile_id in pairs(player.properties or {}) do
+    land_count = land_count + 1
+    local tile = board and board.get_tile_by_id and board:get_tile_by_id(tile_id) or nil
+    if tile and tile.type == "land" then
+      local level = tile.level or 0
+      total = total + gameplay_read_port.total_land_invested(tile, level)
+    end
+  end
+  return cash, land_count, total
+end
+
+local function _build_player_status(player, board)
+  local profile = _resolve_player_profile(player)
+  local cash, land_count, total = _accumulate_player_assets(player, board)
+  return {
+    name = profile.name,
+    avatar = profile.avatar,
+    eliminated = player.eliminated == true,
+    cash_value = cash,
+    total_assets_value = _normalize_total_assets_value(total),
+    cash = "现金: " .. number_utils.format_integer_part(_normalize_display_amount(cash)),
+    land_count = "地块: " .. number_utils.format_integer_part(land_count),
+    total_assets = "总资产: " .. number_utils.format_integer_part(_normalize_display_amount(total)),
+  }
+end
+
 function panel.build_turn_label(_, countdown_seconds)
   return "倒计时:" .. tostring(countdown_seconds or 0)
 end
@@ -91,39 +134,9 @@ function panel.build_player_statuses(game, game_obj, max_players)
   for i = 1, count do
     local player = players[i]
     if player then
-      local profile = _resolve_player_profile(player)
-      local cash = _normalize_cash_value(player.cash)
-      local land_count = 0
-      local total = cash
-      for tile_id in pairs(player.properties or {}) do
-        land_count = land_count + 1
-        local tile = board and board.get_tile_by_id and board:get_tile_by_id(tile_id) or nil
-        if tile and tile.type == "land" then
-          local level = tile.level or 0
-          total = total + gameplay_read_port.total_land_invested(tile, level)
-        end
-      end
-      out[i] = {
-        name = profile.name,
-        avatar = profile.avatar,
-        eliminated = player.eliminated == true,
-        cash_value = cash,
-        total_assets_value = _normalize_total_assets_value(total),
-        cash = "现金: " .. number_utils.format_integer_part(_normalize_display_amount(cash)),
-        land_count = "地块: " .. number_utils.format_integer_part(land_count),
-        total_assets = "总资产: " .. number_utils.format_integer_part(_normalize_display_amount(total)),
-      }
+      out[i] = _build_player_status(player, board)
     else
-      out[i] = {
-        name = "",
-        avatar = nil,
-        eliminated = false,
-        cash_value = nil,
-        total_assets_value = nil,
-        cash = "",
-        land_count = "",
-        total_assets = "",
-      }
+      out[i] = _build_empty_player_status()
     end
   end
   return out

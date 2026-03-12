@@ -68,6 +68,7 @@
 - status: In Progress
 - log: 2026-03-12 已抽离 `model/init.lua`、`panel_slice.lua`、`event_handlers.lua`、`modal_controller.lua`、`view_command_ports.lua` 的 slice/route helper，并补充 UI model dispatch、event handler、interaction 定向用例；相关 presentation suites 通过。
 - log: 2026-03-12 补充 presentation runtime 定向覆盖：新增 `raycast` camera/id fallback、`event_bindings` action-log fallback、`event_handlers` tile-id/tile-payload 路径用例；全量 CRAP 后 T5 残余由 38 降到 29，已清除 `raycast.lua` 与 `_resolve_tile_index` 热点。
+- log: 2026-03-12 继续收 T5 runtime/model 低覆盖热点：将 `ui_model_sync.refresh_from_dirty`、`ui_sync_ports` choice reconcile、`view_command_ports`/`debug.lua` 的 debug toggle 路径拆成细粒度 helper，并收口 `panel_builder.build_player_statuses` 与 choice screen opener 的 slot/projection 分支；定向 suites `presentation_ui_model_dispatch`、`presentation_ui_interaction`、`presentation_popup_visibility`、`presentation_ui_event_handlers` 通过。
 
 ### T6 Presentation view/input cluster
 - depends_on: `[T1]`
@@ -77,6 +78,7 @@
 - status: In Progress
 - log: 2026-03-12 已继续拆分 `item_slots.lua`、`game_action.lua`、`canvas_coordinator.lua`、`action_anim.lua` 的输入/画布/动画路径；`suites.presentation.presentation_item_slots`、`suites.presentation.presentation_choice_routes`、`suites.presentation.presentation_target_pick`、`suites.presentation.presentation_action_anim_core`、`suites.presentation.presentation_board_feedback` 定向回归通过。
 - log: 2026-03-12 补充 presentation T6 characterization tests：覆盖 item_slot pre-confirm 打开 secondary confirm、`item_phase_ask` 单选项直接 dispatch、`anim_tip_text` 的 named/fallback player 与 clear_obstacles/change_skin 文案、`player_units` 的 `resolve_roles`/`resolve_role` fallback；定向套件 `presentation_market_confirm_flow`、`presentation_action_anim_core`、`presentation_board_sync`、`presentation_item_slots` 通过。最新 CRAP 将 T6 residual 压到 28。
+- log: 2026-03-12 继续用 helper 下沉与 characterization tests 吃 T6 热点：拆出 `anim_unit_overlay.clear_obstacles`、`board.anchors` tile-id/spacing 收口，以及 `move_anim` vehicle step-duration 计算 helper；新增 `presentation_action_anim_core`、`presentation_board_sync`、`presentation_move_anim` 定向用例后，与 T5 联跑的 presentation suites 全部通过。
 
 ### T7 Infrastructure/app/core sweep
 - depends_on: `[T1]`

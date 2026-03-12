@@ -12,13 +12,18 @@ local function _collect_tile_positions(tiles, tile_count)
   return positions
 end
 
-local function _render_board_tiles(board, tiles, tile_count)
-  local board_tiles = assert(board.tile_states, "missing ui_model.board.tile_states")
+local function _collect_tile_ids(board)
   local tile_ids = {}
   for i, tile in ipairs(board.tiles) do
     assert(tile ~= nil and tile.id ~= nil, "missing tile id: " .. tostring(i))
     tile_ids[i] = tile.id
   end
+  return tile_ids
+end
+
+local function _render_board_tiles(board, tiles, tile_count)
+  local board_tiles = assert(board.tile_states, "missing ui_model.board.tile_states")
+  local tile_ids = _collect_tile_ids(board)
   for i = 1, tile_count do
     local tile_id = assert(tile_ids[i], "missing tile_id: " .. tostring(i))
     local unit = assert(tiles[i], "missing tile unit: " .. tostring(i))

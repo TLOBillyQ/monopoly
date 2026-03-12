@@ -160,6 +160,21 @@ local function _calc_walk_step_time(len)
   return len / walk_speed
 end
 
+local function _resolve_safe_vehicle_speed(speed)
+  if speed > 0 then
+    return speed
+  end
+  return 0.001
+end
+
+local function _calc_vehicle_accel_step_time(len, speed, accel)
+  local critical_dist = (speed * speed) / accel
+  if len <= critical_dist then
+    return 2 * math.sqrt(len / accel)
+  end
+  return 2 * (speed / accel) + (len - critical_dist) / speed
+end
+
 local function _calc_vehicle_step_time(len)
   if len <= 0 then
     return 0
@@ -167,17 +182,9 @@ local function _calc_vehicle_step_time(len)
   local speed = runtime_constants.vehicle_speed or 0
   local accel = runtime_constants.vehicle_accel or 0
   if accel <= 0 or speed <= 0 then
-    local safe_speed = speed
-    if safe_speed <= 0 then
-      safe_speed = 0.001
-    end
-    return len / safe_speed
+    return len / _resolve_safe_vehicle_speed(speed)
   end
-  local critical_dist = (speed * speed) / accel
-  if len <= critical_dist then
-    return 2 * math.sqrt(len / accel)
-  end
-  return 2 * (speed / accel) + (len - critical_dist) / speed
+  return _calc_vehicle_accel_step_time(len, speed, accel)
 end
 
 local function _is_vehicle_anim(anim_ctx)

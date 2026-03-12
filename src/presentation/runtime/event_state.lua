@@ -3,12 +3,16 @@ local role_id_utils = require("src.core.utils.role_id")
 
 local ui_event_state = {}
 
+local function _has_active_modal(ui)
+  return ui.market_active or ui.choice_active or ui.popup_active
+end
+
 function ui_event_state.is_base_screen_active(state)
   local ui = state and state.ui
   if not ui then
     return false
   end
-  if ui.market_active or ui.choice_active or ui.popup_active then
+  if _has_active_modal(ui) then
     return false
   end
   return true

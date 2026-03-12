@@ -46,6 +46,16 @@ local function _sync_debug_canvas(ui, active_role, next_enabled)
   _hide_debug_canvas(active_role)
 end
 
+local function _warn_missing_debug_channel(active_role, actor_role_id, next_enabled)
+  if not next_enabled then
+    return
+  end
+  if type(active_role) == "table" and type(active_role.send_ui_custom_event) == "function" then
+    return
+  end
+  logger.warn("toggle_action_log missing role event channel:", tostring(actor_role_id))
+end
+
 local function _toggle_action_log(state, intent)
   if not _can_toggle_action_log(state) then
     return true
@@ -56,9 +66,7 @@ local function _toggle_action_log(state, intent)
     return true
   end
   debug_view.set_debug_visible_for_role(state, active_role, next_enabled)
-  if next_enabled and (type(active_role) ~= "table" or type(active_role.send_ui_custom_event) ~= "function") then
-    logger.warn("toggle_action_log missing role event channel:", tostring(actor_role_id))
-  end
+  _warn_missing_debug_channel(active_role, actor_role_id, next_enabled)
   _sync_debug_canvas(ui, active_role, next_enabled)
   runtime.set_client_role(nil)
   return true

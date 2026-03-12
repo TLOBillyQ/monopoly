@@ -69,13 +69,17 @@ end
 function overlay.play_monster(_state, _anim, _duration, _opts)
 end
 
-function overlay.play_clear_obstacles(state, anim, duration, opts)
-  local clear_overlay = assert(opts and opts.clear_overlay, "missing clear_overlay")
-  local cleared = anim.cleared_indices or {}
-  for _, idx in ipairs(cleared) do
+local function _clear_obstacle_overlays(state, clear_overlay, cleared_indices)
+  for _, idx in ipairs(cleared_indices) do
     clear_overlay(state, "roadblock", idx)
     clear_overlay(state, "mine", idx)
   end
+end
+
+function overlay.play_clear_obstacles(state, anim, duration, opts)
+  local clear_overlay = assert(opts and opts.clear_overlay, "missing clear_overlay")
+  local cleared = anim.cleared_indices or {}
+  _clear_obstacle_overlays(state, clear_overlay, cleared)
   local robot_id = prefab.group["清障机器人"]
   runtime.spawn_transient(robot_id, nil, compute.overlay_pos_for_player(state, assert(anim.player_id, "missing clear_obstacles player_id")), duration, _deps(state))
 end

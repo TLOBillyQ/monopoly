@@ -559,6 +559,56 @@ local function _test_anim_tip_text_falls_back_for_unknown_player_and_change_skin
     "change_skin tip should fall back to raw player id when lookup is missing")
 end
 
+local function _test_anim_unit_overlay_clear_obstacles_clears_each_overlay_and_spawns_robot()
+  local overlay = require("src.presentation.view.render.anim_unit_overlay")
+  local state = _build_state()
+  local cleared_calls = {}
+  local transient_calls = {}
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "create_unit_group",
+      value = function(group_id, pos)
+        transient_calls[#transient_calls + 1] = {
+          group_id = group_id,
+          pos = pos,
+        }
+        return { _group_id = group_id }
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "create_unit",
+      value = function(unit_id, pos)
+        transient_calls[#transient_calls + 1] = {
+          unit_id = unit_id,
+          pos = pos,
+        }
+        return { _unit_id = unit_id }
+      end,
+    },
+  }, function()
+    overlay.play_clear_obstacles(state, {
+      cleared_indices = { 2, 4 },
+      player_id = 1,
+    }, 0.75, {
+      clear_overlay = function(_, kind, tile_index)
+        cleared_calls[#cleared_calls + 1] = kind .. ":" .. tostring(tile_index)
+      end,
+    })
+  end)
+
+  assert(#cleared_calls == 4, "clear_obstacles should clear roadblock and mine for each cleared tile")
+  assert(cleared_calls[1] == "roadblock:2", "clear_obstacles should clear roadblock first")
+  assert(cleared_calls[2] == "mine:2", "clear_obstacles should clear mine second")
+  assert(cleared_calls[3] == "roadblock:4", "clear_obstacles should repeat for each cleared tile")
+  assert(cleared_calls[4] == "mine:4", "clear_obstacles should clear mine for each cleared tile")
+  assert(#transient_calls == 1, "clear_obstacles should spawn one robot transient")
+  assert(transient_calls[1].pos.x == 0.0 and transient_calls[1].pos.y == 1.0 and transient_calls[1].pos.z == 0.0,
+    "clear_obstacles robot should spawn above the acting player tile")
+end
+
 return {
   name = "presentation.action_anim_core",
   tests = {
@@ -573,6 +623,7 @@ return {
     { name = "action_anim_cash_receive_routes_board_feedback", run = _test_action_anim_cash_receive_routes_board_feedback },
     { name = "anim_tip_text_builds_named_player_and_clear_obstacles_copy", run = _test_anim_tip_text_builds_named_player_and_clear_obstacles_copy },
     { name = "anim_tip_text_falls_back_for_unknown_player_and_change_skin", run = _test_anim_tip_text_falls_back_for_unknown_player_and_change_skin },
+    { name = "anim_unit_overlay_clear_obstacles_clears_each_overlay_and_spawns_robot", run = _test_anim_unit_overlay_clear_obstacles_clears_each_overlay_and_spawns_robot },
     { name = "action_anim_roll_screen_two_stage_timeline", run = _test_action_anim_roll_screen_two_stage_timeline },
     { name = "action_anim_roll_screen_fallback_face_when_invalid", run = _test_action_anim_roll_screen_fallback_face_when_invalid },
   },

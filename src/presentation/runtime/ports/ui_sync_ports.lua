@@ -8,15 +8,22 @@ local runtime_state = require("src.core.state_access.runtime_state")
 
 local ui_sync_ports = {}
 
+local function _resolve_reconciled_choice_model(game, state, pending)
+  local model = runtime_state.get_ui_model(state)
+  if model and model.choice and model.choice.id == pending.id then
+    return model
+  end
+
+  model = ui_model_sync.build_model(state, game)
+  runtime_state.set_ui_model(state, model)
+  return model
+end
+
 local function _reopen_choice_modal_if_needed(game, state, pending)
   if not choice_ui_state.should_reconcile(game, state, pending) then
     return false
   end
-  local model = runtime_state.get_ui_model(state)
-  if not (model and model.choice and model.choice.id == pending.id) then
-    model = ui_model_sync.build_model(state, game)
-    runtime_state.set_ui_model(state, model)
-  end
+  local model = _resolve_reconciled_choice_model(game, state, pending)
   if not (model and model.choice) then
     return false
   end
