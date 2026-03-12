@@ -550,8 +550,10 @@ local function _test_move_anim_step_duration_uses_vehicle_accel_curve_for_short_
     { target = gameplay_read_port, key = "resolve_vehicle_seat_id", value = function(vehicle_id)
       return vehicle_id == "vehicle_1" and 1 or nil
     end },
+    { target = package.loaded, key = "src.presentation.view.render.move_anim", value = nil },
   }, function()
-    duration = move_anim.step_duration(_build_step_duration_scene(5), 1, 2, {
+    local fresh_move_anim = require("src.presentation.view.render.move_anim")
+    duration = fresh_move_anim.step_duration(_build_step_duration_scene(5), 1, 2, {
       vehicle_id = "vehicle_1",
     })
   end)
@@ -568,8 +570,10 @@ local function _test_move_anim_step_duration_falls_back_to_linear_speed_when_veh
     { target = gameplay_read_port, key = "resolve_vehicle_seat_id", value = function(vehicle_id)
       return vehicle_id == "vehicle_2" and 2 or nil
     end },
+    { target = package.loaded, key = "src.presentation.view.render.move_anim", value = nil },
   }, function()
-    duration = move_anim.step_duration(_build_step_duration_scene(12), 1, 2, {
+    local fresh_move_anim = require("src.presentation.view.render.move_anim")
+    duration = fresh_move_anim.step_duration(_build_step_duration_scene(12), 1, 2, {
       vehicle_id = "vehicle_2",
     })
   end)

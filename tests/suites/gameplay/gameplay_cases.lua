@@ -1072,6 +1072,37 @@ local function _test_runtime_event_bridge_detects_unbound_binding_without_call()
   end)
 end
 
+local function _test_runtime_event_bridge_disables_feature_after_dispatch_failure()
+  local calls = 0
+
+  support.with_patches({
+    { key = "TriggerCustomEvent", value = function()
+      calls = calls + 1
+      error("boom")
+    end },
+  }, function()
+    runtime_event_bridge._reset_for_tests()
+    local ok1, err1 = runtime_event_bridge.emit_custom_event("follow_camera", {}, {
+      feature_key = "test.dispatch_failure",
+    })
+    local ok2, err2 = runtime_event_bridge.emit_custom_event("follow_camera", {}, {
+      feature_key = "test.dispatch_failure",
+    })
+    local ok3, err3 = runtime_event_bridge.emit_custom_event(nil, {}, {
+      feature_key = "test.missing_name",
+    })
+
+    assert(ok1 == false, "bridge should report dispatch failure")
+    assert(tostring(err1):find("dispatch failed:", 1, true) ~= nil,
+      "bridge should surface dispatch failure reason")
+    assert(ok2 == false and err2 == err1,
+      "bridge should short-circuit repeated calls with the stored disable reason")
+    assert(calls == 1, "bridge should stop dispatching once feature is disabled")
+    assert(ok3 == false and err3 == "missing event_name", "bridge should reject missing event_name")
+    runtime_event_bridge._reset_for_tests()
+  end)
+end
+
 local function _test_runtime_context_split_install_stages()
   _with_runtime_context_globals(function()
     local role1 = { id = 1, get_roleid = function() return 1 end }
@@ -4104,6 +4135,8 @@ return {
   _test_clear_obstacles_zero_does_not_log_event_noise = _test_clear_obstacles_zero_does_not_log_event_noise,
   _test_ai_obstacle_probe_does_not_enter_event_feed = _test_ai_obstacle_probe_does_not_enter_event_feed,
   _test_runtime_event_bridge_detects_unbound_binding_without_call = _test_runtime_event_bridge_detects_unbound_binding_without_call,
+  _test_runtime_event_bridge_disables_feature_after_dispatch_failure =
+    _test_runtime_event_bridge_disables_feature_after_dispatch_failure,
   _test_runtime_context_split_install_stages = _test_runtime_context_split_install_stages,
   _test_runtime_context_install_helpers_without_globals = _test_runtime_context_install_helpers_without_globals,
   _test_runtime_editor_exports_camera_target_returns_real_role_ctrl_unit = _test_runtime_editor_exports_camera_target_returns_real_role_ctrl_unit,
