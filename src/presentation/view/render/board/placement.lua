@@ -128,47 +128,75 @@ local function _calc_slot_offset(slot, count, spacing)
   return ox, oz
 end
 
+local function _calc_y_offset(base_y, min_player_y)
+  if base_y < min_player_y then
+    return min_player_y - base_y
+  end
+  return 0
+end
+
+local function _resolve_target_position(base, y_offset, ox, oz)
+  return base + math.Vector3(ox, y_offset, oz)
+end
+
+local function _resolve_vehicle_emit_set_position(seat_id, vehicle)
+  if seat_id and vehicle and vehicle.emit_vehicle_set_position then
+    return vehicle.emit_vehicle_set_position
+  end
+  return nil
+end
+
+local function _place_player_unit(pid, unit, target_pos, seat_id, vehicle)
+  local emit_set_position = _resolve_vehicle_emit_set_position(seat_id, vehicle)
+  if emit_set_position then
+    emit_set_position(pid, target_pos)
+  else
+    assert(unit.set_position ~= nil, "missing unit.set_position: " .. tostring(pid))
+    unit.set_position(target_pos)
+  end
+end
+
+local function _stop_and_log_player_motion(state, pid, seat_id, unit, vehicle)
+  local stop_synthetic_ai = move_anim.peek_pending_synthetic_ai_stop(state.board_scene, pid)
+  move_anim.clear_player_token(state.board_scene, pid, "board_sync_place_players")
+  local stop_result = _stop_player_motion(pid, seat_id, unit, vehicle, stop_synthetic_ai)
+  if stop_synthetic_ai == true then
+    move_anim.consume_pending_synthetic_ai_stop(state.board_scene, pid)
+  end
+  return stop_result
+end
+
+local function _place_single_player(state, player, i, occupants, spacing, min_player_y)
+  local idx, base, pid = _resolve_active_player_base(state, player, i)
+  assert(state.player_units ~= nil, "missing player_units")
+  local unit = assert(state.player_units[pid], "missing player unit: " .. tostring(pid))
+  local base_y = assert(base.y, "missing base.y: " .. tostring(idx))
+  local y_offset = _calc_y_offset(base_y, min_player_y)
+  local list = occupants[idx]
+  local slot, count = _resolve_occupant_slot(list, pid)
+  local ox, oz = _calc_slot_offset(slot, count, spacing)
+  local target_pos = _resolve_target_position(base, y_offset, ox, oz)
+  local seat_id = gameplay_read_port.resolve_vehicle_seat_id(player.seat_id)
+  local vehicle = runtime_ports.resolve_vehicle_helper()
+  local stop_result = _stop_and_log_player_motion(state, pid, seat_id, unit, vehicle)
+  _debug_log(
+    "board_refresh_stop_and_snap",
+    "player_id=" .. tostring(pid),
+    "position=" .. tostring(idx),
+    "seat_id=" .. tostring(seat_id or "nil"),
+    "vehicle_stop=" .. tostring(stop_result.vehicle_stop_path or "none"),
+    "motion_stop=" .. tostring(stop_result.motion_stop_path or "none"),
+    "anim_stop=" .. tostring(stop_result.anim_stop_path or "none"),
+    "target_pos=" .. tostring(target_pos)
+  )
+  _place_player_unit(pid, unit, target_pos, seat_id, vehicle)
+end
+
 function M.place_players(state, players, occupants, spacing, min_player_y)
   for i, player in ipairs(players) do
     assert(player ~= nil, "missing player: " .. tostring(i))
     if not player.eliminated then
-      local idx, base, pid = _resolve_active_player_base(state, player, i)
-      assert(state.player_units ~= nil, "missing player_units")
-      local unit = assert(state.player_units[pid], "missing player unit: " .. tostring(pid))
-      local base_y = assert(base.y, "missing base.y: " .. tostring(idx))
-      local y_offset = 0
-      if base_y < min_player_y then
-        y_offset = min_player_y - base_y
-      end
-      local list = occupants[idx]
-      local slot, count = _resolve_occupant_slot(list, pid)
-      local ox, oz = _calc_slot_offset(slot, count, spacing)
-      local target_pos = base + math.Vector3(ox, y_offset, oz)
-      local seat_id = gameplay_read_port.resolve_vehicle_seat_id(player.seat_id)
-      local vehicle = runtime_ports.resolve_vehicle_helper()
-      local emit_set_position = vehicle and vehicle.emit_vehicle_set_position or nil
-      local stop_synthetic_ai = move_anim.peek_pending_synthetic_ai_stop(state.board_scene, pid)
-      move_anim.clear_player_token(state.board_scene, pid, "board_sync_place_players")
-      local stop_result = _stop_player_motion(pid, seat_id, unit, vehicle, stop_synthetic_ai)
-      if stop_synthetic_ai == true then
-        move_anim.consume_pending_synthetic_ai_stop(state.board_scene, pid)
-      end
-      _debug_log(
-        "board_refresh_stop_and_snap",
-        "player_id=" .. tostring(pid),
-        "position=" .. tostring(idx),
-        "seat_id=" .. tostring(seat_id or "nil"),
-        "vehicle_stop=" .. tostring(stop_result.vehicle_stop_path or "none"),
-        "motion_stop=" .. tostring(stop_result.motion_stop_path or "none"),
-        "anim_stop=" .. tostring(stop_result.anim_stop_path or "none"),
-        "target_pos=" .. tostring(target_pos)
-      )
-      if seat_id and emit_set_position then
-        emit_set_position(pid, target_pos)
-      else
-        assert(unit.set_position ~= nil, "missing unit.set_position: " .. tostring(pid))
-        unit.set_position(target_pos)
-      end
+      _place_single_player(state, player, i, occupants, spacing, min_player_y)
     end
   end
 end

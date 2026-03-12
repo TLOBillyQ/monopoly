@@ -557,6 +557,110 @@ local function _test_board_feedback_play_cue_only_sound_no_effect()
   assert(#sound_calls >= 1, "sound-only cue should trigger sound")
 end
 
+local function _test_board_feedback_play_cue_effect_only_returns_true()
+  local effect_calls = {}
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "play_sfx_by_key",
+      value = function(sfx_key, pos, rot, scale)
+        effect_calls[#effect_calls + 1] = { sfx_key = sfx_key, scale = scale }
+        return 901
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "play_3d_sound",
+      value = function()
+        return nil
+      end,
+    },
+  }, function()
+    local state = _build_state()
+    local played = board_feedback.play_tile_cue(state, "upgrade_land_smoke", 1, {})
+    assert(played == true, "effect-only cue should return true")
+  end)
+
+  assert(#effect_calls == 1, "effect-only cue should call play_sfx_by_key once")
+end
+
+local function _test_board_feedback_play_cue_followup_sound_with_delay()
+  local sound_calls = {}
+  local scheduled_calls = {}
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "play_sfx_by_key",
+      value = function()
+        return 1
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "schedule",
+      value = function(delay, fn)
+        scheduled_calls[#scheduled_calls + 1] = { delay = delay }
+        fn()
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "play_3d_sound",
+      value = function(pos, sound_id, duration, volume)
+        sound_calls[#sound_calls + 1] = { sound_id = sound_id, duration = duration, volume = volume }
+        return 1
+      end,
+    },
+  }, function()
+    local state = _build_state()
+    local played = board_feedback.play_tile_cue(state, "upgrade_land_smoke", 1, {
+      followup_sounds = {
+        { sound_id_ref = "turn_started", delay = 0.5, duration = 2.0, volume = 0.8 },
+      },
+    })
+    assert(played == true, "cue with followup sound should play")
+  end)
+
+  assert(#scheduled_calls == 1, "followup sound should be scheduled")
+  assert(scheduled_calls[1].delay == 0.5, "followup delay should be preserved")
+  assert(#sound_calls >= 1, "followup sound should trigger play_3d_sound")
+end
+
+local function _test_board_feedback_play_cue_nil_payload_uses_defaults()
+  local effect_calls = {}
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "play_sfx_by_key",
+      value = function(sfx_key, pos, rot, scale, duration, rate, with_sound)
+        effect_calls[#effect_calls + 1] = {
+          sfx_key = sfx_key,
+          scale = scale,
+          duration = duration,
+          with_sound = with_sound,
+        }
+        return 1001
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "play_3d_sound",
+      value = function()
+        return nil
+      end,
+    },
+  }, function()
+    local state = _build_state()
+    local played = board_feedback.play_tile_cue(state, "upgrade_land_smoke", 1, nil)
+    assert(played == true, "cue with nil payload should use defaults")
+  end)
+
+  assert(#effect_calls == 1, "nil payload should still call play_sfx_by_key")
+end
+
 return {
   name = "presentation.board_feedback",
   tests = {
@@ -573,5 +677,8 @@ return {
     { name = "board_feedback_play_cue_with_nil_pos_uses_default", run = _test_board_feedback_play_cue_with_nil_pos_uses_default },
     { name = "board_feedback_play_cue_both_effect_and_sound", run = _test_board_feedback_play_cue_both_effect_and_sound },
     { name = "board_feedback_play_cue_only_sound_no_effect", run = _test_board_feedback_play_cue_only_sound_no_effect },
+    { name = "board_feedback_play_cue_effect_only_returns_true", run = _test_board_feedback_play_cue_effect_only_returns_true },
+    { name = "board_feedback_play_cue_followup_sound_with_delay", run = _test_board_feedback_play_cue_followup_sound_with_delay },
+    { name = "board_feedback_play_cue_nil_payload_uses_defaults", run = _test_board_feedback_play_cue_nil_payload_uses_defaults },
   },
 }
