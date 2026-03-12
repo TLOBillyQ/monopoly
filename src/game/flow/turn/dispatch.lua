@@ -8,6 +8,7 @@ local role_id_utils = require("src.core.utils.role_id")
 local output_state_adapter = require("src.game.flow.output_adapters.output_state_adapter")
 
 local turn_dispatch = {}
+local _dispatch_action
 
 local next_turn_cooldown = 0.4
 local default_ui_sync_ports = {
@@ -155,109 +156,138 @@ function turn_dispatch.should_block_action(state, action_or_type)
   return validator.should_block_action(gate_state, action_or_type)
 end
 
-local function _dispatch_action(game, state, action, opts, dispatch_ctx)
+local function _should_invalidate_ui(action)
+  return action.type == "ui_button"
+    or action.type == "choice_select"
+    or action.type == "choice_cancel"
+    or action.type == "market_page_prev"
+    or action.type == "market_page_next"
+    or action.type == "market_tab_select"
+end
+
+local function _handle_auto_toggle(game, state, action)
+  local player = _resolve_actor_player(game, action)
+  if not player then
+    return { status = "rejected" }
+  end
+  player.auto = not (player.auto == true)
+  _reset_afk_tracking(state, player.id)
+  return { status = "applied" }
+end
+
+local function _allow_next_turn(turn_runtime, phase, now, ctx)
+  if not turn_runtime.next_turn_locked then
+    return true
+  end
+  if turn_runtime.next_turn_lock_phase and phase and phase ~= turn_runtime.next_turn_lock_phase then
+    return true
+  end
+  if turn_runtime.next_turn_last_click == nil then
+    return true
+  end
+  local diff = _resolve_timestamp_diff_seconds(ctx, now, turn_runtime.next_turn_last_click)
+  return diff and diff >= next_turn_cooldown
+end
+
+local function _handle_next_turn(game, state, action, ctx)
+  local turn_runtime = runtime_state.ensure_turn_runtime(state)
+  local phase = game.turn.phase
+  local now = _resolve_timestamp_now(ctx)
+  if not _allow_next_turn(turn_runtime, phase, now, ctx) then
+    return { status = "rejected" }
+  end
+  turn_runtime.next_turn_locked = true
+  turn_runtime.next_turn_last_click = now
+  turn_runtime.next_turn_lock_phase = phase
+  if action.input_source ~= "timeout" then
+    _reset_afk_tracking(state, action.actor_role_id)
+  end
+  turn_dispatch.step_turn(game)
+  return { status = "applied" }
+end
+
+local function _handle_ui_button(game, state, action, opts, ctx)
+  if action.id == "auto" then
+    return _handle_auto_toggle(game, state, action)
+  end
+  if not validator.validate_actor_role(game, action) then
+    return { status = "rejected" }
+  end
+  local slot_result = validator.resolve_item_slot_action(ctx.item_slot_source, state, action)
+  if slot_result ~= nil then
+    if not slot_result.ok then
+      return { status = "rejected" }
+    end
+    return _dispatch_action(game, state, slot_result.action, opts, ctx)
+  end
+  if action.id == "next" then
+    return _handle_next_turn(game, state, action, ctx)
+  end
+  return { status = "rejected" }
+end
+
+local function _handle_choice_action(game, state, action, opts, ctx)
+  local choice = ctx.output_ports.get_pending_choice(state)
+  if not validator.validate_choice_action(game, action, choice) then
+    return { status = "rejected" }
+  end
+  if game then
+    assert(game.dispatch_action ~= nil, "missing game.dispatch_action")
+    game:dispatch_action(action)
+  end
+  _maybe_reset_afk_for_current_player(game, state, action)
+  local pending = game and game.turn and game.turn.pending_choice or nil
+  if not pending or not pending.id or pending.id ~= choice.id then
+    turn_dispatch.clear_choice(state, opts)
+  end
+  return { status = "applied" }
+end
+
+local function _resolve_market_choice(game, state, ctx)
+  local turn_choice = game and game.turn and game.turn.pending_choice or nil
+  return turn_choice or ctx.output_ports.get_pending_choice(state)
+end
+
+local function _handle_market_navigation(game, state, action, ctx)
+  local choice = _resolve_market_choice(game, state, ctx)
+  if not choice or choice.kind ~= "market_buy" then
+    logger.warn("[MarketDebug] dispatch_market_nav rejected: pending_choice missing or kind not market_buy")
+    return { status = "rejected" }
+  end
+  if not validator.validate_choice_action(game, action, choice) then
+    logger.warn("[MarketDebug] dispatch_market_nav rejected: validate_choice_action failed")
+    return { status = "rejected" }
+  end
+  if not market_service.choice.apply_navigation(game, choice, action) then
+    logger.warn("[MarketDebug] dispatch_market_nav rejected: apply_navigation failed")
+    return { status = "rejected" }
+  end
+  _maybe_reset_afk_for_current_player(game, state, action)
+  ctx.output_ports.sync_pending_choice(state, choice)
+  return { status = "applied" }
+end
+
+_dispatch_action = function(game, state, action, opts, dispatch_ctx)
   assert(action ~= nil, "missing action")
   if action.input_source == nil then
     action.input_source = "user"
-  end
+end
   local ctx = _resolve_dispatch_context(state, dispatch_ctx)
   local gate_state = validator.resolve_gate_state(state, ctx.ui_sync_ports)
   if validator.should_block_action(gate_state, action) then
     return { status = "blocked" }
   end
-  if action.type == "ui_button"
-      or action.type == "choice_select"
-      or action.type == "choice_cancel"
-      or action.type == "market_page_prev"
-      or action.type == "market_page_next"
-      or action.type == "market_tab_select" then
+  if _should_invalidate_ui(action) then
     ctx.output_ports.invalidate_ui(state)
   end
   if action.type == "ui_button" then
-    if action.id == "auto" then
-      local player = _resolve_actor_player(game, action)
-      if not player then
-        return { status = "rejected" }
-      end
-      player.auto = not (player.auto == true)
-      _reset_afk_tracking(state, player.id)
-      return { status = "applied" }
-    end
-
-    if not validator.validate_actor_role(game, action) then
-      return { status = "rejected" }
-    end
-    local slot_result = validator.resolve_item_slot_action(ctx.item_slot_source, state, action)
-    if slot_result ~= nil then
-      if not slot_result.ok then
-        return { status = "rejected" }
-      end
-      return _dispatch_action(game, state, slot_result.action, opts, ctx)
-    end
-    if action.id == "next" then
-      assert(game ~= nil, "missing game")
-      local turn_runtime = runtime_state.ensure_turn_runtime(state)
-      local phase = game.turn.phase
-      local now = _resolve_timestamp_now(ctx)
-      if turn_runtime.next_turn_locked then
-        local allow = false
-        if turn_runtime.next_turn_lock_phase and phase and phase ~= turn_runtime.next_turn_lock_phase then
-          allow = true
-        elseif turn_runtime.next_turn_last_click == nil then
-          allow = true
-        else
-          local diff = _resolve_timestamp_diff_seconds(ctx, now, turn_runtime.next_turn_last_click)
-          if diff and diff >= next_turn_cooldown then
-            allow = true
-          end
-        end
-        if not allow then
-          return { status = "rejected" }
-        end
-      end
-      turn_runtime.next_turn_locked = true
-      turn_runtime.next_turn_last_click = now
-      turn_runtime.next_turn_lock_phase = phase
-      if action.input_source ~= "timeout" then
-        _reset_afk_tracking(state, action.actor_role_id)
-      end
-      turn_dispatch.step_turn(game)
-      return { status = "applied" }
-    end
-    return { status = "rejected" }
-  elseif action.type == "choice_select" or action.type == "choice_cancel" then
-    local choice = ctx.output_ports.get_pending_choice(state)
-    if not validator.validate_choice_action(game, action, choice) then
-      return { status = "rejected" }
-    end
-    if game then
-      assert(game.dispatch_action ~= nil, "missing game.dispatch_action")
-      game:dispatch_action(action)
-    end
-    _maybe_reset_afk_for_current_player(game, state, action)
-    local pending = game and game.turn and game.turn.pending_choice or nil
-    if not pending or not pending.id or pending.id ~= choice.id then
-      turn_dispatch.clear_choice(state, opts)
-    end
-    return { status = "applied" }
-  elseif action.type == "market_page_prev" or action.type == "market_page_next" or action.type == "market_tab_select" then
-    local turn_choice = game and game.turn and game.turn.pending_choice or nil
-    local choice = turn_choice or ctx.output_ports.get_pending_choice(state)
-    if not choice or choice.kind ~= "market_buy" then
-      logger.warn("[MarketDebug] dispatch_market_nav rejected: pending_choice missing or kind not market_buy")
-      return { status = "rejected" }
-    end
-    if not validator.validate_choice_action(game, action, choice) then
-      logger.warn("[MarketDebug] dispatch_market_nav rejected: validate_choice_action failed")
-      return { status = "rejected" }
-    end
-    if market_service.choice.apply_navigation(game, choice, action) then
-      _maybe_reset_afk_for_current_player(game, state, action)
-      ctx.output_ports.sync_pending_choice(state, choice)
-      return { status = "applied" }
-    end
-    logger.warn("[MarketDebug] dispatch_market_nav rejected: apply_navigation failed")
-    return { status = "rejected" }
+    return _handle_ui_button(game, state, action, opts, ctx)
+  end
+  if action.type == "choice_select" or action.type == "choice_cancel" then
+    return _handle_choice_action(game, state, action, opts, ctx)
+  end
+  if action.type == "market_page_prev" or action.type == "market_page_next" or action.type == "market_tab_select" then
+    return _handle_market_navigation(game, state, action, ctx)
   end
   return { status = "rejected" }
 end

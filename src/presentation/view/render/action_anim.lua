@@ -107,20 +107,16 @@ function action_anim.clear_overlay(state, kind, tile_index)
   handlers.clear_overlay(state, kind, tile_index)
 end
 
-function action_anim.play(state, anim, opts)
-  assert(anim ~= nil, "missing anim")
-  assert(state ~= nil, "missing state")
-  _register_default_handlers()
-  local runtime_bundle = _resolve_runtime_bundle(state, opts)
-  local host_runtime = runtime_bundle.host_runtime
-
+local function _resolve_duration(anim)
   local default_duration = gameplay_rules.action_anim_default_seconds or 1.0
   local duration = anim.duration or durations[anim.kind] or default_duration
   if duration <= 0 then
     duration = default_duration
   end
+  return duration
+end
 
-  local handler = registry.resolve(anim.kind)
+local function _resolve_tip_duration(duration)
   local tip_duration = duration
   if number_utils.is_numeric(duration) and math and math.tofixed then
     local ok, as_fixed = pcall(math.tofixed, duration)
@@ -128,40 +124,60 @@ function action_anim.play(state, anim, opts)
       tip_duration = as_fixed
     end
   end
+  return tip_duration
+end
 
+local function _resolve_tip_text(state, anim)
   local should_show_tip = _should_show_tip(anim)
   local should_debug_log = _should_debug_log(anim)
   local tip_text = nil
   if should_show_tip or should_debug_log then
     tip_text = handlers.build_tip(state, anim)
   end
+  return tip_text, should_show_tip, should_debug_log
+end
 
+local function _emit_tip_text(host_runtime, tip_text, should_show_tip, should_debug_log, tip_duration)
   if should_debug_log and tip_text ~= nil and tip_text ~= "" then
     logger.info_unlimited("[ActionAnim]", tip_text)
   end
-
   if should_show_tip and tip_text ~= nil and tip_text ~= "" then
     if host_runtime and type(host_runtime.show_tips) == "function" then
       host_runtime.show_tips(tip_text, tip_duration)
     end
   end
+end
 
+local function _build_handler_opts(state, runtime_bundle, host_runtime)
+  return {
+    runtime = runtime_bundle.runtime,
+    ui_events = runtime_bundle.ui_events,
+    schedule = host_runtime and host_runtime.schedule or nil,
+    runtime_bundle = runtime_bundle,
+    show_tip = function(text, duration_seconds)
+      if host_runtime and type(host_runtime.show_tips) == "function" then
+        host_runtime.show_tips(text, duration_seconds)
+      end
+    end,
+    hold_seconds = roll_face_hold_seconds,
+    clear_overlay = action_anim.clear_overlay,
+  }
+end
+
+function action_anim.play(state, anim, opts)
+  assert(anim ~= nil, "missing anim")
+  assert(state ~= nil, "missing state")
+  _register_default_handlers()
+  local runtime_bundle = _resolve_runtime_bundle(state, opts)
+  local host_runtime = runtime_bundle.host_runtime
+  local duration = _resolve_duration(anim)
+  local handler = registry.resolve(anim.kind)
+  local tip_duration = _resolve_tip_duration(duration)
+  local tip_text, should_show_tip, should_debug_log = _resolve_tip_text(state, anim)
+  _emit_tip_text(host_runtime, tip_text, should_show_tip, should_debug_log, tip_duration)
   if handler then
-    return handler(state, anim, duration, {
-      runtime = runtime_bundle.runtime,
-      ui_events = runtime_bundle.ui_events,
-      schedule = host_runtime and host_runtime.schedule or nil,
-      runtime_bundle = runtime_bundle,
-      show_tip = function(text, duration_seconds)
-        if host_runtime and type(host_runtime.show_tips) == "function" then
-          host_runtime.show_tips(text, duration_seconds)
-        end
-      end,
-      hold_seconds = roll_face_hold_seconds,
-      clear_overlay = action_anim.clear_overlay,
-    })
+    return handler(state, anim, duration, _build_handler_opts(state, runtime_bundle, host_runtime))
   end
-
   return duration
 end
 

@@ -41,6 +41,8 @@
 - location: `/Users/billyq/Dev/Github/Lua/monopoly/src/game/flow/` 中除 T2 之外的其余模块，以及 `/Users/billyq/Dev/Github/Lua/monopoly/src/game/ai/`；测试优先放在 `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_timeout_and_auto_runner.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_afk.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_intent_dispatch_and_event_feed.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_runtime_context_and_camera_sync.lua`
 - description: 拆 AFK timing、auto-runner、timeout、dispatch、move_followup、AI decision 热点，优先抽成纯 helper，保持 ports 与 state shape 完全不变。凡是 `complexity >= 9` 仍超标的函数，一律做结构性拆分，不接受只补测。
 - validation: 相关 gameplay suites 通过；重新跑 CRAP 后，T3 负责的 `src/game/flow/**/*` 与 `src/game/ai/**/*` 不再出现 `crap > 8`。
+- status: In Progress
+- log: 2026-03-12 已拆分 `dispatch.lua`、`tick_choice_timeout.lua`、`movement/init.lua`、`agent.lua` 的分派/超时/移动/AI 选择路径；`suites.gameplay.gameplay_timeout_and_auto_runner`、`suites.gameplay.gameplay_afk`、`suites.gameplay.gameplay_intent_dispatch_and_event_feed`、`suites.gameplay.gameplay_runtime_context_and_camera_sync` 定向回归通过。
 
 ### T4 Gameplay systems/core cluster
 - depends_on: `[T1]`
@@ -63,6 +65,8 @@
 - location: `/Users/billyq/Dev/Github/Lua/monopoly/src/presentation/view/` 和 `/Users/billyq/Dev/Github/Lua/monopoly/src/presentation/input/`；测试优先放在 `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/presentation/presentation_board_sync.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/presentation/presentation_action_anim_core.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/presentation/presentation_board_feedback.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/presentation/presentation_move_anim.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/presentation/presentation_status3d_and_turn_effects.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/presentation/presentation_choice_routes.lua`、`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/presentation/presentation_target_pick.lua`
 - description: 用现有 host doubles 覆盖 `board_scene.init`、status3d sync、render/overlay/tile 分支、target/pre-confirm 路由。view/input 中所有 `complexity >= 9` 的热点必须拆成 step helpers；简单热点优先靠覆盖率过线。
 - validation: 相关 presentation suites 通过；重新跑 CRAP 后，T6 负责的 view/input 文件不再出现 `crap > 8`。
+- status: In Progress
+- log: 2026-03-12 已继续拆分 `item_slots.lua`、`game_action.lua`、`canvas_coordinator.lua`、`action_anim.lua` 的输入/画布/动画路径；`suites.presentation.presentation_item_slots`、`suites.presentation.presentation_choice_routes`、`suites.presentation.presentation_target_pick`、`suites.presentation.presentation_action_anim_core`、`suites.presentation.presentation_board_feedback` 定向回归通过。
 
 ### T7 Infrastructure/app/core sweep
 - depends_on: `[T1]`

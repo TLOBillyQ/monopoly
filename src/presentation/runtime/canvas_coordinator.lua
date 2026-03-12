@@ -45,19 +45,19 @@ local function _resolve_choice_canvas(ui)
   return nil
 end
 
-function coordinator.switch(ui, target)
-  assert(ui ~= nil, "missing ui")
-  local target_name = target or coordinator.CANVAS_BASE
+local function _has_any_debug_canvas(ui)
   local debug_by_role = ui.debug_visible_by_role
-  local keep_debug = false
   if type(debug_by_role) == "table" then
     for _, enabled in pairs(debug_by_role) do
       if enabled == true then
-        keep_debug = true
-        break
+        return true
       end
     end
   end
+  return false
+end
+
+local function _hide_other_canvases(target_name, keep_debug, send_fn)
   for _, name in ipairs(ui_events.canvas_names) do
     local keep_debug_canvas = name == coordinator.CANVAS_DEBUG and keep_debug
     if name ~= coordinator.CANVAS_BASE
@@ -66,24 +66,35 @@ function coordinator.switch(ui, target)
       and not keep_debug_canvas then
       local hide_event = ui_events.hide[name]
       if hide_event then
-        ui_events.send_to_all(hide_event, {})
+        send_fn(hide_event, {})
       end
     end
   end
+end
+
+local function _show_canvas_set(target_name, send_fn)
   local base_event = ui_events.show[coordinator.CANVAS_BASE]
   if base_event then
-    ui_events.send_to_all(base_event, {})
+    send_fn(base_event, {})
   end
   local always_show_event = ui_events.show[coordinator.CANVAS_ALWAYS_SHOW]
   if always_show_event then
-    ui_events.send_to_all(always_show_event, {})
+    send_fn(always_show_event, {})
   end
   if target_name ~= coordinator.CANVAS_BASE then
     local target_event = ui_events.show[target_name]
     if target_event then
-      ui_events.send_to_all(target_event, {})
+      send_fn(target_event, {})
     end
   end
+end
+
+function coordinator.switch(ui, target)
+  assert(ui ~= nil, "missing ui")
+  local target_name = target or coordinator.CANVAS_BASE
+  local keep_debug = _has_any_debug_canvas(ui)
+  _hide_other_canvases(target_name, keep_debug, ui_events.send_to_all)
+  _show_canvas_set(target_name, ui_events.send_to_all)
 end
 
 function coordinator.switch_for_role(ui, target, role)
@@ -96,32 +107,12 @@ function coordinator.switch_for_role(ui, target, role)
   if type(debug_by_role) == "table" then
     keep_debug = role_id_utils.read(debug_by_role, role_id) == true
   end
-  for _, name in ipairs(ui_events.canvas_names) do
-    local keep_debug_canvas = name == coordinator.CANVAS_DEBUG and keep_debug
-    if name ~= coordinator.CANVAS_BASE
-      and name ~= coordinator.CANVAS_ALWAYS_SHOW
-      and name ~= target_name
-      and not keep_debug_canvas then
-      local hide_event = ui_events.hide[name]
-      if hide_event then
-        ui_events.send_to_role(role, hide_event, {})
-      end
-    end
-  end
-  local base_event = ui_events.show[coordinator.CANVAS_BASE]
-  if base_event then
-    ui_events.send_to_role(role, base_event, {})
-  end
-  local always_show_event = ui_events.show[coordinator.CANVAS_ALWAYS_SHOW]
-  if always_show_event then
-    ui_events.send_to_role(role, always_show_event, {})
-  end
-  if target_name ~= coordinator.CANVAS_BASE then
-    local target_event = ui_events.show[target_name]
-    if target_event then
-      ui_events.send_to_role(role, target_event, {})
-    end
-  end
+  _hide_other_canvases(target_name, keep_debug, function(event_name, payload)
+    ui_events.send_to_role(role, event_name, payload)
+  end)
+  _show_canvas_set(target_name, function(event_name, payload)
+    ui_events.send_to_role(role, event_name, payload)
+  end)
 end
 
 function coordinator.resolve_popup_return_canvas(ui)

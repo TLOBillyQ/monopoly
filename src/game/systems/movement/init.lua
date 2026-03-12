@@ -79,121 +79,188 @@ local function _check_market(board, current, step, steps, abs_steps, facing, bra
   }
 end
 
-function movement.move(game, player, steps, opts)
+local function _resolve_facing_mode(steps, opts)
+  if opts.facing_mode then
+    return opts.facing_mode
+  end
+  if steps < 0 then
+    return "relative_backward"
+  end
+  if opts.direction ~= nil then
+    return "resume_forward"
+  end
+  return "fresh_forward"
+end
+
+local function _resolve_step_fn(board, backward)
+  if backward then
+    return board.step_backward_by_facing
+  end
+  return board.step_forward_by_facing
+end
+
+local function _new_move_state(game, player, steps, opts, abs_steps)
+  local backward = steps < 0
+  return {
+    game = game,
+    player = player,
+    steps = steps,
+    abs_steps = abs_steps,
+    opts = opts,
+    board = game.board,
+    branch_parity = opts.branch_parity or abs_steps,
+    encountered = {},
+    visited = {},
+    pass_start = 0,
+    stopped_on_roadblock = false,
+    market_interrupt = nil,
+    steal_interrupt = nil,
+    current = player.position,
+    backward = backward,
+    persisted_facing = player.status and player.status.move_dir or nil,
+  }
+end
+
+local function _build_move_context(game, player, steps, opts)
   opts = opts or {}
   local abs_steps = steps < 0 and -steps or steps
-  local branch_parity = opts.branch_parity or abs_steps
-  local board = game.board
-  local encountered = {}
-  local visited = {}
-  local pass_start = 0
-  local stopped_on_roadblock = false
-  local market_interrupt = nil
-  local steal_interrupt = nil
-  local current = player.position
-  local start_tile = board:get_tile(current)
-  local step_fn = board.step_forward_by_facing
-  local backward = steps < 0
-  local facing_mode = opts.facing_mode
-  if backward then
-    step_fn = board.step_backward_by_facing
+  local ctx = _new_move_state(game, player, steps, opts, abs_steps)
+  ctx.start_tile = ctx.board:get_tile(player.position)
+  ctx.step_fn = _resolve_step_fn(ctx.board, ctx.backward)
+  ctx.facing = facing_policy.resolve_initial_facing(_resolve_facing_mode(steps, opts), player, opts)
+  return ctx
+end
+
+local function _arm_owned_mine(ctx)
+  local mine = ctx.board.get_mine and ctx.board:get_mine(ctx.current) or nil
+  if type(mine) == "table" and mine.owner_id == ctx.player.id then
+    ctx.board:arm_mine(ctx.current)
   end
-  if not facing_mode then
-    if backward then
-      facing_mode = "relative_backward"
-    elseif opts.direction ~= nil then
-      facing_mode = "resume_forward"
-    else
-      facing_mode = "fresh_forward"
+end
+
+local function _step_move(ctx, step)
+  local next_index, passed, step_dir
+  if ctx.backward then
+    next_index, passed, step_dir = ctx.step_fn(ctx.board, ctx.current, ctx.facing)
+  else
+    next_index, passed, step_dir = ctx.step_fn(ctx.board, ctx.current, ctx.facing, ctx.branch_parity)
+  end
+  ctx.pass_start = ctx.pass_start + passed
+  ctx.facing = step_dir
+  ctx.current = next_index
+  ctx.visited[#ctx.visited + 1] = ctx.current
+  return step
+end
+
+local function _collect_encountered(ctx)
+  local encountered_step = {}
+  for _, pid in ipairs(ctx.game.occupants[ctx.current] or {}) do
+    if pid ~= ctx.player.id then
+      encountered_step[#encountered_step + 1] = pid
+      ctx.encountered[#ctx.encountered + 1] = pid
     end
   end
-  local facing = facing_policy.resolve_initial_facing(facing_mode, player, opts)
-  local persisted_facing = player.status and player.status.move_dir or nil
+  return encountered_step
+end
 
-  local mine = board.get_mine and board:get_mine(current) or nil
-  if type(mine) == "table" and mine.owner_id == player.id then
-    board:arm_mine(current)
+local function _resolve_step_interrupt(ctx, encountered_step, step)
+  if _check_roadblock(ctx.game, ctx.board, ctx.current, ctx.player) then
+    ctx.stopped_on_roadblock = true
+    return true
   end
+  ctx.steal_interrupt = _check_steal(
+    ctx.player,
+    encountered_step,
+    step,
+    ctx.abs_steps,
+    ctx.facing,
+    ctx.branch_parity,
+    ctx.opts
+  )
+  if ctx.steal_interrupt then
+    ctx.steal_interrupt.position = ctx.current
+    return true
+  end
+  ctx.market_interrupt = _check_market(
+    ctx.board,
+    ctx.current,
+    step,
+    ctx.steps,
+    ctx.abs_steps,
+    ctx.facing,
+    ctx.branch_parity,
+    ctx.player,
+    ctx.opts
+  )
+  if ctx.market_interrupt then
+    ctx.market_interrupt.position = ctx.current
+    return true
+  end
+  return false
+end
 
-  for step = 1, abs_steps do
-    local next_index, passed, step_dir
-    if backward then
-      next_index, passed, step_dir = step_fn(board, current, facing)
-    else
-      next_index, passed, step_dir = step_fn(board, current, facing, branch_parity)
-    end
-    pass_start = pass_start + passed
-    facing = step_dir
-    current = next_index
-    visited[#visited + 1] = current
-
-    local others = game.occupants[current] or {}
-    local encountered_step = {}
-    for _, pid in ipairs(others) do
-      if pid ~= player.id then
-        encountered_step[#encountered_step + 1] = pid
-        encountered[#encountered + 1] = pid
-      end
-    end
-
-    if _check_roadblock(game, board, current, player) then
-      stopped_on_roadblock = true
+local function _run_move_steps(ctx)
+  for step = 1, ctx.abs_steps do
+    _step_move(ctx, step)
+    local encountered_step = _collect_encountered(ctx)
+    if _resolve_step_interrupt(ctx, encountered_step, step) then
       break
     end
-
-    steal_interrupt = _check_steal(player, encountered_step, step, abs_steps, facing, branch_parity, opts)
-    if steal_interrupt then
-      steal_interrupt.position = current
-      break
-    end
-
-    market_interrupt = _check_market(board, current, step, steps, abs_steps, facing, branch_parity, player, opts)
-    if market_interrupt then
-      market_interrupt.position = current
-      break
-    end
   end
+end
 
-  if not backward then
-    persisted_facing = facing
+local function _resolve_persisted_facing(ctx)
+  if not ctx.backward then
+    ctx.persisted_facing = ctx.facing
   end
+end
 
-  local landing_tile = board:get_tile(current)
+local function _emit_move_events(ctx, landing_tile)
   _emit_event(monopoly_event.movement.moved, {
-    player = player,
-    from_tile = start_tile,
+    player = ctx.player,
+    from_tile = ctx.start_tile,
     to_tile = landing_tile,
-    steps = steps,
-    text = player.name .. " 从 " .. _tile_label(start_tile) .. " 移动到 " .. _tile_label(landing_tile),
+    steps = ctx.steps,
+    text = ctx.player.name .. " 从 " .. _tile_label(ctx.start_tile) .. " 移动到 " .. _tile_label(landing_tile),
     prompt_text = _build_other_action_prompt_text(),
   })
-
-  if pass_start > 0 then
-    local bonus = pass_start * constants.pass_start_bonus
-    game:add_player_cash(player, bonus)
-    _emit_event(monopoly_event.movement.passed_start, {
-      player = player,
-      count = pass_start,
-      bonus = bonus,
-      text = player.name .. " 经过起点，获得 " .. number_utils.format_integer_part(bonus) .. " 金币",
-      prompt_text = _build_other_action_prompt_text(),
-    })
+  if ctx.pass_start <= 0 then
+    return
   end
+  local bonus = ctx.pass_start * constants.pass_start_bonus
+  ctx.game:add_player_cash(ctx.player, bonus)
+  _emit_event(monopoly_event.movement.passed_start, {
+    player = ctx.player,
+    count = ctx.pass_start,
+    bonus = bonus,
+    text = ctx.player.name .. " 经过起点，获得 " .. number_utils.format_integer_part(bonus) .. " 金币",
+    prompt_text = _build_other_action_prompt_text(),
+  })
+end
 
-  game:update_player_position(player, current)
-  -- move_dir stores the recorded forward heading from the landing tile.
-  game:set_player_status(player, "move_dir", persisted_facing)
-
+local function _build_move_result(ctx, landing_tile)
   return {
-    encountered_players = encountered,
-    passed_start = pass_start,
-    stopped_on_roadblock = stopped_on_roadblock,
-    visited = visited,
+    encountered_players = ctx.encountered,
+    passed_start = ctx.pass_start,
+    stopped_on_roadblock = ctx.stopped_on_roadblock,
+    visited = ctx.visited,
     landing_tile = landing_tile,
-    steps = steps,
-    market_interrupt = market_interrupt,
-    steal_interrupt = steal_interrupt,
+    steps = ctx.steps,
+    market_interrupt = ctx.market_interrupt,
+    steal_interrupt = ctx.steal_interrupt,
   }
+end
+
+function movement.move(game, player, steps, opts)
+  local ctx = _build_move_context(game, player, steps, opts)
+  _arm_owned_mine(ctx)
+  _run_move_steps(ctx)
+  _resolve_persisted_facing(ctx)
+  local landing_tile = ctx.board:get_tile(ctx.current)
+  _emit_move_events(ctx, landing_tile)
+  ctx.game:update_player_position(ctx.player, ctx.current)
+  ctx.game:set_player_status(ctx.player, "move_dir", ctx.persisted_facing)
+  return _build_move_result(ctx, landing_tile)
 end
 
 return movement

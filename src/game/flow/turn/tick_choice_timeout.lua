@@ -50,14 +50,16 @@ local function _ensure_action_actor_role_id(game, choice, action)
   return action
 end
 
-function tick_choice_timeout.step(game, state, dt, opts)
+local function _assert_step_opts(game, opts)
   assert(game ~= nil, "missing game")
   assert(opts ~= nil, "missing opts")
   assert(opts.on_pending_choice ~= nil, "missing opts.on_pending_choice")
   assert(opts.is_choice_active ~= nil, "missing opts.is_choice_active")
   assert(opts.build_action ~= nil, "missing opts.build_action")
   assert(type(opts.dispatch_action_with_close_choice) == "function", "missing opts.dispatch_action_with_close_choice")
+end
 
+local function _resolve_timeout_seconds(game, state, opts)
   local output_ports = _resolve_output_ports(state)
   local timeout = constants.action_timeout_seconds or 0
   if type(opts.get_timeout_seconds) == "function" then
@@ -66,12 +68,10 @@ function tick_choice_timeout.step(game, state, dt, opts)
       timeout = override
     end
   end
-  if timeout <= 0 then
-    output_ports.set_pending_choice_elapsed(state, 0)
-    output_ports.set_pending_choice_id(state, nil)
-    return
-  end
+  return output_ports, timeout
+end
 
+local function _sync_pending_choice_ui(game, state, opts, output_ports)
   local pending = game.turn.pending_choice
   local active_choice = output_ports.get_pending_choice(state)
   if pending and (not active_choice or active_choice.id ~= pending.id) then
@@ -80,9 +80,10 @@ function tick_choice_timeout.step(game, state, dt, opts)
   elseif not pending then
     output_ports.clear_pending_choice(state)
   end
+  return pending, output_ports.get_pending_choice(state)
+end
 
-  local ui_choice_active = opts.is_choice_active(state) == true
-  active_choice = output_ports.get_pending_choice(state)
+local function _resolve_missing_ui_warning(state, game, opts, pending, active_choice, ui_choice_active)
   local active = pending ~= nil or active_choice ~= nil
   local resolved_ui_gate = nil
   if active and active_choice and type(opts.resolve_choice_ui_state) == "function" then
@@ -92,31 +93,33 @@ function tick_choice_timeout.step(game, state, dt, opts)
   if type(resolved_ui_gate) == "table" then
     should_warn_missing_ui = resolved_ui_gate.should_warn == true
   end
-  if should_warn_missing_ui then
-    _log_once(
-      state,
-      "choice_runtime_without_ui_" .. tostring(active_choice.id),
-      "[Eggy]",
-      "runtime pending choice active without ui.choice_active",
-      "choice_id=" .. tostring(active_choice.id),
-      "kind=" .. tostring(active_choice.kind),
-      "owner_role_id=" .. tostring(active_choice.owner_role_id),
-      "route_key=" .. tostring(active_choice.route_key)
-    )
-  end
-  if not active or not active_choice then
-    output_ports.set_pending_choice_elapsed(state, 0)
-    output_ports.set_pending_choice_id(state, nil)
+  return active, should_warn_missing_ui
+end
+
+local function _maybe_warn_missing_ui(state, active_choice, should_warn_missing_ui)
+  if not should_warn_missing_ui then
     return
   end
+  _log_once(
+    state,
+    "choice_runtime_without_ui_" .. tostring(active_choice.id),
+    "[Eggy]",
+    "runtime pending choice active without ui.choice_active",
+    "choice_id=" .. tostring(active_choice.id),
+    "kind=" .. tostring(active_choice.kind),
+    "owner_role_id=" .. tostring(active_choice.owner_role_id),
+    "route_key=" .. tostring(active_choice.route_key)
+  )
+end
 
+local function _sync_elapsed_choice_id(state, output_ports, active_choice)
   if output_ports.get_pending_choice_id(state) ~= active_choice.id then
     output_ports.set_pending_choice_elapsed(state, 0)
     output_ports.set_pending_choice_id(state, active_choice.id)
   end
+end
 
-  local pending_choice_elapsed = output_ports.get_pending_choice_elapsed(state) + dt
-  output_ports.set_pending_choice_elapsed(state, pending_choice_elapsed)
+local function _resolve_min_visible_seconds(game, state, active_choice, opts)
   local min_visible = gameplay_rules.auto_choice_min_visible_seconds or 0
   if type(opts.get_min_visible_seconds) == "function" then
     local override_min_visible = opts.get_min_visible_seconds(game, state, active_choice)
@@ -124,33 +127,62 @@ function tick_choice_timeout.step(game, state, dt, opts)
       min_visible = override_min_visible
     end
   end
+  return min_visible
+end
 
+local function _dispatch_choice_tick_action(game, state, choice, output_ports, opts, payload)
+  local action = opts.build_action(game, state, choice, payload)
+  if not action then
+    return false
+  end
+  _ensure_action_actor_role_id(game, choice, action)
+  output_ports.set_pending_choice_elapsed(state, 0)
+  opts.dispatch_action_with_close_choice(game, state, action)
+  return true
+end
+
+function tick_choice_timeout.step(game, state, dt, opts)
+  _assert_step_opts(game, opts)
+  local output_ports, timeout = _resolve_timeout_seconds(game, state, opts)
+  if timeout <= 0 then
+    output_ports.set_pending_choice_elapsed(state, 0)
+    output_ports.set_pending_choice_id(state, nil)
+    return
+  end
+  local pending, active_choice = _sync_pending_choice_ui(game, state, opts, output_ports)
+  local ui_choice_active = opts.is_choice_active(state) == true
+  local active, should_warn_missing_ui = _resolve_missing_ui_warning(
+    state, game, opts, pending, active_choice, ui_choice_active
+  )
+  _maybe_warn_missing_ui(state, active_choice, should_warn_missing_ui)
+  if not active or not active_choice then
+    output_ports.set_pending_choice_elapsed(state, 0)
+    output_ports.set_pending_choice_id(state, nil)
+    return
+  end
+  _sync_elapsed_choice_id(state, output_ports, active_choice)
+  local pending_choice_elapsed = output_ports.get_pending_choice_elapsed(state) + dt
+  output_ports.set_pending_choice_elapsed(state, pending_choice_elapsed)
+  local min_visible = _resolve_min_visible_seconds(game, state, active_choice, opts)
   if min_visible > 0 and pending_choice_elapsed >= min_visible then
-    local choice = active_choice
-    local action = opts.build_action(game, state, choice, {
+    if _dispatch_choice_tick_action(game, state, active_choice, output_ports, opts, {
       mode = "tick_min_visible",
       elapsed_seconds = pending_choice_elapsed,
       min_visible_seconds = min_visible,
-    })
-    if action then
-      _ensure_action_actor_role_id(game, choice, action)
-      output_ports.set_pending_choice_elapsed(state, 0)
-      opts.dispatch_action_with_close_choice(game, state, action)
+    }) then
       return
     end
   end
-
   if pending_choice_elapsed >= timeout then
-    local choice = active_choice
-    output_ports.set_pending_choice_elapsed(state, 0)
-    local action = opts.build_action(game, state, choice, {
+    local action = opts.build_action(game, state, active_choice, {
       mode = "tick_timeout",
       elapsed_seconds = pending_choice_elapsed,
       timeout_seconds = timeout,
       min_visible_seconds = min_visible,
     })
     assert(action ~= nil, "missing timeout action")
-    _ensure_action_actor_role_id(game, choice, action)
+    _ensure_action_actor_role_id(game, active_choice, action)
+    output_ports.set_pending_choice_elapsed(state, 0)
     opts.dispatch_action_with_close_choice(game, state, action)
   end
 end
