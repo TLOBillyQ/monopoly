@@ -265,6 +265,48 @@ local function _test_synthetic_actor_registry_spawns_from_first_path_tile()
   _assert_eq(created[1].pos.x, 1, "registry should pass queried spawn position to GameAPI")
 end
 
+local function _test_synthetic_actor_registry_reset_destroys_spawned_actor_and_clears_registry()
+  local registry_module = require("src.infrastructure.runtime.synthetic_actor_registry")
+  local destroyed = {}
+  local spawned_unit = {
+    id = "synthetic_unit",
+    start_ai = function() end,
+  }
+  local registry = registry_module.new({
+    LuaAPI = {
+      query_unit = function()
+        return {
+          get_position = function()
+            return { x = 0, y = 0, z = 0 }
+          end,
+        }
+      end,
+    },
+    GameAPI = {
+      create_creature_fixed_scale = function()
+        return spawned_unit
+      end,
+      destroy_unit = function(unit)
+        destroyed[#destroyed + 1] = unit
+      end,
+    },
+  })
+
+  registry.register_specs({
+    { player_id = -3, unit_key = "npc_3", avatar_image_key = 1003 },
+  })
+  registry.spawn_pending({
+    path = { 1 },
+  })
+  assert(registry.resolve_actor(-3) ~= nil, "spawned synthetic actor should be resolvable before reset")
+
+  registry.reset()
+
+  _assert_eq(#destroyed, 1, "registry reset should destroy spawned synthetic actor")
+  _assert_eq(destroyed[1], spawned_unit, "registry reset should destroy the created unit")
+  _assert_eq(registry.resolve_actor(-3), nil, "registry reset should clear actor lookup")
+end
+
 local function _test_ui_bootstrap_required_click_nodes_appends_extras()
   local ui_bootstrap = require("src.app.bootstrap.ui_bootstrap")
   local ui_manager_nodes = {
@@ -529,6 +571,10 @@ return {
     { name = "logger_event_collection_provider_drops_closed_action_log_events", run = _test_logger_event_collection_provider_drops_closed_action_log_events },
     { name = "logger_event_seq_only_tracks_event_feed_changes", run = _test_logger_event_seq_only_tracks_event_feed_changes },
     { name = "synthetic_actor_registry_spawns_from_first_path_tile", run = _test_synthetic_actor_registry_spawns_from_first_path_tile },
+    {
+      name = "synthetic_actor_registry_reset_destroys_spawned_actor_and_clears_registry",
+      run = _test_synthetic_actor_registry_reset_destroys_spawned_actor_and_clears_registry,
+    },
     { name = "ui_bootstrap_required_click_nodes_appends_extras", run = _test_ui_bootstrap_required_click_nodes_appends_extras },
     { name = "runtime_context_vehicle_helper_consume_enter_delay_only_waits_once", run = _test_runtime_context_vehicle_helper_consume_enter_delay_only_waits_once },
     { name = "default_ports_wall_diff_seconds_prefers_game_api_then_falls_back", run = _test_default_ports_wall_diff_seconds_prefers_game_api_then_falls_back },

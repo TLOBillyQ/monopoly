@@ -304,6 +304,53 @@ local function _test_ui_panel_clamps_negative_assets_to_zero()
   _assert_eq(row.total_assets, "总资产: 0", "negative total assets should render as zero")
 end
 
+local function _test_ui_panel_builds_empty_rows_and_counts_land_assets_only()
+  local ui_panel = require("src.presentation.model.panel_builder")
+  local statuses = ui_panel.build_player_statuses({
+    players = {
+      {
+        id = 1,
+        name = "P1",
+        cash = 120,
+        eliminated = false,
+        properties = {
+          [10] = true,
+          [11] = true,
+        },
+      },
+    },
+  }, {
+    board = {
+      get_tile_by_id = function(_, tile_id)
+        if tile_id == 10 then
+          return {
+            type = "land",
+            level = 2,
+            price = 300,
+            upgrade_costs = { 100, 150 },
+          }
+        end
+        return {
+          type = "chance",
+          level = 5,
+          price = 999,
+        }
+      end,
+    },
+  }, 2)
+
+  local row1 = statuses and statuses[1] or nil
+  local row2 = statuses and statuses[2] or nil
+  assert(row1 ~= nil, "first panel row should exist")
+  _assert_eq(row1.land_count, "地块: 2", "panel should count owned properties")
+  _assert_eq(row1.total_assets_value, 670, "panel should only add invested value for land tiles")
+  _assert_eq(row1.total_assets, "总资产: 670", "panel should render total assets with land investment")
+  assert(row2 ~= nil, "second panel row should exist")
+  _assert_eq(row2.name, "", "missing player slots should render empty name")
+  _assert_eq(row2.cash, "", "missing player slots should render empty cash")
+  _assert_eq(row2.total_assets_value, nil, "missing player slots should keep total assets empty")
+end
+
 local function _test_ui_model_player_slot_map_and_choice_owner()
   local ui_model = require("src.presentation.model")
   local g = _new_game()
@@ -864,6 +911,7 @@ return {
   tests = {
     { name = "_test_ui_model_structure", run = _test_ui_model_structure },
     { name = "_test_ui_panel_clamps_negative_assets_to_zero", run = _test_ui_panel_clamps_negative_assets_to_zero },
+    { name = "_test_ui_panel_builds_empty_rows_and_counts_land_assets_only", run = _test_ui_panel_builds_empty_rows_and_counts_land_assets_only },
     { name = "_test_ui_model_player_slot_map_and_choice_owner", run = _test_ui_model_player_slot_map_and_choice_owner },
     { name = "_test_ui_model_player_profile_prefers_role_api_with_fallback", run = _test_ui_model_player_profile_prefers_role_api_with_fallback },
     { name = "_test_ui_model_player_profile_accepts_stringified_avatar", run = _test_ui_model_player_profile_accepts_stringified_avatar },

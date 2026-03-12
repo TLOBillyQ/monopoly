@@ -855,6 +855,175 @@ local function _test_raycast_get_unit_id_uses_lua_api_then_unit_method_fallback(
   assert(lua_api_calls >= 2, "raycast get_unit_id should try LuaAPI before local fallback")
 end
 
+local function _test_ui_event_state_base_screen_active_requires_modal_free_ui()
+  local ui_event_state = require("src.presentation.runtime.event_state")
+  _assert_eq(ui_event_state.is_base_screen_active({ ui = {} }), true,
+    "base screen should be active when no modal flags are set")
+  _assert_eq(ui_event_state.is_base_screen_active({ ui = { market_active = true } }), false,
+    "market screen should disable base screen")
+  _assert_eq(ui_event_state.is_base_screen_active({ ui = { choice_active = true } }), false,
+    "choice screen should disable base screen")
+  _assert_eq(ui_event_state.is_base_screen_active({ ui = { popup_active = true } }), false,
+    "popup should disable base screen")
+  _assert_eq(ui_event_state.is_base_screen_active({}), false,
+    "missing ui state should disable base screen")
+end
+
+local function _test_ui_sync_ports_rebuilds_model_before_reopening_choice()
+  local ui_sync_ports = require("src.presentation.runtime.ports.ui_sync_ports")
+  local runtime_state_local = require("src.core.state_access.runtime_state")
+  local rebuilt = {
+    choice = { id = 42, kind = "remote", route_key = "remote", options = { { id = 1, label = "A" } } },
+    market = { choice_id = 42 },
+  }
+  local state = {
+    ui = ui_view.build_ui_state(),
+    ui_model = {
+      choice = { id = 1 },
+    },
+  }
+  local opened_choice = nil
+  local opened_market = nil
+
+  _with_patches({
+    { target = require("src.presentation.runtime.ports.ui_sync.choice_ui_state"), key = "should_reconcile", value = function()
+      return true
+    end },
+    { target = require("src.presentation.runtime.ports.ui_sync.ui_model_sync"), key = "build_model", value = function()
+      return rebuilt
+    end },
+    { target = require("src.presentation.runtime.controllers.modal_controller"), key = "open_choice_modal", value = function(_, choice, market)
+      opened_choice = choice
+      opened_market = market
+    end },
+  }, function()
+    ui_sync_ports.build({
+      get_ui_state = function(current_state)
+        return current_state.ui
+      end,
+      log_once = function() end,
+      build_log_prefix = function() return "[test]" end,
+    }).on_pending_choice({}, state, { id = 42 })
+  end)
+
+  _assert_eq(runtime_state_local.get_ui_model(state), rebuilt, "ui sync should cache rebuilt model before reopening")
+  _assert_eq(opened_choice, rebuilt.choice, "ui sync should reopen with rebuilt choice view")
+  _assert_eq(opened_market, rebuilt.market, "ui sync should reopen with rebuilt market view")
+  _assert_eq(runtime_state_local.is_ui_dirty(state), true, "ui sync should mark ui dirty when pending choice arrives")
+end
+
+local function _test_debug_view_global_and_role_paths_preserve_state()
+  local debug_view = require("src.presentation.runtime.view.debug")
+  local runtime_ui = require("src.presentation.runtime.ui")
+  local state = {
+    ui = ui_view.build_ui_state(),
+  }
+  local role = {
+    get_roleid = function()
+      return 7
+    end,
+  }
+  local calls = {}
+
+  state.ui.set_debug_log = function(_, text)
+    calls[#calls + 1] = { kind = "log", text = text }
+  end
+  state.ui.set_debug_visible = function(_, visible)
+    calls[#calls + 1] = { kind = "visible", value = visible }
+  end
+
+  _with_patches({
+    { target = runtime_ui, key = "get_client_role", value = function() return nil end },
+  }, function()
+    debug_view.set_debug_log(state, "all")
+    _assert_eq(debug_view.set_debug_visible(state, true), true, "global debug path should succeed without role")
+  end)
+
+  _with_patches({
+    { target = runtime_ui, key = "resolve_role_id", value = function()
+      return 7
+    end },
+  }, function()
+    _assert_eq(debug_view.set_debug_visible_for_role(state, role, false), true,
+      "role debug path should persist visibility by role")
+    debug_view.set_debug_log_for_role(state, role, "role only")
+  end)
+
+  _assert_eq(state.ui.debug_visible, true, "global path should keep ui.debug_visible in sync")
+  _assert_eq(state.ui.debug_visible_by_role[7], false, "role path should persist debug visibility by role")
+  _assert_eq(state.ui.debug_log_enabled_by_role[7], false, "role path should persist debug log flag by role")
+  _assert_eq(calls[1].text, "all", "global log path should pass through text")
+  _assert_eq(calls[#calls].text, "role only", "role log path should pass through text")
+end
+
+local function _test_actor_context_and_host_runtime_fallbacks()
+  local actor_context = require("src.presentation.runtime.actor_context")
+  local host_runtime_local = require("src.presentation.runtime.host")
+  local runtime_ui = require("src.presentation.runtime.ui")
+  local runtime_context = require("src.infrastructure.runtime.context")
+  local listed_role = {
+    get_roleid = function()
+      return 3
+    end,
+  }
+  local fallback_role = {
+    get_roleid = function()
+      return 4
+    end,
+  }
+  local client_role = {
+    get_roleid = function()
+      return 99
+    end,
+  }
+  local handler = function() end
+  local registered = nil
+
+  _with_patches({
+    { target = require("src.presentation.runtime.host.role_resolver"), key = "resolve_roles", value = function()
+      return { listed_role }
+    end },
+    { target = require("src.presentation.runtime.host.role_resolver"), key = "resolve_role_with", value = function(role_id)
+      if role_id == 4 then
+        return fallback_role
+      end
+      return nil
+    end },
+    { target = runtime_ui, key = "get_client_role", value = function()
+      return client_role
+    end },
+    { target = runtime_ui, key = "resolve_role_id", value = function(role)
+      return role and role.get_roleid and role:get_roleid() or nil
+    end },
+    { target = runtime_context, key = "current", value = function()
+      return {
+        env = {
+          LuaAPI = {
+            global_register_custom_event = function(event_name, fn)
+              registered = { name = event_name, handler = fn }
+            end,
+          },
+        },
+      }
+    end },
+  }, function()
+    _assert_eq(actor_context.resolve_role_by_id(nil), client_role, "nil role id should fall back to client role")
+    _assert_eq(actor_context.resolve_role_by_id(3), listed_role, "actor context should prefer resolved role list")
+    local resolved_fallback = actor_context.resolve_role_by_id(4)
+    _assert_eq(resolved_fallback:get_roleid(), 4, "actor context should fall back to resolve_role")
+    local synthetic = actor_context.resolve_role_by_id(5)
+    _assert_eq(type(synthetic.get_roleid), "function", "actor context should synthesize missing roles")
+    _assert_eq(synthetic:get_roleid(), 5, "synthetic role should preserve requested role id")
+    _assert_eq(host_runtime_local.register_custom_event("evt", handler), true,
+      "host runtime should register custom event when LuaAPI exists")
+  end)
+
+  _assert_eq(registered.name, "evt", "host runtime should pass event name through")
+  _assert_eq(registered.handler, handler, "host runtime should pass handler through")
+  _assert_eq(host_runtime_local.register_custom_event(nil, handler), false,
+    "host runtime should reject invalid event name")
+end
+
 
 return {
   name = "presentation_ui.interaction",
@@ -874,5 +1043,9 @@ return {
     { name = "_test_ui_event_router_rejects_next_without_actor_context", run = _test_ui_event_router_rejects_next_without_actor_context },
     { name = "_test_raycast_build_camera_ray_supports_table_vectors", run = _test_raycast_build_camera_ray_supports_table_vectors },
     { name = "_test_raycast_get_unit_id_uses_lua_api_then_unit_method_fallback", run = _test_raycast_get_unit_id_uses_lua_api_then_unit_method_fallback },
+    { name = "_test_ui_event_state_base_screen_active_requires_modal_free_ui", run = _test_ui_event_state_base_screen_active_requires_modal_free_ui },
+    { name = "_test_ui_sync_ports_rebuilds_model_before_reopening_choice", run = _test_ui_sync_ports_rebuilds_model_before_reopening_choice },
+    { name = "_test_debug_view_global_and_role_paths_preserve_state", run = _test_debug_view_global_and_role_paths_preserve_state },
+    { name = "_test_actor_context_and_host_runtime_fallbacks", run = _test_actor_context_and_host_runtime_fallbacks },
   },
 }

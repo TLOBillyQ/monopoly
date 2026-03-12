@@ -11,6 +11,9 @@ local canvas = require("src.presentation.runtime.canvas_coordinator")
 local ui_events = require("src.presentation.runtime.events")
 local base_nodes = require("src.presentation.schema.canvas.base.nodes")
 local always_show_nodes = require("src.presentation.schema.canvas.always_show.nodes")
+local remote_choice_intents = require("src.presentation.runtime.canvas_specs.remote_choice.intents")
+local target_choice_intents = require("src.presentation.runtime.canvas_specs.target_choice.intents")
+local market_intents = require("src.presentation.runtime.canvas_specs.market.intents")
 
 local function _find_spec(specs, node_name)
   for _, spec in ipairs(specs or {}) do
@@ -104,6 +107,100 @@ local function _test_enable_action_log_toggle_touch_fallback_queries_targets_and
   assert(query_calls >= 1, "fallback path should query action-log target nodes")
   _assert_eq(good_node.disabled, false, "fallback should enable nodes returned by runtime.query_nodes")
   _assert_eq(manager.client_role, nil, "fallback should restore client role to nil")
+end
+
+local function _test_register_node_click_handles_query_failure_and_missing_nodes()
+  logger.clear()
+  local shown = {}
+  local registered = {}
+  local listeners = {}
+
+  _with_patches({
+    { target = runtime, key = "query_nodes", value = function(name)
+      if name == "missing_query" then
+        error("boom")
+      end
+      return {}
+    end },
+    { target = require("src.presentation.runtime.host"), key = "show_tips", value = function(text)
+      shown[#shown + 1] = text
+    end },
+  }, function()
+    bindings.register_node_click({}, "missing_query", function() end, registered, listeners)
+    bindings.register_node_click({}, "missing_nodes", function() end, registered, listeners)
+  end)
+
+  _assert_eq(#shown, 2, "register_node_click should show tip for query failures and missing nodes")
+  _assert_eq(registered.missing_query, nil, "query failure should not mark node as registered")
+  _assert_eq(registered.missing_nodes, nil, "missing nodes should not mark node as registered")
+  _assert_eq(#listeners, 0, "failed registrations should not create listeners")
+end
+
+local function _test_canvas_intents_cover_remote_target_and_market_paths()
+  logger.clear()
+  local state = {
+    ui = {},
+    ui_model = {
+      choice = {
+        id = 9,
+        options = {
+          { id = 21, label = "A" },
+        },
+      },
+      market = {
+        choice_id = 18,
+        options = {
+          { id = 33, label = "购买" },
+        },
+      },
+    },
+    target_choice_runtime = {
+      locked_option_id = 21,
+    },
+  }
+  _bind_ui_runtime(state)
+  state.ui_runtime.pending_choice_selected_option_id = 21
+
+  local remote_specs = remote_choice_intents.build(state)
+  local target_specs = target_choice_intents.build(state)
+  local market_item_specs = market_intents.build_items(state)
+  local market_control_specs = market_intents.build_controls(state)
+
+  _assert_eq(remote_specs[1].build_intent().type, "choice_select", "remote choice should build select intent")
+  _assert_eq(remote_specs[1].build_intent().option_id, 21, "remote choice should resolve option by index")
+  _assert_eq(target_specs[1].build_intent().type, "choice_select", "target confirm should emit choice select for locked option")
+  _assert_eq(target_specs[2].build_intent().type, "target_unlock", "target cancel should unlock locked target")
+  _assert_eq(target_specs[3].build_intent().type, "target_lock", "target slot should build target lock intent")
+  state.ui_runtime.pending_choice_selected_option_id = 33
+  _assert_eq(market_item_specs[1].build_intent().type, "market_select", "market item should build selection intent")
+  _assert_eq(market_control_specs[1].build_intent().type, "market_confirm", "market confirm should use selected option")
+  _assert_eq(market_control_specs[2].build_intent().type, "choice_cancel", "market cancel should map to choice cancel")
+  _assert_eq(market_control_specs[8].build_intent(), nil, "vehicle tab should stay disabled")
+end
+
+local function _test_canvas_intents_return_nil_when_choice_or_market_missing()
+  logger.clear()
+  local state = {
+    ui = {},
+    ui_model = {},
+    target_choice_runtime = {
+      locked_option_id = nil,
+    },
+  }
+  _bind_ui_runtime(state)
+
+  local remote_specs = remote_choice_intents.build(state)
+  local target_specs = target_choice_intents.build(state)
+  local market_item_specs = market_intents.build_items(state)
+  local market_control_specs = market_intents.build_controls(state)
+
+  _assert_eq(remote_specs[1].build_intent(), nil, "remote choice should bail out without current choice")
+  _assert_eq(target_specs[1].build_intent(), nil, "target confirm should bail out without locked option")
+  _assert_eq(target_specs[2].build_intent(), nil, "target cancel should bail out without locked option")
+  _assert_eq(market_item_specs[1].build_intent(), nil, "market item intent should bail out without market")
+  _assert_eq(market_control_specs[1].build_intent(), nil, "market confirm should bail out without market")
+  _assert_eq(market_control_specs[4].build_intent(), nil, "market paging should bail out without market")
+  _assert_eq(market_control_specs[6].build_intent(), nil, "market tab select should bail out without market")
 end
 
 local function _test_canvas_registry_builds_canvas_first_route_specs()
@@ -210,6 +307,18 @@ return {
     {
       name = "enable_action_log_toggle_touch_fallback_queries_targets_and_tolerates_bad_nodes",
       run = _test_enable_action_log_toggle_touch_fallback_queries_targets_and_tolerates_bad_nodes,
+    },
+    {
+      name = "register_node_click_handles_query_failure_and_missing_nodes",
+      run = _test_register_node_click_handles_query_failure_and_missing_nodes,
+    },
+    {
+      name = "canvas_intents_cover_remote_target_and_market_paths",
+      run = _test_canvas_intents_cover_remote_target_and_market_paths,
+    },
+    {
+      name = "canvas_intents_return_nil_when_choice_or_market_missing",
+      run = _test_canvas_intents_return_nil_when_choice_or_market_missing,
     },
     {
       name = "canvas_registry_builds_canvas_first_route_specs",

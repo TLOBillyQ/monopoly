@@ -240,6 +240,30 @@ local function _test_runtime_ports_resolve_role_prefers_synthetic_actor_registry
   _reset_runtime_contract_state()
 end
 
+local function _test_runtime_ports_resolve_role_falls_back_to_game_api_get_role()
+  _reset_runtime_contract_state()
+  local requested_player_id = nil
+  local fallback_role = { id = 42 }
+  local ctx = runtime_context.new({
+    GameAPI = {
+      get_role = function(player_id)
+        requested_player_id = player_id
+        if player_id == 42 then
+          return fallback_role
+        end
+        return nil
+      end,
+    },
+  })
+  ctx.roles = {}
+  _set_current_runtime_context(ctx)
+
+  local resolved = runtime_ports.resolve_role(42)
+  _assert_eq(requested_player_id, 42, "resolve_role should query GameAPI.get_role when context roles miss")
+  _assert_eq(resolved, fallback_role, "resolve_role should fall back to GameAPI.get_role result")
+  _reset_runtime_contract_state()
+end
+
 return {
   name = "runtime_ports_contract",
   tests = {
@@ -278,6 +302,10 @@ return {
     {
       name = "runtime_ports_resolve_role_prefers_synthetic_actor_registry",
       run = _test_runtime_ports_resolve_role_prefers_synthetic_actor_registry,
+    },
+    {
+      name = "runtime_ports_resolve_role_falls_back_to_game_api_get_role",
+      run = _test_runtime_ports_resolve_role_falls_back_to_game_api_get_role,
     },
   },
 }
