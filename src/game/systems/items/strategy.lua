@@ -58,25 +58,41 @@ function strategy.timing_allowed(phase, timing, allow_missing_phase)
   return allowed[timing] == true
 end
 
-function strategy.can_offer_in_phase(game, player, item_id, phase, auto_play)
-  local cfg = inventory.cfg(item_id)
-  if not cfg then
+local function _is_manual_pre_action_mine(item_id, phase, timing)
+  return item_id == item_ids.mine and phase == "pre_action" and timing == "manual"
+end
+
+local function _resolve_roadblock_candidates(game, player)
+  if auto_play_port.is_auto_player(game, player) then
+    return roadblock.auto_candidates(game, player, 3)
+  end
+  return roadblock.ui_candidates(game, player, 3)
+end
+
+local function _can_offer_target_item(game, player, item_id)
+  local candidates = strategy.target_candidates(game, player, item_id)
+  return type(candidates) == "table" and #candidates > 0
+end
+
+local function _can_offer_rent_response(game, player, item_id)
+  local tile_ref = game.board and game.board:get_tile(player.position) or nil
+  if not (tile_ref and tile_ref.type == "land") then
     return false
   end
-  if item_id == item_ids.mine and phase == "pre_action" and cfg.timing == "manual" then
+  local owner, st = property_query.resolve_rent_owner(game, tile_ref)
+  if not owner or owner.id == player.id then
+    return false
+  end
+  if item_id ~= item_ids.strong then
     return true
   end
-  if not strategy.timing_allowed(phase, cfg.timing, false) then
-    return false
-  end
+  local total_value = property_value.total_invested(tile_ref, st and st.level or 0)
+  return game:player_balance(player, "金币") >= total_value
+end
 
+local function _can_offer_special_item(game, player, item_id)
   if item_id == item_ids.roadblock then
-    local candidates = nil
-    if auto_play_port.is_auto_player(game, player) then
-      candidates = roadblock.auto_candidates(game, player, 3)
-    else
-      candidates = roadblock.ui_candidates(game, player, 3)
-    end
+    local candidates = _resolve_roadblock_candidates(game, player)
     return type(candidates) == "table" and #candidates > 0
   end
 
@@ -85,26 +101,31 @@ function strategy.can_offer_in_phase(game, player, item_id, phase, auto_play)
   end
 
   if target_item_set[item_id] then
-    local candidates = strategy.target_candidates(game, player, item_id)
-    return type(candidates) == "table" and #candidates > 0
+    return _can_offer_target_item(game, player, item_id)
   end
 
   if item_id == item_ids.strong or item_id == item_ids.free_rent then
-    local tile_ref = game.board and game.board:get_tile(player.position) or nil
-    if not (tile_ref and tile_ref.type == "land") then
-      return false
-    end
-    local owner, st = property_query.resolve_rent_owner(game, tile_ref)
-    if not owner or owner.id == player.id then
-      return false
-    end
-    if item_id == item_ids.strong then
-      local total_value = property_value.total_invested(tile_ref, st and st.level or 0)
-      return game:player_balance(player, "金币") >= total_value
-    end
-    return true
+    return _can_offer_rent_response(game, player, item_id)
   end
 
+  return nil
+end
+
+function strategy.can_offer_in_phase(game, player, item_id, phase, auto_play)
+  local cfg = inventory.cfg(item_id)
+  if not cfg then
+    return false
+  end
+  if _is_manual_pre_action_mine(item_id, phase, cfg.timing) then
+    return true
+  end
+  if not strategy.timing_allowed(phase, cfg.timing, false) then
+    return false
+  end
+  local special_offer = _can_offer_special_item(game, player, item_id)
+  if special_offer ~= nil then
+    return special_offer
+  end
   return true
 end
 

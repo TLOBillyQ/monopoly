@@ -13,8 +13,11 @@ local choice_resolver = support.choice_resolver
 local gameplay_rules = require("src.core.config.gameplay_rules")
 local land_choice_specs = require("src.game.systems.land.choice_specs")
 local item_phase = require("src.game.systems.items.phase")
+local item_strategy = require("src.game.systems.items.strategy")
 local roadblock = require("src.game.systems.items.roadblock")
 local steal = require("src.game.systems.items.steal")
+local status_ops = require("src.game.core.player.state_ops.status_ops")
+local cash_handlers = require("src.game.systems.chance.handlers.cash_handlers")
 local runtime_event_bridge = require("src.infrastructure.runtime.event_bridge")
 local monopoly_event = require("src.core.events.monopoly_events")
 local move_followup = require("src.game.flow.turn.move_followup")
@@ -301,6 +304,207 @@ local function _test_item_phase_exposes_mine_in_pre_action()
   assert(found ~= nil, "pre_action choice should include mine")
   _assert_eq(found.confirm_title, "行动前", "item_phase option should expose confirm title from use-case output")
   _assert_eq(found.confirm_body, "将使用：地雷卡", "item_phase option should expose confirm body from use-case output")
+end
+
+local function _test_item_strategy_can_offer_in_phase_for_rent_cards_and_roadblock()
+  local g = _new_game()
+  local p = g:current_player()
+  local idx = 3
+  local tile_ref = g.board:get_tile(idx)
+  g:update_player_position(p, idx)
+  p.inventory:add({ id = gameplay_rules.item_ids.strong })
+  p.inventory:add({ id = gameplay_rules.item_ids.free_rent })
+  p.inventory:add({ id = gameplay_rules.item_ids.roadblock })
+
+  g:set_tile_owner(tile_ref, p.id)
+  g:set_player_property(p, tile_ref.id, true)
+  assert(
+    item_strategy.can_offer_in_phase(g, p, gameplay_rules.item_ids.strong, "post_action") == false,
+    "strong card should not be offered on owned land"
+  )
+  assert(
+    item_strategy.can_offer_in_phase(g, p, gameplay_rules.item_ids.free_rent, "post_action") == false,
+    "free_rent card should not be offered on owned land"
+  )
+  assert(
+    item_strategy.can_offer_in_phase(g, p, gameplay_rules.item_ids.roadblock, "post_action") == true,
+    "roadblock should be offered when UI candidates exist"
+  )
+
+  g:set_tile_owner(tile_ref, g.players[2].id)
+  g:set_player_cash(p, 100000)
+  assert(
+    item_strategy.can_offer_in_phase(g, p, gameplay_rules.item_ids.strong, "post_action") == true,
+    "strong card should be offered on rival land when player can afford it"
+  )
+  assert(
+    item_strategy.can_offer_in_phase(g, p, gameplay_rules.item_ids.free_rent, "post_action") == true,
+    "free_rent card should be offered on rival land"
+  )
+end
+
+local function _test_item_phase_run_wait_action_anim_patches_move_followup_args()
+  local g = _new_game()
+  local player = g:current_player()
+  player.auto = true
+  g.turn.action_anim = { seq = 7, kind = "item_use" }
+  local original_auto_pre_action = item_strategy.auto_pre_action
+  item_strategy.auto_pre_action = function()
+    return {
+      after_action_anim = {
+        next_state = "move_followup",
+        next_args = {
+          mode = "resume_turn_move",
+        },
+      },
+    }
+  end
+
+  local ok, res = pcall(function()
+    return item_phase.run({ game = g }, "pre_action", {
+      player = player,
+      next_state = "roll",
+      next_args = { player = player },
+    })
+  end)
+  item_strategy.auto_pre_action = original_auto_pre_action
+
+  assert(ok, res)
+  assert(type(res) == "table" and res.waiting == true, "auto item phase should wait for action anim when item queued anim")
+  assert(res.wait_action_anim == true, "auto item phase should route through wait_action_anim")
+  _assert_eq(res.next_state, "move_followup", "auto item phase should preserve move_followup next state")
+  _assert_eq(res.next_args.mode, "resume_turn_move", "move_followup mode should be preserved")
+  _assert_eq(res.next_args.next_state, "roll", "move_followup args should receive default next state")
+  _assert_eq(res.next_args.next_args.player, player, "move_followup args should receive default next args")
+end
+
+local function _test_status_ops_set_player_seat_emits_exit_and_enter()
+  local g = _new_game()
+  local player = g.players[1]
+  player.seat_id = 4001
+  local exited = {}
+  local entered = {}
+  local vehicle = {
+    needs_enter_wait_by_player = {},
+    emit_vehicle_exit = function(player_id)
+      exited[#exited + 1] = player_id
+    end,
+    emit_vehicle_enter = function(player_id, seat_id)
+      entered[#entered + 1] = { player_id = player_id, seat_id = seat_id }
+    end,
+  }
+
+  support.with_patches({
+    { target = gameplay_rules, key = "vehicle_enabled", value = true },
+    { key = "vehicle_helper", value = vehicle },
+  }, function()
+    status_ops.set_player_seat(g, player, 4002)
+  end)
+
+  _assert_eq(player.seat_id, 4002, "set_player_seat should update seat_id")
+  _assert_eq(#exited, 1, "set_player_seat should emit exit when leaving old seat")
+  _assert_eq(exited[1], player.id, "set_player_seat exit should target player")
+  _assert_eq(#entered, 1, "set_player_seat should emit enter for new seat")
+  _assert_eq(entered[1].seat_id, 4002, "set_player_seat should pass new seat to vehicle helper")
+  _assert_eq(vehicle.needs_enter_wait_by_player[player.id], true, "set_player_seat should mark enter wait for player")
+end
+
+local function _test_board_advance_tracks_branch_and_wrap()
+  local board = require("src.game.systems.board.init"):new({
+    tile_lookup = {
+      [1] = { id = 1, name = "A" },
+      [2] = { id = 2, name = "B" },
+      [3] = { id = 3, name = "C" },
+      [4] = { id = 4, name = "D" },
+    },
+    path = {
+      { id = 1, name = "A" },
+      { id = 2, name = "B" },
+      { id = 3, name = "C" },
+      { id = 4, name = "D" },
+    },
+    branches = {
+      [1] = { odd = 3, even = 2 },
+    },
+    map = {},
+    overlays = {
+      roadblocks = {},
+      mines = {},
+    },
+  })
+  local current = 1
+  local branch = board.branches[current]
+  assert(branch and branch.odd and branch.even, "selected branch entry should expose odd/even targets")
+
+  local odd_index = select(1, board:advance(current, 1, 1))
+  local even_index = select(1, board:advance(current, 1, 2))
+  _assert_eq(odd_index, branch.odd, "advance should use odd branch when parity is odd")
+  _assert_eq(even_index, branch.even, "advance should use even branch when parity is even")
+
+  local last = board:length()
+  local wrapped_index, passed_start = board:advance(last, 2)
+  _assert_eq(wrapped_index, 2, "advance should wrap around board length")
+  _assert_eq(passed_start, 1, "advance should count passing start when wrapping")
+end
+
+local function _test_collect_from_others_caps_fee_and_rich_bonus()
+  local handlers = {}
+  local events = {}
+  local anims = {}
+  local common = {
+    dependencies = function()
+      return {
+        monopoly_event = {
+          chance = { applied = "chance_applied" },
+        },
+        number_utils = {
+          format_integer_part = function(value)
+            return tostring(value)
+          end,
+        },
+      }
+    end,
+    queue_action_anim = function(_, anim)
+      anims[#anims + 1] = anim
+    end,
+    emit_event = function(_, payload)
+      events[#events + 1] = payload
+    end,
+    apply_cash_change = function(_, target_player, delta)
+      target_player.cash = target_player.cash + delta
+    end,
+  }
+  cash_handlers.register(handlers, common)
+
+  local game = {
+    players = {
+      { id = 1, name = "P1", cash = 1000, eliminated = false },
+      { id = 2, name = "P2", cash = 50, eliminated = false },
+      { id = 3, name = "P3", cash = 300, eliminated = false },
+    },
+    player_has_deity = function(_, player, deity)
+      return deity == "rich" and player.id == 1
+    end,
+    player_is_in_mountain = function(_, player)
+      return player.id == 3
+    end,
+    player_balance = function(_, player)
+      return player.cash
+    end,
+  }
+
+  handlers.collect_from_others(game, game.players[1], {
+    amount = 100,
+    effect = "collect_from_others",
+  })
+
+  _assert_eq(game.players[1].cash, 1250, "collector should receive doubled fee from each payer up to their cash")
+  _assert_eq(game.players[2].cash, 0, "payer cash should floor at zero")
+  _assert_eq(game.players[3].cash, 100, "second payer should still contribute when collector is not in mountain")
+  _assert_eq(#anims, 2, "cash receive animation should queue once per successful collection")
+  _assert_eq(anims[1].amount, 50, "first receive animation should use capped collected amount")
+  _assert_eq(anims[2].amount, 200, "second receive animation should include rich bonus amount")
+  _assert_eq(#events, 1, "collect_from_others should emit one summary event")
 end
 
 local function _test_roadblock_manual_choice_shows_seven_tiles_with_tile_names_only()
@@ -722,6 +926,26 @@ return {
     { name = "item_executor_fallback_item_use_anim", run = _test_item_executor_fallback_item_use_anim },
     { name = "item_executor_keeps_specific_anim_without_fallback", run = _test_item_executor_keeps_specific_anim_without_fallback },
     { name = "item_phase_exposes_mine_in_pre_action", run = _test_item_phase_exposes_mine_in_pre_action },
+    {
+      name = "item_strategy_can_offer_in_phase_for_rent_cards_and_roadblock",
+      run = _test_item_strategy_can_offer_in_phase_for_rent_cards_and_roadblock,
+    },
+    {
+      name = "item_phase_run_wait_action_anim_patches_move_followup_args",
+      run = _test_item_phase_run_wait_action_anim_patches_move_followup_args,
+    },
+    {
+      name = "status_ops_set_player_seat_emits_exit_and_enter",
+      run = _test_status_ops_set_player_seat_emits_exit_and_enter,
+    },
+    {
+      name = "board_advance_tracks_branch_and_wrap",
+      run = _test_board_advance_tracks_branch_and_wrap,
+    },
+    {
+      name = "collect_from_others_caps_fee_and_rich_bonus",
+      run = _test_collect_from_others_caps_fee_and_rich_bonus,
+    },
     {
       name = "roadblock_manual_choice_shows_seven_tiles_with_tile_names_only",
       run = _test_roadblock_manual_choice_shows_seven_tiles_with_tile_names_only,
