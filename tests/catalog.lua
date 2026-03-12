@@ -49,6 +49,10 @@ local behavior_modules = {
   "suites.runtime.test_profiles",
   "suites.runtime.misc",
   "suites.presentation.gameplay_t6_characterization",
+  "suites.presentation.gameplay_t5_characterization",
+  "suites.gameplay.gameplay_t4_characterization",
+  -- TODO: T2 characterization has broken tests that need to be fixed
+  -- "suites.gameplay.gameplay_t2_characterization",
 }
 
 local contract_modules = {

@@ -56,9 +56,7 @@ function tick_timeout.step_choice_timeout(game, state, dt, opts)
   })
 end
 
-function tick_timeout.step_modal_timeout(state, dt, opts)
-  local ports = state and state.gameplay_loop_ports or nil
-  local output_ports = ports and ports.output or output_state_adapter
+local function _resolve_modal_timeout(opts, state)
   local timeout = constants.action_timeout_seconds or 0
   if opts and opts.get_timeout_seconds then
     local override = opts.get_timeout_seconds(state)
@@ -66,27 +64,56 @@ function tick_timeout.step_modal_timeout(state, dt, opts)
       timeout = override
     end
   end
-  if timeout <= 0 then
-    output_ports.sync_modal_timer(state, {})
-    return
-  end
+  return timeout
+end
+
+local function _resolve_modal_output_ports(state)
+  local ports = state and state.gameplay_loop_ports or nil
+  return ports and ports.output or output_state_adapter
+end
+
+local function _assert_modal_opts(opts)
   assert(opts ~= nil, "missing opts")
   assert(opts.is_active ~= nil, "missing opts.is_active")
   assert(opts.on_timeout ~= nil, "missing opts.on_timeout")
   assert(opts.get_ref ~= nil, "missing opts.get_ref")
-  if not opts.is_active(state) then
-    output_ports.sync_modal_timer(state, {})
-    return
-  end
+end
+
+local function _resolve_modal_ref(output_ports, state, opts)
   local ref = assert(opts.get_ref(state), "missing modal ref")
   if output_ports.get_modal_ref(state) ~= ref then
     output_ports.sync_modal_timer(state, { ref = ref, elapsed_seconds = 0 })
   end
+  return ref
+end
+
+local function _update_modal_elapsed(output_ports, state, ref, dt)
   local next_elapsed = output_ports.get_modal_elapsed(state) + (dt or 0)
   output_ports.sync_modal_timer(state, { ref = ref, elapsed_seconds = next_elapsed })
+  return next_elapsed
+end
+
+local function _handle_modal_timeout(output_ports, state, ref, on_timeout)
+  output_ports.sync_modal_timer(state, { ref = ref, elapsed_seconds = 0 })
+  on_timeout(state)
+end
+
+function tick_timeout.step_modal_timeout(state, dt, opts)
+  local output_ports = _resolve_modal_output_ports(state)
+  local timeout = _resolve_modal_timeout(opts, state)
+  if timeout <= 0 then
+    output_ports.sync_modal_timer(state, {})
+    return
+  end
+  _assert_modal_opts(opts)
+  if not opts.is_active(state) then
+    output_ports.sync_modal_timer(state, {})
+    return
+  end
+  local ref = _resolve_modal_ref(output_ports, state, opts)
+  local next_elapsed = _update_modal_elapsed(output_ports, state, ref, dt)
   if next_elapsed >= timeout then
-    output_ports.sync_modal_timer(state, { ref = ref, elapsed_seconds = 0 })
-    opts.on_timeout(state)
+    _handle_modal_timeout(output_ports, state, ref, opts.on_timeout)
   end
 end
 

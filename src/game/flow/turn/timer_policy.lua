@@ -46,23 +46,12 @@ function turn_timer_policy.is_action_button_wait_active(game, state, ports)
   return true
 end
 
-function turn_timer_policy.is_afk_trackable_wait(game, state, ports)
-  if not (game and state and ports) then
-    return false
-  end
-  if turn_timer_policy.is_action_button_wait_active(game, state, ports) then
-    return true
-  end
-
+local function _is_wait_choice_phase(game)
   local phase = game.turn and game.turn.phase or nil
-  if phase ~= "wait_choice" then
-    return false
-  end
+  return phase == "wait_choice"
+end
 
-  local ui_sync_ports = ports.ui_sync or nil
-  if not ui_sync_ports then
-    return false
-  end
+local function _is_choice_or_market_active(ui_sync_ports, state)
   if ui_sync_ports.is_choice_active and ui_sync_ports.is_choice_active(state) then
     return true
   end
@@ -70,6 +59,60 @@ function turn_timer_policy.is_afk_trackable_wait(game, state, ports)
     return true
   end
   return false
+end
+
+function turn_timer_policy.is_afk_trackable_wait(game, state, ports)
+  if not (game and state and ports) then
+    return false
+  end
+  if turn_timer_policy.is_action_button_wait_active(game, state, ports) then
+    return true
+  end
+  if not _is_wait_choice_phase(game) then
+    return false
+  end
+  local ui_sync_ports = ports.ui_sync or nil
+  if not ui_sync_ports then
+    return false
+  end
+  return _is_choice_or_market_active(ui_sync_ports, state)
+end
+
+local function _resolve_timeout_seconds()
+  return constants.action_timeout_seconds or 0
+end
+
+local function _should_activate_button(timeout)
+  return timeout > 0
+end
+
+local function _resolve_current_player(game)
+  local current_index = game and game.turn and game.turn.current_player_index or nil
+  return current_index and game.players and game.players[current_index] or nil
+end
+
+local function _dispatch_timeout(ctx, current_player)
+  if ctx.dispatch_next then
+    ctx.dispatch_next(current_player.id, "timeout")
+  end
+end
+
+local function _update_elapsed_timer(state, dt, timeout, game, ctx)
+  local elapsed = _resolve_elapsed(state.action_button_elapsed, dt)
+  if elapsed < timeout then
+    state.action_button_elapsed = elapsed
+    return true
+  end
+  return false
+end
+
+local function _handle_timeout_elapsed(state, game, ctx)
+  state.action_button_elapsed = 0
+  local current_player = _resolve_current_player(game)
+  if not current_player then
+    return
+  end
+  _dispatch_timeout(ctx, current_player)
 end
 
 function turn_timer_policy.update_action_button_timer(ctx)
@@ -85,28 +128,18 @@ function turn_timer_policy.update_action_button_timer(ctx)
     return
   end
 
-  local timeout = constants.action_timeout_seconds or 0
-  if timeout <= 0 then
+  local timeout = _resolve_timeout_seconds()
+  if not _should_activate_button(timeout) then
     _reset_action_button(state)
     return
   end
   state.action_button_active = true
 
-  local elapsed = _resolve_elapsed(state.action_button_elapsed, ctx.dt)
-  if elapsed < timeout then
-    state.action_button_elapsed = elapsed
+  if _update_elapsed_timer(state, ctx.dt, timeout, game, ctx) then
     return
   end
 
-  state.action_button_elapsed = 0
-  local current_index = game and game.turn and game.turn.current_player_index or nil
-  local current_player = current_index and game.players and game.players[current_index] or nil
-  if not current_player then
-    return
-  end
-  if ctx.dispatch_next then
-    ctx.dispatch_next(current_player.id, "timeout")
-  end
+  _handle_timeout_elapsed(state, game, ctx)
 end
 
 function turn_timer_policy.update_detained_wait_timer(game, state, dt, step_turn)

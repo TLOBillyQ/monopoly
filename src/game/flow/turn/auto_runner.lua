@@ -92,42 +92,72 @@ local function _sync_wait_signature(self, env)
   end
 end
 
-function auto_runner:next_action(dt, env)
+local function _should_skip_action(self, env)
   if not self.enabled then
-    return nil
+    return true
   end
   env = env or {}
   if env.game_finished then
-    return nil
+    return true
   end
   if env.current_player_auto ~= true then
+    return true
+  end
+  return false
+end
+
+local function _should_wait_interval(self, interval)
+  if self.timer < interval then
+    self.waiting_for_interval = true
+    return true
+  end
+  return false
+end
+
+local function _reset_timer_state(self)
+  self.timer = 0
+  self.waiting_for_interval = false
+end
+
+local function _resolve_modal_action(env)
+  if not env.modal_active then
+    return nil
+  end
+  if env.modal_buttons and #env.modal_buttons > 0 then
+    return { type = "modal_button", index = 1 }
+  end
+  return { type = "modal_confirm" }
+end
+
+local function _resolve_next_button_action(env)
+  local actor_role_id = env.current_player_id or env.current_player_index
+  return { type = "ui_button", id = "next", actor_role_id = actor_role_id }
+end
+
+function auto_runner:next_action(dt, env)
+  if _should_skip_action(self, env) then
     return nil
   end
 
   _sync_wait_signature(self, env)
   local interval = _resolve_interval_seconds(self, env)
   self.timer = self.timer + dt
-  if self.timer < interval then
-    self.waiting_for_interval = true
+  if _should_wait_interval(self, interval) then
     return nil
   end
-  self.timer = 0
-  self.waiting_for_interval = false
+  _reset_timer_state(self)
 
   local choice_action = _resolve_choice_action(env)
   if choice_action then
     return choice_action
   end
 
-  if env.modal_active then
-    if env.modal_buttons and #env.modal_buttons > 0 then
-      return { type = "modal_button", index = 1 }
-    end
-    return { type = "modal_confirm" }
+  local modal_action = _resolve_modal_action(env)
+  if modal_action then
+    return modal_action
   end
 
-  local actor_role_id = env.current_player_id or env.current_player_index
-  return { type = "ui_button", id = "next", actor_role_id = actor_role_id }
+  return _resolve_next_button_action(env)
 end
 
 return auto_runner

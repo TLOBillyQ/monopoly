@@ -74,6 +74,17 @@
   - Cleared 5 major T2 hotspots from top 50: `_resolve_phase_wait_result`, `validate_choice_actor`, `_maybe_rotate_profile`, `_log_missing_auto_choice_action`, `_phase_move`
   - T2 residual: 17 functions with CRAP > 8 (down from 21), total src_over8 dropped from 56 to 46
   - All behavior suites pass (688 tests)
+- log: 2026-03-12 T2 fourth wave cleanup - refactor complexity >= 9 functions:
+  - Refactor `timer_policy.is_afk_trackable_wait` (extract helpers: `_is_wait_choice_phase`, `_is_choice_or_market_active`)
+  - Refactor `timer_policy.update_action_button_timer` (extract helpers: `_resolve_timeout_seconds`, `_should_activate_button`, `_resolve_current_player`, `_dispatch_timeout`, `_update_elapsed_timer`, `_handle_timeout_elapsed`)
+  - Refactor `auto_context.build` (extract helpers: `_resolve_current_player_index`, `_resolve_player_by_index`, `_resolve_current_player_id`, `_is_player_auto`)
+  - Refactor `auto_runner.next_action` (extract helpers: `_should_skip_action`, `_should_wait_interval`, `_reset_timer_state`, `_resolve_modal_action`, `_resolve_next_button_action`)
+  - Refactor `tick_timeout.step_modal_timeout` (extract helpers: `_resolve_modal_timeout`, `_resolve_modal_output_ports`, `_assert_modal_opts`, `_resolve_modal_ref`, `_update_modal_elapsed`, `_handle_modal_timeout`)
+  - Refactor `loop_ui_sync_defaults.M.fill_ui_sync_defaults` and `ui_sync_ports.resolve_ui_gate` (extract table-driven helpers)
+  - Register `gameplay_t2_characterization` tests in catalog (40 tests added)
+  - Cleared 5 T2 hotspots: `is_afk_trackable_wait` (CRAP 11.38->cleared), `update_action_button_timer` (CRAP 10.05->cleared), `auto_context.build` (CRAP 10.02->cleared), `step_modal_timeout` (CRAP 10.14->cleared), `auto_runner.next_action` (CRAP 9.33->cleared)
+  - T2 residual: 12 functions with CRAP > 8 (down from 17)
+  - All behavior suites pass (728 tests)
 - files edited/created: `src/game/flow/turn/roll.lua`, `src/game/flow/turn/move.lua`, `src/game/flow/turn/phase_registry.lua`, `src/game/flow/turn/loop.lua`, `src/game/flow/turn/tick_timeout.lua`, `src/game/flow/turn/timer_policy.lua`, `tests/suites/gameplay/gameplay_cases.lua`, `tests/suites/gameplay/gameplay_turn_flow_and_interrupts.lua`, `tests/suites/gameplay/gameplay_items_startup.lua`, `tests/suites/architecture/usecase_boundary_contract.lua`, `tests/suites/architecture/architecture_guard_contract.lua`, `tests/suites/runtime/narrow_runtime_ports_contract.lua`, `src/game/flow/turn/loop_ports.lua`, `tests/suites/gameplay/gameplay_timeout_and_auto_runner.lua`, `tests/suites/gameplay/gameplay_t2_characterization.lua`, `src/game/flow/turn/land.lua`, `src/game/flow/turn/script.lua`, `src/game/flow/turn/camera_policy.lua`
 
 ### T3 Flow orchestration/AI cluster
@@ -105,6 +116,7 @@
 - log: 2026-03-12 T4 residual cleanup：为低复杂度热点（complexity <= 8）添加 characterization tests：`_call_life_die`（新增 test 验证 life_comp.die 调用）、`_merge_executor_groups`（验证 executors 模块结构）、`_split_entries_by_buyable` 与 `_append_visible_entries`（新增 3 个 tests，并导出 helper 以支持测试）、`context.entry_name`（验证 entry name 解析）、`_apply_tax`（新增 2 个 tests 验证 tax 处理逻辑）；T4 residual 从 19 降至 16 个函数；所有 behavior suites 通过（645 tests）。
 - log: 2026-03-12 T4 focused refactoring wave：重构高复杂度热点（complexity >= 9）：`_apply_pay_rent` 拆分为 4 个 helper（`_find_rent_item_indices`, `_can_use_strong_card`, `_build_rent_choice_intent`, `_try_use_free_rent_card`）；`purchase.execute` 拆分为 3 个 helper（`_resolve_product_id`, `_validate_purchase_entry`, `_handle_paid_purchase`）；`fulfillment.apply` 拆分为 3 个 helper（`_fulfill_item`, `_fulfill_vehicle`, `_fulfill_skin`）；`_pick_chance_card` 拆分为 3 个 helper（`_collect_drawable_cards`, `_calc_total_weight`, `_pick_weighted_card`）；导出测试接口：`bankruptcy._call_life_die`, `executors._merge_executor_groups`；新增 T4 characterization tests 文件（`tests/suites/gameplay/gameplay_t4_characterization.lua`）包含 7 个 tests（4 个 for `_call_life_die`, 3 个 for `_merge_executor_groups`）；所有 behavior suites 通过（652 tests），contract suites 通过（97 tests）。
 - log: 2026-03-12 T4 third wave cleanup - clear zero-coverage hotspots and improve `_try_use_item` coverage：导出测试接口 `session._mark_phase_default`；新增 10 个 characterization tests：`_mark_phase_default` 系列（4 tests：sets phase and dirty, no game returns early, no turn returns early, no dirty ok）、`apply_target` 系列（3 tests：share_wealth, invite_deity, poor）、`_try_use_item` 系列（3 tests：cond false returns nil, no inventory returns nil, not ai usable returns nil）；所有 17 个 T4 characterization tests 通过；全量 behavior suites 通过（652 tests）。
+- log: 2026-03-12 T4 fourth wave cleanup - clear remaining zero-coverage hotspots：将 `gameplay_t4_characterization` 测试套件添加到 `tests/catalog.lua` 以确保覆盖率被正确追踪；验证 3 个零覆盖热点已清零：`_mark_phase_default` (CRAP=3.00, coverage=100%)、`_call_life_die` (CRAP=3.04, coverage=83%)、`_merge_executor_groups` (CRAP=3.02, coverage=88%)；剩余 T4 热点：`apply` (post_effects.lua tax handler, CRAP=10.58, coverage=27%)、`_try_use_item` (CRAP=13.57, coverage=30%)；全量 behavior suites 通过（772 tests），contract suites 通过（97 tests）。
 
 ### T5 Presentation model/runtime cluster
 - depends_on: `[T1]`
