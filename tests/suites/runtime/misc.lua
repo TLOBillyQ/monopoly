@@ -558,6 +558,283 @@ local function _test_landing_visual_hold_defer_dirty_initializes_bucket_and_merg
     "defer_dirty should merge inventory_ids into initialized deferred bucket")
 end
 
+local function _test_logger_flush_event_buffer_replays_buffered_events()
+  logger.clear()
+  local buffer = { entries = {} }
+  logger.push_event_buffer(buffer)
+
+  local ok, err = pcall(function()
+    logger.event("first buffered event")
+    logger.event("second buffered event")
+
+    local text_before = logger.get_text_by_level("event")
+    _assert_eq(text_before, "", "buffered events should not appear in feed before flush")
+
+    local flushed = logger.flush_event_buffer(buffer)
+    _assert_eq(flushed, true, "flush should return true when buffer has entries")
+
+    local text_after = logger.get_text_by_level("event")
+    assert(string.find(text_after, "first buffered event", 1, true) ~= nil, "flush should replay first buffered event")
+    assert(string.find(text_after, "second buffered event", 1, true) ~= nil, "flush should replay second buffered event")
+  end)
+
+  logger.pop_event_buffer(buffer)
+  logger.clear()
+  if not ok then
+    error(err)
+  end
+end
+
+local function _test_logger_flush_event_buffer_skips_when_buffer_not_active()
+  logger.clear()
+  local buffer = { entries = {} }
+
+  local ok, err = pcall(function()
+    logger.event("event before buffer")
+    local flushed = logger.flush_event_buffer(buffer)
+    _assert_eq(flushed, false, "flush should return false when buffer is not active")
+  end)
+
+  logger.clear()
+  if not ok then
+    error(err)
+  end
+end
+
+local function _test_logger_flush_event_buffer_no_tip_replay()
+  logger.clear()
+  local shown = {}
+  logger.set_tip_presenter(function(text, duration)
+    shown[#shown + 1] = { text = text, duration = duration }
+  end)
+
+  local buffer = { entries = {} }
+  logger.push_event_buffer(buffer)
+
+  local ok, err = pcall(function()
+    logger.event_no_tips("no tip event")
+    logger.flush_event_buffer(buffer)
+
+    local text = logger.get_text_by_level("event")
+    assert(string.find(text, "no tip event", 1, true) ~= nil, "flush should replay no_tip event to feed, text=" .. tostring(text))
+    _assert_eq(#shown, 0, "flush should not show tip for no_tip events")
+  end)
+
+  logger.pop_event_buffer(buffer)
+  logger.set_tip_presenter(nil)
+  logger.clear()
+  if not ok then
+    error(err)
+  end
+end
+
+local function _test_logger_flush_event_buffer_empty_buffer_returns_false()
+  logger.clear()
+  local buffer = { entries = {} }
+  logger.push_event_buffer(buffer)
+
+  local ok, err = pcall(function()
+    local flushed = logger.flush_event_buffer(buffer)
+    _assert_eq(flushed, false, "flush should return false for empty buffer")
+  end)
+
+  logger.clear()
+  if not ok then
+    error(err)
+  end
+end
+
+local function _test_logger_flush_event_buffer_invalid_buffer_returns_false()
+  logger.clear()
+
+  local ok, err = pcall(function()
+    _assert_eq(logger.flush_event_buffer(nil), false, "flush should return false for nil buffer")
+    _assert_eq(logger.flush_event_buffer("string"), false, "flush should return false for string buffer")
+    _assert_eq(logger.flush_event_buffer(123), false, "flush should return false for number buffer")
+  end)
+
+  logger.clear()
+  if not ok then
+    error(err)
+  end
+end
+
+local function _test_runtime_context_first_role_from_game_api_with_valid_roles()
+  local role = { id = 5, get_roleid = function() return 5 end }
+  local ctx = runtime_context.new({
+    GameAPI = {
+      get_all_valid_roles = function()
+        return { role }
+      end,
+      get_role = function(id)
+        if id == 5 then return role end
+        return nil
+      end,
+    },
+    LuaAPI = {
+      call_delay_time = function() end,
+      global_register_custom_event = function() end,
+      global_register_trigger_event = function() end,
+      unit_register_custom_event = function() end,
+      unit_register_trigger_event = function() end,
+      global_send_custom_event = function() end,
+    },
+  })
+
+  runtime_context.install_environment(ctx)
+  runtime_context.install_runtime_helpers(ctx)
+
+  local helper = ctx.vehicle_helper
+  local resolved = helper.resolve_any_role()
+  _assert_eq(resolved, role, "resolve_any_role should return first role from GameAPI")
+end
+
+local function _test_runtime_context_first_role_from_game_api_empty_list_fallback()
+  local role = { id = 3, get_roleid = function() return 3 end }
+  local ctx = runtime_context.new({
+    GameAPI = {
+      get_all_valid_roles = function()
+        return {}
+      end,
+      get_role = function(id)
+        if id == 3 then return role end
+        return nil
+      end,
+    },
+    LuaAPI = {
+      call_delay_time = function() end,
+      global_register_custom_event = function() end,
+      global_register_trigger_event = function() end,
+      unit_register_custom_event = function() end,
+      unit_register_trigger_event = function() end,
+      global_send_custom_event = function() end,
+    },
+  })
+
+  runtime_context.install_environment(ctx)
+  runtime_context.install_runtime_helpers(ctx)
+
+  local helper = ctx.vehicle_helper
+  local resolved = helper.resolve_any_role()
+  _assert_eq(resolved, role, "resolve_any_role should fall back to role range when GameAPI returns empty list")
+end
+
+local function _test_runtime_context_first_role_from_game_api_nil_game_api()
+  local ctx = runtime_context.new({
+    LuaAPI = {
+      call_delay_time = function() end,
+      global_register_custom_event = function() end,
+      global_register_trigger_event = function() end,
+      unit_register_custom_event = function() end,
+      unit_register_trigger_event = function() end,
+      global_send_custom_event = function() end,
+    },
+  })
+
+  runtime_context.install_environment(ctx)
+  runtime_context.install_runtime_helpers(ctx)
+
+  local helper = ctx.vehicle_helper
+  local resolved = helper.resolve_any_role()
+  _assert_eq(resolved, nil, "resolve_any_role should return nil when GameAPI is nil and no ctx.roles set")
+end
+
+local function _test_runtime_context_first_role_from_game_api_pcall_failure()
+  local role = { id = 5, get_roleid = function() return 5 end }
+  local ctx = runtime_context.new({
+    GameAPI = {
+      get_all_valid_roles = function()
+        return { role }
+      end,
+      get_role = function(id)
+        if id == 5 then return role end
+        return nil
+      end,
+    },
+    LuaAPI = {
+      call_delay_time = function() end,
+      global_register_custom_event = function() end,
+      global_register_trigger_event = function() end,
+      unit_register_custom_event = function() end,
+      unit_register_trigger_event = function() end,
+      global_send_custom_event = function() end,
+    },
+  })
+
+  runtime_context.install_environment(ctx)
+  runtime_context.install_runtime_helpers(ctx)
+
+  local helper = ctx.vehicle_helper
+  local resolved = helper.resolve_any_role()
+  _assert_eq(resolved, role, "resolve_any_role should return role from GameAPI when pcall succeeds")
+end
+
+local function _test_landing_visual_hold_release_flushes_event_buffer_and_replays_deferred()
+  logger.clear()
+  local state = {}
+  local game = {
+    dirty = {},
+    turn = {
+      landing_visual_hold_active = false,
+      landing_visual_release_pending = false,
+    },
+  }
+
+  local replayed_visual_syncs = {}
+  local replayed_runtime_events = {}
+  local replayed_popups = {}
+
+  landing_visual_hold.start(game)
+  landing_visual_hold.mark_release_pending(game)
+
+  local hold = landing_visual_hold.sync_state_from_game(state, game)
+  logger.push_event_buffer(hold)
+  logger.event("deferred event during hold")
+
+  landing_visual_hold.defer_board_visual_sync(state, { sync_data = true }, function(payload)
+    replayed_visual_syncs[#replayed_visual_syncs + 1] = payload
+  end)
+
+  landing_visual_hold.defer_runtime_event(state, "test_event", { event_data = true }, function(payload)
+    replayed_runtime_events[#replayed_runtime_events + 1] = payload
+  end)
+
+  landing_visual_hold.defer_popup(state, { popup_data = true }, { opt = 1 }, function(payload, opts)
+    replayed_popups[#replayed_popups + 1] = { payload = payload, opts = opts }
+  end)
+
+  local released = landing_visual_hold.release(state, game)
+
+  _assert_eq(released, true, "release should return true when release was pending")
+  _assert_eq(#replayed_visual_syncs, 1, "release should replay deferred visual syncs")
+  _assert_eq(replayed_visual_syncs[1].sync_data, true, "visual sync payload should be preserved")
+  _assert_eq(#replayed_runtime_events, 1, "release should replay deferred runtime events")
+  _assert_eq(replayed_runtime_events[1].event_data, true, "runtime event payload should be preserved")
+  _assert_eq(#replayed_popups, 1, "release should replay deferred popups")
+  _assert_eq(replayed_popups[1].payload.popup_data, true, "popup payload should be preserved")
+
+  local text = logger.get_text_by_level("event")
+  assert(string.find(text, "deferred event during hold", 1, true) ~= nil, "release should flush event buffer")
+
+  logger.clear()
+end
+
+local function _test_landing_visual_hold_release_skips_when_not_pending()
+  local state = {}
+  local game = {
+    dirty = {},
+    turn = {
+      landing_visual_hold_active = false,
+      landing_visual_release_pending = false,
+    },
+  }
+
+  landing_visual_hold.start(game)
+
+  local released = landing_visual_hold.release(state, game)
+  _assert_eq(released, false, "release should return false when release_pending is false")
+end
+
 return {
   name = "misc",
   tests = {
@@ -580,5 +857,16 @@ return {
     { name = "default_ports_wall_diff_seconds_prefers_game_api_then_falls_back", run = _test_default_ports_wall_diff_seconds_prefers_game_api_then_falls_back },
     { name = "ui_bootstrap_spawns_startup_synthetic_actors", run = _test_ui_bootstrap_spawns_startup_synthetic_actors },
     { name = "landing_visual_hold_defer_dirty_initializes_bucket_and_merges_inventory", run = _test_landing_visual_hold_defer_dirty_initializes_bucket_and_merges_inventory },
+    { name = "logger_flush_event_buffer_replays_buffered_events", run = _test_logger_flush_event_buffer_replays_buffered_events },
+    { name = "logger_flush_event_buffer_skips_when_buffer_not_active", run = _test_logger_flush_event_buffer_skips_when_buffer_not_active },
+    { name = "logger_flush_event_buffer_no_tip_replay", run = _test_logger_flush_event_buffer_no_tip_replay },
+    { name = "logger_flush_event_buffer_empty_buffer_returns_false", run = _test_logger_flush_event_buffer_empty_buffer_returns_false },
+    { name = "logger_flush_event_buffer_invalid_buffer_returns_false", run = _test_logger_flush_event_buffer_invalid_buffer_returns_false },
+    { name = "runtime_context_first_role_from_game_api_with_valid_roles", run = _test_runtime_context_first_role_from_game_api_with_valid_roles },
+    { name = "runtime_context_first_role_from_game_api_empty_list_fallback", run = _test_runtime_context_first_role_from_game_api_empty_list_fallback },
+    { name = "runtime_context_first_role_from_game_api_nil_game_api", run = _test_runtime_context_first_role_from_game_api_nil_game_api },
+    { name = "runtime_context_first_role_from_game_api_pcall_failure", run = _test_runtime_context_first_role_from_game_api_pcall_failure },
+    { name = "landing_visual_hold_release_flushes_event_buffer_and_replays_deferred", run = _test_landing_visual_hold_release_flushes_event_buffer_and_replays_deferred },
+    { name = "landing_visual_hold_release_skips_when_not_pending", run = _test_landing_visual_hold_release_skips_when_not_pending },
   },
 }

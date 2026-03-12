@@ -546,7 +546,7 @@ function logger.flush_event_buffer(buffer)
     if entry.no_tip == true then
       _push("event", { no_tip = true }, entry.text or "")
     else
-      _push("event", entry.text or "")
+      _push("event", nil, entry.text or "")
     end
   end
   return true

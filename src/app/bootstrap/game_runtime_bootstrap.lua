@@ -111,20 +111,66 @@ local function _try_raw_diff_reversed(now, previous)
   return nil, false, raw_reverse
 end
 
+local function _try_resolve_wall_diff(wall_diff_seconds, now, previous)
+  local diff_result, diff_ok, diff_raw = _try_wall_diff(wall_diff_seconds, now, previous)
+  if diff_ok then
+    return diff_result, "wall:diff", diff_raw
+  end
+  local reverse_result, reverse_ok, reverse_raw = _try_wall_diff_reversed(wall_diff_seconds, now, previous)
+  if reverse_ok then
+    return reverse_result, "wall:diff_reversed", reverse_raw
+  end
+  return nil, nil, diff_raw
+end
+
+local function _try_resolve_raw_diff(now, previous)
+  local raw_result, raw_ok, raw_val = _try_raw_diff(now, previous)
+  if raw_ok then
+    return raw_result, "wall:raw_diff", raw_val
+  end
+  local raw_rev_result, raw_rev_ok, raw_rev_val = _try_raw_diff_reversed(now, previous)
+  if raw_rev_ok then
+    return raw_rev_result, "wall:raw_diff_reversed", raw_rev_val
+  end
+  return nil, nil, nil
+end
+
+local function _resolve_tick_fallback(state, fallback_seconds, reason)
+  return fallback_seconds, reason, state and state.tick_wall_now_seconds or nil, nil, nil
+end
+
+local function _try_resolve_tick_diff(wall_diff_seconds, now, previous, fallback_seconds)
+  if _is_integer_like_time(now) and _is_integer_like_time(previous) then
+    return fallback_seconds, "fallback:coarse_wall_clock", now, previous, nil
+  end
+
+  local wall_result, wall_tag, wall_raw = _try_resolve_wall_diff(wall_diff_seconds, now, previous)
+  if wall_result ~= nil then
+    return wall_result, wall_tag, now, previous, wall_raw
+  end
+
+  local raw_result, raw_tag, raw_val = _try_resolve_raw_diff(now, previous)
+  if raw_result ~= nil then
+    return raw_result, raw_tag, now, previous, raw_val
+  end
+
+  return fallback_seconds, "fallback:diff_invalid", now, previous, wall_raw
+end
+
 local function _resolve_tick_seconds(state, fallback_seconds)
   if not state then
-    return fallback_seconds, "fallback:no_state", nil, nil, nil
+    return _resolve_tick_fallback(nil, fallback_seconds, "fallback:no_state")
   end
 
   local clock = _resolve_clock_from_state(state)
   local wall_now_seconds, wall_diff_seconds = _resolve_wall_functions(clock)
   if not wall_now_seconds or not wall_diff_seconds then
-    return fallback_seconds, "fallback:no_clock", nil, nil, nil
+    return _resolve_tick_fallback(state, fallback_seconds, "fallback:no_clock")
   end
 
   local now, ok_now = _try_get_now(wall_now_seconds)
   if not ok_now then
-    return fallback_seconds, "fallback:now_invalid", nil, nil, nil
+    return _resolve_tick_fallback(state, fallback_seconds, "fallback:now_invalid")
   end
 
   local previous = _update_tick_state(state, now)
@@ -132,31 +178,7 @@ local function _resolve_tick_seconds(state, fallback_seconds)
     return fallback_seconds, "fallback:no_previous", now, nil, nil
   end
 
-  if _is_integer_like_time(now) and _is_integer_like_time(previous) then
-    return fallback_seconds, "fallback:coarse_wall_clock", now, previous, nil
-  end
-
-  local diff_result, diff_ok, diff_raw = _try_wall_diff(wall_diff_seconds, now, previous)
-  if diff_ok then
-    return diff_result, "wall:diff", now, previous, diff_raw
-  end
-
-  local reverse_result, reverse_ok, reverse_raw = _try_wall_diff_reversed(wall_diff_seconds, now, previous)
-  if reverse_ok then
-    return reverse_result, "wall:diff_reversed", now, previous, reverse_raw
-  end
-
-  local raw_result, raw_ok, raw_val = _try_raw_diff(now, previous)
-  if raw_ok then
-    return raw_result, "wall:raw_diff", now, previous, raw_val
-  end
-
-  local raw_rev_result, raw_rev_ok, raw_rev_val = _try_raw_diff_reversed(now, previous)
-  if raw_rev_ok then
-    return raw_rev_result, "wall:raw_diff_reversed", now, previous, raw_rev_val
-  end
-
-  return fallback_seconds, "fallback:diff_invalid", now, previous, diff_raw
+  return _try_resolve_tick_diff(wall_diff_seconds, now, previous, fallback_seconds)
 end
 
 local function _start_tick_loop(state, current_game_ref, interval)
