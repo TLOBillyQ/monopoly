@@ -48,6 +48,7 @@ local behavior_modules = {
   "suites.presentation.presentation_player_colors",
   "suites.runtime.test_profiles",
   "suites.runtime.misc",
+  "suites.presentation.gameplay_t6_characterization",
 }
 
 local contract_modules = {
