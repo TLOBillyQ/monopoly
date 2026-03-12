@@ -231,4 +231,7 @@ function gameplay_loop_ports.resolve(override_ports)
   end
   return _build_resolved_ports(nil)
 end
+
+gameplay_loop_ports._build_noop_group = _build_noop_group
+
 return gameplay_loop_ports

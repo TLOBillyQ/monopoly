@@ -3314,6 +3314,34 @@ local function _test_gameplay_loop_ports_rejects_legacy_flat_override()
     "legacy flat gameplay_loop_ports override should explain grouped-port requirement")
 end
 
+local function _test_build_noop_group_characterization()
+  local loop_ports = require("src.game.flow.turn.loop_ports")
+
+  local group1 = loop_ports._build_noop_group({ "key1", "key2", "key3" }, nil)
+  assert(type(group1) == "table", "should return a table")
+  assert(type(group1.key1) == "function", "key1 should be a function")
+  assert(type(group1.key2) == "function", "key2 should be a function")
+  assert(type(group1.key3) == "function", "key3 should be a function")
+  group1.key1()
+  group1.key2()
+  group1.key3()
+
+  local override_fn = function() return "overridden" end
+  local group2 = loop_ports._build_noop_group({ "key1", "key2" }, { key2 = override_fn })
+  assert(type(group2.key1) == "function", "key1 should be a function")
+  assert(group2.key2() == "overridden", "key2 should use override function")
+
+  local group3 = loop_ports._build_noop_group({}, nil)
+  assert(type(group3) == "table", "should return empty table for empty keys")
+  local count = 0
+  for _ in pairs(group3) do count = count + 1 end
+  assert(count == 0, "group should have no keys when keys is empty")
+
+  local group4 = loop_ports._build_noop_group({ "key1" }, nil)
+  assert(type(group4.key1) == "function", "key1 should be a function even with nil overrides")
+  group4.key1()
+end
+
 local function _test_turn_decision_wait_choice_no_longer_reads_ui_port_state()
   local g = _new_game()
   local auto_player = g.players[g.turn.current_player_index]
@@ -4308,19 +4336,20 @@ local function _test_tick_timeout_resolve_choice_ui_state_returns_route_key()
   assert(result.should_warn == false, "should not warn by default")
 end
 
-local function _test_roll_dice_with_override_uses_provided_values()
-  local results, total = roll._roll_dice(3, { 4, 5, 6 }, nil)
-  assert(#results == 3, "should return 3 results")
-  assert(results[1] == 4 and results[2] == 5 and results[3] == 6, "should use override values")
-  assert(total == 15, "total should sum override values")
-end
-
-local function _test_roll_dice_with_partial_override_uses_last_for_remaining()
-  local results, total = roll._roll_dice(4, { 2, 3 }, { next_int = function() return 6 end })
-  assert(#results == 4, "should return 4 results")
-  assert(results[1] == 2 and results[2] == 3, "should use provided overrides")
-  assert(results[3] == 3 and results[4] == 3, "should repeat last override value")
-end
+local _roll_dice_tests = {
+  function()
+    local results, total = roll._roll_dice(3, { 4, 5, 6 }, nil)
+    assert(#results == 3, "should return 3 results")
+    assert(results[1] == 4 and results[2] == 5 and results[3] == 6, "should use override values")
+    assert(total == 15, "total should sum override values")
+  end,
+  function()
+    local results, total = roll._roll_dice(4, { 2, 3 }, { next_int = function() return 6 end })
+    assert(#results == 4, "should return 4 results")
+    assert(results[1] == 2 and results[2] == 3, "should use provided overrides")
+    assert(results[3] == 3 and results[4] == 3, "should repeat last override value")
+  end,
+}
 
 return {
   _test_mandatory_payment_causes_bankruptcy = _test_mandatory_payment_causes_bankruptcy,
@@ -4443,6 +4472,7 @@ return {
     _test_item_slot_data_prefers_role_specific_items_and_falls_back,
   _test_gameplay_loop_ports_rejects_legacy_flat_override =
     _test_gameplay_loop_ports_rejects_legacy_flat_override,
+  _test_build_noop_group_characterization = _test_build_noop_group_characterization,
   _test_turn_decision_wait_choice_no_longer_reads_ui_port_state = _test_turn_decision_wait_choice_no_longer_reads_ui_port_state,
   _test_popup_countdown_uses_effective_modal_timeout = _test_popup_countdown_uses_effective_modal_timeout,
   _test_market_countdown_uses_double_action_timeout = _test_market_countdown_uses_double_action_timeout,
@@ -4459,6 +4489,6 @@ return {
   _test_choice_auto_policy_tick_timeout_fallback_when_not_cancelable = _test_choice_auto_policy_tick_timeout_fallback_when_not_cancelable,
   _test_choice_auto_policy_generic_mode_uses_fallback_flag = _test_choice_auto_policy_generic_mode_uses_fallback_flag,
   _test_tick_timeout_resolve_choice_ui_state_returns_route_key = _test_tick_timeout_resolve_choice_ui_state_returns_route_key,
-  _test_roll_dice_with_override_uses_provided_values = _test_roll_dice_with_override_uses_provided_values,
-  _test_roll_dice_with_partial_override_uses_last_for_remaining = _test_roll_dice_with_partial_override_uses_last_for_remaining,
+  _test_roll_dice_with_override_uses_provided_values = _roll_dice_tests[1],
+  _test_roll_dice_with_partial_override_uses_last_for_remaining = _roll_dice_tests[2],
 }

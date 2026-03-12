@@ -42,5 +42,6 @@ return {
     _case("_test_turn_timer_policy_inter_turn_wait_steps_when_timeout_elapsed"),
     _case("_test_item_slot_data_prefers_role_specific_items_and_falls_back"),
     _case("_test_gameplay_loop_ports_rejects_legacy_flat_override"),
+    _case("_test_build_noop_group_characterization"),
   },
 }

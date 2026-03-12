@@ -157,49 +157,87 @@ local function _sync_afk_view(turn_runtime, actor_role_id, tracking_active)
   turn_runtime.afk_elapsed_seconds = _read_afk_elapsed(turn_runtime, normalized)
   turn_runtime.afk_tracking_active = tracking_active == true
 end
-function gameplay_loop.step_afk_auto_host(game, state, dt)
-  assert(game ~= nil, "missing game")
+
+local function _is_afk_enabled()
   local timeout = gameplay_rules.afk_auto_host_seconds or 0
-  local turn_runtime = runtime_state.ensure_turn_runtime(state)
-  if not timeout or timeout <= 0 then
-    _sync_afk_view(turn_runtime, nil, false)
-    return false
-  end
-  local current_player = game.turn and game.players and game.players[game.turn.current_player_index] or nil
-  if not current_player or current_player.auto == true then
-    _sync_afk_view(turn_runtime, nil, false)
-    return false
-  end
-  local ports = _resolve_ports(state)
-  local ui_sync_ports = ports.ui_sync
-  if not turn_timer_policy.is_afk_trackable_wait(game, state, ports) then
-    _sync_afk_view(turn_runtime, current_player.id, false)
-    return false
-  end
-  local elapsed_seconds = _read_afk_elapsed(turn_runtime, current_player.id) + (dt or 0)
-  _write_afk_elapsed(turn_runtime, current_player.id, elapsed_seconds)
-  turn_runtime.afk_actor_role_id = role_id_utils.normalize(current_player.id)
+  return timeout and timeout > 0
+end
+
+local function _resolve_current_player(game)
+  return game.turn and game.players and game.players[game.turn.current_player_index] or nil
+end
+
+local function _is_player_afk_eligible(player)
+  return player and player.auto ~= true
+end
+
+local function _is_afk_trackable(game, state, ports)
+  return turn_timer_policy.is_afk_trackable_wait(game, state, ports)
+end
+
+local function _update_afk_tracking(turn_runtime, player, dt)
+  local elapsed_seconds = _read_afk_elapsed(turn_runtime, player.id) + (dt or 0)
+  _write_afk_elapsed(turn_runtime, player.id, elapsed_seconds)
+  turn_runtime.afk_actor_role_id = role_id_utils.normalize(player.id)
   turn_runtime.afk_elapsed_seconds = elapsed_seconds
   turn_runtime.afk_tracking_active = true
-  if elapsed_seconds < timeout then
-    return false
-  end
-  current_player.auto = true
+  return elapsed_seconds
+end
+
+local function _mark_players_dirty(game)
   if game.mark_players_dirty then
     game:mark_players_dirty()
   else
     game.dirty.any = true
     game.dirty.players = true
   end
-  ports.output.invalidate_ui(state)
-  local auto_runner = state.auto_runner
+end
+
+local function _reset_auto_runner_timer(auto_runner)
   if auto_runner and auto_runner.reset_timer then
     auto_runner:reset_timer()
   end
-  _reset_afk_tracking(state, current_player.id)
-  logger.event_no_tips(tostring(current_player.name) .. " AFK 超时，进入托管")
-  logger.warn("afk auto host enabled:", tostring(current_player.name), "role_id=" .. tostring(current_player.id))
+end
+
+local function _log_afk_auto_host_enabled(player)
+  logger.event_no_tips(tostring(player.name) .. " AFK 超时，进入托管")
+  logger.warn("afk auto host enabled:", tostring(player.name), "role_id=" .. tostring(player.id))
+end
+
+local function _enable_afk_auto_host(game, state, player, timeout)
+  player.auto = true
+  _mark_players_dirty(game)
+  local ports = _resolve_ports(state)
+  ports.output.invalidate_ui(state)
+  _reset_auto_runner_timer(state.auto_runner)
+  _reset_afk_tracking(state, player.id)
+  _log_afk_auto_host_enabled(player)
   return true
+end
+
+function gameplay_loop.step_afk_auto_host(game, state, dt)
+  assert(game ~= nil, "missing game")
+  local timeout = gameplay_rules.afk_auto_host_seconds or 0
+  local turn_runtime = runtime_state.ensure_turn_runtime(state)
+  if not _is_afk_enabled() then
+    _sync_afk_view(turn_runtime, nil, false)
+    return false
+  end
+  local current_player = _resolve_current_player(game)
+  if not _is_player_afk_eligible(current_player) then
+    _sync_afk_view(turn_runtime, nil, false)
+    return false
+  end
+  local ports = _resolve_ports(state)
+  if not _is_afk_trackable(game, state, ports) then
+    _sync_afk_view(turn_runtime, current_player.id, false)
+    return false
+  end
+  local elapsed_seconds = _update_afk_tracking(turn_runtime, current_player, dt)
+  if elapsed_seconds < timeout then
+    return false
+  end
+  return _enable_afk_auto_host(game, state, current_player, timeout)
 end
 local function _initialize_ports(state, game)
   local ports = _resolve_ports(state)
