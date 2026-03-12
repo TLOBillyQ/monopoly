@@ -37,5 +37,10 @@ return {
     _case("_test_popup_countdown_uses_effective_modal_timeout"),
     _case("_test_market_countdown_uses_double_action_timeout"),
     _case("_test_dispatch_gate_blocks_next_when_choice_active"),
+    _case("_test_choice_auto_policy_preconsumed_wait_choice_picks_first_option"),
+    _case("_test_turn_timer_policy_detained_wait_steps_when_timeout_elapsed"),
+    _case("_test_turn_timer_policy_inter_turn_wait_steps_when_timeout_elapsed"),
+    _case("_test_item_slot_data_prefers_role_specific_items_and_falls_back"),
+    _case("_test_gameplay_loop_ports_rejects_legacy_flat_override"),
   },
 }

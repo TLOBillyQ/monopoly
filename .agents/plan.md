@@ -37,6 +37,7 @@
 - log: 2026-03-12 已拆分 `await.lua` 的 choice/action_anim/seconds/move_anim wait 辅助路径、`land.lua` 的 landing wait/post-action 收口，以及 `phase_registry.lua` 的 post_action wait 路由；`suites.gameplay.gameplay_coroutine`、`suites.gameplay.gameplay_turn_flow_and_interrupts`、`suites.gameplay.gameplay_timeout_and_auto_runner` 定向回归通过。
 - log: 2026-03-12 继续补 T2 characterization tests：覆盖 `await.move_anim` 匹配/日志分支、`await.landing_visual`、`await.inter_turn`、`turn_start` pre_action wait 路由、`phase_registry` post_action wait 路由、`turn_land` 的 move_effect followup 延迟路径，并修复 `await.move_anim` 在 debug log 开启时 `opts=nil` 触发的空索引问题；最新双 lane CRAP 中 T2 residual 从 45 降到 30。
 - log: 2026-03-12 新一轮收尾把 `turn_script` wait/phase 分发改成表驱动，拆平 `timer_policy` 的 action/detained/inter-turn timer 公共逻辑，并提炼 `move_followup` 的 steal/market resume helper；补充 `turn_script` wait_move_anim yield/resume 与 `move_followup` steal interrupt wait 的定向测试后，最新双 lane CRAP 将 T2 residual 从 30 降到 29。
+- log: 2026-03-12 继续用覆盖率吃 T2 低复杂度热点：新增 `choice_auto_policy` preconsumed first-option、`timer_policy` detained/inter-turn timeout、`item_slot_data` role/fallback、`loop_ports` legacy flat override 用例，并将 `turn_script.create` 的 coroutine 主循环拆成 step/yield/finish helper；最新双 lane CRAP 将 T2 residual 从 29 降到 23。
 
 ### T3 Flow orchestration/AI cluster
 - depends_on: `[T1]`
@@ -91,6 +92,7 @@
 - status: In Progress
 - log: 2026-03-12 最新双 lane CRAP 已降到 `src_over8=130`；当前 ownership bucket 为 `T2=30`、`T3=1`、`T4=27`、`T5=29`、`T6=28`、`T7=14`、`UNKNOWN=1`。本阶段已开始按最新报告继续收尾，但尚未清零。
 - log: 2026-03-12 继续按最新报告收尾后，双 lane CRAP 更新为 `src_over8=129`；当前 ownership bucket 为 `T2=29`、`T3=1`、`T4=27`、`T5=29`、`T6=28`、`T7=14`、`UNKNOWN=1`。剩余头部热点已切到 `turn_script`、presentation runtime/view 的低覆盖 helper，以及 `effect_pipeline.run`。
+- log: 2026-03-12 再跑一轮 T2 收尾后，双 lane CRAP 保持降到 `src_over8=123`；当前 ownership bucket 为 `T2=23`、`T3=1`、`T4=27`、`T5=29`、`T6=28`、`T7=14`、`UNKNOWN=1`。当前头部已基本转移到 `T5/T6/T7` 的 presentation/runtime helper 与 `app/init.lua`、`config_sanity.lua`。
 
 ### T9 Final verification
 - depends_on: `[T8]`

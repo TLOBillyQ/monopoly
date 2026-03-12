@@ -58,6 +58,7 @@ local item_strategy = require("src.game.systems.items.strategy")
 local facing_policy = require("src.game.systems.board.facing_policy")
 local turn_start = require("src.game.flow.turn.start")
 local turn_script = require("src.game.flow.turn.script")
+local item_slot_data = require("src.game.flow.turn.item_slot_data")
 local default_ports = require("src.game.runtime.default_ports")
 
 local function _mock_lua_api(send_custom_event)
@@ -3161,6 +3162,95 @@ local function _test_choice_auto_policy_timeout_keeps_non_cancelable_choice_fall
   assert(from_timeout.option_id == 4, "non-cancelable timeout should fallback to the first option")
 end
 
+local function _test_choice_auto_policy_preconsumed_wait_choice_picks_first_option()
+  local g = _new_game()
+  local auto_player = g.players[g.turn.current_player_index]
+  auto_player.auto = true
+  local choice = {
+    id = 1004,
+    kind = "remote_dice_value",
+    allow_cancel = false,
+    meta = {
+      player_id = auto_player.id,
+      item_preconsumed = true,
+    },
+    options = { { id = 5, label = "5" }, { id = 6, label = "6" } },
+  }
+
+  local action = choice_auto_policy.decide(g, nil, choice, {
+    mode = "wait_choice",
+    elapsed_seconds = 1,
+  })
+
+  assert(action ~= nil, "preconsumed choice should produce fallback action in wait_choice mode")
+  assert(action.type == "choice_select", "preconsumed choice should select instead of cancel")
+  assert(action.option_id == 5, "preconsumed choice should select the first option")
+end
+
+local function _test_turn_timer_policy_detained_wait_steps_when_timeout_elapsed()
+  local g = _new_game()
+  local state = {}
+  local stepped = 0
+  g.turn.detained_wait_active = true
+  g.turn.detained_wait_elapsed = 0.4
+  g.turn.detained_wait_seconds = 0.5
+
+  turn_timer_policy.update_detained_wait_timer(g, state, 0.2, function(game)
+    assert(game == g, "detained wait should step the current game")
+    stepped = stepped + 1
+  end)
+
+  assert(stepped == 1, "detained wait should step turn after timeout")
+  assert(g.turn.detained_wait_active == false, "detained wait should clear active flag after timeout")
+  assert(g.turn.detained_wait_elapsed == 0, "detained wait should reset elapsed after timeout")
+end
+
+local function _test_turn_timer_policy_inter_turn_wait_steps_when_timeout_elapsed()
+  local g = _new_game()
+  local state = {}
+  local stepped = 0
+  g.turn.inter_turn_wait_active = true
+  g.turn.inter_turn_wait_elapsed = 0.4
+  g.turn.inter_turn_wait_seconds = 0.5
+
+  turn_timer_policy.update_inter_turn_wait_timer(g, state, 0.2, function(game)
+    assert(game == g, "inter-turn wait should step the current game")
+    stepped = stepped + 1
+  end)
+
+  assert(stepped == 1, "inter-turn wait should step turn after timeout")
+  assert(g.turn.inter_turn_wait_active == false, "inter-turn wait should clear active flag after timeout")
+  assert(g.turn.inter_turn_wait_elapsed == 0, "inter-turn wait should reset elapsed after timeout")
+end
+
+local function _test_item_slot_data_prefers_role_specific_items_and_falls_back()
+  local owner_id = 101
+  local slots = item_slot_data.from_ui_state({
+    item_slot_item_ids = { 2001, 2002, 2003 },
+    item_slot_item_ids_by_role = {
+      [tostring(owner_id)] = { 3001, 3002, 3003 },
+    },
+  })
+
+  assert(slots.get_item_ids(owner_id)[2] == 3002, "item_slot_data should prefer role-specific ids")
+  assert(slots.get_item_ids(999)[2] == 2002, "item_slot_data should fall back to shared ids for unknown role")
+  assert(slots.resolve_slot_action(owner_id, "item_slot_3") == 3003, "slot action should resolve string slot ids via role-specific ids")
+  assert(slots.resolve_slot_action(999, 1) == 2001, "slot action should fall back to shared ids when role-specific ids are missing")
+  assert(slots.resolve_slot_action(owner_id, "invalid") == nil, "slot action should reject invalid slot ids")
+end
+
+local function _test_gameplay_loop_ports_rejects_legacy_flat_override()
+  local ok, err = pcall(function()
+    gameplay_loop_ports.resolve({
+      close_choice_modal = function() end,
+    })
+  end)
+
+  assert(ok == false, "legacy flat gameplay_loop_ports override should be rejected")
+  assert(tostring(err):find("legacy flat gameplay_loop_ports is not supported", 1, true) ~= nil,
+    "legacy flat gameplay_loop_ports override should explain grouped-port requirement")
+end
+
 local function _test_turn_decision_wait_choice_no_longer_reads_ui_port_state()
   local g = _new_game()
   local auto_player = g.players[g.turn.current_player_index]
@@ -4051,6 +4141,16 @@ return {
   _test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics = _test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics,
   _test_choice_auto_policy_wait_and_timeout_both_cancel_market_buy = _test_choice_auto_policy_wait_and_timeout_both_cancel_market_buy,
   _test_choice_auto_policy_timeout_keeps_non_cancelable_choice_fallback = _test_choice_auto_policy_timeout_keeps_non_cancelable_choice_fallback,
+  _test_choice_auto_policy_preconsumed_wait_choice_picks_first_option =
+    _test_choice_auto_policy_preconsumed_wait_choice_picks_first_option,
+  _test_turn_timer_policy_detained_wait_steps_when_timeout_elapsed =
+    _test_turn_timer_policy_detained_wait_steps_when_timeout_elapsed,
+  _test_turn_timer_policy_inter_turn_wait_steps_when_timeout_elapsed =
+    _test_turn_timer_policy_inter_turn_wait_steps_when_timeout_elapsed,
+  _test_item_slot_data_prefers_role_specific_items_and_falls_back =
+    _test_item_slot_data_prefers_role_specific_items_and_falls_back,
+  _test_gameplay_loop_ports_rejects_legacy_flat_override =
+    _test_gameplay_loop_ports_rejects_legacy_flat_override,
   _test_turn_decision_wait_choice_no_longer_reads_ui_port_state = _test_turn_decision_wait_choice_no_longer_reads_ui_port_state,
   _test_popup_countdown_uses_effective_modal_timeout = _test_popup_countdown_uses_effective_modal_timeout,
   _test_market_countdown_uses_double_action_timeout = _test_market_countdown_uses_double_action_timeout,

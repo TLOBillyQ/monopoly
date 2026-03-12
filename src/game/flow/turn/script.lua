@@ -40,31 +40,45 @@ local function _run_wait(session, state_name, args)
   return handler(session, args)
 end
 
+local function _set_current_state(session, state_name, state_args)
+  session.current_state = state_name
+  session.current_args = state_args
+end
+
+local function _yield_wait(session, state_name)
+  session.wait_state = state_name
+  coroutine.yield({ kind = "wait", wait_state = state_name })
+end
+
+local function _step_script(session, state_name, state_args)
+  _set_current_state(session, state_name, state_args)
+  local wait_res = _run_wait(session, state_name, state_args)
+  if wait_res == nil then
+    return _run_phase(session, state_name, state_args)
+  end
+  if wait_res.wait then
+    _yield_wait(session, state_name)
+    return state_name, state_args
+  end
+  return wait_res.next_state, wait_res.next_args
+end
+
+local function _finish_script(session)
+  session.current_state = nil
+  session.current_args = nil
+  session.wait_state = nil
+  session.finished = true
+end
+
 function turn_script.create(session)
   assert(session ~= nil, "missing script session")
   return coroutine.create(function()
     local state_name = session.current_state or "start"
     local state_args = session.current_args
     while state_name do
-      session.current_state = state_name
-      session.current_args = state_args
-      local wait_res = _run_wait(session, state_name, state_args)
-      if wait_res then
-        if wait_res.wait then
-          session.wait_state = state_name
-          coroutine.yield({ kind = "wait", wait_state = state_name })
-        else
-          state_name = wait_res.next_state
-          state_args = wait_res.next_args
-        end
-      else
-        state_name, state_args = _run_phase(session, state_name, state_args)
-      end
+      state_name, state_args = _step_script(session, state_name, state_args)
     end
-    session.current_state = nil
-    session.current_args = nil
-    session.wait_state = nil
-    session.finished = true
+    _finish_script(session)
   end)
 end
 
